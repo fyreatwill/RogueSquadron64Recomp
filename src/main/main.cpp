@@ -52,6 +52,7 @@ extern "C" void rs64_m5_route_prepare_handoff(uint32_t prepare_seq,
 #include <algorithm>
 #include <cerrno>
 #include <string>
+#include <cctype>
 #endif
 #endif
 
@@ -7025,6 +7026,137 @@ static bool rs64_m5_callback_order_event(uint32_t width, uint32_t origin,
     return true;
 }
 
+// ---------------------------------------------------------------------------
+// Output-device routing (owner request 2026-10-19). By default the game plays
+// through the macOS default output and follows it when it changes. To pin the
+// game to one device instead (e.g. muted laptop speakers while everything else
+// plays elsewhere), name it by case-insensitive substring:
+//   ROGUESQ_AUDIO_DEVICE="MacBook Pro Speakers"            (env var, wins), or
+//   the same text on the first line of audio_device.txt beside the executable.
+// "default" or empty follows the system default. F9 cycles outputs live
+// (default -> each device -> default) and saves the choice to audio_device.txt,
+// so the loop's headless runs pick it up too. Available names are logged as
+// "[audio-route] device[i]=..." at first open.
+// ---------------------------------------------------------------------------
+static std::atomic<int> g_audio_route_cycle{0};   // F9 presses; consumed on the audio thread
+static std::string g_audio_route_pref;            // audio thread only after first open
+static bool g_audio_route_loaded = false;
+
+static std::string audio_route_file_path() {
+    char* base = SDL_GetBasePath();
+    std::string path = base ? std::string(base) + "audio_device.txt" : "audio_device.txt";
+    if (base) SDL_free(base);
+    return path;
+}
+
+static std::string audio_route_trim(std::string v) {
+    while (!v.empty() && (v.back() == '\n' || v.back() == '\r' || v.back() == ' ' || v.back() == '\t')) v.pop_back();
+    size_t i = 0;
+    while (i < v.size() && (v[i] == ' ' || v[i] == '\t')) ++i;
+    return v.substr(i);
+}
+
+static bool audio_route_is_default(const std::string& v) {
+    if (v.empty()) return true;
+    std::string l = v;
+    for (auto& c : l) c = (char)std::tolower((unsigned char)c);
+    return l == "default";
+}
+
+static void audio_route_load_pref() {
+    if (g_audio_route_loaded) return;
+    g_audio_route_loaded = true;
+    if (const char* env = std::getenv("ROGUESQ_AUDIO_DEVICE")) {
+        g_audio_route_pref = audio_route_trim(env);
+        fprintf(stderr, "[audio-route] preference from ROGUESQ_AUDIO_DEVICE: '%s'\n", g_audio_route_pref.c_str());
+    } else if (FILE* f = fopen(audio_route_file_path().c_str(), "r")) {
+        char line[256] = {0};
+        if (fgets(line, sizeof line, f)) g_audio_route_pref = audio_route_trim(line);
+        fclose(f);
+        fprintf(stderr, "[audio-route] preference from %s: '%s'\n", audio_route_file_path().c_str(), g_audio_route_pref.c_str());
+    }
+    const int n = SDL_GetNumAudioDevices(0);
+    for (int i = 0; i < n; ++i) {
+        const char* name = SDL_GetAudioDeviceName(i, 0);
+        fprintf(stderr, "[audio-route] device[%d]=%s\n", i, name ? name : "?");
+    }
+    fflush(stderr);
+}
+
+// Exact SDL device name for the preference, or empty for the system default.
+static std::string audio_route_resolve() {
+    if (audio_route_is_default(g_audio_route_pref)) return {};
+    std::string want = g_audio_route_pref;
+    for (auto& c : want) c = (char)std::tolower((unsigned char)c);
+    const int n = SDL_GetNumAudioDevices(0);
+    for (int i = 0; i < n; ++i) {
+        const char* name = SDL_GetAudioDeviceName(i, 0);
+        if (!name) continue;
+        std::string l = name;
+        for (auto& c : l) c = (char)std::tolower((unsigned char)c);
+        if (l.find(want) != std::string::npos) return name;
+    }
+    fprintf(stderr, "[audio-route] no output device matches '%s'; using the system default\n", g_audio_route_pref.c_str());
+    fflush(stderr);
+    return {};
+}
+
+static void open_audio_output() {
+    audio_route_load_pref();
+    SDL_AudioSpec desired{};
+    desired.freq     = (int)audio_sample_rate;
+    desired.format   = AUDIO_S16SYS;
+    desired.channels = 2;
+    desired.samples  = 1024;
+
+    const std::string name = audio_route_resolve();
+    audio_device = SDL_OpenAudioDevice(name.empty() ? nullptr : name.c_str(), 0, &desired, nullptr, 0);
+    if (!audio_device && !name.empty()) {
+        fprintf(stderr, "[audio-route] opening '%s' failed (%s); falling back to the system default\n",
+                name.c_str(), SDL_GetError());
+        audio_device = SDL_OpenAudioDevice(nullptr, 0, &desired, nullptr, 0);
+    }
+    if (!audio_device) {
+        fprintf(stderr, "[Audio] SDL_OpenAudioDevice failed: %s\n", SDL_GetError());
+        return;
+    }
+    fprintf(stderr, "[audio-route] output=%s rate=%u\n", name.empty() ? "<system default>" : name.c_str(),
+            audio_sample_rate);
+    fflush(stderr);
+    SDL_PauseAudioDevice(audio_device, 0);
+}
+
+// Applies pending F9 presses: advance default -> device 0 -> ... -> default,
+// persist the choice, and reopen. Runs on the audio thread (queue_samples), the
+// only thread that opens, closes, or queues to audio_device.
+static void audio_route_apply_cycle() {
+    int presses = g_audio_route_cycle.exchange(0, std::memory_order_acq_rel);
+    if (presses <= 0) return;
+    audio_route_load_pref();
+    const int n = SDL_GetNumAudioDevices(0);
+    // Current position: -1 = default, else the index of the device in use.
+    int pos = -1;
+    const std::string cur = audio_route_resolve();
+    for (int i = 0; i < n && !cur.empty(); ++i) {
+        const char* name = SDL_GetAudioDeviceName(i, 0);
+        if (name && cur == name) { pos = i; break; }
+    }
+    while (presses-- > 0) pos = (pos + 1 >= n) ? -1 : pos + 1;
+    const char* next = (pos >= 0) ? SDL_GetAudioDeviceName(pos, 0) : nullptr;
+    g_audio_route_pref = next ? next : "default";
+    if (FILE* f = fopen(audio_route_file_path().c_str(), "w")) {
+        fprintf(f, "%s\n", g_audio_route_pref.c_str());
+        fclose(f);
+    }
+    fprintf(stderr, "[audio-route] F9 -> '%s' (saved to %s)\n", g_audio_route_pref.c_str(),
+            audio_route_file_path().c_str());
+    if (audio_device) {
+        SDL_CloseAudioDevice(audio_device);
+        audio_device = 0;
+    }
+    open_audio_output();
+}
+
 static void set_frequency(uint32_t freq) {
     static const bool probe_enabled = [] {
         const char* all = getenv("ROGUESQ_LOG_ALL");
@@ -7056,24 +7188,13 @@ static void set_frequency(uint32_t freq) {
         audio_device = 0;
     }
     audio_sample_rate = freq;
-
-    SDL_AudioSpec desired{};
-    desired.freq     = (int)freq;
-    desired.format   = AUDIO_S16SYS;
-    desired.channels = 2;
-    desired.samples  = 1024;
-
-    audio_device = SDL_OpenAudioDevice(nullptr, 0, &desired, nullptr, 0);
-    if (!audio_device) {
-        fprintf(stderr, "[Audio] SDL_OpenAudioDevice failed: %s\n", SDL_GetError());
-        return;
-    }
-    SDL_PauseAudioDevice(audio_device, 0);
+    open_audio_output();
 }
 
 extern "C" void rs64_s4245_tick(int kind, uint32_t amount);
 static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_addr) {
     rs64_s4245_tick(4, 1);
+    audio_route_apply_cycle();
     // s371 (M5-AUDIO-PLAN.md Step 6): this parameter was named `num_bytes` but
     // is actually a SAMPLE count -- ultramodern::queue_audio_buffer
     // (lib/N64ModernRuntime/ultramodern/src/audio.cpp:25-36) computes
@@ -9470,6 +9591,9 @@ static void poll_input() {
             write_minidump_safe(nullptr);
         }
 #endif
+        if (e.type == SDL_KEYDOWN && !e.key.repeat && e.key.keysym.sym == SDLK_F9) {
+            g_audio_route_cycle.fetch_add(1, std::memory_order_acq_rel);
+        }
         // Diagnostic: log F1-F4 to confirm the keys are reaching the SDL
         // queue at all. If we see these logs, SDL is delivering keypresses
         // to our process — RT64's filter (which runs before SDL_PollEvent)
@@ -9701,7 +9825,8 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
             if ((org & 0xFFFFFFu) == 0x690400u && ++s_win_polls >= (unsigned)s_win) {
                 const uint32_t a = 0x130B15u ^ 3u;  // byte address inside big-endian word storage
                 const uint8_t before = rd[a];
-                const_cast<uint8_t*>(rd)[a] = 0xFF;
+                static const bool s_nopoke = std::getenv("ROGUESQ_MISSION_WIN_NOPOKE") != nullptr;  // s5615 negative control: log only, no writes
+                if (!s_nopoke) const_cast<uint8_t*>(rd)[a] = 0xFF;
                 // s5605: the mask byte is HUD-only; lv0_checkComplexObjectives ends the mission on
                 // get(3)>=9 (word 0x80138068) or get(2)>=3 (0x80138064, the loss counter - not poked).
                 // s5612: ROGUESQ_MISSION_WIN_REAL=1 pokes get(10) (0x80138084) = 6 instead: lv0's get(3)>=9 and get(2)>=3
@@ -9711,8 +9836,10 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 const uint32_t c = s_real ? 0x138084u : 0x138068u;
                 // rdram words are host-native little-endian (same layout as the godmode float poke above)
                 const uint32_t cb = rd[c] | (rd[c + 1] << 8) | (rd[c + 2] << 16) | ((uint32_t)rd[c + 3] << 24);
-                const_cast<uint8_t*>(rd)[c + 3] = 0; const_cast<uint8_t*>(rd)[c + 2] = 0;
-                const_cast<uint8_t*>(rd)[c + 1] = 0; const_cast<uint8_t*>(rd)[c] = s_real ? 6 : 9;
+                if (!s_nopoke) {
+                    const_cast<uint8_t*>(rd)[c + 3] = 0; const_cast<uint8_t*>(rd)[c + 2] = 0;
+                    const_cast<uint8_t*>(rd)[c + 1] = 0; const_cast<uint8_t*>(rd)[c] = s_real ? 6 : 9;
+                }
                 s_win_done = true;
                 fprintf(stderr, "[mission-win] polls=%u mask 0x%02X -> 0xFF counter(0x%06X) %u -> %u origin=0x%08X\n", s_win_polls, before, c, cb, s_real ? 6u : 9u, org);
             }
