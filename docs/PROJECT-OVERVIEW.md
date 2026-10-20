@@ -7517,3 +7517,205 @@ Mission framebuffer dump viewed (fbd now mkdir'd by m6_keyed_hold.sh): frames sh
 
 - s5510 (static, single-source): mainGameLoop owns B40 (writes 0/0x14/0 around initMission 0x8003E2B4-E2E4, then loops to 0x8003E114); forced nonzero B40 changes the loop arm, so it is a loop-state byte, not a mission selector. Next: read dispatch at L_8003E114, log arm taken in base vs f2.
 - s5509: forcing B40 at initMission (f2/f7) suppresses the [mfst] dbg_data/data loads and the call#2 re-init seen in base; it does NOT select a second mission. Single-source per arm. Next: trace what gates the manifest load on B40.
+
+## Migrated from CURRENT-TRUTH (s5636)
+
+Moved verbatim-in-substance out of `docs/CURRENT-TRUTH.md` during the s5636
+compaction. Exact session detail stays in `PORTING-STATE.md` and git history.
+
+### Closed durable state (reference)
+
+- **RSP task-entry null-contract guard (s5395).** The two public task callback
+  entrypoints reject a null `OSTask` before dereferencing it. Writer is the
+  host runtime callback boundary (`recomp::rsp::run_task`); null is not a
+  legitimate guest task value. Static contract result only (no in-game harness
+  for the null arm).
+- **SDL_QUIT shutdown (s5382, verified).** `quick_exit` fix: old binary rc=134
+  SIGABRT, new rc=0 on the same SIGTERM->SDL_QUIT recipe
+  (`tools/verify_sdl_quit.sh`).
+- **M5 audio contract.** Default `M_AUDTASK` dispatch selects the Factor 5
+  image; stock `aspMain` and `unknown_task_stub` are not valid RS64 de-stubbing
+  targets. The task uses declared `ucode_data_size`; host PCM byte order and
+  queue-size edges are fixed and qualified. `Broke` alone is not evidence of
+  working audio; the required contract is dispatch -> task fields -> DMEM/DMA
+  -> SP completion -> service/slot/voice -> PCM -> route. Three keyed runs
+  reached mission with non-silent PCM and no crash/abort; the long-hold run
+  survived to its watchdog kill. Keep the named guest writers, slot/status
+  guards, wait caps, DMEM lock, and SP completion behavior; do not force gate,
+  slot, or writeback values without independent retail writer evidence and an
+  `ORIGIN:` statement. Validation rows: `docs/M5-AUDIO-PLAN.md` (s4963/s4968).
+- **M3 idiom classes closed:** trap/break/syscall/cop0, unaligned/LLSC/cache,
+  division, float/FCSR, width, indirect-call, self-walk, branch-likely,
+  variable-shift, HI/LO, MMIO-KSEG1 lui bases (s5350,
+  `docs/M3-MMIO-LUI-AUDIT.md`), delay-slot operand hazard (s5345,
+  `docs/M3-DELAY-SLOT-HAZARD-AUDIT.md`), 64-bit shift, 32-bit multiply, 64-bit
+  mul/div, relevant pointer idioms, plus:
+  - `$sp` balance (s5558): 4,854 self-adjustments in 1,751 functions; 1,727
+    balance after collapsing delay-slot epilogues; 24 remaining are
+    non-returning workers or data-gap fragments
+    (`docs/M3-SP-ADJUSTMENT-AUDIT.md`).
+  - Late `$ra` writes (s5559): 25 raw rows, all invalid/data-gap, Factor 5
+    voice `bltzal`/delay-slot fragments, or one intentional tail return
+    (`docs/M3-RA-RETURN-IDIOM-AUDIT.md`, `tools/audit_ra_return_idiom.py`).
+  - `$at` branch joins (s5560): 2,681 joins, 413 touch `$at`, 25 candidates
+    all data-gap/malformed fragments; `loadOverlay` control fired
+    (`docs/M3-AT-BRANCH-JOIN-AUDIT.md`, `tools/audit_at_branch_join.py`).
+  - Conditional moves (s5561): 179 `movz`/`movn` at 149 PCs, 115 exact guarded
+    + 64 `$zero`-dest discards, zero mismatches
+    (`docs/M3-CONDITIONAL-MOVE-AUDIT.md`, `tools/audit_conditional_move.py`).
+  - `$zero`-destination writes (s5557): 0 `ctx->r0` refs (control r2 55248)
+    (`docs/M3-ZERO-REG-WRITE-AUDIT.md`).
+- **Retail-entry byte thread** resolved as a port census byte-swizzle bug.
+- **Heap/copy/message-queue/PI-DMA and host-wrapper pointer classes** closed on
+  the qualified route with positive controls.
+- **MIPS toolchain (2026-10-17).** Real `mips64-elf-gcc` 14.2.0 + binutils 2.40
+  in `~/toolchains/mips64-elf`, symlinked into `/opt/homebrew/bin`; clang kept
+  as `mips64-elf-clang`; plain `make` in `patches/` uses them. Check with
+  `/opt/homebrew/bin/mips64-elf-gcc --version`. History: s5340 found N64Recomp
+  regenerated 11 patch functions but Clang rejected the call to
+  `findAndUnlinkSmallestEntry` (only the entrypoint declared in `funcs.h`);
+  s5341 made the declaration repair regeneration-safe in
+  `tools/fixup_patches_host.py`, wired into the CMake N64Recomp rule; existing
+  ELF -> host generation, Clang, `ar`, and `nm` control all pass.
+- **PatchesLib shadowed on macOS (s5366).** `libPatchesLib.a` and
+  `libRecompiledFuncs.a` both define `allocateDisplayListBuffer`; ld64 never
+  pulls the patch member, so C and asm patch exes are byte-identical and live
+  heap guards are the fixup-inlined `s_alloc_tail_guard*`. Check:
+  `tools/check_patches_shadowed.sh`. `-force_load` would drop the extra inlined
+  guards (behaviour change needing its own A/B); s5367: the patch has stricter
+  predicates, so it is not redundant.
+- **allocDLB guard census (s5378, single run):** route to mission (12288
+  entries) showed `slot0/g2bad/g3bad` all 0; no same-run positive control.
+
+### Generated-symbol sweep (exhausted, s5336-s5574)
+
+Rule: rename a real generated placeholder only when companion map, generated
+span, and independent syms table agree; preserve already-synchronized names,
+data symbols, and unmaterialized host-wrapper entries. Audit files
+`docs/RENAME-S*.md`.
+- Synchronized: `0x800927B0` (s5336 already synced), `menuControllerInputPreamble`
+  (`fake_func_800B47C4`, s5397), `clearMemory16ByteBlocks` (`0x8000040C`/`0x34`,
+  s5398), `playerAwingInitPreamble` (`0x800B58B4`, s5399).
+- Data-gap / H2-H3, unchanged: `fake_func_800B75C4` (s5400),
+  `fake_func_800B89F4` (s5401), `fake_func_800AF6A8` (s5402, 0x8 bytes before
+  `cutsceneTypeStrings`), `func_800E9AE0` (s5402, exact span, no name/caller),
+  `fake_func_800027B8` (s5571, 8 bytes), `fake_func_8000337C` (s5572, 4 bytes
+  before `setVideoReadyFlag`), `fake_func_8006ACA4` (s5573, 12 bytes before
+  `transformObjectColliderCenter`), `fake_func_800AE3E4` (s5574, 12 bytes).
+- s5530 dry-run: 0 companion-backed function renames remain.
+
+### M4 accumulator normalized-boundary history (parked)
+
+- s5404: existing retail parser with controls: 2,083/2,083 task joins,
+  3,020,766 mid-task records, 1,222 tasks with transient `-32768` lanes, zero
+  task-end lanes. Exact join structurally impossible (local task serials, port
+  is one long task, fb origins alternate). Design:
+  `docs/REVISIT-S5404-M4-NORMALIZED-BOUNDARY-DESIGN.md`.
+- s5405: `tools/analyze_m4_normalized.py`; retail 2,580,925 mapped-PC rows,
+  port 0; no image identity in either arm -> H3.
+- s5562: image/progress retail schema, 941,343 rows with all controls; legacy
+  port capture 0 rows -> H3.
+- s5563/s5565: port witness (regeneration-safe), per-task dispatch counter,
+  4096 rows/VI phase cap; 21,512 rows, <20 shared rows per mapped PC -> H3.
+- s5568: port whole-RDRAM control + VI width/origin fields; all controls pass
+  (`retail_rows=2,573,768`, `port_rows=21,514`), joins still <20 -> H3. Initial
+  arm crashed on the old three-argument callback (fixed by fixup migration).
+- s5570: `tools/analyze_m4_ranked.py`, ordered-group rank bins: 16/16 bins equal
+  but every lane mask empty -> H3 (absent discriminator).
+- s5575: `tools/analyze_m4_event_shape.py`, task-total-bucket key: lanes active,
+  zero shared classes (656 retail vs 6 port) -> H3 (`docs/M4-S5575-EVENT-SHAPE.md`).
+- Do not repeat either comparison; no writer or mitigation inferred.
+
+### Regen determinism (closed s5547)
+
+s5533-s5546 drove the scratch replay residual from ~171k lines to 0
+(`tools/fixup_live_replay.py` block-move/order/rename/MEM_W/guard2/swap-ack
+rules, `tools/strip_diag_layers.py` for scratch-only diagnostic blocks,
+`tools/fixup_movz_movn.py` wired into `s5532_determinism.sh`). Blanket static
+RENAMES replay made it worse (s5537, reverted). s5547: `make_elf` ELF
+byte-identical; fresh N64Recomp + replay compiles to asm identical to live
+(only cosmetic `;`/indent, 296 lines, 3 files). `RecompiledFuncs.s4204-fresh`
+is stale vs current N64Recomp (movz/movn forms); use `scratch_s5547_regen` as
+the fresh baseline.
+
+### Title-boot plume SIGSEGV (si_addr=0x58) history
+
+- s5577: lldb-attach loop control passed but 0/4 reached title in 120 s
+  (45 s was also below the ~80 s title transition).
+- s5578: no-lldb loop also stuck at `0x696100`; the missing ingredient was the
+  LLE trio `ROGUESQ_LLE_FORCE=1 LLE_UNGATED=1 LLE_SOLO=1` used by the
+  title-reaching s5453/s5463 recipes.
+- s5579 tooling null (missing zsh re-exec guard; 0 s rc=0). s5580: 4/4 titles;
+  s5581: 8/8; LLE trio 12/12 clean.
+- s5584-s5589: 120 s title holds 4/4 clean. s5589 lldb LAUNCH nulls (getcwd
+  EPERM under lldb in loop context, s5590/s5591). s5592: lldb attach 20/20 clean
+  with injected-SIGSEGV control (`tools/agent/gen_plume_lldb_soak.py`).
+- s5597: ASan arm (`tools/build_asan.sh` -> `build_asan/`) caught a real
+  overflow: `poke_be32(0x101C)` in `factor5_gfx_runner` wrote 0x1C bytes past
+  gfx `dmem` into the audio DMEM global every gfx task; fixed in
+  `src/main/main.cpp` (default drops OOB bytes; `ROGUESQ_POKE_WRAP=1` = wrap
+  arm). s5598 POKE_WRAP A/B identical (keep default drop). s5599/s5600 ASan
+  keyed first-mission holds n=2 clean.
+- s5602/s5603: 8/8 fast default-build title boots clean; with 20/20 attach
+  boots = 28 clean, P(0/28 | p=1/7) ~1.4%: plume probably dissolved by the
+  poke_be32 fix (hypothesis; no writer ever named for the old crash).
+
+### M6 first-mission endurance and second-mission selector (closed)
+
+- Gate closed s5394 (s5394b 904 s, s5394c 900 s). s5516 census: 31 keyed
+  title->mission holds, 251 min, 0 crashes/stalls/early deaths. Long holds
+  s5549-s5595: 10/10 clean incl. hangar route (903 s, `vi_stalls30s=0`).
+  `tools/m6_cycles.sh` counts hangar->mission re-entries (`mission_cycles=` in
+  `m6_god_common.sh` summaries). `# SOAK_TIMEOUT=<s>` header sets a per-recipe
+  cap (loop.sh); `m6_god_common.sh` honours `BUILD=`.
+- s5420: the "static cycle" after ~10-12 min in a flown hold is the TITLE
+  screen (VI 1024, origin 0x790400 from 634 s): mission ended and fell back to
+  attract. `ROGUESQ_FB_DUMP_DIR` dumps PPMs but assumes stride 320 (garbled at
+  other widths).
+- Mission-end facts (s5464-s5498): the ~frame 7000-8000 end in keyed holds is a
+  legitimate MISSION FAILED results screen (loss counter 0x80138064>=3) then
+  title fall-back; godmode and no-key runs end the same way. Flight render
+  correct (s5490: terrain+HUD visible, tricount 3.7M). 0x690400/0x620400
+  alternation is baseline double-buffering.
+- Selector theories refuted (single-source each): gCurrentLevel poke (s5504),
+  B40 poke (s5505), cine-arg 0x13 (s5506), save byte
+  `ROGUESQ_FORCE_SAVE_MISSION` (s5519-s5521), `ROGUESQ_FORCE_INITMISSION_SEL`
+  (s5508/s5513: no new `[mfst]` names). B40 (0x80130B40) is a mainGameLoop
+  state byte reset at 0x800A5E5C by cinematicLoopBody (0x800A5D80) storing its
+  a0 (s5523); initMission (0x800FA250) reads no a0 (s5526); the initMission arm
+  hardcodes B40=0x14 at 0x8003E284 (s5511). Flag word 0x80130B58 bit
+  0x02000000 never set on title or hangar routes (s5514-s5518, lldb
+  write-watch `scratch/agent/m6_wp_flag.sh`, control 0x3470) and gates arm A
+  (0x8003E2B4), not the normal route (arm B, 0x8003E378) (s5596).
+
+### M6 mission-outcome machinery (static, single-source unless noted)
+
+- Byte 0x80130B14 = mainGameLoop result code. Loop at 0x8003E304 runs
+  cinematicLoopBody until bit 0x100 of 0x80130B50 is set, then 0x8003E3C4
+  switches on B14 via table 0x8003A3E8: 1 = level complete (0x8003E3E4), 2 =
+  lose a life (0x8003E4BC), 3/4/5 -> 0x8003E514/E544 (s5610).
+- 800C7738 / 800C776C are flag-setters (bit 0x4 / 0x8 of flagword 0x8010C9E0
+  if gate 0x8010CA20==0). In lv0_checkComplexObjectives get(2)>=3 and
+  get(3)>=9 call 7738 (event 2 -> gate 4 -> Mode2 -> B14=2, LOSE); only
+  get(10)>=6 (0x80138084) calls 776C (event 3 -> gate 3 -> Mode1 -> B14=1 WIN)
+  (s5612; supersedes s5604-s5611 "gate-4 = win"). Gate 6 = 800FADEC per-player
+  respawn. Switch 800FA858, subphase byte 0x8010C9F0, timer float 0x8010C9EC.
+  Loss counter 0x80138064 = gObjectiveCounts[1]; gObjectiveBooleans
+  0x801388A0; mask 0x130B15 is HUD-only.
+- Test hooks in main.cpp: `ROGUESQ_MISSION_WIN` (lose-arm poke),
+  `ROGUESQ_MISSION_WIN_REAL=1` (get(10)=6; s5612 one win B14=1 then 0/4 repro,
+  get(1..9)=0, get(10)=6-7, gate g5->g0->g4(b14=2)->g6),
+  `ROGUESQ_MISSION_WIN_NOPOKE=1` (control: g4/b14=2 tail appears unpoked, s5616).
+- hudbit chain (s5617-s5623, PARKED): only callers of setHudEnableBit4/8 are
+  lvN_checkComplexObjectives + script stubs hookSetHudEnableBit4/8;
+  lv2_checkComplexObjectives sets bit4 only when getObjectiveBoolean(0x64 or
+  0x6D)==1. `ROGUESQ_LOG_HUDBIT=1` logs `[hudbit]`, `[cco]` and
+  setObjectiveBoolean (0x800C7540) id/val (`tools/apply_s5618_hudbit_log.py`,
+  `apply_s5619_cco_log.py`, `apply_s5622_objbool_log.py`); `ra` column always 0
+  (static jal does not maintain r31). lldb breakpoints here were inconclusive
+  (control did not fire, s5617).
+- s5626: cco checker runs ~30/s; objectives are time-gated. s5627: the unpoked
+  0x64/0x65 at +342 s is the LOSE arm (b14=2, gate 0->4->6, overlays 3->4->2
+  same-level restart); the idle autopilot ship fails the mission.
+- s5628: `[ccosnap]` boolean-array snapshot built; s5629 fixed its address
+  read with a `(gpr)(int32_t)` cast (s5628 snapshots invalid).
