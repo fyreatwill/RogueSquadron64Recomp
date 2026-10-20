@@ -1,4 +1,5 @@
-Single next work unit (s5617): identify the writer of b14=2 / the natural mission-end trigger seen in nopoke_b (g4 -> g4s1b2 -> g6s1b2 -> g0b2).
-Hypotheses: H4a mission timer/objective completes naturally (a real win condition met by god-mode flight); H4b a game-side event (enemy count, wave) sets it; H4c an artifact of our runtime (stale flag, audio gate).
-Discriminator: lldb break (or write-watch) on the b14 byte and 800FB190 with a0 logged + backtrace, in a nopoke run with ROGUESQ_MISSION_WIN_NOPOKE=1; positive control: same watch must fire in a poked p100 run. Run as lldb-armed variant of m6_god_common.sh, 2 runs concurrently.
+Single next work unit (s5618): in-process caller log for the gate-4/8 setters, no lldb.
+Context: s5617 lldb breakpoints on setHudEnableBit4/8 got 0 hits in nopoke AND poked-control runs, and neither run produced the g4/b14=2 tail, so the instrument is unproven (see PORTING-STATE s5617).
+Hypotheses: H4a natural objective/DAT-item event calls setHudEnableBit4 (lose arm); H4b a game timer/ally-loss path calls it; H4c runtime artifact (stale flag, audio gate).
+Discriminator: add an env-gated log (ROGUESQ_LOG_HUDBIT=1) in the existing hook _hookSetHudEnableBit4 (and Bit8) printing ctx->r31, the caller's resolved function name and gate 0x8010CA20 every call. Put it in the fixup scripts (tools/fixup_*.py) if the hook is generated. Positive control: the same log must fire at least once in any mission run (boot-time calls count) before a zero is believed. Run nopoke x3 via soak queue (no lldb); outcomes: caller names a DAT/actor effect => H4a; a timer/ally function => H4b; no call but gate still 4 => H4c (gate written elsewhere).
 HYPOTHESIS-ID: m6-mission-endurance
