@@ -9729,10 +9729,15 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 static unsigned s_hb = 0, s_gn = 0;
                 const uint32_t g2 = w32(0x10CA20u), sp = rd[0x10C9F0u ^ 3u], tm = w32(0x10C9ECu), f2 = w32(0x10CA1Cu);
                 float tf; memcpy(&tf, &tm, 4);
-                if ((g2 != s_pg || sp != s_ps || (++s_hb % 120) == 0) && s_gn < 200) {
-                    fprintf(stderr, "[mission-win] seq gate=%u subphase=%u timer=%.3f vflags(0x8010CA1C)=%08X flag=%08X origin=0x%08X\n",
-                            g2, sp, tf, f2, fl, (unsigned)rs64_vi_committed_origin());
-                    s_pg = g2; s_ps = sp; ++s_gn;
+                // s5610: mainGameLoop (0x8003E3C4) switches on byte 0x80130B14 (1 = level-complete arm,
+                // 2 = lose-a-life arm) once bit 0x100 of word 0x80130B50 exits its mission loop
+                // (0x8003E304); log both so the soak shows which half of that handshake is missing.
+                const uint32_t b14 = rd[0x130B14u ^ 3u], b50 = w32(0x130B50u);
+                static uint32_t s_pb14 = 0xFFFFFFFFu, s_pb50 = 0xFFFFFFFFu;
+                if ((g2 != s_pg || sp != s_ps || b14 != s_pb14 || b50 != s_pb50 || (++s_hb % 120) == 0) && s_gn < 200) {
+                    fprintf(stderr, "[mission-win] seq gate=%u subphase=%u timer=%.3f vflags(0x8010CA1C)=%08X flag=%08X b14=%u b50=%08X origin=0x%08X\n",
+                            g2, sp, tf, f2, fl, b14, b50, (unsigned)rs64_vi_committed_origin());
+                    s_pg = g2; s_ps = sp; s_pb14 = b14; s_pb50 = b50; ++s_gn;
                 }
             }
             if (fl != s_prev_fl && s_fl_n < 64) {
