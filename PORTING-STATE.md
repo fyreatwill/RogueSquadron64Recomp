@@ -163790,3 +163790,4 @@ Instrument: main.cpp mission-win block now logs `[mission-win] seq gate= subphas
 change + heartbeat (control: lines must appear after the poke). Soaks s5608_seq_a/b queued (build verified).
 Outcomes: timer frozen -> find who advances 0x8010C9EC (dt source); subphase 2 then gate=0 and play continues -> the win
 condition (lv0 get(3)>=9 poke) is re-zeroed each frame; gate stuck 4 -> handler 800FBB44 stalls.
+Discrimination (s5608): the static map refutes hypothesis (b) "the end-flag consumer is a stub/guard in our recomp" - 800FB4B0 consumes bit 0x4 into gate=4 exactly as retail code reads - and refutes the reading of bit 0x1 as a mission-end signal (it is the respawn countdown). It selects the sub-phase/timer chain (0x8010C9F0 / 0x8010C9EC) as the place the end sequence stalls or is re-cleared. Next discriminator: the s5608_seq soak lines - timer frozen vs gate back to 0 vs gate stuck at 4 (see NEXT.md).
