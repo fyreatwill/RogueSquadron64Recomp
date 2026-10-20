@@ -136,6 +136,7 @@ State as of s5635 (all static claims single-source unless noted):
   mission/content selection by origin alone (s5508).
 
 ## Superseded conclusions worth retaining
+- (s5661) "Unaligned stores may write the voice-range rails" (H1 of s5659): believable because those were the only store forms the census had not hooked; refuted by s5660 (narrow=6 of 17.8M, positive control all>0). The rails are float bit patterns from aligned game stores.
 - s5645 premise "consumeVoiceSamples reads the sample bytes" - overturned s5646 (pure counter); believable because its name and position in the voice pipeline suggest it moves data.
 - "Speech DMA may yield zeros" (D1) - overturned s5647; believable because the voice is audibly absent.
 
@@ -196,6 +197,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 0b. **s5660:** only unhooked game store forms are swl/swr/sdl/sdr (421 sites; many are data-as-code). Hooked via tools/apply_s5660_unaligned_store_census.py -> rs64_s5660_ustore; soak `s5660_vwriter_a` queued (look for `[ustore-all]` control and `[vstore] w=L/R/l/r`). See NEXT.md.
 0a. **s5659 (single-source):** vsnap_b: rails in voice-read range go 2 -> ~1081 (of ~1232 halfwords) in a ~18-task burst (tasks 1789-1806) right after the FIRST enqueueSpeechClip/allocAndConfigureNewVoice (phase 5); clean through task 1528. Fill is at voice start, writer unnamed (not the 28 instrumented stores, not RSP DMA-out). Next: log every write form (swl/swr/sdc1/host memcpy/PI DMA) overlapping the range between task 1528 and 1806, with PC.
+0a. **s5661:** s5660_vwriter_a folded: unaligned stores (swl/swr/sdl/sdr) are NOT the rail writer (narrow=6 of 17.8M stores, control all>0; the 9 rail-word PCs are aligned float stores, 2nd source after s5656). Range [1B2C60,1B3600) is shared heap floats read by audio as samples. NEXT: H3 - does the speech clip's destination buffer ever get a PI/inflate fill? (NEXT.md, slug g2-voice-never-requested).
 0a. **s5658:** s5657 vsnap starved (80-line budget eaten by wide-hash control by task 1007; rails 0/swz<=2 early). Rebuilt rail-count-keyed; s5658_vsnap_b queued.
 0a. **s5657:** [vsnap] instrument built (rsp.cpp) + soak s5657_vsnap_a queued: rail-count timeline of the voice-read range at every audio task; wide hash = positive control.
 0a. **s5655:** rail data (0x8000/0x7FF8) in voice-read range 1B2C60.. is REAL guest data (byte-order artifact refuted, s5655 offline un-swap) with ZERO host writers incl. RSP DMA-out (s5653). s5654 store census had val=0 always (hook pre-store); s5655 reads datum back; soak s5655_vstore_b queued — look for `[vstore-rail]` PCs. See NEXT.md.
