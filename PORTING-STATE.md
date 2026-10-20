@@ -163934,3 +163934,10 @@ Folded s5628_snap_{a,b}: each logged exactly ONE [ccosnap] (#1) over 580 s, list
 Fix: tools/apply_s5619_cco_log.py now uses `MEM_BU((gpr)(int32_t)0x8013889F + i_, 0)`; live RecompiledFuncs patched via sed (7 files); cmake build OK. Soaks s5629_snap2_{a,b} queued (same recipe as s5628). Rule: every instrument reading a fixed KSEG0 address must sign-extend.
 ORIGIN: no mitigation added (instrument fix only).
 Still open: S vs D/T discriminator from the corrected snapshots.
+
+## Session 5630 (2026-10-20) — corrected [ccosnap] soaks fold: bool 7 never set in surviving runs; fail is nondeterministic (2/5), S refuted
+Folded s5629_snap2_{a,b} (real logs are scratch/agent/m6/<tag>/run.log; soak_results/*.log holds only the verdict line). Positive control passes: 11 snapshots each, values 0/1, identical set-growth in both runs (#1 20=1; #2 +80; #3 +1,+7F at mission start; ... #11 15 ids; ids 7, 0x63, 0x64, 0x65 never present).
+- Neither run hit the lose arm: no 0x64, b14=2 count 0, cco ran past call#13740 (~+470 s after mission start, beyond the +342 s of s5625_prog_b). Same recipe as s5625_prog_b. Tally for that recipe: s5625_prog_b FAIL, s5628_snap_a FAIL (b14=2 x37, but its snapshots were the dead instrument), s5628_snap_b ok, s5629_snap2_a ok, s5629_snap2_b ok => the fail is nondeterministic, 2/5.
+- Rules out S (bool[7] set from level init): bool[7] is absent through the whole run in 2/2 valid runs. Rules out T as a fixed-time flip (no flip at +342 s in 2/2). Leaves D: bool[7] is set by a run-dependent event (enemy/escort/ship state), and only when it fires does the 0x64 fail arm arm. Single-source on the failing side: no valid snapshot of a failing run exists yet.
+ORIGIN: no code changed; the writer of bool[7] remains unnamed (setObjectiveBoolean single and plural refuted in s5628; direct MEM_B writer or another setter remains).
+Queued s5630_snap3_{c,d,e,f} (same recipe, corrected instrument) to catch a failing run with snapshots; expected ~40% fail rate => P(no fail in 4) ~13%.
