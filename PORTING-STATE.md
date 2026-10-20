@@ -164209,3 +164209,9 @@ Folded s5675_g1fly_{a,b} (rc=137 = 900 s timeout): both 4/4 attempts `nohangar` 
 Change: m6_god_common.sh now honours AP_OVERRIDE (replaces $AP). Re-queued s5676_g1fly_{a,b}.sh with the identical title->mission EARLY schedule + flight keys, via AP_OVERRIDE. Positive control: keys.log must show `mission t=` (previous keyed runs: t≈81 s) and [pad-host] edges.
 ORIGIN: no mitigation machinery; harness plumbing fix.
 Next: fold s5676_g1fly_{a,b} with the s5675 NEXT criteria.
+
+## Session 5677 (2026-10-20) — s5676 G1 soaks void again: hangar gate, not keys (gate fixed, re-queued)
+Ran: folded `s5676_g1fly_{a,b}` (rc=137 = watchdog kill at 900 s). Positive control FAILED: keys.log has 0 `mission t=` lines and 4x `nohangar-att` per arm. But run logs show the AP_OVERRIDE keys DID reach the game this time: origins 0x00790400 (title), 0x005D4500, 0x00620400, 0x0062BD00 (~390k rows), 0x0066A500, 0x00690400 (~4.8k), 0x00696100 (~395k), and stall-breadcrumbs at phase=7 width=640. No 0x006AB400 (hangar) ever appeared, because the override schedule goes title->mission without the hangar.
+Cause: `m6_god_common.sh` unconditionally required `origin=0x006AB400` then `0x006A2900` before looking for the mission origin, so a hangar-less route failed `nohangar` and the arms were killed/retried (counters in the run logs are from attempts that were discarded as failures). Mitigation-shaped? No — a harness gate fix; ORIGIN: the gate encoded the old keyed route, not the override route.
+Fix: gate skipped when AP_OVERRIDE is set (lines 30-35). Re-queued as `s5677_g1fly_{a,b}` (same arms). Side datum: the override route reached flight-like origins 0x62BD00/0x696100 heavily in all 8 attempts — fold in once the verified run exists; whether 0x690400 here is attract or real mission is still gated by the 130 s verify step.
+Rules out: "keys not delivered" (s5676) — they were delivered. Does not yet answer H-g1/g2/g3.
