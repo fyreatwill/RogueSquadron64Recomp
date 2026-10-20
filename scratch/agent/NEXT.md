@@ -1,5 +1,5 @@
-# NEXT: fold s5693_htab_{a,b} (handle-table registration/fire census)
-Hypotheses: H-reg lvf_initializeObjectTracking never runs / sayWhoaHim never registered (no [hreg] h=0x80108388); H-arm registered but condition never satisfied (hreg present, [hent] shows entry active, no [hfire] for it); H-disp checkObjectiveHandles not reached / dispatch never fires any handler (no [hchk] or no [hfire] at all); H-legit retail also never fires it.
-Discriminator: grep -c '\[hreg\]\|\[hchk\]\|\[hent\]\|\[hfire\]' scratch/agent/soak_results/s5693_htab_*.log; look for h=0x80108388 in each tag. Controls: any [hreg] line; any [hfire] of another handler.
-If H-arm: decode the entry's b4..b7/w8 (bool id, expected, count idx, threshold) and compare against bool array 0x80138xxx / count array in the same run; then oracle-compare. If H-reg: find who calls lvf_initializeObjectTracking (level table) and why not.
-HYPOTHESIS-ID: g1-bool7-voice-path
+# NEXT: trace the FIRED lv2 voice handler into the audio path (G2 dialogue)
+Context: s5694 showed lv2 handlers (e.g. say2PickingUpMultipleSignalsTies_v0xA4 @0x801026CC) fire in the port. Dialogue is still absent (s5637: playObjectiveVoiceLine1 fired 0 in 420 s, but that counted callers of one fn).
+Hypotheses: H1 handler body runs but its voice call (playObjectiveVoiceLine1/other) is gated off by a stub; H2 voice call runs, request dies in the sound-queue/MusyX layer (no PCM); H3 voice call runs and PCM is produced but is muted/dropped at AI/host sink.
+Discriminator (ONE build, all counters): entry logs on funcs_43 say2* handler body (0x801026CC), playObjectiveVoiceLine1, and the next callee it invokes (read funcs_43.c:20466+ first), plus the audio enqueue it ends at; run existing s5693_htab recipe with ROGUESQ_LOG_HUDBIT=1 (hfire shows the handler fired = positive control). Offline first: read say2PickingUpMultipleSignalsTies_v0xA4 body (a0=0xA4 is the line id).
+HYPOTHESIS-ID: g2-voice-path-lv2
