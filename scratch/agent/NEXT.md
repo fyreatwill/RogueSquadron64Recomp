@@ -1,4 +1,5 @@
-# NEXT (s5681): find the ship OBJECT (position/pitch/altitude) for the G1 closed-loop autopilot
-s5680: player record 0x137DB8 has stick echoes (+0xDC/+0xE0, control OK) and a velocity-like vec3 (+0xD0..D8) but no integrated position. Extend ROGUESQ_PLAYER_DUMP: scan the record for pointer-shaped words (0x80xxxxxx / KSEG0 into RDRAM), dump 0x200 bytes of each target in the same [pdump] row format (tag by offset), re-run scripts at scratch/agent/s5680_pdump.sh, then tools/pdump_fields.py (generalize to take a tag) to find a vec3 whose delta integrates +0xD0 vector (corr>0.9) = position; altitude = its y. Then close the loop in the autopilot (level pitch).
-Discriminator: integrator found -> closed loop feasible; none -> try oracle watch or G2 audio comparison.
+# NEXT (s5682): fold s5681_pptr soak -> find ship object position/altitude
+Run: python3 tools/pptr_fields.py scratch/agent/soak_results/s5681_pptr_*.log  (built s5681: [pptr] rows = 0x100 bytes of each KSEG0 pointer target in player record 0x137DB8, 1 Hz).
+Positive control: pdump rows present and sx/sy vary (pdump_fields.py). Look for a (off,tgt) series with a vec3 whose delta correlates with stick (c>0.5) = position/attitude; altitude = its y.
+Outcomes: found -> close the loop in the autopilot (level pitch); none -> follow one more pointer level or oracle watch; or switch to G2 audio comparison.
 HYPOTHESIS-ID: g1-mission-progression

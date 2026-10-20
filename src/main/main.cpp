@@ -9955,6 +9955,18 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 fprintf(stderr, "[pdump] sx=%.2f sy=%.2f btn=0x%04X :", (double)stick_x, (double)stick_y, (unsigned)btn);
                 for (uint32_t o = 0; o < 0x2A0; o += 4) fprintf(stderr, " %08x", rs64_rdram_u32(rd, 0x137DB8u + o));
                 fprintf(stderr, "\n");
+                // s5681: follow KSEG0 pointers in the record; dump 0x100 bytes of each distinct target.
+                uint32_t seen[32]; unsigned ns = 0;
+                for (uint32_t o = 0; o < 0x2A0 && ns < 32; o += 4) {
+                    const uint32_t p = rs64_rdram_u32(rd, 0x137DB8u + o);
+                    if ((p >> 24) != 0x80u || (p & 0xFFFFFFu) < 0x1000u || (p & 0xFFFFFFu) > 0x7FFF00u || (p & 3)) continue;
+                    bool dup = false; for (unsigned i = 0; i < ns; i++) if (seen[i] == p) dup = true;
+                    if (dup) continue;
+                    seen[ns++] = p;
+                    fprintf(stderr, "[pptr] off=%03X tgt=%08x sx=%.2f sy=%.2f :", (unsigned)o, (unsigned)p, (double)stick_x, (double)stick_y);
+                    for (uint32_t q = 0; q < 0x100; q += 4) fprintf(stderr, " %08x", rs64_rdram_u32(rd, (p & 0xFFFFFFu) + q));
+                    fprintf(stderr, "\n");
+                }
             }
         }
     }
