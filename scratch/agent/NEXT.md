@@ -1,4 +1,4 @@
-# NEXT (s5658): fold s5657_vsnap_a soak verdict
-Read scratch/agent/soak_results/s5657_vsnap_a_*.log, grep '\[vsnap\]'. Wide hash must change (positive control) else null is void.
-Outcomes: rails>0 at first vsnap and NARROW never changes => H-P (pre-existing; trace what initialised 1B2C60.. at boot / ROM DMA, then who owns voice slot +0x198 pointer -> H-A). NARROW-CHANGED line w/ rails jump => find the uncovered store form (swl/swr/sdc1/memcpy helpers) around that task.
+# NEXT (s5659): fold s5658_vsnap_b soak verdict
+grep '\[vsnap\]' scratch/agent/m6/s5658_vsnap_b/run.log. Now logs only on narrow rail-count change (+every 1000 tasks); wide_hash still present as control.
+Outcomes: sudden jump rails 0->~190 at task T => find who wrote at T (uncovered store form: swl/swr/sdc1/memcpy/DMA-in from ROM/PI); gradual => heap reuse by game code, trace allocator owner of 1B2C60; never >0 => hits come from different addr (re-check dump source addr).
 HYPOTHESIS-ID: g2-voice-never-requested

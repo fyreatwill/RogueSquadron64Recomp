@@ -164096,3 +164096,8 @@ ORIGIN: no mitigation landed; diagnosis only.
 
 ## Session 5657 (2026-10-20) — s5657 vsnap instrument: rail-count timeline of voice-read range at every audio task
 Built (lib/N64ModernRuntime/librecomp/src/rsp.cpp, patch exported): [vsnap] logs hash + rail-halfword count (raw and 4-byte-swizzled) of [1B2C60,1B3600) and a wide-range hash (positive control) on every audio task where either changes (cap 80 lines). Discriminates H-P (rails present at first audio task, NARROW never changes) vs H-U/H-A (rails appear mid-run with no instrumented store). Soak s5657_vsnap_a queued (HYPOTHESIS g2-voice-never-requested). No run yet this session; build clean. ORIGIN: diagnostic only, no mitigation.
+
+## Session 5658 (2026-10-20) — s5657_vsnap_a folded: instrument budget starved, rebuilt as rail-count-keyed, s5658_vsnap_b queued
+- s5657_vsnap_a (rc=0, alive, 0 crashes): 80 [vsnap] lines, all by task 1007. Wide-hash positive control fired every task (so it ate the 80-line budget; iron rule 3 violation by me). Narrow range rails_raw=0 throughout, rails_swz<=2 (max 2) over tasks 1-1007. So at boot/early tasks the range holds NO rail pattern; the 190/200 rail records of s5652 appear LATER (task >1007) — pre-existing-at-boot (H-P) is disfavoured for early phase, but single-source and window-limited, not a conclusion.
+- Fix: lib rsp.cpp [vsnap] now logs only when the narrow rail count changes (+ heartbeat every 1000 tasks), budget 400; submodule patch exported; built. Queued scratch/agent/soak_queue/s5658_vsnap_b.sh (same recipe). Discriminator: first task where rails jump -> read pc/task context there (find uncovered store form) vs gradual growth.
+ORIGIN: diagnostic only, no mitigation.
