@@ -1,3 +1,6 @@
-Single next work unit (s5642): fold s5641_spath_{a,b} (grep '\[spath\]\|\[speech\]' scratch/agent/m6/<tag>/run.log). Same-run control = [speech] playSpeechClip lines must be present.
-Splits: tickSpeechSubsystem n=0 -> consumer never called (find its caller via recompiled jal 0x80067300, check why). tick runs, enqueueSpeechClip n=0 -> tick's gate/ring-head logic eats entries (read tick 0x80067300 branches vs ring state 0x80139BB0/0x80139C71). enqueue runs, allocAndConfigureNewVoice n=0 -> isVoiceHandleActive/stopVoiceByHandle short-circuit. alloc runs -> voice exists; look downstream (MusyX voice start, ucode PCM, retail oracle comparison of voice PCM).
+Single next work unit (s5643): fold s5642_aloc_{a,b} (grep '\[aloc\]\|\[speech\]' scratch/agent/m6/<tag>/run.log). Control: [speech] playSpeechClip lines + [spath] allocAndConfigureNewVoice present.
+H-C1 entry cnt<=a0 (0x80154670 count too small vs clip id 0x1C4/0x5E) -> alloc bails at B0A8: find who writes 0x80154670 (MusyX voice pool never sized => audio-disabled artifact; M5 de-stub target).
+H-C2 cnt ok, all u0..u3 nonzero / reach_B1F4 absent -> pool-full bail at B0D8.
+H-C3 reach_B1F4 and B220 fire -> voice started; look downstream (ucode PCM, retail-oracle voice compare).
+H-C4 label_B230 without reach_B1F4 and cnt ok -> first gate (B094, $v0 from prologue) bails; read prologue.
 HYPOTHESIS-ID: g2-voice-never-requested

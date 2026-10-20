@@ -64,6 +64,7 @@ State as of s5635 (all static claims single-source unless noted):
   `sayWhoaHim_v0x1FC` (funcs_48.c:4395, a voice-line script entry). Bool 7 is a
   dialogue flag, so the fail arm links to the voice/dialogue path — which is
   exactly what G2 reports as missing (no dialogue). Single-source static.
+- **s5642:** s5641_spath soaks show tickSpeechSubsystem -> enqueueSpeechClip -> allocAndConfigureNewVoice all run (30/30 in one run); alloc has early-outs (B094/B0A8/B0D8, `a0 < *0x80154670`). `[aloc]` instrument built, soaks s5642_aloc_{a,b} queued.
 - **s5641 voice funnel (2 soaks, single-source):** `playObjectiveVoiceLine2` IS entered and each call reaches `playSpeechClip` through every early-out gate; playSpeechClip is a 16-entry ring enqueue that drains (g72 16->13->16). "Script never requests voice" is refuted. Gap is now the consumer `tickSpeechSubsystem` (0x80067300) -> enqueueSpeechClip -> allocAndConfigureNewVoice; `[spath]` instrument built, soaks s5641_spath_{a,b} queued (NEXT.md).
 - Parked side branches: hudbit4 chain (s5617-s5623, setHudEnableBit4/8 only
   via lvN_checkComplexObjectives + script stubs; `ra` always 0); mission-win
