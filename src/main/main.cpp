@@ -2089,10 +2089,23 @@ extern "C" void rs64_s4578_start(uint8_t* rdram) {
     std::thread(s4578_poll, rdram).detach();
 }
 
+// s5653: voice-read source range (set by rsp.cpp on speech-hit audio tasks); census tracks host writers into it.
+extern "C" {
+volatile uint32_t rs64_vsrc_lo = 0, rs64_vsrc_hi = 0;
+uint32_t rs64_vsrc_nw = 0, rs64_vsrc_lastphys = 0, rs64_vsrc_lastlen = 0; char rs64_vsrc_lastapi[24] = {0};
+}
 extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
                                             uint32_t phys,
                                             uint32_t len,
                                             const char* api) {
+    if (rs64_vsrc_hi && len) {
+        const uint32_t s_ = phys & 0x007FFFFFu;
+        if (s_ < rs64_vsrc_hi && s_ + len > rs64_vsrc_lo) {
+            rs64_vsrc_nw++; rs64_vsrc_lastphys = s_; rs64_vsrc_lastlen = len;
+            std::snprintf(rs64_vsrc_lastapi, sizeof rs64_vsrc_lastapi, "%s", api ? api : "?");
+            if (rs64_vsrc_nw <= 30) std::fprintf(stderr, "[vsrc-hostwrite] #%u api=%s phys=%06X len=%X range=%06X-%06X\n", rs64_vsrc_nw, api ? api : "?", s_, len, rs64_vsrc_lo, rs64_vsrc_hi);
+        }
+    }
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_M5_HOST_WRITE");

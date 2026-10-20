@@ -242,3 +242,4 @@ s5637 voice-line soaks a/b: playObjectiveVoiceLine1 (39 static callers) and sayW
 - **s5648:** [vcmd] (rsp.cpp, scans ucode DMA-read ring vs slot-0x80153420 pointer targets) REFUTES D2: mixer reads the +0x198 voice buffer (2561 overlapping reads / 12000 tasks; control passed). Single run; loss is after the read (decode/mix/gain/AI). A first attempt using task->data_ptr as a cmd list was invalid (data_size=1).
 - s5652: vdump fold — hit-task voice-buffer reads are ~all 0x8000/0x7FF8 rail words (190/200 records): garbage source (H-G1), not speech; writer of that RDRAM range unnamed — next: log source addr + find writer.
 - s5651: hit-loud replicated (s5649_vout_a); ROGUESQ_VDUMP raw dump built, soak s5651_vdump_a queued — next: offline spectrum analysis (NEXT.md).
+- s5653: vsrc instrument built (source d/l + host-writer tracking); soak s5653_vsrc_a queued — fold per NEXT.md.
