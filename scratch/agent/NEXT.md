@@ -1,5 +1,4 @@
-# NEXT (s5679): fold s5678_g1fly_{a,b} (harness fixed: AP_OVERRIDE now precedes COMMON)
-Control first: run.log must contain "[autopilot] armed: N events" and [pad-host] lines (grep -a). If absent, harness still broken - fix before anything else.
-Then compare a (fire+steer) vs b (steer only): [pad-host] a=1 edges, mission-state/objbool counters, fb_brightness (python3 scratch/agent/m6/fb_brightness.py <tag>), crash/stall lines.
-Outcomes: a advances counters vs b -> H-g1, extend steered kill route toward win; identical -> H-g2, state-aware autopilot (RDRAM target positions) or G3; no 'a' edges with armed autopilot -> H-g3 fix key map.
+# NEXT (s5680): state-aware autopilot for G1
+Open-loop steering crashes into terrain (s5679). Build: find ship position/pitch/altitude in RDRAM (use godmode health addr neighbourhood; oracle if needed), log them at 1 Hz in a flown-mission soak with positive control (value must change with stick input), then close the loop in the autopilot (level pitch, fire at targets). Commit tool change.
+Discriminating outcome: pitch/alt field tracks stick -> closed-loop feasible; not found -> try G2 audio noise comparison (title music oracle vs port AI PCM).
 HYPOTHESIS-ID: g1-mission-progression
