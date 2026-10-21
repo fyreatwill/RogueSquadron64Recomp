@@ -165083,3 +165083,18 @@ ORIGIN: n/a (diagnostic only; no mitigation added).
 - Result: the corrected port run reached mission, stayed alive with 0 VI stalls, and produced recw=660, pblk=756, recv=66, objcount=14. Every P sample matched its last-writer table (756/756). P origin words were copied from the shooter substructure; direction words were produced through the spawnProbeDroidGroundImpactEffect path from cross/normalize and perpendicular-jitter intermediates. The bounded source read showed no target-position subtraction in that producer.
 - DISCRIMINATION: selects H8a (orientation/animation-derived direction) over H8b (upstream target-minus-origin vector) and H8c (stale stack data). This is one runtime evidence line; retail mission equivalence remains open. ORIGIN: n/a (diagnostic only; no mitigation added).
 - Next: offline-read generatePerpEmitDirectionWithJitter and its caller to identify the exact orientation/animation field and check whether a target enters upstream.
+## Session 5800 (2026-10-21) — offline trace: projectile direction has an upstream position-difference input
+
+Read the required current-truth, next-work, and soak-tail artifacts. The
+planned bounded static audit inspected `generatePerpEmitDirectionWithJitter`
+at 0x800F2DC8 and its `spawnProbeDroidGroundImpactEffect` caller at
+0x800CA3A4/0x800CA4B4. The caller gets a position from
+`lookupHmtTextureByName`, subtracts the droid position, forms three cross
+products, normalizes them, and passes the resulting axes to the jitter helper.
+The helper then applies quaternion rotations and random jitter. This selects
+H8b (an upstream target-like vector enters the direction path) over H8a
+(orientation-only) and H8c (stale stack data). It does not yet establish what
+the lookup result semantically represents, so no runtime build or soak was
+run. The result is single-source static evidence; the next unit will inspect
+the lookup definition and its return consumers. The clean queued soak rows
+added no new crash or stall datum.
