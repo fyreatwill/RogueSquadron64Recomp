@@ -37630,6 +37630,14 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5780 sp175 store x{_n5780}")
 
+    if p.name == "funcs_43.c" and "PATCH: s5781 terrain sample" not in text:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+        import apply_s5781_terrain_sample as _a5781
+        text, _n5781 = _a5781.apply(text)
+        if _n5781:
+            changed = True
+            report.append(f"{p.name}: s5781 terrain sample x{_n5781}")
+
     if p.name == "funcs_43.c" and "PATCH: s5776 orient geom" not in text:
         sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
         import apply_s5776_orient_geom as _a5776

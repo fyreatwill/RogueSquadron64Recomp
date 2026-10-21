@@ -1,17 +1,10 @@
-# NEXT: terrain height at the player's death xz vs the rising player y
+# NEXT: what does record byte3 mean, and is the spawn ys legitimate?
 
-s5781: byte0=1 = sampleTerrainAtNpcPosition (0x80068D5C, a2=0x80138058) nonzero; the player's
-last 0.7 s before every death is an identical rise y -2.88 -> -0.32 at +3.6/s (x~45.5, z~32.5).
+s5782: sampler ret=1 iff scaled player y (ys) > cell record b3; player flies ys -130..-80 over b3 -126..-82 cells; deaths follow sustained ret=1 bands. Instrument: tools/apply_s5781_terrain_sample.py ([terr] lines, ROGUESQ_LOG_MTM=1).
 
-Work unit: (1) static first: disassemble 0x80068D5C (ROM 0xA5D30 + off) and name what it
-compares the position y against (height field / plane / triangle list). (2) One build+run on
-scratch/agent/s5777_althold.sh (GODV=0) logging, every 250 ms from respawn to death, player
-x,y,z + the terrain sample's height/return for that xz (hook the jal at 0x800FF3A8 in
-funcs_43.c via a tools/apply_s5781_*.py fixup, hooked like apply_s5780).
-
-- H-spawn-below-surface: height at xz > y for the whole life (player starts under ground and is lifted); death when sample first returns nonzero.
-- H-surface-is-y0: height ~0 constant, death exactly when y crosses ~0 (a scripted rise through the plane is a game rule; check against retail oracle spawn y).
-- H-height-wrong: height value wild/stale vs neighbouring cells (port bug in the sampler's data).
-
-Control: [sp175]/[bit8call] lines still print; first sample return must flip 0->nonzero at death.
+Work unit: (1) static: read sampler branches from 0x800692D8 onward (funcs_16.c:~4300+) to see which later tests turn a b3<ys hit into ret=1 vs 0 and whether record bytes 4+ matter. (2) One run of s5777_althold.sh with the [terr] cap raised to 2000 and the player's y at the FIRST sample after each respawn logged; compare with the s5738 snapshots' spawn y and with other missions' spawn ys (Mos Eisley hangar spawn).
+- H-spawn-below: spawn ys is lower than retail's (port places player at wrong y / wrong grid origin 0x80136DF0 area) -> compare grid origin fields vs the level file.
+- H-grid-origin-wrong: records are fine but oy/ox/oz (struct +0x18/+0x20/+0x2C) loaded wrong, so cells map to the wrong b3.
+- H-b3-ceiling-by-design: the region is a legit ceiling and the player is meant to be pushed back (ret=1 -> deflect), and our deflect fails.
+Control: ret flips 0->1 in-run (already seen).
 HYPOTHESIS-ID: g1-record-byte0
