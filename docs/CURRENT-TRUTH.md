@@ -374,3 +374,4 @@ Objective-count writer log built (tools/apply_s5787_objcount_log.py, in fixup); 
 
 - s5790: [objwr] entry logs for the 4 candidate counter-2 writers built (tools/apply_s5790_inline_writer_log.py); s5790_wr_fire/nofire queued; fold results next (NEXT.md).
 - s5790 RESULT (fire arm, single-run): counter 2 is incremented by datItemSetObjectiveBooleanCount calls with a2=2,a0=a1=0 (each rise preceded by one); updateNpcEffectIntensity/applyDatObjectiveTriggerEffect refuted. Next: caller + body of that path.
+- s5791 RESULT (single run, fire arm; nofire arm of s5790 matches): counter-2 writer's caller is `updateDestructionDebrisNpc` (funcs_16.c:20649) - NPC-destruction cleanup feeding datItemSetObjectiveBooleanCount from the NPC's DAT descriptor (+0x70..+0x84). Counters are data-driven destroyed-NPC tallies; 3 events -> lv0 fail. Supersedes the s5790 'null-arg fall-through' guess. Next: identify the destroyed NPC type + destroyer.

@@ -37686,6 +37686,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5790 inline writer log x{_n5790}")
 
+    if p.name == "funcs_15.c":
+        import apply_s5791_objwr_bt as _a5791
+        text, _n5791 = _a5791.apply(text)
+        if _n5791:
+            changed = True
+            report.append(f"{p.name}: s5791 objwr bt x{_n5791}")
+
     if p.name == "funcs_27.c" and "PATCH: s5523 cineBody entry log" not in text:
         _a = '    // 0x800A5D80: addiu       $sp, $sp, -0xD8\n'
         if text.count(_a) == 1:
@@ -41313,6 +41320,7 @@ RS64_REPLAY = [
     "apply_s5786_hudbit4_dump.py",
     "apply_s5787_objcount_log.py",
     "apply_s5790_inline_writer_log.py",
+    "apply_s5791_objwr_bt.py",
     "apply_s5757_bit1_ctx.py",
     "apply_s5771_guest_pc_census.py",
     "apply_s5773_bit1_lives.py",
