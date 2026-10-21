@@ -164453,3 +164453,9 @@ No game run this session. Derived six recipes scratch/agent/soak_queue/s5715_lvl
 ## Session 5716 (2026-10-20) — folded lvl2 forced-save soaks (clean x2); queued lvl8/lvl9
 
 No new build. s5715_lvl2a/b (forced save mission 2, 300 s hold each): alive_at_end=1, vi_stalls30s=0, crashlines=0, 0 SIGSEGV/CRASH/fatal in scratch/agent/m6/s5715_lvl2{a,b}/run.log. Positive control present in both: `[lvsel] init a1(cursorMask)=0x4 a2(unlockMask)=0x8 a3=2` (a1==1<<2). Both runs sit on VI origins 0x790400 / 0x62BD00 (~54k / ~14k rows), not the 0x690400 lvl1 origin. Result: H2 (clean) holds for lvl2; no new crash family. lvl3/lvl5 recipes are still queued (a loop-held s5688_bool7_a was in running/). Queued s5716_lvl{8,9}{a,b}.sh (clones of the lvl3 recipe with N swapped) so the loop drains lvl3/5/8/9 without another session. Not yet covered: real-input (non-forced) level select.
+
+## Session 5717 (2026-10-20) — folded lvl3 forced-save soaks (clean x2); lvl5/8/9 still queued
+
+No new build, no new game run by this session. Read scratch/agent/m6/s5715_lvl3{a,b}/{run.log,summary}. Positive control present in both: `[lvsel] init a1(cursorMask)=0x00000008` (==1<<3), B2F=3 forced=3, tick#1 cursor=3. Results: alive_at_end=1, hold=301s, vi_stalls30s=0, crashlines=0, 0 SIGSEGV/CRASH/fatal/abort in run.log (a: godrefills=17, mission_cycles=1; b: godrefills=20, mission_cycles=0). Last VI origin in lvl3a = 0x656400 (phase 9, width 512).
+Rules out (single-run each, n=2): a lvl3 crash/stall family within 300 s of forced mission 3. Does not show: that lvl3 is completable from real input (forced-save is a memory poke). lvl1-4,6,7 now all clean after the s5712 copyToRAM fix; lvl5/8/9 pending in soak_queue (s5715_lvl5{a,b}, s5716_lvl{8,9}{a,b}).
+Next: fold lvl5/8/9 rows; if clean, design the real-input level-select route.
