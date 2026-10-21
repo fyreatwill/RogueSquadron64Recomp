@@ -164636,3 +164636,6 @@ ORIGIN: diagnostic only, no mitigation.
 - Every logged call had a0=1, gate=0, b7=b64=b65=b6D=0. NO a0=2 call occurred, so the fail arm was not reproduced on this route; neither the bool-0x6D nor bool-7 hypothesis is tested (neither confirmed nor refuted).
 - ra=0x0 on every line: recompiled code does not maintain ctx->r31 for natively-called functions, so caller identification by `ra` (the s5748 design) cannot work. Design flaw in the instrument, not a result about the game.
 - Next: add host `backtrace_symbols_fd` (RECOMP_FUNC names are real C symbols) to the [mtm] hook when a0==2, and arm it in a soak that actually reaches a0=2. No code changed this session (docs/fold only).
+
+## Session 5750 (2026-10-21) — mtm a0==2 backtrace patch landed, soaks queued
+Added tools/apply_s5750_mtm_bt.py (hooked in fixup_game_funcs_vendored.py): with ROGUESQ_LOG_MTM=1, first 3 requestMissionTransitionMode entries with a0==2 dump a host backtrace. Built OK. Queued s5750_mtma/b (s5748 recipe). Result pending; no run this session. Rules out nothing yet.
