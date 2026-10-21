@@ -892,3 +892,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261021-043348 | s5755_mtmb | rc=0 | 446s | scratch/agent/soak_results/s5755_mtmb_20261021-043348.log
 20261021-044307 | s5756_nogoda | rc=0 | 446s | scratch/agent/soak_results/s5756_nogoda_20261021-044307.log
 20261021-045033 | s5756_nogodb | rc=0 | 446s | scratch/agent/soak_results/s5756_nogodb_20261021-045033.log
+20261021-050021 | s5757_bit1ctx | rc=0 | 447s | scratch/agent/soak_results/s5757_bit1ctx_20261021-050021.log
