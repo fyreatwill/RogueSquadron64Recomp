@@ -164508,3 +164508,10 @@ Folded s5722_cleanhg{a,b} (both allattempts-failed, 5x nomission each). The gate
 - Result: H1 confirmed (flight sustained all hold with z/a/z/b keys). Single run, frames only; no goal progress observed (ship was never steered). w640 garbage band: fb_0010500_w640 exists once; not examined (G3, deferred).
 - Queued s5727_flysteer (a/sl/a/su/a/sr/a/sd cycle) to see whether real steer+fire yields kills/goal progress/win (G1).
 - ORIGIN: n/a (no mitigation code added).
+
+## Session 5728 (2026-10-20) — folded s5727_flysteer; landed ROGUESQ_SUPPRESS_BOOL (pivot change), queued A/B
+
+- **Fold s5727_flysteer (single run):** alive 541 s, vi_stalls30s=0, crashlines=0, godrefills=20, mission_cycles=3, fbhash 11261 distinct / 13622. Frames: fb_8000 is the SELECT GAME screen (mission failed -> menu), fb_12000 is live banked X-wing flight with HUD radar => steering from real input works and the mission cycles fail->menu->flight ~3x in 541 s. No win. H1 (win) not seen; H2 (flight, no progress) matches; H3 (crash) refuted.
+- **Change (build artifact):** tools/apply_s5728_boolsuppress.py, mirrored into fixup_game_funcs_vendored.py: env `ROGUESQ_SUPPRESS_BOOL=<id>[,<id>]` makes setObjectiveBoolean (funcs_35.c) ignore non-zero sets of those ids, logging `[objbool-sup]`. Built OK (cmake). Purpose: test whether dialogue flag bool 7 (sayWhoaHim_v0x1FC) is causal for the 0x64 fail arm (needs bool1==1 && bool7==1).
+- **Queued:** s5728_sup{a (no suppression, baseline), b,c (SUPPRESS_BOOL=7)}. Fold mission_cycles per arm; control = `[objbool-sup]` lines present in b/c, absent in a.
+- ORIGIN: not a mitigation of a corruption; an env-gated experimental knob, default off.

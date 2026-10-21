@@ -37550,6 +37550,14 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5688 objbools log x{_n5688}")
 
+    if p.name == "funcs_35.c" and "PATCH: s5728 bool suppress" not in text:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+        import apply_s5728_boolsuppress as _a5728
+        text, _n5728 = _a5728.apply(text)
+        if _n5728:
+            changed = True
+            report.append(f"{p.name}: s5728 bool suppress x{_n5728}")
+
     if p.name == "funcs_27.c" and "PATCH: s5523 cineBody entry log" not in text:
         _a = '    // 0x800A5D80: addiu       $sp, $sp, -0xD8\n'
         if text.count(_a) == 1:
@@ -41169,6 +41177,7 @@ RS64_REPLAY = [
     "apply_s5665_decodegate_log.py",
     "apply_s5667_lattice_log.py",
     "apply_s5633_objdraw_force.py",
+    "apply_s5728_boolsuppress.py",
     "apply_s5619_cco_log.py",
     "apply_s4690_external_entry_probe.py",
     "apply_s4694_a14_boundary.py",
