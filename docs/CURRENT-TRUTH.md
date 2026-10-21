@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5771 (2026-10-21).
+Compact operational handoff, maintained as of Session 5773 (2026-10-21).
 `PORTING-STATE.md` is the chronological ledger. Durable background, closed
 audit detail, and the per-thread histories moved out of this file are in
 `docs/PROJECT-OVERVIEW.md` (latest: "Migrated from CURRENT-TRUTH (s5636)");
@@ -20,9 +20,13 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   endurance, not proof every mission subsystem is correct. Keyed holds end in a
   legitimate MISSION FAILED screen (idle autopilot loses; loss counter
   0x80138064) and fall back to title — not a hang.
-- **M6 active thread: why the mission fails (objective booleans).** See the
-  next section. Mission 2 needs a mission-1 win, which the autopilot cannot
-  produce (s5596 named blocker).
+- **M6 active thread: why the unpiloted mission loses a life.** On the
+  level-select route with godmode off, all 5 life losses are the game's death
+  chain: `spawnSceneDebrisAndEffectCluster` stores 0x0190 (kill bit 0x10) on
+  the player slot, then bit1 at 0x800B1140, then `requestMissionTransitionMode(1)`
+  decrements lives at 0x80130B10 (s5773, guest order + host byte watch). Next
+  is who calls that debris function. The objective-boolean / a0=2 notes below
+  are the godmode route, which does not lose a life.
 - **M5 audio de-stubbing: CLOSED** for the qualified route (non-silent PCM,
   task/SP contract, keyed mission and long-hold rows; `docs/M5-AUDIO-PLAN.md`).
   **Audio FIDELITY is OPEN** (rung G2, `tools/agent/ITERATION.md` 3c): owner
@@ -136,6 +140,7 @@ State as of s5635 (all static claims single-source unless noted):
   mission/content selection by origin alone (s5508).
 
 ## Superseded conclusions worth retaining
+- **s5771 "both kill-setter guest PCs stay zero":** believable because mission origin, `[mtm]`, and `[phase]` fired and both counters were zero. That route was godmode and never decremented lives (hp stayed 150, one a0=2). On the death route both setters run, and 0x800B0348 precedes every bit1 (s5773).
 - **s5761 "slotwatch_god null/zero hits" (wp_hits=8):** believable because the summary printed a nonzero hit count and the run stayed alive; actually list-echo lines, and the death route was never reached (no lives-watch fire). Void, not a result.
 - **s5760 "state word = 0x137F3C" (and its soak null):** 0x137F3C is craft+0x180 (rewritten 207x/run with constant 0x10000 by computeCraftSelectTurnFromInput); the slot-table address was mis-derived by 0x18, and the recipe lacked the death env so no deaths occurred. Believable because the static a1 base was read from the wrong lui/addiu pair. Correct: 0x137F24 (s5761).
 - (s5728) "Suppressing bool 7 will show whether it drives the fail arm" — believable because bool 7 was the leading hypothesis; superseded s5729: in the s5728 window bool 7 is never set, so the experiment tested nothing (control failed).
@@ -201,6 +206,8 @@ Each: the wrong claim, why it was believable, what replaced it.
 - **s5675 G1 soaks (no keys sent):** `s5675_g1fly_{a,b}` looked like two 'nohangar x4' flown-mission failures, i.e. a flaky hangar route. Actually `m6_god_common.sh` re-sets ROGUESQ_AUTOPILOT from its own `$AP` after XENV, and STOP=0 emptied `$AP`, so no keys were ever injected. Fixed in s5676 via `AP_OVERRIDE`. Believable because the hangar route is known flaky (~3/5) and 8/8 failures read as more of the same. The s5676 fix was itself ordered wrong (s5677 also keyless) - fixed s5678; lesson: the control is the "[autopilot] armed" log line, not keys.log `mission t=`.
 
 ## Next steps (single monotonic backlog)
+
+_s5773 (top):_ unpiloted level-select fail is the three-death chain, 5/5 (guest `[bit1]`/`[lives]` plus host `[livesbyte]`). Immediate flag writer is `spawnSceneDebrisAndEffectCluster` at 0x800B0348 (player slot 0x80137DBC, halfword -> 0x0190, includes bit 0x10). `spawnNpcDestructionDebris` (bit 0x8) is not the predecessor. Next = name the caller of spawnSceneDebrisAndEffectCluster. Slug g1-debris-caller. Do not rerun the bit1/lives soak.
 
 _s5755:_ [mtmst] fold (single run): bit1 of mask 0x8010C9E0 has ONE writer, pc 0x800B1140 (funcs_30), once per mission start; no store ever sets an end/fail bit in godmode 420 s. Next = find callers/guards of requestMissionTransitionMode (0x800FB2B0). Single-source (mtmb dir missing). (s5756: godmode suppresses the fail arms, so the godmode mtm runs cannot see the end path; non-god mtm soaks s5756_nogoda/b queued, GODV=0.)
 _s5757:_ non-god mtm soaks folded: [hudbit] never fires while [objbool] does (control live) => setHudEnableBit4 is not the unpiloted end path; mtm(a0=1) is the event-table path, identical to godmode. Bit1 writer (funcs_30 0x800B1140) now logs [bit1ctx]; soak s5757_bit1ctx queued.

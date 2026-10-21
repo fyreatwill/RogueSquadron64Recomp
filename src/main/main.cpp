@@ -9739,6 +9739,16 @@ static void poll_input() {
     }
 }
 
+extern "C" long long rs64_s5773_ms(void) {
+    return (long long)std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+extern "C" unsigned long rs64_s5773_ord(void) {
+    static std::atomic<unsigned long> n{0};
+    return n.fetch_add(1, std::memory_order_relaxed) + 1;
+}
+
 static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float* y) {
     if (controller_num != 0) {
         *buttons = 0; *x = 0.0f; *y = 0.0f;
@@ -10074,6 +10084,51 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 if (++s_god_n <= 20 || (s_god_n % 200) == 0)
                     fprintf(stderr, "[godmode] refill #%u cur=%.2f max=%.2f\n", s_god_n, cur, mx);
             }
+        }
+    }
+
+    // s5773: lives-byte watch outside the godmode block. The death route runs with
+    // GODMODE off, so the GODMODE3 [phase] poll never starts. Change lines begin
+    // only after a mission origin so boot traffic cannot eat the cap.
+    {
+        static int s_on = -1;
+        if (s_on < 0) {
+            const char* e = std::getenv("ROGUESQ_LOG_MTM");
+            s_on = (e && e[0] && e[0] != '0') ? 1 : 0;
+        }
+        volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+        if (s_on && rd) {
+            static uint8_t prev[4];
+            static int inited = 0, armed = 0, mission = 0;
+            static unsigned nch = 0;
+            uint8_t b[4];
+            for (int i = 0; i < 4; i++) b[i] = (uint8_t)rs64_rdram_u8(rd, 0x130B10u + (uint32_t)i);
+            const unsigned origin = (unsigned)rs64_vi_committed_origin() & 0xFFFFFFu;
+            if (!armed) {
+                armed = 1;
+                std::fprintf(stderr, "[livesctl] armed ord=%lu t=%lld origin=0x%06X b=%u,%u,%u,%u\n",
+                    rs64_s5773_ord(), rs64_s5773_ms(), origin, b[0], b[1], b[2], b[3]);
+                std::fflush(stderr);
+            }
+            const int mis = (origin == 0x62BD00u || origin == 0x690400u || origin == 0x620400u);
+            if (mis && !mission) {
+                mission = 1;
+                std::fprintf(stderr, "[livesctl] mission ord=%lu t=%lld origin=0x%06X b=%u,%u,%u,%u\n",
+                    rs64_s5773_ord(), rs64_s5773_ms(), origin, b[0], b[1], b[2], b[3]);
+                std::fflush(stderr);
+            }
+            if (inited && mission) {
+                for (int i = 0; i < 4; i++) {
+                    if (b[i] != prev[i] && nch < 80) {
+                        nch++;
+                        std::fprintf(stderr, "[livesbyte] ord=%lu t=%lld i=%d %u->%u origin=0x%06X b=%u,%u,%u,%u\n",
+                            rs64_s5773_ord(), rs64_s5773_ms(), i, prev[i], b[i], origin, b[0], b[1], b[2], b[3]);
+                        std::fflush(stderr);
+                    }
+                }
+            }
+            for (int i = 0; i < 4; i++) prev[i] = b[i];
+            inited = 1;
         }
     }
 

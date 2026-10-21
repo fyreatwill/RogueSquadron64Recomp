@@ -164766,3 +164766,17 @@ The prior iteration stopped after Session 5771's guest-PC census and before the 
 
 ORIGIN: checkpoint retry; no new mitigation or runtime change.
 DISCRIMINATION: resume by instrumenting guest PC 0x800B1140 and the explicit lives byte 0x80130B10 in one build/run. Only a bit1 hit immediately preceding a lives decrement selects H1; bit1 without decrement selects H2; a lives decrement with zero bit1 entries selects H3.
+
+## Session 5773 (2026-10-21) — bit1 post precedes every lives decrement
+Level-select death route, godmode off (`GODV=0`, `MISSION_RE=62BD00`, `HOLD=420`, `ROGUESQ_LOG_MTM=1`, `ROGUESQ_AUTOPILOT_HOLD_MS=1800`, `ROGUESQ_NO_SAVE_WRITE=1`). One run: mission at 20 s, hold 422 s, alive, 0 stalls, 0 crashes, godrefills=0, mission_cycles=2. Positive controls fired in that run: `[livesctl] armed` and `[livesctl] mission` (origin 0x62BD00, then flight origins 0x690400/0x620400) and five `[mtm]` entries, all a0=1.
+
+H1 selected on all 5 life losses, two witnesses sharing `rs64_s5773_ord` / `rs64_s5773_ms`:
+- Guest: `[bit1]` at the executed 0x800B1140 store (player slot s1=0x80137DBC, phase=0, mask=0x2, lives still N) then `[livesatmtm] a0=1` then `[lives]` at 0x800FB28C address 0x80130B10, N->N-1. Deltas 25, 115, 36, 27, 25 ms. Sequence 3->2, 2->1, 1->0, reload 0->3, 3->2, 2->1.
+- Host any-writer poll `[livesbyte]` shows those same byte0 transitions at the same millisecond and no extra decrement.
+
+H2 refuted (every bit1 was followed by a decrement). H3 refuted (every decrement had a preceding bit1). The third loss also posted `[mtmst] 0x800FB2B0 val=3` (lives hit 0).
+
+Same run, the s5771 `[killset]` logs were not zero. Every bit1 is immediately preceded in stderr order by `spawnSceneDebrisAndEffectCluster`'s 0x800B0348 halfword RMW on that player slot (before 0x0001 or 0x0008, after 0x0190: clear bits 0x9, set 0x190, which includes kill bit 0x10). `spawnNpcDestructionDebris` (0x800B08DC, sets bit 0x8) ran twice and was overwritten by the 0x190 store before bit1. The logged r4=0x38 at 0x800B0348 is the halfword at slot+0xB6, not an object pointer. File order is trustworthy here: each killset line sits ~200 lines before its bit1, with tens of thousands of lines between deaths, so this is not a late stdio flush. The s5771 all-zero census was the godmode route, which never decremented lives.
+
+ORIGIN: no mitigation. Diagnostic only (`tools/apply_s5773_bit1_lives.py` plus the host poll in `get_n64_input`).
+DISCRIMINATION: the unpiloted level-select fail is the game's own three-death chain, and the flag store immediately before each life lost is spawnSceneDebrisAndEffectCluster. Next: name who calls that function on the player slot.

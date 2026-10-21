@@ -37590,6 +37590,14 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5771 guest-pc census x{_n5771}")
 
+    if p.name in ("funcs_30.c", "funcs_42.c") and "PATCH: s5773 bit1 lives" not in text:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+        import apply_s5773_bit1_lives as _a5773
+        text, _n5773 = _a5773.apply(text, p.name)
+        if _n5773:
+            changed = True
+            report.append(f"{p.name}: s5773 bit1 lives x{_n5773}")
+
     if p.name.startswith("funcs_") and "PATCH: s5754 mask store log" not in text:
         sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
         import apply_s5754_mask_stores as _a5754
@@ -41231,6 +41239,8 @@ RS64_REPLAY = [
     "apply_s5753_mtm_mask.py",
     "apply_s5754_mask_stores.py",
     "apply_s5757_bit1_ctx.py",
+    "apply_s5771_guest_pc_census.py",
+    "apply_s5773_bit1_lives.py",
     "apply_s5619_cco_log.py",
     "apply_s4690_external_entry_probe.py",
     "apply_s4694_a14_boundary.py",
