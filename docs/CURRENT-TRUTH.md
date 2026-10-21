@@ -366,3 +366,7 @@ s5691: static census of all 179 setObjectiveBoolean sites: only sayWhoaHim_v0x1F
 
 - s5753: [mtm] table-dump + mask-change logger built (ROGUESQ_LOG_MTM); soaks s5753_mtma/b queued; verdict pending (see NEXT.md).
 - s5753 folded (s5754): MASK sampler was post-dispatch => blind; per-store [mtmst] logger landed, soaks s5754_mtma/b queued. mtm table: ids 1-3 -> 0x800FB190; only a0=1 seen in godmode.
+
+
+## s5787 note
+Objective-count writer log built (tools/apply_s5787_objcount_log.py, in fixup); soaks s5787_cnt_fire/nofire queued; NEXT.md reads them. No result yet.

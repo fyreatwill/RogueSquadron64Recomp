@@ -37670,6 +37670,14 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5786 hudbit4 dump x{_n5786}")
 
+    if p.name == "funcs_35.c":
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+        import apply_s5787_objcount_log as _a5787
+        text, _n5787 = _a5787.apply(text)
+        if _n5787:
+            changed = True
+            report.append(f"{p.name}: s5787 objcount log x{_n5787}")
+
     if p.name == "funcs_27.c" and "PATCH: s5523 cineBody entry log" not in text:
         _a = '    // 0x800A5D80: addiu       $sp, $sp, -0xD8\n'
         if text.count(_a) == 1:
@@ -41295,6 +41303,7 @@ RS64_REPLAY = [
     "apply_s5753_mtm_mask.py",
     "apply_s5754_mask_stores.py",
     "apply_s5786_hudbit4_dump.py",
+    "apply_s5787_objcount_log.py",
     "apply_s5757_bit1_ctx.py",
     "apply_s5771_guest_pc_census.py",
     "apply_s5773_bit1_lives.py",

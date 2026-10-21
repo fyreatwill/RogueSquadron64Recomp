@@ -164969,3 +164969,9 @@ Discriminating conclusion, stated explicitly: this session's dump instrument (no
 Next discriminator (in NEXT.md): log each setObjectiveCount/addObjectiveCount(id 2) increment with value + host backtrace, both arms, positive control = counter 2 increments at least once before the fail.
 ORIGIN: no mitigation landed.
 Gate note: the dump selects H-script-fail and refutes H-timer; the next discriminator is the objective-counter-2 increment log (both arms).
+
+## Session 5787 (2026-10-21) — objective-count writer log built (setObjectiveCount/increaseObjectiveCount), fire/nofire arms queued
+
+What ran: tools/apply_s5787_objcount_log.py inserts, under ROGUESQ_LOG_HUDBIT=1, a `[objcount]` line (function, ordinal, id, arg, old value at 0x80138060+4*(id-1), $ra) on every call (budget 200/function) and a host backtrace for the first 6 calls on id 2, into funcs_35.c; mirrored into fixup_game_funcs_vendored.py (so it survives regen). Build verified: binary contains both format strings. Queued rule-13 arms: s5787_cnt_fire (a/sl/sr) and s5787_cnt_nofire (sl/sr only, no fire key), both GODV=0 on the s5786 level-select route.
+Hypotheses: H-friendly-loss (counter 2 = game-side friendly/target loss), H-ours (follows our fire input), H-port-bug (wrong damage/collision path). Splitting outcome: id=2 increments in nofire too -> not our fire; ra/backtrace names the guest caller either way. Control: any `[objcount]` line (all ids) must appear in both arms.
+Rules out: nothing yet (no run). No result claimed.
