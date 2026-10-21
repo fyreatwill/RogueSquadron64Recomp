@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5770 (2026-10-21).
+Compact operational handoff, maintained as of Session 5771 (2026-10-21).
 `PORTING-STATE.md` is the chronological ledger. Durable background, closed
 audit detail, and the per-thread histories moved out of this file are in
 `docs/PROJECT-OVERVIEW.md` (latest: "Migrated from CURRENT-TRUTH (s5636)");
@@ -208,6 +208,7 @@ _s5758:_ s5757_bit1ctx folded: bit1 writer 0x800B1140 runs 6x/447 s with s1=0x80
 _s5759:_ CORRECTS s5758: bit1 (writer 0x800B1140) is the death-settle completion in a per-craft timer tick (0x800B1024), not a spawn; bit1->mtm(1)=lives--; `[mtmst] 0x800FB2B0 val=3` = lives 0 game over; 3 bit1/cycle in s5757 log. See docs/M6-S5759-DEATH-CHAIN.md. Next = find the writer of slot state bits 0x8/0x10 (kill source) via lldb write-watch on the AP/god route (NEXT.md).
 _s5769 (top):_ s5768 summary zeros were FALSE (BPHIT printf broke on a newline; lldb log shows setter-1 x6, mtm x6 alternating, NPC setter x0). Fixed + requeued as s5769_setterbp; read BPHIT a0 values next.
 _s5770 (top):_ the fixed launcher installed LLDB breakpoints before initial continue and completed a 421 s mission hold with runtime controls live (`[mtm]` 11, `[phase]` present), but none of the three symbolic breakpoints stopped (`stop reason = breakpoint` 0; `bp_scene=0`, `bp_npc=0`, `bp_mtm=0`). The earlier s5768 “breakpoints fired” claim was only a single-source LLDB stop-log interpretation and is now void: the runtime `requestMissionTransitionMode` log does not prove the host symbol breakpoint is on the executed dispatch. Next = use generated-code/guest-PC instrumentation at the two setter PCs plus the mtm guest PC, with the same mission/lives controls; do not infer H3 from absent symbolic stops.
+_s5771 (top):_ regeneration-persistent guest-PC census added at 0x800B0348 (`funcs_29.c`, `$s2`) and 0x800B08DC (`funcs_29.c`, `$s0`), then built and run on the 0x00690400 mission route for 421 s. Positive controls passed: mission onset at 60 s, `[mtm]` emitted 11 lines, and `[phase]` was live. Both `[killset]` counters were zero; no lives-decrement line was independently captured, so this is a single-source setter-null, not a complete H3 selection. Next = instrument the known 0x800B1140 bit-1 writer together with an explicit lives-byte decrement control; only a bit1 hit immediately preceding a lives decrement can close the chain.
 
 _s5768:_ Queued soak_queue/s5768_setterbp.sh (lldb breakpoints on both kill-bit setters + requestMissionTransitionMode control; BPHIT lines in run.log). Fold bp_scene/bp_npc/bp_mtm from the summary; a0==0x80137DBC = player. Slug g1-nonhealth-fail.
 _s5767 (top):_ OVERTURNS s5766 'turn float': 0x137F3C = obj0+0x180 IS the slot-state flag halfword (reader funcs_30 0x800B1E7C; writers are halfword bit-RMW, incl. 0x800AE800 `&0xFFFD`). Kill-bit setters are only 0x800B0348 (sets 0x10, spawnSceneDebrisAndEffectCluster) and 0x800B08DC (sets 0x8, spawnNpcDestructionDebris). Earlier watches ran on level-select where the region is select data; gate on mission origin. Slug g1-nonhealth-fail.

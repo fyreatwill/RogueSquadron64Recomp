@@ -37582,6 +37582,14 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5753 mtm mask x{_n5753}")
 
+    if p.name == "funcs_29.c" and "PATCH: s5771 guest-pc census" not in text:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+        import apply_s5771_guest_pc_census as _a5771
+        text, _n5771 = _a5771.apply(text)
+        if _n5771:
+            changed = True
+            report.append(f"{p.name}: s5771 guest-pc census x{_n5771}")
+
     if p.name.startswith("funcs_") and "PATCH: s5754 mask store log" not in text:
         sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
         import apply_s5754_mask_stores as _a5754

@@ -164752,3 +164752,11 @@ ORIGIN: no mitigation machinery added; instrument-script fix only.
 - Rules out treating the host symbol breakpoints as a valid witness for the executed guest dispatch. The runtime `[mtm]` log is a positive control for the guest path, but it does not validate the symbolic breakpoint mapping.
 - ORIGIN: no mitigation; launcher diagnostic fix only.
 - Next: instrument the generated guest-PC bodies at 0x800B0348, 0x800B08DC, and the actual mtm guest PC through the regeneration/fixup path, with the same lives decrement control and player-object argument capture.
+
+## Session 5771 (2026-10-21) — guest-PC kill-setter census ran with live mission controls
+Added `tools/apply_s5771_guest_pc_census.py` and mirrored it in `tools/fixup_game_funcs_vendored.py`. The generated-code anchors are independently confirmed by the instruction comments and existing writer-parity hooks: 0x800B0348 stores `0x180($s2)` and 0x800B08DC stores `0x180($s0)` in funcs_29.c. The census logs ordinal, guest PC, a0, slot pointer, old flags, and new flags immediately before each store; no game logic is changed. The Debug target built successfully after applying the fixup to the live generated tree.
+
+Ran `s5771_guestpc` on the level-select mission recipe for a 421 s hold. Positive controls passed: mission origin 0x00690400 was reached, `[mtm]` emitted 11 lines, and `[phase]` was active. Both `[killset]` counters were zero; the run stayed alive. Because this launcher did not independently log a lives-byte decrement, the result is a single-source null for the two setter PCs, not a complete H3 selection. It rules out the two guest setters executing during this controlled window, but does not rule out the bit1 settle path without the lives control.
+
+ORIGIN: no mitigation or game-logic change; this is regeneration-persistent diagnostic instrumentation at confirmed guest PCs.
+DISCRIMINATION: symbolic host breakpoints are invalid witnesses here; the generated guest-PC census had live mission/transition controls but zero setter entries. Next instrument 0x800B1140 together with an explicit lives-byte decrement control.
