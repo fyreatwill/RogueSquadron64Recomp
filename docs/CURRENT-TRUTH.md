@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5800 (2026-10-21).
+Compact operational handoff, maintained as of Session 5802 (2026-10-21).
 `PORTING-STATE.md` is the chronological ledger. Durable background, closed
 audit detail, and the per-thread histories moved out of this file are in
 `docs/PROJECT-OVERVIEW.md` (latest: "Migrated from CURRENT-TRUTH (s5636)");
@@ -65,6 +65,16 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   `generatePerpEmitDirectionWithJitter`. This preserves H8b over H8a/H8c but
   is single-source static evidence; target versus attachment semantics remain
   open.
+
+- **s5802 object/mesh path classified.** `getObjectMeshTransformOrLocal` masks
+  the caller object's `+0x130` key, walks the active-NPC slot chain at
+  `0x80130BB0`, and resolves an NPC context. With a non-null context `+0xC`
+  mesh record it copies context `+0x8` and calls `transformMeshPartIntoWorld`,
+  whose matrix/vector fields produce the returned world position. This selects
+  H10b (an active object's mesh attachment/local transform) over H10c (a
+  generic effect asset); target-object versus firing-object semantics remain
+  open because the indirect caller supplying the object was not recovered.
+  Single-source static evidence.
 
 ## Active M6 thread: objective booleans and the 0x64 fail arm
 
@@ -237,7 +247,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
-- **s5801:** corrected the s5800 address attribution. `spawnProbeDroidGroundImpactEffect` at `0x800CA3A4` calls `getObjectMeshTransformOrLocal` (`0x800F2988`), not `lookupHmtTextureByName`. The helper resolves an active NPC/object slot and either copies a mesh transform or calls `transformMeshPartIntoWorld`; the caller subtracts that returned position from the droid position before the cross/normalize direction construction. H8b remains selected, but the input is object/mesh-derived rather than texture-lookup-derived. Next: offline-read the resolved object/mesh path and its callers to distinguish a target object's world position from an attachment/local mesh point.
+- **s5802:** the helper's object key resolves through the active-NPC slot chain; a present mesh record is transformed from its local matrix/vector into world space. H10b is selected over H10c, while H10a remains open pending the indirect caller that supplies the object. Next: recover that caller's object provenance, or use a ground-truth/runtime comparison that distinguishes target selection from firing-object attachment.
 - **s5786:** the s5784 life loss is lv0_checkComplexObjectives's own fail rule: `getObjectiveCount(2) >= 3` -> setHudEnableBit4 + speech 0x229 -> mtm(2) (backtrace + speech id; jal pc inferred; single run). Timer/0x64/0x65 refuted. Next: log every increment of objective counter 2 (caller + value), compare with `s5786_hudb_noalt`; find what counter 2 counts (friendlies lost?) and whether our input causes it. Instrument: `tools/apply_s5786_hudbit4_dump.py`.
 - **s5787/s5788:** s5787 objcount arms logged 0 lines (control failed; game logs are in scratch/agent/m6/<tag>/run.log). s5788 added a `getObjectiveCount` change-log as positive control; arms s5788_get_fire/nofire queued. s5789: get-log control passed; counter 2 rises 0->3 with set/increase never entered (both arms). Inline writers to check: datItemSetObjectiveBooleanCount, applyDatObjectiveTriggerEffect, updateNpcEffectIntensity, executeActorType1Effect (static scan, unconfirmed).
 - **s5785:** the s5784 3->2 life loss follows `[mtm] a0=2` preceded by a `setHudEnableBit4` mask store (pc 0x800C775C val=4) ~190 s into the mission; `[killset]`/`[bit8call]` = 0 (debris refuted; controls: strings compiled, s5778 fired 16). Overlay reload only decrements afterwards. Single-source. Next: identify the script caller of setHudEnableBit4 (host backtrace on pc==0x800C775C, dump objective bools/timer) - see NEXT.md. (s5784: ALT_HOLD validated, 421 s alive.)

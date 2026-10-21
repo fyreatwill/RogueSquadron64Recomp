@@ -165119,3 +165119,23 @@ does not yet split target-object position from firing-object attachment/local
 mesh position. No build or runtime run was needed. Single-source static
 evidence; no crash/stall datum and no mitigation landed. The next unit is the
 bounded object/mesh field audit named in scratch/agent/NEXT.md.
+
+## Session 5802 (2026-10-21) — classified projectile object/mesh transform path
+
+Read the required current-truth, next-work, and soak-tail artifacts. The
+planned bounded static audit inspected `getObjectMeshTransformOrLocal` at
+`0x800F2988`, `findActiveNpcInSlotChain`, `getNpcContextByIndex`, and
+`transformMeshPartIntoWorld`, plus the exact `spawnProbeDroidGroundImpactEffect`
+call at `0x800CA3E4`. The helper masks the caller object's `+0x130` key, walks
+the active-NPC slot chain rooted at `0x80130BB0`, and retrieves an NPC context.
+If context `+0xC` is present, it copies context `+0x8` and transforms that mesh
+part's local matrix/vector fields into world space; otherwise it returns the
+context's base transform. The caller subtracts the droid position from this
+returned position before the cross/normalize direction construction.
+
+This selects H10b (active-object mesh attachment/local transform) over H10c
+(generic effect asset with no active-object identity). It does not yet split
+H10a (selected target position) from H10b because the indirect producer of the
+object passed to the spawn routine was not recovered. No build or runtime run
+was needed; this is single-source static evidence. The queued soak tail added
+no new result relevant to this work unit, and no mitigation was landed.
