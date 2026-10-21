@@ -57,6 +57,16 @@ static void s5798_init(uint8_t* rdram, recomp_context* ctx) {
     uint32_t tb = (uint32_t)MEM_W(0, (gpr)(int32_t)0x80130BB0u), sn = (uint32_t)MEM_W(0, (gpr)(int32_t)(tb + (sid & 0xFFFF) * 8));
     fprintf(stderr, "[recw] t=%%lld sid=%%04x n=%%d rec=%%08x sp=%%08x rec-sp=%%d hook_seq=%%u P=%%08x shooter=%%08x P-shooter=%%d\n", ms, sid, cnt[k], rec,
             (uint32_t)ctx->r29, (int)(rec - (uint32_t)ctx->r29), s5798_seq, P, sn, (int)(P - sn));
+    if (P >= 0x80000000u && P + 0x30u <= 0x80400000u) {
+        for (int q = 0; q < 12; q++) {
+            uint32_t a = P + q * 4, cur = (uint32_t)MEM_W(0, (gpr)(int32_t)a);
+            uint32_t i = (a - 0x%08Xu) >> 2;
+            if (a - 0x%08Xu >= 0x%Xu) continue;
+            fprintf(stderr, "[pblk] t=%%lld sid=%%04x q=%%d addr=%%08x cur=%%08x last_pc=%%08x val=%%08x match=%%d ra=%%08x fn=%%s age=%%u\n", ms, sid, q, a, cur,
+                    s5798_last[i].pc, s5798_last[i].val, s5798_last[i].val == cur, s5798_last[i].ra,
+                    s5798_last[i].fn ? s5798_last[i].fn : "(none)", s5798_seq - s5798_last[i].seq);
+        }
+    }
     for (int q = 0; q < 8; q++) {
         uint32_t a = rec + q * 4;
         if (a - 0x%08Xu >= 0x%Xu) continue;
@@ -76,7 +86,7 @@ static void s5798_init(uint8_t* rdram, recomp_context* ctx) {
             org[0], org[1], org[2], pl[0], pl[1], pl[2], (int)rs64_s5798_pl[3], ms - rs64_s5798_pl_ms, sqrtf(dp[0]*dp[0] + dp[1]*dp[1] + dp[2]*dp[2]),
             s5798_cos(vel, org, pl), s5798_cos(vel, org, V[0]), s5798_cos(vel, org, V[1]), s5798_cos(vel, org, V[2]));
 }
-''' % (SPAN, LO, SPAN, LO, SPAN, LO)
+''' % (SPAN, LO, SPAN, LO, LO, SPAN, LO, SPAN, LO)
 
 ANC13 = "    // 0x8005CB10: sh          $v0, 0xF8($s1)\n"
 INC = '#include "funcs.h"\n'
@@ -90,10 +100,25 @@ ANC43 = "    if (s5781_e && player) { x = s5781_f(pos); y = s5781_f(pos + 4); z 
 ADD43 = ("    if (player) { extern float rs64_s5798_pl[4]; extern long long rs64_s5798_pl_ms; extern long long rs64_s5773_ms(void); "
          "rs64_s5798_pl[0] = s5781_f(pos); rs64_s5798_pl[1] = s5781_f(pos + 4); rs64_s5798_pl[2] = s5781_f(pos + 8); rs64_s5798_pl[3] = 1; "
          "rs64_s5798_pl_ms = rs64_s5773_ms(); } /* PATCH: s5798 player cache */\n")
+PBLK = """    if (P >= 0x80000000u && P + 0x30u <= 0x80400000u) {
+        for (int q = 0; q < 12; q++) {
+            uint32_t a = P + q * 4, cur = (uint32_t)MEM_W(0, (gpr)(int32_t)a);
+            uint32_t i = (a - 0x%08Xu) >> 2;
+            if (a - 0x%08Xu >= 0x%Xu) continue;
+            fprintf(stderr, "[pblk] t=%%lld sid=%%04x q=%%d addr=%%08x cur=%%08x last_pc=%%08x val=%%08x match=%%d ra=%%08x fn=%%s age=%%u\\n", ms, sid, q, a, cur,
+                    s5798_last[i].pc, s5798_last[i].val, s5798_last[i].val == cur, s5798_last[i].ra,
+                    s5798_last[i].fn ? s5798_last[i].fn : "(none)", s5798_seq - s5798_last[i].seq);
+        }
+    }
+""" % (LO, LO, SPAN)
 
 
 def apply(text, name=""):
     if T in text:
+        if name == "funcs_13.c" and "[pblk]" not in text:
+            anchor = "    for (int q = 0; q < 8; q++) {\n"
+            assert text.count(anchor) == 1
+            return text.replace(anchor, PBLK + anchor, 1), 0
         return text, 0
     if text.count(INC) != 1:
         return text, 0

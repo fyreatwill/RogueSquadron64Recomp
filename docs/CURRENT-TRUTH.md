@@ -46,6 +46,16 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   dissolved** by the s5597 `poke_be32` overflow fix (28 clean boots,
   P(0/28 | p=1/7) ~1.4%; hypothesis, no writer named).
 
+- **s5799 projectile-direction block: orientation-derived, not stale.** The
+  upgraded `[pblk]` probe fired 756 times in a 421 s mission hold; all sampled
+  words matched their last-writer table and the positive `[recw]`/`[recv]`
+  controls fired. P words are written through the
+  `spawnProbeDroidGroundImpactEffect` path: origin words copy the shooter
+  substructure, while direction words come from its cross/normalize and
+  perpendicular-jitter intermediates. No target-position subtraction appears
+  in that producer. This selects H8a over H8b/H8c (single runtime source;
+  retail mission phase was not reached by the independent oracle run).
+
 ## Active M6 thread: objective booleans and the 0x64 fail arm
 
 State as of s5635 (all static claims single-source unless noted):
@@ -211,7 +221,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
-- **s5798:** projectile spawn record = dispatchCueByCategory's own stack frame (sp+0x10), writers 0x8005E418 (rec+0xC = pos+dir block ptr, caller arg), 0x8005E424 (owner), 0x8005E430 (speed), 0x8005E67C-684 (extents), 0x8005E6C0 (damage); droid chain npcProbeDriod -> tickObjectAnimSubstruct -> spawnProbeDroidGroundImpactEffect -> triggerCueWithSlotEffect -> dispatchCueByCategory (host bt, 60/60; control 576/576 last-writer==memory). Velocity = block dir*speed; only 4/20 droids aim at the player (cos~0.98), 9/20 at a class-2 victim, 8 neither (single run, `scratch/agent/m6/s5798_recw/run.log`). Pure H1 refuted. Next: writer of the dir block (P=0x80165D50) inside spawnProbeDroidGroundImpactEffect/triggerCueWithSlotEffect - orientation axis vs target vector. Instrument `tools/apply_s5798_recwatch.py` (watch range is a constant; widen/move it in the script).
+- **s5799:** `[pblk]` direction-block writers are live and match memory (756/756); the producer's P words are populated from shooter-substructure position plus cross/normalize/perpendicular-jitter intermediates in `spawnProbeDroidGroundImpactEffect`, not a computed target-position difference. H8a selected over H8b/H8c. Next: offline-read `generatePerpEmitDirectionWithJitter` and its caller's object fields to name the orientation/animation axis and determine whether a target vector enters upstream.
 - **s5786:** the s5784 life loss is lv0_checkComplexObjectives's own fail rule: `getObjectiveCount(2) >= 3` -> setHudEnableBit4 + speech 0x229 -> mtm(2) (backtrace + speech id; jal pc inferred; single run). Timer/0x64/0x65 refuted. Next: log every increment of objective counter 2 (caller + value), compare with `s5786_hudb_noalt`; find what counter 2 counts (friendlies lost?) and whether our input causes it. Instrument: `tools/apply_s5786_hudbit4_dump.py`.
 - **s5787/s5788:** s5787 objcount arms logged 0 lines (control failed; game logs are in scratch/agent/m6/<tag>/run.log). s5788 added a `getObjectiveCount` change-log as positive control; arms s5788_get_fire/nofire queued. s5789: get-log control passed; counter 2 rises 0->3 with set/increase never entered (both arms). Inline writers to check: datItemSetObjectiveBooleanCount, applyDatObjectiveTriggerEffect, updateNpcEffectIntensity, executeActorType1Effect (static scan, unconfirmed).
 - **s5785:** the s5784 3->2 life loss follows `[mtm] a0=2` preceded by a `setHudEnableBit4` mask store (pc 0x800C775C val=4) ~190 s into the mission; `[killset]`/`[bit8call]` = 0 (debris refuted; controls: strings compiled, s5778 fired 16). Overlay reload only decrements afterwards. Single-source. Next: identify the script caller of setHudEnableBit4 (host backtrace on pc==0x800C775C, dump objective bools/timer) - see NEXT.md. (s5784: ALT_HOLD validated, 421 s alive.)
