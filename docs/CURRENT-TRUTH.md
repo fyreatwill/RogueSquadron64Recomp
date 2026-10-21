@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5773 (2026-10-21).
+Compact operational handoff, maintained as of Session 5774 (2026-10-21).
 `PORTING-STATE.md` is the chronological ledger. Durable background, closed
 audit detail, and the per-thread histories moved out of this file are in
 `docs/PROJECT-OVERVIEW.md` (latest: "Migrated from CURRENT-TRUTH (s5636)");
@@ -20,13 +20,14 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   endurance, not proof every mission subsystem is correct. Keyed holds end in a
   legitimate MISSION FAILED screen (idle autopilot loses; loss counter
   0x80138064) and fall back to title — not a hang.
-- **M6 active thread: why the unpiloted mission loses a life.** On the
-  level-select route with godmode off, all 5 life losses are the game's death
-  chain: `spawnSceneDebrisAndEffectCluster` stores 0x0190 (kill bit 0x10) on
-  the player slot, then bit1 at 0x800B1140, then `requestMissionTransitionMode(1)`
-  decrements lives at 0x80130B10 (s5773, guest order + host byte watch). Next
-  is who calls that debris function. The objective-boolean / a0=2 notes below
-  are the godmode route, which does not lose a life.
+- **M6 active thread: why the unpiloted mission loses a life.** The 0x0190
+  kill store is still the game's own `spawnSceneDebrisAndEffectCluster`
+  (s5773). s5774 names the callers, two of them, same route, two full 3-life
+  cycles: 4/6 are `updatePlayerCraftPhysics` jal 0x800B2EC4 (the arm taken
+  when `stepObjectOrientationTowardTarget` returns low byte 2), and 2/6 are
+  `updateSplineCraftTransform` jal 0x800B0D9C after bit 0x8 is set. Next is
+  the return-2 path inside that orientation function. The objective-boolean
+  notes below are the godmode route, which does not lose a life.
 - **M5 audio de-stubbing: CLOSED** for the qualified route (non-silent PCM,
   task/SP contract, keyed mission and long-hold rows; `docs/M5-AUDIO-PLAN.md`).
   **Audio FIDELITY is OPEN** (rung G2, `tools/agent/ITERATION.md` 3c): owner
@@ -207,7 +208,9 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
-_s5773 (top):_ unpiloted level-select fail is the three-death chain, 5/5 (guest `[bit1]`/`[lives]` plus host `[livesbyte]`). Immediate flag writer is `spawnSceneDebrisAndEffectCluster` at 0x800B0348 (player slot 0x80137DBC, halfword -> 0x0190, includes bit 0x10). `spawnNpcDestructionDebris` (bit 0x8) is not the predecessor. Next = name the caller of spawnSceneDebrisAndEffectCluster. Slug g1-debris-caller. Do not rerun the bit1/lives soak.
+_s5774 (top):_ debris callers named (run.log `s5774_debris`, n=6 calls, all logged). 4/6 player deaths (the 3->2 and 1->0 of each cycle) are jal 0x800B2EC4 in `updatePlayerCraftPhysics`, a1=1, halfword 0x0001, and the 0x0190 store is the next stderr line. That jal is only reached when `stepObjectOrientationTowardTarget` returns low byte 2 (`beq` at 0x800B2928). 2/6 (the 2->1 deaths) are jal 0x800B0D9C in `updateSplineCraftTransform` after `spawnNpcDestructionDebris` sets bit 0x8 (0x0001->0x0008). Sites 0x800B0C34, 0x800B0EBC, and the hp<=0 jal 0x800B2A08 stayed 0. ROM: 5 direct jals, 0 pointers. Next = which path returns 2 from `stepObjectOrientationTowardTarget` (0x800FFCF8 is a compare, not the return). Slug g1-orient-ret2. Do not rerun the debris census.
+
+_s5773:_ unpiloted level-select fail is the three-death chain (guest `[bit1]`/`[lives]` plus host `[livesbyte]`). Immediate flag writer is `spawnSceneDebrisAndEffectCluster` at 0x800B0348 (player slot 0x80137DBC, halfword -> 0x0190). Caller named in s5774.
 
 _s5755:_ [mtmst] fold (single run): bit1 of mask 0x8010C9E0 has ONE writer, pc 0x800B1140 (funcs_30), once per mission start; no store ever sets an end/fail bit in godmode 420 s. Next = find callers/guards of requestMissionTransitionMode (0x800FB2B0). Single-source (mtmb dir missing). (s5756: godmode suppresses the fail arms, so the godmode mtm runs cannot see the end path; non-god mtm soaks s5756_nogoda/b queued, GODV=0.)
 _s5757:_ non-god mtm soaks folded: [hudbit] never fires while [objbool] does (control live) => setHudEnableBit4 is not the unpiloted end path; mtm(a0=1) is the event-table path, identical to godmode. Bit1 writer (funcs_30 0x800B1140) now logs [bit1ctx]; soak s5757_bit1ctx queued.

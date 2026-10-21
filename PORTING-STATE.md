@@ -164780,3 +164780,21 @@ Same run, the s5771 `[killset]` logs were not zero. Every bit1 is immediately pr
 
 ORIGIN: no mitigation. Diagnostic only (`tools/apply_s5773_bit1_lives.py` plus the host poll in `get_n64_input`).
 DISCRIMINATION: the unpiloted level-select fail is the game's own three-death chain, and the flag store immediately before each life lost is spawnSceneDebrisAndEffectCluster. Next: name who calls that function on the player slot.
+
+## Session 5774 (2026-10-21) — two jals call the player debris function
+
+Static census, then one run. `spawnSceneDebrisAndEffectCluster` entry is 0x800B01E4 (the 0x800B0348 halfword store is inside it). The retail ROM contains exactly five `jal` encodings of that entry and zero raw pointer words and zero `j` encodings, so there is no data-table dispatch. The five sites are three in `updateSplineCraftTransform` (0x800B0C34, 0x800B0D9C, 0x800B0EBC) and two in `updatePlayerCraftPhysics` (0x800B2A08 on the hp<=0 arm, 0x800B2EC4 on the arm taken when `stepObjectOrientationTowardTarget` returns low byte 2).
+
+Instrument: `tools/apply_s5774_debris_caller.py`, hooked from `fixup_game_funcs_vendored.py`, applied to funcs_30.c. Each jal logs `[debris-call]` with site, a0, halfword at +0x180, and the shared `rs64_s5773_ord`/`ms` clock, gated by `ROGUESQ_LOG_MTM`. Rebuilt and ran the s5773 level-select death recipe as `scratch/agent/s5774_debris.sh` (new tag; screen unlocked, `CGSSessionScreenIsLocked` not set). Log: `scratch/agent/m6/s5774_debris/run.log`. Summary: att=1 mission_t=19s hold=421s alive_at_end=1 vi_stalls30s=0 godrefills=0 mission_cycles=3 crashlines=0.
+
+Positive controls in that run: `[livesctl] armed` and `[livesctl] mission` (origin 0x62BD00), flight origins 0x690400/0x620400 on the `[livesbyte]` lines, and six real `[lives]` decrements at 0x80130B10 (3->2, 2->1, 1->0, then after the reload 3->2, 2->1, 1->0). The instrument's own population is complete: n=6 and every call was logged (`c0=0 c1=2 c2=0 c3=0 c4=4`).
+
+This selects H2 and refutes H1 and H3. File order, two cycles identical:
+
+- 4/6, the 3->2 and 1->0 deaths: `[debris-call] kind=pre site=0x800B2EC4 fn=updatePlayerCraftPhysics a0=0x80137DBC a1=1 hw=0x0001`, and the next stderr line is `[killset] pc=0x800B0348` before=0x0001 after=0x0190. Then `[bit1]` ~530 ms later and `[lives]` N->N-1.
+- 2/6, the 2->1 deaths: `[killset] pc=0x800B08DC` before=0x0001 after=0x0008, then `[debris-call] site=0x800B0D9C fn=updateSplineCraftTransform` hw=0x0008, then the 0x0190 store (before=0x0008). The hp<=0 jal 0x800B2A08 and the other two spline jals never ran.
+
+The 0x800B2EC4 jal is not on the return-1 arm (that arm calls `spawnNpcDestructionDebris` or 0x800B2A08 and jumps to L_800B2F1C). So the first death of each cycle is the orientation function returning 2. 0x800FFCF8 inside that function compares a stack byte to 2; it is not the return. Next: trace the real return-2 epilogue. Do not rerun this census.
+
+ORIGIN: no mitigation. The 0x0190 value is the game's own kill-bit RMW; the writers of the call are the two jals above.
+DISCRIMINATION: H2 selected (two direct callers, stable across both cycles). H1 refuted (not one jal). H3 refuted (no pointer in ROM, and every 0x0190 store is the next line after a logged jal).

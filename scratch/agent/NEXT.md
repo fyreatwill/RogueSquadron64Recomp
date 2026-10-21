@@ -1,42 +1,40 @@
-# NEXT: name the caller of spawnSceneDebrisAndEffectCluster
+# NEXT: name the path that makes stepObjectOrientationTowardTarget return 2
 
-Do not rerun the bit1/lives soak. s5773 closed it: on the level-select route
-with godmode off, all 5 life losses are bit1 at 0x800B1140, then
-requestMissionTransitionMode(1), then lives[0x80130B10] N->N-1. The store
-immediately before each bit1 is spawnSceneDebrisAndEffectCluster at
-0x800B0348 (player slot 0x80137DBC, halfword becomes 0x0190, includes kill
-bit 0x10). spawnNpcDestructionDebris (bit 0x8) is not the predecessor.
+s5774 closed the debris-caller census. Do not rerun it. On the level-select
+death route, two full 3-life cycles, controls passed (`[livesctl] mission`,
+lives 3->2 twice, `[debris-call]` on the player slot). Every player-slot
+0x0190 store is the next stderr line after one of two jals:
 
-The single work unit is to name who calls spawnSceneDebrisAndEffectCluster
-on that player slot. Static census first, in the generated tree. Find the
-function entry (not 0x800B0348; that is the sh inside it) and every direct
-jal to that entry. Only if the jal list is empty or ambiguous, add one
-entry log that stamps rs64_s5773_ord/ms and the slot pointer, and rerun
-scratch/agent/s5773_bit1lives.sh. Do not add a new join field if the static
-jal list already names a single caller.
+- 4/6, the 3->2 and 1->0 deaths: jal 0x800B2EC4 in updatePlayerCraftPhysics,
+  a1=1, halfword 0x0001. That jal is reached only from the arm taken when
+  stepObjectOrientationTowardTarget returns low byte 2 (beq at 0x800B2928
+  to L_800B2D2C). The return-1 arm calls spawnNpcDestructionDebris or the
+  hp<=0 jal 0x800B2A08, which stayed at 0.
+- 2/6, the 2->1 deaths: jal 0x800B0D9C in updateSplineCraftTransform, a1=1,
+  halfword 0x0008, immediately after spawnNpcDestructionDebris stored bit
+  0x8 (0x0001 -> 0x0008 at 0x800B08DC). Park this path until the 4/6 path
+  is named. It is not the first death of a cycle.
+
+The single work unit is the 4/6 path: which instruction makes
+stepObjectOrientationTowardTarget (funcs_43.c, entry 0x800FEF10) return 2.
+Static trace from the epilogue backwards. 0x800FFCF8 is NOT that return. It
+compares stack byte sp+0x497 to the immediate 2. Do not grep `addiu $v0, 2`
+and stop.
 
 Competing hypotheses and the discriminating measurement:
 
-- H1: one direct caller (collision or terrain) invokes it immediately before
-  each 0x190 store. Evidence: exactly one jal site, and if a runtime log is
-  still required its timestamp sits just before each [killset] pc=0x800B0348
-  on slot 0x80137DBC.
-- H2: several direct callers, only one of which precedes the player-slot
-  deaths. Evidence: the entry log's caller PC (or a per-site counter) is the
-  same site for all 5 deaths and the other sites stay at zero during the
-  mission phase.
-- H3: no direct jal; dispatch is a function pointer. Evidence: zero jal
-  sites. Then the discriminator is the jalr table or a host backtrace at
-  the entry, not another flag watch.
+- H1: one epilogue writes a return whose low byte is 2, and the predicate
+  above it is readable (terrain, altitude, or a collision byte). Evidence:
+  exactly one path reaches `jr ra` with that value, and naming the compare
+  is the result. No run.
+- H2: several paths return 2. Evidence: more than one such epilogue. Then
+  add one per-path counter and rerun `zsh scratch/agent/s5774_debris.sh`.
+  The path that logs immediately before each `[debris-call] site=0x800B2EC4`
+  is the one. Require `[livesctl] mission`, a lives 3->2 line, and at least
+  one `site=0x800B2EC4` line in the same run. Screen unlocked
+  (`ioreg` must not show `"CGSSessionScreenIsLocked"=Yes`).
+- H3: the function never stores the immediate 2 into the return register.
+  The 2 is a callee return or a loaded byte. Evidence: the epilogue copies
+  v0 from a `jal` or a load. Name that producer before instrumenting.
 
-Require the same positive controls before using a runtime result: mission
-origin, [livesctl] mission, and at least one real 3->2 lives decrement.
-A null caller log with no lives decrement is void.
-
-```zsh
-python3 - << 'PY'
-# print the RECOMP_FUNC that contains the sh at 0x800B0348, then count jal to its entry
-PY
-```
-
-HYPOTHESIS-ID: g1-debris-caller
+HYPOTHESIS-ID: g1-orient-ret2
