@@ -164606,3 +164606,6 @@ Confound found by diffing recipes: s5738 (where deaths recurred ~7.5 s) used the
 Rules out: H1 as stated (env vars alone do not cause the kill on the plain route). Open: death depends on the level-select route/mission 62BD00 and/or its held-stick keys (H3).
 ORIGIN: no mitigation landed; no code change.
 Landed: s5739_hpwatch.sh honours AP_OVERRIDE/MISSION_RE; s5743_hpwatch_lvsel soak queued.
+
+## Session 5744 (2026-10-21) — s5743 lvsel hp-watch void: mission gate quoting bug fixed, s5744 requeued
+s5743 (rc=137, 900 s timeout, empty log) never armed: m6/s5743_hpwatch_lvsel/keys.log shows nomission-att1..3 although run logs contain origin=0x62BD00 (~26k lines/att). Cause: s5739_hpwatch.sh line 39 grep pattern was single-quoted, so ${MISSION_RE:-690400} was matched literally and never fired for ANY MISSION_RE (boring-first: script bug, not game). Fix: double quotes. Requeued as soak_queue/s5744_hpwatch_lvsel.sh (same recipe; hold 300 s). Positive control unchanged: wp1 hit on 0x3470 plus a [snap] death or wp3 hit, else null is void. ORIGIN: no mitigation machinery added; tooling fix only. Result of s5743 is VOID, not a null.

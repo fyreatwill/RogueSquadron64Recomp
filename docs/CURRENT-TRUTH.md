@@ -339,3 +339,5 @@ s5691: static census of all 179 setObjectiveBoolean sites: only sayWhoaHim_v0x1F
 - s5714: the lvl7 "w=442/443 wild SetColorImage" is a 1-row pass whose writeback width = drawColorRect.right (rt64_state.cpp:2203); colorImg.width is a clean 512. SKIP_WILD_W there skips a legit 1-row writeback. Wild-width thread CLOSED; s5712 history-desync fix confirmed n=3.
 
 - **s5733:** tight-thread revive (g3a) did NOT stop mission cycling (origin still alternates); H-LATE refuted, H-OTHER selected (n=1/arm). Next: write-watch the exit/results-state word (NEXT.md), slug g1-gameover-cause.
+
+- s5743 lvsel hp-watch was void (mission gate in s5739_hpwatch.sh single-quoted, never matched); fixed, requeued as s5744.
