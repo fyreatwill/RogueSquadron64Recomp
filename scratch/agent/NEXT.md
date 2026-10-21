@@ -1,4 +1,4 @@
-# NEXT: observe the two kill-bit setters during a real mission
-Work unit: queue a soak on the mission route (origin 0x690400, s5378 route, god/AP env as in s5757_bit1ctx) with the existing rs64_m5_writer_parity/gate-store hooks logging hits of PCs 0x800B0348 (sets 0x10) and 0x800B08DC (sets 0x8) plus the target object pointer and slot idx (obj+0xB8). Control: lives decrement via requestMissionTransitionMode ([mtmst]) must fire in the same run, else void.
-Hypotheses: H1 player craft is passed to a debris spawner by collision -> mission fail (outcome: setter hit with idx==player slot before each lives--); H2 only NPC objects hit these setters (hit idx != player) so fail is health-only; H3 setters never fire in-mission (fail comes via bit1 settle path, s5759).
+# NEXT: fold the s5768_setterbp soak
+Read scratch/agent/m6/s5768_setterbp/summary and grep BPHIT in run_pre.log. Control: bp_mtm>0 and BPHIT a0 values look like 0x80xxxxxx (else the ctx offset/arg register assumption is wrong: fix and requeue).
+H1 setter hit with a0==0x80137DBC before lives-- (player craft debris -> fail); H2 only NPC a0 (fail is health-only); H3 bp_scene=bp_npc=0 (fail via bit1 settle path, s5759).
 HYPOTHESIS-ID: g1-nonhealth-fail
