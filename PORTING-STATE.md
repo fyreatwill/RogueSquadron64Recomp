@@ -164874,3 +164874,20 @@ The earlier event, on 8 of the 9 drops, is the existing `[killset]` at pc=0x800B
 
 ORIGIN: no mitigation. Holding the latched y is not why a life is lost, and the deadband was not tuned.
 DISCRIMINATION: H-hold-still-dies. H-hold-stops refuted for this run. Slug was g1-real-input-win; next slug is g1-bit8-caller. Do not log another angle.
+
+## Session 5779 (2026-10-21) — bit 0x8 is the physics caller
+
+Soak tail had nothing newer than the s5769 rows already in the ledger. Screen lock key `CGSSessionScreenIsLocked` was absent (not `Yes`). The s5778 log was moved to `scratch/agent/m6/s5778_althold_kept/run.log` before this run reused the tag.
+
+ROM census before the instrument, on `build/rogue_squadron.z64`: jal encoding `0x0C02C214` (target `0x800B0850`) occurs twice, at file `0xB206C` and `0xB3658`. Delta `0x15EC` equals `0x800B2A58-0x800B146C`. Zero `j` encodings (`0x0802C214`) and zero raw `0x800B0850` pointers. Recompiled `funcs_30.c` has the same two `spawnNpcDestructionDebris()` calls and no third. That confirms the s5778 static claim from the ROM, not from this runtime.
+
+Fixup `tools/apply_s5779_bit8_caller.py` (hooked from `tools/fixup_game_funcs_vendored.py`) logs those two sites after the delay-slot `a0` assignment and before the call: pc, a0, halfword at a0+0x180. Rebuilt `funcs_30.c` only; the binary contains `[bit8call]`. Recipe `scratch/agent/s5777_althold.sh` unchanged (`GODV=0`, `HOLD=420`, `ROGUESQ_ALT_HOLD=2.0`, `ROGUESQ_LOG_MTM=1`). `rm` of `build/saves/*.bak` printed a zsh nomatch and continued. Log: `scratch/agent/m6/s5777_althold/run.log`.
+
+Summary: att=1 mission_t=19s hold=422s alive_at_end=1 vi_stalls30s=0 crashlines=0 godrefills=0 mission_cycles=4. Controls: `fbrun-control OK`, `mcycles-control OK`, `[autopilot] armed: 424 events`, `[althold]` acted 0→3167 with sy=+1 on 53/60 samples (first climb `n=61 y=-6.303 sy=1.0 acted=58`), nine `[lives]` drops (3→0 three times).
+
+This selects H-phys and refutes H-cine and H-split. Seven `[killset]` lines `pc=0x800B08DC before=0x0001 after=0x0008` (player slot `0x80137DBC`), and each is the next line after a `[bit8call]` `site=0x800B2A58 fn=updatePlayerCraftPhysics a0=0x80137DBC hw=0x0001`. Counters on those lines run c0=0, c1=1..7: `tickCinematicObjectStateMachine`'s jal at `0x800B146C` never executed, not merely unprinted. The other two life losses are the already-closed return-2 path (`[killset]` `0x800B0348` `0x0001→0x0190`), not a third caller. 7+2=9, matching the lives drops.
+
+Static, from the recompiled callers (single-source for the byte's meaning, not for the caller): the physics arm is `lbu 0x175($sp); bne nonzero`. That byte is not stored in `updatePlayerCraftPhysics`. Its only writer is `sb` at `0x800FFC60` in `stepObjectOrientationTowardTarget`, copying record byte 0 from the array at sp+0x198 (stride 0x2C) indexed by the word at sp+0x488, and only when byte sp+0x497 != 0. Nothing in the caller zeroes sp+0x175, so a stale stack byte is still possible. That is the next measurement, not another caller and not an altitude change.
+
+ORIGIN: no mitigation. Bit 0x8 is the value this jal's callee is written to store; the caller is now named.
+DISCRIMINATION: selects H-phys (7/7). refutes H-cine (c0=0) and H-split. Slug g1-bit8-caller is closed. Next slug is g1-sp175-src.

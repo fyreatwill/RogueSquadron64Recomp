@@ -37606,6 +37606,14 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5774 debris caller x{_n5774}")
 
+    if p.name == "funcs_30.c" and "PATCH: s5779 bit8 caller" not in text:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+        import apply_s5779_bit8_caller as _a5779
+        text, _n5779 = _a5779.apply(text)
+        if _n5779:
+            changed = True
+            report.append(f"{p.name}: s5779 bit8 caller x{_n5779}")
+
     if p.name == "funcs_43.c" and "PATCH: s5775 orient ret2" not in text:
         sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
         import apply_s5775_orient_ret2 as _a5775
@@ -41268,6 +41276,7 @@ RS64_REPLAY = [
     "apply_s5774_debris_caller.py",
     "apply_s5775_orient_ret2.py",
     "apply_s5776_orient_geom.py",
+    "apply_s5779_bit8_caller.py",
     "apply_s5619_cco_log.py",
     "apply_s4690_external_entry_probe.py",
     "apply_s4694_a14_boundary.py",

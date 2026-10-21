@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5778 (2026-10-21).
+Compact operational handoff, maintained as of Session 5779 (2026-10-21).
 `PORTING-STATE.md` is the chronological ledger. Durable background, closed
 audit detail, and the per-thread histories moved out of this file are in
 `docs/PROJECT-OVERVIEW.md` (latest: "Migrated from CURRENT-TRUTH (s5636)");
@@ -20,19 +20,21 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   endurance, not proof every mission subsystem is correct. Keyed holds end in a
   legitimate MISSION FAILED screen (idle autopilot loses; loss counter
   0x80138064) and fall back to title — not a hang.
-- **M6 active thread: altitude hold does not stop the life loss.** s5778
-  (H-hold-still-dies, one run). `ROGUESQ_ALT_HOLD=2.0` latched y=0 and
-  commanded sy=+1 (`acted` 0→2960) with no `su`/`sd` keys; lives still
-  went 3→0 three times (9 drops). 8/9 start at `[killset]` pc=0x800B08DC
-  (player slot halfword 0x0001→0x0008) before a spline debris call. The
-  9th is the s5777 return-2 physics path (site 0x800B2EC4). That geometry
-  result stands (H-legit, 5/5; detail `docs/M6-S5775-ORIENT-RET2.md`).
-  The spline jal is not parked: it is downstream of bit 0x8.
-  `spawnNpcDestructionDebris` (0x800B0850) has two callers, 0x800B146C
-  (`tickCinematicObjectStateMachine`, float<=0) and 0x800B2A58
-  (`updatePlayerCraftPhysics`, sp+0x175!=0). Which one fires is unmeasured.
-  No mitigation. Do not tune the deadband. The objective-boolean notes
-  below are the godmode route, which does not lose a life.
+- **M6 active thread: bit 0x8 is the physics caller.** s5779 selects
+  H-phys (one run, 7/7) and refutes H-cine and H-split. Every `[killset]`
+  `0x800B08DC` `0x0001→0x0008` is the next line after `[bit8call]`
+  site `0x800B2A58` in `updatePlayerCraftPhysics` (a0=player, hw=0x0001).
+  The cinematic jal `0x800B146C` never ran (c0=0 on every line). ROM
+  confirms exactly those two `jal`s to `0x800B0850` and no pointer
+  (file `0xB206C`, `0xB3658`). Two of nine life losses skip bit 0x8 and
+  are the closed return-2 path (`0x800B0348` `0x0001→0x0190`). Altitude
+  hold still climbs (`acted` 0→3167, sy=+1). The selecting byte
+  sp+0x175 has one writer, `sb` at `0x800FFC60` in
+  `stepObjectOrientationTowardTarget` (record byte 0, stride 0x2C,
+  index word sp+0x488, only if byte sp+0x497 != 0). The caller does not
+  zero that stack byte. No mitigation. Do not tune `ROGUESQ_ALT_HOLD`.
+  The objective-boolean notes below are the godmode route, which does
+  not lose a life.
 - **M5 audio de-stubbing: CLOSED** for the qualified route (non-silent PCM,
   task/SP contract, keyed mission and long-hold rows; `docs/M5-AUDIO-PLAN.md`).
   **Audio FIDELITY is OPEN** (rung G2, `tools/agent/ITERATION.md` 3c): owner
@@ -214,7 +216,9 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
-_s5778 (top):_ altitude hold does not stop the life loss (H-hold-still-dies, `scratch/agent/m6/s5777_althold/run.log`). acted 0→2960 with sy=+1, and lives still went 3→0 three times. 8/9 drops start at `[killset]` 0x800B08DC (0x0001→0x0008); the 9th is the closed return-2 physics path. Do not tune `ROGUESQ_ALT_HOLD` and do not log another angle. Next = tag the only two callers of `spawnNpcDestructionDebris` (0x800B146C cinematic float<=0, 0x800B2A58 physics sp+0x175!=0) in one build, same death-route recipe. Slug g1-bit8-caller.
+_s5779 (top):_ bit 0x8 is the physics jal (H-phys, 7/7, `scratch/agent/m6/s5777_althold/run.log`; s5778 log kept at `s5778_althold_kept/run.log`). Cinematic jal never ran. Do not retag the callers and do not tune `ROGUESQ_ALT_HOLD`. Next = log the only writer of stack byte sp+0x175 (`sb` 0x800FFC60: index, source byte, flag sp+0x497) on the same recipe and pair each line to `[bit8call]` 0x800B2A58. Slug g1-sp175-src.
+
+_s5778:_ altitude hold does not stop the life loss (H-hold-still-dies). acted 0→2960 with sy=+1; 8/9 drops started at `[killset]` 0x800B08DC. s5779 named that caller. The 9th class is the closed return-2 path.
 
 _s5777:_ the return-2 normal is a real terrain impact (H-legit, 5/5). Geometry stays closed. The altitude-hold run was s5778 and selected H-hold-still-dies.
 
