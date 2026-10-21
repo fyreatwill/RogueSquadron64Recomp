@@ -164968,3 +164968,4 @@ ORIGIN: no mitigation landed. Next discriminator: what increments objective coun
 Discriminating conclusion, stated explicitly: this session's dump instrument (not diagnostic-only: it selected a hypothesis) SELECTS H-script-fail (mission rule `getObjectiveCount(2) >= 3` in lv0_checkComplexObjectives calls setHudEnableBit4 then speech 0x229; two lines of evidence: host backtrace + speech id) and REFUTES H-timer (no timer compare at the site; timers 134.03/131.9 irrelevant; bools 0x64/0x65 = 0). H-ours remains open pending the noalt control arm (s5786_hudb_noalt, queued).
 Next discriminator (in NEXT.md): log each setObjectiveCount/addObjectiveCount(id 2) increment with value + host backtrace, both arms, positive control = counter 2 increments at least once before the fail.
 ORIGIN: no mitigation landed.
+Gate note: the dump selects H-script-fail and refutes H-timer; the next discriminator is the objective-counter-2 increment log (both arms).
