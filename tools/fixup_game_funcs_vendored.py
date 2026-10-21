@@ -37700,6 +37700,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5792 npc victim x{_n5792}")
 
+    if p.name == "funcs_16.c":
+        import apply_s5793_npc_diff as _a5793
+        text, _n5793 = _a5793.apply(text)
+        if _n5793:
+            changed = True
+            report.append(f"{p.name}: s5793 npc diff x{_n5793}")
+
     if p.name == "funcs_27.c" and "PATCH: s5523 cineBody entry log" not in text:
         _a = '    // 0x800A5D80: addiu       $sp, $sp, -0xD8\n'
         if text.count(_a) == 1:
@@ -41329,6 +41336,7 @@ RS64_REPLAY = [
     "apply_s5790_inline_writer_log.py",
     "apply_s5791_objwr_bt.py",
     "apply_s5792_npc_victim.py",
+    "apply_s5793_npc_diff.py",
     "apply_s5757_bit1_ctx.py",
     "apply_s5771_guest_pc_census.py",
     "apply_s5773_bit1_lives.py",
