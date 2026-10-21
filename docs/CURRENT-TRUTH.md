@@ -199,6 +199,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 - **s5675 G1 soaks (no keys sent):** `s5675_g1fly_{a,b}` looked like two 'nohangar x4' flown-mission failures, i.e. a flaky hangar route. Actually `m6_god_common.sh` re-sets ROGUESQ_AUTOPILOT from its own `$AP` after XENV, and STOP=0 emptied `$AP`, so no keys were ever injected. Fixed in s5676 via `AP_OVERRIDE`. Believable because the hangar route is known flaky (~3/5) and 8/8 failures read as more of the same. The s5676 fix was itself ordered wrong (s5677 also keyless) - fixed s5678; lesson: the control is the "[autopilot] armed" log line, not keys.log `mission t=`.
 
 ## Next steps (single monotonic backlog)
+_s5747:_ static fail-arm census (docs/M6-S5747-FAIL-ARM-CENSUS.md): bool-7 arm needs a dialogue flag; observed fail likely via bool 0x6D arm or another arg-2 caller. Next = entry log in requestMissionTransitionMode (NEXT.md).
 _s5746:_ s5745_crawlshot folded: real window clean, crawl band = fbd-only RDRAM artifact (G3 crawl item retired); fbd PPMs now labelled. Next = Next steps #4 (win mission 1; non-health fail condition per s5733).
 _s5745:_ s5744 lvsel hp-watch: no hp->0/lives write on a 3rd route; g1-gameover-cause parked. Next = s5745_crawlshot (G3 crawl band: real window vs fbd), then MUST land a runtime change (NEXT.md).
 _s5743:_ s5742 lldb hp-watch on plain route: no death, 0 hp/lives writes (wp1 control ok). Death arm is route-specific (s5738 used level-select keys, mission 62BD00); next = lldb watch on THAT route (NEXT.md).

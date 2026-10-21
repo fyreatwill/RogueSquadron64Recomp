@@ -164620,3 +164620,9 @@ s5743 (rc=137, 900 s timeout, empty log) never armed: m6/s5743_hpwatch_lvsel/key
 - ORIGIN: raw RDRAM readback of unwritten letterbox rows; RT64 renders from native targets, not RDRAM, so the dump is not the window. G3 crawl item retired.
 - Code change (pivot): src/main/upstream_compat.cpp fbd PPM header now carries a "# source=rdram-readback-not-window vi_width=N" comment so the dump cannot be misread as the window again. Rebuilt OK (cmake --build), not soak-run (comment-only header change).
 - Next: Next steps #4 (real/invulnerable flying; s5733 selected H-OTHER = non-health fail condition).
+
+## Session 5747 (2026-10-21) — static census of the mission fail/win/game-over writers (docs/M6-S5747-FAIL-ARM-CENSUS.md)
+- Ran: one read-only static census (subagent, ~26 tool calls); no game run. Output table in docs/M6-S5747-FAIL-ARM-CENSUS.md. The first stop attempt of this session wrote BLOCKED prematurely because the agent had not returned; this entry supersedes that BLOCKED.md (removed).
+- Showed: the 0x64/0x65 fail arm needs bool[7], which only the dialogue entry sayWhoaHim_v0x1FC sets; a second arm (bool 0x6D, count[0x28]>0) also reaches requestMissionTransitionMode(2) -> B14=2 -> lives-- -> restart/game over. s5728 saw bool 7 never fire yet the mission still fails, so the observed fail uses the 0x6D arm or another arg-2 caller (H-OTHER candidates), not the bool-7 arm.
+- ORIGIN: no code change, no mitigation. Single-source static; unverified at runtime.
+- Next: enumerate all callers of requestMissionTransitionMode with arg 2 and add one log at entry (caller ra + gate) in a build, then run one keyed hold to see which fires.

@@ -1,4 +1,4 @@
-# NEXT: Next steps #4 - find the non-health mission-fail condition (s5733 H-OTHER) and land a change
-Read PORTING-STATE s5733 and docs/CURRENT-TRUTH items 3-4. Hypotheses: (H1) timer/objective-bool fail (bool[1]/bool[7] writers), (H2) wingman/escort loss counter, (H3) port defect in a results-state writer.
-Discriminator: static census of the results-state writer reached from the 0x64 fail arm + one entry log; mandatory pivot: commit a guard/code change or real-input route change, not another observation.
+# NEXT: log the real caller of requestMissionTransitionMode(arg 2) at the observed mission fail
+Read docs/M6-S5747-FAIL-ARM-CENSUS.md. Hypotheses: (H1) bool 0x6D arm (count[0x28]>0), (H2) another arg-2 caller (grep callers of 0x800FB190), (H3) bool-7 arm after all (s5728 control was weak).
+Discriminator: fixup-script entry log in requestMissionTransitionMode (arg, ra, gate, bool[7], bool[0x6D], count[0x28]) with a mark-everything control; one keyed hold >=400 s, two arms concurrently. Land the log as tools/apply_*.py.
 HYPOTHESIS-ID: g1-nonhealth-fail
