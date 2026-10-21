@@ -877,3 +877,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261021-015434 | s5741_hpwatch_b | rc=0 | 567s | scratch/agent/soak_results/s5741_hpwatch_b_20261021-015434.log
 20261021-020521 | s5742_hpwatch_god | rc=0 | 326s | scratch/agent/soak_results/s5742_hpwatch_god_20261021-020521.log
 20261021-021207 | s5743_hpwatch_lvsel | rc=137 | 900s | scratch/agent/soak_results/s5743_hpwatch_lvsel_20261021-021207.log
+20261021-022828 | s5744_hpwatch_lvsel | rc=0 | 365s | scratch/agent/soak_results/s5744_hpwatch_lvsel_20261021-022828.log
