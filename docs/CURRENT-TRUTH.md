@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5803 (2026-10-21).
+Compact operational handoff, maintained as of Session 5804 (2026-10-21).
 `PORTING-STATE.md` is the chronological ledger. Durable background, closed
 audit detail, and the per-thread histories moved out of this file are in
 `docs/PROJECT-OVERVIEW.md` (latest: "Migrated from CURRENT-TRUTH (s5636)");
@@ -86,6 +86,17 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   transform) over H10a (a selected target supplied as the indirect argument)
   and H10c (a generic asset with no active-object identity). Static evidence is
   single-source; the next G1 unit is real-input mission progression/win.
+
+- **s5804 G1 real-input progression hold:** `m6_keyed_hold_var.sh` reached the
+  qualified mission origin at t=195 s, passed the 130 s real-mission check, and
+  held for 603 s with `alive_at_end=1`, zero VI stalls over 30 s, zero crash/
+  abort markers, and a live framebuffer hash control (`maxrun=439`, 15,111
+  distinct hashes / 16,913 total). The route later returned through title/menu
+  origins without a legitimate mission-completion/advance marker. This is a
+  single-run G1b result: stable flight is qualified, but the current control
+  schedule did not win the mission. It does not identify whether objective
+  progress, combat targeting, or the mission's failure/restart path is the
+  limiting factor.
 
 ## Active M6 thread: objective booleans and the 0x64 fail arm
 
@@ -258,7 +269,8 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
-- **s5803:** the generic slot-dispatch chain supplies the firing/effect slot node to `spawnProbeDroidGroundImpactEffect`; its `slot+4` object supplies the `+0x38` mesh handle. H10b is selected over H10a/H10c by static provenance. Next: drive mission 1 with real input and close the first real win; record each distinct crash, stall, or softlock as a separate datum.
+- **s5804:** one 603 s real-input flight reached mission 1 and stayed live with no crash or VI stall, but returned to title/menu without a legitimate win. Next: run a phase-gated A/B control schedule in one iteration: baseline s5804 schedule versus denser mission combat/objective input after the same title->mission route. Require both arms to reach mission, log the first legitimate results/advance marker, and classify stable-no-win versus completion versus crash/stall.
+- **s5803:** the generic slot-dispatch chain supplies the firing/effect slot node to `spawnProbeDroidGroundImpactEffect`; its `slot+4` object supplies the `+0x38` mesh handle. H10b is selected over H10a/H10c by static provenance. The next G1 unit is the s5804 A/B control-schedule comparison.
 - **s5786:** the s5784 life loss is lv0_checkComplexObjectives's own fail rule: `getObjectiveCount(2) >= 3` -> setHudEnableBit4 + speech 0x229 -> mtm(2) (backtrace + speech id; jal pc inferred; single run). Timer/0x64/0x65 refuted. Next: log every increment of objective counter 2 (caller + value), compare with `s5786_hudb_noalt`; find what counter 2 counts (friendlies lost?) and whether our input causes it. Instrument: `tools/apply_s5786_hudbit4_dump.py`.
 - **s5787/s5788:** s5787 objcount arms logged 0 lines (control failed; game logs are in scratch/agent/m6/<tag>/run.log). s5788 added a `getObjectiveCount` change-log as positive control; arms s5788_get_fire/nofire queued. s5789: get-log control passed; counter 2 rises 0->3 with set/increase never entered (both arms). Inline writers to check: datItemSetObjectiveBooleanCount, applyDatObjectiveTriggerEffect, updateNpcEffectIntensity, executeActorType1Effect (static scan, unconfirmed).
 - **s5785:** the s5784 3->2 life loss follows `[mtm] a0=2` preceded by a `setHudEnableBit4` mask store (pc 0x800C775C val=4) ~190 s into the mission; `[killset]`/`[bit8call]` = 0 (debris refuted; controls: strings compiled, s5778 fired 16). Overlay reload only decrements afterwards. Single-source. Next: identify the script caller of setHudEnableBit4 (host backtrace on pc==0x800C775C, dump objective bools/timer) - see NEXT.md. (s5784: ALT_HOLD validated, 421 s alive.)

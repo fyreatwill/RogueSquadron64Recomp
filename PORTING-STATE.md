@@ -165157,3 +165157,22 @@ a generic asset with no active-NPC identity. It selects H10b over H10a/H10c.
 The result is single-source static evidence; no build or runtime run was
 needed, no soak added a relevant crash/stall datum, and no mitigation was
 landed. The next unit is real-input mission-1 progression and win.
+
+## Session 5804 (2026-10-21) — real-input mission hold stayed live without a win
+
+Ran the prescribed G1 progression unit with `zsh
+scratch/agent/m6_keyed_hold_var.sh s5804_g1 600` after the screen-lock check.
+The existing positive control fired (`fbrun-control OK`). One route attempt
+reached the qualified mission origin `0x00690400` at t=195 s, passed the 130 s
+real-mission verification, and held for 603 s. The recipe reported
+`alive_at_end=1`, `vi_stalls30s=0`, `crashlines=0`; framebuffer hashing also
+remained active with `maxrun=439`, `distinct=15111`, `total=16913`.
+
+The run later visited title/menu origins (`0x00720400`/`0x00790400`) but did
+not emit a legitimate mission-results completion or advance marker. This is a
+single-run G1b result: the real-input route can sustain flight, while this
+control schedule does not win the mission. It rules out a crash, frozen-frame
+stall, and immediate route death for this arm, but does not identify whether
+objective progress, combat targeting, or the mission failure/restart path is
+responsible. The next unit is a phase-gated A/B comparison of this schedule
+against denser combat/objective input; no mitigation was landed.
