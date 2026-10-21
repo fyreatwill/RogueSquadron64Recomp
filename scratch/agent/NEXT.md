@@ -1,5 +1,5 @@
-# NEXT: fold s5738_snap{a,b} — what kills the aircraft in one step every ~7 s?
-Read scratch/agent/m6/s5738_snap{a,b}/run.log `grep '^\[snap\]'`. Control: `[snap] death#1` exists (and `[snap] post:`).
-Hypotheses: (H1) terrain/object collision: a position float (y) in the 8 snapshots descends to a plateau and speed floats stay high before death -> game-legit crash of an idle plane; then G1 needs real flight input that climbs (steer arm already survives 541 s clean but still fails -> check that run too). (H2) boundary/timer kill: position nominal, a flag/timer word flips -> find the writer of the hp store via lldb watchpoint on 0x80137E7C (0x137DB8+0xC4) and name the PC. (H3) port defect (bad collision geometry/spawn pose): position at spawn already intersects ground (snapshot -t at respawn shows y ~ ground).
-Method: offline python over the 8x0xA8 words (decode as BE-swapped floats); compare diffs across snapshots to find position/velocity fields; repeat across the 3 deaths for consistency (two lines of evidence).
+# NEXT: fold s5739_hpwatch_a — which PC writes hp 0x137E7C to 0 (and lives 0x130B10)?
+Read scratch/agent/m6/s5739_hpwatch_a/{summary,keys.log,lldb_att*.log}. Controls: run.log has trap-at-swap; lldb log shows 0x3470 watch hit before deletion. If no mission reached / trap fired early, retune TRAPSWAP (mission origin 0x690400 at update_screen ~#11727) and requeue.
+Hypotheses: (H1) hp zeroed by a collision/damage routine with huge damage (bt names a damage fn; check damage arg source); (H2) hp zeroed by a mission-state/respawn routine (flag/timer kill) -> bt names state fn; (H3) port defect: host memcpy/memset clears the record (bt in host code, not recomp fn).
+Discriminator: top frame of the bt at the hp-to-0 write.
 HYPOTHESIS-ID: g1-gameover-cause
