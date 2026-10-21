@@ -1,5 +1,5 @@
-# NEXT: G1 — where does the probe droid aim (is the player the intended target, with NPCs collateral, or are NPCs targeted)? (H1 vs H2'')
-Evidence (s5796): class-2 NPCs are legitimately in the projectile scan list (6/8 victims). Membership is not the bug; question is aim.
-Hypotheses: H1 aim = player, NPCs are collateral on the ray; H2'' droid aim vector points at an NPC (wrong target pick); H5 droids shouldn't be alive/firing yet (mission scripting).
-Discriminator: offline read of the droid fire routine (npcProbeDroid handler, spawns projectile with desc at s5794 shooter log) to find the aim vector source; then one run logging at fire time droid pos, aim dir, player pos (pl=80165df8) and the angle between aim and (player-droid). Outcome: angle ~0 -> H1; aim toward victim -> H2''. Control: [shooter] lines fire.
+# NEXT: G1 — find who fills the static spawn record 0x80165C28 (the real "fire" caller) and read the projectile's true velocity vs player position (H1 vs H2'')
+Evidence (s5797): npcProbeDriod has no fire call; projectile init is 0x8005CB10 reading a caller-filled record (0x80165C28 droids). Record words 0..2 are extents, not aim. Player-pos offset used (0x80137DBC+0xC0) was wrong.
+Hypotheses: H1 aim = player, NPCs collateral; H2'' aim vector points at an NPC; H5 droids shouldn't fire yet. 
+Discriminator: (a) offline: grep writers of 0x80165C28 (lui 0x8016 / addiu 0x5C28) to name the fire function and read its direction source; (b) one run logging, at that fire site, direction/velocity and a VERIFIED player position (find via a known-good consumer, e.g. what the camera or the s5758 player slot 0 0x80137DBC reads — check offsets in the player physics function updatePlayerCraftPhysics). Outcome: velocity angle to player ~0 -> H1; toward victim NPC -> H2''. Control: [aim]-style lines fire and player pos is not (150,150,0).
 HYPOTHESIS-ID: g1-mission-progression
