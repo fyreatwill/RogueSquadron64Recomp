@@ -1,9 +1,9 @@
-# NEXT: G1 — who calls setHudEnableBit4 (0x800C7738) with val 4 ~190 s into the mission?
+# NEXT: G1 — fold the s5786 hudbit4 dump soaks (who/what triggers setHudEnableBit4 ~190 s into the mission?)
 
-s5785: life loss 3->2 = mtm(a0=2) after setHudEnableBit4 store (mtmst pc=0x800C775C val=4); not debris (killset=0, control ok), not reload, not the 0x64/0x65 LOSE booleans (0 at entry).
-- H-script-fail: mission script fail condition (friendly lost / timer / bounds) -> discriminator: log guest caller PC (ctx r31 is 0; use the script interpreter frame / host backtrace) and dump objective booleans 0..0x70, objective counts, objective timer at the val=4 store.
-- H-timer: mission time limit ~190 s -> check getObjectiveTimer (0x800C76E0) value at the store; control: the same dump at mission init must show the timer start.
-- H-ours: our input/autopilot did something (e.g. fire/btn 0x8000 at t=379/385 hitting a friendly) -> compare autopilot lines 766805..766880 (btn=0x8000 at t=379) vs the s5783_noalt run (0 deaths).
-Single build: extend tools/apply_s5754_mask_stores.py with backtrace + bool/timer dump gated ROGUESQ_LOG_MTM on pc==0x800C775C; queue 2 soaks (althold, noalt) of the s5777 recipe with the [terr] budget unchanged. HYPOTHESIS-ID: g1-mission-progression
-
+Soaks `s5786_hudb_althold` and `s5786_hudb_noalt` (queued s5786) log `[hudbit4]` (ra/gate/flagword), `[hudbit4dump]` (nonzero objective bools 1..0x70 + timers 0..7) and host backtraces for the first 4 calls. Logs: scratch/agent/soak_results/s5786_*.log (verdicts in SOAK-RESULTS.md).
+- H-script-fail: dump at the call preceding `[mtm] a0=2` shows a specific objective bool newly set (compare with the previous dump) -> name it via the objective-bool table, trace its setter.
+- H-timer: a timer value at/over a limit at that call -> timer idx + limit.
+- H-ours: noalt arm calls setHudEnableBit4 too (or the althold arm does it with no bool/timer change) -> look at autopilot input at that time (btn 0x8000 at t~379/385).
+Controls: dump lines exist; a nonzero bool appears in some line. If setHudEnableBit4 is never reached in either arm, the run did not reproduce (s5784 reproduced once) — check `[livesbyte] 3->2` presence first and re-queue.
+If the host backtrace only shows recomp host frames with no script info, read the caller's guest args (a0..a3) by extending the same patch.
 HYPOTHESIS-ID: g1-mission-progression
