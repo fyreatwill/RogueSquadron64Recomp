@@ -348,3 +348,5 @@ s5691: static census of all 179 setObjectiveBoolean sites: only sayWhoaHim_v0x1F
 
 - s5748/s5749: [mtm] entry log works (control fired) but both soaks saw only a0=1 calls, and ra is always 0 (recomp doesn't maintain r31) -> use host backtrace_symbols_fd on a0==2 instead of ra; need a route that reaches a0=2.
 - s5750: host backtrace on first 3 a0==2 entries landed (tools/apply_s5750_mtm_bt.py, ROGUESQ_LOG_MTM=1); soaks s5750_mtma/b queued, results pending. Fold: frames naming checkComplexObjectives/setHudEnableBit4 => bool arms; other => another writer; no a0==2 at all => a0=2 was lldb-only (recheck s5470 capture). Nothing overturned this session.
+
+- s5751: a0==2 never fires on the keyed route (9 [mtm] entries, all a0=1 ra=0); backtrace re-aimed at any a0, soaks s5751_mtma/b queued. Game stderr is in scratch/agent/m6/<tag>/run.log.

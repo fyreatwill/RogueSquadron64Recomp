@@ -1,4 +1,4 @@
-# NEXT: [mtm] fold s5750 backtrace soaks
-Read SOAK-RESULTS s5750_mtma/b logs: grep -A30 'a0==2 BACKTRACE'. Control: '[mtm] n=' lines present.
-Backtrace frames name the a0=2 caller (checkComplexObjectives/setHudEnableBit4 => bool arms; other => H2). If no a0==2 line occurs, a0=2 is lldb-only (s5470 r4 read) - check s5470 arg capture.
+# NEXT: [mtm] fold s5751 any-a0 backtrace soaks
+Full stderr: scratch/agent/m6/s5751_mtma/run.log and _mtmb. `grep -a -A26 'BACKTRACE a0=' run.log`. Control: '[mtm] n=' lines.
+Frames name the host-side caller of requestMissionTransitionMode (a0=1, ra=0 seen in s5750). Hypotheses: caller is a bool-arm function (checkComplexObjectives/setHudEnableBit4) vs a game-over/timer path (H2). Symbols may be sparse: map addresses via nm/atos on build/RogueSquadron64Recomp.
 HYPOTHESIS-ID: g1-nonhealth-fail

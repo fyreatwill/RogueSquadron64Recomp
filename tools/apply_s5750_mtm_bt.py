@@ -4,8 +4,8 @@ import pathlib
 base = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
 TAG = "PATCH: s5750 mtm bt"
 BLOCK = ('    { extern int backtrace(void**, int); extern void backtrace_symbols_fd(void* const*, int, int); static int s_b = 0; '
-         'if (getenv("ROGUESQ_LOG_MTM") && U32(ctx->r4) == 2 && s_b < 3) { s_b++; void* bt[24]; int nb = backtrace(bt, 24); '
-         'fprintf(stderr, "[mtm] a0==2 BACKTRACE #%d ra=0x%X\\n", s_b, U32(ctx->r31)); backtrace_symbols_fd(bt, nb, 2); } } /* ' + TAG + ' */\n')
+         'if (getenv("ROGUESQ_LOG_MTM") && s_b < 3) { s_b++; void* bt[24]; int nb = backtrace(bt, 24); '
+         'fprintf(stderr, "[mtm] BACKTRACE a0=%u #%d ra=0x%X\\n", U32(ctx->r4), s_b, U32(ctx->r31)); backtrace_symbols_fd(bt, nb, 2); } } /* ' + TAG + ' */\n')
 def apply(text):
     if TAG in text: return text, 0
     i = text.find("RECOMP_FUNC void requestMissionTransitionMode(uint8_t* rdram")

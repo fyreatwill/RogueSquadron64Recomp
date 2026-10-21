@@ -164639,3 +164639,6 @@ ORIGIN: diagnostic only, no mitigation.
 
 ## Session 5750 (2026-10-21) — mtm a0==2 backtrace patch landed, soaks queued
 Added tools/apply_s5750_mtm_bt.py (hooked in fixup_game_funcs_vendored.py): with ROGUESQ_LOG_MTM=1, first 3 requestMissionTransitionMode entries with a0==2 dump a host backtrace. Built OK. Queued s5750_mtma/b (s5748 recipe). Result pending; no run this session. Rules out nothing yet.
+
+## Session 5751 (2026-10-21) — [mtm] s5750 soaks: a0==2 never fires; backtrace re-aimed at any a0
+Folded s5750_mtma/b (full stderr in scratch/agent/m6/<tag>/run.log, NOT the soak_results log). Control passed: `[mtm] n=` lines fired (3 in a, 6 in b; mission_cycles 3 and 2, alive, 0 crashlines). All 9 entries were a0=1, ra=0x0 (host-side entry), gate=0, all bools 0; zero a0==2 entries, so no BACKTRACE frames. Rules out: a0==2 being reachable on this route (s5470's a0=2 was lldb-only/misread). The mission-end/hangar-return transition is a0=1. Patch tools/apply_s5750_mtm_bt.py changed to dump a host backtrace on the first 3 entries regardless of a0 (live funcs_42.c patched in place, rebuilt). Soaks s5751_mtma/b queued. Next: read frames to name the a0=1 caller.
