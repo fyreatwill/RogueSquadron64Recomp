@@ -1,5 +1,6 @@
-# NEXT: fold s5756_nogoda/b soak results — which setHudEnableBit4 caller ends an unpiloted mission
-Task: read SOAK-RESULTS.md for s5756_nogod{a,b}; grep their logs for [hudbit]/[mtmst]/[objbool] lines before the results screen. Control: >=1 [mtmst] line, godrefills=0. Map the ra of the first setHudEnableBit4 to a function in N64Recomp/RecompiledFuncs (funcs_43/47/48 candidates, docs/M6-S5747-FAIL-ARM-CENSUS.md).
-Hypotheses: H1 bool-0x6D arm (count[0x28]>0); H2 bool-7 arm via dialogue; H3 death path requestMissionTransitionMode(1) (lives--), not via setHudEnableBit4 at all.
-Discriminator: ra of first hudbit hit + whether lives counter changes.
+# NEXT: fold s5757_bit1ctx soak — why does pending-event bit1 (mtm a0=1) get set every mission start?
+s5756 non-god result (s5758 entry): hudbit 0 lines (objbool fired = control live), so setHudEnableBit4 is NOT the end path; mtm(a0=1) fires from runInMissionFrame's event table with b7=b64=b65=b6D=0. Bit1 has one writer 0x800B1140 (funcs_30, per-object update right after terrain query jal 0x80067D90; gated only by word 0x8010CA20==0). Same in god and non-god => godmode was not the confound.
+Task: grep [bit1ctx] in scratch/agent/m6/s5757_bit1ctx/run.log. Compare terrain (f2) vs y (s1+8), b_BB, gate_CA20 at the first hit and subsequent hits. Control: >=1 [bit1ctx] line.
+Hypotheses: H1 terrain query returns garbage (heightmap unloaded) so object thinks it crashed; H2 s1 is legit player ship and bit1 = designed "mission start/spawn" event whose handler mtm(1) is benign, real end is mtm mode 3 from elsewhere; H3 s1 is a non-player object.
+Discriminator: terrain value sane (~ y) vs wild; s1 pointer == player object.
 HYPOTHESIS-ID: g1-nonhealth-fail
