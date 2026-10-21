@@ -164630,3 +164630,9 @@ s5743 (rc=137, 900 s timeout, empty log) never armed: m6/s5743_hpwatch_lvsel/key
 ## Session 5748 (2026-10-21) — landed [mtm] requestMissionTransitionMode entry log; two soaks queued
 Landed tools/apply_s5748_mtm_log.py (mirrored into fixup_game_funcs_vendored.py): ROGUESQ_LOG_MTM=1 logs every entry of requestMissionTransitionMode (a0, ra, gate, bool 7/0x64/0x65/0x6D). Positive control = every call logs (first 200). Count[0x28] omitted (base address not in census). Build OK. Queued s5748_mtma (baseline) and s5748_mtmb (SUPPRESS_BOOL=7) soaks, HOLD=420. Not yet run: next iteration folds [mtm] a0=2 ra to name the real fail-arm caller (H1 bool 6D / H2 other caller / H3 bool 7).
 ORIGIN: diagnostic only, no mitigation.
+
+## Session 5749 (2026-10-21) — folded s5748 [mtm] soaks: control fires, no a0=2 call, ra=0 is useless
+- s5748_mtma/mtmb (scratch/agent/m6/*/run.log): [mtm] positive control PASSED (3 and 5 entries logged), mission held 422 s, alive, vi_stalls30s=0, crashlines=0 in both arms.
+- Every logged call had a0=1, gate=0, b7=b64=b65=b6D=0. NO a0=2 call occurred, so the fail arm was not reproduced on this route; neither the bool-0x6D nor bool-7 hypothesis is tested (neither confirmed nor refuted).
+- ra=0x0 on every line: recompiled code does not maintain ctx->r31 for natively-called functions, so caller identification by `ra` (the s5748 design) cannot work. Design flaw in the instrument, not a result about the game.
+- Next: add host `backtrace_symbols_fd` (RECOMP_FUNC names are real C symbols) to the [mtm] hook when a0==2, and arm it in a soak that actually reaches a0=2. No code changed this session (docs/fold only).

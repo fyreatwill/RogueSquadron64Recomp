@@ -1,4 +1,4 @@
-# NEXT: fold s5748_mtma/mtmb SOAK-RESULTS logs
-grep '\[mtm\]' scratch/agent/soak_results/s5748_mtm*.log. Control: any [mtm] line. Find a0=2 call: ra -> caller (map with funcs grep), b6D/b64/b65/b7 state.
-H1 bool 0x6D arm (b6D=1), H2 other arg-2 caller (ra not in checkComplexObjectives/setHudEnableBit4), H3 bool 7 arm (b7=1 in arm a only; arm b should differ).
+# NEXT: [mtm] hook v2 - host backtrace on a0==2
+Edit tools/apply_s5748_mtm_log.py BLOCK: when U32(ctx->r4)==2 also call backtrace()+backtrace_symbols_fd(STDERR) (include <execinfo.h>); regen path via fixup (apply is idempotent on TAG - bump TAG to s5749). Build, rerun s5748 recipes as s5749_mtma/b.
+Control: a0=1 lines still print. Discriminator: backtrace frames name the a0=2 caller (checkComplexObjectives/setHudEnableBit4 => bool arms; other => H2). If still no a0=2, the fail needs another route: find which route produced the original arg-2 observation (grep s5470 in PORTING-STATE).
 HYPOTHESIS-ID: g1-nonhealth-fail

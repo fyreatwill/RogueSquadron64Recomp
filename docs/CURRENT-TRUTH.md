@@ -345,4 +345,4 @@ s5691: static census of all 179 setObjectiveBoolean sites: only sayWhoaHim_v0x1F
 
 - s5743 lvsel hp-watch was void (mission gate in s5739_hpwatch.sh single-quoted, never matched); fixed, requeued as s5744.
 
-- s5748: [mtm] entry log (ROGUESQ_LOG_MTM=1) landed; soaks s5748_mtma/mtmb queued; fold ra of the a0=2 call to name the fail-arm caller.
+- s5748/s5749: [mtm] entry log works (control fired) but both soaks saw only a0=1 calls, and ra is always 0 (recomp doesn't maintain r31) -> use host backtrace_symbols_fd on a0==2 instead of ra; need a route that reaches a0=2.
