@@ -1,9 +1,8 @@
-# NEXT: G1 — fold the s5786 hudbit4 dump soaks (who/what triggers setHudEnableBit4 ~190 s into the mission?)
+# NEXT: G1 — what increments objective counter 2 in mission 0x620400 (fail at count >= 3)?
 
-Soaks `s5786_hudb_althold` and `s5786_hudb_noalt` (queued s5786) log `[hudbit4]` (ra/gate/flagword), `[hudbit4dump]` (nonzero objective bools 1..0x70 + timers 0..7) and host backtraces for the first 4 calls. Logs: scratch/agent/soak_results/s5786_*.log (verdicts in SOAK-RESULTS.md).
-- H-script-fail: dump at the call preceding `[mtm] a0=2` shows a specific objective bool newly set (compare with the previous dump) -> name it via the objective-bool table, trace its setter.
-- H-timer: a timer value at/over a limit at that call -> timer idx + limit.
-- H-ours: noalt arm calls setHudEnableBit4 too (or the althold arm does it with no bool/timer change) -> look at autopilot input at that time (btn 0x8000 at t~379/385).
-Controls: dump lines exist; a nonzero bool appears in some line. If setHudEnableBit4 is never reached in either arm, the run did not reproduce (s5784 reproduced once) — check `[livesbyte] 3->2` presence first and re-queue.
-If the host backtrace only shows recomp host frames with no script info, read the caller's guest args (a0..a3) by extending the same patch.
+s5786: setHudEnableBit4 caller = lv0_checkComplexObjectives site `getObjectiveCount(2) >= 3` (0x801011B4..0x801011E0), then speech 0x229, then mtm(2). Timer and bools 0x64/0x65 not involved.
+- H-friendly-loss: counter 2 counts friendlies/targets lost; increments come from a game-side kill/destroy event (legit game rule) -> then the question is why friendlies die (our flight/AI/collision port bug?).
+- H-ours: increments follow our fire input (btn 0x8000) hitting friendlies -> noalt arm (queued s5786_hudb_noalt) should show the same increments or none.
+- H-port-bug: counter 2 incremented by a path that should not run (e.g. wrong damage/collision result).
+Discriminator: patch setObjectiveCount/addObjectiveCount (find via `grep -n 'RECOMP_FUNC void .*ObjectiveCount' funcs_35.c`) to log value+host backtrace under ROGUESQ_LOG_HUDBIT; same recipe, both arms (queue both, rule 13). Control: counter 2 increments at least once in the failing arm before the fail.
 HYPOTHESIS-ID: g1-mission-progression
