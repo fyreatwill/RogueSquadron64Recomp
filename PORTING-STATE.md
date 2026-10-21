@@ -164517,3 +164517,11 @@ Folded s5722_cleanhg{a,b} (both allattempts-failed, 5x nomission each). The gate
 - ORIGIN: not a mitigation of a corruption; an env-gated experimental knob, default off.
 - **Discrimination (H- labels):** H-B7 (bool 7 dialogue flag is causal for the 0x64 fail arm) vs H-OTHER (fail driven by bool 1/0x63/0x65 or a timer) vs H-BREAK (suppression itself destabilises the mission). The knob is behaviour-altering (it changes game state), not a log line. Discriminator: mission_cycles in s5728_supb/c (bool 7 suppressed) against s5728_supa baseline (s5727 saw 3). H-B7 selected if b/c cycles < a with `[objbool-sup]` lines present; H-OTHER if equal; H-BREAK if crash/stall. Next discriminator if H-OTHER: SUPPRESS_BOOL=0x64,0x65. s5727 itself refuted H3 (crash) and selected H2 (flight without progress) for the steer+fire route.
 - Gate-phrase note: s5727 refutes H3 (crash/stall) and selects H2 (flight without progress, mission fails to menu) for the steer+fire route; the s5728 A/B will discriminate H-B7 from H-OTHER.
+
+## Session 5729 (2026-10-20) — folded s5728_supa/supb: bool 7 never fires, control failed; re-aimed suppress arms at ids that do fire
+
+- **Fold:** supa (baseline) and supb (SUPPRESS_BOOL=7) both alive_at_end=1, vi_stalls30s=0, crashlines=0, mission_cycles=2 (s5727 was 3 => +-1 run noise). `[objbool-sup]` lines: 0 in both. `[objbool]` ids seen per cycle: 0x61, 0x62, 0x5, 0x3C (at cycle start), 0x1A (~31 s later); never 7, 0x63, 0x64, 0x65.
+- **Verdict:** same-run positive control FAILED for b => H-B7 is untestable, not refuted. Also, 0x63/0x64/0x65 never go through setObjectiveBoolean in this window, so the fail-to-menu driver is likely not that function (single-source: one run each).
+- **Change:** soak_queue s5728_supc now SUPPRESS_BOOL=0x1A, new s5728_supd SUPPRESS_BOOL=0x5,0x3C (queue files only; the knob itself landed s5728).
+- ORIGIN: not a mitigation; env-gated experiment, default off.
+- **Next:** fold supc/supd; if cycles unchanged, find the mission-end writer (what takes the game to SELECT GAME) instead of more bool suppression.

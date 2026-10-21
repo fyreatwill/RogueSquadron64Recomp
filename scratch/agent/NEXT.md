@@ -1,4 +1,5 @@
-# NEXT: fold s5728_sup{a,b,c} (SOAK-RESULTS.md). a = baseline, b/c = ROGUESQ_SUPPRESS_BOOL=7.
-H1: bool 7 causal for fail arm -> b/c mission_cycles drop vs a (a≈3) and flight outlives ~180 s. H2: not causal -> same cycles (then bool 1/0x63/0x65 or a timer is the fail driver; try SUPPRESS_BOOL=0x64,0x65). H3: suppression breaks mission (crash/stall).
-Control: m6/<tag>/run.log has [objbool-sup] lines in b/c, none in a. If b/c never show a sup line, bool 7 is never set in this window -> datum, inspect [objbool] ids.
+# NEXT: fold s5728_supc (SUPPRESS_BOOL=0x1A) and s5728_supd (0x5,0x3C) from SOAK-RESULTS.md.
+s5728 a/b fold: bool 7 NEVER fires (only ids 0x61,0x62,0x5,0x3C,0x1A, 5 per cycle, 0x1A ~31 s after cycle start); b had no [objbool-sup] line => control failed, H-B7 untestable; a and b both mission_cycles=2 (earlier baseline 3 => run-to-run noise +-1, not an effect).
+H1: 0x1A (or 0x5/0x3C) causal for mission failing to menu -> cycles drop / flight outlives ~226 s cycle. H2: not causal -> cycles ~2-3 as before; fail driver is not setObjectiveBoolean (no 0x63/0x64/0x65 ever logged) -> next probe: trace what ends the mission (mission-state writer). H3: suppression destabilises mission.
+Control: m6/<tag>/run.log has [objbool-sup] lines.
 HYPOTHESIS-ID: g1-bool7-suppress
