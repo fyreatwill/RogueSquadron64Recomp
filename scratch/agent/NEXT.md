@@ -1,42 +1,18 @@
-# NEXT: what value is written to sp+0x175 before bit 0x8?
+# NEXT: who sets orientation record byte0=1 for the player?
 
-s5779 closed the caller. Do not retag the two jals. Do not change
-`ROGUESQ_ALT_HOLD`. Do not log another orientation angle.
+s5780 result: sb 0x800FFC60 copies record byte0 (=1, idx 0, flag sp+0x497=1) to the
+caller's sp+0x175; every visible bit8call follows it. Do not re-log that store.
 
-`updatePlayerCraftPhysics` takes the bit-0x8 jal at 0x800B2A58 when its
-float is <= 0 and byte sp+0x175 != 0. That byte is not stored in the
-caller. The only writer is `sb $v0, 0x0($v1)` at 0x800FFC60 in
-`stepObjectOrientationTowardTarget` (funcs_43.c). It copies `lbu 0($s0)`
-from the array at sp+0x198, stride 0x2C, index = word at sp+0x488, and
-only when byte sp+0x497 != 0. The caller never zeroes sp+0x175, so a
-nonzero stack leftover can still select the jal.
+Work unit: static trace first (no build): in funcs_43.c find every store to the
+record array at sp+0x198 (stride 0x2C, byte 0) in stepObjectOrientationTowardTarget
+(s5775 found the ret2 store at 0x800FF6F0 writes sp+0x497; look for sb to 0($s?)/record
+byte0 near 0x800FF*, 0x800FFA*). Name the test (geometry/terrain) that sets byte0=1.
+Then one build+run on s5777_althold.sh logging that test's inputs for the player at the
+store, paired to the next [bit8call].
 
-One build, one run. Add a fixup hooked from
-`tools/fixup_game_funcs_vendored.py` (same shape as
-`tools/apply_s5779_bit8_caller.py`). Do not hand-edit `funcs_43.c`.
-At the 0x800FFC60 store, when the saved object (word at sp+0x4F8, the
-incoming a0) is 0x80137DBC, log: index, source byte, flag byte
-sp+0x497. Print every player store whose source byte != 0 (cap 40) and
-the first few flag!=0 stores. Leave `[bit8call]` in place. Reuse
-`scratch/agent/s5777_althold.sh` unchanged. Screen must not show
-`CGSSessionScreenIsLocked=Yes`. Preserve the current
-`scratch/agent/m6/s5777_althold/run.log` before the run overwrites it.
+- H-real-impact: byte0=1 comes from a true terrain/object hit test with plausible inputs (player really at ground y). Next: why the hit is lethal (float<=0 test).
+- H-bad-input: test inputs wild/stale (e.g. uninitialised geometry). Next: writer of inputs.
 
-Control: a `[bit8call]` line `site=0x800B2A58 a0=0x80137DBC hw=0x0001`
-still prints, and the new store line is judged against that same
-death. Zero store lines in front of a firing bit8call is a result only
-if the store log's own positive control fired earlier in the run
-(a player store line, or a flag!=0 line). A run with no bit8call
-0x0001 transition is void.
+Control: [bit8call] hw=0x0001 still prints; [sp175] lines still print src=1.
 
-- H-written-const: every such bit8call is preceded by this sb, flag
-  != 0, and the source byte is the same small value each time. The
-  byte is an impact flag. Next is the float<=0 test, not the byte.
-- H-written-vary: every such bit8call is preceded by this sb, flag
-  != 0, and the source byte takes more than one nonzero value. Next
-  is what record+0 means.
-- H-stale: a bit8call hw=0x0001 has no sb from this call in front of
-  it. The stack byte was leftover. Next is who last wrote that slot,
-  not the table.
-
-HYPOTHESIS-ID: g1-sp175-src
+HYPOTHESIS-ID: g1-record-byte0

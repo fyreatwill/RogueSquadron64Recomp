@@ -164891,3 +164891,17 @@ Static, from the recompiled callers (single-source for the byte's meaning, not f
 
 ORIGIN: no mitigation. Bit 0x8 is the value this jal's callee is written to store; the caller is now named.
 DISCRIMINATION: selects H-phys (7/7). refutes H-cine (c0=0) and H-split. Slug g1-bit8-caller is closed. Next slug is g1-sp175-src.
+
+## Session 5780 (2026-10-21) — sp+0x175 is written by the orientation record byte, always 1
+
+Soak tail had nothing newer than the s5769 rows. Screen lock key absent. Previous `run.log` kept at `scratch/agent/m6/s5777_althold/run.s5779.log`.
+
+Instrument: `tools/apply_s5780_sp175_store.py` (hooked from `tools/fixup_game_funcs_vendored.py`, listed in the vendored-script list) logs the `sb` at 0x800FFC60 in `stepObjectOrientationTowardTarget`: saved a0 (sp+0x4F8), record index (sp+0x488), source byte, flag byte (sp+0x497), destination address. Player stores with src!=0 capped at 40, first 8 src==0 player stores and 6 other-object stores also printed (those two controls never printed because the 40-cap filled first; positive control instead = 40 `[sp175]` lines and the unchanged `[bit8call]` lines `a0=0x80137DBC hw=0x0001` firing in the same run). Same recipe `s5777_althold.sh`, unchanged.
+
+Summary: att=1 mission_t=20s hold=423s alive_at_end=1 vi_stalls30s=0 crashlines=0 godrefills=0 mission_cycles=5.
+
+Result: selects H-written-const. All 40 logged stores: player, src=1, flag=1, idx 0 (one idx 3). Destination 0x80165D95 on 36 of 40 (a frame whose sp+0x175 is the physics caller's byte, 0x80165C20+0x175) and 0x80165BF8 on 4 (another frame, the store immediately following each bit8call). In the 4 visible pairings (n=1..4) the bit8call is the very next line after a src=1 dst=0x80165D95 store. Bit8calls n=5..9 are past the log cap, so 4 of 9 paired, 0 contradicted (not 9/9).
+So the byte is a record "byte0" impact flag set to 1 by the fill (the s5775 fill family), not stack leftover. H-stale refuted for the paired events; H-written-vary refuted (only value 1).
+
+ORIGIN: no mitigation. No behavior change; instrument only plus a ledger result: the byte is legitimately set, the chain is fill-sets-record-byte0=1 -> physics sees sp+0x175!=0 -> float<=0 -> debris jal -> bit 0x8.
+DISCRIMINATION: selects H-written-const. Next slug g1-record-byte0: who fills record byte0=1 at idx 0 for the player and what geometric/state test makes it, i.e. is the player truly colliding (terrain/object) at the time.

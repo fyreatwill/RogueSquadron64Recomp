@@ -216,7 +216,9 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
-_s5779 (top):_ bit 0x8 is the physics jal (H-phys, 7/7, `scratch/agent/m6/s5777_althold/run.log`; s5778 log kept at `s5778_althold_kept/run.log`). Cinematic jal never ran. Do not retag the callers and do not tune `ROGUESQ_ALT_HOLD`. Next = log the only writer of stack byte sp+0x175 (`sb` 0x800FFC60: index, source byte, flag sp+0x497) on the same recipe and pair each line to `[bit8call]` 0x800B2A58. Slug g1-sp175-src.
+_s5780 (top):_ sp+0x175 is written by the `sb` at 0x800FFC60 from orientation record byte0, always 1 (40/40 logged stores, flag=1, idx 0; 4/4 visible bit8calls directly preceded by it; log capped at 40 so 5 later bit8calls unpaired). H-written-const; not stack leftover. `tools/apply_s5780_sp175_store.py`. Next = find who sets record byte0=1 for the player (the fill that precedes this) and which collision test drives it. Slug g1-record-byte0.
+
+_s5779 :_ bit 0x8 is the physics jal (H-phys, 7/7, `scratch/agent/m6/s5777_althold/run.log`; s5778 log kept at `s5778_althold_kept/run.log`). Cinematic jal never ran. Do not retag the callers and do not tune `ROGUESQ_ALT_HOLD`. Next = log the only writer of stack byte sp+0x175 (`sb` 0x800FFC60: index, source byte, flag sp+0x497) on the same recipe and pair each line to `[bit8call]` 0x800B2A58. Slug g1-sp175-src.
 
 _s5778:_ altitude hold does not stop the life loss (H-hold-still-dies). acted 0→2960 with sy=+1; 8/9 drops started at `[killset]` 0x800B08DC. s5779 named that caller. The 9th class is the closed return-2 path.
 
