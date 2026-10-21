@@ -1,3 +1,4 @@
-# NEXT: fold s5734_objc{a,b} [objc] lines (SOAK-RESULTS.md)
-grep '\[objc\]\|\[god3\]' the two logs. If 0x64 (loss counter) hits 3 while hp>0 in arm a: loss is a data-defined objective count; next, identify which 3 NPCs (bp updateDestructionDebrisNpc 0x? writers, log object ids). Else find other writer of mission-end.
+# NEXT: name the writer of the simultaneous clear of 0x138060/0x138064
+s5734_objc logs: both words go to 0 in the same tick at mission end (resets at +0x60=2/3/4, +0x64=1/2), so a block clear on teardown, not a threshold.
+Work unit: in the GODMODE3 watch thread, on the tick a nonzero->0 transition of +0x60 is seen, also dump the guest PC/ra history (use the existing recomp call-trace ring if present; else add a write hook in the store helper for 0x138060..0x138068). Positive control: mark-everything watch fires on a known write. Hypotheses: (H1) zeroed by mission-teardown init routine after results screen; (H2) zeroed by level reload called from the game-over path; (H3) zeroed by a generic memset of the mission state block. Discriminator: caller PC and whether hp==0 precedes it in the same arm.
 HYPOTHESIS-ID: g1-gameover-cause
