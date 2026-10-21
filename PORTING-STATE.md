@@ -165176,3 +165176,19 @@ stall, and immediate route death for this arm, but does not identify whether
 objective progress, combat targeting, or the mission failure/restart path is
 responsible. The next unit is a phase-gated A/B comparison of this schedule
 against denser combat/objective input; no mitigation was landed.
+
+## Session 5805 (2026-10-21) — G1 A/B: denser input does not win mission 1 either
+
+Ran both arms concurrently from build/ (`scratch/agent/g1_armA.sh` = s5804
+schedule, `g1_armB.sh` = post-t=260 schedule changed to 1 s steps alternating
+a/b fire with sl/sr, 600 steps; both copies drop the pkill so they coexist).
+Screen unlocked (script checks). A: att2 (att1 nomission), mission t=82 s, hold
+603 s, alive=1, 0 stalls>30 s, 0 crash lines, fbhash maxrun=317 distinct=14069/
+15395. B: att1, mission t=80 s, hold 604 s, alive=1, 0 stalls, 0 crash,
+fbhash maxrun=306 distinct=13477/14680. Controls (fbrun, fbhash) fired in both.
+Neither arm produced a results/advance/win marker. Verdict: G1b for both arms —
+sustained fire/stick density is not the limiting factor; G1a refuted for this
+input family, G1c not seen (2/2 stable). Did not examine the objective-boolean
+state, so what limits completion remains open. Next: read objective/boolean
+snapshots ([ccosnap], ROGUESQ_LOG_HUDBIT) in a real-input run to see which
+objective never advances (enemy-kill counter vs. waypoint vs. mission timer).

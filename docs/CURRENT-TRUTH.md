@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5804 (2026-10-21).
+Compact operational handoff, maintained as of Session 5805 (2026-10-21).
 `PORTING-STATE.md` is the chronological ledger. Durable background, closed
 audit detail, and the per-thread histories moved out of this file are in
 `docs/PROJECT-OVERVIEW.md` (latest: "Migrated from CURRENT-TRUTH (s5636)");
@@ -97,6 +97,8 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   schedule did not win the mission. It does not identify whether objective
   progress, combat targeting, or the mission's failure/restart path is the
   limiting factor.
+
+- **s5805 G1 A/B (concurrent, 600 s each):** denser fire/stick input (arm B) and the s5804 schedule (arm A) both stable (0 crash, 0 stall, controls fired) and neither won mission 1. Input density is not the limiter; next is objective-state logging under real input.
 
 ## Active M6 thread: objective booleans and the 0x64 fail arm
 
