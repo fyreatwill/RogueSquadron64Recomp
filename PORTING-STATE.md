@@ -164487,3 +164487,9 @@ Folded s5722_cleanhg{a,b} (both allattempts-failed, 5x nomission each). The gate
 - s5723_introa: mission t=19s, verified 130 s, hold 303 s, alive_at_end=1, vi_stalls30s=0, crashlines=0; controls (fbrun, mcycles) OK.
 - fbd frames: crawl frame (w640, ~#2500) shows STAR WARS logo + "Chapter 1" crawl with a garbage-pixel band across the bottom third (G3 datum: likely stride/height mismatch in the dump or real render fault, unresolved); last frame (#6500, w512) is the Rebel-logo cinematic over desert, i.e. H1 partial: the intro cinematic is playing, not an attract-demo (H3 unsupported: single run, no no-key control).
 - Gameplay hand-off not observed inside 303 s. Queued s5724_introlong (HOLD=540, keys to 900 s) to see whether the cinematic hands off to flight. Single-source; no CURRENT-TRUTH conclusion changed.
+
+## Session 5725 (2026-10-20) — s5724_introlong fold: cinematic still animating at 545 s hold, no hand-off; queue key-variant s5725_introkeys
+- s5724_introlong: mission t=18s, hold 545 s, alive_at_end=1, vi_stalls30s=0, godrefills=4, crashlines=0, controls OK (fbrun/mcycles). fbhash distinct=8227/10884 (animating, not frozen).
+- fbd frames 5000..10000 (w512, origins alternate 0x620400/0x690400): a 3D Rebel-logo model orbited by the camera over desert (5000) then sky (10000); frames differ (md5 x6 distinct). Never reaches cockpit/flight in 545 s. The route sent a/start alternately (AP keys to t=560), so A/Start do not skip it (single run).
+- H1 (hand-off to flight) REFUTED within 545 s; H2 (softlock) NOT shown (animating, no stall) - it is a long or looping non-interactive scene. Open: is this the mission-1 briefing/title scene waiting on a different button (z/b), or a loop. Queued s5725_introkeys (z/start/b keys to t=900, HOLD=540).
+- No code change; observation only. Slug g1-level-select.
