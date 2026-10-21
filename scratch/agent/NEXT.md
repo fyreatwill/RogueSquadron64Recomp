@@ -1,4 +1,4 @@
-# NEXT: fold s5708_lvl{6,7} rows from SOAK-RESULTS.md + scratch/agent/m6/s5708_lvlN/summary. Control: `[lvsel] init a1(cursorMask)` == 1<<N and `[lvinit] initMission gCurLevel=N`.
-Also: lvl4 last frame (scratch/agent/m6/s5708_lvl4/fbd) is hangar-like, not flight; step through its fbd frames to see whether it entered flight and returned, or never left briefing.
-Any crashlines>0 / vi_stalls30s>0 / alive_at_end=0: capture a backtrace, name the writer, fix root cause.
+# NEXT: fold s5710_lvl7{a,b} from SOAK-RESULTS.md. Positive control: log has `copyToRAM: range ... exceeds` (guard fired) and `gCurLevel=7`.
+If crashlines==0 and alive: guard works; then find who issues the SetColorImage w=442 (ORIGIN: writer, via oracle/DL dump on forced lvl7) instead of leaving the guard as the answer.
+If still crashing: take the new backtrace; the cause is elsewhere. Also step lvl4 fbd frames to see if flight was entered.
 HYPOTHESIS-ID: g1-level-select
