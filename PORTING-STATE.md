@@ -164727,3 +164727,11 @@ s5762 had no death so the kill source stayed unobserved. Added `ROGUESQ_FORCEKIL
 - ORIGIN: no mitigation added; no code change.
 - Rules out: "slot state written only by init" (s5763) was drawn from the wrong address; slot-state flags remain unobserved.
 - Next: re-derive the lhu address directly from the generated code (grep the reader of the 0x8/0x10 bits in the objective/fail check) rather than by arithmetic, then watch it.
+
+## Session 5767 (2026-10-21) — offline: 0x137F3C IS the slot-state halfword (obj+0x180); s5766 "turn float" reading overturned; the kill-bit setters enumerated
+- Reader (funcs_30.c updatePlayerCraftPhysics 0x800B1DF8..1E80): a1=0x8014_0000-0x7FF4=0x8013800C; v1=obj[+0xB8]*0x2A0; lhu a1+v1-0xD0 => slot0 0x80137F3C (= obj0 0x80137DBC + 0x180). Arithmetic reconfirmed independently of s5765.
+- The same halfword is a bit-flag RMW target in ~38 `MEM_H(0X180,...)` sites (overlay copies in funcs_28/29/30/31/32/37). s5766's own bt shows the 0x137F3C writer is `sh v0,0x180(s1)` at 0x800AE800 with `& 0xFFFD` (funcs_28.c:42454) - a halfword bit-clear, NOT a float store. The "float" claim in s5766 is unsupported; wp2 hits are the per-frame bit-2 clear, address correct, flag valid.
+- Setters of the kill bits (only two): 0x800B0348 spawnSceneDebrisAndEffectCluster (funcs_29.c:15084) does (x & 0xFFF6)|0x190 => sets 0x10, clears 0x8|0x1; 0x800B08DC spawnNpcDestructionDebris (funcs_29.c:16775) does (x & 0xFFFE)|0x8. Reader tests 0x8/0x10 at 0x800B1E80/1E88. So the non-health fail = craft object passed to a destruction-debris spawner (collision/explosion path), not an HP path.
+- Why s5760/s5762/s5763/s5765 saw nothing: the watched runs were on the level-select route (obj region = select-screen data, 0x10000 word stores); the hp record is valid only at mission origins 0x690400/0x620400 (s5765). Watch must be phase-gated to a mission.
+- ORIGIN: no mitigation added; no code change.
+- Next: in a mission-phase run (origin 0x690400) log hits of PCs 0x800B0348 and 0x800B08DC (rs64_m5_writer_parity hooks already exist) with the player obj pointer; positive control = lives decrement. See NEXT.md.
