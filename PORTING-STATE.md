@@ -165247,3 +165247,11 @@ Verdict: REFUTES H-nospawn (56 >= 21 class-1 NPCs are created in lv0; the port d
 Next discriminator: why are 48 spawned class-1 NPCs not destroyed — (a) player shots never reach them (hit/collision path), (b) they despawn without the teardown arm (off-screen/timeout), (c) autopilot never aims at them. Measure per-NPC fate: msg-5 HIT delivered count vs teardown count vs freed-without-teardown, in one run.
 ORIGIN: no mitigation added; diagnostic only (env-gated).
 Gate wording: this run refutes H-nospawn (56 class-1 spawns >= 21) and selects H-nokill; the next step is to discriminate among hit-never-delivered, hp-not-depleted and silent-free fates per NPC.
+
+## Session 5813 (2026-10-21) — class-1 NPC fate: 47 of 54 freed by msg 2 (silent destroy), only 8 by msg 5 (counted teardown) (s5813)
+Built tools/apply_s5813_npc_fate.py (env ROGUESQ_LOG_HUDBIT; mirrored into fixup): tracks class-1 NPC ptrs at spawn, tallies npcProbeDriod message type (a1) for tracked NPCs, tallies unregisterAndFreeNpcSlot calls by ra.
+Run: scratch/agent/g1_inv1.sh s5813 400 (mission t=81 s, 405 s hold, alive, 0 stalls, 0 crash). Positive control: spawntally total=54 c1=54 sum_ok=1; every npcmsg line has tracked msgs ~= all msgs (lookup fires; 242k msgs, 54 tracked NPCs).
+Result (tracked class-1 NPCs): msg1(spawn)=54, msg2=47, msg3=~29k, msg4=~38k (per-frame updates), msg5=8, msg6=0. msg2's arm (L_800CAF18) frees the NPC (rs_free, clearPendingAndDestroyChildNpc, releaseMeshAsset) without the objective-counter-1 set; msg5's arm is the counted teardown (count 8 == the 8 counter-1 sets of s5811/5812, independent agreement).
+Verdict: SELECTS (b) silent free: ~47 NPCs are destroyed via msg 2, not the kill arm; REFUTES (a) "HIT never reaches" only partially (msg5 reaches 8). Single run. The open question is who sends msg 2 (despawn/offscreen/level cleanup vs a kill that should have been msg 5).
+ORIGIN: no mitigation added; diagnostic only (env-gated).
+Next discriminator: backtrace/sender-ra of msg-2 and msg-5 deliveries (caller of npcProbeDriod) with game-time and the NPC's descriptor hp; if msg 2 comes from a distance/timeout despawn it is by design and the lv0 win condition needs msg5 count>=target.
