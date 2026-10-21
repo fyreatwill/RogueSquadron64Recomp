@@ -164744,3 +164744,11 @@ Built scratch/agent/s5768_setterbp.sh (s5761 harness with the watchpoints replac
 - Stops alternate 1,3,1,3,... i.e. every requestMissionTransitionMode(a0=1) is immediately preceded by a spawnSceneDebrisAndEffectCluster call and the NPC-debris setter never fires in the window. Single-source (hit order from lldb stop log); argument values (which object a0 is: 0x80137DBC player craft?) were NOT captured. Favors H1 (scene setter / player-craft debris precedes fail) over H2 (NPC-only); H3 not excluded until a0 is read.
 - Fix: scratch/agent/s5768_setterbp.sh used `echo` with `\\n`; the new s5769_setterbp.sh uses `print -r` with `\n` (verified the emitted line is `...\n"` single-line). Queued soak_queue/s5769_setterbp.sh; summary should grep run.log for BPHIT a0 values.
 ORIGIN: no mitigation machinery added; instrument-script fix only.
+
+## Session 5770 (2026-10-21) — fixed pre-attach breakpoint launcher produced no symbolic stops
+- Folded the corrected `s5769_setterbp` unit as void. Its run completed a 421 s mission hold; runtime controls were live (`[mtm]` 11 and `[phase]` transitions), so the route reached the intended mission/death machinery.
+- Fixed `scratch/agent/s5769_setterbp.sh` to install `spawnSceneDebrisAndEffectCluster`, `spawnNpcDestructionDebris`, and `requestMissionTransitionMode` breakpoints immediately after LLDB attach, before the initial `continue`. This removes the prior attach-after-event race.
+- The fixed run still had zero actual breakpoint stops (`stop reason = breakpoint` 0; summary `bp_scene=0`, `bp_npc=0`, `bp_mtm=0`). The six apparent BPHIT matches were only the emitted LLDB command text, not callback output. Therefore s5768's claimed six stops is void, and no H1/H2/H3 choice is supported by these symbolic breakpoints.
+- Rules out treating the host symbol breakpoints as a valid witness for the executed guest dispatch. The runtime `[mtm]` log is a positive control for the guest path, but it does not validate the symbolic breakpoint mapping.
+- ORIGIN: no mitigation; launcher diagnostic fix only.
+- Next: instrument the generated guest-PC bodies at 0x800B0348, 0x800B08DC, and the actual mtm guest PC through the regeneration/fixup path, with the same lives decrement control and player-object argument capture.
