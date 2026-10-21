@@ -164462,3 +164462,6 @@ Next: fold lvl5/8/9 rows; if clean, design the real-input level-select route.
 
 ## Session 5718 (2026-10-20) — folded lvl5 forced-save soaks (clean x2); lvl8/9 still queued
 s5715_lvl5a/b: both alive 300 s (hold=302s), crashlines=0, vi_stalls30s=0, control `[lvsel] init a1(cursorMask)=0x20` (==1<<5) present in m6/<tag>/run.log. Single-run each. Forced lvl1-7 now clean; s5716_lvl{8,9}{a,b} still in soak_queue. H2 (clean) holds for lvl5. No code change this session (fold only).
+
+## Session 5719 (2026-10-20) — folded lvl8 forced-save soaks (clean x2); lvl9 still queued
+s5716_lvl8a/b: both alive 300 s (hold=301s), crashlines=0, vi_stalls30s=0, control `[lvsel] init a1(cursorMask)=0x00000100` (==1<<8) present in m6/<tag>/run.log. Single-run each. Forced lvl1-8 now clean; only s5716_lvl9{a,b} remain in soak_queue. H2 (clean) holds for lvl8. No code change (fold only).
