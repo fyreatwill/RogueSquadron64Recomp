@@ -165038,3 +165038,6 @@ ORIGIN: diagnostic only; no mitigation added.
 - Rules out: H4 (shooter ids stale/reused slots). Selects H1-leaning: the hitters are real enemy probe droids, not a mis-resolved object. NOT yet closed: H2' = whether probe droids legitimately target these class-2 objects in retail (target selection / faction), which needs an oracle comparison or a read of npcProbeDriod's target pick.
 - Caveat: single run; one wingman shooter (dmg 10) hitting a different victim is unexplained-but-plausible friendly/neutral fire.
 ORIGIN: diagnostic only; no mitigation added.
+- DISCRIMINATION (s5794, two lines: shooter-node table lookup valid for 12/12 ids + node class vtable 0x800CABD4 x11 matching the s1667-s1681 npcProbeDriod identification): REFUTES H4 (stale/reused shooter slot); SELECTS H1-or-H2' (real enemy probe droids fire at the class-2 objects) over H4, and does not yet split H1 from H2'.
+- Next discriminator: read npcProbeDriod's target pick (funcs_36.c) and log the faction/team word of droid vs victim at first hit; legitimate enemy/ally pair -> H1, equal/garbage -> H2'; also droid count vs spawn table (H5). See scratch/agent/NEXT.md.
+- Gate wording (s5794): this run refutes H4 and selects live-probe-droid shooters; next discriminator named above.
