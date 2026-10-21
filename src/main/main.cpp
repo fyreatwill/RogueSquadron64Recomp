@@ -10027,6 +10027,20 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                                       fprintf(stderr, "\n");
                                   }
                               } }
+                            // s5763: ROGUESQ_FORCEKILL_MS=N forces a real death: up to 3 times, once the mission origin has been
+                            // committed for N ms (and >=20 s apart), host-writes cur=0.0 so the game's own death path (lives--) runs.
+                            { static long long fk_ms = -2, fk_t0 = 0, fk_last = 0; static int fk_n = 0;
+                              if (fk_ms == -2) { const char* e = std::getenv("ROGUESQ_FORCEKILL_MS"); fk_ms = e ? atoll(e) : -1; }
+                              if (fk_ms >= 0 && fk_n < 3 && ((unsigned)rs64_vi_committed_origin() & 0xFFFFFFu) == 0x62BD00u && m > 0.0f && m < 1.0e6f && c > 0.0f) {
+                                  const long long nowms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+                                  if (fk_t0 == 0) fk_t0 = nowms;
+                                  if (nowms - fk_t0 >= fk_ms && nowms - fk_last >= 20000) {
+                                      fk_last = nowms; fk_n++;
+                                      const uint32_t b0 = (0x137DB8u + 0xC4) & ~3u;
+                                      const_cast<uint8_t*>(rdp)[b0] = 0; const_cast<uint8_t*>(rdp)[b0 + 1] = 0; const_cast<uint8_t*>(rdp)[b0 + 2] = 0; const_cast<uint8_t*>(rdp)[b0 + 3] = 0;
+                                      fprintf(stderr, "[forcekill] n=%d hp %.1f->0 origin=0x%06X\n", fk_n, c, (unsigned)rs64_vi_committed_origin() & 0xFFFFFFu);
+                                  }
+                              } }
                             if (!(m > 0.0f && m < 1.0e6f)) continue;
                             if (c != last) { ring[rn++ & 63] = { c, (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() }; last = c; }
                             if (c <= 0.0f && c > -1.0e6f) {
