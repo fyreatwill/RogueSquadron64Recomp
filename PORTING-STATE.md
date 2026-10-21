@@ -164416,3 +164416,6 @@ Folded s5706_mask3/mask5. Positive control PASSED in both: `[lvsel] init a1(curs
 Not shown: that the levels are visually correct or completable (no framebuffer review done; ROGUESQ_FORCE_* is a probe, not real input).
 Queued s5708_lvl{1,4,6,7} (same recipe) to close the level-number sweep; next: read their summaries, then eyeball fbd frames of lvl3/5 for correctness.
 ORIGIN: no code change this session; the unlock hook is a debug-only env override.
+
+## Session 5709 (2026-10-20) — forced levels 1 and 4 init and survive 300 s holds; lvl6/7 still queued
+Folded s5708_lvl1 and s5708_lvl4 soak rows. Positive controls pass: lvl1 `[lvsel] init a1(cursorMask)=0x2`, `[lvinit] gCurLevel=1`; lvl4 cursorMask=0x10, gCurLevel=4 (two initMission calls). Both: alive_at_end=1, vi_stalls30s=0, crashlines=0, 300 s holds. Last framebuffer: lvl1 is in-flight X-wing over cliffs/sky with radar and HUD (distinct, correct-looking mission); lvl4 final frame is a hangar/briefing-style frame (godrefills=2), so lvl4 reached mission init but the final frame is not flight — not yet characterised. No crash/stall datum; no code change. Single-source (one run each). lvl6/7 recipes remain in soak_queue.
