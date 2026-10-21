@@ -164626,3 +164626,7 @@ s5743 (rc=137, 900 s timeout, empty log) never armed: m6/s5743_hpwatch_lvsel/key
 - Showed: the 0x64/0x65 fail arm needs bool[7], which only the dialogue entry sayWhoaHim_v0x1FC sets; a second arm (bool 0x6D, count[0x28]>0) also reaches requestMissionTransitionMode(2) -> B14=2 -> lives-- -> restart/game over. s5728 saw bool 7 never fire yet the mission still fails, so the observed fail uses the 0x6D arm or another arg-2 caller (H-OTHER candidates), not the bool-7 arm.
 - ORIGIN: no code change, no mitigation. Single-source static; unverified at runtime.
 - Next: enumerate all callers of requestMissionTransitionMode with arg 2 and add one log at entry (caller ra + gate) in a build, then run one keyed hold to see which fires.
+
+## Session 5748 (2026-10-21) — landed [mtm] requestMissionTransitionMode entry log; two soaks queued
+Landed tools/apply_s5748_mtm_log.py (mirrored into fixup_game_funcs_vendored.py): ROGUESQ_LOG_MTM=1 logs every entry of requestMissionTransitionMode (a0, ra, gate, bool 7/0x64/0x65/0x6D). Positive control = every call logs (first 200). Count[0x28] omitted (base address not in census). Build OK. Queued s5748_mtma (baseline) and s5748_mtmb (SUPPRESS_BOOL=7) soaks, HOLD=420. Not yet run: next iteration folds [mtm] a0=2 ra to name the real fail-arm caller (H1 bool 6D / H2 other caller / H3 bool 7).
+ORIGIN: diagnostic only, no mitigation.

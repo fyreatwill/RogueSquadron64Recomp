@@ -344,3 +344,5 @@ s5691: static census of all 179 setObjectiveBoolean sites: only sayWhoaHim_v0x1F
 - **s5733:** tight-thread revive (g3a) did NOT stop mission cycling (origin still alternates); H-LATE refuted, H-OTHER selected (n=1/arm). Next: write-watch the exit/results-state word (NEXT.md), slug g1-gameover-cause.
 
 - s5743 lvsel hp-watch was void (mission gate in s5739_hpwatch.sh single-quoted, never matched); fixed, requeued as s5744.
+
+- s5748: [mtm] entry log (ROGUESQ_LOG_MTM=1) landed; soaks s5748_mtma/mtmb queued; fold ra of the a0=2 call to name the fail-arm caller.
