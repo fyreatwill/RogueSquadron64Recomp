@@ -37611,7 +37611,8 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         else:
             _c1 = ('    { fprintf(stderr, "[lvsel] init a1(cursorMask)=0x%08X a2(unlockMask)=0x%08X a3=%u B40=%u s2val=%u\\n", U32(ctx->r5), U32(ctx->r6), U32(ctx->r7), (unsigned)MEM_BU(0xB40, S32(0X8013 << 16)), (unsigned)MEM_BU(0, ctx->r18)); } /* PATCH: s5704 lvsel */\n')
             _c2 = ('    { static int s_t = 0, s_c = -1, s_s = -1; unsigned _cur = MEM_BU(-0X253F, S32(0X800D << 16)), _st = MEM_BU(-0X253C, S32(0X800D << 16)); s_t++; if (s_t == 1 || (int)_cur != s_c || (int)_st != s_s || ctx->r2 != 0x00FFFFFF) { if (s_t < 4000) fprintf(stderr, "[lvsel] tick#%d ret=0x%08X cursor=%u state=%u res=0x%08X\\n", s_t, U32(ctx->r2), _cur, _st, U32(MEM_W(-0X2534, S32(0X800D << 16)))); } s_c = (int)_cur; s_s = (int)_st; } /* PATCH: s5704 lvsel */\n')
-            text = text.replace(_a1, _c1 + _a1, 1)
+            _c0 = ('    { static int s_fu = -2; if (s_fu == -2) { const char* e = getenv(\"ROGUESQ_FORCE_UNLOCK\"); s_fu = (e && e[0]) ? (int)strtol(e, 0, 0) : -1; } if (s_fu >= 0) { MEM_BU(0xB2F, S32(0X8013 << 16)) = (uint8_t)s_fu; ctx->r7 = (uint32_t)s_fu; } fprintf(stderr, \"[lvsel] B2F=%u forced=%d\\n\", (unsigned)MEM_BU(0xB2F, S32(0X8013 << 16)), s_fu); } /* PATCH: s5705 force unlock */\n')
+            text = text.replace(_a1, _c0 + _c1 + _a1, 1)
             text = text.replace(_a2, _a2 + _c2, 1)
             changed = True
             report.append(f"{p.name}: s5704 lvsel hook patched")

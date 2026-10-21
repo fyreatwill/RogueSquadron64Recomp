@@ -198,6 +198,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 - **s5675 G1 soaks (no keys sent):** `s5675_g1fly_{a,b}` looked like two 'nohangar x4' flown-mission failures, i.e. a flaky hangar route. Actually `m6_god_common.sh` re-sets ROGUESQ_AUTOPILOT from its own `$AP` after XENV, and STOP=0 emptied `$AP`, so no keys were ever injected. Fixed in s5676 via `AP_OVERRIDE`. Believable because the hangar route is known flaky (~3/5) and 8/8 failures read as more of the same. The s5676 fix was itself ordered wrong (s5677 also keyless) - fixed s5678; lesson: the control is the "[autopilot] armed" log line, not keys.log `mission t=`.
 
 ## Next steps (single monotonic backlog)
+1a001. **s5706:** ROGUESQ_FORCE_UNLOCK hook built; s5705_unlock3/5 soaks queued — read them first (NEXT.md), slug g1-level-select.
 
 1a000. **s5687:** G2 evidence consolidated in docs/G2-AUDIO-FIDELITY-CLOSURE.md (noise causes s5668+s5672 fixed; rate/format/spectrum/dialogue refuted). G2 closed pending owner listen. Next: Next steps #2 (bool 7 voice path), slug g1-bool7-voice-path.
 0d. **s5669 (PCM-level confirmation):** s5669_pcm_a: 0/330 AI-callback rows have rail samples, hf_ratio ~0.23 in mission; speech clips now enqueue (loadSpeechFile/enqueueSpeechClip x6, voices allocated x6). The noise layer's rail component is gone at the output. NEXT: owner listen / retail-oracle AI PCM hf_ratio compare for residual noise, and confirm speech clip PCM non-rail in voice buffer (slug g2-voice-never-requested -> g2-speech-audible).
