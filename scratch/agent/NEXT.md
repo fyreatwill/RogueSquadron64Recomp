@@ -1,7 +1,5 @@
-# NEXT: what do mtm mode-3 store (0x800FB2B0 val=3) and the 0x100 setter (0x800EE85C) mean — does a non-god mission actually end?
-s5758: bit1 = player-slot-0 spawn event (benign). Unexamined in s5757 log: [mtmst] 0x800EE85C val=0x100 x4 (tickSongFadeTimer, funcs_40 0x800EE730) and 0x800FB2B0 val=3 x2.
-Task (offline, no build): disassemble funcs for 0x800FB190 (handler ids 1-3) and 0x800FB2B0 region in funcs_42.c; read what word the val=3 store targets and who consumes it. Read 0x800EE730 timer: what are floats 0x8010C300/C304 and byte 0x8010C262/264/262, and is the 0x800957AC gate = audio query (0x800A0F50 flag)?
-Hypotheses: H1 mtm stores 3 into a mode word that ends the mission (real end path, stalled by non-god timing); H2 val=3 is an unrelated state (objective stage) and no end ever fires in the keyed route; H3 0x100 timer is audio/song-fade dependent (M5 artifact) and gates something.
-Discriminator: consumer of the val=3 word + whether any later code reads it to start the transition; for H3, whether 0x800957AC depends on audio state we stub.
-Control: reuse s5757 run.log lines 718887/725967 as ground truth; any new soak must show >=1 [mtmst] 0x800EE85C line.
+# NEXT: who sets the per-slot craft state bit 0x8/0x10 (kill source) on the route that dies every ~7.5 s?
+s5759: death chain read (docs/M6-S5759-DEATH-CHAIN.md): state bit 0x10 -> 0x800B1024 settle tick -> bit1 -> mtm(1) -> lives--. Slot state halfword = lhu -0xD0 off (craft+0xB8)*0x2A0 + 0x8014(-0x7FF4 base): compute exact address from funcs_30.c ~0x800B1E60 (a1 base).
+Hypotheses: H1 the state bit is set by collision/damage code with hp->0 (hp writer is only updatePlayerCraftPhysics swc1); H2 set by a timer/objective script (non-health fail); H3 set by an uninitialised/stale value from a stubbed subsystem (audio/DMA).
+Discriminator: lldb (or a built [slotst] probe) write-watch on that halfword on the route where deaths occur (GODMODE3=2 + AUTOPILOT_HOLD_MS=1800, see CURRENT-TRUTH s5742/s5738), with a positive control (watch must fire at mission init). PC of the setter splits H1/H2/H3.
 HYPOTHESIS-ID: g1-nonhealth-fail
