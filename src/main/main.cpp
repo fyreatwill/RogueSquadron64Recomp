@@ -10007,6 +10007,26 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                                   }
                               }
                               pinit = true; }
+                            // s5738: player-record snapshot ring (0x2A0 bytes @0x137DB8, one per >=100 ms) dumped at dead#1..3 so the
+                            // killing event (position/velocity vs terrain) can be read offline. Words are logged raw (big-endian already swapped by rs64_rdram_u32).
+                            { static uint32_t snap[8][0xA8]; static long long snapt[8]; static unsigned sn = 0; static long long lastsnap = 0; static unsigned sdumps = 0;
+                              const long long nowus = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+                              if (m > 0.0f && m < 1.0e6f) {
+                                  if (c > 0.0f && nowus - lastsnap >= 100000) { lastsnap = nowus; for (int i = 0; i < 0xA8; i++) snap[sn & 7][i] = rs64_rdram_u32(rdp, 0x137DB8u + 4 * i); snapt[sn & 7] = nowus; sn++; }
+                                  else if (c <= 0.0f && c > -1.0e6f && sdumps < 3 && sn > 0) {
+                                      sdumps++;
+                                      fprintf(stderr, "[snap] death#%u nsnap=%u (oldest first; t=ms before death)\n", sdumps, sn > 8 ? 8u : sn);
+                                      for (unsigned k = sn > 8 ? sn - 8 : 0; k < sn; k++) {
+                                          fprintf(stderr, "[snap] t=-%lld:", (nowus - snapt[k & 7]) / 1000);
+                                          for (int i = 0; i < 0xA8; i++) fprintf(stderr, " %08x", snap[k & 7][i]);
+                                          fprintf(stderr, "\n");
+                                      }
+                                      std::this_thread::sleep_for(std::chrono::milliseconds(30)); // pre-revive: also dump the post-death record
+                                      fprintf(stderr, "[snap] post:");
+                                      for (int i = 0; i < 0xA8; i++) fprintf(stderr, " %08x", rs64_rdram_u32(rdp, 0x137DB8u + 4 * i));
+                                      fprintf(stderr, "\n");
+                                  }
+                              } }
                             if (!(m > 0.0f && m < 1.0e6f)) continue;
                             if (c != last) { ring[rn++ & 63] = { c, (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() }; last = c; }
                             if (c <= 0.0f && c > -1.0e6f) {
