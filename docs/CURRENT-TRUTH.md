@@ -306,3 +306,5 @@ s5691: static census of all 179 setObjectiveBoolean sites: only sayWhoaHim_v0x1F
 - s5698 (G1): lvN init is reached via initializeObjectiveTracking (jalr table[gCurrentLevel*16]) <- initMission <- mainGameLoop. `ra=0` in recomp logs is an artifact (generated jal never sets r31) — do not infer thread dispatch from it. Next: find B40 writers (see NEXT.md).
 
 - s5707: s5705 unlock3/5 soaks INVALID (hook ran after mask build; a1/a2 unchanged). Fixed; s5706_mask3/5 queued (G1 level-select).
+
+- s5714: the lvl7 "w=442/443 wild SetColorImage" is a 1-row pass whose writeback width = drawColorRect.right (rt64_state.cpp:2203); colorImg.width is a clean 512. SKIP_WILD_W there skips a legit 1-row writeback. Wild-width thread CLOSED; s5712 history-desync fix confirmed n=3.
