@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5776 (2026-10-21).
+Compact operational handoff, maintained as of Session 5777 (2026-10-21).
 `PORTING-STATE.md` is the chronological ledger. Durable background, closed
 audit detail, and the per-thread histories moved out of this file are in
 `docs/PROJECT-OVERVIEW.md` (latest: "Migrated from CURRENT-TRUTH (s5636)");
@@ -20,17 +20,16 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   endurance, not proof every mission subsystem is correct. Keyed holds end in a
   legitimate MISSION FAILED screen (idle autopilot loses; loss counter
   0x80138064) and fall back to title — not a hang.
-- **M6 active thread: the unpiloted life loss is the terrain-alignment snap.**
-  The 0x0190 store is the game's own debris spawn (s5773), reached from
-  `updatePlayerCraftPhysics` jal `0x800B2EC4` when
-  `stepObjectOrientationTowardTarget` returns 2 (s5774). s5776, one
-  death-route run, controls live (`[livesctl] mission`, lives 3->2, ret1
-  n=1..8): 3/3 of those debris calls are the next ord after
-  `kind=ret2 byte0=1 byte1=5 v=2 idx=0 obj=0x80137DBC`, same millisecond.
-  byte0=1 is the terrain sample, not the NPC sphere (byte0=0 never stored
-  2). f24 is ~0; the 0.7 test is only the byte0=0 arm. One later death was
-  the parked spline jal `0x800B0D9C` and had no ret2. Open: whether that
-  terrain normal is a real impact or a degenerate sample. Detail:
+- **M6 active thread: the return-2 life loss is the game's own terrain crash.**
+  Closed s5777 (H-legit, one death-route run, 5/5). Each
+  `site=0x800B2EC4` call is the next ord after `[orient-geom]`, itself the
+  next ord after `kind=ret2 byte0=1` on object 0x80137DBC. f22/f26 are
+  finite and inside the 15/90 gate, record+0x10 is a unit vector distinct
+  from object+0x10 and object+0x1C, and the angles match
+  `asin(dot(+0x1C, record))` / `acos(dot(+0x10, record))` to <0.001 deg.
+  H-copy, H-degen, and a stale-register read are refuted. The steer
+  schedule still dies this way. Spline jal `0x800B0D9C` stays parked
+  (3 calls, no ret2). No mitigation. Detail:
   `docs/M6-S5775-ORIENT-RET2.md`. The objective-boolean notes below are the
   godmode route, which does not lose a life.
 - **M5 audio de-stubbing: CLOSED** for the qualified route (non-silent PCM,
@@ -213,7 +212,9 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
-_s5776 (top):_ the death-route return of 2 is the terrain fill. One run (`scratch/agent/m6/s5775_ret2/run.log`): 3/3 `site=0x800B2EC4` lines are preceded, same millisecond, by `kind=ret2 byte0=1 byte1=5 v=2 idx=0` on object 0x80137DBC. ret1 control n=1..8 fired first. No byte0=0 ret2. f24 ~0 (not the NPC gate). Spline jal 0x800B0D9C remains a separate parked death. Next = log the live angles `f22`/`f26` and the vec3s at record+0x10, object+0x10, object+0x1C on that same store. H-legit: finite normal, not a copy of either object vec, angles inside 15/90. H-copy: record+0x10 equals one of those object vecs. H-degen: zero or NaN normal. Angles outside 15/90 void the read (regs were not live); do not add a field. Slug g1-terrain-snap-geom. Do not rerun the byte0 census.
+_s5777 (top):_ the return-2 normal is a real terrain impact (H-legit, 5/5 in `scratch/agent/m6/s5776_geom/run.log`). Do not log another angle or vec, and do not rerun the byte0 census. Next = one altitude-hold run that can still lose a life: same death-route recipe, no `su`/`sd` keys, `GODV=0`, `ROGUESQ_ALT_HOLD=2.0`, `ROGUESQ_LOG_MTM=1`, no new build. Control is an `[althold] target` line with `acted>0` plus `kind=ret1`. H-hold-stops: no ret2 and no lives 3->2 while the hold is acting. H-hold-still-dies: a ret2 geom line still precedes a lives drop (do not tune the deadband). No `[althold] target` is a null. Slug g1-real-input-win.
+
+_s5776:_ the death-route return of 2 is the terrain fill (3/3 `byte0=1`). s5777 closed the geometry question. Spline jal 0x800B0D9C remains parked.
 
 _s5774:_ debris callers named (run.log `s5774_debris`, n=6). 4/6 player deaths are jal 0x800B2EC4 when the orientation function returns 2; 2/6 are jal 0x800B0D9C. s5776: the return-2 deaths are the terrain fill. Do not rerun the census.
 

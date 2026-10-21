@@ -118,9 +118,22 @@ other-object cap (16) never tripped, so the log is the full set of stores.
 A later player debris call at `0x800B0D9C` (ord 33) had no ret2 in front of
 it. That spline caller stays untraced. No mitigation was added.
 
-## Not claimed
+## Runtime (s5777)
 
-Whether the terrain normal is a real impact or a degenerate sample is not
-measured. The angles `f22`/`f26` are still live at the store on the byte0=1
-path (`0x800FF65C` / `0x800FF670`, no jal before `0x800FF6F0`) and were not
-logged.
+One death-route run, `scratch/agent/m6/s5776_geom/run.log` (hold 422 s,
+0 crashes, 0 stalls). Controls: `[livesctl] mission` at 0x62BD00, lives
+3->2, and `kind=ret1` n=1..8 before the first death.
+
+Five `site=0x800B2EC4` calls. Each is the next ord after `[orient-geom]`,
+which is the next ord after `kind=ret2 byte0=1 byte1=5 v=2 idx=0` on
+0x80137DBC. On every geom line, `f22` is in 1.97..12.27 and `f26` is in
+2.11..12.45 (both finite, inside the 15/90 gate). record+0x10 has length 1,
+is not zero, and is not object+0x10 or object+0x1C. It is nearly +Y
+(`ry` 0.995..0.999). Recomputing `asin(dot(object+0x1C, record))` and
+`acos(dot(object+0x10, record))` matches the logged angles to <0.001 deg,
+so the registers and the three vec3s are the operands of the gate.
+
+That selects a real terrain impact. It refutes a copied ship vector, a
+zero or NaN sample, and a stale angle register. One ret2 line printed
+`f24=1.09e24`; byte0=1 does not read that float. The spline jal
+`0x800B0D9C` fired 3 times with no ret2 and stays parked. No mitigation.

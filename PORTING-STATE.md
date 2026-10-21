@@ -164839,3 +164839,25 @@ The fourth player debris call is the parked spline jal `0x800B0D9C` (ord=33, aft
 
 ORIGIN: no mitigation. The 2 is still the game's own immediate. This session only named which fill reaches the store.
 DISCRIMINATION: H-terrain selected. H-npc refuted. Next discriminator is the geometry at the same store (live f22/f26 and the record/object vec3s), not another byte0 census. Slug g1-terrain-snap-geom.
+
+
+## Session 5777 (2026-10-21) — terrain normal at the return-2 store is a real impact
+
+Death-route run `scratch/agent/s5776_geom.sh` (GODV=0, HOLD=420, MISSION_RE=62BD00, ROGUESQ_LOG_MTM=1, ROGUESQ_NO_SAVE_WRITE=1) after `tools/apply_s5776_orient_geom.py` logged f22/f26 and the three vec3s at the existing 0x800FF6F0 call. Player object only, cap 8, placed after the s5775 ret2 log. Incremental build of funcs_43.c. Summary: att=1 mission_t=19s hold=422s alive_at_end=1 vi_stalls30s=0 crashlines=0 mission_cycles=3. The recipe's ioreg lock check passed (mission was reached).
+
+Controls in `scratch/agent/m6/s5776_geom/run.log`: `[livesctl] mission` at origin 0x62BD00; `[lives] before=3 after=2`; `[orient-ret] kind=ret1` n=1..8 at ord 6..13, before the first death.
+
+5/5 `site=0x800B2EC4` lines are the next ord after `[orient-geom]`, which is the next ord after `kind=ret2 byte0=1 byte1=5 v=2 idx=0 obj=0x80137DBC`. Same millisecond. Example (the other four are the same shape):
+
+```
+[orient-ret] ord=19 kind=ret2 byte0=1 byte1=5 v=2 idx=0 obj=0x80137DBC
+[orient-geom] ord=20 f22=6.89323 f26=7.13339 rx=0.0498755 ry=0.997509 rz=0.0498755 o10x=-0.0731385 o10y=0.996832 o10z=0.0312373 o1cx=0.991384 o1cy=0.0760811 o1cz=-0.106621
+[debris-call] ord=21 site=0x800B2EC4 fn=updatePlayerCraftPhysics a0=0x80137DBC
+```
+
+Across all five, f22 is in 1.97..12.27 and f26 is in 2.11..12.45 (finite, inside the 15/90 gate). record+0x10 has length 1, is not zero, and is not equal to object+0x10 or object+0x1C. Recomputing asin(dot(object+0x1C, record)) and acos(dot(object+0x10, record)) matches the logged angles to <0.001 deg, so the registers are the live angles and the vec3s are the operands. The record vec is nearly +Y (ry 0.995..0.999). One ret2 line printed f24=1.09e24; byte0=1 does not read that float.
+
+Selects H-legit (one run, 5/5, two evidence lines: the gate, and the dot identity). Refutes H-copy, H-degen, and a stale-register void. The steer schedule still dies this way. Spline jal 0x800B0D9C fired 3 times with no ret2 and stays parked.
+
+ORIGIN: no mitigation. The return of 2 is the game's own terrain-alignment test on a real unit normal.
+DISCRIMINATION: H-legit selected. Thread g1-terrain-snap-geom closed. Next is an altitude-hold run that can still lose a life, not another orientation log. Slug g1-real-input-win.

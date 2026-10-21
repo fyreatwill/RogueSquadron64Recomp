@@ -37614,6 +37614,14 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5775 orient ret2 x{_n5775}")
 
+    if p.name == "funcs_43.c" and "PATCH: s5776 orient geom" not in text:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+        import apply_s5776_orient_geom as _a5776
+        text, _n5776 = _a5776.apply(text)
+        if _n5776:
+            changed = True
+            report.append(f"{p.name}: s5776 orient geom x{_n5776}")
+
     if p.name.startswith("funcs_") and "PATCH: s5754 mask store log" not in text:
         sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
         import apply_s5754_mask_stores as _a5754
@@ -41259,6 +41267,7 @@ RS64_REPLAY = [
     "apply_s5773_bit1_lives.py",
     "apply_s5774_debris_caller.py",
     "apply_s5775_orient_ret2.py",
+    "apply_s5776_orient_geom.py",
     "apply_s5619_cco_log.py",
     "apply_s4690_external_entry_probe.py",
     "apply_s4694_a14_boundary.py",
