@@ -1,12 +1,12 @@
-# NEXT: G1 — which objective never advances once the class-2 NPC fail path is removed
+# NEXT: G1 — why counter 1 stops at 8 (needs 21) and counter 10 never moves
 
-Work unit: run `scratch/agent/g1_inv1.sh <tag> 600` (ROGUESQ_NPC_INVULN=1, LOG_HUDBIT=1) with `[ccosnap]`
-boolean-array snapshots armed; tabulate bools/counters (kill count 0x138060.., waypoint, timer) at mission
-onset, mid, and end. Positive control: at least one bool/counter must change.
-
-Hypotheses: (a) the enemy-kill objective never increments because autopilot never hits droids;
-(b) objective advances but the win check is gated on a bool the port never sets (e.g. dialogue-flag bool 7);
-(c) mission timer/other fail path fires. Discriminator: which values change between onset and end.
-If (a): next engineering step = an aim-assist autopilot (stick toward nearest hostile) in main.cpp.
+Work unit: ONE build with a logger at the counter store sites (applyDatObjectiveTriggerEffect 0x80065980,
+datItemSetObjectiveBooleanCount 0x80065914, updateNpcEffectIntensity 0x800F3D64, executeActorType1Effect 0x800F435C,
+increaseObjectiveCount 0x800C75EC): print idx, delta, new value, ra, wall time (put it in a tools/apply_s58xx_*.py
+and the fixup vendored script). Also dump the lv0 DAT items whose target idx is 1 or 10 (count, trigger type).
+Run g1_inv1.sh with the lever on (600 s). Positive control: counter 1 must log 1..8.
+Hypotheses: H-supply (only 8 sources exist before a later trigger); H-trigger (autopilot never enters a trigger
+volume/waypoint); H-port-spawn (port fails to spawn/count items). Discriminator: DAT item total targeting idx 1 —
+==8 selects H-supply, >=21 with unspawned ones selects H-trigger/H-port-spawn. Also verify 800C7D98(4) is requestMissionTransitionMode.
 
 HYPOTHESIS-ID: g1-mission-progression
