@@ -211,7 +211,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
-- **s5784:** ALT_HOLD fix validated (s5777_althold: target y=-6.5, 421 s, alive, no ret1 deaths; one 3->2 life loss at overlay reload, writer unexplained). Next: explain that life loss, then real-input mission completion (see scratch/agent/NEXT.md).
+- **s5785:** the s5784 3->2 life loss follows `[mtm] a0=2` preceded by a `setHudEnableBit4` mask store (pc 0x800C775C val=4) ~190 s into the mission; `[killset]`/`[bit8call]` = 0 (debris refuted; controls: strings compiled, s5778 fired 16). Overlay reload only decrements afterwards. Single-source. Next: identify the script caller of setHudEnableBit4 (host backtrace on pc==0x800C775C, dump objective bools/timer) - see NEXT.md. (s5784: ALT_HOLD validated, 421 s alive.)
 
 _s5782 (top):_ terrain sampler 0x80068D5C = 2D cell grid (struct 0x80136DC0; record byte +3 vs scaled y). ret=1 iff ys > cell b3; player flies ys -130..-80 over records with b3 -126..-82; deaths follow ret=1 bands (single-source, 1 run). y=0 hypothesis refuted. Next = what b3 means (rest of the sampler 0x80069284+ branches) and whether retail spawn ys is higher (NEXT.md). Slug g1-record-byte0.
 _s5781 (top):_ byte0=1 has one writer: terrain sample jal 0x80068D5C (a2=0x80138058) nonzero at 0x800FF3B4. Offline: the player rises y -2.88->-0.32 at +3.6/s identically in 3 deaths (s5738_snapa snaps) and dies at y~-0.3 (single-source). Next = terrain height at that xz vs y (NEXT.md). Slug g1-record-byte0.
