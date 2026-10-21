@@ -353,3 +353,4 @@ s5691: static census of all 179 setObjectiveBoolean sites: only sayWhoaHim_v0x1F
 - s5751: a0==2 never fires on the keyed route (9 [mtm] entries, all a0=1 ra=0); backtrace re-aimed at any a0, soaks s5751_mtma/b queued. Game stderr is in scratch/agent/m6/<tag>/run.log.
 
 - s5753: [mtm] table-dump + mask-change logger built (ROGUESQ_LOG_MTM); soaks s5753_mtma/b queued; verdict pending (see NEXT.md).
+- s5753 folded (s5754): MASK sampler was post-dispatch => blind; per-store [mtmst] logger landed, soaks s5754_mtma/b queued. mtm table: ids 1-3 -> 0x800FB190; only a0=1 seen in godmode.
