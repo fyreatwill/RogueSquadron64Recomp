@@ -164465,3 +164465,6 @@ s5715_lvl5a/b: both alive 300 s (hold=302s), crashlines=0, vi_stalls30s=0, contr
 
 ## Session 5719 (2026-10-20) — folded lvl8 forced-save soaks (clean x2); lvl9 still queued
 s5716_lvl8a/b: both alive 300 s (hold=301s), crashlines=0, vi_stalls30s=0, control `[lvsel] init a1(cursorMask)=0x00000100` (==1<<8) present in m6/<tag>/run.log. Single-run each. Forced lvl1-8 now clean; only s5716_lvl9{a,b} remain in soak_queue. H2 (clean) holds for lvl8. No code change (fold only).
+
+## Session 5720 (2026-10-20) — G1 lvl9 forced soaks folded; unforced real-input level-select soaks queued
+s5716_lvl9a/b: alive 300 s, crashlines=0, vi_stalls30s=0, control `[lvsel] init a1=0x200` (==1<<9) present (single-run each). Forced lvl1-9 are all clean, so the forced-start families are closed. Known: cursor is clamped to max-unlocked byte 0x80130B2F (s5704b), so a real route cannot select beyond default unlock without winning missions. Queued s5720_real{a,b} (no FORCE_* env; same key schedule) to observe the unforced [lvsel] cursor/state ticks under sl/sr keys. No conclusion overturned.
