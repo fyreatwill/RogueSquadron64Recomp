@@ -164493,3 +164493,11 @@ Folded s5722_cleanhg{a,b} (both allattempts-failed, 5x nomission each). The gate
 - fbd frames 5000..10000 (w512, origins alternate 0x620400/0x690400): a 3D Rebel-logo model orbited by the camera over desert (5000) then sky (10000); frames differ (md5 x6 distinct). Never reaches cockpit/flight in 545 s. The route sent a/start alternately (AP keys to t=560), so A/Start do not skip it (single run).
 - H1 (hand-off to flight) REFUTED within 545 s; H2 (softlock) NOT shown (animating, no stall) - it is a long or looping non-interactive scene. Open: is this the mission-1 briefing/title scene waiting on a different button (z/b), or a loop. Queued s5725_introkeys (z/start/b keys to t=900, HOLD=540).
 - No code change; observation only. Slug g1-level-select.
+
+## Session 5726 (2026-10-20) — s5725_introkeys fold: the "Rebel-logo cinematic" was the PAUSE MENU; real-input route reaches flight
+
+- Folded s5725_introkeys (rc=0, 569 s, 0 stalls, 0 crashes, alive at end, mission t=19 s). fbd frames sampled each 500 VIs: 5000 and 9000 show the Rebel-logo screen with "PAUSED / MISSION GOALS / CONTINUE / ABORT LEVEL / GAME SETTINGS" (goals "Protect the homesteads", "Destroy the probe droids"); 11000 shows a live X-wing flight frame with cockpit radar HUD (Tatooine). Frame md5s differ at each sampled frame.
+- CORRECTS s5724/s5725 (top): the logo "cinematic" that "no key skipped" was the pause menu opened by the `start` key in the recipe's a/start/z cycle, not a scripted intro. s5725's z/start/b mix toggled it back out eventually. Believable because the pause emblem is a large animated Rebel logo that fills the frame and the mission intro had also shown logos.
+- Result: first REAL-INPUT (no memory poke) arrival in flight on mission 1. Single run, single source (frames); gameplay/win not yet driven.
+- Queued s5726_flynopause: same route but the post-intro key cycle is z/a/z/b (no `start`), HOLD=540. Fold: flight frames sustained (distinct, HUD) vs paused; then look for mission-goal progress.
+- ORIGIN: n/a (no mitigation code added).
