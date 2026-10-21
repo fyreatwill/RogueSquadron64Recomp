@@ -164861,3 +164861,16 @@ Selects H-legit (one run, 5/5, two evidence lines: the gate, and the dot identit
 
 ORIGIN: no mitigation. The return of 2 is the game's own terrain-alignment test on a real unit normal.
 DISCRIMINATION: H-legit selected. Thread g1-terrain-snap-geom closed. Next is an altitude-hold run that can still lose a life, not another orientation log. Slug g1-real-input-win.
+
+## Session 5778 (2026-10-21) — altitude hold does not stop the life loss
+
+One death-route run, no rebuild. Binary already contained `[althold]` and the s5776 geom log (main.cpp older than the link; s5777's commit was the fixup script plus the ledger). Screen lock: `ioreg` did not show `CGSSessionScreenIsLocked=Yes`, and the runner's own check passed (mission was reached). Recipe `scratch/agent/s5777_althold.sh`: s5776_geom schedule with the flight keys reduced to `a sl a sr` (no `su`/`sd`), `GODV=0`, `HOLD=420`, `MISSION_RE=62BD00`, `ROGUESQ_LOG_MTM=1`, `ROGUESQ_NO_SAVE_WRITE=1`, `ROGUESQ_ALT_HOLD=2.0`. `rm` of `build/saves/*.bak` printed a zsh nomatch and continued; the clean save copy had already happened.
+
+Summary: att=1 mission_t=18s hold=423s alive_at_end=1 vi_stalls30s=0 crashlines=0 godrefills=0 mission_cycles=7. Controls in `scratch/agent/m6/s5777_althold/run.log`: `[autopilot] armed: 424 events`; `[livesctl] mission` at origin 0x62BD00; `kind=ret1` printed 8 times (that printer's verbose cap); `[althold] target y=0.000 db=2.00`; later rows reach `acted=2960` (54 increases). Soak tail had nothing newer than the s5769 rows already in the ledger.
+
+Selects H-hold-still-dies. From the first `acted>0` sample (y=-4.429, sy=+1) through the end, the hold commanded climb on every sample whose |err| exceeded 2, and the logged y stayed below the latch (min -7.43, never back to 0). Lives still went 3→0 three times (9 `[lives] before/after` drops). Two of those drops are preceded by a player `kind=ret2` (player cap is 32, so the other seven are real absences, not a full log): one is site 0x800B2EC4, one is spline site 0x800B0EBC. The other seven debris calls are site 0x800B0D9C.
+
+The earlier event, on 8 of the 9 drops, is the existing `[killset]` at pc=0x800B08DC: player slot 0x80137DBC, halfword 0x0001→0x0008, then the spline debris, then `[killset]` 0x800B0348 0x0008→0x0190, then the lives decrement. The ninth drop skips 0x800B08DC and is the return-2 physics path (0x0001→0x0190 at 0x800B0348). Static, single-source: `spawnNpcDestructionDebris` (entry 0x800B0850) has exactly two `jal`s, 0x800B146C in `tickCinematicObjectStateMachine` (float <= 0) and 0x800B2A58 in `updatePlayerCraftPhysics` (byte sp+0x175 != 0 after that function's own float<=0 check). The run does not say which jal, because the store log is inside the callee and recomp `ra` is 0.
+
+ORIGIN: no mitigation. Holding the latched y is not why a life is lost, and the deadband was not tuned.
+DISCRIMINATION: H-hold-still-dies. H-hold-stops refuted for this run. Slug was g1-real-input-win; next slug is g1-bit8-caller. Do not log another angle.
