@@ -164393,7 +164393,7 @@ Ran: s5703's NEXT. tickCraftSelectScreen's return is the word at 0x800CDACC (= c
 Discriminates: cursorMask bit == 1<<3 with ret 2 -> input/cursor movement (H3/H4); unlockMask < 0b1000 -> unlock (H1); cursorMask ignores B40 -> H2.
 ORIGIN: n/a (diagnostic only; no mitigation added).
 
-## Session 5704b (2026-10-20) — H1 CONFIRMED: level-select clamps to max-unlocked byte 0x80130B2F (=2), not B40
+## Session 5705 (2026-10-20) — level-select discriminator: selects H1 (unlock clamp 0x80130B2F=2), refutes H2-H4
 Ran s5704_lvsel_f3 myself (rc=0; positive control: [lvsel] tick#1 fired; [saveslot] force=3 and [b40w] val=0x03 fired). Log: init a1(cursorMask)=0x4 a2(unlockMask)=0x8 a3=2 B40=3 s2val=3; cursor stays 2 for all 447 ticks (state 1->4), ret=2 at tick#447, B40 rewritten 3->2. Decode of drawRadarIcon (0x800C5D9C): lim = min(lbu 0x80130B2F, 0xF) (bumped to 0x10-0x12 by flag bits in B40+0x18/+0xC), a3=min(lim,*s2), cursorMask=1<<a3. a3=2 with *s2=3 therefore means B2F=2 (max unlocked level) -> H1 (unlock clamp) selected; H2 (cursor ignores B40) refuted (mask follows min(lim,B40)); H3/H4 (input) refuted for the clamp (cursor never moved from 2, and 3 is not even selectable). Single run, single-source for B2F=2 (inferred from a3, B2F not read directly).
-Next discriminator: knob to force 0x80130B2F=N at the drawRadarIcon [lvsel] hook (or find B2F's writer: save load), run with FORCE_SAVE_MISSION=N, expect init a3=N, ret=N, B40 stays N, lvN init. Also log B2F directly in [lvsel] init line.
+Next discriminator (named): knob to force 0x80130B2F=N at the drawRadarIcon [lvsel] hook (or find B2F's writer: save load), run with FORCE_SAVE_MISSION=N, expect init a3=N, ret=N, B40 stays N, lvN init. Also log B2F directly in [lvsel] init line.
 ORIGIN: B2F=2 legitimately comes from the save (fresh save unlocks 0..2); forcing it is a probe, not a fix.
