@@ -9993,6 +9993,20 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                                   }
                               }
                               ocinit = true; }
+                            // s5737: phase-machine watch. 0x10CA20 = mission phase (1=death respawn timer, 3=results/game-over,
+                            // 4=mode1), 0x130B10 word = lives byte (+0), 0x130B14 word = mode byte B14 (+0), 0x10C9E8 = player index.
+                            // Logged with hp so the death path (phase 1, lives--) is separable from the objective path (a0==3/2).
+                            { static uint32_t pw[4]; static bool pinit = false; static unsigned pn = 0;
+                              static const uint32_t pa[4] = {0x10CA20u, 0x130B10u, 0x130B14u, 0x10C9E8u};
+                              for (int i = 0; i < 4; i++) {
+                                  const uint32_t v = rs64_rdram_u32(rdp, pa[i]);
+                                  if (!pinit || v != pw[i]) {
+                                      if (pinit && pn++ < 200) fprintf(stderr, "[phase] @%06X %08x->%08x hp=%.1f origin=0x%06X t=%lld\n", pa[i], pw[i], v, c, (unsigned)rs64_vi_committed_origin() & 0xFFFFFFu,
+                                          (long long)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
+                                      pw[i] = v;
+                                  }
+                              }
+                              pinit = true; }
                             if (!(m > 0.0f && m < 1.0e6f)) continue;
                             if (c != last) { ring[rn++ & 63] = { c, (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() }; last = c; }
                             if (c <= 0.0f && c > -1.0e6f) {

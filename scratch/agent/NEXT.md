@@ -1,4 +1,6 @@
-# NEXT: find what sets bit 0x02000000 of r19+0x18 (the trigger for initMission at 0x8003E2B4)
-s5736: counter block clear = initMission memset, called from the game-mode state fn (0x8003E04C..0x8003E37C). It is a consequence of the mission (re)load.
-Work unit: static first (/tmp/s5736_dis.txt regenerate: python3 -I tools/disasm_mips_elf.py ../rogue_squadron64/build/roguesquadron.elf 0x80000400 0x80140000): identify r19 in that fn, grep all `lui rX,0x0200` / `ori ...,0x200` ORs against offset 24(r19-alias) across the ELF. Then, if few sites, add a one-shot PC/ra log at each and queue a soak. Hypotheses: (H1) set by level-script mission-complete (setHudEnableBit/counter>=3 path, 0x800C7738); (H2) set by player-death/game-over; (H3) set by timer/pause menu quit. Discriminator: which site fires in the objc soak before the clear, and hp>0 or not.
+# NEXT: fold s5737_phase{a,b} (phase/lives/B14 watch) and classify the mission exit
+Read scratch/agent/soak_results/s5737_phase{a,b}_*.log `grep '\[phase\]\|\[god3\]\|\[god-dead\]'`. Control: [phase] lines exist at all (init transitions at mission load).
+Hypotheses: (H1) death path: 0x10CA20 ->1 with hp<=0, 0x130B10 decrements, ->3 when lives hit 0 (game-legit: idle autopilot gets killed; then G1 needs real flying input, not a bug). (H2) phase 3 with hp>0 and lives>0: objective/timer path requestMissionTransitionMode(3|2) - find the caller (function-pointer table). (H3) lives start at 1 in our save/init so first death = game over (check 0x130B10 initial value; compare retail default).
+Arm b (revive) discriminates: if phase still goes 1/3 with hp pinned >0, the death is not health-driven.
+Then: if H1, move G1 to real-input flying (survive via sticks/fire) or lives poke as a PROBE; if H2, watch caller via lldb on 0x800FB190.
 HYPOTHESIS-ID: g1-gameover-cause
