@@ -164589,3 +164589,9 @@ Ran: folded s5739_hpwatch_a (rc=137, 900 s). keys.log shows mission reached (att
 Change: queued s5740_hpwatch_a/b with TRAPSWAP=5200 (just after onset, before the instant-kill deaths seen in s5738). No code change.
 Rules out: nothing about hp writer. ORIGIN: n/a (no mitigation added).
 Next: fold s5740 — need 0x3470 control hit, then top bt frame at hp write.
+
+## Session 5741 (2026-10-21) — s5740 hp-watch folded: control passed, no death in 150 s hold; 480 s re-run queued
+- s5740_hpwatch_{a,b}: positive control OK (TRAPSWAP=5200 fired `trap-at-swap #5200`; watchpoint 1 on 0x3470 hit in rand_recomp). Both runs alive_at_end=1 (hold 150 s; wp_hits 8 / 6).
+- Run a hp watch (0x137E7C, decoded from lldb's 64-bit view, low word): 0x43160000 (150.0f) -> 0x43020000 (130.0f) -> 0x4302071c (130.03f). Writer both times `updatePlayerCraftPhysics` swc1 $f2,0xC0($s3) (PCs 0x800B29F8, 0x800B1FA0; funcs_30.c:8612/6378) via playerXwingUpdate <- slotDispatcherIter <- runInMissionFrame. So hp takes a 20-point hit and slowly regenerates inside the physics routine; the writer family for hp is the craft-physics tick, not a host memset (weak evidence against H3 for these writes).
+- Lives watch (0x130B10) hit only for the initial value. No hp->0 write captured: the 150 s hold ended before the instant-kill death. Rules out nothing about the kill; the discriminator (top frame at hp==0) is still unmeasured.
+- Queued s5741_hpwatch_{a,b} with hold 480 s (same script, TRAPSWAP=5200). ORIGIN: n/a (no mitigation added).
