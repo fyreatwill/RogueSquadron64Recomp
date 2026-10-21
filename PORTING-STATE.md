@@ -164813,3 +164813,29 @@ This selects H3 (the epilogue copies a loaded byte; the immediate 2 is the store
 
 ORIGIN: no mitigation. The 2 is the game's own immediate, stored by its own alignment test.
 DISCRIMINATION: H3 selected. H1 refuted. H2 refuted. Next discriminator is one log at `0x800FF6F0` (byte0, byte1) against the return-1 store at `0x800FFA40` as the control, on the s5774 death route.
+
+## Session 5776 (2026-10-21) — terrain fill stores orientation return 2
+
+Death-route run of the s5774 recipe (`scratch/agent/s5775_ret2.sh`, GODV=0, HOLD=420, MISSION_RE=62BD00, ROGUESQ_LOG_MTM=1) after `tools/apply_s5775_orient_ret2.py` logged the `sb` at `0x800FF6F0` and the return-1 store at `0x800FFA40`. Incremental build. Summary: att=1 mission_t=20s hold=422s alive_at_end=1 vi_stalls30s=0 crashlines=0 mission_cycles=2. Screen was unlocked (the recipe's ioreg check passed and keys reached the mission).
+
+Controls in `scratch/agent/m6/s5775_ret2/run.log`: `[livesctl] mission` once; `[lives] before=3 after=2` at ord=18; `[orient-ret] kind=ret1` n=1..8 at t=3794804661..694, about 33 s before the first death. n=500 never printed, so that store ran fewer than 500 times. The burst is enough: a run with zero ret1 lines would have been a null.
+
+Player ret2 hits were capped at 32 and other objects at 16, so the spline caller could not eat the budget before a player death. Neither cap tripped. The store fired exactly three times, all on the player:
+
+```
+[orient-ret] ord=14 t=3794837247 kind=ret2 byte0=1 byte1=5 f24=0 v=2 idx=0 obj=0x80137DBC player=1
+[debris-call] ord=15 t=3794837247 kind=pre site=0x800B2EC4 fn=updatePlayerCraftPhysics a0=0x80137DBC a1=0x00000001 player=1 hw=0x0001 n=1 c0=0 c1=0 c2=0 c3=0 c4=1
+[orient-ret] ord=20 t=3794852079 kind=ret2 byte0=1 byte1=5 f24=-3.09087e-39 v=2 idx=0 obj=0x80137DBC player=1
+[debris-call] ord=21 t=3794852080 kind=pre site=0x800B2EC4 fn=updatePlayerCraftPhysics a0=0x80137DBC player=1 hw=0x0001 c4=2
+[orient-ret] ord=26 t=3794866460 kind=ret2 byte0=1 byte1=5 f24=-3.09289e-39 v=2 idx=0 obj=0x80137DBC player=1
+[debris-call] ord=27 t=3794866460 kind=pre site=0x800B2EC4 fn=updatePlayerCraftPhysics a0=0x80137DBC player=1 hw=0x0001 c4=3
+```
+
+Each debris line is the next ord, same millisecond, same object. byte0=1 is the terrain fill (`sampleTerrainAtNpcPosition`). byte1=5 is a jump-table slot the s5775 trace says stores 2. idx=0 is the packed winner at sp+0x488, not the probe slot. f24 is 0 or a denormal near 0; the >=0.7 test belongs only to the byte0=0 arm. No byte0=0 ret2 was logged at all.
+
+Selects H-terrain (single run, 3/3). Refutes H-npc for these deaths. Refutes "both". Does not refute the trace: no `0x800B2EC4` line lacks a preceding ret2, byte1 is in {0,5}, v is 2. The byte0=1 = terrain mapping is the s5775 retail disassembly, not a second runtime soak.
+
+The fourth player debris call is the parked spline jal `0x800B0D9C` (ord=33, after the lives 0->3 reload). No ret2 precedes it. Left parked.
+
+ORIGIN: no mitigation. The 2 is still the game's own immediate. This session only named which fill reaches the store.
+DISCRIMINATION: H-terrain selected. H-npc refuted. Next discriminator is the geometry at the same store (live f22/f26 and the record/object vec3s), not another byte0 census. Slug g1-terrain-snap-geom.

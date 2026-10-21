@@ -94,7 +94,33 @@ arguments of `isTerrainCellBlockedAtWorldXz` (`0x800698F4`) with that same
 record. object+0x10 and object+0x1C are the next two vec3s. This trace does
 not name them forward or up.
 
+## Runtime (s5776)
+
+One level-select death run, `scratch/agent/m6/s5775_ret2/run.log` (hold 422 s,
+0 crashes, 0 stalls). Controls: `[livesctl] mission`, lives 3->2, and
+`[orient-ret] kind=ret1` n=1..8 about 33 s before the first death. The
+return-1 store did not reach n=500.
+
+The store at `0x800FF6F0` fired three times, all on the player object, and
+each was the immediately preceding line of a `site=0x800B2EC4` debris call
+(same millisecond):
+
+| ord | byte0 | byte1 | v | idx | f24 | object |
+|---|---|---|---|---|---|---|
+| 14 | 1 | 5 | 2 | 0 | 0 | 0x80137DBC |
+| 20 | 1 | 5 | 2 | 0 | ~-3.09e-39 | 0x80137DBC |
+| 26 | 1 | 5 | 2 | 0 | ~-3.09e-39 | 0x80137DBC |
+
+byte0=1 is the terrain fill. byte1=5 is a jump-table slot that stores 2.
+idx=0 is the packed winner at sp+0x488, not the probe slot. f24 is unused on
+this arm (the 0.7 test is byte0=0 only). No byte0=0 hit occurred, and the
+other-object cap (16) never tripped, so the log is the full set of stores.
+A later player debris call at `0x800B0D9C` (ord 33) had no ret2 in front of
+it. That spline caller stays untraced. No mitigation was added.
+
 ## Not claimed
 
-Which byte0 arm runs on the unpiloted death route is not measured. No
-mitigation was added. The 2/6 spline caller (`0x800B0D9C`) was not traced.
+Whether the terrain normal is a real impact or a degenerate sample is not
+measured. The angles `f22`/`f26` are still live at the store on the byte0=1
+path (`0x800FF65C` / `0x800FF670`, no jal before `0x800FF6F0`) and were not
+logged.
