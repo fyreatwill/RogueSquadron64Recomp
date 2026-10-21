@@ -198,6 +198,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 - **s5675 G1 soaks (no keys sent):** `s5675_g1fly_{a,b}` looked like two 'nohangar x4' flown-mission failures, i.e. a flaky hangar route. Actually `m6_god_common.sh` re-sets ROGUESQ_AUTOPILOT from its own `$AP` after XENV, and STOP=0 emptied `$AP`, so no keys were ever injected. Fixed in s5676 via `AP_OVERRIDE`. Believable because the hangar route is known flaky (~3/5) and 8/8 failures read as more of the same. The s5676 fix was itself ordered wrong (s5677 also keyless) - fixed s5678; lesson: the control is the "[autopilot] armed" log line, not keys.log `mission t=`.
 
 ## Next steps (single monotonic backlog)
+1a003. **s5709 (G1):** forced levels 1 and 4 init (control a1==1<<N, gCurLevel=N) and hold 300 s, no crash/stall (single-run each). lvl1 final frame = in-flight; lvl4 final frame = hangar/briefing-like (uncharacterised). Next: fold s5708_lvl{6,7} soaks, then step lvl4 fbd frames. Slug g1-level-select. No conclusions overturned.
 1a002. **s5708 (G1):** forced levels 3 and 5 init (control a1==1<<N passed, gCurLevel=N) and hold 300 s with no crash/stall (single-run each). Queued s5708_lvl{1,4,6,7}; then review fbd frames of lvl3/5. Slug g1-level-select.
 1a001. **s5706:** ROGUESQ_FORCE_UNLOCK hook built; s5705_unlock3/5 soaks queued — read them first (NEXT.md), slug g1-level-select.
 
