@@ -37601,6 +37601,21 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5520 b40 writer log x{_n}")
 
+    if p.name == "funcs_34.c" and "PATCH: s5704 lvsel" not in text:
+        # s5704: drawRadarIcon (level-select modal) -- log init args and every change of the cursor byte
+        # (0x800CDAC1), state byte (0x800CDAC4) and tick return so the reason the result is 2 (not B40) is visible.
+        _a1 = "    // 0x800C5E94: jal         0x800AEC60\n"
+        _a2 = "    // 0x800C5EAC: addu        $s0, $v0, $zero\n"
+        if text.count(_a1) != 1 or text.count(_a2) != 1:
+            report.append(f"WARNING: {p.name}: s5704 lvsel anchors {text.count(_a1)}/{text.count(_a2)}")
+        else:
+            _c1 = ('    { fprintf(stderr, "[lvsel] init a1(cursorMask)=0x%08X a2(unlockMask)=0x%08X a3=%u B40=%u s2val=%u\\n", U32(ctx->r5), U32(ctx->r6), U32(ctx->r7), (unsigned)MEM_BU(0xB40, S32(0X8013 << 16)), (unsigned)MEM_BU(0, ctx->r18)); } /* PATCH: s5704 lvsel */\n')
+            _c2 = ('    { static int s_t = 0, s_c = -1, s_s = -1; unsigned _cur = MEM_BU(-0X253F, S32(0X800D << 16)), _st = MEM_BU(-0X253C, S32(0X800D << 16)); s_t++; if (s_t == 1 || (int)_cur != s_c || (int)_st != s_s || ctx->r2 != 0x00FFFFFF) { if (s_t < 4000) fprintf(stderr, "[lvsel] tick#%d ret=0x%08X cursor=%u state=%u res=0x%08X\\n", s_t, U32(ctx->r2), _cur, _st, U32(MEM_W(-0X2534, S32(0X800D << 16)))); } s_c = (int)_cur; s_s = (int)_st; } /* PATCH: s5704 lvsel */\n')
+            text = text.replace(_a1, _c1 + _a1, 1)
+            text = text.replace(_a2, _a2 + _c2, 1)
+            changed = True
+            report.append(f"{p.name}: s5704 lvsel hook patched")
+
     if p.name == "funcs_1.c" and "PATCH: s5508 manifest name log" not in text:
         _a = "    // 0x800047F4: lui         $v1, 0x8011\n"
         if text.count(_a) != 1:
