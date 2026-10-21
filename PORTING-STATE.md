@@ -164760,3 +164760,9 @@ Ran `s5771_guestpc` on the level-select mission recipe for a 421 s hold. Positiv
 
 ORIGIN: no mitigation or game-logic change; this is regeneration-persistent diagnostic instrumentation at confirmed guest PCs.
 DISCRIMINATION: symbolic host breakpoints are invalid witnesses here; the generated guest-PC census had live mission/transition controls but zero setter entries. Next instrument 0x800B1140 together with an explicit lives-byte decrement control.
+
+## Session 5772 (2026-10-21) — checkpoint close-out for the bit1/lives discriminator
+The prior iteration stopped after Session 5771's guest-PC census and before the planned bit1/lives work unit. No experiment was rerun here. The durable result remains the qualified s5771 null: mission origin, `[mtm]`, and `[phase]` controls fired for 421 s, while both known kill-setter guest-PC counters stayed at zero; the missing lives-byte control means H3 was not selected. The queued soak tail contains no newer verdict than s5769.
+
+ORIGIN: checkpoint retry; no new mitigation or runtime change.
+DISCRIMINATION: resume by instrumenting guest PC 0x800B1140 and the explicit lives byte 0x80130B10 in one build/run. Only a bit1 hit immediately preceding a lives decrement selects H1; bit1 without decrement selects H2; a lives decrement with zero bit1 entries selects H3.

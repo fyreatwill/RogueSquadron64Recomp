@@ -1,6 +1,7 @@
-# NEXT: bit1 writer versus lives decrement
+# NEXT: RESUME bit1 writer versus lives decrement
 
-One bounded work unit: instrument the already identified guest PC 0x800B1140
+Checkpoint close-out: do not rerun the prior guest-PC census. The next iteration's
+single work unit is to instrument the already identified guest PC 0x800B1140
 and add an explicit watch/log for the player lives byte 0x80130B10. Build once
 and run the level-select mission recipe for 420 s; require mission origin,
 `[mtm]`, and at least one real 3->2/2->1/1->0 lives decrement before using
