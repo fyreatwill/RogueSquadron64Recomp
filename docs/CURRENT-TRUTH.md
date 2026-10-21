@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5779 (2026-10-21).
+Compact operational handoff, maintained as of Session 5783 (2026-10-21).
 `PORTING-STATE.md` is the chronological ledger. Durable background, closed
 audit detail, and the per-thread histories moved out of this file are in
 `docs/PROJECT-OVERVIEW.md` (latest: "Migrated from CURRENT-TRUTH (s5636)");
@@ -20,21 +20,16 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   endurance, not proof every mission subsystem is correct. Keyed holds end in a
   legitimate MISSION FAILED screen (idle autopilot loses; loss counter
   0x80138064) and fall back to title — not a hang.
-- **M6 active thread: bit 0x8 is the physics caller.** s5779 selects
-  H-phys (one run, 7/7) and refutes H-cine and H-split. Every `[killset]`
-  `0x800B08DC` `0x0001→0x0008` is the next line after `[bit8call]`
-  site `0x800B2A58` in `updatePlayerCraftPhysics` (a0=player, hw=0x0001).
-  The cinematic jal `0x800B146C` never ran (c0=0 on every line). ROM
-  confirms exactly those two `jal`s to `0x800B0850` and no pointer
-  (file `0xB206C`, `0xB3658`). Two of nine life losses skip bit 0x8 and
-  are the closed return-2 path (`0x800B0348` `0x0001→0x0190`). Altitude
-  hold still climbs (`acted` 0→3167, sy=+1). The selecting byte
-  sp+0x175 has one writer, `sb` at `0x800FFC60` in
-  `stepObjectOrientationTowardTarget` (record byte 0, stride 0x2C,
-  index word sp+0x488, only if byte sp+0x497 != 0). The caller does not
-  zero that stack byte. No mitigation. Do not tune `ROGUESQ_ALT_HOLD`.
-  The objective-boolean notes below are the godmode route, which does
-  not lose a life.
+- **M6 death thread (s5779-s5783): RESOLVED as a test-input artifact.** The
+  life losses via `[bit8call]` -> `updatePlayerCraftPhysics` -> terrain sampler
+  (`sampleTerrainAtNpcPosition`, ret=1 iff scaled y > cell byte3) happened only
+  when our synthetic input climbed the craft into the level ceiling: s5777's
+  `ROGUESQ_ALT_HOLD` latched target y=0.000 pre-spawn and held stick-up
+  forever (fixed s5783), and s5738's schedule has scripted `su` steps.
+  s5783_noalt (same route, no vertical input, 421 s): 0 deaths, craft sinks to
+  ys -370, sampler never ret=1 (single run; controls fired). Port sampler/physics
+  behave as designed; no mitigation. The unpoked LOSE at ~+342 s (s5627) is a
+  separate, still-unexplained path. Next: G1 mission progression with real input.
 - **M5 audio de-stubbing: CLOSED** for the qualified route (non-silent PCM,
   task/SP contract, keyed mission and long-hold rows; `docs/M5-AUDIO-PLAN.md`).
   **Audio FIDELITY is OPEN** (rung G2, `tools/agent/ITERATION.md` 3c): owner

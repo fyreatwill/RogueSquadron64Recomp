@@ -9942,6 +9942,8 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
             if (p >= 0x1000u && p < 0x7FFF00u) {
                 uint32_t u = rs64_rdram_u32(rd, p + 0x50); float y; memcpy(&y, &u, 4);
                 if (y == y && y > -1.0e6f && y < 1.0e6f) {
+                    if (!s_ah_have && y == 0.0f) { /* s5783: pre-spawn y==0 latch made the hold climb into the ceiling */ }
+                    else {
                     if (!s_ah_have) { s_ah_have = true; s_ah_target = y; fprintf(stderr, "[althold] target y=%.3f db=%.2f\n", (double)y, (double)s_ah_db); }
                     const double err = (double)y - s_ah_target;
                     if (stick_y == 0.0f) {
@@ -9951,6 +9953,7 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                     if ((++s_ah_n % 60) == 1)
                         fprintf(stderr, "[althold] n=%u y=%.3f err=%.3f sy=%.1f acted=%u\n", s_ah_n, (double)y, err, (double)stick_y, s_ah_act);
                 }
+                    }
             }
         }
     }
