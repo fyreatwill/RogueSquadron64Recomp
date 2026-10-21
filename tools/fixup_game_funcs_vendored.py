@@ -37574,6 +37574,14 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5750 mtm bt x{_n5750}")
 
+    if p.name == "funcs_42.c" and "PATCH: s5753 mtm mask" not in text:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+        import apply_s5753_mtm_mask as _a5753
+        text, _n5753 = _a5753.apply(text)
+        if _n5753:
+            changed = True
+            report.append(f"{p.name}: s5753 mtm mask x{_n5753}")
+
     if p.name == "funcs_27.c" and "PATCH: s5523 cineBody entry log" not in text:
         _a = '    // 0x800A5D80: addiu       $sp, $sp, -0xD8\n'
         if text.count(_a) == 1:
@@ -41196,6 +41204,7 @@ RS64_REPLAY = [
     "apply_s5728_boolsuppress.py",
     "apply_s5748_mtm_log.py",
     "apply_s5750_mtm_bt.py",
+    "apply_s5753_mtm_mask.py",
     "apply_s5619_cco_log.py",
     "apply_s4690_external_entry_probe.py",
     "apply_s4694_a14_boundary.py",
