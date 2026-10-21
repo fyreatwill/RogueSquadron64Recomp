@@ -164525,3 +164525,10 @@ Folded s5722_cleanhg{a,b} (both allattempts-failed, 5x nomission each). The gate
 - **Change:** soak_queue s5728_supc now SUPPRESS_BOOL=0x1A, new s5728_supd SUPPRESS_BOOL=0x5,0x3C (queue files only; the knob itself landed s5728).
 - ORIGIN: not a mitigation; env-gated experiment, default off.
 - **Next:** fold supc/supd; if cycles unchanged, find the mission-end writer (what takes the game to SELECT GAME) instead of more bool suppression.
+
+## Session 5730 (2026-10-20) — folded s5728_supc/supd (suppress no effect); mission-end is a GAME OVER screen; landed death probe + revive arm
+- Fold: supc (SUPPRESS_BOOL=0x1A, 50 `[objbool-sup]` lines = control OK) mission_cycles=3; supd (0x5,0x3C, 4 control lines) mission_cycles=3; supa/supb (bool 7, never fires) cycles=2. Cycles 2-3 across all arms = run-to-run noise; H1 (those bools cause the fail) REFUTED for 0x1A/0x5/0x3C (single run each, n=2 arms). Controls pass, so this is a real null.
+- NEW DATUM: supc fbd frame 9000 (just before the cycle's return to 0x790400 at VI #9510) is the "AMBUSH AT MOS EISLEY - GAME OVER" results screen: time 0:00, enemies 3/27, accuracy 0%, friendly saves 49/45, "No new medal". Frame 8500 is live third-person flight with HUD. So the cycle end is the game's own Game Over, not a crash/menu bug; the driver is a death or a fail condition, not setObjectiveBoolean.
+- Why not yet attributable: godmode log is capped at 20 lines (refill #20 at log line 760780, cur=130/150), so health at the end is unobserved; godmode only refills when 0<cur<max, so a one-poll overkill to <=0 is unrevivable.
+- Landed (src/main/main.cpp, godmode block): `[god-dead]` probe (<=60 lines: death transitions and health<max/3, with origin) and ROGUESQ_GODMODE2=1 revive arm (refill when cur<=0). Queued s5730_deada (probe only) and s5730_deadb (revive). Control: `[god-dead]` lines present in m6/<tag>/run.log.
+- ORIGIN: the revive arm is a diagnostic lever (test-only, env-gated like ROGUESQ_GODMODE), not a mitigation of a defect; it tests whether Game Over is health death.

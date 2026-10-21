@@ -9958,6 +9958,20 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
             auto rdf = [&](uint32_t p) { uint32_t u = rs64_rdram_u32(rd, p); float f; memcpy(&f, &u, 4); return f; };
             const uint32_t base = 0x137DB8u;
             const float cur = rdf(base + 0xC4), mx = rdf(base + 0xC8);
+            // s5730: death probe + revive arm. [god-dead] logs (uncapped to 60) every time health is <=0 or drops
+            // below 1/3 max; ROGUESQ_GODMODE2=1 also refills when cur<=0 (revive) to test whether GAME OVER is health death.
+            static int s_god2 = -1; static unsigned s_dead_n = 0; static bool s_was_dead = false;
+            if (s_god2 < 0) { const char* g2 = std::getenv("ROGUESQ_GODMODE2"); s_god2 = (g2 && *g2 == '1') ? 1 : 0; }
+            const bool dead = (mx > 0.0f && mx < 1.0e6f && cur <= 0.0f && cur > -1.0e6f);
+            if (dead != s_was_dead || (mx > 0.0f && cur > 0.0f && cur < mx / 3.0f && s_dead_n < 60)) {
+                s_was_dead = dead;
+                if (s_dead_n++ < 60) fprintf(stderr, "[god-dead] n=%u dead=%d cur=%.2f max=%.2f origin=0x%06X revive=%d\n", s_dead_n, (int)dead, cur, mx, (unsigned)rs64_vi_committed_origin() & 0xFFFFFFu, s_god2);
+            }
+            if (dead && s_god2) {
+                const uint32_t p = base + 0xC4, b = p & ~3u; uint32_t u; memcpy(&u, &mx, 4);
+                const_cast<uint8_t*>(rd)[b + 3] = u >> 24; const_cast<uint8_t*>(rd)[b + 2] = u >> 16;
+                const_cast<uint8_t*>(rd)[b + 1] = u >> 8;  const_cast<uint8_t*>(rd)[b] = u;
+            }
             if (mx > 0.0f && mx < 1.0e6f && cur > 0.0f && cur < mx) {
                 const uint32_t p = base + 0xC4, b = p & ~3u; uint32_t u; memcpy(&u, &mx, 4);
                 const_cast<uint8_t*>(rd)[b + 3] = u >> 24; const_cast<uint8_t*>(rd)[b + 2] = u >> 16;
