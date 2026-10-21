@@ -199,6 +199,8 @@ Each: the wrong claim, why it was believable, what replaced it.
 - **s5675 G1 soaks (no keys sent):** `s5675_g1fly_{a,b}` looked like two 'nohangar x4' flown-mission failures, i.e. a flaky hangar route. Actually `m6_god_common.sh` re-sets ROGUESQ_AUTOPILOT from its own `$AP` after XENV, and STOP=0 emptied `$AP`, so no keys were ever injected. Fixed in s5676 via `AP_OVERRIDE`. Believable because the hangar route is known flaky (~3/5) and 8/8 failures read as more of the same. The s5676 fix was itself ordered wrong (s5677 also keyless) - fixed s5678; lesson: the control is the "[autopilot] armed" log line, not keys.log `mission t=`.
 
 ## Next steps (single monotonic backlog)
+
+_s5755:_ [mtmst] fold (single run): bit1 of mask 0x8010C9E0 has ONE writer, pc 0x800B1140 (funcs_30), once per mission start; no store ever sets an end/fail bit in godmode 420 s. Next = find callers/guards of requestMissionTransitionMode (0x800FB2B0). Single-source (mtmb dir missing).
 _s5747:_ static fail-arm census (docs/M6-S5747-FAIL-ARM-CENSUS.md): bool-7 arm needs a dialogue flag; observed fail likely via bool 0x6D arm or another arg-2 caller. Next = entry log in requestMissionTransitionMode (NEXT.md).
 _s5752:_ mtm backtrace folded: requestMissionTransitionMode is invoked ONLY via runInMissionFrame's event table (jalr 0x800FA820; table 0x8010B350 {id,fn}, pending mask word 0x8010C9E0); a0 = event bit id, not a mode. Next = dump table + log mask transitions (NEXT.md).
 _s5750:_ mtm a0==2 backtrace patch built, soaks s5750_mtma/b queued. Next = fold their BACKTRACE frames (NEXT.md).

@@ -1,5 +1,5 @@
-# NEXT: [mtm] fold s5754 soaks ([mtmst] per-store mask log)
-Read scratch/agent/m6/s5754_mtm{a,b}/run.log: grep '\[mtmst\]\|\[mtm\] n='. Control: >=1 [mtmst] line, and every mtm a0=1 preceded by a store setting bit1.
-Hypotheses: H1 bit1 set each mission by one periodic setter pc (benign start); H2 several pcs set different bits, only bit1 ever fires in godmode (fail bits gated by HP); H3 no [mtmst] at all => mask written via a path not matched by the regex (indirect/other base reg) - grep stores to 0x8010C9E0 with other offsets (e.g. lui 0x8011 + -0x3620 with base reg != MEM_W(-0X3620,...) form).
-Outcome: pc histogram -> name function per pc (nm/funcs grep), find guard of the missing end bit's setter (iron rule 11: name writer).
+# NEXT: [mtmst] follow-up — who requests mission transition / sets the end bit
+Task: offline. Read requestMissionTransitionMode (funcs_42.c, pc 0x800FB2B0) and grep its callers (funcs_*.c) — list each caller + the guard condition. Enqueue one soak (s5755_mtmb recipe copied from s5754_mtma, env ROGUESQ_LOG_MTM=1) to get the second run.
+Hypotheses: H1 transition requested only on mission start (callers = start path), end path never reached because win condition never true; H2 an end-path caller exists but its guard (objective counters) is never satisfied in godmode; H3 end path requests via a different mask value stored through a non-MEM_W(-0x3620) form.
+Discriminator: caller list with guards; a caller whose guard reads objective/enemy counts = the next thing to log.
 HYPOTHESIS-ID: g1-nonhealth-fail
