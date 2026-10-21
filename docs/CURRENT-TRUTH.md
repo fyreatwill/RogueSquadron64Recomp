@@ -373,3 +373,4 @@ s5691: static census of all 179 setObjectiveBoolean sites: only sayWhoaHim_v0x1F
 Objective-count writer log built (tools/apply_s5787_objcount_log.py, in fixup); soaks s5787_cnt_fire/nofire queued; NEXT.md reads them. No result yet.
 
 - s5790: [objwr] entry logs for the 4 candidate counter-2 writers built (tools/apply_s5790_inline_writer_log.py); s5790_wr_fire/nofire queued; fold results next (NEXT.md).
+- s5790 RESULT (fire arm, single-run): counter 2 is incremented by datItemSetObjectiveBooleanCount calls with a2=2,a0=a1=0 (each rise preceded by one); updateNpcEffectIntensity/applyDatObjectiveTriggerEffect refuted. Next: caller + body of that path.
