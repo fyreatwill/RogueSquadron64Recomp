@@ -9982,6 +9982,17 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                             std::this_thread::sleep_for(std::chrono::microseconds(20));
                             uint32_t u = rs64_rdram_u32(rdp, 0x137DB8u + 0xC4); float c; memcpy(&c, &u, 4);
                             uint32_t um = rs64_rdram_u32(rdp, 0x137DB8u + 0xC8); float m; memcpy(&m, &um, 4);
+                            // s5734: objective-counter watch (0x138060..0x13808C, 12 words): log every change with health + origin.
+                            { static uint32_t oc[12]; static bool ocinit = false; static unsigned ocn = 0;
+                              for (int i = 0; i < 12; i++) {
+                                  const uint32_t v = rs64_rdram_u32(rdp, 0x138060u + 4u * i);
+                                  if (!ocinit || v != oc[i]) {
+                                      if (ocinit && ocn++ < 120) fprintf(stderr, "[objc] +0x%02X %08x->%08x hp=%.1f origin=0x%06X t=%lld\n", 0x60 + 4 * i, oc[i], v, c, (unsigned)rs64_vi_committed_origin() & 0xFFFFFFu,
+                                          (long long)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
+                                      oc[i] = v;
+                                  }
+                              }
+                              ocinit = true; }
                             if (!(m > 0.0f && m < 1.0e6f)) continue;
                             if (c != last) { ring[rn++ & 63] = { c, (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() }; last = c; }
                             if (c <= 0.0f && c > -1.0e6f) {

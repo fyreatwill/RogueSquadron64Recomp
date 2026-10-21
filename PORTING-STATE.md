@@ -164554,3 +164554,7 @@ Next: log the writer of the game-over/results-state latch at the dead=1 transiti
 - ORIGIN: no code change this iteration (fold only); no mitigation added.
 - DISCRIMINATOR for next: log the writer of the mission-results/exit state at the transition (what sets the exit request), with positive control = fire on every write to that word.
 - Caveat: n=1 per arm; whether the a revive thread actually fired (revive count) is not printed - add it to the next build.
+
+## Session 5734 (2026-10-21) — [objc] objective-counter watch added to GODMODE3 thread; soaks s5734_objc{a,b} queued
+HYPOTHESIS-ID: g1-gameover-cause
+Built (cmake clean) a 12-word poll of 0x138060..0x13808C (gObjectiveCounts, loss counter 0x138064 per PROJECT-OVERVIEW s5495) inside the GODMODE3 20us thread, logging each change as `[objc] +off old->new hp origin t`. Queued s5734_objca (revive, GODMODE3=1) and s5734_objcb (log-only, =2). Positive control: counters must change at least once per mission (initial value is recorded silently). Fold: 0x138064 reaching 3 while hp>0 in arm a => loss is the data-defined objective count (legitimate scripted loss, health irrelevant; name the NPCs next); no change before exit => other writer. Not yet run; PC attribution unavailable from host thread (writer known: updateDestructionDebrisNpc).
