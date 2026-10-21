@@ -165192,3 +165192,11 @@ input family, G1c not seen (2/2 stable). Did not examine the objective-boolean
 state, so what limits completion remains open. Next: read objective/boolean
 snapshots ([ccosnap], ROGUESQ_LOG_HUDBIT) in a real-input run to see which
 objective never advances (enemy-kill counter vs. waypoint vs. mission timer).
+
+## Session 5806 (2026-10-21) — ROGUESQ_NPC_INVULN test lever: protecting class-2 NPCs removes the counter-2 life-loss rule, mission still not won
+
+Pivot iteration (churn guard): landed a runtime change instead of another observation. `tools/apply_s5806_npc_invuln.py` (mirrored into `fixup_game_funcs_vendored.py`, so it survives regen) adds a TEST-ONLY env lever `ROGUESQ_NPC_INVULN=1` at the entry of `updateDestructionDebrisNpc` (funcs_16.c): for a msg-5 hit on an NPC whose descriptor +0x70 == 2, it zeroes the hit record's damage halfword (a2+6), so descriptor hp never depletes. Rebuilt (rc=0), then ran both arms concurrently with the s5804 real-input schedule (`scratch/agent/g1_inv0.sh` = lever off, `g1_inv1.sh` = lever on; both also `ROGUESQ_LOG_HUDBIT=1`).
+Results (run logs in scratch/agent/m6/s5806_inv{0,1}/): both arms reached mission (t=78 s / 80 s), held 601 s, alive_at_end=1, 0 VI stalls>30 s, 0 crash lines. Positive control: inv1 logged 20 `[npcinv]` zeroed hits (inv0: 0). inv0 fired `[hudbit4] call#1` (the lv0 count(2)>=3 fail rule, as in s5786) and 17 `npcv` tally lines; inv1 fired 0 hudbit4 calls and only 4 `npcv` lines. Neither arm produced a win/advance marker.
+Selects: class-2 NPC destruction is what drives the fail rule under this input (hudbit4 1 vs 0, single run per arm; consistent with s5786/s5793). Refutes: "life loss under real input is a port defect independent of NPC hp". Does NOT show the mission becomes winnable: with the lever on, the win condition is still unmet, so what remains is the positive objective path (kill count / waypoint), not a fail path.
+ORIGIN: the lever is a diagnostic override, not a fix. The writer of class-2 NPC damage is the projectile update (0x8005D35C msg 5) fed by live probe droids (s5794); the hits are legitimate game behaviour, so no default behaviour changed (env-gated, default off).
+Next: with the lever on, snapshot objective bools/counters (`[ccosnap]`) across a hold and name which objective never advances (NEXT.md).

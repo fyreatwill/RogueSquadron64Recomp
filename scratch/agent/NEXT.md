@@ -1,13 +1,12 @@
-# NEXT: G1 — which objective never advances under real input
+# NEXT: G1 — which objective never advances once the class-2 NPC fail path is removed
 
-Work unit: rerun g1_armA.sh-style hold (HOLD=600) with the objective instruments
-armed (ROGUESQ_LOG_HUDBIT=1, [ccosnap]/[objbool] logs) added to COMMON, then
-tabulate boolean-array snapshots over time (kills counter, waypoint, timer).
+Work unit: run `scratch/agent/g1_inv1.sh <tag> 600` (ROGUESQ_NPC_INVULN=1, LOG_HUDBIT=1) with `[ccosnap]`
+boolean-array snapshots armed; tabulate bools/counters (kill count 0x138060.., waypoint, timer) at mission
+onset, mid, and end. Positive control: at least one bool/counter must change.
 
-Hypotheses: (a) enemy-kill objective never increments because our autopilot
-never hits targets; (b) objective advances but win check is gated on a bool the
-port never sets; (c) mission timer/fail path fires first. Discriminator: which
-booleans change between mission onset and the end, vs the retail oracle if
-reachable. Positive control: the snapshot must show at least one boolean change.
+Hypotheses: (a) the enemy-kill objective never increments because autopilot never hits droids;
+(b) objective advances but the win check is gated on a bool the port never sets (e.g. dialogue-flag bool 7);
+(c) mission timer/other fail path fires. Discriminator: which values change between onset and end.
+If (a): next engineering step = an aim-assist autopilot (stick toward nearest hostile) in main.cpp.
 
 HYPOTHESIS-ID: g1-mission-progression
