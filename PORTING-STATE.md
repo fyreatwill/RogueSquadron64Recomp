@@ -164798,3 +164798,18 @@ The 0x800B2EC4 jal is not on the return-1 arm (that arm calls `spawnNpcDestructi
 
 ORIGIN: no mitigation. The 0x0190 value is the game's own kill-bit RMW; the writers of the call are the two jals above.
 DISCRIMINATION: H2 selected (two direct callers, stable across both cycles). H1 refuted (not one jal). H3 refuted (no pointer in ROM, and every 0x0190 store is the next line after a logged jal).
+
+## Session 5775 (2026-10-21) — orientation return 2 is one store at 0x800FF6F0
+
+Static trace, no run. Retail ROM `build/rogue_squadron.z64`, mission overlay, `stepObjectOrientationTowardTarget` at `0x800FEF10` (size `0xEF0`), disassembled with `mips64-elf-objdump -m mips:4000`. Full trace: `docs/M6-S5775-ORIENT-RET2.md`.
+
+The function has one `jr ra` (`0x800FFDF8`). It returns stack byte sp+0x497 (`lbu` at `0x800FFDB4`, `addu v0, t3, zero` at `0x800FFDF4`). `0x800FFCF8` compares that byte to 2; it does not produce the return. Three stores touch the byte and nothing else does. `0x800FEF70` writes 0 on the a1==0 early exit. `0x800FFA40` writes 1 (the caller's non-death arm). `0x800FF6F0` is the only store of 2: both entries set `t3` with `addiu t3, zero, 2` and do not clobber it.
+
+That store is the jump-table block for slots 0 and 5 only (`0x800A9450` entries 0 and 5 both point at `0x800FF610`; slots 1..4 do not store 2). The gate is `abs(asin(dot(object+0x1C, record+0x10))) < 15` and `acos(dot(object+0x10, record+0x10)) < 90`. The symbols `sinfApprox` / `constMinusSinfApprox` are asin and acos: the first clamps to ±1 and returns ±pi/2, with Taylor coefficient 1/6, and the second subtracts that from pi/2. Scale `0x800A9480` is 180/pi.
+
+Two fills share the record array, distinguished by byte0. byte0==1 is a nonzero `sampleTerrainAtNpcPosition` commit and stores 2 whenever the angles pass. byte0==0 is a `findSegmentObjectSphereHit` commit and stores 2 only when the angles pass and the float at record+0x24 is not < 0.7. The store-2 path also snaps object+4/+8/+12 from the record and zeroes object+0x28/+0x2C/+0x30/+0xE8. The caller's beq at `0x800B2928` still leads to jal `0x800B2EC4`.
+
+This selects H3 (the epilogue copies a loaded byte; the immediate 2 is the store at `0x800FF6F0`). It refutes H1 (the epilogue does not write 2, and two predicates reach the store, so it is not one compare). It refutes H2 (one epilogue, not several). Which predicate fires on the death route is unmeasured: H-terrain (byte0==1) vs H-npc (byte0==0).
+
+ORIGIN: no mitigation. The 2 is the game's own immediate, stored by its own alignment test.
+DISCRIMINATION: H3 selected. H1 refuted. H2 refuted. Next discriminator is one log at `0x800FF6F0` (byte0, byte1) against the return-1 store at `0x800FFA40` as the control, on the s5774 death route.

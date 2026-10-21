@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5774 (2026-10-21).
+Compact operational handoff, maintained as of Session 5775 (2026-10-21).
 `PORTING-STATE.md` is the chronological ledger. Durable background, closed
 audit detail, and the per-thread histories moved out of this file are in
 `docs/PROJECT-OVERVIEW.md` (latest: "Migrated from CURRENT-TRUTH (s5636)");
@@ -21,12 +21,16 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   legitimate MISSION FAILED screen (idle autopilot loses; loss counter
   0x80138064) and fall back to title — not a hang.
 - **M6 active thread: why the unpiloted mission loses a life.** The 0x0190
-  kill store is still the game's own `spawnSceneDebrisAndEffectCluster`
-  (s5773). s5774 names the callers, two of them, same route, two full 3-life
-  cycles: 4/6 are `updatePlayerCraftPhysics` jal 0x800B2EC4 (the arm taken
-  when `stepObjectOrientationTowardTarget` returns low byte 2), and 2/6 are
-  `updateSplineCraftTransform` jal 0x800B0D9C after bit 0x8 is set. Next is
-  the return-2 path inside that orientation function. The objective-boolean
+  kill store is the game's own `spawnSceneDebrisAndEffectCluster` (s5773).
+  s5774: 4/6 player deaths are `updatePlayerCraftPhysics` jal 0x800B2EC4, the
+  arm taken when `stepObjectOrientationTowardTarget` returns 2; 2/6 are the
+  parked spline jal 0x800B0D9C. s5775 (static, `docs/M6-S5775-ORIENT-RET2.md`):
+  the return is stack byte sp+0x497, and the only store of 2 is `sb` at
+  `0x800FF6F0`. It runs for probe slot 0 or 5 when
+  `abs(asin(dot(object+0x1C, record+0x10))) < 15°` and
+  `acos(dot(object+0x10, record+0x10)) < 90°`. byte0 selects the fill:
+  1 = terrain sample, 0 = NPC sphere hit (and only if record+0x24 >= 0.7).
+  Which fill fires on the death route is unmeasured. The objective-boolean
   notes below are the godmode route, which does not lose a life.
 - **M5 audio de-stubbing: CLOSED** for the qualified route (non-silent PCM,
   task/SP contract, keyed mission and long-hold rows; `docs/M5-AUDIO-PLAN.md`).
@@ -208,7 +212,9 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
-_s5774 (top):_ debris callers named (run.log `s5774_debris`, n=6 calls, all logged). 4/6 player deaths (the 3->2 and 1->0 of each cycle) are jal 0x800B2EC4 in `updatePlayerCraftPhysics`, a1=1, halfword 0x0001, and the 0x0190 store is the next stderr line. That jal is only reached when `stepObjectOrientationTowardTarget` returns low byte 2 (`beq` at 0x800B2928). 2/6 (the 2->1 deaths) are jal 0x800B0D9C in `updateSplineCraftTransform` after `spawnNpcDestructionDebris` sets bit 0x8 (0x0001->0x0008). Sites 0x800B0C34, 0x800B0EBC, and the hp<=0 jal 0x800B2A08 stayed 0. ROM: 5 direct jals, 0 pointers. Next = which path returns 2 from `stepObjectOrientationTowardTarget` (0x800FFCF8 is a compare, not the return). Slug g1-orient-ret2. Do not rerun the debris census.
+_s5775 (top):_ return 2 is the stack byte at sp+0x497, stored only by `sb` at 0x800FF6F0 (immediate 2). Reached from jump-table slots 0 and 5 (`0x800A9450`) when the 15°/90° alignment test passes. byte0==1 is a terrain sample; byte0==0 is an NPC sphere hit and also needs record+0x24 >= 0.7. Which one fires on the death route is the next measurement (one log at that store, control = the return-1 store at 0x800FFA40). Detail: docs/M6-S5775-ORIENT-RET2.md. Slug g1-orient-ret2. Do not rerun the debris census. `sinfApprox` is asin (constants); do not treat it as sin.
+
+_s5774:_ debris callers named (run.log `s5774_debris`, n=6). 4/6 player deaths are jal 0x800B2EC4 when the orientation function returns 2; 2/6 are jal 0x800B0D9C. The return-2 path is named in s5775. Do not rerun the census.
 
 _s5773:_ unpiloted level-select fail is the three-death chain (guest `[bit1]`/`[lives]` plus host `[livesbyte]`). Immediate flag writer is `spawnSceneDebrisAndEffectCluster` at 0x800B0348 (player slot 0x80137DBC, halfword -> 0x0190). Caller named in s5774.
 
