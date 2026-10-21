@@ -1,18 +1,17 @@
-# NEXT: who sets orientation record byte0=1 for the player?
+# NEXT: terrain height at the player's death xz vs the rising player y
 
-s5780 result: sb 0x800FFC60 copies record byte0 (=1, idx 0, flag sp+0x497=1) to the
-caller's sp+0x175; every visible bit8call follows it. Do not re-log that store.
+s5781: byte0=1 = sampleTerrainAtNpcPosition (0x80068D5C, a2=0x80138058) nonzero; the player's
+last 0.7 s before every death is an identical rise y -2.88 -> -0.32 at +3.6/s (x~45.5, z~32.5).
 
-Work unit: static trace first (no build): in funcs_43.c find every store to the
-record array at sp+0x198 (stride 0x2C, byte 0) in stepObjectOrientationTowardTarget
-(s5775 found the ret2 store at 0x800FF6F0 writes sp+0x497; look for sb to 0($s?)/record
-byte0 near 0x800FF*, 0x800FFA*). Name the test (geometry/terrain) that sets byte0=1.
-Then one build+run on s5777_althold.sh logging that test's inputs for the player at the
-store, paired to the next [bit8call].
+Work unit: (1) static first: disassemble 0x80068D5C (ROM 0xA5D30 + off) and name what it
+compares the position y against (height field / plane / triangle list). (2) One build+run on
+scratch/agent/s5777_althold.sh (GODV=0) logging, every 250 ms from respawn to death, player
+x,y,z + the terrain sample's height/return for that xz (hook the jal at 0x800FF3A8 in
+funcs_43.c via a tools/apply_s5781_*.py fixup, hooked like apply_s5780).
 
-- H-real-impact: byte0=1 comes from a true terrain/object hit test with plausible inputs (player really at ground y). Next: why the hit is lethal (float<=0 test).
-- H-bad-input: test inputs wild/stale (e.g. uninitialised geometry). Next: writer of inputs.
+- H-spawn-below-surface: height at xz > y for the whole life (player starts under ground and is lifted); death when sample first returns nonzero.
+- H-surface-is-y0: height ~0 constant, death exactly when y crosses ~0 (a scripted rise through the plane is a game rule; check against retail oracle spawn y).
+- H-height-wrong: height value wild/stale vs neighbouring cells (port bug in the sampler's data).
 
-Control: [bit8call] hw=0x0001 still prints; [sp175] lines still print src=1.
-
+Control: [sp175]/[bit8call] lines still print; first sample return must flip 0->nonzero at death.
 HYPOTHESIS-ID: g1-record-byte0

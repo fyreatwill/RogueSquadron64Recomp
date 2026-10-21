@@ -164905,3 +164905,12 @@ So the byte is a record "byte0" impact flag set to 1 by the fill (the s5775 fill
 
 ORIGIN: no mitigation. No behavior change; instrument only plus a ledger result: the byte is legitimately set, the chain is fill-sets-record-byte0=1 -> physics sees sp+0x175!=0 -> float<=0 -> debris jal -> bit 0x8.
 DISCRIMINATION: selects H-written-const. Next slug g1-record-byte0: who fills record byte0=1 at idx 0 for the player and what geometric/state test makes it, i.e. is the player truly colliding (terrain/object) at the time.
+
+## Session 5781 (2026-10-21) — byte0=1 is the terrain sample; the player rises into it on an identical path every death
+
+Static, no run. Disassembled `stepObjectOrientationTowardTarget` (`0x800FEF10`, ROM `0xA5D30`+offset, `objdump -EB -m mips:4000`, `scratch/agent/s5781/fn.S`). Every `sb` in the function: `0x800FEF70`/`FFA40`/`FF6F0` (stack byte sp+0x497, s5775), `0x800FF34C` (fill A, record byte0=0, byte1=s4), `0x800FF3B4` (fill B, record byte0=s2=1, byte1=s4, only when `jal 0x80068D5C` sampleTerrainAtNpcPosition with a2=0x80138058 returns nonzero), `0x800FFC60` (sp+0x175 copy), `0x800FFC80` (sp+0x46A, zero). So byte0=1 has exactly one writer and it is the terrain sample, matching the s5775 doc. H-real-impact is already supported by s5777 (return-2 normal is a real impact, 5/5); H-bad-input has no support.
+
+New offline datum (`scratch/agent/m6/s5738_snapa/run.log`, `[snap]` ring words 2..4 = player x,y,z floats, 100 ms steps): in all 3 logged deaths the last 8 snaps are bit-identical to 2 decimals: x 44.97->45.57, y -2.88->-0.32 (rising +3.6/s, constant), z 32.55->32.53. Death lands at y~-0.3 each time. So the player is not diving into terrain; it rises on a deterministic constant-velocity path (scripted launch/autopilot, or y=0 is the surface) and dies when y reaches ~0. Single-source (one run, 3 deaths); no terrain height at that xz yet.
+
+ORIGIN: no mitigation, no code change; ledger result only.
+DISCRIMINATION: H-bad-input unsupported; the open question moves from "who sets byte0" to "what is terrain height at (45.5, 32.5) and why does a rising craft at y=-0.3 count as an impact" (H-spawn-below-surface vs H-surface-is-y0 vs H-height-sample-wrong).
