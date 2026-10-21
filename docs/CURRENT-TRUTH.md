@@ -216,7 +216,9 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
-_s5780 (top):_ sp+0x175 is written by the `sb` at 0x800FFC60 from orientation record byte0, always 1 (40/40 logged stores, flag=1, idx 0; 4/4 visible bit8calls directly preceded by it; log capped at 40 so 5 later bit8calls unpaired). H-written-const; not stack leftover. `tools/apply_s5780_sp175_store.py`. Next = find who sets record byte0=1 for the player (the fill that precedes this) and which collision test drives it. Slug g1-record-byte0.
+_s5781 (top):_ byte0=1 has one writer: terrain sample jal 0x80068D5C (a2=0x80138058) nonzero at 0x800FF3B4. Offline: the player rises y -2.88->-0.32 at +3.6/s identically in 3 deaths (s5738_snapa snaps) and dies at y~-0.3 (single-source). Next = terrain height at that xz vs y (NEXT.md). Slug g1-record-byte0.
+
+_s5780:_ sp+0x175 is written by the `sb` at 0x800FFC60 from orientation record byte0, always 1 (40/40 logged stores, flag=1, idx 0; 4/4 visible bit8calls directly preceded by it; log capped at 40 so 5 later bit8calls unpaired). H-written-const; not stack leftover. `tools/apply_s5780_sp175_store.py`. Next = find who sets record byte0=1 for the player (the fill that precedes this) and which collision test drives it. Slug g1-record-byte0.
 
 _s5779 :_ bit 0x8 is the physics jal (H-phys, 7/7, `scratch/agent/m6/s5777_althold/run.log`; s5778 log kept at `s5778_althold_kept/run.log`). Cinematic jal never ran. Do not retag the callers and do not tune `ROGUESQ_ALT_HOLD`. Next = log the only writer of stack byte sp+0x175 (`sb` 0x800FFC60: index, source byte, flag sp+0x497) on the same recipe and pair each line to `[bit8call]` 0x800B2A58. Slug g1-sp175-src.
 
