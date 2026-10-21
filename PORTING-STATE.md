@@ -164449,3 +164449,7 @@ The s5714 measurement selects H3 and refutes H1 and H2; it closes the wild-width
 ## Session 5715 (2026-10-20) — queued lvl2/lvl3/lvl5 forced-save soaks (x2 each) for G1
 
 No game run this session. Derived six recipes scratch/agent/soak_queue/s5715_lvl{2,3,5}{a,b}.sh from the s5714_lvl7b recipe (only TAG and ROGUESQ_FORCE_SAVE_MISSION/FORCE_UNLOCK changed). Discriminator for the next session: CRASH/SIGSEGV count and VI-origin stalls per log vs the `[lvsel] init` control line (a1 == 1<<N). H1 = new crash family on other missions; H2 = clean like lvl1/4/6/7. Results are folded from SOAK-RESULTS.md next iteration.
+
+## Session 5716 (2026-10-20) — folded lvl2 forced-save soaks (clean x2); queued lvl8/lvl9
+
+No new build. s5715_lvl2a/b (forced save mission 2, 300 s hold each): alive_at_end=1, vi_stalls30s=0, crashlines=0, 0 SIGSEGV/CRASH/fatal in scratch/agent/m6/s5715_lvl2{a,b}/run.log. Positive control present in both: `[lvsel] init a1(cursorMask)=0x4 a2(unlockMask)=0x8 a3=2` (a1==1<<2). Both runs sit on VI origins 0x790400 / 0x62BD00 (~54k / ~14k rows), not the 0x690400 lvl1 origin. Result: H2 (clean) holds for lvl2; no new crash family. lvl3/lvl5 recipes are still queued (a loop-held s5688_bool7_a was in running/). Queued s5716_lvl{8,9}{a,b}.sh (clones of the lvl3 recipe with N swapped) so the loop drains lvl3/5/8/9 without another session. Not yet covered: real-input (non-forced) level select.
