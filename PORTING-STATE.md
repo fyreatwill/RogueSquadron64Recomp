@@ -164403,3 +164403,9 @@ What ran: added a `ROGUESQ_FORCE_UNLOCK=N` branch (PATCH: s5705 force unlock) to
 What it showed: nothing yet — soaks have not run. Positive control: the printed `forced=N` and `B2F=N` lines must appear in each log; absent = hook not hit.
 Discriminator for next session: init a3==N and ret==N, then initMission/[mfst] names for level N vs level 2. H5 (level N initialises) vs H6 (mission load fails for N>2).
 ORIGIN: the clamp writer is the game's own save-derived max-unlocked byte (s5704b H1); this hook is a diagnostic override, not a mitigation.
+
+## Session 5707 (2026-10-20) — s5705 unlock3/5 soaks were an invalid null (stale masks); hook fixed, s5706_mask3/5 queued
+HYPOTHESIS-ID: g1-level-select
+Folded s5705_unlock3/5: `[lvsel] B2F=N forced=N` fired, init logged a3=N B40=N, but a1(cursorMask)=0x4 and a2(unlockMask)=0x8 were identical to the unforced s5704 baseline, cursor stayed 2, tick ret=2, initMission ran level 2 (gCurLevel=2). Cause: the s5705 hook sits after the 0x800C5E8C/E90 sllv that build a2/a1 from the old values, so it only rewrote r7. The positive control (masks change) failed, so the run says nothing about whether level N initialises.
+Fix: hook now also sets r5=1<<N, r6=1<<(N+1) (tools/fixup_game_funcs_vendored.py s5705 _c0 string; generated funcs_34.c patched in place, rebuilt). Queued s5706_mask3/s5706_mask5. Expected: init a1==8/32; then tick ret==N (H5) or a crash/stall for N>2 (H6, capture backtrace).
+ORIGIN: debug-only env hook (ROGUESQ_FORCE_UNLOCK), not a mitigation of a game defect.

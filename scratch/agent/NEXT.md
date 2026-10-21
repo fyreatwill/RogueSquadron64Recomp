@@ -1,4 +1,4 @@
-# NEXT: read s5705_unlock3 / s5705_unlock5 soak logs (scratch/agent/soak_results/). Control: `[lvsel] B2F=N forced=N` present. Then: init a3==N, tick ret==N, B40 stays N, and [mfst]/initMission names for level N vs level 2.
-Hypotheses: H5 level N initialises when unlock=N; H6 mission load fails/crashes for N>2 (then capture backtrace, name writer).
-Discriminator: grep '\[lvsel\]' and '\[mfst\]' in both logs; compare to s5704_lvsel_f0 baseline.
+# NEXT: read s5706_mask3 / s5706_mask5 soak results (scratch/agent/m6/<tag>/run.log). Control: `[lvsel] init a1(cursorMask)` == 0x8 (N=3) / 0x20 (N=5), NOT 0x4. If control fails, the hook is still mis-ordered - fix before concluding anything.
+Then: tick ret==N? initMission name/gCurLevel for N vs 2; any crash/stall for N>2 (capture backtrace, name writer).
+Note: fixup guard "PATCH: s5704 lvsel" not in text means regen applies the new _c0 only on fresh generate; generated file was patched in place.
 HYPOTHESIS-ID: g1-level-select

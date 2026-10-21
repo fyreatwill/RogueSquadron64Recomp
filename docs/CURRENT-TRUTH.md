@@ -299,3 +299,5 @@ s5665_dgate_{a,b} (2 soaks, controls OK): decodeAndFillVoiceBlock RUNS on slot 0
 s5691: static census of all 179 setObjectiveBoolean sites: only sayWhoaHim_v0x1FC sets 7; draw ids (base+1..3) never 7; three level-init sites forward caller a0 (unclassified). Next: log a0 there (NEXT.md).
 
 - s5698 (G1): lvN init is reached via initializeObjectiveTracking (jalr table[gCurrentLevel*16]) <- initMission <- mainGameLoop. `ra=0` in recomp logs is an artifact (generated jal never sets r31) — do not infer thread dispatch from it. Next: find B40 writers (see NEXT.md).
+
+- s5707: s5705 unlock3/5 soaks INVALID (hook ran after mask build; a1/a2 unchanged). Fixed; s5706_mask3/5 queued (G1 level-select).
