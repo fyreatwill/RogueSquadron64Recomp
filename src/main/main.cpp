@@ -9967,6 +9967,42 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 s_was_dead = dead;
                 if (s_dead_n++ < 60) fprintf(stderr, "[god-dead] n=%u dead=%d cur=%.2f max=%.2f origin=0x%06X revive=%d\n", s_dead_n, (int)dead, cur, mx, (unsigned)rs64_vi_committed_origin() & 0xFFFFFFu, s_god2);
             }
+            // s5732: ROGUESQ_GODMODE3=1 starts a tight host thread (~20 us poll) that revives cur<=0 before the
+            // game's per-frame death check can latch, and (mode 2) only logs the pre-death health trajectory
+            // without reviving (control arm: shows damage magnitude, one-hit overkill vs. drain).
+            static int s_god3 = -1; static std::atomic<int> s_g3_dead{0}, s_g3_rev{0};
+            if (s_god3 < 0) {
+                const char* g3 = std::getenv("ROGUESQ_GODMODE3"); s_god3 = (g3 && *g3 == '1') ? 1 : (g3 && *g3 == '2') ? 2 : 0;
+                if (s_god3) {
+                    const int mode = s_god3; volatile uint8_t* rdp = rd;
+                    std::thread([rdp, mode]() {
+                        struct Smp { float v; long long us; };
+                        Smp ring[64]; unsigned rn = 0; float last = -12345.0f; unsigned dumps = 0;
+                        for (;;) {
+                            std::this_thread::sleep_for(std::chrono::microseconds(20));
+                            uint32_t u = rs64_rdram_u32(rdp, 0x137DB8u + 0xC4); float c; memcpy(&c, &u, 4);
+                            uint32_t um = rs64_rdram_u32(rdp, 0x137DB8u + 0xC8); float m; memcpy(&m, &um, 4);
+                            if (!(m > 0.0f && m < 1.0e6f)) continue;
+                            if (c != last) { ring[rn++ & 63] = { c, (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() }; last = c; }
+                            if (c <= 0.0f && c > -1.0e6f) {
+                                s_g3_dead++;
+                                if (dumps++ < 6) {
+                                    fprintf(stderr, "[god3] dead#%d mode=%d cur=%.2f max=%.2f origin=0x%06X history(newest last):", s_g3_dead.load(), mode, c, m, (unsigned)rs64_vi_committed_origin() & 0xFFFFFFu);
+                                    unsigned k = rn > 12 ? rn - 12 : 0;
+                                    for (; k < rn; ++k) fprintf(stderr, " %.1f@%lld", ring[k & 63].v, ring[k & 63].us - ring[(rn - 1) & 63].us);
+                                    fprintf(stderr, "\n");
+                                }
+                                if (mode == 1) {
+                                    const uint32_t b = (0x137DB8u + 0xC4) & ~3u; uint32_t w; memcpy(&w, &m, 4);
+                                    const_cast<uint8_t*>(rdp)[b + 3] = w >> 24; const_cast<uint8_t*>(rdp)[b + 2] = w >> 16;
+                                    const_cast<uint8_t*>(rdp)[b + 1] = w >> 8;  const_cast<uint8_t*>(rdp)[b] = w;
+                                    s_g3_rev++; last = m;
+                                } else { std::this_thread::sleep_for(std::chrono::milliseconds(50)); }
+                            }
+                        }
+                    }).detach();
+                }
+            }
             if (dead && s_god2) {
                 const uint32_t p = base + 0xC4, b = p & ~3u; uint32_t u; memcpy(&u, &mx, 4);
                 const_cast<uint8_t*>(rd)[b + 3] = u >> 24; const_cast<uint8_t*>(rd)[b + 2] = u >> 16;
