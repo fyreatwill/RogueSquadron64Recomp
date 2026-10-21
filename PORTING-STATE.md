@@ -164445,3 +164445,7 @@ ORIGIN: the "wild width" in SKIP_WILD_W is not a SetColorImage width. rt64_state
 
 DISCRIMINATION (s5714): the measurement selected between H1 (misparsed DL), H2 (game really emits w=442) and a third hypothesis H3 (writeback width derived from the draw rect on a 1-row pass). Result: H3 selected; H1 and H2 refuted, because imgW=512 is clean in the same run where the SKIP_WILD_W control fired (writeW=443 == rectRight). NEXT DISCRIMINATOR: g1-level-select H1 (other missions crash on a new family) vs H2 (they soak clean like lvl1/4/6/7): CRASH/SIGSEGV count and VI-origin stalls in forced-save soaks of missions 2, 3, 5, with the [lvsel] init line as control.
 The s5714 measurement selects H3 and refutes H1 and H2; it closes the wild-width thread and resolves the label (root cause: rt64_state.cpp:2203 draw-rect width on 1-row passes). The next probe will discriminate whether missions 2/3/5 crash.
+
+## Session 5715 (2026-10-20) — queued lvl2/lvl3/lvl5 forced-save soaks (x2 each) for G1
+
+No game run this session. Derived six recipes scratch/agent/soak_queue/s5715_lvl{2,3,5}{a,b}.sh from the s5714_lvl7b recipe (only TAG and ROGUESQ_FORCE_SAVE_MISSION/FORCE_UNLOCK changed). Discriminator for the next session: CRASH/SIGSEGV count and VI-origin stalls per log vs the `[lvsel] init` control line (a1 == 1<<N). H1 = new crash family on other missions; H2 = clean like lvl1/4/6/7. Results are folded from SOAK-RESULTS.md next iteration.
