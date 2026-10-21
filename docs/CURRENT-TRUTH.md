@@ -200,6 +200,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 _s5747:_ static fail-arm census (docs/M6-S5747-FAIL-ARM-CENSUS.md): bool-7 arm needs a dialogue flag; observed fail likely via bool 0x6D arm or another arg-2 caller. Next = entry log in requestMissionTransitionMode (NEXT.md).
+_s5750:_ mtm a0==2 backtrace patch built, soaks s5750_mtma/b queued. Next = fold their BACKTRACE frames (NEXT.md).
 _s5746:_ s5745_crawlshot folded: real window clean, crawl band = fbd-only RDRAM artifact (G3 crawl item retired); fbd PPMs now labelled. Next = Next steps #4 (win mission 1; non-health fail condition per s5733).
 _s5745:_ s5744 lvsel hp-watch: no hp->0/lives write on a 3rd route; g1-gameover-cause parked. Next = s5745_crawlshot (G3 crawl band: real window vs fbd), then MUST land a runtime change (NEXT.md).
 _s5743:_ s5742 lldb hp-watch on plain route: no death, 0 hp/lives writes (wp1 control ok). Death arm is route-specific (s5738 used level-select keys, mission 62BD00); next = lldb watch on THAT route (NEXT.md).
@@ -346,3 +347,4 @@ s5691: static census of all 179 setObjectiveBoolean sites: only sayWhoaHim_v0x1F
 - s5743 lvsel hp-watch was void (mission gate in s5739_hpwatch.sh single-quoted, never matched); fixed, requeued as s5744.
 
 - s5748/s5749: [mtm] entry log works (control fired) but both soaks saw only a0=1 calls, and ra is always 0 (recomp doesn't maintain r31) -> use host backtrace_symbols_fd on a0==2 instead of ra; need a route that reaches a0=2.
+- s5750: host backtrace on first 3 a0==2 entries landed (tools/apply_s5750_mtm_bt.py, ROGUESQ_LOG_MTM=1); soaks s5750_mtma/b queued, results pending. Fold: frames naming checkComplexObjectives/setHudEnableBit4 => bool arms; other => another writer; no a0==2 at all => a0=2 was lldb-only (recheck s5470 capture). Nothing overturned this session.
