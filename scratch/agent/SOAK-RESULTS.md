@@ -898,3 +898,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261021-053207 | s5762_slotwatch_lvsel | rc=0 | 484s | scratch/agent/soak_results/s5762_slotwatch_lvsel_20261021-053207.log
 20261021-055108 | s5763_slotwatch_kill | rc=0 | 485s | scratch/agent/soak_results/s5763_slotwatch_kill_20261021-055108.log
 20261021-060305 | s5765_slotwatch_3C | rc=0 | 485s | scratch/agent/soak_results/s5765_slotwatch_3C_20261021-060305.log
+20261021-061557 | s5768_setterbp | rc=0 | 486s | scratch/agent/soak_results/s5768_setterbp_20261021-061557.log
