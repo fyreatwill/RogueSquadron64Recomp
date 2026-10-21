@@ -864,3 +864,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261020-231705 | s5728_supd | rc=0 | 565s | scratch/agent/soak_results/s5728_supd_20261020-231705.log
 20261020-232851 | s5730_deada | rc=0 | 567s | scratch/agent/soak_results/s5730_deada_20261020-232851.log
 20261020-233818 | s5730_deadb | rc=0 | 565s | scratch/agent/soak_results/s5730_deadb_20261020-233818.log
+20261020-235143 | s5732_g3a | rc=0 | 566s | scratch/agent/soak_results/s5732_g3a_20261020-235143.log
+20261021-000109 | s5732_g3b | rc=0 | 566s | scratch/agent/soak_results/s5732_g3b_20261021-000109.log

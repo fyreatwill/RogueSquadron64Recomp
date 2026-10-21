@@ -1,6 +1,5 @@
-# NEXT: fold s5732_g3a (tight-thread revive) / s5732_g3b (log-only control)
-Read SOAK-RESULTS.md tail; per arm grep run logs (scratch/agent/m6/s5732_g3{a,b}/run.log) for `[god3]` and mission_cycles.
-H-LATE: a has mission_cycles 0 and flight > 541 s with revives > 0 -> latch is health-death; next: make revive part of a real-input pass/G1 progress.
-H-OTHER: a still cycles -> second fail condition; log the results-state writer at the dead transition.
-Control: b prints [god3] lines with history (damage shape); a prints them too and revives.
+# NEXT: find the non-health exit trigger (H-OTHER selected, s5733)
+Evidence: s5732_g3a revived health yet mission origin still alternated 0x620400<->0x690400 (6 dead events), same as log-only arm b.
+Work unit: add a write-watch (env-gated) on the mission exit/results-state word in the godmode block of src/main/main.cpp; print writer PC/caller + value at each change, plus a revive counter. Positive control: watch fires on every write to the word (and on the known mission-win probe ROGUESQ_MISSION_WIN). Run one soak with GODMODE3=1.
+Outcomes: writer is fail-timer/objective code -> mission has a non-health fail condition (name it); writer is teardown driven by input/autopilot -> autopilot artifact.
 HYPOTHESIS-ID: g1-gameover-cause
