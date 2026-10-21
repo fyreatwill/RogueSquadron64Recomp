@@ -47,7 +47,7 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   P(0/28 | p=1/7) ~1.4%; hypothesis, no writer named).
 
 - **s5799 projectile-direction block: live and not stale (initial runtime
-  interpretation superseded by s5800 static provenance).** The
+  interpretation corrected by s5801 static provenance).** The
   upgraded `[pblk]` probe fired 756 times in a 421 s mission hold; all sampled
   words matched their last-writer table and the positive `[recw]`/`[recv]`
   controls fired. P words are written through the
@@ -57,14 +57,14 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   upstream subtraction; s5800's static trace found it in the caller. The
   runtime source still establishes live, non-stale writes, while H8b is now
   selected by the combined static/runtime evidence.
-- **s5800 projectile-direction upstream source: target-derived input exists.**
-  Static generated-code trace shows `spawnProbeDroidGroundImpactEffect`
-  receives a position from `lookupHmtTextureByName`, subtracts the droid
-  position, then forms and normalizes three cross-product axes before calling
-  `generatePerpEmitDirectionWithJitter`. The helper itself applies quaternion
-  rotations and jitter to those axes. This selects H8b over H8a/H8c, but is
-  single-source static evidence; the semantic identity of the lookup result is
-  still open.
+- **s5801 projectile-direction upstream source: object/mesh-derived input
+  exists.** Static generated-code trace shows `spawnProbeDroidGroundImpactEffect`
+  calls `getObjectMeshTransformOrLocal`, which resolves an active NPC/object
+  slot and copies or world-transforms a mesh record; the caller subtracts the
+  droid position and forms normalized cross-product axes before calling
+  `generatePerpEmitDirectionWithJitter`. This preserves H8b over H8a/H8c but
+  is single-source static evidence; target versus attachment semantics remain
+  open.
 
 ## Active M6 thread: objective booleans and the 0x64 fail arm
 
@@ -163,6 +163,7 @@ State as of s5635 (all static claims single-source unless noted):
   mission/content selection by origin alone (s5508).
 
 ## Superseded conclusions worth retaining
+- **s5800 lookup attribution:** believable because the prior bounded read conflated a nearby generated-code address with the call site; superseded s5801 after the exact `jal` was checked. `0x800CA3E4` is `getObjectMeshTransformOrLocal`, while `lookupHmtTextureByName` is `0x80058360` and is not called by the direction producer. The upstream position-difference conclusion remains valid, but its semantic source changed to an active object/mesh transform path.
 - **s5799 H8a "no target-position subtraction in the producer":** believable
   because the runtime `[pblk]` writer table ended at the cross/normalize and
   jitter intermediates; superseded s5800 after the caller was read statically
@@ -236,7 +237,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
-- **s5800:** static trace of `spawnProbeDroidGroundImpactEffect` found a position returned by `lookupHmtTextureByName`, subtracted against the droid position, then fed through cross/normalize axes and the quaternion/jitter helper. H8b selected over H8a/H8c; the lookup result's semantic identity remains unresolved. Next: offline-read `lookupHmtTextureByName` and its relevant caller/return users to determine whether that position is a target, effect anchor, or asset-derived point.
+- **s5801:** corrected the s5800 address attribution. `spawnProbeDroidGroundImpactEffect` at `0x800CA3A4` calls `getObjectMeshTransformOrLocal` (`0x800F2988`), not `lookupHmtTextureByName`. The helper resolves an active NPC/object slot and either copies a mesh transform or calls `transformMeshPartIntoWorld`; the caller subtracts that returned position from the droid position before the cross/normalize direction construction. H8b remains selected, but the input is object/mesh-derived rather than texture-lookup-derived. Next: offline-read the resolved object/mesh path and its callers to distinguish a target object's world position from an attachment/local mesh point.
 - **s5786:** the s5784 life loss is lv0_checkComplexObjectives's own fail rule: `getObjectiveCount(2) >= 3` -> setHudEnableBit4 + speech 0x229 -> mtm(2) (backtrace + speech id; jal pc inferred; single run). Timer/0x64/0x65 refuted. Next: log every increment of objective counter 2 (caller + value), compare with `s5786_hudb_noalt`; find what counter 2 counts (friendlies lost?) and whether our input causes it. Instrument: `tools/apply_s5786_hudbit4_dump.py`.
 - **s5787/s5788:** s5787 objcount arms logged 0 lines (control failed; game logs are in scratch/agent/m6/<tag>/run.log). s5788 added a `getObjectiveCount` change-log as positive control; arms s5788_get_fire/nofire queued. s5789: get-log control passed; counter 2 rises 0->3 with set/increase never entered (both arms). Inline writers to check: datItemSetObjectiveBooleanCount, applyDatObjectiveTriggerEffect, updateNpcEffectIntensity, executeActorType1Effect (static scan, unconfirmed).
 - **s5785:** the s5784 3->2 life loss follows `[mtm] a0=2` preceded by a `setHudEnableBit4` mask store (pc 0x800C775C val=4) ~190 s into the mission; `[killset]`/`[bit8call]` = 0 (debris refuted; controls: strings compiled, s5778 fired 16). Overlay reload only decrements afterwards. Single-source. Next: identify the script caller of setHudEnableBit4 (host backtrace on pc==0x800C775C, dump objective bools/timer) - see NEXT.md. (s5784: ALT_HOLD validated, 421 s alive.)

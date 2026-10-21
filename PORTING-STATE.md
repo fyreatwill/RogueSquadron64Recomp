@@ -165098,3 +165098,24 @@ the lookup result semantically represents, so no runtime build or soak was
 run. The result is single-source static evidence; the next unit will inspect
 the lookup definition and its return consumers. The clean queued soak rows
 added no new crash or stall datum.
+
+## Session 5801 (2026-10-21) — corrected projectile-direction provenance to object mesh transform
+
+Read the required current-truth, next-work, and soak-tail artifacts. The
+planned bounded static audit checked the exact generated call at
+`spawnProbeDroidGroundImpactEffect` (`funcs_36.c:0x800CA3E4`) and the callee
+definition. The call is `getObjectMeshTransformOrLocal` (`0x800F2988`), not
+`lookupHmtTextureByName` as recorded in s5800. The helper resolves an active
+NPC/object slot through `findActiveNpcInSlotChain` and `getNpcContextByIndex`;
+when a mesh transform is present it copies the 0x30-byte transform, otherwise
+it calls `transformMeshPartIntoWorld`. The caller then subtracts the droid
+position from the returned three-float position and builds normalized cross
+product axes for the jitter direction helper.
+
+This corrects the semantic-source label: the upstream direction input is
+object/mesh-derived, not texture-lookup-derived. It preserves H8b (a real
+upstream position difference) over orientation-only and stale-stack paths, but
+does not yet split target-object position from firing-object attachment/local
+mesh position. No build or runtime run was needed. Single-source static
+evidence; no crash/stall datum and no mitigation landed. The next unit is the
+bounded object/mesh field audit named in scratch/agent/NEXT.md.
