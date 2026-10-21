@@ -1,6 +1,6 @@
-# NEXT: G1 — name the caller of the 8 counter-1 sets (a2==1) and count its sources
-s5810 showed updateDestructionDebrisNpc never carries a2==1 (0 class-1 spawns of 175). So the 8 `[ctr1] set` ids (0x18,19,2B,1D,1B,1C,29,2A) come from another caller.
-Work unit: ONE build adding, in datItemSetObjectiveBooleanCount under ROGUESQ_LOG_HUDBIT, a glibc backtrace() (see s5793 patch pattern in funcs_16.c) for the first 8 a2==1 calls plus MIPS-side: the caller's $ra is lost because the recomp passes no ra, so also log the C backtrace symbols (recomp function names). Then statically count in that caller how many a2==1 sources the lv0 DAT supplies (>=21 needed). Run scratch/agent/g1_inv1.sh <tag> 400.
-Outcomes: caller = datItem trigger/effect table with only 8 entries -> H-supply (level needs other action/other fail-win route); caller loops over >=21 entries but stops at 8 -> H-port-skip at that loop.
-Positive control: the 8 known ids must each get a backtrace.
+# NEXT: G1 — class-1 (+0x70==1) NPC spawned-vs-torn-down tally in lv0
+s5811: counter 1 increments in npcProbeDriod when a descriptor with +0x70==1 is torn down (after unregisterAndFreeNpcSlot/popNpcSlotFromTail). 8 teardowns in a 405 s hold; target >=21.
+Hypotheses: H-nospawn (fewer than 21 class-1 descriptors ever get created in lv0 -> port skips an upstream spawn/script); H-nokill (>=21 spawned, autopilot only tears down 8 -> input/targeting limit, not a port bug).
+Discriminator (one build, one run): find where descriptors with +0x70 written (grep generated code for the store of +0x70 on the descriptor alloc path; the class-1 spawner is NOT updateDestructionDebrisNpc), log under ROGUESQ_LOG_HUDBIT a per-spawn tally of +0x70 value (classes 0/1/2/3) plus teardown tally in npcProbeDriod (reuse s5811 sites), with `all spawns counted` positive control (sum of classes == total spawns). Run scratch/agent/g1_inv1.sh <tag> 400.
+Outcomes: class-1 spawns <21 -> H-nospawn: trace which script/spawn call is missing vs oracle. class-1 spawns >=21 with only 8 torn down -> H-nokill: count alive class-1 at hold end, then drive fire at them.
 HYPOTHESIS-ID: g1-mission-progression
