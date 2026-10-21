@@ -164501,3 +164501,10 @@ Folded s5722_cleanhg{a,b} (both allattempts-failed, 5x nomission each). The gate
 - Result: first REAL-INPUT (no memory poke) arrival in flight on mission 1. Single run, single source (frames); gameplay/win not yet driven.
 - Queued s5726_flynopause: same route but the post-intro key cycle is z/a/z/b (no `start`), HOLD=540. Fold: flight frames sustained (distinct, HUD) vs paused; then look for mission-goal progress.
 - ORIGIN: n/a (no mitigation code added).
+
+## Session 5727 (2026-10-20) — s5726_flynopause fold: real-input flight sustained 545 s, 0 stalls; queue steer+fire soak
+
+- Folded s5726_flynopause (rc=0, 568 s, mission t=18 s, hold=545 s, alive_at_end=1, vi_stalls30s=0, crashlines=0). fbd: 23 dumps, all distinct (md5), no pause screen; frame 1000 = crawl, frame 5000 = live X-wing over desert with HUD/radar, last frame (11500) = flight with different terrain and radar blips. Control: the same recipe with `start` (s5725) showed the pause menu; removing it keeps flight on screen to the end.
+- Result: H1 confirmed (flight sustained all hold with z/a/z/b keys). Single run, frames only; no goal progress observed (ship was never steered). w640 garbage band: fb_0010500_w640 exists once; not examined (G3, deferred).
+- Queued s5727_flysteer (a/sl/a/su/a/sr/a/sd cycle) to see whether real steer+fire yields kills/goal progress/win (G1).
+- ORIGIN: n/a (no mitigation code added).
