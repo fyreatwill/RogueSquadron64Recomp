@@ -1,12 +1,4 @@
-# NEXT: G1 — why counter 1 stops at 8 (needs 21) and counter 10 never moves
-
-Work unit: ONE build with a logger at the counter store sites (applyDatObjectiveTriggerEffect 0x80065980,
-datItemSetObjectiveBooleanCount 0x80065914, updateNpcEffectIntensity 0x800F3D64, executeActorType1Effect 0x800F435C,
-increaseObjectiveCount 0x800C75EC): print idx, delta, new value, ra, wall time (put it in a tools/apply_s58xx_*.py
-and the fixup vendored script). Also dump the lv0 DAT items whose target idx is 1 or 10 (count, trigger type).
-Run g1_inv1.sh with the lever on (600 s). Positive control: counter 1 must log 1..8.
-Hypotheses: H-supply (only 8 sources exist before a later trigger); H-trigger (autopilot never enters a trigger
-volume/waypoint); H-port-spawn (port fails to spawn/count items). Discriminator: DAT item total targeting idx 1 —
-==8 selects H-supply, >=21 with unspawned ones selects H-trigger/H-port-spawn. Also verify 800C7D98(4) is requestMissionTransitionMode.
-
+# NEXT: G1 — separate H-supply / H-gate / H-port-skip for counter 1 (needs 21, plateaus 8)
+Work unit: ONE build (tools/apply_s58xx_*.py + vendored fixup) adding, under ROGUESQ_LOG_HUDBIT: (a) unbudgeted [ctr1] log in datItemSetObjectiveBooleanCount when a2==1 or sp+0x10==1 (bool id, a3, running counter 1, 0x80130B39); (b) in applyDatObjectiveTriggerEffect log descriptor +0x28/+0x2C/+0x30 and whether the gate passes; (c) one-shot scan at mission start of NPC descriptors (NPC+0x34 -> +0x70..+0x84) listing every a2==1 entry with delta. Run scratch/agent/g1_inv1.sh <tag> 600 (NPC_INVULN=1). Positive control: [ctr1] shows the 8 known ids (18,19,1B,1C,1D,29,2A,2B).
+Outcomes: scan total a3 on idx1 ==8 -> H-supply; >=21 but later ones never fire with gate failing -> H-gate; >=21 and handlers never reached / 0x80130B39!=0 -> H-port-skip.
 HYPOTHESIS-ID: g1-mission-progression
