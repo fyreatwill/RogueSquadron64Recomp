@@ -1,6 +1,6 @@
-# NEXT: G1 — class-1 (+0x70==1) NPC spawned-vs-torn-down tally in lv0
-s5811: counter 1 increments in npcProbeDriod when a descriptor with +0x70==1 is torn down (after unregisterAndFreeNpcSlot/popNpcSlotFromTail). 8 teardowns in a 405 s hold; target >=21.
-Hypotheses: H-nospawn (fewer than 21 class-1 descriptors ever get created in lv0 -> port skips an upstream spawn/script); H-nokill (>=21 spawned, autopilot only tears down 8 -> input/targeting limit, not a port bug).
-Discriminator (one build, one run): find where descriptors with +0x70 written (grep generated code for the store of +0x70 on the descriptor alloc path; the class-1 spawner is NOT updateDestructionDebrisNpc), log under ROGUESQ_LOG_HUDBIT a per-spawn tally of +0x70 value (classes 0/1/2/3) plus teardown tally in npcProbeDriod (reuse s5811 sites), with `all spawns counted` positive control (sum of classes == total spawns). Run scratch/agent/g1_inv1.sh <tag> 400.
-Outcomes: class-1 spawns <21 -> H-nospawn: trace which script/spawn call is missing vs oracle. class-1 spawns >=21 with only 8 torn down -> H-nokill: count alive class-1 at hold end, then drive fire at them.
+# NEXT: G1 — per-NPC fate of class-1 NPCs in lv0 (why 48 of 56 spawned are not torn down)
+s5812: 56 class-1 spawns (spawn arm of npcProbeDriod, L_800CAC40), only 8 teardowns -> H-nokill. 
+Hypotheses: (a) HIT msgs (msg 5) never reach them (player shots/collision path); (b) they are freed without the teardown arm (timeout/offscreen) ; (c) HITs arrive but descriptor hp not depleted (damage halfword wrong); (d) autopilot never aims.
+Discriminator (one build, one run): in npcProbeDriod log per message-type counts keyed by class-1 NPC (dispatch switch on a1): spawn, HIT(5), teardown, plus count of NPCs freed via other path (rs_free of 0x11C obj / unregisterAndFreeNpcSlot without teardown arm). Positive control: spawn count == s5812's 56-range and teardown == 8. Run scratch/agent/g1_inv1.sh <tag> 400.
+Outcomes: HIT=0 -> (a) trace shot->NPC message path; HIT>0, teardown small -> (c) log hp before/after; silent frees large -> (b).
 HYPOTHESIS-ID: g1-mission-progression

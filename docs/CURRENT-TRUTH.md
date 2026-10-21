@@ -100,6 +100,8 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
 
 - **s5805 G1 A/B (concurrent, 600 s each):** denser fire/stick input (arm B) and the s5804 schedule (arm A) both stable (0 crash, 0 stall, controls fired) and neither won mission 1. Input density is not the limiter; next is objective-state logging under real input.
 
+- **s5812 class-1 supply (G1):** `npcProbeDriod` is the NPC message handler (spawn arm mallocs 0x11C, NPC+0x34=descriptor; teardown arm feeds objective counter 1). 405 s lv0 hold: 56 class-1 spawns (all spawns are class 1; sum-control OK), only 8 torn down. Port spawns enough targets; the limit is destruction (H-nokill). Single run. Next: per-NPC fate (HIT msgs vs teardown vs silent free).
+
 ## Active M6 thread: objective booleans and the 0x64 fail arm
 
 State as of s5635 (all static claims single-source unless noted):

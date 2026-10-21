@@ -37756,6 +37756,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5811 ctr1 bt x{_n5811}")
 
+    if p.name == "funcs_36.c":
+        import apply_s5812_npc_spawn_class as _a5812
+        text, _n5812 = _a5812.apply(text)
+        if _n5812:
+            changed = True
+            report.append(f"{p.name}: s5812 spawn class x{_n5812}")
+
     if p.name == "funcs_27.c" and "PATCH: s5523 cineBody entry log" not in text:
         _a = '    // 0x800A5D80: addiu       $sp, $sp, -0xD8\n'
         if text.count(_a) == 1:
@@ -41389,6 +41396,7 @@ RS64_REPLAY = [
     "apply_s5806_npc_invuln.py",
     "apply_s5809_ctr1_log.py",
     "apply_s5811_ctr1_bt.py",
+    "apply_s5812_npc_spawn_class.py",
     "apply_s5810_npc_supply.py",
     "apply_s5794_shooter.py",
     "apply_s5797_aim.py",
