@@ -5,11 +5,14 @@ import pathlib
 base = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
 TAG = "PATCH: s5787 objcount log"
 def block(name):
+    if name == "getObjectiveCount":
+        return ('    { static int s_e = -1, s_k = 0; static uint32_t s_last[16]; if (s_e < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e = (e && e[0]) ? 1 : 0; for (int q = 0; q < 16; q++) s_last[q] = 0xDEADBEEFu; } '
+                'if (s_e && s_k < 200) { uint32_t id_ = (uint32_t)ctx->r4; if (id_ && id_ < 16) { uint32_t v_ = (uint32_t)MEM_W((int32_t)((id_ - 1) * 4), S32((int32_t)0x80138060)); if (v_ != s_last[id_]) { s_last[id_] = v_; s_k++; fprintf(stderr, "[objcount] get id=%u val=%u ra=0x%08X\\n", id_, v_, (unsigned)ctx->r31); } } } } /* ' + TAG + ' */\n')
     return ('    { static int s_e = -1, s_k = 0, s_b = 0; if (s_e < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e = (e && e[0]) ? 1 : 0; } '
             'if (s_e && s_k < 200) { s_k++; uint32_t id_ = (uint32_t)ctx->r4; uint32_t old_ = id_ ? (uint32_t)MEM_W((int32_t)((id_ - 1) * 4), S32((int32_t)0x80138060)) : 0; '
             'fprintf(stderr, "[objcount] ' + name + ' #%d id=%u arg=%d old=%u ra=0x%08X\\n", s_k, id_, (int)ctx->r5, old_, (unsigned)ctx->r31); '
             'if (id_ == 2 && s_b++ < 6) { extern int backtrace(void**, int); extern void backtrace_symbols_fd(void* const*, int, int); void* bt[24]; int nb = backtrace(bt, 24); backtrace_symbols_fd(bt, nb, 2); } } } /* ' + TAG + ' */\n')
-FUNCS = ("setObjectiveCount", "increaseObjectiveCount")
+FUNCS = ("setObjectiveCount", "increaseObjectiveCount", "getObjectiveCount")
 def apply(text):
     n = 0
     for f in FUNCS:

@@ -1,8 +1,9 @@
-# NEXT: G1 — read s5787 soak verdicts: who increments objective counter 2 (fail at count >= 3)?
+# NEXT: G1 — fold s5788_get_fire / s5788_get_nofire ([objcount] get lines in scratch/agent/m6/<tag>/run.log)
 
-Fold SOAK-RESULTS lines s5787_cnt_fire / s5787_cnt_nofire. `grep -a '\[objcount\]' scratch/agent/soak_results/s5787_cnt_*.log | head -60`; backtraces follow the first id=2 lines.
-- Control: any [objcount] line in each arm (else the instrument/route failed: recheck ROGUESQ_LOG_HUDBIT in XENV).
-- H-friendly-loss: id=2 increments with ra in a mission script frame in both arms -> read the script's condition (friendly destroyed?) and find why friendlies die.
-- H-ours: increments only in fire arm. H-port-bug: ra in a native handler (damage/collision) that should not fire.
-Then name the guest caller (ra) via symbols and decide the fix.
+`grep -a '\[objcount\]' scratch/agent/m6/s5788_get_*/run.log | head -60`
+- Control: `get` lines must appear (fail rule polls id 2). None -> route/env failed, recheck.
+- H-bulk: get id=2 val>=3 appears with NO set/increase lines -> counter filled by non-function write; next: store-tag/sampling watch on 0x80138064 (rdram 0x138064) with host backtrace.
+- H-unreached: set/increase lines absent but val rises -> same as bulk; check callers via funcs_44 script sites.
+- H-friendly-loss: increase lines with id=2 and ra in mission script (funcs_44) -> read the condition.
+Compare fire vs nofire arm (fire arm only had hudbit4 in s5787).
 HYPOTHESIS-ID: g1-mission-progression
