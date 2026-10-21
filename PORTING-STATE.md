@@ -164426,3 +164426,10 @@ Folded s5708_lvl1 and s5708_lvl4 soak rows. Positive controls pass: lvl1 `[lvsel
 - Mechanism (single-source, code read): copyToRAM computes offset/size from the readback width (442) while the readback buffer was sized by the writeback recorded at copyToNative width (512); range exceeds nativeReadbackBufferSize and memcpy reads off the mapped buffer (x2=0x1bfe0 bytes).
 - ORIGIN: writer of the wild 442-wide colour/depth image set-image is NOT yet named (SKIP_WILD_W already skips the writeback but copyToRAM is still reached for the history entry). The new bounds check in lib/rt64 native_target.cpp consumes the history entry and skips the copy when off+size > nativeReadbackBufferSize; this is a containment of the RT64-side desync, not a root cause for the 442 width. Patches re-exported (submodule-patches/rt64.patch).
 - Built OK. Queued s5710_lvl7a/b to confirm no crash and look for the `copyToRAM: range ... exceeds` line (positive control that the guard fired); if crash persists the cause is elsewhere.
+
+## Session 5711 (2026-10-20) — lvl7 copyToRAM guard verified; wild 442-wide image is lvl7-specific and racy
+
+Folded s5710_lvl7a/b (full logs in scratch/agent/m6/<tag>/run.log; the soak_results file holds only the summary line). Both alive_at_end=1, crashlines=0, vi_stalls30s=0 over 303 s holds. Positive control: lvl7a has 2 `[rt64] copyToRAM: range ... exceeds readback buf` lines, i.e. the guard fired exactly where s5708_lvl7 previously SIGSEGV'd. lvl7b had 0 guard hits and 0 SKIP_WILD_W, so it survived without exercising the path (no proof either way).
+SKIP_WILD_W (color addr=0x656000 and depth 0x7AB000, w=442 siz=2 rows 0..1) counts: s5708_lvl7=2, s5710_lvl7a=2, s5710_lvl7b=0, s5708_lvl1/lvl6=0. Lvl7-specific and racy (2 of 3).
+Rules out: crash persisting after the guard (cause was the bounds, not elsewhere). Does not answer: who emits a width-442 SetColorImage.
+ORIGIN: writer of the 442-wide set-colour-image still unnamed; guard is a mitigation only. Next: dump RDP words/DL source around that set-cimg in forced lvl7.
