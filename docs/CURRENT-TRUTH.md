@@ -136,6 +136,7 @@ State as of s5635 (all static claims single-source unless noted):
   mission/content selection by origin alone (s5508).
 
 ## Superseded conclusions worth retaining
+- (s5728) "Suppressing bool 7 will show whether it drives the fail arm" — believable because bool 7 was the leading hypothesis; superseded s5729: in the s5728 window bool 7 is never set, so the experiment tested nothing (control failed).
 - (s5692) "A level-init forwarded-a0 site may pass a0=7 and set bool 7" — believable because the three sites forward the caller's a0 unlogged; refuted by 0 id=7 lines in 56 existing [objbool] logs.
 - s5682: "record +0xD0 = ship velocity" (s5681 guess) refuted - field is constant while position moves.
 - (s5661) "Unaligned stores may write the voice-range rails" (H1 of s5659): believable because those were the only store forms the census had not hooked; refuted by s5660 (narrow=6 of 17.8M, positive control all>0). The rails are float bit patterns from aligned game stores.
@@ -198,6 +199,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 - **s5675 G1 soaks (no keys sent):** `s5675_g1fly_{a,b}` looked like two 'nohangar x4' flown-mission failures, i.e. a flaky hangar route. Actually `m6_god_common.sh` re-sets ROGUESQ_AUTOPILOT from its own `$AP` after XENV, and STOP=0 emptied `$AP`, so no keys were ever injected. Fixed in s5676 via `AP_OVERRIDE`. Believable because the hangar route is known flaky (~3/5) and 8/8 failures read as more of the same. The s5676 fix was itself ordered wrong (s5677 also keyless) - fixed s5678; lesson: the control is the "[autopilot] armed" log line, not keys.log `mission t=`.
 
 ## Next steps (single monotonic backlog)
+- **s5729 (top):** s5728 a/b folded: bool 7 never fires (ids per cycle: 0x61,0x62,0x5,0x3C, then 0x1A ~31 s later), b's `[objbool-sup]` control absent => H-B7 untestable; a/b cycles=2 vs 3 earlier (noise). Queued s5728_supc (0x1A) and supd (0x5,0x3C). Fold them; if cycles unchanged, find the mission-end writer that sends the game to SELECT GAME (0x63/0x64/0x65 never pass through setObjectiveBoolean).
 - **s5728 (top):** s5727_flysteer folded: steer+fire real-input flight 541 s clean, but mission fails->SELECT GAME menu 3x (single run); no win. Landed ROGUESQ_SUPPRESS_BOOL (tools/apply_s5728_boolsuppress.py); queued s5728_sup{a,b,c}: fold mission_cycles with bool 7 suppressed vs baseline. Slug g1-bool7-suppress.
 - **s5727 (top):** s5726_flynopause folded: real-input route (no `start`) holds live mission-1 flight for the full 545 s, 0 stalls, 0 crashes, frames distinct (single run). Next: s5727_flysteer (steer+fire) for goal progress/win.
 - **s5726 (top):** CORRECTION to s5724/s5725 below: the 'Rebel-logo cinematic that no key skips' was the PAUSE menu (start key in the recipe). s5725_introkeys reached live X-wing flight on mission 1 from real input (frame 11000 HUD, single run). Queued s5726_flynopause (no start key). Slug g1-level-select.
