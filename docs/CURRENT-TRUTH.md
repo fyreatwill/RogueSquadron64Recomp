@@ -200,6 +200,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 _s5747:_ static fail-arm census (docs/M6-S5747-FAIL-ARM-CENSUS.md): bool-7 arm needs a dialogue flag; observed fail likely via bool 0x6D arm or another arg-2 caller. Next = entry log in requestMissionTransitionMode (NEXT.md).
+_s5752:_ mtm backtrace folded: requestMissionTransitionMode is invoked ONLY via runInMissionFrame's event table (jalr 0x800FA820; table 0x8010B350 {id,fn}, pending mask word 0x8010C9E0); a0 = event bit id, not a mode. Next = dump table + log mask transitions (NEXT.md).
 _s5750:_ mtm a0==2 backtrace patch built, soaks s5750_mtma/b queued. Next = fold their BACKTRACE frames (NEXT.md).
 _s5746:_ s5745_crawlshot folded: real window clean, crawl band = fbd-only RDRAM artifact (G3 crawl item retired); fbd PPMs now labelled. Next = Next steps #4 (win mission 1; non-health fail condition per s5733).
 _s5745:_ s5744 lvsel hp-watch: no hp->0/lives write on a 3rd route; g1-gameover-cause parked. Next = s5745_crawlshot (G3 crawl band: real window vs fbd), then MUST land a runtime change (NEXT.md).
