@@ -506,7 +506,8 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         if (stride > 640u) stride = dw;
         snprintf(path, sizeof path, "%s/fb_%07d_w%u.ppm", s_fbd, n, stride);
         if (FILE* f = fopen(path, "wb")) {
-            fprintf(f, "P6\n%u %u\n255\n", dw, dh);
+            // s5746: raw guest-RDRAM readback, NOT the RT64 window (s5745: the "crawl garbage band" was only in this dump).
+            fprintf(f, "P6\n# source=rdram-readback-not-window vi_width=%u\n%u %u\n255\n", ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG, dw, dh);
             const uint32_t phys = fb & 0x00FFFFFF;
             for (uint32_t i = 0; i < dw * dh; ++i) {
                 const uint32_t o = ((i / dw) * stride + (i % dw)) * 2u;
