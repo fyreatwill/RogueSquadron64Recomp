@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5802 (2026-10-21).
+Compact operational handoff, maintained as of Session 5803 (2026-10-21).
 `PORTING-STATE.md` is the chronological ledger. Durable background, closed
 audit detail, and the per-thread histories moved out of this file are in
 `docs/PROJECT-OVERVIEW.md` (latest: "Migrated from CURRENT-TRUTH (s5636)");
@@ -75,6 +75,17 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   generic effect asset); target-object versus firing-object semantics remain
   open because the indirect caller supplying the object was not recovered.
   Single-source static evidence.
+
+- **s5803 object provenance classified.** The spawn routine is not called with
+  a target argument. `triggerCueWithSlotEffect` dispatches through
+  `slotDispatcherIter`; the dispatcher loads a slot node from the effect table,
+  passes the node as handler `a0`, and calls the node's function pointer at
+  `slot+0`. `spawnProbeDroidGroundImpactEffect` then reads `slot+4` as its
+  object and passes that object's `+0x38` to `getObjectMeshTransformOrLocal`.
+  This selects H10b (the firing/effect object's active mesh attachment/local
+  transform) over H10a (a selected target supplied as the indirect argument)
+  and H10c (a generic asset with no active-object identity). Static evidence is
+  single-source; the next G1 unit is real-input mission progression/win.
 
 ## Active M6 thread: objective booleans and the 0x64 fail arm
 
@@ -247,7 +258,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
-- **s5802:** the helper's object key resolves through the active-NPC slot chain; a present mesh record is transformed from its local matrix/vector into world space. H10b is selected over H10c, while H10a remains open pending the indirect caller that supplies the object. Next: recover that caller's object provenance, or use a ground-truth/runtime comparison that distinguishes target selection from firing-object attachment.
+- **s5803:** the generic slot-dispatch chain supplies the firing/effect slot node to `spawnProbeDroidGroundImpactEffect`; its `slot+4` object supplies the `+0x38` mesh handle. H10b is selected over H10a/H10c by static provenance. Next: drive mission 1 with real input and close the first real win; record each distinct crash, stall, or softlock as a separate datum.
 - **s5786:** the s5784 life loss is lv0_checkComplexObjectives's own fail rule: `getObjectiveCount(2) >= 3` -> setHudEnableBit4 + speech 0x229 -> mtm(2) (backtrace + speech id; jal pc inferred; single run). Timer/0x64/0x65 refuted. Next: log every increment of objective counter 2 (caller + value), compare with `s5786_hudb_noalt`; find what counter 2 counts (friendlies lost?) and whether our input causes it. Instrument: `tools/apply_s5786_hudbit4_dump.py`.
 - **s5787/s5788:** s5787 objcount arms logged 0 lines (control failed; game logs are in scratch/agent/m6/<tag>/run.log). s5788 added a `getObjectiveCount` change-log as positive control; arms s5788_get_fire/nofire queued. s5789: get-log control passed; counter 2 rises 0->3 with set/increase never entered (both arms). Inline writers to check: datItemSetObjectiveBooleanCount, applyDatObjectiveTriggerEffect, updateNpcEffectIntensity, executeActorType1Effect (static scan, unconfirmed).
 - **s5785:** the s5784 3->2 life loss follows `[mtm] a0=2` preceded by a `setHudEnableBit4` mask store (pc 0x800C775C val=4) ~190 s into the mission; `[killset]`/`[bit8call]` = 0 (debris refuted; controls: strings compiled, s5778 fired 16). Overlay reload only decrements afterwards. Single-source. Next: identify the script caller of setHudEnableBit4 (host backtrace on pc==0x800C775C, dump objective bools/timer) - see NEXT.md. (s5784: ALT_HOLD validated, 421 s alive.)

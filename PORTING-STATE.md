@@ -165139,3 +165139,21 @@ H10a (selected target position) from H10b because the indirect producer of the
 object passed to the spawn routine was not recovered. No build or runtime run
 was needed; this is single-source static evidence. The queued soak tail added
 no new result relevant to this work unit, and no mitigation was landed.
+
+## Session 5803 (2026-10-21) — recovered projectile effect-object provenance
+
+Read the required current-truth, next-work, and soak-tail artifacts. The
+planned bounded static provenance audit followed the exact dispatch chain from
+`triggerCueWithSlotEffect` (`0x800F2FCC`) into `slotDispatcherIter`
+(`0x8003E8DC`) and the handler body at `spawnProbeDroidGroundImpactEffect`
+(`0x800CA3A4`). `slotDispatcherIter` loads an effect-table slot node, passes
+that node as handler `a0`, and calls the node's function pointer stored at
+`slot+0`. The spawn handler reads `slot+4` as its object, then reads that
+object's `+0x38` and passes it to `getObjectMeshTransformOrLocal`.
+
+This resolves the prior open discriminator: the indirect object is the
+firing/effect slot's own active object, not a selected target argument and not
+a generic asset with no active-NPC identity. It selects H10b over H10a/H10c.
+The result is single-source static evidence; no build or runtime run was
+needed, no soak added a relevant crash/stall datum, and no mitigation was
+landed. The next unit is real-input mission-1 progression and win.
