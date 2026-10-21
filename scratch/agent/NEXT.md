@@ -1,4 +1,4 @@
-# NEXT: read s5706_mask3 / s5706_mask5 soak results (scratch/agent/m6/<tag>/run.log). Control: `[lvsel] init a1(cursorMask)` == 0x8 (N=3) / 0x20 (N=5), NOT 0x4. If control fails, the hook is still mis-ordered - fix before concluding anything.
-Then: tick ret==N? initMission name/gCurLevel for N vs 2; any crash/stall for N>2 (capture backtrace, name writer).
-Note: fixup guard "PATCH: s5704 lvsel" not in text means regen applies the new _c0 only on fresh generate; generated file was patched in place.
+# NEXT: read s5708_lvl{1,4,6,7} rows in SOAK-RESULTS.md + scratch/agent/m6/s5708_lvlN/summary. Control: `[lvsel] init a1(cursorMask)` == 1<<N and `[lvinit] initMission gCurLevel=N`.
+Any crashlines>0 / vi_stalls30s>0 / alive_at_end=0: capture a backtrace (lldb or ASan arm), name the writer, fix root cause.
+Also: view a few frames from scratch/agent/m6/s5706_mask3/fbd and s5706_mask5/fbd to check lvl3/5 render as distinct, correct missions.
 HYPOTHESIS-ID: g1-level-select
