@@ -1,5 +1,5 @@
-# NEXT: G1 — are class-2 ground NPCs members of slot type *(u16*)0x8013959C, and what is the droid's aim target (type *(u16*)0x80139562)? (H1 vs H2'')
-Evidence (s5795, offline single-source): victim choice is geometric (nearest ray hit among slots of type 0x8013959C, excluding owner and collision-less); no faction compare anywhere.
-Hypotheses: H1 retail-by-design (class-2 NPCs legitimately in that list; droids shoot at the player/objects and ground NPCs are collateral); H2'' class-2 NPCs are registered under the wrong/extra slot type or droids aim at them (aim target type wrong); H5 droids should not be alive yet.
-Discriminator: one run (reuse tools/apply_s5794_shooter.py + scratch/agent/s5793_npcd.sh, bump TAG) logging at first hit: *(u16*)0x8013959C, *(u16*)0x80139562, the type word of victim and of the aim target of the droid. Outcome: victim type == 0x8013959C type AND droid aim target is the player -> H1 (collateral); aim target == victim -> H2''. Positive control: [shooter] lines fire.
+# NEXT: G1 — where does the probe droid aim (is the player the intended target, with NPCs collateral, or are NPCs targeted)? (H1 vs H2'')
+Evidence (s5796): class-2 NPCs are legitimately in the projectile scan list (6/8 victims). Membership is not the bug; question is aim.
+Hypotheses: H1 aim = player, NPCs are collateral on the ray; H2'' droid aim vector points at an NPC (wrong target pick); H5 droids shouldn't be alive/firing yet (mission scripting).
+Discriminator: offline read of the droid fire routine (npcProbeDroid handler, spawns projectile with desc at s5794 shooter log) to find the aim vector source; then one run logging at fire time droid pos, aim dir, player pos (pl=80165df8) and the angle between aim and (player-droid). Outcome: angle ~0 -> H1; aim toward victim -> H2''. Control: [shooter] lines fire.
 HYPOTHESIS-ID: g1-mission-progression

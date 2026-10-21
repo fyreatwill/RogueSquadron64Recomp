@@ -165049,3 +165049,8 @@ ORIGIN: diagnostic only; no mitigation added.
 - Not done: no game run (no new instrument built); what populates type 0x8013959C and where the droid aims (fire-direction code) not read.
 ORIGIN: diagnostic only; no mitigation added.
 - Gate wording (s5795): this offline read refutes the faction-compare form of H2' and selects a geometric nearest-ray-hit victim choice; next discriminator is the slot-type membership of class-2 NPCs and the droid aim target.
+
+## Session 5796 (2026-10-21) — s5796 victim records: class-2 NPCs (record kind 0x0041) are in the projectile hit list
+Ran tools/apply_s5796_victim.py (new, mirrored in fixup_game_funcs_vendored.py; log under ROGUESQ_LOG_HUDBIT at hit-send 0x8005D35C) + scratch/agent/s5793_npcd.sh (TAG s5796_victim), one mission hold, rc=0, 0 crashlines. Positive control: 16 [victim] lines fired, each next to the matching [npcd] line for the same NPC.
+Result: of 8 distinct victims, 6 (ids 52,e4,f2,df,127,ea) are table records whose word5 = 0x0041xxxx and word1 = the class-2 NPC object (e.g. 8033057c) — they ARE in the list the projectile scan walks (the scan walks head 0x8013957C via next at record+4, 0x8003FC28). The other 2 (ids 66,7f) are 0x0084-kind records (non-NPC objects). So H1's membership half holds: class-2 NPCs are legitimately scannable victims; no wrong/extra slot-type registration seen. Correction to s5795: 0x80139562/0x8013959C are not type words — 0x80139550.. holds an ascending 2..0x21 table; the live list head is the halfword at 0x8013957C (read by lhu -0x6A84(0x8014)).
+Not resolved: the droid's aim target (H1 vs H2''). Still single-source runtime; no retail oracle comparison. ORIGIN: n/a (diagnostic only; no mitigation added).
