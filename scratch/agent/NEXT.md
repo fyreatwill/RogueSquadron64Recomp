@@ -1,7 +1,4 @@
-# NEXT: fold s5765_slotwatch_3C (watches corrected to 0x137F3C slot0 / 0x1381DC slot1; natural deaths)
-Read SOAK-RESULTS.md s5765 line + scratch/agent/m6/s5765_slotwatch_3C/lldb_att1.log.
-Control (same run): wp4 (0x130B10) lives byte 3->2->1->0 hits. If absent -> void (route had no deaths).
-Discriminator: bt of wp2/wp3 writes (value low halfword with 0x8/0x10) preceding each lives-- hit.
-- Writer = death handler/damage path => slot state is death-driven (H1); name writer fn, check legitimacy.
-- Only init writes (constant 0x10000, computeCraftSelectTurnFromInput) => flags set elsewhere (H2: different address/width; H3: bit set by objective path).
+# NEXT: locate the REAL slot-state halfword (two wrong addresses so far: 0x137F24, 0x137F3C are craft float data)
+Work unit (offline, no game run): find the generated-code reader that tests the slot state bits 0x8/0x10 (the non-health fail check, s5733) - grep build/ generated funcs for `& 0X8`/`0X10` after an LHU near the slotDispatcherIter / requestMissionTransitionMode path; read the exact base register + offset chain, compute the RDRAM address with a worked example from a live register dump if needed.
+Discriminator: address whose writers are NOT computeCraftSelectTurnFromInput / playerXwingInit float stores. Then queue a slotwatch soak with that address AND lives control (wp4 0x130B10); a run is void if lives never decrements.
 HYPOTHESIS-ID: g1-nonhealth-fail
