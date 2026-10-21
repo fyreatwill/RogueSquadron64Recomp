@@ -164932,3 +164932,11 @@ Measured (single run, positive controls in-run: [livesctl] mission reached, 400 
 Conclusion (two lines: static latch bug + schedule, and the no-input arm; the arm itself is one run): the terrain-sample "impact" is a legitimate ceiling/altitude limit that our test input flew into. The port's sampler (record byte0=1, bit 0x8 physics caller, life loss) behaves as designed; H-spawn-below, H-grid-origin-wrong and the whole physics-caller thread (s5779-s5782) are explained as test-input artifacts, not port defects. Retains caveat: the unpoked idle-autopilot LOSE at ~+342 s (s5627) is a different path and is not covered by this.
 Code: ALT_HOLD no longer latches a y==0.0 pre-spawn target (src/main/main.cpp; built clean). ORIGIN: test-lever fix only, no game-behaviour mitigation.
 Next: validate the fix (hold with real target keeps altitude, 0 deaths) and then spend the loop on G1 mission progression with real input.
+
+## Session 5784 (2026-10-21) — ALT_HOLD fix validated: 421 s hold, no terrain deaths
+HYPOTHESIS-ID: g1-mission-progression
+Ran scratch/agent/s5777_althold.sh once with the rebuilt binary (a/sl/sr flight only, GODV=0). Summary: mission_t=19s hold=421s alive_at_end=1 vi_stalls30s=0 crashlines=0 mission_cycles=0.
+- Positive control: `[althold] target y=-6.500 db=2.00` (nonzero; the pre-spawn y==0 latch is gone) and acted counter climbs to 1974 (116 althold lines). Altitude stayed y in [-9.72,-4.63] around the -6.5 target.
+- No `kind=ret1` terrain-ceiling death line anywhere in run.log (the old failure signature). One life loss, livesbyte ord=7 3->2 at origin 0x690400, coincides with a menuOverlayInit/overlay start-match (err ~-0.7 just before), i.e. a mission reload path, not terrain; unexplained, single-source.
+- Verdict H-fix-holds: ALT_HOLD works; s5783 conclusion (deaths were our own stick-up input) now has a second line of evidence (hold arm ~0 terrain deaths).
+- Not done: real-input mission completion (G1 proper); idle-autopilot LOSE at ~+342 s (s5627) still open. Tooling note: macOS has no `timeout`; scripts self-watchdog.
