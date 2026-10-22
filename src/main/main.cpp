@@ -9927,6 +9927,27 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         }
     }
 
+    // s5891: ROGUESQ_PLPOS_POKE="x,y,z;x,y,z;..." is a TEST-ONLY lever. After mission poll m>=ROGUESQ_PLPOS_POKE_FROM (default 3000)
+    // the ship pos (+0x4C/50/54) is re-written every poll to waypoint k, advancing every 450 polls (~15 s). Logs [plpoke].
+    {
+        static const char* pk = std::getenv("ROGUESQ_PLPOS_POKE");
+        static const unsigned from = std::getenv("ROGUESQ_PLPOS_POKE_FROM") ? (unsigned)atoi(std::getenv("ROGUESQ_PLPOS_POKE_FROM")) : 3000u;
+        static unsigned m = 0;
+        volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+        if (pk && *pk && rd && ((uint32_t)rs64_vi_committed_origin() & 0xFFFFFFu) == 0x690400u) {
+            const uint32_t p = rs64_rdram_u32(rd, 0x137DB8u + 4) & 0xFFFFFFu;
+            if (p >= 0x1000u && p < 0x7FFF00u && ++m >= from) {
+                float wp[64][3]; unsigned nw = 0; const char* c = pk;
+                while (nw < 64 && sscanf(c, "%f,%f,%f", &wp[nw][0], &wp[nw][1], &wp[nw][2]) == 3) { nw++; c = strchr(c, ';'); if (!c) break; c++; }
+                if (nw) {
+                    const unsigned k = ((m - from) / 450u) % nw;
+                    for (int i = 0; i < 3; i++) { uint32_t u; memcpy(&u, &wp[k][i], 4); const uint32_t b = (p + 0x4C + 4 * i) & ~3u; volatile uint8_t* w = const_cast<volatile uint8_t*>(rd); w[b + 3] = u >> 24; w[b + 2] = u >> 16; w[b + 1] = u >> 8; w[b] = u; }
+                    if (((m - from) % 450u) == 0) fprintf(stderr, "[plpoke] m=%u k=%u/%u pos=(%g,%g,%g)\n", m, k, nw, (double)wp[k][0], (double)wp[k][1], (double)wp[k][2]);
+                }
+            }
+        }
+    }
+
     // s5821: ROGUESQ_LOG_PLPOS=1 logs ship pos (+0x4C/+0x50/+0x54) with the injected stick/buttons ~2 Hz in-mission,
     // so held-key phases can be compared inside ONE run (s5820: 150ms taps every 3s moved the ship ~0.05/update).
     {

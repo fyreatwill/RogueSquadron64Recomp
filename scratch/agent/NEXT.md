@@ -1,5 +1,5 @@
-# NEXT (s5891): does a class-1 desc receive hits once the player is within range? (b) reachability vs (c) other
-Context (s5890): s5889 INVULN log: hitsum cls=1 all zero (0 msgs) while cls=2/3 nonzero; player pos static. Single-source.
-Competing: (b) player never near class-1 => zero hits (predict: after relocating player within ~100u of a surviving class-1, cls=1 m5>0); (c) class-1 shielded/unhittable even in range (predict: still cls=1 m=0 when in range, with c2 hits still counting as control).
-Discriminator: one run, fire-all + ROGUESQ_LOG_PLPOS, ROGUESQ_NPC_INVULN=1; poke player pos (or drive sx/sy) to a surviving class-1 position (from [ctr1]/trig logs) at a phase-gated VI; compare cls=1 hitsum before/after in the SAME run. Positive control: cls=2 m5 keeps rising.
+# NEXT (s5892): aim vs unhittable — poke player position AND heading toward a live class-1 target
+Context (s5891): position-only poke beside class-1 targets gave +5 msg5 (cap 8), kills uncorrelated with player distance. s5890's cls=1 zero was an instrument artifact (tally is inside updateDestructionDebrisNpc). Valid instrument: [npcmsg] tmsg5 (s5813, ROGUESQ_LOG_HUDBIT=1).
+Competing: (b') bolts miss because ship heading is not toward the target (predict: with yaw aimed at target, msg5 rises well past 8 and kills correlate with aimed windows); (c) class-1 shapes mostly unhittable (predict: still no msg5 for ids 0x20-0x24,0x27,0x28,0x2D-0x2F even aimed at <10 u).
+Step 1 (same run, phase-gated): dump player record words +0x40..+0x120 under sx=+1 held vs idle (use ROGUESQ_AUTOPILOT 'sr' keys as in g1_fireall) to find yaw/orientation fields. Step 2: extend ROGUESQ_PLPOS_POKE (src/main/main.cpp, s5891 block) to also write yaw = atan2 toward the waypoint's target. Control: pos poke already verified; compare tmsg5 per window inside the one run.
 HYPOTHESIS-ID: g1-mission-progression
