@@ -9940,9 +9940,10 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 float wp[64][3]; unsigned nw = 0; const char* c = pk;
                 while (nw < 64 && sscanf(c, "%f,%f,%f", &wp[nw][0], &wp[nw][1], &wp[nw][2]) == 3) { nw++; c = strchr(c, ';'); if (!c) break; c++; }
                 if (nw) {
-                    const unsigned k = ((m - from) / 450u) % nw;
+                    static const unsigned dwell = std::getenv("ROGUESQ_PLPOS_POKE_DWELL") ? (unsigned)atoi(std::getenv("ROGUESQ_PLPOS_POKE_DWELL")) : 450u;  // s5892
+                    const unsigned k = ((m - from) / dwell) % nw;
                     for (int i = 0; i < 3; i++) { uint32_t u; memcpy(&u, &wp[k][i], 4); const uint32_t b = (p + 0x4C + 4 * i) & ~3u; volatile uint8_t* w = const_cast<volatile uint8_t*>(rd); w[b + 3] = u >> 24; w[b + 2] = u >> 16; w[b + 1] = u >> 8; w[b] = u; }
-                    if (((m - from) % 450u) == 0) fprintf(stderr, "[plpoke] m=%u k=%u/%u pos=(%g,%g,%g)\n", m, k, nw, (double)wp[k][0], (double)wp[k][1], (double)wp[k][2]);
+                    if (((m - from) % dwell) == 0) fprintf(stderr, "[plpoke] m=%u k=%u/%u pos=(%g,%g,%g)\n", m, k, nw, (double)wp[k][0], (double)wp[k][1], (double)wp[k][2]);
                 }
             }
         }
