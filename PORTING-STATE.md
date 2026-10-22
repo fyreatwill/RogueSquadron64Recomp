@@ -165354,3 +165354,8 @@ Run (tools/apply_s5829_teardown_gate.py, ROGUESQ_LOG_HUDBIT, g1_approach.sh s582
 Also notable: ids 0x18/0x19 reproduce deterministically across s5828/s5829 (same approach script), so the counted subset is not random.
 Open: who sends msg 2 (silent destroy) to class-1 NPCs vs msg 5 (hit, hp<=0 -> death arm)? Next: backtrace the msg-2 sender per class-1 id.
 ORIGIN: n/a (diagnostic only, no mitigation).
+
+## Session 5830 (2026-10-21) — NEXT's "who sends msg 2" was already closed: msg 2 is the out-of-range self-despawn (no new run)
+Re-read the ledger before building the planned msg-2/msg-5 sender instrument. It is redundant: s5814 (native backtrace) msg 2 = slotDispatcherIter -> destroyNpcSlotByIndex; s5817 (setter census, 13 callers, all self-despawn, control 3032 vs 3083); s5818 (50/50 npcGroundTroopUpdate destroys via the 21-update out-of-range branch, control 50=50); s5823 (29/29 d2 151..198 > 144, same VI, control 20 res=1 / 20 res=0). Four independent lines agree: 47/54 class-1 NPCs are despawned for leaving the 144 radius, by design. The s5829 NEXT hypotheses (a)/(b) were therefore stale; no instrument built, no run.
+Remaining open: the 8 counted kills are msg 5 via the random death-effect arm (copy 2). To reach counter 1 >= 21 the player must DAMAGE class-1 NPCs. Next unit (NEXT.md): find the damage/hit-resolve path that leads to msg 5 and log hits delivered to class-1 NPCs during an aimed-fire run.
+ORIGIN: no mitigation added; no code change.
