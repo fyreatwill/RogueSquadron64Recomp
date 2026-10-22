@@ -165878,3 +165878,9 @@ ORIGIN: no mitigation added; diagnostic only.
 Discrimination (s5906 gate wording): this run REFUTES H-size and REFUTES H-filter (fine test passes 91-100% for all classes, 671 hits -> 1 RET for 80323f58). It SELECTS H-caller/H-attr over H-late as the live explanations: the gate lies after the fine hit or in RET attribution. Next discriminator: record the hitting obj at the fine-hit and tally RET by that obj (positive control: per-class RETs sum to total RETs); if RET moves to 80323f58-class objects, H-attr is selected, else H-caller (caller discards the result) is selected.
 
 (s5906 gate wording, lowercase) This run refutes H-size and refutes H-filter, and selects H-caller/H-attr as the live explanations. Next discriminator: tally RET by the object at the fine hit; if RETs move to 80323f58-class objects it selects H-attr, otherwise it selects H-caller.
+
+## Session 5907 (2026-10-22) — RET attribution verified (176/176 agree); H-attr refuted; hit is found then discarded by the caller
+Built tools/apply_s5907_hitobj.py (+ funcs_13.c RET hook): rs5907_hitobj = object of the last fine-test hit, reset in rs5834_pre; at each RET tally class of hitobj (hret) and compare to sinobj. Run: scratch/agent/s5902_life.sh (m6/s5902_life/run.log), alive, 0 crashes.
+Result: RET attribution agree=176 nohit=0 disagree=0 (positive control: every RET has a fine-hit object, hret sums = 176 = ret sums). So RET-by-class is real: 80323f58 fine-hits 627 -> RET 6; 80330c5c 798 -> 165; 80331158 11 -> 2; 80330b74 94 -> 0. findSegmentObjectSphereHit (0x8006AB4C) returns 1 on every fine hit, so the discard happens in its CALLER / the RET gate, not in the sphere or node tests. H-attr, H-size, H-filter refuted; H-caller selected (H-late still open).
+ORIGIN: n/a (diagnostic only; no mitigation added).
+Next: find who calls 0x8006AB78-ish wrapper's return/loop in intersectSegmentWithObject and tally return value consumption per class (team/owner/id compare).

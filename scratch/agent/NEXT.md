@@ -1,13 +1,13 @@
-# NEXT (s5907): who consumes the fine-hit, and is RET attribution right?
+# NEXT (s5908): where does the caller discard a returned-1 findSegmentObjectSphereHit?
 
 HYPOTHESIS-ID: g1-mission-progression
 
-s5906: fine test hits 91-100% for all classes (80323f58: 671 hits, RET=1). Not the gate.
+s5907: RET attribution correct (176/176). Fine hit returns 1 for every hit (80323f58: 627 hits, only 6 become RET).
 
 Hypotheses:
-- H-attr: RET attribution via rs5856_sinobj (last in-sphere obj) is wrong; RETs actually come from the object whose fine test hit.
-- H-caller: findSegmentObjectSphereHit returns 1 but the caller (intersectSegmentWithObject loop, funcs_16.c around 0x8006AB58 return) discards it for non-80330c5c objs (team/owner/id compare).
-- H-late: hit is accepted, but later damage/progress handler ignores non-NPC classes.
+- H-caller: the loop calling 0x8006AB4C's function (in intersectSegmentWithObject / 0x8006A944 area) rejects hits by team/owner/id/range compare or nearest-t.
+- H-late: hit accepted (RET) but later damage handler ignores non-NPC class (RET=6 would then just be real).
+- H-shooter: the 627 hits mostly come from shooters (rs5834_who) that are not the player bolt, so RET (player-only?) is correct.
 
-Discriminator (one build, one run of scratch/agent/s5902_life.sh): at fine-hit (tally kind 3) record obj ptr into rs5906_hitobj; at RET (rs5834_pre hit) tally class of rs5906_hitobj alongside sinobj; also log caller ra of findSegmentObjectSphereHit returns that are 1 vs RET count. Positive control: sum of hitobj-class RETs == total RETs.
-Build pattern: apply_s5906_fine.py (apply via python3; build in build/ with DEVELOPER_DIR; run: zsh scratch/agent/s5902_life.sh, no `timeout` binary on macOS).
+Discriminator (one build, run scratch/agent/s5902_life.sh): in the caller after the jal, tally (class, rs5834_who, return v0, whether the loop took the accept branch). Positive control: sum of accepted == RET count (176).
+Read first: static caller code around 0x8006A944..0x8006AB38 in funcs_16.c.
