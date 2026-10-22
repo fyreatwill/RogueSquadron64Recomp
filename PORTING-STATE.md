@@ -166140,3 +166140,16 @@ diagnostic and rejects invalid guest pointers before `getNpcCurrentHealth`.
 
 Ran the s5937 NEXT unit: `py_compile tools/apply_s5818_destroy_health.py` passes, the regenerated `funcs_39.c` carries the same `rs5818_gt_ptr` checks (lines 25932–25944), and `cmake --build build --target RogueSquadron64Recomp` is up to date (binary 15:37, same as the generated file). H1 (stale object/slot pointer) is what the guard covers; no new run was made, so no claim about the in-range path logging beyond s5937.
 Folded soak verdicts: g1_lvl13b and g1_lvl14a each reached flight (mission_t 99 s / 81 s), held 305 s / 303 s, alive_at_end=1, vi_stalls30s=0, crashlines=0 (godrefills=20/17 were the harness's god-mode refills). Together with 11a/b, 12a/b, 13a this gives (a)+(b) for levels 11–14a; (c)+(d) are untouched. Level 10 remains the only failing level (nomission). 14b–18b are queued for the loop.
+
+## Session 5939 (2026-10-22) — level 15a fails with the level-10 signature (stale cinematic, nomission x5)
+
+Folded g1_lvl14b (rc=0, 388 s, passes) and g1_lvl15a (rc=1, 877 s, `allattempts-failed`,
+keys.log `nomission-att1..5`). Level 15a never reaches 0x690400; the VI origin alternates
+0x644D00 / 0x6A2900 for the whole run (~105k rows each). The fbd frame at 4000 shows a
+letterboxed planet-limb cinematic, not flight. The first and last `[phase]` rows of fail_att1
+show `cineState=F7B80040 curOvl=1 B50=00000011` at t=59.6 s: identical to the level-10 stale
+cinematic state (CURRENT-TRUTH). Two independent lines: origin pattern + phase state (control:
+level 11a in the same recipe leaves cinematic state and reaches flight, rc=0).
+So the level-10 defect is not level-10-specific: levels 10 and 15 share it (15b/16-18 still queued
+and will say whether it is a class). Not yet explained: the writer of the stale cineState.
+ORIGIN: no mitigation added this session; offline evidence fold only.

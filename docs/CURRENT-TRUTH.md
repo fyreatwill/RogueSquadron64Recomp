@@ -25,7 +25,7 @@ detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 
 The companion decomp census gives `NUM_LEVELS=0x13`: playable levels 0..18;
 `LOGO_LEVEL=0x13` and `ATST_LEVEL=0x14` are sentinels. Levels 1..9 and 11..14a have route
-and 300-second hold coverage (a)+(b) (11a/b, 12a/b, 13a/b, 14a: rc=0, vi_stalls30s=0, crashlines=0, hold 303-305 s; s5938). Level 10 still fails; 14b..18b are queued. Paired forced-level recipes for levels 10..18
+and 300-second hold coverage (a)+(b) (11a/b, 12a/b, 13a/b, 14a: rc=0, vi_stalls30s=0, crashlines=0, hold 303-305 s; s5938). Level 10 AND 15a fail identically (nomission, `curOvl=1 cineState=F7B80040`, origin 0x644D00/0x6A2900 alternating, letterboxed planet cinematic; s5939); 14b passes; 15b..18b are queued. Paired forced-level recipes for levels 10..18
 were queued, but the first queue pass failed before launch because the shared
 runner was itself a consumable `.sh` recipe and was moved to `soak_queue/done/`:
 
@@ -113,6 +113,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
+0. Level 15a shares level 10's stale-cinematic failure (s5939): treat 10/15 as one defect class; fold 15b..18b verdicts, then chase the cineState writer once for both.
 1. Re-run the corrected level-10 `a/b` coverage pair after the s5818
    diagnostic guard build; the guard audit does not change mission state or
    count as level coverage. Require `[lvsel]`, flight, and the 300-second hold.
