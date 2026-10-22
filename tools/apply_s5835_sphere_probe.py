@@ -12,7 +12,7 @@ extern uint32_t rs5841_cand; static unsigned rs5841_cl[2][5];
 static uint32_t rs5839_obj; static unsigned rs5839_cl[5], rs5839_tp, rs5839_tpc; 
 static float rs5835_f(uint32_t w) { union { uint32_t u; float f; } x; x.u = w; return x.f; }
 static void rs5835_probe(uint8_t* rdram, recomp_context* ctx) {
-    unsigned w = rs5834_who; if (w > 1) return;
+    unsigned w = 0; /* s5855: who-classifier void (s5854); all bolts counted as w=0 */
     uint32_t c = (uint32_t)ctx->r2, p = (uint32_t)ctx->r6, d = (uint32_t)ctx->r7;
     if ((c >> 24) != 0x80 || (p >> 24) != 0x80 || (d >> 24) != 0x80) return;
     float cc[4], pp[3], dd[3];
@@ -36,6 +36,13 @@ static void rs5835_probe(uint8_t* rdram, recomp_context* ctx) {
     float v2 = v[0]*v[0]+v[1]*v[1]+v[2]*v[2], dl = dd[0]*dd[0]+dd[1]*dd[1]+dd[2]*dd[2], t = v[0]*dd[0]+v[1]*dd[1]+v[2]*dd[2];
     float ap2 = (dl > 0.0f) ? v2 - t*t/dl : v2; unsigned in = (ap2 <= cc[3]);
     { float u = (dl > 0.0f) ? t/dl : 0.0f; if (u < 0.0f) u = 0.0f; if (u > 1.0f) u = 1.0f; float q0 = v[0]-u*dd[0], q1 = v[1]-u*dd[1], q2 = v[2]-u*dd[2]; float sd2 = q0*q0+q1*q1+q2*q2; unsigned sin_ = (sd2 <= cc[3]); if (sd2 < rs5835_minsd[w]) { rs5835_minsd[w] = sd2; rs5835_minsdr2[w] = cc[3]; if (rs5835_mp[w]++ < 12) fprintf(stderr, "[sph] MINSD %s sd2=%g r2=%g ratio=%g u=%g dl=%g |v|2=%g\n", w ? "N" : "P", sd2, cc[3], sd2/(cc[3] > 0.0f ? cc[3] : 1.0f), (dl > 0.0f) ? t/dl : 0.0f, dl, v2); } rs5835_sin[w] += sin_; if (sin_ && rs5835_sinp[w]++ < 10) fprintf(stderr, "[sph] SEGIN %s r2=%g |v|2=%g t=%g dl=%g sd2=%g\n", w ? "N" : "P", cc[3], v2, t, dl, sd2); }
+    { /* s5855: per class-1/any id table: tests, min v2, min ap2, r2, segin */
+        static struct { unsigned id, n, segin, c1; float mv2, map2, r2; } T[48]; static unsigned nT; unsigned id = rs5841_cand & 0xFFFF, z;
+        for (z = 0; z < nT; z++) if (T[z].id == id) break;
+        if (z == nT && z < 48) { T[z].id = id; T[z].mv2 = T[z].map2 = 1e30f; nT++; }
+        if (z < 48) { T[z].n++; T[z].c1 = c1f; if (v2 < T[z].mv2) { T[z].mv2 = v2; T[z].r2 = cc[3]; } if (ap2 < T[z].map2) T[z].map2 = ap2; if (ap2 <= cc[3]) T[z].segin++; }
+        static unsigned tk; if ((++tk & 1023) == 0) { fprintf(stderr, "[s5855] ids=%u:", nT); for (z = 0; z < nT; z++) fprintf(stderr, " %x{c1=%u n=%u mv2=%g map2=%g r2=%g in=%u}", T[z].id, T[z].c1, T[z].n, T[z].mv2, T[z].map2, T[z].r2, T[z].segin); fprintf(stderr, "\n"); }
+    }
     if (w == 0) { /* s5853: new-minimum bolt-to-sphere separation, all NPCs (m0) and class-1 only (m1) */
         static float m0 = 1e30f, m1 = 1e30f; unsigned pr = 0; if (v2 < m0) { m0 = v2; pr |= 1; } if (c1f && v2 < m1) { m1 = v2; pr |= 2; }
         if (pr) fprintf(stderr, "[s5853] newmin%u c1=%u id=%x ctr=(%g,%g,%g) r2=%g bolt0=(%g,%g,%g) dir=(%g,%g,%g) v2=%g t=%g ap2=%g\n", pr, c1f, (unsigned)(rs5841_cand & 0xFFFF), cc[0], cc[1], cc[2], cc[3], pp[0], pp[1], pp[2], dd[0], dd[1], dd[2], v2, t, ap2);
@@ -66,7 +73,7 @@ def apply(text, name=None):
             f = "RECOMP_FUNC void audioCueDispatcherNpcHandler("
             i = text.find(f); text = text[:i] + "uint32_t rs5841_cand; /* PATCH: s5841 */\n" + text[i:]; n += 1
     if FN not in text: return text, n
-    if "s5853: new-minimum" not in text and "PATCH: s5835 helpers" in text:
+    if "s5855: per class-1" not in text and "PATCH: s5835 helpers" in text:
         a = text.find("/* PATCH: s5835 helpers */"); b = text.find(FN)
         text = text[:a] + H + text[b:]; n += 1
     if "rs5839_obj = " not in text:
