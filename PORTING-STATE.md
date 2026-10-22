@@ -165906,3 +165906,11 @@ What ran: static finding that npcProbeDriod is a per-slot handler invoked by slo
 Rules out: H-other-prim (nothing else posts 5); the 12 never-hit ids are not missing a bolt-damage poster in dealDamagetoDatItem (it fires once in 420 s). Bolt damage, if it exists as msg5, is the audioCueDispatcherNpcHandler site (misnamed, 0x10D8 bytes) - 763 posts vs 6 ids means most of its msg5 go to non-class-1 slots or are not damage.
 ORIGIN: no mitigation added; diagnostic only (selects the next static read).
 Next: read the msg-5 post site in audioCueDispatcherNpcHandler (guest addr from +53528) - its predicate, selector, and per-slot filter; tally sel list vs class-1 ids.
+
+## Session 5911 (2026-10-22) — static read of the msg-5 post site: it IS the projectile nearest-hit loop (H-site-gate/H-predicate resolved to "aim/nearest-t")
+
+Read N64Recomp/RecompiledFuncs/funcs_13.c, audioCueDispatcherNpcHandler 0x8005D1C8-0x8005D360 (no run; static only, single-source = generated code).
+- Selector: findActiveNpcInSlotChain iterates the chain; each candidate NPC ctx (getNpcContextByIndex) must have ctx+0xC (sphere shape) nonzero, and be neither the projectile's owner (s2) nor 0xFFFF; findSegmentObjectSphereHit(shape, proj segment) must return nonzero; the candidate with the SMALLEST t (f0<f20, f20 seeded from float at 0x8003B038-ish -0x4FC8) is kept (s5).
+- Post predicate (0x8005D298-0x8005D2F4): t <= float[0x8003B03C] (-0x4FC4) -> direct hit; between that and float[-0x4FC0] -> sets projectile +0x14 flag 0x200 (lock-on/near-miss, no post); beyond -> clears flags 0x600, no post. A hit posts slotDispatcherIter(msg 5, {slot+0x16, proj+0xF8, proj+0xFE&0x1F, proj+0xFC...}) to the single nearest candidate (also bumps counter 0x80130B78+8 when proj+0xF8 == getPlayerField2(0)).
+- So the 763 posts are real bolt hits on the NEAREST sphere along the segment (all classes), with no team filter; class-1 NPCs only die when a bolt segment reaches their sphere before any nearer sphere. Rules out H-not-damage (site is bolt damage) and a selector list excluding 12 ids (no id filter exists). Remaining: H-aim (bolt segments never intersect the 12 unhit class-1 spheres, or a nearer class-0/2 sphere always wins).
+- ORIGIN: no mitigation landed.

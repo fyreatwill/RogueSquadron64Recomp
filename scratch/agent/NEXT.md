@@ -1,7 +1,7 @@
-# NEXT (s5911): read the msg-5 post site in audioCueDispatcherNpcHandler
+# NEXT (s5912): shadowing vs no-crossing for the 12 never-struck class-1 ids
 
 HYPOTHESIS-ID: g1-mission-progression
 
-s5910: msg 5 has exactly two posters (audioCueDispatcherNpcHandler+53528: 763; dealDamagetoDatItem: 1) in 420 s fire-held lv0. Controls fired.
-Hypotheses: H-site-gate (the 763 posts are real bolt hits but selector list excludes the 12 ids); H-not-damage (site is a proximity/AI cue, unrelated to bolts); H-predicate (needs a state the player-bolt never sets).
-Discriminator: static read of the call site (find guest addr: grep slotDispatcherIter(rdram in audioCueDispatcherNpcHandler in funcs with a1=5), name the predicate and selector source; then one run logging sel/a2 at that site joined with player bolt positions (apply_s5910_postra.py already prints [postra5] sel/a2 -- ra column now host-bt, fix print).
+s5911 (static): msg-5 post = nearest-t sphere hit in audioCueDispatcherNpcHandler loop 0x8005D1C8; no id filter.
+Hypotheses: H-shadow (a nearer class-0/2 sphere wins on bolts that also cross an unhit class-1 sphere); H-nocross (no bolt segment ever intersects those spheres: aim/elevation); H-thresh (t > float@0x8003B03C so crossings are lock-on only, flag 0x200).
+Discriminator: one hook at the stage-3 site (rs5833_ev stage 3) logging for every sphere hit: cand id, class, t, and at loop end winner id + t + threshold; tally per unhit class-1 id: crossings, wins, lost-to-nearer, t>thresh. Control: killed ids (18,19,1B..) must show wins. Also print the two threshold floats read from rdram.
