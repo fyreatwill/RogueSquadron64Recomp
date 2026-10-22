@@ -37842,6 +37842,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5886 m5 post x{_n5886}")
 
+    if p.name == "funcs_13.c":
+        import apply_s5912_shadow as _a5912
+        text, _n5912 = _a5912.apply(text)
+        if _n5912:
+            changed = True
+            report.append(f"{p.name}: s5912 shadow x{_n5912}")
+
     if p.name == "funcs_8.c":
         import apply_s5910_postra as _a5910
         text, _n5910 = _a5910.apply(text)
@@ -41592,6 +41599,7 @@ RS64_REPLAY = [
     "apply_s5816_slot_expiry.py",
     "apply_s5886_m5post.py",
     "apply_s5910_postra.py",
+    "apply_s5912_shadow.py",
     "apply_s5817_bit3_setters.py",
     "apply_s5818_destroy_health.py",
     "apply_s5846_mission_end.py",

@@ -1,7 +1,8 @@
-# NEXT (s5912): shadowing vs no-crossing for the 12 never-struck class-1 ids
+# NEXT (s5913): get real-input bolts to cross class-1 spheres (aim/steer)
 
 HYPOTHESIS-ID: g1-mission-progression
 
-s5911 (static): msg-5 post = nearest-t sphere hit in audioCueDispatcherNpcHandler loop 0x8005D1C8; no id filter.
-Hypotheses: H-shadow (a nearer class-0/2 sphere wins on bolts that also cross an unhit class-1 sphere); H-nocross (no bolt segment ever intersects those spheres: aim/elevation); H-thresh (t > float@0x8003B03C so crossings are lock-on only, flag 0x200).
-Discriminator: one hook at the stage-3 site (rs5833_ev stage 3) logging for every sphere hit: cand id, class, t, and at loop end winner id + t + threshold; tally per unhit class-1 id: crossings, wins, lost-to-nearer, t>thresh. Control: killed ids (18,19,1B..) must show wins. Also print the two threshold floats read from rdram.
+s5912: shadowing refuted; hit->win->send works for class-1 when a bolt crosses (6/6). Remaining: bolts never cross the other class-1 spheres.
+Hypotheses: H-aim (autopilot flies a fixed key table, never points at class-1 targets); H-range (class-1 NPCs are beyond bolt life ~ few units); H-spawn (those NPCs are not yet spawned/active in 420 s window).
+Discriminator: in one run log, per class-1 id (fn cabd4/d93c0/e7860), player-to-NPC distance at closest approach (ROGUESQ_PLAYER_DUMP + slot-table pos) next to bolt max life distance (s5897 hist). If closest approach >> bolt reach, H-range/H-aim; then add autopilot steering (tools in scratch/agent/g1_approach.sh) toward nearest class-1 and re-run g1_fireall with the s5912 tally as the measure (control: class-1 crossings must exceed 6).
+Instrument already present: tools/apply_s5912_shadow.py (ROGUESQ_LOG_HUDBIT=1), run: zsh scratch/agent/g1_fireall.sh <tag> 420
