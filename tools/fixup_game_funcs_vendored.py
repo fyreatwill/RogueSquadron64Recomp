@@ -41569,6 +41569,7 @@ RS64_REPLAY = [
     "apply_s4988_s4540_boundary.py",
     "apply_s4991_per_origin_bad_budget.py",
     "apply_s5798_recwatch.py",
+    "apply_s5866_plwatch.py",
 ]
 
 
