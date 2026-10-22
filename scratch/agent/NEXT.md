@@ -1,6 +1,6 @@
-# NEXT: G1 - s5854: are player bolts spawned at all, and what owner do they carry?
-s5853: owner census over 81921 chain-loop calls with A held: playermatch=0 (plid 0x38 at 0x80137DBA never equals proj+0xF8); P tests 0. Contradicts s5833 (P 28679 tests).
-Hypotheses: H4 fire handler not spawning bolts (ammo/cooldown/gate); H5 who-classifier wrong field/id (player id differs, e.g. 0x80137DBA stale); H6 s5833 P rows were mislabelled N-side.
-Discriminating measurement (one build, one run): hook the projectile-spawn function (find via the object that writes +0xF8 in the chain; grep recomp funcs for stores to +0xF8 near the fire-button handler / 'audioCueDispatcherNpcHandler' callers) and log owner id + button state at spawn; also log the player object's own id word. Control: N spawns must appear. Outcomes: no spawn while A held -> H4 (read the gate); spawns with owner != 0x38 -> H5 (fix classifier, rerun s5853 probe: newmin rows will then fire); 
-Run: env ROGUESQ_LOG_HITS=1 ROGUESQ_NPC_INVULN=1 zsh scratch/agent/g1_fireall.sh s5854 300
+# NEXT: G1 - s5855: with the who-classifier removed, do any bolts (which include the player's) reach class-1 survivor spheres?
+s5854: +0xF8 is a weapon-record id; player id is s2 (0x38 on all 1025 spawns). P/N split in s5833-s5853 void.
+Hypotheses: H7 bolts DO hit/approach class-1 NPCs but the kill arm (msg 5) is not triggered for survivors (receiver/health side); H8 bolts never come within radius of survivors (aim/range: bolt lifetime/speed short); H9 survivors respawn/despawn (msg 2) before being hit.
+Discriminating measurement (one build, one run): in apply_s5835_sphere_probe, make the newmin print fire for w=1 too (or ignore w) keyed by candidate id, c1f; log per class-1 id: tests, min v2 (bolt-seg to sphere), hits, SEND; plus msg arm (2 vs 5) per id. Positive control: ROGUESQ_TELE_BOLT=1 forced geometry run must show hits on class-1. Outcomes: min sep < r2 with hit but no kill -> H7; min sep >> r2 -> H8; ids never tested while alive -> H9.
+Run: env ROGUESQ_LOG_HITS=1 ROGUESQ_NPC_INVULN=1 zsh scratch/agent/g1_fireall.sh s5855 300
 HYPOTHESIS-ID: g1-mission-progression

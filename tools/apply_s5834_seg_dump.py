@@ -35,8 +35,28 @@ static void rs5834_post(uint8_t* rdram, uint32_t hit) {
 FN = "RECOMP_FUNC void audioCueDispatcherNpcHandler("
 PRE = "    // 0x8005D240: addiu       $a2, $sp, 0x88\n"
 POST = "    // 0x8005D24C: beq         $v0, $zero, L_8005D270\n"
+SPH = r'''/* PATCH: s5854 spawn census helper */
+static void rs5854_spawn(uint8_t* rdram, recomp_context* ctx) {
+    static unsigned tot, eqpl, eqs2; static uint32_t key[16]; static unsigned cnt[16], nk;
+    const char* e = getenv("ROGUESQ_LOG_HITS"); if (!(e && e[0] == '1')) return;
+    uint32_t v = (uint32_t)ctx->r2 & 0xFFFF, s2 = (uint32_t)ctx->r18 & 0xFFFF, pl = (uint32_t)MEM_HU(S32((int32_t)0x80137DBAu), 0), ty = (uint32_t)MEM_BU(ctx->r16, 0X17), k;
+    uint32_t kk = (ty << 16) | v; tot++; if (v == pl) eqpl++; if (s2 == pl) eqs2++;
+    for (k = 0; k < nk; k++) if (key[k] == kk) break; if (k == nk && nk < 16) key[nk++] = kk; if (k < 16) cnt[k]++;
+    if (tot <= 6 || (tot & 255) == 0 || v == pl || s2 == pl) { static unsigned pr; if (pr++ < 80) fprintf(stderr, "[s5854] spawn#%u rec=%08x rec+17(type)=%x rec+18=%x s2=%x a1=%x plid=%x ra=%08x\n", tot, (uint32_t)ctx->r16, ty, v, s2, (uint32_t)ctx->r5 & 0xFFFF, pl, (uint32_t)ctx->r31); }
+    if ((tot & 255) == 1) { fprintf(stderr, "[s5854] census tot=%u v==plid:%u s2==plid:%u plid=%x ty.v*n:", tot, eqpl, eqs2, pl); for (k = 0; k < nk; k++) fprintf(stderr, " %x.%x*%u", key[k] >> 16, key[k] & 0xFFFF, cnt[k]); fprintf(stderr, "\n"); }
+}
+'''
+SPA = "    // 0x8005CB10: sh          $v0, 0xF8($s1)\n"
+def apply_spawn(text):
+    if "PATCH: s5854 spawn census helper" in text: return text, 0
+    i = text.find(FN); j = text.find(SPA, i)
+    if i < 0 or j < 0: return text, 0
+    text = text[:j] + "    rs5854_spawn(rdram, ctx); /* PATCH: s5854 spawn census */\n" + text[j:]
+    i = text.find(FN); text = text[:i] + SPH + text[i:]
+    return text, 2
 def apply(text, name=None):
-    if T in text: return text, 0
+    text, n0 = apply_spawn(text)
+    if T in text: return text, n0
     i = text.find(FN)
     if i < 0: return text, 0
     j = text.find(PRE, i); k = text.find(POST, i)
@@ -45,7 +65,7 @@ def apply(text, name=None):
     text = text[:j] + "    rs5834_pre(rdram, ctx); /* %s */\n" % T + text[j:]
     i = text.find(FN)
     text = text[:i] + H + text[i:]
-    return text, 3
+    return text, 3 + n0
 if __name__ == "__main__":
     p = base / "funcs_13.c"; t = p.read_text(); t2, n = apply(t)
     if n: p.write_text(t2)
