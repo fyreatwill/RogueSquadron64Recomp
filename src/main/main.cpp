@@ -10245,9 +10245,9 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 for (int i = 0; i < 10; ++i) {
                     const uint32_t o = 0x138060u + 4u * i;
                     v[i] = rd[o] | (rd[o + 1] << 8) | (rd[o + 2] << 16) | ((uint32_t)rd[o + 3] << 24);
-                    if ((i == 1 || i == 2 || i == 9) && v[i] != s_pv[i]) chg = true;
+                    if (v[i] != s_pv[i]) chg = true;
                 }
-                if ((chg || (++s_dp % 30) == 0) && s_dn < 300) {
+                if ((chg || (++s_dp % 120) == 0) && s_dn < 2000) {
                     fprintf(stderr, "[mission-win] get %u %u %u %u %u %u %u %u %u %u origin=0x%08X\n", v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], (unsigned)rs64_vi_committed_origin());
                     memcpy(s_pv, v, sizeof v); ++s_dn;
                 }

@@ -165691,3 +165691,9 @@ Ran `scratch/agent/s5881_arms.sh` (3 runs, 330 s mission hold each, ROGUESQ_NO_C
 - Selects: fire (held A) does advance a counter (get(1)); refutes "fire is inert". Refutes (a) for win: no path from idle-flying plus fire to get(10)>=6 within 330 s. (c) not discriminated: what get(1) counts and why get(1)=5 precedes b14=2 are single-run, uncorrelated by mechanism.
 - Caveat: dump cap hit before run end (300 lines), so late-run get values are unobserved; the b14=2 correlation rests on one fire run.
 - ORIGIN: no mitigation added; scripts only (g1_nofire.sh, s5881_arms.sh).
+
+## Session 5882 (2026-10-22) — get(1) is class-1 teardown count; the fire-arm lose arm is get(2) reaching 3 (reproduced 2/2), s5881's get(2)=0 was a dump-cap artifact
+Static: 800C75EC/75C0 callers have only constant indices (no idx-10 caller); the other counter writers are the data-driven descriptor handlers at 80065914 (bool+2 counter adds) and 80065980 (type 0x18/0x19 descriptors add desc+0x3C/+0x4C to counter desc+0x38/+0x48). So get(1)/get(10) are fed by descriptor data, matching s5811/s5850 (get(1) = class-1 NPC teardowns, 21 distinct needed). Run: main.cpp dump now logs all 10 counters on ANY change, cap 2000 (was get(2)/(3)/(10) only, cap 300, 30-poll heartbeat); scratch/agent/s5882_arms.sh = fire1, fire2, nofire (NO_CRASH, 330 s).
+- Positive control: dump shows get(1) 0..5 steps in both fire runs (instrument sees changes); nofire shows get(1) 0..2 only.
+- Result: both fire runs: get(1) 0->5, then get(2) 1,2,3, then ALL counters reset to 0 (mission restart) with 27/28 b14=2 seq lines. Nofire: get(1)=2, get(2)=0, 0 b14=2, 0 crash. Selects (b) variant: lose arm = counter 2 reaching 3 (class-2 descs destroyed, as s5826); not player death (NO_CRASH). Refutes s5881's "get(2) stayed 0" (its 300-line cap hid the tail). get(10) = 0 in all 3 runs.
+- ORIGIN: no mitigation added; instrument widening only.
