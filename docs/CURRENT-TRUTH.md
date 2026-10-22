@@ -32,7 +32,7 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   separate, still-unexplained path. Next: G1 mission progression with real input.
 - **M5 audio de-stubbing: CLOSED** for the qualified route (non-silent PCM,
   task/SP contract, keyed mission and long-hold rows; `docs/M5-AUDIO-PLAN.md`).
-  **Audio FIDELITY is OPEN** (rung G2, `tools/agent/ITERATION.md` 3c): owner
+  **Audio FIDELITY: root causes FIXED s5668/s5672, re-verified on HEAD s5926 (underrun 1/15360, rails 3/368 loud rows); closed pending owner listen, see docs/G2-AUDIO-FIDELITY-CLOSURE.md.** Original report (rung G2, `tools/agent/ITERATION.md` 3c): owner
   report 2026-10-19 — every SFX recognizable but behind a heavy fuzzy/noise
   layer, and no dialogue/voice at all. Owner has watched several missions
   besides Mos Eisley play (rung G1).

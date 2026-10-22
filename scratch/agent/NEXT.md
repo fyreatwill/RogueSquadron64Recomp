@@ -1,8 +1,7 @@
-# NEXT (s5926): G2 audio fidelity - where does the fuzzy noise enter?
+# NEXT (s5927): G3 render fidelity - first hangar artifact vs retail framebuffer
 
-HYPOTHESIS-ID: g2-audio-fidelity
+HYPOTHESIS-ID: g3-render-fidelity
 
-Rung G2 (ITERATION.md 3c) has never been run; G1 bolt-damage thread is closed by s5925.
-Hypotheses for the noise layer: (A) ucode PCM output itself noisy (bad ADPCM decode/resample/reverb in the ported ucode); (B) AI ring/rate/format (byte order, sample-rate mismatch, dropped/duplicated frames); (C) host sink (SDL resample/format).
-Discriminator: dump port AI DMA PCM (at the AI register write, before the host sink) for the title music over a fixed VI-phase window, and dump the same window to a WAV via the host sink path; analyze offline (spectrum, noise floor, ratio of high-band energy, sample rate from AI_DACRATE). If the pre-sink dump is already noisy -> A or B (check byte order/rate by spectrum of a known tone); if clean pre-sink but noisy after -> C. Retail oracle (tools/oracle/README.md) AI PCM of the same title music is the reference for the noise floor if the pre-sink dump is noisy.
-First: grep the port for an existing AI PCM dump flag (grep -rn "AI_PCM\|DUMP_AI\|ai_dump" src tools) before building a new one. Capture once, analyze many.
+G2 closed pending owner listen (s5926 regression held; G2-AUDIO-FIDELITY-CLOSURE.md). G1 bolt-damage thread closed s5925.
+Take CURRENT-TRUTH "Native hangar artifacts parked" (rim band, holo spikes, stale right edge). Hypotheses per artifact: (A) bad RDP/RT64 state translation, (B) stale framebuffer region not cleared/copied, (C) bad geometry from ucode/DL. Discriminator: dump the port framebuffer (ROGUESQ_FB_DUMP_DIR) and the retail oracle framebuffer (tools/oracle) at the same hangar VI phase; diff offline. Pixel-diff localised to the artifact region with retail clean -> port-side; then toggle one setting within a single run. Positive control: oracle dump of a known-different frame must diff.
+NOTE: no `timeout` binary on this host; m6_god_common.sh has its own watchdog.
