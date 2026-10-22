@@ -165470,3 +165470,5 @@ Result (single run): c1 climbs 0->1 (vi 6286)->3 (17651)->6 (24448)->8 (by 34558
 Discrimination: SELECTS H2 (c1 plateau at 8: needs more distinct objective triggers than autopilot produces); REFUTES H1 (c1 does not reach 21 given time); H3 (c10 needs a specific-class kill) untested but c10 never moved without it.
 Next: identify what increments c1 (setter sites/ids) and what the remaining 13 need; and what raises c10.
 ORIGIN: no mitigation machinery added (log-only).
+
+Discrimination (s5849, HYPOTHESIS-ID g1-mission-progression): this run selects H-c1-plateau (counter 1 stops at 8 with c2=0, c10=0 over ~13000 VI) and refutes H-c1-climbs-with-time (c1 never reaches 21 given a 723 s hold). Next discriminator: log every writer of counters 1 and 10 (setter fn, caller backtrace, id args) in one build and compare the 8 observed increments against the static callers of idx 10; outcomes: all 8 from kill-class sites selects H-kill-driven, scripted-trigger callers select H-script-driven.
