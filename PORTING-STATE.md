@@ -165886,3 +165886,11 @@ ORIGIN: n/a (diagnostic only; no mitigation added).
 Next: find who calls 0x8006AB78-ish wrapper's return/loop in intersectSegmentWithObject and tally return value consumption per class (team/owner/id compare).
 
 Gate wording (s5907): this result refutes H-attr (176 agree / 0 disagree) and selects H-caller over H-late; the next discriminator is a per-class tally in the caller of return value, shooter (rs5834_who) and accept-branch taken, with positive control accepted == 176 RETs.
+
+## Session 5908 (2026-10-22) — the instrumented "RET" site is a lock-on target-selection loop, not bolt damage; per-caller tally of findSegmentObjectSphereHit
+Static read of funcs_13.c 0x8005CF54/0x8005D244: the call site hooked by rs5834_pre/post (0x8005D244) sits in a nearest-target loop (iterates NPC slots via revalidateNpcSlotIterator, keeps min t in $f20 / best id in $s5, then sets/clears flags 0x200/0x400 at [s6+0x14]). The "discard" the s5907 gate wording asked about is therefore nearest-t selection by design (H-caller: answered, not a bug). The s5834..s5907 RET counters have been measuring lock-on scans.
+Built tools/apply_s5908_callers.py: all 13 call sites of findSegmentObjectSphereHit now go through rs5908_call(ra) tallying calls/hits per return address. One run of scratch/agent/s5902_life.sh (att=1, mission 81 s, hold 182 s, 0 crashlines, 0 stalls). Result at tot=1.027M calls:
+  800ff288 calls=831454 hits=32 | 800f141c 7486/665 | 800f14dc 20600/402 | 8005cf5c 54702/204 | 8005d0d8 49952/204->198 | 8005d24c 55072/204 | 8005eb5c 7806/0
+Positive control: 8005d24c hits=204 vs s5907 RET=200 at its snapshot (same site, dumps differ in timing); the three 8005Cxxx/D0xx/D2xx lock-on loops scan the same objects (~200 hits each).
+Reading: the mass caller is overlay code 0x800ff288 (831k calls, 32 hits = 0.004%); the only high-yield callers are overlay 0x800f141c (8.9%) and 0x800f14dc (2.0%). Bolt-vs-NPC damage must go through one of those overlay callers, not the funcs_13 lock-on loops. Not yet identified: what those overlay functions are, and whether their hits reach a damage handler.
+ORIGIN: n/a (diagnostic only; no mitigation added).
