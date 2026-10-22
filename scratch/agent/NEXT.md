@@ -1,5 +1,5 @@
-# NEXT: G1 - s5846: why does the mission end at endMissionCleanup (win, timeout or fail)?
-s5845: counter 1 reached 17 and the mission ended at ~VI 42112 exactly as at counter 8 (s5824). Need the end reason.
-Step: (1) full regen (make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake) so the s5818 stale-slot guard lands; (2) offline: grep the generated mainGameLoop for the branch calling endMissionCleanup, name the flag it tests (win/lose/timer), then add one log of that flag + mission timer at call time, run g1_fire.sh with TELE_BOLT.
-Discriminator: flag/timer value at the endMissionCleanup call. Win flag set -> G1 win reached by forced hits, then build real steering; timer expiry -> counter is irrelevant, find objective gate; fail flag -> player death/other.
+# NEXT: G1 - s5847: who sets mask bit 2/4/8 (0x8010C9E0) that fires requestMissionTransitionMode, and is it win or the s5826 FAIL arm?
+s5846: end chain = event table 0x8010B350 via jalr 0x800FA820 in runInMissionFrame; request@VI36330 -> clear(phase4->6)@36651 -> cleanup@36723. a0 unlogged.
+Step: extend tools/apply_s5846_mission_end.py: log a0/a1 (ctx->r4) in requestMissionTransitionMode and bt+counters get(1),get(2),get(10) (0x8013805C+4n region, see rs5818_gt) + mask 0x8010C9E0 at entry of setHudEnableBit4 (0x800C7738), setHudEnableBit8 (0x800C776C) and at the 0x800B1140 death-settle OR. Apply to live funcs (idempotent tags) + build + `env ROGUESQ_TELE_BOLT=1 zsh scratch/agent/g1_fire.sh s5847 720`. Also run once WITHOUT TELE_BOLT.
+Discriminator: caller of setHudEnableBit4 and counter values at that moment: ctr2>=3 / death-settle -> fail arm (keep class-2 NPCs alive); ctr1>=21 or get(10)>=6 -> win. Positive control: [mend] endMissionCleanup must fire.
 HYPOTHESIS-ID: g1-mission-progression
