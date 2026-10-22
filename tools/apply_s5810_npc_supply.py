@@ -4,9 +4,13 @@ call site tally destroy arrivals by the same key. Separates H-supply (spawned cl
 Idempotent; mirrored into fixup_game_funcs_vendored.py."""
 import pathlib
 base = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
-T1 = "PATCH: s5810 npc spawn tally"; T2 = "PATCH: s5810 npc destroy tally"
+T0 = "PATCH: s5885 entry msg"; T1 = "PATCH: s5810 npc spawn tally"; T2 = "PATCH: s5810 npc destroy tally"
 A1 = "RS64_S5798_ST(0x8006CC24u, 0X34, ctx->r17, 4); }\n"
 A2 = "    datItemSetObjectiveBooleanCount(rdram, ctx);\n        goto after_53;\n"
+T3 = "PATCH: s5885 destroy ctx"
+B3 = '    { static int s_e = -1; if (s_e < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e = (e && e[0]) ? 1 : 0; } uint32_t d = (uint32_t)MEM_W(ctx->r17, 0X34); if (s_e && d >= 0x80300000u && d < 0x80330000u) fprintf(stderr, "[supply] destroy-ctx desc=%08x +70=%u msg=%u entry_ra=%08x vi=%u\\n", d, (unsigned)MEM_W(S32((int32_t)d), 0X70), rs5885_msg, rs5885_ra, (unsigned)rs64_vi_n_g); } /* ' + T3 + ' */\n'
+A0 = "    ctx->r3 = ADD32(ctx->r5, -0X1);\n"
+B0 = "    { rs5885_msg = (uint32_t)ctx->r5 & 0xFFFFu; rs5885_ra = (uint32_t)ctx->r31; } /* " + T0 + " */\n"
 PRE = '    { static int s_e = -1; if (s_e < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e = (e && e[0]) ? 1 : 0; } '
 B1 = (PRE + 'static unsigned sp[8], sum1, sum80, tot, nl; uint32_t d = (uint32_t)ctx->r16; if (s_e && d >= 0x80300000u && d < 0x80330000u) { '
       'uint32_t c = (uint32_t)MEM_W(S32((int32_t)d), 0X70), c2 = (uint32_t)MEM_W(S32((int32_t)d), 0X80); tot++; sp[c < 7 ? c : 7]++; '
@@ -22,12 +26,21 @@ def apply(text, name=None):
     n = 0
     i = text.find("RECOMP_FUNC void updateDestructionDebrisNpc(")
     if i < 0: return text, 0
+    if T0 not in text:
+        j = text.find(A0, i)
+        if j >= 0:
+            text = text[:i] + "extern volatile uint32_t rs64_vi_n_g; static uint32_t rs5885_msg, rs5885_ra;\n" + text[i:]
+            j = text.find(A0, i); k = j + len(A0); text = text[:k] + B0 + text[k:]; n += 1
     if T1 not in text:
         j = text.find(A1, i)
         if j >= 0: k = j + len(A1); text = text[:k] + B1 + text[k:]; n += 1
     if T2 not in text:
         j = text.find(A2, i)
         if j >= 0: text = text[:j] + B2 + text[j:]; n += 1
+    if T3 not in text:
+        j = text.find(T2, i)
+        if j >= 0:
+            k = text.find("\n", j) + 1; text = text[:k] + B3 + text[k:]; n += 1
     return text, n
 if __name__ == "__main__":
     p = base / "funcs_16.c"; t = p.read_text(); t2, n = apply(t)

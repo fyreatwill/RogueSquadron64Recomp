@@ -1,5 +1,6 @@
-# NEXT (s5885): who calls destroyNpcSlotByIndex for the class-2 objectives under held fire?
-Context (s5884): msg-5 SEND path excluded (656 sends, 0 descriptor-bearing victims; class-2 destroys at el 337-356 still occur).
-Hypotheses: (a) wave/script logic (timer or counter from class-1 teardowns) destroys class-2 directly; (b) proximity/collision handler (player or NPC body overlap) destroys them; (c) another damage routine other than SEND (area-damage/explosion loop) hits them.
-Discriminator: in apply_s5810_npc_supply.py B2 (destroy hook) also print ctx->r31 (ra) and the caller's caller if cheap (stack word), plus node id, for every destroy; run s5884_hits.sh again (positive control: class-1 destroys print ra too). Group ra by class: class-2 ra == class-1 ra => same teardown routine (then look upstream at its trigger); distinct ra => name that function.
+# NEXT (s5886): who enqueues the msg-5 that kills class-2 objects?
+Context (s5885): all 14 destroy arrivals at updateDestructionDebrisNpc come with msg=5; entry ra is 0 (host dispatch). s5884: SEND hook saw 0 descriptor victims. So the post path or the victim decode differs.
+Hypotheses: (a) msg-5 posted by a different routine than the SEND we hooked (area damage / collision-resolve); (b) SEND victim decode wrong (slot index vs descriptor).
+Discriminator: hook the dispatcher's queue-post function (find via funcs_8 slotDispatcherIter's inbox write) logging msg==5 with caller ra + target slot, join against the destroy-ctx lines by slot->desc (+0x34). Positive control: class-0 destroys must join too.
+Run: zsh scratch/agent/s5885_ctx.sh (rename tag).
 HYPOTHESIS-ID: g1-mission-progression
