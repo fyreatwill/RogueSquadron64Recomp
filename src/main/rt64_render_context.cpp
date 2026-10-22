@@ -54,6 +54,7 @@ static std::atomic<uint32_t> g_rs64_phase_ord{0};
 extern "C" void rs64_bump_phase_ord(void) {
     g_rs64_phase_ord.fetch_add(1, std::memory_order_relaxed);
 }
+extern "C" { volatile uint32_t rs64_vi_n_g = 0; } // s5816
 extern "C" uint32_t rs64_phase_ord(void) {
     return g_rs64_phase_ord.load(std::memory_order_relaxed);
 }
@@ -802,6 +803,7 @@ public:
             static bool s_filter_logged = false;
             ++s_n;
             { rs64_s4899_vi((uint32_t)s_n, ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG); } // s4899
+            rs64_vi_n_g = (uint32_t)s_n; // s5816 VI counter for guest-side diagnostics
 
             // Watchdog moved to its own thread (rs64_cine_start_watchdog_thread)
             // because the gfx_thread can itself be deadlocked on the same mutex

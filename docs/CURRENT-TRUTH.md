@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5815 (2026-10-21).
+Compact operational handoff, maintained as of Session 5816 (2026-10-21).
 `PORTING-STATE.md` is the chronological ledger. Durable background, closed
 audit detail, and the per-thread histories moved out of this file are in
 `docs/PROJECT-OVERVIEW.md` (latest: "Migrated from CURRENT-TRUTH (s5636)");
@@ -121,8 +121,8 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
 Older superseded items (s5634-s5777: R/O hypotheses, ccosnap, mission-win pokes, lldb/plume nulls, voice-DMA guesses, slotwatch addresses) migrated to PROJECT-OVERVIEW 'Migrated from CURRENT-TRUTH (s5815)'. Pattern for all: a null without a same-run control, or a mis-derived address, read as a result.
 - **'Prerequisite gate (+0x28/+0x2C>=+0x30) or 0x80130B39 holds counter 1 at 8' (s5808 candidate):** believable because applyDat's gate and the b39 skip were the only visible conditional paths. s5809 measured gate fields 0 and b39=0 with only 2 trigger calls, so neither blocks; the missing increments are never attempted.
 
-## s5814 note (G1 lv0)
-Class-1 NPC msg 2 (47 of 54) = slot lifetime-timeout destroy (`slotDispatcherIter` -> `destroyNpcSlotByIndex`, countdown byte +0x1A, flag +0x14&8); msg 5 (8) = handler-chain kill. Idle autopilot never kills them, so they time out; lv0 win needs real kills (backtrace + code, two sources). Next: aimed-fire run, and check countdown pass rate vs retail.
+## s5814/s5816 note (G1 lv0)
+Class-1 NPC msg 2 (47 of 54) = `slotDispatcherIter` -> `destroyNpcSlotByIndex`; msg 5 (8) = handler-chain kill. **s5816 corrected the mechanism:** slot byte +0x1A is a reentrancy depth counter (inc before / dec after the update call; post-update value is 1 in 99.99% of 2.88M visits), NOT a lifetime countdown, so there is no timeout. Destroy runs when depth returns to 0 and +0x14&8 is set; bit 8 is a destroy-REQUEST flag (set post-update only 3083 times in 405 s). The s5814 "timeout" reading was believable because the +0x1A/+0x14&8 pair sits right at the destroy branch. Next: name the writers of slot +0x14 bit 3 for class-1 NPCs.
 
 ## Next steps (single monotonic backlog)
 

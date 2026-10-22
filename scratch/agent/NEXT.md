@@ -1,8 +1,7 @@
-# NEXT: G1 — do class-1 NPCs in lv0 time out too fast, or does the port just never kill them?
-(s5815 was a maintenance pass: CURRENT-TRUTH compacted 457->164 lines; no experiment run. Work unit carried over unchanged from s5814.)
-s5814: msg2 = slot lifetime countdown (slotDispatcherIter byte +0x1A, flag +0x14&8) -> destroyNpcSlotByIndex; msg5 = handler-chain kill (8).
-Hypotheses: (a) idle autopilot never kills, timeout is correct; (b) countdown is decremented too often in the port (extra dispatch passes per frame vs retail), NPCs expire early even for a real player; (c) countdown init wrong.
-Discriminator (one build, one run): log per-slot +0x1A initial value at spawn and number of slotDispatcherIter passes per VI frame (positive control: passes/VI constant and nonzero), plus time-to-expiry in VI frames for each msg-2 NPC. Compare with retail via oracle if feasible (expected expiry in frames = init * passes-per-frame).
-Command: scratch/agent/g1_inv1.sh <tag> 400  (instrument goes into a tools/apply_s58xx_*.py fixup script, not hand-edited generated code).
-Outcomes: passes/VI ~1 and expiry ~ init frames -> (a), then drive aimed fire; passes/VI >1 -> (b), fix the pass rate; init differs from DAT value -> (c).
+# NEXT: G1 — who sets slot +0x14 bit 3 (destroy request) for class-1 NPCs in lv0?
+s5816: +0x1A is a reentrancy depth, no timeout exists; destroy = depth 0 && (+0x14 & 8). Flag set post-update 3083x/405 s.
+Hypotheses: (a) the NPC's own update fn sets bit 3 (self-despawn by design, e.g. distance/off-screen/age in its own state); (b) an external setter (damage/kill handler or level script) sets it; (c) a port divergence makes a setter fire early (e.g. bad range/visibility compare).
+Discriminator (one build, one run): trace every store that sets bit 3 of a slot's +0x14 (grep generated code for `MEM_H(0X14` stores / sh to 0x14 off slot regs; add RS64_S5798_ST-like hook logging pc, slot, class(+0x70 via NPC) and a backtrace for the first 8 distinct pcs). Positive control: total sets ~3000/405 s match [slotpost] flag8 count.
+Outcomes: one dominant pc inside NPC update (a) -> read its condition vs retail; setter from kill/handler path (b) -> follow to what drives it; condition inputs look wrong (c) -> fix input.
+Command: scratch/agent/g1_inv1.sh <tag> 400 with instrument in a tools/apply_s58xx_*.py fixup script.
 HYPOTHESIS-ID: g1-mission-progression
