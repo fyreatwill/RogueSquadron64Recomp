@@ -10,7 +10,7 @@ for i in $(seq 1 20); do
   if (( i % 2 == 0 || e > 74 )); then k=z; else k=start; fi
   EARLY="$EARLY$e:$k,"; e=$((e+4))
 done
-FL=""; t=95
+FL=""; t=${FL_START:-95}
 for i in $(seq 1 100); do
   for k in a sl a sr; do FL="$FL$t:$k,"; t=$((t+2)); done
   (( t > 520 )) && break

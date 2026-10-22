@@ -166082,3 +166082,14 @@ positive control. It leaves the level-specific route/origin contract unresolved:
 the common runner's `0x00690400` mission gate is not sufficient for level 10,
 or the forced selector is overwritten before flight. NEXT.md now makes that
 route discriminator the next work unit.
+## Session 5935 (2026-10-22) — rejected early-input explanation for level-10 route stall
+
+Ran the new level-10 `g1_lvl10c` arm with the first post-selection `a/sl/sr`
+event moved from 95 s to 64 s. The local fbrun and mcycles controls passed,
+and all five attempts passed `[lvsel]` with `cursor=10`, `a1=0x400`, and
+`res=0x0000000A`. Every attempt still reached the 640-wide `0x006A2900`
+phase at 60.4–60.9 s and ended `nomission`; no attempt reached the qualified
+`0x00620400/0x00690400` flight origins. This rejects “the route only needed
+earlier post-selection input” for this recipe, while leaving the later writer,
+an unrecognized level-specific origin, and a genuine loading/viewer stall open.
+It rules out another timing-only rerun and does not constitute level coverage.

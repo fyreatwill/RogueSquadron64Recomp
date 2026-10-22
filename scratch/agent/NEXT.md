@@ -1,38 +1,38 @@
-# NEXT: repair the level-10 G1 route discriminator
+# NEXT: identify the level-10 transition failure
 
 HYPOTHESIS-ID: g1-mission-coverage
 
-Work unit: inspect the level-10 route/phase evidence and make the smallest
-recipe change that distinguishes a legitimate level-10 loading path from a
-selector overwrite before flight. The repaired `a/b` pair launched and passed
-`[lvsel]` in all five internal attempts per arm, but both ended
-`allattempts-failed` at `nomission`; observed origins were only
-`0x006A2900` and `0x00644D00`. Do not count this as coverage.
+Work unit: compare the level-10 post-selector transition state and writer
+sequence against the successful level-11 control, using existing logs first and
+one batched probe/change only if the comparison identifies a concrete state
+boundary. Do not count level 10 as coverage.
 
 Competing hypotheses:
 
-- H1: `0x006A2900`/`0x00644D00` are the legitimate level-10 load path and the
-  recipe needs level-specific input or a later origin/phase gate.
-- H2: the forced selector is overwritten after `[lvsel]`, so the observed path
-  is not level 10 and the route needs a selector-state witness.
-- H3: level 10 reaches a flight origin not recognized by the hard-coded
-  `0x00690400` gate; the harness needs a level-specific mission-origin map.
-- H4: the route is genuinely stuck in loading/viewer; a bounded rerun with the
-  corrected gate will reproduce it as a new G1 route failure, not a crash.
+- H1 (rejected): the route only needed earlier post-selection input. Moving the
+  first `a/sl/sr` event from 95 s to 64 s produced the same result in five of
+  five attempts.
+- H2: a later writer overwrites the selected mission or transition state after
+  `[lvsel]`, despite the selector's final `cursor=10/res=0xA` witness.
+- H3: level 10 enters a level-specific flight origin absent from the current
+  `0x620400/0x690400` allowlist; the level-11 origin sequence is not universal.
+- H4: level 10 is genuinely stuck in its loading/viewer transition at
+  `0x006A2900`/`0x00644D00`, independent of selector and input timing.
 
-Discriminator: correlate `[lvsel]`'s `cursor=10/res=0xA` with every subsequent
-VI origin and selector-state line until flight. H1 predicts a stable level-10
-loading-to-flight sequence after the route/input correction; H2 predicts a
-selector/state change away from 10; H3 predicts a stable, previously unknown
-flight origin; H4 predicts persistent `0x006A2900`/`0x00644D00` with no flight.
-The positive control is `[lvsel]` itself; missing it makes a run unevaluable.
+Discriminator: name the first divergent post-selector state/write between
+level 10 and level 11, then toggle or witness that state in one run. H2 predicts
+a selector/mission-state write before the divergence; H3 predicts stable
+level-10 flight frames at a new origin; H4 predicts no transition writer and
+continued `0x006A2900`/`0x00644D00`. The positive controls are `[lvsel]` in
+both runs and level-11's `mission_t=86s` / 300-second hold; missing either
+makes the comparison unevaluable.
 
 Exact evidence checks before any build/run:
 
 ```sh
-rg -n '\[lvsel\]|origin=0x|flight|mission|level' scratch/agent/m6/g1_lvl10[ab]/fail_att*.log | tail -200
-rg -n 'FORCE_SAVE_MISSION|MISSION_RE|006A2900|00644D00|690400' scratch/agent docs
+rg -n '\[lvsel\]|^\[phase\].*origin=0x|mission_t|nomission' scratch/agent/m6/g1_lvl10c/fail_att*.log scratch/agent/m6/g1_lvl11a/run.log | tail -240
+rg -n 'gCurrentLevel|level.*table|006A2900|00644D00|620400|690400|transition' src docs scratch/agent | head -240
 ```
 
 Only after this discriminator is repaired and level 10 reaches flight should
-the next unit consume level 10 `a/b`, then levels 11..18.
+the next unit consume level 10 `a/b`, then levels 12..18.
