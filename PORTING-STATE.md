@@ -165538,3 +165538,5 @@ Result (n=233472 handler entries): type histogram ty1=47 ty2=43 ty3=29030 ty4=30
 Rules out: H17 (handler takes another branch) - it is never entered with 5. Selects: msg 5 is not delivered to fn 0x800E7860 at all - either slotDispatcherIter never routes it to the victim's class-1 update fn (H16) or victims run a different update fn (H18). The ~14 dealDamage calls come from some other path.
 Single-source caveat: one run. New datum: this run died in the hold with Bus error (si_addr=0x37fffd040, x9=0x7fffd040 -> wild MIPS pointer 0x7FFFD040 in a host load), 37 CRASH lines, after ~280 s of mission; backtrace not yet captured (not chased; M6 candidate).
 ORIGIN: n/a (diagnostic only).
+VERDICT: s5858 refutes H17 and selects H16/H18 (msg 5 never delivered to fn 0x800E7860; H19 SEND-type mislabel also open).
+NEXT DISCRIMINATOR: log receiver id + msg type + receiver slot update-fn at the SEND site and a (type, target fn) histogram in slotDispatcherIter; target fn != 0x800E7860 -> H18, no dispatch row -> H16, type != 5 at dispatch -> H19 (see scratch/agent/NEXT.md).
