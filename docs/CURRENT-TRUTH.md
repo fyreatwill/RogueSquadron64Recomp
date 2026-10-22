@@ -165,3 +165,5 @@ must read this file, `scratch/agent/NEXT.md`, and the tail of the soak results
 before acting.
 
 Voice-path (s5637-s5666), mission-transition (s5748-s5754), counter-2 (s5787-s5797) and misc update diaries migrated to PROJECT-OVERVIEW 'Migrated from CURRENT-TRUTH (s5815)'. Net: voice data exists in RDRAM and decodeAndFillVoiceBlock runs, but the buffer content is rail-saturated decoder OUTPUT (suspect runVoiceLatticeFilter 0x8009D980, s5666); counter 2 = class-2 NPC tally fed by updateDestructionDebrisNpc, victims die to real projectile hits (s5793).
+
+- s5820: g1_fly soak ended the mission cleanly (origin 0x620400 at ~353 s) but crashed in our own s5818 instrument during endMissionCleanup (fixed in apply_s5818_destroy_health.py, not rebuilt). Autopilot stick barely moves the player (~0.05 u/update); 'does approaching keep troops alive' is still open.

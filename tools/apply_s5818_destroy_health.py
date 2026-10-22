@@ -10,6 +10,7 @@ static struct { unsigned z, pos, neg, n; } rs5818_b[32]; static unsigned rs5818_
 static void rs5818_sum(void) { for (unsigned i = 0; i < 32 && i < rs5817_nra; i++) if (rs5818_b[i].n) fprintf(stderr, "[b3hpsum] caller=%s n=%u hp0=%u hppos=%u hpneg=%u\n", rs5817_nm[i], rs5818_b[i].n, rs5818_b[i].z, rs5818_b[i].pos, rs5818_b[i].neg); }
 static void rs5818_log(uint8_t* rdram, recomp_context* ctx, uint32_t slot) {
     if (!rs5817_en() || slot < 0x80000000u || slot >= 0x80800000u) return;
+    if (rs5818_tot >= 300) return; /* s5820: endMissionCleanup (~vi 23000+) hands this stale slots -> getNpcCurrentHealth faults (si_addr 0x37fffd040); sample in-mission only */
     recomp_context t = *ctx; t.r4 = (int32_t)slot; getNpcCurrentHealth(rdram, &t);
     uint32_t hp = (uint32_t)t.r2; float f; memcpy(&f, &hp, 4); int k = rs5817_k(rs5817_cur);
     rs5818_b[k].n++; if (hp == 0) rs5818_b[k].z++; else if ((int32_t)hp > 0) rs5818_b[k].pos++; else rs5818_b[k].neg++; rs5818_tot++;
