@@ -1,6 +1,5 @@
-# NEXT: G1 — what makes class-1 NPCs take lethal damage (msg 5), given msg 2 is the by-design out-of-range despawn?
-CLOSED (s5830): msg 2 = out-of-range despawn (s5814/5817/5818/5823, four lines). Do not re-instrument it.
-Hypotheses: (a) projectiles never register hits on class-1 NPCs in the port (collision/damage path divergence); (b) hits register but damage is small/NPC_INVULN-free hp not reached in a short approach; (c) kills need the ship inside the 144 radius for the death-effect arm's rand()&3 gate (copy 2).
-Step 1 (static, cheap): find the function that decrements health at *(slot+0x38) (grep funcs for stores through the health owner / callers of getNpcCurrentHealth's setter) and its callers from projectile code.
-Step 2: ONE build, ONE run (g1_approach.sh, NPC_INVULN unset): per class-1 NPC log damage calls (count, amount, hp before/after, caller via backtrace) + positive control "log every damage call to any object". Outcome: zero class-1 damage calls with nonzero control -> (a); calls with hp never <=0 -> (b); hp<=0 reached but no msg 5 -> (c).
+# NEXT: G1 — do class-1 NPCs receive msg 5 (damage) from player fire at all?
+s5831: updateDestructionDebrisNpc never sees class 1 (control: cls0/2/3 tallied; hits dmg=12 land on cls0/2). Class-1 handle msgs in their own update fns.
+Hypotheses: (a) class-1 gets msg 5 only rarely (8/54 counted) because fire misses/collision radius; (b) msg 5 arrives often but their handler gates the kill (rand()&3, range 144); (c) msg 5 is never sent to them except via death arm.
+Step: patch slotDispatcherIter (where update fn is called with msg) to tally (slot+0x70 class, msg) with the same [hitsum] format under ROGUESQ_LOG_HITS=1; same g1_fire.sh run (env ROGUESQ_LOG_HITS=1 zsh scratch/agent/g1_fire.sh <tag> 320). Control: cls0/2/3 counts must match s5831 magnitude. Outcome: cls1 m5 ~0 -> (a)/(c); cls1 m5 >> 8 -> (b).
 HYPOTHESIS-ID: g1-mission-progression

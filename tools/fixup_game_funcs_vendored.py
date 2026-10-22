@@ -37813,6 +37813,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5829 teardown gate x{_n5829}")
 
+    if p.name == "funcs_16.c":
+        import apply_s5831_hit_tally as _a5831
+        text, _n5831 = _a5831.apply(text)
+        if _n5831:
+            changed = True
+            report.append(f"{p.name}: s5831 hit tally x{_n5831}")
+
     if p.name == "funcs_27.c" and "PATCH: s5523 cineBody entry log" not in text:
         _a = '    // 0x800A5D80: addiu       $sp, $sp, -0xD8\n'
         if text.count(_a) == 1:
@@ -41444,6 +41451,7 @@ RS64_REPLAY = [
     "apply_s5792_npc_victim.py",
     "apply_s5793_npc_diff.py",
     "apply_s5806_npc_invuln.py",
+    "apply_s5831_hit_tally.py",
     "apply_s5809_ctr1_log.py",
     "apply_s5811_ctr1_bt.py",
     "apply_s5812_npc_spawn_class.py",

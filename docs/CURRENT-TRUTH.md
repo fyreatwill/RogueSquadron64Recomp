@@ -128,6 +128,7 @@ Class-1 NPC msg 2 (47 of 54) = `slotDispatcherIter` -> `destroyNpcSlotByIndex`; 
 
 ## Next steps (single monotonic backlog)
 
+- **s5831 (top, single-run):** tally of messages by descriptor class at updateDestructionDebrisNpc: cls1 zero (control cls0/2/3 >100k msgs); msg-5 hits (dmg 12) land on cls0 (6) and cls2 (236). Class-1 NPCs never use that function; next: tally at slotDispatcherIter by slot +0x70.
 - **s5830 (top):** msg-2 question closed (out-of-range despawn, 4 lines). Next: damage path to class-1 NPCs (NEXT.md).
 - **s5828 (top, measured, single-run):** [spawn1] now prints id=desc+0x78 + descriptor words (words 4-6 = float x,y,z). 10 class-1 spawns, ids 2B,1F,18,19,20,21,28,29,2A,2D, all within ~40 u of idle player; only 2 counted. Id space >= 0x18..0x2D (22), so s5827's bound is loose; unreached ids ARE spawned and torn down silently. Next: what decides counted (msg 5) vs silent (msg 2) teardown for class-1.
 - **s5827 (offline, single-source):** counter 1 is per distinct bool id: 44 class-1 spawns -> 8 sets with 8 distinct ids (0x18..0x2B range, ~20 ids). 21 needs nearly every id once = reach more distinct NPCs. Next: map id -> descriptor position from lv0 DAT vs the 8 reached.
