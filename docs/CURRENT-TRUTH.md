@@ -128,6 +128,7 @@ Class-1 NPC msg 2 (47 of 54) = `slotDispatcherIter` -> `destroyNpcSlotByIndex`; 
 
 ## Next steps (single monotonic backlog)
 
+- **s5834 (top, single-run):** player-bolt segment is well-formed (P n=32869 hit=0, |dir|^2=0.53, nonzero, horizontal at player altitude; N 138/40859 hits as control) -> (b) 'degenerate segment' refuted. Next: log shape centre from 0x8006AE58 and point-to-centre distance to split aim-miss (a) from stale centres (c) (NEXT.md).
 - **s5831 (top, single-run):** tally of messages by descriptor class at updateDestructionDebrisNpc: cls1 zero (control cls0/2/3 >100k msgs); msg-5 hits (dmg 12) land on cls0 (6) and cls2 (236). Class-1 NPCs never use that function; next: tally at slotDispatcherIter by slot +0x70.
 - **s5830 (top):** msg-2 question closed (out-of-range despawn, 4 lines). Next: damage path to class-1 NPCs (NEXT.md).
 - **s5828 (top, measured, single-run):** [spawn1] now prints id=desc+0x78 + descriptor words (words 4-6 = float x,y,z). 10 class-1 spawns, ids 2B,1F,18,19,20,21,28,29,2A,2D, all within ~40 u of idle player; only 2 counted. Id space >= 0x18..0x2D (22), so s5827's bound is loose; unreached ids ARE spawned and torn down silently. Next: what decides counted (msg 5) vs silent (msg 2) teardown for class-1.

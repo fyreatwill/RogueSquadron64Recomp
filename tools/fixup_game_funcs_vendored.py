@@ -37834,6 +37834,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5833 proj loop x{_n5833}")
 
+    if p.name == "funcs_13.c":
+        import apply_s5834_seg_dump as _a5834
+        text, _n5834 = _a5834.apply(text)
+        if _n5834:
+            changed = True
+            report.append(f"{p.name}: s5834 seg dump x{_n5834}")
+
     if p.name == "funcs_27.c" and "PATCH: s5523 cineBody entry log" not in text:
         _a = '    // 0x800A5D80: addiu       $sp, $sp, -0xD8\n'
         if text.count(_a) == 1:
@@ -41468,6 +41475,7 @@ RS64_REPLAY = [
     "apply_s5831_hit_tally.py",
     "apply_s5832_disp_tally.py",
     "apply_s5833_proj_loop.py",
+    "apply_s5834_seg_dump.py",
     "apply_s5809_ctr1_log.py",
     "apply_s5811_ctr1_bt.py",
     "apply_s5812_npc_spawn_class.py",
