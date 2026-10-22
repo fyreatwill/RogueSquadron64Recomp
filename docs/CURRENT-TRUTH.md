@@ -182,4 +182,7 @@ Voice-path (s5637-s5666), mission-transition (s5748-s5754), counter-2 (s5787-s57
 - **s5829 (single-run + code read):** class-1 descriptor words don't discriminate counted (0x18,0x19, deterministic across runs) from silent; counted sets come via npcProbeDriod copy 2 (L_800CBCBC, msg-5 death-effect arm), the +0x6C gate (copy 1) never fired. Next: find the msg-2 sender for class-1 NPCs.
 
 ## s5832 addendum (G1)
-Dispatcher tally (s5832): only update fns 8006cbb0 (= updateDestructionDebrisNpc, 249 msg-5), 800cabd4 (6) and 800d93c0 (3) ever receive msg 5 in a 320 s fire mission. Class-1 NPC damage path is therefore one of the last two (inferred, single-source; the class keying in that instrument failed). Next: identify those two fns and the upstream msg-5 sender gate.
+Dispatcher tally (s5832): only update fns 8006cbb0 (= updateDestructionDebrisNpc, 249 msg-5), 800cabd4 (6) and 800d93c0 (3) ever receive msg 5 in a 320 s fire mission. SUPERSEDED (s5833): 800cabd4 = npcProbeDriod, 800d93c0 = npcWingmanUpdate are the s5794 shooters, not class-1 damage handlers.
+
+## s5833 addendum (G1)
+Msg-5 sender = audioCueDispatcherNpcHandler projectile loop (0x8005D1C8-0x8005D360; findSegmentObjectSphereHit per chain NPC). s5833 tally in a 320 s fire mission: player bolts 445 loops / 28679 candidate tests (all with shapes) / 0 sphere hits / 0 sends; NPC bolts 960 / 45187 / 141 / 226. Caveat: autopilot may not aim. Next: for player bolts log min point-segment distance vs sphere radius (control: NPC hits) to split aim-miss from segment-setup defect.

@@ -1,6 +1,6 @@
-# NEXT: G1 — identify msg-5 receivers 800cabd4 and 800d93c0 (class-1 damage path?)
-s5832: only 3 update fns ever get msg 5 (8006cbb0=249, 800cabd4=6, 800d93c0=3). Class-1 NPCs never reach updateDestructionDebrisNpc.
-Hypotheses: (a) 800cabd4/800d93c0 are the class-1 handlers and rarely receive msg 5 because the upstream sender's hit test (radius/collision) rarely passes for them; (b) they are unrelated objects and class-1 never receives msg 5 at all.
-Step: log, at the dispatch call for those two fns, obj (r4) +0x34 descriptor and its +0x70 class (fix s5832's keying: try r16/r17 slot->obj chain), plus dump their first 40 instructions from the recompiled source (grep funcs_*.c) to read the msg-5 arm. Then find the msg-5 sender (grep "ori.*0x5" near sendMsg callers) and its range gate. Control: 8006cbb0 must show class 0/2.
-Outcome: class 1 confirmed on both -> read sender gate; class != 1 -> (b), find class-1 handler fn by tallying all update fns for objects with class 1.
+# NEXT: G1 - player bolts: 0/28679 sphere hits. Aim-miss or segment-setup defect?
+s5833: player bolts reach findSegmentObjectSphereHit (0x8005D248, a1=r19 s3 segment ptr, a2=sp+0x88, a3=sp+0x58, a0=NPC shape ctx+0xC) with 64 candidates each, never hit; NPC bolts hit 141/45187.
+Hypotheses: (a) player bolts geometrically miss (autopilot doesn't aim); (b) segment/velocity setup for player bolts is wrong (zero-length, unscaled, wrong frame) so it can never intersect; (c) candidate shape/position stale for player-frame candidates.
+Step: extend tools/apply_s5833_proj_loop.py (or new s5834): at the CAND hook, for player (P) bolts and for NPC bolts, log segment length (|seg end - start|) distribution and min over candidates of point-to-segment distance minus shape radius; print the first 20 P bolts' segment words and the best candidate. Control: N bolts' HIT events must show min-dist<=radius; P with zero-length segments selects (b). Also hold fire with a KNOWN-near target if one exists (check NPC distances from [plpos] logs).
+Run: env ROGUESQ_LOG_HITS=1 zsh scratch/agent/g1_fire.sh s5834 320 (one run, all keys).
 HYPOTHESIS-ID: g1-mission-progression
