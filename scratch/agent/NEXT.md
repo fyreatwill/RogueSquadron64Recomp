@@ -1,4 +1,4 @@
-# NEXT: G1 - s5872: what kills the autopilot ship (3x requestMissionTransitionMode a0=1 = death path, s5871)?
-Hypotheses: (a) enemy fire/collision with terrain, (b) autopilot flies into scenery/ground, (c) fall-out/out-of-bounds kill. Discriminator: at each a0=1 call log lives byte 0x80130B10+[0x8010C9E8], player hp, position (PLPOS) and the last damage source; arm B: player god mode (poke hp each frame) - if mission survives past VI 15987 the cause is damage, else a different end path.
-Extend tools/apply_s5847_mask_log.py [m47] with lives+hp, regen order make_elf->N64Recomp->fixup->cmake, queue as soak.
+# NEXT: G1 - s5873: fold s5872_hold600_god / _ctl soak verdicts (queued s5872)
+Hypotheses: (a) death is health (god+revive => mission passes vi 15987, no a0=1), (b) non-health kill (still a0=1 with [god-dead] revives firing), (c) godmode doesn't see health in this mission (no [god-dead] dead=1 lines = no positive control, result void).
+Read: scratch/agent/SOAK-RESULTS.md tail, the two logs: grep -a 'god-dead\|m47\|endMissionCleanup'. If (b): add lives byte 0x80130B10+[0x8010C9E8] + PLPOS to [m47] via tools/apply_s5847_mask_log.py and regen.
 HYPOTHESIS-ID: g1-mission-progression
