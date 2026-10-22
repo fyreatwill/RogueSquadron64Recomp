@@ -165792,3 +165792,11 @@ Rules out: input path defect as the reason survivor slots go unaimed (H-input). 
 ORIGIN: diagnostic only, no mitigation.
 Hypotheses: (a) stick steers - supported (echo), (b) input defect - REFUTED, (c) player parked far - not tested.
 Gate wording: refutes an input-path defect with a same-run echo control; does not yet show stick moves the bolt direction.
+
+## Session 5896 (2026-10-22) — slot->descriptor join fails (+0x34 not a pointer); node +0x14 kind field does not separate killed from surviving slots (s5896)
+Extended the s5855 per-id table with a descriptor id read (slot node +0x34 -> +0x78), refreshed per call (tools/apply_s5835_sphere_probe.py + live funcs_16.c edited in place). Ran scratch/agent/s5896_did.sh twice (s5894 recipe, 421 s each, alive, 0 stalls, 0 crashlines); first run read 0xDEAD for every id (first-insert read), second refreshed per call: all 48 ids report 0xD001 = node valid but +0x34 is not an 0x80 pointer. So the +0x34 -> +0x78 join is not how these slot nodes reference a descriptor (the older +0x70 class read at 0x80300000..0x80330000 is a different path).
+Side datum from the [ctx41] node dumps in the same run: node +0x14 = (flags<<16)|own id (38:0x04, 4b:0x84, 52:0x41, 5f:0x142, 66:0x84, 72:0x142, 79:0x42, 7f:0x84, 86:0xc2, 92:0xc2, 9e:0x42, aa:0x42). Killed slot 86 and surviving slot 92 share 0xc2, so that flags field does not separate killed from surviving slots (single-source, 13 nodes).
+Rules out: slot->descriptor join via +0x34/+0x78; a kind split in node +0x14 flags. Does not test H-aim directly; per-frame heading around fire is still unmeasured.
+ORIGIN: diagnostic only, no mitigation.
+Hypotheses: (a) survivors geometrically off-axis - still standing; (b) non-target by kind - weakened, no flags split; (c) bolt range - untested.
+Gate wording: refutes a +0x34 descriptor join and a +0x14 flags split; selects nothing new.
