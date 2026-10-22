@@ -1,12 +1,12 @@
-# NEXT (s5909): identify overlay callers 0x800f141c / 0x800f14dc / 0x800ff288 of findSegmentObjectSphereHit and what consumes their hits
+# NEXT (s5910): find who POSTS NPC message type 5 (damage) and what gates it per bolt
 
 HYPOTHESIS-ID: g1-mission-progression
 
-s5908: lock-on loops (funcs_13 0x8005Cxxx-D2xx) are NOT bolt damage. High-yield callers are overlay: 800f141c (7486 calls/665 hits), 800f14dc (20600/402); mass caller 800ff288 (831k/32).
+s5909: findSegmentObjectSphereHit callers are not damage (occlusion/LOS/lock-on). Damage is msg5 reaching npcProbeDriod via a queue (host stack has no sender, ra=0).
 
 Hypotheses:
-- H-bolt: 0x800f141c/14dc is the bolt-vs-NPC test; hits then go to a damage routine that is gated (team/invuln/ROGUESQ_NPC_INVULN env!) -> check boring thing first: s5902_life.sh sets ROGUESQ_NPC_INVULN=1, which may itself suppress kills.
-- H-terrain: those callers are terrain/ground effect collisions; bolt damage uses a different primitive (e.g. segment-vs-sphere inline).
-- H-gate: hits reach damage but are dropped by life/shield check.
+- H-post-gate: a bolt-update function posts msg5 only when a predicate (team/owner/range) passes; 12 ids never get it.
+- H-other-prim: the bolt uses a primitive other than 0x8006A944 (e.g. inline segment/sphere or findNpcInScaledBoxRegion/AlongDirectionRay: 8005eb5c 7806 calls/0 hits is the box-region caller).
+- H-queue-drop: msg5 posted but dropped before dispatch.
 
-Discriminator: (1) static: find the overlay function containing 0x800f141c (tools/disasm_ovl2c.py or recomp'd overlay funcs) and read what follows the jal; (2) rerun s5902_life.sh WITHOUT ROGUESQ_NPC_INVULN and tally NPC kills (positive control: kill counter increments when invuln off).
+Discriminator: (1) static: in N64Recomp/RecompiledFuncs grep for the message-post function (callee of which npcProbeDriod drains) and sites setting a1/msg type 5; name the poster functions. (2) one run tallying calls/args per poster per bolt id, with control = posters for msg3/4 firing (s5893 had msg3/4 per-id control).
