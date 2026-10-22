@@ -200,3 +200,4 @@ Msg-5 sender = audioCueDispatcherNpcHandler projectile loop (0x8005D1C8-0x8005D3
 - **s5837 (G1, measured):** forced-geometry player bolts (ROGUESQ_TELE_BOLT=1) hit 64 and reach SEND 32/33 — collision/hit/send OK for player; G1 failure = autopilot never within ~8.8 u of an NPC (s5836). Receiver effect not yet measured (NEXT.md).
 
 - s5848: ROGUESQ_NPC_INVULN=1 (class-2 only) keeps mission alive 722 s (no fail arm); control fails c2=3 then Bus error si_addr=0x3c1b4bc0a after endMissionCleanup. Next: log c1/c10 over time in invuln run to find win arm (NEXT.md).
+- s5849: invuln run: c1 plateaus at 8 (vi 34558-47562), c10 stays 0, c2 0; win arm (c1>=21 or c10>=6) not reachable by autopilot. Next: what increments c1/c10 (setter ids).
