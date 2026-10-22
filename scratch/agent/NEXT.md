@@ -1,6 +1,7 @@
-# NEXT: G1 - s5858: where are ~97% of hit SENDs dropped before dealDamageToNpc?
-s5857: SEND=505 vs dealDamageToNpc=14 in one run; those 14 show hp pre==post and garbage hp (hp read has no positive control - void).
-Hypotheses: H16 slotDispatcherIter does not deliver msg 5 to the victim (slot/ctx lookup fails, message queued/dropped); H17 delivered, handler (fn 0x800E7860, funcs_39.c:25943) takes another branch (type-5 index 4 -> L_800E84B8 skipped / health<=0 'blez' at 0x800E84C4 with hp already <=0 -> only sender cleanup); H18 delivered to NPCs whose fn is not class-1 handler (different update fns ignore type 5).
-Discriminating measurement (one build): per run histogram of (a) slotDispatcherIter calls from the 0x8005D35C site, (b) handler entry count by msg type (a1) in npcGroundTroopUpdate, (c) entries at L_800E84B8, (d) hp read at 0x800E84C4 (blez) via the handler's own register, as the positive-control-able hp. Outcomes: (b)=~0 -> H16; (b)~SEND but (c) low -> H17; (b) low but SEND high -> H16/H18.
-Run: env ROGUESQ_LOG_HITS=1 zsh scratch/agent/g1_fireall.sh s5858 300   (add hooks to tools/apply_s5857_dmg_log.py or a new apply_s5858)
+# NEXT: G1 - s5859: who receives the msg-type-5 hit SENDs?
+s5858: npcGroundTroopUpdate sees types 3/4/11 only, never 5 (n=233k, controls populated). 505 SENDs of type 5 exist.
+Hypotheses: H16 slotDispatcherIter/queue drops msg 5 before delivery (slot lookup fails or victim id not live); H18 the victims' update fn is another one (not 0x800E7860) which handles/ignores 5; H19 SEND carries a different type value than 5 in a1 (e.g. type is in another register/field) so the ty5 filter is wrong - check type 11 (174k) vs SEND log.
+Discriminating measurement (one build): at the SEND site log receiver id, msg type, and the receiver slot's update-fn pointer; in slotDispatcherIter entry histogram (msg type, target fn addr) for type 5; positive control: type 3/4/11 deliveries show up in the same table. Outcomes: target fn != 0x800E7860 -> H18; no dispatch row for the SEND -> H16; SEND type != 5 at dispatch -> H19.
+Also: capture lldb backtrace if the Bus error at far 0x37fffd040 recurs (queue the g1_fireall recipe as a soak).
+Run: env ROGUESQ_LOG_HITS=1 zsh scratch/agent/g1_fireall.sh s5859 300
 HYPOTHESIS-ID: g1-mission-progression
