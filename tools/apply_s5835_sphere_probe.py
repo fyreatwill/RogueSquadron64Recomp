@@ -28,16 +28,20 @@ static void rs5897_track(uint8_t* rdram, uint32_t pr, const float* pp) {
 }
 unsigned rs5897_dist2(uint32_t pr) { for (unsigned z = 0; z < rs5897_nL; z++) if (rs5897_L[z].pr == pr) { float q = 0; for (int i = 0; i < 3; i++) { float e = rs5897_L[z].l[i] - rs5897_L[z].s[i]; q += e*e; } return (unsigned)(sqrtf(q) * 100.0f); } return 0xFFFFFFFFu; }
 /* s5901 raw per-bolt-sample log: group = consecutive calls with identical pp; line at group end: cycle (gap>4ms), pp, |dd|, min sd2/r2 over the group's collider rows + that collider's id/centre/r2. Offline NN matching. */
-static struct { int on; float pp[3]; float dl; float best; float bc[4]; unsigned bid, rows; unsigned cyc; double tl; unsigned lines; } rs5901_S;
-static void rs5901_emit(void) { if (!rs5901_S.rows) return; if (rs5901_S.lines++ < 30000) fprintf(stderr, "[s5901] c=%u pp=%g,%g,%g len=%g rows=%u best_ratio=%g id=%x ctr=%g,%g,%g r2=%g\n", rs5901_S.cyc, rs5901_S.pp[0], rs5901_S.pp[1], rs5901_S.pp[2], sqrtf(rs5901_S.dl), rs5901_S.rows, rs5901_S.best, rs5901_S.bid, rs5901_S.bc[0], rs5901_S.bc[1], rs5901_S.bc[2], rs5901_S.bc[3]); rs5901_S.rows = 0; }
+static uint8_t* rs5901_rdram; static unsigned rs5901_c1f; static uint32_t rs5901_obj;
+static uint32_t rs5901_rw(uint32_t a) { return *(uint32_t*)(rs5901_rdram + (a - 0x80000000u)); }
+static unsigned rs5901_did(unsigned id) { uint32_t tb = rs5901_rw(0x80130BB0u), n = rs5901_rw(tb + id * 8), d = ((n >> 24) == 0x80) ? rs5901_rw(n + 0x34) : 0; return ((d >> 24) == 0x80) ? rs5901_rw(d + 0x78) : 0xDEADu; }
+static struct { int on; float pp[3]; float dl; float best; float bc[4]; unsigned bid, bc1, bdid; uint32_t bobj, rows; unsigned cyc; double tl; unsigned lines; } rs5901_S;
+static void rs5901_emit(void) { if (!rs5901_S.rows) return; if (rs5901_S.lines++ < 60000) fprintf(stderr, "[s5901] c=%u pp=%g,%g,%g len=%g rows=%u best_ratio=%g id=%x c1f=%u did=%x obj=%08x ctr=%g,%g,%g r2=%g\n", rs5901_S.cyc, rs5901_S.pp[0], rs5901_S.pp[1], rs5901_S.pp[2], sqrtf(rs5901_S.dl), rs5901_S.rows, rs5901_S.best, rs5901_S.bid, rs5901_S.bc1, rs5901_S.bdid, rs5901_S.bobj, rs5901_S.bc[0], rs5901_S.bc[1], rs5901_S.bc[2], rs5901_S.bc[3]); rs5901_S.rows = 0; }
 static void rs5901_sample(const float* pp, float dl, float sd2, const float* cc, unsigned id) {
     double now = rs5898_now(); float ratio = sd2 / (cc[3] > 0.0f ? cc[3] : 1.0f);
     int same = rs5901_S.rows && pp[0] == rs5901_S.pp[0] && pp[1] == rs5901_S.pp[1] && pp[2] == rs5901_S.pp[2];
     if (!same) { rs5901_emit(); if (now - rs5901_S.tl > 4.0) rs5901_S.cyc++; for (int i = 0; i < 3; i++) rs5901_S.pp[i] = pp[i]; rs5901_S.dl = dl; rs5901_S.best = 1e30f; }
-    rs5901_S.tl = now; rs5901_S.rows++; if (ratio < rs5901_S.best) { rs5901_S.best = ratio; rs5901_S.bid = id; for (int i = 0; i < 4; i++) rs5901_S.bc[i] = cc[i]; }
+    rs5901_S.tl = now; rs5901_S.rows++; if (ratio < rs5901_S.best) { rs5901_S.best = ratio; rs5901_S.bid = id; rs5901_S.bc1 = rs5901_c1f; rs5901_S.bdid = rs5901_did(id); rs5901_S.bobj = rs5901_obj; for (int i = 0; i < 4; i++) rs5901_S.bc[i] = cc[i]; }
 }
 static float rs5835_f(uint32_t w) { union { uint32_t u; float f; } x; x.u = w; return x.f; }
 static void rs5835_probe(uint8_t* rdram, recomp_context* ctx) {
+    rs5901_rdram = rdram;
     unsigned w = 0; /* s5855: who-classifier void (s5854); all bolts counted as w=0 */
     uint32_t c = (uint32_t)ctx->r2, p = (uint32_t)ctx->r6, d = (uint32_t)ctx->r7;
     if ((c >> 24) != 0x80 || (p >> 24) != 0x80 || (d >> 24) != 0x80) return;
@@ -59,6 +63,7 @@ static void rs5835_probe(uint8_t* rdram, recomp_context* ctx) {
         for (int i = 0; i < 3; i++) { union { float f; uint32_t u; } x; x.f = nf[i]; MEM_W(S32((int32_t)p), 4 * i) = (int32_t)x.u; pp[i] = nf[i]; }
         rs5839_tp++; if (rs5837_tele++ < 10) fprintf(stderr, "[sph] TELE obj=%08x ctr=(%g,%g,%g) r2=%g dir=(%g,%g,%g)\n", rs5839_obj, cc[0], cc[1], cc[2], cc[3], dd[0], dd[1], dd[2]);
     }
+    rs5901_c1f = c1f; rs5901_obj = rs5839_obj;
     float v[3] = {cc[0]-pp[0], cc[1]-pp[1], cc[2]-pp[2]};
     float v2 = v[0]*v[0]+v[1]*v[1]+v[2]*v[2], dl = dd[0]*dd[0]+dd[1]*dd[1]+dd[2]*dd[2], t = v[0]*dd[0]+v[1]*dd[1]+v[2]*dd[2];
     float ap2 = (dl > 0.0f) ? v2 - t*t/dl : v2; unsigned in = (ap2 <= cc[3]);

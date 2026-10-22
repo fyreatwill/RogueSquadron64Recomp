@@ -4,13 +4,21 @@ Per cycle c, samples (pp,len,best_ratio,id). Greedy NN match of cycle c samples 
 Reports: segment length stats, per-step displacement, track age histogram, positive control (#tracks age>=3),
 and per-track min over life of best_ratio (sd2/r2; <=1 means segment inside collider sphere)."""
 import re, sys, math, collections
-R = re.compile(r"\[s5901\] c=(\d+) pp=([^,]+),([^,]+),([^ ]+) len=(\S+) rows=(\d+) best_ratio=(\S+) id=(\S+) ctr=([^,]+),([^,]+),([^ ]+) r2=(\S+)")
+R = re.compile(r"\[s5901\] c=(\d+) pp=([^,]+),([^,]+),([^ ]+) len=(\S+) rows=(\d+) best_ratio=(\S+) id=(\S+) c1f=(\d+) did=(\S+) obj=(\S+) ctr=([^,]+),([^,]+),([^ ]+) r2=(\S+)")
 cyc = collections.defaultdict(list)
 for line in open(sys.argv[1], errors="replace"):
     m = R.search(line)
     if m:
-        g = m.groups(); cyc[int(g[0])].append(((float(g[1]), float(g[2]), float(g[3])), float(g[4]), float(g[6]), g[7], int(g[5])))
+        g = m.groups(); cyc[int(g[0])].append(((float(g[1]), float(g[2]), float(g[3])), float(g[4]), float(g[6]), g[7], int(g[8]), g[9], g[10], int(g[5])))
 print("cycles", len(cyc), "samples", sum(map(len, cyc.values())))
+best = [s for v in cyc.values() for s in v]
+print("best-at-sphere rows by c1f:", collections.Counter(s[4] for s in best))
+print("best-at-sphere rows by did:", collections.Counter(s[5] for s in best).most_common())
+print("best-at-sphere rows by collider owner:", collections.Counter(s[6] for s in best).most_common())
+print("positive-control best ids:", {x: sum(1 for s in best if s[3].lower() == x) for x in ("52", "66")})
+for x in ("52", "66", "cc", "1cc", "f1"):
+    rows = [s for s in best if s[3].lower() == x]
+    if rows: print("id", x, "c1f:", collections.Counter(s[4] for s in rows), "owners:", len(set(s[6] for s in rows)))
 lens = sorted(s[1] for v in cyc.values() for s in v)
 if lens: print("seg len p10/50/90/max", lens[len(lens)//10], lens[len(lens)//2], lens[9*len(lens)//10], lens[-1])
 tracks = []; live = []; steps = []
