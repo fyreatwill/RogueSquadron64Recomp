@@ -165599,3 +165599,4 @@ Result: (1) positive control: before the freeze (rows at +7..+45 s) and after A 
 Rules out: speed-product explanation of the freeze; +0xEC/+0xF0 as the throttle words. 
 ORIGIN: no mitigation machinery added (diagnostic only; the hook is passive, `[plw]` prints only under ROGUESQ_PLAYER_DUMP).
 Next: name who calls updatePlayerCraftPhysics (10 call sites in funcs_28/31/32, per-craft-type dispatch) and the gate that stops that dispatch in the frozen window while A restarts it.
+Discrimination (s5866): this run REFUTES H28a (speed-times-stick=0) and H28c, and SELECTS H28b (state gate skips the entire player update; selected hypothesis H28b). Next discriminator: per-caller entry counters for the 10 updatePlayerCraftPhysics callers plus the player node +0x14 flags at 1 Hz in one soak, with pre-freeze/post-A windows as positive control: caller runs but returns early -> H29b (read its branch); callers never run -> H29a/H29c (instrument the dispatcher).
