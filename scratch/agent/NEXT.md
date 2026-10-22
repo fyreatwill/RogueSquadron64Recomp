@@ -1,6 +1,5 @@
-# NEXT: G1 - s5849: how does a real run reach the WIN arm? Log c1/c10 over time in the invuln config.
-s5848: invuln (class-2 hits zeroed) keeps mission alive 722 s; control fails at c2=3 (vi 33765) then Bus error in teardown (m6/s5848c/run.log, si_addr=0x3c1b4bc0a).
-Hypotheses: H1 c1 climbs with flying/shooting objectives in invuln run and reaches 21 given time; H2 c1 plateaus at 8 (needs distinct bool ids / spawn trigger not reached by autopilot); H3 c10 (6) needs kills of a specific class.
-Step: add a periodic (every ~300 vi, ROGUESQ_LOG_HUDBIT) [m47c] line of getObjectiveCount(1),(2),(10) from an existing hook (apply_s5847_mask_log.py anchor, e.g. lv0_checkComplexObjectives entry); run invuln arm 720 s + positive control that the control run's c2 line still reads 3 at fail.
-Secondary: backtrace the post-endMissionCleanup Bus error (lldb or CRASH stack in s5848c/run.log) and name the writer of the 0x3c1b4bc0a pointer.
+# NEXT: G1 - s5850: what increments objective counters 1 and 10, and which of the 21/6 needed are missing?
+s5849: invuln run c1 plateaus at 8, c10=0, c2=0 over 723 s hold (m6/s5849i). Win arm needs c1>=21 or c10>=6.
+Hypotheses: H1 c1 increments come from specific object-kill classes (autopilot kills 8 of them, then runs out of targets in reach); H2 c1 increments are tied to scripted triggers (waves spawn by position/time) the autopilot never reaches; H3 c10 is a different event (e.g. rescue/escort completion).
+Discriminating measurement: one build logging every writer of 0x8013805C+4 and +40 (setter fn, caller via backtrace, id args) with vi; find setter via grep of funcs for stores to 0x8013805C/0x80138060 region (existing getObjectiveCount/setObjective fn). Compare setter's callers at the 8 increments vs c10 callers (static: who calls with idx 10).
 HYPOTHESIS-ID: g1-mission-progression

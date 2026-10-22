@@ -165462,3 +165462,11 @@ Ran the existing ROGUESQ_NPC_INVULN=1 lever (tools/apply_s5806_npc_invuln.py, al
 - New datum: post-endMissionCleanup Bus error in the control (the mission-end teardown path crashes). Single-source (1 run); backtrace in m6/s5848c/run.log.
 - Not yet: win path (c1>=21 or c10>=6) still unreached; the invuln run is a probe, not a pass.
 ORIGIN: no mitigation machinery added this session (test-only lever pre-existing).
+
+## Session 5849 (2026-10-21) — invuln run: objective counter 1 plateaus at 8 (from vi 34558), counter 10 stays 0; win arm unreachable by autopilot
+Added tools/apply_s5849_cnt_log.py ([m47c] every 120 calls of lv0_checkComplexObjectives: c1,c2,c10,vi under ROGUESQ_LOG_HUDBIT; hooked in fixup_game_funcs_vendored.py for funcs_43.c, built). Ran `env ROGUESQ_TELE_BOLT=1 ROGUESQ_NPC_INVULN=1 zsh scratch/agent/g1_fire.sh s5849i 720` (m6/s5849i): mission at 83 s, hold 723 s, alive_at_end=1, 0 stalls, 0 crashlines.
+Positive control: 80 [m47c] lines (instrument fires) and 20 [npcinv] (lever fires); c2 stayed 0 all run (agrees with s5848 invuln arm; control c2=3 arm from s5848c).
+Result (single run): c1 climbs 0->1 (vi 6286)->3 (17651)->6 (24448)->8 (by 34558) and then sits at 8 for ~13000 VI to vi 47562; c10 = 0 throughout.
+Discrimination: SELECTS H2 (c1 plateau at 8: needs more distinct objective triggers than autopilot produces); REFUTES H1 (c1 does not reach 21 given time); H3 (c10 needs a specific-class kill) untested but c10 never moved without it.
+Next: identify what increments c1 (setter sites/ids) and what the remaining 13 need; and what raises c10.
+ORIGIN: no mitigation machinery added (log-only).
