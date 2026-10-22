@@ -236,3 +236,5 @@ Msg-5 sender = audioCueDispatcherNpcHandler projectile loop (0x8005D1C8-0x8005D3
 
 - s5870: held-START bleed (H31c) supported - with AP_HOLD=600 no beginMissionEndTransition fires and the mission runs 187 s w/o VI stall; it ends via endMissionCleanup (requester unnamed). The end-of-run Bus error far=0x3c2bc0000 is the s5818 HUDBIT diagnostic (rs5818_log), not a game crash; guard lands at next regen.
 - **s5883 (top, single-run + s5833):** class-2 kills under held fire are NPC bolts (12/12 N, 0 P); class-2 desc set varies per run. Next: why fire provokes NPC fire on class-2 (NEXT.md).
+
+- **s5884 correction:** s5883's "class-2 kills = NPC bolts (12/12 N)" is superseded — its hook capped at 12 sends (all before el=105 s; class-2 kills start el 319 s). Uncapped: 656 msg-5 SENDs, 0 hit a descriptor-bearing node; class-2 kills come via another destroy caller (unidentified). Next: log caller $ra at destroyNpcSlotByIndex for class-2.
