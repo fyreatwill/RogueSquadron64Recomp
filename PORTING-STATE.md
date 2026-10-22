@@ -165884,3 +165884,5 @@ Built tools/apply_s5907_hitobj.py (+ funcs_13.c RET hook): rs5907_hitobj = objec
 Result: RET attribution agree=176 nohit=0 disagree=0 (positive control: every RET has a fine-hit object, hret sums = 176 = ret sums). So RET-by-class is real: 80323f58 fine-hits 627 -> RET 6; 80330c5c 798 -> 165; 80331158 11 -> 2; 80330b74 94 -> 0. findSegmentObjectSphereHit (0x8006AB4C) returns 1 on every fine hit, so the discard happens in its CALLER / the RET gate, not in the sphere or node tests. H-attr, H-size, H-filter refuted; H-caller selected (H-late still open).
 ORIGIN: n/a (diagnostic only; no mitigation added).
 Next: find who calls 0x8006AB78-ish wrapper's return/loop in intersectSegmentWithObject and tally return value consumption per class (team/owner/id compare).
+
+Gate wording (s5907): this result refutes H-attr (176 agree / 0 disagree) and selects H-caller over H-late; the next discriminator is a per-class tally in the caller of return value, shooter (rs5834_who) and accept-branch taken, with positive control accepted == 176 RETs.
