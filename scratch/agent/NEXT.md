@@ -1,5 +1,4 @@
-# NEXT: G1 - s5877: find the upstream writer that arms the player's 0.5 s crash fuse
-Hypotheses: (a) legit ground impact (y descends smoothly from altitude); (c) wrong terrain/y (y snaps below terrain, or terrain query too high).
-Measure: grep stores to 0x184($reg) in N64Recomp/RecompiledFuncs/funcs_*.c (swc1/sw), identify the one that writes 0.5 with flags|=0x10 for slot 0; log y, terrain(0x80067D90 result), speed, caller ra there (ROGUESQ_LOG_MTM), one build, one run of the s5876 recipe (scratch/agent/g1_pos_pdump.sh, AP_TITLE_N=17 AP_HOLD=600).
-Control: [bit1] a0=1 fires in same run and the new log precedes it.
+# NEXT: G1 - s5877 read [fzw] from soak s5877_fusewatch (queued; log scratch/agent/m6/s5877_fusewatch/run.log + soak_results)
+grep -a '\[fzw\]\|\[bit1\]\|\[plpos\]' run.log: find the first non-decrement (pc != 0x800B1080/10D8) writer of a=80137F40 (timer) / 80137F3C (flags) before each [bit1]; read its ra/fn and y vs plpos.
+Hypotheses: (a) legit ground impact (y descends smoothly) (c) wrong terrain/y. Control: dec writer lines present (dec= counter) in the same run. Then disassemble the writer's fn and name the condition.
 HYPOTHESIS-ID: g1-mission-progression
