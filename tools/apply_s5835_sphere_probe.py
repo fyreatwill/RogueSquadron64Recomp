@@ -6,19 +6,23 @@ import pathlib
 base = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
 T = "PATCH: s5835 sphere probe"
 H = r'''/* PATCH: s5835 helpers */
+#include <time.h>
 extern unsigned rs5834_who; extern unsigned rs5856_cin;
 static unsigned rs5835_sin[2], rs5835_sinp[2], rs5835_n[2], rs5835_in[2], rs5835_zc[2], rs5835_tot, rs5835_inprint; static float rs5835_min[2] = {1e30f, 1e30f}, rs5835_minr2[2], rs5835_minsd[2] = {1e30f, 1e30f}, rs5835_minsdr2[2]; static unsigned rs5835_mp[2]; static unsigned rs5837_tele, rs5837_en = 2, rs5837_cnt;
 extern uint32_t rs5841_cand; static unsigned rs5841_cl[2][5];
 static uint32_t rs5839_obj; static unsigned rs5839_cl[5], rs5839_tp, rs5839_tpc; 
 extern uint32_t rs5856_proj;
-/* s5897 bolt-life tracker: per projectile ptr, life-start pos, max dist^2 from start; histogram of life max dist at life end; hit distances */
-static struct { uint32_t pr; float s[3], l[3], md2; unsigned n; } rs5897_L[32]; static unsigned rs5897_nL, rs5897_hist[8], rs5897_lives, rs5897_hn;
-static void rs5897_flush(unsigned z) { float d = sqrtf(rs5897_L[z].md2); unsigned b = d < 1 ? 0 : d < 2 ? 1 : d < 4 ? 2 : d < 8 ? 3 : d < 16 ? 4 : d < 32 ? 5 : d < 64 ? 6 : 7; rs5897_hist[b]++; rs5897_lives++; if ((rs5897_lives & 63) == 0) fprintf(stderr, "[s5897] life maxdist hist <1,<2,<4,<8,<16,<32,<64,>=64: %u %u %u %u %u %u %u %u lives=%u\n", rs5897_hist[0], rs5897_hist[1], rs5897_hist[2], rs5897_hist[3], rs5897_hist[4], rs5897_hist[5], rs5897_hist[6], rs5897_hist[7], rs5897_lives); }
-static void rs5897_track(uint32_t pr, const float* pp) {
+/* s5897/s5898 bolt-life tracker: per projectile ptr, life-start pos, max dist^2 from start; histogram of life max dist at life end; hit distances; s5898: object word snapshots (0x80 B) at start/last sample, diff dumped at life end, hist2 excludes n<3 lives */
+static struct { uint32_t pr; float s[3], l[3], md2; unsigned n; uint32_t w0[32], w1[32]; double t0, t1; } rs5897_L[32]; static double rs5898_now(void) { struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts); return ts.tv_sec * 1e3 + ts.tv_nsec / 1e6; } static unsigned rs5898_dth[6]; static unsigned rs5897_nL, rs5897_hist[8], rs5897_hist2[8], rs5897_lives, rs5897_lives2, rs5897_hn, rs5898_nd;
+static void rs5897_flush(unsigned z) { float d = sqrtf(rs5897_L[z].md2); unsigned b = d < 1 ? 0 : d < 2 ? 1 : d < 4 ? 2 : d < 8 ? 3 : d < 16 ? 4 : d < 32 ? 5 : d < 64 ? 6 : 7; rs5897_hist[b]++; rs5897_lives++;
+    if (rs5897_L[z].n >= 3) { { double dt = rs5897_L[z].t1 - rs5897_L[z].t0; rs5898_dth[dt < 20 ? 0 : dt < 40 ? 1 : dt < 80 ? 2 : dt < 160 ? 3 : dt < 500 ? 4 : 5]++; } rs5897_hist2[b]++; rs5897_lives2++; if ((d >= 1.0f || rs5898_nd < 8) && rs5898_nd < 40) { rs5898_nd++; fprintf(stderr, "[s5898] life pr=%08x n=%u maxd=%g dt_ms=%.1f diff:", rs5897_L[z].pr, rs5897_L[z].n, d, rs5897_L[z].t1 - rs5897_L[z].t0); for (int i = 0; i < 32; i++) if (rs5897_L[z].w0[i] != rs5897_L[z].w1[i]) fprintf(stderr, " +%x:%08x>%08x", 4*i, rs5897_L[z].w0[i], rs5897_L[z].w1[i]); fprintf(stderr, " | start:"); for (int i = 0; i < 32; i++) fprintf(stderr, " %x", rs5897_L[z].w0[i]); fprintf(stderr, "\n"); } }
+    if ((rs5897_lives & 63) == 0) { fprintf(stderr, "[s5897] life maxdist hist <1,<2,<4,<8,<16,<32,<64,>=64: %u %u %u %u %u %u %u %u lives=%u\n", rs5897_hist[0], rs5897_hist[1], rs5897_hist[2], rs5897_hist[3], rs5897_hist[4], rs5897_hist[5], rs5897_hist[6], rs5897_hist[7], rs5897_lives); fprintf(stderr, "[s5898] hist(n>=3): %u %u %u %u %u %u %u %u lives=%u dt_ms hist <20,<40,<80,<160,<500,>=500: %u %u %u %u %u %u\n", rs5897_hist2[0], rs5897_hist2[1], rs5897_hist2[2], rs5897_hist2[3], rs5897_hist2[4], rs5897_hist2[5], rs5897_hist2[6], rs5897_hist2[7], rs5897_lives2, rs5898_dth[0], rs5898_dth[1], rs5898_dth[2], rs5898_dth[3], rs5898_dth[4], rs5898_dth[5]); } }
+static void rs5897_track(uint8_t* rdram, uint32_t pr, const float* pp) {
     unsigned z; for (z = 0; z < rs5897_nL; z++) if (rs5897_L[z].pr == pr) break;
     if (z == rs5897_nL) { if (z >= 32) return; rs5897_L[z].pr = pr; rs5897_L[z].n = 0; rs5897_nL++; }
-    if (rs5897_L[z].n) { float q = 0; for (int i = 0; i < 3; i++) { float e = pp[i] - rs5897_L[z].l[i]; q += e*e; } if (q > 36.0f || (q > 0 && 0)) { rs5897_flush(z); rs5897_L[z].n = 0; } }
-    if (!rs5897_L[z].n) { for (int i = 0; i < 3; i++) rs5897_L[z].s[i] = pp[i]; rs5897_L[z].md2 = 0; }
+    if (rs5897_L[z].n) { float q = 0; for (int i = 0; i < 3; i++) { float e = pp[i] - rs5897_L[z].l[i]; q += e*e; } if (q > 36.0f) { rs5897_flush(z); rs5897_L[z].n = 0; } }
+    if (!rs5897_L[z].n) { for (int i = 0; i < 3; i++) rs5897_L[z].s[i] = pp[i]; rs5897_L[z].md2 = 0; rs5897_L[z].t0 = rs5898_now(); for (int i = 0; i < 32; i++) rs5897_L[z].w0[i] = (uint32_t)MEM_W(S32((int32_t)pr), 4 * i); }
+    rs5897_L[z].t1 = rs5898_now(); for (int i = 0; i < 32; i++) rs5897_L[z].w1[i] = (uint32_t)MEM_W(S32((int32_t)pr), 4 * i);
     rs5897_L[z].n++; float q = 0; for (int i = 0; i < 3; i++) { rs5897_L[z].l[i] = pp[i]; float e = pp[i] - rs5897_L[z].s[i]; q += e*e; } if (q > rs5897_L[z].md2) rs5897_L[z].md2 = q;
 }
 unsigned rs5897_dist2(uint32_t pr) { for (unsigned z = 0; z < rs5897_nL; z++) if (rs5897_L[z].pr == pr) { float q = 0; for (int i = 0; i < 3; i++) { float e = rs5897_L[z].l[i] - rs5897_L[z].s[i]; q += e*e; } return (unsigned)(sqrtf(q) * 100.0f); } return 0xFFFFFFFFu; }
@@ -30,7 +34,7 @@ static void rs5835_probe(uint8_t* rdram, recomp_context* ctx) {
     float cc[4], pp[3], dd[3];
     for (int i = 0; i < 4; i++) cc[i] = rs5835_f((uint32_t)MEM_W(S32((int32_t)c), 4 * i));
     for (int i = 0; i < 3; i++) { pp[i] = rs5835_f((uint32_t)MEM_W(S32((int32_t)p), 4 * i)); dd[i] = rs5835_f((uint32_t)MEM_W(S32((int32_t)d), 4 * i)); }
-    if ((rs5856_proj >> 24) == 0x80) rs5897_track(rs5856_proj, pp); /* s5897 */
+    if ((rs5856_proj >> 24) == 0x80) rs5897_track(rdram, rs5856_proj, pp); /* s5897 */
     if (rs5837_en == 2) { const char* e = getenv("ROGUESQ_TELE_BOLT"); rs5837_en = (e && e[0] == '1'); }
     unsigned c1f = 0; unsigned k39 = 99; { /* s5841: class of the loop's candidate NPC via slot table *0x80130BB0 id*8 */
         uint32_t tb = (uint32_t)MEM_W(S32((int32_t)0x80130BB0u), 0); uint32_t n = (uint32_t)MEM_W(S32((int32_t)(tb + (rs5841_cand & 0xFFFF) * 8)), 0);
@@ -109,7 +113,7 @@ def apply(text, name=None):
         i = text.find("[s5856] RET id"); j = text.find("); }", i) + 4
         text = text[:j] + ' { static unsigned hn; if (hit && hn++ < 60) fprintf(stderr, "[s5897] HITDIST id=%x life_dist_x100=%u\\n", id, rs5897_dist2(rs5856_proj)); }' + text[j:]; n += 1
     if FN not in text: return text, n
-    if "rs5897_track" not in text and "PATCH: s5835 helpers" in text:
+    if "#include <time.h>\nextern unsigned rs5834_who" not in text and "PATCH: s5835 helpers" in text:
         a = text.find("/* PATCH: s5835 helpers */"); b = text.find(FN)
         text = text[:a] + H + text[b:]; n += 1
     if "rs5839_obj = " not in text:
