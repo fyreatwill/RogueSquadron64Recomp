@@ -1,7 +1,7 @@
-# NEXT (s5917): bearing-to-nearest-class-1 sphere from s5901 rows (offline first)
+# NEXT (s5918): confirm what [s5901] pp is
 
 HYPOTHESIS-ID: g1-mission-progression
 
-s5916: open-loop stick windows did not raise class-1 crossings (3 vs 11 control). s5901 rows carry pp (player pos) and ctr (sphere centre) per row.
-Work unit: offline on scratch/agent/m6/s5915_steer/run.log, for c1f=1 rows compute the bearing (xz) from pp to ctr and distance; tabulate vs plpos heading/velocity direction. Outcome: if class-1 spheres lie consistently off the ship's travel axis by a stable angle, derive the stick direction for a closed-loop steer script; if scattered, spheres are not aim targets and H-aim is closed.
-Control: the 11 control-window crossings must show distance<=radius by the same calc.
+s5917: bearing of class-1 sphere centres relative to pp travel is flat (tools/s5917_bearing.py). If pp is a bolt/segment position (not the ship), this does not test ship-aim.
+Work unit: grep tools/apply_s5835_sphere_probe.py (and the s5901 emitter) for what pp is. If ship: H-aim closed, move to G1 next unmet item. If bolt: redo bearing using [plpos] ship position joined by log order (s5916_tally.py has the join), same hist; flat again => H-aim closed.
+Control: c1f=0 hist shape must be reproduced.

@@ -270,3 +270,4 @@ Msg-5 sender = audioCueDispatcherNpcHandler projectile loop (0x8005D1C8-0x8005D3
 - s5889 (single run per arm): with class-2 invulnerable (INVULN positive control 20 hits) c1 still plateaus at 8 of 21, mission alive 600 s. The class-2 fail arm is NOT the c1 cap. Open: (b) reachability/aim vs (c) shield semantics.
 
 - s5916 (single-source): on the NO_CRASH steer run, open-loop stick windows gave 3 class-1 crossings in 6 windows vs 11 in 4 A-only windows; blind steering does not raise crossings. Next: closed-loop bearing from the player dump (tools/agent/s5916_tally.py is the tally).
+- s5917: class-1 bearing vs pp travel flat (n=398); H-aim unsupported pending pp identity check (NEXT.md).
