@@ -58,6 +58,17 @@ static void rs5835_probe(uint8_t* rdram, recomp_context* ctx) {
         if (k39 > 3) k39 = 4; rs5841_cl[w][k39]++; if ((rs5835_tot & 4095) == 0) fprintf(stderr, "[s5841] cand-class tally P=%u/%u/%u/%u/%u N=%u/%u/%u/%u/%u tele=%u\n", rs5841_cl[0][0], rs5841_cl[0][1], rs5841_cl[0][2], rs5841_cl[0][3], rs5841_cl[0][4], rs5841_cl[1][0], rs5841_cl[1][1], rs5841_cl[1][2], rs5841_cl[1][3], rs5841_cl[1][4], rs5839_tp); }
     { uint32_t o = rs5839_obj, dd0 = ((o >> 24) == 0x80) ? (uint32_t)MEM_W(S32((int32_t)o), 0x34) : 0; if ((dd0 >> 24) == 0x80) k39 = (unsigned)MEM_W(S32((int32_t)dd0), 0x70); if (w == 0) rs5839_cl[k39 < 4 ? k39 : 4]++; if (w == 0 && rs5839_tpc++ < 12) fprintf(stderr, "[sph39] P obj=%08x desc=%08x cls=%u\n", o, dd0, k39); if ((rs5835_tot & 4095) == 0) fprintf(stderr, "[sph39] P class tally c0=%u c1=%u c2=%u c3=%u other=%u tele=%u\n", rs5839_cl[0], rs5839_cl[1], rs5839_cl[2], rs5839_cl[3], rs5839_cl[4], rs5839_tp); }
     { static unsigned nd[2]; if (((rs5839_obj >> 24) == 0x80) && nd[w] < 40) { nd[w]++; fprintf(stderr, "[own40] %s obj=%08x w=", w ? "N" : "P", rs5839_obj); for (int q = 0; q < 0x100; q += 4) fprintf(stderr, "%08X ", (unsigned)MEM_W(S32((int32_t)rs5839_obj), q)); fprintf(stderr, "\n"); } } /* s5840 owner dump */ /* s5841 c1f */
+    { /* s5903 owner join: per distinct (cand id, obj) pair, link tests between collider obj and slot node n / descriptor */
+        static struct { unsigned id; uint32_t obj; } S3[256]; static unsigned nS3; unsigned id3 = rs5841_cand & 0xFFFF, z3; uint32_t o3 = rs5839_obj;
+        if ((o3 >> 24) == 0x80) { for (z3 = 0; z3 < nS3; z3++) if (S3[z3].id == id3 && S3[z3].obj == o3) break;
+          if (z3 == nS3 && nS3 < 256) { S3[nS3].id = id3; S3[nS3].obj = o3; nS3++;
+            uint32_t tb3 = (uint32_t)MEM_W(S32((int32_t)0x80130BB0u), 0), n3 = (uint32_t)MEM_W(S32((int32_t)(tb3 + id3 * 8)), 0), d3 = 0, k3 = 0xFFFF, f3 = 0; unsigned lk_n = 0, lk_d = 0, np = 0;
+            if ((n3 >> 24) == 0x80) { f3 = (uint32_t)MEM_W(S32((int32_t)n3), 0); d3 = (uint32_t)MEM_W(S32((int32_t)n3), 0x34); if (d3 >= 0x80300000u && d3 < 0x80330000u) k3 = (uint32_t)MEM_W(S32((int32_t)d3), 0x70); }
+            for (int q = 0; q < 0x100; q += 4) { uint32_t x = (uint32_t)MEM_W(S32((int32_t)o3), q); if (x == n3 && n3) lk_n |= 1u << (q / 8 > 31 ? 31 : q / 8 % 32); if (x == d3 && d3) lk_d = 1; if ((x >> 24) == 0x80 && x < 0x80800000u) np++; }
+            fprintf(stderr, "[own53] id=%x obj=%08x w0=%08x w4=%08x n=%08x f=%08x d34=%08x cls=%x c1f=%u lk_n=%x lk_d=%u nptr=%u pairs=%u", id3, o3, (unsigned)MEM_W(S32((int32_t)o3), 0), (unsigned)MEM_W(S32((int32_t)o3), 4), n3, f3, d3, k3, c1f, lk_n, lk_d, np, nS3);
+            for (int q = 0; q < 0x100; q += 4) { uint32_t x = (uint32_t)MEM_W(S32((int32_t)o3), q); if ((x >> 24) == 0x80 && x < 0x80800000u && x != o3) fprintf(stderr, " +%x=%08x{0=%x,34=%x,70=%x}", q, x, (unsigned)MEM_W(S32((int32_t)x), 0), (unsigned)MEM_W(S32((int32_t)x), 0x34), (unsigned)MEM_W(S32((int32_t)x), 0x70)); }
+            fprintf(stderr, "\n"); } }
+    } /* s5903 */
     if (rs5837_en && w == 0 && cc[3] > 0.0f && c1f && (rs5837_cnt++ & 3) == 0) { /* s5837: force bolt segment through shape centre */
         float nf[3] = {cc[0]-0.5f*dd[0], cc[1]-0.5f*dd[1], cc[2]-0.5f*dd[2]};
         for (int i = 0; i < 3; i++) { union { float f; uint32_t u; } x; x.f = nf[i]; MEM_W(S32((int32_t)p), 4 * i) = (int32_t)x.u; pp[i] = nf[i]; }
@@ -86,11 +97,25 @@ static void rs5835_probe(uint8_t* rdram, recomp_context* ctx) {
     if ((rs5835_tot & 4095) == 0) fprintf(stderr, "[sph] summary P n=%u in=%u segin=%u zeroctr=%u minap2=%g minsd2=%g(r2=%g) | N n=%u in=%u segin=%u zeroctr=%u minap2=%g minsd2=%g(r2=%g)\n", rs5835_n[0], rs5835_in[0], rs5835_sin[0], rs5835_zc[0], rs5835_min[0], rs5835_minsd[0], rs5835_minsdr2[0], rs5835_n[1], rs5835_in[1], rs5835_sin[1], rs5835_zc[1], rs5835_min[1], rs5835_minsd[1], rs5835_minsdr2[1]);
 }
 '''
+S5903 = r'''    { /* s5903 owner join: per distinct (cand id, obj) pair, link tests between collider obj and slot node n / descriptor */
+        static struct { unsigned id; uint32_t obj; } S3[256]; static unsigned nS3; unsigned id3 = rs5841_cand & 0xFFFF, z3; uint32_t o3 = rs5839_obj;
+        if ((o3 >> 24) == 0x80) { for (z3 = 0; z3 < nS3; z3++) if (S3[z3].id == id3 && S3[z3].obj == o3) break;
+          if (z3 == nS3 && nS3 < 256) { S3[nS3].id = id3; S3[nS3].obj = o3; nS3++;
+            uint32_t tb3 = (uint32_t)MEM_W(S32((int32_t)0x80130BB0u), 0), n3 = (uint32_t)MEM_W(S32((int32_t)(tb3 + id3 * 8)), 0), d3 = 0, k3 = 0xFFFF, f3 = 0; unsigned lk_n = 0, lk_d = 0, np = 0;
+            if ((n3 >> 24) == 0x80) { f3 = (uint32_t)MEM_W(S32((int32_t)n3), 0); d3 = (uint32_t)MEM_W(S32((int32_t)n3), 0x34); if (d3 >= 0x80300000u && d3 < 0x80330000u) k3 = (uint32_t)MEM_W(S32((int32_t)d3), 0x70); }
+            for (int q = 0; q < 0x100; q += 4) { uint32_t x = (uint32_t)MEM_W(S32((int32_t)o3), q); if (x == n3 && n3) lk_n |= 1u << (q / 8 > 31 ? 31 : q / 8 % 32); if (x == d3 && d3) lk_d = 1; if ((x >> 24) == 0x80 && x < 0x80800000u) np++; }
+            fprintf(stderr, "[own53] id=%x obj=%08x w0=%08x w4=%08x n=%08x f=%08x d34=%08x cls=%x c1f=%u lk_n=%x lk_d=%u nptr=%u pairs=%u", id3, o3, (unsigned)MEM_W(S32((int32_t)o3), 0), (unsigned)MEM_W(S32((int32_t)o3), 4), n3, f3, d3, k3, c1f, lk_n, lk_d, np, nS3);
+            for (int q = 0; q < 0x100; q += 4) { uint32_t x = (uint32_t)MEM_W(S32((int32_t)o3), q); if ((x >> 24) == 0x80 && x < 0x80800000u && x != o3) fprintf(stderr, " +%x=%08x{0=%x,34=%x,70=%x}", q, x, (unsigned)MEM_W(S32((int32_t)x), 0), (unsigned)MEM_W(S32((int32_t)x), 0x34), (unsigned)MEM_W(S32((int32_t)x), 0x70)); }
+            fprintf(stderr, "\n"); } }
+    } /* s5903 */
+'''
 FN = "RECOMP_FUNC void intersectSegmentWithObjectSphere("
 CAP = "    transformObjectColliderCenter(rdram, ctx);\n        goto after_0;"
 ANC = "    after_0:\n    // 0x8006AE68: mfc1        $t0, $f20\n"
 def apply(text, name=None):
     n = 0
+    if "/* s5903 */" not in text and " /* s5840 owner dump */ /* s5841 c1f */\n" in text:
+        text = text.replace(" /* s5840 owner dump */ /* s5841 c1f */\n", " /* s5840 owner dump */ /* s5841 c1f */\n" + S5903, 1); n += 1
     if "static float rs5834_pt[3]" in text and "unsigned rs5834_who = 2;" not in text:
         a = "rs5834_sh[8]; static unsigned rs5834_who, "
         assert a in text
