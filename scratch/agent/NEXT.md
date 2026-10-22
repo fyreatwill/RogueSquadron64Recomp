@@ -1,7 +1,6 @@
-# NEXT: G1 — who sets slot +0x14 bit 3 (destroy request) for class-1 NPCs in lv0?
-s5816: +0x1A is a reentrancy depth, no timeout exists; destroy = depth 0 && (+0x14 & 8). Flag set post-update 3083x/405 s.
-Hypotheses: (a) the NPC's own update fn sets bit 3 (self-despawn by design, e.g. distance/off-screen/age in its own state); (b) an external setter (damage/kill handler or level script) sets it; (c) a port divergence makes a setter fire early (e.g. bad range/visibility compare).
-Discriminator (one build, one run): trace every store that sets bit 3 of a slot's +0x14 (grep generated code for `MEM_H(0X14` stores / sh to 0x14 off slot regs; add RS64_S5798_ST-like hook logging pc, slot, class(+0x70 via NPC) and a backtrace for the first 8 distinct pcs). Positive control: total sets ~3000/405 s match [slotpost] flag8 count.
-Outcomes: one dominant pc inside NPC update (a) -> read its condition vs retail; setter from kill/handler path (b) -> follow to what drives it; condition inputs look wrong (c) -> fix input.
-Command: scratch/agent/g1_inv1.sh <tag> 400 with instrument in a tools/apply_s58xx_*.py fixup script.
+# NEXT: G1 — why do class-1 NPCs reach destroy (msg 2 silent, 47/54) instead of the counted kill (msg 5)?
+s5817: bit-3 setters are all self-despawn calls from each object's own update fn (bulk = effects). Class-1 subset callers: npcGroundTroopUpdate (45), npcProbeDriod (56), npcWakeUpdate (17), npcWingmanUpdate (4).
+Hypotheses: (a) destroy follows health<=0 via a path that skips the counted msg 5 (port divergence in the kill-message send); (b) destroy by distance/off-screen/age condition inside the NPC update (design); (c) destroy because a shared state (e.g. wave timer/sibling) was mis-evaluated.
+Discriminator (one build, one run): at the destroyNpcSlotByIndex call sites inside npcGroundTroopUpdate and npcProbeDriod (extend tools/apply_s5817_bit3_setters.py with per-caller site pc via backtrace address offset), log the NPC's health word, distance to player, and last damage source at destroy time. Control: s5817 counts (45/56 per 405 s) reproduce. Outcomes: health<=0 at all -> (a), follow why msg 5 is not sent; health>0 with distance large -> (b) compare threshold to retail; neither -> (c).
+Command: zsh scratch/agent/g1_inv1.sh <tag> 400
 HYPOTHESIS-ID: g1-mission-progression

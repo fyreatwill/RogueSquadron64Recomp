@@ -47,6 +47,7 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   P(0/28 | p=1/7) ~1.4%; hypothesis, no writer named).
 
 - **G1 lv0 evidence chain (s5799-s5813, detail migrated):** projectile-direction block is live (H8b/H10b: firing object's mesh attachment); real-input holds are stable 600 s with no win (s5804/s5805); counter 1 (class-1 NPC kills) climbs only via npcProbeDriod teardown (8 sets), 47/54 class-1 NPCs get msg 2 (silent destroy) vs 8 msg 5 (counted) (s5811-s5813). See s5814 note below.
+- **G1 bit-3 setters (s5817):** slot +0x14 bit 3 is set only by destroyNpcSlotByIndex (13 callers, each its own update fn; bulk = effects/debris/audio cues) and a grid setter that never touches NPCs. Class-1 NPC subset: npcGroundTroopUpdate 45, npcProbeDriod 56, npcWakeUpdate 17, npcWingmanUpdate 4 of 3032 sets. No external setter. Open: are those destroys legitimate (health<=0) or early?
 ## Active M6 thread (summary; detail migrated)
 - Unpoked mission end ~+342 s is the LOSE arm (bool 0x64/0x65, b14=2, same-level restart; s5627). Hypotheses S/T/R/O refuted; bool 7 is a level-F dialogue flag (sayWhoaHim_v0x1FC), not a port defect (s5694). Voice requests, alloc, pool and decode all run in the port (s5641-s5666); missing dialogue is downstream, at decoder output (G2).
 

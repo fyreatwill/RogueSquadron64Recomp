@@ -37770,6 +37770,14 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5813 npc fate x{_n5813}")
 
+    if p.name in ("funcs_8.c", "funcs_10.c"):
+        import apply_s5817_bit3_setters as _a5817
+        _fn5817 = _a5817.apply8 if p.name == "funcs_8.c" else _a5817.apply10
+        text, _n5817 = _fn5817(text)
+        if _n5817:
+            changed = True
+            report.append(f"{p.name}: s5817 bit3 setters x{_n5817}")
+
     if p.name == "funcs_8.c":
         import apply_s5816_slot_expiry as _a5816
         text, _n5816 = _a5816.apply(text)
@@ -41413,6 +41421,7 @@ RS64_REPLAY = [
     "apply_s5812_npc_spawn_class.py",
     "apply_s5813_npc_fate.py",
     "apply_s5816_slot_expiry.py",
+    "apply_s5817_bit3_setters.py",
     "apply_s5810_npc_supply.py",
     "apply_s5794_shooter.py",
     "apply_s5797_aim.py",
