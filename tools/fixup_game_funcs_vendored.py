@@ -37785,6 +37785,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5818 gt label x{_n5818b}")
 
+    if p.name == "funcs_10.c":
+        import apply_s5818_destroy_health as _a5819
+        text, _n5819 = _a5819.apply10(text)
+        if _n5819:
+            changed = True
+            report.append(f"{p.name}: s5819 range inputs x{_n5819}")
+
     if p.name == "funcs_8.c":
         import apply_s5818_destroy_health as _a5818
         text, _n5818 = _a5818.apply8(text)

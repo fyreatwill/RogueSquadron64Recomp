@@ -58,3 +58,37 @@ def apply39(text):
         body = body.replace(L, L + "    { /* PATCH: s5818 gt label */ rs5818_gt(rdram, ctx); }\n")
         text = text[:i] + body + text[j:]; n += 1
     return text, n
+
+# ---- part 3 (s5819): isPointXzWithinRangeOfRef inputs ----
+H10 = r'''/* PATCH: s5819 range helpers */
+extern volatile uint32_t rs64_vi_n_g;
+extern void getCraftRecordByIdx(uint8_t* rdram, recomp_context* ctx);
+static struct { uint32_t ra; unsigned in, out, shown[2]; } rs5819_b[8]; static unsigned rs5819_n;
+static void rs5819_rng(uint8_t* rdram, recomp_context* ctx) {
+    static int e = -1; if (e < 0) { const char* v = getenv("ROGUESQ_LOG_HUDBIT"); e = (v && v[0]) ? 1 : 0; } if (!e) return;
+    uint32_t ra = (uint32_t)ctx->r31, ref = (uint32_t)ctx->r4, pt = (uint32_t)ctx->r5;
+    if (ref < 0x80000000u || ref >= 0x80800000u || pt < 0x80000000u || pt >= 0x80800000u) return;
+    float rx, rz, px, pz, sc, th; uint32_t w;
+    w = MEM_W((int32_t)ref, 0); memcpy(&rx, &w, 4); w = MEM_W((int32_t)ref, 8); memcpy(&rz, &w, 4);
+    w = MEM_W((int32_t)pt, 0); memcpy(&px, &w, 4); w = MEM_W((int32_t)pt, 8); memcpy(&pz, &w, 4);
+    w = MEM_W((int32_t)0x8003A7D4, 0); memcpy(&sc, &w, 4); w = MEM_W((int32_t)0x8003A7D8, 0); memcpy(&th, &w, 4);
+    float dx = (rx - px) * sc, dz = (rz - pz) * sc; float d2 = dx * dx + dz * dz; int res = !(th < d2);
+    int k = -1; for (int i = 0; i < 8; i++) { if (rs5819_b[i].ra == ra) { k = i; break; } if (!rs5819_b[i].ra) { rs5819_b[i].ra = ra; k = i; break; } }
+    if (k < 0) k = 7; if (res) rs5819_b[k].in++; else rs5819_b[k].out++; rs5819_n++;
+    if (rs5819_b[k].shown[res] < 20) { rs5819_b[k].shown[res]++;
+        recomp_context t = *ctx; t.r4 = 0; getCraftRecordByIdx(rdram, &t); uint32_t pl = (uint32_t)t.r2; float ux = 0, uz = 0;
+        if (pl >= 0x80000000u && pl < 0x80800000u) { w = MEM_W((int32_t)pl, 0); memcpy(&ux, &w, 4); w = MEM_W((int32_t)pl, 8); memcpy(&uz, &w, 4); }
+        fprintf(stderr, "[rng] ra=%08X res=%d ref=%08X refxz=(%g,%g) pt=%08X ptxz=(%g,%g) scale=%g thr=%g d2=%g player=%08X plxz=(%g,%g) b39=%u mode=%08X vi=%u\n",
+            ra, res, ref, rx, rz, pt, px, pz, sc, th, d2, pl, ux, uz, (unsigned)MEM_BU((int32_t)0x80130B39, 0), (uint32_t)MEM_W((int32_t)0x8010CA1C, 0), rs64_vi_n_g); }
+    if (rs5819_n <= 2 || (rs5819_n & 4095) == 0) for (int i = 0; i < 8; i++) if (rs5819_b[i].ra) fprintf(stderr, "[rngsum] ra=%08X in=%u out=%u\n", rs5819_b[i].ra, rs5819_b[i].in, rs5819_b[i].out); }
+'''
+def apply10(text):
+    n = 0
+    F = "RECOMP_FUNC void isPointXzWithinRangeOfRef("
+    if F not in text: return text, 0
+    if "PATCH: s5819 range helpers" not in text:
+        i = text.find(F); text = text[:i] + H10 + text[i:]; n += 1
+    if "s5819 range */ rs5819_rng" not in text:
+        i = text.find(F); A = "    // 0x80047DAC: lwc1        $f2, 0x0($a0)\n"; j = text.find(A, i); assert j > 0
+        text = text[:j] + "    { /* PATCH: s5819 range */ rs5819_rng(rdram, ctx); }\n" + text[j:]; n += 1
+    return text, n
