@@ -165972,3 +165972,12 @@ Offline only (scratch/agent/m6/s5921_poke/run.log). (1) Every [sph] MINSD/SEGIN 
 Rules out: "bolts never reach class-1 spheres". Does not close: why in-sphere + fine-pass becomes no hit. Single run, single-source.
 ORIGIN: no mitigation added (offline analysis).
 Next: one instrument at the findSegmentObjectSphereHit return for shape 80323f58 logging fine-test result, returned t, A/B thresholds, and the caller's decision, phase-scoped to the poke windows (NEXT.md).
+
+## Session 5924 (2026-10-22) — s5923 "2276 fine passes -> 6 hits" is an instrument-scope artifact: hret counts only the lock-on site; per-caller hits are 2246/1867/852/826/879
+
+Planned: hook findSegmentObjectSphereHit return for shape 80323f58. Before building, re-read the existing s5921 run log (scratch/agent/m6/s5921_poke/run.log), which already carries both [s5904] and [s5908].
+- [s5904] final row: 80323f58 all=2278 fine=2278/2276 hret=6. hret is bumped only at the hooked RET site (0x8005D24C, apply_s5907_hitobj.py), while `fine` counts every caller of findSegmentObjectSphereHit. Different denominators -> hypothesis B (counter scope), not a loss between fine-pass and post.
+- [s5908] same run: per-caller hits 800ff288 75/3.37M, 800f141c 2246/17.9k, 800f14dc 1867/63k, 8005cf5c 852, 8005d0d8 826, 8005d24c 879, 8005eb5c 0, 8004dd84 0. So the ~2276 hits for 80323f58 are plausibly the 800f141c/800f14dc callers (positive control: sum of hits >> 879, so the lock-on site is a minority).
+- Static (funcs_41.c, single-source): 0x800F1414/0x800F14D4 sit in a viewpoint/ray routine; hit -> branch to L_800F1550 or store t ([sp+0x28]) to [s1+0x1C], loop via 0x8003EEF4 (next object). This looks like a camera/line-of-sight probe, NOT bolt damage.
+ORIGIN: no mitigation added; no code changed. Offline analysis only (no build/run this iteration).
+Rules out: "bolts enter spheres but hits are lost between fine-pass and post" (s5923 wording) - the 6 was never a bolt-hit count. Still open: which caller IS bolt damage (800ff288 75 hits? or none of the 8).

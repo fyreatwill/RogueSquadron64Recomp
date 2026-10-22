@@ -1,9 +1,9 @@
-# NEXT (s5924): why do ~2276 fine-test passes on shape 80323f58 yield only 6 hits?
+# NEXT (s5925): which findSegmentObjectSphereHit caller is BOLT DAMAGE?
 
 HYPOTHESIS-ID: g1-mission-progression
 
-s5923: bolts DO enter class-1 spheres (s5901 ratio<1 x13 during poke; s5904 80323f58 all=2278 fine=2276 hret=6).
-Hypotheses: (A) fine test passes but findSegmentObjectSphereHit returns t outside [0, 0.34] (A threshold at 0x8003B03C) so caller posts nothing; (B) s5904 'fine' counter counts test entry not hit result (instrument defect); (C) caller discards via a flag/team check after return.
-Discriminator: at the function return (funcs_13/16 hook, tools/apply_s5907_hitobj.py is the base) log for obj shape 80323f58 only: fine-test return, out t, A/B floats, then whether the caller posts msg5. Budget scoped per poke window (reset on [plpoke] k change), NOT run-lifetime. Positive control: same log for shape 80330c5c (850 rets must appear).
-Outcomes: A -> t units/segment length question (compare dl 1.2-4.6 vs t); B -> fix counter, rerun tally; C -> read caller code after return.
-Run: scratch/agent/s5921_poke.sh variant with the new hook.
+s5924: hret=6 was lock-on-site only; per-caller hits (s5921 run.log [s5908]): 800ff288 75/3.37M, 800f141c 2246, 800f14dc 1867 (funcs_41 viewpoint/LOS probe), 8005cf5c/d0d8/d24c ~850 each (lock-on loops), 8005eb5c 0, 8004dd84 0.
+Hypotheses: (A) damage = 800ff288 (75 hits, overlay; rare hits because bolts are few/short-lived); (B) damage does not use this function (separate bolt-vs-object path); (C) 800ff288 hits happen but consumer discards.
+Discriminator: extend rs5908_call (tools/apply_s5908_callers.py) with per-(caller, shape w0) hit table AND a log line for each 800ff288 hit (obj, t, ship bolt active flag); disasm 800ff288's enclosing function in RecompiledFuncs to name the consumer. Positive control: 800f141c hits must appear per shape.
+Outcomes: A -> trace its consumer for the damage/msg5 post; B -> grep writers of NPC hp/msg5 senders instead; C -> read consumer after return.
+Run: scratch/agent/s5921_poke.sh variant after rebuild.
