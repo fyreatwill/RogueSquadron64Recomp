@@ -1,6 +1,5 @@
-# NEXT: G1 - s5851: why are 13 of 21 lv0 class-1 targets never torn down? (positions)
-s5850: win == tear down all 21 distinct class-1 descriptors (docs/M6-LV0-OBJECTIVE-TARGETS.md); autopilot gets 8 (17 with TELE_BOLT).
-Hypotheses: H1 survivors are far from the autopilot's flight path (player never within shot range); H2 they spawn only briefly (range despawn msg 2) and respawn out of reach; H3 shots miss at range (s5836 min segment distance).
-Discriminating measurement: one run logging player (craft record 0) x,y,z every ~60 VI plus per-descriptor kill VI; offline compare min player-to-target distance for K vs - targets (decisive if survivors' min distance >> killed ones').
-Then: waypoint the autopilot (g1_fire.sh) to survivors; c10: scan descriptors for +0x70/+0x80==10 across all NPC classes.
+# NEXT: G1 - s5852: do survivors die if fire is held while the player dwells at them?
+s5851: autopilot passed within ~1 u (xz) of survivors 0x1f,0x20,0x21,0x26,0x28 without killing them (tools/analyze_lv0_player_vs_targets.py). plpos btn is 1 Hz so fire exposure is unmeasured.
+Hypotheses: H1 no fire pressed while near (autopilot fire schedule misses); H2 fire pressed but bolts not aimed at ground troops at close range (bolt dir horizontal at player altitude, s5834; targets y -2..-4 vs player -6.5); H3 NPCs not alive at pass time (despawned/respawned).
+Discriminating measurement: one run with ROGUESQ_AUTOPILOT holding B (fire) continuously from mission start (g1_fire.sh variant) + ROGUESQ_LOG_PLPOS at higher rate or per-VI btn; offline join with kills. Decisive: if kills of passed-by survivors rise with continuous fire -> H1; if not -> H2/H3 (then log bolt min distance at close range).
 HYPOTHESIS-ID: g1-mission-progression
