@@ -165867,3 +165867,10 @@ Result: [w0+0x58] is non-null for all 7 classes (80323f58->80324048, 80330c5c->8
 ORIGIN: no mitigation added; diagnostic extension only.
 Next: tally per shape class (a) transformed r2 (cc[3]) at the sphere test and (b) calls/returns of collideSegmentAgainstObjectNodes, to confirm class 80330c5c = small NPC-scale shapes and that the fine test (not the sphere) is the filter; then map which shape records the 21 objective NPCs use.
 Gate wording (s5905): this run refutes the caller-side predicate (H-flag/H-vtbl): every in-sphere class has a non-null [shape+0x58] and takes the fine node test; it keeps H-target/size alive (hit rate tracks shape size, not a type flag). Next discriminator: per-class r2 and fine-test outcome tally in one run.
+
+## Session 5906 (2026-10-22) — fine node test passes ~98% for every shape class; H-size and H-filter refuted; RET attribution suspect
+Built tools/apply_s5906_fine.py (per-class r2 min/max at sphere-in + calls/returns of collideSegmentAgainstObjectNodes at the 0x8006AB40 site, class key [obj+0] with obj=s0). One run of scratch/agent/s5902_life.sh (first attempt had r2=[0,0]: funcs_16.c sphere-site not patched; fixed and rerun, positive control = fine counts track all-sin counts 1:1).
+Result (class: sphere-in calls, fine calls/hits, RET, r2 range): 80323f58: 671/671, RET=1, r2 0.04-0.24; 80330c5c: 806/793, RET=173, r2 0.46; 80324dd8: 99/91, RET=0, r2 0.063; 80331158: 11/10, RET=2; 803311cc: 6/6, RET=0; 80335588: 10/10, RET=0, r2 0.065 (earlier run: 80330b74 11/0).
+Rules out: H-size (r2 is similar scale; small-r2 classes still pass the fine test), H-filter at the fine test (hit rate 91-100% for classes whose RET is ~0). The fine test is NOT the gate: classes with 671 fine hits give 1 RET.
+Open: either the rejection sits AFTER findSegmentObjectSphereHit returns (caller of 0x8006A944 / intersectSegmentWithObject loop), or RET attribution via rs5856_sinobj (= LAST in-sphere obj of the bolt, not the hitting obj) is wrong. Next: log the obj at the fine-test hit that makes the function return 1 and at the caller consuming it; compare with RET.
+ORIGIN: no mitigation added; diagnostic only.

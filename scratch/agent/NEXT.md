@@ -1,12 +1,13 @@
-# NEXT (s5906): per-shape-class r2 and fine-test outcome
+# NEXT (s5907): who consumes the fine-hit, and is RET attribution right?
 
 HYPOTHESIS-ID: g1-mission-progression
 
-s5905: no caller-side predicate; all shape classes take collideSegmentAgainstObjectNodes (0x80069AF0). RET rate 80330c5c 20%, 80323f58 1%, 80330b74 0%.
+s5906: fine test hits 91-100% for all classes (80323f58: 671 hits, RET=1). Not the gate.
 
 Hypotheses:
-- H-size: 80323f58 etc. are large-scale shapes (big r2), thin bolts pass through hollow meshes; 80330c5c are NPC-scale.
-- H-filter: fine test rejects by node/material flag per class (shape-specific), independent of size.
-- H-objective: the 21 objective NPCs use shape records other than 80330c5c, which is why RETs do not progress c1.
+- H-attr: RET attribution via rs5856_sinobj (last in-sphere obj) is wrong; RETs actually come from the object whose fine test hit.
+- H-caller: findSegmentObjectSphereHit returns 1 but the caller (intersectSegmentWithObject loop, funcs_16.c around 0x8006AB58 return) discards it for non-80330c5c objs (team/owner/id compare).
+- H-late: hit is accepted, but later damage/progress handler ignores non-NPC classes.
 
-Discriminator (one build, one run of scratch/agent/s5902_life.sh): in rs5904 tally add per-class (a) r2 = cc[3] min/max at sin_, (b) count of calls into 0x80069AF0 and its returns (wrap in funcs_16.c at the jal 0x8006AB40 site), (c) at objective-NPC teardown/spawn log [desc obj]+0 shape. Positive control: classes with RET>0 must show fine-test ret>0. Fold into tools/apply_s5835_sphere_probe.py incremental (see apply_s5905_shape58.py pattern).
+Discriminator (one build, one run of scratch/agent/s5902_life.sh): at fine-hit (tally kind 3) record obj ptr into rs5906_hitobj; at RET (rs5834_pre hit) tally class of rs5906_hitobj alongside sinobj; also log caller ra of findSegmentObjectSphereHit returns that are 1 vs RET count. Positive control: sum of hitobj-class RETs == total RETs.
+Build pattern: apply_s5906_fine.py (apply via python3; build in build/ with DEVELOPER_DIR; run: zsh scratch/agent/s5902_life.sh, no `timeout` binary on macOS).
