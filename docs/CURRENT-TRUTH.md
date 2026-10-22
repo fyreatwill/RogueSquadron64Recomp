@@ -87,8 +87,8 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   qualified via `tools/fixup_patches_host.py` (s5341).
 - **ASan arm:** `tools/build_asan.sh` -> `build_asan/` (slow); keyed holds with
   `BUILD=` in `m6_god_common.sh`.
-- **Tooling caveats:** `ROGUESQ_FB_DUMP_DIR` assumes stride 320 (garbled at
-  other widths). lldb LAUNCH fails in loop context (getcwd EPERM); lldb ATTACH
+- **Tooling caveats:** `ROGUESQ_FB_DUMP_DIR` dumps at VI_WIDTH (s5486/87; the old
+  stride-320 caveat is stale). lldb LAUNCH fails in loop context (getcwd EPERM); lldb ATTACH
   works. Every soak recipe's line 2 must be the zsh re-exec guard; a 0 s rc=0
   soak is a null. `# SOAK_TIMEOUT=<s>` header sets a per-recipe cap. Full logs
   are `scratch/agent/m6/<tag>/run.log`.
@@ -143,6 +143,7 @@ Older superseded items (s5634-s5777: R/O hypotheses, ccosnap, mission-win pokes,
 Class-1 NPC msg 2 (47 of 54) = `slotDispatcherIter` -> `destroyNpcSlotByIndex`; msg 5 (8) = handler-chain kill. **s5816 corrected the mechanism:** slot byte +0x1A is a reentrancy depth counter (inc before / dec after the update call; post-update value is 1 in 99.99% of 2.88M visits), NOT a lifetime countdown, so there is no timeout. Destroy runs when depth returns to 0 and +0x14&8 is set; bit 8 is a destroy-REQUEST flag (set post-update only 3083 times in 405 s). The s5814 "timeout" reading was believable because the +0x1A/+0x14&8 pair sits right at the destroy branch. Next: name the writers of slot +0x14 bit 3 for class-1 NPCs.
 
 ## Next steps (single monotonic backlog)
+- **s5928 (G1, BLOCKED physical):** automated aiming has no control law (no yaw state, stick never moves xz). Needs one human lv0 play: `scratch/agent/g1_human_play.sh <tag>`; read scratch/agent/m6/<tag>/summary. Win => G1 is a tooling limit; lose/softlock => port defect to trace from [ctr1]/[mend].
 - **s5914 (G1, top, single-run):** autopilot combo keys sla/sra/sua/sda (A+stick; one held event at a time otherwise) now exist; with A held, stick-up moved ship y -6.5 -> -0.4 (A-only control kept y=-6.5), so stick steering works in flight. Only the sua window was logged (plpos budget ends el~253; s5901 rows 19k vs 55k) so per-window class-1 crossings are unmeasured. Next: raise/phase-gate the plpos + s5901 budgets, re-run scratch/agent/g1_steer.sh, tally crossings per window.
 - **s5912 (G1, top, single-run):** winner-selection witness in the projectile loop: 2816 rounds, 474 with a crossing, 0 with >1 crossing, lost=0 -> shadowing refuted. Crossings are almost all debris (8006cbb0); class-1 ids cross 6x total and every crossing wins. The unhit class-1 ids are never crossed = aim/steering. Next: real-input steering toward nearest class-1 NPC (autopilot driven by player dump), count crossings per class-1 id. s5913: offline, stick=0 in all 413 plpos samples and track misses 13 logged class-1 spheres by 1.4-8.8 vs radii 0.06-0.68 (tools/g1_track_vs_spheres.py; sample, budget-capped) -> H-aim selected; next is an autopilot stick table (su/sr/sd keys) with the crossing tally as measure.
 - **s5911 (G1, top, static read, single-source):** msg-5 post site = projectile nearest-sphere-hit loop in audioCueDispatcherNpcHandler (0x8005D298-0x8005D360): no id/team filter, nearest-t candidate wins, direct-hit threshold float at 0x8003B03C. The 12 never-struck class-1 ids are an aim/nearest-sphere question. Next: per-bolt log (candidate id, t, winner class) for bolts whose segment passes within ~r of an unhit class-1 id, to see whether a nearer sphere steals the hit (shadowing) vs no segment crossing.

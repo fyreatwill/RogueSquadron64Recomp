@@ -1,7 +1,6 @@
-# NEXT (s5927): G3 render fidelity - first hangar artifact vs retail framebuffer
+# NEXT (s5928): consume the human lv0 play result (BLOCKED physical)
 
-HYPOTHESIS-ID: g3-render-fidelity
+HYPOTHESIS-ID: g1-human-play-outcome
 
-G2 closed pending owner listen (s5926 regression held; G2-AUDIO-FIDELITY-CLOSURE.md). G1 bolt-damage thread closed s5925.
-Take CURRENT-TRUTH "Native hangar artifacts parked" (rim band, holo spikes, stale right edge). Hypotheses per artifact: (A) bad RDP/RT64 state translation, (B) stale framebuffer region not cleared/copied, (C) bad geometry from ucode/DL. Discriminator: dump the port framebuffer (ROGUESQ_FB_DUMP_DIR) and the retail oracle framebuffer (tools/oracle) at the same hangar VI phase; diff offline. Pixel-diff localised to the artifact region with retail clean -> port-side; then toggle one setting within a single run. Positive control: oracle dump of a known-different frame must diff.
-NOTE: no `timeout` binary on this host; m6_god_common.sh has its own watchdog.
+If scratch/agent/m6/*/summary from g1_human_play.sh exists: win -> mark G1 tooling-limit, take G3 (hangar framebuffer diff, ROGUESQ_FB_DUMP_DIR works at VI_WIDTH); lose/softlock/crash -> trace from [ctr1]/[mend]/[plpos] in run.log, name the writer.
+If none exists: the unblock tier should take G3 and LAND a runtime change (not an observation).
