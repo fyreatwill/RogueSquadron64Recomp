@@ -165493,3 +165493,9 @@ Result (single run, vs s5849i): c1 plateaus at 8 again (ids 0x18,19,1B,1C,1D,29,
 Discrimination: REFUTES H1 (no fire while near survivors); leaves H2 (player bolts do not reach ground-troop spheres at close range; s5836 0 sphere hits/28679 tests) and H3 (survivor not alive/despawned at pass time). Qualifies s5825 (its A-only arm was not A-only), but s5852b agrees fire adds no kills.
 Next: per-bolt log of nearest class-1 NPC sphere distance + NPC alive flag while A held within 5 u (NEXT.md).
 ORIGIN: no mitigation machinery added (script fix + recipe only).
+
+## Session 5853 (2026-10-22) — G1: zero projectiles in the chain loop are owned by the player id; "player bolts never hit" was never a close-range miss
+Ran the planned g1_fireall.sh (A held 840 plpos samples, ROGUESQ_LOG_HITS=1, NPC_INVULN=1) with the s5835 probe extended by a new-minimum bolt-to-sphere print (tools/apply_s5835_sphere_probe.py) and an owner-id census in rs5834_pre (tools/apply_s5834_seg_dump.py). Three runs (s5853 724 s, s5853b 330 s, s5853c 300 s; no crash, no stall).
+Result: `[seg]`/`[sph]` summaries show P n=0 over N n=204800 tests in s5853; the new `[s5853] newmin` rows never fired (no P test at all). Owner census (s5853c, 81921 calls): `playermatch=0`, plid (*0x80137DBA)=0x38, owners seen 92,58,7f,66,4b,fa,b6,13d (max 0x2cb) — NOT 0x38. Positive control: N side fires normally (320 hits / 81920). This contradicts s5833's "P 445 loops / 28679 tests", so either the autopilot's A press no longer spawns a player bolt in this run, or bolts carry a different owner key than *0x80137DBA (the who-classifier, s5834, is single-source).
+Rules out: H2a/H2b (aim or sphere geometry) as the cause in this run — no P test ever reached the sphere function. Open: H4 player bolts not spawned (fire handler gated), H5 who-classifier compares the wrong field (owner at +0xF8 vs 0x80137DBA).
+ORIGIN: no mitigation added; instrumentation only (stderr prints under ROGUESQ_LOG_HITS).

@@ -36,6 +36,10 @@ static void rs5835_probe(uint8_t* rdram, recomp_context* ctx) {
     float v2 = v[0]*v[0]+v[1]*v[1]+v[2]*v[2], dl = dd[0]*dd[0]+dd[1]*dd[1]+dd[2]*dd[2], t = v[0]*dd[0]+v[1]*dd[1]+v[2]*dd[2];
     float ap2 = (dl > 0.0f) ? v2 - t*t/dl : v2; unsigned in = (ap2 <= cc[3]);
     { float u = (dl > 0.0f) ? t/dl : 0.0f; if (u < 0.0f) u = 0.0f; if (u > 1.0f) u = 1.0f; float q0 = v[0]-u*dd[0], q1 = v[1]-u*dd[1], q2 = v[2]-u*dd[2]; float sd2 = q0*q0+q1*q1+q2*q2; unsigned sin_ = (sd2 <= cc[3]); if (sd2 < rs5835_minsd[w]) { rs5835_minsd[w] = sd2; rs5835_minsdr2[w] = cc[3]; if (rs5835_mp[w]++ < 12) fprintf(stderr, "[sph] MINSD %s sd2=%g r2=%g ratio=%g u=%g dl=%g |v|2=%g\n", w ? "N" : "P", sd2, cc[3], sd2/(cc[3] > 0.0f ? cc[3] : 1.0f), (dl > 0.0f) ? t/dl : 0.0f, dl, v2); } rs5835_sin[w] += sin_; if (sin_ && rs5835_sinp[w]++ < 10) fprintf(stderr, "[sph] SEGIN %s r2=%g |v|2=%g t=%g dl=%g sd2=%g\n", w ? "N" : "P", cc[3], v2, t, dl, sd2); }
+    if (w == 0) { /* s5853: new-minimum bolt-to-sphere separation, all NPCs (m0) and class-1 only (m1) */
+        static float m0 = 1e30f, m1 = 1e30f; unsigned pr = 0; if (v2 < m0) { m0 = v2; pr |= 1; } if (c1f && v2 < m1) { m1 = v2; pr |= 2; }
+        if (pr) fprintf(stderr, "[s5853] newmin%u c1=%u id=%x ctr=(%g,%g,%g) r2=%g bolt0=(%g,%g,%g) dir=(%g,%g,%g) v2=%g t=%g ap2=%g\n", pr, c1f, (unsigned)(rs5841_cand & 0xFFFF), cc[0], cc[1], cc[2], cc[3], pp[0], pp[1], pp[2], dd[0], dd[1], dd[2], v2, t, ap2);
+    }
     rs5835_n[w]++; rs5835_tot++; if (in) rs5835_in[w]++; if (cc[0] == 0.0f && cc[1] == 0.0f && cc[2] == 0.0f) rs5835_zc[w]++;
     if (ap2 < rs5835_min[w]) { rs5835_min[w] = ap2; rs5835_minr2[w] = cc[3]; }
     if (rs5835_n[w] <= 20 || (w == 1 && in && rs5835_inprint++ < 10))
@@ -62,7 +66,7 @@ def apply(text, name=None):
             f = "RECOMP_FUNC void audioCueDispatcherNpcHandler("
             i = text.find(f); text = text[:i] + "uint32_t rs5841_cand; /* PATCH: s5841 */\n" + text[i:]; n += 1
     if FN not in text: return text, n
-    if "s5841 c1f" not in text and "PATCH: s5835 helpers" in text:
+    if "s5853: new-minimum" not in text and "PATCH: s5835 helpers" in text:
         a = text.find("/* PATCH: s5835 helpers */"); b = text.find(FN)
         text = text[:a] + H + text[b:]; n += 1
     if "rs5839_obj = " not in text:

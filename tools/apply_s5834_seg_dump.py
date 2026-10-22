@@ -12,6 +12,11 @@ static void rs5834_pre(uint8_t* rdram, recomp_context* ctx) {
     if (!rs5834_en) return;
     uint32_t proj = (uint32_t)ctx->r17, sp = (uint32_t)ctx->r29, pt = (uint32_t)ctx->r19, sh = (uint32_t)MEM_W(S32((int32_t)ctx->r4), 0);
     rs5834_who = ((uint32_t)MEM_HU(S32((int32_t)proj), 0XF8) == (uint32_t)MEM_HU(S32((int32_t)0x80137DBAu), 0)) ? 0 : 1;
+    { /* s5853: owner-id census (is the player-id compare ever true?) */
+        static uint32_t ow[8]; static unsigned oc[8], on, tot, pm, hi; static uint32_t hio; uint32_t o = (uint32_t)MEM_HU(S32((int32_t)proj), 0XF8), pl = (uint32_t)MEM_HU(S32((int32_t)0x80137DBAu), 0); unsigned k;
+        if (o == pl) pm++; if (o > hio) hio = o; for (k = 0; k < on; k++) if (ow[k] == o) break; if (k == on && on < 8) { ow[on++] = o; } if (k < 8) oc[k]++;
+        if ((++tot & 16383) == 1) { fprintf(stderr, "[s5853] owner census plid=%x playermatch=%u maxowner=%x:", pl, pm, hio); for (k = 0; k < on; k++) fprintf(stderr, " %x*%u", ow[k], oc[k]); fprintf(stderr, " tot=%u\n", tot); }
+    }
     for (int i = 0; i < 3; i++) { rs5834_pt[i] = rs5834_f((uint32_t)MEM_W(S32((int32_t)pt), 4 * i)); rs5834_dir[i] = rs5834_f((uint32_t)MEM_W(S32((int32_t)sp), 0x88 + 4 * i)); }
     for (int i = 0; i < 8; i++) rs5834_sh[i] = ((sh >> 24) == 0x80) ? rs5834_f((uint32_t)MEM_W(S32((int32_t)sh), 0x48 + 4 * i)) : 0.0f;
 }

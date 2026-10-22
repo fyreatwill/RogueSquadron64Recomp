@@ -1,6 +1,6 @@
-# NEXT: G1 - s5853: why do player bolts never hit class-1 ground-troop spheres at close range?
-s5852b: A really held (589/725 samples) and survivors passed within 0.8-15 u with 30-57 A samples each; still c1=8. s5836: 0 player-bolt sphere hits / 28679 tests.
-Hypotheses: H2a bolt segment/direction wrong (horizontal at player altitude, targets 2-4 u below); H2b NPC sphere radius/centre wrong (r2 0.065); H3 survivor NPC not alive at pass time (despawned/respawned, msg-2 out-of-range).
-Discriminating measurement (ONE build, ONE run, g1_fireall.sh): in the projectile loop at 0x8005D1C8-0x8005D360 log, when player within 5 u xz of a class-1 NPC (+0x70==1): bolt pos, bolt dir, NPC pos, NPC sphere centre/radius, NPC alive/state word, min segment distance. Positive control: N (NPC) bolts hit (141 sphere hits s5833). Outcomes: dist small but no hit -> H2b; dist large vertically/dir off -> H2a; NPC absent in list -> H3.
-Run: env ROGUESQ_NPC_INVULN=1 zsh scratch/agent/g1_fireall.sh s5853 720
+# NEXT: G1 - s5854: are player bolts spawned at all, and what owner do they carry?
+s5853: owner census over 81921 chain-loop calls with A held: playermatch=0 (plid 0x38 at 0x80137DBA never equals proj+0xF8); P tests 0. Contradicts s5833 (P 28679 tests).
+Hypotheses: H4 fire handler not spawning bolts (ammo/cooldown/gate); H5 who-classifier wrong field/id (player id differs, e.g. 0x80137DBA stale); H6 s5833 P rows were mislabelled N-side.
+Discriminating measurement (one build, one run): hook the projectile-spawn function (find via the object that writes +0xF8 in the chain; grep recomp funcs for stores to +0xF8 near the fire-button handler / 'audioCueDispatcherNpcHandler' callers) and log owner id + button state at spawn; also log the player object's own id word. Control: N spawns must appear. Outcomes: no spawn while A held -> H4 (read the gate); spawns with owner != 0x38 -> H5 (fix classifier, rerun s5853 probe: newmin rows will then fire); 
+Run: env ROGUESQ_LOG_HITS=1 ROGUESQ_NPC_INVULN=1 zsh scratch/agent/g1_fireall.sh s5854 300
 HYPOTHESIS-ID: g1-mission-progression
