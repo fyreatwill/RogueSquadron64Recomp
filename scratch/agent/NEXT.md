@@ -1,9 +1,8 @@
-# NEXT (s5925): which findSegmentObjectSphereHit caller is BOLT DAMAGE?
+# NEXT (s5926): G2 audio fidelity - where does the fuzzy noise enter?
 
-HYPOTHESIS-ID: g1-mission-progression
+HYPOTHESIS-ID: g2-audio-fidelity
 
-s5924: hret=6 was lock-on-site only; per-caller hits (s5921 run.log [s5908]): 800ff288 75/3.37M, 800f141c 2246, 800f14dc 1867 (funcs_41 viewpoint/LOS probe), 8005cf5c/d0d8/d24c ~850 each (lock-on loops), 8005eb5c 0, 8004dd84 0.
-Hypotheses: (A) damage = 800ff288 (75 hits, overlay; rare hits because bolts are few/short-lived); (B) damage does not use this function (separate bolt-vs-object path); (C) 800ff288 hits happen but consumer discards.
-Discriminator: extend rs5908_call (tools/apply_s5908_callers.py) with per-(caller, shape w0) hit table AND a log line for each 800ff288 hit (obj, t, ship bolt active flag); disasm 800ff288's enclosing function in RecompiledFuncs to name the consumer. Positive control: 800f141c hits must appear per shape.
-Outcomes: A -> trace its consumer for the damage/msg5 post; B -> grep writers of NPC hp/msg5 senders instead; C -> read consumer after return.
-Run: scratch/agent/s5921_poke.sh variant after rebuild.
+Rung G2 (ITERATION.md 3c) has never been run; G1 bolt-damage thread is closed by s5925.
+Hypotheses for the noise layer: (A) ucode PCM output itself noisy (bad ADPCM decode/resample/reverb in the ported ucode); (B) AI ring/rate/format (byte order, sample-rate mismatch, dropped/duplicated frames); (C) host sink (SDL resample/format).
+Discriminator: dump port AI DMA PCM (at the AI register write, before the host sink) for the title music over a fixed VI-phase window, and dump the same window to a WAV via the host sink path; analyze offline (spectrum, noise floor, ratio of high-band energy, sample rate from AI_DACRATE). If the pre-sink dump is already noisy -> A or B (check byte order/rate by spectrum of a known tone); if clean pre-sink but noisy after -> C. Retail oracle (tools/oracle/README.md) AI PCM of the same title music is the reference for the noise floor if the pre-sink dump is noisy.
+First: grep the port for an existing AI PCM dump flag (grep -rn "AI_PCM\|DUMP_AI\|ai_dump" src tools) before building a new one. Capture once, analyze many.
