@@ -189,3 +189,5 @@ Dispatcher tally (s5832): only update fns 8006cbb0 (= updateDestructionDebrisNpc
 
 ## s5833 addendum (G1)
 Msg-5 sender = audioCueDispatcherNpcHandler projectile loop (0x8005D1C8-0x8005D360; findSegmentObjectSphereHit per chain NPC). s5833 tally in a 320 s fire mission: player bolts 445 loops / 28679 candidate tests (all with shapes) / 0 sphere hits / 0 sends; NPC bolts 960 / 45187 / 141 / 226. Caveat: autopilot may not aim. Next: for player bolts log min point-segment distance vs sphere radius (control: NPC hits) to split aim-miss from segment-setup defect.
+
+- **s5837 (G1, measured):** forced-geometry player bolts (ROGUESQ_TELE_BOLT=1) hit 64 and reach SEND 32/33 — collision/hit/send OK for player; G1 failure = autopilot never within ~8.8 u of an NPC (s5836). Receiver effect not yet measured (NEXT.md).
