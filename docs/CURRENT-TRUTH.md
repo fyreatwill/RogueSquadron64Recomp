@@ -1,303 +1,118 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5931 (2026-10-22).
-`PORTING-STATE.md` is the chronological ledger. Durable background, closed
-audit detail, and the per-thread histories moved out of this file are in
-`docs/PROJECT-OVERVIEW.md` (latest: "Migrated from CURRENT-TRUTH (s5636)");
-per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
+Compact operational handoff, maintained as of Session 5932 (2026-10-22).
+`PORTING-STATE.md` is the chronological ledger. Durable background and closed
+detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
+`scratch/agent/SOAK-RESULTS.md` and the named audit documents.
 
 ## Headline
 
-- **Route.** The qualified image route boots through attribution, N64 logo,
-  intro, Factor 5 logo, title (`0x00790400`, VI 1024), hangar (`0x006AB400`,
-  VI 512), and mission origins (`0x00690400` / `0x00620400`, VI 512; the
-  alternation is baseline double-buffering). Mission input reaches flight code.
-  The default audio route is active; `ROGUESQ_AUDIO_UCODE=0` is the silent
-  control.
-- **M6 first-mission endurance: CLOSED.** Gate closed s5394 (904 s / 900 s
-  holds); since then 31 keyed title->mission holds (251 min) and 10/10 long
-  holds incl. the hangar route, all 0 crash / 0 stall. This is route
-  endurance, not proof every mission subsystem is correct. Keyed holds end in a
-  legitimate MISSION FAILED screen (idle autopilot loses; loss counter
-  0x80138064) and fall back to title — not a hang.
-- **M6 death thread (s5779-s5783): RESOLVED as a test-input artifact.** The
-  life losses via `[bit8call]` -> `updatePlayerCraftPhysics` -> terrain sampler
-  (`sampleTerrainAtNpcPosition`, ret=1 iff scaled y > cell byte3) happened only
-  when our synthetic input climbed the craft into the level ceiling: s5777's
-  `ROGUESQ_ALT_HOLD` latched target y=0.000 pre-spawn and held stick-up
-  forever (fixed s5783), and s5738's schedule has scripted `su` steps.
-  s5783_noalt (same route, no vertical input, 421 s): 0 deaths, craft sinks to
-  ys -370, sampler never ret=1 (single run; controls fired). Port sampler/physics
-  behave as designed; no mitigation. The unpoked LOSE at ~+342 s (s5627) is a
-  separate, still-unexplained path. Next: G1 mission progression with real input.
-- **M5 audio de-stubbing: CLOSED** for the qualified route (non-silent PCM,
-  task/SP contract, keyed mission and long-hold rows; `docs/M5-AUDIO-PLAN.md`).
-  **Audio FIDELITY: root causes FIXED s5668/s5672, re-verified on HEAD s5926 (underrun 1/15360, rails 3/368 loud rows); closed pending owner listen, see docs/G2-AUDIO-FIDELITY-CLOSURE.md.** Original report (rung G2, `tools/agent/ITERATION.md` 3c): owner
-  report 2026-10-19 — every SFX recognizable but behind a heavy fuzzy/noise
-  layer, and no dialogue/voice at all. Owner has watched several missions
-  besides Mos Eisley play (rung G1).
-- **Open human dependency (s5929, non-blocking):** G1 real-input lv0 outcome needs one human play (`scratch/agent/g1_human_play.sh human1`, read m6/human1/summary). Loop proceeds on the oracle same-autopilot differential / G3 meanwhile.
-- **M4 accumulator comparison: PARKED** at the cross-arm gate after the s5570
-  rank-bin (empty lane masks) and s5575 task-total-bucket (0 shared classes)
-  discriminators; H3 selected, no writer or mitigation inferred. Do not repeat
-  either comparison or add another indirect join field.
-- **Generated-symbol sweep: EXHAUSTED** (s5574; 0 companion-backed renames
-  left). **M3 listed idiom classes: EXHAUSTED** (s5561). **Regen determinism:
-  CLOSED** (s5547). **Title-boot plume SIGSEGV (si_addr=0x58): probably
-  dissolved** by the s5597 `poke_be32` overflow fix (28 clean boots,
-  P(0/28 | p=1/7) ~1.4%; hypothesis, no writer named).
+- The qualified route boots attribution, N64 logo, intro, Factor 5 logo, title,
+  hangar, and mission origins. Mission input reaches flight code.
+- M6 first-mission route endurance is closed: 31 keyed title-to-mission holds
+  (251 minutes), including 10/10 long holds with the hangar route, had zero
+  crash and zero VI stall. Idle autopilot eventually reaches a legitimate
+  mission-failed path; this is not proof that every mission is correct.
+- M5 audio de-stubbing is closed for the qualified route. Audio fidelity fixes
+  were reverified at s5926 (underrun 1/15360, rails 3/368 loud rows); owner
+  listening follow-up is recorded in `docs/G2-AUDIO-FIDELITY-CLOSURE.md`.
+- M3 idiom audits, generated-symbol renaming, and regeneration determinism are
+  closed. M4 accumulator and native hangar artifacts remain parked.
+- G1 is now mission coverage, not autopilot development. The owner directive
+  on 2026-10-22 closes the s5841-s5930 aim/steer/bolt thread as harness work.
 
-- **s5901 (G1, single-run, top):** raw per-bolt sample log + offline NN tracks (tools/s5901_nn.py; control 2458 tracks age>=3): bolts travel median 33 u (p90 106) per life, per-tick segments only ~0.125 u vs collider r ~0.25-0.7 u; 33% of long tracks enter some collider sphere. Blanket H-range refuted; in-sphere ids 15d/52/27f/1cc/10d dominate but class-1 join still missing; s5856 cin=0 for 1cc/f1 despite s5901 ratio<=1 (unexplained). Next: add c1f/did to the s5901 line (NEXT.md).
-- **s5904 (G1, single-run, top):** w0 tally of in-sphere objs: 98% of RETs (172/176) come from obj vtables 0x80330c5c/80331158/803311cc (80330c5c: 168 of 834 in-sphere events = 20%); 0x80323f58 is 654 in-sphere events but ~0 RETs. H-any refuted, H-nested selected (single-source; sinobj = last in-sphere obj). Next: identify the predicate separating 80330c5c from 80323f58 (read vtable/caller statically) and whether 80330c5c objs are the intended targets.
-- **s5903 (G1, single-run, top):** `[own53]` pair dump (256 (cand id,obj) pairs; RET controls 52/f2/66/c9 fired): 0/256 objs contain a pointer to the candidate slot node; one id maps to 27-71 objs of mixed vtables, so the candidate (r16) is NOT the owner of the sphere-tested obj and obj->NPC pointer join is refuted. desc+0x70 class unusable (n+0x34 out of range). Next: record the obj that produced cin=1 at each RET event.
-- **s5902 (G1, single-run, top):** same-run owner/class discriminator built and run (20,712 s5901 rows; 2,734 cycles; NN positive control 1,254 tracks age>=3; RET controls 52/66/cc fired). Candidate-derived `did` is `dead` for every row, so that join remains invalid. Candidate id 52 maps to multiple collider-owner pointers and has c1f=0 despite same-run RET hits; id 66 has c1f=1. This selects the owner-join problem over treating c1f as the objective class, but does not yet identify the 21 class-1 NPCs. No crash/stall in captured run; explicit SIGKILL was required after the harness cap failed to reap the game. Next: derive the collider-owner -> NPC/objective join from the owner pointers, using 52/66 RET rows as controls.
-- **s5896 (G1, single-run, top):** slot->descriptor join via node +0x34->+0x78 fails (all 48 ids: +0x34 not a pointer); node +0x14 flags (flags<<16|id) do not separate killed (86) from surviving (92) slots (both 0xc2). H-aim stands; kind-split weakened. Next: per-frame heading words at each fire (no join needed), compare bolt dir vs vector to nearest survivor.
-- **s5900 (G1, top, single-run):** the s5897 per-projectile life tracker keyed on r17, but r17 is ONE persistent emitter (0x8035581c, handler 0x80239788); pp (arg r6) is the per-bolt segment origin, ~24 distinct pp per cycle x 13 collider candidates each. The s5897/s5898 conclusions (bolts travel <3 u, live ~1 frame, H-range) are VOID (they measured jumps between bolts); H-aim and H-range both unevaluated. Next: track bolts by pp nearest-neighbour continuity across cycles, log true speed/lifetime and hit distance.
-- **s5895 (G1, single-run, top):** unpaused (AP_HOLD=600) stick table: harness stick reaches the player record echo (+0xDC/+0xE0 nonzero in 18/24 stick-active records, 8/300 idle) -> input path OK, (b) refuted; heading also drifts with stick idle; mission still a0=1-ends at vi 16424. Next: per-frame heading+stick sample around fire + slot->descriptor-id join.
-- **s5894 (G1, single-run, top):** per-slot forward closest approach (s5855 table extended): ~10 survivor slots have bolt-line closest approach >=70x r2 (never aimed within ~2 u), 3 killed slots ~0, 3 slots aimed but 20+ u away. H-collision-filter refuted for survivors; H-aim selected. Slot id != descriptor id (join pending). Next: real-stick steering arm (AP_HOLD=600, su/sr/sd) + slot->descriptor join.
-- **s5893 (G1, top, single-run, control msg3/4 per-id fired):** the class-1 msg5 "cap of 8-9" is 9 DISTINCT ids each hit once (18,19,1B,1C,1D,20,29,2A,2B); the other 12 ids (1F,21-28,2D-2F) get 2000-3300 msg3 ticks and zero msg5. Not a cap; it is 'never struck'. Pokes matched target y, so remaining split is bolt heading/aim (forward unmeasured; tilt matrices +0x74/+0xC0). Next: with the leaked-START pause fixed (AP_HOLD=600), does stick steer, and log player bolt direction vs vector to nearest unkilled id.
-- **s5892 (G1, top, single-run):** no yaw field exists in the ship object (only tilt matrices +0x74/+0xC0); ring sweep (ROGUESQ_PLPOS_POKE_DWELL, scratch/agent/s5892_ring.sh) of 67 windows +/-7 u around the class-1 waypoints: tmsg5 8->9, no direction preference. "Forward is a world axis" refuted; unhittable-vs-aim still open (true forward unmeasured). Next: per-id msg5 tally + class-1 msg5 handler read (is 8-9 a one-shot-per-kind cap?).
-- **s5891 (G1, top, single-run):** s5890's "class-1 gets 0 hits" is an instrument-scope artifact (s5831 tally lives in updateDestructionDebrisNpc, never a class-1 fn; use [npcmsg] tmsg5). Player pos poked 3-6 u beside class-1 spawns (ROGUESQ_PLPOS_POKE, scratch/agent/s5891_poke.sh; poke control OK): msg5 only 3->8 and stays at the 8-cap, kills at 20-68 u from the player, 10 ids never killed. Not proximity. Heading not poked, so next = find ship yaw fields and poke pos+yaw (aim) to split aim vs unhittable class-1 shapes.
-- **s5841-s5844 (G1, single-run each):** candidate NPC ctx = getNpcContextByIndex(id); ctx+0 = update fn (class key), ctx+0xC = sphere shape; the old `*(ctx+0x34)+0x70` class read never resolves (s5833/s5839 class tallies were all 'unknown'). With TELE gated on update fn in {800cabd4,800d93c0,800e7860}: 90 forced class-1 hits, 24 sends, objective counter 1 sets 13 vs 4 baseline. Collision->send->receive works; G1 = player never gets near class-1 NPCs (aim/steering). Next: 600 s TELE hold to see whether counter reaches the win threshold; then build aim/steer for real input.
-- **s5840 (single-run):** sphere-test a0 objects are 0xB4-stride pool nodes; no NPC pointer in their first 0x100 bytes (0/32 objects, matcher control OK). Owner must come from the caller's loop variable in the 0x8005D1C8 candidate loop or the slot table; capture it there and gate TELE on class==1.
-- **s5839 (single-run):** sphere-test a0 is a shape record (0x8035xxxx/0x8021xxxx), NOT the NPC: *(a0+0x34)+0x70 gave c1=0 of 31.5k P tests, so no class-1 forced hit happened. Next: find shape->NPC owner link (scan a0 words for spawn1 npc ptrs) then redo class-1 forced hit; 6 natural ctr1 sets seen this run.
-- **s5838 (single-run, inconclusive):** victim-state diff after forced P sends (tools/apply_s5838_send_effect.py) shows no hp-like change, but node+0x34 is not a descriptor and forced victims (ids 0x58-0x1C8) are not class-1 (0x18-0x2D). Next: force hits only onto class-1 shapes and measure objective counter 1 delta; N sends as control.
-- **G1 lv0 evidence chain (s5799-s5813, detail migrated):** projectile-direction block is live (H8b/H10b: firing object's mesh attachment); real-input holds are stable 600 s with no win (s5804/s5805); counter 1 (class-1 NPC kills) climbs only via npcProbeDriod teardown (8 sets), 47/54 class-1 NPCs get msg 2 (silent destroy) vs 8 msg 5 (counted) (s5811-s5813). See s5814 note below.
-- **G1 bit-3 setters (s5817):** slot +0x14 bit 3 is set only by destroyNpcSlotByIndex (13 callers, each its own update fn; bulk = effects/debris/audio cues) and a grid setter that never touches NPCs. Class-1 NPC subset: npcGroundTroopUpdate 45, npcProbeDriod 56, npcWakeUpdate 17, npcWingmanUpdate 4 of 3032 sets. No external setter. Open: are those destroys legitimate (health<=0) or early?
-- **G1 class-1 destroy cause (s5818, single-run):** all 50 npcGroundTroopUpdate self-destroys in a 400 s invuln hold came via funcs_39.c branch 0x800E8450: `isNpcWithinActiveReferenceRange(npc)==0` for 21 consecutive updates (+0x67 counter), health positive, no objective bool/counter gate. Open: is the range check/reference (isPointXzWithinRangeOfRef, thr float 0x8003A7D4, ref = craft record 0 or 0x800AEA18 when 0x80130B39!=0) correct in the port, i.e. are NPCs despawned only because the reference is wrong/stale?
-## Active M6 thread (summary; detail migrated)
-- Unpoked mission end ~+342 s is the LOSE arm (bool 0x64/0x65, b14=2, same-level restart; s5627). Hypotheses S/T/R/O refuted; bool 7 is a level-F dialogue flag (sayWhoaHim_v0x1FC), not a port defect (s5694). Voice requests, alloc, pool and decode all run in the port (s5641-s5666); missing dialogue is downstream, at decoder output (G2).
+## Current frontier: G1 mission coverage
 
-## Durable state
+The companion decomp census gives `NUM_LEVELS=0x13`: playable levels 0..18;
+`LOGO_LEVEL=0x13` and `ATST_LEVEL=0x14` are sentinels. Levels 1..9 have route
+and 300-second hold coverage. Paired forced-level recipes for levels 10..18
+were queued, but the newest queue verdicts are launch failures:
 
-- **Native hangar artifacts parked:** rim band, holo spikes, stale right edge,
-  Factor 5 overlay splice, accumulator origin, pillar references, `0x1F0D74`,
-  odd PI DMA. No mitigation without naming the writer and establishing value
-  legitimacy.
-- **PatchesLib is shadowed on macOS (s5366):** ld64 never pulls the patch
-  `allocateDisplayListBuffer`; live heap guards are the fixup-inlined
-  `s_alloc_tail_guard*` (`tools/check_patches_shadowed.sh`). Patch-layer claims
-  in older entries are unsupported for this build; `-force_load` is a
-  behaviour change needing its own A/B.
-- **allocDLB guards** (s5378): all counters 0 on a mission route but no
-  positive control, so not shown dead.
-- **Hangar route is flaky** (~1/3-3/5 launches reach hangar).
-- **MIPS cross toolchain installed** (2026-10-17, `mips64-elf-gcc` 14.2.0 in
-  `/opt/homebrew/bin`; check with full path). Fresh source-to-ELF patch
-  qualification is unblocked but not yet done; the existing-ELF -> host path is
-  qualified via `tools/fixup_patches_host.py` (s5341).
-- **ASan arm:** `tools/build_asan.sh` -> `build_asan/` (slow); keyed holds with
-  `BUILD=` in `m6_god_common.sh`.
-- **Tooling caveats:** `ROGUESQ_FB_DUMP_DIR` dumps at VI_WIDTH (s5486/87; the old
-  stride-320 caveat is stale). lldb LAUNCH fails in loop context (getcwd EPERM); lldb ATTACH
-  works. Every soak recipe's line 2 must be the zsh re-exec guard; a 0 s rc=0
-  soak is a null. `# SOAK_TIMEOUT=<s>` header sets a per-recipe cap. Full logs
-  are `scratch/agent/m6/<tag>/run.log`.
-- Closed reference material (RSP null guard, SDL_QUIT, M5 contract, M3 audit
-  list, symbol sweep, M4 schema history, regen determinism, plume history,
-  second-mission selector refutations): PROJECT-OVERVIEW s5636 section.
+```text
+20261022-135630 | g1_level_coverage_common | rc=1   | 0s
+20261022-135630 | g1_lvl10a              | rc=127 | 0s
+```
 
-## Operational rules
+These are unevaluable and must not be counted as coverage. First inspect and
+repair the queue recipe/common-script launch contract; then rerun the next two
+levels. A valid coverage run requires `[lvsel]` with `a1 == 1<<level`, flight
+handoff, at least 300 seconds alive, zero crash lines, and no 30-second VI
+stall. Missing controls are failures of evaluation, not passes.
 
-- **Audio output routing (owner feature, 2026-10-19; code inside d1c534be5).**
-  `build/audio_device.txt` (gitignored) pins the output device by
-  case-insensitive name substring; owner set `MacBook Pro Speakers` so test
-  runs play on muted laptop speakers. `ROGUESQ_AUDIO_DEVICE` overrides it;
-  `default` follows the system output. F9 cycles outputs live and rewrites the
-  file. Do not delete or change the file, and do not treat `[audio-route]`
-  lines as M5 evidence.
-- Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 commands or
-  display-list anomalies. The retail oracle is independent ground truth and
-  needs whole-RDRAM, VI, and phase positive controls before a null matters.
-- Batch counters and all A/B arms in one build/run. Gate animated comparisons
-  on VI transitions, not wall-clock time; scope budgets to the phase.
-- A null result is worthless without a positive control in the same run. Two
-  independent evidence lines are required before changing current truth.
-- Ground truth must be consulted before building an instrument. The runtime
-  cannot witness itself. A mitigation is not an explanation.
-- Generated changes belong in fixup tooling. Regeneration order is
+G1 verification, once route+hold works for every level, additionally requires
+a framebuffer showing terrain, craft, and HUD, plus a forced-hit objective
+counter/end-gate response. Mission-to-mission progression and making the
+autopilot win are owner playtest scope.
+
+## Durable state and constraints
+
+- Audio default route is active; `ROGUESQ_AUDIO_UCODE=0` is the silent control.
+- `ROGUESQ_AUDIO_DEVICE` and `build/audio_device.txt` are owner routing state;
+  do not alter them or treat `[audio-route]` as M5 evidence.
+- The hangar route remains flaky at roughly 1/3 to 3/5 launches. Native hangar
+  artifacts (rim band, holo spikes, stale edge, overlay splice, accumulator
+  origin, `0x1F0D74`, odd PI DMA) are parked. No mitigation is acceptable
+  without naming the writer and establishing value legitimacy.
+- PatchesLib is shadowed on macOS; the live heap guards are fixup-inlined.
+  `-force_load` is an unperformed behavior-changing A/B.
+- A real MIPS cross-toolchain is installed at `/opt/homebrew/bin`; fresh
+  source-to-ELF patch qualification is optional because the existing ELF path
+  is qualified.
+- The title plume `si_addr=0x58` is probably dissolved by the s5597
+  `poke_be32` overflow fix (28 clean boots); wait for passive recurrence.
+- The open human dependency is the real-input lv0 play:
+  `scratch/agent/g1_human_play.sh human1`, then read its summary. This does not
+  block offline coverage work.
+
+## Operational rules that remain live
+
+- Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 display lists.
+  Retail oracle evidence needs whole-RDRAM, VI, and phase positive controls.
+- Batch instrumentation and all A/B arms in one build/run. Gate animated
+  comparisons on VI transitions, not wall-clock time. Scope budgets to phase.
+- A null requires a positive control in the same run; two independent lines of
+  evidence are required before changing current truth.
+- Ground truth precedes new instrumentation. A mitigation is not an
+  explanation: identify the writer and establish whether its value is legal.
+- Generated changes belong in fixup tooling. Regen order is
   `make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake`.
-- Run from `build/` with the ROM present, capture output to a file, and kill
-  test process groups with SIGKILL. Never reset, clean, checkout, or update a
-  submodule; export submodule patches after any `lib/` edit.
-- Do not repeat an experiment after three consecutive non-discriminating
-  iterations. A diagnostic field alone is not a work unit.
-- Re-open a closed M3 class only with new recompiler/provenance evidence, and
-  audit a whole idiom class rather than a single crash.
-- Static `jal` does not maintain r31 in generated code: an `ra` log column is
-  always 0 and cannot identify callers.
-- A VI origin is a framebuffer address and is content-blind; do not judge
-  mission/content selection by origin alone (s5508).
+- Run from `build/`, capture output to a file, and SIGKILL test process groups.
+  Never reset, clean, checkout, or update a submodule. After editing `lib/`,
+  run `./submodule-patches/export.sh` and commit refreshed patches.
+- Static `jal` does not maintain r31 in generated code; host backtraces identify
+  callers. VI origin is a framebuffer address and is content-blind.
 
-## Superseded conclusions worth retaining
-- s5921 "tmsg2 rises only during k=4..13" (believable: 3->19 over exactly those windows in a short span) — overturned s5922: rate 1.17 vs 1.05/window, continues through later laps; not proximity.
-- **s5800 lookup attribution:** believable because the prior bounded read conflated a nearby generated-code address with the call site; superseded s5801 after the exact `jal` was checked. `0x800CA3E4` is `getObjectMeshTransformOrLocal`, while `lookupHmtTextureByName` is `0x80058360` and is not called by the direction producer. The upstream position-difference conclusion remains valid, but its semantic source changed to an active object/mesh transform path.
-- **s5799 H8a "no target-position subtraction in the producer":** believable
-  because the runtime `[pblk]` writer table ended at the cross/normalize and
-  jitter intermediates; superseded s5800 after the caller was read statically
-  and showed `lookupHmtTextureByName` position minus droid position upstream.
-  The s5799 live-writer and non-stale conclusions remain valid.
-Older superseded items (s5634-s5777: R/O hypotheses, ccosnap, mission-win pokes, lldb/plume nulls, voice-DMA guesses, slotwatch addresses) migrated to PROJECT-OVERVIEW 'Migrated from CURRENT-TRUTH (s5815)'. Pattern for all: a null without a same-run control, or a mis-derived address, read as a result.
-- **'Prerequisite gate (+0x28/+0x2C>=+0x30) or 0x80130B39 holds counter 1 at 8' (s5808 candidate):** believable because applyDat's gate and the b39 skip were the only visible conditional paths. s5809 measured gate fields 0 and b39=0 with only 2 trigger calls, so neither blocks; the missing increments are never attempted.
+## Closed or parked threads
 
-## s5814/s5816 note (G1 lv0)
-Class-1 NPC msg 2 (47 of 54) = `slotDispatcherIter` -> `destroyNpcSlotByIndex`; msg 5 (8) = handler-chain kill. **s5816 corrected the mechanism:** slot byte +0x1A is a reentrancy depth counter (inc before / dec after the update call; post-update value is 1 in 99.99% of 2.88M visits), NOT a lifetime countdown, so there is no timeout. Destroy runs when depth returns to 0 and +0x14&8 is set; bit 8 is a destroy-REQUEST flag (set post-update only 3083 times in 405 s). The s5814 "timeout" reading was believable because the +0x1A/+0x14&8 pair sits right at the destroy branch. Next: name the writers of slot +0x14 bit 3 for class-1 NPCs.
+- Overlay dispatch/DMA fix and the qualified render route are complete.
+- M5 de-stubbing and G2 root-cause fixes are complete pending owner listening.
+- M3 crash classes, M4 accumulator comparison, generated-symbol sweep,
+  title-plume clean-boot loops, and mission-aim harness work are closed or
+  parked. Do not revive them without genuinely new evidence.
+- The old mission outcome/voice/death diaries and the s5841-s5930 aim ledger
+  were migrated to `docs/PROJECT-OVERVIEW.md` during prior maintenance. Their
+  historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
-- **s5931 (G1, top):** Static level census cross-check is complete: the companion
-  decomp's `enum Level` has `NUM_LEVELS=0x13`, so playable levels are 0..18;
-  `LOGO_LEVEL=0x13` and `ATST_LEVEL=0x14` are non-playable sentinels. The
-  independent `dDefaultCraftForLevel[NUM_LEVELS]` declaration agrees. Paired
-  forced-route coverage recipes for levels 10..18 are queued in
-  `scratch/agent/soak_queue/`; each requires `[lvsel]` control `a1 == 1<<level`,
-  flight handoff, 300 s alive, zero crashlines and zero 30 s VI stalls. Fold
-  the first two verdicts next; a missing control is unevaluable, not a pass.
-- **OWNER REDIRECT 2026-10-22 (G1, top — supersedes s5841-s5930 aim entries below):**
-  G1 is now per-mission COVERAGE (ITERATION.md 3c G1): forced-level route ->
-  flight, >=300 s clean hold, framebuffer render check, forced-hit objective
-  response. Levels 1-9 have route+hold only. Autopilot aim/steer/bolt/hit work
-  (s5841-s5930, ROGUESQ_AIM) is CLOSED as harness work; the owner playtests
-  completability and mission-to-mission progression. Next: mission count from
-  the level table, then levels >=10.
-- **s5930 (G1, closed as harness work):** ROGUESQ_AIM was the final owner-directed
-  aim experiment; its yaw-wrap failure is superseded by the 2026-10-22 G1
-  coverage redirect. Do not calibrate aim or tally class-1 kills here; owner
-  playtest covers completability.
-- **s5928 (G1, BLOCKED physical):** automated aiming has no control law (no yaw state, stick never moves xz). Needs one human lv0 play: `scratch/agent/g1_human_play.sh <tag>`; read scratch/agent/m6/<tag>/summary. Win => G1 is a tooling limit; lose/softlock => port defect to trace from [ctr1]/[mend].
-- **s5914 (G1, top, single-run):** autopilot combo keys sla/sra/sua/sda (A+stick; one held event at a time otherwise) now exist; with A held, stick-up moved ship y -6.5 -> -0.4 (A-only control kept y=-6.5), so stick steering works in flight. Only the sua window was logged (plpos budget ends el~253; s5901 rows 19k vs 55k) so per-window class-1 crossings are unmeasured. Next: raise/phase-gate the plpos + s5901 budgets, re-run scratch/agent/g1_steer.sh, tally crossings per window.
-- **s5912 (G1, top, single-run):** winner-selection witness in the projectile loop: 2816 rounds, 474 with a crossing, 0 with >1 crossing, lost=0 -> shadowing refuted. Crossings are almost all debris (8006cbb0); class-1 ids cross 6x total and every crossing wins. The unhit class-1 ids are never crossed = aim/steering. Next: real-input steering toward nearest class-1 NPC (autopilot driven by player dump), count crossings per class-1 id. s5913: offline, stick=0 in all 413 plpos samples and track misses 13 logged class-1 spheres by 1.4-8.8 vs radii 0.06-0.68 (tools/g1_track_vs_spheres.py; sample, budget-capped) -> H-aim selected; next is an autopilot stick table (su/sr/sd keys) with the crossing tally as measure.
-- **s5911 (G1, top, static read, single-source):** msg-5 post site = projectile nearest-sphere-hit loop in audioCueDispatcherNpcHandler (0x8005D298-0x8005D360): no id/team filter, nearest-t candidate wins, direct-hit threshold float at 0x8003B03C. The 12 never-struck class-1 ids are an aim/nearest-sphere question. Next: per-bolt log (candidate id, t, winner class) for bolts whose segment passes within ~r of an unhit class-1 id, to see whether a nearer sphere steals the hit (shadowing) vs no segment crossing.
-- **s5910 (G1, top, measured):** msg 5 (npcProbeDriod's damage msg) is broadcast by slotDispatcherIter(list,msg,payload); exactly TWO posters in a 420 s fire-held lv0: audioCueDispatcherNpcHandler+53528 (763) and dealDamagetoDatItem (1); controls m3/m4/m9-12 fired. Next: read that handler's msg-5 site (predicate/selector). Recompiled calls leave ctx->r31=0 (use host backtrace for callers).
-- **s5909 (G1, static):** the overlay callers of findSegmentObjectSphereHit are NOT bolt damage: 0x800f141c/14dc are both inside gatherAndSortNearbyNpcViewPoints (hit = skip/occluded), 0x800ff288 is stepObjectOrientationTowardTarget (LOS), raycastTerrainAndNpcs is effect-render only. Bolt damage is the queued msg5 to npcProbeDriod (poster not on stack). Next: statically find the msg-5 poster (enqueue sites storing 5), then tally which poster fires per bolt.
-- **s5908 (G1, top):** the s5834-s5907 RET counters watch a lock-on target-selection loop (0x8005D244, nearest-t by design), NOT bolt damage. Per-caller tally (tools/apply_s5908_callers.py): findSegmentObjectSphereHit callers 0x800ff288 (831k calls/32 hits), 0x800f141c (7.5k/665), 0x800f14dc (20.6k/402) are overlay code; bolt damage must be one of them. Next: identify those overlay functions (disasm/recomp of overlay at 0x800f1400, 0x800ff270), then trace what their hits feed (damage handler?) and why 665+402 hits do not kill NPCs.
-- **s5907 (G1, top):** RET attribution verified (176/176 agree with last fine-hit object): the per-class RET rate is real (80323f58: 627 fine hits -> 6 RET; 80330c5c 798 -> 165). findSegmentObjectSphereHit returns 1 on every fine hit, so the discard is in its caller. H-attr refuted. Next: tally the caller's consumption of the return per class (tools/apply_s5907_hitobj.py is the base instrument).
-- **s5906 (G1, top):** fine node test (collideSegmentAgainstObjectNodes) passes 91-100% for every class incl. 80323f58 (671 hits -> RET 1): it is NOT the RET gate; H-size/H-filter refuted. Next: log the object at the fine-hit return and at the caller consuming 0x8006A944's result; RET attribution via rs5856_sinobj (last in-sphere obj) is suspect. Instrument: tools/apply_s5906_fine.py (call-site patch in funcs_16.c is not in the regen script).
-- **s5905 (G1, top, single-run + static):** no post-sphere team/type predicate exists: findSegmentObjectSphereHit calls the fine test collideSegmentAgainstObjectNodes whenever [[node]+0x58]!=0, and that is non-null for all 7 observed shape classes; 'w0 vtable' is really the shape record. RET rate by class (80330c5c 20%, 80323f58 1%, 80330b74 0%) must come from the fine test/geometry (shape size?, unproven). Next: per-class r2 + fine-test outcome tally (NEXT.md).
-- **s5902 (G1, top, single-run):** candidate id is not a stable collider owner (id 52 maps to multiple `obj` pointers); candidate-derived `did` is `dead` throughout, and c1f disagrees across RET controls (52=0, 66=1). Next: statically/runtime join the `obj` shape record to its owning NPC/objective descriptor; retain 52/66 RET rows as positive controls. Do not treat c1f or did alone as the class-1 join.
-- **s5899 (G1, top, offline single-source):** s5898's 'bolts live ~1 frame' is NOT supported: same-pr lives keep their rotation basis in 30/33 pairs (position 8/33); life boundaries are segment-origin (pp) jumps while pr (r17) persists, so r17 is probably not the bolt. Next: log pp vs pr+0x4c and handler words (NEXT.md).
-- **s5898 (G1, top, single-run, positive control = 20 posted lives with diffs):** the s5897 <1 u histogram is NOT an n==1 artifact (every one of 19456 lives has n>=3) and lives are SHORT in time: 88% (17170) last <20 ms, 9% 20-40 ms, only 1.1% >=500 ms (wall clock, probe-side). A bolt-pool slot is tested against ~11-33 targets in one pass, moves <1 u, and is then re-spawned elsewhere (>6 u jump) - bolts live about one frame (H-lifetime/H-remover), not slow-moving (H-timestep weak: the few long lives are slow non-bolt objects). Next: name the writer that kills/respawns the bolt slot after its first test pass (NEXT.md).
-- **s5882 (G1, 2/2 fire runs):** get(1)=class-1 teardown count (descriptor-driven, handlers 80065914/80065980); fire runs go get(1) 0->5, then get(2) 1->3 = lose arm (b14=2), counters reset; nofire get(1)=2, no lose. s5881's "get(2)=0" was a dump-cap artifact. Next: what destroys the class-2 descs (fire hits on e5c/cce/a9c) and whether fire can avoid them.
-- **s5881 (G1):** under NO_CRASH, held fire raises objective counter get(1) (0x80138060) 2->5 (idle: 2); win counter get(10) never moves in 330 s; fire arm reaches lose arm b14=2 with get(2)=0 (single-run). Next: name get(1)'s writer/meaning, raise the dump cap (NEXT.md).
-- **s5880 (G1, top):** ROGUESQ_NO_CRASH=1 (test lever, tools/apply_s5880_no_crash.py) keeps the player alive for a 332 s hold: [bit1]=0, lives 3, no stalls/crashes, vs ctl losing 3 lives; collisions still log. So the lethal collision is the sole idle-mission-end cause. Next: drive real fire input under NO_CRASH and read the objective/win counters to find why/whether the mission can be won (see NEXT.md).
-- **s5879 (G1, top):** crash-fuse gate NAMED: player a0=1 mission end = updatePlayerCraftPhysics site 0x800B2EC4 reached only on stepObjectOrientationTowardTarget ret 2 (lethal collision with an NPC object, byte0=0, or terrain, byte0=1) or the bit8call terrain-sampler path; three mechanisms across 3 runs (nondeterministic route). Fuse/timer sane, not hp-based (explains s5873 god arm). Supersedes the s5874-s5877 'garbage timer / wrong y' hypotheses. Next: env-gated test lever making the lethal ret2 non-lethal + 600 s hold, watch counters 1/2/10 and the mission end (NEXT.md).
-- **s5918 (G1, single-run offline):** s5901 pp is mostly the ship track (median 1.8 u from [plpos]); class-1 rows come from ~6 moving enemy objects (r2 0.063 for ids 86/92); ship-relative bearing is peaked but object-placement-driven. Next: log ship heading + per-object range (NEXT.md).
-- **s5925 (G1, static, 2 sources w/ s5909):** 0x800ff288 = player-craft physics LOS/collision probe (stepObjectOrientationTowardTarget, called from updatePlayerCraftPhysics); NOT bolt damage. Damage poster is the s5911 projectile loop (8005cf5c/d0d8/d24c). s5924's 'which caller is damage?' next-step is CLOSED; stop G1 per-caller tallies. Pivot to G2 audio fidelity (NEXT.md).
-- **s5924 (G1, top, offline single-source):** s5923's '2276 fine passes -> 6 hits' is a counter-scope artifact: hret counts only lock-on site 0x8005D24C; [s5908] per-caller hits in the same run are 800f141c 2246, 800f14dc 1867 (funcs_41, look like a camera/LOS ray probe, not damage), 800ff288 only 75/3.37M. Next: find which caller is bolt damage (likely 800ff288 - 75 hits - or a non-sphere path); tally its hits per shape + the post-return consumer (NEXT.md).
-- **s5923 (G1, top, offline single-source):** s5921's [sph] probe budget ended before the poke (rows at log line ~209.9k vs first [plpoke] 272.7k), but [s5901] shows 13 class-1 rows with bolt segment INSIDE the sphere during poke and [s5904] shows shape 80323f58: 2278 in-sphere / 2276 fine-pass / only 6 hits. 'Bolts never reach spheres' is refuted; the loss is between fine-pass and hit/post (t<=0.34 threshold? or s5904 'fine' mis-defined). Next: instrument findSegmentObjectSphereHit return for 80323f58 (fine result, t, A/B, caller decision), phase-scoped to poke windows.
-- **s5922 (G1, top, single-run offline):** s5921 log re-parsed per k window: tmsg2 rises 1.17/window at k=4..13 vs 1.05 elsewhere and keeps rising through later laps (37->65) -> tmsg2 is NOT proximity (unrelated background counter); tmsg5 0.09 vs 0.18, no k dependence. Next (NEXT.md): log bolt spawn pos vs class-1 centres to see whether bolts reach them, else read the msg5 sender.
-- **s5921 (G1, top, single-run):** ship poked onto 16 class-1 centres (0 u): tmsg5 2->6 with no step at pokes (range-alone refuted as sufficient, single run, moving centres); tmsg2 side-datum SUPERSEDED by s5922 (mis-read of a short span; no k dependence) (scratch/agent/s5921_poke.sh).
-- **s5920 (G1, top, single-run):** per-frame (2-frame) ship track + tilt matrices: +0x74/+0xC0 are constant 10-deg roll in all 4867 samples incl. stick windows -> NO yaw state (H-heading moot). Per-object min range to 18 class-1 centres 1.8-18 u vs r<=0.59: H-range holds. Next: poke ship pos to <0.3 u of an unkilled centre with PLE=2 and see whether msg5 fires (ROGUESQ_PLPOS_POKE); g1_steer.sh typo fixed (HOLD_MS now applies).
-- **s5919 (G1, single-source offline):** class-1 spheres are tiny (r 0.06-0.68); the 30-frame-sampled ship track never passes within 1.5 u of any of 13 centres (two at 1.5, rest 2.1-8.7). Favours H-range; H-heading/H-lifetime untested. Next (NEXT.md s5920): per-frame ship yaw + owning-object id in [plpos]/[sph], then per-object min range and heading angle.
-- **s5915 (G1):** s5914's "log budget ended at el~253" was wrong - the mission ended (lives lost, endMissionCleanup vi 15596). g1_steer.sh now sets ROGUESQ_NO_CRASH=1; s5915_steer logged all windows to el=412. Next: offline per-window c1f tally (NEXT.md).
-- **s5875 (G1, top, offline):** CORRECTION to s5871/s5874: requestMissionTransitionMode a0 is the event-table BIT index (caller = runInMissionFrame dispatch, mask 0x8010C9E0 bit 1), not a death flag. Bit 1 is set at 0x800B1140 (funcs_30, misnamed computeOrientedTransformFromQuat): object timer [obj+0x184]-=dt hits <=0 with phase(0x8010CA20)==0 -> mask|=2, 0x8010CA18=obj[0xBB]. Soak s5875_hold600_mtm queued with the existing [bit1] logger (ROGUESQ_LOG_MTM). Next: read which object (s1, [obj+0xB8], [obj+0xBB]) and its initial timer/dt - is the expiry legitimate (mission time limit/escort timer) or is our dt/init wrong?
-- **s5877 (G1):** built [fzw] fuse-state writer census (tools/apply_s5877_fusewatch.py); soak s5877_fusewatch queued - read the first non-decrement writer before each [bit1]. Noted: player y pinned at -6.5 with zero input before each crash.
-- **s5876 (G1):** RESULT: [tmr] shows a sane 0.5 s fuse (timer 0.5 to 0.2, dt 0.1), so 0x800B1140 is only the fuse end; crash decision is upstream (refutes garbage timer at this site). Next: log y/terrain at the writer of [obj+0x184]=0.5 / flag 0x10. Earlier: s5875 soak: [bit1] fired 3x for s1=0x80137DBC (player, slot 0), one per life (3->2->1), object y already below terrain (-6.49 vs -6.35). 0x800B1140 path = crash-fuse shape (flag 0x100, state 0x20, timer reset, 0x80059F10, sink to terrain). Unproven: legit ground impact vs wrong y/dt. Built apply_s5876 [tmr] logger; soak s5876_timer queued - read [tmr] dt/timer lines next, and check whether held input (AP_HOLD) legitimately dives the craft.
-- **s5874 (G1, top):** s5873 soaks folded. God arm positive control FIRED (6 [god-dead] lines: dead=1 cur=0 -> revived to 150, revive=1), yet requestMissionTransitionMode a0=1 still fired at vi 12016 (ctl 12035) and again at 14987; both arms survived 332-333 s, no crash/stall. So the a0=1 mission end is NOT a health death (single pair of runs: hypothesis (b)). Next: log lives byte 0x80130B10+[0x8010C9E8], and the caller of requestMissionTransitionMode (ra=0 in [mend]; use rs5846_log bt) to find what sets a0=1.
-- **s5873 (top):** s5872 god arm was void (5/5 title deaths in our own rs5818_log diagnostic, live tree lacked the tool guards). Diagnostic now validates its read pointers; soaks s5873_hold600_god/_ctl re-queued. Fold them; s5872 hypotheses (a)/(b)/(c) still untested.
 
-- **s5872 (queued, unread):** soaks s5872_hold600_god / _ctl run GODMODE 1+2+3 vs none on the hold600 recipe; fold SOAK-RESULTS verdicts first (see s5871 below for the question).
-- **s5871 (G1, top, offline, s5869 log):** the hold600 mission end is the player-DEATH arm: requestMissionTransitionMode a0=1 x3 (vi 12131/15031/15915, c1=6 c2=0) -> game over -> endMissionCleanup vi 15987. Not win, not a leftover key. Next: log lives byte (0x80130B10+[0x8010C9E8]) and player hp + the killer at each a0=1 call; give the autopilot ship god mode in a separate arm to see if the mission then runs past 15987.
-- **s5855 (G1, single-source, top):** with the who split removed, bolt line-vs-sphere tests are inside r2 for ~10 class-1 ids (18f: 295 of 57728) yet SENDs hit only ids 52/c6/66 (INVULN on/off alike). H8 (bolts never reach survivors) refuted. `in` uses infinite-line distance and mixes player+NPC bolts, so it over-counts. Next (s5856): log findSegmentObjectSphereHit return + clamped segin + proj +0xF8 + s2==player per cand id (NEXT.md).
-- **s5854 (G1, single-run, top):** projectile `+0xF8` is `*(weapon record+0x18)` (16 distinct ids), NOT the shooter; the handler's s2 == player id 0x38 on 1025/1025 spawns (A held, 300 s). So the P/N who-classifier used by s5833-s5853 is wrong: all 'P=0 hits' conclusions (s5833/s5836/s5837/s5852/s5853 geometry hypotheses) are void and 'N' rows include player bolts. Next: drop the who split, report newmin bolt-to-sphere separation for class-1 NPCs over ALL bolts (and N hit/SEND per target class) to see whether player bolts reach the 13 survivors.
-- **s5853 (G1, 3 runs, top):** with A really held, the projectile chain loop sees ZERO projectiles whose owner (+0xF8) == *0x80137DBA (0x38): playermatch=0 over 81921 calls, P sphere tests 0 vs N 204800 (N control fires). So 'bolts never reach spheres' is upstream of geometry: either no player bolt is spawned or the who-classifier keys the wrong field (contradicts s5833's 28679 P tests). Next: find the player-fire spawn path and census projectile owners at spawn.
-- **s5852 (top, measured, 2 runs: bug run s5852a + fixed run s5852b, controls fired):** with A (fire) really held (589/725 plpos samples btn=0x8000; s5852b), c1 STILL plateaus at 8 (same ids 0x18,19,1B,1C,1D,29,2A,2B) and every survivor had 30-57 A-held samples within 15 u (0x20: 52, 0x21: 57, 0x28: 44; min dist 0.8 u). H1 'no fire near survivors' REFUTED; open: H2 player bolts never reach ground-troop spheres (s5836: 0 sphere hits) vs H3 NPC not alive/despawned. **Script bug found:** in zsh `$tt:a` is the absolute-path modifier, so every `$AP$tt:a,` event in g1_fire.sh was silently dropped (`armed: 56 events` = 30 menu + 26 alternating; the 'A-only' phases of s5824/s5825/s5849i had NO A presses) - fixed to `${tt}:a`. This QUALIFIES s5825's 'fire not needed' (A-only arm was not A-only) - but s5852b now shows continuous fire adds no kills over s5849i, so the conclusion survives by a different arm. Next: log player-bolt pos vs the nearest class-1 NPC sphere at <5 u while A held.
-- **s5851 (top, offline, single-run s5849i):** the autopilot's flight path passed within 0.3-1.0 u (xz) of 5 of the 13 never-killed class-1 targets (0x1f,0x20,0x21,0x26,0x28), so 'survivors are off-path' is REFUTED for them; the open split is fire exposure/aim while near (plpos btn is 1 Hz, can't resolve) vs respawn/despawn. Tool: tools/analyze_lv0_player_vs_targets.py. Next: per-VI fire-button + NPC live-pos log or fire-hold dwell at 0x28 (71,27) / 0x1f (37,35).
-- **s5850 (top, measured offline from existing logs; two runs agree: s5849i, s5846 both show the same 21 descriptors):** lv0 has exactly 21 DISTINCT class-1 objective NPC descriptors (bool ids 0x18-0x2F, each +0x74 delta=1, groups 110-114) = the c1>=21 win threshold. Win = tear down every one via the msg-5 kill arm; msg-2 out-of-range despawn does not count and the NPC respawns. Autopilot kills 8 (s5849i; 17 in the TELE_BOLT run s5846). Table: docs/M6-LV0-OBJECTIVE-TARGETS.md (tools/dump_lv0_objective_targets.py). Replaces the 'what increments c1' question: closed. Next: log player pos vs the survivors' positions (x,y,z in descriptor words 4-6) to see why 13 are never reached, then steer the autopilot to them; c10 has no class-1 source (no constant-index writer; only descriptor-driven) - check descriptors with +0x70==10 or +0x80==10 (none seen among the 21; groups are 110-114).
-
-- **s5836 (top, single-run):** P bolts' min segment-clamped distance^2 to any NPC sphere = 78 (r2 0.065; ~1000x r2) over 32416 tests, segin=0; N control segin=155. Collision code fine; bolts are never fired near an NPC by the autopilot. Next: place player beside an NPC, check send path (NEXT.md).
-- **s5835 (top, single-run):** sphere probe: centres live (zeroctr=0), P segment-clamped sphere hits 0/29694 (N 515/44034 control), P segs are 1.46 long vs N 3.5-5.6 -> (c) stale shapes refuted; (a) aim/bolt-travel remains. Next: P min sd2 + bolt travel/lifetime + steer toward NPC.
-- **s5834 (top, single-run):** player-bolt segment is well-formed (P n=32869 hit=0, |dir|^2=0.53, nonzero, horizontal at player altitude; N 138/40859 hits as control) -> (b) 'degenerate segment' refuted. Next: log shape centre from 0x8006AE58 and point-to-centre distance to split aim-miss (a) from stale centres (c) (NEXT.md).
-- **s5831 (top, single-run):** tally of messages by descriptor class at updateDestructionDebrisNpc: cls1 zero (control cls0/2/3 >100k msgs); msg-5 hits (dmg 12) land on cls0 (6) and cls2 (236). Class-1 NPCs never use that function; next: tally at slotDispatcherIter by slot +0x70.
-- **s5830 (top):** msg-2 question closed (out-of-range despawn, 4 lines). Next: damage path to class-1 NPCs (NEXT.md).
-- **s5828 (top, measured, single-run):** [spawn1] now prints id=desc+0x78 + descriptor words (words 4-6 = float x,y,z). 10 class-1 spawns, ids 2B,1F,18,19,20,21,28,29,2A,2D, all within ~40 u of idle player; only 2 counted. Id space >= 0x18..0x2D (22), so s5827's bound is loose; unreached ids ARE spawned and torn down silently. Next: what decides counted (msg 5) vs silent (msg 2) teardown for class-1.
-- **s5827 (offline, single-source):** counter 1 is per distinct bool id: 44 class-1 spawns -> 8 sets with 8 distinct ids (0x18..0x2B range, ~20 ids). 21 needs nearly every id once = reach more distinct NPCs. Next: map id -> descriptor position from lv0 DAT vs the 8 reached.
-- **s5826 (top, offline, 4 logs):** s5824's mission end was the FAIL arm (counter 2 reached 3: class-2 descs 0x80319e5c/cce/a9c all destroyed; only e5c dies in no-fire runs), not a win; ctr1=8 alone ends nothing (s5825_aonly alive). Win arms need get(1)>=21 or get(10)>=6, neither near. Next: who destroys cce/a9c (fire vs other) and where class-1 count 21 / counter 10 would come from.
-- **s5825 (top, single-run per arm):** B-only 6, Z-only 6, A-only 8 ctr1 sets, same schedule: fire keys are NOT needed for counter-1 kills; they come from approach alone. Qualifies s5824's fire attribution. Next: why only s5824 ended the mission at 8; find the win check.
-- **s5847 (top, measured, single-run, control endMissionCleanup fired):** mission end in real-input fire run = FAIL arm: first setHudEnableBit4(a0=2,a1=3) called from lv0_checkComplexObjectives+2412 with c1=8 c2=3 c10=0 (vi 32795); requestMissionTransitionMode a0=2 follows. Not a win. Win needs c1>=21 / c10>=6 while c2 stays <3 (class-2 NPCs 0x80319e5c/cce/a9c must survive). Instrument: tools/apply_s5847_mask_log.py ([m47]). Next: fire run with class-2 NPCs protected only (not class-1) and see whether c1 climbs past 8.
-- **s5846 (top, measured, 2 runs s5846b/c, control endMissionCleanup fired):** mainGameLoop never decides to end the mission; the end is a runInMissionFrame event-table chain (table 0x8010B350, mask 0x8010C9E0, dispatch jalr 0x800FA820). Observed: requestMissionTransitionMode (event 1/2/3, phase 0->4 by phase value at next step) -> clearMissionObjectiveFlagsAndEnterPhaseSix (phase 4->6, ~320 VI later) -> tickMissionPhaseTransitionTimer sets flags 0x40 -> endMissionCleanup (+~72 VI); total 36330->36723 VI (s5846c), 42057->42129 (s5846b). Phase 4 = a0==2 (results mode, B14=2) path; whether the trigger was win or the FAIL arm of s5826 (counter 2=3) is NOT yet separated (a0 and the setHudEnableBit4/8 caller at 0x800C7738/776C unlogged). beginMissionEndTransition fires only 4x pre-mission with flags 0 (not the end path). Instrument: tools/apply_s5846_mission_end.py ([mend]/[mend-bt] under ROGUESQ_LOG_HUDBIT). s5818 stale-slot guard hand-applied to live funcs_8.c? NO (anchor absent) - still needs full regen; crashlines=37 at the end are that instrument. Next: log setHudEnableBit4/8 callers (bt) + a0 and counters at the first requestMissionTransitionMode.
-- **s5845 (top, measured):** forced class-1 hits (TELE_BOLT) + extended A-fire: counter 1 reached 17 (was 4/13), mission still ends at endMissionCleanup (~VI 42112, origin 0x620400) exactly as at counter 8 (s5824), so end-reason (win vs timeout vs fail) is the open question. End-of-mission crash is the s5818 instrument (guard added in apply_s5818_destroy_health.py; needs full regen). Next: find what calls endMissionCleanup / the mission-result flag (win vs lose) at that VI.
-- **s5824 (top, single-run):** real input, NPC_INVULN unset (scratch/agent/g1_fire.sh): objective counter 1 rose 2→8 (first kill during A/B phase, none in A-only control) and the mission then ended (endMissionCleanup, origin 0x620400) with no memory poke. Fire-does-nothing refuted. B vs Z attribution unseparated (approach accumulates). Crash at end is the known s5818 instrument (needs regen). Next: B-only vs Z-only runs; identify what 8 means / win condition.
-- **s5823 (top, measured, single-run, with in/out control):** 29/29 ground-troop self-destroys (via=3) coincide in the same VI with an out-of-range result, d2 151-198 vs thr 144. Despawn-by-design confirmed; a second destroy path is not needed. Next: ship fire (find the fire button, hold with A) and watch counter 1 / hp<=0 kills rise past 8 (g1_approach.sh variant).
-- **s5821 (top, measured, 2 identical-schedule runs):** the player ship does NOT move from stick input (su/sr/sd held 40 s each: pos frozen at (42.70,-6.5,44.99)); it moves ONLY while A (0x8000) is held, ~2.2 u/s along (x,z) (el 361->380: (42.7,45.0)->(73.8,87.8)); the s5820 tap schedule (150 ms/3 s) was ~5% duty, hence 'barely moves'. Ship also moves during the z/start title-nav presses (el 79-125) then freezes. Next: hold A continuously with the NPC bearing, re-test the ground-troop range gate (ROGUESQ_LOG_PLPOS=1, ROGUESQ_AUTOPILOT_HOLD_MS=2500, scratch/agent/g1_pos.sh). Mission-end crash fix in apply_s5818 (cap 300) is NOT in the current build (live RecompiledFuncs already fixup-stamped; needs full regen) - keep holds <350 s.
-- **s5819 (top, measured, single-run):** ground-troop out-of-range despawn is by design as implemented: ref == player craft (0x80137DC0), sane coords, NPC d2~187 vs threshold 144 (scaled 0.25) while player idles. Next: fly toward the NPC (stick-forward schedule) and check destroys drop / counted kills rise (g1_inv1.sh variant).
-- **s5811 (top, measured, single-run, 8/8 ids backtraced):** the 8 counter-1 sets come from npcProbeDriod's NPC-teardown path (after unregisterAndFreeNpcSlot/popNpcSlotFromTail, funcs_36.c:23881 and :24901; args from descriptor +0x70/74/78/7C/80/84), NOT a DAT trigger table. Counter 1 = class-1 (+0x70==1) NPC teardowns. Next: count class-1 descriptors SPAWNED vs torn down in lv0 (NEXT.md).
-- **s5810 (measured, measured, single-run):** updateDestructionDebrisNpc is NOT the counter-1 feeder: 175 spawns tallied classes 0/2/3 only, zero class-1 (+0x70==1) and zero +0x80==1 descriptors; yet the 8 a2==1 `[ctr1]` sets still fire from another caller (ids 0x18,19,2B,1D,1B,1C,29,2A, st10=110..112; `ra` log is stale). Supersedes s5808's NPC-descriptor reading for counter 1. Next: backtrace the 8 sets to name the caller, then count that caller's sources in the lv0 DAT (NEXT.md).
-- **s5809 (top, measured):** unbudgeted `[ctr1]` log (405 s hold, NPC_INVULN=1): exactly the 8 known bool ids write counter 1 (0->8), none after; applyDatObjectiveTriggerEffect ran only 2x with prereq fields 0 (gate open); 0x80130B39==0. H-gate and the b39 skip are refuted (single run). Open: H-supply (only 8 counter-1 sources in lv0 DAT) vs H-port-skip (other handlers unreached). Next: one-shot NPC-descriptor scan listing a2==1 entries + npcPredictedRangeCheck call count (NEXT.md).
-- **s5808 (static, single-source, now partly measured):** counter 1 is descriptor-driven (datItem adds a3 to counter a2 per NPC descriptor; setObjectiveBoolean touches no counter), so 'one increment per new bool' is wrong. Only 8 bool ids ever set.
-- **s5807 (top):** with ROGUESQ_NPC_INVULN=1 objective bools advance (…1E, 2A, 29) and counter 1 climbs to 8 then plateaus (s5806_inv1 and an 1800 s hold s5807_inv1long, both alive, 0 stall/crash, no win). lv0 success arms: get(1)>=21 (arm D, needs B6A4==0,B6A8==0) and get(10)>=6 (arm C); get(2)>=3/get(3)>=9 are fail-ish. Bool-gate hypothesis refuted; static read is single-source. Next: log counter store sites + dump lv0 DAT items targeting idx 1/10 (NEXT.md).
-Closed diary s5694-s5806 (death thread, kill-setter hunt, level-select, bool-7 voice lead, NPC_INVULN lever) migrated to PROJECT-OVERVIEW. Key survivors: bool 7 is a level-F bool (not a port defect, s5694); deaths on the idle route follow terrain-sampler ret=1 from synthetic climb input (resolved s5783); `ROGUESQ_NPC_INVULN=1` is a test-only lever that advances objective bools but does not win.
-3. **Name the bool[1]/bool[7] writers** for the 0x64 fail arm (neither is set
-   via the one logged setObjectiveBoolean site); fold with `[ccosnap]`.
-4. **Give the mission soak real or invulnerable flying** so mission 1 can be
-   won (idle autopilot fails it, s5627); mission-2 endurance depends on it.
-5. **G2 audio fidelity:** diagnose the fuzzy/noise layer and the absent
-   dialogue/voice path (owner report 2026-10-19); requires retail-comparison
-   evidence, not just non-silent PCM.
-6. **Fresh MIPS source-to-ELF patch qualification** now that the cross
-   toolchain is installed (optional; existing ELF path already qualified).
-7. **Plume recurrence watch (passive):** any CRASHMARK/BREADCRUMB or
-   si_addr=0x58 in a future soak -> lldb attach backtrace, name the writer.
-   Do not spend iterations on more clean-boot loops.
-8. **Parked, re-open only with a genuinely new discriminator:** M4
-   accumulator, retail-entry byte, native hangar artifacts, hudbit4 chain,
-   mission-win pokes, PatchesLib `-force_load` A/B.
-9. **OPEN DEPENDENCY (human):** declare the project goal met or name a new
-   target (raised s5530/s5585; still open).
+1. Repair the level-coverage queue launch contract after the 0-second
+   `g1_level_coverage_common`/`g1_lvl10a` failures. Confirm the common script
+   exists, is invoked from repo root, and propagates a real game launch; do not
+   claim level coverage until `[lvsel]` controls fire.
+2. Consume the next two valid levels from the repaired queue (levels 10..18),
+   folding each verdict into the ledger and this handoff.
+3. Sweep remaining levels for route+hold, then add framebuffer and forced-hit
+   objective checks to every level.
+4. Fold the human lv0 play when available; a loss, softlock, or broken render is
+   a new root-cause datum, while a win establishes a tooling limitation.
+5. After G1 coverage, pursue G3 render fidelity and any distinct G4 crash/stall
+   datum. G2 owner listening remains the audio-fidelity follow-up.
+6. Optional: qualify a fresh MIPS source-to-ELF patch after higher-priority G1.
 
 ## Evidence index
 
-Use `PORTING-STATE.md` for exact session details; never read it whole. Use
-`docs/PROJECT-OVERVIEW.md` for migrated durable history, `docs/M5-AUDIO-PLAN.md`
-for audio inventory and validation, `docs/F5-UCODE-REFERENCE.md` for the
-microcode contract, `docs/M6-OBJECTIVE-COUNTER-WRITERS.md` and
-`docs/M6-PHASE-MACHINE.md` for mission logic, and
-`scratch/agent/SOAK-RESULTS.md` for queued soak verdicts. The next iteration
-must read this file, `scratch/agent/NEXT.md`, and the tail of the soak results
-before acting.
-
-Voice-path (s5637-s5666), mission-transition (s5748-s5754), counter-2 (s5787-s5797) and misc update diaries migrated to PROJECT-OVERVIEW 'Migrated from CURRENT-TRUTH (s5815)'. Net: voice data exists in RDRAM and decodeAndFillVoiceBlock runs, but the buffer content is rail-saturated decoder OUTPUT (suspect runVoiceLatticeFilter 0x8009D980, s5666); counter 2 = class-2 NPC tally fed by updateDestructionDebrisNpc, victims die to real projectile hits (s5793).
-
-- s5820: g1_fly soak ended the mission cleanly (origin 0x620400 at ~353 s) but crashed in our own s5818 instrument during endMissionCleanup (fixed in apply_s5818_destroy_health.py, not rebuilt). Autopilot stick barely moves the player (~0.05 u/update); 'does approaching keep troops alive' is still open.
-
-- s5822: holding A (ship loops, idle->moving) takes ground-troop gtdest from 0 (idle) to 27 in 130 s; d2 at destroy not observed ([rng] cap 20/result spent early). Despawn-by-design consistent but not selected vs a motion/collision destroy path. Next: key the [rng] log to gtdest (full regen).
-
-- **s5829 (single-run + code read):** class-1 descriptor words don't discriminate counted (0x18,0x19, deterministic across runs) from silent; counted sets come via npcProbeDriod copy 2 (L_800CBCBC, msg-5 death-effect arm), the +0x6C gate (copy 1) never fired. Next: find the msg-2 sender for class-1 NPCs.
-
-## s5832 addendum (G1)
-Dispatcher tally (s5832): only update fns 8006cbb0 (= updateDestructionDebrisNpc, 249 msg-5), 800cabd4 (6) and 800d93c0 (3) ever receive msg 5 in a 320 s fire mission. SUPERSEDED (s5833): 800cabd4 = npcProbeDriod, 800d93c0 = npcWingmanUpdate are the s5794 shooters, not class-1 damage handlers.
-
-## s5833 addendum (G1)
-Msg-5 sender = audioCueDispatcherNpcHandler projectile loop (0x8005D1C8-0x8005D360; findSegmentObjectSphereHit per chain NPC). s5833 tally in a 320 s fire mission: player bolts 445 loops / 28679 candidate tests (all with shapes) / 0 sphere hits / 0 sends; NPC bolts 960 / 45187 / 141 / 226. Caveat: autopilot may not aim. Next: for player bolts log min point-segment distance vs sphere radius (control: NPC hits) to split aim-miss from segment-setup defect.
-
-- **s5837 (G1, measured):** forced-geometry player bolts (ROGUESQ_TELE_BOLT=1) hit 64 and reach SEND 32/33 — collision/hit/send OK for player; G1 failure = autopilot never within ~8.8 u of an NPC (s5836). Receiver effect not yet measured (NEXT.md).
-
-- s5848: ROGUESQ_NPC_INVULN=1 (class-2 only) keeps mission alive 722 s (no fail arm); control fails c2=3 then Bus error si_addr=0x3c1b4bc0a after endMissionCleanup. Next: log c1/c10 over time in invuln run to find win arm (NEXT.md).
-- s5849: invuln run: c1 plateaus at 8 (vi 34558-47562), c10 stays 0, c2 0; win arm (c1>=21 or c10>=6) not reachable by autopilot. Next: what increments c1/c10 (setter ids).
-
-- **s5857 (G1, single-run, top):** same run: 505 hit SENDs but only 14 dealDamageToNpc calls (~3%), so the receiver mostly never applies damage (msg-5 handler = fn 0x800E7860 case L_800E84B8, no gate found by static read). The hp pre/post column of those 14 is void (no positive control; pre==post, garbage values). Next s5858: msg-type histogram at handler entry vs SEND count (NEXT.md).
-- s5856: findSegmentObjectSphereHit returns nonzero for ~12 NPC ids under fire (ret≈clamped-in); the loop is closest-hit with ONE SEND per bolt, so s5855's 'inside but no SEND' was not a defect. Question moves to what the SEND victim does (hp/kill). Single-run. Also SIGBUS at ~270 s hold (si_addr=0x37fffd040) unbacktraced.
-- **s5859 (G1, top):** type-5 hit SENDs are delivered (468 dispatched vs 505 sent) to updateDestructionDebrisNpc 8006cbb0 (455), 800cabd4 (6), 800d93c0 (7); no drop (H16/H19 refuted). Victims are debris objects, not troops, so s5858's zero at npcGroundTroopUpdate is expected. Next: per-SEND victim fn/class + nearest class-1 troop distance at fire time (NEXT.md).
-- s5858 (G1, single-run, top): npcGroundTroopUpdate (0x800E7860) entry histogram: types 3/4/11 only (~29k/30k/174k), type 5 = 0, L84B8=0 -> msg 5 hit SENDs never reach this handler (H17 refuted). Next: find which fn receives the type-5 SENDs / why slotDispatcherIter drops them (NEXT.md). Same run crashed with Bus error far=0x37fffd040 (wild MIPS ptr 0x7FFFD040) at ~280 s of mission - M6 datum, no backtrace yet.
-- **s5868 (G1, top, measured, 2 arms):** the s5867 gate word 0x8010CA1C==0x101 is the PAUSE/mission-end state (beginMissionEndTransition sets it; initOrUpdatePauseScreenDim/endMissionEndTransition clear). Harness autopilot START presses (title script t=10..126) leak into the mission: begin n=2-4 follow START fires 21/25/29; with fires 21+ removed only begin n=1 (VI 4560) remains and the mission stays paused. So the 'frozen ship' = paused mission, NOT a physics defect (supersedes the s5867 H30 port-flag framing). s5869: nostart16 got 5/5 nomission (the t=74 START IS the mission-launch press, so it can't be removed); new H31c = 2500 ms START hold ends at mission onset 76.5s and may pause it; soak s5869_hold600 queued (AP_HOLD env). Next: rerun stick table without leaked START. Instrument tools/apply_s5868_flagwatch.py ([flw]).
-- **s5867 (G1, top, 3 soaks + in-run control):** the frozen-ship gate is upstream of the physics wrapper: only caller #1 (0x800B4588, symbol `playWeaponFireSound` = X-wing wrapper) ever runs and never early-returns; chain updatePlayerCraftPhysics <- wrapper <- `playerXwingUpdate`(slot,msg,payload) <- `slotDispatcherIter` <- runInMissionFrame. msg 3 (per-frame tick) reaches the player slot iff mission-flags word 0x8010CA1C == 0 (69/69 rows; 0/242 rows at 0x101); A-hold returns the word to 0. msg 4 keeps flowing. H30 selected: something withholds msg 3 while 0x8010CA1C bits 0x1/0x100 are set. Open: is that flag by-design (retail needs A/throttle) or a port-side stuck flag. Instrument tools/apply_s5867_callers.py + apply_s5867b_msg.py (`[plc]`). Next: writers of 0x8010CA1C bits 0x1/0x100 + reader that gates msg 3.
-- **s5866 (G1, top, single soak + in-run control):** [plw] store census on the player record: in the frozen window (el 140-340, pos fixed) ZERO stores reach the record (no updatePlayerCraftPhysics, no addScaledVec3ToVec3 pos writes); outside it they run ~30-60/s. A resumes them. So the whole player update is gated off (not speed*stick=0); +0xEC/+0xF0 are spawn-only, speed word is rec+0x2C (0x800B35AC). Next: callers/gate of updatePlayerCraftPhysics (10 sites funcs_28/31/32).
-- **s5865 (G1, offline, top, single soak + in-run control):** soak s5864_stick_pdump: the full player record is byte-identical over 228 consecutive [pdump] rows spanning all su/sr/sd windows (no word correlates with stick, max |c|=0.09; +0xDC/E0/D0 stay 0/0/-36); A-hold changes pos x/z, +0x2C/+0x34 and +0xEC/+0xF0 (2.625->3.75, speed-like). So H26b: the update that consumes the stick does not run/has no effect while static; s5864's 'record echoes stick' held only while the ship was live. Next: find the writer of +0xEC/+0xF0 and +0x2C/+0x34.
-- **s5864 (G1, offline, top):** 'stick does not steer' is NOT an input-path defect: sx/sy are injected (plpos rows), the player record echoes them exactly (+0xDC/+0xE0, s5680) and pos.y tracks sy (s5684) - H25/H27 refuted (two sources). Remaining H26: frozen pos (y=-6.5 floor, 124-360 s) is a ship-state gate; only A moves it. Soak s5864_stick_pdump queued (record words vs stick while pos frozen).
-- **s5863 (G1, offline, top):** the planned vertical-offset arm is redundant: ROGUESQ_TELE_BOLT (s5841/s5845) already forces hits and lifts counter 1 (4 -> 13/17); H22 aim/altitude stands (natural 9/2049). Class-1 collider r~0.2 u (r2 0.0412, retail code). Next (NEXT.md): why stick input does not steer the ship (s5821).
-- **s5862 (G1, single-run T arm, top):** H23 refuted (shadowed=0; all 9 troop-hit bolts won). Troops get 9/2049 bolt hits vs debris 237 -> H22 aim/altitude selected. Also Bus error far=0x3c2d5b616 at ~260 s. Next: vertical-offset arm (NEXT.md).
-- **s5861 (G1, single-run, top):** closest-hit loop: of 1793 bolts only 285 hit anything; winners debris/troop-handler-fn/other = 278/0/7. Troop classifier keyed wrong fn (troop nodes are 800cabd4/800d93c0), so shadowing is unmeasured. Next: fix classifier, rerun (NEXT.md).
-- **s5860 (G1, offline, two runs s5857+s5858, top):** H20 refuted — the autopilot passes within 0.4-3 u (xz) of survivors 0x1f/0x27/0x2a/0x20/0x26 with A held (17-20 A-samples in range); kills 6-8 of 21. Survivors show xz<<3D gap (vertical offset ~4-6 u), killed ones don't — suggestive, not clean. Next: per-bolt bolt-vs-troop 3D distance (see NEXT.md).
-
-- s5870: held-START bleed (H31c) supported - with AP_HOLD=600 no beginMissionEndTransition fires and the mission runs 187 s w/o VI stall; it ends via endMissionCleanup (requester unnamed). The end-of-run Bus error far=0x3c2bc0000 is the s5818 HUDBIT diagnostic (rs5818_log), not a game crash; guard lands at next regen.
-- **s5883 (top, single-run + s5833):** class-2 kills under held fire are NPC bolts (12/12 N, 0 P); class-2 desc set varies per run. Next: why fire provokes NPC fire on class-2 (NEXT.md).
-
-- **s5884 correction:** s5883's "class-2 kills = NPC bolts (12/12 N)" is superseded — its hook capped at 12 sends (all before el=105 s; class-2 kills start el 319 s). Uncapped: 656 msg-5 SENDs, 0 hit a descriptor-bearing node; class-2 kills come via another destroy caller (unidentified). Next: log caller $ra at destroyNpcSlotByIndex for class-2.
-- **s5886 (top, single-run, control cls0/cls1 joined):** s5884/s5885's "SEND misses class-2" was a decode bug: the NPC object is *(slot+4) and the descriptor is obj+0x34 (updateDestructionDebrisNpc 0x8006CBF8). Fixed decode: 666/710 msg-5 SENDs hit class-2 descs (cce/a9c/e5c ~135 each), 12 hit class 1, 32 class 0. Class-2 kills ARE projectile-hit SENDs; backtrace shows handler-nested dispatch. who/shooter columns still void (s5854). Supersedes s5884 'not via SEND', s5885 'unhooked path'. Next (NEXT.md): what are class-2 objects, and aim/steer fire at class-1 only.
-- **s5888 (top, offline code read, single-source):** class-2 objects are level-DAT type-0x14 descriptors installed by setupNpcUpdateFunctions (0x800653B4, case 8 -> update fn 0x8006CBB0) via spawnNpcOfType, called from loadDatFile and updateActiveGridCellState (grid-cell activation); the only 0x11C NPC malloc is the class-1 spawn arm. No runtime parent link exists => H-script selected, H-shield refuted. Next: dump type/+0x70 of 80319E5C/CCE/A9C to confirm, then class-2-only INVULN fire run logging c1 over time (NEXT.md).
-- **s5887 (top, single-run + s5886):** class-2 NPCs are co-located (<=2 xz units, 7/7) with class-1 target descriptors, and the npcProbeDriod spawn arm only ever creates class-1 (80/80) — class-2 come from another creator. Fire at class-1 therefore hits class-2 (fail arm). Next: find class-2 creator; test if class-1 can be killed without class-2 (NEXT.md).
-
-- s5890 (offline, single-source): in the s5889 INVULN log class-1 descriptors got 0 hit msgs (hitsum cls=1 all zero vs cls=2 m5~991) while the player stayed put (plpos static) => (b) reachability favoured over (c). Next: move the player to a surviving class-1 (stick toward it or probe pos-poke) and re-read cls=1.
-- s5889 (single run per arm): with class-2 invulnerable (INVULN positive control 20 hits) c1 still plateaus at 8 of 21, mission alive 600 s. The class-2 fail arm is NOT the c1 cap. Open: (b) reachability/aim vs (c) shield semantics.
-
-- s5916 (single-source): on the NO_CRASH steer run, open-loop stick windows gave 3 class-1 crossings in 6 windows vs 11 in 4 A-only windows; blind steering does not raise crossings. Next: closed-loop bearing from the player dump (tools/agent/s5916_tally.py is the tally).
-- s5917: class-1 bearing vs pp travel flat (n=398); H-aim unsupported pending pp identity check (NEXT.md).
+Use `PORTING-STATE.md` only through bounded grep/sed windows. Use
+`docs/PROJECT-OVERVIEW.md` for migrated history, `docs/M5-AUDIO-PLAN.md` for
+audio inventory, `docs/F5-UCODE-REFERENCE.md` for the microcode contract,
+`docs/M6-OBJECTIVE-COUNTER-WRITERS.md` and `docs/M6-PHASE-MACHINE.md` for
+mission logic, and `scratch/agent/SOAK-RESULTS.md` for queued verdicts.

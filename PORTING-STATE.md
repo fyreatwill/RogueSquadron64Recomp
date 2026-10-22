@@ -166033,3 +166033,19 @@ aim-calibration entry is superseded by the owner’s G1 coverage redirect.
 
 ORIGIN: no mitigation or runtime behavior change; only coverage scripts and
 ledger/state updates were added.
+## Session 5932 (2026-10-22) — maintenance compacted CURRENT-TRUTH and isolated the level-coverage queue launch failure
+
+The mandatory size check reported 60,165 bytes, so this was a maintenance
+iteration and no runtime experiment was run. CURRENT-TRUTH was rewritten from
+303 lines into a compact operational handoff: the current G1 coverage goal,
+closed/parked threads, live constraints, durable state, and a monotonic backlog
+remain; the long s5841-s5930 aim diary and older migrated material remain in
+PROJECT-OVERVIEW. The next work unit is now the queue launch-contract audit.
+
+The newest soak tail contains `g1_level_coverage_common rc=1` and
+`g1_lvl10a rc=127`, both at 0 seconds. This is an unevaluable launch failure,
+not evidence about level 10. NEXT.md records four competing causes and the
+single discriminator: inspect the exact scripts, logs, executable bits, and
+queue/done placement before running another game. The maintenance rewrite
+reduces the handoff below its 60 KB trigger and refreshes the stale session
+headline.
