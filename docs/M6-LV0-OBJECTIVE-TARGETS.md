@@ -26,3 +26,8 @@ desc      boolid kill spawns grp  posx posy posz
 8031C708  0x2e  -  5  113  47 -2 94
 8031C7FC  0x2f  -  5  113  55 -4 91
 ```
+
+## class-2 NPC positions vs nearest class-1 descriptor (s5887, single run m6/s5887_pos; npc+0/+8 = x/z at msg=3 of [npcd])
+80319a9c (37,36) <-> 803175a4 (37,35) | 80319cdc (69,23) <-> 8031aa94 (70,23) | 80319e5c (91,42) <-> 8031c05c (91,40)
+8031a5dc (47,83) <-> 80317698 (45,85) | 8031a69c (51,91) <-> 8031addc (52,92) | 80319b5c (34,113) <-> 80317888 (36,112) | 80319c1c (62,118) <-> 80317790 (64,118)
+All 7/7 class-2 objects sit within ~2 units (xz) of a class-1 descriptor.

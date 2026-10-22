@@ -1,6 +1,6 @@
-# NEXT (s5887): class-2 objects take ~all fire; class-1 targets get 12/710 hits
-Context (s5886): SEND decode fixed (obj=*(slot+4), desc=obj+0x34). 666/710 hits are class-2 (fail-arm descs 80319cdc/a9c/e5c ~135 each). Destroying all three = lose arm.
-Hypotheses: (a) class-2 are friendly/escort objects the autopilot's blind fire hits because they sit on its path; (b) class-2 are ordinary hostiles that the game wants killed and the lose arm is a separate trigger; (c) class-2 desc positions coincide with class-1 groups (aim ambiguity).
-Discriminator: dump class-2 descs' positions (+0x78 float xyz words 4-6 like [spawn1]) and class (+0x70/+0x74/+0x80) next to class-1 positions, plus player pos at each class-2 hit; compare with retail lv0 data (docs/M6-LV0-OBJECTIVE-TARGETS.md). Control: class-1 rows already exist. Offline first: tools/dump_lv0_objective_targets.py with class 2.
-Run: zsh scratch/agent/s5885_ctx.sh style (g1_fireall.sh, LOG_HITS+LOG_HUDBIT).
+# NEXT (s5888): who creates class-2 NPCs (desc+0x70==2), and can class-1 be killed without hitting them?
+Context (s5887): class-2 NPCs sit within ~2 xz units of class-1 descs (7/7); spawn arm L_800CAC40 only makes class-1.
+Hypotheses: (a) class-2 = shield/decoy companion placed on each class-1 group by a second spawner; (b) class-2 = same object seen through a second descriptor view; (c) class-2 spawned by level script (static 0x80319xxx desc table) unrelated to class-1 yet map-overlapping.
+Discriminator: offline first - grep RecompiledFuncs for other rs_malloc 0x11C sites / writers of NPC+0x34 (npc desc ptr); then [npcd] msg=3 npc+0x0C..: does class-2 carry a parent link (npcv parent=) to a class-1 npc? Control: npcv parent field is already logged for class-1.
+Then: protect-class-2 (ROGUESQ_NPC_INVULN class-2 only) + fire run: does c1 climb past 8 toward 21?
 HYPOTHESIS-ID: g1-mission-progression
