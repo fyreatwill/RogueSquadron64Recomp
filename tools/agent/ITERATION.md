@@ -58,10 +58,24 @@ When choosing the work unit, this order overrides Next-steps ordering:
    "all threads parked", "no discriminator remains" and "need a human-chosen target"
    are NOT blocks — 15+ of the 34 blocks between s5031 and s5604 were exactly this,
    and every one was re-scoped by the unblock tier at the cost of two sessions.
-   - G1 **Mission progression.** Every mission reachable and completable from REAL
-     input, not memory pokes (ROGUESQ_MISSION_WIN is a probe, not a pass). The owner
-     has watched several missions besides Mos Eisley play. Close one mission at a
-     time: reach, fly, win, advance; each distinct crash/stall/softlock is a datum.
+   - G1 **Mission coverage (redefined by the owner 2026-10-22).** A mission is
+     VERIFIED when, reached through the forced level-select route
+     (ROGUESQ_FORCE_UNLOCK + ROGUESQ_FORCE_SAVE_MISSION + ROGUESQ_NO_SAVE_WRITE,
+     s5705-s5720 recipes): (a) it reaches flight, (b) holds >=300 s with 0 crash /
+     0 VI stall, (c) a framebuffer capture shows terrain, craft and HUD (compare a
+     retail oracle frame when one is obtainable), and (d) its objective logic
+     responds: forced hits (the s5841 TELE-style lever) move that level's objective
+     counter / end gate. Levels 1-9 have (a)+(b) only (s5708-s5720; lvl7 copyToRAM
+     fixed s5712). Order: find the real mission count from the level table, sweep
+     every remaining level for (a)+(b), then (c)+(d) for all; every distinct crash,
+     stall, softlock or broken render is a datum to root-cause.
+     OUT OF SCOPE — owner playtest covers it: making the autopilot aim, steer, hit
+     or win (bolt tracking, hit spheres, yaw control laws, ROGUESQ_AIM tuning). The
+     s5841-s5930 aim thread is CLOSED as harness work: a blind scripted input
+     missing targets is expected, and forced hits already show the game's damage
+     -> objective path works. If NEXT.md proposes aim/steer/bolt work, discard it
+     and take the next G1 coverage item. Mission-to-mission progression after a
+     real win is also the owner's playtest; do not poke wins to test it.
    - G2 **Audio fidelity.** Owner listening report 2026-10-19: every sound effect is
      recognizable, but all audio sits behind a heavy fuzzy/noise layer, and there is
      NO dialogue/voice. "M5 closed" only proved non-silent PCM. Discriminate where the
