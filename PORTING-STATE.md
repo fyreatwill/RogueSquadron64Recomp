@@ -165932,3 +165932,8 @@ Result: (1) during the sua window plpos shows sy=1.0 on 20 samples and ship y go
 Rules out: "stick has no effect in flight" (it moves y with A held). Does not yet settle H-aim (no per-window crossing tally; log budgets exhausted).
 ORIGIN: no mitigation added; the autopilot combo keys are an input-injection instrument.
 Next: raise the plpos and s5901 log budgets (or phase-gate them per stick window) and re-run g1_steer.sh, tally class-1 crossings per window.
+
+## Session 5915 (2026-10-22) — s5914 "log budget ended at el~253" was a misdiagnosis: the mission ended (3 lives lost); ROGUESQ_NO_CRASH=1 steer run covers all stick windows
+
+Checked the plpos code (main.cpp ~9967): it has NO budget; s5901 cap is 60000 lines (s5914 used 19075). s5914 plpos stopped at el=260.4 because the mission ended: requestMissionTransitionMode x3 (vi 14073/14679/15524) -> endMissionCleanup vi 15596 -> title 0x790400 (consistent with the s5877/s5880 finding that collision deaths exhaust 3 lives). Added ROGUESQ_NO_CRASH=1 to scratch/agent/g1_steer.sh COMMON and re-ran s5915_steer 330: att=1 mission_t=80s hold=334s alive, 0 stalls, 0 crashlines, plpos 418 rows through el=412.4 (positions move in every 30 s window; y drops to -18 under sda windows), s5901 50197 rows (under cap). endMissionCleanup count 1 (the control string appears once; no mid-run end). ORIGIN: no mitigation added (test lever from s5880 only).
+Not yet done: per-window c1f/best_ratio tally (offline, scratch/agent/m6/s5915_steer/run.log). Caveat: with NO_CRASH the ship never dies, so crossings are measured on a non-lethal flight.
