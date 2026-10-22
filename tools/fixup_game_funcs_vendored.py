@@ -37785,6 +37785,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5818 gt label x{_n5818b}")
 
+    if p.name in ("funcs_42.c", "funcs_35.c"):
+        import apply_s5847_mask_log as _a5847
+        text, _n5847 = _a5847.apply(text)
+        if _n5847:
+            changed = True
+            report.append(f"{p.name}: s5847 mask log x{_n5847}")
+
     if p.name == "funcs_42.c":
         import apply_s5846_mission_end as _a5846
         text, _n5846 = _a5846.apply(text)
@@ -41508,6 +41515,7 @@ RS64_REPLAY = [
     "apply_s5817_bit3_setters.py",
     "apply_s5818_destroy_health.py",
     "apply_s5846_mission_end.py",
+    "apply_s5847_mask_log.py",
     "apply_s5810_npc_supply.py",
     "apply_s5794_shooter.py",
     "apply_s5797_aim.py",
