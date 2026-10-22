@@ -9958,14 +9958,19 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
     // so held-key phases can be compared inside ONE run (s5820: 150ms taps every 3s moved the ship ~0.05/update).
     {
         static int s_lp = -1; static unsigned s_n = 0;
+        static const unsigned s_every = std::getenv("ROGUESQ_PLPOS_EVERY") ? (unsigned)atoi(std::getenv("ROGUESQ_PLPOS_EVERY")) : 30u;  // s5920
         if (s_lp < 0) { const char* g = std::getenv("ROGUESQ_LOG_PLPOS"); s_lp = (g && *g == '1') ? 1 : 0; }
         volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
-        if (s_lp && rd && ((uint32_t)rs64_vi_committed_origin() & 0xFFFFFFu) == 0x690400u && (++s_n % 30) == 0) {
+        if (s_lp && rd && ((uint32_t)rs64_vi_committed_origin() & 0xFFFFFFu) == 0x690400u && (++s_n % s_every) == 0) {
             const uint32_t p = rs64_rdram_u32(rd, 0x137DB8u + 4) & 0xFFFFFFu;
             if (p >= 0x1000u && p < 0x7FFF00u) {
                 float v[3]; for (int i = 0; i < 3; i++) { uint32_t u = rs64_rdram_u32(rd, p + 0x4C + 4 * i); memcpy(&v[i], &u, 4); }
                 fprintf(stderr, "[plpos] el=%.1f n=%u pos=(%g,%g,%g) sx=%.1f sy=%.1f btn=0x%04X\n",
                         (double)SDL_GetTicks() / 1000.0, s_n, (double)v[0], (double)v[1], (double)v[2], (double)stick_x, (double)stick_y, (unsigned)btn);
+                if (s_every < 30u) {  // s5920: tilt matrices (+0x74 / +0xC0, 9 floats each) -> forward vector offline
+                    float m1[9], m2[9]; for (int i = 0; i < 9; i++) { uint32_t u = rs64_rdram_u32(rd, p + 0x74 + 4 * i); memcpy(&m1[i], &u, 4); u = rs64_rdram_u32(rd, p + 0xC0 + 4 * i); memcpy(&m2[i], &u, 4); }
+                    fprintf(stderr, "[plmat] n=%u A=%g,%g,%g,%g,%g,%g,%g,%g,%g B=%g,%g,%g,%g,%g,%g,%g,%g,%g\n", s_n, (double)m1[0],(double)m1[1],(double)m1[2],(double)m1[3],(double)m1[4],(double)m1[5],(double)m1[6],(double)m1[7],(double)m1[8],(double)m2[0],(double)m2[1],(double)m2[2],(double)m2[3],(double)m2[4],(double)m2[5],(double)m2[6],(double)m2[7],(double)m2[8]);
+                }
             }
         }
     }

@@ -1,7 +1,7 @@
-# NEXT (s5920): per-frame ship yaw + object id in class-1 sphere log
+# NEXT (s5921): poke ship within 0.3 u of an unkilled class-1 centre
 
 HYPOTHESIS-ID: g1-mission-progression
 
-Context (s5919): class-1 spheres r 0.06-0.68; track (30-frame samples) never within 1.5 of any centre. H-range favoured, H-heading/H-lifetime untested (log lacks yaw and object id; plpos sparse).
-Work unit: extend [plpos] emitter to every frame during a short window and add ship yaw; tag [sph] P rows with owning object ptr; rerun tools/g1_steer.sh; tabulate per-object min range and angle(heading, ship->obj) with tools/g1_track_vs_spheres.py.
-Control: the 13-sphere / 20 P-row shape reproduced.
+Context (s5920): ship has no yaw; track never within 1.8 u of any class-1 centre (r<=0.59). H-range holds.
+Work unit: use ROGUESQ_PLPOS_POKE (s5891, scratch/agent/s5891_poke.sh as template) with waypoints = centres of unkilled ids (from m6/s5920b_steer/run.log [s5901] c1f=1 ctr=), PLE=2 logging; check whether [npcmsg] tmsg5 / kill fires when range < r.
+Positive control: poke onto a centre of an already-killed id vs unkilled; kills must rise for >=1 poked id. Null (no msg5 at range<r) => collision uses bolt pos, not ship pos; then log bolt spawn pos.
