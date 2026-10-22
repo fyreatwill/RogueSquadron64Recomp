@@ -1,4 +1,4 @@
-# NEXT: G1 - s5875: find what sets requestMissionTransitionMode a0=1 when health is held at 150
-Hypotheses: (a) lives byte hits 0 (non-health death), (b) a0=1 is a scripted/timer mission end (e.g. objective fail or time), (c) a different player-HP field than the one godmode revives.
-Measure: add lives byte 0x80130B10+[0x8010C9E8], caller ra (use bt from rs5846_log) and mission timer to [m47] via tools/apply_s5847_mask_log.py, regen, run god+ctl hold600 as queued soaks. Outcome splits: lives drop to 0 => (a); ra points at timer/objective fn => (b); neither => (c).
+# NEXT: G1 - s5876: fold s5875_hold600_mtm soak; identify the object whose 0x184 timer expires at 0x800B1140
+Hypotheses: (a) legit mission timer (objective time limit) - mission is meant to end/fail; (b) our dt (a1) is wrong/huge or timer init (obj+0x184) is uninitialised/zero from an unimplemented spawn path; (c) object is an NPC/ally despawn timer that should not drive mission end (phase gate wrong).
+Measure: read [bit1] lines in scratch/agent/m6/s5875_hold600_mtm/run.log (slot, lives, s1 vs [m47] vi). Then add a one-build logger (apply_s5876) at 0x800B1024 entry printing s1, [s1+0xB8], [s1+0xBB], dt(f6), [s1+0x184] for the first 3 calls per object, to see initial timer and per-frame dt. dt ~1/60 sane => (a)/(c); dt wild => (b).
 HYPOTHESIS-ID: g1-mission-progression
