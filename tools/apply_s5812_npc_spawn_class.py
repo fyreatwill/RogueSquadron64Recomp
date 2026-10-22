@@ -7,7 +7,7 @@ TAG = "PATCH: s5812 spawn class"
 BLK = ('    { /* ' + TAG + ' */ static int s_e = -1; static unsigned s_c[5], s_t; '
        'if (s_e < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e = (e && e[0]) ? 1 : 0; } '
        'if (s_e) { uint32_t d = U32(ctx->r18); unsigned k = d ? (unsigned)MEM_W(ctx->r18, 0X70) : 99u; unsigned ki = k < 4 ? k : 4; s_c[ki]++; s_t++; '
-       'if (ki == 1) fprintf(stderr, "[spawn1] #%u desc=0x%08X npc=0x%08X\\n", s_c[1], d, U32(ctx->r17)); '
+       'if (ki == 1) { fprintf(stderr, "[spawn1] #%u desc=0x%08X npc=0x%08X id=0x%X w=", s_c[1], d, U32(ctx->r17), (unsigned)MEM_W(ctx->r18, 0X78)); for (int q = 0; q < 0x90; q += 4) fprintf(stderr, "%08X ", (unsigned)MEM_W(ctx->r18, q)); fprintf(stderr, "\\n"); } '
        'if (s_t <= 64 || (s_t & 15) == 0) fprintf(stderr, "[spawntally] total=%u c0=%u c1=%u c2=%u c3=%u other=%u sum_ok=%d\\n", s_t, s_c[0], s_c[1], s_c[2], s_c[3], s_c[4], (int)(s_c[0]+s_c[1]+s_c[2]+s_c[3]+s_c[4] == s_t)); } }\n')
 def apply(text, funcs=None):
     i = text.find("RECOMP_FUNC void npcProbeDriod(")
