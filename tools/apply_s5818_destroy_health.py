@@ -33,13 +33,18 @@ H39 = r'''/* PATCH: s5818 gt helpers */
 extern volatile uint32_t rs64_vi_n_g;
 extern void getNpcCurrentHealth(uint8_t* rdram, recomp_context* ctx);
 static int rs5818_via; static unsigned rs5818_gn;
+struct rs5822_e { uint32_t ref, pt; float d2; int res; uint32_t vi; }; extern struct rs5822_e rs5822_ring[256]; extern unsigned rs5822_rn;
 static void rs5818_gt(uint8_t* rdram, recomp_context* ctx) {
     static int e = -1; if (e < 0) { const char* v = getenv("ROGUESQ_LOG_HUDBIT"); e = (v && v[0]) ? 1 : 0; } if (!e) return;
     int32_t s1 = (int32_t)ctx->r17; int32_t d = MEM_W(s1, 0X34); uint32_t f60 = 0, f64 = 0, f68 = 0, bb = 0xFF, cnt = 0xFFFFFFFFu;
     if (d) { f60 = MEM_W(d, 0X60); f64 = MEM_W(d, 0X64); f68 = MEM_W(d, 0X68);
         if (f60) bb = MEM_BU((int32_t)0x8013889F + (int32_t)f60, 0); if (f64) cnt = (uint32_t)MEM_W((int32_t)0x8013805C + (int32_t)(f64 << 2), 0); }
     recomp_context t = *ctx; t.r4 = MEM_W(s1, 0X38); getNpcCurrentHealth(rdram, &t); rs5818_gn++;
-    if (rs5818_gn <= 80) fprintf(stderr, "[gtdest] n=%u via=%d f60=%u bool=%u f64=%u cnt=%d f68=%d hp=%d vi=%u\n", rs5818_gn, rs5818_via, f60, bb, f64, (int32_t)cnt, (int32_t)f68, (int32_t)t.r2, rs64_vi_n_g); }
+    if (rs5818_gn <= 80) fprintf(stderr, "[gtdest] n=%u via=%d f60=%u bool=%u f64=%u cnt=%d f68=%d hp=%d vi=%u", rs5818_gn, rs5818_via, f60, bb, f64, (int32_t)cnt, (int32_t)f68, (int32_t)t.r2, rs64_vi_n_g);
+    if (rs5818_gn <= 80) { /* s5822: most recent range result whose ref/pt lies within the NPC object (+-0x400) */
+        int got = 0; for (unsigned i = 1; i <= 256 && i <= rs5822_rn && !got; i++) { struct rs5822_e* q = &rs5822_ring[(rs5822_rn - i) & 255];
+            uint32_t a = (uint32_t)s1; if ((q->pt - a + 0x400u) < 0x800u || (q->ref - a + 0x400u) < 0x800u) { fprintf(stderr, " npc=%08X lastrng: res=%d d2=%g age_vi=%u", a, q->res, q->d2, rs64_vi_n_g - q->vi); got = 1; } }
+        if (!got) fprintf(stderr, " npc=%08X lastrng: none-in-ring(rn=%u)", (uint32_t)s1, rs5822_rn); fprintf(stderr, "\n"); } }
 '''
 def apply39(text):
     n = 0
@@ -65,6 +70,7 @@ H10 = r'''/* PATCH: s5819 range helpers */
 extern volatile uint32_t rs64_vi_n_g;
 extern void getCraftRecordByIdx(uint8_t* rdram, recomp_context* ctx);
 static struct { uint32_t ra; unsigned in, out, shown[2]; } rs5819_b[8]; static unsigned rs5819_n;
+struct rs5822_e { uint32_t ref, pt; float d2; int res; uint32_t vi; }; struct rs5822_e rs5822_ring[256]; unsigned rs5822_rn;
 static void rs5819_rng(uint8_t* rdram, recomp_context* ctx) {
     static int e = -1; if (e < 0) { const char* v = getenv("ROGUESQ_LOG_HUDBIT"); e = (v && v[0]) ? 1 : 0; } if (!e) return;
     uint32_t ra = (uint32_t)ctx->r31, ref = (uint32_t)ctx->r4, pt = (uint32_t)ctx->r5;
@@ -74,6 +80,7 @@ static void rs5819_rng(uint8_t* rdram, recomp_context* ctx) {
     w = MEM_W((int32_t)pt, 0); memcpy(&px, &w, 4); w = MEM_W((int32_t)pt, 8); memcpy(&pz, &w, 4);
     w = MEM_W((int32_t)0x8003A7D4, 0); memcpy(&sc, &w, 4); w = MEM_W((int32_t)0x8003A7D8, 0); memcpy(&th, &w, 4);
     float dx = (rx - px) * sc, dz = (rz - pz) * sc; float d2 = dx * dx + dz * dz; int res = !(th < d2);
+    { struct rs5822_e* q = &rs5822_ring[rs5822_rn++ & 255]; q->ref = ref; q->pt = pt; q->d2 = d2; q->res = res; q->vi = rs64_vi_n_g; }
     int k = -1; for (int i = 0; i < 8; i++) { if (rs5819_b[i].ra == ra) { k = i; break; } if (!rs5819_b[i].ra) { rs5819_b[i].ra = ra; k = i; break; } }
     if (k < 0) k = 7; if (res) rs5819_b[k].in++; else rs5819_b[k].out++; rs5819_n++;
     if (rs5819_b[k].shown[res] < 20) { rs5819_b[k].shown[res]++;
