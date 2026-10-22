@@ -1,12 +1,7 @@
-# NEXT (s5910): find who POSTS NPC message type 5 (damage) and what gates it per bolt
+# NEXT (s5911): read the msg-5 post site in audioCueDispatcherNpcHandler
 
 HYPOTHESIS-ID: g1-mission-progression
 
-s5909: findSegmentObjectSphereHit callers are not damage (occlusion/LOS/lock-on). Damage is msg5 reaching npcProbeDriod via a queue (host stack has no sender, ra=0).
-
-Hypotheses:
-- H-post-gate: a bolt-update function posts msg5 only when a predicate (team/owner/range) passes; 12 ids never get it.
-- H-other-prim: the bolt uses a primitive other than 0x8006A944 (e.g. inline segment/sphere or findNpcInScaledBoxRegion/AlongDirectionRay: 8005eb5c 7806 calls/0 hits is the box-region caller).
-- H-queue-drop: msg5 posted but dropped before dispatch.
-
-Discriminator: (1) static: in N64Recomp/RecompiledFuncs grep for the message-post function (callee of which npcProbeDriod drains) and sites setting a1/msg type 5; name the poster functions. (2) one run tallying calls/args per poster per bolt id, with control = posters for msg3/4 firing (s5893 had msg3/4 per-id control).
+s5910: msg 5 has exactly two posters (audioCueDispatcherNpcHandler+53528: 763; dealDamagetoDatItem: 1) in 420 s fire-held lv0. Controls fired.
+Hypotheses: H-site-gate (the 763 posts are real bolt hits but selector list excludes the 12 ids); H-not-damage (site is a proximity/AI cue, unrelated to bolts); H-predicate (needs a state the player-bolt never sets).
+Discriminator: static read of the call site (find guest addr: grep slotDispatcherIter(rdram in audioCueDispatcherNpcHandler in funcs with a1=5), name the predicate and selector source; then one run logging sel/a2 at that site joined with player bolt positions (apply_s5910_postra.py already prints [postra5] sel/a2 -- ra column now host-bt, fix print).
