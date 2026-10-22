@@ -1,5 +1,5 @@
-# NEXT: G1 — win arms: why ctr1 plateaus at 8 (need 21) and what feeds counter 10
-s5826: s5824's end = FAIL arm (counter 2 reached 3 via class-2 descs e5c, cce, a9c destroyed; no-fire runs only lose e5c). Win arms: get(1)>=21 (needs B6A4==0,B6A8==0) or get(10)>=6.
-Hypotheses: (a) lv0 DAT supplies only 8 class-1 sources until more NPCs spawn later/with progress; (b) class-1 NPCs despawn out-of-range (s5823) before being killed, so count stays 8; (c) counter 10 is fed by a different writer never reached.
-Discriminator: offline from existing logs first: grep `[supply]` cls1 spawn count vs teardown count in s5825_aonly; then one run with A-held approach toward class-1 ground troops while avoiding class-2 (no fire), logging writers of counter 10 (0x80138064 +9*4?) - positive control: the ctr1 sets still fire.
+# NEXT: G1 — map counter-1 bool ids (0x18..0x2B) to lv0 DAT descriptors/positions
+s5827: counter 1 counts distinct bool ids (44 class-1 spawns -> 8 distinct sets). Need ~21 distinct ids.
+Hypotheses: (a) unreached ids are NPCs placed beyond reach of a 2.2 u/s ship; (b) unreached ids need a different trigger (scripted/later spawn); (c) counter 10 (arm C get(10)>=6) is a separate objective path.
+Discriminator (offline first): read lv0 DAT descriptor table (see tools/apply_s5809_ctr1_log.py for the datItem hook) -> list id, position; compare with player start (42.7,45.0) and distance travelled. Then one run with the autopilot logging which ids set, positive control: the 8 known ids.
 HYPOTHESIS-ID: g1-mission-progression

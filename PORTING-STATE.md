@@ -165335,3 +165335,8 @@ Findings: (1) ctr1 reached 8 in s5824 AND s5825_aonly, but only s5824 ended; aon
 Rules out: "ctr1==8 plus a timer ends the mission" (a), "run-specific win" (b). Single-run per arm for the class-2 kills; label single-source for who destroyed cce/a9c (fire inferred, not shown).
 ORIGIN: no code change; no mitigation added.
 Next: who destroys the two extra class-2 descriptors in s5824 (player fire stray hits on static class-2 objects vs other), and what lv0 has 21 class-1 (win arm D) vs only 8 observed.
+
+## Session 5827 (2026-10-21) — counter 1 is per-bool-id, not per-kill: 44 class-1 spawns yield only 8 distinct ids
+Offline, s5825_aonly/run.log. (1) `[spawntally]` reached total=44 with c1=44 (all class 1, c0/c2/c3=0), yet `[ctr1] set` fired exactly 8 times, each with a DISTINCT id (0x18,19,2B,1B,1C,1D,2A,29), each val=1, c stepping 0->7. Repeated spawns of the same descriptor add nothing. (2) The id space seen across runs (those 8 plus 0x1E from s5807) lies in 0x18..0x2B (20 ids); get(1)>=21 therefore needs essentially every id in that range set once, i.e. distinct class-1 NPCs reached, not more kills of the same ones. Hypothesis (a) "DAT supplies only 8 sources" and (b) "despawn before kill" are both consistent; (b) is supported by s5823. Hypothesis (c) counter 10 writer: not tested this session (no run). Single-source (one log).
+Ruled in: the plateau at 8 is a coverage limit (ids reachable by a ship moving ~2.2 u/s on A only), not a stuck counter. Not run: no game run this iteration.
+Next: map id -> descriptor/position from the lv0 DAT offline and compare against the 8 reached positions to see which ids are in range of the start point.
