@@ -1,8 +1,9 @@
-# NEXT (s5913): get real-input bolts to cross class-1 spheres (aim/steer)
+# NEXT (s5914): steer the ship with the autopilot stick keys, count class-1 crossings
 
 HYPOTHESIS-ID: g1-mission-progression
 
-s5912: shadowing refuted; hit->win->send works for class-1 when a bolt crosses (6/6). Remaining: bolts never cross the other class-1 spheres.
-Hypotheses: H-aim (autopilot flies a fixed key table, never points at class-1 targets); H-range (class-1 NPCs are beyond bolt life ~ few units); H-spawn (those NPCs are not yet spawned/active in 420 s window).
-Discriminator: in one run log, per class-1 id (fn cabd4/d93c0/e7860), player-to-NPC distance at closest approach (ROGUESQ_PLAYER_DUMP + slot-table pos) next to bolt max life distance (s5897 hist). If closest approach >> bolt reach, H-range/H-aim; then add autopilot steering (tools in scratch/agent/g1_approach.sh) toward nearest class-1 and re-run g1_fireall with the s5912 tally as the measure (control: class-1 crossings must exceed 6).
-Instrument already present: tools/apply_s5912_shadow.py (ROGUESQ_LOG_HUDBIT=1), run: zsh scratch/agent/g1_fireall.sh <tag> 420
+s5913: stick=0 for all 413 plpos samples; track misses logged class-1 spheres by 1.4-8.8 (radii 0.06-0.68). H-aim selected.
+Work unit: copy scratch/agent/g1_fireall.sh to g1_steer.sh; add phase-gated held stick keys (su/sr/sd/sl keys per the s5821 table, e.g. rotate 3s windows) alongside A-fire; raise [sph] log budget if cheap. Run once (420 s), then tally crossings per class-1 id with the s5912 HUDBIT tally (ROGUESQ_LOG_HUDBIT=1).
+Control: the unsteered s5912 baseline had 6 class-1 crossings total; any steered run is judged vs that within-run phase (stick-off phase vs stick-on phase, gate on VI).
+Outcomes: crossings >6 and rising with steering -> aim confirmed, then closed-loop steering from the player dump; no change -> steering keys do not move the ship (check plpos sx/sy nonzero first) or range (bolt life) limits.
+Analysis: python3 tools/g1_track_vs_spheres.py <run.log>
