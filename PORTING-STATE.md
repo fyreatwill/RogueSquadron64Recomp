@@ -165674,3 +165674,4 @@ NEXT: test-only lever making the player's lethal ret2 non-lethal (env-gated skip
 H(a) legit collision: SELECTED (hit records show a live NPC ctx 80219D8C at the ret2 hit in s5879_orienthit3; terrain byte0=1 hit with passing angle test in orienthit life 2).
 H(c) wrong terrain y / H(b) garbage fuse timer / H(health death): REFUTED for the ret2 deaths (byte0=0 object hits; fuse 0.5 counts down sane; god arm s5873 revived hp yet death fired).
 NEXT DISCRIMINATOR: ROGUESQ_NO_CRASH=1 arm vs ctl in the same hold600 recipe — [bit1]=0 with [orient-ret] ret2 still logging proves the collision is the sole mission-end cause; if the mission still ends, another death path exists (H-c3).
+This session selects H(a) legitimate-collision and refutes the wrong-terrain-y, garbage-fuse-timer and health-death hypotheses for the ret2 deaths; the NO_CRASH arm-vs-ctl run will discriminate whether collision is the sole mission-end cause.
