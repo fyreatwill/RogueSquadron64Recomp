@@ -165800,3 +165800,9 @@ Rules out: slot->descriptor join via +0x34/+0x78; a kind split in node +0x14 fla
 ORIGIN: diagnostic only, no mitigation.
 Hypotheses: (a) survivors geometrically off-axis - still standing; (b) non-target by kind - weakened, no flags split; (c) bolt range - untested.
 Gate wording: refutes a +0x34 descriptor join and a +0x14 flags split; selects nothing new.
+
+## Session 5897 (2026-10-22) — player bolts travel <~3 u before testing/dying; kills are point-blank; H-range supersedes H-aim (s5897)
+Ran: tools/apply_s5835_sphere_probe.py extended with a per-projectile life tracker (rs5897_track: life-start pos, max dist, histogram, HITDIST on ret!=0), scratch/agent/s5897_life.sh (s5896 recipe, 421 s hold, 0 crashes, 0 stalls). Offline re-read of s5896 logs first: s5855 `in` counts are INFINITE-LINE hits (ap2<=r2), s5856 `cin` is the segment-clamped count; survivors aa/9e/92 had in=70-100 but cin=0, so "aimed on-axis but never reached" - aim alone did not explain them.
+Result: life max-dist histogram (<1,<2,<4,<8,<16,<32,<64,>=64) = 17891/138/279/645/113/5/1/0 over 19072 lives; 60 logged hits: 41 at life_dist 0, the rest 0.23-3.2 u. Positive control: HITDIST fires (60 rows) and the hit ids match s5856 ret>0 ids. So hits happen only when a target is within ~3 u of where the bolt first appears; bolts almost never travel the 12-25 u to on-axis survivors. Supersedes s5894's "H-aim selected": survivors are on-axis (fap2~0 at 12-24 u) but out of bolt reach.
+Rules out: aim/steering as the primary cause; input path (s5895). Open: why bolts advance <1-3 u (per-step velocity |dir| 0.09-2.1 u/test, lifetime/despawn, or timestep dt wrong). Caveat: life reset heuristic = >6 u jump; 94% lives <1 u may include stationary/idle pool slots (single-source).
+ORIGIN: instrument only (no mitigation added).

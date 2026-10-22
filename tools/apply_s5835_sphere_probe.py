@@ -10,6 +10,18 @@ extern unsigned rs5834_who; extern unsigned rs5856_cin;
 static unsigned rs5835_sin[2], rs5835_sinp[2], rs5835_n[2], rs5835_in[2], rs5835_zc[2], rs5835_tot, rs5835_inprint; static float rs5835_min[2] = {1e30f, 1e30f}, rs5835_minr2[2], rs5835_minsd[2] = {1e30f, 1e30f}, rs5835_minsdr2[2]; static unsigned rs5835_mp[2]; static unsigned rs5837_tele, rs5837_en = 2, rs5837_cnt;
 extern uint32_t rs5841_cand; static unsigned rs5841_cl[2][5];
 static uint32_t rs5839_obj; static unsigned rs5839_cl[5], rs5839_tp, rs5839_tpc; 
+extern uint32_t rs5856_proj;
+/* s5897 bolt-life tracker: per projectile ptr, life-start pos, max dist^2 from start; histogram of life max dist at life end; hit distances */
+static struct { uint32_t pr; float s[3], l[3], md2; unsigned n; } rs5897_L[32]; static unsigned rs5897_nL, rs5897_hist[8], rs5897_lives, rs5897_hn;
+static void rs5897_flush(unsigned z) { float d = sqrtf(rs5897_L[z].md2); unsigned b = d < 1 ? 0 : d < 2 ? 1 : d < 4 ? 2 : d < 8 ? 3 : d < 16 ? 4 : d < 32 ? 5 : d < 64 ? 6 : 7; rs5897_hist[b]++; rs5897_lives++; if ((rs5897_lives & 63) == 0) fprintf(stderr, "[s5897] life maxdist hist <1,<2,<4,<8,<16,<32,<64,>=64: %u %u %u %u %u %u %u %u lives=%u\n", rs5897_hist[0], rs5897_hist[1], rs5897_hist[2], rs5897_hist[3], rs5897_hist[4], rs5897_hist[5], rs5897_hist[6], rs5897_hist[7], rs5897_lives); }
+static void rs5897_track(uint32_t pr, const float* pp) {
+    unsigned z; for (z = 0; z < rs5897_nL; z++) if (rs5897_L[z].pr == pr) break;
+    if (z == rs5897_nL) { if (z >= 32) return; rs5897_L[z].pr = pr; rs5897_L[z].n = 0; rs5897_nL++; }
+    if (rs5897_L[z].n) { float q = 0; for (int i = 0; i < 3; i++) { float e = pp[i] - rs5897_L[z].l[i]; q += e*e; } if (q > 36.0f || (q > 0 && 0)) { rs5897_flush(z); rs5897_L[z].n = 0; } }
+    if (!rs5897_L[z].n) { for (int i = 0; i < 3; i++) rs5897_L[z].s[i] = pp[i]; rs5897_L[z].md2 = 0; }
+    rs5897_L[z].n++; float q = 0; for (int i = 0; i < 3; i++) { rs5897_L[z].l[i] = pp[i]; float e = pp[i] - rs5897_L[z].s[i]; q += e*e; } if (q > rs5897_L[z].md2) rs5897_L[z].md2 = q;
+}
+unsigned rs5897_dist2(uint32_t pr) { for (unsigned z = 0; z < rs5897_nL; z++) if (rs5897_L[z].pr == pr) { float q = 0; for (int i = 0; i < 3; i++) { float e = rs5897_L[z].l[i] - rs5897_L[z].s[i]; q += e*e; } return (unsigned)(sqrtf(q) * 100.0f); } return 0xFFFFFFFFu; }
 static float rs5835_f(uint32_t w) { union { uint32_t u; float f; } x; x.u = w; return x.f; }
 static void rs5835_probe(uint8_t* rdram, recomp_context* ctx) {
     unsigned w = 0; /* s5855: who-classifier void (s5854); all bolts counted as w=0 */
@@ -18,6 +30,7 @@ static void rs5835_probe(uint8_t* rdram, recomp_context* ctx) {
     float cc[4], pp[3], dd[3];
     for (int i = 0; i < 4; i++) cc[i] = rs5835_f((uint32_t)MEM_W(S32((int32_t)c), 4 * i));
     for (int i = 0; i < 3; i++) { pp[i] = rs5835_f((uint32_t)MEM_W(S32((int32_t)p), 4 * i)); dd[i] = rs5835_f((uint32_t)MEM_W(S32((int32_t)d), 4 * i)); }
+    if ((rs5856_proj >> 24) == 0x80) rs5897_track(rs5856_proj, pp); /* s5897 */
     if (rs5837_en == 2) { const char* e = getenv("ROGUESQ_TELE_BOLT"); rs5837_en = (e && e[0] == '1'); }
     unsigned c1f = 0; unsigned k39 = 99; { /* s5841: class of the loop's candidate NPC via slot table *0x80130BB0 id*8 */
         uint32_t tb = (uint32_t)MEM_W(S32((int32_t)0x80130BB0u), 0); uint32_t n = (uint32_t)MEM_W(S32((int32_t)(tb + (rs5841_cand & 0xFFFF) * 8)), 0);
@@ -75,7 +88,7 @@ def apply(text, name=None):
     if "PATCH: s5856" not in text and "static void rs5834_post(" in text:
         k = "static void rs5834_pre(uint8_t* rdram, recomp_context* ctx) {\n"
         assert text.count(k) == 1
-        text = text.replace(k, "extern uint32_t rs5841_cand; unsigned rs5856_cin; static uint32_t rs5856_proj; /* PATCH: s5856 */\n" + k + "    rs5856_cin = 0; rs5856_proj = (uint32_t)ctx->r17;\n", 1)
+        text = text.replace(k, "extern uint32_t rs5841_cand; unsigned rs5856_cin; uint32_t rs5856_proj; unsigned rs5897_dist2(uint32_t); /* PATCH: s5856 */\n" + k + "    rs5856_cin = 0; rs5856_proj = (uint32_t)ctx->r17;\n", 1)
         k = "static void rs5834_post(uint8_t* rdram, uint32_t hit) {\n    if (!rs5834_en) return;\n"
         assert text.count(k) == 1
         post = r'''    { /* PATCH: s5856 per-id: calls, ret!=0, clamped-in, clamped-in&&ret==0 */
@@ -84,13 +97,19 @@ def apply(text, name=None):
         if (z == nT && z < 64) { T[z].id = id; nT++; }
         if (z < 64) { T[z].n++; if (hit) T[z].ret++; if (rs5856_cin) T[z].cin++; if (rs5856_cin && !hit) T[z].cmiss++; if ((rs5856_proj >> 24) == 0x80) T[z].wid = (unsigned)MEM_HU(S32((int32_t)rs5856_proj), 0xF8); }
         if (rs5856_cin && !hit) { static unsigned pm; if (pm++ < 15) fprintf(stderr, "[s5856] CMISS id=%x proj=%08x wid=%x\\n", id, rs5856_proj, (unsigned)MEM_HU(S32((int32_t)rs5856_proj), 0xF8)); }
-        if (hit) { static unsigned ph; if (ph++ < 15) fprintf(stderr, "[s5856] RET id=%x proj=%08x cin=%u\\n", id, rs5856_proj, rs5856_cin); }
+        if (hit) { static unsigned ph; if (ph++ < 15) fprintf(stderr, "[s5856] RET id=%x proj=%08x cin=%u\\n", id, rs5856_proj, rs5856_cin); } { extern unsigned rs5897_dist2(uint32_t); static unsigned hn; if (hit && hn++ < 60) fprintf(stderr, "[s5897] HITDIST id=%x life_dist_x100=%u\\n", id, rs5897_dist2(rs5856_proj)); }
         if ((++tk & 1023) == 0) { fprintf(stderr, "[s5856] ids=%u:", nT); for (z = 0; z < nT; z++) fprintf(stderr, " %x{n=%u ret=%u cin=%u cmiss=%u wid=%x}", T[z].id, T[z].n, T[z].ret, T[z].cin, T[z].cmiss, T[z].wid); fprintf(stderr, "\\n"); }
     }
 '''
         text = text.replace(k, k + post, 1); n += 1
+    if "static uint32_t rs5856_proj;" in text:
+        text = text.replace("static uint32_t rs5856_proj;", "uint32_t rs5856_proj; unsigned rs5897_dist2(uint32_t);", 1); n += 1
+    old = 'rs5856_proj, rs5856_cin); }\n'
+    if "[s5897] HITDIST" not in text and "[s5856] RET id" in text:
+        i = text.find("[s5856] RET id"); j = text.find("); }", i) + 4
+        text = text[:j] + ' { static unsigned hn; if (hit && hn++ < 60) fprintf(stderr, "[s5897] HITDIST id=%x life_dist_x100=%u\\n", id, rs5897_dist2(rs5856_proj)); }' + text[j:]; n += 1
     if FN not in text: return text, n
-    if "rs5856_cin |= sin_" not in text and "PATCH: s5835 helpers" in text:
+    if "rs5897_track" not in text and "PATCH: s5835 helpers" in text:
         a = text.find("/* PATCH: s5835 helpers */"); b = text.find(FN)
         text = text[:a] + H + text[b:]; n += 1
     if "rs5839_obj = " not in text:
