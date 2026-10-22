@@ -1,35 +1,38 @@
-# NEXT: consume the repaired G1 level-10 coverage pair
+# NEXT: repair the level-10 G1 route discriminator
 
 HYPOTHESIS-ID: g1-mission-coverage
 
-Work unit: let the queue run `g1_lvl10a.sh` and `g1_lvl10b.sh`, then classify
-both only if they reach flight. The previous attempt produced
-`g1_level_coverage_common rc=1, 0s` and `g1_lvl10a rc=127, 0s`; inspection
-showed the common `.sh` runner was consumed by the queue glob. It is now
-`scratch/agent/g1_level_coverage_common.zsh`; all active wrappers pass syntax
-checks and level 10 `a/b` are restored.
+Work unit: inspect the level-10 route/phase evidence and make the smallest
+recipe change that distinguishes a legitimate level-10 loading path from a
+selector overwrite before flight. The repaired `a/b` pair launched and passed
+`[lvsel]` in all five internal attempts per arm, but both ended
+`allattempts-failed` at `nomission`; observed origins were only
+`0x006A2900` and `0x00644D00`. Do not count this as coverage.
 
-Competing hypotheses for the next pair:
+Competing hypotheses:
 
-- H1: level 10 reaches flight and holds 300 seconds in both arms; this is
-  valid level-10 route+hold coverage.
-- H2: either arm launches but misses `[lvsel]` or flight; the forced-level
-  harness is still invalid and must not count as coverage.
-- H3: either arm crashes, hangs, or stalls VI for 30 seconds after flight; the
-  log is a new G1 root-cause datum.
-- H4: either arm still fails at 0 seconds; the path repair is incomplete and
-  its stderr identifies the remaining launch contract defect.
+- H1: `0x006A2900`/`0x00644D00` are the legitimate level-10 load path and the
+  recipe needs level-specific input or a later origin/phase gate.
+- H2: the forced selector is overwritten after `[lvsel]`, so the observed path
+  is not level 10 and the route needs a selector-state witness.
+- H3: level 10 reaches a flight origin not recognized by the hard-coded
+  `0x00690400` gate; the harness needs a level-specific mission-origin map.
+- H4: the route is genuinely stuck in loading/viewer; a bounded rerun with the
+  corrected gate will reproduce it as a new G1 route failure, not a crash.
 
-Discriminator: per run, require `[lvsel] a1 == 1<<10`, flight handoff, HOLD
-completion, zero `CRASH`/abort lines, and no unchanged VI origin for 30 seconds.
-The positive control is the `[lvsel]` line itself; missing controls make the
-run unevaluable rather than a pass.
+Discriminator: correlate `[lvsel]`'s `cursor=10/res=0xA` with every subsequent
+VI origin and selector-state line until flight. H1 predicts a stable level-10
+loading-to-flight sequence after the route/input correction; H2 predicts a
+selector/state change away from 10; H3 predicts a stable, previously unknown
+flight origin; H4 predicts persistent `0x006A2900`/`0x00644D00` with no flight.
+The positive control is `[lvsel]` itself; missing it makes a run unevaluable.
 
-Suggested checks after the queue verdicts arrive:
+Exact evidence checks before any build/run:
 
 ```sh
-tail -5 scratch/agent/SOAK-RESULTS.md
-rg -n '\[lvsel\]|flight|CRASH|VI|stall' scratch/agent/soak_results/g1_lvl10[ab]_*.log
+rg -n '\[lvsel\]|origin=0x|flight|mission|level' scratch/agent/m6/g1_lvl10[ab]/fail_att*.log | tail -200
+rg -n 'FORCE_SAVE_MISSION|MISSION_RE|006A2900|00644D00|690400' scratch/agent docs
 ```
 
-The following unit is level 11 `a/b` after level 10 is valid.
+Only after this discriminator is repaired and level 10 reaches flight should
+the next unit consume level 10 `a/b`, then levels 11..18.

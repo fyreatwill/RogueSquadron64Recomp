@@ -166066,3 +166066,19 @@ and the path assertion all pass. No game was launched in this work unit.
 This rules out a missing game executable, cwd failure, and mission-level result
 as explanations for the prior 0-second verdicts. The next queue pair must still
 provide the `[lvsel]` positive control before counting any coverage.
+## Session 5934 (2026-10-22) — classified repaired level-10 coverage pair
+
+Consumed the repaired `g1_lvl10a` and `g1_lvl10b` queue verdicts. Each arm
+launched five internal attempts and passed the positive selector control:
+`[lvsel]` reported `cursor=10`, `a1=0x400`, and `res=0x0000000A`. Neither arm
+reached the qualified flight handoff; all ten attempts ended `nomission`, with
+origins limited to `0x006A2900` and `0x00644D00` loading/viewer phases. There
+were no crash or post-flight stall measurements because flight was never
+reached. The pair is therefore unevaluable for G1 coverage, not a level-10
+pass and not a new crash datum.
+
+This rules out the prior queue launch-contract defect and a missing selector
+positive control. It leaves the level-specific route/origin contract unresolved:
+the common runner's `0x00690400` mission gate is not sufficient for level 10,
+or the forced selector is overwritten before flight. NEXT.md now makes that
+route discriminator the next work unit.

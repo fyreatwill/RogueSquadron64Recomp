@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5932 (2026-10-22).
+Compact operational handoff, maintained as of Session 5934 (2026-10-22).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -34,10 +34,14 @@ runner was itself a consumable `.sh` recipe and was moved to `soak_queue/done/`:
 20261022-135630 | g1_lvl10a              | rc=127 | 0s
 ```
 
-These are unevaluable and must not be counted as coverage. Session 5933 moved
+These are unevaluable and must not be counted as coverage. The repaired level-10
+pair passed `[lvsel]` (`cursor=10`, `res=0xA`) in all five attempts per arm,
+but both arms exhausted at `nomission`; their observed origins were only
+`0x006A2900` and `0x00644D00`. This is not level coverage or crash/stall data.
+Session 5933 moved
 the shared runner to `scratch/agent/g1_level_coverage_common.zsh`, outside the
 queue glob, and restored level-10 `a/b` plus level-11 `a` wrappers. The wrappers
-pass syntax/path-only checks; the next queue pass must rerun level 10. A valid
+pass syntax/path-only checks. A valid
 coverage run requires `[lvsel]` with `a1 == 1<<level`, flight
 handoff, at least 300 seconds alive, zero crash lines, and no 30-second VI
 stall. Missing controls are failures of evaluation, not passes.
@@ -98,11 +102,13 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. Consume the next two level-10 runs from the repaired queue. Confirm the
-   `[lvsel]` positive control, flight handoff, 300-second hold, and zero VI
-   stall/crash before counting coverage.
-2. Consume the next valid levels from the repaired queue (11..18),
-   folding each verdict into the ledger and this handoff.
+1. Repair the G1 level-10 route discriminator: determine whether the observed
+   `0x006A2900`/`0x00644D00` sequence is a level-specific loading path needing
+   more input, or whether the forced selector is overwritten before flight.
+   Do not count level 10 until a level-appropriate flight origin is identified
+   and held for 300 seconds.
+2. Rerun level 10 `a/b` with the corrected route/origin control, then consume
+   levels 11..18 from the repaired queue.
 3. Sweep remaining levels for route+hold, then add framebuffer and forced-hit
    objective checks to every level.
 4. Fold the human lv0 play when available; a loss, softlock, or broken render is
