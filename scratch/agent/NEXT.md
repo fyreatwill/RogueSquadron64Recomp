@@ -1,6 +1,5 @@
-# NEXT: G1 - s5870: read soak s5869_hold600 (AP_TITLE_N=17 AP_HOLD=600)
-Hypotheses: H31b begin n=1 (pause 0x101 at VI~4560) is a natural mission-start requester; H31c it is the still-held 2500 ms START (fire 17 released at 76.5s == mission origin onset) read in-mission.
-Discriminator: grep '[flw] .*beginMissionEndTransition' in scratch/agent/m6/s5869_hold600/run.log. Absent (and initMission writers still present = control) -> H31c: make harness hold short / gate keys on mission entry, then rerun stick table 240-440 and check ROGUESQ_LOG_PLPOS position changes. Present -> H31b: find natural requester (event table 0x8010B350 chain, s5846).
-If route fails (allattempts-failed) it is flaky-route, rerun once.
+# NEXT: G1 - s5871: who calls endMissionCleanup at ~VI 15987 in the hold600 mission?
+Hypotheses: (a) player death / ship destroyed (b) mission-win/timer condition (c) leftover harness key (START or hold) re-entering pause/quit.
+Discriminator: rerun s5869 recipe (AP_HOLD=600) WITHOUT ROGUESQ_LOG_HUDBIT (avoids the diagnostic fault) plus a log on the mainGameLoop caller of endMissionCleanup (gMissionState/exit-reason globals) and PLPOS hp near the end; compare to keys.log timing. Check grep 'endMissionCleanup\|beginMissionEndTransition\|player.*dead' in run.log and position/hp trace before VI 15987.
+Queue it as scratch/agent/soak_queue/s5871_endreq.sh (copy of the s5869 script, HUDBIT removed from COMMON via env override).
 HYPOTHESIS-ID: g1-mission-progression
-Also: backtrace Bus error far=0x3c2d5b616 / 0x37fffd040 (M6) when a run recurs it.

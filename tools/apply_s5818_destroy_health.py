@@ -12,6 +12,7 @@ static void rs5818_log(uint8_t* rdram, recomp_context* ctx, uint32_t slot) {
     if (!rs5817_en() || slot < 0x80000000u || slot >= 0x80800000u) return;
     if (rs5818_tot >= 300) return;
     { uint32_t u = (uint32_t)MEM_W((int32_t)slot, 0); if (u < 0x80000000u || u >= 0x80800000u) return; } /* s5845: endMissionCleanup stale slot (upd junk) faulted the diagnostic itself (Bus error in getNpcCurrentHealth+276) */
+ { const char* cn = rs5817_nm[rs5817_k(rs5817_cur)]; if (cn && !strcmp(cn, "destroyTransientNpcSlots")) return; } /* s5870: mission-end bulk teardown hands junk slots (upd valid, health ptr junk: Bus error far=0x3c2bc0000 in getNpcCurrentHealth+276, s5869 hold600); our own diagnostic faulted, not the game */
  /* s5820: endMissionCleanup (~vi 23000+) hands this stale slots -> getNpcCurrentHealth faults (si_addr 0x37fffd040); sample in-mission only */
     recomp_context t = *ctx; t.r4 = (int32_t)slot; getNpcCurrentHealth(rdram, &t);
     uint32_t hp = (uint32_t)t.r2; float f; memcpy(&f, &hp, 4); int k = rs5817_k(rs5817_cur);
