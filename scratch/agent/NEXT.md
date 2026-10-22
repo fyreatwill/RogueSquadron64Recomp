@@ -1,6 +1,6 @@
-# NEXT (s5900): what is r17 ("proj") in the segment-vs-sphere loop, and what is pp?
-Context (s5899): same-pr lives keep rotation basis (+0x28..0x48) 30/33; boundaries are pp (arg r6) jumps >6 u. So r17 persists while pp jumps.
-Competing: (a) r17 is a ship/emitter, pp = per-weapon muzzle segment origin (several per frame); (b) r17 is the bolt and pp is a different quantity (e.g. previous-pos); (c) r17 is a pool node reused with same basis (unlikely).
-Discriminator (one build, one run, extend rs5897_track in tools/apply_s5835_sphere_probe.py): for the first 300 samples log pr, pp, pr+0x4c..0x54, pr+0x00 and +0x60 words, and |pp-obj pos|. pp==obj pos -> (a/b by motion); pp far from obj pos and alternating among few values -> (a). Positive control: log must show >=300 rows with nonzero pr.
-Recipe: scratch/agent/s5897_life.sh (sed -i needs '' on macOS).
+# NEXT (s5901): true per-bolt speed/lifetime/hit distance in the segment-vs-sphere loop
+Context (s5900): r17 is one emitter (0x8035581c); pp (arg r6) is each bolt's segment origin; ~24 distinct pp per cycle, 13 collider rows each. s5897/5898 life stats void.
+Competing: (H-range) bolts move too little/expire before reaching troops; (H-aim) bolts pass beside targets; (H-ok) bolts travel fine and survivors are another cause (e.g. NPC invuln flag, ROGUESQ_NPC_INVULN is armed in the recipe!). Check the boring thing first: recipe sets ROGUESQ_NPC_INVULN=1 - confirm it does not explain survivors.
+Discriminator (one build, one run): replace rs5897_track keying with nearest-neighbour matching of pp across successive cycles (a cycle = new pp != previous pp); per bolt log displacement per cycle, age in cycles, and distance to nearest collider centre at last sample; positive control: >=100 bolts with age>=3.
+Recipe: scratch/agent/s5897_life.sh; edit both tools/apply_s5835_sphere_probe.py and live N64Recomp/RecompiledFuncs/funcs_16.c.
 HYPOTHESIS-ID: g1-mission-progression
