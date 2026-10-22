@@ -176,3 +176,5 @@ Voice-path (s5637-s5666), mission-transition (s5748-s5754), counter-2 (s5787-s57
 - s5820: g1_fly soak ended the mission cleanly (origin 0x620400 at ~353 s) but crashed in our own s5818 instrument during endMissionCleanup (fixed in apply_s5818_destroy_health.py, not rebuilt). Autopilot stick barely moves the player (~0.05 u/update); 'does approaching keep troops alive' is still open.
 
 - s5822: holding A (ship loops, idle->moving) takes ground-troop gtdest from 0 (idle) to 27 in 130 s; d2 at destroy not observed ([rng] cap 20/result spent early). Despawn-by-design consistent but not selected vs a motion/collision destroy path. Next: key the [rng] log to gtdest (full regen).
+
+- **s5829 (single-run + code read):** class-1 descriptor words don't discriminate counted (0x18,0x19, deterministic across runs) from silent; counted sets come via npcProbeDriod copy 2 (L_800CBCBC, msg-5 death-effect arm), the +0x6C gate (copy 1) never fired. Next: find the msg-2 sender for class-1 NPCs.

@@ -37806,6 +37806,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5816 slot expiry x{_n5816}")
 
+    if p.name == "funcs_36.c":
+        import apply_s5829_teardown_gate as _a5829
+        text, _n5829 = _a5829.apply(text)
+        if _n5829:
+            changed = True
+            report.append(f"{p.name}: s5829 teardown gate x{_n5829}")
+
     if p.name == "funcs_27.c" and "PATCH: s5523 cineBody entry log" not in text:
         _a = '    // 0x800A5D80: addiu       $sp, $sp, -0xD8\n'
         if text.count(_a) == 1:
@@ -41440,6 +41447,7 @@ RS64_REPLAY = [
     "apply_s5809_ctr1_log.py",
     "apply_s5811_ctr1_bt.py",
     "apply_s5812_npc_spawn_class.py",
+    "apply_s5829_teardown_gate.py",
     "apply_s5813_npc_fate.py",
     "apply_s5816_slot_expiry.py",
     "apply_s5817_bit3_setters.py",
