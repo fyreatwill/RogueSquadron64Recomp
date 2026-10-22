@@ -1,6 +1,5 @@
-# NEXT (s5894): aim, not cap - does real stick input steer once the leaked-START pause is removed, and where do player bolts point?
-Context (s5893): the msg5 count is 9 distinct ids hit once each; 12 class-1 ids never get msg5 (2000+ ticks each). Pokes at target x/y/z gave +1 only, so the remaining split is heading/aim.
-Competing: (a) player bolt forward vector never points at the unkilled ids from any position the autopilot/poke reaches (aim); (b) bolt forward is fine but those ids' collision spheres/shapes are unreachable by the player-bolt chain (ownership/layer filter); (c) stick steers fine when not paused and real steering would succeed (s5868: frozen ship = paused mission).
-Discriminator (one build, one run): log at each player bolt spawn the bolt dir vector and, for each unkilled class-1 id, the angle between dir and (target - bolt pos); run with AP_HOLD=600 (no leaked START) and the stick table su/sr/sd. Fire counts as control (msg3/4). If min angle over a 420 s hold is <5 deg for some unkilled id yet no msg5 => (b); if never <5 deg => (a); if stick moves heading => (c) then build an aim autopilot.
-Instruments reuse: ROGUESQ_PLPOS_POKE, tools/apply_s5893_msg5ids.py ([m5id]/[m5tab]) for the outcome tally.
+# NEXT (s5895): can real stick input steer the ship toward a survivor, and which descriptor ids are the unaimed slots?
+Context (s5894): ~10 survivor slots never get bolt-line within ~2 u; H-aim selected, single run, slot ids not joined to descriptor ids.
+Competing: (a) stick steers when not paused -> aim autopilot feasible; (b) stick does not steer even unpaused (input path defect); (c) slots unaimed because player is parked far in xz, not heading.
+Discriminator: run s5894 recipe with AP_HOLD=600 and stick table su/sr/sd (see s5868/s5869 scripts), log [plpos] heading-sensitive fields (tilt matrices +0x74/+0xC0) and bolt dir at spawn; also print descriptor id (slot node +0x34 -> +0x78) in the [s5855] line. Control: fire counts and tilt matrix change under stick. Stick moves bolt dir => (a); not => (b).
 HYPOTHESIS-ID: g1-mission-progression
