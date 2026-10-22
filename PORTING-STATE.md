@@ -166112,3 +166112,26 @@ to the post-section-4 dispatch/state boundary. It does not name the writer,
 establish the legitimacy of `0x006A2900`, or count level 10 as coverage. No
 build or game run was needed because the existing multi-attempt logs supplied
 the discriminator; NEXT.md now requires one batched level-state/caller probe.
+
+## Session 5937 (2026-10-22) — guarded the s5818 NPC-health diagnostic read
+
+Planned: satisfy the mandatory no-churn pivot with a bounded M3 guard-class
+audit rather than re-running the level-10 transition instrument. The existing
+`s5818` `npcGroundTroopUpdate` probe dereferenced `ctx->r17`, `[s1+0x38]`, and
+the nested health-array address before calling `getNpcCurrentHealth`; the
+s5845/s5870/s5872 crash evidence identifies stale NPC slots during game-side
+teardown as the source. That stale slot is legitimate game state, but the
+diagnostic read is not.
+
+Changed `tools/apply_s5818_destroy_health.py` and the live generated
+`RecompiledFuncs/funcs_39.c` together. The probe now validates the object
+range, slot range, health base, and computed indexed read range before calling
+the health helper. It does not filter or mutate the game’s NPC state. The
+source and generated guards match; `python3 -m py_compile` passed and the
+Debug `RogueSquadron64Recomp` target linked successfully.
+
+Rules out: the prior diagnostic fault path remaining unguarded at this call
+site. It does not claim that level 10 is covered or that the underlying game
+teardown state is invalid. ORIGIN: `npcGroundTroopUpdate`/NPC teardown writes
+the stale object/slot values; this change protects only our read-only
+diagnostic and rejects invalid guest pointers before `getNpcCurrentHealth`.

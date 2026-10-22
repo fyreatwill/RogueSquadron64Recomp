@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5936 (2026-10-22).
+Compact operational handoff, maintained as of Session 5937 (2026-10-22).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -113,20 +113,23 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. Identify the writer/caller responsible for level-10’s missing immediate
+1. Re-run the corrected level-10 `a/b` coverage pair after the s5818
+   diagnostic guard build; the guard audit does not change mission state or
+   count as level coverage. Require `[lvsel]`, flight, and the 300-second hold.
+2. Identify the writer/caller responsible for level-10’s missing immediate
    `cineBody` transition after section-4 DMA. Compare `ROGUESQ_LOG_LEVEL` and
    phase state around level 10’s `0x006A2900` edge against level 11’s
    `0x00696100` edge; do not try another timing-only arm. Do not count level 10
    until a level-appropriate flight origin is identified and held for 300 s.
-2. Rerun level 10 `a/b` with the corrected transition control, then consume
+3. Rerun level 10 `a/b` with the corrected transition control, then consume
    levels 11..18 from the repaired queue.
-3. Sweep remaining levels for route+hold, then add framebuffer and forced-hit
+4. Sweep remaining levels for route+hold, then add framebuffer and forced-hit
    objective checks to every level.
-4. Fold the human lv0 play when available; a loss, softlock, or broken render is
+5. Fold the human lv0 play when available; a loss, softlock, or broken render is
    a new root-cause datum, while a win establishes a tooling limitation.
-5. After G1 coverage, pursue G3 render fidelity and any distinct G4 crash/stall
+6. After G1 coverage, pursue G3 render fidelity and any distinct G4 crash/stall
    datum. G2 owner listening remains the audio-fidelity follow-up.
-6. Optional: qualify a fresh MIPS source-to-ELF patch after higher-priority G1.
+7. Optional: qualify a fresh MIPS source-to-ELF patch after higher-priority G1.
 
 ## Evidence index
 

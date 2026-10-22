@@ -39,12 +39,20 @@ extern volatile uint32_t rs64_vi_n_g;
 extern void getNpcCurrentHealth(uint8_t* rdram, recomp_context* ctx);
 static int rs5818_via; static unsigned rs5818_gn;
 struct rs5822_e { uint32_t ref, pt; float d2; int res; uint32_t vi; }; extern struct rs5822_e rs5822_ring[256]; extern unsigned rs5822_rn;
+static int rs5818_gt_ptr(uint32_t p, uint32_t n) {
+    return p >= 0x80000000u && p <= 0x80800000u - n;
+}
 static void rs5818_gt(uint8_t* rdram, recomp_context* ctx) {
     static int e = -1; if (e < 0) { const char* v = getenv("ROGUESQ_LOG_HUDBIT"); e = (v && v[0]) ? 1 : 0; } if (!e) return;
-    int32_t s1 = (int32_t)ctx->r17; int32_t d = MEM_W(s1, 0X34); uint32_t f60 = 0, f64 = 0, f68 = 0, bb = 0xFF, cnt = 0xFFFFFFFFu;
+    uint32_t us1 = U32(ctx->r17); if (!rs5818_gt_ptr(us1, 0x3Cu)) return;
+    int32_t s1 = (int32_t)us1; int32_t d = MEM_W(s1, 0X34); uint32_t f60 = 0, f64 = 0, f68 = 0, bb = 0xFF, cnt = 0xFFFFFFFFu;
+    uint32_t slot = U32(MEM_W(s1, 0X38));
+    if (!rs5818_gt_ptr(slot, 0x194u)) return;
     if (d) { f60 = MEM_W(d, 0X60); f64 = MEM_W(d, 0X64); f68 = MEM_W(d, 0X68);
         if (f60) bb = MEM_BU((int32_t)0x8013889F + (int32_t)f60, 0); if (f64) cnt = (uint32_t)MEM_W((int32_t)0x8013805C + (int32_t)(f64 << 2), 0); }
-    recomp_context t = *ctx; t.r4 = MEM_W(s1, 0X38); getNpcCurrentHealth(rdram, &t); rs5818_gn++;
+    uint32_t b = U32(MEM_W((int32_t)slot, 0X190)); uint32_t ix = U32(MEM_W((int32_t)0x80137CE4u, 0)); uint64_t ea = (uint64_t)b + 4ull * ix;
+    if (!rs5818_gt_ptr(b, 4u) || ea < b || ea + 4u > 0x80800000ull) return;
+    recomp_context t = *ctx; t.r4 = (int32_t)slot; getNpcCurrentHealth(rdram, &t); rs5818_gn++;
     if (rs5818_gn <= 80) fprintf(stderr, "[gtdest] n=%u via=%d f60=%u bool=%u f64=%u cnt=%d f68=%d hp=%d vi=%u", rs5818_gn, rs5818_via, f60, bb, f64, (int32_t)cnt, (int32_t)f68, (int32_t)t.r2, rs64_vi_n_g);
     if (rs5818_gn <= 80) { /* s5822: most recent range result whose ref/pt lies within the NPC object (+-0x400) */
         int got = 0; for (unsigned i = 1; i <= 256 && i <= rs5822_rn && !got; i++) { struct rs5822_e* q = &rs5822_ring[(rs5822_rn - i) & 255];
