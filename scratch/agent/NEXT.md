@@ -1,7 +1,6 @@
-# NEXT: G1 - s5848: with fire on, keep class-2 NPCs (descs 0x80319e5c/cce/a9c) alive so counter 2 stays <3; does counter 1 climb past 8 and does a win arm fire?
-s5847 result: the mission end is the FAIL arm (c2=3,c1=8,c10=0 at lv0_checkComplexObjectives+2412 -> setHudEnableBit4). Win needs c1>=21 or c10>=6 (s5826/s5807).
-Hypotheses: H1 class-2 NPCs are killed by player fire/friendly fire -> c2=3 -> fail (protect them -> run continues, c1 may climb). H2 c2 also rises from despawn/out-of-range, so protecting hp doesn't help. H3 c1 plateaus at 8 regardless (needs distinct bool ids, s5827) so the mission is only winnable by flying to more spawns.
-Step: add a class-2-only invuln (find how ROGUESQ_NPC_INVULN is applied in tools/apply_s5818_destroy_health.py / getNpcCurrentHealth wrapper; restrict to NPCs whose desc is one of the three class-2 descs) as env ROGUESQ_NPC_INVULN_C2=1; build; run `env ROGUESQ_TELE_BOLT=1 ROGUESQ_NPC_INVULN_C2=1 ROGUESQ_LOG_HUDBIT=1 zsh scratch/agent/g1_fire.sh s5848 720`, and the control without the env in the same iteration (queue as soak if long).
-Discriminator: [m47] c2 at end. c2<3 and mission still alive at hold end -> H1 confirmed; c2 reaches 3 anyway -> H2 (find the third increment writer); c1 >8 -> H3 refuted.
-Positive control: [mend] endMissionCleanup fires in the control run.
+# NEXT: G1 - s5849: how does a real run reach the WIN arm? Log c1/c10 over time in the invuln config.
+s5848: invuln (class-2 hits zeroed) keeps mission alive 722 s; control fails at c2=3 (vi 33765) then Bus error in teardown (m6/s5848c/run.log, si_addr=0x3c1b4bc0a).
+Hypotheses: H1 c1 climbs with flying/shooting objectives in invuln run and reaches 21 given time; H2 c1 plateaus at 8 (needs distinct bool ids / spawn trigger not reached by autopilot); H3 c10 (6) needs kills of a specific class.
+Step: add a periodic (every ~300 vi, ROGUESQ_LOG_HUDBIT) [m47c] line of getObjectiveCount(1),(2),(10) from an existing hook (apply_s5847_mask_log.py anchor, e.g. lv0_checkComplexObjectives entry); run invuln arm 720 s + positive control that the control run's c2 line still reads 3 at fail.
+Secondary: backtrace the post-endMissionCleanup Bus error (lldb or CRASH stack in s5848c/run.log) and name the writer of the 0x3c1b4bc0a pointer.
 HYPOTHESIS-ID: g1-mission-progression

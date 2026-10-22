@@ -165453,3 +165453,12 @@ Result (single run, positive control endMissionCleanup fired at vi=33261): first
 Rules out: the s5824/s5846 mission end being a win. It is the FAIL arm (ctr2>=3, ctr1 8 <21, ctr10 0). Confirms s5826 offline reading with an independent runtime line (bt + counter values at the call).
 Not run: the no-TELE_BOLT arm (the trigger site is identical code; low value). 
 Discrimination (HYPOTHESIS-ID g1-mission-progression): this run SELECTS H-failarm (mission end = lv0_checkComplexObjectives FAIL arm, c2=3) and REFUTES H-win (win arm, would need c1>=21 or c10>=6; measured c1=8, c10=0) and H-mainGameLoop-flag (bt shows the call comes from checkComplexObjectives, not a mainGameLoop end flag). Next discriminator (NEXT.md s5848): class-2-only invuln arm vs control in one iteration - c2<3 and mission alive at hold end selects H-class2-killed; c2 reaching 3 anyway selects H-other-c2-writer; c1>8 refutes H-c1-plateau.
+
+## Session 5848 (2026-10-21) — class-2 NPC invuln keeps the mission alive 722 s; control ends via FAIL arm then Bus error
+Ran the existing ROGUESQ_NPC_INVULN=1 lever (tools/apply_s5806_npc_invuln.py, already class-2-only via desc+0x70==2; no new build) vs control, both g1_fire.sh 720 s, ROGUESQ_TELE_BOLT=1 ROGUESQ_LOG_HUDBIT=1.
+- Invuln arm (m6/s5848i): [npcinv] fired 20 times (positive control; descs 80319a9c/cdc), mission origin 0x690400 at 82 s, alive_at_end=1, hold=722 s, 0 stalls, 0 crashlines, ZERO [m47] lines (fail arm never reached), no endMissionCleanup.
+- Control (m6/s5848c): 0 npcinv, [m47] setHudEnableBit4 c1=8 c2=3 c10=0 at vi=33765 -> requestMissionTransitionMode -> phase6 -> endMissionCleanup vi=34155, then CRASH signal 10 (Bus error, si_addr=0x3c1b4bc0a, pc=0x10587e9a0), 37 crashlines, died at 493 s.
+- H1 CONFIRMED (class-2 NPC hits drive c2 to 3 -> fail); H2 not supported (c2 never reached 3 with hits zeroed); H3 not tested (c1 not logged in invuln arm; no c1 evidence either way).
+- New datum: post-endMissionCleanup Bus error in the control (the mission-end teardown path crashes). Single-source (1 run); backtrace in m6/s5848c/run.log.
+- Not yet: win path (c1>=21 or c10>=6) still unreached; the invuln run is a probe, not a pass.
+ORIGIN: no mitigation machinery added this session (test-only lever pre-existing).
