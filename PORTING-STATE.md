@@ -165655,3 +165655,7 @@ Queued scratch/agent/soak_queue/s5875_hold600_mtm.sh (hold600 + ROGUESQ_LOG_MTM 
 
 ## Session 5877 (2026-10-22) — fuse-state writer census built (tools/apply_s5877_fusewatch.py), soak queued
 Reused the s5798 per-store hook: widened its range check to the player object's +0x180 flags / +0x184 fuse timer (0x80137F3C, 0xC bytes) and added `[fzw]` lines in funcs_13.c (ROGUESQ_LOG_MTM) with pc, ra, fn, value, object y, slot. Positive control: the per-frame timer decrement at pc 0x800B1080/0x800B10D8 must log in the same run. Mirrored into the fixup list; build OK (cmake), soak `s5877_fusewatch` queued (recipe = s5875). Not yet run: no result. Noted from the s5875 log: player y is pinned at -6.5 with zero input before each crash, so "legit impact vs wrong y" is still open. Next: read the first non-decrement writer before each `[bit1]`.
+
+## Session 5878 (2026-10-22) — checkpoint close-out: fusewatch dedup tweak committed
+Retry of s5877 close-out. Only uncommitted change: tools/apply_s5877_fusewatch.py now suppresses repeat [fzw] lines when the flags word (80137F3C) is rewritten with an unchanged value (static lastflg), saving the 600-line log budget for real transitions. No experiment run; soak s5877_fusewatch still queued/unread. ORIGIN: n/a (diagnostic logging only, no mitigation).
+RESUME: read scratch/agent/soak_results for s5877_fusewatch per NEXT.md.

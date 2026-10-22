@@ -18,8 +18,9 @@ ADD = ANC + r'''    if ((uint32_t)(a - 0x80137F3Cu) < 0xCu) { /* ''' + T + r''' 
         if (e) {
             int isdec = (pc == 0x800B1080u || pc == 0x800B10D8u);
             if (isdec) dec++;
-            if ((!isdec || dec <= 4 || dec % 60 == 0) && n++ < 600) {
-                uint32_t v = (uint32_t)MEM_W(0, (gpr)(int32_t)(a & ~3u)); float y, f; uint32_t yu = (uint32_t)MEM_W(0, (gpr)(int32_t)0x80137E0Cu); memcpy(&y, &yu, 4); memcpy(&f, &v, 4);
+            static uint32_t lastflg = 0xFFFFFFFFu; uint32_t v0 = (uint32_t)MEM_W(0, (gpr)(int32_t)(a & ~3u)); int skipflg = (a == 0x80137F3Cu && v0 == lastflg); if (a == 0x80137F3Cu) lastflg = v0;
+            if (!skipflg && (!isdec || dec <= 4 || dec % 60 == 0) && n++ < 600) {
+                uint32_t v = v0; float y, f; uint32_t yu = (uint32_t)MEM_W(0, (gpr)(int32_t)0x80137E0Cu); memcpy(&y, &yu, 4); memcpy(&f, &v, 4);
                 fprintf(stderr, "[fzw] t=%lld a=%08x w=%d val=%08x(%g) pc=%08x ra=%08x fn=%s y=%g slot=%d dec=%d\n", rs64_s5773_ms(), a, w, v, f, pc, (uint32_t)ctx->r31, fn ? fn : "?", y, (int)MEM_W(0, (gpr)(int32_t)0x80137E74u), dec);
             }
         }
