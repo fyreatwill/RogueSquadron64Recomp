@@ -1,5 +1,5 @@
-# NEXT: s5877 soak was a null (fuse never armed, no [bit1], y flat -6.5, no input). Re-run same fusewatch build WITH keyed descend input so [bit1] fires (control), then read writers per below.
-# NEXT: G1 - s5877 read [fzw] from soak s5877_fusewatch (queued; log scratch/agent/m6/s5877_fusewatch/run.log + soak_results)
-grep -a '\[fzw\]\|\[bit1\]\|\[plpos\]' run.log: find the first non-decrement (pc != 0x800B1080/10D8) writer of a=80137F40 (timer) / 80137F3C (flags) before each [bit1]; read its ra/fn and y vs plpos.
-Hypotheses: (a) legit ground impact (y descends smoothly) (c) wrong terrain/y. Control: dec writer lines present (dec= counter) in the same run. Then disassemble the writer's fn and name the condition.
+# NEXT (s5880): make the player's lethal collision non-lethal (TEST-ONLY lever) and see whether lv0 runs past the idle-death end.
+Context: s5879 named the gate - death = stepObjectOrientationTowardTarget returns 2 (store at 0x800FF6F0) -> updatePlayerCraftPhysics call 0x800B2EC4; other death path = [bit8call] 0x800B2A58 (terrain sampler). Fuse/timer/hp are sane.
+Work: add env ROGUESQ_NO_CRASH=1 (fixup script, not generated file): at 0x800B2EC4 skip the spawnSceneDebrisAndEffectCluster call when obj==0x80137DBC, and at 0x800B2A58 skip bit8call kill for the player. Controls: [orient-ret] ret2 and [bit8call] lines still log (the collision still happens) while [bit1] must be 0. Run hold600 recipe (scratch/agent/soak_queue/done/s5879_orienthit_manual.sh with ROGUESQ_NO_CRASH=1), 1 ctl + 1 arm.
+Hypotheses: (a) mission then survives past VI ~15987 and eventually ends via FAIL arm (c2>=3) or timeout; (b) craft stuck in colliding geometry -> repeated ret2 spam/stall; (c) another death path appears.
 HYPOTHESIS-ID: g1-mission-progression

@@ -59,6 +59,21 @@ static void s5775_ret2(uint8_t* rdram, recomp_context* ctx) {
         fprintf(stderr, "[orient-ret] ord=%lu t=%lld kind=ret2 byte0=%u byte1=%u f24=%g v=%u idx=%u obj=0x%08X player=%d\\n",
             rs64_s5773_ord(), rs64_s5773_ms(), byte0, byte1, pun.f, v, idx, obj, player);
         fflush(stderr);
+        if (player) { /* s5879: hit-record dump + candidate object slots */
+            unsigned w, oi = (unsigned)MEM_HU(ctx->r17, 2);
+            fprintf(stderr, "[orient-hit] ord=%lu oi=0x%04X rec:", rs64_s5773_ord(), oi);
+            for (w = 0; w < 0x30; w += 4) fprintf(stderr, " %08X", (unsigned)MEM_W(ctx->r17, w));
+            fprintf(stderr, "\\n[orient-hit] ctx(oi) tbl=*0x80130BB0:");
+            {
+                int32_t tb = (int32_t)MEM_W(0, (int32_t)0x80130BB0u);
+                int32_t cp = (int32_t)MEM_W(0, tb + (int32_t)(oi * 8u));
+                fprintf(stderr, " cp=%08X:", (unsigned)cp);
+                if ((unsigned)cp >= 0x80000000u && (unsigned)cp < 0x80800000u)
+                    for (w = 0; w < 0x40; w += 4) fprintf(stderr, " %08X", (unsigned)MEM_W(0, cp + (int32_t)w));
+            }
+            fprintf(stderr, "\\n");
+            fflush(stderr);
+        }
     }
 }
 static void s5775_ret1(uint8_t* rdram, recomp_context* ctx) {
