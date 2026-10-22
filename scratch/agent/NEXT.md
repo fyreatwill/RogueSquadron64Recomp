@@ -1,6 +1,6 @@
-# NEXT: G1 — who sends msg 2 (silent destroy) vs msg 5 (counted teardown) to class-1 NPCs in lv0
-s5813: 47/54 tracked class-1 NPCs got msg 2 (frees without counter), 8 got msg 5 (counted teardown).
-Hypotheses: (a) msg 2 = offscreen/distance/timeout despawn (by design); (b) msg 2 = kill path that should be msg 5 but the port takes the wrong branch (e.g. flag/hp compare); (c) msg 2 = level-cleanup sweep.
-Discriminator (one build, one run): in rs5813_msg for tracked NPC and msg 2/5, log the caller of npcProbeDriod (ra), VI frame count, NPC desc hp fields (+0x70.. descriptor), and whether the NPC was ever hit. Positive control: msg5 count==8, msg2==47 as in s5813. Run scratch/agent/g1_inv1.sh <tag> 400.
-Outcomes: msg2 ra == level-cleanup/timeout caller -> (a)/(c), then look at what kills in the real game (oracle); msg2 ra == same hit-resolve caller as msg5 -> (b), diff the branch condition.
+# NEXT: G1 — do class-1 NPCs in lv0 time out too fast, or does the port just never kill them?
+s5814: msg2 = slot lifetime countdown (slotDispatcherIter byte +0x1A, flag +0x14&8) -> destroyNpcSlotByIndex; msg5 = handler-chain kill (8).
+Hypotheses: (a) idle autopilot never kills, timeout is correct; (b) countdown is decremented too often in the port (extra dispatch passes per frame vs retail), NPCs expire early even for a real player; (c) countdown init wrong.
+Discriminator (one build, one run): log per-slot +0x1A initial value at spawn and number of slotDispatcherIter passes per VI frame (positive control: passes/VI constant and nonzero), plus time-to-expiry in VI frames for each msg-2 NPC. Compare with retail via oracle if feasible (expected expiry in frames = init * passes-per-frame). Run scratch/agent/g1_inv1.sh <tag> 400.
+Outcomes: passes/VI ~1 and expiry ~ init frames -> (a), then drive aimed fire; passes/VI >1 -> (b), fix the pass rate.
 HYPOTHESIS-ID: g1-mission-progression

@@ -273,6 +273,9 @@ Each: the wrong claim, why it was believable, what replaced it.
 - **s5675 G1 soaks (no keys sent):** `s5675_g1fly_{a,b}` looked like two 'nohangar x4' flown-mission failures, i.e. a flaky hangar route. Actually `m6_god_common.sh` re-sets ROGUESQ_AUTOPILOT from its own `$AP` after XENV, and STOP=0 emptied `$AP`, so no keys were ever injected. Fixed in s5676 via `AP_OVERRIDE`. Believable because the hangar route is known flaky (~3/5) and 8/8 failures read as more of the same. The s5676 fix was itself ordered wrong (s5677 also keyless) - fixed s5678; lesson: the control is the "[autopilot] armed" log line, not keys.log `mission t=`.
 - **'Prerequisite gate (+0x28/+0x2C>=+0x30) or 0x80130B39 holds counter 1 at 8' (s5808 candidate):** believable because applyDat's gate and the b39 skip were the only visible conditional paths. s5809 measured gate fields 0 and b39=0 with only 2 trigger calls, so neither blocks; the missing increments are never attempted.
 
+## s5814 note (G1 lv0)
+Class-1 NPC msg 2 (47 of 54) = slot lifetime-timeout destroy (`slotDispatcherIter` -> `destroyNpcSlotByIndex`, countdown byte +0x1A, flag +0x14&8); msg 5 (8) = handler-chain kill. Idle autopilot never kills them, so they time out; lv0 win needs real kills (backtrace + code, two sources). Next: aimed-fire run, and check countdown pass rate vs retail.
+
 ## Next steps (single monotonic backlog)
 
 - **s5811 (top, measured, single-run, 8/8 ids backtraced):** the 8 counter-1 sets come from npcProbeDriod's NPC-teardown path (after unregisterAndFreeNpcSlot/popNpcSlotFromTail, funcs_36.c:23881 and :24901; args from descriptor +0x70/74/78/7C/80/84), NOT a DAT trigger table. Counter 1 = class-1 (+0x70==1) NPC teardowns. Next: count class-1 descriptors SPAWNED vs torn down in lv0 (NEXT.md).
