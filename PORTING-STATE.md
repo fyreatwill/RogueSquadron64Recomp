@@ -165561,3 +165561,10 @@ Result s5861b: bolts=1793, bolts with any hit=285, winner kind D(debris fn 0x800
 Caveat: kind T keyed the handler address 0x800E7860, but node+0 fns of troops are 0x800cabd4/0x800d93c0 (s5859), so those fall in O; "shadowed=0" is therefore VOID, not a refutation. What stands: only ~16% of bolts hit anything, and ~97% of those hits are debris nodes; the 7 'O' wins are the only candidate troop hits (2.5%).
 ORIGIN: n/a (diagnostic only; no mitigation). Single-run.
 NEXT DISCRIMINATOR: reclassify O into troop (fn 800cabd4/800d93c0/800e7860) vs other, rerun: do troop hits exist with a debris winner of smaller t (shadowing, H23) or are troops simply never in the bolt segment (aim/altitude, H22)?
+
+## Session 5862 (2026-10-22) — s5862: H23 (debris shadows troops) REFUTED; troops are hit by 9 of 2049 bolts, all won — H22 (aim/altitude) selected
+Rebuilt with the corrected troop classifier (fn 800cabd4/800d93c0/800e7860) and ran s5862 (300 s hold, A held, same script). Last [s5861] line: bolts=2049, hitbolts=246, winners D/T/O=237/9/0, troophit_bolts=9, shadowed=0.
+Selects/refutes: H23 refuted — in all 9 bolts where a troop sphere was hit, the troop was the closest hit (shadowed=0), so debris never steals a troop hit. H22 selected: troops are hit by 0.4% of bolts (9/2049) while debris takes 237; the autopilot's fire seldom intersects troop spheres (consistent with s5860's 4-6 u vertical offset). Control: debris wins 237 (matches s5859 split); the s5861b run with the wrong classifier gave 278 D, so the D arm is reproducible. Single-run for the T arm, two-run for D.
+ORIGIN: n/a. 
+Also M6 datum: the same run died at ~260 s with Bus error far=0x3c2d5b616 pc=0x1014c4234 (cf. s5858 far=0x37fffd040): wild pointer, unbacktraced.
+NEXT DISCRIMINATOR (s5863): add a vertical-steer arm — in one run, hold the autopilot altitude nearer troop height (or tele-fire bolts at troop y) and measure troophit_bolts / c1 kills; if kills rise, H22 confirmed as the G1 blocker.
