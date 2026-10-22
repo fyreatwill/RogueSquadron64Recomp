@@ -46,6 +46,7 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   dissolved** by the s5597 `poke_be32` overflow fix (28 clean boots,
   P(0/28 | p=1/7) ~1.4%; hypothesis, no writer named).
 
+- **s5840 (single-run):** sphere-test a0 objects are 0xB4-stride pool nodes; no NPC pointer in their first 0x100 bytes (0/32 objects, matcher control OK). Owner must come from the caller's loop variable in the 0x8005D1C8 candidate loop or the slot table; capture it there and gate TELE on class==1.
 - **s5839 (single-run):** sphere-test a0 is a shape record (0x8035xxxx/0x8021xxxx), NOT the NPC: *(a0+0x34)+0x70 gave c1=0 of 31.5k P tests, so no class-1 forced hit happened. Next: find shape->NPC owner link (scan a0 words for spawn1 npc ptrs) then redo class-1 forced hit; 6 natural ctr1 sets seen this run.
 - **s5838 (single-run, inconclusive):** victim-state diff after forced P sends (tools/apply_s5838_send_effect.py) shows no hp-like change, but node+0x34 is not a descriptor and forced victims (ids 0x58-0x1C8) are not class-1 (0x18-0x2D). Next: force hits only onto class-1 shapes and measure objective counter 1 delta; N sends as control.
 - **G1 lv0 evidence chain (s5799-s5813, detail migrated):** projectile-direction block is live (H8b/H10b: firing object's mesh attachment); real-input holds are stable 600 s with no win (s5804/s5805); counter 1 (class-1 NPC kills) climbs only via npcProbeDriod teardown (8 sets), 47/54 class-1 NPCs get msg 2 (silent destroy) vs 8 msg 5 (counted) (s5811-s5813). See s5814 note below.

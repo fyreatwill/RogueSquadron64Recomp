@@ -1,5 +1,5 @@
-# NEXT: G1 - s5840: find shape->NPC owner link, then class-1 forced hit.
-s5839: intersectSegmentWithObjectSphere a0 is a shape record (0x8035xxxx/0x8021xxxx); +0x34 is not the NPC descriptor, class tally c1=0.
-Step: in the s5835 probe, for the first ~30 P tests dump 0x40 words of a0; also keep a ring of NPC ptrs from the s5812 spawn1 log (npc=r17, class-1 only) and report which a0 word (offset) equals a recorded NPC ptr. Alternative: capture the owner arg held in audioCueDispatcherNpcHandler's candidate loop. Positive control: N-shooter tests on same shapes must show the same offset.
-Outcomes: offset found -> gate TELE on owner class==1 and read [ctr1] delta (g1_fire.sh s5841 320, env ROGUESQ_LOG_HITS=1 ROGUESQ_TELE_BOLT=1 ROGUESQ_LOG_HUDBIT=1); no offset -> owner reached via the slot table (tb=*0x80130BB0, id*8), scan those nodes instead.
+# NEXT: G1 - s5841: capture the NPC arg from the caller's candidate loop (0x8005D1C8, audioCueDispatcherNpcHandler) at the sphere test.
+s5840: sphere a0 = 0xB4-stride pool node, no NPC pointer in 0x100 bytes (0/32). Owner not stored in the shape.
+Step: in tools/apply_s5835_sphere_probe.py, hook the candidate loop (find which saved register holds the NPC/slot node when it calls intersectSegmentWithObjectSphere, e.g. print ctx->r16..r23 and stack words at call time for the first 30 P calls, compare to spawn1 npc ptrs offline), store as rs5841_npc, gate TELE on *(npc+0x34)+0x70==1. Run: env ROGUESQ_LOG_HITS=1 ROGUESQ_TELE_BOLT=1 ROGUESQ_LOG_HUDBIT=1 zsh scratch/agent/g1_fire.sh s5841 320.
+Outcomes: register found + [ctr1] climbs on forced class-1 P hits -> steering-only (build aim); no climb -> msg-5 receiver ignores player hits. Register not found -> use slot table *0x80130BB0 id*8.
 HYPOTHESIS-ID: g1-mission-progression
