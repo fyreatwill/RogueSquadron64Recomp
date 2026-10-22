@@ -8,7 +8,7 @@ T0 = "PATCH: s5885 entry msg"; T1 = "PATCH: s5810 npc spawn tally"; T2 = "PATCH:
 A1 = "RS64_S5798_ST(0x8006CC24u, 0X34, ctx->r17, 4); }\n"
 A2 = "    datItemSetObjectiveBooleanCount(rdram, ctx);\n        goto after_53;\n"
 T3 = "PATCH: s5885 destroy ctx"
-B3 = '    { static int s_e = -1; if (s_e < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e = (e && e[0]) ? 1 : 0; } uint32_t d = (uint32_t)MEM_W(ctx->r17, 0X34); if (s_e && d >= 0x80300000u && d < 0x80330000u) fprintf(stderr, "[supply] destroy-ctx desc=%08x +70=%u msg=%u entry_ra=%08x vi=%u\\n", d, (unsigned)MEM_W(S32((int32_t)d), 0X70), rs5885_msg, rs5885_ra, (unsigned)rs64_vi_n_g); } /* ' + T3 + ' */\n'
+B3 = '    { static int s_e = -1; if (s_e < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e = (e && e[0]) ? 1 : 0; } uint32_t d = (uint32_t)MEM_W(ctx->r17, 0X34); if (s_e && d >= 0x80300000u && d < 0x80330000u) fprintf(stderr, "[supply] destroy-ctx desc=%08x +70=%u msg=%u entry_ra=%08x vi=%u\\n", d, (unsigned)MEM_W(S32((int32_t)d), 0X70), rs5885_msg, rs5885_ra, (unsigned)rs64_vi_n_g); { static unsigned s_bn; if (s_bn++ < 8) { void* bt[24]; int nb = backtrace(bt, 24); backtrace_symbols_fd(bt, nb, 2); } } } /* ' + T3 + ' */\n'
 A0 = "    ctx->r3 = ADD32(ctx->r5, -0X1);\n"
 B0 = "    { rs5885_msg = (uint32_t)ctx->r5 & 0xFFFFu; rs5885_ra = (uint32_t)ctx->r31; } /* " + T0 + " */\n"
 PRE = '    { static int s_e = -1; if (s_e < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e = (e && e[0]) ? 1 : 0; } '
@@ -29,7 +29,7 @@ def apply(text, name=None):
     if T0 not in text:
         j = text.find(A0, i)
         if j >= 0:
-            text = text[:i] + "extern volatile uint32_t rs64_vi_n_g; static uint32_t rs5885_msg, rs5885_ra;\n" + text[i:]
+            text = text[:i] + "#include <execinfo.h>\nextern volatile uint32_t rs64_vi_n_g; static uint32_t rs5885_msg, rs5885_ra;\n" + text[i:]
             j = text.find(A0, i); k = j + len(A0); text = text[:k] + B0 + text[k:]; n += 1
     if T1 not in text:
         j = text.find(A1, i)

@@ -37,7 +37,7 @@ static void rs5838_send(uint8_t* rdram, uint32_t proj, uint32_t cand) {
     unsigned who = ((uint32_t)MEM_HU(S32((int32_t)proj), 0XF8) == (uint32_t)MEM_HU(S32((int32_t)0x80137DBAu), 0)) ? 0 : 1;
     uint32_t tb = (uint32_t)MEM_W(S32((int32_t)0x80130BB0u), 0); uint32_t n = (uint32_t)MEM_W(S32((int32_t)(tb + (cand & 0xFFFF) * 8)), 0);
     if (!rs5838_ok(n)) return;
-    uint32_t d = (uint32_t)MEM_W(S32((int32_t)n), 0X34);
+    uint32_t o = (uint32_t)MEM_W(S32((int32_t)n), 4); uint32_t d = rs5838_ok(o) ? (uint32_t)MEM_W(S32((int32_t)o), 0X34) : 0; /* s5886: NPC obj is slot+4 */
     if (rs5838_sent[who] <= 4000) fprintf(stderr, "[eff2] SEND %s victim=%04x n=%08x d=%08x cls=%u shooter=%04x\n", who ? "N" : "P", cand & 0xFFFF, n, d, rs5838_ok(d) ? (unsigned)MEM_W(S32((int32_t)d), 0X70) : 99u, (unsigned)MEM_HU(S32((int32_t)proj), 0XF8));
     if (rs5838_sent[who]++ >= 12 || rs5838_qn >= 24) return;
     struct rs5838_p* q = &rs5838_q[rs5838_qn++]; q->n = n; q->d = d; q->w = cand & 0xFFFF; q->t = rs5838_now(); q->stage = 0; q->who = who;

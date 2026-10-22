@@ -37835,6 +37835,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5816 slot expiry x{_n5816}")
 
+    if p.name == "funcs_8.c":
+        import apply_s5886_m5post as _a5886
+        text, _n5886 = _a5886.apply(text)
+        if _n5886:
+            changed = True
+            report.append(f"{p.name}: s5886 m5 post x{_n5886}")
+
     if p.name == "funcs_36.c":
         import apply_s5829_teardown_gate as _a5829
         text, _n5829 = _a5829.apply(text)
@@ -41560,6 +41567,7 @@ RS64_REPLAY = [
     "apply_s5829_teardown_gate.py",
     "apply_s5813_npc_fate.py",
     "apply_s5816_slot_expiry.py",
+    "apply_s5886_m5post.py",
     "apply_s5817_bit3_setters.py",
     "apply_s5818_destroy_health.py",
     "apply_s5846_mission_end.py",
