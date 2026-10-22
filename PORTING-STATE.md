@@ -165783,3 +165783,12 @@ Rules out: pure collision-filter/unhittable (H-collision-filter) for those ~10 s
 ORIGIN: diagnostic only, no mitigation.
 Hypotheses: H-aim SELECTED (survivor slots have forward closest approach >=70x r2); H-collision-filter REFUTED for those slots; H-range-limited (bolt lifetime) open for aa/9e/92.
 Gate wording: this run selects H-aim over H-collision-filter for the survivor slots; next is a real-stick steering arm plus a slot-to-descriptor-id join.
+
+## Session 5895 (2026-10-22) — real stick input reaches the player record in an unpaused mission; (b) input-path defect refuted (s5895)
+Ran scratch/agent/s5895_steer.sh (g1_pos_pdump.sh, AP_HOLD=600, stick table su/sr/sd/a/b, ROGUESQ_PLAYER_DUMP, LOG_HITS/MTM). Run: mission onset 82 s, held 332 s alive, 0 crash lines, 0 VI stalls, fbhash distinct=9207/10460.
+Control (same run): of 326 [pdump] records, those with the harness stick active (sx/sy != 0) had a nonzero stick echo (words 56/57 = +0xDC/+0xE0) in 18 of 24; with stick idle 292 of 300 had zero echo (8 nonzero = release/sample-edge). sy=1 echoes were 0x40c710ca / 0x4004b5db. So the autopilot stick reaches the record: (b) refuted, (a) stands (stick-driven).
+Ship heading words (w5/w7) change continuously with stick idle too (rotates every record), so the ship's heading is not purely stick-owned in this scene; the harness cannot isolate stick -> bolt dir from this log (sampling ~every 30 frames vs 600 ms holds). Mission still ends via requestMissionTransitionMode a0=1 (c1=6) at vi=16424, same family as s5871/s5875.
+Rules out: input path defect as the reason survivor slots go unaimed (H-input). Leaves: H-aim needs a per-frame heading+stick sample around fire, and a slot-id -> descriptor-id join.
+ORIGIN: diagnostic only, no mitigation.
+Hypotheses: (a) stick steers - supported (echo), (b) input defect - REFUTED, (c) player parked far - not tested.
+Gate wording: refutes an input-path defect with a same-run echo control; does not yet show stick moves the bolt direction.
