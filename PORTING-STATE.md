@@ -165675,3 +165675,11 @@ H(a) legit collision: SELECTED (hit records show a live NPC ctx 80219D8C at the 
 H(c) wrong terrain y / H(b) garbage fuse timer / H(health death): REFUTED for the ret2 deaths (byte0=0 object hits; fuse 0.5 counts down sane; god arm s5873 revived hp yet death fired).
 NEXT DISCRIMINATOR: ROGUESQ_NO_CRASH=1 arm vs ctl in the same hold600 recipe — [bit1]=0 with [orient-ret] ret2 still logging proves the collision is the sole mission-end cause; if the mission still ends, another death path exists (H-c3).
 This session selects H(a) legitimate-collision and refutes the wrong-terrain-y, garbage-fuse-timer and health-death hypotheses for the ret2 deaths; the NO_CRASH arm-vs-ctl run will discriminate whether collision is the sole mission-end cause.
+
+## Session 5880 (2026-10-22) — ROGUESQ_NO_CRASH lever: the player's lethal collision is the sole cause of the idle-mission deaths
+ORIGIN: test-only lever (env ROGUESQ_NO_CRASH, default off) skipping the player-only (obj 0x80137DBC) calls at 0x800B2EC4 (spawnSceneDebrisAndEffectCluster) and 0x800B2A58 (spawnNpcDestructionDebris); it hides no corruption — the collisions are legitimate (s5879), the lever only removes their lethal consequence. Patch: tools/apply_s5880_no_crash.py, hooked in fixup_game_funcs_vendored.py.
+Ran ctl + arm of the s5879 hold600 recipe (scratch/agent/soak_queue/done/s5880_nocrash_pair.sh; logs scratch/agent/m6/s5880_{ctl,arm}).
+- Positive control (same recipe, lever off): [bit1] fires 3x (lives 3->2->1), 2 player ret2 hits, mission respawns, positions still moving at el=409.
+- Arm: [bit1]=0, lives stay 3 for the full 332 s hold, 7 player ret2 hits (all in the first ~75 ords right after mission onset, none later), 17 bit8call lines (collision still happens, lethal call skipped), 0 crash lines, 0 VI stalls >30 s, craft position keeps changing (plpos el=220..401), fbhash distinct=9411/10598 (ctl 9142/10594).
+Selects H(a) of NEXT s5880: the mission survives past the old idle-death end. Refutes H(b) repeated ret2 spam/stall (hits stop after the first ~0.1 s) and H(c) another death path (none observed in 332 s). The mission does NOT end on its own while idle (no FAIL arm, no timeout seen).
+NEXT: with NO_CRASH the player lives indefinitely, so the win condition can be driven from real input (fire at objectives) instead of ROGUESQ_MISSION_WIN.
