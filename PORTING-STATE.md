@@ -166153,3 +166153,22 @@ level 11a in the same recipe leaves cinematic state and reaches flight, rc=0).
 So the level-10 defect is not level-10-specific: levels 10 and 15 share it (15b/16-18 still queued
 and will say whether it is a class). Not yet explained: the writer of the stale cineState.
 ORIGIN: no mitigation added this session; offline evidence fold only.
+
+## Session 5940 (2026-10-22) — levels 10/15 sit in the menu-overlay model-viewer loop, not a stuck cinematic
+
+Folded: g1_lvl15b failed (allattempts-failed, nomission), g1_lvl16a passed (hold 301 s, vi_stalls30s=0, crashlines=0).
+Level 15 (a and b) therefore joins level 10 as the second failing class; 14b/16a pass.
+Log diff 10a vs 11a: identical [phase] rows (cineState F7B80040 curOvl=1 at ~180 ms is the SAME in level 11, so it is
+NOT a stale-cinematic signature); the only split is after lvsel res=N: level 11 gets cineBody call#3 + initMission,
+level 10 never does (cineBody capped at 2 calls, no [initMission]).
+Experiment (s5940 dir scratch/agent/m6/s5940): ran level-10 recipe, macOS `sample` of the game at ~150 s and ~170 s.
+Main thread (mainBootstrapWorker -> mainGameLoop -> menuOverlayInit funcs_34.c:7250 -> runModelViewerLoop funcs_36.c)
+is alternating waitForPrevFrameDone / submitGfxFrame, i.e. a live frame-pumping loop (all other threads blocked on
+message queues, no deadlock). runModelViewerLoop in 7/7 sample hits of sample1. Positive control: same tool shows
+audio/gfx threads active, so the sampler resolves frames.
+ORIGIN: no code change. Single-source (two samples, one run): levels 10 and 15 are routed from the menu overlay into
+runModelViewerLoop instead of initMission. Whether that is legitimate retail behaviour (levels 10/15 being
+non-flight / viewer-backed entries) or a wrong menu state after forced-select is UNDECIDED. Rules out: deadlock,
+hang, stale-cinematic-state writer, input timing (s5938).
+Next discriminator: retail oracle or decomp read of menuOverlayInit branch that calls 0x800C9BF0 with
+0x800C6900(*s3) result for selection 10/15 vs 11.

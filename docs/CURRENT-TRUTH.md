@@ -113,7 +113,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-0. Level 15a shares level 10's stale-cinematic failure (s5939): treat 10/15 as one defect class; fold 15b..18b verdicts, then chase the cineState writer once for both.
+0. Levels 10 and 15 (a+b) fail alike; 16a passes. s5940 REVISION: cineState=F7B80040 is NOT stale (level 11 shows it too). Main thread sits in menuOverlayInit -> runModelViewerLoop (frame-pumping, no deadlock; single-source, 2 samples). Next: read the menuOverlayInit branch (funcs_34.c ~7250, jal 0x800C9BF0 / 0x800C6900) for selection 10/15 vs 11 to decide whether the viewer is legit retail behaviour for those entries; then continue 16b..18b.
 1. Re-run the corrected level-10 `a/b` coverage pair after the s5818
    diagnostic guard build; the guard audit does not change mission state or
    count as level coverage. Require `[lvsel]`, flight, and the 300-second hold.
