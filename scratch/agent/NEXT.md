@@ -1,5 +1,5 @@
-# NEXT: G1 - s5877: fold s5876_timer soak ([tmr] lines)
-Hypotheses: (a) legit ground-impact fuse - player dives into terrain under held input; dt~1/60 and timer starts at the 0x800A566C-scale const, the object has been below terrain for real. (b) our dt (f6) wild or timer init zero/garbage -> premature expiry. (c) y/terrain wrong (terrain query 0x80067D90 returns too-high value), so craft "hits" ground it should not.
-Measure: grep '\[tmr\]' scratch/agent/m6/s5876_timer/run.log. dt~0.016-0.05 and timer counting down from a sane value => not (b). Then compare terrain vs y trajectory just before the first [bit1] (c): if y is monotonically descending in flight that is (a); if y snaps below terrain in one frame, suspect (c) - add a per-frame y/terrain log near 0x800B10F4 for the player only.
-Control: [tmr] must print for 0x80137DBC and [bit1]/[m47] a0=1 must fire in same run.
+# NEXT: G1 - s5877: find the upstream writer that arms the player's 0.5 s crash fuse
+Hypotheses: (a) legit ground impact (y descends smoothly from altitude); (c) wrong terrain/y (y snaps below terrain, or terrain query too high).
+Measure: grep stores to 0x184($reg) in N64Recomp/RecompiledFuncs/funcs_*.c (swc1/sw), identify the one that writes 0.5 with flags|=0x10 for slot 0; log y, terrain(0x80067D90 result), speed, caller ra there (ROGUESQ_LOG_MTM), one build, one run of the s5876 recipe (scratch/agent/g1_pos_pdump.sh, AP_TITLE_N=17 AP_HOLD=600).
+Control: [bit1] a0=1 fires in same run and the new log precedes it.
 HYPOTHESIS-ID: g1-mission-progression
