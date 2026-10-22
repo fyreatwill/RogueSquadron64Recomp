@@ -1,7 +1,6 @@
-# NEXT: G1 - s5869: is the frozen ship just a PAUSED mission? (0x8010CA1C 0x101 = beginMissionEndTransition/pause state)
-Context (s5868): 0x8010CA1C writers: beginMissionEndTransition sets 0x1 then 0x101 (pc 800faf64/80); initOrUpdatePauseScreenDim clears 0x100 (800c2104) and does ~1800 per-frame bit-0x80 RMW (800c293c); endMissionEndTransition clears 0x1 (800fb0ac/b8); initPlayerCraftMovementMode clears 0x100 (800b397c). In s5868_flw the harness autopilot START presses (0x1000, title script t=10..126, every 8) leak into the mission: begin n=2,3,4 fired 109/25/80 log lines after START fires 21/25/29. With AP_TITLE_N=17 (no fires 21+) only begin n=1 remains (VI 4560) and the pause-dim runs for the whole run (3991 stores). So frozen-ship windows = a paused mission, not a physics defect.
-Hypotheses: H31a begin n=1 is from START fire 17 (t=74); H31b n=1 is natural mission-start (intro/briefing hold) needing A/START to dismiss.
-Discriminator: queued soak s5868_nostart16 (AP_TITLE_N=16, no START at t=74): if begin n=1 absent and ship responds to stick without A -> H31a (fix recipes: gate title keys on mission entry); if begin n=1 still fires -> H31b, find the natural requester (event table 0x8010B350 chain, s5846). Positive control: [flw] must still show initMission writers. The N=16 attempt in-session ended allattempts-failed (flaky route, mission not reached) so rerun is needed.
-Then: with no pause, re-run the stick table (phases 240-440) and check player pos/record changes (ROGUESQ_LOG_PLPOS).
+# NEXT: G1 - s5870: read soak s5869_hold600 (AP_TITLE_N=17 AP_HOLD=600)
+Hypotheses: H31b begin n=1 (pause 0x101 at VI~4560) is a natural mission-start requester; H31c it is the still-held 2500 ms START (fire 17 released at 76.5s == mission origin onset) read in-mission.
+Discriminator: grep '[flw] .*beginMissionEndTransition' in scratch/agent/m6/s5869_hold600/run.log. Absent (and initMission writers still present = control) -> H31c: make harness hold short / gate keys on mission entry, then rerun stick table 240-440 and check ROGUESQ_LOG_PLPOS position changes. Present -> H31b: find natural requester (event table 0x8010B350 chain, s5846).
+If route fails (allattempts-failed) it is flaky-route, rerun once.
 HYPOTHESIS-ID: g1-mission-progression
 Also: backtrace Bus error far=0x3c2d5b616 / 0x37fffd040 (M6) when a run recurs it.
