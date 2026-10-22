@@ -208,3 +208,5 @@ Msg-5 sender = audioCueDispatcherNpcHandler projectile loop (0x8005D1C8-0x8005D3
 
 - s5848: ROGUESQ_NPC_INVULN=1 (class-2 only) keeps mission alive 722 s (no fail arm); control fails c2=3 then Bus error si_addr=0x3c1b4bc0a after endMissionCleanup. Next: log c1/c10 over time in invuln run to find win arm (NEXT.md).
 - s5849: invuln run: c1 plateaus at 8 (vi 34558-47562), c10 stays 0, c2 0; win arm (c1>=21 or c10>=6) not reachable by autopilot. Next: what increments c1/c10 (setter ids).
+
+- s5856: findSegmentObjectSphereHit returns nonzero for ~12 NPC ids under fire (ret≈clamped-in); the loop is closest-hit with ONE SEND per bolt, so s5855's 'inside but no SEND' was not a defect. Question moves to what the SEND victim does (hp/kill). Single-run. Also SIGBUS at ~270 s hold (si_addr=0x37fffd040) unbacktraced.

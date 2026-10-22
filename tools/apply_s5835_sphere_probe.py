@@ -6,7 +6,7 @@ import pathlib
 base = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
 T = "PATCH: s5835 sphere probe"
 H = r'''/* PATCH: s5835 helpers */
-extern unsigned rs5834_who;
+extern unsigned rs5834_who; extern unsigned rs5856_cin;
 static unsigned rs5835_sin[2], rs5835_sinp[2], rs5835_n[2], rs5835_in[2], rs5835_zc[2], rs5835_tot, rs5835_inprint; static float rs5835_min[2] = {1e30f, 1e30f}, rs5835_minr2[2], rs5835_minsd[2] = {1e30f, 1e30f}, rs5835_minsdr2[2]; static unsigned rs5835_mp[2]; static unsigned rs5837_tele, rs5837_en = 2, rs5837_cnt;
 extern uint32_t rs5841_cand; static unsigned rs5841_cl[2][5];
 static uint32_t rs5839_obj; static unsigned rs5839_cl[5], rs5839_tp, rs5839_tpc; 
@@ -35,7 +35,7 @@ static void rs5835_probe(uint8_t* rdram, recomp_context* ctx) {
     float v[3] = {cc[0]-pp[0], cc[1]-pp[1], cc[2]-pp[2]};
     float v2 = v[0]*v[0]+v[1]*v[1]+v[2]*v[2], dl = dd[0]*dd[0]+dd[1]*dd[1]+dd[2]*dd[2], t = v[0]*dd[0]+v[1]*dd[1]+v[2]*dd[2];
     float ap2 = (dl > 0.0f) ? v2 - t*t/dl : v2; unsigned in = (ap2 <= cc[3]);
-    { float u = (dl > 0.0f) ? t/dl : 0.0f; if (u < 0.0f) u = 0.0f; if (u > 1.0f) u = 1.0f; float q0 = v[0]-u*dd[0], q1 = v[1]-u*dd[1], q2 = v[2]-u*dd[2]; float sd2 = q0*q0+q1*q1+q2*q2; unsigned sin_ = (sd2 <= cc[3]); if (sd2 < rs5835_minsd[w]) { rs5835_minsd[w] = sd2; rs5835_minsdr2[w] = cc[3]; if (rs5835_mp[w]++ < 12) fprintf(stderr, "[sph] MINSD %s sd2=%g r2=%g ratio=%g u=%g dl=%g |v|2=%g\n", w ? "N" : "P", sd2, cc[3], sd2/(cc[3] > 0.0f ? cc[3] : 1.0f), (dl > 0.0f) ? t/dl : 0.0f, dl, v2); } rs5835_sin[w] += sin_; if (sin_ && rs5835_sinp[w]++ < 10) fprintf(stderr, "[sph] SEGIN %s r2=%g |v|2=%g t=%g dl=%g sd2=%g\n", w ? "N" : "P", cc[3], v2, t, dl, sd2); }
+    { float u = (dl > 0.0f) ? t/dl : 0.0f; if (u < 0.0f) u = 0.0f; if (u > 1.0f) u = 1.0f; float q0 = v[0]-u*dd[0], q1 = v[1]-u*dd[1], q2 = v[2]-u*dd[2]; float sd2 = q0*q0+q1*q1+q2*q2; unsigned sin_ = (sd2 <= cc[3]); if (sd2 < rs5835_minsd[w]) { rs5835_minsd[w] = sd2; rs5835_minsdr2[w] = cc[3]; if (rs5835_mp[w]++ < 12) fprintf(stderr, "[sph] MINSD %s sd2=%g r2=%g ratio=%g u=%g dl=%g |v|2=%g\n", w ? "N" : "P", sd2, cc[3], sd2/(cc[3] > 0.0f ? cc[3] : 1.0f), (dl > 0.0f) ? t/dl : 0.0f, dl, v2); } rs5856_cin |= sin_; rs5835_sin[w] += sin_; if (sin_ && rs5835_sinp[w]++ < 10) fprintf(stderr, "[sph] SEGIN %s r2=%g |v|2=%g t=%g dl=%g sd2=%g\n", w ? "N" : "P", cc[3], v2, t, dl, sd2); }
     { /* s5855: per class-1/any id table: tests, min v2, min ap2, r2, segin */
         static struct { unsigned id, n, segin, c1; float mv2, map2, r2; } T[48]; static unsigned nT; unsigned id = rs5841_cand & 0xFFFF, z;
         for (z = 0; z < nT; z++) if (T[z].id == id) break;
@@ -72,8 +72,25 @@ def apply(text, name=None):
             text = text.replace(a, "    rs5841_cand = (uint32_t)(ctx->r16 & 0xFFFF); /* PATCH: s5841 */\n" + a, 1)
             f = "RECOMP_FUNC void audioCueDispatcherNpcHandler("
             i = text.find(f); text = text[:i] + "uint32_t rs5841_cand; /* PATCH: s5841 */\n" + text[i:]; n += 1
+    if "PATCH: s5856" not in text and "static void rs5834_post(" in text:
+        k = "static void rs5834_pre(uint8_t* rdram, recomp_context* ctx) {\n"
+        assert text.count(k) == 1
+        text = text.replace(k, "extern uint32_t rs5841_cand; unsigned rs5856_cin; static uint32_t rs5856_proj; /* PATCH: s5856 */\n" + k + "    rs5856_cin = 0; rs5856_proj = (uint32_t)ctx->r17;\n", 1)
+        k = "static void rs5834_post(uint8_t* rdram, uint32_t hit) {\n    if (!rs5834_en) return;\n"
+        assert text.count(k) == 1
+        post = r'''    { /* PATCH: s5856 per-id: calls, ret!=0, clamped-in, clamped-in&&ret==0 */
+        static struct { unsigned id, n, ret, cin, cmiss, wid; } T[64]; static unsigned nT, tk; unsigned id = rs5841_cand & 0xFFFF, z;
+        for (z = 0; z < nT; z++) if (T[z].id == id) break;
+        if (z == nT && z < 64) { T[z].id = id; nT++; }
+        if (z < 64) { T[z].n++; if (hit) T[z].ret++; if (rs5856_cin) T[z].cin++; if (rs5856_cin && !hit) T[z].cmiss++; if ((rs5856_proj >> 24) == 0x80) T[z].wid = (unsigned)MEM_HU(S32((int32_t)rs5856_proj), 0xF8); }
+        if (rs5856_cin && !hit) { static unsigned pm; if (pm++ < 15) fprintf(stderr, "[s5856] CMISS id=%x proj=%08x wid=%x\\n", id, rs5856_proj, (unsigned)MEM_HU(S32((int32_t)rs5856_proj), 0xF8)); }
+        if (hit) { static unsigned ph; if (ph++ < 15) fprintf(stderr, "[s5856] RET id=%x proj=%08x cin=%u\\n", id, rs5856_proj, rs5856_cin); }
+        if ((++tk & 1023) == 0) { fprintf(stderr, "[s5856] ids=%u:", nT); for (z = 0; z < nT; z++) fprintf(stderr, " %x{n=%u ret=%u cin=%u cmiss=%u wid=%x}", T[z].id, T[z].n, T[z].ret, T[z].cin, T[z].cmiss, T[z].wid); fprintf(stderr, "\\n"); }
+    }
+'''
+        text = text.replace(k, k + post, 1); n += 1
     if FN not in text: return text, n
-    if "s5855: per class-1" not in text and "PATCH: s5835 helpers" in text:
+    if "rs5856_cin |= sin_" not in text and "PATCH: s5835 helpers" in text:
         a = text.find("/* PATCH: s5835 helpers */"); b = text.find(FN)
         text = text[:a] + H + text[b:]; n += 1
     if "rs5839_obj = " not in text:
