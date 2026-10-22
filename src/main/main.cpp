@@ -10067,9 +10067,14 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                     const bool on = el >= s_from;
                     if (valid) { if (on) { s_sum_act += std::fabs(yerr); s_cnt_act++; } else { s_sum_ctl += std::fabs(yerr); s_cnt_ctl++; } }
                     if (on && valid && stick_x == 0.0f && stick_y == 0.0f) {
-                        const double k = 2.0;  // full stick at ~29 deg error
-                        if (std::fabs(yerr) > s_aim_db) stick_x = (float)std::max(-1.0, std::min(1.0, -k * yerr));
-                        if (std::fabs(perr) > s_aim_db) stick_y = (float)std::max(-1.0, std::min(1.0, k * perr));
+                        // s5929 run 1 (s5929_aim): k=2 both axes chattered sx=+-1 at |yerr|~180 (wrap flips the sign each
+                        // sample, net no turn) and sy=0.2-0.4 never lifted the ship off y~-18. Fix: latch the turn
+                        // direction while |yerr|>120 deg; pitch gain 6 (full stick at ~10 deg).
+                        static float s_turn = 0.0f;
+                        if (std::fabs(yerr) > 2.0944 && s_turn != 0.0f) stick_x = s_turn;
+                        else if (std::fabs(yerr) > s_aim_db) stick_x = (float)std::max(-1.0, std::min(1.0, -2.0 * yerr));
+                        s_turn = (std::fabs(yerr) > 2.0944) ? (s_turn != 0.0f ? s_turn : (yerr > 0 ? -1.0f : 1.0f)) : 0.0f;
+                        if (std::fabs(perr) > s_aim_db) stick_y = (float)std::max(-1.0, std::min(1.0, 6.0 * perr));
                         if (stick_x != 0.0f || stick_y != 0.0f) s_act++;
                     }
                     if ((++s_n % 16) == 1)
