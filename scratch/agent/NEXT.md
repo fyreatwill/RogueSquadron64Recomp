@@ -1,5 +1,5 @@
-# NEXT: G1 - s5841: capture the NPC arg from the caller's candidate loop (0x8005D1C8, audioCueDispatcherNpcHandler) at the sphere test.
-s5840: sphere a0 = 0xB4-stride pool node, no NPC pointer in 0x100 bytes (0/32). Owner not stored in the shape.
-Step: in tools/apply_s5835_sphere_probe.py, hook the candidate loop (find which saved register holds the NPC/slot node when it calls intersectSegmentWithObjectSphere, e.g. print ctx->r16..r23 and stack words at call time for the first 30 P calls, compare to spawn1 npc ptrs offline), store as rs5841_npc, gate TELE on *(npc+0x34)+0x70==1. Run: env ROGUESQ_LOG_HITS=1 ROGUESQ_TELE_BOLT=1 ROGUESQ_LOG_HUDBIT=1 zsh scratch/agent/g1_fire.sh s5841 320.
-Outcomes: register found + [ctr1] climbs on forced class-1 P hits -> steering-only (build aim); no climb -> msg-5 receiver ignores player hits. Register not found -> use slot table *0x80130BB0 id*8.
+# NEXT: G1 - s5845: does the forced-hit kill chain reach mission WIN? (end-to-end with forced geometry)
+s5844: TELE gated on class-1 update fn (ctx+0 in 800cabd4/800d93c0/800e7860) gives 24 sends, counter-1 sets 13 (vs 4). Win not seen in 320 s.
+Step: run env ROGUESQ_LOG_HITS=1 ROGUESQ_TELE_BOLT=1 ROGUESQ_LOG_HUDBIT=1 zsh scratch/agent/g1_fire.sh s5845 700 (autopilot fires only 240-400 s: extend fire window in g1_fire.sh to 240-640 first, e.g. loop seq 360 3 637 with 'a'). Look for [ctr1] c=N past 13, objective-complete / win VI change.
+Outcomes: counter plateaus below threshold -> find the remaining objective counters (2,3 in c=a,b,c); win fires -> then build real-input steering toward class-1 NPCs (replace TELE).
 HYPOTHESIS-ID: g1-mission-progression

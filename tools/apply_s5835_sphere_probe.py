@@ -8,6 +8,7 @@ T = "PATCH: s5835 sphere probe"
 H = r'''/* PATCH: s5835 helpers */
 extern unsigned rs5834_who;
 static unsigned rs5835_sin[2], rs5835_sinp[2], rs5835_n[2], rs5835_in[2], rs5835_zc[2], rs5835_tot, rs5835_inprint; static float rs5835_min[2] = {1e30f, 1e30f}, rs5835_minr2[2], rs5835_minsd[2] = {1e30f, 1e30f}, rs5835_minsdr2[2]; static unsigned rs5835_mp[2]; static unsigned rs5837_tele, rs5837_en = 2, rs5837_cnt;
+extern uint32_t rs5841_cand; static unsigned rs5841_cl[2][5];
 static uint32_t rs5839_obj; static unsigned rs5839_cl[5], rs5839_tp, rs5839_tpc; 
 static float rs5835_f(uint32_t w) { union { uint32_t u; float f; } x; x.u = w; return x.f; }
 static void rs5835_probe(uint8_t* rdram, recomp_context* ctx) {
@@ -18,9 +19,15 @@ static void rs5835_probe(uint8_t* rdram, recomp_context* ctx) {
     for (int i = 0; i < 4; i++) cc[i] = rs5835_f((uint32_t)MEM_W(S32((int32_t)c), 4 * i));
     for (int i = 0; i < 3; i++) { pp[i] = rs5835_f((uint32_t)MEM_W(S32((int32_t)p), 4 * i)); dd[i] = rs5835_f((uint32_t)MEM_W(S32((int32_t)d), 4 * i)); }
     if (rs5837_en == 2) { const char* e = getenv("ROGUESQ_TELE_BOLT"); rs5837_en = (e && e[0] == '1'); }
-    unsigned k39 = 99; { uint32_t o = rs5839_obj, dd0 = ((o >> 24) == 0x80) ? (uint32_t)MEM_W(S32((int32_t)o), 0x34) : 0; if ((dd0 >> 24) == 0x80) k39 = (unsigned)MEM_W(S32((int32_t)dd0), 0x70); if (w == 0) rs5839_cl[k39 < 4 ? k39 : 4]++; if (w == 0 && rs5839_tpc++ < 12) fprintf(stderr, "[sph39] P obj=%08x desc=%08x cls=%u\n", o, dd0, k39); if ((rs5835_tot & 4095) == 0) fprintf(stderr, "[sph39] P class tally c0=%u c1=%u c2=%u c3=%u other=%u tele=%u\n", rs5839_cl[0], rs5839_cl[1], rs5839_cl[2], rs5839_cl[3], rs5839_cl[4], rs5839_tp); }
-    { static unsigned nd[2]; if (((rs5839_obj >> 24) == 0x80) && nd[w] < 40) { nd[w]++; fprintf(stderr, "[own40] %s obj=%08x w=", w ? "N" : "P", rs5839_obj); for (int q = 0; q < 0x100; q += 4) fprintf(stderr, "%08X ", (unsigned)MEM_W(S32((int32_t)rs5839_obj), q)); fprintf(stderr, "\n"); } } /* s5840 owner dump */
-    if (rs5837_en && w == 0 && cc[3] > 0.0f && k39 == 1 && (rs5837_cnt++ & 3) == 0) { /* s5837: force bolt segment through shape centre */
+    unsigned c1f = 0; unsigned k39 = 99; { /* s5841: class of the loop's candidate NPC via slot table *0x80130BB0 id*8 */
+        uint32_t tb = (uint32_t)MEM_W(S32((int32_t)0x80130BB0u), 0); uint32_t n = (uint32_t)MEM_W(S32((int32_t)(tb + (rs5841_cand & 0xFFFF) * 8)), 0);
+        if ((n >> 24) == 0x80) { uint32_t d = (uint32_t)MEM_W(S32((int32_t)n), 0x34); if (d >= 0x80300000u && d < 0x80330000u) k39 = (unsigned)MEM_W(S32((int32_t)d), 0x70); }
+        { static unsigned nd2[2]; if ((n >> 24) == 0x80 && nd2[w] < 24) { nd2[w]++; fprintf(stderr, "[ctx41] %s id=%x n=%08x:", w ? "N" : "P", (unsigned)(rs5841_cand & 0xFFFF), n); for (int q = 0; q < 0x80; q += 4) { uint32_t x = (uint32_t)MEM_W(S32((int32_t)n), q); if ((x >> 24) == 0x80 && x < 0x80800000u) fprintf(stderr, " +%x=%08x{70=%x}", q, x, (unsigned)MEM_W(S32((int32_t)x), 0x70)); else fprintf(stderr, " +%x=%x", q, x); } fprintf(stderr, "\n"); } }
+        if ((n >> 24) == 0x80) { static uint32_t fk[2][24]; static unsigned fc[2][24], fn[2]; uint32_t f = (uint32_t)MEM_W(S32((int32_t)n), 0); unsigned z; c1f = (f == 0x800cabd4u || f == 0x800d93c0u || f == 0x800e7860u); for (z = 0; z < fn[w]; z++) if (fk[w][z] == f) break; if (z == fn[w] && z < 24) { fk[w][z] = f; fn[w]++; } if (z < 24) fc[w][z]++; if ((rs5835_tot & 4095) == 0) { fprintf(stderr, "[fn41] %s:", w ? "N" : "P"); for (z = 0; z < fn[w]; z++) fprintf(stderr, " %08x=%u", fk[w][z], fc[w][z]); fprintf(stderr, "\n"); } }
+        if (k39 > 3) k39 = 4; rs5841_cl[w][k39]++; if ((rs5835_tot & 4095) == 0) fprintf(stderr, "[s5841] cand-class tally P=%u/%u/%u/%u/%u N=%u/%u/%u/%u/%u tele=%u\n", rs5841_cl[0][0], rs5841_cl[0][1], rs5841_cl[0][2], rs5841_cl[0][3], rs5841_cl[0][4], rs5841_cl[1][0], rs5841_cl[1][1], rs5841_cl[1][2], rs5841_cl[1][3], rs5841_cl[1][4], rs5839_tp); }
+    { uint32_t o = rs5839_obj, dd0 = ((o >> 24) == 0x80) ? (uint32_t)MEM_W(S32((int32_t)o), 0x34) : 0; if ((dd0 >> 24) == 0x80) k39 = (unsigned)MEM_W(S32((int32_t)dd0), 0x70); if (w == 0) rs5839_cl[k39 < 4 ? k39 : 4]++; if (w == 0 && rs5839_tpc++ < 12) fprintf(stderr, "[sph39] P obj=%08x desc=%08x cls=%u\n", o, dd0, k39); if ((rs5835_tot & 4095) == 0) fprintf(stderr, "[sph39] P class tally c0=%u c1=%u c2=%u c3=%u other=%u tele=%u\n", rs5839_cl[0], rs5839_cl[1], rs5839_cl[2], rs5839_cl[3], rs5839_cl[4], rs5839_tp); }
+    { static unsigned nd[2]; if (((rs5839_obj >> 24) == 0x80) && nd[w] < 40) { nd[w]++; fprintf(stderr, "[own40] %s obj=%08x w=", w ? "N" : "P", rs5839_obj); for (int q = 0; q < 0x100; q += 4) fprintf(stderr, "%08X ", (unsigned)MEM_W(S32((int32_t)rs5839_obj), q)); fprintf(stderr, "\n"); } } /* s5840 owner dump */ /* s5841 c1f */
+    if (rs5837_en && w == 0 && cc[3] > 0.0f && c1f && (rs5837_cnt++ & 3) == 0) { /* s5837: force bolt segment through shape centre */
         float nf[3] = {cc[0]-0.5f*dd[0], cc[1]-0.5f*dd[1], cc[2]-0.5f*dd[2]};
         for (int i = 0; i < 3; i++) { union { float f; uint32_t u; } x; x.f = nf[i]; MEM_W(S32((int32_t)p), 4 * i) = (int32_t)x.u; pp[i] = nf[i]; }
         rs5839_tp++; if (rs5837_tele++ < 10) fprintf(stderr, "[sph] TELE obj=%08x ctr=(%g,%g,%g) r2=%g dir=(%g,%g,%g)\n", rs5839_obj, cc[0], cc[1], cc[2], cc[3], dd[0], dd[1], dd[2]);
@@ -48,8 +55,14 @@ def apply(text, name=None):
         b = "rs5834_zero[1]);\n}\n"
         assert text.count(b) == 1
         text = text.replace(b, "rs5834_zero[1]);\n    rs5834_who = 2; /* PATCH: s5835 */\n}\n", 1); n += 1
+    if "rs5841_cand = " not in text and "PATCH: s5833 proj loop" in text:
+        a = "    rs5833_ev(rdram, (uint32_t)ctx->r17, 1, (uint32_t)(ctx->r16 & 0xFFFF), 1); /* PATCH: s5833 proj loop */\n"
+        if a in text:
+            text = text.replace(a, "    rs5841_cand = (uint32_t)(ctx->r16 & 0xFFFF); /* PATCH: s5841 */\n" + a, 1)
+            f = "RECOMP_FUNC void audioCueDispatcherNpcHandler("
+            i = text.find(f); text = text[:i] + "uint32_t rs5841_cand; /* PATCH: s5841 */\n" + text[i:]; n += 1
     if FN not in text: return text, n
-    if "s5840 owner dump" not in text and "PATCH: s5835 helpers" in text:
+    if "s5841 c1f" not in text and "PATCH: s5835 helpers" in text:
         a = text.find("/* PATCH: s5835 helpers */"); b = text.find(FN)
         text = text[:a] + H + text[b:]; n += 1
     if "rs5839_obj = " not in text:
