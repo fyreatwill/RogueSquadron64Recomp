@@ -9897,6 +9897,11 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                     else if (!strcmp(kbuf, "sr")) { s_ev[s_nev].btn = 0; s_ev[s_nev].sx = 1.0f; }
                     else if (!strcmp(kbuf, "su")) { s_ev[s_nev].btn = 0; s_ev[s_nev].sy = 1.0f; }
                     else if (!strcmp(kbuf, "sd")) { s_ev[s_nev].btn = 0; s_ev[s_nev].sy = -1.0f; }
+                    // s5914: stick+A combos (sla/sra/sua/sda): one held event carries both, since only one event is held at a time.
+                    else if (!strcmp(kbuf, "sla")) { s_ev[s_nev].btn = N64_A_BUTTON; s_ev[s_nev].sx = -1.0f; }
+                    else if (!strcmp(kbuf, "sra")) { s_ev[s_nev].btn = N64_A_BUTTON; s_ev[s_nev].sx = 1.0f; }
+                    else if (!strcmp(kbuf, "sua")) { s_ev[s_nev].btn = N64_A_BUTTON; s_ev[s_nev].sy = 1.0f; }
+                    else if (!strcmp(kbuf, "sda")) { s_ev[s_nev].btn = N64_A_BUTTON; s_ev[s_nev].sy = -1.0f; }
                     else s_ev[s_nev].btn = keybtn(kbuf);
                     s_nev++;
                 }
