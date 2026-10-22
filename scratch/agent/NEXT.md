@@ -1,5 +1,5 @@
-# NEXT: G1 — do real-input kills raise counter 1 (arm D needs get(1)>=21)?
-s5823: ground-troop destroys are out-of-range despawns (29/29 d2>=151). So kills must come from player fire.
-Hypotheses: (a) fire button held with A kills troops and counter 1 rises past 8 -> mission can be won from real input; (b) fire hits nothing/does no damage (hp stays 10/20) -> port defect in weapon/damage path; (c) kills happen but are not counted (count path skipped).
-Discriminator: copy scratch/agent/g1_approach.sh, in the phase table hold A plus the fire button (find it: grep CURRENT-TRUTH/PROJECT-OVERVIEW for the N64 fire button, B 0x4000 likely) in one phase and A alone in another within ONE run; log [gtdest] hp, [ctr1], and hp<=0 destroys per phase. Control: NPC_INVULN unset in the fire phase so kills are possible; A-only phase is the same-run negative.
+# NEXT: G1 — which button kills, and is counter 8 the win condition?
+s5824: with real input (A held + B/Z presses, no invuln) counter 1 reached 8 and the mission ended cleanly.
+Hypotheses: (a) B fires lasers and produces the kills; (b) Z does; (c) kills come from the approach alone/ambient allies. Discriminator: two runs of g1_fire.sh variants with the SAME A-alternation, one with only B in the fire slots, one with only Z (and a third, A-only, full length), compare ctr1 set count by t=360. Positive control: the A-only run must show fewer sets than the better arm. Also check the 0x620400 screen/result (win vs death) via fbd dumps in m6/s5824_fire/fbd.
+Also: regen/rebuild so apply_s5818 cap lands (avoid end-of-mission crash).
 HYPOTHESIS-ID: g1-mission-progression
