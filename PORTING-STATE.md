@@ -166093,3 +166093,22 @@ phase at 60.4–60.9 s and ended `nomission`; no attempt reached the qualified
 earlier post-selection input” for this recipe, while leaving the later writer,
 an unrecognized level-specific origin, and a genuine loading/viewer stall open.
 It rules out another timing-only rerun and does not constitute level coverage.
+
+## Session 5936 (2026-10-22) — located the level-10 post-selector dispatch divergence
+
+Compared the existing five level-10 `g1_lvl10c` attempts against the successful
+level-11 control before building. All level-10 attempts pass the `[lvsel]`
+positive control and perform the section-4 overlay DMA, but the first
+post-selector phase state remains `curOvl=1`, `cineState=F7B80040`,
+`STAR`; there is no immediate `cineBody` entry. The level-11 control has the
+same selector/overlay controls, then logs `cineBody ... a0=0x0000000B`, resets
+to `curOvl=2`, zero cinematic state, and reaches `0x00696100` followed by
+`0x00690400`. A later level-10 log eventually shows `cineBody a0=0xA`, so
+this is a delayed/misrouted transition boundary rather than proof that the
+function is never called.
+
+This rules out the selector positive-control failure and narrows H2/H3/H4/H5
+to the post-section-4 dispatch/state boundary. It does not name the writer,
+establish the legitimacy of `0x006A2900`, or count level 10 as coverage. No
+build or game run was needed because the existing multi-attempt logs supplied
+the discriminator; NEXT.md now requires one batched level-state/caller probe.
