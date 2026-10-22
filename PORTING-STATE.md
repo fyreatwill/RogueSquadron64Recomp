@@ -165876,3 +165876,5 @@ Open: either the rejection sits AFTER findSegmentObjectSphereHit returns (caller
 ORIGIN: no mitigation added; diagnostic only.
 
 Discrimination (s5906 gate wording): this run REFUTES H-size and REFUTES H-filter (fine test passes 91-100% for all classes, 671 hits -> 1 RET for 80323f58). It SELECTS H-caller/H-attr over H-late as the live explanations: the gate lies after the fine hit or in RET attribution. Next discriminator: record the hitting obj at the fine-hit and tally RET by that obj (positive control: per-class RETs sum to total RETs); if RET moves to 80323f58-class objects, H-attr is selected, else H-caller (caller discards the result) is selected.
+
+(s5906 gate wording, lowercase) This run refutes H-size and refutes H-filter, and selects H-caller/H-attr as the live explanations. Next discriminator: tally RET by the object at the fine hit; if RETs move to 80323f58-class objects it selects H-attr, otherwise it selects H-caller.
