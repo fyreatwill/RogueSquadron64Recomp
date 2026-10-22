@@ -1,7 +1,6 @@
-# NEXT: G1 - s5857: what does a SEND to a hit victim do? (hits are real: s5856)
-s5856: hit fn returns nonzero for ~12 ids; closest-hit then one SEND per bolt (s3 hit=304, s4 SEND=493). H10/H11 dropped.
-Hypotheses: H13 the victim handler receives the damage msg but ignores it (class/state gate) -> hp unchanged; H14 hp drops but kill/explosion path never fires (death routine stub/guard); H15 enemies die fine and the mission win condition is what's missing.
-Discriminating measurement (one build, one run): at SEND (0x8005D35C) log victim id, class (desc+0x70), victim hp field before; re-read hp ~2 frames later and log a dead/flag-change; count kills per class. Positive control: ROGUESQ_MISSION_WIN-independent: id 52 SEND must appear. Outcomes: hp flat -> H13; hp drops, no death -> H14; deaths occur -> H15 (check win counter).
-Also: take lldb backtrace of the SIGBUS (si_addr=0x37fffd040) if it recurs.
-Run: env ROGUESQ_LOG_HITS=1 zsh scratch/agent/g1_fireall.sh s5857 300
+# NEXT: G1 - s5858: where are ~97% of hit SENDs dropped before dealDamageToNpc?
+s5857: SEND=505 vs dealDamageToNpc=14 in one run; those 14 show hp pre==post and garbage hp (hp read has no positive control - void).
+Hypotheses: H16 slotDispatcherIter does not deliver msg 5 to the victim (slot/ctx lookup fails, message queued/dropped); H17 delivered, handler (fn 0x800E7860, funcs_39.c:25943) takes another branch (type-5 index 4 -> L_800E84B8 skipped / health<=0 'blez' at 0x800E84C4 with hp already <=0 -> only sender cleanup); H18 delivered to NPCs whose fn is not class-1 handler (different update fns ignore type 5).
+Discriminating measurement (one build): per run histogram of (a) slotDispatcherIter calls from the 0x8005D35C site, (b) handler entry count by msg type (a1) in npcGroundTroopUpdate, (c) entries at L_800E84B8, (d) hp read at 0x800E84C4 (blez) via the handler's own register, as the positive-control-able hp. Outcomes: (b)=~0 -> H16; (b)~SEND but (c) low -> H17; (b) low but SEND high -> H16/H18.
+Run: env ROGUESQ_LOG_HITS=1 zsh scratch/agent/g1_fireall.sh s5858 300   (add hooks to tools/apply_s5857_dmg_log.py or a new apply_s5858)
 HYPOTHESIS-ID: g1-mission-progression
