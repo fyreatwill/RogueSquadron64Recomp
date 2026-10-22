@@ -235,3 +235,4 @@ Msg-5 sender = audioCueDispatcherNpcHandler projectile loop (0x8005D1C8-0x8005D3
 - **s5860 (G1, offline, two runs s5857+s5858, top):** H20 refuted — the autopilot passes within 0.4-3 u (xz) of survivors 0x1f/0x27/0x2a/0x20/0x26 with A held (17-20 A-samples in range); kills 6-8 of 21. Survivors show xz<<3D gap (vertical offset ~4-6 u), killed ones don't — suggestive, not clean. Next: per-bolt bolt-vs-troop 3D distance (see NEXT.md).
 
 - s5870: held-START bleed (H31c) supported - with AP_HOLD=600 no beginMissionEndTransition fires and the mission runs 187 s w/o VI stall; it ends via endMissionCleanup (requester unnamed). The end-of-run Bus error far=0x3c2bc0000 is the s5818 HUDBIT diagnostic (rs5818_log), not a game crash; guard lands at next regen.
+- **s5883 (top, single-run + s5833):** class-2 kills under held fire are NPC bolts (12/12 N, 0 P); class-2 desc set varies per run. Next: why fire provokes NPC fire on class-2 (NEXT.md).

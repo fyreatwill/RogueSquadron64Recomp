@@ -1,4 +1,5 @@
-# NEXT (s5883): fire kills class-2 objective descs -> get(2)=3 lose. Can fire be aimed so class-1 (21 needed) die without class-2 (3 = lose)?
-Context (s5882): fire x2 reproduce get(1) 0->5 then get(2) 1,2,3 -> mission reset; nofire never loses. Win needs get(1)>=21 or get(10)>=6.
-Work: log the class-2 desc id + killer message/source at each get(2) increment (descs 0x80319e5c/cce/a9c), and what get(2) increments map to (handler 80065980 desc+0x38/+0x48). Positive control: get(2) steps must appear in fire run. Hypotheses: (a) held-fire A auto-targets nearest incl. class-2 (friendly/escort) objects; (b) class-2 die from enemy fire only when player is near; (c) class-2 die by timer once class-1 count passes some value.
+# NEXT (s5884): why does held player fire make NPC bolts kill class-2 objectives (nofire: 0 destroys in 413 s)?
+Context (s5883): class-2 kills are NPC bolts (12/12 who=N); class-2 descriptor set varies per run (e5c/c1c/5dc vs a9c/cdc/e5c).
+Hypotheses: (a) player fire wakes/aggroes enemy groups whose bolts then hit nearby class-2; (b) fire spawns/activates enemies by a trigger that nofire never crosses (only class-1 teardowns count); (c) class-2 objects are the enemy's targets only once engaged.
+Discriminator: in one fire run log shooter desc/vt + victim desc per SEND (not capped at 24) and the first-fire time vs first N-SEND; positive control = N sends fire. Compare with nofire window phase-gated on the same VI origin.
 HYPOTHESIS-ID: g1-mission-progression
