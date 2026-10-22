@@ -37778,6 +37778,20 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5817 bit3 setters x{_n5817}")
 
+    if p.name == "funcs_39.c":
+        import apply_s5818_destroy_health as _a5818b
+        text, _n5818b = _a5818b.apply39(text)
+        if _n5818b:
+            changed = True
+            report.append(f"{p.name}: s5818 gt label x{_n5818b}")
+
+    if p.name == "funcs_8.c":
+        import apply_s5818_destroy_health as _a5818
+        text, _n5818 = _a5818.apply8(text)
+        if _n5818:
+            changed = True
+            report.append(f"{p.name}: s5818 destroy health x{_n5818}")
+
     if p.name == "funcs_8.c":
         import apply_s5816_slot_expiry as _a5816
         text, _n5816 = _a5816.apply(text)
@@ -41422,6 +41436,7 @@ RS64_REPLAY = [
     "apply_s5813_npc_fate.py",
     "apply_s5816_slot_expiry.py",
     "apply_s5817_bit3_setters.py",
+    "apply_s5818_destroy_health.py",
     "apply_s5810_npc_supply.py",
     "apply_s5794_shooter.py",
     "apply_s5797_aim.py",
