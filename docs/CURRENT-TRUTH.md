@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5902 (2026-10-22).
+Compact operational handoff, maintained as of Session 5931 (2026-10-22).
 `PORTING-STATE.md` is the chronological ledger. Durable background, closed
 audit detail, and the per-thread histories moved out of this file are in
 `docs/PROJECT-OVERVIEW.md` (latest: "Migrated from CURRENT-TRUTH (s5636)");
@@ -144,6 +144,14 @@ Older superseded items (s5634-s5777: R/O hypotheses, ccosnap, mission-win pokes,
 Class-1 NPC msg 2 (47 of 54) = `slotDispatcherIter` -> `destroyNpcSlotByIndex`; msg 5 (8) = handler-chain kill. **s5816 corrected the mechanism:** slot byte +0x1A is a reentrancy depth counter (inc before / dec after the update call; post-update value is 1 in 99.99% of 2.88M visits), NOT a lifetime countdown, so there is no timeout. Destroy runs when depth returns to 0 and +0x14&8 is set; bit 8 is a destroy-REQUEST flag (set post-update only 3083 times in 405 s). The s5814 "timeout" reading was believable because the +0x1A/+0x14&8 pair sits right at the destroy branch. Next: name the writers of slot +0x14 bit 3 for class-1 NPCs.
 
 ## Next steps (single monotonic backlog)
+- **s5931 (G1, top):** Static level census cross-check is complete: the companion
+  decomp's `enum Level` has `NUM_LEVELS=0x13`, so playable levels are 0..18;
+  `LOGO_LEVEL=0x13` and `ATST_LEVEL=0x14` are non-playable sentinels. The
+  independent `dDefaultCraftForLevel[NUM_LEVELS]` declaration agrees. Paired
+  forced-route coverage recipes for levels 10..18 are queued in
+  `scratch/agent/soak_queue/`; each requires `[lvsel]` control `a1 == 1<<level`,
+  flight handoff, 300 s alive, zero crashlines and zero 30 s VI stalls. Fold
+  the first two verdicts next; a missing control is unevaluable, not a pass.
 - **OWNER REDIRECT 2026-10-22 (G1, top — supersedes s5841-s5930 aim entries below):**
   G1 is now per-mission COVERAGE (ITERATION.md 3c G1): forced-level route ->
   flight, >=300 s clean hold, framebuffer render check, forced-hit objective
@@ -151,7 +159,10 @@ Class-1 NPC msg 2 (47 of 54) = `slotDispatcherIter` -> `destroyNpcSlotByIndex`; 
   (s5841-s5930, ROGUESQ_AIM) is CLOSED as harness work; the owner playtests
   completability and mission-to-mission progression. Next: mission count from
   the level table, then levels >=10.
-- **s5930 (G1, top):** ROGUESQ_AIM autopilot landed (main.cpp ~10009, scratch/agent/g1_aim.sh); pitch converges, yaw does not (mean |yerr| 124 control vs 112 actuated, sign flips at sx=+-1). Next: calibrate yaw with a single-axis test (hold sr alone, log forward-vector yaw delta sign and rate), fix sign/wrap in the law, re-run g1_aim.sh, then tally class-1 kills.
+- **s5930 (G1, closed as harness work):** ROGUESQ_AIM was the final owner-directed
+  aim experiment; its yaw-wrap failure is superseded by the 2026-10-22 G1
+  coverage redirect. Do not calibrate aim or tally class-1 kills here; owner
+  playtest covers completability.
 - **s5928 (G1, BLOCKED physical):** automated aiming has no control law (no yaw state, stick never moves xz). Needs one human lv0 play: `scratch/agent/g1_human_play.sh <tag>`; read scratch/agent/m6/<tag>/summary. Win => G1 is a tooling limit; lose/softlock => port defect to trace from [ctr1]/[mend].
 - **s5914 (G1, top, single-run):** autopilot combo keys sla/sra/sua/sda (A+stick; one held event at a time otherwise) now exist; with A held, stick-up moved ship y -6.5 -> -0.4 (A-only control kept y=-6.5), so stick steering works in flight. Only the sua window was logged (plpos budget ends el~253; s5901 rows 19k vs 55k) so per-window class-1 crossings are unmeasured. Next: raise/phase-gate the plpos + s5901 budgets, re-run scratch/agent/g1_steer.sh, tally crossings per window.
 - **s5912 (G1, top, single-run):** winner-selection witness in the projectile loop: 2816 rounds, 474 with a crossing, 0 with >1 crossing, lost=0 -> shadowing refuted. Crossings are almost all debris (8006cbb0); class-1 ids cross 6x total and every crossing wins. The unhit class-1 ids are never crossed = aim/steering. Next: real-input steering toward nearest class-1 NPC (autopilot driven by player dump), count crossings per class-1 id. s5913: offline, stick=0 in all 413 plpos samples and track misses 13 logged class-1 spheres by 1.4-8.8 vs radii 0.06-0.68 (tools/g1_track_vs_spheres.py; sample, budget-capped) -> H-aim selected; next is an autopilot stick table (su/sr/sd keys) with the crossing tally as measure.

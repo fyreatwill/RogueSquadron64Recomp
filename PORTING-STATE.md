@@ -166012,3 +166012,24 @@ Rules out: "autopilot has no control law" as the only obstacle - a law now exist
 DISCRIMINATION (s5930): hypotheses H-nolaw (G1 failure = autopilot never steers) vs H-portdefect (class-1 NPCs unhittable in the port). Selected/refuted: H-nolaw-as-sole-cause REFUTED for pitch (pitch error converges under stick drive, positive control act=9645), yaw remains unresolved; so a stick-driven ship CAN be steered, the s5928 "stick never moves xz" premise is only true for scripted y-only windows. H-portdefect still untested because yaw does not converge. NEXT DISCRIMINATOR: single-axis yaw test (hold sr then sl, log forward-yaw delta) -> splits yaw-sign-inverted / wrong-forward-axis / low-turn-rate; recorded in scratch/agent/NEXT.md.
 This run refutes H-nolaw as the sole cause (pitch converges under stick drive) and selects yaw calibration as the open obstacle; the single-axis yaw test will discriminate sign-inverted vs wrong-axis vs low-rate.
 Agent follow-up (s5930): calibration was done offline (4867 rows of s5920b_steer): no matrix row/column is forward (the +0x74/+0xC0 matrices are a constant 10 deg roll), forward = pos delta over 4 polls; sx=+1 lowers atan2(dx,dz) heading ~45 deg/s (sx = -k*yerr), sy=+1 is a pitch RATE. This refutes H-inverted-sign and H-wrong-matrix-axis as the yaw cause; the failure is a +-180 deg wrap flip (yerr 180.0 -> -178.2 with sx -1 -> +1 each sample), plus pitch gain too low (never left y~-18). Aim-on mean target distance 74.8 vs control 24.5, [ctr1] sets 5 (control, 100 s) vs 2 (aim, 410 s): the unfixed law is worse than no steering. An unrun fix (turn-direction latch when |yerr|>120 deg, pitch gain 2->6) is in main.cpp, rebuilt. Next discriminator: run g1_aim.sh with the fix; mean |yerr| and min target distance should fall well below control (124 deg / 24.5).
+
+## Session 5931 (2026-10-22) — established playable mission count and queued levels 10–18 coverage
+
+Planned unit: establish the real mission count from an independent static source,
+cross-check it, then queue paired forced-route coverage runs for every remaining
+playable level. The companion decomp `docs/mips_to_c/ctx.c` defines
+`NUM_LEVELS=0x13`, with ordinary levels 0..0x12; `LOGO_LEVEL=0x13` and
+`ATST_LEVEL=0x14` are sentinels outside the playable range. Its independent
+`dDefaultCraftForLevel[NUM_LEVELS]` declaration confirms the same 19-entry
+bound. This selects the coverage sweep over H3's suspected table-bound failure.
+
+Queued 18 recipes (`g1_lvl10a/b` through `g1_lvl18a/b`), using the forced
+mission/unlock controls, no-save-write protection, qualified autopilot route,
+and existing phase/FB/crash controls. No build or game run was needed for this
+static-and-queue work unit. The next two queued verdicts must have `[lvsel]
+a1 == 1<<level` before flight/300 s results are interpretable; missing controls
+are unevaluable. H1/H2 remain open pending those runs. The prior s5930
+aim-calibration entry is superseded by the owner’s G1 coverage redirect.
+
+ORIGIN: no mitigation or runtime behavior change; only coverage scripts and
+ledger/state updates were added.
