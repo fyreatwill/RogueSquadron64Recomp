@@ -165324,3 +165324,7 @@ Confound: A-hold approach accumulates across phases, so B vs Z kill attribution 
 Crash: Bus error si_addr=0x37fffd040 in rs5818_log<-destroyNpcSlotByIndex<-endMissionCleanup — the known own-instrument crash (cap 300 in apply_s5818 not in current build); not a port defect.
 ORIGIN: no mitigation added this session (script only).
 Next: separate fire button (B-only vs Z-only with A held, separate runs of same phase-gated schedule) and identify what ends the mission at counter 8 (win vs. other) — look at origin 0x620400 content/result screen.
+
+## Session 5825 (2026-10-21) — fire-button arms: A-only reaches ctr1=8 without B or Z
+Ran g1_fire.sh (now takes F1/F2 env for the fire key) as three sequential arms via scratch/agent/g1_fire_arms.sh, same A-alternation, no invuln: B-only (s5825_bonly), Z-only (s5825_zonly), A-only (s5825_aonly). Counter-1 [ctr1] set counts by end of 400 s hold: B-only 6, Z-only 6, A-only 8. All alive at end, 0 crashlines, 0 VI stalls. Set id order identical across arms (0x18,19,2B,1B/1C,1D...).
+Verdict: H(c) approach/ambient kills supported; H(a) B fires and H(b) Z fires both refuted as the kill source — the no-fire control gets MORE sets, not fewer. This overturns the s5824 reading that fire-phase kills were fire-attributable. Caveat: single run per arm, ship-position variance between runs (no cross-run A/B rule), so 6 vs 8 is not meaningful, only "A-only is sufficient". Open: why the s5824 run ended the mission at 8 while these did not show an end (alive_at_end=1 in all), and what drives class-1 destroys by approach.
