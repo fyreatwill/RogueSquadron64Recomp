@@ -165266,3 +165266,7 @@ Verdict: SELECTS H-despawn-by-design (hypothesis a: timeout expiry; the 47 NPCs 
 ORIGIN: no mitigation added; diagnostic only.
 Next: the lv0 win needs msg5 count >= target, i.e. real kills; test with aimed fire (not idle) or oracle comparison of how many class-1 NPCs retail kills; also check why the +0x1A countdown initial value/rate matches retail (port runs dispatch passes per frame — verify pass rate vs retail ~VI).
 Gate wording (s5814): this run SELECTS H-despawn-by-design (msg 2 = slot lifetime-timeout destroy via slotDispatcherIter -> destroyNpcSlotByIndex, two sources: native backtrace + guarded call site) and REFUTES H-wrong-branch-kill and H-level-cleanup-sweep (no hit-resolve or cleanup caller in any sampled msg-2 stack). Next discriminator: log per-slot +0x1A initial value and slotDispatcherIter passes per VI frame; passes/VI ~1 selects H-idle-autopilot-never-kills (drive aimed fire), passes/VI >1 selects H-port-countdown-too-fast (fix pass rate).
+
+## Session 5815 (2026-10-21) — maintenance: CURRENT-TRUTH compacted 457→164 lines
+
+Step 0 triggered (60178 B > 60000). Moved five verbatim blocks (s5799-s5813 headline items, M6 thread detail, superseded s5634-s5777 entries, closed next-steps diary s5694-s5806, voice/mtm/counter-2 update diaries) into PROJECT-OVERVIEW.md under "Migrated from CURRENT-TRUTH (s5815)", leaving one-paragraph stubs with the surviving conclusions. CURRENT-TRUTH is now ~14 KB. No experiments run. NEXT.md unchanged: s5814 G1 lv0 countdown-pass-rate unit (g1_inv1.sh) remains the next work unit.
