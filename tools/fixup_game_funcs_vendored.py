@@ -37927,6 +37927,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5887 spawn nonclass1 dump x{_n5812}")
 
+    if p.name == "funcs_36.c":
+        import apply_s5893_msg5ids as _a5893
+        text, _n5893 = _a5893.apply(text)
+        if _n5893:
+            changed = True
+            report.append(f"{p.name}: s5893 msg5 per-id x{_n5893}")
+
     if p.name == "funcs_27.c" and "PATCH: s5523 cineBody entry log" not in text:
         _a = '    // 0x800A5D80: addiu       $sp, $sp, -0xD8\n'
         if text.count(_a) == 1:
@@ -41571,6 +41578,7 @@ RS64_REPLAY = [
     "apply_s5809_ctr1_log.py",
     "apply_s5811_ctr1_bt.py",
     "apply_s5887_npc_spawn_class.py",
+    "apply_s5893_msg5ids.py",
     "apply_s5812_npc_spawn_class.py",
     "apply_s5829_teardown_gate.py",
     "apply_s5813_npc_fate.py",
