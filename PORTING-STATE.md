@@ -166003,3 +166003,9 @@ ORIGIN: none (no mitigation added).
 
 ## Session 5929 (2026-10-22) — unblock: s5928 physical block re-scoped (route 3), not resolved
 Block: G1 needs one human lv0 play; no m6/human1 result exists. Real as written (no automated control law), but it only gates the G1 question, not the project. Untried discriminator that could make the human unnecessary: run the retail oracle under the identical scripted lv0 input; same-failure => autopilot limit. Rewrote NEXT.md to do that (or G3 with a landed change if oracle input is infeasible); listed the human play as a non-blocking dependency in CURRENT-TRUTH. No code changed. ORIGIN: none.
+
+## Session 5930 (2026-10-22) — landed closed-loop aim autopilot (ROGUESQ_AIM), law does not yet converge
+
+Churn-guard pivot: committed a RUNTIME change. `src/main/main.cpp` (~line 10009, +76 lines): TEST-ONLY `ROGUESQ_AIM=<deadband rad>` + `ROGUESQ_AIM_TARGETS="x,y,z;..."` (+`ROGUESQ_AIM_FROM_S`) drives stick_x/stick_y toward the nearest not-yet-visited target from the player tilt-matrix forward vector; logs `[aim]`. Script: scratch/agent/g1_aim.sh (56 deduped class-1 centres from earlier [sph] logs). Run s5929_aim: mission at t=82 s, 560 s hold, 0 crashes, 0 stalls; actuation from el=230 s.
+Result: control window (stick 0) mean |yaw err| = 124.1 deg (2479 samples); actuated = 111.6 deg (9645 samples) -> essentially no convergence; yerr jumps between about -178 and +165 with sx saturated at +-1 (sx=+1 at yerr=-178, sx=-1 at +102/+165), i.e. the sign/axis calibration or the yaw wrap is wrong, or stick->turn rate is too small. Pitch error does shrink (perr 0-13 deg). Positive control fired (act counts 209 -> 9645, nonzero stick). No class-1 kill-count change observed ([ctr1] set #6/#7 only). ORIGIN: test-only lever, not a mitigation; no game behaviour changed when env unset.
+Rules out: "autopilot has no control law" as the only obstacle - a law now exists but its yaw axis is miscalibrated; G1 still undecided.

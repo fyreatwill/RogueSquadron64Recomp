@@ -10006,6 +10006,82 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         }
     }
 
+    // s5929: ROGUESQ_AIM=<deadband rad> + ROGUESQ_AIM_TARGETS="x,y,z;..." is a TEST-ONLY closed-loop aim autopilot
+    // (G1: s5928 found the scripted stick never steers toward class-1 NPCs). Steers the ship toward the nearest
+    // not-yet-visited target whenever no scripted stick is held. Actuation starts at SDL el >= ROGUESQ_AIM_FROM_S
+    // (default 0); before that it logs the same errors with stick=0 = the in-run zero-stick control.
+    // CALIBRATION (offline, scratch/agent/m6/s5920b_steer/run.log, PLE=2, 4867 [plpos]/[plmat] rows):
+    //  - forward axis: the +0x74/+0xC0 "tilt" matrices are a constant 10-deg roll in ALL rows (incl. stick windows),
+    //    so NO matrix row/column is forward. Forward is therefore the velocity: pos(n) - pos(n-4) (A-held flight
+    //    moves 0.075-0.125 u/poll along a fixed heading; heading = atan2(dx,dz) is constant without stick input).
+    //  - yaw sign: sx=+1 held -> heading atan2(dx,dz) DECREASES ~45 deg/s (e.g. 4.3 -> -100.6 deg in 2.4 s, ship
+    //    circles r~2.5 u); sx=-1 -> heading INCREASES (-111.6 -> 9.1 in 2.4 s). So sx = -k*yaw_err.
+    //  - pitch sign: sy=+1 held raised y (-6.5 -> -0.1, and loops if held); sy=-1 dropped y (-9.8 -> -18.1).
+    //    sy is a pitch RATE, so sy = +k*(desired climb angle - current climb angle atan2(vy, |vxz|)).
+    // Logs [aim] ~1 Hz: target idx, dist, yaw/pitch error (deg), stick out, actuation count.
+    {
+        static float s_aim_db = -1.0f;
+        static float s_tg[64][3]; static unsigned s_ntg = 0; static bool s_vis[64];
+        static double s_from = 0.0;
+        static float s_hist[8][3]; static unsigned s_hn = 0;
+        static unsigned s_n = 0, s_act = 0, s_cur = 64, s_cur_polls = 0, s_visits = 0;
+        static double s_sum_ctl = 0, s_sum_act = 0; static unsigned s_cnt_ctl = 0, s_cnt_act = 0;
+        if (s_aim_db < -0.5f) {
+            const char* g = std::getenv("ROGUESQ_AIM"); s_aim_db = (g && *g) ? (float)atof(g) : 0.0f;
+            const char* t = std::getenv("ROGUESQ_AIM_TARGETS");
+            while (t && *t && s_ntg < 64 && sscanf(t, "%f,%f,%f", &s_tg[s_ntg][0], &s_tg[s_ntg][1], &s_tg[s_ntg][2]) == 3) { s_vis[s_ntg] = false; s_ntg++; t = strchr(t, ';'); if (!t) break; t++; }
+            const char* f = std::getenv("ROGUESQ_AIM_FROM_S"); s_from = (f && *f) ? atof(f) : 0.0;
+            if (s_aim_db > 0.0f) fprintf(stderr, "[aim] armed db=%.3f targets=%u from_s=%.1f\n", (double)s_aim_db, s_ntg, s_from);
+        }
+        volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+        if (s_aim_db > 0.0f && s_ntg && rd && ((uint32_t)rs64_vi_committed_origin() & 0xFFFFFFu) == 0x690400u) {
+            const uint32_t p = rs64_rdram_u32(rd, 0x137DB8u + 4) & 0xFFFFFFu;
+            if (p >= 0x1000u && p < 0x7FFF00u) {
+                float v[3]; for (int i = 0; i < 3; i++) { uint32_t u = rs64_rdram_u32(rd, p + 0x4C + 4 * i); memcpy(&v[i], &u, 4); }
+                if (v[0] == v[0] && v[1] == v[1] && v[2] == v[2] && !(v[0] == 0.0f && v[2] == 0.0f)) {
+                    memcpy(s_hist[s_hn % 8], v, sizeof v); s_hn++;
+                    // nearest unvisited target; visited when within 1.5 u or after 600 polls (~40 s) on it
+                    auto d2 = [&](unsigned k) { float a = s_tg[k][0]-v[0], b = s_tg[k][1]-v[1], c = s_tg[k][2]-v[2]; return a*a+b*b+c*c; };
+                    if (s_cur < s_ntg && (d2(s_cur) < 2.25f || s_cur_polls > 600)) { s_vis[s_cur] = true; s_visits++; s_cur = 64; }
+                    if (s_cur >= s_ntg) {
+                        unsigned nv = 0; for (unsigned k = 0; k < s_ntg; k++) nv += s_vis[k] ? 0 : 1;
+                        if (!nv) for (unsigned k = 0; k < s_ntg; k++) s_vis[k] = false;
+                        float best = 1e30f; for (unsigned k = 0; k < s_ntg; k++) if (!s_vis[k] && d2(k) < best) { best = d2(k); s_cur = k; }
+                        s_cur_polls = 0;
+                    }
+                    s_cur_polls++;
+                    const unsigned L = 4;
+                    double yerr = 0, perr = 0; bool valid = false;
+                    if (s_hn > L) {
+                        const float* o = s_hist[(s_hn - 1 - L) % 8];
+                        const double dx = v[0]-o[0], dy = v[1]-o[1], dz = v[2]-o[2], hs = std::sqrt(dx*dx+dz*dz);
+                        if (hs > 0.02 * L && hs < 2.0 * L) {  // moving, and not a respawn/teleport jump
+                            const double tx = s_tg[s_cur][0]-v[0], ty = s_tg[s_cur][1]-v[1], tz = s_tg[s_cur][2]-v[2];
+                            yerr = std::atan2(tx, tz) - std::atan2(dx, dz);
+                            while (yerr > M_PI) yerr -= 2 * M_PI; while (yerr < -M_PI) yerr += 2 * M_PI;
+                            perr = std::atan2(ty, std::sqrt(tx*tx+tz*tz)) - std::atan2(dy, hs);
+                            valid = true;
+                        }
+                    }
+                    const double el = (double)SDL_GetTicks() / 1000.0;
+                    const bool on = el >= s_from;
+                    if (valid) { if (on) { s_sum_act += std::fabs(yerr); s_cnt_act++; } else { s_sum_ctl += std::fabs(yerr); s_cnt_ctl++; } }
+                    if (on && valid && stick_x == 0.0f && stick_y == 0.0f) {
+                        const double k = 2.0;  // full stick at ~29 deg error
+                        if (std::fabs(yerr) > s_aim_db) stick_x = (float)std::max(-1.0, std::min(1.0, -k * yerr));
+                        if (std::fabs(perr) > s_aim_db) stick_y = (float)std::max(-1.0, std::min(1.0, k * perr));
+                        if (stick_x != 0.0f || stick_y != 0.0f) s_act++;
+                    }
+                    if ((++s_n % 16) == 1)
+                        fprintf(stderr, "[aim] el=%.1f %s tgt=%u d=%.2f yerr=%.1f perr=%.1f sx=%.2f sy=%.2f act=%u visits=%u pos=(%.2f,%.2f,%.2f) mean|yerr| ctl=%.1f(%u) act=%.1f(%u)\n",
+                                el, on ? "ON" : "ctl", s_cur, std::sqrt((double)d2(s_cur)), yerr * 57.29578, perr * 57.29578, (double)stick_x, (double)stick_y,
+                                s_act, s_visits, (double)v[0], (double)v[1], (double)v[2],
+                                s_cnt_ctl ? s_sum_ctl / s_cnt_ctl * 57.29578 : 0.0, s_cnt_ctl, s_cnt_act ? s_sum_act / s_cnt_act * 57.29578 : 0.0, s_cnt_act);
+                }
+            }
+        }
+    }
+
     // s5492: ROGUESQ_GODMODE=1 is a TEST-ONLY lever for M6 endurance soaks. The player
     // record table at 0x80137DB8 (stride 0x2A0, found via getPlayerHealthPercentage)
     // holds float health at +0xC4 and max health at +0xC8; refill slot 0 whenever it

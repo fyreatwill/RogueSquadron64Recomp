@@ -1,7 +1,6 @@
-# NEXT (s5929): oracle same-autopilot differential for G1, else G3 with a landed change
+# NEXT (s5931): calibrate ROGUESQ_AIM yaw axis
 
-HYPOTHESIS-ID: g1-oracle-same-autopilot-differential
+HYPOTHESIS-ID: g1-aim-autopilot-yaw-calibration
 
-1. Check (static, 10 min) whether the retail oracle accepts the same scripted lv0 input (see run_s3746_oracle_exact_route.sh, g1_fly.sh). If yes: one oracle run with the IDENTICAL schedule, positive control = oracle reaches lv0 flight; compare ctr1/class-1 kill count and mission end vs the port. Oracle also never kills class-1 => G1 is an autopilot limit, close it. Oracle kills many => real port defect with a same-input discriminator.
-2. If the oracle cannot take the input: take G3 (hangar framebuffer diff vs oracle, ROGUESQ_FB_DUMP_DIR works at VI_WIDTH) and LAND a runtime/tool change, not an observation.
-Open human dependency (not blocking): scratch/agent/g1_human_play.sh human1; if scratch/agent/m6/human1/summary appears, consume it first.
+H1 yaw sign inverted; H2 wrong matrix column/row for forward; H3 turn rate too low/yaw wrap bug.
+Discriminator: in ONE run, hold sr alone for 20 s then sl alone for 20 s (A held), log forward-vector yaw per sample; sign and rate of d(yaw)/dt split H1/H2/H3. Then fix the law in main.cpp ~10009 and rerun scratch/agent/g1_aim.sh; success = mean |yerr| actuated << control and class-1 [ctr1] get(1) rises.
