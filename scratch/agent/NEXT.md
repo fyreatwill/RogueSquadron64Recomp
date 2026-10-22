@@ -1,42 +1,9 @@
-# NEXT: qualify the s5818 NPC-health diagnostic guard class
+# NEXT: fold remaining G1 sweep soaks (levels 14b..18b), then (c) framebuffer captures
 
-HYPOTHESIS-ID: m3-s5818-health-read-guard
+HYPOTHESIS-ID: g1-mission-coverage-sweep
 
-Work unit: add a regeneration-safe guest-pointer guard before the existing
-s5818 `npcGroundTroopUpdate` health probe, update the live generated function,
-and build `RogueSquadron64Recomp`. Do not run a new soak: this is a bounded
-guard-class audit, not a diagnostic rerun.
-
-Competing hypotheses:
-
-- H1: `ctx->r17` or `[s1+0x38]` can be stale/non-KSEG0 at the diagnostic call,
-  so the probe can fault before the game health path is tested.
-- H2: only the nested health-array calculation is unsafe; the object and slot
-  pointers are always valid at this call site.
-- H3: all three pointers are valid and the prior fault cannot recur in this
-  call site; a guard would be unjustified.
-
-Discriminator: static dataflow plus the existing crash evidence. H1 selects if
-the call can reach `getNpcCurrentHealth` with an invalid object/slot or nested
-health address; H2 selects if only the nested address can be invalid; H3 would
-reject the guard. The positive control is the existing s5818 fault evidence
-and the unchanged `s5818` in-range probe path; no new counter is needed.
-
-Evidence consumed before building: the `s5845/s5870/s5872` records identify
-stale NPC slots as the diagnostic fault source, and the current `rs5818_gt`
-body dereferences `s1`, `[s1+0x34]`, and `[s1+0x38]` before the health call.
-The game-side writer is `npcGroundTroopUpdate`/teardown; the new guard only
-protects our read and does not filter or mutate game state.
-
-Exact preflight/build commands:
-
-```sh
-rg -n 'rs5818_gt|t\.r4 = MEM_W\(s1, 0X38\)' tools/apply_s5818_destroy_health.py ../N64Recomp/RecompiledFuncs/funcs_39.c
-python3 -m py_compile tools/apply_s5818_destroy_health.py
-cmake --build build --config Debug --target RogueSquadron64Recomp
-```
-
-Expected outcomes: the source patch and generated function both contain the
-same pointer/range checks, and the normal build succeeds. A future s5818 run
-must show the valid in-range path still logging while stale slots are skipped;
-this iteration does not claim a mission-coverage result.
+Work unit: read the new SOAK-RESULTS.md lines for g1_lvl14b..g1_lvl18b (queued in
+scratch/agent/soak_queue/). Any rc!=0, crashlines>0 or vi_stalls30s>0 is a datum:
+capture a backtrace and name the writer. If all pass, pick one passing level and
+add a framebuffer capture (G1 item c) to the recipe, enqueue it.
+Open: level 10 `nomission` (stale cinematic state, curOvl=1 cineState=F7B80040).

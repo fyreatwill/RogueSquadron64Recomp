@@ -166135,3 +166135,8 @@ site. It does not claim that level 10 is covered or that the underlying game
 teardown state is invalid. ORIGIN: `npcGroundTroopUpdate`/NPC teardown writes
 the stale object/slot values; this change protects only our read-only
 diagnostic and rejects invalid guest pointers before `getNpcCurrentHealth`.
+
+## Session 5938 (2026-10-22) — verified s5818 guard build, folded level 11–14a soak verdicts
+
+Ran the s5937 NEXT unit: `py_compile tools/apply_s5818_destroy_health.py` passes, the regenerated `funcs_39.c` carries the same `rs5818_gt_ptr` checks (lines 25932–25944), and `cmake --build build --target RogueSquadron64Recomp` is up to date (binary 15:37, same as the generated file). H1 (stale object/slot pointer) is what the guard covers; no new run was made, so no claim about the in-range path logging beyond s5937.
+Folded soak verdicts: g1_lvl13b and g1_lvl14a each reached flight (mission_t 99 s / 81 s), held 305 s / 303 s, alive_at_end=1, vi_stalls30s=0, crashlines=0 (godrefills=20/17 were the harness's god-mode refills). Together with 11a/b, 12a/b, 13a this gives (a)+(b) for levels 11–14a; (c)+(d) are untouched. Level 10 remains the only failing level (nomission). 14b–18b are queued for the loop.

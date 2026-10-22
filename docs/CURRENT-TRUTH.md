@@ -24,8 +24,8 @@ detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 ## Current frontier: G1 mission coverage
 
 The companion decomp census gives `NUM_LEVELS=0x13`: playable levels 0..18;
-`LOGO_LEVEL=0x13` and `ATST_LEVEL=0x14` are sentinels. Levels 1..9 have route
-and 300-second hold coverage. Paired forced-level recipes for levels 10..18
+`LOGO_LEVEL=0x13` and `ATST_LEVEL=0x14` are sentinels. Levels 1..9 and 11..14a have route
+and 300-second hold coverage (a)+(b) (11a/b, 12a/b, 13a/b, 14a: rc=0, vi_stalls30s=0, crashlines=0, hold 303-305 s; s5938). Level 10 still fails; 14b..18b are queued. Paired forced-level recipes for levels 10..18
 were queued, but the first queue pass failed before launch because the shared
 runner was itself a consumable `.sh` recipe and was moved to `soak_queue/done/`:
 
