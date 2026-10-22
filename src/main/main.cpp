@@ -9927,6 +9927,22 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         }
     }
 
+    // s5821: ROGUESQ_LOG_PLPOS=1 logs ship pos (+0x4C/+0x50/+0x54) with the injected stick/buttons ~2 Hz in-mission,
+    // so held-key phases can be compared inside ONE run (s5820: 150ms taps every 3s moved the ship ~0.05/update).
+    {
+        static int s_lp = -1; static unsigned s_n = 0;
+        if (s_lp < 0) { const char* g = std::getenv("ROGUESQ_LOG_PLPOS"); s_lp = (g && *g == '1') ? 1 : 0; }
+        volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+        if (s_lp && rd && ((uint32_t)rs64_vi_committed_origin() & 0xFFFFFFu) == 0x690400u && (++s_n % 30) == 0) {
+            const uint32_t p = rs64_rdram_u32(rd, 0x137DB8u + 4) & 0xFFFFFFu;
+            if (p >= 0x1000u && p < 0x7FFF00u) {
+                float v[3]; for (int i = 0; i < 3; i++) { uint32_t u = rs64_rdram_u32(rd, p + 0x4C + 4 * i); memcpy(&v[i], &u, 4); }
+                fprintf(stderr, "[plpos] el=%.1f n=%u pos=(%g,%g,%g) sx=%.1f sy=%.1f btn=0x%04X\n",
+                        (double)SDL_GetTicks() / 1000.0, s_n, (double)v[0], (double)v[1], (double)v[2], (double)stick_x, (double)stick_y, (unsigned)btn);
+            }
+        }
+    }
+
     // s5685: ROGUESQ_ALT_HOLD=<deadband> is a TEST-ONLY closed-loop autopilot. s5684 measured stick_y moving
     // ship pos y (sy=+1 -> +0.12/poll, sy=-1 -> -0.19/poll). Latch the ship y on the first mission poll and
     // drive stick_y toward it whenever no scripted stick_y is held. Logs ~1 Hz (control: err/sy visible).
