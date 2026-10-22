@@ -1,6 +1,6 @@
-# NEXT (s5899): who kills/respawns the player bolt slot after its first test pass?
-Context (s5898): 88% of 19456 bolt lives last <20 ms (one pass over 11-33 targets), move <1 u, then the slot is respawned >6 u away. Bolts live ~1 frame.
-Competing: (a) lifetime timer in the bolt object expires at once (timer units/dt wrong in the port); (b) bolt removed by a collision test result (any hit incl. self/terrain/own-ship) -> free; (c) the pool is a ring and fire rate respawns slots every frame so a 'life' is really one bolt that is retired by next spawn (pool too small: spawn recycles live bolts); (d) per-frame bolt update is not run for the slot (bolt never advances) and slot recycled by the spawner.
-Discriminator: in the probe, for lives with n>=3 and dt<40ms log (i) the bolt object timer/age words (find by diffing two successive frame snapshots of the SAME slot: words that change by constant per frame) and (ii) the guest call chain/PC of the writer that changes pr+0x4c..0x54 at the life boundary (use the existing write-watch facility, ROGUESQ_WATCH knobs in docs/ENV-KNOBS.md, arm a whole-object positive control first). Outcome: age word hits limit -> (a) trace dt; writer is free/alloc fn with live bolt -> (c); position never changed between frames of same slot -> (d).
-Recipe: scratch/agent/s5897_life.sh (tag still s5897_life; sed -i needs '' on macOS).
+# NEXT (s5900): what is r17 ("proj") in the segment-vs-sphere loop, and what is pp?
+Context (s5899): same-pr lives keep rotation basis (+0x28..0x48) 30/33; boundaries are pp (arg r6) jumps >6 u. So r17 persists while pp jumps.
+Competing: (a) r17 is a ship/emitter, pp = per-weapon muzzle segment origin (several per frame); (b) r17 is the bolt and pp is a different quantity (e.g. previous-pos); (c) r17 is a pool node reused with same basis (unlikely).
+Discriminator (one build, one run, extend rs5897_track in tools/apply_s5835_sphere_probe.py): for the first 300 samples log pr, pp, pr+0x4c..0x54, pr+0x00 and +0x60 words, and |pp-obj pos|. pp==obj pos -> (a/b by motion); pp far from obj pos and alternating among few values -> (a). Positive control: log must show >=300 rows with nonzero pr.
+Recipe: scratch/agent/s5897_life.sh (sed -i needs '' on macOS).
 HYPOTHESIS-ID: g1-mission-progression
