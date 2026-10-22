@@ -36,6 +36,7 @@ per-session evidence is in the named `docs/*AUDIT.md` files and soak results.
   report 2026-10-19 — every SFX recognizable but behind a heavy fuzzy/noise
   layer, and no dialogue/voice at all. Owner has watched several missions
   besides Mos Eisley play (rung G1).
+- **Open human dependency (s5929, non-blocking):** G1 real-input lv0 outcome needs one human play (`scratch/agent/g1_human_play.sh human1`, read m6/human1/summary). Loop proceeds on the oracle same-autopilot differential / G3 meanwhile.
 - **M4 accumulator comparison: PARKED** at the cross-arm gate after the s5570
   rank-bin (empty lane masks) and s5575 task-total-bucket (0 shared classes)
   discriminators; H3 selected, no writer or mitigation inferred. Do not repeat
