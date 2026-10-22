@@ -41572,6 +41572,7 @@ RS64_REPLAY = [
     "apply_s5866_plwatch.py",
     "apply_s5867_callers.py",
     "apply_s5867b_msg.py",
+    "apply_s5868_flagwatch.py",
 ]
 
 
