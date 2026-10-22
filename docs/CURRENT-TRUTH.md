@@ -180,3 +180,6 @@ Voice-path (s5637-s5666), mission-transition (s5748-s5754), counter-2 (s5787-s57
 - s5822: holding A (ship loops, idle->moving) takes ground-troop gtdest from 0 (idle) to 27 in 130 s; d2 at destroy not observed ([rng] cap 20/result spent early). Despawn-by-design consistent but not selected vs a motion/collision destroy path. Next: key the [rng] log to gtdest (full regen).
 
 - **s5829 (single-run + code read):** class-1 descriptor words don't discriminate counted (0x18,0x19, deterministic across runs) from silent; counted sets come via npcProbeDriod copy 2 (L_800CBCBC, msg-5 death-effect arm), the +0x6C gate (copy 1) never fired. Next: find the msg-2 sender for class-1 NPCs.
+
+## s5832 addendum (G1)
+Dispatcher tally (s5832): only update fns 8006cbb0 (= updateDestructionDebrisNpc, 249 msg-5), 800cabd4 (6) and 800d93c0 (3) ever receive msg 5 in a 320 s fire mission. Class-1 NPC damage path is therefore one of the last two (inferred, single-source; the class keying in that instrument failed). Next: identify those two fns and the upstream msg-5 sender gate.

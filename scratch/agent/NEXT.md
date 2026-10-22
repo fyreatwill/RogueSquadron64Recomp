@@ -1,5 +1,6 @@
-# NEXT: G1 — do class-1 NPCs receive msg 5 (damage) from player fire at all?
-s5831: updateDestructionDebrisNpc never sees class 1 (control: cls0/2/3 tallied; hits dmg=12 land on cls0/2). Class-1 handle msgs in their own update fns.
-Hypotheses: (a) class-1 gets msg 5 only rarely (8/54 counted) because fire misses/collision radius; (b) msg 5 arrives often but their handler gates the kill (rand()&3, range 144); (c) msg 5 is never sent to them except via death arm.
-Step: patch slotDispatcherIter (where update fn is called with msg) to tally (slot+0x70 class, msg) with the same [hitsum] format under ROGUESQ_LOG_HITS=1; same g1_fire.sh run (env ROGUESQ_LOG_HITS=1 zsh scratch/agent/g1_fire.sh <tag> 320). Control: cls0/2/3 counts must match s5831 magnitude. Outcome: cls1 m5 ~0 -> (a)/(c); cls1 m5 >> 8 -> (b).
+# NEXT: G1 — identify msg-5 receivers 800cabd4 and 800d93c0 (class-1 damage path?)
+s5832: only 3 update fns ever get msg 5 (8006cbb0=249, 800cabd4=6, 800d93c0=3). Class-1 NPCs never reach updateDestructionDebrisNpc.
+Hypotheses: (a) 800cabd4/800d93c0 are the class-1 handlers and rarely receive msg 5 because the upstream sender's hit test (radius/collision) rarely passes for them; (b) they are unrelated objects and class-1 never receives msg 5 at all.
+Step: log, at the dispatch call for those two fns, obj (r4) +0x34 descriptor and its +0x70 class (fix s5832's keying: try r16/r17 slot->obj chain), plus dump their first 40 instructions from the recompiled source (grep funcs_*.c) to read the msg-5 arm. Then find the msg-5 sender (grep "ori.*0x5" near sendMsg callers) and its range gate. Control: 8006cbb0 must show class 0/2.
+Outcome: class 1 confirmed on both -> read sender gate; class != 1 -> (b), find class-1 handler fn by tallying all update fns for objects with class 1.
 HYPOTHESIS-ID: g1-mission-progression

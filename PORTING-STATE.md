@@ -165366,3 +165366,12 @@ Meaning: class-1 NPCs (ground troops, npcProbeDriod etc.) never route through up
 ORIGIN: no mitigation added; instrument only (read-only).
 Next: tally msgs at the slot dispatcher (slotDispatcherIter) keyed by slot +0x70 class so class 1 is visible, same run shape.
 Discrimination (s5831): this run refutes hypothesis "damage to class-1 is observable at updateDestructionDebrisNpc" (class-1 count 0 vs >100k for other classes) and refutes "projectiles never register hits" for classes 0/2 (msg-5 dmg=12 seen 6 and 236 times). It closes the NEXT.md step-2 site as a dead end. Next discriminator: slotDispatcherIter tally keyed by slot +0x70 -- cls1 m5 near 0 selects (a)/(c), cls1 m5 >> 8 selects (b) gated kill.
+
+## Session 5832 (2026-10-21) — dispatcher-level msg tally: only 3 update fns ever receive msg 5; fn 8006cbb0 = updateDestructionDebrisNpc
+
+Added tools/apply_s5832_disp_tally.py (mirrored into fixup): tallies (class, msg, update-fn) at the indirect update call in slotDispatcherIter, under ROGUESQ_LOG_HITS=1. Run: g1_fire.sh s5832 320 (mission t=81s, alive, 0 crashes, 0 VI stalls).
+Class keying FAILED: the call's a0 is not the NPC object, so every event landed in the "cls=4 / unresolved" bucket while cls0-3 read 0 (the s5831 tally in the same run shows cls0 m5=7, cls2 m5=242). So the per-class split from this instrument is void; the per-fn split is valid (fn comes straight from the dispatch target).
+Per-fn msg-5 receipt over the whole run: fn 8006cbb0 = 249 (matches s5831 cls0+cls2 = 249, so it IS updateDestructionDebrisNpc: independent control), fn 800cabd4 = 6, fn 800d93c0 = 3; no other update fn ever got msg 5 (total m5 = 258 = 249+6+3). Msg 11 dominates (766k), msgs 3/4 ~220-250k.
+Reading: class-1 NPCs (never seen by updateDestructionDebrisNpc) can only be receiving msg 5 through 800cabd4/800d93c0 at ~9 total in a 320 s fire-held mission — hypothesis (a)/(c) (rare/no damage delivery to class 1), not (b). Caveat: identification of those two fns as class-1 handlers is inferred (class lookup failed), single-source.
+ORIGIN: diagnostic only, no mitigation added.
+Next: identify 800cabd4 / 800d93c0 (descriptor class of their objects, what they do on msg 5), and why fire doesn't send msg 5 to them (collision/radius test upstream of msg send).
