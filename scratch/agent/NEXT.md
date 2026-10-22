@@ -1,6 +1,6 @@
-# NEXT (s5931): calibrate ROGUESQ_AIM yaw axis
+# NEXT (s5931): run g1_aim.sh with the wrap-latch + pitch-gain fix (already in main.cpp, rebuilt)
 
-HYPOTHESIS-ID: g1-aim-autopilot-yaw-calibration
+HYPOTHESIS-ID: g1-aim-autopilot-yaw-wrap
 
-H1 yaw sign inverted; H2 wrong matrix column/row for forward; H3 turn rate too low/yaw wrap bug.
-Discriminator: in ONE run, hold sr alone for 20 s then sl alone for 20 s (A held), log forward-vector yaw per sample; sign and rate of d(yaw)/dt split H1/H2/H3. Then fix the law in main.cpp ~10009 and rerun scratch/agent/g1_aim.sh; success = mean |yerr| actuated << control and class-1 [ctr1] get(1) rises.
+H-wrap: the +-180 deg flip causes non-convergence (fix should drop mean |yerr| well below the 124 deg control and min target distance below 24.5). If it still fails, H-rate (turn rate too low) is next.
+Command: zsh scratch/agent/g1_aim.sh s5931_aim (screen unlocked), compare [aim] mean|yerr| ctl vs act, and [ctr1] sets.
