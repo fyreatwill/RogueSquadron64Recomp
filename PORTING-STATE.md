@@ -165485,3 +165485,11 @@ Result (single run, 1 Hz position samples, descriptor pos = spawn position): kil
 Discrimination: REFUTES H1 (survivors are off the flight path) for >=5 of 13; selects H3-style (proximity without fire/aim, or fire exposure) -- but plpos btn samples (1 Hz, 2.5 s holds) cannot resolve fire exposure (B bit set in 2 of ~1000 in-range samples), so fire-while-near is UNMEASURED, not refuted. H2 (despawn/respawn) untested.
 Next: one run logging per-VI fire-button state + NPC alive/pos near player, or autopilot that holds fire (B) while it dwells at the survivor coordinates (0x28 at 71,27; 0x1f at 37,35).
 ORIGIN: no mitigation machinery added (offline tool only).
+
+## Session 5852 (2026-10-22) — continuous fire does not kill lv0 survivors; g1_fire.sh dropped every `$tt:a` event (zsh modifier bug)
+Ran: scratch/agent/g1_fireall.sh (g1_fire.sh with A every 3 s from t=130, hold 2500 ms, NPC_INVULN=1). First run s5852a showed `[autopilot] armed: 30 events` and zero btn=0x8000 samples: zsh expands `$tt:a` as the ":a" absolute-path modifier, so the events became paths and sscanf dropped them. Same bug in g1_fire.sh: s5849i/s5825 `armed: 56 events` = 30 menu taps + 26 alternating (`:$k` form works) - their "A-only" phases never pressed A. Fixed both scripts to `${tt}:a`. Rerun s5852b (mission at 80 s, hold 724 s, alive, 0 stalls, 0 crashlines).
+Positive control: 589 of 725 plpos samples btn=0x8000 (s5852a had 0), [m47c] and [ctr1] instruments fired.
+Result (single run, vs s5849i): c1 plateaus at 8 again (ids 0x18,19,1B,1C,1D,29,2A,2B); survivors 0x1f,0x20,0x21,0x22-0x28,0x2d,0x2e had 30-57 A-held samples within 15 u each, closest approach 0.8 u. 
+Discrimination: REFUTES H1 (no fire while near survivors); leaves H2 (player bolts do not reach ground-troop spheres at close range; s5836 0 sphere hits/28679 tests) and H3 (survivor not alive/despawned at pass time). Qualifies s5825 (its A-only arm was not A-only), but s5852b agrees fire adds no kills.
+Next: per-bolt log of nearest class-1 NPC sphere distance + NPC alive flag while A held within 5 u (NEXT.md).
+ORIGIN: no mitigation machinery added (script fix + recipe only).
