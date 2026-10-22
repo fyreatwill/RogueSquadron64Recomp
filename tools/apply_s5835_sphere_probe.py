@@ -8,6 +8,10 @@ T = "PATCH: s5835 sphere probe"
 H = r'''/* PATCH: s5835 helpers */
 #include <time.h>
 extern unsigned rs5834_who; extern unsigned rs5856_cin;
+uint32_t rs5856_sinobj; /* s5904 */
+static struct { uint32_t w0; unsigned all, ret; } rs5904_T[32]; static unsigned rs5904_nT;
+void rs5904_tally(uint8_t* rdram, uint32_t obj, int kind) { if ((obj >> 24) != 0x80) return; uint32_t w0 = (uint32_t)MEM_W(S32((int32_t)obj), 0); unsigned z; for (z = 0; z < rs5904_nT; z++) if (rs5904_T[z].w0 == w0) break; if (z == rs5904_nT) { if (z >= 32) return; rs5904_T[z].w0 = w0; rs5904_nT++; } if (kind) rs5904_T[z].ret++; else rs5904_T[z].all++; }
+void rs5904_dump(void) { fprintf(stderr, "[s5904] w0 tally (all-sin / ret):"); for (unsigned z = 0; z < rs5904_nT; z++) fprintf(stderr, " %08x={all=%u ret=%u}", rs5904_T[z].w0, rs5904_T[z].all, rs5904_T[z].ret); fprintf(stderr, "\n"); }
 static unsigned rs5835_sin[2], rs5835_sinp[2], rs5835_n[2], rs5835_in[2], rs5835_zc[2], rs5835_tot, rs5835_inprint; static float rs5835_min[2] = {1e30f, 1e30f}, rs5835_minr2[2], rs5835_minsd[2] = {1e30f, 1e30f}, rs5835_minsdr2[2]; static unsigned rs5835_mp[2]; static unsigned rs5837_tele, rs5837_en = 2, rs5837_cnt;
 extern uint32_t rs5841_cand; static unsigned rs5841_cl[2][5];
 static uint32_t rs5839_obj; static unsigned rs5839_cl[5], rs5839_tp, rs5839_tpc; 
@@ -78,7 +82,7 @@ static void rs5835_probe(uint8_t* rdram, recomp_context* ctx) {
     float v[3] = {cc[0]-pp[0], cc[1]-pp[1], cc[2]-pp[2]};
     float v2 = v[0]*v[0]+v[1]*v[1]+v[2]*v[2], dl = dd[0]*dd[0]+dd[1]*dd[1]+dd[2]*dd[2], t = v[0]*dd[0]+v[1]*dd[1]+v[2]*dd[2];
     float ap2 = (dl > 0.0f) ? v2 - t*t/dl : v2; unsigned in = (ap2 <= cc[3]);
-    { float u = (dl > 0.0f) ? t/dl : 0.0f; if (u < 0.0f) u = 0.0f; if (u > 1.0f) u = 1.0f; float q0 = v[0]-u*dd[0], q1 = v[1]-u*dd[1], q2 = v[2]-u*dd[2]; float sd2 = q0*q0+q1*q1+q2*q2; unsigned sin_ = (sd2 <= cc[3]); rs5901_sample(pp, dl, sd2, cc, rs5841_cand & 0xFFFF); /* s5901 */ if (sd2 < rs5835_minsd[w]) { rs5835_minsd[w] = sd2; rs5835_minsdr2[w] = cc[3]; if (rs5835_mp[w]++ < 12) fprintf(stderr, "[sph] MINSD %s sd2=%g r2=%g ratio=%g u=%g dl=%g |v|2=%g\n", w ? "N" : "P", sd2, cc[3], sd2/(cc[3] > 0.0f ? cc[3] : 1.0f), (dl > 0.0f) ? t/dl : 0.0f, dl, v2); } rs5856_cin |= sin_; rs5835_sin[w] += sin_; if (sin_ && rs5835_sinp[w]++ < 10) fprintf(stderr, "[sph] SEGIN %s r2=%g |v|2=%g t=%g dl=%g sd2=%g\n", w ? "N" : "P", cc[3], v2, t, dl, sd2); }
+    { float u = (dl > 0.0f) ? t/dl : 0.0f; if (u < 0.0f) u = 0.0f; if (u > 1.0f) u = 1.0f; float q0 = v[0]-u*dd[0], q1 = v[1]-u*dd[1], q2 = v[2]-u*dd[2]; float sd2 = q0*q0+q1*q1+q2*q2; unsigned sin_ = (sd2 <= cc[3]); rs5901_sample(pp, dl, sd2, cc, rs5841_cand & 0xFFFF); /* s5901 */ if (sd2 < rs5835_minsd[w]) { rs5835_minsd[w] = sd2; rs5835_minsdr2[w] = cc[3]; if (rs5835_mp[w]++ < 12) fprintf(stderr, "[sph] MINSD %s sd2=%g r2=%g ratio=%g u=%g dl=%g |v|2=%g\n", w ? "N" : "P", sd2, cc[3], sd2/(cc[3] > 0.0f ? cc[3] : 1.0f), (dl > 0.0f) ? t/dl : 0.0f, dl, v2); } rs5856_cin |= sin_; if (sin_) { rs5856_sinobj = rs5839_obj; rs5904_tally(rdram, rs5839_obj, 0); } rs5835_sin[w] += sin_; if (sin_ && rs5835_sinp[w]++ < 10) fprintf(stderr, "[sph] SEGIN %s r2=%g |v|2=%g t=%g dl=%g sd2=%g\n", w ? "N" : "P", cc[3], v2, t, dl, sd2); }
     { /* s5855: per class-1/any id table: tests, min v2, min ap2, r2, segin */
         static struct { unsigned id, n, segin, c1; float mv2, map2, r2, fap2, fv2, fsn2; unsigned fn, did; } T[48]; static unsigned nT; unsigned id = rs5841_cand & 0xFFFF, z;
         for (z = 0; z < nT; z++) if (T[z].id == id) break;
@@ -132,7 +136,7 @@ def apply(text, name=None):
     if "PATCH: s5856" not in text and "static void rs5834_post(" in text:
         k = "static void rs5834_pre(uint8_t* rdram, recomp_context* ctx) {\n"
         assert text.count(k) == 1
-        text = text.replace(k, "extern uint32_t rs5841_cand; unsigned rs5856_cin; uint32_t rs5856_proj; unsigned rs5897_dist2(uint32_t); /* PATCH: s5856 */\n" + k + "    rs5856_cin = 0; rs5856_proj = (uint32_t)ctx->r17;\n", 1)
+        text = text.replace(k, "extern uint32_t rs5841_cand; unsigned rs5856_cin; uint32_t rs5856_proj; unsigned rs5897_dist2(uint32_t); uint32_t rs5856_sinobj; void rs5904_tally(uint8_t*, uint32_t, int); void rs5904_dump(void); /* PATCH: s5856 */\n" + k + "    rs5856_cin = 0; rs5856_sinobj = 0; rs5856_proj = (uint32_t)ctx->r17;\n", 1)
         k = "static void rs5834_post(uint8_t* rdram, uint32_t hit) {\n    if (!rs5834_en) return;\n"
         assert text.count(k) == 1
         post = r'''    { /* PATCH: s5856 per-id: calls, ret!=0, clamped-in, clamped-in&&ret==0 */
@@ -146,6 +150,23 @@ def apply(text, name=None):
     }
 '''
         text = text.replace(k, k + post, 1); n += 1
+    if "PATCH: s5904" not in text and "PATCH: s5856" in text and "static void rs5834_pre(" in text:
+        a = "    rs5856_cin = 0; rs5856_proj = (uint32_t)ctx->r17;\n"
+        assert text.count(a) == 1
+        text = text.replace(a, "    rs5856_cin = 0; rs5856_sinobj = 0; rs5856_proj = (uint32_t)ctx->r17;\n", 1)
+        a = "static void rs5834_pre(uint8_t* rdram, recomp_context* ctx) {\n"
+        text = text.replace(a, "uint32_t rs5856_sinobj; void rs5904_tally(uint8_t*, uint32_t, int); void rs5904_dump(void); /* PATCH: s5904 */\n" + a, 1)
+        b = "        if (hit) { static unsigned ph; if (ph++ < 15) fprintf(stderr, \"[s5856] RET id=%x proj=%08x cin=%u\\n\""
+        assert text.count(b) == 1
+        text = text.replace(b, "        if (hit) { static unsigned p4; rs5904_tally(rdram, rs5856_sinobj, 1); if (p4++ < 40) { uint32_t so = rs5856_sinobj; fprintf(stderr, \"[s5904] RET id=%x sinobj=%08x w0=%08x w4=%08x\\n\", id, so, ((so >> 24) == 0x80) ? (unsigned)MEM_W(S32((int32_t)so), 0) : 0u, ((so >> 24) == 0x80) ? (unsigned)MEM_W(S32((int32_t)so), 4) : 0u); } if ((p4 & 7) == 0) rs5904_dump(); }\n" + b, 1); n += 1
+    if "PATCH: s5904 tally" not in text and "PATCH: s5835 helpers" in text and "rs5901_sample(pp, dl, sd2, cc" in text:
+        k = "extern unsigned rs5834_who; extern unsigned rs5856_cin;\n"
+        assert text.count(k) == 1
+        hh = H[H.index("uint32_t rs5856_sinobj;"):H.index("static unsigned rs5835_sin[2]")]
+        text = text.replace(k, k + "/* PATCH: s5904 tally */\n" + hh, 1)
+        a = "rs5856_cin |= sin_; rs5835_sin[w] += sin_;"
+        assert text.count(a) == 1
+        text = text.replace(a, "rs5856_cin |= sin_; if (sin_) { rs5856_sinobj = rs5839_obj; rs5904_tally(rdram, rs5839_obj, 0); } rs5835_sin[w] += sin_;", 1); n += 1
     if "static uint32_t rs5856_proj;" in text:
         text = text.replace("static uint32_t rs5856_proj;", "uint32_t rs5856_proj; unsigned rs5897_dist2(uint32_t);", 1); n += 1
     old = 'rs5856_proj, rs5856_cin); }\n'
