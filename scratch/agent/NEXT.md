@@ -1,6 +1,7 @@
-# NEXT (s5901): true per-bolt speed/lifetime/hit distance in the segment-vs-sphere loop
-Context (s5900): r17 is one emitter (0x8035581c); pp (arg r6) is each bolt's segment origin; ~24 distinct pp per cycle, 13 collider rows each. s5897/5898 life stats void.
-Competing: (H-range) bolts move too little/expire before reaching troops; (H-aim) bolts pass beside targets; (H-ok) bolts travel fine and survivors are another cause (e.g. NPC invuln flag, ROGUESQ_NPC_INVULN is armed in the recipe!). Check the boring thing first: recipe sets ROGUESQ_NPC_INVULN=1 - confirm it does not explain survivors.
-Discriminator (one build, one run): replace rs5897_track keying with nearest-neighbour matching of pp across successive cycles (a cycle = new pp != previous pp); per bolt log displacement per cycle, age in cycles, and distance to nearest collider centre at last sample; positive control: >=100 bolts with age>=3.
-Recipe: scratch/agent/s5897_life.sh; edit both tools/apply_s5835_sphere_probe.py and live N64Recomp/RecompiledFuncs/funcs_16.c.
+# NEXT (s5902): tally s5901 in-sphere samples by class-1 objective vs RET
+Context (s5901): bolts travel 33 u median and enter spheres; blanket H-range refuted. Missing: which in-sphere ids are the 21 class-1 objective NPCs, and why s5856 cin=0 for ids 1cc/f1 although s5901 ratio<=1 (competing: H-scope cin only set for last row/ w mismatch; H-id: rs5841_cand not the collider owner at the sphere call; H-real: those ids are non-objective).
+Discriminator (one build, one run): append c1f and descriptor id (s5855 `did`) to the [s5901] line and also log rs5839_obj (collider owner) vs rs5841_cand; raise the 30000-line cap to 60000 or sample 1-in-2 cycles; offline: for in-sphere samples, count by did/c1f and compare with RET list (ids 52/66/c6/86).
+Positive control: in-sphere count for ids 52/66 must be >0 and match RET.
+Recipe: scratch/agent/s5897_life.sh (tag in g1_fireall call is s5897_life; use a new tag by editing a copy in place before launching, do not git checkout it).
+Edit both tools/apply_s5835_sphere_probe.py and live N64Recomp/RecompiledFuncs/funcs_16.c; analyzer tools/s5901_nn.py.
 HYPOTHESIS-ID: g1-mission-progression

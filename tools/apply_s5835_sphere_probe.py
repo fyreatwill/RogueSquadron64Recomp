@@ -27,6 +27,15 @@ static void rs5897_track(uint8_t* rdram, uint32_t pr, const float* pp) {
     rs5897_L[z].n++; float q = 0; for (int i = 0; i < 3; i++) { rs5897_L[z].l[i] = pp[i]; float e = pp[i] - rs5897_L[z].s[i]; q += e*e; } if (q > rs5897_L[z].md2) rs5897_L[z].md2 = q;
 }
 unsigned rs5897_dist2(uint32_t pr) { for (unsigned z = 0; z < rs5897_nL; z++) if (rs5897_L[z].pr == pr) { float q = 0; for (int i = 0; i < 3; i++) { float e = rs5897_L[z].l[i] - rs5897_L[z].s[i]; q += e*e; } return (unsigned)(sqrtf(q) * 100.0f); } return 0xFFFFFFFFu; }
+/* s5901 raw per-bolt-sample log: group = consecutive calls with identical pp; line at group end: cycle (gap>4ms), pp, |dd|, min sd2/r2 over the group's collider rows + that collider's id/centre/r2. Offline NN matching. */
+static struct { int on; float pp[3]; float dl; float best; float bc[4]; unsigned bid, rows; unsigned cyc; double tl; unsigned lines; } rs5901_S;
+static void rs5901_emit(void) { if (!rs5901_S.rows) return; if (rs5901_S.lines++ < 30000) fprintf(stderr, "[s5901] c=%u pp=%g,%g,%g len=%g rows=%u best_ratio=%g id=%x ctr=%g,%g,%g r2=%g\n", rs5901_S.cyc, rs5901_S.pp[0], rs5901_S.pp[1], rs5901_S.pp[2], sqrtf(rs5901_S.dl), rs5901_S.rows, rs5901_S.best, rs5901_S.bid, rs5901_S.bc[0], rs5901_S.bc[1], rs5901_S.bc[2], rs5901_S.bc[3]); rs5901_S.rows = 0; }
+static void rs5901_sample(const float* pp, float dl, float sd2, const float* cc, unsigned id) {
+    double now = rs5898_now(); float ratio = sd2 / (cc[3] > 0.0f ? cc[3] : 1.0f);
+    int same = rs5901_S.rows && pp[0] == rs5901_S.pp[0] && pp[1] == rs5901_S.pp[1] && pp[2] == rs5901_S.pp[2];
+    if (!same) { rs5901_emit(); if (now - rs5901_S.tl > 4.0) rs5901_S.cyc++; for (int i = 0; i < 3; i++) rs5901_S.pp[i] = pp[i]; rs5901_S.dl = dl; rs5901_S.best = 1e30f; }
+    rs5901_S.tl = now; rs5901_S.rows++; if (ratio < rs5901_S.best) { rs5901_S.best = ratio; rs5901_S.bid = id; for (int i = 0; i < 4; i++) rs5901_S.bc[i] = cc[i]; }
+}
 static float rs5835_f(uint32_t w) { union { uint32_t u; float f; } x; x.u = w; return x.f; }
 static void rs5835_probe(uint8_t* rdram, recomp_context* ctx) {
     unsigned w = 0; /* s5855: who-classifier void (s5854); all bolts counted as w=0 */
@@ -53,7 +62,7 @@ static void rs5835_probe(uint8_t* rdram, recomp_context* ctx) {
     float v[3] = {cc[0]-pp[0], cc[1]-pp[1], cc[2]-pp[2]};
     float v2 = v[0]*v[0]+v[1]*v[1]+v[2]*v[2], dl = dd[0]*dd[0]+dd[1]*dd[1]+dd[2]*dd[2], t = v[0]*dd[0]+v[1]*dd[1]+v[2]*dd[2];
     float ap2 = (dl > 0.0f) ? v2 - t*t/dl : v2; unsigned in = (ap2 <= cc[3]);
-    { float u = (dl > 0.0f) ? t/dl : 0.0f; if (u < 0.0f) u = 0.0f; if (u > 1.0f) u = 1.0f; float q0 = v[0]-u*dd[0], q1 = v[1]-u*dd[1], q2 = v[2]-u*dd[2]; float sd2 = q0*q0+q1*q1+q2*q2; unsigned sin_ = (sd2 <= cc[3]); if (sd2 < rs5835_minsd[w]) { rs5835_minsd[w] = sd2; rs5835_minsdr2[w] = cc[3]; if (rs5835_mp[w]++ < 12) fprintf(stderr, "[sph] MINSD %s sd2=%g r2=%g ratio=%g u=%g dl=%g |v|2=%g\n", w ? "N" : "P", sd2, cc[3], sd2/(cc[3] > 0.0f ? cc[3] : 1.0f), (dl > 0.0f) ? t/dl : 0.0f, dl, v2); } rs5856_cin |= sin_; rs5835_sin[w] += sin_; if (sin_ && rs5835_sinp[w]++ < 10) fprintf(stderr, "[sph] SEGIN %s r2=%g |v|2=%g t=%g dl=%g sd2=%g\n", w ? "N" : "P", cc[3], v2, t, dl, sd2); }
+    { float u = (dl > 0.0f) ? t/dl : 0.0f; if (u < 0.0f) u = 0.0f; if (u > 1.0f) u = 1.0f; float q0 = v[0]-u*dd[0], q1 = v[1]-u*dd[1], q2 = v[2]-u*dd[2]; float sd2 = q0*q0+q1*q1+q2*q2; unsigned sin_ = (sd2 <= cc[3]); rs5901_sample(pp, dl, sd2, cc, rs5841_cand & 0xFFFF); /* s5901 */ if (sd2 < rs5835_minsd[w]) { rs5835_minsd[w] = sd2; rs5835_minsdr2[w] = cc[3]; if (rs5835_mp[w]++ < 12) fprintf(stderr, "[sph] MINSD %s sd2=%g r2=%g ratio=%g u=%g dl=%g |v|2=%g\n", w ? "N" : "P", sd2, cc[3], sd2/(cc[3] > 0.0f ? cc[3] : 1.0f), (dl > 0.0f) ? t/dl : 0.0f, dl, v2); } rs5856_cin |= sin_; rs5835_sin[w] += sin_; if (sin_ && rs5835_sinp[w]++ < 10) fprintf(stderr, "[sph] SEGIN %s r2=%g |v|2=%g t=%g dl=%g sd2=%g\n", w ? "N" : "P", cc[3], v2, t, dl, sd2); }
     { /* s5855: per class-1/any id table: tests, min v2, min ap2, r2, segin */
         static struct { unsigned id, n, segin, c1; float mv2, map2, r2, fap2, fv2, fsn2; unsigned fn, did; } T[48]; static unsigned nT; unsigned id = rs5841_cand & 0xFFFF, z;
         for (z = 0; z < nT; z++) if (T[z].id == id) break;
