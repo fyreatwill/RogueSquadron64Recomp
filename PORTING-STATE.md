@@ -166049,3 +166049,20 @@ single discriminator: inspect the exact scripts, logs, executable bits, and
 queue/done placement before running another game. The maintenance rewrite
 reduces the handoff below its 60 KB trigger and refreshes the stale session
 headline.
+
+## Session 5933 (2026-10-22) — repaired the G1 level-coverage queue launch contract
+
+Consumed the new queue verdicts before choosing work: `g1_level_coverage_common`
+failed at 0s with `LEVEL: missing LEVEL`; `g1_lvl10a`, `g1_lvl10b`, and
+`g1_lvl11a` failed at 0s/rc=127 because the common runner had already been moved
+to `soak_queue/done/` by the queue loop. The loop consumes every top-level
+`soak_queue/*.sh`, so a shared `.sh` helper cannot live there.
+
+Moved the shared runner to `scratch/agent/g1_level_coverage_common.zsh`, updated
+all active G1 wrappers, and restored the level-10 `a/b` and level-11 `a` queue
+recipes. `zsh -n` on the common runner, `bash -n` on every active G1 recipe,
+and the path assertion all pass. No game was launched in this work unit.
+
+This rules out a missing game executable, cwd failure, and mission-level result
+as explanations for the prior 0-second verdicts. The next queue pair must still
+provide the `[lvsel]` positive control before counting any coverage.

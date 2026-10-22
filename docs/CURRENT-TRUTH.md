@@ -26,16 +26,19 @@ detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 The companion decomp census gives `NUM_LEVELS=0x13`: playable levels 0..18;
 `LOGO_LEVEL=0x13` and `ATST_LEVEL=0x14` are sentinels. Levels 1..9 have route
 and 300-second hold coverage. Paired forced-level recipes for levels 10..18
-were queued, but the newest queue verdicts are launch failures:
+were queued, but the first queue pass failed before launch because the shared
+runner was itself a consumable `.sh` recipe and was moved to `soak_queue/done/`:
 
 ```text
 20261022-135630 | g1_level_coverage_common | rc=1   | 0s
 20261022-135630 | g1_lvl10a              | rc=127 | 0s
 ```
 
-These are unevaluable and must not be counted as coverage. First inspect and
-repair the queue recipe/common-script launch contract; then rerun the next two
-levels. A valid coverage run requires `[lvsel]` with `a1 == 1<<level`, flight
+These are unevaluable and must not be counted as coverage. Session 5933 moved
+the shared runner to `scratch/agent/g1_level_coverage_common.zsh`, outside the
+queue glob, and restored level-10 `a/b` plus level-11 `a` wrappers. The wrappers
+pass syntax/path-only checks; the next queue pass must rerun level 10. A valid
+coverage run requires `[lvsel]` with `a1 == 1<<level`, flight
 handoff, at least 300 seconds alive, zero crash lines, and no 30-second VI
 stall. Missing controls are failures of evaluation, not passes.
 
@@ -95,11 +98,10 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. Repair the level-coverage queue launch contract after the 0-second
-   `g1_level_coverage_common`/`g1_lvl10a` failures. Confirm the common script
-   exists, is invoked from repo root, and propagates a real game launch; do not
-   claim level coverage until `[lvsel]` controls fire.
-2. Consume the next two valid levels from the repaired queue (levels 10..18),
+1. Consume the next two level-10 runs from the repaired queue. Confirm the
+   `[lvsel]` positive control, flight handoff, 300-second hold, and zero VI
+   stall/crash before counting coverage.
+2. Consume the next valid levels from the repaired queue (11..18),
    folding each verdict into the ledger and this handoff.
 3. Sweep remaining levels for route+hold, then add framebuffer and forced-hit
    objective checks to every level.
