@@ -1,3 +1,3 @@
-# NEXT: G1c - fold s6037_dd15c/dd2c/dd3c
+# NEXT: G1c - fold s6038_dd2p / s6038_dd15p [cellprobe]
 HYPOTHESIS-ID: g1c-draw-distance
-Read scratch/agent/m6/g1_lvl1g1cdd{15,2,3}/run.log. Outcomes: (a) no SIGBUS and gridlog gx<=terr-1 => clamp fixes dd2; then compare distant-terrain fraction in fbd/ captures vs dd1 (same phase), frame time (G1b instrument), and run 1.5x/2x 300 s on levels 5 and 10. (b) still crashes => get new gridlog tail and backtrace; the clamp is not the only OOB source (check 64-wide window bitmaps 0x80132DB0/0x80133DB0 when w>64).
+grep -a cellprobe scratch/agent/m6/g1_lvl1g1cdd{2p,15p}/run.log. Outcomes: (a) tbl=0x00000000 => H-tbl: find who zeroes/never sets 0x80130004 (watch stores; check level-load order vs scaled window); (b) tbl valid, cell idx huge or s2 outside the cell array => H-cell: s2 = cell base + (z*w+x)*2 read past array, fix the index math for the scaled window (the 64-wide bitmaps 0x80132DB0/0x80133DB0 too); (c) no cellprobe line yet still crashes => lldb the real fault. For dd15p also get the vec3Cross NaN source (which input is NaN: log f-regs at funcs_4.c:35899). Then requeue /tmp/s6037_dd3c.sh.

@@ -37809,6 +37809,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6037:
             changed = True
             report.append(f"{p.name}: s6037 ddclamp x{_n6037}")
+        import apply_s6038_cellprobe as _a6038
+        text, _n6038 = _a6038.apply9(text)
+        if _n6038:
+            changed = True
+            report.append(f"{p.name}: s6038 cellprobe x{_n6038}")
 
     if p.name == "funcs_10.c":
         import apply_s6027_cellmul as _a6027
@@ -41654,6 +41659,7 @@ RS64_REPLAY = [
     "apply_s6034_gridlog.py",
     "apply_s6036_dd.py",
     "apply_s6037_ddclamp.py",
+    "apply_s6038_cellprobe.py",
     "apply_s6031_far.py",
     "apply_s5818_destroy_health.py",
     "apply_s5846_mission_end.py",
