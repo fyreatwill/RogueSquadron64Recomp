@@ -166501,3 +166501,8 @@ Rules out: nothing new; no crash/stall datum to root-cause. No code change this 
 Ran: folded s6006_hangar_route_c: att=1, mission_t=81s, hold=602s, alive_at_end=1, vi_stalls30s=0, godrefills=20, crashlines=0, rc=0. Enqueued s6008_hangar_route_d/e/f (clones of c) for a larger-n launch-success rate.
 Shows: hangar route 3/3 first-attempt launches clean, 0 crash/0 stall (post FIX_ZERO_SHADE-off). Prior flake rate ~1/3-3/5; 3/3 is suggestive only (small n, single-source). Pillar-stub Next items are stale (s5971 fixed them). No conclusions overturned.
 Next: fold d/e/f; if clean (6/6) mark the hangar route stable in CURRENT-TRUTH and take the next G-ladder rung (G2 audio noise discrimination).
+
+## Session 6009 (2026-10-23) — hangar-route soaks d/e folded (clean, 5/5); g/h/i queued
+HYPOTHESIS-ID: g4-crash-stall-hunt
+Folded s6008_hangar_route_d and _e: both att=1, mission_t=80-81s, hold=601s, alive_at_end=1, vi_stalls30s=0, godrefills=20, crashlines=0, rc=0 (harness verdict, single-source). With a/b/c the hangar route is 5/5 first-attempt launches clean post FIX_ZERO_SHADE-off, vs the prior 1/3-3/5 flake rate. f still queued; enqueued s6009_hangar_route_g/h/i (clones of f) to reach n=9.
+Rules out: a crash/stall in 5 of 5 runs; no backtrace warranted. No code change, no ORIGIN needed. G2 is closed by owner ear (CURRENT-TRUTH), so the NEXT.md "G2 PCM compare" is discarded; ladder goes to G3 hangar native artifacts if 9/9.
