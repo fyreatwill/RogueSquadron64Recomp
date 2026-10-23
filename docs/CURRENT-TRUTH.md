@@ -253,5 +253,6 @@ Gfx thread hot spot found by `sample` (s6015): ~80% of gfx samples in O(n^2) g_s
 - s6039: cellprobe address bug fixed (table ptr is t0+4, t0=0x80136DC0, not 0x80130004); dd2 crash = NULL cell descriptor table at that struct, corrected probe queued (s6039_dd2q).
 
 - **s6040 G1c:** cellprobe: crash struct is static 0x80136DC0 (tbl=*(+4)==0), not *(0x80130004). ddclamp treated window counts as maxima; rewritten (clamp start+count to terrain, w*d<=pool cap). Seen req=420>cap=400 once. Arms s6040_dd2r/dd3r queued; if tbl==0 persists, watch 0x80136DC4 writer.
+- **s6043 G1c:** gate worked (dd15s/dd2s reach mission) but both then die in-mission ~t=98s with tbl 0x80136DC4==0 and window x0=0x7F7F0017 (poison high half; dd2s SIGBUS deterministic). Writer unnamed. tblwatch probe + s6043_dd1w/dd2w arms queued (retail control); fold: does retail also zero tbl mid-mission?
 - **s6042 G1c:** dd2 failures (4 of 5 arms) are `nomission` = crash BEFORE mission start with terrain table 0x80136DC4==0 (not a corrupt writer); knob+clamp now gated on table != 0; arms s6042_dd15s/dd2s/dd3s queued - fold: dd2 reaches mission? remaining in-mission deaths (dd2r died_in_verify) need a backtrace.
 - **s6041 G1c:** dd2r failures show poison-like window x0~0x7F7F7F97 that the clamp cannot produce => clamp is not the root cause; dd3r crashes at +9960 wild ptr. See NEXT.md.
