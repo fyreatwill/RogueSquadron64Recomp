@@ -113,6 +113,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 - **s6023 G1c:** FOV 0x130C50 and LOD-table arms (fov15/fov025/lod2/lod025) queued; fold results next.
+- **s6026 G1c:** igrid arms void: x0.25 control +7% (needed <-10%), x2 +0.5%; 0x137A58 is not a count, 0x137A60 already consumed by rs_malloc at load. Real lever = incoming cell count of allocAndInitGridCellArray (loadLevelAssets $a0 -> 0x80130C4C), must be scaled at function entry before alloc; then fog arm.
 - **s6025 G1c:** LOD-table arms (0x9ECB0 x2/x0.25) +6.2%/+4.9% tri/task, x0.25 control failed => table inert for lvl1 flight (not extend lever, not refuted by a valid control either). igrid2/igrid025 still queued, fold next.
 - **s6024 G1c:** FOV 0x130C50 arms: x0.25 control -24.6% tri/task, x1.5 -10.3% (and a self-inflicted vec3Cross NaN abort at 183 s) => FOV is shrink-only too. Int-mode knob (ROGUESQ_DD_IADDRS/IMUL) built; igrid2/igrid025 arms queued on 0x137A58/0x137A60. LOD arms (s6023) pending.
 - **s6022 G1c:** r2A/r3A (0x9DEAC x2/x3): per-task tri +4%/+7%, total tri -5%/-16% => footprint scalar is shrink-only (posAB x0.25 = -31%); not the extend lever. Cap lives elsewhere: grid buffer size (0x80137A68, rs_malloc 200*(n/10)) or FOV 0x80130C50; LOD 0x9ECB0 and fog arms unrun.

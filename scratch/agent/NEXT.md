@@ -1,6 +1,5 @@
-# NEXT: G1c - fold s6024_g1c_igrid2 / igrid025 from SOAK-RESULTS.md (queued, not yet run by loop as of s6025)
+# NEXT: G1c - scale the PRE-ALLOC cell count (allocAndInitGridCellArray $a0) and fog arm
 HYPOTHESIS-ID: g1c-draw-distance
-LOD table 0x9ECB0 arms (s6023) failed their x0.25 control (+4.9%) => inert on lvl1. 0x9DEAC, FOV also shrink-only.
-Remaining: H-grid (int counts 0x137A58/60, igrid arms), H-fade (ROGUESQ_FORCE_FOG in flight), H-farplane.
-Fold: awk '/\[g1c\] state=/{s=$2} /\[tricnt\]/{field tri=N, keep >=50, mean per s}' on scratch/agent/m6/g1_lvl1g1cigrid*/run.log. Control: igrid025 must shrink >10%; igrid2 pass = >+10% tri/task; x2 may crash (heap) -> capture site.
-If igrid null/void: locate grid alloc (rs_malloc 200*(n/10) at 0x800480BC) and patch the count before allocation; then fog arm.
+s6026: post-load rewrites of grid words are void (count latched at rs_malloc 0x800480BC). Remaining levers: H-count (incoming $a0 of allocAndInitGridCellArray / loadLevelAssets, halfword 0x80130C4C; callers pass getLevelExpansionMemoryBudget=0x800 or lhu 0x800B090C[s0]), H-fade (ROGUESQ_FORCE_FOG in flight), H-farplane.
+Work unit: add an env ROGUESQ_DD_CELLMUL applied at entry of loadLevelAssets (find how existing fixup/patch hooks recompiled funcs; put in tools/fixup_*.py so it survives regen). Arms in ONE build: x0.25 (control: tri/task must drop >10% or alloc fails visibly), x2. Check heap: x2 may crash -> capture site. Measure with the tricnt fold used in s6024 (awk over run.log, tri>=50 mean). If hook cost is high, run fog arm first.
+Outcomes: x0.25 shrinks & x2 grows => H-count is the extend lever; x0.25 inert => count unrelated to draw set, go fog.
