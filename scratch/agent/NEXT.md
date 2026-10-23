@@ -1,4 +1,4 @@
-# NEXT: G1c - fold the s6027 CELLMUL arms, then fog arm
+# NEXT: G1c - H-fade: ROGUESQ_FORCE_FOG in-flight arm
 HYPOTHESIS-ID: g1c-draw-distance
-Soaks s6027_g1c_cell025 and s6027_g1c_cell2 (ROGUESQ_DD_CELLMUL, pre-alloc cell count) run between iterations; read their SOAK-RESULTS.md lines and logs. Grep `[cellmul]` to confirm the knob fired (positive control), then fold tri/task (tri>=50 mean, awk as in s6024/s6026) vs the retail baseline.
-Outcomes: x0.25 drops >10% and x2 rises => H-count is the extend lever (then 1.5x/2x/3x steps, 300 s holds on lvl 1/5/10). x0.25 inert or crash/alloc failure => record, then run the ROGUESQ_FORCE_FOG in-flight arm (H-fade), then H-farplane.
+s6028: cell count (x0.25/x2) moved tri/task -8%/+8.7%, noise-level; not the extend lever. Remaining hypotheses: H-fade (haze hides distant terrain; test ROGUESQ_FORCE_FOG on lvl1 flight and measure distant-terrain pixel fraction in fixed-camera framebuffer), H-farplane (far-clip constant in terrain submit path; grep for it near buildVisibleTerrainGridAroundCamera), H-budget (DL/vertex caps).
+Find how ROGUESQ_FORCE_FOG is wired (grep lib/ and tools/), queue a soak with it vs the retail control (s6027_ret recipe style, XENV_EXTRA), and compare the fbd framebuffer captures. Outcome: distant pixels change => fade is the limiter; no change => go far-plane.
