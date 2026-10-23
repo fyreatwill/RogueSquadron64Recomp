@@ -999,3 +999,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261023-040838 | s5991_lvl1_rdpbin_rdram | rc=0 | 293s | scratch/agent/soak_results/s5991_lvl1_rdpbin_rdram_20261023-040838.log
 20261023-042406 | m6_lvl0_hold660_r1 | rc=0 | 746s | scratch/agent/soak_results/m6_lvl0_hold660_r1_20261023-042406.log
 20261023-043632 | m6_lvl0_hold660_r2 | rc=0 | 746s | scratch/agent/soak_results/m6_lvl0_hold660_r2_20261023-043632.log
+20261023-044934 | m6_lvl0_hold660_r3 | rc=0 | 746s | scratch/agent/soak_results/m6_lvl0_hold660_r3_20261023-044934.log

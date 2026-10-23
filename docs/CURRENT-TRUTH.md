@@ -113,6 +113,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 - **s6000 G4:** lvl0 hold r1+r2 clean (662 s, 0 stall, 0 crash); r3 pending in the queue.
+- **s6001 G4:** lvl0 3/3 clean 660 s holds (closed). The pillar-stub Next items below (s5964/s5970/s5999) are STALE - s5971 fixed them (FIX_ZERO_SHADE off). Queued m6_lvl{11-14,16-18}_hold660; fold, then G1(c) framebuffer check lvl10-18.
 - **s5999 G4 (queued; r1/r2 folded s6000):** m6_lvl0_hold660_r1-3 enqueued (lvl0 was the only level without a 660 s hold). Fold verdicts from SOAK-RESULTS.md: 3x clean (rc=0, 0 crash/0 VI stall) closes lvl0 G4, then take G3 hangar white pillar stubs (s5964) or the plume si_addr=0x58 lldb loop; any abort => lldb/ASan backtrace + writer. No conclusions overturned this session.
 - **s5998 G3 (single-source, visual):** lvl0 same-level pair (docs/g3_port_lvl0_oracle_pair_f5000.png vs retail lvl1 oracle) shows no port-only in-flight defect; G3 in-flight closed coarse. Next: G4 soaks of any level not yet held >=660 s with a keyed run, else G3 hangar white pillar stubs (s5964).
 - **G1(d) s5997 CLOSED (PARTIAL-final):** a0=2/3 success requests come from per-level checkComplexObjectives gated on a level-specific BOOL set (lvl8: 5,A,E,15-18 via lv8_checkComplexObjectives+4560; bools set by trigger descriptors, identical in ctl/tele arms); counters 1/2/10 gate only lvl0. Forced hits move counters but cannot complete lvl8. lvl7 end = 3 deaths. Next: G4 crash/stall soaks across levels, then G3 render fidelity.
