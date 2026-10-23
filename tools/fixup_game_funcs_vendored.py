@@ -37793,6 +37793,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s6031 far x{_n6031}")
 
+    if p.name == "funcs_9.c":
+        import apply_s6034_gridlog as _a6034
+        text, _n6034 = _a6034.apply9(text)
+        if _n6034:
+            changed = True
+            report.append(f"{p.name}: s6034 gridlog x{_n6034}")
+
     if p.name == "funcs_10.c":
         import apply_s6027_cellmul as _a6027
         text, _n6027 = _a6027.apply10(text)
@@ -41634,6 +41641,7 @@ RS64_REPLAY = [
     "apply_s5912_shadow.py",
     "apply_s5817_bit3_setters.py",
     "apply_s6027_cellmul.py",
+    "apply_s6034_gridlog.py",
     "apply_s6031_far.py",
     "apply_s5818_destroy_health.py",
     "apply_s5846_mission_end.py",
