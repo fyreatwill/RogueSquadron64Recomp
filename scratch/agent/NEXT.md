@@ -1,5 +1,6 @@
-# NEXT: lvl1 ground — framebuffer pixel vs predicted colour for one ord-7 CI group
-HYPOTHESIS-ID: g3-lvl1-mesh-ground
-s5992 result: TLUT/texels bright (H3' dead). Remaining: H4 renderer-side darkening (rt64 combine/blend/othermode), H1 legit (scene is just that colour).
-Work unit: from scratch/agent/s5991/lvl1_rdp.bin pick one large ord-7 CI tri group (tools/rdpbin_tri_colors.py), extract its screen bbox from the tri edge coeffs, read the same pixels from the matching port framebuffer capture (rdram fb dump, fb addr in file name), compare to predicted texel*shade.
-Outcomes: pixels ~ predicted => H1, close the thread and move to next G1/G3 item (mission (c)+(d) coverage); pixels much darker => H4, inspect rt64 combiner path for that comb/othermode. Control: pick an unambiguous bright group (e.g. HUD/sky) and confirm the pixel readback matches.
+# NEXT: G1(d) lvl7/lvl8 — identify which objective counter id moves under TELE and whether an end gate responds
+HYPOTHESIS-ID: g1-d-objective-gate
+s5993 closed the lvl1 ground thread (H1 legit). Folded (d): lvl7 tele objsnap 33 vs ctl 2; lvl8 objcount 0->4.
+Work unit: run `python3 tools/apply_s5953_objsnap.py` (or grep '[objsnap]' in scratch/agent/m6/g1_lvl{7,8}{ctl,tele}/run.log) to list the ids/values that move; compare to the level's objective table; decide whether forced hits reach a completion/fail counter.
+Outcomes: a counter reaches its target => (d) PASS for that level, record; moves but short of target => queue a longer tele soak; no ids move => (d) not met, root-cause the applyDat path.
+Do NOT do aim/steer work (out of scope).
