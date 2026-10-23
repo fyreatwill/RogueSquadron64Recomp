@@ -166496,3 +166496,8 @@ m6_lvl18_hold660: rc=0, hold 662 s, vi_stalls30s=0, crashlines=0, mission_cycles
 Ran: folded s6006_hangar_route_a and _b from SOAK-RESULTS.md (m6_god_common.sh, hangar route, HOLD=600, LATE=95). Both: att=1 (reached mission first launch), mission_t=81s, hold 600/601 s, alive_at_end=1, vi_stalls30s=0, godrefills=20, crashlines=0, rc=0. No abort, no stall, so no backtrace was warranted.
 Shows: 2/2 hangar-route launches succeeded on the first attempt with 0 crash/0 stall over ~10 min each, post-FIX_ZERO_SHADE-off baseline. Prior launch-failure rate was ~1/3-3/5; n=2 is too small to say it improved (single-source, small n). Run c is still in soak_queue; fold it next.
 Rules out: nothing new; no crash/stall datum to root-cause. No code change this session.
+
+## Session 6008 (2026-10-23) — hangar-route soak c folded (clean, 3/3); d/e/f queued
+Ran: folded s6006_hangar_route_c: att=1, mission_t=81s, hold=602s, alive_at_end=1, vi_stalls30s=0, godrefills=20, crashlines=0, rc=0. Enqueued s6008_hangar_route_d/e/f (clones of c) for a larger-n launch-success rate.
+Shows: hangar route 3/3 first-attempt launches clean, 0 crash/0 stall (post FIX_ZERO_SHADE-off). Prior flake rate ~1/3-3/5; 3/3 is suggestive only (small n, single-source). Pillar-stub Next items are stale (s5971 fixed them). No conclusions overturned.
+Next: fold d/e/f; if clean (6/6) mark the hangar route stable in CURRENT-TRUTH and take the next G-ladder rung (G2 audio noise discrimination).
