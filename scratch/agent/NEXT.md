@@ -1,6 +1,6 @@
-# NEXT: fold lvl5 ctl2/tele2 pair, then g1_d_compare.sh 5
+# NEXT: fold g1_lvl5_tele3, then g1_d_compare.sh 5 (ctl arm = m6/g1_lvl5ctl from ctl2)
 
 HYPOTHESIS-ID: g1-mission-coverage-sweep
 
-S5951: lvl5 NSW A/B folded: nsw att1 pass (mission t=79); nonsw att1 nomission (viewer stall origin 0x62BD00, s3294-stall lines) then att2 pass. So the viewer stall is FLAKY (intermittent), not caused by NO_SAVE_WRITE. Re-queued g1_lvl5_ctl2 / g1_lvl5_tele2 (same recipe, retry pair).
-Fold: read m6/g1_lvl5{ctl,tele}/keys.log (same tags). If both reach mission, run g1_d_compare.sh 5 and fold (d). If nomission again, capture lldb backtrace of the 0x62BD00 viewer stall (M6 rule: root-cause, no guard). Then lvl6+ (d).
+S5952: lvl5 ctl2 reached mission (t=80s, hold 303s, 0 crash/stall). tele2 reached mission too but had NO ROGUESQ_TELE_BOLT export (recipe defect; TELE=0 over 834 tally lines) so compare 5 is void on the tele side. Requeued g1_lvl5_tele3 with the export.
+Fold: after tele3 runs, `zsh tools/g1_d_compare.sh 5`; positive control = TELE>0 in the tele arm. Then queue lvl6 ctl+tele pair (copy g1_lvl4_tele recipe incl. the export; ALWAYS diff tele vs ctl recipe before queueing). Then lvl7+.

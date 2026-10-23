@@ -166234,3 +166234,7 @@ Hypotheses: H1 NO_SAVE_WRITE blocks a save-state bit the lvl5 viewer exit needs;
 
 ## Session 5951 (2026-10-22) — lvl5 NO_SAVE_WRITE A/B folded; viewer stall is flaky
 Ran: nothing new in-game; folded soaks g1_lvl5_nsw (rc=0, mission t=79 s, hold 303 s, 0 stalls, 0 crash) and g1_lvl5_nonsw (rc=0; att1 nomission with viewer parked at origin 0x62BD00 and s3294-stall lines, att2 mission t=107 s, verified 130 s). Showed: the lvl5 level-select viewer stall occurs without being tied to NO_SAVE_WRITE (it hit the flag-off arm; the flag-on arm passed first try), so the earlier nomission x3 void is an intermittent viewer hang, not a flag effect. Rules out H1 (flag blocks viewer exit). Does not yet explain the hang writer; 1/2 and 0/1 is too few to rate it. Re-queued lvl5 ctl2/tele2; next iteration folds them and, if the stall recurs, captures a backtrace.
+
+## Session 5952 (2026-10-22) — lvl5 ctl2/tele2 folded; tele2 recipe lacked the TELE lever
+
+ctl2: mission t=80s, hold 303s, 0 crash, 0 VI stall (viewer stall did not recur). tele2: mission t=79s, hold 303s clean, but TELE=0 (834 cand-class lines all tele=0) because g1_lvl5_tele2.sh omitted `export ROGUESQ_TELE_BOLT=1` (lvl4 recipe has it). g1_d_compare.sh 5 therefore shows identical arms (objcount 0, BooleanCount 4) - a null with the positive control failed, so no (d) verdict for lvl5. Lvl5 now has (a)+(b) in 3 further clean runs. Requeued g1_lvl5_tele3 with the export.
