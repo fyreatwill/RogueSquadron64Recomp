@@ -113,6 +113,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
+- **s5969 G3 (single-source):** ROGUESQ_TINT_OM (control passed): port-only othermode 0x504240/0x550231/0xf0a4001 tris on Select Craft are the floor-glow decal, platform and planet = legitimate, NOT the white-pillar stubs (those are on Available Craft, not reached). Next: same probe on Available Craft page, tint untextured white-shade tris.
 - **s5968 G3 (single-source):** address-free descriptor pairing (s5968_descpair.py; ctl retN/N-1 tri-overlap 0.95, portN/N-1 0.80) retail-vs-port tri-weighted overlap 0.05 (keyJ 0.07). Retail loads uniform LOADBLOCK 1023-texel chunks (I16-ish fmt4/size2) with othermode 0x552230/0x552078; port loads variable 191-767 texel blocks, 0x552038/0x552230. Producers differ (cxd4 RSP vs rt64 HLE), so RDP command streams cannot pair by texture; texel bytes are not in either dump. Next: port-side per-draw texture hash + paint port-only stub tris a flat colour in rt64 to identify which DL/texture they come from (NEXT.md).
 - **s5967 G3:** image_read_en (0x40) is NEVER consumed by rt64 (IM_RD only #defined; no OtherMode accessor/shader use) => the 0x552078 vs 0x552038 delta is not the stub cause; H-rdp-imgread refuted statically. Next: texel-content hash pairing of port-only tris (NEXT.md).
 - **s5966 G3:** address-keyed retail/port frame pairing impossible (SETTIMG addr overlap 0.00, self-ctl 1.0; fmt-only 0.80). Next: texel-content hash pairing or in-run image_read_en toggle (NEXT.md).
