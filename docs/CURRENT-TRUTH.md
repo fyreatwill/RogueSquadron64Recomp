@@ -174,5 +174,5 @@ mission logic, and `scratch/agent/SOAK-RESULTS.md` for queued verdicts.
 - s5961: g1_lvl6t pair (0 crash/0 stall) printed ZERO `[objsnap-t]` lines in both arms, but no hook-ran control existed, so it is NOT evidence that lvl6 (d) is dead. Hook now prints `[objsnap-t] hb ticks=N` heartbeat; g1_lvl6u ctl+tele queued. Superseded: the s5960 plan that lvl6t "settles" lvl6 (d) - it was believable because the hook was in the binary, but presence of the string never proved the function is called per frame on lvl6. Next step #1 is to fold g1_lvl6u (heartbeat first).
 
 - **s5963 G3 retail pixel oracle:** angrylion software RDP as m64p plugin gives real retail framebuffers (docs/G3-RETAIL-PIXEL-ORACLE.md, recipe scratch/agent/s5963_angry_fb.sh). Port hangar white pillar stubs are absent in retail (single-source). Next: same-page port/retail frame pair + DL/RDP-state diff for the stub draws.
-- s5972: lvl1-5,7-9 _zs soaks queued to verify the flip (see NEXT.md).
+- s5973: lvl1+lvl2 _zs soaks fold clean (sky and terrain textured, 0% black; single-source visual). lvl3,4,5,7,8,9 _zs still queued — fold them next (see NEXT.md); if any shows black sky, re-enable the fix narrowly for that DL. No conclusion overturned.
 - s5971: FIX_ZERO_SHADE was the writer of white hangar pillar caps/shadows; default flipped OFF (verified hangar + lvl6 only).
