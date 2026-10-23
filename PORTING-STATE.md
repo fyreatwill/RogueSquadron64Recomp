@@ -166367,3 +166367,7 @@ starfield + textured asteroid + X-wing + HUD in both arms; lvl7 shows textured c
 in both arms. Camera pose differs (animating scene, no cross-run A/B on geometry) but no black sky or
 untextured surface in the zs arm. Evidence is by-eye on one frame per arm (single-source per level).
 Rules out the sky regression H2 for lvl1-5 and lvl7. lvl8/lvl9 zs soaks still queued.
+
+## Session 5976 (2026-10-23) — FIX_ZERO_SHADE OFF: lvl8+lvl9 fine, flip closed
+
+Folded g1_lvl8_zs and g1_lvl9_zs (rc=0, 403s/387s, no crash/stall). Framebuffers (scratch/agent/m6/g1_lvl8zs, g1_lvl9zs) show textured orange sky, terrain, X-wing, HUD/radar; same as ctl arms (lvl9 ctl last frame was the Mission Failed screen — a later phase, not a render difference). H1 holds for all 9 levels (single-source visual, but 9 levels x ctl comparison). FIX_ZERO_SHADE default-OFF flip closed. Rules out: black sky/untextured regressions from the flip.

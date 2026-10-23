@@ -1,5 +1,4 @@
-# NEXT: fold remaining _zs sky-regression soaks (lvl8,9)
+# NEXT: G2 audio fidelity — oracle vs port AI PCM on title music
 
-HYPOTHESIS-ID: g3-render-fidelity
-
-lvl1-5 and lvl7 zs verified fine (H1). When SOAK-RESULTS shows lvl8/9 zs, view the last frame in scratch/agent/m6/g1_lvlNzs/fbd vs g1_lvlNctl/fbd (sips -s format png, Read). H1 all fine -> close FIX_ZERO_SHADE flip in CURRENT-TRUTH. H2 a level black sky/untextured -> re-enable the fix narrowly for that DL. Then G1 (c)/(d) review. No aim/steer work.
+HYPOTHESIS-ID: g2-audio-noise
+FIX_ZERO_SHADE flip closed (s5976). Take G2: capture retail-oracle AI PCM and port AI PCM in the title phase; compare noise floor, spectrum, sample rate, byte order. H1 noise in ucode PCM; H2 AI ring/rate/format; H3 host sink. Discriminator: does port PCM (pre-sink dump) already show the broadband noise vs oracle? Positive control: inject a known tone. No aim/steer work.
