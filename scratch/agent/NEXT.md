@@ -1,3 +1,5 @@
-# NEXT: fold hangar_route h,i (SOAK-RESULTS.md), then G3 hangar rim band
-HYPOTHESIS-ID: g4-crash-stall-hunt
-a-g are 7/7 clean (s6010). Grep att=/crashlines/vi_stalls30s for s6009_hangar_route_h and _i. att>1 or abort => lldb/ASan backtrace, name writer. 9/9 clean => edit CURRENT-TRUTH line ~70 flake note to "not reproduced", close G4 hangar route, take G3: pick the rim band artifact and name its writer via oracle/RDP-bin comparison. G2 is closed by owner ear; no PCM compare.
+# NEXT: G3 hangar rim band — name the writer
+HYPOTHESIS-ID: g3-hangar-rim-band
+G4 hangar route closed (s6011, 9/9 clean). Take the rim band from CURRENT-TRUTH line ~71.
+Hypotheses: H1 RDP triangles/rect emitted by the game DL cover the band (game-side data); H2 renderer scissor/viewport edge handling (RT64 port); H3 stale framebuffer region not cleared (ucode/VI origin). 
+Discriminator: capture one hangar frame with the raw RDP bin dump (tools/rdpbin_top_groups.py, rdpbin_tri_colors.py) and check whether any command touches the band's pixel rows; positive control = a command known to cover a visible object. Band covered by cmds => H1; none => H2/H3 (then compare VI origin/scissor).

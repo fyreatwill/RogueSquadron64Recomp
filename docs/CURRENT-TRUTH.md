@@ -67,7 +67,7 @@ autopilot win are owner playtest scope.
 - Audio default route is active; `ROGUESQ_AUDIO_UCODE=0` is the silent control.
 - `ROGUESQ_AUDIO_DEVICE` and `build/audio_device.txt` are owner routing state;
   do not alter them or treat `[audio-route]` as M5 evidence.
-- The hangar route remains flaky at roughly 1/3 to 3/5 launches. Native hangar
+- Hangar route (s6006-s6011, post FIX_ZERO_SHADE-off): 9 soaks a-i, 8 first-attempt (att=1) and 1 att=2 (run h; log holds only the summary line, no crash/stall recorded), all 600 s holds with 0 crash / 0 VI stall. The old ~1/3-3/5 flake rate is NOT reproduced (single-source harness). G4 hangar route closed. Native hangar
   artifacts (rim band, holo spikes, stale edge, overlay splice, accumulator
   origin, `0x1F0D74`, odd PI DMA) are parked. No mitigation is acceptable
   without naming the writer and establishing value legitimacy.

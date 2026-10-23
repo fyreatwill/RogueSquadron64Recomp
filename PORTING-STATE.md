@@ -166509,3 +166509,6 @@ Rules out: a crash/stall in 5 of 5 runs; no backtrace warranted. No code change,
 
 ## Session 6010 (2026-10-23) — hangar-route soaks f/g folded (clean, 7/7); h/i still queued
 Folded from SOAK-RESULTS.md: s6008_hangar_route_f (att=1, mission_t=81s, hold=602s, vi_stalls30s=0, crashlines=0) and s6009_hangar_route_g (att=1, mission_t=82s, hold=603s, vi_stalls30s=0, crashlines=0). Running total a-g: 7/7 first-attempt launches clean, 0 crash, 0 VI stall (single-source harness). The ~1/3-3/5 flake note is NOT yet downgraded: h and i have not run (still in soak_queue). Nothing overturned. Next: fold h/i; if 9/9 downgrade the note, then G3 hangar rim-band writer.
+
+## Session 6011 (2026-10-23) — hangar-route soaks h/i folded; 9/9 holds clean, G4 hangar route closed
+Folded s6009_hangar_route_h (att=2, mission_t=77s, hold=605s, vi_stalls30s=0, crashlines=0) and _i (att=1, mission_t=81s, hold=603s, vi_stalls30s=0, crashlines=0). With a-g: 9/9 600 s holds with 0 crash / 0 VI stall; 8 of 9 launched first try, run h needed a second launch attempt but its log retains only the summary line (cause of the retry unrecorded; no crash line). Single-source harness verdict. Rules out: the ~1/3-3/5 flake rate persisting after FIX_ZERO_SHADE-off. CURRENT-TRUTH hangar note rewritten accordingly. No code change. Next: G3, name the writer of the hangar rim band.
