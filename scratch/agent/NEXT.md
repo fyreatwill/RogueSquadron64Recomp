@@ -1,4 +1,3 @@
-# NEXT: G4 crash/stall hunting across missions (G3 in-flight coarse-closed)
-
+# NEXT: fold m6_lvl1_hold660_r{1,2,3} soak verdicts
 HYPOTHESIS-ID: g4-mission-soaks
-Write queued soaks (scratch/agent/soak_queue/) re-running lvl1-9 forced-route recipes (see done/ g1_lvlN_zs.sh) for 600 s with keyed hold, checking each for CRASH/VI stall. Alternatively a pixel-level G3 diff needs a port lvl1 start-of-mission fbd dump matching retail camera (retail frame docs/g3_retail_lvl1_flight_oracle.png).
+Read SOAK-RESULTS.md tail. Any crash/VI stall in 660 s hold: capture lldb backtrace, name writer, root-cause. All clean: queue same for lvl3 and lvl6 via HOLD_S (see m6_lvl1_hold660_r1.sh).
