@@ -166222,3 +166222,7 @@ Ran tools/g1_d_compare.sh 2 and 3: lvl2 has only the tele arm (TELE=10 control f
 
 ## Session 5948 (2026-10-22) — G1(d) lvl2/3 tele-vs-ctl fold
 Ran `tools/g1_d_compare.sh 2` and `3` on the completed soak pairs. Positive control: TELE lines 0 (ctl) vs 10 (tele) on both levels, 0 crashes. lvl2: datItemSetObjectiveBooleanCount calls 4 -> 17, applyDatObjectiveTriggerEffect 114 -> 42. lvl3: BooleanCount 0 -> 8, applyDat 44 -> 20. No [objcount] val= lines in either level, so no counter id/end gate identified. Result: forced hits reach the objective writer on lvl1-3 (partial H1, single-source per level); (d) not PASS. Open: why applyDat falls under TELE (not phase-gated; per-run VI-phase counts needed). Rules out H2 (lever inapplicable) for lvl1-3. lvl4/5 pairs still in the soak queue. No code change; ledger fold only.
+
+## Session 5949 (2026-10-22) — G1(d) lvl4 tele-vs-ctl fold
+
+Ran `tools/g1_d_compare.sh 4` on the completed g1_lvl4_{ctl,tele} soaks (rc=0, 392 s each, 0 crashes). TELE fires 0 vs 10 (positive control passes). Unlike lvl2/3, objective-writer counts all rise under TELE: BooleanCount 7->10, applyDatObjectiveTriggerEffect 2->8, updateNpcEffectIntensity 29->54, and [objcount] val= max 2->3 (first level where the counter itself moves). Single-source. So the lvl2/3 applyDat drop is not a universal TELE effect; run-length/phase gating still needed to explain it. lvl5 pair still queued.
