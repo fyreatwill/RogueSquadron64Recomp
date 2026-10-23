@@ -112,6 +112,7 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+- **s6031 G1c:** far-plane knob ROGUESQ_DD_FAR/DD_NEAR (tools/apply_s6031_far.py, guPerspective args in setupCameraMatrices 0x80016D10) built; arms s6031_g1c_farret/far025/far2/far4/near4 queued, fold results next. Then L-budget.
 - **s6023 G1c:** FOV 0x130C50 and LOD-table arms (fov15/fov025/lod2/lod025) queued; fold results next.
 - **s6027 G1c:** ROGUESQ_DD_CELLMUL (pre-alloc cell count at allocAndInitGridCellArray entry, tools/apply_s6027_cellmul.py) built; arms s6027_g1c_cell025 / cell2 queued, results pending in SOAK-RESULTS.md. Then fog arm.
 - **s6030 G1c:** fog arms folded: FORCE_FOG magenta 750-2900 px/frame (0.4-1.6%) as a thin sliver vs 0 in control => fog does not tint terrain; L-fade closed (single-source). Next: far-plane / L-radius, then L-budget.
