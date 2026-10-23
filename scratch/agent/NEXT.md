@@ -1,3 +1,3 @@
-# NEXT: loop title boots under lldb until the plume SIGSEGV (si_addr=0x58) recurs
+# NEXT: fold s5986_plume_attach_g/h verdicts, then G1 (d) forced-hit objective counters
 HYPOTHESIS-ID: g4-mission-soaks
-Levels 0-9 hold clean (s5985). Queue a soak script in scratch/agent/soak_queue/ that boots to title N times (~1/7 rate, so >=14 boots) under lldb batch mode, SIGKILLs each, and on a crash saves `bt all` + registers. If it recurs: name the writer of the faulting pointer, root-cause. Positive control: lldb must attach and report exit status on a deliberately killed run. After that: G1 (d) forced-hit objective counters per level (s5841 TELE lever).
+Read scratch/agent/soak_results/s5986_attach_{g,h}/summary. Valid only if control=PASS and titles>=8/10 (lldb LAUNCH recipes are a getcwd tooling null — never use). If a STOP/BREADCRUMB appears: read run*.lldb bt, name the writer of the si_addr=0x58 pointer. If 20/20 clean with control PASS: close plume loop as non-recurring and move to G1 (d) per-level forced hits (s5841 TELE lever).
