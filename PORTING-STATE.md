@@ -166244,3 +166244,8 @@ ran: g1_d_compare 5 on tele3 (TELE=10 vs 0 control passes; applyDat 2->6, Boolea
 change (pivot): tools/apply_s5953_objsnap.py (vendored into fixup_game_funcs_vendored.py) adds a full 15-slot diff of the counter array 0x80138060 at entry of get/set/increaseObjectiveCount, logging [objsnap] id=N old->new (budget 400, ROGUESQ_LOG_HUDBIT). Built clean. Queued g1_lvl5_tele4 (same recipe as tele3) as its first run; positive control = TELE>0 plus at least one [objsnap] line.
 ORIGIN: not a mitigation; diagnostic only, no guard or behaviour change.
 rules out: nothing yet.
+
+### Session 5953 addendum — objsnap first run (tele4, ran in-session)
+RESULT (single-source, no same-build ctl yet): g1_lvl5 tele4 reached mission t=81s, held 303s, 0 crash/stall; TELE=10 (positive control passes), [objsnap] printed exactly ONE change in 303 s: id=2 0->1 (ra=0). Counter id=2 is the MISSION-FAIL counter per s5787 notes, not a kill/objective-progress counter; no other of the 15 slots moved.
+DISCRIMINATION: selects H-fail (forced hits only drive damage -> fail counter id=2) over H-progress (forced hits advance an objective-count slot) for lvl5; weakens the earlier reading that applyDat/BooleanCount rises mean objective progress. Caveat: ctl arm on this build missing.
+NEXT DISCRIMINATOR: g1_lvl5_ctl3 (same recipe, no TELE_BOLT, same build) queued: if ctl also shows id=2 0->1, the change is baseline and forced hits move NO counter on lvl5 (H-null); if ctl shows none, forced hits move only the fail counter (H-fail confirmed). Then lvl4 (where objcount val 2->3 was seen) rerun with objsnap to see which id moved there.

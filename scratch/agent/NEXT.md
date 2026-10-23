@@ -1,5 +1,5 @@
-# NEXT: fold g1_lvl5_tele4 ([objsnap] first run), then lvl6 ctl+tele pair
+# NEXT: fold g1_lvl5_ctl3 (objsnap id=2 baseline?) then lvl4 tele rerun with objsnap
 
 HYPOTHESIS-ID: g1-mission-coverage-sweep
 
-Fold: grep -c '\[objsnap\]' scratch/agent/m6/g1_lvl5tele/run.log and `zsh tools/g1_d_compare.sh 5`. Control: TELE>0. If objsnap prints id=N changes under TELE, (d) has a counter for lvl5 (compare to ctl, which needs the same build: requeue g1_lvl5_ctl as ctl3). If zero objsnap lines with HUDBIT on, the counter array is not moved via these accessors on lvl5 -> read docs/M6-OBJECTIVE-COUNTER-WRITERS.md for the real end-gate. Then queue lvl6 ctl+tele (diff recipes first).
+tele4: only [objsnap] id=2 0->1 (fail counter). Discriminator: ctl3 same build. grep objsnap scratch/agent/m6/g1_lvl5ctl/run.log. ctl shows id=2 change => H-null (forced hits move no counter); ctl shows none => H-fail. Then requeue g1_lvl4_tele to learn which id gave 2->3 there.
