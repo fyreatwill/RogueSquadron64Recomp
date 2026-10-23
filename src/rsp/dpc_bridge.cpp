@@ -2729,15 +2729,20 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
         {   // s4285: at flush, is the lap-1 content RT64 is about to read already overwritten (bump-time shadow vs live)?
             static unsigned long fl = 0, flDiff = 0, flWords = 0, flDiffWords = 0, flCtl = 0;
             unsigned long d = 0, w = 0;
-            if (g_rdram_for_submit) for (const S4272Sh &e : g_s4272_sh)
+            static const bool s_s4285 = []{ const char *e = std::getenv("ROGUESQ_S4285"); return e && *e == '1'; }(); /* s6016: diag-only O(shadow bytes) loop per flush; default off */
+            if (s_s4285 && g_rdram_for_submit) for (const S4272Sh &e : g_s4272_sh)
                 for (uint32_t x = e.lo; x < e.hi; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[e.off + (x - e.lo)], 4); memcpy(&now, g_rdram_for_submit + x, 4); w++; if (was != now) d++; }
-            fl++; flWords += w; flDiffWords += d; if (d) flDiff++;
+            if (s_s4285) fl++; flWords += w; flDiffWords += d; if (d) flDiff++;
             { uint32_t x = 0, y = 1; flCtl += (x != y); }
-            if (fl <= 8 || (fl & 63) == 0)
+            if (s_s4285 && (fl <= 8 || (fl & 63) == 0))
                 fprintf(stderr, "[s4285-flush] n=%lu shRanges=%zu words=%lu diffWords=%lu | tot flushes=%lu withDiff=%lu words=%lu diff=%lu control=%lu\n", fl, g_s4272_sh.size(), w, d, fl, flDiff, flWords, flDiffWords, flCtl);
         }
         {
             uint32_t b = 0;
+            /* s6016: was a linear scan of g_s4272_sh per deferred range (O(n^2), ~80% of Gfx-thread samples in s6015); first-match semantics kept via emplace */
+            std::unordered_map<uint64_t, const S4272Sh *> shIdx;
+            shIdx.reserve(g_s4272_sh.size());
+            for (const S4272Sh &e : g_s4272_sh) shIdx.emplace(((uint64_t)e.lo << 32) | e.hi, &e);
             for (const auto &r : g_deferred_ranges) {
                 if (should_drop_wrap_rdp(r.first, r.second)) continue;
                 b += r.second - r.first;
@@ -2745,7 +2750,7 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
                 rs64_dpc_record_submit(r.first, r.second);
                 static const bool s_restore = []{ const char *e = std::getenv("ROGUESQ_WRAP_RESTORE"); return !(e && *e == '0'); }(); /* s4287: default on */
                 const S4272Sh *shp = nullptr;
-                if (s_restore && g_rdram_for_submit) for (const S4272Sh &e : g_s4272_sh) if (e.lo == r.first && e.hi == r.second) { shp = &e; break; }
+                if (s_restore && g_rdram_for_submit) { auto it = shIdx.find(((uint64_t)r.first << 32) | r.second); if (it != shIdx.end()) shp = it->second; }
                 static unsigned long rn = 0, rMiss = 0, rWordsRestored = 0, rPostDiff = 0, rCtl = 0;
                 static thread_local std::vector<uint8_t> liveSave; /* s4287: reuse, no per-range alloc */
                 if (shp) {   // s4286: feed RT64 the bump-time bytes, then put live back

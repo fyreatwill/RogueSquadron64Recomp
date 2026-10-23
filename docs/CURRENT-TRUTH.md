@@ -224,3 +224,7 @@ mission logic, and `scratch/agent/SOAK-RESULTS.md` for queued verdicts.
 - s5991: lvl1 CI ground timgs use TLUT src 0x563980/0x563260; RDRAM-paired capture queued (s5991_lvl1_rdpbin_rdram) to decode palette vs observed colour. Next: tools/rdram_decode_tlut.py.
 - s5993 (single-source, visual): lvl1 RDRAM fb (tools/fb_from_rdram.py, 512x358) shows textured grass/rock hills; the 'dark ground' is a cliff face with legit streaky texture. H4 not supported; g3-lvl1-mesh-ground CLOSED. G1(d) lvl7 (tele objsnap 33 vs 2) and lvl8 (objcount 0->4) show counter movement; lvl9 none. Next: G1(d) end-gate identification for lvl7/lvl8 via tools/apply_s5953_objsnap.py.
 - s5992 (single-source): lvl1 ground TLUT 0x563980 / CI8 timgs decode to mid-bright red-brown (mean ~(125,25,20)); H3' (bad palette/texels) ruled out. With bright vertex shade (s5990) the darkening, if real, is renderer-side (H4) or legit (H1). Tool: tools/rdram_decode_tlut.py. Next: framebuffer-pixel vs predicted-colour check for one ord-7 CI group.
+
+
+## G1b update (s6016)
+Gfx thread hot spot found by `sample` (s6015): ~80% of gfx samples in O(n^2) g_s4272_sh scan at dpc_bridge.cpp:2748 + s4285 diag loop; fixed s6016 (hash index, ROGUESQ_S4285 gate). Verify with soak s6016_g1b_scanfix vs s6014 loud baseline (17.6% slow seconds). H-host/H-shader/H-log not supported.

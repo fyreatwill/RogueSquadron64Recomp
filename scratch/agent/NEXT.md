@@ -1,5 +1,5 @@
-# NEXT: fold s6015_g1b_sample (G1b) - read scratch/agent/g1b_samples/s6015/s*.txt
+# NEXT: fold s6016_g1b_scanfix (G1b post-fix arm)
 HYPOTHESIS-ID: g1b-frame-pacing
-s6014: quiet arm not quiet (151 vs 171 KB/s; dominant logs are ungated [m4-y8000]/[s3290-stall]/[s3294-stall]/[s3295-disp]); slow-second fraction loud 17.6% vs quiet 23.2%, so the five toggled knobs are not the cause. cpu~wall in slow seconds => not blocking/shader.
-Fold: for each s*.txt, read the heaviest stacks of the Gfx/RSP thread (RT64 vs F5 LLE interpreter vs our hooks vs fprintf). Positive control: s*.line must show sd_wall>100 and the sample must contain the gfx thread.
-If a logging/hook function dominates: gate it (env) and add a truly-quiet arm (stderr to a file the script does not grep needs run.log - gate the 4 prints above instead). If RT64/interpreter dominates: look at per-scene cost (triangle/vertex count co-variance) next.
+s6015 sampler (6 samples, all with sd_wall 102-193ms; positive control passed): Gfx thread ~93% in send_dl -> factor5_ucode -> rsp_dpc_submit, ~80% of ALL gfx samples at dpc_bridge.cpp:2748 (linear scan of g_s4272_sh per deferred range, O(n^2)) + the s4285 per-flush shadow word-compare diag. RT64 processRDPLists itself is only ~3% => H-rsp/H-host/H-shader/H-log not the cause; our own bridge scan is.
+s6016 fix: hash index for the scan (first-match preserved), s4285 diag gated behind ROGUESQ_S4285=1.
+Fold: compare SOAK-RESULTS s6016_g1b_scanfix [g1b] slow-second fraction vs s6014_g1b_loud (17.6%). Expect sharp drop. If slow seconds remain, re-sample (tools in s6015 recipe) and read the new top frame. Also check rendering unchanged (soak rc=0, no new crash).
