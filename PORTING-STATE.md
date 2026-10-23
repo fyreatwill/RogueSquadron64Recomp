@@ -166386,3 +166386,6 @@ Read s5978 state: levels 1-18 have (a)+(b)+(c); all lvl1-9 zs soaks rc=0 (SOAK-R
 
 ## Session 5980 (2026-10-23) — M6 lvl1 660 s holds r1/r2 clean; lvl3/lvl6 holds queued
 Folded SOAK-RESULTS: m6_lvl1_hold660_r1 and r2 both reached mission at t=86 s and held 664-665 s with alive_at_end=1, vi_stalls30s=0, crashlines=0 (single source: the harness verdict line; r1 shows mission_cycles=2, r2 mission_cycles=1 — not a crash datum, noted only). r3 still queued. Queued m6_lvl3_hold660 and m6_lvl6_hold660 (same recipe, HOLD_S=660, LEVEL=3/6). No code change. Rules out: a lvl1 crash/stall within 11 min in 2/2 runs.
+
+## Session 5981 (2026-10-23) — M6 660s holds: lvl1 r3 and lvl3 clean; lvl2/4/5/7/8/9 holds queued
+Folded SOAK-RESULTS: m6_lvl1_hold660_r3 (hold=662s, alive_at_end=1, vi_stalls30s=0, crashlines=0) and m6_lvl3_hold660 (hold=662s, alive_at_end=1, vi_stalls30s=0, crashlines=0). With r1/r2 that is 3/3 clean on lvl1 and 1/1 on lvl3. (The log "crash" grep count of 1 per log is the recipe's own summary line, crashlines=0 is the verdict.) Queued the same recipe for lvl2,4,5,7,8,9 (lvl6 already queued) as scratch/agent/soak_queue/m6_lvlN_hold660.sh. No new crash datum; this iteration's change is the queued recipes only.
