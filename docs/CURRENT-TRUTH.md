@@ -112,6 +112,7 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+- **s5987:** plume attach g/h 20/20 clean (control PASS) -> plume loop closed as non-recurring. New G3 datum: port lvl1 frames 4000/4500 show flat dark mesh ground (eyeball, undecided; NEXT.md).
 
 - **s5986:** s5982 lldb-launch plume soaks were a tooling null (getcwd EPERM, titles=0/3); attach recipes s5986_plume_attach_g/h queued (control + 10 boots each).
 - **s5980 G4:** m6_lvl1_hold660_r1/r2 clean (664-665 s hold, 0 VI stall, 0 crash lines; single-source harness verdict). r3 + m6_lvl3_hold660 + m6_lvl6_hold660 queued. Fold verdicts; crash/stall => lldb backtrace + writer. If all clean: queue lvl2,4,5,7,8,9 holds, then loop title boots under lldb for the si_addr=0x58 plume SIGSEGV.
