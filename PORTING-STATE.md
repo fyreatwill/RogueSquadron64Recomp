@@ -166477,3 +166477,8 @@ m6_lvl11_hold660 rc=0 (752 s) and m6_lvl12_hold660 rc=0 (759 s): lvl12 line `hol
 
 ## Session 6003 (2026-10-23) — folded lvl13/lvl14 660 s holds (G4): clean; lvl10/15 holds queued
 Folded SOAK-RESULTS: m6_lvl13_hold660 (mission_t=97s, hold 662s, alive_at_end=1, vi_stalls30s=0, crashlines=0) and m6_lvl14_hold660 (mission_t=81s, hold 663s, same zeros). The only "crash" grep hit per log is the summary line itself (crashlines=0). Queued m6_lvl10_hold660 and m6_lvl15_hold660 using ROGUESQ_FORCE_PLANET_UNLOCK=0xFF (s5944 lever, flight ~400 s instead of ~790 s; SOAK_TIMEOUT=1300). lvl16/17/18 still queued. Levels 0-9, 11-14 now have >=1 clean 660 s hold. Rules out nothing new; no conclusions overturned. No code change this session (recipes only).
+
+## Session 6004 (2026-10-23) — G4 lvl10/15 holds folded; G1(c) frame check lvl10-15
+- Folded SOAK-RESULTS: m6_lvl10_hold660 (hold 665 s, vi_stalls30s=0, crashlines=0) and m6_lvl15_hold660 (661 s, 0 stall, 0 crash, godrefills=20) both rc=0 clean. lvl16/17/18 holds still queued.
+- G1(c): built docs/g1_lvl10_15_contact.png from the existing fbd dumps (scratch/agent/m6/g1_lvl{10..15}m6hold/fbd, frame at 2/3 of run). All six show terrain/sky, player craft, radar and HUD reticle (lvl10 canyon, lvl11 snow, lvl12/15 sky, lvl13 space w/ Y-wing, lvl14 hills). Single-source (eyeball, no retail oracle frames for these levels).
+- Rules out: render-blank/black-frame failure on lvl10-15. No code change; no ORIGIN needed.

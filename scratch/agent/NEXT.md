@@ -1,3 +1,3 @@
-# NEXT: fold m6_lvl{10,15,16,17,18}_hold660 verdicts (G4)
+# NEXT: fold m6_lvl{16,17,18}_hold660 verdicts (G4) + G1(c) sheet
 HYPOTHESIS-ID: g4-crash-stall-hunt
-s6003: lvl13/14 660 s holds clean. Queued: lvl10/15 (PLANET_UNLOCK, timeout 1300), lvl16/17/18. Any abort -> lldb/ASan backtrace, name the writer. If all clean, G4 is closed for levels 0-18: take G3 render fidelity (hangar artifacts list in CURRENT-TRUTH), or G2 audio noise discrimination.
+s6004: lvl10/15 holds clean; G1(c) lvl10-15 sheet OK. Fold lvl16-18 from SOAK-RESULTS.md; build contact sheet from scratch/agent/m6/g1_lvl{16,17,18}m6hold/fbd (recipe in s6004 entry: PIL via plain python3, NOT -I). Any abort -> lldb/ASan backtrace, name writer. If all clean, G4 closed 0-18: take G3 remaining hangar artifacts or G5 sweep per ladder.
