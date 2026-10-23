@@ -172,7 +172,7 @@ index a0d4a6a..1b5315c 100644
              // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
              //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..f1cfe90 100644
+index 6255872..96ea7f4 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
 @@ -4,12 +4,39 @@
@@ -473,7 +473,7 @@ index 6255872..f1cfe90 100644
                      colorWorkBuffer[workBufferIndex + 0] = v1Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 1] = v2Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 2] = v3Color * (1/255.0f);
-@@ -477,6 +716,404 @@ namespace RT64 {
+@@ -477,6 +716,424 @@ namespace RT64 {
                      colorWorkBuffer[workBufferIndex + 2] = interop::float4(0.0f, 0.0f, 0.0f, 0.0f);
                  }
  
@@ -791,7 +791,27 @@ index 6255872..f1cfe90 100644
 +                    if (s_tom) {
 +                        const uint32_t oL = uint32_t(state->rdp->otherMode.L);
 +                        const bool stub = oL == 0x504240u || oL == 0x550231u || oL == 0xf0a4001u;
-+                        if (s_tom == 1 || stub) {
++                        bool white = false;
++                        if (s_tom == 3 && !textured) {
++                            white = true;
++                            for (int vi = 0; vi < 3; vi++) {
++                                const auto &c = colorWorkBuffer[workBufferIndex + vi];
++                                if (c.x < 0.8f || c.y < 0.8f || c.z < 0.8f) white = false;
++                            }
++                        }
++                        bool inrect = false;
++                        if (s_tom == 4) {
++                            bool l = true, r = true;
++                            for (int vi = 0; vi < 3; vi++) {
++                                const float vx = float(posWorkBuffer[workBufferIndex + vi].x);
++                                const float vy = float(posWorkBuffer[workBufferIndex + vi].y);
++                                const bool iy = vy >= 150.f && vy <= 230.f;
++                                l = l && iy && vx >= 70.f && vx <= 105.f;
++                                r = r && iy && vx >= 420.f && vx <= 457.f;
++                            }
++                            inrect = l || r;
++                        }
++                        if (s_tom == 1 || (s_tom == 2 && stub) || white || inrect) {
 +                            float xmn = 1e9f, xmx = -1e9f, ymn = 1e9f, ymx = -1e9f;
 +                            for (int vi = 0; vi < 3; vi++) {
 +                                colorWorkBuffer[workBufferIndex + vi] =
@@ -878,7 +898,7 @@ index 6255872..f1cfe90 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -537,6 +1174,66 @@ namespace RT64 {
+@@ -537,6 +1194,66 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
@@ -945,7 +965,7 @@ index 6255872..f1cfe90 100644
                      curData += triangleTexWords;
                  }
                  // No texture coefficients
-@@ -584,6 +1281,68 @@ namespace RT64 {
+@@ -584,6 +1301,68 @@ namespace RT64 {
                  break;
              }
  
