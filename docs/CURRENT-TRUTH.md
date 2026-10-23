@@ -112,6 +112,7 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+- **s5989:** lvl1 colour question answered offline via RS64_RDP_BIN_PORT: soak s5989_lvl1_rdpbin queued; analyze with `python3 -I tools/rdpbin_tri_colors.py scratch/agent/s5989/lvl1_rdp.bin [ord]`.
 - **s5988:** lvl1 ground zoom = structured tiling (not format garble); dark-tint vs legit open; per-tri colour dump queued (NEXT.md).
 - **s5987:** plume attach g/h 20/20 clean (control PASS) -> plume loop closed as non-recurring. New G3 datum: port lvl1 frames 4000/4500 show flat dark mesh ground (eyeball, undecided; NEXT.md).
 
