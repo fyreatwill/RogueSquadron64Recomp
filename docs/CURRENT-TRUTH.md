@@ -112,6 +112,7 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+- **s6034 G1c (RESULT):** retail lvl1: requested cells 504-1148 < pool cap 2048, window ~35x29 of 64x64 terrain => cap and terrain-end NOT binding; limit is the footprint window written by binPolygonIntoTerrainGrid (single run, single-source). Next: log its input polygon + clamp.
 - **s6034 G1c:** stream pool (0x18 nodes, cap lhu 0x80130C4C) + window 0x80132DB0..BC + terrain w/h 0x80136DF8/FA bound the visible set (single-source, code read). `[gridlog]` instrument (ROGUESQ_DD_GRIDLOG=1) built; arms s6034_g1c_ret/posab/cell2 queued, fold kept-vs-cap next.
 - **s6033 G1c:** far-plane arms folded: far025 -45% tri/task (control OK), far2 flat (+0.3%), far4 partial -11%. ALL scalar levers (footprint, FOV, LOD, cell, igrid, fog, far) are shrink-only/flat => retail cap is not a tunable scalar. Next: H-data (is lvl1 terrain extent baked: dump grid cell dims/world extent from allocAndInitGridCellArray and compare to camera far distance) then L-budget (0x80137A68 buffer, rs_malloc 200*(n/10)). near4 arm still queued.
 - **s6031 G1c:** far-plane knob ROGUESQ_DD_FAR/DD_NEAR (tools/apply_s6031_far.py, guPerspective args in setupCameraMatrices 0x80016D10) built; arms s6031_g1c_farret/far025/far2/far4/near4 were staged but NOT queued until s6032 (copied from scratch/agent/s6031_arms/ to soak_queue/); fold results next. Then L-budget.
