@@ -166219,3 +166219,6 @@ Next: fold lvl2-5 tele as they run; lvl3 has a ctl.
 
 ## Session 5947 (2026-10-22) — G1(d) partial fold lvl2/3, queue missing ctl arms
 Ran tools/g1_d_compare.sh 2 and 3: lvl2 has only the tele arm (TELE=10 control fired; objwr datItemSetObjectiveBooleanCount=17), lvl3 has only the ctl arm (TELE=0 as expected, no BooleanCount writes). Neither is a comparable pair yet, so no verdict (single-source, no conclusion). Queued the missing arms: g1_lvl2_ctl, g1_lvl4_ctl, g1_lvl5_ctl (lvl3/4/5 tele already queued). Next: fold lvl2-5 pairs once they land.
+
+## Session 5948 (2026-10-22) — G1(d) lvl2/3 tele-vs-ctl fold
+Ran `tools/g1_d_compare.sh 2` and `3` on the completed soak pairs. Positive control: TELE lines 0 (ctl) vs 10 (tele) on both levels, 0 crashes. lvl2: datItemSetObjectiveBooleanCount calls 4 -> 17, applyDatObjectiveTriggerEffect 114 -> 42. lvl3: BooleanCount 0 -> 8, applyDat 44 -> 20. No [objcount] val= lines in either level, so no counter id/end gate identified. Result: forced hits reach the objective writer on lvl1-3 (partial H1, single-source per level); (d) not PASS. Open: why applyDat falls under TELE (not phase-gated; per-run VI-phase counts needed). Rules out H2 (lever inapplicable) for lvl1-3. lvl4/5 pairs still in the soak queue. No code change; ledger fold only.
