@@ -4,13 +4,15 @@ mission tick, funcs_42.c) under ROGUESQ_LOG_HUDBIT, logged as [objsnap-t] with i
 Idempotent; mirrored into fixup_game_funcs_vendored.py."""
 import pathlib
 base = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
-TAG = "PATCH: s5960 objsnap tick"
-BLOCK = ('    { static int s_e = -1, s_k = 0; static uint32_t s_p[16]; static int s_init = 0; if (s_e < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e = (e && e[0]) ? 1 : 0; } '
-         'if (s_e && s_k < 400) { for (int q = 0; q < 15; q++) { uint32_t v_ = (uint32_t)MEM_W((int32_t)(q * 4), S32((int32_t)0x80138060)); '
+TAG = "PATCH: s5960b objsnap tick"
+BLOCK = ('    { static int s_e = -1, s_k = 0; static uint32_t s_p[16]; static int s_init = 0; static unsigned s_n = 0; if (s_e < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e = (e && e[0]) ? 1 : 0; } '
+         'if (s_e) { s_n++; if (s_n == 1 || (s_n % 600) == 0) fprintf(stderr, "[objsnap-t] hb ticks=%u s_k=%d\\n", s_n, s_k); } if (s_e && s_k < 400) { for (int q = 0; q < 15; q++) { uint32_t v_ = (uint32_t)MEM_W((int32_t)(q * 4), S32((int32_t)0x80138060)); '
          'if (!s_init) { s_p[q] = v_; } else if (v_ != s_p[q]) { s_k++; fprintf(stderr, "[objsnap-t] id=%d %u->%u\\n", q + 1, s_p[q], v_); s_p[q] = v_; } } s_init = 1; } } /* ' + TAG + ' */\n')
 def apply(text):
     i = text.find("RECOMP_FUNC void tickMissionObjectives(")
     if i < 0: return text, 0
+    import re
+    text = re.sub(r"    \{ static int s_e = -1, s_k = 0; static uint32_t s_p\[16\];[^\n]*PATCH: s5960 objsnap tick \*/\n", "", text)
     j = text.find("    int c1cs = 0;\n", i); assert 0 < j - i < 300
     k = j + len("    int c1cs = 0;\n")
     if TAG in text[k:k + 40 + len(BLOCK) + 200]: return text, 0
