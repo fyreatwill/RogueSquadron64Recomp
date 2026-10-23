@@ -1,5 +1,4 @@
-# NEXT: G1c - fold [gridlog] arms (s6034_g1c_ret/posab/cell2, plus near4)
+# NEXT: G1c - what clamps the footprint polygon window (binPolygonIntoTerrainGrid)
 HYPOTHESIS-ID: g1c-draw-distance
-grep '\[gridlog\]' in scratch/agent/soak_results/s6034_g1c_*.log. Control: posab must show smaller kept / d2 max than ret (else instrument void).
-Outcomes: kept==cap(0x80130C4C) => H-budget: add knob raising cap AND the pool alloc (find rs_malloc for *0x80136E1C), arm 1.5x/2x/3x. kept<cap with gx/gz at terrain bounds (terr=WxH) => H-data: close G1c, ask owner. kept<cap, window<terr => find writer of 0x80132DB4/BC (window size) and scale it.
-Then ROGUESQ_DRAW_DISTANCE opt-in knob per ITERATION.md G1c.
+Established s6034: window (0x80132DB0..BC) is neither cap- nor terrain-bound (req<=1148<2048, <45% of 64x64). H1: footprint polygon vertices are clamped to a fixed world distance inside buildVisibleTerrainGridAroundCamera (0x800437B0) before binPolygonIntoTerrainGrid. H2: polygon is far-plane-derived but a later min() against a constant. H3: bin function clamps width/depth to a max span.
+Discriminator: one build logging polygon vertices (world x/z) at binPolygonIntoTerrainGrid entry + the window it writes, retail vs far2 vs posab arms (posab/cell2/near4 already queued; fold them). If window grows with far2 -> far knob was applied elsewhere; if polygon fixed -> find the clamp constant (H1/H2) and make it ROGUESQ_DRAW_DISTANCE. Fix kept= walk (+4) in apply_s6034_gridlog.py.
