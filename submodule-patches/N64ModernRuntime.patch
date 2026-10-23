@@ -5917,7 +5917,7 @@ index a22f747..9a72ebe 100644
              // Swap to the higher priority thread.
              swap_to_thread(PASS_RDRAM next_thread);
 diff --git a/ultramodern/src/threads.cpp b/ultramodern/src/threads.cpp
-index 812c556..25eba5d 100644
+index 812c556..034c65e 100644
 --- a/ultramodern/src/threads.cpp
 +++ b/ultramodern/src/threads.cpp
 @@ -1,7 +1,22 @@
@@ -6289,7 +6289,30 @@ index 812c556..25eba5d 100644
      wait_for_resumed(PASS_RDRAM cur_context);
  }
  
-@@ -239,7 +555,7 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -188,6 +504,22 @@ static void _thread_func(RDRAM_ARG PTR(OSThread) self_, PTR(thread_func_t) entry
+     thread_self = self_;
+     is_game_thread = true;
+ 
++    // Retail sets FCSR 0x01000800 (flush-denormals-to-zero) via osCreateThread 0x8002B40C /
++    // osInitialize 0x8002BFD0 (s6012 census). Opt-in arm: ROGUESQ_FTZ=1 sets arm64 FPCR.FZ (bit 24).
++    {
++        static const bool ftz = []{ const char* e = getenv("ROGUESQ_FTZ"); return e && e[0] == '1'; }();
++#if defined(__aarch64__)
++        if (ftz) {
++            uint64_t fpcr;
++            __asm__ volatile("mrs %0, fpcr" : "=r"(fpcr));
++            fpcr |= (1ull << 24);
++            __asm__ volatile("msr fpcr, %0" :: "r"(fpcr));
++        }
++#else
++        (void)ftz;
++#endif
++    }
++
+     // Set the thread name
+     ultramodern::set_native_thread_name(ultramodern::threads::get_game_thread_name(self));
+     ultramodern::set_native_thread_priority(ultramodern::ThreadPriority::High);
+@@ -239,7 +571,7 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
      // Otherwise, immediately start the thread and terminate this one.
      else {
          t->state = OSThreadState::QUEUED;
@@ -6298,7 +6321,7 @@ index 812c556..25eba5d 100644
          //throw ultramodern::thread_terminated{};
      }
  }
-@@ -259,6 +575,20 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
+@@ -259,6 +591,20 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
      // Pass the context as an argument to the thread function to ensure that it can't get cleared before the thread captures its value.
      UltraThreadContext* context = new UltraThreadContext{};
      t->context = context;
@@ -6319,7 +6342,7 @@ index 812c556..25eba5d 100644
      context->host_thread = std::thread{_thread_func, PASS_RDRAM t_, entrypoint, arg, t->context};
  
      // Wait until the thread is initialized to indicate that it's ready to be started.
-@@ -286,6 +616,11 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -286,6 +632,11 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
      OSThread* t = TO_PTR(OSThread, t_);
      // Check if the thread is destroying itself (arg is null or thread_self)
      if (t_ == thread_self) {
@@ -6331,7 +6354,7 @@ index 812c556..25eba5d 100644
          throw ultramodern::thread_terminated{};
      }
      // Otherwise if the thread isn't stopped, remove it from its currrent queue., 
-@@ -294,9 +629,22 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -294,9 +645,22 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
      }
      // Check if the thread has already been destroyed to prevent destroying it again.
      UltraThreadContext* cur_context = t->context;
@@ -6354,7 +6377,7 @@ index 812c556..25eba5d 100644
          cur_context->running.signal();
      }
  }
-@@ -337,6 +685,20 @@ PTR(OSThread) ultramodern::this_thread() {
+@@ -337,6 +701,20 @@ PTR(OSThread) ultramodern::this_thread() {
      return thread_self;
  }
  
@@ -6375,7 +6398,7 @@ index 812c556..25eba5d 100644
  static std::thread thread_cleaner_thread;
  static moodycamel::BlockingConcurrentQueue<UltraThreadContext*> deleted_threads{};
  extern std::atomic_bool exited;
-@@ -347,8 +709,18 @@ void thread_cleaner_func() {
+@@ -347,8 +725,18 @@ void thread_cleaner_func() {
          UltraThreadContext* to_delete;
          if (deleted_threads.wait_dequeue_timed(to_delete, 10ms)) {
              debug_printf("[Cleanup] Deleting thread context %p\n", to_delete);
@@ -6394,7 +6417,7 @@ index 812c556..25eba5d 100644
              delete to_delete;
          }
      }
-@@ -359,6 +731,11 @@ void ultramodern::init_thread_cleanup() {
+@@ -359,6 +747,11 @@ void ultramodern::init_thread_cleanup() {
  }
  
  void ultramodern::cleanup_thread(UltraThreadContext *cur_context) {
