@@ -1,4 +1,3 @@
-# NEXT: G1c - implement ROGUESQ_DRAW_DISTANCE on 0x8009DEAC and fold [gridlog] arms
+# NEXT: G1c - fold s6036_dd1/2/3 soaks
 HYPOTHESIS-ID: g1c-draw-distance
-Facts (s6035 code read): polygon unclamped; knob = float at 0x8009DEAC (14.5), DEB0 recomputed each call; limits = terrain w/h + 64-wide window bitmaps (overflow risk if window >64).
-H-A: DEAC scaling widens the window until terrain/64 stride saturates. H-B: earlier x2/x3 arms never scaled DEAC (explains +4%). Discriminator: fixup script writes DEAC*=ROGUESQ_DRAW_DISTANCE (clamp so window<=64, never change default), run lvl1 at 1.0 vs 2.0 with ROGUESQ_DD_GRIDLOG=1 in one build; compare win w/d and kept. First fold the queued s6034_g1c_ret/posab [gridlog] output from SOAK-RESULTS.
+Read scratch/agent/m6/g1_lvl1g1cdd{1,2,3}/run.log: grep [dd]/[gridlog]. H-A: window w/req scales with m (dd2 w ~2x dd1 at comparable pose) and distant terrain fraction rises (compare captured framebuffers). H-B: window unchanged => another clamp downstream. Check w<=64 at dd3, crashes, frame time (G1b instrument). Then steps 1.5x/2x on levels 5 and 10 for 300 s holds.
