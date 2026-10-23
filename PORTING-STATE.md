@@ -166238,3 +166238,9 @@ Ran: nothing new in-game; folded soaks g1_lvl5_nsw (rc=0, mission t=79 s, hold 3
 ## Session 5952 (2026-10-22) — lvl5 ctl2/tele2 folded; tele2 recipe lacked the TELE lever
 
 ctl2: mission t=80s, hold 303s, 0 crash, 0 VI stall (viewer stall did not recur). tele2: mission t=79s, hold 303s clean, but TELE=0 (834 cand-class lines all tele=0) because g1_lvl5_tele2.sh omitted `export ROGUESQ_TELE_BOLT=1` (lvl4 recipe has it). g1_d_compare.sh 5 therefore shows identical arms (objcount 0, BooleanCount 4) - a null with the positive control failed, so no (d) verdict for lvl5. Lvl5 now has (a)+(b) in 3 further clean runs. Requeued g1_lvl5_tele3 with the export.
+
+## Session 5953 (2026-10-22) — objsnap instrument landed; lvl5 tele3 folded
+ran: g1_d_compare 5 on tele3 (TELE=10 vs 0 control passes; applyDat 2->6, BooleanCount 4->5, objcount_max 0 in both arms, no crash). Single-source. objcount_max stays empty/0 on lvl1/2/3/5 because s5787 only logs getObjectiveCount value CHANGES per id and the counters may move via other paths.
+change (pivot): tools/apply_s5953_objsnap.py (vendored into fixup_game_funcs_vendored.py) adds a full 15-slot diff of the counter array 0x80138060 at entry of get/set/increaseObjectiveCount, logging [objsnap] id=N old->new (budget 400, ROGUESQ_LOG_HUDBIT). Built clean. Queued g1_lvl5_tele4 (same recipe as tele3) as its first run; positive control = TELE>0 plus at least one [objsnap] line.
+ORIGIN: not a mitigation; diagnostic only, no guard or behaviour change.
+rules out: nothing yet.
