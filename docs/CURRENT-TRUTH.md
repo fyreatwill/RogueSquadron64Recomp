@@ -113,7 +113,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-- s5955: lvl4 tele5 objsnap = only id=15 cycling 0-3 (single-source, no same-build ctl yet); ctl5 + lvl6 pair queued, see NEXT.md.
+- s5956: lvl4 ctl5 (no TELE) also prints objsnap id=15 (8) + id=5 (4): id=15 cycling is baseline, lvl4 (d) NOT shown (supersedes s5949 / s5955 reading). lvl6 ctl has 0 objsnap; lvl6 tele + lvl7 pair queued.
 - **G1(d) lvl1 (s5946, single-source):** TELE fires (0 vs 10) and objective-writer calls rise (BooleanCount 13->22), but [objcount] id=13 max stays 4 in both arms. Use `tools/g1_d_compare.sh N` for lvl2-5.
 - **G1(d) lvl2/3 (s5948, single-source):** both pairs complete. TELE fires 0 vs 10 in each (control passes). lvl2: BooleanCount writes 4->17 (tele), but applyDatObjectiveTriggerEffect falls 114->42; lvl3: BooleanCount 0->8, applyDat 44->20. [objcount] val= line never printed in either arm (objcount_max empty). Reading: forced hits do reach the objective-count writer on lvl1/2/3 (H1 partial), but no end-gate/counter id is identified, so (d) is NOT yet PASS. Applied-effect count dropping under TELE is unexplained (tele ends runs earlier? or kills triggers) - needs per-run duration/phase gating. lvl5 pair still queued (soak_queue g1_lvl{4,5}_{ctl,tele}).
 - **G1(d) lvl4 (s5949, single-source):** TELE 0 vs 10; objcount val max 2->3, applyDat 2->8, BooleanCount 7->10, no crash. First level where the objective counter moves under forced hits; applyDat rises here (opposite of lvl2/3).
