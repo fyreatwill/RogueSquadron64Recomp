@@ -194,3 +194,4 @@ mission logic, and `scratch/agent/SOAK-RESULTS.md` for queued verdicts.
 - s5990 (single-source): lvl1 raw RDP capture shows ground/flight tris have BRIGHT vertex shade (mean 140-240, constant prim 4fd926b9) — H2' dark-shade ruled out; remaining H3' (TLUT/texel) / H1 / renderer-side. Tools: tools/rdpbin_tri_colors.py, tools/rdpbin_top_groups.py.
 
 - s5991: lvl1 CI ground timgs use TLUT src 0x563980/0x563260; RDRAM-paired capture queued (s5991_lvl1_rdpbin_rdram) to decode palette vs observed colour. Next: tools/rdram_decode_tlut.py.
+- s5992 (single-source): lvl1 ground TLUT 0x563980 / CI8 timgs decode to mid-bright red-brown (mean ~(125,25,20)); H3' (bad palette/texels) ruled out. With bright vertex shade (s5990) the darkening, if real, is renderer-side (H4) or legit (H1). Tool: tools/rdram_decode_tlut.py. Next: framebuffer-pixel vs predicted-colour check for one ord-7 CI group.
