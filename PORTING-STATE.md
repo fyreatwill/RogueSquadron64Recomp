@@ -166354,3 +166354,7 @@ Verified lib/rt64 rt64_gbi_rdp.cpp:1089 now defaults the flag OFF and build/Rogu
 
 ## Session 5973 (2026-10-23) — FIX_ZERO_SHADE OFF: lvl1+lvl2 sky/terrain fine (H1 so far)
 Folded g1_lvl1_zs and g1_lvl2_zs (both rc=0, ~392 s). Late fbd frames vs ctl (fix ON): lvl1 avg RGB 160,112,141 vs 155,105,136, 0% black; lvl2 sky textured and terrain textured in both (viewed PNG; whole-frame mean differs only because the craft is over a rock face in zs vs open sky in ctl — camera position, not shading). No black sky / untextured terrain. Lvl3,4,5,7,8,9 zs still queued; lvl6 has no zs recipe. Single-source (visual + mean) for 2 of 8 levels; no code change this session.
+
+## Session 5974 (2026-10-23) — FIX_ZERO_SHADE OFF: lvl3+lvl4 fine (H1 so far)
+
+Folded g1_lvl3_zs and g1_lvl4_zs soaks (both rc=0, ~395 s, no crash/stall). Compared last framebuffer (fbd, 512 wide) vs the matching ctl runs: lvl3 shows textured cloud sky, terrain, fortress structure, craft and HUD; lvl4 shows textured sunset sky, canyon wall, X-wing and HUD. No black sky or untextured geometry (H2 not seen). Single-source (visual, one frame per level; ctl frames differ in camera phase). lvl5/7/8/9 zs soaks still queued. Rules out: FIX_ZERO_SHADE OFF regressing lvl1-4.
