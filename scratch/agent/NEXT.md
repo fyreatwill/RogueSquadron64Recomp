@@ -1,7 +1,5 @@
-# NEXT: fold g1_lvl6u pair ([objsnap-t] with heartbeat control)
+# NEXT: G3 render fidelity - start with hangar artifacts
 
-HYPOTHESIS-ID: g1-mission-coverage-sweep
+HYPOTHESIS-ID: g3-render-fidelity
 
-H-C (state-gated tick, see s5961 addendum): hb absent => lvl6 is not in runInMissionFrame state 1, so the lvl6t null was a never-called hook. If H-C, log the jump-table state index per change on lvl6 vs lvl5 (lvl5 = positive control, must show hb).
-
-Fold: `grep -h '\[objsnap-t\]' scratch/agent/m6/g1_lvl6{ctl,tele}/run.log`. FIRST check `hb ticks=` present in both arms (hook-ran control); if absent, tickMissionObjectives is not called on lvl6 flight - find the real per-frame caller. If present: tele-only ids => lvl6 (d) responds; none in both => H-B (forced hits do not reach the counter table). Then summarize (d) across lvls 1-9 and move to G3 render fidelity.
+G1(d) is folded for lvls 1-9 (s5962: lvl6 = no counter response, H-B). Take G3: read CURRENT-TRUTH's hangar-artifact list, pick the top artifact, write 2-3 competing causes (ucode DL decode vs RDP state vs rt64 backend), and design ONE capture (fbd dump + DL dump flag) re-analyzed offline. Do not do aim/steer work.

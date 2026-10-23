@@ -113,6 +113,8 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
+- **s5962 lvl6 (d):** heartbeat control passed (hb ticks=1 both arms, 600 in tele), objsnap shows no change in either arm => lvl6 forced hits move no counter in the snapshotted table (H-B, single-source). H-C refuted. Next: G3 render fidelity (hangar artifacts list).
+
 - s5956: lvl4 ctl5 (no TELE) also prints objsnap id=15 (8) + id=5 (4): id=15 cycling is baseline, lvl4 (d) NOT shown (supersedes s5949 / s5955 reading). lvl6 ctl has 0 objsnap; lvl6 tele + lvl7 pair queued.
 - **G1(d) lvl1 (s5946, single-source):** TELE fires (0 vs 10) and objective-writer calls rise (BooleanCount 13->22), but [objcount] id=13 max stays 4 in both arms. Use `tools/g1_d_compare.sh N` for lvl2-5.
 - **G1(d) lvl2/3 (s5948, single-source):** both pairs complete. TELE fires 0 vs 10 in each (control passes). lvl2: BooleanCount writes 4->17 (tele), but applyDatObjectiveTriggerEffect falls 114->42; lvl3: BooleanCount 0->8, applyDat 44->20. [objcount] val= line never printed in either arm (objcount_max empty). Reading: forced hits do reach the objective-count writer on lvl1/2/3 (H1 partial), but no end-gate/counter id is identified, so (d) is NOT yet PASS. Applied-effect count dropping under TELE is unexplained (tele ends runs earlier? or kills triggers) - needs per-run duration/phase gating. lvl5 pair still queued (soak_queue g1_lvl{4,5}_{ctl,tele}).
