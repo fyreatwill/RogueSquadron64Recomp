@@ -1,5 +1,5 @@
-# NEXT: G1c - name the writer of the uninitialised terrain struct under dd2
+# NEXT: G1c - fold gated knob arms s6042_dd15s/dd2s/dd3s
 HYPOTHESIS-ID: g1c-draw-distance
-H1: stream fn runs before terrain load completes (struct 0x80136DC0 still zero) because the knob changes timing/branch; H2: struct/window freed or overwritten by an OOB write from a scaled-window loop (poison 0x7F7F7F7F pattern); H3: knob scaling corrupts DEAC float consumer elsewhere (dd3 wild pointer site +9960).
-Discriminator (one build, one run): add a probe at stream-fn entry logging *(0x80136DC4), DB0..DBC, caller ra, phase, for dd1 (control, 1x semantic with knob=1.0000001) vs dd2 in the SAME recipe; plus lldb hw-watch on host addr of 0x80136DC4 in dd2 to catch the last writer. H1 => tbl==0 already at first entry in dd2 only; H2 => tbl nonzero at entry then zeroed (watch names writer).
-Then: if root cause fixed, levels 5/10 at 2x with G1b frame-time baseline.
+H1: dd2 crash was pre-terrain use of the knob/clamp (gate fixes it: dd2s reaches mission, keys.log `mission t=`). H2: gate insufficient, still nomission => stream fn itself runs pre-terrain with scale-independent garbage; look at what dd1 does differently (knob 1.0 skips clamp only). H3: in-mission deaths (dd2r died_in_verify, dd3 +9960 wild ptr) are a separate real window-overrun; take lldb backtrace.
+Discriminator: SOAK-RESULTS lines for s6042_*; m6/g1_lvl1g1cdd{15,2,3}s/keys.log: `mission t=` present vs nomission; then crash site if any. Positive control: dd1 arm keys show mission t~87.
+Then, if dd2s holds 240s: levels 5 and 10 at 2x, compare [g1b] frame time with the G1b baseline, distant-terrain fb fraction.

@@ -7,7 +7,7 @@ base = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledF
 OLD = "    // 0x800429C0: addu        $a1, $zero, $zero\n"
 NEW = r'''    { /* PATCH: s6037 ddclamp */ static int on6037 = -1;
       if (on6037 < 0) { const char* e = getenv("ROGUESQ_DRAW_DISTANCE"); on6037 = (e && *e && atof(e) != 1.0) ? 1 : 0; }
-      if (on6037) {
+      if (on6037 && MEM_W(4, (int64_t)(int32_t)0x80136DC0) != 0) {
         int64_t h = (int64_t)(int32_t)0x80132000, t = (int64_t)(int32_t)0x80136000;
         int32_t tw = (int32_t)MEM_HU(0xDF8, t), th = (int32_t)MEM_HU(0xDFA, t);
         int32_t x0 = (int32_t)MEM_W(0xDB0, h), x1 = (int32_t)MEM_W(0xDB4, h), z0 = (int32_t)MEM_W(0xDB8, h), z1 = (int32_t)MEM_W(0xDBC, h);
