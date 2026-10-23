@@ -1,3 +1,3 @@
-# NEXT: G1c - fold fog arms, then far-plane
+# NEXT: G1c - L-radius far-plane
 HYPOTHESIS-ID: g1c-draw-distance
-Fold s6029_g1c_fogmag vs s6029_g1c_fogret from SOAK-RESULTS.md (tri/task bins as in s6028, plus framebuffer capture if the recipe produced one: count magenta pixels in fogmag; control = retail has none). Magenta present => L-fade is live, find where fog start/end are set (RDP setFogRange / game fog params) and scale them. No magenta => fog not the limiter; go H-farplane: grep for far-clip constant near buildVisibleTerrainGridAroundCamera and the projection setup, then H-budget.
+Fog closed (s6030: no terrain tint). Competing: H-farplane (projection/far-clip constant culls distant tiles), H-radius (streamTerrainGridCellsByDistance rodata 0x3A4FC..0x3A50C already scaled in s6019-s6022: shrink-only), H-budget (grid buffer 0x80137A68 cap). Step 1: grep recomp output + docs for the projection far value (guOrtho/guPerspective call args, RDP viewport/zfar) near buildVisibleTerrainGridAroundCamera; add an env knob scaling far with a positive control (log line + visible cull change), arms x0.5 / x2 vs control, lvl1, measure tri/task and distant-terrain fraction.
