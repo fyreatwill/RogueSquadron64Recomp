@@ -160,3 +160,4 @@ audio inventory, `docs/F5-UCODE-REFERENCE.md` for the microcode contract,
 mission logic, and `scratch/agent/SOAK-RESULTS.md` for queued verdicts.
 
 - s5959: lvl8 (d) shown — tele forced hits step objsnap id=6 0->4->0, ctl silent. lvl9 pair queued.
+- s5960: lvl9 (d) ambiguous (baseline cycle both arms). Objsnap now also diffs per frame in tickMissionObjectives (`[objsnap-t]`); g1_lvl6t ctl+tele queued to settle lvl6 (d).

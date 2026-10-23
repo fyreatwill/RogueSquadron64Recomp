@@ -166277,3 +166277,9 @@ Rules out: lvl6 objsnap-visible objective response. Does not rule out an objecti
 
 ## Session 5959 (2026-10-22) — lvl8 tele folded: forced hits move objsnap id=6 (0->1->2->3->4->0); lvl9 pair queued
 g1_lvl8_ctl: rc=0 401s, 0 CRASH, zero objsnap lines. g1_lvl8_tele: rc=0 404s, 0 CRASH, 5 objsnap lines id=6 stepping 0->1->2->3->4->0. Same-run-class control (ctl arm silent) => G1 (d) shown for lvl8 (single-pair). Queued g1_lvl9_ctl/tele (LEVEL=9 clones of lvl8 recipe).
+
+## Session 5960 (2026-10-22) — lvl9 folded; objsnap now ticks per-frame in tickMissionObjectives (pivot change)
+
+- lvl9 (d): ctl and tele both show only the baseline id=1/3/5 0->1->0 cycle, 0 crash lines; tele has one extra id=3 0->1 (2 vs 1). Not a clear forced-hit response (single-source, one arm each).
+- Engineering change: tools/apply_s5960_objsnap_tick.py (mirrored in fixup_game_funcs_vendored.py) runs the 15-slot objective diff (0x80138060) on every call of tickMissionObjectives (funcs_42.c), logged `[objsnap-t]` under ROGUESQ_LOG_HUDBIT. Reason: s5953 only diffed inside get/set/increaseObjectiveCount, so lvl6 (tele showed no movement) could have been a writer that bypasses the accessors. Built clean.
+- Queued g1_lvl6t_ctl / g1_lvl6t_tele. Discriminator: tele-only `[objsnap-t]` ids => lvl6 counter moves via a direct writer; none in both (with TELE positive control firing) => lvl6 forced hits do not reach the counter table.
