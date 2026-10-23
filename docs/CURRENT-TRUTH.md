@@ -161,3 +161,4 @@ mission logic, and `scratch/agent/SOAK-RESULTS.md` for queued verdicts.
 
 - s5959: lvl8 (d) shown — tele forced hits step objsnap id=6 0->4->0, ctl silent. lvl9 pair queued.
 - s5960: lvl9 (d) ambiguous (baseline cycle both arms). Objsnap now also diffs per frame in tickMissionObjectives (`[objsnap-t]`); g1_lvl6t ctl+tele queued to settle lvl6 (d).
+- s5961: g1_lvl6t pair (0 crash/0 stall) printed ZERO `[objsnap-t]` lines in both arms, but no hook-ran control existed, so it is NOT evidence that lvl6 (d) is dead. Hook now prints `[objsnap-t] hb ticks=N` heartbeat; g1_lvl6u ctl+tele queued. Superseded: the s5960 plan that lvl6t "settles" lvl6 (d) - it was believable because the hook was in the binary, but presence of the string never proved the function is called per frame on lvl6. Next step #1 is to fold g1_lvl6u (heartbeat first).
