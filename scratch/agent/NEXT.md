@@ -1,3 +1,3 @@
-# NEXT: fold m6_lvl18_hold660 (G4), then close G4 0-18 and move to G3
+# NEXT: fold s6006_hangar_route_{a,b,c} (G3/G4)
 HYPOTHESIS-ID: g4-crash-stall-hunt
-s6005: lvl16/17 holds clean (fail-retry cycles, no crash/stall). Fold lvl18 from SOAK-RESULTS.md (grep mission_cycles in its log). If clean, G4 is closed 0-18: take G3 (hangar artifacts in CURRENT-TRUTH, or in-flight frame diff vs retail oracle pair g1_lvl0_oracle_pair). Any abort -> lldb/ASan backtrace, name the writer.
+G4 closed 0-18 (s6006). Fold the three hangar-route soaks from SOAK-RESULTS.md (grep crashlines/vi_stalls30s). Any abort/stall -> lldb or ASan backtrace, name the writer, root-cause. All clean -> record hangar-route failure rate (previously ~1/3-3/5 launches) and take G5 renaming sweep or parked hangar artifact with a new angle.
