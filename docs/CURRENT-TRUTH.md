@@ -117,6 +117,7 @@ autopilot win are owner playtest scope.
   ("buffering"), on busy scenes and on bare landscape alike. Never measured
   (no wall-clock in logs). Hypotheses and the single discriminating instrument
   are in `tools/agent/ITERATION.md` 3c G1b.
+- **s6013:** ftz0/ftz1 clean (opt-in stays off). G1b instrument ROGUESQ_G1B built; soaks s6013_g1b_lvl1/lvl10 queued (NEXT.md).
 - **s6012:** FP div census closed (no guard); opt-in ROGUESQ_FTZ added, soaks s6012_ftz1/0 queued (NEXT.md).
 - **s6000 G4:** lvl0 hold r1+r2 clean (662 s, 0 stall, 0 crash); r3 pending in the queue.
 - **s6001 G4:** lvl0 3/3 clean 660 s holds (closed). The pillar-stub Next items below (s5964/s5970/s5999) are STALE - s5971 fixed them (FIX_ZERO_SHADE off). Queued m6_lvl{11-14,16-18}_hold660; fold, then G1(c) framebuffer check lvl10-18. s6008: hangar route 3/3 clean (att=1); d/e/f queued.
