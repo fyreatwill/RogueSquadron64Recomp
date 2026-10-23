@@ -112,6 +112,7 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+- **s6033 G1c:** far-plane arms folded: far025 -45% tri/task (control OK), far2 flat (+0.3%), far4 partial -11%. ALL scalar levers (footprint, FOV, LOD, cell, igrid, fog, far) are shrink-only/flat => retail cap is not a tunable scalar. Next: H-data (is lvl1 terrain extent baked: dump grid cell dims/world extent from allocAndInitGridCellArray and compare to camera far distance) then L-budget (0x80137A68 buffer, rs_malloc 200*(n/10)). near4 arm still queued.
 - **s6031 G1c:** far-plane knob ROGUESQ_DD_FAR/DD_NEAR (tools/apply_s6031_far.py, guPerspective args in setupCameraMatrices 0x80016D10) built; arms s6031_g1c_farret/far025/far2/far4/near4 were staged but NOT queued until s6032 (copied from scratch/agent/s6031_arms/ to soak_queue/); fold results next. Then L-budget.
 - **s6023 G1c:** FOV 0x130C50 and LOD-table arms (fov15/fov025/lod2/lod025) queued; fold results next.
 - **s6027 G1c:** ROGUESQ_DD_CELLMUL (pre-alloc cell count at allocAndInitGridCellArray entry, tools/apply_s6027_cellmul.py) built; arms s6027_g1c_cell025 / cell2 queued, results pending in SOAK-RESULTS.md. Then fog arm.
