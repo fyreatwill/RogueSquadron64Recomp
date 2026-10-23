@@ -1,7 +1,7 @@
-# NEXT: G3 - texel-content pairing of port-only white-stub tris
+# NEXT: G3 - identify the DL/texture behind port-only white stub tris (port-side only)
 
 HYPOTHESIS-ID: g3-render-fidelity
 
-s5967: image_read_en is inert in rt64 (IM_RD unused) -> not the cause of port-only white pillar stubs.
-Work unit: hash the texel payload (LOADBLOCK/LOADTILE source bytes + tile fmt/size/dims) bound to each triangle in the s5964 retail RDP dump and in a port capture of the same Available Craft page (ROGUESQ_LOG_TRITEX exists in rt64_gbi_rdp.cpp:1151). Pair by content hash; list port-only tris (the ~40 with states 0x504240/0x550231/0xf0a4001) and their texture hash/dims/colour-combiner. Outcomes: stubs use a texture/cc absent in retail => H-dl (wrong DL/texture state upstream); same textures present in retail but not drawn at those screen positions => geometry/transform difference. Positive control: self-pairing port-vs-port must give 1.0.
+s5968: RDP command streams cannot be paired retail<->port by texture (descriptor overlap 0.05; producers differ, no texel bytes in dumps). Stop pairing offline.
+Work unit: in rt64 (rt64_gbi_rdp.cpp), under an env flag, tint triangles whose othermode-lo is 0x504240/0x550231/0xf0a4001 (port-only states) a flat colour and log per-draw: DL address (curData), texture addr/fmt/size, cc. Same Available Craft page as s5964. Hypotheses: H-dl (wrong texture/DL state upstream) vs H-geom (transform). Positive control: tint ALL tris must colour the whole frame. Outcome: the stub tris' source DL address, then trace in the ucode DL builder.
 Do not do aim/steer work.

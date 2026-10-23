@@ -166322,3 +166322,6 @@ Result: `IM_RD 0x40` is defined at lib/rt64/src/shared/rt64_f3d_defines.h:87 and
 Consequence: the remaining hypotheses for port-only white stubs are H-dl (port builds extra/different geometry or texture state) or content. The 0x40 delta is just retail's blender reading memory colour, which rt64 always emulates via framebuffer blend.
 No code changed, no run. ORIGIN: n/a (no mitigation added).
 Next: pair by texel content (hash TMEM/LOADBLOCK payloads per tri in both retail rdp dump and port) and list port-only tris' texture hashes.
+
+## Session 5968 (2026-10-22) — G3 address-free descriptor pairing: retail/port RDP streams do not pair
+Ran scratch/agent/s5968_descpair.py on the s5964 retail/port dumps: per-triangle key = (cc, othermode, SETTILE, SETTILESIZE, LOADBLOCK params, no addresses). Controls: retail N/N-1 tri overlap 0.95, port N/N-1 0.80. Retail vs port: 0.05 (key Jaccard 0.07). Retail uses uniform 1023-texel LOADBLOCKs; port uses variable 191-767-texel blocks — different producers, so the streams are structurally incomparable; texel bytes are not in either dump. Rules out: command-stream texture pairing as a route to the stub cause. Single-source. Next: port-side tint/log of the port-only-state tris to find their DL source (NEXT.md).
