@@ -14,3 +14,5 @@ need per-level NPC update-fn census ([fn41] tally) to retarget; H3 TELE fires bu
 for that level not reached by player hits (investigate that level's end-gate writer).
 Discriminator: tele-vs-ctl count of [objcount]/[objwr] lines plus TELE-line count (control).
 If soaks have not run yet, do offline work: write the (d) comparison script (tools or scratch) so the fold is one command.
+
+S5947: lvl2 tele-only, lvl3 ctl-only folded as incomplete; queued g1_lvl{2,4,5}_ctl. Next: run tools/g1_d_compare.sh 2..5 when pairs complete.

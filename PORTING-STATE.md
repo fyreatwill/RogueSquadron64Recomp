@@ -166216,3 +166216,6 @@ applyDatObjectiveTriggerEffect 21 -> 24, updateNpcEffectIntensity 43 -> 48; exec
 did not exceed the ctl value. Single-run, animating scene, cross-run counts: label SINGLE-SOURCE, not a (d) PASS yet.
 Rules out H2 for lvl1 (TELE fires). Open: whether id=13 is lvl1's kill counter at all (ctl also reaches 4 unforced).
 Next: fold lvl2-5 tele as they run; lvl3 has a ctl.
+
+## Session 5947 (2026-10-22) — G1(d) partial fold lvl2/3, queue missing ctl arms
+Ran tools/g1_d_compare.sh 2 and 3: lvl2 has only the tele arm (TELE=10 control fired; objwr datItemSetObjectiveBooleanCount=17), lvl3 has only the ctl arm (TELE=0 as expected, no BooleanCount writes). Neither is a comparable pair yet, so no verdict (single-source, no conclusion). Queued the missing arms: g1_lvl2_ctl, g1_lvl4_ctl, g1_lvl5_ctl (lvl3/4/5 tele already queued). Next: fold lvl2-5 pairs once they land.
