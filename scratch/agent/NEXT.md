@@ -1,5 +1,5 @@
-# NEXT: fold g1_lvl5_ctl3 (objsnap id=2 baseline?) then lvl4 tele rerun with objsnap
+# NEXT: fold g1_lvl4_tele5 (objsnap on lvl4), then queue lvl6 ctl+tele pair
 
 HYPOTHESIS-ID: g1-mission-coverage-sweep
 
-tele4: only [objsnap] id=2 0->1 (fail counter). Discriminator: ctl3 same build. grep objsnap scratch/agent/m6/g1_lvl5ctl/run.log. ctl shows id=2 change => H-null (forced hits move no counter); ctl shows none => H-fail. Then requeue g1_lvl4_tele to learn which id gave 2->3 there.
+lvl5 result: forced hits move only objsnap id=2 (fail counter). Fold: grep objsnap scratch/agent/m6/g1_lvl4tele/run.log (expect an id with 2->3 if the s5949 objcount move is real; none => s5949 reading was noise). Then queue g1_lvl6_ctl/tele (copy g1_lvl5 recipes with LEVEL=6; tele needs ROGUESQ_TELE_BOLT=1).
