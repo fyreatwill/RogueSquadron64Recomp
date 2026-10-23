@@ -158,3 +158,5 @@ Use `PORTING-STATE.md` only through bounded grep/sed windows. Use
 audio inventory, `docs/F5-UCODE-REFERENCE.md` for the microcode contract,
 `docs/M6-OBJECTIVE-COUNTER-WRITERS.md` and `docs/M6-PHASE-MACHINE.md` for
 mission logic, and `scratch/agent/SOAK-RESULTS.md` for queued verdicts.
+
+- s5959: lvl8 (d) shown — tele forced hits step objsnap id=6 0->4->0, ctl silent. lvl9 pair queued.

@@ -166274,3 +166274,6 @@ Rules out: lvl6 objsnap-visible objective response. Does not rule out an objecti
 - lvl7 tele (10 TELE hits, 0 crash, rc=0, 390 s): objsnap id=1 0<->4 cycle (30 lines vs ctl 2, baseline cycle, more lines only from longer activity) plus id=2 0->2->3->0 three transitions that the ctl run never shows. Same counter that moved under forced hits at lvl5 (s5955-ish) -> G1 (d) for lvl7 passes at single-run level (ctl/tele pair, one arm each).
 - Rules out: lvl7 objective path dead under forced hits. lvl6 remains the only level with no objsnap response.
 - Queued g1_lvl8_ctl / g1_lvl8_tele (copies of lvl7 recipes, LEVEL=8). Next: fold them, then lvl9.
+
+## Session 5959 (2026-10-22) — lvl8 tele folded: forced hits move objsnap id=6 (0->1->2->3->4->0); lvl9 pair queued
+g1_lvl8_ctl: rc=0 401s, 0 CRASH, zero objsnap lines. g1_lvl8_tele: rc=0 404s, 0 CRASH, 5 objsnap lines id=6 stepping 0->1->2->3->4->0. Same-run-class control (ctl arm silent) => G1 (d) shown for lvl8 (single-pair). Queued g1_lvl9_ctl/tele (LEVEL=9 clones of lvl8 recipe).
