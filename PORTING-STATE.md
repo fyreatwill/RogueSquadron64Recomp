@@ -166506,3 +166506,6 @@ Next: fold d/e/f; if clean (6/6) mark the hangar route stable in CURRENT-TRUTH a
 HYPOTHESIS-ID: g4-crash-stall-hunt
 Folded s6008_hangar_route_d and _e: both att=1, mission_t=80-81s, hold=601s, alive_at_end=1, vi_stalls30s=0, godrefills=20, crashlines=0, rc=0 (harness verdict, single-source). With a/b/c the hangar route is 5/5 first-attempt launches clean post FIX_ZERO_SHADE-off, vs the prior 1/3-3/5 flake rate. f still queued; enqueued s6009_hangar_route_g/h/i (clones of f) to reach n=9.
 Rules out: a crash/stall in 5 of 5 runs; no backtrace warranted. No code change, no ORIGIN needed. G2 is closed by owner ear (CURRENT-TRUTH), so the NEXT.md "G2 PCM compare" is discarded; ladder goes to G3 hangar native artifacts if 9/9.
+
+## Session 6010 (2026-10-23) — hangar-route soaks f/g folded (clean, 7/7); h/i still queued
+Folded from SOAK-RESULTS.md: s6008_hangar_route_f (att=1, mission_t=81s, hold=602s, vi_stalls30s=0, crashlines=0) and s6009_hangar_route_g (att=1, mission_t=82s, hold=603s, vi_stalls30s=0, crashlines=0). Running total a-g: 7/7 first-attempt launches clean, 0 crash, 0 VI stall (single-source harness). The ~1/3-3/5 flake note is NOT yet downgraded: h and i have not run (still in soak_queue). Nothing overturned. Next: fold h/i; if 9/9 downgrade the note, then G3 hangar rim-band writer.
