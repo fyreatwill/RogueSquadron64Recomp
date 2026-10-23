@@ -166389,3 +166389,7 @@ Folded SOAK-RESULTS: m6_lvl1_hold660_r1 and r2 both reached mission at t=86 s an
 
 ## Session 5981 (2026-10-23) — M6 660s holds: lvl1 r3 and lvl3 clean; lvl2/4/5/7/8/9 holds queued
 Folded SOAK-RESULTS: m6_lvl1_hold660_r3 (hold=662s, alive_at_end=1, vi_stalls30s=0, crashlines=0) and m6_lvl3_hold660 (hold=662s, alive_at_end=1, vi_stalls30s=0, crashlines=0). With r1/r2 that is 3/3 clean on lvl1 and 1/1 on lvl3. (The log "crash" grep count of 1 per log is the recipe's own summary line, crashlines=0 is the verdict.) Queued the same recipe for lvl2,4,5,7,8,9 (lvl6 already queued) as scratch/agent/soak_queue/m6_lvlN_hold660.sh. No new crash datum; this iteration's change is the queued recipes only.
+
+## Session 5982 (2026-10-23) — M6 660s holds lvl2/lvl4 clean; plume lldb title soaks queued
+
+Folded verdicts: m6_lvl2_hold660 (664 s, 0 VI stall, 0 crash lines, alive_at_end=1), m6_lvl3 (662 s, clean), m6_lvl4_hold660 (665 s, clean), lvl1 r3 (662 s, clean). All single-source harness verdicts (crashlines/vi_stalls30s counters). Running total: lvl1 3/3, lvl2, lvl3, lvl4 clean at 660 s; lvl5-9 holds still queued for the loop. No new crash/stall datum, so no backtrace to take. Queued two lldb-wrapped 3-boot title plume soaks (s5982_a/b, via tools/agent/gen_plume_lldb_soak.py) for the si_addr=0x58 secondary; expected: 6 more boots, a SIGSEGV would print a real backtrace in the log. Null here is weak evidence (plume already believed dissolved by s5597 fix, 28 clean boots).
