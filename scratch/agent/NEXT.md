@@ -1,5 +1,7 @@
-# NEXT: fold g1_lvl4_tele5 (objsnap on lvl4), then queue lvl6 ctl+tele pair
+# NEXT: fold g1_lvl4_ctl5, g1_lvl6_ctl, g1_lvl6_tele
 
 HYPOTHESIS-ID: g1-mission-coverage-sweep
 
-lvl5 result: forced hits move only objsnap id=2 (fail counter). Fold: grep objsnap scratch/agent/m6/g1_lvl4tele/run.log (expect an id with 2->3 if the s5949 objcount move is real; none => s5949 reading was noise). Then queue g1_lvl6_ctl/tele (copy g1_lvl5 recipes with LEVEL=6; tele needs ROGUESQ_TELE_BOLT=1).
+Fold: `grep objsnap scratch/agent/m6/g1_lvl{4ctl,6ctl,6tele}/run.log | awk '{print $2}' | sort | uniq -c`.
+lvl4: if ctl5 also shows id=15 0-3 cycling => baseline, forced hits move nothing on lvl4 (H-null). If ctl has none => id=15 is forced-hit driven.
+lvl6: tele TELE>0 and ctl TELE=0 are required controls; look for any id besides 15. Then queue lvl7 pair.

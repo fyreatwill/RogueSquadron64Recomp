@@ -166252,3 +166252,7 @@ NEXT DISCRIMINATOR: g1_lvl5_ctl3 (same recipe, no TELE_BOLT, same build) queued:
 
 ## Session 5954 (2026-10-22) — lvl5 ctl3 folded: forced hits move only objsnap id=2
 Folded g1_lvl5_ctl3 (rc=0, mission_t~80s, hold 303s, 0 stalls/crashes). Compared against tele4 (same build, same recipe except ROGUESQ_TELE_BOLT=1): ctl run.log has 0 [objsnap] lines; tele run.log has exactly one, `id=2 0->1`. Positive control: tele log shows [sph] TELE lines, ctl shows none. Reading (single-source): on lvl5 forced hits move only fail-counter id=2; no objective-completion counter moves, so G1(d) is not PASS for lvl5 (matches objcount_max 0). Queued g1_lvl4_tele5 (objsnap armed) to learn which id produced the lvl4 2->3 move.
+
+## Session 5955 (2026-10-22) — lvl4 tele5 folded: objsnap shows only id=15 cycling 0-3; same-build ctl queued
+Folded g1_lvl4_tele5 (rc=0, mission_t=86s, hold 304s, 0 crash, 0 VI stall; TELE=10 positive control passes). [objsnap] printed 15 lines, ALL id=15 cycling 0->1->2->3->0 (ra=0): a rolling 0-3 counter, not an objective count; no id=2 move on lvl4 (unlike lvl5). The old lvl4 ctl predates objsnap (0 lines is not a control), so id=15 may be baseline. Single-source. Queued g1_lvl4_ctl5 (same build, no TELE) plus lvl6 ctl/tele pair.
+rules out: s5949 "objcount rises on lvl4" is not reproduced as an objective-slot move. ORIGIN: no code change; queue scripts only.
