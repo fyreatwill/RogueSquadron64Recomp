@@ -118,6 +118,7 @@ autopilot win are owner playtest scope.
   (no wall-clock in logs). Hypotheses and the single discriminating instrument
   are in `tools/agent/ITERATION.md` 3c G1b.
 - **s6014 (G1b measured):** 217/748 s of lvl1 and ~26% of hangar/menu seconds have gfx send_dl at 130-210 ms/task (vs ~9) with cpu~wall, so the game runs ~5 gfx tasks/s while VI stays 60. Host load/QoS/log volume do NOT co-vary. Open: RT64/RSP work vs harness instrumentation (8 s cadence = FB dump). Quiet-vs-loud arms queued (s6014_g1b_*); then `sample` the game during a slow second.
+- **s6015 (arm fold):** the s6014 "quiet" arm FAILED its positive control (151 vs 171 KB/s; volume is ungated [m4-y8000]/[s3290-stall]/[s3294-stall]/[s3295-disp], not the FBH/TRI/DRAWN/OBJBOOL/HUDBIT knobs). So "log volume does not co-vary" in the line above is only "those five knobs do not matter" (slow fraction loud 17.6% vs quiet 23.2%, single-source); H-log remains untested but a-priori weak (~150 KB/s vs 130-210 ms stalls). Next: soak s6015_g1b_sample (`sample` of the game on slow seconds) - read scratch/agent/g1b_samples/s6015/.
 - **s6013:** ftz0/ftz1 clean (opt-in stays off). G1b instrument ROGUESQ_G1B built; soaks s6013_g1b_lvl1/lvl10 queued (NEXT.md).
 - **s6012:** FP div census closed (no guard); opt-in ROGUESQ_FTZ added, soaks s6012_ftz1/0 queued (NEXT.md).
 - **s6000 G4:** lvl0 hold r1+r2 clean (662 s, 0 stall, 0 crash); r3 pending in the queue.
