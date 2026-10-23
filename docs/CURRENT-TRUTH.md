@@ -128,7 +128,7 @@ autopilot win are owner playtest scope.
   1-~3 and the endgame-mission soak play; the window closing at the end of a
   soak hold is the harness SIGKILL, not a crash.
 
-0ab. (s5957) (d) status: lvl6 tele (tele=9) shows NO objsnap movement (not shown); lvl7 ctl baseline = id=1 0<->4 cycle; lvl7 tele pending.
+0ab. (s5958) (d) status: lvl7 tele (10 hits, 0 crash) moves objsnap id=2 0->2->3->0, absent in ctl (single-source, one arm each); same counter as lvl5. lvl6 tele (tele=9) shows NO objsnap movement (not shown; widen snapshot via level-table objective slot). lvl8 ctl+tele queued (soak_queue/g1_lvl8_*), then lvl9.
 0aa. (s5945) 10/15 unlock lever CONFIRMED (flight 104/135 s, 300 s hold clean) => (a)+(b) done for all levels 1-18; (c) done for 18/18 from existing fbd dumps (docs/g1_flight_contact_sheet.png, in-port only, no retail oracle). Now (d): fold g1_lvl{1..5}_tele vs g1_lvl{1,3}_ctl ([sph] TELE lines = positive control; compare [objcount]/[objwr]); extend to 6-18 if TELE fires.
 0a. (s5944) Landed ROGUESQ_FORCE_PLANET_UNLOCK (byte 0x8013A663). Fold g1_lvl10_pu / g1_lvl15_pu: flight in ~400 s confirms the unlock-bit gate (then 10/15 route is instant); still viewer-stuck refutes it.
 0. (s5942) Levels 10/15 viewer likely NOT stuck: lvl10 arms the G2 auto-advance at ~790 s (lvl5 exits via G1 button at once); soaks capped at 880 s killed it mid-exit. g1_lvl10long/15long (2100 s cap) queued; fold their verdicts. If they reach flight, mark 10/15 (a) and note the 13-min delay is retail-timer or a missing planet unlock bit (FORCE_UNLOCK writes only 0x8013B2F; G1 needs byte 0x8013A663 bit asset+1) -- forcing that bit would make it exit instantly.
