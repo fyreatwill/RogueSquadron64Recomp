@@ -1,9 +1,7 @@
-# NEXT: G3 - get a truly page-aligned retail/port RDP frame pair
+# NEXT: G3 - content-keyed pairing or in-run image_read_en toggle
 
 HYPOTHESIS-ID: g3-render-fidelity
 
-Done s5965: last-stable-frame census differs structurally (retail 1115 tris / port 425, disjoint tri bands, port-only states 0x504240/0x550231/0xf0a4001). Frame pairing unproven.
-Competing: H-page (different scene state), H-rdp-imgread, H-dl.
-Work unit: pair by content, not position. For the retail rdp.log pick the fullsync whose framebuffer (angrylion r12.png) matches; then locate in BOTH streams the SETTIMG/SETTILE texture address+size sets (texture-image census per frame) and choose the frame pair with the largest overlap. Then diff only the tris that sample shared textures. Positive control: self-diff of two consecutive port frames must be ~0.
-Alternative cheap test: in rt64 toggle image_read_en forcing on 0x552038 tris in-run (toggle every N VIs, phase-gated) and see whether white stubs change.
+s5966: SETTIMG address pairing impossible (0.00 overlap; heap layout differs; port self-control 1.0).
+Work unit (cheapest discriminator first): in rt64, force image_read_en off on tris with othermode-lo 0x552038 (phase-gated on VI, toggle within one run every N VIs, positive control = force ALL tris off must visibly change frame) and see whether the white pillar stubs vanish. Stubs vanish => H-rdp-imgread; unchanged => H-dl / content difference, then hash texels (TMEM loads) for content pairing.
 Do not do aim/steer work.
