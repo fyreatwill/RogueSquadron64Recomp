@@ -3217,7 +3217,7 @@ static volatile int g_poll_running;
 /* --fb-dump WIDTH:DELAY_S:START:LEN:PATH (repeatable via --vi-poll): first time the
  * polled VI width register equals WIDTH, wait DELAY_S then write LEN bytes of
  * physical RDRAM at START (big-endian, raw) to PATH. */
-#define MAX_FB_DUMPS 4
+#define MAX_FB_DUMPS 16
 static struct { unsigned width; double delay; unsigned start, len; char path[512]; double armed_at; int done; } g_fbd[MAX_FB_DUMPS];
 static int g_nfbd;
 static void fb_dump_poll(double t, unsigned width)
