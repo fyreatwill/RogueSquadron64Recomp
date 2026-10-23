@@ -1,5 +1,6 @@
-# NEXT: lvl1 ground darkness - identify the ground timg and check TLUT/texels vs rendered pixels
+# NEXT: lvl1 ground darkness - decode TLUT/texels from s5991 RDRAM dump
 HYPOTHESIS-ID: g3-lvl1-mesh-ground
-s5990: raw RDP shows bright vertex shade for ord=7 tris (H2' dead). Remaining: H3' wrong TLUT/palette/texels; H1 legit; H4 renderer-side darkening.
-Step: pick top ord-7 timg groups (python3 -I tools/rdpbin_top_groups.py /tmp/s5989_all.txt 7 20; regenerate with rdpbin_tri_colors.py on scratch/agent/s5989/lvl1_rdp.bin). Extend the analyzer to track tlut load (op 0x30/0x35 loadtlut) addresses and dump TLUT entries for the fmt=18 (CI) timgs; decode a few texels and compare mean to the observed ground framebuffer colour.
-Outcomes: decoded texel colours dark => H3'/H1 (asset or TLUT load); bright => H4 (renderer tint/blend, inspect rt64 combine path).
+Read new line in SOAK-RESULTS.md (s5991_lvl1_rdpbin_rdram); dumps in scratch/agent/s5991/rd/rdram_*.bin (word-swapped ^3 per 4 bytes; phys addr = file offset).
+Write tools/rdram_decode_tlut.py: dump TLUT RGBA5551 entries at 0x563980 and 0x563260 (256 entries or 16), and CI8 texels of timg 0x469cb0, 0x4ad7a0; compute mean colour of texels->palette.
+Outcomes: dark mean => H3'/H1 (asset/TLUT contents wrong; find TLUT writer); bright (~140-220) => H4 renderer-side darkening, inspect rt64 combine/blend path.
+Positive control: decode a known-bright group (timg 0x4e1950 fmt=10 IA/RGBA) and match its mean to the analyzer's shade.
