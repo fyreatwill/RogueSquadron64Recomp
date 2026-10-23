@@ -166575,3 +166575,12 @@ Rules out: nothing yet (no run). Next: fold the three verdicts, bin tricount per
 - Positive control passed in the same run (posAB scaled arm falls 31% vs its own retail arm); B-alone is the same-run null, hence A (0x9DEAC) carries the effect. Single-source (tri counts); mapping of A to a "radius" still needs the rise test.
 - Replaced the moot r2B recipe with s6021_g1c_r2A and r3A (0x9DEAC at 2x/3x). Pass: scaled tri clearly > retail = L-radius lever; flat = L-budget/other.
 - ORIGIN: no mitigation machinery added; only soak recipes.
+
+## Session 6022 (2026-10-23) — G1c: raising 0x9DEAC 2x/3x does NOT raise drawn triangles; footprint scalar is a shrink-only lever
+
+Folded s6021_g1c_r2A / r3A (rc=0, 393 s / 253 s, lvl1, in-run alt retail/scaled every 120 VIs, tasks with tri>=50, per-task mean tri):
+- r2A (0x9DEAC x2): retail 604.4 (787 tasks) vs scaled 628.4 (721) = +4.0%; total tri 475653 vs 453090 (-4.7%).
+- r3A (x3): retail 519.4 (722) vs scaled 556.5 (567) = +7.1%; total tri 375040 vs 315527 (-15.9%).
+- Same awk on posAB control (x0.25, s6020): 641.0 -> 443.0 = -31%. So the instrument discriminates in the shrink direction in the same awk; growth is <=7% and non-monotonic in total.
+Verdict: L-radius via 0x9DEAC is NOT the extend lever (pass bar was >+10%). The scalar can only cull, i.e. the retail footprint is already at a cap set elsewhere. Candidate caps: fixed-size visible grid (rs_malloc(200*(n/10)) at 0x800480BC, table 0x80137A68, counts 0x80137A58/60/70 per M3-S3640 audit) = L-budget; or the camera far plane / FOV scale 0x80130C50. Fog (L-fade) and LOD (0x9ECB0, L-lod) arms still unrun. Single-source (tri counts); no fb distant-fraction measured yet.
+ORIGIN: n/a (no mitigation landed; diagnostic fold only).
