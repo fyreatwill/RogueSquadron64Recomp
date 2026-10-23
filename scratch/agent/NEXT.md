@@ -1,9 +1,8 @@
-# NEXT: G1 (c) framebuffer capture + (d) forced-hit objective response, starting with level 1
+# NEXT: fold g1_lvl10_pu / g1_lvl15_pu, then G1 (c)+(d) for level 1
 
 HYPOTHESIS-ID: g1-mission-coverage-sweep
 
-Levels 1-17 and 18a have (a)+(b) (s5943); fold g1_lvl18b from SOAK-RESULTS first.
-Work unit: using the s5705-s5720 forced-level route and the s5841 TELE-style forced-hit lever,
-capture a framebuffer in flight for one level (terrain/craft/HUD present?) and verify the
-objective counter moves after forced hits. Positive control: the same capture at hangar/title
-must differ; counter must be unchanged with the lever off. Do not do aim/steer work.
+Fold the two _pu verdicts from SOAK-RESULTS (ROGUESQ_FORCE_PLANET_UNLOCK=0xFF). Pass = flight + 300 s hold,
+0 crash/stall within ~400 s => unlock-bit gate confirmed; use the lever for 10/15 from now on.
+Fail (viewer persists) => gate refuted; read runModelViewerLoop G2 timer instead.
+Then: framebuffer capture in flight for level 1 + forced-hit objective response (no aim work).

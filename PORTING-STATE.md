@@ -166197,3 +166197,6 @@ the planet-intro viewer exits and flight is reached; the earlier nomission verdi
 crash. Levels 1-17 and 18a now have (a)+(b); g1_lvl18b is still running/queued. Two lines of
 evidence: verdict lines in SOAK-RESULTS plus mission origin 0x00690400-family cycling in
 run.log. Remaining G1: (c) framebuffer + (d) forced-hit objective response for all levels.
+
+## Session 5944 (2026-10-22) — ROGUESQ_FORCE_PLANET_UNLOCK: runtime lever for the level 10/15 planet-viewer wait
+Pivot-guard change (build artifact moved). Added to the s5704 lvsel hook in tools/fixup_game_funcs_vendored.py (and in-place in the live RecompiledFuncs/funcs_34.c, since the fixup is marker-guarded) an opt-in env `ROGUESQ_FORCE_PLANET_UNLOCK=<byte>` that writes byte 0x8013A663 (isUnlockBitSet(asset+1) gate for the viewer's G1 A/START exit, s5941 static trace). Default unset = no behaviour change. Build OK. ORIGIN: the byte is the retail persistent planet-unlock bitfield; the lever only mimics a save with those planets seen, it mitigates nothing. Queued g1_lvl10_pu / g1_lvl15_pu (600 s cap): expected flight (0x690400-class origin) in ~400 s if the s5941 trace is right; if still stuck at the viewer, the G1 gate hypothesis is refuted. Not yet run (loop folds results).
