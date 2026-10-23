@@ -1,4 +1,3 @@
-# NEXT: fold lvl9 hold660, plume lldb soaks, and g1_lvl0_oracle_pair
+# NEXT: loop title boots under lldb until the plume SIGSEGV (si_addr=0x58) recurs
 HYPOTHESIS-ID: g4-mission-soaks
-Read SOAK-RESULTS.md tail. crashlines>0 / vi_stalls30s>0 / alive_at_end=0 => lldb backtrace, name writer, root-cause.
-G3: scratch/agent/m6/g1_lvl0orc/fbd/*.ppm vs docs/g3_retail_lvl1_flight_oracle.png (same level, Tatooine). Compare terrain/sky/craft/HUD; any port-only defect is a datum. If clean, G3 in-flight closed; then loop title boots under lldb for the si_addr=0x58 plume SIGSEGV.
+Levels 0-9 hold clean (s5985). Queue a soak script in scratch/agent/soak_queue/ that boots to title N times (~1/7 rate, so >=14 boots) under lldb batch mode, SIGKILLs each, and on a crash saves `bt all` + registers. If it recurs: name the writer of the faulting pointer, root-cause. Positive control: lldb must attach and report exit status on a deliberately killed run. After that: G1 (d) forced-hit objective counters per level (s5841 TELE lever).
