@@ -1,5 +1,5 @@
-# NEXT: G1c - fold s6019_g1c_pos2 and s6018_g1c_r2 (tag g1_lvl1g1cpos2 / g1cr2b)
+# NEXT: G1c - fold s6020_g1c_posB / posAB / r2B (tags g1_lvl1g1cposB / posAB / r2B)
 HYPOTHESIS-ID: g1c-draw-distance
-Levers now scale rodata floats 0x3A4FC..0x3A50C (streamTerrainGridCellsByDistance). Check run.log `[g1c] rodata`/`scaled addrs` dump first (values must be sane distances, not 0.5).
-Bin: `grep -a '^\[g1c\] state=\|^\[tricnt\]' run.log | awk` (see s6019 entry) by state. pos2 MUST give scaled tri < retail tri (control). If not, bisect addresses one at a time (ROGUESQ_DD_ADDRS=0x3A500 etc) in a single-run alt arm; also consider 0x80042B50 compares c.lt/c.le with $f2 from 0x3A4FC.
-If control passes and r2 raises tris: LOD arm control next (ROGUESQ_DD_LOD=0.25), then 1.5/3x and ROGUESQ_DRAW_DISTANCE wrapper. fb-dump pairs for distant terrain fraction.
+Levers: RAM floats 0x9DEAC/0x9DEB0 (physical) feeding the terrain footprint polygon. Check run.log `[g1c] ram 0x9DE98..` dump first (values must be sane, nonzero distance-like).
+Bin: grep -a '^\[g1c\] state=\|^\[tricnt\]' run.log | awk by state, ONLY tasks with tri>=50 (menu/boot tasks swamp the mean). Control: posB/posAB scaled tri must be clearly < retail (>10%).
+Pass -> r2B tri rise = L-radius; flat = L-budget; then fb-dump distant-terrain fraction, 1.5x/3x, ROGUESQ_DRAW_DISTANCE wrapper. Fail -> try 0x80130C50 FOV scale / sinf args at 0x800438D4, or the LOD table 0x9ECB0 control.
