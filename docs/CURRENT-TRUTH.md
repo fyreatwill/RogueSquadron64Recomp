@@ -112,6 +112,7 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+- **G1(d) lvl1 (s5946, single-source):** TELE fires (0 vs 10) and objective-writer calls rise (BooleanCount 13->22), but [objcount] id=13 max stays 4 in both arms. Use `tools/g1_d_compare.sh N` for lvl2-5.
 - **Owner listening report 2026-10-22 (G2):** after the s5668 compander fix and
   s5672 AI cadence fix, the fuzz is "way better than it used to be". Dialogue
   then confirmed by a live listen the same day: **dialogue is clean and there
