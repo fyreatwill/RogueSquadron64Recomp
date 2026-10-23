@@ -93,6 +93,25 @@ When choosing the work unit, this order overrides Next-steps ordering:
      host vs busy host. Whichever term co-varies with slow frames selects the cause;
      fix the root cause (e.g. thread QoS, async pipeline compile, cheaper logging),
      not the symptom.
+   - G1c **Extended draw distance (owner request 2026-10-23).** Take after G1b, and reuse
+     its per-frame timing instrument: every gain here costs frame time. Owner sees terrain
+     resolve gradually out of the haze in flight and wants more of the landscape drawn than
+     the N64 could. RT64 can only draw what the game submits, so the limit lives in game
+     code. First find WHICH limit applies, one discriminator per lever, measured as distant
+     terrain pixel fraction in a fixed-camera framebuffer (level 1 is the positive control):
+     L-fade (a distance fade/haze baked into vertex shade or a combiner blend toward sky
+     colour: note PORTING-STATE "Fog contributes nothing" was an early pre-flight scene,
+     re-test with ROGUESQ_FORCE_FOG in flight), L-radius (the terrain patch/tile
+     visibility radius or far-clip constant in the terrain submit path), L-lod (the
+     detail index at 0x80137CE4 that selects per-template LOD slots and
+     selectMeshLodAndSubmitForRender / setObjectDetailLevel), L-budget (display-list,
+     vertex or streamed-tile buffer caps that would overflow once more is drawn).
+     Then expose the winner as an opt-in setting (env ROGUESQ_DRAW_DISTANCE=<multiplier>,
+     default 1.0 = retail), raise it in steps (1.5x, 2x, 3x) and record per step: distant
+     terrain visible, pop-in, frame time, crashes over a 300 s hold. Done when 2x holds
+     300 s on levels 1, 5 and 10 with 0 crashes and no frame-time regression beyond the
+     G1b baseline; ask the owner to judge the look. Never change the default away from
+     retail without the owner's say.
    - G2 **Audio fidelity: CLOSED** (owner live listen 2026-10-22: dialogue clean, no
      fuzz; agrees with s5669-s5674 PCM evidence). Reopen only on a new owner report.
    - G3 **Render fidelity.** Hangar artifacts (CURRENT-TRUTH list) and in-flight frame

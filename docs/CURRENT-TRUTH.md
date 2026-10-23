@@ -112,6 +112,10 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+- **Owner request 2026-10-23 (queued as G1c, after G1b):** extend draw distance so
+  more landscape renders than retail did. Find the limiting lever (distance fade,
+  terrain radius, LOD index 0x80137CE4, buffer caps) and expose it as opt-in
+  ROGUESQ_DRAW_DISTANCE, default retail. Full spec: ITERATION.md item 3c G1c.
 - **Owner report 2026-10-23 (queued as G1b, after the G1 level sweep):** ~70% of
   missions play flawlessly; the rest intermittently slow down game-wide
   ("buffering"), on busy scenes and on bare landscape alike. Never measured
