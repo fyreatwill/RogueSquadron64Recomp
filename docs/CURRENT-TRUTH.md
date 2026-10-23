@@ -147,6 +147,7 @@ autopilot win are owner playtest scope.
   1-~3 and the endgame-mission soak play; the window closing at the end of a
   soak hold is the harness SIGKILL, not a crash.
 
+0ac. (s5994) G1(d) lvl7 id=2 0>2>3>0 and lvl8 id=6 0>1>2>3>4>0 move under TELE only (ctl absent); reset to 0, no end gate seen, target unknown => PARTIAL, single-source. Tool: tools/objsnap_summary.py.
 0ab. (s5958) (d) status: lvl7 tele (10 hits, 0 crash) moves objsnap id=2 0->2->3->0, absent in ctl (single-source, one arm each); same counter as lvl5. lvl6 tele (tele=9) shows NO objsnap movement (not shown; widen snapshot via level-table objective slot). lvl8 ctl+tele queued (soak_queue/g1_lvl8_*), then lvl9.
 0aa. (s5945) 10/15 unlock lever CONFIRMED (flight 104/135 s, 300 s hold clean) => (a)+(b) done for all levels 1-18; (c) done for 18/18 from existing fbd dumps (docs/g1_flight_contact_sheet.png, in-port only, no retail oracle). Now (d): fold g1_lvl{1..5}_tele vs g1_lvl{1,3}_ctl ([sph] TELE lines = positive control; compare [objcount]/[objwr]); extend to 6-18 if TELE fires.
 0a. (s5944) Landed ROGUESQ_FORCE_PLANET_UNLOCK (byte 0x8013A663). Fold g1_lvl10_pu / g1_lvl15_pu: flight in ~400 s confirms the unlock-bit gate (then 10/15 route is instant); still viewer-stuck refutes it.
