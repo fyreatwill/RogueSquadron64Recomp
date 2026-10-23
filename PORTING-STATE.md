@@ -166470,3 +166470,7 @@ Folded SOAK-RESULTS: m6_lvl0_hold660_r1 and r2 both rc=0, hold=662 s, alive_at_e
 ## Session 6001 (2026-10-23) — lvl0 hold r3 clean; stale pillar-stub next-steps retired; lvl11-18 660 s holds queued
 HYPOTHESIS-ID: g4-crash-stall-hunt
 m6_lvl0_hold660_r3 rc=0 (746 s): lvl0 now 3/3 clean 660 s holds, G4 for lvl0 closed. Found the Next-steps items "G3 hangar white pillar stubs (s5964/s5970/s5999)" are stale: s5971 identified the writer (our ROGUESQ_FIX_ZERO_SHADE mitigation), default flipped OFF, verified on lvl0-9 (s5973-s5976). Queued m6_lvl{11,12,13,14,16,17,18}_hold660 (same common runner, HOLD_S=660); lvl10/15 excluded (~790 s viewer wait). No code change; ORIGIN: n/a.
+
+## Session 6002 (2026-10-23) — folded lvl11/lvl12 660 s holds (G4): clean
+HYPOTHESIS-ID: g4-crash-stall-hunt
+m6_lvl11_hold660 rc=0 (752 s) and m6_lvl12_hold660 rc=0 (759 s): lvl12 line `hold=665s alive_at_end=1 vi_stalls30s=0 crashlines=0` (positive-control arm is the common runner's own godrefills=4 / alive_at_end=1 fields). G1(c) for 11/12 was already covered by the s5945 fbd contact sheet, so no new capture. lvl13/14/16/17/18 holds still queued. No code change; ORIGIN: n/a.
