@@ -175,4 +175,4 @@ mission logic, and `scratch/agent/SOAK-RESULTS.md` for queued verdicts.
 
 - **s5963 G3 retail pixel oracle:** angrylion software RDP as m64p plugin gives real retail framebuffers (docs/G3-RETAIL-PIXEL-ORACLE.md, recipe scratch/agent/s5963_angry_fb.sh). Port hangar white pillar stubs are absent in retail (single-source). Next: same-page port/retail frame pair + DL/RDP-state diff for the stub draws.
 - s5973: lvl1+lvl2 _zs soaks fold clean (sky and terrain textured, 0% black; single-source visual). lvl3,4,5,7,8,9 _zs still queued — fold them next (see NEXT.md); if any shows black sky, re-enable the fix narrowly for that DL. No conclusion overturned.
-- s5971: FIX_ZERO_SHADE was the writer of white hangar pillar caps/shadows; default flipped OFF (verified hangar + lvl6; s5973-s5974 lvl1-4 sky/terrain fine; lvl5,7,8,9 zs soaks pending).
+- s5971: FIX_ZERO_SHADE was the writer of white hangar pillar caps/shadows; default flipped OFF (verified hangar + lvl6; s5973-s5974 lvl1-4 sky/terrain fine; lvl5+lvl7 fine at s5975; lvl8,9 zs soaks pending).
