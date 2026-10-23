@@ -182,4 +182,4 @@ mission logic, and `scratch/agent/SOAK-RESULTS.md` for queued verdicts.
 - s5971: FIX_ZERO_SHADE was the writer of white hangar pillar caps/shadows; default flipped OFF (verified hangar + lvl6; s5973-s5974 lvl1-4 sky/terrain fine; lvl5+lvl7 fine at s5975; lvl8+lvl9 fine at s5976 — all 9 levels verified, flip CLOSED; two lines: frame review + hangar/lvl6 earlier).
 
 - (s5981) M6 660s holds: lvl1 3/3 and lvl3 1/1 clean (0 crash, 0 VI stall). lvl2,4,5,6,7,8,9 hold660 recipes queued; fold verdicts next, then title-boot plume SIGSEGV (si_addr=0x58) loop under lldb.
-- (s5982) M6 660s holds lvl1-4 clean (single-source harness verdicts); lvl5-9 holds and two lldb plume title soaks queued.
+- (s5983) M6 660s holds lvl1-6 clean (single-source harness verdicts); lvl7-9 holds and two lldb plume title soaks still queued.
