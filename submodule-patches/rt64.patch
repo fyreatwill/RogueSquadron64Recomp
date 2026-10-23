@@ -172,7 +172,7 @@ index a0d4a6a..1b5315c 100644
              // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
              //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..96ea7f4 100644
+index 6255872..2f9b435 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
 @@ -4,12 +4,39 @@
@@ -473,7 +473,7 @@ index 6255872..96ea7f4 100644
                      colorWorkBuffer[workBufferIndex + 0] = v1Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 1] = v2Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 2] = v3Color * (1/255.0f);
-@@ -477,6 +716,424 @@ namespace RT64 {
+@@ -477,6 +716,426 @@ namespace RT64 {
                      colorWorkBuffer[workBufferIndex + 2] = interop::float4(0.0f, 0.0f, 0.0f, 0.0f);
                  }
  
@@ -848,7 +848,9 @@ index 6255872..96ea7f4 100644
 +                {
 +                    static const bool s_fix = []{
 +                        const char *e = std::getenv("ROGUESQ_FIX_ZERO_SHADE");
-+                        if (!e) return true; // default ON
++                        // s5971: default OFF. It painted retail-dark hangar shadows/pillar
++                        // caps white; mission-6 sky is fine without it.
++                        if (!e) return false;
 +                        return e[0] && e[0] != '0';
 +                    }();
 +                    if (s_fix && textured) {
@@ -898,7 +900,7 @@ index 6255872..96ea7f4 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -537,6 +1194,66 @@ namespace RT64 {
+@@ -537,6 +1196,66 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
@@ -965,7 +967,7 @@ index 6255872..96ea7f4 100644
                      curData += triangleTexWords;
                  }
                  // No texture coefficients
-@@ -584,6 +1301,68 @@ namespace RT64 {
+@@ -584,6 +1303,68 @@ namespace RT64 {
                  break;
              }
  

@@ -1,7 +1,5 @@
-# NEXT: G3 - which texture do the white pillar-cap tris sample?
+# NEXT: G1 coverage (c)+(d) / G3 follow-up
 
 HYPOTHESIS-ID: g3-render-fidelity
 
-s5970: pillar stubs on Available Craft are textured tris (cap DLs 0x3007936f0/937a0/93678/93b70/93c20, L=0x552038). Not untextured shade-only (mode 3 negative; mode 4 rect control turned both pillars green).
-Work unit: extend TINT_OM mode 4 to log per-tri the bound texture identity (tmem/SETTIMG addr, fmt/size, width, texel hash of the first 64 bytes from RDRAM) and the cc/combiner and vertex colour for cap tris vs body tris. Hypotheses: H-tex (cap texture mis-loaded/wrong fmt: e.g. 1x1 white or TMEM overwrite), H-cc (combiner yields white regardless of texel), H-design (retail also white, differs only by darkening). Discriminator: force texel sample to flat magenta in cap tris (mode 5, same rect): if still white => cc/shade path; if magenta => texture path, then dump texel bytes. Recipe: copy scratch/agent/s5970_tint4.sh. Compare retail r12.png pillar caps (dark).
-Do not do aim/steer work.
+s5971: white pillar caps/shadows were ROGUESQ_FIX_ZERO_SHADE (default now OFF). Next: check other levels (soak g1 recipes with default build) for black-sky regressions from the flip: grep sky frames in scratch/agent/m6/*/fbd of lvl 1-9; if any level goes black, re-enable the fix narrowly (only for that DL/phase). Then continue G1 (c) framebuffer review. No aim/steer work.
