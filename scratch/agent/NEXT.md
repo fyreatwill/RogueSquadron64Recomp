@@ -1,7 +1,7 @@
-# NEXT: G3 - content-keyed pairing or in-run image_read_en toggle
+# NEXT: G3 - texel-content pairing of port-only white-stub tris
 
 HYPOTHESIS-ID: g3-render-fidelity
 
-s5966: SETTIMG address pairing impossible (0.00 overlap; heap layout differs; port self-control 1.0).
-Work unit (cheapest discriminator first): in rt64, force image_read_en off on tris with othermode-lo 0x552038 (phase-gated on VI, toggle within one run every N VIs, positive control = force ALL tris off must visibly change frame) and see whether the white pillar stubs vanish. Stubs vanish => H-rdp-imgread; unchanged => H-dl / content difference, then hash texels (TMEM loads) for content pairing.
+s5967: image_read_en is inert in rt64 (IM_RD unused) -> not the cause of port-only white pillar stubs.
+Work unit: hash the texel payload (LOADBLOCK/LOADTILE source bytes + tile fmt/size/dims) bound to each triangle in the s5964 retail RDP dump and in a port capture of the same Available Craft page (ROGUESQ_LOG_TRITEX exists in rt64_gbi_rdp.cpp:1151). Pair by content hash; list port-only tris (the ~40 with states 0x504240/0x550231/0xf0a4001) and their texture hash/dims/colour-combiner. Outcomes: stubs use a texture/cc absent in retail => H-dl (wrong DL/texture state upstream); same textures present in retail but not drawn at those screen positions => geometry/transform difference. Positive control: self-pairing port-vs-port must give 1.0.
 Do not do aim/steer work.
