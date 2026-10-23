@@ -166463,3 +166463,6 @@ Rules out: a gross in-flight render defect at lvl0. G3 in-flight stays closed at
 
 ## Session 5999 (2026-10-23) — queued lvl0 660 s holds (G4)
 Enqueued scratch/agent/soak_queue/m6_lvl0_hold660_r{1,2,3}.sh (copy of the lvl1-9 hold recipe with LEVEL=0, HOLD_S=660). No game run this iteration; the loop runs them between iterations. Expected: 0 crash / 0 VI stall = lvl0 clean; any abort -> lldb backtrace next iteration.
+
+## Session 6000 (2026-10-23) — folded lvl0 660 s hold r1/r2 (G4): clean
+Folded SOAK-RESULTS: m6_lvl0_hold660_r1 and r2 both rc=0, hold=662 s, alive_at_end=1, vi_stalls30s=0, crashlines=0 (harness verdict, single-source; r1+r2 are independent runs of one recipe). r3 was still queued at session start (soak_queue/m6_lvl0_hold660_r3.sh), no verdict yet. No game run or code change this iteration. Rules out: a lvl0 crash/stall in two 660 s holds. lvl0 G4 closes on r3 clean.
