@@ -166655,3 +166655,14 @@ Next: patch DEAC via env ROGUESQ_DRAW_DISTANCE (fixup script), read [gridlog] fr
 ## Session 6036 (2026-10-23) — folded s6034 gridlog; landed ROGUESQ_DRAW_DISTANCE knob (apply_s6036_dd.py)
 Gridlog (scratch/agent/m6/g1_lvl1g1cgrid{ret,posab,cell2}/run.log, 268-274 lines each; soak logs themselves hold none, the m6 run.log does): the terrain window is camera/state dependent, not fixed: ret/cell2 arms w=16..23 d=16..34 req up to 646 against 32x32/64x64 terrain; posab arm w=4..5 d=5..8 req 20-40. kept=1 (list walk returns one node, so "kept" is not a visible-count). Window therefore tracks the footprint polygon, consistent with s6035 (polygon unclamped, DEAC=scale knob).
 DEAC (0x8009DEAC) is NOT constant: swc1 writers at 0x800448B0, 0x80045540, 0x8004562C, 0x80045658, 0x8004567C, so scaling memory would be overwritten; the knob scales the read at 0x80043918 in buildVisibleTerrainGridAroundCamera instead. ROGUESQ_DRAW_DISTANCE=<m> (clamp 0.25..4, unset=1.0 retail, logs "[dd]" once). Built; arms dd1/dd2/dd3 queued (lvl1, gridlog on). Untested until soaks fold; window w>64 would overflow the 64-wide bitmaps, so check w in the dd3 gridlog. ORIGIN: not a mitigation; an opt-in scale on a read.
+
+## Session 6037 (2026-10-23) — dd2 crash root-caused (unclamped footprint window); apply_s6037_ddclamp.py landed
+
+Folded s6036_dd1/dd2. dd1 (m=1): [gridlog] matches retail (lvl1 w=36 d=30 of 64x64, no crash). dd2 (m=2): all 5 attempts SIGBUS at
+getGridCellValueAt+1860 (guest pc 0x800547bc, si_addr 0x38000007c). Last [gridlog] before the crash: `x0=3 w=33 ... terr=32x32 gx[32..32]` =>
+window right edge 36 > terrain width 32 (early 32x32 scene; also the window did scale ~2x: w 16 -> 32, so knob H-A holds there).
+ORIGIN: writer of the window is the footprint bbox at 0x80042944..0x800429BC (min / ceil-max of the polygon, NO clamp to terrain dims);
+retail polygon stays inside the terrain, a 2x polygon does not, so the OOB grid read is a legitimate consequence of the knob, not a
+latent retail bug. Fix (knob-only, retail untouched when env unset/1): tools/apply_s6037_ddclamp.py clamps DB0..DBC to [0,tw]/[0,th]
+(u16 0x80136DF8/DFA) and updates $a3/$a2 (min x/z). Wired into fixup_game_funcs_vendored.py; live-patched funcs_9.c; build OK.
+Queued s6037_dd15c / dd2c / dd3c (dd3 file renamed from s6036_dd3). Not yet run: no claim that the clamp fixes the crash.
