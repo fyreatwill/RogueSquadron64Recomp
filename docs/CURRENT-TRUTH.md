@@ -113,6 +113,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
+- **s5978 G3 in-flight (single-source, visual):** unpaused retail lvl1 flight frame obtained (scratch/agent/s5978_retail_flight.sh: stop presses at 76 s, flight starts 77.4 s, fb-dump DELAY counts from FIRST 512-wide VI ~38 s not run start; frame docs/g3_retail_lvl1_flight_oracle.png, X-wing/reticle/radar/HUD/terrain/sky all render). Port flight frames (docs/g1_flight_contact_sheet.png) show the same element classes; no port-only defect visible at eyeball level. Not pixel-diffed (different camera/scene state). Next: same-camera comparison needs a port frame at lvl1 start; else G3 in-flight closed at coarse level, move to G4 soaks.
 - **s5977 G3 in-flight oracle:** retail oracle reaches Tatooine mission 1 with alternating start/A presses (scratch/agent/s5977_retail_flight.sh; frame docs/g3_retail_lvl1_paused_oracle.png, paused). Supersedes 'oracle reaches boot/attract only'. Next: unpaused retail frame, then diff vs port lvl1 flight frame (NEXT.md). G2 stale PCM-compare NEXT discarded (closed by owner ear).
 
 - **s5970 G3 (single-source):** Available Craft white pillar stubs are TEXTURED tris (cap DLs 0x3007936f0.. L=0x552038), not untextured shade-only (TINT_OM mode 3 negative; mode 4 rect control turned both pillars green). Next: log/force texture identity for cap tris (NEXT.md).
