@@ -166491,3 +166491,8 @@ Folded SOAK-RESULTS: m6_lvl13_hold660 (mission_t=97s, hold 662s, alive_at_end=1,
 
 ## Session 6006 (2026-10-23) — G4 lvl18 hold folded (G4 0-18 closed); hangar-route soaks queued
 m6_lvl18_hold660: rc=0, hold 662 s, vi_stalls30s=0, crashlines=0, mission_cycles=0 (alive at end). With s5985/s5999/s6002-s6005, every level 0-18 has a >=660 s keyed hold with 0 crash / 0 VI stall: G4 closed for 0-18. Remaining G3 hangar artifacts are the parked native ones (rim band, holo spikes, etc.). Queued s6006_hangar_route_{a,b,c} (600 s holds, s5548 recipe) to measure the post-s5971 hangar-route failure rate and capture any abort. No conclusions overturned.
+
+## Session 6007 (2026-10-23) — hangar-route soaks a/b folded (clean); c still queued
+Ran: folded s6006_hangar_route_a and _b from SOAK-RESULTS.md (m6_god_common.sh, hangar route, HOLD=600, LATE=95). Both: att=1 (reached mission first launch), mission_t=81s, hold 600/601 s, alive_at_end=1, vi_stalls30s=0, godrefills=20, crashlines=0, rc=0. No abort, no stall, so no backtrace was warranted.
+Shows: 2/2 hangar-route launches succeeded on the first attempt with 0 crash/0 stall over ~10 min each, post-FIX_ZERO_SHADE-off baseline. Prior launch-failure rate was ~1/3-3/5; n=2 is too small to say it improved (single-source, small n). Run c is still in soak_queue; fold it next.
+Rules out: nothing new; no crash/stall datum to root-cause. No code change this session.

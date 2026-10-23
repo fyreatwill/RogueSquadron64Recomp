@@ -114,6 +114,7 @@ autopilot win are owner playtest scope.
 ## Next steps (single monotonic backlog)
 - **s6000 G4:** lvl0 hold r1+r2 clean (662 s, 0 stall, 0 crash); r3 pending in the queue.
 - **s6001 G4:** lvl0 3/3 clean 660 s holds (closed). The pillar-stub Next items below (s5964/s5970/s5999) are STALE - s5971 fixed them (FIX_ZERO_SHADE off). Queued m6_lvl{11-14,16-18}_hold660; fold, then G1(c) framebuffer check lvl10-18.
+- **s6007:** hangar-route soaks a/b folded: both att=1, 600 s hold, 0 crash/0 VI stall (n=2, not enough to revise the ~1/3-3/5 flake rate). Run c still queued.
 - **s6006 G4 CLOSED 0-18:** lvl18 662 s hold clean (0 stall/0 crash); all levels 0-18 held. Queued s6006_hangar_route_{a,b,c}; fold from SOAK-RESULTS.md (any abort => lldb/ASan backtrace + writer), then G5/parked hangar items.
 - **s6005 G4/G1(c):** lvl16 (662 s) and lvl17 (662 s) holds: 0 stall, 0 crash, but both end in MISSION FAILED/GAME OVER (blind autopilot dies) and the harness cycles fail->results->select->relaunch (3x and 9x), all clean. lvl17/18 frames show terrain+craft+HUD (docs/g1_lvl16_18_contact.png; single-source). Next: fold lvl18 hold, then G3.
 - **s6004 G4/G1(c):** lvl10 (665 s) and lvl15 (661 s) holds clean (0 stall/0 crash). G1(c) eyeball check lvl10-15 passes (docs/g1_lvl10_15_contact.png: terrain, craft, HUD; single-source). Next: fold lvl16/17/18 holds, then G1(c) contact sheet for 16-18; G4 closes for 0-18 if clean.
