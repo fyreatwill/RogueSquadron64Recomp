@@ -1,5 +1,5 @@
-# NEXT: G1 coverage (c)+(d) / G3 follow-up
+# NEXT: fold the _zs sky-regression soaks
 
 HYPOTHESIS-ID: g3-render-fidelity
 
-s5971: white pillar caps/shadows were ROGUESQ_FIX_ZERO_SHADE (default now OFF). Next: check other levels (soak g1 recipes with default build) for black-sky regressions from the flip: grep sky frames in scratch/agent/m6/*/fbd of lvl 1-9; if any level goes black, re-enable the fix narrowly (only for that DL/phase). Then continue G1 (c) framebuffer review. No aim/steer work.
+Queued s5972: g1_lvl{1,2,3,4,5,7,8,9}_zs (default build, FIX_ZERO_SHADE OFF). When SOAK-RESULTS shows them, compare late-hold fbd frames in scratch/agent/m6/g1_lvlNzs/fbd against baseline m6/g1_lvlNctl/fbd (fix ON). H1: sky identical/fine -> flip safe, close. H2: a level has black sky/untextured terrain -> re-enable the fix narrowly for that DL (name the DL, not a global flag). Then continue G1 (c) review. No aim/steer work.

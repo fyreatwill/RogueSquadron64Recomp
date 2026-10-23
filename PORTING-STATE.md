@@ -166347,3 +166347,7 @@ ORIGIN: n/a (diagnostic env-gated, no mitigation).
 HYPOTHESIS-ID: g3-render-fidelity
 ORIGIN: the white geometry was written by our own rt64 mitigation `ROGUESQ_FIX_ZERO_SHADE` (rt64_gbi_rdp.cpp), which replaces near-black shade on T0*SHADE tris with white. The retail-legit value is dark (shadow decals, pillar caps); the fix is the writer.
 Boring-first check of s5970's open question. Same-recipe hangar runs (s5971_fix0 vs fix1, phase-gated frames): fix=1 shows 11 [fix-zero-shade] hits and a white X-wing floor shadow + white pillar blocks; fix=0 shows 0 hits and dark shadows. Positive control: fix=1 reproduces the white. Mission 6 (g1_lvl6fz0 vs g1_lvl6ctl): ctl had 24 hits, fz0 0 hits, sky/terrain still textured (no black sky). Changed default to OFF in lib/rt64 (patch exported). Default-build hangar re-run (s5971_def): 0 hits, dark shadows. Single mission checked for sky; other levels unverified.
+
+## Session 5972 (2026-10-22) — queued sky-regression soaks after FIX_ZERO_SHADE default OFF
+
+Verified lib/rt64 rt64_gbi_rdp.cpp:1089 now defaults the flag OFF and build/RogueSquadron64Recomp (22:43) post-dates the flip. Queued 8 control soaks (g1_lvl{1,2,3,4,5,7,8,9}_zs; lvl6 already verified in s5971) that reuse g1_level_coverage_common.zsh under the new default. Pre-flip fbd dumps (m6/g1_lvlNctl) are the fix-ON baseline for comparison. No result yet; the loop runs them between iterations. ORIGIN: n/a (no mitigation added).
