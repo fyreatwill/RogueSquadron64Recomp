@@ -166269,3 +166269,8 @@ Ran: folded g1_lvl6tele, g1_lvl6ctl, g1_lvl7ctl from scratch/agent/m6/*/run.log 
 - lvl7 ctl (TELE=0): 2 `[objsnap]` lines, id=1 0->4->0 — baseline cycle, so it cannot count as an objective signal in the lvl7 tele run unless it differs.
 - lvl7 tele (queued, scratch/agent/soak_queue/g1_lvl7_tele.sh) has not run yet.
 Rules out: lvl6 objsnap-visible objective response. Does not rule out an objective counter outside the objsnap array.
+
+## Session 5958 (2026-10-22) — lvl7 tele folded: forced hits move objsnap id=2 (0->2->3->0); lvl8 pair queued
+- lvl7 tele (10 TELE hits, 0 crash, rc=0, 390 s): objsnap id=1 0<->4 cycle (30 lines vs ctl 2, baseline cycle, more lines only from longer activity) plus id=2 0->2->3->0 three transitions that the ctl run never shows. Same counter that moved under forced hits at lvl5 (s5955-ish) -> G1 (d) for lvl7 passes at single-run level (ctl/tele pair, one arm each).
+- Rules out: lvl7 objective path dead under forced hits. lvl6 remains the only level with no objsnap response.
+- Queued g1_lvl8_ctl / g1_lvl8_tele (copies of lvl7 recipes, LEVEL=8). Next: fold them, then lvl9.
