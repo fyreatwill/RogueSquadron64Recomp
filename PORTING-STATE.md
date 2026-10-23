@@ -166673,3 +166673,10 @@ ORIGIN: v1==0 is not yet attributed to a writer; the probe exists to name whethe
 
 ## Session 6039 (2026-10-23) — fixed cellprobe address; dd2 NULL descriptor table is t0+4, not 0x80130004
 s6038 cellprobe showed tbl=0, but the probe read 0x80130004; the code at 0x80042D7C loads `lw v1,4(t0)` with t0=0x80136DC0, so the probe printed the wrong word. cell=0x8000 idx=0, s2 inside RDRAM (0x80250356). Probe now prints MEM_W(4,t0) and t0[0..4]; rebuilt; queued s6039_dd2q. Outcomes: t0+4==0 => find writer of 0x80136DC4 (struct initialised per terrain; scaled window may reach cells before table load); t0+4 valid but idx*30 overruns => index math. ORIGIN: diagnostic only, no mitigation added.
+
+## Session 6040 (2026-10-23) — dd2 crash: cellprobe shows struct 0x80136DC0+4 == 0; window math treated counts as maxima; clamp rewritten
+- s6039 dd2q cellprobe (fixed addr): v1=0, t0=0x80136DC0 (a1 = static global, NOT *(0x80130004) as CURRENT-TRUTH s6038 said), tbl=*(t0+4)=0, cell=0x8000 idx=0, t0w=00000000 00000000 8026D2A0 8026F2B0 414CCCCD. So the crash is a null table pointer in that static struct, not an idx overrun.
+- Datum: gridlog in dd2q shows 1 line with req=420 > cap=400 (32x32 terrain, w=28 d=15) - pool-cap overrun, first in the run. Mechanism to the null not proven (single-source, hypothesis).
+- Found s6037 ddclamp bug: DB4/DBC are COUNTS (retail gridlog x0=20 w=37, z0=-1 d=38), clamp treated them as maxima. Rewrote in tools/apply_s6037_ddclamp.py (and live funcs_9.c): clamp [x0,x0+w) to terrain, bound w*d <= pool cap u16 0x80130C4C. Rebuilt; arms s6040_dd2r, s6040_dd3r queued.
+- ORIGIN: clamp is a bound on our own scaled window (retail never exceeds); writer of 0x80136DC4==0 still unnamed - if dd2r still dies with tbl==0, lldb watch on 0x80136DC4 is next.
+- Not run: dd15p NaN in vec3Cross still open.

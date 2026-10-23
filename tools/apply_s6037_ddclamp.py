@@ -11,8 +11,11 @@ NEW = r'''    { /* PATCH: s6037 ddclamp */ static int on6037 = -1;
         int64_t h = (int64_t)(int32_t)0x80132000, t = (int64_t)(int32_t)0x80136000;
         int32_t tw = (int32_t)MEM_HU(0xDF8, t), th = (int32_t)MEM_HU(0xDFA, t);
         int32_t x0 = (int32_t)MEM_W(0xDB0, h), x1 = (int32_t)MEM_W(0xDB4, h), z0 = (int32_t)MEM_W(0xDB8, h), z1 = (int32_t)MEM_W(0xDBC, h);
-        if (x0 < 0) x0 = 0; if (z0 < 0) z0 = 0; if (x1 > tw) x1 = tw; if (z1 > th) z1 = th;
-        if (x1 < x0) x1 = x0; if (z1 < z0) z1 = z0;
+        /* s6040: DB4/DBC are COUNTS (gridlog x0=20 w=37), not maxima; clamp [x0,x0+w) to terrain, then bound w*d by pool cap u16 0x80130C4C */
+        { int32_t cap = (int32_t)MEM_HU(0xC4C, (int64_t)(int32_t)0x80130000);
+          int32_t xl = x0 < 0 ? 0 : x0, xh = x0 + x1; if (xh > tw) xh = tw; x1 = xh > xl ? xh - xl : 0; x0 = xl;
+          int32_t zl = z0 < 0 ? 0 : z0, zh = z0 + z1; if (zh > th) zh = th; z1 = zh > zl ? zh - zl : 0; z0 = zl;
+          while (cap > 0 && x1 * z1 > cap && z1 > 1) z1--; while (cap > 0 && x1 * z1 > cap && x1 > 1) x1--; }
         MEM_W(0xDB0, h) = (uint32_t)x0; MEM_W(0xDB4, h) = (uint32_t)x1; MEM_W(0xDB8, h) = (uint32_t)z0; MEM_W(0xDBC, h) = (uint32_t)z1;
         ctx->r7 = (int64_t)x0; ctx->r6 = (int64_t)z0;
       } }
