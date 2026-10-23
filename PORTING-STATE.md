@@ -166569,3 +166569,9 @@ Rules out: nothing yet (no run). Next: fold the three verdicts, bin tricount per
 - Change: events.cpp g1c dump now prints 0x9DE98..0x9DEC0; built; export.sh run. Queued s6020_g1c_posB (0.25x 0x9DEB0), posAB (0.25x both), r2B (2x 0x9DEB0).
 - ORIGIN: not mitigation; diagnostic lever only.
 - DISCRIMINATION (s6020): REFUTES "rodata floats 0x3A4FC..0x3A50C are the terrain radius" (pos2 +3% instead of cut). SELECTS 0x8009DEAC/0x8009DEB0 as the footprint-distance candidates; next: posB/posAB must cut flight tri count (control), then r2B decides L-radius vs L-budget.
+
+## Session 6021 (2026-10-23) — G1c: 0x8009DEAC is the live terrain-footprint scalar (0x9DEB0 inert); r2A/r3A queued
+- Folded soaks s6020_g1c_posB / posAB (lvl1, rc=0, 0 crash, 0 VI stall). State-binned mean tri over tasks with tri>=50 (retail vs scaled-0.25, alternating every 120 VIs within ONE run): posB (0x9DEB0 only) 581 -> 621 (no drop, inert); posAB (0x9DEAC+0x9DEB0) 641 -> 443 (-31%); earlier pos2 518 -> 535 (null). RAM dump 0x9DE98..: 49 30.25 16 6.25 0 14.5 16 ... so 0x9DEAC=14.5, 0x9DEB0=16.
+- Positive control passed in the same run (posAB scaled arm falls 31% vs its own retail arm); B-alone is the same-run null, hence A (0x9DEAC) carries the effect. Single-source (tri counts); mapping of A to a "radius" still needs the rise test.
+- Replaced the moot r2B recipe with s6021_g1c_r2A and r3A (0x9DEAC at 2x/3x). Pass: scaled tri clearly > retail = L-radius lever; flat = L-budget/other.
+- ORIGIN: no mitigation machinery added; only soak recipes.

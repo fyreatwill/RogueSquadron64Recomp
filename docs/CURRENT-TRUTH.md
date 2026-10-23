@@ -112,6 +112,7 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+- **s6021 G1c:** 0x8009DEAC (14.5) is the live footprint scalar: posAB (A+B at 0.25x) tri 641->443 (-31%) vs own retail arm, B alone (0x9DEB0) 581->621 inert. r2A/r3A queued; rise = L-radius. Single-source (tri counts).
 - **s6020 G1c:** rodata floats 0x3A4FC..0x3A50C are pooled constants (0.5/512/1), pos2 control failed; real footprint scalars are RAM floats 0x8009DEAC/0x8009DEB0 (buildVisibleTerrainGridAroundCamera). Arms s6020_g1c_posB/posAB/r2B queued; read `[g1c] state=` bins with tri>=50 filter.
 - **s6019 G1c:** pos control FAILED (0x8003A538 is a 0.5 grid-snap, not radius; s6018 arms void). Lever retargeted to rodata floats 0x3A4FC..0x3A50C (read by streamTerrainGridCellsByDistance 0x80042B50), ROGUESQ_DD_ADDRS overrides. Arms s6019_g1c_pos2 + s6018_g1c_r2 queued. LOD (0x8009ECB0) control still unrun. Fog (L-fade) untouched.
 - **Owner request 2026-10-23 (queued as G1c, after G1b):** extend draw distance so
