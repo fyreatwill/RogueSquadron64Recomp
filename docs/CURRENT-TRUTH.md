@@ -190,3 +190,5 @@ mission logic, and `scratch/agent/SOAK-RESULTS.md` for queued verdicts.
 - (s5983) M6 660s holds lvl1-6 clean (single-source harness verdicts); lvl7-9 holds and two lldb plume title soaks still queued.
 
 - (s5984) M6 660s holds lvl7/lvl8 clean (single-source). lvl9 hold + plume lldb soaks queued. G3: post-fix port lvl1 frames in docs/g3_port_lvl1_flight_postfix.png are a different level from the retail oracle frame (Tatooine=lvl0); g1_lvl0_oracle_pair queued for the same-level comparison.
+
+- s5990 (single-source): lvl1 raw RDP capture shows ground/flight tris have BRIGHT vertex shade (mean 140-240, constant prim 4fd926b9) — H2' dark-shade ruled out; remaining H3' (TLUT/texel) / H1 / renderer-side. Tools: tools/rdpbin_tri_colors.py, tools/rdpbin_top_groups.py.
