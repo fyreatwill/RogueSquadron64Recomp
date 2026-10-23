@@ -7,9 +7,9 @@ OLD = "    // 0x80042D88: lb          $v0, 0x3($v1)\n"
 NEW = r'''    { /* PATCH: s6038 cellprobe */ static int n6038 = 0; uint32_t v1b = (uint32_t)ctx->r3;
       if ((v1b < 0x80000000u || v1b >= 0x80800000u) && n6038 < 8) { n6038++;
         int64_t h = (int64_t)(int32_t)0x80132000, t = (int64_t)(int32_t)0x80136000;
-        fprintf(stderr, "[cellprobe] v1=0x%08X t0=0x%08X tbl=0x%08X s2=0x%08X cell=0x%04X idx=%u win x0=%u w=%u z0=%u d=%u terr=%ux%u a0=%d\n", v1b, (uint32_t)ctx->r8,
-          (uint32_t)MEM_W(4, (int64_t)(int32_t)0x80130000), (uint32_t)ctx->r18, (unsigned)MEM_HU(0, ctx->r18), (unsigned)(MEM_HU(0, ctx->r18) & 0x1FFF),
-          (uint32_t)MEM_W(0xDB0, h), (uint32_t)MEM_W(0xDB4, h), (uint32_t)MEM_W(0xDB8, h), (uint32_t)MEM_W(0xDBC, h), (unsigned)MEM_HU(0xDF8, t), (unsigned)MEM_HU(0xDFA, t), (int)ctx->r4);
+        fprintf(stderr, "[cellprobe] v1=0x%08X t0=0x%08X tbl=0x%08X s2=0x%08X cell=0x%04X idx=%u win x0=%u w=%u z0=%u d=%u terr=%ux%u a0=%d t0w=%08X %08X %08X %08X %08X\n", v1b, (uint32_t)ctx->r8,
+          (uint32_t)MEM_W(4, ctx->r8), (uint32_t)ctx->r18, (unsigned)MEM_HU(0, ctx->r18), (unsigned)(MEM_HU(0, ctx->r18) & 0x1FFF),
+          (uint32_t)MEM_W(0xDB0, h), (uint32_t)MEM_W(0xDB4, h), (uint32_t)MEM_W(0xDB8, h), (uint32_t)MEM_W(0xDBC, h), (unsigned)MEM_HU(0xDF8, t), (unsigned)MEM_HU(0xDFA, t), (int)ctx->r4, (uint32_t)MEM_W(0, ctx->r8), (uint32_t)MEM_W(4, ctx->r8), (uint32_t)MEM_W(8, ctx->r8), (uint32_t)MEM_W(12, ctx->r8), (uint32_t)MEM_W(16, ctx->r8));
       } }
 '''
 def apply9(text):

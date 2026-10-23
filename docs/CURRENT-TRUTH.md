@@ -249,3 +249,5 @@ Gfx thread hot spot found by `sample` (s6015): ~80% of gfx samples in O(n^2) g_s
 - **s6017 (G1b CLOSED):** s6016 hash-index fix: lvl1 slow seconds 132/748 (17.6%) -> 0/748, mean sd_wall 31.4 -> 10.3 ms, tasks/s 25.5 -> 30.2, 0 crash/stall. Cause was our own O(n^2) scan in rsp_dpc_submit. Reuse the `[g1b]` instrument (ROGUESQ_G1B=1) as the frame-time baseline for G1c. Next: G1c.
 
 - s6036 G1c: ROGUESQ_DRAW_DISTANCE knob landed (scales DEAC read at 0x80043918; DEAC has runtime writers). Soaks s6036_dd1/2/3 queued; fold window w (must stay <=64) and distant-terrain fraction. Gridlog output lives in scratch/agent/m6/*/run.log.
+
+- s6039: cellprobe address bug fixed (table ptr is t0+4, t0=0x80136DC0, not 0x80130004); dd2 crash = NULL cell descriptor table at that struct, corrected probe queued (s6039_dd2q).
