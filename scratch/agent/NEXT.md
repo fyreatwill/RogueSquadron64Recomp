@@ -1,5 +1,6 @@
-# NEXT: G1c - fold gated knob arms s6042_dd15s/dd2s/dd3s
+# NEXT: G1c - fold tblwatch arms s6043_dd1w (retail control) / s6043_dd2w
 HYPOTHESIS-ID: g1c-draw-distance
-H1: dd2 crash was pre-terrain use of the knob/clamp (gate fixes it: dd2s reaches mission, keys.log `mission t=`). H2: gate insufficient, still nomission => stream fn itself runs pre-terrain with scale-independent garbage; look at what dd1 does differently (knob 1.0 skips clamp only). H3: in-mission deaths (dd2r died_in_verify, dd3 +9960 wild ptr) are a separate real window-overrun; take lldb backtrace.
-Discriminator: SOAK-RESULTS lines for s6042_*; m6/g1_lvl1g1cdd{15,2,3}s/keys.log: `mission t=` present vs nomission; then crash site if any. Positive control: dd1 arm keys show mission t~87.
-Then, if dd2s holds 240s: levels 5 and 10 at 2x, compare [g1b] frame time with the G1b baseline, distant-terrain fb fraction.
+s6042 result: gate fixed H1 (dd15s/dd2s now reach mission, t=84-87). Both then die IN-mission (~t=98 s) with the player in a death/respawn churn (s5897 lives=1216) and terrain table 0x80136DC4==0, window x0=0x7F7F0017 (poison high half, low half 23 = real x0), a0=-128 d=128. dd2s: SIGBUS deterministic (same si_addr in 2 attempts) in streamTerrainGridCellsByDistance+10880; dd15s: abort (signal 6, no [CRASH] bt context read yet).
+H1: tbl nonzero->0 transition also happens in retail dd1 and is survived there (then dd2 differs via stale window words). H2: transition is dd-specific (clamp/knob left state). H3: transition is retail-benign only because function is not called with tbl==0 in dd1.
+Discriminator: grep '\[tblwatch\]' in m6/g1_lvl1g1cdd1w/run.log vs cdd2w; compare window words at the transition and whether crash follows. Positive control: first tblwatch line (prev FFFFFFFF -> initial) must print in both arms.
+Next: if retail also zeroes tbl, name the writer (watch 0x80136DC4 write PC) and guard the stream fn on tbl==0 as retail-equivalent; then dd3s result, levels 5/10.
