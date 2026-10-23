@@ -113,6 +113,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 - **G1(d) lvl1 (s5946, single-source):** TELE fires (0 vs 10) and objective-writer calls rise (BooleanCount 13->22), but [objcount] id=13 max stays 4 in both arms. Use `tools/g1_d_compare.sh N` for lvl2-5.
+- **G1(d) lvl2-5 (s5947):** lvl2 has only the tele arm, lvl3 only ctl; no pair is complete, no verdict. Queued g1_lvl{2,4,5}_ctl (tele 3/4/5 already queued). Fold with `tools/g1_d_compare.sh 2..5` once pairs land. No conclusions overturned.
 - **Owner listening report 2026-10-22 (G2):** after the s5668 compander fix and
   s5672 AI cadence fix, the fuzz is "way better than it used to be". Dialogue
   then confirmed by a live listen the same day: **dialogue is clean and there
