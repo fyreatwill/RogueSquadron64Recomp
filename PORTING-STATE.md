@@ -166383,3 +166383,6 @@ Ran scratch/agent/s5978_retail_flight.sh (presses stop at 76 s; flight origin 0x
 
 ## Session 5979 (2026-10-23) — M6 endurance soaks queued (lvl1 hold 660 s x3)
 Read s5978 state: levels 1-18 have (a)+(b)+(c); all lvl1-9 zs soaks rc=0 (SOAK-RESULTS tail). G4 next: the M6 >=10 min keyed hold was never run (HOLD was hardcoded 300 in scratch/agent/g1_level_coverage_common.zsh). Made HOLD overridable via HOLD_S and queued m6_lvl1_hold660_r{1,2,3}.sh (SOAK_TIMEOUT=1100). No game run this iteration; verdicts arrive in SOAK-RESULTS.md. Outcomes: crash/stall => lldb backtrace + root-cause; clean x3 => repeat on lvl3/lvl6.
+
+## Session 5980 (2026-10-23) — M6 lvl1 660 s holds r1/r2 clean; lvl3/lvl6 holds queued
+Folded SOAK-RESULTS: m6_lvl1_hold660_r1 and r2 both reached mission at t=86 s and held 664-665 s with alive_at_end=1, vi_stalls30s=0, crashlines=0 (single source: the harness verdict line; r1 shows mission_cycles=2, r2 mission_cycles=1 — not a crash datum, noted only). r3 still queued. Queued m6_lvl3_hold660 and m6_lvl6_hold660 (same recipe, HOLD_S=660, LEVEL=3/6). No code change. Rules out: a lvl1 crash/stall within 11 min in 2/2 runs.
