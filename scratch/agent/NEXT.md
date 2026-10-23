@@ -1,4 +1,4 @@
-# NEXT: G1c - find the cap above 0x9DEAC (L-budget grid size / FOV) and run LOD + fog arms
+# NEXT: G1c - read s6023 arms (fov15/fov025/lod2/lod025) from SOAK-RESULTS.md
 HYPOTHESIS-ID: g1c-draw-distance
-s6022: raising 0x9DEAC x2/x3 gave tri +4%/+7% per task (total down) -> shrink-only lever. Hypotheses: (H-grid) visible grid is a fixed n/10-cell array (0x80137A68, counts 0x80137A58/60/70) so the footprint saturates; (H-fov) far extent set by FOV scale 0x80130C50 / far plane; (H-lod) distant tiles drawn but at low LOD (0x8009ECB0 table 19.5/32/100/200); (H-fade) fog/haze hides them.
-Work unit (one build, all arms): extend ROGUESQ_DD_ADDRS arms with 0x80130C50 x1.5 and LOD table 0x9ECB0..+0x10 x2 and the grid count words 0x80137A58/60 x2 (check they are float-vs-int first: counts are INTEGERS, so scale via an int-mode or skip), run as concurrent soaks (lvl1, same awk: scripts in /tmp/bin.sh pattern: field $4 = tri, tri>=50, bin by [g1c] state). Also dump fb at retail vs scaled for distant terrain fraction. Positive control: x0.25 arm for each lever. Pass: >+10% tri or visible distant pixels.
+Hypotheses: H-fov (0x80130C50 scale sets far extent), H-lod (0x9ECB0 table), H-grid (fixed grid buffer, needs build to scale int counts 0x80137A58/60), H-fade (fog).
+Analyze logs in scratch/agent/soak_results/*s6023*: awk field $4 = tri, tri>=50, bin by [g1c] state. Positive control = x0.25 arm must change tri/visible; pass for x1.5/x2 = >+10% tri. If both null with working controls: build int-mode scaling for grid counts, then fog arm.
