@@ -1,6 +1,5 @@
-# NEXT: G1(d) what triggers the ctl-arm mission end on lvl7/lvl8?
+# NEXT: G1(d) static: who issues requestMissionTransitionMode a0=2/3 (success) and what gates it?
 HYPOTHESIS-ID: g1-d-objective-gate
-s5995: endMissionCleanup fires in ctl AND tele arms (lvl7 vi~15259); counter id=2 hit 3 (threshold) ~2600 VIs earlier but ctl ends too.
-Hypotheses: H1 end is timer/scripted (independent of counters); H2 end is driven by a different counter/flag also moved in ctl (e.g. id=1 oscillations); H3 end is a player-death/fail path (requestMissionTransitionMode a0=1 mask=2).
-Work unit: in a lvl7 ctl run, log backtrace + args of requestMissionTransitionMode n=3 (mend-bt already exists in run.log: read scratch/agent/m6/g1_lvl7ctl/run.log lines near 'mend] fn=clearMission') and the flags/counters dump at that instant; decide fail vs win. Positive control: n=1,2 transitions already logged.
-No aim/steer work.
+s5996: lvl7 end = 3rd death (a0=1), lvl8 end = a0=2 ph=7 requests in both arms. Counters never gate an observed end.
+Hypotheses: H1 a0=2/3 callers gated by objective counters/flags (then TELE could finish a level); H2 gated by timer/scripted trigger (lvl8 ph=7 requests start with no hits); H3 gated by enemy-count/DL-chunk check.
+Work unit (offline, no game run): grep generated funcs for callers of requestMissionTransitionMode (0x800FB190) with a0=2 or 3 (see docs/M6-PHASE-MACHINE.md, M6-S5747-FAIL-ARM-CENSUS.md), list each caller's gating condition, decide whether objective counters (0x8013805C+4n) feed it. Record verdict; if H1 holds, define a (d) PASS test on lvl8; if H2/H3, close (d) as PARTIAL-final and move to G4/G3. No aim/steer work.
