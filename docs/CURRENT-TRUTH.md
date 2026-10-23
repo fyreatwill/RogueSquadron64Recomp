@@ -183,3 +183,5 @@ mission logic, and `scratch/agent/SOAK-RESULTS.md` for queued verdicts.
 
 - (s5981) M6 660s holds: lvl1 3/3 and lvl3 1/1 clean (0 crash, 0 VI stall). lvl2,4,5,6,7,8,9 hold660 recipes queued; fold verdicts next, then title-boot plume SIGSEGV (si_addr=0x58) loop under lldb.
 - (s5983) M6 660s holds lvl1-6 clean (single-source harness verdicts); lvl7-9 holds and two lldb plume title soaks still queued.
+
+- (s5984) M6 660s holds lvl7/lvl8 clean (single-source). lvl9 hold + plume lldb soaks queued. G3: post-fix port lvl1 frames in docs/g3_port_lvl1_flight_postfix.png are a different level from the retail oracle frame (Tatooine=lvl0); g1_lvl0_oracle_pair queued for the same-level comparison.

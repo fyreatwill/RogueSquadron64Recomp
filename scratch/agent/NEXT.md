@@ -1,3 +1,4 @@
-# NEXT: fold m6_lvl{7,8,9}_hold660 and s5589_plume_lldb_s5982_{a,b} verdicts
+# NEXT: fold lvl9 hold660, plume lldb soaks, and g1_lvl0_oracle_pair
 HYPOTHESIS-ID: g4-mission-soaks
-Read SOAK-RESULTS.md tail. Any crashlines>0 / vi_stalls30s>0 / alive_at_end=0: capture lldb backtrace, name writer, root-cause. All clean: G1 (c)+(d) coverage for levels 1-9 (framebuffer capture + forced-hit objective counter), or loop title boots under lldb until the si_addr=0x58 plume SIGSEGV recurs.
+Read SOAK-RESULTS.md tail. crashlines>0 / vi_stalls30s>0 / alive_at_end=0 => lldb backtrace, name writer, root-cause.
+G3: scratch/agent/m6/g1_lvl0orc/fbd/*.ppm vs docs/g3_retail_lvl1_flight_oracle.png (same level, Tatooine). Compare terrain/sky/craft/HUD; any port-only defect is a datum. If clean, G3 in-flight closed; then loop title boots under lldb for the si_addr=0x58 plume SIGSEGV.
