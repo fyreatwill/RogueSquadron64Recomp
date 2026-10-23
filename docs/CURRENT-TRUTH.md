@@ -112,6 +112,11 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+- **Owner report 2026-10-23 (queued as G1b, after the G1 level sweep):** ~70% of
+  missions play flawlessly; the rest intermittently slow down game-wide
+  ("buffering"), on busy scenes and on bare landscape alike. Never measured
+  (no wall-clock in logs). Hypotheses and the single discriminating instrument
+  are in `tools/agent/ITERATION.md` 3c G1b.
 - **s6000 G4:** lvl0 hold r1+r2 clean (662 s, 0 stall, 0 crash); r3 pending in the queue.
 - **s6001 G4:** lvl0 3/3 clean 660 s holds (closed). The pillar-stub Next items below (s5964/s5970/s5999) are STALE - s5971 fixed them (FIX_ZERO_SHADE off). Queued m6_lvl{11-14,16-18}_hold660; fold, then G1(c) framebuffer check lvl10-18. s6008: hangar route 3/3 clean (att=1); d/e/f queued.
 - **s6007:** hangar-route soaks a/b folded: both att=1, 600 s hold, 0 crash/0 VI stall (n=2, not enough to revise the ~1/3-3/5 flake rate). Run c still queued.

@@ -76,13 +76,25 @@ When choosing the work unit, this order overrides Next-steps ordering:
      -> objective path works. If NEXT.md proposes aim/steer/bolt work, discard it
      and take the next G1 coverage item. Mission-to-mission progression after a
      real win is also the owner's playtest; do not poke wins to test it.
-   - G2 **Audio fidelity.** Owner listening report 2026-10-19: every sound effect is
-     recognizable, but all audio sits behind a heavy fuzzy/noise layer, and there is
-     NO dialogue/voice. "M5 closed" only proved non-silent PCM. Discriminate where the
-     noise enters (ucode PCM vs AI ring/rate/format vs host sink) by comparing retail
-     oracle AI PCM with port AI PCM in the same phase (title music is the cleanest
-     reference: noise floor, spectrum, sample-rate, byte order). Separately, find the
-     voice/dialogue path and why it produces nothing.
+   - G1b **Frame pacing (owner report 2026-10-23).** Take this once the G1 per-level
+     (a)+(b) sweep is done. Owner watching mission play: ~70% of missions run
+     flawlessly, but the whole game intermittently slows as if "buffering" — sometimes
+     with many assets on screen, sometimes on plain landscape. Existing logs carry no
+     wall-clock time, so the slowdown has never been measured. Competing hypotheses:
+     H-host (only 5 P-cores on this Mac; REAPER/Chrome/WindowServer/agent work push
+     game threads onto E-cores — fits slowdowns on bare landscape), H-rsp (LLE F5 gfx
+     ucode CPU cost per frame rises with scene density — fits busy scenes), H-shader
+     (RT64 pipeline/shader creation on first use of new materials), H-log (diagnostic
+     logging bursts: 268 MB in one 9-min soak, frames with >1.6 MB). Discriminator,
+     ONE instrument / ONE build: per-VI wall-clock frame time, and per frame the gfx
+     RSP task host-ms, RT64 present/GPU wait, pipeline-creation count, log bytes, and
+     the CPU cluster (P/E) the guest and RSP threads ran on (sample thread CPU or
+     QoS). Then same level/recipe in arms: normal logging vs logging off, and quiet
+     host vs busy host. Whichever term co-varies with slow frames selects the cause;
+     fix the root cause (e.g. thread QoS, async pipeline compile, cheaper logging),
+     not the symptom.
+   - G2 **Audio fidelity: CLOSED** (owner live listen 2026-10-22: dialogue clean, no
+     fuzz; agrees with s5669-s5674 PCM evidence). Reopen only on a new owner report.
    - G3 **Render fidelity.** Hangar artifacts (CURRENT-TRUTH list) and in-flight frame
      diffs against retail framebuffers.
    - G4 **Crash/stall hunting** across every reachable mission via queued soaks.
