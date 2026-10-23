@@ -166333,3 +166333,5 @@ ORIGIN: diagnostic only, env-gated, default off; no mitigation added.
 Next: rerun tint arm 2 with keys advanced to Available Craft page (longer PROBE keys) and tint by *other* discriminator (white-shade tris with no texture), then log DL.
 
 Session 5969 discrimination (addendum): REFUTES H-portonly-state (hypothesis: othermode-lo 0x504240/0x550231/0xf0a4001 marks the white-pillar stub tris): tinting exactly those states with a passing mode-1 positive control coloured only the floor decal, platform and planet, none of them pillar stubs. SELECTS toward H-dl/H-geom on the Available Craft page, still undecided. Next discriminator: on Available Craft, mode 3 tint of untextured near-white-shade tris; if the stubs go green and their DL pointer matches a DL also drawn textured elsewhere => H-dl (wrong texture bound); if the DL is shade-only in every draw => H-geom/shade (stub is untextured by design, transform or vertex-colour fault).
+
+Session 5969 gate wording: this run refutes H-portonly-state and selects the Available Craft mode-3 tint as the next discriminator (stub DL textured elsewhere => H-dl; shade-only everywhere => H-geom).
