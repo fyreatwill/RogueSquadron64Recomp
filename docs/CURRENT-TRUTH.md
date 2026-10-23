@@ -114,8 +114,9 @@ autopilot win are owner playtest scope.
 ## Next steps (single monotonic backlog)
 - **Owner listening report 2026-10-22 (G2):** after the s5668 compander fix and
   s5672 AI cadence fix, the fuzz is "way better than it used to be". Dialogue
-  NOT yet heard, but the owner may have been absent or muted during speech, so
-  this is neither a pass nor a fail for dialogue. Owner has watched missions
+  then confirmed by a live listen the same day: **dialogue is clean and there
+  is no fuzz.** G2 audio fidelity is CLOSED by owner ear (independent of the
+  s5669-s5674 PCM measurements, so two sources agree). Owner has watched missions
   1-~3 and the endgame-mission soak play; the window closing at the end of a
   soak hold is the harness SIGKILL, not a crash.
 
