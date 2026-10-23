@@ -113,6 +113,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
+- **s5965 G3 (single-source):** last-stable-frame census (s5965_last.py/s5965_bbox.py): retail 1115 tris vs port 425; retail 0x552078 tris cover y172-298, port 0x552038 tris y78-224, port-only states 0x504240/0x550231/0xf0a4001 exist (~40 tris). Frames are likely different scene states, so 0x40 delta is NOT yet a defect. Next: match by DL/texture content or camera, not 'last frame'.
 - **s5964 G3 (top item, single-source):** same-page retail frame (scratch/agent/s5964/r12.png, Available Craft) vs port s4642: white pillar stubs are port-only (supersedes s5963's different-page caveat). RDP census (s5964_oth.py): retail othermode-lo 0x552078 vs port 0x552038 (image_read_en 0x40), frames not page-aligned. Next: page-align the retail rdp frame and port frame, list differing tri states, toggle image_read_en in rt64 in-run. See scratch/agent/NEXT.md.
 
 - **s5962 lvl6 (d):** heartbeat control passed (hb ticks=1 both arms, 600 in tele), objsnap shows no change in either arm => lvl6 forced hits move no counter in the snapshotted table (H-B, single-source). H-C refuted. Next: G3 render fidelity (hangar artifacts list).
