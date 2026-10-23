@@ -166587,3 +166587,10 @@ ORIGIN: n/a (no mitigation landed; diagnostic fold only).
 
 ## Session 6023 (2026-10-23) — G1c: queued FOV (0x130C50) and LOD-table arms with x0.25 controls
 Existing ROGUESQ_DD_ADDRS/RADIUS/LOD knobs cover the next levers, no rebuild. Queued soak_queue/s6023_g1c_{fov15,fov025,lod2,lod025}.sh (lvl1, in-run alt retail/scaled per 120 VIs, G1B instrument). Grid-count words skipped: integers, not float-scalable by this knob (would need a build). Pass: fov/lod >+10% tri/task in [g1c] scaled bins with tri>=50; x0.25 arm must visibly shrink or that lever's null is void. Results arrive in SOAK-RESULTS.md. No result yet this session.
+
+## Session 6024 (2026-10-23) — G1c: FOV scalar 0x130C50 is not the extend lever either; int-mode grid-count knob built, 2 arms queued
+Folded s6023_g1c_fov15 / fov025 (lvl1, in-run alt, tri>=50 tasks, [tricnt] tri= per task, binned by [g1c] state):
+- fov025 (x0.25, control): retail 687.6 (779 tasks) -> scaled 518.2 (841) = -24.6%. Control fires, instrument discriminates.
+- fov15 (x1.5): retail 642.4 (641) -> scaled 576.1 (703) = -10.3% per task; total tri ~equal (411747 vs 405022). No growth, fails the >+10% bar.
+- fov15 died at 183 s in a scaled window: `Assertion failed: ctx->f10.fl == ctx->f10.fl, vec3Cross, funcs_4.c:35892` (NaN into a vec3 cross product, vi=15481). WRITER: our own knob rewrites 0x130C50 every VI, a float the game also uses as a divisor/direction input; NaN is a product of the experiment, not a retail defect. Mitigation not landed. ORIGIN: n/a.
+Verdict: two footprint levers (0x9DEAC, FOV) are shrink-only => the cap is a count/buffer (L-budget) or something else. Built int-mode: ROGUESQ_DD_IADDRS=<hex,..> + ROGUESQ_DD_IMUL=<m> (events.cpp g1c::apply, patch exported). Queued s6024_g1c_igrid2 / igrid025 scaling s32 words 0x137A58,0x137A60 (grid counts per M3-S3640 audit). Hazard: buffer was allocated at retail size, so x2 may overflow the heap => a crash would itself be a datum (confirms fixed-size L-budget). LOD arms (s6023 lod2/lod025) still queued. No result yet for those.

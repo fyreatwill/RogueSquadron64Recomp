@@ -113,6 +113,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 - **s6023 G1c:** FOV 0x130C50 and LOD-table arms (fov15/fov025/lod2/lod025) queued; fold results next.
+- **s6024 G1c:** FOV 0x130C50 arms: x0.25 control -24.6% tri/task, x1.5 -10.3% (and a self-inflicted vec3Cross NaN abort at 183 s) => FOV is shrink-only too. Int-mode knob (ROGUESQ_DD_IADDRS/IMUL) built; igrid2/igrid025 arms queued on 0x137A58/0x137A60. LOD arms (s6023) pending.
 - **s6022 G1c:** r2A/r3A (0x9DEAC x2/x3): per-task tri +4%/+7%, total tri -5%/-16% => footprint scalar is shrink-only (posAB x0.25 = -31%); not the extend lever. Cap lives elsewhere: grid buffer size (0x80137A68, rs_malloc 200*(n/10)) or FOV 0x80130C50; LOD 0x9ECB0 and fog arms unrun.
 - **s6021 G1c:** 0x8009DEAC (14.5) is the live footprint scalar: posAB (A+B at 0.25x) tri 641->443 (-31%) vs own retail arm, B alone (0x9DEB0) 581->621 inert. r2A/r3A queued; rise = L-radius. Single-source (tri counts).
 - **s6020 G1c:** rodata floats 0x3A4FC..0x3A50C are pooled constants (0.5/512/1), pos2 control failed; real footprint scalars are RAM floats 0x8009DEAC/0x8009DEB0 (buildVisibleTerrainGridAroundCamera). Arms s6020_g1c_posB/posAB/r2B queued; read `[g1c] state=` bins with tri>=50 filter.
