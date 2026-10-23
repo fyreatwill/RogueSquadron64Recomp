@@ -166474,3 +166474,6 @@ m6_lvl0_hold660_r3 rc=0 (746 s): lvl0 now 3/3 clean 660 s holds, G4 for lvl0 clo
 ## Session 6002 (2026-10-23) — folded lvl11/lvl12 660 s holds (G4): clean
 HYPOTHESIS-ID: g4-crash-stall-hunt
 m6_lvl11_hold660 rc=0 (752 s) and m6_lvl12_hold660 rc=0 (759 s): lvl12 line `hold=665s alive_at_end=1 vi_stalls30s=0 crashlines=0` (positive-control arm is the common runner's own godrefills=4 / alive_at_end=1 fields). G1(c) for 11/12 was already covered by the s5945 fbd contact sheet, so no new capture. lvl13/14/16/17/18 holds still queued. No code change; ORIGIN: n/a.
+
+## Session 6003 (2026-10-23) — folded lvl13/lvl14 660 s holds (G4): clean; lvl10/15 holds queued
+Folded SOAK-RESULTS: m6_lvl13_hold660 (mission_t=97s, hold 662s, alive_at_end=1, vi_stalls30s=0, crashlines=0) and m6_lvl14_hold660 (mission_t=81s, hold 663s, same zeros). The only "crash" grep hit per log is the summary line itself (crashlines=0). Queued m6_lvl10_hold660 and m6_lvl15_hold660 using ROGUESQ_FORCE_PLANET_UNLOCK=0xFF (s5944 lever, flight ~400 s instead of ~790 s; SOAK_TIMEOUT=1300). lvl16/17/18 still queued. Levels 0-9, 11-14 now have >=1 clean 660 s hold. Rules out nothing new; no conclusions overturned. No code change this session (recipes only).
