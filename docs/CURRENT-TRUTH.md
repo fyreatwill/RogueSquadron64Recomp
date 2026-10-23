@@ -114,6 +114,7 @@ autopilot win are owner playtest scope.
 ## Next steps (single monotonic backlog)
 - **s6023 G1c:** FOV 0x130C50 and LOD-table arms (fov15/fov025/lod2/lod025) queued; fold results next.
 - **s6027 G1c:** ROGUESQ_DD_CELLMUL (pre-alloc cell count at allocAndInitGridCellArray entry, tools/apply_s6027_cellmul.py) built; arms s6027_g1c_cell025 / cell2 queued, results pending in SOAK-RESULTS.md. Then fog arm.
+- **s6029 G1c:** H-fade arms s6029_g1c_fogmag / s6029_g1c_fogret queued (FORCE_FOG=FF00FF vs control); fold next, then far-plane.
 - **s6028 G1c:** s6027 cell-count arms folded: x0.25 532.7 / retail 578.7 / x2 629.2 tri/task (-8% / +8.7%, cross-run, noise ~5-7%) => cell count is a weak monotonic lever, not the extend lever (single-source). Next: ROGUESQ_FORCE_FOG in-flight arm (H-fade), then far-plane.
 - **s6025 G1c:** LOD-table arms (0x9ECB0 x2/x0.25) +6.2%/+4.9% tri/task, x0.25 control failed => table inert for lvl1 flight (not extend lever, not refuted by a valid control either). igrid2/igrid025 still queued, fold next.
 - **s6024 G1c:** FOV 0x130C50 arms: x0.25 control -24.6% tri/task, x1.5 -10.3% (and a self-inflicted vec3Cross NaN abort at 183 s) => FOV is shrink-only too. Int-mode knob (ROGUESQ_DD_IADDRS/IMUL) built; igrid2/igrid025 arms queued on 0x137A58/0x137A60. LOD arms (s6023) pending.

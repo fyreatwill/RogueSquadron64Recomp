@@ -1,4 +1,3 @@
-# NEXT: G1c - H-fade: ROGUESQ_FORCE_FOG in-flight arm
+# NEXT: G1c - fold fog arms, then far-plane
 HYPOTHESIS-ID: g1c-draw-distance
-s6028: cell count (x0.25/x2) moved tri/task -8%/+8.7%, noise-level; not the extend lever. Remaining hypotheses: H-fade (haze hides distant terrain; test ROGUESQ_FORCE_FOG on lvl1 flight and measure distant-terrain pixel fraction in fixed-camera framebuffer), H-farplane (far-clip constant in terrain submit path; grep for it near buildVisibleTerrainGridAroundCamera), H-budget (DL/vertex caps).
-Find how ROGUESQ_FORCE_FOG is wired (grep lib/ and tools/), queue a soak with it vs the retail control (s6027_ret recipe style, XENV_EXTRA), and compare the fbd framebuffer captures. Outcome: distant pixels change => fade is the limiter; no change => go far-plane.
+Fold s6029_g1c_fogmag vs s6029_g1c_fogret from SOAK-RESULTS.md (tri/task bins as in s6028, plus framebuffer capture if the recipe produced one: count magenta pixels in fogmag; control = retail has none). Magenta present => L-fade is live, find where fog start/end are set (RDP setFogRange / game fog params) and scale them. No magenta => fog not the limiter; go H-farplane: grep for far-clip constant near buildVisibleTerrainGridAroundCamera and the projection setup, then H-budget.
