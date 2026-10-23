@@ -1,5 +1,5 @@
-# NEXT: fold the _zs sky-regression soaks
+# NEXT: fold remaining _zs sky-regression soaks (lvl3,4,5,7,8,9)
 
 HYPOTHESIS-ID: g3-render-fidelity
 
-Queued s5972: g1_lvl{1,2,3,4,5,7,8,9}_zs (default build, FIX_ZERO_SHADE OFF). When SOAK-RESULTS shows them, compare late-hold fbd frames in scratch/agent/m6/g1_lvlNzs/fbd against baseline m6/g1_lvlNctl/fbd (fix ON). H1: sky identical/fine -> flip safe, close. H2: a level has black sky/untextured terrain -> re-enable the fix narrowly for that DL (name the DL, not a global flag). Then continue G1 (c) review. No aim/steer work.
+lvl1, lvl2 zs verified fine (H1). When SOAK-RESULTS shows lvl3/4/5/7/8/9 zs, view the last frame in scratch/agent/m6/g1_lvlNzs/fbd vs g1_lvlNctl/fbd (sips -s format png, Read). H1 all fine -> close FIX_ZERO_SHADE flip in CURRENT-TRUTH. H2 a level black sky/untextured -> re-enable the fix narrowly for that DL. Then G1 (c)/(d) review. No aim/steer work.

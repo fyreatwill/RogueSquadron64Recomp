@@ -166351,3 +166351,6 @@ Boring-first check of s5970's open question. Same-recipe hangar runs (s5971_fix0
 ## Session 5972 (2026-10-22) — queued sky-regression soaks after FIX_ZERO_SHADE default OFF
 
 Verified lib/rt64 rt64_gbi_rdp.cpp:1089 now defaults the flag OFF and build/RogueSquadron64Recomp (22:43) post-dates the flip. Queued 8 control soaks (g1_lvl{1,2,3,4,5,7,8,9}_zs; lvl6 already verified in s5971) that reuse g1_level_coverage_common.zsh under the new default. Pre-flip fbd dumps (m6/g1_lvlNctl) are the fix-ON baseline for comparison. No result yet; the loop runs them between iterations. ORIGIN: n/a (no mitigation added).
+
+## Session 5973 (2026-10-23) — FIX_ZERO_SHADE OFF: lvl1+lvl2 sky/terrain fine (H1 so far)
+Folded g1_lvl1_zs and g1_lvl2_zs (both rc=0, ~392 s). Late fbd frames vs ctl (fix ON): lvl1 avg RGB 160,112,141 vs 155,105,136, 0% black; lvl2 sky textured and terrain textured in both (viewed PNG; whole-frame mean differs only because the craft is over a rock face in zs vs open sky in ctl — camera position, not shading). No black sky / untextured terrain. Lvl3,4,5,7,8,9 zs still queued; lvl6 has no zs recipe. Single-source (visual + mean) for 2 of 8 levels; no code change this session.
