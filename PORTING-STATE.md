@@ -166460,3 +166460,6 @@ ORIGIN: n/a (no code change).
 Ran: viewed port lvl0 frame fb_0005000 from soak g1_lvl0_oracle_pair (alive 303 s, 0 VI stalls, 0 crashes) next to retail oracle frame docs/g3_retail_lvl1_flight_oracle.png. Saved docs/g3_port_lvl0_oracle_pair_f5000.png.
 Showed: both show X-wing, green targeting reticle, red radar ellipse, green wingman icon, graded sky and sand terrain. Differences are scene state (camera bank, craft livery lighting) and crop (port RDRAM dump is 512x358, retail oracle 512x412, so the lives badge is below the port crop). No texture corruption, missing geometry or stub tris seen. Single-source, visual only, not pixel-diffed.
 Rules out: a gross in-flight render defect at lvl0. G3 in-flight stays closed at the coarse level (agrees with s5985, s5993). Remaining G3: hangar white pillar stubs (s5964), parked.
+
+## Session 5999 (2026-10-23) — queued lvl0 660 s holds (G4)
+Enqueued scratch/agent/soak_queue/m6_lvl0_hold660_r{1,2,3}.sh (copy of the lvl1-9 hold recipe with LEVEL=0, HOLD_S=660). No game run this iteration; the loop runs them between iterations. Expected: 0 crash / 0 VI stall = lvl0 clean; any abort -> lldb backtrace next iteration.
