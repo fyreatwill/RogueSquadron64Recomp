@@ -2,6 +2,9 @@
 
 HYPOTHESIS-ID: g1-mission-coverage-sweep
 
+S5946: lvl1 folded (tools/g1_d_compare.sh 1): TELE 0 vs 10; BooleanCount writes 13->22, objcount id=13 max 4 both arms => partial H1/H3, single-source.
+Next unit: run `tools/g1_d_compare.sh N` for lvl2-5 once their soaks land; identify which objcount id is lvl1's real kill counter.
+
 State: (a)+(b) done for levels 1-18; (c) done 18/18 (docs/g1_flight_contact_sheet.png).
 Queued: g1_lvl{1,2,3,4,5}_tele (ROGUESQ_TELE_BOLT=1) and g1_lvl{1,3}_ctl.
 Logs: scratch/agent/m6/g1_lvl<N>{tele,ctl}/run.log.

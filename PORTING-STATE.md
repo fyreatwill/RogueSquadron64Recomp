@@ -166206,3 +166206,13 @@ Folded g1_lvl10_pu / g1_lvl15_pu: lvl10 mission_t=104s hold=301s, lvl15 mission_
 (c): no new run needed -- m6_god_common.sh already dumps a framebuffer every 500 VIs (fbd/*.ppm). Contact sheet of one in-flight frame per level (frame ~ (mission_t+100 s)*29 VI/s, 18 levels) is docs/g1_flight_contact_sheet.png: 16 of 18 cells show terrain/sky, player craft, radar and target reticle; the lvl6 and lvl17 cells landed on post-failure screens (game over -> hangar loop with idle autopilot), and a second sheet of their earlier frames shows flight (lvl6 terrain+craft+radar; lvl17 Death Star trench + craft + radar). Result: (c) satisfied for 18/18 by in-port frames; NO retail oracle comparison made (single-source, in-port only). Cell 11/lvl11b end frame is the "Escape from Fest / GAME OVER" results screen (idle autopilot death), legitimate.
 (d): queued g1_lvl{1..5}_tele (ROGUESQ_TELE_BOLT=1) and g1_lvl{1,3}_ctl (no lever) via g1_level_coverage_common.zsh. Positive control = "[sph] TELE" lines in run.log; compare [objcount]/[objwr]/[objbool] between tele and ctl. TELE's class-1 key (update fns 0x800cabd4/0x800d93c0/0x800e7860) was derived on level 0, so a level with no such NPCs will show zero TELE lines -- that is "lever inapplicable", not "objective logic dead".
 Rules out: nothing new refuted. ORIGIN: n/a (no mitigation; scripts and a doc image only).
+
+## Session 5946 (2026-10-22) — G1(d) lvl1 tele-vs-ctl fold + tools/g1_d_compare.sh
+
+Ran: folded g1_lvl1_ctl / g1_lvl1_tele (both rc=0, 392 s, 0 crash, 0 VI stall). New one-command fold: `tools/g1_d_compare.sh <N>`.
+Result (lvl1): TELE line control: ctl 0 vs tele 10 (positive control fired). datItemSetObjectiveBooleanCount 13 -> 22,
+applyDatObjectiveTriggerEffect 21 -> 24, updateNpcEffectIntensity 43 -> 48; executeActorType1Effect equal (120);
+[objcount] id=13 max val 4 in BOTH arms. So forced hits reach the objective-writer path (H1 partial) but the id=13 counter
+did not exceed the ctl value. Single-run, animating scene, cross-run counts: label SINGLE-SOURCE, not a (d) PASS yet.
+Rules out H2 for lvl1 (TELE fires). Open: whether id=13 is lvl1's kill counter at all (ctl also reaches 4 unforced).
+Next: fold lvl2-5 tele as they run; lvl3 has a ctl.
