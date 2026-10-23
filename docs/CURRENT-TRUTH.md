@@ -112,6 +112,7 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+- **s6018 G1c in progress:** levers ROGUESQ_DD_RADIUS (terrain window float 0x8003A538) / ROGUESQ_DD_LOD (0x8009ECB0 x5) / ROGUESQ_DD_ALT built in events.cpp g1c::apply; arms s6018_g1c_{pos,r2,lod2} queued. Fold: bin tricount by `[g1c] state=`; pos arm must cut tris (control). Still unread: streamTerrainGridCellsByDistance 0x80042B50 (own cap?), fog (L-fade).
 - **Owner request 2026-10-23 (queued as G1c, after G1b):** extend draw distance so
   more landscape renders than retail did. Find the limiting lever (distance fade,
   terrain radius, LOD index 0x80137CE4, buffer caps) and expose it as opt-in

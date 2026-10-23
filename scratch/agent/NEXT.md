@@ -1,6 +1,5 @@
-# NEXT: G1c extended draw distance - find WHICH limit applies (discriminator first)
+# NEXT: G1c - fold the three queued arms (s6018_g1c_pos/r2/lod2)
 HYPOTHESIS-ID: g1c-draw-distance
-G1b closed (s6017): baseline lvl1 post-fix = 0 slow seconds, mean sd_wall 10.3 ms, tasks/s 30.2.
-Hypotheses (see iteration prompt G1c): L-fade (haze baked in shade/combiner; re-test ROGUESQ_FORCE_FOG in flight), L-radius (terrain tile visibility radius / far clip constant), L-lod (detail index 0x80137CE4, selectMeshLodAndSubmitForRender / setObjectDetailLevel), L-budget (DL/vertex/tile buffer caps).
-Discriminator: fixed-camera lvl1 framebuffer, measure distant-terrain pixel fraction while perturbing ONE lever per arm in the same build (env-gated): fog off, radius const x2, lod index forced 0, then check budget overflow counters. Positive control: an arm that visibly changes the distant fraction (e.g. force-hide terrain) must fire. Build all arms in one iteration (iron rule 13), run as queued soaks with G1B=1 on.
-First step: grep for terrain visibility radius / far-clip consts and 0x80137CE4 readers in recompiled code; write the arm list here, then implement env hooks in a fixup script.
+Hypotheses: L-radius (0x8003A538 float scales terrain window), L-lod (0x8009ECB0 thresholds), L-budget (streamTerrainGridCellsByDistance 0x80042B50 caps), L-fade (haze).
+Discriminator: in soak logs, split RDP tricount / RT64 drawn lines by the preceding `[g1c] state=retail|scaled` marker. pos arm (radius 0.25) MUST show fewer tris in scaled state (positive control) - if not, the lever does not reach terrain and the whole instrument is void (check [g1c] dump printed non-zero radius).
+If r2 raises tris in scaled state: L-radius works; check pop-in/crash, then try 1.5/3x and build ROGUESQ_DRAW_DISTANCE wrapper. If r2 flat: read 0x80042B50 for its own radius/budget cap and add a lever. Then fb-dump pairs for distant-terrain pixel fraction.
