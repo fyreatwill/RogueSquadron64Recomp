@@ -113,6 +113,8 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
+- **s5977 G3 in-flight oracle:** retail oracle reaches Tatooine mission 1 with alternating start/A presses (scratch/agent/s5977_retail_flight.sh; frame docs/g3_retail_lvl1_paused_oracle.png, paused). Supersedes 'oracle reaches boot/attract only'. Next: unpaused retail frame, then diff vs port lvl1 flight frame (NEXT.md). G2 stale PCM-compare NEXT discarded (closed by owner ear).
+
 - **s5970 G3 (single-source):** Available Craft white pillar stubs are TEXTURED tris (cap DLs 0x3007936f0.. L=0x552038), not untextured shade-only (TINT_OM mode 3 negative; mode 4 rect control turned both pillars green). Next: log/force texture identity for cap tris (NEXT.md).
 - **s5969 G3 (single-source):** ROGUESQ_TINT_OM (control passed): port-only othermode 0x504240/0x550231/0xf0a4001 tris on Select Craft are the floor-glow decal, platform and planet = legitimate, NOT the white-pillar stubs (those are on Available Craft, not reached). Next: same probe on Available Craft page, tint untextured white-shade tris.
 - **s5968 G3 (single-source):** address-free descriptor pairing (s5968_descpair.py; ctl retN/N-1 tri-overlap 0.95, portN/N-1 0.80) retail-vs-port tri-weighted overlap 0.05 (keyJ 0.07). Retail loads uniform LOADBLOCK 1023-texel chunks (I16-ish fmt4/size2) with othermode 0x552230/0x552078; port loads variable 191-767 texel blocks, 0x552038/0x552230. Producers differ (cxd4 RSP vs rt64 HLE), so RDP command streams cannot pair by texture; texel bytes are not in either dump. Next: port-side per-draw texture hash + paint port-only stub tris a flat colour in rt64 to identify which DL/texture they come from (NEXT.md).
