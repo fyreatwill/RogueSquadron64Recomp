@@ -166261,3 +166261,11 @@ rules out: s5949 "objcount rises on lvl4" is not reproduced as an objective-slot
 Folded g1_lvl4_ctl5 (m6/g1_lvl4ctl: mission_t=87s, hold 304s, 0 crash, 0 VI stall): with NO TELE lever the run still prints [objsnap] id=15 (8 lines) and id=5 (4 lines). Tele5 (m6/g1_lvl4tele) printed 15 lines, all id=15. So the id=15 0-3 cycle exists without forced hits (baseline); forced hits move NO objective slot on lvl4 that ctl does not also move (H-null; the ctl-only id=5 is unexplained, single run). Folded g1_lvl6_ctl (mission_t=97s, hold 305s, 0 crash, 0 stall): 0 objsnap lines, as expected for a no-hit control; lvl6 tele still queued (needed for the positive control). Queued g1_lvl7_ctl + g1_lvl7_tele (copies of the lvl6 recipes, LEVEL=7; ctl has no TELE export).
 rules out: lvl4 objective-counter response to forced hits (d-criterion) is not demonstrated; do not claim lvl4 (d).
 ORIGIN: no code change; queue scripts only.
+
+## Session 5957 (2026-10-22) — lvl6 tele folded (9 forced hits, zero objsnap movement); lvl7 ctl objsnap id=1 cycle is baseline; lvl7 tele still queued
+
+Ran: folded g1_lvl6tele, g1_lvl6ctl, g1_lvl7ctl from scratch/agent/m6/*/run.log (all three: alive_at_end=1, vi_stalls30s=0, crashlines=0, hold 303-305 s).
+- lvl6 tele: positive control fired (`tele=` reached 9), yet 0 `[objsnap]` lines in both tele and ctl. So lvl6 forced hits move NO tracked objective counter: G1(d) is NOT shown for lvl6 (null with a live control = the objsnap array does not cover lvl6's objective slot, or lvl6's gate is not hit-driven).
+- lvl7 ctl (TELE=0): 2 `[objsnap]` lines, id=1 0->4->0 — baseline cycle, so it cannot count as an objective signal in the lvl7 tele run unless it differs.
+- lvl7 tele (queued, scratch/agent/soak_queue/g1_lvl7_tele.sh) has not run yet.
+Rules out: lvl6 objsnap-visible objective response. Does not rule out an objective counter outside the objsnap array.
