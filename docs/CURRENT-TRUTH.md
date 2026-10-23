@@ -112,6 +112,7 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+- **s5988:** lvl1 ground zoom = structured tiling (not format garble); dark-tint vs legit open; per-tri colour dump queued (NEXT.md).
 - **s5987:** plume attach g/h 20/20 clean (control PASS) -> plume loop closed as non-recurring. New G3 datum: port lvl1 frames 4000/4500 show flat dark mesh ground (eyeball, undecided; NEXT.md).
 
 - **s5986:** s5982 lldb-launch plume soaks were a tooling null (getcwd EPERM, titles=0/3); attach recipes s5986_plume_attach_g/h queued (control + 10 boots each).
