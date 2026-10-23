@@ -166185,3 +166185,15 @@ Offline re-analysis of existing run logs (scratch/agent/m6/{s5715_lvl5a,g1_lvl10
 - Caveat: single-source per level (one log each; 10a/10b/10c all end ~880 s). Not yet observed to reach flight.
 - Queued: soak_queue/g1_lvl10long.sh and g1_lvl15long.sh (SOAK_TIMEOUT=2100, WAITN=330) to see whether flight is reached after the viewer exits. Discriminator: reaches mission origin => levels 10/15 pass (a); else a post-viewer failure is the next datum.
 ORIGIN: no mitigation added; only soak recipes.
+
+## Session 5943 (2026-10-22) — G1: levels 10 and 15 pass (a)+(b) via the long viewer wait
+
+Folded SOAK-RESULTS g1_lvl10long and g1_lvl15long (the s5942 queue): both rc=0.
+lvl10long: mission_t=207s, hold=303s, alive_at_end=1, vi_stalls30s=0, crashlines=0.
+lvl15long: mission_t=251s, hold=305s, alive_at_end=1, vi_stalls30s=0, crashlines=0,
+godrefills=20 (harness god-mode refill counter, not a fault). So H1 of s5942 holds:
+the planet-intro viewer exits and flight is reached; the earlier nomission verdicts for
+10/15a were an insufficient wait (soak cutoff 880 s vs. viewer auto-advance ~790 s), not a
+crash. Levels 1-17 and 18a now have (a)+(b); g1_lvl18b is still running/queued. Two lines of
+evidence: verdict lines in SOAK-RESULTS plus mission origin 0x00690400-family cycling in
+run.log. Remaining G1: (c) framebuffer + (d) forced-hit objective response for all levels.
