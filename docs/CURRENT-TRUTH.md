@@ -228,3 +228,5 @@ mission logic, and `scratch/agent/SOAK-RESULTS.md` for queued verdicts.
 
 ## G1b update (s6016)
 Gfx thread hot spot found by `sample` (s6015): ~80% of gfx samples in O(n^2) g_s4272_sh scan at dpc_bridge.cpp:2748 + s4285 diag loop; fixed s6016 (hash index, ROGUESQ_S4285 gate). Verify with soak s6016_g1b_scanfix vs s6014 loud baseline (17.6% slow seconds). H-host/H-shader/H-log not supported.
+
+- **s6017 (G1b CLOSED):** s6016 hash-index fix: lvl1 slow seconds 132/748 (17.6%) -> 0/748, mean sd_wall 31.4 -> 10.3 ms, tasks/s 25.5 -> 30.2, 0 crash/stall. Cause was our own O(n^2) scan in rsp_dpc_submit. Reuse the `[g1b]` instrument (ROGUESQ_G1B=1) as the frame-time baseline for G1c. Next: G1c.

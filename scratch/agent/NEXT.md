@@ -1,5 +1,6 @@
-# NEXT: fold s6016_g1b_scanfix (G1b post-fix arm)
-HYPOTHESIS-ID: g1b-frame-pacing
-s6015 sampler (6 samples, all with sd_wall 102-193ms; positive control passed): Gfx thread ~93% in send_dl -> factor5_ucode -> rsp_dpc_submit, ~80% of ALL gfx samples at dpc_bridge.cpp:2748 (linear scan of g_s4272_sh per deferred range, O(n^2)) + the s4285 per-flush shadow word-compare diag. RT64 processRDPLists itself is only ~3% => H-rsp/H-host/H-shader/H-log not the cause; our own bridge scan is.
-s6016 fix: hash index for the scan (first-match preserved), s4285 diag gated behind ROGUESQ_S4285=1.
-Fold: compare SOAK-RESULTS s6016_g1b_scanfix [g1b] slow-second fraction vs s6014_g1b_loud (17.6%). Expect sharp drop. If slow seconds remain, re-sample (tools in s6015 recipe) and read the new top frame. Also check rendering unchanged (soak rc=0, no new crash).
+# NEXT: G1c extended draw distance - find WHICH limit applies (discriminator first)
+HYPOTHESIS-ID: g1c-draw-distance
+G1b closed (s6017): baseline lvl1 post-fix = 0 slow seconds, mean sd_wall 10.3 ms, tasks/s 30.2.
+Hypotheses (see iteration prompt G1c): L-fade (haze baked in shade/combiner; re-test ROGUESQ_FORCE_FOG in flight), L-radius (terrain tile visibility radius / far clip constant), L-lod (detail index 0x80137CE4, selectMeshLodAndSubmitForRender / setObjectDetailLevel), L-budget (DL/vertex/tile buffer caps).
+Discriminator: fixed-camera lvl1 framebuffer, measure distant-terrain pixel fraction while perturbing ONE lever per arm in the same build (env-gated): fog off, radius const x2, lod index forced 0, then check budget overflow counters. Positive control: an arm that visibly changes the distant fraction (e.g. force-hide terrain) must fire. Build all arms in one iteration (iron rule 13), run as queued soaks with G1B=1 on.
+First step: grep for terrain visibility radius / far-clip consts and 0x80137CE4 readers in recompiled code; write the arm list here, then implement env hooks in a fixup script.

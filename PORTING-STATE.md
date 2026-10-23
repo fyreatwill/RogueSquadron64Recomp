@@ -166540,3 +166540,9 @@ Built: scratch/agent/m6_god_common.sh now accepts FBD_EVERY_V/FBH_V/TRI_V/DRAWN_
 - Fix: unordered_map index over g_s4272_sh built per flush (first-match preserved via emplace); s4285 diag loop gated behind ROGUESQ_S4285=1 (diag-only, counters unused elsewhere).
 - ORIGIN: not a corruption mitigation; the scan is our own s4272/s4286 wrap-restore diagnostic-era code whose shadow list grows with deferred ranges per flush.
 - Built OK. Queued soaks/s6016_g1b_scanfix.sh (same recipe as s6014 loud) to measure slow-second fraction (baseline 17.6%).
+
+## Session 6017 (2026-10-23) — G1b CLOSED: scan fix removes all slow seconds (17.6% -> 0.0%)
+- Folded soak s6016_g1b_scanfix (lvl1, same recipe/route as s6014 loud, rc=0, alive_at_end=1, vi_stalls30s=0, crashlines=0). From scratch/agent/m6/g1_lvl1g1b{loud,scanfix}/run.log `[g1b]` lines (748 s each): slow seconds (sd_wall avg >50 ms) loud 132 (17.6%) -> scanfix 0 (0.0%); >100 ms 99 -> 0; mean sd_wall 31.4 -> 10.3 ms/task; mean gfx tasks/s 25.5 -> 30.2; VI 60.0 -> 59.9.
+- Two lines of evidence: s6015 `sample` (80% of gfx samples in the scan) + s6016 same-recipe A/B (slow seconds vanish). Positive control = the loud arm of the same recipe reproduces the 17.6% baseline from s6014. Cross-run A/B on an animating scene, but the effect is 132 -> 0 of 748, far outside phase jitter.
+- Verdict: owner's intermittent "buffering" slowdown on lvl1 = our own O(n^2) g_s4272_sh scan in rsp_dpc_submit, not host/RT64/shader/log. Not verified: lvl10 (s6013 lvl10 had rc=1 for a separate reason) and rendering pixel-identity (no crash, tasks/s up). 
+- ORIGIN: n/a (no mitigation added; performance fix landed s6016). Next: G1c extended draw distance.
