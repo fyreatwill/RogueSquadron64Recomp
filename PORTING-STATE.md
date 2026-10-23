@@ -166358,3 +166358,12 @@ Folded g1_lvl1_zs and g1_lvl2_zs (both rc=0, ~392 s). Late fbd frames vs ctl (fi
 ## Session 5974 (2026-10-23) — FIX_ZERO_SHADE OFF: lvl3+lvl4 fine (H1 so far)
 
 Folded g1_lvl3_zs and g1_lvl4_zs soaks (both rc=0, ~395 s, no crash/stall). Compared last framebuffer (fbd, 512 wide) vs the matching ctl runs: lvl3 shows textured cloud sky, terrain, fortress structure, craft and HUD; lvl4 shows textured sunset sky, canyon wall, X-wing and HUD. No black sky or untextured geometry (H2 not seen). Single-source (visual, one frame per level; ctl frames differ in camera phase). lvl5/7/8/9 zs soaks still queued. Rules out: FIX_ZERO_SHADE OFF regressing lvl1-4.
+
+## Session 5975 (2026-10-23) — FIX_ZERO_SHADE OFF: lvl5+lvl7 fine (H1 so far)
+
+Folded g1_lvl5_zs and g1_lvl7_zs soaks (rc=0, 386 s / 393 s, no crash/stall). Compared last
+framebuffer (scratch/agent/m6/g1_lvl5zs vs g1_lvl5ctl, g1_lvl7zs vs g1_lvl7ctl; ppm -> png): lvl5 shows
+starfield + textured asteroid + X-wing + HUD in both arms; lvl7 shows textured cliff + cloud sky + Y-wing
+in both arms. Camera pose differs (animating scene, no cross-run A/B on geometry) but no black sky or
+untextured surface in the zs arm. Evidence is by-eye on one frame per arm (single-source per level).
+Rules out the sky regression H2 for lvl1-5 and lvl7. lvl8/lvl9 zs soaks still queued.
