@@ -1,3 +1,3 @@
-# NEXT: G1c - fold s6046_dd2lw (lldb write-watch on tbl 0x80136DC4; s6045 failed: no timeout cmd, fixed with perl alarm)
+# NEXT: G1c - fold s6047_dd2lw (lldb write-watch on tbl, address = x0+0x136DC4)
 HYPOTHESIS-ID: g1c-draw-distance
-Read scratch/agent/m6/s6045_dd2lw/lldb.log (s6046 reuses OUT dir). Positive control: watchpoint stops at call=129/783 table swaps must appear. Then: a stop whose new word is 0 -> its bt names the writer: fix root cause. No zero-write but SIGBUS -> re-derive x21 origin from disasm of streamTerrainGridCellsByDistance+10880 (tools/agent/disasm_at.py). If still no stops, check common.log and whether 0x380136DC4 is the right host address (compare with ROGUESQ_DD_DUMP output).
+Read scratch/agent/m6/s6047_dd2lw/lldb.log. Control: watchpoint stops at table swaps must appear (nonzero count). Then a stop whose new word is 0 -> bt names the writer: fix root cause. No stops at all -> check that the first breakpoint hit and x0 printed; if the watch is on a wrong convention, read MEM_HU macro in the recomp headers.
