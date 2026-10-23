@@ -112,6 +112,7 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+- **s6035 G1c (code-read, single-source):** footprint polygon has NO clamp; scale knob is float 0x8009DEAC (14.5; DEB0 recomputed each call). Hard limits: terrain w/h and 64-wide window bitmaps (0x80132DB0/0x80133DB0). Unresolved: why earlier x2/x3 arms gave only +4%/+7%. Next: ROGUESQ_DRAW_DISTANCE scaling DEAC + read queued [gridlog] arms.
 - **s6034 G1c (RESULT):** retail lvl1: requested cells 504-1148 < pool cap 2048, window ~35x29 of 64x64 terrain => cap and terrain-end NOT binding; limit is the footprint window written by binPolygonIntoTerrainGrid (single run, single-source). Next: log its input polygon + clamp.
 - **s6034 G1c:** stream pool (0x18 nodes, cap lhu 0x80130C4C) + window 0x80132DB0..BC + terrain w/h 0x80136DF8/FA bound the visible set (single-source, code read). `[gridlog]` instrument (ROGUESQ_DD_GRIDLOG=1) built; arms s6034_g1c_ret/posab/cell2 queued, fold kept-vs-cap next.
 - **s6033 G1c:** far-plane arms folded: far025 -45% tri/task (control OK), far2 flat (+0.3%), far4 partial -11%. ALL scalar levers (footprint, FOV, LOD, cell, igrid, fog, far) are shrink-only/flat => retail cap is not a tunable scalar. Next: H-data (is lvl1 terrain extent baked: dump grid cell dims/world extent from allocAndInitGridCellArray and compare to camera far distance) then L-budget (0x80137A68 buffer, rs_malloc 200*(n/10)). near4 arm still queued.

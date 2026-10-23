@@ -1,4 +1,4 @@
-# NEXT: G1c - what clamps the footprint polygon window (binPolygonIntoTerrainGrid)
+# NEXT: G1c - implement ROGUESQ_DRAW_DISTANCE on 0x8009DEAC and fold [gridlog] arms
 HYPOTHESIS-ID: g1c-draw-distance
-Established s6034: window (0x80132DB0..BC) is neither cap- nor terrain-bound (req<=1148<2048, <45% of 64x64). H1: footprint polygon vertices are clamped to a fixed world distance inside buildVisibleTerrainGridAroundCamera (0x800437B0) before binPolygonIntoTerrainGrid. H2: polygon is far-plane-derived but a later min() against a constant. H3: bin function clamps width/depth to a max span.
-Discriminator: one build logging polygon vertices (world x/z) at binPolygonIntoTerrainGrid entry + the window it writes, retail vs far2 vs posab arms (posab/cell2/near4 already queued; fold them). If window grows with far2 -> far knob was applied elsewhere; if polygon fixed -> find the clamp constant (H1/H2) and make it ROGUESQ_DRAW_DISTANCE. Fix kept= walk (+4) in apply_s6034_gridlog.py.
+Facts (s6035 code read): polygon unclamped; knob = float at 0x8009DEAC (14.5), DEB0 recomputed each call; limits = terrain w/h + 64-wide window bitmaps (overflow risk if window >64).
+H-A: DEAC scaling widens the window until terrain/64 stride saturates. H-B: earlier x2/x3 arms never scaled DEAC (explains +4%). Discriminator: fixup script writes DEAC*=ROGUESQ_DRAW_DISTANCE (clamp so window<=64, never change default), run lvl1 at 1.0 vs 2.0 with ROGUESQ_DD_GRIDLOG=1 in one build; compare win w/d and kept. First fold the queued s6034_g1c_ret/posab [gridlog] output from SOAK-RESULTS.
