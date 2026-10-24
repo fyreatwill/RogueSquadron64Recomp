@@ -37805,6 +37805,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s6086 bigarena x{_n6086}")
 
+    if p.name == "funcs_3.c":
+        import apply_s6098_dlpool as _a6098
+        text, _n6098 = _a6098.apply3(text)
+        if _n6098:
+            changed = True
+            report.append(f"{p.name}: s6098 dlpool x{_n6098}")
+
     if p.name == "funcs_6.c":
         import apply_s6088_bucketlog as _a6088
         text, _n6088 = _a6088.apply6(text)
@@ -41711,6 +41718,7 @@ RS64_REPLAY = [
     "apply_s6063_heaplog.py",
     "apply_s6086_bigarena.py",
     "apply_s6088_bucketlog.py",
+    "apply_s6098_dlpool.py",
     "apply_s6038_cellprobe.py",
     "apply_s6043_tblwatch.py",
     "apply_s6031_far.py",

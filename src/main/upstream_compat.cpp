@@ -2388,6 +2388,25 @@ extern "C" uint32_t rs64_s6091_scale(uint32_t v) {
 static unsigned long s_s6093_cnt[8];
 extern "C" void rs64_s6096_skip(uint32_t r16, uint32_t off) { ++s_s6093_cnt[6]; static int n = 0; if (n++ < 12) std::fprintf(stderr, "[bucketlog] s6096 guard-skip r16=%08X s1off=%u\n", r16, off); }
 extern "C" void rs64_s6097_inline(uint32_t nb, uint32_t heads, uint32_t ent, uint32_t bad) { static unsigned long nt = 0; ++nt; if (nt <= 6 || nt % 100 == 0) std::fprintf(stderr, "[bucketlog] s6097 inline tick#%lu nb=%u heads=%u ent=%u oob=%u\n", nt, nb, heads, ent, bad); }
+extern "C" int rs64_s6098_en(void) { static const int on = [] { const char* e = std::getenv("ROGUESQ_DLPOOLLOG"); return (e && e[0] && e[0] != '0') ? 1 : 0; }(); return on; }
+extern "C" void rs64_s6098(int kind, uint32_t len, uint32_t tail) {  /* s6098: DL-chunk cache length at begin(0)/reclaim(1) entry */
+    static unsigned long calls[2], zero[2]; static uint32_t minlen = 0xFFFFFFFFu, maxlen = 0, first = 0xFFFFFFFFu, last = 0; static unsigned long grew = 0;
+    ++calls[kind & 1]; if (len == 0) ++zero[kind & 1];
+    if (first == 0xFFFFFFFFu) first = len;
+    if (len > last && calls[0] + calls[1] > 1) ++grew;
+    bool newmin = len < minlen, newmax = len > maxlen; if (newmin) minlen = len; if (newmax) maxlen = len; last = len;
+    unsigned long n = calls[0] + calls[1];
+    if (n <= 3 || newmin || (kind == 0 && len == 0 && zero[0] <= 20) || n % 2000 == 0)
+        std::fprintf(stderr, "[dlpool] kind=%s len=%u tail=%08X begin=%lu reclaim=%lu empty_b=%lu empty_r=%lu first=%u min=%u max=%u grew=%lu\n", kind ? "reclaim" : "begin", len, tail, calls[0], calls[1], zero[0], zero[1], first, minlen, maxlen, grew);
+}
+extern "C" int rs64_s6099_en(void) { static const int on = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX"); return (e && e[0] && e[0] != '0') ? 1 : 0; }(); return on; }
+extern "C" uint32_t rs64_s6099_alloc(void) {  /* s6099: 128 DL chunks (0x108 B) from a bump arena at 0x80F00000..0x80FFFFFF; 0 when exhausted */
+    static uint32_t bump = 0; const uint32_t bytes = 128u * 0x108u;
+    if (bump + bytes > 0x100000u) { static int w = 0; if (!w++) std::fprintf(stderr, "[dlpoolx] arena exhausted\n"); return 0; }
+    uint32_t p = 0x80F00000u + bump; bump += bytes;
+    std::fprintf(stderr, "[dlpoolx] +128 chunks at %08X (total %u)\n", p, bump / 0x108u);
+    return p;
+}
 extern "C" void rs64_s6093_cnt(int w) { ++s_s6093_cnt[w & 7]; }
 extern "C" void rs64_s6094_tick(uint8_t* rdram, uint32_t nbm, uint32_t basem) {  /* s6094: age histogram at each tickTextureMaterialExpiry entry */
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_BUCKETLOG"); return e && e[0] && e[0] != '0'; }();
