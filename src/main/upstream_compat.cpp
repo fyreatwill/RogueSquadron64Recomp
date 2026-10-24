@@ -2390,6 +2390,7 @@ extern "C" void rs64_s5041_free(uint32_t ptr, uint32_t ra) {
 static std::map<uint32_t, uint32_t> s_s6063_live; static uint64_t s_s6063_bytes = 0, s_s6063_peak = 0;
 static bool s6063_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_HEAPLOG"); return e && e[0] && e[0] != '0'; }(); return on; }
 static void s6127_walk(uint32_t req, bool ok = false);
+static void s6129_dump(const char* why, uint32_t from);
 static uint8_t* g_s6127_rd = nullptr;
 static inline uint32_t s5042_rd(const uint8_t* rd, uint32_t off);
 static uint32_t g_s6127_flags;
@@ -2398,6 +2399,8 @@ extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
     if (!s6063_on()) return;
     if (!ptr && req == 0x1000u) s6127_walk(req);
     if (ptr && req == 0x1000u) { static int k1 = 0; if (k1++ < 40) { s6127_walk(req, true); uint8_t* r = g_s6127_rd; std::fprintf(stderr, "[heaplog-1000ok] flags=%X -> %08X slot100=%08X slotE8=%08X slot104=%08X\n", g_s6127_flags, ptr, r?s5042_rd(r,0x10FF00u):0xFFFFFFFFu, r?s5042_rd(r,0x10FF18u):0xFFFFFFFFu, r?s5042_rd(r,0x10FEFCu):0xFFFFFFFFu); } }
+    { static int ntrig = 0; /* s6129: heap block list around the unexplained big (top-down arena?) block */
+      if (ptr && ((req == 0x1CFE0u && ptr == 0x802EC480u) || (req == 0xC0C0u && ptr == 0x80318950u) || (req == 0x8000u && (g_s6127_flags & 0xF) == 4 && ntrig == 2)) && ntrig < 4) { ++ntrig; char w[48]; std::snprintf(w, sizeof w, "trig%d req=%X ptr=%08X fl=%X", ntrig, req, ptr, g_s6127_flags); s6129_dump(w, 0x802EC000u); } }
     static int nnull = 0;
     if (ptr) { auto it = s_s6063_live.find(ptr); if (it != s_s6063_live.end()) s_s6063_bytes -= it->second; s_s6063_live[ptr] = req; s_s6063_bytes += req; if (s_s6063_bytes > s_s6063_peak) s_s6063_peak = s_s6063_bytes; }
     if (!ptr && req == 0x1000u) std::fprintf(stderr, "[heaplog-null1000] flags=%08X req=0x1000 -> NULL ra=%08X live=0x%llX nblk=%zu\n", g_s6127_flags, ra, (unsigned long long)s_s6063_bytes, s_s6063_live.size()); /* s6126: null-dest DMA scratch alloc */
@@ -2530,6 +2533,17 @@ static void s6127_walk(uint32_t req, bool ok) {  /* s6127: walk both guest heaps
     }
 }
 static uint8_t* g_s6127_rd_fwd() { return g_s6127_rd; }
+static void s6129_dump(const char* why, uint32_t from) {  /* s6129: list every main-heap block at/after `from` (hdr: u16 flags,u16 tag,u32 size,16B hdr) */
+    uint8_t* rd = g_s6127_rd; if (!rd) return;
+    uint32_t a = s5042_rd(rd, 0x10FF00u); int g = 0, shown = 0; uint32_t endsent = s5042_rd(rd, 0x10FF00u);
+    std::fprintf(stderr, "[s6129] %s head=%08X slotE8=%08X top-ptrs 63D8=%08X 63DC=%08X 63E0=%08X 63E4=%08X 63F8=%08X\n", why, endsent, s5042_rd(rd, 0x10FF18u), s5042_rd(rd, 0x1163D8u), s5042_rd(rd, 0x1163DCu), s5042_rd(rd, 0x1163E0u), s5042_rd(rd, 0x1163E4u), s5042_rd(rd, 0x1163F8u));
+    while (a >= 0x80000000u && a < 0x80800000u && g++ < 200000) {
+        uint32_t w0 = s5042_rd(rd, a - 0x80000000u), sz = s5042_rd(rd, a - 0x80000000u + 4); uint16_t fl = w0 >> 16;
+        if (a >= from && shown < 48) { ++shown; std::fprintf(stderr, "[s6129]   blk@%08X fl=%04X tag=%04X size=%X\n", a, fl, w0 & 0xFFFF, sz); }
+        if ((fl & 8) || sz == 0 || sz > 0x800000u) { std::fprintf(stderr, "[s6129]   END blk@%08X fl=%04X size=%X (nblk walked=%d)\n", a, fl, sz, g); break; }
+        a += 0x10 + sz;
+    }
+}
 extern "C" void rs64_s5042_poison(uint8_t* rdram, uint32_t ptr, uint32_t ra) {
     g_s6127_rd = rdram; /* s6127: stash rdram for the NULL-path freelist walk */
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_FREE_POISON"); return e && e[0] && e[0] != '0'; }();

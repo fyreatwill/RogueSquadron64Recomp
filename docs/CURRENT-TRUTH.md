@@ -167,3 +167,6 @@ The 21:9 NULL-dest DMA is rs_malloc(0x1000,flags=9) failing from true MAIN-heap 
 
 ## s6128 update (G1d 21:9 heap)
 Allocation stream (every rs_malloc>=0x4000) is identical wide vs 4:3 for ~370 rows; extra consumption is ONE heap block: 0x3E4B00 (wide) vs 0x2DB000 (ctl), created by a path the heaplog misses (no logged rs_malloc has either size), plus heap end lower in wide (0x8071B670 vs 0x80795BF0 later in ctl). `[heapwalk-top]` instrument landed. Next: find that block's creator and the ctl heap-end growth.
+
+## s6129 update (G1d 21:9 heap root cause)
+The 21:9 heap deficit is the widened framebuffer carve: partitionFramebufferMemory (0x80000DD4) places fbs at the top of the 8 MB (globals 0x801163D8/DC/E4/F8), each w*448*2 (512: 0x70000; 1045: 0xE4980), so 21:9 moves heap end -0x74980, fb base and the top-down pool -0xE9300 and costs ~1.9 MB of the 2.6 MB 4:3 free space (-> NULL rs_malloc(0x1000), s6127). The 0x2DB000/0x3E4B00 "block" is that pool region. 16:9 (796) has no heap NULL but stalls in initMission -> initializeObjectiveTracking -> lv1_initializeObjectTracking (new, uncharacterized). Fix routes: lift RT64's 8 MB rdram cap (osMemSize up to 16 MB; ROGUESQ_OSMEM_MB clamps to 8 in recomp.cpp:565) or shrink the carve. NEXT: find where RT64 caps rdram, and charcterize the 16:9 stall.
