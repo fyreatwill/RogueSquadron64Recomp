@@ -331,4 +331,5 @@ Gfx thread hot spot found by `sample` (s6015): ~80% of gfx samples in O(n^2) g_s
 - **s6068 G1c:** L10 'nomission' retries (s6065/s6066) were a recipe defect: cap 600 + no ROGUESQ_FORCE_PLANET_UNLOCK=0xFF (viewer ~790 s). Supersedes 's6067 route flake'. Queued s6068_px2_dd2_hold300_l10pu (cap 1000); fold it.
 - **s6102 G1c ph2 CLOSED:** s6101 dd4 a/b both died (hold 220/289 s, alive_at_end=0, crashlines=37; rc=0 is NOT a pass - read alive_at_end). dd>=3 crashes in 150-290 s (finder null node). ROGUESQ_DRAW_DISTANCE now capped at 2 unless ROGUESQ_DD_UNSAFE=1. Supersedes s6098 'dd4 non-monotone'. Next: G1d widescreen.
 
+- **s6104 G1d:** ROGUESQ_ASPECT_SCALE=k lever (guPerspective aspect) built; soaks s6104_g1d_scale/scaleexp queued, unread. 
 - **s6103 G1d:** RT64 widens only if game submits wider colour image + scissor + VI regs (code read, single-source). Knob ROGUESQ_ASPECT=expand|W:H added (Original default). Next: patch guPerspective aspect (a3) x(target/1.333) and the viewport/scissor in one env-gated build; check s6103_g1d_expand_l1 soak.
