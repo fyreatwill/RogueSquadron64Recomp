@@ -113,6 +113,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 - **s6086 G1c ph2:** ROGUESQ_BIGARENA=1 built (scaled terrain pool diverted to 0x80800000 arena, tools/apply_s6086_bigarena.py); 3 soaks queued (ctl px4 dd3 / arena px4 dd3 / arena px8 dd4); fold per scratch/agent/NEXT.md.
+- **s6087 G1c ph2 (RESULT):** arena exonerated - the no-arena control crashes identically (5/5, si_addr 0x380000004 = guest NULL+4, beginFrameDLChunk+12168/46788/79280). Mechanism: node-cache head *(0x801163B0)==0 and findAndUnlinkSmallestEntry (0x8002221C) returned 0, then `sw $v0,4($a0=0)` at 0x8000A97C. Crashes at nblk 578-583 while healthy runs reach 676, so not a block-count cap. Drain writer unnamed; next unit in NEXT.md.
 - **Owner 2026-10-24: queued G1d widescreen/ultrawide (16:9 TV, 21:9 monitor) and G1e
   higher frame rate, after G1c phase 2.** Specs: ITERATION.md item 3c.
 - **Owner 2026-10-24: G1c phase 2 queued right after G3b** — push draw distance as far
