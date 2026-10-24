@@ -166864,3 +166864,10 @@ Folded s6073_ddfar_dd2_hold300_l1 (rc=0, hold=301s, vi_stalls30s=0, crashlines=0
 ## Session 6075 (2026-10-23) — G1c: folded dd1 control + dd2 L10 (auto-far); L5/dd3 still queued
 Folded 2 of 4 s6074 soaks. s6074_ddfar_dd2_l10: rc=0, hold=301s, vi_stalls30s=0, crashlines=0 (first clean dd2 L10 300 s hold since the POOLX/cap work; earlier L10 arms hit the 600 s kill). In-flight [g1cf] tasks=1 tri: p10 164 / med 444 / p90 972; dd flag active on 12195 frames. s6074_ddfar_dd1_l1 (control, DRAW_DISTANCE=1): rc=0, hold=304s, 0 stalls, 0 crashlines; the dd flag is 0 on every tasks=1 frame (12058), so auto-far does NOT leak into dd1. Control tri med 1027 (p10 212, p90 1216) over ALL tasks=1 frames incl. non-flight, so it is NOT comparable to the 643 in-flight figure from s6074 (different filter) - single-source, no retail-vs-dd2 ratio drawn from it. Fixed-camera scorer tools/g1c_fixed_score.py crashes on L10 fbd (mixed w320/w512 frames; IndexError at line 13) - not fixed this session. sd_wall mean: dd1_l1 9.15, dd2_l10 6.31 (different levels, no regression claim).
 Pending: s6074_ddfar_dd2_l5, s6074_ddfar_dd3_l1 (still in soak_queue). Rules out: auto-far leaking into dd1.
+
+## Session 6076 (2026-10-23) — G1c: dd2 L5 + dd3 L1 hold 300 s clean; scorer fixed
+- s6074_ddfar_dd2_l5 and s6074_ddfar_dd3_l1 (rc=0): hold 304/305 s, alive_at_end=1, vi_stalls30s=0, crashlines=0.
+- With s6075 (dd2 L10 clean, dd1 control clean) the G1c done-criterion "dd2 holds 300 s on L1, L5, L10 with 0 crash" is MET for crash/stall; dd3 L1 also clean.
+- tools/g1c_fixed_score.py now skips non-512-wide/truncated frames (fixes L10 IndexError). Scores: L10 tight 0.98 (space/sky colours saturate the terrain heuristic - not meaningful there), L1 dd1 tight med 0.065 vs dd3 0.034, L5 dd2 0.033. Cross-run on animating scenes: NOT a valid comparison (iron rule 2); look judgement is the owner's.
+- Not done: frame-time vs G1b baseline per step (no wall-clock instrument for dd arms beyond s6074 tri counts). Single-source on that point.
+- ORIGIN: no mitigation machinery added (scorer-only change).

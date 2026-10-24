@@ -1,3 +1,4 @@
-# NEXT: G1c - fold s6074_ddfar_{dd2_l5,dd3_l1} (still queued) and fix scorer
-HYPOTHESIS-ID: g1c-heap-exhaustion
-Folded so far: dd1_l1 control clean (dd flag never fires), dd2_l10 holds 300 s clean. Remaining: dd2_l5 and dd3_l1 in SOAK-RESULTS.md (logs scratch/agent/m6/g1_lvl*g1cs6074_*). Also make tools/g1c_fixed_score.py skip/handle frames whose width != the first (IndexError on L10 fbd with w320+w512 mixed), then score L10 and compare in-flight tri with a same-filter retail arm (restrict tri stats to in-flight VI range, same as s6074's 643 figure). If dd2 L1/L5/L10 all hold with 0 crash: record it for owner look judgement, move to G3.
+# NEXT: G3 render fidelity - in-flight frame diff vs retail oracle / hangar artifact list
+HYPOTHESIS-ID: g3-render-fidelity
+G1c crash/stall criterion met (s6076); owner look-judgement of ROGUESQ_DRAW_DISTANCE=2 pending (default stays 1.0).
+Unit: take the hangar artifact list in CURRENT-TRUTH, pick the top item, write 2-3 hypotheses + discriminating capture, one build, one run.

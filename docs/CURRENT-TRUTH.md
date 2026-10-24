@@ -112,6 +112,9 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+
+> s6076: G1c crash/stall criterion MET (ROGUESQ_DRAW_DISTANCE=2 auto-far holds 300 s clean on L1, L5, L10; dd3 L1 clean). Ask owner to judge look; default stays retail. Next rung: G3 render fidelity.
+
 - **s6072 G1c (single-source):** s6071 far025 arm folded: dd1 tri 489 vs ~674 ref (-27%, control weaker than the -45% predicted; cross-run), dd2 695 (x1.42 over dd1). Selects nothing. First action next: fold far1 and far4 (scratch/agent/m6/g1_lvl1g1c6071far{1,4}/run.log) - far4 dd2 tri/terrain fraction above far1 => H-clip. No conclusion overturned this session.
 - **s6075 G1c:** s6074 dd2_l10 holds 300 s clean (0 crash/stall); dd1_l1 control clean and dd flag never fires (auto-far does not leak into dd1). Control tri (med 1027, all active frames) is not comparable to the in-flight 643 figure (single-source). Pending: s6074_ddfar_dd2_l5, dd3_l1; fix tools/g1c_fixed_score.py on mixed-width fbd (L10 IndexError), then owner look-judgement and G3.
 - **s6074 G1c:** dd2 + auto-far L1: tri x2.3 (643->1465), terrain fraction 0.030->0.074, 300 s hold 0 crash/stall, VI 60/s, RSP host +~10 ms/s. Queued s6074_ddfar_{dd2_l5,dd2_l10,dd3_l1,dd1_l1}; fold, then ask owner to judge look. Default stays 1.0.

@@ -25,7 +25,9 @@ T = []; H = []
 for p in sorted(glob.glob(os.path.join(d, "fb_*_w512.ppm"))):
     n = int(re.search(r"fb_(\d+)_", p).group(1))
     if n < minn or n % 3: continue
-    w, h, px = load(p); T.append(terr(w, h, px)); H.append(hud(w, h, px))
+    w, h, px = load(p)
+    if w != 512 or len(px) < w * h * 3: continue  # mixed-width / truncated frames (L10 fbd)
+    T.append(terr(w, h, px)); H.append(hud(w, h, px))
 if not T: print("no frames"); sys.exit(1)
 q = lambda v, f: sorted(v)[int(len(v) * f)]
 print("%s frames=%d tight med %.4f p10 %.4f p90 %.4f | loose med %.4f | HUD>=50red: %d/%d (med %d)" % (
