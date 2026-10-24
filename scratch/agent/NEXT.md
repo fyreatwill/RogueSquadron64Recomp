@@ -1,6 +1,6 @@
-# NEXT: G1c - fold s6061 arms (heap exhaustion hypothesis), then fix heap for dd2
+# NEXT: G1c - size the pool multiplier to the heap
 HYPOTHESIS-ID: g1c-draw-distance
-s6061: px4_dd2 SIGBUS = rs_malloc(0x1E4) NULL in allocateAndInitCraftNpcContext (unchecked), i.e. guest heap exhausted by the dd2 window (kept 1243 vs ~365 cells). `[mallocnull]` log built.
-Fold arms in scratch/agent/SOAK-RESULTS.md / soak_results: s6061_px4_dd2b (expect [mallocnull] = positive control), px3_dd2, px4_dd1, px8_dd1.
-Hypotheses: (A) heap use scales with active window (dd2 crashes at px>=3-4, dd1 never) ; (B) poolx alloc alone exhausts (px8_dd1 crashes) ; (C) NULL is from a different allocator limit (fragmentation).
-Next unit: log rs_malloc free/high-water at the window rebuild; if A, either enlarge guest heap under DRAW_DISTANCE or cap NPC spawn to retail cells; then rerun `python3 tools/g1c_ddtog_fold.py scratch/agent/m6/g1_lvl1g1cpx4_dd2 4500 --hud`.
+s6062: px4 at dd1 hits rs_malloc NULL (control fired) => poolx alone exhausts the 8 MB guest heap. px2 is clean (dd1.5, dd2). px3_dd2 crashes at a second NULL deref (no mallocnull).
+Hypotheses: (A) heap budget between px2 and px3 is the limit -> find the fit point; (B) a cheaper consumer (stream tile cache, audio buffers) can be shrunk to buy room for px3/4; (C) terrain still flat at px2 because pool is not the extent limit (HUD restored only).
+Unit: instrument rs_malloc wrapper (src/main/upstream_compat.cpp rs64_s5041_malloc area) to log request size + running live-bytes high-water at poolx alloc and on first NULL; run px2, px2.5(if poolx accepts fractions, it does: atof), px3 at dd1 in one batch; then check HUD/terrain via tools/g1c_ddtog_fold.py with --hud. Control: px4 must show NULL.
+Check queued px4_dd2b/px8_dd1 results in SOAK-RESULTS first.
