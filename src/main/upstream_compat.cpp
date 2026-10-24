@@ -2514,17 +2514,18 @@ static void s6127_walk(uint32_t req, bool ok) {  /* s6127: walk both guest heaps
     uint8_t* rd = g_s6127_rd_fwd(); if (!rd) { std::fprintf(stderr, "[heapwalk] no rdram yet\n"); return; }
     for (int h = 0; h < 2; ++h) {
         uint32_t head = s5042_rd(rd, (h ? 0x8010FF18u : 0x8010FF00u) - 0x80000000u);
-        uint64_t freeb = 0, usedb = 0; uint32_t nfree = 0, nused = 0, big[5] = {0,0,0,0,0}; uint32_t a = head, first = head, last = 0; int guard = 0;
+        uint64_t freeb = 0, usedb = 0; uint32_t nfree = 0, nused = 0, big[5] = {0,0,0,0,0}; uint32_t a = head, first = head, last = 0; int guard = 0; struct UB { uint32_t sz, addr, tag; } ub[10] = {}; /* s6128: top used blocks */
         if (!ok) std::fprintf(stderr, "[heapwalk] heap%d ptr-slot=%08X (0x8010FEFC=%08X 0x80110018=%08X)\n", h, head, s5042_rd(rd, 0x10FF00u), s5042_rd(rd, 0x10FF18u));
         if (head < 0x80000000u || head >= 0x80800000u) { std::fprintf(stderr, "[heapwalk] heap%d head=%08X (out of range)\n", h, head); continue; }
         while (a >= 0x80000000u && a < 0x80800000u && guard++ < 200000) {
             uint32_t w0 = s5042_rd(rd, a - 0x80000000u), sz = s5042_rd(rd, a - 0x80000000u + 4); uint16_t fl = w0 >> 16;
             last = a; if (guard <= 12 && !ok) std::fprintf(stderr, "[heapwalk]   h%d blk@%08X w0=%08X size=%08X\n", h, a, w0, sz);
-            if (fl & 1) { ++nfree; freeb += sz; for (int i = 0; i < 5; ++i) if (sz > big[i]) { for (int j = 4; j > i; --j) big[j] = big[j-1]; big[i] = sz; break; } } else { ++nused; usedb += sz; }
+            if (fl & 1) { ++nfree; freeb += sz; for (int i = 0; i < 5; ++i) if (sz > big[i]) { for (int j = 4; j > i; --j) big[j] = big[j-1]; big[i] = sz; break; } } else { ++nused; usedb += sz; for (int i = 0; i < 10; ++i) if (sz > ub[i].sz) { for (int j = 9; j > i; --j) ub[j] = ub[j-1]; ub[i] = { sz, a, (uint32_t)(w0 & 0xFFFFu) }; break; } }
             if (fl & 8) break;
             if (sz == 0 || sz > 0x800000u) { std::fprintf(stderr, "[heapwalk] heap%d BAD size %08X at %08X fl=%04X\n", h, sz, a, fl); break; }
             a = a + 0x10 + sz;
         }
+        if (h == 1) { std::fprintf(stderr, "[heapwalk-top]%s used>=:", ok ? "(1000ok)" : ""); for (int i = 0; i < 10; ++i) if (ub[i].sz) std::fprintf(stderr, " %X@%08X/t%X", ub[i].sz, ub[i].addr, ub[i].tag); std::fprintf(stderr, "\n"); }
         if (!(ok && h == 0)) std::fprintf(stderr, "[heapwalk]%s req#%d heap%d start=%08X lastblk=%08X end~%08X nfree=%u free=0x%llX nused=%u used=0x%llX top5free=%X,%X,%X,%X,%X\n", ok ? "(1000ok)" : "", n, h, first, last, a, nfree, (unsigned long long)freeb, nused, (unsigned long long)usedb, big[0], big[1], big[2], big[3], big[4]);
     }
 }

@@ -164,3 +164,6 @@ ROGUESQ_FB_WIDTH=683 now renders (s6119): RT64 width allowlists (last-drawn stor
 
 ## s6127 update (G1d 21:9 crash)
 The 21:9 NULL-dest DMA is rs_malloc(0x1000,flags=9) failing from true MAIN-heap exhaustion (0x80154690..0x8071B670, free 0xCB0, used 0x5C5E50) with the secondary heap slot (0x8010FF00) = 0; the 4:3 control has the main heap to 0x80795BF0 with ~2.6 MB free. Not fragmentation. Open: which allocations add ~2 MB in wide, and why heap end / secondary slot differ. See PORTING-STATE Session 6127.
+
+## s6128 update (G1d 21:9 heap)
+Allocation stream (every rs_malloc>=0x4000) is identical wide vs 4:3 for ~370 rows; extra consumption is ONE heap block: 0x3E4B00 (wide) vs 0x2DB000 (ctl), created by a path the heaplog misses (no logged rs_malloc has either size), plus heap end lower in wide (0x8071B670 vs 0x80795BF0 later in ctl). `[heapwalk-top]` instrument landed. Next: find that block's creator and the ctl heap-end growth.
