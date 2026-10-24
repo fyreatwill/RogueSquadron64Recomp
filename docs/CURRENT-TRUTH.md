@@ -161,3 +161,6 @@ ROGUESQ_FB_WIDTH=683 now renders (s6119): RT64 width allowlists (last-drawn stor
 - s6121: ROGUESQ_ASPECT=<w>:<h> (>4:3) now derives FB_WIDTH+scales in main.cpp; 16:9/21:9 soaks queued, results pending.
 
 - **G1d s6122 (supersedes s6120 'widened frame works end to end'):** ROGUESQ_FB_WIDTH/ASPECT 683/797/1045 all crash 5/5 at mission start (do_rom_read, 64-bit DMA dest 0x380000003, ~150 lines after initMission n=1); 4:3 ctl is fine. s6120's screenshot was pre-flight only. The `initMission+1000` frame in logs is the lvinit-bt diagnostic, not the crash. H-heap (wider pfm fbs starve the 8 MB heap -> NULL alloc) vs H-stride untested; s6122 soak (ROGUESQ_LOG_DMA) queued to name the caller. s6121 screenshots are invalid (game not frontmost; use s6120_run.sh's osascript activate).
+
+## s6127 update (G1d 21:9 crash)
+The 21:9 NULL-dest DMA is rs_malloc(0x1000,flags=9) failing from true MAIN-heap exhaustion (0x80154690..0x8071B670, free 0xCB0, used 0x5C5E50) with the secondary heap slot (0x8010FF00) = 0; the 4:3 control has the main heap to 0x80795BF0 with ~2.6 MB free. Not fragmentation. Open: which allocations add ~2 MB in wide, and why heap end / secondary slot differ. See PORTING-STATE Session 6127.
