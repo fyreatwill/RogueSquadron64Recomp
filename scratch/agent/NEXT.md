@@ -1,6 +1,5 @@
-# NEXT: G1c - fold s6050_dd2_l5, s6050_dd2_l10 (now with planet unlock), s6051_dd1_l10pu (control)
+# NEXT: G1c - name the writer that wraps the terrain window at 2x (holds were vacuous)
 HYPOTHESIS-ID: g1c-draw-distance
-Hypotheses: H-holds (2x survives 300 s on lvl5 and lvl10 with span-table bound) vs H-levelspecific (another unbounded writer on those levels crashes).
-Discriminator: SOAK-RESULTS rc and run-dir summary (crashlines, vi_stalls30s) for tags g1cdd2l5, g1cdd2l10pu; controls g1cdd1l5 (done, clean) and g1cdd1l10pu must be rc=0. Check `grep -a '[spanbound]'` / '[gridlog]' in scratch/agent/m6/g1_lvl*/run.log.
-If crash: lldb backtrace, name writer (iron rule 11). If both pass: G1c half done; build G1b per-VI wall-clock instrument for the frame-time clause (ROGUESQ_G1B already logs sd_wall/sd_cpu per second - use it), then ask owner to judge the look.
-NOTE: level 10 recipes MUST export ROGUESQ_FORCE_PLANET_UNLOCK=0xFF and SOAK_TIMEOUT>=900.
+Hypotheses: H-clamp-order (s6037 clamp runs but a later footprint/binning write re-corrupts 0x80132DB4/BC) vs H-bound-starve (s6048 span-bound skips stores binPolygonIntoTerrainGrid needs, leaving min>max rows -> negative counts) vs H-radius-neg (scaled radius makes the game's own min/max computation produce max<min before any patch, clamp mis-handles it).
+Discriminator: one build, one 2x run on level 5 (recipe s6050_dd2_l5) adding [winlog] lines at (a) before clamp 0x800429C0, (b) right after clamp, (c) at streamTerrainGridCellsByDistance entry, (d) existing gridlog after; plus env to disable s6048 bound for one arm (accept crash, take lldb backtrace). Control: 1x run must show (a)==(b)==(c) sane. Outcome map: (a) already wrapped -> H-radius-neg; (b) sane but (c) wrapped -> H-clamp-order, find writer between via watch; (c) sane but gridlog wrapped -> stream function mutates; bound-off arm sane -> H-bound-starve.
+Also: s6051_dd1_l10pu control is queued; fold it. Success metric for G1c is kept count / terrain pixel fraction >= 1x, never rc=0 alone.
