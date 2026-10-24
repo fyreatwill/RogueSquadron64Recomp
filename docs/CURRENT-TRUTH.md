@@ -113,6 +113,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
+> s6081: G4 l4 and l6 folded clean (0 stall, 0 crash, 300 s, n=1). Queued l7-9 (s6080) plus l2b/l3b repeats; then G5 (check session titles first).
 > s6080: G4 soaks s6079_g4_l2/l3 folded clean (vi_stalls30s=0, crashlines=0, 300 s holds, n=1 each). Pending: s6079_g4_l4, queued s6080_g4_l6..l9; then repeat l2/l3, then G5 (check session titles). No conclusions overturned.
 > s6079: G1c dd3 frame time folded: vi/s p50 60, send_dl 21.4 ms/s p50 (p95/task 3.74 ms). H-flat; G1c criterion met, awaiting owner look-judgement. Queued G4 soaks s6079_g4_l{2,3,4}.
 > s6078: G1c frame time folded for dd1/dd2 (L1, 300 s): VI 60/s both; send_dl 9.8->25.7 ms/s p50 (p95/task 0.42->1.87 ms). dd3 arm still queued (s6077_g1b_dd3_l1). H-flat holds for dd2.

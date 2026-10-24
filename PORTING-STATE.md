@@ -166893,3 +166893,7 @@ Took the G3 rung. The NEXT.md "hangar artifact list, top item" is already resolv
 
 ## Session 6080 (2026-10-23) — G4 stall hunt: levels 2 and 3 clean; queued levels 6-9
 Folded s6079_g4_l2 / s6079_g4_l3 (retail dd, 300 s hold, G1B timing on): both rc=0, summary files report vi_stalls30s=0, crashlines=0, alive_at_end=1 (L2 hold=304s, L3 hold=303s); run.log CRASH/abort/SIGSEGV grep count 0 for both. L4 (s6079_g4_l4) still queued. Queued s6080_g4_l6..l9 with the same recipe. No new failure datum; nothing to root-cause. Rules out: crash/stall at L2/L3 under retail draw distance in a single 300 s hold each (n=1 each).
+
+## Session 6081 (2026-10-24) — G4 stall hunt: levels 4 and 6 clean; queued l2/l3 repeats
+
+Folded s6079_g4_l4 and s6080_g4_l6 (summary files): both att=1, 300 s hold, alive_at_end=1, vi_stalls30s=0, crashlines=0 (l4 mission_cycles=0; l6 mission_cycles=2, godrefills=20). n=1 each, single-source harness. Levels 2,3,4,6 now clean in the G4 re-sweep; no failure to root-cause, no conclusion overturned. Queued s6081_g4_l2b and s6081_g4_l3b (n>=2 repeats) behind the already-queued s6080_g4_l7/l8/l9. No code change this session (queue scripts only).
