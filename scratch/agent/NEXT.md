@@ -1,5 +1,5 @@
-# NEXT: G1c - fold s6053_dd1_l5 / s6053_dd2_l5 (clamp-as-maxima fix)
+# NEXT: G1c - fold s6054_dd{1,2}_l{1,10}
 HYPOTHESIS-ID: g1c-draw-distance
-Hypothesis: s6053 fix (clamp DB4/DBC as maxima, not counts) removes the u32-wrapped window at 2x. Alternatives if not: H-bound-starve (s6048 span-table skips starve binning) or H-radius-neg (game's own min/max inverted at scaled radius).
-Discriminator: in SOAK-RESULTS/logs of s6053_dd2_l5: grep [gridlog] - w/d must be <=64, kept >= dd1 kept (control s6053_dd1_l5 must be sane, kept=1+). fb capture must show more terrain than dd1. If w still wraps -> add [winlog] before/after clamp (0x800429C0) and at streamTerrainGridCellsByDistance entry in one build.
-If sane: run dd2 levels 1 and 10 (FORCE_PLANET_UNLOCK=0xFF, SOAK_TIMEOUT>=900), ROGUESQ_G1B frame time vs dd1, then dd15/dd3, then ask owner to judge the look. Default stays retail.
+Hypotheses: H-gain (2x window draws visibly more far terrain on lvl1), H-nogain (window grows but a downstream cap - L-lod/L-budget/node list - hides it), H-regress (frame time or crash at 2x).
+Discriminator: per level, from scratch/agent/m6/g1_lvl{1,10}g1cdd{1,2}l*f/: crashes/VI stalls in summary; G1B frame time p50/p99 dd1 vs dd2; distant-terrain pixel fraction in matching-phase fb captures (fbd/). Note gridlog kept==1 is non-discriminating; fix the counter (walk list head->next properly) only if H-nogain needs it.
+Then dd15/dd3 on lvl1, then ask owner to judge the look. Default stays retail.

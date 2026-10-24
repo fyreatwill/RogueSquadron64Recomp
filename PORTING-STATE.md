@@ -166748,3 +166748,10 @@ Reading: with s6037 clamp + s6048 span bound, 2x "holds" because the footprint w
 - Resolves H-clamp-order (own clamp is the writer); H-radius-neg and H-bound-starve not needed to explain the wrap. The earlier s6041 observation (x0~0x7F7F7F97) is a separate matter (span-table byte stores) already handled by s6048/49.
 - ORIGIN: the wrapped DB4/DBC were written by apply_s6037_ddclamp.py's own mislabelled clamp (it is a bug fix to that guard, not a new mitigation): now clamps x0>=0, x1<=tw, x1>=x0 (maxima) and bounds (x1-x0)*(z1-z0) by the pool cap.
 - Changed: tools/apply_s6037_ddclamp.py (replaces old block in live funcs_9.c; rebuilt). Queued s6053_dd1_l5 (control) and s6053_dd2_l5. Success metric: dd2 [gridlog] w/d sane (<=64, never ~4.29e9) AND kept >= dd1 kept; terrain visible in fb; NOT rc=0 alone.
+
+## Session 6054 (2026-10-23) — folded s6053 l5 arms: 2x window no longer wraps; l5 is a poor draw-distance scene; l1/l10 arms queued
+- Folded s6053_dd1_l5 / s6053_dd2_l5 (scratch/agent/m6/g1_lvl5g1cdd{1l5,2l5b}/run.log). Both: 303 s hold, alive_at_end=1, vi_stalls30s=0, crashlines=0.
+- [gridlog] windows (317 vs 318 samples): dd1 max w=d=45, mean req=920; dd2 max w=d=64 (= terrain tw clamp), mean req=1119 (+22%). No u32 wrap at 2x -> the s6053 maxima-clamp fix works (H-clamp-order confirmed; H-radius-neg / H-bound-starve not needed).
+- kept=1 in 317/317 dd1 samples and 315/318 dd2 samples: the gridlog `kept` counter does not discriminate (it counts nodes reachable from r2 at that hook, evidently the list head only) - NOT evidence that 2x draws no extra terrain. Single-source; do not cite as "no terrain gained".
+- Framebuffers fb_0003500 (dd1 vs dd2) both show terrain + craft + HUD, no corruption. Cameras differ (animating scene, no cross-run A/B), and lvl5 is a dark moon with starfield so far terrain is invisible either way: it cannot answer "more landscape drawn". Level 1 is the designated positive control.
+- Queued s6054_dd{1,2}_l{1,10} (l10 with FORCE_PLANET_UNLOCK=0xFF, SOAK_TIMEOUT=900). Next: fold, measure distant-terrain pixel fraction l1 dd1 vs dd2, G1b frame time.
