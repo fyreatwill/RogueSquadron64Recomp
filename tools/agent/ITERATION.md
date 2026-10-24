@@ -116,6 +116,28 @@ When choosing the work unit, this order overrides Next-steps ordering:
      fuzz; agrees with s5669-s5674 PCM evidence). Reopen only on a new owner report.
    - G3 **Render fidelity.** Hangar artifacts (CURRENT-TRUTH list) and in-flight frame
      diffs against retail framebuffers.
+   - G3b **In-flight spike lines (owner report 2026-10-24).** Take this next, ahead of
+     further G4 soaks (finish folding any G4 soaks already queued first). Owner watching
+     plain retail-settings flight (s6081 lvl2, no draw-distance flags): mostly smooth, but
+     occasional single-frame flashes of thin lines, one or two at a time, shooting in
+     from random points on the screen border. Classic spike-triangle signature: a vertex
+     at or behind the eye plane (w~0) or with garbage coords, unclipped, stretched past
+     the viewport. Same class as the hangar "holo spikes" fixed ~s4518.
+     Hypotheses: H-rsp (LLE F5 gfx ucode emulation edge case: VRCP/VRCPH/VRSQ precision,
+     clamp/saturation, or near-plane clip path emits a bad vertex), H-rt64 (renderer
+     treats extreme/out-of-guard-band RDP coords differently from hardware, which
+     clamps), H-retail (retail does it too, masked by RDP coordinate clamping).
+     Instrument, one build: per frame, log every RDP triangle with any vertex beyond a
+     guard band (e.g. |x| or |y| > 2x viewport) or with a near-zero/negative w where
+     visible, with frame number, vertex coords and the display-list/ucode task it came
+     from; dump the framebuffer on those frames. Positive control: count must be > 0
+     on a frame where a flash is visible in the dump. Discriminator: if the bad vertex
+     is already in the RSP output (RDP command stream) -> H-rsp, bisect against the
+     reference RSP behaviour of the offending vector op; if the RDP command is sane
+     but RT64 draws a spike -> H-rt64, clamp/cull like hardware; if retail (emulator,
+     same level and frame region) shows the same lines -> H-retail, optional
+     host-side cull behind an env flag. Done when a 300 s lvl2 hold shows 0 logged
+     spike triangles (or only retail-matching ones) with no new missing geometry.
    - G4 **Crash/stall hunting** across every reachable mission via queued soaks.
    - G5 The renaming sweep (item 4), last.
 4. **Generated-symbol renaming sweep** (HYPOTHESIS-ID:

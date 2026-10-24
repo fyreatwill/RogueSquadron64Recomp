@@ -112,6 +112,9 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+- **Owner report 2026-10-24 (queued as G3b, take next):** occasional single-frame
+  thin lines flash in from the screen border during normal retail flight (spike
+  triangles). Full spec and discriminator: ITERATION.md item 3c G3b.
 
 > s6082: G4 l7 and l8 folded clean (0 stall, 0 crash, 300 s, n=1). Pending soaks: l9, l2b, l3b, l10 (s6082), l5b (s6082). Next: fold them; if all clean take G5 sweep (check session titles first) or G3. No conclusions overturned.
 > s6081: G4 l4 and l6 folded clean (0 stall, 0 crash, 300 s, n=1). Queued l7-9 (s6080) plus l2b/l3b repeats; then G5 (check session titles first).
