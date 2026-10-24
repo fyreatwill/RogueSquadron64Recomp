@@ -1,8 +1,6 @@
-# NEXT: fold s6088 bucket-table soaks (G1c phase 2, dd3 node-cache drain)
+# NEXT: measure DL-node supply at dd3 (G1c phase 2)
 HYPOTHESIS-ID: g1c-phase2-drawdist
-Read scratch/agent/SOAK-RESULTS.md tail; `grep '\[bucketlog\]'` in soak_results/s6088_bucket_dd1_* and _dd3_*.
-Positive control: dd1 log must show call=1 and call=4096k dumps (else instrument dead, redo).
-H-bucket: dd3 zero-return dump shows nonempty=0/totcnt=0 (guest supply exhausted) -> raise supply (guest pool/second arena for DL nodes) not a guard.
-H-leak: buckets non-empty but ret=0 -> scan/corruption; find writer.
-H-drain: totcnt trends down across dd3 4096-cadence dumps vs flat at dd1 -> something consumes without reclaim; instrument reclaimDisplayListChunk 0x80007CDC next.
-A NULL guard is a mitigation and needs an ORIGIN line.
+Facts (s6089): dd3 reaches findAndUnlinkSmallestEntry first time, call 59 returns 0 -> NULL node -> SIGBUS beginFrameDLChunk+12168, 5/5. dd1 never calls it. Bucket dump read nbuckets=0 (post-call, layout suspect).
+Hypotheses: H-bucket supply exhausted (pool sized for retail) -> raise supply/second arena for DL nodes; H-reclaim reclaimDisplayListChunk 0x80007CDC not returning nodes at dd3; H-layout my table decode wrong.
+Discriminator, ONE build: dump PRE-call (entry) table by disassembling funcs_6.c findAndUnlinkSmallestEntry (lhu 0x8012EEF0 count, base lw 0x8012F000, node +0 next/+8 cnt) and count reclaimDisplayListChunk calls/nodes returned per frame at dd1 vs dd3 in the same build (env toggle). Positive control: dd1 must show reclaim counts >0.
+Soak recipes: scratch/agent/soak_queue/running_manual/s6088_bucket_dd{1,3}.sh; run with perl -e 'alarm 700; exec @ARGV' (no `timeout` on this Mac) or enqueue in soak_queue/.
