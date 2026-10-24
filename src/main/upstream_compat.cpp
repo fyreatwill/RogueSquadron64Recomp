@@ -2353,6 +2353,25 @@ extern "C" void rs64_s5041_free(uint32_t ptr, uint32_t ra) {
         std::fprintf(stderr, "[s5041-free-census] DOUBLE ptr=%08X ra=%08X nfree=%lu ndouble=%lu%s\n", ptr, ra, nfree, ndouble, force ? " (FORCE control)" : ""); } }
     if ((nfree & (nfree - 1)) == 0) std::fprintf(stderr, "[s5041-free-census] total nfree=%lu ndouble=%lu live_freed=%zu\n", nfree, ndouble, s_s5041_freed.size());
 }
+#include <map>
+static std::map<uint32_t, uint32_t> s_s6063_live; static uint64_t s_s6063_bytes = 0, s_s6063_peak = 0;
+static bool s6063_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_HEAPLOG"); return e && e[0] && e[0] != '0'; }(); return on; }
+extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
+    if (!s6063_on()) return;
+    static int nnull = 0;
+    if (ptr) { auto it = s_s6063_live.find(ptr); if (it != s_s6063_live.end()) s_s6063_bytes -= it->second; s_s6063_live[ptr] = req; s_s6063_bytes += req; if (s_s6063_bytes > s_s6063_peak) s_s6063_peak = s_s6063_bytes; }
+    if (req >= 0x4000u || (!ptr && nnull < 4))
+        std::fprintf(stderr, "[heaplog] malloc req=0x%X -> %08X ra=%08X live=0x%llX peak=0x%llX nblk=%zu\n", req, ptr, ra, (unsigned long long)s_s6063_bytes, (unsigned long long)s_s6063_peak, s_s6063_live.size());
+    if (!ptr && nnull++ < 2) {
+        std::multimap<uint32_t, uint32_t, std::greater<uint32_t>> big; for (auto& kv : s_s6063_live) big.emplace(kv.second, kv.first);
+        int k = 0; for (auto& b : big) { if (k++ >= 8) break; std::fprintf(stderr, "[heaplog]   live top%d size=0x%X ptr=%08X\n", k, b.first, b.second); }
+    }
+}
+extern "C" void rs64_s6063_free(uint32_t ptr) {
+    if (!s6063_on() || !ptr) return;
+    auto it = s_s6063_live.find(ptr); if (it == s_s6063_live.end()) return;
+    s_s6063_bytes -= it->second; s_s6063_live.erase(it);
+}
 extern "C" void rs64_s5041_malloc(uint32_t ptr) {
     if (!s5041_on() || ptr == 0) return;
     s_s5041_freed.erase(ptr);

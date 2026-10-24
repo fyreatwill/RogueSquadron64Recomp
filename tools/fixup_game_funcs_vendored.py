@@ -37793,6 +37793,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s6031 far x{_n6031}")
 
+    if p.name == "funcs_0.c":
+        import apply_s6063_heaplog as _a6063
+        text, _n6063 = _a6063.apply0(text)
+        if _n6063:
+            changed = True
+            report.append(f"{p.name}: s6063 heaplog x{_n6063}")
+
     if p.name == "funcs_16.c":
         import apply_s6061_mallocnull as _a6061
         text, _n6061 = _a6061.apply16(text)
@@ -41684,6 +41691,7 @@ RS64_REPLAY = [
     "apply_s6048_spanbound.py",
     "apply_s6058_poolx.py",
     "apply_s6061_mallocnull.py",
+    "apply_s6063_heaplog.py",
     "apply_s6038_cellprobe.py",
     "apply_s6043_tblwatch.py",
     "apply_s6031_far.py",

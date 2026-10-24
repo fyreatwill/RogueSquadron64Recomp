@@ -278,3 +278,5 @@ Gfx thread hot spot found by `sample` (s6015): ~80% of gfx samples in O(n^2) g_s
 - **s6060 G1c (single-source, 5/5 deterministic):** px4_dd2 (POOLX=4, dd2) SIGBUS in allocateAndInitCraftNpcContext+3040 via updateActiveGridCellState->setupNpcUpdateFunctions->spawnNpcOfType (x1=0x8006bd80, si_addr 0x380000080). No frames, so px4 HUD/terrain unanswered. Extended cells reach NPC spawn; next: name the writer of the bad NPC pointer, then re-run px4 with it fixed or with NPC spawn gated for out-of-retail-window cells.
 
 - **s6062 G1c:** poolx4 at dd1 crashes 5/5 with [mallocnull] control firing => pool capacity multiplier alone exhausts guest heap (8 MB RDRAM); dd2 window not needed. px3_dd2 crashes via a different NULL deref (si_addr 0x380000002, no mallocnull). Safe operating point so far: px2 (clean at dd1.5/dd2). Next: heap free/high-water at pool alloc, then size poolx to fit (px2.5?) or shrink another consumer.
+
+- **s6063 G1c:** built ROGUESQ_HEAPLOG (guest malloc live/peak accounting, tools/apply_s6063_heaplog.py); pool is only 9.6 KB at px1 so px4 NULL means heap already near-full. Arms s6063_heap_px1-4 queued; next: fold and decide A/B/C per NEXT.md.
