@@ -173,3 +173,6 @@ The 21:9 heap deficit is the widened framebuffer carve: partitionFramebufferMemo
 
 ## G1d update (s6130)
 RT64's 8 MB rdram bounds (state.cpp:3395 etc.) widened to 16 MB; ROGUESQ_OSMEM_MB now allows <=16. 12 MB then dies at boot (4:3 too): DL-chunk pool *(0x801163B0) is len=0 at first beginFrameDLChunk (8 MB: 1356). The game's pool build depends on osMemSize. NEXT: find the pool builder (store watch on 0x801163B0 during boot, 8 vs 12) and see which osMemSize test skips it; alternative route is shrinking the fb carve at 8 MB instead.
+
+## G1d update (s6131) — supersedes s6130 'pool not built at 12 MB'
+The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBootWrapper). The crash is our ~1011 hard-coded `0x80800000` pointer-range guards in generated funcs (+107 in src/main, 28 tools scripts) rejecting any pointer above 8 MB; s6130's len=0 was the instrument's own 8 MB walk bound. NEXT: replace the literal with a runtime RS64_RAM_TOP in the fixup script, rebuild, retest OSMEM=12 (then 21:9/16:9).
