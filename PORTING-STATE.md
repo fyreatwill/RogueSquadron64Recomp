@@ -166942,3 +166942,8 @@ Folded s6086_ctl_px4_dd3_noarena (rc=1, 5/5 attempts crash, keys.log shows missi
 - Not a fixed node cap: non-crashing runs reach heaplog nblk 673-676 (s6065/s642), the dd3 crashes die at nblk 578-583, so the cache is emptied by something that scales with draw distance, not by block count. Writer of the drain (what consumes/never returns cache nodes at dd3) is still unnamed.
 - Rules out: H-arena-ptr, heap-NULL-as-cause. Leaves: H-DL (cache drain by DL chunk consumption at dd3) vs H-stride.
 No code change this session (fold + trace only); next unit adds one instrument (see NEXT.md).
+
+## Session 6088 (2026-10-24) — G1c ph2: bucket-table instrument on findAndUnlinkSmallestEntry built, dd1 control + dd3 soaks queued
+
+Built ROGUESQ_BUCKETLOG=1 (tools/apply_s6088_bucketlog.py, wired into fixup_game_funcs_vendored.py funcs_6.c + apply list; C++ rs64_s6088_fuse in upstream_compat.cpp). It wraps findAndUnlinkSmallestEntry (0x8002221C), and on call #1, every 4096th call, and the first 3 zero-returns dumps: bucket count (lhu 0x8012EEF0), per-bucket chain length/sum of +8 counts (table ptr at 0x8012F000), cache head 0x801163B0, heaplog live/peak. Positive control = the dd1 soak must dump at call #1 and on the 4096 cadence. Discriminator: at dd3 zero-return, all buckets empty with totcnt 0 while live is far below peak at dd1 -> H-bucket (guest sizing, supply); buckets non-empty yet 0 returned -> scan bug/corruption (H-leak).
+Queued s6088_bucket_dd1 and s6088_bucket_dd3 (arena on, px4 at dd3). Build clean; no run this session (soaks belong to the loop). ORIGIN: instrument only, no mitigation added.

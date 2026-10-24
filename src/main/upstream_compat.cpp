@@ -2374,6 +2374,27 @@ extern "C" void rs64_s6063_free(uint32_t ptr) {
     auto it = s_s6063_live.find(ptr); if (it == s_s6063_live.end()) return;
     s_s6063_bytes -= it->second; s_s6063_live.erase(it);
 }
+static inline uint32_t s5042_rd(const uint8_t* rd, uint32_t off);
+extern "C" void rs64_s6088_fuse(uint8_t* rdram, uint32_t ret, uint32_t ra) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_BUCKETLOG"); return e && e[0] && e[0] != '0'; }();
+    if (!on) return;
+    static unsigned long ncall = 0, nzero = 0; static int dumps = 0;
+    ++ncall; if (!ret) ++nzero;
+    bool want = (!ret && nzero <= 3) || ncall == 1 || (ncall & 4095u) == 0;
+    if (!want || dumps >= 40) return;
+    ++dumps;
+    auto rd = [&](uint32_t g) -> uint32_t { return (g >= 0x80000000u && g < 0x80800000u) ? s5042_rd(rdram, g - 0x80000000u) : 0u; };
+    uint32_t nb = rd(0x8012EEF0u) >> 16, base = rd(0x8012F000u);
+    unsigned long totc = 0, nz = 0; char buf[512]; int o = 0;
+    for (uint32_t i = 0; i < nb && i < 64; ++i) {
+        uint32_t n = rd(base + 4 * i); unsigned len = 0, cs = 0;
+        while (n && len < 4096) { cs += rd(n + 8) >> 16; ++len; n = rd(n); }
+        totc += cs; if (len) ++nz;
+        if (o < 480) o += std::snprintf(buf + o, sizeof(buf) - o, "%u:%u/%u ", i, len, cs);
+    }
+    std::fprintf(stderr, "[bucketlog] call=%lu zero=%lu ret=%08X ra=%08X nbuckets=%u nonempty=%lu totcnt=%lu cachehead=%08X live=0x%llX peak=0x%llX | %s\n",
+        ncall, nzero, ret, ra, nb, nz, totc, rd(0x801163B0u), (unsigned long long)s_s6063_bytes, (unsigned long long)s_s6063_peak, buf);
+}
 static uint32_t s_s6086_expect = 0, s_s6086_bump = 0;
 extern "C" void rs64_s6086_arm(uint32_t o, uint32_t n) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_BIGARENA"); return e && e[0] && e[0] != '0'; }();
