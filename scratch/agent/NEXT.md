@@ -1,5 +1,5 @@
-# NEXT: G1d step 26 - OSMEM=12: why is the scanned-out frame garbage (loop is alive)
+# NEXT: G1d step 27 - OSMEM=12: control run + where RT64 draws
 HYPOTHESIS-ID: g1d-widescreen
-Known (s6133): frame loop runs at 12 MB (swap-ack cycles ~30/s); fbd frames 3000-4500 identical stripe garbage; harness hardcodes origin 0x00790400 (m6_god_common.sh:30) so 12 MB runs read "notitle".
-Hypotheses: H-ci (RDP color-image address >8 MB masked/clamped so RT64 draws elsewhere), H-vi (RT64 reads VI origin 0xA90400 from a 8 MB-bounded rdram view), H-nodraw (game never issues draws; fb is uninitialised memory).
-Discriminator: one run OSMEM=12 logging per frame the SetColorImage address, VI origin and a hash of rdram at that origin after the RDP task; positive control = same logging at 8 MB. Also make the harness origin check accept a regex/ROGUESQ-derived origin.
+Known (s6134): RT64 caps at workload_queue:500 and f3dfactor5:193 widened; 12 MB still ends "nomission" with garbage fbd frames, VI origins vary (0xA96100/0xAAB400/0xB90400).
+Hypotheses: H-ci (some other bound drops/relocates >8MB colour images, e.g. fbManager readback/present), H-game (game at 12 MB never reaches flight; garbage is legit uninitialised fb), H-dump (fbd dumper reads wrong address/size at 12 MB).
+Discriminator: run the SAME recipe at ROGUESQ_OSMEM_MB=8 (positive control; TITLE_ORIGIN default) and 12, logging per VI the SetColorImage address, VI origin, and rdram hash at origin after the RDP task; compare whether RT64 write-back lands at origin.

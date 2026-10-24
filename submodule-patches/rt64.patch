@@ -51,7 +51,7 @@ index cf05674..d863758 100644
  
          void setDepthImage(State *state, DisplayList **dl) {
 diff --git a/src/gbi/rt64_gbi_f3dfactor5.cpp b/src/gbi/rt64_gbi_f3dfactor5.cpp
-index a0d4a6a..1b5315c 100644
+index a0d4a6a..f6a56a9 100644
 --- a/src/gbi/rt64_gbi_f3dfactor5.cpp
 +++ b/src/gbi/rt64_gbi_f3dfactor5.cpp
 @@ -32,6 +32,8 @@
@@ -63,6 +63,15 @@ index a0d4a6a..1b5315c 100644
  namespace RT64 {
      namespace GBI_F3DFACTOR5 {
          // ROGUESQ_LOG_GBI=1 enables per-handler diagnostic logs (off by default
+@@ -188,7 +190,7 @@ namespace RT64 {
+             N64Matrix4x4 mat = {};
+             const uint32_t phys = addr & 0x00FFFFFF;
+             auto load_be16 = [&](uint32_t off) -> uint16_t {
+-                if (phys + off + 1 >= 0x800000) return 0;
++                if (phys + off + 1 >= 0x1000000) return 0;
+                 uint8_t hi = rdram[(phys + off) ^ 3];
+                 uint8_t lo = rdram[(phys + off + 1) ^ 3];
+                 return (hi << 8) | lo;
 @@ -371,6 +373,57 @@ namespace RT64 {
              (*dl)++;  // skip the 8-byte payload
          }
@@ -7242,7 +7251,7 @@ index b4c85f5..880611b 100644
              adjustVector(fbPairs, fbPairCount);
              addedPair = true;
 diff --git a/src/hle/rt64_workload_queue.cpp b/src/hle/rt64_workload_queue.cpp
-index 5a331aa..71db1f5 100644
+index 5a331aa..7a1871b 100644
 --- a/src/hle/rt64_workload_queue.cpp
 +++ b/src/hle/rt64_workload_queue.cpp
 @@ -10,6 +10,74 @@
@@ -7328,7 +7337,7 @@ index 5a331aa..71db1f5 100644
 +                    // Wild or OOB CIMG pairs must not reach RenderTarget /
 +                    // RAM-read paths (fbgate2 SIGSEGV on addr≥8MB w=5).
 +                    static constexpr uint32_t kMaxSaneFbWidth = 1280u;
-+                    static constexpr uint32_t kRdramBytes = 0x800000u;
++                    static constexpr uint32_t kRdramBytes = 0x1000000u; // s6134: 16 MB (was 8 MB, dropped every >8MB colour image)
 +                    if (nativeColorWidth == 0 || nativeColorWidth > kMaxSaneFbWidth ||
 +                        colorImg.address >= kRdramBytes) {
 +                        return false;
