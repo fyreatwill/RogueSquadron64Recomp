@@ -166813,3 +166813,8 @@ Evidence: the poolx allocation is a single block of 0x5C000*k (px3 req=0x114000,
 Verdict: H-direct (poolx over-allocates) CONFIRMED, H-fragment not needed; 8 MB RDRAM guest heap (tracked live ~5.3 MB + static image, highest block 0x807A1810) is the ceiling; px3 misses by ~100 KB. ra field logs 00000000 (r31 clobbered before wrapper) - writer attribution by ra not available; the pool block identity is by size/[poolx] line.
 Queued s6064_heap_px{2,25,25d2}: px2.5 saves ~188 KB vs px3. Next: fold m6/g1_lvl1g1c64*/ ; if px2.5 holds, 300 s hold on L1/5/10 then HUD/terrain via g1c_ddtog_fold.py --hud.
 ORIGIN: diagnostic only, no mitigation added.
+
+## Session 6065 (2026-10-23) — heaplog px2/px2.5 folded: no post-pool NULL; 300 s dd2 holds queued
+Folded scratch/agent/m6/g1_lvl1g1c642 and g1_lvl1g1c6425 run.logs (ROGUESQ_HEAPLOG=1). Both rc=0, 0 crash lines, vi_stalls30s=0. Control: `[poolx] cap 2048 -> 4096` (px2) / `-> 5120` (px2.5) fired. The 26 `[heaplog] ... -> 00000000` lines in each log are all at line ~55-57k, long before the poolx line (~295-306k): early-boot NULLs that exist in both arms (pre-pool, not pool-driven); post-pool NULL count is 0 in both. Late live heap: px2 0x4DD881, px2.5 0x538D25 (px3 fails at ~0x192CC shortfall per s6064). So px2 and px2.5 fit the 8 MB guest heap at dd1; px2.5 at dd2 (s6064_heap_px25d2) still unrun. Single-source (one run/arm). Not yet shown: that px2 at dd2 fixes terrain extent (s6059: HUD partly restored, terrain flat) — the visual gain question stays open.
+Queued done-criterion runs: s6065_px2_dd2_hold300_l{1,5,10} (300 s hold, px2, dd2, HEAPLOG on).
+ORIGIN: no code mitigation added this session (queue scripts only).
