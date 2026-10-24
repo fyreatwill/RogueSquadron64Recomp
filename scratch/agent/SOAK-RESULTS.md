@@ -1095,3 +1095,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261023-204619 | s6064_heap_px25 | rc=0 | 218s | scratch/agent/soak_results/s6064_heap_px25_20261023-204619.log
 20261023-205049 | s6064_heap_px25d2 | rc=0 | 220s | scratch/agent/soak_results/s6064_heap_px25d2_20261023-205049.log
 20261023-205429 | s6065_px2_dd2_hold300_l1 | rc=0 | 393s | scratch/agent/soak_results/s6065_px2_dd2_hold300_l1_20261023-205429.log
+20261023-210209 | s6065_px2_dd2_hold300_l10 | rc=137 | 600s | scratch/agent/soak_results/s6065_px2_dd2_hold300_l10_20261023-210209.log
+20261023-211209 | s6065_px2_dd2_hold300_l5 | rc=0 | 385s | scratch/agent/soak_results/s6065_px2_dd2_hold300_l5_20261023-211209.log

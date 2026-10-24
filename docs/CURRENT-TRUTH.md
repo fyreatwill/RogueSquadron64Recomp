@@ -283,3 +283,6 @@ Gfx thread hot spot found by `sample` (s6015): ~80% of gfx samples in O(n^2) g_s
 
 - **s6063 G1c:** built ROGUESQ_HEAPLOG (guest malloc live/peak accounting, tools/apply_s6063_heaplog.py); pool is only 9.6 KB at px1 so px4 NULL means heap already near-full. Arms s6063_heap_px1-4 queued; next: fold and decide A/B/C per NEXT.md.
 - **s6064 G1c:** heaplog logs live in scratch/agent/m6/g1_lvl1g1chp*/run.log. poolx block = 0x5C000*k (not 9.6 KB): px3/px4 NULLs are the 8 MB guest heap running out (px4 NULL 0xF000C after 0x170000 pool; px3 NULL 0x192CC). px2 safe; px2.5 queued (s6064_heap_px25*). Boot-time NULLs at live~1.5 MB are baseline-benign.
+
+
+<!-- s6067 --> G1c status: px2 dd2 300 s holds clean on L1 (s6066) and L5 (s6065). L10 reached no mission in 3 attempts (also happens at dd1: route flake, not dd-related); retries s6066_px2_dd2_hold300_l10a/b queued. If either holds clean, criterion met -> ask owner to judge look.
