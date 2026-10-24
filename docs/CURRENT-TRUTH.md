@@ -179,3 +179,5 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
 
 ## G1d update (s6132)
 8 MB pointer guards are now RS64_RAM_TOP (runtime, = 0x80000000+OSMEM_MB): funcs_*.c via tools/fixup_ramtop.py (last fixup stage), C++ via tools/apply_s6132_ramtop_cpp.py (already applied; lib edits exported). ROGUESQ_OSMEM_MB=12 now boots, reaches initMission lvl1, then hangs after lv1_initializeObjectTracking (no crash; same spot as the 16:9 8 MB stall). Next: sample/lldb that stall, compare args/pool vs 8 MB. Then 21:9 at 12 MB.
+
+(s6133) OSMEM=12 "hang" REFUTED as a deadlock: waitForPostSwapAck cycles ~30/s and the post-swap flags advance; the scanned-out frame (origin 0xA90400) is frozen stripe garbage; m6_god_common.sh:30 hardcodes origin 0x00790400 so 12 MB runs read "notitle". Single-arm (8 MB control not run). NEXT: compare RDP color-image address vs VI origin vs what RT64 reads at 12 MB; parameterise the harness origin.

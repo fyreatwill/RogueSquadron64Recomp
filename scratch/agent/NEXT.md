@@ -1,5 +1,5 @@
-# NEXT: G1d step 25 - OSMEM=12 lvl1 hang: main thread waits forever in waitForPostSwapAck
+# NEXT: G1d step 26 - OSMEM=12: why is the scanned-out frame garbage (loop is alive)
 HYPOTHESIS-ID: g1d-widescreen
-Known (s6132 sample): initMission finished; mainGameLoop->runInMissionFrame->waitForPrevFrameDone->waitForPostSwapAck->osRecvMesg blocked; idle thread running; gfx/SP threads alive.
-Hypotheses: H-nosend (the post-swap ack sender never fires: gfx/swap completion path has another size-dependent assumption), H-drop (message sent but queue/pointer rejected by an 8 MB-style range check), H-order (thread priority/scheduling stall specific to the larger heap).
-Discriminator: find the queue pointer waitForPostSwapAck passes to osRecvMesg (funcs_5.c:7048 area) and log every osSendMesg to it plus the receive, per VI, OSMEM=12 vs unset (same recipe: env XENV_EXTRA=\"ROGUESQ_OSMEM_MB=12 \" HOLD_S=60 LEVEL=1 TAG_SUFFIX=x zsh scratch/agent/g1_level_coverage_common.zsh). Sends>0 with no wake = H-drop; zero sends = H-nosend (then trace who should send).
+Known (s6133): frame loop runs at 12 MB (swap-ack cycles ~30/s); fbd frames 3000-4500 identical stripe garbage; harness hardcodes origin 0x00790400 (m6_god_common.sh:30) so 12 MB runs read "notitle".
+Hypotheses: H-ci (RDP color-image address >8 MB masked/clamped so RT64 draws elsewhere), H-vi (RT64 reads VI origin 0xA90400 from a 8 MB-bounded rdram view), H-nodraw (game never issues draws; fb is uninitialised memory).
+Discriminator: one run OSMEM=12 logging per frame the SetColorImage address, VI origin and a hash of rdram at that origin after the RDP task; positive control = same logging at 8 MB. Also make the harness origin check accept a regex/ROGUESQ-derived origin.
