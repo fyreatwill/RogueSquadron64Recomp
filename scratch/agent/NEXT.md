@@ -1,6 +1,7 @@
-# NEXT: G1d step 31 - 12 MB frame verify, then 21:9/16:9 at 12 MB
+# NEXT: G1d step 32 - 21:9 and 16:9 at OSMEM=12
 HYPOTHESIS-ID: g1d-widescreen
-Known (s6138): rsp.hpp DMEM->RDRAM write bound fixed; 12 MB RDP list matches 8 MB; task cost normal.
-Hypotheses: H-ok (12 MB flight frame correct and heap deficit gone => wide aspect works with OSMEM=12), H-other-cap (remaining >8 MB drop elsewhere: garbage frame, check ROGUESQ_FB_DUMP_VI=1 frame vs 8 MB), H-heap-still (wide heap NULL persists).
-Discriminator: scratch/agent/s6138_run.sh arms + ROGUESQ_FB_DUMP_VI=1 for mb8/mb12 (compare dumps visually: terrain/craft/HUD); then arms ROGUESQ_OSMEM_MB=12 ROGUESQ_ASPECT=21:9 and 16:9 on L1 via g1_level_coverage_common.zsh, HOLD_S=300, read alive_at_end and [heapwalk-top]. Positive control: the 4:3 12 MB arm in the same batch.
+Known (s6139): ROGUESQ_OSMEM_MB=12 4:3 L1 flight frame correct, 0 crash.
+Hypotheses: H-ok (wide aspect + OSMEM=12 holds, heap deficit gone), H-heap-still (wide heap NULL persists), H-wide-render (frame garbage/HUD misanchored at wide).
+Run: copy scratch/agent/s6139_run.sh, arms: XENV_EXTRA="ROGUESQ_OSMEM_MB=12 ROGUESQ_ASPECT=21:9 ROGUESQ_FB_DUMP_VI=1" (and 16:9), TITLE_ORIGIN=0x00B90400 MISSION_RE=A90400, HOLD_S=300, LEVEL=1; use the 4:3 12 MB arm as positive control. Read alive_at_end and [heapwalk-top]; view a dump per arm (sips -s format png).
 Then: HUD x anchoring, menus/hangar at wide, default OSMEM bundling under ROGUESQ_ASPECT.
+Note: macOS sed -i needs '' arg; write scripts via heredoc.
