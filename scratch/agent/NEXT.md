@@ -1,6 +1,6 @@
-# NEXT: G1c - find where dd breaks the frame, then name the truncator
+# NEXT: G1c - did raising the stream-pool cap un-break dd>=1.5?
 HYPOTHESIS-ID: g1c-draw-distance
-s6057: within-run dd1/dd2 toggle shows dd2 frames lose terrain AND HUD (86/200 HUD frames, terrain 0.02 vs 0.086); dd0.5 control behaves. Extra cells do not reach pixels; frame is broken at 2x.
-1. Fold queued arms (loop runs them): s6057_ddtog125, s6057_ddtog15 -> `python3 tools/g1c_ddtog_fold.py scratch/agent/m6/g1_lvl1g1cddtog125 4500 --hud` (and ...15). Outcome splits: terrain GAIN with HUD intact at 1.25/1.5 => break point is between; use that as the supported max and keep digging above it. Already broken at 1.25 => truncation is not pool-cap bound, look at RSP DL/vertex/DMEM output buffers.
-2. Name the truncator: at dd2 compare the DL length / final RSP task output (ROGUESQ_LOG_RDP_TRICOUNT is budget-capped to early ords; make a flight-phase-scoped counter) for blk0 vs blk1 frames in one toggle run. Candidates: pool cap u16 0x80130C4C (=2048, binds at 2x; try raising to 4096 in a toggle arm), DL buffer size, vertex buffer, RT64 draw limit.
-3. Default stays retail. No macOS `timeout`. Dump rate var is FBD_EVERY_V.
+s6058: s6057 arms folded: dd1.25 HUD intact 202/202 but terrain gain nil (0.0795 vs 0.0813); dd1.5 HUD lost in 38/100 frames, terrain nil. Pool = malloc(cap*0x18) at loadLevelAssets, cap from level table 0x800B090C. Built ROGUESQ_DD_POOLX=<k> (tools/apply_s6058_poolx.py) scaling the cap+alloc.
+1. Fold queued arms: `python3 tools/g1c_ddtog_fold.py scratch/agent/m6/g1_lvl1g1c{px2_dd2,px2_dd15,px4_dd2} 4500 --hud`. Check log shows `[poolx] cap A -> B` (control). HUD restored + terrain gain => pool cap was the truncator: then check pixels grow; HUD still lost => truncator is elsewhere (RSP DL/vertex/DMEM buffers, RT64 limit).
+2. Even with HUD intact at 1.25 terrain does not grow: extra cells submitted but not visible => look at far-clip/frustum cull or fog/hidden by LOD (H-hidden).
+3. Default stays retail. No macOS timeout. FBD_EVERY_V is the dump rate.

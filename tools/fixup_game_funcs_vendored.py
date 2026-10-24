@@ -37804,6 +37804,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6036:
             changed = True
             report.append(f"{p.name}: s6036 dd x{_n6036}")
+        import apply_s6058_poolx as _a6058
+        text, _n6058 = _a6058.apply9(text)
+        if _n6058:
+            changed = True
+            report.append(f"{p.name}: s6058 poolx x{_n6058}")
         import apply_s6048_spanbound as _a6048
         text, _n6048 = _a6048.apply9(text)
         if _n6048:
@@ -41670,6 +41675,7 @@ RS64_REPLAY = [
     "apply_s6036_dd.py",
     "apply_s6037_ddclamp.py",
     "apply_s6048_spanbound.py",
+    "apply_s6058_poolx.py",
     "apply_s6038_cellprobe.py",
     "apply_s6043_tblwatch.py",
     "apply_s6031_far.py",
