@@ -1,5 +1,5 @@
-# NEXT: G1d step 10 - find the copy stage from the 0x8076A980 render target into the flips (w683)
+# NEXT: G1d step 11 - VI registers under ROGUESQ_FB_WIDTH=683 (RT64 present path)
 HYPOTHESIS-ID: g1d-widescreen
-Known (s6117): colour images/flips are consistent with the patched layout; VI origin fixed; flips still black/sparse.
-Competing: H-tex-stride (copy uses SETTEXTUREIMAGE width/SETTILE line/LOADBLOCK dxt computed for 512) vs H-copy-dims (copy rect/scissor 512 wide) vs H-order (copy happens before render completes). 
-Discriminator: extend tools/rdpbin_scissor.py (or new tool) to list, in ctl_rdp.bin and w683_rdp.bin (scratch/agent/m6/s6116/), SETTEXTUREIMAGE(0x3D) addr/width, SETTILE(0x35) line, LOADBLOCK(0x33) dxt, TEXRECT(0x24) following a SETCOLORIMAGE to a flip. ctl vs w683 diff of that table selects the hardcoded-512 field. Positive control: ctl must show textures sourced from 0x80790000.
+Known (s6118): RDP stream is width-consistent; flips drawn directly; no copy stage. Black window is downstream.
+Competing: H-vi-width (VI_WIDTH_REG still 512 or xScale/hStart unscaled, RT64 reads flip with wrong stride) vs H-rt64-fb-size (RT64 fb width keyed off scissor/colorimage, mismatch with VI) vs H-readback (only our fbdump reader is wrong; window truly black).
+Discriminator: one run, log per swap the VI regs RT64 sees (VI_WIDTH_REG, X_SCALE, H_START, V_START, ORIGIN, CTRL) in ctl vs ROGUESQ_FB_WIDTH=683 (src/main/upstream_compat.cpp ~358, ~626). Scale the mode table comRegs width (+0x04) and xScale per fbw/512 if they read 512. Positive control: ctl must print width 512 + origin; fix arm must flip the window from black.

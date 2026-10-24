@@ -145,3 +145,7 @@ Activated-window screenshots work (osascript frontmost + screencapture; ctl vali
 
 ## G1d update (s6117)
 s6116's "second colour-image pointer" is REFUTED: 0x8076A980 is region 0x801163E4 (top-fbsize) = the intermediate render target; ctl has the identical role split (0x80790000 intermediate + two flips). Fixed: VI field-origin offset (mode +0x28/+0x3C, hardcoded 1024/2048) now scaled under ROGUESQ_FB_WIDTH -> VI fb alternates. Still black: flips receive no final image. Next: parse the w683 rdp.bin for the copy stage from 0x8076A980 into the flips (SETTEXTUREIMAGE/SETTILE line/TEXRECT with 512-based stride) and compare with ctl.
+
+
+## G1d state (s6118)
+Widened (ROGUESQ_FB_WIDTH=683) RDP stream is width-consistent with retail (scissors, tile lines, no copy stage; flips are drawn directly). Black window therefore lies downstream: RT64 VI/present path. Check VI_WIDTH_REG, xScale, hStart/vStart in the mode table (upstream_compat.cpp ~626: comRegs width/xScale at +0x04..; s6117 already scaled fldRegs origin).
