@@ -1,7 +1,6 @@
-# NEXT: G1d step 17 - read the s6124 ring-producer soaks (wide vs ctl) and name the writer of the NULL DMA dest
+# NEXT: G1d step 18 - find the real producer of the NULL-dest 0x1000 DMA (devAddr 0xB01A5E20) at 21:9
 HYPOTHESIS-ID: g1d-widescreen
-Known (s6124 analysis): 4:3 ctl has 0 dram=0 DMAs; 21:9 has one (ROM 0x1A5E20, mb 0x80110828) right after valid chunks into scratch 0x80716C40 (ctl scratch 0x80766C40).
-Read first: SOAK-RESULTS lines s6124_g1d_ring_wide / _ctl; logs in scratch/agent/m6/*s6124_ring_*/ . grep '\[dma-ring-producer\]' near the first `devAddr=0x01A5E20` / dramAddr=0x00000000.
-Hypotheses: H-heap (producer enqueues dramAddr=0: caller got NULL from an alloc) ; H-clobber (producer logs valid dramAddr, slot zeroed before consume); H-ptr (caller reads a NULL scratch-pointer global).
-Discriminator: producer's dramAddr for that request. 0 => H-heap/H-ptr: then lldb/host-backtrace at the producer (static jal does not keep r31) or add a rebuild-based alloc-failure log (needs fixup script, not live regen). Valid => H-clobber: find who writes ring slot +8.
-Fix direction: place wide framebuffers in extra mapped RAM above 0x80800000 if RDP masking allows, or find why heap shrinks; name the writer (rule 11).
+Known (s6125): submitDmaRequestBatch ring producer does NOT enqueue this request in either arm (wide or 4:3 ctl), so the ring is cleared. Request follows 0x1000-byte chunks into scratch 0x80716C40 (ctl 0x80766C40).
+Hypotheses: H-heap (caller got NULL from rs_malloc when wide FB shifts heap), H-ptr (caller reads a NULL scratch-pointer global), H-other-producer (a non-batch DMA request function builds the mb 0x80110828 entry).
+Build one fixup-scripted diagnostic (tools/fixup_*.py, env-gated): (1) log every rs_malloc return==0 with r31 and requested size; (2) log the caller r31 / function at the point the game queues a request whose dest is 0 (the pi-start-dma callers: find the osSendMesg of mb 0x80110828 writers). Run wide arm once + ctl arm; first NULL alloc or first dest==0 queue with caller names the writer.
+Outcomes: NULL rs_malloc => heap exhausted at wide FB, move FB/pools above 0x80800000 or enlarge heap; dest from global => trace that global's writer.
