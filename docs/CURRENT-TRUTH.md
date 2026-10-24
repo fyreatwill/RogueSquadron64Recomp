@@ -139,3 +139,6 @@ Widened-fb garbage = the two flight flip buffers (0x80620000/0x80690000) sit onl
 
 ## G1d update (s6115)
 fb size = partitionFramebufferMemory a2*a3*2; patched under ROGUESQ_FB_WIDTH (tools/apply_s6031_far.py applypfm). Flip buffers no longer overlap (spacing 0x95680) but 683 dumps remain garbage (control without width flag is valid). Next: compare SETCOLORIMAGE width vs RT64/VI width at present for a 683 frame; find any other hardcoded 512 stride. Window screenshots need the game window frontmost (not yet).
+
+## G1d update (s6116)
+Activated-window screenshots work (osascript frontmost + screencapture; ctl valid). w683 window is black; RDP draws 683-wide colour image at 0x8076A980 while VI shows pfm-moved buffers 0x8066A980/0x805D5300 and stalls. Next: find who sets colour-image addr 0x8076A980 (second fb pointer not covered by partitionFramebufferMemory patch).
