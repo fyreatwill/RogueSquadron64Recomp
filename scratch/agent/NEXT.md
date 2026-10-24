@@ -1,5 +1,6 @@
-# NEXT: G1d step 30 - where does the RDP command window point at OSMEM=12
+# NEXT: G1d step 31 - 12 MB frame verify, then 21:9/16:9 at 12 MB
 HYPOTHESIS-ID: g1d-widescreen
-Known (s6137): at 12 MB the first TLUT RT64 sees has no SetTImg and random params => RDP list read is garbage from the start. 8 MB control sane. No 8 MB masks remain in RT64/ucode data paths.
-Hypotheses: H-window (DPC start/end submitted to RT64 point at the wrong place, e.g. 24-bit/KSEG fold or ucode output buffer allocated >8MB but game/ucode DMA-out lands elsewhere), H-dmaout (RSP DMA write from DMEM to RDRAM above 8 MB dropped/aliased, so list area holds stale data), H-hdr (task header / output_buff fields parsed with 8MB mask).
-Discriminator: in src/rsp/dpc_bridge.cpp log, first 20 gfx tasks per run, task output_buff/size, each DPC start/end and the first 4 64-bit words at start (read from rdram) - 8 vs 12 MB (scratch/agent/s6137_run.sh; add env flag). Words at 12 MB that parse as valid RDP opcodes (0xFD/0xF5/0xFF...) => H-window not it, look at RT64 consumption; junk => H-dmaout/H-hdr, compare against the DMEM source.
+Known (s6138): rsp.hpp DMEM->RDRAM write bound fixed; 12 MB RDP list matches 8 MB; task cost normal.
+Hypotheses: H-ok (12 MB flight frame correct and heap deficit gone => wide aspect works with OSMEM=12), H-other-cap (remaining >8 MB drop elsewhere: garbage frame, check ROGUESQ_FB_DUMP_VI=1 frame vs 8 MB), H-heap-still (wide heap NULL persists).
+Discriminator: scratch/agent/s6138_run.sh arms + ROGUESQ_FB_DUMP_VI=1 for mb8/mb12 (compare dumps visually: terrain/craft/HUD); then arms ROGUESQ_OSMEM_MB=12 ROGUESQ_ASPECT=21:9 and 16:9 on L1 via g1_level_coverage_common.zsh, HOLD_S=300, read alive_at_end and [heapwalk-top]. Positive control: the 4:3 12 MB arm in the same batch.
+Then: HUD x anchoring, menus/hangar at wide, default OSMEM bundling under ROGUESQ_ASPECT.

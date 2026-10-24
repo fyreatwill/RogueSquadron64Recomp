@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..2da831a 100644
+index b0d6bef..5ec0c8f 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,7 @@
@@ -72,7 +72,7 @@ index b0d6bef..2da831a 100644
  }
  
  #define RSP_ADD32(a, b) \
-@@ -94,25 +113,188 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -94,36 +113,205 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -264,10 +264,13 @@ index b0d6bef..2da831a 100644
      dram_addr &= 0xFFFFF8;
      // Same IMEM/DMEM split as the rdram→dmem direction: silently skip IMEM
      // writebacks, clamp lengths to actual memory bounds.
-@@ -121,9 +303,15 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
+     if (dmem_addr & 0x1000) return;
+     dmem_addr &= 0xFFF;
      if (dmem_addr + wr_len > 0x1000) wr_len = 0x1000 - dmem_addr;
-     if (dram_addr >= 0x800000) return;
-     if (dram_addr + wr_len > 0x800000) wr_len = 0x800000 - dram_addr;
+-    if (dram_addr >= 0x800000) return;
+-    if (dram_addr + wr_len > 0x800000) wr_len = 0x800000 - dram_addr;
++    if (dram_addr >= 0x1000000) return; // s6138: 16 MB (was 8 MB: dropped every DMEM->RDRAM write above 8 MB)
++    if (dram_addr + wr_len > 0x1000000) wr_len = 0x1000000 - dram_addr;
 +    rs64_s4239_dma(1, dram_addr, wr_len, dmem_addr);
 +    rs64_probe_dma_write_origin(dram_addr, wr_len, dmem_addr);
      for (uint32_t i = 0; i < wr_len; i++) {

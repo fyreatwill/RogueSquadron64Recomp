@@ -2735,6 +2735,21 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     uint32_t &s_dl_base = s_submit_dl_base;
     uint32_t &s_last_end = s_submit_last_end;
 
+    {   // s6138: DPC window log (RDP list start/end + first bytes), 8 vs 12 MB discriminator
+        static const bool s_win = []{ const char *e = std::getenv("ROGUESQ_LOG_DPCWIN"); return e && *e && *e != '0'; }();
+        static int s_winn = 0, s_winhi = 0;
+        if (s_win && end_phys > start_phys) {
+            if (start_phys >= 0x800000u) ++s_winhi;
+            if (s_winn < 40 || (s_winn % 20000) == 0) {
+                uint32_t from = (start_phys != s_submit_dl_base) ? start_phys : s_submit_last_end;
+                fprintf(stderr, "[dpcwin #%d] start=0x%08X end=0x%08X new=0x%06X..0x%06X hi=%d bytes=", s_winn, start, end, from, end_phys, s_winhi);
+                for (uint32_t i = 0; i < 16 && from + i < 0x4000000u; ++i)
+                    fprintf(stderr, "%02X", (unsigned)rdram[(from + i) ^ 3]);
+                fputc('\n', stderr); fflush(stderr);
+            }
+            ++s_winn;
+        }
+    }
     if (start_phys != s_dl_base) {
         s_dl_base = start_phys;
         s_last_end = start_phys;
