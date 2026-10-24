@@ -11,9 +11,12 @@ NEW = r'''    { /* PATCH: s6034 gridlog */ static int on6034 = -1; static int n6
         uint32_t cap = (uint32_t)MEM_HU(0xC4C, g), wx = (uint32_t)MEM_W(0xDB0, h), ww = (uint32_t)MEM_W(0xDB4, h), wz = (uint32_t)MEM_W(0xDB8, h), wd = (uint32_t)MEM_W(0xDBC, h);
         uint32_t tw = (uint32_t)MEM_HU(0xDF8, t), th = (uint32_t)MEM_HU(0xDFA, t);
         uint32_t node = (uint32_t)ctx->r2; int kept = 0; float dmin = 1e30f, dmax = -1.0f; int32_t xmax = -999999, zmax = -999999, xmin = 999999, zmin = 999999;
+        /* s6056: list is doubly linked (next +0, prev +4); v0 is not an end, so walk both ways (old forward-only walk always gave kept=1) */
+        uint32_t start6056 = node; int pass6056;
+        for (pass6056 = 0; pass6056 < 2; pass6056++) { node = start6056; if (pass6056) node = node ? (uint32_t)MEM_W(0x4, (int64_t)(int32_t)node) : 0;
         while (node && kept < 100000) { int64_t nb = (int64_t)(int32_t)node; union { uint32_t u; float f; } d; d.u = (uint32_t)MEM_W(0x8, nb);
           if (d.f < dmin) dmin = d.f; if (d.f > dmax) dmax = d.f; int32_t gx = (int32_t)MEM_W(0xC, nb), gz = (int32_t)MEM_W(0x10, nb);
-          if (gx > xmax) xmax = gx; if (gx < xmin) xmin = gx; if (gz > zmax) zmax = gz; if (gz < zmin) zmin = gz; kept++; node = (uint32_t)MEM_W(0x0, nb); }
+          if (gx > xmax) xmax = gx; if (gx < xmin) xmin = gx; if (gz > zmax) zmax = gz; if (gz < zmin) zmin = gz; kept++; node = (uint32_t)MEM_W(pass6056 ? 0x4 : 0x0, nb); } }
         fprintf(stderr, "[gridlog] win x0=%u w=%u z0=%u d=%u req=%u terr=%ux%u cap=%u kept=%d d2[min=%.1f max=%.1f] gx[%d..%d] gz[%d..%d]\n", wx, ww, wz, wd, ww * wd, tw, th, cap, kept, dmin, dmax, xmin, xmax, zmin, zmax);
       } }
 '''
