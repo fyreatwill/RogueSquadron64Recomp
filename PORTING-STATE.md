@@ -167060,3 +167060,11 @@ Ran L1 flight 60 s hold with RS64_RDP_BIN_PORT (600 MB cap hit; alive, 0 crashli
 Result (single run, single-source): SETSCISSOR 10.2 extents in flight are 512x448 (0,0,2048,1792; 8603x) paired with a 4-unit-smaller copy (2044,1788), 640x340 (2560,1360; 2346x), 640x480 (239x), 320x224 (40x). SETCOLORIMAGE widths: 512 (main, 3 triple-buffer-like addresses 0x80..), 640 (secondary passes). So the flight image is a 512-wide colour image with a 512 scissor; widening to 16:9 means 512 -> ~683 (or 640 -> 853) in colour-image width, scissor, the viewport scale/translate the F5 ucode projects with, and the VI mode width/xscale.
 Writer lead: setupCameraMatrices (funcs_4.c ~line 26867+, 0x80017xxx) emits the 0xED scissor from halfword globals at lui 0x8012 (-0x56F4 etc.) scaled by float at 0x800007A4 (x4). Not yet patched.
 Rules out: nothing overturned. ORIGIN: n/a (no mitigation added).
+
+## Session 6111 (2026-10-24) — maintenance: CURRENT-TRUTH compacted 60 KB -> 10 KB
+
+Step 0 triggered (60143 bytes). Migrated the ~230-line per-session backlog/evidence block (s5942-s6110) verbatim to
+docs/PROJECT-OVERVIEW.md ("Archived CURRENT-TRUTH backlog"), replaced it with a 5-item monotonic backlog plus a
+"settled results" digest (G1b, G3b, G1c ph2, G3, harness lessons), compacted the level-10/15 narrative, refreshed the
+headline date. 343 -> 132 lines (net -211). No experiments run; no conclusions overturned. G1d step 4 (NEXT.md) is
+unchanged and is the next unit.
