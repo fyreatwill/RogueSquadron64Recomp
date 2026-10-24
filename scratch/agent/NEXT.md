@@ -1,6 +1,5 @@
-# NEXT: G1d step 9 - who supplies colour-image address 0x8076A980 under FB_WIDTH=683
+# NEXT: G1d step 10 - find the copy stage from the 0x8076A980 render target into the flips (w683)
 HYPOTHESIS-ID: g1d-widescreen
-Known (s6116): w683 RDP SETCOLORIMAGE=0x8076A980 (683 wide) but VI flips 0x8066A980/0x805D5300; window black, VI origin stuck 0x66AD80.
-Competing: H-second-ptr (another fb-pointer table, e.g. set by setupFramebuffers/ video-state fn, uses unpatched layout) vs H-pfm-order (pfm patch shifts later regions so a cached pointer from retail layout is stale) vs H-rt64 (RT64 mishandles 683 CI).
-Discriminator: grep funcs_0.c for stores of region addresses returned by partitionFramebufferMemory and for 0x8076/0x76A980 constants; log at runtime the pfm return pointers + the CI address in the first flight DL (one build). Control: ctl run must show CI == VI flip buffer.
-Screenshot recipe: scratch/agent/s6116_run.sh (reuse).
+Known (s6117): colour images/flips are consistent with the patched layout; VI origin fixed; flips still black/sparse.
+Competing: H-tex-stride (copy uses SETTEXTUREIMAGE width/SETTILE line/LOADBLOCK dxt computed for 512) vs H-copy-dims (copy rect/scissor 512 wide) vs H-order (copy happens before render completes). 
+Discriminator: extend tools/rdpbin_scissor.py (or new tool) to list, in ctl_rdp.bin and w683_rdp.bin (scratch/agent/m6/s6116/), SETTEXTUREIMAGE(0x3D) addr/width, SETTILE(0x35) line, LOADBLOCK(0x33) dxt, TEXRECT(0x24) following a SETCOLORIMAGE to a flip. ctl vs w683 diff of that table selects the hardcoded-512 field. Positive control: ctl must show textures sourced from 0x80790000.

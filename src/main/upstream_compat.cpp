@@ -437,6 +437,16 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         }
     }
 
+    {   // s6117 G1d: ROGUESQ_FB_WIDTH flight swaps pass flip+0x400 (one 512-px line); at width 683 that is not a line start, RT64 finds no matching colour image.
+        static const uint32_t fbw = [] { const char* e = std::getenv("ROGUESQ_FB_WIDTH"); return (e && *e) ? (uint32_t)std::atoi(e) : 0u; }();
+        static const bool fix = [] { const char* e = std::getenv("ROGUESQ_FB_ORIGIN_FIX"); return e && *e && *e != '0'; }();
+        if (fbw > 0) {
+            static uint32_t seen[24]; static int ns;
+            bool known = false; for (int i = 0; i < ns; ++i) known |= (seen[i] == fb);
+            if (!known && ns < 24) { seen[ns++] = fb; fprintf(stderr, "[fbw] swap#%d new fb=0x%08X fix=%d\n", n, fb, (int)fix); }
+            (void)fix;
+        }
+    }
     rs64_s4899_swap(fb, rs64_vi_committed_width()); // s4900
     if (n <= 16 || (n & 63) == 0) {
         fprintf(stderr, "[osViSwapBuffer #%d] fb=0x%08X\n", n, fb);
@@ -713,6 +723,11 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
             const uint32_t nx = (uint32_t)((uint64_t)xScale * fbw / 512u);
             write_u32(0x08, fbw);
             write_u32(0x20, nx);
+            // s6117: fldRegs[0/1].origin (+0x28/+0x3C) is the second-field line offset = width*2 bytes; scale it with the width (else VI origin = fb+0x400 misses the 683-wide colour image).
+            for (uint32_t off : {0x28u, 0x3Cu}) {
+                uint32_t o = 0; for (int i = 0; i < 4; ++i) o = (o << 8) | rdram[((rdram_off + off + i) & 0x7FFFFFu) ^ 3];
+                if (o) { write_u32(off, (uint32_t)((uint64_t)o * fbw / 512u)); fprintf(stderr, "[fbw] fld origin +0x%X %u->%u\n", off, o, (uint32_t)((uint64_t)o * fbw / 512u)); }
+            }
             fprintf(stderr, "[fbw] osViSetMode mode_ptr=0x%08X width %u->%u xScale 0x%X->0x%X\n", mode_ptr, width, fbw, xScale, nx);
             width = fbw;
         }

@@ -142,3 +142,6 @@ fb size = partitionFramebufferMemory a2*a3*2; patched under ROGUESQ_FB_WIDTH (to
 
 ## G1d update (s6116)
 Activated-window screenshots work (osascript frontmost + screencapture; ctl valid). w683 window is black; RDP draws 683-wide colour image at 0x8076A980 while VI shows pfm-moved buffers 0x8066A980/0x805D5300 and stalls. Next: find who sets colour-image addr 0x8076A980 (second fb pointer not covered by partitionFramebufferMemory patch).
+
+## G1d update (s6117)
+s6116's "second colour-image pointer" is REFUTED: 0x8076A980 is region 0x801163E4 (top-fbsize) = the intermediate render target; ctl has the identical role split (0x80790000 intermediate + two flips). Fixed: VI field-origin offset (mode +0x28/+0x3C, hardcoded 1024/2048) now scaled under ROGUESQ_FB_WIDTH -> VI fb alternates. Still black: flips receive no final image. Next: parse the w683 rdp.bin for the copy stage from 0x8076A980 into the flips (SETTEXTUREIMAGE/SETTILE line/TEXRECT with 512-based stride) and compare with ctl.
