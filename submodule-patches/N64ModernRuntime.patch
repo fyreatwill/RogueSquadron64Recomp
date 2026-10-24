@@ -1500,7 +1500,7 @@ index 944e9fe..72c5fcd 100644
      std::unique_ptr<char[]> to_print = std::make_unique<char[]>(size + 1);
  
 diff --git a/librecomp/src/recomp.cpp b/librecomp/src/recomp.cpp
-index 4276b7d..830192b 100644
+index 4276b7d..2204ec9 100644
 --- a/librecomp/src/recomp.cpp
 +++ b/librecomp/src/recomp.cpp
 @@ -398,7 +398,7 @@ recomp::RomValidationError recomp::select_rom(const std::filesystem::path& rom_p
@@ -1533,7 +1533,21 @@ index 4276b7d..830192b 100644
      if (game_entry.thread_create_callback != nullptr) {
          game_entry.thread_create_callback(rdram, &ctx);
      }
-@@ -726,6 +740,17 @@ bool wait_for_game_started(uint8_t* rdram, recomp_context* context) {
+@@ -543,7 +557,12 @@ void init(uint8_t* rdram, recomp_context* ctx, gpr entrypoint) {
+     MEM_W(osTvType, 0) = 1; // NTSC
+     MEM_W(osRomBase, 0) = 0xB0000000u; // standard rom base
+     MEM_W(osResetType, 0) = 0; // cold reset
+-    MEM_W(osMemSize, 0) = 8 * 1024 * 1024; // 8MB
++    {   // s6114 G1d: ROGUESQ_OSMEM_MB=<n> tells the game it has n MB (n<=16 keeps everything below the RSP-visible 24-bit span).
++        const char* e = std::getenv("ROGUESQ_OSMEM_MB");
++        int mb = (e && *e) ? std::atoi(e) : 8;
++        if (mb < 4 || mb > 8) mb = 8; // >8 MB crashes RT64 (rdram capped at 8 MB, s6114)
++        MEM_W(osMemSize, 0) = mb * 1024 * 1024;
++    }
+ }
+ 
+ std::u8string recomp::current_game_id() {
+@@ -726,6 +745,17 @@ bool wait_for_game_started(uint8_t* rdram, recomp_context* context) {
                  save_type = game_entry.save_type;
                  ultramodern::init_saving(rdram);
  

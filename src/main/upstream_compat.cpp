@@ -509,13 +509,14 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         const uint32_t dh = wide_fb ? 448u : (stride > 640u ? 448u : stride * 224u / 320u);
         if (stride > 640u && !wide_fb) stride = dw;
         snprintf(path, sizeof path, "%s/fb_%07d_w%u.ppm", s_fbd, n, stride);
+        fprintf(stderr, "[fbdump] n=%d fb=0x%08X stride=%u\n", n, fb, stride);
         if (FILE* f = fopen(path, "wb")) {
             // s5746: raw guest-RDRAM readback, NOT the RT64 window (s5745: the "crawl garbage band" was only in this dump).
             fprintf(f, "P6\n# source=rdram-readback-not-window vi_width=%u\n%u %u\n255\n", ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG, dw, dh);
             const uint32_t phys = fb & 0x00FFFFFF;
             for (uint32_t i = 0; i < dw * dh; ++i) {
                 const uint32_t o = ((i / dw) * stride + (i % dw)) * 2u;
-                uint16_t px = (uint16_t)((rdram[((phys + o) & 0x7FFFFFu) ^ 3] << 8) | rdram[((phys + o + 1) & 0x7FFFFFu) ^ 3]);
+                uint16_t px = (uint16_t)((rdram[((phys + o) & 0xFFFFFFu) ^ 3] << 8) | rdram[((phys + o + 1) & 0xFFFFFFu) ^ 3]);
                 unsigned char rgb[3] = {(unsigned char)(((px >> 11) & 31) * 255 / 31), (unsigned char)(((px >> 6) & 31) * 255 / 31), (unsigned char)(((px >> 1) & 31) * 255 / 31)};
                 fwrite(rgb, 1, 3, f);
             }

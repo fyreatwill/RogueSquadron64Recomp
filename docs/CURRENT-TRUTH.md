@@ -133,3 +133,6 @@ mission logic, and `scratch/agent/SOAK-RESULTS.md` for queued verdicts.
 
 ## G1d widescreen state (s6113)
 Levers proven: ROGUESQ_VPW_SCALE (camera rect), ROGUESQ_ASPECT_SCALE (guPerspective aspect), ROGUESQ_FB_WIDTH (video-state a0 -> scissor + SETCOLORIMAGE width; plus osViSetMode width/xScale rewrite). Scissor does NOT follow the camera rect. Blocker: flight fbs at 0x80620000/0x80790000 overflow the 8 MB RDRAM top at width 683 (readback garbage). Next: relocate/verify buffers, then VI hstart/hend span + HUD x anchoring. Default behaviour unchanged (all opt-in).
+
+## G1d update (s6114)
+Widened-fb garbage = the two flight flip buffers (0x80620000/0x80690000) sit only 0x70000 apart (512x448x2), so 683-wide frames overlap each other. s6113's "0x80790000 overflow" was the hangar buffer. Fbs are carved top-down from osMemSize by the layout fn at 0x80000E00 (config struct 0x8010FCB0+0x2C..0x38 = region sizes); ROGUESQ_OSMEM_MB (4..8) shifts them; >8 MB aborts RT64 (8 MB rdram cap). Next: find/enlarge the fb size field under ROGUESQ_FB_WIDTH, then screenshot, VI hstart/hend, HUD x.

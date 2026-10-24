@@ -1,5 +1,5 @@
-# NEXT: G1d step 6 - fix the framebuffer overflow at widened width
+# NEXT: G1d step 7 - enlarge the flight framebuffer region size under ROGUESQ_FB_WIDTH
 HYPOTHESIS-ID: g1d-widescreen
-Known (s6113): ROGUESQ_FB_WIDTH=683 (with VPW_SCALE=1.3333 ASPECT_SCALE=1.3333) makes scissor and SETCOLORIMAGE 683 wide and VI mode 683/xScale 0x444, but the fb readback is garbage. Colour images 0x80620000 and 0x80790000; the second ends 0x80823A00 > 8 MB top, masked/wrapped by RT64/dump.
-Competing: H-overflow (buffer past 8 MB) vs H-dump-wrong-buffer/stride vs H-rt64-reads-VI-origin-with-other-stride.
-Discriminator: one run, same recipe: (a) log the osViSwapBuffer fb addresses next to each dump and dump BOTH buffers; the 0x80620000 one (fits) should be a valid picture if H-overflow; (b) find the fb allocation (grep 0x80790000 / the video init) and move the upper buffer below 0x80700000 under the env. Then screenshot, then VI hstart/hend span for 16:9 and HUD x.
+Known (s6114): flight flip buffers are 0x70000 apart (fixed 512x448x2); 683 needs 0x95800 so they overlap -> garbage. Buffers are carved top-down from osMemSize by the layout fn near 0x80000E00 (funcs_0.c ~900-1100; config struct at 0x8010FCB0, size fields +0x2C/+0x30/+0x34/+0x38 aligned to 16; sw to 0x801163D8..0x801163E4). >8 MB aborts RT64.
+Competing: H-size-in-config-struct (a static size field, e.g. 0x70000 or a<<6 form) vs H-size-computed-from-constant-in-fn vs H-fb1-offset-separate.
+Discriminator: log the config struct words (+0x2C..0x44) and the computed 0x801163D8/DC/E0/E4 at layout time (one build); find which equals 0x70000. Then patch via fixup script (tools/apply_s6031_far.py pattern) under ROGUESQ_FB_WIDTH to 0x95800 (rounded), run the 683 recipe (scratch/agent/soak_queue/s6114_g1d_fbw683.sh), expect a valid picture in both fbd dumps; then screenshot, VI hstart/hend span, HUD x.
