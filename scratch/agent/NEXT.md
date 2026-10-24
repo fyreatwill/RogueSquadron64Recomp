@@ -1,8 +1,6 @@
-# NEXT: why do all LUT entries stay age 0 at dd3? (G1c phase 2)
+# NEXT: why does tickTextureMaterialExpiry never age the 2048-bucket table? (G1c phase 2)
 HYPOTHESIS-ID: g1c-phase2-drawdist
-Facts (s6092): full scan at finder call 59: 6815 entries / 8192 buckets, age0=6808, 7 odd. +8 = age (tick +1 up to 0x708 then frees; reset zeroes; finder picks largest nonzero age).
-Hypotheses: H-notick tickTextureMaterialExpiry not running/starved at dd3; H-allreset every entry touched (reset) each frame since per-frame texture working set >= table; H-reader the 7 nonzero + 8192 base differ from game's view.
-Discriminator, one build: counters (per VI) for tickTextureMaterialExpiry calls, resetMaterialExpiryById calls, finder calls/zero returns, and entry count; dd1 control vs dd3 in one recipe pair. Wrap in funcs_6.c via tools/apply_s6088_bucketlog.py style patch (idempotent, env gated).
-Run: copy scratch/agent/soak_queue/done/s6091_lutx4_dd3.sh with new tag, dd1 and dd3.
-
-STATUS s6093: counters built; soaks s6093_cnt_dd1/dd3 queued. Next: read SOAK-RESULTS + soak_results logs, grep '[bucketlog] s6093' (compare tickcalls/resetcalls growth between consecutive dumps, dd1 vs dd3), pick hypothesis per outcomes above.
+Facts (s6094): tick runs, table valid (nb=2048 base 0x8018B490, ent=1715), all ages 0 across 40 consecutive ticks, resetMaterialExpiryById never called, only 2 nodes >=8MB.
+Hypotheses: H-body the loop body's age store never executes (guard branch / control-flow bug in recompiled code, e.g. goto L_80022128 for every node); H-inlinezero an inline writer zeroes +8 between ticks (find via store-watch on a sampled node's age halfword, PC attribution); H-reader tick sees entries the reader misreads (unlikely: same macros).
+Discriminator, one build: inside tick (funcs_6.c, via apply_s6088_bucketlog.py) count nodes visited, age-store executions (path at 0x800220A4/AC), expiry path (0x800220B0) hits, and guard skips; plus RS64 store hook logging PC of any write to age of node #1 of bucket 0. Run s6094_tick_dd3.sh (150s hold, in scratch/agent/soak_queue/).
+Outcomes: visited>0 & stores>0 -> H-inlinezero (name writer PC); visited==0 -> H-body; stores==0 with visited>0 -> age>=0x708 or branch bug.

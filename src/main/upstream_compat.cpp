@@ -2387,6 +2387,17 @@ extern "C" uint32_t rs64_s6091_scale(uint32_t v) {
 }
 static unsigned long s_s6093_cnt[2];
 extern "C" void rs64_s6093_cnt(int w) { ++s_s6093_cnt[w & 1]; }
+extern "C" void rs64_s6094_tick(uint8_t* rdram, uint32_t nbm, uint32_t basem) {  /* s6094: age histogram at each tickTextureMaterialExpiry entry */
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_BUCKETLOG"); return e && e[0] && e[0] != '0'; }();
+    if (!on) return;
+    static unsigned long nt = 0; ++nt;
+    static int n2048 = 0; bool big = (nbm == 2048u) && n2048 < 40; if (big) ++n2048; if (!(nt <= 3 || (nt % 600) == 0 || big) || nt > 20000) return;
+    auto rd = [&](uint32_t g) -> uint32_t { if (g < 0x80000000u || g >= 0x90000000u || (g & 3u)) return 0u; const uint8_t* q = rdram + (int64_t)(int32_t)g; return ((uint32_t)q[0 ^ 3] << 24) | ((uint32_t)q[1 ^ 3] << 16) | ((uint32_t)q[2 ^ 3] << 8) | (uint32_t)q[3 ^ 3]; };
+    uint32_t nb = nbm, base = basem;
+    unsigned long hi8 = 0, ne = 0, a0 = 0, an = 0, sum = 0; unsigned mx = 0;
+    for (uint32_t i = 0; i < nb && i < 16384; ++i) { uint32_t n = rd(base + 4 * i); int len = 0; while (n && len++ < 4096) { unsigned a = rd(n + 8) >> 16; ++ne; if (n >= 0x80800000u) ++hi8; if (a) ++an; else ++a0; sum += a; if (a > mx) mx = a; n = rd(n); } }
+    std::fprintf(stderr, "[bucketlog] s6094 tick#%lu nb=%u base=%08X ent=%lu age0=%lu agenz=%lu sumage=%lu maxage=%u nodes_ge_8MB=%lu\n", nt, nb, base, ne, a0, an, sum, mx, hi8);
+}
 extern "C" void rs64_s6088_fuse(uint8_t* rdram, uint32_t ret, uint32_t ra, uint32_t gcount, uint32_t gbase, uint32_t gcache) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_BUCKETLOG"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;

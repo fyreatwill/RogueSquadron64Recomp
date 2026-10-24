@@ -22,6 +22,9 @@ def apply6(text):
         sig = "RECOMP_FUNC void %s(uint8_t* rdram, recomp_context* ctx) {\n" % fn
         if ("PATCH: s6093 cnt%d" % w) not in text and sig in text:
             text = text.replace(sig, "extern void rs64_s6093_cnt(int);\n" + sig + "    rs64_s6093_cnt(%d); /* PATCH: s6093 cnt%d */\n" % (w, w), 1); n += 1
+    old0 = "    rs64_s6093_cnt(0); /* PATCH: s6093 cnt0 */\n"
+    if old0 in text and "PATCH: s6094" not in text:
+        text = text.replace("RECOMP_FUNC void tickTextureMaterialExpiry(uint8_t* rdram, recomp_context* ctx) {\n" + old0, "extern void rs64_s6094_tick(uint8_t*, uint32_t, uint32_t);\nRECOMP_FUNC void tickTextureMaterialExpiry(uint8_t* rdram, recomp_context* ctx) {\n    rs64_s6094_tick(rdram, (uint32_t)MEM_HU(S32(0X8013 << 16), -0X7110), U32(MEM_W(S32(0X8013 << 16), -0X7100))); /* PATCH: s6094 */\n" + old0, 1); n += 1
     return text, n
 if __name__ == "__main__":
     import pathlib
