@@ -167068,3 +167068,7 @@ docs/PROJECT-OVERVIEW.md ("Archived CURRENT-TRUTH backlog"), replaced it with a 
 "settled results" digest (G1b, G3b, G1c ph2, G3, harness lessons), compacted the level-10/15 narrative, refreshed the
 headline date. 343 -> 132 lines (net -211). No experiments run; no conclusions overturned. G1d step 4 (NEXT.md) is
 unchanged and is the next unit.
+
+## Session 6112 (2026-10-24) — G1d: camera viewport widening lever (ROGUESQ_VPW_SCALE) works; colour image/scissor/VI still 512
+Added tools/apply_s6031_far.py VPW block (also applied live to funcs_4.c): before the guPerspective call in setupCameraMatrices, ROGUESQ_VPW_SCALE=k rewrites the camera struct's width (+0x10) and centre-x (+0x18) from the first-seen originals (idempotent per camera pointer), and logs `[vpw] cam ... w h cx cy kv` for the first 12 calls (unset = retail, log still fires = positive control). Built clean.
+Result (L1, two arms, 131 s holds, both alive_at_end=1, 0 crashlines, 0 VI stalls; recipes in scratch/agent/soak_queue/hold/): ctl logs the camera as a 320x224 virtual rect (cx 160, cy 112); VPW=1.3333 + ASPECT_SCALE=1.3333 logs 426 / cx 213. Same fb index 4740: craft is the same pixel size (undistorted) but the scene is shifted/cropped on the right (radar half off-screen, craft right of centre), fb still w512. So H-viewport-lever CONFIRMED (single-source, eyeball); the 512 colour image / scissor / VI width is the remaining piece (the "bars/clipped" outcome in NEXT). Rules out: the viewport rect is not clamped by the game to 320. ORIGIN: n/a (opt-in env lever, default retail).

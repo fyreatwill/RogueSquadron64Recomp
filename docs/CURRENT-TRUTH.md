@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6111 (2026-10-24; maintenance compaction).
+Compact operational handoff, maintained as of Session 6112 (2026-10-24).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -92,7 +92,7 @@ autopilot win are owner playtest scope.
    (guPerspective aspect in setupCameraMatrices) scales rigid-object width ~1/k (s6108).
    Flight RDP census (s6110, `tools/rdpbin_scissor.py`): colour image 512 wide, scissor 512x448
    (+4-unit twin), secondary passes 640. A real widening must change colour-image width, scissor,
-   viewport and VI width together under `ROGUESQ_ASPECT=16:9`; scissor writer lead is
+   viewport and VI width together under `ROGUESQ_ASPECT=16:9`. s6112: `ROGUESQ_VPW_SCALE=k` (+ASPECT_SCALE=k) widens the camera viewport (320x224 virtual rect -> 426) undistorted, but output is still a 512 image so the right side is cropped: remaining = scissor/colour-image/VI width + HUD x; scissor writer lead is
    setupCameraMatrices (0x80017xxx, halfword globals x float @0x800007A4); VI table
    `selectAndApplyViMode` (0x80128D50, 0x50-byte OSViMode entries), `osViSetMode_recomp`
    (upstream_compat.cpp:621). Then HUD x anchoring, menus/hangar check, 21:9.
