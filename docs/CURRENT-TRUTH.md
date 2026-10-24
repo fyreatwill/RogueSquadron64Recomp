@@ -153,3 +153,5 @@ Widened (ROGUESQ_FB_WIDTH=683) RDP stream is width-consistent with retail (sciss
 
 ## G1d status (s6119)
 ROGUESQ_FB_WIDTH=683 now renders (s6119): RT64 width allowlists (last-drawn store, mode-3 saneW, writeback allowW) accept width==FB_WIDTH; VI regs verified consistent (w683 xScale 0x444, origin field offset 1366). Fbdump flip shows a correct frame; on-screen window not yet verified. Next: window screenshot with game frontmost, then wire ROGUESQ_ASPECT=16:9/21:9 (FOV/HUD x), menus/hangar check.
+
+- s6121: ROGUESQ_ASPECT=<w>:<h> (>4:3) now derives FB_WIDTH+scales in main.cpp; 16:9/21:9 soaks queued, results pending.

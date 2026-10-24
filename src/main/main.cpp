@@ -10727,8 +10727,28 @@ static void rs64_m5_apply_drain_tick_policy() {
 #endif
 }
 
+// G1d (s6121): ROGUESQ_ASPECT=<w>:<h> with w/h > 4:3 derives the game-side widescreen
+// knobs (framebuffer width = round(448*r), projection + viewport scales = width/512).
+// Explicit ROGUESQ_FB_WIDTH / VPW_SCALE / ASPECT_SCALE win. 4:3, orig, expand: untouched (retail).
+static void rs64_g1d_apply_aspect_policy() {
+    const char* as = std::getenv("ROGUESQ_ASPECT");
+    const char* c = as ? std::strchr(as, ':') : nullptr;
+    if (!c) return;
+    double w = std::atof(as), h = std::atof(c + 1);
+    if (!(w > 0.0 && h > 0.0) || w / h <= 4.0 / 3.0 + 1e-3) return;
+    int fbw = (int)(448.0 * w / h + 0.5);
+    char b[32];
+    std::snprintf(b, sizeof b, "%d", fbw);
+    setenv("ROGUESQ_FB_WIDTH", b, 0);
+    std::snprintf(b, sizeof b, "%.4f", fbw / 512.0);
+    setenv("ROGUESQ_VPW_SCALE", b, 0);
+    setenv("ROGUESQ_ASPECT_SCALE", b, 0);
+    std::fprintf(stderr, "[g1d] ROGUESQ_ASPECT=%s -> FB_WIDTH=%d scales=%s\n", as, fbw, b);
+}
+
 int main(int argc, char* argv[]) {
     (void)argc; (void)argv;
+    rs64_g1d_apply_aspect_policy();
 
     // The drain-loop tick is a port-only injection; keep the retail-shaped
     // path as the default while retaining an explicit rollback arm.
