@@ -166882,3 +166882,11 @@ Took the G3 rung. The NEXT.md "hangar artifact list, top item" is already resolv
 - dd2: vi/s p5=58 p50=60; send_dl wall 0.87 ms/task p50, 1.87 p95; 25.7 ms/s p50, 37.4 p95.
 - Reading: dd2 adds ~16 ms of RSP host time per second (~1.6% of one second), p95 per task rises ~4.5x but is still <2 ms of a 16.7 ms frame. No frame-rate regression (p50 60 vi/s both). Single-source (one run per arm, same instrument); consistent with s6055 (no regression) and s6074 (+~10 ms/s).
 - dd3_l1 arm still queued; fold next iteration. Default stays retail.
+
+## Session 6079 (2026-10-23) — G1c frame-time: dd3 holds VI 60/s p50; H-flat, G1c closed pending owner look
+
+- Folded s6077_g1b_dd3_l1 (rc=0, 300 s hold). Same parser as s6078 (`[g1b]` lines, t>100, tasks>0; reproduced dd1/dd2 numbers exactly as a control).
+- dd3: 285 s; vi/s p5=58 p50=60; send_dl 21.4 ms/s p50, 56.3 p95; per task 0.73 ms p50, 3.74 p95. (dd1: 9.8 / 12.7 ms/s; dd2: 25.7 / 37.4.)
+- Outcome split from NEXT.md: dd3 vi/s p50 = 60 => H-flat (RSP cost grows but stays far below the 16.7 ms frame budget at p50); H-rsp not supported at the VI-rate level. Tail does grow: dd3 p95 per task 3.74 ms (9x dd1). Single-source per arm (one run each).
+- G1c done-criterion met (2x holds 300 s on L1/L5/L10, 0 crash, no frame-rate regression). Remaining: owner judges the look (docs/DRAW-DISTANCE.md). Default stays retail.
+- Queued G4 stall-hunt soaks s6079_g4_l{2,3,4} (retail, 300 s hold, G1B timing) for the loop to run.

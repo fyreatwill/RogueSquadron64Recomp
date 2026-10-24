@@ -113,6 +113,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
+> s6079: G1c dd3 frame time folded: vi/s p50 60, send_dl 21.4 ms/s p50 (p95/task 3.74 ms). H-flat; G1c criterion met, awaiting owner look-judgement. Queued G4 soaks s6079_g4_l{2,3,4}.
 > s6078: G1c frame time folded for dd1/dd2 (L1, 300 s): VI 60/s both; send_dl 9.8->25.7 ms/s p50 (p95/task 0.42->1.87 ms). dd3 arm still queued (s6077_g1b_dd3_l1). H-flat holds for dd2.
 > s6076: G1c crash/stall criterion MET (ROGUESQ_DRAW_DISTANCE=2 auto-far holds 300 s clean on L1, L5, L10; dd3 L1 clean). Ask owner to judge look; default stays retail. G3 CLOSED as stale (s6077: pillar stubs were our FIX_ZERO_SHADE, fixed s5971; owner guide docs/DRAW-DISTANCE.md). Queued s6077_g1b_dd{1,2,3}_l1 for the per-step frame-time figure (last open G1c item); then G4/G5.
 
