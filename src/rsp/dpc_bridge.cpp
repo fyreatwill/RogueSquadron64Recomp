@@ -2847,7 +2847,7 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     // Garbage tasks (trig data executed as DL) write junk DPC pointers; any
     // range outside 8MB RDRAM would make the diagnostics below (and RT64)
     // read OOB host memory. Drop it before the first dereference.
-    if (submit_lo >= 0x800000 || submit_hi > 0x800000 || submit_hi <= submit_lo) {
+    if (submit_lo >= 0x1000000 || submit_hi > 0x1000000 || submit_hi <= submit_lo) { // s6135: 16 MB (was 8 MB: dropped every RDP submit above 8 MB at OSMEM>8)
         static int s_n = 0;
         if (++s_n <= 16 || (s_n & 255) == 0) {
             fprintf(stderr, "[dpc-oob-range #%d] dropping submit range 0x%08X..0x%08X\n",
@@ -3164,7 +3164,7 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
             uint8_t  segHigh = (uint8_t)((w1w >> 24) & 0xFF);
             // Width is encoded in bits 0-11 of w0 as (width-1).
             uint16_t cimg_width = (uint16_t)((w0w & 0xFFFu) + 1);
-            const bool oob_high  = (addr24 >= 0x00800000u);
+            const bool oob_high  = (addr24 >= 0x01000000u);
             const bool oob_low   = (addr24 < 0x00100000u && addr24 != 0);
             const bool oob_width = (cimg_width > 640u);
             (void)segHigh;
@@ -3472,8 +3472,8 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
                     // ROGUESQ_PRIM_FF block below pokes `submit_lo + n`, the
                     // base of the whole submit range rather than this command —
                     // that looks wrong, but it is off by default and untouched.)
-                    const uint32_t off = (uint32_t)mips & 0x7FFFFF;
-                    if (off + 8 <= 0x800000) {
+                    const uint32_t off = (uint32_t)mips & 0xFFFFFF;
+                    if (off + 8 <= 0x1000000) {
                         rdram[(off + 7) ^ 3] = 0xFF;
                     }
                 }
@@ -3757,7 +3757,7 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
             // that emitted the bad command + the source DL location, so we can
             // backtrack to whichever code wrote garbage into this DL slot.
             // Throttled exponentially to avoid log floods.
-            if (g_cine_last_cimg_addr >= 0x00800000u) {
+            if (g_cine_last_cimg_addr >= 0x01000000u) {
                 static std::atomic<uint64_t> s_oob{0};
                 uint64_t n = ++s_oob;
                 if (n == 1 || (n & (n - 1)) == 0) {
@@ -3931,7 +3931,7 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
                                ((uint32_t)(uint8_t)MEM_B(6, mp) <<  8) |
                                ((uint32_t)(uint8_t)MEM_B(7, mp));
                 uint32_t addr24 = w1v & 0x00FFFFFF;
-                const bool drop_high = (addr24 >= 0x00800000u);
+                const bool drop_high = (addr24 >= 0x01000000u); // s6135: 16 MB
                 const bool drop_low  = (addr24 != 0 && addr24 < 0x00100000u);
                 if (drop_high || drop_low) {
                     static std::atomic<uint64_t> s_drop_h{0};

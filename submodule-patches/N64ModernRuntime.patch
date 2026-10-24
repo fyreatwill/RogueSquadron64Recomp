@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..ef2cb45 100644
+index b0d6bef..2da831a 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,7 @@
@@ -200,8 +200,10 @@ index b0d6bef..ef2cb45 100644
 +    }
      dmem_addr &= 0xFFF;
      if (dmem_addr + rd_len > 0x1000) rd_len = 0x1000 - dmem_addr;
-     if (dram_addr >= 0x800000) return;
-     if (dram_addr + rd_len > 0x800000) rd_len = 0x800000 - dram_addr;
+-    if (dram_addr >= 0x800000) return;
+-    if (dram_addr + rd_len > 0x800000) rd_len = 0x800000 - dram_addr;
++    if (dram_addr >= 0x1000000) return; // s6135: 16 MB (was 8 MB: dropped every DL fetch above 8 MB at OSMEM>8)
++    if (dram_addr + rd_len > 0x1000000) rd_len = 0x1000000 - dram_addr;
 +    rs64_m5_audio_input_dma(rdram, dram_addr, rd_len, dmem_addr);
 +    // Record only window-targeted small fetches (actual DL chunk staging,
 +    // dmem 0x170 len ~0x110) — NOT full segment images that merely cover the
@@ -3734,7 +3736,7 @@ index 1cb3f6a..fc98f60 100644
      return true;
  }
 diff --git a/librecomp/src/sp.cpp b/librecomp/src/sp.cpp
-index ae0f44f..d2d65ec 100644
+index ae0f44f..049aea6 100644
 --- a/librecomp/src/sp.cpp
 +++ b/librecomp/src/sp.cpp
 @@ -1,15 +1,112 @@
@@ -3755,12 +3757,12 @@ index ae0f44f..d2d65ec 100644
 +
 +static bool rs64_sp_task_range_valid(uint64_t addr, uint64_t size) {
 +    constexpr uint64_t kseg0_base = 0xFFFFFFFF80000000ull;
-+    constexpr uint64_t kseg0_end = 0xFFFFFFFF80800000ull;
++    constexpr uint64_t kseg0_end = 0xFFFFFFFF81000000ull;
 +    if (addr >= kseg0_base && size <= kseg0_end - addr) return true;
 +
 +    const uint32_t low = static_cast<uint32_t>(addr);
 +    return (addr >> 32) == 0 && low >= 0x80000000u &&
-+           size <= 0x00800000ull - (low - 0x80000000u);
++           size <= 0x01000000ull - (low - 0x80000000u);
 +}
 +
 +static bool log_sp_yielded_ab() {

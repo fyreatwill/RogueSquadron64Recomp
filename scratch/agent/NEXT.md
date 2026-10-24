@@ -1,5 +1,5 @@
-# NEXT: G1d step 27 - OSMEM=12: control run + where RT64 draws
+# NEXT: G1d step 28 - OSMEM=12 flight frame correctness + swap-rate collapse
 HYPOTHESIS-ID: g1d-widescreen
-Known (s6134): RT64 caps at workload_queue:500 and f3dfactor5:193 widened; 12 MB still ends "nomission" with garbage fbd frames, VI origins vary (0xA96100/0xAAB400/0xB90400).
-Hypotheses: H-ci (some other bound drops/relocates >8MB colour images, e.g. fbManager readback/present), H-game (game at 12 MB never reaches flight; garbage is legit uninitialised fb), H-dump (fbd dumper reads wrong address/size at 12 MB).
-Discriminator: run the SAME recipe at ROGUESQ_OSMEM_MB=8 (positive control; TITLE_ORIGIN default) and 12, logging per VI the SetColorImage address, VI origin, and rdram hash at origin after the RDP task; compare whether RT64 write-back lands at origin.
+Known (s6135): 12 MB origins = 8 MB +0x400000 (TITLE_ORIGIN=0x00B90400 MISSION_RE=A90400). 8 MB literals in RSP DMA / sp.cpp / dpc_bridge widened to 16 MB; RT64 now gets draws. fbd swap counter n stalls ~1500-1700 at 12 MB (8 MB: 6500 in same hold); dumps are w640 non-flight.
+Hypotheses: H-slow (game/RT64 genuinely 4x slower at 12 MB: e.g. a remaining >8 MB path falling to slow route), H-stuck (game parks in a pre-flight phase while VI shows A90400), H-dump (swap counter n is not comparable; dump hook not reached in flight).
+Discriminator: one 12 MB run with ROGUESQ_FB_DUMP_VI=1 FBD_EVERY_V=50 and ROGUESQ_G1B per-VI timing; compare swap n vs VI count per 10 s for 8 MB (control, same build) and 12 MB; view the VI-origin frame at the last dump. Also grep for remaining 0x800000/0x7FFFFF functional uses (dpc_bridge 1132-1560 masks are diagnostics; check aspMain.cpp, upstream_compat.cpp, main.cpp:4692/5086/5103).

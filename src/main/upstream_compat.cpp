@@ -523,7 +523,9 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         if (FILE* f = fopen(path, "wb")) {
             // s5746: raw guest-RDRAM readback, NOT the RT64 window (s5745: the "crawl garbage band" was only in this dump).
             fprintf(f, "P6\n# source=rdram-readback-not-window vi_width=%u\n%u %u\n255\n", ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG, dw, dh);
-            const uint32_t phys = fb & 0x00FFFFFF;
+            // s6135: ROGUESQ_FB_DUMP_VI=1 dumps the buffer the VI actually scans out (at 12 MB the swap-time fb argument is 0x70000 below VI origin).
+            static const bool s_fbd_vi = [] { const char* e = std::getenv("ROGUESQ_FB_DUMP_VI"); return e && *e && e[0] != '0'; }();
+            const uint32_t phys = s_fbd_vi ? (ultramodern::renderer::get_vi_regs()->VI_ORIGIN_REG & 0x00FFFFFF) : (fb & 0x00FFFFFF);
             for (uint32_t i = 0; i < dw * dh; ++i) {
                 const uint32_t o = ((i / dw) * stride + (i % dw)) * 2u;
                 uint16_t px = (uint16_t)((rdram[((phys + o) & 0xFFFFFFu) ^ 3] << 8) | rdram[((phys + o + 1) & 0xFFFFFFu) ^ 3]);
