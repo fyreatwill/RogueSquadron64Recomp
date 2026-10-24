@@ -116,8 +116,8 @@ When choosing the work unit, this order overrides Next-steps ordering:
      fuzz; agrees with s5669-s5674 PCM evidence). Reopen only on a new owner report.
    - G3 **Render fidelity.** Hangar artifacts (CURRENT-TRUTH list) and in-flight frame
      diffs against retail framebuffers.
-   - G3b **In-flight spike lines (owner report 2026-10-24).** Take this next, ahead of
-     further G4 soaks (finish folding any G4 soaks already queued first). Owner watching
+   - G3b **In-flight spike lines (owner report 2026-10-24).** Take this next (G4 is
+     parked; queued G4 soaks were cancelled). Owner watching
      plain retail-settings flight (s6081 lvl2, no draw-distance flags): mostly smooth, but
      occasional single-frame flashes of thin lines, one or two at a time, shooting in
      from random points on the screen border. Classic spike-triangle signature: a vertex
@@ -138,7 +138,11 @@ When choosing the work unit, this order overrides Next-steps ordering:
      same level and frame region) shows the same lines -> H-retail, optional
      host-side cull behind an env flag. Done when a 300 s lvl2 hold shows 0 logged
      spike triangles (or only retail-matching ones) with no new missing geometry.
-   - G4 **Crash/stall hunting** across every reachable mission via queued soaks.
+   - G4 **Crash/stall hunting: PARKED by owner 2026-10-24.** s5999-s6082: all 19 levels
+     (0-18) held 660 s clean, hangar route 9/9 clean, 0 retail-settings crashes found;
+     repeat holds stopped paying. Do NOT queue crash/stall-hunt or repeat-hold soaks.
+     Reopen only on an owner-reported crash/stall in play, or a crash that a soak
+     run for another goal hits as a side effect (fix that one, don't start a sweep).
    - G5 The renaming sweep (item 4), last.
 4. **Generated-symbol renaming sweep** (HYPOTHESIS-ID:
    generated-symbol-renaming-sweep), once 1-3 are inapplicable (M5 closed;

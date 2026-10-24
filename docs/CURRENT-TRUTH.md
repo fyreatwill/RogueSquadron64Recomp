@@ -112,6 +112,9 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+- **Owner 2026-10-24: G4 crash/stall hunting PARKED.** All 19 levels + hangar route
+  clean (s5999-s6082). Queued s6081/s6082 G4 soaks moved to soak_queue/cancelled/.
+  Do not queue repeat holds; reopen only on an owner-reported crash.
 - **Owner report 2026-10-24 (queued as G3b, take next):** occasional single-frame
   thin lines flash in from the screen border during normal retail flight (spike
   triangles). Full spec and discriminator: ITERATION.md item 3c G3b.
