@@ -1,5 +1,5 @@
-# NEXT: G1d step 7 - enlarge the flight framebuffer region size under ROGUESQ_FB_WIDTH
+# NEXT: G1d step 8 - why 683-wide frames are garbage after non-overlapping buffers
 HYPOTHESIS-ID: g1d-widescreen
-Known (s6114): flight flip buffers are 0x70000 apart (fixed 512x448x2); 683 needs 0x95800 so they overlap -> garbage. Buffers are carved top-down from osMemSize by the layout fn near 0x80000E00 (funcs_0.c ~900-1100; config struct at 0x8010FCB0, size fields +0x2C/+0x30/+0x34/+0x38 aligned to 16; sw to 0x801163D8..0x801163E4). >8 MB aborts RT64.
-Competing: H-size-in-config-struct (a static size field, e.g. 0x70000 or a<<6 form) vs H-size-computed-from-constant-in-fn vs H-fb1-offset-separate.
-Discriminator: log the config struct words (+0x2C..0x44) and the computed 0x801163D8/DC/E0/E4 at layout time (one build); find which equals 0x70000. Then patch via fixup script (tools/apply_s6031_far.py pattern) under ROGUESQ_FB_WIDTH to 0x95800 (rounded), run the 683 recipe (scratch/agent/soak_queue/s6114_g1d_fbw683.sh), expect a valid picture in both fbd dumps; then screenshot, VI hstart/hend span, HUD x.
+Known (s6115): partitionFramebufferMemory patched (ROGUESQ_FB_WIDTH), spacing OK, dumps garbage; control (no width flag) dump valid.
+Competing: H-rt64-vi-width (RT64 uses VI width/origin that disagrees with SETCOLORIMAGE width) vs H-second-hardcoded-512 (a copy/clear/Z loop or VI origin step with 512) vs H-dump-stride (dump/readback assumes stride from a different source).
+Discriminator (one build): log at present: VI width reg, VI origin, SETCOLORIMAGE width seen by RT64/ucode, and game Z-buffer address/stride; also grep funcs for 0x200 / 1024-byte row strides near fb users. Positive control: same log on the no-flag run must show 512 everywhere.

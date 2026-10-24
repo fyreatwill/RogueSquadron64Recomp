@@ -136,3 +136,6 @@ Levers proven: ROGUESQ_VPW_SCALE (camera rect), ROGUESQ_ASPECT_SCALE (guPerspect
 
 ## G1d update (s6114)
 Widened-fb garbage = the two flight flip buffers (0x80620000/0x80690000) sit only 0x70000 apart (512x448x2), so 683-wide frames overlap each other. s6113's "0x80790000 overflow" was the hangar buffer. Fbs are carved top-down from osMemSize by the layout fn at 0x80000E00 (config struct 0x8010FCB0+0x2C..0x38 = region sizes); ROGUESQ_OSMEM_MB (4..8) shifts them; >8 MB aborts RT64 (8 MB rdram cap). Next: find/enlarge the fb size field under ROGUESQ_FB_WIDTH, then screenshot, VI hstart/hend, HUD x.
+
+## G1d update (s6115)
+fb size = partitionFramebufferMemory a2*a3*2; patched under ROGUESQ_FB_WIDTH (tools/apply_s6031_far.py applypfm). Flip buffers no longer overlap (spacing 0x95680) but 683 dumps remain garbage (control without width flag is valid). Next: compare SETCOLORIMAGE width vs RT64/VI width at present for a 683 frame; find any other hardcoded 512 stride. Window screenshots need the game window frontmost (not yet).
