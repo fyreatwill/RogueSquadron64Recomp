@@ -18,6 +18,10 @@ def apply6(text):
     if "PATCH: s6090 lutinit" in text and "PATCH: s6091 lutscale" not in text:
         text = text.replace("/* PATCH: s6090 lutinit */\n", "/* PATCH: s6090 lutinit */\n    ctx->r4 = (int32_t)rs64_s6091_scale(U32(ctx->r4)); ctx->r5 = (int32_t)rs64_s6091_scale(U32(ctx->r5)); /* PATCH: s6091 lutscale */\n", 1); text = text.replace("extern void rs64_s6090_init(uint32_t, uint32_t, uint32_t);\n", "extern void rs64_s6090_init(uint32_t, uint32_t, uint32_t);\nextern uint32_t rs64_s6091_scale(uint32_t);\n", 1); n += 1
     if "PATCH: s6090 lutinit" not in text and SIG2 in text: text = text.replace(SIG2, NEW2, 1); n += 1
+    for fn, w in (("tickTextureMaterialExpiry", 0), ("resetMaterialExpiryById", 1)):
+        sig = "RECOMP_FUNC void %s(uint8_t* rdram, recomp_context* ctx) {\n" % fn
+        if ("PATCH: s6093 cnt%d" % w) not in text and sig in text:
+            text = text.replace(sig, "extern void rs64_s6093_cnt(int);\n" + sig + "    rs64_s6093_cnt(%d); /* PATCH: s6093 cnt%d */\n" % (w, w), 1); n += 1
     return text, n
 if __name__ == "__main__":
     import pathlib

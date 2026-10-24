@@ -2385,6 +2385,8 @@ extern "C" uint32_t rs64_s6091_scale(uint32_t v) {
     std::fprintf(stderr, "[lutscale] %u -> %u\n", v, v * k);
     return v * k;
 }
+static unsigned long s_s6093_cnt[2];
+extern "C" void rs64_s6093_cnt(int w) { ++s_s6093_cnt[w & 1]; }
 extern "C" void rs64_s6088_fuse(uint8_t* rdram, uint32_t ret, uint32_t ra, uint32_t gcount, uint32_t gbase, uint32_t gcache) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_BUCKETLOG"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
@@ -2408,6 +2410,7 @@ extern "C" void rs64_s6088_fuse(uint8_t* rdram, uint32_t ret, uint32_t ra, uint3
         if (i < 40 && o < 480) o += std::snprintf(buf + o, sizeof(buf) - o, "%u:%u/%u ", i, len, cs);
     }
     std::fprintf(stderr, "[bucketlog] s6092 all: entries=%lu age0=%lu age1_15=%lu age16+=%lu maxage=%u maxchain=%lu\n", nent, a0n, a1n, a2n, maxage, maxlen);
+    std::fprintf(stderr, "[bucketlog] s6093 tickcalls=%lu resetcalls=%lu\n", s_s6093_cnt[0], s_s6093_cnt[1]);
     std::fprintf(stderr, "[bucketlog] call=%lu zero=%lu ret=%08X ra=%08X nbuckets=%u nonempty=%lu totcnt=%lu cachehead=%08X live=0x%llX peak=0x%llX | %s\n",
         ncall, nzero, ret, ra, nb, nz, totc, rd(0x801163B0u), (unsigned long long)s_s6063_bytes, (unsigned long long)s_s6063_peak, buf);
 }
