@@ -8,12 +8,15 @@ NEW = ("RECOMP_FUNC void findAndUnlinkSmallestEntry_s6088_inner(uint8_t* rdram, 
        "RECOMP_FUNC void findAndUnlinkSmallestEntry(uint8_t* rdram, recomp_context* ctx) { uint32_t _ra = U32(ctx->r31); findAndUnlinkSmallestEntry_s6088_inner(rdram, ctx); rs64_s6088_fuse(rdram, U32(ctx->r2), _ra, (uint32_t)MEM_HU(S32(0X8013 << 16), -0X7110), U32(MEM_W(S32(0X8013 << 16), -0X7100)), U32(MEM_W(S32(0X8011 << 16), 0X63B0))); } /* PATCH: s6088 bucketlog */\n"
        "RECOMP_FUNC void findAndUnlinkSmallestEntry_s6088_inner(uint8_t* rdram, recomp_context* ctx) {\n")
 SIG2 = "RECOMP_FUNC void initTextureLUTAndAllocBuffers(uint8_t* rdram, recomp_context* ctx) {\n"
-NEW2 = ("extern void rs64_s6090_init(uint32_t, uint32_t, uint32_t);\n"
+NEW2 = ("extern void rs64_s6090_init(uint32_t, uint32_t, uint32_t);\nextern uint32_t rs64_s6091_scale(uint32_t);\n"
         "RECOMP_FUNC void initTextureLUTAndAllocBuffers(uint8_t* rdram, recomp_context* ctx) {\n"
-        "    rs64_s6090_init(U32(ctx->r4), U32(ctx->r5), U32(ctx->r31)); /* PATCH: s6090 lutinit */\n")
+        "    rs64_s6090_init(U32(ctx->r4), U32(ctx->r5), U32(ctx->r31)); /* PATCH: s6090 lutinit */\n"
+        "    ctx->r4 = (int32_t)rs64_s6091_scale(U32(ctx->r4)); ctx->r5 = (int32_t)rs64_s6091_scale(U32(ctx->r5)); /* PATCH: s6091 lutscale */\n")
 def apply6(text):
     n = 0
     if "PATCH: s6088 bucketlog" not in text and SIG in text: text = text.replace(SIG, NEW, 1); n += 1
+    if "PATCH: s6090 lutinit" in text and "PATCH: s6091 lutscale" not in text:
+        text = text.replace("/* PATCH: s6090 lutinit */\n", "/* PATCH: s6090 lutinit */\n    ctx->r4 = (int32_t)rs64_s6091_scale(U32(ctx->r4)); ctx->r5 = (int32_t)rs64_s6091_scale(U32(ctx->r5)); /* PATCH: s6091 lutscale */\n", 1); text = text.replace("extern void rs64_s6090_init(uint32_t, uint32_t, uint32_t);\n", "extern void rs64_s6090_init(uint32_t, uint32_t, uint32_t);\nextern uint32_t rs64_s6091_scale(uint32_t);\n", 1); n += 1
     if "PATCH: s6090 lutinit" not in text and SIG2 in text: text = text.replace(SIG2, NEW2, 1); n += 1
     return text, n
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
-# NEXT: who refills the DL-node bucket cnt? (G1c phase 2)
+# NEXT: who writes/zeroes the +8 halfword of LUT entries? (G1c phase 2)
 HYPOTHESIS-ID: g1c-phase2-drawdist
-Facts (s6090): at dd3 call 59 of findAndUnlinkSmallestEntry (0x8002221C) all 55 nonempty buckets (of 2048) hold nodes with cnt(+8 u16)==0 -> returns 0 -> NULL -> SIGBUS beginFrameDLChunk+12168. dd1 never calls it. Reader fixed (rdram+(int32)addr).
-Hypotheses: H-refill reclaim (reclaimDisplayListChunk 0x80007CDC) never raises cnt at dd3; H-size nodes are sized/counted for retail volume (cnt = free chunks per size) and dd3 simply needs more; H-order a second consumer drains cnt faster than reclaim.
-Discriminator, ONE build: log pre-call dump (sum cnt, nonempty) every 8th call plus counts of reclaimDisplayListChunk calls and writes to node+8 (wrap 0x80007CDC; find the store sites with grep 'sh .*0x8(' in funcs_6.c near it) at dd3; positive control = reclaim count >0 at dd3 (dd1 doesn't call the finder, so also log reclaim at dd1). Read where cnt is initialised (allocator of nodes) to see what bounds it; then raise supply (larger node count) under ROGUESQ_DRAW_DISTANCE.
-Run: sed the s6088_bucket_dd3.sh recipe (tag), perl -e 'alarm 560; exec @ARGV' zsh it; logs in scratch/agent/m6/<tag>/fail_att*.log.
+Facts (s6091): LUTSCALE=4 leaves dd3 failing at finder call 58-59 with totcnt=0 (nonempty 41). Capacity is not binding; call ordinal invariant.
+Hypotheses: H-zeroed some path clears +8 (use/pin count) on every node and never restores it at dd3; H-never-set entries are inserted with +8 = 0 when the DL volume is large; H-fixed-demand ~58 calls happen in one fixed sequence and consume all evictable entries regardless of table size.
+Discriminator, one build: log first 8 nodes' +8 (and chain length) at finder calls 1, 30, 58 plus grep-enumerated store sites to +8 (sh with offset 0X8) in funcs_6.c ~0x8001E230-0x80022300 wrapped with a counter; compare dd1 forced-call positive control.
+Run: copy scratch/agent/soak_queue/done/s6091_lutx4_dd3.sh (tag), perl -e 'alarm 580; exec @ARGV' zsh it.

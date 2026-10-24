@@ -2379,6 +2379,12 @@ extern "C" void rs64_s6090_init(uint32_t a0, uint32_t a1, uint32_t ra) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_BUCKETLOG"); return e && e[0] && e[0] != '0'; }();
     if (on) std::fprintf(stderr, "[bucketlog] initTextureLUT a0=%u a1=%u ra=%08X\n", a0 & 0xFFFFu, a1 & 0xFFFFu, ra);
 }
+extern "C" uint32_t rs64_s6091_scale(uint32_t v) {
+    static const uint32_t k = [] { const char* e = std::getenv("ROGUESQ_LUTSCALE"); int x = e ? std::atoi(e) : 1; return (uint32_t)(x < 1 ? 1 : x > 16 ? 16 : x); }();
+    if (k == 1 || v != 2048u) return v;
+    std::fprintf(stderr, "[lutscale] %u -> %u\n", v, v * k);
+    return v * k;
+}
 extern "C" void rs64_s6088_fuse(uint8_t* rdram, uint32_t ret, uint32_t ra, uint32_t gcount, uint32_t gbase, uint32_t gcache) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_BUCKETLOG"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
