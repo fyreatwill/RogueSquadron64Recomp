@@ -2400,13 +2400,14 @@ extern "C" void rs64_s6088_fuse(uint8_t* rdram, uint32_t ret, uint32_t ra, uint3
     auto rd = [&](uint32_t g) -> uint32_t { if (g < 0x80000000u || g >= 0x80800000u || (g & 3u)) return 0u; const uint8_t* q = rdram + (int64_t)(int32_t)g; return ((uint32_t)q[0 ^ 3] << 24) | ((uint32_t)q[1 ^ 3] << 16) | ((uint32_t)q[2 ^ 3] << 8) | q[3 ^ 3]; };
     uint32_t nb = gcount, base = gbase;
     std::fprintf(stderr, "[bucketlog] raw: macro count=%u base=%08X cache=%08X | s5042_rd count=%u base=%08X cache=%08X\n", gcount, gbase, gcache, rd(0x8012EEF0u) >> 16, rd(0x8012F000u), rd(0x801163B0u));
-    unsigned long totc = 0, nz = 0; char buf[512]; int o = 0;
-    for (uint32_t i = 0; i < nb && i < 64; ++i) {
+    unsigned long totc = 0, nz = 0, nent = 0, a0n = 0, a1n = 0, a2n = 0, maxlen = 0; unsigned maxage = 0; char buf[512]; int o = 0; /* s6092: scan ALL buckets + age histogram */
+    for (uint32_t i = 0; i < nb && i < 16384; ++i) {
         uint32_t n = rd(base + 4 * i); unsigned len = 0, cs = 0;
-        while (n && len < 4096) { cs += rd(n + 8) >> 16; /* halfword at +8 is high half of word */ ++len; n = rd(n); }
-        totc += cs; if (len) ++nz;
-        if (o < 480) o += std::snprintf(buf + o, sizeof(buf) - o, "%u:%u/%u ", i, len, cs);
+        while (n && len < 4096) { unsigned age = rd(n + 8) >> 16; cs += age; ++len; ++nent; if (age == 0) ++a0n; else if (age < 16) ++a1n; else ++a2n; if (age > maxage) maxage = age; n = rd(n); }
+        totc += cs; if (len) ++nz; if (len > maxlen) maxlen = len;
+        if (i < 40 && o < 480) o += std::snprintf(buf + o, sizeof(buf) - o, "%u:%u/%u ", i, len, cs);
     }
+    std::fprintf(stderr, "[bucketlog] s6092 all: entries=%lu age0=%lu age1_15=%lu age16+=%lu maxage=%u maxchain=%lu\n", nent, a0n, a1n, a2n, maxage, maxlen);
     std::fprintf(stderr, "[bucketlog] call=%lu zero=%lu ret=%08X ra=%08X nbuckets=%u nonempty=%lu totcnt=%lu cachehead=%08X live=0x%llX peak=0x%llX | %s\n",
         ncall, nzero, ret, ra, nb, nz, totc, rd(0x801163B0u), (unsigned long long)s_s6063_bytes, (unsigned long long)s_s6063_peak, buf);
 }

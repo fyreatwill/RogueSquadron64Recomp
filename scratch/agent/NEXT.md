@@ -1,6 +1,6 @@
-# NEXT: who writes/zeroes the +8 halfword of LUT entries? (G1c phase 2)
+# NEXT: why do all LUT entries stay age 0 at dd3? (G1c phase 2)
 HYPOTHESIS-ID: g1c-phase2-drawdist
-Facts (s6091): LUTSCALE=4 leaves dd3 failing at finder call 58-59 with totcnt=0 (nonempty 41). Capacity is not binding; call ordinal invariant.
-Hypotheses: H-zeroed some path clears +8 (use/pin count) on every node and never restores it at dd3; H-never-set entries are inserted with +8 = 0 when the DL volume is large; H-fixed-demand ~58 calls happen in one fixed sequence and consume all evictable entries regardless of table size.
-Discriminator, one build: log first 8 nodes' +8 (and chain length) at finder calls 1, 30, 58 plus grep-enumerated store sites to +8 (sh with offset 0X8) in funcs_6.c ~0x8001E230-0x80022300 wrapped with a counter; compare dd1 forced-call positive control.
-Run: copy scratch/agent/soak_queue/done/s6091_lutx4_dd3.sh (tag), perl -e 'alarm 580; exec @ARGV' zsh it.
+Facts (s6092): full scan at finder call 59: 6815 entries / 8192 buckets, age0=6808, 7 odd. +8 = age (tick +1 up to 0x708 then frees; reset zeroes; finder picks largest nonzero age).
+Hypotheses: H-notick tickTextureMaterialExpiry not running/starved at dd3; H-allreset every entry touched (reset) each frame since per-frame texture working set >= table; H-reader the 7 nonzero + 8192 base differ from game's view.
+Discriminator, one build: counters (per VI) for tickTextureMaterialExpiry calls, resetMaterialExpiryById calls, finder calls/zero returns, and entry count; dd1 control vs dd3 in one recipe pair. Wrap in funcs_6.c via tools/apply_s6088_bucketlog.py style patch (idempotent, env gated).
+Run: copy scratch/agent/soak_queue/done/s6091_lutx4_dd3.sh with new tag, dd1 and dd3.
