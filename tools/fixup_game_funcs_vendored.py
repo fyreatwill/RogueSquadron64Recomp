@@ -37794,6 +37794,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             report.append(f"{p.name}: s6031 far x{_n6031}")
 
     if p.name == "funcs_0.c":
+        import apply_s6031_far as _a6031p
+        text, _n6115 = _a6031p.applypfm(text)
+        if _n6115:
+            changed = True
+            report.append(f"{p.name}: s6115 pfm x{_n6115}")
         import apply_s6063_heaplog as _a6063
         text, _n6063 = _a6063.apply0(text)
         if _n6063:

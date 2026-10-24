@@ -51,7 +51,20 @@ def apply4(text):
     text, m = applyfbw(text)
     return text, n + m
 
+# s6115 G1d: partitionFramebufferMemory(a0,a1,a2=w,a3=h) sizes each fb as w*h*2 (0x70000 for 512x448); widen w under ROGUESQ_FB_WIDTH so flip buffers do not overlap.
+PFM_ANCHOR = "    int c1cs = 0;\n    // 0x80000DD4: addu        $t5, $a0, $zero\n"
+PFM = ('    { /* PATCH: s6115 pfm */ static int wv = -1, nl; if (wv < 0) { const char* e = getenv("ROGUESQ_FB_WIDTH"); wv = (e && *e) ? atoi(e) : 0; }\n'
+       '      if (nl < 16) { fprintf(stderr, "[fbw] pfm a2=%d a3=%d wv=%d\\n", (int)ctx->r6, (int)ctx->r7, wv); nl++; }\n'
+       '      if (wv > 0 && (int)ctx->r6 == 512 && (int)ctx->r7 == 448) ctx->r6 = (gpr)wv; }\n')
+def applypfm(text):
+    if "PATCH: s6115 pfm" in text: return text, 0
+    assert text.count(PFM_ANCHOR) == 1, text.count(PFM_ANCHOR)
+    return text.replace(PFM_ANCHOR, "    int c1cs = 0;\n" + PFM + "    // 0x80000DD4: addu        $t5, $a0, $zero\n", 1), 1
+
 if __name__ == "__main__":
     p = base / "funcs_4.c"; t = p.read_text(); t2, n = apply4(t)
     if n: p.write_text(t2)
     print("funcs_4.c live patched x%d" % n)
+    p0 = base / "funcs_0.c"; t = p0.read_text(); t2, n = applypfm(t)
+    if n: p0.write_text(t2)
+    print("funcs_0.c live patched x%d" % n)
