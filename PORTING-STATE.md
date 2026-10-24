@@ -167020,3 +167020,9 @@ Showed: (1) dd1 control: pool length swings 77..1925 over 24000 begins and recov
 Rules out: DL-chunk pool capacity as the dd3 limiter (growing it 2.8x leaves the same crash at the same begin range); "dd3 limit = monotone in draw distance".
 ORIGIN: no mitigation added this session; DLPOOLX stays an env-gated diagnostic. Writer of the null node (finder returning 0 on the material list) still not named.
 Next: soaks s6101_dd4x_a/b (dd4+DLPOOLX, 300 s) decide whether dd4 is a usable setting; if it holds, the next work unit is why dd3 at begin~6506 differs (scene event), not more pool probes.
+
+## Session 6099 (2026-10-24) — s6101 dd4 both crash; ROGUESQ_DRAW_DISTANCE capped at 2 (G1c phase 2 closed)
+ORIGIN: the dd>=3 crash is the finder null-node deref (x4=0x8018B490, s6098); writer of the empty material list 0x80128EF8 still unnamed. The cap is a deliberate mitigation behind the opt-in knob, not an explanation; retail (dd1) path untouched.
+- Folded s6101_dd4x_a/b: rc=0 was misleading. Verdict lines read alive_at_end=0, hold=220 s / 289 s (<300), crashlines=37 (healthy dd1 control s6098: alive_at_end=1, crashlines=0). Both dd4 runs (DLPOOLX+BIGARENA+POOLX4+UCODE_CAP) died. So the s6098 "dd4 clean 152 s" was a short survivor of the same failure, not a non-monotone split; dd>=3 fails in ~150-290 s, dd2 holds 300 s on L1/L5/L10 (s6076).
+- Change: tools/apply_s6036_dd.py (and live funcs_9.c) clamps ROGUESQ_DRAW_DISTANCE to 2.0 unless ROGUESQ_DD_UNSAFE=1; stderr notice. cmake build OK; not game-run (clamp is a pure constant change on the dd>2 path).
+- Budget rule: 5th iteration on this thread, stopped per NEXT.md. G1c phase 2 closed at dd2 + auto-far; owner can lift with ROGUESQ_DD_UNSAFE=1.
