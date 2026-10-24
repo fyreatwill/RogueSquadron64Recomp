@@ -335,3 +335,5 @@ Gfx thread hot spot found by `sample` (s6015): ~80% of gfx samples in O(n^2) g_s
 - **s6103 G1d:** RT64 widens only if game submits wider colour image + scissor + VI regs (code read, single-source). Knob ROGUESQ_ASPECT=expand|W:H added (Original default). Next: patch guPerspective aspect (a3) x(target/1.333) and the viewport/scissor in one env-gated build; check s6103_g1d_expand_l1 soak.
 
 - s6105 (G1d): x1.3333 aspect scale inconclusive by eye; extreme-k (3.0, 0.4) soaks queued as positive control. See NEXT.md.
+
+- s6106 (G1d): ROGUESQ_ASPECT_SCALE (guPerspective aspect) visibly squeezes/stretches the 3D view at k=0.4/3.0 (qualitative, unphased). Next: phase-gated k=0.5/1/2 measurement, then widen framebuffer. See NEXT.md.

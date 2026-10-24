@@ -1,3 +1,4 @@
-# NEXT: G1d step 2c - read s6105 extreme-k soaks
+# NEXT: G1d step 2d - quantify the aspect lever, then widen the framebuffer
 HYPOTHESIS-ID: g1d-widescreen
-Look at the last fb dump (sort numerically, sips -s format png) in scratch/agent/m6/g1_lvl1g1ds6105_k3p0/fbd and ..._k0p4/fbd. H1: r7 is the aspect -> craft/terrain visibly stretched/squeezed (k3 narrow, k0.4 wide). H2: no visible change -> aspect arrives elsewhere (FP reg f14 or stack); inspect setupCameraMatrices call site in funcs_4.c. If H1: next ONE build widens game colour image/scissor/VI width under ROGUESQ_ASPECT, then 16:9 window screenshot. Then HUD x anchoring.
+s6106 read k3p0/k0p4 dumps: 3D view visibly changes with ROGUESQ_ASPECT_SCALE (qualitative, scenes not phase-matched).
+Work unit: queue 3 soaks (k=0.5, 1.0, 2.0) on lvl1 with same recipe as s6105, compare the SAME early frame index (phase-gate on first flight VI; fixed-camera intro) and measure width of a rigid object (craft/ring) per k; expect width ~ 1/k. Then ONE build widening game colour image/scissor/VI width under ROGUESQ_ASPECT=16:9 and a 16:9 window screenshot. Then HUD x anchoring (note ring HUD goes through the projection).
