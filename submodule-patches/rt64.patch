@@ -3255,7 +3255,7 @@ index f17db9b..7fb6721 100644
          }
  
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index d1a9f4e..629dbae 100644
+index d1a9f4e..4682de4 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -4,10 +4,20 @@
@@ -4135,7 +4135,28 @@ index d1a9f4e..629dbae 100644
          assert(tile < RDP_TILES);
          auto &t = tiles[tile];
          t.uls = uls;
-@@ -912,6 +1634,18 @@ namespace RT64 {
+@@ -818,6 +1540,20 @@ namespace RT64 {
+             }
+         }
+ 
++        // s6137: ROGUESQ_LOG_BIGTLUT=1 logs oversized TLUT loads (corrupt-stream hunt at OSMEM=12).
++        {
++            static const bool s_big = []{ const char *e = std::getenv("ROGUESQ_LOG_BIGTLUT"); return e && *e && *e != '0'; }();
++            static int s_n = 0;
++            const uint32_t rc = 1 + ((lrt >> 2) - (ult >> 2));
++            const uint32_t wpr = ((lrs >> 2) - (uls >> 2)) + 1;
++            if (s_big && (uint32_t(rc) * wpr > 4096u || s_n < 8) && s_n < 40) {
++                s_n++;
++                std::fprintf(stderr, "[bigtlut] n=%d tile=%u uls=%u ult=%u lrs=%u lrt=%u rows=%u wpr=%u timg fmt=%u siz=%u w=%u addr=0x%06X tmem=%u line=%u%s\n",
++                    s_n, tile, uls, ult, lrs, lrt, rc, wpr, texture.fmt, texture.siz, texture.width, texture.address, t.tmem, t.line,
++                    (uint32_t(rc) * wpr > 4096u) ? " OVERSIZE" : "");
++            }
++        }
++
+         // Perform the first step of the deferred operation.
+         loadTLUTOperation(t, texture, true);
+ 
+@@ -912,6 +1648,18 @@ namespace RT64 {
      }
  
      void RDP::setFogColor(uint32_t color) {
@@ -4154,7 +4175,7 @@ index d1a9f4e..629dbae 100644
          hlslpp::float4 &fogColor = fogColorStack[fogColorStackSize - 1];
          fogColor.x = ((color >> 24) & 0xFF) / 255.0f;
          fogColor.y = ((color >> 16) & 0xFF) / 255.0f;
-@@ -935,6 +1669,23 @@ namespace RT64 {
+@@ -935,6 +1683,23 @@ namespace RT64 {
      }
  
      void RDP::setFillColor(uint32_t color) {
@@ -4178,7 +4199,7 @@ index d1a9f4e..629dbae 100644
          fillColorStack[fillColorStackSize - 1] = color;
          state->updateDrawStatusAttribute(DrawAttribute::FillColor);
      }
-@@ -1049,6 +1800,44 @@ namespace RT64 {
+@@ -1049,6 +1814,44 @@ namespace RT64 {
              lry |= 3;
          }
  
@@ -4223,7 +4244,7 @@ index d1a9f4e..629dbae 100644
          drawRect(ulx, uly, lrx, lry, 0, 0, 0, 0, false, extAlignment);
      }
  
-@@ -1131,6 +1920,893 @@ namespace RT64 {
+@@ -1131,6 +1934,893 @@ namespace RT64 {
          triTcFloats.insert(triTcFloats.end(), tc, tc + triCount * TcFloatsPerTri);
          triColorFloats.insert(triColorFloats.end(), col, col + triCount * ColFloatsPerTri);
          drawCall.triangleCount += triCount;
@@ -5117,7 +5138,7 @@ index d1a9f4e..629dbae 100644
  
          const FixedRect &scissorRect = state->rdp->scissorRectStack[scissorStackSize - 1];
          if (!scissorRect.isNull()) {
-@@ -1285,6 +2961,7 @@ namespace RT64 {
+@@ -1285,6 +2975,7 @@ namespace RT64 {
          triTcFloats.emplace_back(flip ? u2 : u1);
          triTcFloats.emplace_back(flip ? v1 : v2);
          drawCall.triangleCount += 2;
@@ -5125,7 +5146,7 @@ index d1a9f4e..629dbae 100644
  
          // Update the tracked texcoords for the used tiles. Use scissor intersection to figure out 
          // what the bounds of the real sampling will be if necessary.
-@@ -1319,6 +2996,40 @@ namespace RT64 {
+@@ -1319,6 +3010,40 @@ namespace RT64 {
          RT64_LOG_PRINTF("RDP::drawTexRect(ulx %d, uly %d, lrx %d, lry %d, tile %u, uls %d, ult %d, dsdx %d, dtdy %d, flip %u)", ulx, uly, lrx, lry, tile, uls, ult, dsdx, dtdy, flip);
  #   endif
  
