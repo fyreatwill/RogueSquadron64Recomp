@@ -1,6 +1,5 @@
-# NEXT: split H-leak vs H-demand for the DL-chunk pool at dd3 (G1c phase 2)
+# NEXT: read s6101 dd4x soaks, then explain the dd3 vs dd4 split (G1c phase 2)
 HYPOTHESIS-ID: g1c-phase2-drawdist
-Facts (s6097): ra is useless (r31=0 in recompiled jal). Consumption ~33/begin dd1, 33->60/begin dd3; net drain ~1-2/begin from begin~6458; pool recovers after tasks=0 stretches. Returns are inline pushes at 0x800079E0,7A44,7AA0,7AFC,7B58,7BB4,7D38 (funcs_3.c), reclaim never runs.
-Hypotheses: H-leak (pushes skipped when a gfx task is dropped/truncated, so chunks of that frame never return); H-demand (returns are tied to task completion and lag; draining is transient pressure and the real killer is something else after len==0 + grow, e.g. wrong grown-chunk layout); H-grow-bug (grown chunks lack some field, so the SIGBUS at si_addr 0x380000000 comes from a grown chunk, not exhaustion).
-Discriminator, one build: count pushes (writes of 0x801163B0 at those pcs) vs pops per begin and per gfx task completion, log at dd3 and dd1 (control); also run dd3 with DLPOOLX but arena chunks pre-initialised identical to a pool chunk (copy bytes of a live chunk) and log whether the SIGBUS faulting address lies in the arena.
-Outcomes: pushes < pops over a window with no task drop -> H-leak find skipped path; pushes==pops but len falls -> H-demand; fault pc/addr relates to arena chunk -> H-grow-bug.
+Facts (s6098): dd3+DLPOOLX still dies at begin~6600 after 19 grows (arena not exhausted); crash is a null node in the finder (x4=0x8018B490); dd4+DLPOOLX held 152 s with 1 grow. So pool size is not the limiter and failure is not monotone in dd.
+Do: tail scratch/agent/SOAK-RESULTS.md for s6101_dd4x_a/b. Outcomes: both hold 300 s -> dd4 usable; compare dd3 vs dd4 game state at begin~6506 (VI/frame at that begin, mission_t, objects) from fail_att1.log vs run.log; one crash -> dd4 flaky too, take a lldb/ASan backtrace of the finder null (iron rule: name the writer of the empty material list 0x80128EF8).
+Budget: 5th iteration on this thread; if s6101 does not split, STOP and cap ROGUESQ_DRAW_DISTANCE to the highest clean setting behind the knob, then take G1d.
