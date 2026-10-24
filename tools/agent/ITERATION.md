@@ -117,8 +117,14 @@ When choosing the work unit, this order overrides Next-steps ordering:
      priority after the spike lines. Start from the s6074 state (DRAW_DISTANCE=2 +
      auto-far: tri x2.3, terrain fraction 0.030->0.074, VI 60/s, clean) and find the
      next binding limit at each step up (3x, 4x, beyond the 4.0 clamp if useful):
-     guest heap (px3+ exhausts the 8 MB heap, s6062: consider giving the terrain pools
-     host-side or above-8MB memory the game code can address), the 64-wide bitmap stride
+     guest heap (px3+ exhausts the 8 MB heap, s6062). The 8 MB is NOT a hard limit here:
+     librecomp already maps 512 MB read/write behind rdram (addresses.hpp mem_size;
+     KSEG0 0x80000000-0x9FFFFFFF), and recomp.cpp:560 just tells the game 8 MB via
+     osMemSize. Owner approves expanding it. Cheapest route first: carve the terrain
+     pools (or a second rs_malloc arena) from 0x80800000+ rather than raising osMemSize
+     globally (the game may branch on 4/8 MB modes). Watch the RSP/RDP side: display-list
+     segment addresses are 24-bit, so anything the gfx ucode reads must sit below 16 MB
+     physical (0x81000000) unless the ucode/RT64 address masking is widened too, the 64-wide bitmap stride
      and terrain dims (s6035), the ucode iteration cap (ROGUESQ_UCODE_CAP, s6070), RSP
      host cost per frame (G1b instrument; VI must stay 60/s), and distant pop-in.
      Measure every step with the fixed-camera terrain-fraction scorer plus a framebuffer
