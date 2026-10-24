@@ -149,3 +149,7 @@ s6116's "second colour-image pointer" is REFUTED: 0x8076A980 is region 0x801163E
 
 ## G1d state (s6118)
 Widened (ROGUESQ_FB_WIDTH=683) RDP stream is width-consistent with retail (scissors, tile lines, no copy stage; flips are drawn directly). Black window therefore lies downstream: RT64 VI/present path. Check VI_WIDTH_REG, xScale, hStart/vStart in the mode table (upstream_compat.cpp ~626: comRegs width/xScale at +0x04..; s6117 already scaled fldRegs origin).
+
+
+## G1d status (s6119)
+ROGUESQ_FB_WIDTH=683 now renders (s6119): RT64 width allowlists (last-drawn store, mode-3 saneW, writeback allowW) accept width==FB_WIDTH; VI regs verified consistent (w683 xScale 0x444, origin field offset 1366). Fbdump flip shows a correct frame; on-screen window not yet verified. Next: window screenshot with game frontmost, then wire ROGUESQ_ASPECT=16:9/21:9 (FOV/HUD x), menus/hangar check.
