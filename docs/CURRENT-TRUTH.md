@@ -286,3 +286,5 @@ Gfx thread hot spot found by `sample` (s6015): ~80% of gfx samples in O(n^2) g_s
 
 
 <!-- s6067 --> G1c status: px2 dd2 300 s holds clean on L1 (s6066) and L5 (s6065). L10 reached no mission in 3 attempts (also happens at dd1: route flake, not dd-related); retries s6066_px2_dd2_hold300_l10a/b queued. If either holds clean, criterion met -> ask owner to judge look.
+
+- **s6068 G1c:** L10 'nomission' retries (s6065/s6066) were a recipe defect: cap 600 + no ROGUESQ_FORCE_PLANET_UNLOCK=0xFF (viewer ~790 s). Supersedes 's6067 route flake'. Queued s6068_px2_dd2_hold300_l10pu (cap 1000); fold it.
