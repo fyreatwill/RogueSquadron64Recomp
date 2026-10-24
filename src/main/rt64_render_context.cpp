@@ -224,6 +224,13 @@ public:
         }
         app->userConfig.developerMode = debug || dev_mode_on;
         app->userConfig.displayBuffering = RT64::UserConfiguration::DisplayBuffering::Triple;
+        // G1d (s6103): ROGUESQ_ASPECT=orig|expand|<w>:<h> selects RT64 output aspect. Opt-in; unset = retail (Original).
+        if (const char* as = std::getenv("ROGUESQ_ASPECT")) {
+            using AR = RT64::UserConfiguration::AspectRatio;
+            if (!strcmp(as, "expand") || !strcmp(as, "auto")) { app->userConfig.aspectRatio = AR::Expand; app->userConfig.extAspectRatio = AR::Expand; }
+            else if (const char* c = strchr(as, ':')) { double w = atof(as), h = atof(c + 1); if (w > 0 && h > 0) { app->userConfig.aspectRatio = AR::Manual; app->userConfig.aspectTarget = w / h; } }
+            fprintf(stderr, "[g1d] ROGUESQ_ASPECT=%s applied\n", as);
+        }
         if (const char* rm = std::getenv("ROGUESQ_RESMULT")) { double m = std::atof(rm); if (m > 0.0) app->userConfig.resolutionMultiplier = m; }
 
         // PresentEarly ON by default. Our cinematic stays on a single VI fb
