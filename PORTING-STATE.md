@@ -167227,3 +167227,4 @@ Result: 8 MB control: 8 TLUT loads, all sane (rows=1 wpr=16, timg addr 0x751FC0,
 Rules out: RT64-side 8 MB masks in the TLUT path as the cause (the input is already junk); H-game (needs a bad SetTImg - there is none).
 ORIGIN: n/a (diagnostic only; no mitigation added).
 Next: log DPC START/END/addresses and first 8 words of each RDP submit at 12 MB vs 8 MB (dpc_bridge), find where the list lives (ucode output buffer address) and whether RSP DMA-out to it landed.
+Discrimination (s6137): this run refutes H-game and refutes the RT64-side address-mask hypothesis (the very first TLUT has no SetTImg, so the input is junk before any mask applies), and selects H-window/H-dmaout (corrupt RDP list at its source) over H-rt64. The next discriminator: dpc_bridge logs per gfx task the DPC start/end and first 4 RDP words, 8 MB vs 12 MB; valid RDP opcodes at 12 MB select the RT64 consumption side, junk selects H-dmaout/H-hdr.
