@@ -95,7 +95,7 @@ autopilot win are owner playtest scope.
    viewport and VI width together under `ROGUESQ_ASPECT=16:9`. s6112: `ROGUESQ_VPW_SCALE=k` (+ASPECT_SCALE=k) widens the camera viewport (320x224 virtual rect -> 426) undistorted, but output is still a 512 image so the right side is cropped: remaining = scissor/colour-image/VI width + HUD x; scissor writer lead is
    setupCameraMatrices (0x80017xxx, halfword globals x float @0x800007A4); VI table
    `selectAndApplyViMode` (0x80128D50, 0x50-byte OSViMode entries), `osViSetMode_recomp`
-   (upstream_compat.cpp:621). Then HUD x anchoring, menus/hangar check, 21:9.
+   (upstream_compat.cpp:621). s6119-s6120: black 683 window was RT64 width allowlists (fixed, env-exact-match); window screenshots now show the undistorted 683 frame on L1. Remaining: bundle VPW/ASPECT_SCALE/FB_WIDTH behind `ROGUESQ_ASPECT=auto|4:3|16:9|21:9`, menus/hangar at 683, HUD x anchoring, 21:9.
 2. **G1e higher frame rate** after G1d (spec: ITERATION.md 3c).
 3. **G1 level 10/15 note:** both pass (a)+(b) only with `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF` or a
    ~790 s planet-intro wait (SOAK_TIMEOUT >= 900). Forced-hit objective (d) is PARTIAL: counters move
