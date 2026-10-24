@@ -503,9 +503,11 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         if (stride < 64u || stride > 1024u) stride = 320u;
         // s5487: VI_WIDTH=1024 frames are a 512-wide buffer whose rows are paired side by side (s5486 PNGs: left/right halves
         // were adjacent scanlines, rest of the 716-row dump was unrelated RDRAM). Dump those as 512x448 at pitch 512.
-        const uint32_t dw = stride > 640u ? stride / 2u : stride;
-        const uint32_t dh = stride > 640u ? 448u : stride * 224u / 320u;
-        if (stride > 640u) stride = dw;
+        static const uint32_t s_fbw = [] { const char* e = std::getenv("ROGUESQ_FB_WIDTH"); return (e && *e) ? (uint32_t)std::atoi(e) : 0u; }();
+        const bool wide_fb = s_fbw > 0 && stride == s_fbw; // s6113: widened flight buffer is true-width, not paired rows
+        const uint32_t dw = (stride > 640u && !wide_fb) ? stride / 2u : stride;
+        const uint32_t dh = wide_fb ? 448u : (stride > 640u ? 448u : stride * 224u / 320u);
+        if (stride > 640u && !wide_fb) stride = dw;
         snprintf(path, sizeof path, "%s/fb_%07d_w%u.ppm", s_fbd, n, stride);
         if (FILE* f = fopen(path, "wb")) {
             // s5746: raw guest-RDRAM readback, NOT the RT64 window (s5745: the "crawl garbage band" was only in this dump).
@@ -699,6 +701,19 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
                 "[vi-transition-producer] call=%d committed_width=%u requested_width=%u mode_ptr=0x%08X\n",
                 n, committed_width, width, mode_ptr);
             fflush(stderr);
+        }
+    }
+    {   // s6113 G1d: ROGUESQ_FB_WIDTH=<w> pairs with the fixup'd video-state patch; widen the 512-wide flight VI mode to w (same output span, xScale scaled).
+        static const uint32_t fbw = [] { const char* e = std::getenv("ROGUESQ_FB_WIDTH"); return (e && *e) ? (uint32_t)std::atoi(e) : 0u; }();
+        if (fbw > 0 && width == 512u) {
+            auto write_u32 = [&](uint32_t off, uint32_t v) {
+                for (int i = 0; i < 4; ++i) rdram[((rdram_off + off + i) & 0x7FFFFFu) ^ 3] = (uint8_t)(v >> (24 - 8 * i));
+            };
+            const uint32_t nx = (uint32_t)((uint64_t)xScale * fbw / 512u);
+            write_u32(0x08, fbw);
+            write_u32(0x20, nx);
+            fprintf(stderr, "[fbw] osViSetMode mode_ptr=0x%08X width %u->%u xScale 0x%X->0x%X\n", mode_ptr, width, fbw, xScale, nx);
+            width = fbw;
         }
     }
     extern void osViSetMode(uint8_t* rdram, int32_t modePtr);

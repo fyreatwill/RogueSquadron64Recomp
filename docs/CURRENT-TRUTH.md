@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6112 (2026-10-24).
+Compact operational handoff, maintained as of Session 6113 (2026-10-24).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -130,3 +130,6 @@ Use `PORTING-STATE.md` only through bounded grep/sed windows. Use
 audio inventory, `docs/F5-UCODE-REFERENCE.md` for the microcode contract,
 `docs/M6-OBJECTIVE-COUNTER-WRITERS.md` and `docs/M6-PHASE-MACHINE.md` for
 mission logic, and `scratch/agent/SOAK-RESULTS.md` for queued verdicts.
+
+## G1d widescreen state (s6113)
+Levers proven: ROGUESQ_VPW_SCALE (camera rect), ROGUESQ_ASPECT_SCALE (guPerspective aspect), ROGUESQ_FB_WIDTH (video-state a0 -> scissor + SETCOLORIMAGE width; plus osViSetMode width/xScale rewrite). Scissor does NOT follow the camera rect. Blocker: flight fbs at 0x80620000/0x80790000 overflow the 8 MB RDRAM top at width 683 (readback garbage). Next: relocate/verify buffers, then VI hstart/hend span + HUD x anchoring. Default behaviour unchanged (all opt-in).

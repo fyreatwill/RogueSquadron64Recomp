@@ -18,7 +18,7 @@ VPW = ('    { /* PATCH: s6112 vpw */ static double kv = -1.0; static uint32_t sp
        '      if (nl6112 < 12 || (kv > 0.0 && (nl6112 % 600) == 0)) fprintf(stderr, "[vpw] cam %08x w %d h %d cx %d cy %d kv %g\\n", (unsigned)ctx->r17, (int)MEM_W(ctx->r17, 0X10), (int)MEM_W(ctx->r17, 0X14), (int)MEM_W(ctx->r17, 0X18), (int)MEM_W(ctx->r17, 0X1C), kv); nl6112++;\n'
        '      if (kv > 0.0) { int i, f = -1; for (i = 0; i < ns6112; i++) if (sp6112[i] == (uint32_t)ctx->r17) f = i; if (f < 0 && ns6112 < 8) { f = ns6112++; sp6112[f] = (uint32_t)ctx->r17; og6112[f][0] = (int32_t)MEM_W(ctx->r17, 0X10); og6112[f][1] = (int32_t)MEM_W(ctx->r17, 0X18); }\n'
        '        if (f >= 0) { MEM_W(0X10, ctx->r17) = (uint32_t)(int32_t)(og6112[f][0] * kv); MEM_W(0X18, ctx->r17) = (uint32_t)(int32_t)(og6112[f][1] * kv); } } }\n')
-def apply4(text):
+def _apply4_old(text):
     if "PATCH: s6104 aspect" in text and "PATCH: s6112 vpw" not in text:
         return text.replace(OLD, VPW + OLD, 1), 1
     if "PATCH: s6104 aspect" not in text and "PATCH: s6031 far */ static int" in text:
@@ -32,6 +32,25 @@ def apply4(text):
     i = text.find(OLD, a); assert i > 0
     text = text[:a] + HDR + text[a:]
     return text.replace(OLD, NEW + ASP + OLD, 1), 1
+if False:
+    p = base / "funcs_4.c"; t = p.read_text(); t2, n = apply4(t)
+    if n: p.write_text(t2)
+    print("funcs_4.c live patched x%d" % n)
+
+# s6113 G1d: ROGUESQ_FB_WIDTH=<w> widens the 512x448 video state (a0 of the video-state-update fn, stored at 0x8011A838 = scissor/colour-image width source).
+FBW_ANCHOR = "    int c1cs = 0;\n    // 0x80017B88: addiu       $sp, $sp, -0x70\n"
+FBW = ('    { /* PATCH: s6113 fbw */ static int wv = -1, nl; if (wv < 0) { const char* e = getenv("ROGUESQ_FB_WIDTH"); wv = (e && *e) ? atoi(e) : 0; }\n'
+       '      if (nl < 16) { fprintf(stderr, "[fbw] vsu a0=%d a1=%d wv=%d\\n", (int)ctx->r4, (int)ctx->r5, wv); nl++; }\n'
+       '      if (wv > 0 && (int)ctx->r4 == 512 && (int)ctx->r5 == 448) ctx->r4 = (gpr)wv; }\n')
+def applyfbw(text):
+    if "PATCH: s6113 fbw" in text: return text, 0
+    assert text.count(FBW_ANCHOR) == 1, text.count(FBW_ANCHOR)
+    return text.replace(FBW_ANCHOR, "    int c1cs = 0;\n" + FBW + "    // 0x80017B88: addiu       $sp, $sp, -0x70\n", 1), 1
+def apply4(text):
+    text, n = _apply4_old(text)
+    text, m = applyfbw(text)
+    return text, n + m
+
 if __name__ == "__main__":
     p = base / "funcs_4.c"; t = p.read_text(); t2, n = apply4(t)
     if n: p.write_text(t2)
