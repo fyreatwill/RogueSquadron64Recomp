@@ -1,3 +1,3 @@
-# NEXT: fold s6079_g4_l{2,3,4} (G4 stall hunt), then G5 or further G4
+# NEXT: fold s6079_g4_l4 and s6080_g4_l6..l9 (G4 stall hunt)
 HYPOTHESIS-ID: g4-stall-hunt
-G1c is closed pending owner look (docs/DRAW-DISTANCE.md). Fold SOAK-RESULTS lines for s6079_g4_l2/3/4: any rc!=0 other than 137-at-600s, any CRASH/abort, any VI stall >30 s in scratch/agent/m6/g1_lvl{2,3,4}s6079g4*/run.log. Each distinct failure: lldb backtrace, name the writer, fix root cause. If all clean, queue levels 6-9 the same way; else G5 renaming sweep (check session titles first).
+Read SOAK-RESULTS tail plus scratch/agent/m6/g1_lvl*s608*g4*/summary (vi_stalls30s, crashlines, alive_at_end) and run.log CRASH/abort greps. Any failure: lldb backtrace, name writer, fix root cause. If all clean, repeat L2/L3 once more (n>=2 each), then G5 renaming sweep (check session titles first).

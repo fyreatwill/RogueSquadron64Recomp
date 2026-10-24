@@ -166890,3 +166890,6 @@ Took the G3 rung. The NEXT.md "hangar artifact list, top item" is already resolv
 - Outcome split from NEXT.md: dd3 vi/s p50 = 60 => H-flat (RSP cost grows but stays far below the 16.7 ms frame budget at p50); H-rsp not supported at the VI-rate level. Tail does grow: dd3 p95 per task 3.74 ms (9x dd1). Single-source per arm (one run each).
 - G1c done-criterion met (2x holds 300 s on L1/L5/L10, 0 crash, no frame-rate regression). Remaining: owner judges the look (docs/DRAW-DISTANCE.md). Default stays retail.
 - Queued G4 stall-hunt soaks s6079_g4_l{2,3,4} (retail, 300 s hold, G1B timing) for the loop to run.
+
+## Session 6080 (2026-10-23) — G4 stall hunt: levels 2 and 3 clean; queued levels 6-9
+Folded s6079_g4_l2 / s6079_g4_l3 (retail dd, 300 s hold, G1B timing on): both rc=0, summary files report vi_stalls30s=0, crashlines=0, alive_at_end=1 (L2 hold=304s, L3 hold=303s); run.log CRASH/abort/SIGSEGV grep count 0 for both. L4 (s6079_g4_l4) still queued. Queued s6080_g4_l6..l9 with the same recipe. No new failure datum; nothing to root-cause. Rules out: crash/stall at L2/L3 under retail draw distance in a single 300 s hold each (n=1 each).
