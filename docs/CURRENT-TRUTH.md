@@ -112,6 +112,7 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+- **s6086 G1c ph2:** ROGUESQ_BIGARENA=1 built (scaled terrain pool diverted to 0x80800000 arena, tools/apply_s6086_bigarena.py); 3 soaks queued (ctl px4 dd3 / arena px4 dd3 / arena px8 dd4); fold per scratch/agent/NEXT.md.
 - **Owner 2026-10-24: queued G1d widescreen/ultrawide (16:9 TV, 21:9 monitor) and G1e
   higher frame rate, after G1c phase 2.** Specs: ITERATION.md item 3c.
 - **Owner 2026-10-24: G1c phase 2 queued right after G3b** — push draw distance as far

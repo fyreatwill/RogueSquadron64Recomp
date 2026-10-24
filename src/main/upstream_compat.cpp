@@ -2374,6 +2374,18 @@ extern "C" void rs64_s6063_free(uint32_t ptr) {
     auto it = s_s6063_live.find(ptr); if (it == s_s6063_live.end()) return;
     s_s6063_bytes -= it->second; s_s6063_live.erase(it);
 }
+static uint32_t s_s6086_expect = 0, s_s6086_bump = 0;
+extern "C" void rs64_s6086_arm(uint32_t o, uint32_t n) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_BIGARENA"); return e && e[0] && e[0] != '0'; }();
+    if (on && n > o) { s_s6086_expect = n * 184u; s_s6086_bump = 0; }
+}
+extern "C" uint32_t rs64_s6086_divert(uint32_t req) {
+    if (!s_s6086_expect || req != s_s6086_expect) return 0;
+    s_s6086_expect = 0;
+    uint32_t p = 0x80800000u + s_s6086_bump; s_s6086_bump += (req + 15u) & ~15u;
+    std::fprintf(stderr, "[bigarena] pool req=0x%X -> %08X\n", req, p);
+    return p;
+}
 extern "C" void rs64_s5041_malloc(uint32_t ptr) {
     if (!s5041_on() || ptr == 0) return;
     s_s5041_freed.erase(ptr);

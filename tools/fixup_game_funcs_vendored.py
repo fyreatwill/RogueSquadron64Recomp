@@ -37799,6 +37799,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6063:
             changed = True
             report.append(f"{p.name}: s6063 heaplog x{_n6063}")
+        import apply_s6086_bigarena as _a6086
+        text, _n6086 = _a6086.apply0(text)
+        if _n6086:
+            changed = True
+            report.append(f"{p.name}: s6086 bigarena x{_n6086}")
 
     if p.name == "funcs_16.c":
         import apply_s6061_mallocnull as _a6061
@@ -37823,6 +37828,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6058:
             changed = True
             report.append(f"{p.name}: s6058 poolx x{_n6058}")
+        import apply_s6086_bigarena as _a6086b
+        text, _n6086b = _a6086b.apply9(text)
+        if _n6086b:
+            changed = True
+            report.append(f"{p.name}: s6086 arm x{_n6086b}")
         import apply_s6048_spanbound as _a6048
         text, _n6048 = _a6048.apply9(text)
         if _n6048:
@@ -41692,6 +41702,7 @@ RS64_REPLAY = [
     "apply_s6058_poolx.py",
     "apply_s6061_mallocnull.py",
     "apply_s6063_heaplog.py",
+    "apply_s6086_bigarena.py",
     "apply_s6038_cellprobe.py",
     "apply_s6043_tblwatch.py",
     "apply_s6031_far.py",
