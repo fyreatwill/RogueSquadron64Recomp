@@ -3,15 +3,15 @@ length at every beginFrameDLChunk (0x8000A8A0) and reclaimDisplayListChunk (0x80
 the pool's initial length, whether anything refills it, and its minimum before the finder-zero crash.
 Walk is inline (MEM_W) because the C++ raw-rdram reader was wrong (s6095). Unset = silent, walk skipped.
 Idempotent; funcs_3.c only. C++ side: rs64_s6098_* in src/main/upstream_compat.cpp."""
-EXT = ("extern int rs64_s6098_en(void);\nextern void rs64_s6098(int, uint32_t, uint32_t);\n")
+EXT = ("extern int rs64_s6098_en(void);\nextern void rs64_s6098(int, uint32_t, uint32_t, uint32_t);\n")
 def _hook(kind):
     return ("    if (rs64_s6098_en()) { uint32_t _n = U32(ctx->r4), _l = 0; while (_n >= 0x80000000u && _n < 0x80800000u && _l < 200000u) { ++_l; _n = U32(MEM_W((gpr)(int32_t)_n, 0)); } "
-            "rs64_s6098(%d, _l, _n); } /* PATCH: s6098 dlpool */\n" % kind)
+            "rs64_s6098(%d, _l, _n, U32(ctx->r31)); } /* PATCH: s6098 dlpool */\n" % kind)
 GROW = ("    if (rs64_s6099_en() && U32(ctx->r4) == 0u) { /* PATCH: s6099 dlpoolx -- grow the fixed 1356-chunk pool from a 0x80F00000 arena */\n"
-        "        uint32_t _h = U32(MEM_W(0, (gpr)(int32_t)0x801163B0u)); uint32_t _c = rs64_s6099_alloc();\n"
+        "        uint32_t _h = U32(MEM_W(0, (gpr)(int32_t)0x801163B0u)); uint32_t _c = rs64_s6099_alloc(U32(ctx->r31));\n"
         "        for (uint32_t _k = 0; _c && _h == 0u && _k < 128u; ++_k, _c += 0x108u) { MEM_W(0, (gpr)(int32_t)_c) = (int32_t)_h; MEM_W(4, (gpr)(int32_t)_c) = 0; if (_h) MEM_W(4, (gpr)(int32_t)_h) = (int32_t)_c; _h = _c; MEM_W(0, (gpr)(int32_t)0x801163B0u) = (int32_t)_h; }\n"
         "        ctx->r4 = (int32_t)U32(MEM_W(0, (gpr)(int32_t)0x801163B0u)); }\n")
-EXT2 = "extern int rs64_s6099_en(void);\nextern uint32_t rs64_s6099_alloc(void);\n"
+EXT2 = "extern int rs64_s6099_en(void);\nextern uint32_t rs64_s6099_alloc(uint32_t);\n"
 def apply3(text):
     text, n1 = _apply3(text)
     text, n2 = _apply3(text)
