@@ -167239,3 +167239,11 @@ NEXT DISCRIMINATOR: dump the 12 MB VI-origin flight frame (ROGUESQ_FB_DUMP_VI=1)
 
 ## Session 6139 (2026-10-24) — OSMEM=12 flight frame verified correct (H-ok)
 Ran scratch/agent/s6139_run.sh: L1, 60 s hold, ROGUESQ_FB_DUMP_VI=1, arm mb8 (control) vs mb12 (ROGUESQ_OSMEM_MB=12). Both alive_at_end=1, vi_stalls30s=0, crashlines=0 (mb12 godrefills=1). FB dumps (scratch/agent/m6/g1_lvl1s6139_*/fbd/fb_0006000_w512.ppm viewed): mb12 frame shows sky, terrain, X-wing, reticle, radar - same content class as mb8, only camera differs (animating scene, no cross-run pixel compare). Rules out H-other-cap for the flight frame; the s6138 rsp.hpp fix holds. Single-source (one frame pair visually). Not yet run: 21:9/16:9 at 12 MB. (First attempt this session ran nothing: macOS sed -i needs an arg; script rewritten by heredoc.)
+
+## Session 6140 (2026-10-24) — OSMEM=12 + ROGUESQ_ASPECT: 16:9 renders real widescreen flight, 21:9 still fails to reach flight
+Ran scratch/agent/s6140_run.sh (OSMEM_MB=12, L1, FB_DUMP_VI, HOLD 120): arms a43 (control), a219, a169.
+- a43 control: att=1 hold=131s alive=1 vi_stalls=0 crashlines=0 (positive control OK).
+- a169 (16:9): harness says allattempts-failed, but that is the origin regex (MISSION_RE=A90400 does not match wide-FB origins) — NOT a crash (0 crashlines in all 5 attempts). The framebuffer dumps are w796 and the last one is a correct widescreen L1 flight frame (terrain, X-wing, radar, lives counter); saved scratch/agent/m6/s6140/a169_flight_w796.png. The extra width IS drawn (sky/terrain extend), not stretched. HUD radar/"6" are NOT anchored to the screen edges yet (G1d item).
+- a219 (21:9): all 5 attempts never reached a wide frame; dumps stay w320 and the last is the stripe garbage (blue/black horizontal lines), VI origins alternate 0x93752A/0xA1BEAA at width 1045, 0 crash, guest spins in stall sites (s3294-stall). So 21:9 at 12 MB fails differently from 16:9: the heap deficit alone is not the whole story; width 1045 (FB 1045x240x2 = 501 KB vs 796 -> 382 KB) is the new variable.
+Rules out: H-heap-still for 16:9 (works at 12 MB); the harness origin check is invalid for any wide arm (judge by dump).
+ORIGIN: no mitigation added this session (run + dumps only).

@@ -1,7 +1,7 @@
-# NEXT: G1d step 32 - 21:9 and 16:9 at OSMEM=12
+# NEXT: G1d step 33 - why does 21:9 (w1045) fail at 12 MB while 16:9 (w796) works
 HYPOTHESIS-ID: g1d-widescreen
-Known (s6139): ROGUESQ_OSMEM_MB=12 4:3 L1 flight frame correct, 0 crash.
-Hypotheses: H-ok (wide aspect + OSMEM=12 holds, heap deficit gone), H-heap-still (wide heap NULL persists), H-wide-render (frame garbage/HUD misanchored at wide).
-Run: copy scratch/agent/s6139_run.sh, arms: XENV_EXTRA="ROGUESQ_OSMEM_MB=12 ROGUESQ_ASPECT=21:9 ROGUESQ_FB_DUMP_VI=1" (and 16:9), TITLE_ORIGIN=0x00B90400 MISSION_RE=A90400, HOLD_S=300, LEVEL=1; use the 4:3 12 MB arm as positive control. Read alive_at_end and [heapwalk-top]; view a dump per arm (sips -s format png).
-Then: HUD x anchoring, menus/hangar at wide, default OSMEM bundling under ROGUESQ_ASPECT.
-Note: macOS sed -i needs '' arg; write scripts via heredoc.
+Known (s6140): 12 MB: 16:9 OK (dump w796 correct flight), 21:9 stuck (dump w320 stripes, VI origin alternates at width 1045, guest in s3294-stall). Harness MISSION_RE is invalid for wide arms: judge by fbd dump width/png.
+Hypotheses: H-size (FB/pool size >~500 KB or total exceeds 12 MB pool -> try ROGUESQ_OSMEM_MB=16), H-width (a width-dependent constant e.g. 1024 cap/stride), H-aspect-math (21:9 projection value).
+Discriminator, one script, sequential arms: 21:9 at OSMEM_MB=16; 16:9-like intermediate aspect (e.g. 18:9) at 12 MB; read dump widths. 16:9@12 is the positive control.
+Then: HUD edge anchoring, menus/hangar at wide, bundle OSMEM default under ROGUESQ_ASPECT.
+Note: macOS sed -i needs '' arg; write scripts via heredoc; copy scratch/agent/s6140_run.sh.
