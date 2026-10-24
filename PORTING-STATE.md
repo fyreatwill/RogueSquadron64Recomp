@@ -166897,3 +166897,7 @@ Folded s6079_g4_l2 / s6079_g4_l3 (retail dd, 300 s hold, G1B timing on): both rc
 ## Session 6081 (2026-10-24) — G4 stall hunt: levels 4 and 6 clean; queued l2/l3 repeats
 
 Folded s6079_g4_l4 and s6080_g4_l6 (summary files): both att=1, 300 s hold, alive_at_end=1, vi_stalls30s=0, crashlines=0 (l4 mission_cycles=0; l6 mission_cycles=2, godrefills=20). n=1 each, single-source harness. Levels 2,3,4,6 now clean in the G4 re-sweep; no failure to root-cause, no conclusion overturned. Queued s6081_g4_l2b and s6081_g4_l3b (n>=2 repeats) behind the already-queued s6080_g4_l7/l8/l9. No code change this session (queue scripts only).
+
+## Session 6082 (2026-10-24) — G4 stall hunt: levels 7 and 8 clean; queued l10/l5 repeats
+
+Folded s6080_g4_l7 and s6080_g4_l8 (summary files): both att=1, 300 s hold (l7 mission_t=81s, l8 mission_t=91s hold=301s), alive_at_end=1, vi_stalls30s=0, crashlines=0; soak logs rc=0 (the single CRASH/abort/stall grep hit per log is the harness's own summary/arming text, not a crash line — crashlines=0 is authoritative). n=1 each, single-source harness. G4 re-sweep clean for L2,3,4,6,7,8. Still queued: l9, l2b, l3b. Added s6082_g4_l10 and s6082_g4_l5b. No code change; no conclusion overturned.
