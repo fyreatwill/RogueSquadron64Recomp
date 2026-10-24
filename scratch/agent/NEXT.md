@@ -1,4 +1,4 @@
-# NEXT: G1d step 2d - read the s6107 k-sweep, then widen the framebuffer
+# NEXT: G1d step 3 - widen the framebuffer under ROGUESQ_ASPECT=16:9
 HYPOTHESIS-ID: g1d-widescreen
-Fold s6107_g1d_k0p5/k1p0/k2p0 from SOAK-RESULTS.md. Compare the SAME early fb dump index (first flight VI, fixed intro camera): measure craft/ring pixel width per k. Width ~ 1/k => lever is the projection aspect (H-lever); unchanged => H-other. k=1.0 must look retail (control).
-Then ONE build widening game colour image/scissor/VI width under ROGUESQ_ASPECT=16:9 plus a 16:9 window screenshot; then HUD x anchoring.
+s6108: aspect lever (ROGUESQ_ASPECT_SCALE) confirmed ~1/k on craft width. First fold s6107_g1d_k2p0 from SOAK-RESULTS.md (expect craft ~half of k1.0 width, flight fb index 4500).
+Then ONE build: with ROGUESQ_ASPECT=16:9 set guPerspective aspect scale = 4/3 / (16/9) and widen game colour image width, scissor and VI width; run L1 with a 16:9 window and capture. Outcomes: extra width drawn undistorted => proceed to HUD x anchoring; stretched => viewport/scissor not widened; black bars => VI/colour image width missed.
