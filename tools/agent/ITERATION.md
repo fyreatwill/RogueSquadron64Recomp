@@ -132,6 +132,29 @@ When choosing the work unit, this order overrides Next-steps ordering:
      Bundle the winning combination behind the single ROGUESQ_DRAW_DISTANCE knob (it
      should set far/pool/cap itself) so the owner can flip one setting. Default stays
      retail until the owner chooses.
+   - G1d **Widescreen / ultrawide (owner request 2026-10-24).** Take after G1c phase 2.
+     Owner plays on a 21:9 ultrawide monitor and a 65" 16:9 TV; today the picture is 4:3
+     with black bars. Goal: the 3D view fills whatever aspect the window has (4:3, 16:9,
+     21:9), with the extra width drawn (not stretched), the HUD anchored to the real
+     screen edges, and menus/hangar still correct. Note the port runs the F5 gfx ucode
+     LLE, so RT64 sees only screen-space RDP triangles: its HLE "Expand" aspect mode and
+     matrix-based tricks cannot work by themselves. Expect to patch the game side: the
+     projection matrix / FOV (the 0x130C50 FOV scalar from s6024 is a lead), viewport and
+     scissor, the framebuffer width the game renders into, and the HUD x positions. Pairs
+     naturally with G1c: wider view needs the wider terrain footprint. Check the internal
+     resolution also follows the window (ROGUESQ_RESMULT exists; a 4K TV should get a
+     sharp image). Opt-in setting first (ROGUESQ_ASPECT=auto|4:3|16:9|21:9), owner
+     judges via screenshots at 16:9 and 21:9, then the owner decides the default.
+   - G1e **Higher frame rate (owner request 2026-10-24).** Take after G1d. VI is 60/s but
+     the game probably produces a new frame only every 2-3 VIs. First measure the real
+     game frame rate per level (distinct framebuffers per second, G1b instrument). Then
+     the levers, cheapest and most faithful first: (1) the game's own frame-pacing/VI
+     retrace divisor, if the sim uses a delta time and tolerates a 60 Hz update (verify
+     physics, AI, timers, audio sync and mission scripts are not tied to frame count:
+     compare mission timer and craft speed per real second at both rates); (2) if the
+     sim is frame-locked, run render-only extra frames or decouple sim from render;
+     (3) RT64 frame interpolation needs matrix data the LLE path does not provide, so
+     only consider it if a way to feed it exists. Opt-in setting, then owner judges feel.
    - G2 **Audio fidelity: CLOSED** (owner live listen 2026-10-22: dialogue clean, no
      fuzz; agrees with s5669-s5674 PCM evidence). Reopen only on a new owner report.
    - G3 **Render fidelity.** Hangar artifacts (CURRENT-TRUTH list) and in-flight frame
