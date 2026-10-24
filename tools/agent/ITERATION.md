@@ -112,6 +112,20 @@ When choosing the work unit, this order overrides Next-steps ordering:
      300 s on levels 1, 5 and 10 with 0 crashes and no frame-time regression beyond the
      G1b baseline; ask the owner to judge the look. Never change the default away from
      retail without the owner's say.
+     **Phase 2 (owner 2026-10-24): push draw distance as far as it will go.** Take right
+     after G3b closes. Owner: "everything else seems to be working great"; this is the
+     priority after the spike lines. Start from the s6074 state (DRAW_DISTANCE=2 +
+     auto-far: tri x2.3, terrain fraction 0.030->0.074, VI 60/s, clean) and find the
+     next binding limit at each step up (3x, 4x, beyond the 4.0 clamp if useful):
+     guest heap (px3+ exhausts the 8 MB heap, s6062: consider giving the terrain pools
+     host-side or above-8MB memory the game code can address), the 64-wide bitmap stride
+     and terrain dims (s6035), the ucode iteration cap (ROGUESQ_UCODE_CAP, s6070), RSP
+     host cost per frame (G1b instrument; VI must stay 60/s), and distant pop-in.
+     Measure every step with the fixed-camera terrain-fraction scorer plus a framebuffer
+     contact sheet the owner can eyeball (send per step, same camera, dd1 vs dd-max).
+     Bundle the winning combination behind the single ROGUESQ_DRAW_DISTANCE knob (it
+     should set far/pool/cap itself) so the owner can flip one setting. Default stays
+     retail until the owner chooses.
    - G2 **Audio fidelity: CLOSED** (owner live listen 2026-10-22: dialogue clean, no
      fuzz; agrees with s5669-s5674 PCM evidence). Reopen only on a new owner report.
    - G3 **Render fidelity.** Hangar artifacts (CURRENT-TRUTH list) and in-flight frame

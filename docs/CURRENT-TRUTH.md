@@ -112,6 +112,10 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog)
+- **Owner 2026-10-24: G1c phase 2 queued right after G3b** — push draw distance as far
+  as possible (heap, stride, ucode cap, RSP cost, pop-in); one knob bundles it. Owner
+  thinks they may have seen longer draw distance in the s6081 lvl2 G4 run, which was at
+  the default (no ROGUESQ_DRAW_DISTANCE set), so that impression was not the knob.
 - **Owner 2026-10-24: G4 crash/stall hunting PARKED.** All 19 levels + hangar route
   clean (s5999-s6082). Queued s6081/s6082 G4 soaks moved to soak_queue/cancelled/.
   Do not queue repeat holds; reopen only on an owner-reported crash.
