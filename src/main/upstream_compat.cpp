@@ -2385,8 +2385,10 @@ extern "C" uint32_t rs64_s6091_scale(uint32_t v) {
     std::fprintf(stderr, "[lutscale] %u -> %u\n", v, v * k);
     return v * k;
 }
-static unsigned long s_s6093_cnt[2];
-extern "C" void rs64_s6093_cnt(int w) { ++s_s6093_cnt[w & 1]; }
+static unsigned long s_s6093_cnt[8];
+extern "C" void rs64_s6096_skip(uint32_t r16, uint32_t off) { ++s_s6093_cnt[6]; static int n = 0; if (n++ < 12) std::fprintf(stderr, "[bucketlog] s6096 guard-skip r16=%08X s1off=%u\n", r16, off); }
+extern "C" void rs64_s6097_inline(uint32_t nb, uint32_t heads, uint32_t ent, uint32_t bad) { static unsigned long nt = 0; ++nt; if (nt <= 6 || nt % 100 == 0) std::fprintf(stderr, "[bucketlog] s6097 inline tick#%lu nb=%u heads=%u ent=%u oob=%u\n", nt, nb, heads, ent, bad); }
+extern "C" void rs64_s6093_cnt(int w) { ++s_s6093_cnt[w & 7]; }
 extern "C" void rs64_s6094_tick(uint8_t* rdram, uint32_t nbm, uint32_t basem) {  /* s6094: age histogram at each tickTextureMaterialExpiry entry */
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_BUCKETLOG"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
@@ -2396,6 +2398,7 @@ extern "C" void rs64_s6094_tick(uint8_t* rdram, uint32_t nbm, uint32_t basem) { 
     uint32_t nb = nbm, base = basem;
     unsigned long hi8 = 0, ne = 0, a0 = 0, an = 0, sum = 0; unsigned mx = 0;
     for (uint32_t i = 0; i < nb && i < 16384; ++i) { uint32_t n = rd(base + 4 * i); int len = 0; while (n && len++ < 4096) { unsigned a = rd(n + 8) >> 16; ++ne; if (n >= 0x80800000u) ++hi8; if (a) ++an; else ++a0; sum += a; if (a > mx) mx = a; n = rd(n); } }
+    std::fprintf(stderr, "[bucketlog] s6095 visit=%lu agestore=%lu expire=%lu advance=%lu skip=%lu top=%lu\n", s_s6093_cnt[2], s_s6093_cnt[3], s_s6093_cnt[4], s_s6093_cnt[5], s_s6093_cnt[6], s_s6093_cnt[7]);
     std::fprintf(stderr, "[bucketlog] s6094 tick#%lu nb=%u base=%08X ent=%lu age0=%lu agenz=%lu sumage=%lu maxage=%u nodes_ge_8MB=%lu\n", nt, nb, base, ne, a0, an, sum, mx, hi8);
 }
 extern "C" void rs64_s6088_fuse(uint8_t* rdram, uint32_t ret, uint32_t ra, uint32_t gcount, uint32_t gbase, uint32_t gcache) {

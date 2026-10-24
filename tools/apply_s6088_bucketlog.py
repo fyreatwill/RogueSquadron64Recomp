@@ -25,6 +25,41 @@ def apply6(text):
     old0 = "    rs64_s6093_cnt(0); /* PATCH: s6093 cnt0 */\n"
     if old0 in text and "PATCH: s6094" not in text:
         text = text.replace("RECOMP_FUNC void tickTextureMaterialExpiry(uint8_t* rdram, recomp_context* ctx) {\n" + old0, "extern void rs64_s6094_tick(uint8_t*, uint32_t, uint32_t);\nRECOMP_FUNC void tickTextureMaterialExpiry(uint8_t* rdram, recomp_context* ctx) {\n    rs64_s6094_tick(rdram, (uint32_t)MEM_HU(S32(0X8013 << 16), -0X7110), U32(MEM_W(S32(0X8013 << 16), -0X7100))); /* PATCH: s6094 */\n" + old0, 1); n += 1
+    if "PATCH: s6095" not in text and "PATCH: s6094" in text:
+        i = text.find("RECOMP_FUNC void tickTextureMaterialExpiry(")
+        j = text.find("RECOMP_FUNC void", i + 10)
+        body = text[i:j]
+        for a, b, after in (("    // 0x80022094: lhu         $v1, 0x8($s0)\n", 2, 0), ("    { MEM_H(0X8, ctx->r16) = ctx->r2; RS64_S5798_ST(0x800220ACu", 3, 0),
+                            ("L_800220B0:\n", 4, 1), ("L_80022128:\n", 5, 1)):
+            k = body.find(a)
+            if k < 0: continue
+            ins = "    rs64_s6093_cnt(%d); /* PATCH: s6095 */\n" % b
+            k2 = k + len(a) if after else k
+            body = body[:k2] + ins + body[k2:]; n += 1
+        text = text[:i] + body + text[j:]
+    if "PATCH: s6096" not in text and "PATCH: s6095" in text:
+        i = text.find("RECOMP_FUNC void tickTextureMaterialExpiry(")
+        j = text.find("RECOMP_FUNC void", i + 10)
+        body = text[i:j]
+        a = "            goto L_80022128;\n        }\n    }\n"
+        k = body.find(a)
+        if k >= 0:
+            body = body[:k] + "            rs64_s6096_skip(r16_lo, U32(ctx->r17)); /* PATCH: s6096 */\n" + body[k:]; n += 1
+        a = "L_80022094:\n"
+        k = body.find(a)
+        if k >= 0:
+            body = body[:k+len(a)] + "    rs64_s6093_cnt(7); /* PATCH: s6096 top */\n" + body[k+len(a):]; n += 1
+        text = text[:i] + "extern void rs64_s6096_skip(uint32_t, uint32_t);\n" + body + text[j:] if False else text[:i] + body + text[j:]
+        text = text.replace("extern void rs64_s6094_tick(", "extern void rs64_s6096_skip(uint32_t, uint32_t);\nextern void rs64_s6094_tick(", 1)
+    if "PATCH: s6097" not in text and "PATCH: s6096" in text:
+        a = "    rs64_s6093_cnt(0); /* PATCH: s6093 cnt0 */\n"
+        blk = ("    { uint32_t _nb = (uint32_t)MEM_HU(S32(0X8013 << 16), -0X7110), _bs = U32(MEM_W(S32(0X8013 << 16), -0X7100)), _h = 0, _e = 0, _bad = 0; /* PATCH: s6097 */\n"
+               "      for (uint32_t _i = 0; _i < _nb && _i < 16384; ++_i) { uint32_t _n = U32(MEM_W((gpr)(int32_t)(_bs + 4 * _i), 0)); if (_n) ++_h; int _l = 0; while (_n && _l++ < 4096) { ++_e; if (_n < 0x80000000u || _n >= 0x80800000u) { ++_bad; break; } _n = U32(MEM_W((gpr)(int32_t)_n, 0)); } }\n"
+               "      rs64_s6097_inline(_nb, _h, _e, _bad); }\n")
+        k = text.find(a, text.find("RECOMP_FUNC void tickTextureMaterialExpiry("))
+        if k >= 0:
+            text = text[:k+len(a)] + blk + text[k+len(a):]; n += 1
+            text = text.replace("extern void rs64_s6094_tick(", "extern void rs64_s6097_inline(uint32_t, uint32_t, uint32_t, uint32_t);\nextern void rs64_s6094_tick(", 1)
     return text, n
 if __name__ == "__main__":
     import pathlib
