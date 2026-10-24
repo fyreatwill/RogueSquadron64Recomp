@@ -154,6 +154,7 @@ Widened (ROGUESQ_FB_WIDTH=683) RDP stream is width-consistent with retail (sciss
 ## G1d status (s6119)
 ROGUESQ_FB_WIDTH=683 now renders (s6119): RT64 width allowlists (last-drawn store, mode-3 saneW, writeback allowW) accept width==FB_WIDTH; VI regs verified consistent (w683 xScale 0x444, origin field offset 1366). Fbdump flip shows a correct frame; on-screen window not yet verified. Next: window screenshot with game frontmost, then wire ROGUESQ_ASPECT=16:9/21:9 (FOV/HUD x), menus/hangar check.
 
+- s6123: wide-mission crash = NULL-dest PI DMA (failed alloc), H-heap leading, ctl43 DMA-log soak queued.
 - s6121: ROGUESQ_ASPECT=<w>:<h> (>4:3) now derives FB_WIDTH+scales in main.cpp; 16:9/21:9 soaks queued, results pending.
 
 - **G1d s6122 (supersedes s6120 'widened frame works end to end'):** ROGUESQ_FB_WIDTH/ASPECT 683/797/1045 all crash 5/5 at mission start (do_rom_read, 64-bit DMA dest 0x380000003, ~150 lines after initMission n=1); 4:3 ctl is fine. s6120's screenshot was pre-flight only. The `initMission+1000` frame in logs is the lvinit-bt diagnostic, not the crash. H-heap (wider pfm fbs starve the 8 MB heap -> NULL alloc) vs H-stride untested; s6122 soak (ROGUESQ_LOG_DMA) queued to name the caller. s6121 screenshots are invalid (game not frontmost; use s6120_run.sh's osascript activate).
