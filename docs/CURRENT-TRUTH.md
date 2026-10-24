@@ -125,6 +125,7 @@ autopilot win are owner playtest scope.
   thin lines flash in from the screen border during normal retail flight (spike
   triangles). Full spec and discriminator: ITERATION.md item 3c G3b.
 
+> s6084: G3b folded - real arm 516 bad tris (pinned-Y wedge) in RDP stream; ROGUESQ_CULL_SPIKE opt-in cull added, soak queued. See PORTING-STATE.
 > s6083: G3b instrument landed (ROGUESQ_LOG_SPIKE / ROGUESQ_SPIKE_CTL, dpc_bridge.cpp rs64_spike_scan); soaks s6083_g3b_spike_{ctl,real}_l2 queued. Control must fire >0 before the real arm means anything.
 > s6082: G4 l7 and l8 folded clean (0 stall, 0 crash, 300 s, n=1). Pending soaks: l9, l2b, l3b, l10 (s6082), l5b (s6082). Next: fold them; if all clean take G5 sweep (check session titles first) or G3. No conclusions overturned.
 > s6081: G4 l4 and l6 folded clean (0 stall, 0 crash, 300 s, n=1). Queued l7-9 (s6080) plus l2b/l3b repeats; then G5 (check session titles first).

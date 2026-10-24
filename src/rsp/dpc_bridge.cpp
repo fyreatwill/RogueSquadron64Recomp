@@ -2409,11 +2409,12 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     static const bool on = [] { const char *e = std::getenv("ROGUESQ_LOG_SPIKE"); return e && *e && *e != '0'; }();
     if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u) return;
     static const double guard = [] { const char *e = std::getenv("ROGUESQ_SPIKE_CTL"); return e && *e ? atof(e) : 640.0; }();
-    static uint64_t s_tris = 0, s_bad = 0, s_logged = 0;
+    static const bool cull = [] { const char *e = std::getenv("ROGUESQ_CULL_SPIKE"); return e && *e && *e != '0'; }();
+    static uint64_t s_tris = 0, s_bad = 0, s_logged = 0, s_culled = 0;
     static int s_swap = -1; static uint32_t s_swap_tris = 0, s_swap_bad = 0;
     const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
     if (sw != s_swap) {
-        if (s_swap_bad) { fprintf(stderr, "[spike-swap] swap=%d tris=%u bad=%u total_tris=%llu total_bad=%llu\n", s_swap, s_swap_tris, s_swap_bad, (unsigned long long)s_tris, (unsigned long long)s_bad); fflush(stderr); }
+        if (s_swap_bad) { fprintf(stderr, "[spike-swap] swap=%d tris=%u bad=%u total_tris=%llu total_bad=%llu culled=%llu\n", s_swap, s_swap_tris, s_swap_bad, (unsigned long long)s_tris, (unsigned long long)s_bad, (unsigned long long)s_culled); fflush(stderr); }
         s_swap = sw; s_swap_tris = 0; s_swap_bad = 0;
     }
     auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & 0x7FFFFCu), 4); return v; };
@@ -2432,6 +2433,11 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         bool bad = !(yh <= ym && ym <= yl);
         for (auto &p : v) if (p[0] < -guard || p[0] > 320.0 + guard || p[1] < -guard || p[1] > 240.0 + guard) bad = true;
         s_tris++; s_swap_tris++;
+        if (bad && cull) {
+            // s6084: zero the triangle height (yl=ym=yh=0) so the rasteriser emits no scanlines; length is unchanged.
+            uint32_t n0 = w0 & ~0x3FFFu, n1 = 0; memcpy(g_rdram_for_submit + (a & 0x7FFFFCu), &n0, 4); memcpy(g_rdram_for_submit + ((a + 4) & 0x7FFFFCu), &n1, 4);
+            s_culled++;
+        }
         if (bad) {
             s_bad++; s_swap_bad++;
             if (s_logged++ < 600) {
