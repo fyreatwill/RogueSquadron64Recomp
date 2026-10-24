@@ -2393,6 +2393,7 @@ extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
     if (!s6063_on()) return;
     static int nnull = 0;
     if (ptr) { auto it = s_s6063_live.find(ptr); if (it != s_s6063_live.end()) s_s6063_bytes -= it->second; s_s6063_live[ptr] = req; s_s6063_bytes += req; if (s_s6063_bytes > s_s6063_peak) s_s6063_peak = s_s6063_bytes; }
+    if (!ptr && req == 0x1000u) std::fprintf(stderr, "[heaplog-null1000] req=0x1000 -> NULL ra=%08X live=0x%llX nblk=%zu\n", ra, (unsigned long long)s_s6063_bytes, s_s6063_live.size()); /* s6126: null-dest DMA scratch alloc */
     if (req >= 0x4000u || (!ptr && nnull < 4))
         std::fprintf(stderr, "[heaplog] malloc req=0x%X -> %08X ra=%08X live=0x%llX peak=0x%llX nblk=%zu\n", req, ptr, ra, (unsigned long long)s_s6063_bytes, (unsigned long long)s_s6063_peak, s_s6063_live.size());
     if (!ptr && nnull++ < 2) {
@@ -5457,6 +5458,14 @@ extern "C" void rs64_s5039_mq_hook(uint8_t* rdram, uint32_t mq, uint32_t ra, int
     s5038_mq_census(rdram, mq, ra, kind ? "setevent" : "jam");
 }
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
+    { // s6126: producer of PI OSIoMesg slots (ring 0x801107E0.., stride 0x18): log sender ra + slot dram at send time
+        static const bool on = std::getenv("ROGUESQ_LOG_DMA") != nullptr;
+        const uint32_t m = (uint32_t)ctx->r5;
+        if (on && m >= 0x801107E0u && m < 0x80110900u) {
+            fprintf(stderr, "[pi-slot-send] mq=0x%08X mb=0x%08X ra=0x%08X dram=0x%08X dev=0x%08X size=0x%X\n",
+                (uint32_t)ctx->r4, m, (uint32_t)ctx->r31, (uint32_t)MEM_W(8, m), (uint32_t)MEM_W(0xC, m), (uint32_t)MEM_W(0x10, m));
+        }
+    }
     s5038_mq_census(rdram, (uint32_t)ctx->r4, (uint32_t)ctx->r31, "send");
     const bool s4580_q = s4580::on() && (uint32_t)ctx->r4 == 0x8010FEE0u; /* PATCH: s4580 */
     const int s4580_vcb = s4580_q ? s4580::vc(rdram, (uint32_t)ctx->r4) : 0;
