@@ -493,6 +493,7 @@ extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *last
 // `extern` in recomp.h so any RECOMP_FUNC translation unit can write it by
 // name; defined once here.
 extern "C" volatile uint32_t g_rs64_last_guest_pc = 0;
+extern "C" uint32_t rs64_ram_top = 0x80800000u; // s6132: set by librecomp from ROGUESQ_OSMEM_MB
 extern "C" int rogue_current_thread_id(uint8_t* rdram);
 static thread_local uint32_t g_rs64_m5_field348_static_callsite = 0;
 static thread_local uint32_t g_rs64_m5_pcm_callsite = 0;

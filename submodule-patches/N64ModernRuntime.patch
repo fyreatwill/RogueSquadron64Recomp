@@ -1122,7 +1122,7 @@ index 8c8e5d1..1d5ee9e 100644
  }
  
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..8a1bd86 100644
+index 43509ba..0466549 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
 @@ -1,3 +1,5 @@
@@ -1147,11 +1147,12 @@ index 43509ba..8a1bd86 100644
  static std::vector<uint8_t> rom;
  
  bool recomp::is_rom_loaded() {
-@@ -61,9 +69,88 @@ extern "C" void osCreatePiManager_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -61,9 +69,89 @@ extern "C" void osCreatePiManager_recomp(uint8_t* rdram, recomp_context* ctx) {
      ;
  }
  
 +extern "C" volatile uint32_t g_rs64_last_guest_pc;
++extern "C" uint32_t rs64_ram_top;
  void recomp::do_rom_read(uint8_t* rdram, gpr ram_address, uint32_t physical_addr, size_t num_bytes) {
      // TODO use word copies when possible
  
@@ -1189,12 +1190,12 @@ index 43509ba..8a1bd86 100644
 +        // s4298: name where the odd ROM address lives in RDRAM (the node the guest read it from)
 +        fprintf(stderr, "[s4298-odd] phys=0x%08X ram=0x%08llX bytes=0x%zX\n", physical_addr, (unsigned long long)ram_address, num_bytes);
 +        int hits = 0;
-+        for (uint32_t a = 0; a + 4 <= 0x800000 && hits < 16; a += 4) {
++        for (uint32_t a = 0; a + 4 <= (rs64_ram_top - 0x80000000u) && hits < 16; a += 4) {
 +            // s4567: also match the guest-form word (phys + 0x50000000)
 +            if (*(uint32_t*)(rdram + a) == physical_addr || *(uint32_t*)(rdram + a) == physical_addr + 0x50000000u) {
 +                hits++;
 +                fprintf(stderr, "[s4298-odd] hit at rdram 0x%06X; words:", a);
-+                for (int k = -8; k < 8; k++) { uint32_t b = a + k * 4; if (b + 4 <= 0x800000) fprintf(stderr, " %08X", *(uint32_t*)(rdram + b)); }
++                for (int k = -8; k < 8; k++) { uint32_t b = a + k * 4; if (b + 4 <= (rs64_ram_top - 0x80000000u)) fprintf(stderr, " %08X", *(uint32_t*)(rdram + b)); }
 +                fprintf(stderr, "\n");
 +            }
 +        }
@@ -1202,11 +1203,11 @@ index 43509ba..8a1bd86 100644
 +        {
 +            // s4589: same-run control + pair scan; the request node is {cart, ram}, so find the ram word
 +            uint32_t ramw = (uint32_t)ram_address; int rh = 0;
-+            for (uint32_t a = 0; a + 4 <= 0x800000 && rh < 24; a += 4) {
++            for (uint32_t a = 0; a + 4 <= (rs64_ram_top - 0x80000000u) && rh < 24; a += 4) {
 +                if (*(uint32_t*)(rdram + a) == ramw) {
 +                    rh++;
 +                    fprintf(stderr, "[s4589-ram] hit at rdram 0x%06X; words:", a);
-+                    for (int k = -4; k < 4; k++) { uint32_t b = a + k * 4; if (b + 4 <= 0x800000) fprintf(stderr, " %08X", *(uint32_t*)(rdram + b)); }
++                    for (int k = -4; k < 4; k++) { uint32_t b = a + k * 4; if (b + 4 <= (rs64_ram_top - 0x80000000u)) fprintf(stderr, " %08X", *(uint32_t*)(rdram + b)); }
 +                    fprintf(stderr, "\n");
 +                }
 +            }
@@ -1236,7 +1237,7 @@ index 43509ba..8a1bd86 100644
      // TODO handle misaligned DMA
      assert((physical_addr & 0x1) == 0 && "Only PI DMA from aligned ROM addresses is currently supported");
      assert((ram_address & 0x7) == 0 && "Only PI DMA to aligned RDRAM addresses is currently supported");
-@@ -72,11 +159,35 @@ void recomp::do_rom_read(uint8_t* rdram, gpr ram_address, uint32_t physical_addr
+@@ -72,11 +160,35 @@ void recomp::do_rom_read(uint8_t* rdram, gpr ram_address, uint32_t physical_addr
          MEM_B(i, ram_address) = *rom_addr;
          rom_addr++;
      }
@@ -1254,7 +1255,7 @@ index 43509ba..8a1bd86 100644
 +        static const bool force = [] { const char* e = std::getenv("ROGUESQ_PIO_GUARD_FORCE"); return e && e[0] && e[0] != '0'; }();
 +        if (!off) {
 +            uint32_t a = (uint32_t)ram_address;
-+            bool seg = (a < 0x00800000u) || (a >= 0x80000000u && a < 0x80800000u) || (a >= 0xA0000000u && a < 0xA0800000u);
++            bool seg = (a < (rs64_ram_top - 0x80000000u)) || (a >= 0x80000000u && a < rs64_ram_top) || (a >= 0xA0000000u && a < (rs64_ram_top + 0x20000000u));
 +            bool bad = !seg || physical_addr < recomp::rom_base || (uint64_t)(physical_addr - recomp::rom_base) + 4 > rom.size();
 +            static unsigned long viol = 0; static int shown = 0, total = 0;
 +            ++total;
@@ -1272,7 +1273,7 @@ index 43509ba..8a1bd86 100644
      uint8_t* rom_addr = rom.data() + physical_addr - recomp::rom_base;
      MEM_B(0, ram_address) = *rom_addr++;
      MEM_B(1, ram_address) = *rom_addr++;
-@@ -113,6 +224,9 @@ void set_save_file_path(const std::u8string& subfolder, const std::u8string& nam
+@@ -113,6 +225,9 @@ void set_save_file_path(const std::u8string& subfolder, const std::u8string& nam
  }
  
  void update_save_file() {
@@ -1282,7 +1283,7 @@ index 43509ba..8a1bd86 100644
      bool saving_failed = false;
      {
          std::ofstream save_file = recomp::open_output_file_with_backup(ultramodern::get_save_file_path(), std::ios_base::binary);
-@@ -174,6 +288,12 @@ void save_write_ptr(const void* in, uint32_t offset, uint32_t count) {
+@@ -174,6 +289,12 @@ void save_write_ptr(const void* in, uint32_t offset, uint32_t count) {
  }
  
  void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t count) {
@@ -1295,7 +1296,7 @@ index 43509ba..8a1bd86 100644
      assert(offset + count <= save_context.save_buffer.size());
  
      {
-@@ -187,12 +307,30 @@ void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t cou
+@@ -187,12 +308,30 @@ void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t cou
  }
  
  void save_read(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t count) {
@@ -1326,7 +1327,7 @@ index 43509ba..8a1bd86 100644
  }
  
  void save_clear(uint32_t start, uint32_t size, char value) {
-@@ -266,13 +404,119 @@ void ultramodern::join_saving_thread() {
+@@ -266,13 +405,120 @@ void ultramodern::join_saving_thread() {
      }
  }
  
@@ -1366,7 +1367,7 @@ index 43509ba..8a1bd86 100644
 +}
 +static void rs64_s4211_pi_note(uint32_t dram, uint32_t size, uint32_t rom_off) {
 +    Rs64S4211Pi& e = rs64_s4211_pi_ring[rs64_s4211_pi_n % 8192];
-+    e.dram = dram & 0x7FFFFFu; e.size = size; e.rom_off = rom_off; e.phase = rs64_phase_ord(); e.pc = g_rs64_last_guest_pc;
++    e.dram = dram & 0xFFFFFFu; e.size = size; e.rom_off = rom_off; e.phase = rs64_phase_ord(); e.pc = g_rs64_last_guest_pc;
 +    rs64_s4211_pi_n++;
 +}
 +extern "C" void rs64_s4230_poll_start(uint8_t*);
@@ -1389,11 +1390,12 @@ index 43509ba..8a1bd86 100644
 +        static const bool force = [] { const char* e = std::getenv("ROGUESQ_PI_DMA_GUARD_FORCE"); return e && e[0] && e[0] != '0'; }();
 +        if (!off) {
 +            uint32_t ram_p = (uint32_t)rdram_address & 0x1FFFFFFFu;
-+            bool seg = ((uint32_t)rdram_address < 0x00800000u) || ((uint32_t)rdram_address >= 0x80000000u && (uint32_t)rdram_address < 0x80800000u) ||
-+                       ((uint32_t)rdram_address >= 0xA0000000u && (uint32_t)rdram_address < 0xA0800000u);
++            const uint32_t ram_sz = rs64_ram_top - 0x80000000u; // s6132: osMemSize, not a literal 8 MB
++            bool seg = ((uint32_t)rdram_address < ram_sz) || ((uint32_t)rdram_address >= 0x80000000u && (uint32_t)rdram_address < rs64_ram_top) ||
++                       ((uint32_t)rdram_address >= 0xA0000000u && (uint32_t)rdram_address < 0xA0000000u + ram_sz);
 +            bool bad = false;
 +            if (size != 0) {
-+                bad = !seg || (uint64_t)ram_p + size > 0x800000u;
++                bad = !seg || (uint64_t)ram_p + size > ram_sz;
 +                if (direction == 0 && physical_addr >= recomp::rom_base)
 +                    bad = bad || (uint64_t)(physical_addr - recomp::rom_base) + size > rom.size();
 +            }
@@ -1446,7 +1448,7 @@ index 43509ba..8a1bd86 100644
  
              // Send a message to the mq to indicate that the transfer completed
              ultramodern::enqueue_external_message_src(mq, 0, false, ultramodern::EventMessageSource::Pi);
-@@ -313,12 +557,42 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -313,12 +559,42 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      uint32_t mb = ctx->r4;
      uint32_t pri = ctx->r5;
      uint32_t direction = ctx->r6;
@@ -1489,7 +1491,7 @@ index 43509ba..8a1bd86 100644
      debug_printf("[pi] DMA from 0x%08X into 0x%08X of size 0x%08X\n", devAddr, dramAddr, size);
  
      do_dma(PASS_RDRAM mq, dramAddr, physical_addr, size, direction);
-@@ -336,6 +610,9 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -336,6 +612,9 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      PTR(OSMesgQueue) mq = mb->hdr.retQueue;
      uint32_t physical_addr = k1_to_phys(devAddr);
  
@@ -1515,7 +1517,7 @@ index 944e9fe..72c5fcd 100644
      std::unique_ptr<char[]> to_print = std::make_unique<char[]>(size + 1);
  
 diff --git a/librecomp/src/recomp.cpp b/librecomp/src/recomp.cpp
-index 4276b7d..4066c2c 100644
+index 4276b7d..decf7fc 100644
 --- a/librecomp/src/recomp.cpp
 +++ b/librecomp/src/recomp.cpp
 @@ -398,7 +398,7 @@ recomp::RomValidationError recomp::select_rom(const std::filesystem::path& rom_p
@@ -1548,7 +1550,7 @@ index 4276b7d..4066c2c 100644
      if (game_entry.thread_create_callback != nullptr) {
          game_entry.thread_create_callback(rdram, &ctx);
      }
-@@ -543,7 +557,12 @@ void init(uint8_t* rdram, recomp_context* ctx, gpr entrypoint) {
+@@ -543,7 +557,13 @@ void init(uint8_t* rdram, recomp_context* ctx, gpr entrypoint) {
      MEM_W(osTvType, 0) = 1; // NTSC
      MEM_W(osRomBase, 0) = 0xB0000000u; // standard rom base
      MEM_W(osResetType, 0) = 0; // cold reset
@@ -1558,11 +1560,12 @@ index 4276b7d..4066c2c 100644
 +        int mb = (e && *e) ? std::atoi(e) : 8;
 +        if (mb < 4 || mb > 16) mb = 8; // s6130: allow up to 16 MB (24-bit RSP span); s6114 saw RT64 abort >8 MB
 +        MEM_W(osMemSize, 0) = mb * 1024 * 1024;
++        rs64_ram_top = 0x80000000u + (uint32_t)mb * 1024u * 1024u;
 +    }
  }
  
  std::u8string recomp::current_game_id() {
-@@ -726,6 +745,17 @@ bool wait_for_game_started(uint8_t* rdram, recomp_context* context) {
+@@ -726,6 +746,17 @@ bool wait_for_game_started(uint8_t* rdram, recomp_context* context) {
                  save_type = game_entry.save_type;
                  ultramodern::init_saving(rdram);
  
@@ -1581,10 +1584,10 @@ index 4276b7d..4066c2c 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..413942d 100644
+index 1cb3f6a..fc98f60 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
-@@ -1,8 +1,15 @@
+@@ -1,8 +1,16 @@
 +#include <chrono>
  #include <cassert>
 +#include <cmath>
@@ -1596,11 +1599,12 @@ index 1cb3f6a..413942d 100644
 +#include <vector>
  
  #include "rsp.hpp"
++extern "C" uint32_t rs64_ram_top; // s6132
 +extern "C" { extern volatile uint32_t rs64_vsrc_lo, rs64_vsrc_hi; extern uint32_t rs64_vsrc_nw, rs64_vsrc_lastphys, rs64_vsrc_lastlen; extern char rs64_vsrc_lastapi[24]; }
  
  static recomp::rsp::callbacks_t rsp_callbacks {};
  
-@@ -11,6 +18,7 @@ void recomp::rsp::set_callbacks(const callbacks_t& callbacks) {
+@@ -11,6 +19,7 @@ void recomp::rsp::set_callbacks(const callbacks_t& callbacks) {
  }
  
  uint8_t dmem[0x1000];
@@ -1608,7 +1612,7 @@ index 1cb3f6a..413942d 100644
  uint16_t rspReciprocals[512];
  uint16_t rspInverseSquareRoots[512];
  
-@@ -32,24 +40,2109 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +41,2109 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -2806,7 +2810,7 @@ index 1cb3f6a..413942d 100644
 +                               int32_t size) {
 +    const uint32_t start = static_cast<uint32_t>(ptr) & 0x007FFFFFu;
 +    const uint32_t span = static_cast<uint32_t>(size);
-+    if (span == 0 || start >= 0x800000u) return false;
++    if (span == 0 || start >= (rs64_ram_top - 0x80000000u)) return false;
 +    const uint64_t end = static_cast<uint64_t>(start) + span;
 +    return static_cast<uint64_t>(dram) < end &&
 +           static_cast<uint64_t>(dram) + len > start;
@@ -2855,7 +2859,7 @@ index 1cb3f6a..413942d 100644
 +            uint32_t fnv = 2166136261u; double ss = 0; int32_t pk = 0;
 +            for (uint32_t i = 0; i < len; i++) fnv = (fnv * 16777619u) ^ RSP_MEM_BU(0, 0x6F0 + i);
 +            for (uint32_t i = 0; i + 1 < len; i += 2) { int32_t v = (int16_t)((RSP_MEM_BU(0, 0x6F0 + i) << 8) | RSP_MEM_BU(0, 0x6F0 + i + 1)); ss += (double)v * v; int32_t a = v < 0 ? -v : v; if (a > pk) pk = a; }
-+            fprintf(stderr, "[s4239-out] ph=%u k=%u dram=0x%06X fnv=0x%08X rms=%.0f peak=%d\n", ph, on, dram_addr & 0x7FFFFFu, fnv, sqrt(ss / (len / 2)), pk);
++            fprintf(stderr, "[s4239-out] ph=%u k=%u dram=0x%06X fnv=0x%08X rms=%.0f peak=%d\n", ph, on, dram_addr & 0xFFFFFFu, fnv, sqrt(ss / (len / 2)), pk);
 +        }
 +    }
 +    if (n >= 1500u || len < 16u) return;
@@ -2868,7 +2872,7 @@ index 1cb3f6a..413942d 100644
 +    }
 +    n++;
 +    fprintf(stderr, "[s4239-dma] n=%u ph=%u dir=%s dram=0x%06X dmem=0x%03X len=0x%X peak=%d rms=%.0f\n",
-+            n, rs64_phase_ord(), dir ? "W" : "R", dram_addr & 0x7FFFFFu, off, len, pk, cnt ? sqrt(ss / cnt) : 0.0);
++            n, rs64_phase_ord(), dir ? "W" : "R", dram_addr & 0xFFFFFFu, off, len, pk, cnt ? sqrt(ss / cnt) : 0.0);
 +}
 +extern "C" { uint32_t rs64_s4210_cmd[512][12]; uint32_t rs64_s4210_n; }
 +extern "C" void rs64_s4210_cmd_rec(uint32_t src) {
@@ -2924,7 +2928,7 @@ index 1cb3f6a..413942d 100644
 +    static uint32_t ph_key = 0xFFFFFFFFu; static unsigned long ph_tasks, ph_changes;
 +    uint32_t phase = rs64_phase_ord();
 +    if (phase != ph_key) { ph_key = phase; ph_tasks = ph_changes = 0; }
-+    const uint32_t dp = dp_virt & 0x7FFFFFu;
++    const uint32_t dp = dp_virt & 0xFFFFFFu;
 +    const uint32_t lo = dp - 0x10, len = 0x130;
 +    auto byte = [&](uint32_t p) { return rdram[(p & 0x007FFFFFu) ^ 3]; };
 +    uint32_t h = 2166136261u;
@@ -3135,7 +3139,7 @@ index 1cb3f6a..413942d 100644
 +static void rs64_s4214_scan(uint8_t* rdram, const OSTask* task, uint32_t phase, unsigned n) {
 +    static uint8_t prev[96 * 0x50 + 0x30]; static uint32_t prev_dp; static bool have;
 +    uint32_t dp = (uint32_t)task->t.data_ptr; uint32_t off = dp & 0x1FFFFFFFu;
-+    if (off == 0 || off + sizeof(prev) > 0x800000u) return;
++    if (off == 0 || off + sizeof(prev) > (rs64_ram_top - 0x80000000u)) return;
 +    const uint8_t* b = rdram + off;
 +    uint8_t cur[sizeof(prev)];
 +    for (size_t i = 0; i < sizeof(cur); i++) cur[i] = b[i ^ 3]; // guest byte order (rdram word-swapped)
@@ -3491,13 +3495,13 @@ index 1cb3f6a..413942d 100644
 +        if (s_vc_en < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_vc_en = (e && e[0]) ? 1 : 0; }
 +        if (s_vc_en) {
 +            s_vc_n++;
-+            auto rn = [&](uint32_t a) { uint32_t v; memcpy(&v, rdram + (a & 0x7FFFFFu), 4); return v; };
++            auto rn = [&](uint32_t a) { uint32_t v; memcpy(&v, rdram + (a & 0xFFFFFFu), 4); return v; };
 +            const uint32_t slot = 0x153420u;
-+            const uint32_t tg[3] = { rn(slot + 0x198u) & 0x7FFFFFu, rn(slot + 0x11C0u) & 0x7FFFFFu, rn(slot + 0xB84u) & 0x7FFFFFu };
++            const uint32_t tg[3] = { rn(slot + 0x198u) & 0xFFFFFFu, rn(slot + 0x11C0u) & 0xFFFFFFu, rn(slot + 0xB84u) & 0xFFFFFFu };
 +            unsigned hit[3] = {0, 0, 0};
 +            for (uint32_t i = 0; i < rs64_s4209_n && i < 4096u; i++) {
 +                const uint32_t d = rs64_s4209_rd[i][0], l = rs64_s4209_rd[i][1];
-+                s_tot_reads++; if (d < 0x800000u) s_tot_any++;
++                s_tot_reads++; if (d < (rs64_ram_top - 0x80000000u)) s_tot_any++;
 +                for (int k = 0; k < 3; k++)
 +                    if (tg[k] >= 0x100000u && tg[k] < 0x7F0000u && d < tg[k] + 0x1000u && d + l > tg[k]) { hit[k]++; s_tot_hit[k]++; }
 +            }
@@ -3535,7 +3539,7 @@ index 1cb3f6a..413942d 100644
 +                        bool nw = true; for (unsigned k = 0; k < s_vs_nd; k++) if (s_vs_seen[k] == d) nw = false;
 +                        if (nw && s_vs_nd < 3) s_vs_seen[s_vs_nd++] = d;
 +                        if (s_vs_log < 12 || nw) { s_vs_log++; fprintf(stderr, "[vsrc] task=%u tg0=%06X d=%06X l=%X range=%06X-%06X hostwrites=%u last=%s@%06X+%X first16:", s_vc_n, tg[0], d, l, rs64_vsrc_lo, rs64_vsrc_hi, rs64_vsrc_nw, rs64_vsrc_lastapi, rs64_vsrc_lastphys, rs64_vsrc_lastlen);
-+                            for (uint32_t b = 0; b < 16; b++) fprintf(stderr, " %02X", rdram[(d + b) & 0x7FFFFFu]); fprintf(stderr, "\n"); }
++                            for (uint32_t b = 0; b < 16; b++) fprintf(stderr, " %02X", rdram[(d + b) & 0xFFFFFFu]); fprintf(stderr, "\n"); }
 +                        break;
 +                    }
 +                }
@@ -3545,7 +3549,7 @@ index 1cb3f6a..413942d 100644
 +                        const uint32_t d = rs64_s4209_rd[i][0], l = rs64_s4209_rd[i][1];
 +                        if (tg[0] >= 0x100000u && d < tg[0] + 0x1000u && d + l > tg[0]) {
 +                            fprintf(stderr, "[vcmd-buf] task=%u read dram=%06X len=%X dmem=%03X srcnz=%u bytes:", s_vc_n, d, l, rs64_s4209_rd[i][4], rs64_s4209_rd[i][2]);
-+                            for (uint32_t b = 0; b < 64 && b < l; b++) fprintf(stderr, " %02X", rdram[(d + b) & 0x7FFFFFu]);
++                            for (uint32_t b = 0; b < 64 && b < l; b++) fprintf(stderr, " %02X", rdram[(d + b) & 0xFFFFFFu]);
 +                            fprintf(stderr, "\n"); break;
 +                        }
 +                    }
@@ -3560,7 +3564,7 @@ index 1cb3f6a..413942d 100644
 +                        for (uint32_t i = 0; i < 0x300u; i++) rec[8 + i] = RSP_MEM_BU(0, 0x6F0 + i);
 +                        for (uint32_t i = 0; i < rs64_s4209_n; i++) {
 +                            const uint32_t d = rs64_s4209_rd[i][0], l = rs64_s4209_rd[i][1];
-+                            if (tg[0] >= 0x100000u && d < tg[0] + 0x1000u && d + l > tg[0]) { for (uint32_t b = 0; b < 0x128u && b < l; b++) rec[8 + 0x300 + b] = rdram[(d + b) & 0x7FFFFFu]; break; }
++                            if (tg[0] >= 0x100000u && d < tg[0] + 0x1000u && d + l > tg[0]) { for (uint32_t b = 0; b < 0x128u && b < l; b++) rec[8 + 0x300 + b] = rdram[(d + b) & 0xFFFFFFu]; break; }
 +                        }
 +                        fwrite(rec, 1, sizeof rec, s_vf); fflush(s_vf);
 +                    }
@@ -3721,7 +3725,7 @@ index 1cb3f6a..413942d 100644
  
      // Ensure that the ucode exited correctly
      if (exit_reason != RspExitReason::Broke) {
-@@ -58,5 +2151,7 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -58,5 +2152,7 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  
@@ -5150,10 +5154,10 @@ index 149e770..fcc27b8 100644
  
  void ultramodern::join_event_threads() {
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..11d8f7d 100644
+index 9944a02..cda8ae6 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
-@@ -1,18 +1,317 @@
+@@ -1,18 +1,318 @@
  #include <bitset>
  #include <thread>
 +#include <cstdio>
@@ -5198,6 +5202,7 @@ index 9944a02..11d8f7d 100644
 +// s4911: per-second table of blocking recvs on ANY queue keyed by (mq, tid, host call site = guest function+offset).
 +#include <map>
 +#include <tuple>
++extern "C" uint32_t rs64_ram_top; // s6132
 +static void s4911_all(uint32_t mq, int tid, double ms) {
 +    static std::mutex m; static std::map<std::tuple<uint32_t, int, std::string>, std::pair<uint32_t, double>> tab;
 +    static auto t0 = std::chrono::steady_clock::now(); static uint32_t rows = 0;
@@ -5351,11 +5356,11 @@ index 9944a02..11d8f7d 100644
 +}
 +
 +// Returns true (refuse) if mq_ is outside the game's KSEG0 RDRAM range
-+// (0x80000000-0x80800000, the same 8MB bound used by every other guard site
++// (0x80000000-rs64_ram_top, the same 8MB bound used by every other guard site
 +// in this project).
 +static bool mesgqueue_guard_refuse(const char* who, int32_t mq_) {
 +    uint32_t addr = (uint32_t)mq_;
-+    if (addr >= 0x80000000u && addr < 0x80800000u) {
++    if (addr >= 0x80000000u && addr < rs64_ram_top) {
 +        return false;
 +    }
 +    uint32_t bad_total = ++g_mesgqueue_guard_bad;
@@ -5471,7 +5476,7 @@ index 9944a02..11d8f7d 100644
  static moodycamel::BlockingConcurrentQueue<QueuedMessage> external_messages {};
  std::bitset<32> requeue_enabled;
  
-@@ -27,47 +326,169 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
+@@ -27,47 +327,169 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
      requeue_enabled.set(static_cast<int>(EventMessageSource::Dp), mqc.requeue_dp);
  }
  
@@ -5646,7 +5651,7 @@ index 9944a02..11d8f7d 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      mq->blocked_on_recv = NULLPTR;
      mq->blocked_on_send = NULLPTR;
-@@ -75,6 +496,26 @@ extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) ms
+@@ -75,6 +497,26 @@ extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) ms
      mq->msg = msg;
      mq->validCount = 0;
      mq->first = 0;
@@ -5673,7 +5678,7 @@ index 9944a02..11d8f7d 100644
  }
  
  s32 MQ_GET_COUNT(OSMesgQueue *mq) {
-@@ -90,6 +531,11 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
+@@ -90,6 +532,11 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
  }
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
@@ -5685,7 +5690,7 @@ index 9944a02..11d8f7d 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is full.
-@@ -106,6 +552,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -106,6 +553,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
          }
      }
      
@@ -5700,7 +5705,7 @@ index 9944a02..11d8f7d 100644
      if (jam) {
          // Jams insert at the head of the message queue's buffer.
          mq->first = (mq->first + mq->msgCount - 1) % mq->msgCount;
-@@ -129,6 +583,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -129,6 +584,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
  }
  
  bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
@@ -5711,7 +5716,7 @@ index 9944a02..11d8f7d 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is empty
-@@ -145,7 +603,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -145,7 +604,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      }
  
      if (msg_ != NULLPTR) {
@@ -5726,7 +5731,7 @@ index 9944a02..11d8f7d 100644
      }
      
      mq->first = (mq->first + 1) % mq->msgCount;
-@@ -160,8 +624,76 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -160,8 +625,76 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      return true;
  }
  
@@ -5804,7 +5809,7 @@ index 9944a02..11d8f7d 100644
      bool jam = false;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -173,8 +705,14 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -173,8 +706,14 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
      // Handle any messages that have been received from an external thread.
      dequeue_external_messages(PASS_RDRAM1);
  
@@ -5819,7 +5824,7 @@ index 9944a02..11d8f7d 100644
      
      // Check the queue to see if this thread should swap execution to another.
      ultramodern::check_running_queue(PASS_RDRAM1);
-@@ -183,7 +721,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -183,7 +722,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -5832,7 +5837,7 @@ index 9944a02..11d8f7d 100644
      bool jam = true;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -205,18 +747,72 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -205,18 +748,72 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osRecvMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, s32 flags) {

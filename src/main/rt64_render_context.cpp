@@ -86,6 +86,7 @@ extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task);
 #include <mutex>
 #include <string>
 #include <atomic>
+extern "C" uint32_t rs64_ram_top; // s6132
 extern std::atomic<uint64_t> g_rs64_rt64_tri_accepted, g_rs64_rt64_rect_accepted;
 volatile uint32_t g_rs64_g1cf_tasks = 0, g_rs64_g1cf_dsize = 0;  // s6070 g1cf: gfx tasks / dl bytes since last VI
 extern "C" { volatile int g_rs64_dd_blk = 0; }  // s6070: set by the s6036 dd patch (funcs_9.c): 1 = dd multiplier active this call
@@ -486,7 +487,7 @@ public:
                         uint8_t buf[0x2000];
                         for (uint32_t i = 0; i < sizeof(buf); ++i) {
                             uint32_t off = ucode_phys + i;
-                            buf[i] = (off < 0x800000u) ? rdram[off ^ 3] : 0;
+                            buf[i] = (off < (rs64_ram_top - 0x80000000u)) ? rdram[off ^ 3] : 0;
                         }
                         fwrite(buf, 1, sizeof(buf), f);
                         fclose(f);
@@ -498,7 +499,7 @@ public:
                         std::vector<uint8_t> buf(udata_size);
                         for (uint32_t i = 0; i < udata_size; ++i) {
                             uint32_t off = udata_phys + i;
-                            buf[i] = (off < 0x800000u) ? rdram[off ^ 3] : 0;
+                            buf[i] = (off < (rs64_ram_top - 0x80000000u)) ? rdram[off ^ 3] : 0;
                         }
                         fwrite(buf.data(), 1, udata_size, f);
                         fclose(f);
@@ -531,7 +532,7 @@ public:
                             uint8_t buf[0x10000];
                             for (uint32_t i = 0; i < sizeof(buf); ++i) {
                                 uint32_t off = base + i;
-                                buf[i] = (off < 0x800000u) ? rdram[off ^ 3] : 0;
+                                buf[i] = (off < (rs64_ram_top - 0x80000000u)) ? rdram[off ^ 3] : 0;
                             }
                             fwrite(buf, 1, sizeof(buf), f);
                             fclose(f);
@@ -568,7 +569,7 @@ public:
                 uint64_t op80_payloads[8] = {0};
                 int op80_count = 0;
                 for (int i = 0; i < 1024; ++i) {
-                    if (addr + 8u > 0x800000u) break;
+                    if (addr + 8u > (rs64_ram_top - 0x80000000u)) break;
                     uint8_t op = rdram[addr ^ 3];
                     hist[op]++;
                     total++;
@@ -620,7 +621,7 @@ public:
                     int dump_jumps = 16;
                     fprintf(stderr, "[opcode-hist #1 FULL DL DUMP] start=0x%08X\n", dl_phys);
                     for (int i = 0; i < 256; ++i) {
-                        if (a + 8u > 0x800000u) break;
+                        if (a + 8u > (rs64_ram_top - 0x80000000u)) break;
                         uint64_t w = 0;
                         for (int k = 0; k < 8; ++k) {
                             w = (w << 8) | rdram[(a + k) ^ 3];
@@ -843,12 +844,12 @@ public:
                 // version of this driver at iter 1255).
                 const uint32_t STATE_BASE = 0x128EAA;
                 const uint32_t COUNT_ADDR = 0x128EAD;
-                if (COUNT_ADDR < 0x800000) {
+                if (COUNT_ADDR < (rs64_ram_top - 0x80000000u)) {
                     uint8_t total = app->core.RDRAM[COUNT_ADDR ^ 3];
                     if (total > 0 && total <= 8) {
                         for (uint8_t i = 0; i < total; i++) {
                             uint32_t addr = STATE_BASE + i;
-                            if (addr >= 0x800000) continue;
+                            if (addr >= (rs64_ram_top - 0x80000000u)) continue;
                             uint8_t state = app->core.RDRAM[addr ^ 3];
                             switch (state) {
                                 case 4: app->core.RDRAM[addr ^ 3] = 5; break;  // PRESENTED → DISPLAYED
@@ -871,7 +872,7 @@ public:
                 // Globals from docs/game-architecture.md. RDRAM is little-endian
                 // word-swap relative to MIPS BE — use byte index ^ 3.
                 auto rb = [&](uint32_t addr) -> uint8_t {
-                    if (addr >= 0x800000) return 0;
+                    if (addr >= (rs64_ram_top - 0x80000000u)) return 0;
                     return app->core.RDRAM[addr ^ 3];
                 };
                 auto rw = [&](uint32_t addr) -> uint32_t {
@@ -903,10 +904,10 @@ public:
                         cineStatePtr, cineStage, curCutsceneFile,
                         changed ? " [CHANGED]" : "");
                     // Dump first 32 bytes of cutscene struct (filename field). Helps confirm WHICH cutscene.
-                    if (curCutsceneFile >= 0x80000000 && curCutsceneFile < 0x80800000) {
+                    if (curCutsceneFile >= 0x80000000 && curCutsceneFile < rs64_ram_top) {
                         uint32_t off = curCutsceneFile - 0x80000000;
                         fprintf(stderr, "  cutscene-filename: \"");
-                        for (int i = 0; i < 32 && (off + i) < 0x800000; i++) {
+                        for (int i = 0; i < 32 && (off + i) < (rs64_ram_top - 0x80000000u); i++) {
                             uint8_t b = app->core.RDRAM[(off + i) ^ 3];
                             if (b >= 0x20 && b < 0x7F) fputc(b, stderr);
                             else if (b == 0) break;
@@ -1000,7 +1001,7 @@ public:
                         std::vector<uint8_t> buf(512u * 2u * 260u);
                         for (uint32_t i = 0; i < buf.size(); i++) {
                             uint32_t off = org + i;
-                            buf[i] = (off < 0x800000u) ? rd[off ^ 3] : 0;
+                            buf[i] = (off < (rs64_ram_top - 0x80000000u)) ? rd[off ^ 3] : 0;
                         }
                         fwrite(buf.data(), 1, buf.size(), f);
                         fclose(f);
@@ -1026,7 +1027,7 @@ public:
                 // data there. If all zeros, VI is sampling an empty buffer.
                 uint32_t origin = vi->VI_ORIGIN_REG & 0x00FFFFFF;
                 uint32_t any_nonzero = 0;
-                if (app && app->core.RDRAM && origin > 0 && origin + 16 < 0x800000) {
+                if (app && app->core.RDRAM && origin > 0 && origin + 16 < (rs64_ram_top - 0x80000000u)) {
                     for (int i = 0; i < 16; i++) {
                         any_nonzero |= app->core.RDRAM[origin + i];
                     }

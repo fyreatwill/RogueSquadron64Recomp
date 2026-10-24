@@ -42067,3 +42067,6 @@ else:
 # s5668: N64Recomp lagging-label bug repair (audioCompandS16 returned +-0x7FFF for every input). Must run last.
 import subprocess as _sp5668
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_label_realign.py")), str(base)])
+
+# s6132 G1d: parameterise the 8 MB pointer-range guards (RS64_RAM_TOP). Must run after every other patch (they emit the literal).
+_sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_ramtop.py")), str(base)])

@@ -216,7 +216,7 @@ extern "C" void osDpGetCounters_recomp(uint8_t* rdram, recomp_context* ctx) {
     {
         const uint32_t lo = (uint32_t)buf_ptr;
         const bool sext = (int64_t)buf_ptr == (int64_t)(int32_t)lo;
-        if (!sext || lo < 0x80000000u || 32u > 0x00800000u - (lo - 0x80000000u)) {
+        if (!sext || lo < 0x80000000u || 32u > (rs64_ram_top - 0x80000000u) - (lo - 0x80000000u)) {
             static std::atomic<uint32_t> bad{0};
             if (bad++ < 8) fprintf(stderr, "[osDpGetCounters] wild buf 0x%llX ignored\n", (unsigned long long)buf_ptr);
             return;
@@ -424,7 +424,7 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     if (s_redirect) {
         const uint32_t phys = fb & 0x00FFFFFF;
         // Lo-res-fb signature: addresses 0x6BA000 / 0x6DD000 / 0x7DD000
-        // (under 0x800000, in the small-fb cluster). Hi-res scratch is at
+        // (under (rs64_ram_top - 0x80000000u), in the small-fb cluster). Hi-res scratch is at
         // 0x62B800 — leave that untouched; redirect anything else in the
         // "expected VI fb" range to the hi-res scratch.
         if ((phys == 0x6BA000) || (phys == 0x6DD000) || (phys == 0x7DD000)) {
@@ -469,8 +469,8 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
             const uint32_t scan = 320u * 224u * 2u;
             for (uint32_t i = 0; i < scan; i += 2) {
                 uint32_t off = phys + i;
-                uint8_t b0 = rdram[(off & 0x7FFFFFu) ^ 3];
-                uint8_t b1 = rdram[((off + 1) & 0x7FFFFFu) ^ 3];
+                uint8_t b0 = rdram[(off & 0xFFFFFFu) ^ 3];
+                uint8_t b1 = rdram[((off + 1) & 0xFFFFFFu) ^ 3];
                 if (b0 || b1) {
                     if (first_nz_off == 0xFFFFFFFFu) {
                         first_nz_off = i;
@@ -499,7 +499,7 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         const uint32_t phys = fb & 0x00FFFFFF;
         uint64_t h = 1469598103934665603ull;
         for (uint32_t i = 0; i < 320u * 224u * 2u; ++i) {
-            h = (h ^ rdram[((phys + i) & 0x7FFFFFu) ^ 3]) * 1099511628211ull;
+            h = (h ^ rdram[((phys + i) & 0xFFFFFFu) ^ 3]) * 1099511628211ull;
         }
         fprintf(stderr, "[fbhash #%d] fb=0x%08X h=%016llx\n", n, fb, (unsigned long long)h);
     }
@@ -586,7 +586,7 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         // s5080: computeGridLayerScrollOffset (0x800455C8) lerps on x = *(*(0x80138D1C)+0x50)
         // between thresholds 0x130C5C/60 into outputs 0x130C54/58 -> 0x9DEAC.
         const uint32_t optr = w(0x138D1C);
-        const uint32_t oph = optr & 0x7FFFFF;
+        const uint32_t oph = optr & 0xFFFFFFu;
         const bool ok = (optr >> 28) == 8 && oph < 0x7FFFA0;
         fprintf(stderr, "[watch2 #%d] objptr=%08X x50=%08X obj48..58=%08X %08X %08X %08X %08X thrA=%08X thrB=%08X y0=%08X y1=%08X acc40=%08X\n",
                 n, optr, ok ? w(oph + 0x50) : 0u, ok ? w(oph + 0x48) : 0u, ok ? w(oph + 0x4C) : 0u,
@@ -607,8 +607,8 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
             if (name[0]) {
                 std::string out = std::string(s_snap_dir) + "/" + name + ".bin";
                 if (FILE* o = fopen(out.c_str(), "wb")) {
-                    std::vector<uint8_t> buf(0x800000);
-                    for (uint32_t i = 0; i < 0x800000; ++i) buf[i] = rdram[i ^ 3];
+                    std::vector<uint8_t> buf((rs64_ram_top - 0x80000000u));
+                    for (uint32_t i = 0; i < (rs64_ram_top - 0x80000000u); ++i) buf[i] = rdram[i ^ 3];
                     fwrite(buf.data(), 1, buf.size(), o);
                     fclose(o);
                     fprintf(stderr, "[rdram-snap] %s n=%d\n", name, n);
@@ -648,7 +648,7 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
     auto read_u32 = [&](uint32_t off) -> uint32_t {
         uint32_t v = 0;
         for (int i = 0; i < 4; ++i) {
-            v = (v << 8) | rdram[((rdram_off + off + i) & 0x7FFFFFu) ^ 3];
+            v = (v << 8) | rdram[((rdram_off + off + i) & 0xFFFFFFu) ^ 3];
         }
         return v;
     };
@@ -672,7 +672,7 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
     fflush(stderr);
     {
         auto guest_u8 = [rdram](uint32_t guest) -> uint32_t {
-            if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFu;
+            if (guest < 0x80000000u || guest >= rs64_ram_top) return 0xFFu;
             return rdram[(guest - 0x80000000u) ^ 3u];
         };
         auto guest_u32 = [&guest_u8](uint32_t guest) -> uint32_t {
@@ -718,14 +718,14 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
         static const uint32_t fbw = [] { const char* e = std::getenv("ROGUESQ_FB_WIDTH"); return (e && *e) ? (uint32_t)std::atoi(e) : 0u; }();
         if (fbw > 0 && width == 512u) {
             auto write_u32 = [&](uint32_t off, uint32_t v) {
-                for (int i = 0; i < 4; ++i) rdram[((rdram_off + off + i) & 0x7FFFFFu) ^ 3] = (uint8_t)(v >> (24 - 8 * i));
+                for (int i = 0; i < 4; ++i) rdram[((rdram_off + off + i) & 0xFFFFFFu) ^ 3] = (uint8_t)(v >> (24 - 8 * i));
             };
             const uint32_t nx = (uint32_t)((uint64_t)xScale * fbw / 512u);
             write_u32(0x08, fbw);
             write_u32(0x20, nx);
             // s6117: fldRegs[0/1].origin (+0x28/+0x3C) is the second-field line offset = width*2 bytes; scale it with the width (else VI origin = fb+0x400 misses the 683-wide colour image).
             for (uint32_t off : {0x28u, 0x3Cu}) {
-                uint32_t o = 0; for (int i = 0; i < 4; ++i) o = (o << 8) | rdram[((rdram_off + off + i) & 0x7FFFFFu) ^ 3];
+                uint32_t o = 0; for (int i = 0; i < 4; ++i) o = (o << 8) | rdram[((rdram_off + off + i) & 0xFFFFFFu) ^ 3];
                 if (o) { write_u32(off, (uint32_t)((uint64_t)o * fbw / 512u)); fprintf(stderr, "[fbw] fld origin +0x%X %u->%u\n", off, o, (uint32_t)((uint64_t)o * fbw / 512u)); }
             }
             fprintf(stderr, "[fbw] osViSetMode mode_ptr=0x%08X width %u->%u xScale 0x%X->0x%X\n", mode_ptr, width, fbw, xScale, nx);
@@ -1132,7 +1132,7 @@ static thread_local uint32_t g_rs64_m5_route_state_call_ordinal = 0xFFFFFFFFu;
 static thread_local uint32_t g_rs64_m5_route_state_entry_a1 = 0xFFFFFFFFu;
 static thread_local uint32_t g_rs64_m5_route_state_audio_nonzero = 2u;
 static uint32_t rs64_m5_route_state_guest_byte(uint8_t* rdram, uint32_t guest) {
-    if (rdram == nullptr || guest < 0x80000000u || guest >= 0x80800000u) {
+    if (rdram == nullptr || guest < 0x80000000u || guest >= rs64_ram_top) {
         return 0xFFFFFFFFu;
     }
     return rdram[(guest - 0x80000000u) ^ 3u];
@@ -1741,7 +1741,7 @@ extern "C" void rs64_s4230_poll_start(uint8_t* rdram) {
         // so a new head gets itself plus 4 more polls, and later word changes are at most 8 snapshots
         // >=200 ms apart. Guest pc is not logged on those lines: it is not the store.
         std::thread([rdram] {
-            const auto W = [rdram](uint32_t g) -> uint32_t { g &= 0x1FFFFFFFu; return g < 0x800000u ? *(volatile uint32_t*)(rdram + (g & ~3u)) : 0u; };
+            const auto W = [rdram](uint32_t g) -> uint32_t { g &= 0x1FFFFFFFu; return g < (rs64_ram_top - 0x80000000u) ? *(volatile uint32_t*)(rdram + (g & ~3u)) : 0u; };
             const auto in = [](uint32_t v) { return v >= 0x8017D000u && v < 0x80188000u; };
             const auto freed = [](uint32_t v) { return v >= 0x8017D910u && v < 0x80189340u; };
             unsigned long ticks = 0; int hits = 0; int snaps = 0; int repeat_snaps = 0; bool cap_logged = false;
@@ -1770,7 +1770,7 @@ extern "C" void rs64_s4230_poll_start(uint8_t* rdram) {
                     uint32_t head = W(heads[l]);
                     if (freed(head)) in_freed = true;
                     uint32_t n = head, len = 0, sig = head;
-                    while (n >= 0x80000000u && n < 0x80800000u && len < 2100) {
+                    while (n >= 0x80000000u && n < rs64_ram_top && len < 2100) {
                         len++;
                         uint32_t words[6];
                         for (uint32_t k = 0; k < 6; k++) words[k] = W(n + k * 4);
@@ -1839,7 +1839,7 @@ extern "C" void rs64_s4230_poll_start(uint8_t* rdram) {
                     }
                 }
                 const uint32_t vb = W(0x1496F8u); const uint32_t vc = (W(0x149700u) >> 16) & 0xFFFFu;
-                if (vb >= 0x80000000u && vb < 0x80800000u && vc && vc < 512) {
+                if (vb >= 0x80000000u && vb < rs64_ram_top && vc && vc < 512) {
                     for (uint32_t o = 0; o < vc * 0x40u && o < 0x8000u; o += 4) { uint32_t v = W(vb + o); if (in(v) && hits < 40) { hits++; std::fprintf(stderr, "[s4526-P] VOICE-IN-RANGE base=%08X cnt=%u off=%04X word=%08X t=%lu pc=%08X width=%u\n", vb, vc, o, v, ticks, (unsigned)g_rs64_last_guest_pc, rs64_vi_committed_width()); } }
                 }
                 ticks++; if ((ticks % 400) == 0) std::fprintf(stderr, "[s4526-P] alive ticks=%lu len0=%u len1=%u voicebase=%08X cnt=%u\n", ticks, lastlen[0], lastlen[1], vb, vc);
@@ -2357,10 +2357,10 @@ extern "C" int rs64_s5037_copy_guard(uint8_t* rdram, uint32_t dst, uint32_t src,
     if (off || !rdram || len == 0) return 0;
     auto span_ok = [len](uint32_t a) {
         uint32_t p = a & 0x1FFFFFFFu;
-        bool seg = (a < 0x00800000u) || (a >= 0x80000000u && a < 0x80800000u) || (a >= 0xA0000000u && a < 0xA0800000u);
-        return seg && (uint64_t)p + len <= 0x800000u;
+        bool seg = (a < (rs64_ram_top - 0x80000000u)) || (a >= 0x80000000u && a < rs64_ram_top) || (a >= 0xA0000000u && a < (rs64_ram_top + 0x20000000u));
+        return seg && (uint64_t)p + len <= (rs64_ram_top - 0x80000000u);
     };
-    bool bad = len > 0x800000u || !span_ok(dst) || !span_ok(src);
+    bool bad = len > (rs64_ram_top - 0x80000000u) || !span_ok(dst) || !span_ok(src);
     static int shown = 0; static unsigned long viol = 0;
     if (force) bad = true;
     if (!bad) return 0;
@@ -2461,7 +2461,7 @@ extern "C" void rs64_s6094_tick(uint8_t* rdram, uint32_t nbm, uint32_t basem) { 
     auto rd = [&](uint32_t g) -> uint32_t { if (g < 0x80000000u || g >= 0x90000000u || (g & 3u)) return 0u; const uint8_t* q = rdram + (int64_t)(int32_t)g; return ((uint32_t)q[0 ^ 3] << 24) | ((uint32_t)q[1 ^ 3] << 16) | ((uint32_t)q[2 ^ 3] << 8) | (uint32_t)q[3 ^ 3]; };
     uint32_t nb = nbm, base = basem;
     unsigned long hi8 = 0, ne = 0, a0 = 0, an = 0, sum = 0; unsigned mx = 0;
-    for (uint32_t i = 0; i < nb && i < 16384; ++i) { uint32_t n = rd(base + 4 * i); int len = 0; while (n && len++ < 4096) { unsigned a = rd(n + 8) >> 16; ++ne; if (n >= 0x80800000u) ++hi8; if (a) ++an; else ++a0; sum += a; if (a > mx) mx = a; n = rd(n); } }
+    for (uint32_t i = 0; i < nb && i < 16384; ++i) { uint32_t n = rd(base + 4 * i); int len = 0; while (n && len++ < 4096) { unsigned a = rd(n + 8) >> 16; ++ne; if (n >= rs64_ram_top) ++hi8; if (a) ++an; else ++a0; sum += a; if (a > mx) mx = a; n = rd(n); } }
     std::fprintf(stderr, "[bucketlog] s6095 visit=%lu agestore=%lu expire=%lu advance=%lu skip=%lu top=%lu\n", s_s6093_cnt[2], s_s6093_cnt[3], s_s6093_cnt[4], s_s6093_cnt[5], s_s6093_cnt[6], s_s6093_cnt[7]);
     std::fprintf(stderr, "[bucketlog] s6094 tick#%lu nb=%u base=%08X ent=%lu age0=%lu agenz=%lu sumage=%lu maxage=%u nodes_ge_8MB=%lu\n", nt, nb, base, ne, a0, an, sum, mx, hi8);
 }
@@ -2477,7 +2477,7 @@ extern "C" void rs64_s6088_fuse(uint8_t* rdram, uint32_t ret, uint32_t ra, uint3
     bool want = (!ret && nzero <= 3) || ncall == 1 || (ncall & 4095u) == 0;
     if (!want || dumps >= 40) return;
     ++dumps;
-    auto rd = [&](uint32_t g) -> uint32_t { if (g < 0x80000000u || g >= 0x80800000u || (g & 3u)) return 0u; const uint8_t* q = rdram + (int64_t)(int32_t)g; return ((uint32_t)q[0 ^ 3] << 24) | ((uint32_t)q[1 ^ 3] << 16) | ((uint32_t)q[2 ^ 3] << 8) | q[3 ^ 3]; };
+    auto rd = [&](uint32_t g) -> uint32_t { if (g < 0x80000000u || g >= rs64_ram_top || (g & 3u)) return 0u; const uint8_t* q = rdram + (int64_t)(int32_t)g; return ((uint32_t)q[0 ^ 3] << 24) | ((uint32_t)q[1 ^ 3] << 16) | ((uint32_t)q[2 ^ 3] << 8) | q[3 ^ 3]; };
     uint32_t nb = gcount, base = gbase;
     std::fprintf(stderr, "[bucketlog] raw: macro count=%u base=%08X cache=%08X | s5042_rd count=%u base=%08X cache=%08X\n", gcount, gbase, gcache, rd(0x8012EEF0u) >> 16, rd(0x8012F000u), rd(0x801163B0u));
     unsigned long totc = 0, nz = 0, nent = 0, a0n = 0, a1n = 0, a2n = 0, maxlen = 0; unsigned maxage = 0; char buf[512]; int o = 0; /* s6092: scan ALL buckets + age histogram */
@@ -2500,7 +2500,7 @@ extern "C" void rs64_s6086_arm(uint32_t o, uint32_t n) {
 extern "C" uint32_t rs64_s6086_divert(uint32_t req) {
     if (!s_s6086_expect || req != s_s6086_expect) return 0;
     s_s6086_expect = 0;
-    uint32_t p = 0x80800000u + s_s6086_bump; s_s6086_bump += (req + 15u) & ~15u;
+    uint32_t p = rs64_ram_top + s_s6086_bump; s_s6086_bump += (req + 15u) & ~15u;
     std::fprintf(stderr, "[bigarena] pool req=0x%X -> %08X\n", req, p);
     return p;
 }
@@ -2519,13 +2519,13 @@ static void s6127_walk(uint32_t req, bool ok) {  /* s6127: walk both guest heaps
         uint32_t head = s5042_rd(rd, (h ? 0x8010FF18u : 0x8010FF00u) - 0x80000000u);
         uint64_t freeb = 0, usedb = 0; uint32_t nfree = 0, nused = 0, big[5] = {0,0,0,0,0}; uint32_t a = head, first = head, last = 0; int guard = 0; struct UB { uint32_t sz, addr, tag; } ub[10] = {}; /* s6128: top used blocks */
         if (!ok) std::fprintf(stderr, "[heapwalk] heap%d ptr-slot=%08X (0x8010FEFC=%08X 0x80110018=%08X)\n", h, head, s5042_rd(rd, 0x10FF00u), s5042_rd(rd, 0x10FF18u));
-        if (head < 0x80000000u || head >= 0x80800000u) { std::fprintf(stderr, "[heapwalk] heap%d head=%08X (out of range)\n", h, head); continue; }
-        while (a >= 0x80000000u && a < 0x80800000u && guard++ < 200000) {
+        if (head < 0x80000000u || head >= rs64_ram_top) { std::fprintf(stderr, "[heapwalk] heap%d head=%08X (out of range)\n", h, head); continue; }
+        while (a >= 0x80000000u && a < rs64_ram_top && guard++ < 200000) {
             uint32_t w0 = s5042_rd(rd, a - 0x80000000u), sz = s5042_rd(rd, a - 0x80000000u + 4); uint16_t fl = w0 >> 16;
             last = a; if (guard <= 12 && !ok) std::fprintf(stderr, "[heapwalk]   h%d blk@%08X w0=%08X size=%08X\n", h, a, w0, sz);
             if (fl & 1) { ++nfree; freeb += sz; for (int i = 0; i < 5; ++i) if (sz > big[i]) { for (int j = 4; j > i; --j) big[j] = big[j-1]; big[i] = sz; break; } } else { ++nused; usedb += sz; for (int i = 0; i < 10; ++i) if (sz > ub[i].sz) { for (int j = 9; j > i; --j) ub[j] = ub[j-1]; ub[i] = { sz, a, (uint32_t)(w0 & 0xFFFFu) }; break; } }
             if (fl & 8) break;
-            if (sz == 0 || sz > 0x800000u) { std::fprintf(stderr, "[heapwalk] heap%d BAD size %08X at %08X fl=%04X\n", h, sz, a, fl); break; }
+            if (sz == 0 || sz > (rs64_ram_top - 0x80000000u)) { std::fprintf(stderr, "[heapwalk] heap%d BAD size %08X at %08X fl=%04X\n", h, sz, a, fl); break; }
             a = a + 0x10 + sz;
         }
         if (h == 1) { std::fprintf(stderr, "[heapwalk-top]%s used>=:", ok ? "(1000ok)" : ""); for (int i = 0; i < 10; ++i) if (ub[i].sz) std::fprintf(stderr, " %X@%08X/t%X", ub[i].sz, ub[i].addr, ub[i].tag); std::fprintf(stderr, "\n"); }
@@ -2537,21 +2537,21 @@ static void s6129_dump(const char* why, uint32_t from) {  /* s6129: list every m
     uint8_t* rd = g_s6127_rd; if (!rd) return;
     uint32_t a = s5042_rd(rd, 0x10FF00u); int g = 0, shown = 0; uint32_t endsent = s5042_rd(rd, 0x10FF00u);
     std::fprintf(stderr, "[s6129] %s head=%08X slotE8=%08X top-ptrs 63D8=%08X 63DC=%08X 63E0=%08X 63E4=%08X 63F8=%08X\n", why, endsent, s5042_rd(rd, 0x10FF18u), s5042_rd(rd, 0x1163D8u), s5042_rd(rd, 0x1163DCu), s5042_rd(rd, 0x1163E0u), s5042_rd(rd, 0x1163E4u), s5042_rd(rd, 0x1163F8u));
-    while (a >= 0x80000000u && a < 0x80800000u && g++ < 200000) {
+    while (a >= 0x80000000u && a < rs64_ram_top && g++ < 200000) {
         uint32_t w0 = s5042_rd(rd, a - 0x80000000u), sz = s5042_rd(rd, a - 0x80000000u + 4); uint16_t fl = w0 >> 16;
         if (a >= from && shown < 48) { ++shown; std::fprintf(stderr, "[s6129]   blk@%08X fl=%04X tag=%04X size=%X\n", a, fl, w0 & 0xFFFF, sz); }
-        if ((fl & 8) || sz == 0 || sz > 0x800000u) { std::fprintf(stderr, "[s6129]   END blk@%08X fl=%04X size=%X (nblk walked=%d)\n", a, fl, sz, g); break; }
+        if ((fl & 8) || sz == 0 || sz > (rs64_ram_top - 0x80000000u)) { std::fprintf(stderr, "[s6129]   END blk@%08X fl=%04X size=%X (nblk walked=%d)\n", a, fl, sz, g); break; }
         a += 0x10 + sz;
     }
 }
 extern "C" void rs64_s5042_poison(uint8_t* rdram, uint32_t ptr, uint32_t ra) {
     g_s6127_rd = rdram; /* s6127: stash rdram for the NULL-path freelist walk */
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_FREE_POISON"); return e && e[0] && e[0] != '0'; }();
-    if (!on || ptr < 0x80000010u || ptr >= 0x80800000u || (ptr & 3u)) return;
+    if (!on || ptr < 0x80000010u || ptr >= rs64_ram_top || (ptr & 3u)) return;
     static unsigned long npoison = 0, nskip = 0, nverify_bad = 0; static int shown = 0;
     uint32_t off = ptr - 0x80000000u;
     uint32_t sz = s5042_rd(rdram, off - 0x10 + 4);
-    if (sz < 0x20 || sz > 0x700000u || off + 16 > 0x800000u) { ++nskip; if (shown < 8) { ++shown; std::fprintf(stderr, "[s5042-poison] SKIP ptr=%08X sz=%08X ra=%08X\n", ptr, sz, ra); } return; }
+    if (sz < 0x20 || sz > 0x700000u || off + 16 > (rs64_ram_top - 0x80000000u)) { ++nskip; if (shown < 8) { ++shown; std::fprintf(stderr, "[s5042-poison] SKIP ptr=%08X sz=%08X ra=%08X\n", ptr, sz, ra); } return; }
     for (uint32_t i = 0; i < 16; i += 4) { uint32_t v = 0xDEADBEEFu; for (int k = 0; k < 4; k++) rdram[(off + i + k) ^ 3u] = (uint8_t)(v >> (24 - 8 * k)); }
     bool ok = s5042_rd(rdram, off) == 0xDEADBEEFu && s5042_rd(rdram, off + 12) == 0xDEADBEEFu;
     if (!ok) ++nverify_bad;
@@ -2813,7 +2813,7 @@ extern "C" void rs64_m5_producer_mark_handoff(uint8_t* rdram, uint32_t edge,
     if (key != next_key) { key = next_key; rows = 0; }
     if (rows++ >= 512u) return;
     const auto byte = [rdram](uint32_t guest) -> uint32_t {
-        if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFu;
+        if (guest < 0x80000000u || guest >= rs64_ram_top) return 0xFFu;
         return rdram[(guest - 0x80000000u) ^ 3u];
     };
     const auto word = [&byte](uint32_t guest) -> uint32_t {
@@ -2981,10 +2981,10 @@ extern "C" void zmemcpy(uint8_t* rdram, recomp_context* ctx) {
     uint64_t src_full  = (uint64_t)ctx->r5;
     uint64_t len_full  = (uint64_t)ctx->r6;
     constexpr uint64_t KSEG0_BASE = 0xFFFFFFFF80000000ull;
-    constexpr uint64_t KSEG0_END  = 0xFFFFFFFF80800000ull;
+    const uint64_t KSEG0_END  = 0xFFFFFFFF00000000ull + rs64_ram_top;
     constexpr uint32_t KSEG0_BASE_LO = 0x80000000u;
-    constexpr uint32_t KSEG0_END_LO  = 0x80800000u;
-    auto in_range = [](uint64_t addr_full, uint64_t n) {
+    const uint32_t KSEG0_END_LO  = rs64_ram_top;
+    auto in_range = [&](uint64_t addr_full, uint64_t n) {
         // Accept either sign-extended (0xFFFFFFFF80...) or zero-extended (0x80...)
         // as long as it lands within the 8MB rdram region.
         if (addr_full >= KSEG0_BASE && addr_full + n <= KSEG0_END) return true;
@@ -3385,7 +3385,7 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
                 (unsigned)task->t.ucode,
                 (unsigned)task->t.ucode_size);
             uint32_t dp = (uint32_t)task->t.data_ptr;
-            if (task->t.type == M_GFXTASK && dp >= 0x80000000u && dp < 0x80800000u) {
+            if (task->t.type == M_GFXTASK && dp >= 0x80000000u && dp < rs64_ram_top) {
                 uint32_t off = dp - 0x80000000u;
                 fprintf(stderr, "  data_ptr[0..32]:");
                 for (int i = 0; i < 32; ++i) {
@@ -3402,7 +3402,7 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
         OSTask* task = TO_PTR(OSTask, ctx->r4);
         uint32_t dp = (uint32_t)task->t.data_ptr;
         if (dir && *dir && task->t.type == M_GFXTASK && dp >= 0x80000000u &&
-            dp + 0x4000u <= 0x80800000u) {
+            dp + 0x4000u <= rs64_ram_top) {
             static uint32_t seen_w[8];
             static int seen_n[8];
             static int nw = 0;
@@ -3422,7 +3422,7 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
                     for (uint32_t o = 0; o < 0x100u; o += 8) {
                         uint32_t w0 = 0, w1 = 0;
                         for (int j = 0; j < 4; ++j) { w0 = (w0 << 8) | rdram[(off + o + j) ^ 3]; w1 = (w1 << 8) | rdram[(off + o + 4 + j) ^ 3]; }
-                        if ((w0 >> 24) == 6 && (w1 >> 24) == 0x80 && (w1 & 0x1FFFFFFFu) + 0x1000u <= 0x800000u) {
+                        if ((w0 >> 24) == 6 && (w1 >> 24) == 0x80 && (w1 & 0x1FFFFFFFu) + 0x1000u <= (rs64_ram_top - 0x80000000u)) {
                             uint32_t co = w1 & 0x1FFFFFFFu;
                             char cp[512];
                             std::snprintf(cp, sizeof cp, "%s/port_w%u_%d_c%02d.bin", dir, width, seen_n[idx] - 1, c++);
@@ -3437,7 +3437,7 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
                                     uint32_t v0 = rd32(co + q), v1 = rd32(co + q + 4);
                                     uint32_t op = v0 >> 24, db = v1 & 0x1FFFFFFFu;
                                     q += 8;
-                                    if ((op == 1 || op == 2 || op == 4 || op == 0xFD) && (v1 >> 24) == 0x80 && db + 0x400u <= 0x800000u) {
+                                    if ((op == 1 || op == 2 || op == 4 || op == 0xFD) && (v1 >> 24) == 0x80 && db + 0x400u <= (rs64_ram_top - 0x80000000u)) {
                                         char dp2[512];
                                         std::snprintf(dp2, sizeof dp2, "%s/port_w%u_%d_c%02d_d%02u_op%02x.bin", dir, width, seen_n[idx] - 1, c - 1, dn++, op);
                                         if (FILE* df = std::fopen(dp2, "wb")) {
@@ -3755,7 +3755,7 @@ static void recv_trace_exit(uint32_t mq, int32_t flag, uint64_t tid, int32_t res
 static void recv_trace_scheduler_type(uint8_t* rdram, uint32_t msg_addr,
                                       int32_t result) {
     if (!recv_trace_enabled() || result != 0 || msg_addr < 0x80000000u ||
-        msg_addr >= 0x80800000u) return;
+        msg_addr >= rs64_ram_top) return;
     static std::atomic<uint32_t> rows{0};
     const uint32_t row = rows.fetch_add(1, std::memory_order_relaxed);
     if (row >= 256u) return;
@@ -3778,7 +3778,7 @@ extern "C" void rs64_m5_scheduler_recv_identity(uint8_t* rdram, uint32_t pc,
                                                    uint32_t output_slot,
                                                    uint32_t result) {
     if (!recv_trace_enabled() || result != 0 || rdram == nullptr) return;
-    if (output_slot < 0x80000000u || output_slot >= 0x80800000u) return;
+    if (output_slot < 0x80000000u || output_slot >= rs64_ram_top) return;
     const uint32_t slot_phys = output_slot - 0x80000000u;
     const uint32_t msg_addr =
         (static_cast<uint32_t>(rdram[slot_phys ^ 3u]) << 24) |
@@ -3786,7 +3786,7 @@ extern "C" void rs64_m5_scheduler_recv_identity(uint8_t* rdram, uint32_t pc,
         (static_cast<uint32_t>(rdram[(slot_phys + 2u) ^ 3u]) << 8) |
         static_cast<uint32_t>(rdram[(slot_phys + 3u) ^ 3u]);
     unsigned type = 0xFFu;
-    if (msg_addr >= 0x80000000u && msg_addr < 0x80800000u) {
+    if (msg_addr >= 0x80000000u && msg_addr < rs64_ram_top) {
         type = rdram[(msg_addr - 0x80000000u) ^ 3u];
     }
     static std::atomic<uint32_t> bucket{0xFFFFFFFFu};
@@ -3799,7 +3799,7 @@ extern "C" void rs64_m5_scheduler_recv_identity(uint8_t* rdram, uint32_t pc,
     const uint32_t row = rows.fetch_add(1, std::memory_order_relaxed);
     if (row >= 256u) return;
     auto be_u8 = [rdram](uint32_t guest) -> unsigned {
-        if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFu;
+        if (guest < 0x80000000u || guest >= rs64_ram_top) return 0xFFu;
         return rdram[(guest - 0x80000000u) ^ 3u];
     };
     std::fprintf(stderr,
@@ -4062,7 +4062,7 @@ extern "C" void rs64_m5_output_state_fields(uint8_t* rdram,
         return rs64_rdram_u32(rdram, p);
     };
     auto byte = [rdram](uint32_t guest) -> uint32_t {
-        if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
+        if (guest < 0x80000000u || guest >= rs64_ram_top) return 0xFFFFFFFFu;
         return rdram[(guest - 0x80000000u) ^ 3u];
     };
     std::fprintf(stderr,
@@ -5218,7 +5218,7 @@ static void rs64_m5_frequency_producer(uint8_t* rdram, recomp_context* ctx,
         return rs64_rdram_u32(rdram, p);
     };
     auto byte = [rdram](uint32_t guest) -> uint32_t {
-        if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
+        if (guest < 0x80000000u || guest >= rs64_ram_top) return 0xFFFFFFFFu;
         return rdram[(guest - 0x80000000u) ^ 3u];
     };
     static std::atomic<uint32_t> send_seq{0};
@@ -5482,7 +5482,7 @@ static void s5038_mq_census(uint8_t* rdram, uint32_t mq, uint32_t ra, const char
     static std::atomic<unsigned long> calls{0}, viol{0}; static std::atomic<int> shown_k[4]{}; /* s5040: per-kind log budget */
     const int ki = kind[0] == 'j' ? 0 : kind[0] == 's' && kind[1] == 'e' ? 1 : kind[0] == 's' ? 2 : 3;
     ++calls;
-    auto kseg0 = [](uint32_t a, uint32_t n) { return a >= 0x80000000u && (uint64_t)(a - 0x80000000u) + n <= 0x800000u; };
+    auto kseg0 = [](uint32_t a, uint32_t n) { return a >= 0x80000000u && (uint64_t)(a - 0x80000000u) + n <= (rs64_ram_top - 0x80000000u); };
     bool bad = !kseg0(mq, sizeof(OSMesgQueue)) || (mq & 3u);
     int32_t mc = 0, vcnt = 0, first = 0; uint32_t msg = 0;
     if (!bad) {
@@ -5589,7 +5589,7 @@ static void rs64_m5_frequency_contract(uint8_t* rdram, recomp_context* ctx) {
         return rs64_rdram_u32(rdram, p);
     };
     auto byte = [rdram](uint32_t guest) -> uint32_t {
-        if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
+        if (guest < 0x80000000u || guest >= rs64_ram_top) return 0xFFFFFFFFu;
         return rdram[(guest - 0x80000000u) ^ 3u];
     };
     const uint32_t source_word = word(s0 + 0x60u);
@@ -5631,7 +5631,7 @@ extern "C" void rs64_m5_frequency_caller(uint8_t* rdram, recomp_context* ctx,
         return rs64_rdram_u32(rdram, p);
     };
     auto byte = [](uint8_t* rdram, uint32_t guest) -> uint32_t {
-        if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
+        if (guest < 0x80000000u || guest >= rs64_ram_top) return 0xFFFFFFFFu;
         return rdram[(guest - 0x80000000u) ^ 3u];
     };
     std::fprintf(stderr,
@@ -5782,6 +5782,7 @@ extern "C" void osStopThread_recomp(uint8_t* rdram, recomp_context* ctx) {
 // One [s4899-vi] row is flushed per update_screen with counts and the ordered event string.
 #include <mutex>
 #include <string>
+extern "C" uint32_t rs64_ram_top; // s6132
 namespace {
 struct S4899 { std::mutex m; unsigned cnt[128] = {}; std::string order; unsigned swR = 0, swS = 0, swn = 0; uint32_t lastfb = ~0u; double tR1 = -1, tR2 = -1, tlast = 0, tB = -1, tD = -1; unsigned nB = 0, nD = 0; }; // s4903
 static double s4902_ms() { using C = std::chrono::steady_clock; return std::chrono::duration<double, std::milli>(C::now().time_since_epoch()).count(); } // s4902
@@ -5835,7 +5836,7 @@ extern "C" void rs64_audioloop_witness(uint8_t* rdram, recomp_context* ctx,
     const uint32_t n = counts[stage][phase]++;
     if (n >= 12u && (n & 255u) != 0u) return;
     auto byte = [](uint8_t* rdram, uint32_t guest) -> uint32_t {
-        if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
+        if (guest < 0x80000000u || guest >= rs64_ram_top) return 0xFFFFFFFFu;
         return rdram[(guest - 0x80000000u) ^ 3u];
     };
     const uint32_t msg = U32(ctx->r29) + 0x10u;
