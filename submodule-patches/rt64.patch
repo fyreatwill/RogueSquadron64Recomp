@@ -1422,7 +1422,7 @@ index 873883d..c2a00bb 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_framebuffer_manager.cpp b/src/hle/rt64_framebuffer_manager.cpp
-index 7d385fa..994b968 100644
+index 7d385fa..17bbcfc 100644
 --- a/src/hle/rt64_framebuffer_manager.cpp
 +++ b/src/hle/rt64_framebuffer_manager.cpp
 @@ -6,6 +6,10 @@
@@ -1669,7 +1669,30 @@ index 7d385fa..994b968 100644
  
          while (descriptorReinterpretSetsCount >= descriptorReinterpretSets.size()) {
              descriptorReinterpretSets.emplace_back();
-@@ -797,6 +964,41 @@ namespace RT64 {
+@@ -396,9 +563,19 @@ namespace RT64 {
+         // If the starting address is lower than the framebuffer address, we move a row one by one according to the stride specified of the original image width.
+         uint32_t tileRowStart = 0;
+         uint32_t fbStride = fb->imageRowBytes(fb->width);
+-        while (addressStart < fb->addressStart) {
+-            addressStart += fbStride;
+-            tileRowStart++;
++        // s6136: closed form. The original per-row loop spun for seconds (12 MB: tile address far below fb, tiny stride) and hangs forever on stride 0.
++        if (addressStart < fb->addressStart) {
++            static int s_logged = 0;
++            if (s_logged < 20 && getenv("ROGUESQ_LOG_FBTILE")) {
++                s_logged++;
++                fprintf(stderr, "[fbtile] addrStart=0x%x end=0x%x fbStart=0x%x fbEnd=0x%x stride=%u fbw=%u siz=%u\n", addressStart, addressEnd, fb->addressStart, fb->addressEnd, fbStride, (unsigned)fb->width, (unsigned)fb->siz);
++            }
++            if (fbStride == 0) {
++                return false;
++            }
++            const uint32_t rows = (fb->addressStart - addressStart + fbStride - 1) / fbStride;
++            addressStart += rows * fbStride;
++            tileRowStart += rows;
+         }
+ 
+         // We went over the allowed address range, a tile copy is impossible.
+@@ -797,6 +974,41 @@ namespace RT64 {
          assert(RDRAM != nullptr);
  
          differentFbs.clear();
