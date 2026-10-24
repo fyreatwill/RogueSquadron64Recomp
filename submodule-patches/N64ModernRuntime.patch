@@ -1515,7 +1515,7 @@ index 944e9fe..72c5fcd 100644
      std::unique_ptr<char[]> to_print = std::make_unique<char[]>(size + 1);
  
 diff --git a/librecomp/src/recomp.cpp b/librecomp/src/recomp.cpp
-index 4276b7d..2204ec9 100644
+index 4276b7d..4066c2c 100644
 --- a/librecomp/src/recomp.cpp
 +++ b/librecomp/src/recomp.cpp
 @@ -398,7 +398,7 @@ recomp::RomValidationError recomp::select_rom(const std::filesystem::path& rom_p
@@ -1556,7 +1556,7 @@ index 4276b7d..2204ec9 100644
 +    {   // s6114 G1d: ROGUESQ_OSMEM_MB=<n> tells the game it has n MB (n<=16 keeps everything below the RSP-visible 24-bit span).
 +        const char* e = std::getenv("ROGUESQ_OSMEM_MB");
 +        int mb = (e && *e) ? std::atoi(e) : 8;
-+        if (mb < 4 || mb > 8) mb = 8; // >8 MB crashes RT64 (rdram capped at 8 MB, s6114)
++        if (mb < 4 || mb > 16) mb = 8; // s6130: allow up to 16 MB (24-bit RSP span); s6114 saw RT64 abort >8 MB
 +        MEM_W(osMemSize, 0) = mb * 1024 * 1024;
 +    }
  }

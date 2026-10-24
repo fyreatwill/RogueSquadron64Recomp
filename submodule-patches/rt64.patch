@@ -1413,7 +1413,7 @@ index 873883d..c2a00bb 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_framebuffer_manager.cpp b/src/hle/rt64_framebuffer_manager.cpp
-index 7d385fa..12257ac 100644
+index 7d385fa..994b968 100644
 --- a/src/hle/rt64_framebuffer_manager.cpp
 +++ b/src/hle/rt64_framebuffer_manager.cpp
 @@ -6,6 +6,10 @@
@@ -1457,7 +1457,7 @@ index 7d385fa..12257ac 100644
 +        // Two TLS dummies: fullSync get()s color then depth; a single TLS object
 +        // aliases both pointers and corrupts height for copyRenderTargetToNative.
 +        static constexpr uint32_t kMaxSaneFbWidth = 1280u;
-+        static constexpr uint32_t kRdramBytes = 0x800000u;
++        static constexpr uint32_t kRdramBytes = 0x1000000u; // s6130: 16 MB
 +        const uint32_t rowBytes = (width != 0 && siz <= 3)
 +            ? (uint32_t)((uint64_t)width << siz >> 1) : 0u;
 +        const uint64_t rangeEnd = (rowBytes != 0 && height != 0)
@@ -3223,7 +3223,7 @@ index f17db9b..7fb6721 100644
          }
  
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index d1a9f4e..f65be03 100644
+index d1a9f4e..629dbae 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -4,10 +4,20 @@
@@ -3639,7 +3639,7 @@ index d1a9f4e..f65be03 100644
 +        // Mask reads into the 8MB RDRAM window. Factor 5's LLE-recompiled ucode can
 +        // emit texture addresses outside RDRAM; hardware wraps, so mask instead of
 +        // faulting on the host.
-+        const uint32_t rdramMask = 0x7FFFFF;
++        const uint32_t rdramMask = 0xFFFFFF;
          if constexpr (RGBA32) {
              // Split the lower and upper half of the word into the lower and upper half of TMEM.
              const uint32_t UpperTMEM = (RDP_TMEM_BYTES >> 1);
@@ -3746,7 +3746,7 @@ index d1a9f4e..f65be03 100644
 +                    static std::atomic<int> nci{0};
 +                    static std::mutex seenMu;
 +                    static std::vector<uint32_t> seen;
-+                    const uint32_t a = textureStart & 0x7FFFFF;
++                    const uint32_t a = textureStart & 0xFFFFFF;
 +                    bool first = false;
 +                    {
 +                        std::lock_guard<std::mutex> lk(seenMu);
@@ -3794,7 +3794,7 @@ index d1a9f4e..f65be03 100644
 +                    const char *e = std::getenv("ROGUESQ_DUMP_TMEM_LOAD");
 +                    return e && *e && *e != '0';
 +                }();
-+                const uint32_t a = textureStart & 0x7FFFFF;
++                const uint32_t a = textureStart & 0xFFFFFF;
 +                // ROGUESQ_DUMP_ADDR_LO/HI (hex) override the dump window. The
 +                // two windows below were chosen for the texture populations of
 +                // sessions 12-17; each new investigation has found its
@@ -4067,7 +4067,7 @@ index d1a9f4e..f65be03 100644
 +                static std::atomic<int> nd{0};
 +                static std::mutex seen_mu;
 +                static std::vector<uint32_t> seen;
-+                const uint32_t a = texture.address & 0x7FFFFF;
++                const uint32_t a = texture.address & 0xFFFFFF;
 +                bool first = false;
 +                {
 +                    std::lock_guard<std::mutex> lk(seen_mu);
@@ -5317,7 +5317,7 @@ index e3d289c..5da989d 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..2a59767 100644
+index 10f98af..bd7af9a 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -5406,7 +5406,7 @@ index 10f98af..2a59767 100644
 +    static constexpr uint32_t kOstWatchSize = 48u;
 +    static constexpr uint32_t kOstPriOff = 4u;
 +    static constexpr uint32_t kOstCtxOff = 32u;
-+    static constexpr uint32_t kRdramBytes = 0x800000u;
++    static constexpr uint32_t kRdramBytes = 0x1000000u; // s6130: 16 MB
 +    static constexpr uint32_t kMaxSaneFbWidth = 1280u;
 +
 +    static std::atomic<uint32_t> g_ost_wb_control{0};
@@ -6230,7 +6230,7 @@ index 10f98af..2a59767 100644
 +                                idx, (unsigned)callTile.sampleWidth,
 +                                (unsigned)callTile.sampleHeight,
 +                                (unsigned)callTile.loadTile.line,
-+                                palOp.texture.address & 0x7FFFFF,
++                                palOp.texture.address & 0xFFFFFF,
 +                                (int)palOp.type);
 +                            for (int c = 0; c < 4; c++) {
 +                                uint32_t a = 0xF80 + c * 8;
@@ -6585,7 +6585,7 @@ index 10f98af..2a59767 100644
 +                            // bounds check of its own -- SIGBUS reading &RDRAM[storageAddress]
 +                            // past the 8MB RDRAM buffer (confirmed: crash address matched a
 +                            // same-tick [fb-get] REFUSE oob=1 log exactly).
-+                            static constexpr uint64_t kRdramBytes = 0x800000u;
++                            static constexpr uint64_t kRdramBytes = 0x1000000u; // s6130: 16 MB
 +                            const uint64_t rangeEnd = (uint64_t)storageAddress + (uint64_t)readFbBytes;
 +                            if ((storageAddress >= kRdramBytes) || (rangeEnd > kRdramBytes)) {
 +                                static std::atomic<int> s_skip{ 0 };
@@ -6613,7 +6613,7 @@ index 10f98af..2a59767 100644
                                  uint32_t readFbBytes = readRowBytes * readRowCount;
                                  uint32_t storageAddress = depthImg.address + readRowBytes * depthFb->readHeight;
 +                                // s182: same OOB-read guard as the color block above.
-+                                static constexpr uint64_t kRdramBytes = 0x800000u;
++                                static constexpr uint64_t kRdramBytes = 0x1000000u; // s6130: 16 MB
 +                                const uint64_t rangeEnd = (uint64_t)storageAddress + (uint64_t)readFbBytes;
 +                                if ((storageAddress >= kRdramBytes) || (rangeEnd > kRdramBytes)) {
 +                                    static std::atomic<int> s_skip{ 0 };
@@ -7106,7 +7106,7 @@ index 10f98af..2a59767 100644
 -                present.storage.resize(screenFbBytes);
 -                memcpy(present.storage.data(), &RDRAM[screenFbAddress], screenFbBytes);
 -                uint64_t newScreenHash = XXH3_64bits(present.storage.data(), screenFbBytes);
-+                if (uint64_t(screenFbAddress) + screenFbBytes > 0x800000) screenFbBytes = 0; // s5254: RDRAM above 8MB is PROT_NONE
++                if (uint64_t(screenFbAddress) + screenFbBytes > 0x1000000) screenFbBytes = 0; // s6130 16MB; // s5254: RDRAM above 8MB is PROT_NONE
 +                S4267T _um(28); // s4907: present.storage copy + hash
 +                static const bool s_ctl28 = [](){ const char *v = std::getenv("ROGUESQ_S4267_SLEEP28"); return v && *v && *v != '0'; }();
 +                if (s_ctl28) std::this_thread::sleep_for(std::chrono::milliseconds(2));

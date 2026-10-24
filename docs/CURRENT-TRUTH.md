@@ -170,3 +170,6 @@ Allocation stream (every rs_malloc>=0x4000) is identical wide vs 4:3 for ~370 ro
 
 ## s6129 update (G1d 21:9 heap root cause)
 The 21:9 heap deficit is the widened framebuffer carve: partitionFramebufferMemory (0x80000DD4) places fbs at the top of the 8 MB (globals 0x801163D8/DC/E4/F8), each w*448*2 (512: 0x70000; 1045: 0xE4980), so 21:9 moves heap end -0x74980, fb base and the top-down pool -0xE9300 and costs ~1.9 MB of the 2.6 MB 4:3 free space (-> NULL rs_malloc(0x1000), s6127). The 0x2DB000/0x3E4B00 "block" is that pool region. 16:9 (796) has no heap NULL but stalls in initMission -> initializeObjectiveTracking -> lv1_initializeObjectTracking (new, uncharacterized). Fix routes: lift RT64's 8 MB rdram cap (osMemSize up to 16 MB; ROGUESQ_OSMEM_MB clamps to 8 in recomp.cpp:565) or shrink the carve. NEXT: find where RT64 caps rdram, and charcterize the 16:9 stall.
+
+## G1d update (s6130)
+RT64's 8 MB rdram bounds (state.cpp:3395 etc.) widened to 16 MB; ROGUESQ_OSMEM_MB now allows <=16. 12 MB then dies at boot (4:3 too): DL-chunk pool *(0x801163B0) is len=0 at first beginFrameDLChunk (8 MB: 1356). The game's pool build depends on osMemSize. NEXT: find the pool builder (store watch on 0x801163B0 during boot, 8 vs 12) and see which osMemSize test skips it; alternative route is shrinking the fb carve at 8 MB instead.
