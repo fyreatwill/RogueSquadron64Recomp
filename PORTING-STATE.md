@@ -166874,3 +166874,11 @@ Pending: s6074_ddfar_dd2_l5, s6074_ddfar_dd3_l1 (still in soak_queue). Rules out
 
 ## Session 6077 (2026-10-23) — G3 rung closed as stale; draw-distance owner guide
 Took the G3 rung. The NEXT.md "hangar artifact list, top item" is already resolved: the white pillar stubs were our ROGUESQ_FIX_ZERO_SHADE mitigation (s5971, default OFF, verified lvl0-9 s5973-s5976), rim band / holo spikes no longer visible (s4644), lvl1 dark ground is legitimate texture (s5993), in-flight coarse diff vs retail oracle done (s5978, s5985, s5998). Remaining hangar items (accumulator origin, 0x1F0D74, odd PI DMA) are parked M4 threads, not render defects. G3 therefore CLOSED pending owner reports. No experiment run. Landed docs/DRAW-DISTANCE.md (new): env knobs, measured evidence, and open items for the owner's look-judgement of ROGUESQ_DRAW_DISTANCE=2. ORIGIN: n/a (no mitigation added).
+
+## Session 6078 (2026-10-23) — G1c frame-time: dd2 costs ~16 ms/s of RSP, VI stays 60/s
+
+- Folded s6077_g1b_dd1_l1 and dd2_l1 (rc=0, 300 s holds, ROGUESQ_G1B per-VI timing, no fb dumps; per-second `[g1b]` lines in scratch/agent/m6/g1_lvl1s6077g1b_dd{1,2}/run.log, t>100 s, tasks>0; 287 / 284 seconds).
+- dd1: vi/s p5=60 p50=60; send_dl wall 0.33 ms/task p50, 0.42 p95; 9.8 ms/s p50, 12.7 p95.
+- dd2: vi/s p5=58 p50=60; send_dl wall 0.87 ms/task p50, 1.87 p95; 25.7 ms/s p50, 37.4 p95.
+- Reading: dd2 adds ~16 ms of RSP host time per second (~1.6% of one second), p95 per task rises ~4.5x but is still <2 ms of a 16.7 ms frame. No frame-rate regression (p50 60 vi/s both). Single-source (one run per arm, same instrument); consistent with s6055 (no regression) and s6074 (+~10 ms/s).
+- dd3_l1 arm still queued; fold next iteration. Default stays retail.

@@ -113,6 +113,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
+> s6078: G1c frame time folded for dd1/dd2 (L1, 300 s): VI 60/s both; send_dl 9.8->25.7 ms/s p50 (p95/task 0.42->1.87 ms). dd3 arm still queued (s6077_g1b_dd3_l1). H-flat holds for dd2.
 > s6076: G1c crash/stall criterion MET (ROGUESQ_DRAW_DISTANCE=2 auto-far holds 300 s clean on L1, L5, L10; dd3 L1 clean). Ask owner to judge look; default stays retail. G3 CLOSED as stale (s6077: pillar stubs were our FIX_ZERO_SHADE, fixed s5971; owner guide docs/DRAW-DISTANCE.md). Queued s6077_g1b_dd{1,2,3}_l1 for the per-step frame-time figure (last open G1c item); then G4/G5.
 
 - **s6072 G1c (single-source):** s6071 far025 arm folded: dd1 tri 489 vs ~674 ref (-27%, control weaker than the -45% predicted; cross-run), dd2 695 (x1.42 over dd1). Selects nothing. First action next: fold far1 and far4 (scratch/agent/m6/g1_lvl1g1c6071far{1,4}/run.log) - far4 dd2 tri/terrain fraction above far1 => H-clip. No conclusion overturned this session.

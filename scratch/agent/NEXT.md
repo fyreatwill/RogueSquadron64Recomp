@@ -1,6 +1,5 @@
-# NEXT: fold G1c frame-time arms (s6077_g1b_dd{1,2,3}_l1), then G4/G5
+# NEXT: fold s6077_g1b_dd3_l1 (frame time), close G1c; then G4/G5
 HYPOTHESIS-ID: g1c-frame-time
-G3 closed as stale (s6077: pillar stubs = FIX_ZERO_SHADE, resolved s5971). Queued s6077_g1b_dd{1,2,3}_l1 (ROGUESQ_G1B per-VI timing, no fb dumps).
-Unit: fold SOAK-RESULTS lines; extract [g1b] frame-time p50/p95 per arm (see s6013 fold for the parser). Hypotheses: H-flat (dd2/3 within ~1 ms p50 of dd1; RSP +10 ms/s is ~0.17 ms/frame), H-rsp (p95 grows with tri count -> dd3 visibly slower).
-Outcome split: H-flat => G1c fully done, only owner look-judgement left. H-rsp => document per-step cost in docs/DRAW-DISTANCE.md, still opt-in.
-Then: G4 any distinct stall hunting, else G5 renaming sweep (check session titles first).
+s6078 folded dd1/dd2: VI 60/s both, send_dl 9.8 vs 25.7 ms/s p50. Parser: grep '^\[g1b\]' scratch/agent/m6/g1_lvl1s6077g1b_dd3/run.log, t>100, tasks>0, same stats as the s6078 entry.
+Outcome split: dd3 vi/s p5 ~60 => H-flat, G1c done pending owner look. dd3 vi/s p50 <55 => H-rsp, document cost in docs/DRAW-DISTANCE.md (opt-in anyway).
+Then: G4 stall hunting via queued soaks, else G5 renaming sweep (check session titles first).
