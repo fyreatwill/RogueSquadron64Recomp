@@ -166990,3 +166990,4 @@ Meaning: the tick runs, walks a valid table, yet ages stay 0 and entry count is 
 ORIGIN: no mitigation added; diagnostic only (env-gated ROGUESQ_BUCKETLOG).
 DISCRIMINATION (s6094): REFUTES H-notick (tick runs ~2700x on the finder's own table), H-allreset (resetMaterialExpiryById 0 calls), H-reader (same macros, valid table, ent=1715), H-8MB-guard (2 nodes >=8MB). SELECTS the pair {H-body: age store never executes, H-inlinezero: an inline writer zeroes +8 between ticks}.
 NEXT DISCRIMINATOR: in-tick counters (nodes visited / age stores at 0x800220A4-AC / expiry hits at 0x800220B0 / guard skips) plus a store-watch with PC attribution on one node's age halfword. visited==0 -> H-body; stores>0 -> H-inlinezero with writer PC. Recorded in scratch/agent/NEXT.md.
+s6094 refutes H-notick, H-allreset, H-reader and H-8MB-guard; it selects the pair H-body / H-inlinezero (next test: in-tick counters plus an age-halfword store watch discriminate them).
