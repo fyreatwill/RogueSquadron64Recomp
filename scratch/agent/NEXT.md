@@ -1,6 +1,4 @@
-# NEXT: G1c - read heap accounting, size the pool/heap
-HYPOTHESIS-ID: g1c-draw-distance
-Fold scratch/agent/soak_results/s6063_heap_px{1..4}_*.log: grep '\[heaplog\]'. Control: px4 must log a NULL malloc + top-8 live blocks.
-Hypotheses: (A) live bytes at px2->px3 approach the heap ceiling, fit point exists (try px2.5); (B) a few huge live blocks (top-8 list) are a shrinkable consumer; (C) heap is fragmented (live << ceiling yet NULL) -> allocator issue, not budget.
-Outcomes: peak near ceiling + big block identified -> shrink it or opt-in bigger heap; live far below ceiling at NULL -> fragmentation (C).
-Then re-run tools/g1c_ddtog_fold.py with --hud on the best safe px for HUD/terrain.
+# NEXT: G1c - fold px2/px2.5 heaplog arms
+HYPOTHESIS-ID: g1c-heap-exhaustion
+Fold scratch/agent/m6/g1_lvl1g1c64{2,25,25d2}/run.log (NOT soak_results; those are verdict lines). grep '\[heaplog\].*-> 00000000' after the [poolx] line; compare with SOAK-RESULTS rc.
+Outcomes: px2.5 rc=0 and no post-pool NULL -> raise to 300 s holds on L1/5/10 at dd2, then g1c_ddtog_fold.py --hud for terrain/HUD; px2.5 NULLs -> px2 is the ceiling, document and measure its visual gain vs px1 (or find pool-block shrink: the 0x5C000 unit).
