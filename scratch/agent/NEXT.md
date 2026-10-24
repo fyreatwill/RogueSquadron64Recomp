@@ -1,4 +1,3 @@
-# NEXT: G1d step 3 - widen the framebuffer under ROGUESQ_ASPECT=16:9
+# NEXT: G1d step 3 - locate flight fb width/scissor/alloc sites, then widen under ROGUESQ_ASPECT=16:9
 HYPOTHESIS-ID: g1d-widescreen
-s6108: aspect lever (ROGUESQ_ASPECT_SCALE) confirmed ~1/k on craft width. First fold s6107_g1d_k2p0 from SOAK-RESULTS.md (expect craft ~half of k1.0 width, flight fb index 4500).
-Then ONE build: with ROGUESQ_ASPECT=16:9 set guPerspective aspect scale = 4/3 / (16/9) and widen game colour image width, scissor and VI width; run L1 with a 16:9 window and capture. Outcomes: extra width drawn undistorted => proceed to HUD x anchoring; stretched => viewport/scissor not widened; black bars => VI/colour image width missed.
+Do the site scouting INLINE (no subagent; s6109's stalled): grep N64Recomp/RecompiledFuncs for the flight DL setup (SETCOLORIMAGE width 512 / 0x200 constants, scissor setup, fb allocation near initMission/initVideoSubsystem funcs_5.c:154). Then ONE env-gated build: guPerspective aspect x (4/3)/(16/9), colour image width + scissor + VI width (rewrite in osViSetMode_recomp) to ~683. Outcomes: undistorted extra width => HUD x anchoring; stretched => viewport/scissor missed; bars => VI/colour image missed.
