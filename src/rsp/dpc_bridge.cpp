@@ -2400,7 +2400,52 @@ extern "C" bool rs64_dpc_take_synthetic_consumer(uint64_t *serial) {
     return true;
 }
 
+// s6083 G3b: scan every submitted RDP range for triangles whose edge-walk
+// coordinates fall far outside the 320x240 viewport (spike-line signature).
+// ROGUESQ_LOG_SPIKE=1 logs; ROGUESQ_SPIKE_CTL=<px> shrinks the guard band to
+// <px> beyond the viewport as a positive control (ordinary tris must fire).
+std::atomic<int> g_rs64_swap_n{0};
+static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
+    static const bool on = [] { const char *e = std::getenv("ROGUESQ_LOG_SPIKE"); return e && *e && *e != '0'; }();
+    if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u) return;
+    static const double guard = [] { const char *e = std::getenv("ROGUESQ_SPIKE_CTL"); return e && *e ? atof(e) : 640.0; }();
+    static uint64_t s_tris = 0, s_bad = 0, s_logged = 0;
+    static int s_swap = -1; static uint32_t s_swap_tris = 0, s_swap_bad = 0;
+    const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
+    if (sw != s_swap) {
+        if (s_swap_bad) { fprintf(stderr, "[spike-swap] swap=%d tris=%u bad=%u total_tris=%llu total_bad=%llu\n", s_swap, s_swap_tris, s_swap_bad, (unsigned long long)s_tris, (unsigned long long)s_bad); fflush(stderr); }
+        s_swap = sw; s_swap_tris = 0; s_swap_bad = 0;
+    }
+    auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & 0x7FFFFCu), 4); return v; };
+    auto sx14 = [](uint32_t v) { return (double)(((int32_t)(v << 18)) >> 18) / 4.0; };
+    for (uint32_t a = lo & ~3u; a + 8 <= hi;) {
+        const uint32_t w0 = rd(a), w1 = rd(a + 4);
+        const uint32_t op = (w0 >> 24) & 0x3F;
+        if (op == 0x24 || op == 0x25) { a += 16; continue; }
+        if (op < 0x08 || op > 0x0F) { a += 8; continue; }
+        const uint32_t len = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
+        if (a + 32 > hi) break;
+        const double yl = sx14(w0 & 0x3FFF), ym = sx14((w1 >> 16) & 0x3FFF), yh = sx14(w1 & 0x3FFF);
+        auto fx = [&](uint32_t o) { return (double)(int32_t)rd(a + o) / 65536.0; };
+        const double xl = fx(8), dl = fx(12), xh = fx(16), dh = fx(20), xm = fx(24), dm = fx(28);
+        const double v[5][2] = {{xh, yh}, {xm + dm * (ym - yh), ym}, {xl, ym}, {xl + dl * (yl - ym), yl}, {xh + dh * (yl - yh), yl}};
+        bool bad = !(yh <= ym && ym <= yl);
+        for (auto &p : v) if (p[0] < -guard || p[0] > 320.0 + guard || p[1] < -guard || p[1] > 240.0 + guard) bad = true;
+        s_tris++; s_swap_tris++;
+        if (bad) {
+            s_bad++; s_swap_bad++;
+            if (s_logged++ < 600) {
+                fprintf(stderr, "[spike] swap=%d off=%06X op=%02X Y(h,m,l)=%.2f,%.2f,%.2f V=(%.1f,%.1f)(%.1f,%.1f)(%.1f,%.1f)(%.1f,%.1f)(%.1f,%.1f) range=%06X..%06X\n",
+                        sw, a, op, yh, ym, yl, v[0][0], v[0][1], v[1][0], v[1][1], v[2][0], v[2][1], v[3][0], v[3][1], v[4][0], v[4][1], lo, hi);
+                fflush(stderr);
+            }
+        }
+        a += len;
+    }
+}
+
 static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
+    rs64_spike_scan(lo, hi);
     g_last_submit_lo.store(lo, std::memory_order_release);
     g_last_submit_hi.store(hi, std::memory_order_release);
     const uint32_t before = g_task_bridge_e9.load(std::memory_order_acquire);
