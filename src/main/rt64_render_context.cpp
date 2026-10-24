@@ -87,6 +87,9 @@ extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task);
 #include <string>
 #include <atomic>
 extern std::atomic<uint64_t> g_rs64_rt64_tri_accepted, g_rs64_rt64_rect_accepted;
+volatile uint32_t g_rs64_g1cf_tasks = 0, g_rs64_g1cf_dsize = 0;  // s6070 g1cf: gfx tasks / dl bytes since last VI
+extern "C" { volatile int g_rs64_dd_blk = 0; }  // s6070: set by the s6036 dd patch (funcs_9.c): 1 = dd multiplier active this call
+static struct G1cf { uint32_t subs = 0, bytes = 0, tri = 0, maxlen = 0, lastlen = 0; uint64_t rt0 = 0, rr0 = 0; } s_g1cf;  // s6070
 namespace s4267 {
 static const bool on = [] { const char* e = std::getenv("ROGUESQ_S4267"); return e && *e && *e != '0'; }();
 static std::mutex m;
@@ -999,6 +1002,17 @@ public:
                 }
             }
 
+            {   // s6070 g1c: per-VI frame summary (ROGUESQ_G1CF=1), unbudgeted, tagged with the dd toggle state
+                static int s_f = -1;
+                if (s_f < 0) { const char *e = std::getenv("ROGUESQ_G1CF"); s_f = (e && *e && *e != '0') ? 1 : 0; }
+                if (s_f) {
+                    uint64_t t1 = g_rs64_rt64_tri_accepted.load(), r1 = g_rs64_rt64_rect_accepted.load();
+                    fprintf(stderr, "[g1cf] vi=%d dd=%d tasks=%u dsize=%u subs=%u bytes=%u tri=%u rt64tri=%llu rt64rect=%llu maxlen=%u lastlen=%u\n",
+                            s_n, g_rs64_dd_blk, g_rs64_g1cf_tasks, g_rs64_g1cf_dsize, s_g1cf.subs, s_g1cf.bytes, s_g1cf.tri,
+                            (unsigned long long)(t1 - s_g1cf.rt0), (unsigned long long)(r1 - s_g1cf.rr0), s_g1cf.maxlen, s_g1cf.lastlen);
+                    s_g1cf = G1cf(); s_g1cf.rt0 = t1; s_g1cf.rr0 = r1; g_rs64_g1cf_tasks = 0; g_rs64_g1cf_dsize = 0;
+                }
+            }
             if (s_n <= 4 || (s_n & 63) == 0) {
                 ultramodern::renderer::ViRegs* vi = ultramodern::renderer::get_vi_regs();
                 // Sample 16 bytes at VI_ORIGIN to see if there's actual pixel
@@ -1217,6 +1231,15 @@ namespace ultramodern {
                     fwrite(app->core.RDRAM + lo_phys, 1, hi_phys - lo_phys, s_bin);
                     s_bin_total += 16 + (hi_phys - lo_phys);
                 }
+            }
+            {   // s6070 g1cf: per-VI accumulation (tri counted from the RDP stream, independent of the s5424 gate)
+                s_g1cf.subs++; s_g1cf.bytes += hi_phys - lo_phys; s_g1cf.lastlen = hi_phys - lo_phys;
+                if (hi_phys - lo_phys > s_g1cf.maxlen) s_g1cf.maxlen = hi_phys - lo_phys;
+                if (app->core.RDRAM) { const uint8_t *r = app->core.RDRAM; uint32_t a = lo_phys;
+                    while (a + 8 <= hi_phys) { uint32_t op = r[a ^ 3] & 0x3F, n = 8;
+                        if (op >= 0x08 && op <= 0x0F) { n = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0); ++s_g1cf.tri; }
+                        else if (op == 0x24 || op == 0x25) n = 16;
+                        a += n; } }
             }
             {   // s5424: per-submission RDP command census (ROGUESQ_LOG_RDP_TRICOUNT=1) for flight-vs-hangar geometry volume.
                 static int s_tc = -1;

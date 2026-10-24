@@ -238,7 +238,8 @@ if is_main_ucode and ITER_MARKER not in text:
     entry_pattern = re.compile(r"(\n    RSP rsp\{\};\n)")
     if entry_pattern.search(text):
         text = entry_pattern.sub(
-            r"\1    int rs64_iter = 0;  " + ITER_MARKER + "\n"
+            "\\1    static int rs64_cap_v = 0; if (!rs64_cap_v) { const char *e = getenv(\"ROGUESQ_UCODE_CAP\"); rs64_cap_v = (e && *e) ? atoi(e) : 16384; if (rs64_cap_v != 16384) fprintf(stderr, \"[ucode-cap] ROGUESQ_UCODE_CAP=%d\\\\n\", rs64_cap_v); }  /* s6070 */\n"
+            r"    int rs64_iter = 0;  " + ITER_MARKER + "\n"
             r"    r18 = 0x100;  " + R18_MARKER + "\n",
             text, count=1)
 
@@ -291,7 +292,7 @@ if is_main_ucode and self_restart_applied and (ENTRY_LABEL + ":") not in text:
     if l1090_pattern.search(text):
         replacement = (
             "L_1090:\n"
-            "    if (++rs64_iter > 16384) {  " + ITER_MARKER + "\n"
+            "    if (++rs64_iter > rs64_cap_v) {  " + ITER_MARKER + "\n"
             "        static int rs64_cap_fires = 0;\n"
             "        if (++rs64_cap_fires <= 4 || (rs64_cap_fires & 63) == 0) {\n"
             '            fprintf(stderr, "[ucode-cap] fired #%d, last r17=0x%X\\n", rs64_cap_fires, r17);\n'
@@ -2634,7 +2635,7 @@ if is_main_ucode and SOURCE_AUDIT_MARKER not in text:
         print("fixup_factor5_ucode: FIXUP 10 ANCHOR FAILED (L_10E8 natural exit).", file=sys.stderr)
         sys.exit(1)
     cap_anchor = re.compile(
-        r"(if \(\+\+rs64_iter > 16384\) \{  /\* fixup: iter cap \*/.*?)(        return RspExitReason::Broke;)",
+        r"(if \(\+\+rs64_iter > rs64_cap_v\) \{  /\* fixup: iter cap \*/.*?)(        return RspExitReason::Broke;)",
         flags=re.DOTALL)
     def cap_repl(m: re.Match) -> str:
         return m.group(1) + "        rs64_e9prov_source_end(r17, 2);  " + SOURCE_AUDIT_MARKER + "\n" + m.group(2)

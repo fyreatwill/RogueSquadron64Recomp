@@ -8,6 +8,7 @@ NEW = r'''    { /* PATCH: s6036 dd */ static float m6036 = -1.0f;
       static int tg6036 = -1; static unsigned cnt6036 = 0; static int last6036 = -1; float me6036 = m6036;
       if (tg6036 < 0) { const char* t = getenv("ROGUESQ_DD_TOGGLE"); tg6036 = t ? atoi(t) : 0; }
       if (tg6036 > 0) { int blk = (int)((cnt6036++ / (unsigned)tg6036) & 1u); me6036 = blk ? m6036 : 1.0f; if (blk != last6036) { last6036 = blk; fprintf(stderr, "[ddtog] call=%u blk=%d m=%g\n", cnt6036, blk, me6036); } }
+      { extern volatile int g_rs64_dd_blk; g_rs64_dd_blk = (me6036 != 1.0f); }
       if (me6036 != 1.0f && MEM_W(4, (int64_t)(int32_t)0x80136DC0) != 0) { union { uint32_t u; float f; } c; c.u = ctx->f2.u32l; c.f *= me6036; ctx->f2.u32l = c.u; } }
 '''
 def apply9(text):
