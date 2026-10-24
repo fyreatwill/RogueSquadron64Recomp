@@ -2389,13 +2389,20 @@ extern "C" void rs64_s5041_free(uint32_t ptr, uint32_t ra) {
 #include <map>
 static std::map<uint32_t, uint32_t> s_s6063_live; static uint64_t s_s6063_bytes = 0, s_s6063_peak = 0;
 static bool s6063_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_HEAPLOG"); return e && e[0] && e[0] != '0'; }(); return on; }
+static void s6127_walk(uint32_t req, bool ok = false);
+static uint8_t* g_s6127_rd = nullptr;
+static inline uint32_t s5042_rd(const uint8_t* rd, uint32_t off);
+static uint32_t g_s6127_flags;
+extern "C" void rs64_s6127_fl(uint32_t f) { g_s6127_flags = f; }
 extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
     if (!s6063_on()) return;
+    if (!ptr && req == 0x1000u) s6127_walk(req);
+    if (ptr && req == 0x1000u) { static int k1 = 0; if (k1++ < 40) { s6127_walk(req, true); uint8_t* r = g_s6127_rd; std::fprintf(stderr, "[heaplog-1000ok] flags=%X -> %08X slot100=%08X slotE8=%08X slot104=%08X\n", g_s6127_flags, ptr, r?s5042_rd(r,0x10FF00u):0xFFFFFFFFu, r?s5042_rd(r,0x10FF18u):0xFFFFFFFFu, r?s5042_rd(r,0x10FEFCu):0xFFFFFFFFu); } }
     static int nnull = 0;
     if (ptr) { auto it = s_s6063_live.find(ptr); if (it != s_s6063_live.end()) s_s6063_bytes -= it->second; s_s6063_live[ptr] = req; s_s6063_bytes += req; if (s_s6063_bytes > s_s6063_peak) s_s6063_peak = s_s6063_bytes; }
-    if (!ptr && req == 0x1000u) std::fprintf(stderr, "[heaplog-null1000] req=0x1000 -> NULL ra=%08X live=0x%llX nblk=%zu\n", ra, (unsigned long long)s_s6063_bytes, s_s6063_live.size()); /* s6126: null-dest DMA scratch alloc */
+    if (!ptr && req == 0x1000u) std::fprintf(stderr, "[heaplog-null1000] flags=%08X req=0x1000 -> NULL ra=%08X live=0x%llX nblk=%zu\n", g_s6127_flags, ra, (unsigned long long)s_s6063_bytes, s_s6063_live.size()); /* s6126: null-dest DMA scratch alloc */
     if (req >= 0x4000u || (!ptr && nnull < 4))
-        std::fprintf(stderr, "[heaplog] malloc req=0x%X -> %08X ra=%08X live=0x%llX peak=0x%llX nblk=%zu\n", req, ptr, ra, (unsigned long long)s_s6063_bytes, (unsigned long long)s_s6063_peak, s_s6063_live.size());
+        std::fprintf(stderr, "[heaplog] flags=%X malloc req=0x%X -> %08X ra=%08X live=0x%llX peak=0x%llX nblk=%zu\n", g_s6127_flags, req, ptr, ra, (unsigned long long)s_s6063_bytes, (unsigned long long)s_s6063_peak, s_s6063_live.size());
     if (!ptr && nnull++ < 2) {
         std::multimap<uint32_t, uint32_t, std::greater<uint32_t>> big; for (auto& kv : s_s6063_live) big.emplace(kv.second, kv.first);
         int k = 0; for (auto& b : big) { if (k++ >= 8) break; std::fprintf(stderr, "[heaplog]   live top%d size=0x%X ptr=%08X\n", k, b.first, b.second); }
@@ -2500,7 +2507,30 @@ extern "C" void rs64_s5041_malloc(uint32_t ptr) {
 }
 
 static inline uint32_t s5042_rd(const uint8_t* rd, uint32_t off) { return ((uint32_t)rd[off ^ 3u] << 24) | ((uint32_t)rd[(off + 1) ^ 3u] << 16) | ((uint32_t)rd[(off + 2) ^ 3u] << 8) | rd[(off + 3) ^ 3u]; }
+
+static uint8_t* g_s6127_rd_fwd();
+static void s6127_walk(uint32_t req, bool ok) {  /* s6127: walk both guest heaps (heads 0x8010FEFC, 0x80110018); hdr: u16 flags(1=free,2=used,8=end) u16 tag u32 size, 16B hdr */
+    static int n = 0, nok = 0; if (ok) { if (nok++ >= 40) return; } else if (n++ >= 3) return;
+    uint8_t* rd = g_s6127_rd_fwd(); if (!rd) { std::fprintf(stderr, "[heapwalk] no rdram yet\n"); return; }
+    for (int h = 0; h < 2; ++h) {
+        uint32_t head = s5042_rd(rd, (h ? 0x8010FF18u : 0x8010FF00u) - 0x80000000u);
+        uint64_t freeb = 0, usedb = 0; uint32_t nfree = 0, nused = 0, big[5] = {0,0,0,0,0}; uint32_t a = head, first = head, last = 0; int guard = 0;
+        if (!ok) std::fprintf(stderr, "[heapwalk] heap%d ptr-slot=%08X (0x8010FEFC=%08X 0x80110018=%08X)\n", h, head, s5042_rd(rd, 0x10FF00u), s5042_rd(rd, 0x10FF18u));
+        if (head < 0x80000000u || head >= 0x80800000u) { std::fprintf(stderr, "[heapwalk] heap%d head=%08X (out of range)\n", h, head); continue; }
+        while (a >= 0x80000000u && a < 0x80800000u && guard++ < 200000) {
+            uint32_t w0 = s5042_rd(rd, a - 0x80000000u), sz = s5042_rd(rd, a - 0x80000000u + 4); uint16_t fl = w0 >> 16;
+            last = a; if (guard <= 12 && !ok) std::fprintf(stderr, "[heapwalk]   h%d blk@%08X w0=%08X size=%08X\n", h, a, w0, sz);
+            if (fl & 1) { ++nfree; freeb += sz; for (int i = 0; i < 5; ++i) if (sz > big[i]) { for (int j = 4; j > i; --j) big[j] = big[j-1]; big[i] = sz; break; } } else { ++nused; usedb += sz; }
+            if (fl & 8) break;
+            if (sz == 0 || sz > 0x800000u) { std::fprintf(stderr, "[heapwalk] heap%d BAD size %08X at %08X fl=%04X\n", h, sz, a, fl); break; }
+            a = a + 0x10 + sz;
+        }
+        if (!(ok && h == 0)) std::fprintf(stderr, "[heapwalk]%s req#%d heap%d start=%08X lastblk=%08X end~%08X nfree=%u free=0x%llX nused=%u used=0x%llX top5free=%X,%X,%X,%X,%X\n", ok ? "(1000ok)" : "", n, h, first, last, a, nfree, (unsigned long long)freeb, nused, (unsigned long long)usedb, big[0], big[1], big[2], big[3], big[4]);
+    }
+}
+static uint8_t* g_s6127_rd_fwd() { return g_s6127_rd; }
 extern "C" void rs64_s5042_poison(uint8_t* rdram, uint32_t ptr, uint32_t ra) {
+    g_s6127_rd = rdram; /* s6127: stash rdram for the NULL-path freelist walk */
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_FREE_POISON"); return e && e[0] && e[0] != '0'; }();
     if (!on || ptr < 0x80000010u || ptr >= 0x80800000u || (ptr & 3u)) return;
     static unsigned long npoison = 0, nskip = 0, nverify_bad = 0; static int shown = 0;

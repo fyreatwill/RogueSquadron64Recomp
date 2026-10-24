@@ -1,6 +1,6 @@
-# NEXT: G1d step 19 - why does rs_malloc(0x1000) fail at 21:9 with only ~4.2 MB live?
+# NEXT: G1d step 20 - who consumes the extra ~2 MB of MAIN heap in 21:9, and why is the main heap end 0x8071B670 (vs ctl 0x80795BF0)?
 HYPOTHESIS-ID: g1d-widescreen
-Known (s6126): crash writer = rs_malloc(0x1000)->NULL (heaplog-null1000, live=0x3FF568 nblk=630), stored unchecked into load struct 0x48(s0) by processAssetLoadStep, becomes DMA dest 0.
-Hypotheses: H-frag (free space exists but no 0x1000 contiguous block / freelist damaged), H-limit (allocator heap end lower than 8 MB, or wide FBs/pools eat region), H-divert (s6086 bigarena divert interacting).
-Build: in rs64_s6063_malloc NULL path (src/main/upstream_compat.cpp ~2392) walk the guest freelist (find rs_malloc_s5041_inner's list head/heap bounds in funcs_0.c:3340) and log heap start/end, total free, top-5 free blocks. Run 21:9 once (m6 recipe: env ROGUESQ_G1B=1 XENV_EXTRA="ROGUESQ_ASPECT=21:9 ROGUESQ_LOG_DMA=1 ROGUESQ_HEAPLOG=1 " HOLD_S=30 LEVEL=1 TAG_SUFFIX=x zsh scratch/agent/g1_level_coverage_common.zsh), and a 4:3 ctl logging the same freelist stats at the same alloc ordinal.
-Outcomes: tiny total free => limit (enlarge heap/move pools >=0x80800000); big free but no block => fragmentation (find the fragmenting alloc).
+Known (s6127): NULL = main heap exhausted (free 0xCB0), secondary heap slot 0x8010FF00 zero at that moment; ctl has ~2.6 MB free.
+Hypotheses: H-fbpool (wide framebuffer/terrain pools alloc more), H-divert (s6086 bigarena changes heap end/usage), H-order (secondary heap cleared before alloc).
+Build/run: env ROGUESQ_G1B=1 XENV_EXTRA="ROGUESQ_ASPECT=21:9 ROGUESQ_LOG_DMA=1 ROGUESQ_HEAPLOG=1 " HOLD_S=30 LEVEL=1 TAG_SUFFIX=<t> zsh scratch/agent/g1_level_coverage_common.zsh ; ctl without ASPECT. Log every rs_malloc >=0x10000 with ordinal in both arms and diff; also log main heap end sentinel after initMainHeap.
+Outcome: extra big allocs named -> shrink or move them above 0x80800000; else heap end shift -> fix init size.

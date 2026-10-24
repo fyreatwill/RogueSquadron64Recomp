@@ -5,10 +5,10 @@ Idempotent; funcs_0.c only. C++ side lives in src/main/upstream_compat.cpp (rs64
 import pathlib
 base = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
 OLD = "RECOMP_FUNC void rs_malloc(uint8_t* rdram, recomp_context* ctx) { rs_malloc_s5041_inner(rdram, ctx); rs64_s5041_malloc(U32(ctx->r2)); } /* PATCH: s5041 malloc wrap */\n"
-NEW = "RECOMP_FUNC void rs_malloc(uint8_t* rdram, recomp_context* ctx) { uint32_t _rq = U32(ctx->r4), _ra = U32(ctx->r31); rs_malloc_s5041_inner(rdram, ctx); rs64_s5041_malloc(U32(ctx->r2)); rs64_s6063_malloc(_rq, U32(ctx->r2), _ra); } /* PATCH: s5041 malloc wrap */ /* PATCH: s6063 heaplog */\n"
+NEW = "RECOMP_FUNC void rs_malloc(uint8_t* rdram, recomp_context* ctx) { uint32_t _rq = U32(ctx->r4), _ra = U32(ctx->r31); rs64_s6127_fl(U32(ctx->r5)); rs_malloc_s5041_inner(rdram, ctx); rs64_s5041_malloc(U32(ctx->r2)); rs64_s6063_malloc(_rq, U32(ctx->r2), _ra); } /* PATCH: s5041 malloc wrap */ /* PATCH: s6063 heaplog */\n"
 FREE_OLD = "    rs64_s5041_free(U32(ctx->r4), U32(ctx->r31)); /* PATCH: s5041 free census */\n"
 FREE_NEW = FREE_OLD + "    rs64_s6063_free(U32(ctx->r4)); /* PATCH: s6063 heaplog free */\n"
-DECL = "extern void rs64_s6063_malloc(uint32_t, uint32_t, uint32_t);\nextern void rs64_s6063_free(uint32_t);\n"
+DECL = "extern void rs64_s6063_malloc(uint32_t, uint32_t, uint32_t);\nextern void rs64_s6063_free(uint32_t);\nextern void rs64_s6127_fl(uint32_t);\n"
 def apply0(text):
     if "PATCH: s6063 heaplog" in text or OLD not in text: return text, 0
     text = text.replace(OLD, NEW, 1)
