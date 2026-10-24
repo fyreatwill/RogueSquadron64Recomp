@@ -337,3 +337,4 @@ Gfx thread hot spot found by `sample` (s6015): ~80% of gfx samples in O(n^2) g_s
 - s6105 (G1d): x1.3333 aspect scale inconclusive by eye; extreme-k (3.0, 0.4) soaks queued as positive control. See NEXT.md.
 
 - s6106 (G1d): ROGUESQ_ASPECT_SCALE (guPerspective aspect) visibly squeezes/stretches the 3D view at k=0.4/3.0 (qualitative, unphased). Next: phase-gated k=0.5/1/2 measurement, then widen framebuffer. See NEXT.md.
+- s6107 (G1d): queued s6107_g1d_k0p5/k1p0/k2p0 (L1, 120 s, FBD_EVERY_V=30); unread. Next step #1 is now: fold those results (rigid-object width ~1/k => H-lever), then one build widening colour image/scissor/VI width under ROGUESQ_ASPECT=16:9, then HUD x anchoring. No conclusion overturned this session.
