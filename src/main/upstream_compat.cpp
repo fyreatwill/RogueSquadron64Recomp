@@ -2375,20 +2375,29 @@ extern "C" void rs64_s6063_free(uint32_t ptr) {
     s_s6063_bytes -= it->second; s_s6063_live.erase(it);
 }
 static inline uint32_t s5042_rd(const uint8_t* rd, uint32_t off);
-extern "C" void rs64_s6088_fuse(uint8_t* rdram, uint32_t ret, uint32_t ra) {
+extern "C" void rs64_s6090_init(uint32_t a0, uint32_t a1, uint32_t ra) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_BUCKETLOG"); return e && e[0] && e[0] != '0'; }();
+    if (on) std::fprintf(stderr, "[bucketlog] initTextureLUT a0=%u a1=%u ra=%08X\n", a0 & 0xFFFFu, a1 & 0xFFFFu, ra);
+}
+extern "C" void rs64_s6088_fuse(uint8_t* rdram, uint32_t ret, uint32_t ra, uint32_t gcount, uint32_t gbase, uint32_t gcache) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_BUCKETLOG"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
+    { static uint32_t lastnb = 0xFFFFFFFFu, lastbase = 0; static int chg = 0;
+      uint32_t nb0 = gcount, b0 = gbase;
+      if ((nb0 != lastnb || b0 != lastbase) && chg++ < 20) std::fprintf(stderr, "[bucketlog] CHANGE nb %u->%u base %08X->%08X ret=%08X ra=%08X ncall_next\n", lastnb, nb0, lastbase, b0, ret, ra);
+      lastnb = nb0; lastbase = b0; }
     static unsigned long ncall = 0, nzero = 0; static int dumps = 0;
     ++ncall; if (!ret) ++nzero;
     bool want = (!ret && nzero <= 3) || ncall == 1 || (ncall & 4095u) == 0;
     if (!want || dumps >= 40) return;
     ++dumps;
-    auto rd = [&](uint32_t g) -> uint32_t { return (g >= 0x80000000u && g < 0x80800000u) ? s5042_rd(rdram, g - 0x80000000u) : 0u; };
-    uint32_t nb = rd(0x8012EEF0u) >> 16, base = rd(0x8012F000u);
+    auto rd = [&](uint32_t g) -> uint32_t { if (g < 0x80000000u || g >= 0x80800000u || (g & 3u)) return 0u; const uint8_t* q = rdram + (int64_t)(int32_t)g; return ((uint32_t)q[0 ^ 3] << 24) | ((uint32_t)q[1 ^ 3] << 16) | ((uint32_t)q[2 ^ 3] << 8) | q[3 ^ 3]; };
+    uint32_t nb = gcount, base = gbase;
+    std::fprintf(stderr, "[bucketlog] raw: macro count=%u base=%08X cache=%08X | s5042_rd count=%u base=%08X cache=%08X\n", gcount, gbase, gcache, rd(0x8012EEF0u) >> 16, rd(0x8012F000u), rd(0x801163B0u));
     unsigned long totc = 0, nz = 0; char buf[512]; int o = 0;
     for (uint32_t i = 0; i < nb && i < 64; ++i) {
         uint32_t n = rd(base + 4 * i); unsigned len = 0, cs = 0;
-        while (n && len < 4096) { cs += rd(n + 8) >> 16; ++len; n = rd(n); }
+        while (n && len < 4096) { cs += rd(n + 8) >> 16; /* halfword at +8 is high half of word */ ++len; n = rd(n); }
         totc += cs; if (len) ++nz;
         if (o < 480) o += std::snprintf(buf + o, sizeof(buf) - o, "%u:%u/%u ", i, len, cs);
     }

@@ -1,6 +1,6 @@
-# NEXT: measure DL-node supply at dd3 (G1c phase 2)
+# NEXT: who refills the DL-node bucket cnt? (G1c phase 2)
 HYPOTHESIS-ID: g1c-phase2-drawdist
-Facts (s6089): dd3 reaches findAndUnlinkSmallestEntry first time, call 59 returns 0 -> NULL node -> SIGBUS beginFrameDLChunk+12168, 5/5. dd1 never calls it. Bucket dump read nbuckets=0 (post-call, layout suspect).
-Hypotheses: H-bucket supply exhausted (pool sized for retail) -> raise supply/second arena for DL nodes; H-reclaim reclaimDisplayListChunk 0x80007CDC not returning nodes at dd3; H-layout my table decode wrong.
-Discriminator, ONE build: dump PRE-call (entry) table by disassembling funcs_6.c findAndUnlinkSmallestEntry (lhu 0x8012EEF0 count, base lw 0x8012F000, node +0 next/+8 cnt) and count reclaimDisplayListChunk calls/nodes returned per frame at dd1 vs dd3 in the same build (env toggle). Positive control: dd1 must show reclaim counts >0.
-Soak recipes: scratch/agent/soak_queue/running_manual/s6088_bucket_dd{1,3}.sh; run with perl -e 'alarm 700; exec @ARGV' (no `timeout` on this Mac) or enqueue in soak_queue/.
+Facts (s6090): at dd3 call 59 of findAndUnlinkSmallestEntry (0x8002221C) all 55 nonempty buckets (of 2048) hold nodes with cnt(+8 u16)==0 -> returns 0 -> NULL -> SIGBUS beginFrameDLChunk+12168. dd1 never calls it. Reader fixed (rdram+(int32)addr).
+Hypotheses: H-refill reclaim (reclaimDisplayListChunk 0x80007CDC) never raises cnt at dd3; H-size nodes are sized/counted for retail volume (cnt = free chunks per size) and dd3 simply needs more; H-order a second consumer drains cnt faster than reclaim.
+Discriminator, ONE build: log pre-call dump (sum cnt, nonempty) every 8th call plus counts of reclaimDisplayListChunk calls and writes to node+8 (wrap 0x80007CDC; find the store sites with grep 'sh .*0x8(' in funcs_6.c near it) at dd3; positive control = reclaim count >0 at dd3 (dd1 doesn't call the finder, so also log reclaim at dd1). Read where cnt is initialised (allocator of nodes) to see what bounds it; then raise supply (larger node count) under ROGUESQ_DRAW_DISTANCE.
+Run: sed the s6088_bucket_dd3.sh recipe (tag), perl -e 'alarm 560; exec @ARGV' zsh it; logs in scratch/agent/m6/<tag>/fail_att*.log.
