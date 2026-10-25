@@ -168206,3 +168206,19 @@ Lining up control +0x1C with wide +0x14 does not make the windows match. The wor
 This selects H-two and refutes H-shift and H-moved. H-shift required the 0x40-byte windows to match once those chunk offsets line up, and the bytes on either side of the pointer to be the same values. They are not. H-moved required the first prefix to leave `0x80B29954` / `0x80AF08C4`. Both arms hit those addresses. The two slots stay unnamed as a single member. Do not patch either address. Do not skip `copyNativeToRAM`. Do not retarget `0x8096D600`. Do not write `0x801163E8`. Do not change n=3 `t0`. Do not raise `osMemSize`. Do not move `f0`.
 
 Superseded: "an 8-byte slide would reveal one shifted field." Believable because the chunk offsets differ by exactly 8 and both words are texture addresses. The surrounding words are not the same command stream.
+
+## Session 6210 (2026-10-25) — wide texture sibling is chunk 157, not 151
+
+Asked whether the s6209 neighbor pattern repeats on the next texture-command window. One new binary. `rs64_m4_dma_probe` now logs two `[g1d-win]` lines per process: the first phase-4 prefix, then the next prefix at a different word address. A later DMA that starts 8 bytes earlier and repeats that address is not logged again. Recipe is the s6209 sequential 12 MB pair (`scratch/agent/s6210_run.sh`, gitignored). Witness `scratch/agent/soak_results/s6210/witness.txt`.
+
+Screen unlocked. Control pid 63148 ready at 40 s, wide pid 63297 ready at 40 s, both SIGKILL. Crash-marker count 0 in both logs.
+
+Positive controls held. Control `[g1d-drop] aspect=4:3 drop=0`, n=3 `e8=0x80B25000`, `data_ptr=0x80B2D820`, `w78=05200002`. Wide `[g1d-drop] aspect=16:9 fbw=796 t0=0xAE200 drop=0x19200`, n=3 `e8=0x80AE6E00`, `data_ptr=0x80AEF620`, `w28=w78=00000000`. `ci_hit=0`. `ti_hit` is 13280/160 = 83 per submission on 4:3 and 5632/176 = 32 per submission on 16:9. The first window in each arm is the s6209 window: control `0x80B29954` = `0x80A6AA10` idx 71 chunk_off 28 (0x1C); wide `0x80AF08C4` = `0x80AE6120` idx 150 chunk_off 20 (0x14). `chunk_off` in the log is decimal.
+
+Not H-template. The second control window is the predicted sibling: `word_at=0x80B29A5C` `word=0x80A6BA10` `idx=72` `chunk_off=28`. Before is `00000000,00000000,00000000,E6000000,00000000,F5100000,07080200,FD100000` and after matches the first control window. The word at -0x20 does not: first window `04C304C3`, second `00000000`. H-template required those before/after words to be equal. They are not.
+
+The second wide window is not the predicted sibling. Predicted was `0x80AE5520` at index 151 +0x14, which is `word_at=0x80AF09CC` (pool `0x80AE6E00` + 151*0x108 + 0x14). Logged is `word_at=0x80AF0FFC` `word=0x80AE5520` `idx=157` `chunk_off=20` (0x14). The word value matches and the chunk index does not. This selects H-other. No `[g1d-ptr]` row in the wide log has a word_at inside chunks 151..156 (128 phase-4 pointer rows, 0 in that span). That probe only records words whose low 24 bits lie in `[0xA6A000, 0xB00000)`, so those chunks may be unread or full of other commands. Per H-other the wide neighbor bytes are not the discriminator. They are in the witness. The first wide window's word at -0x20 is `80AF0DD8` (the start of chunk 155) followed by `B5000000`; that is not a proven link.
+
+Do not patch either slot. Do not skip `copyNativeToRAM`. Do not retarget `0x8096D600`. Do not write `0x801163E8`. Do not change n=3 `t0`. Do not raise `osMemSize`. Do not move `f0`.
+
+Superseded: "the second wide texture word sits in the next chunk, index 151." Believable because the control arm's second word is the next chunk and the next logged wide word is `0x80AE5520`. The pool index of that word is 157.

@@ -1,45 +1,47 @@
-# Compare the sibling texture-command windows
+# Does phase 4 read wide pool chunk 151?
 HYPOTHESIS-ID: g1d-widescreen
 
-Session 6209 selects H-two and refutes H-shift and H-moved.
+Session 6210 selects H-other and refutes H-template.
 Keep the image drop. Do not revert it. Do not skip
 `Framebuffer::copyNativeToRAM`. Do not retarget `0x8096D600`. Do not
 write `0x801163E8`. Do not change n=3's `t0`. Do not raise `osMemSize`.
 Do not patch the RDP stream. Do not move `f0`. Do not retarget the `swl`
 at `0x8000D5A8`. Do not patch either texture slot. Do not add a store
-watch.
+watch. Do not compare the wide neighbor bytes. Do not rerun the
+control -0x20 comparison: idx 72 matches idx 71 except `04C304C3` vs
+`00000000` at -0x20, and that already refutes H-template on control.
 
-The first phase-4 prefix is the address half of a `G_SETTIMG`
-(`FD100000` immediately before the pointer) in both arms. Control:
-index 71, chunk+0x1C, `0x80B29954` = `0x80A6AA10`. Wide: index 150,
-chunk+0x14, `0x80AF08C4` = `0x80AE6120`. Chunk bytes `[0x00,0x10)` match
-(`00000000,00000000,E6000000,00000000`). Control then has
-`F5100000/07080200` (opcode 0xF5, G_SETTILE) and wide does not, so the
-shared opcode sits 8 bytes later. The other neighbors disagree. The
-`[g1d-win]` `chunk_off` field is decimal.
+Wide pool `0x80AE6E00`. Chunk 150 holds `0x80AE6120` at +0x14
+(`0x80AF08C4`). The next logged prefix is chunk 157 +0x14
+(`0x80AF0FFC` = `0x80AE5520`), not chunk 151 +0x14 (`0x80AF09CC`).
+The s6210 pointer log has 0 hits in chunks 151..156, and it only
+records words in `[0xA6A000, 0xB00000)`. The first wide window's word
+at -0x20 is `0x80AF0DD8` (chunk 155's start) then `B5000000`. That is
+not a proven link. Do not chase it in this run.
 
-The open fact is whether that neighbor pattern is the aspect template
-or one odd pair of chunks. One paired run, same recipe as
-`scratch/agent/s6209_run.sh` (12 MB, sequential, ctl 4:3 then wide
-16:9, from `build/`, SIGKILL, screen unlocked, do not pass
-`ROGUESQ_FB_WIDTH`). Keep `[g1d-img]`, `[g1d-drop]`, and `[g1d-ptr]`.
-Log two `[g1d-win]` lines per arm: the first prefix, and the next
-prefix whose `word_at` differs. Do not log the same address twice
-(a later DMA starts 8 bytes earlier and repeats the wide word).
+One paired run, same recipe as `scratch/agent/s6210_run.sh` (12 MB,
+sequential, ctl 4:3 then wide 16:9, from `build/`, SIGKILL, screen
+unlocked, do not pass `ROGUESQ_FB_WIDTH`). Keep `[g1d-img]`,
+`[g1d-drop]`, and `[g1d-ptr]`. On a phase-4 DMA whose range overlaps
+pool chunk 151 (wide; start `0x80AF09B8`, length `0x108`) or chunk 72
+(control; start `0x80B29A40`, the positive control), log one
+`[g1d-ch]` line: arm pool, chunk index, dram, len, guest pc, and the
+first 8 big-endian words at the chunk start. Also log one line when a
+phase-4 DMA overlaps any byte of wide chunks 151..156 even if it
+misses the first `0x20`. Cap 4 lines per arm. Do not restore the
+per-DMA hash stream.
 
-- H-template: the second control word is `0x80A6BA10` at index 72
-  +0x1C, and its before/after words equal the first control window.
-  The second wide word is `0x80AE5520` at index 151 +0x14, and its
-  before/after words equal the first wide window. The address word
-  itself may differ. The command list differs by aspect. Do not patch.
-- H-unique: a second window's before/after differs from the first
-  window in that arm, ignoring the address word. Name the disagreeing
-  words and both chunk offsets. Do not treat index 71/150 as the
-  template.
-- H-other: the second distinct `word_at` is not the sibling above.
-  Report the address, index, and offset. Do not compare neighbors.
+- H-unread: control logs chunk 72 (positive control) and wide logs
+  zero lines whose range overlaps chunk 151 or chunks 151..156. Phase
+  4 does not read that span. Do not patch.
+- H-read-other: wide overlaps chunk 151 and none of its first 8 words
+  is a pointer into `[0xA6A000, 0xB00000)`. Name the words. Do not patch.
+- H-read-tex: wide overlaps chunk 151 and one of those words is a
+  texture pointer the exact list missed. Name the word and its chunk
+  offset. Do not patch.
 
 Control must still show `w78=05200002` at `data_ptr=0x80B2D820` and
 `[g1d-drop] aspect=4:3 drop=0`. Wide `e8` must stay `0x80AE6E00` and
-`[g1d-drop]` must stay `drop=0x19200`. The first control hit on
-`0x80A6AA10` remains the positive control for the scan.
+`[g1d-drop]` must stay `drop=0x19200`. The chunk-72 line is the
+positive control. A wide log with no chunk-72-equivalent control line
+is not a result.

@@ -645,7 +645,8 @@ extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len) {
         static uint32_t prefix_hits = 0;
         static uint32_t slot_hits = 0;
         static uint32_t scans = 0;
-        static int win_once = 0;
+        static uint32_t win_at[2] = {};
+        static int win_n = 0;
         const uint32_t phase = rs64_phase_ord();
         if (phase != phase_key) {
             phase_key = phase;
@@ -701,17 +702,21 @@ extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len) {
                     const bool stride = !exact && low >= 0x00A6AA10u &&
                         ((low - 0x00A6AA10u) & 0xFFFu) == 0u;
                     if (exact || stride) {
-                        if (phase == 4u && !win_once) {
-                            // One window per process. The 8-byte field gap is
-                            // chunk-relative, so the DMA off is not the field.
-                            win_once = 1;
-                            const uint32_t at = phys + off;
+                        const uint32_t at = phys + off;
+                        const uint32_t at_k = 0x80000000u | at;
+                        bool win_seen = false;
+                        for (int wi = 0; wi < win_n; ++wi)
+                            win_seen = win_seen || win_at[wi] == at_k;
+                        // Two windows per process: the first prefix, then the
+                        // next prefix at a different address. A later DMA can
+                        // start 8 bytes earlier and repeat the same word.
+                        if (phase == 4u && win_n < 2 && !win_seen) {
+                            win_at[win_n++] = at_k;
                             uint32_t pool = 0;
                             if (0x1163ECu <= ram_bytes) {
                                 for (uint32_t b = 0; b < 4u; ++b)
                                     pool = (pool << 8) | g_rdram_for_submit[(0x1163E8u + b) ^ 3u];
                             }
-                            const uint32_t at_k = 0x80000000u | at;
                             int idx = -1;
                             int coff = -1;
                             if ((pool & 0xFu) == 0u && pool >= 0x80800000u && pool < 0x81000000u &&
