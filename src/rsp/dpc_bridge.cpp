@@ -647,6 +647,9 @@ extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len) {
         static uint32_t scans = 0;
         static uint32_t win_at[2] = {};
         static int win_n = 0;
+        static uint32_t ch_dram[4] = {};
+        static int ch_idx[4] = {};
+        static int ch_n = 0;
         const uint32_t phase = rs64_phase_ord();
         if (phase != phase_key) {
             phase_key = phase;
@@ -655,6 +658,7 @@ extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len) {
             prefix_hits = 0;
             slot_hits = 0;
             scans = 0;
+            ch_n = 0;
         }
         const uint32_t phys = dram & 0x00FFFFFFu;
         // s6208: the per-DMA hash line is not emitted. s6195 showed it is
@@ -662,6 +666,67 @@ extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len) {
         {
             const uint32_t ram_bytes = rs64_ram_top > 0x80000000u
                 ? (rs64_ram_top - 0x80000000u) : 0u;
+            // s6211: one line when a phase-4 DMA overlaps control chunk 72
+            // (positive control) or wide chunks 151..156. Not a hash stream.
+            if (phase == 4u && ch_n < 4 && len > 0u) {
+                uint32_t pool = 0;
+                if (0x1163ECu <= ram_bytes) {
+                    for (uint32_t b = 0; b < 4u; ++b)
+                        pool = (pool << 8) | g_rdram_for_submit[(0x1163E8u + b) ^ 3u];
+                }
+                const bool ctl_pool = pool == 0x80B25000u;
+                const bool wide_pool = pool == 0x80AE6E00u;
+                if (ctl_pool || wide_pool) {
+                    const uint32_t watch0 = ctl_pool ? 72u : 151u;
+                    const uint32_t watch_n = ctl_pool ? 1u : 6u;
+                    const uint32_t pool_phys = pool & 0x00FFFFFFu;
+                    const uint32_t watch_lo = pool_phys + watch0 * 0x108u;
+                    const uint32_t watch_hi = watch_lo + watch_n * 0x108u;
+                    const uint32_t dma_hi = phys + len;
+                    if (phys < watch_hi && dma_hi > watch_lo && dma_hi >= phys) {
+                        uint32_t cursor = phys > watch_lo ? phys : watch_lo;
+                        const uint32_t ov_end = dma_hi < watch_hi ? dma_hi : watch_hi;
+                        while (cursor < ov_end && ch_n < 4) {
+                            const uint32_t rel = cursor - pool_phys;
+                            const int idx = static_cast<int>(rel / 0x108u);
+                            const uint32_t chunk_phys = pool_phys + static_cast<uint32_t>(idx) * 0x108u;
+                            const uint32_t next_phys = chunk_phys + 0x108u;
+                            bool seen = false;
+                            for (int i = 0; i < ch_n; ++i)
+                                seen = seen || (ch_idx[i] == idx && ch_dram[i] == dram);
+                            if (!seen && idx >= static_cast<int>(watch0) &&
+                                idx < static_cast<int>(watch0 + watch_n)) {
+                                const uint32_t piece_lo = cursor > chunk_phys ? cursor : chunk_phys;
+                                const uint32_t piece_hi = ov_end < next_phys ? ov_end : next_phys;
+                                ch_idx[ch_n] = idx;
+                                ch_dram[ch_n] = dram;
+                                ++ch_n;
+                                char words[12 * 8];
+                                words[0] = 0;
+                                if (chunk_phys + 0x20u <= ram_bytes) {
+                                    size_t n = 0;
+                                    for (uint32_t i = 0; i < 8u; ++i) {
+                                        uint32_t w = 0;
+                                        for (uint32_t b = 0; b < 4u; ++b)
+                                            w = (w << 8) |
+                                                g_rdram_for_submit[(chunk_phys + i * 4u + b) ^ 3u];
+                                        n += static_cast<size_t>(std::snprintf(
+                                            words + n, sizeof(words) - n, "%s%08X",
+                                            i ? "," : "", w));
+                                    }
+                                }
+                                std::fprintf(stderr,
+                                    "[g1d-ch] arm=%s pool=0x%08X idx=%d dram=0x%08X len=0x%X "
+                                    "ov=0x%X guest_pc=0x%08X words=%s\n",
+                                    ctl_pool ? "ctl" : "wide", pool, idx, dram, len,
+                                    piece_hi - piece_lo, (unsigned)g_rs64_last_guest_pc, words);
+                                std::fflush(stderr);
+                            }
+                            cursor = next_phys;
+                        }
+                    }
+                }
+            }
             uint32_t scan_n = len > 0x1000u ? 0x1000u : len;
             if (phys >= ram_bytes) scan_n = 0;
             else if (scan_n > ram_bytes - phys) scan_n = ram_bytes - phys;
