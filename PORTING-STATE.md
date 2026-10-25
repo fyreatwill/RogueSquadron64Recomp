@@ -168090,3 +168090,20 @@ This refutes H-ec-hole. The span under `ec` is not a free hole at the moment of 
 The same end test is also true of the working control pool (`0x80B25000 < 0x80B95BF0`). It does not, by itself, prove the candidate bytes are a live allocation rather than the free arena the retail pool already sits in. That split is the next measurement, not a second address.
 
 ORIGIN: no value was written on the wide path. The color-image writeback is untouched and its pixels stay legitimate. The `00010001` words are still the bytes `Framebuffer::copyNativeToRAM` left in the unmoved node (s6200); this session did not add a skip, clamp, or restore.
+
+## Session 6203 (2026-10-25) — both pool addresses share one non-free heap block
+
+Ran the s6202 recipe on one binary, two sequential 12 MB arms (`scratch/agent/s6203_run.sh`, witness `scratch/agent/soak_results/s6203/witness.txt`). Screen unlocked. Control pid 55929 ready at 41 s, wide pid 56047 ready at 40 s, both SIGKILL. Neither log has a crash marker. The new line is `[g1d-hblk]` in `tools/apply_s6031_far.py` (`apply_s6203_heapclass`), wired through `fixup_game_funcs_vendored.py`. It runs at the existing `0x80001010` site when `ROGUESQ_LOG_G1D_TASK=1` and the incoming width is 512. It walks the main heap from `0x8010FF18` and names the block covering `0x80B25000` and the block covering `0x8096D600`. It does not store.
+
+Positive control held. Control logged `[g1d-retarget] skip outw=512 ow=512 cur=0x80B25000`, carve n=3 `e8=0x80B25000`, pool n=3 `base=0x80B25000` `bytes=0x4AF58`, and phase-4 `data_ptr=0x80B2D820` `w78=05200002`. Wide logged the s6202 reject (`base=0x8096D600`, `heap_end=0x80B95BF0`), kept `e8=0x80AE6E00`, and phase-4 `data_ptr=0x80AEF620` read `w28=w78=00010001`. Both arms printed `[g1d-hblk]` (nblk=109, head `0x80154690`), so the hook is not blind.
+
+Both addresses are the same block in both arms: header `0x808B77F0`, flags `0x0006`, tag `0`, size `0x2DB000`. The declared span is `[0x808B77F0, 0x80B92800)`. The candidate is `0xB5E10` into that block and the control pool address is `0x2CD810` into it, short of the end by `0xD800`. No earlier block covered `0x8096D600`. The walk stopped once both hits were recorded, so its `last` is this header rather than the s6202 end `0x80B95BF0`.
+
+This selects H-early and refutes H-free and H-live. H-free required one free block (flag bit 0). The free bit is clear. `rs_malloc` and `getTotalFreeHeapSize` test that bit with `andi` of `0x1`, and `coalesceFreeHeapBlocks` at `0x8000235C` only skips a block when `flags & 6` is zero; `0x6` is not skipped. Bit 1, the used mark tested at `0x80002398`, is set. Bit 2 is also set; that bit is what coalesce tests on a free successor before merging (`0x800023BC`), and this block is not free. H-live required the candidate to be a used block and the control address to be a different block. The control address is this same block. The two arms match, including the size, so the wide-specific `0x3E4B00` block from s6128 has not appeared yet.
+
+Superseded: "the end test cannot tell a live block from the free arena, so the candidate might still be free." Believable because s6202 only proved the heap walk passes the address, and the working control pool is also below that end. The flag word says otherwise.
+
+The pool log at `0x80018030` is the size computation in `buildAndRegisterDefaultMaterial`, immediately before that function clears the pool. It is not `rs_malloc`. Whether this block is still intact after that clear is the next measurement. Do not retarget `0x8096D600` and do not pick a second address.
+
+ORIGIN: no value was written. The color-image writeback is untouched. The `00010001` words remain the bytes `Framebuffer::copyNativeToRAM` left in the unmoved node (s6200). This session added a heap-block log only.
+

@@ -1,56 +1,64 @@
-# NEXT: classify the heap block under the phase-4 pool
+# NEXT: reclassify the same two addresses after the pool clear
 HYPOTHESIS-ID: g1d-widescreen
 
-Session 6202 refutes H-ec-hole as "the span under ec is free." Do not
+Session 6203 selects H-early and refutes H-free and H-live. Do not
 write `0x801163E8`. Do not try a second address. Do not change `t0`,
 `d8`, `dc`, `f0`, `f4`, `f8`, or `ec`. Do not raise `osMemSize`. Do not
-skip the color-image writeback. Do not rerun the s6202 placement.
+skip the color-image writeback. Do not retarget `0x8096D600` yet.
 
-Witness: `scratch/agent/soak_results/s6202/witness.txt`.
+Witness: `scratch/agent/soak_results/s6203/witness.txt`.
 
-The opt-in store at `0x80001010` computed `ec - t2` and stopped.
-Control `outw=512` skipped: `e8=0x80B25000`, phase-4 `data_ptr=0x80B2D820`,
-task-time word `+0x78 = 05200002` (`+0x28 = 00000000`). Wide
-`base=0x8096D600`, `span_end=0x809B8600` (`0x809B8600 - 0x4B000`;
-the older `0x8096D800` note is 0x200 high), rejected because the main
-heap walk reached `heap_end=0x80B95BF0` from `heap_head=0x80154690`.
-`e8` stayed `0x80AE6E00`. Task-time `+0x28` and `+0x78` on
-`0x80AEF620` are still `00010001`. `r3` was not modified, and the wide
-carve globals match s6201.
+At the `0x80001010` store, with `ROGUESQ_LOG_G1D_TASK=1`, both arms
+walked the main heap from `0x8010FF18` (head `0x80154690`, 109 blocks
+to the hit). `0x80B25000` and `0x8096D600` are the same block:
 
-The same heap end is above the working control pool
-(`0x80B25000 < 0x80B95BF0`). "End above the address" is therefore true
-of the retail placement too. It does not say whether `0x8096D600` is a
-live block.
+```
+addr=0x808B77F0 flags=0x0006 tag=0x0000 size=0x2DB000
+```
 
-One new log line, same site, no store. When `ROGUESQ_LOG_G1D_TASK=1`
-and this carve would have considered the retarget, walk the main heap
-from `0x8010FF18` and print the one block whose span covers
-`0x80B25000` and the one whose span covers `0x8096D600`:
-`addr`, `flags`, `tag`, `size`, and whether the two addresses are the
-same block. Print it for both arms. A missing line is a blind hook.
+Span is `[0x808B77F0, 0x80B92800)`. The free bit is clear. Bit 1 (the
+used mark `coalesceFreeHeapBlocks` tests at `0x80002398`) is set, and
+bit 2 is also set. `coalesceFreeHeapBlocks` at `0x8000235C` does not
+skip a block whose flags `& 6` are nonzero. Control
+`data_ptr=0x80B2D820` still reads `w78=05200002`. Wide `e8` stayed
+`0x80AE6E00` and `w28=w78=00010001`. Carve n=3 and pool n=3 match
+s6202. The new log does not store.
+
+`[g1d-pool]` at `0x80018030` is not `rs_malloc`. It is the size
+computation inside `buildAndRegisterDefaultMaterial` (`funcs_4.c`),
+`v1 = base + bytes`, immediately before the pool clear. The carve-time
+walk may simply be early, which is what H-early claimed. One new log
+line, same site, no store. When `ROGUESQ_LOG_G1D_TASK=1` and this is
+pool call n=3, walk from `0x8010FF18` again and print the block
+covering `0x80B25000` and the block covering `0x8096D600`: `addr`,
+`flags`, `tag`, `size`, `same`, `nblk`, `head`. Tag the line
+`[g1d-hblk-pool]` so it cannot be confused with `[g1d-hblk]`. Print it
+for both arms. A missing line is a blind hook.
 
 Build once:
 `env DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --target RogueSquadron64Recomp`
 
-Then the s6202 recipe, sequential, from `build/`, SIGKILL, screen
+Then the s6203 recipe, sequential, from `build/`, SIGKILL, screen
 unlocked, one game at a time:
 `ROGUESQ_OSMEM_MB=12 ROGUESQ_LOG_G1D_TASK=1 ROGUESQ_LOG_PHASE=1`
 `ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1`
 `ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1`
 with `ROGUESQ_ASPECT=4:3` then `16:9`. Do not pass `ROGUESQ_FB_WIDTH`.
 
-- H-live: the candidate address is in a used block (flag 2) and the
-  control pool address is not that block. The reject stands. Do not
-  retarget there.
-- H-free: both addresses fall in one free block (flag 1). The end test
-  was coarser than occupancy. The same `ec-t2` candidate is still the
-  only address in play; a later iteration may retry it only with a
-  flag test in place of the end test.
-- H-early: the control pool address is already inside a used block at
-  this moment, same as the candidate. The walk is too early to name
-  the retail reservation. Next witness is the same two addresses after
-  `[g1d-pool] n=3`, not a new base.
+- H-same: both arms still report `0x808B77F0` / flags `0x0006` /
+  size `0x2DB000` / same=1. The pool clear does not subdivide it.
+  The candidate is inside the live block that already held the retail
+  pool at the carve store. Do not retarget `0x8096D600`. The next
+  witness is the writer of that header, not another address.
+- H-split: the two addresses are different blocks after the clear.
+  If the candidate is then free (flag bit 0) and the control address
+  is not, the carve-time walk was early and a later iteration may
+  retry `ec-t2` with a flag test in place of the end test. If the
+  candidate is non-free and distinct, the reject stands.
+- H-grow: the wide covering size is no longer `0x2DB000` while control
+  stays `0x2DB000`. That is the width-dependent block s6128 saw. Record
+  its flag. Do not retarget until that flag is known.
 
 Control must still show `w78=05200002` at `data_ptr=0x80B2D820`. Wide
-`e8` must stay `0x80AE6E00`.
+`e8` must stay `0x80AE6E00`. The carve-time `[g1d-hblk]` line must
+still fire, or the new hook has no positive control.
