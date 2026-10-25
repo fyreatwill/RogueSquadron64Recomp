@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6197 (2026-10-25).
+Compact operational handoff, maintained as of Session 6198 (2026-10-25).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -88,7 +88,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog; per-session history archived in PROJECT-OVERVIEW.md, "Archived CURRENT-TRUTH backlog")
 
-1. **G1d widescreen (active, `scratch/agent/NEXT.md`).** s6197: the wide phase-4 command node does not contain control's `05200002` anywhere in a 0x200-byte window (refutes a shifted block). From `0x28` the body is an `00010001` fill, including over `0x78..0xB4`; the header and the RDP list at `0x108` still match after the `0x3E200` relocation, and `0x178` is a real width-minus-one field (511 vs 795). Next: the guest PC that stores the fill, ordered against the PC that stores `05200002` in control. History: Aspect lever proven: `ROGUESQ_ASPECT_SCALE=k`
+1. **G1d widescreen (active, `scratch/agent/NEXT.md`).** s6198: no scalar store (SB/SH/SW/SD) changes the phase-4 command node into `05200002` or `00010001`. The hook did record `05200002` elsewhere, including one high-RDRAM create at `0xA3DE48` (`inflate_fast`), so it is not blind; the node words arrive by DMA or an unaligned store (`do_swl`/`do_swr`). s6197 still stands: the wide body is an `00010001` fill, not a shifted `05200002` block, and `0x178` is width-minus-one. History: Aspect lever proven: `ROGUESQ_ASPECT_SCALE=k`
    (guPerspective aspect in setupCameraMatrices) scales rigid-object width ~1/k (s6108).
    Flight RDP census (s6110, `tools/rdpbin_scissor.py`): colour image 512 wide, scissor 512x448
    (+4-unit twin), secondary passes 640. A real widening must change colour-image width, scissor,
@@ -416,3 +416,5 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   No rendering mitigation.
 
 - s6197: 0x200-byte dump of the first two root nodes (`scratch/agent/soak_results/s6197/`). Control node 0 has `05200002` once at 0x78 (positive control). Wide node 0 (`0x80AEF620`) has zero hits at any byte offset and 81 words of `00010001` (runs `0x28..0xD8`, `0xE0..0x104`, `0x198..0x1FC`; `0001FFFF` at `0xDC`). 32 words match, 9 relocate by `0x3E200`, 6 other diffs sit in the preserved RDP list (`0x178` = width-1). This refutes H-shift in that window and selects H-fill. Control node 1's 0x78 block is different data, not `05200002`. Writer still unnamed. Superseded: "the fixed-point block might sit past the 0x10F DMA" — believable because that is the RSP transfer length and s6196 stopped there.
+
+- s6198: scalar B/H/W/D stores do not create the command-node words. Paired 12 MB run `scratch/agent/soak_results/s6198e/` (160 phase-4 joins and root `0x003BD0` both arms; copies 400/320). Control node `0xB2D820` still has `05200002` at +0x78; wide node `0xAEF620` still has 81 `00010001` words from +0x28. An unevictable above-8 MB log was still open at the node dump (cap line after the dump) and recorded 0 changed words inside either 0x200 window. Uncapped `05200002` exact rows: 259, none in the node; the same hook did log a create at `0xA3DE48`. Dead end: s6198d credited `rs_memset` (`0x800078EC`) for 128 wide-node words because the byte store was scored on the word it left unchanged. Superseded: "the fill PC is a scalar store the parity hook can name" — believable because the bytes sit in RDRAM and SB/SH/SW/SD are the usual writers; s6198e is the before/after check those hooks needed. Next witness is a DMA destination or `do_swl`/`do_swr`, not another scalar hook. No rendering change.

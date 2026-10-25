@@ -168020,3 +168020,15 @@ This refutes H-shift inside the window the RSP's 0x10F read could have missed, a
 Next discriminator: guest PC and order of the store that writes `00010001` at node+0x28, against the PC that writes `05200002` at node+0x78 in control, and against the wide-only `0001FFFF` at node+0xDC. Join those rows to the same run's `[g1d-node]` base; do not hardcode the physical address. No rendering value changed.
 
 ORIGIN: diagnostic only. The added lines log an env-gated DMA snapshot and do not skip, clamp, or rewrite guest or RDP data.
+
+## Session 6198 (2026-10-25) — scalar stores do not write the command-node fill
+
+The phase-4 command node is still the s6197 picture, and no scalar store creates it. Paired 12 MB 4:3/16:9 runs used `scratch/agent/s6179_g1d_rdp_words.sh` (title census, `MISSION_RE=ZZZ`). The run that counts is `scratch/agent/soak_results/s6198e/`: both arms had 160 phase-4 `[g1d-join]` rows and `[g1d-root]` seq1 `root_norm=0x003BD0`; copies were 400 (control) and 320 (wide). Wide never reaches 400 copies on this route, so the stopper no longer waits for that. Nodes, from `s6198e/ctl.node` and `s6198e/wide.node`: control `dram=0x80B2D820` `05200002` once at +0x78; wide `dram=0x80AEF620` 81 words of `00010001` from +0x28.
+
+The witness reads the word back after SB/SH/SW/SD and keeps a row only when the aligned word changes into `05200002`, `00010001`, or `0001FFFF`. Above 8 MB those rows are not subject to the 24-run summary eviction. In s6198e the 65536-row cap is at run-log line 176756 and the wide node dump is at line 88329, so the log was still open when the node was sampled. Window hits inside either 0x200-byte node: 0. Uncapped `05200002` exact rows: 259, none inside the node. The same hook did create one high-RDRAM `05200002`, `inflate_fast` at `0xA3DE48` (delta about -0xEFA50 from control node+0x78). The other `05200002` PCs (`0x800C8858`, `0x800C8A00`, `0x800C893C`) write `0x1E6854..0x1E6BC4` only. So the hook sees this immediate and still does not see it at the node.
+
+Dead end, preserved as `scratch/agent/soak_results/s6198d/`: scoring a byte store on the word it left behind credited `rs_memset` (`0x800078EC`, `sb`) for 128 consecutive wide-node words of `00010001`. That is the first byte of each word, which was already `0x00`. The before/after check removes it. An earlier halfword census (`s6198c`) could not prove a miss either: single-word runs are dropped once a PC holds 24 of them, and `0x0002` flooded the exact log.
+
+This refutes H-skipped, H-clobber, and H-elsewhere for a scalar writer of the node body. It does not name the writer. H-dma is not concluded: the remaining classes are a PI or RSP block write, and `do_swl`/`do_swr`, which the parity hook does not see. Next discriminator is those block writes joined to the same run's node base. No rendering value changed.
+
+ORIGIN: diagnostic only. The fill witness logs env-gated store readback and does not skip, clamp, or rewrite guest or RDP data.

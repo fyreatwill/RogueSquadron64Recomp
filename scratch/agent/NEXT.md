@@ -1,48 +1,50 @@
-# NEXT: name the PC that fills the wide command node
+# NEXT: name the non-scalar writer of the command node
 HYPOTHESIS-ID: g1d-widescreen
 
-Session 6197 refuted H-shift. Control node 0 contains `05200002` once at
-offset `0x78`. Wide node 0 (`dram` base from `[g1d-node] n=0`) contains that
-word at no byte offset in `0x200` bytes. `00010001` fills `0x28..0xD8`,
-`0xE0..0x104` and `0x198..0x1FC`, with `0001FFFF` at `0xDC`. The header and
-the RDP list at `0x108..0x194` are already written in both arms (9 pointer
-words relocate by `0x3E200`; `0x178` is framebuffer width minus one). Do not
-re-dump the node and do not treat those RDP immediates as the missing block.
+Session 6198 closed the scalar path. SB/SH/SW/SD that change a word into
+`05200002`, `00010001`, or `0001FFFF` do not touch either phase-4 command
+node. The hook is not blind: the same run logged 259 `05200002` creates,
+including `inflate_fast` at `0xA3DE48` (about 0xEFA50 below control
+node+0x78). Control node 0 is still `dram=0x80B2D820` with `05200002` at
++0x78. Wide node 0 is still `dram=0x80AEF620` with the `00010001` fill from
++0x28. Do not add another scalar store hook. `rs_memset` (`0x800078EC`) was
+a false credit when a byte store was scored on a word it left unchanged.
 
-Do not change rendering. The store hook `rs64_m5_writer_parity` passes
-`value` as literal `0` and runs before the store
-(`tools/fixup_game_funcs_vendored.py`). Read the word back from RDRAM on the
-next hook entry, the same pending-store pattern as `rs64_s5654_vstore`.
+Do not change rendering. One env-gated witness, `ROGUESQ_LOG_G1D_FILLPC`
+still set, plus a new `ROGUESQ_LOG_G1D_BLK` (name it that). Log only writes
+that can produce a 0x80-byte or larger block without a scalar store:
 
-Add one env-gated witness, `ROGUESQ_LOG_G1D_FILLPC`, phase >= 4 only. When
-the word just stored is `0x00010001`, `0x0001FFFF`, or `0x05200002`, record
-guest PC, address, value, and a monotonic order. Collapse per PC (count,
-first address, last address, first order, last order) so a framebuffer clear
-does not flood the log. Keep the existing paired runner and its controls,
-including `ROGUESQ_LOG_G1D_READS`:
+- PI DMA completion whose RDRAM dest overlaps phys `>= 0x800000` (source,
+  dest, length, guest PC).
+- RSP `dma_dmem_to_rdram` with the same overlap (DMEM address, dest, length).
+- `do_swl` / `do_swr` when the aligned word changes into one of the three
+  command-node words. That hook lives in `recomp.h`; a `lib/` edit must be
+  followed by `./submodule-patches/export.sh` in the same commit.
+
+Keep the paired runner:
 
     zsh scratch/agent/s6179_g1d_rdp_words.sh
 
-Copy the `[g1d-fill]` lines out before a `nomission` retry truncates
-`run.log`. Game logs are `scratch/agent/m6/g1_lvl1_ctl/run.log` and
-`g1_lvl1_wide/run.log`. Join store rows to that run's `[g1d-node] n=0` base.
-Do not hardcode the physical address. SIGKILL the process group once both
-arms have 160 phase-4 joins, 400 copies, both root sequences
-(seq1 `root_norm=0x003BD0`), and the fill-PC summary.
+It stops when both arms have 160 phase-4 joins, one `root_seq=1
+root_norm=0x003BD0`, and a fill summary. Wide copies plateau below 400; do
+not wait for 400. SIGKILL the process group. Game logs are
+`scratch/agent/m6/g1_lvl1_ctl/run.log` and `g1_lvl1_wide/run.log`. Join
+block rows to that run's `[g1d-node] n=0` base. Do not hardcode the physical
+address.
 
-Positive control: the control arm must show a PC whose stored word is
-`05200002` at that run's node+`0x78`. If it does not, the hook is blind and
-the run is void.
+Positive control: control must show one logged block write whose dest range
+covers that run's node+0x78, and the wide arm must show one whose dest range
+covers node+0x28. A row that only overlaps the header or the RDP list at
++0x108 does not count; those words already match after relocation.
 
-Competing hypotheses:
+- H-dma: the covering write is a PI or RSP DMA. The source address (ROM or
+  the other RDRAM region) is the measurement. Next iteration reads that
+  source, it does not add another hook.
+- H-swl: no DMA covers the body, and a `do_swl`/`do_swr` row does. That PC
+  is the writer.
+- H-host: neither DMA nor SWL covers the body even though the node dump
+  still has the words. The writer is a host memcpy; the next witness is the
+  C++ write into `g_recomp_rdram_for_wp_raw`, not another guest hook.
 
-- H-skipped: that `05200002` PC never stores the value in the wide arm, and
-  a `00010001` PC's address span already covers wide node+`0x28`. The body
-  writer did not run; the fill is leftover.
-- H-clobber: the same `05200002` PC hits wide node+`0x78`, and a later
-  `00010001` store overwrites it. Order is the measurement.
-- H-elsewhere: the `05200002` PC runs in the wide arm, but not inside the
-  node. The address delta from node+`0x78` is the measurement.
-- H-dma: no CPU store of `00010001` hits wide node+`0x28` even though the
-  control positive control fired. The fill arrived by DMA; that is the next
-  witness, not another store hook.
+If the new log is empty everywhere while the old `05200002` exact rows still
+fire, the block hook is blind. Fix it and rerun in the same iteration.

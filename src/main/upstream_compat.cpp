@@ -2743,9 +2743,330 @@ extern "C" void rs64_m5_pre_dma_writer_store(char width, uint32_t pc,
                                                 uint32_t addr,
                                                 uint32_t value);
 
+// s6198: rs64_m5_writer_parity passes value as literal 0 and runs before the
+// store, so the stored word is read back from RDRAM on the next hook entry.
+extern "C" volatile uint8_t* volatile g_recomp_rdram_for_wp_raw;
+
+namespace {
+
+struct Rs64FillRun { uint32_t lo, hi; };
+struct Rs64FillAgg {
+    uint64_t count = 0;
+    uint32_t first = 0, last = 0, lo = 0, hi = 0;
+    uint64_t ord0 = 0, ord1 = 0;
+    Rs64FillRun runs[24]{};
+    uint8_t nruns = 0;
+    uint8_t overflow = 0;
+};
+struct Rs64FillSig { uint32_t pc, value; uint64_t ord; };
+struct Rs64FillTls {
+    uint32_t pc = 0, value = 0, lo = 0, hi = 0, first = 0, last = 0;
+    uint64_t count = 0, ord0 = 0, ord1 = 0;
+    bool live = false;
+    int dir = 0;
+    int stride = 4;
+};
+
+struct Rs64FillState {
+    std::mutex mu;
+    std::map<uint64_t, Rs64FillAgg> by;
+    std::map<uint32_t, Rs64FillSig> sig;
+    std::atomic<uint64_t> order{0};
+    std::atomic<uint64_t> words{0};
+    std::atomic<uint64_t> resolved{0};
+    std::atomic<uint64_t> nonzero{0};
+    std::atomic<uint64_t> interesting{0};
+    uint32_t gen = 0;
+    uint32_t exact = 0;
+    uint32_t sig_drop = 0;
+    int pcs_overflow = 0;
+    std::chrono::steady_clock::time_point flushed{};
+    bool ever = false;
+};
+
+Rs64FillState& rs64_fill_state() {
+    static Rs64FillState s;
+    return s;
+}
+
+void rs64_fill_add_run(Rs64FillAgg* agg, uint32_t lo, uint32_t hi) {
+    const uint32_t span = hi >= lo ? hi - lo : 0u;
+    if (agg->nruns >= 24) {
+        agg->overflow = 1;
+        if (span < 0x20u) return;
+        uint8_t victim = 0;
+        uint32_t shortest = 0xFFFFFFFFu;
+        for (uint8_t i = 0; i < agg->nruns; ++i) {
+            const uint32_t w = agg->runs[i].hi - agg->runs[i].lo;
+            if (w < shortest) { shortest = w; victim = i; }
+        }
+        if (shortest >= span) return;
+        agg->runs[victim] = agg->runs[agg->nruns - 1];
+        agg->nruns--;
+    }
+    if (agg->nruns < 24) {
+        agg->runs[agg->nruns++] = Rs64FillRun{lo, hi};
+    } else {
+        agg->overflow = 1;
+    }
+    bool merged = true;
+    while (merged) {
+        merged = false;
+        for (uint8_t i = 0; i < agg->nruns && !merged; ++i) {
+            for (uint8_t j = static_cast<uint8_t>(i + 1); j < agg->nruns; ++j) {
+                Rs64FillRun* x = &agg->runs[i];
+                Rs64FillRun* y = &agg->runs[j];
+                if (x->hi + 4u < y->lo || y->hi + 4u < x->lo) continue;
+                if (y->lo < x->lo) x->lo = y->lo;
+                if (y->hi > x->hi) x->hi = y->hi;
+                agg->runs[j] = agg->runs[agg->nruns - 1];
+                agg->nruns--;
+                merged = true;
+                break;
+            }
+        }
+    }
+}
+
+void rs64_fill_flush_summary_locked(Rs64FillState& st) {
+    st.gen++;
+    std::fprintf(stderr,
+        "[g1d-fill-ctl] gen=%u word_stores=%llu resolved=%llu nonzero=%llu "
+        "interesting=%llu pcs=%zu sig=%zu exact=%u pcs_overflow=%d sig_drop=%u rdram=%d\n",
+        st.gen,
+        (unsigned long long)st.words.load(std::memory_order_relaxed),
+        (unsigned long long)st.resolved.load(std::memory_order_relaxed),
+        (unsigned long long)st.nonzero.load(std::memory_order_relaxed),
+        (unsigned long long)st.interesting.load(std::memory_order_relaxed),
+        st.by.size(), st.sig.size(), st.exact, st.pcs_overflow, st.sig_drop,
+        g_recomp_rdram_for_wp_raw != nullptr);
+    for (const auto& kv : st.by) {
+        const uint32_t pc = static_cast<uint32_t>(kv.first >> 32);
+        const uint32_t value = static_cast<uint32_t>(kv.first);
+        const Rs64FillAgg& agg = kv.second;
+        char spans[512];
+        size_t used = 0;
+        spans[0] = 0;
+        for (uint8_t i = 0; i < agg.nruns && used + 20 < sizeof(spans); ++i) {
+            used += static_cast<size_t>(std::snprintf(
+                spans + used, sizeof(spans) - used, "%s%06X-%06X",
+                i ? "," : "", agg.runs[i].lo, agg.runs[i].hi));
+        }
+        if (agg.overflow && used + 2 < sizeof(spans)) spans[used++] = '+';
+        spans[used] = 0;
+        std::fprintf(stderr,
+            "[g1d-fill] gen=%u pc=0x%08X value=%08X count=%llu first=0x%06X last=0x%06X "
+            "min=0x%06X max=0x%06X ord=%llu-%llu runs=%u spans=%s\n",
+            st.gen, pc, value, (unsigned long long)agg.count, agg.first, agg.last,
+            agg.lo, agg.hi, (unsigned long long)agg.ord0, (unsigned long long)agg.ord1,
+            agg.nruns, spans[0] ? spans : "-");
+    }
+    std::fflush(stderr);
+    st.flushed = std::chrono::steady_clock::now();
+    st.ever = true;
+}
+
+void rs64_fill_commit_tls(Rs64FillTls* tls) {
+    if (!tls->live || tls->count == 0) return;
+    Rs64FillState& st = rs64_fill_state();
+    std::lock_guard<std::mutex> lock(st.mu);
+    const uint64_t key = (uint64_t)tls->pc << 32 | tls->value;
+    auto it = st.by.find(key);
+    if (it == st.by.end()) {
+        const bool common = tls->value == 0x00010001u || tls->value == 0x0001u;
+        if (st.by.size() >= 1024u && common) {
+            st.pcs_overflow = 1;
+            tls->live = false;
+            tls->count = 0;
+            return;
+        }
+        it = st.by.emplace(key, Rs64FillAgg{}).first;
+        it->second.first = tls->first;
+        it->second.lo = tls->lo;
+        it->second.hi = tls->hi;
+        it->second.ord0 = tls->ord0;
+    }
+    Rs64FillAgg& agg = it->second;
+    agg.count += tls->count;
+    agg.last = tls->last;
+    agg.ord1 = tls->ord1;
+    if (tls->lo < agg.lo) agg.lo = tls->lo;
+    if (tls->hi > agg.hi) agg.hi = tls->hi;
+    rs64_fill_add_run(&agg, tls->lo, tls->hi);
+    const auto ord_at = [&](uint32_t addr) -> uint64_t {
+        const uint32_t step = tls->stride > 0 ? (uint32_t)tls->stride : 4u;
+        if (tls->dir < 0) return tls->ord0 + (uint64_t)(tls->hi - addr) / step;
+        return tls->ord0 + (uint64_t)(addr - tls->lo) / step;
+    };
+    const bool rare = tls->value == 0x05200002u || tls->value == 0x0001FFFFu;
+    if (rare) {
+        if (tls->count <= 256u) {
+            const uint32_t step = tls->stride > 0 ? (uint32_t)tls->stride : 4u;
+            for (uint32_t addr = tls->lo; addr <= tls->hi; addr += step) {
+                const uint64_t ord = ord_at(addr);
+                if (st.exact < 4000u || tls->value == 0x05200002u) {
+                    std::fprintf(stderr,
+                        "[g1d-fill-exact] pc=0x%08X value=%08X addr=0x%06X ord=%llu\n",
+                        tls->pc, tls->value, addr, (unsigned long long)ord);
+                    if (tls->value == 0x05200002u) std::fflush(stderr);
+                    st.exact++;
+                }
+                if (st.sig.size() < 16384u) {
+                    st.sig[addr] = Rs64FillSig{tls->pc, tls->value, ord};
+                } else {
+                    st.sig_drop++;
+                }
+            }
+        } else {
+            st.sig_drop++;
+        }
+    } else {
+        for (auto sig = st.sig.begin(); sig != st.sig.end(); ) {
+            const uint32_t addr = sig->first;
+            if (addr < tls->lo || addr > tls->hi) { ++sig; continue; }
+            const uint64_t ord = ord_at(addr);
+            std::fprintf(stderr,
+                "[g1d-fill-clobber] addr=0x%06X prev_pc=0x%08X prev_value=%08X prev_ord=%llu "
+                "pc=0x%08X ord=%llu\n",
+                addr, sig->second.pc, sig->second.value,
+                (unsigned long long)sig->second.ord, tls->pc, (unsigned long long)ord);
+            sig = st.sig.erase(sig);
+        }
+    }
+    tls->live = false;
+    tls->count = 0;
+}
+
+void rs64_fill_note_hi(uint32_t pc, uint32_t phys, uint32_t word) {
+    // Command nodes sit above the 8 MB line (s6197: 0xAEF620 / 0xB2D820).
+    // The 24-run summary evicts later single-word stores, so this log is the
+    // one that can still name a scattered 00010001 writer.
+    if (phys < 0x800000u || phys >= 0x01000000u) return;
+    static std::atomic<uint32_t> hi_n{0};
+    const uint32_t n = hi_n.fetch_add(1, std::memory_order_relaxed);
+    if (n >= 65536u) return;
+    std::fprintf(stderr, "[g1d-fill-hi] pc=0x%08X value=%08X addr=0x%06X n=%u\n",
+                 pc, word, phys, n);
+    if (word == 0x05200002u || (n & 63u) == 0u) std::fflush(stderr);
+}
+
+void rs64_fill_note_word(Rs64FillTls* tls, uint32_t pc, uint32_t phys,
+                         uint32_t word, int stride) {
+    const bool interesting = stride == 4 &&
+        (word == 0x00010001u || word == 0x0001FFFFu || word == 0x05200002u);
+    if (!interesting) return;
+    rs64_fill_note_hi(pc, phys, word);
+    Rs64FillState& st = rs64_fill_state();
+    const uint64_t ord = st.order.fetch_add(1, std::memory_order_relaxed) + 1u;
+    st.interesting.fetch_add(1, std::memory_order_relaxed);
+    if (tls->live && tls->count && tls->pc == pc && tls->value == word &&
+        tls->stride == stride) {
+        if (tls->dir >= 0 && phys == tls->hi + (uint32_t)stride) {
+            tls->hi = phys;
+            tls->last = phys;
+            tls->count++;
+            tls->ord1 = ord;
+            tls->dir = 1;
+            return;
+        }
+        if (tls->dir <= 0 && phys + (uint32_t)stride == tls->lo) {
+            tls->lo = phys;
+            tls->last = phys;
+            tls->count++;
+            tls->ord1 = ord;
+            tls->dir = -1;
+            return;
+        }
+    }
+    rs64_fill_commit_tls(tls);
+    *tls = Rs64FillTls{pc, word, phys, phys, phys, phys, 1u, ord, ord, true, 0, stride};
+}
+
+}  // namespace
+
+extern "C" void rs64_g1d_fillpc_note(char width, uint32_t pc, uint32_t addr) {
+    static std::atomic<int> armed{0};
+    if (armed.exchange(1, std::memory_order_relaxed) == 0) {
+        std::fprintf(stderr, "[g1d-fill-ctl] armed=1\n");
+        std::fflush(stderr);
+    }
+    // before/before2 are the aligned word(s) before this store. rs_memset's
+    // sb loop otherwise gets credit for a 00010001 word it did not change.
+    struct Pend { uint32_t pc, phys, before, before2; char width; bool live; };
+    static thread_local Pend pend{};
+    static thread_local Rs64FillTls tls{};
+    static thread_local uint32_t ticks = 0;
+    Rs64FillState& st = rs64_fill_state();
+    auto target_word = [](uint32_t word) {
+        return word == 0x05200002u || word == 0x00010001u || word == 0x0001FFFFu;
+    };
+    if (pend.live) {
+        const Pend done = pend;
+        pend.live = false;
+        volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+        if (rd != nullptr && done.phys < 0x00FFFFF8u) {
+            if (done.width == 'H' || done.width == 'B') {
+                const uint32_t aligned = done.phys & ~3u;
+                const uint32_t word = rs64_rdram_u32(rd, aligned);
+                st.resolved.fetch_add(1, std::memory_order_relaxed);
+                if (word) st.nonzero.fetch_add(1, std::memory_order_relaxed);
+                if (word != done.before && target_word(word))
+                    rs64_fill_note_word(&tls, done.pc, aligned, word, 4);
+            } else {
+                const uint32_t nwords = done.width == 'D' ? 2u : 1u;
+                for (uint32_t i = 0; i < nwords; ++i) {
+                    const uint32_t phys = done.phys + 4u * i;
+                    const uint32_t word = rs64_rdram_u32(rd, phys);
+                    const uint32_t prior = i == 0u ? done.before : done.before2;
+                    st.resolved.fetch_add(1, std::memory_order_relaxed);
+                    if (word) st.nonzero.fetch_add(1, std::memory_order_relaxed);
+                    if (word != prior && target_word(word))
+                        rs64_fill_note_word(&tls, done.pc, phys, word, 4);
+                }
+            }
+        }
+    }
+    volatile uint8_t* rd_now = g_recomp_rdram_for_wp_raw;
+    if (width == 'H') {
+        const uint32_t phys = addr & 0x1FFFFFFFu;
+        st.words.fetch_add(1, std::memory_order_relaxed);
+        if ((phys & 1u) == 0u && phys < 0x00FFFFFEu && rd_now != nullptr) {
+            const uint32_t aligned = phys & ~3u;
+            pend = Pend{pc, phys, rs64_rdram_u32(rd_now, aligned), 0u, width, true};
+        }
+    } else if (width == 'B') {
+        const uint32_t phys = addr & 0x1FFFFFFFu;
+        st.words.fetch_add(1, std::memory_order_relaxed);
+        if (phys < 0x00FFFFFCu && rd_now != nullptr) {
+            const uint32_t aligned = phys & ~3u;
+            pend = Pend{pc, phys, rs64_rdram_u32(rd_now, aligned), 0u, width, true};
+        }
+    } else if (width == 'W' || width == 'D') {
+        const uint32_t phys = (addr & 0x1FFFFFFFu) & ~3u;
+        st.words.fetch_add(1, std::memory_order_relaxed);
+        if (phys < 0x01000000u && rd_now != nullptr) {
+            const uint32_t before2 = width == 'D' && phys + 4u < 0x01000000u
+                ? rs64_rdram_u32(rd_now, phys + 4u) : 0u;
+            pend = Pend{pc, phys, rs64_rdram_u32(rd_now, phys), before2, width, true};
+        }
+    }
+    if ((++ticks & 8191u) == 0u) {
+        rs64_fill_commit_tls(&tls);
+        std::lock_guard<std::mutex> lock(st.mu);
+        const auto now = std::chrono::steady_clock::now();
+        if (!st.ever || now - st.flushed >= std::chrono::milliseconds(500))
+            rs64_fill_flush_summary_locked(st);
+    }
+}
+
 extern "C" void rs64_m5_route_value_writer(char width, uint32_t pc,
                                               uint32_t addr,
                                               uint32_t value) {
+    static const bool g1d_fillpc = [] {
+        const char* e = std::getenv("ROGUESQ_LOG_G1D_FILLPC");
+        return e && *e && *e != '0';
+    }();
+    if (g1d_fillpc) rs64_g1d_fillpc_note(width, pc, addr);
     rs64_m5_pre_dma_writer_store(width, pc, addr, value);
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
