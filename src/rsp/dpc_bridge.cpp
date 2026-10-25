@@ -2450,8 +2450,59 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     }
 }
 
+// s6158 G1d: region scan. ROGUESQ_LOG_REGION="x0,x1,y0,y1" (raw RDP px) logs every
+// triangle (bbox centre in region) and texrect (ul in region) with its range and
+// offset; ROGUESQ_SHIFT_REGION=<dx px> additionally shifts matching tris/rects in x
+// (positive control: the matched element must visibly move in the fbdump).
+static void rs64_region_scan(uint32_t lo, uint32_t hi) {
+    static double R[4]; static double dxs = 0; static int shiftOn = 0;
+    static const bool on = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_REGION");
+        if (!e || !*e || sscanf(e, "%lf,%lf,%lf,%lf", &R[0], &R[1], &R[2], &R[3]) != 4) return false;
+        const char *d = std::getenv("ROGUESQ_SHIFT_REGION");
+        if (d && *d) { dxs = atof(d); shiftOn = 1; }
+        return true; }();
+    if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u) return;
+    static uint32_t s_logged = 0, s_hits = 0;
+    const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
+    auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & 0x7FFFFCu), 4); return v; };
+    auto wr = [&](uint32_t a, uint32_t v) { memcpy(g_rdram_for_submit + (a & 0x7FFFFCu), &v, 4); };
+    auto sx14 = [](uint32_t v) { return (double)(((int32_t)(v << 18)) >> 18) / 4.0; };
+    for (uint32_t a = lo & ~3u; a + 8 <= hi;) {
+        const uint32_t w0 = rd(a), w1 = rd(a + 4);
+        const uint32_t op = (w0 >> 24) & 0x3F;
+        if (op == 0x24 || op == 0x25) {
+            if (a + 16 > hi) break;
+            const double xh = ((w1 >> 12) & 0xFFF) / 4.0, yh = (w1 & 0xFFF) / 4.0;
+            const double xl = ((w0 >> 12) & 0xFFF) / 4.0, yl = (w0 & 0xFFF) / 4.0;
+            if (xl >= R[0] && xl <= R[1] && yl >= R[2] && yl <= R[3]) {
+                s_hits++;
+                if (s_logged++ < 400) { fprintf(stderr, "[region] swap=%d TEXRECT off=%06X ul=(%.1f,%.1f) lr=(%.1f,%.1f) range=%06X..%06X\n", sw, a, xh, yh, xl, yl, lo, hi); fflush(stderr); }
+                if (shiftOn) { const int32_t d4 = (int32_t)(dxs * 4); wr(a, (w0 & ~0xFFF000u) | ((((w0 >> 12) & 0xFFF) + d4) & 0xFFF) << 12); wr(a + 4, (w1 & ~0xFFF000u) | ((((w1 >> 12) & 0xFFF) + d4) & 0xFFF) << 12); }
+            }
+            a += 16; continue;
+        }
+        if (op < 0x08 || op > 0x0F) { a += 8; continue; }
+        const uint32_t len = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
+        if (a + 32 > hi) break;
+        const double yl = sx14(w0 & 0x3FFF), ym = sx14((w1 >> 16) & 0x3FFF), yh = sx14(w1 & 0x3FFF);
+        auto fx = [&](uint32_t o) { return (double)(int32_t)rd(a + o) / 65536.0; };
+        const double xl = fx(8), dl = fx(12), xh = fx(16), dh = fx(20), xm = fx(24), dm = fx(28);
+        const double xs[5] = {xh, xm + dm * (ym - yh), xl, xl + dl * (yl - ym), xh + dh * (yl - yh)};
+        double mn = 1e9, mx = -1e9; for (double x : xs) { mn = x < mn ? x : mn; mx = x > mx ? x : mx; }
+        const double cx = (mn + mx) / 2, cy = (yh + yl) / 2;
+        if (cx >= R[0] && cx <= R[1] && cy >= R[2] && cy <= R[3] && (mx - mn) <= 130.0 && (yl - yh) <= 130.0) {  // size cap: skip sky/terrain tris
+            s_hits++;
+            if (s_logged++ < 400) { fprintf(stderr, "[region] swap=%d TRI off=%06X op=%02X x=%.1f..%.1f y=%.1f..%.1f range=%06X..%06X\n", sw, a, op, mn, mx, yh, yl, lo, hi); fflush(stderr); }
+            if (shiftOn) { const int32_t d = (int32_t)(dxs * 65536.0); wr(a + 8, rd(a + 8) + d); wr(a + 16, rd(a + 16) + d); wr(a + 24, rd(a + 24) + d); }
+        }
+        a += len;
+    }
+}
+
 static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
     rs64_spike_scan(lo, hi);
+    rs64_region_scan(lo, hi);
     g_last_submit_lo.store(lo, std::memory_order_release);
     g_last_submit_hi.store(hi, std::memory_order_release);
     const uint32_t before = g_task_bridge_e9.load(std::memory_order_acquire);
