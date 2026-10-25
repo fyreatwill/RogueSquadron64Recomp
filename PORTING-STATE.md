@@ -167601,3 +167601,29 @@ ORIGIN: the initial apparent scanline corruption came from the dump reader's
 wrong stride, not a named game writer; the corrected capture still has a central
 guest-frame corruption, so the next instrument must census every CI before any
 skip or width rewrite.
+
+## Session 6177 (2026-10-25) — phase-4 CI census finds no hidden secondary target
+
+Added a bounded per-swap CI census to `src/main/rt64_render_context.cpp`,
+recording every color-image width/address and its RDP list range. Built the
+Debug target and ran paired 12 MB control/wide arms with per-VI dumps and the
+existing VI-writer, framebuffer-allocation, and RDP-route probes. Both arms
+fired the positive controls: 842 joins and 160 phase-4 census frames each.
+
+Every sampled phase-4 control frame had three repeated submissions of
+`512@0xB90000`; every wide frame had three repeated submissions of
+`796@0xB51E00`, with no hidden 320/512/640 CI and no alternate address. This
+closes H-unrewritten-secondary for phase 4. The wide frame-408 guest dump had
+448 unique rows and variation in all 796 columns; the control had the expected
+black columns. Thus the wide guest corruption from s6172 did not reproduce and
+H-phase4-producer was not selected. No rendering mitigation landed.
+
+The first wrapper attempt was invalid because it omitted `TAG_SUFFIX`; it
+started no game and produced no measurements. The fixed run used the shared
+harness logs under `scratch/agent/m6/g1_lvl1_{ctl,wide}/run.log`; no soak
+summary was claimed because the diagnostic processes were SIGKILLed at the
+bounded capture end.
+
+ORIGIN: diagnostic-only change; no mitigation or value legitimacy claim was
+made. The next discriminator is a phase-2/3 per-frame census to catch an
+earlier producer if the intermittent corruption recurs.

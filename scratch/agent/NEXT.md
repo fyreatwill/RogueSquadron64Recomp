@@ -1,41 +1,34 @@
-# RESUME: census every phase-4 title CI before attributing the corrupt producer
+# NEXT: census title phases 2-3 for the intermittent wide title corruption
 HYPOTHESIS-ID: g1d-widescreen
 
-s6176 reached phase-4 frames 417-488 in the wide arm. After fixing the dump
-stride, the guest image is coherent around a horizontally corrupted central
-rectangle. The current join reports only the last CI, so it cannot say whether
-an earlier secondary pass wrote the bad region.
+s6177 closed the hidden-secondary hypothesis for phase 4: all 160 sampled
+phase-4 wide frames had exactly three repeated `796@0xB51E00` submissions and
+no alternate CI. The wide frame-408 guest dump was coherent in this capture,
+so the s6172 corruption remains intermittent.
 
 Competing hypotheses and discriminator:
 
-- H-secondary: a phase-4 frame contains an earlier 320/512/640 CI or a second
-  framebuffer write before the final 796 CI; its width/address and list range
-  identify the missed pass.
-- H-producer: every phase-4 CI is 796-wide and targets `0xB51E00`, yet the
-  guest dump still has the central rectangle; the remaining writer is a game
-  asset/layout producer inside that valid list.
-- H-rt64: all guest bytes are coherent but the activated window is corrupt.
-  This is now disfavored by the fixed dump, and is closed if the same-frame
-  guest dump remains corrupted while the route census is complete.
+- H-early-phase: the corrupt title frame is produced in phase 2 or 3, before
+  the phase-4 stream; a complete per-swap census there will show a non-796 CI
+  or alternate target associated with the bad dump.
+- H-phase4-producer: phases 2-3 are also width-consistent, and a wide guest
+  dump is corrupt while every CI is `796@0xB51E00`; the remaining writer is
+  inside that valid game list.
+- H-intermittent-layout: all sampled CIs are width-consistent and guest dumps
+  are coherent, so the defect is frame-specific and needs a capture that
+  catches the corruption before attribution.
 
-Discriminator: extend the existing join in one build to retain every CI
-width/address/list range per phase-4 frame, not only the last CI. Run paired
-control and wide arms with `FBD_EVERY_V=1`, `ROGUESQ_FB_WIDTH=796` on wide,
-`ROGUESQ_FB_DUMP_VI=1`, `ROGUESQ_LOG_RDP_ROUTE=1`, and the existing writer and
-allocation logs. A 320/512/640 or alternate-address CI before a corrupt wide
-dump selects H-secondary; an all-796 census with a corrupt guest dump selects
-H-producer; coherent guest bytes plus only a bad window selects H-rt64. The
-control arm's phase-4 dump and full CI census are the positive control in the
-same run.
+Discriminator: use the existing per-frame CI census and per-VI dump in one
+paired control/wide run, but classify phases 2 and 3 separately. A non-796 or
+alternate-address CI selects H-early-phase; a corrupt guest dump with only
+796 CIs selects H-phase4-producer; coherent dumps with only 796 CIs selects
+H-intermittent-layout. Positive controls are the 842 join rows and the control
+phase-2/3 dumps in the same run.
 
-Resume from the repo root:
+Run from the repo root:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp -j4
-    # launch control and wide concurrently with the existing g1 coverage
-    # harness, using OSMEM=12 and title origins 0x00790400/0x00752200;
-    # set FBD_EVERY_V=1, ROGUESQ_FB_WIDTH=796 on wide, and arm
-    # ROGUESQ_LOG_VI_WRITERS=1, ROGUESQ_LOG_FB_ALLOC=1,
-    # ROGUESQ_LOG_RDP_ROUTE=1, and ROGUESQ_FB_DUMP_VI=1.
+    zsh scratch/agent/s6177_g1d_ci_census.sh
 
-Do not change retail defaults or add a cull/skip. If the writer is named,
-make the smallest opt-in fix and rerun the paired capture in this iteration.
+Keep the retail default unchanged. Do not add a cull or skip until a writer
+and value legitimacy are established.

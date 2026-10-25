@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <mutex>
 #include <string_view>
 #include <vector>
 
@@ -26,6 +27,15 @@ static std::atomic<uint32_t> g_rs64_g1d_join_ci_w{0};
 static std::atomic<uint32_t> g_rs64_g1d_join_ci_a{0};
 static std::atomic<uint32_t> g_rs64_g1d_join_cis{0};
 
+struct Rs64G1dCiObservation {
+    uint32_t width;
+    uint32_t address;
+    uint32_t lo;
+    uint32_t hi;
+};
+static std::mutex g_rs64_g1d_ci_mutex;
+static std::vector<Rs64G1dCiObservation> g_rs64_g1d_ci_frame;
+
 extern "C" void rs64_g1d_join_swap(uint32_t frame, uint32_t fb,
                                      uint32_t vi_width, uint32_t vi_origin) {
     static int enabled = -1;
@@ -41,6 +51,11 @@ extern "C" void rs64_g1d_join_swap(uint32_t frame, uint32_t fb,
     const uint32_t phase = rs64_phase_ord();
     if (phase != last_phase) { last_phase = phase; phase_rows = 0; }
     if (phase_rows++ < 160) {
+        std::vector<Rs64G1dCiObservation> cis;
+        {
+            std::lock_guard<std::mutex> lock(g_rs64_g1d_ci_mutex);
+            cis.swap(g_rs64_g1d_ci_frame);
+        }
         std::fprintf(stderr,
             "[g1d-join] phase=%u frame=%u fb=0x%06X vi_w=%u vi_o=0x%06X "
             "rdp_lo=0x%06X rdp_hi=0x%06X ci_n=%u last_ci_w=%u last_ci_a=0x%06X\n",
@@ -48,6 +63,12 @@ extern "C" void rs64_g1d_join_swap(uint32_t frame, uint32_t fb,
             g_rs64_g1d_join_lo.load(), g_rs64_g1d_join_hi.load(),
             g_rs64_g1d_join_cis.load(), g_rs64_g1d_join_ci_w.load(),
             g_rs64_g1d_join_ci_a.load());
+        std::fprintf(stderr, "[g1d-frame-ci] phase=%u frame=%u n=%zu", phase, frame, cis.size());
+        for (const auto& ci : cis) {
+            std::fprintf(stderr, " %u@0x%06X[0x%06X-0x%06X]",
+                         ci.width, ci.address, ci.lo, ci.hi);
+        }
+        std::fputc('\n', stderr);
         std::fflush(stderr);
     }
 }
@@ -1282,6 +1303,14 @@ namespace ultramodern {
                             g_rs64_g1d_join_ci_w.store((w0 & 0x3FF) + 1u, std::memory_order_relaxed);
                             g_rs64_g1d_join_ci_a.store(w1 & 0xFFFFFFu, std::memory_order_relaxed);
                             g_rs64_g1d_join_cis.fetch_add(1, std::memory_order_relaxed);
+                            {
+                                std::lock_guard<std::mutex> lock(g_rs64_g1d_ci_mutex);
+                                if (g_rs64_g1d_ci_frame.size() < 64) {
+                                    g_rs64_g1d_ci_frame.push_back({(w0 & 0x3FF) + 1u,
+                                                                    w1 & 0xFFFFFFu,
+                                                                    lo_phys, hi_phys});
+                                }
+                            }
                             std::fprintf(stderr, "[rdp-route] phase=%u lo=0x%06X len=%u ci_w=%u ci_a=0x%06X vi_w=%u vi_o=0x%06X\n",
                                 phase, lo_phys, hi_phys - lo_phys, (w0 & 0x3FF) + 1, w1 & 0xFFFFFF, viw, vio & 0xFFFFFF);
                             saw_ci = true;

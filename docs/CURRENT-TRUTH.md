@@ -238,3 +238,14 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   pass) and H-early-producer remain open; H-early-RT64 is weakened but not
   formally closed without a complete per-frame CI census. The diagnostic change
   is in `src/main/upstream_compat.cpp`.
+
+- s6177: the new per-swap CI census positively fired in both paired arms (842
+  joins each; 160 phase-4 frames each). Every phase-4 control submission was
+  `512@0xB90000`; every wide submission was `796@0xB51E00`, with three repeated
+  submissions of the same RDP range per swap and no hidden 320/512/640 or
+  alternate-address CI. This closes H-unrewritten-secondary for phase 4. The
+  wide frame-408 guest dump was also structurally non-corrupt (448 unique rows,
+  all 796 columns varying; control had the expected black columns), so
+  H-producer was not selected in this capture and s6172's intermittent
+  corruption did not reproduce. The instrument is in
+  `src/main/rt64_render_context.cpp`; no rendering mitigation landed.
