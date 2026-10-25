@@ -1,4 +1,4 @@
-# G1d: which texture does the title garbage rect sample? (H-up167 vs H-cache)
+# G1d: why does the up_167 TMEM upload (h98bb35b7e7c80445) contain noise when its RDRAM source looks like photo?
 HYPOTHESIS-ID: g1d-widescreen
-s6233: reinterpretTileRecord never fired in a w900 title run (0 [REINTERP], no positive control) -> H-fbreinterp disfavoured. Remaining: H-up167 (rect = noisy 64x32 upload hash h98bb35b7e7c80445), H-cache (hash collision).
-Next: one build logging per-draw texture hash + upload id for texrects at screen x<=0x240,y>=0x2A0 (w900 title), compare to up_167. Add a positive control (force-mark all draws). Run: zsh scratch/agent/s6233_run.sh 900 log (note wrapper can exceed 10 min; run in background).
+s6234: the noisy texture is drawn 6x/frame at title (0 misses). H-up167 supported. Hypotheses: H-load (LoadTile addr/dxt/line wrong so TMEM load reads wrong RDRAM), H-stale (RDRAM source overwritten between LOADBLOCK parse and upload), H-tmem (RT64 TMEM load/word-swap at that call).
+Next: in queueGPUUploadTMEM (rt64_texture_cache.cpp) when hash==ROGUESQ_LOG_TEXHASH log LoadTile fields; in the same run read RDRAM at that address (via rsp/rdram pointer) and compare to `bytes`. Control: same compare on a clean upload must match. Run: zsh scratch/agent/s6234_run.sh 900 log (background, ~10 min).
