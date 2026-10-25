@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6182 (2026-10-25).
+Compact operational handoff, maintained as of Session 6184 (2026-10-25).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -306,3 +306,13 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   bytes, not framebuffer writers, and the dump hook does not log first host
   readback bytes. H-guest-layout, H-intermittent-layout, and H-renderer-readback
   therefore remain open. `MISSION_RE=ZZZ` means no mission/hold verdict.
+
+- s6184: the new phase-4 `copyToRAM` trace fired 400 times in each paired arm,
+  with the route positive controls still at 160 joins and 1,440 records. The
+  control copied `512x448` to `0xB90000` (457,728 bytes); wide copied `796x448`
+  to `0xB51E00` (711,624 bytes). All 399 consecutive `before` hashes after the
+  first exactly equaled the preceding `host` hash in both arms (`mismatch=0`).
+  This names the RT64 readback-copy boundary as the immediate writer of the
+  changing bytes and rules out an intervening guest write between copies. It
+  does not yet name the RT64 source-region/layout defect producing the wide
+  central rectangle. No mitigation landed.

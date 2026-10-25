@@ -7807,10 +7807,23 @@ index b9cb1f5..7f9c15b 100644
              framebufferVector.emplace_back();
              framebufferVector.back().paramsBuffer = p.worker->device->createBuffer(RenderBufferDesc::UploadBuffer(256, RenderBufferFlag::CONSTANT));
 diff --git a/src/render/rt64_native_target.cpp b/src/render/rt64_native_target.cpp
-index 6891b7b..965f1ce 100644
+index 6891b7b..0520a75 100644
 --- a/src/render/rt64_native_target.cpp
 +++ b/src/render/rt64_native_target.cpp
-@@ -60,9 +60,32 @@ namespace RT64 {
+@@ -6,6 +6,12 @@
+ 
+ #include "rt64_native_target.h"
+ 
++extern "C" void rs64_g1d_copy_to_ram_trace(uint32_t rowStart, uint32_t rowEnd,
++                                             uint32_t width, uint8_t siz,
++                                             uint8_t *destination,
++                                             const uint8_t *source,
++                                             uint32_t bytes);
++
+ #include "gbi/rt64_f3d.h"
+ #include "shared/rt64_fb_common.h"
+ 
+@@ -60,9 +66,32 @@ namespace RT64 {
          return rowSize * height;
      }
  
@@ -7843,7 +7856,7 @@ index 6891b7b..965f1ce 100644
          // Create the buffers for change count readback if they've not been created yet.
          if ((changeCountBuffer == nullptr) || (changeReadbackBuffer == nullptr)) {
              changeCountBuffer = worker->device->createBuffer(RenderBufferDesc::DefaultBuffer(sizeof(uint32_t), RenderBufferFlag::STORAGE | RenderBufferFlag::UNORDERED_ACCESS));
-@@ -232,6 +255,16 @@ namespace RT64 {
+@@ -232,6 +261,16 @@ namespace RT64 {
      }
  
      void NativeTarget::copyToNative(RenderWorker *worker, RenderTarget *srcTarget, uint32_t rowWidth, uint32_t rowStart, uint32_t rowEnd, uint8_t siz, uint8_t fmt, uint32_t ditherPattern, uint32_t ditherRandomSeed, const ShaderLibrary *shaderLibrary) {
@@ -7860,7 +7873,7 @@ index 6891b7b..965f1ce 100644
          assert(worker != nullptr);
  
          srcTarget->resolveTarget(worker, shaderLibrary);
-@@ -358,11 +391,35 @@ namespace RT64 {
+@@ -358,15 +397,41 @@ namespace RT64 {
      }
  
      void NativeTarget::copyToRAM(uint32_t rowStart, uint32_t rowEnd, uint32_t width, uint8_t siz, uint8_t *data) {
@@ -7895,7 +7908,15 @@ index 6891b7b..965f1ce 100644
 +        }
          RenderRange readRange = { bufferOffset, bufferOffset + bufferSize };
          uint8_t *readbackData = reinterpret_cast<uint8_t *>(writeBuffer.nativeReadbackBuffer->map(0, &readRange));
++        rs64_g1d_copy_to_ram_trace(rowStart, rowEnd, width, siz, data,
++                                   readbackData + bufferOffset, bufferSize);
          memcpy(data, readbackData + bufferOffset, bufferSize);
+         writeBuffer.nativeReadbackBuffer->unmap();
+         writeBufferHistoryIndex++;
+     }
+-};
+\ No newline at end of file
++};
 diff --git a/src/render/rt64_native_target.h b/src/render/rt64_native_target.h
 index eb944a4..4e17af8 100644
 --- a/src/render/rt64_native_target.h

@@ -266,6 +266,44 @@ extern "C" uint32_t rs64_vi_committed_origin();
 extern "C" void rs64_s4899_swap(uint32_t fb, uint32_t width);
 extern "C" void rs64_g1d_join_swap(uint32_t frame, uint32_t fb,
                                      uint32_t vi_width, uint32_t vi_origin);
+static std::atomic<uint8_t*> g_rs64_g1d_rdram{nullptr};
+extern "C" void rs64_g1d_copy_to_ram_trace(uint32_t rowStart, uint32_t rowEnd,
+                                             uint32_t width, uint8_t siz,
+                                             uint8_t *destination,
+                                             const uint8_t *source,
+                                             uint32_t bytes) {
+    static int enabled = -1;
+    static uint32_t phase_seen = UINT32_MAX;
+    static uint32_t rows = 0;
+    if (enabled < 0) {
+        const char* e = std::getenv("ROGUESQ_LOG_G1D_COPY");
+        enabled = (e && *e && *e != '0') ? 1 : 0;
+    }
+    if (!enabled || source == nullptr || bytes == 0) return;
+    const uint32_t phase = rs64_phase_ord();
+    if (phase != phase_seen) { phase_seen = phase; rows = 0; }
+    if (phase < 4u || phase > 4u || rows++ >= 400u) return;
+    uint8_t* rdram = g_rs64_g1d_rdram.load(std::memory_order_relaxed);
+    if (rdram == nullptr) return;
+    const uintptr_t base = reinterpret_cast<uintptr_t>(rdram);
+    const uintptr_t dst = reinterpret_cast<uintptr_t>(destination);
+    const uint32_t phys = dst >= base ? static_cast<uint32_t>(dst - base) : 0xFFFFFFFFu;
+    uint64_t before = 1469598103934665603ull;
+    uint64_t host = 1469598103934665603ull;
+    for (uint32_t i = 0; i < bytes; ++i) {
+        const uint8_t hb = source[i];
+        host = (host ^ hb) * 1099511628211ull;
+        if (phys != 0xFFFFFFFFu) {
+            const uint8_t bb = rdram[(phys + i) ^ 3u];
+            before = (before ^ bb) * 1099511628211ull;
+        }
+    }
+    std::fprintf(stderr,
+        "[g1d-copy] phase=%u row=%u-%u width=%u siz=%u phys=0x%06X bytes=%u before=%016llX host=%016llX\n",
+        phase, rowStart, rowEnd, width, siz, phys, bytes,
+        (unsigned long long)before, (unsigned long long)host);
+    std::fflush(stderr);
+}
 // s5078: per-(pc,addr) count of instrumented stores into 0x9DE80..0x9DF00, fed by
 // rs64_m5_writer_parity (apply_s5078_flight_writer_census.py), printed per swap under WATCH_LOG.
 static std::mutex g_s5078_mu;
@@ -277,6 +315,7 @@ extern "C" void rs64_s5078_flight_store(uint32_t pc, uint32_t addr) {
 
 extern std::atomic<int> g_rs64_swap_n;
 extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
+    g_rs64_g1d_rdram.store(rdram, std::memory_order_relaxed);
     static int s_count = 0;
     int n = ++s_count;
     g_rs64_swap_n.store(n, std::memory_order_relaxed);

@@ -167756,3 +167756,25 @@ mission/hold verdict applies. No rendering mitigation landed.
 
 ORIGIN: no guest or renderer value changed and no skip, guard, clamp, or cull
 was added; this iteration only ran the existing bounded census.
+
+## Session 6184 (2026-10-25) — traced the phase-4 framebuffer readback boundary
+
+The RT64 `copyToRAM` boundary was instrumented and the refreshed Debug target
+was run in the paired 12 MB control/wide recipe. Both arms reached the phase-4
+positive controls: 160 joined frames and 1,440 route rows. The trace fired its
+bounded 400-copy phase budget in each arm. Control copied `512x448` into guest
+physical `0xB90000` (457,728 bytes); wide copied `796x448` into `0xB51E00`
+(711,624 bytes).
+
+For each arm, all 399 consecutive copies after the first had a destination
+`before` FNV hash exactly equal to the preceding host readback hash
+(`mismatch=0`). This names the RT64 readback-copy boundary as the immediate
+writer of the changing phase-4 framebuffer bytes and rules out an intervening
+guest write between successive copies. It does not yet identify the RT64
+source-region/layout defect that makes the wide frame's central rectangle
+wrong. `MISSION_RE=ZZZ` remained intentional title-census configuration, so no
+mission/hold verdict applies. No crash marker occurred and no mitigation was
+added.
+
+ORIGIN: diagnostic-only RT64 readback tracing; no guest or renderer value was
+changed, and no skip, guard, clamp, or cull was landed.
