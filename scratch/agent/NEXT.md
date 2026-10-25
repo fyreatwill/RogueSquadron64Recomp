@@ -3,7 +3,7 @@ HYPOTHESIS-ID: g1d-widescreen
 
 s6173 validated the new join but did not reproduce the corruption: at phase 4,
 frame 500, control joined VI 1024/title 0xB90400/CI 512 and wide joined VI
-1024/title 0xB52200/CI 796; the wide dump was coherent by row uniqueness. The
+1024/title 0xB52200/CI 796; the wide dump was coherent by row uniqueness.
 The retry close-out did not rerun it. Resume by capturing every title frame so
 an intermittent first-bad frame is not hidden by the old every-500 dump
 interval. This remains diagnostic, not endurance.

@@ -167565,3 +167565,16 @@ H-early-producer, or H-unrewritten-secondary. It narrows the immediate
 measurement to an intermittent or frame-specific producer/layout change; the
 next discriminator remains an every-frame phase-4 guest dump joined to its CI,
 VI, and preceding RDP-route records. No code mitigation was added.
+
+## Session 6175 (2026-10-25) — closed the retry without rerunning the G1d probe
+
+This was the mandated retry close-out. No experiment was rerun. The only
+available evidence remains s6173: `[g1d-join]` fired in both 12 MB arms, and
+the wide phase-4 frame-500 guest dump was coherent by row uniqueness. Because
+the positive control passed but the corruption did not recur, this result does
+not select H-early-RT64, H-early-producer, or H-unrewritten-secondary. It does
+rule out treating the s6172 corruption as deterministic on that frame and
+leaves an intermittent or frame-specific producer/layout change as the active
+question. The next discriminator is unchanged: capture every phase-4 title
+frame and join each guest dump to its CI width/address, VI origin/width, and
+preceding RDP-route record. No code or mitigation change was made.
