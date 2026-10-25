@@ -1,8 +1,13 @@
-# NEXT: G1d step 55 - isolate the first corrupted 16:9 menu/hangar framebuffer stage
+# NEXT: G1d reproduce the qualified 16:9 route and join RDP/VI at menu frames
 HYPOTHESIS-ID: g1d-widescreen
-s6163: matched 4:3/16:9 logs reached title, hangar, craft-select, and mission with zero crash markers; 16:9 title/hangar dumps are horizontal garbage. The helper's 4:3-only title gate was invalid for wide origins, so use phase transitions rather than TITLE_ORIGIN.
-Work unit: use the existing logs/dumps and one fresh paired capture after fixing only the route gate to accept the width-specific title origin. Compare the first title and hangar frames at matched phase transitions with `ROGUESQ_FB_DUMP_VI=1`; record RDP colour-image width, VI width/origin, and whether the dump is valid. Exact commands: patch `scratch/agent/g1_fly.sh` to accept `ROGUESQ_ASPECT`-derived title origins (or phase-7 title transition) and emit a `wide_title` marker; run `env -u ROGUESQ_ASPECT ... g1_fly.sh ...` and `env ROGUESQ_ASPECT=16:9 ... g1_fly.sh ...` concurrently; inspect `scratch/agent/m6/<tag>/run.log` and `fbd`.
+
+s6164 parameterized g1_fly.sh's title, hangar, and mission origin gates. The fresh 4:3 control passed; fresh wide arms did not reproduce the qualified route (8 MB stopped before wide title; 12 MB stalled in phase 6). Existing s6163b evidence still shows correct wide VI transitions but garbage title/hangar dumps. Do not infer H-stride or H-menu-policy yet.
+
+Work unit: one instrumented 12 MB 16:9 run plus 4:3 control using the qualified s6163b route recipe. Capture two consecutive title and hangar frames, and for each frame record RDP SETCOLORIMAGE width/address, scissor width, VI width/origin, and dump hash/validity. Keep all arms in the same build and phase-gate comparisons on the title and hangar VI transitions.
+
 Competing hypotheses and discriminator:
-- H-stride/VI: wide menu RDP output writes a valid frame but VI reads the wrong stride/origin. If RDP width/origin and VI origin disagree at the first bad dump, this is selected; if they agree, it is refuted.
-- H-menu-policy: the menu/hangar display list itself emits invalid wide primitives or assumes 512/640 geometry. If RDP and VI agree but the wide dump is already garbage while the 4:3 dump is valid, this is selected.
-- H-transition-only: only the first wide transition buffer is bad and later wide menu frames recover. The discriminator is two consecutive wide dumps after the title and two after hangar; recovery selects this, persistent corruption refutes it.
+- H-stride/VI: RDP colour-image/scissor and VI width/origin disagree at the first bad wide frame. This selects a present/readback stride or origin defect.
+- H-menu-policy: RDP and VI agree, but the wide dump is already garbage while the 4:3 dump is valid. This selects a menu/hangar display-list assumption or invalid wide primitive.
+- H-transition-only: the first wide dump is bad but the second consecutive dump recovers with the same RDP/VI relation. Recovery selects a transition-buffer defect; persistence refutes it.
+
+Commands: use the existing qualified 12 MB route setup from `scratch/agent/m6/s6163b_g1d_169`, add the RDP colour-image/scissor trace to the same build, then run control and wide concurrently from `build/`; use `ROGUESQ_ASPECT=16:9 ROGUESQ_OSMEM_MB=12 TITLE_ORIGINS="0x00752200 0x752200" HANGAR_ORIGINS="0x006AB638 0x6AB638" MISSION_ORIGINS="0x00652438 0x652438"`. SIGKILL test groups after both title and hangar have two consecutive dumps. Record the exact route recipe before launching if the prior wrapper needs additional force-unlock variables.

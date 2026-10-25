@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6113 (2026-10-24).
+Compact operational handoff, maintained as of Session 6164 (2026-10-24).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -213,4 +213,4 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
 - s6160 (G1d): RA law now 192+0.294*(ex-284); w1024 ring+disc aligned (auto run; ring vanishes at R>=547). Open: reticle centring, w683.
 - s6161 (G1d): reticle exempted from HUD anchor (vp 138d20 elems <0x80300000 are world-projected); w796 reticle now ~+60px ahead of craft, ring/disc/counter aligned. 3:2 (w672) HUD law extrapolation bad (ring clipped, disc off) - not a target aspect. Open: owner-eyeball 16:9/21:9 contact sheet; crescent; menus/hangar under ASPECT.
 - s6162 (G1d): 21:9 w1024 lvl1 full-frame check passes (reticle, radar, counter, no spikes; single-source). Next: menus/hangar under ASPECT=16:9, then owner contact sheet.
-- s6163 (G1d): matched 4:3 and 16:9 route logs reached title, hangar, craft-select, and mission with zero crash markers. 16:9 title/hangar captures are visibly horizontal garbage while 4:3 captures are valid; the 16:9 route gate was invalid because it required the 4:3 title origin. Wide origins are 0x00752200/0x006AB638/0x00652438 at w796. This is a render/presentation defect, not a route failure. Next: identify the first bad wide menu/hangar framebuffer stage by comparing RDP/VI width, origin, and dump bytes at matched phases; H-stride/VI mismatch vs H-menu policy remain open.
+- s6163 (G1d): matched 4:3 and 16:9 route logs reached title, hangar, craft-select, and mission with zero crash markers. 16:9 title/hangar captures are visibly horizontal garbage while 4:3 captures are valid; the 16:9 route gate was invalid because it required the 4:3 title origin. Wide origins are 0x00752200/0x006AB638/0x00652438 at w796. This is a render/presentation defect, not a route failure. s6164 parameterized title, hangar, and mission origin gates in g1_fly.sh. The fresh control passed the new gate; the fresh wide arms did not reproduce the qualified route (8 MB never reached the wide title; 12 MB stalled in phase 6), so they are not new rendering evidence. Existing s6163b paired captures remain the evidence: VI width/origin transitions are correct while the first wide hangar dump is garbage. H-stride/VI mismatch vs H-menu policy remain open because the paired RDP colour-image relation was not recorded.
