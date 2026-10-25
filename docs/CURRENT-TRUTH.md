@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6170 (2026-10-25).
+Compact operational handoff, maintained as of Session 6174 (2026-10-25).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -223,3 +223,5 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
 - s6172: a fresh same-build paired run positively fired the writer, framebuffer-allocation, RDP-route, and dump instruments. The control's first 512-wide title dump is coherent; the wide arm's matching 512-wide dump is horizontal scanline corruption. The writer census saw the same early dimensions in both arms (320x224, 640x340, 640x480, 512x340, 512x448); the opt-in arm rewrote the two 512 dimensions, and later phase-4 routes were `ci_w=796` with matching wide scissors. Thus the remaining defect is not the already-fixed 512x340 allocator or a missing logged 512 title allocation call, and it is not an RT64-only present artifact because the guest dump is already corrupt. The concurrent harness retries failed the title gate, so this is single-source route evidence, not a clean endurance result. H-unsupported-asset/earlier-phase producer remains open; no mitigation landed.
 
 - s6173: the new phase-scoped `[g1d-join]` probe compiled and positively fired in both 12 MB arms (196 control joins, 842 wide joins; the wide route also emitted 5,743 RDP rows). At title phase 4/frame 500, control joined `VI width=1024`, title origin `0xB90400`, `CI width=512`, while wide joined `VI width=1024`, title origin `0xB52200`, `CI width=796`; both had the expected RDP list ranges and nonzero CI counts. The matching wide frame-500 guest dump was coherent in this attempt by row-uniqueness inspection, so s6172's scanline corruption did not reproduce. This validates the join instrument and narrows the defect to intermittent or frame-specific producer/layout behavior; it does not select H-early-producer or H-unrewritten-secondary. The diagnostic processes were SIGKILLed before endurance completion, so this is not a route/hold result. No mitigation landed.
+
+- s6174 retry checkpoint: no new run was performed. The s6173 positive control and non-reproduction remain the only new evidence; the next discriminator is unchanged: capture every phase-4 title frame and join each guest dump to its CI/VI/RDP-route records.

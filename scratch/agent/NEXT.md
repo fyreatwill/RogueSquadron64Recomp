@@ -1,12 +1,12 @@
-# NEXT: attribute the first corrupt wide title framebuffer producer
+# RESUME: attribute the first corrupt wide title framebuffer producer
 HYPOTHESIS-ID: g1d-widescreen
 
 s6173 validated the new join but did not reproduce the corruption: at phase 4,
 frame 500, control joined VI 1024/title 0xB90400/CI 512 and wide joined VI
 1024/title 0xB52200/CI 796; the wide dump was coherent by row uniqueness. The
-next run must capture every title frame so an intermittent first-bad frame is
-not hidden by the old every-500 dump interval. This remains diagnostic, not
-endurance.
+The retry close-out did not rerun it. Resume by capturing every title frame so
+an intermittent first-bad frame is not hidden by the old every-500 dump
+interval. This remains diagnostic, not endurance.
 
 Competing hypotheses and discriminator:
 
@@ -34,7 +34,7 @@ intermittent and the next lead is the first frame whose CI/list join changes,
 not a width patch. The positive control is the control arm's matching phase-4
 frame and join row in the same run.
 
-Run from the repo root after implementing the bounded hook:
+Resume from the repo root; the bounded hook is already implemented:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp -j4
     # launch control and wide concurrently with the existing g1 coverage
