@@ -474,6 +474,7 @@ extern "C" void rs64_e9prov_task_join_report(uint32_t task);
 extern "C" void rs64_e9prov_task_begin(uint32_t task, uint32_t root_dl,
                                           const uint8_t *rdram, uint32_t ucode_addr);
 extern "C" void rs64_e9prov_task_end(uint32_t task);
+extern "C" uint32_t rs64_e9prov_current_root_dl();
 extern "C" void rs64_inline_probe_trigen_stage(uint32_t dl_ptr, uint32_t boot_130,
                                                   uint32_t staged_130, uint32_t skipped_host_130,
                                                   uint32_t boot_ff0, uint32_t staged_ff0,
@@ -6049,6 +6050,51 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     if (ucode_data_addr != 0 && ucode_data_size != 0 && ucode_data_size <= 0xFC0) {
         dma_rdram_to_dmem(rdram, 0, ucode_data_addr & 0x00FFFFFF, ucode_data_size - 1);
     }
+    {
+        static const bool enabled = [] {
+            const char* e = std::getenv("ROGUESQ_LOG_G1D_INPUT");
+            return e && *e && *e != '0';
+        }();
+        if (enabled && rs64_phase_ord() == 4 && dl_ptr != 0) {
+            static uint32_t root_base = 0;
+            static uint32_t roots[32] = {};
+            static uint32_t root_count = 0;
+            static uint32_t row = 0;
+            const uint32_t root = dl_ptr & 0x007FFFFFu;
+            if (root_base == 0) root_base = root;
+            bool known = false;
+            for (uint32_t i = 0; i < root_count; ++i) {
+                if (roots[i] == root) { known = true; break; }
+            }
+            if (!known && root_count < 32) {
+                roots[root_count++] = root;
+                uint32_t root_hash = 2166136261u;
+                uint32_t root_nonzero = 0;
+                for (uint32_t i = 0; i < 0x100; ++i) {
+                    const uint8_t b = rdram[(root + i) ^ 3u];
+                    root_hash ^= b;
+                    root_hash *= 16777619u;
+                    root_nonzero += b != 0;
+                }
+                uint32_t data_hash = 2166136261u;
+                uint32_t data_nonzero = 0;
+                for (uint32_t i = 0; i < ucode_data_size && i < 0xFC0; ++i) {
+                    const uint8_t b = g_dmem_cur[i ^ 3u];
+                    data_hash ^= b;
+                    data_hash *= 16777619u;
+                    data_nonzero += b != 0;
+                }
+                std::fprintf(stderr,
+                    "[g1d-udata] phase=4 row=%u task_root=0x%06X "
+                    "root_hash=0x%08X root_nz=%u ucode_data=0x%08X data_size=0x%X "
+                    "data_hash=0x%08X data_nz=%u\n",
+                    ++row, root,
+                    root_hash, root_nonzero, ucode_data_addr, ucode_data_size,
+                    data_hash, data_nonzero);
+                std::fflush(stderr);
+            }
+        }
+    }
     // Second shadow: the ucode CODE image. The overlay loader (L_1278) and
     // bootstrap DMA segments from OSTask.ucode + table offsets (observed up to
     // +0x803F0, len 0xF80), and that RDRAM is also engine-corrupted mid-flight
@@ -6356,6 +6402,44 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     const auto t_start = s_taskms ? std::chrono::steady_clock::now()
                                   : std::chrono::steady_clock::time_point{};
     RspExitReason r = factor5_ucode(rdram, ucode_addr);
+    {
+        static const bool enabled = [] {
+            const char* e = std::getenv("ROGUESQ_LOG_G1D_INPUT");
+            return e && *e && *e != '0';
+        }();
+        const uint32_t root = rs64_e9prov_current_root_dl() & 0x007FFFFFu;
+        if (enabled && rs64_phase_ord() == 4 && root != 0 && root <= 0x007FFF00u) {
+            static uint32_t root_base = 0;
+            static uint32_t roots[32] = {};
+            static uint32_t root_count = 0;
+            static uint32_t row = 0;
+            if (root_base == 0) root_base = root;
+            bool known = false;
+            for (uint32_t i = 0; i < root_count; ++i) {
+                if (roots[i] == root) { known = true; break; }
+            }
+            if (!known && root_count < 32) {
+                roots[root_count++] = root;
+                uint32_t hash = 2166136261u;
+                uint32_t nonzero = 0;
+                for (uint32_t i = 0; i < 0x100; ++i) {
+                    const uint8_t b = rdram[(root + i) ^ 3u];
+                    hash ^= b;
+                    hash *= 16777619u;
+                    nonzero += b != 0;
+                }
+                std::fprintf(stderr,
+                    "[g1d-root] phase=4 row=%u root_seq=%u root=0x%06X root_norm=0x%06X "
+                    "hash=0x%08X nz=%u bytes=",
+                    ++row, root_count - 1, root, (root - root_base) & 0x007FFFFFu,
+                    hash, nonzero);
+                for (uint32_t i = 0; i < 0x100; ++i)
+                    std::fprintf(stderr, "%02X", rdram[(root + i) ^ 3u]);
+                std::fprintf(stderr, "\n");
+                std::fflush(stderr);
+            }
+        }
+    }
     g_rs64_lle_depth.fetch_sub(1, std::memory_order_release);
     if (s_fs_slot_task) {
         const uint8_t slot_b0_post = fs_slot_b0();

@@ -1,35 +1,37 @@
-# NEXT: identify the width-bearing RSP input
+# NEXT: identify the other RSP-visible width input
 HYPOTHESIS-ID: g1d-widescreen
 
-Session 6191 selected the same phase-4 task identity in both arms: type 1,
-data_size 0, ucode 0x80024A10, ucode_data 0x80038D00, and ucode_data_size
-0x800. The two dominant root-DL addresses differ only by the wide-arm
-relocation delta -0x3E200, while the same guest command source 0x8000834C
-produces the extra wide central TEXRECTs. The exact width-bearing input is
-still open.
+Session 6192 selected neither sampled input: post-DMA `ucode_data` matched
+exactly, and every callback-selected root-DL first-0x100 window was zero-filled
+in both arms. The root probe fired for 26/29 unique roots, with the same
+normalized relocation sequence and the required 656/615 joins and 400/400
+copy rows. The extra central TEXRECTs therefore come from another RSP-visible
+RDRAM read.
 
-Next work unit: add one phase-scoped trace at `rs64_run_lle_gfx` / immediately
-after `factor5_gfx_runner` loads the task input that records, for each unique
-phase-4 root DL, the first 0x100 bytes (normalized by the arm's root relocation)
-and a hash/nonzero count of the `ucode_data` bytes copied into DMEM. Keep the
-existing `[g1d-task]`, command-source, join, and copy probes enabled. Build
-once, then run:
+Next work unit: enumerate the Factor 5 main-ucode RDRAM reads reachable from
+the command-source path at guest PC `0x8000834C`, then add one phase-scoped
+read witness for the complete candidate table set in the fixup pipeline. The
+witness must record address, access width, guest PC, task/root, and a bounded
+hash/nonzero count of each candidate region, with control and wide arms in one
+build/run. Keep `[g1d-task]`, `[g1d-root]`, command-source, join, and copy probes
+enabled. Do not modify rendering or filter commands. Build once, then run:
 
     zsh scratch/agent/s6179_g1d_rdp_words.sh
 
-Compare the same two-root sequence and the corresponding root/ucode-data
-records in the control and wide `fail_att1.log` files; require the existing
-160 joins and 400 copy rows per arm as positive controls.
+The new read witness is gated by `ROGUESQ_LOG_G1D_READS` and must have a
+positive control in each arm: at least 160 joins, 400 copies, and both known
+root sequences. A candidate region whose normalized hash differs between arms
+is the width-bearing input; if all candidates match, instrument the first
+uncatalogued RDRAM read in the same ucode path rather than declaring absence.
 
 Competing hypotheses and discriminator:
 
-- H-root-DL: normalized root-DL bytes differ at the width/scissor input while
-  ucode-data hashes match; the game-side DL input is the producer.
-- H-ucode-data: root-DL bytes match after relocation but the bootstrap/DMEM
-  input differs; the RSP setup data is the producer.
-- H-other-RDRAM: both sampled inputs match, so the width-dependent command
-  population comes from another RDRAM table read by the ucode; trace the first
-  differing root-relative read before considering any renderer change.
+- H-table: one enumerated RDRAM table hash differs at the same task/root and
+  source PC; that table is the width-bearing producer.
+- H-DMEM-derived: all enumerated RDRAM table hashes match but a DMEM-derived
+  address/value differs; trace the first differing derived read.
+- H-unlisted: all candidate hashes match; the census is incomplete and the
+  next read witness must expand to the first unlisted RDRAM read.
 
-The discriminator is the first normalized byte/hash difference paired with the
-same guest source PC and DPC window. Do not add a rendering mitigation.
+The discriminator is the first normalized address/hash difference paired with
+the same guest source PC and DPC window. Do not add a rendering mitigation.

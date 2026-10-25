@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6191 (2026-10-25).
+Compact operational handoff, maintained as of Session 6192 (2026-10-25).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -374,3 +374,16 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   remains open. The oracle cannot reach this 1024-wide phase, so this is
   single-source runtime evidence with positive controls, not retail-grounded
   proof. The trace is env-gated by `ROGUESQ_LOG_G1D_TASK`.
+
+- s6192: the paired input probe fired with the required controls (656/615
+  phase-4 joins and 400 copy rows in control/wide). Post-DMA `ucode_data` was
+  identical in both arms (`0xD91538FA`, 794 nonzero bytes). The
+  callback-selected root-DL probe captured 26/29 unique roots; every sampled
+  first 0x100-byte window was zero (`hash=0xE6A1D1C5`, `nz=0`) in both arms,
+  while normalized root sequences included the known `-0x3E200` relocation.
+  The initial task-wrapper sample was independently zero-filled, so it was
+  rejected as a root witness and corrected in the same iteration. This closes
+  root-DL bytes and ucode-data as the observed source of the extra central
+  TEXRECT population and selects H-other-RDRAM: the width-bearing value is
+  read from another RSP-visible RDRAM table. The oracle cannot reach this
+  phase; no render mitigation landed.

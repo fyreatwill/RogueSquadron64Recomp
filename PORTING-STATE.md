@@ -167928,3 +167928,20 @@ controls, not retail-grounded proof. No rendering mitigation landed.
 
 ORIGIN: the change only records task metadata and does not alter RDP commands,
 guest memory, or renderer decisions.
+
+## Session 6192 (2026-10-25) — separated root-DL and ucode-data inputs
+
+Built the phase-4 input probe and ran the paired 12 MB control/wide experiment
+with the existing task, join, and copy probes. The first probe sampled
+`task->data_ptr`, whose first 0x100 bytes were zero in both arms; that was not
+treated as evidence and was corrected to sample the callback-selected root
+after the Factor 5 task. The corrected probe captured 26/29 unique roots, with
+the same zero-filled first 0x100-byte window in every sample and the known
+wide relocation sequence. Post-DMA `ucode_data` was identical
+(`0xD91538FA`, 794 nonzero bytes). Positive controls were 656/615 phase-4
+joins and 400/400 copy rows. Root-DL bytes and bootstrap/DMEM data are ruled
+out for this capture; the next work unit is a complete RSP-visible RDRAM-read
+census. No rendering mitigation landed.
+
+ORIGIN: the change only records task metadata and does not alter RDP commands,
+guest memory, or renderer decisions.
