@@ -1396,6 +1396,66 @@ namespace ultramodern {
                     std::fflush(stderr);
                 }
             }
+            {
+                // s6206: phase-4 color/texture image addresses inside the
+                // early-image span. A summary line fires even when the hit
+                // count is zero, so a miss is not a silent scanner.
+                static int s_img = -1;
+                static uint32_t s_subs = 0, s_ci = 0, s_ti = 0, s_ci_hit = 0, s_ti_hit = 0;
+                static uint32_t s_hits = 0;
+                static uint32_t s_last_ci = 0, s_last_ti = 0;
+                static int s_logged_ci = 0;
+                if (s_img < 0) {
+                    const char* e = std::getenv("ROGUESQ_LOG_G1D_TASK");
+                    s_img = (e && *e && *e != '0') ? 1 : 0;
+                }
+                if (s_img && app->core.RDRAM && rs64_phase_ord() == 4u) {
+                    const uint8_t* r = app->core.RDRAM;
+                    uint32_t a = lo_phys;
+                    while (a + 8 <= hi_phys) {
+                        const uint32_t w0 = (uint32_t(r[a ^ 3]) << 24) |
+                                            (uint32_t(r[(a + 1) ^ 3]) << 16) |
+                                            (uint32_t(r[(a + 2) ^ 3]) << 8) |
+                                            uint32_t(r[(a + 3) ^ 3]);
+                        const uint32_t w1 = (uint32_t(r[(a + 4) ^ 3]) << 24) |
+                                            (uint32_t(r[(a + 5) ^ 3]) << 16) |
+                                            (uint32_t(r[(a + 6) ^ 3]) << 8) |
+                                            uint32_t(r[(a + 7) ^ 3]);
+                        const uint32_t op = (w0 >> 24) & 0x3F;
+                        uint32_t ncmd = 8;
+                        if (op >= 8 && op <= 15) {
+                            ncmd = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
+                        } else if (op == 0x24 || op == 0x25) {
+                            ncmd = 16;
+                        }
+                        if (op == 0x3F || op == 0x3D) {
+                            const uint32_t addr = w1 & 0x00FFFFFFu;
+                            const bool hit = addr >= 0x00A6A000u && addr < 0x00B00000u;
+                            if (op == 0x3F) { ++s_ci; s_last_ci = addr; if (hit) ++s_ci_hit; }
+                            else { ++s_ti; s_last_ti = addr; if (hit) ++s_ti_hit; }
+                            if (hit && s_hits < 48u) {
+                                ++s_hits;
+                                std::fprintf(stderr,
+                                    "[g1d-img-hit] kind=%s addr=0x%06X w0=0x%08X w1=0x%08X pc=0x%08X n=%u\n",
+                                    op == 0x3F ? "ci" : "ti", addr, w0, w1,
+                                    (uint32_t)g_rs64_last_guest_pc, s_hits);
+                                std::fflush(stderr);
+                            }
+                        }
+                        a += ncmd;
+                    }
+                    ++s_subs;
+                    if ((s_ci > 0u && !s_logged_ci) || s_subs <= 4u ||
+                        (s_ci == 0u && s_subs <= 64u) || (s_subs % 16u) == 0u) {
+                        std::fprintf(stderr,
+                            "[g1d-img] phase=4 subs=%u ci=%u ti=%u ci_hit=%u ti_hit=%u last_ci=0x%06X last_ti=0x%06X pc=0x%08X\n",
+                            s_subs, s_ci, s_ti, s_ci_hit, s_ti_hit, s_last_ci, s_last_ti,
+                            (uint32_t)g_rs64_last_guest_pc);
+                        std::fflush(stderr);
+                        if (s_ci > 0u) s_logged_ci = 1;
+                    }
+                }
+            }
             // Diagnostic: log the LAST submission's last bytes so we can see
             // what RDP commands trigger RT64's vector-OOB assert. Gate behind
             // ROGUESQ_LOG_RDP_SUBMIT=1.

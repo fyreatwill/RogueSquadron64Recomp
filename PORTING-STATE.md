@@ -168142,3 +168142,17 @@ Superseded: "the block disappears because `rs_free` or a coalesce of header `0x8
 
 ORIGIN: no value was written. The color-image writeback is untouched. The `00010001` words remain the bytes `Framebuffer::copyNativeToRAM` left in the unmoved node (s6200). This session only enabled two logs that were already in the binary.
 
+## Session 6206 (2026-10-25) — phase 4 samples the 640x480 image as a texture
+
+Asked whether phase 4 reads the early images that cover the wide pool. One new binary, two sequential 12 MB arms (`scratch/agent/s6206_run.sh`). Screen unlocked. Control pid 58818 ready at 41 s, wide pid 58929 ready at 40 s, both SIGKILL. Neither log has a crash marker. Witness: `scratch/agent/soak_results/s6206/witness.txt`. The raw logs were deleted after the witness was cut. The new lines are `[g1d-img]` / `[g1d-img-hit]` in `src/main/rt64_render_context.cpp` and `[g1d-wb]` in `src/main/upstream_compat.cpp`, both gated by the existing `ROGUESQ_LOG_G1D_TASK`. No store.
+
+Positive controls held. Control phase-4 `data_ptr=0x80B2D820` read `w78=05200002`, carve n=3 `e8=0x80B25000`, pool n=3 `base=0x80B25000` `bytes=0x4AF58`. Wide kept `e8=0x80AE6E00` and `data_ptr=0x80AEF620` read `w28=w78=00010001`. `[g1d-wb]` reached n=1024 with n4=0 in both arms, so the span counter is not blind. The printed writebacks are phase 2 and 3. Both arms write `0xADD000` len `0x23000` through `0xB00000`. That span covers the wide pool and misses the 4:3 pool, which starts at `0xB25000`.
+
+The image scan fired. Control parsed 336 color images and 20552 texture images by subs=112; wide parsed 288 and 17608 by subs=96. `ci_hit=0` in both. `last_ci` is `0xB90000` on 4:3 and `0xB51E00` on 16:9, the real phase-4 framebuffer, outside `[0xA6A000, 0xB00000)`. `ti_hit` is exactly 83 per submission on 4:3 (9296 at subs=112) and exactly 32 per submission on 16:9 (3072 at subs=96). The hit log keeps the first 48. Control's are `SetTextureImage` `w0=0xFD100000` at PC `0x80007904`, a `0x1000` stride from `0xA6AA10` to `0xA99A10`. Wide's mix `0xFD100000`, `0xFD180000`, and `0xFD500000` at PCs `0x80007904` and `0x8000834C`, and the highest logged address is `0xAE6B20`, `0x2E0` below the pool. Later summaries also carry PC `0x8000834C`. `[0xA6A000, 0xB00000)` is `0x96000` bytes, which is the 640x480 image.
+
+This selects H-read and refutes H-clobber and H-blind. H-clobber required both the color-image count and the texture-image count in that span to be 0. The texture count is not 0. H-blind required the new scan and the writeback control to stay silent. Both fired, and the color-image parser saw the real framebuffer. The logged texture prefix does not enter the pool slice; that does not reopen H-clobber, because the image those commands point at is the same allocation the writeback covers.
+
+Superseded: "phase 4 does not read the early images, so the overlap is only a stale render-target copy." Believable because `ci_hit` is 0 and the phase-4 color target is the real framebuffer. The texture commands still point into the 640x480 image.
+
+ORIGIN: no value was written. The color-image writeback is untouched. The `00010001` words remain the bytes `Framebuffer::copyNativeToRAM` left in the unmoved node (s6200). This session added two counters and did not move the images.
+

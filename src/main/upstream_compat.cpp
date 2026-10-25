@@ -3016,6 +3016,34 @@ extern "C" void rs64_g1d_blk_set_ustore_pc(uint32_t pc) {
 
 extern "C" void rs64_g1d_blk_dma(const char* kind, uint32_t src, uint32_t dest,
                                  uint32_t len, uint32_t pc) {
+    // s6206: count copyNativeToRAM spans that overlap the early images
+    // [0xA6A000, 0xB00000). Independent of the command-node block log.
+    if (kind != nullptr && len >= 4u && std::strcmp(kind, "rt64wb") == 0) {
+        static int s_wb = -1;
+        if (s_wb < 0) {
+            const char* e = std::getenv("ROGUESQ_LOG_G1D_TASK");
+            s_wb = (e && *e && *e != '0') ? 1 : 0;
+        }
+        if (s_wb) {
+            const uint32_t phys = dest & 0x00FFFFFFu;
+            const uint64_t end64 = (uint64_t)phys + (uint64_t)len;
+            if (phys < 0x00B00000u && end64 > 0x00A6A000u) {
+                static uint32_t n = 0;
+                static uint32_t n4 = 0;
+                ++n;
+                const uint32_t phase = rs64_phase_ord();
+                if (phase == 4u) ++n4;
+                const bool edge = n <= 8u || (n & (n - 1u)) == 0u;
+                if (edge) {
+                    std::fprintf(stderr,
+                        "[g1d-wb] n=%u n4=%u phase=%u src=0x%06X dest=0x%06X end=0x%06X len=0x%X\n",
+                        n, n4, phase, src & 0x00FFFFFFu, phys,
+                        (uint32_t)std::min<uint64_t>(end64, 0x00FFFFFFu), len);
+                    std::fflush(stderr);
+                }
+            }
+        }
+    }
     if (!rs64_g1d_blk_enabled() || len < 4u || kind == nullptr) return;
     rs64_g1d_blk_arm();
     const uint32_t phys = dest & 0x1FFFFFFFu;
