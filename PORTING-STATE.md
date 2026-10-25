@@ -167508,3 +167508,22 @@ next G1d check.
 ORIGIN: the change is a width-aware allocation contract for the legitimate
 512x340 menu/hangar request; no invalid-value guard or default-path change was
 added.
+
+## Session 6171 (2026-10-25) — G1d found the remaining wide menu-route pixel defect
+
+The existing paired s6169b framebuffer dumps were sufficient for the planned
+render discriminator; no fresh build or run was needed. Both arms had the
+required route/allocation positive controls and clean mission reaches. The 4:3
+control's early title/menu dumps are coherent: the 512x448 title frame and the
+512x358 menu frames contain Star Wars title, select-game, select-level, and
+craft-select imagery. The corresponding wide arm's early 512-wide dumps are
+horizontal scanline garbage, while its later 796-wide select-level and flight
+dumps are coherent and correctly widened. The wide log also shows the expected
+`512x340 wv=796` allocation and phase-5 `ci_w=796`, scissor `3184x1360`, and VI
+width 796; both arms remain crash-free with no VI stall.
+
+This selects H-menu-layout: the allocation fix removed the pre-mission crash,
+but title/menu presentation still uses a 512-wide path before the widened
+phase-5 route. It rules out a route failure and the previously tested
+allocation/RT64 failure for this result. The exact earlier-phase writer remains
+unattributed; no mitigation was added.
