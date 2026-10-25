@@ -167778,6 +167778,7 @@ added.
 
 ORIGIN: diagnostic-only RT64 readback tracing; no guest or renderer value was
 changed, and no skip, guard, clamp, or cull was landed.
+
 ## Session 6185 (2026-10-25) — checkpointed the RT64 source-region discriminator
 
 This was a retry close-out; no experiment or soak was rerun. The partial
@@ -167796,3 +167797,23 @@ The next discriminator is unchanged: one phase-scoped trace at the RT64
 row range/width, and bounded hashes for central versus outer columns, with
 the existing 4:3 and 16:9/12 MB arms in the same build/run. No conclusion was
 added to CURRENT-TRUTH because this checkpoint adds no new evidence.
+
+## Session 6186 (2026-10-25) — finalized the phase-4 retry checkpoint
+
+No experiment or soak was rerun in this retry. The existing s6184 result remains
+the evidence: the phase-scoped `copyToRAM` trace fired in both paired arms, all
+399 post-first-copy destination hashes matched the preceding host readback hash,
+and the route positive controls fired in both arms. The discriminating result is
+limited but real: `copyToRAM` is the immediate writer of the changing guest
+framebuffer bytes, while the source target/row layout that produces the wide
+central rectangle remains unidentified. H-rt64-source-region,
+H-guest-layout, and H-intermittent-readback are therefore still open.
+
+The next discriminator is the one recorded in `scratch/agent/NEXT.md`: add a
+phase-scoped RT64 source-side trace at `copyToNative`/readback, logging target
+identity, row range/width, and bounded central-versus-outer hashes, then run the
+existing control and 16:9/12 MB arms together. No mitigation is justified yet;
+the writer and value legitimacy are still unproven.
+
+ORIGIN: checkpoint close-out only; no guest or renderer value changed and no
+skip, guard, clamp, or cull was landed.
