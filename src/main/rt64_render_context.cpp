@@ -1313,6 +1313,45 @@ namespace ultramodern {
                                 ++s_word_rows;
                             }
                         }
+                        if (phase >= 4u) {
+                            static int s_cmd_log = -1;
+                            static uint32_t s_cmd_phase = UINT32_MAX;
+                            static uint32_t s_cmd_rows = 0;
+                            if (s_cmd_log < 0) {
+                                const char *e = std::getenv("ROGUESQ_LOG_G1D_CMD");
+                                s_cmd_log = (e && *e && *e != '0') ? 1 : 0;
+                            }
+                            if (s_cmd_log) {
+                                if (phase != s_cmd_phase) { s_cmd_phase = phase; s_cmd_rows = 0; }
+                                const bool rect = (op == 0x24 || op == 0x25 ||
+                                                   op == 0x2D || op == 0x36);
+                                const bool draw = (op >= 0x08 && op <= 0x0F) || rect;
+                                const bool structural = (op == 0x2D || op == 0x3F);
+                                if ((draw || structural) && s_cmd_rows < 4000u) {
+                                    uint32_t x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+                                    bool central = false;
+                                    if (rect) {
+                                        x0 = ((w0 >> 12) & 0xFFF) >> 2;
+                                        y0 = (w0 & 0xFFF) >> 2;
+                                        x1 = ((w1 >> 12) & 0xFFF) >> 2;
+                                        y1 = (w1 & 0xFFF) >> 2;
+                                        if (x0 > x1) { const uint32_t t = x0; x0 = x1; x1 = t; }
+                                        if (y0 > y1) { const uint32_t t = y0; y0 = y1; y1 = t; }
+                                        central = x0 < (viw * 2u) / 3u && x1 > viw / 3u && y1 > y0;
+                                    }
+                                    const char *kind = (op == 0x3F) ? "cimg" :
+                                        (op == 0x2D) ? "scissor" :
+                                        (op == 0x24) ? "texrect" :
+                                        (op == 0x25) ? "texrectflip" :
+                                        (op == 0x36) ? "fillrect" : "tri";
+                                    std::fprintf(stderr,
+                                        "[g1d-cmd] phase=%u row=%u addr=0x%06X op=0x%02X kind=%s "
+                                        "rect=%u,%u-%u,%u central=%u w0=0x%08X w1=0x%08X\n",
+                                        phase, s_cmd_rows++, a, op, kind,
+                                        x0, y0, x1, y1, central ? 1u : 0u, w0, w1);
+                                }
+                            }
+                        }
                         if (op == 0x3F) {
                             if (g_rs64_g1d_join_phase.load(std::memory_order_relaxed) != phase)
                                 g_rs64_g1d_join_cis.store(0, std::memory_order_relaxed);

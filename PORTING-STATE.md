@@ -167860,3 +167860,24 @@ was added.
 
 ORIGIN: the run only measured RT64 source/copy and RDP words; no guest or
 renderer value was changed.
+
+## Session 6189 (2026-10-25) — selected the wide RDP producer
+
+The paired G1d route was first run with the new diagnostic flags accidentally
+omitted from `XENV_EXTRA`; its 600-second completion was retained only as a
+setup positive control and not interpreted. The recipe was corrected, then the
+same control/wide 600-second route ran with the command and target probes.
+Both arms positively fired the route controls (400 copy traces each; 682/570
+joins; 12,000 bounded command records) and had no crash or abort markers.
+
+Phase-4 command records contained 3,775 control and 3,787 wide TEXRECTs. After
+normalizing the raw Factor 5 rectangle endpoints, 1,868 control versus 2,165
+wide rectangles overlapped the central third of the screen. Target/native
+records independently showed the expected source targets, 512x447 at
+0xB90000 and 796x447 at 0xB51E00, with no resolved-texture dimension mismatch.
+This selects H-rdp-producer over H-resolve-layout for this capture and rules
+out a wrong source identity or copy extent. It does not yet name the game-side
+writer of the extra wide commands. The live central flag had a reversed-
+endpoint diagnostic bug; it was fixed and compile-tested after the run, while
+the result above came from offline normalization of the captured raw fields.
+No mitigation was added.

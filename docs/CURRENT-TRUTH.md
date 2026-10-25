@@ -336,3 +336,17 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   wrong target identity or copy extent for this capture and weakens
   H-copy-layout. The dynamic opcode census is near-identical, so it does not
   yet name H-rdp-producer versus H-resolve-layout; no mitigation landed.
+
+- s6189: the corrected 600-second paired run enabled both new probes and
+  positively fired 682/570 joins, 400 copy traces, 12,000 command records, and
+  target/native logs in control/wide. After normalizing reversed TEXRECT
+  endpoints in the captured raw records, phase 4 had 1,868 central-overlapping
+  TEXRECTs in control versus 2,165 wide (3,775/3,787 total); control source
+  target was 512x447 at 0xB90000 and wide was 796x447 at 0xB51E00. The target
+  logs showed no resolve-texture use and no dimension mismatch at the source
+  boundary. This selects H-rdp-producer over H-resolve-layout for this capture:
+  the wide-only central draw population is already present in submitted RDP
+  commands. The exact game-side producer/writer is still unnamed. The live
+  central flag had a reversed-endpoint diagnostic bug, fixed and compile-tested
+  after the run; the result above is an offline normalization of the captured
+  raw rectangles. No mitigation landed.

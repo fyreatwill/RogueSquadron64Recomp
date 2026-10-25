@@ -7807,10 +7807,15 @@ index b9cb1f5..7f9c15b 100644
              framebufferVector.emplace_back();
              framebufferVector.back().paramsBuffer = p.worker->device->createBuffer(RenderBufferDesc::UploadBuffer(256, RenderBufferFlag::CONSTANT));
 diff --git a/src/render/rt64_native_target.cpp b/src/render/rt64_native_target.cpp
-index 6891b7b..b61d69a 100644
+index 6891b7b..e1471f3 100644
 --- a/src/render/rt64_native_target.cpp
 +++ b/src/render/rt64_native_target.cpp
-@@ -6,6 +6,15 @@
+@@ -3,16 +3,37 @@
+ //
+ 
+ #include <cstring>
++#include <cstdio>
++#include <cstdlib>
  
  #include "rt64_native_target.h"
  
@@ -7826,7 +7831,24 @@ index 6891b7b..b61d69a 100644
  #include "gbi/rt64_f3d.h"
  #include "shared/rt64_fb_common.h"
  
-@@ -60,9 +69,32 @@ namespace RT64 {
+ #include "rt64_render_target.h"
+ #include "rt64_render_worker.h"
+ 
++extern "C" uint32_t rs64_phase_ord(void);
++
+ namespace RT64 {
++    static bool rs64_g1d_native_log_enabled() {
++        static const bool enabled = [] {
++            const char *e = std::getenv("ROGUESQ_LOG_G1D_TARGET");
++            return e && *e && *e != '0';
++        }();
++        return enabled;
++    }
++
+     // NativeTarget
+ 
+     NativeTarget::NativeTarget() { }
+@@ -60,9 +81,32 @@ namespace RT64 {
          return rowSize * height;
      }
  
@@ -7859,7 +7881,7 @@ index 6891b7b..b61d69a 100644
          // Create the buffers for change count readback if they've not been created yet.
          if ((changeCountBuffer == nullptr) || (changeReadbackBuffer == nullptr)) {
              changeCountBuffer = worker->device->createBuffer(RenderBufferDesc::DefaultBuffer(sizeof(uint32_t), RenderBufferFlag::STORAGE | RenderBufferFlag::UNORDERED_ACCESS));
-@@ -232,6 +264,16 @@ namespace RT64 {
+@@ -232,10 +276,37 @@ namespace RT64 {
      }
  
      void NativeTarget::copyToNative(RenderWorker *worker, RenderTarget *srcTarget, uint32_t rowWidth, uint32_t rowStart, uint32_t rowEnd, uint8_t siz, uint8_t fmt, uint32_t ditherPattern, uint32_t ditherRandomSeed, const ShaderLibrary *shaderLibrary) {
@@ -7876,7 +7898,28 @@ index 6891b7b..b61d69a 100644
          assert(worker != nullptr);
  
          srcTarget->resolveTarget(worker, shaderLibrary);
-@@ -287,6 +329,9 @@ namespace RT64 {
+ 
++        if (rs64_g1d_native_log_enabled()) {
++            const uint32_t phase = rs64_phase_ord();
++            if (phase >= 4u) {
++                static uint32_t last_phase = UINT32_MAX;
++                static uint32_t count = 0;
++                if (phase != last_phase) { last_phase = phase; count = 0; }
++                if (count++ < 2000u) {
++                    std::fprintf(stderr,
++                        "[g1d-native] phase=%u addr=0x%06X src=%ux%u resolve=%u rows=%u..%u rowW=%u siz=%u fmt=%u\n",
++                        phase, srcTarget->addressForName & 0xFFFFFFu,
++                        srcTarget->width, srcTarget->height,
++                        srcTarget->usesResolve() ? 1u : 0u,
++                        rowStart, rowEnd, rowWidth, unsigned(siz), unsigned(fmt));
++                }
++            }
++        }
++
+         if (srcTarget->fbWriteDescSet == nullptr) {
+             srcTarget->fbWriteDescSet = std::make_unique<FramebufferWriteDescriptorTextureSet>(worker->device);
+             srcTarget->fbWriteDescSet->setTexture(srcTarget->fbWriteDescSet->gInput, srcTarget->getResolvedTexture(), RenderTextureLayout::SHADER_READ, srcTarget->getResolvedTextureView());
+@@ -287,6 +358,9 @@ namespace RT64 {
          ReadBuffer *readBuffer = &readBufferHistory[readBufferHistoryCount - 1];
          WriteBuffer &writeBuffer = writeBufferHistory[writeBufferHistoryCount];
          writeBufferHistoryCount++;
@@ -7886,7 +7929,7 @@ index 6891b7b..b61d69a 100644
          
          const uint32_t bufferSize = getNativeSize(rowWidth, rowEnd, siz);
          if (readBuffer->nativeBufferSize < bufferSize) {
-@@ -358,15 +403,44 @@ namespace RT64 {
+@@ -358,15 +432,44 @@ namespace RT64 {
      }
  
      void NativeTarget::copyToRAM(uint32_t rowStart, uint32_t rowEnd, uint32_t width, uint8_t siz, uint8_t *data) {
@@ -7960,6 +8003,84 @@ index eb944a4..a5dc797 100644
  
          static uint32_t getNativeSize(uint32_t width, uint32_t height, uint8_t siz);
      };
+-};
+\ No newline at end of file
++};
+diff --git a/src/render/rt64_render_target.cpp b/src/render/rt64_render_target.cpp
+index 81917bc..0e730ed 100644
+--- a/src/render/rt64_render_target.cpp
++++ b/src/render/rt64_render_target.cpp
+@@ -5,6 +5,8 @@
+ #include "rt64_render_target.h"
+ 
+ #include <algorithm>
++#include <cstdio>
++#include <cstdlib>
+ 
+ #include "gbi/rt64_f3d.h"
+ #include "shared/rt64_fb_common.h"
+@@ -13,9 +15,33 @@
+ 
+ #include "rt64_raster_shader.h"
+ 
++extern "C" uint32_t rs64_phase_ord(void);
++
+ #define PRINT_CONSTRUCTOR_DESTRUCTOR 0
+ 
+ namespace RT64 {
++    static bool rs64_g1d_target_log_enabled() {
++        static const bool enabled = [] {
++            const char *e = std::getenv("ROGUESQ_LOG_G1D_TARGET");
++            return e && *e && *e != '0';
++        }();
++        return enabled;
++    }
++
++    static void rs64_g1d_target_log(const char *kind, uint32_t address,
++                                    Framebuffer::Type type, uint32_t width,
++                                    uint32_t height, bool resolved) {
++        if (!rs64_g1d_target_log_enabled()) return;
++        const uint32_t phase = rs64_phase_ord();
++        if (phase < 4u) return;
++        static uint32_t last_phase = UINT32_MAX;
++        static uint32_t count = 0;
++        if (phase != last_phase) { last_phase = phase; count = 0; }
++        if (count++ >= 2000u) return;
++        std::fprintf(stderr, "[g1d-target] phase=%u kind=%s addr=0x%06X type=%u w=%u h=%u resolved=%u\n",
++                     phase, kind, address & 0xFFFFFFu, unsigned(type), width, height, resolved ? 1u : 0u);
++    }
++
+     // RenderTarget
+     
+     const long RenderTarget::MaxDimension = 0x4000L;
+@@ -81,6 +107,7 @@ namespace RT64 {
+ 
+         this->width = width;
+         this->height = height;
++        rs64_g1d_target_log("setup-color", addressForName, type, width, height, false);
+ 
+         downsampledTextureMultiplier = 0;
+         format = colorBufferFormat(usesHDR);
+@@ -105,6 +132,7 @@ namespace RT64 {
+ 
+         this->width = width;
+         this->height = height;
++        rs64_g1d_target_log("setup-depth", addressForName, type, width, height, false);
+ 
+         downsampledTextureMultiplier = 0;
+         format = depthBufferFormat();
+@@ -413,6 +441,7 @@ namespace RT64 {
+         }
+ 
+         const bool hwResolve = shaderLibrary->usesHardwareResolve;
++        rs64_g1d_target_log("resolve", addressForName, type, width, height, resolvedTexture != nullptr);
+         RenderTextureBarrier resolveBarriers[] = {
+             RenderTextureBarrier(texture.get(), hwResolve ? RenderTextureLayout::RESOLVE_SOURCE : RenderTextureLayout::SHADER_READ),
+             RenderTextureBarrier(resolvedTexture.get(), hwResolve ? RenderTextureLayout::RESOLVE_DEST : RenderTextureLayout::COLOR_WRITE)
+@@ -512,4 +541,4 @@ namespace RT64 {
+     RenderFormat RenderTarget::depthBufferFormat() {
+         return RenderFormat::D32_FLOAT;
+     }
 -};
 \ No newline at end of file
 +};
