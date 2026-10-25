@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6188 (2026-10-25).
+Compact operational handoff, maintained as of Session 6190 (2026-10-25).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -350,3 +350,14 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   central flag had a reversed-endpoint diagnostic bug, fixed and compile-tested
   after the run; the result above is an offline normalization of the captured
   raw rectangles. No mitigation landed.
+
+- s6190: added task serial, root display-list, guest PC, DPC window, and submit
+  serial to each phase-4 command row. The paired 12 MB route positively fired
+  425/522 joins, 535/477 copy rows, and 8,000 command rows per arm before the
+  diagnostic hold was SIGKILLed. Central TEXRECTs came from the same guest PC
+  `0x8000834C` and the same alternating two-root-DL pattern after relocation;
+  each arm used one coherent DPC submission window. Wide tasks emitted about
+  123-127 central TEXRECTs versus 61-65 in control. This rules out a hidden
+  secondary CI/scissor pass and a distinct menu-writer/source-PC path for this
+  capture, selecting the same-source RSP/width-dependent geometry path. The
+  exact RSP input field remains unnamed; no mitigation landed.

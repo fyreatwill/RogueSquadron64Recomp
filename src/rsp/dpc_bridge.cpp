@@ -2379,6 +2379,10 @@ extern "C" uint32_t rs64_e9prov_current_task() {
     return g_e9prov.task;
 }
 
+extern "C" uint32_t rs64_e9prov_current_root_dl() {
+    return g_e9prov.root_dl;
+}
+
 extern "C" void rs64_f5_vtxcolor_get(uint32_t *task, uint32_t *valid,
                                        uint32_t *ordinal, uint32_t *pc,
                                        uint32_t *source) {

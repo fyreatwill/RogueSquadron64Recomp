@@ -167881,3 +167881,27 @@ writer of the extra wide commands. The live central flag had a reversed-
 endpoint diagnostic bug; it was fixed and compile-tested after the run, while
 the result above came from offline normalization of the captured raw fields.
 No mitigation was added.
+
+## Session 6190 (2026-10-25) — attributed phase-4 commands to the guest task
+
+Added regeneration-safe `[g1d-cmd]` fields for task serial, root display-list,
+guest PC, DPC window, and submission serial, plus a DPC-bridge root-DL getter.
+The Debug build succeeded. The paired 12 MB control/wide route positively fired
+the required controls before SIGKILL: 425/522 joins, 535/477 copy rows, and
+8,000 command rows per arm; no crash or abort marker was observed in the
+captured phase.
+
+In phase 4, representative central TEXRECTs were emitted by the same guest PC
+`0x8000834C` in both arms and the same alternating two-root-DL pattern after
+relocation: control roots `0x32D820/0x3313F0`, wide roots
+`0x2EF620/0x2F31F0`. Their DPC windows were single coherent submissions
+(`0x9F6800..0x9FB3F8` control and `0x9B8600..0x9BD298` wide), not a separate
+hidden CI/scissor source. The wide task emitted about 123-127 central TEXRECTs
+per task versus 61-65 in control, with width-adjusted coordinates. This rules
+out H-secondary-pass and a distinct menu-writer/source-PC path for this capture;
+it selects the same-source H-rsp/width-dependent geometry path. The exact RSP
+input field that causes the extra rectangles remains open. No rendering
+mitigation was added.
+
+ORIGIN: the change only records existing task/DL identity and does not alter
+RDP commands, guest memory, or renderer decisions.

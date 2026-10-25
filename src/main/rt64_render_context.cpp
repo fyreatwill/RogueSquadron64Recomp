@@ -76,7 +76,11 @@ extern "C" void rs64_g1d_join_swap(uint32_t frame, uint32_t fb,
 extern "C" uint64_t rs64_dpc_get_last_submit_serial();
 extern "C" bool rs64_dpc_take_synthetic_consumer(uint64_t *serial);
 extern "C" uint32_t rs64_e9prov_current_task();
+extern "C" uint32_t rs64_e9prov_current_root_dl();
 extern "C" uint32_t rs64_e9prov_current_scope();
+extern "C" volatile uint32_t g_rs64_last_guest_pc;
+extern uint32_t g_rsp_dpc_start;
+extern uint32_t g_rsp_dpc_end;
 extern "C" int rs64_is_hangar_vi(void);
 extern "C" void rs64_s4899_vi(uint32_t vi, uint32_t width);
 extern "C" void rs64_s4597_target_store(char width, uint32_t pc, uint32_t addr, uint32_t value);
@@ -1346,9 +1350,17 @@ namespace ultramodern {
                                         (op == 0x36) ? "fillrect" : "tri";
                                     std::fprintf(stderr,
                                         "[g1d-cmd] phase=%u row=%u addr=0x%06X op=0x%02X kind=%s "
-                                        "rect=%u,%u-%u,%u central=%u w0=0x%08X w1=0x%08X\n",
+                                        "rect=%u,%u-%u,%u central=%u w0=0x%08X w1=0x%08X "
+                                        "task=%u root_dl=0x%06X guest_pc=0x%08X "
+                                        "dpc=0x%06X-0x%06X submit=%llu\n",
                                         phase, s_cmd_rows++, a, op, kind,
-                                        x0, y0, x1, y1, central ? 1u : 0u, w0, w1);
+                                        x0, y0, x1, y1, central ? 1u : 0u, w0, w1,
+                                        rs64_e9prov_current_task(),
+                                        rs64_e9prov_current_root_dl() & 0x7FFFFFu,
+                                        (uint32_t)g_rs64_last_guest_pc,
+                                        g_rsp_dpc_start & 0x3FFFFFFu,
+                                        g_rsp_dpc_end & 0x3FFFFFFu,
+                                        (unsigned long long)rs64_dpc_get_last_submit_serial());
                                 }
                             }
                         }

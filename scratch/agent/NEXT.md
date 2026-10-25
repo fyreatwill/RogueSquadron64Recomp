@@ -1,27 +1,32 @@
-# NEXT: name the game-side producer of the extra wide central draws
+# NEXT: identify the width-dependent RSP input
 HYPOTHESIS-ID: g1d-widescreen
 
-Session 6189 selected H-rdp-producer: the wide phase-4 stream has 2,165
-central-overlapping TEXRECTs versus 1,868 in control, while source target
-dimensions and readback extents match the requested width. Competing
-hypotheses for the remaining writer attribution:
+Session 6190 selected the same-source RSP/width-dependent geometry path: phase-4
+central TEXRECTs used guest PC `0x8000834C`, the same alternating two-root-DL
+pattern after relocation, and one coherent DPC window per task; wide emitted
+about 123-127 central TEXRECTs per task versus 61-65 in control. H-secondary-
+pass and a distinct menu-writer/source-PC path are ruled out for this capture.
 
-- H-menu-display-list: the widened menu/title display-list builder emits the
-  extra central rectangles intentionally from a width-dependent path.
-- H-rsp-geometry: the LLE RSP output differs before the RDP submission range,
-  creating extra geometry/rect commands from a bad viewport or scissor input.
-- H-secondary-pass: a hidden secondary CI/scissor pass, not the last CI, paints
-  the central rectangle and is only exposed by the wide route.
+Next work unit: add one phase-scoped trace at `rs64_run_lle_gfx` that records
+the guest OSTask input identity for phase-4 gfx tasks alongside the existing
+command source: task data_ptr, data_size, ucode, ucode_data, ucode_data_size,
+and root DL. Build once, then run
+`zsh scratch/agent/s6179_g1d_rdp_words.sh` until both arms have >=160 joins and
+>=400 copy rows; snapshot the phase-4 rows before killing the wrappers.
 
-Discriminator: join each phase-4 `[g1d-cmd]` record to its RDP submission
-range and guest RSP task/DL source, then compare the first matched frame
-ordinal in both arms. A command present only in the wide arm with a guest
-display-list/RSP source selects H-menu-display-list or H-rsp-geometry by its
-source PC; identical source commands with a distinct secondary CI/scissor
-range selects H-secondary-pass. No clamp, cull, skip, or other mitigation is
-allowed until the writer and legitimacy of the wide pixels are named.
+Competing hypotheses and discriminator:
 
-Exact next work unit: add the source task/DL identity to the existing
-phase-4 command records in one build, export submodule patches if needed, build
-Debug, and run the same `zsh scratch/agent/s6179_g1d_rdp_words.sh` route with
-the route controls (>=160 joins and >=400 copies per arm).
+- H-width-input: control and wide use the same task/data identity except for
+  the expected relocated framebuffer/root addresses; the width-dependent
+  command population is produced by RSP viewport/scissor input.
+- H-task-builder: wide has a distinct data_ptr/data_size/ucode-data identity
+  at the same guest PC; the game-side task builder is the producer.
+- H-dl-source: task identity matches, but root DL contents/source ranges differ
+  in a way not explained by relocation; the DL builder/input stream is the
+  producer.
+
+A normalized same-task join (task input fields, root DL relocation delta, DPC
+  range, and first wide-only central command) is the discriminator. Identical
+  task inputs select H-width-input; a wide-only task identity selects
+  H-task-builder; identical task inputs with an unexplained DL/source delta
+  selects H-dl-source. No rendering mitigation is allowed.
