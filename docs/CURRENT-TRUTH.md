@@ -210,3 +210,4 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
 (s6158) Radar disc = RDP tris/rects (not mesh matrix, not 0x800159B4): ROGUESQ_LOG_REGION/ROGUESQ_SHIFT_REGION (dpc_bridge.cpp rs64_region_scan, size-capped) shifts it in screen space; with ROGUESQ_HUD_ANCHOR=142,334 + SHIFT_REGION=192 at w796 ring and disc align at the right edge (single frame, eyeballed). Open: crescent, reticle displaced by anchor, derive A/R/region from width and wire into ROGUESQ_ASPECT.
 
 - s6159 (G1d): ROGUESQ_ASPECT>4:3 now auto-sets HUD anchor + radar-disc region shift (main.cpp rs64_g1d_apply_aspect_policy). Good at w796; at w1024 RA law (0.434*ex+68.7, 2-pt fit) leaves ring missing; reticle off-centre. See NEXT.md.
+- s6160 (G1d): RA law now 192+0.294*(ex-284); w1024 ring+disc aligned (auto run; ring vanishes at R>=547). Open: reticle centring, w683.
