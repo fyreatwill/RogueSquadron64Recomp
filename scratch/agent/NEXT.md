@@ -1,7 +1,6 @@
-# NEXT: G1d step 40 - cover the HUD elements the x-class mark missed, then implement ROGUESQ_HUD_ANCHOR
+# NEXT: G1d step 41 - HUD anchor: mark the second (1.6x) store per x coordinate
 HYPOTHESIS-ID: g1d-widescreen
-s6147: x-class (addr&0xF==4,|v|>=8) moves ally icon + a ring right; y-class moves ring/ally/missile counter down. Radar disc and missile counter did not move in x arm.
-Hypotheses: H-other-pc (disc/counter x stored with |v|<8, other nibble, or by code outside initHudStruct e.g. per-frame updater), H-int (counter x is an s16/int stored not float), H-parent (disc positioned relative to the ring/another node).
-Discriminator (one build, one run): in the w census log (scratch/agent/m6/g1_lvl1s6146b_w/run.log) list every float store with |v| in [8,400] regardless of nibble, grouped by block (0x30); then arms per block-set via MARKPC:lo-hi (+ MARKCLS=x) and read which block is the disc / counter. Also census stores to 0x80340240..0x80340430 outside pc 0x800C0084..0x800C1B60 (per-frame writers).
-Then implement ROGUESQ_HUD_ANCHOR in the fixup: x<160 shifted by -(virtW-320)/2, x>=160 by +, x-class only, under ROGUESQ_ASPECT != 4:3.
-Recipe template: scratch/agent/s6147_run.sh (kill-after-10-dumps, fb VI 6500 contact sheet via PIL).
+s6148 census: 8 HUD blocks at 0x80340240+0x30*n, x@+0x24 y@+0x28, each stored twice in initHudStruct (4:3 value then ~1.6x value; second wins). s6147 mark likely hit the overwritten first store for blocks 6 (x 76->121.6) and 7 (x 106->169.6/177).
+Hypotheses: H-layout (first store overwritten; mark the second) vs H-perframe (a writer outside initHudStruct re-sets disc/counter x each frame) vs H-parent.
+Discriminator: one run with ROGUESQ_HUD_MARKCLS=x restricted to the LAST store per address (or MARKPC = pcs 0x800c0354,0x800c0530,0x800c0568 etc.) and fb dump; if blocks 6/7 (disc/counter) move -> H-layout, implement ROGUESQ_HUD_ANCHOR (x<160 shifted -(virtW-320)/2*1.6-scale, x>=160 +) in the fixup under ROGUESQ_ASPECT != 4:3. If they still do not move -> H-perframe: census stores to 0x80340240..0x80340430 outside pc 0x800C0084..0x800C1B60 over a longer window.
+Recipe template: scratch/agent/s6147_run.sh.
