@@ -8105,7 +8105,7 @@ index 81917bc..0e730ed 100644
 \ No newline at end of file
 +};
 diff --git a/src/render/rt64_texture_cache.cpp b/src/render/rt64_texture_cache.cpp
-index 0848f3e..da2a177 100644
+index 0848f3e..22c84a9 100644
 --- a/src/render/rt64_texture_cache.cpp
 +++ b/src/render/rt64_texture_cache.cpp
 @@ -4,6 +4,8 @@
@@ -8147,10 +8147,21 @@ index 0848f3e..da2a177 100644
          // Check for free spaces on the LIFO queue first.
          uint32_t textureIndex;
          if (!freeSpaces.empty()) {
-@@ -1259,6 +1284,52 @@ namespace RT64 {
+@@ -1259,6 +1284,63 @@ namespace RT64 {
      }
  
      void TextureCache::queueGPUUploadTMEM(uint64_t hash, uint64_t creationFrame, const uint8_t *bytes, int bytesCount, int width, int height, uint32_t tlut, const LoadTile &loadTile, bool decodeTMEM) {
++        // PATCH (s6232): ROGUESQ_DUMP_TMEM_DIR=<dir> dumps the TMEM bytes RT64 actually uploads (cap 400 files)
++        {
++            static const char *s_dumpDir = std::getenv("ROGUESQ_DUMP_TMEM_DIR");
++            static int s_dumpCount = 0;
++            if (s_dumpDir && s_dumpDir[0] && bytes != nullptr && bytesCount > 0 && s_dumpCount < 400) {
++                char path[512];
++                snprintf(path, sizeof(path), "%s/up_%03d_h%016llx_%dx%d_t%u_d%d.bin", s_dumpDir, s_dumpCount, (unsigned long long)hash, width, height, tlut, decodeTMEM ? 1 : 0);
++                if (FILE *f = fopen(path, "wb")) { fwrite(bytes, 1, (size_t)bytesCount, f); fclose(f); }
++                s_dumpCount++;
++            }
++        }
 +        // PATCH: positive-control test hook (s193) -- ROGUESQ_TEST_FORCE_TMEM_ZERO=1
 +        // deliberately zeroes width on the first decodeTMEM upload seen, to
 +        // confirm the s192 guard below is reachable and its logging fires
