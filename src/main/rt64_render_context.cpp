@@ -1262,13 +1262,20 @@ namespace ultramodern {
             // s6165: join RDP targets to the VI state at the same submission.
             // The budget is per phase so boot traffic cannot hide menu frames.
             static int s_route = -1;
+            static int s_words = -1;
             static uint32_t s_route_phase = UINT32_MAX;
             static uint32_t s_route_rows = 0;
+            static uint32_t s_word_phase = UINT32_MAX;
+            static uint32_t s_word_rows = 0;
             if (s_route < 0) {
                 const char* e = std::getenv("ROGUESQ_LOG_RDP_ROUTE");
                 s_route = (e && *e && *e != '0') ? 1 : 0;
             }
-            if (s_route) {
+            if (s_words < 0) {
+                const char* e = std::getenv("ROGUESQ_LOG_RDP_WORDS");
+                s_words = (e && *e && *e != '0') ? 1 : 0;
+            }
+            if (s_route || s_words) {
                 const uint32_t phase = rs64_phase_ord();
                 if (phase != s_route_phase) {
                     s_route_phase = phase;
@@ -1294,6 +1301,18 @@ namespace ultramodern {
                         uint32_t n = 8;
                         if (op >= 8 && op <= 15) n = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
                         else if (op == 0x24 || op == 0x25) n = 16;
+                        if (s_words && phase >= 4u) {
+                            if (phase != s_word_phase) {
+                                s_word_phase = phase;
+                                s_word_rows = 0;
+                            }
+                            if (s_word_rows < 20000u) {
+                                std::fprintf(stderr,
+                                    "[g1d-word] phase=%u row=%u addr=0x%06X op=0x%02X w0=0x%08X w1=0x%08X vi_w=%u vi_o=0x%06X\n",
+                                    phase, s_word_rows, a, op, w0, w1, viw, vio & 0xFFFFFFu);
+                                ++s_word_rows;
+                            }
+                        }
                         if (op == 0x3F) {
                             if (g_rs64_g1d_join_phase.load(std::memory_order_relaxed) != phase)
                                 g_rs64_g1d_join_cis.store(0, std::memory_order_relaxed);

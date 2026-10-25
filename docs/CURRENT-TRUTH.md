@@ -268,3 +268,12 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   pre-presentation guest-frame defect selects H-in-list-producer for this
   occurrence and rules out an early hidden or secondary CI. The writer inside
   the valid phase-4 list remains unnamed; no mitigation landed.
+
+- s6180: a phase-4 complete RDP-word census ran in concurrent control/wide arms.
+  Both arms fired the word and VI/CI positive controls. The first 2,000 command
+  opcodes matched; the first word differences were the expected width-dependent
+  scissor and SETCOLORIMAGE fields (`512/0xB90000` versus `796/0xB51E00`). The
+  wide guest framebuffer still showed the central corruption. This weakens
+  H-in-list-command as an unexpected-command explanation and leaves
+  H-guest-layout versus H-intermittent-layout open. The oracle cannot reach this
+  phase, so it supplied no independent phase-4 ground truth; no mitigation landed.

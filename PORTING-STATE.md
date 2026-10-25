@@ -167669,3 +167669,23 @@ writer remains unnamed. No mitigation landed.
 
 ORIGIN: runner timing only; no game or renderer value was changed, and no
 skip/guard was added.
+
+## Session 6180 (2026-10-25) — matched phase-4 RDP opcode structure across wide corruption
+
+Added the phase-scoped `ROGUESQ_LOG_RDP_WORDS` census and ran the rebuilt
+binary in concurrent 4:3 control and 16:9 wide arms. The word and VI/CI
+positive controls fired in both arms. The first 2,000 phase-4 opcodes matched;
+the first differences were the expected width-dependent scissor and
+SETCOLORIMAGE fields (`512/0xB90000` versus `796/0xB51E00`). The wide raw guest
+framebuffer still showed the central corruption while the control remained
+coherent.
+
+This weakens the explanation that an unexpected command structure or hidden
+early secondary CI is causing the defect. It does not yet distinguish a bad
+guest framebuffer layout/write from a frame-specific producer/readback race,
+because the complete late-command and per-frame write metadata are not yet
+captured. The retail oracle cannot reach phase 4, so it provided no independent
+target-phase ground truth. No mitigation landed.
+
+ORIGIN: diagnostic-only command-word logging; no rendering value was changed,
+and no skip/guard/cull was added.
