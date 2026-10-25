@@ -1,51 +1,54 @@
-# NEXT: name the free that replaces the carve-time heap block
+# NEXT: does phase 4 read the early images that cover the wide pool?
 HYPOTHESIS-ID: g1d-widescreen
 
-Session 6204 refutes H-same and the stated H-grow. The carve-time
-block `0x808B77F0` flags `0x0006` size `0x2DB000` is gone by pool
-call n=3. Do not retarget `0x8096D600`. Do not write `0x801163E8`.
-Do not change `t0`, `d8`, `dc`, `f0`, `f4`, `f8`, or `ec`. Do not
-raise `osMemSize`. Do not skip the color-image writeback. Do not add
-another heap walk.
+Session 6205 closed the heap-block question. Do not look for another
+free. Do not retarget `0x8096D600`. Do not write `0x801163E8`. Do not
+change `t0`, `d8`, `dc`, `f0`, `f4`, `f8`, or `ec`. Do not raise
+`osMemSize`. Do not skip `Framebuffer::copyNativeToRAM`.
 
-Witness: `scratch/agent/soak_results/s6204/witness.txt`.
+The writer is `coalesceFreeHeapBlocks`, called from `runVideoFrameTick`
+at `0x80001430` because `partitionFramebufferMemory` returned 0.
+`a0=a1=0` is that mode. `a2` is the heap head. `a3` is `ec`. The stores
+at `0x8000249C` and `0x800024A4` produce the pool-time size and the
+flag-8 terminator at `ec-0x10`. That value is the game's own heap bound.
 
-At `[g1d-hblk-pool]` (`0x80018030`, n=3) both arms walk 21 blocks from
-head `0x80154690` and stop at `ec-0x10`. `0x8096D600` is inside
-`0x80195180` flags `0x0001` (free bit set, bits 1 and 2 clear), size
-`0x861660` in 4:3 and `0x823460` in 16:9. The delta is `0x3E200`, the
-same as `ec`. `0x80B25000` is not covered. Both live pool bases are
-above the stop: control `0x80B25000`, wide `0x80AE6E00`. The wide pool
-`[0x80AE6E00, 0x80B31D58)` still crosses the color images that end at
-`0x80B00000`. `ec-t2` is the wrong hole: it sits in the free block,
-and the retail pool sits above the terminator.
+The overlap that remains is layout. Carve n=0, n=1, and n=2 are
+identical in both arms. Their `d8` images all end at `0x80B00000`:
 
-The hooks already in `rs_free` (`ROGUESQ_LOG_RS_FREE`) and
-`coalesceFreeHeapBlocks` (`ROGUESQ_LOG_COALESCE_HEAP_ENTRY`) name a
-caller. No rebuild. The free log is uncapped; keep only the rows
-between `[g1d-hblk]` and `[g1d-hblk-pool]`.
+- n=0 `0x80ADD000` plus `0x23000` (320x224)
+- n=1 `0x80A6A000` plus `0x96000` (640x480)
+- n=2 `0x80A95C00` plus `0x6A400` (640x340)
 
-Same s6204 recipe, sequential, from `build/`, SIGKILL, screen
-unlocked, one game at a time. Add the two env vars. Do not pass
-`ROGUESQ_FB_WIDTH`.
+The 4:3 n=3 pool starts at `0x80B25000`, above that end. The 16:9 n=3
+pool is `[0x80AE6E00, 0x80B31D58)` and crosses it. n=3's own stack is
+packed from `ec` to the top, so there is no hole to slide the pool into
+without saying which other buffer is dead.
+
+One paired run, same recipe as s6205, no new store. Add one env-gated
+counter, not a new heap walk. Log every phase-4 RDP color-image and
+texture-image address that intersects `[0x80A6A000, 0x80B00000)`, with
+the guest PC already available on the task row. Also count
+`copyNativeToRAM` spans that intersect that same range, as the positive
+control: that count must be >0 in both arms (s6200 already saw those
+writebacks).
 
 `ROGUESQ_OSMEM_MB=12 ROGUESQ_LOG_G1D_TASK=1 ROGUESQ_LOG_PHASE=1`
 `ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1`
 `ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1`
-`ROGUESQ_LOG_RS_FREE=1 ROGUESQ_LOG_COALESCE_HEAP_ENTRY=1`
-with `ROGUESQ_ASPECT=4:3` then `16:9`.
+with `ROGUESQ_ASPECT=4:3` then `16:9`. From `build/`, one game at a
+time, SIGKILL, screen unlocked. Do not pass `ROGUESQ_FB_WIDTH`.
 
-- H-free: in that window, an `[rs-free]` pointer is `0x808B77F0` or
-  its block contains that header, or the freed span ends at `ec-0x10`.
-  `caller_ra` is the writer. Record the wide-versus-control pointer
-  delta. Do not retarget.
-- H-coalesce: no such free, but a `[coalesce-entry]` `a0`/`a1` covers
-  `0x808B77F0` or `0x80195180`. `ra` is the writer. Do not retarget.
-- H-neither: neither tag touches that range. The positive control is
-  then that the tag appears somewhere else in the same log. The next
-  witness is a store of the header words `0x808B77F0` and
-  `0x80195180`, not a pool move.
+- H-read: phase-4 CI or TI count in that range is >0. The images are
+  live. The next change relocates them or the pool; it does not drop
+  the writeback.
+- H-clobber: CI and TI counts are 0 in both arms, while the writeback
+  control is >0 in both. The bytes are a stale render-target copy into
+  memory n=3 reused. Only then is an opt-in refusal of writeback spans
+  that intersect the live pool (`e8`, `e8+0x4AF58`) a candidate, and
+  only on the wide arm. The 4:3 pool does not intersect the range, so
+  its writeback count must stay >0.
+- H-blind: the new counter does not fire and the writeback control is
+  also 0. The instrument missed the phase. Do not relocate anything.
 
 Control must still show `w78=05200002` at `data_ptr=0x80B2D820`. Wide
-`e8` must stay `0x80AE6E00`. `[g1d-hblk-pool]` must still report flags
-`0x0001` at `0x80195180`, or the window has no positive control.
+`e8` must stay `0x80AE6E00` and `w28=w78=00010001`.

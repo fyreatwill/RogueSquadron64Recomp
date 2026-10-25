@@ -168123,3 +168123,22 @@ The writer that replaces `0x808B77F0` flags `0x0006` with `0x80195180` flags `0x
 
 ORIGIN: no value was written. The color-image writeback is untouched. The `00010001` words remain the bytes `Framebuffer::copyNativeToRAM` left in the unmoved node (s6200). This session added a second heap-block log only.
 
+
+## Session 6205 (2026-10-25) — coalesce replaces the carve-time heap block
+
+Named the writer that removes the carve-time heap block. No rebuild and no store. The s6204 recipe ran again with the existing `ROGUESQ_LOG_RS_FREE` and `ROGUESQ_LOG_COALESCE_HEAP_ENTRY` hooks. Screen-lock key absent. Control pid 57833 ready at 40 s, wide pid 57943 ready at 40 s, both SIGKILL, 0 crash. Logs: `scratch/agent/soak_results/s6205/`.
+
+Positive controls match s6204. Control phase-4 `data_ptr=0x80B2D820` has `w78=05200002` and pool `e8=0x80B25000`. Wide keeps `e8=0x80AE6E00` and `data_ptr=0x80AEF620` reads `w28=w78=00010001`. Pool-time `[g1d-hblk-pool]` is still `0x80195180` flags `0x0001`, size `0x861660` / `0x823460`. `[rs-free]` fired 6983 times (control) and 6899 times (wide), so the free log is not blind. Every `caller_ra` is 0, which is the known `r31` value at `rs_free` entry, not a new zero. `[coalesce-entry]` fired 3 times per arm. The 256-entry cap was not reached.
+
+The window from `[g1d-hblk]` to `[g1d-hblk-pool]` contains 0 `[rs-free]` rows and one `[coalesce-entry]`: `a0=0 a1=0 a2=0x80154690 a3=ec ra=0`. Control `a3=0x809F6800`. Wide `a3=0x809B8600`. Both values are the `ec` just printed by `[g1d-carve] n=3`, and both lie inside the old block `[0x808B77F0, 0x80B92800)`. This refutes H-free. It selects H-coalesce, with one correction: `a0` and `a1` are not the covering pointers.
+
+`coalesceFreeHeapBlocks` has one caller, `runVideoFrameTick` at `0x80001430`. The `a0=0` path is the branch taken when `partitionFramebufferMemory` returns 0 (`0x80001414`): `a0=0`, `a1=0`, `a2=0x8010D200+0x47490` which is the heap head, and `a3` is the word at `sp+0x48`. That word is the out-pointer `partitionFramebufferMemory` received as `a1` (`t6=a1` at `0x80000DD8`) and wrote on the return-0 path (`0x80001068`). The other two coalesce rows are the `a0=1` path (`a1=0x8010D208`) from earlier carves, so the window row is uniquely this call. `ra=0` in the log does not name the PC; the single `jal` plus the argument pattern does.
+
+The body then does what the pool-time walk sees. At `0x8000249C` it stores `(s0-a3)-0x20` as the pre-terminator block's size, with `s0=a3_arg=ec`. At `0x800024A4` it stores flag 8 at `ec-0x10`. The unique header that satisfies the size formula is `0x80195180`: `(0x809F6800-0x80195180-0x20)=0x861660` and `(0x809B8600-0x80195180-0x20)=0x823460`. The terminator address equals `[g1d-hblk-pool] last`. The old header `0x808B77F0` is interior to that resized span, which is why the walk no longer reports it. The value is legitimate. It is the game's own post-carve heap bound, not a wild pointer and not a reason to retarget the pool below the terminator.
+
+The same carve log shows the overlap is elsewhere. Carves n=0, n=1, and n=2 are byte-identical across the arms. Their `d8` images end at `0x80B00000`: `0x80ADD000+0x23000`, `0x80A6A000+0x96000`, `0x80A95C00+0x6A400`. The 4:3 n=3 pool starts at `0x80B25000`, above that end. The 16:9 pool `[0x80AE6E00, 0x80B31D58)` crosses it. n=3's own stack is packed from `ec` to the top, so the heap rewrite is not a hole the pool can move into.
+
+Superseded: "the block disappears because `rs_free` or a coalesce of header `0x808B77F0` runs between the two walks." Believable because those are the two logged heap mutators and the block is gone at the second walk. The free log is empty in the window, and the coalesce arguments are a new heap end, not that header.
+
+ORIGIN: no value was written. The color-image writeback is untouched. The `00010001` words remain the bytes `Framebuffer::copyNativeToRAM` left in the unmoved node (s6200). This session only enabled two logs that were already in the binary.
+
