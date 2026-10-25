@@ -10746,6 +10746,21 @@ static void rs64_g1d_apply_aspect_policy() {
     setenv("ROGUESQ_VPW_SCALE", b, 0);
     setenv("ROGUESQ_ASPECT_SCALE", b, 0);
     std::fprintf(stderr, "[g1d] ROGUESQ_ASPECT=%s -> FB_WIDTH=%d scales=%s\n", as, fbw, b);
+    // s6159: HUD anchor + radar-disc region shift derived from fb width. Calibrated at w796 only
+    // (A=142=(fbw-512)/2, R-A=192 at w796; w1024 overshot ~55px with slope 0.676 so linear 2-pt fit 0.434*ex+68.7, region 520..630 x 20..135 = right edge - 276/-166 scaled by fbw/796);
+    // other widths are extrapolation until verified. ROGUESQ_HUD_ANCHOR_AUTO=0 disables.
+    const char* au = std::getenv("ROGUESQ_HUD_ANCHOR_AUTO");
+    if (!au || std::atoi(au) != 0) {
+        const double ex = fbw - 512.0, A = ex / 2.0, RA = 0.434 * ex + 68.7, k = fbw / 796.0;
+        char hb[64], rg[96], sh[32];
+        std::snprintf(hb, sizeof hb, "%.1f,%.1f", A, A + RA);
+        std::snprintf(rg, sizeof rg, "%.0f,%.0f,20,135", fbw - 276.0 * k, fbw - 166.0 * k);
+        std::snprintf(sh, sizeof sh, "%.0f", RA);
+        setenv("ROGUESQ_HUD_ANCHOR", hb, 0);
+        setenv("ROGUESQ_LOG_REGION", rg, 0);
+        setenv("ROGUESQ_SHIFT_REGION", sh, 0);
+        std::fprintf(stderr, "[g1d] hud anchor=%s disc region=%s shift=%s\n", hb, rg, sh);
+    }
 }
 
 int main(int argc, char* argv[]) {

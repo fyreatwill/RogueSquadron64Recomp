@@ -1,3 +1,3 @@
-# NEXT: G1d step 50 - fold HUD anchor + disc region shift into ROGUESQ_ASPECT
+# NEXT: G1d step 51 - fix radar ring/disc at w1024 and reticle centring
 HYPOTHESIS-ID: g1d-widescreen
-s6158: disc moves with ROGUESQ_SHIFT_REGION (screen-space, size-capped). Work unit: derive A, R, region and disc shift from fb width (w796: A=142,R=334,region 520,630,20,135, shift 192; check w683,w1024 by scaling), apply automatically when ROGUESQ_ASPECT != 4:3, then fix the two leftovers: green reticle should stay centred (find which vp/elem the anchor wrongly moves), and the radar crescent. Verify with fbdump at 16:9 and 21:9 in one run each.
+s6159: auto anchor works at w796 (16:9). At w1024 RA=0.434*ex+68.7 puts disc on-screen but ring missing. Work unit: run w1024 with ROGUESQ_HUD_ANCHOR_AUTO=0 + explicit ROGUESQ_HUD_ANCHOR=256,<R> sweep R in {500,530,547,580} (one run each, concurrent is not possible; use fbdump frame 5000) to find where ring and disc align, giving a 3rd RA point (796:192, 1024:?) to pick the law; also run w683 (ASPECT=3:2? use ROGUESQ_FB_WIDTH=683). Then find which vp the anchor wrongly moves for the green reticle. Script: scratch/agent/s6159_run.sh <aspect>.
