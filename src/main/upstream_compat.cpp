@@ -264,6 +264,8 @@ extern "C" void osViBlack_recomp(uint8_t* /*rdram*/, recomp_context* ctx) {
 extern "C" uint32_t rs64_vi_committed_width();
 extern "C" uint32_t rs64_vi_committed_origin();
 extern "C" void rs64_s4899_swap(uint32_t fb, uint32_t width);
+extern "C" void rs64_g1d_join_swap(uint32_t frame, uint32_t fb,
+                                     uint32_t vi_width, uint32_t vi_origin);
 // s5078: per-(pc,addr) count of instrumented stores into 0x9DE80..0x9DF00, fed by
 // rs64_m5_writer_parity (apply_s5078_flight_writer_census.py), printed per swap under WATCH_LOG.
 static std::mutex g_s5078_mu;
@@ -337,6 +339,8 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         rs64_vi_boundary_log("swap", fb,
                              vi->VI_ORIGIN_REG & 0x00FFFFFFu,
                              vi->VI_WIDTH_REG);
+        rs64_g1d_join_swap((uint32_t)n, fb, vi->VI_WIDTH_REG,
+                           vi->VI_ORIGIN_REG);
     }
     if (s_log_callers) {
         struct CallerRow {

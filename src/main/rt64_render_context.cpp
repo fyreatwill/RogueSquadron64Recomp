@@ -16,6 +16,41 @@
 // The bridge needs to forward Factor 5 raw RDP byte ranges via
 // processDisplayLists(isHLE=false). Set on construction, cleared on shutdown.
 static std::atomic<RT64::Application*> g_rt64_app{nullptr};
+extern "C" uint32_t rs64_phase_ord(void);
+
+// Host-side observations only; no rendering decision depends on them.
+static std::atomic<uint32_t> g_rs64_g1d_join_phase{UINT32_MAX};
+static std::atomic<uint32_t> g_rs64_g1d_join_lo{0};
+static std::atomic<uint32_t> g_rs64_g1d_join_hi{0};
+static std::atomic<uint32_t> g_rs64_g1d_join_ci_w{0};
+static std::atomic<uint32_t> g_rs64_g1d_join_ci_a{0};
+static std::atomic<uint32_t> g_rs64_g1d_join_cis{0};
+
+extern "C" void rs64_g1d_join_swap(uint32_t frame, uint32_t fb,
+                                     uint32_t vi_width, uint32_t vi_origin) {
+    static int enabled = -1;
+    static uint32_t last_phase = UINT32_MAX;
+    static uint32_t phase_rows = 0;
+    if (enabled < 0) {
+        const char* route = std::getenv("ROGUESQ_LOG_RDP_ROUTE");
+        const char* dump = std::getenv("ROGUESQ_FB_DUMP_VI");
+        enabled = ((route && *route && *route != '0') ||
+                   (dump && *dump && *dump != '0')) ? 1 : 0;
+    }
+    if (!enabled) return;
+    const uint32_t phase = rs64_phase_ord();
+    if (phase != last_phase) { last_phase = phase; phase_rows = 0; }
+    if (phase_rows++ < 160) {
+        std::fprintf(stderr,
+            "[g1d-join] phase=%u frame=%u fb=0x%06X vi_w=%u vi_o=0x%06X "
+            "rdp_lo=0x%06X rdp_hi=0x%06X ci_n=%u last_ci_w=%u last_ci_a=0x%06X\n",
+            phase, frame, fb & 0xFFFFFFu, vi_width, vi_origin & 0xFFFFFFu,
+            g_rs64_g1d_join_lo.load(), g_rs64_g1d_join_hi.load(),
+            g_rs64_g1d_join_cis.load(), g_rs64_g1d_join_ci_w.load(),
+            g_rs64_g1d_join_ci_a.load());
+        std::fflush(stderr);
+    }
+}
 
 extern "C" uint64_t rs64_dpc_get_last_submit_serial();
 extern "C" bool rs64_dpc_take_synthetic_consumer(uint64_t *serial);
@@ -1239,6 +1274,14 @@ namespace ultramodern {
                         if (op >= 8 && op <= 15) n = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
                         else if (op == 0x24 || op == 0x25) n = 16;
                         if (op == 0x3F) {
+                            if (g_rs64_g1d_join_phase.load(std::memory_order_relaxed) != phase)
+                                g_rs64_g1d_join_cis.store(0, std::memory_order_relaxed);
+                            g_rs64_g1d_join_phase.store(phase, std::memory_order_relaxed);
+                            g_rs64_g1d_join_lo.store(lo_phys, std::memory_order_relaxed);
+                            g_rs64_g1d_join_hi.store(hi_phys, std::memory_order_relaxed);
+                            g_rs64_g1d_join_ci_w.store((w0 & 0x3FF) + 1u, std::memory_order_relaxed);
+                            g_rs64_g1d_join_ci_a.store(w1 & 0xFFFFFFu, std::memory_order_relaxed);
+                            g_rs64_g1d_join_cis.fetch_add(1, std::memory_order_relaxed);
                             std::fprintf(stderr, "[rdp-route] phase=%u lo=0x%06X len=%u ci_w=%u ci_a=0x%06X vi_w=%u vi_o=0x%06X\n",
                                 phase, lo_phys, hi_phys - lo_phys, (w0 & 0x3FF) + 1, w1 & 0xFFFFFF, viw, vio & 0xFFFFFF);
                             saw_ci = true;

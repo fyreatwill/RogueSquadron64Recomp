@@ -167552,3 +167552,6 @@ mitigation or retail-default change was made.
 ORIGIN: the corruption is in the guest framebuffer bytes before presentation;
 the next work unit must name the producer/stride writer before changing any
 width or adding a skip.
+## Session 6173 (2026-10-25) — G1d joined title framebuffer dumps to their RDP producer
+
+Added a host-side, phase-scoped `[g1d-join]` diagnostic in `rt64_render_context.cpp`, called from `osViSwapBuffer_recomp`. It records the swap frame, VI width/origin, latest RDP list range, CI count, and latest CI width/address; it is enabled by the existing RDP-route or VI-dump flags. The Debug target built successfully after a declaration-order fix. A paired 12 MB control/wide run positively fired the instrument in both arms. At the phase-4 title frame 500, control joined VI 1024/title 0xB90400/CI 512 and wide joined VI 1024/title 0xB52200/CI 796. The wide frame-500 guest dump was coherent by row-uniqueness inspection, so the s6172 scanline corruption did not recur. This rules out treating the current observation as a deterministic RT64-only failure, but does not name the writer; the next discriminator is every-frame phase-4 capture. The diagnostic run was SIGKILLed before hold completion.

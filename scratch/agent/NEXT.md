@@ -1,13 +1,12 @@
 # NEXT: attribute the first corrupt wide title framebuffer producer
 HYPOTHESIS-ID: g1d-widescreen
 
-s6172 narrowed the defect. A same-build paired run positively fired all
-diagnostics: the control's first 512-wide title dump is coherent, while the
-wide arm's matching 512-wide dump is horizontal scanline corruption. Both
-arms logged the same early video-state dimensions; the wide arm already
-rewrites 512x340 and 512x448, and its later phase-4 RDP route is coherent at
-796 pixels. The concurrent harness did not satisfy the title gate on its
-retries, so do not call the next run a clean endurance result.
+s6173 validated the new join but did not reproduce the corruption: at phase 4,
+frame 500, control joined VI 1024/title 0xB90400/CI 512 and wide joined VI
+1024/title 0xB52200/CI 796; the wide dump was coherent by row uniqueness. The
+next run must capture every title frame so an intermittent first-bad frame is
+not hidden by the old every-500 dump interval. This remains diagnostic, not
+endurance.
 
 Competing hypotheses and discriminator:
 
@@ -25,23 +24,24 @@ Competing hypotheses and discriminator:
   first bad dump's CI width/address and the immediately preceding video-state
   call distinguish this from an asset producer.
 
-Discriminator: add one regeneration-safe, phase-scoped join at the first
-pre-phase-5 bad dump (not a run-lifetime counter), recording the framebuffer
-dump ordinal, current VI origin/width, every CI width/address, RDP list start,
-and the video-state call dimensions immediately before that frame. The same
-single build must carry control and wide arms. A coherent guest dump plus bad
-window selects H-early-rt64; a corrupt guest dump with a 320/640 or uncovered
-buffer selects H-unrewritten-secondary; a corrupt guest dump whose source
-display list is otherwise valid selects H-early-producer. The positive control
-is the control's matching title dump and its route/join row in the same run.
+Discriminator: rerun the same build with `FBD_EVERY_V=1` and compare every
+phase-4 title dump, its `[g1d-join]` row, and the preceding `[rdp-route]` CI
+records. A coherent guest dump plus bad window selects H-early-rt64; a corrupt
+guest dump with a 320/640 or uncovered buffer selects H-unrewritten-secondary;
+a corrupt guest dump whose source display list is otherwise valid selects
+H-early-producer. If all per-frame guest dumps are coherent, the corruption is
+intermittent and the next lead is the first frame whose CI/list join changes,
+not a width patch. The positive control is the control arm's matching phase-4
+frame and join row in the same run.
 
 Run from the repo root after implementing the bounded hook:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp -j4
     # launch control and wide concurrently with the existing g1 coverage
     # harness, using OSMEM=12 and title origins 0x00790400/0x00752200;
-    # arm ROGUESQ_LOG_VI_WRITERS=1, ROGUESQ_LOG_FB_ALLOC=1,
-    # ROGUESQ_LOG_RDP_ROUTE=1, and ROGUESQ_FB_DUMP_VI=1.
+    # set FBD_EVERY_V=1 and arm ROGUESQ_LOG_VI_WRITERS=1,
+    # ROGUESQ_LOG_FB_ALLOC=1, ROGUESQ_LOG_RDP_ROUTE=1, and
+    # ROGUESQ_FB_DUMP_VI=1.
 
 Do not change retail defaults or add a cull/skip. If the writer is named,
 make the smallest opt-in fix and rerun the paired capture in this iteration.
