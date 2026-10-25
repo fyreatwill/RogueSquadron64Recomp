@@ -1,46 +1,41 @@
-# RESUME NEXT: isolate the RT64 readback source region for the phase-4 defect
+# NEXT: identify the RT64 render-target source/layout writer
 HYPOTHESIS-ID: g1d-widescreen
 
-This is a checkpoint close-out after the primary work unit stopped. Do not
-rerun the experiment unchanged. Session 6184's phase-4 `copyToRAM` trace fired 400 times in each
-arm. Control copied 512x448 into guest physical 0xB90000; wide copied 796x448
-into 0xB51E00. In both arms, all 399 consecutive destination `before` hashes
-equalled the preceding host readback hash. The route positive controls remained
-160 joins and 1,440 route rows per arm. This selects the readback-copy boundary
-as the immediate writer of the changing framebuffer bytes, but does not name
-the RT64 render/readback source of the wide central rectangle.
+Session 6185's batched source/readback trace ran the preserved 4:3 control and
+16:9/12 MB arm in one build and run. Both arms had 160 phase-4 joins, 1,440
+route rows, and 400 copy traces. Control used source target/address
+0xB90000, 512x447; wide used 0xB51E00, 796x447. For all 399 consecutive
+transitions in both arms, center and outer hashes in the guest destination
+matched the preceding host readback hashes. The changing wide central
+rectangle is therefore already present at the RT64 readback source boundary;
+there was no intervening guest write and no source-hash alternation in this
+capture.
 
 Competing hypotheses and discriminator:
 
-- H-rt64-source-region: an RT64 source-target/row layout produces the damaged
-  central rectangle only for the 796-wide target.
-- H-guest-layout: the guest framebuffer is already wrong before the RT64 copy
-  boundary on a fresh destination range.
-- H-intermittent-readback: source-region hashes alternate between clean and
-  corrupt phase-4 frames while CI/route metadata stays fixed.
+- H-resolve-layout: the wide `RenderTarget` allocation, resize, resolve, or
+  framebuffer view has a bad source extent/stride that creates the rectangle.
+- H-rdp-producer: the wide RDP commands rasterize the rectangle into the RT64
+  target before resolve.
+- H-copy-layout: `copyToNative` uses a wrong row origin/extent or stale target
+  for the wide target even though the target identity is correct.
 
-Discriminator: add one phase-scoped trace at the RT64 `copyToNative`/readback
-source boundary recording source target identity, rowStart/rowEnd, rowWidth,
-and bounded hashes for central damaged columns versus outer columns. Compare
-those source hashes with the paired guest destination ranges. A wide-only
-anomalous source central hash selects H-rt64-source-region; an anomalous fresh
-destination before copy selects H-guest-layout; alternating source hashes with
-fixed CI/route selects H-intermittent-readback. Keep both arms in one build/run
-and retain the phase-4 route positive controls. Do not add a skip or clamp until
-the writer and value legitimacy are named.
+Discriminator: add one phase-4, budgeted trace at the RT64 target/resolve path
+that records the source target identity, texture/resolved-texture dimensions,
+`copyToNative` rowWidth/rowStart/rowEnd, and the RDP draw/resolve ordering for
+the same frame. A target or resolved texture whose dimensions/identity do not
+match 796x448 selects H-resolve-layout; a correct target with a new
+wide-only draw command covering the damaged center selects H-rdp-producer; a
+correct target and command stream with a mismatched copy extent/origin selects
+H-copy-layout. Keep the control and wide arms together and retain the 160-join
+and 400-copy positive controls. Do not add a clamp/cull/skip until the writer
+and legitimacy of the source pixels are named.
 
-Build/run after adding the source-region trace:
+Exact work:
 
     ./submodule-patches/export.sh
     cmake --build build --config Debug --target RogueSquadron64Recomp -j4
     zsh scratch/agent/s6179_g1d_rdp_words.sh
 
-Preserve the existing 4:3 control and 16:9/12 MB wide recipes. Do not rerun
-the completed census unchanged or widen the mission route until this
-source-region discriminator is run.
-
-Resume artifact: the prior source tree contains the phase-4 copy boundary
-instrumentation and the paired-run script above. Add only the RT64 source-side
-trace, export submodule patches if lib/ changes, build once, and run the paired
-arms. Record which of the three hypotheses the source hashes select before
-landing any mitigation.
+Use the existing phase-4 route and dump artifacts; do not rerun the completed
+source-hash census unchanged.

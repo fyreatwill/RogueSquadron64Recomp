@@ -167817,3 +167817,25 @@ the writer and value legitimacy are still unproven.
 
 ORIGIN: checkpoint close-out only; no guest or renderer value changed and no
 skip, guard, clamp, or cull was landed.
+
+## Session 6187 (2026-10-25) — isolated the phase-4 RT64 readback source
+
+The batched source-region extension was built and run in the existing paired
+12 MB control/wide recipe. Both arms passed the route positive controls with
+160 phase-4 joins and 1,440 route rows, and each produced the bounded 400-copy
+trace. Control's source target was `0xB90000` at `512x447`; wide's was
+`0xB51E00` at `796x447`. The trace hashed the center and outer source regions
+separately and compared them with the guest destination. In all 399
+consecutive post-first copies, both regions' guest `before` hashes matched the
+preceding host source hashes in both arms.
+
+This rules out an intervening guest write and source-hash alternation for this
+capture. The wide central rectangle is already present at the RT64
+render-target/readback boundary, selecting H-rt64-source-region over
+H-guest-layout and H-intermittent-readback. The target allocation/resolve or
+RDP producer that creates those source pixels is still unnamed; no mitigation
+was added. The title-only `MISSION_RE=ZZZ` configuration means this is not a
+mission/hold verdict.
+
+ORIGIN: diagnostic-only RT64 source/readback tracing; no guest or renderer value
+was changed, and no skip, guard, clamp, or cull was landed.

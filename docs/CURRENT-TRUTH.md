@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6184 (2026-10-25).
+Compact operational handoff, maintained as of Session 6187 (2026-10-25).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -316,3 +316,13 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   changing bytes and rules out an intervening guest write between copies. It
   does not yet name the RT64 source-region/layout defect producing the wide
   central rectangle. No mitigation landed.
+
+- s6185: the source-side extension fired 400 times in each paired arm, with
+  160 phase-4 joins and 1,440 route rows each. Control read back from target
+  `0xB90000` (`512x447`); wide read back from target `0xB51E00` (`796x447`).
+  Center and outer source hashes were copied unchanged into the guest: all 399
+  consecutive transitions matched the preceding host hash in both regions and
+  both arms. This rules out an intervening guest write and source-hash
+  alternation for this capture, selecting the RT64 render-target/readback
+  layout boundary over H-guest-layout and H-intermittent-readback. The target
+  allocation/resolve writer is still unnamed; no mitigation landed.

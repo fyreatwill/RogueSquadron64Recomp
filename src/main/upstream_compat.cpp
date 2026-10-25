@@ -271,7 +271,10 @@ extern "C" void rs64_g1d_copy_to_ram_trace(uint32_t rowStart, uint32_t rowEnd,
                                              uint32_t width, uint8_t siz,
                                              uint8_t *destination,
                                              const uint8_t *source,
-                                             uint32_t bytes) {
+                                             uint32_t bytes,
+                                             uint32_t sourceTarget,
+                                             uint32_t sourceWidth,
+                                             uint32_t sourceHeight) {
     static int enabled = -1;
     static uint32_t phase_seen = UINT32_MAX;
     static uint32_t rows = 0;
@@ -290,6 +293,13 @@ extern "C" void rs64_g1d_copy_to_ram_trace(uint32_t rowStart, uint32_t rowEnd,
     const uint32_t phys = dst >= base ? static_cast<uint32_t>(dst - base) : 0xFFFFFFFFu;
     uint64_t before = 1469598103934665603ull;
     uint64_t host = 1469598103934665603ull;
+    uint64_t beforeCenter = 1469598103934665603ull;
+    uint64_t hostCenter = 1469598103934665603ull;
+    uint64_t beforeOuter = 1469598103934665603ull;
+    uint64_t hostOuter = 1469598103934665603ull;
+    const uint32_t rowBytes = width << siz >> 1;
+    const uint32_t centerLo = rowBytes / 4u;
+    const uint32_t centerHi = rowBytes - centerLo;
     for (uint32_t i = 0; i < bytes; ++i) {
         const uint8_t hb = source[i];
         host = (host ^ hb) * 1099511628211ull;
@@ -297,11 +307,30 @@ extern "C" void rs64_g1d_copy_to_ram_trace(uint32_t rowStart, uint32_t rowEnd,
             const uint8_t bb = rdram[(phys + i) ^ 3u];
             before = (before ^ bb) * 1099511628211ull;
         }
+        const bool center = (i % rowBytes) >= centerLo && (i % rowBytes) < centerHi;
+        if (center) {
+            hostCenter = (hostCenter ^ hb) * 1099511628211ull;
+            if (phys != 0xFFFFFFFFu) {
+                const uint8_t bb = rdram[(phys + i) ^ 3u];
+                beforeCenter = (beforeCenter ^ bb) * 1099511628211ull;
+            }
+        } else {
+            hostOuter = (hostOuter ^ hb) * 1099511628211ull;
+            if (phys != 0xFFFFFFFFu) {
+                const uint8_t bb = rdram[(phys + i) ^ 3u];
+                beforeOuter = (beforeOuter ^ bb) * 1099511628211ull;
+            }
+        }
     }
     std::fprintf(stderr,
-        "[g1d-copy] phase=%u row=%u-%u width=%u siz=%u phys=0x%06X bytes=%u before=%016llX host=%016llX\n",
+        "[g1d-copy] phase=%u row=%u-%u width=%u siz=%u phys=0x%06X bytes=%u "
+        "target=0x%06X targetWH=%ux%u before=%016llX host=%016llX "
+        "beforeCenter=%016llX hostCenter=%016llX beforeOuter=%016llX hostOuter=%016llX\n",
         phase, rowStart, rowEnd, width, siz, phys, bytes,
-        (unsigned long long)before, (unsigned long long)host);
+        sourceTarget, sourceWidth, sourceHeight,
+        (unsigned long long)before, (unsigned long long)host,
+        (unsigned long long)beforeCenter, (unsigned long long)hostCenter,
+        (unsigned long long)beforeOuter, (unsigned long long)hostOuter);
     std::fflush(stderr);
 }
 // s5078: per-(pc,addr) count of instrumented stores into 0x9DE80..0x9DF00, fed by
