@@ -10738,6 +10738,7 @@ static void rs64_g1d_apply_aspect_policy() {
     double w = std::atof(as), h = std::atof(c + 1);
     if (!(w > 0.0 && h > 0.0) || w / h <= 4.0 / 3.0 + 1e-3) return;
     int fbw = (int)(448.0 * w / h + 0.5);
+    if (fbw > 1024) fbw = 1024;  // s6142: 1024 renders, 1032/1045 do not (stripe garbage, guest stall); cap source unnamed
     char b[32];
     std::snprintf(b, sizeof b, "%d", fbw);
     setenv("ROGUESQ_FB_WIDTH", b, 0);

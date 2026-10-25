@@ -167255,3 +167255,7 @@ Ran scratch/agent/s6141_run.sh, 4 sequential arms L1 100 s, judged by fbd dump w
 - 16:9 (w796) @ 12 MB positive control: w796 dumps present.
 Discriminated: failing width lies in (896,1045]; leading suspect H-width = a 1024 cap/stride (1045 > 1024 is the only power-of-two straddle). H-aspect-math not excluded but 18:9/16:9 use the same code path.
 ORIGIN: no mitigation added (run only).
+
+## Session 6142 (2026-10-24) — G1d width bisect: FB width 1024 works, 1032 fails
+Ran scratch/agent/s6142_run.sh (OSMEM=12, explicit FB_WIDTH+scales, L1, FB_DUMP_VI). Dump widths: w960 -> 11 frames at w960; w1024 -> 12 frames at w1024; w1032 -> only w320/512/640 stripe garbage (same as 21:9 w1045). Harness verdicts are "allattempts-failed" for wide arms (origin regex), judged by dump only. Result: the cap sits between 1024 and 1032 (power-of-two limit), independent of memory (s6141). The limiting constant is NOT yet named.
+ORIGIN: main.cpp rs64_g1d_apply_aspect_policy now clamps derived fb width to 1024 (21:9 -> 1024, ~2.29:1 vs 2.33:1, thin pillars). This is a mitigation; the writer of the >1024 failure (game fb layout, ucode, or RT64 texture/stride limit) is unidentified. Clamp build/run not yet verified (no rebuild this session).
