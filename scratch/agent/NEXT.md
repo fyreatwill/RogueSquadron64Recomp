@@ -1,6 +1,7 @@
-# NEXT: G1d step 39 - map x vs y in the HUD element table, then anchor
+# NEXT: G1d step 40 - cover the HUD elements the x-class mark missed, then implement ROGUESQ_HUD_ANCHOR
 HYPOTHESIS-ID: g1d-widescreen
-s6146: flight HUD element floats (320x240 px) live at 0x80340240..0x80340430, stored by initHudStruct pcs 0x800C0180..0x800C1320 (list in PORTING-STATE s6146 / run.log of scratch/agent/m6/g1_lvl1s6146b_m). Mark +160 on all => radar/ally/missile counter vanish (control OK).
-Hypotheses: H-xy (each element block has x,y pairs at fixed offsets; marking only x-offset stores moves the element right by 160 while y-only moves it down), H-rewrite (a per-frame updater re-derives positions, so init-time shifts are overwritten or only apply to the slide-in start), H-scale (some floats are scales/sizes).
-Discriminator, one build, arms run sequentially with fb dump kill-after-10 pattern (scratch/agent/s6146b_run.sh): extend apply_s6146b_hudpc.py with ROGUESQ_HUD_MARKOFF=<hexmask-of-addr-low-nibble-class> OR simply run MARKPC arms by block, e.g. 160:800c0180-800c01c0 (radar?), and per-offset: mark only stores whose address low byte & 0xF in {0x4,0xC} vs {0x0,0x8} (x vs y guess from pairs 340240/340244, 340384/340388). Read dumps: element moves right => x class. Include one frame-diff of the element position at two later VIs to detect H-rewrite (does it return to unmarked place?).
-Then: implement ROGUESQ_HUD_ANCHOR in fixup (shift x<160 by -(virtW-320)/2 and x>=160 by +, only x-class stores, only when ROGUESQ_ASPECT != 4:3).
+s6147: x-class (addr&0xF==4,|v|>=8) moves ally icon + a ring right; y-class moves ring/ally/missile counter down. Radar disc and missile counter did not move in x arm.
+Hypotheses: H-other-pc (disc/counter x stored with |v|<8, other nibble, or by code outside initHudStruct e.g. per-frame updater), H-int (counter x is an s16/int stored not float), H-parent (disc positioned relative to the ring/another node).
+Discriminator (one build, one run): in the w census log (scratch/agent/m6/g1_lvl1s6146b_w/run.log) list every float store with |v| in [8,400] regardless of nibble, grouped by block (0x30); then arms per block-set via MARKPC:lo-hi (+ MARKCLS=x) and read which block is the disc / counter. Also census stores to 0x80340240..0x80340430 outside pc 0x800C0084..0x800C1B60 (per-frame writers).
+Then implement ROGUESQ_HUD_ANCHOR in the fixup: x<160 shifted by -(virtW-320)/2, x>=160 by +, x-class only, under ROGUESQ_ASPECT != 4:3.
+Recipe template: scratch/agent/s6147_run.sh (kill-after-10-dumps, fb VI 6500 contact sheet via PIL).

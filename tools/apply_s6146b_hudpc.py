@@ -9,16 +9,16 @@ OLD = "|| (uint32_t)(_a5798 - 0x8010CA30u) < 0x1F00u) rs64_s5798_st("
 NEW = "|| (uint32_t)(_a5798 - 0x8010CA30u) < 0x1F00u || ((uint32_t)(pc) - 0x800C0084u) < 0x1ADDu) rs64_s5798_st("
 ANC = "void rs64_s5798_st(uint8_t* rdram, recomp_context* ctx, uint32_t pc, uint32_t a, int w, const char* fn) {\n"
 ADD = ANC + r'''    if ((uint32_t)(pc - 0x800C0084u) < 0x1ADDu) { /* ''' + T + r''' */
-        static int ew = -1; static double mk = 0; static uint32_t lo = 0x800C0084u, hi = 0x800C1B60u;
+        static int ew = -1; static int cls = 0; static double mk = 0; static uint32_t lo = 0x800C0084u, hi = 0x800C1B60u;
         if (ew < 0) {
             const char* s = getenv("ROGUESQ_HUD_WATCH"); ew = (s && s[0]) ? 1 : 0;
-            const char* m = getenv("ROGUESQ_HUD_MARKPC");
+            const char* m = getenv("ROGUESQ_HUD_MARKPC"); const char* cl = getenv("ROGUESQ_HUD_MARKCLS"); if (cl) cls = (cl[0]=='x') ? 1 : (cl[0]=='y') ? 2 : 0;
             if (m && m[0]) { mk = atof(m); const char* c = strchr(m, ':'); if (c) { lo = (uint32_t)strtoul(c + 1, 0, 16); const char* d = strchr(c, '-'); if (d) hi = (uint32_t)strtoul(d + 1, 0, 16); }
                 fprintf(stderr, "[hudp] MARK +%g pc %08x-%08x\n", mk, lo, hi); }
         }
         uint32_t v = (uint32_t)MEM_W(0, (gpr)(int32_t)(a & ~3u)); float f; memcpy(&f, &v, 4);
         int marked = 0;
-        if (w == 4 && mk != 0 && pc >= lo && pc <= hi && ((f > 1e-3f && f < 4096.f) || (f < -1e-3f && f > -4096.f))) {
+        if (w == 4 && mk != 0 && pc >= lo && pc <= hi && ((f > 1e-3f && f < 4096.f) || (f < -1e-3f && f > -4096.f)) && (cls == 0 || ((f >= 8.f || f <= -8.f) && (a & 0xFu) == (cls == 1 ? 4u : 8u)))) {
             f = (float)(f + mk); memcpy(&v, &f, 4); MEM_W(0, (gpr)(int32_t)(a & ~3u)) = v; marked = 1;
         }
         if (ew || marked) {
