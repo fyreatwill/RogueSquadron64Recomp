@@ -10751,7 +10751,7 @@ static void rs64_g1d_apply_aspect_policy() {
     // other widths are extrapolation until verified. ROGUESQ_HUD_ANCHOR_AUTO=0 disables.
     const char* au = std::getenv("ROGUESQ_HUD_ANCHOR_AUTO");
     if (!au || std::atoi(au) != 0) {
-        const double ex = fbw - 512.0, A = ex / 2.0, RA = 0.434 * ex + 68.7, k = fbw / 796.0;
+        const double ex = fbw - 512.0, A = ex / 2.0, RA = 192.0 + 0.294 * (ex - 284.0), k = fbw / 796.0;
         char hb[64], rg[96], sh[32];
         std::snprintf(hb, sizeof hb, "%.1f,%.1f", A, A + RA);
         std::snprintf(rg, sizeof rg, "%.0f,%.0f,20,135", fbw - 276.0 * k, fbw - 166.0 * k);

@@ -1,3 +1,3 @@
-# NEXT: G1d step 51 - fix radar ring/disc at w1024 and reticle centring
+# NEXT: G1d step 52 - reticle centring under HUD anchor, w683 check
 HYPOTHESIS-ID: g1d-widescreen
-s6159: auto anchor works at w796 (16:9). At w1024 RA=0.434*ex+68.7 puts disc on-screen but ring missing. Work unit: run w1024 with ROGUESQ_HUD_ANCHOR_AUTO=0 + explicit ROGUESQ_HUD_ANCHOR=256,<R> sweep R in {500,530,547,580} (one run each, concurrent is not possible; use fbdump frame 5000) to find where ring and disc align, giving a 3rd RA point (796:192, 1024:?) to pick the law; also run w683 (ASPECT=3:2? use ROGUESQ_FB_WIDTH=683). Then find which vp the anchor wrongly moves for the green reticle. Script: scratch/agent/s6159_run.sh <aspect>.
+s6160: radar law fixed (w796, w1024 aligned). Work unit: find which viewport/sprite the ROGUESQ_HUD_ANCHOR moves that displaces the green aiming reticle (compare reticle x at ASPECT=16:9 with and without anchor, fbdump frame 5000, script scratch/agent/s6159_run.sh <aspect>); then exempt it. Also run ROGUESQ_ASPECT=3:2 for w683 sanity.
