@@ -167778,3 +167778,21 @@ added.
 
 ORIGIN: diagnostic-only RT64 readback tracing; no guest or renderer value was
 changed, and no skip, guard, clamp, or cull was landed.
+## Session 6185 (2026-10-25) — checkpointed the RT64 source-region discriminator
+
+This was a retry close-out; no experiment or soak was rerun. The partial
+s6184 work remains the usable result: its phase-scoped `copyToRAM` trace fired
+in both control and wide arms, and 399 consecutive destination `before` hashes
+matched the preceding host readback hash in each arm. The paired route
+positive controls also fired (160 joins and 1,440 route rows per arm). This
+identifies the copy-to-RAM boundary as the immediate writer of the changing
+guest framebuffer bytes, but it does not identify the RT64 source target or
+row layout that produces the wide central rectangle. It rules out a stale
+destination-only explanation for those observed changes, while H-rt64-source-
+region, H-guest-layout, and H-intermittent-readback remain open.
+
+The next discriminator is unchanged: one phase-scoped trace at the RT64
+`copyToNative`/readback source boundary, recording source target identity,
+row range/width, and bounded hashes for central versus outer columns, with
+the existing 4:3 and 16:9/12 MB arms in the same build/run. No conclusion was
+added to CURRENT-TRUTH because this checkpoint adds no new evidence.

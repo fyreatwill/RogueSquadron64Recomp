@@ -1,7 +1,8 @@
-# NEXT: isolate the RT64 readback source region for the phase-4 defect
+# RESUME NEXT: isolate the RT64 readback source region for the phase-4 defect
 HYPOTHESIS-ID: g1d-widescreen
 
-Session 6184 result: the phase-4 `copyToRAM` trace fired 400 times in each
+This is a checkpoint close-out after the primary work unit stopped. Do not
+rerun the experiment unchanged. Session 6184's phase-4 `copyToRAM` trace fired 400 times in each
 arm. Control copied 512x448 into guest physical 0xB90000; wide copied 796x448
 into 0xB51E00. In both arms, all 399 consecutive destination `before` hashes
 equalled the preceding host readback hash. The route positive controls remained
@@ -37,3 +38,9 @@ Build/run after adding the source-region trace:
 Preserve the existing 4:3 control and 16:9/12 MB wide recipes. Do not rerun
 the completed census unchanged or widen the mission route until this
 source-region discriminator is run.
+
+Resume artifact: the prior source tree contains the phase-4 copy boundary
+instrumentation and the paired-run script above. Add only the RT64 source-side
+trace, export submodule patches if lib/ changes, build once, and run the paired
+arms. Record which of the three hypotheses the source hashes select before
+landing any mitigation.
