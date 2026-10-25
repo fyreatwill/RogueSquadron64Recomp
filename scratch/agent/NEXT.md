@@ -8,6 +8,10 @@ still receives and allocates 512x340. The paired control/wide traces also show
 the expected 0x400000 12 MB relocation and the wide crash remains in
 `renderLitTexturedMeshFaces+7948`; no RT64-only explanation is needed yet.
 
+Checkpoint close-out: do not rebuild or rerun from this retry. The next iteration
+must begin with the allocation rewrite below and preserve both control and wide
+arms in the same build.
+
 Next work unit: extend the regeneration-safe `ROGUESQ_FB_WIDTH` rewrite in
 `tools/apply_s6031_far.py` so the matching 512x340 partition call uses the
 opt-in width, rebuild once, and run concurrent 4:3 control plus 16:9/12 MB
