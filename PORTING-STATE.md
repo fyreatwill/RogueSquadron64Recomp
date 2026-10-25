@@ -167480,3 +167480,31 @@ H-menu-render-input and H-wide-RT64 as the leading explanations. The next
 discriminator is unchanged: after rewriting the matching partition allocation,
 the wide trace must show 796x340 and the crash must disappear or move to a
 newly attributable site. No experiment was run in this checkpoint.
+
+## Session 6170 (2026-10-25) — G1d made menu framebuffer allocation width-aware
+
+The regeneration-safe `tools/apply_s6031_far.py` patch was completed for the
+existing `partitionFramebufferMemory` hook: when `ROGUESQ_FB_WIDTH` is active,
+both 512x448 flight and the identified 512x340 menu/hangar allocations now
+use the opt-in width. The first application exposed and fixed an idempotence
+case where the generated file already contained the older patch. The full
+Debug target rebuilt successfully.
+
+The first paired attempt was invalid because the visual-only helper used
+`MISSION_RE=ZZZ`; both arms recorded `nomission` and were discarded. With the
+actual control (`690400`) and wide (`A52438`) mission origins, the concurrent
+4:3 control and 16:9/12 MB arm both reached mission (86/87 s), held 182/183 s,
+and ended alive with zero crash lines and zero 30-second VI stalls. The wide
+arm emitted 320 phase-5 RDP-route rows with `ci_w=796`, scissor `3184x1360`,
+and VI width 796; the control emitted 512-wide phase-5 rows. Both arms fired
+the framebuffer allocation trace, and the wide `[fbw] pfm` positive control
+reported `a2=512 a3=340 wv=796` for the menu allocation. The wide crash from
+s6168 did not recur, and the run produced 16 VI framebuffer dumps. This
+selects H-menu-fb-fixed for the prior crash and rules out the leading
+H-menu-render-input and H-wide-RT64 explanations for that failure. It does
+not yet prove that title/hangar pixels are correct; those captures remain the
+next G1d check.
+
+ORIGIN: the change is a width-aware allocation contract for the legitimate
+512x340 menu/hangar request; no invalid-value guard or default-path change was
+added.

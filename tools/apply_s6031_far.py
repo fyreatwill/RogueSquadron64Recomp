@@ -60,15 +60,19 @@ PFM_ANCHOR = "    int c1cs = 0;\n    // 0x80000DD4: addu        $t5, $a0, $zero\
 PFM = ('    int ow = (int)ctx->r6, oh = (int)ctx->r7;\n'
        '    { /* PATCH: s6115 pfm */ static int wv = -1, nl; if (wv < 0) { const char* e = getenv("ROGUESQ_FB_WIDTH"); wv = (e && *e) ? atoi(e) : 0; }\n'
        '      if (nl < 16) { fprintf(stderr, "[fbw] pfm a2=%d a3=%d wv=%d\\n", ow, oh, wv); nl++; }\n'
-       '      if (wv > 0 && ow == 512 && oh == 448) ctx->r6 = (gpr)wv; }\n')
+       '      if (wv > 0 && ow == 512 && (oh == 448 || oh == 340)) ctx->r6 = (gpr)wv; }\n')
 def applypfm(text):
     if "PATCH: s6115 pfm" in text:
+        current = '      if (wv > 0 && ow == 512 && oh == 448) ctx->r6 = (gpr)wv; }\n'
+        current_new = '      if (wv > 0 && ow == 512 && (oh == 448 || oh == 340)) ctx->r6 = (gpr)wv; }\n'
+        if current in text:
+            return text.replace(current, current_new, 1), 1
         old = ('    { /* PATCH: s6115 pfm */ static int wv = -1, nl; if (wv < 0) { const char* e = getenv("ROGUESQ_FB_WIDTH"); wv = (e && *e) ? atoi(e) : 0; }\n'
                '      if (nl < 16) { fprintf(stderr, "[fbw] pfm a2=%d a3=%d wv=%d\\n", (int)ctx->r6, (int)ctx->r7, wv); nl++; }\n'
-               '      if (wv > 0 && (int)ctx->r6 == 512 && (int)ctx->r7 == 448) ctx->r6 = (gpr)wv; }\n')
+               '      if (wv > 0 && (int)ctx->r6 == 512 && ((int)ctx->r7 == 448 || (int)ctx->r7 == 340)) ctx->r6 = (gpr)wv; }\n')
         old2 = ('    { /* PATCH: s6115 pfm */ static int wv = -1, nl; int ow = (int)ctx->r6, oh = (int)ctx->r7; if (wv < 0) { const char* e = getenv("ROGUESQ_FB_WIDTH"); wv = (e && *e) ? atoi(e) : 0; }\n'
                 '      if (nl < 16) { fprintf(stderr, "[fbw] pfm a2=%d a3=%d wv=%d\\n", ow, oh, wv); nl++; }\n'
-                '      if (wv > 0 && ow == 512 && oh == 448) ctx->r6 = (gpr)wv; }\n')
+                '      if (wv > 0 && ow == 512 && (oh == 448 || oh == 340)) ctx->r6 = (gpr)wv; }\n')
         if old in text:
             text = text.replace(old, PFM, 1)
         elif old2 in text:

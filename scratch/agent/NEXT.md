@@ -1,43 +1,36 @@
-# NEXT: RESUME s6169 — qualify width-aware menu/hangar framebuffer allocation
+# NEXT: inspect post-fix widescreen title/hangar captures
 HYPOTHESIS-ID: g1d-widescreen
 
-s6168 selected H-menu-fb-allocation. This retry did not rerun the experiment;
-the existing s6168 artifacts are the evidence to resume from. The opt-in video-state writer changes
-512x340 menu/hangar calls to width 796, but `partitionFramebufferMemory`
-still receives and allocates 512x340. The paired control/wide traces also show
-the expected 0x400000 12 MB relocation and the wide crash remains in
-`renderLitTexturedMeshFaces+7948`; no RT64-only explanation is needed yet.
-
-Checkpoint close-out: do not rebuild or rerun from this retry. The next iteration
-must begin with the allocation rewrite below and preserve both control and wide
-arms in the same build.
-
-Next work unit: extend the regeneration-safe `ROGUESQ_FB_WIDTH` rewrite in
-`tools/apply_s6031_far.py` so the matching 512x340 partition call uses the
-opt-in width, rebuild once, and run concurrent 4:3 control plus 16:9/12 MB
-arms with `ROGUESQ_LOG_FB_ALLOC=1 ROGUESQ_LOG_RDP_ROUTE=1`. Keep default
-retail unchanged.
+s6170 selected H-menu-fb-fixed for the pre-mission crash: the width-aware
+partition hook made the 16:9/12 MB arm reach mission and hold clean. The next
+single work unit is a bounded render check of the same opt-in route, using the
+paired framebuffer dumps already produced by the valid s6169b run and one
+fresh paired run only if the existing phase coverage is insufficient.
 
 Competing hypotheses and discriminator:
 
-- H-menu-fb-fixed: the 512x340 allocation is the contract defect; after the
-  change the wide allocation trace shows the menu call as 796x340, the phase-5
-  RDP/VI join remains width-consistent, and the render crash disappears or
-  moves to a newly attributable guest site.
-- H-menu-render-input: allocation becomes 796x340 but the same
-  `renderLitTexturedMeshFaces+7948` failure persists with a bad input/backtrace;
-  allocation was necessary but not sufficient.
-- H-wide-RT64: allocation becomes 796x340 and the guest/RDP rows are sane, but
-  an RT64 consumer still rejects the target; retain the first RT64 failure and
-  its address/width as the next discriminator.
+- H-menu-pixels-fixed: the title and hangar framebuffer dumps contain coherent
+  16:9 content, with the wide RDP/VI width and origin joins matching the dump;
+  the allocation fix is sufficient.
+- H-menu-layout: wide title/hangar dumps are still horizontally garbage or
+  cropped while route and allocation joins are sane; the next writer is a
+  menu-specific viewport/scissor/HUD policy.
+- H-wide-present: the guest dump is coherent but the displayed/presented wide
+  image is wrong; compare VI-origin bytes and the on-screen capture before
+  changing game code.
 
-Required positive controls: control must emit `512x340` allocation rows and
-512-wide phase-5 RDP/VI rows; wide must emit the changed `796x340` allocation
-row and 796-wide phase-5 rows. Capture the first wide framebuffer dump or
-crash/backtrace. Exact run shape:
+Discriminator: compare same-phase control/wide framebuffer dumps at title and
+hangar, then correlate each with `[fballoc]`, `[rdp-route]`, and `[phase]`
+rows. A valid result requires the control and wide route markers, the wide
+`512x340 wv=796` allocation positive control, and no crash/30-second VI stall.
+Do not add a mitigation or alter the retail default.
 
-    python3 tools/apply_s6031_far.py
-    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp -j4
-    # concurrent arms from build/, using the s6168 fixed-run env and SIGKILL watchdog
+Useful bounded commands:
 
-Do not add a guard or alter the default 4:3 path.
+    find scratch/agent/m6/g1_lvl1_s6169b_ctl/fbd scratch/agent/m6/g1_lvl1_s6169b_wide/fbd -type f | sort
+    grep -a -E '^\[phase\]|^\[rdp-route\].*phase=5|^\[fbw\] pfm a2=512 a3=340|^\[CRASH\]|^\[ABORT\]' scratch/agent/m6/g1_lvl1_s6169b_{ctl,wide}/run.log | tail -120
+
+If the existing dumps do not contain both title and hangar, run the paired
+route with `ROGUESQ_OSMEM_MB=12 ROGUESQ_ASPECT=16:9
+ROGUESQ_FB_DUMP_VI=1 ROGUESQ_LOG_FB_ALLOC=1 ROGUESQ_LOG_RDP_ROUTE=1`, actual
+mission origin `690400`/`A52438`, and a 180-second hold.
