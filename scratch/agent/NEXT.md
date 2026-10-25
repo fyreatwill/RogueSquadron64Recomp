@@ -1,4 +1,4 @@
-# G1d: why does the up_167 TMEM upload (h98bb35b7e7c80445) contain noise when its RDRAM source looks like photo?
+# G1d: which loads compose the noisy up_167 TMEM (h98bb35b7e7c80445)?
 HYPOTHESIS-ID: g1d-widescreen
-s6234: the noisy texture is drawn 6x/frame at title (0 misses). H-up167 supported. Hypotheses: H-load (LoadTile addr/dxt/line wrong so TMEM load reads wrong RDRAM), H-stale (RDRAM source overwritten between LOADBLOCK parse and upload), H-tmem (RT64 TMEM load/word-swap at that call).
-Next: in queueGPUUploadTMEM (rt64_texture_cache.cpp) when hash==ROGUESQ_LOG_TEXHASH log LoadTile fields; in the same run read RDRAM at that address (via rsp/rdram pointer) and compare to `bytes`. Control: same compare on a clean upload must match. Run: zsh scratch/agent/s6234_run.sh 900 log (background, ~10 min).
+s6235: no single LoadBlock >=1KB reproduces up_167 TMEM; matcher control passes (clean uploads match). Hypotheses: H-multi (several small loads assemble it; one carries noise), H-stale (a later load overwrites part of TMEM before upload), H-tmem (RT64 upload/word-swap).
+Next: in uploadTexture/queueGPUUploadTMEM log g_rs64LoadSeq at upload for hash==ROGUESQ_LOG_TEXHASH; offline list the last ~16 loads (tmem range, src addr) before it, and diff each load's tmem dump vs the up_167 bytes at that range. Run: zsh scratch/agent/s6235_run.sh 900 log (loads in scratch/agent/m6/s6235_log_w900).
