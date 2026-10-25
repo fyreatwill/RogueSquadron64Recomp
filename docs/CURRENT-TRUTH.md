@@ -194,3 +194,4 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
 
 (s6142) G1d: FB width bisect at OSMEM 12: 960 and 1024 render wide flight, 1032 and 1045 fail (stripe garbage). Cap in (1024,1032]. Aspect policy now clamps width to 1024 (unbuilt/unverified). Root constant unnamed.
 (s6143) 21:9 clamp to w1024 verified: 13 w1024 flight frames, 0 crash; left terrain void + HUD anchoring remain.
+(s6144) Terrain left void FIXED: footprint frustum x-extent (0x800438C4) now scaled by ROGUESQ_FP_XSCALE (default=ASPECT_SCALE); terrain fills w1024 in flight. Remaining: HUD edge anchoring, menus/hangar at wide.
