@@ -387,3 +387,17 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   TEXRECT population and selects H-other-RDRAM: the width-bearing value is
   read from another RSP-visible RDRAM table. The oracle cannot reach this
   phase; no render mitigation landed.
+
+- s6195: the complete main-ucode DMA-read witness fired in one paired build
+  (12,288 control rows, 12,286 wide rows; 32/28 root rows and 400/400 copy
+  rows). The first read, the common `mem=0x1DB0` bootstrap source, matched
+  exactly. The first differing candidate is the `mem=0x170`, `len=0x10F`
+  command-source DMA at root-relative offset zero: control hash `0x8D4703B3`
+  versus wide `0x12499740`, with the same guest PC `0x80007904` and transfer
+  shape. The previously matched root witness covered only its first 0x100
+  bytes, so this selects the root-DL tail / dynamic command-source table as
+  the first width-bearing RDRAM input (H-table), while leaving open whether
+  those differing tail words are legitimate relocations or width-dependent
+  command data. The new regeneration-safe `ROGUESQ_LOG_G1D_READS` witness
+  records address, width, hash, nonzero count, task/root, guest PC, and DPC
+  window. No rendering mitigation landed.

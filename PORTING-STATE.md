@@ -167971,3 +167971,24 @@ Factor 5 RSP-visible RDRAM reads, exactly as recorded in `scratch/agent/NEXT.md`
 
 ORIGIN: no code or runtime behavior changed; this entry records only the
 already-observed paired result and its resume point.
+
+## Session 6195 (2026-10-25) — found the first differing RSP DMA-read candidate
+
+Added the regeneration-safe `ROGUESQ_LOG_G1D_READS` witness at the existing
+main-ucode DMA-read hooks and ran one concurrent 4:3/16:9 pair. The positive
+controls fired: 12,288 control read rows and 12,286 wide rows, 32/28 root rows,
+and 400/400 copy rows. The common `mem=0x1DB0` bootstrap read matched exactly.
+The first differing candidate was the `mem=0x170`, `len=0x10F` command-source
+DMA at root-relative offset zero: control hash `0x8D4703B3` versus wide
+`0x12499740`, with the same guest PC `0x80007904` and transfer shape. The
+earlier root witness covered only the first 0x100 bytes, so this result selects
+the root-DL tail / dynamic command-source table as the first width-bearing RSP
+input, while leaving open whether the tail words are relocations or commands.
+
+This rules out the bootstrap read as the cause and narrows H-other-RDRAM to a
+specific candidate; it does not yet name the game-side writer. The next probe
+will decode and relocation-normalize the 0x100..0x10E tail. No rendering
+mitigation landed.
+
+ORIGIN: the change only adds env-gated read provenance and does not alter DMA,
+RDP commands, guest memory, or renderer decisions.

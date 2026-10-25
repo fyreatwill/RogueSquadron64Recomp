@@ -337,6 +337,7 @@ extern "C" uint64_t rs64_rdp_advance_join_order();
 extern "C" uint64_t rs64_rdp_advance_reset_order();
 extern "C" uint64_t rs64_rdp_advance_first_consumer_order();
 extern "C" uint32_t rs64_rdp_advance_first_consumer_address();
+extern "C" uint32_t rs64_e9prov_current_root_dl();
 
 static void rs64_count_submitted_e9(uint32_t lo, uint32_t hi) {
     if (!log_e9_unified() || g_rdram_for_submit == nullptr) return;
@@ -632,6 +633,38 @@ static bool m4_src_enabled(uint32_t *cap_out) {
 // s4630: every ucode SP DMA read in the M4 phase (dmem/dram/len), so the
 // RDRAM source of the vertex/matrix blocks can be compared with retail.
 extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len) {
+    static const bool g1d_reads = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_G1D_READS");
+        return e && *e && *e != '0';
+    }();
+    if (g1d_reads && rs64_phase_ord() >= 4u && g_rdram_for_submit != nullptr) {
+        static uint32_t phase_key = 0xFFFFFFFFu;
+        static uint32_t rows = 0;
+        const uint32_t phase = rs64_phase_ord();
+        if (phase != phase_key) { phase_key = phase; rows = 0; }
+        if (rows < 4096u) {
+            const uint32_t phys = dram & 0x00FFFFFFu;
+            const uint32_t sample = std::min<uint32_t>(len, 0x400u);
+            uint32_t fnv = 2166136261u;
+            uint32_t nonzero = 0;
+            if (phys < 0x01000000u) {
+                for (uint32_t i = 0; i < sample; ++i) {
+                    const uint8_t b = g_rdram_for_submit[(phys + i) ^ 3u];
+                    fnv = (fnv * 16777619u) ^ b;
+                    nonzero += b != 0u;
+                }
+            }
+            std::fprintf(stderr,
+                "[g1d-read] phase=%u row=%u mem=0x%04X dram=0x%08X phys=0x%06X "
+                "len=0x%X sample=0x%X hash=0x%08X nz=%u task=%u root=0x%06X "
+                "guest_pc=0x%08X dpc=0x%06X-0x%06X\n",
+                phase, rows++, mem, dram, phys, len, sample, fnv, nonzero,
+                g_e9prov.task, rs64_e9prov_current_root_dl() & 0x7FFFFFu,
+                (unsigned)g_rs64_last_guest_pc,
+                g_rsp_dpc_start & 0x3FFFFFFu, g_rsp_dpc_end & 0x3FFFFFFu);
+            std::fflush(stderr);
+        }
+    }
     uint32_t cap;
     if (!m4_src_enabled(&cap)) return;
     static uint32_t lines = 0;

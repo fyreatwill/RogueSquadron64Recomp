@@ -1,38 +1,32 @@
-# NEXT: RESUME — identify the other RSP-visible width input
+# NEXT: isolate the width-bearing root-DL tail words
 HYPOTHESIS-ID: g1d-widescreen
 
-Retry checkpoint: do not rerun Session 6192. It selected neither sampled input:
-post-DMA `ucode_data` matched
-exactly, and every callback-selected root-DL first-0x100 window was zero-filled
-in both arms. The root probe fired for 26/29 unique roots, with the same
-normalized relocation sequence and the required 656/615 joins and 400/400
-copy rows. The extra central TEXRECTs therefore come from another RSP-visible
-RDRAM read.
+Session 6195 selected the first differing candidate in the complete DMA-read
+census: `mem=0x170`, `len=0x10F`, root-relative offset zero, same guest PC
+`0x80007904`, control hash `0x8D4703B3` versus wide `0x12499740`. The earlier
+root witness only covered the first 0x100 bytes, which matched and was zero.
+The remaining question is whether the differing 0x100..0x10E tail is merely
+relocation metadata or contains the width-bearing command words.
 
-Resume next work unit: enumerate the Factor 5 main-ucode RDRAM reads reachable from
-the command-source path at guest PC `0x8000834C`, then add one phase-scoped
-read witness for the complete candidate table set in the fixup pipeline. The
-witness must record address, access width, guest PC, task/root, and a bounded
-hash/nonzero count of each candidate region, with control and wide arms in one
-build/run. Keep `[g1d-task]`, `[g1d-root]`, command-source, join, and copy probes
-enabled. Do not modify rendering or filter commands. Build once, then run:
+Resume next work unit: dump and normalize the 15 tail bytes (0x100..0x10E) of
+the first root-relative 0x10F DMA, alongside the existing root relocation
+sequence, in both arms. Attribute each nonzero word to pointer relocation,
+command opcode, or ordinary data; do not change rendering. Keep all existing
+controls and `ROGUESQ_LOG_G1D_READS` enabled. Build once, then run:
 
     zsh scratch/agent/s6179_g1d_rdp_words.sh
 
-The new read witness is gated by `ROGUESQ_LOG_G1D_READS` and must have a
-positive control in each arm: at least 160 joins, 400 copies, and both known
-root sequences. A candidate region whose normalized hash differs between arms
-is the width-bearing input; if all candidates match, instrument the first
-uncatalogued RDRAM read in the same ucode path rather than declaring absence.
+The witness must retain positive controls in each arm: at least 160 joins, 400
+copies, and both known root sequences. The discriminator is the first tail word
+that remains different after applying the already-known relocation delta.
 
-Competing hypotheses and discriminator:
+Competing hypotheses:
 
-- H-table: one enumerated RDRAM table hash differs at the same task/root and
-  source PC; that table is the width-bearing producer.
-- H-DMEM-derived: all enumerated RDRAM table hashes match but a DMEM-derived
-  address/value differs; trace the first differing derived read.
-- H-unlisted: all candidate hashes match; the census is incomplete and the
-  next read witness must expand to the first unlisted RDRAM read.
+- H-relocation: every differing tail word is a relocated pointer and the
+  referenced command bytes match after relocation normalization.
+- H-command: at least one tail word is a command/operand whose normalized value
+  differs; it is the width-bearing producer input.
+- H-other: the tail is only a pointer table; follow the first referenced target
+  and witness that target in the same run.
 
-The discriminator is the first normalized address/hash difference paired with
-the same guest source PC and DPC window. Do not add a rendering mitigation.
+Do not add a rendering mitigation.
