@@ -1461,6 +1461,25 @@ namespace ultramodern {
                                 if (addr > s_ti_max) s_ti_max = addr;
                                 if (addr == 0x00A6AA10u) s_ti_saw_ctl = 1;
                                 if (addr == 0x00AE5F20u) s_ti_saw_wide = 1;
+                                {
+                                    static const uint32_t k_tb[3] = {0x00A6AA10u, 0x00AE5F20u, 0x00AE6B20u};
+                                    static bool s_tb_done[3] = {false, false, false};
+                                    for (int ti = 0; ti < 3; ++ti) {
+                                        if (addr != k_tb[ti] || s_tb_done[ti]) continue;
+                                        s_tb_done[ti] = true;
+                                        uint32_t wv[8];
+                                        for (uint32_t k = 0; k < 8u; ++k) {
+                                            uint32_t v = 0;
+                                            for (uint32_t b = 0; b < 4u; ++b)
+                                                v = (v << 8) | r[(addr + k * 4u + b) ^ 3u];
+                                            wv[k] = v;
+                                        }
+                                        std::fprintf(stderr,
+                                            "[g1d-tb] addr=0x%06X %08X %08X %08X %08X %08X %08X %08X %08X\n",
+                                            addr, wv[0], wv[1], wv[2], wv[3], wv[4], wv[5], wv[6], wv[7]);
+                                        std::fflush(stderr);
+                                    }
+                                }
                                 bool seen = false;
                                 for (uint32_t i = 0; i < s_ti_n; ++i) {
                                     if (s_ti_set[i] == addr) { seen = true; break; }

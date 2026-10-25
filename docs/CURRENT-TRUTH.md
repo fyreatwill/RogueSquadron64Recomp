@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6212 (2026-10-25).
+Compact operational handoff, maintained as of Session 6213 (2026-10-25).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -88,7 +88,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog; per-session history archived in PROJECT-OVERVIEW.md, "Archived CURRENT-TRUTH backlog")
 
-1. **G1d widescreen (active, `scratch/agent/NEXT.md`).** s6212 selects H-stop and refutes H-cross (single-source runtime census; positive controls held). Wide phase-4 TI addresses in `[0xA6A000, 0xB00000)` are 23 distinct, `ov=0`, max `0xAE6B20`, above-pool count 0 against live pool `0xAE6E00`. The `0x200` ladder does not enter the pool. Control is 75 addresses, min `0xA6AA10`, max `0xAABA10`, above 0 against `0xB25000`. Keep the image drop. Do not patch. Next: dump the bytes at wide `0xAE5F20` and `0xAE6B20` and at control `0xA6AA10` on the phase-4 hit. H-fill if wide is a repeated fill word and control is not; H-texture if both are non-fill. Do not raise the 48-line cap. Do not skip `copyNativeToRAM`. Do not retarget `0x8096D600`. Do not write `0x801163E8`. Do not change n=3 `t0`. Do not raise `osMemSize`. Do not move `f0`. Per-session record is the G1d status section below.
+1. **G1d widescreen (active, `scratch/agent/NEXT.md`).** s6213 (single-source, controls held): at phase-4 TI hit, wide 0xAE5F20 and 0xAE6B20 both hold the SAME non-fill 8 words `00010845 008300C5 10411045 188318C5 09051149 20032045 20C320C5 30033045`; ctl 0xA6AA10 is `63556355` x8 (flat fill). H-texture, not H-fill/H-split. Plus s6212: wide TI set 23 addrs, max `0xAE6B20`, above-pool 0 vs pool `0xAE6E00`; keep the image drop; do not patch. Next: sample the same bytes at the end of the phase-3 writeback vs at the phase-4 hit (written this frame vs stale). Do not raise the 48-line cap. Do not skip `copyNativeToRAM`. Do not retarget `0x8096D600`. Do not write `0x801163E8`. Do not change n=3 `t0`. Do not raise `osMemSize`. Do not move `f0`. Per-session record is the G1d status section below.
 2. **G1e higher frame rate** after G1d (spec: ITERATION.md 3c).
 3. **G1 level 10/15 note:** both pass (a)+(b) only with `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF` or a
    ~790 s planet-intro wait (SOAK_TIMEOUT >= 900). Forced-hit objective (d) is PARTIAL: counters move
