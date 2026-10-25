@@ -1,5 +1,5 @@
-# NEXT: G1d step 46 - verify 0x800159B4 is the flight-HUD sprite emitter, then bias the screen offset
+# NEXT: G1d step 47 - correct HUD centre/filter at 0x800159B4 and anchor to screen edges
 HYPOTHESIS-ID: g1d-widescreen
-s6154 static trace: consumer = 0x800159B4; x=(elem+0x18 + vp+0x18)*[0x800006F8] at pcs 0x800160A4..0x800160CC; callers loop lists vp+0xC and vp+0x8 in setupCameraMatrices.
-Work unit (one build, one run): fixup-script hook in 0x800159B4 that (a) logs per element [elem addr, x, y, list id] once per distinct elem for ~120 frames of lvl1 flight, and (b) under env ROGUESQ_HUD_CPOS=<px> adds +px to x for elems with x<160 and -px for x>=160 after the 0x800160B0 add. Positive control: ring+disc+ally+counter all shift in one 16:9 frame vs scratch/agent/m6/s6149b baseline; the log must list those elements. Outcomes: elements logged and shift -> anchor at this site, wire to ROGUESQ_ASPECT; flight HUD not logged -> function is subtitle-only, fall back to lists in setupCameraMatrices / runtime read watch.
-Also resolve the constant at 0x800006F8.
+s6155: emitter verified; CPOS lever shifts ally counter + radar ring; but centre=160*scale wrong (all shifted left) and world sprites also pass through it.
+Work unit: edit tools/apply_s6155_hudcpos.py: only bias when vp (r17)==0x800cf090 (HUD list; log shows world sprites use 0x80165ec8); centre = (virtual width 320 * scale)/2 plus the VPW/aspect offset - log x of the radar ring and counter in a 4:3 control to learn their native x, then bias left items by +delta and right items by -delta where delta=(wide-4:3 width)/2*scale. Run ctl vs cpos with scratch/agent/s6155_hudcpos.sh pattern at 16:9; judge by a fbdump (not window screenshot) so the scene phase matches.
+Outcomes: ring+counter reach the wide-frame edges -> wire into ROGUESQ_ASPECT default; else examine the vp list ordering.
