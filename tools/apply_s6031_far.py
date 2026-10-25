@@ -211,6 +211,43 @@ def apply_s6203_heapclass(text):
         return text, 0
     return text.replace(old, new, 1), 1
 
+def apply_s6204_poolclass(text):
+    if "PATCH: s6204 poolclass" in text:
+        return text, 0
+    old = (
+        "      if (en && n < 8) { fprintf(stderr, \"[g1d-pool] n=%d pc=0x80018030 base=0x%08X bytes=0x%X arg=0x%X end=0x%08X ra=0x%08X\\n\", n, U32(ctx->r18), U32(ctx->r2), U32(ctx->r23), U32(ctx->r3), U32(ctx->r31)); fflush(stderr); ++n; } }\n"
+    )
+    new = (
+        "      if (en && n < 8) { fprintf(stderr, \"[g1d-pool] n=%d pc=0x80018030 base=0x%08X bytes=0x%X arg=0x%X end=0x%08X ra=0x%08X\\n\", n, U32(ctx->r18), U32(ctx->r2), U32(ctx->r23), U32(ctx->r3), U32(ctx->r31));\n"
+        "        if (n == 3) { /* PATCH: s6204 poolclass */\n"
+        "          uint32_t want0 = 0x80B25000u, want1 = 0x8096D600u;\n"
+        "          uint32_t b0 = 0, f0 = 0, tg0 = 0, s0 = 0, b1 = 0, f1 = 0, tg1 = 0, s1 = 0, hhead = 0, last = 0;\n"
+        "          int hit0 = 0, hit1 = 0, nblk = 0;\n"
+        "          hhead = U32(MEM_W(S32(0x8010 << 16), 0xFF18));\n"
+        "          if (hhead >= 0x80000000u && hhead < 0x81000000u) {\n"
+        "            uint32_t a = hhead; int g = 0;\n"
+        "            while (g++ < 200000) {\n"
+        "              uint32_t w0 = U32(MEM_W(S32(a), 0)), sz = U32(MEM_W(S32(a), 4)), fl = w0 >> 16;\n"
+        "              if (g == 1 && (fl & 0xBu) == 0u) break;\n"
+        "              ++nblk; last = a;\n"
+        "              if (sz <= 0x1000000u) {\n"
+        "                uint32_t span = a + 0x10u + sz;\n"
+        "                if (span > a) {\n"
+        "                  if (!hit0 && a <= want0 && want0 < span) { hit0 = 1; b0 = a; f0 = fl; tg0 = w0 & 0xFFFFu; s0 = sz; }\n"
+        "                  if (!hit1 && a <= want1 && want1 < span) { hit1 = 1; b1 = a; f1 = fl; tg1 = w0 & 0xFFFFu; s1 = sz; }\n"
+        "                } }\n"
+        "              if ((hit0 && hit1) || (fl & 8u)) break;\n"
+        "              if (sz == 0u || sz > 0x1000000u) break;\n"
+        "              uint32_t nxa = a + 0x10u + sz; if (nxa <= a || nxa >= 0x81000000u) break; a = nxa; } }\n"
+        "          fprintf(stderr, \"[g1d-hblk-pool] n=%d head=0x%08X last=0x%08X nblk=%d same=%d ctl_addr=0x%08X ctl_fl=%04X ctl_tag=%04X ctl_sz=0x%X ctl_hit=%d cand_addr=0x%08X cand_fl=%04X cand_tag=%04X cand_sz=0x%X cand_hit=%d\\n\",\n"
+        "            n, hhead, last, nblk, (hit0 && hit1 && b0 == b1) ? 1 : 0, b0, (unsigned)f0, (unsigned)tg0, s0, hit0, b1, (unsigned)f1, (unsigned)tg1, s1, hit1);\n"
+        "        }\n"
+        "        fflush(stderr); ++n; } }\n"
+    )
+    if text.count(old) != 1:
+        return text, 0
+    return text.replace(old, new, 1), 1
+
 def apply_s6201_pool(text):
     if "PATCH: s6201 pool" in text:
         return text, 0
@@ -259,8 +296,9 @@ def apply_s6201_alloc(text):
 if __name__ == "__main__":
     p = base / "funcs_4.c"; t = p.read_text(); t2, n = apply4(t)
     t2, m = apply_s6201_pool(t2)
-    if n or m: p.write_text(t2)
-    print("funcs_4.c live patched x%d pool=%d" % (n, m))
+    t2, q = apply_s6204_poolclass(t2)
+    if n or m or q: p.write_text(t2)
+    print("funcs_4.c live patched x%d pool=%d poolclass=%d" % (n, m, q))
     p0 = base / "funcs_0.c"; t = p0.read_text(); t2, n = applypfm(t)
     t2, c = apply_s6201_carve(t2)
     t2, r = apply_s6202_retarget(t2)

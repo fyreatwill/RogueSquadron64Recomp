@@ -37796,6 +37796,10 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6201p:
             changed = True
             report.append(f"{p.name}: s6201 pool x{_n6201p}")
+        text, _n6204 = _a6031.apply_s6204_poolclass(text)
+        if _n6204:
+            changed = True
+            report.append(f"{p.name}: s6204 poolclass x{_n6204}")
 
     if p.name == "funcs_0.c":
         import apply_s6031_far as _a6031p

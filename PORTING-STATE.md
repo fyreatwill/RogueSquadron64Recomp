@@ -168107,3 +168107,19 @@ The pool log at `0x80018030` is the size computation in `buildAndRegisterDefault
 
 ORIGIN: no value was written. The color-image writeback is untouched. The `00010001` words remain the bytes `Framebuffer::copyNativeToRAM` left in the unmoved node (s6200). This session added a heap-block log only.
 
+## Session 6204 (2026-10-25) — pool init splits the carve-time heap block
+
+Ran the s6203 recipe on one binary after adding `[g1d-hblk-pool]` at pool call n=3 (`0x80018030`, the size add immediately before the 0x108 link loop in `buildAndRegisterDefaultMaterial`). The line walks the main heap from `0x8010FF18` and classifies `0x80B25000` and `0x8096D600`. It does not store. The patch is `apply_s6204_poolclass` in `tools/apply_s6031_far.py`, wired through `fixup_game_funcs_vendored.py`. Screen unlocked. Control pid 57020 ready at 40 s, wide pid 57122 ready at 40 s, both SIGKILL. Neither log has a crash marker. Witness: `scratch/agent/soak_results/s6204/witness.txt`.
+
+Positive control held. Both arms still printed the carve-time `[g1d-hblk]` (nblk=109, head `0x80154690`, block `0x808B77F0` flags `0x0006` size `0x2DB000`, same=1). Control logged `[g1d-retarget] skip`, carve n=3 `e8=0x80B25000`, pool n=3 `base=0x80B25000` `bytes=0x4AF58`, and phase-4 `data_ptr=0x80B2D820` `w78=05200002`. Wide kept `e8=0x80AE6E00` and phase-4 `data_ptr=0x80AEF620` read `w28=w78=00010001`. Both arms printed exactly one `[g1d-hblk-pool]`, so the new hook is not blind.
+
+At that later site the carve-time block is gone. Control: `nblk=21 same=0`, `0x80B25000` hit=0, `0x8096D600` covered by `0x80195180` flags `0x0001` tag `0` size `0x861660`. Wide: the same header and flags, size `0x823460`, and `0x80B25000` still hit=0. The walk stopped at `last=0x809F67F0` (control) and `0x809B85F0` (wide). Each `last` equals that block's span end (`header+0x10+size`) and equals `ec-0x10` (`ec` `0x809F6800` / `0x809B8600`). The size delta and the `ec` delta are both `0x3E200`, one widened 448-line buffer. Flag `0x0001` is the free bit; bits 1 and 2 are clear. The old header `0x808B77F0` now sits inside this free span. Both live pool bases (`0x80B25000` and `0x80AE6E00`) are above `last`, so the walk never reaches them. The wide pool `[0x80AE6E00, 0x80B31D58)` still crosses the color images that end at `0x80B00000`.
+
+This refutes H-same and the stated H-grow. H-same required the pool-time walk to still report `0x808B77F0` / `0x0006` / `0x2DB000` / same=1. H-grow required the control cover to stay `0x2DB000`. It selects the free-candidate half of H-split and confirms H-early: the carve-time classification was before the heap changed. It does not select "the control address is a different non-free block". That address has no covering block because the walk stops at `ec-0x10`. The stopping block's flag word was not printed; the address match is the evidence.
+
+Superseded: "if the candidate is free, retry `ec-t2` with a flag test." Believable because s6202 rejected `[0x8096D600, ec)` only for lying under the carve-time heap end `0x80B95BF0`, so a free flag would reverse that reject. At pool init the free flag is real, and the placement is still wrong: `0x8096D600` is inside the free block, while the working control pool is above the terminator. Do not retarget `0x8096D600`.
+
+The writer that replaces `0x808B77F0` flags `0x0006` with `0x80195180` flags `0x0001` is still unnamed. `rs_free` and `coalesceFreeHeapBlocks` already log a caller under `ROGUESQ_LOG_RS_FREE` and `ROGUESQ_LOG_COALESCE_HEAP_ENTRY`. Do not change `t0` and do not raise `osMemSize`.
+
+ORIGIN: no value was written. The color-image writeback is untouched. The `00010001` words remain the bytes `Framebuffer::copyNativeToRAM` left in the unmoved node (s6200). This session added a second heap-block log only.
+
