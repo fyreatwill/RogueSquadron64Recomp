@@ -1,3 +1,3 @@
-# NEXT: G1d step 52 - reticle centring under HUD anchor, w683 check
+# NEXT: G1d step 53 - 21:9 (w1024) full-frame check after reticle fix, then menus/hangar under ASPECT
 HYPOTHESIS-ID: g1d-widescreen
-s6160: radar law fixed (w796, w1024 aligned). Work unit: find which viewport/sprite the ROGUESQ_HUD_ANCHOR moves that displaces the green aiming reticle (compare reticle x at ASPECT=16:9 with and without anchor, fbdump frame 5000, script scratch/agent/s6159_run.sh <aspect>); then exempt it. Also run ROGUESQ_ASPECT=3:2 for w683 sanity.
+s6161: reticle fix verified at w796. Work unit: run scratch/agent/s6161_run.sh 21:9 _fix "" and inspect fbdump 5000 (reticle near craft, ring/disc right edge, counter left); then ROGUESQ_ASPECT=16:9 through title/hangar (TITLE_ORIGIN route) fbdump to see whether menus/hangar are correct or need a per-screen policy. Then prepare owner contact sheet (16:9 and 21:9).
