@@ -1442,7 +1442,7 @@ index 873883d..b28d33b 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_framebuffer_manager.cpp b/src/hle/rt64_framebuffer_manager.cpp
-index 7d385fa..17bbcfc 100644
+index 7d385fa..d687242 100644
 --- a/src/hle/rt64_framebuffer_manager.cpp
 +++ b/src/hle/rt64_framebuffer_manager.cpp
 @@ -6,6 +6,10 @@
@@ -1647,7 +1647,34 @@ index 7d385fa..17bbcfc 100644
  
          TileCopy &srcTile = tileCopies[op.reinterpretTile.srcId];
          if (srcTile.ignore) {
-@@ -341,12 +483,37 @@ namespace RT64 {
+@@ -318,6 +460,26 @@ namespace RT64 {
+         }
+ 
+         TileCopy &dstTile = tileCopies[op.reinterpretTile.dstId];
++        {
++            // s6233 diagnostic: log every reinterpret; ROGUESQ_SKIP_REINTERPRET=1 drops them (arm).
++            static int s_log = -1, s_skip = -1;
++            if (s_log < 0) {
++                const char *l = std::getenv("ROGUESQ_LOG_REINTERPRET");
++                const char *s = std::getenv("ROGUESQ_SKIP_REINTERPRET");
++                s_log = (l && l[0] && l[0] != '0') ? 1 : 0;
++                s_skip = (s && s[0] && s[0] != '0') ? 1 : 0;
++            }
++            if (s_log) {
++                fprintf(stderr, "[REINTERP] frame=%llu src=%u dst=%u srcFmt=%u srcSiz=%u dstFmt=%u dstSiz=%u dst=%ux%u tlut=%llx skip=%d\n",
++                    (unsigned long long)submissionFrame, (unsigned)op.reinterpretTile.srcId, (unsigned)op.reinterpretTile.dstId,
++                    (unsigned)op.reinterpretTile.srcFmt, (unsigned)op.reinterpretTile.srcSiz, (unsigned)op.reinterpretTile.dstFmt,
++                    (unsigned)op.reinterpretTile.dstSiz, (unsigned)dstTile.usedWidth, (unsigned)dstTile.usedHeight,
++                    (unsigned long long)op.reinterpretTile.tlutHash, s_skip);
++            }
++            if (s_skip) {
++                return;
++            }
++        }
+         const uint32_t index = uint32_t(cmdListReinterpretations.cmdListDispatches.size());
+         CommandListReinterpretDispatch dispatch;
+         auto &c = dispatch.reinterpretCB;
+@@ -341,12 +503,37 @@ namespace RT64 {
              dstTile.needsDiscard = false;
          }
  
@@ -1689,7 +1716,7 @@ index 7d385fa..17bbcfc 100644
  
          while (descriptorReinterpretSetsCount >= descriptorReinterpretSets.size()) {
              descriptorReinterpretSets.emplace_back();
-@@ -396,9 +563,19 @@ namespace RT64 {
+@@ -396,9 +583,19 @@ namespace RT64 {
          // If the starting address is lower than the framebuffer address, we move a row one by one according to the stride specified of the original image width.
          uint32_t tileRowStart = 0;
          uint32_t fbStride = fb->imageRowBytes(fb->width);
@@ -1712,7 +1739,7 @@ index 7d385fa..17bbcfc 100644
          }
  
          // We went over the allowed address range, a tile copy is impossible.
-@@ -797,6 +974,41 @@ namespace RT64 {
+@@ -797,6 +994,41 @@ namespace RT64 {
          assert(RDRAM != nullptr);
  
          differentFbs.clear();
