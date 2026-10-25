@@ -1,15 +1,11 @@
-# Wide title/select-game art x-origin (+241 vs 0)
+# Wide title art x-origin: find the writer of the width-dependent offset
 HYPOTHESIS-ID: g1d-widescreen
-(Rewritten s6223 after the CURRENT-TRUTH maintenance compaction; the work unit is unchanged from s6222. CURRENT-TRUTH "G1d widescreen" is now the distilled state; the old log is in PROJECT-OVERVIEW.md.)
-
-s6222: wide phase-4 title art = same 64x32 texrect grid as 4:3 but at x 241..753 (centred would be 142); stride refuted.
+s6224: origin of the 64x32 title texrect grid = 0 @4:3, 241 @FB_WIDTH 796 (scale 1.5547), 384 @1024 (scale 2.0); constant over all submits (slide refuted). guest_pc 0x8000834C in the log is stale, not the emitter.
 
 Hypotheses:
-- H-origin-global: the menu layout x-offset derives from the width global 0x8011A838 or a widened constant, e.g. (W-314)/2 or 160*scale. Predicts a constant 241 across all phase-4 frames.
-- H-slide: the art slides in and 241 is an animation phase. Predicts x varying across frames, converging to a constant.
-- H-hook-side-effect: the s6113 menu-dimension hook rewrites a value later used as texrect x. Predicts the offset tracks the hooked dimensions, and disappears when the hook is off for the 512x340/512x448 rewrites.
+- H-scale-math: offset = f(width, scale) computed by guest layout code from 0x8011A838 / hooked dims (e.g. (W - 640*k)/2 form). Predicts a third width (e.g. ROGUESQ_ASPECT=16:10 or FB_WIDTH=900) lands on the same formula; fit the 3 points.
+- H-hook: the s6113 menu-dimension hook (512x448 / 512x340 rewrites) feeds the layout. Predicts offset changes with the hooked dims while FB_WIDTH is fixed.
+- H-dl-data: the offset is baked into the DL by a builder that reads the FB width. Predicts a guest write of the value *4 (964=0x3C4 @796, 1536=0x600 @1024) into a DL word before the submit.
 
-Discriminator: log the minimum x of the 64-wide tiles per submit for every phase-4 frame in the wide arm (do not use the 4000-row cap). Constant 241 over 100+ frames means H-origin-global or H-hook; varying means H-slide. Then use lldb or a guest write-watch on the caller of the texrect emitter at PC 0x80007904 to find the x-origin operand and its source.
-
-Run: adapt scratch/agent/s6222_run.sh. First `pkill -f m6_god` and `pkill -f '_run.sh'`, and pgrep for orphan games (one game at a time). Analyse fail_att1.log; the route gate fails for wide arms by design. Positive control: the c43 (4:3) arm must report column 0 / x origin 0 in the same run.
-Kill the game with SIGKILL. Run from build/ with the ROM beside it.
+Discriminator (one build/run): add a third width arm (ROGUESQ_FB_WIDTH=900 with the c43/ctl recipe of scratch/agent/s6224_run.sh) to fit the formula, and in the same run dump the first texrect's DL words (w0/w1 already logged) and scan guest RAM at the submit for the 4x-unit value; then lldb/guest write-watch that DL word address (positive control: the 4:3 arm's 0 word is untouched, use a known-written neighbour) to name the writer.
+Run: copy scratch/agent/s6224_run.sh (one game at a time; SIGKILL; analyse with scratch/agent/s6224_minx.py on run.log, NOT fail_att*.log for the c43 arm).
