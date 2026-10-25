@@ -3018,11 +3018,17 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
                     liveSave.assign(g_rdram_for_submit + r.first, g_rdram_for_submit + r.second);
                     for (uint32_t x = r.first; x < r.second; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[shp->off + (x - r.first)], 4); memcpy(&now, g_rdram_for_submit + x, 4); if (was != now) rWordsRestored++; }
                     memcpy(g_rdram_for_submit + r.first, &g_s4272_shadow[shp->off], r.second - r.first);
+                    if (r.second > r.first)
+                        rs64_g1d_blk_dma("wrap", 0, r.first, r.second - r.first, 0);
                     for (uint32_t x = r.first; x < r.second; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[shp->off + (x - r.first)], 4); memcpy(&now, g_rdram_for_submit + x, 4); if (was != now) rPostDiff++; }
                     rCtl += 1;
                 } else if (s_restore) rMiss++;
                 ultramodern::submit_rdp_range(r.first, r.second);
-                if (shp) memcpy(g_rdram_for_submit + r.first, liveSave.data(), r.second - r.first);
+                if (shp) {
+                    memcpy(g_rdram_for_submit + r.first, liveSave.data(), r.second - r.first);
+                    if (r.second > r.first)
+                        rs64_g1d_blk_dma("unwrap", 0, r.first, r.second - r.first, 0);
+                }
                 if (s_restore && (++rn <= 8 || (rn & 1023) == 0))
                     fprintf(stderr, "[s4286-restore] n=%lu restoredRanges=%lu noShadow=%lu wordsRestored=%lu postDiff(must be 0)=%lu\n", rn, rCtl, rMiss, rWordsRestored, rPostDiff);
             }

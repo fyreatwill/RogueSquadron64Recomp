@@ -1046,10 +1046,10 @@ index 6255872..2f9b435 100644
  
              return trianglesEnd;
 diff --git a/src/hle/rt64_framebuffer.cpp b/src/hle/rt64_framebuffer.cpp
-index 873883d..c2a00bb 100644
+index 873883d..b28d33b 100644
 --- a/src/hle/rt64_framebuffer.cpp
 +++ b/src/hle/rt64_framebuffer.cpp
-@@ -16,6 +16,70 @@
+@@ -16,6 +16,73 @@
  
  #include "render/rt64_render_worker.h"
  
@@ -1061,6 +1061,9 @@ index 873883d..c2a00bb 100644
 +extern "C" uint32_t rs64_vi_committed_width(void);
 +extern "C" uint32_t rs64_vi_committed_origin(void);
 +extern "C" volatile uint32_t g_rs64_last_guest_pc;
++extern "C" void rs64_g1d_blk_dma(const char *kind, uint32_t src, uint32_t dest,
++                                 uint32_t len, uint32_t pc);
++extern "C" volatile uint8_t *volatile g_recomp_rdram_for_wp_raw;
 +extern "C" __attribute__((weak)) volatile unsigned rs64_s4234_g;  // s4279: fillSampleStreamRange ENTRY ordinal
 +static volatile unsigned *const rs64_s4234_g_weak = &rs64_s4234_g;
 +
@@ -1120,7 +1123,7 @@ index 873883d..c2a00bb 100644
  #ifdef __GNUC__
  #define _byteswap_ulong __builtin_bswap32
  #endif
-@@ -91,7 +155,58 @@ namespace RT64 {
+@@ -91,7 +158,58 @@ namespace RT64 {
              dstWords++;
          }
  
@@ -1179,7 +1182,7 @@ index 873883d..c2a00bb 100644
          return differentPixels;
      }
  
-@@ -143,7 +258,154 @@ namespace RT64 {
+@@ -143,7 +261,154 @@ namespace RT64 {
          uint8_t *dstBytes = dst + dstRowStart * imageRowBytes(dstRowWidth);
          uint32_t *dstWords = reinterpret_cast<uint32_t *>(dstBytes);
          uint32_t bytesToSwap = (dstRowEnd - dstRowStart) * imageRowBytes(dstRowWidth);
@@ -1334,10 +1337,27 @@ index 873883d..c2a00bb 100644
          nativeTarget.copyToRAM(dstRowStart, dstRowEnd, dstRowWidth, siz, dstBytes);
  
          // Write back to RDRAM by swapping every word.
-@@ -165,6 +427,79 @@ namespace RT64 {
+@@ -165,6 +430,96 @@ namespace RT64 {
              dstWords[0] = dstFirstWord;
          }
  
++        {
++            uint8_t *base = (uint8_t *)g_recomp_rdram_for_wp_raw;
++            if (base != nullptr && bytesToSwap >= 4u) {
++                const uintptr_t dst_u = (uintptr_t)dstBytes;
++                const uintptr_t base_u = (uintptr_t)base;
++                if (dst_u >= base_u) {
++                    const uintptr_t off = dst_u - base_u;
++                    if (off < 0x01000000u) {
++                        uint32_t len = bytesToSwap;
++                        if (off + len > 0x01000000u)
++                            len = (uint32_t)(0x01000000u - off);
++                        rs64_g1d_blk_dma("rt64wb", addressStart, (uint32_t)off, len, 0);
++                    }
++                }
++            }
++        }
++
 +        if (do_fl_restore && fl_host && fl_snap && fl_snap_n >= 16u) {
 +            auto rbe_u16 = [](const uint8_t *base, uint32_t off) -> uint16_t {
 +                return (uint16_t)((base[off ^ 3] << 8) | base[(off + 1) ^ 3]);
@@ -1414,7 +1434,7 @@ index 873883d..c2a00bb 100644
  #   ifdef DUMP_RAW_RDRAM
          char path[1024];
          snprintf(path, sizeof(path), "dumps/FB_0x%X_W_%d_H_%d_SIZ_%d.rdram", addressStart, dstRowWidth, height, siz);
-@@ -199,4 +534,4 @@ namespace RT64 {
+@@ -199,4 +554,4 @@ namespace RT64 {
      uint64_t FramebufferTile::hash() const {
          return XXH3_64bits(this, sizeof(FramebufferTile));
      }

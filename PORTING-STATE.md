@@ -168044,3 +168044,19 @@ The wide positive control failed on that run, so the same iteration extended the
 This selects H-host for the wide `00010001` fill and refutes H-dma and H-swl for that body. It does not name the host writer. `rs64_s4223_memcpy` is not a candidate: it only prints when `dst==0x8013A5C0` and does not store. The next discriminator is a host write into the rdram the node dump reads (`g_rdram_for_submit`): `Framebuffer::copyNativeToRAM`, and the default-on wrap-restore `memcpy` pair in `dpc_bridge.cpp`, joined to that run's node base. No rendering value changed.
 
 ORIGIN: diagnostic only. The block witness logs env-gated DMA, unaligned-store, and zmemcpy readback. It does not skip, clamp, or rewrite guest or RDP data.
+
+## Session 6200 (2026-10-25) — wide command-node fill is color-image writeback
+
+The host-copy witness is `scratch/agent/soak_results/s6200/`, from `zsh scratch/agent/s6179_g1d_rdp_words.sh`. The screen was unlocked. Both 12 MB arms stopped at 26 s with 160 phase-4 joins and `root_norm=0x003BD0`. `[g1d-blk-ctl] armed=1` fired in both; the 200000-row cap did not.
+
+Positive controls held. Control node `phys=0xB2D820` still has `05200002` at +0x78, and the only row covering that word is `swl` at `pc=0x8000D5A8`, phase 3, `00000000`->`05200002`, dest `0xB2D898`, before the dump. Wide node `phys=0xAEF620` still has 81 words of `00010001` from +0x28. `rt64wb` fired 1424 times in control and 1364 in wide, so the new hook is not blind.
+
+Wide node+0x28 (`0xAEF648`) has 193 covering rows before the dump and zero after. Every one is `rt64wb`. No `pi`, `rsp`, `zmemcpy`, or `swl` row overlaps it. The last eight are one span: `src=dest=0xA95C00`, `end=0xB00000`, `len=0x6A400`, phase 3. `0x6A400` is `640*340*2`. The same address is covered earlier by phase-2 `0xADD000` `len=0x23000` (`320*224*2`, 20 rows in both arms) and phase-3 `0xA6A000` `len=0x96000` (`640*480*2`, 112 wide / 115 control). All three images end at `0xB00000`. Both arms' `[fballoc]` line is `in=640x340` `top=0x80A95C00`.
+
+Control node `0xB2D820` is `0x2D820` past `0xB00000`, so those writebacks miss it. The node delta `0xB2D820-0xAEF620` is `0x3E200`, equal to `(796-512)*448*2`, one widened 448-line buffer. The color-image addresses did not move. `wrap` and `unwrap` logged 0 rows, and the existing shadow-restore path logged 0 `[s4273-wrap]` and 0 `[s4286-restore]` lines, so those copies did not run.
+
+This selects H-rt64wb and refutes H-wrap for this capture. The writer is `Framebuffer::copyNativeToRAM` of the shared color images that end at `0xB00000`. Those stores are the image's pixels; the 4:3 arm performs the same stores and they are legitimate. The defect is the wide command node sitting inside the image. Tail words such as `0x80AEF728` are the control pointers minus `0x3E200`, so structural words still exist beside the fill; the `swl` that plants `05200002` still aims at `0xB2D898` and does not repair the wide body. No rendering value changed.
+
+Superseded: "the wide fill is an unnamed host copy, possibly the wrap-restore shadow." Believable because s6199 had closed the guest block paths and the shadow `memcpy` is a default-on RDRAM store. This run's restore path did not execute, and the covering rows are the color-image writeback.
+
+ORIGIN: `Framebuffer::copyNativeToRAM` writes legitimate color-image pixels at `0xA95C00`, `0xA6A000`, and `0xADD000`. The wide node address lies inside those images. The pixel value is legitimate; the overlap is not. No skip or restore was added.
