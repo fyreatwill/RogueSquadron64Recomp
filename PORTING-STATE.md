@@ -167438,3 +167438,32 @@ failure; those remain the next discriminator. No mitigation was added.
 
 ORIGIN: the only runtime behavior change is the opt-in rewrite of the named
 512x340 menu/hangar video-state call; the default 4:3 path is unchanged.
+
+## Session 6168 (2026-10-24) — G1d traced the menu framebuffer allocation contract
+
+Hypotheses: H-menu-fb-allocation (the new 796-wide menu video state still uses
+512x340 framebuffer allocations), H-menu-render-input (allocation geometry is
+consistent but the widened draw exposes a bad guest mesh/input), and H-wide-RT64
+(guest allocation and RDP inputs agree but RT64 rejects the target). The retail
+oracle remains unable to reach the hangar/menu, so it supplied no independent
+allocation witness; the 4:3 arm was the positive control.
+
+Added the regeneration-safe, env-gated `ROGUESQ_LOG_FB_ALLOC` trace at
+`partitionFramebufferMemory`, recording input dimensions, output pointers and
+the framebuffer globals. Rebuilt successfully. In one concurrent fixed rerun,
+both arms fired the allocation control and RDP-route probes. Control showed
+the expected `512x340` menu/hangar allocation call and phase-5 `ci_w=512`,
+scissor `2048x1360`, VI width 512. Wide showed the same `512x340` allocation
+call, while phase 5 emitted `ci_w=796`, scissor `3184x1360`, VI width 796;
+its framebuffer bases were the control bases plus exactly 0x400000 from the
+12 MB layout. The wide arm again failed in
+`renderLitTexturedMeshFaces+7948`. The independent allocation and RDP/VI
+lines select H-menu-fb-allocation: the opt-in width writer widened the menu
+video state but the partition writer still sizes the 512x340 buffers at the
+retail width. H-menu-render-input and H-wide-RT64 are not selected by this
+evidence. No mitigation or default behavior changed.
+
+ORIGIN: the defect is the writer/allocator contract introduced by the opt-in
+width change; the logged 512x340 dimensions are legitimate retail inputs, and
+the next fix must make the matching allocation width-aware rather than skip a
+wild value.

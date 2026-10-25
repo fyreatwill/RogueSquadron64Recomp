@@ -57,13 +57,36 @@ def apply4(text):
 
 # s6115 G1d: partitionFramebufferMemory(a0,a1,a2=w,a3=h) sizes each fb as w*h*2 (0x70000 for 512x448); widen w under ROGUESQ_FB_WIDTH so flip buffers do not overlap.
 PFM_ANCHOR = "    int c1cs = 0;\n    // 0x80000DD4: addu        $t5, $a0, $zero\n"
-PFM = ('    { /* PATCH: s6115 pfm */ static int wv = -1, nl; if (wv < 0) { const char* e = getenv("ROGUESQ_FB_WIDTH"); wv = (e && *e) ? atoi(e) : 0; }\n'
-       '      if (nl < 16) { fprintf(stderr, "[fbw] pfm a2=%d a3=%d wv=%d\\n", (int)ctx->r6, (int)ctx->r7, wv); nl++; }\n'
-       '      if (wv > 0 && (int)ctx->r6 == 512 && (int)ctx->r7 == 448) ctx->r6 = (gpr)wv; }\n')
+PFM = ('    int ow = (int)ctx->r6, oh = (int)ctx->r7;\n'
+       '    { /* PATCH: s6115 pfm */ static int wv = -1, nl; if (wv < 0) { const char* e = getenv("ROGUESQ_FB_WIDTH"); wv = (e && *e) ? atoi(e) : 0; }\n'
+       '      if (nl < 16) { fprintf(stderr, "[fbw] pfm a2=%d a3=%d wv=%d\\n", ow, oh, wv); nl++; }\n'
+       '      if (wv > 0 && ow == 512 && oh == 448) ctx->r6 = (gpr)wv; }\n')
 def applypfm(text):
-    if "PATCH: s6115 pfm" in text: return text, 0
-    assert text.count(PFM_ANCHOR) == 1, text.count(PFM_ANCHOR)
-    return text.replace(PFM_ANCHOR, "    int c1cs = 0;\n" + PFM + "    // 0x80000DD4: addu        $t5, $a0, $zero\n", 1), 1
+    if "PATCH: s6115 pfm" in text:
+        old = ('    { /* PATCH: s6115 pfm */ static int wv = -1, nl; if (wv < 0) { const char* e = getenv("ROGUESQ_FB_WIDTH"); wv = (e && *e) ? atoi(e) : 0; }\n'
+               '      if (nl < 16) { fprintf(stderr, "[fbw] pfm a2=%d a3=%d wv=%d\\n", (int)ctx->r6, (int)ctx->r7, wv); nl++; }\n'
+               '      if (wv > 0 && (int)ctx->r6 == 512 && (int)ctx->r7 == 448) ctx->r6 = (gpr)wv; }\n')
+        old2 = ('    { /* PATCH: s6115 pfm */ static int wv = -1, nl; int ow = (int)ctx->r6, oh = (int)ctx->r7; if (wv < 0) { const char* e = getenv("ROGUESQ_FB_WIDTH"); wv = (e && *e) ? atoi(e) : 0; }\n'
+                '      if (nl < 16) { fprintf(stderr, "[fbw] pfm a2=%d a3=%d wv=%d\\n", ow, oh, wv); nl++; }\n'
+                '      if (wv > 0 && ow == 512 && oh == 448) ctx->r6 = (gpr)wv; }\n')
+        if old in text:
+            text = text.replace(old, PFM, 1)
+        elif old2 in text:
+            text = text.replace(old2, PFM, 1)
+        else:
+            return text, 0
+    else:
+        assert text.count(PFM_ANCHOR) == 1, text.count(PFM_ANCHOR)
+        text = text.replace(PFM_ANCHOR, "    int c1cs = 0;\n" + PFM + "    // 0x80000DD4: addu        $t5, $a0, $zero\n", 1)
+    start = text.find("RECOMP_FUNC void partitionFramebufferMemory(")
+    if start < 0:
+        return text, 0
+    end = text.find("    return;\n    // 0x80001084: nop", start)
+    if end < 0 or "PATCH: s6168 fballoc" in text[start:end]:
+        return text, 0
+    tail = ('    { /* PATCH: s6168 fballoc */ static int en = -1, n; if (en < 0) { const char* e = getenv("ROGUESQ_LOG_FB_ALLOC"); en = (e && *e && *e != \'0\') ? 1 : 0; }\n'
+            '      if (en && n < 80) { fprintf(stderr, "[fballoc] in=%dx%d out=%dx%d p0=0x%08X/%u p1=0x%08X/%u top=0x%08X/%u/%u/%u\\n", ow, oh, (int)ctx->r6, (int)ctx->r7, U32(ctx->r13), U32(MEM_W(ctx->r13, 0)), U32(ctx->r14), U32(MEM_W(ctx->r14, 0)), U32(MEM_W(S32(0x8011 << 16), 0x63D8)), U32(MEM_W(S32(0x8011 << 16), 0x63DC)), U32(MEM_W(S32(0x8011 << 16), 0x63E0)), U32(MEM_W(S32(0x8011 << 16), 0x63E4))); fflush(stderr); ++n; } }\n')
+    return text[:end] + tail + text[end:], 1
 
 if __name__ == "__main__":
     p = base / "funcs_4.c"; t = p.read_text(); t2, n = apply4(t)
