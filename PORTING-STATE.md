@@ -167283,3 +167283,5 @@ Findings: (1) s6145's "HUD structs D_8010CA30[2]" is WRONG: that region is a mix
 Rules out: HUD x via D_8010CA30 region; initHudStruct node +0x18/+0x1C; linkHudNodeAndComputeScreenPos for flight HUD (s6145).
 Not yet known: which float in each element block is x (vs y/size), and whether a per-frame updater rewrites them after init.
 ORIGIN: n/a (diagnostic hooks, env-gated, default off; no mitigation added).
+Discrimination (s6146): REFUTED H-matrix (a single HUD matrix/ortho shift) and H-node-in-D_8010CA30 / initHudStruct node +0x18: neither holds the widget positions. SELECTED H-node (per-element 2D floats) in the form "elements are float tables at 0x80340240..0x80340430 written by initHudStruct": the mark-everything arm removed radar/ally/missile counter while the same-recipe control arm kept them. NOT yet split: H-xy vs H-scale vs H-rewrite.
+Next discriminator (NEXT.md): mark only stores of a given address class / pc block in one build, read which elements slide right (x class) vs down (y class) vs resize; plus a two-VI position diff to detect a per-frame rewriter.
