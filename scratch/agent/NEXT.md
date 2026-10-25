@@ -1,4 +1,5 @@
-# G1d: which loads compose the noisy up_167 TMEM (h98bb35b7e7c80445)?
+# G1d: is the 64x32 span of the up_167 texrect the game's, or widened by RT64?
 HYPOTHESIS-ID: g1d-widescreen
-s6235: no single LoadBlock >=1KB reproduces up_167 TMEM; matcher control passes (clean uploads match). Hypotheses: H-multi (several small loads assemble it; one carries noise), H-stale (a later load overwrites part of TMEM before upload), H-tmem (RT64 upload/word-swap).
-Next: in uploadTexture/queueGPUUploadTMEM log g_rs64LoadSeq at upload for hash==ROGUESQ_LOG_TEXHASH; offline list the last ~16 loads (tmem range, src addr) before it, and diff each load's tmem dump vs the up_167 bytes at that range. Run: zsh scratch/agent/s6235_run.sh 900 log (loads in scratch/agent/m6/s6235_log_w900).
+s6236: up_167 = 672-byte f4/s2 load at tmem 0 + stale TMEM tail (see PORTING-STATE s6236). Hypotheses: H-game-span (game SETTILESIZE really covers 64x32 -> retail samples stale TMEM too; garbage is retail-faithful and only visible because of layout), H-rt64-span (RT64 derives width/height/line from the widened fb width, so it samples beyond the 672 valid bytes), H-order (draw happens before its load completes).
+Discriminator: in the draw-time log (framebuffer_renderer.cpp s6234 hook) also print tile fmt/siz/line/tmem and uls/ult/lrs/lrt for hash==98bb35b7e7c80445, and run at the 4:3 control (no ROGUESQ_FB_WIDTH) where the same texture should have span <= 672 B (21x16 16bpp-ish). If 4:3 span is 672 B and wide span is 4096 B -> H-rt64-span: fix the span derivation. If both 4096 -> H-game-span.
+Run: zsh scratch/agent/s6235_run.sh 900 log, plus a second arm with W0=512.
