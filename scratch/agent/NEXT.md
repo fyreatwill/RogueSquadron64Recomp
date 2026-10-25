@@ -1,3 +1,3 @@
-# NEXT: G1d step 53 - 21:9 (w1024) full-frame check after reticle fix, then menus/hangar under ASPECT
+# NEXT: G1d step 54 - menus/hangar under ROGUESQ_ASPECT=16:9 (title -> hangar route), then owner contact sheet
 HYPOTHESIS-ID: g1d-widescreen
-s6161: reticle fix verified at w796. Work unit: run scratch/agent/s6161_run.sh 21:9 _fix "" and inspect fbdump 5000 (reticle near craft, ring/disc right edge, counter left); then ROGUESQ_ASPECT=16:9 through title/hangar (TITLE_ORIGIN route) fbdump to see whether menus/hangar are correct or need a per-screen policy. Then prepare owner contact sheet (16:9 and 21:9).
+s6162: 21:9 in-flight frame verified. Work unit: run the TITLE_ORIGIN hangar route with ROGUESQ_ASPECT=16:9 and ROGUESQ_FB_DUMP_VI=1, inspect title/hangar fbdumps: H-ok (menus pillarboxed/correct), H-stretch (menus stretched or HUD anchor shifts menu elements), H-broken (clipped). If H-stretch/broken, add a per-screen policy (anchor only when in flight). Then build contact sheet 4:3/16:9/21:9 for the owner.
