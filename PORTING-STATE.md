@@ -167247,3 +167247,11 @@ Ran scratch/agent/s6140_run.sh (OSMEM_MB=12, L1, FB_DUMP_VI, HOLD 120): arms a43
 - a219 (21:9): all 5 attempts never reached a wide frame; dumps stay w320 and the last is the stripe garbage (blue/black horizontal lines), VI origins alternate 0x93752A/0xA1BEAA at width 1045, 0 crash, guest spins in stall sites (s3294-stall). So 21:9 at 12 MB fails differently from 16:9: the heap deficit alone is not the whole story; width 1045 (FB 1045x240x2 = 501 KB vs 796 -> 382 KB) is the new variable.
 Rules out: H-heap-still for 16:9 (works at 12 MB); the harness origin check is invalid for any wide arm (judge by dump).
 ORIGIN: no mitigation added this session (run + dumps only).
+
+## Session 6141 (2026-10-24) — 21:9 failure is width-dependent (>1024?), not memory: 18:9 (w896) works at 12 MB
+Ran scratch/agent/s6141_run.sh, 4 sequential arms L1 100 s, judged by fbd dump widths (harness MISSION_RE invalid for wide arms).
+- 21:9 (w1045) @ OSMEM=16: dumps only w320/w512/w640 (never wide), s3294-stall width=1045. 21:9 @ OSMEM=12: identical (w320 garbage, s3290-stall width=1045). => H-size REFUTED (16 MB no better than 12).
+- 18:9 (w896) @ 12 MB: 10 wide w896 dumps; frame verified visually (sky, terrain, X-wing, radar top-right, lives/target HUD, correct aspect, undistorted).
+- 16:9 (w796) @ 12 MB positive control: w796 dumps present.
+Discriminated: failing width lies in (896,1045]; leading suspect H-width = a 1024 cap/stride (1045 > 1024 is the only power-of-two straddle). H-aspect-math not excluded but 18:9/16:9 use the same code path.
+ORIGIN: no mitigation added (run only).

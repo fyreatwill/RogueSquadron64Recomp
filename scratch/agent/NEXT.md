@@ -1,7 +1,6 @@
-# NEXT: G1d step 33 - why does 21:9 (w1045) fail at 12 MB while 16:9 (w796) works
+# NEXT: G1d step 34 - find the first failing FB width between 896 and 1045 (suspect 1024 cap)
 HYPOTHESIS-ID: g1d-widescreen
-Known (s6140): 12 MB: 16:9 OK (dump w796 correct flight), 21:9 stuck (dump w320 stripes, VI origin alternates at width 1045, guest in s3294-stall). Harness MISSION_RE is invalid for wide arms: judge by fbd dump width/png.
-Hypotheses: H-size (FB/pool size >~500 KB or total exceeds 12 MB pool -> try ROGUESQ_OSMEM_MB=16), H-width (a width-dependent constant e.g. 1024 cap/stride), H-aspect-math (21:9 projection value).
-Discriminator, one script, sequential arms: 21:9 at OSMEM_MB=16; 16:9-like intermediate aspect (e.g. 18:9) at 12 MB; read dump widths. 16:9@12 is the positive control.
+Known (s6141): at OSMEM 12 and 16 alike 21:9 (w1045) never reaches a wide frame; 18:9 (w896) and 16:9 (w796) render correct flight. Memory refuted.
+Hypotheses: H-width (constant 1024 cap/stride/texture-size limit in game, RT64 or ucode), H-aspect-math (21:9 projection value only), H-other-threshold.
+Discriminator: copy scratch/agent/s6141_run.sh; arms at OSMEM=12 with explicit ROGUESQ_FB_WIDTH=960, 1024, 1032 (plus ASPECT_SCALE/VPW_SCALE as main.cpp:10733 derives for 21:9 - or ASPECT=<w>:<h> chosen to give those widths, e.g. 20:9=996?). Judge by fbd widths. First failing width selects the constant; grep 1024/0x400 in RT64 allowlists (s6119 width allowlists) and the guest fb layout fn 0x80000DD4.
 Then: HUD edge anchoring, menus/hangar at wide, bundle OSMEM default under ROGUESQ_ASPECT.
-Note: macOS sed -i needs '' arg; write scripts via heredoc; copy scratch/agent/s6140_run.sh.
