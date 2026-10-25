@@ -296,3 +296,13 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   H-intermittent-layout, but the framebuffer writer/stride is still unnamed.
   The wrapper also fixed stale 8 MB title origins and the missing LEVEL export;
   no rendering value or mitigation changed.
+
+- s6183: the rebuilt paired 12 MB run again reached phase 4 in both arms with
+  160 joined frames and 1,440 route records each. Every control frame used only
+  `512@0xB90000`; every wide frame used only `796@0xB51E00`, with expected
+  scissors and no hidden alternate CI. This is a positive complete route census
+  and closes the hidden-late-CI branch for this run, but it is not the missing
+  guest-write/readback discriminator: the existing word hook sees submitted RDP
+  bytes, not framebuffer writers, and the dump hook does not log first host
+  readback bytes. H-guest-layout, H-intermittent-layout, and H-renderer-readback
+  therefore remain open. `MISSION_RE=ZZZ` means no mission/hold verdict.

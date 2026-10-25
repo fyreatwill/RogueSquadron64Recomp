@@ -167735,3 +167735,24 @@ bytes with the same positive controls. No rendering mitigation was added.
 ORIGIN: the only changes were harness corrections for LEVEL and 12 MB title
 origins, plus bounded diagnostic analysis; no guest or renderer value changed,
 and no skip/guard/cull was landed.
+
+## Session 6183 (2026-10-25) — completed phase-4 CI census without naming the writer
+
+The rebuilt paired 12 MB control/wide run reached phase 4 in both arms. Each
+arm produced 160 joined phase-4 frames and 1,440 route records. Control was
+uniformly `CI=512@0xB90000`; wide was uniformly `CI=796@0xB51E00`, with
+matching width-dependent scissors. The per-frame CI lists contained only the
+expected target in both arms, so the hidden-late-CI and alternate-target
+explanations remain closed for this route. No crash marker occurred during the
+capture.
+
+This was a route/word census, not the missing guest-write/readback trace: the
+existing word hook observes submitted RDP bytes but does not attribute writes
+into the phase-4 framebuffer, and the raw dump hook does not expose first host
+readback bytes. It therefore does not select H-guest-layout over
+H-intermittent-layout or H-renderer-readback; the framebuffer writer remains
+unnamed. `MISSION_RE=ZZZ` intentionally made this a title census, so no
+mission/hold verdict applies. No rendering mitigation landed.
+
+ORIGIN: no guest or renderer value changed and no skip, guard, clamp, or cull
+was added; this iteration only ran the existing bounded census.
