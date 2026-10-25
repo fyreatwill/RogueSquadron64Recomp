@@ -41740,6 +41740,8 @@ RS64_REPLAY = [
     "apply_s6043_tblwatch.py",
     "apply_s6144_fpx.py",
     "apply_s6145_hudx.py",
+    "apply_s6146_hudwatch.py",
+    "apply_s6146b_hudpc.py",
     "apply_s6031_far.py",
     "apply_s5818_destroy_health.py",
     "apply_s5846_mission_end.py",
