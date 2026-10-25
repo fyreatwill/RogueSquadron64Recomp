@@ -37878,6 +37878,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s6144 fpx x{_n6144}")
 
+    if p.name == "funcs_12.c":
+        import apply_s6145_hudx as _a6145
+        text, _n6145 = _a6145.apply(text)
+        if _n6145:
+            changed = True
+            report.append(f"{p.name}: s6145 hudx x{_n6145}")
+
     if p.name == "funcs_10.c":
         import apply_s6027_cellmul as _a6027
         text, _n6027 = _a6027.apply10(text)
@@ -41732,6 +41739,7 @@ RS64_REPLAY = [
     "apply_s6038_cellprobe.py",
     "apply_s6043_tblwatch.py",
     "apply_s6144_fpx.py",
+    "apply_s6145_hudx.py",
     "apply_s6031_far.py",
     "apply_s5818_destroy_health.py",
     "apply_s5846_mission_end.py",
