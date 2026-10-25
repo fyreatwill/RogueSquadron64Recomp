@@ -3020,6 +3020,23 @@ extern "C" void rs64_g1d_blk_set_ustore_pc(uint32_t pc) {
     g_rs64_blk_ustore_pc = pc;
 }
 
+extern "C" void rs64_g1d_tb2(const char* tag) {
+    volatile uint8_t* r = g_recomp_rdram_for_wp_raw;
+    if (r == nullptr) return;
+    static const uint32_t k[3] = {0x00A6AA10u, 0x00AE5F20u, 0x00AE6B20u};
+    for (int i = 0; i < 3; ++i) {
+        uint32_t wv[8];
+        for (uint32_t q = 0; q < 8u; ++q) {
+            uint32_t v = 0;
+            for (uint32_t b = 0; b < 4u; ++b) v = (v << 8) | r[(k[i] + q * 4u + b) ^ 3u];
+            wv[q] = v;
+        }
+        std::fprintf(stderr, "[g1d-tb2] %s addr=0x%06X %08X %08X %08X %08X %08X %08X %08X %08X\n",
+                     tag, k[i], wv[0], wv[1], wv[2], wv[3], wv[4], wv[5], wv[6], wv[7]);
+    }
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_g1d_blk_dma(const char* kind, uint32_t src, uint32_t dest,
                                  uint32_t len, uint32_t pc) {
     // s6206: count copyNativeToRAM spans that overlap the early images
@@ -3039,6 +3056,19 @@ extern "C" void rs64_g1d_blk_dma(const char* kind, uint32_t src, uint32_t dest,
                 ++n;
                 const uint32_t phase = rs64_phase_ord();
                 if (phase == 4u) ++n4;
+                {
+                    static bool s_first = false;
+                    static bool s_cov[3] = {false, false, false};
+                    static const uint32_t ka[3] = {0x00A6AA10u, 0x00AE5F20u, 0x00AE6B20u};
+                    if (!s_first) { s_first = true; rs64_g1d_tb2("wb-first"); }
+                    for (int ti = 0; ti < 3; ++ti) {
+                        if (!s_cov[ti] && ka[ti] >= phys && ka[ti] + 32u <= end64) {
+                            s_cov[ti] = true;
+                            std::fprintf(stderr, "[g1d-tb2] wb-covers addr=0x%06X phase=%u n=%u\n", ka[ti], phase, n);
+                            rs64_g1d_tb2("wb-cover");
+                        }
+                    }
+                }
                 const bool edge = n <= 8u || (n & (n - 1u)) == 0u;
                 if (edge) {
                     std::fprintf(stderr,

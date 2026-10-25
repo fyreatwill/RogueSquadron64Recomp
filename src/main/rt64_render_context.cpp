@@ -151,6 +151,8 @@ extern std::atomic<uint64_t> g_rs64_rt64_tri_accepted, g_rs64_rt64_rect_accepted
 volatile uint32_t g_rs64_g1cf_tasks = 0, g_rs64_g1cf_dsize = 0;  // s6070 g1cf: gfx tasks / dl bytes since last VI
 extern "C" { volatile int g_rs64_dd_blk = 0; }  // s6070: set by the s6036 dd patch (funcs_9.c): 1 = dd multiplier active this call
 static struct G1cf { uint32_t subs = 0, bytes = 0, tri = 0, maxlen = 0, lastlen = 0; uint64_t rt0 = 0, rr0 = 0; } s_g1cf;  // s6070
+extern "C" void rs64_g1d_tb2(const char* tag);
+
 namespace s4267 {
 static const bool on = [] { const char* e = std::getenv("ROGUESQ_S4267"); return e && *e && *e != '0'; }();
 static std::mutex m;
@@ -1464,9 +1466,12 @@ namespace ultramodern {
                                 {
                                     static const uint32_t k_tb[3] = {0x00A6AA10u, 0x00AE5F20u, 0x00AE6B20u};
                                     static bool s_tb_done[3] = {false, false, false};
+                                    static uint32_t s_tb_hits[3] = {0, 0, 0};
                                     for (int ti = 0; ti < 3; ++ti) {
+                                        if (addr == k_tb[ti] && ++s_tb_hits[ti] == 2u) rs64_g1d_tb2("ti-hit2");
                                         if (addr != k_tb[ti] || s_tb_done[ti]) continue;
                                         s_tb_done[ti] = true;
+                                        rs64_g1d_tb2("ti-hit1");
                                         uint32_t wv[8];
                                         for (uint32_t k = 0; k < 8u; ++k) {
                                             uint32_t v = 0;
