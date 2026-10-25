@@ -116,6 +116,7 @@ def apply_s6207_drop(text):
         "        uint32_t t0 = ((uint32_t)fbw * 448u * 2u + 0x3fu) & ~0x3fu;\n"
         "        int32_t ov = (int32_t)t0 + 0x6B000 - 0x100000;\n"
         "        if (ov > 0) drop = (int)ov;\n"
+        "        { const char* ex = getenv(\"ROGUESQ_G1D_DROP_EXTRA\"); if (ov > 0 && ex && *ex) drop += (int)strtoul(ex, 0, 0); }\n"
         "        fprintf(stderr, \"[g1d-drop] aspect=%s fbw=%d t0=0x%X drop=0x%X\\n\", as, fbw, t0, (unsigned)drop);\n"
         "    } else fprintf(stderr, \"[g1d-drop] aspect=%s drop=0\\n\", as ? as : \"<unset>\");\n"
         "    fflush(stderr);\n"
