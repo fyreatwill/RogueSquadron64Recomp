@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6190 (2026-10-25).
+Compact operational handoff, maintained as of Session 6191 (2026-10-25).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -361,3 +361,16 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   secondary CI/scissor pass and a distinct menu-writer/source-PC path for this
   capture, selecting the same-source RSP/width-dependent geometry path. The
   exact RSP input field remains unnamed; no mitigation landed.
+
+- s6191: `[g1d-task]` at `rs64_run_lle_gfx` positively captured the phase-4 RSP
+  task identity in both arms (control 912 rows, wide 591; each also had 160
+  phase-4 joins and 400 copy rows). Both arms use type-1 tasks with identical
+  `data_size=0`, `ucode=0x80024A10`, `ucode_data=0x80038D00`, and
+  `ucode_data_size=0x800`; the two dominant root-DL addresses relocate by a
+  constant `-0x3E200` in wide. Existing command attribution independently names
+  guest PC `0x8000834C` in both arms. This selects H-width-input / same task
+  identity and rules out a distinct wide task-builder identity for this capture;
+  the exact width-bearing RSP input (root-DL bytes versus bootstrap/DMEM input)
+  remains open. The oracle cannot reach this 1024-wide phase, so this is
+  single-source runtime evidence with positive controls, not retail-grounded
+  proof. The trace is env-gated by `ROGUESQ_LOG_G1D_TASK`.

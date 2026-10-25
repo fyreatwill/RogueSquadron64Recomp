@@ -167905,3 +167905,26 @@ mitigation was added.
 
 ORIGIN: the change only records existing task/DL identity and does not alter
 RDP commands, guest memory, or renderer decisions.
+
+## Session 6191 (2026-10-25) — identified the stable phase-4 RSP task input
+
+Added the env-gated `[g1d-task]` trace at `rs64_run_lle_gfx` for phase-4 task
+identity: task pointer, type, data pointer/size, ucode, ucode-data pointer and
+size, and root display-list. The Debug build succeeded. The paired route
+reached the required positive controls in both arms; the retained first
+attempt logs contain 912 control task rows and 591 wide rows, plus 160 phase-4
+joins and 400 copy rows per arm.
+
+Both arms used type-1 tasks with `data_size=0`, `ucode=0x80024A10`,
+`ucode_data=0x80038D00`, and `ucode_data_size=0x800`. The two dominant root-DL
+addresses relocated by the constant `-0x3E200` in wide. Existing command rows
+independently attributed the central TEXRECTs to the same guest PC
+`0x8000834C` in both arms. This selects the same-task H-width-input path and
+rules out a distinct wide task-builder identity for this capture. It leaves
+the exact width-bearing input open between root-DL bytes, bootstrap/DMEM data,
+and another RDRAM table. The retail oracle cannot reach this 1024-wide phase,
+so the result is single-source runtime evidence with same-run positive
+controls, not retail-grounded proof. No rendering mitigation landed.
+
+ORIGIN: the change only records task metadata and does not alter RDP commands,
+guest memory, or renderer decisions.

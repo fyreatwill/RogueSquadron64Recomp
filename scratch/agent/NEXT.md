@@ -1,32 +1,35 @@
-# NEXT: identify the width-dependent RSP input
+# NEXT: identify the width-bearing RSP input
 HYPOTHESIS-ID: g1d-widescreen
 
-Session 6190 selected the same-source RSP/width-dependent geometry path: phase-4
-central TEXRECTs used guest PC `0x8000834C`, the same alternating two-root-DL
-pattern after relocation, and one coherent DPC window per task; wide emitted
-about 123-127 central TEXRECTs per task versus 61-65 in control. H-secondary-
-pass and a distinct menu-writer/source-PC path are ruled out for this capture.
+Session 6191 selected the same phase-4 task identity in both arms: type 1,
+data_size 0, ucode 0x80024A10, ucode_data 0x80038D00, and ucode_data_size
+0x800. The two dominant root-DL addresses differ only by the wide-arm
+relocation delta -0x3E200, while the same guest command source 0x8000834C
+produces the extra wide central TEXRECTs. The exact width-bearing input is
+still open.
 
-Next work unit: add one phase-scoped trace at `rs64_run_lle_gfx` that records
-the guest OSTask input identity for phase-4 gfx tasks alongside the existing
-command source: task data_ptr, data_size, ucode, ucode_data, ucode_data_size,
-and root DL. Build once, then run
-`zsh scratch/agent/s6179_g1d_rdp_words.sh` until both arms have >=160 joins and
->=400 copy rows; snapshot the phase-4 rows before killing the wrappers.
+Next work unit: add one phase-scoped trace at `rs64_run_lle_gfx` / immediately
+after `factor5_gfx_runner` loads the task input that records, for each unique
+phase-4 root DL, the first 0x100 bytes (normalized by the arm's root relocation)
+and a hash/nonzero count of the `ucode_data` bytes copied into DMEM. Keep the
+existing `[g1d-task]`, command-source, join, and copy probes enabled. Build
+once, then run:
+
+    zsh scratch/agent/s6179_g1d_rdp_words.sh
+
+Compare the same two-root sequence and the corresponding root/ucode-data
+records in the control and wide `fail_att1.log` files; require the existing
+160 joins and 400 copy rows per arm as positive controls.
 
 Competing hypotheses and discriminator:
 
-- H-width-input: control and wide use the same task/data identity except for
-  the expected relocated framebuffer/root addresses; the width-dependent
-  command population is produced by RSP viewport/scissor input.
-- H-task-builder: wide has a distinct data_ptr/data_size/ucode-data identity
-  at the same guest PC; the game-side task builder is the producer.
-- H-dl-source: task identity matches, but root DL contents/source ranges differ
-  in a way not explained by relocation; the DL builder/input stream is the
-  producer.
+- H-root-DL: normalized root-DL bytes differ at the width/scissor input while
+  ucode-data hashes match; the game-side DL input is the producer.
+- H-ucode-data: root-DL bytes match after relocation but the bootstrap/DMEM
+  input differs; the RSP setup data is the producer.
+- H-other-RDRAM: both sampled inputs match, so the width-dependent command
+  population comes from another RDRAM table read by the ucode; trace the first
+  differing root-relative read before considering any renderer change.
 
-A normalized same-task join (task input fields, root DL relocation delta, DPC
-  range, and first wide-only central command) is the discriminator. Identical
-  task inputs select H-width-input; a wide-only task identity selects
-  H-task-builder; identical task inputs with an unexplained DL/source delta
-  selects H-dl-source. No rendering mitigation is allowed.
+The discriminator is the first normalized byte/hash difference paired with the
+same guest source PC and DPC window. Do not add a rendering mitigation.

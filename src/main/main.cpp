@@ -6825,6 +6825,29 @@ extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task) {
     }
     std::lock_guard<std::recursive_mutex> lle_lock(g_lle_task_mutex);
     s4249::Hold s4249_hold(1);
+    static int s_log_g1d_task = -1;
+    if (s_log_g1d_task < 0) {
+        const char* v = std::getenv("ROGUESQ_LOG_G1D_TASK");
+        s_log_g1d_task = (v && *v && *v != '0') ? 1 : 0;
+    }
+    const uint32_t g1d_phase = rs64_phase_ord();
+    if (s_log_g1d_task && g1d_phase == 4) {
+        static uint32_t s_g1d_task_rows = 0;
+        if (s_g1d_task_rows < 4096) {
+            ++s_g1d_task_rows;
+            std::fprintf(stderr,
+                "[g1d-task] phase=%u row=%u task_ptr=%p type=0x%08X "
+                "data_ptr=0x%08X data_size=0x%08X ucode=0x%08X "
+                "ucode_data=0x%08X ucode_data_size=0x%08X root_dl=0x%08X\n",
+                g1d_phase, s_g1d_task_rows, (const void*)task,
+                (uint32_t)task->t.type, (uint32_t)task->t.data_ptr,
+                (uint32_t)task->t.data_size, (uint32_t)task->t.ucode,
+                (uint32_t)task->t.ucode_data,
+                (uint32_t)task->t.ucode_data_size,
+                (uint32_t)task->t.data_ptr);
+            std::fflush(stderr);
+        }
+    }
     rs64_rdp_advance_reset();
     s_pending_task_data_ptr        = (uint32_t)task->t.data_ptr;
     s_pending_task_ucode_data      = (uint32_t)task->t.ucode_data;
