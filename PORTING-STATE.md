@@ -167319,3 +167319,11 @@ Ran MARKPC=60 x-class marks on 800c0568-0738 (d), 0ac4-0b58 (e), 0d5c-1000 (f), 
 - d, e: nothing visible moves (same as 0738-083c / 098c-0ac4 in s6150).
 - Ally icon (top-left green ship) and radar disc never moved in ANY arm s6149-s6151 -> they are not drawn from initHudStruct's second-store x; store-site chase is exhausted at ~6 arms for 2 elements. Pivot to the consumer: hook where the 0x80340240 element table is read for draw and apply the anchor there.
 ORIGIN: no code change this session (instrument-only; marks are existing env flags).
+
+## Session 6152 (2026-10-24) — G1d: offline read of initHudStruct; it is a message-switch handler, element x/y are at +0x18/+0x1C, not +0x24/+0x28; per-frame consumer not yet found
+
+Ran: one offline sub-agent trace (no game run, no build) for the reader of the 0x80340240 element table. Single-source (agent read of funcs_*.c), unverified at runtime.
+Findings: (1) initHudStruct (0x800C0084..0x800C1B60, funcs_33.c:6314) is NOT an init: `a1` is a message id 1..12 dispatched via jump table 0x800A6458; it stores no code pointers, it links the node into a list (node+0x3C next, +0x40 prev, list head *(s4)+8). (2) The element block at node+0x3C (created by getter 0x80063C3C): +0x08 u16 count, +0x0C/+0x10 halfword array ptrs, +0x18/+0x1C = x/y position floats, +0x24/+0x28 = scale sx/sy (stores 0x800C01AC/0x800C01B8 are ratios, matching why marking +0x24/+0x28 only moved/removed icons by scale rather than anchoring). Position stores are 0x800C01B4 (x) and 0x800C01BC (y). Same layout is written by linkHudNodeAndComputeScreenPos (0x80055C14/40) and layoutHudSpriteScreenRect (0x800B4700/20). (3) No float-load per-frame reader of +0x18/+0x1C that emits draw commands was found; the draw likely walks the element list and reads the halfword arrays (+0x10).
+Rules out: the "x at +0x24 / y at +0x28" premise of s6147-s6151 (ROGUESQ_HUD_MARKCLS) - those were scale fields for at least this block; and "anchor at the float-load consumer" as a quick grep job.
+ORIGIN: no mitigation machinery added (docs only).
+Next: open buildHudAmmoReadout (0x800B8380, funcs_31.c) and updateMenuPerFrame (0x800BB8B4/0x800BB918); trace readers of list head *(s4)+8; then hook x at +0x18 (side by x<160) with a 16:9 lvl1 positive control.

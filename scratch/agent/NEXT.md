@@ -1,4 +1,4 @@
-# NEXT: G1d step 44 - anchor HUD at the consumer of the element table
+# NEXT: G1d step 45 - anchor HUD x at +0x18 of the element block, find the list-walk consumer
 HYPOTHESIS-ID: g1d-widescreen
-s6151: store-range bisect exhausted (ally icon + radar disc never move; digit = 800c1000-1b60, counter icon = 0b58-0d5c, ring = blocks 6/7).
-Work unit: find the function(s) that READ the 0x80340240 element table (x at +0x24, y at +0x28) to build draw commands (grep recompiled funcs for loads from that table / lwc1 off +0x24), then add a fixup-script hook adding (aspect_shift * side) to x at read time, side = left/right by x<centre. Positive control: ring+disc+ally+counter all shift in one 16:9 lvl1 frame. Compare against scratch/agent/m6/s6149b baseline.
+s6152: element block x/y = +0x18/+0x1C (scale = +0x24/+0x28); initHudStruct is a message-switch handler (a1 = msg 1..12, table 0x800A6458).
+Work unit: (1) offline: read buildHudAmmoReadout (0x800B8380) and updateMenuPerFrame (0x800BB8B4/0x800BB918) and readers of list head *(s4)+8 to find the draw-time consumer. (2) Add a fixup-script hook that adds aspect_shift*side to the float at element+0x18 (side by x<160) at the position stores 0x800C01B4 etc. and at the consumer; positive control: ring+disc+ally+counter all shift in one 16:9 lvl1 frame vs scratch/agent/m6/s6149b baseline. Re-verify the +0x18 claim with a mark-arm (ROGUESQ_HUD_MARKPC at pc 800c01b4) before building on it.
