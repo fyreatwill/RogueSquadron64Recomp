@@ -92,10 +92,103 @@ def applypfm(text):
             '      if (en && n < 80) { fprintf(stderr, "[fballoc] in=%dx%d out=%dx%d p0=0x%08X/%u p1=0x%08X/%u top=0x%08X/%u/%u/%u\\n", ow, oh, (int)ctx->r6, (int)ctx->r7, U32(ctx->r13), U32(MEM_W(ctx->r13, 0)), U32(ctx->r14), U32(MEM_W(ctx->r14, 0)), U32(MEM_W(S32(0x8011 << 16), 0x63D8)), U32(MEM_W(S32(0x8011 << 16), 0x63DC)), U32(MEM_W(S32(0x8011 << 16), 0x63E0)), U32(MEM_W(S32(0x8011 << 16), 0x63E4))); fflush(stderr); ++n; } }\n')
     return text[:end] + tail + text[end:], 1
 
+def apply_s6201_carve(text):
+    if "PATCH: s6201 carve" in text:
+        return text, 0
+    a = text.find("RECOMP_FUNC void partitionFramebufferMemory(")
+    b = text.find("RECOMP_FUNC void thread3_video_handle(", a)
+    if a < 0 or b < 0:
+        return text, 0
+    body = text[a:b]
+    body = body.replace(
+        "      if (wv > 0 && ow == 512 && (oh == 448 || oh == 340)) ctx->r6 = (gpr)wv; }\n    // 0x80000DD4: addu        $t5, $a0, $zero\n",
+        "      if (wv > 0 && ow == 512 && (oh == 448 || oh == 340)) ctx->r6 = (gpr)wv; }\n"
+        "    uint32_t g1d_top = 0, g1d_a3 = 0, g1d_t0 = 0, g1d_t1 = 0, g1d_t2 = 0, g1d_t3 = 0, g1d_t4 = 0, g1d_ptr = 0, g1d_pc = 0;\n"
+        "    int g1d_outw = (int)ctx->r6; /* PATCH: s6201 carve */\n"
+        "    // 0x80000DD4: addu        $t5, $a0, $zero\n",
+        1)
+    body = body.replace(
+        "L_80000EC8:\n    // 0x80000EC8: lui         $v0, 0x8011\n",
+        "L_80000EC8:\n"
+        "    g1d_top = U32(ctx->r4); g1d_a3 = U32(ctx->r7); g1d_t0 = U32(ctx->r8); g1d_t1 = U32(ctx->r9); g1d_t2 = U32(ctx->r10); g1d_t3 = U32(ctx->r11); g1d_t4 = U32(ctx->r12); /* PATCH: s6201 carve snap */\n"
+        "    // 0x80000EC8: lui         $v0, 0x8011\n",
+        1)
+    body = body.replace(
+        "{ MEM_W(0X63E8, ctx->r1) = ctx->r4; RS64_S5798_ST(0x80000FFCu, 0X63E8, ctx->r1, 4); }\n",
+        "{ MEM_W(0X63E8, ctx->r1) = ctx->r4; RS64_S5798_ST(0x80000FFCu, 0X63E8, ctx->r1, 4); }\n"
+        "    g1d_ptr = U32(ctx->r4); g1d_pc = 0x80000FFCu; /* PATCH: s6201 carve ptr */\n",
+        1)
+    body = body.replace(
+        "{ MEM_W(0X63E8, ctx->r1) = ctx->r3; RS64_S5798_ST(0x80001010u, 0X63E8, ctx->r1, 4); }\n",
+        "{ MEM_W(0X63E8, ctx->r1) = ctx->r3; RS64_S5798_ST(0x80001010u, 0X63E8, ctx->r1, 4); }\n"
+        "    g1d_ptr = U32(ctx->r3); g1d_pc = 0x80001010u; /* PATCH: s6201 carve ptr */\n",
+        1)
+    ret = "    return;\n    // 0x80001084: nop\n"
+    log = (
+        "    { /* PATCH: s6201 carve */ static int en = -1, n; if (en < 0) { const char* e = getenv(\"ROGUESQ_LOG_G1D_TASK\"); en = (e && *e && *e != '0') ? 1 : 0; }\n"
+        "      if (en && n < 24) { fprintf(stderr, \"[g1d-carve] n=%d pc=0x%08X ra=0x%08X in=%dx%d outw=%d top=0x%08X a3=0x%X t0=0x%X t1=0x%X t2=0x%X t3=0x%X t4=0x%X ptr=0x%08X e4=0x%08X d8=0x%08X dc=0x%08X e0=0x%08X e8=0x%08X f0=0x%08X f4=0x%08X f8=0x%08X ec=0x%08X\\n\",\n"
+        "        n, g1d_pc, U32(ctx->r31), ow, oh, g1d_outw, g1d_top, g1d_a3, g1d_t0, g1d_t1, g1d_t2, g1d_t3, g1d_t4, g1d_ptr,\n"
+        "        U32(MEM_W(S32(0x8011 << 16), 0x63E4)), U32(MEM_W(S32(0x8011 << 16), 0x63D8)), U32(MEM_W(S32(0x8011 << 16), 0x63DC)), U32(MEM_W(S32(0x8011 << 16), 0x63E0)), U32(MEM_W(S32(0x8011 << 16), 0x63E8)), U32(MEM_W(S32(0x8011 << 16), 0x63F0)), U32(MEM_W(S32(0x8011 << 16), 0x63F4)), U32(MEM_W(S32(0x8011 << 16), 0x63F8)), U32(MEM_W(S32(0x8011 << 16), 0x63EC))); fflush(stderr); ++n; } }\n"
+    )
+    if body.count(ret) != 1 or "s6201 carve snap" not in body or body.count("s6201 carve ptr") != 2:
+        return text, 0
+    body = body.replace(ret, log + ret, 1)
+    return text[:a] + body + text[b:], 1
+
+def apply_s6201_pool(text):
+    if "PATCH: s6201 pool" in text:
+        return text, 0
+    anchor = "    // 0x80018030: addu        $v1, $s2, $v0\n    ctx->r3 = ADD32(ctx->r18, ctx->r2);\n"
+    if text.count(anchor) != 1:
+        return text, 0
+    log = (
+        anchor +
+        "    { /* PATCH: s6201 pool */ static int en = -1, n; if (en < 0) { const char* e = getenv(\"ROGUESQ_LOG_G1D_TASK\"); en = (e && *e && *e != '0') ? 1 : 0; }\n"
+        "      if (en && n < 8) { fprintf(stderr, \"[g1d-pool] n=%d pc=0x80018030 base=0x%08X bytes=0x%X arg=0x%X end=0x%08X ra=0x%08X\\n\", n, U32(ctx->r18), U32(ctx->r2), U32(ctx->r23), U32(ctx->r3), U32(ctx->r31)); fflush(stderr); ++n; } }\n"
+    )
+    return text.replace(anchor, log, 1), 1
+
+def apply_s6201_alloc(text):
+    if "PATCH: s6201 alloc" in text:
+        return text, 0
+    a = text.find("RECOMP_FUNC void beginFrameDLChunk(")
+    b = text.find("\nRECOMP_FUNC ", a + 10)
+    if a < 0 or b < 0:
+        return text, 0
+    body = text[a:b]
+    body = body.replace(
+        "    int c1cs = 0;\n",
+        "    int c1cs = 0;\n    uint32_t g1d_head = 0, g1d_next = 0; /* PATCH: s6201 alloc */\n",
+        1)
+    head = "    // 0x8000A934: lw          $v0, 0x63B0($v0)\n    g_rs64_last_guest_pc = 0x8000A934u;\n    ctx->r2 = MEM_W(ctx->r2, 0X63B0);\n"
+    if body.count(head) != 1:
+        return text, 0
+    body = body.replace(head, head + "    g1d_head = U32(ctx->r2); /* PATCH: s6201 alloc head */\n", 1)
+    nxt = "    // 0x8000A93C: lui         $at, 0x8011\n"
+    if body.count(nxt) != 1:
+        return text, 0
+    body = body.replace(nxt, "    g1d_next = U32(ctx->r2); /* PATCH: s6201 alloc next */\n" + nxt, 1)
+    st = "{ MEM_W(-0X5B40, ctx->r1) = ctx->r2; RS64_S5798_ST(0x8000A9CCu, -0X5B40, ctx->r1, 4); }\n"
+    if body.count(st) != 1:
+        return text, 0
+    log = (
+        st +
+        "    { /* PATCH: s6201 alloc */ static int en = -1, n, seen; static uint32_t last = 0xffffffffu; if (en < 0) { const char* e = getenv(\"ROGUESQ_LOG_G1D_TASK\"); en = (e && *e && *e != '0') ? 1 : 0; }\n"
+        "      if (en) { uint32_t ptr = U32(ctx->r4); ++seen; if ((ptr != last || seen <= 4) && n < 2000) { last = ptr; uint32_t stride = (g1d_next > g1d_head) ? (g1d_next - g1d_head) : 0u;\n"
+        "        fprintf(stderr, \"[g1d-alloc] n=%d seen=%d pc=0x8000A9CC ptr=0x%08X head=0x%08X next=0x%08X stride=0x%X slot=0x%08X ra=0x%08X\\n\", n, seen, ptr, g1d_head, g1d_next, stride, U32(ctx->r2), U32(ctx->r31)); fflush(stderr); ++n; } } }\n"
+    )
+    body = body.replace(st, log, 1)
+    return text[:a] + body + text[b:], 1
+
 if __name__ == "__main__":
     p = base / "funcs_4.c"; t = p.read_text(); t2, n = apply4(t)
-    if n: p.write_text(t2)
-    print("funcs_4.c live patched x%d" % n)
+    t2, m = apply_s6201_pool(t2)
+    if n or m: p.write_text(t2)
+    print("funcs_4.c live patched x%d pool=%d" % (n, m))
     p0 = base / "funcs_0.c"; t = p0.read_text(); t2, n = applypfm(t)
-    if n: p0.write_text(t2)
-    print("funcs_0.c live patched x%d" % n)
+    t2, c = apply_s6201_carve(t2)
+    if n or c: p0.write_text(t2)
+    print("funcs_0.c live patched x%d carve=%d" % (n, c))
+    p3 = base / "funcs_3.c"; t = p3.read_text(); t2, k = apply_s6201_alloc(t)
+    if k: p3.write_text(t2)
+    print("funcs_3.c alloc=%d" % k)
