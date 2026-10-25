@@ -1333,6 +1333,26 @@ namespace ultramodern {
                                                    op == 0x2D || op == 0x36);
                                 const bool draw = (op >= 0x08 && op <= 0x0F) || rect;
                                 const bool structural = (op == 0x2D || op == 0x3F);
+                                static uint32_t s_ti_w0 = 0, s_ti_w1 = 0;
+                                if (op == 0x3D) { s_ti_w0 = w0; s_ti_w1 = w1; }
+                                if (rect && (op == 0x24 || op == 0x25) && s_cmd_rows < 4000u) {
+                                    // s6230: SETTIMG source + content probe for each texrect
+                                    const uint32_t ta = s_ti_w1 & 0x7FFFFFu;
+                                    uint32_t h = 2166136261u; uint32_t hist[256] = {0}; uint32_t distinct = 0;
+                                    uint32_t b0 = 0;
+                                    if (ta + 64 <= 0x800000u) {
+                                        for (uint32_t i = 0; i < 64; ++i) {
+                                            const uint8_t bb = r[(ta + i) ^ 3];
+                                            h = (h ^ bb) * 16777619u;
+                                            if (!hist[bb]++) ++distinct;
+                                            if (i < 4) b0 = (b0 << 8) | bb;
+                                        }
+                                    }
+                                    std::fprintf(stderr,
+                                        "[g1d-tex] phase=%u row=%u addr=0x%06X tex=0x%06X fmt=%u siz=%u w=%u hash=0x%08X distinct64=%u b0=0x%08X\n",
+                                        phase, s_cmd_rows, a, ta, (s_ti_w0 >> 21) & 7, (s_ti_w0 >> 19) & 3,
+                                        (s_ti_w0 & 0xFFF) + 1, h, distinct, b0);
+                                }
                                 if ((draw || structural) && s_cmd_rows < 4000u) {
                                     uint32_t x0 = 0, y0 = 0, x1 = 0, y1 = 0;
                                     bool central = false;
