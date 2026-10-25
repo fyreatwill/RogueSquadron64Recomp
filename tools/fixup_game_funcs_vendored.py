@@ -37872,6 +37872,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6043:
             changed = True
             report.append(f"{p.name}: s6043 tblwatch x{_n6043}")
+        import apply_s6144_fpx as _a6144
+        text, _n6144 = _a6144.apply9(text)
+        if _n6144:
+            changed = True
+            report.append(f"{p.name}: s6144 fpx x{_n6144}")
 
     if p.name == "funcs_10.c":
         import apply_s6027_cellmul as _a6027
@@ -41726,6 +41731,7 @@ RS64_REPLAY = [
     "apply_s6098_dlpool.py",
     "apply_s6038_cellprobe.py",
     "apply_s6043_tblwatch.py",
+    "apply_s6144_fpx.py",
     "apply_s6031_far.py",
     "apply_s5818_destroy_health.py",
     "apply_s5846_mission_end.py",
