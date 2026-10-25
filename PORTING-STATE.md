@@ -167929,6 +167929,19 @@ controls, not retail-grounded proof. No rendering mitigation landed.
 ORIGIN: the change only records task metadata and does not alter RDP commands,
 guest memory, or renderer decisions.
 
+## Session 6193 (2026-10-25) — closed the interrupted phase-4 census checkpoint
+
+No new run was performed, per retry close-out. Session 6192's paired result is
+the current evidence: callback-selected root-DL windows and post-DMA
+`ucode_data` matched between control and wide arms, with positive controls of
+656/615 joins and 400/400 copy rows. The next discriminator remains the
+RSP-visible RDRAM-read census; this checkpoint preserves that resume point and
+does not add a new rendering conclusion.
+
+ORIGIN: no code or runtime behavior changed in this checkpoint; it records the
+already completed work unit so the interrupted iteration has a valid ledger
+close-out.
+
 ## Session 6192 (2026-10-25) — separated root-DL and ucode-data inputs
 
 Built the phase-4 input probe and ran the paired 12 MB control/wide experiment

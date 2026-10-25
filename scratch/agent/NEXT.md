@@ -1,14 +1,15 @@
-# NEXT: identify the other RSP-visible width input
+# NEXT: RESUME — identify the other RSP-visible width input
 HYPOTHESIS-ID: g1d-widescreen
 
-Session 6192 selected neither sampled input: post-DMA `ucode_data` matched
+Retry checkpoint: do not rerun Session 6192. It selected neither sampled input:
+post-DMA `ucode_data` matched
 exactly, and every callback-selected root-DL first-0x100 window was zero-filled
 in both arms. The root probe fired for 26/29 unique roots, with the same
 normalized relocation sequence and the required 656/615 joins and 400/400
 copy rows. The extra central TEXRECTs therefore come from another RSP-visible
 RDRAM read.
 
-Next work unit: enumerate the Factor 5 main-ucode RDRAM reads reachable from
+Resume next work unit: enumerate the Factor 5 main-ucode RDRAM reads reachable from
 the command-source path at guest PC `0x8000834C`, then add one phase-scoped
 read witness for the complete candidate table set in the fixup pipeline. The
 witness must record address, access width, guest PC, task/root, and a bounded
