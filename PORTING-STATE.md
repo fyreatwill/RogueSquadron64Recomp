@@ -167311,3 +167311,11 @@ Result: arm a and b: HUD identical to baseline (nothing moved). Arm c: the count
 Read: single-source (one frame per arm, pixels). Positive control: the s6149 arm in the same recipe family moved the ring, and arm c moved something, so the hook fires. a/b null is only valid as "those ranges do not hold x of ally/disc/counter shield", not that they hold no x stores. Pixel-count diff was useless (terrain differs per run); eyeballing HUD only.
 Rules out: pcs 0738-083c and 098c-0ac4 as ally/disc/counter x. Remaining unlabelled: ally icon x and disc x are in 0568-0738, 0ac4-0b58, or >0d5c (initHudStruct runs to 1B60); counter digit x is a separate writer.
 ORIGIN: no mitigation machinery added; diagnostic env only.
+
+## Session 6151 (2026-10-24) — G1d: 4-arm pc-range bisect of remaining HUD x stores (scripts/agent/s6151_run.sh); counter digit found, ally icon and radar disc still unmoved
+Ran MARKPC=60 x-class marks on 800c0568-0738 (d), 0ac4-0b58 (e), 0d5c-1000 (f), 1000-1b60 (g), lvl1 16:9, frames in scratch/agent/m6/s6151/{d,e,f,g}.png vs s6150/base.png.
+- g (1000-1b60): the missile-counter digit "6" moves ~+60px right of its shield icon, so the digit text is stored in this range (positive: visible move).
+- f (0d5c-1000): a green empty circle appears near x=260,y=395 (some element that normally sits under the counter icon); radar contents change but disc position unchanged.
+- d, e: nothing visible moves (same as 0738-083c / 098c-0ac4 in s6150).
+- Ally icon (top-left green ship) and radar disc never moved in ANY arm s6149-s6151 -> they are not drawn from initHudStruct's second-store x; store-site chase is exhausted at ~6 arms for 2 elements. Pivot to the consumer: hook where the 0x80340240 element table is read for draw and apply the anchor there.
+ORIGIN: no code change this session (instrument-only; marks are existing env flags).
