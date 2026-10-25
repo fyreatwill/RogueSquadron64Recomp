@@ -1,3 +1,4 @@
-# NEXT: G1d step 35 - verify the 1024 clamp, then HUD edge anchoring
+# NEXT: G1d step 36 - terrain left-edge void at 21:9, then HUD edge anchoring
 HYPOTHESIS-ID: g1d-widescreen
-Build (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build), run ROGUESQ_OSMEM_MB=12 ROGUESQ_ASPECT=21:9 (expect FB_WIDTH=1024, fbd w1024 frames, like s6142_w1024). Positive control: w1032 arm still garbage. Optional root-cause: grep 1024/0x400 in guest fb layout fn 0x80000DD4 and RT64 fb/texture limits. Then HUD edge anchoring, menus/hangar at wide, default OSMEM under ROGUESQ_ASPECT.
+s6143 verified ROGUESQ_ASPECT=21:9 -> w1024 flight (scratch/agent/m6/s6143/a219_w1024.png). Defects: sky-blue void left of the terrain (terrain visibility/cull uses 4:3 frustum? or tile radius) and HUD not edge-anchored.
+Work unit: one build with a cull-bypass/log for the terrain patch visibility test; compare w1024 vs 4:3 ctl; H-frustum (terrain cull uses 4:3 FOV/aspect) vs H-radius (distance) vs H-camera-angle (void is just sky at that heading). Positive control: widen the cull and see terrain fill. Recipe: s6143_run.sh. Then HUD x anchoring, menus/hangar at wide.

@@ -193,3 +193,4 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
 (s6140) OSMEM=12: 16:9 renders correct widescreen L1 flight (w796 dump, 0 crash; harness origin regex invalid for wide arms - judge by dump). 21:9 (w1045) still never reaches a wide frame (w320 stripe garbage, guest stall). NEXT: bisect 21:9 by width (e.g. ROGUESQ_FBW between 796 and 1045) at 12 MB to find the first failing width; then HUD edge anchoring.
 
 (s6142) G1d: FB width bisect at OSMEM 12: 960 and 1024 render wide flight, 1032 and 1045 fail (stripe garbage). Cap in (1024,1032]. Aspect policy now clamps width to 1024 (unbuilt/unverified). Root constant unnamed.
+(s6143) 21:9 clamp to w1024 verified: 13 w1024 flight frames, 0 crash; left terrain void + HUD anchoring remain.
