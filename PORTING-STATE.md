@@ -167839,3 +167839,24 @@ mission/hold verdict.
 
 ORIGIN: diagnostic-only RT64 source/readback tracing; no guest or renderer value
 was changed, and no skip, guard, clamp, or cull was landed.
+
+## Session 6188 (2026-10-25) — completed the phase-4 RT64 target/copy discriminator
+
+The first 240-second invocation of the paired runner was invalid: both arms
+positively fired the join probe but stopped in phase 3, so neither copy nor
+word trace reached phase 4. The runner was extended to 600 seconds and the
+same control/wide experiment was rerun after the existing build completed.
+
+The corrected run reached phase 4 in both 12 MB arms with 160 joined frames,
+400 `[g1d-copy]` rows, and 80,000 bounded `[g1d-word]` rows per arm. Control's
+source target was `0xB90000` at `512x447`; wide's was `0xB51E00` at `796x447`.
+Both copy traces covered rows 0-447 with the matching width, and neither arm
+logged a crash or abort. The target identity and copy extent are therefore not
+the cause for this capture, weakening H-copy-layout. The dynamic RDP opcode
+histograms were near-identical, so this run does not yet select H-rdp-producer
+over H-resolve-layout; explicit resolve dimensions and a command-level
+central-rectangle classification remain the next discriminator. No mitigation
+was added.
+
+ORIGIN: the run only measured RT64 source/copy and RDP words; no guest or
+renderer value was changed.

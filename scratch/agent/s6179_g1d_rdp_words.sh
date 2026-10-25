@@ -22,7 +22,7 @@ run_arm ctl 4:3 0x00B90400 "$D/ctl-fb"
 p1=$!
 run_arm wide 16:9 0x00B52200 "$D/wide-fb"
 p2=$!
-sleep 240
+sleep 600
 kill -KILL "$p1" "$p2" 2>/dev/null || true
 wait "$p1" 2>/dev/null || true
 wait "$p2" 2>/dev/null || true

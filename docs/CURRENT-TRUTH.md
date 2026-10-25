@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6187 (2026-10-25).
+Compact operational handoff, maintained as of Session 6188 (2026-10-25).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -326,3 +326,13 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   alternation for this capture, selecting the RT64 render-target/readback
   layout boundary over H-guest-layout and H-intermittent-readback. The target
   allocation/resolve writer is still unnamed; no mitigation landed.
+
+- s6188: the first 240-second paired run was invalid: both arms positively
+  fired the join probe but stopped in phase 3. Extending the same runner to 600
+  seconds produced a valid paired run with 160 phase-4 joins, 400 copy traces,
+  and 80,000 bounded RDP-word records per arm, with no crash/abort markers.
+  Control used target `0xB90000` at `512x447`; wide used `0xB51E00` at
+  `796x447`. Both copied rows 0-447 with the matching width. This rules out a
+  wrong target identity or copy extent for this capture and weakens
+  H-copy-layout. The dynamic opcode census is near-identical, so it does not
+  yet name H-rdp-producer versus H-resolve-layout; no mitigation landed.
