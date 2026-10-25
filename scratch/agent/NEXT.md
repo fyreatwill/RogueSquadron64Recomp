@@ -1,41 +1,47 @@
-# NEXT: attribute the earlier wide title/menu width policy
+# NEXT: attribute the first corrupt wide title framebuffer producer
 HYPOTHESIS-ID: g1d-widescreen
 
-s6171 selected H-menu-layout: the existing s6169b control has coherent title
-and menu pixels, while the wide arm's early 512-wide dumps are horizontal
-scanline garbage; later 796-wide select-level and flight dumps are coherent.
-The next single work unit is to identify the earlier-phase writer that leaves
-the wide title/menu path at 512, then make the smallest regeneration-safe
-opt-in change to use the selected width. Do not change retail behaviour.
+s6172 narrowed the defect. A same-build paired run positively fired all
+diagnostics: the control's first 512-wide title dump is coherent, while the
+wide arm's matching 512-wide dump is horizontal scanline corruption. Both
+arms logged the same early video-state dimensions; the wide arm already
+rewrites 512x340 and 512x448, and its later phase-4 RDP route is coherent at
+796 pixels. The concurrent harness did not satisfy the title gate on its
+retries, so do not call the next run a clean endurance result.
 
 Competing hypotheses and discriminator:
 
-- H-early-width-writer: an earlier menu/title video-state or framebuffer
-  writer still hardcodes 512, and widening that writer makes the wide guest
-  dump coherent.
-- H-early-present: the guest framebuffer is coherent but the screen/present
-  path corrupts it; an on-screen capture or VI-origin byte comparison differs.
-- H-unsupported-asset: the wide guest dump is already corrupt before the
-  framebuffer writer because an asset/display-list path assumes 512; the
-  first bad RDP/VI join or source buffer identifies it.
+- H-early-producer: an earlier title display-list or asset producer still
+  assumes a 512-wide stride/address. A first-bad framebuffer join keyed by
+  phase, CI address, VI origin, and source display-list identifies it; a
+  controlled opt-in rewrite of that producer makes the first title dump
+  coherent.
+- H-early-rt64: the guest RDP/VI join and guest dump are coherent, but RT64's
+  readback/present interpretation corrupts only the window. This is proven
+  only if guest bytes/hash are coherent while an activated-window capture is
+  corrupt; it is refuted if the guest dump is already scanline-corrupt.
+- H-unrewritten-secondary: the bad dump is from a 320/640 secondary pass or
+  another framebuffer not covered by the current 512-dimension hook. The
+  first bad dump's CI width/address and the immediately preceding video-state
+  call distinguish this from an asset producer.
 
-Discriminator: use one paired run with a phase-scoped trace of every video
-state/framebuffer allocation before phase 5, plus the existing RDP/VI join and
-framebuffer dump. If the first bad wide frame has a 512 writer,
-H-early-width-writer wins; if the guest dump is coherent but on-screen capture
-is bad, H-early-present wins; if both are bad with no 512 writer,
-H-unsupported-asset wins. A valid run requires control and wide title/menu
-route markers, the `512x340 wv=796` allocation positive control, and no
-crash/30-second VI stall. Do not add a mitigation or alter the retail default.
+Discriminator: add one regeneration-safe, phase-scoped join at the first
+pre-phase-5 bad dump (not a run-lifetime counter), recording the framebuffer
+dump ordinal, current VI origin/width, every CI width/address, RDP list start,
+and the video-state call dimensions immediately before that frame. The same
+single build must carry control and wide arms. A coherent guest dump plus bad
+window selects H-early-rt64; a corrupt guest dump with a 320/640 or uncovered
+buffer selects H-unrewritten-secondary; a corrupt guest dump whose source
+display list is otherwise valid selects H-early-producer. The positive control
+is the control's matching title dump and its route/join row in the same run.
 
-Useful bounded commands:
+Run from the repo root after implementing the bounded hook:
 
-    rg -n 'partitionFramebufferMemory|buildAndRegisterDefaultMaterial|osViSetMode|ROGUESQ_FB_WIDTH|ROGUESQ_ASPECT' src tools RecompiledFuncs lib/rt64
-    rg -n 'ROGUESQ_LOG_FB_ALLOC|\[fbw\]|ROGUESQ_LOG_RDP_ROUTE|phase=5' src tools
-    # Build once, then run both arms concurrently with:
-    # ROGUESQ_OSMEM_MB=12 ROGUESQ_ASPECT=16:9 ROGUESQ_FB_DUMP_VI=1
-    # ROGUESQ_LOG_FB_ALLOC=1 ROGUESQ_LOG_RDP_ROUTE=1
+    cmake --build build --config Debug --target RogueSquadron64Recomp -j4
+    # launch control and wide concurrently with the existing g1 coverage
+    # harness, using OSMEM=12 and title origins 0x00790400/0x00752200;
+    # arm ROGUESQ_LOG_VI_WRITERS=1, ROGUESQ_LOG_FB_ALLOC=1,
+    # ROGUESQ_LOG_RDP_ROUTE=1, and ROGUESQ_FB_DUMP_VI=1.
 
-The measurement must include the first wide title/menu framebuffer dump and
-the first pre-phase-5 width writer; do not infer from already-valid flight
-frames.
+Do not change retail defaults or add a cull/skip. If the writer is named,
+make the smallest opt-in fix and rerun the paired capture in this iteration.

@@ -167527,3 +167527,28 @@ but title/menu presentation still uses a 512-wide path before the widened
 phase-5 route. It rules out a route failure and the previously tested
 allocation/RT64 failure for this result. The exact earlier-phase writer remains
 unattributed; no mitigation was added.
+
+## Session 6172 (2026-10-25) — G1d narrowed the first corrupt wide title frame
+
+The Debug target rebuilt successfully. A same-build concurrent control/wide
+run armed the existing VI-writer, framebuffer-allocation, RDP-route, and VI
+framebuffer-dump probes. The control's first 512-wide title dump was coherent;
+the wide arm's matching 512-wide dump was horizontal scanline corruption. Both
+arms positively logged the same early video-state dimensions: 320x224, 640x340,
+640x480, 512x340, and 512x448. The wide arm rewrote the two 512 dimensions,
+and its later phase-4 route was coherent at `ci_w=796` with matching wide
+scissor coordinates. This rules out the already-fixed 512x340 allocation and
+the simple explanation that the current logged 512 writer was never widened.
+Because the guest dump itself is corrupt, an RT64-only window/present defect
+is not selected. The remaining candidates are an uncovered 320/640 secondary
+buffer or an earlier asset/display-list producer that assumes a 512 stride.
+
+The concurrent harness retries failed the title gate (`notitle-att1` and
+`notitle-att2` in both arms), so this is route-invalid single-source evidence,
+not a clean endurance result; the positive control is still valid for the
+frame-level visual discriminator. The exact writer remains open. No code
+mitigation or retail-default change was made.
+
+ORIGIN: the corruption is in the guest framebuffer bytes before presentation;
+the next work unit must name the producer/stride writer before changing any
+width or adding a skip.
