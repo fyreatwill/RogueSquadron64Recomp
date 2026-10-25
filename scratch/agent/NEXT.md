@@ -1,41 +1,48 @@
-# NEXT: find where the wide command node lost its payload
+# NEXT: name the PC that fills the wide command node
 HYPOTHESIS-ID: g1d-widescreen
 
-Session 6196 classified the first root-relative `mem=0x170` `len=0x10F` node
-(`ctl 0x80B2D820`, `wide 0x80AEF620`, delta `0x3E200`). Pointer words relocate
-and the RDP list at +0x108 matches. From offset `0x28` the wide node is the
-word `0x00010001` where control is `0`, and that fill covers control's
-fixed-point block at `0x78..0xB4` (`05200002`, `01750000`, `03ADFFFE`, ...).
-The same tail pattern repeats on the second node (`0xB313F0` / `0xAF31F0`).
-`0x00010001` is not a relocated pointer. This selects H-command for the node
-body. The writer is unnamed.
+Session 6197 refuted H-shift. Control node 0 contains `05200002` once at
+offset `0x78`. Wide node 0 (`dram` base from `[g1d-node] n=0`) contains that
+word at no byte offset in `0x200` bytes. `00010001` fills `0x28..0xD8`,
+`0xE0..0x104` and `0x198..0x1FC`, with `0001FFFF` at `0xDC`. The header and
+the RDP list at `0x108..0x194` are already written in both arms (9 pointer
+words relocate by `0x3E200`; `0x178` is framebuffer width minus one). Do not
+re-dump the node and do not treat those RDP immediates as the missing block.
 
-Do not change rendering. Keep the existing paired runner and every current
-control (`ROGUESQ_LOG_G1D_READS` included):
+Do not change rendering. The store hook `rs64_m5_writer_parity` passes
+`value` as literal `0` and runs before the store
+(`tools/fixup_game_funcs_vendored.py`). Read the word back from RDRAM on the
+next hook entry, the same pending-store pattern as `rs64_s5654_vstore`.
+
+Add one env-gated witness, `ROGUESQ_LOG_G1D_FILLPC`, phase >= 4 only. When
+the word just stored is `0x00010001`, `0x0001FFFF`, or `0x05200002`, record
+guest PC, address, value, and a monotonic order. Collapse per PC (count,
+first address, last address, first order, last order) so a framebuffer clear
+does not flood the log. Keep the existing paired runner and its controls,
+including `ROGUESQ_LOG_G1D_READS`:
 
     zsh scratch/agent/s6179_g1d_rdp_words.sh
 
-Extend the existing `[g1d-tail]` snapshot so the first two root-relative nodes
-in each arm dump `0x200` bytes, not only `0x10F`. Search that window for the
-control signature `05200002`.
+Copy the `[g1d-fill]` lines out before a `nomission` retry truncates
+`run.log`. Game logs are `scratch/agent/m6/g1_lvl1_ctl/run.log` and
+`g1_lvl1_wide/run.log`. Join store rows to that run's `[g1d-node] n=0` base.
+Do not hardcode the physical address. SIGKILL the process group once both
+arms have 160 phase-4 joins, 400 copies, both root sequences
+(seq1 `root_norm=0x003BD0`), and the fill-PC summary.
+
+Positive control: the control arm must show a PC whose stored word is
+`05200002` at that run's node+`0x78`. If it does not, the hook is blind and
+the run is void.
 
 Competing hypotheses:
 
-- H-shift: wide still contains `05200002` at a different offset inside the
-  `0x200` window. The RSP's `0x10F` read then misses it. The offset delta is
-  the next measurement.
-- H-fill: the signature is absent and the `0x00010001` fill covers the window.
-  Next probe is the store PC of the first `0x00010001` word (control's zero
-  and the `05200002` block are the comparison).
-- H-alias: rejected as the game bug. The 23-bit mask is only in
-  `g_e9prov.root_dl` / `[g1d-root]`. The DMA dram address is the full
-  `0x80xxxxxx` pointer. Do not "fix" the witness mask as if it were the writer.
-
-Positive controls, each arm: at least 160 phase-4 joins, 400 copies, and both
-root sequences (seq1 `root_norm=0x003BD0`). The discriminator is whether
-`05200002` occurs in the wide `0x200` window.
-
-Game logs are `scratch/agent/m6/g1_lvl1_ctl/run.log` and `g1_lvl1_wide/run.log`,
-not `soak_results/s6179/*.out`. Copy the `[g1d-tail]` lines out before a
-`nomission` retry truncates `run.log`. SIGKILL the process group once the
-controls and the `0x200` dump are on disk.
+- H-skipped: that `05200002` PC never stores the value in the wide arm, and
+  a `00010001` PC's address span already covers wide node+`0x28`. The body
+  writer did not run; the fill is leftover.
+- H-clobber: the same `05200002` PC hits wide node+`0x78`, and a later
+  `00010001` store overwrites it. Order is the measurement.
+- H-elsewhere: the `05200002` PC runs in the wide arm, but not inside the
+  node. The address delta from node+`0x78` is the measurement.
+- H-dma: no CPU store of `00010001` hits wide node+`0x28` even though the
+  control positive control fired. The fill arrived by DMA; that is the next
+  witness, not another store hook.

@@ -666,20 +666,62 @@ extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len) {
             // RSP read. Dump its 0x100..0x10E tail as big-endian words, plus a
             // bounded look at pointer-shaped words, so one pair of arms can
             // separate relocation from a width-bearing command.
-            if (mem == 0x170u && len == 0x10Fu && phys + 0x120u < 0x01000000u) {
+            // s6197: the RSP only reads 0x10F. Dump 0x200 of the first two
+            // distinct root nodes so a shifted 05200002 block is visible.
+            if (mem == 0x170u && len == 0x10Fu && phys + 0x200u < 0x01000000u) {
                 static uint32_t seen = 0;
                 static uint32_t dumped = 0;
+                static uint32_t node_phys[2] = {};
+                static uint32_t node_n = 0;
                 const uint32_t root = rs64_e9prov_current_root_dl() & 0x007FFFFFu;
                 const uint32_t rel = (phys - root) & 0x007FFFFFu;
                 const bool at_root = rel == 0u;
                 seen++;
+                auto be_word = [&](uint32_t off) -> uint32_t {
+                    uint32_t word = 0;
+                    for (uint32_t b = 0; b < 4u; ++b)
+                        word = (word << 8) | g_rdram_for_submit[(phys + off + b) ^ 3u];
+                    return word;
+                };
+                if (at_root && node_n < 2u) {
+                    bool known = false;
+                    for (uint32_t i = 0; i < node_n; ++i) known = known || node_phys[i] == phys;
+                    if (!known) {
+                        int sig_off = -1;
+                        uint32_t sig_n = 0;
+                        uint32_t fill_n = 0;
+                        int fill_off = -1;
+                        char sig_offs[96] = {};
+                        size_t sig_len = 0;
+                        for (uint32_t off = 0; off + 4u <= 0x200u; ++off) {
+                            const uint32_t word = be_word(off);
+                            if (word == 0x05200002u) {
+                                if (sig_off < 0) sig_off = static_cast<int>(off);
+                                if (sig_n < 8u && sig_len + 8u < sizeof(sig_offs)) {
+                                    sig_len += static_cast<size_t>(std::snprintf(
+                                        sig_offs + sig_len, sizeof(sig_offs) - sig_len,
+                                        "%s0x%X", sig_n ? "," : "", off));
+                                }
+                                sig_n++;
+                            }
+                            if ((off & 3u) == 0u && word == 0x00010001u) {
+                                if (fill_off < 0) fill_off = static_cast<int>(off);
+                                fill_n++;
+                            }
+                        }
+                        std::fprintf(stderr,
+                            "[g1d-node] phase=%u n=%u dram=0x%08X phys=0x%06X root=0x%06X "
+                            "sig=05200002 sig_n=%u sig_off=%d sig_offs=%s fill10001=%u "
+                            "fill_off=%d bytes=",
+                            phase, node_n, dram, phys, root, sig_n, sig_off,
+                            sig_n ? sig_offs : "-", fill_n, fill_off);
+                        for (uint32_t i = 0; i < 0x200u; ++i)
+                            std::fprintf(stderr, "%02X", g_rdram_for_submit[(phys + i) ^ 3u]);
+                        std::fprintf(stderr, "\n");
+                        node_phys[node_n++] = phys;
+                    }
+                }
                 if (dumped < 8u && (at_root || dumped == 0u)) {
-                    auto be_word = [&](uint32_t off) -> uint32_t {
-                        uint32_t word = 0;
-                        for (uint32_t b = 0; b < 4u; ++b)
-                            word = (word << 8) | g_rdram_for_submit[(phys + off + b) ^ 3u];
-                        return word;
-                    };
                     uint32_t head_nz = 0;
                     uint32_t head_hash = 2166136261u;
                     for (uint32_t i = 0; i < 0x100u; ++i) {

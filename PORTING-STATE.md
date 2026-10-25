@@ -168004,3 +168004,19 @@ On the first root-relative node, and again on the second (`0xB313F0` / `0xAF31F0
 This selects H-command for the node body and refutes H-relocation and H-other for those words. The writer of `0x00010001`, and whether control's `05200002` block merely sits past the `0x10F` window in the wide arm, is still unnamed. No rendering value changed.
 
 ORIGIN: diagnostic only. The added lines log an env-gated DMA snapshot and do not skip, clamp, or rewrite guest or RDP data.
+
+## Session 6197 (2026-10-25) — wide command-node body is a fill, not a shifted block
+
+Extended the phase-4 `ROGUESQ_LOG_G1D_READS` witness so the first two distinct root-relative `mem=0x170` `len=0x10F` nodes dump 0x200 bytes and the witness scans every byte offset for `05200002`. One paired 12 MB 4:3/16:9 run (`scratch/agent/s6179_g1d_rdp_words.sh`) was SIGKILLed once the controls and the dumps were on disk. Extracts: `scratch/agent/soak_results/s6197/ctl.nodes`, `wide.nodes`, `ctl.counts`, `wide.counts`.
+
+Controls, each arm: 160 phase-4 `[g1d-join]` rows, 400 `[g1d-copy]` rows, and `[g1d-root]` seq1 `root_norm=0x003BD0`. Both control nodes are 512 bytes. Wide node 0 (`dram=0x80AEF620`) is 512 bytes. Wide node 1's hex line was split by an interleaved log after 299 bytes; its in-process scan of the full 0x200 had already printed.
+
+Positive control: control node 0 (`0x80B2D820`) contains `05200002` once, at offset 0x78 (`sig_n=1`, `sig_offs=0x78`). An offline parse of that dump matches. Control node 1 does not contain `05200002`; its 0x78 block is a different fixed-point group (`046BF789`, `F6540000`, ...), so the shift signature is node 0's.
+
+Wide node 0 has `sig_n=0`: `05200002` does not occur at any byte offset in the 0x200 window. `00010001` occupies 81 word-aligned slots (runs `0x28..0xD8`, `0xE0..0x104`, `0x198..0x1FC`) with `0001FFFF` at `0xDC`. That first run covers control's zero gap and the fixed-point block at `0x78..0xB4`. Of the 128 words, 32 are identical, 9 are the header and RDP pointers relocated by `0x3E200`, 81 are the fill, and 6 differ inside the preserved RDP list at `0x108..0x194`. One of those six is legitimate width data: `0x178` is `FF1001FF` versus `FF10031B`, low half 511 versus 795, the framebuffer width minus one. Wide node 1's scan agrees (`sig_n=0`, `fill10001=82`, first fill at decimal 40, which is offset 0x28).
+
+This refutes H-shift inside the window the RSP's 0x10F read could have missed, and selects H-fill for the node body. It does not name the writer. The header `0x00..0x24` and the RDP list `0x108..0x194` are written in both arms, so the fill is what remains where control wrote the fixed-point block. Superseded: "the `05200002` block might sit past the 0x10F DMA". That was believable because the transfer length is 0x10F and s6196 stopped there; the next 0x200 bytes do not contain the word.
+
+Next discriminator: guest PC and order of the store that writes `00010001` at node+0x28, against the PC that writes `05200002` at node+0x78 in control, and against the wide-only `0001FFFF` at node+0xDC. Join those rows to the same run's `[g1d-node]` base; do not hardcode the physical address. No rendering value changed.
+
+ORIGIN: diagnostic only. The added lines log an env-gated DMA snapshot and do not skip, clamp, or rewrite guest or RDP data.
