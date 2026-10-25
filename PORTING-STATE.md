@@ -167578,3 +167578,26 @@ leaves an intermittent or frame-specific producer/layout change as the active
 question. The next discriminator is unchanged: capture every phase-4 title
 frame and join each guest dump to its CI width/address, VI origin/width, and
 preceding RDP-route record. No code or mitigation change was made.
+## Session 6176 (2026-10-25) — fixed G1d title dump stride and captured the wide corruption
+
+Built the Debug target, then ran the G1d title capture with per-VI dumps and
+VI-writer, framebuffer-allocation, and RDP-route logs. The first paired attempt
+was contaminated by a harness retry after SIGKILL. A bounded wide rerun reached
+phase 4, but exposed that the dump helper used 512-pixel paired-row decoding
+when VI width was 1024; this was an instrumentation defect because the actual
+wide framebuffer is 796 pixels. Fixed `src/main/upstream_compat.cpp` to use the
+opt-in framebuffer width whenever VI is in the >640 virtual-width mode, rebuilt,
+and reran the bounded capture.
+
+The corrected run produced 72 phase-4 joins (frames 417-488), with VI origin
+0xB52200, CI width 796, matching wide scissors, and `stride=796` guest dumps.
+Frames show a coherent title around a horizontally corrupted central rectangle.
+This independently rules out the old dump-stride explanation and weakens a
+presentation-only RT64 defect. The join still records only the last CI per frame,
+so it cannot distinguish a hidden earlier 320/512/640 secondary pass from a
+game-side producer inside the valid 796 list. No rendering mitigation was added.
+
+ORIGIN: the initial apparent scanline corruption came from the dump reader's
+wrong stride, not a named game writer; the corrected capture still has a central
+guest-frame corruption, so the next instrument must census every CI before any
+skip or width rewrite.

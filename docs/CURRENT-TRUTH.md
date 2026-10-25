@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6174 (2026-10-25).
+Compact operational handoff, maintained as of Session 6176 (2026-10-25).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -225,3 +225,16 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
 - s6173: the new phase-scoped `[g1d-join]` probe compiled and positively fired in both 12 MB arms (196 control joins, 842 wide joins; the wide route also emitted 5,743 RDP rows). At title phase 4/frame 500, control joined `VI width=1024`, title origin `0xB90400`, `CI width=512`, while wide joined `VI width=1024`, title origin `0xB52200`, `CI width=796`; both had the expected RDP list ranges and nonzero CI counts. The matching wide frame-500 guest dump was coherent in this attempt by row-uniqueness inspection, so s6172's scanline corruption did not reproduce. This validates the join instrument and narrows the defect to intermittent or frame-specific producer/layout behavior; it does not select H-early-producer or H-unrewritten-secondary. The diagnostic processes were SIGKILLed before endurance completion, so this is not a route/hold result. No mitigation landed.
 
 - s6174 retry checkpoint: no new run was performed. The s6173 positive control and non-reproduction remain the only new evidence; the next discriminator is unchanged: capture every phase-4 title frame and join each guest dump to its CI/VI/RDP-route records.
+
+- s6176: the every-frame capture reached 72 phase-4 wide joins (frames 417-488).
+  The first attempt exposed a diagnostic defect: with VI width 1024, the dump
+  helper used a 512-pixel paired-row stride even when `ROGUESQ_ASPECT=16:9` had
+  selected a 796-pixel framebuffer. The helper was corrected and rebuilt; the
+  fixed run logged `stride=796`, VI origin `0xB52200`, CI width 796, and matching
+  wide scissors. The decoded guest frames have a coherent title around a
+  horizontally corrupted central rectangle, so the defect is before
+  presentation and the old dump-stride explanation is closed. Because the
+  join records only the last CI, H-unrewritten-secondary (a hidden 320/512/640
+  pass) and H-early-producer remain open; H-early-RT64 is weakened but not
+  formally closed without a complete per-frame CI census. The diagnostic change
+  is in `src/main/upstream_compat.cpp`.

@@ -1,47 +1,41 @@
-# RESUME: attribute the first corrupt wide title framebuffer producer
+# RESUME: census every phase-4 title CI before attributing the corrupt producer
 HYPOTHESIS-ID: g1d-widescreen
 
-s6173 validated the new join but did not reproduce the corruption: at phase 4,
-frame 500, control joined VI 1024/title 0xB90400/CI 512 and wide joined VI
-1024/title 0xB52200/CI 796; the wide dump was coherent by row uniqueness.
-The retry close-out did not rerun it. Resume by capturing every title frame so
-an intermittent first-bad frame is not hidden by the old every-500 dump
-interval. This remains diagnostic, not endurance.
+s6176 reached phase-4 frames 417-488 in the wide arm. After fixing the dump
+stride, the guest image is coherent around a horizontally corrupted central
+rectangle. The current join reports only the last CI, so it cannot say whether
+an earlier secondary pass wrote the bad region.
 
 Competing hypotheses and discriminator:
 
-- H-early-producer: an earlier title display-list or asset producer still
-  assumes a 512-wide stride/address. A first-bad framebuffer join keyed by
-  phase, CI address, VI origin, and source display-list identifies it; a
-  controlled opt-in rewrite of that producer makes the first title dump
-  coherent.
-- H-early-rt64: the guest RDP/VI join and guest dump are coherent, but RT64's
-  readback/present interpretation corrupts only the window. This is proven
-  only if guest bytes/hash are coherent while an activated-window capture is
-  corrupt; it is refuted if the guest dump is already scanline-corrupt.
-- H-unrewritten-secondary: the bad dump is from a 320/640 secondary pass or
-  another framebuffer not covered by the current 512-dimension hook. The
-  first bad dump's CI width/address and the immediately preceding video-state
-  call distinguish this from an asset producer.
+- H-secondary: a phase-4 frame contains an earlier 320/512/640 CI or a second
+  framebuffer write before the final 796 CI; its width/address and list range
+  identify the missed pass.
+- H-producer: every phase-4 CI is 796-wide and targets `0xB51E00`, yet the
+  guest dump still has the central rectangle; the remaining writer is a game
+  asset/layout producer inside that valid list.
+- H-rt64: all guest bytes are coherent but the activated window is corrupt.
+  This is now disfavored by the fixed dump, and is closed if the same-frame
+  guest dump remains corrupted while the route census is complete.
 
-Discriminator: rerun the same build with `FBD_EVERY_V=1` and compare every
-phase-4 title dump, its `[g1d-join]` row, and the preceding `[rdp-route]` CI
-records. A coherent guest dump plus bad window selects H-early-rt64; a corrupt
-guest dump with a 320/640 or uncovered buffer selects H-unrewritten-secondary;
-a corrupt guest dump whose source display list is otherwise valid selects
-H-early-producer. If all per-frame guest dumps are coherent, the corruption is
-intermittent and the next lead is the first frame whose CI/list join changes,
-not a width patch. The positive control is the control arm's matching phase-4
-frame and join row in the same run.
+Discriminator: extend the existing join in one build to retain every CI
+width/address/list range per phase-4 frame, not only the last CI. Run paired
+control and wide arms with `FBD_EVERY_V=1`, `ROGUESQ_FB_WIDTH=796` on wide,
+`ROGUESQ_FB_DUMP_VI=1`, `ROGUESQ_LOG_RDP_ROUTE=1`, and the existing writer and
+allocation logs. A 320/512/640 or alternate-address CI before a corrupt wide
+dump selects H-secondary; an all-796 census with a corrupt guest dump selects
+H-producer; coherent guest bytes plus only a bad window selects H-rt64. The
+control arm's phase-4 dump and full CI census are the positive control in the
+same run.
 
-Resume from the repo root; the bounded hook is already implemented:
+Resume from the repo root:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp -j4
     # launch control and wide concurrently with the existing g1 coverage
     # harness, using OSMEM=12 and title origins 0x00790400/0x00752200;
-    # set FBD_EVERY_V=1 and arm ROGUESQ_LOG_VI_WRITERS=1,
-    # ROGUESQ_LOG_FB_ALLOC=1, ROGUESQ_LOG_RDP_ROUTE=1, and
-    # ROGUESQ_FB_DUMP_VI=1.
+    # set FBD_EVERY_V=1, ROGUESQ_FB_WIDTH=796 on wide, and arm
+    # ROGUESQ_LOG_VI_WRITERS=1, ROGUESQ_LOG_FB_ALLOC=1,
+    # ROGUESQ_LOG_RDP_ROUTE=1, and ROGUESQ_FB_DUMP_VI=1.
 
 Do not change retail defaults or add a cull/skip. If the writer is named,
 make the smallest opt-in fix and rerun the paired capture in this iteration.

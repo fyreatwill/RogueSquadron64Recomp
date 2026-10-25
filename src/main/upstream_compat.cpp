@@ -515,10 +515,11 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         // s5486: dump at the VI line pitch (hi-res 640/1024 phases were previously cropped to 320x224).
         uint32_t stride = ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG;
         if (stride < 64u || stride > 1024u) stride = 320u;
-        // s5487: VI_WIDTH=1024 frames are a 512-wide buffer whose rows are paired side by side (s5486 PNGs: left/right halves
-        // were adjacent scanlines, rest of the 716-row dump was unrelated RDRAM). Dump those as 512x448 at pitch 512.
+        // Default VI_WIDTH=1024 frames use the retail paired-row layout; an
+        // explicit widened framebuffer overrides that interpretation.
         static const uint32_t s_fbw = [] { const char* e = std::getenv("ROGUESQ_FB_WIDTH"); return (e && *e) ? (uint32_t)std::atoi(e) : 0u; }();
-        const bool wide_fb = s_fbw > 0 && stride == s_fbw; // s6113: widened flight buffer is true-width, not paired rows
+        const bool wide_fb = s_fbw > 0 && stride > 640u && s_fbw < stride;
+        if (wide_fb) stride = s_fbw;
         const uint32_t dw = (stride > 640u && !wide_fb) ? stride / 2u : stride;
         const uint32_t dh = wide_fb ? 448u : (stride > 640u ? 448u : stride * 224u / 320u);
         if (stride > 640u && !wide_fb) stride = dw;
