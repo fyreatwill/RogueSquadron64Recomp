@@ -167710,3 +167710,28 @@ the positive controls.
 
 ORIGIN: checkpoint only; no code, renderer value, skip, guard, or cull changed
 in this retry.
+
+## Session 6182 (2026-10-25) — complete phase-4 route census selects guest layout lead
+
+The first wrapper run was invalid: it omitted `LEVEL`, and the second run used
+stale 8 MB title origins, so both arms reported `notitle`. The wrapper was
+fixed to export `LEVEL=1` and use the documented 12 MB origins (`0xB90400`
+control and `0xB52200` wide), then the Debug target was rebuilt and the paired
+census was rerun.
+
+Both arms fired the positive controls and reached phase 4. Each produced 160
+joined phase-4 frames and 1,440 phase-4 route records. Control was uniformly
+`CI=512@0xB90000`; wide was uniformly `CI=796@0xB51E00`, with matching
+width-dependent scissors and no hidden late 320/512/640 or alternate-address
+CI. The wide guest framebuffer hashes still differ from control. `MISSION_RE=ZZZ`
+made `nomission-att1` expected; this was a title census, not a mission hold.
+
+This closes H-hidden-width-pass for the observed phase-4 route and makes
+H-guest-layout the leading explanation over H-intermittent-layout, but does
+not yet name the framebuffer writer or prove whether the host readback is
+involved. The next probe must trace phase-scoped framebuffer writes/readback
+bytes with the same positive controls. No rendering mitigation was added.
+
+ORIGIN: the only changes were harness corrections for LEVEL and 12 MB title
+origins, plus bounded diagnostic analysis; no guest or renderer value changed,
+and no skip/guard/cull was landed.

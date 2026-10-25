@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6181 (2026-10-25).
+Compact operational handoff, maintained as of Session 6182 (2026-10-25).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -284,3 +284,15 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   H-in-list-command as an unexpected-command explanation and leaves
   H-guest-layout versus H-intermittent-layout open. The oracle cannot reach this
   phase, so it supplied no independent phase-4 ground truth; no mitigation landed.
+
+- s6182: the corrected 12 MB-origin paired run supplied the missing positive
+  control. Both arms reached phase 4 with 160 joined frames and 1,440 route
+  records. Every control record was the expected 512-wide CI/scissor stream;
+  every wide record was the expected 796-wide stream, with no late alternate CI
+  or hidden 320/512/640 pass. The wide guest framebuffer hashes still differ
+  from control, and the run intentionally stopped at the title census
+  (`MISSION_RE=ZZZ`), so no mission/hold verdict applies. H-hidden-width-pass
+  is closed for the observed phase-4 route; H-guest-layout is now leading over
+  H-intermittent-layout, but the framebuffer writer/stride is still unnamed.
+  The wrapper also fixed stale 8 MB title origins and the missing LEVEL export;
+  no rendering value or mitigation changed.
