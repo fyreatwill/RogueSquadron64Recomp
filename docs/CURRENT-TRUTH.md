@@ -204,3 +204,5 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
 (s6154, single-source static) Draw-time HUD x/y consumer candidate: 0x800159B4 (funcs_4.c:22628), x=(elem+0x18+vp+0x18)*[0x800006F8], y likewise; driven by setupCameraMatrices lists vp+0xC/vp+0x8. Supersedes the s6153 line. Unverified at runtime.
 
 (s6155, runtime, 2 arms single screenshot pair) 0x800159B4 verified as the flight HUD sprite emitter (also emits world sprites); [0x800006F8]=4.0, x in 4x units. ROGUESQ_HUD_CPOS=<px> lever moves ally counter + radar ring; centre threshold (160*scale) is wrong for wide view so all moved left. Next: restrict to vp=0x800cf090 list, use real centre, wire into ROGUESQ_ASPECT. Supersedes s6154 'unverified'.
+
+(s6156) ROGUESQ_HUD_ANCHOR=A,R (w796: 142,334) puts counter+ally icon at left edge and radar ring at right edge in a fbdump; radar disc + crescent unmoved (other emitter). Wide-view HUD lists uniformly offset +142 px (vp cdc80/cd670/138d20). Next: disc emitter, derive A/R from width, wire into ROGUESQ_ASPECT.

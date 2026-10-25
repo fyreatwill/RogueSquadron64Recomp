@@ -1,5 +1,5 @@
-# NEXT: G1d step 47 - correct HUD centre/filter at 0x800159B4 and anchor to screen edges
+# NEXT: G1d step 48 - move the radar disc/crescent with the ring; derive HUD anchor A/R from width
 HYPOTHESIS-ID: g1d-widescreen
-s6155: emitter verified; CPOS lever shifts ally counter + radar ring; but centre=160*scale wrong (all shifted left) and world sprites also pass through it.
-Work unit: edit tools/apply_s6155_hudcpos.py: only bias when vp (r17)==0x800cf090 (HUD list; log shows world sprites use 0x80165ec8); centre = (virtual width 320 * scale)/2 plus the VPW/aspect offset - log x of the radar ring and counter in a 4:3 control to learn their native x, then bias left items by +delta and right items by -delta where delta=(wide-4:3 width)/2*scale. Run ctl vs cpos with scratch/agent/s6155_hudcpos.sh pattern at 16:9; judge by a fbdump (not window screenshot) so the scene phase matches.
-Outcomes: ring+counter reach the wide-frame edges -> wire into ROGUESQ_ASPECT default; else examine the vp list ordering.
+s6156: ROGUESQ_HUD_ANCHOR=142,334 (w796) moves counter, ally icon, ring to the edges; grey radar disc (~575 px of 796) and crescent stay. Disc is not emitted via 0x800159B4 vp set {cdc80,cd670,138d20} (or its elem sits in vp 165ec8/cf090).
+Work unit: log disc emitter: run s6156_run.sh ctl-style with ROGUESQ_HUD_LOG for ALL vps incl. 165ec8 and cf090 and also a CPOS mark (+160px all vps incl. 165ec8) to see whether the disc moves (positive control); if it moves under some vp, extend the anchor set; else find the disc's draw (mesh/matrix path, not sprite). Then A=(W-320)*? derive: A=142 at w796 (check w683, w1024 for the formula), R=(W-320)-A, and bundle into ROGUESQ_ASPECT.
+Outcomes: disc moves with ring -> HUD fully anchored at 16:9; else disc is a mesh and needs matrix-translate lever.
