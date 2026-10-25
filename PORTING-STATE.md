@@ -167689,3 +167689,24 @@ target-phase ground truth. No mitigation landed.
 
 ORIGIN: diagnostic-only command-word logging; no rendering value was changed,
 and no skip/guard/cull was added.
+
+## Session 6181 (2026-10-25) — checkpointed the unresolved G1d discriminator
+
+This is a retry close-out; no experiment was rerun. Session 6180 remains the
+latest evidence: both arms fired positive controls, the first 2,000 phase-4
+RDP words matched apart from expected width fields, and the wide guest
+framebuffer still contained the central corruption. This weakens an unexpected
+early command structure and an RT64-only presentation fault, but does not
+distinguish a late hidden command, a guest framebuffer write/layout defect, or
+frame-specific readback state. The retail oracle cannot reach phase 4.
+
+The next discriminator is unchanged: capture every phase-4 submitted RDP range
+and CI/scissor command, joined to that frame's raw guest framebuffer hash, in
+one control/wide build and run. An unexpected late CI/scissor selects
+H-hidden-width-pass; complete matching streams with different hashes select
+H-guest-layout; matching streams and hashes with clean/corrupt alternation
+select H-intermittent-layout. Existing control dumps and phase-4 word rows are
+the positive controls.
+
+ORIGIN: checkpoint only; no code, renderer value, skip, guard, or cull changed
+in this retry.

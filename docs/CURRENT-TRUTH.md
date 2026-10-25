@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6178 (2026-10-25).
+Compact operational handoff, maintained as of Session 6181 (2026-10-25).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -238,6 +238,13 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   pass) and H-early-producer remain open; H-early-RT64 is weakened but not
   formally closed without a complete per-frame CI census. The diagnostic change
   is in `src/main/upstream_compat.cpp`.
+
+- s6180: the complete-build retry matched the first 2,000 phase-4 RDP opcodes
+  between control and wide arms; only expected scissor and SETCOLORIMAGE width
+  and address fields differed. The wide guest framebuffer remained corrupt.
+  This weakens hidden-command and RT64-only explanations but does not identify
+  the late writer/readback event. Next is a complete frame-scoped RDP-range and
+  raw-framebuffer-hash census.
 
 - s6177: the new per-swap CI census positively fired in both paired arms (842
   joins each; 160 phase-4 frames each). Every phase-4 control submission was

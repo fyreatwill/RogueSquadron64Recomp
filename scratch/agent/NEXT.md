@@ -1,35 +1,30 @@
-# NEXT: distinguish wide guest-layout corruption from frame-specific readback
+# NEXT: resume the G1d complete phase-4 frame census
 HYPOTHESIS-ID: g1d-widescreen
 
-s6180 added a phase-4 complete RDP-word census and ran concurrent control/wide
-arms. Both arms fired positive controls. The first 2,000 opcodes matched; only
-the expected width-dependent scissor and SETCOLORIMAGE words differed, while the
-wide guest framebuffer retained the central corruption. The retail oracle cannot
-reach phase 4, so it supplies no independent target-phase witness.
+RESUME checkpoint (Session 6181): do not rerun the prior probe unchanged. The
+last run established that the first 2,000 phase-4 RDP words match between 4:3
+control and 16:9 wide apart from expected scissor/SETCOLORIMAGE fields, while
+the wide guest framebuffer can still be corrupt. Artifacts are the committed
+`src/main/rt64_render_context.cpp` diagnostic and prior outputs under
+`scratch/agent/soak_results/s6179/`.
 
 Competing hypotheses and discriminator:
 
-- H-guest-layout: identical command structure plus different per-frame guest
-  framebuffer writes/readback metadata; the widened framebuffer or stride path
-  is wrong.
-- H-intermittent-layout: identical command and write/readback metadata on clean
-  and corrupt frames; corruption depends on frame-specific producer state.
-- H-hidden-width-pass: a later phase-4 submission not captured by the first
-  2,000 words writes the damaged rectangle.
+- H-hidden-width-pass: a later command range or CI/scissor pass writes the
+  damaged region. A late unexpected CI/scissor selects it.
+- H-guest-layout: the complete command stream matches but the wide guest
+  framebuffer hash differs before VI dump. That selects a guest write/stride
+  or layout defect.
+- H-intermittent-layout: complete streams and framebuffer metadata match while
+  clean and corrupt frames alternate. That selects frame-specific state.
 
-Discriminator: one build, both arms, capture a phase-4 frame-scoped census of
-every submitted RDP range (not just the first 20,000 words), its CI/scissor
-commands, and the raw guest framebuffer hash immediately before each VI dump.
-Unexpected extra CI/scissor or a late command selects H-hidden-width-pass;
-matching complete command streams with differing hashes selects H-guest-layout;
-matching streams and hashes with clean/corrupt frame alternation selects
-H-intermittent-layout. The control arm's coherent dump and phase-4 word rows are
-the positive controls.
-
-Run after instrumentation:
+Restore/extend the census so it records every phase-4 submitted RDP range,
+every CI/scissor command, and the raw guest framebuffer hash immediately before
+each VI dump, then run both arms:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp -j4
-    zsh scratch/agent/s6181_g1d_frame_census.sh
+    zsh scratch/agent/s6179_g1d_rdp_words.sh
 
-Keep retail defaults unchanged. Do not add a skip, cull, or width rewrite until
-the writer and legitimacy of the corrupt value are established.
+Preserve the existing 4:3 control and 16:9/12 MB wide recipes and positive
+controls. Do not add a skip, cull, or width rewrite until the writer and value
+legitimacy are established.
