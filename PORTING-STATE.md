@@ -167389,3 +167389,12 @@ Evidence retained from the prior matched s6163b pair: wide VI transitions are ti
 ORIGIN: no corruption guard or rendering mitigation was added. The only code change is harness provenance: accepting the legitimate width-specific VI origins.
 
 Next: reproduce the qualified 12 MB 16:9 route with the corrected gates, and in one build/run log the RDP SETCOLORIMAGE width/address and VI width/origin for two consecutive title and hangar frames. A disagreement selects H-stride/VI; agreement with a garbage dump selects H-menu-policy; recovery after the first bad frame selects H-transition-only.
+
+## Session 6165 (2026-10-24) — G1d joined menu RDP targets to VI state
+Hypotheses: H-stride/VI (RDP colour-image/scissor and VI width/origin disagree), H-menu-policy (the wide menu display-list/video policy remains 512), and H-transition-only (only the first transition buffer is bad). Discriminator: phase-gated SETCOLORIMAGE/SETSCISSOR rows joined to VI width/origin in concurrent 4:3 and 16:9/12 MB arms, with framebuffer dumps and route markers.
+
+The first launch was invalid because the common wrapper requires LEVEL and TAG_SUFFIX; the second paired launch was also invalid because each wrapper unconditionally pkilled the other game's process. I added an opt-out to the scratch wrapper and reran. The valid control reached title 0x00790400, hangar 0x006AB400, and mission 0x00690400; the valid wide arm reached relocated title 0x00B52200, hangar 0x00AAB638, and mission 0x00A52438. Both had zero crash markers. Positive control fired: 5,785 control and 2,460 wide route rows.
+
+At hangar phase 5, control emitted CI width 512 and scissor coordinates ending at 2048/1360 with VI width 512. Wide emitted the same CI width 512 and scissor coordinates while VI width was 796. Wide title/flight rows used width-aware CI values. This selects a menu/hangar width-policy mismatch over a transition-only defect and scopes the next probe to the game-side writer/builder. The exact writer is not yet identified; no rendering mitigation was landed. ORIGIN: the only runtime code change is an env-gated diagnostic in src/main/rt64_render_context.cpp; it does not alter RDP or VI state.
+
+Next: enumerate and trace the phase-5 menu video-state/SETCOLORIMAGE writer, then qualify one opt-in width-aware change with the same two-arm route.

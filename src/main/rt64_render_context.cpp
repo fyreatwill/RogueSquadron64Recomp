@@ -1203,6 +1203,57 @@ namespace ultramodern {
     void submit_rdp_range(uint32_t lo_phys, uint32_t hi_phys) {
         RT64::Application *app = g_rt64_app.load();
         if (app && hi_phys > lo_phys) {
+            // s6165: join RDP targets to the VI state at the same submission.
+            // The budget is per phase so boot traffic cannot hide menu frames.
+            static int s_route = -1;
+            static uint32_t s_route_phase = UINT32_MAX;
+            static uint32_t s_route_rows = 0;
+            if (s_route < 0) {
+                const char* e = std::getenv("ROGUESQ_LOG_RDP_ROUTE");
+                s_route = (e && *e && *e != '0') ? 1 : 0;
+            }
+            if (s_route) {
+                const uint32_t phase = rs64_phase_ord();
+                if (phase != s_route_phase) {
+                    s_route_phase = phase;
+                    s_route_rows = 0;
+                }
+                const auto* vi = ultramodern::renderer::get_vi_regs();
+                const uint32_t viw = vi ? vi->VI_WIDTH_REG : 0;
+                const uint32_t vio = vi ? vi->VI_ORIGIN_REG : 0;
+                if (s_route_rows < 160 && viw >= 320 && viw <= 1024 && app->core.RDRAM) {
+                    const uint8_t* r = app->core.RDRAM;
+                    uint32_t a = lo_phys;
+                    bool saw_ci = false, saw_sc = false;
+                    while (a + 8 <= hi_phys) {
+                        const uint32_t w0 = (uint32_t(r[a ^ 3]) << 24) |
+                                            (uint32_t(r[(a + 1) ^ 3]) << 16) |
+                                            (uint32_t(r[(a + 2) ^ 3]) << 8) |
+                                            uint32_t(r[(a + 3) ^ 3]);
+                        const uint32_t w1 = (uint32_t(r[(a + 4) ^ 3]) << 24) |
+                                            (uint32_t(r[(a + 5) ^ 3]) << 16) |
+                                            (uint32_t(r[(a + 6) ^ 3]) << 8) |
+                                            uint32_t(r[(a + 7) ^ 3]);
+                        const uint32_t op = (w0 >> 24) & 0x3F;
+                        uint32_t n = 8;
+                        if (op >= 8 && op <= 15) n = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
+                        else if (op == 0x24 || op == 0x25) n = 16;
+                        if (op == 0x3F) {
+                            std::fprintf(stderr, "[rdp-route] phase=%u lo=0x%06X len=%u ci_w=%u ci_a=0x%06X vi_w=%u vi_o=0x%06X\n",
+                                phase, lo_phys, hi_phys - lo_phys, (w0 & 0x3FF) + 1, w1 & 0xFFFFFF, viw, vio & 0xFFFFFF);
+                            saw_ci = true;
+                        } else if (op == 0x2D) {
+                            std::fprintf(stderr, "[rdp-route] phase=%u lo=0x%06X len=%u sc=%u,%u-%u,%u vi_w=%u vi_o=0x%06X\n",
+                                phase, lo_phys, hi_phys - lo_phys, (w0 >> 12) & 0xFFF, w0 & 0xFFF,
+                                (w1 >> 12) & 0xFFF, w1 & 0xFFF, viw, vio & 0xFFFFFF);
+                            saw_sc = true;
+                        }
+                        a += n;
+                    }
+                    if (saw_ci || saw_sc) ++s_route_rows;
+                    std::fflush(stderr);
+                }
+            }
             // Diagnostic: log the LAST submission's last bytes so we can see
             // what RDP commands trigger RT64's vector-OOB assert. Gate behind
             // ROGUESQ_LOG_RDP_SUBMIT=1.
