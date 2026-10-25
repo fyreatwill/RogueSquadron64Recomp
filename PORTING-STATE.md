@@ -167958,3 +167958,16 @@ does not add a new rendering conclusion.
 ORIGIN: no code or runtime behavior changed in this checkpoint; it records the
 already completed work unit so the interrupted iteration has a valid ledger
 close-out.
+
+## Session 6194 (2026-10-25) — finalized the interrupted census retry
+
+This retry performed no new experiment, as required by the checkpoint close-out
+contract. The available Session 6192 paired run is sufficient to narrow the
+current hypothesis: callback-selected root-DL windows and post-DMA `ucode_data`
+matched between control and wide arms, while the 656/615 join and 400/400 copy
+positive controls fired. Those two input classes are therefore ruled out for
+this capture. The next discriminator is the phase-scoped census of other
+Factor 5 RSP-visible RDRAM reads, exactly as recorded in `scratch/agent/NEXT.md`.
+
+ORIGIN: no code or runtime behavior changed; this entry records only the
+already-observed paired result and its resume point.
