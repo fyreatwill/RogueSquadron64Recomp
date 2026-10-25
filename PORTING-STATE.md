@@ -167418,3 +167418,23 @@ diagnostic attribution run.
 
 Next: widen only the identified 0x154-height calls behind the opt-in aspect
 setting, rebuild once, and compare phase-5 route rows and framebuffer dumps.
+
+## Session 6167 (2026-10-24) — G1d qualified the menu width writer and exposed downstream crash
+
+Changed the regeneration-safe s6113 hook in `tools/apply_s6031_far.py` so the
+opt-in `ROGUESQ_FB_WIDTH` rewrite also applies to the identified 512x340
+menu/hangar call; updated the live generated function through that script and
+built `RogueSquadron64Recomp` successfully. Ran paired level-1 4:3 control and
+16:9/12 MB arms with RDP-route and VI framebuffer probes. The control reached
+mission and held 304 seconds with zero crash lines and zero 30-second VI
+stalls. The wide arm produced 640 phase-5 route rows with `ci_w=796`, scissor
+`3184x1360`, and VI width 796, while the control remained at 512; this proves
+the game-side video-state writer was the source and rules out a later separate
+display-list writer. The wide arm crashed on all five attempts in
+`renderLitTexturedMeshFaces+7948` before mission, leaving only pre-change
+512-wide dumps and no clean post-change framebuffer verdict. This does not
+select buffer allocation versus guest render-input versus RT64 downstream
+failure; those remain the next discriminator. No mitigation was added.
+
+ORIGIN: the only runtime behavior change is the opt-in rewrite of the named
+512x340 menu/hangar video-state call; the default 4:3 path is unchanged.

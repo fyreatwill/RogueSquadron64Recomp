@@ -37,13 +37,17 @@ if False:
     if n: p.write_text(t2)
     print("funcs_4.c live patched x%d" % n)
 
-# s6113 G1d: ROGUESQ_FB_WIDTH=<w> widens the 512x448 video state (a0 of the video-state-update fn, stored at 0x8011A838 = scissor/colour-image width source).
+# s6113 G1d: ROGUESQ_FB_WIDTH=<w> widens the identified 512-wide video states (a0 of the video-state-update fn, stored at 0x8011A838 = scissor/colour-image width source).
 FBW_ANCHOR = "    int c1cs = 0;\n    // 0x80017B88: addiu       $sp, $sp, -0x70\n"
 FBW = ('    { /* PATCH: s6113 fbw */ static int wv = -1, nl; if (wv < 0) { const char* e = getenv("ROGUESQ_FB_WIDTH"); wv = (e && *e) ? atoi(e) : 0; }\n'
        '      if (nl < 16) { fprintf(stderr, "[fbw] vsu a0=%d a1=%d wv=%d\\n", (int)ctx->r4, (int)ctx->r5, wv); nl++; }\n'
-       '      if (wv > 0 && (int)ctx->r4 == 512 && (int)ctx->r5 == 448) ctx->r4 = (gpr)wv; }\n')
+       '      if (wv > 0 && (int)ctx->r4 == 512 && ((int)ctx->r5 == 448 || (int)ctx->r5 == 340)) ctx->r4 = (gpr)wv; }\n')
 def applyfbw(text):
-    if "PATCH: s6113 fbw" in text: return text, 0
+    if "PATCH: s6113 fbw" in text:
+        old = '      if (wv > 0 && (int)ctx->r4 == 512 && (int)ctx->r5 == 448) ctx->r4 = (gpr)wv; }\n'
+        new = '      if (wv > 0 && (int)ctx->r4 == 512 && ((int)ctx->r5 == 448 || (int)ctx->r5 == 340)) ctx->r4 = (gpr)wv; }\n'
+        if old in text: return text.replace(old, new, 1), 1
+        return text, 0
     assert text.count(FBW_ANCHOR) == 1, text.count(FBW_ANCHOR)
     return text.replace(FBW_ANCHOR, "    int c1cs = 0;\n" + FBW + "    // 0x80017B88: addiu       $sp, $sp, -0x70\n", 1), 1
 def apply4(text):
