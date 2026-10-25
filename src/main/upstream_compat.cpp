@@ -35,6 +35,7 @@
 #include "rs64_rdram_peek.h"
 #endif
 
+#include <algorithm>
 #include <atomic>
 #include <execinfo.h>
 
@@ -2984,6 +2985,118 @@ void rs64_fill_note_word(Rs64FillTls* tls, uint32_t pc, uint32_t phys,
 
 }  // namespace
 
+namespace {
+
+std::atomic<uint64_t> g_rs64_blk_n{0};
+std::atomic<uint64_t> g_rs64_blk_drop{0};
+std::atomic<int> g_rs64_blk_armed{0};
+thread_local uint32_t g_rs64_blk_ustore_pc = 0;
+
+bool rs64_g1d_blk_enabled() {
+    static const bool on = [] {
+        const char* e = std::getenv("ROGUESQ_LOG_G1D_BLK");
+        return e && *e && *e != '0';
+    }();
+    return on;
+}
+
+void rs64_g1d_blk_arm() {
+    if (g_rs64_blk_armed.exchange(1, std::memory_order_relaxed) == 0) {
+        std::fprintf(stderr, "[g1d-blk-ctl] armed=1\n");
+        std::fflush(stderr);
+    }
+}
+
+}  // namespace
+
+extern "C" void rs64_g1d_blk_set_ustore_pc(uint32_t pc) {
+    if (!rs64_g1d_blk_enabled()) return;
+    g_rs64_blk_ustore_pc = pc;
+}
+
+extern "C" void rs64_g1d_blk_dma(const char* kind, uint32_t src, uint32_t dest,
+                                 uint32_t len, uint32_t pc) {
+    if (!rs64_g1d_blk_enabled() || len < 4u || kind == nullptr) return;
+    rs64_g1d_blk_arm();
+    const uint32_t phys = dest & 0x1FFFFFFFu;
+    if (phys >= 0x01000000u) return;
+    const uint64_t end64 = (uint64_t)phys + (uint64_t)len;
+    if (end64 <= 0x800000ull) return;
+    // s6199: a >=0x80 transfer that misses the wide node is not the fill.
+    // Shorter transfers are logged only when they actually plant a
+    // command-node word, so the wide 00010001 fill cannot hide under the
+    // length filter.
+    uint32_t hit_off = 0;
+    uint32_t hit_word = 0;
+    if (len < 0x80u) {
+        volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+        if (rd == nullptr) return;
+        const uint32_t start = phys & ~3u;
+        const uint32_t end = (uint32_t)std::min<uint64_t>(end64, 0x00FFFFFCu);
+        bool hit = false;
+        for (uint32_t a = start; a + 4u <= end; a += 4u) {
+            uint32_t word = 0;
+            for (uint32_t b = 0; b < 4u; ++b)
+                word = (word << 8) | rd[(a + b) ^ 3u];
+            if (word == 0x05200002u || word == 0x00010001u || word == 0x0001FFFFu) {
+                hit = true;
+                hit_off = a - phys;
+                hit_word = word;
+                break;
+            }
+        }
+        if (!hit) return;
+    }
+    const uint64_t n = g_rs64_blk_n.fetch_add(1, std::memory_order_relaxed);
+    if (n >= 200000u) {
+        const uint64_t drop = g_rs64_blk_drop.fetch_add(1, std::memory_order_relaxed);
+        if (drop == 0u) {
+            std::fprintf(stderr, "[g1d-blk-ctl] cap=200000\n");
+            std::fflush(stderr);
+        }
+        return;
+    }
+    const uint32_t end = (uint32_t)std::min<uint64_t>(end64, 0x00FFFFFFu);
+    std::fprintf(stderr,
+        "[g1d-blk] kind=%s src=0x%08X dest=0x%06X end=0x%06X len=0x%X pc=0x%08X "
+        "before=%08X after=%08X phase=%u n=%llu\n",
+        kind, src, phys, end, len, pc, hit_off, hit_word, rs64_phase_ord(),
+        (unsigned long long)n);
+    if ((n & 31u) == 0u || len < 0x80u) std::fflush(stderr);
+}
+
+extern "C" void rs64_g1d_blk_unaligned(char kind, uint32_t addr, uint32_t before,
+                                       uint32_t after) {
+    if (!rs64_g1d_blk_enabled()) return;
+    if (after == before) return;
+    if (after != 0x05200002u && after != 0x00010001u && after != 0x0001FFFFu) return;
+    rs64_g1d_blk_arm();
+    const uint32_t phys = addr & 0x1FFFFFFFu;
+    if (phys >= 0x01000000u) return;
+    static std::atomic<uint32_t> low_fill{0};
+    if (after == 0x00010001u && phys < 0x800000u) {
+        if (low_fill.fetch_add(1, std::memory_order_relaxed) >= 64u) return;
+    }
+    const char* name = "una";
+    if (kind == 'L') name = "swl";
+    else if (kind == 'R') name = "swr";
+    else if (kind == 'l') name = "sdl";
+    else if (kind == 'r') name = "sdr";
+    const uint32_t pc = g_rs64_blk_ustore_pc ? g_rs64_blk_ustore_pc
+                                             : (uint32_t)g_rs64_last_guest_pc;
+    const uint64_t n = g_rs64_blk_n.fetch_add(1, std::memory_order_relaxed);
+    if (n >= 200000u) {
+        g_rs64_blk_drop.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+    std::fprintf(stderr,
+        "[g1d-blk] kind=%s src=0x00000000 dest=0x%06X end=0x%06X len=0x4 pc=0x%08X "
+        "before=%08X after=%08X phase=%u n=%llu\n",
+        name, phys, phys + 4u, pc, before, after, rs64_phase_ord(),
+        (unsigned long long)n);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_g1d_fillpc_note(char width, uint32_t pc, uint32_t addr) {
     static std::atomic<int> armed{0};
     if (armed.exchange(1, std::memory_order_relaxed) == 0) {
@@ -3414,6 +3527,11 @@ extern "C" void zmemcpy(uint8_t* rdram, recomp_context* ctx) {
     }
     rs64_m5_host_write_census(rdram, (uint32_t)dest_reg & 0x007FFFFFu,
                               len, "zmemcpy");
+    {
+        uint32_t pc = (uint32_t)ctx->r31;
+        if (pc < 0x80000000u) pc = (uint32_t)g_rs64_last_guest_pc;
+        rs64_g1d_blk_dma("zmemcpy", (uint32_t)src_reg, (uint32_t)dest_reg, len, pc);
+    }
     ctx->r2 = ctx->r4;  // zlib's zmemcpy returns nothing meaningful
 }
 

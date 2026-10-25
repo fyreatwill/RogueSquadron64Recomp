@@ -1,10 +1,10 @@
 #!/bin/zsh
-# Paired 12 MB phase-4 census. s6198 adds ROGUESQ_LOG_G1D_FILLPC and stops
-# once both arms have the join/copy/root controls plus a fill-PC summary.
+# Paired 12 MB phase-4 census. s6200 keeps ROGUESQ_LOG_G1D_BLK and writes a
+# new directory so s6199 and s6199b are not overwritten.
 set -u
 setopt NULL_GLOB NO_NOMATCH
 cd "$(git rev-parse --show-toplevel)" || exit 1
-D="scratch/agent/soak_results/s6198e"
+D="scratch/agent/soak_results/s6200"
 mkdir -p "$D/ctl-fb" "$D/wide-fb"
 export FBD_EVERY_V=1
 export HOLD_S=90 LEVEL=1
@@ -25,9 +25,9 @@ run_arm() {
   env ROGUESQ_OSMEM_MB=12 ROGUESQ_ASPECT="$aspect" ROGUESQ_FB_WIDTH="$width" \
       ROGUESQ_FB_DUMP_VI=1 ROGUESQ_FB_DUMP_DIR="$dump" TITLE_ORIGIN="$origin" \
       MISSION_RE=ZZZ ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_FORCE_UNLOCK=1 \
-      ROGUESQ_FORCE_SAVE_MISSION=1 LEVEL=1 ROGUESQ_G1B=1 TAG="s6198_${arm}" \
+      ROGUESQ_FORCE_SAVE_MISSION=1 LEVEL=1 ROGUESQ_G1B=1 TAG="s6200_${arm}" \
       TAG_SUFFIX="_${arm}" BUILD="$PWD/build" HOLD=90 ROGUESQ_NO_PKILL=1 \
-      XENV_EXTRA="ROGUESQ_LOG_VI_WRITERS=1 ROGUESQ_LOG_FB_ALLOC=1 ROGUESQ_LOG_RDP_ROUTE=1 ROGUESQ_LOG_RDP_WORDS=1 ROGUESQ_LOG_G1D_COPY=1 ROGUESQ_LOG_G1D_CMD=1 ROGUESQ_LOG_G1D_TARGET=1 ROGUESQ_LOG_G1D_TASK=1 ROGUESQ_LOG_G1D_INPUT=1 ROGUESQ_LOG_G1D_READS=1 ROGUESQ_LOG_G1D_FILLPC=1 ROGUESQ_FB_DUMP_VI=1 ROGUESQ_FB_DUMP_DIR=$dump ROGUESQ_FB_WIDTH=$width" \
+      XENV_EXTRA="ROGUESQ_LOG_VI_WRITERS=1 ROGUESQ_LOG_FB_ALLOC=1 ROGUESQ_LOG_RDP_ROUTE=1 ROGUESQ_LOG_RDP_WORDS=1 ROGUESQ_LOG_G1D_COPY=1 ROGUESQ_LOG_G1D_CMD=1 ROGUESQ_LOG_G1D_TARGET=1 ROGUESQ_LOG_G1D_TASK=1 ROGUESQ_LOG_G1D_INPUT=1 ROGUESQ_LOG_G1D_READS=1 ROGUESQ_LOG_G1D_FILLPC=1 ROGUESQ_LOG_G1D_BLK=1 ROGUESQ_FB_DUMP_VI=1 ROGUESQ_FB_DUMP_DIR=$dump ROGUESQ_FB_WIDTH=$width" \
       python3 -c 'import os
 try:
     os.setsid()
@@ -58,11 +58,14 @@ def count(path):
     joins = copies = roots = fills = sigs = 0
     node = b""
     keep = []
+    blk = []
     with path.open("rb") as f:
         for raw in f:
             if b"[g1d-join] phase=4 " in raw: joins += 1
             elif b"[g1d-copy] phase=4 " in raw: copies += 1
             elif b"root_seq=1 " in raw and b"root_norm=0x003BD0" in raw: roots += 1
+            elif b"[g1d-blk" in raw:
+                blk.append(raw)
             elif b"[g1d-fill-hi]" in raw or b"[g1d-fill] gen=" in raw or b"[g1d-fill-exact]" in raw or b"[g1d-fill-ctl]" in raw or b"[g1d-fill-clobber]" in raw:
                 fills += b"[g1d-fill] gen=" in raw
                 sigs += b"value=05200002" in raw
@@ -70,7 +73,7 @@ def count(path):
             elif b"[g1d-node] phase=4 n=0 " in raw and not node:
                 node = raw
                 keep.append(raw)
-    return joins, copies, roots, fills, sigs, node, keep
+    return joins, copies, roots, fills, sigs, node, keep, blk
 scored = []
 for path in files:
     try:
@@ -80,8 +83,9 @@ for path in files:
 if not scored:
     print("0 0 0 0 0 missing")
     raise SystemExit
-path, (joins, copies, roots, fills, sigs, node, keep) = max(scored, key=lambda item: item[1][0])
+path, (joins, copies, roots, fills, sigs, node, keep, blk) = max(scored, key=lambda item: item[1][0])
 (dest / f"{arm}.fill").write_bytes(b"".join(keep))
+(dest / f"{arm}.blk").write_bytes(b"".join(blk))
 if node:
     (dest / f"{arm}.node").write_bytes(node.split(b" bytes=")[0] + b"\n")
 (dest / f"{arm}.logpath").write_text(str(path) + "\n")
@@ -132,7 +136,12 @@ while (( SECONDS < deadline )); do
 done
 kill -KILL -"$p1" -"$p2" 2>/dev/null || true
 kill -KILL "$p1" "$p2" 2>/dev/null || true
-sleep 1
-ready ctl 0 || true
-ready wide 0 || true
+# The node line can flush after the first post-kill extract (s6199b wrote
+# .blk and left .node empty). Retry until both extracts exist.
+for _ in 1 2 3 4 5; do
+  sleep 1
+  ready ctl 0 || true
+  ready wide 0 || true
+  [[ -s "$D/ctl.node" && -s "$D/wide.node" ]] && break
+done
 echo "stopped at ${SECONDS}s" | tee -a "$D/poll.txt"

@@ -2129,7 +2129,9 @@ extern "C" void rs64_s5654_vstore(uint32_t pc, uint32_t addr, uint32_t value, ch
 }
 // s5660: unaligned stores (swl/swr/sdl/sdr) were never hooked by the s5654 census; route them through it.
 // Positive control: [ustore-all] counts every call (all addresses) so a zero narrow count is interpretable.
+extern "C" void rs64_g1d_blk_set_ustore_pc(uint32_t pc);
 extern "C" void rs64_s5660_ustore(uint32_t pc, uint32_t addr, uint32_t value, char width) {
+    rs64_g1d_blk_set_ustore_pc(pc);
     static std::atomic<uint64_t> all{0}, wide{0}, narrow{0};
     uint64_t a = ++all; const uint32_t p = addr & 0x1FFFFFFFu;
     if (p >= 0x1B2C60u && p < 0x29DFB8u) { ++wide; if (p < 0x1B3600u) ++narrow; rs64_s5654_vstore(pc, p, value, width); }
