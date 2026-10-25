@@ -167648,3 +167648,24 @@ layout event. No rendering mitigation was added.
 ORIGIN: the only code change was a harness path correction needed to launch the
 existing binary; no guest or renderer value was changed, and no skip/guard was
 landed.
+
+## Session 6179 (2026-10-25) — reproduced wide title corruption with a complete phase-4 CI census
+
+The first s6177 wrapper invocation produced empty arm logs because the shared
+harness was still generating its long autopilot schedule when the wrapper's
+150-second kill window elapsed. The wrapper was corrected to pass `HOLD=90`
+and use a 240-second capture window, then the Debug target was rebuilt and the
+paired control/wide census was rerun.
+
+Both arms positively fired the join and framebuffer-dump controls. Each had 160
+phase-4 joins. Every control join had the single expected `512@0xB90000`
+colour image; every wide join had only `796@0xB51E00`. The wide frame-500 guest
+dump contains the horizontal-corruption rectangle; the paired control frame is
+coherent. Because the defect is already present in the guest framebuffer, this
+rules out an RT64-only presentation explanation for this occurrence. The
+complete CI census also rules out an early hidden target or secondary CI. The
+selected branch is a valid-list command or guest framebuffer-write defect; its
+writer remains unnamed. No mitigation landed.
+
+ORIGIN: runner timing only; no game or renderer value was changed, and no
+skip/guard was added.

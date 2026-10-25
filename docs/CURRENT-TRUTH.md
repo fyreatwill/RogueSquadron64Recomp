@@ -259,3 +259,12 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   H-early-phase and leaves H-intermittent-layout / an in-list producer open.
   The first wrapper attempt was invalid because this checkout uses `build/`,
   not `build/Debug`; the fixed wrapper passes `BUILD=$PWD/build`.
+
+- s6179: the corrected paired census reproduced the wide title corruption. The
+  control and wide arms each had 160 phase-4 joins; every control frame was
+  `512@0xB90000` and every wide frame was only `796@0xB51E00`. A wide guest
+  framebuffer dump at frame 500 has the same horizontal-corruption rectangle,
+  while the paired control dump is coherent. The complete CI census plus the
+  pre-presentation guest-frame defect selects H-in-list-producer for this
+  occurrence and rules out an early hidden or secondary CI. The writer inside
+  the valid phase-4 list remains unnamed; no mitigation landed.

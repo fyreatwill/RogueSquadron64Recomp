@@ -1,34 +1,33 @@
-# NEXT: reproduce the intermittent wide title corruption with the phase-4 census
+# NEXT: capture valid phase-4 list contents on a corrupt wide frame
 HYPOTHESIS-ID: g1d-widescreen
 
-s6178 ran the corrected paired census successfully. The control and wide arms
-had identical phase-2/3 CI targets (320-wide phase 2; 640-wide phase 3), while
-phase 4 was consistently 512-wide control versus 796-wide wide. The bad wide
-guest framebuffer did not recur, so no writer or mitigation is justified.
+s6179 reproduced the corruption. Each arm had 160 phase-4 joins; every control
+join was `512@0xB90000` and every wide join was only `796@0xB51E00`. The wide
+guest dump at frame 500 has the corrupted central rectangle; the paired control
+dump is coherent. This is a guest-frame defect, not presentation-only, but the
+writer inside the valid list is not yet named.
 
 Competing hypotheses and discriminator:
 
-- H-in-list-producer: a corrupt wide guest dump recurs while the complete
-  phase-4 census remains only `796@0xB51E00`; the defect is inside the valid
-  game-produced list or its guest framebuffer writes.
-- H-intermittent-layout: another clean wide run has only the expected CIs and
-  coherent guest dumps; the s6172 corruption is frame-specific and needs a
-  producer/layout capture that catches the event.
-- H-early-phase: an unexpected CI or target appears before phase 4 and is
-  temporally associated with a later corrupt dump; this remains possible only
-  if a future run catches such a frame, since s6178 found no aspect-specific
-  phase-2/3 target.
+- H-list-command: the corrupt frame's valid phase-4 RDP words differ from a
+  coherent frame in a way that identifies a game-side command/writer.
+- H-guest-layout: RDP words match a coherent frame, but guest framebuffer
+  writes/readback differ; the writer is a framebuffer layout or stride path.
+- H-intermittent-layout: the same valid list and framebuffer path produce one
+  clean and one corrupt frame; the defect is frame-specific.
 
-Discriminator: rerun the existing paired census unchanged. A corrupt wide
-  dump with only `796@0xB51E00` selects H-in-list-producer; a clean run with
-  the same CI census strengthens H-intermittent-layout; an alternate early CI
-  selects H-early-phase. Positive controls are the 842 joins and phase-2/3
-  control dumps in the same run.
+Discriminator: add one phase-4, frame-gated dump of complete RDP command words
+plus framebuffer write/readback metadata, then run both arms together. A
+differing command stream selects H-list-command; identical commands with
+differing guest writes selects H-guest-layout; identical commands and writes
+with one clean and one corrupt frame selects H-intermittent-layout. Positive
+controls are the phase-2/3 CIs and coherent control frame.
 
 Run from the repo root:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp -j4
-    zsh scratch/agent/s6177_g1d_ci_census.sh
+    zsh scratch/agent/s6179_g1d_rdp_words.sh
 
 Keep the retail default unchanged. Do not add a cull, skip, or width rewrite
-until a writer and value legitimacy are established.
+until a writer and value legitimacy are established. Preserve the s6177 runner
+fixes (`BUILD=$PWD/build`, `HOLD=90`, and the 240-second window).
