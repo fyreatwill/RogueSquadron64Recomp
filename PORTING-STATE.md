@@ -167304,3 +167304,10 @@ Ran scratch/agent/s6149_run.sh (L1, ASPECT=16:9, OSMEM=12, MARKPC=60:800c0354-80
 Verdict: blocks 6/7 (0x80340384, 0x803403B4) are the ring (and parts of it), not disc/counter. Disc and counter x come from other stores: H-layout refuted for them; the s6147 +160-on-all x arm did move counter (200->360) and ally, so those x words are inside initHudStruct but at other blocks/addresses (candidates: 0x80340294/2C4 (pcs 0738/0768/07f0/083c), 0x80340264/2F4 (098c..0ac4), 0x80340324/354 (0b58..0d5c)).
 NEXT: bisect those pc ranges individually (one run each, concurrent arms OK per rule 13) to label ally/counter/disc, then write ROGUESQ_HUD_ANCHOR. Single-source (framebuffer pixels), single frame per arm.
 ORIGIN: no mitigation machinery added; diagnostic env only.
+
+## Session 6150 (2026-10-24) — G1d: 3-arm pc-range bisect of HUD x stores; 0b58-0d5c = counter shield icon, 0738-083c and 098c-0ac4 move nothing visible
+Ran scratch/agent/s6150_run.sh (L1, 16:9, OSMEM 12, MARKCLS=x, MARKPC=60 on pc ranges a=0738-083c, b=098c-0ac4, c=0b58-0d5c), frame 6500 w796 each, compared by eye against s6149b baseline (ally icon x~200, counter shield+"6" x~200, disc x~570).
+Result: arm a and b: HUD identical to baseline (nothing moved). Arm c: the counter shield icon moved right ~60 px and a previously hidden green circle reticle appeared at x~355; the "6" digit text stayed at x~200 (digits are a separate writer). Ally icon (top-left) and disc did not move in any arm.
+Read: single-source (one frame per arm, pixels). Positive control: the s6149 arm in the same recipe family moved the ring, and arm c moved something, so the hook fires. a/b null is only valid as "those ranges do not hold x of ally/disc/counter shield", not that they hold no x stores. Pixel-count diff was useless (terrain differs per run); eyeballing HUD only.
+Rules out: pcs 0738-083c and 098c-0ac4 as ally/disc/counter x. Remaining unlabelled: ally icon x and disc x are in 0568-0738, 0ac4-0b58, or >0d5c (initHudStruct runs to 1B60); counter digit x is a separate writer.
+ORIGIN: no mitigation machinery added; diagnostic env only.
