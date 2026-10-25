@@ -167467,3 +167467,16 @@ ORIGIN: the defect is the writer/allocator contract introduced by the opt-in
 width change; the logged 512x340 dimensions are legitimate retail inputs, and
 the next fix must make the matching allocation width-aware rather than skip a
 wild value.
+
+## Session 6169 (2026-10-24) — checkpointed the s6168 G1d discriminator
+
+Checkpoint close-out only; the s6168 experiment was not rerun. The preserved
+artifacts are the positive-control allocation/RDP traces and the s6168 ledger
+entry: control emitted the legitimate 512x340 menu allocation and 512-wide
+phase-5 route, while the wide arm emitted the 796-wide video state but retained
+the 512x340 allocation before failing in `renderLitTexturedMeshFaces+7948`.
+Those two independent lines already select H-menu-fb-allocation and rule out
+H-menu-render-input and H-wide-RT64 as the leading explanations. The next
+discriminator is unchanged: after rewriting the matching partition allocation,
+the wide trace must show 796x340 and the crash must disappear or move to a
+newly attributable site. No experiment was run in this checkpoint.
