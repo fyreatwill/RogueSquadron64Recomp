@@ -167398,3 +167398,23 @@ The first launch was invalid because the common wrapper requires LEVEL and TAG_S
 At hangar phase 5, control emitted CI width 512 and scissor coordinates ending at 2048/1360 with VI width 512. Wide emitted the same CI width 512 and scissor coordinates while VI width was 796. Wide title/flight rows used width-aware CI values. This selects a menu/hangar width-policy mismatch over a transition-only defect and scopes the next probe to the game-side writer/builder. The exact writer is not yet identified; no rendering mitigation was landed. ORIGIN: the only runtime code change is an env-gated diagnostic in src/main/rt64_render_context.cpp; it does not alter RDP or VI state.
 
 Next: enumerate and trace the phase-5 menu video-state/SETCOLORIMAGE writer, then qualify one opt-in width-aware change with the same two-arm route.
+
+## Session 6166 (2026-10-24) — G1d identified the menu/hangar width-policy writer
+
+Ran the existing writer-attribution and RDP/VI join instruments in concurrent
+4:3 and 16:9/12 MB level-1 arms. The writer positive control fired in both
+arms. The wide arm reached phase 5 and produced 640 route rows; every sampled
+phase-5 RDP stream retained `ci_w=512` and 2048x1360 scissor while VI width
+was 796. `buildAndRegisterDefaultMaterial` at guest PC 0x80017C14 was called
+with menu/hangar `(a0,a1)` forms 0x200/0x154 and 0x280/0x154; the existing
+s6113 hook only handles 0x200/0x1C0 flight. Static store census independently
+ties this function to global 0x8011A838. This rules out a generic RT64
+allowlist/present-only explanation and a transition-only explanation. The 4:3
+arm reached only phases 2-4 in this attempt, so its missing phase-5 rows are a
+route miss, not evidence of absence. No default behavior changed.
+
+ORIGIN: no corruption guard or rendering mitigation was added; this was a
+diagnostic attribution run.
+
+Next: widen only the identified 0x154-height calls behind the opt-in aspect
+setting, rebuild once, and compare phase-5 route rows and framebuffer dumps.
