@@ -632,6 +632,7 @@ static bool m4_src_enabled(uint32_t *cap_out) {
 
 // s4630: every ucode SP DMA read in the M4 phase (dmem/dram/len), so the
 // RDRAM source of the vertex/matrix blocks can be compared with retail.
+extern "C" uint32_t rs64_ram_top;
 extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len) {
     static const bool g1d_reads = [] {
         const char *e = std::getenv("ROGUESQ_LOG_G1D_READS");
@@ -640,28 +641,103 @@ extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len) {
     if (g1d_reads && rs64_phase_ord() >= 4u && g_rdram_for_submit != nullptr) {
         static uint32_t phase_key = 0xFFFFFFFFu;
         static uint32_t rows = 0;
+        static uint32_t hits = 0;
+        static uint32_t prefix_hits = 0;
+        static uint32_t slot_hits = 0;
+        static uint32_t scans = 0;
         const uint32_t phase = rs64_phase_ord();
-        if (phase != phase_key) { phase_key = phase; rows = 0; }
-        if (rows < 4096u) {
-            const uint32_t phys = dram & 0x00FFFFFFu;
-            const uint32_t sample = std::min<uint32_t>(len, 0x400u);
-            uint32_t fnv = 2166136261u;
-            uint32_t nonzero = 0;
-            if (phys < 0x01000000u) {
-                for (uint32_t i = 0; i < sample; ++i) {
-                    const uint8_t b = g_rdram_for_submit[(phys + i) ^ 3u];
-                    fnv = (fnv * 16777619u) ^ b;
-                    nonzero += b != 0u;
+        if (phase != phase_key) {
+            phase_key = phase;
+            rows = 0;
+            hits = 0;
+            prefix_hits = 0;
+            slot_hits = 0;
+            scans = 0;
+        }
+        const uint32_t phys = dram & 0x00FFFFFFu;
+        // s6208: the per-DMA hash line is not emitted. s6195 showed it is
+        // thousands of rows and it buries the texture-address slot.
+        {
+            const uint32_t ram_bytes = rs64_ram_top > 0x80000000u
+                ? (rs64_ram_top - 0x80000000u) : 0u;
+            uint32_t scan_n = len > 0x1000u ? 0x1000u : len;
+            if (phys >= ram_bytes) scan_n = 0;
+            else if (scan_n > ram_bytes - phys) scan_n = ram_bytes - phys;
+            const uint32_t root = rs64_e9prov_current_root_dl() & 0x007FFFFFu;
+            const bool dram_in_node = root != 0u && phys >= root && phys < root + 0x200u;
+            const bool dram_in_glob = phys >= 0x00116000u && phys < 0x00117000u;
+            auto emit_hit = [&](uint32_t off, uint32_t word, const char *why) {
+                const uint32_t word_phys = phys + off;
+                const bool word_in_node = root != 0u && word_phys >= root &&
+                    word_phys + 4u <= root + 0x200u;
+                const int node_off = word_in_node ? static_cast<int>(word_phys - root) : -1;
+                std::fprintf(stderr,
+                    "[g1d-ptr] phase=%u why=%s dram=0x%08X off=0x%X word=0x%08X "
+                    "guest_pc=0x%08X in_node=%u node_off=%d root=0x%06X mem=0x%04X len=0x%X\n",
+                    phase, why, dram, off, word, (unsigned)g_rs64_last_guest_pc,
+                    dram_in_node ? 1u : 0u, node_off, root, mem, len);
+                std::fflush(stderr);
+            };
+            if (scan_n >= 4u) {
+                ++scans;
+                if ((scans % 512u) == 1u && scans <= 4097u) {
+                    std::fprintf(stderr,
+                        "[g1d-ptr-sum] phase=%u scans=%u hits=%u prefix=%u slot=%u\n",
+                        phase, scans, hits, prefix_hits, slot_hits);
+                    std::fflush(stderr);
+                }
+                bool logged_span = false;
+                for (uint32_t off = 0; off + 4u <= scan_n; off += 4u) {
+                    uint32_t word = 0;
+                    for (uint32_t b = 0; b < 4u; ++b)
+                        word = (word << 8) | g_rdram_for_submit[(phys + off + b) ^ 3u];
+                    const uint32_t low = word & 0x00FFFFFFu;
+                    if (low < 0x00A6A000u || low >= 0x00B00000u) continue;
+                    const uint32_t top = word >> 24;
+                    if (top != 0x00u && top != 0x80u) continue;
+                    const bool exact = low == 0x00A6AA10u || low == 0x00AE6120u ||
+                        low == 0x00AE5520u || low == 0x00AE5320u || low == 0x00AE5120u;
+                    const bool stride = !exact && low >= 0x00A6AA10u &&
+                        ((low - 0x00A6AA10u) & 0xFFFu) == 0u;
+                    if (exact || stride) {
+                        if (prefix_hits < 64u) {
+                            ++prefix_hits;
+                            emit_hit(off, word, exact ? "prefix" : "stride");
+                        }
+                    } else if ((dram_in_node || dram_in_glob) && slot_hits < 64u) {
+                        ++slot_hits;
+                        emit_hit(off, word, dram_in_node ? "node" : "glob");
+                    } else if (!logged_span && hits < 64u) {
+                        ++hits;
+                        logged_span = true;
+                        emit_hit(off, word, "span");
+                    }
+                }
+                if (prefix_hits < 64u && scan_n >= 3u) {
+                    for (uint32_t off = 0; off + 3u <= scan_n && prefix_hits < 64u; ++off) {
+                        const uint8_t b0 = g_rdram_for_submit[(phys + off) ^ 3u];
+                        const uint8_t b1 = g_rdram_for_submit[(phys + off + 1) ^ 3u];
+                        const uint8_t b2 = g_rdram_for_submit[(phys + off + 2) ^ 3u];
+                        const bool ctl = b0 == 0xA6 && b1 == 0xAA && b2 == 0x10;
+                        const bool wide_b = b0 == 0xAE && b1 == 0x61 && b2 == 0x20;
+                        if (!ctl && !wide_b) continue;
+                        if ((off & 3u) == 1u && off >= 1u) {
+                            const uint8_t topb = g_rdram_for_submit[(phys + off - 1u) ^ 3u];
+                            if (topb == 0x00u || topb == 0x80u) continue;
+                        }
+                        const uint32_t word = (off >= 1u
+                                ? ((uint32_t)g_rdram_for_submit[(phys + off - 1u) ^ 3u] << 24)
+                                : 0u) |
+                            ((uint32_t)b0 << 16) | ((uint32_t)b1 << 8) | (uint32_t)b2;
+                        const uint32_t log_off = ((off & 3u) == 1u && off >= 1u) ? off - 1u : off;
+                        ++prefix_hits;
+                        emit_hit(log_off, word, ctl ? "bytes-ctl" : "bytes-wide");
+                    }
                 }
             }
-            std::fprintf(stderr,
-                "[g1d-read] phase=%u row=%u mem=0x%04X dram=0x%08X phys=0x%06X "
-                "len=0x%X sample=0x%X hash=0x%08X nz=%u task=%u root=0x%06X "
-                "guest_pc=0x%08X dpc=0x%06X-0x%06X\n",
-                phase, rows++, mem, dram, phys, len, sample, fnv, nonzero,
-                g_e9prov.task, rs64_e9prov_current_root_dl() & 0x7FFFFFu,
-                (unsigned)g_rs64_last_guest_pc,
-                g_rsp_dpc_start & 0x3FFFFFFu, g_rsp_dpc_end & 0x3FFFFFFu);
+        }
+        if (rows < 4096u) {
+            ++rows;
             // s6196: the 0x10F command-source DMA is the first width-differing
             // RSP read. Dump its 0x100..0x10E tail as big-endian words, plus a
             // bounded look at pointer-shaped words, so one pair of arms can
