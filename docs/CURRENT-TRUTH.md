@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6192 (2026-10-25).
+Compact operational handoff, maintained as of Session 6196 (2026-10-25).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -88,7 +88,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog; per-session history archived in PROJECT-OVERVIEW.md, "Archived CURRENT-TRUTH backlog")
 
-1. **G1d widescreen (active, `scratch/agent/NEXT.md`).** Aspect lever proven: `ROGUESQ_ASPECT_SCALE=k`
+1. **G1d widescreen (active, `scratch/agent/NEXT.md`).** s6196: the phase-4 command node the RSP actually DMAs (`mem=0x170`, `len=0x10F`, 24-bit `0x80B2D820`/`0x80AEF620`) relocates its pointers by `0x3E200` and those RDP targets match, but from offset `0x28` the wide node is `0x00010001` where control is `0`, including over the control fixed-point block at `0x78..0xB4`. The s6195 zero head was the 23-bit root alias. Next: longer dump of that node, then the writer of `0x00010001`. History: Aspect lever proven: `ROGUESQ_ASPECT_SCALE=k`
    (guPerspective aspect in setupCameraMatrices) scales rigid-object width ~1/k (s6108).
    Flight RDP census (s6110, `tools/rdpbin_scissor.py`): colour image 512 wide, scissor 512x448
    (+4-unit twin), secondary passes 640. A real widening must change colour-image width, scissor,
@@ -401,3 +401,16 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   command data. The new regeneration-safe `ROGUESQ_LOG_G1D_READS` witness
   records address, width, hash, nonzero count, task/root, guest PC, and DPC
   window. No rendering mitigation landed.
+
+- s6196: that open question is closed for the node body. Paired controls were
+  160 phase-4 joins and 400 copies per arm. Pointer words, including the
+  RDP list at +0x108 (`E7/B9/B7/B6/BE/FA`), match after `0x3E200`. From +0x28
+  wide is `0x00010001` (one `0x0001FFFF` at +0xDC) where control is zero,
+  and +0x78..0xB4 replaces control's `05200002` block. `0x00010001` is not a
+  pointer (its low address is identical static code). This selects H-command
+  for the node body and refutes H-relocation / H-other for those words.
+  Superseded: s6195's "first 0x100 bytes are zero". Believable because both
+  arms' `[g1d-root]` samples hashed `0xE6A1D1C5` with `nz=0`, but that witness
+  masks the root to 23 bits (`0x32D820`) and does not read the DMA at
+  `0xB2D820` (`head_nz=69` vs `136`). Writer of `0x00010001` still unnamed.
+  No rendering mitigation.

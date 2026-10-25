@@ -167992,3 +167992,15 @@ mitigation landed.
 
 ORIGIN: the change only adds env-gated read provenance and does not alter DMA,
 RDP commands, guest memory, or renderer decisions.
+
+## Session 6196 (2026-10-25) — classified the wide command-node tail
+
+Extended the phase-4 `ROGUESQ_LOG_G1D_READS` witness so a `mem=0x170` `len=0x10F` command-source DMA dumps its big-endian words and follows pointer-shaped words. One paired 12 MB 4:3/16:9 run (`scratch/agent/s6179_g1d_rdp_words.sh`) fired the controls in each arm: 160 phase-4 `[g1d-join]` rows, 400 `[g1d-copy]` rows, and 32/28 `[g1d-root]` rows whose normalized sequences agree (seq1 `root_norm=0x003BD0`). The extracts are `scratch/agent/soak_results/s6196/ctl.tail` and `wide.tail`. The run was SIGKILLed once those controls and the node dumps were on disk.
+
+The DMA the RSP actually reads is 24-bit: control `0x80B2D820`, wide `0x80AEF620`, delta exactly `0x3E200`. `[g1d-root]` masks that address to 23 bits (`0x32D820` / `0x2EF620`) and both arms read a zero page there (`nz=0`, hash `0xE6A1D1C5`). That is why the s6195 head looked empty. The real node is not empty (control `head_nz=69` hash `0x150149B3`, wide `head_nz=136` hash `0xA185C6DA`).
+
+On the first root-relative node, and again on the second (`0xB313F0` / `0xAF31F0`): offsets `0x00..0x24` are five pointers that differ by `0x3E200` plus five identical words (`0x06000000`, static `0x80037658`, `0x07000000`). The pointer at `+0x108` references an RDP list (`E7`, `B9`, `B7`, `B6`, `BE`, `FA`) that matches after the same relocation, so this refutes that list as the width-bearing input. From offset `0x28` through the tail, wide is the word `0x00010001` (one `0x0001FFFF` at `+0xDC`) where control is zero, except control's fixed-point block at `0x78..0xB4` (`05200002`, `01750000`, `03ADFFFE`, `01770000`, `03A7FFFE`, `FC2A0000`, ...). The first tail word that survives relocation normalization is at `+0x100`: `0x00000000` versus `0x00010001`. Treating `0x00010001` as a pointer lands in identical static code at `0x010001`, so it is not a relocated pointer.
+
+This selects H-command for the node body and refutes H-relocation and H-other for those words. The writer of `0x00010001`, and whether control's `05200002` block merely sits past the `0x10F` window in the wide arm, is still unnamed. No rendering value changed.
+
+ORIGIN: diagnostic only. The added lines log an env-gated DMA snapshot and do not skip, clamp, or rewrite guest or RDP data.

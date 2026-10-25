@@ -1,32 +1,41 @@
-# NEXT: isolate the width-bearing root-DL tail words
+# NEXT: find where the wide command node lost its payload
 HYPOTHESIS-ID: g1d-widescreen
 
-Session 6195 selected the first differing candidate in the complete DMA-read
-census: `mem=0x170`, `len=0x10F`, root-relative offset zero, same guest PC
-`0x80007904`, control hash `0x8D4703B3` versus wide `0x12499740`. The earlier
-root witness only covered the first 0x100 bytes, which matched and was zero.
-The remaining question is whether the differing 0x100..0x10E tail is merely
-relocation metadata or contains the width-bearing command words.
+Session 6196 classified the first root-relative `mem=0x170` `len=0x10F` node
+(`ctl 0x80B2D820`, `wide 0x80AEF620`, delta `0x3E200`). Pointer words relocate
+and the RDP list at +0x108 matches. From offset `0x28` the wide node is the
+word `0x00010001` where control is `0`, and that fill covers control's
+fixed-point block at `0x78..0xB4` (`05200002`, `01750000`, `03ADFFFE`, ...).
+The same tail pattern repeats on the second node (`0xB313F0` / `0xAF31F0`).
+`0x00010001` is not a relocated pointer. This selects H-command for the node
+body. The writer is unnamed.
 
-Resume next work unit: dump and normalize the 15 tail bytes (0x100..0x10E) of
-the first root-relative 0x10F DMA, alongside the existing root relocation
-sequence, in both arms. Attribute each nonzero word to pointer relocation,
-command opcode, or ordinary data; do not change rendering. Keep all existing
-controls and `ROGUESQ_LOG_G1D_READS` enabled. Build once, then run:
+Do not change rendering. Keep the existing paired runner and every current
+control (`ROGUESQ_LOG_G1D_READS` included):
 
     zsh scratch/agent/s6179_g1d_rdp_words.sh
 
-The witness must retain positive controls in each arm: at least 160 joins, 400
-copies, and both known root sequences. The discriminator is the first tail word
-that remains different after applying the already-known relocation delta.
+Extend the existing `[g1d-tail]` snapshot so the first two root-relative nodes
+in each arm dump `0x200` bytes, not only `0x10F`. Search that window for the
+control signature `05200002`.
 
 Competing hypotheses:
 
-- H-relocation: every differing tail word is a relocated pointer and the
-  referenced command bytes match after relocation normalization.
-- H-command: at least one tail word is a command/operand whose normalized value
-  differs; it is the width-bearing producer input.
-- H-other: the tail is only a pointer table; follow the first referenced target
-  and witness that target in the same run.
+- H-shift: wide still contains `05200002` at a different offset inside the
+  `0x200` window. The RSP's `0x10F` read then misses it. The offset delta is
+  the next measurement.
+- H-fill: the signature is absent and the `0x00010001` fill covers the window.
+  Next probe is the store PC of the first `0x00010001` word (control's zero
+  and the `05200002` block are the comparison).
+- H-alias: rejected as the game bug. The 23-bit mask is only in
+  `g_e9prov.root_dl` / `[g1d-root]`. The DMA dram address is the full
+  `0x80xxxxxx` pointer. Do not "fix" the witness mask as if it were the writer.
 
-Do not add a rendering mitigation.
+Positive controls, each arm: at least 160 phase-4 joins, 400 copies, and both
+root sequences (seq1 `root_norm=0x003BD0`). The discriminator is whether
+`05200002` occurs in the wide `0x200` window.
+
+Game logs are `scratch/agent/m6/g1_lvl1_ctl/run.log` and `g1_lvl1_wide/run.log`,
+not `soak_results/s6179/*.out`. Copy the `[g1d-tail]` lines out before a
+`nomission` retry truncates `run.log`. SIGKILL the process group once the
+controls and the `0x200` dump are on disk.

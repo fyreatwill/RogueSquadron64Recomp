@@ -662,6 +662,71 @@ extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len) {
                 g_e9prov.task, rs64_e9prov_current_root_dl() & 0x7FFFFFu,
                 (unsigned)g_rs64_last_guest_pc,
                 g_rsp_dpc_start & 0x3FFFFFFu, g_rsp_dpc_end & 0x3FFFFFFu);
+            // s6196: the 0x10F command-source DMA is the first width-differing
+            // RSP read. Dump its 0x100..0x10E tail as big-endian words, plus a
+            // bounded look at pointer-shaped words, so one pair of arms can
+            // separate relocation from a width-bearing command.
+            if (mem == 0x170u && len == 0x10Fu && phys + 0x120u < 0x01000000u) {
+                static uint32_t seen = 0;
+                static uint32_t dumped = 0;
+                const uint32_t root = rs64_e9prov_current_root_dl() & 0x007FFFFFu;
+                const uint32_t rel = (phys - root) & 0x007FFFFFu;
+                const bool at_root = rel == 0u;
+                seen++;
+                if (dumped < 8u && (at_root || dumped == 0u)) {
+                    auto be_word = [&](uint32_t off) -> uint32_t {
+                        uint32_t word = 0;
+                        for (uint32_t b = 0; b < 4u; ++b)
+                            word = (word << 8) | g_rdram_for_submit[(phys + off + b) ^ 3u];
+                        return word;
+                    };
+                    uint32_t head_nz = 0;
+                    uint32_t head_hash = 2166136261u;
+                    for (uint32_t i = 0; i < 0x100u; ++i) {
+                        const uint8_t b = g_rdram_for_submit[(phys + i) ^ 3u];
+                        head_nz += b != 0u;
+                        head_hash = (head_hash * 16777619u) ^ b;
+                    }
+                    const uint32_t words[4] = {
+                        be_word(0x100u), be_word(0x104u), be_word(0x108u), be_word(0x10Cu)};
+                    std::fprintf(stderr,
+                        "[g1d-tail] phase=%u n=%u seen=%u dram=0x%08X phys=0x%06X root=0x%06X rel=0x%X "
+                        "head_nz=%u head_hash=0x%08X words=%08X,%08X,%08X,%08X bytes=",
+                        phase, dumped, seen, dram, phys, root, rel, head_nz, head_hash,
+                        words[0], words[1], words[2], words[3]);
+                    for (uint32_t i = 0x100u; i < 0x10Fu; ++i)
+                        std::fprintf(stderr, "%02X%s", g_rdram_for_submit[(phys + i) ^ 3u],
+                            i == 0x10Eu ? "" : ":");
+                    std::fprintf(stderr, "\n");
+                    if (head_nz != 0u && dumped < 2u) {
+                        std::fprintf(stderr, "[g1d-head] n=%u phys=0x%06X bytes=", dumped, phys);
+                        for (uint32_t i = 0; i < 0x100u; ++i)
+                            std::fprintf(stderr, "%02X", g_rdram_for_submit[(phys + i) ^ 3u]);
+                        std::fprintf(stderr, "\n");
+                    }
+                    if (at_root) {
+                        for (uint32_t wi = 0; wi < 4u; ++wi) {
+                            const uint32_t word = words[wi];
+                            const uint32_t tp = word & 0x00FFFFFFu;
+                            const uint32_t hi = word >> 24;
+                            if (!((hi == 0x00u || hi == 0x80u) && tp >= 0x1000u &&
+                                  tp + 64u < 0x01000000u))
+                                continue;
+                            uint32_t th = 2166136261u;
+                            std::fprintf(stderr,
+                                "[g1d-tail-tgt] n=%u wi=%u word=0x%08X phys=0x%06X bytes=",
+                                dumped, wi, word, tp);
+                            for (uint32_t i = 0; i < 64u; ++i) {
+                                const uint8_t b = g_rdram_for_submit[(tp + i) ^ 3u];
+                                th = (th * 16777619u) ^ b;
+                                std::fprintf(stderr, "%02X", b);
+                            }
+                            std::fprintf(stderr, " hash=0x%08X\n", th);
+                        }
+                    }
+                    dumped++;
+                }
+            }
             std::fflush(stderr);
         }
     }
