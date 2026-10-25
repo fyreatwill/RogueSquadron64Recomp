@@ -37829,6 +37829,10 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6203:
             changed = True
             report.append(f"{p.name}: s6203 heapclass x{_n6203}")
+        text, _n6207 = _a6031p.apply_s6207_drop(text)
+        if _n6207:
+            changed = True
+            report.append(f"{p.name}: s6207 drop x{_n6207}")
 
     if p.name == "funcs_3.c":
         import apply_s6098_dlpool as _a6098

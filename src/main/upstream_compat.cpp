@@ -41,6 +41,7 @@
 
 #include "recomp.h"
 
+extern "C" uint32_t rs64_phase_ord(void);
 extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
                                              uint32_t phys,
                                              uint32_t len,
@@ -579,7 +580,12 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     // ROGUESQ_FB_DUMP_DIR=<dir> (s5420): write the 320x224 RGBA16 fb as PPM every 1000th swap.
     static const char* s_fbd = std::getenv("ROGUESQ_FB_DUMP_DIR");
     static const int s_fbd_every = [] { const char* e = std::getenv("ROGUESQ_FB_DUMP_EVERY"); int v = e ? atoi(e) : 0; return v > 0 ? v : 500; }();
-    if (s_fbd && *s_fbd && n % s_fbd_every == 0) {
+    static const int s_fbd_phase = [] { const char* e = std::getenv("ROGUESQ_FB_DUMP_PHASE"); return (e && *e) ? std::atoi(e) : -1; }();
+    static int s_fbd_phase_left = 1;
+    const bool phase_gate = s_fbd_phase >= 0;
+    const bool phase_ok = !phase_gate || ((int)rs64_phase_ord() == s_fbd_phase && s_fbd_phase_left > 0);
+    if (s_fbd && *s_fbd && phase_ok && (phase_gate || n % s_fbd_every == 0)) {
+        if (phase_gate) --s_fbd_phase_left;
         char path[512];
         // s5486: dump at the VI line pitch (hi-res 640/1024 phases were previously cropped to 320x224).
         uint32_t stride = ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG;

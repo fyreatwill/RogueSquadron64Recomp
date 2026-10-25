@@ -92,6 +92,50 @@ def applypfm(text):
             '      if (en && n < 80) { fprintf(stderr, "[fballoc] in=%dx%d out=%dx%d p0=0x%08X/%u p1=0x%08X/%u top=0x%08X/%u/%u/%u\\n", ow, oh, (int)ctx->r6, (int)ctx->r7, U32(ctx->r13), U32(MEM_W(ctx->r13, 0)), U32(ctx->r14), U32(MEM_W(ctx->r14, 0)), U32(MEM_W(S32(0x8011 << 16), 0x63D8)), U32(MEM_W(S32(0x8011 << 16), 0x63DC)), U32(MEM_W(S32(0x8011 << 16), 0x63E0)), U32(MEM_W(S32(0x8011 << 16), 0x63E4))); fflush(stderr); ++n; } }\n')
     return text[:end] + tail + text[end:], 1
 
+def apply_s6207_drop(text):
+    if "PATCH: s6207 drop" in text:
+        return text, 0
+    helper = (
+        "/* PATCH: s6207 drop\n"
+        "   The 0x100000 path ends an image at top-0x100000. On a widened flight\n"
+        "   carve the n=3 pool starts below that (s6206: e8 = top - t0 - 0x6B000,\n"
+        "   t1+t1+t2 = 0x10000+0x10000+0x4B000). Shift only that image down by the\n"
+        "   overlap so it ends on the pool base. The upward cursor stays put, and\n"
+        "   4:3 (overlap negative, or aspect not wider) keeps the retail address. */\n"
+        "static int rs64_g1d_image_drop(void) {\n"
+        "    static int drop = -2;\n"
+        "    if (drop != -2) return drop;\n"
+        "    drop = 0;\n"
+        "    const char* as = getenv(\"ROGUESQ_ASPECT\");\n"
+        "    const char* c = as ? as : \"\";\n"
+        "    while (as && *c && *c != ':') ++c;\n"
+        "    double w = (as && *c == ':') ? atof(as) : 0.0, h = (as && *c == ':') ? atof(c + 1) : 0.0;\n"
+        "    if (as && w > 0.0 && h > 0.0 && w / h > 4.0 / 3.0 + 1e-3) {\n"
+        "        int fbw = 0; const char* fe = getenv(\"ROGUESQ_FB_WIDTH\"); if (fe && *fe) fbw = atoi(fe);\n"
+        "        if (fbw <= 0) { fbw = (int)(448.0 * w / h + 0.5); if (fbw > 1024) fbw = 1024; }\n"
+        "        uint32_t t0 = ((uint32_t)fbw * 448u * 2u + 0x3fu) & ~0x3fu;\n"
+        "        int32_t ov = (int32_t)t0 + 0x6B000 - 0x100000;\n"
+        "        if (ov > 0) drop = (int)ov;\n"
+        "        fprintf(stderr, \"[g1d-drop] aspect=%s fbw=%d t0=0x%X drop=0x%X\\n\", as, fbw, t0, (unsigned)drop);\n"
+        "    } else fprintf(stderr, \"[g1d-drop] aspect=%s drop=0\\n\", as ? as : \"<unset>\");\n"
+        "    fflush(stderr);\n"
+        "    return drop;\n"
+        "}\n"
+    )
+    anchor = "RECOMP_FUNC void partitionFramebufferMemory("
+    site = (
+        "    // 0x80000F14: subu        $v0, $a0, $v0\n"
+        "    ctx->r2 = SUB32(ctx->r4, ctx->r2);\n"
+    )
+    site_new = (
+        site +
+        "    { /* PATCH: s6207 drop */ int d = rs64_g1d_image_drop(); if (d > 0) ctx->r2 = SUB32(ctx->r2, d); }\n"
+    )
+    if text.count(anchor) != 1 or text.count(site) != 1:
+        return text, 0
+    text = text.replace(anchor, helper + anchor, 1)
+    return text.replace(site, site_new, 1), 1
+
 def apply_s6201_carve(text):
     if "PATCH: s6201 carve" in text:
         return text, 0
@@ -303,8 +347,9 @@ if __name__ == "__main__":
     t2, c = apply_s6201_carve(t2)
     t2, r = apply_s6202_retarget(t2)
     t2, h = apply_s6203_heapclass(t2)
-    if n or c or r or h: p0.write_text(t2)
-    print("funcs_0.c live patched x%d carve=%d retarget=%d heapclass=%d" % (n, c, r, h))
+    t2, d = apply_s6207_drop(t2)
+    if n or c or r or h or d: p0.write_text(t2)
+    print("funcs_0.c live patched x%d carve=%d retarget=%d heapclass=%d drop=%d" % (n, c, r, h, d))
     p3 = base / "funcs_3.c"; t = p3.read_text(); t2, k = apply_s6201_alloc(t)
     if k: p3.write_text(t2)
     print("funcs_3.c alloc=%d" % k)
