@@ -167627,3 +167627,24 @@ bounded capture end.
 ORIGIN: diagnostic-only change; no mitigation or value legitimacy claim was
 made. The next discriminator is a phase-2/3 per-frame census to catch an
 earlier producer if the intermittent corruption recurs.
+
+## Session 6178 (2026-10-25) — censused G1d title phases 2 and 3
+
+The first invocation of the s6177 census wrapper was invalid because the
+checkout's executable and ROM are under `build/`, while the shared harness
+defaulted to `build/Debug`; both arm logs were empty and no game launched. The
+wrapper was fixed to pass `BUILD=$PWD/build`, then the Debug target was rebuilt
+and the same paired control/wide census was rerun.
+
+Both arms positively fired the join and dump controls: 842 joins each, with
+thousands of framebuffer dumps. Phase 2 used only 320-wide CIs at
+0xABA000/0xADD000 in both arms; phase 3 used only 640-wide CIs at
+0x9D4000/0xA6A000 in both arms. Phase 4 remained width-consistent at 512 for
+control and 796 for wide. No aspect-specific early producer or alternate CI
+appeared, and the intermittent central corruption did not recur. This weakens
+H-early-phase but does not distinguish an in-list producer from a frame-specific
+layout event. No rendering mitigation was added.
+
+ORIGIN: the only code change was a harness path correction needed to launch the
+existing binary; no guest or renderer value was changed, and no skip/guard was
+landed.

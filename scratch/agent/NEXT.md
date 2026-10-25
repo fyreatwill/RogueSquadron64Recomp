@@ -1,34 +1,34 @@
-# NEXT: census title phases 2-3 for the intermittent wide title corruption
+# NEXT: reproduce the intermittent wide title corruption with the phase-4 census
 HYPOTHESIS-ID: g1d-widescreen
 
-s6177 closed the hidden-secondary hypothesis for phase 4: all 160 sampled
-phase-4 wide frames had exactly three repeated `796@0xB51E00` submissions and
-no alternate CI. The wide frame-408 guest dump was coherent in this capture,
-so the s6172 corruption remains intermittent.
+s6178 ran the corrected paired census successfully. The control and wide arms
+had identical phase-2/3 CI targets (320-wide phase 2; 640-wide phase 3), while
+phase 4 was consistently 512-wide control versus 796-wide wide. The bad wide
+guest framebuffer did not recur, so no writer or mitigation is justified.
 
 Competing hypotheses and discriminator:
 
-- H-early-phase: the corrupt title frame is produced in phase 2 or 3, before
-  the phase-4 stream; a complete per-swap census there will show a non-796 CI
-  or alternate target associated with the bad dump.
-- H-phase4-producer: phases 2-3 are also width-consistent, and a wide guest
-  dump is corrupt while every CI is `796@0xB51E00`; the remaining writer is
-  inside that valid game list.
-- H-intermittent-layout: all sampled CIs are width-consistent and guest dumps
-  are coherent, so the defect is frame-specific and needs a capture that
-  catches the corruption before attribution.
+- H-in-list-producer: a corrupt wide guest dump recurs while the complete
+  phase-4 census remains only `796@0xB51E00`; the defect is inside the valid
+  game-produced list or its guest framebuffer writes.
+- H-intermittent-layout: another clean wide run has only the expected CIs and
+  coherent guest dumps; the s6172 corruption is frame-specific and needs a
+  producer/layout capture that catches the event.
+- H-early-phase: an unexpected CI or target appears before phase 4 and is
+  temporally associated with a later corrupt dump; this remains possible only
+  if a future run catches such a frame, since s6178 found no aspect-specific
+  phase-2/3 target.
 
-Discriminator: use the existing per-frame CI census and per-VI dump in one
-paired control/wide run, but classify phases 2 and 3 separately. A non-796 or
-alternate-address CI selects H-early-phase; a corrupt guest dump with only
-796 CIs selects H-phase4-producer; coherent dumps with only 796 CIs selects
-H-intermittent-layout. Positive controls are the 842 join rows and the control
-phase-2/3 dumps in the same run.
+Discriminator: rerun the existing paired census unchanged. A corrupt wide
+  dump with only `796@0xB51E00` selects H-in-list-producer; a clean run with
+  the same CI census strengthens H-intermittent-layout; an alternate early CI
+  selects H-early-phase. Positive controls are the 842 joins and phase-2/3
+  control dumps in the same run.
 
 Run from the repo root:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp -j4
     zsh scratch/agent/s6177_g1d_ci_census.sh
 
-Keep the retail default unchanged. Do not add a cull or skip until a writer
-and value legitimacy are established.
+Keep the retail default unchanged. Do not add a cull, skip, or width rewrite
+until a writer and value legitimacy are established.

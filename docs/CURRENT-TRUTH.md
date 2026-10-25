@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6176 (2026-10-25).
+Compact operational handoff, maintained as of Session 6178 (2026-10-25).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -249,3 +249,13 @@ The pool IS built at 12 MB (head 0x80B20000, builder 0x80017B88 via initVideoBoo
   H-producer was not selected in this capture and s6172's intermittent
   corruption did not reproduce. The instrument is in
   `src/main/rt64_render_context.cpp`; no rendering mitigation landed.
+
+- s6178: the corrected paired census ran with 842 joins and thousands of dumps
+  in each arm. Phases 2-3 were identical in control and wide: phase 2 used
+  only 320-wide CIs at `0xABA000`/`0xADD000`, and phase 3 used only 640-wide
+  CIs at `0x9D4000`/`0xA6A000`. No aspect-specific early producer or alternate
+  CI was observed. Phase 4 remained width-consistent (512 control, 796 wide);
+  the intermittent central corruption did not recur. This weakens
+  H-early-phase and leaves H-intermittent-layout / an in-list producer open.
+  The first wrapper attempt was invalid because this checkout uses `build/`,
+  not `build/Debug`; the fixed wrapper passes `BUILD=$PWD/build`.
