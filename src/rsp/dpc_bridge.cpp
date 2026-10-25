@@ -645,6 +645,7 @@ extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len) {
         static uint32_t prefix_hits = 0;
         static uint32_t slot_hits = 0;
         static uint32_t scans = 0;
+        static int win_once = 0;
         const uint32_t phase = rs64_phase_ord();
         if (phase != phase_key) {
             phase_key = phase;
@@ -700,6 +701,53 @@ extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len) {
                     const bool stride = !exact && low >= 0x00A6AA10u &&
                         ((low - 0x00A6AA10u) & 0xFFFu) == 0u;
                     if (exact || stride) {
+                        if (phase == 4u && !win_once) {
+                            // One window per process. The 8-byte field gap is
+                            // chunk-relative, so the DMA off is not the field.
+                            win_once = 1;
+                            const uint32_t at = phys + off;
+                            uint32_t pool = 0;
+                            if (0x1163ECu <= ram_bytes) {
+                                for (uint32_t b = 0; b < 4u; ++b)
+                                    pool = (pool << 8) | g_rdram_for_submit[(0x1163E8u + b) ^ 3u];
+                            }
+                            const uint32_t at_k = 0x80000000u | at;
+                            int idx = -1;
+                            int coff = -1;
+                            if ((pool & 0xFu) == 0u && pool >= 0x80800000u && pool < 0x81000000u &&
+                                at_k >= pool) {
+                                const uint32_t rel = at_k - pool;
+                                if (rel < 0x50000u) {
+                                    idx = static_cast<int>(rel / 0x108u);
+                                    coff = static_cast<int>(rel % 0x108u);
+                                }
+                            }
+                            char pre[12 * 8], post[12 * 8];
+                            pre[0] = 0;
+                            post[0] = 0;
+                            if (at >= 0x20u && at + 0x24u <= ram_bytes) {
+                                size_t pn = 0, qn = 0;
+                                for (uint32_t i = 0; i < 8u; ++i) {
+                                    auto be_at = [&](uint32_t p) -> uint32_t {
+                                        uint32_t w = 0;
+                                        for (uint32_t b = 0; b < 4u; ++b)
+                                            w = (w << 8) | g_rdram_for_submit[(p + b) ^ 3u];
+                                        return w;
+                                    };
+                                    const uint32_t bw = be_at(at - 0x20u + i * 4u);
+                                    const uint32_t aw = be_at(at + 4u + i * 4u);
+                                    pn += static_cast<size_t>(std::snprintf(
+                                        pre + pn, sizeof(pre) - pn, "%s%08X", i ? "," : "", bw));
+                                    qn += static_cast<size_t>(std::snprintf(
+                                        post + qn, sizeof(post) - qn, "%s%08X", i ? "," : "", aw));
+                                }
+                            }
+                            std::fprintf(stderr,
+                                "[g1d-win] phase=%u word_at=0x%08X word=0x%08X pool=0x%08X "
+                                "idx=%d chunk_off=%d before=%s after=%s\n",
+                                phase, at_k, word, pool, idx, coff, pre, post);
+                            std::fflush(stderr);
+                        }
                         if (prefix_hits < 64u) {
                             ++prefix_hits;
                             emit_hit(off, word, exact ? "prefix" : "stride");
