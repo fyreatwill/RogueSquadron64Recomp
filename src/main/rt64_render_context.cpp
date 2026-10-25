@@ -1405,6 +1405,21 @@ namespace ultramodern {
                 static uint32_t s_hits = 0;
                 static uint32_t s_last_ci = 0, s_last_ti = 0;
                 static int s_logged_ci = 0;
+                // Distinct phase-4 TI addresses in [0xA6A000, 0xB00000).
+                // The 48-line hit log stays capped. Past 256 kept addresses,
+                // below-pool addresses are dropped (ov=1) but max still
+                // moves, and above-pool addresses go in the side buffer so
+                // that count stays exact until abcap.
+                static uint32_t s_ti_set[256];
+                static uint32_t s_ti_extra[256];
+                static uint32_t s_ti_n = 0;
+                static uint32_t s_ti_extra_n = 0;
+                static uint32_t s_ti_min = 0xFFFFFFFFu;
+                static uint32_t s_ti_max = 0;
+                static uint32_t s_ti_ov = 0;
+                static uint32_t s_ti_extra_ov = 0;
+                static int s_ti_saw_ctl = 0;
+                static int s_ti_saw_wide = 0;
                 if (s_img < 0) {
                     const char* e = std::getenv("ROGUESQ_LOG_G1D_TASK");
                     s_img = (e && *e && *e != '0') ? 1 : 0;
@@ -1441,6 +1456,41 @@ namespace ultramodern {
                                     (uint32_t)g_rs64_last_guest_pc, s_hits);
                                 std::fflush(stderr);
                             }
+                            if (op == 0x3D && hit) {
+                                if (addr < s_ti_min) s_ti_min = addr;
+                                if (addr > s_ti_max) s_ti_max = addr;
+                                if (addr == 0x00A6AA10u) s_ti_saw_ctl = 1;
+                                if (addr == 0x00AE5F20u) s_ti_saw_wide = 1;
+                                bool seen = false;
+                                for (uint32_t i = 0; i < s_ti_n; ++i) {
+                                    if (s_ti_set[i] == addr) { seen = true; break; }
+                                }
+                                if (!seen) {
+                                    for (uint32_t i = 0; i < s_ti_extra_n; ++i) {
+                                        if (s_ti_extra[i] == addr) { seen = true; break; }
+                                    }
+                                }
+                                if (!seen) {
+                                    if (s_ti_n < 256u) {
+                                        s_ti_set[s_ti_n++] = addr;
+                                    } else {
+                                        s_ti_ov = 1u;
+                                        uint32_t pool_now = 0;
+                                        const uint32_t ram_bytes = rs64_ram_top > 0x80000000u
+                                            ? (rs64_ram_top - 0x80000000u) : 0u;
+                                        if (0x1163ECu <= ram_bytes) {
+                                            for (uint32_t b = 0; b < 4u; ++b) {
+                                                pool_now = (pool_now << 8) | r[(0x1163E8u + b) ^ 3u];
+                                            }
+                                        }
+                                        const uint32_t pool_phys = pool_now & 0x00FFFFFFu;
+                                        if (pool_phys != 0u && addr >= pool_phys) {
+                                            if (s_ti_extra_n < 256u) s_ti_extra[s_ti_extra_n++] = addr;
+                                            else s_ti_extra_ov = 1u;
+                                        }
+                                    }
+                                }
+                            }
                         }
                         a += ncmd;
                     }
@@ -1451,6 +1501,55 @@ namespace ultramodern {
                             "[g1d-img] phase=4 subs=%u ci=%u ti=%u ci_hit=%u ti_hit=%u last_ci=0x%06X last_ti=0x%06X pc=0x%08X\n",
                             s_subs, s_ci, s_ti, s_ci_hit, s_ti_hit, s_last_ci, s_last_ti,
                             (uint32_t)g_rs64_last_guest_pc);
+                        uint32_t pool = 0;
+                        const uint32_t ram_bytes = rs64_ram_top > 0x80000000u
+                            ? (rs64_ram_top - 0x80000000u) : 0u;
+                        if (0x1163ECu <= ram_bytes) {
+                            for (uint32_t b = 0; b < 4u; ++b)
+                                pool = (pool << 8) | r[(0x1163E8u + b) ^ 3u];
+                        }
+                        const uint32_t pool_phys = pool & 0x00FFFFFFu;
+                        uint32_t above = 0;
+                        uint32_t low = 0;
+                        uint32_t listed[8];
+                        auto take_above = [&](uint32_t a) {
+                            if (pool_phys == 0u || a < pool_phys) return;
+                            if (above < 8u) listed[above] = a;
+                            if (above == 0u || a < low) low = a;
+                            ++above;
+                        };
+                        for (uint32_t i = 0; i < s_ti_n; ++i) take_above(s_ti_set[i]);
+                        for (uint32_t i = 0; i < s_ti_extra_n; ++i) take_above(s_ti_extra[i]);
+                        char addr_txt[96];
+                        addr_txt[0] = 0;
+                        if (above >= 1u && above <= 8u) {
+                            for (uint32_t i = 1; i < above; ++i) {
+                                const uint32_t v = listed[i];
+                                uint32_t j = i;
+                                while (j > 0u && listed[j - 1u] > v) {
+                                    listed[j] = listed[j - 1u];
+                                    --j;
+                                }
+                                listed[j] = v;
+                            }
+                            size_t used = 0;
+                            for (uint32_t i = 0; i < above; ++i) {
+                                used += static_cast<size_t>(std::snprintf(
+                                    addr_txt + used, sizeof(addr_txt) - used,
+                                    "%s0x%06X", i ? "," : "", listed[i]));
+                            }
+                        }
+                        const uint32_t n_known = s_ti_n + s_ti_extra_n;
+                        std::fprintf(stderr,
+                            "[g1d-ti] n=%u min=0x%06X max=0x%06X above=%u low=0x%06X ov=%u abcap=%u pool=0x%08X saw=%s%s%s%s%s%s\n",
+                            n_known, n_known ? s_ti_min : 0u, n_known ? s_ti_max : 0u,
+                            above, above ? low : 0u, s_ti_ov, s_ti_extra_ov, pool,
+                            s_ti_saw_ctl ? "0xA6AA10" : "",
+                            (s_ti_saw_ctl && s_ti_saw_wide) ? "," : "",
+                            s_ti_saw_wide ? "0xAE5F20" : "",
+                            (!s_ti_saw_ctl && !s_ti_saw_wide) ? "none" : "",
+                            addr_txt[0] ? " addrs=" : "",
+                            addr_txt);
                         std::fflush(stderr);
                         if (s_ci > 0u) s_logged_ci = 1;
                     }
