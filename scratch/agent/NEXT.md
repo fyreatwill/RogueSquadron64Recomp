@@ -1,3 +1,3 @@
-# Does the 0x25000 extra drop make the wide HUD (ammo readout) render correctly?
+# Re-capture the wide HUD (ammo readout) in both arms with an occlusion-proof capture
 HYPOTHESIS-ID: g1d-widescreen
-s6217: extra=0x25000 moves wb/memset off the TLUT gap (end 0xAC1E00). Remaining: framebuffer capture of the flight HUD in both arms (scratch/agent/s6217_run.sh arms ctl/test; add the framebuffer-dump env used by g1_level_coverage_common.zsh, level 1). Outcome A: test HUD correct, ctl corrupt -> bake total drop (t0-0x70000) as wide default in apply_s6031_far.py, regen fully. Outcome B: both corrupt -> something else in gap; check heap/pool use.
+s6218 screenshots were occluded at the bottom-right (inconclusive). Rerun scratch/agent/s6218_run.sh but replace `screencapture -x` with `screencapture -x -l<winid>` where winid comes from a CGWindowList lookup of owner "RogueSquadron64Recomp" (python3 -c with Quartz, or osascript), or raise the game window first. Outcome A: test HUD ammo correct, ctl corrupt -> bake total drop as wide default in apply_s6031_far.py, regen fully. Outcome B: both corrupt -> inspect heap/pool use in the gap.
