@@ -1,5 +1,5 @@
-# Title-art x-origin: find the DL-builder operand that yields 306 (w900)
+# G1d: verify the s6227 menu-camera fix across widths; re-test defect B
 HYPOTHESIS-ID: g1d-widescreen
-s6226: H-artifact refuted offline; grid is full 8x64 cols at 306..818 on w900, raw texrect w0=0xE45C8080 w1=0x004C8000 (x already final in the DL). Origin = (W-512)/2 + 64*W/512 exactly.
-Hypotheses: H-addend (guest computes origin as centred + a scaled 64px term, e.g. a column-count/clip constant scaled by the g1d scale patch); H-scalepatch (OUR g1d scale/fixup multiplies an x operand twice or scales a base that already includes centring -> bug in our patch; check tools/fixup_*g1d* scaling of x in the menu DL builder); H-retail-layout (retail 4:3 layout has the same +64 term that is 0 at 640 only by coincidence of a clamp).
-Discriminator: grep fixup scripts for the g1d x scaling site that touches the 2D menu texrect emitter (PC 0x80007904 neighbourhood), compute what 4:3 gives with the same formula; then lldb/log the DL word write for the first texrect (addr 0x9A1B10 w1 field) with a write-watch to name the writer function and its x operand. If our patch scales it -> fix there (H-scalepatch); if guest-only -> patch the origin operand in fixup script.
+s6227 fixed the title/select x origin (640-wide menu cams now scale W/640). Remaining: fix_01 title frame showed a garbage block left of the art and off-centre art.
+Hypotheses: H-B (defect B corrupt central rect still present, pool overlap), H-phase (fix_01 is a transitional frame, not phase 4), H-window (screencapture window aspect distorts).
+Discriminator: run w796, w900, w1024 with the fix, ROGUESQ_LOG_G1D_CMD=1, screenshots every 3 s from 15 s to 60 s; check min-x == (W-512)/2 per width (positive control: w900 gives 193) and read the title-phase frames; if garbage persists, it is defect B: check DROP_EXTRA=0x25000 arm in the same run.

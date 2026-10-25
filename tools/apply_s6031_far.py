@@ -17,7 +17,7 @@ ASP = ('    { /* PATCH: s6104 aspect */ static double k6104 = -1.0; if (k6104 < 
 VPW = ('    { /* PATCH: s6112 vpw */ static double kv = -1.0; static uint32_t sp6112[8]; static int32_t og6112[8][2]; static int nl6112, ns6112; if (kv < 0.0) { const char* e = getenv("ROGUESQ_VPW_SCALE"); kv = (e && *e) ? atof(e) : 0.0; }\n'
        '      if (nl6112 < 12 || (kv > 0.0 && (nl6112 % 600) == 0)) fprintf(stderr, "[vpw] cam %08x w %d h %d cx %d cy %d kv %g\\n", (unsigned)ctx->r17, (int)MEM_W(ctx->r17, 0X10), (int)MEM_W(ctx->r17, 0X14), (int)MEM_W(ctx->r17, 0X18), (int)MEM_W(ctx->r17, 0X1C), kv); nl6112++;\n'
        '      if (kv > 0.0) { int i, f = -1; for (i = 0; i < ns6112; i++) if (sp6112[i] == (uint32_t)ctx->r17) f = i; if (f < 0 && ns6112 < 8) { f = ns6112++; sp6112[f] = (uint32_t)ctx->r17; og6112[f][0] = (int32_t)MEM_W(ctx->r17, 0X10); og6112[f][1] = (int32_t)MEM_W(ctx->r17, 0X18); }\n'
-       '        if (f >= 0) { MEM_W(0X10, ctx->r17) = (uint32_t)(int32_t)(og6112[f][0] * kv); MEM_W(0X18, ctx->r17) = (uint32_t)(int32_t)(og6112[f][1] * kv); } } }\n')
+       '        if (f >= 0) { MEM_W(0X10, ctx->r17) = (uint32_t)(int32_t)(og6112[f][0] * kv * (og6112[f][0] == 640 ? 0.8 : 1.0)); MEM_W(0X18, ctx->r17) = (uint32_t)(int32_t)(og6112[f][1] * kv * (og6112[f][0] == 640 ? 0.8 : 1.0)); } } }\n')
 def _apply4_old(text):
     if "PATCH: s6104 aspect" in text and "PATCH: s6112 vpw" not in text:
         return text.replace(OLD, VPW + OLD, 1), 1
@@ -50,8 +50,12 @@ def applyfbw(text):
         return text, 0
     assert text.count(FBW_ANCHOR) == 1, text.count(FBW_ANCHOR)
     return text.replace(FBW_ANCHOR, "    int c1cs = 0;\n" + FBW + "    // 0x80017B88: addiu       $sp, $sp, -0x70\n", 1), 1
+old6227 = '(uint32_t)(int32_t)(og6112[f][0] * kv); MEM_W(0X18, ctx->r17) = (uint32_t)(int32_t)(og6112[f][1] * kv);'
+new6227 = '(uint32_t)(int32_t)(og6112[f][0] * kv * (og6112[f][0] == 640 ? 0.8 : 1.0)); MEM_W(0X18, ctx->r17) = (uint32_t)(int32_t)(og6112[f][1] * kv * (og6112[f][0] == 640 ? 0.8 : 1.0));'
 def apply4(text):
     text, n = _apply4_old(text)
+    if old6227 in text:
+        text = text.replace(old6227, new6227); n += 1
     text, m = applyfbw(text)
     return text, n + m
 
