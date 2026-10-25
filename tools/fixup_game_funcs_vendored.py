@@ -37792,6 +37792,10 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6031:
             changed = True
             report.append(f"{p.name}: s6031 far x{_n6031}")
+        text, _n6201p = _a6031.apply_s6201_pool(text)
+        if _n6201p:
+            changed = True
+            report.append(f"{p.name}: s6201 pool x{_n6201p}")
 
     if p.name == "funcs_0.c":
         import apply_s6031_far as _a6031p
@@ -37809,6 +37813,14 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6086:
             changed = True
             report.append(f"{p.name}: s6086 bigarena x{_n6086}")
+        text, _n6201c = _a6031p.apply_s6201_carve(text)
+        if _n6201c:
+            changed = True
+            report.append(f"{p.name}: s6201 carve x{_n6201c}")
+        text, _n6202 = _a6031p.apply_s6202_retarget(text)
+        if _n6202:
+            changed = True
+            report.append(f"{p.name}: s6202 retarget x{_n6202}")
 
     if p.name == "funcs_3.c":
         import apply_s6098_dlpool as _a6098
@@ -37816,6 +37828,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6098:
             changed = True
             report.append(f"{p.name}: s6098 dlpool x{_n6098}")
+        import apply_s6031_far as _a6201a
+        text, _n6201a = _a6201a.apply_s6201_alloc(text)
+        if _n6201a:
+            changed = True
+            report.append(f"{p.name}: s6201 alloc x{_n6201a}")
 
     if p.name == "funcs_6.c":
         import apply_s6088_bucketlog as _a6088

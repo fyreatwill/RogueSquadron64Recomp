@@ -135,6 +135,42 @@ def apply_s6201_carve(text):
     body = body.replace(ret, log + ret, 1)
     return text[:a] + body + text[b:], 1
 
+def apply_s6202_retarget(text):
+    if "PATCH: s6202 retarget" in text:
+        return text, 0
+    old = (
+        "{ MEM_W(0X63E8, ctx->r1) = ctx->r3; RS64_S5798_ST(0x80001010u, 0X63E8, ctx->r1, 4); }\n"
+        "    g1d_ptr = U32(ctx->r3); g1d_pc = 0x80001010u; /* PATCH: s6201 carve ptr */\n"
+    )
+    new = (
+        "{ MEM_W(0X63E8, ctx->r1) = ctx->r3; RS64_S5798_ST(0x80001010u, 0X63E8, ctx->r1, 4); }\n"
+        "    { /* PATCH: s6202 retarget */ static int n6202; uint32_t cur = U32(ctx->r3);\n"
+        "      if (g1d_outw != 512 && ow == 512) {\n"
+        "        uint32_t t2 = U32(ctx->r10), t3 = U32(ctx->r11), t4 = U32(ctx->r12), a1 = U32(ctx->r5);\n"
+        "        int down = (t3 >= a1 && t4 >= a1); uint32_t ec = cur - t3 - t4; uint32_t base = ec - t2;\n"
+        "        uint32_t hhead = 0, hend = 0; int crossed = 0, hok = 0;\n"
+        "        if (down && t2 >= 0x10u && (base & 0xFu) == 0u && base >= 0x80000000u && base < ec) {\n"
+        "          hhead = U32(MEM_W(S32(0x8010 << 16), 0xFF18));\n"
+        "          if (hhead >= 0x80000000u && hhead < 0x81000000u) {\n"
+        "            uint32_t a = hhead; int g = 0;\n"
+        "            while (g++ < 200000) {\n"
+        "              uint32_t w0 = U32(MEM_W(S32(a), 0)), sz = U32(MEM_W(S32(a), 4)), fl = w0 >> 16;\n"
+        "              if (g == 1 && (fl & 0xBu) == 0u) break;\n"
+        "              hend = a; hok = 1; if (a > base) crossed = 1;\n"
+        "              if (fl & 8u) break;\n"
+        "              if (sz == 0u || sz > 0x1000000u) break;\n"
+        "              uint32_t nxa = a + 0x10u + sz; if (nxa <= a || nxa >= 0x81000000u) break; a = nxa; } }\n"
+        "          if (crossed) { if (n6202 < 8) fprintf(stderr, \"[g1d-retarget] reject heap_end=0x%08X heap_head=0x%08X base=0x%08X span_end=0x%08X t2=0x%X cur=0x%08X hok=%d\\n\", hend, hhead, base, ec, t2, cur, hok); }\n"
+        "          else { MEM_W(0X63E8, ctx->r1) = (int32_t)base; if (n6202 < 8) fprintf(stderr, \"[g1d-retarget] ok base=0x%08X span_end=0x%08X t2=0x%X cur=0x%08X heap_end=0x%08X heap_head=0x%08X hok=%d\\n\", base, ec, t2, cur, hend, hhead, hok); }\n"
+        "        } else if (n6202 < 8) fprintf(stderr, \"[g1d-retarget] reject path down=%d base=0x%08X ec=0x%08X t2=0x%X t3=0x%X t4=0x%X a1=0x%X cur=0x%08X\\n\", down, base, ec, t2, t3, t4, a1, cur);\n"
+        "        ++n6202; fflush(stderr);\n"
+        "      } else if (n6202 < 8) { fprintf(stderr, \"[g1d-retarget] skip outw=%d ow=%d cur=0x%08X\\n\", g1d_outw, ow, cur); fflush(stderr); ++n6202; } }\n"
+        "    g1d_ptr = U32(MEM_W(0X63E8, ctx->r1)); g1d_pc = 0x80001010u; /* PATCH: s6201 carve ptr */\n"
+    )
+    if text.count(old) != 1:
+        return text, 0
+    return text.replace(old, new, 1), 1
+
 def apply_s6201_pool(text):
     if "PATCH: s6201 pool" in text:
         return text, 0
@@ -187,8 +223,9 @@ if __name__ == "__main__":
     print("funcs_4.c live patched x%d pool=%d" % (n, m))
     p0 = base / "funcs_0.c"; t = p0.read_text(); t2, n = applypfm(t)
     t2, c = apply_s6201_carve(t2)
-    if n or c: p0.write_text(t2)
-    print("funcs_0.c live patched x%d carve=%d" % (n, c))
+    t2, r = apply_s6202_retarget(t2)
+    if n or c or r: p0.write_text(t2)
+    print("funcs_0.c live patched x%d carve=%d retarget=%d" % (n, c, r))
     p3 = base / "funcs_3.c"; t = p3.read_text(); t2, k = apply_s6201_alloc(t)
     if k: p3.write_text(t2)
     print("funcs_3.c alloc=%d" % k)

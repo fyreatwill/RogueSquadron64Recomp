@@ -1,75 +1,56 @@
-# NEXT: retarget the phase-4 DL pool off the color images
+# NEXT: classify the heap block under the phase-4 pool
 HYPOTHESIS-ID: g1d-widescreen
 
-Session 6201 selected H-base and refuted H-size and H-not-this. Do not
-add another write hook. Do not skip, clamp, or restore the color-image
-writeback. Do not rerun `scratch/agent/soak_results/s6200/` or
-`s6201/` unless this patch changes the logged placement. Do not raise
-`osMemSize`. The overlap is top-invariant: carves with `a3!=0` end at
-`top-0x100000` because that subtract is hardcoded, and the 448-line
-stack hangs off `d8 = top-t0`.
+Session 6202 refutes H-ec-hole as "the span under ec is free." Do not
+write `0x801163E8`. Do not try a second address. Do not change `t0`,
+`d8`, `dc`, `f0`, `f4`, `f8`, or `ec`. Do not raise `osMemSize`. Do not
+skip the color-image writeback. Do not rerun the s6202 placement.
 
-Witness: `scratch/agent/soak_results/s6201/witness.txt`.
+Witness: `scratch/agent/soak_results/s6202/witness.txt`.
 
-Phase-4 `[g1d-task] data_ptr` is the chunk `beginFrameDLChunk` pops at
-PC `0x8000A9CC`. Stride `0x108` and pool n=3 bytes `0x4AF58` / arg
-`t2=0x4B000` are the same in both 12 MB arms. Carve n=3 (`a3==0`,
-store PC `0x80001010`) is the only carve that changes:
+The opt-in store at `0x80001010` computed `ec - t2` and stopped.
+Control `outw=512` skipped: `e8=0x80B25000`, phase-4 `data_ptr=0x80B2D820`,
+task-time word `+0x78 = 05200002` (`+0x28 = 00000000`). Wide
+`base=0x8096D600`, `span_end=0x809B8600` (`0x809B8600 - 0x4B000`;
+the older `0x8096D800` note is 0x200 high), rejected because the main
+heap walk reached `heap_end=0x80B95BF0` from `heap_head=0x80154690`.
+`e8` stayed `0x80AE6E00`. Task-time `+0x28` and `+0x78` on
+`0x80AEF620` are still `00010001`. `r3` was not modified, and the wide
+carve globals match s6201.
 
-- control: `outw=512 t0=0x70000 d8=0x80B90000 e8=0x80B25000`, node `0x80B2D820`
-- wide: `outw=796 t0=0xAE200 d8=0x80B51E00 e8=0x80AE6E00`, node `0x80AEF620`
+The same heap end is above the working control pool
+(`0x80B25000 < 0x80B95BF0`). "End above the address" is therefore true
+of the retail placement too. It does not say whether `0x8096D600` is a
+live block.
 
-`t0` delta = pool delta = node delta = `(796-512)*448*2` = `0x3E200`.
-Pool = `d8 - t1 - t1 - t2` with `t1=0x10000` (`d8-0x6B000`). Chunk
-indexes 132 and 190 match. Wide pool `[0xAE6E00,0xB31D58)` intersects
-the unchanged image `[0xA95C00,0xB00000)`. f0 `0xB41E00` and f4
-`0xB31E00` stay above `0xB00000`. The gap `0xB00000..d8` is `0x51E00`:
-the pool alone fits, f0+f4+pool (`0x6B000`) does not. Do not put the
-wide pool at the control address `0x80B25000` (that span runs through
-wide `d8`). Do not hardcode `0x3E200`.
-
-One opt-in patch, regeneration-safe in `tools/apply_s6031_far.py`.
-On the `0x80001010` store only, and only when this carve's outgoing
-width was rewritten (`outw != 512`, the existing `wv>0` path), overwrite
-the `0x801163E8` global with a span of length `t2`. Do not change `t0`,
-`d8`, `dc`, f0, f4, f8, or ec, and do not touch the `0x80000FFC` store.
-Read `0x80001010..0x80001084` before clobbering `r3`; patch the global
-if the register is reused. Retail `outw==512` must keep e8 `0x80B25000`.
-
-Candidate to test, recomputed from the logged registers, not from the
-constants above: `ec - t2` (the `0x801163EC` value minus `t2`, aligned
-the same way the guest aligns). On the s6201 wide numbers that is
-`[0x96D800, 0x9B8600)`, which misses d8, f0, f4, f8, ec, and the
-writebacks that end at `0xB00000`. Reject it if the main-heap end
-(the s6127 heap high-water, not the DL freelist at `0x801163B0`) is
-above that base. If the hole is occupied, log the two bounds and stop.
-That is a result. Do not guess a second address in the same run.
-
-Also extend the existing phase-4 `[g1d-task]` line in
-`src/main/main.cpp` (`rs64_run_lle_gfx`) to print the big-endian words
-at `data_ptr+0x28` and `data_ptr+0x78`, still gated on
-`ROGUESQ_LOG_G1D_TASK`, first rows only. The fill is what the RSP sees
-at task time. An alloc-time read is not a pass: the image pixels are
-already there before the chunk is popped.
+One new log line, same site, no store. When `ROGUESQ_LOG_G1D_TASK=1`
+and this carve would have considered the retarget, walk the main heap
+from `0x8010FF18` and print the one block whose span covers
+`0x80B25000` and the one whose span covers `0x8096D600`:
+`addr`, `flags`, `tag`, `size`, and whether the two addresses are the
+same block. Print it for both arms. A missing line is a blind hook.
 
 Build once:
 `env DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --target RogueSquadron64Recomp`
 
-Then the s6201 recipe, sequential, from `build/`, SIGKILL, screen
+Then the s6202 recipe, sequential, from `build/`, SIGKILL, screen
 unlocked, one game at a time:
 `ROGUESQ_OSMEM_MB=12 ROGUESQ_LOG_G1D_TASK=1 ROGUESQ_LOG_PHASE=1`
 `ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1`
 `ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1`
 with `ROGUESQ_ASPECT=4:3` then `16:9`. Do not pass `ROGUESQ_FB_WIDTH`.
 
-Pass: control e8 stays `0x80B25000`, data_ptr stays `0x80B2D820`, and
-the task-time word at +0x78 is `05200002`. Wide data_ptr lies inside
-the new span, outside every `[g1d-carve]` image (`d8`/`dc` of n=0..3
-and the spans that end at `top-0x100000`), +0x28 is not `00010001`,
-and +0x78 is `05200002`. A null `[g1d-carve]` / `[g1d-alloc]` /
-`[g1d-task]` line is a blind hook: fix it and rerun.
+- H-live: the candidate address is in a used block (flag 2) and the
+  control pool address is not that block. The reject stands. Do not
+  retarget there.
+- H-free: both addresses fall in one free block (flag 1). The end test
+  was coarser than occupancy. The same `ec-t2` candidate is still the
+  only address in play; a later iteration may retry it only with a
+  flag test in place of the end test.
+- H-early: the control pool address is already inside a used block at
+  this moment, same as the candidate. The walk is too early to name
+  the retail reservation. Next witness is the same two addresses after
+  `[g1d-pool] n=3`, not a new base.
 
-If the wide address misses the images but +0x78 is not `05200002`,
-stop. That selects the phase-3 `swl` at `0x8000D5A8` (it still writes
-`0xB2D898` and does not retarget a moved node). Do not add a writeback
-hook for that outcome.
+Control must still show `w78=05200002` at `data_ptr=0x80B2D820`. Wide
+`e8` must stay `0x80AE6E00`.
