@@ -96,7 +96,7 @@ autopilot win are owner playtest scope.
    on lvl1-5,7,8 but no level end was shown driven by them (s5997).
 4. **Parked, do not revive without new evidence:** G4 crash hunting (all 19 levels + hangar route
    clean, s5999-s6082); G3 hangar artifacts; M4 accumulator; title plume `si_addr=0x58`.
-5. **C-patch pipeline qualified (s6269); s6270 300 s holds with the patched binary: lvl11 and lvl14 CLEAN (s6271 fold), lvl18 CLEAN (s6270 soak rc=0); s6271_plume_title16_patched was a BROKEN RECIPE (bash vs zsh, no game ran, NO DATA — superseded: its 'clean' expectation was never earned); refixed as s6272_plume_attach16_patched (lldb attach + SIGSEGV control; require control=PASS) queued** (side-effect check only, not a G4 sweep). Fold the SOAK-RESULTS verdicts first; crash -> backtrace + root cause. Any new patch needs its target in tools/weaken_patched_funcs.py PATCH_WEAKEN and a two-arm qualification.
+5. **C-patch pipeline qualified (s6269); s6270 300 s holds with the patched binary: lvl11 and lvl14 CLEAN (s6271 fold), lvl18 CLEAN (s6270 soak rc=0); s6271_plume_title16_patched was a BROKEN RECIPE (bash vs zsh, no game ran, NO DATA — superseded: its 'clean' expectation was never earned); refixed as s6272_plume_attach16_patched, FOLDED s6273: control=PASS, titles 16/16, bad=0 (plume did not recur; parked)** (side-effect check only, not a G4 sweep). Fold the SOAK-RESULTS verdicts first; crash -> backtrace + root cause. Any new patch needs its target in tools/weaken_patched_funcs.py PATCH_WEAKEN and a two-arm qualification.
 6. Optional: real-input lv0 human play.
 
 ### Settled results worth keeping (from the archived backlog)

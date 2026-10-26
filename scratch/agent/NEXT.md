@@ -1,4 +1,3 @@
-# Fold s6272 plume attach verdict (patched build), then pick the next unclosed rung
-HYPOTHESIS-ID: m6-endurance-patched-build
-Read the s6272_plume_attach16_patched line in SOAK-RESULTS.md and scratch/agent/soak_results/s6272_attach_patched/summary. Require control=PASS (injected SIGSEGV caught) else it is a tooling null. titles=N/16 bad=0 with control PASS is clean. Any STOP/BREADCRUMB -> read run<r>.lldb backtrace, name writer, root-cause fix. If clean, next rung: a concrete game bug needing a C patch (add target to tools/weaken_patched_funcs.py PATCH_WEAKEN, two-arm qualify as s6269) or G3 render fidelity.
-(s6271 was a broken recipe — no data; see PORTING-STATE s6272.)
+# G1d title garbage rect: H-up167 byte compare
+HYPOTHESIS-ID: g1d-title-garbage-rect
+s6272 plume loop closed clean (16/16, control PASS). Next unclosed rung: widescreen title backdrop garbage rect (CURRENT-TRUTH item 1, s6234). Log LoadTile RDRAM source/dxt/tmem offset for up_167 (h98bb35b7e7c80445) at upload and compare RDRAM bytes vs uploaded bytes. Outcomes: equal -> RT64 sampling/tile mapping (H-cache); differ -> upload path (LoadBlock dxt). Include a force-mark positive control. Owner-optional; if it needs more than one iteration, park.
