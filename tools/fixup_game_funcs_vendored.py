@@ -37853,6 +37853,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s6285 topup x{_n6285}")
 
+    if p.name in ("funcs_3.c", "funcs_4.c"):
+        import apply_s6287_ppcount as _a6287
+        text, _n6287 = _a6287.apply(text)
+        if _n6287:
+            changed = True
+            report.append(f"{p.name}: s6287 ppcount x{_n6287}")
+
     if p.name == "funcs_6.c":
         import apply_s6088_bucketlog as _a6088
         text, _n6088 = _a6088.apply6(text)
@@ -41779,6 +41786,7 @@ RS64_REPLAY = [
     "apply_s6086_bigarena.py",
     "apply_s6088_bucketlog.py",
     "apply_s6098_dlpool.py",
+    "apply_s6287_ppcount.py",
     "apply_s6038_cellprobe.py",
     "apply_s6043_tblwatch.py",
     "apply_s6144_fpx.py",

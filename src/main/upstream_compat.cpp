@@ -2512,10 +2512,12 @@ extern "C" uint32_t rs64_s6091_scale(uint32_t v) {
 static unsigned long s_s6093_cnt[8];
 extern "C" void rs64_s6096_skip(uint32_t r16, uint32_t off) { ++s_s6093_cnt[6]; static int n = 0; if (n++ < 12) std::fprintf(stderr, "[bucketlog] s6096 guard-skip r16=%08X s1off=%u\n", r16, off); }
 extern "C" void rs64_s6097_inline(uint32_t nb, uint32_t heads, uint32_t ent, uint32_t bad) { static unsigned long nt = 0; ++nt; if (nt <= 6 || nt % 100 == 0) std::fprintf(stderr, "[bucketlog] s6097 inline tick#%lu nb=%u heads=%u ent=%u oob=%u\n", nt, nb, heads, ent, bad); }
+static void rs64_s6287_flush(unsigned long begin, uint32_t len);
 extern "C" int rs64_s6098_en(void) { static const int on = [] { const char* e = std::getenv("ROGUESQ_DLPOOLLOG"); return (e && e[0] && e[0] != '0') ? 1 : 0; }(); return on; }
 extern "C" void rs64_s6098(int kind, uint32_t len, uint32_t tail, uint32_t ra) {  /* s6098: DL-chunk cache length at begin(0)/reclaim(1) entry */
     static unsigned long calls[2], zero[2]; static uint32_t minlen = 0xFFFFFFFFu, maxlen = 0, first = 0xFFFFFFFFu, last = 0; static unsigned long grew = 0;
     ++calls[kind & 1]; if (len == 0) ++zero[kind & 1];
+    if (kind == 0) rs64_s6287_flush(calls[0], len);
     { static uint32_t pl = 0xFFFFFFFFu; static std::map<uint32_t, std::pair<unsigned long, unsigned long>> by; /* ra -> (calls, chunks consumed) */
       if (kind == 0) { auto& e = by[ra]; ++e.first; if (pl != 0xFFFFFFFFu && pl > len) e.second += pl - len; pl = len; }
       if (kind == 0 && calls[0] % 1000 == 0) { std::fprintf(stderr, "[dlpool-ra] begin#%lu len=%u:", calls[0], len); for (auto& kv : by) std::fprintf(stderr, " ra=%08X n=%lu cons=%lu;", kv.first, kv.second.first, kv.second.second); std::fprintf(stderr, "\n"); } }
@@ -2525,6 +2527,19 @@ extern "C" void rs64_s6098(int kind, uint32_t len, uint32_t tail, uint32_t ra) {
     unsigned long n = calls[0] + calls[1];
     if (n <= 3 || newmin || (kind == 0 && len == 0 && zero[0] <= 20) || n % 2000 == 0)
         std::fprintf(stderr, "[dlpool] kind=%s len=%u tail=%08X begin=%lu reclaim=%lu empty_b=%lu empty_r=%lu first=%u min=%u max=%u grew=%lu\n", kind ? "reclaim" : "begin", len, tail, calls[0], calls[1], zero[0], zero[1], first, minlen, maxlen, grew);
+}
+static int s_s6287_on = -1; static std::map<uint32_t, unsigned long> s_s6287_pc[2];  /* s6287: per-begin-frame push(1)/pop(0) counts by guest pc at the DL-chunk cache head */
+extern "C" void rs64_s6287(int kind, uint32_t pc) { if (s_s6287_on < 0) { const char* e = std::getenv("ROGUESQ_PPLOG"); s_s6287_on = (e && e[0] && e[0] != '0') ? 1 : 0; } if (s_s6287_on) ++s_s6287_pc[kind & 1][pc]; }
+static void rs64_s6287_flush(unsigned long begin, uint32_t len) {
+    if (s_s6287_on <= 0) return;
+    static const unsigned long lo = [] { const char* e = std::getenv("ROGUESQ_PPLOG_LO"); return e ? (unsigned long)std::atol(e) : 38ul; }();
+    static const unsigned long hi = [] { const char* e = std::getenv("ROGUESQ_PPLOG_HI"); return e ? (unsigned long)std::atol(e) : 48ul; }();
+    if (begin >= lo && begin <= hi) {
+        unsigned long tp = 0, tq = 0; for (auto& kv : s_s6287_pc[0]) tp += kv.second; for (auto& kv : s_s6287_pc[1]) tq += kv.second;
+        std::fprintf(stderr, "[ppcount] frame_before_begin#%lu len_at_begin=%u pops=%lu pushes=%lu\n", begin, len, tp, tq);
+        for (int k = 0; k < 2; ++k) { std::fprintf(stderr, "[ppcount]   %s:", k ? "push" : "pop"); int c = 0; for (auto& kv : s_s6287_pc[k]) if (kv.second >= 3 && c++ < 40) std::fprintf(stderr, " %08X=%lu", kv.first, kv.second); std::fprintf(stderr, "\n"); }
+    }
+    s_s6287_pc[0].clear(); s_s6287_pc[1].clear();
 }
 extern "C" int rs64_s6099_en(void) { static const int on = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX"); return (e && e[0] && e[0] != '0') ? 1 : 0; }(); return on; }
 static int s_s6286_armed = 0;  /* s6286: per-site grows must not touch the cache before beginFrameDLChunk has seen it initialised (topup at 0x80001F88 broke boot) */
