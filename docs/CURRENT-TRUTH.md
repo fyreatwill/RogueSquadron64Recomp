@@ -156,3 +156,4 @@ Default stays retail 4:3. Opt-in levers: `ROGUESQ_ASPECT=<w>:<h>` (derives FB_WI
 
 - s6249: G1d wide-title: RI_CLEAR (pre-read-in memset) cuts texrect-skip residual only 0.174->0.132; H-readin minor. Open: H-bg-wrap, fill-rect residual. See NEXT.md.
 - s6250: bboxR ph4 garbage-region texrects are 8-22 px glyph-like rects, no >512 S span (single-source, 600-line cap) -> H-bg-wrap unsupported. Open: fill-rect residual (NEXT.md).
+- s6251: wide-title ph4 lower-band residual: texrect-all 0.132 -> fill+texrect-all 0.050, so fill ops paint ~0.08 (single-source). skip-all arm reads 1.0 (invalid control). Open: remaining 0.05 (try fill+texrect+tri-all csv, log fill rects with colour).
