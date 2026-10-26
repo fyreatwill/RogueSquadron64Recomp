@@ -168916,3 +168916,12 @@ Discrimination (checkpoint close-out): this session narrows the G3c(a) fade-ring
 
 ## Session 6312 (2026-10-26) — s6311 soak was never queued; recipe written and queued
 The s6311 entry said "soak queued" but no recipe existed in soak_queue/ or done/; scratch/agent/m6/s6311_g3c held an empty pos.runner.log and g1_lvl1s6311_pos a ~60 s manual run with 0 [edgepos] lines (that run had no ROGUESQ_G3C_POSLOG, so the zero is not a null: no positive control). build/RogueSquadron64Recomp (15:58) contains the edgepos/EDGE_FADE_TEST strings. Wrote scratch/agent/soak_queue/s6311_g3c_edgefade.sh (arms pos = POSLOG, test02 = POSLOG + RGB x0.2, level 1, 90 s hold, FB dumps). No result yet; loop will fold it. Rules out nothing.
+
+## Session 6313 (2026-10-26) — s6311 edgefade soak folded: positive control NEGATIVE, a0 spacing says Vtx colour
+
+Soak s6311_g3c_edgefade ran (rc=0, arms pos/test02, 130 s holds, 0 crashes, 1506/1516 FB dumps). Log file in soak_results was empty; real data in scratch/agent/m6/g1_lvl1s6311_{pos,test02}.
+- Positive control (RGB x0.2 on a0 bytes at 0x8004B644 epilogue): terrain-band mean brightness over 20 sampled dumps pos=109.9 vs test02=106.3. A real x0.2 would drop it ~5x. => NEGATIVE: the scaled bytes do not reach the rendered terrain (or are overwritten later). Edgefade as built cannot fade anything.
+- [edgepos]: 4015/4102 lines; x 7..31, y -1..2.5, z 33..61 (cell/grid-scale units, not obviously camera-relative); note rgb printed is PRE-scale so test02 log cannot show the hook applied.
+- Static: buildGridCellMesh (0x8004B930) calls 0x8004B644 with a0 = $s3+0x10,+0x14,+0x18,... (4-byte slots), and the logged a0 values step 0x10 between calls (0x802DB44C,..45C) with low nibble 0xC = Vtx colour offset. So a0 may be Vtx RGBA inside the cell mesh, yet is not what RT64 draws: suspect a later overwrite/copy (ORIGIN not yet named) or a per-cell cache built before the hook window.
+ORIGIN: no mitigation added; this is a negative instrument result.
+Next: find stores to $s3-relative / Vtx colour after the jal sites in buildGridCellMesh (0x8004BCA0..0x8004BFF4) and any later colour copy; re-run a positive control there.
