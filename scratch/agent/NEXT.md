@@ -1,5 +1,4 @@
-# Next: G3c(a) far-edge treatment - fade/clip outermost cell ring at dd>1
+# Next: read s6306 edgedrop soak (G3c a)
 HYPOTHESIS-ID: g3c-owner-visual
-s6305: forced fog is flat across depth at dd3 (0.25/0.27/0.27) -> no distance ramp; edge = footprint trapezoid (with s6303 78 vs 29 cells). H-fade refuted.
-Unit: in tools/fixup_*.py (find the buildGridCellMesh/cell-radius test from s6303), add opt-in (ROGUESQ_EDGE_FADE) treatment: drop or vertex-alpha-ramp the outermost N cell rings at dd>1. Build once, run dd3 fixed camera lvl1 with edge fade on/off in one queued soak (two arms), capture fb frames; compare edge stair-step visually and via row-wise terrain-boundary roughness. Positive control: ring-drop of 3 rings must visibly shrink the footprint.
-Also ask owner re ROGUESQ_CULL_SPIKE default (G3c b).
+Fold scratch/agent/SOAK-RESULTS.md s6306_g3c_edgedrop lines. Score fb dumps in scratch/agent/m6/s6306_g3c with tools/g3c_edge_score.py / g3c_horizon_score.py: terrain fraction + row-wise boundary roughness per arm (dd3_none vs drop100 vs drop30); grep [celltest] d2 range from the logs to sanity-check thresholds.
+Outcomes: drop30 shrinks footprint -> hook controls the edge; choose threshold fading/ring and compare roughness. No change in any arm -> hook is near-ring only; move to footprint planes (0x80043918 corner vector) or vertex alpha. Then ask owner re ROGUESQ_CULL_SPIKE default (G3c b).

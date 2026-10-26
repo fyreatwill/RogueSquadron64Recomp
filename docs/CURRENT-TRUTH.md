@@ -87,6 +87,7 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog; per-session history archived in PROJECT-OVERVIEW.md, "Archived CURRENT-TRUTH backlog")
+- s6306 (G3c a): built opt-in ROGUESQ_EDGE_DROP_D2 (tools/apply_s6303_celltest.py) and queued 3-arm dd3 soak s6306_g3c_edgedrop; result pending (NEXT.md).
 - s6305 (G3c a): forced fog at dd3 is flat across depth (far/mid/near magenta 0.25/0.27/0.27; nofog ~0, retail 0.01/0.02/0.03) -> no distance haze ramp; H-fade refuted, far edge = footprint trapezoid (s6303). Next: opt-in edge-ring fade in a fixup script (NEXT.md). Single-source.
 
 - **s6289 corrects s6288 5j:** the dd3 `+128 chunks at 80E00000` alloc is NOT from the finder-grow (zero `[finder-grow]`/`[s6289-real]` lines in 10 failing logs; finder C-patch not live, it is in PATCH_WEAKEN). Culprit is another grow site (begin/b030/topup); `ra` in `[dlpoolx]` is always 0 so tag sites by constant. Parked behind G3c.
