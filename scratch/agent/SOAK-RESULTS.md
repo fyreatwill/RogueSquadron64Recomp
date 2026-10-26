@@ -1169,3 +1169,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261026-<manual> | s6290_g3c_retail | rc=0 | 200s hold | scratch/agent/m6/g1_lvl1s6290_g3c_retail/run.log; folded s6292, g3c alternation=0.395, positive control=12528, crash=0
 20261026-<manual> | s6290_g3c_wide | rc=0 | 200s hold | scratch/agent/m6/g1_lvl1s6290_g3c_wide/run.log; folded s6292, g3c alternation=0.384, positive control=12132, crash=0
 20261026-140420 | s6293_g3c_edge_arms | rc=0 | 216s | scratch/agent/soak_results/s6293_g3c_edge_arms_20261026-140420.log
+20261026-145637 | s6297_g3c_aspect_fbw | rc=0 | 213s | scratch/agent/soak_results/s6297_g3c_aspect_fbw_20261026-145637.log

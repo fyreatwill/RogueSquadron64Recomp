@@ -210,3 +210,5 @@ Default stays retail 4:3. Opt-in levers: `ROGUESQ_ASPECT=<w>:<h>` (derives FB_WI
 - s6279 (VOID, see 5b): the identical-crash 'exoneration' compared two arms that both crashed inside the buggy wrapper.
 
 - s6297: s6293 aspect/dd3_aspect edge scores are VOID (dump decoded 1024-wide VI as 512, fixed via ROGUESQ_FB_WIDTH=1024). Corrected aspect edge_excess_med=-0.0026 vs retail 0.0212: H-aspect unsupported. dd3_aspect not yet rescored.
+
+- s6299 G3c(a): tools/g3c_horizon_score.py; jump_med retail .281 / dd3 .317 / aspect .394 / dd3_aspect .400 (matched-frame aspect-retail +.111, dd3-retail +.023); hole metric void (water=sky colour). Single-source, aspect-confounded. Next: G3c(b) spikes (NEXT.md).

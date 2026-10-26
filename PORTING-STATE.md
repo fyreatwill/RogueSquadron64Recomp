@@ -168831,3 +168831,10 @@ Visual (fb_0004059_w1024, single frame): terrain far ridge on the right ends in 
 Rules out: the edge scorer as a discriminator (void for G3c(a)); H-aspect alone (s6297). Single-source (one frame).
 ORIGIN: diagnostic only.
 Next: horizon-profile scorer (per-column topmost terrain row, count of row jumps > N px and interior sky holes) over retail/dd2/dd3/aspect/dd3_aspect dumps (existing dd2/dd3/retail dumps are 512-wide and valid), then pick the arm that owns the stair-step.
+
+## Session 6299 (2026-10-26) — G3c(a) horizon-profile scorer: dd alone ≈ retail, aspect arms score higher jump, hole metric void
+Ran: new tools/g3c_horizon_score.py (per-column topmost terrain row, 128 bins; jump = fraction of adjacent bins with >1.5% height step; hole = sky-coloured px below horizon). Stride-8 over s6293 retail/dd2/dd3 (512 wide) and s6297 aspect/dd3_aspect (1024 wide). Positive control: terrain columns found on every scored frame (cols_med 52-110) and dd3_aspect fb_0004059 scores jump 0.47 (above all arm medians).
+Result: jump_med retail 0.281, dd2 0.264, dd3 0.317, aspect 0.394, dd3_aspect 0.400. Frame-number-matched (every 24th dump): aspect-retail +0.111 (73% of 268 pairs >0), dd3-retail +0.023 (41%), dd3_aspect-dd3 +0.042 (61%). hole metric is VOID: retail already 0.33 because water/blue terrain is classed as sky (colour rule cannot separate them).
+Reading: dd3 alone does not own the stair-step; aspect arms score higher but the effect is inconsistent (+0.111 vs +0.042) and confounded by 1024-wide dumps and a different camera FOV/content. Single-source; not a root cause. Rules out: dd-only (haze not scaled with draw distance) as sufficient. Does NOT yet prove aspect owns it.
+ORIGIN: diagnostic tool only; no game behaviour mitigated.
+Next: a cheap visual contact sheet of matched-frame retail vs aspect horizon crops for owner eyeball is lower value than moving on; take G3c(b) spikes (H-rsp-emu reference check) next, return to (a) with a vertex-level probe of the footprint cell include only if (b) leaves time.

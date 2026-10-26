@@ -1,4 +1,5 @@
-# Next: G3c(a) horizon-profile scorer across arms
+# Next: G3c(b) knife spikes - reopen H-rsp-emu vs H-retail
 HYPOTHESIS-ID: g3c-owner-visual
-Write tools/g3c_horizon_score.py: per column topmost terrain-coloured row in mission frames; metrics = mean |row jump| between adjacent columns above a smoothness floor, and interior sky-hole pixel count below the horizon. Positive control: dd3_aspect frame fb_0004059_w1024 (scratch/agent/m6/g1_lvl1s6297_dd3_aspect/fbd) must score high. Run on g1_lvl1s6293_{retail,dd2,dd3} and g1_lvl1s6297_{aspect,dd3_aspect}. Arm with high jumps/holes that retail lacks owns the defect -> then root-cause (cell footprint boundary / missing cell link) with a writer named.
-Then G3c(b) spikes.
+Competing: H-rsp-emu (our LLE RSP F5 clip path differs from hardware: VRCP/VRCPH/VRCPL, VMULF/VMACF rounding, VCH/VCL/VCR flags) vs H-retail (retail also draws wedges).
+Discriminator: take a logged wedge (G3b s6081-s6085 logs; grep PORTING-STATE for 'spike') and replay its exact vertex/matrix inputs through an independent RSP vector-op reference (python model of VRCP/VRCPL/VRCPH/VRSQ per ares) and compare to our RSP output; independent check = tools/oracle retail run if reaching that level is feasible. Positive control: a known-good vertex must match.
+(a) status: s6299 scorer ambiguous (aspect jump +0.11 vs retail, dd3 ~0); revisit with vertex-level probe only after (b).
