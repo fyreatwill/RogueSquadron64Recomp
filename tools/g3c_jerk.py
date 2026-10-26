@@ -10,8 +10,8 @@ import re, sys, math, statistics as st
 def parse(path):
     rows = []
     for ln in open(path, errors='replace'):
-        m = re.match(r'\[g3c\] vi=(\d+) t=([\d.]+) tasks=(\d+) cam=(\S+) pl=(\S+)', ln)
-        if m:
+        m = re.match(r'\[g3c\] vi=(\d+) t=([\d.]+) tasks=(\d+) cam=([-+0-9.eEinfa,]+) pl=([-+0-9.eEinfa,]+)', ln)
+        if m and m[4].count(',') == 15 and m[5].count(',') == 11 and '' not in m[4].split(',') + m[5].split(','):
             rows.append((int(m[1]), float(m[2]), int(m[3]),
                          [float(x) for x in m[4].split(',')], [float(x) for x in m[5].split(',')]))
     return rows
