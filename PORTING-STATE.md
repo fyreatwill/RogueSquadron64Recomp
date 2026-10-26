@@ -168824,3 +168824,10 @@ Ran: inspected s6293 aspect/dd3_aspect framebuffer dumps; they were visibly scra
 Result: H-aspect (frustum widening exposes the edge) is NOT supported; the aspect arm shows no more edge than retail in a correctly decoded frame. All s6293 aspect and dd3_aspect scores are void; dd2/dd3 (512-wide) arms were unaffected. Single-source (scorer on runtime framebuffer); the owner-visible jagged edge remains unexplained and may be retail-like (H-bare) or specific to dd3+aspect (not re-scored).
 ORIGIN: tooling fix to a diagnostic dump; no mitigation of game behaviour.
 Next: rerun dd3_aspect with ROGUESQ_FB_WIDTH=1024 and view a contact sheet; then vertex-ramp probe per NEXT.md if an edge remains.
+
+## Session 6298 (2026-10-26) — dd3+21:9 rescored with fixed dump: scorer flat, but frame shows stair-step edge and missing cells
+Ran: dd3_aspect arm (DD_UNSAFE, DRAW_DISTANCE=3, ASPECT=21:9, OSMEM 12, ROGUESQ_FB_WIDTH=1024), level 1, 202 s hold, alive, 0 VI stalls, 0 crash lines, 2114 dumps, scorer control PASS. edge_excess_med=0.0239 (retail 0.0212, aspect-only -0.0026): the outer-12.5% terrain-fraction scorer does NOT separate arms.
+Visual (fb_0004059_w1024, single frame): terrain far ridge on the right ends in blocky stair-steps against sky (~y 265-295), and a sky-coloured cell hole sits in the near terrain bottom-centre. So the owner's "blocky edge" is real in dd3+aspect, and the scorer measures the wrong thing (terrain fraction by column cannot see a stair-stepped ridge profile or interior holes). No retail frame of comparable camera yet.
+Rules out: the edge scorer as a discriminator (void for G3c(a)); H-aspect alone (s6297). Single-source (one frame).
+ORIGIN: diagnostic only.
+Next: horizon-profile scorer (per-column topmost terrain row, count of row jumps > N px and interior sky holes) over retail/dd2/dd3/aspect/dd3_aspect dumps (existing dd2/dd3/retail dumps are 512-wide and valid), then pick the arm that owns the stair-step.
