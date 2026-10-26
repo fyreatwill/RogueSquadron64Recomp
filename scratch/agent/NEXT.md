@@ -1,25 +1,30 @@
-# Next: discriminate the jagged far-terrain edge with one fixed-camera arm table
+# Next: name the terrain-edge writer before proposing a fix
 HYPOTHESIS-ID: g3c-owner-visual
 
-Completed this unit (s6292): `tools/g3c_jerk.py` on all four phase-gated arms. Retail
-sign-alternation=0.395, FPS60=0.625, wide=0.384, FPS60+wide=0.632; each arm had
-thousands of `[g3c]` records and zero crash markers. This selects H-fps60 for the
-turn shake; aspect alone is not causal. The next G3c defect is the blocky
-far-terrain edge.
+Completed s6293: the five-arm edge table passed controls and produced an
+aspect-only lead, but retail's transient p90 and the shared framebuffer source
+make H-aspect provisional. Do not rerun the same arm table.
 
-Before building, write the competing hypotheses and discriminator into the session
-ledger: H-fade (haze/fog end is not scaled with draw distance), H-radius (terrain
-visibility radius exposes a grid boundary), H-aspect (wide frustum exposes a side
-edge), and H-retail (the edge is present at retail). Build one instrument carrying
-the fixed-camera framebuffer dump/scorer and run retail, DD2, DD3, ASPECT, and
-DD3+ASPECT arms in the same phase-gated recipe. The discriminating measurement is
-the outer-edge pixel profile against the haze colour: retail edge absent + DD-only
-edge selects H-fade/H-radius; wide-only edge selects H-aspect; edge present in
-retail selects H-retail. Positive control: terrain scorer must report nonzero
-terrain fraction and every arm must produce a framebuffer dump.
+One bounded work unit: static-enumerate the terrain visibility/fog writers that
+can differ under `ROGUESQ_DRAW_DISTANCE` or `ROGUESQ_ASPECT`, then instrument
+only the highest-ranked candidate in one phase-gated build/run. Competing
+hypotheses are H-aspect (frustum/viewport widening exposes a side boundary),
+H-radius (terrain patch visibility radius is extended or mis-scaled), H-fade
+(fog/haze end remains retail while terrain is extended), and H-retail (the
+boundary is legitimate). The discriminator is the candidate's guest value and
+writer PC in retail versus one changed arm: an aspect-only change with unchanged
+radius/fog values selects H-aspect; changed radius with unchanged fog selects
+H-radius; changed fog end/start selects H-fade; identical values and a retail
+matching edge select H-retail. Positive controls: the candidate log must fire in
+retail and opt-in flight phases, and the framebuffer edge scorer must remain
+nonzero in both arms.
 
-Exact commands: create the five-arm recipe under `scratch/agent/soak_queue/`,
-run it from the repo root with the existing level-1 fixed-camera route, then use
-`python3 -I tools/g1c_fixed_score.py <run-dir>` and a contact sheet. Keep the
-default retail settings unchanged. If the edge measurement is positive, name the
-writer/constant before proposing a fog or outer-ring fix.
+Static commands:
+
+    rg -n "0x80132DB0|0x80132DB4|0x80132DB8|0x80132DBC|fog|Fog|far|radius|DRAW_DISTANCE|ASPECT_SCALE|guPerspective" tools src RecompiledPatches
+    rg -n "setObjectDetailLevel|selectMeshLodAndSubmitForRender|terrain|visibility" RecompiledFuncs/funcs_*.c tools/fixup_game_funcs*.py
+
+Then add one env-gated log at the highest-confidence generated writer/fixup
+site, rebuild the normal target, and run retail plus `ROGUESQ_ASPECT=21:9
+ROGUESQ_OSMEM_MB=12` in one phase-gated recipe. Record the writer PC, value,
+and arm table; do not add a fog/radius mitigation in this unit.

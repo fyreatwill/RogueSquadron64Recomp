@@ -168729,3 +168729,29 @@ with or without wide. It does not identify the exact camera writer, and the
 comparison is single-instrument evidence rather than an independent reference.
 The next G3c unit is a fixed-camera retail/DD/ASPECT terrain-edge arm table;
 spikes-reference work follows it.
+## Session 6293 (2026-10-26) — G3c terrain-edge arm table leaves an aspect lead
+
+Ran the five-arm fixed-camera level-1 route after fixing two zsh harness issues
+(the first attempt launched no game because `status` is readonly; the second
+attempt's command-substitution PIDs were not children; the final harness used a
+global PID array). Arms were retail, `DRAW_DISTANCE=2`, unsafe
+`DRAW_DISTANCE=3`, `ASPECT=21:9`, and unsafe DD3+21:9. All five reached mission
+in 7 s, held about 205 s, produced 513-673 phase-gated VI framebuffer dumps,
+and had nonzero terrain controls, alive-at-end=1, zero VI stalls, and zero crash
+lines. `tools/g3c_edge_score.py` reported edge excess (outer 12.5% terrain minus
+center 50%) medians: retail 0.0212, DD2 -0.0000, DD3 -0.0043, aspect 0.0354,
+DD3+aspect 0.0344; all scorer controls passed. Contact sheets of late mission
+frames visibly show the blocky terrain boundary in the opt-in arms.
+
+Discrimination: the aspect-only and DD3+aspect medians are the strongest signal,
+so H-aspect is the current lead; DD2 does not reproduce it and the retail p90
+0.2502 shows transient edge pixels, so H-retail is not cleanly selected and
+H-fade/H-radius remain unresolved. The scorer and contact sheets are two views
+of the same runtime framebuffer, not an independent retail witness; no writer or
+constant was named and no mitigation was added.
+ORIGIN: diagnostic-only framebuffer measurement; no mitigation or value rewrite.
+Next: static-enumerate the aspect/draw-distance terrain and fog/radius writers,
+then add one phase-gated writer/value log for the highest-ranked candidate. The
+next instrument must distinguish a frustum/aspect edge from a terrain-radius or
+fog-end edge in one run, with a retail positive control and an opt-in changed
+control.
