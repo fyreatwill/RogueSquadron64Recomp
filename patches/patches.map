@@ -18,6 +18,14 @@ Discarded input sections
  .MIPS.abiflags
                 0x00000000       0x18 heap_guards.o
  .llvm_addrsig  0x00000000        0x0 heap_guards.o
+ .reginfo       0x00000000       0x18 rng_patch.o
+ .MIPS.abiflags
+                0x00000000       0x18 rng_patch.o
+ .pdr           0x00000000       0x20 rng_patch.o
+ .mdebug.abi32  0x00000000        0x0 rng_patch.o
+ .comment       0x00000000       0x13 rng_patch.o
+ .gnu.attributes
+                0x00000000       0x10 rng_patch.o
 
 Memory Configuration
 
@@ -30,6 +38,7 @@ Linker script and memory map
 
 LOAD cinematic_probe.o
 LOAD heap_guards.o
+LOAD rng_patch.o
                 0x80801000                        RAMBASE = 0x80801000
                 0x81000000                        PATCH_RAM_END = 0x81000000
 
@@ -44,13 +53,16 @@ LOAD heap_guards.o
  *(.text*)
  .text          0x80801000        0x0 cinematic_probe.o
  .text          0x80801000      0x668 heap_guards.o
+ .text          0x80801668        0x0 rng_patch.o
 
-.recomp_patch   0x80801668      0xa98 load address 0x00000668
+.recomp_patch   0x80801668      0xaa8 load address 0x00000668
  *(.recomp_patch*)
  .recomp_patch  0x80801668       0x10 cinematic_probe.o
                 0x80801668                isCinematicActive
  .recomp_patch  0x80801678      0xa88 heap_guards.o
                 0x80801678                allocateDisplayListBuffer
+ .recomp_patch  0x80802100       0x10 rng_patch.o
+                0x80802100                setRngSeed
  *(.recomp_force_patch*)
 
 .recomp_export
@@ -62,15 +74,17 @@ LOAD heap_guards.o
 .rodata
  *(.rodata*)
 
-.data           0x80802100        0x0 load address 0x00001100
+.data           0x80802110        0x0 load address 0x00001110
  *(.data*)
- .data          0x80802100        0x0 cinematic_probe.o
- .data          0x80802100        0x0 heap_guards.o
+ .data          0x80802110        0x0 cinematic_probe.o
+ .data          0x80802110        0x0 heap_guards.o
+ .data          0x80802110        0x0 rng_patch.o
 
-.bss            0x80802100        0x0 load address 0x00001100
+.bss            0x80802110        0x0 load address 0x00001110
  *(.bss*)
- .bss           0x80802100        0x0 cinematic_probe.o
- .bss           0x80802100        0x0 heap_guards.o
+ .bss           0x80802110        0x0 cinematic_probe.o
+ .bss           0x80802110        0x0 heap_guards.o
+ .bss           0x80802110        0x0 rng_patch.o
  *(COMMON)
                 0x00000001                        ASSERT ((. <= PATCH_RAM_END), Maxed out recomp extra ram)
 
@@ -96,4 +110,5 @@ LOAD heap_guards.o
                 0x8011a7dc                        heap_tail_loc = 0x8011a7dc
                 0x801163d4                        heap_bump = 0x801163d4
                 0x800b0934                        cinematic_flag = 0x800b0934
+                0x80003470                        rng_seed = 0x80003470
 OUTPUT(patches.elf elf32-bigmips)

@@ -34,3 +34,6 @@ heap_bump           = 0x801163D4;
 
 /* cinematic_probe.c (s6269 patch qualification) */
 cinematic_flag = 0x800B0934;
+
+/* rng_patch.c (s6277 patch qualification) */
+rng_seed = 0x80003470;

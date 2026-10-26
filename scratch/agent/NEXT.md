@@ -1,4 +1,3 @@
-# Next: G1d residual is parked; take ladder item 5 (MIPS C-patch qualification) or owner feedback
+# Next: owner feedback on opt-ins; otherwise a real C patch with a purpose
 HYPOTHESIS-ID: cpatch-pipeline-qualification
-s6276 closed the s6275 rerun as VOID (frozen frame, no blanking control; see PORTING-STATE s6276). Do not rerun skip-toggle unless the dump reads the RT64 native target or the toggle gates writeback.
-Next unit: pick ONE small real C patch (tools/weaken_patched_funcs.py PATCH_WEAKEN target), qualify with the two-arm discipline (patched vs unpatched, same run recipe, positive control that the patch fires), then a 300 s hold. Read docs/CURRENT-TRUTH item 5 first.
+Pipeline now qualified for no-arg (s6269) and arg+store (s6277) patches. Reserved libc names (rand) are unpatchable (N64Recomp strict mode). Do not qualify more trivial leaves: next C patch should fix or enable something real (e.g. a dd>=3 display-list pool exhaustion writer, G1c phase 2 residual, or a widescreen HUD x-position patch for G1d). Pick one, two-arm it (patched vs unpatched, positive control that the patch fires), then a 300 s hold.

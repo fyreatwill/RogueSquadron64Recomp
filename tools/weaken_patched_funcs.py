@@ -15,7 +15,7 @@ import re
 import sys
 from pathlib import Path
 
-PATCH_WEAKEN = ["isCinematicActive"]  # s6269 qualification probe
+PATCH_WEAKEN = ["isCinematicActive", "setRngSeed"]  # s6269 qualification probe
 
 def main() -> int:
     if len(sys.argv) != 2:
