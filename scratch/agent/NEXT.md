@@ -1,5 +1,5 @@
-# G1e step 4: FPS60 audio sync + other levels + hangar/title
+# G1e step 4b: FPS60 audio sync + hangar/title
 HYPOTHESIS-ID: g1e-framerate
-Hypotheses: H-clean (FPS60 only changes gfx task rate; audio, timers, other levels fine); H-audio (audio tick or dialogue/music cue scheduling counts VIs/frames, so FPS60 desyncs voice vs mission events); H-menu (hangar/title/briefing code assumes 30 game fps, e.g. fade timers by frame count).
-Unit: (1) fold the queued s6257_g1e_snap_lvl10 verdict (SOAK-RESULTS.md) and run tools/g1e_rate_diff.py + tools/g1e_float_rate_diff.py on scratch/agent/m6/g1_lvl10_s6257snap/run.log 6; frame-locked words beyond 0x8011A8F4/0x8013889C select H-audio/other. (2) With ROGUESQ_FPS60=1 vs unset, one run each on a level with scripted dialogue: log time (wall clock) from mission start to the first N dialogue/music cue events; ratio ~1 -> H-clean, ~0.5 -> H-audio. (3) Title -> hangar with FPS60=1: measure fade/transition wall duration (VI origin change timestamps) vs retail; ratio ~0.5 -> H-menu, apply the limit byte only in flight (already: only rewrites when byte==2).
-Note: the lever only fires when 0x80128EAF==2 (flight), so menus are probably untouched; confirm.
+Hypotheses: H-clean (FPS60 only changes gfx task rate); H-audio (dialogue/music cue scheduling counts frames -> desync at FPS60); H-menu (hangar/title fades count frames).
+lvl10 snap soak (s6257) folded in s6258: no new frame-locked words (weak: int arm had no control).
+Unit: (2) with ROGUESQ_FPS60=1 vs unset, one run each on a level with scripted dialogue: wall-clock from mission start to first N dialogue/music cue events; ratio ~1 -> H-clean, ~0.5 -> H-audio. (3) Title->hangar with FPS60=1: VI-origin-change timestamps vs retail; ~0.5 -> H-menu (lever only rewrites byte 0x80128EAF when ==2, i.e. flight; confirm). Build both arms and queue as soaks.
