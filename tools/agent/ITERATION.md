@@ -155,6 +155,36 @@ When choosing the work unit, this order overrides Next-steps ordering:
      sim is frame-locked, run render-only extra frames or decouple sim from render;
      (3) RT64 frame interpolation needs matrix data the LLE path does not provide, so
      only consider it if a way to feed it exists. Opt-in setting, then owner judges feel.
+   - G3c **Owner visual report 2026-10-26: take next** (finish the NEXT.md unit in flight,
+     then switch; dd3 work resumes after). Owner watched many runs (s6091-s6264 mixed
+     dd3/dd4, ASPECT, FPS60) and reports three defects. Each needs: an arm table that
+     says which setting(s) produce it (retail control, each opt-in alone, combos), a
+     discriminating measurement, a root-cause fix, and owner-viewable before/after frames.
+     (a) **Jagged far-terrain edge.** Where fog/haze normally hides the horizon, the edge
+     of the drawn terrain is blocky/stair-stepped. Leads: the terrain cell footprint's
+     grid-aligned boundary exposed by auto-far at dd>1 (haze/fog distance not scaled with
+     the draw distance), or the G1d frustum x-widening (s6144) exposing the side edge.
+     Fix candidates: scale the game's distance haze/fog start/end with the dd/aspect
+     factor, or fade the outermost ring of cells, so the edge falls inside the haze as in
+     retail. Check retail (no opt-ins) first: if retail shows no edge, the opt-ins own it.
+     (b) **Knife spikes still visible.** G3b (s6085) called the on-screen wedges
+     "retail-identical" from ucode reasoning only; that is single-source and unverified
+     (no retail/independent RSP reference was run). Reopen: H-rsp-emu (our LLE RSP
+     emulation of the F5 clip path differs from hardware: check VRCP/VRCPH/VRCPL,
+     VMULF/VMACF rounding/clamp, VCH/VCL/VCR clip flags against a reference RSP such as
+     ares/cen64/parallel-rsp on the exact inputs that produced a logged wedge) vs
+     H-retail (run the same level in an accurate emulator and look for wedges). If no
+     reference shows them, fix the emulation. If retail truly has them, ask the owner
+     about making ROGUESQ_CULL_SPIKE default-on.
+     (c) **Screen shake while turning.** Slight shaking of the whole view whenever the
+     ship turns. Leads: H-fps60 (FPS60 camera follow/smoothing is frame-count-based or
+     updated on a different cadence from the craft, so camera vs craft alternates),
+     H-pacing (presented frames alternate uneven VI spacing, judder), H-aspect (wide
+     camera/viewport scale applied on alternate frames), H-retail (retail has it).
+     Measure per presented frame: camera yaw/position and craft yaw from guest RAM, plus
+     present timestamp, during a scripted steady turn; compute the second difference
+     (jerk) of camera yaw per real second. Arms: retail, FPS60, ASPECT, both. Shake =
+     sign-alternating jerk that retail lacks.
    - G2 **Audio fidelity: CLOSED** (owner live listen 2026-10-22: dialogue clean, no
      fuzz; agrees with s5669-s5674 PCM evidence). Reopen only on a new owner report.
    - G3 **Render fidelity.** Hangar artifacts (CURRENT-TRUTH list) and in-flight frame
