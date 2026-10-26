@@ -1,6 +1,3 @@
-# G1d wide-title residual: within-run skip toggle (replaces stale up_167 plan)
+# G1d residual: ladder exhausted, wait for owner feedback
 HYPOTHESIS-ID: g1d-title-garbage-rect
-The s6273 NEXT (compare up_167 RDRAM vs upload bytes) was STALE: s6239/s6240 already refuted up_167 as the garbage-rect source (not sampled by texrects; triangle samples <21 valid rows). Do not run it.
-State: s6253 left a ~0.13 non-black residual in the ph4 lower band with texrect-all skipped; fill rects = 0 in ph4; cross-run skip arms are invalid controls (fb dump at frame 500 reads 1.0).
-Work unit (owner-optional, park after ONE iteration): add ROGUESQ_SKIP_TOGGLE=<N> in lib/rt64/src/hle/rt64_rdp.cpp rs64SkipDraw so the skip class alternates on/off every N VI frames inside ONE run; dump fb on both sides (adjacent frames) and compare lower-band non-black fraction. Positive control: tri+texrect+fill all-skip on the "on" side must blank the band. Outcomes: residual follows toggle -> it is a draw of the skipped class; residual constant -> RDRAM/stale-fb source, not a draw. Any lib/ edit => ./submodule-patches/export.sh + commit.
-If owner reports nothing about the wide title, G1d stays closed as opt-in and the ladder is exhausted: wait for owner playtest feedback (docs/OWNER-OPT-INS.md).
+s6275 built ROGUESQ_SKIP_TOGGLE (works) but fb dump cadence stayed 500, so no on/off pair. Optional revival: make the common script forward ROGUESQ_FB_DUMP_EVERY, rerun scratch/agent/s6275_run.sh, compare lower-band non-black fraction on adjacent dumps (on side must blank = control). Otherwise wait for owner playtest feedback (docs/OWNER-OPT-INS.md).
