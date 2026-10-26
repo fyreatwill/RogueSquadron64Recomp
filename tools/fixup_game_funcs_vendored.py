@@ -37951,6 +37951,10 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6311:
             changed = True
             report.append(f"{p.name}: s6311 edgefade x{_n6311}")
+        text, _n6314 = _a6311.apply10b(text)
+        if _n6314:
+            changed = True
+            report.append(f"{p.name}: s6314 edgefade2 x{_n6314}")
         import apply_s6027_cellmul as _a6027
         text, _n6027 = _a6027.apply10(text)
         if _n6027:

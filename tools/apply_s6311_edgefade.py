@@ -39,10 +39,31 @@ def apply10(text):
     return text[:j] + code + text[j:], 1
 
 
+LABEL2 = "L_8004AA74:\n"
+
+
+def apply10b(text):
+    """s6314: sibling accumulator 0x8004A6C0 (reached via 0x8004AA94) also writes lit RGB to a0."""
+    i = text.find(LABEL2)
+    if i < 0 or "PATCH: s6314 edgefade2" in text[i:i + 1200]:
+        return text, 0
+    j = i + len(LABEL2)
+    code = (
+        '    { /* PATCH: s6314 edgefade2 */ static int en6314 = -1; static double sc6314 = 1.0; static unsigned n6314 = 0;\n'
+        '      if (en6314 < 0) { const char* e = getenv("ROGUESQ_EDGE_FADE_TEST2"); en6314 = 0; if (e && *e) { sc6314 = atof(e); en6314 = 1; } }\n'
+        '      if (en6314) { n6314++; if ((n6314 & 0xFFFFu) == 1u) fprintf(stderr, "[edgefade2] calls=%u a0=0x%08X\\n", n6314, (unsigned)ctx->r4);\n'
+        '        for (int k = 0; k < 3; k++) { double v = (double)(uint8_t)MEM_B(k, ctx->r4) * sc6314; if (v > 255.0) v = 255.0; if (v < 0.0) v = 0.0; MEM_B(k, ctx->r4) = (int8_t)(uint8_t)v; } }\n'
+        '    }\n'
+    )
+    return text[:j] + code + text[j:], 1
+
+
 if __name__ == "__main__":
     p = BASE / "funcs_10.c"
     t = p.read_text()
     t2, n = apply10(t)
+    t2, n2 = apply10b(t2)
+    n += n2
     if n:
         p.write_text(t2)
     print(f"funcs_10.c live patched x{n}")
