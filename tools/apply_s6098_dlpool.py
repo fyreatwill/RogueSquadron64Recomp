@@ -7,14 +7,14 @@ EXT = ("extern int rs64_s6098_en(void);\nextern void rs64_s6098(int, uint32_t, u
 def _hook(kind):
     return ("    if (rs64_s6098_en()) { uint32_t _n = U32(ctx->r4), _l = 0; while (_n >= 0x80000000u && _n < 0x80800000u && _l < 200000u) { ++_l; _n = U32(MEM_W((gpr)(int32_t)_n, 0)); } "
             "rs64_s6098(%d, _l, _n, U32(ctx->r31)); } /* PATCH: s6098 dlpool */\n" % kind)
-GROW = ("    if (rs64_s6099_en() && ({ uint32_t _w = U32(ctx->r4), _q = 0; while (_w >= 0x80000000u && _w < 0x81000000u && _q < 256u) { ++_q; _w = U32(MEM_W((gpr)(int32_t)_w, 0)); } _q < 256u; })) { /* PATCH: s6099 dlpoolx -- grow the fixed 1356-chunk pool from a 0x80F00000 arena */\n"
+GROW = ("    if (rs64_s6099_en() && rs64_s6286_armed_q() && ({ uint32_t _w = U32(ctx->r4), _q = 0; while (_w >= 0x80000000u && _w < 0x81000000u && _q < 256u) { ++_q; _w = U32(MEM_W((gpr)(int32_t)_w, 0)); } _q < 256u; })) { /* PATCH: s6099 dlpoolx -- grow the fixed 1356-chunk pool from a 0x80F00000 arena */\n"
         "        uint32_t _h = U32(MEM_W(0, (gpr)(int32_t)0x801163B0u)); uint32_t _c = rs64_s6099_alloc(U32(ctx->r31));\n"
         "        for (uint32_t _k = 0; _c && _k < 128u; ++_k, _c += 0x108u) { MEM_W(0, (gpr)(int32_t)_c) = (int32_t)_h; MEM_W(4, (gpr)(int32_t)_c) = 0; if (_h) MEM_W(4, (gpr)(int32_t)_h) = (int32_t)_c; _h = _c; MEM_W(0, (gpr)(int32_t)0x801163B0u) = (int32_t)_h; }\n"
         "        ctx->r4 = (int32_t)U32(MEM_W(0, (gpr)(int32_t)0x801163B0u)); }\n")
 PRE = ("    { static int _pd; if (_pd < 2 && rs64_s6099_en()) { int _nc = rs64_s6286_pre(); if (_nc) { _pd = 2; if (_nc < 0) _nc = 0; uint32_t _h = U32(MEM_W(0, (gpr)(int32_t)0x801163B0u));\n"
        "      for (int _g = 0; _g < _nc; _g += 128) { uint32_t _c = rs64_s6099_alloc(U32(ctx->r31)); for (uint32_t _k = 0; _c && _k < 128u; ++_k, _c += 0x108u) { MEM_W(0, (gpr)(int32_t)_c) = (int32_t)_h; MEM_W(4, (gpr)(int32_t)_c) = 0; if (_h) MEM_W(4, (gpr)(int32_t)_h) = (int32_t)_c; _h = _c; } }\n"
        "      MEM_W(0, (gpr)(int32_t)0x801163B0u) = (int32_t)_h; ctx->r4 = (int32_t)_h; } } } /* PATCH: s6286 pregrow */\n")
-EXT2 = "extern int rs64_s6285_en(void);\nextern int rs64_s6286_pre(void);\nextern void rs64_s6286_arm(void);\nextern int rs64_s6099_en(void);\nextern uint32_t rs64_s6099_alloc(uint32_t);\n"
+EXT2 = "extern int rs64_s6285_en(void);\nextern int rs64_s6286_pre(void);\nextern void rs64_s6286_arm(void);\nextern int rs64_s6286_armed_q(void);\nextern int rs64_s6099_en(void);\nextern uint32_t rs64_s6099_alloc(uint32_t);\n"
 ANCH4 = "    g_rs64_last_guest_pc = 0x8000B030u;\n    ctx->r4 = MEM_W(ctx->r4, 0X63B0);\n"
 def _apply4(text):
     """s6285: begin pops the cache at 0x8000B030 with no empty test; a dd3 frame drains it mid-function (a0=0 -> sw 4(a0) SIGBUS at 0x8000B080)."""

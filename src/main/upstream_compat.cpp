@@ -2544,6 +2544,7 @@ static void rs64_s6287_flush(unsigned long begin, uint32_t len) {
 extern "C" int rs64_s6099_en(void) { static const int on = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX"); return (e && e[0] && e[0] != '0') ? 1 : 0; }(); return on; }
 static int s_s6286_armed = 0;  /* s6286: per-site grows must not touch the cache before beginFrameDLChunk has seen it initialised (topup at 0x80001F88 broke boot) */
 extern "C" void rs64_s6286_arm(void) { s_s6286_armed = 1; }
+extern "C" int rs64_s6286_armed_q(void) { return s_s6286_armed; }  /* s6288: the begin-time GROW hook was ungated and emptied the menu cache at begin 43 */
 extern "C" int rs64_s6285_en(void) { static const int off = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_PRE"); return (e && std::atoi(e) > 0) ? 1 : 0; }(); return rs64_s6099_en() && !off && s_s6286_armed; }  /* s6286: per-site grows (b030/topup/finder-grow) are off when the one-shot pre-grow is requested */
 extern "C" int rs64_s6286_pre(void) {  /* s6286: 0 until the AT-th beginFrameDLChunk call (ROGUESQ_DLPOOLX_AT, default 3000: past boot and level load, where early grows broke the game), then PRE chunks (or -1 = arm per-site grows only) */
     static const int pre = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_PRE"); return e ? std::atoi(e) : 0; }();
