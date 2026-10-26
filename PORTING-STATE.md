@@ -168430,4 +168430,5 @@ Added `ROGUESQ_WBLOG=1` (rt64_state.cpp: `[wblog]` per colour writeback phase/ad
 - Rules out: guest-side writer (no overlap needed beyond the RT64 writeback); a draw as painter (s6243).
 ORIGIN: no mitigation landed; instrument only. Next: restrict the writeback to drawn rows / clear the native target, and test whether the VI width should be 900.
 DISCRIMINATION (s6244 close-out): REFUTES H-guest-writer and H-draw-painter for the title noise (wblog ranges + s6243 skip-all-draws leave noise, two sources). SELECTS the RT64 writeback-of-undrawn-native-rows family (H-uncleared) over a guest-side writer; leaves H-vi-width (VI should read w=900) open, since stride mismatch 900 vs 512 is confirmed but its pixel effect is unmeasured.
+In short: this refutes the guest-writer and draw-painter hypotheses and selects H-uncleared (RT64 writeback of undrawn native rows) as the leading cause.
 NEXT DISCRIMINATOR (one build, one run, s6244_run.sh): ROGUESQ_WB_CLAMP_ROWS=<n> and ROGUESQ_WB_CLEAR=1 arms. If clamp/clear removes the noise below y~255 -> H-uncleared confirmed; if noise persists with a cleared target -> H-vi-width. Control: unmodified arm stays noisy.
