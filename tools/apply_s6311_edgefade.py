@@ -103,6 +103,30 @@ def apply10d(text):
     return text[:k] + EF4_LINE + text[k:], 1
 
 
+EF5_LINE = (
+    '        if (lg6315 && ((n6315 % 5u) == 0u) && n6315 < 60000u) { fprintf(stderr, "[edgefade5] n=%u cell=%d,%d cam=", n6315, (int)rs64_ef_col, (int)rs64_ef_row); for (int q = 0; q < 32; q++) { uint32_t u = (uint32_t)MEM_W(q * 4, 0x80138D20u); float fv; memcpy(&fv, &u, 4); fprintf(stderr, "%g,", fv); } fprintf(stderr, "pl="); for (int q = 0; q < 12; q++) { uint32_t u = (uint32_t)MEM_W(q * 4, 0x80137DBCu); float fv; memcpy(&fv, &u, 4); fprintf(stderr, "%g,", fv); } fprintf(stderr, "\\n"); }\n'
+)
+
+
+def apply10e(text):
+    """s6317: stash cell col,row (a0+0x18/+0x1A) at 0x8004AA94 entry (A6C0 epilogue r19 is not AA94's s3) and log camera struct floats."""
+    if 'rs64_ef_col' in text or 'edgefade4' not in text:
+        return text, 0
+    fn = text.find('RECOMP_FUNC void mapCellGeometryToGridSpace(')
+    first = text.find('RECOMP_FUNC')
+    anchor = '    ctx->r19 = ADD32(ctx->r4, 0);\n'
+    a = text.find(anchor, fn)
+    if fn < 0 or a < 0:
+        return text, 0
+    a += len(anchor)
+    text = text[:a] + '    rs64_ef_col = MEM_H(ctx->r19, 0X18); rs64_ef_row = MEM_H(ctx->r19, 0X1A); /* PATCH: s6317 cellstash */\n' + text[a:]
+    text = text[:first] + 'static int32_t rs64_ef_col = 0, rs64_ef_row = 0; /* PATCH: s6317 cellstash */\n' + text[first:]
+    k = text.find('        n6315++; if (lg6315')
+    if k < 0:
+        return text, 0
+    return text[:k] + EF5_LINE + text[k:], 1
+
+
 if __name__ == "__main__":
     p = BASE / "funcs_10.c"
     t = p.read_text()
@@ -113,6 +137,8 @@ if __name__ == "__main__":
     n += n3
     t2, n4 = apply10d(t2)
     n += n4
+    t2, n5 = apply10e(t2)
+    n += n5
     if n:
         p.write_text(t2)
     print(f"funcs_10.c live patched x{n}")

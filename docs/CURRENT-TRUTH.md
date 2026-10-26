@@ -87,6 +87,7 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog; per-session history archived in PROJECT-OVERVIEW.md, "Archived CURRENT-TRUTH backlog")
+- s6317 (G3c a): s6316 `cell=` junk explained: log fires in A6C0 epilogue where r19 != AA94's s3. AA94 now stashes cell (col,row)=(a0+0x18,+0x1A) into rs64_ef_col/row; [edgefade5] logs cell + 32 camera floats + 12 player floats. Soak s6317_g3c_cal2 queued; next regress cell mean vs floats for fade centre/cell size.
 - s6316 (G3c a): s6315 REFUTED the fade centre: A6C0 a1 is a unit normal (no position) and 0x80137DBC is a slot not a float record (pl=1e10 garbage, f=1 everywhere). Position source = caller 0x8004AA94 a0 cell idx (+0x18/+0x1A halfwords). [edgefade4] calibration soak s6316_g3c_cal queued; next: find player cell/pos, move fade hook to AA94 level (or compute f per cell and pass via global).
 - (superseded by s6316) s6315 (G3c a): ROGUESQ_EDGE_FADE=start,end[,r,g,b] built (apply10c, A6C0 epilogue; centre=player rec 0x80137DBC [1],[3]*GRIDSCALE 0.5 UNVERIFIED); soak s6315_g3c_edgefade3 queued, no result yet.
 - s6314 (G3c a): CONFIRMED by run: 0x8004A6C0 (via 0x8004AA94) is the terrain lit-RGB writer; ROGUESQ_EDGE_FADE_TEST2=0.2 turns terrain near-black (scratch/agent/m6/s6314_g3c/{base,t2}_f1200.png), sky/HUD/craft unchanged. 0x8004B644 is NOT the terrain path (s6313 negative explained). Next: distance-based fade in A6C0 epilogue = ROGUESQ_EDGE_FADE.
