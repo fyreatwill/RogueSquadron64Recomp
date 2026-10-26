@@ -1,5 +1,5 @@
-# G1d: clear the enlarged fb RDRAM span in the wide title
+# G1d: wide-title background tiling + white corners
 HYPOTHESIS-ID: g1d-widescreen
-s6245: clamping writeback rows (256) did not blacken the lower half (0.998 non-black vs 0.819 ctl) -> noise is stale RAM, not RT64 writeback. 
-Hypotheses: H-stale-ram (memset 0xB3B200..+900*448*2 once at fb alloc/ph4 start in rt64 or fixup -> lower half goes black); H-vi-width (VI reads w=512 of a 900 image; stride fix needed).
-Discriminator: add ROGUESQ_WB_CLEAR=1 (zero that RDRAM span before the first ph4 draw), run s6244_run.sh with TAGX=_clear EXTRA_E="ROGUESQ_WB_CLEAR=1 "; compare lower-band non-black fraction (script in s6245 entry method) and VIEW the 512 VI picture. Control: TAGX=_ctl arm.
+s6246: WB_CLEAR dropped lower-band non-black 0.819->0.545 (stale RAM part); remaining picture = tiled hangar bg with seams at x~65/130/195/705/770 + white corner blocks (x<65,x>770,y>255).
+Hypotheses: H-bg-wrap (bg texrect/tri S-range repeats at 512-wide span; widen or clamp edge); H-native-white (RT64 native fb cleared white / not cleared for wide span).
+Discriminator: use s6244 skip arms (texrect-all / tri-all in ph4) to see which class paints the tiled strips and the white corners; control = none arm. Then clear RT64 native target colour to black at wide alloc (arm ROGUESQ_WB_NATIVE_BLACK).

@@ -168441,3 +168441,11 @@ Added `ROGUESQ_WB_CLAMP_ROWS=<n>` (rt64_state.cpp: caps colour-writeback rows wh
 - Rules out: undrawn-native-row writeback as the (sole) painter of the noise. Leaves H-vi-width / stale-RAM-in-uncleared-fb (the 900x448 region at 0xB3B200 overlaps memory nothing clears; retail 512 fb never needed clearing there).
 ORIGIN: no mitigation landed; diagnostic env only (default off).
 NEXT: arm ROGUESQ_WB_CLEAR (memset RDRAM fb span to 0 at wide-fb alloc / before first draw in ph4) — if lower half goes black, the fix is clearing the enlarged fb region in the guest-side alloc; also view the VI-read picture (w=512) rather than the 900 dump.
+
+## Session 6246 (2026-10-25) — ROGUESQ_WB_CLEAR: zeroing the wide fb span before writeback removes only part of the lower-half noise; the rest is real drawn content (tiled hangar bg) plus white writeback blocks
+Added `ROGUESQ_WB_CLEAR=1` (rt64_state.cpp: memset 448*ww*2 bytes at the fb address before each ww>512 colour writeback; patch exported). Same wide-900 title recipe (s6244_run.sh, TAGX/EXTRA_E), fb_0001000_w900.ppm non-black fraction rows 0-254 / 255-447 (scratch/agent/nb_frac.py):
+- control 0.399 / 0.819 (reproduces s6245 control); clear 0.408 / 0.545; clamp256 (s6245) 0.692 / 0.998.
+- Viewing the clear-arm dump: the picture is not random noise. The 4:3 menu (SELECT GAME panel, medals) sits centred, the hangar background is drawn repeated/tiled across the 900 width with column wrap seams (x~65,130,195,705,770), and solid white blocks remain at the lower-left/right corners (x<65, x>770, y>255) even with RAM pre-zeroed, so those pixels come from the writeback itself (RT64 native target is white there), not stale RAM.
+- Reading: stale RAM accounted for ~0.27 of the lower band (0.819->0.545); the remainder is (a) the guest background draw wrapping/tiling at the 512 coordinate span (the wide fb needs the bg quad widened or clamped, not memset) and (b) white undrawn native regions written back. Single run per arm = single-source; upper bands differ cross-run (animating).
+ORIGIN: no mitigation landed; diagnostic env only (default off).
+NEXT: attack (a)/(b): find the bg draw (texrect/tri class from s6244 skip arms) producing the tiling and widen/clamp its S range; clear native target to black at wide-fb alloc for (b).
