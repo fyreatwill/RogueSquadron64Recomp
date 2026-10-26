@@ -168755,3 +168755,33 @@ then add one phase-gated writer/value log for the highest-ranked candidate. The
 next instrument must distinguish a frustum/aspect edge from a terrain-radius or
 fog-end edge in one run, with a retail positive control and an opt-in changed
 control.
+
+## Session 6294 (2026-10-26) — qualified terrain-radius writer probe; wide route gate was void
+
+Static enumeration ranked the terrain-window radius read at guest PC 0x80043918
+(source 0x8009DEAC, existing s6036 draw-distance site) above the projection-far
+writer because it directly controls terrain submission. Ground-truth review of
+the Factor 5 reference and oracle guidance was completed before instrumenting.
+
+Added tools/apply_s6294_edgewriter.py and registered it in
+tools/fixup_game_funcs_vendored.py. The env-gated probe logs writer PC, arm,
+raw/effective radius, terrain-table validity, and return register. The normal
+Debug target rebuilt successfully.
+
+Retail arm: level 1 reached mission at 87 s and held 204 s; alive_at_end=1,
+VI stalls=0, crash lines=0. The probe passed its positive control and logged
+raw radius 16/2 during setup, later rising through 19.68, 23.69, 23.71, and
+23.95 with valid=1. This establishes the site is live in flight.
+
+21:9 arm: the initial recipe rejected the widened title because it hard-coded
+the retail title origin. The log independently showed the game reached width
+1024 origin 0x00B20400 and the probe fired with arm=2.0000, raw=16/2,
+effective=1, valid=1. After correcting TITLE_ORIGIN to 0x00B20400, the retry
+still reached the widened origin but ended nomission-att1; it did not provide a
+valid flight comparison. The retry was SIGKILLed after preserving its log.
+
+Result: the probe is qualified, but no H-aspect/H-radius/H-fade discriminator
+is selected. The wide pre-flight values are not evidence about the terrain edge.
+This rules out neither H-aspect nor H-radius. Next is the same probe with the
+origin-agnostic TITLE_ORIGIN/MISSION_RE recipe; only a valid flight row may
+update current truth.

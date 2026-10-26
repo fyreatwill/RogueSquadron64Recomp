@@ -1,30 +1,23 @@
-# Next: name the terrain-edge writer before proposing a fix
+# Next: rerun the terrain-radius probe on valid wide flight
 HYPOTHESIS-ID: g3c-owner-visual
 
-Completed s6293: the five-arm edge table passed controls and produced an
-aspect-only lead, but retail's transient p90 and the shared framebuffer source
-make H-aspect provisional. Do not rerun the same arm table.
+s6294 added the fixup-backed `ROGUESQ_G3C_EDGE_WRITER` probe at guest PC
+0x80043918 and built it successfully. Retail level 1 held 204 s clean with
+the positive control firing. The first wide recipe used the wrong title-origin
+gate; the corrected retry reached the 1024-wide origin but ended
+`nomission-att1`. Do not interpret its pre-flight samples as a terrain result.
 
-One bounded work unit: static-enumerate the terrain visibility/fog writers that
-can differ under `ROGUESQ_DRAW_DISTANCE` or `ROGUESQ_ASPECT`, then instrument
-only the highest-ranked candidate in one phase-gated build/run. Competing
-hypotheses are H-aspect (frustum/viewport widening exposes a side boundary),
-H-radius (terrain patch visibility radius is extended or mis-scaled), H-fade
-(fog/haze end remains retail while terrain is extended), and H-retail (the
-boundary is legitimate). The discriminator is the candidate's guest value and
-writer PC in retail versus one changed arm: an aspect-only change with unchanged
-radius/fog values selects H-aspect; changed radius with unchanged fog selects
-H-radius; changed fog end/start selects H-fade; identical values and a retail
-matching edge select H-retail. Positive controls: the candidate log must fire in
-retail and opt-in flight phases, and the framebuffer edge scorer must remain
-nonzero in both arms.
+One bounded work unit: rerun retail and 21:9 concurrently with the same binary,
+using the origin-agnostic phase gates below. Competing hypotheses remain
+H-aspect (radius unchanged, widened frustum exposes edge), H-radius (raw or
+effective radius changes), H-fade (radius unchanged but projection/fog writer
+changes), and H-retail (retail flight shows the same edge). The discriminator
+is the probe's `raw/eff/valid` rows after mission phase plus the existing edge
+score/contact sheet. Missing mission or missing probe is VOID, not a null.
 
-Static commands:
+    env ROGUESQ_G3C_EDGE_WRITER=1 TITLE_ORIGIN='0x[0-9A-F]*' MISSION_RE='[0-9A-F]+' ROGUESQ_G1B=1 XENV_EXTRA='ROGUESQ_G3C_EDGE_WRITER=1' HOLD_S=200 LEVEL=1 TAG_SUFFIX=s6295_retail zsh scratch/agent/g1_level_coverage_common.zsh
+    env ROGUESQ_G3C_EDGE_WRITER=1 TITLE_ORIGIN='0x[0-9A-F]*' MISSION_RE='[0-9A-F]+' ROGUESQ_G1B=1 XENV_EXTRA='ROGUESQ_G3C_EDGE_WRITER=1 ROGUESQ_ASPECT=21:9 ROGUESQ_OSMEM_MB=12' HOLD_S=200 LEVEL=1 TAG_SUFFIX=s6295_wide zsh scratch/agent/g1_level_coverage_common.zsh
 
-    rg -n "0x80132DB0|0x80132DB4|0x80132DB8|0x80132DBC|fog|Fog|far|radius|DRAW_DISTANCE|ASPECT_SCALE|guPerspective" tools src RecompiledPatches
-    rg -n "setObjectDetailLevel|selectMeshLodAndSubmitForRender|terrain|visibility" RecompiledFuncs/funcs_*.c tools/fixup_game_funcs*.py
-
-Then add one env-gated log at the highest-confidence generated writer/fixup
-site, rebuild the normal target, and run retail plus `ROGUESQ_ASPECT=21:9
-ROGUESQ_OSMEM_MB=12` in one phase-gated recipe. Record the writer PC, value,
-and arm table; do not add a fog/radius mitigation in this unit.
+Do not add a fog/radius mitigation. If both arms reach flight and radius is
+unchanged, static-enumerate the projection/fog writer next; otherwise fix only
+the harness gate and rerun this same probe.

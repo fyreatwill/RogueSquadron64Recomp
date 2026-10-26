@@ -98,6 +98,16 @@ autopilot win are owner playtest scope.
   framebuffer source; H-fade/H-radius and the writer remain unresolved. No
   mitigation is allowed until the writer/value is named. Next: static-enumerate
   terrain/fog/radius writers, then one phase-gated writer/value discriminator.
+- **s6294 G3c radius-writer probe:** the new fixup-backed probe at guest PC
+  `0x80043918` (raw terrain-radius source `0x8009DEAC`) fired in the retail
+  mission control (`raw` rose 16 -> ~24, `valid=1`) and in the 21:9 arm. The
+  21:9 launch reached the widened 1024 VI origin `0x00B20400`, but the common
+  harness was first keyed to the retail title origin and the corrected retry
+  reached no mission; therefore this is instrument qualification, not a flight
+  discriminator. Its pre-flight aspect samples were unchanged (`raw=16,2`,
+  `eff=1`) and cannot select H-radius. Next: rerun with the known
+  origin-agnostic recipe (`TITLE_ORIGIN='0x[0-9A-F]*' MISSION_RE='[0-9A-F]+'`),
+  then proceed to the projection/fog writer if flight radius remains unchanged.
 - **s6292 G3c turn-shake result:** the phase-gated camera/craft instrument passed
   its positive control in all four arms. Sign-alternation was retail 0.395,
   FPS60 0.625, wide-only 0.384, and FPS60+wide 0.632, with thousands of records
