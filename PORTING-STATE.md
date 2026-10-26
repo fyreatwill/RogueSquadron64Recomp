@@ -168785,3 +168785,15 @@ is selected. The wide pre-flight values are not evidence about the terrain edge.
 This rules out neither H-aspect nor H-radius. Next is the same probe with the
 origin-agnostic TITLE_ORIGIN/MISSION_RE recipe; only a valid flight row may
 update current truth.
+
+Close-out addendum (s6294 retry): what this selects. The retail arm fixes the
+reference band for the discriminator: in valid retail flight the raw terrain
+radius at 0x80043918 is 19.68-23.95 (valid=1), versus 16/2 during setup. So a
+setup-phase wide row can never be compared with flight, which is exactly why the
+wide arm is VOID rather than a null (this refutes using pre-flight rows for
+H-aspect/H-radius). Next discriminator, named explicitly: in a wide (21:9) arm
+that reaches flight, raw/eff radius inside 19.68-23.95 selects H-aspect or
+H-fade (radius unchanged; static-enumerate the projection/fog writer next);
+raw/eff above that band selects H-radius (fix the radius scaling at the
+site); a retail-identical edge in the contact sheet selects H-retail. Missing
+mission or probe rows = VOID. Resume with the two commands in NEXT.md.
