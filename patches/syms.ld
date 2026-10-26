@@ -31,3 +31,6 @@ heap_free_head      = 0x801163B0;
 heap_other_listhead = 0x801163FC;
 heap_tail_loc       = 0x8011A7DC;
 heap_bump           = 0x801163D4;
+
+/* cinematic_probe.c (s6269 patch qualification) */
+cinematic_flag = 0x800B0934;

@@ -46,7 +46,7 @@ autopilot win are owner playtest scope.
   artifacts (rim band, holo spikes, stale edge, overlay splice, accumulator
   origin, `0x1F0D74`, odd PI DMA) are parked. No mitigation is acceptable
   without naming the writer and establishing value legitimacy.
-- PatchesLib is shadowed on macOS; the live heap guards are fixup-inlined.
+- C patches (s6269): PatchesLib was shadowed on macOS (ld64 pulls archive members lazily). Now: `tools/weaken_patched_funcs.py ../N64Recomp/RecompiledFuncs` (after fixup_game_funcs, before cmake) weakens names in its PATCH_WEAKEN list, CMake `-force_load`s PatchesLib on Apple, and `fixup_patches_host.py` renames the stale allocateDisplayListBuffer override out of the way (the hand-fixed funcs_3 version stays live; heap guards remain fixup-inlined). Only `isCinematicActive` (probe, semantics identical, logs `[patch-live]`) is live. To patch another function: add it to PATCH_WEAKEN, ensure the game version has no hand fixups, qualify two-arm.
   `-force_load` is an unperformed behavior-changing A/B.
 - A real MIPS cross-toolchain is installed at `/opt/homebrew/bin`; fresh
   source-to-ELF patch qualification is optional because the existing ELF path

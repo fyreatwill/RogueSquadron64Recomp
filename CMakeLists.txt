@@ -381,6 +381,12 @@ endif()
 # overrides for any duplicated symbol names (Zelda's pattern).
 if (PATCHES_BUILD_OK)
     target_link_libraries(RogueSquadron64Recomp PRIVATE PatchesLib)
+    if (APPLE)
+        # ld64 pulls archive members lazily, so a patch overriding an already
+        # defined (weak, tools/weaken_patched_funcs.py) symbol is never linked.
+        target_link_options(RogueSquadron64Recomp PRIVATE
+           "LINKER:-force_load,$<TARGET_FILE:PatchesLib>")
+    endif()
 endif()
 
 target_link_libraries(RogueSquadron64Recomp PRIVATE

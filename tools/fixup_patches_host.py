@@ -23,7 +23,19 @@ def main() -> int:
     if "findAndUnlinkSmallestEntry(uint8_t* rdram" in text:
         return 0
 
-    path.write_text(text.replace(anchor, anchor + DECLARATIONS, 1))
+    text = text.replace(anchor, anchor + "#include <stdio.h>\n" + DECLARATIONS, 1)
+    # s6269 positive control: proves the PatchesLib isCinematicActive is the live one.
+    head = "RECOMP_FUNC void isCinematicActive(uint8_t* rdram, recomp_context* ctx) {\n"
+    probe = ('    { static unsigned n; n++; if ((n & (n - 1u)) == 0) '
+             'fprintf(stderr, "[patch-live] isCinematicActive calls=%u\\n", n); }\n')
+    if text.count(head) == 1:
+        text = text.replace(head, head + probe, 1)
+    # s6269: PatchesLib is -force_load'ed on macOS, so a stale override would beat the
+    # hand-fixed game allocateDisplayListBuffer (funcs_3.c); rename it out of the way.
+    stale = "RECOMP_FUNC void allocateDisplayListBuffer("
+    if text.count(stale) == 1:
+        text = text.replace(stale, "RECOMP_FUNC void unused_patch_allocateDisplayListBuffer(", 1)
+    path.write_text(text)
     return 0
 
 
