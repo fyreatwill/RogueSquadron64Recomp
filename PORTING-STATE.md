@@ -168472,3 +168472,6 @@ ORIGIN: none (no mitigation added).
 ## Session 6251 (2026-10-25) — wide-title residual: fill-rect skip drops 0.132 -> 0.050
 Ran s6244_run.sh SKIPPH=4 with WB_CLEAR+RI_CLEAR: arm "fill,texrect-all" lower-band non-black 0.050 vs texrect-all alone 0.132 (upper 0.0 both). Fill ops paint ~0.08 of the 0.132 residual (H-fillrect supported, single run per arm, same phase gate). Remaining 0.05 is unattributed (tri? white corners?). Arm "all" read lower 1.0 (skip-all leaves a non-black frame), so it is NOT a valid zero control; the residual floor is unproven.
 ORIGIN: no code change; diagnostic only.
+
+## Session 6252 (2026-10-25) — s6252 tri-all discriminator is confounded (lower band reads 1.0)
+Ran arm fill,texrect-all,tri-all (ph4, wide 900 title, RI_CLEAR+WB_CLEAR): upper 0.001, lower 1.0 (vs fill,texrect-all: 0.0 / 0.05). Skipping ALL tris makes the lower band read fully non-black, same artefact as the "all" arm (s6251 noted it is not a zero control): with no tris the frame is not cleared/presented the same way, so the reading cannot say whether tris paint the last 0.05. Result: H-tri-rest neither confirmed nor refuted; instrument invalid as a tri discriminator. Next: log fill/tri extents in ph4 (WBLOG) instead of skipping, and compare against the 512 scissor.
