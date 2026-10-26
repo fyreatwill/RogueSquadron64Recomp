@@ -14,4 +14,6 @@ cd build && env ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=2 ./RogueSquadron64Recomp
 | Remove spike lines in flight | `ROGUESQ_CULL_SPIKE=1` | Culls the ucode clip-plane wedge triangles (s6085). | CURRENT-TRUTH "G3b" |
 | Frame-time instrument | `ROGUESQ_G1B=1` | Per-VI timing log. | s6017 |
 
-Rules of thumb: combine settings freely only after checking the table (FPS60 + DRAW_DISTANCE were not soaked together; widescreen + FPS60 not either). Kill the game with SIGKILL.
+Combos: FPS60 + DRAW_DISTANCE=2 held 300 s clean on levels 1 and 5 (s6262, alive_at_end=1, 0 stalls, 0 crash lines). Widescreen + FPS60 soaks queued (s6263), not yet verified.
+
+Rules of thumb: combine settings freely only after checking the table. Kill the game with SIGKILL.

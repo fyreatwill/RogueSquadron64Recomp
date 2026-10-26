@@ -168523,3 +168523,6 @@ SOAK-RESULTS: s6260_g1e_fps60_l1 (hold=301s, vi_stalls30s=0, crashlines=0, alive
 
 ## Session 6262 (2026-10-26) — G1e closed (lvl5 FPS60 hold clean); owner opt-in page; FPS60+dd2 combo soaks queued
 Folded s6260_g1e_fps60_l5: hold=301s alive_at_end=1 vi_stalls30s=0 crashlines=0. With lvl1/lvl10 (s6261) FPS60 is clean on all three levels; G1e closed as opt-in, owner to judge feel. Landed docs/OWNER-OPT-INS.md (one page: FPS60, DRAW_DISTANCE, ASPECT, CULL_SPIKE, G1B with verified state and known defects). Queued s6262_fps60_dd2_l1/l5 (FPS60+DRAW_DISTANCE=2 pairing never soaked together). Parked G1d title defect B (100+ sessions, cosmetic, title-only, opt-in).
+
+## Session 6263 (2026-10-26) — FPS60+dd2 combo verified clean; widescreen+FPS60 soaks queued
+Folded s6262_fps60_dd2_l1 (hold=302s alive_at_end=1 vi_stalls30s=0 crashlines=0) and _l5 (hold=302s alive_at_end=1 vi_stalls30s=0 crashlines=0, godrefills=1 benign). Combo FPS60+DRAW_DISTANCE=2 is clean on both levels. Updated docs/OWNER-OPT-INS.md. Queued s6263_wide_fps60_16x9 and _21x9 (ASPECT + OSMEM_MB=12 + FPS60, lvl1 240 s). Rules out nothing new; no code change.
