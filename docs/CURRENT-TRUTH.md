@@ -144,3 +144,7 @@ Default stays retail 4:3. Opt-in levers: `ROGUESQ_ASPECT=<w>:<h>` (derives FB_WI
 - s6241 (G1d, single-source): `ROGUESQ_LOG_BBOX=1` region logger (control fired): photo CI4 wedge triangles with x<0 bboxes occur at both 4:3 and wide, so they are not the wide-only painter; logging cannot name the painter. Next: skip-bisect by draw class in ph3 (NEXT.md).
 - s6243 (G1d): SKIPPH=-1 all-draw skip blanks the wide title (control OK); ph4-only skip leaves noise below y~255 -> garbage rect is aliased undrawn fb RAM, not a draw. Next: intersect RT64 writeback ranges with the w900 fb (NEXT.md).
 - s6244 (G1d): ROGUESQ_WBLOG: ph4 title colour writeback addr=0xB3B200 ww=900 rows 0-447 covers the whole 512x444 scan-out (origin 0xB3AE00); noise = native-target undrawn rows written back. Next: clamp writeback rows to drawn region / clear native target (NEXT.md).
+
+
+## s6245 update (G1d wide-title noise)
+RT64 writeback of undrawn rows is NOT the source of the lower-half title noise (WB_CLAMP_ROWS=256 arm: lower band 0.998 non-black vs 0.819 control, single run each). Next: zero the enlarged fb RDRAM span (WB_CLEAR arm) and inspect the 512-wide VI picture.

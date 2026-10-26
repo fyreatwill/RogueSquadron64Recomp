@@ -168432,3 +168432,12 @@ ORIGIN: no mitigation landed; instrument only. Next: restrict the writeback to d
 DISCRIMINATION (s6244 close-out): REFUTES H-guest-writer and H-draw-painter for the title noise (wblog ranges + s6243 skip-all-draws leave noise, two sources). SELECTS the RT64 writeback-of-undrawn-native-rows family (H-uncleared) over a guest-side writer; leaves H-vi-width (VI should read w=900) open, since stride mismatch 900 vs 512 is confirmed but its pixel effect is unmeasured.
 In short: this refutes the guest-writer and draw-painter hypotheses and selects H-uncleared (RT64 writeback of undrawn native rows) as the leading cause.
 NEXT DISCRIMINATOR (one build, one run, s6244_run.sh): ROGUESQ_WB_CLAMP_ROWS=<n> and ROGUESQ_WB_CLEAR=1 arms. If clamp/clear removes the noise below y~255 -> H-uncleared confirmed; if noise persists with a cleared target -> H-vi-width. Control: unmodified arm stays noisy.
+
+## Session 6245 (2026-10-25) — ROGUESQ_WB_CLAMP_ROWS: clamping the w900 writeback to 256 rows does NOT remove the lower-half noise; H-uncleared (writeback of undrawn native rows) refuted as the sole source
+Added `ROGUESQ_WB_CLAMP_ROWS=<n>` (rt64_state.cpp: caps colour-writeback rows when ww>512; patch exported) and TAGX/EXTRA_E hooks in scratch/agent/s6244_run.sh. Wide w900 title, one run per arm, dump fb_0001000_w900.ppm (RDRAM readback at stride 900), non-black pixel fraction (every 2nd row) rows 0-254 / 255-447:
+- control (unmodified): 0.399 / 0.819 (still noisy -> control holds)
+- clamp 256 (rows >=256 never written back): 0.692 / 0.998
+- Reading: with the writeback suppressed below y=256 the lower band is MORE non-black, so that RAM holds content that does not come from RT64's native-target writeback at all (stale/aliased RAM under the 900-stride image). The upper band also differs between arms (animating title, cross-run, not comparable: iron rule 2). Single run per arm = single-source.
+- Rules out: undrawn-native-row writeback as the (sole) painter of the noise. Leaves H-vi-width / stale-RAM-in-uncleared-fb (the 900x448 region at 0xB3B200 overlaps memory nothing clears; retail 512 fb never needed clearing there).
+ORIGIN: no mitigation landed; diagnostic env only (default off).
+NEXT: arm ROGUESQ_WB_CLEAR (memset RDRAM fb span to 0 at wide-fb alloc / before first draw in ph4) — if lower half goes black, the fix is clearing the enlarged fb region in the guest-side alloc; also view the VI-read picture (w=512) rather than the 900 dump.

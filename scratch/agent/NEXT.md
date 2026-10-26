@@ -1,5 +1,5 @@
-# G1d: stop the wide-title writeback from dumping undrawn native-target rows
+# G1d: clear the enlarged fb RDRAM span in the wide title
 HYPOTHESIS-ID: g1d-widescreen
-s6244: ph4 colour writeback (addr 0xB3B200, ww=900, rows 0-447) covers the whole VI scan-out (origin 0xB3AE00, w=512 h=444). Noise below y~255 = RT64 native-target content for undrawn rows.
-Hypotheses: H-uncleared (native target rows never drawn hold garbage -> clear to black on fb alloc/resize, or clamp writeback rows to the drawn extent); H-vi-width (VI should read w=900, mismatched stride is the real bug).
-Discriminator, one build: in the wide route (s6244_run.sh) add env ROGUESQ_WB_CLAMP_ROWS=<n> (cap cRowEnd for ww=900 ph4) and ROGUESQ_WB_CLEAR=1 (zero the native target at resize); compare fb_0001000 non-black fraction below y=255 in one run per arm; control = unmodified arm still noisy.
+s6245: clamping writeback rows (256) did not blacken the lower half (0.998 non-black vs 0.819 ctl) -> noise is stale RAM, not RT64 writeback. 
+Hypotheses: H-stale-ram (memset 0xB3B200..+900*448*2 once at fb alloc/ph4 start in rt64 or fixup -> lower half goes black); H-vi-width (VI reads w=512 of a 900 image; stride fix needed).
+Discriminator: add ROGUESQ_WB_CLEAR=1 (zero that RDRAM span before the first ph4 draw), run s6244_run.sh with TAGX=_clear EXTRA_E="ROGUESQ_WB_CLEAR=1 "; compare lower-band non-black fraction (script in s6245 entry method) and VIEW the 512 VI picture. Control: TAGX=_ctl arm.
