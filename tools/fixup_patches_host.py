@@ -63,7 +63,7 @@ def main() -> int:
             + fhead +
             "    static unsigned n, nulls, bad, dumps; static int ctl = -1;\n"
             "    if (ctl < 0) ctl = getenv(\"ROGUESQ_FIND_CTL\") != NULL;\n"
-            "    int64_t b = (int32_t)0x80000000;\n"
+            "    int64_t b = (int32_t)0x80120000;\n"  # s6280: was 0x80000000 -> read code at 0x80008EF8 (not 0x80128EF8) as the list head
             "    static int off = -1; if (off < 0) off = getenv(\"ROGUESQ_FIND_OFF\") != NULL;\n"
             "    if (off) findAndUnlinkSmallestEntry_s6088_inner(rdram, ctx); else rs64_find_body(rdram, ctx);\n"
             "    n++;\n"
