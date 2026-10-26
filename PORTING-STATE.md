@@ -168552,3 +168552,7 @@ Rules out: "patch pipeline unusable on macOS". Rest: any future patch needs its 
 
 ## Session 6270 (2026-10-26) — queued patched-build holds for lvl 11/14/18 (no game run this iteration)
 Maintenance check: CURRENT-TRUTH is 23.6 KB, no compaction needed. Enqueued three 300 s forced-level holds (s6270_patched_l11/l14/l18) so the C-patch-enabled binary (s6269) gets endurance coverage on previously untested-with-this-binary levels; the loop runs them between iterations. This is a side-effect check, not a G4 sweep. Results arrive in SOAK-RESULTS.md; any crash gets a backtrace and root cause, not a guard. No experiment run here, so nothing is ruled in or out yet.
+
+## Session 6271 (2026-10-26) — s6270 lvl11/14 patched-build holds folded clean; plume loop queued
+What ran: no game run. Folded two soak verdicts from SOAK-RESULTS.md (patched C-patch build, side-effect check): lvl11 hold=304s alive_at_end=1 vi_stalls30s=0 crashlines=0; lvl14 hold=303s alive_at_end=1 vi_stalls30s=0 crashlines=0. lvl18 still queued (soak_queue/s6270_patched_l18.sh), verdict arrives next fold. Queued scratch/agent/soak_queue/s6271_plume_title16_patched.sh: 16 title boots under lldb (reused s5576 script, lldb positive control inside) to catch the ~1/7 si_addr=0x58 plume SIGSEGV with a real backtrace if it still exists (prior: 28 clean boots after s5597).
+Rules out: the C-patch binary adds no crash/stall on lvl11/14 (single 300 s run each).
