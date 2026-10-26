@@ -1166,3 +1166,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261026-014207 | s6272_plume_attach16_patched | rc=0 | 966s | scratch/agent/soak_results/s6272_plume_attach16_patched_20261026-014207.log
 20261026-134207 | s6290_g3c_both | rc=0 | 220s | scratch/agent/soak_results/s6290_g3c_both_20261026-134207.log
 20261026-134547 | s6290_g3c_fps60 | rc=0 | 216s | scratch/agent/soak_results/s6290_g3c_fps60_20261026-134547.log
+20261026-<manual> | s6290_g3c_retail | rc=0 | 200s hold | scratch/agent/m6/g1_lvl1s6290_g3c_retail/run.log; folded s6292, g3c alternation=0.395, positive control=12528, crash=0
+20261026-<manual> | s6290_g3c_wide | rc=0 | 200s hold | scratch/agent/m6/g1_lvl1s6290_g3c_wide/run.log; folded s6292, g3c alternation=0.384, positive control=12132, crash=0

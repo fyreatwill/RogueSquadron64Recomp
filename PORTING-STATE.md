@@ -168716,3 +168716,16 @@ Ran: tools/g3c_jerk.py on scratch/agent/m6/g1_lvl1s6290_g3c_{fps60,both}/run.log
 Validity: the camera floats are a changing matrix (cam[0..8] is a 3x3 rotation with unit rows, cam[9..11] a translation, cam[12..15] garbage ~1e-39), so 0x80138D20+0x2C is right. cam and pl are all zero before flight (about 40% of rows), which the analyser already skips. Turning frames are far above 10, so the arms are valid.
 Showed: presented-frame spacing is 97% single-VI in both FPS60-bearing arms, so judder from uneven pacing (H-pacing) is not visible there. Alternation 0.625/0.632 is above 0.5 but below the 0.7 shake line, and there is NO retail arm yet, so no arm can be named the owner of the shake. Single-source, instrument-only. The retail and wide arms are still queued (soak_queue/s6290_g3c_{retail,wide}.sh).
 Rules out: nothing yet. Selects: nothing yet. Selects/refutes once retail lands: retail alternation near 0.5 with fps60/both at 0.63 selects an FPS60 camera-cadence cause (H-fps60); retail at about 0.62 refutes FPS60 and selects H-retail.
+## Session 6292 (2026-10-26) — G3c four-arm shake discriminator selects FPS60 cadence, not aspect
+
+Ran the two queued s6290 arms that had not been folded (retail and wide), then
+analysed all four phase-gated logs with `tools/g3c_jerk.py`. The instrument's
+positive control fired 12,528 times (retail), 12,576 (FPS60), 12,132 (wide), and
+the existing 12,208 (FPS60+wide). Sign-alternation fractions were respectively
+0.395, 0.625, 0.384, and 0.632; all arms had zero crash markers. The result
+selects H-fps60 camera cadence/pacing for the turning shake and disfavors
+H-aspect, because wide-only stayed at the retail baseline while FPS60 stayed high
+with or without wide. It does not identify the exact camera writer, and the
+comparison is single-instrument evidence rather than an independent reference.
+The next G3c unit is a fixed-camera retail/DD/ASPECT terrain-edge arm table;
+spikes-reference work follows it.
