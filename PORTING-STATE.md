@@ -168617,3 +168617,10 @@ NEXT DISCRIMINATOR: lldb watchpoint / breakpoint at beginFrameDLChunk on the dd3
 - Rules out: memory corruption / wild-writer hypotheses (H-stale-ptr, H-pool-overrun) for dd3 boot; the s6278 H-uncalled verdict; s6279 patch exoneration (void). Selects H-exhaustion (single-source: one run, one attempt; the 0 non-empty buckets beyond the 64 dumped is not shown).
 - ORIGIN: no mitigation machinery added; a diagnostic bug fixed. Note the wrapper-diagnostic lesson: a crash whose frame #0 is host diagnostic code is the instrument's, check lldb frame #0 before theorising about the guest.
 - Not done: ctl arm (ROGUESQ_FIND_CTL) positive control for bad>0; sizing of the pool.
+
+## Session 6281 (2026-10-26) — dd3 pool exhaustion anatomy: all 83 remaining bucket entries are size-0, used list holds 429 entries
+- Unit: extend the finder-wrapper NULL dump (tools/fixup_patches_host.py) to count every bucket entry (not just the first 64), zero-size entries, and the used-list length; log a baseline after call 1. Rebuilt, ran dd3 norm (tag g1_lvl1s6281_dd3_norm, same recipe as s6280).
+- Result: `[find-first] after call1 bucket_entries=138`; at the first NULL `[find-null-all] bucket_entries=83 zero_size=83 nonempty_buckets=83 used_list_len=429 used_zero=189`. Run ended allattempts-failed (the known dd3 crash).
+- Meaning: at NULL every remaining free entry has size 0 (the finder skips sz==0, ported verbatim from retail), so the pool is out of usable chunks, not corrupted. 429 entries sit on the used list (240 nonzero) while only ~139 existed at init, so entries are created at runtime (remainder splits); 512 total. Supports H-pool-small / H-no-return-within-frame over H-leak-across-frames, but single-source (one run, no dd1 control with the same dump, so the used-list size at dd1 is unknown).
+- Not done: dd1 control with the same dump (needed to say whether 429 is abnormal), ROGUESQ_FIND_CTL positive control, identifying the creator of runtime entries / the frame-end return path.
+- ORIGIN: no mitigation added; diagnostic only.
