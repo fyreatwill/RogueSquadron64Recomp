@@ -1,3 +1,4 @@
-# G1d residual: ladder exhausted, wait for owner feedback
-HYPOTHESIS-ID: g1d-title-garbage-rect
-s6275 built ROGUESQ_SKIP_TOGGLE (works) but fb dump cadence stayed 500, so no on/off pair. Optional revival: make the common script forward ROGUESQ_FB_DUMP_EVERY, rerun scratch/agent/s6275_run.sh, compare lower-band non-black fraction on adjacent dumps (on side must blank = control). Otherwise wait for owner playtest feedback (docs/OWNER-OPT-INS.md).
+# Next: G1d residual is parked; take ladder item 5 (MIPS C-patch qualification) or owner feedback
+HYPOTHESIS-ID: cpatch-pipeline-qualification
+s6276 closed the s6275 rerun as VOID (frozen frame, no blanking control; see PORTING-STATE s6276). Do not rerun skip-toggle unless the dump reads the RT64 native target or the toggle gates writeback.
+Next unit: pick ONE small real C patch (tools/weaken_patched_funcs.py PATCH_WEAKEN target), qualify with the two-arm discipline (patched vs unpatched, same run recipe, positive control that the patch fires), then a 300 s hold. Read docs/CURRENT-TRUTH item 5 first.
