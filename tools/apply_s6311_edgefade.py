@@ -87,6 +87,22 @@ def apply10c(text):
     return text[:k] + code + text[k:], 1
 
 
+EF4_LINE = (
+        '        if (lg6315 && ((n6315 < 40u) || (n6315 % 4001u) == 0u)) { uint32_t w0 = (uint32_t)MEM_W(0X0, pb), s3 = (uint32_t)ctx->r19; fprintf(stderr, "[edgefade4] slot=%08X %08X %08X %08X %08X obj=", (unsigned)w0, (unsigned)MEM_W(0X4, pb), (unsigned)MEM_W(0X8, pb), (unsigned)MEM_W(0XC, pb), (unsigned)MEM_W(0X10, pb)); if (w0 >= 0x80000000u && w0 < 0x80800000u) for (int q = 0; q < 12; q++) { uint32_t u = (uint32_t)MEM_W(q * 4, w0); float fv; memcpy(&fv, &u, 4); fprintf(stderr, "%g ", fv); } fprintf(stderr, " s3=%08X cell=%d,%d\\n", (unsigned)s3, (s3 >= 0x80000000u && s3 < 0x80800000u) ? (int)(int16_t)MEM_H(0X18, s3) : -1, (s3 >= 0x80000000u && s3 < 0x80800000u) ? (int)(int16_t)MEM_H(0X1A, s3) : -1); }\n'
+)
+
+
+def apply10d(text):
+    """s6316: calibration log [edgefade4] (slot words, *slot floats, cell idx), inserted before n6315++."""
+    key = '        n6315++; if (lg6315'
+    if 'edgefade4' in text or 'PATCH: s6315 edgefade3' not in text:
+        return text, 0
+    k = text.find(key)
+    if k < 0:
+        return text, 0
+    return text[:k] + EF4_LINE + text[k:], 1
+
+
 if __name__ == "__main__":
     p = BASE / "funcs_10.c"
     t = p.read_text()
@@ -95,6 +111,8 @@ if __name__ == "__main__":
     n += n2
     t2, n3 = apply10c(t2)
     n += n3
+    t2, n4 = apply10d(t2)
+    n += n4
     if n:
         p.write_text(t2)
     print(f"funcs_10.c live patched x{n}")

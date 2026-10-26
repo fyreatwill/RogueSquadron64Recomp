@@ -1,6 +1,6 @@
-# Next: fold s6315 edgefade3 soak, calibrate grid-vs-player scale, score the fade
+# Next: fold s6316 calibration soak, choose fade centre, move hook to cell level
 HYPOTHESIS-ID: g3c-owner-visual
-Soak s6315_g3c_edgefade3 (arms dd3_log, dd3_fade, ret_log) writes scratch/agent/m6/g1_lvl1s6315_*/run.log.
-1. From dd3_log [edgefade3] lines: is d centred on 0 with max ~78? If d is offset/huge, fix ROGUESQ_EDGE_GRIDSCALE or the player-record source (pl[1],pl[3] guess) and rerun.
-2. Score dd3_fade vs dd3_log FB dumps with tools/g3c_edge_score.py: edge excess must drop, near terrain unchanged; positive control = f>0 count in [edgefade3] log and visible PNG tint.
-3. Pick haze colour from the sky horizon pixels; then ask owner re ROGUESQ_CULL_SPIKE default, and send before/after PNGs.
+Soak s6316_g3c_cal writes scratch/agent/m6/g1_lvl1s6316_cal/run.log with [edgefade4] lines.
+1. Read [edgefade4]: does *slot (obj=) show plausible float position (x,y,z in game units, changing)? Does cell=x,z vary across the visible grid? Compare cell idx range to obj pos/scale to get the grid cell size.
+2. Fix: A6C0 gets only a normal, so compute fade factor per cell in 0x8004AA94 (cell idx from s3+0x18/0x1A vs player cell) and store in a global read by the A6C0 epilogue hook (s3 = ctx->r19 may also work if preserved; verify cell != -1 in log).
+3. Rerun dd3_log vs dd3_fade (reuse s6315 recipe), score with tools/g3c_edge_score.py; positive control f>0 count + visible tint. Then haze colour, send PNGs to owner.
