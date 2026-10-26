@@ -69,6 +69,8 @@ def main() -> int:
             "    n++;\n"
             "    uint32_t head = (uint32_t)MEM_W(0X8EF8, b);\n"
             "    if (n == 1) { uint32_t cnt = MEM_HU(0X8EF0, b), bk = (uint32_t)MEM_W(0X8F00, b); unsigned tot = 0; for (uint32_t i = 0; i < cnt && i < 65536; i++) { uint32_t e = (uint32_t)MEM_W(i * 4, (int64_t)(int32_t)bk); unsigned l = 0; while (e && l < 100000) { l++; tot++; e = (uint32_t)MEM_W(0, (int64_t)(int32_t)e); } } fprintf(stderr, \"[find-first] after call1 bucket_entries=%u\\n\", tot); }\n"
+            "    { static unsigned pk, lastp; unsigned ul2 = 0; uint32_t u2 = head; while (u2 && ul2 < 100000) { ul2++; u2 = (uint32_t)MEM_W(0, (int64_t)(int32_t)u2); }\n"
+            "      if (ul2 > pk) pk = ul2; if (n % 200 == 0 || (pk >= lastp + 50)) { lastp = pk; fprintf(stderr, \"[find-used] call=%u used_len=%u peak=%u\\n\", n, ul2, pk); } }\n"
             "    if (ctx->r2 == 0) {\n"
             "        nulls++;\n"
             "        if (dumps < 3) {\n"
