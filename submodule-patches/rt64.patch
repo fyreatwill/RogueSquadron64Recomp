@@ -3302,7 +3302,7 @@ index f17db9b..7fb6721 100644
          }
  
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index d1a9f4e..9b75309 100644
+index d1a9f4e..f6d3f00 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -4,10 +4,20 @@
@@ -4328,7 +4328,7 @@ index d1a9f4e..9b75309 100644
          drawRect(ulx, uly, lrx, lry, 0, 0, 0, 0, false, extAlignment);
      }
  
-@@ -1131,6 +1957,893 @@ namespace RT64 {
+@@ -1131,6 +1957,918 @@ namespace RT64 {
          triTcFloats.insert(triTcFloats.end(), tc, tc + triCount * TcFloatsPerTri);
          triColorFloats.insert(triColorFloats.end(), col, col + triCount * ColFloatsPerTri);
          drawCall.triangleCount += triCount;
@@ -4743,6 +4743,31 @@ index d1a9f4e..9b75309 100644
 +                    nTex = 0; nNoTex = 0; nT1 = 0;
 +                    nShadeBlack = 0; nShadeOk = 0; nShadeWhite = 0;
 +                    for (int c = 0; c < 4; c++) { vmin[c] = 1e9f; vmax[c] = -1e9f; }
++                }
++            }
++        }
++
++        // PATCH (s6240): ROGUESQ_LOG_TRI_T=1 — triangle-path twin of ROGUESQ_LOG_TEXRECT_T. Logs every draw whose
++        // render tile has maskt==5 (up_167 descriptor), plus the first 20 of any tile as positive control.
++        {
++            static const bool s_logTT = []{ const char *e = std::getenv("ROGUESQ_LOG_TRI_T"); return e && *e && *e != '0'; }();
++            if (s_logTT && tile < RDP_TILES && triCount > 0) {
++                static std::atomic<int> nAny{0}, nUp{0};
++                const auto &tt = tiles[tile];
++                const bool up = (tt.maskt == 5 && tt.siz == 0 && tt.fmt != 3);
++                const int a = ++nAny;
++                const int u = up ? ++nUp : nUp.load();
++                if (a <= 20 || (up && u <= 400)) {
++                    float xmn = 1e9f, xmx = -1e9f, ymn = 1e9f, ymx = -1e9f, vmn = 1e9f, vmx = -1e9f, umn = 1e9f, umx = -1e9f;
++                    for (uint32_t i = 0; i < triCount * 3; i++) {
++                        const float px = pos[i * PosFloatsPerVertex + 0], py = pos[i * PosFloatsPerVertex + 1];
++                        const float u_ = tc[i * TcFloatsPerVertex + 0], v_ = tc[i * TcFloatsPerVertex + 1];
++                        xmn = std::min(xmn, px); xmx = std::max(xmx, px); ymn = std::min(ymn, py); ymx = std::max(ymx, py);
++                        umn = std::min(umn, u_); umx = std::max(umx, u_); vmn = std::min(vmn, v_); vmx = std::max(vmx, v_);
++                    }
++                    std::fprintf(stderr, "[triT #%d up=%d] tris=%u tile=%u fmt=%u siz=%u line=%u lrs=%u lrt=%u maskt=%d masks=%d bbox=(%.0f,%.0f)-(%.0f,%.0f) uv=[%.2f,%.2f]x[%.2f,%.2f]\n",
++                        a, (int)up, triCount, tile, (unsigned)tt.fmt, (unsigned)tt.siz, (unsigned)tt.line, tt.lrs, tt.lrt, (int)tt.maskt, (int)tt.masks, xmn, ymn, xmx, ymx, umn, umx, vmn, vmx);
++                    std::fflush(stderr);
 +                }
 +            }
 +        }
@@ -5222,7 +5247,7 @@ index d1a9f4e..9b75309 100644
  
          const FixedRect &scissorRect = state->rdp->scissorRectStack[scissorStackSize - 1];
          if (!scissorRect.isNull()) {
-@@ -1285,6 +2998,7 @@ namespace RT64 {
+@@ -1285,6 +3023,7 @@ namespace RT64 {
          triTcFloats.emplace_back(flip ? u2 : u1);
          triTcFloats.emplace_back(flip ? v1 : v2);
          drawCall.triangleCount += 2;
@@ -5230,7 +5255,7 @@ index d1a9f4e..9b75309 100644
  
          // Update the tracked texcoords for the used tiles. Use scissor intersection to figure out 
          // what the bounds of the real sampling will be if necessary.
-@@ -1319,6 +3033,60 @@ namespace RT64 {
+@@ -1319,6 +3058,60 @@ namespace RT64 {
          RT64_LOG_PRINTF("RDP::drawTexRect(ulx %d, uly %d, lrx %d, lry %d, tile %u, uls %d, ult %d, dsdx %d, dtdy %d, flip %u)", ulx, uly, lrx, lry, tile, uls, ult, dsdx, dtdy, flip);
  #   endif
  
@@ -5275,10 +5300,10 @@ index d1a9f4e..9b75309 100644
 +            if (s_logT && tile < RDP_TILES) {
 +                static std::atomic<int> nAny{0}, nUp{0};
 +                const auto &tt = tiles[tile];
-+                const bool up = (tt.fmt == 4 && tt.siz == 0 && tt.tmem == 0 && tt.line == 4);
++                const bool up = (tt.maskt == 5);
 +                const int a = ++nAny;
 +                const int u = up ? ++nUp : nUp.load();
-+                if (a <= 20 || (up && u <= 120)) {
++                if (a <= 20 || (up && u <= 400)) {
 +                    const double rows = (double(lry) - double(uly)) / 4.0, cols = (double(lrx) - double(ulx)) / 4.0;
 +                    const double t0 = double(ult) / 32.0, s0 = double(uls) / 32.0;
 +                    const double t1 = t0 + rows * double(dtdy) / 1024.0, s1 = s0 + cols * double(dsdx) / 1024.0;
