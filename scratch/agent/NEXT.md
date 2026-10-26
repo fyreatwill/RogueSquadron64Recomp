@@ -1,6 +1,6 @@
-# G1d: wide-title lower-band residual — no attributed draw class
-HYPOTHESIS-ID: g1d-widescreen
-s6253: ph4 has 0 fills; s6251 attribution refuted; cross-run spread (0.05-0.17) too large to use skip arms.
-Hypotheses: H-tri-rest, H-texrect-rest, H-vi-readout (residual is VI/writeback of stale RDRAM, not a draw).
-Next unit: ONE run, in-run toggle: skip texrect-all on odd VI frames in ph4 and dump fb at paired frames (even/odd); compare lower band within run. Also dump lower-band non-black x-histogram for the none arm vs bboxR/bboxT x-extents. Positive control: texrect-skip frames must differ from non-skip frames in the glyph rows.
-Consider whether this 0.05 residual matters to the owner at all; if the title renders right at 21:9, close it and move to G1e.
+# G1e: does lowering the arbiter limit byte give 60 game fps without breaking the sim?
+HYPOTHESIS-ID: g1e-framerate
+Baseline (s6254): flight 30 gfx tasks/s, VI 60/s (lvl1, lvl10).
+Hypotheses: H-limit (byte 0x80128EAF is 2 in flight; forcing 1 yields 60 tasks/s), H-fixed-step (sim advances fixed dt per frame, so 60 fps = 2x game speed), H-delta (sim uses computeFrameDeltaTime 0x8000BBB0 / 0x80138F10 timestamp, so speed is unchanged), H-cpu (frame work cannot finish in 16.7 ms, tasks stay <60).
+Unit (ONE build, ONE run, in-run toggle phase-gated on VI count): env ROGUESQ_G1E_LIMIT=<n> poked from the Gfx thread (like g1c::apply in lib/N64ModernRuntime/ultramodern/src/events.cpp) into 0x80128EAF every VI, toggled between retail and n on alternating 20 s windows, with [g1b] tasks/s plus per-window mission timer advance and craft speed/position delta per real second. Positive control: first log the value of 0x80128EAF read in flight (must print, expect 2). Level 1 via recipe scratch/agent/g1_level_coverage_common.zsh (ROGUESQ_G1B=1). After lib/ edit: ./submodule-patches/export.sh and commit.
+Outcomes: tasks 60 and per-second speed unchanged -> H-limit+H-delta, ship as opt-in; tasks 60 and speed 2x -> H-fixed-step, need sim decoupling (lever 2); tasks stay 30 -> H-limit false/H-cpu, read value first.
