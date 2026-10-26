@@ -153,3 +153,5 @@ Default stays retail 4:3. Opt-in levers: `ROGUESQ_ASPECT=<w>:<h>` (derives FB_WI
 - s6247: phase-4 skip arms with WB_CLEAR (single run each, lower-band non-black): none 0.639, tri-all 0.699, fill 0.809, texrect-all 0.174 (upper 0.0). Texrects paint the tiled bg/strips; residual 0.174 is neither texrect nor tri -> fill or native white corners. Next: clear native target to black at wide alloc, re-measure residual.
 
 - s6248: H-native-white REFUTED by source (RT64 clearColorTarget clears to opaque black, rt64_render_target.cpp:353 / plume RenderColor default a=1). Residual 0.174 comes from RDRAM read-in or fill ops, not an uncleared target. Next: log/zero the RDRAM span at read-in time (rt64_state.cpp ~2412 read path) + texrect S ranges (LOG_TEXRECT_T).
+
+- s6249: G1d wide-title: RI_CLEAR (pre-read-in memset) cuts texrect-skip residual only 0.174->0.132; H-readin minor. Open: H-bg-wrap, fill-rect residual. See NEXT.md.
