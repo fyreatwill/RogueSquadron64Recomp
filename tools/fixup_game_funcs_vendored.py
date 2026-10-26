@@ -37925,6 +37925,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6294:
             changed = True
             report.append(f"{p.name}: s6294 edgewriter x{_n6294}")
+        import apply_s6303_celltest as _a6303
+        text, _n6303 = _a6303.apply9(text)
+        if _n6303:
+            changed = True
+            report.append(f"{p.name}: s6303 celltest x{_n6303}")
 
     if p.name == "funcs_4.c":
         import apply_s6155_hudcpos as _a6155

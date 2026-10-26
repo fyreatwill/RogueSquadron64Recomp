@@ -1,4 +1,4 @@
-# Next: G3c(a) jagged far-terrain edge - vertex probe (needs s6296 radius-writer follow-up)
+# Next: G3c(a) jagged far-terrain edge - in-flight fog/shade ramp vs distance
 HYPOTHESIS-ID: g3c-owner-visual
-G3c(c) closed s6302 (shake amplitude equal in all arms; H-retail). G3c(b) spikes: no emulation defect found (s6300/s6301); CULL_SPIKE opt-in, owner question pending.
-Unit: s6298 frame shows stair-step edge + missing cells at dd3+21:9. Dump terrain cell draw list per frame (retail vs dd3 vs dd3+wide), plot cell footprint boundary; discriminate grid-aligned footprint edge (H-footprint) vs frustum widening (H-frustum). Use tools/g3c horizon scorer from s6299.
+s6303: per-cell r^2 test is a near ring (not scaled); far extent = footprint frustum, scaled ~2.7x by dd3, unchanged by aspect. Haze not scaled (s6296).
+Unit: H-fade (shade/alpha ramp ends before the dd3 footprint edge, so edge is un-hazed) vs H-footprint (trapezoid far side itself stair-steps even with haze). One phase-gated run: ROGUESQ_FORCE_FOG arm vs none at dd3, same level-1 camera; measure terrain vertex shade alpha/fog factor vs cell distance (probe in buildGridCellMesh vertex write) and horizon score (tools/g3c_horizon_score.py). Positive control: forced fog changes far shade. If ramp saturates at ~retail 29 cells while dd3 draws to 78 -> scale the ramp end by dd (fix in fixup script). Also ask owner re ROGUESQ_CULL_SPIKE default.

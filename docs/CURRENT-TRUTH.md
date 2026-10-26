@@ -98,6 +98,7 @@ autopilot win are owner playtest scope.
   framebuffer source; H-fade/H-radius and the writer remain unresolved. No
   mitigation is allowed until the writer/value is named. Next: static-enumerate
   terrain/fog/radius writers, then one phase-gated writer/value discriminator.
+- **s6303 G3c(a) cell-test result (single-source):** the r^2 test at 0x800434E4 is a NEAR ring (r2 153.8-220, identical in retail/dd3/aspect; pass = d2<r2). Traversed far extent: retail 29.4 cells, dd3 78.3, dd3+21:9 79.5 -> dd scales the footprint (0x80043918) ~2.7x, aspect does not. Not the far-edge writer. Next: in-flight fog/shade ramp vs distance (ROGUESQ_FORCE_FOG). Tools: tools/apply_s6303_celltest.py, tools/g3c_celltest.py.
 - **s6296 G3c static enumeration (single-source):** terrain radius 0x8009DEAC feeds only the footprint frustum (0x80043918), a scroll offset (computeGridLayerScrollOffset) and the r^2 per-cell test (buildGridCellMeshForFace 0x800434E0); no guest fog/haze start/end derives from radius/FOV/aspect, so H-fade has no writer to scale. Remaining lead: per-vertex shade/alpha ramp by distance (measure in one phase-gated run) vs the footprint trapezoid far side itself.
 - **s6295 G3c radius result:** 21:9 flight rows at 0x80043918 are raw 19.68-23.94, eff=1, identical to the retail band, so H-radius is ruled out for ASPECT (single-source). Remaining H-aspect/H-fade: static-enumerate the projection/fog writer next. Run key-driven arms one at a time (concurrent windows stall pre-flight).
 - **s6294 G3c radius-writer probe:** the new fixup-backed probe at guest PC
