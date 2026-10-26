@@ -98,6 +98,7 @@ autopilot win are owner playtest scope.
   framebuffer source; H-fade/H-radius and the writer remain unresolved. No
   mitigation is allowed until the writer/value is named. Next: static-enumerate
   terrain/fog/radius writers, then one phase-gated writer/value discriminator.
+- **s6296 G3c static enumeration (single-source):** terrain radius 0x8009DEAC feeds only the footprint frustum (0x80043918), a scroll offset (computeGridLayerScrollOffset) and the r^2 per-cell test (buildGridCellMeshForFace 0x800434E0); no guest fog/haze start/end derives from radius/FOV/aspect, so H-fade has no writer to scale. Remaining lead: per-vertex shade/alpha ramp by distance (measure in one phase-gated run) vs the footprint trapezoid far side itself.
 - **s6295 G3c radius result:** 21:9 flight rows at 0x80043918 are raw 19.68-23.94, eff=1, identical to the retail band, so H-radius is ruled out for ASPECT (single-source). Remaining H-aspect/H-fade: static-enumerate the projection/fog writer next. Run key-driven arms one at a time (concurrent windows stall pre-flight).
 - **s6294 G3c radius-writer probe:** the new fixup-backed probe at guest PC
   `0x80043918` (raw terrain-radius source `0x8009DEAC`) fired in the retail

@@ -1,11 +1,11 @@
-# Next: G3c(a) static-enumerate projection/fog writers (H-aspect vs H-fade)
+# Next: G3c(a) vertex-level distance ramp (L-fade at vertex shade) vs bare footprint edge
 HYPOTHESIS-ID: g3c-owner-visual
 
-s6295: terrain radius at 0x80043918 is unchanged in 21:9 flight (19.68-23.94, eff=1) -> H-radius out.
-Remaining: H-aspect (widened frustum exposes grid-aligned cell edge) vs H-fade (fog/haze start/end
-not scaled with dd/aspect). One bounded unit: grep-enumerate every writer of the fog/haze
-start/end (and the s6144 frustum x-widening consumer) in generated code, then compare their values
-in one wide run vs retail (single run each, NOT concurrent) plus the contact-sheet edge score.
-Outcome map: fog values equal retail and edge present at far x -> H-aspect (cull/extend cells
-in x); fog identical but dd>1 edge inside haze gap -> H-fade (scale fog). Do not add mitigation
-before naming the writer (iron rule 11).
+s6296: radius has no fog/haze consumer (static). Remaining hypotheses for the jagged far edge:
+ H-ramp: retail hides the edge with a distance-baked vertex shade/alpha ramp which dd/aspect cells lack.
+ H-bare: retail edge is equally bare (edge excess 0.0212 in s6293) and the opt-ins merely show more of it.
+Discriminator, one phase-gated flight run per arm (one at a time): log vertex alpha/shade of terrain
+verts vs cell distance (outer 12.5% vs inner) in retail and dd3+aspect, with a positive control
+(force-mark all verts). Ramp present in retail only on outer cells -> H-ramp (extend ramp with r);
+flat in both -> H-bare (owner question: fade outer ring, opt-in). No mitigation before the writer is named.
+Then G3c(b) spikes reference check.
