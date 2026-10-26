@@ -88,6 +88,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog; per-session history archived in PROJECT-OVERVIEW.md, "Archived CURRENT-TRUTH backlog")
 
+- **s6289 corrects s6288 5j:** the dd3 `+128 chunks at 80E00000` alloc is NOT from the finder-grow (zero `[finder-grow]`/`[s6289-real]` lines in 10 failing logs; finder C-patch not live, it is in PATCH_WEAKEN). Culprit is another grow site (begin/b030/topup); `ra` in `[dlpoolx]` is always 0 so tag sites by constant. Parked behind G3c.
 - **Owner visual report 2026-10-26 (G3c, take next after the in-flight NEXT unit):**
   (a) jagged/blocky terrain edge where fog normally hides it, (b) knife spikes still
   visible (G3b "retail-identical" was never checked against a reference: reopened),

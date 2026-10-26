@@ -1,6 +1,4 @@
-# Next: fix the finder-grow chain shape so dd3 survives the first empty-cache event
-HYPOTHESIS-ID: cpatch-pipeline-qualification
-s6288: ungated begin GROW was the menu killer (gated now). Gated dd3 MB=2 dies 5/5 right after the first finder-grow (pc 0x80015544, chunks at 0x80E00000) with SIGBUS guest addr 1 in drawSubtitleText.
-Hypotheses: H-shape (grown chain's +0/+4/other fields differ from real pool chunks: compare a real chunk's 0x108 bytes at head vs synthesized; drawSubtitleText may read a size/flag word or +4 as pointer), H-range (game code range-checks chunk pointers < 0x80800000 / 8 MB), H-unlink (finder is expected to also unlink and set the used-list; returning r2 without the bookkeeping leaves 0x63B0 inconsistent).
-Work unit: dump 0x20 words of one real chunk (head of 0x801163B0 at begin 5) and of a grown chunk, read funcs_3.c near 0x80015544 and the DL-chunk consumer in drawSubtitleText, then adapt the grow (copy real chunk header words; try arena below 0x80800000 only if H-range). Recipe: tools/s6288_dd3_dlpoolx_run.sh (MB=2, AT=3000).
-Outcomes: survives past begin 6656 -> H-shape fixed, then residual-leak measurement; still crashes at addr 1 with identical header -> H-unlink/H-range.
+# Next: G3c owner visual report (arm table first)
+HYPOTHESIS-ID: g3c-owner-visual
+Owner priority (ITERATION.md G3c). Three defects: (a) jagged far-terrain edge, (b) knife spikes (reopen: H-rsp-emu vs H-retail), (c) turn shake. Start with (c): cheapest single instrument - per presented frame log camera yaw/pos + craft yaw from guest RAM + present timestamp during a scripted steady turn; arms retail / FPS60 / ASPECT / both; shake = sign-alternating second difference retail lacks. Batch (a) into the same build: an arm table of which opt-ins show the terrain edge (retail control first, framebuffer dumps).
+Parked (small): dd3 - tag grow sites by constant in tools/apply_s6098_dlpool.py (ra is always 0) to name the crashing site; s6289 showed the finder-grow never fires.
