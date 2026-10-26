@@ -1,3 +1,3 @@
-# Fold s6264 wide+FPS60 soaks, then G3 render fidelity
-HYPOTHESIS-ID: g1-optin-combos
-Read s6264_wide_fps60_16x9 / _21x9 in SOAK-RESULTS.md and the real logs in scratch/agent/m6/g1_lvl1s6264_wide_*/ (soak_results logs are empty for g1 recipes). Want: keys.log has no notitle/nomission, run.log has width=796 / 1024 lines in flight, alive_at_end, 0 crash lines, 0 VI stalls. If clean, add the wide+FPS60 combo to docs/OWNER-OPT-INS.md (note: wide recipes need TITLE_ORIGIN='0x[0-9A-F]*' MISSION_RE='[0-9A-F]+') and move to G3 render fidelity (hangar artifacts / in-flight frame diffs). If a crash: backtrace, root-cause. G4 sweeps stay parked.
+# G3 render fidelity: in-flight frame diff vs retail
+HYPOTHESIS-ID: g3-inflight-diff
+Read docs/G3-RETAIL-PIXEL-ORACLE.md, pick one level with an obtainable retail oracle frame, capture a matching port framebuffer at the same camera, and diff. Discriminate: missing geometry/HUD vs texture/colour mismatch vs match. Log outcome; no aim/steer work.
