@@ -168516,3 +168516,7 @@ Unit: NEXT.md step 4b. No game run (the audio arm needs no new instrument: PROJE
 
 ## Session 6260 (2026-10-26) — G1e hangar FPS60 soak folded (H-menu refuted); lvl1/5/10 FPS60 holds queued
 s6259_g1e_fps60_hangar: rc=0, 605 s hold, alive_at_end=1, vi_stalls30s=0, crashlines=0, mission_t=77s vs baseline s6009_hangar_route_i 81s (same recipe, same godrefills=20, mission_cycles=0). Hangar/title route reaches the same state with ROGUESQ_FPS60=1; H-menu refuted (single comparison, not a per-frame cadence diff). Queued s6260_g1e_fps60_l1/l5/l10 (300 s, G1B timing, FPS60=1). Note: ROGUESQ_FPS60 passes through env to the common script only if it forwards env (default inherits).
+
+## Session 6261 (2026-10-26) — G1e FPS60 lvl1/lvl10 holds folded clean
+
+SOAK-RESULTS: s6260_g1e_fps60_l1 (hold=301s, vi_stalls30s=0, crashlines=0, alive_at_end=1) and s6260_g1e_fps60_l10 (hold=303s, vi_stalls30s=0, crashlines=0, alive_at_end=1) are both clean with ROGUESQ_FPS60=1. The lvl5 recipe is still in soak_queue; the loop will fold it. With the hangar soak (s6259) this is three clean FPS60 contexts. The G1B per-frame timing was not in these logs, so no new frame-time number; the 60 gfx tasks/s and ~10 ms RSP figures from s6255 stand (single-source). G1e is closed as an opt-in setting; default stays retail, the owner judges feel. Next rung: G3/G5 per the ladder.
