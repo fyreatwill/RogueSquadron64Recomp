@@ -3302,7 +3302,7 @@ index f17db9b..7fb6721 100644
          }
  
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index d1a9f4e..38fa078 100644
+index d1a9f4e..4602d42 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -4,10 +4,41 @@
@@ -4312,7 +4312,7 @@ index d1a9f4e..38fa078 100644
  #   ifdef LOG_FILLRECT_METHODS
          RT64_LOG_PRINTF("RDP::fillRect(ulx %d, uly %d, lrx %d, lry %d)", ulx, uly, lrx, lry);
  #   endif
-@@ -1049,6 +1859,44 @@ namespace RT64 {
+@@ -1049,6 +1859,59 @@ namespace RT64 {
              lry |= 3;
          }
  
@@ -4354,10 +4354,25 @@ index d1a9f4e..38fa078 100644
 +            }
 +        }
 +
++        // PATCH (s6253): ROGUESQ_LOG_FILLALL=1 — log EVERY fill rect (cap 4000 per phase) with colour, for the wide-title residual.
++        {
++            static const bool s_fa = []{ const char *e = std::getenv("ROGUESQ_LOG_FILLALL"); return e && *e && *e != '0'; }();
++            if (s_fa) {
++                static std::atomic<int> nF[16]{};
++                const unsigned ph = rs64_phase_ord ? rs64_phase_ord() : 0u;
++                const int n = ++nF[ph & 15u];
++                if (n <= 4000) {
++                    std::fprintf(stderr, "[fillA ph%u #%d] cimg=0x%08X cw=%u siz=%u fill=0x%08X rect=(%d,%d)-(%d,%d) cyc=%d\n",
++                        ph, n, colorImage.address, (unsigned)colorImage.width, (unsigned)colorImage.siz, fillColorStack[fillColorStackSize - 1], ulx, uly, lrx, lry, (int)(mode >> G_MDSFT_CYCLETYPE));
++                    std::fflush(stderr);
++                }
++            }
++        }
++
          drawRect(ulx, uly, lrx, lry, 0, 0, 0, 0, false, extAlignment);
      }
  
-@@ -1084,6 +1932,7 @@ namespace RT64 {
+@@ -1084,6 +1947,7 @@ namespace RT64 {
      }
      
      void RDP::drawTris(uint32_t triCount, const float *pos, const float *tc, const float *col, uint8_t tile, uint8_t levels) {
@@ -4365,7 +4380,7 @@ index d1a9f4e..38fa078 100644
          // Levels is expected to be above 0 elsewhere.
          levels += 1;
  
-@@ -1131,6 +1980,944 @@ namespace RT64 {
+@@ -1131,6 +1995,944 @@ namespace RT64 {
          triTcFloats.insert(triTcFloats.end(), tc, tc + triCount * TcFloatsPerTri);
          triColorFloats.insert(triColorFloats.end(), col, col + triCount * ColFloatsPerTri);
          drawCall.triangleCount += triCount;
@@ -5310,7 +5325,7 @@ index d1a9f4e..38fa078 100644
  
          const FixedRect &scissorRect = state->rdp->scissorRectStack[scissorStackSize - 1];
          if (!scissorRect.isNull()) {
-@@ -1285,6 +3072,7 @@ namespace RT64 {
+@@ -1285,6 +3087,7 @@ namespace RT64 {
          triTcFloats.emplace_back(flip ? u2 : u1);
          triTcFloats.emplace_back(flip ? v1 : v2);
          drawCall.triangleCount += 2;
@@ -5318,7 +5333,7 @@ index d1a9f4e..38fa078 100644
  
          // Update the tracked texcoords for the used tiles. Use scissor intersection to figure out 
          // what the bounds of the real sampling will be if necessary.
-@@ -1315,10 +3103,89 @@ namespace RT64 {
+@@ -1315,10 +3118,89 @@ namespace RT64 {
      }
      
      void RDP::drawTexRect(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry, uint8_t tile, int16_t uls, int16_t ult, int16_t dsdx, int16_t dtdy, bool flip, const ExtendedAlignment &extAlignment) {

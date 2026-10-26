@@ -1,5 +1,6 @@
-# G1d: wide-title residual 0.05 — skip arms exhausted, switch to logging
+# G1d: wide-title lower-band residual — no attributed draw class
 HYPOTHESIS-ID: g1d-widescreen
-s6252: tri-all arm reads lower=1.0 (confounded, same as "all"); skipping everything is not a usable zero control.
-Hypotheses: H-fill-extent, H-tri-rest, H-white-corner.
-Next unit: one build logging in ph4 every fill rect (x0,y0,x1,y1,colour) and every tri's screen bbox + draw class, with the fb-lower-band pixel rows (y>=255) that are non-black dumped by x-range; correlate the 0.05 pixel columns with logged primitives. Positive control: a logged primitive known to cover the band must map to non-black pixels.
+s6253: ph4 has 0 fills; s6251 attribution refuted; cross-run spread (0.05-0.17) too large to use skip arms.
+Hypotheses: H-tri-rest, H-texrect-rest, H-vi-readout (residual is VI/writeback of stale RDRAM, not a draw).
+Next unit: ONE run, in-run toggle: skip texrect-all on odd VI frames in ph4 and dump fb at paired frames (even/odd); compare lower band within run. Also dump lower-band non-black x-histogram for the none arm vs bboxR/bboxT x-extents. Positive control: texrect-skip frames must differ from non-skip frames in the glyph rows.
+Consider whether this 0.05 residual matters to the owner at all; if the title renders right at 21:9, close it and move to G1e.
