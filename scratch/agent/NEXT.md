@@ -1,4 +1,3 @@
-# G5 renaming sweep (G1-G4 all closed/parked; owner judges opt-ins)
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
-Before starting: grep -n '^## Session ' PORTING-STATE.md | tail -15 ; if all sweep-titled, do a REVISIT of the retail-entry boundary instead.
-Note: sweep alone trips the engineering-pivot counter (6 -> pivot); prefer a real change (e.g. M6 endurance on an untested route, or an M3 idiom audit) when possible.
+# Optional MIPS source-to-ELF patch qualification (G5 sweep complete, s6268)
+HYPOTHESIS-ID: mips-c-patch-qualification
+Goal: with mips64-elf-gcc 14.2, build a trivial C patch into patches.elf, load it, and qualify with the two-arm discipline (patched vs unpatched, same phase-gated run, positive control that the patch visibly fires). Pick a harmless target (e.g. a counter incremented in a hot function) and read the counter. If nothing applicable, take M6 mission endurance on an untested route.
