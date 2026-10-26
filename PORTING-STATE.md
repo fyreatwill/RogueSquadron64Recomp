@@ -168838,3 +168838,11 @@ Result: jump_med retail 0.281, dd2 0.264, dd3 0.317, aspect 0.394, dd3_aspect 0.
 Reading: dd3 alone does not own the stair-step; aspect arms score higher but the effect is inconsistent (+0.111 vs +0.042) and confounded by 1024-wide dumps and a different camera FOV/content. Single-source; not a root cause. Rules out: dd-only (haze not scaled with draw distance) as sufficient. Does NOT yet prove aspect owns it.
 ORIGIN: diagnostic tool only; no game behaviour mitigated.
 Next: a cheap visual contact sheet of matched-frame retail vs aspect horizon crops for owner eyeball is lower value than moving on; take G3c(b) spikes (H-rsp-emu reference check) next, return to (a) with a vertex-level probe of the footprint cell include only if (b) leaves time.
+
+## Session 6300 (2026-10-26) — G3c(b) spikes: RSP reciprocal unit audited against hardware ROM values; divide path exonerated, clip ops still unchecked
+- Work unit: H-rsp-emu vs H-retail, first lever = the divide unit (VRCP/VRCPL/VRCPH/VRSQ), since the F5 clip path derives screen coords from reciprocals.
+- Source check: lib/N64ModernRuntime/librecomp/include/librecomp/rsp_vu_impl.hpp:1352-1440 is the ares algorithm (DIVDP/DIVIN/DIVOUT, clz shift, sign mask, -32768 special case); tables built in librecomp/src/rsp.cpp:26-42 and `constants_init` is registered at recomp.cpp:806 (so tables are not zero).
+- Table positive control (python, independent of the C): rcp[0..3] truncated to u16 = 0xFFFF,0xFF00,0xFE01,0xFD04, which are the known hardware ROM values.
+- Result: the divide unit matches the hardware reference; no evidence it produces the pinned Y of -170.25/-224.25. Does NOT rule out VCH/VCL/VCR/VMULF/VMACF (not reviewed) nor a ucode-level clip result that hardware shares. s6085's H-retail reading stays single-source and unverified; no vertex-level replay was done.
+- Not done: replay of the swap-1867 pre-projection vertices; no game run this iteration.
+ORIGIN: n/a, audit only, no mitigation added.

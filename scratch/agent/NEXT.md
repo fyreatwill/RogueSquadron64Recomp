@@ -1,5 +1,5 @@
-# Next: G3c(b) knife spikes - reopen H-rsp-emu vs H-retail
+# Next: G3c(b) knife spikes - vertex-level replay of a logged wedge
 HYPOTHESIS-ID: g3c-owner-visual
-Competing: H-rsp-emu (our LLE RSP F5 clip path differs from hardware: VRCP/VRCPH/VRCPL, VMULF/VMACF rounding, VCH/VCL/VCR flags) vs H-retail (retail also draws wedges).
-Discriminator: take a logged wedge (G3b s6081-s6085 logs; grep PORTING-STATE for 'spike') and replay its exact vertex/matrix inputs through an independent RSP vector-op reference (python model of VRCP/VRCPL/VRCPH/VRSQ per ares) and compare to our RSP output; independent check = tools/oracle retail run if reaching that level is feasible. Positive control: a known-good vertex must match.
-(a) status: s6299 scorer ambiguous (aspect jump +0.11 vs retail, dd3 ~0); revisit with vertex-level probe only after (b).
+s6300 exonerated the divide unit (VRCP/VRSQ tables match hardware ROM). Remaining: H-rsp-emu in clip/multiply ops (VCH/VCL/VCR/VMULF/VMACF/VMUDN family in rsp_vu_impl.hpp) vs H-retail (hardware yields the same pinned Y -170.25/-224.25).
+Unit: add ROGUESQ_LOG_SPIKE-gated dump of the DMEM vertex block + matrix for the first flagged swap (one build), run lvl2 flight 120s, then recompute that vertex's clip/projection offline in python per docs/F5-UCODE-REFERENCE.md. Positive control: a non-flagged vertex from the same DL must reproduce its logged RDP coords exactly. Outcome A: recompute == RDP output -> ucode math faithful, ask owner about CULL_SPIKE default. Outcome B: differs -> bisect to the op.
+Then G3c(c) shake (jerk measurement), G3c(a) vertex probe.

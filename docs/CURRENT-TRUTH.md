@@ -212,3 +212,4 @@ Default stays retail 4:3. Opt-in levers: `ROGUESQ_ASPECT=<w>:<h>` (derives FB_WI
 - s6297: s6293 aspect/dd3_aspect edge scores are VOID (dump decoded 1024-wide VI as 512, fixed via ROGUESQ_FB_WIDTH=1024). Corrected aspect edge_excess_med=-0.0026 vs retail 0.0212: H-aspect unsupported. dd3_aspect not yet rescored.
 
 - s6299 G3c(a): tools/g3c_horizon_score.py; jump_med retail .281 / dd3 .317 / aspect .394 / dd3_aspect .400 (matched-frame aspect-retail +.111, dd3-retail +.023); hole metric void (water=sky colour). Single-source, aspect-confounded. Next: G3c(b) spikes (NEXT.md).
+- s6300 G3c(b): RSP divide unit (VRCP/VRSQ + tables) matches ares/hardware ROM values (rcp[0..3]=FFFF,FF00,FE01,FD04); wedges not explained by it. VCH/VCL/VCR/VMULF/VMACF and a vertex replay of swap 1867 still open; CULL_SPIKE stays opt-in. Single-source.
