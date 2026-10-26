@@ -9,6 +9,8 @@ DECLARATIONS = (
     "extern void findAndUnlinkSmallestEntry(uint8_t* rdram, "
     "recomp_context* ctx);\n"
     "extern char* getenv(const char*);\n"
+    "extern void findAndUnlinkSmallestEntry_s6088_inner(uint8_t* rdram, "
+    "recomp_context* ctx);\n"
 )
 
 
@@ -62,7 +64,8 @@ def main() -> int:
             "    static unsigned n, nulls, bad, dumps; static int ctl = -1;\n"
             "    if (ctl < 0) ctl = getenv(\"ROGUESQ_FIND_CTL\") != NULL;\n"
             "    int64_t b = (int32_t)0x80000000;\n"
-            "    rs64_find_body(rdram, ctx);\n"
+            "    static int off = -1; if (off < 0) off = getenv(\"ROGUESQ_FIND_OFF\") != NULL;\n"
+            "    if (off) findAndUnlinkSmallestEntry_s6088_inner(rdram, ctx); else rs64_find_body(rdram, ctx);\n"
             "    n++;\n"
             "    uint32_t head = (uint32_t)MEM_W(0X8EF8, b);\n"
             "    if (ctx->r2 == 0) {\n"
