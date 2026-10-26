@@ -1175,3 +1175,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261026-154228 | s6306_g3c_edgedrop | rc=0 | 420s | scratch/agent/soak_results/s6306_g3c_edgedrop_20261026-154228.log
 20261026-161056 | s6311_g3c_edgefade | rc=0 | 280s | scratch/agent/soak_results/s6311_g3c_edgefade_20261026-161056.log
 20261026-164420 | s6316_g3c_cal | rc=0 | 141s | scratch/agent/soak_results/s6316_g3c_cal_20261026-164420.log
+20261026-164946 | s6317_g3c_cal2 | rc=0 | 141s | scratch/agent/soak_results/s6317_g3c_cal2_20261026-164946.log
