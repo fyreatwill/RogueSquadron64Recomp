@@ -208,3 +208,5 @@ Default stays retail 4:3. Opt-in levers: `ROGUESQ_ASPECT=<w>:<h>` (derives FB_WI
 - s6253: ph4 issues zero fill rects (ROGUESQ_LOG_FILLALL positive control 830 lines in ph2/3/5), so s6251's "fill paints 0.08" is refuted; texrect-all lower reads 0.131-0.173 across runs, fb dump at frame 500 reads 1.0 in all skip arms (invalid). Residual unattributed; next: within-run toggle, not cross-run.
 
 - s6279 (VOID, see 5b): the identical-crash 'exoneration' compared two arms that both crashed inside the buggy wrapper.
+
+- s6297: s6293 aspect/dd3_aspect edge scores are VOID (dump decoded 1024-wide VI as 512, fixed via ROGUESQ_FB_WIDTH=1024). Corrected aspect edge_excess_med=-0.0026 vs retail 0.0212: H-aspect unsupported. dd3_aspect not yet rescored.

@@ -593,7 +593,7 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         // Default VI_WIDTH=1024 frames use the retail paired-row layout; an
         // explicit widened framebuffer overrides that interpretation.
         static const uint32_t s_fbw = [] { const char* e = std::getenv("ROGUESQ_FB_WIDTH"); return (e && *e) ? (uint32_t)std::atoi(e) : 0u; }();
-        const bool wide_fb = s_fbw > 0 && stride > 640u && s_fbw < stride;
+        const bool wide_fb = s_fbw > 0 && stride > 640u && s_fbw <= stride;
         if (wide_fb) stride = s_fbw;
         const uint32_t dw = (stride > 640u && !wide_fb) ? stride / 2u : stride;
         const uint32_t dh = wide_fb ? 448u : (stride > 640u ? 448u : stride * 224u / 320u);

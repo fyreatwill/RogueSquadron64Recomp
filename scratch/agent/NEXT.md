@@ -1,11 +1,7 @@
-# Next: G3c(a) vertex-level distance ramp (L-fade at vertex shade) vs bare footprint edge
+# Next: G3c(a) rescore dd3_aspect with correct dump, then vertex ramp probe if edge remains
 HYPOTHESIS-ID: g3c-owner-visual
 
-s6296: radius has no fog/haze consumer (static). Remaining hypotheses for the jagged far edge:
- H-ramp: retail hides the edge with a distance-baked vertex shade/alpha ramp which dd/aspect cells lack.
- H-bare: retail edge is equally bare (edge excess 0.0212 in s6293) and the opt-ins merely show more of it.
-Discriminator, one phase-gated flight run per arm (one at a time): log vertex alpha/shade of terrain
-verts vs cell distance (outer 12.5% vs inner) in retail and dd3+aspect, with a positive control
-(force-mark all verts). Ramp present in retail only on outer cells -> H-ramp (extend ramp with r);
-flat in both -> H-bare (owner question: fade outer ring, opt-in). No mitigation before the writer is named.
-Then G3c(b) spikes reference check.
+s6297: s6293 aspect scores were a decode artifact; corrected aspect edge excess -0.0026 (retail 0.0212).
+1. Copy scratch/agent/soak_queue/done/s6297 recipe pattern with spec "dd3_aspect|ROGUESQ_DD_UNSAFE=1 ROGUESQ_DRAW_DISTANCE=3 ROGUESQ_ASPECT=21:9 ROGUESQ_OSMEM_MB=12", ROGUESQ_FB_WIDTH=1024; score with tools/g3c_edge_score.py and view a late-frame PNG (sips) vs retail.
+   Edge visible in dd3_aspect only -> opt-in owns it (H-ramp: vertex shade probe). Not visible -> H-bare/no defect; ask owner for a screenshot.
+2. Then G3c(b) spikes reference check.
