@@ -114,8 +114,7 @@ autopilot win are owner playtest scope.
   its positive control in all four arms. Sign-alternation was retail 0.395,
   FPS60 0.625, wide-only 0.384, and FPS60+wide 0.632, with thousands of records
   per arm and zero crash markers. This selects H-fps60 (camera cadence/pacing),
-  while H-aspect is not supported. This is one instrument's four-arm evidence;
-  the exact camera writer still needs an audit.
+  while H-aspect is not supported. **SUPERSEDED s6302:** alternation fraction is amplitude-blind (FPS60 accel rms is lower); tools/g3c_hf.py HF residual (control fired) = retail 11.8, FPS60 12.2, wide 11.2, both 12.2 mrad -> no arm adds shake; (c) is H-retail/30fps judder, closed pending owner.
 - **Owner visual report 2026-10-26 (G3c, next):**
   (a) jagged/blocky terrain edge where fog normally hides it, (b) knife spikes still
   visible (G3b "retail-identical" was never checked against a reference: reopened),
