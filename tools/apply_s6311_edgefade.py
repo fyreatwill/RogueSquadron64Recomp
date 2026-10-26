@@ -58,12 +58,43 @@ def apply10b(text):
     return text[:j] + code + text[j:], 1
 
 
+def apply10c(text):
+    """s6315: ROGUESQ_EDGE_FADE=start,end[,r,g,b] distance fade of the lit RGB written by 0x8004A6C0.
+    a1 (ctx->r5) = grid-unit x,y,z floats; centre = player record 0x80137DBC floats [1],[3] * ROGUESQ_EDGE_GRIDSCALE (default 0.5).
+    ROGUESQ_EDGE_FADE_LOG=1 logs grid pos, player/camera floats and distance (calibration)."""
+    i = text.find(LABEL2)
+    if i < 0:
+        return text, 0
+    j = i + len(LABEL2)
+    # insert after the s6314 block (ends at its closing brace line)
+    k = text.find("    }\n", j)
+    if k < 0 or "PATCH: s6315 edgefade3" in text[j:j + 4000]:
+        return text, 0
+    k += len("    }\n")
+    code = (
+        '    { /* PATCH: s6315 edgefade3 */ static int en6315 = -1; static double st6315 = 0, en_6315 = 1, hz6315[3] = {200,215,235}, gs6315 = 0.5; static int lg6315 = 0; static unsigned n6315 = 0;\n'
+        '      if (en6315 < 0) { const char* e = getenv("ROGUESQ_EDGE_FADE"); en6315 = 0; lg6315 = (getenv("ROGUESQ_EDGE_FADE_LOG") != NULL);\n'
+        '        const char* g = getenv("ROGUESQ_EDGE_GRIDSCALE"); if (g && *g) gs6315 = atof(g);\n'
+        '        if (e && *e) { double a = 0, b = 1, r = 200, gg = 215, bb = 235; int c = sscanf(e, "%lf,%lf,%lf,%lf,%lf", &a, &b, &r, &gg, &bb); if (c >= 2) { st6315 = a; en_6315 = b; if (c >= 5) { hz6315[0] = r; hz6315[1] = gg; hz6315[2] = bb; } en6315 = 1; } } }\n'
+        '      if (en6315 || lg6315) { uint32_t pb = 0x80137DBCu; uint32_t pxi = (uint32_t)MEM_W(0X4, pb), pzi = (uint32_t)MEM_W(0XC, pb), gx = (uint32_t)MEM_W(0X0, ctx->r5), gz = (uint32_t)MEM_W(0X8, ctx->r5);\n'
+        '        float pxf, pzf, gxf, gzf; memcpy(&pxf, &pxi, 4); memcpy(&pzf, &pzi, 4); memcpy(&gxf, &gx, 4); memcpy(&gzf, &gz, 4);\n'
+        '        double dx = gxf - pxf * gs6315, dz = gzf - pzf * gs6315, d = sqrt(dx * dx + dz * dz);\n'
+        '        double f = 0.0; if (en6315) { f = (d - st6315) / (en_6315 - st6315); if (f < 0) f = 0; if (f > 1) f = 1; f = f * f * (3.0 - 2.0 * f); }\n'
+        '        n6315++; if (lg6315 && ((n6315 < 600u) || (n6315 % 4001u) == 0u)) fprintf(stderr, "[edgefade3] n=%u g=%g,%g pl=%g,%g d=%g f=%g\\n", n6315, gxf, gzf, pxf, pzf, d, f);\n'
+        '        if (f > 0.0) for (int q = 0; q < 3; q++) { double v = (double)(uint8_t)MEM_B(q, ctx->r4); v = v + (hz6315[q] - v) * f; if (v > 255.0) v = 255.0; if (v < 0.0) v = 0.0; MEM_B(q, ctx->r4) = (int8_t)(uint8_t)v; } }\n'
+        '    }\n'
+    )
+    return text[:k] + code + text[k:], 1
+
+
 if __name__ == "__main__":
     p = BASE / "funcs_10.c"
     t = p.read_text()
     t2, n = apply10(t)
     t2, n2 = apply10b(t2)
     n += n2
+    t2, n3 = apply10c(t2)
+    n += n3
     if n:
         p.write_text(t2)
     print(f"funcs_10.c live patched x{n}")
