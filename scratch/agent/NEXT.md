@@ -1,6 +1,5 @@
-# Next: scan s6320 RAM snapshots for the player/camera position triple
+# Next: H-matrix — terrain-pass view matrix translation row
 HYPOTHESIS-ID: g3c-owner-visual
-Prereq: SOAK-RESULTS has s6320_g3c_ramsnap; snaps in scratch/agent/m6/s6320_g3c/snaps (delete after analysis, 320 MB).
-Run: python3 -I tools/g3c_ramscan.py scratch/agent/m6/s6320_g3c/snaps
-Outcomes: H-ramscan = a triple with plausible travel (hundreds of units) -> positive control: its x/z should track AA94 ring cell indices (mod 64 * cell size); then hook the fade with it. H-matrix = no triple -> read translation row from view matrix loaded by the terrain pass. H-none = abandon fade, ask owner whether jagged edge still matters.
-If the soak has no snaps (rc!=0), check runner.log first (boring: dir path / env passthrough XENV_EXTRA).
+State (s6320): RAM float-triple scan found no position (only timeline ramp 0x8011A8F4). 
+Hypotheses: H-matrix (matrix loaded by terrain pass at/near 0x8004AA94 has smoothly drifting translation row = world position) vs H-camrel (translation ~constant, camera-relative) = H-none.
+Measurement: fixup-script log of the 16 floats at the matrix pointer the terrain pass uses (find via static look at callers of 0x8004AA94/0x80046214), one per frame, lvl1 dd3 scripted flight, compare to craft motion; positive control = log must show rotation orthonormal rows. If H-camrel: ask owner whether jagged edge still matters.
