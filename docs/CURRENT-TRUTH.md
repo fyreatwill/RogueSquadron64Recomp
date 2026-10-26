@@ -87,7 +87,7 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog; per-session history archived in PROJECT-OVERVIEW.md, "Archived CURRENT-TRUTH backlog")
-- s6314 (G3c a): 0x8004B644 is not the only lit-RGB writer; sibling 0x8004A6C0 (via 0x8004AA94) is the same accumulator. ROGUESQ_EDGE_FADE_TEST2 hook built, soak s6314_g3c_edgefade2 queued (t2 vs base brightness). Single-source static.
+- s6314 (G3c a): CONFIRMED by run: 0x8004A6C0 (via 0x8004AA94) is the terrain lit-RGB writer; ROGUESQ_EDGE_FADE_TEST2=0.2 turns terrain near-black (scratch/agent/m6/s6314_g3c/{base,t2}_f1200.png), sky/HUD/craft unchanged. 0x8004B644 is NOT the terrain path (s6313 negative explained). Next: distance-based fade in A6C0 epilogue = ROGUESQ_EDGE_FADE.
 - s6313 (G3c a): s6311 soak folded: RGB x0.2 hook at 0x8004B644 epilogue did NOT darken terrain (mean 109.9 vs 106.3) => positive control negative; a0 steps 0x10 with low nibble 0xC (Vtx colour) yet overwritten/cached elsewhere. Next: find later colour store/copy in buildGridCellMesh 0x8004BCA0..0x8004BFF4.
 - s6311 (G3c a): 0x8004B644 a0 = 0x10-stride lit-colour scratch array (via 0x80137A50), not proven to be the Vtx; epilogue hook ROGUESQ_EDGE_FADE_TEST (RGB scale, positive control) + ROGUESQ_G3C_POSLOG built (tools/apply_s6311_edgefade.py); soak recipe s6311_g3c_edgefade actually queued in s6312 (s6311 never wrote it). Single-source static.
 - s6309 (G3c a): buildGridCellMeshForFace has no colour/alpha store (link bytes only); fade hook must be in the 0x80046214..0x8004B644 callees (NEXT.md). Single-source static.
