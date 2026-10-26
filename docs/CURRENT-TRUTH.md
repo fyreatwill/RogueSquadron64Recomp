@@ -138,3 +138,4 @@ Default stays retail 4:3. Opt-in levers: `ROGUESQ_ASPECT=<w>:<h>` (derives FB_WI
 - s6237 (G1d): the noisy up_167 title texture is a game-defined 64x21 4bpp tile (lrt=80, maskt=5); identical descriptor at 4:3 and wide, so RT64 does not widen it. Rows 21-31 are stale TMEM by design. Open: does a draw sample them (NEXT.md). Logger: `ROGUESQ_LOG_UPSPAN=1`.
 
 - s6238 (G1d): `ROGUESQ_LOG_TEXRECT_T=1` texrect t-range logger: 120 family draws sample only valid rows (16-row tile t<=15.75; 80-row tile), maskt=0; the maskt=5 up_167 render tile never appeared in the capped sample. H-sample-stale unproven (NEXT.md: filter on maskt==5).
+- s6239: maskt==5 texrect draws = 0 (ctl 20); up_167 not sampled by texrects.
