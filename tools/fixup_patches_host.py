@@ -21,7 +21,7 @@ def main() -> int:
     anchor = '#include "funcs.h"\n'
     if text.count(anchor) != 1:
         raise SystemExit(f"{path}: expected one funcs.h include")
-    if "findAndUnlinkSmallestEntry(uint8_t* rdram" in text:
+    if "extern char* getenv(const char*);" in text:
         return 0
 
     text = text.replace(anchor, anchor + "#include <stdio.h>\n" + DECLARATIONS, 1)
@@ -50,6 +50,42 @@ def main() -> int:
             "}\n"
             "static void rs64_seed_body(uint8_t* rdram, recomp_context* ctx) {\n")
         text = text.replace(rhead, wrap, 1)
+    # s6278: findAndUnlinkSmallestEntry C patch (multi-call, stateful). Invariant per call:
+    # a non-NULL return leaves the entry at the head of the list at [0x80128EF8] with
+    # prev==0. ROGUESQ_FIND_CTL=1 corrupts the expectation (control: bad must fire).
+    # NULL returns (dd>=3 exhaustion signature) dump the pool state once (first 3).
+    fhead = "RECOMP_FUNC void findAndUnlinkSmallestEntry(uint8_t* rdram, recomp_context* ctx) {\n"
+    if text.count(fhead) == 1:
+        wrap = (
+            "static void rs64_find_body(uint8_t* rdram, recomp_context* ctx);\n"
+            + fhead +
+            "    static unsigned n, nulls, bad, dumps; static int ctl = -1;\n"
+            "    if (ctl < 0) ctl = getenv(\"ROGUESQ_FIND_CTL\") != NULL;\n"
+            "    int64_t b = (int32_t)0x80000000;\n"
+            "    rs64_find_body(rdram, ctx);\n"
+            "    n++;\n"
+            "    uint32_t head = (uint32_t)MEM_W(0X8EF8, b);\n"
+            "    if (ctx->r2 == 0) {\n"
+            "        nulls++;\n"
+            "        if (dumps < 3) {\n"
+            "            dumps++;\n"
+            "            uint32_t cnt = MEM_HU(0X8EF0, b), bk = (uint32_t)MEM_W(0X8F00, b);\n"
+            "            fprintf(stderr, \"[find-null] call=%u nulls=%u buckets=%u arr=0x%08X usedhead=0x%08X\\n\", n, nulls, cnt, bk, head);\n"
+            "            for (uint32_t i = 0; i < cnt && i < 64; i++) {\n"
+            "                uint32_t e = (uint32_t)MEM_W(i * 4, (int64_t)(int32_t)bk); unsigned len = 0, z = 0;\n"
+            "                while (e && len < 100000) { len++; if (!MEM_HU(8, (int64_t)(int32_t)e)) z++; e = (uint32_t)MEM_W(0, (int64_t)(int32_t)e); }\n"
+            "                fprintf(stderr, \"[find-null]  bucket %u len=%u zero_size=%u\\n\", i, len, z);\n"
+            "            }\n"
+            "        }\n"
+            "    } else {\n"
+            "        uint32_t prev = head ? (uint32_t)MEM_W(4, (int64_t)(int32_t)head) : 1u;\n"
+            "        if (head == 0 || prev != (ctl ? 1u : 0u)) bad++;\n"
+            "    }\n"
+            "    if (n == 1 || (n & (n - 1u)) == 0)\n"
+            "        fprintf(stderr, \"[patch-live] findAndUnlinkSmallestEntry calls=%u nulls=%u bad=%u ctl=%d\\n\", n, nulls, bad, ctl);\n"
+            "}\n"
+            "static void rs64_find_body(uint8_t* rdram, recomp_context* ctx) {\n")
+        text = text.replace(fhead, wrap, 1)
     # s6269: PatchesLib is -force_load'ed on macOS, so a stale override would beat the
     # hand-fixed game allocateDisplayListBuffer (funcs_3.c); rename it out of the way.
     stale = "RECOMP_FUNC void allocateDisplayListBuffer("

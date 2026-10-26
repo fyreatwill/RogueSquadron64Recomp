@@ -16,7 +16,6 @@ __start = 0x80000000;
 /* The C patch and assembly use this absolute linker alias; N64Recomp maps the
  * matching relocation to the game's reference symbol by name. */
 func_8002221C = 0x8002221C;
-findAndUnlinkSmallestEntry = 0x8002221C;
 
 /* --- Game data symbols touched by patches ------------------------------- */
 /* heap_guards.c reads/writes these globals. Addresses are static RAM slots
@@ -37,3 +36,8 @@ cinematic_flag = 0x800B0934;
 
 /* rng_patch.c (s6277 patch qualification) */
 rng_seed = 0x80003470;
+
+/* dl_finder.c (s6278 patch #3) */
+dl_bucket_count = 0x80128EF0;
+dl_used_head    = 0x80128EF8;
+dl_buckets      = 0x80128F00;
