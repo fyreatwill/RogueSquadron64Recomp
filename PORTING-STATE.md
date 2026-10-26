@@ -168449,3 +168449,8 @@ Added `ROGUESQ_WB_CLEAR=1` (rt64_state.cpp: memset 448*ww*2 bytes at the fb addr
 - Reading: stale RAM accounted for ~0.27 of the lower band (0.819->0.545); the remainder is (a) the guest background draw wrapping/tiling at the 512 coordinate span (the wide fb needs the bg quad widened or clamped, not memset) and (b) white undrawn native regions written back. Single run per arm = single-source; upper bands differ cross-run (animating).
 ORIGIN: no mitigation landed; diagnostic env only (default off).
 NEXT: attack (a)/(b): find the bg draw (texrect/tri class from s6244 skip arms) producing the tiling and widen/clamp its S range; clear native target to black at wide-fb alloc for (b).
+
+## Session 6247 (2026-10-25) — G1d wide-title paint-class skip arms (with WB_CLEAR)
+Ran s6244_run.sh at w900, ROGUESQ_WB_CLEAR=1, SKIP_PHASE=4, one run per arm. fb_0001000_w900.ppm non-black fraction (rows 0-254 / 255-447): none 0.671/0.639 (control, fired; lower band differs from s6246's 0.545 so run-to-run spread is ~0.1), tri-all 0.531/0.699, fill 0.399/0.809, texrect-all 0.000/0.174.
+Reading (single run per arm): texrects paint the upper band entirely and most of the lower band (removing them leaves 0.174 lower). Triangles do not paint the lower band (0.699 with them skipped). The residual 0.174 lower after texrect skip is not texrect/tri-explained: candidates are fill rects or the RT64 native-target white corners. Fill skip raising lower to 0.809 is unexplained (single run, possibly spread).
+No code change this session; evidence only.

@@ -1,5 +1,6 @@
-# G1d: wide-title background tiling + white corners
+# G1d: wide-title residual after texrect skip
 HYPOTHESIS-ID: g1d-widescreen
-s6246: WB_CLEAR dropped lower-band non-black 0.819->0.545 (stale RAM part); remaining picture = tiled hangar bg with seams at x~65/130/195/705/770 + white corner blocks (x<65,x>770,y>255).
-Hypotheses: H-bg-wrap (bg texrect/tri S-range repeats at 512-wide span; widen or clamp edge); H-native-white (RT64 native fb cleared white / not cleared for wide span).
-Discriminator: use s6244 skip arms (texrect-all / tri-all in ph4) to see which class paints the tiled strips and the white corners; control = none arm. Then clear RT64 native target colour to black at wide alloc (arm ROGUESQ_WB_NATIVE_BLACK).
+s6247: texrect-all skip (ph4, WB_CLEAR) leaves lower-band 0.174 non-black; tri-all/fill skips do not remove it.
+Hypotheses: H-bg-wrap (texrect S range repeats at 512-wide span; widen/clamp), H-native-white (RT64 native fb not cleared to black at wide alloc -> white corners).
+Discriminator: add ROGUESQ_WB_NATIVE_BLACK (clear RT64 native colour target to black at wide alloc) and run texrect-all + none arms; residual->0 selects H-native-white. Then inspect texrect S ranges for the tiling seams (x~65/130/195/705/770) via ROGUESQ_LOG_TEXRECT_T.
+Recipe: SKIPPH=4 TAGX=_x env "EXTRA_E=ROGUESQ_WB_CLEAR=1 ..." zsh scratch/agent/s6244_run.sh <arm>; analyze with scratch/agent/nb_frac.py.
