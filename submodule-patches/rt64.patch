@@ -3302,7 +3302,7 @@ index f17db9b..7fb6721 100644
          }
  
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index d1a9f4e..f6d3f00 100644
+index d1a9f4e..fdf7972 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -4,10 +4,20 @@
@@ -4328,7 +4328,7 @@ index d1a9f4e..f6d3f00 100644
          drawRect(ulx, uly, lrx, lry, 0, 0, 0, 0, false, extAlignment);
      }
  
-@@ -1131,6 +1957,918 @@ namespace RT64 {
+@@ -1131,6 +1957,944 @@ namespace RT64 {
          triTcFloats.insert(triTcFloats.end(), tc, tc + triCount * TcFloatsPerTri);
          triColorFloats.insert(triColorFloats.end(), col, col + triCount * ColFloatsPerTri);
          drawCall.triangleCount += triCount;
@@ -4743,6 +4743,32 @@ index d1a9f4e..f6d3f00 100644
 +                    nTex = 0; nNoTex = 0; nT1 = 0;
 +                    nShadeBlack = 0; nShadeOk = 0; nShadeWhite = 0;
 +                    for (int c = 0; c < 4; c++) { vmin[c] = 1e9f; vmax[c] = -1e9f; }
++                }
++            }
++        }
++
++        // PATCH (s6241): ROGUESQ_LOG_BBOX triangle path — draws whose bbox overlaps the lower-left title region.
++        {
++            static const bool s_logBT = []{ const char *e = std::getenv("ROGUESQ_LOG_BBOX"); return e && *e && *e != '0'; }();
++            if (s_logBT && tile < RDP_TILES && triCount > 0) {
++                static std::atomic<int> nAny{0}; static std::atomic<int> nRegPh[16]{};
++                const auto &tt = tiles[tile];
++                const float cw = float(colorImage.width ? colorImage.width : 640);
++                float xmn = 1e9f, xmx = -1e9f, ymn = 1e9f, ymx = -1e9f;
++                for (uint32_t i = 0; i < triCount * 3; i++) {
++                    const float px = pos[i * PosFloatsPerVertex + 0], py = pos[i * PosFloatsPerVertex + 1];
++                    xmn = std::min(xmn, px); xmx = std::max(xmx, px); ymn = std::min(ymn, py); ymx = std::max(ymx, py);
++                }
++                const float cx = 0.5f * (xmn + xmx), cy = 0.5f * (ymn + ymx);
++                const bool reg = ((cx < 0.075f * cw || cx > 0.85f * cw) && cy >= 0.55f * 448.0f);
++                const int a = ++nAny;
++                const unsigned ph_ = (rs64_phase_ord ? rs64_phase_ord() : 0u) & 15u;
++                const int r = reg ? ++nRegPh[ph_] : nRegPh[ph_].load();
++                if (a <= 20 || (reg && r <= 600)) {
++                    const unsigned ph = rs64_phase_ord ? rs64_phase_ord() : 0u;
++                    std::fprintf(stderr, "[bboxT ph%u #%d reg=%d] cimg=0x%08X cw=%u timg=0x%08X tris=%u tile=%u fmt=%u siz=%u line=%u tmem=%u lrs=%u lrt=%u maskt=%d bbox=(%.0f,%.0f)-(%.0f,%.0f)\n",
++                        ph, a, (int)reg, colorImage.address, (unsigned)colorImage.width, texture.address, triCount, tile, (unsigned)tt.fmt, (unsigned)tt.siz, (unsigned)tt.line, (unsigned)tt.tmem, tt.lrs, tt.lrt, (int)tt.maskt, xmn, ymn, xmx, ymx);
++                    std::fflush(stderr);
 +                }
 +            }
 +        }
@@ -5247,7 +5273,7 @@ index d1a9f4e..f6d3f00 100644
  
          const FixedRect &scissorRect = state->rdp->scissorRectStack[scissorStackSize - 1];
          if (!scissorRect.isNull()) {
-@@ -1285,6 +3023,7 @@ namespace RT64 {
+@@ -1285,6 +3049,7 @@ namespace RT64 {
          triTcFloats.emplace_back(flip ? u2 : u1);
          triTcFloats.emplace_back(flip ? v1 : v2);
          drawCall.triangleCount += 2;
@@ -5255,7 +5281,7 @@ index d1a9f4e..f6d3f00 100644
  
          // Update the tracked texcoords for the used tiles. Use scissor intersection to figure out 
          // what the bounds of the real sampling will be if necessary.
-@@ -1319,6 +3058,60 @@ namespace RT64 {
+@@ -1319,6 +3084,84 @@ namespace RT64 {
          RT64_LOG_PRINTF("RDP::drawTexRect(ulx %d, uly %d, lrx %d, lry %d, tile %u, uls %d, ult %d, dsdx %d, dtdy %d, flip %u)", ulx, uly, lrx, lry, tile, uls, ult, dsdx, dtdy, flip);
  #   endif
  
@@ -5309,6 +5335,30 @@ index d1a9f4e..f6d3f00 100644
 +                    const double t1 = t0 + rows * double(dtdy) / 1024.0, s1 = s0 + cols * double(dsdx) / 1024.0;
 +                    std::fprintf(stderr, "[texrectT #%d up=%d] tile=%u fmt=%u siz=%u line=%u lrs=%u lrt=%u loadedRows=%u rect=(%d,%d)-(%d,%d) s=[%.2f,%.2f] t=[%.2f,%.2f] dsdx=%d dtdy=%d flip=%d maskt=%d cmt=%d masks=%d cms=%d\n",
 +                        a, (int)up, tile, (unsigned)tt.fmt, (unsigned)tt.siz, (unsigned)tt.line, tt.lrs, tt.lrt, (unsigned)(tt.lrt / 4 + 1), ulx, uly, lrx, lry, s0, s1, t0, t1, (int)dsdx, (int)dtdy, (int)flip, (int)tt.maskt, (int)tt.cmt, (int)tt.masks, (int)tt.cms);
++                    std::fflush(stderr);
++                }
++            }
++        }
++        // PATCH (s6241): ROGUESQ_LOG_BBOX=1 — bbox-keyed draw log for the wide-title garbage rectangle. Logs every texrect
++        // whose centre falls in the garbage-column regions (x <7.5% or >85% of the colour-image width, y >= 55% of 448; s6241 fb_0001000 shows noise at x0..64 and x770..900, y255..448) with the
++        // colour image, texture image, tile descriptor and cycle type. Control: first 20 texrects of any region ("any").
++        {
++            static const bool s_logB = []{ const char *e = std::getenv("ROGUESQ_LOG_BBOX"); return e && *e && *e != '0'; }();
++            if (s_logB && tile < RDP_TILES) {
++                static std::atomic<int> nAny{0}; static std::atomic<int> nRegPh[16]{};
++                const auto &tt = tiles[tile];
++                const float cw = float(colorImage.width ? colorImage.width : 640);
++                const float cx = (float(ulx) + float(lrx)) * 0.125f, cy = (float(uly) + float(lry)) * 0.125f;
++                const bool reg = ((cx < 0.075f * cw || cx > 0.85f * cw) && cy >= 0.55f * 448.0f);
++                const int a = ++nAny;
++                const unsigned ph_ = (rs64_phase_ord ? rs64_phase_ord() : 0u) & 15u;
++                const int r = reg ? ++nRegPh[ph_] : nRegPh[ph_].load();
++                if (a <= 20 || (reg && r <= 600)) {
++                    const unsigned ph = rs64_phase_ord ? rs64_phase_ord() : 0u;
++                    std::fprintf(stderr, "[bboxR ph%u #%d reg=%d] cimg=0x%08X cw=%u timg=0x%08X tw=%u tfmt=%u tsiz=%u cyc=%u tile=%u fmt=%u siz=%u line=%u tmem=%u lrs=%u lrt=%u maskt=%d rect=(%d,%d)-(%d,%d) uv=(%d,%d) ds=%d dt=%d\n",
++                        ph, a, (int)reg, colorImage.address, (unsigned)colorImage.width, texture.address, (unsigned)texture.width, (unsigned)texture.fmt, (unsigned)texture.siz,
++                        (unsigned)otherMode.cycleType(), tile, (unsigned)tt.fmt, (unsigned)tt.siz, (unsigned)tt.line, (unsigned)tt.tmem, tt.lrs, tt.lrt, (int)tt.maskt,
++                        ulx / 4, uly / 4, lrx / 4, lry / 4, (int)uls, (int)ult, (int)dsdx, (int)dtdy);
 +                    std::fflush(stderr);
 +                }
 +            }
