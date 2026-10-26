@@ -1,4 +1,6 @@
-# Next: G3c(a) jagged far-terrain edge - in-flight fog/shade ramp vs distance
+# Next: G3c(a) jagged far-terrain edge - read the s6304 fog-ramp soak
 HYPOTHESIS-ID: g3c-owner-visual
-s6303: per-cell r^2 test is a near ring (not scaled); far extent = footprint frustum, scaled ~2.7x by dd3, unchanged by aspect. Haze not scaled (s6296).
-Unit: H-fade (shade/alpha ramp ends before the dd3 footprint edge, so edge is un-hazed) vs H-footprint (trapezoid far side itself stair-steps even with haze). One phase-gated run: ROGUESQ_FORCE_FOG arm vs none at dd3, same level-1 camera; measure terrain vertex shade alpha/fog factor vs cell distance (probe in buildGridCellMesh vertex write) and horizon score (tools/g3c_horizon_score.py). Positive control: forced fog changes far shade. If ramp saturates at ~retail 29 cells while dd3 draws to 78 -> scale the ramp end by dd (fix in fixup script). Also ask owner re ROGUESQ_CULL_SPIKE default.
+s6304 queued scratch/agent/soak_queue/s6304_g3c_fogramp.sh (dd3_nofog, dd3_fog, retail_fog, forced magenta fog FF00FF). Fold its SOAK-RESULTS line, then:
+  python3 -I tools/g3c_fogramp.py scratch/agent/m6/g1_lvl1s6304_<arm>/fbd 0 20   (per arm)
+Positive control: fog arms magenta_px_total >> 0, nofog ~0. Outcomes: far third heavily magenta at dd3 -> H-fade refuted, edge is footprint trapezoid (then fade/clip the outermost cell ring or scale footprint softly); far low, mid/near high, retail far high -> H-fade selected, scale ramp end by dd in a fixup script; everything <2% -> fog factor ~0 in flight, probe F5 vertex alpha next.
+Also ask owner re ROGUESQ_CULL_SPIKE default (G3c b).
