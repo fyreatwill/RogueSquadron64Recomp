@@ -3302,7 +3302,7 @@ index f17db9b..7fb6721 100644
          }
  
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index d1a9f4e..9592a52 100644
+index d1a9f4e..9b75309 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -4,10 +4,20 @@
@@ -5230,7 +5230,7 @@ index d1a9f4e..9592a52 100644
  
          // Update the tracked texcoords for the used tiles. Use scissor intersection to figure out 
          // what the bounds of the real sampling will be if necessary.
-@@ -1319,6 +3033,40 @@ namespace RT64 {
+@@ -1319,6 +3033,60 @@ namespace RT64 {
          RT64_LOG_PRINTF("RDP::drawTexRect(ulx %d, uly %d, lrx %d, lry %d, tile %u, uls %d, ult %d, dsdx %d, dtdy %d, flip %u)", ulx, uly, lrx, lry, tile, uls, ult, dsdx, dtdy, flip);
  #   endif
  
@@ -5268,6 +5268,26 @@ index d1a9f4e..9592a52 100644
 +            }
 +        }
 +
++        // PATCH (s6238): ROGUESQ_LOG_TEXRECT_T=1 — texrect t/s sampling range vs the tile's loaded rows. Logs every texrect
++        // whose tile size is lrt==80 (up_167 descriptor), plus the first 20 of any other tile as positive control.
++        {
++            static const bool s_logT = []{ const char *e = std::getenv("ROGUESQ_LOG_TEXRECT_T"); return e && *e && *e != '0'; }();
++            if (s_logT && tile < RDP_TILES) {
++                static std::atomic<int> nAny{0}, nUp{0};
++                const auto &tt = tiles[tile];
++                const bool up = (tt.fmt == 4 && tt.siz == 0 && tt.tmem == 0 && tt.line == 4);
++                const int a = ++nAny;
++                const int u = up ? ++nUp : nUp.load();
++                if (a <= 20 || (up && u <= 120)) {
++                    const double rows = (double(lry) - double(uly)) / 4.0, cols = (double(lrx) - double(ulx)) / 4.0;
++                    const double t0 = double(ult) / 32.0, s0 = double(uls) / 32.0;
++                    const double t1 = t0 + rows * double(dtdy) / 1024.0, s1 = s0 + cols * double(dsdx) / 1024.0;
++                    std::fprintf(stderr, "[texrectT #%d up=%d] tile=%u fmt=%u siz=%u line=%u lrs=%u lrt=%u loadedRows=%u rect=(%d,%d)-(%d,%d) s=[%.2f,%.2f] t=[%.2f,%.2f] dsdx=%d dtdy=%d flip=%d maskt=%d cmt=%d masks=%d cms=%d\n",
++                        a, (int)up, tile, (unsigned)tt.fmt, (unsigned)tt.siz, (unsigned)tt.line, tt.lrs, tt.lrt, (unsigned)(tt.lrt / 4 + 1), ulx, uly, lrx, lry, s0, s1, t0, t1, (int)dsdx, (int)dtdy, (int)flip, (int)tt.maskt, (int)tt.cmt, (int)tt.masks, (int)tt.cms);
++                    std::fflush(stderr);
++                }
++            }
++        }
          // ROGUESQ_LOG_PIPELINE (stage 1) — count drawTexRect input. Combined
          // with the GPU-side stage 2.5 counter, this shows how many texrects
          // enter the pipeline vs how many reach the for-loop.
