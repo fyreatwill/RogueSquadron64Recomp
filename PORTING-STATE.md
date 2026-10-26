@@ -168797,3 +168797,18 @@ H-fade (radius unchanged; static-enumerate the projection/fog writer next);
 raw/eff above that band selects H-radius (fix the radius scaling at the
 site); a retail-identical edge in the contact sheet selects H-retail. Missing
 mission or probe rows = VOID. Resume with the two commands in NEXT.md.
+
+## Session 6295 (2026-10-26) — wide-flight terrain radius equals retail band; H-radius ruled out for 21:9
+
+Ran the s6294 probe (ROGUESQ_G3C_EDGE_WRITER at 0x80043918) with the origin-agnostic recipe.
+Concurrent retail+wide arms (s6295_retail/_wide) both stalled in pre-flight (phase 4,
+origin fixed, only setup rows raw=16/2) = VOID; cause very likely two game windows contending
+for keyboard focus, so key-driven arms must run one at a time. Wide arm rerun alone
+(s6295_wide2): att=1, hold 202 s, 0 VI stalls, 0 crash lines, flight rows raw=19.6844..23.944,
+eff=1, valid=1 — identical to the s6294 retail band (19.68-23.95). Positive control: the setup
+rows (raw=16/2) fire in the same run.
+Result: the terrain visibility radius is NOT widened by ROGUESQ_ASPECT=21:9 (flight rows match
+retail). H-radius is ruled out for the aspect arm. Remaining: H-aspect (frustum widening
+exposes the grid-aligned edge) and H-fade (haze/fog writer not scaled). Single-source
+(one probe site); contact-sheet edge score is the second line.
+Code: no change (diagnostic result only; probe landed s6294).

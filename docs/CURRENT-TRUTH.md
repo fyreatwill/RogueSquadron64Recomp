@@ -98,6 +98,7 @@ autopilot win are owner playtest scope.
   framebuffer source; H-fade/H-radius and the writer remain unresolved. No
   mitigation is allowed until the writer/value is named. Next: static-enumerate
   terrain/fog/radius writers, then one phase-gated writer/value discriminator.
+- **s6295 G3c radius result:** 21:9 flight rows at 0x80043918 are raw 19.68-23.94, eff=1, identical to the retail band, so H-radius is ruled out for ASPECT (single-source). Remaining H-aspect/H-fade: static-enumerate the projection/fog writer next. Run key-driven arms one at a time (concurrent windows stall pre-flight).
 - **s6294 G3c radius-writer probe:** the new fixup-backed probe at guest PC
   `0x80043918` (raw terrain-radius source `0x8009DEAC`) fired in the retail
   mission control (`raw` rose 16 -> ~24, `valid=1`) and in the 21:9 arm. The
