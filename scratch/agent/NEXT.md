@@ -1,3 +1,3 @@
-# G1e step 5: fold hangar FPS60 soak, then 300 s FPS60 holds on lvl1/5/10
+# G1e step 6: fold s6260_g1e_fps60_l1/l5/l10 holds
 HYPOTHESIS-ID: g1e-framerate
-Audio: H-clean (VI-driven tick, s6259). Remaining: H-menu. Read s6259_g1e_fps60_hangar in SOAK-RESULTS.md: rc=0, VI-origin change cadence/hangar reach vs s6009_hangar_route_i. If hangar reached and cadence similar -> H-menu refuted; then 300 s FPS60=1 holds on lvl1,5,10 (0 crash/stall, G1B frame time <16.7 ms) and ask owner to judge feel; consider making it a documented setting.
+Read the three s6260 lines in SOAK-RESULTS.md: want 0 crash/stall and G1B frame time <16.7 ms (check the log for FPS60 effect: ~60 gfx tasks/s). If clean, document ROGUESQ_FPS60=1 as a supported setting in PROJECT-OVERVIEW.md and ask owner to judge feel; close G1e and move to G3b/G5 per the ladder.
