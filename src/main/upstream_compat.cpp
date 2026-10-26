@@ -2527,10 +2527,11 @@ extern "C" void rs64_s6098(int kind, uint32_t len, uint32_t tail, uint32_t ra) {
         std::fprintf(stderr, "[dlpool] kind=%s len=%u tail=%08X begin=%lu reclaim=%lu empty_b=%lu empty_r=%lu first=%u min=%u max=%u grew=%lu\n", kind ? "reclaim" : "begin", len, tail, calls[0], calls[1], zero[0], zero[1], first, minlen, maxlen, grew);
 }
 extern "C" int rs64_s6099_en(void) { static const int on = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX"); return (e && e[0] && e[0] != '0') ? 1 : 0; }(); return on; }
-extern "C" uint32_t rs64_s6099_alloc(uint32_t ra) {  /* s6099: 128 DL chunks (0x108 B) from a bump arena at 0x80F00000..0x80FFFFFF; 0 when exhausted */
+extern "C" uint32_t rs64_s6099_alloc(uint32_t ra) {  /* s6099/s6284: 128 DL chunks (0x108 B) from a bump arena ending at 0x81000000 (ROGUESQ_DLPOOLX_MB, default 1, max 4); 0 when exhausted */
+    static const uint32_t cap = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_MB"); int m = e ? std::atoi(e) : 1; if (m < 1) m = 1; if (m > 4) m = 4; return (uint32_t)m << 20; }();
     static uint32_t bump = 0; const uint32_t bytes = 128u * 0x108u;
-    if (bump + bytes > 0x100000u) { static int w = 0; if (!w++) std::fprintf(stderr, "[dlpoolx] arena exhausted\n"); return 0; }
-    uint32_t p = 0x80F00000u + bump; bump += bytes;
+    if (bump + bytes > cap) { static int w = 0; if (!w++) std::fprintf(stderr, "[dlpoolx] arena exhausted (cap %u MB)\n", cap >> 20); return 0; }
+    uint32_t p = (0x81000000u - cap) + bump; bump += bytes;
     std::fprintf(stderr, "[dlpoolx] +128 chunks at %08X (total %u) ra=%08X pc=%08X\n", p, bump / 0x108u, ra, (uint32_t)g_rs64_last_guest_pc);
     return p;
 }
