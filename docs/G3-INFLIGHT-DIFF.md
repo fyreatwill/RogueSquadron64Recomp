@@ -17,3 +17,6 @@ SAME tick after mission start (retail: s5978 recipe flight origin 0x690400 at ~7
 delay measured from the first 512-wide VI poll; port: ROGUESQ_FB_DUMP_EVERY=10, level forced to
 the retail first mission) and compare craft mean luminance over the craft bounding box. Positive
 control: the same measurement on the HUD radar ring, which should match within noise.
+
+## s6267 resolution
+Craft shade matches: bbox dark-pixel (<150 luma) median retail 74.9 vs port 76.0/75.8 (mean 81.2 vs 79.0/78.9); radar-ring control 889px (177,16,11) vs 842px (181,16,13). Earlier light livery was the lvl0 frame. G3 closed (not tick-matched; two evidence lines: numeric + visual).
