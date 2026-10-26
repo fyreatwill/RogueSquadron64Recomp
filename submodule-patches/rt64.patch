@@ -3302,7 +3302,7 @@ index f17db9b..7fb6721 100644
          }
  
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index d1a9f4e..3585f88 100644
+index d1a9f4e..38fa078 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -4,10 +4,41 @@
@@ -3333,7 +3333,7 @@ index d1a9f4e..3585f88 100644
 +    static const long ph = []{ const char *p = std::getenv("ROGUESQ_SKIP_PHASE"); return p ? std::atol(p) : 3L; }();
 +    const long curPh = long(rs64_phase_ord ? rs64_phase_ord() : 0u);
 +    if ((++nSeen % 4000) == 1) { std::fprintf(stderr, "[skipdraw] seen=%d hit=%d curPh=%ld wantPh=%ld cls=%s\n", nSeen.load(), nHit.load(), curPh, ph, cls); std::fflush(stderr); }
-+    if (curPh != ph) return false;
++    if (ph >= 0 && curPh != ph) return false; // ROGUESQ_SKIP_PHASE=-1: all phases (s6243)
 +    const std::string v(e);
 +    auto has = [&](const char *k) { return v.find(k) != std::string::npos; };
 +    bool r = false;
