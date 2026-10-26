@@ -1,5 +1,5 @@
-# G1d: intersect RT64 writebacks with the wide scan-out fb (title)
+# G1d: stop the wide-title writeback from dumping undrawn native-target rows
 HYPOTHESIS-ID: g1d-widescreen
-s6243: all-phase skip blanks the wide title frame (control OK); ph4-only skip leaves noise below y~255 -> garbage = undrawn fb RAM aliasing, filled by RT64 writeback/draw output, not a draw.
-One build, one run (wide w900 title, s6242_run.sh recipe): log every rt64_writeback / copyNativeToRAM (phase, phys addr, len, w, h) AND the VI scan-out origin+width per phase 4-5 title frames; compute offline the overlap with [origin, origin+0xC4E00). Outcomes: a writeback range covers fb offset >=0x70800 -> H-alias confirmed, writer = that image; then relocate/shrink that image or the fb (do NOT drop writeback). No overlap -> noise from guest-side write; use lldb write-watch on the fb tail (positive control: whole-fb watch fires).
-Positive control: arm SKIPPH=-1 'all' in same session must blank (done s6243).
+s6244: ph4 colour writeback (addr 0xB3B200, ww=900, rows 0-447) covers the whole VI scan-out (origin 0xB3AE00, w=512 h=444). Noise below y~255 = RT64 native-target content for undrawn rows.
+Hypotheses: H-uncleared (native target rows never drawn hold garbage -> clear to black on fb alloc/resize, or clamp writeback rows to the drawn extent); H-vi-width (VI should read w=900, mismatched stride is the real bug).
+Discriminator, one build: in the wide route (s6244_run.sh) add env ROGUESQ_WB_CLAMP_ROWS=<n> (cap cRowEnd for ww=900 ph4) and ROGUESQ_WB_CLEAR=1 (zero the native target at resize); compare fb_0001000 non-black fraction below y=255 in one run per arm; control = unmodified arm still noisy.
