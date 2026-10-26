@@ -37846,6 +37846,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s6201 alloc x{_n6201a}")
 
+    if p.name == "funcs_4.c":
+        import apply_s6098_dlpool as _a6285
+        text, _n6285 = _a6285.apply_topup(text)
+        if _n6285:
+            changed = True
+            report.append(f"{p.name}: s6285 topup x{_n6285}")
+
     if p.name == "funcs_6.c":
         import apply_s6088_bucketlog as _a6088
         text, _n6088 = _a6088.apply6(text)
