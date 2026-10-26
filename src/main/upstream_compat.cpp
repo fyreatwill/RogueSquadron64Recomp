@@ -2527,6 +2527,13 @@ extern "C" void rs64_s6098(int kind, uint32_t len, uint32_t tail, uint32_t ra) {
         std::fprintf(stderr, "[dlpool] kind=%s len=%u tail=%08X begin=%lu reclaim=%lu empty_b=%lu empty_r=%lu first=%u min=%u max=%u grew=%lu\n", kind ? "reclaim" : "begin", len, tail, calls[0], calls[1], zero[0], zero[1], first, minlen, maxlen, grew);
 }
 extern "C" int rs64_s6099_en(void) { static const int on = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX"); return (e && e[0] && e[0] != '0') ? 1 : 0; }(); return on; }
+static int s_s6286_armed = 0;  /* s6286: per-site grows must not touch the cache before beginFrameDLChunk has seen it initialised (topup at 0x80001F88 broke boot) */
+extern "C" void rs64_s6286_arm(void) { s_s6286_armed = 1; }
+extern "C" int rs64_s6285_en(void) { static const int off = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_PRE"); return (e && std::atoi(e) > 0) ? 1 : 0; }(); return rs64_s6099_en() && !off && s_s6286_armed; }  /* s6286: per-site grows (b030/topup/finder-grow) are off when the one-shot pre-grow is requested */
+extern "C" int rs64_s6286_pre(void) {  /* s6286: 0 until the AT-th beginFrameDLChunk call (ROGUESQ_DLPOOLX_AT, default 3000: past boot and level load, where early grows broke the game), then PRE chunks (or -1 = arm per-site grows only) */
+    static const int pre = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_PRE"); return e ? std::atoi(e) : 0; }();
+    static const int at = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_AT"); return e ? std::atoi(e) : 3000; }();
+    static int calls = 0; if (++calls < at) return 0; s_s6286_armed = 1; return pre > 0 ? pre : -1; }
 extern "C" uint32_t rs64_s6099_alloc(uint32_t ra) {  /* s6099/s6284: 128 DL chunks (0x108 B) from a bump arena ending at 0x81000000 (ROGUESQ_DLPOOLX_MB, default 1, max 4); 0 when exhausted */
     static const uint32_t cap = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_MB"); int m = e ? std::atoi(e) : 1; if (m < 1) m = 1; if (m > 4) m = 4; return (uint32_t)m << 20; }();
     static uint32_t bump = 0; const uint32_t bytes = 128u * 0x108u;
