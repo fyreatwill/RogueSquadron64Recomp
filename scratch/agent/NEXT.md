@@ -1,6 +1,6 @@
-# G1d: wide-title residual, H-fillrect
+# G1d: wide-title residual, remaining 0.05 after fill+texrect skip
 HYPOTHESIS-ID: g1d-widescreen
-s6250: bboxR ph4 texrects in garbage regions are 8-22 px glyph-like rects, no >512 span -> H-bg-wrap unsupported (capped sample of 600).
-Hypotheses: H-fillrect (FILLRECT/fill-cycle rects paint the ~0.13 lower-band residual), H-tex-clamp (rects with s-span past lrs sample clamped/stale texels).
-Discriminator: log fill-cycle rects (cyc=3) and fillrects in ph4 with rect + fill colour, and skip arm 'fill' together with texrect-all and RI_CLEAR in one run; residual (nb_frac.py) dropping to ~0 selects H-fillrect.
-Recipe: SKIPPH=4 TAGX=_x env "EXTRA_E=ROGUESQ_WB_CLEAR=1 ROGUESQ_RI_CLEAR=1 " zsh scratch/agent/s6244_run.sh <arm>. Note: run the harness fix.out says allattempts-failed but run.log in scratch/agent/m6/g1_lvl1s6244_*/ is valid for title-phase data.
+s6251: fill,texrect-all skip -> lower residual 0.050 (texrect-all alone 0.132). Fill paints ~0.08. "all" arm is not a zero control (reads 1.0).
+Hypotheses: H-fill-extent (fill rects wider than the 512 scissor/FB width, repaint with last fill colour), H-tri-rest (tris paint the last 0.05), H-white-corner.
+Discriminator: arm "fill,texrect-all,tri-all" (csv) -> if ~0 then tris; else log fill rect extents/colours in ph4 (WBLOG) and compare to 512 width.
+Recipe: env SKIPPH=4 TAGX=_ri "EXTRA_E=ROGUESQ_WB_CLEAR=1 ROGUESQ_RI_CLEAR=1 " zsh scratch/agent/s6244_run.sh <csv arm>; scan with scratch/agent/nb_frac.py on g1_lvl1s6244_<arm>_ri_ph4/fbd/fb_0001000_w900.ppm
