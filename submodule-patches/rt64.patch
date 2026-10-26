@@ -5272,7 +5272,7 @@ index d1a9f4e..9592a52 100644
          // with the GPU-side stage 2.5 counter, this shows how many texrects
          // enter the pipeline vs how many reach the for-loop.
 diff --git a/src/hle/rt64_rdp_tmem.cpp b/src/hle/rt64_rdp_tmem.cpp
-index 6051f4e..c011d38 100644
+index 6051f4e..a3baf88 100644
 --- a/src/hle/rt64_rdp_tmem.cpp
 +++ b/src/hle/rt64_rdp_tmem.cpp
 @@ -6,6 +6,8 @@
@@ -5284,7 +5284,7 @@ index 6051f4e..c011d38 100644
  
  #include "xxHash/xxh3.h"
  
-@@ -50,6 +52,31 @@ namespace RT64 {
+@@ -50,10 +52,46 @@ namespace RT64 {
      }
  
      uint64_t TextureManager::uploadTexture(State *state, const LoadTile &loadTile, TextureCache *textureCache, uint64_t creationFrame, uint16_t width, uint16_t height, uint32_t tlut) {
@@ -5316,7 +5316,22 @@ index 6051f4e..c011d38 100644
          const uint8_t *TMEM = reinterpret_cast<const uint8_t *>(state->rdp->TMEM);
          uint64_t hash = TMEMHasher::hash(TMEM, loadTile, width, height, tlut, TMEMHasher::CurrentHashVersion);
          if (hashSet.find(hash) == hashSet.end()) {
-@@ -85,7 +112,7 @@ namespace RT64 {
+             hashSet.insert(hash);
++            // PATCH (s6237): ROGUESQ_LOG_UPSPAN=1 logs the tile descriptor behind every new upload (first 400) to split game-span vs RT64-widened span.
++            if (std::getenv("ROGUESQ_LOG_UPSPAN")) {
++                static int s_n = 0;
++                if (s_n++ < 400) {
++                    fprintf(stderr, "[upspan] hash=0x%016llx w=%u h=%u fmt=%u siz=%u line=%u tmem=%u uls=%u ult=%u lrs=%u lrt=%u cms=%u cmt=%u masks=%u maskt=%u tlut=0x%X\n",
++                        (unsigned long long)hash, (unsigned)width, (unsigned)height, (unsigned)loadTile.fmt, (unsigned)loadTile.siz, (unsigned)loadTile.line,
++                        (unsigned)loadTile.tmem, (unsigned)loadTile.uls, (unsigned)loadTile.ult, (unsigned)loadTile.lrs, (unsigned)loadTile.lrt,
++                        (unsigned)loadTile.cms, (unsigned)loadTile.cmt, (unsigned)loadTile.masks, (unsigned)loadTile.maskt, (unsigned)tlut);
++                    fflush(stderr);
++                }
++            }
+             textureCache->queueGPUUploadTMEM(hash, creationFrame, TMEM, RDP_TMEM_BYTES, width, height, tlut, loadTile, true);
+         }
+ 
+@@ -85,7 +123,7 @@ namespace RT64 {
          }
  
          // Dump the RDRAM last loaded into the TMEM address pointed to by the tile. Required for generating hashes used by Rice.

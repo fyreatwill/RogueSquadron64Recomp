@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6215 (2026-10-25).
+Compact operational handoff, maintained as of Session 6237 (2026-10-25).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -134,3 +134,5 @@ Default stays retail 4:3. Opt-in levers: `ROGUESQ_ASPECT=<w>:<h>` (derives FB_WI
 
 - s6236 (offline, single-source): noisy up_167 TMEM = a 672-byte f4/s2 LoadBlock at tmem 0 (srcfnv 16aef4cc85ca1200, from 0x803780/0x9712B0/0x93AD50/0x94FE70) + ~3.4 KB stale TMEM from earlier 2048/4096-B loads; hash churns because the stale tail churns. Next: log SETTILE/SETTILESIZE (line, size, fmt) of the draw using up_167 to see whether the 64x32 span is the game's or RT64-derived (NEXT.md).
 - s6235: per-load log (ROGUESQ_LOG_LOADS) shows no single LoadBlock>=1KB builds the noisy up_167 TMEM (matcher control OK, single-source); H-load disfavoured, next = stamp upload with load seq and diff the preceding loads (see NEXT.md).
+
+- s6237 (G1d): the noisy up_167 title texture is a game-defined 64x21 4bpp tile (lrt=80, maskt=5); identical descriptor at 4:3 and wide, so RT64 does not widen it. Rows 21-31 are stale TMEM by design. Open: does a draw sample them (NEXT.md). Logger: `ROGUESQ_LOG_UPSPAN=1`.
