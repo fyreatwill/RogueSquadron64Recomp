@@ -41,6 +41,7 @@
 
 #include "recomp.h"
 
+extern "C" uint32_t g_s6491[4]; // s6491 terrain-grid call/list/chain counters
 extern "C" uint32_t g_s6489[8]; // s6489 cumulative cell-gate exit counters (patched funcs_10.c)
 extern "C" uint32_t rs64_phase_ord(void);
 extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
@@ -608,6 +609,7 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
             fprintf(stderr, "[cellcum] n=%d e0=%u e1=%u e2=%u e3=%u e4=%u e5=%u e6=%u e7pass=%u\n", n,
                     g_s6489[0], g_s6489[1], g_s6489[2], g_s6489[3], g_s6489[4], g_s6489[5], g_s6489[6], g_s6489[7]);
         }
+        fprintf(stderr, "[gridcum] n=%d calls=%u listnz=%u chainnz=%u\n", n, g_s6491[0], g_s6491[1], g_s6491[2]);
         if (FILE* f = fopen(path, "wb")) {
             // s5746: raw guest-RDRAM readback, NOT the RT64 window (s5745: the "crawl garbage band" was only in this dump).
             fprintf(f, "P6\n# source=rdram-readback-not-window vi_width=%u\n%u %u\n255\n", ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG, dw, dh);
