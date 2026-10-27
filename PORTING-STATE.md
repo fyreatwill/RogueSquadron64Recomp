@@ -169047,3 +169047,20 @@ copy. The first run's ordinary control was incorrectly phase-gated and produced
 zero; that qualification failure was fixed and the arm was rerun before drawing
 the result. Next is a bounded pre-VTX last-writer table plus bulk-copy control.
 ORIGIN: diagnostic-only exact-range shadow; no mitigation or visual behavior change.
+
+## Session 6332 (2026-10-26) — checkpoint close-out: preserve pre-VTX resume state
+
+This retry did not rerun the s6331 experiment, in accordance with the
+checkpoint-close-out instruction. The existing s6331 artifact and ledger entry
+are complete enough to carry forward: both positive controls fired, the keyed
+level-1 DD3/red hold reached flight and stayed alive for 130 seconds, and no
+phase-6 parity-instrumented scalar store overlapped a registered VTX range.
+The 96 phase-7 overlaps were zero-valued writes. No conclusion changed and no
+new soak verdict arrived.
+
+The next discriminator remains the bounded pre-VTX last-writer table joined to
+each phase-6 VTX range, with a same-build bulk-copy census/control and the
+ordinary-store and VTX controls retained. Do not add an edge-fade or cull
+mitigation until a writer and value legitimacy are established.
+ORIGIN: checkpoint documentation only; no experiment rerun, code change, or
+visual behavior change.
