@@ -169543,3 +169543,4 @@ Result at the FD57 SDV (vd=v6/v7 chain): VMUDH v7 = v?[lane1]=02A8 * v30[1]=0001
 Next: extend ring depth to ~96 and capture the group before, to trace E6E1.FBF6 back to a DMEM load / matrix row.
 DISCRIMINATION (s6377): REFUTES H-dmem-multiplier (the multiplier is not a DMEM constant: no lastld source for v4/v5 at the FD57 group, they are VMADN/VMADH outputs). SELECTS H-upstream-operand as the live branch (H-input narrowed to the operand E6E1.FBF6 and the 13C0/0004/0005 terms); H-clip/H-retail remain.
 NEXT DISCRIMINATOR: 128-op ring at the FD57 SDV; if E6E1.FBF6 traces to a sane vertex/matrix DMEM load -> H-retail/H-clip (ask owner re CULL_SPIKE default-on); if it traces to a guest-written bad value -> H-input, name the guest writer.
+Summary (s6377): the 24-op ring run refutes the DMEM-constant multiplier form of H-input and selects the upstream-operand branch (E6E1.FBF6 trace) as the next discriminate step.
