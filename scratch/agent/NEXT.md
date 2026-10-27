@@ -1,6 +1,6 @@
-# NEXT: who writes the span grid at 0x80130DB0 and what column bound does it use?
+# NEXT: why do dd4 edge-interpolation results saturate at the -128 lower clamp (0x80042820 / 0x800426D8)?
 HYPOTHESIS-ID: g1c-span-reject-predicate
 
-s6520: dd4 span bytes read as 0x80 (never written) at x>=32 (72% of 4844 reads vs 10% baseline); dd1 has none.
-Hypotheses: H-writer-bound (span-grid writer loops only over the dd1 window width; dd4 window reads past it), H-init (grid init clears to 0x80 and writer is skipped for far cells by another dd gate), H-stride (grid row stride is 32 so x>=32 aliases other rows).
-Discriminator: one build, log all writes (PC, offset from 0x80130DB0, value) in the span-grid writer family (s6512 all-span-writers patch exists: reuse) for dd1 vs dd4 over one frame; bucket offline by column x. Positive control: dd1 columns <32 must show writes. No writes at x>=32 in dd4 => H-writer-bound/H-init (find loop bound); writes present but 0x80 => H-stride.
+s6521: span grid fully written both arms; 0x80 bytes are clamp/clear values from the stream function's own edge loop (0x80042760..0x8004282C: sb trunc(clamp(f0, f12, f10))). dd4: 58% of 0x80042820 stores are 0x80, 5.2M stores at col>=32 (dd1 8k).
+Hypotheses: H-clamp-legit (dd4 widened frustum edges really lie past -128 and the lower clamp is meant to mean "accept all"; then the COMPARE misreads -128), H-input-bad (dd4 inputs a1/f2/f22/f4 are wrong outside dd1 range: scale or divide by near-zero f2), H-bound-swap (f12/f10 are the wrong layer's bounds at dd4).
+Discriminator: one build (extend apply_s6521 handler site, or a probe at 0x80042820/0x800426D8 in funcs_9.c) logging pre-clamp f0, f12, f10, row (a0), layer (t4 offset), per call; dd1 vs dd4 pinned lvl1 150 s (reuse scratch/agent/s6521_spanw.sh). Positive control: dd1 rows with f0 within [f12,f10] exist. Outcome: f0<f12 with f12=-128 and sane f0 magnitude => H-clamp-legit (go read the compare at cell+3); f0 huge/NaN => H-input-bad (trace f2/f22/a1); f12/f10 differ by layer between arms => H-bound-swap.
