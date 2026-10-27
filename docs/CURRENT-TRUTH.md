@@ -229,4 +229,5 @@ Default stays retail 4:3. Opt-in levers: `ROGUESQ_ASPECT=<w>:<h>` (derives FB_WI
 - s6300 G3c(b): RSP divide unit (VRCP/VRSQ + tables) matches ares/hardware ROM values (rcp[0..3]=FFFF,FF00,FE01,FD04); wedges not explained by it. VCH/VCL/VCR/VMULF/VMACF and a vertex replay of swap 1867 still open; CULL_SPIKE stays opt-in. Single-source.
 - s6301 G3c(b): tools/rsp_vu_diff: 496/496 VU op/element hashes identical SIMD vs SISD (31 ops x 16 e), mutation control fires on VCL. Emulation of clip/multiply ops has no SIMD defect; still ares-lineage (not hardware). Spike thread: ask owner re CULL_SPIKE default; else move on.
 
+- s6322: visited-cell regression vs cam/s at baseline for s=12.8 (refuted); next fit emitting cells. 
 - s6319: footprint-derived fade centre (circular mean of AA94 cells) REFUTED offline (single-source, s6317 log): AA94 visits the whole 64-ring as a streaming sweep, centre jumps, R~0.5. G3c(a) fade needs a true player/camera position source (RAM-diff scan of smoothly changing floats in flight).

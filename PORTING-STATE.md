@@ -168978,3 +168978,10 @@ Next: validate the cell scale (regress AA94 cell stash vs camX/Z/12.8), then ROG
 Discrimination: this run SELECTS H-matrix and REFUTES H-camrel / H-none (s6320 NEXT.md table): camera position is absolute, smooth, and readable live, so a camera-centred fade is feasible.
 Next discriminator: H-scale12.8 vs H-other — regress the AA94 cell stash circular mean against camX/Z divided by candidate scale s; the s with minimum residual wins, s=1.0 is the positive control (must be worse).
 Summary: this selects H-matrix and refutes H-camrel; the next regression will discriminate cell scale candidates.
+
+## Session 6322 (2026-10-26) — cell-scale regression: no clean fit, method flawed (visited set is a sweep, not a footprint)
+Ran: ROGUESQ_G3C_CAMLOG=1 + ROGUESQ_EDGE_FADE_LOG=1, lvl1 dd3 130 s (scratch/agent/s6322_run.sh -> m6/g1_lvl1s6322_scale; 0 crash, 0 VI stall, 2393 camlog / 12000 edgefade5 lines). New tools/g3c_scalefit.py joins each edgefade5 cell to the preceding camlog frame (camX/Z = floats 9 and 11 of the camlog block) and fits circular-mean(cells) vs cam/s mod dim. Flight camera ptr is 0x80138458 (earlier ptrs 800B1910/80138930 are menu/intro cameras; the pointer changes, so read it each frame). 258 flight frames.
+Result: random baseline residual is ~24 cells (dim 64) / ~49 (dim 128), measured at s=64 and s=1 (positive control: wrong s is uniformly at baseline). s=12.8 gives 26.6 / 42.9 = baseline, so H-scale12.8 is REFUTED as a centre estimator. The best s is a broad minimum at 2.1-2.4 (median 16, p90 ~33 = still baseline) in both dims, never a few cells. No clean linear map.
+Why: s6319 already showed AA94 sweeps the whole ring (streaming order), so the circular mean of VISITED cells is not a footprint centre whatever s is. This run repeated that flaw with a better camera source. Single-source.
+ORIGIN: no mitigation added (tool + log only). 
+Next: attribute cells by what is DRAWN, not visited: log the AA94 cells whose call advances the display-list pointer (emits triangles), regress that set's centroid on cam/s.
