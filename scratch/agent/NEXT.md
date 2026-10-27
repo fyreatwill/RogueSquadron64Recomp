@@ -8,6 +8,11 @@ phase-6 VTX join rows had valid post-values, but no red-valued VTX lane matched
 a phase-5 guest-store post-value. The 15 exact matches were zero-valued rows.
 The DD3 level-1 hold was alive for 130 seconds with zero VI stalls/crash lines.
 
+Conclusion carried forward: the observed phase-5 guest-store last-writer path
+is eliminated, but the experiment did not choose among H-host-write-order,
+H-unlogged-bulk, and H-vtx-copy. The next exact-lane host-write table is the
+required selecting discriminator, not another post-store rerun.
+
 Competing hypotheses: H-host-write-order (a host/DMA write populates the red
 lane after the last logged guest store), H-unlogged-bulk (a bulk source touches
 the exact lane outside the bounded witness), and H-vtx-copy (the red bytes are

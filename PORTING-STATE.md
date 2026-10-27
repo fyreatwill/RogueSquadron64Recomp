@@ -169179,3 +169179,11 @@ next exact-lane host-write ordering witness is still required to distinguish a
 host/DMA writer from VTX-side copy/read ordering. `docs/CURRENT-TRUTH.md`
 already contains that conclusion and needs no factual change. The next run
 must use all existing controls and the command preserved in `scratch/agent/NEXT.md`.
+Discriminator outcome: post-store readback eliminated the observed guest-store
+last-writer subhypothesis, but did not select among H-host-write-order,
+H-unlogged-bulk, and H-vtx-copy. The next discriminator is the bounded
+exact-lane host-write table: a matching host payload selects H-host-write-order;
+a nonmatching host event followed by a red transition selects H-unlogged-bulk;
+no host event with a red transition at VTX selects H-vtx-copy.
+ORIGIN: checkpoint close-out of the post-store attribution experiment; no
+mitigation or runtime behavior change was made.
