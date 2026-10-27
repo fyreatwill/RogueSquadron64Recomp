@@ -170119,3 +170119,10 @@ Read the VI loop (lib/N64ModernRuntime/ultramodern/src/events.cpp vi_thread_func
 ## Session 6457 (2026-10-27) — queued VI spin vs NOSPIN arm soaks (G3c(c))
 Verified build/RogueSquadron64Recomp (08:01:10) is newer than events.cpp (08:01:07), so it carries the s6456 sleep-then-spin. Queued scratch/agent/soak_queue/s6457_vi_spin.sh and s6457_vi_nospin.sh: identical s6290 retail recipe (lvl1, 200 s hold, ROGUESQ_G3C_LOG=1), the second adds ROGUESQ_VI_NOSPIN=1. No run this session; the loop runs them between iterations. Analyse with tools/g3c_jerk.py plus per-VI wall dt sd (baseline sd ~2 ms, alternation ~0.78 about 16.67 ms).
 ORIGIN: no mitigation added; queueing only.
+
+## Session 6458 (2026-10-27) — s6457 VI spin vs NOSPIN folded: identical, G3c(c) closed as retail judder
+Ran: offline analysis of the two queued soaks (lvl1, 200 s holds, both rc=0, alive, 0 stalls, 0 crashlines) with new tools/g3c_vi_dt.py on the [g3c] VI stamps (first quarter skipped).
+Result: spin vs nospin wall-dt: p50 6.0/6.7 ms, p75 30.5/28.9, p95 59.9/61.3, sd(<40ms) 10.67/10.58, fraction <2 ms 0.42/0.41; VI/s 60.9/60.0, gfx tasks/s 18.6/18.3. No difference, so timer oversleep (H-vi-timer) is ruled out as the jitter source. The stamps are bursty (3-4 VIs within 0.1 ms then ~66 ms gap, one gfx task per burst), i.e. they track task completion, not the VI timer; this differs from the s6455 logs (p50 16.6 ms) - different regime/recipe (G1B env), unexplained, single-source.
+Rules out: VI-timer oversleep as the owner's shake; with s6455 (arm-independent jerk) G3c(c) is closed as retail 30 Hz-class judder. Does NOT rule out that lvl1 runs ~18 gfx tasks/s under G1B logging (possible G1b slowdown datum).
+ORIGIN: no mitigation added; analysis only plus tools/g3c_vi_dt.py.
+Next: G1c phase 2, dd>=3 missing near mountain (NEXT.md).
