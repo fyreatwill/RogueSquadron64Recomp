@@ -1,26 +1,24 @@
-# NEXT: identify the exact stream writer for a dd4 EMPTY row
+# RESUME: identify the exact stream writer for a dd4 EMPTY row
 HYPOTHESIS-ID: g1c-dd8-limit
 
-The s6500 ring joined dd4 EMPTY seq 269 to a meaningful post table, while the
-stream sample was all 127. This selects H-writer, but cumulative counts only
-show activity at 0x80042DB4 and 0x80042DC0; they do not identify the writer for
-the matching return.
+Checkpoint close-out: s6500 already ran and selected H-writer. Its same-sequence
+dd4 EMPTY row had meaningful post-bin bytes but an all-127 stream sample;
+cumulative counts narrowed activity to 0x80042DB4 and 0x80042DC0 without naming
+the writer for that return. No rerun was performed during this retry.
 
-Do exactly one build/run. Extend the regeneration-safe s6500 probe with
+Resume with exactly one build/run. Extend the regeneration-safe s6500 probe with
 per-stream-return writer deltas and last values for all four sites
-0x80042DB4, 0x80042DC0, 0x80042EBC, and 0x80042EC4; print those values on the
-matching `[streamdump] EMPTY` row. Keep the pinned recipe and run
+0x80042DB4, 0x80042DC0, 0x80042EBC, and 0x80042EC4; print them on the matching
+`[streamdump] EMPTY` row. Keep the pinned recipe and run
 `zsh scratch/agent/s6492_forface.sh` after a Debug build.
 
-Competing hypotheses and discriminator:
+Discriminator:
 
-- H-bin: the matching dd4 post snapshot is all 127/sentinel with no meaningful
-  bytes. This would prove the rasterizer returned no usable span data.
-- H-writer: the matching dd4 post snapshot has a meaningful byte, but the
-  stream sample is all sentinel/clear; a per-PC delta identifies the site.
-- H-order: post and stream samples differ without any intervening writer delta.
-  This would indicate the consumer observes a different call/order boundary.
+- A delta at one site on the matching row selects that writer as the source of
+  the post-bin mutation.
+- No delta at any site, with post and stream still differing, selects H-order
+  (an uninstrumented writer or call boundary) and requires a new site census.
 
-Positive controls are mandatory: dd1 must produce nonempty rows and nonzero
-meaningful post stores; dd4 must produce EMPTY rows with a same-sequence post
-snapshot. If either control is absent, call the result unevaluable.
+Positive controls remain mandatory: dd1 nonempty rows and nonzero meaningful
+post stores, plus dd4 EMPTY rows with a same-sequence post snapshot. Missing
+either control makes the run unevaluable.

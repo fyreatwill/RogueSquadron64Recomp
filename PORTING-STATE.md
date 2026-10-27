@@ -170442,3 +170442,15 @@ This rules out the claim that dd4 could not be classified because the post
 snapshot budget ended before its first EMPTY. It does not yet distinguish the
 two active stream writer sites, so the next unit is a per-return writer-delta
 probe. ORIGIN: diagnostic instrumentation only; no mitigation was landed.
+
+## Session 6501 (2026-10-27) — checkpoint close-out for the per-return writer probe
+
+This retry did not rerun s6500 or build a new instrument. The existing s6500
+result remains the latest discriminator: a same-sequence dd4 EMPTY row has
+meaningful post-bin bytes but an all-127 stream sample, selecting H-writer over
+H-bin; cumulative counts narrow the active sites to 0x80042DB4 and 0x80042DC0
+without identifying the writer for that exact return. No new conclusion or
+runtime change was made. The resume unit is the already specified per-return
+delta/last-value probe for all four candidate sites, with dd1 nonempty and dd4
+EMPTY controls. ORIGIN: checkpoint documentation only; no mitigation or
+behavior change.
