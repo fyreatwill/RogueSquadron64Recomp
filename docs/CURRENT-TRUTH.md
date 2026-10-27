@@ -307,6 +307,7 @@ invalid cross-function join even when guest IDs match. H-boundary is selected;
 the exact per-invocation join fix remains to be built.
 
 ## Next steps — s6516 table-selection check (top)
+- **s6519 (top):** [ret-sum] + window/table dims: all 703 dd4 EMPTY calls are IN-bounds windows (e.g. win=0,54,0,11 tbl=64,64, nclear=594 npass=0); dd1 mission-table never EMPTY. Refutes H-oob, selects H-reject (span compares reject whole in-table windows at dd4). Single-source (windows differ in shape between arms). Next: cell-rec + s6515 split on EMPTY dd4 windows.
 - **s6518 (top):** uncapped ret-sum, pinned lvl1: EMPTY on the mission table 802EE7B4 is 0/2643 at dd1 vs 345/2402 (~14%) at dd4; load tables also differ. Phase-only/gate-hides refuted. Single-source; harm to rendered terrain unproven.
 - **s6517 (top, supersedes s6516's open question):** the table base is NOT an
   arm effect. `[t0+4]` = `[hdr+0x1C]` is stored by `load_level_hmp` (0x80043E64)

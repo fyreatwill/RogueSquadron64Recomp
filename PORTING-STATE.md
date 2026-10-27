@@ -170725,3 +170725,10 @@ ORIGIN: observation only; no mitigation added.
 Next: for dd4 mission-table EMPTY calls, join to a0/camera cell and the span compares to see whether the requested window lies outside the table (legit) or inside it with the cell bytes rejected (defect).
 Discrimination (s6518): selects H-mission-differs (mission-table EMPTY 0/2643 dd1 vs 345/2402 dd4); refutes H-phase-only and refutes H-gate-hides (EMPTY at keys 745+, uncapped).
 Next discriminator: s6519 logs a0 window origin vs table bounds per EMPTY call; separates H-oob (legit out-of-range) from H-reject (in-table cells rejected) and H-cap.
+
+## Session 6519 (2026-10-27) — dd4 EMPTY calls are in-bounds windows rejected by the span compares (not out-of-table)
+Built tools/apply_s6519_window_bounds.py: [ret-sum] now carries the request window (0x80132DB0 x0, +4 w, +8 y0, +C h) and table dims (0x80136DF8/FA). Ran scratch/agent/s6519_window.sh (pinned pose lvl1, dd1 vs dd4, 150 s, both arms rc=0). Bucketed offline (in-bounds = x0>=0,y0>=0,x0+w<=W,y0+h<=H).
+Result: dd4 EMPTY = 98 (table 802525E4) + 605 (mission table 802EE7B4), ALL in-bounds (0 oob). Example: win=0,54,0,11 tbl=64,64 nclear=594 nskip=0 npass=0 — every cell of an in-table window cleared by the compares. dd1 EMPTY = 7, all on the 32x32 load table; dd1 mission-table calls are never EMPTY (1109 in / 1428 oob, all ok). Positive control: dd1 non-EMPTY in-bounds rows exist on all three tables (125/231/1109) so the bucketing separates classes.
+Discrimination: refutes H-oob (EMPTY windows are inside the table); selects H-reject (in-table cells fail both span compares at dd4); H-cap not tested (nskip=0, no cap path hit). Caveat: dd4 window is 54x11 vs dd1 windows partly oob, so the windows differ in shape between arms (single-source).
+ORIGIN: observation only, no mitigation added.
+Next: per-cell record of the rejected cells in an EMPTY dd4 window (s6516 cell-rec + s6515 split on the 802EE7B4 table) to read which compare rejects and what the cell bytes are; then ask why dd4's span bytes differ from dd1's.
