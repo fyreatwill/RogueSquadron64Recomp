@@ -169227,3 +169227,25 @@ VTX read selects H-vtx-copy; a matching host payload outside the prior bounded
 rows selects H-host-order-residual. Resume with the command preserved in
 `scratch/agent/NEXT.md`.
 ORIGIN: checkpoint close-out only; no runtime behavior or mitigation change.
+
+## Session 6341 (2026-10-26) — qualified the phase-6 source-transition witness
+
+Read the retail/oracle and Factor 5 reference constraints before instrumenting.
+The oracle whole-RDRAM positive control fired 10,000 writes in an 8-second
+boot/attract run; its candidate watch at physical `0x735560..0x7355A0` had zero
+hits, so it supplied no mission-phase ground truth. Added a regeneration-
+preserved source-transition witness to `src/rsp/dpc_bridge.cpp`: each phase-6
+VTX range snapshots registration bytes and reports them beside VTX-read bytes,
+plus the count/source/DMEM/FNV/red-word summary of overlapping post-registration
+DMAs. The build passed.
+
+The qualified run reached mission in 8 seconds. VTX, ordinary-store, bulk, and
+forced-red controls fired; 64 phase-6 transition rows were emitted. For the
+red range `0x735560..0x7355D0`, registration and VTX-read bytes were identical
+and already red, with `dma_events=0`. This selects an earlier/unlogged
+population path over VTX-side copy and the sampled host-order path, but does
+not name its writer. The harness did not emit its hold summary and the explicit
+game process was SIGKILLed, so no 130-second endurance claim is made. No
+mitigation was added. Next is the same witness extended across the phase-5 to
+phase-6 boundary, retaining the same hypothesis slug and controls.
+ORIGIN: source-transition measurement; no mitigation.

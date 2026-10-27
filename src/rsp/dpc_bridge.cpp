@@ -1479,6 +1479,13 @@ struct Rs64F5VtxStoreRange {
     uint32_t end;
     uint32_t task;
     uint32_t pc;
+    uint32_t dma_events = 0;
+    uint32_t last_dma_source = 0;
+    uint32_t last_dma_len = 0;
+    uint32_t last_dma_dmem = 0;
+    uint32_t last_dma_fnv = 0;
+    uint32_t last_dma_red_words = 0;
+    uint8_t registration[32] = {};
 };
 
 struct Rs64F5LastWriter {
@@ -1585,6 +1592,31 @@ static void rs64_f5_dump_join(uint32_t phase, uint32_t source, uint32_t bytes,
         g_f5_last_writer.resize(0x200000u);
     std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
     uint32_t rows = 0, written = 0, red = 0;
+    const uint32_t snapshot = std::min(bytes, 32u);
+    uint8_t registration[32] = {};
+    uint32_t dma_events = 0, dma_source = 0, dma_len = 0, dma_dmem = 0;
+    uint32_t dma_fnv = 0, dma_red_words = 0;
+    for (Rs64F5VtxStoreRange& row : g_f5_vtx_store_ranges) {
+        if (row.phase == phase && row.source == source && row.end == source + bytes) {
+            std::memcpy(registration, row.registration, sizeof registration);
+            dma_events = row.dma_events;
+            dma_source = row.last_dma_source;
+            dma_len = row.last_dma_len;
+            dma_dmem = row.last_dma_dmem;
+            dma_fnv = row.last_dma_fnv;
+            dma_red_words = row.last_dma_red_words;
+            break;
+        }
+    }
+    std::fprintf(stderr,
+        "[f5-source-transition] phase=%u task=%u vtx=0x%06X..0x%06X registered=",
+        phase, task, source, source + bytes);
+    for (uint32_t i = 0; i < snapshot; ++i) std::fprintf(stderr, "%02X", registration[i]);
+    std::fprintf(stderr, " read=");
+    for (uint32_t i = 0; i < snapshot; ++i) std::fprintf(stderr, "%02X", rdram[(source + i) ^ 3u]);
+    std::fprintf(stderr, " dma_events=%u last_dma=0x%06X..0x%06X dmem=0x%03X fnv=%08X red_words=%u\n",
+                 dma_events, dma_source, dma_source + dma_len, dma_dmem,
+                 dma_fnv, dma_red_words);
     for (uint32_t p = source; p < source + bytes; p += 4u) {
         const Rs64F5LastWriter& w = g_f5_last_writer[p >> 2u];
         const uint32_t now = (uint32_t(rdram[p ^ 3u]) << 24) |
@@ -1623,7 +1655,7 @@ extern "C" void rs64_f5_host_bulk_shadow(uint32_t phys, uint32_t len,
     const uint32_t start = phys & 0x7FFFFFu;
     const uint32_t end = std::min(start + len, 0x800000u);
     std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
-    for (const Rs64F5VtxStoreRange& row : g_f5_vtx_store_ranges) {
+    for (Rs64F5VtxStoreRange& row : g_f5_vtx_store_ranges) {
         if (!row.end || start >= row.end || end <= row.source) continue;
         if (g_f5_bulk_rows++ >= 64u) return;
         std::fprintf(stderr,
@@ -1696,7 +1728,7 @@ extern "C" void rs64_f5_host_bulk_payload(uint32_t phys, uint32_t len,
     const uint32_t end = std::min(start + len, 0x800000u);
     static uint32_t rows = 0;
     std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
-    for (const Rs64F5VtxStoreRange& row : g_f5_vtx_store_ranges) {
+    for (Rs64F5VtxStoreRange& row : g_f5_vtx_store_ranges) {
         if (!row.end || start >= row.end || end <= row.source) continue;
         if (rows++ >= 64u) return;
         const uint32_t first = std::max(start, row.source);
@@ -1715,6 +1747,12 @@ extern "C" void rs64_f5_host_bulk_payload(uint32_t phys, uint32_t len,
             const uint8_t b = g_dmem_cur[((dmem_addr + off + 2u) & 0xFFFu) ^ 3u];
             red += r == 0xFFu && (g == 0u || b == 0u);
         }
+        row.dma_events++;
+        row.last_dma_source = start;
+        row.last_dma_len = end - start;
+        row.last_dma_dmem = dmem_addr;
+        row.last_dma_fnv = fnv;
+        row.last_dma_red_words = red;
         std::fprintf(stderr,
             "[f5-bulk-payload] n=%u phase=%u task=%u bulk=0x%06X..0x%06X "
             "dmem=0x%03X vtx=0x%06X..0x%06X lanes=0x%06X..0x%06X "
@@ -1745,6 +1783,11 @@ extern "C" void rs64_f5_vtx_store_range(uint32_t phase, uint32_t source,
     Rs64F5VtxStoreRange& row =
         g_f5_vtx_store_ranges[g_f5_vtx_store_range_next++ % 128u];
     row = {phase, source, source + bytes, task, pc & 0x7FFFFFu};
+    if (g_recomp_rdram_for_wp_raw) {
+        const uint32_t snapshot = std::min(bytes, 32u);
+        for (uint32_t i = 0; i < snapshot; ++i)
+            row.registration[i] = g_recomp_rdram_for_wp_raw[(source + i) ^ 3u];
+    }
 }
 
 extern "C" void rs64_f5_store_shadow(char width, uint32_t pc,
