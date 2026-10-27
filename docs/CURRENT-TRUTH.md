@@ -296,3 +296,4 @@ s6371: spike pinned Y (0xFD57 @DMEM 0x43A) is never DMA-loaded (v43A only 0000/3
 - s6372: RSP store watch ([spike-st], ROGUESQ_SPIKE_DMEM=1) built for DMEM 0x43A/0x462 incl. vector stores; soak s6372_spike_store queued; fold its `[spike-st] ... FD57 ... ra=` rows next (resolve ra with atos).
 
 - s6374 (G3c b): s6373's VGE-clamp reading REFUTED: v29 lane1=F006, pinned Y=FD57 passes VGE unchanged (1020 events, lvl2). Y is the vmadh accumulator output (v4 lane1=-3 const, indep. of v5 lane1); next snapshot v0+ACC before the vmadh.
+- s6375 (G3c b): SDV hook now also snapshots v0-v3 and ACCH/M/L. At FD57 events lane1 ACC=FFFF_FD57_FD57, v0=[0400 02A8 01FF 0], v4 lane1=-3; v6=ACCM clamp (self-consistent, single-source). Pre-VMADH ACC and vmudn operands not captured; next: 24-op VU ring buffer replayed at FD57 SDV (NEXT.md).
