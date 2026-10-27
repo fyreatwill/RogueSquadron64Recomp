@@ -170492,3 +170492,21 @@ offline census of counter assignments, instrumentation calls, and control flow
 around 0x80042EBC; its outcome must select H-duplicate, H-uninstrumented, or
 H-boundary before another run. ORIGIN: checkpoint documentation only; no
 mitigation or runtime behavior change.
+
+## Session 6505 (2026-10-27) — audited the EBC writer join and selected the boundary defect
+
+The prescribed offline audit ran against the live generated
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_9.c`
+and the s6500-s6503 fixups. It found one `s6500_wcount` declaration, no reset
+or duplicate assignment, and one live `s6500_note_writer` call at the EBC
+store 0x80042EBC. The apparent second EC4 site is unreachable generated C
+after an unconditional goto; it is the duplicated delay-slot representation,
+not a second live writer. The snapshot is at the return tail of
+`binPolygonIntoTerrainGrid`, while the EBC writer is in the later
+`streamTerrainGridCellsByDistance`. Therefore H-duplicate and H-uninstrumented
+are refuted and H-boundary is selected: the cumulative file-scope counters are
+an invalid cross-function join even when sampled guest IDs match, especially
+given the prior cross-host-thread observation. No build or game run occurred;
+no mitigation or runtime behavior changed. ORIGIN: audit identifies the
+cross-function shared-counter join as the source of the invalid delta; the next
+unit must replace the join key before any writer claim is made.

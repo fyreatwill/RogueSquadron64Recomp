@@ -1,39 +1,26 @@
-# NEXT: offline audit — explain the impossible EBC writer delta before rerunning
+# NEXT: build the per-invocation EBC join fix
 HYPOTHESIS-ID: g1c-dd8-limit
 
-The prior probe artifacts are already present; do not rerun the game or rebuild
-before the audit below is complete. This handoff is intentionally offline.
+One bounded change: replace the s6500 cumulative counter delta with a
+regeneration-safe sequence/key captured at the bin return and matched at
+stream entry/writer time. Preserve the writer census and emit a delta only for
+a matching interval; do not change game behavior.
 
-The s6502 single-snapshot run passed both controls, but the 0x80042EBC count
-delta underflowed while 0x80042DB4 had positive deltas. The guest thread IDs
-matched, so the result cannot yet name a writer. Do one offline source audit
-before another build: enumerate every declaration, assignment, and call of
-`s6500_wcount[2]`, `s6501_post_wcount[2]`, and `s6500_note_writer(0x80042EBCu)`
-in the generated funcs_9.c and all three fixup scripts, then inspect the exact
-control-flow placement around 0x80042EBC.
+The s6505 audit is in `docs/S6505-EBC-WRITER-AUDIT.md`: H-duplicate and
+H-uninstrumented are refuted; H-boundary is selected.
 
-Competing hypotheses and discriminator:
+Competing hypotheses and discriminator for the one build/run:
 
-- H-duplicate: a second declaration or stale generated fragment resets/aliases
-  the EBC counter. A complete assignment census finds one or more reset sites.
-- H-uninstrumented: EBC is written through an uninstrumented path, so the
-  snapshot and current counter are from different writer populations. The
-  source audit finds a matching table-byte store without s6500_note_writer.
-- H-boundary: the snapshot is taken in a different call/phase than the stream
-  row despite equal guest IDs. The exact CFG and sequence placement show a
-  call boundary between the post snapshot and return.
+- H-boundary: a keyed interval makes EBC deltas monotonic and removes the
+  underflow while retaining dd1 nonempty and dd4 EMPTY writer activity.
+- H-race: a keyed/serialized snapshot still underflows or loses increments,
+  proving shared host-thread mutation remains.
+- H-missing: matched rows show EBC table changes without the keyed writer,
+  proving an uninstrumented writer remains.
 
-Exact resume commands:
+Apply the fix through the existing s650 fixup path, build once, and run:
 
-    rg -n "s6500_wcount|s6501_post_wcount|s6500_note_writer|42EBC|42EC4" \
-      RecompiledFuncs/funcs_9.c tools/apply_s650*.py
-    sed -n '<bounded-start>,<bounded-end>p' RecompiledFuncs/funcs_9.c
+    zsh scratch/agent/s6492_forface.sh
 
-Record the census and the bounded CFG window in the next session entry. Do not
-claim an exact writer from the existing runtime counters: the EBC underflow is
-invalid evidence until the audit explains its reset, missing store, or join
-boundary.
-
-The audit selects one of these; only then build one regeneration-safe fix and
-rerun `zsh scratch/agent/s6492_forface.sh`, requiring dd1 nonempty and dd4
-EMPTY controls. No soak is justified before the audit resolves the underflow.
+Require dd1 nonempty controls, dd4 EMPTY controls, and a positive key-match
+control. No soak is justified until the key discriminator passes.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6504 (2026-10-27).
+Compact operational handoff, maintained after Session 6505 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -193,20 +193,23 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   Never reset, clean, checkout, or update submodules. If editing `lib/`, run
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
-Session 6503 was a checkpoint close-out only. The retry did not rerun the probe;
-the durable result remains that the EBC delta is invalid and the exact writer is
-unresolved. Session 6504 completes that handoff without rerunning the probe;
-resume with the offline assignment/control-flow audit in NEXT.md.
+Session 6503 was a checkpoint close-out only. Session 6504 completed the
+handoff without rerunning the probe. Session 6505 completed the offline audit:
+there is one counter declaration, no reset or duplicate assignment, and every
+live 0x80042EBC store calls the writer helper. The apparent second 0x80042EC4
+site is unreachable after an unconditional generated `goto`. The snapshot is
+at the end of binPolygonIntoTerrainGrid while the writer is in the later
+streamTerrainGridCellsByDistance, so the shared cumulative counter is an
+invalid cross-function join even when guest IDs match. H-boundary is selected;
+the exact per-invocation join fix remains to be built.
 
-## Next steps — s6502 override (top)
-- **s6502 (top):** the per-return writer probe is still unevaluable: the final
-  single-snapshot arm passed dd1/dd4 controls and matched guest thread IDs, but
-  0x80042EBC's count delta underflowed while 0x80042DB4 was positive. First do
-  an offline source audit of every assignment and call to `s6500_wcount[2]` and
-  the snapshot fields in generated funcs_9.c; determine whether the apparent
-  reset is a duplicate definition, an uninstrumented writer path, or a join
-  boundary. Do not run another soak until the audit names the cause. Then build
-  all candidate fixes in one run and require dd1 nonempty plus dd4 EMPTY rows.
+## Next steps — s6505 boundary fix (top)
+- **s6505 (top):** replace the shared cumulative writer-counter join with one
+  regeneration-safe per-invocation key spanning the bin return and stream
+  entry/writer interval. Keep all candidate arms in one build and one run;
+  require dd1 nonempty and dd4 EMPTY controls, and reject any unsigned delta
+  unless its key and interval match. The offline audit is recorded in
+  `docs/S6505-EBC-WRITER-AUDIT.md`; do not treat the old EBC delta as evidence.
 - **s6499 (folded):** the complete store census selected a later stream-path
   writer for the dd1 EMPTY control; the dd4 row was beyond its post budget.
 - **s6498 (folded):** dd4 EMPTY rows have valid bounds and all-127 table
