@@ -169709,3 +169709,25 @@ combined) are therefore not mission evidence, despite terrain positive
 controls. This run selects no fog/grid/aspect hypothesis and rules out only
 the assumption that the retail title-origin gate is valid for the aspect arm.
 No code or default changed. ORIGIN: no mitigation.
+
+## Session 6390 (2026-10-26) — validated the widescreen mission phase gate
+
+Ran the prescribed route-validation arms concurrently from the current Debug
+build. The first aspect attempt used the retail `MISSION_RE` and therefore
+waited on the wrong origin; its phase log nevertheless showed the complete
+widescreen route ending at `width=796 origin=0x00639238`. The retail control
+reached `width=512 origin=0x00690400` at 85.8 s, held 130 s, and reported
+`alive_at_end=1 vi_stalls30s=0 crashlines=0` with framebuffer positive controls.
+
+Reran the aspect arm with `TITLE_ORIGIN=0x00639238 MISSION_RE=639238`. It
+reached the corrected mission origin at 85.8 s (harness mission t=92), held
+131 s, and reported `alive_at_end=1 vi_stalls30s=0 crashlines=0`; its
+framebuffer positive controls also fired. The complete widescreen phase
+sequence was `0/320/640/1024/796/640/796` with origins
+`0/0x280/0x651300/0x752200/0x6631B8/0x67CF00/0x639238`, versus the retail
+`0/320/640/1024/512/640/512` sequence ending at `0x690400`.
+
+This validates the widescreen mission-phase gate and rules out the claim that
+the aspect route fails before mission. It does not select the terrain-edge
+fog/grid/aspect hypothesis; the next four-arm edge table is still required.
+ORIGIN: no mitigation; route-gate correction only.

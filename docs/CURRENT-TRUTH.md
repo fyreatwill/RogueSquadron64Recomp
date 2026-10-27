@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6389 (2026-10-26).
+Compact operational handoff, maintained after Session 6390 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -48,10 +48,13 @@ draw-distance=2 reached mission origin and held 184/183 seconds with zero VI
 stalls and crash markers. Their mission-phase edge scores were
 `edge_excess_med=0.0286` and `0.0029`; both terrain controls passed. The
 aspect-only and combined arms initially missed the retail title origin because
-widescreen changes it from `0x00790400` to `0x00639238`. A corrected gate
-reached the widescreen title/hangar phase, but neither arm reached
-`0x00690400`; those positive-control scores are phase-mismatched and cannot
-select H-edge-fog, H-edge-grid, or H-edge-aspect. No runtime or default changed.
+widescreen changes it from `0x00790400` to `0x00639238`. Session 6390 corrected
+the route gate: the widescreen arm reached stable flight-equivalent
+`width=796 origin=0x00639238` and held 131 seconds; the retail control reached
+`0x00690400` and held 130 seconds. Both had zero VI stalls and crash markers,
+alive-at-end, and positive framebuffer-hash controls. This validates the
+widescreen mission gate but does not select H-edge-fog, H-edge-grid, or
+H-edge-aspect; no runtime or default changed.
 
 ## G1 mission coverage
 
@@ -81,11 +84,12 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. Finish G3c(a) with a valid widescreen mission route: census the actual
-   aspect phase-origin sequence and gate edge captures on mission origin
-   before comparing retail/dd/aspect/combined frames. The s6389 retail/dd
-   scores are provisional controls; the s6389 aspect scores are invalid due
-   to phase mismatch. The height-byte fade arm is closed as ineffective.
+1. Finish G3c(a) with the validated phase gates: run one four-arm
+   retail/dd2/aspect/combined edge table, using `0x00690400` for retail/dd2
+   and `0x00639238` for aspect/combined. Score only mission-phase captures;
+   the s6389 retail/dd scores remain provisional and its aspect scores remain
+   invalid due to phase mismatch. The height-byte fade arm is closed as
+   ineffective.
 2. Measure the owner-reported turning shake with the retail/FPS60/aspect arms
    if it remains actionable; current residual evidence is consistent with
    retail 30-Hz judder.
