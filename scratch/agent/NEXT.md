@@ -1,5 +1,5 @@
-# NEXT: G3c(b) knife spikes - reference RSP check of the F5 clip path
+# NEXT: G3c(b) spikes - is the constant wedge vertex a stale VTX slot?
 HYPOTHESIS-ID: g3c-owner-visual-b
-G3c(a) height-fade closed s6365 (f live, jump_med unchanged). Remaining (a) leads (haze scaling) low value after s6311-s6359 nulls.
-Hypotheses: H-rsp-emu (our LLE RSP differs from hardware on VRCP/VRCPH/VRCPL, VMULF/VMACF, VCH/VCL/VCR), H-retail (retail emits the wedges too).
-Work unit: take a logged wedge's RSP input (use existing ROGUESQ spike log from G3b), replay the vertex/clip microcode ops in an independent reference (ares/cen64/parallel-rsp if installed, else a small python model of the vector ops) and compare output vertices. Positive control: a known-good vertex must match.
+s6366: 96.5% of flagged wedges pin yh==ym at -224.25/-170.25; border-crossing run shares a constant vertex (1113.7,-170.25).
+Hypotheses: H-stale-slot (tri indexes a vertex-buffer slot not loaded this frame -> retail does it too), H-clip-const (ucode writes a fixed clip-plane vertex -> retail too), H-emu (excluded by s6300/s6301).
+Work unit: one build, extend the F5 0x04 VTX probe (tools/fixup_factor5_ucode.py) to record the DMEM vertex slots loaded per task, plus on a swap that logs [spike] dump the vertex whose projected (x,y)==(1113.7,-170.25) and whether any VTX load wrote that slot. Positive control: ROGUESQ_SPIKE_CTL=40 still flags. Discriminator: slot never loaded => stale (retail identical, ask owner re CULL_SPIKE default); loaded with sane input => emulation/ucode arithmetic bug, bisect.
