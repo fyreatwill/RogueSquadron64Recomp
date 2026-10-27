@@ -198,4 +198,5 @@ unit.
 
 - s6431: wide-aspect soaks must use MISSION_WIDTH=796|1024 (not MISSION_RE=ZZZ, which forced false nomission). Open G1d datum: terrain/sky holes at wide frame edges (single frame each at 16:9, 21:9) - see NEXT.md.
 
+- s6436: s6435 cap soak void (MISSION_WIDTH=WW placeholder, no flight reached); requeued s6436_aspect_cap with 796.
 - s6434: s6433 hangar soak 'notitle' = harness origin gates under wide FB (WIDE_ROUTE=1 added, s6434_aspect_hangar219 requeued). Dumps show hangar full-width but ~340/448 rows, and ASPECT flight black holes (single-source). Next: fold s6434; check hangar height via RT64 window capture / viewport; check holes with UCODE_CAP at ASPECT.
