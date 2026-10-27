@@ -220,3 +220,5 @@ unit.
 - s6436: s6435 cap soak void (MISSION_WIDTH=WW placeholder, no flight reached); requeued s6436_aspect_cap with 796.
 - s6434: s6433 hangar soak 'notitle' = harness origin gates under wide FB (WIDE_ROUTE=1 added, s6434_aspect_hangar219 requeued). Dumps show hangar full-width but ~340/448 rows, and ASPECT flight black holes (single-source). Next: fold s6434; check hangar height via RT64 window capture / viewport; check holes with UCODE_CAP at ASPECT.
 - s6452: G1e re-closed: retail ~30 fps vs FPS60 ~59 (0x8011A8F4, s6256-57) already measured; s6450-51 md5/per-VI approach redundant, abandoned. M6 hold soak s6452_m6_hold600 queued.
+
+- s6465 (fold): dd6 lvl10 clean (301 s, 0 stalls/crashes) => dd6 qualified lvl1/5/10. Clamp under DD_UNSAFE lifted 6->8 (apply_s6036_dd.py + funcs_9.c); s6466_dd8_lvl1 queued. Then dd1 vs dd6 owner contact sheet.

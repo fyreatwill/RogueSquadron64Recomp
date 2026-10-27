@@ -170150,3 +170150,9 @@ Folded s6463_dd1_lvl10_ctl (rc=1, 841 s, 5/5 route attempts failed, dd1 retail) 
 
 ## Session 6464 (2026-10-27) — folded lvl10 retry+control: dd4 and dd1 both clean
 Recipes with FORCE_PLANET_UNLOCK=0xFF: s6463_dd4_lvl10_retry rc=0 (mission_t=107s hold=305s, vi_stalls30s=0, crashlines=0) and s6464_dd1_lvl10_ctl rc=0 (same shape, hold=300s). Confirms s6463: earlier lvl10 route failures were the recipe omission, not dd. The s6461 audio-probe SIGBUS did not recur (1 hit, unexplained; passive). ORIGIN: n/a (no mitigation added). Queued s6465_dd6_lvl10 (dd6 lvl10 hold). Rules out: dd4 limits on lvl10.
+
+## Session 6465 (2026-10-27) — folded dd6 lvl10 clean; lifted dd clamp 6->8, dd8 lvl1 soak queued
+- s6465_dd6_lvl10: rc=0, hold 301 s, vi_stalls30s=0, crashlines=0, alive_at_end=1. dd6 now clean on lvl1/5/10 (single run each).
+- Change: tools/apply_s6036_dd.py clamp under ROGUESQ_DD_UNSAFE raised 6.0 -> 8.0 (also edited the already-patched RecompiledFuncs/funcs_9.c since the patch is idempotent-keyed); cmake build OK. Default unchanged (retail 1.0; 4.0 clamp without DD_UNSAFE, 3.0 without it per s6446 guard).
+- Queued soak_queue/s6466_dd8_lvl1.sh. Verify run.log echoes "multiplier 8"; watch heap/alloc failures (px3+ heap limit s6062), UCODE_CAP, bitmap stride.
+- Owner dd1-vs-dd6 contact sheet NOT yet produced (deferred; needs fixed-camera captures).
