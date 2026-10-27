@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6394 (2026-10-26).
+Compact operational handoff, maintained after Session 6395 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -92,6 +92,17 @@ context, not guest game data; null is invalid. The Debug target rebuilt
 successfully with only pre-existing warnings. No production null hit was
 observed, so this is a safety invariant rather than evidence of a live crash.
 
+Session 6395 reran the four edge arms with the per-arm width predicate. The
+helper classified all four arms as `allattempts-failed` at its title gate, so
+no arm was eligible for scoring. This gate result is stale: the final aspect
+and combined logs each contain 28 phase-5 target-store rows, sustained
+796-wide VI rows, framebuffer dumps, and zero crash markers; retail and dd2
+contain sustained 640-wide rows and the same positive framebuffer controls,
+but no phase-5 rows. The title predicate blocks valid wide-arm mission
+evidence and cannot distinguish the edge hypotheses. The next run must use
+phase-5 plus the arm-specific flight width as the mission predicate, with the
+title check informational only.
+
 ## G1 mission coverage
 
 Playable levels are 0..18 (`NUM_LEVELS=0x13`; 19 and 20 are sentinels). Levels
@@ -120,12 +131,11 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. Rerun the four-arm G3c(a) edge table with per-arm flight-width gates: retail
-   and dd2 must reach the stable 640-wide flight row after the phase-5 writer
-   witness; aspect and combined must reach 796-wide flight. Require positive
-   framebuffer hashes and zero crash/stall markers, then score only the gated
-   mission captures. Do not use a fixed VI origin; the height-byte fade arm is
-   closed as ineffective.
+1. Rerun the four-arm G3c(a) edge table after removing the redundant title
+   predicate: require phase-5 plus the arm-specific flight width (640
+   retail/dd2, 796 aspect/combined), positive framebuffer hashes, and zero
+   crash/stall markers; score only gated mission captures. Do not use a fixed
+   VI origin; the height-byte fade arm is closed as ineffective.
 2. Measure the owner-reported turning shake with the retail/FPS60/aspect arms
    if it remains actionable; current residual evidence is consistent with
    retail 30-Hz judder.

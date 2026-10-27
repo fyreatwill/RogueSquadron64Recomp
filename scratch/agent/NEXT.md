@@ -1,12 +1,11 @@
-# NEXT: rerun G3c(a) with per-arm flight-width gates
+# NEXT: remove the stale title gate and rerun G3c(a)
 HYPOTHESIS-ID: g3c-edge-arm-route-gate
 
-Run the same four arms from `scratch/agent/s6394_edge_arms.sh`, but make the
-route predicate per-arm: retail and draw-distance=2 must show the phase-5
-target-store witness followed by a stable `width=640` VI flight row; aspect
-only and combined must show the witness followed by `width=796`. Keep the
-positive framebuffer-hash/terrain controls and zero crash/stall checks. Score
-only dumps after the arm-specific gate passes.
+Update `scratch/agent/s6394_edge_arms.sh` so `TITLE_ANY` is not a blocking
+predicate. Run the same four arms using phase-5 plus the per-arm flight width:
+retail/dd2 `width=640`, aspect/combined `width=796`. Keep title/armed rows as
+informational evidence, and retain positive framebuffer-hash/terrain controls
+and zero crash/stall checks. Score only dumps after the arm-specific gate.
 
 Competing hypotheses:
 
@@ -19,11 +18,19 @@ Competing hypotheses:
 - H-gate-only: the score ordering collapses or changes once all four arms have
   valid per-arm flight captures.
 
-DISCRIMINATING MEASUREMENT: one concurrent four-arm run, one build, with the
-phase-5 writer witness and arm-specific width gate. A complete valid table
-selects fog/grid/aspect by score ordering; any arm failing its gate leaves the
-visual hypotheses unevaluable and selects only a route-gate correction.
+DISCRIMINATING MEASUREMENT: one concurrent four-arm run with no title gate and
+the phase-5 + arm-width predicate. A complete valid table selects fog/grid/
+aspect by score ordering; any arm still failing its gate selects only the
+remaining route failure.
 
-Exact command: `zsh scratch/agent/s6394_edge_arms.sh` after updating its
-per-arm gate, then run `python3 tools/g3c_edge_score.py` on each gated `fbd`
-directory. Do not change runtime defaults or visual code.
+Competing hypotheses:
+
+- H-title-gate: removing the title predicate yields valid captures without
+  changing runtime behavior.
+- H-edge-fog: dd2 changes edge excess relative to retail; combined follows dd2.
+- H-edge-grid: dd2 and combined share the edge signature.
+- H-edge-aspect: aspect-only and combined share the edge signature.
+
+Exact command: update the helper, run `zsh scratch/agent/s6394_edge_arms.sh`,
+then run `python3 tools/g3c_edge_score.py` on each gated `fbd` directory. Do
+not change runtime defaults or visual code.

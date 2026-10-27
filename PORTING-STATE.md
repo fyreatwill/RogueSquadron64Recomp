@@ -169808,3 +169808,22 @@ complete route predicate and shows that the next gate must be per-arm flight
 width, not a single mission origin.
 
 ORIGIN: route-gate harness predicates; no game-data mitigation or default change.
+
+## Session 6395 (2026-10-27) — reran edge arms and exposed the stale title gate
+
+Ran `scratch/agent/s6394_edge_arms.sh` as one concurrent four-arm experiment
+with the per-arm 640/796 width predicate, phase-5 writer witness, framebuffer
+dumps, and 180-second holds. All four helper runs ended `allattempts-failed`:
+retail and dd2 had five attempts with 640-wide rows but no phase-5 witness;
+aspect and combined had five attempts, 796-wide rows, and 28 phase-5 rows each,
+but were still rejected by the helper's title gate. The final aspect/combined
+logs had positive framebuffer controls and zero crash markers; all arms had
+positive framebuffer dumps. No edge score was accepted because the required
+per-arm mission gate was not satisfied by the harness.
+
+This rules out neither H-edge-fog, H-edge-grid, nor H-edge-aspect. It does
+show that the title predicate is redundant/stale: it rejects logs containing
+the downstream phase-5 and flight-width evidence. The next run removes that
+blocking check and retains title/armed rows as informational only.
+
+ORIGIN: harness route predicate; no game-data mitigation or default change.
