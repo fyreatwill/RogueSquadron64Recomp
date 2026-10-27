@@ -1,5 +1,4 @@
-# NEXT: quantify sky-coloured holes in terrain across pose-matched windows
+# NEXT: is dd2 truncating the display list on craft+HUD-absent frames?
 HYPOTHESIS-ID: g3c-edge-arm-route-gate
-
-s6401: contact sheet shows holes (sky-colour where terrain should be) in dd2/aspect/combined, none in retail (1 frame/arm).
-Work unit: for each arm's 31 matched frames (windows in PORTING-STATE s6401), count per-frame pixels that are sky-blue with terrain pixel above-and-below in the same column (or terrain below within 40px), report median/p90 per arm; retail must be ~0 (negative control) and a synthetic hole-injected retail frame must score high (positive control). If opt-in arms >> retail: dump RDP tri list/DL for one hole frame (ROGUESQ spike/RDP logging) to see if triangles are missing (terrain cell submit/budget) vs mis-coloured. Do not change defaults.
+s$N: in the s6400 dd2 pose-lock window, frames >=1686 lack craft+HUD and show terrain only as a sawtooth ridge over flat sky (view/s6402). Retail never does. Hypotheses: H-cap (ROGUESQ_UCODE_CAP iteration cap ends the F5 task early), H-buf (DL/vertex/segment buffer overflow with dd2 terrain), H-death (craft died; camera detached - then HUD absence is legit but sawtooth still unexplained), H-dump (dump timed mid-frame).
+Discriminator: one dd2 pose-lock run (copy tools/s6400_posel.sh dd2 arm) logging per VI: ucode cap hit flag, RDP tri count, task end reason, plus fbd dump. Positive control: lower UCODE_CAP drastically in a retail arm and confirm craft/HUD vanish + flag fires. If cap-hit co-occurs with craft-absent frames -> raise cap scaling with dd (bundle into DRAW_DISTANCE). Check [poselock] ship alive state to kill H-death. Do not change defaults.

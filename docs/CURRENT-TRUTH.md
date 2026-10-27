@@ -168,3 +168,5 @@ background, closed threads, and the archived long backlog are in
 `docs/PROJECT-OVERVIEW.md`. Queued-soak verdicts are in
 `scratch/agent/SOAK-RESULTS.md`; do not treat a queued repeat soak as a work
 unit.
+
+- s6402: G3c(a) dd2 sawtooth/holes = frames with craft+HUD absent (likely truncated DL; single-source, see PORTING-STATE). Next: log UCODE_CAP/tri count per VI in dd2 pose-lock arm (scratch/agent/NEXT.md).
