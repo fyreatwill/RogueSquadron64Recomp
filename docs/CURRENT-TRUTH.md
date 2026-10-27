@@ -1,11 +1,21 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6345 (2026-10-26).
+Compact operational handoff, maintained as of Session 6347 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
 
 ## Headline
+
+- s6347: the exact-address D114 witness passed all controls and captured 43
+  phase-5 rows in the target `0x735560..0x7355D0` lanes. The generated
+  `0x8000D114` effective addresses were the target addresses and the post-store
+  helper used the live RDRAM base, but source/pre/post values were
+  pointer/list-shaped and did not equal the later red VTX-boundary bytes.
+  H-real-store, H-wrong-address, and H-wrong-buffer are refuted for these
+  sampled rows; a later phase-5 guest writer remains unnamed. The DD3 level-1
+  hold reached mission in 7 seconds and held 130 seconds with zero VI stalls or
+  crash lines. No mitigation was added.
 
 - s6337: the post-store shadow passed ordinary-store, VTX, bulk, source-red, and post-store controls. Of 2,308 bounded phase-6 VTX join rows, 2,303 had valid post-store readback; the only exact post-store/current-VTX matches were 15 zero-valued rows, while red-valued VTX lanes had no matching phase-5 guest-store post-value. The DD3 level-1 hold reached mission in 8 seconds and stayed alive 130 seconds with zero VI stalls/crash lines. This rules out the observed phase-5 guest-store last-writer path as the source of the red bytes; exact-lane host-write ordering remains open. No mitigation was added.
 - s6339: the exact-lane host-order witness passed all prior controls and recorded 128 bounded rows, all `rsp_dmem_to_rdram`. On sampled red-valued phase-6 VTX lanes, pre-write bytes were already red and post-write bytes changed; these host DMAs are later overwrites, not the transition that creates the red source. The DD3 level-1 hold reached mission and stayed alive 130 seconds with zero VI stalls/crash lines. H-host-write-order is not selected for the sampled lanes; the source-transition boundary remains open between earlier/unlogged bulk population and VTX-side source/read ordering. No mitigation was added.
@@ -102,7 +112,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog; per-session history archived in PROJECT-OVERVIEW.md, "Archived CURRENT-TRUTH backlog")
 
-- **s6345 (G3c a):** the phase-boundary fallback finds red bytes already present in phase-5 VTX lanes, but the `0x8000D114` source value and post-store readback disagree with those bytes. The game-side colour writer is therefore still unnamed and the current store witness has an address/base or call-boundary defect. Next: audit the exact generated `0x8000D114` store and post-store hook in one build, logging the effective address, source register, pre-store bytes, post-store bytes, and the independent VTX-boundary bytes for the same lane; retain ordinary-store and VTX positive controls. The discriminator is equality of the post-store bytes with the actual boundary bytes: equality names the writer; mismatch proves the witness is observing a different address/buffer. No fade/cull mitigation.
+- **s6347 (G3c a):** the exact D114 rows now prove the effective address and host base are correct while D114 writes pointer/list values, not the red payload. Next: add a target-range phase-5 store census for every guest store overlapping `0x735560..0x7355D0`, retaining PC, source value, pre-store word, and phase-ordered sequence after the D114 rows; retain ordinary-store, VTX, bulk, and D114 controls. The discriminator is the first later store whose post-value equals the independent VTX-boundary red word; that PC names the legitimate colour writer. No fade/cull mitigation.
 - **s6323 (G3c a):** builder grid coord at 0x80130C10 = camera*0.5 (origin 0). AA94 cell ids do NOT linearly track it (resid 12-15 cells). Next: fade by lit-vertex world radius ([edgepos]) from camera, skip cell mapping. See scratch/agent/NEXT.md.
 - s6321 (G3c a): CAMERA POSITION FOUND: struct ptr at 0x80138D1C; +0x28 = 3x3 rotation (9 floats), +0x4C..0x54 = world pos x,y,z (smooth in flight; positive control orthonormal rows). Log: ROGUESQ_G3C_CAMLOG=1 (tools/apply_s6321_camlog.py). Cell scale 12.8 UNVERIFIED. Next: regress AA94 cell stash vs pos/12.8, then edge fade centred on camera. Single-source (one lvl1 run).
 - s6320 (G3c a): RAM-snapshot scan (40 snaps, tools/g3c_ramscan.py) REFUTED a plain float position triple in 8 MB RDRAM (single-source); only triple = timeline ramp 0x8011A8F4. Next: log terrain-pass view matrix translation row (H-matrix) vs H-none.

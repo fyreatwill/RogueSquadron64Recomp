@@ -1491,6 +1491,7 @@ struct Rs64F5VtxStoreRange {
 struct Rs64F5LastWriter {
     uint32_t pc = 0;
     uint32_t value = 0;
+    uint32_t pre_value = 0;
     uint32_t post_value = 0;
     uint32_t phase = 0;
     uint8_t width = 0;
@@ -1506,6 +1507,14 @@ static std::vector<Rs64F5LastWriter> g_f5_last_writer;
 static uint32_t g_f5_last_writer_updates = 0;
 static uint32_t g_f5_bulk_control = 0;
 static uint32_t g_f5_bulk_rows = 0;
+static uint32_t g_f5_d114_exact_rows = 0;
+
+static uint32_t rs64_f5_read_word(const volatile uint8_t* rd, uint32_t phys) {
+    const uint32_t a = phys & ~3u;
+    return (uint32_t(rd[a + 3u]) << 24) |
+           (uint32_t(rd[a + 2u]) << 16) |
+           (uint32_t(rd[a + 1u]) << 8) | uint32_t(rd[a]);
+}
 
 struct Rs64F5PhaseDma {
     uint32_t phase = 0;
@@ -1583,6 +1592,8 @@ static void rs64_f5_last_writer_update(char width, uint32_t pc,
         Rs64F5LastWriter& row = g_f5_last_writer[i];
         row.pc = pc;
         row.value = value;
+        row.pre_value = g_recomp_rdram_for_wp_raw
+            ? rs64_f5_read_word(g_recomp_rdram_for_wp_raw, phys) : 0u;
         row.post_value = 0;
         row.phase = phase;
         row.width = static_cast<uint8_t>(width);
@@ -1600,10 +1611,7 @@ extern "C" void rs64_f5_store_shadow_post(char width, uint32_t pc,
     const uint32_t phys = addr & 0x7FFFFFu;
     const uint32_t aligned = phys & ~3u;
     const volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
-    uint32_t now = (uint32_t(rd[aligned + 3u]) << 24) |
-                   (uint32_t(rd[aligned + 2u]) << 16) |
-                   (uint32_t(rd[aligned + 1u]) << 8) |
-                   uint32_t(rd[aligned]);
+    uint32_t now = rs64_f5_read_word(rd, aligned);
     std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
     if (g_f5_last_writer.empty()) g_f5_last_writer.resize(0x200000u);
     const uint32_t first = phys >> 2u;
@@ -1613,6 +1621,18 @@ extern "C" void rs64_f5_store_shadow_post(char width, uint32_t pc,
         if (row.pc == pc && row.phase == rs64_phase_ord()) {
             row.post_value = now;
             row.post_valid = true;
+            if (pc == 0x8000D114u && row.phase == 5u &&
+                phys >= 0x735560u && phys < 0x7355D0u &&
+                g_f5_d114_exact_rows < 64u) {
+                std::fprintf(stderr,
+                    "[f5-d114-exact] phase=%u pc=0x%08X addr=0x%08X phys=0x%06X "
+                    "base=%p width=%c source=0x%08X pre=0x%08X post=0x%08X "
+                    "aligned=0x%06X endian=be-word\n",
+                    row.phase, pc, addr, phys, (const void*)rd,
+                    width, row.value, row.pre_value, now, aligned);
+                ++g_f5_d114_exact_rows;
+                std::fflush(stderr);
+            }
         }
     }
 }

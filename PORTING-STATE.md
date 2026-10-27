@@ -169340,3 +169340,19 @@ VTX-boundary bytes for the same lanes. Equality of post-store and boundary bytes
 selects H-real-store; a different address or base selects H-wrong-address or
 H-wrong-buffer. Resume using the command preserved in `scratch/agent/NEXT.md`.
 ORIGIN: checkpoint close-out only; no runtime behavior or mitigation change.
+
+## Session 6347 (2026-10-26) — exact-address D114 witness selects later writer
+
+Built the host exact-store witness and ran the DD3 level-1 arm. The first
+instrument cap was consumed by phase-3 rows; after narrowing it to phase 5 and
+then to the target range, the final run captured 43 rows in
+`0x735560..0x7355D0`. Every sampled `0x8000D114` store used the exact target
+effective address and the same live RDRAM base, but its source/pre/post values
+were pointer/list-shaped and did not equal the later red VTX-boundary bytes.
+The independent VTX boundary remained red, with 28 phase-5 snapshot rows and
+23 red rows, and no phase-5 DMA overlap. Ordinary-store, VTX, and bulk
+positive controls fired. The mission reached flight in 7 seconds and held 130
+seconds with zero VI stalls and crash lines. This refutes H-real-store,
+H-wrong-address, and H-wrong-buffer for the sampled D114 rows and selects a
+later phase-5 guest writer or copy path; no mitigation was added.
+ORIGIN: exact-address source/pre/post/base witness; no mitigation.
