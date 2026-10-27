@@ -169422,3 +169422,10 @@ Next: soak dd3 level 1 with sky-coloured haze fade vs no fade, contact sheet.
 Sampled horizon sky from s6355 fb_0003423 (~139,189,213; frame is mixed, so single-source colour). Wrote scratch/agent/soak_queue/s6357_g3c_skyfade.sh with three dd3 arms on level 1 using the proven-live AA74 write site. No game run this session; the loop will run it.
 ORIGIN: no code change; no mitigation added.
 Next: fold the soak, compute g3c_edge_score per arm, build an owner contact sheet.
+
+## Session 6358 (2026-10-26) — G3c(a): sky-coloured AA74 edge fade does NOT remove the stair-step (nofade / fa 18..26 / fb 26..34)
+Folded the s6357 soak (rc=0, 419 s; all arms att=1, alive_at_end=1, vi_stalls=0, crashlines=0, scorer control=PASS).
+Scores (dd3 lvl1, cross-run, so only coarse): terrain_med 0.0411 / 0.0432 / 0.0413; edge_excess_med -0.0046 / -0.0041 / -0.0044; horizon jump_med 0.333 / 0.317 / 0.334-ish (fb line not read), hole_med 0.108 / 0.110, cols_med 98 / 91. Differences are within cross-run noise on an animating scene.
+Visual (same frame index 1200, 512 wide, scratch/agent/m6/s6357_g3c/sheet/{nofade,fb}.png): the stair-step on the far terrain edge against the cloud layer is present in both arms (notches near x~345 and x~490). The fade site is live (s6356 red control) but a flat sky colour (139,189,213) does not hide the edge because the far edge sits against clouds/gradient, and the terrain top already renders in that hazy blue.
+Rules out: "recolouring the fade to sky blue hides the edge" (single-run each; frame not phase-gated, labelled single-source). Remaining candidates: alpha/coverage fade of the outer ring (needs the cell to become transparent, not recoloured), or cull the outer partial ring so the boundary falls off-grid; or raise the footprint beyond the fade radius.
+ORIGIN: no mitigation code added this session (analysis only).
