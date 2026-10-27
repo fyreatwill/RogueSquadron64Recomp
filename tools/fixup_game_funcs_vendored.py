@@ -37982,11 +37982,23 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             if _n6328:
                 changed = True
                 report.append(f"{p.name}: s6311 {_nm6328} x{_n6328}")
+        import apply_s6363_heightfade as _a6363
+        text, _n6363 = _a6363.apply10(text)
+        if _n6363:
+            changed = True
+            report.append(f"{p.name}: s6363 fexport x{_n6363}")
         import apply_s6027_cellmul as _a6027
         text, _n6027 = _a6027.apply10(text)
         if _n6027:
             changed = True
             report.append(f"{p.name}: s6027 cellmul x{_n6027}")
+
+    if p.name == "funcs_4.c":
+        import apply_s6363_heightfade as _a6363b
+        text, _n6363b = _a6363b.apply4(text)
+        if _n6363b:
+            changed = True
+            report.append(f"{p.name}: s6363 heightfade x{_n6363b}")
 
     if p.name == "funcs_39.c":
         import apply_s5818_destroy_health as _a5818b

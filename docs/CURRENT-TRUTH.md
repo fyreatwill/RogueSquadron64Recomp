@@ -123,6 +123,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog; per-session history archived in PROJECT-OVERVIEW.md, "Archived CURRENT-TRUTH backlog")
 
+- **s6363 (G3c a):** height-byte fade hook built (tools/apply_s6363_heightfade.py; ROGUESQ_EDGE_FADE_R2_Y / _YC control / _YLOG), scratch ring 0x80FF0000. Soak s6363_g3c_heightfade queued, result pending. Fold: ycontrol must be visible first; then jump_med of y/ylow vs nofade.
 - **s6362 (G3c a):** terrain has NO CPU Vtx writer (single-source static): F5 TRI_GEN on the RSP builds y from 25 height bytes at cell+0x44 (written by 0x80046030 / 0x80048BAC, handed over at 0x8001178C, flat path funcs_4.c:7501/7518). 0x80137A54=normals, 0x80137A50=RGBA grids. Height-byte scratch-copy lerp is the next arm.
 - **s6361 (G3c a):** static survey (single-source): no Vtx position `sh` store in 0x8004A6C0/B644/B938 (only `sb` lit RGB + 100-byte cell records at *(0x80137A50)). Vertex-y fade must hook the later Vtx builder; see NEXT.md.
 - **s6358 (G3c a):** s6357 sky-fade soak folded: neither fade radius (18..26, 26..34) removed the far-edge stair-step (scores within noise; frame 1200 shows the notches in nofade and fb; single-source, not phase-gated). A flat sky-colour recolour is not a fix. Next: alpha/coverage fade of the outermost ring or cull of the partial outer ring, with a phase-gated same-frame comparison.
