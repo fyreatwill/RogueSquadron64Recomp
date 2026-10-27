@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6328 (2026-10-26).
+Compact operational handoff, maintained as of Session 6329 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -8,6 +8,7 @@ detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 ## Headline
 
 - s6328: the batched F5 DMA-source instrument passed its positive control (about 1.9M sampled reads; flight reached phase 6/7), but `ROGUESQ_EDGE_FORCE_RED=1` at 0x8004B910 still produced no terrain red (red fraction 0 in the late flight dump; radar-only red remains); the sampled reads are mostly broad 0x0170/0x0280 display-list/terrain records and do not name a colour writer. The epilogue is ruled out; next instrument the actual F5 `VTX` load and its vertex-buffer byte range, then identify the last guest store into that range.
+- s6329 checkpoint close-out: no rerun; the s6328 conclusion and VTX/store discriminator remain current.
 
 - The qualified route boots attribution, N64 logo, intro, Factor 5 logo, title,
   hangar, and mission origins. Mission input reaches flight code.
