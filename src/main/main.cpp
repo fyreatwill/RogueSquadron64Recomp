@@ -2137,10 +2137,13 @@ extern "C" void rs64_s5660_ustore(uint32_t pc, uint32_t addr, uint32_t value, ch
     if (p >= 0x1B2C60u && p < 0x29DFB8u) { ++wide; if (p < 0x1B3600u) ++narrow; rs64_s5654_vstore(pc, p, value, width); }
     if ((a & 0x3FFFFu) == 1) std::fprintf(stderr, "[ustore-all] all=%llu wide=%llu narrow=%llu\n", (unsigned long long)a, (unsigned long long)wide.load(), (unsigned long long)narrow.load());
 }
+extern "C" void rs64_f5_host_bulk_shadow(uint32_t phys, uint32_t len,
+                                           const char* api);
 extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
                                             uint32_t phys,
                                             uint32_t len,
                                             const char* api) {
+    rs64_f5_host_bulk_shadow(phys, len, api);
     if (rs64_vsrc_hi && len) {
         const uint32_t s_ = phys & 0x007FFFFFu;
         if (s_ < rs64_vsrc_hi && s_ + len > rs64_vsrc_lo) {

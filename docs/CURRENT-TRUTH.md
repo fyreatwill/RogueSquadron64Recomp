@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6331 (2026-10-26).
+Compact operational handoff, maintained as of Session 6333 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -11,6 +11,7 @@ detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 - s6329 checkpoint close-out: no rerun; the s6328 conclusion and VTX/store discriminator remain current.
 - s6330: the regeneration-preserved F5 `0x04` VTX probe passed in phases 3–7 (320 records; phase 6 sources include `0x735560..0x73E3B0`) and the red arm still produced no terrain red. The existing p6 page-fault witness also fired in phase 6 at `0x733378`, but its `guest_pc=0x8000D3D0` is a stack-local `sw v0,0x14(sp)`, so it is not a named vertex-buffer writer; the page-fault annotation is not sufficient guest-store attribution. Next: add an exact-range guest-store shadow with an ordinary-store positive control.
 - s6331: the exact-range post-VTX shadow passed both controls: the ordinary store at `0x801E8710` fired in phase 4 and the F5 VTX control fired in phase 6. The red/DD3 level-1 hold reached mission in 14 s and stayed alive 130 s with zero VI stalls/crash lines. No parity-instrumented guest store overlapped a phase-6 VTX range; 96 overlaps were phase-7 buffer writes, all zero-valued. This does not yet prove H-ucode-light: stores before the VTX task and bulk/uninstrumented copies are not in the post-VTX shadow.
+- s6333: the pre-VTX last-writer join passed the ordinary-store, VTX, and bulk controls on the successful retry. Phase-6 VTX ranges joined to prior hooked guest stores, predominantly PC `0x8000D114` in phase 5 (`heapFreeListDequeue`), and many source words already contained red bytes. `rsp_dmem_to_rdram` also overlapped a phase-6 VTX range, proving a bulk/DMA population path. The existing parity hook still passes literal zero for `value`, so the writer value field is not evidence; the source-byte dump is. This selects a pre-copy/bulk population path over a no-writer null, but does not yet identify which writer supplies the rendered colour.
 
 - The qualified route boots attribution, N64 logo, intro, Factor 5 logo, title,
   hangar, and mission origins. Mission input reaches flight code.
@@ -93,6 +94,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog; per-session history archived in PROJECT-OVERVIEW.md, "Archived CURRENT-TRUTH backlog")
 
+- **s6333 (G3c a):** pre-VTX last-writer join found phase-5 `heapFreeListDequeue` writes and phase-6 `rsp_dmem_to_rdram` overlap for the VTX source ranges; source bytes include red under the force-red arm. The parity hook's literal-zero value is a qualification gap. Next: add a post-store value witness for the named writer and join its exact byte lanes to the VTX ranges; keep the bulk census and controls. No fade/cull mitigation.
 - **s6323 (G3c a):** builder grid coord at 0x80130C10 = camera*0.5 (origin 0). AA94 cell ids do NOT linearly track it (resid 12-15 cells). Next: fade by lit-vertex world radius ([edgepos]) from camera, skip cell mapping. See scratch/agent/NEXT.md.
 - **s6331 (G3c a):** exact-range post-VTX shadow is qualified, but phase 6 has no matching scalar store; phase 7 has only zero-valued buffer writes. Next: retain a bounded last-writer table for every parity-instrumented store before VTX registration, then join the phase-6 source range to the last writer and source bytes. Include a bulk-copy census/control in the same build; do not add a fade or cull mitigation.
 - s6321 (G3c a): CAMERA POSITION FOUND: struct ptr at 0x80138D1C; +0x28 = 3x3 rotation (9 floats), +0x4C..0x54 = world pos x,y,z (smooth in flight; positive control orthonormal rows). Log: ROGUESQ_G3C_CAMLOG=1 (tools/apply_s6321_camlog.py). Cell scale 12.8 UNVERIFIED. Next: regress AA94 cell stash vs pos/12.8, then edge fade centred on camera. Single-source (one lvl1 run).

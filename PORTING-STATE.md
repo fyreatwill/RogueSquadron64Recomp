@@ -169064,3 +169064,32 @@ ordinary-store and VTX controls retained. Do not add an edge-fade or cull
 mitigation until a writer and value legitimacy are established.
 ORIGIN: checkpoint documentation only; no experiment rerun, code change, or
 visual behavior change.
+
+## Session 6333 (2026-10-26) — joined pre-VTX writers and bulk DMA to F5 source ranges
+
+Extended the existing regeneration-preserved F5 store shadow in
+`src/rsp/dpc_bridge.cpp` with a bounded physical-word last-writer table and a
+phase-6 VTX join that dumps exact source bytes. Added a bulk-write overlap
+census through the existing host-write path in `src/main/main.cpp`. The Debug
+target built successfully.
+
+The first keyed level-1 DD3/red attempt stopped in the hangar and had no
+phase-6 VTX control, so it was not interpreted. The same built arm was retried.
+The successful retry fired the ordinary-store, VTX, and bulk controls, reached
+mission in 14 seconds, held 130 seconds alive, and had zero VI stalls and crash
+lines. Phase-6 VTX ranges joined to prior hooked guest stores, mostly PC
+`0x8000D114` in phase 5, which resolves to `heapFreeListDequeue`'s store of
+`$s3` through `v0`. Many joined source words already contained red bytes. A
+`rsp_dmem_to_rdram` bulk write overlapped a phase-6 VTX range. This rules out a
+no-writer interpretation and supports pre-copy/bulk population, but does not
+identify the colour writer: the existing generated parity hook supplies literal
+zero for its value argument, so the recorded writer value is not evidence.
+
+This also rules out treating the phase-6 source as unpopulated before VTX. It
+does not distinguish whether `heapFreeListDequeue` is a legitimate colour
+writer or an incidental list/heap writer whose range is later populated by DMA,
+nor does it settle the red-source/non-red-framebuffer readback hypothesis.
+Next is a post-store actual-value and byte-lane witness for `0x8000D114`, with
+the same controls retained. No mitigation was added.
+ORIGIN: diagnostic-only last-writer/bulk attribution; writer value remains
+unqualified because the pre-store hook passes literal zero.

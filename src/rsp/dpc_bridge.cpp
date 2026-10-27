@@ -1481,9 +1481,110 @@ struct Rs64F5VtxStoreRange {
     uint32_t pc;
 };
 
+struct Rs64F5LastWriter {
+    uint32_t pc = 0;
+    uint32_t value = 0;
+    uint32_t phase = 0;
+    uint8_t width = 0;
+};
+
 static Rs64F5VtxStoreRange g_f5_vtx_store_ranges[128] = {};
 static uint32_t g_f5_vtx_store_range_next = 0;
 static std::mutex g_f5_vtx_store_mutex;
+static std::vector<Rs64F5LastWriter> g_f5_last_writer;
+static uint32_t g_f5_last_writer_updates = 0;
+static uint32_t g_f5_bulk_control = 0;
+static uint32_t g_f5_bulk_rows = 0;
+
+static bool rs64_f5_shadow_on() {
+    static const bool on = [] {
+        const char* e = std::getenv("ROGUESQ_LOG_F5_STORE_SHADOW");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        return (e && *e && *e != '0') || (all && *all && *all != '0');
+    }();
+    return on;
+}
+
+static void rs64_f5_last_writer_update(char width, uint32_t pc,
+                                       uint32_t addr, uint32_t value,
+                                       uint32_t phase) {
+    if (!rs64_f5_shadow_on() || addr < 0x80000000u || addr >= 0x80800000u)
+        return;
+    if (g_f5_last_writer.empty())
+        g_f5_last_writer.resize(0x200000u);
+    const uint32_t span = width == 'D' ? 8u : (width == 'B' ? 1u :
+                           (width == 'H' ? 2u : 4u));
+    const uint32_t phys = addr & 0x7FFFFFu;
+    std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
+    const uint32_t first = phys >> 2u;
+    const uint32_t last = (phys + span - 1u) >> 2u;
+    for (uint32_t i = first; i <= last && i < 0x200000u; ++i) {
+        Rs64F5LastWriter& row = g_f5_last_writer[i];
+        row.pc = pc;
+        row.value = value;
+        row.phase = phase;
+        row.width = static_cast<uint8_t>(width);
+        ++g_f5_last_writer_updates;
+    }
+}
+
+static void rs64_f5_dump_join(uint32_t phase, uint32_t source, uint32_t bytes,
+                              uint32_t task, uint32_t vtx_pc,
+                              const uint8_t* rdram) {
+    if (!rs64_f5_shadow_on() || phase < 6u || !rdram ||
+        source >= 0x800000u || bytes == 0 || bytes > 0x800000u - source)
+        return;
+    if (g_f5_last_writer.empty())
+        g_f5_last_writer.resize(0x200000u);
+    std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
+    uint32_t rows = 0, written = 0, red = 0;
+    for (uint32_t p = source; p < source + bytes; p += 4u) {
+        const Rs64F5LastWriter& w = g_f5_last_writer[p >> 2u];
+        const uint32_t now = (uint32_t(rdram[p ^ 3u]) << 24) |
+                             (uint32_t(rdram[(p + 1u) ^ 3u]) << 16) |
+                             (uint32_t(rdram[(p + 2u) ^ 3u]) << 8) |
+                             uint32_t(rdram[(p + 3u) ^ 3u]);
+        if (w.pc) ++written;
+        if (((now >> 24) & 0xFFu) == 0xFFu || ((now >> 16) & 0xFFu) == 0xFFu ||
+            ((now >> 8) & 0xFFu) == 0xFFu) ++red;
+        if (rows++ < 24u) {
+            std::fprintf(stderr,
+                "[f5-vtx-join] phase=%u task=%u vtx_pc=0x%06X phys=0x%06X "
+                "bytes=0x%08X last_pc=0x%08X last_w=%c last_phase=%u "
+                "last_val=0x%08X now=0x%08X\n",
+                phase, task, vtx_pc & 0x7FFFFFu, p, bytes, w.pc,
+                w.width ? char(w.width) : '-', w.phase, w.value, now);
+        }
+    }
+    std::fprintf(stderr,
+        "[f5-vtx-join-summary] phase=%u task=%u source=0x%06X bytes=0x%X "
+        "words=%u written=%u red_words=%u shadow_updates=%u\n",
+        phase, task, source, bytes, rows, written, red, g_f5_last_writer_updates);
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_f5_host_bulk_shadow(uint32_t phys, uint32_t len,
+                                           const char* api) {
+    if (!rs64_f5_shadow_on() || len == 0u) return;
+    if (!g_f5_bulk_control) {
+        std::fprintf(stderr, "[f5-bulk-control] api=%s phys=0x%06X len=0x%X\n",
+                     api ? api : "?", phys & 0x7FFFFFu, len);
+        std::fflush(stderr);
+        g_f5_bulk_control = 1;
+    }
+    const uint32_t start = phys & 0x7FFFFFu;
+    const uint32_t end = std::min(start + len, 0x800000u);
+    std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
+    for (const Rs64F5VtxStoreRange& row : g_f5_vtx_store_ranges) {
+        if (!row.end || start >= row.end || end <= row.source) continue;
+        if (g_f5_bulk_rows++ >= 64u) return;
+        std::fprintf(stderr,
+            "[f5-bulk-overlap] n=%u api=%s phase=%u task=%u bulk=0x%06X..0x%06X "
+            "vtx=0x%06X..0x%06X\n", g_f5_bulk_rows, api ? api : "?",
+            row.phase, row.task, start, end, row.source, row.end);
+        std::fflush(stderr);
+    }
+}
 
 extern "C" void rs64_f5_vtx_store_range(uint32_t phase, uint32_t source,
                                            uint32_t bytes, uint32_t task,
@@ -1513,6 +1614,7 @@ extern "C" void rs64_f5_store_shadow(char width, uint32_t pc,
     }
     if (!enabled) return;
     const uint32_t phase = rs64_phase_ord();
+    rs64_f5_last_writer_update(width, pc, addr, value, phase);
     const uint32_t phys = addr & 0x7FFFFFu;
     const uint32_t span = width == 'D' ? 8u : (width == 'B' ? 1u :
                            (width == 'H' ? 2u : 4u));
@@ -1746,6 +1848,7 @@ extern "C" void rs64_f5_vtx_probe(uint32_t pc, uint32_t w0, uint32_t w1,
     const uint32_t source = w1 & 0x7FFFFFu;
     const uint32_t bytes = count * 16u;
     rs64_f5_vtx_store_range(phase, source, bytes, g_e9prov.task, pc);
+    rs64_f5_dump_join(phase, source, bytes, g_e9prov.task, pc, rdram);
     std::fprintf(stderr,
                  "[f5-vtx] phase=%u task=%u pc=0x%06X w0=0x%08X w1=0x%08X "
                  "first=%u count=%u source=0x%06X end=0x%06X bytes=",
