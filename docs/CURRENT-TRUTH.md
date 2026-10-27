@@ -233,3 +233,5 @@ Default stays retail 4:3. Opt-in levers: `ROGUESQ_ASPECT=<w>:<h>` (derives FB_WI
 
 - s6322: visited-cell regression vs cam/s at baseline for s=12.8 (refuted); next fit emitting cells. 
 - s6319: footprint-derived fade centre (circular mean of AA94 cells) REFUTED offline (single-source, s6317 log): AA94 visits the whole 64-ring as a streaming sweep, centre jumps, R~0.5. G3c(a) fade needs a true player/camera position source (RAM-diff scan of smoothly changing floats in flight).
+
+- s6324 (G3c a): terrain lit-vertex pos (hook 0x8004B910, 0x48/0x50($sp)) is in the cam*0.5 grid frame; radius from cam*0.5 bounded: dd1 max 19.5 / p99 17.7, dd3 max 26.1 / p99 25.2 (single-source, forward-biased sample). AA94 cell-id mapping is unnecessary: fade by that radius directly (next: implement fade + frame compare).
