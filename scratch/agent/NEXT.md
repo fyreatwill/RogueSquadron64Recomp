@@ -1,3 +1,3 @@
-# NEXT: fold s6420 dd3 lvl5/lvl10 holds + s6421_dd3lod_lvl1 A/B (G1c phase 2)
+# NEXT: fold s6421_dd3lod_lvl1 A/B + s6422_dd3_sheet (G1c phase 2)
 HYPOTHESIS-ID: g1c-dd-phase2
-Read SOAK-RESULTS tail. (1) s6420_dd3fix_lvl5/lvl10: crash/VI-stall check; any crash -> backtrace + root-cause. (2) s6421_dd3lod_lvl1 vs s6420_dd3fix_lvl1: compare G1b frame time and tri count (LODSCALE=1 vs off). Then build a pose-matched dd1 vs dd3 vs dd3+LODSCALE contact sheet for the owner (use the s6412_attpin pinned recipe; do not use posesheet-by-fbn). Decide whether LODSCALE joins the single ROGUESQ_DRAW_DISTANCE bundle (default stays retail).
+dd3+fix holds lvl1/5/10 are clean (s6422). Read SOAK-RESULTS tail for s6421_dd3lod_lvl1 (vs s6420_dd3fix_lvl1: crash/stall, G1b frame time, tri count) and s6422_dd3_sheet (m6/s6422_attpin arms d1b/d3/d3lod). Build a pose-matched contact sheet from the FB dumps (same pinned pose; not posesheet-by-fbn), save under scratch/agent/view/s6422/, compute terrain fraction per arm. Decide whether LODSCALE joins the ROGUESQ_DRAW_DISTANCE bundle (default stays retail). Then take next G1c lever (dd4 / beyond clamp) or move to G1d state check.
