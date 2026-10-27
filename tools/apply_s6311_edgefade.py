@@ -207,6 +207,25 @@ def apply10i(text):
     return text[:j] + EF9_CODE + text[j:], 1
 
 
+EF10_OLD = "MEM_B(q, ctx->r4) = (int8_t)(uint8_t)v; } } }\n"
+EF10_NEW = (
+    'MEM_B(q, ctx->r4) = (int8_t)(uint8_t)v; }\n'
+    '          { /* PATCH: s6359 alpha */ static int al6359 = -1; if (al6359 < 0) { const char* e = getenv("ROGUESQ_EDGE_FADE_R2_ALPHA"); al6359 = (e && *e && *e != \'0\') ? 1 : 0; }\n'
+    '            if (en6328 && al6359 && f > 0.0) { double a = (double)(uint8_t)MEM_B(3, ctx->r4) * (1.0 - f); MEM_B(3, ctx->r4) = (int8_t)(uint8_t)a; } } } }\n'
+)
+
+
+def apply10j(text):
+    """s6359: ROGUESQ_EDGE_FADE_R2_ALPHA=1 also scales the vertex alpha byte (r4+3) by (1-f) in the radfade2 hook (transparent edge arm)."""
+    i = text.find("PATCH: s6328 radfade2")
+    if i < 0 or "PATCH: s6359 alpha" in text[i:i + 6000]:
+        return text, 0
+    j = text.find(EF10_OLD, i)
+    if j < 0 or j - i > 4000:
+        return text, 0
+    return text[:j] + EF10_NEW + text[j + len(EF10_OLD):], 1
+
+
 if __name__ == "__main__":
     p = BASE / "funcs_10.c"
     t = p.read_text()
@@ -227,6 +246,8 @@ if __name__ == "__main__":
     n += n8
     t2, n9 = apply10i(t2)
     n += n9
+    t2, n10 = apply10j(t2)
+    n += n10
     if n:
         p.write_text(t2)
     print(f"funcs_10.c live patched x{n}")

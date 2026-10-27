@@ -1,8 +1,7 @@
-# NEXT: G3c(a) outer-ring alpha/cull for far-edge stair-step
+# NEXT: G3c(a) score s6359 alpha-fade soak
 HYPOTHESIS-ID: g3c-owner-visual
 
-s6357 showed sky-colour fade (AA74, 18..26 and 26..34) leaves the stair-step intact. Hypotheses:
-H-recolour-wrong (edge needs transparency, not colour), H-footprint (edge cells lie beyond fade radius), H-grid (partial outer ring is the step itself; culling it moves the boundary).
-1. Build arms in ONE build: cull outermost ring of cells (env), alpha-fade outermost ring, nofade control; same phase gate (PROBE_KEYS_FROM_PHASE=1) at identical VI.
-2. Score with tools/g3c_horizon_score.py (jump_med / hole_med) and make a same-frame contact sheet nofade vs each arm.
-3. Edge step gone in cull arm only -> H-grid; alpha arm only -> H-recolour-wrong; none -> H-footprint, raise radius.
+Fold SOAK-RESULTS s6359_g3c_alpha. Arms in scratch/agent/m6/s6359_g3c/. Score nofade/fb/alpha with tools/g3c_horizon_score.py (jump_med/hole_med), contact sheet at identical VI.
+- alphared shows no change vs nofade -> vertex alpha ignored by terrain render mode; alpha lever dead, next: H-footprint (raise radius / widen fade bands past r=34).
+- alphared changes, alpha arm removes step -> adopt alpha fade, bundle into ROGUESQ_DRAW_DISTANCE; ask owner to judge.
+- alpha changes but step intact -> H-grid: step is geometry of the cell footprint; try smoothing outer ring heights (fade y toward horizon).

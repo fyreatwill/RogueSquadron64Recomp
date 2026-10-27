@@ -37977,7 +37977,7 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6317:
             changed = True
             report.append(f"{p.name}: s6317 cellstash x{_n6317}")
-        for _nm6328 in ("apply10f", "apply10g", "apply10h", "apply10i"):
+        for _nm6328 in ("apply10f", "apply10g", "apply10h", "apply10i", "apply10j"):
             text, _n6328 = getattr(_a6311, _nm6328)(text)
             if _n6328:
                 changed = True
