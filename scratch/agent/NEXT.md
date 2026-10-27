@@ -10,6 +10,8 @@ Hypotheses:
 - H-real-colour: the F5 vertex layout puts RGBA in these lanes, and they really are 0xFF.
 - H-mixed: some ranges are pos-only (false positive), others have genuine colour lanes.
 
+RESULT: H-false-positive selected for 0x735560 (PORTING-STATE s6349 addendum). Remaining: decode 0x72D898, 0x7364D8, 0x736A00 the same way.
+
 Discriminator (offline, no run): read docs/F5-UCODE-REFERENCE.md for the 0x04 VTX record layout
 (stride, pos/colour offsets); decode the logged `registered=`/`read=` hex in
 scratch/agent/m6/g1_lvl1s6349_host_target_write/run.log by field; count 0xFF per field.
