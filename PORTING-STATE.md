@@ -170732,3 +170732,11 @@ Result: dd4 EMPTY = 98 (table 802525E4) + 605 (mission table 802EE7B4), ALL in-b
 Discrimination: refutes H-oob (EMPTY windows are inside the table); selects H-reject (in-table cells fail both span compares at dd4); H-cap not tested (nskip=0, no cap path hit). Caveat: dd4 window is 54x11 vs dd1 windows partly oob, so the windows differ in shape between arms (single-source).
 ORIGIN: observation only, no mitigation added.
 Next: per-cell record of the rejected cells in an EMPTY dd4 window (s6516 cell-rec + s6515 split on the 802EE7B4 table) to read which compare rejects and what the cell bytes are; then ask why dd4's span bytes differ from dd1's.
+
+## Session 6520 (2026-10-27) — dd4 span rejects are 0x80 (never-written) span bytes, concentrated at x>=32
+Offline-only (capture once, analyze many): the s6519 logs already carry s6515 [span-pred] and s6516 [cell-rec], so no new build. Mission-table keys >=745, lvl1 pose-pinned, 150 s per arm.
+- Span byte at the first compare (cell+3): dd1 mission table has 0 reads of -128 and 52264 pass0 / 6992 s0clear, spans almost all 127. dd4 has 4844 s0clear reads with span=-128 plus many span=0/-1 against plane=127 (7160, 4914).
+- Of the dd4 span=-128 reads, 3485/4844 (72%) have grid x>=32 (idx%64), while x>=32 is only 6169/59211 (10%) of all dd4 mission cell-rec samples. Enrichment ~7x.
+- EMPTY returns carry s0=-128<-38 on all 4 sampled s0 pairs; s1 sampled spans 127/-10/-1 vs plane 127.
+- Read: the span grid the filter reads is populated for the dd1 footprint (columns <32) and left at 0x80 beyond it; dd4 widens the window (54 cols) into never-written columns, so the first compare rejects whole windows. Distribution vs dd1 control plus x-enrichment, same logs -> single-source, NOT yet a writer. Writer of the span grid and its x bound is the open item. ORIGIN: not a mitigation; no code changed.
+Rules out: H-cmp1-only (plane byte), H-oob (already s6519).
