@@ -169268,3 +169268,20 @@ discriminator. This rules out the sampled phase-5 DMA path and the named list
 writer as the red-byte writer, but leaves the earlier population/copy boundary
 open. No mitigation was added.
 ORIGIN: source-transition instrumentation; no mitigation.
+
+## Session 6343 (2026-10-26) — checkpoint close-out for the phase-5 boundary witness
+
+This retry did not rerun or rebuild s6342. The qualified s6342 run remains the
+available evidence: sampled phase-5 DMA ranges did not overlap the red phase-6
+VTX ranges, the named `0x8000D114` store carried pointer/list values rather
+than colour payload, and the fixed-prefix phase-5 store table saturated before
+retaining matching rows. Therefore the s6342 null is not discriminating. The
+earlier population/copy boundary remains open; no mitigation or runtime change
+was made.
+
+Resume with the bounded phase-boundary ring/snapshot specified in
+`scratch/agent/NEXT.md`. It must retain the last exact-range phase-5 guest-store
+and host-DMA payloads for every future phase-6 VTX range, preserve all four
+positive controls, and select H-phase5-guest, H-phase5-bulk, or H-earlier-copy
+from the payload bytes rather than from the saturated-table null.
+ORIGIN: checkpoint close-out of a diagnostic-only witness; no mitigation.

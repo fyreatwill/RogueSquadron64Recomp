@@ -1,5 +1,9 @@
-# NEXT: retain exact phase-5 boundary writes for red VTX ranges
+# NEXT: RESUME — retain exact phase-5 boundary writes for red VTX ranges
 HYPOTHESIS-ID: g3c-owner-visual
+
+This is a checkpoint resume. Do not rerun the completed s6342 fixed-prefix
+experiment. The existing result is non-discriminating because its phase-5
+store table saturated before retaining a matching row.
 
 Competing hypotheses:
 
@@ -17,9 +21,9 @@ no red phase-5 payload leaves the earlier initialization/copy boundary open.
 The ordinary-store, VTX, bulk, and EDGE_FORCE_RED controls must still fire.
 
 Bounded work unit: replace the saturated fixed-prefix phase-5 store history
-with a ring or boundary snapshot keyed by the eventual VTX ranges. Keep the
-source-transition output capped at 64 rows and the existing phase gates. Build
-and run one arm:
+with a phase-boundary ring or snapshot keyed by the eventual VTX ranges. Keep
+the source-transition output capped at 64 rows and the existing phase gates.
+Build and run one arm:
 
 `cmake --build build --config Debug --target RogueSquadron64Recomp`
 
