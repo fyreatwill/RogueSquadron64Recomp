@@ -1,7 +1,7 @@
-# NEXT: G3c(a) fold s6355 red-haze control
+# NEXT: G3c(a) real haze-coloured edge fade at dd3
 HYPOTHESIS-ID: g3c-owner-visual
 
-s6354 showed pcr (col=sp+0x74,row=sp+0x44) is the valid AA74 pair. Open question: does writing vertex rgb at AA74 change rendered terrain? Soak s6355_g3c_r2_redctl (arms ctl: R2=0,1 red haze; mid: 18..26 red haze), dirs scratch/agent/m6/g1_lvl1s6355_{ctl,mid}.
-1. Find frames with terrain (python scan for r>b+8 fraction; skip explosion frames; convert with `sips -s format png`), view ctl.
-2. ctl terrain red => write site live: view mid, far-edge frames: is edge faded smooth? Run tools/g3c_edge_score.py ctl/mid. Build owner contact sheet.
-3. ctl terrain NOT red => AA74 r4 colour is not the terrain colour (decode which store feeds the vertex shade, or fade the DL vertex after it is built); do not tune radii further.
+s6356: AA74 write (ROGUESQ_EDGE_FADE_R2=r0,r1,116,68,R,G,B) proven live and distance-selective. Now make it the actual fix for the jagged far-terrain edge.
+1. Sample horizon sky colour from a flight frame (e.g. scratch/agent/m6/g1_lvl1s6355_ctl/fbd/fb_0003423_w512.ppm, near the terrain/sky boundary) -> R,G,B.
+2. Write soak scratch/agent/soak_queue/s6357_g3c_skyfade.sh modelled on done/s6355_g3c_r2_redctl.sh: arms nofade (dd3 only), fade (R2=<edge-8>,<edge>,116,68,R,G,B) where edge ~ the dd3 terrain footprint radius (tune: arm a 18..26, arm b 26..34). Same hold/dump flags.
+3. Fold: g3c_edge_score per arm; view far-edge frames; build owner contact sheet nofade vs fade at the same phase. Expected: fade arm edge blends into sky (no stair-step); if stair-step persists beyond the fade radius, fade radius is smaller than the drawn footprint -> raise it.
