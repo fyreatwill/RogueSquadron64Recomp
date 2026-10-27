@@ -169133,3 +169133,18 @@ next work unit is post-store actual-byte readback for phase-5 guest stores,
 joined to the phase-6 VTX lanes, with host-write ordering as the fallback.
 No mitigation was added.
 ORIGIN: exact payload/lane attribution; no skip, guard, fade, or cull change.
+
+## Session 6336 (2026-10-26) — checkpoint close-out: preserve the post-store discriminator
+
+This retry did not rerun s6335 or start a new experiment. The existing s6335
+artifact and ledger entry are the available evidence: the DMA payload lanes
+overlapping phase-6 F5 VTX ranges do not match the later red source bytes, while
+the ordinary-store, VTX, bulk, and source-red controls passed and the level-1
+DD3 hold stayed alive for 130 seconds with zero VI stalls and crash lines. That
+selects a pre-VTX source-population path over H-bulk-colour, but does not name
+the writer. No new conclusion or mitigation is justified in this checkpoint.
+
+Resume with the already specified s6336 discriminator: read actual post-store
+bytes for phase-5 guest stores, join them to phase-6 VTX lanes, and fall back to
+host-write ordering only if no guest-store bytes match. Do not rerun the prior
+experiment merely to close this checkpoint.
