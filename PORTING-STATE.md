@@ -168997,3 +168997,6 @@ Result: edgepos x,z are integer grid cells in the same frame as gl = camera*0.5 
 Rules out: needing the AA94 cell-id mapping at all (s6322/s6323 dead end); the fade centre is simply cam*0.5 in the lit-vertex hook's own pos floats. Caveat (single-source): sample is first-2000 + 1/7 over ~60 s, forward-biased; the true edge radius vs dd needs a full per-frame max, and ratio dd3/dd1 = 1.34 (not 3) says lit-vertex footprint is not simply proportional to dd.
 Not yet shown: that darkening/fading these vertices by radius actually hides the jagged edge (needs fog colour target and a before/after frame).
 ORIGIN: no mitigation added this session (diagnostic only; fade not landed).
+
+## Session 6325 (2026-10-26) — radius edge-fade built (ROGUESQ_EDGE_FADE_R), 4-arm soak queued
+Added apply10g to tools/apply_s6311_edgefade.py: at the 0x8004B910 epilogue, lit RGB blends toward a haze colour (default black) by smoothstep((r-R0)/(R1-R0)), r = distance of the vertex (0x48/0x50($sp)) from cam*0.5. Env `ROGUESQ_EDGE_FADE_R=r0,r1[,R,G,B]`; logs `[radfade] maxr` for the full-run radius max. Built clean (cmake rc=0). Soak s6325_g3c_radfade queued: dd3 arms nofade(R=1000), R18-26, R10-26, ctl(R=0,1 = positive control, whole terrain should go black). Idempotency window for s6311 marker widened to 9000 chars. Result next iteration: compare far-edge rows in FB dumps.

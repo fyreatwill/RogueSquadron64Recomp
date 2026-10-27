@@ -18,7 +18,7 @@ def apply10(text):
     i = text.find(LABEL)
     if i < 0:
         return text, 0
-    if "PATCH: s6311 edgefade" in text[i:i + 2500]:
+    if "PATCH: s6311 edgefade" in text[i:i + 9000]:
         return text, 0
     j = i + len(LABEL)
     code = (
@@ -143,6 +143,28 @@ def apply10f(text):
     return text[:k] + EF6_LINE + text[k:], 1
 
 
+EF7_CODE = (
+    '    { /* PATCH: s6325 radfade */ static int en6325 = -1; static double r0_6325 = 0, r1_6325 = 1, hz6325[3] = {0,0,0}; static unsigned n6325 = 0; static double mx6325 = 0;\n'
+    '      if (en6325 < 0) { const char* e = getenv("ROGUESQ_EDGE_FADE_R"); en6325 = 0; if (e && *e) { double a = 0, b = 1, r = 0, g = 0, bb = 0; int c = sscanf(e, "%lf,%lf,%lf,%lf,%lf", &a, &b, &r, &g, &bb); if (c >= 2) { r0_6325 = a; r1_6325 = b; if (c >= 5) { hz6325[0] = r; hz6325[1] = g; hz6325[2] = bb; } en6325 = 1; } } }\n'
+    '      if (en6325) { uint32_t cp = (uint32_t)MEM_W(0, (int64_t)(int32_t)0x80138D1Cu);\n'
+    '        if (cp >= 0x80000000u && cp < 0x80800000u) { uint32_t xi = (uint32_t)MEM_W(0X48, ctx->r29), zi = (uint32_t)MEM_W(0X50, ctx->r29), cxi = (uint32_t)MEM_W(0x4C, (int64_t)(int32_t)cp), czi = (uint32_t)MEM_W(0x54, (int64_t)(int32_t)cp);\n'
+    '          float xf, zf, cxf, czf; memcpy(&xf, &xi, 4); memcpy(&zf, &zi, 4); memcpy(&cxf, &cxi, 4); memcpy(&czf, &czi, 4);\n'
+    '          double dx = xf - cxf * 0.5, dz = zf - czf * 0.5, d = sqrt(dx * dx + dz * dz), f = (d - r0_6325) / (r1_6325 - r0_6325); if (f < 0) f = 0; if (f > 1) f = 1; f = f * f * (3.0 - 2.0 * f);\n'
+    '          if (d > mx6325 && d < 1000.0) mx6325 = d; n6325++; if ((n6325 % 200000u) == 1u) fprintf(stderr, "[radfade] n=%u maxr=%g r=%g f=%g\\n", n6325, mx6325, d, f);\n'
+    '          if (f > 0.0) for (int q = 0; q < 3; q++) { double v = (double)(uint8_t)MEM_B(q, ctx->r4); v = v + (hz6325[q] - v) * f; if (v > 255.0) v = 255.0; if (v < 0.0) v = 0.0; MEM_B(q, ctx->r4) = (int8_t)(uint8_t)v; } } }\n'
+    '    }\n'
+)
+
+
+def apply10g(text):
+    """s6325: ROGUESQ_EDGE_FADE_R=r0,r1[,R,G,B] radius fade (cells, centre cam*0.5) of lit RGB at the 0x8004B910 epilogue; default target black."""
+    i = text.find(LABEL)
+    if i < 0 or "PATCH: s6325 radfade" in text[i:i + 6000]:
+        return text, 0
+    j = i + len(LABEL)
+    return text[:j] + EF7_CODE + text[j:], 1
+
+
 if __name__ == "__main__":
     p = BASE / "funcs_10.c"
     t = p.read_text()
@@ -157,6 +179,8 @@ if __name__ == "__main__":
     n += n5
     t2, n6 = apply10f(t2)
     n += n6
+    t2, n7 = apply10g(t2)
+    n += n7
     if n:
         p.write_text(t2)
     print(f"funcs_10.c live patched x{n}")
