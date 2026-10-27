@@ -169417,3 +169417,8 @@ Ran: offline fold of s6355_g3c_r2_redctl (arms ctl R2=0,1 red; mid R2=18..26 red
 Rules out: "AA74 r4 colour is not the terrain colour" (NEXT branch 3); the s6355 open question. Two sources: ctl whole-terrain red + mid distance-banded red. Selects: the pcr pair (col=sp+0x74,row=sp+0x44) with radii in cam-cell units gives a working distance fade, so the edge fix is a haze-coloured fade, not further radius tuning.
 ORIGIN: no code change this session (offline analysis only); no mitigation added.
 Next: soak dd3 level 1 with sky-coloured haze fade vs no fade, contact sheet.
+
+## Session 6357 (2026-10-26) — G3c(a): queued sky-coloured edge-fade soak (nofade / 18..26 / 26..34)
+Sampled horizon sky from s6355 fb_0003423 (~139,189,213; frame is mixed, so single-source colour). Wrote scratch/agent/soak_queue/s6357_g3c_skyfade.sh with three dd3 arms on level 1 using the proven-live AA74 write site. No game run this session; the loop will run it.
+ORIGIN: no code change; no mitigation added.
+Next: fold the soak, compute g3c_edge_score per arm, build an owner contact sheet.
