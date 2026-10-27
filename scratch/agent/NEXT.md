@@ -1,5 +1,11 @@
-# NEXT: audit the exact phase-5 store address/readback witness
+# RESUME: audit the exact phase-5 store address/readback witness
 HYPOTHESIS-ID: g3c-owner-visual
+
+Checkpoint close-out: do not rerun the interrupted work in this iteration.
+The available s6345 run is qualified and non-discriminating: the phase-5
+boundary snapshot found red bytes before VTX, while the retained
+`0x8000D114` source/post-store values were pointer/list-shaped and did not
+match those bytes. Resume by building the exact-address witness below.
 
 The s6345 phase-boundary fallback found red bytes already present in phase 5,
 but the matching `0x8000D114` source values and post-store readbacks were

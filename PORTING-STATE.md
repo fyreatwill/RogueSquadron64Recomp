@@ -169321,3 +169321,22 @@ buffer, or call boundary. Next audit the generated effective address and
 post-store base with the independent VTX boundary bytes. No mitigation was
 added.
 ORIGIN: phase-boundary source-transition measurement; no mitigation.
+
+## Session 6346 (2026-10-26) — checkpoint close-out for exact-store witness
+
+This retry did not rebuild or rerun the s6345 follow-up, as required by the
+checkpoint-close-out instruction. The qualified s6345 arm remains the latest
+evidence: red bytes were already present at the retained phase-5 boundary,
+while every matching `0x8000D114` source value and post-store readback was
+pointer/list-shaped and did not equal the red VTX bytes. That rules out treating
+the retained attribution as a legitimate colour writer, but does not select
+whether its effective address, buffer base, or call-boundary extraction is
+wrong. The four positive controls and the 130-second clean hold remain valid
+from s6345; no new runtime conclusion or mitigation was added.
+
+The next discriminator is unchanged: build the exact-store witness with
+effective address, source value, pre/post bytes, host-base identity, and later
+VTX-boundary bytes for the same lanes. Equality of post-store and boundary bytes
+selects H-real-store; a different address or base selects H-wrong-address or
+H-wrong-buffer. Resume using the command preserved in `scratch/agent/NEXT.md`.
+ORIGIN: checkpoint close-out only; no runtime behavior or mitigation change.
