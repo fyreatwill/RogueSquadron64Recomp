@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6511 (2026-10-27).
+Compact operational handoff, maintained after Session 6512 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -77,6 +77,20 @@ coherent accesses into a real 64x64 grid, not stale bytes outside a 24-byte
 table. It does not yet prove whether the dd4 EMPTY result is a legitimate
 span-table filter outcome or identify any initialization writer outside the
 four instrumented sites. No guard, game behavior, or default changed.
+
+Session 6512 extended the probe to eight distinct span-store PCs and added a
+first-call pre-writer baseline. The Debug build passed. The paired pinned run
+held dd1 and dd4 for 151 seconds, with 14 and 108 keyed rows respectively,
+zero crash markers, and zero 30-second VI stalls. The `[span-base]` positive
+control fired in both arms; every sampled baseline/return snapshot was a full
+64x64, 8192-byte grid. The eight-site table showed activity only at
+`0x800426D8`, `0x80042820`, `0x80042A74`, `0x80042A78`, `0x80042DB4`, and
+`0x80042DC0`; `0x80042EBC` and `0x80042EC4` remained zero. The dd1 EMPTY
+control had interval DB4/DC0 deltas `6,6`; the dd4 EMPTY control had `49,49`,
+while its selected 24-byte table was all `127`. This rules out the two
+unobserved EBC/EC4 sites as the source and makes an uninstrumented initializer
+less likely, but does not yet select legitimate filter input over a late
+DB4/DC0 rewrite. No guard, gameplay behavior, or default changed.
 
 Session 6500 extended the byte-store census with a 64-entry sequence-keyed
 post-bin ring and bounded writer summary. The final pinned dd1/dd4 run reached
@@ -265,8 +279,22 @@ streamTerrainGridCellsByDistance, so the shared cumulative counter is an
 invalid cross-function join even when guest IDs match. H-boundary is selected;
 the exact per-invocation join fix remains to be built.
 
-## Next steps — s6511 span-grid writer audit (top)
-- **s6511 (top):** audit the upstream writer and dimensions of the full
+## Next steps — s6512 span-filter source audit (top)
+- **s6512 (top):** join the full eight-site writer table to the individual
+  span-filter decisions in `streamTerrainGridCellsByDistance`. In one Debug
+  build and one pinned dd1/dd4 run, log each bounded filter input (cell row,
+  cell column, window words, selected signed span bytes, and the writer-table
+  sequence at that decision) plus the final selected-byte snapshot for the
+  same keyed return. Competing outcomes: H-filter-legitimate (dd4 EMPTY
+  cells read all-127 spans before any later rewrite), H-late-rewrite (the
+  decision reads populated spans but a later DB4/DC0 write makes the return
+  snapshot empty), or H-missing-source (the decision reads a non-127 value
+  written by a site not in the eight-PC census). The discriminator is the
+  per-cell decision value joined to the keyed return, and the `[span-base]`
+  control must fire in both arms. Do not add a guard or change behavior.
+  ORIGIN: s6512 named six active sites and ruled out EBC/EC4, but the
+  existing return table cannot say what value the filter actually consumed.
+- **s6511 (folded):** audit the upstream writer and dimensions of the full
   `0x80130DB0..0x80132DAF` span grid that the reconstructed DC0 path reads.
   In one Debug build and one pinned dd1/dd4 run, log the grid dimensions at
   initialization, every writer family that changes sampled rows, and a keyed

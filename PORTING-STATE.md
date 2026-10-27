@@ -170607,3 +170607,24 @@ exist and supports a coherent full-grid/DC0 stream interpretation. It does not
 yet prove that dd4 EMPTY is a legitimate span-filter result or identify an
 initializer outside the four instrumented writer sites. No guard, gameplay
 behavior, or default changed.
+
+## Session 6512 (2026-10-27) — extended the span-grid writer census
+
+The planned s6512 launcher and patch were absent, so I reconstructed both and
+added a regeneration-side probe for eight distinct span-store PCs plus a
+first-call pre-writer 64x64 baseline. The Debug target built successfully. A
+paired pinned dd1/dd4 run held 151 seconds in both arms: dd1 produced 14 keyed
+rows and dd4 108, with zero crash markers and zero 30-second VI stalls. The
+`[span-base]` positive control fired in both arms and every sampled grid was
+8192 bytes with non-127 contents.
+
+The eight-site table showed activity at `0x800426D8`, `0x80042820`,
+`0x80042A74`, `0x80042A78`, `0x80042DB4`, and `0x80042DC0`; EBC/EC4 remained
+zero. The dd1 EMPTY control had interval DB4/DC0 deltas `6,6`; the dd4 EMPTY
+control had `49,49`, while its selected 24-byte table was all `127`. This
+rules out the two unobserved EBC/EC4 sites as the source and makes an
+uninstrumented initializer less likely, but does not distinguish legitimate
+filter input from a later DB4/DC0 rewrite. The new source script and launcher
+are committed; no guard, gameplay behavior, or default changed. ORIGIN: the
+probe names the observed writers and treats their grid targets as legitimate
+stores; it does not mitigate any value.
