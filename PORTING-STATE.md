@@ -170115,3 +170115,7 @@ Next: read how the VI timer sleeps (events.cpp ~1473-1493, sleep_until(next) acc
 
 ## Session 6456 (2026-10-27) — VI thread: sleep-then-spin to cut macOS timer oversleep (G3c(c) residual)
 Read the VI loop (lib/N64ModernRuntime/ultramodern/src/events.cpp vi_thread_func): deadlines were already absolute (start + total_vis/60), so accumulation drift is not the jitter source (H-vi-timer-accumulate ruled out by reading). Remaining candidate: std::this_thread::sleep_until oversleep on macOS (timer slack). Change: sleep to deadline-2ms then spin; ROGUESQ_VI_NOSPIN=1 restores old behaviour. Built clean; patches exported. NOT yet measured: no soak run this session, so the effect on VI dt sd (~2 ms before) is unverified. Next: queue arm soaks (spin vs NOSPIN) comparing VI dt sd/alternation.
+
+## Session 6457 (2026-10-27) — queued VI spin vs NOSPIN arm soaks (G3c(c))
+Verified build/RogueSquadron64Recomp (08:01:10) is newer than events.cpp (08:01:07), so it carries the s6456 sleep-then-spin. Queued scratch/agent/soak_queue/s6457_vi_spin.sh and s6457_vi_nospin.sh: identical s6290 retail recipe (lvl1, 200 s hold, ROGUESQ_G3C_LOG=1), the second adds ROGUESQ_VI_NOSPIN=1. No run this session; the loop runs them between iterations. Analyse with tools/g3c_jerk.py plus per-VI wall dt sd (baseline sd ~2 ms, alternation ~0.78 about 16.67 ms).
+ORIGIN: no mitigation added; queueing only.

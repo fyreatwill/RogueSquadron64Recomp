@@ -1,3 +1,3 @@
-# NEXT: G3c(c) measure VI sleep-then-spin (s6456 change)
+# NEXT: G3c(c) read s6457 VI spin vs NOSPIN soaks
 HYPOTHESIS-ID: g3c-shake
-Change landed s6456 (events.cpp, spin last 2 ms; ROGUESQ_VI_NOSPIN=1 = old). Queue two soaks (same recipe as s6455 [g3c] logging): default vs NOSPIN. Compare VI dt sd and alternation. sd drops from ~2 ms to <0.5 ms with spin only -> timer oversleep was the cause, keep spin, tell owner. No change -> sd is upstream of the sleep (scheduler/logging); close G3c(c) as retail 30 Hz judder, move to G1c phase 2.
+Soaks s6457_vi_spin / s6457_vi_nospin were queued (see SOAK-RESULTS.md tail). Logs in scratch/agent/soak_results/. Compute per-VI wall dt sd and sign-alternation about 16.67 ms for both (method of s6455). sd drops from ~2 ms to <0.5 ms with spin only -> timer oversleep was the cause, keep spin, tell owner. No change -> sd is upstream of the sleep (logger/scheduler); close G3c(c) as retail 30 Hz judder, move to G1c phase 2. If results are missing, wait (do offline work), do not re-queue.
