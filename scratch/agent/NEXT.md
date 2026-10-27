@@ -1,6 +1,6 @@
-# NEXT: does EMPTY fall monotonically to the dd1 level as ROGUESQ_SPANSCALE grows (and does the frame improve)?
+# NEXT: why do ~20% of dd4 cells still reject at SPANSCALE=16 (rec window vs span)?
 HYPOTHESIS-ID: g1c-span-reject-predicate
 
-s6523: consumer decoded (skip if A==B==-128; reject if A<rec[3] or rec[4]<B; signed lb). dd4 EMPTY 24% (s1) -> 14% (s4); dd1 0.2%.
-Hypotheses: H-scale (byte range is the limit: EMPTY keeps falling toward 0.2% at s=8/16), H-reject-by-design (plateau near 14%: remaining rejects are real rec-window rejects of far terrain), H-phase-confound (differences are key/phase sampling; compare EMPTY only within matched key ranges).
-Discriminator: copy scratch/agent/s6523_spanscale.sh; arms dd4 s4 / s8 / s16 (tools/apply_s6523_spanscale.py already built in; no rebuild needed) and compute EMPTY fraction per key window 745+ (mission table) only. Also save a framebuffer per arm (fixed pose via POSE_REF) and run the terrain-fraction scorer. Monotone->0 + more terrain pixels = H-scale: bake dd-derived scale into ROGUESQ_DRAW_DISTANCE. Plateau = H-reject-by-design.
+s6524: dd4 EMPTY keys>=745: s1 28.3 / s4 24.3 / s8 19.9 / s16 21.1%, dd1 0% -> plateau; H-scale refuted as dominant.
+Hypotheses: H-rec-window (far cells' rec[3]/rec[4] height window excludes the rasterized span: scale/offset rec by dd), H-span-offset (span bytes biased by dd-dependent origin, e.g. cell/win mapping), H-reject-by-design (far cells legitimately outside window).
+Discriminator (offline, no build): from scratch/agent/m6/g1_lvl1s6524b_dd4s16/run.log, join [span-pred]/[cell-rec] rows of EMPTY returns; tabulate A,B,rec3,rec4 per rejected cell vs same cells at dd1 (dd1 never rejects). If A,B sit inside a consistent offset of rec window -> H-rec-window/H-span-offset (patch); if A,B are far outside (>100) -> by design.
