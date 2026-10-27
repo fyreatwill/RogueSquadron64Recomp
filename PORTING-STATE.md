@@ -170723,3 +170723,5 @@ Result by table (EMPTY/total): dd1 — 80246434 7/130, 802525E4 0/542, 802EE7B4 
 So H-mission-differs holds: on the flight (mission) table dd4 returns EMPTY ~14% of calls, dd1 never. H-phase-only and H-gate-hides are refuted (EMPTY rows exist well past load, keys 745+). Single-source (one pinned-pose run per arm); EMPTY meaning (no cell passed the span compares) is not yet shown to be harmful or to correlate with missing terrain.
 ORIGIN: observation only; no mitigation added.
 Next: for dd4 mission-table EMPTY calls, join to a0/camera cell and the span compares to see whether the requested window lies outside the table (legit) or inside it with the cell bytes rejected (defect).
+Discrimination (s6518): selects H-mission-differs (mission-table EMPTY 0/2643 dd1 vs 345/2402 dd4); refutes H-phase-only and refutes H-gate-hides (EMPTY at keys 745+, uncapped).
+Next discriminator: s6519 logs a0 window origin vs table bounds per EMPTY call; separates H-oob (legit out-of-range) from H-reject (in-table cells rejected) and H-cap.
