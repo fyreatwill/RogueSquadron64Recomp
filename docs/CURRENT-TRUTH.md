@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6510 (2026-10-27).
+Compact operational handoff, maintained after Session 6511 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -11,8 +11,9 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 - M5 audio de-stubbing, M3 idiom audits, generated-symbol renaming, and M6
   first-mission endurance are closed. G4 crash hunting is parked after clean
   coverage. G1 is mission coverage and visual quality, not autopilot work.
-- Current owner frontier is G3c: terrain-edge fade, spike-line ground truth,
-  and turning-camera shake. G3c(a) height-byte fade was null; G3c(b)'s VU
+- Current owner frontier is G1c's span-grid legitimacy boundary, followed by
+  G3c: terrain-edge fade, spike-line ground truth, and turning-camera shake.
+  G3c(a) height-byte fade was null; G3c(b)'s VU
   arithmetic is internally consistent, the corrected FD57 replay passes, and
   the independent cxd4 scalar replay agrees with the target chain.
 
@@ -63,6 +64,19 @@ row/inner positions beyond the first 24 bytes. This selects H-coherent-stream
 over H-corrupt-input and overturns s6509's 24-byte-table interpretation: the
 span table is the larger grid already admitted by the `0x2000` bound. No guard,
 game behavior, or default changed.
+
+Session 6511 completed the full-grid discriminator in one paired pinned run.
+The regenerated probe passed its positive controls with 14 keyed dd1 rows and
+8 keyed dd4 rows, no crash/abort markers, and no observed VI stall. Every row
+reported a 64x64, 8192-byte span grid with non-127 contents. Full-range writer
+activity was observed from DB4 and DC0 in both arms; dd1 addresses began near
+`0x80130DB0` and dd4 addresses reached the outer grid, while EBC/EC4 had no
+full-grid writes in the sampled rows. This refutes H-short-init (only the first
+24 bytes initialized) and supports H-full-grid: the DC0 stream writes are
+coherent accesses into a real 64x64 grid, not stale bytes outside a 24-byte
+table. It does not yet prove whether the dd4 EMPTY result is a legitimate
+span-table filter outcome or identify any initialization writer outside the
+four instrumented sites. No guard, game behavior, or default changed.
 
 Session 6500 extended the byte-store census with a 64-entry sequence-keyed
 post-bin ring and bounded writer summary. The final pinned dd1/dd4 run reached

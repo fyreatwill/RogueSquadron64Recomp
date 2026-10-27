@@ -170591,3 +170591,19 @@ overturned. This selects H-coherent-stream over H-corrupt-input and rules out
 the DC0 target arithmetic as the writer of the missing-cell defect. No guard,
 game behavior, or default changed. ORIGIN: the new telemetry classified the
 target as a legitimate row-grid address rather than merely allowing it.
+## Session 6511 (2026-10-27) — completed the full span-grid discriminator
+
+The planned s6511 launcher was absent, so I reconstructed it and added a
+regeneration-side probe for the complete `0x80130DB0..0x80132DAF` span grid.
+The Debug target built successfully. A paired pinned dd1/dd4 run produced 14
+dd1 and 8 dd4 keyed stream-return rows, including the existing nonempty/EMPTY
+controls, with no crash/abort markers and no observed VI stall. Every row
+reported a 64x64 (8192-byte) grid with non-127 contents. Full-range writes were
+seen from the DB4/DC0 writer pair in both arms; dd4 reached outer-grid
+addresses, while EBC/EC4 had no full-grid writes in the sampled rows.
+
+This refutes the short-initialization hypothesis that only the first 24 bytes
+exist and supports a coherent full-grid/DC0 stream interpretation. It does not
+yet prove that dd4 EMPTY is a legitimate span-filter result or identify an
+initializer outside the four instrumented writer sites. No guard, gameplay
+behavior, or default changed.

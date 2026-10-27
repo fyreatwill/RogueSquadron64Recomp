@@ -1,27 +1,26 @@
-# NEXT: audit the full span-grid writer and initialization
+# NEXT: close the full-grid writer/source boundary
 HYPOTHESIS-ID: g1c-span-grid-writer
 
-Run exactly one bounded experiment. Extend the existing keyed DC0/postring
-probe to capture the full span-grid dimensions and initialization/writer
-activity over `0x80130DB0..0x80132DAF`, retaining the dd1 nonempty and dd4
-EMPTY keyed controls. Do not add a guard or change game behavior.
+Run exactly one bounded experiment. Extend the keyed probe to include all
+seven known span-table writer sites and a first-call full-grid baseline, then
+log the per-cell filter input and selected span bytes for the same dd1 nonempty
+and dd4 EMPTY keyed controls. Do not add a guard or change game behavior.
 
 Competing hypotheses and discriminator:
 
-- H-full-grid: initialization and writers cover the full 0x2000-byte grid;
+- H-raster-grid: the first baseline and known writers explain the full grid;
   dd4 empty returns are a legitimate rasterizer/input result.
-- H-short-init: only the first 24 bytes are initialized; later DC0 reads are
-  stale or uninitialized.
-- H-late-unexpected-writer: a post-rasterization writer changes sampled rows
-  from an unexpected source.
+- H-uninstrumented-init: an uninstrumented initializer or writer supplies the
+  bytes used by the dd4 filters.
+- H-late-writer: a known writer changes the sampled rows after rasterization.
 
-The discriminating measurement is a positive initialization control plus
-keyed per-writer source attribution for the same rows read by the DC0 return.
-The result must report grid dimensions, writer PCs/values, and the keyed table
-snapshot for dd1 nonempty and dd4 EMPTY rows. A null is invalid unless the
-full-grid initialization control visibly fires in the same run.
+The discriminating measurement is the keyed first-baseline-to-return diff,
+with all seven writer PCs and per-cell filter inputs joined to the same stream
+return. A null is invalid unless the full-grid initialization control visibly
+fires in the same run.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/s6511_span_grid.sh
+    python3 tools/apply_s6512_span_writers.py
+    zsh scratch/agent/s6512_span_writers.sh
