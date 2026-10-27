@@ -149,7 +149,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-0. G1c phase 2 (s6407): dd>2 REQUIRES `ROGUESQ_DD_UNSAFE=1` (s6102 clamp); plain dd3/dd4 arms are really dd2 (check the `[dd] ... capped to 2` log line). With the override and cap 65536, dd3/dd4 hold 183 s clean (0 cap fires, 0 find-null) but ~5% of frames lose the HUD (retail 473/474, dd3 393/415, dd4 382/402) and terrain fraction does not rise (single-source, cross-run). Read s6408_dd34_long (420 s) in SOAK-RESULTS, then name the truncation writer (NEXT.md). Superseded: "dd3/dd4 untested after cap fix" - the first s6407 arms were void.
+0. G1c phase 2 (s6410): dd>2 REQUIRES `ROGUESQ_DD_UNSAFE=1` (s6102 clamp). dd2/dd3/dd4 each hold 200-420 s clean on lvl1 (s6408, s6410). OPEN: does terrain extent grow at dd3/dd4? `ROGUESQ_POSE_LOCK` pins position only, so the s6410 sheet is not view-matched (attitude differs, diff 22-42). Next: extend pose-lock to yaw/pitch/roll, rebuild once, rerun scratch/agent/s6410_dd234_pose.sh (tools/g1c_posesheet.py; map fbdump n via last `[fbdump]` before each `[poselock]` line - they are different counters). Then fold s6411 dd2 lvl5/lvl10 300 s holds (done-criterion legs). Superseded: s6407 '~5% HUD-absent frames at dd3/dd4' (believable: scorer counted craft-select/menu frames as flight; s6409 refuted).
 
 1. Re-score the completed four-arm G3c(a) run using phase-aligned flight dump
    windows (640 retail/dd2, 796 aspect/combined), positive framebuffer hashes,
