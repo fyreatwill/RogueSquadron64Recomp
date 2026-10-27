@@ -37893,6 +37893,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6036:
             changed = True
             report.append(f"{p.name}: s6036 dd x{_n6036}")
+        import apply_s6418_farclip as _a6418
+        text, _n6418 = _a6418.apply9(text)
+        if _n6418:
+            changed = True
+            report.append(f"{p.name}: s6418 farclip x{_n6418}")
         import apply_s6058_poolx as _a6058
         text, _n6058 = _a6058.apply9(text)
         if _n6058:
@@ -41842,6 +41847,7 @@ RS64_REPLAY = [
     "apply_s6034_gridlog.py",
     "apply_s6417_meshlog.py",
     "apply_s6036_dd.py",
+    "apply_s6418_farclip.py",
     "apply_s6037_ddclamp.py",
     "apply_s6048_spanbound.py",
     "apply_s6058_poolx.py",
