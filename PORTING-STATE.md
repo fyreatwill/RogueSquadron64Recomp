@@ -169731,3 +169731,21 @@ This validates the widescreen mission-phase gate and rules out the claim that
 the aspect route fails before mission. It does not select the terrain-edge
 fog/grid/aspect hypothesis; the next four-arm edge table is still required.
 ORIGIN: no mitigation; route-gate correction only.
+
+## Session 6391 (2026-10-26) — four-arm edge table failed the aspect-only route gate
+
+Ran the prescribed retail, draw-distance=2, aspect, and combined arms
+concurrently from the current Debug build. All four had positive framebuffer
+controls, reached a stable phase, held about 181–183 seconds, and reported
+alive-at-end with zero VI stalls and zero crash markers.
+
+Retail and dd2 reached `width=512 origin=0x00690400`; combined reached
+`width=796 origin=0x00639238`. Aspect-only instead reached `width=796
+origin=0x0058B038`. Its score was therefore not a mission-phase score under
+the planned route gate. The edge scores (`retail 0.0616`, `dd2 -0.0001`,
+`aspect -0.0623`, `combined -0.0584` median excess) are retained as raw output
+only and do not discriminate fog, grid, or aspect causes. The next work unit is
+a clean solo aspect run recording all origin transitions to distinguish a
+concurrency artifact from a legitimate alternate route or stale gate.
+
+ORIGIN: no mitigation; the run changed no runtime code or defaults.

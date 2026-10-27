@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6390 (2026-10-26).
+Compact operational handoff, maintained after Session 6391 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -56,6 +56,13 @@ alive-at-end, and positive framebuffer-hash controls. This validates the
 widescreen mission gate but does not select H-edge-fog, H-edge-grid, or
 H-edge-aspect; no runtime or default changed.
 
+Session 6391 reran the four-arm edge table concurrently. Retail and dd2 reached
+`0x00690400`; combined reached `width=796 origin=0x00639238`. The aspect-only
+arm instead settled at `width=796 origin=0x0058B038`, so its route gate failed
+despite alive-at-end, zero VI stalls, zero crash markers, and a positive
+framebuffer control. The four edge scores are not a valid discriminator and
+remain provisional; no visual hypothesis was selected.
+
 ## G1 mission coverage
 
 Playable levels are 0..18 (`NUM_LEVELS=0x13`; 19 and 20 are sentinels). Levels
@@ -84,12 +91,11 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. Finish G3c(a) with the validated phase gates: run one four-arm
-   retail/dd2/aspect/combined edge table, using `0x00690400` for retail/dd2
-   and `0x00639238` for aspect/combined. Score only mission-phase captures;
-   the s6389 retail/dd scores remain provisional and its aspect scores remain
-   invalid due to phase mismatch. The height-byte fade arm is closed as
-   ineffective.
+1. Diagnose the aspect-only route mismatch: run that arm alone with the same
+   recipe and record every phase/origin transition. Determine whether
+   `0x0058B038` is a legitimate aspect route, a stale gate, or a concurrency
+   artifact before repeating the four-arm edge table. The height-byte fade arm
+   is closed as ineffective.
 2. Measure the owner-reported turning shake with the retail/FPS60/aspect arms
    if it remains actionable; current residual evidence is consistent with
    retail 30-Hz judder.
