@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6497 (2026-10-27).
+Compact operational handoff, maintained after Session 6498 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -16,13 +16,14 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
   arithmetic is internally consistent, the corrected FD57 replay passes, and
   the independent cxd4 scalar replay agrees with the target chain.
 
-Session 6497 extended the terrain rasterizer probe with pre-clamp integer
-bounds, first/last table-store addresses, and a rasterizer sequence joined to
-stream returns. The Debug build and pinned dd1/dd4 run were clean for 151 s in
-both arms; dd1 fired the positive controls. This attempt logged only nonempty
-stream returns in the bounded dd4 sample, although the existing ForFace empty
-breadcrumb fired, so H-order/H-scale/H-writer remain unresolved. Duplicate
-diagnostic emission was fixed in the patch script and generated probe.
+Session 6498 reran the terrain rasterizer probe with a larger bounded sample.
+The Debug build and pinned dd1/dd4 run were clean for 151 s in both arms; dd1
+fired the positive controls and dd4 produced 25 EMPTY stream rows. Those rows
+had `seq==ret`, in-range bounds (`0..54/56`, `0..10/11`), and in-range
+first/last store addresses, but the sampled span table remained all `127`.
+The same-thread call order weakens H-order, while no clear/overwrite witness
+was captured, so H-scale versus H-writer remains unresolved. No mitigation or
+default changed.
 
 ## Current frontier: G3c(b) spike-line discriminator
 
@@ -167,13 +168,14 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   Never reset, clean, checkout, or update submodules. If editing `lib/`, run
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
-## Next steps — s6497 override (top)
-- **s6497 (top):** the bounds/store/sequence probe built and ran, but the dd4
-  sample contained 8 logged `ok` stream returns and no `EMPTY` stream row;
-  ForFace empty breadcrumbs still fired. Positive dd1 controls passed, so the
-  result is unevaluable rather than a null. Re-run the same instrument with a
-  larger or phase-targeted stream log budget and require an EMPTY dd4 row before
-  classifying H-order, H-scale, or H-writer.
+## Next steps — s6498 override (top)
+- **s6498 (top):** dd4 EMPTY rows are now captured. They have `seq==ret`, valid
+  pre-clamp bounds and in-range store addresses, yet the sampled table is all
+  `127`; dd1 has both EMPTY and nonempty controls. This weakens H-order and
+  does not show a later clear/overwrite. Next: add a bounded per-store census
+  (count plus first/last stored byte and the table sample immediately after
+  rasterizer return) to separate H-bin/no-meaningful-fill from H-writer. Keep
+  the pinned dd1/dd4 recipe and require dd1 nonempty plus dd4 EMPTY controls.
 - **s6496 (top):** the `binPolygonIntoTerrainGrid` writer was instrumented and the
   pinned dd1/dd4 arms ran in one build. The positive control fired (dd1: 8 ok /
   6 empty logged returns; dd4: 8 ok / 25 empty). dd4 empty intervals contained

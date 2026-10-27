@@ -170376,3 +170376,21 @@ result. The duplicate probe emission was corrected in both the patch script and
 the generated diagnostic source.
 
 ORIGIN: diagnostic instrumentation only; no mitigation or gameplay behavior changed.
+
+## Session 6498 (2026-10-27) — dd4 EMPTY stream rows have valid bounds but an all-127 table
+
+Built the Debug target and reran `zsh scratch/agent/s6492_forface.sh` with the
+pinned dd1/dd4 arms for 150 seconds. Both arms reached mission and remained
+alive for 151 seconds with zero VI stalls and zero crash markers. The positive
+dd1 controls fired: 15 bounded stream rows, including 8 nonempty and 7 empty;
+dd4 produced 33 rows, including 8 nonempty and 25 EMPTY rows.
+
+The dd4 EMPTY rows had `seq==ret`, bounds such as `0,54,0,11` and `0,56,0,10`,
+and first/last store addresses within `0x80130DB0..0x80132DAF`. Their sampled
+span-table bytes were all `127`. The adjacent `[binin]` record showed a
+nondegenerate 526-bin polygon input with divisor 12.8. This weakens the
+same-thread H-order explanation and rules out out-of-range bounds/stores, but
+the probe did not observe a post-rasterizer table state or a clear/overwrite
+writer, so it does not select H-bin versus H-writer. It is a discriminating
+EMPTY result, not a null. ORIGIN: diagnostic instrumentation only; no
+mitigation or gameplay behavior changed.
