@@ -279,3 +279,4 @@ Default stays retail 4:3. Opt-in levers: `ROGUESQ_ASPECT=<w>:<h>` (derives FB_WI
 - s6351 G3c(b): replay unrunnable (logs gone, no independent RSP ref, no clip constants in F5 ref); stays opt-in, owner call. Next: (a) writer audit.
 
 - s6353: G3c(a) radfade2 at AA74 positive control PASSED (s6352 ctl flat sky-blue terrain vs dark in log arm). Position stack pair unresolved: only sp+0x44 varies (x-like); s6353 soak tests 0x44/0x48 and 0x44/0x4C. Single-source.
+- s6354: s6353 pairs invalid (w4=0 always). Decoded from code: at AA74 hook sp+0x44=row, sp+0x74=col, sp+0x40=height. Soak s6354_g3c_r2_colrow queued (xoff=116,zoff=68 and swapped). Single-source until logged d varies and is bounded.
