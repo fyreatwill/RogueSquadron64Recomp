@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6386 (2026-10-26).
+Compact operational handoff, maintained after Session 6387 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -35,8 +35,10 @@ consuming 88 rows; it never reached a valid FD57 comparison. The Ares-derived
 header path is the runtime implementation and is not independent ground truth.
 
 The independent comparison is currently capability-blocked; the route audit
-still passes its positive control. The next gate is the owner's
-`ROGUESQ_CULL_SPIKE` decision, not another game run.
+still passes its positive control. Session 6387 did not run another game or
+change code: the next gate remains the owner's `ROGUESQ_CULL_SPIKE` decision.
+Until that decision or a usable independent reference is supplied, no runtime
+conclusion about the wedge's retail fidelity is justified.
 
 ## G1 mission coverage
 
@@ -69,7 +71,8 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 1. Finish G3c(b) with the owner's decision on `ROGUESQ_CULL_SPIKE`; the
    independent cxd4 comparison is capability-blocked after a reproducible
    offline comparator crash, so do not infer clamp behavior from the internally
-   consistent but single-source s6380long replay.
+   consistent but single-source s6380long replay. Do not run the game until
+   the owner chooses the opt-in mitigation or provides a reference path.
 2. Finish G3c(a) only with a phase-gated edge measurement and owner-viewable
    frames; the height-byte fade arm is closed as ineffective.
 3. Measure the owner-reported turning shake with the retail/FPS60/aspect arms

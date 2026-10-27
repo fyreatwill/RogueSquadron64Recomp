@@ -8,6 +8,9 @@ but its scalar VU objects segfaulted reproducibly around parsed row 95 in the
 offline comparator after 88 rows. The Ares-derived header path is the runtime
 implementation and is not independent ground truth.
 
+Session 6387 evidence: the repository remains at the owner gate, with no new
+runtime result, no rebuild, and no default-setting change.
+
 Use the corrected route witness:
 
 - `scratch/agent/m6/g1_lvl2s6380long/run.log`

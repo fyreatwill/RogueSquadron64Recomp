@@ -169659,3 +169659,14 @@ This rules out neither H-rsp-emu-clamp nor H-clip/H-retail. It does rule out
 the current cxd4 offline integration as a usable discriminator. The next gate
 is the owner's opt-in `ROGUESQ_CULL_SPIKE` decision, with retail defaults
 unchanged. ORIGIN: no mitigation; no runtime or game behavior changed.
+
+## Session 6387 (2026-10-26) — owner gate remains pending after reference failure
+
+Performed the prescribed gate review without rebuilding or rerunning the game.
+The only available evidence remains the s6380long positive-control route and
+the reproducible cxd4 comparator crash before FD57 evaluation. The three
+competing explanations therefore remain unresolved: an RSP emulation/clamp
+defect, a legitimate clip-path wedge, or a retail-faithful artifact. The owner
+must either approve `ROGUESQ_CULL_SPIKE=1` as an opt-in mitigation with retail
+defaults unchanged, or provide a usable independent/reference-RSP path. No
+runtime change was made. ORIGIN: no mitigation; owner decision required.
