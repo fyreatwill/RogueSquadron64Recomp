@@ -170066,3 +170066,7 @@ Ran new tools/g3c_spike_rdp_model.py on s6380long ([spike] rows, lvl2 retail 320
 
 ## Session 6442 (2026-10-27) — M6 endurance: queued 3x600 s retail mission holds (lvl 1/5/7)
 NEXT.md was stale vs CURRENT-TRUTH (ladder items closed); took item 3b. Wrote scratch/agent/soak_queue/s6442_m6_hold600.sh (3 concurrent retail-settings 600 s holds via g1_level_coverage_common.zsh). No game run this session; verdicts arrive via SOAK-RESULTS.md. Rules out nothing yet.
+
+## Session 6443 (2026-10-27) — folded s6442 M6 600 s retail holds (lvl 1/5/7): 3/3 clean
+
+Read the per-level summaries (scratch/agent/m6/s6442_hold600/l{1,5,7}.runner.log; the soak .log itself is empty because the recipe redirects to the runner logs). All three ran concurrently under retail settings with G1B timing on, att=1, hold=602 s, alive_at_end=1, vi_stalls30s=0, crashlines=0. mission_t 72/83/88 s. lvl1 godrefills=2 mission_cycles=0; lvl5 godrefills=20 mission_cycles=0; lvl7 godrefills=20 mission_cycles=14, meaning 14 hangar re-entries after first mission origin (mission end/fail loop under the blind autopilot with god refills; no crash or stall, owner-playtest scope per G1). Control: harness's own mission_cycles counter fires on lvl7 (non-zero), lvl1/5 zero is consistent with s6079-s6080 results. n=1 per level, 3 concurrent instances so host load is higher than single-run, which makes 0 stalls a stronger result. M6 (item 3b) first-mission endurance goal met: 0 distinct failures to root-cause. No code change this session.
