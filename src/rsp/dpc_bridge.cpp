@@ -1525,10 +1525,14 @@ struct Rs64F5PhaseStore {
     uint32_t span = 0;
     uint32_t pc = 0;
     uint32_t value = 0;
+    uint8_t width = 0;
 };
 
-static Rs64F5PhaseStore g_f5_phase_store[2048] = {};
+static constexpr uint32_t kF5PhaseStoreCapacity = 65536u;
+static Rs64F5PhaseStore g_f5_phase_store[kF5PhaseStoreCapacity] = {};
 static uint32_t g_f5_phase_store_count = 0;
+static uint32_t g_f5_phase_store_next = 0;
+static uint32_t g_f5_phase_store_prints = 0;
 
 struct Rs64F5HostOrderPending {
     uint64_t seq = 0;
@@ -1565,9 +1569,13 @@ static void rs64_f5_last_writer_update(char width, uint32_t pc,
                            (width == 'H' ? 2u : 4u));
     const uint32_t phys = addr & 0x7FFFFFu;
     std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
-    if (phase == 5u && g_f5_phase_store_count < 2048u) {
-        Rs64F5PhaseStore& event = g_f5_phase_store[g_f5_phase_store_count++];
-        event = {phase, phys, span, pc, value};
+    if (phase == 5u) {
+        Rs64F5PhaseStore& event =
+            g_f5_phase_store[g_f5_phase_store_next++ % kF5PhaseStoreCapacity];
+        event = {phase, phys, span, pc, value,
+                 static_cast<uint8_t>(width)};
+        if (g_f5_phase_store_count < kF5PhaseStoreCapacity)
+            ++g_f5_phase_store_count;
     }
     const uint32_t first = phys >> 2u;
     const uint32_t last = (phys + span - 1u) >> 2u;
@@ -1646,7 +1654,11 @@ static void rs64_f5_dump_join(uint32_t phase, uint32_t source, uint32_t bytes,
             ++phase5_dma_events;
     }
     for (uint32_t i = 0; i < g_f5_phase_store_count; ++i) {
-        const Rs64F5PhaseStore& store = g_f5_phase_store[i];
+        const uint32_t oldest =
+            (g_f5_phase_store_next + kF5PhaseStoreCapacity -
+             g_f5_phase_store_count) % kF5PhaseStoreCapacity;
+        const Rs64F5PhaseStore& store =
+            g_f5_phase_store[(oldest + i) % kF5PhaseStoreCapacity];
         if (store.phase != 5u || store.addr >= source + bytes ||
             store.addr + store.span <= source) continue;
         ++phase5_store_events;
@@ -1657,6 +1669,44 @@ static void rs64_f5_dump_join(uint32_t phase, uint32_t source, uint32_t bytes,
         const uint32_t v = store.value;
         if (((v >> 24) & 0xFFu) == 0xFFu || ((v >> 16) & 0xFFu) == 0xFFu ||
             ((v >> 8) & 0xFFu) == 0xFFu) ++phase5_red_store_events;
+        if (g_f5_phase_store_prints++ < 128u) {
+            std::fprintf(stderr,
+                "[f5-phase5-store] addr=0x%06X span=%u width=%c "
+                "pc=0x%08X value=0x%08X overlap=0x%06X..0x%06X\n",
+                store.addr, store.span, store.width ? char(store.width) : '-',
+                store.pc, store.value, std::max(store.addr, source),
+                std::min(store.addr + store.span, source + bytes));
+        }
+    }
+    // The ring records event order, but a busy phase can wrap it before the
+    // VTX command arrives. The per-word last-writer table is the phase-boundary
+    // snapshot for lanes that have not been overwritten in a later phase.
+    if (phase5_store_events == 0u) {
+        for (uint32_t p = source; p < source + bytes; p += 4u) {
+            const Rs64F5LastWriter& store = g_f5_last_writer[p >> 2u];
+            if (store.phase != 5u || !store.pc) continue;
+            const uint32_t boundary =
+                (uint32_t(rdram[p ^ 3u]) << 24) |
+                (uint32_t(rdram[(p + 1u) ^ 3u]) << 16) |
+                (uint32_t(rdram[(p + 2u) ^ 3u]) << 8) |
+                uint32_t(rdram[(p + 3u) ^ 3u]);
+            ++phase5_store_events;
+            if (!phase5_first_store_pc) {
+                phase5_first_store_pc = store.pc;
+                phase5_first_store_value = store.value;
+            }
+            if (((boundary >> 24) & 0xFFu) == 0xFFu ||
+                ((boundary >> 16) & 0xFFu) == 0xFFu ||
+                ((boundary >> 8) & 0xFFu) == 0xFFu)
+                ++phase5_red_store_events;
+            if (g_f5_phase_store_prints++ < 128u) {
+                std::fprintf(stderr,
+                    "[f5-phase5-snapshot] addr=0x%06X span=4 width=%c "
+                    "pc=0x%08X value=0x%08X boundary=0x%08X\n",
+                    p, store.width ? char(store.width) : '-', store.pc,
+                    store.value, boundary);
+            }
+        }
     }
     std::fprintf(stderr,
         "[f5-source-transition] phase=%u task=%u vtx=0x%06X..0x%06X registered=",

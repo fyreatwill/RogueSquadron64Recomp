@@ -169300,3 +169300,24 @@ replace the saturated prefix with a phase-boundary ring/snapshot, retain exact
 guest-store and host-DMA payload bytes for future phase-6 VTX ranges, and keep
 the four positive controls. No mitigation or runtime conclusion was added.
 ORIGIN: checkpoint close-out of a non-discriminating diagnostic instrument; no mitigation.
+
+## Session 6345 (2026-10-26) — retained phase-5 boundary snapshot for red VTX lanes
+
+The phase-5 store witness was changed from a saturated fixed prefix to a
+65,536-entry ring with a per-word phase-boundary fallback. The ring itself
+wrapped before the phase-6 VTX command, but the fallback retained 28 exact
+phase-5 lanes for `0x735560..0x7355D0`; 23 had red boundary bytes and there
+were zero phase-5 DMA overlaps. Ordinary-store, VTX, bulk, and forced-red
+controls all fired. The DD3 level-1 arm built cleanly, reached mission in
+8 seconds, and held 130 seconds with `alive_at_end=1`, zero VI stalls, and
+zero crash lines.
+
+Every matching lane was attributed to `0x8000D114`, but its source values
+were pointer/list-shaped and its post-store readback repeated those values
+instead of the actual red VTX bytes. This proves the red bytes are present at
+the retained phase-5 boundary, but it does not name a legitimate colour
+writer; the current exact-store witness is observing a different address,
+buffer, or call boundary. Next audit the generated effective address and
+post-store base with the independent VTX boundary bytes. No mitigation was
+added.
+ORIGIN: phase-boundary source-transition measurement; no mitigation.
