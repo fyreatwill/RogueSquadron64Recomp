@@ -149,6 +149,8 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
+0. G1c phase 2 (s6407): dd>2 REQUIRES `ROGUESQ_DD_UNSAFE=1` (s6102 clamp); plain dd3/dd4 arms are really dd2 (check the `[dd] ... capped to 2` log line). With the override and cap 65536, dd3/dd4 hold 183 s clean (0 cap fires, 0 find-null) but ~5% of frames lose the HUD (retail 473/474, dd3 393/415, dd4 382/402) and terrain fraction does not rise (single-source, cross-run). Read s6408_dd34_long (420 s) in SOAK-RESULTS, then name the truncation writer (NEXT.md). Superseded: "dd3/dd4 untested after cap fix" - the first s6407 arms were void.
+
 1. Re-score the completed four-arm G3c(a) run using phase-aligned flight dump
    windows (640 retail/dd2, 796 aspect/combined), positive framebuffer hashes,
    and zero crash/stall markers. The title gate and width-order defects are
