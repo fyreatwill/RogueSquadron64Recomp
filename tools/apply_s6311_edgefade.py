@@ -165,6 +165,25 @@ def apply10g(text):
     return text[:j] + EF7_CODE + text[j:], 1
 
 
+EF8_CODE = (
+    '    { /* PATCH: s6327 forcered */ static int en6327 = -1; if (en6327 < 0) { const char* e = getenv("ROGUESQ_EDGE_FORCE_RED"); en6327 = (e && *e && *e != \'0\') ? 1 : 0; }\n'
+    '      if (en6327) { MEM_B(0, ctx->r4) = (int8_t)0xFF; MEM_B(1, ctx->r4) = 0; MEM_B(2, ctx->r4) = 0; } }\n'
+)
+
+
+def apply10h(text):
+    """s6327: ROGUESQ_EDGE_FORCE_RED=1 forces lit RGB to (255,0,0) at the 0x8004B910 epilogue (write-path positive control)."""
+    i = text.find(LABEL)
+    if i < 0 or "PATCH: s6327 forcered" in text[i:i + 12000]:
+        return text, 0
+    k = text.find("PATCH: s6325 radfade", i)
+    if k < 0:
+        return text, 0
+    e = text.find("    }\n", text.find("MEM_B(q, ctx->r4)", k))
+    e += len("    }\n")
+    return text[:e] + EF8_CODE + text[e:], 1
+
+
 if __name__ == "__main__":
     p = BASE / "funcs_10.c"
     t = p.read_text()
@@ -181,6 +200,8 @@ if __name__ == "__main__":
     n += n6
     t2, n7 = apply10g(t2)
     n += n7
+    t2, n8 = apply10h(t2)
+    n += n8
     if n:
         p.write_text(t2)
     print(f"funcs_10.c live patched x{n}")

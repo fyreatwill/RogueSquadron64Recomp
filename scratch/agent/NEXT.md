@@ -1,6 +1,6 @@
-# Next: why does radfade f=1 not darken terrain? (write-path positive control)
+# Next: find the real writer of terrain vertex colour (radfade hook is on the wrong write)
 HYPOTHESIS-ID: g3c-owner-visual
-s6326: ctl arm (ROGUESQ_EDGE_FADE_R=0,1, f=1 logged) has dark fraction 0.0017 vs nofade 0.0023 -> the fade write at 0x8004B910 epilogue has no visible effect.
-Hypotheses: H-combiner (terrain combiner ignores shade RGB: uses texture/env only), H-readback (rdram-readback fbd frames are not what RT64 presents; use present capture), H-order (epilogue write is overwritten/precedes recolour), H-misapplied (applied to non-terrain verts).
-Discriminator, one build: env flag forces lit RGB to saturated red at the epilogue for all verts; run 1 arm lvl1 dd3 and check (a) red fraction in rdram fbd, (b) in RT64 present capture. Red in (b) not (a) -> readback; red nowhere -> combiner/order; red on terrain only -> write path OK and fade math (f applied to wrong channel) is the bug.
-See tools/apply_s6311_edgefade.py (s6325 block ~line 148-160) for the patch; regen order applies.
+s6327: forced red at 0x8004B910 epilogue (r4 bytes 0..2) is invisible in flight frames -> that write is not the terrain colour sink.
+Hypotheses: H-copy (colours copied into the DL vertex buffer before the epilogue; r4 is a temp), H-otherfn (terrain verts are lit by a different function than 0x8004B910), H-ucode-light (ucode lights from normals at draw time; RGB bytes in vertex are ignored, shade comes from lighting state), H-readback (no: radar red proves readback shows guest-written colours).
+Discriminator, one build: in a lvl1 flight DL, log (once, at frame N) the terrain vertex array address range the F5 ucode loads (G_VTX op) with its first 4 vertices' bytes, then add a write watch (store hook in the generated code / MEM_B macro under an env) over that range logging the writer PC/function name. Positive control: force-red at the found writer must turn terrain red in fbd. Outcomes: red -> hook there for radius fade; no red + writer is ucode-side -> H-ucode-light, fade via light colour/ambient instead.
+Ground rule: patches live in tools/apply_s6311_edgefade.py (idempotent live patch) + must be mirrored in fixup scripts for regen.
