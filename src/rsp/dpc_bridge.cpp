@@ -634,6 +634,20 @@ static bool m4_src_enabled(uint32_t *cap_out) {
 // RDRAM source of the vertex/matrix blocks can be compared with retail.
 extern "C" uint32_t rs64_ram_top;
 extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len) {
+    {   // s6328 G3c: ROGUESQ_G3C_DMALOG=period,count : log ucode DMA reads with (i %% period) < count with first 16 source bytes
+        static uint32_t skip = 0, cnt = 0; static int init = 0; static uint32_t idx = 0;
+        if (!init) { init = 1; const char *e = std::getenv("ROGUESQ_G3C_DMALOG"); if (e && *e) { unsigned a = 0, b = 0; if (sscanf(e, "%u,%u", &a, &b) == 2 && a) { skip = a; cnt = b; } } }
+        if (cnt && g_rdram_for_submit != nullptr) {
+            uint32_t i = idx++;
+            if ((i % skip) < cnt) {
+                uint32_t ph = dram & 0x00FFFFFFu; uint8_t b[16];
+                for (uint32_t q = 0; q < 16; ++q) b[q] = g_rdram_for_submit[(ph + q) ^ 3u];
+                fprintf(stderr, "[g3cdma] i=%u mem=%04X dram=%08X len=%u :", i, mem, dram, len);
+                for (uint32_t q = 0; q < 16; ++q) fprintf(stderr, " %02X", b[q]);
+                fputc('\n', stderr);
+            }
+        }
+    }
     static const bool g1d_reads = [] {
         const char *e = std::getenv("ROGUESQ_LOG_G1D_READS");
         return e && *e && *e != '0';

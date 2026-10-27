@@ -1,13 +1,13 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6310 (2026-10-26).
+Compact operational handoff, maintained as of Session 6328 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
 
 ## Headline
 
-- s6325: `ROGUESQ_EDGE_FADE_R=r0,r1[,R,G,B]` radius fade built at 0x8004B910 (centre cam*0.5); 4-arm dd3 soak read in s6326: positive control (R=0,1 full black) did NOT darken terrain (dark frac 0.0017 vs nofade 0.0023) -> fade arms uninformative; next verify the epilogue lit-RGB write reaches the drawn colour (force red), and compare RT64 present vs RDRAM readback.
+- s6328: the batched F5 DMA-source instrument passed its positive control (about 1.9M sampled reads; flight reached phase 6/7), but `ROGUESQ_EDGE_FORCE_RED=1` at 0x8004B910 still produced no terrain red (red fraction 0 in the late flight dump; radar-only red remains); the sampled reads are mostly broad 0x0170/0x0280 display-list/terrain records and do not name a colour writer. The epilogue is ruled out; next instrument the actual F5 `VTX` load and its vertex-buffer byte range, then identify the last guest store into that range.
 
 - The qualified route boots attribution, N64 logo, intro, Factor 5 logo, title,
   hangar, and mission origins. Mission input reaches flight code.
