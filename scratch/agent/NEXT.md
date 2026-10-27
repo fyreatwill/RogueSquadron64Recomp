@@ -1,3 +1,5 @@
-# NEXT: G3c(b) angrylion replay of one logged spike wedge
-HYPOTHESIS-ID: g3c-spike-angrylion
-Follow docs/G3C-SPIKE-ANGRYLION-PLAN.md. Build a tiny harness (tools/) that encodes one [spike] polygon from a s6380long-style log as RDP triangle commands and runs it through angrylion's rdp core in /Users/williambuckley/Documents/Tools/g3_angrylion; positive control = sane triangle lights pixels. Outcomes: lit pixels ~ s6441 model -> retail draws wedges, ask owner re CULL_SPIKE default; ~0 -> hardware clips, fix host side. G1e CLOSED, M6 closed, do not re-hold.
+# NEXT: G3c(c) screen shake while turning - arm table + jerk measurement
+HYPOTHESIS-ID: g3c-shake
+G3c(b) closed s6454 (angrylion: wedges are retail-faithful). Now owner defect (c): slight whole-view shake while the ship turns.
+Hypotheses: H-fps60 (camera follow updated on a different cadence than craft), H-pacing (uneven VI spacing between presented frames), H-aspect (wide-view scale applied alternately), H-retail.
+Discriminator: per presented frame log camera yaw/pos + craft yaw from guest RAM + present timestamp during a scripted steady turn; second difference of camera yaw per real second. Arms: retail, FPS60, ASPECT, both. Shake = sign-alternating jerk absent in retail. Find camera/craft yaw addresses from CURRENT-TRUTH/PORTING-STATE grep first; one build, all arms as queued soaks.

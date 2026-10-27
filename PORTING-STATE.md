@@ -170096,3 +170096,11 @@ ORIGIN: n/a (no mitigation added).
 
 ## Session 6453 (2026-10-27) — folded s6452 M6 hold (clean); found angrylion RDP as unused H-retail reference for G3c(b)
 Folded s6452_m6_hold600: rc=0, 677 s, 0 CRASH/abort/stall matches in log. Re-read G3c(b) state: RSP arithmetic refuted as defect by 4 lines, H-rt64 not supported (s6441, single-source). docs/G3C-SPIKE-REFERENCE.md claimed no LLE/RDP reference exists; that was wrong for the RDP half - Tools/g3_angrylion (s5963) is an accurate software RDP. New plan doc docs/G3C-SPIKE-ANGRYLION-PLAN.md (hypotheses H-hw-draws / H-hw-clips, positive control). No build or run this session. ORIGIN: n/a (no mitigation).
+
+## Session 6454 (2026-10-27) — G3c(b) angrylion replay: hardware-accurate RDP draws the logged wedges (H-hw-draws)
+- Built tools/angrylion_replay/replay.c (links Tools/g3_angrylion build/libalp-core.a; build line in file header comment below). It encodes each `[spike]` polygon exactly as dpc_bridge.cpp:3416-3419 decodes it (xh,yh / xm / xl,ym / xl',yl / xh',yl => RDP fill-mode triangle words, lft = xl>xh), runs angrylion's n64video_process_list, counts non-zero 16bpp pixels in a 320x240 scissor.
+- Positive control in same run: sane tri (10,10)(100,10)(10,100) lit 4185 px (model 4050).
+- s6380long log: 79 polygons, 16 light pixels (3909 total, 8-885 px each); the SAME 16 swaps (1615-1621, 1759-1762...) the s6441 Sutherland-Hodgman model flagged. Lesson: the model's hull included the degenerate upper-minor-edge point xm (ym==yh), yet it still agreed - the rasteriser result is the independent second source.
+- Verdict: H-hw-draws. A hardware-accurate RDP rasterises these polygons if the RSP emits them; RSP side was matched in s6385/s6388. So the wedges are retail-faithful (two lines: s6441 model + angrylion; caveat: coordinates are 0.1-rounded from the log, lft derived, not raw RDP words). H-rt64 and H-rsp-emu not supported. ROGUESQ_CULL_SPIKE stays opt-in; owner question: make it default-on as a cosmetic improvement over retail?
+- ORIGIN: no mitigation added; harness only.
+- Build: D=/Users/williambuckley/Documents/Tools/g3_angrylion; clang -O1 -I$D/src/src/core -I$D/src/src tools/angrylion_replay/replay.c $D/build/libalp-core.a -lc++ -o /tmp/replay; /tmp/replay run.log
