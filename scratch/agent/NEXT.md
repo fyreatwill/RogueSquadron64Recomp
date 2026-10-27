@@ -1,4 +1,5 @@
-# NEXT: dd4 low-ground frames: fewer passing cells (H-data) or cells pass but not drawn (H-budget)?
+# NEXT: dd4 low-ground frames — confirm fewer cells reach draw (H-data) with a per-VI pass-cell count
 HYPOTHESIS-ID: g1c-dd8-limit
-s6487: ~52% of dd4 frames are low-ground vs 2% at dd1; pool size irrelevant.
-Discriminator: within ONE dd4 run (scratch/agent/m6/g1_lvl1s6487p_d4), join each fbdump frame's ground score with the exitlog/gatesplit pass-cell and tri counts for that VI (tools/g1c_fbdump_join.py pattern). Low frames with fewer pass cells => H-data; same pass cells but fewer tris drawn => H-budget (check ROGUESQ_UCODE_CAP). Positive control: dd1 pass counts > 0.
+s6488: low-ground dd4 frames submit ~28% fewer tris, no ceiling (H-budget not indicated), single-source.
+Do: (1) extend tools/g1c_lowframe_tris.py to sum [tricnt] over all tasks per VI (between consecutive fbdump/present lines); re-run on s6487 d1/d4 for a comparable dd1-vs-dd4 tri total. (2) If a cell-gate counter is cheap to add (ROGUESQ_* log in the cell-population pass loop), one build logging pass-cell count per VI, same dd4 run, join with ground score. Positive control: dd1 pass count > 0.
+Outcomes: low frames have fewer pass cells => H-data, find which gate rejects (distance/visibility flag writer); equal pass cells but fewer tris => cull in the submit path.
