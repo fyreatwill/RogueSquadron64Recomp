@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6505 (2026-10-27).
+Compact operational handoff, maintained after Session 6506 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -15,6 +15,17 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
   and turning-camera shake. G3c(a) height-byte fade was null; G3c(b)'s VU
   arithmetic is internally consistent, the corrected FD57 replay passes, and
   the independent cxd4 scalar replay agrees with the target chain.
+
+Session 6506 replaced the invalid cross-function cumulative join with an
+invocation-local writer baseline and atomic key in the existing s650 fixup
+path. The Debug build passed. The prescribed pinned dd1/dd4 run produced 14
+dd1 and 8 dd4 `[postring]` rows, including nonempty and EMPTY controls; every
+row had `key==seq`, positive writer activity, and nonnegative interval deltas.
+The first dd1 interval was `144,144,0,0`; subsequent dd1 rows were `6..9,6..9,0,0`,
+while dd4 rows were `49..53,49..53,0,0`. This removes the unsigned-underflow
+join defect and shows the observed interval activity is at DB4/DC0, not EBC/EC4.
+The result identifies the boundary/race artifact but does not yet prove which
+writer changed the post-bin table; no game behavior or default changed.
 
 Session 6500 extended the byte-store census with a 64-entry sequence-keyed
 post-bin ring and bounded writer summary. The final pinned dd1/dd4 run reached
@@ -203,13 +214,16 @@ streamTerrainGridCellsByDistance, so the shared cumulative counter is an
 invalid cross-function join even when guest IDs match. H-boundary is selected;
 the exact per-invocation join fix remains to be built.
 
-## Next steps — s6505 boundary fix (top)
-- **s6505 (top):** replace the shared cumulative writer-counter join with one
-  regeneration-safe per-invocation key spanning the bin return and stream
-  entry/writer interval. Keep all candidate arms in one build and one run;
-  require dd1 nonempty and dd4 EMPTY controls, and reject any unsigned delta
-  unless its key and interval match. The offline audit is recorded in
-  `docs/S6505-EBC-WRITER-AUDIT.md`; do not treat the old EBC delta as evidence.
+## Next steps — s6506 writer attribution (top)
+- **s6506 (top):** use the passing invocation key to attribute each matching
+  post-bin table change to a concrete store site. Extend the same keyed interval
+  census with per-site byte/store counts and a post-table diff, retaining dd1
+  nonempty and dd4 EMPTY controls in one build/run. The current run shows only
+  DB4/DC0 activity during stream intervals, but that is aggregate interval
+  evidence; distinguish DB4/DC0 from an out-of-interval EBC/EC4 write before
+  naming the writer or adding any mitigation.
+- **s6505 (folded):** the invocation-local key removed the shared cumulative
+  underflow. H-boundary remains selected; the exact post-bin writer is open.
 - **s6499 (folded):** the complete store census selected a later stream-path
   writer for the dd1 EMPTY control; the dd4 row was beyond its post budget.
 - **s6498 (folded):** dd4 EMPTY rows have valid bounds and all-127 table

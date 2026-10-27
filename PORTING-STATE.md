@@ -170510,3 +170510,19 @@ given the prior cross-host-thread observation. No build or game run occurred;
 no mitigation or runtime behavior changed. ORIGIN: audit identifies the
 cross-function shared-counter join as the source of the invalid delta; the next
 unit must replace the join key before any writer claim is made.
+
+## Session 6506 (2026-10-27) — keyed the EBC census to stream invocations
+
+The prescribed s6505 unit added `tools/apply_s6505_invocation.py`, which places
+an atomic monotonic key and invocation-local writer-counter baseline at the
+entry of `streamTerrainGridCellsByDistance`; its return dump reports the
+interval delta. The Debug target rebuilt successfully. The pinned dd1/dd4
+run completed with no crash markers: dd1 produced 14 keyed rows and dd4 8,
+including nonempty and EMPTY controls. Every row had `key==seq`; all deltas
+were nonnegative and positive. dd1 began with `144,144,0,0`, then produced
+`6..9,6..9,0,0`; dd4 produced `49..53,49..53,0,0`. Thus H-race/unsigned
+underflow in the old cross-function join is not present in the keyed interval,
+and the observed interval activity is DB4/DC0 rather than EBC/EC4. This does
+not yet prove the exact post-bin writer because a write outside the interval
+could still change the table. ORIGIN: diagnostic join repair only; no
+mitigation, game behavior, or default changed.
