@@ -1,8 +1,5 @@
-# NEXT: why do dd4 stream-function calls return empty with a non-empty window (span-table filters)
+# NEXT: who writes the span table 0x80130DB0 (0x2000 B) and window words 0x80132DB0..BC, and why does it leave all-127 / w2=0 at dd4
 HYPOTHESIS-ID: g1c-dd8-limit
-s6493: empty lists (20% dd4) are not early-out/pool/spanbound/nonode. Cells are rejected by the span-table filters in streamTerrainGridCellsByDistance (0x80042D64 equal-sentinel beq; 0x80042D90/DA8 +3/+4 byte compares vs table 0x80130DB0).
-Hypotheses: H-spanoverflow (signed-byte table can't hold dd4 extents / footprint rasterizer writes wrong rows), H-footprint (window words 0x80132DB0..BC from s6036/s6037 mismatch the table's row origin), H-camera (empties only at certain poses, a real geometry effect).
-Do: scout the writer of table 0x80130DB0 (who fills rows/bytes from the footprint polygon, row origin, byte meaning). Then on empty calls ([streamcum] extension) log window words 0x80132DB0/B4/B8/BC and the first rows of the table; compare with a non-empty dd4 call and a dd1 call. Re-run scratch/agent/s6493_streamcum.sh (rename tag). Outcome: whether table bytes are out of range/wrapped on empty calls.
-
-## RESUME (s6494)
-tools/apply_s6493b_empty_dump.py exists but has NOT been applied/built/run. Next: `python3 tools/apply_s6493b_empty_dump.py` (after apply_s6493_stream_cum.py), rebuild (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build), re-run scratch/agent/s6493_streamcum.sh with ROGUESQ_FORFACE_LOG=1 at dd4 and dd1, compare [streamdump] EMPTY vs ok rows: are table bytes out of range/wrapped or window words mismatched on empties? Fold the patch into the fixup scripts if it must survive regen.
+s6495: dd4 EMPTY stream calls see an all-127 table and window w=0,55,0,10 (w2=0; ok calls w2=17). Table is not wrapped. The footprint rasterizer did not populate rows.
+Hypotheses: H-footprint-degenerate (footprint polygon at dd4 has zero area / clipped away at certain poses), H-order (stream fn called before the rasterizer refresh on that frame, stale/cleared table), H-scale (dd scale overflows an s16/byte coordinate in the rasterizer).
+Do: grep funcs_*.c for stores to 0x80132DB8 / table base (lui 0x8013 + 0x2DB8 / -0x2448 offsets, and loops filling 127/-128), identify the function, add a [fpdump] log of its inputs (vertices, scale, dd) and its call order vs stream fn, run s6493_streamcum.sh arms again (dd1/dd4). Discriminator: inputs degenerate (area 0) -> H-footprint; rasterizer not called before EMPTY -> H-order; coords exceed byte/s16 -> H-scale.
