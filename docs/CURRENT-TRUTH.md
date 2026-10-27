@@ -148,7 +148,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-- s6435: ASPECT!=4:3 now lifts ucode cap to 65536 (fixup, built). s6434 hangar soak folded clean (both wide arms alive, 0 stalls/crashes). Fold soak s6435_aspect_cap (cap fires + g1d_hole_count, control CAP=16384); then hangar 340/448 row check, owner contact sheet, G3 livery diff, G5.
+- s6435: ASPECT!=4:3 now lifts ucode cap to 65536 (fixup, built). s6434 hangar soak folded clean (both wide arms alive, 0 stalls/crashes). s6437: s6436_aspect_cap folded - cap fires 0 in both arms (default and CAP=16384 control), hole scores similar (med .118 vs .110): ucode cap is NOT the 16:9 lvl1 hole source. Next: hangar 340/448 row check, owner contact sheet, G3 livery diff, G5.
 - s6433: G1e CLOSED (s6254-s6262, s6290). Open: G1d hangar/menu 21:9 recheck (soak s6433_aspect_hangar219 queued), owner contact sheet, then G3 livery diff, G5. (s6432: wide-edge holes not reproduced.)
 
 - s6427: 320-wide cams no longer vpw-scaled (logo shifted +78 at 16:9); soak s6427_aspect_menufix queued - fold, check fb_0000303 centred, then radar clip.

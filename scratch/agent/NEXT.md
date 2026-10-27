@@ -1,5 +1,3 @@
-# NEXT: fold s6436_aspect_cap, then hangar height
+# NEXT: hangar VI height/scissor at ASPECT vs 4:3
 HYPOTHESIS-ID: g1d-aspect-hangar
-Fold s6436_aspect_cap from SOAK-RESULTS (arms capdefault vs cap16384, 16:9 lvl1, MISSION_WIDTH=796): FIRST confirm each arm reached flight (not allattempts-failed), then count "[ucode-cap] fired" per arm in soak_results logs; run tools/g1d_hole_count.py on flight-width dumps of each arm.
-Outcomes: control fires>0 and default 0 with fewer holes -> H-cap confirmed (fix landed). Control 0 fires -> cap not the hole source; go to H-viewport/H-dump.
-Then: hangar VI height/scissor at ASPECT vs 4:3 (~340/448 rows), owner contact sheet, G3 livery diff, G5.
+s6437 closed the cap question (0 fires both arms). Now: hangar at ASPECT=16:9 vs 4:3 — measure VI origin/height and scissor rows (~340 of 448 seen), using the s6434 hangar219 recipe (scratch/agent/soak_queue/done/s6434_aspect_hangar219*.sh) with a 4:3 control arm in the same soak. Outcomes: rows 340 in wide only -> H-viewport (fix scissor/height in aspect patch); equal in both -> dump artifact (H-dump). Then owner contact sheet, G3 livery diff, G5.
