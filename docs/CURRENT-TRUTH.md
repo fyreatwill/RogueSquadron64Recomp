@@ -193,3 +193,5 @@ unit.
 - s6424: 21:9 arm crashed 3/3 (no OSMEM_MB=12 -> 8 MB heap exhaustion at load_level_hmp); s6425 makes ASPECT imply OSMEM 12 and re-queues the sheet (s6425_aspect_sheet2). Next: fold it, send sheet; hangar/menu 21:9; G1e.
 
 - s6428: 16:9 logo +78px shift root-caused: 640-wide cams scaled x kv*0.8 into unwidened 640 fb; fix = scale keyed on live video-state width <=640 -> no scale (verified logo centred, flight intact). Still open G1d: 21:9/hangar recheck, radar clip repro, w640 late-dump noise (dump-stride mislabel?), then G1e.
+
+- s6431: wide-aspect soaks must use MISSION_WIDTH=796|1024 (not MISSION_RE=ZZZ, which forced false nomission). Open G1d datum: terrain/sky holes at wide frame edges (single frame each at 16:9, 21:9) - see NEXT.md.

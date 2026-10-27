@@ -170007,3 +170007,9 @@ Next: fold results, build contact sheet for owner, then G1e.
 - Flight: a169 late w796 frame (796x448) shows ship, craft HUD left, radar top-right unclipped, sky/terrain filling width. a219 late w1024 frame (1024x448) likewise, radar and lives HUD at real edges. The earlier "16:9 radar clipped" (s6426) did not reproduce at s6428 build.
 - A mid-run a219 w1024 dump is garbage (partial image + noise rows): dump taken at a width/stride transition, consistent with the dump-mislabel hypothesis (H-dumpmislabel), single-source, not root-caused; flight/late frames are clean so it is cosmetic for the dump tool.
 - Not done: hangar/menu at 21:9 recheck; contact sheet for owner; harness mission detector for wide widths. Views in scratch/agent/m6/s6429_view/.
+
+## Session 6431 (2026-10-27) — wide-arm false negative root-caused; owner aspect sheet built
+- s6428 wide arms (a169/a219) logged "allattempts-failed": NOT a game fault. The soak passed MISSION_RE=ZZZ (never matches) because wide framebuffer origins move, so m6_god_common.sh always reported nomission. Fixed in scratch/agent/m6_god_common.sh: new MISSION_WIDTH=<w> gate (>300 rows of width=<w>); positive control on existing a219 log: 234884 rows of width=1024 (a169: 153904 of width=796). Future wide recipes: MISSION_WIDTH=796 (16:9) / 1024 (21:9) instead of MISSION_RE=ZZZ.
+- 21:9 menu/title frames (w640 range) are centred 640x448, no garble (fb_0000045 checked).
+- Owner sheet: scratch/agent/m6/s6429_view/owner_sheet_43_169_219.png (4:3 / 16:9 / 21:9, different poses). NEW DATA: 16:9 frame shows a flat sky-blue rectangle floating over the terrain edge; 21:9 frame shows a terrain hole at the left-centre. Both are plausible missing-terrain at widened frustum edges (single-frame, single-source; not yet measured over frames).
+- ORIGIN: harness fix only, no game guard added.

@@ -1,3 +1,4 @@
-# NEXT: G1d owner contact sheet + 21:9 menu/hangar recheck, then G1e frame-rate
+# NEXT: G1d wide-edge terrain holes, then G1e frame rate
 HYPOTHESIS-ID: g1d-widescreen
-s6428 verify folded (s6430): logo centred, 16:9/21:9 flight fine. Remaining G1d: (1) 21:9 hangar/menu frames from scratch/agent/m6/g1_lvl1s6428_a219/fbd (w640 range) - check centring/garble; (2) build owner contact sheet 4:3/16:9/21:9 same pose (a43/a169/a219 late frames, s6429_view); (3) fix wide-arm detection in g1_level_coverage_common.zsh so 'allattempts-failed' stops being a false negative. Then G1e: measure distinct framebuffers/sec per level with the G1b instrument.
+s6431: wide-arm harness false negative fixed (use MISSION_WIDTH=796|1024 in wide recipes). Owner sheet built (scratch/agent/m6/s6429_view/owner_sheet_43_169_219.png).
+Open datum: 16:9 flat sky-blue rectangle near terrain edge, 21:9 terrain hole left-centre. Work unit: count in fbd dumps (a169/a219, w796/w1024 frames) how many frames show such holes; H-cull (terrain cell footprint / frustum x-widening excludes cells at the edge), H-pool (dd1 pool too small for wide footprint), H-retail (4:3 control shows same). Compare same frames to a43 control; then G1e (distinct framebuffers/sec per level).

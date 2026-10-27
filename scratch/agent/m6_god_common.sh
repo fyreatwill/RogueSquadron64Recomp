@@ -48,7 +48,10 @@ for att in 1 2 3 4 5; do
   for n in $(seq 1 ${WAITN:-30}); do
     sleep 5; kill -0 $p 2>/dev/null || break
     [ $((n%6)) -eq 0 ] && key 6
-    if [ "${MISSION_WIDE_FLIGHT:-0}" = 1 ]; then
+    if [ -n "${MISSION_WIDTH:-}" ]; then
+      # s6431: wide-aspect arms move the framebuffer origins (MISSION_RE=ZZZ never matched -> false nomission); gate on sustained flight-width rows instead.
+      [ "$(grep -ac "width=${MISSION_WIDTH}\\b" $L)" -gt 300 ] && { mt=$SECONDS; break; }
+    elif [ "${MISSION_WIDE_FLIGHT:-0}" = 1 ]; then
       # Route gate: allocator-independent wide flight plus the phase-5 writer witness.
       grep -aqE 'width=796' $L &&
         grep -aq '\[f5-phase5-target-store\]' $L && { mt=$SECONDS; break; }
