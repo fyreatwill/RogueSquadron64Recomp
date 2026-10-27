@@ -151,6 +151,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
+- s6463: lvl10 route failures (s6461 dd4, s6463 dd1 control) = recipes missing ROGUESQ_FORCE_PLANET_UNLOCK=0xFF, not dd (single-source until s6463_dd4/s6464_dd1 lvl10 pass). Both requeued with the export.
 - s6462: dd6 lvl1 300 s hold CLEAN (0 stalls/crashes). dd4 lvl10 (s6461) = route failure (5 attempts bounced menus 6DD280/6BA280, never reached mission; hold untested) + 1 SIGBUS in diagnostic rs64_probe_audio_dma_write (att3, unreproduced, origin unproven). Queued s6463 dd4 lvl10 retry + dd1 control + s6462_dd6_lvl5; fold them, then dd8/next limit.
 - (prior) s6461: G1c phase 2 — fold s6461_dd4_lvl10 and s6462_dd6_lvl1/lvl5 soak verdicts (dd clamp is 6 under ROGUESQ_DD_UNSAFE); find the next binding limit.
 - **s6460**: dd4 FOLDED: lvl1+lvl5 300 s holds clean (multiplier 4 echoed, 0 crashes/stalls/alloc failures, VI mean 61.0, sd_wall 53/60 ms/s). Next: dd4 lvl10 hold, then lift clamp 4.0->6 (apply_s6036_dd.py:7, DD_UNSAFE only) and find the next limit; owner sheet dd1 vs dd4.
