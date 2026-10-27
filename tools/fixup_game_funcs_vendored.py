@@ -37877,6 +37877,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s6061 mallocnull x{_n6061}")
 
+    if p.name == "funcs_10.c":
+        import apply_s6474_subcount as _a6474b
+        text, _n6474b = _a6474b.apply10(text)
+        if _n6474b:
+            changed = True
+            report.append(f"{p.name}: s6474 subcount x{_n6474b}")
+
     if p.name == "funcs_9.c":
         import apply_s6034_gridlog as _a6034
         text, _n6034 = _a6034.apply9(text)
@@ -37888,6 +37895,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6417:
             changed = True
             report.append(f"{p.name}: s6417 meshlog x{_n6417}")
+        import apply_s6474_subcount as _a6474
+        text, _n6474 = _a6474.apply9(text)
+        if _n6474:
+            changed = True
+            report.append(f"{p.name}: s6474 subcount x{_n6474}")
         import apply_s6036_dd as _a6036
         text, _n6036 = _a6036.apply9(text)
         if _n6036:
@@ -41846,6 +41858,7 @@ RS64_REPLAY = [
     "apply_s6027_cellmul.py",
     "apply_s6034_gridlog.py",
     "apply_s6417_meshlog.py",
+    "apply_s6474_subcount.py",
     "apply_s6036_dd.py",
     "apply_s6418_farclip.py",
     "apply_s6037_ddclamp.py",
