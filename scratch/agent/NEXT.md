@@ -1,8 +1,5 @@
-# NEXT: fold s6367 spike-dmem soak (G3c b)
+# NEXT: G3c(b) spike pinned-Y: stale slot vs ucode constant
 HYPOTHESIS-ID: g3c-owner-visual-b
-Soak s6367_spike_dmem queued (lvl2, ROGUESQ_LOG_SPIKE=1 ROGUESQ_SPIKE_DMEM=1). Read [spike-dmem] lines in its log (scratch/agent/m6/g1_lvl2s6367spikedmem/run.log or soak_results).
-Per bad tri it logs DMEM hit counts/offsets for pinned Y, apex Y, apex X in s15.2 and s15.16 BE encodings.
-Control: apexY/apexX should hit in some encoding (else format guess wrong -> inspect DMEM vertex layout via docs/F5-UCODE-REFERENCE.md, try other encodings).
-Discriminator: pinY hits at a constant DMEM offset across swaps while apex hits move => stale slot (note offset; compare with VTX-loaded window). pinY with 0 hits while controls hit => value is computed/not resident (H-clip-const).
-Note DMEM is read at submit time, may not equal state during the tri emit.
-Next discriminator (s6367): log VTX DMA dmem dest/len per task, test whether DMEM 0x43A/0x462 fall inside loaded windows on spike tasks (inside=legit data, outside=stale slot). Strengthen moving-value control.
+s6368 fold: pinY=-170.25 (s15.2 -681 = 0xFD57) sits at DMEM 0x43A and 0x462 in 117/120 wedge rows; apexX control hit only 8/120.
+Hypotheses: H-stale-slot (0x43A/0x462 are vertex-buffer slots never rewritten by the VTX DMA), H-ucode-const (value is a ucode/clip constant or scratch written by ucode), H-coincidence.
+Discriminating build (one): in the F5 VTX handler/DMA log dmem dest+len per task, and on non-spike tasks dump the 16-bit at 0x43A/0x462 every task. Outcomes: offsets inside a VTX window and value unchanged for tasks whose window excluded them => stale slot (find which VTX/index references slot); value identical on ALL tasks incl. non-spike and outside any VTX window => ucode constant (then check if the tri path reads it: H-rsp). Control: a known VTX-window vertex word must be seen to change with its DMA.
