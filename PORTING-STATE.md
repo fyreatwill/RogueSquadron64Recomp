@@ -169977,3 +169977,6 @@ Flight-only (fb n>=1500) terrain fraction via tools/g1c_fixed_score.py: tight me
 Mean G1b sd_wall (RSP host ms per s, 240 samples): d1b 69, d3 149, d3lod 170; VI stayed 63-65/s in all arms.
 CAVEAT (single-source, cross-run): ROGUESQ_POSE_LOCK pinned position only at different [poselock] n per arm (x=48.9 / 90.6 / 115.1), so the arms did NOT view-match; the fraction drop at d3 is a pose artifact, not evidence dd3 draws less (s6419 pinned-pose scoring 0.179 vs 0.044 stands). What the run does show: d3lod gives no terrain gain over d3 and costs ~14% more RSP time. DECISION: ROGUESQ_DD_LODSCALE stays out of the ROGUESQ_DRAW_DISTANCE bundle (opt-in only, default off). RSP host cost ~2.2x at dd3 vs dd1 (69->149 ms/s) is the real dd3 price; budget is not breached (VI 60+).
 Next: G1c phase 2 is at its practical limit (dd3 clean on lvl1/5/10); move to G1d state check (ASPECT) per ladder.
+
+## Session 6424 (2026-10-27) — G1d state check; aspect contact-sheet soak queued
+Grepped ledger: ASPECT flight at 16:9/21:9 verified (s6143-s6161: ultrawide terrain fill via s6144 frustum widen, HUD anchor s6155/s6159, no spikes); unverified: menus/hangar at 21:9 and an owner-viewable matched-pose sheet. Wrote scratch/agent/soak_queue/s6424_aspect_sheet.sh (pose-locked 4:3/16:9/21:9 arms, lvl1, FB dumps). No run this iteration; loop will execute it.
