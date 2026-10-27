@@ -3431,6 +3431,31 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
                         sw, a, op, yh, ym, yl, v[0][0], v[0][1], v[1][0], v[1][1], v[2][0], v[2][1], v[3][0], v[3][1], v[4][0], v[4][1], lo, hi);
                 fflush(stderr);
             }
+            // s6367: DMEM search for the pinned (stale?) vertex. Encodings: s15.2 16-bit (y*4) and s15.16 32-bit (y*65536), BE.
+            static const bool dsr = [] { const char *e = std::getenv("ROGUESQ_SPIKE_DMEM"); return e && *e && *e != '0'; }();
+            static uint32_t s_dlog = 0;
+            if (dsr && g_dmem_cur != nullptr && s_dlog < 120) {
+                s_dlog++;
+                auto b = [&](uint32_t o) { return (uint32_t)g_dmem_cur[(o & 0xFFFu) ^ 3u]; };
+                auto find16 = [&](int16_t val, char *out, size_t n) {
+                    size_t k = 0; int cnt = 0;
+                    for (uint32_t o = 0; o < 0x1000; o += 2) if ((int16_t)((b(o) << 8) | b(o + 1)) == val) { cnt++; if (k + 6 < n) k += snprintf(out + k, n - k, "%03X ", o); }
+                    return cnt; };
+                auto find32 = [&](int32_t val, char *out, size_t n) {
+                    size_t k = 0; int cnt = 0;
+                    for (uint32_t o = 0; o < 0x1000; o += 4) if ((int32_t)((b(o) << 24) | (b(o + 1) << 16) | (b(o + 2) << 8) | b(o + 3)) == val) { cnt++; if (k + 6 < n) k += snprintf(out + k, n - k, "%03X ", o); }
+                    return cnt; };
+                const double ys[3] = {ym, v[0][1], v[0][0]};  // pinned y, apex y, apex x
+                const char *nm[3] = {"pinY", "apexY", "apexX"};
+                fprintf(stderr, "[spike-dmem] swap=%d off=%06X task=%u", sw, a, g_e9prov.task);
+                for (int i = 0; i < 3; ++i) {
+                    char h16[96] = "", h32[96] = "";
+                    int c16 = find16((int16_t)lrint(ys[i] * 4.0), h16, sizeof h16);
+                    int c32 = find32((int32_t)lrint(ys[i] * 65536.0), h32, sizeof h32);
+                    fprintf(stderr, " %s=%.2f s15.2:%d[%s] s15.16:%d[%s]", nm[i], ys[i], c16, h16, c32, h32);
+                }
+                fputc('\n', stderr); fflush(stderr);
+            }
         }
         a += len;
     }
