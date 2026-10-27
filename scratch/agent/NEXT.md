@@ -1,6 +1,6 @@
-# NEXT: what does the span-grid consumer do with saturated bytes (0x80/0x7F) at cols>=32?
+# NEXT: does EMPTY fall monotonically to the dd1 level as ROGUESQ_SPANSCALE grows (and does the frame improve)?
 HYPOTHESIS-ID: g1c-span-reject-predicate
 
-s6522: clamp bounds are the fixed signed-byte range (127/-128) in both arms; inputs finite and equal between arms; dd4 pre-clamp values at col>=32 reach -472/344, so 0x80 is a legit saturation (H-clamp-legit selected; bound-swap and input-bad refuted).
-Hypotheses: H-reject-by-design (consumer compares span bytes and rejects saturated cells; retail never reaches col>=32 so it is only a dd>1 artefact), H-scale (dd>1 needs the f22=40 scale / row slope rescaled so values stay in byte range), H-consumer-bug (compare treats -128 incorrectly, e.g. unsigned lb vs lbu).
-Discriminator: locate the consumer load of the grid bytes (lb vs lbu, compare against what) in streamTerrainGridCellsByDistance; log per accept/reject decision at col>=32 for dd4 with the byte value; then an arm that forces f22 /= (dd) to keep values in range and counts EMPTY cells (positive control: dd1 unchanged). If EMPTY drops => H-scale.
+s6523: consumer decoded (skip if A==B==-128; reject if A<rec[3] or rec[4]<B; signed lb). dd4 EMPTY 24% (s1) -> 14% (s4); dd1 0.2%.
+Hypotheses: H-scale (byte range is the limit: EMPTY keeps falling toward 0.2% at s=8/16), H-reject-by-design (plateau near 14%: remaining rejects are real rec-window rejects of far terrain), H-phase-confound (differences are key/phase sampling; compare EMPTY only within matched key ranges).
+Discriminator: copy scratch/agent/s6523_spanscale.sh; arms dd4 s4 / s8 / s16 (tools/apply_s6523_spanscale.py already built in; no rebuild needed) and compute EMPTY fraction per key window 745+ (mission table) only. Also save a framebuffer per arm (fixed pose via POSE_REF) and run the terrain-fraction scorer. Monotone->0 + more terrain pixels = H-scale: bake dd-derived scale into ROGUESQ_DRAW_DISTANCE. Plateau = H-reject-by-design.

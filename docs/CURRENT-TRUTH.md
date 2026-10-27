@@ -11,6 +11,7 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 - M5 audio de-stubbing, M3 idiom audits, generated-symbol renaming, and M6
   first-mission endurance are closed. G4 crash hunting is parked after clean
   coverage. G1 is mission coverage and visual quality, not autopilot work.
+- s6523: consumer decoded (0x80042D50: skip if A==B==-128; reject if A<rec[3] or rec[4]<B; signed lb, so no lb/lbu bug). Saturation at -128 collides with the empty sentinel. ROGUESQ_SPANSCALE=4 (tools/apply_s6523_spanscale.py) cuts dd4 EMPTY 24%->14% (dd1 0.2%): H-scale partial, single-source. Next: s=8/16 + terrain fraction.
 - s6522: span-grid 0x80 bytes at col>=32 are legit byte-clamp saturations (bounds 127/-128 fixed, inputs finite, pre-clamp down to -472); next is the grid consumer compare / value scale.
 - Current owner frontier is G1c's span-filter cell record. Both live
   compares reject dd4 empty cells; the next question is whether cell bytes
