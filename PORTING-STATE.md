@@ -170013,3 +170013,9 @@ Next: fold results, build contact sheet for owner, then G1e.
 - 21:9 menu/title frames (w640 range) are centred 640x448, no garble (fb_0000045 checked).
 - Owner sheet: scratch/agent/m6/s6429_view/owner_sheet_43_169_219.png (4:3 / 16:9 / 21:9, different poses). NEW DATA: 16:9 frame shows a flat sky-blue rectangle floating over the terrain edge; 21:9 frame shows a terrain hole at the left-centre. Both are plausible missing-terrain at widened frustum edges (single-frame, single-source; not yet measured over frames).
 - ORIGIN: harness fix only, no game guard added.
+
+## Session 6432 (2026-10-27) — G1d wide-edge "hole" count: no excess holes vs 4:3 control
+- Scored s6428 fbd dumps (lvl1, pose-locked) with g3c_holes flat-sky scorer, flight-width frames only (a43 w512, a169 w796, a219 w1024), late half. Fraction of frames >0.10: a43 490/553 (89%), a169 325/480 (68%), a219 184/417 (44%); median 0.178/0.126/0.063. The wide arms do NOT exceed the 4:3 control, so the sky-hole score is dominated by legitimate sky (craft climbing); it cannot separate holes from sky on this pose set (positive control fired 0.1256 earlier but the discriminator is too weak for natural sky).
+- Viewed the top-scoring 21:9 frames: genuine sky/clouds with terrain along the bottom, no sky-coloured rectangle cut into terrain. Visible instead: thin horizontal streak lines near the horizon in 3 of 4 (spike-class lines, G3b/CULL_SPIKE territory, present in 4:3 retail class too per s6085/s6405).
+- Conclusion (single-source, visual + scorer): the s6431 owner-sheet rectangle/hole is not reproduced as a recurring defect in the s6428 dumps; treated as a one-frame datum, H-cull/H-pool not supported. Not closed with a positive-controlled hole detector.
+- Added tools/g1d_hole_count.py. ORIGIN: analysis tool only, no game guard.

@@ -148,6 +148,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
+- s6432: G1d wide-edge holes NOT reproduced in s6428 dumps (wide arms no worse than 4:3 control; tools/g1d_hole_count.py). Treat as one-frame datum; move on to G1e (distinct framebuffers/sec per level).
 
 - s6427: 320-wide cams no longer vpw-scaled (logo shifted +78 at 16:9); soak s6427_aspect_menufix queued - fold, check fb_0000303 centred, then radar clip.
 - G1d (s6430): s6428 verify soak FOLDED: logo centred at 16:9 (pixel diff vs 4:3 identical rows 0-320), 16:9 (796x448) and 21:9 (1024x448) flight fill frame with HUD at edges, radar unclipped; harness reports allattempts-failed for wide arms (4:3-keyed detector, not crashes). Remaining: hangar/menu 21:9 recheck, owner contact sheet, then G1e. OLD NOTE: s6428 cam-scale fix is built; soak_queue/s6428_aspect_verify.sh queued (a43ref/a43/a169/a219 pose-locked, lvl1). Fold it: logo centring, 16:9 radar clip, w640 late-dump noise (dump-stride mislabel vs real menu stride; re-read at w796, a43 = control). Earlier note (s6426) that menu garble is a wide-FB stride defect is now UNVERIFIED: s6427 showed the logo shift was camera scaling, and part of the garble may be dump-at-wrong-stride. Then contact sheet for owner, hangar 21:9, G1e.
