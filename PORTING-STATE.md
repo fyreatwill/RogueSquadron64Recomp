@@ -168977,3 +168977,4 @@ Rules out: H-camrel (position is absolute and smooth). Supports: fade centre = (
 Next: validate the cell scale (regress AA94 cell stash vs camX/Z/12.8), then ROGUESQ_EDGE_FADE with that centre.
 Discrimination: this run SELECTS H-matrix and REFUTES H-camrel / H-none (s6320 NEXT.md table): camera position is absolute, smooth, and readable live, so a camera-centred fade is feasible.
 Next discriminator: H-scale12.8 vs H-other — regress the AA94 cell stash circular mean against camX/Z divided by candidate scale s; the s with minimum residual wins, s=1.0 is the positive control (must be worse).
+Summary: this selects H-matrix and refutes H-camrel; the next regression will discriminate cell scale candidates.
