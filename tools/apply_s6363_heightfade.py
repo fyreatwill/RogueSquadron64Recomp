@@ -18,13 +18,14 @@ BASE = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledF
 MARK = "PATCH: s6363 heightfade"
 
 HOOK = (
-    '    { /* PATCH: s6363 heightfade */ extern float rs64_s6363_f; extern int rs64_s6363_y; static int en = -1, yc = 0, hz = 0, lg = 0; static unsigned n = 0, ring = 0;\n'
+    '    { /* PATCH: s6363 heightfade */ extern float rs64_s6363_f; extern int rs64_s6363_y; extern unsigned rs64_s6363_k; static int en = -1, yc = 0, hz = 0, lg = 0; static unsigned n = 0, ring = 0, nz = 0, nh = 0; static double fmax = 0;\n'
     '      if (en < 0) { en = 0; const char* e = getenv("ROGUESQ_EDGE_FADE_R2_Y"); const char* c = getenv("ROGUESQ_EDGE_FADE_R2_YC"); lg = getenv("ROGUESQ_EDGE_FADE_R2_YLOG") ? 1 : 0; if (e && *e) { hz = atoi(e); en |= 1; rs64_s6363_y = 1; } if (c && *c) { yc = atoi(c); en |= 2; } }\n'
     '      uint32_t sp6363 = U32(ctx->r2);\n'
     '      if (en && sp6363 >= 0x80000000u && sp6363 < 0x807FFFC0u) { uint32_t dst = 0x80FF0000u + (ring++ & 2047u) * 32u; int v[25]; int sum = 0;\n'
     '        for (int q = 0; q < 25; q++) { v[q] = (uint8_t)MEM_B(q, (int64_t)(int32_t)sp6363); sum += v[q]; }\n'
     '        double f = (en & 1) ? rs64_s6363_f : 0.0; int target = (hz < 0) ? sum / 25 : hz;\n'
     '        for (int q = 0; q < 25; q++) { double x = v[q] + (target - v[q]) * f + ((en & 2) ? yc : 0); if (x < 0) x = 0; if (x > 255) x = 255; MEM_B(q, (int64_t)(int32_t)dst) = (int8_t)(uint8_t)x; }\n'
+    '        if (f > 0.0) nz++; if (f > 0.99) nh++; if (f > fmax) fmax = f; if (lg && n >= 40u && (n % 2000u) == 0u) fprintf(stderr, "[heightfade-stat] n=%u nz=%u nh=%u fmax=%g k=%u\\n", n, nz, nh, fmax, rs64_s6363_k);\n'
     '        if (lg && (n < 40u || (n % 20011u) == 0u)) fprintf(stderr, "[heightfade] n=%u src=%08X f=%g tgt=%d v0=%d v12=%d v24=%d\\n", n, sp6363, f, target, v[0], v[12], v[24]);\n'
     '        n++; ctx->r2 = (gpr)(int32_t)dst; } }\n'
 )
@@ -51,9 +52,9 @@ def apply10(text):
     j = text.find(old, i)
     if j < 0 or j - i > 3000:
         return text, 0
-    new = old[:-1] + " rs64_s6363_f = (float)f; /* PATCH: s6363 fexport */\n"
+    new = old[:-1] + " rs64_s6363_f = (float)f; rs64_s6363_k++; /* PATCH: s6363 fexport */\n"
     k = text.find("RECOMP_FUNC", 0)
-    defs = "float rs64_s6363_f = 0.0f; int rs64_s6363_y = 0; /* PATCH: s6363 fexport */\n"
+    defs = "float rs64_s6363_f = 0.0f; int rs64_s6363_y = 0; unsigned rs64_s6363_k = 0; /* PATCH: s6363 fexport */\n"
     t = text[:j] + new + text[j + len(old):]
     # suppress the colour tint when the geometry arm owns the fade
     s = "if (en6328 && f > 0.0) for (int q = 0; q < 3; q++)"
