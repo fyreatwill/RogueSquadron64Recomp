@@ -169589,3 +169589,15 @@ comparison, followed by one deterministic capture only if it identifies a
 route/input mismatch.
 
 ORIGIN: no mitigation; retry checkpoint documentation only.
+
+## Session 6383 (2026-10-26) — compacted CURRENT-TRUTH and preserved the FD57 route audit
+
+Maintenance iteration. The mandated size check found `docs/CURRENT-TRUTH.md`
+at 60,884 bytes. I did not build or run an experiment. The active handoff was
+rewritten to 4,389 bytes, removing 245 lines of duplicated historical backlog
+and stale closed-thread detail; durable history remains in
+`docs/PROJECT-OVERVIEW.md`, `PORTING-STATE.md`, and the named evidence files.
+The active next work unit remains the bounded s6378-versus-s6380 route audit;
+no G3c clamp hypothesis changed and no mitigation was added.
+
+ORIGIN: no mitigation; maintenance compaction only.

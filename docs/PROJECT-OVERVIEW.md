@@ -8037,6 +8037,11 @@ Objective-count writer log built (tools/apply_s5787_objcount_log.py, in fixup); 
 
 ## Archived CURRENT-TRUTH backlog and evidence index (migrated s6111 maintenance)
 
+The s6383 maintenance pass compacted the active handoff from 60,884 bytes to
+4,389 bytes. Its removed historical detail is represented by this archive,
+the chronological ledger, and the existing session-specific evidence files;
+the active frontier is kept only in `docs/CURRENT-TRUTH.md`.
+
 Verbatim per-session Next-steps/evidence lines s5942-s6110 (G1 coverage, G1(d) objectives, G3 pillar stubs, G4 holds, G1b, G1c draw-distance, G1d widescreen). Newest first within the G1c block.
 
 ## Next steps (single monotonic backlog)
