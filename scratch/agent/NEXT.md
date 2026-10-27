@@ -1,5 +1,6 @@
-# NEXT: G1c phase 2 — why does terrain vanish at dd3/dd4?
+# NEXT: fold s6414_dd_pool soak (G1c phase 2, dd3/dd4 terrain missing)
 HYPOTHESIS-ID: g1c-dd-phase2
-Evidence (s6413): pinned, position-matched lvl1 frames: dd1/dd2 draw the near mountain, dd3/dd4 draw none (view/s6413/sheet2.png).
-Hypotheses: H-chunk (display-list chunk supply exhausted at dd>=3, terrain DLs dropped), H-pool (terrain tile pool/grid dims s6035 overflow or wrap), H-cap (ucode iteration cap / tri budget hit; cap already 65536 at dd>1), H-cull (far/near clip scaled wrongly so near tiles culled).
-Discriminator: one build, reuse tools/ s6412_attpin recipe (dd1,dd2,dd3,dd4), log per VI in flight: DL chunk alloc count/fail count, terrain tiles submitted, tri count, ucode cap fires. Positive control: dd1 vs dd2 tri count rises. Whichever counter diverges at dd3 selects the hypothesis; fix its root cause (grow arena above 0x80800000 per G1c phase 2 plan) rather than guarding.
+Read SOAK-RESULTS s6414_dd_pool and scratch/agent/m6/g1_lvl1s6414_{d1b,d2,u3}/run.log (grep the DLPOOLLOG lines, `[s6098`). Restrict to the pose-matched window (early flight, same as view/s6413/sheet2.png frames).
+- u3 pool length drains toward 0 while d1b/d2 flat: H-chunk. Name the consumer (see s6097: ~33 chunks/begin dd1, ~60 dd3), fix root cause (bigger pool/arena per G1c phase 2 plan).
+- pool flat in all arms, terrain still missing: H-cull/H-pool/H-cap. Next probe: terrain grid cell count + far-clip at 0x80136DC0 context per dd, from buildVisibleTerrainGridAroundCamera.
+- Positive control: d1 pool length must appear (min ~77). If no lines, DLPOOLLOG did not arm: check funcs_3.c patch is built.
