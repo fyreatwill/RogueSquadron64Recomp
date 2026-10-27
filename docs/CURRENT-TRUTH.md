@@ -160,6 +160,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps — s6468 override (top)
+- **s6483 (top):** flood-fill floats 0x8003A80C/0x8003A810 = 0.8/0.5 vs constant a1=1.0 at all 4 call sites => dead gate, NOT a radius (static reading, single-source). Next: isPointXzWithinRangeOfRef 0x8003A7D4/7D8 values + [rng] in/out at dd1 vs dd3 (NEXT.md).
 - **s6481 (top):** pool row+2 links are written continuously in flight (~83k stores/150 s dd1, 16 PCs; insert-like 0x800487F8, 0x8004B56C; unlink-like 0x80048EB8) via ROGUESQ_POOLWATCH (apply_s6481_poolwatch.py) -> far-cell empty link is runtime-population-bound, not load-time. Next: radius/distance arg of the dominant insert writer (NEXT.md).
 - **s6480 (prev):** link table = pool of 12-byte rows at *0x80136FCC, size n from level data (load_level_hmp 0x80044554); gate = row[cell+0x1E]+2 != FFFF and row[that]+4 == 1. Pool census instrument (apply_s6480_poolcensus.py) was uninformative (free pattern gone, scan unbounded by n). Next: record n at 0x80041EF0 + write-watch sh to row+2 with PC (NEXT.md).
 - **s6479 (top):** populated-cell census: pass cells/window dd1 75 vs dd3 36 while entries 2.5x; cell-pointer extent identical => extra cells added by widening are empty by link (H-data-limit; two arms, single run). Next: who fills table 0x80136FCC link halfwords and is it radius-bounded (NEXT.md).
