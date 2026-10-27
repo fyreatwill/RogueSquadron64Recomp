@@ -170711,3 +170711,6 @@ Result:
 - So 802525E4 is the second level image loaded before the mission, and the s6516 claim "dd4 EMPTY reads a different table" is a phase-sampling artifact: dd1 EMPTY dump rows are keys 2-8, dd4 EMPTY rows are keys 399-499. H-far-layer, H-stale-desc, H-caller-arg all moot (t0 is the constant 0x80136DC0; t0 is set from a1=0x80136DC0 at 0x80042C90).
 - Not yet known: whether dd1 vs dd4 differ in EMPTY rate on the mission table; the dump gate hides keys >499.
 ORIGIN: observation only; no mitigation added.
+
+Discrimination (s6517): REFUTES H-far-layer, H-stale-desc and H-caller-arg (all assumed the descriptor/table differed by arm; it does not - t0 is constant and the base is the level image loaded by load_level_hmp, same order in both arms). SELECTS H-phase-sampling for the s6516 "different table" observation.
+Next discriminator: print a [span-filter] summary for EVERY keyed return (not only keys <=499), then compare EMPTY/ok counts per table base per arm; H-mission-differs (dd4 EMPTY rate on 802EE7B4 > dd1) is confirmed if the mission-table EMPTY rate differs between arms, H-phase-only if EMPTY appears only on tables 1-2 in both arms.
