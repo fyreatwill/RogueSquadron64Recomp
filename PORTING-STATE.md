@@ -170176,3 +170176,13 @@ ORIGIN: n/a (no mitigation added; analysis tool only).
 
 ## Session 6469 (2026-10-27) — dd2/dd3/dd4 existing dumps are phase-mismatched; pose-pinned dd2/3/4/6 arms queued
 Built tools/g1c_ground_sheet.py (bottom-band non-sky fraction + side-by-side sheet). Ran it on existing unpinned lvl1 dumps (s6407 retail/dd2/dd3/dd4 + s6468p_d8): medians dd1 .59, dd2 .48, dd3 .91, dd4 .91, dd8 .29, but the sheet (scratch/agent/m6/s6469_dd_break_sheet.png) shows each arm in a different flight pose (dd3/dd4 frames show dark ground at low altitude; dd1/dd2/dd8 frames are high and show sky/cliff only). The score therefore tracks camera altitude, not draw distance: NO break point can be concluded from these dumps (iron rule 2). Ground-presence metric has no valid positive/negative control yet. Queued soak_queue/s6469_dd_break_sheet.sh: pose-pinned dd2, dd3, dd4, dd6 reusing the s6468p poseref (dd1/dd8 pinned arms already exist). Next: fold, join with tools/g1c_fbdump_join.py, score + eyeball sheet.
+
+## Session 6470 (2026-10-27) — folded pinned dd arms: triangle count breaks between dd2 and dd3 (960 -> 575), flat from dd3 to dd8
+Folded s6469 soak (rc=0). Per-arm median tri over frames with tri>300 (tricnt, same pinned recipe): dd1 818, dd2 961, dd3 575, dd4 580, dd6 576, dd8 578
+(p90 1129/1130/609/752/610/726). Sheet scratch/agent/m6/s6470_pinned.png (order dd1,dd2/dd3,dd4/dd6,dd8): dd3/dd4 flat sky-blue below the craft,
+dd6/dd8 terrain chunks floating over flat blue; dd1/dd2 solid ground. The ground-presence score (tools/g1c_ground_sheet.py) is NOT usable as a break
+detector (median 0.98 at dd3 despite a ground-less tile; frame poses within an arm vary, min 0.13-0.2 everywhere) — tricnt median is the cleaner signal.
+Finding: break is at dd3, not dd4 (single-source, one run per arm, pinned pose). Contradiction to resolve: s6419/s6422 scored dd3+farclip fix as BETTER
+than dd2 (terrain frac 0.179), and s6446 dd3 holds ran clean — but those were not ROGUESQ_POSE_PIN_POSITION arms. Competing: H-pin (position pin starves
+the view at dd3), H-farclip (fix inactive: gated on MEM 0x80136DC0 in-flight flag, scale dd^2 may overflow), H-real (dd3 genuinely loses ground).
+Queued scratch/agent/soak_queue/s6470_dd3_break_ab.sh: d2ctl, d3nf (NOFARCLIP=1), d3free (no pin), d3pin (repeat). No code changed.

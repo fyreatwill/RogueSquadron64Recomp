@@ -162,6 +162,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 ## Next steps — s6468 override (top)
 **dd>=4 renders with the ground missing (s6468, single-source stills).** Sheets `scratch/agent/m6/s6469_flight_sheet.png`, `s6469_dd4_dd6_dd8_sheet.png`: dd1 solid ground; dd4/6/8 flat sky-blue where ground belongs, terrain chunks floating. The terrain-fraction scorer cannot see this (0.139 vs 0.133). Do not call dd>=4 "clean" on crash-free holds alone. Next: find dd2/dd3 break point with the same joiner (`tools/g1c_fbdump_join.py A B 0x80620000,0x80690000`) AND eyeball sheets; then name which budget drops ground tiles (cell pool / DL / vertex). Hangar at dd8 also shows scanline garbage (unresolved).
 
+- s6470: pinned arms folded: median tri dd1 818/dd2 961/dd3 575/dd4 580/dd6 576/dd8 578 => break is at dd3 in the PINNED recipe (single-source); conflicts with s6419/s6422 (unpinned dd3+fix better). s6470_dd3_break_ab queued (pin vs NOFARCLIP vs repeat).
 - s6469: existing dd2/dd3/dd4 dumps are unpinned (different poses) so the ground score tracked altitude; no break point yet. Pose-pinned dd2/3/4/6 arms queued (soak_queue/s6469_dd_break_sheet.sh -> scratch/agent/m6/g1_lvl1s6469p_*); fold, then use tools/g1c_ground_sheet.py (compare against pinned s6468p_d1 = control, s6468p_d8 = missing).
 
 ## Next steps (single monotonic backlog)

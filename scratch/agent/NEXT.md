@@ -1,7 +1,6 @@
-# NEXT: fold pose-pinned dd2/dd3/dd4/dd6 arms and find where the ground disappears
+# NEXT: fold s6470_dd3_break_ab (d2ctl/d3nf/d3free/d3pin) and decide pin vs farclip vs real
 HYPOTHESIS-ID: g1c-dd8-limit
-
-Queued: soak_queue/s6469_dd_break_sheet.sh (dirs scratch/agent/m6/g1_lvl1s6469p_d2/d3/d4/d6; controls g1_lvl1s6468p_d1 (ground present) and _d8 (missing)).
-Work unit: after the soak lands, `python3 tools/g1c_ground_sheet.py scratch/agent/m6/s6469_pinned.png dd1=..s6468p_d1 dd2=..s6469p_d2 dd3=..s6469p_d3 dd4=..s6469p_d4 dd6=..s6469p_d6 dd8=..s6468p_d8`;
-use tools/g1c_fbdump_join.py to confirm same-phase pairing first. Break at dd N -> test that step's pool/DL/vertex counters
-(LOG_F5_STORE_SHADOW in run.log); no break below dd4 -> dd4 jump is the lever. If a pinned arm fails to pair with d1, the score is invalid again.
+Dirs: scratch/agent/m6/g1_lvl1s6470_{d2ctl,d3nf,d3free,d3pin}. Metric: median tri over tricnt lines with tri>300 (see s6470 entry; dd2 961, dd3 pinned 575).
+Outcomes: d3pin~575 & d3free~960+ -> pin artifact, dd3 fine, redo dd4/6/8 unpinned. d3pin~575 & d3free~575 & d3nf~575 -> real dd3 break, test farclip gate (0x80136DC0)
+and scale overflow. d3nf differs from d3pin -> farclip fix is the lever. d2ctl must reproduce ~960 (control) or the run is invalid.
+Also view a frame from each arm (fbd/fb_*_w512.ppm) rather than trusting the ground score.
