@@ -1,29 +1,17 @@
-# NEXT: are the -38 cell bytes an in-table field
+# NEXT: which descriptor (t0/r8) selects table 802525E4 on dd4 EMPTY returns
 HYPOTHESIS-ID: g1c-span-reject-predicate
 
-s6515 selected H-both. On dd4 EMPTY, every logged return clears through both
-`0x80042D8C` (span -128 < cell+3 -38) and `0x80042DA4` (cell+4 about -38 <
-plane 127). s1 is 42-64% of those clears. dd1 EMPTY and both arms' nonempty
-returns clear only through the first compare, with cell+3 109. The cell
-record that supplies +3/+4 is the open input.
+s6516: cell +3..+5 are constant per table (DA/-38 for 802EE7B4 and 802525E4,
+6D/109 for 80246434), offsets in-table. dd4 EMPTY returns read 802525E4, dd1
+EMPTY read 80246434. Open input: the descriptor pointer r8 (t0) at 0x80042D7C.
 
-One Debug build, one pinned dd1/dd4 run. At the `0x80042D6C` index load
-(`lhu` from s2, masked `0x1FFF`; cell = `[t0+4] + index*30`), log the index,
-table base, cell address, and bytes +0..+5 for s0 clears, s1 clears, and
-passes. Keep `[span-base]`. Do not add a guard or change behavior.
+Hypotheses: H-far-layer (802525E4 is the far/outer-ring table that dd4 auto-far
+enables, so reading it on EMPTY is design), H-stale-desc (t0 for the EMPTY
+pass is left pointing at a previous layer's descriptor), H-caller-arg (the
+caller passes a different descriptor under dd4 scaling).
 
-- H-legit-outer: indices sit inside the table and +3/+4 are stable per index.
-  dd4 EMPTY bytes are about -38; dd1 s0 bytes are 109.
-- H-bad-index: the cell address falls outside the table, so -38 is not a
-  cell field.
-- H-shared-template: one index supplies the -38 bytes for the dd4 EMPTY clears.
-
-A null is invalid unless `[span-base]` fires in both arms, nonempty rows
-still show `npass>0`, and the logged +3 byte reproduces -38 on dd4 EMPTY and
-109 on dd1 s0.
-
-Commands:
-
-    python3 tools/apply_s6516_cell_record.py
-    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/s6516_cell_record.sh
+Single build: log r8, [r8+0..16], caller RA, and the pass index at function entry
+for every keyed return in both arms (with 100% of EMPTY keys, not first 24 rows),
+plus the descriptor owner table (grep who stores 802525E4 into a descriptor).
+Controls: [span-base], [span-pred] npass>0 on ok keys, base 802525E4 present in
+dd1 rows. Reuse tools/apply_s6516_cell_record.py as template; no guard.

@@ -306,19 +306,13 @@ streamTerrainGridCellsByDistance, so the shared cumulative counter is an
 invalid cross-function join even when guest IDs match. H-boundary is selected;
 the exact per-invocation join fix remains to be built.
 
-## Next steps — s6515 cell-record check (top)
-- **s6515 (top):** H-both is selected. dd4 EMPTY clears take both
-  `0x80042D8C` (span < cell+3) and `0x80042DA4` (cell+4 < second plane);
-  dd1 EMPTY and nonempty returns take only the first. Next: at the
-  `0x80042D6C` index load, on the same pinned dd1/dd4 return budget, log the
-  cell index (`lhu & 0x1FFF`), the table base at `[t0+4]`, the cell address,
-  and bytes +0..+5 for s0 clears, s1 clears, and passes. Competing outcomes:
-  H-legit-outer (indices sit in the table and +3/+4 are a stable per-index
-  field; dd4 EMPTY is about -38 while dd1 s0 is 109), H-bad-index (the
-  address falls outside the table), or H-shared-template (one index supplies
-  the -38 bytes). Discriminator: index histogram plus in-table bit, and the
-  logged +3 byte must reproduce -38 on dd4 EMPTY and 109 on dd1 s0.
-  `[span-base]` and nonempty `npass>0` stay the controls. Do not add a guard.
+## Next steps — s6516 table-selection check (top)
+- **s6516 (top):** cell +3/+4/+5 are one constant per table (802EE7B4 and
+  802525E4 = 0xDA/-38, 80246434 = 0x6D/109), offsets all in-table. dd4 EMPTY
+  returns read table 802525E4; dd1 EMPTY returns read 80246434. Next: find the
+  writer/selector of the table descriptor `t0` (r8; `[t0+4]` = base) for the
+  EMPTY invocations in dd4, and what the 802525E4 table is (second terrain
+  layer / far ring?). Retail-legit question: does dd1 ever EMPTY on 802525E4?
 - **s6514 (folded):** the filter reads populated span bytes, then its own
   `0x7F` immediate stamps them. s6515 then showed both compares, not the
   second plane alone, produce the dd4 EMPTY clear.

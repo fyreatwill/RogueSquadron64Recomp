@@ -170689,3 +170689,15 @@ cells (dd1 `npass` 1-22, dd4 `npass` 3-16). The second-plane 127 seen in
 s6514 does clear cells, and so does span < cell+3, on every logged dd4 EMPTY
 return. No guard or default changed. ORIGIN: no mitigation; the counts are
 the game's own compares, and the `0x7F` stamp is unchanged.
+
+## Session 6516 (2026-10-27) — span cell bytes are a per-table field; dd4 EMPTY reads a different table
+
+Ran: tools/apply_s6516_cell_record.py (observation-only `[cell-rec]` at 0x80042D88: key, span, plane, idx, table base `[t0+4]`, cell, off, bytes +0..+5, first 24 per keyed return), Debug build, pinned dd1/dd4 (scratch/agent/s6516_cell_record.sh; logs in scratch/agent/m6/g1_lvl1s6516_dd{1,4}/run.log). Both arms alive, 0 stalls, 0 crashes. Controls: `[span-pred]` fired in both (dd4 EMPTY ns0/ns1 ~220/370 as in s6515; dd1 `ok` npass=1); [cell-rec] 76896 (dd1) / 82199 (dd4) rows.
+
+Result:
+- Offsets are all multiples of 30 inside the table (off 0, 30, 7560...): no bad index (H-bad-index killed).
+- Cell bytes +3,+4,+5 are one repeated value per TABLE: table base 802EE7B4 and 802525E4 carry 0xDA (-38); table base 80246434 carries 0x6D (109). Same bytes in dd1 and dd4, so the -38 is not an arm artifact (H-legit-outer holds: stable per-table field).
+- The difference between arms is WHICH table: dd1 EMPTY returns read cells of base 80246434 (+3 = 109, rejected only by compare 1); dd4 EMPTY returns read cells of base 802525E4 (+3 = -38, rejected by both compares). dd4 `ok` returns still read 80246434. 802525E4 appears in dd1 too (13032 rows) but not in its EMPTY keys.
+- Open: what selects t0 (r8, the table-descriptor pointer) for the dd4 EMPTY invocations, i.e. why EMPTY terrain passes sweep the 802525E4 table.
+Caveat: first 24 rows per key only; table-base-per-EMPTY-key join done by a loose awk join (single-source).
+ORIGIN: observation only; no mitigation added.
