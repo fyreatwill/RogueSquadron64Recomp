@@ -277,3 +277,5 @@ Default stays retail 4:3. Opt-in levers: `ROGUESQ_ASPECT=<w>:<h>` (derives FB_WI
 
 - s6327 (g3c-a): force-red at the 0x8004B910 epilogue (ROGUESQ_EDGE_FORCE_RED) leaves in-flight terrain unchanged (single-source, viewed fb 4002 + red-fraction vs ctl) -> that epilogue is NOT the terrain colour sink; the s6325/6326 radfade hook is misplaced. Next: locate the real vertex-colour writer (see NEXT.md).
 - s6351 G3c(b): replay unrunnable (logs gone, no independent RSP ref, no clip constants in F5 ref); stays opt-in, owner call. Next: (a) writer audit.
+
+- s6353: G3c(a) radfade2 at AA74 positive control PASSED (s6352 ctl flat sky-blue terrain vs dark in log arm). Position stack pair unresolved: only sp+0x44 varies (x-like); s6353 soak tests 0x44/0x48 and 0x44/0x4C. Single-source.
