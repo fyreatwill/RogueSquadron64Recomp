@@ -1,3 +1,3 @@
-# NEXT: G3c(b) spike-line reference check (H-rsp-emu vs H-retail)
+# NEXT: G3c(b) H-rt64 offline model
 HYPOTHESIS-ID: g3c-spike-reference
-Owner contact sheet done (docs/owner_sheet_s6439.png); G3 livery + G5 already closed. Take G3c(b): reopen the knife-spike claim with an independent reference (tools/oracle retail run of lvl1 if reachable, else offline replay of a logged wedge's vertex inputs through a reference RSP vector-op model). Write hypotheses + positive control first; if the oracle cannot reach flight, do the offline VRCP/VRCPH/VCH/VCL check.
+Hypotheses: H-rt64 (RT64 draws wedge coords the RDP would clip/clamp) vs H-retail (hardware RDP draws it too). Take one logged wedge triangle from a ROGUESQ_LOG_SPIKE run (tools/g3c_spike_classify.py), model RDP scissor + s10.2 coordinate limits, and compare to the matching framebuffer dump: wedge visible in dump but fully scissored in the model => H-rt64, fix by clamping/culling in RT64 behind an env flag. Positive control: a synthetic in-screen triangle must pass the model unchanged. If inconclusive, switch to M6 endurance (item 3b).

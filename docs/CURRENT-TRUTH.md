@@ -18,6 +18,8 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
 ## Current frontier: G3c(b) spike-line discriminator
 
+s6440: no retail/LLE reference exists locally (see docs/G3C-SPIKE-REFERENCE.md); H-retail unresolved, H-rt64 (RT64 vs RDP handling of the wedge coords) is the open local lead; CULL_SPIKE stays opt-in.
+
 Session 6378 produced the known FD57 wedge route: a 128-op VU ring showed a
 legitimate near-zero-w clip ratio chain. Session 6379 replayed 90 accumulator
 links with 0 mismatches. The s6380 route audit corrected the prior zero-FD57
