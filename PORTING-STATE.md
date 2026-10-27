@@ -169625,3 +169625,21 @@ Positive controls: both witness streams contain FD57, and replay accumulator
 matches are nonzero with zero accumulator mismatches. Rules out: missing
 positive control and route absence as explanations for s6380. ORIGIN: no
 mitigation; offline audit and replay only.
+## Session 6385 (2026-10-26) — corrected FD57 post-vd replay matches all logged lanes
+
+Ran the bounded offline replay on the corrected s6380long FD57 ring at the
+target `[spike-vu8]` row (`run.log:135075`). The two-row chain produced 8/8
+accumulator matches and 8/8 post-`vd` result matches, with 0 mismatches and 0
+saturated-result matches. The replay's first general 28-row ring still had 29
+result mismatches despite 144/144 accumulator matches, so those mismatches
+remain a separate unqualified-ring issue rather than evidence of bad clamp
+arithmetic. The exact FD57 chain is internally consistent and does not select
+H-rsp-emu-clamp; it does not prove H-clip or H-retail because the logged FD57
+outputs are not saturated and no independent/reference-RSP or retail comparison
+ran this session.
+
+Positive controls: the target witness contains the known FD57 rows and the
+replay matched every target accumulator and result. Rules out: a host post-`vd`
+arithmetic mismatch on this corrected FD57 chain. Next: obtain an
+independent/reference-RSP comparison of the exact vectors before changing the
+emulator or enabling spike culling.

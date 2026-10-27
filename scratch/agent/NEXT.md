@@ -1,8 +1,8 @@
-# NEXT: RUN — post-vd clamp replay on corrected FD57 ring
+# NEXT: RUN — independent/reference-RSP comparison for the FD57 ring
 HYPOTHESIS-ID: g3c-owner-visual-b
 
-The route audit is complete. Do not rebuild or rerun the game before this
-offline replay.
+The corrected post-vd replay is complete. Do not rebuild or rerun the game
+before this comparison.
 
 Use the corrected route witness:
 
@@ -11,21 +11,26 @@ Use the corrected route witness:
 - `scratch/agent/m6/g1_lvl2s6380long/mc_ctl.txt`
 - reference: `scratch/agent/m6/g1_lvl2s6378/run.log`
 
-Run `python3 tools/agent/rsp_vu_replay.py <run.log> <first-spike-vu8-line>`
-for s6380long and the reference ring. Record rows, accumulator mismatches,
-result mismatches, and saturated-result matches. The route audit already passed
-the positive control: s6380long has 155 FD57 `[spike-st]` rows and 546 FD57
-`[spike-vu8]` rows, with `att=1 mission` and the same VI origins as s6378.
+Use the fetched/reference RSP implementation or an existing accurate RSP
+emulator on the exact logged FD57 input vectors from
+`scratch/agent/m6/g1_lvl2s6380long/run.log`; compare lane outputs and clamp
+flags with the 8/8 host replay result. If no reference path can consume these
+captured vectors, record that concrete capability failure and use the owner's
+`ROGUESQ_CULL_SPIKE` decision as the next gate rather than another game run.
+The route audit already passed the positive control: s6380long has 155 FD57
+`[spike-st]` rows and 546 FD57 `[spike-vu8]` rows, with `att=1 mission` and the
+same VI origins as s6378.
 
 Competing hypotheses:
 
-- H-rsp-emu-clamp: replayed post-`vd` results disagree with the logged lane
-  values at the FD57 ring, indicating clamp/ACC semantics are wrong.
-- H-clip: replayed values match and show legitimate saturation from near-zero w;
-  the wedge is a valid clip-path output.
-- H-retail: replay matches, but an independent retail/reference RSP run is
-  still required before calling the visible spike retail-identical.
+- H-rsp-emu-clamp: the independent/reference RSP disagrees with the logged lane
+  values, selecting an emulation/clamp defect.
+- H-clip: the independent/reference RSP agrees and the near-zero-w chain is a
+  legitimate saturated clip-path output.
+- H-retail: the independent/reference RSP agrees, but only a retail emulator
+  frame comparison can establish whether the visible wedge is hardware-faithful.
 
-DISCRIMINATING MEASUREMENT: FD57-ring post-`vd` result replay. Mismatched
-logged results select H-rsp-emu-clamp; matching results with saturated lanes
-select H-clip, while H-retail remains open pending an independent reference.
+DISCRIMINATING MEASUREMENT: independent/reference-RSP lane output and clamp
+flags for the exact FD57 input vectors. Disagreement selects H-rsp-emu-clamp;
+agreement with saturation selects H-clip; agreement without a retail comparison
+leaves H-retail open.

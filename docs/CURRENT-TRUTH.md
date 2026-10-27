@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6384 (2026-10-26).
+Compact operational handoff, maintained after Session 6385 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -13,8 +13,8 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
   coverage. G1 is mission coverage and visual quality, not autopilot work.
 - Current owner frontier is G3c: terrain-edge fade, spike-line ground truth,
   and turning-camera shake. G3c(a) height-byte fade was null; G3c(b)'s VU
-  arithmetic is internally consistent but its clamp discriminator lacks the
-  FD57 positive control in the latest runs.
+  arithmetic is internally consistent and the corrected FD57 replay passes,
+  but independent/reference-RSP ground truth is still open.
 
 ## Current frontier: G3c(b) spike-line discriminator
 
@@ -25,12 +25,15 @@ interpretation: s6380 had a `nomission-att1` retry, then `att=2 mission`, while
 s6380long matched the reference `att=1 mission` route. s6380long recorded 185
 `[spike-st]` rows and 23,680 `[spike-vu8]` rows, including 155 and 546 FD57
 rows respectively. The target positive control therefore passes in both
-witness streams; the post-`vd` clamp replay is the next discriminator.
+witness streams. Session 6385 replayed the corrected FD57 post-`vd` ring:
+2 rows, 8/8 accumulator matches, and 8/8 result matches, with no saturation.
+This rules out a replay arithmetic error in that ring, but does not establish
+retail/reference-RSP equivalence or explain the visible wedge.
 
-The immediate work unit is the post-`vd` replay in `scratch/agent/NEXT.md`,
-using the corrected s6380long FD57 ring. The route audit has already shown the
-positive control in both witness streams, so no new capture is currently
-justified.
+The immediate next work unit is an independent/reference-RSP comparison of the
+FD57 inputs and output, as described in `scratch/agent/NEXT.md`. The route audit
+and target replay both pass their positive controls, so no new capture is
+currently justified.
 
 ## G1 mission coverage
 
@@ -60,23 +63,20 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. Run the post-`vd` replay on the corrected s6380long FD57 ring and classify
-   clamp arithmetic; do not capture another game run unless replay input is
-   insufficient.
-2. Finish G3c(b) with an independent/reference-RSP comparison or owner’s
+1. Finish G3c(b) with an independent/reference-RSP comparison or owner’s
    decision on `ROGUESQ_CULL_SPIKE`; do not infer clamp behavior from the
-   unqualified s6380 run.
-3. Finish G3c(a) only with a phase-gated edge measurement and owner-viewable
+   internally consistent but single-source s6380long replay.
+2. Finish G3c(a) only with a phase-gated edge measurement and owner-viewable
    frames; the height-byte fade arm is closed as ineffective.
-4. Measure the owner-reported turning shake with the retail/FPS60/aspect arms
+3. Measure the owner-reported turning shake with the retail/FPS60/aspect arms
    if it remains actionable; current residual evidence is consistent with
    retail 30-Hz judder.
-5. Then resume G1c draw-distance phase 2, G1d aspect, G1e frame rate, and
+4. Then resume G1c draw-distance phase 2, G1d aspect, G1e frame rate, and
    G5 only in the stated ladder order. G4 and aim/steer work stay parked.
 
 ## Evidence index
 
-Recent session findings are in `PORTING-STATE.md` sessions 6377–6382. Durable
+Recent session findings are in `PORTING-STATE.md` sessions 6377–6385. Durable
 background, closed threads, and the archived long backlog are in
 `docs/PROJECT-OVERVIEW.md`. Queued-soak verdicts are in
 `scratch/agent/SOAK-RESULTS.md`; do not treat a queued repeat soak as a work
