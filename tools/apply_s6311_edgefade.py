@@ -184,6 +184,29 @@ def apply10h(text):
     return text[:e] + EF8_CODE + text[e:], 1
 
 
+EF9_CODE = (
+    '    { /* PATCH: s6328 radfade2 */ static int en6328 = -1, xo6328 = 0x40, zo6328 = 0x48, lg6328 = 0; static double r0_6328 = 0, r1_6328 = 1, hz6328[3] = {0,0,0}; static unsigned n6328 = 0;\n'
+    '      if (en6328 < 0) { en6328 = 0; lg6328 = getenv("ROGUESQ_EDGE_FADE_R2_LOG") ? 1 : 0; const char* e = getenv("ROGUESQ_EDGE_FADE_R2"); if (e && *e) { double a = 0, b = 1, r = 0, g = 0, bb = 0; int xo = 0x40, zo = 0x48; int c = sscanf(e, "%lf,%lf,%d,%d,%lf,%lf,%lf", &a, &b, &xo, &zo, &r, &g, &bb); if (c >= 2) { r0_6328 = a; r1_6328 = b; if (c >= 4) { xo6328 = xo; zo6328 = zo; } if (c >= 7) { hz6328[0] = r; hz6328[1] = g; hz6328[2] = bb; } en6328 = 1; } } }\n'
+    '      if (en6328 || lg6328) { uint32_t cp = (uint32_t)MEM_W(0, (int64_t)(int32_t)0x80138D1Cu); n6328++;\n'
+    '        if (cp >= 0x80000000u && cp < 0x80800000u) { float w[12]; for (int q = 0; q < 12; q++) { uint32_t wi = (uint32_t)MEM_W(0x38 + 4 * q, ctx->r29); memcpy(&w[q], &wi, 4); }\n'
+    '          uint32_t xi = (uint32_t)MEM_W(xo6328, ctx->r29), zi = (uint32_t)MEM_W(zo6328, ctx->r29), cxi = (uint32_t)MEM_W(0x4C, (int64_t)(int32_t)cp), czi = (uint32_t)MEM_W(0x54, (int64_t)(int32_t)cp);\n'
+    '          float xf, zf, cxf, czf; memcpy(&xf, &xi, 4); memcpy(&zf, &zi, 4); memcpy(&cxf, &cxi, 4); memcpy(&czf, &czi, 4);\n'
+    '          double dx = xf - cxf * 0.5, dz = zf - czf * 0.5, d = sqrt(dx * dx + dz * dz), f = (d - r0_6328) / (r1_6328 - r0_6328); if (f < 0) f = 0; if (f > 1) f = 1; f = f * f * (3.0 - 2.0 * f);\n'
+    '          if (lg6328 && (n6328 < 120u || (n6328 % 20011u) == 0u)) fprintf(stderr, "[radfade2] n=%u d=%g f=%g cam=%g,%g w38..64=%g %g %g %g %g %g %g %g %g %g %g %g\\n", n6328, d, f, cxf, czf, w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7], w[8], w[9], w[10], w[11]);\n'
+    '          if (en6328 && f > 0.0) for (int q = 0; q < 3; q++) { double v = (double)(uint8_t)MEM_B(q, ctx->r4); v = v + (hz6328[q] - v) * f; if (v > 255.0) v = 255.0; if (v < 0.0) v = 0.0; MEM_B(q, ctx->r4) = (int8_t)(uint8_t)v; } } }\n'
+    '    }\n'
+)
+
+
+def apply10i(text):
+    """s6328: ROGUESQ_EDGE_FADE_R2=r0,r1[,xoff,zoff[,R,G,B]] radius fade at the proven-live A6C0 AA74 write site (stack-arg float offsets from callee sp); ROGUESQ_EDGE_FADE_R2_LOG=1 dumps 12 stack words."""
+    i = text.find(LABEL2)
+    if i < 0 or "PATCH: s6328 radfade2" in text[i:i + 3000]:
+        return text, 0
+    j = i + len(LABEL2)
+    return text[:j] + EF9_CODE + text[j:], 1
+
+
 if __name__ == "__main__":
     p = BASE / "funcs_10.c"
     t = p.read_text()
@@ -202,6 +225,8 @@ if __name__ == "__main__":
     n += n7
     t2, n8 = apply10h(t2)
     n += n8
+    t2, n9 = apply10i(t2)
+    n += n9
     if n:
         p.write_text(t2)
     print(f"funcs_10.c live patched x{n}")
