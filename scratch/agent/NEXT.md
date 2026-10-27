@@ -1,3 +1,3 @@
-# NEXT: hangar VI height/scissor at ASPECT vs 4:3
-HYPOTHESIS-ID: g1d-aspect-hangar
-s6437 closed the cap question (0 fires both arms). Now: hangar at ASPECT=16:9 vs 4:3 — measure VI origin/height and scissor rows (~340 of 448 seen), using the s6434 hangar219 recipe (scratch/agent/soak_queue/done/s6434_aspect_hangar219*.sh) with a 4:3 control arm in the same soak. Outcomes: rows 340 in wide only -> H-viewport (fix scissor/height in aspect patch); equal in both -> dump artifact (H-dump). Then owner contact sheet, G3 livery diff, G5.
+# NEXT: G3 livery diff (hangar/flight vs retail oracle frame)
+HYPOTHESIS-ID: g3-livery-diff
+s6438 closed hangar rows (full height at 16:9/21:9). Remaining ladder: owner contact sheet (send existing s6434/s6428 fbd frames), G3 livery/in-flight diff vs retail oracle frames (tools/oracle/README.md), then G5. Write hypotheses + discriminator before building.
