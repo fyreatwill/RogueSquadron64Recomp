@@ -169785,3 +169785,26 @@ allocation. The four-arm edge scores from s6391 remain invalid until recomputed
 with phase/flight and positive-control gates rather than a fixed origin.
 
 ORIGIN: no mitigation; this was an isolated measurement and changed no runtime code or defaults.
+## Session 6394 (2026-10-26) — edge table still fails allocator-independent retail gating
+
+Built the Debug target and ran the four requested edge arms concurrently with
+framebuffer dumps and the existing phase-5 writer witness. The first launch
+was invalid because the helper's basic-grep title regex treated the `+` in the
+broad origin pattern literally; it was stopped with SIGKILL. The fixed helper
+accepts the existing autopilot-armed title control and, for widescreen arms,
+requires a 796-pixel VI row plus `[f5-phase5-target-store]` before declaring
+mission onset.
+
+The rerun produced positive framebuffer controls and zero crash markers. The
+aspect-only and combined arms reached 796-pixel rows and each fired 28 phase-5
+target-store rows. Retail and dd2 ended in `allattempts-failed`; their logs
+only reached 512/640-pixel transition rows and did not fire the phase-5 target
+witness under the new gate. Raw scorer output was therefore not a four-arm
+discriminator: retail `edge_excess_med=-0.0876`, dd2 `-0.0238`, aspect
+`-0.0259`, combined `-0.0001`, with terrain controls passing, but only the
+widescreen scores had valid mission-phase evidence. This rules out neither
+fog, grid, nor aspect. It does rule out the stale fixed-origin gate as a
+complete route predicate and shows that the next gate must be per-arm flight
+width, not a single mission origin.
+
+ORIGIN: route-gate harness predicates; no game-data mitigation or default change.

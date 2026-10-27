@@ -1,32 +1,29 @@
-# NEXT: rerun the G3c(a) edge table with a valid wide-flight gate
+# NEXT: rerun G3c(a) with per-arm flight-width gates
 HYPOTHESIS-ID: g3c-edge-arm-route-gate
 
-Build one run recipe containing the four arms from s6391: retail, draw-distance
-2, aspect-only, and combined. Replace the fixed-origin mission gate with a
-phase/flight gate requiring the phase-5 DMA witness, stable wide VI width, and
-the positive framebuffer controls; record each arm's ordered width/origin
-transitions and then compute edge scores only for arms that pass it.
+Run the same four arms from `scratch/agent/s6394_edge_arms.sh`, but make the
+route predicate per-arm: retail and draw-distance=2 must show the phase-5
+target-store witness followed by a stable `width=640` VI flight row; aspect
+only and combined must show the witness followed by `width=796`. Keep the
+positive framebuffer-hash/terrain controls and zero crash/stall checks. Score
+only dumps after the arm-specific gate passes.
 
 Competing hypotheses:
 
-- H-edge-fog: retail and opt-in edge scores remain comparable after the route
-  gate is corrected; scaling haze/fog is the next discriminator.
-- H-edge-grid: the scores track the expanded terrain-cell boundary, so the
-  outer grid ring is the cause.
-- H-edge-aspect: only the widened frustum changes the edge score, implicating
-  aspect exposure rather than draw-distance or fog.
-- H-gate-only: the prior score differences were dominated by invalid route
-  gating and disappear or become stable after accepting allocator-dependent
-  origins.
+- H-edge-fog: dd2 changes edge excess relative to retail at the same width;
+  aspect-only does not change it, and combined follows dd2.
+- H-edge-grid: dd2 and combined share the same edge signature regardless of
+  aspect, indicating the expanded terrain-cell boundary.
+- H-edge-aspect: aspect-only changes edge excess relative to retail, and
+  combined follows aspect-only rather than dd2.
+- H-gate-only: the score ordering collapses or changes once all four arms have
+  valid per-arm flight captures.
 
-DISCRIMINATING MEASUREMENT: one concurrent four-arm run with the same fixed
-camera/framebuffer scorer, but an explicit per-arm pass/fail route table. If
-all four arms pass and the score ordering is stable, it selects among the
-visual hypotheses; if only the previously rejected aspect arm gains valid
-flight evidence or the scores collapse, it selects H-gate-only. Each arm must
-fire its positive controls in the same run.
+DISCRIMINATING MEASUREMENT: one concurrent four-arm run, one build, with the
+phase-5 writer witness and arm-specific width gate. A complete valid table
+selects fog/grid/aspect by score ordering; any arm failing its gate leaves the
+visual hypotheses unevaluable and selects only a route-gate correction.
 
-Use the existing s6391 arm recipe/harness, update only its route predicate to
-accept the observed allocator-dependent wide origins, then run the Debug target
-and the four arms concurrently. Do not change runtime defaults or the visual
-edge code in this unit.
+Exact command: `zsh scratch/agent/s6394_edge_arms.sh` after updating its
+per-arm gate, then run `python3 tools/g3c_edge_score.py` on each gated `fbd`
+directory. Do not change runtime defaults or visual code.

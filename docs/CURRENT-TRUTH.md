@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6393 (2026-10-26).
+Compact operational handoff, maintained after Session 6394 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -74,6 +74,16 @@ rules out H-route-failure and makes the fixed-origin gate stale; the edge-arm
 scores still need a rerun using phase/flight controls instead of an origin
 allowlist.
 
+Session 6394 ran the four-arm table with framebuffer dumps and the phase-5
+writer witness. The first launch exposed a basic-grep regex defect in the
+temporary route helper. After fixing it, aspect-only and combined reached
+796-wide flight and fired 28 phase-5 target-store rows each with no crash
+markers. Retail and dd2 did not pass the mission gate in the concurrent run;
+their raw edge scores (`-0.0876` and `-0.0238`) are invalid alongside the
+valid-but-not-comparable aspect (`-0.0259`) and combined (`-0.0001`) scores.
+The positive terrain controls fired in all dump sets. This confirms the gate
+still needs per-arm flight-width criteria; no visual hypothesis is selected.
+
 Session 6392 completed a bounded M3 audit of host-facing RSP callback inputs.
 `rs64_run_lle_gfx` now rejects null RDRAM, null shared DMEM, or null task before
 locking or staging the task, and the optional audio-object reader rejects null
@@ -110,11 +120,12 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. Rerun the four-arm G3c(a) edge table with a route gate based on stable
-   widescreen flight controls (phase-5/flight evidence and positive framebuffer
-   hashes), not fixed VI origins. Recompute edge scores only after every arm
-   passes that gate. The isolated arm shows that origin is allocator-dependent;
-   the height-byte fade arm is closed as ineffective.
+1. Rerun the four-arm G3c(a) edge table with per-arm flight-width gates: retail
+   and dd2 must reach the stable 640-wide flight row after the phase-5 writer
+   witness; aspect and combined must reach 796-wide flight. Require positive
+   framebuffer hashes and zero crash/stall markers, then score only the gated
+   mission captures. Do not use a fixed VI origin; the height-byte fade arm is
+   closed as ineffective.
 2. Measure the owner-reported turning shake with the retail/FPS60/aspect arms
    if it remains actionable; current residual evidence is consistent with
    retail 30-Hz judder.
