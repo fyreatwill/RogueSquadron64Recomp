@@ -1,3 +1,3 @@
-# NEXT: M6 title->mission endurance (item 3b)
+# NEXT: fold s6442_m6_hold600 soak (3x600 s retail holds lvl1/5/7)
 HYPOTHESIS-ID: m6-endurance
-G3c(b) closed locally (s6441 model: RDP would draw the wedges too; only a human-installed LLE reference resolves H-retail; ask owner). Queue 3 keyed mission-hold soaks (>=10 min) on the s5378 title->mission route, log CRASH/abort and VI stalls >30 s; backtrace each distinct failure.
+Read SOAK-RESULTS.md tail + scratch/agent/soak_results/*s6442*; count CRASH/abort/VI stalls>30s per level. Any failure: lldb/ASan backtrace, name writer, root-cause fix. If clean (3/3), record and take G3c(a) pose-locked arm compare or ask owner re spike reference.

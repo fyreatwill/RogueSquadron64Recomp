@@ -170063,3 +170063,6 @@ ORIGIN: n/a, documentation of a measured inventory; no mitigation added.
 
 ## Session 6441 (2026-10-27) — G3c(b) H-rt64 offline RDP scissor model
 Ran new tools/g3c_spike_rdp_model.py on s6380long ([spike] rows, lvl2 retail 320x240): convex hull of each logged 5-vertex polygon, Sutherland-Hodgman clip to RDP scissor (0,0)-(320,240), Y limit s11.2 check. Positive control (synthetic in-screen tri) = 4050 px exact. Result: 79 flagged, 63 fully clipped away (hardware draws nothing), 16 leave 4-850 px on-screen after scissor (peak swap 1618, 850 px), 0 exceed the RDP Y range. So a hardware RDP given this exact RSP output also rasterises those 16 wedges; RT64 drawing them is not evidence of a renderer-only artifact. H-rt64 NOT supported (single-source: hull is an upper bound on the true triangle shape; no RT64 pixel diff made). H-retail stays unresolved (needs a real LLE reference); CULL_SPIKE stays opt-in.
+
+## Session 6442 (2026-10-27) — M6 endurance: queued 3x600 s retail mission holds (lvl 1/5/7)
+NEXT.md was stale vs CURRENT-TRUTH (ladder items closed); took item 3b. Wrote scratch/agent/soak_queue/s6442_m6_hold600.sh (3 concurrent retail-settings 600 s holds via g1_level_coverage_common.zsh). No game run this session; verdicts arrive via SOAK-RESULTS.md. Rules out nothing yet.
