@@ -1,5 +1,5 @@
-# NEXT: farclip multiplier A/B at dd3 (H-farclip-scale)
+# NEXT: buildGridCellMesh exit-path census (H-bgcm-gate)
 HYPOTHESIS-ID: g1c-dd8-limit
-Established (s6474): per-node emit fraction ~5% at dd2 and dd3 (no dd3-specific bail); meshlog shows list d2max (2400-6400 at dd3) >> DEB4 cutoff (1289 at dd3, 573 at dd2), chain=0 in late rows both arms.
-Hypotheses: H-cutoff-small (cutoff dd^2*base too low vs list d2 range: raising it x2/x4 restores tris at dd3), H-other (tri count unchanged by cutoff -> limit is elsewhere, e.g. later in the chain walk).
-Work: add env ROGUESQ_DD_FARCLIP_MUL (float, default 1) to tools/apply_s6418_farclip.py (extra factor on c.f), regen via fixup, build; queue pinned recipe s6474_sublog.sh style with dd3 x1/x4 (and dd2 x1) + MESHLOG/SUBLOG; compare chain and stripN and per-frame tri count (s6470 metric). Positive control: chain must grow with x4.
+Established (s6475): farclip cutoff x4 grows chain 687->930 but stripN unchanged (18.5 vs 20.0): cutoff refuted. s6474: only ~5% of buildGridCellMesh entries emit strips at dd2 and dd3.
+Hypotheses: H-gate-A (state byte at cell+0x14 / 0x8004B978 gate skips cells: cell flags not set for far cells), H-gate-B (0x8004B9C0/9CC tile-variant gate), H-gate-C (cell geometry not yet mapped / empty).
+Work: via apply_s6474_subcount.py add per-exit counters at each branch leading to L_8004C294 inside buildGridCellMesh (funcs_10.c ~20912+), print in [sublog]; run pinned dd2 vs dd3x4. Outcome: the exit whose count dominates and differs names the lever.
