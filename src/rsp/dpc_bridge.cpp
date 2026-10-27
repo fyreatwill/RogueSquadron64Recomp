@@ -1507,6 +1507,29 @@ static uint32_t g_f5_last_writer_updates = 0;
 static uint32_t g_f5_bulk_control = 0;
 static uint32_t g_f5_bulk_rows = 0;
 
+struct Rs64F5PhaseDma {
+    uint32_t phase = 0;
+    uint32_t start = 0;
+    uint32_t end = 0;
+    uint32_t dmem = 0;
+    uint32_t fnv = 0;
+    uint32_t red_words = 0;
+};
+
+static Rs64F5PhaseDma g_f5_phase_dma[512] = {};
+static uint32_t g_f5_phase_dma_count = 0;
+
+struct Rs64F5PhaseStore {
+    uint32_t phase = 0;
+    uint32_t addr = 0;
+    uint32_t span = 0;
+    uint32_t pc = 0;
+    uint32_t value = 0;
+};
+
+static Rs64F5PhaseStore g_f5_phase_store[2048] = {};
+static uint32_t g_f5_phase_store_count = 0;
+
 struct Rs64F5HostOrderPending {
     uint64_t seq = 0;
     uint32_t phys = 0;
@@ -1542,6 +1565,10 @@ static void rs64_f5_last_writer_update(char width, uint32_t pc,
                            (width == 'H' ? 2u : 4u));
     const uint32_t phys = addr & 0x7FFFFFu;
     std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
+    if (phase == 5u && g_f5_phase_store_count < 2048u) {
+        Rs64F5PhaseStore& event = g_f5_phase_store[g_f5_phase_store_count++];
+        event = {phase, phys, span, pc, value};
+    }
     const uint32_t first = phys >> 2u;
     const uint32_t last = (phys + span - 1u) >> 2u;
     for (uint32_t i = first; i <= last && i < 0x200000u; ++i) {
@@ -1596,6 +1623,11 @@ static void rs64_f5_dump_join(uint32_t phase, uint32_t source, uint32_t bytes,
     uint8_t registration[32] = {};
     uint32_t dma_events = 0, dma_source = 0, dma_len = 0, dma_dmem = 0;
     uint32_t dma_fnv = 0, dma_red_words = 0;
+    uint32_t phase5_dma_events = 0;
+    uint32_t phase5_store_events = 0;
+    uint32_t phase5_red_store_events = 0;
+    uint32_t phase5_first_store_pc = 0;
+    uint32_t phase5_first_store_value = 0;
     for (Rs64F5VtxStoreRange& row : g_f5_vtx_store_ranges) {
         if (row.phase == phase && row.source == source && row.end == source + bytes) {
             std::memcpy(registration, row.registration, sizeof registration);
@@ -1608,14 +1640,35 @@ static void rs64_f5_dump_join(uint32_t phase, uint32_t source, uint32_t bytes,
             break;
         }
     }
+    for (uint32_t i = 0; i < g_f5_phase_dma_count; ++i) {
+        const Rs64F5PhaseDma& dma = g_f5_phase_dma[i];
+        if (dma.phase == 5u && dma.start < source + bytes && dma.end > source)
+            ++phase5_dma_events;
+    }
+    for (uint32_t i = 0; i < g_f5_phase_store_count; ++i) {
+        const Rs64F5PhaseStore& store = g_f5_phase_store[i];
+        if (store.phase != 5u || store.addr >= source + bytes ||
+            store.addr + store.span <= source) continue;
+        ++phase5_store_events;
+        if (!phase5_first_store_pc) {
+            phase5_first_store_pc = store.pc;
+            phase5_first_store_value = store.value;
+        }
+        const uint32_t v = store.value;
+        if (((v >> 24) & 0xFFu) == 0xFFu || ((v >> 16) & 0xFFu) == 0xFFu ||
+            ((v >> 8) & 0xFFu) == 0xFFu) ++phase5_red_store_events;
+    }
     std::fprintf(stderr,
         "[f5-source-transition] phase=%u task=%u vtx=0x%06X..0x%06X registered=",
         phase, task, source, source + bytes);
     for (uint32_t i = 0; i < snapshot; ++i) std::fprintf(stderr, "%02X", registration[i]);
     std::fprintf(stderr, " read=");
     for (uint32_t i = 0; i < snapshot; ++i) std::fprintf(stderr, "%02X", rdram[(source + i) ^ 3u]);
-    std::fprintf(stderr, " dma_events=%u last_dma=0x%06X..0x%06X dmem=0x%03X fnv=%08X red_words=%u\n",
-                 dma_events, dma_source, dma_source + dma_len, dma_dmem,
+    std::fprintf(stderr, " dma_events=%u phase5_dma_events=%u phase5_store_events=%u phase5_red_store_events=%u first_store_pc=0x%08X first_store_value=0x%08X last_dma=0x%06X..0x%06X dmem=0x%03X fnv=%08X red_words=%u\n",
+                 dma_events, phase5_dma_events, phase5_store_events,
+                 phase5_red_store_events, phase5_first_store_pc,
+                 phase5_first_store_value,
+                 dma_source, dma_source + dma_len, dma_dmem,
                  dma_fnv, dma_red_words);
     for (uint32_t p = source; p < source + bytes; p += 4u) {
         const Rs64F5LastWriter& w = g_f5_last_writer[p >> 2u];
@@ -1726,6 +1779,26 @@ extern "C" void rs64_f5_host_bulk_payload(uint32_t phys, uint32_t len,
     if (!rs64_f5_shadow_on() || len == 0u) return;
     const uint32_t start = phys & 0x7FFFFFu;
     const uint32_t end = std::min(start + len, 0x800000u);
+    const uint32_t phase = rs64_phase_ord();
+    if (phase == 5u && g_f5_phase_dma_count < 512u) {
+        Rs64F5PhaseDma& dma = g_f5_phase_dma[g_f5_phase_dma_count++];
+        dma.phase = phase;
+        dma.start = start;
+        dma.end = end;
+        dma.dmem = dmem_addr;
+        dma.fnv = 2166136261u;
+        dma.red_words = 0u;
+        const uint32_t sample = std::min(len, 0x1000u);
+        for (uint32_t i = 0; i < sample; ++i)
+            dma.fnv = (dma.fnv * 16777619u) ^
+                g_dmem_cur[((dmem_addr + i) & 0xFFFu) ^ 3u];
+        for (uint32_t i = 0; i + 2u < sample; i += 4u) {
+            const uint8_t r = g_dmem_cur[((dmem_addr + i) & 0xFFFu) ^ 3u];
+            const uint8_t g = g_dmem_cur[((dmem_addr + i + 1u) & 0xFFFu) ^ 3u];
+            const uint8_t b = g_dmem_cur[((dmem_addr + i + 2u) & 0xFFFu) ^ 3u];
+            dma.red_words += r == 0xFFu && (g == 0u || b == 0u);
+        }
+    }
     static uint32_t rows = 0;
     std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
     for (Rs64F5VtxStoreRange& row : g_f5_vtx_store_ranges) {

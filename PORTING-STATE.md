@@ -169249,3 +169249,22 @@ game process was SIGKILLed, so no 130-second endurance claim is made. No
 mitigation was added. Next is the same witness extended across the phase-5 to
 phase-6 boundary, retaining the same hypothesis slug and controls.
 ORIGIN: source-transition measurement; no mitigation.
+
+## Session 6342 (2026-10-26) — extended source transition across phase 5
+
+The existing phase-6-only witness could not answer the prescribed phase-5
+discriminator, so `src/rsp/dpc_bridge.cpp` was extended with capped phase-5
+host-DMA retention and phase-5 guest-store event retention. The first fixed
+arm built cleanly and reached mission in 7 seconds, then held 130 seconds
+with `alive_at_end=1`, zero 30-second VI stalls, zero crash lines, and all
+VTX/store/bulk/forced-red controls firing.
+
+The 128 transition rows reported zero phase-5 DMA overlaps for the sampled
+red ranges. Existing last-writer joins still identified phase-5 PC
+`0x8000D114`, but its values were pointer/list-shaped rather than red colour
+payload. The fixed-prefix phase-5 store table saturated before matching rows
+were retained (`phase5_store_events=0` for those ranges), so the null is not a
+discriminator. This rules out the sampled phase-5 DMA path and the named list
+writer as the red-byte writer, but leaves the earlier population/copy boundary
+open. No mitigation was added.
+ORIGIN: source-transition instrumentation; no mitigation.
