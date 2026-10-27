@@ -11029,6 +11029,7 @@ static void rs64_g1d_apply_aspect_policy() {
     char b[32];
     std::snprintf(b, sizeof b, "%d", fbw);
     setenv("ROGUESQ_FB_WIDTH", b, 0);
+    if (fbw > 796) setenv("ROGUESQ_OSMEM_MB", "12", 0);  // s6425: 21:9 (w1024) framebuffers exhaust the 8 MB heap -> level-1 load_level_hmp NULL-dst crash (s6424 a219 3/3); 16:9 fits in 8 MB
     std::snprintf(b, sizeof b, "%.4f", fbw / 512.0);
     setenv("ROGUESQ_VPW_SCALE", b, 0);
     setenv("ROGUESQ_ASPECT_SCALE", b, 0);
