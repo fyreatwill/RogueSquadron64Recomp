@@ -169670,3 +169670,22 @@ defect, a legitimate clip-path wedge, or a retail-faithful artifact. The owner
 must either approve `ROGUESQ_CULL_SPIKE=1` as an opt-in mitigation with retail
 defaults unchanged, or provide a usable independent/reference-RSP path. No
 runtime change was made. ORIGIN: no mitigation; owner decision required.
+
+## Session 6388 (2026-10-26) — locally satisfied the reference-RSP block
+
+The owner-gate block from s6387 was treated as an unverified claim. The cxd4
+source was already present locally, so route 2 was attempted before any owner
+decision or game run. The earlier offline comparator's apparent crash was an
+integration/parser defect: the run log interleaves `[spike-vu8]` records with
+other diagnostics, while the old parser assumed a contiguous block.
+
+Added `tools/agent/cxd4_vu_replay.c`, which builds the independent cxd4 scalar
+VU implementation and parses bounded records defensively. Feeding the exact
+FD57 witness window from `scratch/agent/m6/g1_lvl2s6380long/run.log` produced:
+`rows=4 accCompared=24 accMismatches=0 fd57=1 malformed=0`; stderr also records
+cxd4 independently producing `FD57` on VMADH lane 1. The target positive
+control therefore passes, and the cxd4 accumulator/result agrees with the
+runtime witness. This refutes the RSP-emulation/clamp-disagreement hypothesis.
+Retail visual fidelity remains unproven, so `ROGUESQ_CULL_SPIKE` stays opt-in
+and no default changed. The block is resolved; next is the phase-gated G3c(a)
+terrain-edge measurement. ORIGIN: local route-2 unblock.

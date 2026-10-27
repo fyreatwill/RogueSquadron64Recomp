@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6387 (2026-10-26).
+Compact operational handoff, maintained after Session 6388 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -13,8 +13,8 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
   coverage. G1 is mission coverage and visual quality, not autopilot work.
 - Current owner frontier is G3c: terrain-edge fade, spike-line ground truth,
   and turning-camera shake. G3c(a) height-byte fade was null; G3c(b)'s VU
-  arithmetic is internally consistent and the corrected FD57 replay passes,
-  but independent/reference-RSP ground truth is still open.
+  arithmetic is internally consistent, the corrected FD57 replay passes, and
+  the independent cxd4 scalar replay agrees with the target chain.
 
 ## Current frontier: G3c(b) spike-line discriminator
 
@@ -34,11 +34,14 @@ the offline comparator segfaulted reproducibly around parsed row 95 after
 consuming 88 rows; it never reached a valid FD57 comparison. The Ares-derived
 header path is the runtime implementation and is not independent ground truth.
 
-The independent comparison is currently capability-blocked; the route audit
-still passes its positive control. Session 6387 did not run another game or
-change code: the next gate remains the owner's `ROGUESQ_CULL_SPIKE` decision.
-Until that decision or a usable independent reference is supplied, no runtime
-conclusion about the wedge's retail fidelity is justified.
+Session 6388 built a fresh scalar cxd4 replay from the already-present
+independent source and fed it the bounded FD57 witness window. It consumed
+four records, matched all 24 consecutive accumulator lanes, and independently
+produced FD57 on the VMADH lane-1 result. The prior comparator block was an
+integration/parser defect caused by interleaved diagnostics in the full log,
+not a missing reference capability. This refutes the RSP-emulation/clamp
+disagreement hypothesis. It does not prove retail visual fidelity, so
+`ROGUESQ_CULL_SPIKE` remains opt-in and the retail default is unchanged.
 
 ## G1 mission coverage
 
@@ -68,17 +71,12 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. Finish G3c(b) with the owner's decision on `ROGUESQ_CULL_SPIKE`; the
-   independent cxd4 comparison is capability-blocked after a reproducible
-   offline comparator crash, so do not infer clamp behavior from the internally
-   consistent but single-source s6380long replay. Do not run the game until
-   the owner chooses the opt-in mitigation or provides a reference path.
-2. Finish G3c(a) only with a phase-gated edge measurement and owner-viewable
+1. Finish G3c(a) with a phase-gated edge measurement and owner-viewable
    frames; the height-byte fade arm is closed as ineffective.
-3. Measure the owner-reported turning shake with the retail/FPS60/aspect arms
+2. Measure the owner-reported turning shake with the retail/FPS60/aspect arms
    if it remains actionable; current residual evidence is consistent with
    retail 30-Hz judder.
-4. Then resume G1c draw-distance phase 2, G1d aspect, G1e frame rate, and
+3. Then resume G1c draw-distance phase 2, G1d aspect, G1e frame rate, and
    G5 only in the stated ladder order. G4 and aim/steer work stay parked.
 
 ## Evidence index
