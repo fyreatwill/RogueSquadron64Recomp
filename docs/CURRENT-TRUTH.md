@@ -307,12 +307,16 @@ invalid cross-function join even when guest IDs match. H-boundary is selected;
 the exact per-invocation join fix remains to be built.
 
 ## Next steps — s6516 table-selection check (top)
-- **s6516 (top):** cell +3/+4/+5 are one constant per table (802EE7B4 and
-  802525E4 = 0xDA/-38, 80246434 = 0x6D/109), offsets all in-table. dd4 EMPTY
-  returns read table 802525E4; dd1 EMPTY returns read 80246434. Next: find the
-  writer/selector of the table descriptor `t0` (r8; `[t0+4]` = base) for the
-  EMPTY invocations in dd4, and what the 802525E4 table is (second terrain
-  layer / far ring?). Retail-legit question: does dd1 ever EMPTY on 802525E4?
+- **s6517 (top, supersedes s6516's open question):** the table base is NOT an
+  arm effect. `[t0+4]` = `[hdr+0x1C]` is stored by `load_level_hmp` (0x80043E64)
+  once per level load: 80246434 (keys 1-130), 802525E4 (keys ~131-744),
+  802EE7B4 (mission, keys 745+; ~2550 calls) - identical order and ~identical
+  key boundaries in dd1 and dd4. The s6516 "dd4 EMPTY reads another table"
+  was a SAMPLING-PHASE confound: the `[span-filter]` dump rows cover keys 2-8
+  (dd1 EMPTY, phase 1) but keys 399-499 (dd4 EMPTY, phase 2). Next: compare
+  EMPTY rate per table per arm over ALL keys (find the dump gate first),
+  especially the mission table 802EE7B4, before reasoning further about the
+  dd4 span reject.
 - **s6514 (folded):** the filter reads populated span bytes, then its own
   `0x7F` immediate stamps them. s6515 then showed both compares, not the
   second plane alone, produce the dd4 EMPTY clear.

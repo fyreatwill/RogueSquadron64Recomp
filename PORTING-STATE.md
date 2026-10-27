@@ -170701,3 +170701,13 @@ Result:
 - Open: what selects t0 (r8, the table-descriptor pointer) for the dd4 EMPTY invocations, i.e. why EMPTY terrain passes sweep the 802525E4 table.
 Caveat: first 24 rows per key only; table-base-per-EMPTY-key join done by a loose awk join (single-source).
 ORIGIN: observation only; no mitigation added.
+
+## Session 6517 (2026-10-27) — terrain descriptor base is the loaded level, not an arm effect
+
+Ran: tools/apply_s6517_desc_owner.py (observation-only `[desc-ent]` at every keyed streamTerrainGridCellsByDistance entry and `[desc-st]` at the 0x80043E64 store), Debug build, pinned dd1/dd4 (scratch/agent/s6517_desc_owner.sh; logs scratch/agent/m6/g1_lvl1s6517_dd{1,4}/run.log).
+
+Result:
+- Descriptor 0x80136DC0: `[+4]` is stored only by `load_level_hmp` (3 stores per run, in both arms): hdr 80245BE0 -> base 80246434 (keys 1-130), hdr 802502B0 -> 802525E4 (keys 131-744), hdr 802EC480 -> 802EE7B4 (keys 745+, 2579 calls dd4 / 2538 dd1). Boundaries match across arms within a few keys. Positive control: the three table bases equal those seen in s6516 cell-rec.
+- So 802525E4 is the second level image loaded before the mission, and the s6516 claim "dd4 EMPTY reads a different table" is a phase-sampling artifact: dd1 EMPTY dump rows are keys 2-8, dd4 EMPTY rows are keys 399-499. H-far-layer, H-stale-desc, H-caller-arg all moot (t0 is the constant 0x80136DC0; t0 is set from a1=0x80136DC0 at 0x80042C90).
+- Not yet known: whether dd1 vs dd4 differ in EMPTY rate on the mission table; the dump gate hides keys >499.
+ORIGIN: observation only; no mitigation added.
