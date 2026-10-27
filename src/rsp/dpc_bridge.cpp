@@ -372,7 +372,7 @@ static std::atomic<uint32_t> g_inline_probe_trigen_boot_lines{0};
 static std::atomic<uint32_t> g_inline_probe_summaries{0};
 static std::atomic<uint32_t> g_inline_probe_phase{0xFFFFFFFFu};
 extern "C" uint32_t rs64_phase_ord(void);
-extern "C" { extern uint32_t rs64_spk_dma_ring[256][3]; extern uint32_t rs64_spk_dma_n; }
+extern "C" { extern uint32_t rs64_spk_dma_ring[256][3]; extern uint32_t rs64_spk_dma_n, rs64_spk_cov43a, rs64_spk_cov462, rs64_spk_ctl; }
 
 static bool log_inline_advance() {
     static const bool enabled = [] {
@@ -3467,7 +3467,7 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
                     const bool c462 = (0x462u >= r[2] && 0x462u < r[2] + r[1]);
                     if (c43a || c462) { ncov++; fprintf(stderr, " [dram=%06X dmem=%03X len=%X%s%s]", r[0], r[2], r[1], c43a ? " c43A" : "", c462 ? " c462" : ""); }
                 }
-                fprintf(stderr, " covering=%u/%u\n", ncov, nall);
+                fprintf(stderr, " covering=%u/%u cum_cov43A=%u cum_cov462=%u cum_ctl500=%u cum_events=%u\n", ncov, nall, rs64_spk_cov43a, rs64_spk_cov462, rs64_spk_ctl, rn);
                 s_ring_prev = rn;
                 fflush(stderr);
             }

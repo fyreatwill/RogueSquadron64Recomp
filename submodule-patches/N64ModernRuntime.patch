@@ -1616,7 +1616,7 @@ index 4276b7d..decf7fc 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..bfc2083 100644
+index 1cb3f6a..b0aa9bc 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,8 +1,16 @@
@@ -2878,9 +2878,9 @@ index 1cb3f6a..bfc2083 100644
 +    uint32_t* r = rs64_s4209_rd[rs64_s4209_n++];
 +    r[0] = dram_addr & 0x007FFFFFu; r[1] = len; r[2] = s; r[3] = d; r[4] = dmem_addr;
 +}
-+extern "C" { uint32_t rs64_spk_dma_ring[256][3]; uint32_t rs64_spk_dma_n; }
++extern "C" { uint32_t rs64_spk_dma_ring[256][3]; uint32_t rs64_spk_dma_n; uint32_t rs64_spk_cov43a, rs64_spk_cov462, rs64_spk_ctl; }
 +extern "C" void rs64_s4239_dma(int dir, uint32_t dram_addr, uint32_t len, uint32_t dmem_addr) {
-+    if (dir == 0) { uint32_t* r = rs64_spk_dma_ring[rs64_spk_dma_n++ & 255u]; r[0] = dram_addr & 0xFFFFFFu; r[1] = len; r[2] = dmem_addr & 0xFFFu; }  /* s6369: DMA-read ring for spike DMEM window test */
++    if (dir == 0) { uint32_t* r = rs64_spk_dma_ring[rs64_spk_dma_n++ & 255u]; r[0] = dram_addr & 0xFFFFFFu; r[1] = len; r[2] = dmem_addr & 0xFFFu; { uint32_t d0 = dmem_addr & 0xFFFu; if (0x43Au >= d0 && 0x43Au < d0 + len) rs64_spk_cov43a++; if (0x462u >= d0 && 0x462u < d0 + len) rs64_spk_cov462++; if (0x500u >= d0 && 0x500u < d0 + len) rs64_spk_ctl++; } }  /* s6369: DMA-read ring for spike DMEM window test */
 +    static int en = -1; static unsigned n = 0; static uint32_t ph_key = 0xFFFFFFFFu;
 +    if (en < 0) { const char* e = getenv("ROGUESQ_S4239"); en = (e && *e && *e != '0') ? (e[0] == '2' ? 2 : 1) : 0; }
 +    if (!en || !rs64_s4208_active) return;
