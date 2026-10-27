@@ -1,6 +1,5 @@
-# Next: fit cell scale on cells that EMIT geometry, not cells visited
+# Next: stop regressing cell ids; get the fade centre from the builder's own loop
 HYPOTHESIS-ID: g3c-owner-visual
-State (s6322): flight camera pos = floats 9,11 at *(0x80138D1C)+0x28 (ptr varies; flight ptr 0x80138458). s6322 regression of VISITED AA94 cells vs cam/s is at random baseline for s=12.8 (AA94 sweeps the whole ring; visited set is not a footprint). tools/g3c_scalefit.py exists.
-Hypotheses: H-scale (some s fits the EMITTING cells, residual <=3 cells) vs H-nonlinear (grid origin is not cam/s; need the build function's own grid origin args).
-Measurement: in AA94 (tools/apply_s6311_edgefade.py), log cell only when the DL write pointer advanced during that cell; run lvl1 dd3 130 s with CAMLOG; rerun g3c_scalefit.py. Positive control: emitting-cell count>0 and its spread is much smaller than the full ring; wrong s stays at baseline.
-If H-nonlinear: log buildVisibleTerrainGridAroundCamera args/locals (grid origin) in camlog and use those as the fade centre.
+State (s6323): builder (0x800437B0) grid coord gl = cam*0.5 at 0x80130C10 (origin 0, k 0.5); AA94 cell ids (a0+0x18/+0x1A) do not linearly track gl (resid sd 12-15 cells, 142 frames). NOTE MEM_W with a literal base needs (int64_t)(int32_t)0xADDRu. [edgefade5] cam= is garbage; use [camlog].
+Hypotheses: H-index (AA94 cell ids are ring/patch-local, wrap or are offset per-frame) vs H-fixedfade (skip the cell mapping entirely: fade by distance of the lit vertex world pos [edgepos] from gl*2 = camera, which s6311 already hooks at 0x8004B644 with pos floats at 0x48($sp)).
+Measurement: use the s6311 [edgepos] world position (x,z) vs camera pos from [camlog] per frame: compute radius histogram of lit vertices; if radius is bounded by a clear edge (~dd3 footprint), fade by that radius directly (no cell mapping). Run lvl1 dd3 with ROGUESQ_G3C_POSLOG=1 + EDGE_FADE_LOG; positive control: radius spans >0 and max radius scales dd1 vs dd3.

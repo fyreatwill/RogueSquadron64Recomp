@@ -127,6 +127,21 @@ def apply10e(text):
     return text[:k] + EF5_LINE + text[k:], 1
 
 
+EF6_LINE = (
+    '        if (lg6315 && ((n6315 % 5u) == 0u) && n6315 < 60000u) { fprintf(stderr, "[edgefade6] n=%u gl=", n6315); for (int q = 0; q < 3; q++) { uint32_t u = (uint32_t)MEM_W(q * 4, (int64_t)(int32_t)0x80130C10u); float fv; memcpy(&fv, &u, 4); fprintf(stderr, "%g,", fv); } fprintf(stderr, "org="); for (int q = 0; q < 3; q++) { uint32_t u = (uint32_t)MEM_W(0x14 + q * 4, (int64_t)(int32_t)0x80136DC0u); float fv; memcpy(&fv, &u, 4); fprintf(stderr, "%g,", fv); } { uint32_t u = (uint32_t)MEM_W(0, (int64_t)(int32_t)0x8003A518u); float fv; memcpy(&fv, &u, 4); fprintf(stderr, "k=%g", fv); } fprintf(stderr, "\\n"); }\n'
+)
+
+
+def apply10f(text):
+    """s6323: log the terrain builder's camera-relative grid origin (0x80130C10 = (cam-org)*k, set at 0x80043840..)."""
+    if 'edgefade6' in text or 'edgefade5' not in text:
+        return text, 0
+    k = text.find('        n6315++; if (lg6315')
+    if k < 0:
+        return text, 0
+    return text[:k] + EF6_LINE + text[k:], 1
+
+
 if __name__ == "__main__":
     p = BASE / "funcs_10.c"
     t = p.read_text()
@@ -139,6 +154,8 @@ if __name__ == "__main__":
     n += n4
     t2, n5 = apply10e(t2)
     n += n5
+    t2, n6 = apply10f(t2)
+    n += n6
     if n:
         p.write_text(t2)
     print(f"funcs_10.c live patched x{n}")

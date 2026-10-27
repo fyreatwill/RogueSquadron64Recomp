@@ -87,6 +87,8 @@ autopilot win are owner playtest scope.
   historical hypotheses are not current work items.
 
 ## Next steps (single monotonic backlog; per-session history archived in PROJECT-OVERVIEW.md, "Archived CURRENT-TRUTH backlog")
+
+- **s6323 (G3c a):** builder grid coord at 0x80130C10 = camera*0.5 (origin 0). AA94 cell ids do NOT linearly track it (resid 12-15 cells). Next: fade by lit-vertex world radius ([edgepos]) from camera, skip cell mapping. See scratch/agent/NEXT.md.
 - s6321 (G3c a): CAMERA POSITION FOUND: struct ptr at 0x80138D1C; +0x28 = 3x3 rotation (9 floats), +0x4C..0x54 = world pos x,y,z (smooth in flight; positive control orthonormal rows). Log: ROGUESQ_G3C_CAMLOG=1 (tools/apply_s6321_camlog.py). Cell scale 12.8 UNVERIFIED. Next: regress AA94 cell stash vs pos/12.8, then edge fade centred on camera. Single-source (one lvl1 run).
 - s6320 (G3c a): RAM-snapshot scan (40 snaps, tools/g3c_ramscan.py) REFUTED a plain float position triple in 8 MB RDRAM (single-source); only triple = timeline ramp 0x8011A8F4. Next: log terrain-pass view matrix translation row (H-matrix) vs H-none.
 - s6318 (G3c a): s6317 cal2 folded. Cell stash works (col/row span 0..63, wrapping = ring-buffer slot indices, not world coords). Floats at 0x80138D20 and 0x80137DBC are CONSTANT garbage across the run: not position records (H-cam/H-pl dead there). Next: fade centre = per-frame circular mean of visited cells mod 64, fade by circular distance; add a frame-boundary marker to the log first.
