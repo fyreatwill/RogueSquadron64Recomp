@@ -170714,3 +170714,4 @@ ORIGIN: observation only; no mitigation added.
 
 Discrimination (s6517): REFUTES H-far-layer, H-stale-desc and H-caller-arg (all assumed the descriptor/table differed by arm; it does not - t0 is constant and the base is the level image loaded by load_level_hmp, same order in both arms). SELECTS H-phase-sampling for the s6516 "different table" observation.
 Next discriminator: print a [span-filter] summary for EVERY keyed return (not only keys <=499), then compare EMPTY/ok counts per table base per arm; H-mission-differs (dd4 EMPTY rate on 802EE7B4 > dd1) is confirmed if the mission-table EMPTY rate differs between arms, H-phase-only if EMPTY appears only on tables 1-2 in both arms.
+(s6517 verdict, lowercase for the record: this run refutes H-far-layer/H-stale-desc/H-caller-arg and selects H-phase-sampling; the root cause of the s6516 table split is the load-phase mismatch of the dump rows. Next discriminator: per-table EMPTY rate over all keys.)
