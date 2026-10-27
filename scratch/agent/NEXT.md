@@ -1,7 +1,9 @@
-# NEXT: qualify the exact-lane host writer/order
+# RESUME: qualify the exact-lane host writer/order
 HYPOTHESIS-ID: g3c-owner-visual
 
-s6337 completed the post-store discriminator. Controls passed; 2,303/2,308
+s6337 completed the post-store discriminator. This checkpoint did not rerun it.
+The existing artifact is `tools/apply_s6336_f5_poststore.py`, and Session 6337
+already records the successful build/run and its logs. Controls passed; 2,303/2,308
 phase-6 VTX join rows had valid post-values, but no red-valued VTX lane matched
 a phase-5 guest-store post-value. The 15 exact matches were zero-valued rows.
 The DD3 level-1 hold was alive for 130 seconds with zero VI stalls/crash lines.
@@ -16,7 +18,7 @@ matching payload selects H-host-write-order; a nonmatching host event followed
 by a red transition selects H-unlogged-bulk; no host event plus a red transition
 at VTX selects H-vtx-copy. Controls must still fire.
 
-Next work unit: add that bounded host-write ordering witness, retaining the
+Next work unit after this checkpoint: add that bounded host-write ordering witness, retaining the
 post-store, VTX, bulk, source-red, and ordinary-store controls. Build and run:
 
 `cmake --build build --config Debug --target RogueSquadron64Recomp`

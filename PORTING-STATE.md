@@ -169168,3 +169168,14 @@ a later VTX-side copy/read ordering. The next unit is an exact-lane host-write
 ordering witness. No mitigation was added.
 ORIGIN: guest-store last-writer attribution; post-store readback is diagnostic
 only and makes no rendering change.
+
+## Session 6338 (2026-10-26) — checkpoint close-out for the host-order witness
+
+This retry did not rerun the s6337 experiment. The existing post-store probe
+(`tools/apply_s6336_f5_poststore.py`) and s6337 ledger entry are the durable
+artifacts. The current conclusion remains: the observed phase-5 guest-store
+last-writer path does not supply the red-valued phase-6 VTX lanes, while the
+next exact-lane host-write ordering witness is still required to distinguish a
+host/DMA writer from VTX-side copy/read ordering. `docs/CURRENT-TRUTH.md`
+already contains that conclusion and needs no factual change. The next run
+must use all existing controls and the command preserved in `scratch/agent/NEXT.md`.
