@@ -169846,3 +169846,9 @@ aspect hypothesis was selected. This rules out route-gate failure, not any
 visual edge cause.
 
 ORIGIN: harness route predicates only; no game-data mitigation or default change.
+
+## Session 6397 (2026-10-27) — phase-aligned G3c(a) edge table: metric not comparable across arms
+
+Scored the s6394 fbd dumps filtered to flight widths only (retail/dd2 w640, aspect/combined w796) with tools/g3c_edge_score.py; positive control PASS on all four. Results: retail frames=245 terrain_med=0.4425 edge_excess_med=-0.1381; dd2 frames=293 terrain_med=0.0346 edge=-0.0018; aspect frames=1449 terrain_med=0.1878 edge=0.0001; combined frames=1447 terrain_med=0.0484 edge=-0.0087.
+Verdict: NOT a discriminator. Whole-frame terrain fraction differs 13x between retail and dd2 on the same level, so the w640/w796 frame sets contain different scene content (w640 likely includes pre-flight/hangar/menu frames; w796 sets are 5-6x larger) and the colour-threshold edge score tracks scene content, not the far edge. No fog/grid/aspect hypothesis selected. Width filtering is insufficient phase alignment; the dumps carry no flight-phase marker.
+Rules out: using width alone as the flight gate. Next: a fixed-camera, phase-gated capture (dump frame indices after phase-5 witness + N VIs, same N per arm) or a direct horizon-profile metric instead of a colour fraction.

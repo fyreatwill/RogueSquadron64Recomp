@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6396 (2026-10-27).
+Compact operational handoff, maintained after Session 6397 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -109,6 +109,11 @@ passed 130s verification, and recorded zero crash lines and zero 30s VI stalls.
 Framebuffer controls passed. Provisional post-flight edge scores were retail
 `-0.0038`, dd2 `-0.0014`, aspect `0.0518`, combined `0.0158`; dump windows
 were not phase-aligned across arms, so no edge hypothesis is selected.
+
+Session 6397 scored the s6394 dumps filtered by flight width: all controls pass but
+terrain_med spans 0.44 (retail) to 0.035 (dd2), so width does not align scene content
+and the colour-fraction edge score is not a discriminator. No edge hypothesis selected;
+next needs a phase-gated fixed-camera capture or a horizon-profile metric.
 
 ## G1 mission coverage
 
