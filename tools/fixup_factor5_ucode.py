@@ -222,6 +222,12 @@ if "factor5_boot(" in text and SILENCE_MARKER not in text:
 # ---------------------------------------------------------------------------
 # Fixup 2: inject iter cap at L_1090 (main ucode only)
 # ---------------------------------------------------------------------------
+if is_main_ucode:
+    # s6435: upgrade already-patched files so ROGUESQ_ASPECT!=4:3 also lifts the cap.
+    _old_cap = 'rs64_cap_v = (e && *e) ? atoi(e) : ((dd && atof(dd) > 1.0) ? 65536 : 16384); }'
+    _new_cap = ('const char *as = getenv("ROGUESQ_ASPECT"); int wide = (as && *as && !(as[0]==\'4\' && as[1]==\':\' && as[2]==\'3\' && !as[3])); '
+                'rs64_cap_v = (e && *e) ? atoi(e) : (((dd && atof(dd) > 1.0) || wide) ? 65536 : 16384); }')
+    text = text.replace(_old_cap, _new_cap)
 ITER_MARKER = "/* fixup: iter cap */"
 R18_MARKER  = "/* fixup: r18 = 0x100 (ucode-state base in DMEM) */"
 if is_main_ucode and ITER_MARKER not in text:
@@ -238,7 +244,7 @@ if is_main_ucode and ITER_MARKER not in text:
     entry_pattern = re.compile(r"(\n    RSP rsp\{\};\n)")
     if entry_pattern.search(text):
         text = entry_pattern.sub(
-            "\\1    static int rs64_cap_v = 0; if (!rs64_cap_v) { const char *e = getenv(\"ROGUESQ_UCODE_CAP\"); { const char *dd = getenv(\"ROGUESQ_DRAW_DISTANCE\"); rs64_cap_v = (e && *e) ? atoi(e) : ((dd && atof(dd) > 1.0) ? 65536 : 16384); } if (rs64_cap_v != 16384) fprintf(stderr, \"[ucode-cap] ROGUESQ_UCODE_CAP=%d\\\\n\", rs64_cap_v); }  /* s6070 */\n"
+            "\\1    static int rs64_cap_v = 0; if (!rs64_cap_v) { const char *e = getenv(\"ROGUESQ_UCODE_CAP\"); { const char *dd = getenv(\"ROGUESQ_DRAW_DISTANCE\"); const char *as = getenv(\"ROGUESQ_ASPECT\"); int wide = (as && *as && !(as[0]=='4' && as[1]==':' && as[2]=='3' && !as[3])); rs64_cap_v = (e && *e) ? atoi(e) : (((dd && atof(dd) > 1.0) || wide) ? 65536 : 16384); } if (rs64_cap_v != 16384) fprintf(stderr, \"[ucode-cap] ROGUESQ_UCODE_CAP=%d\\\\n\", rs64_cap_v); }  /* s6070 */\n"
             r"    int rs64_iter = 0;  " + ITER_MARKER + "\n"
             r"    r18 = 0x100;  " + R18_MARKER + "\n",
             text, count=1)

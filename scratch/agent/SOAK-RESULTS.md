@@ -1204,3 +1204,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261027-044911 | s6427_aspect_menufix | rc=0 | 465s | scratch/agent/soak_results/s6427_aspect_menufix_20261027-044911.log
 20261027-051415 | s6428_aspect_verify | rc=0 | 467s | scratch/agent/soak_results/s6428_aspect_verify_20261027-051415.log
 20261027-053132 | s6433_aspect_hangar219 | rc=137 | 1300s | scratch/agent/soak_results/s6433_aspect_hangar219_20261027-053132.log
+20261027-055516 | s6434_aspect_hangar219 | rc=0 | 546s | scratch/agent/soak_results/s6434_aspect_hangar219_20261027-055516.log
