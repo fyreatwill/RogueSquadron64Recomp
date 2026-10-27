@@ -10672,7 +10672,9 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 if (s_ref_state == 2) {
                     static bool s_ref_logged = false;
                     for (int i = 0; i < 64; i++) {
-                        if (i >= 0x4C / 4 && i < 0x58 / 4) continue;
+                        static int s_pin_position = -1;
+                        if (s_pin_position < 0) { const char* g = std::getenv("ROGUESQ_POSE_PIN_POSITION"); s_pin_position = (g && *g && *g != '0') ? 1 : 0; }
+                        if (!s_pin_position && i >= 0x4C / 4 && i < 0x58 / 4) continue;
                         float f; memcpy(&f, &s_ref[i], 4);
                         const float a = f < 0 ? -f : f;
                         if (!(a >= 1e-6f && a <= 1.0001f)) continue;

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6397 (2026-10-27).
+Compact operational handoff, maintained after Session 6467 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -123,6 +123,16 @@ Session 6399: ROGUESQ_POSE_LOCK=1 (no-input hover, main.cpp) works in all 4 arms
 
 Session 6401: pose-matched contact sheet (scratch/agent/view/s6401/sheet.png) shows sky-coloured holes cut into terrain in dd2 (sawtooth), aspect (rectangle) and combined (wedge) but not retail; outer-column scalars are noise and the s6399 aspect lean is withdrawn. Edge is likely missing geometry, single frame per arm.
 
+Session 6467: the first dd1-vs-dd8 capture used the shared attitude reference but
+the existing pose lock excludes position; at sample n=300 the arms differed by
+about 16 world units, and the contact sheet paired different route phases. The
+fixed version added opt-in `ROGUESQ_POSE_PIN_POSITION=1` and rebuilt cleanly;
+both arms then held 151 s with zero VI stalls/crash lines. Dump ordinal still is
+not a phase key: the attempted sheet still paired title/hangar/craft-select
+frames against flight frames. Terrain scores and that sheet are invalid for
+selecting H-terrain or H-address-limit. Next discriminator must join dumps to
+the logged flight VI/origin, not pair equal dump numbers.
+
 ## G1 mission coverage
 
 Playable levels are 0..18 (`NUM_LEVELS=0x13`; 19 and 20 are sentinels). Levels
@@ -151,6 +161,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
+- s6467: dd8 lvl5 clean (301 s, 0 stalls/crashes); lvl10 was allattempts-failed with no crash marker. First dd1-vs-dd8 owner capture was phase-invalid because pose lock excluded position and dump ordinal is not a route key. Fixed opt-in position pin built and both fresh arms held 151 s clean, but equal dump numbers still paired different phases. Next: add an offline fbdump-to-`[vi]`/origin join and build a genuinely flight-matched dd1-vs-dd8 sheet; only then score terrain/HUD or revisit the 16 MB-limit SIGBUS hypothesis.
 - s6466 (fold): dd8 lvl1 300 s hold clean on att2 (multiplier 8 confirmed in run.log, 0 alloc failures). CORRECTION: att1 was a real SIGBUS in factor5_ucode on the gfx thread (si_addr=0x109c08064, fail_att1.log:215850) at lvl1 start, not a route failure; I first mislabelled it from the soak summary alone. Hypothesis (unverified, 1 of 2 attempts): dd8 data past the 16 MB physical limit the gfx ucode can address. Queued s6467_dd8_lvl5/lvl10. If the SIGBUS recurs: map si_addr to a guest address, carve pools below 0x81000000. Then dd1-vs-dd8 owner contact sheet.
 - s6464 (fold): lvl10 with FORCE_PLANET_UNLOCK=0xFF: dd4 retry (s6463) and dd1 control (s6464) both rc=0, hold 305/300 s, vi_stalls30s=0, crashlines=0 => dd4 qualified on lvl1/5/10; s6463 recipe-omission diagnosis CONFIRMED (two runs, was single-source). The s6461 audio-probe SIGBUS did not recur (unexplained, passive). Queued s6465_dd6_lvl10; then dd1-vs-dd6 owner contact sheet, then lift clamp to dd8 (apply_s6036_dd.py) and soak lvl1.
 - s6463: lvl10 route failures (s6461 dd4, s6463 dd1 control) = recipes missing ROGUESQ_FORCE_PLANET_UNLOCK=0xFF, not dd (single-source until s6463_dd4/s6464_dd1 lvl10 pass). Both requeued with the export.
