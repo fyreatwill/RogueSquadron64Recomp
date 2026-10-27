@@ -297,10 +297,10 @@ index b0d6bef..a1aa4ea 100644
  
  namespace recomp {
 diff --git a/librecomp/include/librecomp/rsp_vu_impl.hpp b/librecomp/include/librecomp/rsp_vu_impl.hpp
-index dbf46b2..f5e6bab 100644
+index dbf46b2..e0c2952 100644
 --- a/librecomp/include/librecomp/rsp_vu_impl.hpp
 +++ b/librecomp/include/librecomp/rsp_vu_impl.hpp
-@@ -20,12 +20,21 @@
+@@ -20,12 +20,24 @@
  // ----------------------------------------------------------------------
  
  #include <cstdint>
@@ -315,14 +315,39 @@ index dbf46b2..f5e6bab 100644
 +
 +// s6376: ring of the last multiply/accumulate ops (lane 1, PRE-op state) lives in main.cpp.
 +extern "C" int rs64_vu_ring_enabled(void);
++extern "C" void rs64_vld_note(uint32_t reg, uint32_t addr, const char* kind);
++extern "C" void rs64_vu_ring_vte(uint32_t reg, const uint16_t* lanes);
 +extern "C" void rs64_vu_ring_push(uint32_t op, uint32_t vd, uint32_t e, uint32_t vs, uint32_t vte, uint32_t h, uint32_t m, uint32_t l);
 +#define RS64_VU_RING(OP, VD, VS, VT, E) do { if (rs64_vu_ring_enabled()) { \
 +    cr128 vte_r = (VT)(E); \
++    { uint16_t vl_[8]; for (int i_ = 0; i_ < 8; i_++) vl_[i_] = (uint16_t)(VT).element(i_); rs64_vu_ring_vte((uint32_t)(&(VT) - &vpu.r[0]), vl_); } \
 +    rs64_vu_ring_push((OP), (uint32_t)(&(VD) - &vpu.r[0]), (E), (VS).u16(1), vte_r.u16(1), ACCH.u16(1), ACCM.u16(1), ACCL.u16(1)); } } while (0)
  #define VCOH vpu.vcoh
  #define VCOL vpu.vcol
  #define VCCH vpu.vcch
-@@ -190,8 +199,8 @@ auto RSP::LFV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -168,12 +180,14 @@ auto RSP::CTC2(cr32& rt, u8 rd) -> void {
+ template<u8 e>
+ auto RSP::LBV(r128& vt, cr32& rs, s8 imm) -> void {
+     auto address = rs + imm;
++    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LBV");
+     vt.byte(e) = RSP_MEM_B(0, address);
+ }
+ 
+ template<u8 e>
+ auto RSP::LDV(r128& vt, cr32& rs, s8 imm) -> void {
+     auto address = rs + imm * 8;
++    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LDV");
+     auto start = e;
+     auto end = std::min(start + 8, 16);
+     for (u32 offset = start; offset < end; offset++) {
+@@ -184,14 +198,15 @@ auto RSP::LDV(r128& vt, cr32& rs, s8 imm) -> void {
+ template<u8 e>
+ auto RSP::LFV(r128& vt, cr32& rs, s8 imm) -> void {
+     auto address = rs + imm * 16;
++    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LFV");
+     auto index = (address & 7) - e;
+     address &= ~7;
+     auto start = e;
      auto end = std::min(start + 8, 16);
      r128 tmp;
      for (u32 offset = 0; offset < 4; offset++) {
@@ -333,7 +358,11 @@ index dbf46b2..f5e6bab 100644
      }
      for (u32 offset = start; offset < end; offset++) {
          vt.byte(offset) = tmp.byte(offset);
-@@ -204,7 +213,7 @@ auto RSP::LHV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -201,16 +216,18 @@ auto RSP::LFV(r128& vt, cr32& rs, s8 imm) -> void {
+ template<u8 e>
+ auto RSP::LHV(r128& vt, cr32& rs, s8 imm) -> void {
+     auto address = rs + imm * 16;
++    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LHV");
      auto index = (address & 7) - e;
      address &= ~7;
      for (u32 offset = 0; offset < 8; offset++) {
@@ -342,7 +371,50 @@ index dbf46b2..f5e6bab 100644
      }
  }
  
-@@ -281,7 +290,7 @@ auto RSP::LUV(r128& vt, cr32& rs, s8 imm) -> void {
+ template<u8 e>
+ auto RSP::LLV(r128& vt, cr32& rs, s8 imm) -> void {
+     auto address = rs + imm * 4;
++    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LLV");
+     auto start = e;
+     auto end = std::min(start + 4, 16);
+     for (u32 offset = start; offset < end; offset++) {
+@@ -221,6 +238,7 @@ auto RSP::LLV(r128& vt, cr32& rs, s8 imm) -> void {
+ template<u8 e>
+ auto RSP::LPV(r128& vt, cr32& rs, s8 imm) -> void {
+     auto address = rs + imm * 8;
++    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LPV");
+     auto index = (address & 7) - e;
+     address &= ~7;
+     for (u32 offset = 0; offset < 8; offset++) {
+@@ -231,6 +249,7 @@ auto RSP::LPV(r128& vt, cr32& rs, s8 imm) -> void {
+ template<u8 e>
+ auto RSP::LQV(r128& vt, cr32& rs, s8 imm) -> void {
+     auto address = rs + imm * 16;
++    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LQV");
+     auto start = e;
+     auto end = std::min((u32)(16 + e - (address & 15)), (u32)16);
+     for (u32 offset = start; offset < end; offset++) {
+@@ -241,6 +260,7 @@ auto RSP::LQV(r128& vt, cr32& rs, s8 imm) -> void {
+ template<u8 e>
+ auto RSP::LRV(r128& vt, cr32& rs, s8 imm) -> void {
+     auto address = rs + imm * 16;
++    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LRV");
+     auto index = e;
+     auto start = 16 - ((address & 15) - index);
+     address &= ~15;
+@@ -252,6 +272,7 @@ auto RSP::LRV(r128& vt, cr32& rs, s8 imm) -> void {
+ template<u8 e>
+ auto RSP::LSV(r128& vt, cr32& rs, s8 imm) -> void {
+     auto address = rs + imm * 2;
++    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LSV");
+     auto start = e;
+     auto end = std::min(start + 2, 16);
+     for (u32 offset = start; offset < end; offset++) {
+@@ -278,16 +299,18 @@ auto RSP::LTV(u8 vt, cr32& rs, s8 imm) -> void {
+ template<u8 e>
+ auto RSP::LUV(r128& vt, cr32& rs, s8 imm) -> void {
+     auto address = rs + imm * 8;
++    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LUV");
      auto index = (address & 7) - e;
      address &= ~7;
      for (u32 offset = 0; offset < 8; offset++) {
@@ -351,7 +423,14 @@ index dbf46b2..f5e6bab 100644
      }
  }
  
-@@ -313,6 +322,7 @@ template<u8 e>
+ template<u8 e>
+ auto RSP::LWV(r128& vt, cr32& rs, s8 imm) -> void {
+     auto address = rs + imm * 16;
++    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LWV");
+     auto start = 16 - e;
+     auto end = e + 16;
+     for (u32 offset = start; offset < end; offset++) {
+@@ -313,6 +336,7 @@ template<u8 e>
  auto RSP::SBV(cr128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm;
      RSP_MEM_B(0, address) = vt.byte(e);
@@ -359,7 +438,7 @@ index dbf46b2..f5e6bab 100644
  }
  
  template<u8 e>
-@@ -323,6 +333,15 @@ auto RSP::SDV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -323,6 +347,15 @@ auto RSP::SDV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset & 15);
      }
@@ -375,7 +454,7 @@ index dbf46b2..f5e6bab 100644
  }
  
  template<u8 e>
-@@ -380,6 +399,7 @@ auto RSP::SFV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -380,6 +413,7 @@ auto RSP::SFV(cr128& vt, cr32& rs, s8 imm) -> void {
          RSP_MEM_B(0, address + (base + 12 & 15)) = 0;
          break;
      }
@@ -383,7 +462,7 @@ index dbf46b2..f5e6bab 100644
  }
  
  template<u8 e>
-@@ -392,6 +412,7 @@ auto RSP::SHV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -392,6 +426,7 @@ auto RSP::SHV(cr128& vt, cr32& rs, s8 imm) -> void {
          auto value = vt.byte(byte + 0 & 15) << 1 | vt.byte(byte + 1 & 15) >> 7;
          RSP_MEM_B(0, address + (index + offset * 2 & 15)) = value;
      }
@@ -391,7 +470,7 @@ index dbf46b2..f5e6bab 100644
  }
  
  template<u8 e>
-@@ -402,6 +423,7 @@ auto RSP::SLV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -402,6 +437,7 @@ auto RSP::SLV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset & 15);
      }
@@ -399,7 +478,7 @@ index dbf46b2..f5e6bab 100644
  }
  
  template<u8 e>
-@@ -416,6 +438,7 @@ auto RSP::SPV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -416,6 +452,7 @@ auto RSP::SPV(cr128& vt, cr32& rs, s8 imm) -> void {
              RSP_MEM_B(0, address++) = vt.element(offset & 7) >> 7;
          }
      }
@@ -407,7 +486,7 @@ index dbf46b2..f5e6bab 100644
  }
  
  template<u8 e>
-@@ -426,6 +449,7 @@ auto RSP::SQV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -426,6 +463,7 @@ auto RSP::SQV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset & 15);
      }
@@ -415,7 +494,7 @@ index dbf46b2..f5e6bab 100644
  }
  
  template<u8 e>
-@@ -438,6 +462,7 @@ auto RSP::SRV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -438,6 +476,7 @@ auto RSP::SRV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset + base & 15);
      }
@@ -423,7 +502,7 @@ index dbf46b2..f5e6bab 100644
  }
  
  template<u8 e>
-@@ -448,6 +473,7 @@ auto RSP::SSV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -448,6 +487,7 @@ auto RSP::SSV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset & 15);
      }
@@ -431,7 +510,7 @@ index dbf46b2..f5e6bab 100644
  }
  
  template<u8 e>
-@@ -462,6 +488,7 @@ auto RSP::STV(u8 vt, cr32& rs, s8 imm) -> void {
+@@ -462,6 +502,7 @@ auto RSP::STV(u8 vt, cr32& rs, s8 imm) -> void {
          RSP_MEM_B(0, address + (base++ & 15)) = vpu.r[offset].byte(element++ & 15);
          RSP_MEM_B(0, address + (base++ & 15)) = vpu.r[offset].byte(element++ & 15);
      }
@@ -439,7 +518,7 @@ index dbf46b2..f5e6bab 100644
  }
  
  template<u8 e>
-@@ -476,6 +503,7 @@ auto RSP::SUV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -476,6 +517,7 @@ auto RSP::SUV(cr128& vt, cr32& rs, s8 imm) -> void {
              RSP_MEM_B(0, address++) = vt.byte((offset & 7) << 1);
          }
      }
@@ -447,7 +526,7 @@ index dbf46b2..f5e6bab 100644
  }
  
  template<u8 e>
-@@ -488,6 +516,7 @@ auto RSP::SWV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -488,6 +530,7 @@ auto RSP::SWV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address + (base++ & 15)) = vt.byte(offset & 15);
      }
@@ -455,7 +534,7 @@ index dbf46b2..f5e6bab 100644
  }
  
  template<u8 e>
-@@ -844,6 +873,7 @@ auto RSP::VLT(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -844,6 +887,7 @@ auto RSP::VLT(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<bool U, u8 e>
  auto RSP::VMACF(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -463,7 +542,7 @@ index dbf46b2..f5e6bab 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -911,6 +941,7 @@ auto RSP::VMACQ(r128& vd) -> void {
+@@ -911,6 +955,7 @@ auto RSP::VMACQ(r128& vd) -> void {
  
  template<u8 e>
  auto RSP::VMADH(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -471,7 +550,7 @@ index dbf46b2..f5e6bab 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -941,6 +972,7 @@ auto RSP::VMADH(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -941,6 +986,7 @@ auto RSP::VMADH(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMADL(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -479,7 +558,7 @@ index dbf46b2..f5e6bab 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -976,6 +1008,7 @@ auto RSP::VMADL(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -976,6 +1022,7 @@ auto RSP::VMADL(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMADM(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -487,7 +566,7 @@ index dbf46b2..f5e6bab 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1013,6 +1046,7 @@ auto RSP::VMADM(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1013,6 +1060,7 @@ auto RSP::VMADM(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMADN(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -495,7 +574,7 @@ index dbf46b2..f5e6bab 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1083,6 +1117,7 @@ auto RSP::VMRG(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1083,6 +1131,7 @@ auto RSP::VMRG(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMUDH(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -503,7 +582,7 @@ index dbf46b2..f5e6bab 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1106,6 +1141,7 @@ auto RSP::VMUDH(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1106,6 +1155,7 @@ auto RSP::VMUDH(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMUDL(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -511,7 +590,7 @@ index dbf46b2..f5e6bab 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1126,6 +1162,7 @@ auto RSP::VMUDL(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1126,6 +1176,7 @@ auto RSP::VMUDL(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMUDM(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -519,7 +598,7 @@ index dbf46b2..f5e6bab 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1150,6 +1187,7 @@ auto RSP::VMUDM(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1150,6 +1201,7 @@ auto RSP::VMUDM(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMUDN(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -527,7 +606,7 @@ index dbf46b2..f5e6bab 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1174,6 +1212,7 @@ auto RSP::VMUDN(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1174,6 +1226,7 @@ auto RSP::VMUDN(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<bool U, u8 e>
  auto RSP::VMULF(r128& vd, cr128& vs, cr128& vt) -> void {
