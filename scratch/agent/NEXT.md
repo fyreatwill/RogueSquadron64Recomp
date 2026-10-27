@@ -1,6 +1,5 @@
-# NEXT: G1c phase 2 - why dd>=3 drops the near mountain (CURRENT-TRUTH item 0, s6413)
-HYPOTHESIS-ID: g1c-dd3-missing-terrain
-Hypotheses: H-pool (a terrain pool/arena sized for dd<=2 overflows at dd3, cells skipped), H-cull (per-cell visibility radius/LOD index wraps or clamps wrongly at dd3), H-dl (DL budget: ruled out by s6409/s6403 cap scaling, keep as control), H-scorer (s6413 single-frame/arm; re-check with several position-matched frames).
-Discriminator: pose-locked (ROGUESQ_POSE_LOCK=1) lvl1 capture dd2 vs dd3 at identical pose, dump per-frame count of terrain cells submitted vs cells in radius; if submitted < expected at dd3 -> H-pool/H-cull (read the allocator failure / skip branch), if equal but pixels missing -> H-dl/ucode.
-Start by reading s6413 in PORTING-STATE (grep 'Session 6413') and tools/apply_s6036_dd.py.
-Closed this session: G3c(c) (s6457 soaks folded, see CURRENT-TRUTH s6458).
+# NEXT: fold s6459 dd4 holds (G1c phase 2: how far can draw distance go)
+HYPOTHESIS-ID: g1c-dd4-limits
+Hypotheses: H-dd4-clean (farclip fix + cap scaling make dd4 hold like dd3), H-heap (guest heap exhausts at dd4, s6062), H-rsp-cost (RSP ms/s makes VI drop below 60).
+Discriminator: fold SOAK-RESULTS s6459_dd4_lvl1/lvl5 logs: run.log 'multiplier 4', crashlines, vi_stalls30s, VI/s, RSP ms/s vs dd3 (~149 ms/s). Clean -> bundle dd4 option + owner sheet; heap/alloc failure -> carve second arena per CLAUDE/G1c phase 2 text.
+Stale item 0 in CURRENT-TRUTH Next steps (dd3 missing mountain) was RESOLVED by s6418 farclip fix; ignore it.
