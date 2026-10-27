@@ -37920,6 +37920,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6477:
             changed = True
             report.append(f"{p.name}: s6477 gatesplit x{_n6477}")
+        import apply_s6480_poolcensus as _a6480
+        text, _n6480 = _a6480.apply9(text)
+        if _n6480:
+            changed = True
+            report.append(f"{p.name}: s6480 poolcensus x{_n6480}")
         import apply_s6036_dd as _a6036
         text, _n6036 = _a6036.apply9(text)
         if _n6036:
@@ -41881,6 +41886,7 @@ RS64_REPLAY = [
     "apply_s6474_subcount.py",
     "apply_s6476_exitcount.py",
     "apply_s6477_gatesplit.py",
+    "apply_s6480_poolcensus.py",
     "apply_s6036_dd.py",
     "apply_s6418_farclip.py",
     "apply_s6037_ddclamp.py",
