@@ -7,7 +7,7 @@ detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 
 ## Headline
 
-- s6325: `ROGUESQ_EDGE_FADE_R=r0,r1[,R,G,B]` radius fade built at 0x8004B910 (centre cam*0.5); 4-arm dd3 soak queued, result pending.
+- s6325: `ROGUESQ_EDGE_FADE_R=r0,r1[,R,G,B]` radius fade built at 0x8004B910 (centre cam*0.5); 4-arm dd3 soak read in s6326: positive control (R=0,1 full black) did NOT darken terrain (dark frac 0.0017 vs nofade 0.0023) -> fade arms uninformative; next verify the epilogue lit-RGB write reaches the drawn colour (force red), and compare RT64 present vs RDRAM readback.
 
 - The qualified route boots attribution, N64 logo, intro, Factor 5 logo, title,
   hangar, and mission origins. Mission input reaches flight code.
