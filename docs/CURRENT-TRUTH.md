@@ -117,7 +117,7 @@ next needs a phase-gated fixed-camera capture or a horizon-profile metric.
 
 Session 6398: the phase-aligned horizon profile (tools/g3c_phase_horizon.py) is also not a discriminator: autopilot camera pose diverges between arms within ~1000 VIs of flight start (viewed frames in scratch/agent/view/s6398/), and retail already scores jump~0.33. Only a pose-locked capture (pinned camera matrix / no-input hover arm, or offline pose-matched frame pairs) can compare arms.
 
-Session 6399: ROGUESQ_POSE_LOCK=1 (no-input hover, main.cpp) works in all 4 arms (s6400_posel.sh); arms share pose within ~0.15 at poselock n=60 and ~5 units at n=570, then drift with sim rate. Score only the early window (dumps from flight start to ~n=600) with tools/g3c_horizon_score.py.
+Session 6399: ROGUESQ_POSE_LOCK=1 (no-input hover, main.cpp) works in all 4 arms (s6400_posel.sh); arms share pose within ~0.15 at poselock n=60 and ~5 units at n=570, then drift with sim rate. Score only the early window (dumps from flight start to ~n=600) with tools/g3c_horizon_score.py. Matched-window scoring: jump_med retail .283 dd2 .217 aspect .314 combined .260 (single-source, weak) - dd-grid not supported, aspect side-edge weak lean.
 
 ## G1 mission coverage
 
