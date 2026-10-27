@@ -163,6 +163,8 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 3. Then resume G1c draw-distance phase 2, G1d aspect, G1e frame rate, and
    G5 only in the stated ladder order. G4 and aim/steer work stay parked.
 
+- s6409: dd3/dd4 (DD_UNSAFE) hold 420 s clean (0 crash/stall) on lvl1; the s6407 '~5% HUD-absent' was a scorer artifact (craft-select + post-mission menu frames); flight-only absent 1/1134, 2/824 (black transitions). No DL truncation at dd3/dd4. Next: pose-locked dd2/dd3/dd4 contact sheet to see whether the terrain gain is visible, then levels 5 and 10 holds (NEXT.md).
+
 ## Evidence index
 
 Recent session findings are in `PORTING-STATE.md` sessions 6377–6385. Durable
