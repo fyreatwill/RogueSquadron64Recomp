@@ -1,5 +1,5 @@
-# NEXT: buildGridCellMesh exit-path census (H-bgcm-gate)
+# NEXT: split the e3 gate (0x8004BB18 vs 0x8004BB34) and sample cell+0x1E for pass vs fail (H-bgcm-link)
 HYPOTHESIS-ID: g1c-dd8-limit
-Established (s6475): farclip cutoff x4 grows chain 687->930 but stripN unchanged (18.5 vs 20.0): cutoff refuted. s6474: only ~5% of buildGridCellMesh entries emit strips at dd2 and dd3.
-Hypotheses: H-gate-A (state byte at cell+0x14 / 0x8004B978 gate skips cells: cell flags not set for far cells), H-gate-B (0x8004B9C0/9CC tile-variant gate), H-gate-C (cell geometry not yet mapped / empty).
-Work: via apply_s6474_subcount.py add per-exit counters at each branch leading to L_8004C294 inside buildGridCellMesh (funcs_10.c ~20912+), print in [sublog]; run pinned dd2 vs dd3x4. Outcome: the exit whose count dominates and differs names the lever.
+Established (s6476): 99.5% (dd2) / 99.95% (dd3) of buildGridCellMesh entries exit at 0x8004BB3C; table 0x80136FCC row[cell+0x1E]: halfword+2 == 0xFFFF (BB18) or linked row halfword+4 != 1 (BB34). Counters sum to entries (control OK).
+Hypotheses: H-link-empty (far cells have cell+0x1E=0 / no link => cells are unpopulated placeholders, i.e. the cell list extends beyond real terrain data), H-link-type (link exists but type !=1 = a different cell kind that is drawn elsewhere), H-index (cell+0x1E is garbage/stale at dd3 because the cell array is reused/overrun).
+Work: extend tools/apply_s6476_exitcount.py: split e3 into BB18 vs BB34 counters; also log (every 30 builds) a histogram of cell+0x1E low byte for failing vs passing cells (first 16 distinct values) and min/max world distance if cheap. Run s6476_exit.sh again (rename s6477). Outcome: if BB18 dominates and +0x1E is constant -> unpopulated cells (H-link-empty; then ask what populates cells: streamTerrainGridCellsByDistance row fill); if BB34 dominates -> inspect row type values; if +0x1E varies wildly only at dd3 -> H-index, find the writer.

@@ -37883,6 +37883,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6474b:
             changed = True
             report.append(f"{p.name}: s6474 subcount x{_n6474b}")
+        import apply_s6476_exitcount as _a6476b
+        text, _n6476b = _a6476b.apply10(text)
+        if _n6476b:
+            changed = True
+            report.append(f"{p.name}: s6476 exitcount x{_n6476b}")
 
     if p.name == "funcs_9.c":
         import apply_s6034_gridlog as _a6034
@@ -37900,6 +37905,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6474:
             changed = True
             report.append(f"{p.name}: s6474 subcount x{_n6474}")
+        import apply_s6476_exitcount as _a6476
+        text, _n6476 = _a6476.apply9(text)
+        if _n6476:
+            changed = True
+            report.append(f"{p.name}: s6476 exitcount x{_n6476}")
         import apply_s6036_dd as _a6036
         text, _n6036 = _a6036.apply9(text)
         if _n6036:
@@ -41859,6 +41869,7 @@ RS64_REPLAY = [
     "apply_s6034_gridlog.py",
     "apply_s6417_meshlog.py",
     "apply_s6474_subcount.py",
+    "apply_s6476_exitcount.py",
     "apply_s6036_dd.py",
     "apply_s6418_farclip.py",
     "apply_s6037_ddclamp.py",
