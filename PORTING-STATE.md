@@ -169371,3 +169371,10 @@ write from an earlier/uninstrumented copy or ordering gap. The run reached
 mission in 8 seconds and held 130 seconds with `alive_at_end=1`, zero VI
 stalls, and zero crash lines. No mitigation was added.
 ORIGIN: phase-5 target-range guest-store/post-store census; no mitigation.
+
+## Session 6349 (2026-10-26) — host-write census: no host write touches the "red" VTX range before phase 7; "red" is likely int16 sign bytes
+Ran: fixed-range census `[f5-hosttgt]` (src/rsp/dpc_bridge.cpp, in rs64_f5_host_write_begin/after, independent of the VTX range registry) for `0x735560..0x7355D0`, one DD3 level-1 EDGE_FORCE_RED arm (g1_lvl1s6349_host_target_write: mission_t=8s, hold 130s, alive, 0 VI stalls, 0 crashlines). Controls fired in-run: `[f5-hosttgt-control]` (first host write = pi_rom_to_rdram, phase 2), `[f5-bulk-control]`, VTX join (`red_words=23/28` at phase 6), 96 target rows.
+Result: all 96 retained target host-write rows are `rsp_dmem_to_rdram` at **phase 7** (after the phase-6 VTX reads); the first overlap in the whole run is seq=1/phase 7. No pi_rom/pi_sram/zmemcpy/phase<=6 host write ever overlapped the range. The phase-7 writes are the RSP writing RDP command bytes (E7/E6/FD/F5 patterns) into the buffer, i.e. the range is reused later. Rules out H-host-target-write and H-order-gap (phase ordering consistent); the bytes are present before any host write: H-earlier-copy/guest-written only.
+Key observation (single-source, from logged bytes): the 0x735560 VTX bytes `FFA4 FEEF FFA4 0000 FFAA FF09 FF6F 0000 FF89 FF09 FF89 0000 ...` are 8-byte groups of int16 values with a 0000 pad, i.e. small NEGATIVE shorts (-92, -273, -86, -247...). The "red" test (any of 3 byte lanes == 0xFF) fires on the 0xFF sign byte of negative coordinates, so the "red boundary bytes" chased s6330-s6348 are plausibly legitimate position data, not a colour corruption. Not yet confirmed against the F5 vertex layout.
+ORIGIN: no mitigation added; instrument only.
+No lib/ edits. Next: audit the red detector against the F5 VTX layout (docs/F5-UCODE-REFERENCE.md) and re-score the "red" ranges by field.

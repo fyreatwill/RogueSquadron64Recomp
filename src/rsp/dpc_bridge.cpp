@@ -1559,6 +1559,19 @@ struct Rs64F5HostOrderPending {
 };
 
 static Rs64F5HostOrderPending g_f5_host_order_pending;
+// s6349: fixed-range host-write census for the red VTX boundary.
+static constexpr uint32_t kF5HostTgtBegin = 0x735560u;
+static constexpr uint32_t kF5HostTgtEnd = 0x7355D0u;
+struct Rs64F5HostTgt {
+    bool valid;
+    unsigned long long seq;
+    uint32_t phase, start, end;
+    char api[32];
+    uint8_t before[kF5HostTgtEnd - kF5HostTgtBegin];
+};
+static Rs64F5HostTgt g_f5_hosttgt_pending;
+static unsigned long long g_f5_hosttgt_seq;
+static uint32_t g_f5_hosttgt_rows;
 static uint64_t g_f5_host_order_seq = 0;
 static uint32_t g_f5_host_order_rows = 0;
 
@@ -1832,6 +1845,26 @@ extern "C" void rs64_f5_host_write_begin(const uint8_t* rdram, uint32_t phys,
     const uint32_t start = phys & 0x7FFFFFu;
     const uint32_t end = std::min(start + len, 0x800000u);
     std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
+    // s6349: fixed target-range host-write census, independent of the VTX
+    // range registry (which only fills at phase 6, after the red is present).
+    {
+        static uint32_t calls = 0;
+        if (!calls++)
+            std::fprintf(stderr, "[f5-hosttgt-control] first host write api=%s phys=0x%06X len=0x%X phase=%u\n",
+                         api ? api : "?", start, end - start, rs64_phase_ord());
+        if (start < kF5HostTgtEnd && end > kF5HostTgtBegin) {
+            g_f5_hosttgt_pending = {};
+            g_f5_hosttgt_pending.valid = true;
+            g_f5_hosttgt_pending.seq = ++g_f5_hosttgt_seq;
+            g_f5_hosttgt_pending.phase = rs64_phase_ord();
+            g_f5_hosttgt_pending.start = start;
+            g_f5_hosttgt_pending.end = end;
+            std::snprintf(g_f5_hosttgt_pending.api, sizeof g_f5_hosttgt_pending.api,
+                          "%s", api ? api : "?");
+            for (uint32_t i = 0; i < kF5HostTgtEnd - kF5HostTgtBegin; ++i)
+                g_f5_hosttgt_pending.before[i] = rdram[(kF5HostTgtBegin + i) ^ 3u];
+        }
+    }
     for (const Rs64F5VtxStoreRange& row : g_f5_vtx_store_ranges) {
         if (!row.end || start >= row.end || end <= row.source) continue;
         const uint32_t first = std::max(start, row.source);
@@ -1856,6 +1889,31 @@ extern "C" void rs64_f5_host_write_after(const uint8_t* rdram, uint32_t phys,
                                            uint32_t len, const char* api) {
     if (!rs64_f5_shadow_on() || !rdram || len == 0u) return;
     std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
+    if (g_f5_hosttgt_pending.valid) {
+        Rs64F5HostTgt& t = g_f5_hosttgt_pending;
+        t.valid = false;
+        if (t.start == (phys & 0x7FFFFFu) && g_f5_hosttgt_rows++ < 96u) {
+            const uint32_t n = kF5HostTgtEnd - kF5HostTgtBegin;
+            uint32_t changed = 0, red_before = 0, red_after = 0;
+            uint8_t after[kF5HostTgtEnd - kF5HostTgtBegin];
+            for (uint32_t i = 0; i < n; ++i) {
+                after[i] = rdram[(kF5HostTgtBegin + i) ^ 3u];
+                changed += after[i] != t.before[i];
+                red_before += t.before[i] == 0xFFu;
+                red_after += after[i] == 0xFFu;
+            }
+            std::fprintf(stderr,
+                "[f5-hosttgt] seq=%llu api=%s phase=%u write=0x%06X..0x%06X "
+                "changed=%u ff_before=%u ff_after=%u before=",
+                (unsigned long long)t.seq, t.api, t.phase, t.start, t.end,
+                changed, red_before, red_after);
+            for (uint32_t i = 0; i < n; ++i) std::fprintf(stderr, "%02X", t.before[i]);
+            std::fprintf(stderr, " after=");
+            for (uint32_t i = 0; i < n; ++i) std::fprintf(stderr, "%02X", after[i]);
+            std::fprintf(stderr, "\n");
+            std::fflush(stderr);
+        }
+    }
     Rs64F5HostOrderPending& p = g_f5_host_order_pending;
     if (!p.valid || p.phys != (phys & 0x7FFFFFu) || p.len != len) return;
     bool red = false;
