@@ -372,6 +372,7 @@ static std::atomic<uint32_t> g_inline_probe_trigen_boot_lines{0};
 static std::atomic<uint32_t> g_inline_probe_summaries{0};
 static std::atomic<uint32_t> g_inline_probe_phase{0xFFFFFFFFu};
 extern "C" uint32_t rs64_phase_ord(void);
+extern "C" { extern uint32_t rs64_spk_dma_ring[256][3]; extern uint32_t rs64_spk_dma_n; }
 
 static bool log_inline_advance() {
     static const bool enabled = [] {
@@ -3454,7 +3455,21 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
                     int c32 = find32((int32_t)lrint(ys[i] * 65536.0), h32, sizeof h32);
                     fprintf(stderr, " %s=%.2f s15.2:%d[%s] s15.16:%d[%s]", nm[i], ys[i], c16, h16, c32, h32);
                 }
-                fputc('\n', stderr); fflush(stderr);
+                fputc('\n', stderr);
+                // s6369: DMA-read windows (RDRAM->DMEM) since the previous spike row that cover DMEM 0x43A/0x462.
+                static uint32_t s_ring_prev = 0;
+                const uint32_t rn = rs64_spk_dma_n;
+                uint32_t from = (rn - s_ring_prev > 256u) ? rn - 256u : s_ring_prev, ncov = 0, nall = rn - from;
+                fprintf(stderr, "[spike-dma] task=%u events_since_prev=%u:", g_e9prov.task, rn - s_ring_prev);
+                for (uint32_t i = from; i != rn; ++i) {
+                    const uint32_t *r = rs64_spk_dma_ring[i & 255u];
+                    const bool c43a = (0x43Au >= r[2] && 0x43Au < r[2] + r[1]);
+                    const bool c462 = (0x462u >= r[2] && 0x462u < r[2] + r[1]);
+                    if (c43a || c462) { ncov++; fprintf(stderr, " [dram=%06X dmem=%03X len=%X%s%s]", r[0], r[2], r[1], c43a ? " c43A" : "", c462 ? " c462" : ""); }
+                }
+                fprintf(stderr, " covering=%u/%u\n", ncov, nall);
+                s_ring_prev = rn;
+                fflush(stderr);
             }
         }
         a += len;

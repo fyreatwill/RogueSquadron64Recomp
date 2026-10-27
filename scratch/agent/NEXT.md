@@ -1,5 +1,5 @@
-# NEXT: G3c(b) spike pinned-Y: stale slot vs ucode constant
+# NEXT: G3c(b) spike pinned-Y: fold s6369 DMA-window soak
 HYPOTHESIS-ID: g3c-owner-visual-b
-s6368 fold: pinY=-170.25 (s15.2 -681 = 0xFD57) sits at DMEM 0x43A and 0x462 in 117/120 wedge rows; apexX control hit only 8/120.
-Hypotheses: H-stale-slot (0x43A/0x462 are vertex-buffer slots never rewritten by the VTX DMA), H-ucode-const (value is a ucode/clip constant or scratch written by ucode), H-coincidence.
-Discriminating build (one): in the F5 VTX handler/DMA log dmem dest+len per task, and on non-spike tasks dump the 16-bit at 0x43A/0x462 every task. Outcomes: offsets inside a VTX window and value unchanged for tasks whose window excluded them => stale slot (find which VTX/index references slot); value identical on ALL tasks incl. non-spike and outside any VTX window => ucode constant (then check if the tri path reads it: H-rsp). Control: a known VTX-window vertex word must be seen to change with its DMA.
+Soak s6369_spike_dmawin (queued) logs `[spike-dma] ... covering=C/N` after each `[spike-dmem]` row.
+Hypotheses: H-stale-slot (C=0, N>0: nothing DMA-loads 0x43A/0x462 -> ucode-written/stale constant; ask owner about ROGUESQ_CULL_SPIKE default-on), H-loaded (C>0: trace dram source to its writer, ask if value legit), H-ring-miss (N=0: DMA path not hooked; fix before concluding).
+Fold: grep '\[spike-dma\]' in scratch/agent/m6/g1_lvl2s6369spikedmem/run.log, tabulate C/N vs pinY-resident rows (117/120 earlier).
