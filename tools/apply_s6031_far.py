@@ -56,10 +56,20 @@ def apply4(text):
     text, n = _apply4_old(text)
     if old6227 in text:
         text = text.replace(old6227, new6227); n += 1
+    # s6428 G1d: log each camera on first sight (nl6112<12 budget hid the later cams).
+    o6428 = "og6112[f][1] = (int32_t)MEM_W(ctx->r17, 0X18); }\n"
+    n6428 = "og6112[f][1] = (int32_t)MEM_W(ctx->r17, 0X18); fprintf(stderr, \"[vpw1] cam %08x w %d h %d cx %d cy %d\\n\", (unsigned)ctx->r17, og6112[f][0], (int)MEM_W(ctx->r17, 0X14), og6112[f][1], (int)MEM_W(ctx->r17, 0X1C)); }\n"
+    if o6428 in text and "[vpw1]" not in text:
+        text = text.replace(o6428, n6428, 1); n += 1
     # s6427 G1d: 320-wide cameras (attribution/N64 logo) render into an unwidened 320 fb; do not W/512-scale them.
     o6427 = "(og6112[f][0] == 640 ? 0.8 : 1.0)"; n6427 = "(og6112[f][0] == 640 ? 0.8 : og6112[f][0] == 320 ? 1.0 / kv : 1.0)"
     if o6427 in text:
         text = text.replace(o6427, n6427); n += 1
+    # s6428 G1d: scale cameras by the LIVE video-state width (0x8011A838): unwidened 320/640 fbs (logo/menus) get no scale; 640-cam in a widened flight fb keeps 0.8.
+    o6428b = "(og6112[f][0] == 640 ? 0.8 : og6112[f][0] == 320 ? 1.0 / kv : 1.0)"
+    n6428b = "((int32_t)MEM_W(-0X57C8, (gpr)(int32_t)0x80120000) <= 640 ? 1.0 / kv : og6112[f][0] == 640 ? 0.8 : 1.0)"
+    if o6428b in text:
+        text = text.replace(o6428b, n6428b); n += 1
     text, m = applyfbw(text)
     return text, n + m
 

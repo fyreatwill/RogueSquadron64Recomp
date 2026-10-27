@@ -1,4 +1,5 @@
-# NEXT: fold s6427_aspect_menufix soak
+# NEXT: G1d recheck after s6428 camera-scale fix
 HYPOTHESIS-ID: g1d-widescreen
-s6427 change: tools/apply_s6031_far.py no longer W/512-scales 320-wide cameras (attribution/N64 logo cams were scaled w 320->497 cx 160->248 into an unwidened 320/640 fb; logo drawn +78 px right in a169 w640 dumps, see /tmp-free ref scratch/agent/m6/g1_lvl1s6425_a169/fbd/fb_0000303_w640.ppm vs a43ref).
-Next: fold SOAK-RESULTS line, compare fb_0000303 in g1_lvl1s6427_a169 vs a43ref (logo centred => H-320cam confirmed; still shifted => the 640x480 logo cam is the culprit: its [vpw] line is suppressed by nl6112<12 log budget, log first sight of each cam). Then 16:9 radar clip, menu stride garble (w640 later frames), hangar 21:9, G1e.
+Queue ONE soak (copy scratch/agent/s6428_cam.sh pattern / s6427 soak): a43ref, a43, a169, a219 with hangar route; compare logo centring at 21:9, flight HUD/radar edges at 16:9 and 21:9, and check whether the noisy lower half of late w640 dumps is a dump-stride mislabel (dump tool uses 640 while vsu width is 796) - positive control: same dump in a43 arm should be clean.
+Hypotheses: H-dumpmislabel (noise only in dumps, game output fine) vs H-menu-stride (real menu fb stride garble at wide aspect). Discriminator: dump w796 re-read of the same buffer.
+Then G1e (frame rate measure) if G1d judged done by owner contact sheets.

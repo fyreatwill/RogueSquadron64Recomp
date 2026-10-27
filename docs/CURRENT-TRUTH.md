@@ -191,3 +191,5 @@ unit.
 
 - s6423 (fold s6422, single-source cross-run): dd1/dd3/dd3+LODSCALE 150 s lvl1 all clean. LODSCALE gives no terrain gain and +14% RSP ms over dd3 -> NOT in the DRAW_DISTANCE bundle. RSP cost dd3 ~2.2x dd1 (69->149 ms/s), VI still 63-65. Arms were not view-matched (POSE_LOCK pins position only); don't read the raw terrain-fraction drop. G1c phase 2 considered done at dd3; next rung G1d (ASPECT) state check.
 - s6424: 21:9 arm crashed 3/3 (no OSMEM_MB=12 -> 8 MB heap exhaustion at load_level_hmp); s6425 makes ASPECT imply OSMEM 12 and re-queues the sheet (s6425_aspect_sheet2). Next: fold it, send sheet; hangar/menu 21:9; G1e.
+
+- s6428: 16:9 logo +78px shift root-caused: 640-wide cams scaled x kv*0.8 into unwidened 640 fb; fix = scale keyed on live video-state width <=640 -> no scale (verified logo centred, flight intact). Still open G1d: 21:9/hangar recheck, radar clip repro, w640 late-dump noise (dump-stride mislabel?), then G1e.
