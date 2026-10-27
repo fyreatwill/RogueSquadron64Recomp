@@ -1,4 +1,4 @@
-# NEXT: qualify the phase-6 red source transition
+# NEXT: resume qualification of the phase-6 red source transition
 HYPOTHESIS-ID: g3c-owner-visual
 
 s6339 completed the exact-lane host-order discriminator. It recorded 128
@@ -6,6 +6,12 @@ bounded rows, all `rsp_dmem_to_rdram`; sampled red lanes were already red in
 `before=` and changed in `after=`, so these were later overwrites, not the red
 source. The VTX, guest-store, bulk, source-red, ordinary-store controls and
 130-second DD3 hold all passed.
+
+This is a retry checkpoint: do not rerun or rebuild in the checkpoint iteration.
+The existing witness is in the dirty vendored runtime/RT64 tree and the prior
+run artifacts are in the s6339 soak output. Resume by adding the source-
+transition table described below, then use the exact build and run commands
+that follow.
 
 Competing hypotheses: H-unlogged-bulk (the red transition occurs in an earlier
 bulk/source path not joined by the current post-VTX witness), H-vtx-copy (the

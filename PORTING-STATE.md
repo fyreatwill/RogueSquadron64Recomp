@@ -169207,3 +169207,23 @@ VTX-side source/read ordering, because the actual transition still precedes
 the captured host events. No mitigation was added.
 ORIGIN: exact-lane host-write ordering; the witness is diagnostic-only and
 does not alter RDRAM or rendering.
+
+## Session 6340 (2026-10-26) — checkpoint close-out for source-transition witness
+
+This retry did not rerun or rebuild the s6339 work unit. The existing exact-lane
+host-write witness and its qualified DD3/red level-1 run remain the durable
+artifacts. Known result: 128 bounded rows were recorded, all
+`rsp_dmem_to_rdram`; sampled phase-6 red lanes were already red before those
+host writes and changed afterward, so the sampled host events are later
+overwrites rather than the red source transition. The positive controls and
+130-second hold remain valid. No new conclusion selects H-unlogged-bulk over
+H-vtx-copy, and no mitigation was added.
+
+The next discriminator is unchanged: add a phase-6 source-transition table
+covering each joined red lane at registration, every intervening exact-range
+DMA payload/source, and the VTX read, with a forced-red pre-VTX positive
+control. A pre-VTX transition selects H-unlogged-bulk; a transition only at
+VTX read selects H-vtx-copy; a matching host payload outside the prior bounded
+rows selects H-host-order-residual. Resume with the command preserved in
+`scratch/agent/NEXT.md`.
+ORIGIN: checkpoint close-out only; no runtime behavior or mitigation change.
