@@ -10650,6 +10650,38 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
             if (pv) for (int i = 0; i < 3; i++) { uint32_t u = rs64_rdram_u32(rd, p + 0x4C + 4 * i); memcpy(&v[i], &u, 4); }
             if (pv && (v[0] != 0.0f || v[1] != 0.0f || v[2] != 0.0f)) s_pl_live = true;
             if (s_pl_live && ((uint32_t)rs64_vi_committed_origin() & 0xFFFFFFu) >= 0x600000u) { stick_x = 0.0f; stick_y = 0.0f; btn = 0; }
+            // s6412: ROGUESQ_POSE_REF=<file> pins attitude across arms. First arm to lock writes the player object's
+            // 0x100 bytes there; later arms overwrite every unit-range float word (attitude/matrix candidates, |f| in
+            // [1e-6,1.0001]; pos 0x4C..0x57 excluded) of their object with the reference each poll.
+            if (s_pl_live && pv) {
+                static int s_ref_state = 0;  // 0 untried, 1 wrote file, 2 applying
+                static uint32_t s_ref[64];
+                static const char* s_ref_path = std::getenv("ROGUESQ_POSE_REF");
+                if (s_ref_path && *s_ref_path && s_ref_state == 0) {
+                    FILE* fr = fopen(s_ref_path, "rb");
+                    if (fr && fread(s_ref, 4, 64, fr) == 64) { s_ref_state = 2; fprintf(stderr, "[poselock] ref loaded from %s\n", s_ref_path); }
+                    else {
+                        if (fr) fclose(fr);
+                        fr = fopen(s_ref_path, "wb");
+                        for (int i = 0; i < 64; i++) s_ref[i] = rs64_rdram_u32(rd, p + 4 * i);
+                        if (fr) { fwrite(s_ref, 4, 64, fr); fprintf(stderr, "[poselock] ref written to %s\n", s_ref_path); }
+                        s_ref_state = 1;
+                    }
+                    if (fr) fclose(fr);
+                }
+                if (s_ref_state == 2) {
+                    static bool s_ref_logged = false;
+                    for (int i = 0; i < 64; i++) {
+                        if (i >= 0x4C / 4 && i < 0x58 / 4) continue;
+                        float f; memcpy(&f, &s_ref[i], 4);
+                        const float a = f < 0 ? -f : f;
+                        if (!(a >= 1e-6f && a <= 1.0001f)) continue;
+                        *(volatile uint32_t*)(rd + ((p + 4 * i) & ~3u)) = s_ref[i];
+                        if (!s_ref_logged) fprintf(stderr, "[poselock] pin off=0x%02X val=%.5f\n", 4 * i, (double)f);
+                    }
+                    s_ref_logged = true;
+                }
+            }
             if (s_pl_live && (s_pln++ % 30) == 0) {
                 fprintf(stderr, "[poselock] n=%u pos=%.2f,%.2f,%.2f\n", s_pln - 1, (double)v[0], (double)v[1], (double)v[2]);
             }

@@ -169908,3 +169908,10 @@ Stale NEXT.md asked for a G3c(c) shake measurement; s6302 already did it (camera
 - Sheet scratch/agent/s6410_sheet/sheet.png (pose 60/120/180 mapped to fb n): positions match to ~0.1 units but camera/craft ATTITUDE differs between arms (mean frame diff 22-42; craft banked differently, different sky/terrain proportion). u4 diverges in position after pose n=120 (19.0 vs 15.7). So poselock pins position only; no valid dd2-vs-dd3 terrain-extent comparison exists yet. Result: H-limit vs H-score still UNSPLIT.
 - Next: lock attitude too (or pick frames by best sky/terrain-rows match), or use the fixed-camera scorer on frames where craft attitude agrees. Queued s6411 dd2 300 s holds on lvl5 and lvl10 (done-criterion legs).
 - Code: tools/g1c_posesheet.py (new). No default change. ORIGIN: n/a.
+
+## Session 6412 (2026-10-27) — G1c phase 2: attitude-pin for POSE_LOCK built; s6411 lvl10 "fail" was a recipe defect
+
+- s6411 folded: lvl5 dd2 300 s clean (hold=301 vi_stalls=0 crashlines=0). lvl10 dd2 rc=137 / nomission x3: attempts reached flight (origins 0x6A2900, 0x644D00, phase 6) but the gate regex defaults to 690400 and the recipe lacked ROGUESQ_FORCE_PLANET_UNLOCK=0xFF (the s6051 lever; s6050 failed identically). Not a crash. Redo queued with the lever.
+- Code: ROGUESQ_POSE_REF=<file> added to the POSE_LOCK block in src/main/main.cpp. First locking arm saves the player object (p=*(0x137DB8+4), 0x100 B); later arms rewrite each poll every word whose float value is in [1e-6,1.0001] (pos 0x4C..0x57 excluded) so attitude/matrix words match the reference. Heuristic, offsets unverified — the `[poselock] pin off=` log lists what was pinned. Build OK.
+- Queued scratch/agent/soak_queue/s6412_attpin.sh (dd1 reference, then dd1-pinned control + dd2/dd3/dd4 pinned). Not yet run: no result this session.
+- ORIGIN: n/a (test-only harness, not a mitigation).
