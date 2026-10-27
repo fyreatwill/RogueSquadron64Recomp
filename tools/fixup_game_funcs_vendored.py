@@ -4944,6 +4944,8 @@ static void rs64_m5_writer_parity(char width, uint32_t pc,
     extern uint32_t rs64_phase_ord(void);
     extern uint32_t rs64_vi_committed_width(void);
     extern uint32_t rs64_vi_committed_origin(void);
+    extern void rs64_f5_store_shadow(char width, uint32_t pc,
+                                      uint32_t addr, uint32_t value);
     if (enabled < 0) {
         const char* e = getenv("ROGUESQ_LOG_M5_WRITER_PARITY");
         const char* all = getenv("ROGUESQ_LOG_ALL");
@@ -4956,6 +4958,7 @@ static void rs64_m5_writer_parity(char width, uint32_t pc,
                                                 uint32_t value);
         rs64_m5_route_value_writer(width, pc, addr, value);
     }
+    rs64_f5_store_shadow(width, pc, addr, value);
     if (!enabled) return;
     if (addr == 0x801E8710u) {
         unsigned source_width = rs64_vi_committed_width();

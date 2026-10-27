@@ -169026,3 +169026,24 @@ ORIGIN: no mitigation or code change in this checkpoint; the prior instrument's 
 ## Session 6330 (2026-10-26) — qualified F5 VTX source probe; page-fault writer witness is insufficient
 Added a regeneration-preserved `0x04` F5 VTX probe in `tools/fixup_factor5_ucode.py` and its host callback in `src/rsp/dpc_bridge.cpp`; Debug build completed. The keyed level-1 DD3 force-red arm reached flight and held 130 seconds alive with zero VI stalls and zero crash lines. The VTX control fired in phases 3–7 (320 records); phase-6 records loaded terrain-like ranges including `0x735560..0x73E3B0` and logged the first four 16-byte records. The existing p6 page-fault witness, with its global print cap moved to a phase-6 budget, fired once in phase 6 at `phys=0x733378`; its `guest_pc=0x8000D3D0` resolves to a stack-local `sw v0,0x14($sp)`, not a named store into the VTX range. The force-red arm remained absent from drawn terrain, consistent with s6327/s6328.
 This qualifies the VTX source measurement and proves the page-fault control fires, but it does not identify a legitimate guest writer: the fault annotation can be stale/current-PC context and the watched page is broader than one VTX command. It rules out treating the fixed `mprotect` witness as the requested writer attribution, not H-copy/H-otherfn/H-ucode-light/H-readback. Next is an exact-range guest-store shadow keyed by the VTX callback, with an ordinary guest-store positive control. ORIGIN: diagnostic-only VTX callback and expanded phase-6 fault logging; no mitigation or visual behavior change.
+
+## Session 6331 (2026-10-26) — qualified exact-range F5 VTX store shadow
+
+Added a regeneration-preserved `rs64_f5_store_shadow` callback to the existing
+generated scalar-store parity hook, plus phase-6 VTX range registration and the
+standalone installer `tools/apply_s6331_f5_store_shadow.py`. The callback is
+diagnostic only and does not alter guest memory. Built the full Debug target.
+
+Ran the keyed level-1 DD3/red arm in
+`scratch/agent/m6/g1_lvl1s6331_vtxshadow2/run.log` with a 130-second hold:
+the ordinary-store positive control fired once in phase 4, the F5 VTX control
+fired in phase 6, and the summary reported mission at 14 s, alive at end,
+zero VI stalls, and zero crash lines. There were 320 VTX records and 96
+post-VTX shadow overlaps. No overlap occurred in phase 6; the 96 phase-7
+overlaps were writes of zero to two terrain-buffer ranges. This rules out a
+post-VTX parity-instrumented scalar RGB writer as the immediate source of the
+red-arm failure, but it does not rule out a pre-VTX writer or bulk/uninstrumented
+copy. The first run's ordinary control was incorrectly phase-gated and produced
+zero; that qualification failure was fixed and the arm was rerun before drawing
+the result. Next is a bounded pre-VTX last-writer table plus bulk-copy control.
+ORIGIN: diagnostic-only exact-range shadow; no mitigation or visual behavior change.

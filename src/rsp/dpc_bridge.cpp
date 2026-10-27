@@ -1473,6 +1473,73 @@ static Rs64F5VtxColorState g_f5_vtxcolor_state;
 static std::mutex g_f5_vtxcolor_mutex;
 static bool rs64_m4_y8000_in_gate();
 
+struct Rs64F5VtxStoreRange {
+    uint32_t phase;
+    uint32_t source;
+    uint32_t end;
+    uint32_t task;
+    uint32_t pc;
+};
+
+static Rs64F5VtxStoreRange g_f5_vtx_store_ranges[128] = {};
+static uint32_t g_f5_vtx_store_range_next = 0;
+static std::mutex g_f5_vtx_store_mutex;
+
+extern "C" void rs64_f5_vtx_store_range(uint32_t phase, uint32_t source,
+                                           uint32_t bytes, uint32_t task,
+                                           uint32_t pc) {
+    const char* e = std::getenv("ROGUESQ_LOG_F5_STORE_SHADOW");
+    const char* all = std::getenv("ROGUESQ_LOG_ALL");
+    if (!((e && *e && *e != '0') || (all && *all && *all != '0')) ||
+        phase < 6u) return;
+    if (bytes == 0 || source >= 0x800000u || bytes > 0x800000u - source)
+        return;
+    std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
+    Rs64F5VtxStoreRange& row =
+        g_f5_vtx_store_ranges[g_f5_vtx_store_range_next++ % 128u];
+    row = {phase, source, source + bytes, task, pc & 0x7FFFFFu};
+}
+
+extern "C" void rs64_f5_store_shadow(char width, uint32_t pc,
+                                       uint32_t addr, uint32_t value) {
+    static int enabled = -1;
+    static uint32_t control = 0;
+    static uint32_t rows = 0;
+    if (enabled < 0) {
+        const char* e = std::getenv("ROGUESQ_LOG_F5_STORE_SHADOW");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        enabled = ((e && *e && *e != '0') ||
+                   (all && *all && *all != '0')) ? 1 : 0;
+    }
+    if (!enabled) return;
+    const uint32_t phase = rs64_phase_ord();
+    const uint32_t phys = addr & 0x7FFFFFu;
+    const uint32_t span = width == 'D' ? 8u : (width == 'B' ? 1u :
+                           (width == 'H' ? 2u : 4u));
+    if (addr == 0x801E8710u && !control) {
+        std::fprintf(stderr,
+            "[f5-store-shadow-control] phase=%u pc=0x%08X addr=0x%08X value=0x%08X\n",
+            phase, pc, addr, value);
+        std::fflush(stderr);
+        control = 1;
+    }
+    if (phase < 6u) return;
+    std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
+    for (const Rs64F5VtxStoreRange& row : g_f5_vtx_store_ranges) {
+        if (row.end == 0 || row.phase != phase || phys >= row.end ||
+            phys + span <= row.source) continue;
+        if (rows++ >= 512u) return;
+        std::fprintf(stderr,
+            "[f5-store-shadow] n=%u phase=%u vtx=0x%06X..0x%06X task=%u "
+            "vtx_pc=0x%06X store_pc=0x%08X addr=0x%08X phys=0x%06X "
+            "width=%c value=0x%08X overlap=0x%06X..0x%06X\n",
+            rows, phase, row.source, row.end, row.task, row.pc, pc, addr,
+            phys, width, value, std::max(phys, row.source),
+            std::min(phys + span, row.end));
+        std::fflush(stderr);
+    }
+}
+
 static void rs64_f5_vtxcolor_state(uint32_t pc, uint32_t source, uint32_t ordinal) {
     std::lock_guard<std::mutex> lock(g_f5_vtxcolor_mutex);
     g_f5_vtxcolor_state.task = g_e9prov.task;
@@ -1678,6 +1745,7 @@ extern "C" void rs64_f5_vtx_probe(uint32_t pc, uint32_t w0, uint32_t w1,
     const uint32_t first = (w0 >> 1) & 0x7Fu;
     const uint32_t source = w1 & 0x7FFFFFu;
     const uint32_t bytes = count * 16u;
+    rs64_f5_vtx_store_range(phase, source, bytes, g_e9prov.task, pc);
     std::fprintf(stderr,
                  "[f5-vtx] phase=%u task=%u pc=0x%06X w0=0x%08X w1=0x%08X "
                  "first=%u count=%u source=0x%06X end=0x%06X bytes=",
