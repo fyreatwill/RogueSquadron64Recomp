@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6388 (2026-10-26).
+Compact operational handoff, maintained after Session 6389 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -43,6 +43,16 @@ not a missing reference capability. This refutes the RSP-emulation/clamp
 disagreement hypothesis. It does not prove retail visual fidelity, so
 `ROGUESQ_CULL_SPIKE` remains opt-in and the retail default is unchanged.
 
+Session 6389 ran the G3c(a) arm table in one fresh Debug build. Retail and
+draw-distance=2 reached mission origin and held 184/183 seconds with zero VI
+stalls and crash markers. Their mission-phase edge scores were
+`edge_excess_med=0.0286` and `0.0029`; both terrain controls passed. The
+aspect-only and combined arms initially missed the retail title origin because
+widescreen changes it from `0x00790400` to `0x00639238`. A corrected gate
+reached the widescreen title/hangar phase, but neither arm reached
+`0x00690400`; those positive-control scores are phase-mismatched and cannot
+select H-edge-fog, H-edge-grid, or H-edge-aspect. No runtime or default changed.
+
 ## G1 mission coverage
 
 Playable levels are 0..18 (`NUM_LEVELS=0x13`; 19 and 20 are sentinels). Levels
@@ -71,8 +81,11 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. Finish G3c(a) with a phase-gated edge measurement and owner-viewable
-   frames; the height-byte fade arm is closed as ineffective.
+1. Finish G3c(a) with a valid widescreen mission route: census the actual
+   aspect phase-origin sequence and gate edge captures on mission origin
+   before comparing retail/dd/aspect/combined frames. The s6389 retail/dd
+   scores are provisional controls; the s6389 aspect scores are invalid due
+   to phase mismatch. The height-byte fade arm is closed as ineffective.
 2. Measure the owner-reported turning shake with the retail/FPS60/aspect arms
    if it remains actionable; current residual evidence is consistent with
    retail 30-Hz judder.

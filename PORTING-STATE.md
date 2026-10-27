@@ -169689,3 +169689,23 @@ runtime witness. This refutes the RSP-emulation/clamp-disagreement hypothesis.
 Retail visual fidelity remains unproven, so `ROGUESQ_CULL_SPIKE` stays opt-in
 and no default changed. The block is resolved; next is the phase-gated G3c(a)
 terrain-edge measurement. ORIGIN: local route-2 unblock.
+
+## Session 6389 (2026-10-26) — edge arm table exposed a widescreen phase-gate mismatch
+
+Built with `cmake --build build --config Debug --target RogueSquadron64Recomp -j2`
+and ran retail, `ROGUESQ_DRAW_DISTANCE=2`, `ROGUESQ_ASPECT=16:9`, and combined
+arms concurrently using the existing mission harness and framebuffer dump.
+Retail and draw-distance arms reached `0x00690400`, held 184/183 seconds,
+and reported zero VI stalls and crash markers. With the capture window
+`n >= 3000`, `g3c_edge_score.py` reported terrain controls PASS and
+edge-excess medians 0.0286 (retail) and 0.0029 (dd2).
+
+The aspect arms first failed the harness's retail title-origin gate because
+widescreen reports title origin `0x00639238`; this produced `notitle-att1` and
+was corrected in a retry with `TITLE_ORIGIN=0x00639238`. The corrected arms
+reached the widescreen title/hangar origin sequence but did not reach mission
+origin before the run was stopped. Their scores (0.0870 aspect, -0.0032
+combined) are therefore not mission evidence, despite terrain positive
+controls. This run selects no fog/grid/aspect hypothesis and rules out only
+the assumption that the retail title-origin gate is valid for the aspect arm.
+No code or default changed. ORIGIN: no mitigation.
