@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6512 (2026-10-27).
+Compact operational handoff, maintained after Session 6514 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -92,11 +92,20 @@ unobserved EBC/EC4 sites as the source and makes an uninstrumented initializer
 less likely, but does not yet select legitimate filter input over a late
 DB4/DC0 rewrite. No guard, gameplay behavior, or default changed.
 
-Session 6513 was a checkpoint close-out rather than a new experiment. The
-planned per-cell span-filter join was not run in this retry: no build, run log,
-or joined decision rows exist. Therefore s6512 remains the latest
-discriminating result; the legitimate-filter versus late-rewrite question is
-still open and no new hypothesis is selected.
+Session 6514 selected H-late-rewrite. The keyed probe read the span bytes
+before the `0x7F` stores. Both pinned arms held 151 s with zero stalls and
+zero crash lines; `[span-base]` fired, and nonempty rows had `npass>0` while
+every EMPTY row had `npass==0`. dd1 EMPTY was 6/6 late-rewrite (`nother` 6-7);
+dd4 EMPTY was 100/100 (`nother` 33-68). Sampled populated cells were 127 at
+return, and the DB4 interval delta matched DC0 and `nclear`. Rasterizer census
+counts were already nonzero, so H-missing-source is refuted; zero EMPTY rows
+were all-sentinel, so H-filter-legitimate is refuted. The stamp is the
+filter's own `0x7F` immediate. dd4's first populated sample had second-plane
+byte 127 on 100/100 EMPTY rows; dd1's had 25 on 6/6. No guard or default changed.
+
+Superseded: s6495's "all-127 table means the rasterizer produced no rows."
+Believable because the return snapshot is the sentinel. That snapshot is taken
+after this call's DB4/DC0 stores. The decision itself read populated spans.
 
 Session 6500 extended the byte-store census with a 64-entry sequence-keyed
 post-bin ring and bounded writer summary. The final pinned dd1/dd4 run reached
@@ -285,21 +294,22 @@ streamTerrainGridCellsByDistance, so the shared cumulative counter is an
 invalid cross-function join even when guest IDs match. H-boundary is selected;
 the exact per-invocation join fix remains to be built.
 
-## Next steps — s6512 span-filter source audit (top)
-- **s6512 (top):** join the full eight-site writer table to the individual
-  span-filter decisions in `streamTerrainGridCellsByDistance`. In one Debug
-  build and one pinned dd1/dd4 run, log each bounded filter input (cell row,
-  cell column, window words, selected signed span bytes, and the writer-table
-  sequence at that decision) plus the final selected-byte snapshot for the
-  same keyed return. Competing outcomes: H-filter-legitimate (dd4 EMPTY
-  cells read all-127 spans before any later rewrite), H-late-rewrite (the
-  decision reads populated spans but a later DB4/DC0 write makes the return
-  snapshot empty), or H-missing-source (the decision reads a non-127 value
-  written by a site not in the eight-PC census). The discriminator is the
-  per-cell decision value joined to the keyed return, and the `[span-base]`
-  control must fire in both arms. Do not add a guard or change behavior.
-  ORIGIN: s6512 named six active sites and ruled out EBC/EC4, but the
-  existing return table cannot say what value the filter actually consumed.
+## Next steps — s6514 reject predicate (top)
+- **s6514 (top):** H-late-rewrite is selected. The EMPTY list is the filter
+  rejecting every cell and stamping `0x7F`, not an all-sentinel input and not
+  a writer outside the eight-PC census. Next: at the two compares
+  (`0x80042D8C` span < cell+3, `0x80042DA4` cell+4 < second plane), count
+  which one clears, on the same pinned dd1/dd4 return budget. Competing
+  outcomes: H-s1-sentinel (dd4 EMPTY clears because the second plane is 127
+  and cell+4 < 127; dd1 EMPTY and nonempty accepts do not), H-s0-below (the
+  clear is span < cell+3 in both arms), or H-both. Discriminator: per-return
+  clear counts split by predicate, with `[span-base]` and nonempty `npass>0`
+  as controls. Do not add a guard. ORIGIN: s6514 saw second-plane 127 on
+  100/100 dd4 EMPTY first samples and 25 on 6/6 dd1, but did not log cell+3
+  or cell+4.
+- **s6512 (folded):** the eight-site census ruled out EBC/EC4. s6514 then
+  showed the DB4/DC0 delta on EMPTY returns is this call's own `0x7F` stamp
+  after a populated read.
 - **s6511 (folded):** audit the upstream writer and dimensions of the full
   `0x80130DB0..0x80132DAF` span grid that the reconstructed DC0 path reads.
   In one Debug build and one pinned dd1/dd4 run, log the grid dimensions at

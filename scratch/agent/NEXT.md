@@ -1,28 +1,26 @@
-# NEXT: resume the span-filter decision join
-HYPOTHESIS-ID: g1c-span-grid-writer
+# NEXT: which compare rejects the span cell
+HYPOTHESIS-ID: g1c-span-reject-predicate
 
-RESUME: the s6513 experiment was not run during checkpoint close-out. Run
-exactly one bounded experiment. Add a phase-gated, rate-limited trace at
-the per-cell span filter in `streamTerrainGridCellsByDistance` containing the
-cell row/column, window words, selected signed span bytes, and the current
-eight-site writer sequence; join it to the existing keyed return snapshot.
-Keep the `[span-base]` positive control and run the pinned dd1/dd4 arms in one
-Debug build. Do not add a guard or change game behavior.
+s6514 closed the writer question. EMPTY returns read populated primary span
+bytes, then `0x80042DB4`/`0x80042DC0` stamp `0x7F`. The second plane was 127
+on 100/100 dd4 EMPTY first samples and 25 on 6/6 dd1 EMPTY samples. That is
+not yet the compare predicate: cell+3 and cell+4 were not logged.
 
-Competing hypotheses and discriminator:
+One Debug build, one pinned dd1/dd4 run. At `0x80042D8C` and `0x80042DA4`,
+count clears caused by span < cell+3 versus cell+4 < second-plane, and log
+the two cell bytes with the span bytes on the existing keyed return. Keep
+`[span-base]`. Do not add a guard or change behavior.
 
-- H-filter-legitimate: dd4 EMPTY cells read all-127 spans before any later
-  rewrite.
-- H-late-rewrite: the filter reads populated spans, then DB4/DC0 rewrites the
-  grid before the keyed return snapshot.
-- H-missing-source: the filter reads a non-127 value written by a site absent
-  from the eight-PC census.
+- H-s1-sentinel: dd4 EMPTY clears are cell+4 < 127 on the second plane; dd1
+  EMPTY and nonempty accepts are not.
+- H-s0-below: clears are span < cell+3 in both arms.
+- H-both: both predicates fire on the dd4 EMPTY rows.
 
-The discriminating measurement is the per-cell decision value joined to the
-same keyed return. A null is invalid unless `[span-base]` fires in both arms.
+A null is invalid unless `[span-base]` fires in both arms and nonempty rows
+still show `npass>0`.
 
 Commands:
 
-    cmake --build build --config Debug --target RogueSquadron64Recomp
-    python3 tools/apply_s6513_span_filter.py
-    zsh scratch/agent/s6513_span_filter.sh
+    python3 tools/apply_s6515_span_predicate.py
+    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
+    zsh scratch/agent/s6515_span_predicate.sh

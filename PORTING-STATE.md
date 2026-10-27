@@ -170639,3 +170639,27 @@ but legitimate filter input versus a later DB4/DC0 rewrite is unresolved.
 No hypothesis was selected, and no guard, gameplay behavior, or default
 changed. The next unit preserves the s6513 command and discriminator in
 `scratch/agent/NEXT.md`. ORIGIN: no mitigation or value rewrite was added.
+
+## Session 6514 (2026-10-27) — span filter reads populated bytes, then stamps 127
+
+The s6513 per-cell join ran in one Debug build. `tools/apply_s6513_span_filter.py`
+records the signed span bytes at `0x80042D50` before the `0x7F` stores, the
+eight-site writer mask at that read, and the same addresses at the keyed
+return. Pinned dd1/dd4 (att2 after a dd4 route miss) each held 151 s with zero
+VI stalls and zero crash lines. `[span-base]` fired in both arms (64x64,
+8192 bytes, thousands of non-127 bytes). Nonempty controls were 8/8 with
+`nd>0` and `npass>0`; every EMPTY row had `npass==0`. Count identity held
+(`n127+n80+nother==nd`) and every DB4 interval delta matched DC0 and `nclear`.
+EBC/EC4 deltas stayed 0. Rasterizer census counts were already nonzero at
+entry on every row.
+
+H-filter-legitimate is refuted: 0/6 dd1 EMPTY and 0/100 dd4 EMPTY reads were
+all sentinels (dd1 `nother` 6-7, dd4 33-68). H-missing-source is refuted: no
+row had a zero rasterizer census, and the first populated sample was usually
+read before this call's DB4/DC0 writes (`wbit` 0 on 6/6 dd1 and 93/100 dd4).
+H-late-rewrite is selected. Every sampled populated cell was 127 at return.
+The stamp is the filter's own `addiu $v1, 0x7F` at `0x80042DB0`, not a foreign
+writer. dd4's first populated sample had second-plane byte 127 on 100/100
+EMPTY rows; dd1's had 25 on 6/6. That plane split is observed, not yet the
+measured compare predicate. No guard or default changed. ORIGIN: no
+mitigation; the `0x7F` store is the game's own immediate, observed only.
