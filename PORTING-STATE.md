@@ -169933,3 +169933,11 @@ ORIGIN: no mitigation added; instrument-recipe only.
 Ran: offline fold of s6414_dd_pool (rc=0, 468 s). Note the log tag is `[dlpool]`, not DLPOOLLOG. Arms d1b/d2/u3 each logged 12-13 `kind=begin` lines (positive control: pool length varies, min=77 max=1925 grew=1778-2286 in every arm). `empty_b=0 empty_r=0` in all three, and the minimum (77) is identical across dd1/dd2/dd3, so the DL chunk pool does not exhaust when dd3 drops terrain. H-chunk is refuted (two lines: min equality across arms + empty counters zero). Single-source for the "pool moves" claim only in the sense that all counters come from one patch (apply_s6098_dlpool.py).
 Landed: scratch/agent/soak_queue/s6415_dd_grid.sh = same pinned recipe + ROGUESQ_DD_GRIDLOG=1 (apply_s6034_gridlog.py, already live: window/req/terr/cap/kept per 30th call). Splits H-pool (kept==cap), H-cap (window clamped), H-cull (kept~req, still missing).
 ORIGIN: no mitigation added; instrument-recipe only.
+
+## Session 6416 (2026-10-27) — folded s6415 gridlog soak: H-pool/H-cap refuted, terrain loss is downstream of the cell list
+
+Ran: read-only analysis of scratch/agent/m6/g1_lvl1s6415_{d1b,d2,u3}/run.log [gridlog] rows (64/55/47). Positive control: d1b kept>1 and tracks req (kept 1..471), rows vary with camera.
+Showed: kept < cap in all 166 rows (max 1684 vs cap 2048; 64x64 early tier cap 600 never reached). kept scales with dd (d1b ~0.43*req, d2 ~0.48, u3 ~0.67-0.83), gx/gz spans widen, no clamp at the 64 stride. Occasional kept=0 rows are map-edge/transition windows present in all arms.
+Rules out: H-pool (node pool cap 0x80130C4C), H-cap, window clamp. Combined with s6414 (DL chunk pool never drains) the supply side is exonerated; remaining is H-cull downstream (per-node far-clip / submit / vertex-DL build for the extra cells).
+ORIGIN: no mitigation landed; analysis only.
+Next: per-node submit counters on the pinned recipe (NEXT.md). Outcome: ADVANCED is not claimed lightly - this is a fold of an already-run soak plus a narrowed hypothesis; no code change.
