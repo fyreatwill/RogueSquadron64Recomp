@@ -169561,3 +169561,15 @@ ORIGIN: no mitigation added; tool only. Selected: H-clip/H-retail (legit saturat
 Built the all-lane VU ring extension and post-`vd` capture (src/main/main.cpp, librecomp rsp VU header, exported submodule patch) plus the replay update in tools/agent/rsp_vu_replay.py. The Debug build succeeded. Two lvl2 runs with `ROGUESQ_SPIKE_DMEM=1` recorded 3,328 and 3,072 `[spike-vu8]` rows and zero accumulator mismatches; the longer run had 10 generic saturated-result matches. Neither run recorded an FD57 row (`fd57=0`), so the required pinned-wedge positive control did not pass and no clamp conclusion is valid. The first provisional replay had invalid post-result comparisons because it sampled a register that could be rewritten between ring entries; the fixed probe captures the prior result at the next VU-op boundary. ORIGIN: no mitigation; diagnostic capture/replay only.
 
 Rules out: none of H-rsp-emu-clamp, H-clip, or H-retail; the generic saturation control proves the comparison path executes, but not on the target wedge. Next: compare the s6380 route/phase/task trace with the known s6378 FD57-producing recipe and make one deterministic capture run before interpreting clamp results.
+
+## Session 6381 (2026-10-26) — checkpoint close-out: preserve the unqualified FD57 replay and resume route audit
+
+No experiment was rerun in this retry. The s6380 Debug build and its two lvl2
+runs remain the available artifacts: 3,328 and 3,072 `[spike-vu8]` rows, zero
+accumulator mismatches, 10 generic saturated-result matches in the longer run,
+and zero FD57 rows. Therefore the post-`vd` clamp replay is live but still has
+no target positive control; H-rsp-emu-clamp, H-clip, and H-retail remain
+unevaluable. The next work unit is the bounded offline comparison of the s6380
+route against the known s6378 FD57-producing route, followed by one deterministic
+capture only if the comparison identifies the smallest route/input correction.
+ORIGIN: no mitigation; checkpoint documentation only.

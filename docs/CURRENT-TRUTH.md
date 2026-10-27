@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6380 (s6380: all-lane VU post-vd probe built and two lvl2 runs completed, but neither reached the FD57 positive control; next = make the FD57 capture route deterministic); earlier: Session 6348 (2026-10-26).
+Compact operational handoff, maintained as of Session 6381 (s6380: all-lane VU post-vd probe built and two lvl2 runs completed, but neither reached the FD57 positive control; s6381 checkpoint close-out preserves the result and resumes the deterministic capture-route audit); earlier: Session 6348 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
@@ -15,6 +15,12 @@ detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
   longer run did produce 10 generic saturated-result matches, proving the
   post-result path is live, but the pinned-wedge clamp split remains
   unevaluable. No mitigation was added.
+
+- s6381: retry checkpoint only; no rerun. The s6380 build/run artifacts remain
+  authoritative: the replay path is live on generic saturated results, but the
+  FD57 target positive control is absent, so H-rsp-emu-clamp versus H-clip/
+  H-retail remains unevaluable. Resume with the bounded s6378-versus-s6380
+  route/phase/task comparison before any new build or interpretation.
 
 - s6348: the target-range phase-5 census passed the ordinary-store, VTX,
   bulk, and forced-red controls and captured 44 target-store/post pairs. The
@@ -132,6 +138,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog; per-session history archived in PROJECT-OVERVIEW.md, "Archived CURRENT-TRUTH backlog")
 
+- **s6381 resume (G3c b):** do not rerun the s6380 experiment. First compare the known s6378 FD57-producing route with both s6380 logs using bounded counts/phase/origin/task traces. Only if that audit finds a route/input mismatch, make the smallest recipe correction and run one deterministic capture. FD57 plus `[spike-vu8]` selects the clamp discriminator; same phase/origin with no FD57 selects route/timing; FD57 in `[spike-st]` without a ring block selects instrumentation.
 - **s6363 (G3c a):** height-byte fade hook built (tools/apply_s6363_heightfade.py; ROGUESQ_EDGE_FADE_R2_Y / _YC control / _YLOG), scratch ring 0x80FF0000. Soak folded s6364: ycontrol (+50 heights) visibly displaces terrain (hook on drawn cells), but f logged 0 in all 41 y-arm samples (f exported from funcs_10 colour callee; order/staleness unverified), so y/ylow arms show no effect (jump_med 0.378/0.317 vs nofade 0.333, noise-level). s6365: f IS live (nz~24%, fmax 1) yet y/ylow jump_med 0.356/0.350 vs nofade 0.357 (ycontrol 0.348): height-byte fade is NOT the jagged-edge cause; close it, move to G3c(b).
 - **s6362 (G3c a):** terrain has NO CPU Vtx writer (single-source static): F5 TRI_GEN on the RSP builds y from 25 height bytes at cell+0x44 (written by 0x80046030 / 0x80048BAC, handed over at 0x8001178C, flat path funcs_4.c:7501/7518). 0x80137A54=normals, 0x80137A50=RGBA grids. Height-byte scratch-copy lerp is the next arm.
 - **s6361 (G3c a):** static survey (single-source): no Vtx position `sh` store in 0x8004A6C0/B644/B938 (only `sb` lit RGB + 100-byte cell records at *(0x80137A50)). Vertex-y fade must hook the later Vtx builder; see NEXT.md.
