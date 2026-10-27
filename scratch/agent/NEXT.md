@@ -1,26 +1,27 @@
-# NEXT: audit the DC0 target input path
-HYPOTHESIS-ID: g1c-dd8-limit
+# NEXT: audit the full span-grid writer and initialization
+HYPOTHESIS-ID: g1c-span-grid-writer
 
-Run exactly one bounded experiment. Extend the existing keyed DC0 probe so the
-live `0x80042DC0` store records the base pointer, index/offset arithmetic, and
-source value that produce `ctx->r21`. Retain the keyed post-table diff, DC0
-target/value classification, and dd1 nonempty/dd4 EMPTY controls. Do not add a
-guard or change game behavior.
+Run exactly one bounded experiment. Extend the existing keyed DC0/postring
+probe to capture the full span-grid dimensions and initialization/writer
+activity over `0x80130DB0..0x80132DAF`, retaining the dd1 nonempty and dd4
+EMPTY keyed controls. Do not add a guard or change game behavior.
 
 Competing hypotheses and discriminator:
 
-- H-coherent-stream: base plus index intentionally walks a larger stream
-  buffer; this proves the OUT target is a legitimate-but-misjoined boundary.
-- H-corrupt-input: base or index is outside the stream allocation or does not
-  match the target arithmetic; this names the corrupt input writer.
-- H-uninstrumented: the OUT target cannot be reconstructed from the logged
-  source path; this reopens a host/uninstrumented writer.
+- H-full-grid: initialization and writers cover the full 0x2000-byte grid;
+  dd4 empty returns are a legitimate rasterizer/input result.
+- H-short-init: only the first 24 bytes are initialized; later DC0 reads are
+  stale or uninitialized.
+- H-late-unexpected-writer: a post-rasterization writer changes sampled rows
+  from an unexpected source.
 
-The discriminator is exact target reconstruction from the logged base/index
-path, with the active span-bound decision retained. Positive controls are
-keyed rows, dd1 nonempty rows, dd4 EMPTY rows, and zero crash/VI-stall markers.
+The discriminating measurement is a positive initialization control plus
+keyed per-writer source attribution for the same rows read by the DC0 return.
+The result must report grid dimensions, writer PCs/values, and the keyed table
+snapshot for dd1 nonempty and dd4 EMPTY rows. A null is invalid unless the
+full-grid initialization control visibly fires in the same run.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/s6492_forface.sh
+    zsh scratch/agent/s6511_span_grid.sh

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6509 (2026-10-27).
+Compact operational handoff, maintained after Session 6510 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -51,6 +51,18 @@ dd1 labels the bound `disabled`. This selects H-DC0-corrupt over
 H-DC0-legitimate: the writer is `streamTerrainGridCellsByDistance` at
 `0x80042DC0`, and its `ctx->r21` target path is the next upstream boundary to
 audit. No guard or gameplay behavior changed.
+
+Session 6510 reconstructed that target path in one paired pinned run. The
+regeneration-safe probe logged 512 DC0 rows in each arm; dd1 had 15 keyed
+postring rows and dd4 had 8, with the existing nonempty/EMPTY controls, zero
+crash markers, and zero 30-second VI stalls. Every sampled row reconstructed
+`addr` exactly as `r5 + r14`, where `r5 = r20 + (r30 << 6)` and `r14 =
+0x80130DB0`; `r3` was always `0x7F`. The base is an offset into the 64-byte
+row grid, not a host pointer, and the OUT addresses are the expected
+row/inner positions beyond the first 24 bytes. This selects H-coherent-stream
+over H-corrupt-input and overturns s6509's 24-byte-table interpretation: the
+span table is the larger grid already admitted by the `0x2000` bound. No guard,
+game behavior, or default changed.
 
 Session 6500 extended the byte-store census with a 64-entry sequence-keyed
 post-bin ring and bounded writer summary. The final pinned dd1/dd4 run reached
@@ -239,18 +251,20 @@ streamTerrainGridCellsByDistance, so the shared cumulative counter is an
 invalid cross-function join even when guest IDs match. H-boundary is selected;
 the exact per-invocation join fix remains to be built.
 
-## Next steps — s6510 DC0 input-path audit (top)
-- **s6510 (top):** audit the upstream construction of `ctx->r21` at the live
-  `0x80042DC0` store in `streamTerrainGridCellsByDistance`. In one Debug build
-  and one pinned dd1/dd4 run, log the base pointer, index/offset arithmetic,
-  and the source value that produces each target; retain the keyed post-table
-  diff, DC0 target/value classification, and EMPTY/nonempty controls. Competing
-  outcomes: a coherent base-plus-index path that intentionally walks a larger
-  stream buffer selects a legitimate-but-misjoined boundary; an index or base
-  outside the stream allocation selects the corrupt input writer; no matching
-  source for an OUT target reopens an uninstrumented/host write. Do not add a
-  guard or change behavior. ORIGIN: s6509 found OUT targets accepted by the
-  active span bound at the DC0 store.
+## Next steps — s6511 span-grid writer audit (top)
+- **s6511 (top):** audit the upstream writer and dimensions of the full
+  `0x80130DB0..0x80132DAF` span grid that the reconstructed DC0 path reads.
+  In one Debug build and one pinned dd1/dd4 run, log the grid dimensions at
+  initialization, every writer family that changes sampled rows, and a keyed
+  empty-return snapshot. Competing outcomes: the grid is initialized and
+  populated over the full 0x2000-byte extent (dd4 missing cells are a
+  legitimate rasterizer/input result); only the first 24 bytes are initialized
+  (the larger target is stale/uninitialized); or a writer changes the grid
+  after rasterization with an unexpected source. Discriminator: positive
+  initialization control plus keyed writer/source attribution for dd1 nonempty
+  and dd4 EMPTY rows. Do not add a guard or change game behavior. ORIGIN:
+  s6510 exactly reconstructed the supposedly out-of-table DC0 targets as
+  row-grid addresses.
 - **s6505 (folded):** the invocation-local key removed the shared cumulative
   underflow. H-boundary remains selected; the exact post-bin writer is open.
 - **s6499 (folded):** the complete store census selected a later stream-path

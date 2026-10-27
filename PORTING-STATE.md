@@ -170573,3 +170573,21 @@ initial label rerun crashed before controls and was discarded; the fixed clean
 attempt above is the result. No guard, game behavior, or default changed.
 ORIGIN: diagnostic classification only; do not mitigate until the target-input
 writer is named and its legitimacy established.
+
+## Session 6510 (2026-10-27) — reconstructed the DC0 row-grid target
+
+The prescribed s6510 unit extended `tools/apply_s6509_dc0.py` with the live
+operand path at `0x80042DC0`: `r5 = r20 + (r30 << 6)`, `r21 = r5 + r14`,
+`r14 = 0x80130DB0`, and the written source value in `r3`. The Debug target
+rebuilt successfully after the probe's first malformed helper edit was caught
+and repaired by the compiler. The pinned dd1/dd4 run held both arms for 151 s;
+both summaries report alive-at-end, zero 30-second VI stalls, and zero crash
+lines. The positive control supplied 512 `[dc0-store]` rows per arm, plus 15
+dd1 and 8 dd4 keyed `[postring]` rows. Every sampled row's `recon` matched its
+actual target; dd1 was `span_mode=disabled`, dd4 was `active_accept`, and all
+sampled writes were `0x7F`. The operands therefore coherently walk the larger
+64-byte-row span grid; the prior 24-byte-table corruption interpretation is
+overturned. This selects H-coherent-stream over H-corrupt-input and rules out
+the DC0 target arithmetic as the writer of the missing-cell defect. No guard,
+game behavior, or default changed. ORIGIN: the new telemetry classified the
+target as a legitimate row-grid address rather than merely allowing it.
