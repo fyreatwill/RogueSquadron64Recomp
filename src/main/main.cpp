@@ -5959,7 +5959,7 @@ static void rs64_audio_source_objects(uint8_t* rdram, const OSTask* task) {
         const char* value = std::getenv("ROGUESQ_LOG_AUDIO_OBJECTS");
         return value && value[0] && value[0] != '0';
     }();
-    if (!enabled || !task) return;
+    if (!enabled || rdram == nullptr || task == nullptr) return;
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin();
     if (!((width == 1024 && origin == 0x790400) ||
@@ -6999,7 +6999,9 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
 // (real SP_BOOT does this DMA-style; the runner mimics SP_BOOT but skips
 // this step), then invokes the LLE runner.
 extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task) {
-    if (task == nullptr) {
+    // The host owns both buffers; a teardown can invalidate the callback
+    // context before the scheduler drops its last task reference.
+    if (rdram == nullptr || g_dmem_cur == nullptr || task == nullptr) {
         return -1;
     }
     std::lock_guard<std::recursive_mutex> lle_lock(g_lle_task_mutex);

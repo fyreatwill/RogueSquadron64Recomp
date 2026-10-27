@@ -169749,3 +169749,22 @@ a clean solo aspect run recording all origin transitions to distinguish a
 concurrency artifact from a legitimate alternate route or stale gate.
 
 ORIGIN: no mitigation; the run changed no runtime code or defaults.
+
+## Session 6392 (2026-10-26) — guarded host RSP callback null inputs
+
+The mandated no-churn pivot selected a bounded M3 guard-class audit rather than
+rerunning the aspect-only route observation. Audited the host-facing LLE RSP
+entry and its optional audio-object diagnostic reader. Added an early return in
+`rs64_run_lle_gfx` for null RDRAM, null shared DMEM, or null task, and skipped
+the diagnostic reader when RDRAM is null. The writer is the host callback
+context; null is invalid and is not legitimate guest data. The Debug target
+rebuilt successfully (`cmake --build build --config Debug --target
+RogueSquadron64Recomp`) with only existing deprecation/deployment warnings.
+
+This rules out a compile/link regression from the guard and closes this
+callback-entry null-dereference class at the audited sites. No production null
+hit was observed, so the change is a safety invariant, not evidence that this
+caused a recorded crash. The aspect-only route mismatch remains the next
+visual work unit.
+
+ORIGIN: host RSP callback supplies the RDRAM/DMEM context; null is invalid.

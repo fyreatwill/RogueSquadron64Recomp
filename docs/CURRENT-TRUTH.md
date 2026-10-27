@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6391 (2026-10-26).
+Compact operational handoff, maintained after Session 6392 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -62,6 +62,14 @@ arm instead settled at `width=796 origin=0x0058B038`, so its route gate failed
 despite alive-at-end, zero VI stalls, zero crash markers, and a positive
 framebuffer control. The four edge scores are not a valid discriminator and
 remain provisional; no visual hypothesis was selected.
+
+Session 6392 completed a bounded M3 audit of host-facing RSP callback inputs.
+`rs64_run_lle_gfx` now rejects null RDRAM, null shared DMEM, or null task before
+locking or staging the task, and the optional audio-object reader rejects null
+RDRAM before its first diagnostic read. The writer is the host callback
+context, not guest game data; null is invalid. The Debug target rebuilt
+successfully with only pre-existing warnings. No production null hit was
+observed, so this is a safety invariant rather than evidence of a live crash.
 
 ## G1 mission coverage
 
