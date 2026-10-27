@@ -10634,6 +10634,28 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         }
     }
 
+    // s6399: ROGUESQ_POSE_LOCK=1 is a TEST-ONLY no-input hover arm for G3c edge comparison. Once the mission
+    // origin is live, all stick/button input is zeroed so every arm flies the same straight line from spawn
+    // (autopilot attitude diverged per arm, s6397/s6398). Logs pos every 30 polls to pair frames offline.
+    {
+        static int s_pl = -1;
+        static unsigned s_pln = 0;
+        if (s_pl < 0) { const char* g = std::getenv("ROGUESQ_POSE_LOCK"); s_pl = (g && *g && *g != '0') ? 1 : 0; }
+        volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+        static bool s_pl_live = false;  // wide (ASPECT) flight uses a different VI origin than 0x690400, so latch on a live ship pos instead
+        if (s_pl && rd) {
+            const uint32_t p = rs64_rdram_u32(rd, 0x137DB8u + 4) & 0xFFFFFFu;
+            float v[3] = {0, 0, 0};
+            const bool pv = p >= 0x1000u && p < 0x7FFF00u;
+            if (pv) for (int i = 0; i < 3; i++) { uint32_t u = rs64_rdram_u32(rd, p + 0x4C + 4 * i); memcpy(&v[i], &u, 4); }
+            if (pv && (v[0] != 0.0f || v[1] != 0.0f || v[2] != 0.0f)) s_pl_live = true;
+            if (s_pl_live && ((uint32_t)rs64_vi_committed_origin() & 0xFFFFFFu) >= 0x600000u) { stick_x = 0.0f; stick_y = 0.0f; btn = 0; }
+            if (s_pl_live && (s_pln++ % 30) == 0) {
+                fprintf(stderr, "[poselock] n=%u pos=%.2f,%.2f,%.2f\n", s_pln - 1, (double)v[0], (double)v[1], (double)v[2]);
+            }
+        }
+    }
+
     *x = stick_x;
     *y = stick_y;
     *buttons = btn;

@@ -1,7 +1,6 @@
-# NEXT: pose-locked capture for G3c(a) edge arms
+# NEXT: score pose-matched early-flight frames for G3c(a) edge arms
 HYPOTHESIS-ID: g3c-edge-arm-route-gate
 
-s6398: width filter (s6397) and VI-offset phase gating (s6398) both fail: autopilot attitude diverges per arm, so scene content differs. Metrics on unequal scenes are noise.
-Work unit: add an env (e.g. ROGUESQ_POSE_LOCK=1) that, after the phase-5 witness + N VIs, pins the camera/craft attitude (hover, no autopilot input, or freeze camera matrix in guest RAM) so all four arms (retail, dd2, aspect, combined) render the same pose; dump one frame per arm; score with tools/g3c_horizon_score.py and eyeball a contact sheet (sips -> PNG in scratch/agent/view/).
-Alternative cheaper: log camera yaw/pitch/roll per dump VI and pick pose-matched frame pairs offline.
-Outcomes: dd2 tracks combined, aspect tracks retail -> grid; dd2 tracks retail, combined tracks aspect -> aspect side edge. Do not change runtime defaults.
+s6400: ROGUESQ_POSE_LOCK=1 gives matched pose in the first ~600 polls of flight in all arms (retail, dd2, aspect16:9, combined), dirs scratch/agent/m6/g1_lvl1s6400_*/fbd, log lines [poselock] n=.. pos=...
+Work unit: map FB dump files to poselock n (dump order/VI vs wall time in run.log; or pick the first K dumps after the first [poselock] line), view contact sheet of the first ~10 post-spawn frames per arm (sips -> PNG in scratch/agent/view/s6400/), score with tools/g3c_horizon_score.py on those only.
+Outcomes: dd2 tracks combined, aspect tracks retail -> grid footprint; dd2 tracks retail, combined tracks aspect -> aspect side edge. If early frames still show no edge in any arm, lengthen the matched window by lowering sim drift (e.g. hold throttle/brakes) before concluding. Do not change runtime defaults.
