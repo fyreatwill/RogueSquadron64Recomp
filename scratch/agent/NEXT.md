@@ -1,5 +1,8 @@
-# NEXT: explain the impossible EBC writer delta before rerunning
+# NEXT: RESUME — explain the impossible EBC writer delta before rerunning
 HYPOTHESIS-ID: g1c-dd8-limit
+
+This is a checkpoint resume. The prior probe artifacts are already present;
+do not rerun the game or rebuild before the audit below is complete.
 
 The s6502 single-snapshot run passed both controls, but the 0x80042EBC count
 delta underflowed while 0x80042DB4 had positive deltas. The guest thread IDs
@@ -19,6 +22,12 @@ Competing hypotheses and discriminator:
 - H-boundary: the snapshot is taken in a different call/phase than the stream
   row despite equal guest IDs. The exact CFG and sequence placement show a
   call boundary between the post snapshot and return.
+
+Exact resume commands:
+
+    rg -n "s6500_wcount|s6501_post_wcount|s6500_note_writer|42EBC|42EC4" \
+      RecompiledFuncs/funcs_9.c tools/apply_s650*.py
+    sed -n '<bounded-start>,<bounded-end>p' RecompiledFuncs/funcs_9.c
 
 The audit selects one of these; only then build one regeneration-safe fix and
 rerun `zsh scratch/agent/s6492_forface.sh`, requiring dd1 nonempty and dd4

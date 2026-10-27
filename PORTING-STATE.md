@@ -170468,3 +170468,16 @@ positive deltas, but 0x80042EBC still underflowed. This does not select an exact
 writer; it retains only the prior H-writer-over-H-bin result. Next is an offline
 assignment/control-flow audit of the EBC counter and snapshot before another
 run. ORIGIN: diagnostic instrumentation only; no mitigation or behavior change.
+
+## Session 6503 (2026-10-27) — checkpoint close-out preserves the unresolved EBC join
+
+This was a retry after the s6502 work unit stopped before its exit contract was
+completed. No experiment or rebuild was rerun. The existing s6502 artifacts and
+result remain: dd1/dd4 positive controls passed, guest-thread IDs matched, the
+0x80042DB4 delta was positive, and the 0x80042EBC unsigned delta was
+impossible. Therefore the probe does not identify an exact writer and H-writer
+remains only the prior s6500 lead over H-bin. The next discriminator is the
+offline assignment/control-flow audit of `s6500_wcount[2]`, the post snapshot,
+and every 0x80042EBC instrumentation site; only its result justifies another
+build or soak. ORIGIN: checkpoint documentation only; no mitigation or runtime
+behavior change.
