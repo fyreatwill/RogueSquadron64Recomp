@@ -150,6 +150,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
+- s6455: G3c(c) camera-yaw jerk is arm-independent (VI-index alternation 0.19-0.21 in retail/fps60/wide/both); s6292 FPS60 selection was a wall-stamp artifact. Open: VI event wall dt sd ~2 ms in ALL arms (H-vi-timer vs retail judder).
 - s6454: G3c(b) CLOSED as H-hw-draws: angrylion replay (tools/angrylion_replay/replay.c) lights the same 16/79 logged wedges (3909 px) as the s6441 model; control tri 4185 px. Wedges are retail-faithful; CULL_SPIKE stays opt-in, ask owner re default-on. NEXT = G3c(c) screen shake while turning (jerk of camera yaw vs craft yaw per presented frame; arms retail/FPS60/ASPECT/both).
 - s6451: G1e s6450 per-VI dumps fold: md5 runs useless (2-VI field alternation, lag1 diff const 7.6 vs lag2 0.45); frame period still unmeasured; next read game-side frame counter per VI (tools/g1e_vi_period.py).
 - s6449: s6448 edge soak FOLDED: tools/g3c_edge_stair.py stair_med retail 3.68 / ref(control2) 6.63 / dd2 6.19 / dd3 2.45 / fps60 3.54 / asp169 2.96 - control spread exceeds arm spread, so no opt-in shows more stair-stepping than retail (single-source). Sheet docs/owner_sheet_s6449_edge.png. G3c(a) parked pending owner judgement. Retail frame shows a spike line (G3b datum). Next: G1e real frame-rate measurement.
