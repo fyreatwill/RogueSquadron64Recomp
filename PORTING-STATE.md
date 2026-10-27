@@ -170186,3 +170186,8 @@ Finding: break is at dd3, not dd4 (single-source, one run per arm, pinned pose).
 than dd2 (terrain frac 0.179), and s6446 dd3 holds ran clean — but those were not ROGUESQ_POSE_PIN_POSITION arms. Competing: H-pin (position pin starves
 the view at dd3), H-farclip (fix inactive: gated on MEM 0x80136DC0 in-flight flag, scale dd^2 may overflow), H-real (dd3 genuinely loses ground).
 Queued scratch/agent/soak_queue/s6470_dd3_break_ab.sh: d2ctl, d3nf (NOFARCLIP=1), d3free (no pin), d3pin (repeat). No code changed.
+
+## Session 6471 (2026-10-27) — folded s6470 dd3 break A/B: dd3 submits a shorter display list in all three dd3 arms; farclip gate and pin both ruled out as levers
+Median tri (tricnt, tri>300) per arm: d2ctl 905 (control reproduced; s6470 had 961), d3nf (NOFARCLIP=1) 576, d3free (no pin) 575, d3pin 575. So: not a pin artifact (d3free same), not the farclip fix (d3nf same), dd3 is genuinely lower than dd2 on this route. Caveat: the distributions are bimodal, not a flat cap (d2ctl modes ~424 and ~1110, d3 modes ~310 and ~598), and the DL length shrinks with the tri count (len 205k at dd2 vs 116k at dd3), so the game itself submits fewer terrain commands at dd3. Last-frame stills (scratch/agent/m6/s6471_ab.png: d2ctl, d3free, d3nf) show terrain in all three, so the break is intermittent per frame/pose, not a permanent missing ground. Single-source per arm.
+Rules out: H-pin, H-farclip (as the lever for this symptom). Remains: H-real (terrain submit radius/cell-count lower at dd3: scale overflow in the dd^2 scaling or a pool cap in the terrain cell builder).
+ORIGIN: n/a (no mitigation added; analysis only, no code changed).

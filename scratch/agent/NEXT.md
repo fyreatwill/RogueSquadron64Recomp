@@ -1,6 +1,6 @@
-# NEXT: fold s6470_dd3_break_ab (d2ctl/d3nf/d3free/d3pin) and decide pin vs farclip vs real
+# NEXT: find why the terrain submit path emits a shorter display list at dd3 than dd2
 HYPOTHESIS-ID: g1c-dd8-limit
-Dirs: scratch/agent/m6/g1_lvl1s6470_{d2ctl,d3nf,d3free,d3pin}. Metric: median tri over tricnt lines with tri>300 (see s6470 entry; dd2 961, dd3 pinned 575).
-Outcomes: d3pin~575 & d3free~960+ -> pin artifact, dd3 fine, redo dd4/6/8 unpinned. d3pin~575 & d3free~575 & d3nf~575 -> real dd3 break, test farclip gate (0x80136DC0)
-and scale overflow. d3nf differs from d3pin -> farclip fix is the lever. d2ctl must reproduce ~960 (control) or the run is invalid.
-Also view a frame from each arm (fbd/fb_*_w512.ppm) rather than trusting the ground score.
+Known (s6471): dd3 median tri ~575 in 3 arms (NOFARCLIP, unpinned, pinned) vs dd2 905; DL len 116k vs 205k. Farclip + pin ruled out.
+Hypotheses: H-scale (dd^2 scaled radius/count overflows a u8/u16 or hits a clamp at dd3), H-pool (terrain cell pool cap in rs_malloc arena), H-real (retail logic caps cell ring).
+Work: read tools/apply_s6036_dd.py + apply_s6418_farclip.py scale constants; list every value scaled by dd or dd^2 and its width/clamp. Then one build that logs the scaled values at dd2 vs dd3 (positive control: dd2 prints, dd3 differs), one run.
+Outcome: a value saturating/clamping at dd3 -> fix the width; none -> test pool cap via heap-usage counters.

@@ -240,3 +240,5 @@ unit.
 - s6452: G1e re-closed: retail ~30 fps vs FPS60 ~59 (0x8011A8F4, s6256-57) already measured; s6450-51 md5/per-VI approach redundant, abandoned. M6 hold soak s6452_m6_hold600 queued.
 
 - s6465 (fold): dd6 lvl10 clean (301 s, 0 stalls/crashes) => dd6 qualified lvl1/5/10. Clamp under DD_UNSAFE lifted 6->8 (apply_s6036_dd.py + funcs_9.c); s6466_dd8_lvl1 queued. Then dd1 vs dd6 owner contact sheet.
+
+- s6471: dd3 break A/B folded: d2ctl 905, d3nf/d3free/d3pin all ~575 median tri; farclip and pin ruled out, game submits shorter DL at dd3 (116k vs 205k). Next: read terrain cell-count/radius scaling in tools/apply_s6036_dd.py for dd^2 overflow at dd3.
