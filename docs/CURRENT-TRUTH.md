@@ -115,6 +115,8 @@ terrain_med spans 0.44 (retail) to 0.035 (dd2), so width does not align scene co
 and the colour-fraction edge score is not a discriminator. No edge hypothesis selected;
 next needs a phase-gated fixed-camera capture or a horizon-profile metric.
 
+Session 6398: the phase-aligned horizon profile (tools/g3c_phase_horizon.py) is also not a discriminator: autopilot camera pose diverges between arms within ~1000 VIs of flight start (viewed frames in scratch/agent/view/s6398/), and retail already scores jump~0.33. Only a pose-locked capture (pinned camera matrix / no-input hover arm, or offline pose-matched frame pairs) can compare arms.
+
 ## G1 mission coverage
 
 Playable levels are 0..18 (`NUM_LEVELS=0x13`; 19 and 20 are sentinels). Levels
