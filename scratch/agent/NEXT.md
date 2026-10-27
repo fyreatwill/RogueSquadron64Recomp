@@ -1,3 +1,5 @@
-# NEXT: fold s6446_dd3real_lvl5 / lvl10 (genuine dd3, 300 s each)
-HYPOTHESIS-ID: g1c-phase2-dd3
-Check each run.log (scratch/agent/m6/g1_lvl*s6446_dd3real/run.log) says "multiplier 3" (NOT capped) and alive_at_end=1, 0 crash lines, 0 VI stall. Clean on both -> dd3 qualified on lvl1/5/10; update docs/OWNER-OPT-INS.md and ask owner to judge docs/owner_sheet_s6439.png. A crash -> capture lldb backtrace, root-cause (finder null node, s6102). Lesson: always grep the knob echo in the log before trusting a recipe's label.
+# NEXT: G3c(a) jagged far-terrain edge - arm table
+HYPOTHESIS-ID: g3c-visual-defects
+dd3 is qualified (s6447); owner directive says switch to G3c now. Start with (a):
+H-optin (auto-far/dd>1 exposes grid-aligned cell boundary, haze not scaled) vs H-aspect (s6144 frustum x-widening exposes side edge) vs H-retail (retail already shows it).
+Discriminator: pinned-pose framebuffer (recipe soak_queue/s6412_attpin.sh) in arms retail / dd2 / dd3 / ASPECT alone / FPS60 alone; compare far-edge stair-step metric (row-wise horizon x-run lengths of terrain-vs-sky boundary) + a retail positive control. Queue as ONE soak script with all arms; send contact sheet to owner. Then fix: scale fog/haze start/end by dd factor or fade outer ring.
