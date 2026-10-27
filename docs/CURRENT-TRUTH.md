@@ -263,3 +263,5 @@ unit.
 - s6477: buildGridCellMesh BB18 gate (table row link==0xFFFF) takes ~99% of exits at dd2/dd3; cell+0x1E indices are varied real rows (H-index unsupported). Next: dd1 control (NEXT.md).
 
 - s6482: grid row+2 link writers (0x800487F8, 0x8004B56C) are generic list-node push/unlink, no distance gate (single-source). Next: radius in processGridCellByDistance/updateActiveGridCellState, else pivot L-lod/fog.
+
+- **s6492 (supersedes s6491 'list never empty'):** g_s6491 listnz read stale r16 (head is v0). Real: streamTerrainGridCellsByDistance (0x8042B50) returns an empty list on 15.5% of dd4 calls (0.3% dd1); ForFace itself never skips cells before its jal; another 24% of dd4 ForFace calls get tiny lists with no cell < DEB4. Next: instrument the stream function's exits (NEXT.md).

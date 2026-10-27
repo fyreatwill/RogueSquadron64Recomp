@@ -610,6 +610,7 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
                     g_s6489[0], g_s6489[1], g_s6489[2], g_s6489[3], g_s6489[4], g_s6489[5], g_s6489[6], g_s6489[7]);
         }
         fprintf(stderr, "[gridcum] n=%d calls=%u listnz=%u chainnz=%u\n", n, g_s6491[0], g_s6491[1], g_s6491[2]);
+        { extern uint32_t g_s6492[12]; fprintf(stderr, "[forface] n=%d iter=%u jal=%u lastexit=%u lastnear=%u pass=%u headset=%u epi=%u epi_s5zero=%u entries=%u a0zero=%u\n", n, g_s6492[0], g_s6492[1], g_s6492[2], g_s6492[3], g_s6492[4], g_s6492[5], g_s6492[6], g_s6492[7], g_s6492[8], g_s6492[9]); }
         if (FILE* f = fopen(path, "wb")) {
             // s5746: raw guest-RDRAM readback, NOT the RT64 window (s5745: the "crawl garbage band" was only in this dump).
             fprintf(f, "P6\n# source=rdram-readback-not-window vi_width=%u\n%u %u\n255\n", ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG, dw, dh);
