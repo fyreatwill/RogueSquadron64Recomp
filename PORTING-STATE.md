@@ -170156,3 +170156,6 @@ Recipes with FORCE_PLANET_UNLOCK=0xFF: s6463_dd4_lvl10_retry rc=0 (mission_t=107
 - Change: tools/apply_s6036_dd.py clamp under ROGUESQ_DD_UNSAFE raised 6.0 -> 8.0 (also edited the already-patched RecompiledFuncs/funcs_9.c since the patch is idempotent-keyed); cmake build OK. Default unchanged (retail 1.0; 4.0 clamp without DD_UNSAFE, 3.0 without it per s6446 guard).
 - Queued soak_queue/s6466_dd8_lvl1.sh. Verify run.log echoes "multiplier 8"; watch heap/alloc failures (px3+ heap limit s6062), UCODE_CAP, bitmap stride.
 - Owner dd1-vs-dd6 contact sheet NOT yet produced (deferred; needs fixed-camera captures).
+
+## Session 6466 (2026-10-27) — folded dd8 lvl1: multiplier 8 applied, 300 s hold clean; dd8 lvl5/lvl10 queued
+s6466_dd8_lvl1 (rc=0, att=2, hold=301s, vi_stalls30s=0, crashlines=0). run.log confirms "[dd] ROGUESQ_DRAW_DISTANCE multiplier 8" and UCODE_CAP=65536; 0 allocation-failure/exhaustion lines. Attempt 1 was a route failure (fail_att1.log), retried clean. No new binding limit found at dd8 on lvl1 (single level, single-source). Queued s6467_dd8_lvl5 and lvl10. Next: fold them; then fixed-camera dd1-vs-dd8 contact sheet for the owner.

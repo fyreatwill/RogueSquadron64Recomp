@@ -1224,3 +1224,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261027-091458 | s6463_dd4_lvl10_retry | rc=0 | 416s | scratch/agent/soak_results/s6463_dd4_lvl10_retry_20261027-091458.log
 20261027-092154 | s6464_dd1_lvl10_ctl | rc=0 | 411s | scratch/agent/soak_results/s6464_dd1_lvl10_ctl_20261027-092154.log
 20261027-093015 | s6465_dd6_lvl10 | rc=0 | 412s | scratch/agent/soak_results/s6465_dd6_lvl10_20261027-093015.log
+20261027-093837 | s6466_dd8_lvl1 | rc=0 | 617s | scratch/agent/soak_results/s6466_dd8_lvl1_20261027-093837.log
