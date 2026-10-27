@@ -1529,6 +1529,7 @@ static Rs64F5PhaseDma g_f5_phase_dma[512] = {};
 static uint32_t g_f5_phase_dma_count = 0;
 
 struct Rs64F5PhaseStore {
+    uint64_t seq = 0;
     uint32_t phase = 0;
     uint32_t addr = 0;
     uint32_t span = 0;
@@ -1541,7 +1542,10 @@ static constexpr uint32_t kF5PhaseStoreCapacity = 65536u;
 static Rs64F5PhaseStore g_f5_phase_store[kF5PhaseStoreCapacity] = {};
 static uint32_t g_f5_phase_store_count = 0;
 static uint32_t g_f5_phase_store_next = 0;
+static uint64_t g_f5_phase_store_seq = 0;
 static uint32_t g_f5_phase_store_prints = 0;
+static uint32_t g_f5_target_store_prints = 0;
+static uint32_t g_f5_target_post_prints = 0;
 
 struct Rs64F5HostOrderPending {
     uint64_t seq = 0;
@@ -1577,14 +1581,28 @@ static void rs64_f5_last_writer_update(char width, uint32_t pc,
     const uint32_t span = width == 'D' ? 8u : (width == 'B' ? 1u :
                            (width == 'H' ? 2u : 4u));
     const uint32_t phys = addr & 0x7FFFFFu;
+    const uint32_t pre = g_recomp_rdram_for_wp_raw
+        ? rs64_f5_read_word(g_recomp_rdram_for_wp_raw, phys) : 0u;
     std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
     if (phase == 5u) {
         Rs64F5PhaseStore& event =
             g_f5_phase_store[g_f5_phase_store_next++ % kF5PhaseStoreCapacity];
-        event = {phase, phys, span, pc, value,
+        event = {++g_f5_phase_store_seq, phase, phys, span, pc, value,
                  static_cast<uint8_t>(width)};
         if (g_f5_phase_store_count < kF5PhaseStoreCapacity)
             ++g_f5_phase_store_count;
+        if (phys < 0x7355D0u && phys + span > 0x735560u &&
+            g_f5_target_store_prints < 256u) {
+            std::fprintf(stderr,
+                "[f5-phase5-target-store] seq=%llu pc=0x%08X addr=0x%08X "
+                "phys=0x%06X span=%u width=%c value=0x%08X pre=0x%08X "
+                "overlap=0x%06X..0x%06X\n",
+                static_cast<unsigned long long>(event.seq), pc, addr, phys,
+                span, width, value, pre, std::max(phys, 0x735560u),
+                std::min(phys + span, 0x7355D0u));
+            ++g_f5_target_store_prints;
+            std::fflush(stderr);
+        }
     }
     const uint32_t first = phys >> 2u;
     const uint32_t last = (phys + span - 1u) >> 2u;
@@ -1616,6 +1634,25 @@ extern "C" void rs64_f5_store_shadow_post(char width, uint32_t pc,
     if (g_f5_last_writer.empty()) g_f5_last_writer.resize(0x200000u);
     const uint32_t first = phys >> 2u;
     const uint32_t last = (phys + span - 1u) >> 2u;
+    if (rs64_phase_ord() == 5u && phys < 0x7355D0u &&
+        phys + span > 0x735560u && g_f5_target_post_prints < 256u) {
+        for (uint32_t i = 0; i < g_f5_phase_store_count; ++i) {
+            const uint32_t index = (g_f5_phase_store_next +
+                kF5PhaseStoreCapacity - 1u - i) % kF5PhaseStoreCapacity;
+            const Rs64F5PhaseStore& event = g_f5_phase_store[index];
+            if (event.phase != 5u || event.pc != pc || event.addr != phys ||
+                event.span != span) continue;
+            std::fprintf(stderr,
+                "[f5-phase5-target-post] seq=%llu pc=0x%08X addr=0x%08X "
+                "phys=0x%06X span=%u width=%c value=0x%08X pre=0x%08X "
+                "post=0x%08X\n",
+                static_cast<unsigned long long>(event.seq), pc, addr, phys,
+                span, width, event.value, rs64_f5_read_word(rd, phys), now);
+            ++g_f5_target_post_prints;
+            std::fflush(stderr);
+            break;
+        }
+    }
     for (uint32_t i = first; i <= last && i < 0x200000u; ++i) {
         Rs64F5LastWriter& row = g_f5_last_writer[i];
         if (row.pc == pc && row.phase == rs64_phase_ord()) {

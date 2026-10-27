@@ -169356,3 +169356,18 @@ seconds with zero VI stalls and crash lines. This refutes H-real-store,
 H-wrong-address, and H-wrong-buffer for the sampled D114 rows and selects a
 later phase-5 guest writer or copy path; no mitigation was added.
 ORIGIN: exact-address source/pre/post/base witness; no mitigation.
+
+## Session 6348 (2026-10-26) — phase-5 target-range census finds no colour guest writer
+
+Built the target-range phase-5 census and ran the DD3 level-1 arm. The
+ordinary-store, VTX, bulk, and forced-red controls all fired; 44 target-store
+and immediate-post pairs were captured across the sampled phase-5 activity.
+Every pair was either a pointer/list-shaped `0x8000D114` store or the single
+zero store at `0x80010FCC`; none of the post-values matched the independent red
+VTX-boundary bytes at `0x735560..0x7355D0`. The boundary was red for five
+phase-6 tasks and had zero phase-5 DMA overlap. This refutes H-later-store for
+the instrumented guest-store class, but does not distinguish a host target
+write from an earlier/uninstrumented copy or ordering gap. The run reached
+mission in 8 seconds and held 130 seconds with `alive_at_end=1`, zero VI
+stalls, and zero crash lines. No mitigation was added.
+ORIGIN: phase-5 target-range guest-store/post-store census; no mitigation.

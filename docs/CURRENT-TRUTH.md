@@ -1,11 +1,22 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6347 (2026-10-26).
+Compact operational handoff, maintained as of Session 6348 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
 
 ## Headline
+
+- s6348: the target-range phase-5 census passed the ordinary-store, VTX,
+  bulk, and forced-red controls and captured 44 target-store/post pairs. The
+  only writers overlapping `0x735560..0x7355D0` were the pointer/list-shaped
+  `0x8000D114` stores plus one zero store at `0x80010FCC`; none of their
+  post-values equaled the independent red VTX boundary. The boundary remained
+  red across five phase-6 tasks, with zero phase-5 DMA overlap. H-later-store
+  is refuted for the instrumented guest-store class; the transition remains
+  open to a host write or earlier/uninstrumented copy. The DD3 level-1 hold
+  reached mission in 8 seconds and held 130 seconds with `alive_at_end=1`,
+  zero VI stalls, and zero crash lines. No mitigation was added.
 
 - s6347: the exact-address D114 witness passed all controls and captured 43
   phase-5 rows in the target `0x735560..0x7355D0` lanes. The generated
@@ -112,7 +123,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog; per-session history archived in PROJECT-OVERVIEW.md, "Archived CURRENT-TRUTH backlog")
 
-- **s6347 (G3c a):** the exact D114 rows now prove the effective address and host base are correct while D114 writes pointer/list values, not the red payload. Next: add a target-range phase-5 store census for every guest store overlapping `0x735560..0x7355D0`, retaining PC, source value, pre-store word, and phase-ordered sequence after the D114 rows; retain ordinary-store, VTX, bulk, and D114 controls. The discriminator is the first later store whose post-value equals the independent VTX-boundary red word; that PC names the legitimate colour writer. No fade/cull mitigation.
+- **s6348 (G3c a):** the target-range census captured every instrumented phase-5 guest store overlapping `0x735560..0x7355D0`; only `0x8000D114` pointer/list stores and one zero store at `0x80010FCC` appeared, and no post-value matched the independent red VTX boundary. Next: instrument host RDRAM writes overlapping this exact target range across the phase-5→phase-6 boundary, retaining API, sequence, pre-bytes, payload/post-bytes, and phase; retain the ordinary-store, VTX, bulk, and forced-red controls. The discriminator is a host write whose post-bytes first become the red boundary; absence with controls firing selects an earlier/uninstrumented copy or ordering gap. No fade/cull mitigation.
 - **s6323 (G3c a):** builder grid coord at 0x80130C10 = camera*0.5 (origin 0). AA94 cell ids do NOT linearly track it (resid 12-15 cells). Next: fade by lit-vertex world radius ([edgepos]) from camera, skip cell mapping. See scratch/agent/NEXT.md.
 - s6321 (G3c a): CAMERA POSITION FOUND: struct ptr at 0x80138D1C; +0x28 = 3x3 rotation (9 floats), +0x4C..0x54 = world pos x,y,z (smooth in flight; positive control orthonormal rows). Log: ROGUESQ_G3C_CAMLOG=1 (tools/apply_s6321_camlog.py). Cell scale 12.8 UNVERIFIED. Next: regress AA94 cell stash vs pos/12.8, then edge fade centred on camera. Single-source (one lvl1 run).
 - s6320 (G3c a): RAM-snapshot scan (40 snaps, tools/g3c_ramscan.py) REFUTED a plain float position triple in 8 MB RDRAM (single-source); only triple = timeline ramp 0x8011A8F4. Next: log terrain-pass view matrix translation row (H-matrix) vs H-none.
