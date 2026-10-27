@@ -1,7 +1,8 @@
-# NEXT: exact count of populated link rows, and who writes row+2 after pool init (0x80041EF0)
+# NEXT: which insert writer populates grid-cell link chains, and does it carry a player-distance radius?
 HYPOTHESIS-ID: g1c-dd8-limit
-Known (s6480): *0x80136FCC -> pool of n 12-byte rows (n from level data, load_level_hmp 0x80044554 passes a0 to 0x80041EF0). Gate: Y=row[cell+0x1E]+2 != FFFF && row[Y]+4==1.
-H-streamer-bound: non-FFFF row+2 writes happen at runtime near the player (writer PC in a streamer/spawner) -> far rows empty only because not loaded -> raise that radius.
-H-load-time: all row+2 writes happen at level load from hmp data -> data-limited, close lever, pursue LOD/fog.
-Work: in a fixup patch, (1) record n and base at the 0x80041EF0 call; (2) log (PC-tag, row idx, value, VI) for every `sh ...,0x2(row)` in the functions found by grepping RecompiledFuncs for `sh .*0x2(` near lw 0x6FCC users (funcs_10.c lines ~3179-24992 list); simplest: wrap the 0x80136FCC-based stores. Run dd1 vs dd3 pinned (clone scratch/agent/s6480_pool.sh). Positive control: count of writes with value!=FFFF must be >0 at level load.
-Outcomes: writes continue during flight -> H-streamer-bound; only at load -> H-load-time.
+Known (s6481): row+2 links in the pool at *0x80136FCC are written at runtime in flight by 16 PCs; dominant non-FFFF writers 0x800487F8, 0x8004B56C, 0x8004805C, 0x80047668, 0x80047EA0/47F50; unlink-like 0x80048EB8, 0x8004B594, 0x80047064.
+H-radius: an insert writer's caller gates on a distance from the player cell (constant or table) -> scale it by DRAW_DISTANCE and far cells get chains.
+H-object-bound: chains are the objects (enemies/props) placed in each cell; far cells are empty because no objects exist there -> terrain strips come from another source; close this lever, pivot to L-lod/fog.
+Work: read generated code of the funcs containing 0x800487F8 and 0x8004B56C and their callers (grep RecompiledFuncs); extend apply_s6481_poolwatch to log the caller RA/a0..a3 for those PCs at dd1; then a one-site lever probe (widen radius x3 at that site, ROGUESQ env) and check [exitlog] pass count + terrain fraction at dd1 vs lever.
+Outcomes: radius found and widening raises passes -> H-radius, bundle under DRAW_DISTANCE; no distance gate -> H-object-bound.
+Build note: vendored fixup refuses a 2nd run on the live tree; apply new apply_*.py helpers to live files with a one-off driver (see s6481) and also wire them in fixup_game_funcs_vendored.py.

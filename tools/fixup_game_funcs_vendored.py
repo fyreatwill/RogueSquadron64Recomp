@@ -7947,6 +7947,10 @@ static void rs64_probe_submit_gate_store(char width, uint32_t pc, uint32_t addr,
             changed = True
         rewritten.append(line)
     text = ''.join(rewritten)
+    import apply_s6481_poolwatch as _a6481
+    text, _n6481 = _a6481.apply_helper(text)
+    if _n6481:
+        changed = True
 
     # s2469: capture the complete setupCameraMatrices caller boundary.  The
     # static census has 39 generated callsites across 11 files; keeping the
@@ -41887,6 +41891,7 @@ RS64_REPLAY = [
     "apply_s6476_exitcount.py",
     "apply_s6477_gatesplit.py",
     "apply_s6480_poolcensus.py",
+    "apply_s6481_poolwatch.py",
     "apply_s6036_dd.py",
     "apply_s6418_farclip.py",
     "apply_s6037_ddclamp.py",
