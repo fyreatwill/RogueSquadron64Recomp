@@ -170331,3 +170331,26 @@ Hypotheses and next discriminator (s6494): H-spanoverflow (signed-byte span tabl
 Ran tools/apply_s6493b_empty_dump.py (already applied) + s6493_streamcum.sh (lvl1 pose-pinned, dd1 and dd4 in parallel, 150 s, 0 crashes, 0 VI stalls). [streamdump] rows (run.log under scratch/agent/m6/g1_lvl1s6493bq_d{1,4}): dd1 empties (6) look like legit rows beyond the footprint: window w=23,2,17,3, table 127,127 then -128 (filled). dd4 empties (25 of first 25): window w=0,55|56,0,10 and table bytes 0x80130DB0..+23 ALL 127 (the "no span" sentinel), whereas dd4 ok calls have w=20,8,17,9 or 0,32,17,12 with -128 (full span) runs and a few 127. So the table is neither wrapped nor out of range: the footprint rasterizer produced no rows for those calls (window word 2 = 0 vs 17 on every ok call). H-spanoverflow: refuted for these rows. H-footprint: selected (window words / table not populated on empties). H-camera: unresolved (rows are repeated identical, i.e. same pose, consistent with a pose-dependent degenerate footprint). Single-source (one pose-pinned lvl1 run per arm).
 ORIGIN: no mitigation added; diagnostic only (patch scripts already in tools/).
 Next: scout the writer of 0x80130DB0 table / 0x80132DB0..BC (footprint polygon rasterizer, funcs_9.c near 0x800426D8..0x80042EC4 callers) and log its inputs (polygon vertices, dd scale) on the call preceding an EMPTY stream call.
+## Session 6496 (2026-10-27) — rasterizer inputs are nondegenerate before dd4 empty span returns
+
+Ran the existing regeneration-safe `tools/apply_s6496_bin_inputs.py` probe in the
+Debug target after a clean `cmake --build build --config Debug --target
+RogueSquadron64Recomp`. The pinned paired harness `zsh
+scratch/agent/s6492_forface.sh` ran dd1 and dd4 for 150 seconds each; both reached
+mission, stayed alive, and reported zero VI stalls and zero crash markers.
+
+The positive control fired in the same run: dd1 logged 8 nonempty and 6 empty
+`[streamdump]` returns; dd4 logged 8 nonempty and 25 empty returns. `binPolygon`
+inputs were observed before both kinds of return, with divisor 12.8. The dd4
+empty interval included `nbin=262` and later changing polygon vertices such as
+X/Z extents roughly -27..55 / -32..96; it was not a zero-area or absent input.
+Those empty returns still had all-127 span bytes and window `0,54/56,0,10`.
+
+This refutes H-footprint-degenerate at the polygon-input boundary. It does not
+distinguish stale ordering from an internal integer-bin/scale rejection, because
+the current probe captures inputs but not the computed bounds or store sequence.
+It also rules out a route/crash explanation for this measurement. ORIGIN: n/a
+(diagnostic-only instrumentation; no mitigation or default changed).
+
+Next discriminator: log computed bounds, first/last table-store addresses, and a
+sequence shared by rasterizer and stream return in one dd1/dd4 run.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6467 (2026-10-27).
+Compact operational handoff, maintained after Session 6496 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -159,7 +159,18 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   Never reset, clean, checkout, or update submodules. If editing `lib/`, run
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
-## Next steps — s6468 override (top)
+## Next steps — s6496 override (top)
+- **s6496 (top):** the `binPolygonIntoTerrainGrid` writer was instrumented and the
+  pinned dd1/dd4 arms ran in one build. The positive control fired (dd1: 8 ok /
+  6 empty logged returns; dd4: 8 ok / 25 empty). dd4 empty intervals contained
+  repeated rasterizer calls (one interval had `nbin=262`) with changing,
+  nonzero-area polygon extents and a stable divisor 12.8, while the span table
+  remained all 127 and the window was `0,54/56,0,10`. This refutes
+  H-footprint-degenerate at the polygon-input boundary. It does not split
+  H-order (rasterizer refresh is late/stale) from H-scale (computed integer
+  bins fall outside the table or are rejected). Next: log the rasterizer's
+  computed min/max and first/last table-store indices, plus a sequence number
+  shared with the stream return, in the same dd1/dd4 run.
 - **s6491 (top):** buildGridCellMesh's only caller chain is buildVisibleTerrainGridAroundCamera -> buildGridCellMeshForFace; the cell list is nonempty on every call at dd1 and dd4 (list-empty gate refuted), but ForFace leaves an empty mesh chain on 41% of dd4 calls vs 5% of dd1 (sim also ~20% slower at dd4). Deficit is inside ForFace's per-cell loop before 0x8004349C (single run/arm). Next: per-cell exit census of ForFace (NEXT.md).
 - **s6490 (second):** at dd4, 52% of low-ground flight frames have zero buildGridCellMesh entries over 9 VIs vs 1% of high-ground frames; dd1 builds every window (0/652 zero) -> terrain cell pass is not invoked in those frames (H-pass-skipped; single run/arm, slower-sim confound open). Passing cells are only 8-32 per run, so s6489 'per-VI pass-cell count' was ill-shaped. tools/g1c_lowframe_tris.py hardcodes fbs 0x80656000/0x806AB000 (flight fbs here are 0x80620000/0x80690000): its s6488/s6489 low/high split is suspect. Next: caller above 0x8004B930 and the gate that skips it at dd4 (NEXT.md).
 - **s6489 (top):** summing tricnt over all tasks per VI (tools/g1c_lowframe_tris.py) confirms s6488 within the dd4 run (low 1239 vs high 1726 tris, -28%); also dd4 high frames submit ~half of dd1's tris (3338), cross-run lead only (iron rule 2). Next: per-VI pass-cell count + tris/cell logging build.
