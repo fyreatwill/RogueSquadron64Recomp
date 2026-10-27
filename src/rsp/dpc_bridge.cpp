@@ -1586,6 +1586,49 @@ extern "C" void rs64_f5_host_bulk_shadow(uint32_t phys, uint32_t len,
     }
 }
 
+extern "C" void rs64_f5_host_bulk_payload(uint32_t phys, uint32_t len,
+                                             uint32_t dmem_addr) {
+    if (!rs64_f5_shadow_on() || len == 0u) return;
+    const uint32_t start = phys & 0x7FFFFFu;
+    const uint32_t end = std::min(start + len, 0x800000u);
+    static uint32_t rows = 0;
+    std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
+    for (const Rs64F5VtxStoreRange& row : g_f5_vtx_store_ranges) {
+        if (!row.end || start >= row.end || end <= row.source) continue;
+        if (rows++ >= 64u) return;
+        const uint32_t first = std::max(start, row.source);
+        const uint32_t last = std::min(end, row.end);
+        uint32_t fnv = 2166136261u, nonzero = 0u, red = 0u;
+        for (uint32_t p = first; p < last; ++p) {
+            const uint32_t off = p - start;
+            const uint8_t b = g_dmem_cur[((dmem_addr + off) & 0xFFFu) ^ 3u];
+            fnv = (fnv * 16777619u) ^ b;
+            nonzero += b != 0u;
+        }
+        for (uint32_t p = first; p + 2u < last; p += 4u) {
+            const uint32_t off = p - start;
+            const uint8_t r = g_dmem_cur[((dmem_addr + off) & 0xFFFu) ^ 3u];
+            const uint8_t g = g_dmem_cur[((dmem_addr + off + 1u) & 0xFFFu) ^ 3u];
+            const uint8_t b = g_dmem_cur[((dmem_addr + off + 2u) & 0xFFFu) ^ 3u];
+            red += r == 0xFFu && (g == 0u || b == 0u);
+        }
+        std::fprintf(stderr,
+            "[f5-bulk-payload] n=%u phase=%u task=%u bulk=0x%06X..0x%06X "
+            "dmem=0x%03X vtx=0x%06X..0x%06X lanes=0x%06X..0x%06X "
+            "fnv=%08X nonzero=%u red_words=%u bytes=",
+            rows, row.phase, row.task, start, end, dmem_addr, row.source,
+            row.end, first, last, fnv, nonzero, red);
+        const uint32_t dump = std::min(last - first, 64u);
+        for (uint32_t i = 0; i < dump; ++i) {
+            const uint32_t off = first - start + i;
+            std::fprintf(stderr, "%02X", (unsigned)g_dmem_cur[((dmem_addr + off) & 0xFFFu) ^ 3u]);
+        }
+        if (dump < last - first) std::fprintf(stderr, "...");
+        std::fprintf(stderr, "\n");
+    }
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_f5_vtx_store_range(uint32_t phase, uint32_t source,
                                            uint32_t bytes, uint32_t task,
                                            uint32_t pc) {

@@ -169112,3 +169112,24 @@ an exact bulk payload/lane witness. The retail oracle ground-truth check also
 passed its whole-RDRAM positive control (10,000 writes); its 15-second
 attract-only route did not execute `0x8000D114`, so it supplied no target-route
 value sample.
+
+## Session 6335 (2026-10-26) — qualified the F5 DMA payload lanes
+
+Added a regeneration-preserved witness at the actual `rsp_dmem_to_rdram` path.
+For each bounded phase-6 overlap with a recorded F5 VTX source range it logs
+the physical DMA range, DMEM source, exact destination/VTX lane intersection,
+payload hash, nonzero/red counts, and copied lane bytes. The Debug target built
+successfully and the qualified DD3/red level-1 run passed the ordinary-store,
+VTX, bulk, and source-red controls, reached mission in 8 seconds, held 130
+seconds alive, and recorded zero VI stalls and crash lines.
+
+The exact DMA payload does not match the red bytes later consumed by the same
+VTX ranges: for `0x735560..0x7355D0`, the DMA lane payload begins `D317...`
+while the VTX probe reads `FFA4...`; the `0x72D898` joined range also differs.
+This rules out H-bulk-colour for these overlapping writes. It supports a
+pre-VTX source-population path, but does not identify whether a guest store,
+another host write, or ordering between writes supplies the red bytes. The
+next work unit is post-store actual-byte readback for phase-5 guest stores,
+joined to the phase-6 VTX lanes, with host-write ordering as the fallback.
+No mitigation was added.
+ORIGIN: exact payload/lane attribution; no skip, guard, fade, or cull change.

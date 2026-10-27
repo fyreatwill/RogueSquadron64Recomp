@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..7161bc7 100644
+index b0d6bef..f44dc6e 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,7 @@
@@ -72,7 +72,7 @@ index b0d6bef..7161bc7 100644
  }
  
  #define RSP_ADD32(a, b) \
-@@ -94,36 +113,210 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -94,36 +113,213 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -112,6 +112,8 @@ index b0d6bef..7161bc7 100644
 +                                             uint32_t phys,
 +                                             uint32_t len,
 +                                             const char* api);
++extern "C" void rs64_f5_host_bulk_payload(uint32_t phys, uint32_t len,
++                                             uint32_t dmem_addr);
 +extern "C" void rs64_g1d_blk_dma(const char* kind, uint32_t src, uint32_t dest,
 +                                 uint32_t len, uint32_t pc);
 +extern "C" volatile uint32_t g_rs64_last_guest_pc;
@@ -282,6 +284,7 @@ index b0d6bef..7161bc7 100644
 +    rs64_g1d_blk_dma("rsp", dmem_addr, dram_addr, wr_len,
 +                     (uint32_t)g_rs64_last_guest_pc);
 +    rs64_m5_host_write_census(rdram, dram_addr, wr_len, "rsp_dmem_to_rdram");
++    rs64_f5_host_bulk_payload(dram_addr, wr_len, dmem_addr);
 +    rs64_m5_exact_route_dma_write(rdram, dram_addr, wr_len, dmem_addr);
 +    rs64_m5_source_range_dma_write(rdram, dram_addr, wr_len, dmem_addr);
 +    rs64_probe_audio_dma_write(rdram, dram_addr, wr_len, dmem_addr);
