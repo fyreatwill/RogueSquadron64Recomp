@@ -169827,3 +169827,22 @@ the downstream phase-5 and flight-width evidence. The next run removes that
 blocking check and retains title/armed rows as informational only.
 
 ORIGIN: harness route predicate; no game-data mitigation or default change.
+
+## Session 6396 (2026-10-27) — fixed optional-title and wide-flight gate ordering
+
+The planned concurrent four-arm G3c(a) rerun first exposed two harness-only
+false negatives: optional-title mode still waited on the obsolete 4:3 title
+origin, and the wide-flight regex expected `origin=... width=796` although the
+runtime emits `width=796 ... origin=...`. The helper was changed to wait for a
+literal `[autopilot] armed` marker in optional-title mode and to match the
+width independently from origin. A clean rerun then reached the mission
+predicate on attempt 1 in all arms: retail/dd2 at 91s and aspect/combined at
+33/34s. Each passed 130s verification; all four had zero `CRASH`/`SIGSEGV`/
+abort markers and zero 30-second VI stalls. Framebuffer positive controls
+passed. Provisional scores from the available post-flight windows were retail
+`-0.0038`, dd2 `-0.0014`, aspect `0.0518`, and combined `0.0158`, but the
+windows were not phase-aligned across 640- and 796-wide arms, so no fog/grid/
+aspect hypothesis was selected. This rules out route-gate failure, not any
+visual edge cause.
+
+ORIGIN: harness route predicates only; no game-data mitigation or default change.

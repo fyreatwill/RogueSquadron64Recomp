@@ -28,10 +28,14 @@ for att in 1 2 3 4 5; do
   has() { grep -aq "$1" $L; }
   key() { :; }  # no-op: autopilot injects keys
   fail() { echo "$1-att$att" >> $K; kill -9 $p 2>/dev/null; wait $p 2>/dev/null; cp $L $OUT/fail_att$att.log; }
-  for i in $(seq 1 150); do has "origin=${TITLE_ORIGIN:-0x00790400}" && break; kill -0 $p 2>/dev/null || break; sleep 1; done
-  if [ "${TITLE_ANY:-0}" = 1 ]; then
-    has '[autopilot] armed' || { fail notitle; continue; }
+  if [ "${TITLE_OPTIONAL:-0}" = 1 ]; then
+    for i in $(seq 1 150); do grep -a -F -q '[autopilot] armed' "$L" && break; kill -0 $p 2>/dev/null || break; sleep 1; done
+    grep -a -F -q '[autopilot] armed' "$L" || { fail notitle; continue; }
+  elif [ "${TITLE_ANY:-0}" = 1 ]; then
+    for i in $(seq 1 150); do has "origin=${TITLE_ORIGIN:-0x00790400}" && break; kill -0 $p 2>/dev/null || break; sleep 1; done
+    grep -a -F -q '[autopilot] armed' "$L" || { fail notitle; continue; }
   else
+    for i in $(seq 1 150); do has "origin=${TITLE_ORIGIN:-0x00790400}" && break; kill -0 $p 2>/dev/null || break; sleep 1; done
     has "origin=${TITLE_ORIGIN:-0x00790400}" || { fail notitle; continue; }
   fi
   [ -n "${AP_OVERRIDE:-}" ] || for n in $(seq 1 12); do has 'origin=0x006AB400' && break; key 36; sleep 4; key 6; sleep 7; done
@@ -46,7 +50,7 @@ for att in 1 2 3 4 5; do
     [ $((n%6)) -eq 0 ] && key 6
     if [ "${MISSION_WIDE_FLIGHT:-0}" = 1 ]; then
       # Route gate: allocator-independent wide flight plus the phase-5 writer witness.
-      grep -aqE 'origin=0x[0-9A-Fa-f]{6} width=796' $L &&
+      grep -aqE 'width=796' $L &&
         grep -aq '\[f5-phase5-target-store\]' $L && { mt=$SECONDS; break; }
     else
       grep -aqE "origin=0x(00)?(${MISSION_RE:-690400})" $L && { mt=$SECONDS; break; }

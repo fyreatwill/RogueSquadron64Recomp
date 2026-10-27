@@ -1,25 +1,25 @@
-# NEXT: remove the stale title gate and rerun G3c(a)
+# NEXT: phase-align the completed G3c(a) edge table
 HYPOTHESIS-ID: g3c-edge-arm-route-gate
 
-Update `scratch/agent/s6394_edge_arms.sh` so `TITLE_ANY` is not a blocking
-predicate. Run the same four arms using phase-5 plus the per-arm flight width:
-retail/dd2 `width=640`, aspect/combined `width=796`. Keep title/armed rows as
-informational evidence, and retain positive framebuffer-hash/terrain controls
-and zero crash/stall checks. Score only dumps after the arm-specific gate.
+Use the completed s6396 logs and dumps, or rerun the same helper if needed, but
+score only comparable flight-phase dumps: retail/dd2 at `width=640`,
+aspect/combined at `width=796`, after the phase-5 witness. Keep title/armed rows
+informational; retain positive framebuffer-hash/terrain controls and zero
+crash/stall checks. The helper fixes from s6396 are already in place.
 
-DISCRIMINATING MEASUREMENT: one concurrent four-arm run with no title gate and
-the phase-5 + arm-width predicate. A complete valid table selects fog/grid/
-aspect by score ordering; any arm still failing its gate selects only the
-remaining route failure.
+DISCRIMINATING MEASUREMENT: one table of four phase-aligned edge scores. If dd2
+tracks combined while aspect tracks retail, select grid; if dd2 tracks retail
+while combined tracks aspect, select fog; if aspect and combined share the shift
+against both controls, select aspect. Any missing arm is a route/capture failure,
+not visual evidence.
 
 Competing hypotheses:
 
-- H-title-gate: removing the title predicate yields valid captures without
-  changing runtime behavior.
+- H-title-gate: fixed; the clean rerun reached all four mission predicates.
 - H-edge-fog: dd2 changes edge excess relative to retail; combined follows dd2.
 - H-edge-grid: dd2 and combined share the edge signature.
 - H-edge-aspect: aspect-only and combined share the edge signature.
 
-Exact command: update the helper, run `zsh scratch/agent/s6394_edge_arms.sh`,
-then run `python3 tools/g3c_edge_score.py` on each gated `fbd` directory. Do
-not change runtime defaults or visual code.
+Exact command: use `python3 tools/g3c_edge_score.py` on phase-aligned flight
+windows in each `scratch/agent/m6/g1_lvl1s6394_*/fbd` directory. Do not change
+runtime defaults or visual code.

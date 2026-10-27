@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6395 (2026-10-27).
+Compact operational handoff, maintained after Session 6396 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -99,9 +99,16 @@ and combined logs each contain 28 phase-5 target-store rows, sustained
 796-wide VI rows, framebuffer dumps, and zero crash markers; retail and dd2
 contain sustained 640-wide rows and the same positive framebuffer controls,
 but no phase-5 rows. The title predicate blocks valid wide-arm mission
-evidence and cannot distinguish the edge hypotheses. The next run must use
-phase-5 plus the arm-specific flight width as the mission predicate, with the
-title check informational only.
+evidence and cannot distinguish the edge hypotheses.
+
+Session 6396 fixed the gate in `m6_god_common.sh`: optional-title arms now
+wait for the literal autopilot marker, and wide-flight matching accepts the
+emitted `width=796 ... origin=...` order. The clean concurrent rerun reached
+mission on attempt 1 in all arms (retail/dd2 at 91s; aspect/combined at 33/34s),
+passed 130s verification, and recorded zero crash lines and zero 30s VI stalls.
+Framebuffer controls passed. Provisional post-flight edge scores were retail
+`-0.0038`, dd2 `-0.0014`, aspect `0.0518`, combined `0.0158`; dump windows
+were not phase-aligned across arms, so no edge hypothesis is selected.
 
 ## G1 mission coverage
 
@@ -131,11 +138,12 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. Rerun the four-arm G3c(a) edge table after removing the redundant title
-   predicate: require phase-5 plus the arm-specific flight width (640
-   retail/dd2, 796 aspect/combined), positive framebuffer hashes, and zero
-   crash/stall markers; score only gated mission captures. Do not use a fixed
-   VI origin; the height-byte fade arm is closed as ineffective.
+1. Re-score the completed four-arm G3c(a) run using phase-aligned flight dump
+   windows (640 retail/dd2, 796 aspect/combined), positive framebuffer hashes,
+   and zero crash/stall markers. The title gate and width-order defects are
+   fixed; do not use a fixed VI origin. Select fog/grid/aspect only when all
+   four scores are from comparable flight phases. The height-byte fade arm is
+   closed as ineffective.
 2. Measure the owner-reported turning shake with the retail/FPS60/aspect arms
    if it remains actionable; current residual evidence is consistent with
    retail 30-Hz judder.
