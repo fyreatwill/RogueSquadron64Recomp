@@ -294,3 +294,5 @@ s6371: [spike-cov] per-event DMA logger built; soak s6371_spike_cov queued (fold
 s6371: spike pinned Y (0xFD57 @DMEM 0x43A) is never DMA-loaded (v43A only 0000/3333 over 1500 covering DMAs) -> written by ucode; next: RSP store watch on 0x43A/0x462.
 
 - s6372: RSP store watch ([spike-st], ROGUESQ_SPIKE_DMEM=1) built for DMEM 0x43A/0x462 incl. vector stores; soak s6372_spike_store queued; fold its `[spike-st] ... FD57 ... ra=` rows next (resolve ra with atos).
+
+- s6373 (G3c b): spike pinned Y 0xFD57 is stored by SDV $v6 at ucode L_1740 after `vge $v6,$v6,$v29[1q]` (guard-band clamp, $v29 from DMEM 0x60) - inference, single-source; see NEXT.md.

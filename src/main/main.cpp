@@ -4706,6 +4706,11 @@ static void rs64_audio_hash_rdram(const uint8_t* rdram, uint32_t addr,
 }
 
 static thread_local bool g_rs64_audio_vector_store = false;
+static thread_local uint32_t g_spike_sdv_reg = 0, g_spike_sdv_e = 0, g_spike_sdv_lanes[8];
+extern "C" void rs64_spike_sdv_note(uint32_t reg, uint32_t e, const uint32_t* lanes) {
+    g_spike_sdv_reg = reg; g_spike_sdv_e = e;
+    for (int i = 0; i < 8; i++) g_spike_sdv_lanes[i] = lanes[i];
+}
 
 extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
                                            uint32_t len, uint32_t value,
@@ -4733,6 +4738,10 @@ extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
                     fprintf(stderr, "[spike-st] dmem=%03X len=%u op=%08X val=%08X v43A=%04X v462=%04X%s ra=%p %s+0x%lx n43A=%u n462=%u ctl=%u\n",
                             a0, len, vector_op, value, v43a, v462, fd ? " FD57" : "", ra, di.dli_sname ? di.dli_sname : "?",
                             di.dli_saddr ? (unsigned long)((char*)ra - (char*)di.dli_saddr) : 0ul, n43a, n462, nctl);
+                    if (vector_op == 0x53445600u)
+                        fprintf(stderr, "[spike-sdv] vreg=%u e=%u lanes=%04X %04X %04X %04X %04X %04X %04X %04X\n", g_spike_sdv_reg, g_spike_sdv_e,
+                                g_spike_sdv_lanes[0], g_spike_sdv_lanes[1], g_spike_sdv_lanes[2], g_spike_sdv_lanes[3],
+                                g_spike_sdv_lanes[4], g_spike_sdv_lanes[5], g_spike_sdv_lanes[6], g_spike_sdv_lanes[7]);
                 }
             }
         }

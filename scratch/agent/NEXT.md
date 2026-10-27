@@ -1,6 +1,5 @@
-# NEXT: fold s6372 [spike-st] soak: which RSP store leaves 0xFD57 in DMEM 0x43A/0x462
+# NEXT: confirm spike Y=FD57 is the VGE guard-band clamp (DMEM 0x60) and check pre-clamp inputs vs reference VU
 HYPOTHESIS-ID: g3c-owner-visual-b
-Read scratch/agent/SOAK-RESULTS.md tail + soak_results/s6372_spike_store_*.log. Check positive control first (ctl>0 in [spike-st] rows; if no rows at all with n43A=0, the slots are never stored -> revisit: written by DMA after all or different DMEM copy).
-Resolve the FD57-row `ra=` with `atos -o build/RogueSquadron64Recomp -arch arm64 <ra - slide>` or lldb `image lookup -a`; map to the ucode source line/op (sh/sw/SQV/...), name the stage, and decide whether the value is legit (VTX output) -> emulation vs ucode-state bug. Then fix or ask owner about ROGUESQ_CULL_SPIKE default-on.
-
-s6372 RESULT (supersedes the "Read ..." steps above): writer of 0xFD57 at DMEM 0x438/0x460 is an SDV vector store (VU lane holds FD57; not DMA, not scalar). Next: dump source vreg index + 8 lanes at first FD57 SDV (pass call-site identity), trace the producing VU op (saturation vs stale input), compare to a reference VU.
+s6373 RESULT: writer is vreg 6 SDV at ucode L_1740 (`vmadh $v6,$v4,$v0; vge $v6,$v6,$v29[1q]`, $v29=DMEM 0x60). Y=FD57 pinned while X varies -> Y saturated by VGE lower bound.
+Work unit: extend rs64_spike_sdv_note to also log DMEM 0x60..0x6F (v29 source) and, at first FD57, a snapshot of rsp.vpu.r[4], r[5], r[6], r[29] (add hook at the VGE line via fixup script in tools/fixup_*.py or log inside SDV via `this`). Outcomes: v29 lane1 == FD57 -> clamp confirmed; then compute pre-clamp Y from v4/v5/recip: huge due to w~0 -> retail identical (ask owner on CULL_SPIKE default-on); moderate value clamped wrongly -> VMADH/VGE emulation bug, replay in ares/parallel-rsp.
+Recipe: env ROGUESQ_G1B=1 XENV_EXTRA="ROGUESQ_LOG_SPIKE=1 ROGUESQ_SPIKE_DMEM=1" HOLD_S=300 LEVEL=2 TAG_SUFFIX=s6374 zsh scratch/agent/g1_level_coverage_common.zsh
