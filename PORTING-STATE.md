@@ -170538,3 +170538,19 @@ not identify a writer outside the stream interval. The next discriminator is a
 single build/run that records per-site counts plus a post-return table diff and
 keeps the dd1 nonempty and dd4 EMPTY controls. ORIGIN: checkpoint close-out;
 no mitigation, game behavior, or default changed.
+
+## Session 6508 (2026-10-27) — identified the DC0 writer for the post-bin diff
+
+The prescribed s6507 unit added `tools/apply_s6507_writer_diff.py`, extending
+the keyed writer census with per-site table-byte masks and a post-table diff.
+The Debug target rebuilt successfully. The pinned dd1/dd4 run held both arms
+for 151 s with zero VI stalls and crash markers; dd1 produced 14 keyed rows
+and dd4 108, including nonempty and EMPTY controls. On the initial matching
+controls, dd1's changed masks were `0x80` and `0x03`, with interval DC0 masks
+exactly `0x80` and `0x03`; dd4 produced `0x800000` and `0x18`, again matching
+DC0. DB4, EBC, and EC4 interval masks were zero in those controls. This is
+two-arm evidence selecting the concrete store at `0x80042DC0` for the observed
+post-bin table change. Later rows retained a nonzero diff with no new interval
+mask, so the run does not attribute every later mutation to DC0. No mitigation,
+game behavior, or default changed. ORIGIN: the change is diagnostic telemetry;
+the named DC0 value/address is not yet classified as legitimate or corrupt.

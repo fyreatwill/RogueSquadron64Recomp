@@ -1,33 +1,29 @@
-# NEXT: RESUME — attribute post-bin table changes to a concrete writer
+# NEXT: audit the selected DC0 writer's address and value
 HYPOTHESIS-ID: g1c-dd8-limit
 
-The prior retry already has the s6506 artifact and result; do not rerun it as
-part of checkpoint close-out. On the next iteration, run exactly this one
-bounded experiment: extend the passing invocation-key census with per-site
-counts and a post-table diff. Keep DB4, DC0, EBC, and EC4 separate; for each
-keyed stream invocation record the four interval counts and the table bytes at
-the stream return. Preserve the dd1 nonempty and dd4 EMPTY controls in one
-build and one run. Do not change game behavior or add a mitigation.
+Run exactly one bounded experiment. Extend the existing keyed probe so each
+live 0x80042DC0 store records target address, byte value, table index or
+out-of-table classification, and the existing span-bound decision. Retain the
+per-site interval masks and post-table diff. Use one Debug build and the pinned
+dd1/dd4 arms in `scratch/agent/s6492_forface.sh`; do not change game behavior
+or add a mitigation.
 
 Competing hypotheses and discriminator:
 
-- H-DB4/DC0: the keyed interval's DB4/DC0 stores explain the matching table
-  change; the changed table bytes must overlap the bytes written by those sites.
-- H-EBC/EC4: EBC or EC4 writes outside the stream interval explain the change;
-  a widened keyed interval or a post-return writer snapshot will show EBC/EC4
-  activity tied to the same key.
-- H-uninstrumented: none of the four sites accounts for the diff; the post-table
-  diff remains nonzero while all keyed site counts are zero, proving a missing
-  writer path.
+- H-DC0-legitimate: every changed-byte overlap is a target in
+  `0x80130DB0..0x80130DC7` with an ordinary signed span value; this proves DC0
+  is a legitimate stream refresh and moves the defect upstream.
+- H-DC0-corrupt: a matching DC0 store targets outside the table or carries a
+  value outside the signed span domain; this identifies the corrupt writer
+  input path before any guard is considered.
+- H-uninstrumented: the post-table diff is nonzero but no keyed DC0 target
+  accounts for it; this reopens a host/uninstrumented writer path.
 
-The result must include a positive key-match control, dd1 nonempty rows, and
-dd4 EMPTY rows. Exact commands:
+Positive controls required: keyed rows, dd1 nonempty rows, dd4 EMPTY rows, and
+zero crash/VI-stall markers. Expected split is determined by the target/value
+classification above; a null is not evidence unless all controls pass.
+
+Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
     zsh scratch/agent/s6492_forface.sh
-
-Expected split: if the changed post-table bytes overlap DB4/DC0 stores, select
-H-DB4/DC0; if EBC/EC4 activity is tied to the same key outside the interval,
-select H-EBC/EC4; if the diff remains while all four counts are zero, select
-H-uninstrumented and enumerate the missing writer path. Require the positive
-controls before treating any null as evidence.

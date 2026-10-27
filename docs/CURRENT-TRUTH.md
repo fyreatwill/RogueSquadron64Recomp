@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6506 (2026-10-27).
+Compact operational handoff, maintained after Session 6508 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -26,6 +26,18 @@ while dd4 rows were `49..53,49..53,0,0`. This removes the unsigned-underflow
 join defect and shows the observed interval activity is at DB4/DC0, not EBC/EC4.
 The result identifies the boundary/race artifact but does not yet prove which
 writer changed the post-bin table; no game behavior or default changed.
+
+Session 6508 added a regeneration-safe per-site byte mask and post-table diff
+to that keyed probe. The Debug build passed. The pinned run held both dd1 and
+dd4 for 151 s with zero VI stalls/crash markers; dd1 produced 14 keyed rows
+and dd4 108, including nonempty and EMPTY controls. On the initial matching
+controls, dd1 changed byte mask 0x80 with interval mask DC0=0x80, then 0x03
+with DC0=0x03; dd4 changed 0x800000 then 0x18 with DC0 matching those masks.
+DB4, EBC, and EC4 interval masks were zero in those controls. This selects
+the concrete 0x80042DC0 writer for the observed post-bin change in two
+independent arms. Later rows retain a nonzero diff with zero new interval
+mask, so this does not claim every later mutation is DC0. No mitigation or
+default changed.
 
 Session 6500 extended the byte-store census with a 64-entry sequence-keyed
 post-bin ring and bounded writer summary. The final pinned dd1/dd4 run reached
@@ -214,14 +226,19 @@ streamTerrainGridCellsByDistance, so the shared cumulative counter is an
 invalid cross-function join even when guest IDs match. H-boundary is selected;
 the exact per-invocation join fix remains to be built.
 
-## Next steps — s6506 writer attribution (top)
-- **s6506 (top):** use the passing invocation key to attribute each matching
-  post-bin table change to a concrete store site. Extend the same keyed interval
-  census with per-site byte/store counts and a post-table diff, retaining dd1
-  nonempty and dd4 EMPTY controls in one build/run. The current run shows only
-  DB4/DC0 activity during stream intervals, but that is aggregate interval
-  evidence; distinguish DB4/DC0 from an out-of-interval EBC/EC4 write before
-  naming the writer or adding any mitigation.
+## Next steps — s6509 DC0 legitimacy audit (top)
+- **s6509 (top):** audit the selected 0x80042DC0 writer's target address and
+  value in the same keyed dd1/dd4 arms. Log the DC0 target, value, table index
+  (or out-of-table classification), and whether the target is accepted by the
+  existing span bound; retain the post-table diff and positive nonempty/EMPTY
+  controls. If all changed bytes are in 0x80130DB0..DC7 with ordinary span
+  values, select a legitimate stream refresh and move the defect upstream. If
+  any target is outside that table or any value is outside the signed span
+  domain, select a corrupt DC0 write and name its input path. If the diff is
+  nonzero with no matching DC0 target, reopen an uninstrumented/host writer.
+  Do not add a guard or change behavior until address/value legitimacy is
+  classified. ORIGIN: s6508's mask join names DC0 for the positive controls;
+  legitimacy of its address/value remains unproven.
 - **s6505 (folded):** the invocation-local key removed the shared cumulative
   underflow. H-boundary remains selected; the exact post-bin writer is open.
 - **s6499 (folded):** the complete store census selected a later stream-path
