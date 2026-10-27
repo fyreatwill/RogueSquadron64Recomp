@@ -1,3 +1,3 @@
-# NEXT: G3c(b) H-rt64 offline model
-HYPOTHESIS-ID: g3c-spike-reference
-Hypotheses: H-rt64 (RT64 draws wedge coords the RDP would clip/clamp) vs H-retail (hardware RDP draws it too). Take one logged wedge triangle from a ROGUESQ_LOG_SPIKE run (tools/g3c_spike_classify.py), model RDP scissor + s10.2 coordinate limits, and compare to the matching framebuffer dump: wedge visible in dump but fully scissored in the model => H-rt64, fix by clamping/culling in RT64 behind an env flag. Positive control: a synthetic in-screen triangle must pass the model unchanged. If inconclusive, switch to M6 endurance (item 3b).
+# NEXT: M6 title->mission endurance (item 3b)
+HYPOTHESIS-ID: m6-endurance
+G3c(b) closed locally (s6441 model: RDP would draw the wedges too; only a human-installed LLE reference resolves H-retail; ask owner). Queue 3 keyed mission-hold soaks (>=10 min) on the s5378 title->mission route, log CRASH/abort and VI stalls >30 s; backtrace each distinct failure.
