@@ -11,6 +11,7 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 - M5 audio de-stubbing, M3 idiom audits, generated-symbol renaming, and M6
   first-mission endurance are closed. G4 crash hunting is parked after clean
   coverage. G1 is mission coverage and visual quality, not autopilot work.
+- s6522: span-grid 0x80 bytes at col>=32 are legit byte-clamp saturations (bounds 127/-128 fixed, inputs finite, pre-clamp down to -472); next is the grid consumer compare / value scale.
 - Current owner frontier is G1c's span-filter cell record. Both live
   compares reject dd4 empty cells; the next question is whether cell bytes
   near -38 are an in-table field. Then G3c: terrain-edge fade, spike-line
