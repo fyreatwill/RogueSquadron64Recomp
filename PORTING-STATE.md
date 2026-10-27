@@ -169187,3 +169187,23 @@ a nonmatching host event followed by a red transition selects H-unlogged-bulk;
 no host event with a red transition at VTX selects H-vtx-copy.
 ORIGIN: checkpoint close-out of the post-store attribution experiment; no
 mitigation or runtime behavior change was made.
+
+## Session 6339 (2026-10-26) — qualified exact-lane host-write ordering
+
+Added a regeneration-preserved host-write boundary witness around the existing
+F5 VTX range joins. It snapshots bytes before and after overlapping host
+mutations and records a sequence, API, phase, physical range, and bounded byte
+payload. The Debug target built successfully; submodule patch exports were
+refreshed for the RT64 and N64ModernRuntime edits.
+
+The DD3/red level-1 run passed the ordinary-store, VTX, bulk, source-red,
+guest-store, and host-write controls, reached mission in 8 seconds, held 130
+seconds alive, and recorded zero VI stalls and crash lines. The witness emitted
+128 bounded rows, all `rsp_dmem_to_rdram`. For sampled red-valued phase-6 VTX
+lanes, the `before` bytes were already red and the `after` bytes changed. These
+host DMAs therefore overwrite later contents; they do not create the observed
+red source transition. This does not select the earlier/unlogged bulk path over
+VTX-side source/read ordering, because the actual transition still precedes
+the captured host events. No mitigation was added.
+ORIGIN: exact-lane host-write ordering; the witness is diagnostic-only and
+does not alter RDRAM or rendering.

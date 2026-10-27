@@ -1500,6 +1500,21 @@ static uint32_t g_f5_last_writer_updates = 0;
 static uint32_t g_f5_bulk_control = 0;
 static uint32_t g_f5_bulk_rows = 0;
 
+struct Rs64F5HostOrderPending {
+    uint64_t seq = 0;
+    uint32_t phys = 0;
+    uint32_t len = 0;
+    uint32_t overlap = 0;
+    uint32_t sample_len = 0;
+    char api[32] = {};
+    uint8_t before[32] = {};
+    bool valid = false;
+};
+
+static Rs64F5HostOrderPending g_f5_host_order_pending;
+static uint64_t g_f5_host_order_seq = 0;
+static uint32_t g_f5_host_order_rows = 0;
+
 static bool rs64_f5_shadow_on() {
     static const bool on = [] {
         const char* e = std::getenv("ROGUESQ_LOG_F5_STORE_SHADOW");
@@ -1617,6 +1632,61 @@ extern "C" void rs64_f5_host_bulk_shadow(uint32_t phys, uint32_t len,
             row.phase, row.task, start, end, row.source, row.end);
         std::fflush(stderr);
     }
+}
+
+extern "C" void rs64_f5_host_write_begin(const uint8_t* rdram, uint32_t phys,
+                                           uint32_t len, const char* api) {
+    if (!rs64_f5_shadow_on() || !rdram || len == 0u) return;
+    const uint32_t start = phys & 0x7FFFFFu;
+    const uint32_t end = std::min(start + len, 0x800000u);
+    std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
+    for (const Rs64F5VtxStoreRange& row : g_f5_vtx_store_ranges) {
+        if (!row.end || start >= row.end || end <= row.source) continue;
+        const uint32_t first = std::max(start, row.source);
+        const uint32_t last = std::min(end, row.end);
+        const uint32_t sample = std::min(last - first, 32u);
+        g_f5_host_order_pending = {};
+        g_f5_host_order_pending.seq = ++g_f5_host_order_seq;
+        g_f5_host_order_pending.phys = start;
+        g_f5_host_order_pending.len = end - start;
+        g_f5_host_order_pending.overlap = first;
+        g_f5_host_order_pending.sample_len = sample;
+        std::snprintf(g_f5_host_order_pending.api,
+                      sizeof g_f5_host_order_pending.api, "%s", api ? api : "?");
+        for (uint32_t i = 0; i < sample; ++i)
+            g_f5_host_order_pending.before[i] = rdram[(first + i) ^ 3u];
+        g_f5_host_order_pending.valid = true;
+        return;
+    }
+}
+
+extern "C" void rs64_f5_host_write_after(const uint8_t* rdram, uint32_t phys,
+                                           uint32_t len, const char* api) {
+    if (!rs64_f5_shadow_on() || !rdram || len == 0u) return;
+    std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
+    Rs64F5HostOrderPending& p = g_f5_host_order_pending;
+    if (!p.valid || p.phys != (phys & 0x7FFFFFu) || p.len != len) return;
+    bool red = false;
+    for (uint32_t i = 0; i < p.sample_len; ++i) {
+        const uint8_t v = rdram[(p.overlap + i) ^ 3u];
+        red |= v == 0xFFu;
+    }
+    if (!red || g_f5_host_order_rows++ >= 128u) {
+        p.valid = false;
+        return;
+    }
+    std::fprintf(stderr, "[f5-host-order] seq=%llu api=%s phys=0x%06X len=0x%X "
+                 "overlap=0x%06X sample=%u phase=%u before=",
+                 (unsigned long long)p.seq, api ? api : p.api, p.phys, p.len,
+                 p.overlap, p.sample_len, rs64_phase_ord());
+    for (uint32_t i = 0; i < p.sample_len; ++i)
+        std::fprintf(stderr, "%02X", p.before[i]);
+    std::fprintf(stderr, " after=");
+    for (uint32_t i = 0; i < p.sample_len; ++i)
+        std::fprintf(stderr, "%02X", rdram[(p.overlap + i) ^ 3u]);
+    std::fprintf(stderr, "\n");
+    std::fflush(stderr);
+    p.valid = false;
 }
 
 extern "C" void rs64_f5_host_bulk_payload(uint32_t phys, uint32_t len,
