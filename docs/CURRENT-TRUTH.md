@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6385 (2026-10-26).
+Compact operational handoff, maintained after Session 6386 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -28,12 +28,15 @@ rows respectively. The target positive control therefore passes in both
 witness streams. Session 6385 replayed the corrected FD57 post-`vd` ring:
 2 rows, 8/8 accumulator matches, and 8/8 result matches, with no saturation.
 This rules out a replay arithmetic error in that ring, but does not establish
-retail/reference-RSP equivalence or explain the visible wedge.
+retail/reference-RSP equivalence or explain the visible wedge. Session 6386
+found the independent cxd4 RSP sources and built their scalar VU objects, but
+the offline comparator segfaulted reproducibly around parsed row 95 after
+consuming 88 rows; it never reached a valid FD57 comparison. The Ares-derived
+header path is the runtime implementation and is not independent ground truth.
 
-The immediate next work unit is an independent/reference-RSP comparison of the
-FD57 inputs and output, as described in `scratch/agent/NEXT.md`. The route audit
-and target replay both pass their positive controls, so no new capture is
-currently justified.
+The independent comparison is currently capability-blocked; the route audit
+still passes its positive control. The next gate is the owner's
+`ROGUESQ_CULL_SPIKE` decision, not another game run.
 
 ## G1 mission coverage
 
@@ -63,9 +66,10 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. Finish G3c(b) with an independent/reference-RSP comparison or owner’s
-   decision on `ROGUESQ_CULL_SPIKE`; do not infer clamp behavior from the
-   internally consistent but single-source s6380long replay.
+1. Finish G3c(b) with the owner's decision on `ROGUESQ_CULL_SPIKE`; the
+   independent cxd4 comparison is capability-blocked after a reproducible
+   offline comparator crash, so do not infer clamp behavior from the internally
+   consistent but single-source s6380long replay.
 2. Finish G3c(a) only with a phase-gated edge measurement and owner-viewable
    frames; the height-byte fade arm is closed as ineffective.
 3. Measure the owner-reported turning shake with the retail/FPS60/aspect arms

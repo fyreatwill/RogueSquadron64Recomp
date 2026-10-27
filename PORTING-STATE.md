@@ -169643,3 +169643,19 @@ replay matched every target accumulator and result. Rules out: a host post-`vd`
 arithmetic mismatch on this corrected FD57 chain. Next: obtain an
 independent/reference-RSP comparison of the exact vectors before changing the
 emulator or enabling spike culling.
+
+## Session 6386 (2026-10-26) — reference-RSP comparison capability failed
+
+Attempted the prescribed offline FD57 comparison without rebuilding or rerunning
+the game. The Ares-derived VU header already used by the runtime was rejected
+as non-independent ground truth. The separately installed cxd4 RSP source at
+`/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4`
+compiled into scalar VU objects, but a direct log comparator consumed 88 rows
+and then segfaulted reproducibly around parsed row 95; no FD57 lane or clamp
+comparison was produced. Positive control remains the existing s6380long
+route witness (155 FD57 store rows and 546 FD57 VU rows).
+
+This rules out neither H-rsp-emu-clamp nor H-clip/H-retail. It does rule out
+the current cxd4 offline integration as a usable discriminator. The next gate
+is the owner's opt-in `ROGUESQ_CULL_SPIKE` decision, with retail defaults
+unchanged. ORIGIN: no mitigation; no runtime or game behavior changed.

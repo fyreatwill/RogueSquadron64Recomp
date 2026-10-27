@@ -1,8 +1,12 @@
-# NEXT: RUN — independent/reference-RSP comparison for the FD57 ring
+# NEXT: OWNER GATE — decide `ROGUESQ_CULL_SPIKE` after failed reference comparison
 HYPOTHESIS-ID: g3c-owner-visual-b
 
-The corrected post-vd replay is complete. Do not rebuild or rerun the game
-before this comparison.
+The corrected post-vd replay is complete. Do not rebuild or rerun the game for
+this gate. The independent cxd4 RSP source exists at
+`/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4`,
+but its scalar VU objects segfaulted reproducibly around parsed row 95 in the
+offline comparator after 88 rows. The Ares-derived header path is the runtime
+implementation and is not independent ground truth.
 
 Use the corrected route witness:
 
@@ -11,12 +15,10 @@ Use the corrected route witness:
 - `scratch/agent/m6/g1_lvl2s6380long/mc_ctl.txt`
 - reference: `scratch/agent/m6/g1_lvl2s6378/run.log`
 
-Use the fetched/reference RSP implementation or an existing accurate RSP
-emulator on the exact logged FD57 input vectors from
-`scratch/agent/m6/g1_lvl2s6380long/run.log`; compare lane outputs and clamp
-flags with the 8/8 host replay result. If no reference path can consume these
-captured vectors, record that concrete capability failure and use the owner's
-`ROGUESQ_CULL_SPIKE` decision as the next gate rather than another game run.
+Owner gate: choose whether `ROGUESQ_CULL_SPIKE=1` is acceptable as an opt-in
+mitigation while leaving retail defaults unchanged, or provide a reference
+RSP/emulator path that can consume the captured vectors. Do not run the game
+until that choice is made.
 The route audit already passed the positive control: s6380long has 155 FD57
 `[spike-st]` rows and 546 FD57 `[spike-vu8]` rows, with `att=1 mission` and the
 same VI origins as s6378.
@@ -30,7 +32,9 @@ Competing hypotheses:
 - H-retail: the independent/reference RSP agrees, but only a retail emulator
   frame comparison can establish whether the visible wedge is hardware-faithful.
 
-DISCRIMINATING MEASUREMENT: independent/reference-RSP lane output and clamp
-flags for the exact FD57 input vectors. Disagreement selects H-rsp-emu-clamp;
-agreement with saturation selects H-clip; agreement without a retail comparison
-leaves H-retail open.
+DISCRIMINATING MEASUREMENT: an independent/reference-RSP lane comparison. It
+was not obtainable this iteration: cxd4 compilation succeeded, but the
+comparator crashed at a reproducible row before FD57 evaluation. If a usable
+reference is supplied, disagreement selects H-rsp-emu-clamp; agreement with
+saturation selects H-clip; agreement without a retail comparison leaves
+H-retail open. Otherwise the owner's culling decision is the next gate.
