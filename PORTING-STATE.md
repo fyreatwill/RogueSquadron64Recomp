@@ -169768,3 +169768,20 @@ caused a recorded crash. The aspect-only route mismatch remains the next
 visual work unit.
 
 ORIGIN: host RSP callback supplies the RDRAM/DMEM context; null is invalid.
+
+## Session 6393 (2026-10-26) — isolated aspect route reaches valid flight
+
+Ran the planned single-arm `ROGUESQ_ASPECT=21:9` level-1 recipe after a clean
+Debug build. The harness reported `mission_t=8s`, `hold=184s`,
+`alive_at_end=1`, `vi_stalls30s=0`, `crashlines=0`. The phase-5 DMA witness,
+input-writer control, and repeated framebuffer-hash controls all fired.
+
+The ordered VI transitions were `320@0x280`, `640@0xA1F500`,
+`1024@0xB20400`, `640@0xA4B100`, then stable flight `1024@0x9D5800`.
+The earlier concurrent arm's `0x0058B038` was therefore not a stable route
+identity. This rules out the aspect-only title/menu failure hypothesis and
+shows that the fixed-origin harness gate is stale; VI origins vary with buffer
+allocation. The four-arm edge scores from s6391 remain invalid until recomputed
+with phase/flight and positive-control gates rather than a fixed origin.
+
+ORIGIN: no mitigation; this was an isolated measurement and changed no runtime code or defaults.

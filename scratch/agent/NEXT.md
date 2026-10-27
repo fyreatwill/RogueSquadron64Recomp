@@ -1,27 +1,32 @@
-# NEXT: complete the RSP callback null-input guard audit
-HYPOTHESIS-ID: m3-rsp-entry-null-guard
+# NEXT: rerun the G3c(a) edge table with a valid wide-flight gate
+HYPOTHESIS-ID: g3c-edge-arm-route-gate
 
-This iteration is the bounded M3 guard-class change. The audited class is
-host-facing RSP callback entry points that accept `rdram` and then dereference
-it before the generated ucode can report an error.
+Build one run recipe containing the four arms from s6391: retail, draw-distance
+2, aspect-only, and combined. Replace the fixed-origin mission gate with a
+phase/flight gate requiring the phase-5 DMA witness, stable wide VI width, and
+the positive framebuffer controls; record each arm's ordered width/origin
+transitions and then compute edge scores only for arms that pass it.
 
 Competing hypotheses:
 
-- H-null-is-impossible: the runtime always supplies non-null RDRAM and DMEM;
-  the guard is unreachable and should remain a cheap defensive invariant.
-- H-null-is-transient: a teardown or failed task can enter the callback with a
-  null context; returning `-1` prevents a host crash and lets the caller's
-  existing task-failure path handle it.
-- H-null-is-game-data: a malformed guest task is the source; callback guards
-  cannot explain it and task-field validation is the next class instead.
+- H-edge-fog: retail and opt-in edge scores remain comparable after the route
+  gate is corrected; scaling haze/fog is the next discriminator.
+- H-edge-grid: the scores track the expanded terrain-cell boundary, so the
+  outer grid ring is the cause.
+- H-edge-aspect: only the widened frustum changes the edge score, implicating
+  aspect exposure rather than draw-distance or fog.
+- H-gate-only: the prior score differences were dominated by invalid route
+  gating and disappear or become stable after accepting allocator-dependent
+  origins.
 
-DISCRIMINATING MEASUREMENT: build the guard and run the existing compile/test
-targets. The source audit must show every callback in this class has a null
-decision before dereference, while the normal build remains unchanged. A
-synthetic null callback test would select H-null-is-transient only if the
-runtime exposes one; no production null hit is expected and that absence does
-not justify removing the guard.
+DISCRIMINATING MEASUREMENT: one concurrent four-arm run with the same fixed
+camera/framebuffer scorer, but an explicit per-arm pass/fail route table. If
+all four arms pass and the score ordering is stable, it selects among the
+visual hypotheses; if only the previously rejected aspect arm gains valid
+flight evidence or the scores collapse, it selects H-gate-only. Each arm must
+fire its positive controls in the same run.
 
-Planned change: guard `rs64_run_lle_gfx` on both `rdram` and `g_dmem_cur`, and
-guard the optional audio-object diagnostic before its first RDRAM read. Build
-the Debug target and record whether the production path is unaffected.
+Use the existing s6391 arm recipe/harness, update only its route predicate to
+accept the observed allocator-dependent wide origins, then run the Debug target
+and the four arms concurrently. Do not change runtime defaults or the visual
+edge code in this unit.

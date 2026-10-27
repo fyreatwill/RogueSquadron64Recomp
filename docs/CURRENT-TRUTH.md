@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6392 (2026-10-26).
+Compact operational handoff, maintained after Session 6393 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -63,6 +63,17 @@ despite alive-at-end, zero VI stalls, zero crash markers, and a positive
 framebuffer control. The four edge scores are not a valid discriminator and
 remain provisional; no visual hypothesis was selected.
 
+Session 6393 reran the aspect-only arm in isolation with the same level-1
+recipe. It held 184 seconds alive with zero VI stalls and zero crash markers;
+the phase-5 DMA witness and framebuffer-hash positive controls fired. The
+ordered VI transitions were `320@0x280`, `640@0xA1F500`, `1024@0xB20400`,
+`640@0xA4B100`, then stable flight `1024@0x9D5800`. Thus the prior
+`0x0058B038` expectation is not a stable route identity: the isolated run
+reached valid wide flight with a different, allocator-dependent origin. This
+rules out H-route-failure and makes the fixed-origin gate stale; the edge-arm
+scores still need a rerun using phase/flight controls instead of an origin
+allowlist.
+
 Session 6392 completed a bounded M3 audit of host-facing RSP callback inputs.
 `rs64_run_lle_gfx` now rejects null RDRAM, null shared DMEM, or null task before
 locking or staging the task, and the optional audio-object reader rejects null
@@ -99,11 +110,11 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. Diagnose the aspect-only route mismatch: run that arm alone with the same
-   recipe and record every phase/origin transition. Determine whether
-   `0x0058B038` is a legitimate aspect route, a stale gate, or a concurrency
-   artifact before repeating the four-arm edge table. The height-byte fade arm
-   is closed as ineffective.
+1. Rerun the four-arm G3c(a) edge table with a route gate based on stable
+   widescreen flight controls (phase-5/flight evidence and positive framebuffer
+   hashes), not fixed VI origins. Recompute edge scores only after every arm
+   passes that gate. The isolated arm shows that origin is allocator-dependent;
+   the height-byte fade arm is closed as ineffective.
 2. Measure the owner-reported turning shake with the retail/FPS60/aspect arms
    if it remains actionable; current residual evidence is consistent with
    retail 30-Hz judder.
