@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6514 (2026-10-27).
+Compact operational handoff, maintained after Session 6515 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -11,8 +11,10 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 - M5 audio de-stubbing, M3 idiom audits, generated-symbol renaming, and M6
   first-mission endurance are closed. G4 crash hunting is parked after clean
   coverage. G1 is mission coverage and visual quality, not autopilot work.
-- Current owner frontier is G1c's span-grid legitimacy boundary, followed by
-  G3c: terrain-edge fade, spike-line ground truth, and turning-camera shake.
+- Current owner frontier is G1c's span-filter cell record. Both live
+  compares reject dd4 empty cells; the next question is whether cell bytes
+  near -38 are an in-table field. Then G3c: terrain-edge fade, spike-line
+  ground truth, and turning-camera shake.
   G3c(a) height-byte fade was null; G3c(b)'s VU
   arithmetic is internally consistent, the corrected FD57 replay passes, and
   the independent cxd4 scalar replay agrees with the target chain.
@@ -102,6 +104,16 @@ counts were already nonzero, so H-missing-source is refuted; zero EMPTY rows
 were all-sentinel, so H-filter-legitimate is refuted. The stamp is the
 filter's own `0x7F` immediate. dd4's first populated sample had second-plane
 byte 127 on 100/100 EMPTY rows; dd1's had 25 on 6/6. No guard or default changed.
+
+Session 6515 counted the two compares on that same keyed return. Both pinned
+arms held 151 s with zero stalls and zero crash lines; `[span-base]` fired,
+nonempty rows had `npass>0`, and `ns0+ns1+npass+nskip==nd` on every row.
+dd4 EMPTY was 100/100 both predicates (s1 is 42-64% of clears, median 57%,
+and every s1 clear is cell+4 < plane 127). Sampled s0 operands there are
+span -128 < cell+3 -38; sampled s1 operands are cell+4 about -38 < plane 127.
+dd1 EMPTY was 6/6 s0-only (span 38-41 < cell+3 109, ns1=0), and both arms'
+nonempty returns were s0-only too. This selects H-both and refutes a
+single-predicate account. No guard or default changed.
 
 Superseded: s6495's "all-127 table means the rasterizer produced no rows."
 Believable because the return snapshot is the sentinel. That snapshot is taken
@@ -294,19 +306,22 @@ streamTerrainGridCellsByDistance, so the shared cumulative counter is an
 invalid cross-function join even when guest IDs match. H-boundary is selected;
 the exact per-invocation join fix remains to be built.
 
-## Next steps — s6514 reject predicate (top)
-- **s6514 (top):** H-late-rewrite is selected. The EMPTY list is the filter
-  rejecting every cell and stamping `0x7F`, not an all-sentinel input and not
-  a writer outside the eight-PC census. Next: at the two compares
-  (`0x80042D8C` span < cell+3, `0x80042DA4` cell+4 < second plane), count
-  which one clears, on the same pinned dd1/dd4 return budget. Competing
-  outcomes: H-s1-sentinel (dd4 EMPTY clears because the second plane is 127
-  and cell+4 < 127; dd1 EMPTY and nonempty accepts do not), H-s0-below (the
-  clear is span < cell+3 in both arms), or H-both. Discriminator: per-return
-  clear counts split by predicate, with `[span-base]` and nonempty `npass>0`
-  as controls. Do not add a guard. ORIGIN: s6514 saw second-plane 127 on
-  100/100 dd4 EMPTY first samples and 25 on 6/6 dd1, but did not log cell+3
-  or cell+4.
+## Next steps — s6515 cell-record check (top)
+- **s6515 (top):** H-both is selected. dd4 EMPTY clears take both
+  `0x80042D8C` (span < cell+3) and `0x80042DA4` (cell+4 < second plane);
+  dd1 EMPTY and nonempty returns take only the first. Next: at the
+  `0x80042D6C` index load, on the same pinned dd1/dd4 return budget, log the
+  cell index (`lhu & 0x1FFF`), the table base at `[t0+4]`, the cell address,
+  and bytes +0..+5 for s0 clears, s1 clears, and passes. Competing outcomes:
+  H-legit-outer (indices sit in the table and +3/+4 are a stable per-index
+  field; dd4 EMPTY is about -38 while dd1 s0 is 109), H-bad-index (the
+  address falls outside the table), or H-shared-template (one index supplies
+  the -38 bytes). Discriminator: index histogram plus in-table bit, and the
+  logged +3 byte must reproduce -38 on dd4 EMPTY and 109 on dd1 s0.
+  `[span-base]` and nonempty `npass>0` stay the controls. Do not add a guard.
+- **s6514 (folded):** the filter reads populated span bytes, then its own
+  `0x7F` immediate stamps them. s6515 then showed both compares, not the
+  second plane alone, produce the dd4 EMPTY clear.
 - **s6512 (folded):** the eight-site census ruled out EBC/EC4. s6514 then
   showed the DB4/DC0 delta on EMPTY returns is this call's own `0x7F` stamp
   after a populated read.

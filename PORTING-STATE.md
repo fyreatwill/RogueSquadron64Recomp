@@ -170663,3 +170663,29 @@ writer. dd4's first populated sample had second-plane byte 127 on 100/100
 EMPTY rows; dd1's had 25 on 6/6. That plane split is observed, not yet the
 measured compare predicate. No guard or default changed. ORIGIN: no
 mitigation; the `0x7F` store is the game's own immediate, observed only.
+
+## Session 6515 (2026-10-27) — both span compares reject dd4 empty cells
+
+`tools/apply_s6515_span_predicate.py` counts the live clears at `0x80042D8C`
+(span < cell+3) and `0x80042DA4` (cell+4 < second plane) and prints the first
+four operand pairs on the existing keyed return. One Debug build. The pinned
+dd1/dd4 launcher `scratch/agent/s6515_span_predicate.sh` reached mission on
+attempt 1 in both arms (91 s and 85 s) and held 151 s. Summaries:
+`g1_lvl1s6515_dd1` and `g1_lvl1s6515_dd4` are alive-at-end, zero 30-second VI
+stalls, zero crash lines. Run logs echoed multiplier 1 and multiplier 4.
+`[span-base]` fired in both arms (64x64, 8192 bytes, thousands of non-127
+bytes). Nonempty controls were 8/8 per arm with `npass>0`. Every EMPTY row
+had `npass==0` (dd1 6/6, dd4 100/100). `ns0+ns1+npass+nskip==nd` on all 122
+rows, and on dd4 EMPTY `nclear==ns0+ns1` with `nskip==0` (100/100).
+
+This selects H-both. It refutes H-s0-below and refutes H-s1-sentinel as a
+single cause. dd4 EMPTY is 100/100 both predicates: s0 is 201-345 cells per
+return and s1 is 249-369, which is 42-64% of that return's clears (median
+57%). Every s1 clear has second plane 127 and cell+4 < 127. First s1 samples
+are span -1..-10, cell+4 about -38, plane 127. First s0 samples on those
+rows are span -128 < cell+3 -38. dd1 EMPTY is 6/6 s0-only (span 38-41 <
+cell+3 109, ns1=0). Both arms' nonempty returns are s0-only and still pass
+cells (dd1 `npass` 1-22, dd4 `npass` 3-16). The second-plane 127 seen in
+s6514 does clear cells, and so does span < cell+3, on every logged dd4 EMPTY
+return. No guard or default changed. ORIGIN: no mitigation; the counts are
+the game's own compares, and the `0x7F` stamp is unchanged.
