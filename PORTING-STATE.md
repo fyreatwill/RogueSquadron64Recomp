@@ -170129,3 +170129,8 @@ Next: G1c phase 2, dd>=3 missing near mountain (NEXT.md).
 
 ## Session 6459 (2026-10-27) — NEXT.md was stale (dd3 missing mountain already fixed by s6418); queued dd4 holds
 Found NEXT.md pointed at CURRENT-TRUTH item 0 (dd>=3 drops near mountain), which s6418 (farclip fix) and s6422/s6447 (dd3 holds lvl1/5/10 clean) already resolved. No game run this session. Queued soak_queue/s6459_dd4_lvl1.sh and s6459_dd4_lvl5.sh (DRAW_DISTANCE=4 + DD_UNSAFE, 300 s) to find the next binding limit past dd3 (heap, RSP cost). Rules out nothing; results pending in SOAK-RESULTS.md.
+
+## Session 6460 (2026-10-27) — s6459 dd4 holds folded: dd4 clean on lvl1 and lvl5
+Ran: read s6459_dd4_lvl1/lvl5 soak verdicts plus scratch/agent/m6/g1_lvl{1,5}s6459_dd4/run.log. Both echo "[dd] ROGUESQ_DRAW_DISTANCE multiplier 4" (positive control: the s6446 cap did not fire under DD_UNSAFE=1). Both: hold=302s, alive_at_end=1, vi_stalls30s=0, crashlines=0, 0 alloc/heap-failure lines. [g1b] per-second: lvl1 n=387 VI mean 61.0, 6 s below 55 VI, sd_wall mean 53.2 ms/s (max 230); lvl5 n=381 VI mean 61.0, 8 s below 55, sd_wall mean 60.0 ms/s (max 219).
+Shows: the s6418 farclip fix + cap scaling dissolved the dd4 heap/RSP limit seen at s6062; no binding limit reached at 4x; VI stays 60/s. Rules out H-heap and H-rsp-cost at dd4 (2 levels; lvl10 and a visual sheet still missing, so dd4 stays DD_UNSAFE-gated).
+Next: qualify dd4 on lvl10, then lift the hard 4.0 clamp (tools/apply_s6036_dd.py:7) to 6 under DD_UNSAFE to find the next binding limit.
