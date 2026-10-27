@@ -170272,3 +170272,6 @@ Also: the real mesh-LOD lever already exists and was measured: ROGUESQ_DD_LOD (e
 ORIGIN: no code change this session; nothing mitigated.
 Rules out: H-lod via 0x80137CE4. Remaining levers: L-fog (haze/fog start/end vs dd; ROGUESQ_FORCE_FOG exists in flight per ladder text) and H-budget (s6466-s6467 dd8 lvl10 rc=1; s6468 ground-missing at dd>=4).
 Next: fog params dump at dd1 vs dd4 pinned pose (NEXT.md).
+
+## Session 6486 (2026-10-27) — dd4 missing ground is not the fog colour (FORCE_FOG magenta control)
+Ran scratch/agent/soak_queue/s6486_dd4_fogcolor.sh (pinned lvl1, ROGUESQ_FORCE_FOG=FF00FF at dd1 and dd4, concurrent, 150 s each) and new tools/g1c_magenta.py. Positive control: dd1 shows magenta (whole-frame median 0.33%, bottom-band max 5.3%, visible on a distant rock in the sheet). dd4: magenta median 0.0000, max 0.96%, while ground score is 0.235 vs 0.875 at dd1 (tools/g1c_ground_sheet.py). The missing-ground band is plain sky blue, so fog saturation (H-fog) is ruled out; remaining H-budget/H-data, consistent with s6476/s6479 (cell link lookup fails, extra cells empty). Caveat: single run per arm, dd1/dd4 sheet frames are not identical poses, but the colour test does not need pose matching. NEXT: writer of table 0x80136FCC link halfwords and whether it is radius-bounded.

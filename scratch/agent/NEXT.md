@@ -1,7 +1,6 @@
-# NEXT: fog/haze scaling vs dd, then ground-missing budget at dd>=4
+# NEXT: who fills the cell material-link table 0x80136FCC, and is it radius-bounded?
 HYPOTHESIS-ID: g1c-dd8-limit
-Closed s6485: 0x80137CE4 is the difficulty index (not LOD); mesh LOD levers already no-gain (s6421).
-H-fog: game fog/haze start/end (find via setFog/G_SETFOG-equivalent writes in the F5 DL, or RDP fog color/blend) unchanged at dd>1, so far geometry washes to sky colour; the "ground missing = flat sky blue" at dd>=4 (s6468) may be fog saturation, not missing tiles.
-H-budget: ground tiles dropped by DL/vertex/cell pool at dd>=4.
-Discriminator (one build, one run, pose-pinned like s6469_dd_break_sheet): at dd1 and dd4 log the fog params the game submits per frame and the ground-region vertex count; ALSO run an arm with fog disabled (ROGUESQ_FORCE_FOG off / fog blend zeroed). Positive control: fog-off arm must change the sky-blue ground region colour at dd1.
-Outcomes: fog-off restores ground at dd4 => H-fog (scale fog with dd); ground still missing and vertex count low => H-budget.
+Closed s6486: fog colour is not the dd4 missing-ground band (magenta control fired at dd1, ~0 at dd4).
+H-writer-radius: the link halfwords in 0x80136FCC are written only for cells within a fixed radius of the player (loader/streamer), so widened cells stay empty.
+H-writer-static: table is filled once at level load from level data covering a fixed area; dd cannot extend it without data.
+Discriminator: find writers of 0x80136FCC (grep recompiled funcs for stores relative to that base, lui 0x8013 / addiu 0x6FCC); log per-frame count of nonzero halfwords in-window at dd1 vs dd4 pinned. Positive control: dd1 count > 0. Same count at dd1/dd4 => static (H-writer-static); larger at dd4 => radius-bounded and a gate exists.
