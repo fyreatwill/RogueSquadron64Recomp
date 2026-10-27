@@ -150,6 +150,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
+- s6451: G1e s6450 per-VI dumps fold: md5 runs useless (2-VI field alternation, lag1 diff const 7.6 vs lag2 0.45); frame period still unmeasured; next read game-side frame counter per VI (tools/g1e_vi_period.py).
 - s6449: s6448 edge soak FOLDED: tools/g3c_edge_stair.py stair_med retail 3.68 / ref(control2) 6.63 / dd2 6.19 / dd3 2.45 / fps60 3.54 / asp169 2.96 - control spread exceeds arm spread, so no opt-in shows more stair-stepping than retail (single-source). Sheet docs/owner_sheet_s6449_edge.png. G3c(a) parked pending owner judgement. Retail frame shows a spike line (G3b datum). Next: G1e real frame-rate measurement.
 - s6448: G3c(a) far-edge arm table QUEUED (soak_queue/s6448_g3ca_edge.sh: retail/dd2/dd3/ASPECT16:9/FPS60 at pinned pose). Next: fold results, write edge-stair metric (terrain-vs-sky boundary x-run lengths; retail = control), owner sheet, then fix (scale haze with dd or fade outer cells). Then G3c(b) reference-RSP check, G3c(c) shake jerk measurement. No conclusions overturned this session.
 - s6447: FOLDED real dd3 lvl5/lvl10 300 s holds: both clean ('multiplier 3' echoed, alive_at_end=1, vi_stalls30s=0, crashlines=0) => dd3 qualified on lvl1/5/10; owner to judge docs/owner_sheet_s6439.png; dd>3 still needs DD_UNSAFE. Next: G3c (owner visual report) per NEXT.md.
