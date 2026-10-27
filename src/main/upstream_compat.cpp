@@ -41,6 +41,7 @@
 
 #include "recomp.h"
 
+extern "C" uint32_t g_s6489[8]; // s6489 cumulative cell-gate exit counters (patched funcs_10.c)
 extern "C" uint32_t rs64_phase_ord(void);
 extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
                                              uint32_t phys,
@@ -603,6 +604,10 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         if (stride > 640u && !wide_fb) stride = dw;
         snprintf(path, sizeof path, "%s/fb_%07d_w%u.ppm", s_fbd, n, stride);
         fprintf(stderr, "[fbdump] n=%d fb=0x%08X stride=%u\n", n, fb, stride);
+        { // s6489: cumulative buildGridCellMesh exit counters (e7 = cell passed all gates); defined in patched funcs_10.c
+            fprintf(stderr, "[cellcum] n=%d e0=%u e1=%u e2=%u e3=%u e4=%u e5=%u e6=%u e7pass=%u\n", n,
+                    g_s6489[0], g_s6489[1], g_s6489[2], g_s6489[3], g_s6489[4], g_s6489[5], g_s6489[6], g_s6489[7]);
+        }
         if (FILE* f = fopen(path, "wb")) {
             // s5746: raw guest-RDRAM readback, NOT the RT64 window (s5745: the "crawl garbage band" was only in this dump).
             fprintf(f, "P6\n# source=rdram-readback-not-window vi_width=%u\n%u %u\n255\n", ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG, dw, dh);

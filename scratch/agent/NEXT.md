@@ -1,5 +1,5 @@
-# NEXT: dd4 low-ground frames — per-VI pass-cell count and tris/cell (one build)
+# NEXT: what skips the terrain cell pass (buildGridCellMesh 0x8004B930) on dd4 low-ground frames
 HYPOTHESIS-ID: g1c-dd8-limit
-s6489: summed per-VI tris confirm low-ground dd4 frames submit ~28% fewer tris (1239 vs 1726); dd4 high frames submit ~half of dd1 tris (cross-run lead).
-Do: one build adding ROGUESQ_* log in the cell-population pass loop: per VI pass-cell count, and cells-with-geometry; same dd4 and dd1 runs (positive control: dd1 count > 0). Join with ground score via tools/g1c_lowframe_tris.py.
-Outcomes: low frames have fewer pass cells => H-data, find which gate rejects; equal cells but fewer tris => per-cell LOD/cull in the submit path (also explains dd4 < dd1 tris).
+s6490: at dd4, 52% of low-ground flight frames have zero buildGridCellMesh entries over a 9-VI span (high-ground 1%; dd1 0/652 zero). Hypotheses: H-pass-skipped (a caller-side gate skips the terrain build on those frames), H-slow-sim (dd4 game frame spans >9 VIs so windows are empty but the fb is a stale-good/bad frame; no real skip), H-order (ground is built but dropped later in DL/pool; the other 48% of low frames).
+Do: one build adding a per-game-frame log of the callers of 0x8004B930 (find via static call graph in N64Recomp/RecompiledFuncs: grep buildGridCellMesh) with the gate value, printed with VI n; same pinned dd1/dd4 recipe (scratch/agent/s6489_cellpass.sh). Fix tools/g1c_lowframe_tris.py fb list to 0x80620000,0x80690000 first.
+Outcomes: caller fires every game frame at dd1 (control) and skips at dd4 on low frames => H-pass-skipped, read the gate; caller fires equally but builds nothing => gate inside; dd4 caller rate itself low and uncorrelated with ground => H-slow-sim, switch to game-frame (not VI) windows.
