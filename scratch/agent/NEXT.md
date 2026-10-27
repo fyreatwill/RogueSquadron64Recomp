@@ -1,3 +1,3 @@
-# NEXT: G3 livery diff (hangar/flight vs retail oracle frame)
-HYPOTHESIS-ID: g3-livery-diff
-s6438 closed hangar rows (full height at 16:9/21:9). Remaining ladder: owner contact sheet (send existing s6434/s6428 fbd frames), G3 livery/in-flight diff vs retail oracle frames (tools/oracle/README.md), then G5. Write hypotheses + discriminator before building.
+# NEXT: G3c(b) spike-line reference check (H-rsp-emu vs H-retail)
+HYPOTHESIS-ID: g3c-spike-reference
+Owner contact sheet done (docs/owner_sheet_s6439.png); G3 livery + G5 already closed. Take G3c(b): reopen the knife-spike claim with an independent reference (tools/oracle retail run of lvl1 if reachable, else offline replay of a logged wedge's vertex inputs through a reference RSP vector-op model). Write hypotheses + positive control first; if the oracle cannot reach flight, do the offline VRCP/VRCPH/VCH/VCL check.

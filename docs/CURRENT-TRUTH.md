@@ -148,6 +148,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
+- s6439: owner contact sheet built (docs/owner_sheet_s6439.png, tools/owner_sheet_s6439.py); G3 livery (s6267) and G5 (s6268) were already closed. Ladder exhausted of non-owner items: ask owner to judge sheet; next engineering = M6 title->mission endurance (item 3b) or G3c(b) spike reference check.
 - s6438: hangar 340/448-row claim NOT reproduced (tools/fb_rows_lit.py: wide hangar readbacks 436-448 lit rows of 448 in both arms) - H-viewport refuted, G1d hangar closed on rows. Next: owner contact sheet, G3 livery diff, G5.
 - s6435: ASPECT!=4:3 now lifts ucode cap to 65536 (fixup, built). s6434 hangar soak folded clean (both wide arms alive, 0 stalls/crashes). s6437: s6436_aspect_cap folded - cap fires 0 in both arms (default and CAP=16384 control), hole scores similar (med .118 vs .110): ucode cap is NOT the 16:9 lvl1 hole source. Next: hangar 340/448 row check, owner contact sheet, G3 livery diff, G5.
 - s6433: G1e CLOSED (s6254-s6262, s6290). Open: G1d hangar/menu 21:9 recheck (soak s6433_aspect_hangar219 queued), owner contact sheet, then G3 livery diff, G5. (s6432: wide-edge holes not reproduced.)
