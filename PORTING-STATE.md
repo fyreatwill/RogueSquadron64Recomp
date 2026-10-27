@@ -169961,3 +169961,9 @@ Pose-matched contact sheet (tools/g1c_posesheet.py, fbn 1800/2097) FAILED as an 
 ## Session 6420 (2026-10-27) — folded s6419 dd2+fix holds (lvl1, lvl10 clean); dd3 holds queued
 
 Folded SOAK-RESULTS: s6419_dd2fix_lvl1 (hold 301 s, alive, vi_stalls30s=0, crashlines=0) and s6419_dd2fix_lvl10 (same, 0 stalls, 0 crashes). lvl5 dd2+fix still queued. Queued s6420_dd3fix_lvl1/5/10 (300 s dd3 holds with the s6418 farclip fix, G1B on). No game run this session; no code change. Single-source (soak verdict lines only; frame time not compared to G1b baseline yet).
+
+## Session 6421 (2026-10-27) — folded dd3 lvl1 hold; LOD-tier dd scaling (H-lod-coarse) built as opt-in
+- Fold: s6420_dd3fix_lvl1 = rc 0, 301 s hold, alive_at_end=1, vi_stalls30s=0, crashlines=0 (dd3 + s6418 farclip fix is stable on lvl1). lvl5/lvl10 dd3 holds still in soak_queue (loop runs them).
+- Change: tools/apply_s6418_farclip.py now also carries "PATCH: s6421 lodscale": when ROGUESQ_DD_LODSCALE=1 the four LOD-tier thresholds at 0x8009DE94..DEA0 are multiplied by dd^2 each frame (same in-flight gate as the farclip scale; originals cached on first read). Default off = no behaviour change. apply9 handles both fresh and already-s6418-patched funcs_9.c (idempotent; second run x0). Live funcs_9.c patched and rebuilt clean.
+- Queued soak_queue/s6421_dd3lod_lvl1.sh (dd3 + LODSCALE=1, G1B on, 300 s hold, lvl1) as the A/B arm against s6420_dd3fix_lvl1. Discriminator: tri count / G1b frame time vs baseline; if tri count rises and the terrain fraction/pop-in improves without a frame-time regression, LODSCALE earns a place in the dd bundle; if frame time regresses with no visible gain, leave off. Cross-run, single-source until a pose-matched sheet.
+- ORIGIN: not a corruption mitigation; scales a game-side LOD constant table that the retail game leaves fixed (s6417 meshlog showed the table is dd-independent).
