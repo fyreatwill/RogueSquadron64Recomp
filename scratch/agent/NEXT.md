@@ -1,6 +1,6 @@
-# NEXT: who fills the cell material-link table 0x80136FCC, and is it radius-bounded?
+# NEXT: what do the low-ground dd4 frames share? (dd4 ground deficit is intermittent)
 HYPOTHESIS-ID: g1c-dd8-limit
-Closed s6486: fog colour is not the dd4 missing-ground band (magenta control fired at dd1, ~0 at dd4).
-H-writer-radius: the link halfwords in 0x80136FCC are written only for cells within a fixed radius of the player (loader/streamer), so widened cells stay empty.
-H-writer-static: table is filled once at level load from level data covering a fixed area; dd cannot extend it without data.
-Discriminator: find writers of 0x80136FCC (grep recompiled funcs for stores relative to that base, lui 0x8013 / addiu 0x6FCC); log per-frame count of nonzero halfwords in-window at dd1 vs dd4 pinned. Positive control: dd1 count > 0. Same count at dd1/dd4 => static (H-writer-static); larger at dd4 => radius-bounded and a gate exists.
+s6487: pool x4 no effect (refuted exhaustion). dd4 ground med 0.734 here vs 0.235 in s6486; min 0.130 frames in both dd4 arms.
+H-pose: low frames occur at specific camera poses/headings (pin drifts); H-timing: low frames are early (streaming not yet caught up after pin); H-data: low frames look at map edge where level data ends.
+Discriminator: from existing dumps scratch/agent/m6/g1_lvl1s6487p_{d1,d4,d4p4}/fbd, compute ground score for EVERY dumped frame (not 13-sampled) vs frame index, plot series and find the low frames; check whether the same indices are low at dd1 (control) and whether they cluster at start. Offline only, no new run.
+Same indices low in dd1 => pose/scene, not dd. Low only in dd4 and clustered early => streaming lag. Low only in dd4 mid-run => data/edge.
