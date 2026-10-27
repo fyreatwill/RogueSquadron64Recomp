@@ -242,3 +242,5 @@ unit.
 - s6465 (fold): dd6 lvl10 clean (301 s, 0 stalls/crashes) => dd6 qualified lvl1/5/10. Clamp under DD_UNSAFE lifted 6->8 (apply_s6036_dd.py + funcs_9.c); s6466_dd8_lvl1 queued. Then dd1 vs dd6 owner contact sheet.
 
 - s6471: dd3 break A/B folded: d2ctl 905, d3nf/d3free/d3pin all ~575 median tri; farclip and pin ruled out, game submits shorter DL at dd3 (116k vs 205k). Next: read terrain cell-count/radius scaling in tools/apply_s6036_dd.py for dd^2 overflow at dd3.
+
+- s6472 (single-source, static): dd3 DL shrink likely from fixed 64x64 terrain-grid tables in binPolygonIntoTerrainGrid (0x8004286C; bbox width/depth at 0x80132DB4/BC predicted 58 at dd2, 87 at dd3). Unmeasured. Next: log width/depth at dd1/2/3 (see NEXT.md).
