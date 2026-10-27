@@ -1,4 +1,4 @@
-# NEXT: G3c(b) spike pinned-Y: fold s6371 [spike-cov] soak
+# NEXT: G3c(b) spike pinned-Y: find the RSP store that writes DMEM 0x43A/0x462
 HYPOTHESIS-ID: g3c-owner-visual-b
-Soak s6371_spike_cov (queued, built s6371) logs each DMA covering DMEM 0x43A with its post-DMA value. Fold: grep '\[spike-cov\]' scratch/agent/m6/g1_lvl2s6371spikedmem/run.log; count PIN lines (v43A==F55C) and compare k with spike rows' cum_cov43A.
-H-loaded (PIN present): trace dram source to writer, ask if legit. H-ucode-write (no PIN while spike rows show Y -681): ucode overwrites DMEM after load -> inspect which RSP code writes 0x43A. If neither resolves, ask owner about ROGUESQ_CULL_SPIKE default-on.
+s6371: H-loaded refuted (post-DMA v43A only 0000/3333, never FD57; pinned Y=-170.25px = s15.2 -681 = 0xFD57). H-ucode-write selected.
+Work unit: one build with an RSP store watch (PC + value) on DMEM 0x43A/0x462 for the F5 ucode, gated by ROGUESQ_SPIKE_DMEM; log stores whose value==0xFD57 (and a positive control: watch a known-written address). Queue a lvl2 300 s soak with ROGUESQ_LOG_SPIKE=1 ROGUESQ_SPIKE_DMEM=1. Writer PC -> name the ucode stage; then decide if value legit (clip/VTX output) and whether to fix the emulation or ask owner about ROGUESQ_CULL_SPIKE default-on.
