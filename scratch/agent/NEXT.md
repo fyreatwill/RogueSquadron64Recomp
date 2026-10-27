@@ -7,17 +7,6 @@ retail/dd2 `width=640`, aspect/combined `width=796`. Keep title/armed rows as
 informational evidence, and retain positive framebuffer-hash/terrain controls
 and zero crash/stall checks. Score only dumps after the arm-specific gate.
 
-Competing hypotheses:
-
-- H-edge-fog: dd2 changes edge excess relative to retail at the same width;
-  aspect-only does not change it, and combined follows dd2.
-- H-edge-grid: dd2 and combined share the same edge signature regardless of
-  aspect, indicating the expanded terrain-cell boundary.
-- H-edge-aspect: aspect-only changes edge excess relative to retail, and
-  combined follows aspect-only rather than dd2.
-- H-gate-only: the score ordering collapses or changes once all four arms have
-  valid per-arm flight captures.
-
 DISCRIMINATING MEASUREMENT: one concurrent four-arm run with no title gate and
 the phase-5 + arm-width predicate. A complete valid table selects fog/grid/
 aspect by score ordering; any arm still failing its gate selects only the
