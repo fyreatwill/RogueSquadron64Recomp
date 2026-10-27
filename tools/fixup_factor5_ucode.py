@@ -238,7 +238,7 @@ if is_main_ucode and ITER_MARKER not in text:
     entry_pattern = re.compile(r"(\n    RSP rsp\{\};\n)")
     if entry_pattern.search(text):
         text = entry_pattern.sub(
-            "\\1    static int rs64_cap_v = 0; if (!rs64_cap_v) { const char *e = getenv(\"ROGUESQ_UCODE_CAP\"); rs64_cap_v = (e && *e) ? atoi(e) : 16384; if (rs64_cap_v != 16384) fprintf(stderr, \"[ucode-cap] ROGUESQ_UCODE_CAP=%d\\\\n\", rs64_cap_v); }  /* s6070 */\n"
+            "\\1    static int rs64_cap_v = 0; if (!rs64_cap_v) { const char *e = getenv(\"ROGUESQ_UCODE_CAP\"); { const char *dd = getenv(\"ROGUESQ_DRAW_DISTANCE\"); rs64_cap_v = (e && *e) ? atoi(e) : ((dd && atof(dd) > 1.0) ? 65536 : 16384); } if (rs64_cap_v != 16384) fprintf(stderr, \"[ucode-cap] ROGUESQ_UCODE_CAP=%d\\\\n\", rs64_cap_v); }  /* s6070 */\n"
             r"    int rs64_iter = 0;  " + ITER_MARKER + "\n"
             r"    r18 = 0x100;  " + R18_MARKER + "\n",
             text, count=1)
