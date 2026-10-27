@@ -170526,3 +170526,15 @@ and the observed interval activity is DB4/DC0 rather than EBC/EC4. This does
 not yet prove the exact post-bin writer because a write outside the interval
 could still change the table. ORIGIN: diagnostic join repair only; no
 mitigation, game behavior, or default changed.
+
+## Session 6507 (2026-10-27) — checkpoint close-out preserves the keyed writer result
+
+This retry did not rerun the s6506 build or soak. The durable result remains
+discriminating: the repaired invocation-local key produced positive, matched
+dd1/dd4 controls with nonnegative deltas, and the observed interval activity
+was at 0x80042DB4/0x80042DC0 (DB4/DC0), not 0x80042EBC/0x80042EC4 (EBC/EC4).
+That refutes the old unsigned cross-function join/race artifact, but it does
+not identify a writer outside the stream interval. The next discriminator is a
+single build/run that records per-site counts plus a post-return table diff and
+keeps the dd1 nonempty and dd4 EMPTY controls. ORIGIN: checkpoint close-out;
+no mitigation, game behavior, or default changed.
