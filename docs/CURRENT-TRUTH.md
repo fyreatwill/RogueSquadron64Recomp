@@ -1,11 +1,20 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6369 (s6369: DMA-read-window probe built, soak queued; s6368: pinned spike Y=-170.25 s15.2 is resident at constant DMEM 0x43A/0x462 in 117/120 wedges, single-source; next = VTX-window/ucode-constant test); earlier: Session 6348 (2026-10-26).
+Compact operational handoff, maintained as of Session 6380 (s6380: all-lane VU post-vd probe built and two lvl2 runs completed, but neither reached the FD57 positive control; next = make the FD57 capture route deterministic); earlier: Session 6348 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
 
 ## Headline
+
+- s6380: the VU ring now retains all eight lanes and captures each prior
+  operation's post-`vd` result at the next VU-op boundary; replay compares the
+  model clamp against that post-result. The Debug build succeeded and two lvl2
+  runs recorded 3,328 and 3,072 `[spike-vu8]` rows with zero accumulator
+  mismatches, but neither reached the FD57 positive control (`fd57=0`). The
+  longer run did produce 10 generic saturated-result matches, proving the
+  post-result path is live, but the pinned-wedge clamp split remains
+  unevaluable. No mitigation was added.
 
 - s6348: the target-range phase-5 census passed the ordinary-store, VTX,
   bulk, and forced-red controls and captured 44 target-store/post pairs. The
@@ -299,5 +308,12 @@ s6371: spike pinned Y (0xFD57 @DMEM 0x43A) is never DMA-loaded (v43A only 0000/3
 - s6377 (G3c b): ring now logs vte reg/lanes + last-load DMEM source. The FD57 multiplier v4:v5=FFFD.FFF7 is computed in-ucode (VMUDL/VMADM/VMADN/VMADH on v19[0]=5@LSV13E, v6[3]=4@LSV406, v26[3]=13C0, input E6E1.FBF6), not a DMEM constant; the 680 operand is LDV@120. Next: deeper ring (~96 ops) to trace E6E1.FBF6. Single-source.
 - s6378 (G3c b): 128-op ring: the -2.0001 multiplier descends from a saturated (7FFF) reciprocal/ratio chain on guest-sane inputs = near-zero-w clip scale, computed legitimately; H-input unsupported, H-clip/H-retail favoured. Single-source (no reference RSP). Next: reference-RSP replay of one wedge input, else ask owner re CULL_SPIKE default-on.
 - s6379 (G3c b): tools/agent/rsp_vu_replay.py replays the s6378 128-op ring lane 0: 90/90 chained accumulators match, 0 mismatch (acc arithmetic only; output clamp/lane 1 not logged, still same-author spec). H-rsp-emu on acc arithmetic unsupported; ask owner re ROGUESQ_CULL_SPIKE default-on, else log per-lane vd to test clamp.
+- s6380 (G3c b): all-lane post-`vd` capture and replay built, but two lvl2
+  attempts had no FD57 positive-control row (0 FD57 despite 3,328/3,072
+  `[spike-vu8]` rows). Generic saturated results matched 10 times in the longer
+  run, proving the clamp comparison executes, but the pinned wedge was absent;
+  H-rsp-emu versus H-clip/H-retail remains unevaluable. Next: compare the
+  s6380 route/phase/task trace with the known s6378 FD57-producing recipe and
+  make one deterministic capture run before interpreting clamp results.
 - s6376 (G3c b): 24-op VU ring ([spike-vu], ROGUESQ_SPIKE_DMEM) at the FD57 SDV; hand replay of VMUDH/VMADN/VMADH reproduces ACC and v6=FD57 exactly (single-source: own replay), so the RSP emulation of these ops is NOT the cause; Y = 680*(1-2.0001) from a DMEM multiplier of -2.0001. Next: trace the DMEM source of that multiplier (writer of the vte vector) and decide retail-legit vs bad input; if legit, ask owner about CULL_SPIKE default-on.
 - s6375 (G3c b): SDV hook now also snapshots v0-v3 and ACCH/M/L. At FD57 events lane1 ACC=FFFF_FD57_FD57, v0=[0400 02A8 01FF 0], v4 lane1=-3; v6=ACCM clamp (self-consistent, single-source). Pre-VMADH ACC and vmudn operands not captured; next: 24-op VU ring buffer replayed at FD57 SDV (NEXT.md).

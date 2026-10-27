@@ -4707,7 +4707,7 @@ static void rs64_audio_hash_rdram(const uint8_t* rdram, uint32_t addr,
 
 static thread_local bool g_rs64_audio_vector_store = false;
 static thread_local uint32_t g_spike_sdv_reg = 0, g_spike_sdv_e = 0, g_spike_sdv_lanes[8], g_spike_sdv_snap[88];
-struct Rs64VuRingEnt { uint16_t op, vd, e, vs, vte, h, m, l, vtr, vl[8]; uint32_t src; const char* kind; };
+struct Rs64VuRingEnt { uint16_t op, vd, e, vtr, vl[8], all[48], post[8]; uint32_t src; const char* kind; };
 static thread_local uint32_t g_vld_addr[32]; static thread_local const char* g_vld_kind[32];
 static thread_local uint32_t g_vte_pend_reg; static thread_local uint16_t g_vte_pend_l[8];
 extern "C" void rs64_vld_note(uint32_t reg, uint32_t addr, const char* kind) { if (reg < 32 && getenv("ROGUESQ_SPIKE_DMEM")) { g_vld_addr[reg] = addr; g_vld_kind[reg] = kind; } }
@@ -4715,17 +4715,32 @@ extern "C" void rs64_vu_ring_vte(uint32_t reg, const uint16_t* l) { g_vte_pend_r
 static thread_local Rs64VuRingEnt g_vu_ring[128];
 static thread_local uint32_t g_vu_ring_n = 0;
 extern "C" int rs64_vu_ring_enabled(void) { static const int on = getenv("ROGUESQ_SPIKE_DMEM") != nullptr; return on; }
-extern "C" void rs64_vu_ring_push(uint32_t op, uint32_t vd, uint32_t e, uint32_t vs, uint32_t vte, uint32_t h, uint32_t m, uint32_t l) {
+extern "C" uint32_t rs64_vu_ring_prev_vd(void) { return g_vu_ring_n ? g_vu_ring[(g_vu_ring_n - 1) % 128].vd : 0; }
+extern "C" void rs64_vu_ring_capture_prev(const uint16_t* lanes) {
+    if (!g_vu_ring_n) return;
+    Rs64VuRingEnt& r = g_vu_ring[(g_vu_ring_n - 1) % 128];
+    for (int i = 0; i < 8; i++) r.post[i] = lanes[i];
+}
+extern "C" void rs64_vu_ring_push(uint32_t op, uint32_t vd, uint32_t e, const uint16_t* all) {
     Rs64VuRingEnt& r = g_vu_ring[g_vu_ring_n++ % 128];
-    r = {(uint16_t)op, (uint16_t)vd, (uint16_t)e, (uint16_t)vs, (uint16_t)vte, (uint16_t)h, (uint16_t)m, (uint16_t)l, (uint16_t)g_vte_pend_reg, {0}, g_vld_addr[g_vte_pend_reg], g_vld_kind[g_vte_pend_reg]};
+    r.op = (uint16_t)op; r.vd = (uint16_t)vd; r.e = (uint16_t)e; r.vtr = (uint16_t)g_vte_pend_reg;
     for (int i = 0; i < 8; i++) r.vl[i] = g_vte_pend_l[i];
+    for (int i = 0; i < 48; i++) r.all[i] = all[i];
+    for (int i = 0; i < 8; i++) r.post[i] = 0;
+    r.src = g_vld_addr[g_vte_pend_reg]; r.kind = g_vld_kind[g_vte_pend_reg];
 }
 static void rs64_vu_ring_dump(FILE* f) {
     static const char* const names[10] = {"VMACF","VMADH","VMADL","VMADM","VMADN","VMUDH","VMUDL","VMUDM","VMUDN","VMULF"};
     uint32_t n = g_vu_ring_n, cnt = n < 128 ? n : 128;
     for (uint32_t k = 0; k < cnt; k++) {
         const Rs64VuRingEnt& r = g_vu_ring[(n - cnt + k) % 128];
-        fprintf(f, "[spike-vu] %s vd=v%u e=%u vs1=%04X vte1=%04X preACC=%04X.%04X.%04X vt=v%u[%04X %04X %04X %04X %04X %04X %04X %04X] lastld=%s@%03X\n", names[r.op], r.vd, r.e, r.vs, r.vte, r.h, r.m, r.l, r.vtr, r.vl[0], r.vl[1], r.vl[2], r.vl[3], r.vl[4], r.vl[5], r.vl[6], r.vl[7], r.kind ? r.kind : "none", r.src & 0xFFFu);
+        // legacy fields (lane 1) kept for old tooling; [spike-vu8] carries all lanes.
+        fprintf(f, "[spike-vu] %s vd=v%u e=%u vs1=%04X vte1=%04X preACC=%04X.%04X.%04X vt=v%u[%04X %04X %04X %04X %04X %04X %04X %04X] lastld=%s@%03X\n", names[r.op], r.vd, r.e, r.all[1], r.all[9], r.all[17], r.all[25], r.all[33], r.vtr, r.vl[0], r.vl[1], r.vl[2], r.vl[3], r.vl[4], r.vl[5], r.vl[6], r.vl[7], r.kind ? r.kind : "none", r.src & 0xFFF);
+        fprintf(f, "[spike-vu8] %s vd=v%u", names[r.op], r.vd);
+        static const char* const tag[6] = {"vs","vte","H","M","L","pvd"};
+        for (int g = 0; g < 6; g++) { fprintf(f, " %s=", tag[g]); for (int i = 0; i < 8; i++) fprintf(f, "%04X%s", r.all[g*8+i], i < 7 ? "," : ""); }
+        fprintf(f, " post="); for (int i = 0; i < 8; i++) fprintf(f, "%04X%s", r.post[i], i < 7 ? "," : "");
+        fprintf(f, "\n");
     }
 }
 extern "C" void rs64_spike_sdv_note(uint32_t reg, uint32_t e, const uint32_t* lanes) {

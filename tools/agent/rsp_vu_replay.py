@@ -32,21 +32,29 @@ def op(name,acc,s,t):
     elif name=='VMACF': acc=s48(acc)+s*t*2; r=sat_signed(acc)
     else: return None
     return s48(acc), r
+# s6380: reads [spike-vu8] (all 8 lanes of vs/vte/ACC pre-state + post-op vd result).
 rows=[]
 for l in open(sys.argv[1],errors='replace').read().split('\n')[int(sys.argv[2])-1:]:
-    m=re.match(r'\[spike-vu\] (\w+) vd=v(\d+) e=(\w+) vs1=(\w+) vte1=(\w+) preACC=(\w+)\.(\w+)\.(\w+)',l)
-    if m: rows.append((m[1],int(m[4],16),int(m[5],16),(int(m[6],16)<<32)|(int(m[7],16)<<16)|int(m[8],16)))
-    elif rows and not l.startswith('[spike-vu]'): break
-ok=bad=skip=0
+    m=re.match(r'\[spike-vu8\] (\w+) vd=v(\d+) vs=(\S+) vte=(\S+) H=(\S+) M=(\S+) L=(\S+) pvd=(\S+) post=(\S+)',l)
+    if m:
+        f=lambda x:[int(v,16) for v in x.split(',')]
+        rows.append(dict(n=m[1],vd=int(m[2]),vs=f(m[3]),vt=f(m[4]),H=f(m[5]),M=f(m[6]),L=f(m[7]),pvd=f(m[8]),post=f(m[9])))
+    elif rows and not l.startswith('[spike-vu'): break
+okA=badA=okR=badR=skip=sat=0
 for i in range(len(rows)-1):
-    n,s,t,pre=rows[i]; nxt=rows[i+1]
-    r=op(n,pre,s,t)
-    if r is None: skip+=1; continue
-    acc,_=r
-    if nxt[0].startswith('VMAD') or nxt[0] in ('VMACF',):
-        want=s48(nxt[3]); got=s48(acc)
-        if want==got: ok+=1
-        else:
-            bad+=1; print(f'row{i} {n} s={s:04X} t={t:04X} pre={pre&(2**48-1):012X} model={got&(2**48-1):012X} logged_next={want&(2**48-1):012X}')
-    else: skip+=1
-print(f'rows={len(rows)} match={ok} mismatch={bad} unchained/skipped={skip}')
+    a,b=rows[i],rows[i+1]
+    for ln in range(8):
+        pre=(a['H'][ln]<<32)|(a['M'][ln]<<16)|a['L'][ln]
+        r=op(a['n'],pre,a['vs'][ln],a['vt'][ln])
+        if r is None: skip+=1; continue
+        acc,res=r
+        if b['n'].startswith('VMAD') or b['n']=='VMACF':
+            want=(b['H'][ln]<<32)|(b['M'][ln]<<16)|b['L'][ln]
+            if s48(want)==acc: okA+=1
+            else: badA+=1; print(f'ACC row{i} lane{ln} {a["n"]} s={a["vs"][ln]:04X} t={a["vt"][ln]:04X} model={acc&(2**48-1):012X} logged={want&(2**48-1):012X}')
+        if res is not None:
+            if res==a['post'][ln]:
+                okR+=1
+                if res in (0x7FFF,0x8000,0xFFFF,0x0000) and (s48(acc)>>16 > 0x7FFF or s48(acc)>>16 < -0x8000): sat+=1
+            else: badR+=1; print(f'RES row{i} lane{ln} {a["n"]} s={a["vs"][ln]:04X} t={a["vt"][ln]:04X} acc={acc&(2**48-1):012X} model_vd={res:04X} logged_post={a["post"][ln]:04X}')
+print(f'rows={len(rows)} accMatch={okA} accMismatch={badA} resMatch={okR} resMismatch={badR} saturatedResMatch={sat} skipped={skip}')
