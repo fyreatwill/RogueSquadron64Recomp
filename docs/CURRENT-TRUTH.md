@@ -252,3 +252,5 @@ unit.
 - s6473: H-GRID64 REFUTED offline (gridlog window is post-s6037-clamp, <=64; saturated in only 2/47 w, 6/47 d dd3 rows; kept<cap). Loss is downstream of the cell list: next = per-node submit/DL-emit counters dd2 vs dd3 (NEXT.md). | (superseded lead) s6472 (single-source, static): dd3 DL shrink likely from fixed 64x64 terrain-grid tables in binPolygonIntoTerrainGrid (0x8004286C; bbox width/depth at 0x80132DB4/BC predicted 58 at dd2, 87 at dd3). Unmeasured. Next: log width/depth at dd1/2/3 (see NEXT.md).
 
 - s6477: buildGridCellMesh BB18 gate (table row link==0xFFFF) takes ~99% of exits at dd2/dd3; cell+0x1E indices are varied real rows (H-index unsupported). Next: dd1 control (NEXT.md).
+
+- s6482: grid row+2 link writers (0x800487F8, 0x8004B56C) are generic list-node push/unlink, no distance gate (single-source). Next: radius in processGridCellByDistance/updateActiveGridCellState, else pivot L-lod/fog.
