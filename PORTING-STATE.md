@@ -170354,3 +170354,25 @@ It also rules out a route/crash explanation for this measurement. ORIGIN: n/a
 
 Next discriminator: log computed bounds, first/last table-store addresses, and a
 sequence shared by rasterizer and stream return in one dd1/dd4 run.
+
+## Session 6497 (2026-10-27) — bounded rasterizer bounds/store probe did not capture a dd4 EMPTY stream row
+
+Ran the required ground-truth checks (`tools/oracle/README.md` and
+`docs/F5-UCODE-REFERENCE.md`) before instrumenting. Extended
+`tools/apply_s6496_bin_inputs.py` and the generated `funcs_9.c` probe to record
+the four pre-clamp rasterizer bounds, first/last table-store addresses, and a
+rasterizer entry/return sequence on `[streamdump]`. Built Debug successfully.
+Ran `zsh scratch/agent/s6492_forface.sh` with pinned dd1/dd4 arms for 150 s.
+
+Results: both arms reached mission and ended alive after 151 s with
+`vi_stalls30s=0` and `crashlines=0`. dd1 supplied the positive controls: 15
+bounded stream rows, nonempty rows, and table stores within the expected
+`0x80130DB0..0x80132DAF` range; sequence and return matched. dd4 supplied 8
+bounded `ok` stream rows with in-range stores, but no `EMPTY` stream row. The
+existing ForFace empty breadcrumb did fire in dd4, proving the upstream empty
+path occurred but not that the stream consumer observed the target condition.
+Therefore H-order, H-scale, and H-writer remain unresolved; this is not a null
+result. The duplicate probe emission was corrected in both the patch script and
+the generated diagnostic source.
+
+ORIGIN: diagnostic instrumentation only; no mitigation or gameplay behavior changed.

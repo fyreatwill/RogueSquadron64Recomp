@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6496 (2026-10-27).
+Compact operational handoff, maintained after Session 6497 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -15,6 +15,14 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
   and turning-camera shake. G3c(a) height-byte fade was null; G3c(b)'s VU
   arithmetic is internally consistent, the corrected FD57 replay passes, and
   the independent cxd4 scalar replay agrees with the target chain.
+
+Session 6497 extended the terrain rasterizer probe with pre-clamp integer
+bounds, first/last table-store addresses, and a rasterizer sequence joined to
+stream returns. The Debug build and pinned dd1/dd4 run were clean for 151 s in
+both arms; dd1 fired the positive controls. This attempt logged only nonempty
+stream returns in the bounded dd4 sample, although the existing ForFace empty
+breadcrumb fired, so H-order/H-scale/H-writer remain unresolved. Duplicate
+diagnostic emission was fixed in the patch script and generated probe.
 
 ## Current frontier: G3c(b) spike-line discriminator
 
@@ -159,7 +167,13 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   Never reset, clean, checkout, or update submodules. If editing `lib/`, run
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
-## Next steps — s6496 override (top)
+## Next steps — s6497 override (top)
+- **s6497 (top):** the bounds/store/sequence probe built and ran, but the dd4
+  sample contained 8 logged `ok` stream returns and no `EMPTY` stream row;
+  ForFace empty breadcrumbs still fired. Positive dd1 controls passed, so the
+  result is unevaluable rather than a null. Re-run the same instrument with a
+  larger or phase-targeted stream log budget and require an EMPTY dd4 row before
+  classifying H-order, H-scale, or H-writer.
 - **s6496 (top):** the `binPolygonIntoTerrainGrid` writer was instrumented and the
   pinned dd1/dd4 arms ran in one build. The positive control fired (dd1: 8 ok /
   6 empty logged returns; dd4: 8 ok / 25 empty). dd4 empty intervals contained
