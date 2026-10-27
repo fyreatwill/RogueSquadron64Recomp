@@ -1,6 +1,7 @@
-# NEXT: fold s6414_dd_pool soak (G1c phase 2, dd3/dd4 terrain missing)
+# NEXT: fold s6415_dd_grid soak (G1c phase 2, dd3/dd4 terrain missing)
 HYPOTHESIS-ID: g1c-dd-phase2
-Read SOAK-RESULTS s6414_dd_pool and scratch/agent/m6/g1_lvl1s6414_{d1b,d2,u3}/run.log (grep the DLPOOLLOG lines, `[s6098`). Restrict to the pose-matched window (early flight, same as view/s6413/sheet2.png frames).
-- u3 pool length drains toward 0 while d1b/d2 flat: H-chunk. Name the consumer (see s6097: ~33 chunks/begin dd1, ~60 dd3), fix root cause (bigger pool/arena per G1c phase 2 plan).
-- pool flat in all arms, terrain still missing: H-cull/H-pool/H-cap. Next probe: terrain grid cell count + far-clip at 0x80136DC0 context per dd, from buildVisibleTerrainGridAroundCamera.
-- Positive control: d1 pool length must appear (min ~77). If no lines, DLPOOLLOG did not arm: check funcs_3.c patch is built.
+s6414 result: H-chunk REFUTED (DL pool min=77 in d1b, d2 AND u3 alike, empty_b=0 everywhere; no drain). Remaining: H-pool (terrain node pool cap u16 0x80130C4C), H-cap/H-cull (window/kept count).
+s6415_dd_grid = same pinned recipe + ROGUESQ_DD_GRIDLOG=1. Read scratch/agent/m6/g1_lvl1s6415_{d1b,d2,u3}/run.log `[gridlog]` lines (positive control: d1 kept>1, tracks req).
+- u3 kept << req or kept == cap: H-pool (raise cap 0x80130C4C / carve arena per G1c ph2 plan).
+- kept ~ req but terrain still missing: H-cull downstream (far-clip/per-node submit), probe the submit path.
+- gx/gz range shrinks vs d2: window clamped (64 stride / terr dims).
