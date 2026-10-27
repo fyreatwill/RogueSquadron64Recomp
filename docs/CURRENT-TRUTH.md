@@ -171,3 +171,5 @@ unit.
 
 - s6402: G3c(a) dd2 sawtooth/holes = frames with craft+HUD absent (likely truncated DL; single-source, see PORTING-STATE). Next: log UCODE_CAP/tri count per VI in dd2 pose-lock arm (scratch/agent/NEXT.md).
 - s6403: ROOT CAUSE of dd2 craft/HUD-absent+sawtooth frames = F5 ucode iteration cap 16384 firing (cap 65536 -> 0 fires, craft+HUD intact; retail+CAP=1500 positive control reproduces missing craft/HUD). Default cap now 65536 when DRAW_DISTANCE>1 (fixup_factor5_ucode.py). s6404: dd2 default 0 fires, retail unchanged; craft/HUD visual confirmation in default arm still owed. Re-score G3c(a) holes with the cap fix, then G3c(c).
+
+- s6405: dd2 terrain holes confirmed fixed by scaled ucode cap in dd2/aspect/combined (g3c_holes 0 frames>0.03, control fired). Next: G3c(c) turning-shake jerk (see NEXT.md).
