@@ -1,4 +1,5 @@
 #include "rs64_rdram_peek.h"
+#include <dlfcn.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -4709,6 +4710,33 @@ static thread_local bool g_rs64_audio_vector_store = false;
 extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
                                            uint32_t len, uint32_t value,
                                            uint32_t vector_op) {
+    // s6372: RSP store watch on the spike's pinned-Y DMEM slots (0x43A/0x462) + positive control (0xB00..0xB05), gfx DMEM only.
+    {
+        static const bool spw = [] { const char* e = std::getenv("ROGUESQ_SPIKE_DMEM"); return e && *e && *e != '0'; }();
+        if (spw && len != 0u && g_dmem_cur == dmem) {
+            const uint32_t a0 = dmem_addr & 0xFFFu;
+            auto hit = [&](uint32_t t) { return t >= a0 && t < a0 + len; };
+            static uint32_t n43a = 0, n462 = 0, nctl = 0, nlog = 0, nfd = 0;
+            const bool h43a = hit(0x43Au), h462 = hit(0x462u), hctl = hit(0xB00u);
+            if (hctl) nctl++;
+            if (h43a || h462) {
+                if (h43a) n43a++;
+                if (h462) n462++;
+                auto h16 = [&](uint32_t o) { return (uint32_t)(((uint32_t)g_dmem_cur[(o & 0xFFFu) ^ 3u] << 8) | g_dmem_cur[((o + 1) & 0xFFFu) ^ 3u]); };
+                const uint32_t v43a = h16(0x43Au), v462 = h16(0x462u);
+                const bool fd = v43a == 0xFD57u || v462 == 0xFD57u;
+                if (fd) nfd++;
+                if ((fd || (n43a + n462) <= 40u) && nlog < 400u) {
+                    nlog++;
+                    void* ra = __builtin_return_address(0);
+                    Dl_info di{}; dladdr(ra, &di);
+                    fprintf(stderr, "[spike-st] dmem=%03X len=%u op=%08X val=%08X v43A=%04X v462=%04X%s ra=%p %s+0x%lx n43A=%u n462=%u ctl=%u\n",
+                            a0, len, vector_op, value, v43a, v462, fd ? " FD57" : "", ra, di.dli_sname ? di.dli_sname : "?",
+                            di.dli_saddr ? (unsigned long)((char*)ra - (char*)di.dli_saddr) : 0ul, n43a, n462, nctl);
+                }
+            }
+        }
+    }
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_M5_SOURCE_WRITER");

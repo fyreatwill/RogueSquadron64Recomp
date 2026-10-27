@@ -292,3 +292,5 @@ Default stays retail 4:3. Opt-in levers: `ROGUESQ_ASPECT=<w>:<h>` (derives FB_WI
 - s6360 (G3c(a)): arms scored: jump_med nofade .317 / fb .317 / alpha .333 / alphared .345 (alphared control weak). Colour and alpha fades both null on the stair-step -> geometry (H-grid). Next: outer-ring height smoothing / footprint radius > 34.
 s6371: [spike-cov] per-event DMA logger built; soak s6371_spike_cov queued (fold next iter).
 s6371: spike pinned Y (0xFD57 @DMEM 0x43A) is never DMA-loaded (v43A only 0000/3333 over 1500 covering DMAs) -> written by ucode; next: RSP store watch on 0x43A/0x462.
+
+- s6372: RSP store watch ([spike-st], ROGUESQ_SPIKE_DMEM=1) built for DMEM 0x43A/0x462 incl. vector stores; soak s6372_spike_store queued; fold its `[spike-st] ... FD57 ... ra=` rows next (resolve ra with atos).
