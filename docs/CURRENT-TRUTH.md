@@ -285,3 +285,4 @@ Default stays retail 4:3. Opt-in levers: `ROGUESQ_ASPECT=<w>:<h>` (derives FB_WI
 - s6354: s6353 pairs invalid (w4=0 always). Decoded from code: at AA74 hook sp+0x44=row, sp+0x74=col, sp+0x40=height. Soak s6354_g3c_r2_colrow queued (xoff=116,zoff=68 and swapped). Single-source until logged d varies and is bounded.
 
 - s6359 (G3c(a)): ROGUESQ_EDGE_FADE_R2_ALPHA=1 added (vertex alpha scaled by 1-f in radfade2 hook; tools/apply_s6311_edgefade.py apply10j). Soak s6359_g3c_alpha queued (nofade/fb/alpha/alphared control). Cull-ring arm was already s6306 (EDGE_DROP_D2). Next: score the arms.
+- s6360 (G3c(a)): arms scored: jump_med nofade .317 / fb .317 / alpha .333 / alphared .345 (alphared control weak). Colour and alpha fades both null on the stair-step -> geometry (H-grid). Next: outer-ring height smoothing / footprint radius > 34.

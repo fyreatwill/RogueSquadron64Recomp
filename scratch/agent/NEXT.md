@@ -1,7 +1,8 @@
-# NEXT: G3c(a) score s6359 alpha-fade soak
+# NEXT: G3c(a) H-grid — outer-ring geometry
 HYPOTHESIS-ID: g3c-owner-visual
 
-Fold SOAK-RESULTS s6359_g3c_alpha. Arms in scratch/agent/m6/s6359_g3c/. Score nofade/fb/alpha with tools/g3c_horizon_score.py (jump_med/hole_med), contact sheet at identical VI.
-- alphared shows no change vs nofade -> vertex alpha ignored by terrain render mode; alpha lever dead, next: H-footprint (raise radius / widen fade bands past r=34).
-- alphared changes, alpha arm removes step -> adopt alpha fade, bundle into ROGUESQ_DRAW_DISTANCE; ask owner to judge.
-- alpha changes but step intact -> H-grid: step is geometry of the cell footprint; try smoothing outer ring heights (fade y toward horizon).
+s6360: colour (s6357) and alpha (s6359) fades both leave the stair-step (jump_med .317 vs .317/.333). Step is geometry of the cell footprint.
+Work unit: find the terrain cell submit loop footprint (see s6311 apply10j / EDGE_DROP_D2 hooks in tools/apply_s6311_edgefade.py), add an opt-in arm that lerps outer-ring vertex y toward the horizon/sea height over r=26..34 (ROGUESQ_EDGE_FADE_R2_Y=1), soak nofade/y/yred(control: y raised by +50 so it is obvious) with the s6359 recipe, score with tools/g3c_horizon_score.py.
+- y changes jump_med by >0.03 down -> adopt, bundle into DRAW_DISTANCE, ask owner.
+- control visible but jump unchanged -> raise footprint radius past 34 instead.
+- control invisible -> hook not on the drawn cells; fix before concluding.
