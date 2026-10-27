@@ -169285,3 +169285,18 @@ and host-DMA payloads for every future phase-6 VTX range, preserve all four
 positive controls, and select H-phase5-guest, H-phase5-bulk, or H-earlier-copy
 from the payload bytes rather than from the saturated-table null.
 ORIGIN: checkpoint close-out of a diagnostic-only witness; no mitigation.
+
+## Session 6344 (2026-10-26) — retry close-out: preserve the phase-5 resume boundary
+
+This retry performed no rebuild, run, or new experiment, as required by the
+checkpoint-close-out instruction. The only available evidence remains the
+qualified s6342 arm: its phase-5 DMA overlap set was empty for the sampled
+phase-6 red VTX ranges, the retained `0x8000D114` values were list pointers,
+and the fixed-prefix store history saturated before retaining a matching row.
+That result cannot select H-phase5-guest, H-phase5-bulk, or H-earlier-copy.
+
+The next discriminator is unchanged and is now explicitly a resume unit:
+replace the saturated prefix with a phase-boundary ring/snapshot, retain exact
+guest-store and host-DMA payload bytes for future phase-6 VTX ranges, and keep
+the four positive controls. No mitigation or runtime conclusion was added.
+ORIGIN: checkpoint close-out of a non-discriminating diagnostic instrument; no mitigation.

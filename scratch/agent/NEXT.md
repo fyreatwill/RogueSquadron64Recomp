@@ -1,9 +1,11 @@
 # NEXT: RESUME — retain exact phase-5 boundary writes for red VTX ranges
 HYPOTHESIS-ID: g3c-owner-visual
 
-This is a checkpoint resume. Do not rerun the completed s6342 fixed-prefix
-experiment. The existing result is non-discriminating because its phase-5
-store table saturated before retaining a matching row.
+This is a checkpoint resume. Do not rerun or rebuild the completed s6342
+fixed-prefix experiment. The existing result is non-discriminating because
+its phase-5 store table saturated before retaining a matching row. Implement
+the replacement ring/snapshot and run the exact command below in the next
+iteration.
 
 Competing hypotheses:
 
