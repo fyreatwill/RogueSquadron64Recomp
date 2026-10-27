@@ -11,6 +11,7 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 - M5 audio de-stubbing, M3 idiom audits, generated-symbol renaming, and M6
   first-mission endurance are closed. G4 crash hunting is parked after clean
   coverage. G1 is mission coverage and visual quality, not autopilot work.
+- s6525: offline join of s6524b dd4 EMPTY rows: ALL rejected cells have rec[3]=rec[4]=-2 (0xFE) and plane byte 127 sentinel; span 6-9 below. Not an offset - rec records are unpopulated beyond the builder footprint (single-source). Next: name the writer of rec[3]/[4] and its radius/count cap.
 - s6524: SPANSCALE sweep (keys>=745, pinned lvl1): dd1 EMPTY 0%, dd4 s1/4/8/16 = 28.3/24.3/19.9/21.1% -> plateau ~20%, H-scale refuted as dominant (s6523's 24->14% was key-window mix); residue = rec-window rejects (H-reject-by-design, single-source). Next: per-EMPTY-cell A,B,rec3,rec4 from existing logs.
 - s6523: consumer decoded (0x80042D50: skip if A==B==-128; reject if A<rec[3] or rec[4]<B; signed lb, so no lb/lbu bug). Saturation at -128 collides with the empty sentinel. ROGUESQ_SPANSCALE=4 (tools/apply_s6523_spanscale.py) cuts dd4 EMPTY 24%->14% (dd1 0.2%): H-scale partial, single-source. Next: s=8/16 + terrain fraction.
 - s6522: span-grid 0x80 bytes at col>=32 are legit byte-clamp saturations (bounds 127/-128 fixed, inputs finite, pre-clamp down to -472); next is the grid consumer compare / value scale.

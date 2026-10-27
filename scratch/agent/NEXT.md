@@ -1,6 +1,6 @@
-# NEXT: why do ~20% of dd4 cells still reject at SPANSCALE=16 (rec window vs span)?
+# NEXT: who writes cell rec[3]/rec[4] (=0xFE sentinel on rejected dd4 cells) and what caps its footprint?
 HYPOTHESIS-ID: g1c-span-reject-predicate
 
-s6524: dd4 EMPTY keys>=745: s1 28.3 / s4 24.3 / s8 19.9 / s16 21.1%, dd1 0% -> plateau; H-scale refuted as dominant.
-Hypotheses: H-rec-window (far cells' rec[3]/rec[4] height window excludes the rasterized span: scale/offset rec by dd), H-span-offset (span bytes biased by dd-dependent origin, e.g. cell/win mapping), H-reject-by-design (far cells legitimately outside window).
-Discriminator (offline, no build): from scratch/agent/m6/g1_lvl1s6524b_dd4s16/run.log, join [span-pred]/[cell-rec] rows of EMPTY returns; tabulate A,B,rec3,rec4 per rejected cell vs same cells at dd1 (dd1 never rejects). If A,B sit inside a consistent offset of rec window -> H-rec-window/H-span-offset (patch); if A,B are far outside (>100) -> by design.
+s6525: all 100 dd4 EMPTY returns have c3=c4=-2, plane=127 sentinel (single-source offline).
+Hypotheses: H-builder-radius (rec builder loops over a fixed cell count/radius, not scaled by dd), H-reset-sentinel (recs are reset to 0xFE each frame and refilled only for in-footprint cells), H-by-design (far cells legitimately empty).
+Discriminator (one build, one run): at the EMPTY return dump 8 raw rec bytes for the first 4 rejecting cells AND the same cells' address; grep recompiled funcs for stores to cell+3/+4 (base 0x80246434, stride 30) to name writer; positive control: a non-rejecting cell dump must show rec3 != -2. If writer loop bound is a constant -> scale it with dd (patch in fixup script); if rec is refilled but window -2 -> by-design.

@@ -170771,3 +170771,9 @@ Terrain fraction (g1c_fixed_score, 1 frame/arm): dd1 0.062, dd4 s1 0.019, s4 0.1
 Verdict: refutes H-scale as the dominant cause (no monotone fall to dd1's 0%); selects H-reject-by-design for the ~20% residue (rec-window A<rec[3] / rec[4]<B rejects on far cells). Single-source.
 ORIGIN: diagnostic arms only (env-gated, default stock); no mitigation added.
 Next: dump per-EMPTY-cell (A,B,rec3,rec4,cell xy) at dd4 s16 from existing [span-pred]/[cell-rec] logs and check whether rec[3]/rec[4] windows for far cells exclude the rasterized span (height-window mismatch => scale rec by dd, not spans).
+
+## Session 6525 (2026-10-27) — dd4 EMPTY rejects: every rejected cell has rec window (-2,-2); span 6-9 below (H-rec-unpopulated)
+Offline join of s6524b dd4 SPANSCALE=16 run.log `[span-pred]` rows (100 EMPTY, 8 ok; no build, no run). Format decoded from tools/apply_s6515_span_predicate.py: s0=`span<c3` (reject 0x80042D8C), s1=`span:c4<plane` (reject 0x80042DA4).
+Result: of the 400 s0 samples ALL have c3=-2 (span -8..-11, i.e. 6-9 below the window); of 400 s1 samples ALL have c4=-2, and 395/400 have plane byte 127 (4 x 67, 1 x 64). ns1_127≈ns1 in every EMPTY row. So the rejecting cells have a degenerate rec[3]=rec[4]=0xFE window and the second-plane byte is the 127 sentinel; this is NOT a span-offset/scale mismatch (consistent with s6524 plateau). Rec 0xFE/0xFE looks like an unpopulated/sentinel record, i.e. the rec builder does not fill cells beyond its footprint at dd4. Label: single-source (one run; cell-rec rows only logged for keys<=10, where recs read 6D fill, so the rejected cells' raw bytes were not dumped).
+ORIGIN: unchanged - no code change; writer of rec[3]/rec[4] (-2 sentinel) is the next thing to name.
+Rules out: H-rec-window as an offset (window is empty, not shifted), H-span-offset. Selects: H-rec-unpopulated (builder radius/footprint cap).
