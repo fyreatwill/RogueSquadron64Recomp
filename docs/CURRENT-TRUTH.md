@@ -123,6 +123,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog; per-session history archived in PROJECT-OVERVIEW.md, "Archived CURRENT-TRUTH backlog")
 
+- **s6362 (G3c a):** terrain has NO CPU Vtx writer (single-source static): F5 TRI_GEN on the RSP builds y from 25 height bytes at cell+0x44 (written by 0x80046030 / 0x80048BAC, handed over at 0x8001178C, flat path funcs_4.c:7501/7518). 0x80137A54=normals, 0x80137A50=RGBA grids. Height-byte scratch-copy lerp is the next arm.
 - **s6361 (G3c a):** static survey (single-source): no Vtx position `sh` store in 0x8004A6C0/B644/B938 (only `sb` lit RGB + 100-byte cell records at *(0x80137A50)). Vertex-y fade must hook the later Vtx builder; see NEXT.md.
 - **s6358 (G3c a):** s6357 sky-fade soak folded: neither fade radius (18..26, 26..34) removed the far-edge stair-step (scores within noise; frame 1200 shows the notches in nofade and fb; single-source, not phase-gated). A flat sky-colour recolour is not a fix. Next: alpha/coverage fade of the outermost ring or cull of the partial outer ring, with a phase-gated same-frame comparison.
 - **s6356 (G3c a):** s6355 red-haze control FOLDED: ctl (R2=0,1 red) turns the whole near terrain solid red (red fraction 0.22 vs mid 0.027); mid (18..26) tints only the distant ridge. The AA74 write with pcr pair (116,68) is live and distance-selective -> use it for the real edge fade with a sky/haze colour. Next: dd3 fade-vs-none with sky colour (NEXT.md).
