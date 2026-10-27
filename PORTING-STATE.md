@@ -170035,3 +170035,9 @@ Change: the F5 ucode iteration cap (s6403/s6070) was lifted to 65536 only when R
 ORIGIN: the cap is a legitimate runaway guard; the value 16384 is legitimate for retail 4:3 scene size, too small for wider footprints (writer: fixup-injected constant, not guest data).
 Untested: soak_queue/s6435_aspect_cap.sh (16:9 default cap vs ROGUESQ_UCODE_CAP=16384 control; count [ucode-cap] fired + g1d_hole_count). H-dump / H-viewport (hangar ~340/448 rows) still open.
 Discrimination: the change is a behaviour fix, not an instrument (it changes rs64_cap_v from 16384 to 65536 under ASPECT!=4:3). It selects between H-cap and H-viewport/H-dump for the ASPECT flight black holes. Next discriminator: s6435_aspect_cap, 16:9 lvl1, default cap vs CAP=16384 control, same build and recipe. If the control logs [ucode-cap] fired>0 and the default logs 0 with fewer g1d_hole_count frames >0.10, H-cap is confirmed. If the control logs 0 fires, H-cap is refuted and H-viewport is next.
+
+## Session 6436 (2026-10-27) — s6435_aspect_cap was a harness false negative (MISSION_WIDTH=WW placeholder); requeued as s6436
+- s6435 soak rc=1: both arms (capdefault, cap16384) logged `allattempts-failed`; 0 `[ucode-cap] fired` in both. Both runs stalled in the hangar-width log (phase=7 width=796, origin=0x98B038 per fail_att5.log) rather than a game crash, and neither reached the flight gate.
+- Cause: the recipe passed the literal `MISSION_WIDTH=WW` (copied from the s6428 template, where it was only a placeholder), so m6_god_common.sh's `width=WW` flight gate never matched (see s6431 gate). The zero fire counts are therefore NOT a result (no flight reached, no positive control).
+- Fix: s6436_aspect_cap.sh with MISSION_WIDTH=796 (16:9 flight width). Same two arms; outcome table unchanged: control fires>0 and default 0 with fewer holes -> H-cap confirmed; control 0 -> cap not the hole source.
+- No code change. ORIGIN: harness-only defect, no mitigation machinery added.
