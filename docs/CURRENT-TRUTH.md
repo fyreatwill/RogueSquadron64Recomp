@@ -119,6 +119,8 @@ Session 6398: the phase-aligned horizon profile (tools/g3c_phase_horizon.py) is 
 
 Session 6399: ROGUESQ_POSE_LOCK=1 (no-input hover, main.cpp) works in all 4 arms (s6400_posel.sh); arms share pose within ~0.15 at poselock n=60 and ~5 units at n=570, then drift with sim rate. Score only the early window (dumps from flight start to ~n=600) with tools/g3c_horizon_score.py. Matched-window scoring: jump_med retail .283 dd2 .217 aspect .314 combined .260 (single-source, weak) - dd-grid not supported, aspect side-edge weak lean.
 
+Session 6401: pose-matched contact sheet (scratch/agent/view/s6401/sheet.png) shows sky-coloured holes cut into terrain in dd2 (sawtooth), aspect (rectangle) and combined (wedge) but not retail; outer-column scalars are noise and the s6399 aspect lean is withdrawn. Edge is likely missing geometry, single frame per arm.
+
 ## G1 mission coverage
 
 Playable levels are 0..18 (`NUM_LEVELS=0x13`; 19 and 20 are sentinels). Levels
