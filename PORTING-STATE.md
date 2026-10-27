@@ -169573,3 +169573,19 @@ unevaluable. The next work unit is the bounded offline comparison of the s6380
 route against the known s6378 FD57-producing route, followed by one deterministic
 capture only if the comparison identifies the smallest route/input correction.
 ORIGIN: no mitigation; checkpoint documentation only.
+
+## Session 6382 (2026-10-26) — retry close-out: preserve s6380 artifacts and resume the FD57 route audit
+
+This was a checkpoint retry, not a new experiment. No build or run was
+performed. The available s6380 artifacts remain `scratch/agent/m6/g1_lvl2s6380/run.log`,
+`scratch/agent/m6/g1_lvl2s6380long/run.log`, their `keys.log` and `mc_ctl.txt`
+files, plus the known FD57-producing reference at
+`scratch/agent/m6/g1_lvl2s6378/run.log`. The recorded s6380 result is 3,328
+and 3,072 `[spike-vu8]` rows, zero accumulator mismatches, 10 generic
+saturated-result matches in the longer run, and zero FD57 rows. The post-vd
+replay is therefore live but unqualified; H-rsp-emu-clamp, H-clip, and
+H-retail remain unevaluable. Next is the bounded offline route/phase/task
+comparison, followed by one deterministic capture only if it identifies a
+route/input mismatch.
+
+ORIGIN: no mitigation; retry checkpoint documentation only.
