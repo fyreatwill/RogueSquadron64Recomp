@@ -170000,3 +170000,10 @@ Folded s6427 soak (rc=0). Compared fb_0000303_w640: a169 logo STILL +78 px right
 ## Session 6429 (2026-10-27) — queued s6428 aspect verification soak (a43ref/a43/a169/a219)
 Ran: no game run. Wrote scratch/agent/soak_queue/s6428_aspect_verify.sh (copy of the s6427 pose-locked sheet, tag s6428, built on the s6428 live-vsu-width camera scale fix). Loop will execute it. Open question for the fold: logo centring at 16:9/21:9 (fb_0000303_w640 vs a43ref), 16:9 radar edge, and whether lower-half noise in late w640 dumps is a dump-stride mislabel (vsu width 796 vs dump 640): H-dumpmislabel vs H-menu-stride; discriminator = re-read same buffer at w796, a43 arm as positive control.
 Next: fold results, build contact sheet for owner, then G1e.
+
+## Session 6430 (2026-10-27) — folded s6428_aspect_verify: logo centring fixed at 16:9; 16:9 and 21:9 flight fill the frame, HUD at real edges
+- Soak rc=0 (467 s). a43 (4:3 control): summary clean (alive, vi_stalls=0, crashlines=0). a169/a219 report `allattempts-failed` from the coverage harness (mission detector keyed on 4:3 widths; MISSION_RE=ZZZ + TITLE_ORIGIN recipe), NOT a crash: a169 produced 960 w796 dumps, a219 709 w1024 dumps, all alive.
+- Logo: fb_0000303_w640 pixel-diffed a43 vs a169: rows 0-320 identical (difference bbox starts at y=320, 1726 px >30), so the +78 px shift is gone (s6428 fix confirmed, two lines: pixel diff + visual).
+- Flight: a169 late w796 frame (796x448) shows ship, craft HUD left, radar top-right unclipped, sky/terrain filling width. a219 late w1024 frame (1024x448) likewise, radar and lives HUD at real edges. The earlier "16:9 radar clipped" (s6426) did not reproduce at s6428 build.
+- A mid-run a219 w1024 dump is garbage (partial image + noise rows): dump taken at a width/stride transition, consistent with the dump-mislabel hypothesis (H-dumpmislabel), single-source, not root-caused; flight/late frames are clean so it is cosmetic for the dump tool.
+- Not done: hangar/menu at 21:9 recheck; contact sheet for owner; harness mission detector for wide widths. Views in scratch/agent/m6/s6429_view/.
