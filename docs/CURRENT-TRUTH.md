@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6499 (2026-10-27).
+Compact operational handoff, maintained after Session 6500 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -15,6 +15,16 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
   and turning-camera shake. G3c(a) height-byte fade was null; G3c(b)'s VU
   arithmetic is internally consistent, the corrected FD57 replay passes, and
   the independent cxd4 scalar replay agrees with the target chain.
+
+Session 6500 extended the byte-store census with a 64-entry sequence-keyed
+post-bin ring and bounded writer summary. The final pinned dd1/dd4 run reached
+mission and held 151/151 s with zero VI stalls and crash markers. dd1 supplied
+6 EMPTY and 8 nonempty controls; dd4 supplied 100 EMPTY and 8 nonempty
+controls. Every joined row had `seq==ret==post`. dd4 EMPTY seq 269 had a
+meaningful post table (`127,246,255,...`) while the stream sample was all 127,
+so H-bin is refuted for the matching control and H-writer is selected. The
+cumulative writer summary proves activity at 0x80042DB4 and 0x80042DC0, but
+does not identify which site changed that row. No mitigation or default changed.
 
 Session 6499 added a complete byte-store census and a post-bin return snapshot.
 The corrected pinned dd1/dd4 run reached mission for 151 s; dd1 had 6 EMPTY and
@@ -171,16 +181,15 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   Never reset, clean, checkout, or update submodules. If editing `lib/`, run
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
-## Next steps — s6499 override (top)
-- **s6499 (top):** the complete store census selects a later stream-path
-  writer for the dd1 EMPTY control: post-return non-127 bytes become an
-  all-sentinel stream sample, with `seq==ret==post` and extra stores after
-  return. The dd4 EMPTY arm lacks a same-sequence post snapshot because its
-  first EMPTY is beyond the 33-row post budget. Next: retain the pinned dd1/dd4
-  recipe and join a bounded ring of post-return samples to the matching stream
-  sequence; log per-PC counts for `0x80042DB4/DC0/EBC/EC4`. Require dd1
-  nonempty plus dd4 EMPTY controls. Select H-bin versus H-writer only when the
-  dd4 same-sequence post sample is available.
+## Next steps — s6500 override (top)
+- **s6500 (top):** the sequence-keyed post ring selects H-writer for dd4:
+  matching EMPTY seq 269 has meaningful post-bin bytes but an all-127 stream
+  sample, with `seq==ret==post`. Cumulative counts identify the active writer
+  class but not the exact site. Next: retain the pinned recipe and add
+  per-stream-return writer deltas/last values for all four sites, then name the
+  writer; require dd1 nonempty and dd4 EMPTY controls.
+- **s6499 (folded):** the complete store census selected a later stream-path
+  writer for the dd1 EMPTY control; the dd4 row was beyond its post budget.
 - **s6498 (folded):** dd4 EMPTY rows have valid bounds and all-127 table
   samples, but the prior probe did not capture a post-return state or writer.
 - **s6496 (top):** the `binPolygonIntoTerrainGrid` writer was instrumented and the

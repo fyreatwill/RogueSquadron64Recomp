@@ -170419,3 +170419,26 @@ incomplete; the corrected pass rebuilt and reran before this entry was written.
 No mitigation, default, or gameplay behavior changed. ORIGIN: diagnostic
 instrumentation only; the named stream-path sites are the observed writer
 class, not a behavior change.
+
+## Session 6500 (2026-10-27) — post-bin ring joins the dd4 EMPTY writer boundary
+
+Extended the s6499 regeneration-applied probe with a 64-entry sequence-keyed
+post-bin ring and bounded writer summaries for the four stream-path byte-store
+sites. The first two placement attempts were build-only instrumentation defects
+(one misplaced the print in a camera diagnostic and one left it inside a block
+comment); both were corrected before the final run. Debug then rebuilt cleanly.
+
+Ran the pinned dd1/dd4 arms for 150 s. Both reached mission and held 151 s
+with `vi_stalls30s=0` and `crashlines=0`. dd1 produced 6 EMPTY and 8 nonempty
+rows; dd4 produced 100 EMPTY and 8 nonempty rows. All joined rows had
+`seq==ret==post`. The first captured dd4 EMPTY, seq 269, had post-bin bytes
+`127,246,255,246,...` and `non127=33190`, while the stream sample was 56
+sentinel bytes (`127,...`). This is a positive same-sequence discriminator:
+H-bin is refuted for dd4 and H-writer is selected. The cumulative writer
+summary shows activity at 0x80042DB4 and 0x80042DC0, but cannot name which site
+changed this exact row; no gameplay or default behavior changed.
+
+This rules out the claim that dd4 could not be classified because the post
+snapshot budget ended before its first EMPTY. It does not yet distinguish the
+two active stream writer sites, so the next unit is a per-return writer-delta
+probe. ORIGIN: diagnostic instrumentation only; no mitigation was landed.
