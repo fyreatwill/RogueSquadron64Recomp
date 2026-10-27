@@ -1,4 +1,3 @@
-# NEXT: G3c(c) residual - does VI pacing jitter (sd ~2 ms, all arms) reach the screen?
+# NEXT: G3c(c) measure VI sleep-then-spin (s6456 change)
 HYPOTHESIS-ID: g3c-shake
-s6455: camera yaw jerk is identical across retail/FPS60/ASPECT/both (VI-index alt 0.19-0.21). Left: H-vi-timer (our VI loop, events.cpp ~1473-1493, jitters; port defect for any setting) vs H-retail (30 Hz judder only; nothing to fix) vs H-logger-artifact ([g3c] stamp not the present time).
-Work: read the VI timer loop (sleep_until(next) accumulating vs rebased after oversleep). Add a stamp at the RT64 present/swap call, queue one retail soak, compare present-dt sd/alternation with the VI-event dt. Present dt sd >1 ms and bimodal -> fix the timer (absolute deadlines, spin the last ~1 ms); present dt flat -> close G3c(c) as retail, tell owner, move to G1c phase 2.
+Change landed s6456 (events.cpp, spin last 2 ms; ROGUESQ_VI_NOSPIN=1 = old). Queue two soaks (same recipe as s6455 [g3c] logging): default vs NOSPIN. Compare VI dt sd and alternation. sd drops from ~2 ms to <0.5 ms with spin only -> timer oversleep was the cause, keep spin, tell owner. No change -> sd is upstream of the sleep (scheduler/logging); close G3c(c) as retail 30 Hz judder, move to G1c phase 2.
