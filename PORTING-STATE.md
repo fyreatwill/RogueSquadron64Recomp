@@ -169900,3 +169900,11 @@ Stale NEXT.md asked for a G3c(c) shake measurement; s6302 already did it (camera
 - Side datum: u3 left flight and returned to the hangar/logo screen at ~n=5658 (mission_cycles=0, pose-lock hover => presumably mission end/fail); u4 stayed in flight to the end. Not investigated (owner playtest scope: mission outcomes).
 - Still open: terrain fraction does not rise at dd3/dd4 vs dd2 on the cross-run score (single-source, animating camera); needs a pose-locked fixed-camera dd2 vs dd3 vs dd4 sheet.
 - Code: tools/g1c_hud_timeline.py only. No default change. ORIGIN: n/a.
+
+## Session 6410 (2026-10-27) — G1c phase 2: dd2/dd3/dd4 pose-locked sheet is NOT view-matched; lvl5/lvl10 dd2 holds queued
+
+- Ran s6410 (scratch/agent/s6410_dd234_pose.sh, 3 concurrent arms d2 / DD_UNSAFE dd3 / DD_UNSAFE dd4, HOLD 200 s, POSE_LOCK=1, FB_DUMP_EVERY=3): all three alive_at_end=1, vi_stalls30s=0, crashlines=0 (mission_t≈90 s, hold 203 s).
+- Gotcha: fbdump n counts from boot (flight starts ~n=1824-2031 per arm); poselock n is flight-gated. Map by the last `[fbdump] n=` before each `[poselock]` line. Naive same-n pairing shows the boot logo (first sheet was useless).
+- Sheet scratch/agent/s6410_sheet/sheet.png (pose 60/120/180 mapped to fb n): positions match to ~0.1 units but camera/craft ATTITUDE differs between arms (mean frame diff 22-42; craft banked differently, different sky/terrain proportion). u4 diverges in position after pose n=120 (19.0 vs 15.7). So poselock pins position only; no valid dd2-vs-dd3 terrain-extent comparison exists yet. Result: H-limit vs H-score still UNSPLIT.
+- Next: lock attitude too (or pick frames by best sky/terrain-rows match), or use the fixed-camera scorer on frames where craft attitude agrees. Queued s6411 dd2 300 s holds on lvl5 and lvl10 (done-criterion legs).
+- Code: tools/g1c_posesheet.py (new). No default change. ORIGIN: n/a.
