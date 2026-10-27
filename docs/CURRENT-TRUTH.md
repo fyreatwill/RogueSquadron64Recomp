@@ -265,3 +265,5 @@ unit.
 - s6482: grid row+2 link writers (0x800487F8, 0x8004B56C) are generic list-node push/unlink, no distance gate (single-source). Next: radius in processGridCellByDistance/updateActiveGridCellState, else pivot L-lod/fog.
 
 - **s6492 (supersedes s6491 'list never empty'):** g_s6491 listnz read stale r16 (head is v0). Real: streamTerrainGridCellsByDistance (0x8042B50) returns an empty list on 15.5% of dd4 calls (0.3% dd1); ForFace itself never skips cells before its jal; another 24% of dd4 ForFace calls get tiny lists with no cell < DEB4. Next: instrument the stream function's exits (NEXT.md).
+
+- **s6493:** stream-function exit census (lvl1 pose-pinned, 150 s): dd4 empty=300/1504 (20%) vs dd1 7/2303; z-early-out, pool cap, spanbound skip, node==0 are all 0 at dd4, so the empties come from the per-cell span-table filters (0x80130DB0 signed-byte table). dd4 visits fewer cells/call than dd1 despite a 1.6x wider window. Next: dump window words + span table on empty calls (H-spanoverflow). Single-source.
