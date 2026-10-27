@@ -168975,3 +168975,5 @@ Result: words 0..8 are a rotation 3x3 (row0 = 0.826,0.527,0.199, norm ~1.0 -> po
 Why s6320 missed it: the earlier scans looked at 0x80138D20 (the pointer slot's neighbour) and RAM snapshots; the position lives behind the pointer in a heap struct, so a fixed-address float-triple scan could not see it.
 Rules out: H-camrel (position is absolute and smooth). Supports: fade centre = (camX/12.8, camZ/12.8) in cell units (UNVERIFIED scale) vs AA94 (col,row) cells mod ring dim.
 Next: validate the cell scale (regress AA94 cell stash vs camX/Z/12.8), then ROGUESQ_EDGE_FADE with that centre.
+Discrimination: this run SELECTS H-matrix and REFUTES H-camrel / H-none (s6320 NEXT.md table): camera position is absolute, smooth, and readable live, so a camera-centred fade is feasible.
+Next discriminator: H-scale12.8 vs H-other — regress the AA94 cell stash circular mean against camX/Z divided by candidate scale s; the s with minimum residual wins, s=1.0 is the positive control (must be worse).
