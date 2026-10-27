@@ -1,0 +1,3 @@
+1. The planned unit (add a per-VI game-counter instrument for frame period) was redundant: the frame period is already in the ledger (s6256-s6257: 0x8011A8F4 30.06/s retail vs 58.8-59.9/s FPS60; s4902: ~30 Hz swaps vs 60 Hz retrace).
+2. Evidence this iteration: grep of PORTING-STATE/CURRENT-TRUTH located those entries; a re-run of tools/g1e_float_rate_diff.py on the s6257 log returned 0 windows (snapshots gone), so I could not reproduce the numbers, only cite them.
+3. Refuting experiment: run FPS60 vs retail on lvl1 with ROGUESQ g1e-snap enabled and check 0x8011A8F4 per-second delta ratio; if it is not ~2.0, the ledger values are wrong and G1e must reopen.
