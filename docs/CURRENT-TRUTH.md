@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6348 (2026-10-26).
+Compact operational handoff, maintained as of Session 6367 (s6367: spike DMEM-search probe queued, fold scratch/agent/SOAK-RESULTS.md s6367); earlier: Session 6348 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.

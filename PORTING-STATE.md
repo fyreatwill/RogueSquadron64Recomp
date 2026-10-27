@@ -169473,3 +169473,8 @@ This refutes H-stale and H-height-byte-edge, and closes the s6363 height-fade th
 - Rules out: H-rsp-emu arithmetic as the cause (3 lines now: ROM table, SIMD/SISD fuzz, constant-vertex signature). Does not prove H-retail.
 - Next: one-build capture of the F5 VTX buffer (DMEM/RDRAM) on a swap that logs a [spike], to check whether the (1113.7,-170.25) vertex index was ever loaded that frame (stale slot) -> if stale, retail does it too and CULL_SPIKE default-on goes to owner.
 ORIGIN: n/a, offline analysis tool only, no mitigation added.
+
+## Session 6367 (2026-10-26) — G3c(b) spikes: DMEM-search probe for the pinned vertex built, soak queued
+- Added ROGUESQ_SPIKE_DMEM=1 to rs64_spike_scan (src/rsp/dpc_bridge.cpp): for each flagged tri (cap 120) it searches the live RSP DMEM (g_dmem_cur) for the pinned Y, apex Y and apex X in s15.2 16-bit and s15.16 32-bit BE encodings, logging counts/offsets as [spike-dmem]. Apex lookups are the same-run positive control for the encoding guess. Build clean; recipe scratch/agent/soak_queue/s6367_spike_dmem.sh (lvl2, 300 s) queued for the loop.
+- Not yet a result; caveat: DMEM is sampled at submit time, not at tri emit. Stale-slot vs H-clip-const verdict deferred to the soak.
+ORIGIN: n/a, diagnostic only (env-gated), no mitigation added.
