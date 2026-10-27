@@ -170126,3 +170126,6 @@ Result: spin vs nospin wall-dt: p50 6.0/6.7 ms, p75 30.5/28.9, p95 59.9/61.3, sd
 Rules out: VI-timer oversleep as the owner's shake; with s6455 (arm-independent jerk) G3c(c) is closed as retail 30 Hz-class judder. Does NOT rule out that lvl1 runs ~18 gfx tasks/s under G1B logging (possible G1b slowdown datum).
 ORIGIN: no mitigation added; analysis only plus tools/g3c_vi_dt.py.
 Next: G1c phase 2, dd>=3 missing near mountain (NEXT.md).
+
+## Session 6459 (2026-10-27) — NEXT.md was stale (dd3 missing mountain already fixed by s6418); queued dd4 holds
+Found NEXT.md pointed at CURRENT-TRUTH item 0 (dd>=3 drops near mountain), which s6418 (farclip fix) and s6422/s6447 (dd3 holds lvl1/5/10 clean) already resolved. No game run this session. Queued soak_queue/s6459_dd4_lvl1.sh and s6459_dd4_lvl5.sh (DRAW_DISTANCE=4 + DD_UNSAFE, 300 s) to find the next binding limit past dd3 (heap, RSP cost). Rules out nothing; results pending in SOAK-RESULTS.md.
