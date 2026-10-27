@@ -1,3 +1,3 @@
-# NEXT: fold s6452_m6_hold600 soak, then pick G3c(b) spike reference check or M6 repeat
-HYPOTHESIS-ID: m6-endurance
-Fold the soak verdict from SOAK-RESULTS.md (crash/stall = new datum: lldb backtrace, name writer). If clean, take G3c(b): obtain an independent RSP reference (ares/cen64 build) for the FD57 wedge inputs, see docs/G3C-SPIKE-REFERENCE.md. G1e is CLOSED (retail ~30 fps; do not re-measure).
+# NEXT: G3c(b) angrylion replay of one logged spike wedge
+HYPOTHESIS-ID: g3c-spike-angrylion
+Follow docs/G3C-SPIKE-ANGRYLION-PLAN.md. Build a tiny harness (tools/) that encodes one [spike] polygon from a s6380long-style log as RDP triangle commands and runs it through angrylion's rdp core in /Users/williambuckley/Documents/Tools/g3_angrylion; positive control = sane triangle lights pixels. Outcomes: lit pixels ~ s6441 model -> retail draws wedges, ask owner re CULL_SPIKE default; ~0 -> hardware clips, fix host side. G1e CLOSED, M6 closed, do not re-hold.
