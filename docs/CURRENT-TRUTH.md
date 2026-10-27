@@ -196,3 +196,5 @@ unit.
 - s6428: 16:9 logo +78px shift root-caused: 640-wide cams scaled x kv*0.8 into unwidened 640 fb; fix = scale keyed on live video-state width <=640 -> no scale (verified logo centred, flight intact). Still open G1d: 21:9/hangar recheck, radar clip repro, w640 late-dump noise (dump-stride mislabel?), then G1e.
 
 - s6431: wide-aspect soaks must use MISSION_WIDTH=796|1024 (not MISSION_RE=ZZZ, which forced false nomission). Open G1d datum: terrain/sky holes at wide frame edges (single frame each at 16:9, 21:9) - see NEXT.md.
+
+- s6434: s6433 hangar soak 'notitle' = harness origin gates under wide FB (WIDE_ROUTE=1 added, s6434_aspect_hangar219 requeued). Dumps show hangar full-width but ~340/448 rows, and ASPECT flight black holes (single-source). Next: fold s6434; check hangar height via RT64 window capture / viewport; check holes with UCODE_CAP at ASPECT.

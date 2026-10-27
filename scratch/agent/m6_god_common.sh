@@ -28,6 +28,8 @@ for att in 1 2 3 4 5; do
   has() { grep -aq "$1" $L; }
   key() { :; }  # no-op: autopilot injects keys
   fail() { echo "$1-att$att" >> $K; kill -9 $p 2>/dev/null; wait $p 2>/dev/null; cp $L $OUT/fail_att$att.log; }
+  # s6434: wide-aspect arms move every framebuffer origin (FB_WIDTH 796/1024), so the 0x790400/0x6AB400 gates false-fail (s6433: 6/6 'notitle' while the autopilot reached hangar+flight). WIDE_ROUTE=1 gates on autopilot-armed and skips the hangar origin gates.
+  [ "${WIDE_ROUTE:-0}" = 1 ] && { TITLE_OPTIONAL=1; AP_OVERRIDE_WIDE=1; }
   if [ "${TITLE_OPTIONAL:-0}" = 1 ]; then
     for i in $(seq 1 150); do grep -a -F -q '[autopilot] armed' "$L" && break; kill -0 $p 2>/dev/null || break; sleep 1; done
     grep -a -F -q '[autopilot] armed' "$L" || { fail notitle; continue; }
@@ -38,8 +40,8 @@ for att in 1 2 3 4 5; do
     for i in $(seq 1 150); do has "origin=${TITLE_ORIGIN:-0x00790400}" && break; kill -0 $p 2>/dev/null || break; sleep 1; done
     has "origin=${TITLE_ORIGIN:-0x00790400}" || { fail notitle; continue; }
   fi
-  [ -n "${AP_OVERRIDE:-}" ] || for n in $(seq 1 12); do has 'origin=0x006AB400' && break; key 36; sleep 4; key 6; sleep 7; done
-  if [ -z "${AP_OVERRIDE:-}" ]; then
+  [ -n "${AP_OVERRIDE:-}${AP_OVERRIDE_WIDE:-}" ] || for n in $(seq 1 12); do has 'origin=0x006AB400' && break; key 36; sleep 4; key 6; sleep 7; done
+  if [ -z "${AP_OVERRIDE:-}${AP_OVERRIDE_WIDE:-}" ]; then
   has 'origin=0x006AB400' || { fail nohangar; continue; }
   sleep 15
   for n in $(seq 1 14); do { has 'origin=0x006A2900' || has 'origin=0x6A2900'; } && break; key 6; sleep 7; done
