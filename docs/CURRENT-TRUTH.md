@@ -160,6 +160,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps — s6468 override (top)
+- **s6485 (top):** 0x80137CE4 = difficulty index (readers all NPC/script code, none in funcs_8/9; s5793+s5818), NOT an LOD index; mesh-LOD levers DD_LOD/LODSCALE already measured no-gain (s6421). L-lod closed. Next: fog/haze params at dd1 vs dd4 pinned pose, then H-budget for ground-missing at dd>=4 (NEXT.md).
 - **s6484 (top):** isPointXzWithinRangeOfRef = scale .25, thr 144 => 48 raw-unit NPC-vs-player AI range (s5819 values), NOT a terrain lever; with s6483/s6482 all cell-population distance gates are closed. Next: L-lod (0x80137CE4) / fog-haze scaling at dd>1 (NEXT.md).
 - **s6483 (prev):** flood-fill floats 0x8003A80C/0x8003A810 = 0.8/0.5 vs constant a1=1.0 at all 4 call sites => dead gate, NOT a radius (static reading, single-source). Next: isPointXzWithinRangeOfRef 0x8003A7D4/7D8 values + [rng] in/out at dd1 vs dd3 (NEXT.md).
 - **s6481 (top):** pool row+2 links are written continuously in flight (~83k stores/150 s dd1, 16 PCs; insert-like 0x800487F8, 0x8004B56C; unlink-like 0x80048EB8) via ROGUESQ_POOLWATCH (apply_s6481_poolwatch.py) -> far-cell empty link is runtime-population-bound, not load-time. Next: radius/distance arg of the dominant insert writer (NEXT.md).
