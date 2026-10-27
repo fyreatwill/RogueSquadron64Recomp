@@ -1,9 +1,7 @@
-# NEXT: G3c(a) fold s6363 height-fade soak
+# NEXT: G3c(a) make the height-fade factor f live, rerun y vs nofade
 HYPOTHESIS-ID: g3c-owner-visual
 
-Built s6363 (hook at 0x80011788, see PORTING-STATE s6363). Soak scratch/agent/soak_queue/s6363_g3c_heightfade.sh runs between iterations; results in SOAK-RESULTS.md and scratch/agent/m6/s6363_g3c/.
-Fold it: (1) grep '[heightfade]' in each arm log (n>0 for y/ylow/ycontrol; src in 0x80000000..0x807FFFFF) ; (2) view a ycontrol fb vs nofade at the same frame - terrain must be visibly displaced (else hook not on drawn cells: fix first); (3) tools/g3c_horizon_score.py on each arm dir; compare jump_med.
-- jump_med drops >0.03 (y or ylow) -> adopt, bundle into DRAW_DISTANCE, ask owner.
-- control visible but jump unchanged -> raise footprint radius past 34 / fade source f is stale (consider per-cell d).
-- control invisible -> hook not on drawn cells (try renderUnlitMeshFaces 0x80011C9C and flat words funcs_4.c:7501/7518).
-If the soak has not run yet, run it by hand (one game at a time).
+s6364 result: hook at 0x80011788 is on drawn cells (ycontrol +50 visibly spikes terrain), but every logged f was 0 (rs64_s6363_f is written in funcs_10.c radfade2 block after L_8004AA74, per cell colour callee).
+Hypotheses: H-stale (colour callee runs after the height hook or for a different cell, so f is stale/0), H-near (nearly all cells are within r0=26 so f=0 is real and only far cells matter; log was sampled 41 times, mostly early), H-ok (f works, fade genuinely no effect on jump).
+Work unit (one build, one run): in tools/apply_s6363_heightfade.py hook, count f>0 and f>0.99 over the run and print every 2000 calls; also compute d in-hook from cell position (same xo/zo/cxf/czf formula as radfade2) as f2 and log f vs f2 agreement. Regen via fixup (not hand edit), cmake, rerun soak recipe (copy running_manual/s6363_g3c_heightfade.sh, y + ylow + nofade) and score with `python3 tools/g3c_horizon_score.py <fbd> 3600` (flight frames only).
+Outcomes: f>0 never but f2>0 -> H-stale, use f2. f>0 often and jump_med unchanged -> H-ok, y-fade not the edge cause; take next lead (fade outermost ring / haze scaling). jump_med drops >0.03 -> adopt into DRAW_DISTANCE bundle, ask owner.
