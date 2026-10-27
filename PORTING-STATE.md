@@ -170554,3 +170554,22 @@ post-bin table change. Later rows retained a nonzero diff with no new interval
 mask, so the run does not attribute every later mutation to DC0. No mitigation,
 game behavior, or default changed. ORIGIN: the change is diagnostic telemetry;
 the named DC0 value/address is not yet classified as legitimate or corrupt.
+
+## Session 6509 (2026-10-27) — classified out-of-table DC0 targets
+
+The prescribed s6509 unit added `tools/apply_s6509_dc0.py`, a regeneration-safe
+probe at the live `0x80042DC0` store. It records target, byte value, table
+index or OUT classification, and whether the existing draw-distance span bound
+was disabled or actively accepted the store. The Debug target rebuilt
+successfully. Clean per-attempt evidence supplied dd1 with 14 keyed rows (6
+EMPTY, 8 nonempty) and dd4 with 31 keyed rows (23 EMPTY, 8 nonempty), with no
+`[CRASH]` markers; these are the required positive controls. Every sampled DC0
+store wrote `0x7F`. Both arms produced targets outside
+`0x80130DB0..0x80130DC7`; dd4 labeled them `span_mode=active_accept`, while
+dd1 labeled the bound `disabled`. This selects H-DC0-corrupt: the existing
+draw-distance bound admits writes beyond the 24-byte table, and the next
+upstream target is `ctx->r21` in `streamTerrainGridCellsByDistance`. The
+initial label rerun crashed before controls and was discarded; the fixed clean
+attempt above is the result. No guard, game behavior, or default changed.
+ORIGIN: diagnostic classification only; do not mitigate until the target-input
+writer is named and its legitimacy established.

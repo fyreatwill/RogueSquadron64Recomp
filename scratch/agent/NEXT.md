@@ -1,27 +1,24 @@
-# NEXT: audit the selected DC0 writer's address and value
+# NEXT: audit the DC0 target input path
 HYPOTHESIS-ID: g1c-dd8-limit
 
-Run exactly one bounded experiment. Extend the existing keyed probe so each
-live 0x80042DC0 store records target address, byte value, table index or
-out-of-table classification, and the existing span-bound decision. Retain the
-per-site interval masks and post-table diff. Use one Debug build and the pinned
-dd1/dd4 arms in `scratch/agent/s6492_forface.sh`; do not change game behavior
-or add a mitigation.
+Run exactly one bounded experiment. Extend the existing keyed DC0 probe so the
+live `0x80042DC0` store records the base pointer, index/offset arithmetic, and
+source value that produce `ctx->r21`. Retain the keyed post-table diff, DC0
+target/value classification, and dd1 nonempty/dd4 EMPTY controls. Do not add a
+guard or change game behavior.
 
 Competing hypotheses and discriminator:
 
-- H-DC0-legitimate: every changed-byte overlap is a target in
-  `0x80130DB0..0x80130DC7` with an ordinary signed span value; this proves DC0
-  is a legitimate stream refresh and moves the defect upstream.
-- H-DC0-corrupt: a matching DC0 store targets outside the table or carries a
-  value outside the signed span domain; this identifies the corrupt writer
-  input path before any guard is considered.
-- H-uninstrumented: the post-table diff is nonzero but no keyed DC0 target
-  accounts for it; this reopens a host/uninstrumented writer path.
+- H-coherent-stream: base plus index intentionally walks a larger stream
+  buffer; this proves the OUT target is a legitimate-but-misjoined boundary.
+- H-corrupt-input: base or index is outside the stream allocation or does not
+  match the target arithmetic; this names the corrupt input writer.
+- H-uninstrumented: the OUT target cannot be reconstructed from the logged
+  source path; this reopens a host/uninstrumented writer.
 
-Positive controls required: keyed rows, dd1 nonempty rows, dd4 EMPTY rows, and
-zero crash/VI-stall markers. Expected split is determined by the target/value
-classification above; a null is not evidence unless all controls pass.
+The discriminator is exact target reconstruction from the logged base/index
+path, with the active span-bound decision retained. Positive controls are
+keyed rows, dd1 nonempty rows, dd4 EMPTY rows, and zero crash/VI-stall markers.
 
 Commands:
 
