@@ -170076,3 +170076,6 @@ Picked up NEXT.md (dd3 check). Grepping run.log for the knob echo showed the s64
 
 ## Session 6447 (2026-10-27) — real dd3 lvl5/lvl10 holds folded: clean, dd3 qualified
 Folded soak s6446_dd3real_lvl5 and _lvl10 (rc=0, 386 s/413 s wall). Both run.logs echo "[dd] ROGUESQ_DRAW_DISTANCE multiplier 3" (not capped), summary: hold 302 s/301 s, alive_at_end=1, vi_stalls30s=0, crashlines=0 (lvl5 godrefills=11, benign). The raw word "stall" appears 70k-138k times per log only inside [vi-fs-decision] "stalled=0" fields; not stalls. Together with s6421/s6422 (lvl1) dd3 is now qualified on lvl1/5/10. Rules out: the s6102 dd>2 crash recurring at dd3 on these levels. Pending: owner judgement of the look. OWNER-OPT-INS.md and CURRENT-TRUTH updated. Switching to G3c per standing directive.
+
+## Session 6448 (2026-10-27) — G3c(a) edge arm-table soak queued
+Switched to G3c per owner directive. Wrote soak_queue/s6448_g3ca_edge.sh: one pinned-pose lvl1 recipe with arms retail, dd2, dd3, ASPECT 16:9 alone, FPS60 alone (FB dumps on). No game run this session; edge-stair metric script to be written when dumps land (NEXT.md). Rules out nothing yet.

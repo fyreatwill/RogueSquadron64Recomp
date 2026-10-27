@@ -1,5 +1,5 @@
-# NEXT: G3c(a) jagged far-terrain edge - arm table
+# NEXT: G3c(a) fold s6448 edge soak, compute stair-step metric
 HYPOTHESIS-ID: g3c-visual-defects
-dd3 is qualified (s6447); owner directive says switch to G3c now. Start with (a):
-H-optin (auto-far/dd>1 exposes grid-aligned cell boundary, haze not scaled) vs H-aspect (s6144 frustum x-widening exposes side edge) vs H-retail (retail already shows it).
-Discriminator: pinned-pose framebuffer (recipe soak_queue/s6412_attpin.sh) in arms retail / dd2 / dd3 / ASPECT alone / FPS60 alone; compare far-edge stair-step metric (row-wise horizon x-run lengths of terrain-vs-sky boundary) + a retail positive control. Queue as ONE soak script with all arms; send contact sheet to owner. Then fix: scale fog/haze start/end by dd factor or fade outer ring.
+Queued scratch/agent/soak_queue/s6448_g3ca_edge.sh (arms: retail, dd2, dd3, asp169, fps60; pinned pose; FB dumps in scratch/agent/m6/g1_lvl1s6448_*/fbd).
+Hypotheses: H-optin (dd/auto-far exposes grid boundary; haze not scaled) vs H-aspect (frustum x-widening) vs H-retail.
+Next: read SOAK-RESULTS tail; write scratch/agent/edge_metric.py (per-row terrain-vs-sky boundary x-run lengths, using retail as positive control: dd3 should have longer/blockier runs if H-optin); contact sheet for owner; then fix (scale fog/haze by dd or fade outer cells).
