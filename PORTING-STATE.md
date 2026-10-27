@@ -170394,3 +170394,28 @@ the probe did not observe a post-rasterizer table state or a clear/overwrite
 writer, so it does not select H-bin versus H-writer. It is a discriminating
 EMPTY result, not a null. ORIGIN: diagnostic instrumentation only; no
 mitigation or gameplay behavior changed.
+
+## Session 6499 (2026-10-27) — complete rasterizer store census finds a post-bin writer
+
+Added `tools/apply_s6499_store_census.py` and the completion fixup for every
+span-table byte-store site in the generated funcs_9.c cluster. The probe counts
+stores and non-127 bytes, records first/last address/value, snapshots the table
+at bin return, and joins the sample to the stream return. Debug rebuilt cleanly.
+
+Ran the pinned dd1/dd4 arms for 150 s. dd1 reached mission and held 151 s with
+zero VI stalls/crash markers; it supplied 6 EMPTY and 8 nonempty stream rows.
+dd4 reached mission and held 151 s with 25 EMPTY and 8 nonempty rows, but its
+diagnostic log had 37 crash markers, so that arm is not a clean stability hold.
+All observed rows had `seq==ret==post`. For dd1 EMPTY seq 2, the post-bin
+sample was `38,38,...` with 28 meaningful stores; the stream sample became
+`127,127,-128,...` with 40 stores. The additional stores are in the stream
+path's clear/clamp sites `0x80042DB4`, `0x80042DC0`, `0x80042EBC`, and
+`0x80042EC4`; this selects H-writer for that dd1 EMPTY control and refutes a
+pure H-bin explanation for it. The first dd4 EMPTY occurred at seq 268, after
+the bounded post snapshot budget, so dd4 H-bin versus H-writer remains open.
+
+The initial pass omitted two stream byte stores and was discarded as
+incomplete; the corrected pass rebuilt and reran before this entry was written.
+No mitigation, default, or gameplay behavior changed. ORIGIN: diagnostic
+instrumentation only; the named stream-path sites are the observed writer
+class, not a behavior change.

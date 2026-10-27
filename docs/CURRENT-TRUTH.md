@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6498 (2026-10-27).
+Compact operational handoff, maintained after Session 6499 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -16,14 +16,17 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
   arithmetic is internally consistent, the corrected FD57 replay passes, and
   the independent cxd4 scalar replay agrees with the target chain.
 
-Session 6498 reran the terrain rasterizer probe with a larger bounded sample.
-The Debug build and pinned dd1/dd4 run were clean for 151 s in both arms; dd1
-fired the positive controls and dd4 produced 25 EMPTY stream rows. Those rows
-had `seq==ret`, in-range bounds (`0..54/56`, `0..10/11`), and in-range
-first/last store addresses, but the sampled span table remained all `127`.
-The same-thread call order weakens H-order, while no clear/overwrite witness
-was captured, so H-scale versus H-writer remains unresolved. No mitigation or
-default changed.
+Session 6499 added a complete byte-store census and a post-bin return snapshot.
+The corrected pinned dd1/dd4 run reached mission for 151 s; dd1 had 6 EMPTY and
+8 nonempty controls, while dd4 had 25 EMPTY and 8 nonempty rows (dd4 also
+reported 37 crash markers, so its hold is diagnostic only). Every joined row
+had `seq==ret==post`. In dd1 EMPTY seq 2, the post-return table contained
+non-127 values (`38,38,...`) with 28 meaningful stores, but the stream sample
+was all sentinel/clear values with 40 stores. A later stream-path writer,
+among `0x80042DB4`, `0x80042DC0`, `0x80042EBC`, and `0x80042EC4`, demonstrably
+changes the table after rasterizer return; this selects H-writer for the dd1
+EMPTY control. The dd4 EMPTY rows occur after the bounded post log, so H-bin
+versus H-writer is not selected for dd4. No mitigation or default changed.
 
 ## Current frontier: G3c(b) spike-line discriminator
 
@@ -168,14 +171,18 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   Never reset, clean, checkout, or update submodules. If editing `lib/`, run
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
-## Next steps — s6498 override (top)
-- **s6498 (top):** dd4 EMPTY rows are now captured. They have `seq==ret`, valid
-  pre-clamp bounds and in-range store addresses, yet the sampled table is all
-  `127`; dd1 has both EMPTY and nonempty controls. This weakens H-order and
-  does not show a later clear/overwrite. Next: add a bounded per-store census
-  (count plus first/last stored byte and the table sample immediately after
-  rasterizer return) to separate H-bin/no-meaningful-fill from H-writer. Keep
-  the pinned dd1/dd4 recipe and require dd1 nonempty plus dd4 EMPTY controls.
+## Next steps — s6499 override (top)
+- **s6499 (top):** the complete store census selects a later stream-path
+  writer for the dd1 EMPTY control: post-return non-127 bytes become an
+  all-sentinel stream sample, with `seq==ret==post` and extra stores after
+  return. The dd4 EMPTY arm lacks a same-sequence post snapshot because its
+  first EMPTY is beyond the 33-row post budget. Next: retain the pinned dd1/dd4
+  recipe and join a bounded ring of post-return samples to the matching stream
+  sequence; log per-PC counts for `0x80042DB4/DC0/EBC/EC4`. Require dd1
+  nonempty plus dd4 EMPTY controls. Select H-bin versus H-writer only when the
+  dd4 same-sequence post sample is available.
+- **s6498 (folded):** dd4 EMPTY rows have valid bounds and all-127 table
+  samples, but the prior probe did not capture a post-return state or writer.
 - **s6496 (top):** the `binPolygonIntoTerrainGrid` writer was instrumented and the
   pinned dd1/dd4 arms ran in one build. The positive control fired (dd1: 8 ok /
   6 empty logged returns; dd4: 8 ok / 25 empty). dd4 empty intervals contained
