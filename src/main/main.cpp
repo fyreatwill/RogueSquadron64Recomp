@@ -9134,7 +9134,11 @@ static bool vtx_fault_try_handle_fault(siginfo_t* info, void* ucontext_raw) {
 #else
     (void)ucontext_raw;
 #endif
-    if (n <= 128) {
+    static uint64_t phase_detail_n = 0;
+    if (phase >= 6 && p6) {
+        ++phase_detail_n;
+    }
+    if (n <= 128 || (phase >= 6 && p6 && phase_detail_n <= 256)) {
         fprintf(stderr,
             "[vtx-write-fault] n=%llu phase=%u phys=0x%06X page=%d "
             "overlap=p4:%d,p6:%d pc=0x%llX lr=0x%llX guest_pc=0x%08X\n",

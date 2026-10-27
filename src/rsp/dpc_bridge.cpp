@@ -1658,6 +1658,42 @@ extern "C" void rs64_f5_state_probe(uint32_t r17, uint32_t w0, uint32_t w1) {
     }
 }
 
+extern "C" void rs64_f5_vtx_probe(uint32_t pc, uint32_t w0, uint32_t w1,
+                                    const uint8_t *rdram) {
+    static const bool enabled = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_F5_VTX");
+        return e && *e && *e != '0';
+    }();
+    if (!enabled || !rdram) return;
+    static uint32_t phase_seen = 0xFFFFFFFFu;
+    static uint32_t lines = 0;
+    const uint32_t phase = rs64_phase_ord();
+    if (phase != phase_seen) {
+        phase_seen = phase;
+        lines = 0;
+        std::fprintf(stderr, "[f5-vtx-control] phase=%u task=%u\n", phase, g_e9prov.task);
+    }
+    if (lines++ >= 64) return;
+    const uint32_t count = (w0 >> 12) & 0xFFu;
+    const uint32_t first = (w0 >> 1) & 0x7Fu;
+    const uint32_t source = w1 & 0x7FFFFFu;
+    const uint32_t bytes = count * 16u;
+    std::fprintf(stderr,
+                 "[f5-vtx] phase=%u task=%u pc=0x%06X w0=0x%08X w1=0x%08X "
+                 "first=%u count=%u source=0x%06X end=0x%06X bytes=",
+                 phase, g_e9prov.task, pc & 0x7FFFFFu, w0, w1, first, count,
+                 source, source + bytes);
+    const uint32_t dump = std::min(count, 4u) * 16u;
+    if (source + dump <= 0x800000u) {
+        for (uint32_t i = 0; i < dump; ++i)
+            std::fprintf(stderr, "%02X", (unsigned)rdram[(source + i) ^ 3]);
+    } else {
+        std::fprintf(stderr, "OUT_OF_RANGE");
+    }
+    std::fprintf(stderr, "\n");
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m4_index_probe(uint32_t kind, uint32_t slot,
                                       uint32_t p0, uint32_t p1, uint32_t p2,
                                       uint32_t index, uint32_t masked,

@@ -9,6 +9,7 @@ detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 
 - s6328: the batched F5 DMA-source instrument passed its positive control (about 1.9M sampled reads; flight reached phase 6/7), but `ROGUESQ_EDGE_FORCE_RED=1` at 0x8004B910 still produced no terrain red (red fraction 0 in the late flight dump; radar-only red remains); the sampled reads are mostly broad 0x0170/0x0280 display-list/terrain records and do not name a colour writer. The epilogue is ruled out; next instrument the actual F5 `VTX` load and its vertex-buffer byte range, then identify the last guest store into that range.
 - s6329 checkpoint close-out: no rerun; the s6328 conclusion and VTX/store discriminator remain current.
+- s6330: the regeneration-preserved F5 `0x04` VTX probe passed in phases 3–7 (320 records; phase 6 sources include `0x735560..0x73E3B0`) and the red arm still produced no terrain red. The existing p6 page-fault witness also fired in phase 6 at `0x733378`, but its `guest_pc=0x8000D3D0` is a stack-local `sw v0,0x14(sp)`, so it is not a named vertex-buffer writer; the page-fault annotation is not sufficient guest-store attribution. Next: add an exact-range guest-store shadow with an ordinary-store positive control.
 
 - The qualified route boots attribution, N64 logo, intro, Factor 5 logo, title,
   hangar, and mission origins. Mission input reaches flight code.
@@ -92,6 +93,7 @@ autopilot win are owner playtest scope.
 ## Next steps (single monotonic backlog; per-session history archived in PROJECT-OVERVIEW.md, "Archived CURRENT-TRUTH backlog")
 
 - **s6323 (G3c a):** builder grid coord at 0x80130C10 = camera*0.5 (origin 0). AA94 cell ids do NOT linearly track it (resid 12-15 cells). Next: fade by lit-vertex world radius ([edgepos]) from camera, skip cell mapping. See scratch/agent/NEXT.md.
+- **s6330 (G3c a):** VTX source probe and p6 writer witness are qualified, but the p6 fault's guest-PC annotation names only a stack-local store and cannot identify the writer. Next: exact-range guest-store shadow, with ordinary-store positive control; do not add a fade or cull mitigation.
 - s6321 (G3c a): CAMERA POSITION FOUND: struct ptr at 0x80138D1C; +0x28 = 3x3 rotation (9 floats), +0x4C..0x54 = world pos x,y,z (smooth in flight; positive control orthonormal rows). Log: ROGUESQ_G3C_CAMLOG=1 (tools/apply_s6321_camlog.py). Cell scale 12.8 UNVERIFIED. Next: regress AA94 cell stash vs pos/12.8, then edge fade centred on camera. Single-source (one lvl1 run).
 - s6320 (G3c a): RAM-snapshot scan (40 snaps, tools/g3c_ramscan.py) REFUTED a plain float position triple in 8 MB RDRAM (single-source); only triple = timeline ramp 0x8011A8F4. Next: log terrain-pass view matrix translation row (H-matrix) vs H-none.
 - s6318 (G3c a): s6317 cal2 folded. Cell stash works (col/row span 0..63, wrapping = ring-buffer slot indices, not world coords). Floats at 0x80138D20 and 0x80137DBC are CONSTANT garbage across the run: not position records (H-cam/H-pl dead there). Next: fade centre = per-frame circular mean of visited cells mod 64, fade by circular distance; add a frame-boundary marker to the log first.

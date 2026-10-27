@@ -3132,6 +3132,28 @@ if is_main_ucode and F5_STATE_MARKER not in text:
         print(f"fixup_factor5_ucode: FIXUP 13b ANCHOR FAILED (decl={n_decl} state={n_state}).", file=sys.stderr)
         sys.exit(1)
 
+# s6330: capture the actual Factor 5 VTX command and its RDRAM payload.  Keep
+# this at the common fetch boundary so regeneration cannot lose the witness.
+F5_VTX_MARKER = "/* fixup: F5 VTX source probe v1 */"
+if is_main_ucode and F5_VTX_MARKER not in text:
+    decl_anchor = re.compile(r"(extern \"C\" void rs64_f5_state_probe[^\n]*\n)")
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) +
+        'extern "C" void rs64_f5_vtx_probe(uint32_t pc, uint32_t w0, uint32_t w1, const uint8_t *rdram);  ' +
+        F5_VTX_MARKER + "\n",
+        text, count=1)
+    call_anchor = re.compile(
+        r"(    rs64_f5_state_probe\(r17, r19, r20\);  /\* fixup: F5 state census v1 \*/\n)"
+    )
+    text, n_call = call_anchor.subn(
+        lambda m: m.group(1) +
+        "    if ((r19 >> 24) == 0x04) rs64_f5_vtx_probe(r17, r19, r20, rdram);  " +
+        F5_VTX_MARKER + "\n",
+        text, count=1)
+    if (n_decl, n_call) != (1, 1):
+        print(f"fixup_factor5_ucode: F5 VTX ANCHOR FAILED (decl={n_decl}, call={n_call}).", file=sys.stderr)
+        sys.exit(1)
+
 # ---------------------------------------------------------------------------
 # Fixup 18: record L_11B0's actual indirect continuation (s726).
 # ---------------------------------------------------------------------------
