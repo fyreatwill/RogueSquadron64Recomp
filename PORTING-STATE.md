@@ -170237,3 +170237,6 @@ ORIGIN: diagnostic counters only; no mitigation added.
 
 ### Addendum (s6479) — discrimination and next discriminator
 This census SELECTS H-data-limit (cells added by widening are link-empty; pass count flat/lower) and REFUTES H-window-limit (pass count would have grown ~2.5x with the window; it fell 75 -> 36). Next discriminator: write-watch on stores to the link halfwords of table 0x80136FCC logging writer PC + row at dd1 vs dd3; rows written only inside the retail radius => H-streamer-bound (raise that radius), rows absent from level data => H-truly-empty (close lever, go to LOD/fog).
+
+### Addendum 2 (s6479) — verdict, lowercase for the ledger grep
+The populated-cell census selects H-data-limit and refutes H-window-limit (pass cells 75 -> 36 while entries grew 2.5x); it closes the cell-mesh gate as a source of extra terrain. Next, discriminate H-streamer-bound from H-truly-empty with a write-watch on the 0x80136FCC link halfwords (writer PC + row, dd1 vs dd3).
