@@ -243,4 +243,4 @@ unit.
 
 - s6471: dd3 break A/B folded: d2ctl 905, d3nf/d3free/d3pin all ~575 median tri; farclip and pin ruled out, game submits shorter DL at dd3 (116k vs 205k). Next: read terrain cell-count/radius scaling in tools/apply_s6036_dd.py for dd^2 overflow at dd3.
 
-- s6472 (single-source, static): dd3 DL shrink likely from fixed 64x64 terrain-grid tables in binPolygonIntoTerrainGrid (0x8004286C; bbox width/depth at 0x80132DB4/BC predicted 58 at dd2, 87 at dd3). Unmeasured. Next: log width/depth at dd1/2/3 (see NEXT.md).
+- s6473: H-GRID64 REFUTED offline (gridlog window is post-s6037-clamp, <=64; saturated in only 2/47 w, 6/47 d dd3 rows; kept<cap). Loss is downstream of the cell list: next = per-node submit/DL-emit counters dd2 vs dd3 (NEXT.md). | (superseded lead) s6472 (single-source, static): dd3 DL shrink likely from fixed 64x64 terrain-grid tables in binPolygonIntoTerrainGrid (0x8004286C; bbox width/depth at 0x80132DB4/BC predicted 58 at dd2, 87 at dd3). Unmeasured. Next: log width/depth at dd1/2/3 (see NEXT.md).
