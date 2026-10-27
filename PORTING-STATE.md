@@ -169093,3 +169093,22 @@ Next is a post-store actual-value and byte-lane witness for `0x8000D114`, with
 the same controls retained. No mitigation was added.
 ORIGIN: diagnostic-only last-writer/bulk attribution; writer value remains
 unqualified because the pre-store hook passes literal zero.
+
+## Session 6334 (2026-10-26) — qualified the pre-VTX heap writer value
+
+Applied the regeneration-preserved s6334 witness to the `0x8000D114` scalar
+store in `heapFreeListDequeue`, changing only the diagnostic argument from the
+old literal zero to the actual `ctx->r19` source register. The Debug build
+completed successfully. A qualified level-1 DD3 force-red run passed the
+ordinary-store, F5 VTX, and bulk/DMA controls, reached mission in 8 seconds,
+and held 130 seconds with `alive_at_end=1`, zero 30-second VI stalls, and zero
+crash lines. The joined phase-6 VTX ranges contained red source words, and
+`rsp_dmem_to_rdram` overlapped them. The named store's actual values were
+pointer/list-shaped (`0x800DB7D8`, `0x800DB79C`, and similar), not colour
+bytes. This rules out `0x8000D114` as the red colour writer and selects the
+bulk/pre-copy path over a no-writer explanation, but does not yet prove that
+the overlapping DMA payload contains the red bytes. The next discriminator is
+an exact bulk payload/lane witness. The retail oracle ground-truth check also
+passed its whole-RDRAM positive control (10,000 writes); its 15-second
+attract-only route did not execute `0x8000D114`, so it supplied no target-route
+value sample.
