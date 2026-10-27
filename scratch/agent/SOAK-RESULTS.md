@@ -1180,3 +1180,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261026-190200 | s6343_phase5_snapshot | rc=0 | 145s | scratch/agent/m6/g1_lvl1s6343_phase5_snapshot/run.log; mission_t=8s hold=130s alive=1 vi_stalls=0 crashlines=0; phase5 snapshot=28 rows/23 red, phase5 DMA overlaps=0, controls fired
 20261026-193144 | s6352_g3c_r2 | rc=0 | 281s | scratch/agent/soak_results/s6352_g3c_r2_20261026-193144.log
 20261026-193750 | s6353_g3c_r2_pairs | rc=0 | 420s | scratch/agent/soak_results/s6353_g3c_r2_pairs_20261026-193750.log
+20261026-194701 | s6354_g3c_r2_colrow | rc=0 | 419s | scratch/agent/soak_results/s6354_g3c_r2_colrow_20261026-194701.log
