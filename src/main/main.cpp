@@ -4707,6 +4707,21 @@ static void rs64_audio_hash_rdram(const uint8_t* rdram, uint32_t addr,
 
 static thread_local bool g_rs64_audio_vector_store = false;
 static thread_local uint32_t g_spike_sdv_reg = 0, g_spike_sdv_e = 0, g_spike_sdv_lanes[8], g_spike_sdv_snap[88];
+struct Rs64VuRingEnt { uint16_t op, vd, e, vs, vte, h, m, l; };
+static thread_local Rs64VuRingEnt g_vu_ring[24];
+static thread_local uint32_t g_vu_ring_n = 0;
+extern "C" int rs64_vu_ring_enabled(void) { static const int on = getenv("ROGUESQ_SPIKE_DMEM") != nullptr; return on; }
+extern "C" void rs64_vu_ring_push(uint32_t op, uint32_t vd, uint32_t e, uint32_t vs, uint32_t vte, uint32_t h, uint32_t m, uint32_t l) {
+    g_vu_ring[g_vu_ring_n++ % 24] = {(uint16_t)op, (uint16_t)vd, (uint16_t)e, (uint16_t)vs, (uint16_t)vte, (uint16_t)h, (uint16_t)m, (uint16_t)l};
+}
+static void rs64_vu_ring_dump(FILE* f) {
+    static const char* const names[10] = {"VMACF","VMADH","VMADL","VMADM","VMADN","VMUDH","VMUDL","VMUDM","VMUDN","VMULF"};
+    uint32_t n = g_vu_ring_n, cnt = n < 24 ? n : 24;
+    for (uint32_t k = 0; k < cnt; k++) {
+        const Rs64VuRingEnt& r = g_vu_ring[(n - cnt + k) % 24];
+        fprintf(f, "[spike-vu] %s vd=v%u e=%u vs1=%04X vte1=%04X preACC=%04X.%04X.%04X\n", names[r.op], r.vd, r.e, r.vs, r.vte, r.h, r.m, r.l);
+    }
+}
 extern "C" void rs64_spike_sdv_note(uint32_t reg, uint32_t e, const uint32_t* lanes) {
     g_spike_sdv_reg = reg; g_spike_sdv_e = e;
     for (int i = 0; i < 8; i++) g_spike_sdv_lanes[i] = lanes[i];
@@ -4750,6 +4765,7 @@ extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
                             for (int i = 0; i < 8; i++) fprintf(stderr, "%04X ", g_spike_sdv_snap[r * 8 + i]);
                             fputc('\n', stderr);
                         }
+                        rs64_vu_ring_dump(stderr);
                         fprintf(stderr, "[spike-dmem60]");
                         for (uint32_t o = 0x60; o < 0x70; o += 2)
                             fprintf(stderr, " %04X", (unsigned)(((uint32_t)g_dmem_cur[o ^ 3u] << 8) | g_dmem_cur[(o + 1) ^ 3u]));
