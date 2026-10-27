@@ -169601,3 +169601,27 @@ The active next work unit remains the bounded s6378-versus-s6380 route audit;
 no G3c clamp hypothesis changed and no mitigation was added.
 
 ORIGIN: no mitigation; maintenance compaction only.
+
+## Session 6384 (2026-10-26) — corrected the FD57 route audit and selected post-vd replay
+
+Ran the bounded offline audit over `scratch/agent/m6/g1_lvl2s6378`,
+`s6380`, and `s6380long` artifacts. The earlier “zero FD57” statement was a
+marker error: the rows carry `FD57` as a field in `[spike-st]`/`[spike-vu8]`,
+not `fd57=`. s6380 had `nomission-att1` and reached mission on attempt 2;
+s6380long matched the known reference route (`att=1 mission`) and the same
+VI-origin sequence. Its positive-control counts were 185 `[spike-st]`, 23,680
+`[spike-vu8]`, with 155 and 546 FD57 rows respectively.
+
+As an offline arithmetic check, `tools/agent/rsp_vu_replay.py` over the first
+ring returned s6380long: `rows=28 accMatch=144 accMismatch=0 resMatch=187
+resMismatch=29 saturatedResMatch=10 skipped=0`; s6380 returned 13 rows,
+56/0 accumulator match/mismatch, 81/15 result match/mismatch, and 2
+saturated-result matches. The route and timing explanations are rejected; the
+post-vd result replay is now the next discriminator. The result mismatches are
+not yet a clamp conclusion because the replay began at the first ring dump,
+not a proven FD57-specific subchain.
+
+Positive controls: both witness streams contain FD57, and replay accumulator
+matches are nonzero with zero accumulator mismatches. Rules out: missing
+positive control and route absence as explanations for s6380. ORIGIN: no
+mitigation; offline audit and replay only.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6383 (2026-10-26).
+Compact operational handoff, maintained after Session 6384 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -20,16 +20,17 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
 Session 6378 produced the known FD57 wedge route: a 128-op VU ring showed a
 legitimate near-zero-w clip ratio chain. Session 6379 replayed 90 accumulator
-links with 0 mismatches. Session 6380 added all-lane post-`vd` capture and the
-clamp replay, but two runs produced 3,328 and 3,072 rows, 10 generic saturated
-matches, and zero FD57 rows. Sessions 6381–6382 were checkpoint retries only.
-No clamp conclusion or mitigation is qualified.
+links with 0 mismatches. The s6380 route audit corrected the prior zero-FD57
+interpretation: s6380 had a `nomission-att1` retry, then `att=2 mission`, while
+s6380long matched the reference `att=1 mission` route. s6380long recorded 185
+`[spike-st]` rows and 23,680 `[spike-vu8]` rows, including 155 and 546 FD57
+rows respectively. The target positive control therefore passes in both
+witness streams; the post-`vd` clamp replay is the next discriminator.
 
-The immediate work unit is the bounded offline comparison in
-`scratch/agent/NEXT.md`: compare s6380 and s6380long against the known s6378
-route, phase, origin, task, key, and control markers. Only a route mismatch
-justifies one corrected capture. Matching route with no FD57 selects timing;
-FD57 in `[spike-st]` but not `[spike-vu8]` selects instrumentation.
+The immediate work unit is the post-`vd` replay in `scratch/agent/NEXT.md`,
+using the corrected s6380long FD57 ring. The route audit has already shown the
+positive control in both witness streams, so no new capture is currently
+justified.
 
 ## G1 mission coverage
 
@@ -59,8 +60,9 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. Complete the s6383 FD57 route audit from `scratch/agent/NEXT.md`; capture
-   once only if the audit identifies a smallest route/input correction.
+1. Run the post-`vd` replay on the corrected s6380long FD57 ring and classify
+   clamp arithmetic; do not capture another game run unless replay input is
+   insufficient.
 2. Finish G3c(b) with an independent/reference-RSP comparison or owner’s
    decision on `ROGUESQ_CULL_SPIKE`; do not infer clamp behavior from the
    unqualified s6380 run.

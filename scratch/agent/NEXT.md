@@ -1,33 +1,31 @@
-# NEXT: RESUME — deterministic FD57 capture-route audit
+# NEXT: RUN — post-vd clamp replay on corrected FD57 ring
 HYPOTHESIS-ID: g3c-owner-visual-b
 
-This is the next work unit after the s6383 maintenance pass. Do not rebuild or
-rerun s6380 before the offline audit. Do not treat the missing FD57 row as a
-clamp result.
+The route audit is complete. Do not rebuild or rerun the game before this
+offline replay.
 
-Compare these bounded artifacts:
+Use the corrected route witness:
 
-- `scratch/agent/m6/g1_lvl2s6378/run.log` — known FD57 positive control
-- `scratch/agent/m6/g1_lvl2s6380/run.log`
 - `scratch/agent/m6/g1_lvl2s6380long/run.log`
-- matching `keys.log` and `mc_ctl.txt` files
+- `scratch/agent/m6/g1_lvl2s6380long/keys.log`
+- `scratch/agent/m6/g1_lvl2s6380long/mc_ctl.txt`
+- reference: `scratch/agent/m6/g1_lvl2s6378/run.log`
 
-Use `grep -c` and `grep -n ... | head/tail` only; do not print a whole log.
-Build a compact table for route markers, `keys.log`, `mc_ctl.txt`, `origin=`,
-`phase=`, task markers, `[spike-st]`, `fd57=`, and `[spike-vu8]`. Establish
-whether s6380 reached the same phase/origin/task route as s6378.
+Run `python3 tools/agent/rsp_vu_replay.py <run.log> <first-spike-vu8-line>`
+for s6380long and the reference ring. Record rows, accumulator mismatches,
+result mismatches, and saturated-result matches. The route audit already passed
+the positive control: s6380long has 155 FD57 `[spike-st]` rows and 546 FD57
+`[spike-vu8]` rows, with `att=1 mission` and the same VI origins as s6378.
 
 Competing hypotheses:
 
-- H-recipe: forced route/input differs; route, phase, origin, task, or key
-  markers differ.
-- H-timing: route matches but the wedge fell outside the captured interval;
-  route markers match and FD57 is absent in both s6380 witnesses.
-- H-instrument: the target store witness or ring filter missed FD57; FD57 is
-  present in `[spike-st]` without a corresponding `[spike-vu8]` row.
+- H-rsp-emu-clamp: replayed post-`vd` results disagree with the logged lane
+  values at the FD57 ring, indicating clamp/ACC semantics are wrong.
+- H-clip: replayed values match and show legitimate saturation from near-zero w;
+  the wedge is a valid clip-path output.
+- H-retail: replay matches, but an independent retail/reference RSP run is
+  still required before calling the visible spike retail-identical.
 
-DISCRIMINATING MEASUREMENT: route identity plus FD57 presence in both witness
-streams. If a mismatch exists, correct only the smallest recipe difference and
-run one capture with the existing build. If the route matches and FD57 appears,
-replay the post-vd clamp. If it matches and FD57 remains absent, select timing;
-if only `[spike-st]` has FD57, select instrumentation.
+DISCRIMINATING MEASUREMENT: FD57-ring post-`vd` result replay. Mismatched
+logged results select H-rsp-emu-clamp; matching results with saturated lanes
+select H-clip, while H-retail remains open pending an independent reference.
