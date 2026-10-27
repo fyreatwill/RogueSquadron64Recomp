@@ -1,3 +1,3 @@
-# NEXT: G1e measure real game frame rate per level
+# NEXT: G1e analyze s6450 per-VI dumps
 HYPOTHESIS-ID: g1e-framerate
-G3c(a) folded s6449 (null, parked for owner). Take G1e: count distinct framebuffers per second (VI origin changes vs content hash changes) in lvl1/5/10 retail, using existing fbd dumps (hash consecutive dumps) or the G1b frame-time instrument. Hypotheses: H-30 (game renders every 2nd VI), H-20 (every 3rd), H-var. Discriminator: ratio of distinct-content frames to VIs over a 60 s flight window; positive control = FPS60 arm should show ~2x distinct frames of retail. Existing data: scratch/agent/m6/g1_lvl1s6448_{retail,fps60}/fbd (VI-numbered dumps every 3 VIs).
+Read SOAK-RESULTS for s6450_g1e; in scratch/agent/m6/s6450_g1e/*/fbd (or tag dirs) md5 each VI dump over a steady flight window, compute run lengths of identical consecutive hashes. H-30: runs of 2; H-20: runs of 3; H-60: runs of 1; H-var. Control: FPS60 arm should have runs ~half retail's. Then lever (1) per G1e text.
