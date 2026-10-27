@@ -170454,3 +170454,17 @@ runtime change was made. The resume unit is the already specified per-return
 delta/last-value probe for all four candidate sites, with dd1 nonempty and dd4
 EMPTY controls. ORIGIN: checkpoint documentation only; no mitigation or
 behavior change.
+## Session 6502 (2026-10-27) — writer-delta probe exposes an invalid EBC join
+
+Added regeneration-safe s6501/s6502/s6503 fixups and rebuilt Debug. The first
+per-return delta run passed the dd1/dd4 positive controls but shared counters
+produced impossible unsigned underflows. A thread-local retry reproduced the
+underflow, showing that the bin and stream calls can cross host threads and
+that thread-local state cannot join them. The final single-global snapshot
+added guest-thread IDs and reran the same pinned arms: dd1 held 152 s and dd4
+151 s, both with zero VI stalls/crash markers; dd1 supplied 6 EMPTY/8 nonempty
+rows and dd4 100 EMPTY/8 nonempty rows. Guest IDs matched, 0x80042DB4 had
+positive deltas, but 0x80042EBC still underflowed. This does not select an exact
+writer; it retains only the prior H-writer-over-H-bin result. Next is an offline
+assignment/control-flow audit of the EBC counter and snapshot before another
+run. ORIGIN: diagnostic instrumentation only; no mitigation or behavior change.

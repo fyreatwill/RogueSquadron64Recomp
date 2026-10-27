@@ -1,24 +1,25 @@
-# RESUME: identify the exact stream writer for a dd4 EMPTY row
+# NEXT: explain the impossible EBC writer delta before rerunning
 HYPOTHESIS-ID: g1c-dd8-limit
 
-Checkpoint close-out: s6500 already ran and selected H-writer. Its same-sequence
-dd4 EMPTY row had meaningful post-bin bytes but an all-127 stream sample;
-cumulative counts narrowed activity to 0x80042DB4 and 0x80042DC0 without naming
-the writer for that return. No rerun was performed during this retry.
+The s6502 single-snapshot run passed both controls, but the 0x80042EBC count
+delta underflowed while 0x80042DB4 had positive deltas. The guest thread IDs
+matched, so the result cannot yet name a writer. Do one offline source audit
+before another build: enumerate every declaration, assignment, and call of
+`s6500_wcount[2]`, `s6501_post_wcount[2]`, and `s6500_note_writer(0x80042EBCu)`
+in the generated funcs_9.c and all three fixup scripts, then inspect the exact
+control-flow placement around 0x80042EBC.
 
-Resume with exactly one build/run. Extend the regeneration-safe s6500 probe with
-per-stream-return writer deltas and last values for all four sites
-0x80042DB4, 0x80042DC0, 0x80042EBC, and 0x80042EC4; print them on the matching
-`[streamdump] EMPTY` row. Keep the pinned recipe and run
-`zsh scratch/agent/s6492_forface.sh` after a Debug build.
+Competing hypotheses and discriminator:
 
-Discriminator:
+- H-duplicate: a second declaration or stale generated fragment resets/aliases
+  the EBC counter. A complete assignment census finds one or more reset sites.
+- H-uninstrumented: EBC is written through an uninstrumented path, so the
+  snapshot and current counter are from different writer populations. The
+  source audit finds a matching table-byte store without s6500_note_writer.
+- H-boundary: the snapshot is taken in a different call/phase than the stream
+  row despite equal guest IDs. The exact CFG and sequence placement show a
+  call boundary between the post snapshot and return.
 
-- A delta at one site on the matching row selects that writer as the source of
-  the post-bin mutation.
-- No delta at any site, with post and stream still differing, selects H-order
-  (an uninstrumented writer or call boundary) and requires a new site census.
-
-Positive controls remain mandatory: dd1 nonempty rows and nonzero meaningful
-post stores, plus dd4 EMPTY rows with a same-sequence post snapshot. Missing
-either control makes the run unevaluable.
+The audit selects one of these; only then build one regeneration-safe fix and
+rerun `zsh scratch/agent/s6492_forface.sh`, requiring dd1 nonempty and dd4
+EMPTY controls. No soak is justified before the audit resolves the underflow.

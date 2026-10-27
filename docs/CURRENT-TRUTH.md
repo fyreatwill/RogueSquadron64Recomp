@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6500 (2026-10-27).
+Compact operational handoff, maintained after Session 6502 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -25,6 +25,18 @@ meaningful post table (`127,246,255,...`) while the stream sample was all 127,
 so H-bin is refuted for the matching control and H-writer is selected. The
 cumulative writer summary proves activity at 0x80042DB4 and 0x80042DC0, but
 does not identify which site changed that row. No mitigation or default changed.
+
+Session 6502 ran the prescribed per-return writer probe after fixing two join
+defects. The first run passed controls but shared counters produced impossible
+underflows; a thread-local retry showed that the bin and stream calls can cross
+host threads, so thread-local state was not a valid key. The final single-global
+snapshot added guest-thread IDs: both arms were clean (151/152 s, zero VI stalls
+and crash markers), dd1 supplied 6 EMPTY/8 nonempty rows, and dd4 supplied 100
+EMPTY/8 nonempty rows. The guest IDs matched, and 0x80042DB4 had positive count
+deltas on the matching rows, but 0x80042EBC still had an impossible unsigned
+count underflow. The writer attribution is therefore not yet valid; retain
+H-writer over H-bin from s6500, but do not name an exact site. No runtime
+default or gameplay behavior changed.
 
 Session 6499 added a complete byte-store census and a post-bin return snapshot.
 The corrected pinned dd1/dd4 run reached mission for 151 s; dd1 had 6 EMPTY and
@@ -181,13 +193,15 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   Never reset, clean, checkout, or update submodules. If editing `lib/`, run
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
-## Next steps — s6500 override (top)
-- **s6500 (top):** the sequence-keyed post ring selects H-writer for dd4:
-  matching EMPTY seq 269 has meaningful post-bin bytes but an all-127 stream
-  sample, with `seq==ret==post`. Cumulative counts identify the active writer
-  class but not the exact site. Next: retain the pinned recipe and add
-  per-stream-return writer deltas/last values for all four sites, then name the
-  writer; require dd1 nonempty and dd4 EMPTY controls.
+## Next steps — s6502 override (top)
+- **s6502 (top):** the per-return writer probe is still unevaluable: the final
+  single-snapshot arm passed dd1/dd4 controls and matched guest thread IDs, but
+  0x80042EBC's count delta underflowed while 0x80042DB4 was positive. First do
+  an offline source audit of every assignment and call to `s6500_wcount[2]` and
+  the snapshot fields in generated funcs_9.c; determine whether the apparent
+  reset is a duplicate definition, an uninstrumented writer path, or a join
+  boundary. Do not run another soak until the audit names the cause. Then build
+  all candidate fixes in one run and require dd1 nonempty plus dd4 EMPTY rows.
 - **s6499 (folded):** the complete store census selected a later stream-path
   writer for the dd1 EMPTY control; the dd4 row was beyond its post budget.
 - **s6498 (folded):** dd4 EMPTY rows have valid bounds and all-127 table
