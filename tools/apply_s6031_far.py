@@ -56,6 +56,10 @@ def apply4(text):
     text, n = _apply4_old(text)
     if old6227 in text:
         text = text.replace(old6227, new6227); n += 1
+    # s6427 G1d: 320-wide cameras (attribution/N64 logo) render into an unwidened 320 fb; do not W/512-scale them.
+    o6427 = "(og6112[f][0] == 640 ? 0.8 : 1.0)"; n6427 = "(og6112[f][0] == 640 ? 0.8 : og6112[f][0] == 320 ? 1.0 / kv : 1.0)"
+    if o6427 in text:
+        text = text.replace(o6427, n6427); n += 1
     text, m = applyfbw(text)
     return text, n + m
 

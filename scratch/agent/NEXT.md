@@ -1,3 +1,4 @@
-# NEXT: G1d defects from s6426 sheet
+# NEXT: fold s6427_aspect_menufix soak
 HYPOTHESIS-ID: g1d-widescreen
-Hypotheses for garbled menu frames at ASPECT=16:9/21:9: H-stride (menu FB width differs from the widened width used by VI/scaler), H-hudclip (menu draws use 4:3 scissor but wide origin), H-capture-only (fbdump reads RDRAM at wrong width; on-screen image fine). Discriminator: dump the same menu frame via fbdump and a screen capture of the window; if screen is fine -> capture-only. Also: find the HUD radar x anchor/scissor at 16:9 (radar clipped at right border; 21:9 OK) and fix. Then hangar 21:9, G1e.
+s6427 change: tools/apply_s6031_far.py no longer W/512-scales 320-wide cameras (attribution/N64 logo cams were scaled w 320->497 cx 160->248 into an unwidened 320/640 fb; logo drawn +78 px right in a169 w640 dumps, see /tmp-free ref scratch/agent/m6/g1_lvl1s6425_a169/fbd/fb_0000303_w640.ppm vs a43ref).
+Next: fold SOAK-RESULTS line, compare fb_0000303 in g1_lvl1s6427_a169 vs a43ref (logo centred => H-320cam confirmed; still shifted => the 640x480 logo cam is the culprit: its [vpw] line is suppressed by nl6112<12 log budget, log first sight of each cam). Then 16:9 radar clip, menu stride garble (w640 later frames), hangar 21:9, G1e.
