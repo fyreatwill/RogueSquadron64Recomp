@@ -160,6 +160,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps — s6468 override (top)
+- **s6479 (top):** populated-cell census: pass cells/window dd1 75 vs dd3 36 while entries 2.5x; cell-pointer extent identical => extra cells added by widening are empty by link (H-data-limit; two arms, single run). Next: who fills table 0x80136FCC link halfwords and is it radius-bounded (NEXT.md).
 - **s6476 (top):** buildGridCellMesh exit census: 99.5% (dd2)/99.95% (dd3) of entries exit at 0x8004BB3C (cell material-link lookup in table 0x80136FCC fails); dd3 passes 8x fewer cells despite 13% more entries. Control: exits sum to entries. Next = split BB18/BB34 and sample cell+0x1E (NEXT.md). Single run/arm, pinned.
 **dd>=4 renders with the ground missing (s6468, single-source stills).** Sheets `scratch/agent/m6/s6469_flight_sheet.png`, `s6469_dd4_dd6_dd8_sheet.png`: dd1 solid ground; dd4/6/8 flat sky-blue where ground belongs, terrain chunks floating. The terrain-fraction scorer cannot see this (0.139 vs 0.133). Do not call dd>=4 "clean" on crash-free holds alone. Next: find dd2/dd3 break point with the same joiner (`tools/g1c_fbdump_join.py A B 0x80620000,0x80690000`) AND eyeball sheets; then name which budget drops ground tiles (cell pool / DL / vertex). Hangar at dd8 also shows scanline garbage (unresolved).
 
