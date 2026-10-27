@@ -150,6 +150,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
+- s6446: CORRECTION: s6420 'dd3+fix lvl1/5/10 clean' holds were really dd2 (run.log: 'capped to 2'; no DD_UNSAFE in recipe). Real dd3 holds exist only for lvl1 (s6421 300 s, s6422 150 s). Guard raised to 3 (tools/apply_s6036_dd.py, built); soak_queue/s6446_dd3real_lvl5/lvl10 queued - fold; confirm run.log says 'multiplier 3'. Then record the dd knob bundle; default stays retail.
 - s6442/s6443: M6 3x600 s retail holds lvl1/5/7 folded: 3/3 clean (0 crash, 0 VI stall; lvl7 mission_cycles=14 = fail/re-enter loop, not a fault). M6 goal met; do NOT repeat holds (G4 parked). Next: G1c phase 2 dd3 (see NEXT.md).
 - s6439: owner contact sheet built (docs/owner_sheet_s6439.png, tools/owner_sheet_s6439.py); G3 livery (s6267) and G5 (s6268) were already closed. Ladder exhausted of non-owner items: ask owner to judge sheet; next engineering = M6 title->mission endurance (item 3b) or G3c(b) spike reference check.
 - s6438: hangar 340/448-row claim NOT reproduced (tools/fb_rows_lit.py: wide hangar readbacks 436-448 lit rows of 448 in both arms) - H-viewport refuted, G1d hangar closed on rows. Next: owner contact sheet, G3 livery diff, G5.
