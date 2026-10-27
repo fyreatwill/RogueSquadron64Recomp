@@ -4706,10 +4706,11 @@ static void rs64_audio_hash_rdram(const uint8_t* rdram, uint32_t addr,
 }
 
 static thread_local bool g_rs64_audio_vector_store = false;
-static thread_local uint32_t g_spike_sdv_reg = 0, g_spike_sdv_e = 0, g_spike_sdv_lanes[8];
+static thread_local uint32_t g_spike_sdv_reg = 0, g_spike_sdv_e = 0, g_spike_sdv_lanes[8], g_spike_sdv_snap[32];
 extern "C" void rs64_spike_sdv_note(uint32_t reg, uint32_t e, const uint32_t* lanes) {
     g_spike_sdv_reg = reg; g_spike_sdv_e = e;
     for (int i = 0; i < 8; i++) g_spike_sdv_lanes[i] = lanes[i];
+    for (int i = 0; i < 32; i++) g_spike_sdv_snap[i] = lanes[8 + i];
 }
 
 extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
@@ -4742,6 +4743,18 @@ extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
                         fprintf(stderr, "[spike-sdv] vreg=%u e=%u lanes=%04X %04X %04X %04X %04X %04X %04X %04X\n", g_spike_sdv_reg, g_spike_sdv_e,
                                 g_spike_sdv_lanes[0], g_spike_sdv_lanes[1], g_spike_sdv_lanes[2], g_spike_sdv_lanes[3],
                                 g_spike_sdv_lanes[4], g_spike_sdv_lanes[5], g_spike_sdv_lanes[6], g_spike_sdv_lanes[7]);
+                    if (vector_op == 0x53445600u) {
+                        static const int rn[4] = {4, 5, 6, 29};
+                        for (int r = 0; r < 4; r++) {
+                            fprintf(stderr, "[spike-vr] v%d=", rn[r]);
+                            for (int i = 0; i < 8; i++) fprintf(stderr, "%04X ", g_spike_sdv_snap[r * 8 + i]);
+                            fputc('\n', stderr);
+                        }
+                        fprintf(stderr, "[spike-dmem60]");
+                        for (uint32_t o = 0x60; o < 0x70; o += 2)
+                            fprintf(stderr, " %04X", (unsigned)(((uint32_t)g_dmem_cur[o ^ 3u] << 8) | g_dmem_cur[(o + 1) ^ 3u]));
+                        fputc('\n', stderr);
+                    }
                 }
             }
         }

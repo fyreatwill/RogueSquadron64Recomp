@@ -297,7 +297,7 @@ index b0d6bef..a1aa4ea 100644
  
  namespace recomp {
 diff --git a/librecomp/include/librecomp/rsp_vu_impl.hpp b/librecomp/include/librecomp/rsp_vu_impl.hpp
-index dbf46b2..832e5fc 100644
+index dbf46b2..dd6b5cd 100644
 --- a/librecomp/include/librecomp/rsp_vu_impl.hpp
 +++ b/librecomp/include/librecomp/rsp_vu_impl.hpp
 @@ -190,8 +190,8 @@ auto RSP::LFV(r128& vt, cr32& rs, s8 imm) -> void {
@@ -337,20 +337,22 @@ index dbf46b2..832e5fc 100644
  }
  
  template<u8 e>
-@@ -323,6 +324,12 @@ auto RSP::SDV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -323,6 +324,14 @@ auto RSP::SDV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset & 15);
      }
 +    {
-+        uint32_t sdv_lanes[8];
++        uint32_t sdv_lanes[40];
 +        for (u32 i = 0; i < 8; i++) sdv_lanes[i] = (uint16_t)vt.element(i);
++        static const u32 snap[4] = {4, 5, 6, 29};
++        for (u32 r = 0; r < 4; r++) for (u32 i = 0; i < 8; i++) sdv_lanes[8 + r * 8 + i] = (uint16_t)vpu.r[snap[r]].element(i);
 +        rs64_spike_sdv_note((uint32_t)(&vt - &vpu.r[0]), e, sdv_lanes);
 +    }
 +    rs64_m5_audio_dmem_vector_store(rs + imm * 8, 8, 0x53445600u);
  }
  
  template<u8 e>
-@@ -380,6 +387,7 @@ auto RSP::SFV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -380,6 +389,7 @@ auto RSP::SFV(cr128& vt, cr32& rs, s8 imm) -> void {
          RSP_MEM_B(0, address + (base + 12 & 15)) = 0;
          break;
      }
@@ -358,7 +360,7 @@ index dbf46b2..832e5fc 100644
  }
  
  template<u8 e>
-@@ -392,6 +400,7 @@ auto RSP::SHV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -392,6 +402,7 @@ auto RSP::SHV(cr128& vt, cr32& rs, s8 imm) -> void {
          auto value = vt.byte(byte + 0 & 15) << 1 | vt.byte(byte + 1 & 15) >> 7;
          RSP_MEM_B(0, address + (index + offset * 2 & 15)) = value;
      }
@@ -366,7 +368,7 @@ index dbf46b2..832e5fc 100644
  }
  
  template<u8 e>
-@@ -402,6 +411,7 @@ auto RSP::SLV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -402,6 +413,7 @@ auto RSP::SLV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset & 15);
      }
@@ -374,7 +376,7 @@ index dbf46b2..832e5fc 100644
  }
  
  template<u8 e>
-@@ -416,6 +426,7 @@ auto RSP::SPV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -416,6 +428,7 @@ auto RSP::SPV(cr128& vt, cr32& rs, s8 imm) -> void {
              RSP_MEM_B(0, address++) = vt.element(offset & 7) >> 7;
          }
      }
@@ -382,7 +384,7 @@ index dbf46b2..832e5fc 100644
  }
  
  template<u8 e>
-@@ -426,6 +437,7 @@ auto RSP::SQV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -426,6 +439,7 @@ auto RSP::SQV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset & 15);
      }
@@ -390,7 +392,7 @@ index dbf46b2..832e5fc 100644
  }
  
  template<u8 e>
-@@ -438,6 +450,7 @@ auto RSP::SRV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -438,6 +452,7 @@ auto RSP::SRV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset + base & 15);
      }
@@ -398,7 +400,7 @@ index dbf46b2..832e5fc 100644
  }
  
  template<u8 e>
-@@ -448,6 +461,7 @@ auto RSP::SSV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -448,6 +463,7 @@ auto RSP::SSV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset & 15);
      }
@@ -406,7 +408,7 @@ index dbf46b2..832e5fc 100644
  }
  
  template<u8 e>
-@@ -462,6 +476,7 @@ auto RSP::STV(u8 vt, cr32& rs, s8 imm) -> void {
+@@ -462,6 +478,7 @@ auto RSP::STV(u8 vt, cr32& rs, s8 imm) -> void {
          RSP_MEM_B(0, address + (base++ & 15)) = vpu.r[offset].byte(element++ & 15);
          RSP_MEM_B(0, address + (base++ & 15)) = vpu.r[offset].byte(element++ & 15);
      }
@@ -414,7 +416,7 @@ index dbf46b2..832e5fc 100644
  }
  
  template<u8 e>
-@@ -476,6 +491,7 @@ auto RSP::SUV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -476,6 +493,7 @@ auto RSP::SUV(cr128& vt, cr32& rs, s8 imm) -> void {
              RSP_MEM_B(0, address++) = vt.byte((offset & 7) << 1);
          }
      }
@@ -422,7 +424,7 @@ index dbf46b2..832e5fc 100644
  }
  
  template<u8 e>
-@@ -488,6 +504,7 @@ auto RSP::SWV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -488,6 +506,7 @@ auto RSP::SWV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address + (base++ & 15)) = vt.byte(offset & 15);
      }

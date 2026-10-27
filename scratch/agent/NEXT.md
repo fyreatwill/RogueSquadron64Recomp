@@ -1,5 +1,5 @@
-# NEXT: confirm spike Y=FD57 is the VGE guard-band clamp (DMEM 0x60) and check pre-clamp inputs vs reference VU
+# NEXT: find what produces the constant Y=FD57 in $v6 (vmadh $v6,$v4,$v0 chain) - snapshot v0 and ACC
 HYPOTHESIS-ID: g3c-owner-visual-b
-s6373 RESULT: writer is vreg 6 SDV at ucode L_1740 (`vmadh $v6,$v4,$v0; vge $v6,$v6,$v29[1q]`, $v29=DMEM 0x60). Y=FD57 pinned while X varies -> Y saturated by VGE lower bound.
-Work unit: extend rs64_spike_sdv_note to also log DMEM 0x60..0x6F (v29 source) and, at first FD57, a snapshot of rsp.vpu.r[4], r[5], r[6], r[29] (add hook at the VGE line via fixup script in tools/fixup_*.py or log inside SDV via `this`). Outcomes: v29 lane1 == FD57 -> clamp confirmed; then compute pre-clamp Y from v4/v5/recip: huge due to w~0 -> retail identical (ask owner on CULL_SPIKE default-on); moderate value clamped wrongly -> VMADH/VGE emulation bug, replay in ares/parallel-rsp.
-Recipe: env ROGUESQ_G1B=1 XENV_EXTRA="ROGUESQ_LOG_SPIKE=1 ROGUESQ_SPIKE_DMEM=1" HOLD_S=300 LEVEL=2 TAG_SUFFIX=s6374 zsh scratch/agent/g1_level_coverage_common.zsh
+s6374 RESULT: VGE clamp refuted (v29 lane1=F006 < FD57; value passes unchanged). v4 lane1=FFFD const, v5 lane1 varies, Y stays FD57.
+Work unit: in the SDV hook also capture v0 and the 3 ACC lanes sets (ACCH/ACCM/ACCL) via vpu (add to sdv_lanes snapshot), and VCC/VCO; hand-replay vmudn/vmadh producing v6 lane1 against RSP semantics (ares vmadh: acc += (s32)vs*vt<<16). Outcomes: ACC/v0 explain FD57 exactly -> ucode math legit, FD57 is a real (retail) vertex Y: ask owner about CULL_SPIKE default-on; mismatch -> VMADH/VMUDN emulation bug, fix in rsp_vu_impl.hpp.
+Recipe: env ROGUESQ_G1B=1 XENV_EXTRA="ROGUESQ_LOG_SPIKE=1 ROGUESQ_SPIKE_DMEM=1" HOLD_S=120 LEVEL=2 TAG_SUFFIX=s6375 zsh scratch/agent/g1_level_coverage_common.zsh
