@@ -170715,3 +170715,11 @@ ORIGIN: observation only; no mitigation added.
 Discrimination (s6517): REFUTES H-far-layer, H-stale-desc and H-caller-arg (all assumed the descriptor/table differed by arm; it does not - t0 is constant and the base is the level image loaded by load_level_hmp, same order in both arms). SELECTS H-phase-sampling for the s6516 "different table" observation.
 Next discriminator: print a [span-filter] summary for EVERY keyed return (not only keys <=499), then compare EMPTY/ok counts per table base per arm; H-mission-differs (dd4 EMPTY rate on 802EE7B4 > dd1) is confirmed if the mission-table EMPTY rate differs between arms, H-phase-only if EMPTY appears only on tables 1-2 in both arms.
 (s6517 verdict, lowercase for the record: this run refutes H-far-layer/H-stale-desc/H-caller-arg and selects H-phase-sampling; the root cause of the s6516 table split is the load-phase mismatch of the dump rows. Next discriminator: per-table EMPTY rate over all keys.)
+
+## Session 6518 (2026-10-27) — EMPTY rate per table per arm: mission table is 0/2571 at dd1, 339/2395 at dd4
+Built tools/apply_s6518_ret_summary.py: uncapped `[ret-sum]` line per keyed streamTerrainGridCellsByDistance return (the old `[span-filter]` dump was capped at 100 EMPTY / 8 ok rows, which is why s6516/s6517 saw only load-phase rows). Ran s6518_ret_sum.sh (pinned pose, lvl1, dd1 vs dd4, 150 s hold, both arms clean, 0 stalls).
+Control: ret-sum rows == desc-ent rows (dd4 3139/3139; dd1 3315/3314, one return in flight at kill).
+Result by table (EMPTY/total): dd1 — 80246434 7/130, 802525E4 0/542, 802EE7B4 0/2643. dd4 — 80246434 0/130, 802525E4 100/601, 802EE7B4 345/2402.
+So H-mission-differs holds: on the flight (mission) table dd4 returns EMPTY ~14% of calls, dd1 never. H-phase-only and H-gate-hides are refuted (EMPTY rows exist well past load, keys 745+). Single-source (one pinned-pose run per arm); EMPTY meaning (no cell passed the span compares) is not yet shown to be harmful or to correlate with missing terrain.
+ORIGIN: observation only; no mitigation added.
+Next: for dd4 mission-table EMPTY calls, join to a0/camera cell and the span compares to see whether the requested window lies outside the table (legit) or inside it with the cell bytes rejected (defect).
