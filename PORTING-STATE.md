@@ -170481,3 +170481,14 @@ offline assignment/control-flow audit of `s6500_wcount[2]`, the post snapshot,
 and every 0x80042EBC instrumentation site; only its result justifies another
 build or soak. ORIGIN: checkpoint documentation only; no mitigation or runtime
 behavior change.
+
+## Session 6504 (2026-10-27) — completed checkpoint handoff for the EBC audit
+
+This retry performed no experiment or rebuild, as required for checkpoint
+close-out. The durable evidence remains the s6502 result: positive dd1/dd4
+controls and matching guest-thread IDs, but an impossible unsigned delta at
+0x80042EBC, so the exact writer is unresolved. The next discriminator is an
+offline census of counter assignments, instrumentation calls, and control flow
+around 0x80042EBC; its outcome must select H-duplicate, H-uninstrumented, or
+H-boundary before another run. ORIGIN: checkpoint documentation only; no
+mitigation or runtime behavior change.

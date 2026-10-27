@@ -1,8 +1,8 @@
-# NEXT: RESUME — explain the impossible EBC writer delta before rerunning
+# NEXT: offline audit — explain the impossible EBC writer delta before rerunning
 HYPOTHESIS-ID: g1c-dd8-limit
 
-This is a checkpoint resume. The prior probe artifacts are already present;
-do not rerun the game or rebuild before the audit below is complete.
+The prior probe artifacts are already present; do not rerun the game or rebuild
+before the audit below is complete. This handoff is intentionally offline.
 
 The s6502 single-snapshot run passed both controls, but the 0x80042EBC count
 delta underflowed while 0x80042DB4 had positive deltas. The guest thread IDs
@@ -28,6 +28,11 @@ Exact resume commands:
     rg -n "s6500_wcount|s6501_post_wcount|s6500_note_writer|42EBC|42EC4" \
       RecompiledFuncs/funcs_9.c tools/apply_s650*.py
     sed -n '<bounded-start>,<bounded-end>p' RecompiledFuncs/funcs_9.c
+
+Record the census and the bounded CFG window in the next session entry. Do not
+claim an exact writer from the existing runtime counters: the EBC underflow is
+invalid evidence until the audit explains its reset, missing store, or join
+boundary.
 
 The audit selects one of these; only then build one regeneration-safe fix and
 rerun `zsh scratch/agent/s6492_forface.sh`, requiring dd1 nonempty and dd4

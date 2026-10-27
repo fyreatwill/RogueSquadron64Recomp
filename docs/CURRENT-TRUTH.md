@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained after Session 6503 (2026-10-27).
+Compact operational handoff, maintained after Session 6504 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail and the
 retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 
@@ -193,9 +193,10 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   Never reset, clean, checkout, or update submodules. If editing `lib/`, run
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
-Session 6503 is a checkpoint close-out only. The retry did not rerun the probe;
+Session 6503 was a checkpoint close-out only. The retry did not rerun the probe;
 the durable result remains that the EBC delta is invalid and the exact writer is
-unresolved. Resume with the offline assignment/control-flow audit in NEXT.md.
+unresolved. Session 6504 completes that handoff without rerunning the probe;
+resume with the offline assignment/control-flow audit in NEXT.md.
 
 ## Next steps — s6502 override (top)
 - **s6502 (top):** the per-return writer probe is still unevaluable: the final
