@@ -162,6 +162,8 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 ## Next steps — s6468 override (top)
 **dd>=4 renders with the ground missing (s6468, single-source stills).** Sheets `scratch/agent/m6/s6469_flight_sheet.png`, `s6469_dd4_dd6_dd8_sheet.png`: dd1 solid ground; dd4/6/8 flat sky-blue where ground belongs, terrain chunks floating. The terrain-fraction scorer cannot see this (0.139 vs 0.133). Do not call dd>=4 "clean" on crash-free holds alone. Next: find dd2/dd3 break point with the same joiner (`tools/g1c_fbdump_join.py A B 0x80620000,0x80690000`) AND eyeball sheets; then name which budget drops ground tiles (cell pool / DL / vertex). Hangar at dd8 also shows scanline garbage (unresolved).
 
+- s6469: existing dd2/dd3/dd4 dumps are unpinned (different poses) so the ground score tracked altitude; no break point yet. Pose-pinned dd2/3/4/6 arms queued (soak_queue/s6469_dd_break_sheet.sh -> scratch/agent/m6/g1_lvl1s6469p_*); fold, then use tools/g1c_ground_sheet.py (compare against pinned s6468p_d1 = control, s6468p_d8 = missing).
+
 ## Next steps (single monotonic backlog)
 
 - s6467: dd8 lvl5 clean (301 s, 0 stalls/crashes); lvl10 was allattempts-failed with no crash marker. First dd1-vs-dd8 owner capture was phase-invalid because pose lock excluded position and dump ordinal is not a route key. Fixed opt-in position pin built and both fresh arms held 151 s clean, but equal dump numbers still paired different phases. Next: add an offline fbdump-to-`[vi]`/origin join and build a genuinely flight-matched dd1-vs-dd8 sheet; only then score terrain/HUD or revisit the 16 MB-limit SIGBUS hypothesis.
