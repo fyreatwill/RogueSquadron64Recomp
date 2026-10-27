@@ -4712,19 +4712,19 @@ static thread_local uint32_t g_vld_addr[32]; static thread_local const char* g_v
 static thread_local uint32_t g_vte_pend_reg; static thread_local uint16_t g_vte_pend_l[8];
 extern "C" void rs64_vld_note(uint32_t reg, uint32_t addr, const char* kind) { if (reg < 32 && getenv("ROGUESQ_SPIKE_DMEM")) { g_vld_addr[reg] = addr; g_vld_kind[reg] = kind; } }
 extern "C" void rs64_vu_ring_vte(uint32_t reg, const uint16_t* l) { g_vte_pend_reg = reg & 31; for (int i = 0; i < 8; i++) g_vte_pend_l[i] = l[i]; }
-static thread_local Rs64VuRingEnt g_vu_ring[24];
+static thread_local Rs64VuRingEnt g_vu_ring[128];
 static thread_local uint32_t g_vu_ring_n = 0;
 extern "C" int rs64_vu_ring_enabled(void) { static const int on = getenv("ROGUESQ_SPIKE_DMEM") != nullptr; return on; }
 extern "C" void rs64_vu_ring_push(uint32_t op, uint32_t vd, uint32_t e, uint32_t vs, uint32_t vte, uint32_t h, uint32_t m, uint32_t l) {
-    Rs64VuRingEnt& r = g_vu_ring[g_vu_ring_n++ % 24];
+    Rs64VuRingEnt& r = g_vu_ring[g_vu_ring_n++ % 128];
     r = {(uint16_t)op, (uint16_t)vd, (uint16_t)e, (uint16_t)vs, (uint16_t)vte, (uint16_t)h, (uint16_t)m, (uint16_t)l, (uint16_t)g_vte_pend_reg, {0}, g_vld_addr[g_vte_pend_reg], g_vld_kind[g_vte_pend_reg]};
     for (int i = 0; i < 8; i++) r.vl[i] = g_vte_pend_l[i];
 }
 static void rs64_vu_ring_dump(FILE* f) {
     static const char* const names[10] = {"VMACF","VMADH","VMADL","VMADM","VMADN","VMUDH","VMUDL","VMUDM","VMUDN","VMULF"};
-    uint32_t n = g_vu_ring_n, cnt = n < 24 ? n : 24;
+    uint32_t n = g_vu_ring_n, cnt = n < 128 ? n : 128;
     for (uint32_t k = 0; k < cnt; k++) {
-        const Rs64VuRingEnt& r = g_vu_ring[(n - cnt + k) % 24];
+        const Rs64VuRingEnt& r = g_vu_ring[(n - cnt + k) % 128];
         fprintf(f, "[spike-vu] %s vd=v%u e=%u vs1=%04X vte1=%04X preACC=%04X.%04X.%04X vt=v%u[%04X %04X %04X %04X %04X %04X %04X %04X] lastld=%s@%03X\n", names[r.op], r.vd, r.e, r.vs, r.vte, r.h, r.m, r.l, r.vtr, r.vl[0], r.vl[1], r.vl[2], r.vl[3], r.vl[4], r.vl[5], r.vl[6], r.vl[7], r.kind ? r.kind : "none", r.src & 0xFFFu);
     }
 }
