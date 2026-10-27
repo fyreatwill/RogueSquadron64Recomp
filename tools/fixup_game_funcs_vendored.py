@@ -41868,6 +41868,7 @@ RS64_REPLAY = [
     "apply_s5868_flagwatch.py",
     "apply_s5877_fusewatch.py",
     "apply_s6334_vtx_writer_value.py",
+    "apply_s6336_f5_poststore.py",
 ]
 
 

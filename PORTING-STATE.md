@@ -169148,3 +169148,23 @@ Resume with the already specified s6336 discriminator: read actual post-store
 bytes for phase-5 guest stores, join them to phase-6 VTX lanes, and fall back to
 host-write ordering only if no guest-store bytes match. Do not rerun the prior
 experiment merely to close this checkpoint.
+
+## Session 6337 (2026-10-26) — qualified post-store bytes for F5 VTX joins
+
+Added `tools/apply_s6336_f5_poststore.py` to the regeneration replay list and
+used it to place a post-store readback after 48,984 generated scalar/double
+stores. The host shadow records the actual guest-RDRAM word after each store and
+joins it to the phase-6 F5 VTX source ranges. The Debug target built
+successfully. The qualified DD3/red level-1 run passed ordinary-store, VTX,
+bulk, source-red, and post-store controls, reached mission in 8 seconds, held
+130 seconds alive, and recorded zero VI stalls and crash lines.
+
+There were 2,308 bounded phase-6 VTX join rows; 2,303 had valid post-store
+readback. Only 15 post-store values exactly matched the later VTX word, and all
+15 were zero-valued rows. No red-valued VTX lane matched a phase-5 guest-store
+post-value. This rules out the observed phase-5 guest-store last-writer path as
+the red-byte source, but does not distinguish an unbounded host/DMA writer from
+a later VTX-side copy/read ordering. The next unit is an exact-lane host-write
+ordering witness. No mitigation was added.
+ORIGIN: guest-store last-writer attribution; post-store readback is diagnostic
+only and makes no rendering change.

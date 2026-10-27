@@ -1484,9 +1484,13 @@ struct Rs64F5VtxStoreRange {
 struct Rs64F5LastWriter {
     uint32_t pc = 0;
     uint32_t value = 0;
+    uint32_t post_value = 0;
     uint32_t phase = 0;
     uint8_t width = 0;
+    bool post_valid = false;
 };
+
+extern "C" volatile uint8_t* volatile g_recomp_rdram_for_wp_raw;
 
 static Rs64F5VtxStoreRange g_f5_vtx_store_ranges[128] = {};
 static uint32_t g_f5_vtx_store_range_next = 0;
@@ -1522,9 +1526,37 @@ static void rs64_f5_last_writer_update(char width, uint32_t pc,
         Rs64F5LastWriter& row = g_f5_last_writer[i];
         row.pc = pc;
         row.value = value;
+        row.post_value = 0;
         row.phase = phase;
         row.width = static_cast<uint8_t>(width);
+        row.post_valid = false;
         ++g_f5_last_writer_updates;
+    }
+}
+
+extern "C" void rs64_f5_store_shadow_post(char width, uint32_t pc,
+                                             uint32_t addr) {
+    if (!rs64_f5_shadow_on() || addr < 0x80000000u ||
+        addr >= 0x80800000u || !g_recomp_rdram_for_wp_raw) return;
+    const uint32_t span = width == 'D' ? 8u : (width == 'B' ? 1u :
+                           (width == 'H' ? 2u : 4u));
+    const uint32_t phys = addr & 0x7FFFFFu;
+    const uint32_t aligned = phys & ~3u;
+    const volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+    uint32_t now = (uint32_t(rd[aligned + 3u]) << 24) |
+                   (uint32_t(rd[aligned + 2u]) << 16) |
+                   (uint32_t(rd[aligned + 1u]) << 8) |
+                   uint32_t(rd[aligned]);
+    std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
+    if (g_f5_last_writer.empty()) g_f5_last_writer.resize(0x200000u);
+    const uint32_t first = phys >> 2u;
+    const uint32_t last = (phys + span - 1u) >> 2u;
+    for (uint32_t i = first; i <= last && i < 0x200000u; ++i) {
+        Rs64F5LastWriter& row = g_f5_last_writer[i];
+        if (row.pc == pc && row.phase == rs64_phase_ord()) {
+            row.post_value = now;
+            row.post_valid = true;
+        }
     }
 }
 
@@ -1551,9 +1583,10 @@ static void rs64_f5_dump_join(uint32_t phase, uint32_t source, uint32_t bytes,
             std::fprintf(stderr,
                 "[f5-vtx-join] phase=%u task=%u vtx_pc=0x%06X phys=0x%06X "
                 "bytes=0x%08X last_pc=0x%08X last_w=%c last_phase=%u "
-                "last_val=0x%08X now=0x%08X\n",
+                "last_val=0x%08X post=%s0x%08X now=0x%08X\n",
                 phase, task, vtx_pc & 0x7FFFFFu, p, bytes, w.pc,
-                w.width ? char(w.width) : '-', w.phase, w.value, now);
+                w.width ? char(w.width) : '-', w.phase, w.value,
+                w.post_valid ? "" : "?", w.post_value, now);
         }
     }
     std::fprintf(stderr,

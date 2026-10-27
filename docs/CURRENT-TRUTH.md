@@ -1,11 +1,13 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 6334 (2026-10-26).
+Compact operational handoff, maintained as of Session 6337 (2026-10-26).
 `PORTING-STATE.md` is the chronological ledger. Durable background and closed
 detail are in `docs/PROJECT-OVERVIEW.md`; exact run verdicts are in
 `scratch/agent/SOAK-RESULTS.md` and the named audit documents.
 
 ## Headline
+
+- s6337: the post-store shadow passed ordinary-store, VTX, bulk, source-red, and post-store controls. Of 2,308 bounded phase-6 VTX join rows, 2,303 had valid post-store readback; the only exact post-store/current-VTX matches were 15 zero-valued rows, while red-valued VTX lanes had no matching phase-5 guest-store post-value. The DD3 level-1 hold reached mission in 8 seconds and stayed alive 130 seconds with zero VI stalls/crash lines. This rules out the observed phase-5 guest-store last-writer path as the source of the red bytes; exact-lane host-write ordering remains open. No mitigation was added.
 
 - s6328: the batched F5 DMA-source instrument passed its positive control (about 1.9M sampled reads; flight reached phase 6/7), but `ROGUESQ_EDGE_FORCE_RED=1` at 0x8004B910 still produced no terrain red (red fraction 0 in the late flight dump; radar-only red remains); the sampled reads are mostly broad 0x0170/0x0280 display-list/terrain records and do not name a colour writer. The epilogue is ruled out; next instrument the actual F5 `VTX` load and its vertex-buffer byte range, then identify the last guest store into that range.
 - s6329 checkpoint close-out: no rerun; the s6328 conclusion and VTX/store discriminator remain current.
@@ -96,7 +98,7 @@ autopilot win are owner playtest scope.
 
 ## Next steps (single monotonic backlog; per-session history archived in PROJECT-OVERVIEW.md, "Archived CURRENT-TRUTH backlog")
 
-- **s6335 (G3c a):** the exact `rsp_dmem_to_rdram` payload/lane witness shows the overlapping DMA bytes are not the red bytes later consumed by F5 VTX, while all controls and the 130-second DD3 hold pass. Next: add post-store byte readback to the phase-5 guest-store shadow and join each candidate writer's actual bytes to the phase-6 VTX lanes; retain ordinary-store, VTX, bulk, and source-red controls. If no guest store matches, enumerate the host-write/DMA ordering for the same lanes. No fade/cull mitigation.
+- **s6337 (G3c a):** post-store readback shows no phase-5 guest-store post-value matching red-valued phase-6 VTX lanes; the only exact matches are zero rows, and all controls plus the 130-second DD3 hold pass. Next: add an exact-lane host-write ordering witness for the red VTX ranges, retaining all controls. Record every host write/DMA event touching a joined red lane with sequence, API, phase, payload hash/bytes, and pre/post RDRAM bytes. If no host event matches, audit VTX source-copy/read ordering. Do not add fade/cull mitigation.
 - **s6323 (G3c a):** builder grid coord at 0x80130C10 = camera*0.5 (origin 0). AA94 cell ids do NOT linearly track it (resid 12-15 cells). Next: fade by lit-vertex world radius ([edgepos]) from camera, skip cell mapping. See scratch/agent/NEXT.md.
 - s6321 (G3c a): CAMERA POSITION FOUND: struct ptr at 0x80138D1C; +0x28 = 3x3 rotation (9 floats), +0x4C..0x54 = world pos x,y,z (smooth in flight; positive control orthonormal rows). Log: ROGUESQ_G3C_CAMLOG=1 (tools/apply_s6321_camlog.py). Cell scale 12.8 UNVERIFIED. Next: regress AA94 cell stash vs pos/12.8, then edge fade centred on camera. Single-source (one lvl1 run).
 - s6320 (G3c a): RAM-snapshot scan (40 snaps, tools/g3c_ramscan.py) REFUTED a plain float position triple in 8 MB RDRAM (single-source); only triple = timeline ramp 0x8011A8F4. Next: log terrain-pass view matrix translation row (H-matrix) vs H-none.
