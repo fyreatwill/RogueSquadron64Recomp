@@ -1616,7 +1616,7 @@ index 4276b7d..decf7fc 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..b0aa9bc 100644
+index 1cb3f6a..f48f717 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,8 +1,16 @@
@@ -1644,7 +1644,7 @@ index 1cb3f6a..b0aa9bc 100644
  uint16_t rspReciprocals[512];
  uint16_t rspInverseSquareRoots[512];
  
-@@ -32,24 +41,2111 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +41,2114 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -2880,7 +2880,10 @@ index 1cb3f6a..b0aa9bc 100644
 +}
 +extern "C" { uint32_t rs64_spk_dma_ring[256][3]; uint32_t rs64_spk_dma_n; uint32_t rs64_spk_cov43a, rs64_spk_cov462, rs64_spk_ctl; }
 +extern "C" void rs64_s4239_dma(int dir, uint32_t dram_addr, uint32_t len, uint32_t dmem_addr) {
-+    if (dir == 0) { uint32_t* r = rs64_spk_dma_ring[rs64_spk_dma_n++ & 255u]; r[0] = dram_addr & 0xFFFFFFu; r[1] = len; r[2] = dmem_addr & 0xFFFu; { uint32_t d0 = dmem_addr & 0xFFFu; if (0x43Au >= d0 && 0x43Au < d0 + len) rs64_spk_cov43a++; if (0x462u >= d0 && 0x462u < d0 + len) rs64_spk_cov462++; if (0x500u >= d0 && 0x500u < d0 + len) rs64_spk_ctl++; } }  /* s6369: DMA-read ring for spike DMEM window test */
++    if (dir == 0) { uint32_t* r = rs64_spk_dma_ring[rs64_spk_dma_n++ & 255u]; r[0] = dram_addr & 0xFFFFFFu; r[1] = len; r[2] = dmem_addr & 0xFFFu; { uint32_t d0 = dmem_addr & 0xFFFu; if (0x43Au >= d0 && 0x43Au < d0 + len) rs64_spk_cov43a++; if (0x462u >= d0 && 0x462u < d0 + len) rs64_spk_cov462++; if (0x500u >= d0 && 0x500u < d0 + len) rs64_spk_ctl++; } static int sce = -1; if (sce < 0) { const char* e = getenv("ROGUESQ_SPIKE_DMEM"); sce = (e && *e && *e != '0') ? 1 : 0; }
++        const uint32_t d0 = dmem_addr & 0xFFFu; if (sce && (0x43Au >= d0 && 0x43Au < d0 + len)) { /* s6371: per-event covering DMA with post-DMA DMEM value at 0x43A/0x462 (spike pinned Y -681 => s15.2 0xF55C) */
++            static uint32_t lastv = 0xFFFFFFFFu, nlog = 0; uint32_t v = (RSP_MEM_BU(0, 0x43A) << 8) | RSP_MEM_BU(0, 0x43B); uint32_t v2 = (RSP_MEM_BU(0, 0x462) << 8) | RSP_MEM_BU(0, 0x463);
++            if ((v != lastv || (rs64_spk_cov43a & 63u) == 0) && nlog < 1500u) { nlog++; lastv = v; fprintf(stderr, "[spike-cov] k=%u dram=%06X dmem=%03X len=%X v43A=%04X v462=%04X%s\n", rs64_spk_cov43a, dram_addr & 0xFFFFFFu, d0, len, v, v2, v == 0xF55Cu ? " PIN" : ""); } } }  /* s6369: DMA-read ring for spike DMEM window test */
 +    static int en = -1; static unsigned n = 0; static uint32_t ph_key = 0xFFFFFFFFu;
 +    if (en < 0) { const char* e = getenv("ROGUESQ_S4239"); en = (e && *e && *e != '0') ? (e[0] == '2' ? 2 : 1) : 0; }
 +    if (!en || !rs64_s4208_active) return;
@@ -3759,7 +3762,7 @@ index 1cb3f6a..b0aa9bc 100644
  
      // Ensure that the ucode exited correctly
      if (exit_reason != RspExitReason::Broke) {
-@@ -58,5 +2154,7 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -58,5 +2157,7 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  
