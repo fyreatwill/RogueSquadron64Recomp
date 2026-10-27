@@ -1,3 +1,3 @@
-# NEXT: fold s6421_dd3lod_lvl1 A/B + s6422_dd3_sheet (G1c phase 2)
-HYPOTHESIS-ID: g1c-dd-phase2
-dd3+fix holds lvl1/5/10 are clean (s6422). Read SOAK-RESULTS tail for s6421_dd3lod_lvl1 (vs s6420_dd3fix_lvl1: crash/stall, G1b frame time, tri count) and s6422_dd3_sheet (m6/s6422_attpin arms d1b/d3/d3lod). Build a pose-matched contact sheet from the FB dumps (same pinned pose; not posesheet-by-fbn), save under scratch/agent/view/s6422/, compute terrain fraction per arm. Decide whether LODSCALE joins the ROGUESQ_DRAW_DISTANCE bundle (default stays retail). Then take next G1c lever (dd4 / beyond clamp) or move to G1d state check.
+# NEXT: G1d widescreen state check (G1c phase 2 closed at dd3, s6423)
+HYPOTHESIS-ID: g1d-widescreen
+Grep CURRENT-TRUTH/PORTING-STATE for ROGUESQ_ASPECT state (s6144 frustum x-widening, HUD anchoring, 16:9 / 21:9 screenshots). Identify the first unverified item (HUD edge anchoring, menus/hangar at 21:9) and queue one soak with pinned arms 4:3/16:9/21:9 dumping FB at same pose; build the owner contact sheet.

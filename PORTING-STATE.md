@@ -169970,3 +169970,10 @@ Folded SOAK-RESULTS: s6419_dd2fix_lvl1 (hold 301 s, alive, vi_stalls30s=0, crash
 
 ## Session 6422 (2026-10-27) — folded dd3+fix holds lvl5/lvl10 clean; pose-matched dd1/dd3/dd3+LODSCALE sheet queued
 Ran: SOAK-RESULTS fold. s6420_dd3fix_lvl1/lvl5/lvl10 all rc=0, hold 301-302 s, alive_at_end=1, vi_stalls30s=0, crashlines=0 (lvl5 godrefills=12, no crash). So dd3+farclip fix holds 300 s on levels 1, 5, 10 (G1c done-criterion shape, at 3x instead of 2x). s6421_dd3lod_lvl1 (LODSCALE A/B) has not run yet - still in soak_queue, loop will run it. Queued soak_queue/s6422_dd3_sheet.sh: s6412 attitude-pinned recipe, arms d1b / d3 / d3lod (+ d1ref pose reference), FB dumps every 3 VI + G1b timing, for the owner contact sheet. Rules out: nothing new; no code change this session (queue script only).
+
+## Session 6423 (2026-10-27) — folded s6422 dd1/dd3/dd3+LODSCALE sheet soak: clean, LODSCALE does not help
+Ran offline only (no game run). s6422_dd3_sheet arms d1b/d3/d3lod all alive_at_end=1, vi_stalls30s=0, crashlines=0 (150 s holds, lvl1).
+Flight-only (fb n>=1500) terrain fraction via tools/g1c_fixed_score.py: tight median d1b 0.220, d3 0.136, d3lod 0.071 (loose 0.410/0.446/0.270).
+Mean G1b sd_wall (RSP host ms per s, 240 samples): d1b 69, d3 149, d3lod 170; VI stayed 63-65/s in all arms.
+CAVEAT (single-source, cross-run): ROGUESQ_POSE_LOCK pinned position only at different [poselock] n per arm (x=48.9 / 90.6 / 115.1), so the arms did NOT view-match; the fraction drop at d3 is a pose artifact, not evidence dd3 draws less (s6419 pinned-pose scoring 0.179 vs 0.044 stands). What the run does show: d3lod gives no terrain gain over d3 and costs ~14% more RSP time. DECISION: ROGUESQ_DD_LODSCALE stays out of the ROGUESQ_DRAW_DISTANCE bundle (opt-in only, default off). RSP host cost ~2.2x at dd3 vs dd1 (69->149 ms/s) is the real dd3 price; budget is not breached (VI 60+).
+Next: G1c phase 2 is at its practical limit (dd3 clean on lvl1/5/10); move to G1d state check (ASPECT) per ladder.

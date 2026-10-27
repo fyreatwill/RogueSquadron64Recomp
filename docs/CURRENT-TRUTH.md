@@ -185,3 +185,5 @@ unit.
 - s6405: dd2 terrain holes confirmed fixed by scaled ucode cap in dd2/aspect/combined (g3c_holes 0 frames>0.03, control fired). Next: G3c(c) turning-shake jerk (see NEXT.md).
 
 - s6405: G3c closed out. (c) shake = retail 30 fps judder (s6302, equal HF residual all arms); (a) holes fixed by cap scaling and flight frames in retail/dd2/aspect show craft+HUD+terrain (view/s6406/sheet.png); (b) opt-in cull stays opt-in (no retail reference). Next: G1c phase 2, dd3 with scaled cap (NEXT.md).
+
+- s6423 (fold s6422, single-source cross-run): dd1/dd3/dd3+LODSCALE 150 s lvl1 all clean. LODSCALE gives no terrain gain and +14% RSP ms over dd3 -> NOT in the DRAW_DISTANCE bundle. RSP cost dd3 ~2.2x dd1 (69->149 ms/s), VI still 63-65. Arms were not view-matched (POSE_LOCK pins position only); don't read the raw terrain-fraction drop. G1c phase 2 considered done at dd3; next rung G1d (ASPECT) state check.
