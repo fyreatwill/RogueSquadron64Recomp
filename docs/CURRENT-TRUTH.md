@@ -151,7 +151,8 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-- s6461: G1c phase 2 — fold s6461_dd4_lvl10 and s6462_dd6_lvl1/lvl5 soak verdicts (dd clamp is 6 under ROGUESQ_DD_UNSAFE); find the next binding limit.
+- s6462: dd6 lvl1 300 s hold CLEAN (0 stalls/crashes). dd4 lvl10 (s6461) = route failure (5 attempts bounced menus 6DD280/6BA280, never reached mission; hold untested) + 1 SIGBUS in diagnostic rs64_probe_audio_dma_write (att3, unreproduced, origin unproven). Queued s6463 dd4 lvl10 retry + dd1 control + s6462_dd6_lvl5; fold them, then dd8/next limit.
+- (prior) s6461: G1c phase 2 — fold s6461_dd4_lvl10 and s6462_dd6_lvl1/lvl5 soak verdicts (dd clamp is 6 under ROGUESQ_DD_UNSAFE); find the next binding limit.
 - **s6460**: dd4 FOLDED: lvl1+lvl5 300 s holds clean (multiplier 4 echoed, 0 crashes/stalls/alloc failures, VI mean 61.0, sd_wall 53/60 ms/s). Next: dd4 lvl10 hold, then lift clamp 4.0->6 (apply_s6036_dd.py:7, DD_UNSAFE only) and find the next limit; owner sheet dd1 vs dd4.
 - **s6458**: s6457 spin vs NOSPIN FOLDED (tools/g3c_vi_dt.py): per-VI wall-dt distributions IDENTICAL (p50 6.0 vs 6.7 ms, sd<40ms 10.67 vs 10.58, 42%/41% of VIs stamped <2 ms after the previous). Oversleep is NOT the cause; s6456 spin stays opt-out-able but is unproven. New datum: [g3c] VI stamps arrive in bursts (3-4 VIs within 0.1 ms, then ~66 ms gap) with VI/s 60.9 and gfx tasks/s 18.6 on lvl1 => the stamp reflects task-completion batching, not VI timer jitter; the s6455 '2 ms sd' was a different regime. G3c(c) CLOSED as retail judder (4th line of evidence: arm-independent jerk s6455 + equal wall-dt spin/nospin). Next: fold s6459 dd4 holds (item 0 is resolved).
 - s6455: G3c(c) camera-yaw jerk is arm-independent (VI-index alternation 0.19-0.21 in retail/fps60/wide/both); s6292 FPS60 selection was a wall-stamp artifact. Open: VI event wall dt sd ~2 ms in ALL arms (H-vi-timer vs retail judder).
