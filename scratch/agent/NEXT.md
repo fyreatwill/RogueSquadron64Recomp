@@ -1,7 +1,8 @@
-# NEXT: join span-filter decisions to the eight-site writer census
+# NEXT: resume the span-filter decision join
 HYPOTHESIS-ID: g1c-span-grid-writer
 
-Run exactly one bounded experiment. Add a phase-gated, rate-limited trace at
+RESUME: the s6513 experiment was not run during checkpoint close-out. Run
+exactly one bounded experiment. Add a phase-gated, rate-limited trace at
 the per-cell span filter in `streamTerrainGridCellsByDistance` containing the
 cell row/column, window words, selected signed span bytes, and the current
 eight-site writer sequence; join it to the existing keyed return snapshot.

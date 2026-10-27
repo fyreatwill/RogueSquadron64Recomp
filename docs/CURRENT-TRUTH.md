@@ -92,6 +92,12 @@ unobserved EBC/EC4 sites as the source and makes an uninstrumented initializer
 less likely, but does not yet select legitimate filter input over a late
 DB4/DC0 rewrite. No guard, gameplay behavior, or default changed.
 
+Session 6513 was a checkpoint close-out rather than a new experiment. The
+planned per-cell span-filter join was not run in this retry: no build, run log,
+or joined decision rows exist. Therefore s6512 remains the latest
+discriminating result; the legitimate-filter versus late-rewrite question is
+still open and no new hypothesis is selected.
+
 Session 6500 extended the byte-store census with a 64-entry sequence-keyed
 post-bin ring and bounded writer summary. The final pinned dd1/dd4 run reached
 mission and held 151/151 s with zero VI stalls and crash markers. dd1 supplied

@@ -170628,3 +170628,14 @@ filter input from a later DB4/DC0 rewrite. The new source script and launcher
 are committed; no guard, gameplay behavior, or default changed. ORIGIN: the
 probe names the observed writers and treats their grid targets as legitimate
 stores; it does not mitigate any value.
+
+## Session 6513 (2026-10-27) — checkpointed the unrun span-filter join
+
+This was a retry close-out, not a new experiment. The planned s6513
+per-cell span-filter join was not run: there is no new build result, run log,
+or joined decision row in the workspace. The s6512 writer-census conclusion
+therefore remains the latest evidence: the full-grid interpretation stands,
+but legitimate filter input versus a later DB4/DC0 rewrite is unresolved.
+No hypothesis was selected, and no guard, gameplay behavior, or default
+changed. The next unit preserves the s6513 command and discriminator in
+`scratch/agent/NEXT.md`. ORIGIN: no mitigation or value rewrite was added.
