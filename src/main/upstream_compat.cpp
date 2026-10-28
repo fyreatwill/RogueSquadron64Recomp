@@ -2525,11 +2525,39 @@ static unsigned long s_s6093_cnt[8];
 extern "C" void rs64_s6096_skip(uint32_t r16, uint32_t off) { ++s_s6093_cnt[6]; static int n = 0; if (n++ < 12) std::fprintf(stderr, "[bucketlog] s6096 guard-skip r16=%08X s1off=%u\n", r16, off); }
 extern "C" void rs64_s6097_inline(uint32_t nb, uint32_t heads, uint32_t ent, uint32_t bad) { static unsigned long nt = 0; ++nt; if (nt <= 6 || nt % 100 == 0) std::fprintf(stderr, "[bucketlog] s6097 inline tick#%lu nb=%u heads=%u ent=%u oob=%u\n", nt, nb, heads, ent, bad); }
 static void rs64_s6287_flush(unsigned long begin, uint32_t len);
+extern "C" volatile uint8_t* volatile g_recomp_rdram_for_wp_raw;
+static std::vector<uint32_t> s_s6558_blocks;  /* s6558: rs64_s6099_alloc block bases */
+static void rs64_s6558_cut(unsigned long begin, uint32_t len) {  /* s6558: ROGUESQ_CHUNKCUT=1 -> on a >200-chunk free-list drop between begins, locate the walk's terminal node vs the previous snapshot */
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_CHUNKCUT"); return e && e[0] && e[0] != '0'; }();
+    if (!on) return;
+    static const bool selftest = [] { const char* e = std::getenv("ROGUESQ_CHUNKCUT_SELFTEST"); return e && e[0] && e[0] != '0'; }();
+    volatile uint8_t* rd = g_recomp_rdram_for_wp_raw; if (!rd) return;
+    auto ok = [](uint32_t a) { return a >= 0x80000000u && a < 0x80800000u && !(a & 3u); };
+    auto r32 = [&](uint32_t a) -> uint32_t { return ok(a) || (a >= 0x80800000u && a < 0x81000000u && !(a & 3u)) ? rs64_rdram_u32(rd, a & 0x1FFFFFFFu) : 0u; };
+    static std::vector<uint32_t> prev; static bool haveprev = false;
+    std::vector<uint32_t> cur; uint32_t n = r32(0x801163B0u);
+    while (n >= 0x80000000u && n < 0x81000000u && !(n & 3u) && cur.size() < 4096) { cur.push_back(n); n = r32(n); }
+    if (selftest && begin == 100 && cur.size() > 5) {
+        uint32_t t = cur[3]; volatile uint8_t* p = rd + ((t & 0x1FFFFFFFu) & ~3u); p[0] = p[1] = p[2] = p[3] = 0;
+        std::fprintf(stderr, "[chunkcut] SELFTEST zeroed link of node %08X (idx 3 of %zu) at begin %lu\n", t, cur.size(), begin);
+    }
+    if (haveprev && len + 200 < (uint32_t)prev.size()) {
+        uint32_t T = cur.empty() ? 0 : cur.back(); long idx = -1;
+        for (size_t i = 0; i < prev.size(); ++i) if (prev[i] == T) { idx = (long)i; break; }
+        std::fprintf(stderr, "[chunkcut] begin %lu prevlen=%zu walk=%zu (cap4096) T=%08X *T=%08X *(T+4)=%08X idxInPrev=%ld nextOld:", begin, prev.size(), cur.size(), T, r32(T), r32(T + 4), idx);
+        if (idx >= 0) for (long k = idx + 1; k <= idx + 3 && k < (long)prev.size(); ++k) std::fprintf(stderr, " %08X(valid=%d)", prev[k], (int)(r32(prev[k] + 4) != 0 || prev[k] == prev.front()));
+        size_t pin = 0; for (uint32_t a : prev) { bool f = false; for (uint32_t b : cur) if (a == b) { f = true; break; } if (!f) ++pin; }
+        uint32_t blk = 0; for (uint32_t b : s_s6558_blocks) if (T >= b && T < b + 128u * 0x108u) blk = b;
+        std::fprintf(stderr, " oldNodesGone=%zu Tblock=%08X Toff=%u\n", pin, blk, blk ? (T - blk) / 0x108u : 0u);
+    }
+    prev.swap(cur); haveprev = true;
+}
 extern "C" int rs64_s6098_en(void) { static const int on = [] { const char* e = std::getenv("ROGUESQ_DLPOOLLOG"); return (e && e[0] && e[0] != '0') ? 1 : 0; }(); return on; }
 extern "C" void rs64_s6098(int kind, uint32_t len, uint32_t tail, uint32_t ra) {  /* s6098: DL-chunk cache length at begin(0)/reclaim(1) entry */
     static unsigned long calls[2], zero[2]; static uint32_t minlen = 0xFFFFFFFFu, maxlen = 0, first = 0xFFFFFFFFu, last = 0; static unsigned long grew = 0;
     ++calls[kind & 1]; if (len == 0) ++zero[kind & 1];
     if (kind == 0) rs64_s6287_flush(calls[0], len);
+    if (kind == 0) rs64_s6558_cut(calls[0], len);
     { static uint32_t pl = 0xFFFFFFFFu; static std::map<uint32_t, std::pair<unsigned long, unsigned long>> by; /* ra -> (calls, chunks consumed) */
       if (kind == 0) { auto& e = by[ra]; ++e.first; if (pl != 0xFFFFFFFFu && pl > len) e.second += pl - len; pl = len; }
       if (kind == 0 && calls[0] % 1000 == 0) { std::fprintf(stderr, "[dlpool-ra] begin#%lu len=%u:", calls[0], len); for (auto& kv : by) std::fprintf(stderr, " ra=%08X n=%lu cons=%lu;", kv.first, kv.second.first, kv.second.second); std::fprintf(stderr, "\n"); } }
@@ -2566,7 +2594,7 @@ extern "C" uint32_t rs64_s6099_alloc(uint32_t ra) {  /* s6099/s6284: 128 DL chun
     static const uint32_t cap = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_MB"); int m = e ? std::atoi(e) : 1; if (m < 1) m = 1; if (m > 4) m = 4; return (uint32_t)m << 20; }();
     static uint32_t bump = 0; const uint32_t bytes = 128u * 0x108u;
     if (bump + bytes > cap) { static int w = 0; if (!w++) std::fprintf(stderr, "[dlpoolx] arena exhausted (cap %u MB)\n", cap >> 20); return 0; }
-    uint32_t p = (0x81000000u - cap) + bump; bump += bytes;
+    uint32_t p = (0x81000000u - cap) + bump; bump += bytes; s_s6558_blocks.push_back(p);
     std::fprintf(stderr, "[dlpoolx] +128 chunks at %08X (total %u) ra=%08X pc=%08X\n", p, bump / 0x108u, ra, (uint32_t)g_rs64_last_guest_pc);
     return p;
 }
