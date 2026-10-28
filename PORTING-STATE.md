@@ -171320,3 +171320,20 @@ untouched because they contain pre-existing dirty changes.
 
 ORIGIN: generated store `0x800496A8`; the destination writer/source is still
 the `getTextureTlutEntry` return path or a later generated register mutation.
+
+## Session 6600 (2026-10-28) — closed the checkpoint without rerunning the witness
+
+This retry followed the checkpoint-closeout rule and did not rerun the
+incomplete s6599 dd4 wrapper. The saved evidence is unchanged: s6598's retail
+arm completed with positive controls and no crash/stall, while the dd4 wrapper
+produced no witness-phase output. Therefore no hypothesis is selected and no
+guard is justified. The next discriminator remains a direct bounded dd4 launch
+that captures `[hudptrr] stage=tlut_return` before generated store `0x800496A8`,
+with the existing material/TLUT and player-record controls required to fire.
+
+Rules out this iteration: no new runtime cause, no null result from the
+incomplete dd4 wrapper, and no new mitigation. The pre-existing dirty
+submodules remain untouched.
+
+ORIGIN: generated store `0x800496A8`; its destination source remains the
+`getTextureTlutEntry` return path or a later generated register mutation.
