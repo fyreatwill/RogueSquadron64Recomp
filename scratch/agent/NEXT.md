@@ -1,5 +1,5 @@
-# NEXT: dd range census (s6576 item) — per-level tw/th/cap
+# NEXT: dd5 on large-terrain levels (lvl3 78x78, lvl7 93x96) — does dd>4 pay there?
 HYPOTHESIS-ID: g1c-dd-phase2
-State (s6583): valid same-pose dd1/dd4 sheet at docs/owner_sheet_s6583.png (owner to judge). dd4 gain at lvl1 is small => lvl1 extent-bound.
-Work unit: census tw/th/cap per level (1,5,10 + others) via ROGUESQ_DD_LOG at dd4/dd6. If every level is extent-bound, the dd range is done at ~6: bundle the knob and close G1c phase 2.
-Outcome: per-level table; levels with terrain >64x64 are the ones where dd>4 can still pay.
+State (s6584): lvl1/5/10 extent-bound at dd4 bundle (census 0 cap-trim). Bundle clamps px at 5.
+Work unit: run lvl3 and lvl7 at ROGUESQ_DRAW_DISTANCE=4 and 6 (one at a time, ROGUESQ_DD_LOG=1, 150 s, recipe like scratch/agent/s6582_run.sh with MISSION_RE for that level), compare post-window area and cap-trim count, and 300 s clean hold at the winning dd.
+Outcomes: cap-trim 0 and area grows 4->6 => raise bundle px cap beyond 5 for these levels; cap-trim >0 at dd6 => px cap (5) is the binding limit, raise it; area flat => extent-bound everywhere, close G1c phase 2 and hand owner the dd4 sheet.

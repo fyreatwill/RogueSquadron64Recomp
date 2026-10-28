@@ -25,6 +25,7 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
     Open hypotheses (NEXT.md): H-uninit (extra pool entries never linked),
     H-fixedarr (retail-sized parallel array read past its end), H-clamp
     (ddclamp window feeds an entry the game never built).
+  - s6584: census over existing logs: with the dd4 bundle (px4) cap trimming is gone on lvl5/lvl10 (0/48, 0/6); lvl1/5/10 are extent-bound, dd>4 cannot add terrain there. Only lvl3 (78x78) and lvl7 (93x96) can still pay at dd5+ (pre-bundle logs only). Next: dd5/dd6 bundle runs on lvl3/lvl7 (NEXT.md).
   - s6578: ROGUESQ_DRAW_DISTANCE>1 now bundles the validated recipe (RAMTOP_MB=16, MALLOC_SPILL, DLPOOLX 4MB@3000, DD_POOLX=ceil(dd)<=5) in main.cpp; lvl1 dd4 bundle-only 130 s clean vs vetoed control Bus error si_addr=0x380000004 (single run/arm). The s6549-s6551 NULL node = DL-chunk pool exhaustion (not unknown corruption). s6579: "multiplier 3" at dd4 is the s6446 cap (apply_s6036_dd.py:7, dd>3 -> 3 unless ROGUESQ_DD_UNSAFE=1), so this "dd4" run was dd3 (code reading; confirm via log). True-dd4 300 s soaks queued: soak_queue/s6579_dd4_unsafe_lvl5/lvl10.sh.
   - s6548: `[ddclamp]` lvl1 terrain is 64x64 with a 2048-cell cap; dd4
     (~88x137) and dd6 (~101x174) footprints both clamp to the terrain, so dd6
