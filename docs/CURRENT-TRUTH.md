@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6599 (2026-10-28).
+Compact operational handoff, as of Session 6601 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -14,7 +14,32 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   first-mission endurance (3x600 s lvl1/5/7, s6442), and G2 audio are closed.
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
-- **Active thread: G1c draw-distance phase 2 (HYPOTHESIS-ID g1c-dd-phase2).**
+- **Active thread: G3 render fidelity / hangar artifacts (HYPOTHESIS-ID g3-hangar-artifacts).**
+  - s6601 pivoted after three stalled `g1c-dd-phase2` iterations. The retained
+    G3c camera-jerk analyzer was rerun with its positive control: synthetic
+    smooth motion scored 0.152 sign alternation and injected alternating shake
+    scored 1.000. Archived flight arms scored retail 0.395, FPS60 0.625, and
+    FPS60+21:9 0.632, with the same camera-minus-craft heading offset (~1.566
+    rad). This does not identify a new FPS60-owned shake defect and supports
+    the existing retail-cadence closure. The next work unit is the parked
+    hangar-artifact audit, with a same-phase framebuffer comparison as the
+    discriminator.
+  - **G1c draw-distance phase 2 is paused, not resolved.** The TLUT-return
+    witness remains unevaluable because the last dd4 wrapper ended before its
+    witness phase; do not repeat it under the old hypothesis ID without a new
+    discriminating design.
+  - s6598: static Mach-O mapping resolves `hudDisplayUpdateWorker+5532` to
+    generated guest store `0x800496A8: sw v0,0(a0)`. The host instruction is
+    `str w8,[x9,x10]`, with `x10 = ctx->r4 + 0x80000000`; the old source copy
+    confirms `r4` is the return saved from `getTextureTlutEntry` at
+    `0x8002333C` (`0x80049660`), while `r2` is the copied value. This rules
+    out a host/runtime dereference and the already-witnessed `0x80049644/54`
+    reads; H-other-generated-load/H-stale remains open. A persistent
+    `tlut_return` witness was added beside the existing controls and the binary
+    rebuilt. Retail completed route/130 s verification clean
+    (`alive_at_end=1`, `vi_stalls30s=0`, `crashlines=0`); the concurrent dd4
+    harness cycled retries without a durable summary before SIGKILL, so it
+    supplies no dd4 witness verdict.
   - s6598: static Mach-O mapping resolves `hudDisplayUpdateWorker+5532` to
     generated guest store `0x800496A8: sw v0,0(a0)`. The host instruction is
     `str w8,[x9,x10]`, with `x10 = ctx->r4 + 0x80000000`; the old source copy
@@ -176,6 +201,19 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
+-1. **(s6601) Audit the parked hangar artifacts under `g3-hangar-artifacts`.**
+  Build/run one same-phase capture table for retail 4:3, ASPECT 16:9, and
+  ASPECT 21:9 at the hangar origin, joining the framebuffer dumps to the VI
+  origin and width. Competing hypotheses are H-viewport (wrong scissor or
+  viewport exposes the rim band), H-stride (wide framebuffer row/flip stride
+  leaves stale right-edge data), H-rdp (RT64/RDP edge treatment produces the
+  holo spikes), and H-game (the submitted hangar geometry itself contains the
+  artifact). Discriminator: the artifact's first/last changed pixel bounds
+  and command-range attribution in the same phase; width-proportional stale
+  bands select H-stride, fixed screen-space clipping selects H-viewport or
+  H-rdp, and identical geometry in the retail control selects H-game. Keep
+  default retail behavior unchanged and produce an owner-viewable contact
+  sheet before any mitigation.
 -1. **(s6598) Read the mapped `getTextureTlutEntry` return before the `0x800496A8` store.** The new `tlut_return` witness is persistent but the dd4 run did not finish. Run one bounded dd4 route with `ROGUESQ_HUDPTRWATCH=1` and inspect `[hudptrr] stage=tlut_return` against the known controls. Hypotheses: H-return-wild (the function returns `0x951335B0`), H-between-store (the return is valid but another generated store changes `r4`), H-host-alias (valid guest state is changed by host address conversion), H-stale (the return is an old object). Discriminator: return value equal to `0x951335B0` selects the return writer; a valid return followed by the mapped store selects an intervening generated write; a host-only mismatch selects conversion; retail/dd4-valid returns with divergent lifetime select stale state. Do not add a guard.
 -1. **(s6581) True dd4 (DD_UNSAFE=1, bundle) is clean on lvl1/5/10: 300 s holds each, 0 stall, 0 crashlines, log `multiplier 4` (one run per level; the rare dd4 gfx SIGBUS, rate <=~1/9, is not excluded). (s6582 DONE: cap lifted, dd4 allowed without UNSAFE, 150 s lvl1 clean.) Remaining: a valid same-pose dd1-vs-dd4 sheet (log g_rs64_dd_blk per fb dump; s6582 sheet invalid). Old text: lift the dd>3 cap in apply_s6036_dd.py:7 (cap to 4 without DD_UNSAFE) -> regen/rebuild, then dd1-vs-dd4 same-pose contact sheet for the owner. Default stays retail.** (s6583 DONE: valid same-pose dd1 vs dd4 sheet at docs/owner_sheet_s6583.png, [fbdump] now carries dd= tag; dd4 shows only slightly more far terrain at lvl1 pose 3 — extent-bound per s6576; sheet sent to owner for judging.)
 - [s6576, do first] lvl1 footprint saturates at the level's own terrain extent by dd6 (post area 4096=64x64; s6575's 'table too small' was mis-framed - tw/th are level dims). Census tw/th/cap per level (1,5,10 + others) via ROGUESQ_DD_LOG; if every level is extent-bound, dd range is done at ~6: bundle far/pool/cap behind the single knob and run 300 s holds on lvl 1,5,10 at dd6 + contact sheet for owner. See NEXT.md.

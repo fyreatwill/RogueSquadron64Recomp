@@ -171337,3 +171337,17 @@ submodules remain untouched.
 
 ORIGIN: generated store `0x800496A8`; its destination source remains the
 `getTextureTlutEntry` return path or a later generated register mutation.
+## Session 6601 (2026-10-28) — pivoted from stalled draw-distance witness and rechecked turn-shake arms
+
+- Work unit: reran `tools/g3c_jerk.py` on the retained s6290 retail, FPS60,
+  and FPS60+21:9 flight logs, plus its synthetic positive control.
+- Positive control passed: smooth synthetic motion had 0.152 sign alternation;
+  injected alternating shake had 1.000.
+- Results: retail 0.395, FPS60 0.625, combined FPS60+21:9 0.632; camera-minus-
+  craft heading was ~1.566 rad in all real arms. This does not isolate an
+  FPS60-owned defect and supports the existing retail-cadence closure.
+- The prior `g1c-dd-phase2` TLUT-return witness was not rerun after three
+  stalled iterations. It remains unevaluable, and the next unit pivots to the
+  hangar-artifact same-phase framebuffer audit.
+- Rules out: treating the archived turn-shake metric as a new draw-distance
+  blocker or as evidence that FPS60 alone owns the visual shake.
