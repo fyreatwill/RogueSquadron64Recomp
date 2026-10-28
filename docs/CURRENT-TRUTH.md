@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6595 (2026-10-28).
+Compact operational handoff, as of Session 6596 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -200,6 +200,10 @@ Recent session findings are in `PORTING-STATE.md` sessions 6378–6551. Durable
 background, closed threads, and the archived backlogs are in
 `docs/PROJECT-OVERVIEW.md`. Queued-soak verdicts are in
 `scratch/agent/SOAK-RESULTS.md`.
+
+The s6596 retry was a checkpoint close-out only: it did not rerun the s6595
+experiment or add a conclusion. The saved s6595 corrected-arm artifacts remain
+the active evidence for the HUD SIGBUS mapping work.
 
 ## Update s6568
 - s6567 conclusion 'pool size not px2 limit' SUPERSEDED: recipe lacked ROGUESQ_DLPOOLX=1. px2 with DLPOOLX=1 DLPOOLX_MB=4 DLPOOLX_AT=3000 RAMTOP_MB=16 holds clean (1/1 90s; control 3/3 crash). px3 5/5 crashes in allocAndInitDoublyLinkedNodePool12 (NULL+2): next binding limit is that node-pool allocator, not the DL arena.

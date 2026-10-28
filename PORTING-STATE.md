@@ -171244,3 +171244,18 @@ The witness at generated PCs `0x80049644` and `0x80049654` fired 276 rows in ret
 This rules out using the `0x80049644/54` chain as the crash explanation. It does not yet distinguish H-overlay-alias, H-other-generated-load, H-host-deref, or H-stale. No guard or skip was landed. ORIGIN: the wild pointer writer and legitimacy remain unproven; the next unit must map the saved host crash offset to the exact generated instruction before adding another probe.
 
 Next: map `hudDisplayUpdateWorker+5532` with `nm`/`atos`/disassembly, enumerate its real pointer-producing loads, then instrument only the mapped site with the existing positive controls.
+
+## Session 6596 (2026-10-28) — checkpoint close-out preserves the unresolved HUD mapping unit
+
+This retry did not rerun the s6595 experiment or build another instrument, per the
+checkpoint instruction after the prior attempt stopped early. The saved corrected
+s6595 arm artifacts remain present, while the outer launcher logs add no new
+discriminator. The existing result still rules out the instrumented
+`0x80049644/54` read chain as the source of `0x951335B0`, but does not classify
+the actual `hudDisplayUpdateWorker+5532` fault among overlay alias, another
+generated load, host dereference, or stale object. The independent oracle remains
+unavailable because its `libmupen64plus.dylib` core/plugin is absent.
+
+No mitigation was added. Resume by mapping the saved crash PC to the exact
+generated instruction and only then choosing the next witness; do not add another
+read probe before that mapping.
