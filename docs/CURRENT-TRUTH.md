@@ -57,6 +57,7 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
+- s6574 "dd12 holds clean": believable because the env var was 12 and the run was clean; overturned s6575 - the multiplier is clamped to 8, so it was dd8. Raising the clamp is not the next step; the 64-wide terrain table saturates first (single-source, one run's log).
 - (s6559, superseded s6560) "The ~600 chunk/frame loss comes from a head write the store hook cannot see (MEM_W grow hooks, fixup force-zero)." Believable because the hook showed no far/mid/null stores yet the list shrank. Refuted: tracked==actual head 199/199 with a firing positive control; the off-chain stores are in the hooked path, mislabelled 'splice'.
 
 One line each: claim (superseded by; why it was believable).
@@ -137,6 +138,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
+- [s6575, do first] [ddclamp] logs show post-clamp x range saturating at tw=64: tabulate footprint area vs dd offline (dd1/2/4/8 lvl1). Saturation at dd>=4 => the 64x64 terrain table, not the multiplier, is the limit; next unit = terrain dims patch (s6035 stride). See NEXT.md.
 - [s6567] dd6 px2/px3 with RAMTOP_MB=16 all die with Bus error si_addr=0x38000000x (A/B/C identical): pool size is NOT the px2 limit; the chunk list also still collapses. Next: symbolize the crash pc / backtrace, name the writer of the 0x80000000-offset access (see NEXT.md).
 
 0. **(s6572 SOLVED the px3+spill hud fault; supersedes s6570/s6571 "zeroed/empty record" framing.) ROOT CAUSE = `TO_PTR` in lib/N64ModernRuntime/ultramodern/include/ultramodern/ultra64.h masked guest addresses to 8 MB (`& 0x7FFFFF`, s5240), so host osCreateMesgQueue/osSendMesg/osRecvMesg on a queue above 8 MB (record 0x80954F60 + 0x1D0 = 0x80955130, which exists only with RAMTOP_MB=16 + spill) read/wrote the ALIASED low-RAM copy 0x80155130 while generated guest code (MEM_W, unmasked) saw the real address, still all-zero. Two lines of evidence: (a) ROGUESQ_RECV_TRACE `[createmq] mq=0x80955130 msg=0x80955150 count=66` fired while a 16-byte poller watch on 0x955138..0x955147 saw 0 writes over a whole run (same-arm positive control: the record head 0x954F60 showed writes); (b) mask widened to 0x1FFFFFF -> px3+spill hold `mission_verified_130s`, 0 CRASH, svcrecv now returns real slots (validCount=31) vs 8/8 faults before. 1 clean run so far -> NEXT: 3-run px3/px4 confirm, then re-measure the dd3/dd4 limits. Any other host-side `& 0x7FFFFF` on guest pointers (ultramodern/librecomp, src/main) is the same bug class: audit them.** 
@@ -177,4 +179,4 @@ background, closed threads, and the archived backlogs are in
 - s6571 (SUPERSEDED by s6572: queue was never zero-written, the host aliased it to 0x80155130 via the 8 MB TO_PTR mask).  Tool note s6572: ROGUESQ_LOG_FL_ZERO_WATCH=1 ROGUESQ_FL_ZERO_ADDR=<phys hex, now up to 32 MB> ROGUESQ_FL_ZERO_ALWAYS=1 is a no-lldb 16-byte write watch with function attribution (lldb launch hangs in dyld under this harness).
 
 - s6573: px3+spill dd6 confirmed 4/4 clean after TO_PTR mask widening (s6572); px3 fault CLOSED. Next: px4/dd=8 (see NEXT.md).
-- s6574: px4/dd8 (2/2) and px5/dd12 (1/1) lvl1 130 s clean with spill recipe; effective dd and terrain fraction not yet verified (NEXT.md).
+- s6574: px4/dd8 (2/2) lvl1 130 s clean with spill recipe. The px5 "dd12" run was really dd8 (s6575: clamp [0.25,8] under DD_UNSAFE, apply_s6036_dd.py:7; run.log prints multiplier 8) - no dd12 evidence exists.
