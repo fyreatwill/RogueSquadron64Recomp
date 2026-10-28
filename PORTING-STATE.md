@@ -170797,3 +170797,4 @@ Added extern "C" rs64_swap_n() (src/rsp/dpc_bridge.cpp) and made s6527_force() s
 ORIGIN: experiment arm only; no mitigation landed. Writer of the reject remains the span grid compare at 0x80042D8C (grid floor -128 saturation, s6526).
 Rules out: H-rejects-offscreen (rejects are visible-terrain cells at dd4). Selects H-rejects-hide-terrain.
 Next: design the safe dd>1 accept rule (bypass span reject for in-window cells when dd>1, or fix the span grid saturation at its writer), qualify two-arm, expose under ROGUESQ_DRAW_DISTANCE.
+Discriminator result: the same-run toggle selects H-rejects-hide-terrain and refutes H-rejects-offscreen; next discriminator is the dd>1 bypass vs dd1 control on lvl1/5/10 (frame time + terrain fraction), which resolves whether bypass or a fix at the span-grid writer is the root cause.
