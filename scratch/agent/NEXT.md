@@ -1,34 +1,35 @@
-# NEXT: name the 21:9 level-select floor primitive
-HYPOTHESIS-ID: g1d-levelselect-tear
+# NEXT: why the same floor triangles tear only at 21:9
+HYPOTHESIS-ID: g1d-levelselect-frustum
 
-s6611 closed the step-column test. Do not retune `ROGUESQ_HUD_ANCHOR` or
-`ROGUESQ_SHIFT_REGION`, and do not add a cull or a default change.
+s6612 named the primitive and ruled out a stride or T derivative that
+jumps with width. Do not retune `ROGUESQ_HUD_ANCHOR` or
+`ROGUESQ_SHIFT_REGION`. Do not add a cull or a default change. Do not
+bring back the DPC byte walker: it scored 0 sane triangles of 3577
+(16:9) and 3389 (21:9).
 
-The tear is horizontal slices of the hangar floor in the outer thirds of
-the phase-4 1024×336 buffer (n=1400/1500/1600). Outer-third dy over the
-worst 70 rows is 24.3 / 19.1 / 18.3, against 7.7 on the 16:9 level-select
-(sides quiet, center ring hot) and 3.8–5.1 on the quiet rows of the same
-21:9 frames. Shift 384 or 512 makes the SAD worse (~50–62 vs ~17–22).
-The center ring stays solid. Evidence: `scratch/agent/s6611_tear/summary.json`,
-`zoom_left.png`, `zoom_left_16.png`, `zoom_ring.png`.
+The band x < width/3, y in 170..260, is RDP op `0x0F` (shaded, textured,
+z), tile 0, TMEM line 4, fmt 4, siz 0, mask 6. Logged from RT64 after
+decode (`rs64_floor_note`). The largest pair is y=249..300 on both
+arms. dtde matches (19.5312 vs 19.5314, and the same match on 20.425,
+29.790, 31.275, 50.116, -41.655, 15.762, 49.863). Y spans match. X span
+and dsdx scale by 1024/796. line stays 4. Guest PC `80007904` is on
+every row and is not the writer.
 
-ONE work unit: name the textured primitive that paints x < width/3,
-y in 170..260, of that phase-4 frame.
+Same-run outer-third dy on rows 180..250: 16:9 = 8.47, 21:9 = 24.55.
+Dumps: `scratch/agent/s6612_floor/wide16/fbd/fb_0001400_w796.ppm` and
+`wide21/fbd/fb_0001400_w1024.ppm`.
 
-Offline first. `ROGUESQ_ASPECT_SCALE` and `ROGUESQ_VPW_SCALE` are consumed
-only as the projection aspect, the footprint x scale, and the viewport
-width (`tools/apply_s6031_far.py`, `tools/apply_s6144_fpx.py`, the s6112
-viewport patch). Read those consumers. If one of them also scales a floor
-texture stride or S/T, that consumer is the suspect: say which instruction,
-and stop.
+ONE work unit: log the base S and T that `decodeTriangles` already
+computes for this same key (op 0x0F, tile 0, line 4), both arms, one
+binary, the s6612 runner. Record S at the visible left edge (x=0), not
+only the derivative.
 
-If they only widen the projection, the discriminator is one instrumented
-build and two arms (ASPECT 21:9 and 16:9, same route as s6610). During
-phase 4 only, log each textured primitive whose screen box hits
-x < width/3 and y in 170..260: guest PC, texture width/stride, and the
-UV derivative if the ucode stream has it. The primitive whose stride or
-derivative jumps between width 796 and 1024 is the writer. Negative
-control: 16:9 side dy stays near 7.7. Positive control: 21:9 side dy
-stays above 18 on a frame in that phase. If both arms log the same
-primitive with the same derivative, the wider frustum itself is the
-cause and the next unit says so — do not patch yet.
+- If 21:9's S there is outside the 64-wide mask and 16:9's is inside,
+  the wider frustum walks off the texture. Say so. Do not patch yet.
+- If both sit inside the mask, walk-off is refuted. The next unit then
+  has to name a different difference (coverage, scissor, or which part
+  of the triangle is inside x < width/3). Do not invent a writer from
+  PC `80007904`.
+
+Negative control: 16:9 floor-band dy stays near 8. Positive control:
+21:9 floor-band dy stays above 18. Screen must be unlocked.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6611 (2026-10-28).
+Compact operational handoff, as of Session 6612 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -14,7 +14,7 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   first-mission endurance (3x600 s lvl1/5/7, s6442), and G2 audio are closed.
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
-- **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-tear).**
+- **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-frustum).**
   - s6611: the step-column metric is blind. Control passed (flight `none`; a
     pasted 200×640 block scores H-composite at x=640). n=1400/1500/1600
     score `none`; stride fit R≤0.061 for slopes ±384/±512. Outer-third
@@ -25,7 +25,14 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
     512/640 seam. The pixels are horizontal slices of the hangar floor
     in the outer thirds; the center ring stays near the 16:9 ring.
     Summary: `scratch/agent/s6611_tear/summary.json`. No default change.
-    Next: name that floor primitive.
+  - s6612: the floor primitive is an RDP triangle, op `0x0F`, tile 0,
+    TMEM line 4, fmt 4 / siz 0, mask 6. Logged from RT64's decoded
+    triangles (the DPC byte walk had 0 sane of 3577 and 3389). On the
+    same route, dtde matches across FB 796 and 1024 (19.53, 20.42,
+    29.79, 31.27, 50.12, …) and Y spans match; X span and dsdx scale by
+    1024/796. Same-run floor-band dy is 8.47 (16:9) vs 24.55 (21:9).
+    Not a stride or derivative that jumps with width. No patch.
+    Guest PC `80007904` is on every row and is not the writer.
   - s6610: 16:9 flight-radar clip fixed (opt-in only). The s6155 right-half add
     places the ring at retail_right+second. second=A+RA (334 at fb 796) is
     50 px past that frame. second=fbw-512 alone moved the ring to x 671..764
@@ -202,8 +209,9 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
 - **G1d (aspect): flight radar inset matches retail (s6610).** Extra width
   is real scene and the left HUD stays pinned. Open opt-in defect: 21:9
   level-select floor is sliced into horizontal scanlines in the outer
-  thirds (s6611); not a framebuffer stride and not a 512/640 seam. The OS
-  window remains 640x480, so wider modes letterbox.
+  thirds (s6611). s6612 named the triangles (op 0x0F, line 4); their T
+  derivative does not change with width, so the wider frustum is what
+  differs. The OS window remains 640x480, so wider modes letterbox.
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
@@ -302,14 +310,14 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6611) Name the 21:9 level-select floor primitive.** Outer thirds of
-   phase-4 1024×336, rows ~179–258, are horizontal slices (side dy 18–24 vs
-   7.7 at 16:9 and ~4 on the quiet rows above). Center ring dy stays near
-   the 16:9 ring. Not a 384/512-px row shear and not a 512/640 seam. Find
-   the textured primitive that covers x<width/3 in that band; compare its
-   texture stride or UV derivative at FB 1024 vs 796. No cull or default
-   change. `ROGUESQ_ASPECT_SCALE` is only the projection/footprint/viewport
-   scale (`apply_s6031_far.py`, `apply_s6144_fpx.py`).
+1. **(s6612) Explain the 21:9 floor tear without a stride change.** The
+   band is op `0x0F` triangles, tile 0, TMEM line 4, fmt 4/siz 0, mask 6.
+   dtde and Y match at FB 796 and 1024; X span and dsdx scale by 1024/796.
+   Do not patch and do not retune HUD anchor or shift. Next discriminator:
+   log the base S/T (already computed in `decodeTriangles`) for that same
+   key, both arms, one binary. If 21:9's S at the visible left edge is
+   outside the 64-wide mask and 16:9's is inside, the wider frustum walks
+   off the texture. If both sit inside the mask, that walk-off is refuted.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

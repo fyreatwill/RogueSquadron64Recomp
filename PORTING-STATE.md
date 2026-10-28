@@ -171628,3 +171628,37 @@ bytes are not established as display pixels. Runtime artifact origin is open.
   (FB 1024, ASPECT_SCALE = fbw/512 = 2). The primitive is not named.
   No default, guard, or anchor change.
   ORIGIN: no mitigation.
+
+## Session 6612 (2026-10-28) — level-select floor tris keep their T step
+
+- Maintenance check: CURRENT-TRUTH 39,353 bytes, below 60,000. Soak tail
+  still ends at the s6580 dd4 holds. Screen IOConsoleLocked was false.
+  No second game was running. `ROGUESQ_ASPECT_SCALE` / `ROGUESQ_VPW_SCALE`
+  only widen projection, viewport, framebuffer partition, and the flight
+  terrain footprint. Neither scales a hangar-floor texture stride or S/T.
+- First instrument walked the DPC range in `rs64_floor_scan`. Both arms
+  reached the real level-select size (`[floor] enter` 796×336 phase 5 and
+  1024×336 phase 4) and a same-run framebuffer. Census: 16:9 tri=3577
+  sane=0; 21:9 tri=3389 sane=0. The first 16:9 buffer was 3833/4096 zero
+  words plus 260 of byte 0x80; the first 21:9 buffer histogrammed like
+  MIPS (0x3C/0x8F/0x8C/0xAF/0xAC). The "rects" that passed a loose box
+  test had fmt 7 and colour-image widths of 1/2391/3809. That walk is
+  not the stream RT64 draws. It is now a stub.
+- Second instrument logs triangles and texrects from RT64 after decode
+  (`rs64_floor_note`, `ROGUESQ_LOG_FLOOR=1`). Same route, one binary,
+  16:9 then 21:9, SIGKILL. Both alive, 0 crash lines, expected-width
+  n=1400 dumps present. The left-third y=170..260 band is op 0x0F
+  (shaded, textured, z), tile 0, TMEM line 4, fmt 4, siz 0, mask 6.
+  Colour-image width is 796 or 1024, matching the VI. The largest pair
+  is y=249..300 on both arms. 16:9 x=37..204 dtde=19.5312; 21:9
+  x=48..262 dtde=19.5314. The other paired dtde values match the same
+  way (20.425, 29.790, 31.275, 50.116, -41.655, 15.762, 49.863). X span
+  and dsdx scale by 1024/796 (1.286). line stays 4. timg width is 1 on
+  every row, so it is not the jump either. Guest PC is 80007904 on
+  every row; that is the gfx-thread breadcrumb, not a named writer.
+- Same-run dy, outer thirds, rows 180..250: 16:9 = 8.47 (negative
+  control, near the s6611 7.7), 21:9 = 24.55 (positive control, above
+  18). 21:9 quiet rows stay 3.65. This selects the wider frustum over a
+  texture-stride or derivative that changes with width. No cull, no
+  anchor change, no default change.
+  ORIGIN: no mitigation.

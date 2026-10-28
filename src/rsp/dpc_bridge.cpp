@@ -3477,6 +3477,139 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     }
 }
 
+// s6612: phase is not a level-select key (21:9 is phase 4, 16:9 is phase 5).
+// Gate on the VI framebuffer that the torn dumps actually are: 796x336 or
+// 1024x336. Notes come from RT64's decoded triangles and texrects. A byte
+// walker of the DPC range never locked onto a command (0 sane of thousands).
+extern "C" void rs64_vi_fb_wh(uint32_t *out_w, uint32_t *out_h);
+
+extern "C" void rs64_floor_note(
+    int kind, int textured, uint32_t op, uint32_t tile,
+    float x0, float y0, float x1, float y1,
+    float dsdx, float dtdx, float dsde, float dtde,
+    uint32_t line, uint32_t timg_w, uint32_t fmt, uint32_t siz,
+    uint32_t masks, uint32_t maskt, uint32_t cms, uint32_t cmt,
+    uint32_t cimg_w) {
+    static const bool on = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_FLOOR");
+        return e && *e && *e != '0';
+    }();
+    if (!on) return;
+    struct Row {
+        uint8_t kind = 0, op = 0, tile = 0, fmt = 0, siz = 0, masks = 0, maskt = 0, cms = 0, cmt = 0;
+        uint16_t line = 0, timg_w = 0, cimg_w = 0;
+        int32_t qs = 0, qt = 0;
+        uint32_t hits = 0, pc = 0;
+        double area = 0, dsdx = 0, dtdx = 0, dsde = 0, dtde = 0;
+        double minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9;
+    };
+    static Row rows[48];
+    static int nrows = 0;
+    static uint32_t hits = 0, draws = 0, n_tri = 0, n_rect = 0, n_sane = 0, raws = 0;
+    static int dumped = 0;
+    static bool was = false;
+    static uint32_t gate_w = 0, gate_h = 0;
+    uint32_t vw = 0, vh = 0;
+    rs64_vi_fb_wh(&vw, &vh);
+    const bool gate = (vh >= 320 && vh <= 352) && (vw == 796 || vw == 1024);
+    auto dump_rows = [&](const char *why) {
+        fprintf(stderr, "[floor] table why=%s w=%u h=%u submits=%u seen_tex=%u hits=%u keys=%d "
+                "tri=%u sane=%u rect=%u sane_rect=%u cimg=%u settile=%u other=%u\n",
+                why, gate_w, gate_h, draws, hits, hits, nrows,
+                n_tri, n_sane, n_rect, n_sane, cimg_w, 0u, 0u);
+        if (!nrows) { fflush(stderr); return; }
+        int order[48];
+        for (int i = 0; i < nrows; i++) order[i] = i;
+        for (int i = 1; i < nrows; i++) {
+            int v = order[i], j = i;
+            while (j > 0 && rows[order[j - 1]].area < rows[v].area) { order[j] = order[j - 1]; j--; }
+            order[j] = v;
+        }
+        const int nprint = nrows < 16 ? nrows : 16;
+        for (int i = 0; i < nprint; i++) {
+            const Row &r = rows[order[i]];
+            fprintf(stderr,
+                    "[floor] row why=%s kind=%s op=%02X tile=%u line=%u timgw=%u fmt=%u siz=%u "
+                    "masks=%u maskt=%u cms=%u cmt=%u dsdx=%.4f dtdx=%.4f dsde=%.4f dtde=%.4f "
+                    "hits=%u area=%.0f x=%.0f..%.0f y=%.0f..%.0f timg=%06X root=%06X pc=%08X f5=%06X cimg=%u\n",
+                    why, r.kind ? "rect" : "tri", r.op, r.tile, r.line, r.timg_w, r.fmt, r.siz,
+                    r.masks, r.maskt, r.cms, r.cmt, r.dsdx, r.dtdx, r.dsde, r.dtde,
+                    r.hits, r.area, r.minx, r.maxx, r.miny, r.maxy,
+                    0u, g_e9prov.root_dl & 0xFFFFFFu, r.pc, 0u, r.cimg_w);
+        }
+        fflush(stderr);
+    };
+    if (was && !gate) {
+        dump_rows("leave");
+        nrows = 0; hits = 0; draws = 0; n_tri = n_rect = n_sane = 0; dumped = 0; raws = 0;
+    }
+    was = gate;
+    if (!gate) return;
+    gate_w = vw; gate_h = vh;
+    if (kind) n_rect++; else n_tri++;
+    const bool on_fb = x1 > -8.0f && x0 < vw + 8.0f && y1 > -8.0f && y0 < vh + 8.0f &&
+        (x1 - x0) > 0.25f && (y1 - y0) > 0.25f &&
+        (cimg_w == 0 || cimg_w + 1 >= vw) && cimg_w < vw + 8;
+    if (textured && on_fb) n_sane++;
+    const bool band = textured && on_fb && x0 < vw / 3.0f && x1 > 0.0f && y0 < 260.0f && y1 > 170.0f;
+    if (draws++ == 0) {
+        fprintf(stderr, "[floor] enter w=%u h=%u phase=%u\n", vw, vh, rs64_phase_ord());
+        fflush(stderr);
+    }
+    if (band) {
+        const float area = (x1 - x0) * (y1 - y0);
+        Row key{};
+        key.kind = (uint8_t)kind; key.op = (uint8_t)op; key.tile = (uint8_t)tile;
+        key.line = (uint16_t)line; key.timg_w = (uint16_t)timg_w;
+        key.fmt = (uint8_t)fmt; key.siz = (uint8_t)siz;
+        key.masks = (uint8_t)masks; key.maskt = (uint8_t)maskt;
+        key.cms = (uint8_t)cms; key.cmt = (uint8_t)cmt;
+        key.cimg_w = (uint16_t)cimg_w;
+        key.qs = (int32_t)std::lround(dsdx * 64.0); key.qt = (int32_t)std::lround(dtde * 64.0);
+        key.dsdx = dsdx; key.dtdx = dtdx; key.dsde = dsde; key.dtde = dtde;
+        key.pc = g_rs64_last_guest_pc;
+        int slot = -1;
+        for (int i = 0; i < nrows; i++) {
+            if (rows[i].kind == key.kind && rows[i].op == key.op && rows[i].tile == key.tile &&
+                rows[i].line == key.line && rows[i].timg_w == key.timg_w &&
+                rows[i].fmt == key.fmt && rows[i].siz == key.siz &&
+                rows[i].qs == key.qs && rows[i].qt == key.qt) { slot = i; break; }
+        }
+        if (slot < 0 && nrows < 48) { slot = nrows++; rows[slot] = key; }
+        else if (slot < 0) {
+            int small = 0;
+            for (int i = 1; i < nrows; i++) if (rows[i].area < rows[small].area) small = i;
+            if (area > rows[small].area) { rows[small] = key; slot = small; }
+        }
+        if (slot >= 0) {
+            Row &r = rows[slot];
+            r.hits++; r.area += area;
+            if (x0 < r.minx) r.minx = x0; if (x1 > r.maxx) r.maxx = x1;
+            if (y0 < r.miny) r.miny = y0; if (y1 > r.maxy) r.maxy = y1;
+            hits++;
+            if (raws < 8) {
+                raws++;
+                fprintf(stderr, "[floor-raw] %s op=%02X tile=%u line=%u timgw=%u dsdx=%.4f dtde=%.4f x=%.0f..%.0f y=%.0f..%.0f cimg=%u\n",
+                        kind ? "rect" : "tri", op, tile, line, timg_w, dsdx, dtde, x0, x1, y0, y1, cimg_w);
+                fflush(stderr);
+            }
+        }
+    }
+    if (dumped == 0 && hits >= 40) { dump_rows("early"); dumped = 1; }
+    else if (dumped == 1 && hits >= 400) { dump_rows("mid"); dumped = 2; }
+    if (draws == 1 || draws == 40 || (draws % 2000u) == 0u) {
+        fprintf(stderr, "[floor] census w=%u h=%u submits=%u tri=%u sane=%u rect=%u sane_rect=%u "
+                "cimg=%u settile=%u other=%u hits=%u keys=%d\n",
+                vw, vh, draws, n_tri, n_sane, n_rect, n_sane, cimg_w, 0u, 0u, hits, nrows);
+        fflush(stderr);
+    }
+}
+
+static void rs64_floor_scan(uint32_t lo, uint32_t hi) {
+    (void)lo; (void)hi;
+}
+
+
 // s6158 G1d: region scan. ROGUESQ_LOG_REGION="x0,x1,y0,y1" (raw RDP px) logs every
 // triangle (bbox centre in region) and texrect (ul in region) with its range and
 // offset; ROGUESQ_SHIFT_REGION=<dx px> additionally shifts matching tris/rects in x
@@ -3530,6 +3663,7 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
 static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
     rs64_spike_scan(lo, hi);
     rs64_region_scan(lo, hi);
+    rs64_floor_scan(lo, hi);
     g_last_submit_lo.store(lo, std::memory_order_release);
     g_last_submit_hi.store(hi, std::memory_order_release);
     const uint32_t before = g_task_bridge_e9.load(std::memory_order_acquire);

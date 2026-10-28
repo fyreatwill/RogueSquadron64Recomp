@@ -896,6 +896,31 @@ extern "C" uint32_t rs64_vi_committed_origin() {
     return ultramodern::renderer::get_vi_regs()->VI_ORIGIN_REG;
 }
 
+extern "C" void rs64_vi_fb_wh(uint32_t *out_w, uint32_t *out_h) {
+    uint32_t w = 0, h = 0;
+    if (out_w != nullptr && out_h != nullptr) {
+        const auto regs = *ultramodern::renderer::get_vi_regs();
+        RT64::VI vi{};
+        vi.status.word = regs.VI_STATUS_REG;
+        vi.origin = regs.VI_ORIGIN_REG;
+        vi.width = regs.VI_WIDTH_REG;
+        vi.vCurrentLine = regs.VI_V_CURRENT_LINE_REG;
+        vi.hRegion.word = regs.VI_H_START_REG;
+        vi.vRegion.word = regs.VI_V_START_REG;
+        vi.xTransform.word = regs.VI_X_SCALE_REG;
+        vi.yTransform.word = regs.VI_Y_SCALE_REG;
+        if (vi.width && vi.xTransform.xScale && vi.yTransform.yScale &&
+            vi.hRegion.hEnd > vi.hRegion.hStart &&
+            vi.vRegion.vEnd > vi.vRegion.vStart && vi.fbSiz() >= 2) {
+            const auto size = vi.fbSize();
+            w = size.x;
+            h = size.y;
+        }
+    }
+    if (out_w) *out_w = w;
+    if (out_h) *out_h = h;
+}
+
 extern "C" uint32_t rs64_phase_ord(void);
 
 extern "C" void rs64_m5_vi_commit_handoff(uint32_t caller,
