@@ -1,5 +1,7 @@
-# NEXT: fold s6532 r5/r6 (queued), then ORIGIN work on the -128 span saturation writer
+# NEXT: confirm span-bypass frame cost same-run, then cut it
 HYPOTHESIS-ID: g1c-span-reject-predicate
-s6534: r1-r4 clean; SIGBUS (1 in ~9) is not reproducing, stop spending iterations on it.
-1. Fold r5/r6 from SOAK-RESULTS.md (use the tag line: alive_at_end, crashlines). Any crash: read run.log backtrace; check faulting host ptr = rdram+>16MB; fix mask in apply_s6036_dd.py.
-2. Then ORIGIN: pre-clamp f0/f12/f10 at 0x80042820/0x800426D8, dd1 vs dd4 (s6521/s6526 next): why do dd4 span values saturate at -128 where dd1 does not. One instrument, paired pinned run.
+s6535 (cross-run, single-source): dd4 bypass lvl1/lvl5 gives ~10 gfx tasks/s, 103-110 ms/task vs opt-out 14-16 tasks/s, 62-70 ms. Iron rule 2 forbids trusting cross-run on animating scenes.
+Hypotheses: H-more-tris (bypass accepts many more cells -> more RSP work, expected cost, tune a cap); H-pose (runs differ in scene); H-bypass-overhead (per-cell host cost).
+Discriminator: pinned lvl1 dd4 with ROGUESQ_G1B=1 ROGUESQ_SPANFORCE=toggle (s6528 recipe, tools/apply_s6527_spanforce.py), per-second g1b lines aligned to toggle swaps; compare tasks/s and sd_wall in force-on vs off windows within one run. Positive control: the toggle must change terrain fraction (s6528 did 0.047 vs 0.209).
+If cost is in force-on windows only -> H-more-tris: add a cell-count/radius cap (e.g. ROGUESQ_BYPASS_MAXCELLS) inside DRAW_DISTANCE and re-measure per step.
+Put ROGUESQ_G1B=1 into XENV_EXTRA; g1b lines land in scratch/agent/m6/<TAG>/run.log.
