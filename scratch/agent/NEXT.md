@@ -1,6 +1,6 @@
-# NEXT: phase-7 hudDisplayUpdateWorker SIGBUS (wild guest ptr 0x951335B0) on lvl7 dd4 after the 64x64 slot cap (s6591)
+# NEXT: bisect the lvl7 phase-7 hudDisplayUpdateWorker SIGBUS within the dd4 bundle (s6592)
 HYPOTHESIS-ID: g1c-dd-phase2
-Hypotheses: H-dd (dd4 bundle: SPILL_HI / RAMTOP 20MB / DLPOOLX move something the HUD worker dereferences), H-retail (lvl7 phase-7 reload crashes at dd1 too), H-stale (state from the pre-reload level, e.g. freed HUD obj).
-Discriminator: run scratch/agent/s6591_run.sh for ret and dd4 (new tag), same recipe; compare whether ret reaches the same phase-7 point and crashes. Also grep what writes 0x951335B0-style values (look at hudDisplayUpdateWorker+5084 guest source).
-Outcomes: ret also crashes -> not dd, retail-class bug, find writer; ret clean + dd4 crashes -> bisect bundle env flags one at a time (arms concurrent).
-Then: dd4 300 s holds on lvl1/5/10 to confirm the 64x64 cap regressed nothing.
+Hypotheses: H-retail (the HUD reload is intrinsically broken and retail will reproduce it), H-dd-setting (one bundle setting creates the wild HUD pointer), H-dd-interaction (only the combination corrupts state), H-stale (the level reload leaves a freed HUD object).
+Discriminator: build once, then run the same lvl7 route in arms retail, full dd4, and full dd4 with exactly one of `ROGUESQ_SPILL_HI=1`, `ROGUESQ_RAMTOP_MB=20`, `ROGUESQ_DLPOOLX_MB=8`, `ROGUESQ_DD_CAPX=2`, or `ROGUESQ_DD_UNSAFE=1` removed. Preserve `ROGUESQ_DESCWATCH=1`, `ROGUESQ_TBLNULL_LOG=1`, and `ROGUESQ_G1B=1`; classify each arm by phase-7 reach, `hudDisplayUpdateWorker+5084`, far/guest pointer, and crash count.
+Outcomes: retail crashes -> H-retail; retail clean and one removal is clean -> that setting's writer/state is causal; all dd arms crash -> H-dd-interaction or H-stale, so add a first-writer watch for guest `0x951335B0` before changing code. A guard/skip is forbidden until the writer and legitimacy are established.
+Exact starting point: clone `scratch/agent/s6591_run.sh` into one batched arm script so all settings use the same route and current build.
