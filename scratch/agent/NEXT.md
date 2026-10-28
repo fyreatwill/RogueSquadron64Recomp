@@ -1,5 +1,5 @@
-# NEXT: G1c phase 2 resume (dd>1 cap decision) — G3c(a) closed s6544
+# NEXT: same-pose cap0 vs cap-inf frame pair (G1c phase 2)
 HYPOTHESIS-ID: g1c-dd-phase2
-State: G3c(a) edge arms (s6544) show no opt-in rougher than retail. Open owner question: dd>1 default cap0 (cheap) vs inf (3x terrain, ~1.7x wall) from s6543.
-Work unit: build an owner contact sheet (same pinned pose) for retail/dd2/dd4 cap0/dd4 inf from scratch/agent/m6/g1_lvl1s6544_*/fbd (tools/owner_sheet_*.py pattern) and record it; then continue G1c phase 2 next binding limit past dd4 (e.g. dd6 with 0x80800000 pool) per ladder 3c.
-Outcome logic: sheet shows visibly more terrain at inf -> recommend inf for dd>1 to owner; no visible difference -> cap0.
+State: s6545 sheet (docs/owner_sheet_s6545.png) is cross-run, poses differ -> not usable for the cap0/inf owner decision.
+Work unit: reuse the s6542 same-run cap toggle (scratch/agent/s6542_run.sh) at dd4 lvl1; dump FB on consecutive VIs immediately before and after a toggle (pose delta ~0), feed a pair into tools/owner_sheet_s6545.py style sheet. Positive control: terrain-fraction differs between the two when forced fully (inf vs cap 0).
+Outcome logic: visible extra terrain at inf in the same pose -> recommend inf for dd>1 to owner; none -> cap0. After that: next binding limit past dd4 (dd6, 0x80800000 pool).
