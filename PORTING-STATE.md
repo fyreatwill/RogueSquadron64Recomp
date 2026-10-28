@@ -171351,3 +171351,26 @@ ORIGIN: generated store `0x800496A8`; its destination source remains the
   hangar-artifact same-phase framebuffer audit.
 - Rules out: treating the archived turn-shake metric as a new draw-distance
   blocker or as evidence that FPS60 alone owns the visual shake.
+
+## Session 6602 (2026-10-28) — isolated wide-only hangar framebuffer bands
+
+- Work unit: built the current Debug target, checked that the macOS screen was
+  unlocked, and ran one same-route capture arm each for retail 4:3, ASPECT
+  16:9, and ASPECT 21:9. The phase-gated framebuffer and VI controls fired in
+  every arm.
+- Results: retail reached `512 @ 0x006AB400` and held 130 seconds clean;
+  16:9 reached width 796 and held 131 seconds clean; 21:9 reached width 1024
+  and held 131 seconds clean. All three had zero crash lines and zero VI
+  stalls. The contact sheets are in `scratch/agent/s6602_hangar_capture/`.
+- Measurement: at dump ordinal 1150, retail had no interior high-roughness
+  band; 16:9 had one at approximately x=269..334 of 796 pixels; 21:9 had one
+  at approximately x=347..639 of 1024 pixels. The wide-only, width-dependent
+  artifact selects H-stride/stale framebuffer data over identical game
+  geometry, but the existing triangle counters only report task ordinals and
+  do not attribute a command to the dumped framebuffer.
+- Rules out: a retail-identical hangar artifact and a crash/stall explanation.
+  Does not yet distinguish the exact stride writer from viewport/RDP handling.
+  No guard, skip, or default change was made.
+
+ORIGIN: the visible bands are a symptom; the writer is not yet named. No
+mitigation was added.

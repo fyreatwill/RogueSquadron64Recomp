@@ -15,6 +15,18 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G3 render fidelity / hangar artifacts (HYPOTHESIS-ID g3-hangar-artifacts).**
+  - s6602: same-route hangar captures completed for retail 4:3, ASPECT 16:9,
+    and ASPECT 21:9 in one Debug build. All three phase controls fired and
+    all arms held clean (0 crash lines, 0 VI stalls). Retail's 512-wide hangar
+    frames have no interior roughness band; the 16:9 arm has a visible striped
+    band at approximately x=269..334 of 796 pixels, and 21:9 has one at
+    x=347..639 of 1024 pixels. Contact sheets are in
+    `scratch/agent/s6602_hangar_capture/`. This selects a wide-only stale
+    framebuffer/row-stride family over identical game geometry, but is not yet
+    a writer attribution: the existing `[tricnt]`/`[rt64drawn]` logs report
+    task ordinals and do not join commands to the dumped framebuffer. No guard
+    or skip landed. Next: instrument the wide framebuffer write/flip stride
+    and join its source range to the same hangar phase.
   - s6601 pivoted after three stalled `g1c-dd-phase2` iterations. The retained
     G3c camera-jerk analyzer was rerun with its positive control: synthetic
     smooth motion scored 0.152 sign alternation and injected alternating shake
@@ -201,6 +213,15 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
+-1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
+  Build one instrumented binary and rerun the three same-phase arms only if
+  needed for the new witness. Log, per hangar VI phase, the selected width,
+  VI origin, source framebuffer address, row stride, and the copy/flip source
+  range; include a positive control from the retail 512-wide arm. Discriminator:
+  a source range or row stride that lands on the measured 16:9/21:9 band selects
+  H-stride; matching stride with a fixed screen-space scissor selects
+  H-viewport/H-RDP; identical source geometry and pixels across arms selects
+  H-game. Do not add a cull, skip, or default change until the writer is named.
 -1. **(s6601) Audit the parked hangar artifacts under `g3-hangar-artifacts`.**
   Build/run one same-phase capture table for retail 4:3, ASPECT 16:9, and
   ASPECT 21:9 at the hangar origin, joining the framebuffer dumps to the VI

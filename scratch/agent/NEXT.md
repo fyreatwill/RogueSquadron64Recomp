@@ -1,32 +1,35 @@
-# NEXT: PIVOT — audit hangar artifacts with a same-phase framebuffer table
+# NEXT: attribute the wide-only hangar bands to framebuffer stride
 HYPOTHESIS-ID: g3-hangar-artifacts
 
-Pivot status (s6601): the prior `g1c-dd-phase2` witness stalled for three
-iterations without an advanced result. Do not rerun it under that slug.
-
-One work unit: capture the same hangar phase at retail 4:3, ASPECT 16:9, and
-ASPECT 21:9, then join each dump to VI origin/width and compare the artifact's
-pixel bounds plus RDP command range.
+One work unit: add one phase-gated witness for the framebuffer copy/flip path,
+then run the retail 4:3, ASPECT 16:9, and ASPECT 21:9 hangar arms in one build.
+The witness must log VI width/origin, selected framebuffer, row stride, and the
+source/destination range used by the wide framebuffer path. Keep the current
+`[fbdump]` and `[vi]` controls enabled; the retail arm is the positive control.
 
 Competing hypotheses:
-- H-viewport: an incorrect scissor/viewport exposes the rim band.
-- H-stride: a wide framebuffer row or flip stride leaves stale right-edge data.
-- H-rdp: RT64/RDP edge treatment creates the holo spikes.
-- H-game: the submitted hangar geometry itself contains the artifact.
 
-Discriminator: width-proportional stale bands select H-stride; fixed
-screen-space clipping selects H-viewport or H-rdp; identical command geometry
-and artifact in the retail control selects H-game. The framebuffer/VI join and
-the known hangar-origin gate are the positive controls and must fire in every
-arm.
+- H-stride: the wide framebuffer row/flip stride or source range leaves stale
+  data in the measured band.
+- H-viewport: the viewport/scissor is fixed incorrectly and exposes a band at
+  a screen-space boundary.
+- H-rdp: the RDP/RT64 edge treatment produces the band after the source image
+  is already correct.
+- H-game: the submitted hangar geometry or texture itself contains the band.
+
+Discriminator: a logged source range or stride that overlaps the measured
+16:9 x=269..334 band or 21:9 x=347..639 band selects H-stride; identical
+stride/source with a fixed screen-space boundary selects H-viewport/H-rdp;
+identical source geometry and pixels in retail and wide arms selects H-game.
+Every null requires the retail phase/dump positive control in the same run.
 
 Commands:
 
 ```sh
-rg -n 'hangar|ROGUESQ_ASPECT|fbdump|VI origin|scissor|viewport' \
-  tools scratch/agent docs | head -120
-# Then write one build/run arm table and use the existing fbdump/contact-sheet
-# tooling; keep all three aspect arms in this iteration.
+rg -n 'FB_WIDTH|FB_DUMP|VI_ORIGIN|stride|copy|flip|scissor|viewport' src lib/rt64
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
+# Run the three s6602 route arms with the new witness and SIGKILL cleanup.
 ```
 
-Do not add a guard or skip. Default retail behavior must remain unchanged.
+Do not add a guard, skip, or default change until the writer is named and its
+value is shown to be illegitimate.
