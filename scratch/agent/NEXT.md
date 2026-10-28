@@ -1,4 +1,6 @@
-# NEXT: does streamTerrainGridCellsByDistance run inside load_level_hmp on lvl7 dd4? (H-load-race vs H-teardown-zero)
+# NEXT: phase-7 hudDisplayUpdateWorker SIGBUS (wild guest ptr 0x951335B0) on lvl7 dd4 after the 64x64 slot cap (s6591)
 HYPOTHESIS-ID: g1c-dd-phase2
-State (s6590): retail desc+4 valid; dd4 CAPX=2 fault sees desc+0/+4 NULL with dims 93x96 already set.
-Work unit: patch logs (via fixup script) at load_level_hmp (0x80043DD8 region) entry/exit, the 0x6DC0/0x4 publish stores, loadLevelAssets zeroing, and the first streaming call with desc+4==0, each with VI number; run scratch/agent/s6590_run.sh dd4 and ret. Outcome: streaming call between dims set and publish => load race (find who calls streaming from the other thread/frame, defer it or gate on desc+4!=0); zeroing after publish => find the teardown writer.
+Hypotheses: H-dd (dd4 bundle: SPILL_HI / RAMTOP 20MB / DLPOOLX move something the HUD worker dereferences), H-retail (lvl7 phase-7 reload crashes at dd1 too), H-stale (state from the pre-reload level, e.g. freed HUD obj).
+Discriminator: run scratch/agent/s6591_run.sh for ret and dd4 (new tag), same recipe; compare whether ret reaches the same phase-7 point and crashes. Also grep what writes 0x951335B0-style values (look at hudDisplayUpdateWorker+5084 guest source).
+Outcomes: ret also crashes -> not dd, retail-class bug, find writer; ret clean + dd4 crashes -> bisect bundle env flags one at a time (arms concurrent).
+Then: dd4 300 s holds on lvl1/5/10 to confirm the 64x64 cap regressed nothing.

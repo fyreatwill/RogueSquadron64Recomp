@@ -41922,6 +41922,7 @@ RS64_REPLAY = [
     "apply_s6086_bigarena.py",
     "apply_s6569_spill.py",
     "apply_s6570_svcnull.py",
+    "apply_s6591_descwatch.py",
     "apply_s6088_bucketlog.py",
     "apply_s6098_dlpool.py",
     "apply_s6287_ppcount.py",

@@ -25,13 +25,15 @@ NEW = r'''    { /* s6590 desc log */ static int dl = -1, dn = 0; if (dl < 0) dl 
           if (x0 < 0) x0 = 0; if (x1 > tw) x1 = tw; if (x1 < x0) x1 = x0;
           if (z0 < 0) z0 = 0; if (z1 > th) z1 = th; if (z1 < z0) z1 = z0;
           while (cap > 0 && (x1 - x0) * (z1 - z0) > cap && (z1 - z0) > 1) z1--; while (cap > 0 && (x1 - x0) * (z1 - z0) > cap && (x1 - x0) > 1) x1--;
+          /* s6591 slot64: the per-cell slot array at 0x80132DC0 is 64 words wide x 64 rows (0x4000, ends exactly at the terrain descriptor 0x80136DC0); stores at 0x80043020 index it by (row<<8)+4*col, so a window with d>64 rows clears the descriptor (s6591 descwatch: val 0 to 80136DC0/C4). Cap the window at 64x64. */
+          if (x1 - x0 > 64) x1 = x0 + 64; if (z1 - z0 > 64) z1 = z0 + 64;
           if (getenv("ROGUESQ_DD_LOG") && (n6548++ % (cx_log6586 ? 6 : 60)) == 0) fprintf(stderr, "[ddclamp] pre x[%d,%d) z[%d,%d) tw=%d th=%d cap=%d post x[%d,%d) z[%d,%d)\n", px0, px1, pz0, pz1, tw, th, cap, x0, x1, z0, z1); }
         MEM_W(0xDB0, h) = (uint32_t)x0; MEM_W(0xDB4, h) = (uint32_t)x1; MEM_W(0xDB8, h) = (uint32_t)z0; MEM_W(0xDBC, h) = (uint32_t)z1;
         ctx->r7 = (int64_t)x0; ctx->r6 = (int64_t)z0;
       } }
 '''
 def apply9(text):
-    if "PATCH: s6037 ddclamp" in text and "s6586b capx" in text and "s6590 desc log" in text or OLD not in text: return text, 0
+    if "PATCH: s6037 ddclamp" in text and "s6586b capx" in text and "s6590 desc log" in text and "s6591 slot64" in text or OLD not in text: return text, 0
     if "PATCH: s6037 ddclamp" in text:
         i = text.index("    { /* s6590 desc log */") if "s6590 desc log" in text else text.index("    { /* PATCH: s6037 ddclamp */"); j = text.index(OLD, i); text = text[:i] + text[j:]
     assert text.count(OLD) == 1
