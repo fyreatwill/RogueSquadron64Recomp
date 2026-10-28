@@ -171173,3 +171173,5 @@ Result: 4/4 attempts Bus error, same far=0x380000022 as s6586 (4 MB pool). Each 
 Leading remaining suspect (H-table64, single-source): a retail-sized per-cell/64-wide table indexed by the widened window (s6035 64-wide stride).
 ORIGIN: no mitigation added; SPILL_HI/DLPOOLX_MB>4 are opt-in env switches.
 Single-source: one run, 4 attempts, all same fault.
+Discrimination: refuted H-pool (8 MB pool, 256 of ~31000 chunks used, same fault 4/4) and selected H-table64/H-other for the remaining cause. Hypotheses split: pool-capacity lever (dead) vs per-cell table bound (alive).
+Next discriminator: log table base + index at guest pc 0x800547bc for CAPX=1 vs CAPX=2 windows in one run (positive control: the 2x window must fault); index past table length only in the 2x window selects H-table64.
