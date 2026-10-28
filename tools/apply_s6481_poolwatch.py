@@ -28,9 +28,18 @@ NEW = '''    { /* ''' + TAG + ''' */
       }
     }
 '''
+NEW2 = '''    { /* PATCH: s6559 headwatch */
+      extern void rs64_s6559_head(uint32_t, uint32_t); extern volatile int g_s6559_pend; extern void rs64_s6559_tick(uint32_t, uint32_t, uint32_t);
+      if (width == 'W' && addr == 0x801163B0u) rs64_s6559_head(pc, value);
+      else if (g_s6559_pend) rs64_s6559_tick(pc, addr, value);
+    }
+'''
 HELPER_DEF = 'uint32_t g_s6481_pool __attribute__((weak));\n'
 def apply_helper(t):
-    if TAG in t or ANCHOR not in t: return t, 0
-    t = t.replace(ANCHOR, NEW + ANCHOR, 1)
+    if ANCHOR not in t: return t, 0
+    if TAG in t:
+        if "PATCH: s6559 headwatch" in t: return t, 0
+        return t.replace(ANCHOR, NEW2 + ANCHOR, 1), 1
+    t = t.replace(ANCHOR, NEW + NEW2 + ANCHOR, 1)
     t = t.replace('static int s_process_scene_node_depth;\n', 'static int s_process_scene_node_depth;\n' + HELPER_DEF, 1)
     return t, 1

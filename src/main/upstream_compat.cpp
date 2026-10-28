@@ -2552,11 +2552,41 @@ static void rs64_s6558_cut(unsigned long begin, uint32_t len) {  /* s6558: ROGUE
     }
     prev.swap(cur); haveprev = true;
 }
+static unsigned long s_s6559_begin = 0;
+extern "C" volatile int g_s6559_pend = 0;
+static struct { uint32_t pc, nv, oh; unsigned long b; } s_s6559_p;
+static unsigned long s_s6559_push = 0, s_s6559_splice = 0, s_s6559_rows = 0;
+extern "C" void rs64_s6559_tick(uint32_t pc, uint32_t addr, uint32_t value) {  /* s6559: resolve a pending off-chain head store at the next guest store to nv+0 (the push's link write) */
+    if (addr != s_s6559_p.nv) return;
+    g_s6559_pend = 0;
+    if (value == s_s6559_p.oh) { ++s_s6559_push; return; }
+    ++s_s6559_splice;
+    if (s_s6559_rows < 300) { ++s_s6559_rows; std::fprintf(stderr, "[headwatch] SPLICE begin %lu headpc=%08X newhead=%08X oldhead=%08X link(pc=%08X)=%08X\n", s_s6559_p.b, s_s6559_p.pc, s_s6559_p.nv, s_s6559_p.oh, pc, value); }
+}
+extern "C" void rs64_s6559_head(uint32_t pc, uint32_t nv) {  /* s6559: ROGUESQ_HEADWATCH=1 -> every guest store to the DL-chunk cache head 0x801163B0 (frames >= ROGUESQ_HEADWATCH_FROM, default 5900): classify pop (new head on old chain, idx<=50), far pop (idx>50), push (off-chain, next store to nv+0 == old head) or SPLICE (off-chain, link != old head) */
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_HEADWATCH"); return e && e[0] && e[0] != '0'; }();
+    if (!on) return;
+    static const unsigned long from = [] { const char* e = std::getenv("ROGUESQ_HEADWATCH_FROM"); return e ? (unsigned long)std::atol(e) : 5900ul; }();
+    if (s_s6559_begin < from) return;
+    volatile uint8_t* rd = g_recomp_rdram_for_wp_raw; if (!rd) return;
+    auto r32 = [&](uint32_t a) -> uint32_t { return (a >= 0x80000000u && a < 0x81000000u && !(a & 3u)) ? rs64_rdram_u32(rd, a & 0x1FFFFFFFu) : 0u; };
+    uint32_t oh = r32(0x801163B0u), n = oh; long idx = -1;
+    for (long i = 0; i < 4096 && n >= 0x80000000u && n < 0x81000000u; ++i) { if (n == nv) { idx = i; break; } n = r32(n); }
+    static unsigned long nnear = 0, nnull = 0; static unsigned long nfar = 0, farrows = 0;
+    if (nv == 0) ++nnull;
+    else if (nv == r32(oh)) ++nnear;  /* plain pop: new head == old head's next */
+    else if (r32(nv) == oh) ++s_s6559_push;  /* push, link written first */
+    else if (idx < 0) { ++s_s6559_splice; if (s_s6559_rows < 120) { ++s_s6559_rows; std::fprintf(stderr, "[headwatch] OTHER begin %lu pc=%08X oh=%08X nv=%08X *oh=%08X *(oh+4)=%08X *nv=%08X *(nv+4)=%08X\n", s_s6559_begin, pc, oh, nv, r32(oh), r32(oh + 4), r32(nv), r32(nv + 4)); } }
+    else if (idx > 50) { ++nfar; if (farrows < 400) { ++farrows; std::fprintf(stderr, "[headwatch] FARPOP begin %lu pc=%08X newhead=%08X idx=%ld\n", s_s6559_begin, pc, nv, idx); } }
+    else { ++nnear; static unsigned long i0 = 0, i2 = 0, isum = 0; if (idx == 0) ++i0; else { ++i2; isum += idx; if (i2 % 64 == 1) std::fprintf(stderr, "[headwatch] MIDPOP begin %lu pc=%08X idx=%ld (n=%lu sum=%lu noop0=%lu)\n", s_s6559_begin, pc, idx, i2, isum, i0); } }
+    static std::map<uint32_t, unsigned long> bypc; if (nv && nv == r32(oh)) ++bypc[pc];
+    static unsigned long lastdump = 0; if (s_s6559_begin >= lastdump + 20) { lastdump = s_s6559_begin; std::fprintf(stderr, "[headwatch] tally begin %lu near=%lu null=%lu push=%lu splice=%lu far=%lu\n", s_s6559_begin, nnear, nnull, s_s6559_push, s_s6559_splice, nfar); for (auto& kv : bypc) std::fprintf(stderr, "[headwatch]   pc=%08X pops=%lu\n", kv.first, kv.second); }
+}
 extern "C" int rs64_s6098_en(void) { static const int on = [] { const char* e = std::getenv("ROGUESQ_DLPOOLLOG"); return (e && e[0] && e[0] != '0') ? 1 : 0; }(); return on; }
 extern "C" void rs64_s6098(int kind, uint32_t len, uint32_t tail, uint32_t ra) {  /* s6098: DL-chunk cache length at begin(0)/reclaim(1) entry */
     static unsigned long calls[2], zero[2]; static uint32_t minlen = 0xFFFFFFFFu, maxlen = 0, first = 0xFFFFFFFFu, last = 0; static unsigned long grew = 0;
     ++calls[kind & 1]; if (len == 0) ++zero[kind & 1];
-    if (kind == 0) rs64_s6287_flush(calls[0], len);
+    if (kind == 0) { s_s6559_begin = calls[0]; rs64_s6287_flush(calls[0], len); }
     if (kind == 0) rs64_s6558_cut(calls[0], len);
     { static uint32_t pl = 0xFFFFFFFFu; static std::map<uint32_t, std::pair<unsigned long, unsigned long>> by; /* ra -> (calls, chunks consumed) */
       if (kind == 0) { auto& e = by[ra]; ++e.first; if (pl != 0xFFFFFFFFu && pl > len) e.second += pl - len; pl = len; }
