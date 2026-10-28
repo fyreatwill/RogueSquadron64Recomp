@@ -2717,6 +2717,20 @@ extern "C" void rs64_s6570_svcnull(char k, uint32_t a, uint32_t ra, uint32_t b) 
     static int n = 0; if (!on || n >= 60) return; ++n;
     std::fprintf(stderr, "[svcnull] %c a=%08X ra=%08X b=%08X\n", k, a, ra, b);
 }
+static bool g_s6571_last_null = false;
+extern "C" void rs64_s6571_svc(char k, uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_SVCNULL"); return e && e[0] && e[0] != '0'; }();
+    static int nr = 0, nt = 0, nrall = 0;
+    if (!on) return;
+    if (k == 'T') { if (nt++ >= 60) return; std::fprintf(stderr, "[svcstop] T svc=%08X ra=%08X flag=%02X queue=%08X\n", a, b, c, d); return; }
+    if (k == 'q') { static int nq = 0; if (c != 0 || d != 0 || nq >= 40) { /* only print when the preceding 'r' printed a null slot */ } 
+        if (g_s6571_last_null && nq++ < 40) std::fprintf(stderr, "[svcq] svc=%08X first|msgCount<<16=%08X msgbuf=%08X buf[0]=%08X\n", a, b, c, d);
+        g_s6571_last_null = false; return; }
+    /* 'r': after osRecvMesg: a=svc b=osRecvMesg retval c=slot d=validCount; log all for svc 0x80954F60 (first 12) + every empty slot (first 40) */
+    if (c == 0) { if (nr++ >= 40) return; } else if (a == 0x80954F60u) { if (nrall++ >= 12) return; } else return;
+    if (c == 0) g_s6571_last_null = true;
+    std::fprintf(stderr, "[svcrecv] r svc=%08X ret=%08X slot=%08X validCount=%u\n", a, b, c, d);
+}
 extern "C" int rs64_s6569_isspill(uint32_t p) { return p >= 0x80800000u && p < 0x80C00000u; }
 extern "C" void rs64_s5041_malloc(uint32_t ptr) {
     if (!s5041_on() || ptr == 0) return;
@@ -6214,6 +6228,12 @@ extern "C" void rs64_s5039_mq_hook(uint8_t* rdram, uint32_t mq, uint32_t ra, int
     s5038_mq_census(rdram, mq, ra, kind ? "setevent" : "jam");
 }
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
+    { /* s6571: every direct osSendMesg to the hud service queue (svc 0x80954F60 +0x1D0), any sender */
+        static const bool on = [] { const char* e = std::getenv("ROGUESQ_SVCNULL"); return e && e[0] && e[0] != '0'; }();
+        static int n = 0;
+        if (on && (uint32_t)ctx->r4 == 0x80955130u && n++ < 40)
+            std::fprintf(stderr, "[svcsend] mq=%08X msg=%08X ra=%08X flag=%d\n", (uint32_t)ctx->r4, (uint32_t)ctx->r5, (uint32_t)ctx->r31, (int)(s32)ctx->r6);
+    }
     { // s6126: producer of PI OSIoMesg slots (ring 0x801107E0.., stride 0x18): log sender ra + slot dram at send time
         static const bool on = std::getenv("ROGUESQ_LOG_DMA") != nullptr;
         const uint32_t m = (uint32_t)ctx->r5;

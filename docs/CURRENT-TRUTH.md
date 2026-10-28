@@ -173,3 +173,5 @@ background, closed threads, and the archived backlogs are in
 
 ## Update s6568
 - s6567 conclusion 'pool size not px2 limit' SUPERSEDED: recipe lacked ROGUESQ_DLPOOLX=1. px2 with DLPOOLX=1 DLPOOLX_MB=4 DLPOOLX_AT=3000 RAMTOP_MB=16 holds clean (1/1 90s; control 3/3 crash). px3 5/5 crashes in allocAndInitDoublyLinkedNodePool12 (NULL+2): next binding limit is that node-pool allocator, not the DL arena.
+
+- s6571 (single-source, 3/3 runs): px3+spill hud fault = service record 0x80954F60's OSMesgQueue (+0x1D0) is all-zero when the worker recvs; no stop signal fired, earlier sends did land. Writer of the zeroing unnamed -> NEXT.md.
