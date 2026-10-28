@@ -168,3 +168,6 @@ Recent session findings are in `PORTING-STATE.md` sessions 6378–6551. Durable
 background, closed threads, and the archived backlogs are in
 `docs/PROJECT-OVERVIEW.md`. Queued-soak verdicts are in
 `scratch/agent/SOAK-RESULTS.md`.
+
+## Update s6568
+- s6567 conclusion 'pool size not px2 limit' SUPERSEDED: recipe lacked ROGUESQ_DLPOOLX=1. px2 with DLPOOLX=1 DLPOOLX_MB=4 DLPOOLX_AT=3000 RAMTOP_MB=16 holds clean (1/1 90s; control 3/3 crash). px3 5/5 crashes in allocAndInitDoublyLinkedNodePool12 (NULL+2): next binding limit is that node-pool allocator, not the DL arena.
