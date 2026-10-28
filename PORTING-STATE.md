@@ -171128,3 +171128,9 @@ Grep of tools/apply_s6036_dd.py:7: ROGUESQ_DRAW_DISTANCE>3 is clamped to 3 unles
 - s6579_dd4_unsafe_lvl5: "multiplier 4" present in log; hold=301 s, vi_stalls30s=0, crashlines=0, alive_at_end=1. PASS (first true-dd4 lvl5 300 s hold).
 - s6579_dd4_unsafe_lvl10 rc=1 "allattempts-failed": NOT a game fault. All 5 attempts (fail_att1-5.log) reached live flight (origins 0x6A2900/0x644D00, ~9700 VI rows, f5 flush counters advancing), CRASH count 0 in each; the recipe's MISSION_RE defaults to 690400 so m6_mission_tmpl declared nomission (same artifact as s6411). Single-source (log-level; no framebuffer inspected this session).
 - Enqueued s6580_dd4_unsafe_lvl10 (MISSION_RE='6A2900|644D00') and lvl1 true-dd4 soaks. No code change.
+
+## Session 6581 (2026-10-28) — folded s6580 true-dd4 lvl1/lvl10 soaks: dd4 clean on lvl1/5/10
+- SOAK-RESULTS logs for s6580 are 0 bytes (recipes redirect to scratch/agent/m6/s6580_*/run.log; real data in scratch/agent/m6/g1_lvl*s6580_*/run.log).
+- s6580_dd4_unsafe_lvl1: hold=302 s, alive_at_end=1, vi_stalls30s=0, crashlines=0; lvl10 (MISSION_RE='6A2900|644D00'): hold=303 s, same zeros. Both logs show `[dd] ROGUESQ_DRAW_DISTANCE multiplier 4` (true dd4, not the s6446 cap).
+- With s6579 lvl5: true dd4 is 3/3 clean on levels 1, 5, 10 at 300 s, one run each. Does not exclude the rare (<=~1/9) dd4 gfx-thread SIGBUS. No code change.
+- Next: lift the dd>3 cap behind the knob (apply_s6036_dd.py:7), rebuild, dd1-vs-dd4 contact sheet.

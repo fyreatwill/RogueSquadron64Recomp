@@ -1,4 +1,5 @@
-# NEXT: fold s6580 true-dd4 lvl10/lvl1 soaks (queued)
+# NEXT: lift the dd>3 cap and produce a dd1-vs-dd4 owner contact sheet
 HYPOTHESIS-ID: g1c-dd-phase2
-s6579: lvl5 true dd4 (multiplier 4 confirmed in log) 301 s hold, 0 stall, 0 crashlines. lvl10 "allattempts-failed" = harness false-nomission (flight origins 0x6A2900/0x644D00, MISSION_RE default 690400; 0 CRASH in 5 attempts, ~9700 VI rows each), same as s6411.
-Work unit: read SOAK-RESULTS s6580_dd4_unsafe_lvl10/lvl1 (hold=301, vi_stalls30s=0, crashlines=0 => pass). If both pass, dd4 is clean on lvl1/5/10 -> decide lifting the s6446 cap (apply_s6036_dd.py:7) behind owner approval, then contact sheet dd1 vs dd4.
+State (s6581): true dd4 (DD_UNSAFE=1) 300 s clean on lvl1/5/10.
+Work unit: edit tools/apply_s6036_dd.py:7 so dd up to 4 is allowed without ROGUESQ_DD_UNSAFE (keep 8 under UNSAFE; default stays retail 1.0). Regen order: apply fixup -> cmake (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer). Verify log prints "multiplier 4" without DD_UNSAFE. Then same-pose framebuffer contact sheet dd1 vs dd4 (reuse docs/owner_sheet_s6546 recipe) for the owner.
+Outcomes: multiplier 4 w/o UNSAFE + sheet => close cap item; still "capped to 3" => the fixup did not re-apply, check regen order.
