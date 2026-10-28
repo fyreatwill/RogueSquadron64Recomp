@@ -2563,6 +2563,7 @@ extern "C" void rs64_s6559_tick(uint32_t pc, uint32_t addr, uint32_t value) {  /
     ++s_s6559_splice;
     if (s_s6559_rows < 300) { ++s_s6559_rows; std::fprintf(stderr, "[headwatch] SPLICE begin %lu headpc=%08X newhead=%08X oldhead=%08X link(pc=%08X)=%08X\n", s_s6559_p.b, s_s6559_p.pc, s_s6559_p.nv, s_s6559_p.oh, pc, value); }
 }
+static uint32_t s_s6560_tracked = 0; static bool s_s6560_have = false;
 extern "C" void rs64_s6559_head(uint32_t pc, uint32_t nv) {  /* s6559: ROGUESQ_HEADWATCH=1 -> every guest store to the DL-chunk cache head 0x801163B0 (frames >= ROGUESQ_HEADWATCH_FROM, default 5900): classify pop (new head on old chain, idx<=50), far pop (idx>50), push (off-chain, next store to nv+0 == old head) or SPLICE (off-chain, link != old head) */
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_HEADWATCH"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
@@ -2573,6 +2574,7 @@ extern "C" void rs64_s6559_head(uint32_t pc, uint32_t nv) {  /* s6559: ROGUESQ_H
     uint32_t oh = r32(0x801163B0u), n = oh; long idx = -1;
     for (long i = 0; i < 4096 && n >= 0x80000000u && n < 0x81000000u; ++i) { if (n == nv) { idx = i; break; } n = r32(n); }
     static unsigned long nnear = 0, nnull = 0; static unsigned long nfar = 0, farrows = 0;
+    s_s6560_tracked = nv; s_s6560_have = true;
     if (nv == 0) ++nnull;
     else if (nv == r32(oh)) ++nnear;  /* plain pop: new head == old head's next */
     else if (r32(nv) == oh) ++s_s6559_push;  /* push, link written first */
@@ -2587,6 +2589,21 @@ extern "C" void rs64_s6098(int kind, uint32_t len, uint32_t tail, uint32_t ra) {
     static unsigned long calls[2], zero[2]; static uint32_t minlen = 0xFFFFFFFFu, maxlen = 0, first = 0xFFFFFFFFu, last = 0; static unsigned long grew = 0;
     ++calls[kind & 1]; if (len == 0) ++zero[kind & 1];
     if (kind == 0) { s_s6559_begin = calls[0]; rs64_s6287_flush(calls[0], len); }
+    { /* s6560: compare the hook-tracked head (last guest 'W' store seen by rs64_s6559_head) with the actual head at every begin/reclaim entry; a mismatch = a rewrite outside the hooked store path */
+      static const bool hw = [] { const char* e = std::getenv("ROGUESQ_HEADWATCH"); return e && e[0] && e[0] != '0'; }();
+      static const bool st = [] { const char* e = std::getenv("ROGUESQ_HEADWATCH_SELFTEST"); return e && e[0] && e[0] != '0'; }();
+      volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+      if (hw && rd && s_s6559_begin >= 5800) {
+        auto r32 = [&](uint32_t a) -> uint32_t { return (a >= 0x80000000u && a < 0x81000000u && !(a & 3u)) ? rs64_rdram_u32(rd, a & 0x1FFFFFFFu) : 0u; };
+        auto walk = [&](uint32_t h) { long l = 0; while (l < 8192 && h >= 0x80000000u && h < 0x81000000u) { ++l; h = r32(h); } return l; };
+        if (st && kind == 0 && s_s6559_begin == 6000) { uint32_t h = r32(0x801163B0u); uint32_t nn = r32(r32(h)); volatile uint8_t* q = rd + 0x1163B0u; q[0 ^ 3] = nn >> 24; q[1 ^ 3] = nn >> 16; q[2 ^ 3] = nn >> 8; q[3 ^ 3] = nn; std::fprintf(stderr, "[headwatch2] SELFTEST poked head %08X -> %08X\n", h, nn); }
+        uint32_t act = r32(0x801163B0u);
+        static unsigned long nmis = 0, nok = 0, rows = 0;
+        if (s_s6560_have && act != s_s6560_tracked) { ++nmis; if (rows < 200) { ++rows; std::fprintf(stderr, "[headwatch2] MISMATCH kind=%d begin %lu actual=%08X tracked=%08X walk(actual)=%ld walk(tracked)=%ld lastpc=%08X ra=%08X (mis=%lu ok=%lu)\n", kind, s_s6559_begin, act, s_s6560_tracked, walk(act), walk(s_s6560_tracked), (uint32_t)g_rs64_last_guest_pc, ra, nmis, nok); } }
+        else if (s_s6560_have) ++nok;
+        s_s6560_tracked = act; s_s6560_have = true;  /* resync so each mismatch is a distinct event */
+      }
+    }
     if (kind == 0) rs64_s6558_cut(calls[0], len);
     { static uint32_t pl = 0xFFFFFFFFu; static std::map<uint32_t, std::pair<unsigned long, unsigned long>> by; /* ra -> (calls, chunks consumed) */
       if (kind == 0) { auto& e = by[ra]; ++e.first; if (pl != 0xFFFFFFFFu && pl > len) e.second += pl - len; pl = len; }
