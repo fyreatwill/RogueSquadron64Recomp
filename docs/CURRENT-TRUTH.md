@@ -126,7 +126,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. **Name the NULL node in the dd>1 pool crash** (g1c-dd-phase2, top; NEXT.md).
+1. **Fold the s6553 A/B (ctl vs dlx) for the dd>1 NULL node** (g1c-dd-phase2, top; NEXT.md). s6553 code reading: the NULL is `0x8002221C` (DL chunk allocator) returning empty at 0x80011480, appended unguarded (single-source). Old plan follows.
    With `ROGUESQ_DD_POOLX=2`, log pool base/stride/count and walk the list from
    head [0x8011A7DC] on the frame before the crash; first-NULL index == retail
    count (400) -> H-uninit (link the extra entries in the DD pool carve, not a
