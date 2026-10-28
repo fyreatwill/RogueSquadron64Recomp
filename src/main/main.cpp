@@ -1,3 +1,4 @@
+#include <cmath>
 #include "rs64_rdram_peek.h"
 #include <dlfcn.h>
 #include <cstdio>
@@ -11017,6 +11018,26 @@ static void rs64_m5_apply_drain_tick_policy() {
 #endif
 }
 
+// G1c (s6578): ROGUESQ_DRAW_DISTANCE=<dd> with dd > 1 bundles the validated pool/heap recipe
+// (s6567 RAMTOP guards, s6569 malloc spill, s6099 DL-chunk arena, s6058 terrain pool x ceil(dd)); px2-px5 hold
+// clean with it (s6567, s6574) and px>=2 faults without it (s6549-s6551). Explicit env values win; dd<=1 untouched.
+static void rs64_g1c_apply_dd_policy() {
+    const char* e = std::getenv("ROGUESQ_DRAW_DISTANCE");
+    double dd = (e && *e) ? std::atof(e) : 1.0;
+    if (!(dd > 1.0 + 1e-3)) return;
+    int px = (int)std::ceil(dd);
+    std::fprintf(stderr, "[ddbundle] dd=%.2f px=%d (ramtop16 spill dlpoolx4MB)\n", dd, px);
+    if (px > 5) px = 5;
+    char b[16];
+    std::snprintf(b, sizeof b, "%d", px);
+    setenv("ROGUESQ_RAMTOP_MB", "16", 0);
+    setenv("ROGUESQ_MALLOC_SPILL", "1", 0);
+    setenv("ROGUESQ_DLPOOLX", "1", 0);
+    setenv("ROGUESQ_DLPOOLX_MB", "4", 0);
+    setenv("ROGUESQ_DLPOOLX_AT", "3000", 0);
+    setenv("ROGUESQ_DD_POOLX", b, 0);
+}
+
 // G1d (s6121): ROGUESQ_ASPECT=<w>:<h> with w/h > 4:3 derives the game-side widescreen
 // knobs (framebuffer width = round(448*r), projection + viewport scales = width/512).
 // Explicit ROGUESQ_FB_WIDTH / VPW_SCALE / ASPECT_SCALE win. 4:3, orig, expand: untouched (retail).
@@ -11056,6 +11077,7 @@ static void rs64_g1d_apply_aspect_policy() {
 int main(int argc, char* argv[]) {
     (void)argc; (void)argv;
     rs64_g1d_apply_aspect_policy();
+    rs64_g1c_apply_dd_policy();
 
     // The drain-loop tick is a port-only injection; keep the retail-shaped
     // path as the default while retaining an explicit rollback arm.

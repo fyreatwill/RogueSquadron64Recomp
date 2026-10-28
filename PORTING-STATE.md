@@ -171111,3 +171111,11 @@ showed: lvl1 (positive control, tw=th=64 cap=2048): 21 samples, 12 with post are
 conclusion: s6576's "level-extent-bound" is only half true. The cap (0x80130C4C, 2048 on 64x64 levels, 400 on 32x32) trims the window below the terrain extent in roughly 55% of sampled calls, by shortening the z range. So the cap IS a lever at dd6 (consistent with s6549-s6551: lifting it via POOLX faults on a NULL list node, still unexplained). Single-source (ddclamp log, sampled every 60th call).
 rules out: "dd~6 is the useful ceiling because every level is extent-bound".
 ORIGIN: n/a (no mitigation added; instrument-only census script).
+
+## Session 6578 (2026-10-28) — ROGUESQ_DRAW_DISTANCE>1 now bundles the pool/heap recipe; NULL-node fault explained
+ran: traced 0x80011524 (NEXT.md's "NULL list node"): it is the DL-chunk free-list (head 0x801163B0) pop returning NULL after findAndUnlinkSmallestEntry fails; demand at px>=2 outruns the fixed 2909-chunk pool (s6562-s6563) and, after s6567/s6572, the 8 MB guard/TO_PTR limits. So H-fixedarr (the sibling DL pool) was the answer, already fixed by the DLPOOLX/RAMTOP/SPILL recipe. Added rs64_g1c_apply_dd_policy() in src/main/main.cpp: dd>1 setenv-defaults (overwrite 0) RAMTOP_MB=16, MALLOC_SPILL=1, DLPOOLX=1/MB=4/AT=3000, DD_POOLX=min(5,ceil(dd)); logs "[ddbundle]". Run: scratch/agent/s6578_run.sh, lvl1, 130 s, ROGUESQ_DRAW_DISTANCE=4 only.
+showed: bundle arm: [ddbundle] dd=4 px=4, [poolx] 400->1600, alive_at_end=1 vi_stalls30s=0 crashlines=0. Control arm (same, recipe vetoed via DLPOOLX=0 SPILL=0 RAMTOP_MB=8): Bus error si_addr=0x380000004 (identical to s6549). Positive control holds. Single run per arm.
+rules out: needing manual env recipe for dd>1; the NULL-node fault as an unknown corruption.
+ORIGIN: n/a (bundle sets pool sizes; the NULL was legitimate pool exhaustion, writer = demand scaling, not a corruption).
+oddity: log prints "[dd] multiplier 3" for dd=4 (not investigated).
+next: 300 s bundle-only holds at dd4 on lvl 1/5/10, then 2 dd values for terrain fraction.

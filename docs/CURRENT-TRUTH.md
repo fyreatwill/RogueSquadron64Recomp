@@ -25,6 +25,7 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
     Open hypotheses (NEXT.md): H-uninit (extra pool entries never linked),
     H-fixedarr (retail-sized parallel array read past its end), H-clamp
     (ddclamp window feeds an entry the game never built).
+  - s6578: ROGUESQ_DRAW_DISTANCE>1 now bundles the validated recipe (RAMTOP_MB=16, MALLOC_SPILL, DLPOOLX 4MB@3000, DD_POOLX=ceil(dd)<=5) in main.cpp; lvl1 dd4 bundle-only 130 s clean vs vetoed control Bus error si_addr=0x380000004 (single run/arm). The s6549-s6551 NULL node = DL-chunk pool exhaustion (not unknown corruption). Open: dd4 prints "multiplier 3"; 300 s holds on lvl 1/5/10.
   - s6548: `[ddclamp]` lvl1 terrain is 64x64 with a 2048-cell cap; dd4
     (~88x137) and dd6 (~101x174) footprints both clamp to the terrain, so dd6
     draws no more than dd4 on lvl1 (s6547: dd6 cheaper, 56 vs 109 ms/s).
