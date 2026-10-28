@@ -1,5 +1,5 @@
-# NEXT: G3c (owner visual defects) — start with (a) jagged far-terrain edge arm table
-HYPOTHESIS-ID: g3c-visual-defects
-State (s6543): cap thread closed enough: cap120 ~= cap0 terrain, only inf buys terrain (~3x) at ~1.7x wall. Leave the default; owner question in CURRENT-TRUTH s6543 line (cap0 vs inf for dd>1). Optional later: cap knee 300/600 via CAP_ALT.
-Work unit: G3c(a). Arm table (retail, DD=2, DD=4 default cap, DD=4 inf, ASPECT alone) at a pinned pose (s6542_run.sh recipe), score the far-terrain edge (tools/g3c_edge_score.py exists), root-cause the stair-step, produce before/after frames. Read CURRENT-TRUTH G3c(a) notes (height-byte fade was null, s6389).
-Outcome logic: retail shows no edge -> opt-in owns it (which one splits via arms); edge in retail too -> not a regression.
+# NEXT: G1c phase 2 resume (dd>1 cap decision) — G3c(a) closed s6544
+HYPOTHESIS-ID: g1c-dd-phase2
+State: G3c(a) edge arms (s6544) show no opt-in rougher than retail. Open owner question: dd>1 default cap0 (cheap) vs inf (3x terrain, ~1.7x wall) from s6543.
+Work unit: build an owner contact sheet (same pinned pose) for retail/dd2/dd4 cap0/dd4 inf from scratch/agent/m6/g1_lvl1s6544_*/fbd (tools/owner_sheet_*.py pattern) and record it; then continue G1c phase 2 next binding limit past dd4 (e.g. dd6 with 0x80800000 pool) per ladder 3c.
+Outcome logic: sheet shows visibly more terrain at inf -> recommend inf for dd>1 to owner; no visible difference -> cap0.
