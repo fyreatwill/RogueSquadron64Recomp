@@ -15,6 +15,7 @@ patch = r'''    { /* PATCH: s6588 tblnull */
       static int e = -1, n = 0; if (e < 0) { e = getenv("ROGUESQ_TBLNULL_SKIP") ? 2 : (getenv("ROGUESQ_TBLNULL_LOG") ? 1 : 0); }
       if (e && ((uint32_t)MEM_W(0X4, ctx->r8) & 0x7FFFFFFFu) == 0) {
         if (n++ < 40) fprintf(stderr, "[tblnull] n=%d t0=%08X tbl=%08X cellp=%08X cellh=%04X off=%u a0=%d a1=%08X s6=%08X\n", n, (uint32_t)ctx->r8, (uint32_t)MEM_W(0X4, ctx->r8), (uint32_t)ctx->r18, (unsigned)MEM_HU(0, ctx->r18), (unsigned)ctx->r2, (int)(int8_t)ctx->r4, (uint32_t)ctx->r5, (uint32_t)ctx->r22);
+        if (n <= 6) { int64_t h = (int64_t)(int32_t)0x80132000, t = (int64_t)(int32_t)0x80136DC0; fprintf(stderr, "[tblnull2] desc w0=%08X w8=%08X wC=%08X w10=%08X cols38=%u rows3A=%u win x0=%u w=%u z0=%u d=%u\n", (uint32_t)MEM_W(0, t), (uint32_t)MEM_W(8, t), (uint32_t)MEM_W(0xC, t), (uint32_t)MEM_W(0x10, t), (unsigned)MEM_HU(0x38, t), (unsigned)MEM_HU(0x3A, t), (uint32_t)MEM_W(0xDB0, h), (uint32_t)MEM_W(0xDB4, h), (uint32_t)MEM_W(0xDB8, h), (uint32_t)MEM_W(0xDBC, h)); }
         if (e == 2) goto L_80043020;
       }
     }
