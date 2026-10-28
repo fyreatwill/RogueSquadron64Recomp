@@ -41904,6 +41904,7 @@ RS64_REPLAY = [
     "apply_s6048_spanbound.py",
     "apply_s6529_spanbypass.py",
     "apply_s6537_bypasscap.py",
+    "apply_s6555_travwalk.py",
     "apply_s6058_poolx.py",
     "apply_s6061_mallocnull.py",
     "apply_s6063_heaplog.py",

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6554 (2026-10-27).
+Compact operational handoff, as of Session 6555 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -52,6 +52,8 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
 ## Superseded conclusions — do not act on these
 
 One line each: claim (superseded by; why it was believable).
+
+- s6554 "runaway consumer in traverseSceneGraphRecursive" (s6555: sibling loop visits 8-17 nodes/frame, 0 revisits at the fault frames; the fault stack merely passes through it).
 
 - s6553 "dd>1 NULL node = DL-chunk supply shortfall" (s6554: a 12x larger arena is consumed in ~24 frames; chunk-empty is the symptom of a runaway scene-graph walk).
 - s6550 "split POOLX=3 vs 4 for a threshold" (s6551: px2-4 all fault; the cap scaled with POOLX).
@@ -127,7 +129,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. **Name the runaway consumer in traverseSceneGraphRecursive at dd4 POOLX>=2** (g1c-dd-phase2, top; NEXT.md). s6554: chunk-cache exhaustion is the symptom (ctl len->0 then NULL deref at 0x80011524; dlx2 grew a 4 MB arena = 15872 chunks in ~24 frames and still hit 0, so supply is not the cause). Instrument per-call node visit counts / revisit (cycle) detection in traverseSceneGraphRecursive/processSceneNode for px1 (control) vs px2 in one build.
+1. **Census DL-chunk pops/pushes per swap by caller (ra), px1 vs px2** (g1c-dd-phase2, top; NEXT.md). s6555 REFUTED traverseSceneGraphRecursive as the runaway (8-17 nodes/frame, 0 cycles at the px2 crash frames; selftest positive control fired). Chunk drain is inside per-node submit work or a failed chunk return (reclaim=0 everywhere; px1 len rises, px2 leaks ~5/frame then collapses).
 2. **Lift the 0x80130C4C 2048-cell cap with its pool** once item 1 is fixed;
    qualify on lvl1, then on a level with terrain larger than 64x64 (s6548).
 3. **Owner decision: dd>1 bypass cap.** cap120 is pointless; choose cap0
