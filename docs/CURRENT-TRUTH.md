@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6552 (2026-10-27).
+Compact operational handoff, as of Session 6554 (2026-10-27).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -53,6 +53,7 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
 
 One line each: claim (superseded by; why it was believable).
 
+- s6553 "dd>1 NULL node = DL-chunk supply shortfall" (s6554: a 12x larger arena is consumed in ~24 frames; chunk-empty is the symptom of a runaway scene-graph walk).
 - s6550 "split POOLX=3 vs 4 for a threshold" (s6551: px2-4 all fault; the cap scaled with POOLX).
 - s6545 "cap0 vs inf undecided" / s6544 "pinned pose" sheet (s6546; s6544 pinned only the stair-metric window, not the camera).
 - s6539 cap ordering 0<40<120<inf for terrain (s6541 retracted as run-to-run scatter; 4-10 frames/arm looked monotonic).
@@ -126,12 +127,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. **Fold the s6553 A/B (ctl vs dlx) for the dd>1 NULL node** (g1c-dd-phase2, top; NEXT.md). s6553 code reading: the NULL is `0x8002221C` (DL chunk allocator) returning empty at 0x80011480, appended unguarded (single-source). Old plan follows.
-   With `ROGUESQ_DD_POOLX=2`, log pool base/stride/count and walk the list from
-   head [0x8011A7DC] on the frame before the crash; first-NULL index == retail
-   count (400) -> H-uninit (link the extra entries in the DD pool carve, not a
-   guard); index inside retail range -> H-clamp/H-fixedarr, find the writer
-   (guest-store watch on the node field). One build, one run.
+1. **Name the runaway consumer in traverseSceneGraphRecursive at dd4 POOLX>=2** (g1c-dd-phase2, top; NEXT.md). s6554: chunk-cache exhaustion is the symptom (ctl len->0 then NULL deref at 0x80011524; dlx2 grew a 4 MB arena = 15872 chunks in ~24 frames and still hit 0, so supply is not the cause). Instrument per-call node visit counts / revisit (cycle) detection in traverseSceneGraphRecursive/processSceneNode for px1 (control) vs px2 in one build.
 2. **Lift the 0x80130C4C 2048-cell cap with its pool** once item 1 is fixed;
    qualify on lvl1, then on a level with terrain larger than 64x64 (s6548).
 3. **Owner decision: dd>1 bypass cap.** cap120 is pointless; choose cap0
