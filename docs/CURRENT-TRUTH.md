@@ -25,7 +25,7 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
     Open hypotheses (NEXT.md): H-uninit (extra pool entries never linked),
     H-fixedarr (retail-sized parallel array read past its end), H-clamp
     (ddclamp window feeds an entry the game never built).
-  - s6578: ROGUESQ_DRAW_DISTANCE>1 now bundles the validated recipe (RAMTOP_MB=16, MALLOC_SPILL, DLPOOLX 4MB@3000, DD_POOLX=ceil(dd)<=5) in main.cpp; lvl1 dd4 bundle-only 130 s clean vs vetoed control Bus error si_addr=0x380000004 (single run/arm). The s6549-s6551 NULL node = DL-chunk pool exhaustion (not unknown corruption). Open: dd4 prints "multiplier 3"; 300 s holds on lvl 1/5/10.
+  - s6578: ROGUESQ_DRAW_DISTANCE>1 now bundles the validated recipe (RAMTOP_MB=16, MALLOC_SPILL, DLPOOLX 4MB@3000, DD_POOLX=ceil(dd)<=5) in main.cpp; lvl1 dd4 bundle-only 130 s clean vs vetoed control Bus error si_addr=0x380000004 (single run/arm). The s6549-s6551 NULL node = DL-chunk pool exhaustion (not unknown corruption). s6579: "multiplier 3" at dd4 is the s6446 cap (apply_s6036_dd.py:7, dd>3 -> 3 unless ROGUESQ_DD_UNSAFE=1), so this "dd4" run was dd3 (code reading; confirm via log). True-dd4 300 s soaks queued: soak_queue/s6579_dd4_unsafe_lvl5/lvl10.sh.
   - s6548: `[ddclamp]` lvl1 terrain is 64x64 with a 2048-cell cap; dd4
     (~88x137) and dd6 (~101x174) footprints both clamp to the terrain, so dd6
     draws no more than dd4 on lvl1 (s6547: dd6 cheaper, 56 vs 109 ms/s).
@@ -58,6 +58,7 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
+- (s6579) "dd4 bundle-only / dd4 holds without ROGUESQ_DD_UNSAFE ran at dd4" (superseded: they ran dd3). Believable because the knob was set to 4 and nothing warned except a "multiplier 3" log line, which looked like a display quirk; the s6446 cap in apply_s6036_dd.py:7 clamps silently otherwise.
 - s6576 "lvl1 ddclamp area saturates at level extent by dd6, not an engine table" (s6577: at dd6 the cell cap trims the window below the extent in ~55% of samples on lvl1/5/10; the earlier 4096 maximum was a single sample).
 - s6574 "dd12 holds clean": believable because the env var was 12 and the run was clean; overturned s6575 - the multiplier is clamped to 8, so it was dd8. Raising the clamp is not the next step; the 64-wide terrain table saturates first (single-source, one run's log).
 - (s6559, superseded s6560) "The ~600 chunk/frame loss comes from a head write the store hook cannot see (MEM_W grow hooks, fixup force-zero)." Believable because the hook showed no far/mid/null stores yet the list shrank. Refuted: tracked==actual head 199/199 with a firing positive control; the off-chain stores are in the hooked path, mislabelled 'splice'.
@@ -140,6 +141,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
+-1. **(s6579) Fold s6579_dd4_unsafe_lvl5/lvl10 soak verdicts (true dd4, DD_UNSAFE=1, 300 s); confirm "multiplier 4"; then lvl1 300 s; then decide whether to lift the dd>3 cap.**
 - [s6576, do first] lvl1 footprint saturates at the level's own terrain extent by dd6 (post area 4096=64x64; s6575's 'table too small' was mis-framed - tw/th are level dims). Census tw/th/cap per level (1,5,10 + others) via ROGUESQ_DD_LOG; if every level is extent-bound, dd range is done at ~6: bundle far/pool/cap behind the single knob and run 300 s holds on lvl 1,5,10 at dd6 + contact sheet for owner. See NEXT.md.
 - [s6567] dd6 px2/px3 with RAMTOP_MB=16 all die with Bus error si_addr=0x38000000x (A/B/C identical): pool size is NOT the px2 limit; the chunk list also still collapses. Next: symbolize the crash pc / backtrace, name the writer of the 0x80000000-offset access (see NEXT.md).
 
