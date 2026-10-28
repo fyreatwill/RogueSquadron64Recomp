@@ -2578,7 +2578,12 @@ extern "C" void rs64_s6559_head(uint32_t pc, uint32_t nv) {  /* s6559: ROGUESQ_H
     if (nv == 0) ++nnull;
     else if (nv == r32(oh)) ++nnear;  /* plain pop: new head == old head's next */
     else if (r32(nv) == oh) ++s_s6559_push;  /* push, link written first */
-    else if (idx < 0) { ++s_s6559_splice; if (s_s6559_rows < 120) { ++s_s6559_rows; std::fprintf(stderr, "[headwatch] OTHER begin %lu pc=%08X oh=%08X nv=%08X *oh=%08X *(oh+4)=%08X *nv=%08X *(nv+4)=%08X\n", s_s6559_begin, pc, oh, nv, r32(oh), r32(oh + 4), r32(nv), r32(nv + 4)); } }
+    else if (idx < 0) { ++s_s6559_splice;
+        /* s6561: heapWalker (0x800079F0) splices a per-mode list in FRONT of the free list (tail->next=oldhead; head=a0), so an off-chain nv is expected. The loss test is whether walk(nv) still reaches oh (old chain preserved) and how the lengths compare. */
+        long reach = -1, lnv = 0, loh = 0; { uint32_t m = nv; for (long i = 0; i < 8192 && m >= 0x80000000u && m < 0x81000000u; ++i, ++lnv) { if (m == oh && reach < 0) reach = i; m = r32(m); } }
+        { uint32_t m = oh; for (long i = 0; i < 8192 && m >= 0x80000000u && m < 0x81000000u; ++i, ++loh) m = r32(m); }
+        static unsigned long nreach = 0, nnoreach = 0; if (reach >= 0) ++nreach; else ++nnoreach;
+        if (s_s6559_rows < 120 || (nnoreach <= 40 && reach < 0)) { ++s_s6559_rows; std::fprintf(stderr, "[headwatch] OTHER begin %lu pc=%08X oh=%08X nv=%08X *oh=%08X *(oh+4)=%08X *nv=%08X *(nv+4)=%08X REACH=%ld lenNV=%ld lenOH=%ld tot_reach=%lu tot_noreach=%lu\n", s_s6559_begin, pc, oh, nv, r32(oh), r32(oh + 4), r32(nv), r32(nv + 4), reach, lnv, loh, nreach, nnoreach); } }
     else if (idx > 50) { ++nfar; if (farrows < 400) { ++farrows; std::fprintf(stderr, "[headwatch] FARPOP begin %lu pc=%08X newhead=%08X idx=%ld\n", s_s6559_begin, pc, nv, idx); } }
     else { ++nnear; static unsigned long i0 = 0, i2 = 0, isum = 0; if (idx == 0) ++i0; else { ++i2; isum += idx; if (i2 % 64 == 1) std::fprintf(stderr, "[headwatch] MIDPOP begin %lu pc=%08X idx=%ld (n=%lu sum=%lu noop0=%lu)\n", s_s6559_begin, pc, idx, i2, isum, i0); } }
     static std::map<uint32_t, unsigned long> bypc; if (nv && nv == r32(oh)) ++bypc[pc];
