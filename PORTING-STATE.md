@@ -171429,3 +171429,26 @@ writer; the actual band writer remains unnamed.
 
 ORIGIN: no new mitigation or writer claim; this entry preserves the known
   legitimate copy-path result and the still-open source/presentation split.
+
+## Session 6606 (2026-10-28) — found the wide hangar band in source pixels
+
+- Added a phase-gated fingerprint immediately after the `present.storage`
+  framebuffer copy and rebuilt the Debug target; exported the RT64 submodule
+  patch.
+- Retail control fired at width 512/origin `0x790400` with nonzero 512,
+  transitions 82, hash `42020AE708518CD0`. A clean ASPECT 16:9 arm fired at
+  width 796/origin `0xA631B8`; the measured 269..335 band had first/last
+  nonzero 269/334, nonzero 7722, transitions 2336, hash
+  `02408104333BE1AE`.
+- The s6602 owner-visible band plus this direct source capture selects
+  H-source: the wide-only band exists before presentation. Retail completed a
+  131-second mission hold clean (0 VI stalls, 0 crash lines). The isolated
+  21:9 attempt reached only a pre-hangar 1024 phase and returned to 640; its
+  all-zero 512 control is not a wide-band null.
+
+Rules out this iteration: malformed copy/flip stride remains ruled out; the
+source-versus-presentation split is closed in favour of source pixels. It does
+not yet name the source writer (RT64 colour writeback versus guest/RDP write).
+
+ORIGIN: no mitigation was added. The source fingerprint is an observation;
+the writer remains to be attributed before any guard or cull is considered.

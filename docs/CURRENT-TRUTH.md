@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6604 (2026-10-28).
+Compact operational handoff, as of Session 6606 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,6 +15,17 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G3 render fidelity / hangar artifacts (HYPOTHESIS-ID g3-hangar-artifacts).**
+  - s6606: the phase-gated source fingerprint ran immediately after the
+    `present.storage` copy. Retail 4:3 fired its control at width 512/origin
+    `0x790400` (nonzero 512, transitions 82, hash `42020AE708518CD0`). A
+    clean ASPECT 16:9 arm fired at width 796/origin `0xA631B8`, exactly across
+    the measured band 269..335 (first/last nonzero 269/334, nonzero 7722,
+    transitions 2336, hash `02408104333BE1AE`). Together with the s6602
+    owner-visible wide-only band, this selects H-source: the band is already
+    in source pixels before presentation. The 21:9 retry reached only a
+    pre-hangar 1024 phase and then returned to 640; its 512 control was all
+    zero and is not evidence about the wide band. Retail completed a 131 s
+    mission hold clean (0 VI stalls, 0 crash lines). No mitigation landed.
   - s6603: a phase-gated witness at RT64's actual `present.storage` framebuffer copy ran in retail 4:3, ASPECT 16:9, and ASPECT 21:9 from one Debug build. All arms held clean (0 crash lines, 0 VI stalls) and the witness fired in each positive-control phase. Retail used 512-wide rows with a 1024-byte stride; 16:9 used 796-wide rows with a 1592-byte stride; 21:9 used 1024-wide rows with a 2048-byte stride. Each source range covered the complete selected framebuffer. This rules out a malformed wide copy/flip stride as the band writer, but does not distinguish whether the band is already in source pixels or is introduced by viewport/RDP presentation. The local retail oracle cannot currently run: `tools/oracle` has no built core/plugin dylib. Next: phase-gated source-pixel fingerprint versus the owner-visible output in the same hangar phase.
   - s6602: same-route hangar captures completed for retail 4:3, ASPECT 16:9,
     and ASPECT 21:9 in one Debug build. All three phase controls fired and
@@ -214,14 +225,13 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
--1. **(s6604 resume) Determine whether the wide-only hangar band exists in source pixels.**
-  Add the phase-gated source-pixel fingerprint immediately before the
-  `present.storage` memcpy in `lib/rt64/src/hle/rt64_state.cpp`, then run the
-  saved s6602 retail 4:3, ASPECT 16:9, and ASPECT 21:9 route arms in one build.
-  Keep `[fbdump]`, `[vi]`, and `[fb-flip-range]` enabled; retail is the positive
-  control. Source-band pixels select H-source; clean source with a band only in
-  the owner-visible output selects H-viewport/H-rdp; identical source hashes
-  with a wide-only displayed band select H-width. Do not add a mitigation.
+-1. **(s6606) Attribute the source band to a writer class.** Add one
+  phase-gated census at RT64 colour writeback: for the measured 16:9 band,
+  record whether any writeback range intersects its pixel columns before the
+  source fingerprint, with the existing retail control in the same build.
+  An intersecting writeback selects H-RDP-writeback; no intersecting writeback
+  while the source band persists selects H-game/guest-write. Keep the
+  measurement bounded to the hangar phase and do not add a mitigation.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
