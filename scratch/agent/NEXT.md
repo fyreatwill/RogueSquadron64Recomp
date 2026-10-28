@@ -1,5 +1,4 @@
-# NEXT: G1c phase 2 - lift the 2048-cell footprint cap, test on a bigger level
+# NEXT: root-cause the dd4 POOLX=4 crash in renderFlatMeshFaceGroup (s6549)
 HYPOTHESIS-ID: g1c-dd-phase2
-State: s6548: lvl1 terrain is 64x64, dd4 already covers it; cap=2048 at 0x80130C4C trims mid-map windows (dd6 z 64->35).
-Work unit: env ROGUESQ_DD_CAP=<n> overriding cap in tools/apply_s6037_ddclamp.py (and check the pool that cap sizes, writer of 0x80130C4C); find a level with terrain dims >64 (log tw/th per level via ROGUESQ_DD_LOG) and run dd4 with cap 2048 vs 8192 pinned, compare terrain fraction. Positive control: post window area rises with cap.
-Then G3c(b)/(c).
+Hypotheses: H-heap (cap*0x18 pool at 2400 overlaps/exhausts neighbouring heap block, s6062), H-ptr (larger window feeds stale/garbage mesh node pointer), H-flaky (crash unrelated to cap; px1 repeat also crashes sometimes).
+Work unit: run scratch/agent/s6549_run.sh 4 1 and 4 4 and 4 2 twice each (separately, one at a time); for crashes get the faulting guest address (x1=0x80011524 in the crash regs) and the pool base/end from the [poolx] log + allocator; discriminator = crash only when px>=2 and guest fault addr near pool end -> H-heap.
