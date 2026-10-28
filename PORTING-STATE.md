@@ -171104,3 +171104,10 @@ showed: pre-clamp footprint area keeps growing with dd (max 14820 dd4, 34419 dd6
 rules out: "need bigger terrain table on lvl1" as the next lever; raising the multiplier past ~6 on lvl1 (single-source: ddclamp logs only, sampled every 60th call).
 ORIGIN: n/a (no mitigation added).
 next: NEXT.md - per-level tw/th/cap census, then bundle knob + 300 s holds.
+
+## Session 6577 (2026-10-28) — per-level ddclamp census at dd6: the cell cap, not level extent, trims the window in ~half the samples
+ran: scratch/agent/s6577_run.sh (lvl 1,5,10,3,7 at dd6, ROGUESQ_DD_LOG=1, 90 s holds, one at a time); parsed "[ddclamp]" lines from m6/g1_lvl*s6577*/run.log.
+showed: lvl1 (positive control, tw=th=64 cap=2048): 21 samples, 12 with post area >=0.9*cap, 12 with post area < the extent-clipped footprint, 9 equal to it. lvl5 (64x64, cap 2048, one sample cap=600): 18 samples, 10 >=0.9*cap, 9 below extent clip. lvl10 (32x32, cap=400): 3 samples, 2 >=0.9*cap (e.g. post z[17,29) = 12 rows trimmed by cap). lvl3 (32x32 cap=400) looks the same in its tail. lvl7 was still running at write time.
+conclusion: s6576's "level-extent-bound" is only half true. The cap (0x80130C4C, 2048 on 64x64 levels, 400 on 32x32) trims the window below the terrain extent in roughly 55% of sampled calls, by shortening the z range. So the cap IS a lever at dd6 (consistent with s6549-s6551: lifting it via POOLX faults on a NULL list node, still unexplained). Single-source (ddclamp log, sampled every 60th call).
+rules out: "dd~6 is the useful ceiling because every level is extent-bound".
+ORIGIN: n/a (no mitigation added; instrument-only census script).

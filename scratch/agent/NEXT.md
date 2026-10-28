@@ -1,5 +1,5 @@
-# NEXT: per-level terrain-extent census, then bundle dd knob and hold
+# NEXT: lift the cell cap safely (why does POOLX fault on a NULL list node?)
 HYPOTHESIS-ID: g1c-dd-phase2
-Fact (s6576): lvl1 [ddclamp] post area hits 4096 (full 64x64 = level extent tw*th) by dd6; pre area keeps growing. So the limit on lvl1 is the level's extent, not a table.
-Hypotheses: H-extent (all levels are extent-bound, dd~6 is the useful ceiling) vs H-cap (cap 0xC4C=2048 or tw/th>64 on some levels binds first) vs H-sample (60th-call sampling hides it).
-Work unit: read tw/th/cap/post area for lvl5, lvl10 and 2-3 other levels from existing m6 logs (grep "[ddclamp]" dirs g1_lvl5*, g1_lvl10*; those with ROGUESQ_DD_LOG). Positive control: lvl1 reproduces 4096. If any level shows post area < tw*th at dd>=6 with cap binding => cap is the lever (raise cap, check heap). If all extent-bound => bundle far/pool/cap behind ROGUESQ_DRAW_DISTANCE, queue 300 s holds lvl1/5/10 at dd6, make dd1-vs-dd6 contact sheet for owner.
+Fact (s6577): at dd6 the cap (2048 on 64x64, 400 on 32x32) trims the ddclamp window below the level extent in ~55% of samples (lvl1/5/10). So the cap is a real lever; extent is not the only limit.
+Hypotheses: H-uninit (extra pool entries never linked) vs H-fixedarr (retail-sized parallel array read past end) vs H-clamp.
+Work unit: with the s6549 recipe (dd4 lvl1 POOLX=2), find the allocation/array sized by cap at 0x80130C4C and check whether sibling arrays keep retail size (grep the allocator for the cap constant); if so, scale them with the cap. Positive control: px1 clean, px2 faults at 0x80011524.
