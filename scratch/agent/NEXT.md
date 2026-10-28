@@ -1,5 +1,5 @@
-# NEXT: same-pose cap0 vs cap-inf frame pair (G1c phase 2)
+# NEXT: G1c phase 2 - next binding limit past dd4 (dd6, 0x80800000 pool)
 HYPOTHESIS-ID: g1c-dd-phase2
-State: s6545 sheet (docs/owner_sheet_s6545.png) is cross-run, poses differ -> not usable for the cap0/inf owner decision.
-Work unit: reuse the s6542 same-run cap toggle (scratch/agent/s6542_run.sh) at dd4 lvl1; dump FB on consecutive VIs immediately before and after a toggle (pose delta ~0), feed a pair into tools/owner_sheet_s6545.py style sheet. Positive control: terrain-fraction differs between the two when forced fully (inf vs cap 0).
-Outcome logic: visible extra terrain at inf in the same pose -> recommend inf for dd>1 to owner; none -> cap0. After that: next binding limit past dd4 (dd6, 0x80800000 pool).
+State: s6546 settled cap0 vs inf (inf draws the terrain; owner to choose default, ~1.7x wall). Owner question pending: make dd>1 default cap inf?
+Work unit: run lvl1 pinned recipe (scratch/agent/s6546_run.sh, CAP_ALT off, ROGUESQ_BYPASS_MAXCELLS=-1 i.e. inf) at ROGUESQ_DRAW_DISTANCE=6 with ROGUESQ_DD_UNSAFE=1; record crash point / heap exhaustion (s6062 8 MB heap). If heap, carve terrain pool from 0x80800000+ (DL-read data must stay <0x81000000). Positive control: dd4 same recipe passes.
+Outcomes: clean -> measure terrain fraction + wall vs dd4; heap exhaust -> implement second arena; then switch to G3c(b)/(c).
