@@ -1,0 +1,26 @@
+#!/bin/zsh
+# s6592: one-build, concurrent lvl7 phase-7 HUD SIGBUS setting bisect.
+set -u
+ROOT=$(git rev-parse --show-toplevel) || exit 2
+cd "$ROOT" || exit 2
+/usr/sbin/ioreg -n Root -d1 | grep -q '"CGSSessionScreenIsLocked"=Yes' && { echo "SCREEN LOCKED"; exit 4; }
+
+run_arm() {
+  local arm=$1 extra=${2-}
+  env MISSION_RE=62BD00 ROGUESQ_NO_PKILL=1 ROGUESQ_G1B=1 \
+    MISSION_WIDE_FLIGHT=0 TITLE_OPTIONAL=1 XENV_EXTRA="$extra" \
+    HOLD_S=60 LEVEL=7 TAG_SUFFIX="s6592_$arm" \
+    zsh scratch/agent/s6591_run.sh "$arm" > "scratch/agent/s6592_${arm}.launcher.log" 2>&1
+}
+
+BASE='ROGUESQ_DD_UNSAFE=1 ROGUESQ_DD_LOG=1 ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_DD_CAPX=2 ROGUESQ_SPILL_HI=1 ROGUESQ_RAMTOP_MB=20 ROGUESQ_DLPOOLX_MB=8 ROGUESQ_TBLNULL_LOG=1 ROGUESQ_DESCWATCH=1'
+run_arm ret 'ROGUESQ_TBLNULL_LOG=1 ROGUESQ_DESCWATCH=1' & p1=$!
+run_arm full "$BASE" & p2=$!
+run_arm no_spill 'ROGUESQ_DD_UNSAFE=1 ROGUESQ_DD_LOG=1 ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_DD_CAPX=2 ROGUESQ_RAMTOP_MB=20 ROGUESQ_DLPOOLX_MB=8 ROGUESQ_TBLNULL_LOG=1 ROGUESQ_DESCWATCH=1' & p3=$!
+run_arm no_ramtop 'ROGUESQ_DD_UNSAFE=1 ROGUESQ_DD_LOG=1 ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_DD_CAPX=2 ROGUESQ_SPILL_HI=1 ROGUESQ_DLPOOLX_MB=8 ROGUESQ_TBLNULL_LOG=1 ROGUESQ_DESCWATCH=1' & p4=$!
+run_arm no_dlpool 'ROGUESQ_DD_UNSAFE=1 ROGUESQ_DD_LOG=1 ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_DD_CAPX=2 ROGUESQ_SPILL_HI=1 ROGUESQ_RAMTOP_MB=20 ROGUESQ_TBLNULL_LOG=1 ROGUESQ_DESCWATCH=1' & p5=$!
+run_arm no_capx 'ROGUESQ_DD_UNSAFE=1 ROGUESQ_DD_LOG=1 ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_SPILL_HI=1 ROGUESQ_RAMTOP_MB=20 ROGUESQ_DLPOOLX_MB=8 ROGUESQ_TBLNULL_LOG=1 ROGUESQ_DESCWATCH=1' & p6=$!
+run_arm no_unsafe 'ROGUESQ_DD_LOG=1 ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_DD_CAPX=2 ROGUESQ_SPILL_HI=1 ROGUESQ_RAMTOP_MB=20 ROGUESQ_DLPOOLX_MB=8 ROGUESQ_TBLNULL_LOG=1 ROGUESQ_DESCWATCH=1' & p7=$!
+wait $p1; r1=$?; wait $p2; r2=$?; wait $p3; r3=$?; wait $p4; r4=$?; wait $p5; r5=$?; wait $p6; r6=$?; wait $p7; r7=$?
+printf 'ret=%s full=%s no_spill=%s no_ramtop=%s no_dlpool=%s no_capx=%s no_unsafe=%s\n' "$r1" "$r2" "$r3" "$r4" "$r5" "$r6" "$r7"
+exit 0

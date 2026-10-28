@@ -171217,3 +171217,12 @@ Retail reached mission flight and held 130 s: `alive_at_end=1`, `vi_stalls30s=0`
 This selects H-dd over H-retail and rules out the s6591 slot-clear writer as the current fault: the 64x64 cap removed the descriptor NULL, but a later dd4-only state still reaches a wild HUD pointer. It does not yet distinguish a single bundle setting from an interaction, and no mitigation was landed. Positive control: retail completed the same route; dd4 crash evidence repeated 5/5 with the same symbol and pointer.
 ORIGIN: not yet named. The current writer of guest `0x951335B0` is unproven; the next work unit is a same-build one-setting-at-a-time dd4 bundle bisect, followed by a first-writer watch before any guard or skip.
 Next: run retail, full dd4, and each full-dd4 arm with one of `SPILL_HI`, `RAMTOP_MB=20`, `DLPOOLX_MB=8`, `DD_CAPX=2`, or `DD_UNSAFE` removed, concurrently where possible; classify phase-7 reach and the SIGBUS signature.
+
+## Session 6593 (2026-10-28) — one-setting bisect leaves the HUD SIGBUS as an interaction
+Ran one Debug build, then a concurrent seven-arm lvl7 route: retail control, full dd4, and full dd4 with each of `SPILL_HI`, `RAMTOP_MB=20`, `DLPOOLX_MB=8`, `DD_CAPX=2`, and `DD_UNSAFE` removed. All arms used the same forced mission route, descriptor/table breadcrumbs, G1b logging, and 60-second hold configuration.
+
+Retail and full dd4 each reached mission and completed the harness verification clean (`alive_at_end=1`, `vi_stalls30s=0`, `crashlines=0`). Every one-setting removal reached mission but died during verification on all five attempts; each captured the same SIGBUS at `hudDisplayUpdateWorker+5084` with guest pointer `0x951335B0` and host fault address `0x3951335B0`. The common crash signature rules out H-retail and does not identify any single bundle setting. It selects H-dd-interaction (or a shared draw-distance interaction) over H-dd-setting. The concurrent full/removal arms were route-valid, but the removals did not survive long enough for a 60-second hold; this is a crash datum, not an endurance claim.
+
+The positive controls fired: retail and full dd4 completed the same mission gate, and all removal arms reached mission before their repeat crash. No mitigation was landed. ORIGIN: the writer of `0x951335B0` is still unproven; the next unit must add a generated-code first-store watch with PC/RA and a known HUD-store positive control before any guard or skip.
+
+Next: build the first-writer watch for guest `0x951335B0` and run retail versus full dd4 on the same lvl7 route.
