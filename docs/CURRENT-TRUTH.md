@@ -45,6 +45,7 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   - s6560: tracked-vs-actual head check (positive-controlled by SELFTEST poke): mismatch 0 / match 199 over begins 5800-6047, so the head is never rewritten outside the hooked guest-store path (MEM_W grow, fixup zeroing, host writes all refuted). New suspect: the 134+ OTHER head stores at guest pc 80007A44/AA0/AFC install a node off the old chain. Reclaim (kind 1) never runs. Next: walk lengths before/after those stores and read the function (NEXT.md).
   - s6561: the 134 OTHER head stores (pc 80007A44/AA0/AFC) are heapWalker (0x800079F0) splicing per-mode lists IN FRONT of the free list (tail->next=oldhead): old chain stays reachable (REACH>=0, lenNV~=lenOH+k) in all but 1-2/attempt. Not the loss writer (refutes H-A/H-C). Only REACH=-1 cases: oh=0, and pc 80018094 = the DL-chunk pool (re)initialiser (relinks 2909 chunks, head=base) at begin 6016-6067. Open: caller (ra) and trigger of that reinit vs the cache emptying ~6047; and supply (heapWalker returns) vs demand (pops) at px2.
   - s6562: pool reinit at pc 80018094 = `buildAndRegisterDefaultMaterial` called from `advanceVideoFrame` (0x800183F8) at flight-scene start (switch to 512x448 = the flight view, confirmed by framebuffer). It is legitimate and happens in px1 too. In 14/14 px2 runs the cache empties 70-130 begins after it; px1 (4/4) never. So the collapse is real in-flight demand>supply at px2 on a fresh 2909-chunk pool, not corruption. Open: per-begin demand after reinit at px2 vs px1.
+  - s6563: px2 head pops/begin ~100 vs px1 ~50 (2x demand); splice (supply) rate identical in both arms (0.3-1.0/begin). H-D3 unsupported; H-D1/H-D2 (pool fixed at 2909) remain. Post-reinit returns unmeasured (OTHER-row cap ~120, DLPOOLLOG off). Next: scale reinit chunk count by px at 0x80018044 and rerun px2.
 - **G3c (owner visual report): engineering closed, owner judgement pending.**
   (a) far-edge stair: no opt-in rougher than retail (s6449, s6544);
   (b) spike wedges: H-hw-draws, angrylion lights the same 16/79 wedges
@@ -136,7 +137,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. **Census DL-chunk pops/pushes per swap by caller (ra), px1 vs px2** (g1c-dd-phase2, top; NEXT.md). s6555 REFUTED traverseSceneGraphRecursive as the runaway (8-17 nodes/frame, 0 cycles at the px2 crash frames; selftest positive control fired). Chunk drain is inside per-node submit work or a failed chunk return (reclaim=0 everywhere; px1 len rises, px2 leaks ~5/frame then collapses).
+1. **Scale the 0x80018044 DL-chunk pool reinit count by px (s6563), rerun px2 x5; if collapse and the NULL-node fault vanish, H-D2 is the cause. (Old item: census DL-chunk pops/pushes per swap by caller, px1 vs px2)** (g1c-dd-phase2, top; NEXT.md). s6555 REFUTED traverseSceneGraphRecursive as the runaway (8-17 nodes/frame, 0 cycles at the px2 crash frames; selftest positive control fired). Chunk drain is inside per-node submit work or a failed chunk return (reclaim=0 everywhere; px1 len rises, px2 leaks ~5/frame then collapses).
 2. **Lift the 0x80130C4C 2048-cell cap with its pool** once item 1 is fixed;
    qualify on lvl1, then on a level with terrain larger than 64x64 (s6548).
 3. **Owner decision: dd>1 bypass cap.** cap120 is pointless; choose cap0
