@@ -171120,3 +171120,6 @@ ORIGIN: n/a (bundle sets pool sizes; the NULL was legitimate pool exhaustion, wr
 oddity: log prints "[dd] multiplier 3" for dd=4 (not investigated).
 next: 300 s bundle-only holds at dd4 on lvl 1/5/10, then 2 dd values for terrain fraction.
 DISCRIMINATION (s6578): the change is behavioural, not instrumentation (a ~15-line env-policy function in main.cpp that alters pool sizes/guards at startup). It selects H-fixedarr (fixed-size DL-chunk pool + 8 MB guard limit) over H-uninit and H-clamp for the NULL node: same build, same level, same dd4/px4, recipe on = clean 130 s, recipe vetoed = identical fault si_addr=0x380000004. Next discriminator: does the bundle-only recipe hold 300 s on lvl5/lvl10 (a fault there names a second limit); see NEXT.md.
+
+## Session 6579 (2026-10-28) — "multiplier 3" at dd=4 explained: s6446 cap; true-dd4 soaks queued
+Grep of tools/apply_s6036_dd.py:7: ROGUESQ_DRAW_DISTANCE>3 is clamped to 3 unless ROGUESQ_DD_UNSAFE=1 (s6446 guard). Consequence: s6578's "dd4 bundle" lvl1 130 s run and any dd4 holds without DD_UNSAFE were dd3 (single-source: code reading, not yet confirmed by a log line from a new run). Queued scratch/agent/soak_queue/s6579_dd4_unsafe_lvl5.sh and _lvl10.sh (300 s, DD_UNSAFE=1) for true dd4. No game run this iteration.
