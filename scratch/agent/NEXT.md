@@ -1,5 +1,5 @@
-# NEXT: read the s6537 cap-arm soak results and pick a cap
+# NEXT: fold s6537 cap_40 and cap_inf, then pick a cap
 HYPOTHESIS-ID: g1c-span-reject-predicate
-s6537 built ROGUESQ_BYPASS_MAXCELLS (per-swap cap on force-accepted span-reject cells). Four soaks queued: scratch/agent/soak_queue/s6537_cap_{0,40,120,inf}.sh (logs in scratch/agent/m6/s6537_cap_*/ and soak_results/).
-Work unit: after the loop runs them, extract per arm the [g1b] sd_wall ms/task and tasks/s, VI rate, crashes, and the fixed-camera terrain fraction (same scorer as s6528/s6536) from the fb dumps.
-Outcomes: inf must reproduce ~127 ms / ~10.5 tasks/s (positive control; if not, the cap wrapper changed behaviour). cap=0 near opt-out (~55-65 ms) with terrain fraction ~0.047. If cost scales with cap while fraction gains saturate early -> choose that cap as dd>1 default (ROGUESQ_BYPASS_MAXCELLS default); if fraction is linear in cost, expose the knob and report the tradeoff to the owner with a contact sheet.
+Folded so far (s6538): cap0 57.9 ms/task, 18.7 tasks/s, tight frac 0.0285; cap120 87.2 ms, 17.9 tasks/s, frac 0.0735 (p90 0.26). Pending: s6537_cap_40 and s6537_cap_inf in scratch/agent/soak_queue (loop runs them). If SOAK-RESULTS lacks them, check queue; do not babysit.
+Work unit: per arm dir scratch/agent/m6/g1_lvl1s6537_{40,inf}: g1b mean (awk over [g1b] lines; restrict to flight seconds if possible) + `python3 -I tools/g1c_fixed_score.py <dir>/fbd 4500`.
+Outcomes: inf must reproduce ~127 ms / 10.5 tasks/s (positive control; else the cap wrapper changed behaviour). If frac(40)/frac(120)/frac(inf) saturate early while cost scales -> choose that cap as dd>1 default; if linear -> expose knob, send owner contact sheet of cap 0/120/inf.
