@@ -4219,7 +4219,7 @@ index 1f3a4cf..b9cc34f 100644
  }
  
 diff --git a/ultramodern/include/ultramodern/ultra64.h b/ultramodern/include/ultramodern/ultra64.h
-index 31eb106..37b7100 100644
+index 31eb106..0f4381e 100644
 --- a/ultramodern/include/ultramodern/ultra64.h
 +++ b/ultramodern/include/ultramodern/ultra64.h
 @@ -39,7 +39,9 @@ typedef uint8_t u8;
@@ -4229,7 +4229,7 @@ index 31eb106..37b7100 100644
 -#  define TO_PTR(type, var) ((type*)(&rdram[(uint64_t)var - 0xFFFFFFFF80000000]))
 +// s5240: index masked to the 8 MB RDRAM window (hardware mirrors RDRAM) so a guest-supplied
 +// NULL / bad pointer cannot form a wild host pointer; in-range addresses are unchanged.
-+#  define TO_PTR(type, var) ((type*)(&rdram[((uint64_t)var - 0xFFFFFFFF80000000) & 0x7FFFFFull]))
++#  define TO_PTR(type, var) ((type*)(&rdram[((uint64_t)var - 0xFFFFFFFF80000000) & 0x1FFFFFFull])) /* s6572: was 0x7FFFFF - aliased guest >8 MB (RAMTOP_MB=16 spill queues) onto low RAM */
  #  define GET_MEMBER(type, addr, member) (addr + (intptr_t)&(((type*)nullptr)->member))
  #  ifdef __cplusplus
  #    define NULLPTR (PTR(void))0
@@ -5486,7 +5486,7 @@ index 149e770..e1a28fe 100644
  
  void ultramodern::join_event_threads() {
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..cda8ae6 100644
+index 9944a02..8416aed 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
 @@ -1,18 +1,318 @@
@@ -5990,7 +5990,7 @@ index 9944a02..cda8ae6 100644
 +    if (recv_trace_env()) {
 +        static std::atomic<uint32_t> rows{0};
 +        const uint32_t row = rows.fetch_add(1, std::memory_order_relaxed);
-+        if (row < 80) {
++        if (row < 80 || (uint32_t)mq_ >= 0x80800000u /* s6572: never cap queues above 8 MB (hud service record 0x80955130) */) {
 +            std::fprintf(stderr,
 +                "[createmq] row=%u mq=0x%08X msg=0x%08X count=%d tid=%llu\n",
 +                row, static_cast<uint32_t>(mq_), static_cast<uint32_t>(msg),

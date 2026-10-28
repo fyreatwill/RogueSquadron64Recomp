@@ -9289,7 +9289,7 @@ static size_t fl_zero_page_size() {
 
 // MEM_W host address for KSEG0 0x80000000+phys (word-aligned).
 static uintptr_t fl_zero_header_host(uint8_t* rdram, uint32_t slot) {
-    return (uintptr_t)rdram + (uintptr_t)(slot & 0x7FFFFFu);
+    return (uintptr_t)rdram + (uintptr_t)(slot & 0x1FFFFFFu);
 }
 
 static void fl_zero_resolve_sym(uint64_t pc, const char** out_name, uint64_t* out_off) {
@@ -9523,16 +9523,16 @@ static void start_fl_zero_poller() {
         uint32_t slot = 0x1F3CC0u; /* 0x801F3CC0 & 0x7FFFFF */
         if (const char* e = std::getenv("ROGUESQ_FL_ZERO_ADDR")) {
             unsigned long v = strtoul(e, nullptr, 0);
-            if (v > 0 && v < 0x800000u) slot = (uint32_t)v;
+            if (v > 0 && v < 0x2000000u) slot = (uint32_t)v;
         }
-        slot &= 0x7FFFFFu;
+        slot &= 0x1FFFFFFu;  /* s6572: widened for RAMTOP>8MB */
 #ifndef _WIN32
         g_flz_fault_rdram.store(rdram, std::memory_order_release);
         g_flz_fault_slot.store(slot, std::memory_order_relaxed);
         g_flz_fault_enabled.store(1, std::memory_order_release);
 #endif
         auto rbyte = [&](uint32_t a) -> uint8_t {
-            return rdram[(a & 0x7FFFFF) ^ 3];
+            return rdram[(a & 0x1FFFFFF) ^ 3];
         };
         auto snap16 = [&](uint8_t out[16]) {
             for (int i = 0; i < 16; ++i) out[i] = rbyte(slot + (uint32_t)i);
