@@ -11,6 +11,7 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 - M5 audio de-stubbing, M3 idiom audits, generated-symbol renaming, and M6
   first-mission endurance are closed. G4 crash hunting is parked after clean
   coverage. G1 is mission coverage and visual quality, not autopilot work.
+- s6536: same-run SPANFORCE toggle (g1b, dd4 lvl1, 300 s): accept-all phase sd_wall 126.8 ms/task and 10.5 tasks/s vs retail compare 54.6 ms and 18.4 tasks/s, VI 63.5 both; clean. Confirms s6535 (H-more-tris). Next: cap accepted cells/radius, re-measure.
 - s6535: span-bypass frame cost (cross-run, from scratch/agent/m6/*/run.log [g1b], single-source): dd4 gfx tasks/s 9.9-10 with bypass vs 14-15.7 opt-out (dd1 13.0), sd_wall 103-110 ms vs 62-70 ms; lvl10 unaffected. -128 ORIGIN thread closed (reject is the real predicate, s6527). s6532 r5/r6 clean. Next: same-run SPANFORCE toggle with g1b to confirm the cost, then cheaper accept rule.
 - s6532: s6531 lvl5 dd4 bypass and opt-out soaks both clean (crashlines=0); s6529 lvl5 SIGBUS is rare, bypass-dependence unproven. 3 repeat soaks queued (s6532_dd4_bypass_lvl5_r1-3).
 - s6534: s6532 lvl5 dd4+bypass r3/r4 clean (crashlines=0); 0 crashes in last 8 lvl5 dd4 runs, SIGBUS rate <=~1/9 (single-source). No DiagnosticReport for the s6529 gfx-thread SIGBUS (two older MAIN-thread SIGBUS reports at 0x38000000x, allocateDisplayListBuffer / load_level_hmp, different site). r5/r6 queued.
