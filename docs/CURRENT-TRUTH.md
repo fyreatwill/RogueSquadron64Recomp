@@ -41,7 +41,8 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
     rdram base; s6461 lvl10, s6466 dd8 lvl1 att1, s6529 lvl5): 0 crashes in
     the last 8 lvl5 dd4 runs, rate <=~1/9, not bypass-specific (s6534).
   - s6556: DL-chunk census (s6287) shows pushes == real pops per frame at px1 and px2 (counted pops = pops+pushes because push sites also load head). Yet px2 len falls ~600 chunks/frame (1553->0 in 24 begins ~5932-5956) with ~20 pops/frame: chunks leave the free list off-census (chain cut / unmatched consumer). Leak and bad-free refuted. Next: log the list cut point (NEXT.md). s6558: instrument ROGUESQ_CHUNKCUT built; run e3 partial (begin 41 cut only, uncontrolled); read g1_lvl1s6553_dd4_px2_e3/run.log past begin 5900, then run the _st selftest arm.
-  - s6559: guest-store watch on head 0x801163B0 (ROGUESQ_HEADWATCH=1): over begins 5800-6240 at dd4 px2, 0 far pops, 0 mid pops, 0 null stores; only ~4 real pops/begin. The ~600 chunk/frame loss therefore comes from a head write the store hook cannot see (MEM_W grow/pregrow hooks, fixup force-zero patches). Next: compare hook-tracked head vs actual head at each begin (NEXT.md).
+  - s6559: guest-store watch on head 0x801163B0 (ROGUESQ_HEADWATCH=1): over begins 5800-6240 at dd4 px2, 0 far pops, 0 mid pops, 0 null stores; only ~4 real pops/begin.
+  - s6560: tracked-vs-actual head check (positive-controlled by SELFTEST poke): mismatch 0 / match 199 over begins 5800-6047, so the head is never rewritten outside the hooked guest-store path (MEM_W grow, fixup zeroing, host writes all refuted). New suspect: the 134+ OTHER head stores at guest pc 80007A44/AA0/AFC install a node off the old chain. Reclaim (kind 1) never runs. Next: walk lengths before/after those stores and read the function (NEXT.md).
 - **G3c (owner visual report): engineering closed, owner judgement pending.**
   (a) far-edge stair: no opt-in rougher than retail (s6449, s6544);
   (b) spike wedges: H-hw-draws, angrylion lights the same 16/79 wedges
@@ -52,6 +53,7 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
+- (s6559, superseded s6560) "The ~600 chunk/frame loss comes from a head write the store hook cannot see (MEM_W grow hooks, fixup force-zero)." Believable because the hook showed no far/mid/null stores yet the list shrank. Refuted: tracked==actual head 199/199 with a firing positive control; the off-chain stores are in the hooked path, mislabelled 'splice'.
 
 One line each: claim (superseded by; why it was believable).
 
