@@ -138,7 +138,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 
 ## Next steps (single monotonic backlog)
 
-1. **Make the extra-chunk insertion fault-free at px1, then re-test px2 (s6564).** REINITX=2 faults at px1 too (confound); find why (placement >= 0x80800000 vs prepend layout), THEN H-D2 is testable. (Old item: census DL-chunk pops/pushes per swap by caller, px1 vs px2) (g1c-dd-phase2, top; NEXT.md). s6555 REFUTED traverseSceneGraphRecursive as the runaway (8-17 nodes/frame, 0 cycles at the px2 crash frames; selftest positive control fired). Chunk drain is inside per-node submit work or a failed chunk return (reclaim=0 everywhere; px1 len rises, px2 leaks ~5/frame then collapses).
+1. **(s6565: tail-append never popped = fault-free but uninformative; head-prepend +384 faults at px1, so popping arena chunks is what faults. Name the writer of the wild 0x38000000 link: head11 + ROGUESQ_CHUNKCUT=1 + arena-chunk +0 write watch.)** **Make the extra-chunk insertion fault-free at px1, then re-test px2 (s6564).** REINITX=2 faults at px1 too (confound); find why (placement >= 0x80800000 vs prepend layout), THEN H-D2 is testable. (Old item: census DL-chunk pops/pushes per swap by caller, px1 vs px2) (g1c-dd-phase2, top; NEXT.md). s6555 REFUTED traverseSceneGraphRecursive as the runaway (8-17 nodes/frame, 0 cycles at the px2 crash frames; selftest positive control fired). Chunk drain is inside per-node submit work or a failed chunk return (reclaim=0 everywhere; px1 len rises, px2 leaks ~5/frame then collapses).
 2. **Lift the 0x80130C4C 2048-cell cap with its pool** once item 1 is fixed;
    qualify on lvl1, then on a level with terrain larger than 64x64 (s6548).
 3. **Owner decision: dd>1 bypass cap.** cap120 is pointless; choose cap0

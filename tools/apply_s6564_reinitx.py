@@ -8,13 +8,20 @@ ANCH = ("rs64_f5_store_shadow_post('W', 0x80018094u, U32(ADD32(ctx->r1, 0X63B0))
 HOOK = r'''    { /* PATCH: s6564 reinitx */ static double _k = -1.0; if (_k < 0) { const char* _e = getenv("ROGUESQ_DD_REINITX"); _k = (_e && *_e) ? atof(_e) : 0.0; }
       if (_k > 1.0) { extern uint32_t rs64_s6099_alloc(uint32_t); uint32_t _h = U32(MEM_W(0X63B0, ctx->r1)), _n0 = 0, _w = _h; while (_w >= 0x80000000u && _w < 0x81000000u && _n0 < 200000u) { ++_n0; _w = U32(MEM_W(0, (gpr)(int32_t)_w)); }
         uint32_t _want = _n0 >= 2000u ? (uint32_t)((_k - 1.0) * _n0) : 0u, _add = 0;
-        for (uint32_t _g = 0; _g < _want; _g += 128u) { uint32_t _c = rs64_s6099_alloc(U32(ctx->r31)); if (!_c) break; for (uint32_t _q = 0; _q < 128u; ++_q, _c += 0x108u) { MEM_W(0, (gpr)(int32_t)_c) = (int32_t)_h; MEM_W(4, (gpr)(int32_t)_c) = 0; if (_h) MEM_W(4, (gpr)(int32_t)_h) = (int32_t)_c; _h = _c; ++_add; } }
+        static int _tail = -1; if (_tail < 0) { const char* _m = getenv("ROGUESQ_DD_REINITX_MODE"); _tail = (_m && _m[0] == 't') ? 1 : 0; }
+        uint32_t _l = 0; if (_tail) { _l = _h; while (U32(MEM_W(0, (gpr)(int32_t)_l))) _l = U32(MEM_W(0, (gpr)(int32_t)_l)); }
+        for (uint32_t _g = 0; _g < _want; _g += 128u) { uint32_t _c = rs64_s6099_alloc(U32(ctx->r31)); if (!_c) break; for (uint32_t _q = 0; _q < 128u; ++_q, _c += 0x108u) {
+          if (_tail) { MEM_W(0, (gpr)(int32_t)_c) = 0; MEM_W(4, (gpr)(int32_t)_c) = (int32_t)_l; MEM_W(0, (gpr)(int32_t)_l) = (int32_t)_c; _l = _c; }
+          else { MEM_W(0, (gpr)(int32_t)_c) = (int32_t)_h; MEM_W(4, (gpr)(int32_t)_c) = 0; if (_h) MEM_W(4, (gpr)(int32_t)_h) = (int32_t)_c; _h = _c; }
+          ++_add; } }
         MEM_W(0X63B0, ctx->r1) = (int32_t)_h;
         fprintf(stderr, "[reinitx] k=%.2f len %u -> %u (+%u) head=%08X\n", _k, _n0, _n0 + _add, _add, _h); } }
 '''
 if __name__ == "__main__":
     T = P.read_text()
-    if "PATCH: s6564 reinitx" in T: print("already"); raise SystemExit
+    if "PATCH: s6564 reinitx" in T:
+        a = T.index("    { /* PATCH: s6564 reinitx */"); e = T.index("_n0 + _add, _add, _h); } }\n", a) + len("_n0 + _add, _add, _h); } }\n")
+        T = T[:a] + T[e:]
     assert T.count(ANCH) == 1, T.count(ANCH)
     i = T.index(ANCH) + len(ANCH) - len("L_80018098:\n")
     P.write_text(T[:i] + HOOK + T[i:]); print("ok")
