@@ -170854,3 +170854,13 @@ Gate wording: the four cap arms discriminate H-cost-linear from H-cost-front-loa
 
 ## Session 6538 (2026-10-27) — folded first two s6537 cap arms (cap=0, cap=120); cap=40 and inf still queued
 Soaks s6537_cap_0 and s6537_cap_120 finished (rc=0, 0 crashlines, 0 VI stalls, alive_at_end=1). Pinned lvl1 dd4, g1b whole-run means (include pre-flight seconds, so absolute ms are diluted; compare arms only): cap0 n=392 s, vi/s 61.7, tasks/s 18.7, sd_wall 57.9 ms; cap120 n=393 s, vi/s 61.3, tasks/s 17.9, sd_wall 87.2 ms. Terrain fraction (tools/g1c_fixed_score.py, min_n 4500): cap0 tight med 0.0285 (p90 0.116, 10 frames); cap120 tight med 0.0735 (p90 0.262, 9 frames). Reading: cost rises with cap (+29 ms at 120 cells) and so does terrain; cap0 matches opt-out (~55-65 ms predicted). Fraction at 120 is still well below accept-all (0.209 in s6528) in median, so no saturation visible yet. Only 2 of 4 points: the H-cost-linear vs H-cost-front-loaded split needs cap=40 and the cap=inf positive control (127 ms / 10.5 tasks/s), both still in soak_queue. Single-source, cross-run (pinned pose); small frame counts (9-10). ORIGIN: no code change; measurement fold only.
+
+## Session 6539 (2026-10-27) — folded s6537 cap_40 and cap_inf; cap120 dominates accept-all
+
+All four arms finished rc=0, 0 crashlines, 0 VI stalls, alive_at_end=1. Pinned lvl1 dd4, g1b whole-run means (tools/g1c_fold.py), terrain fraction by tools/g1c_fixed_score.py min_n 4500:
+| cap | sd_wall ms/task | tasks/s | tight med | loose med | frames |
+| 0 | 57.9 | 18.7 | 0.0285 | 0.089 | 10 |
+| 40 | 77.1 | 18.7 | 0.0347 | 0.188 | 10 |
+| 120 | 87.2 | 17.9 | 0.0735 | 0.276 | 9 |
+| inf | 126.6 | 13.7 | 0.0614 | 0.212 | 4 |
+Positive control: inf reproduces s6536's ~127 ms/task (tasks/s 13.7 vs 10.5 remembered; ms matches), so the cap wrapper did not change accept-all behaviour. Split of the s6537 hypotheses: ratio frac(40)/frac(inf) = 0.57 tight but 0.89 loose, and sd(40)/sd(0) = 1.33 (criterion was <=1.3). Mixed, not a clean H-cost-front-loaded. What is solid: cap120 is better than accept-all on BOTH axes (cost 0.69x of inf, loose fraction 1.30x of inf), so accept-all's extra far cells add cost without visible terrain; the loose metric gains most of its value by cap 40. Caveats: cross-run, 4-10 frames per arm, the inf arm has only 4 scorable frames (tight med is noise-level), single-source. ORIGIN: no code change; measurement fold only.
