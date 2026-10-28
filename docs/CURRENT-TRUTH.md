@@ -12,6 +12,7 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
   first-mission endurance are closed. G4 crash hunting is parked after clean
   coverage. G1 is mission coverage and visual quality, not autopilot work.
 - s6532: s6531 lvl5 dd4 bypass and opt-out soaks both clean (crashlines=0); s6529 lvl5 SIGBUS is rare, bypass-dependence unproven. 3 repeat soaks queued (s6532_dd4_bypass_lvl5_r1-3).
+- s6534: s6532 lvl5 dd4+bypass r3/r4 clean (crashlines=0); 0 crashes in last 8 lvl5 dd4 runs, SIGBUS rate <=~1/9 (single-source). No DiagnosticReport for the s6529 gfx-thread SIGBUS (two older MAIN-thread SIGBUS reports at 0x38000000x, allocateDisplayListBuffer / load_level_hmp, different site). r5/r6 queued.
 - s6533: s6532 lvl5 dd4+bypass r1/r2 clean (alive_at_end=1, crashlines=0); SIGBUS tally 1 crash in 4-5 runs, rate <=~1/4 (single-source). r3 pending; r4-r6 queued.
 - s6525: offline join of s6524b dd4 EMPTY rows: ALL rejected cells have rec[3]=rec[4]=-2 (0xFE) and plane byte 127 sentinel; span 6-9 below. Not an offset - rec records are unpopulated beyond the builder footprint (single-source). Next: name the writer of rec[3]/[4] and its radius/count cap.
 - s6526: raw rec dump REFUTES s6525 (rec sentinel): dd4-rejected cells have normal recs (rec[3]=-38 etc.); reject = span grid saturated at -128 (11/12). Next: pre-clamp f0/f12/f10 at 0x80042820/0x800426D8 dd1 vs dd4 (s6521 next).

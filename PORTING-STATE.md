@@ -170827,3 +170827,8 @@ No code, default, or gameplay change this session (queue scripts + NEXT only).
 
 ## Session 6533 (2026-10-27) — folded s6532 lvl5 dd4+bypass r1/r2 (both clean); queued r4-r6
 Summaries (m6/*s6532*): r1 alive_at_end=1 stalls=0 crashlines=0 hold=244s; r2 alive_at_end=1 stalls=0 crashlines=0 hold=240s. r3 still queued. Tally for dd4+bypass lvl5: 1 SIGBUS (s6529) in 5 clean-or-crash runs so far (s6529 crash, s6531, r1, r2 clean) — rate ~<=1/4, not bypass-demonstrated. Queued r4-r6 (identical recipe) to widen the denominator; no code change, ORIGIN of -128 span saturation writer still open. Evidence single-source (soak summaries).
+
+## Session 6534 (2026-10-27) — folded s6532 lvl5 dd4+bypass r3/r4 (clean); no DiagnosticReport for the gfx-thread SIGBUS
+- r3 and r4: alive_at_end=1, vi_stalls30s=0, crashlines=0 (hold 242 s / 240 s). With r1/r2, s6531 bypass+optout: 0 crashes in 8 lvl5 dd4 runs after the single s6529 SIGBUS; overall ~1 in 9-10 (single-source, rate <=~1/9).
+- ~/Library/Logs/DiagnosticReports has only two game reports today (01:30 and 04:32, before the 17:xx s6529 soaks): 01:30 = SIGBUS at 0x380000000 in allocateDisplayListBuffer via allocOrEvictMaterialNode (guest MAIN thread), 04:32 = SIGBUS at 0x38000001c in load_level_hmp via initMission (MAIN). Both are unmasked-host-pointer (rdram+0x380000000-class) faults on the MAIN thread, a different thread/site from the s6529 gfx ucode thread SIGBUS; no report exists for s6529, so no independent backtrace of it. Not claimed related.
+- ORIGIN: no code or mitigation change this session. r5/r6 still queued.
