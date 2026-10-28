@@ -170824,3 +170824,6 @@ Showed: bypass arm alive_at_end=1, crashlines=0, vi_stalls30s=0, hold 244 s; opt
 Rules out: "bypass deterministically crashes lvl5" (refuted at n=1 clean). Does not rule out H-16MB (unmasked ucode read above 0x81000000) - the address evidence from s6529 stands single-source.
 Queued: s6532_dd4_bypass_lvl5_r1..r3 (same recipe as s6531, distinct tags). Next: fold them; on a crash read the backtrace for the >16 MB pointer source.
 No code, default, or gameplay change this session (queue scripts + NEXT only).
+
+## Session 6533 (2026-10-27) — folded s6532 lvl5 dd4+bypass r1/r2 (both clean); queued r4-r6
+Summaries (m6/*s6532*): r1 alive_at_end=1 stalls=0 crashlines=0 hold=244s; r2 alive_at_end=1 stalls=0 crashlines=0 hold=240s. r3 still queued. Tally for dd4+bypass lvl5: 1 SIGBUS (s6529) in 5 clean-or-crash runs so far (s6529 crash, s6531, r1, r2 clean) — rate ~<=1/4, not bypass-demonstrated. Queued r4-r6 (identical recipe) to widen the denominator; no code change, ORIGIN of -128 span saturation writer still open. Evidence single-source (soak summaries).
