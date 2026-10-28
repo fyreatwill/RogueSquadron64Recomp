@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6606 (2026-10-28).
+Compact operational handoff, as of Session 6607 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,7 +15,24 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G3 render fidelity / hangar artifacts (HYPOTHESIS-ID g3-hangar-artifacts).**
-  - s6606: the phase-gated source fingerprint ran immediately after the
+  - s6607: a before/after colour-writeback witness passed its injected-byte
+    control in retail and ASPECT 16:9 (12 MB); both 95 s arms finished alive,
+    0 crash markers. In hangar phase 5, the two wide sources had 48/25
+    intersecting writebacks, all changing the watched columns with changing
+    control pixels; non-overlapping writes changed none. This refutes only
+    "no RT64 writeback touches the region", not the artifact's origin.
+    No preceding post-writeback hash matched the eight initial source
+    fingerprints. Crucially, raw PPMs extend past the logged source:
+    retail dumps 512x358 versus copy 512x336 (+22 rows), wide 796x448
+    versus copy 796x336 (+112). The wide bottom garbage is below the copy
+    boundary in the same captured frame; source code hardcodes the excess
+    height. The earlier column fingerprint does not measure that bottom band.
+    **s6606's H-source attribution is superseded.** Real window appearance is
+    unmeasured; capture bounds must be corrected before a rendering fix.
+    Evidence: `scratch/agent/s6607_band_wb/summary.json`,
+    `docs/owner_sheet_s6607_capture_bounds.png`; analyser
+    `tools/g3_hangar_writeback.py`. No mitigation/default change landed.
+  - s6606 (source attribution superseded s6607): the phase-gated source fingerprint ran immediately after the
     `present.storage` copy. Retail 4:3 fired its control at width 512/origin
     `0x790400` (nonzero 512, transitions 82, hash `42020AE708518CD0`). A
     clean ASPECT 16:9 arm fired at width 796/origin `0xA631B8`, exactly across
@@ -142,6 +159,13 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
+- s6606 "the wide hangar band is already in source pixels" (s6607: source
+  fingerprint checks columns 269..335 in 336 rows; visible bottom garbage is
+  in a raw 448-row dump beyond that copy). Believable because the raw PPM
+  looked like window output and nonzero/transition counts appeared to confirm
+  it. The PPM header explicitly says rdram-readback-not-window; its fixed
+  height is not the actual VI source height. Actual window fidelity remains
+  open; the source-versus-presentation split was not closed.
 - (s6579) "dd4 bundle-only / dd4 holds without ROGUESQ_DD_UNSAFE ran at dd4" (superseded: they ran dd3). Believable because the knob was set to 4 and nothing warned except a "multiplier 3" log line, which looked like a display quirk; the s6446 cap in apply_s6036_dd.py:7 clamps silently otherwise.
 - s6576 "lvl1 ddclamp area saturates at level extent by dd6, not an engine table" (s6577: at dd6 the cell cap trims the window below the extent in ~55% of samples on lvl1/5/10; the earlier 4096 maximum was a single sample).
 - s6574 "dd12 holds clean": believable because the env var was 12 and the run was clean; overturned s6575 - the multiplier is clamped to 8, so it was dd8. Raising the clamp is not the next step; the 64-wide terrain table saturates first (single-source, one run's log).
@@ -225,13 +249,14 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
--1. **(s6606) Attribute the source band to a writer class.** Add one
-  phase-gated census at RT64 colour writeback: for the measured 16:9 band,
-  record whether any writeback range intersects its pixel columns before the
-  source fingerprint, with the existing retail control in the same build.
-  An intersecting writeback selects H-RDP-writeback; no intersecting writeback
-  while the source band persists selects H-game/guest-write. Keep the
-  measurement bounded to the hangar phase and do not add a mitigation.
+-1. **(s6607) Correct diagnostic framebuffer bounds, then check the actual window.**
+  `upstream_compat.cpp` forces wide dumps to 448 rows (retail 512 -> 358)
+  while the hangar source is 336 rows. Use the actual VI/source shape for
+  dumps, preserving the source base/stride and explicit provenance. Validate
+  retail and 16:9 in one build; compare the corrected dump with an actual
+  game-window capture in the same phase. Hypotheses: H-dump-overread,
+  H-window-present, H-real-source. Do not infer an image defect from a
+  nonzero fingerprint or writeback overlap. No rendering mitigation yet.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

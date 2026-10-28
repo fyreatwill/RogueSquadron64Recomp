@@ -1,37 +1,51 @@
-# NEXT: ATTRIBUTE THE SOURCE BAND TO A WRITER CLASS
+# NEXT: FIX DIAGNOSTIC CAPTURE BOUNDS AND VERIFY THE WINDOW
 HYPOTHESIS-ID: g3-hangar-artifacts
 
-Checkpoint close-out: s6606 selected H-source. The source band is present
-before presentation in the clean 16:9 arm; the 21:9 route was not reached and
-must not be treated as a null. Do not rerun the source fingerprint.
+s6607 completed the requested writeback census in retail and wide16 (12 MB).
+The narrow no-writeback hypothesis is refuted: hangar wide sources have 48
+and 25 intersecting writebacks, each changing the watched columns. Neither
+arm's initial source fingerprints match a preceding writeback post hash.
+Do not repeat this census or call overlap an artifact attribution.
 
-Work unit: add one phase-gated writeback-range census at RT64 colour
-writeback, then run one retail control and one ASPECT 16:9 arm in the same
-Debug build. Join each writeback range to the measured source-band columns
-269..335 and the same hangar phase; keep `[fb-source-fp]`, `[fb-flip-range]`,
-and `[fbdump]` enabled. Exact discriminator: an intersecting colour
-writeback range before the source fingerprint selects H-RDP-writeback; a
-clean writeback census with the source band still present selects H-game/
-guest-write. The source fingerprint is the positive control, and the retail
-arm must fire its phase control. Do not add a guard, skip, or default change
-until the writer class is named.
+The decisive correction: raw dumps exceed the actual logged source height.
+Retail: 512x358 vs 512x336. Wide16: 796x448 vs 796x336. Same-frame wide
+bottom garbage lies below the 336-row boundary; the dump code explicitly
+forces 448 rows. The previous column ROI is not that bottom band.
+See docs/owner_sheet_s6607_capture_bounds.png. This is a capture diagnosis,
+not proof of what the RT64 window displays, and not a rendering fix.
 
-Competing hypotheses:
+ONE bounded change: correct the existing framebuffer dumper to derive its
+height/layout from the actual VI/source geometry instead of width heuristics.
+Keep the raw dump's provenance and log base, stride and dimensions. Read the
+RT64 shape calculation first; reuse its semantics rather than a hangar-only
+336 constant. Preserve paired-row retail modes and validate the title too.
 
-- H-RDP-writeback: RT64 colour writeback covers the measured band before the source copy.
-- H-game-write: no RT64 writeback covers it; the guest/RDP stream wrote the band directly into the source framebuffer.
-- H-range-join: the band is covered, but the current writeback census misses it because of row/stride or phase attribution.
+Competing hypotheses and discriminator, written before building:
+- H-dump-overread: garbage exists only in rows outside the actual source;
+  correctly bounded dump and an actual window capture both lack it.
+- H-window-present: bounded source is clean but actual window still shows
+  a band; presentation/layout is the remaining owner.
+- H-real-source: the same visible band exists within both bounded source
+  and window; only then pursue the producing RDP/guest writer.
+The positive control is actual image content plus a deliberately oversized
+reference crop showing the known tail. Match by VI transition/source address,
+not dump ordinal or elapsed time. A nonzero hash alone is not a control.
 
-Discriminator: one same-phase intersecting-range table, with the source
-fingerprint and retail control firing in the same run. The retail oracle
-remains unavailable because its built core/plugin dylib is absent locally.
-
-Exact preparation/build commands:
-
+Preparation/build:
 ```sh
-rg -n 'rs64_writeback|wblog|colorWriteWidth|source\[=' lib/rt64/src/hle/rt64_state.cpp
+rg -n 'const uint32_t dh|source=rdram-readback|s_fbd_vi' src/main/upstream_compat.cpp
+rg -n 'screenFbSize|screenFbAddress|VI.*[Ss]ize' lib/rt64/src/hle/rt64_state.cpp
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
 ```
-
-Do not add a guard, skip, or default change until the writer is named and its
-value is shown to be illegitimate.
+Reference recipe (capture driver lives in scratch and has no build changes):
+```sh
+python3 scratch/agent/s6607_band_wb_run.py
+python3 tools/g3_hangar_writeback.py scratch/agent/s6607_band_wb/retail/run.log scratch/agent/s6607_band_wb/wide16/run.log
+```
+Use NEW output paths for the next run; preserve s6607 artifacts. Arm retail
+and ASPECT=16:9 with OSMEM_MB=12 from the same binary, one game at a time,
+phase-gated autopilot as in the driver, screen unlocked. Capture the actual
+window using a window screenshot (e.g. screencapture -x -l <window-id> PATH),
+not a PPM read of guest RAM. Check screenshot permission before starting;
+a denial is not evidence about rendering. SIGKILL game at the deadline.
+Do not add a rendering guard, cull or default change.

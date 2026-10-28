@@ -171452,3 +171452,51 @@ not yet name the source writer (RT64 colour writeback versus guest/RDP write).
 
 ORIGIN: no mitigation was added. The source fingerprint is an observation;
 the writer remains to be attributed before any guard or cull is considered.
+
+
+## Session 6607 (2026-10-28) — measured hangar writebacks and found oversized diagnostic captures
+
+- Maintenance check: CURRENT-TRUTH 33,288 bytes, below 60,000. Read handoff
+  and soak tail in order; no new unconsumed soak verdict was present.
+- Strengthened the planned range census to bracket actual colour writeback
+  with full band-byte snapshots and control pixels, tracking all source
+  framebuffers seen in the VI phase. Added the persistent RT64 patch and
+  tools/g3_hangar_writeback.py; Debug build and Python compile passed.
+  The first edit script assertion stopped before writing the runtime file;
+  corrected it and built the instrument. Exported submodule patches.
+- One retail 95.5 s arm and one ASPECT 16:9 / 12 MB 95.8 s arm ended alive,
+  0 crash markers. Both injected controls reported identical=0/injected=1.
+  A preliminary 8 MB wide launch was SIGKILLed after noticing the recipe
+  mismatch and preserved as wide16_8mb_preflight; the corrected arm ran now.
+  These are diagnostic captures, not endurance/stall qualifications.
+- Hangar phase 5: retail 0x656000/0x6AB000 had 48/25 overlapping writebacks
+  with changed pixels; wide 0x9DE900/0xA62B80 had 48/25. Every overlap
+  changed the watched band and control pixels; non-overlapping writes had
+  no changes. Wide changed-byte totals 1,348,250 and 688,363. Static inspection
+  confirms Framebuffer::copyNativeToRAM copies native pixels and swaps words.
+  This refutes H-no-writeback only. Concurrent guest writers are not excluded.
+- No preceding writeback post hash matched the eight initial source
+  fingerprints. The VI origin is not the copy base (wide 0xA631B8 vs
+  0xA62B80), so the analyser joins via actual [fb-flip-range] base.
+- Boring root of the capture evidence: upstream_compat.cpp hardcodes dh=448
+  for wide dumps and derives 358 for retail 512, while same-phase RT64 source
+  copies are 796x336 / 512x336. Joined dump headers prove +112 / +22 extra
+  rows. Viewed same-frame wide fb_0001500: garbage is at the bottom, below
+  the source boundary; the prior instrument sampled columns 269..335, not
+  this tail. docs/owner_sheet_s6607_capture_bounds.png shows full vs bounded
+  diagnostic image. Cropping is explanatory evidence, not a runtime fix.
+- Superseded s6606 H-source attribution: a nonzero fingerprint of unrelated
+  columns does not prove the photographed band is in the presented source.
+  The PPM explicitly labels itself rdram-readback-not-window. Actual window
+  appearance remains unmeasured; no renderer-corruption explanation selected.
+  Existing oracle core/plugin remains unbuilt; no retail oracle run claimed.
+
+Rules out: no-writeback coverage of the watched columns; diagnostic PPM
+height as a faithful representation of the VI copy. Does not rule out a real
+window artifact, nor establish the original writer of a defective pixel.
+Artifacts: scratch/agent/s6607_band_wb/{retail,wide16}/run.log and summary.json.
+Next bounded unit: fix dumper shape from actual VI geometry and compare with
+an actual window capture, before adding any further rendering instrument.
+ORIGIN: no mitigation. The oversized dump is written by the diagnostic
+osViSwapBuffer_recomp PPM loop, reading beyond the actual source; those tail
+bytes are not established as display pixels. Runtime artifact origin is open.

@@ -31,6 +31,7 @@ To disable: unset, set to `0`, or leave undefined.
 | Env Var | Default | Tags Enabled | When To Enable |
 |---|---|---|---|
 | `ROGUESQ_LOG_AUDIO_OBJECTS` | off | `[audio-objects-task]`, `[audio-objects-frame]` | Compare live audio task headers, state buffers, and voice records with retail. Bounded samples in title and hangar. |
+| `ROGUESQ_LOG_FB_BAND_WB` | off | `[fb-band-wb-control]`, `[fb-band-wb]` | Source-band before/after colour writeback hashes, changed bytes, control pixels and physical overlap; first 128 writebacks per VI phase. Sources registered at VI copies; earlier writes are not covered. |
 | `ROGUESQ_LOG_ALL` | off | everything below | Quick "show me everything" — heavy output, OK for one-shot diagnostic. |
 | `ROGUESQ_LOG_THREADS` | off | `[NAME] set_native_thread_name`, `[NAME] wstring`, `[NAME] SetThreadDescription`, `[RT64] Thread::setCurrentThreadName begin/done`, `[RT64] wstring ok` | Thread-name registration crashed (utf-8/utf-16 conversion, COM init). Useful only when investigating thread-naming code. |
 | `ROGUESQ_RECV_TRACE` | off | `[recvtrace]`, `[recvsum]`, `[recv-scheduler-type]`, `[framesync-gate]` | Bounded blocked-receive and scheduler-message-type census. Scheduler rows sample the received message byte plus `89F`/`28D44` for VI-640 frame-sync diagnosis. |
