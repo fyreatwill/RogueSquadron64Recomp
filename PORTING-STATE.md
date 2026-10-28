@@ -170890,3 +170890,12 @@ Terrain fraction by cap (fbd tags, only 8 frames): inf 0.047 med (n=3), cap0 0.0
 Rules out: cap120 being costlier than accept-all. Does not show cap120 adds terrain over cap0 (needs more frames, reversed rotation order, FB_DUMP_EVERY smaller).
 
 Discrimination (s6542, added after Stop-gate feedback): hypotheses H-cap-costless (accepting every bypassed cell costs no more than the capped path) vs H-cap-cost (cost scales with accepted cells). Same-run, same-scene outcome: inf cap 129.8 ms vs cap120 43.8 ms with accepted cells 505 vs 98 per swap -> H-cap-costless REFUTED (single-run, same-scene; wall per swap 2.9x), H-cap-cost SELECTED for the inf arm. Still open: H-cap-buys-terrain vs H-cap-irrelevant (8 frames, underpowered) and cap0-vs-cap120 cost (order-confounded). Next discriminator: ROGUESQ_CAP_ORDER=rev rotation + FB_DUMP_EVERY=20 giving >=15 frames per cap; cap120 terrain > cap0 selects H-cap-buys-terrain, equal selects H-cap-irrelevant.
+
+## Session 6543 (2026-10-27) — reversed cap rotation: cap120 buys no terrain over cap0; only unlimited accept does
+
+Added ROGUESQ_CAP_ORDER=rev (inf,120,0 rotation) to tools/apply_s6537_bypasscap.py (and the already-patched funcs_9.c), tools/g1c_fbd_bycap.py (terrain fraction per cap from [fbdump] n= tags), rebuilt Debug, ran ONE lvl1 dd4 pinned 300 s run (scratch/agent/s6543_run.sh: CAP_ALT=60, rev, FB_DUMP_EVERY=20), rc=0, 0 CRASH.
+Positive control: per-cap taken/rejected as designed (inf 794 taken, cap0 0 taken/607 rejected, cap120 100 taken/497 rejected), ~1420 swaps per cap.
+Cost (sd_wall mean, g1b): inf 104.7 ms, cap120 68.5, cap0 60.8. Terrain fraction (w512 frames, tight/loose median): inf 0.091/0.561 (n=133), cap0 0.030/0.091 (n=60), cap120 0.032/0.129 (n=62; loose means 0.157 vs 0.153).
+Re-scoring s6542's run with the same scorer (more frames than s6542's 8 counted): inf 0.179 (n=28), cap0 0.047 (n=12), cap120 0.030 (n=12).
+Hypotheses: H-cap-buys-terrain vs H-cap-irrelevant. Outcome: cap120 ~= cap0 in terrain in BOTH rotation orders (two-source) -> H-cap-irrelevant SELECTED for caps up to 120; cost cap0 < cap120 < inf in the reversed order, and s6542's cap0>cap120 was post-inf hysteresis (cap0 followed inf there). Terrain gain exists only with unlimited acceptance (~3x tight) at ~1.7x wall. The s6540 default of 120 is therefore cost without benefit. Not yet tested: intermediate caps (300-600) to find a knee.
+ORIGIN: no mitigation added; env-only diagnostic toggle in an existing opt-in patch.
