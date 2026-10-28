@@ -170917,3 +170917,9 @@ Ran scratch/agent/s6547_run.sh (ROGUESQ_BYPASS_MAXCELLS=-1, DD_UNSAFE=1, pose-pi
 g1b means (~290 samples each): dd4 15.7 tasks/s, sd_wall 108.6 ms/s; dd6 12.6 tasks/s, sd_wall 56.4 ms/s, VI 61 both. Terrain fraction (g1c_fixed_score, n>=1000): dd6 tight med 0.069 / loose 0.369 (40 frames); dd4 tight 0.117 / loose 0.447 (51 frames).
 Reading: dd6 is CHEAPER and shows NO more terrain than dd4 (cross-run, single-source, scatter ~2x per s6541). So some other limit clamps the footprint between dd4 and dd6 (candidates: ROGUESQ_UCODE_CAP=65536 default per log, grid/stride dims s6035, pool size). The 0x80800000 arena is not yet motivated: nothing exhausted.
 ORIGIN: no code change this session (recipe script only).
+
+## Session 6548 (2026-10-27) — dd6 clamp named: lvl1 terrain is 64x64 and the 2048-cell footprint cap binds
+Added env-gated `[ddclamp]` pre/post log (ROGUESQ_DD_LOG=1, every 60th call) to the s6037 footprint clamp (tools/apply_s6037_ddclamp.py, marker "s6548 log"). Ran the s6547 recipe at dd4 and dd6 (90 s, lvl1 pinned, scratch/agent/s6548_run.sh; both clean, logs scratch/agent/m6/g1_lvl1s6548_dd{4,6}/run.log).
+Result: tw=th=64, cap(0x80130C4C)=2048 cells. Pre-clamp footprint at dd4 is already ~88x137 (x[58,149) z[-47,90)), at dd6 ~101x174 — both far past the 64x64 terrain, so the clamp reduces both to the same terrain-bounded window (H-grid). Separately cap=2048 (≈45x45) binds mid-map: dd6 `pre x[6,134) z[-58,106) -> post x[6,64) z[0,35)` (58x35=2030) trimmed z from 64 to 35 — a cap-driven loss of half the rows (H-pool/cap). UCODE_CAP not implicated (single-source: this log; the dd4-vs-dd6 terrain fraction from s6547 is the consistent second line).
+So dd>4 on lvl1 cannot show more land: the level is 64 cells across. Further distance needs a larger cap (0x80130C4C pool sized 2048) — only helps when the camera is mid-map and the window is cap-trimmed.
+ORIGIN: diagnostic only, no mitigation added.

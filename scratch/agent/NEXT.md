@@ -1,6 +1,5 @@
-# NEXT: G1c phase 2 - find the clamp that makes dd6 draw <= dd4
+# NEXT: G1c phase 2 - lift the 2048-cell footprint cap, test on a bigger level
 HYPOTHESIS-ID: g1c-dd-phase2
-State: s6547: dd6 clean 203 s, no heap exhaustion, but cheaper (56 vs 109 ms/s) and no more terrain than dd4 (tight 0.069 vs 0.117). Something clamps footprint/work above dd4.
-Hypotheses: H-ucodecap (ROGUESQ_UCODE_CAP=65536 default truncates the task), H-grid (cell grid/stride dims s6035 clamp radius), H-pool (a pool silently refuses allocs).
-Work unit: same s6547 recipe at dd6 in arms: UCODE_CAP=262144 added; grep run.log for [dd]/[cap] clamp prints; in one build log the effective radius/cell-count in buildVisibleTerrainGridAroundCamera at dd4 vs dd6. Positive control: dd4 vs dd6 radius differs if unclamped.
-Outcomes: radius equal -> H-grid; terrain/cost rises with cap -> H-ucodecap. Then G3c(b)/(c).
+State: s6548: lvl1 terrain is 64x64, dd4 already covers it; cap=2048 at 0x80130C4C trims mid-map windows (dd6 z 64->35).
+Work unit: env ROGUESQ_DD_CAP=<n> overriding cap in tools/apply_s6037_ddclamp.py (and check the pool that cap sizes, writer of 0x80130C4C); find a level with terrain dims >64 (log tw/th per level via ROGUESQ_DD_LOG) and run dd4 with cap 2048 vs 8192 pinned, compare terrain fraction. Positive control: post window area rises with cap.
+Then G3c(b)/(c).
