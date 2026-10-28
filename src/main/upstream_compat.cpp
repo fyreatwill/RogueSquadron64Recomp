@@ -44,6 +44,7 @@
 extern "C" uint32_t g_s6491[4]; // s6491 terrain-grid call/list/chain counters
 extern "C" uint32_t g_s6489[8]; // s6489 cumulative cell-gate exit counters (patched funcs_10.c)
 extern "C" uint32_t rs64_phase_ord(void);
+extern "C" volatile int g_rs64_dd_blk; // s6583: dd toggle state, tagged on [fbdump]
 extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
                                              uint32_t phys,
                                              uint32_t len,
@@ -604,7 +605,7 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         const uint32_t dh = wide_fb ? 448u : (stride > 640u ? 448u : stride * 224u / 320u);
         if (stride > 640u && !wide_fb) stride = dw;
         snprintf(path, sizeof path, "%s/fb_%07d_w%u.ppm", s_fbd, n, stride);
-        fprintf(stderr, "[fbdump] n=%d fb=0x%08X stride=%u\n", n, fb, stride);
+        fprintf(stderr, "[fbdump] n=%d fb=0x%08X stride=%u dd=%d\n", n, fb, stride, g_rs64_dd_blk);
         { // s6489: cumulative buildGridCellMesh exit counters (e7 = cell passed all gates); defined in patched funcs_10.c
             fprintf(stderr, "[cellcum] n=%d e0=%u e1=%u e2=%u e3=%u e4=%u e5=%u e6=%u e7pass=%u\n", n,
                     g_s6489[0], g_s6489[1], g_s6489[2], g_s6489[3], g_s6489[4], g_s6489[5], g_s6489[6], g_s6489[7]);

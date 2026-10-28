@@ -1,5 +1,5 @@
-# NEXT: valid same-pose dd1 vs dd4 owner contact sheet
+# NEXT: dd range census (s6576 item) — per-level tw/th/cap
 HYPOTHESIS-ID: g1c-dd-phase2
-State (s6582): dd cap lifted (dd4 w/o UNSAFE verified, 150 s clean). docs/owner_sheet_s6582.png is invalid (assumed frame<->toggle mapping, poses differ).
-Work unit: emit g_rs64_dd_blk in the fb-dump filename/log (extern volatile int, set in apply_s6036_dd) so each dump is tagged dd1/dd4; rerun scratch/agent/s6582_run.sh (pose lock + toggle) and pair adjacent dumps of opposite tag with minimal pose diff (use owner_sheet_s6546.py style). Positive control: tags must alternate in the dump list.
-Outcome: pair with ship/HUD identical, dd4 showing more terrain => send sheet; else widen pose lock.
+State (s6583): valid same-pose dd1/dd4 sheet at docs/owner_sheet_s6583.png (owner to judge). dd4 gain at lvl1 is small => lvl1 extent-bound.
+Work unit: census tw/th/cap per level (1,5,10 + others) via ROGUESQ_DD_LOG at dd4/dd6. If every level is extent-bound, the dd range is done at ~6: bundle the knob and close G1c phase 2.
+Outcome: per-level table; levels with terrain >64x64 are the ones where dd>4 can still pay.
