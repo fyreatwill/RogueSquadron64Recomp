@@ -1,54 +1,41 @@
-# NEXT: 16:9 flight radar anchor
-HYPOTHESIS-ID: g1d-hud-anchor-right
+# NEXT: 21:9 level-select tear
+HYPOTHESIS-ID: g1d-levelselect-tear
 
-s6609 closed the owner-sheet question. Retail, 16:9 and 21:9 hangar+flight
-windows were paired with VI-bounded sources (`docs/owner_sheet_s6609_aspect.png`).
-Extra width is additional scene. The left shield is x 44..71 at every width.
-The flight radar's right edge is retail 476, 16:9 794 (clipped, width 73 vs
-89), 21:9 991 (whole, inset 32). Those are exactly 476+334 and 476+515.
+s6610 closed the flight-radar clip. Do not retune `ROGUESQ_HUD_ANCHOR` or
+`ROGUESQ_SHIFT_REGION`. The open opt-in defect is the 21:9 level-select
+tear: VI-bounded source and the paired window, frames n=1400/1500/1600,
+absent from 16:9 and retail level-select and from later 21:9 bay/flight
+(s6609). The s6610 run wrote the same frames again:
 
-The logged anchor pairs are `142,334` at fb 796 and `256,515` at fb 1024
-(`A, A+RA` from `rs64_g1d_apply_aspect_policy`). `tools/apply_s6155_hudcpos.py`
-does `n = x - A`; left items keep `n`, right items get `n + second`. If the
-game already added `A` before that hook, the right edge becomes retail+second.
-second=`fbw-512` would preserve the retail inset (796 -> 760, 1024 -> 988).
-The current second term overshoots 796 by 50 px and clips, and overshoots
-1024 by only 3 px. Per-sprite f4 was not logged; this run is the test.
+- torn candidates: `scratch/agent/s6610_hud_anchor/wide21/fbd/fb_0001400_w1024.ppm`
+  and n=1500, n=1600
+- clean 1024 control, same run: `fb_0002500_w1024.ppm` (flight, ring inset 31)
+- 16:9 level-select control, not torn in s6609:
+  `scratch/agent/s6608_capture_bounds/wide16/fbd/fb_0001400_w796.ppm`
 
-ONE work unit: change only the second `ROGUESQ_HUD_ANCHOR` number from
-`A+RA` to `fbw-512` in `src/main/main.cpp` (`rs64_g1d_apply_aspect_policy`).
-Do not change `ROGUESQ_SHIFT_REGION` or `ROGUESQ_LOG_REGION` in the same arm.
-Rebuild the game target only (the patch already reads the env). No regen.
+ONE work unit, offline, no rebuild. For each frame, per row, record the
+column of the strongest horizontal step and whether that column is stable
+down the frame.
 
 Hypotheses:
-- H-anchor: the s6155 right-half add is the writer. After the change, 16:9
-  radar right edge moves from 794 to about 760 (inset ~35, width ~89) and
-  21:9 moves from 991 to about 988. Left shield stays x 44..71.
-- H-not-live: the boxes matched the constants by coincidence. The radar box
-  does not move. Revert the constant in this same iteration.
-- H-other-hud: the radar moves as predicted but another right-edge HUD
-  element (the green reticle) leaves the frame or doubles its error. Then
-  the single second-term is not safe for every right-half sprite; report
-  which element and do not keep the change.
+- H-stride: the step's x changes linearly with y (a shear). Slope times
+  bytes-per-pixel equals a stride error (1024-wide row vs 640 or 512).
+  The clean flight frame must not shear.
+- H-composite: one y-band (around rows 150-260) has a stable vertical step,
+  and the segment on one side of it matches a narrower buffer (512 or 640)
+  while rows outside the band are one coherent 1024-wide image. Flight
+  control has no such band.
+- H-game: the step follows a silhouette, not a straight or sheared line,
+  in the torn frames only. Then the writer is the level-select draw, and
+  the next unit names that draw. No copy fix.
 
-Discriminator: radar bounding box on the VI-bounded flight source, same
-route as s6609, 16:9 and 21:9, one binary. Positive control: left shield
-box unchanged, and both arms reach flight (phase width 796 or 1024, height
-444) with 0 crash lines. Retail inset 35 from s6609 is the control; do not
-spend a third run unless the wide arms fail to reach flight.
+Positive control, same script: copy the clean flight frame, paste a
+200-row-tall 640-wide block into its middle, and the metric must flag
+that band and must not flag the untouched flight frame. If both the
+synthetic band and the real level-select frame score the same class,
+that class is the writer family. If the real frame scores nothing, the
+metric is blind — do not add another field; look at the rows.
 
-```sh
-# edit main.cpp second anchor term, then:
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
-# screen unlocked (ioreg CGSSessionScreenIsLocked / IOConsoleLocked)
-# reuse scratch/agent/s6609_capture_run.py env with ROGUESQ_ASPECT=16:9 then 21:9
-# SIGKILL after the flight window shot. Measure green-left and red-right boxes.
-```
-
-Do not touch the 21:9 level-select tear in this unit. It is next-steps item 2:
-source and window both torn on n=1400/1500/1600, absent at 16:9 and retail,
-so the writer is still unnamed. No cull.
-
-The 21:9 fb-flip-range log missed the hangar copy because it keeps only 64
-lines per phase and the hangar stayed in phase 4. Do not read that absence
-as "RT64 never copied 1024x336".
+No cull, skip, or default change. Do not run the game unless the three
+existing 1024 frames are missing or not actually level-select (check
+the shot json phase/width first).

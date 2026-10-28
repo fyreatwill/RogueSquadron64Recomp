@@ -171559,3 +171559,42 @@ bytes are not established as display pixels. Runtime artifact origin is open.
 - Sheet: `docs/owner_sheet_s6609_aspect.png`. No default, guard, or anchor
   constant was changed.
   ORIGIN: no mitigation.
+
+## Session 6610 (2026-10-28) — fixed the 16:9 flight radar clip
+
+- Maintenance check: CURRENT-TRUTH 37,799 bytes, below 60,000. Soak tail
+  still ends at the s6580 dd4 holds already in the ledger. Screen lock:
+  IOConsoleLocked false. No game was running.
+- Work unit: change only the HUD-anchor second term from A+RA to fbw-512
+  (`rs64_g1d_apply_aspect_policy`). Measurer positive control on the
+  s6608/s6609 flight dumps recovered retail ring x 387..480 (inset 31,
+  width 94), 16:9 x 721..794 (inset 1, width 74), 21:9 x 902..995
+  (inset 28, width 94), and left shield x 44..71 on every width.
+- Ring-only arm (shift left at RA, 192 at 796 / 259 at 1024). Logged
+  anchor 142.0,284.0 and 256.0,512.0. Both arms SIGKILL after flight,
+  alive, 0 crash lines, 796x444 phase 7 and 1024x444 phase 6.
+  16:9 ring moved to x 671..764 (inset 31, width 94; predicted ~764).
+  21:9 ring x 899..992 (predicted 992). Shield stayed x 44..71. This
+  selects H-anchor for the red ring and refutes H-not-live. The orange
+  wedge did not move: 16:9 wedge stayed 769..792, 0/457 pixels inside
+  the new ring (before: 377/377 inside). So second-term alone splits
+  the radar. That arm is not what shipped.
+- Disc tris are chosen before the shift, from LOG_REGION. The shift that
+  had kept the wedge inside the ring was second-A. With second=fbw-512
+  that equals A, so the follow-up set ROGUESQ_SHIFT_REGION to A and left
+  the region box alone. Logged shift 142 at 796 and 256 at 1024.
+  Same route, both arms alive, 0 crash lines. 16:9 ring x 671..764
+  (inset 31, width 94); wedge 719..742, 271/271 inside (50 px left of
+  the split position, the same delta as the ring). 21:9 ring x 899..992
+  (inset 31, width 94); wedge 947..971, 417/417 inside. Retail measurer
+  on the old dump is inset 31 width 94, so both wide rings now match it.
+  Left shield x 44..71 (16:9 x1=72). 16:9 center reticle was scene-absent
+  this pass; the ring-only pass had moved it from cx 460 (frame center
+  398) to cx 398, toward center, not off the frame.
+- H-other-hud as a "do not keep" is the ring-only split, which was
+  corrected in this same iteration by the disc shift. Opt-in only.
+  Defaults unchanged. Sheet: `docs/owner_sheet_s6610_radar.png`.
+  ORIGIN: no mitigation. The ring writer is the s6155 right-half add;
+  second=fbw-512 is the inset-preserving value because the hook adds it
+  on top of a position that already includes A. The wedge writer is
+  SHIFT_REGION; shift=A is the value that keeps that wedge inside the ring.

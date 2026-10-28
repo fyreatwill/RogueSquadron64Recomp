@@ -11062,11 +11062,16 @@ static void rs64_g1d_apply_aspect_policy() {
     // other widths are extrapolation until verified. ROGUESQ_HUD_ANCHOR_AUTO=0 disables.
     const char* au = std::getenv("ROGUESQ_HUD_ANCHOR_AUTO");
     if (!au || std::atoi(au) != 0) {
-        const double ex = fbw - 512.0, A = ex / 2.0, RA = 192.0 + 0.294 * (ex - 284.0), k = fbw / 796.0;
+        const double ex = fbw - 512.0, A = ex / 2.0, k = fbw / 796.0;
         char hb[64], rg[96], sh[32];
-        std::snprintf(hb, sizeof hb, "%.1f,%.1f", A, A + RA);
+        // Right-half add is applied on top of a position that already includes A,
+        // so the on-screen right edge lands at retail+second. second must be the
+        // extra width (fbw-512) to keep the retail inset; A+RA overshoots 796 by 50 px.
+        std::snprintf(hb, sizeof hb, "%.1f,%.1f", A, ex);
         std::snprintf(rg, sizeof rg, "%.0f,%.0f,20,135", fbw - 276.0 * k, fbw - 166.0 * k);
-        std::snprintf(sh, sizeof sh, "%.0f", RA);
+        // Disc tris are selected pre-shift. The shift that kept the wedge inside the
+        // ring was (second - A); with second = ex that is A. RA leaves the wedge behind.
+        std::snprintf(sh, sizeof sh, "%.0f", A);
         setenv("ROGUESQ_HUD_ANCHOR", hb, 0);
         setenv("ROGUESQ_LOG_REGION", rg, 0);
         setenv("ROGUESQ_SHIFT_REGION", sh, 0);
