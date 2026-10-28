@@ -3392,6 +3392,7 @@ extern "C" bool rs64_dpc_take_synthetic_consumer(uint64_t *serial) {
 // ROGUESQ_LOG_SPIKE=1 logs; ROGUESQ_SPIKE_CTL=<px> shrinks the guard band to
 // <px> beyond the viewport as a positive control (ordinary tris must fire).
 std::atomic<int> g_rs64_swap_n{0};
+extern "C" int rs64_swap_n(void) { return g_rs64_swap_n.load(std::memory_order_relaxed); } // s6528 C accessor
 static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     static const bool on = [] { const char *e = std::getenv("ROGUESQ_LOG_SPIKE"); return e && *e && *e != '0'; }();
     if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u) return;

@@ -170791,3 +170791,9 @@ Built tools/apply_s6527_spanforce.py (ROGUESQ_SPANFORCE=1 forces both span compa
 ORIGIN: observation/experiment arm only, no mitigation.
 Rules out: H-clamp-overflow as reject cause. Selects nothing on harm. Verdict: single-source, pose-confounded.
 Next: same-run toggle (flip SPANFORCE on/off by VI phase in one process, identical camera) and score the pair.
+
+## Session 6528 (2026-10-27) — same-run SPANFORCE toggle: dd4 span rejects HIDE terrain (4.4x tight fraction, 3 phase cycles)
+Added extern "C" rs64_swap_n() (src/rsp/dpc_bridge.cpp) and made s6527_force() support ROGUESQ_SPANFORCE=toggle: force phase = ((swap-1)/PERIOD)&1, logs each transition (tools/apply_s6527_spanforce.py updated). One pinned lvl1 dd4 run (scratch/agent/s6528_toggle.sh, PERIOD=500, fb dump every 100), rc=0, 0 crashes, 0 VI stalls. Positive control: [spanforce] swap=2501/3001/3501/4001/4501 phase lines fire. Terrain fraction (g1c_fixed_score metric, frames n>=2100): off-phase tight mean 0.047 (n=11), force-phase 0.209 (n=12); jumps repeat at each transition (3500->3600: 0.024->0.298; 4500->4600: 0.018->0.235). Frame pair scratch/agent/m6/s6528_toggle/n4500.png (off: sky only, radar shows no terrain) vs n4600.png (force: hills/terrain drawn, radar shows terrain), no spikes/garbage in force frames. Craft pose animates across a phase so per-frame values vary, but the on/off step recurs 3x at the exact toggle swaps.
+ORIGIN: experiment arm only; no mitigation landed. Writer of the reject remains the span grid compare at 0x80042D8C (grid floor -128 saturation, s6526).
+Rules out: H-rejects-offscreen (rejects are visible-terrain cells at dd4). Selects H-rejects-hide-terrain.
+Next: design the safe dd>1 accept rule (bypass span reject for in-window cells when dd>1, or fix the span grid saturation at its writer), qualify two-arm, expose under ROGUESQ_DRAW_DISTANCE.
