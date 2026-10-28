@@ -1234,3 +1234,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261027-171955 | s6529_dd4_bypass_lvl10 | rc=0 | 347s | scratch/agent/soak_results/s6529_dd4_bypass_lvl10_20261027-171955.log
 20261027-172721 | s6529_dd4_bypass_lvl5 | rc=0 | 285s | scratch/agent/soak_results/s6529_dd4_bypass_lvl5_20261027-172721.log
 20261027-173207 | s6529_dd4_optout_lvl1 | rc=0 | 316s | scratch/agent/soak_results/s6529_dd4_optout_lvl1_20261027-173207.log
+20261027-173929 | s6531_dd4_bypass_lvl5 | rc=0 | 327s | scratch/agent/soak_results/s6531_dd4_bypass_lvl5_20261027-173929.log
+20261027-174456 | s6531_dd4_optout_lvl5 | rc=0 | 327s | scratch/agent/soak_results/s6531_dd4_optout_lvl5_20261027-174456.log

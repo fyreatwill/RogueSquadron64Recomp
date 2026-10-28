@@ -11,6 +11,7 @@ retired CURRENT-TRUTH backlog are in `docs/PROJECT-OVERVIEW.md`.
 - M5 audio de-stubbing, M3 idiom audits, generated-symbol renaming, and M6
   first-mission endurance are closed. G4 crash hunting is parked after clean
   coverage. G1 is mission coverage and visual quality, not autopilot work.
+- s6532: s6531 lvl5 dd4 bypass and opt-out soaks both clean (crashlines=0); s6529 lvl5 SIGBUS is rare, bypass-dependence unproven. 3 repeat soaks queued (s6532_dd4_bypass_lvl5_r1-3).
 - s6525: offline join of s6524b dd4 EMPTY rows: ALL rejected cells have rec[3]=rec[4]=-2 (0xFE) and plane byte 127 sentinel; span 6-9 below. Not an offset - rec records are unpopulated beyond the builder footprint (single-source). Next: name the writer of rec[3]/[4] and its radius/count cap.
 - s6526: raw rec dump REFUTES s6525 (rec sentinel): dd4-rejected cells have normal recs (rec[3]=-38 etc.); reject = span grid saturated at -128 (11/12). Next: pre-clamp f0/f12/f10 at 0x80042820/0x800426D8 dd1 vs dd4 (s6521 next).
 - s6524: SPANSCALE sweep (keys>=745, pinned lvl1): dd1 EMPTY 0%, dd4 s1/4/8/16 = 28.3/24.3/19.9/21.1% -> plateau ~20%, H-scale refuted as dominant (s6523's 24->14% was key-window mix); residue = rec-window rejects (H-reject-by-design, single-source). Next: per-EMPTY-cell A,B,rec3,rec4 from existing logs.
