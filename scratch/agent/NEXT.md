@@ -1,6 +1,6 @@
-# NEXT: land a dd>1 span-reject bypass inside ROGUESQ_DRAW_DISTANCE and qualify it
+# NEXT: fold s6529 bypass soak verdicts, then name the span-saturation writer
 HYPOTHESIS-ID: g1c-span-reject-predicate
 
-s6528 confirmed: at dd4 the span compares at 0x80042D8C/0x80042DA4 reject cells that hold visible terrain (tight fraction 0.047 -> 0.209 when forced, 3 recurring steps).
-Hypotheses: H-bypass-safe (accepting all in-window cells at dd>1 is fine: no spikes, frame time ok), H-bypass-costly (extra cells blow the tri/time budget or the ucode cap), H-saturation-writer (the clean fix is upstream: the span grid's -128 clamp floor at the writer in streamTerrainGridCellsByDistance/scanConvertTriangleToSpanTable; bypass is only a workaround, needs ORIGIN naming).
-Discriminator: build default-on bypass when DRAW_DISTANCE>1 (env opt-out), run pinned lvl1+lvl5+lvl10 dd4 with G1B frame-time instrument vs dd1 retail control (same recipe, 240 s); score terrain fraction, VI/s, crashes. Also trace why grid holds -128 (pre-clamp inputs unlogged) to name the writer.
+Read SOAK-RESULTS.md s6529_* lines (dd4 bypass lvl1/5/10; opt-out lvl1 is the toggle positive control). Score from logs: G1B frame time/VI per s, terrain fraction (fixed-camera scorer), tri count, crashes, spike log vs s6459/s6463/s6464 pre-bypass.
+Hypotheses: H-bypass-safe (VI 60/s, 0 crash, fraction up) / H-bypass-costly (VI drops or ucode cap hit -> gate bypass to dd<=3 or cap cells) / H-toggle-broken (opt-out arm differs from pre-bypass -> patch not what we think).
+Then: log pre-clamp inputs into scanConvertTriangleToSpanTable at dd4 to name the writer of -128 (ORIGIN).
