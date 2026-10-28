@@ -1,9 +1,8 @@
-# NEXT: who calls the DL-chunk pool init at pc 0x80018094, and when relative to the cache emptying
+# NEXT: after the flight-scene pool reinit, why does px2 demand outrun supply (px1 does not)?
 HYPOTHESIS-ID: g1c-dd-phase2
-Facts (s6561): heapWalker splices (pc 80007A44/AA0/AFC) are legitimate and preserve the chain. The only chain-dropping head store is pc 80018094 (pool relink loop at 80018044, stride 0x108, head=base), once per attempt at begin 6016-6067, nv=80564800 len 2909.
+Facts (s6562): reinit at pc 80018094 is the game's flight-scene init (512x448 flight view, 2909-chunk pool); present in px1 and px2. px2 cache hits 0 in 14/14 runs 70-130 begins later; px1 never empties (len 661->1326).
 Hypotheses:
-- H-R1: it is the game's own recovery/rebuild (e.g. called when begin finds the cache empty, or on scene/level (re)init) -> then the collapse precedes it and the real cause is demand>supply at px2.
-- H-R2: it is a level-reload/transition path triggered by something else (death, mission restart, our pose-lock harness), and it fires BEFORE the crash, dropping outstanding chunks that live per-mode lists still point at -> the crash (SIGBUS in submitSceneNodeRender) is dangling pointers from this reinit.
-- H-R3: reinit is called repeatedly and only logged once by the row cap.
-Discriminator (ONE build, ONE run, s6553_run.sh 4 2 same env as hw7): at pc 80018094 head-store log ra (g_rs64_last caller / ctx r31 of the enclosing function), begin number, len(cache) before, sum of per-mode list lengths (0x801163C8 table + the 0x8011xxxx/0x8012A4B0 siblings read by heapWalker) before, and per begin 5990-6100 the free-list length + per-mode list lengths. H-R1: reinit begin > empty begin and ra is the begin path. H-R2: reinit begin < empty begin or per-mode lists nonempty at reinit and crash follows within a few begins. Positive control: a heapWalker splice must show per-mode list length dropping to 0 in the same table.
-Also compute supply vs demand per begin (sum lenNV-lenOH at splices vs pops) to explain px2 depletion. Do NOT redo head-store classification or REACH.
+- H-D1: px2 submits more DL chunks per frame (bigger terrain/dd4 footprint) than the pool supplies; chunks return via heapWalker only at a fixed rate -> linear depletion; the fix is a bigger pool (pool size is set by px, so check what px2 actually allocates vs reinit's 2909).
+- H-D2: the reinit builds only 2909 chunks regardless of px (the px-scaled pool is a different structure), so px2 starves where px1's smaller demand fits.
+- H-D3: heapWalker return rate drops at px2 (frame time) so supply falls behind.
+Discriminator (one run each, px1 and px2, hw7 recipe, ROGUESQ_HEADWATCH=1 FROM=5900): per begin 6053-6140 log pops, heapWalker returned count (sum lenNV-lenOH at splices), and len. H-D1: pops/begin px2 >> px1 with equal return rate. H-D2: reinit len identical (2909) in both arms. H-D3: returns/begin lower at px2. Positive control: splices already log nonzero.
