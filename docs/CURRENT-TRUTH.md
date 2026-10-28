@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6597 (2026-10-28).
+Compact operational handoff, as of Session 6598 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,6 +15,18 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G1c draw-distance phase 2 (HYPOTHESIS-ID g1c-dd-phase2).**
+  - s6598: static Mach-O mapping resolves `hudDisplayUpdateWorker+5532` to
+    generated guest store `0x800496A8: sw v0,0(a0)`. The host instruction is
+    `str w8,[x9,x10]`, with `x10 = ctx->r4 + 0x80000000`; the old source copy
+    confirms `r4` is the return saved from `getTextureTlutEntry` at
+    `0x8002333C` (`0x80049660`), while `r2` is the copied value. This rules
+    out a host/runtime dereference and the already-witnessed `0x80049644/54`
+    reads; H-other-generated-load/H-stale remains open. A persistent
+    `tlut_return` witness was added beside the existing controls and the binary
+    rebuilt. Retail completed route/130 s verification clean
+    (`alive_at_end=1`, `vi_stalls30s=0`, `crashlines=0`); the concurrent dd4
+    harness cycled retries without a durable summary before SIGKILL, so it
+    supplies no dd4 witness verdict.
   - s6594: the regenerated store watch covered `[0x951335A0,0x951335C0)` and
     fired its active player-record positive control (retail 392 rows; dd4 36
     rows) but saw zero target-range stores in both arms. Retail held clean;
@@ -164,7 +176,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
--1. **(s6595) Map the actual `hudDisplayUpdateWorker+5532` crash instruction before adding another witness.** The `0x80049644/54` read witness passed its positive controls but never observed `0x951335B0`; therefore it is not yet evidence about the faulting dereference. Use the saved dd4 crash PC and binary symbols/disassembly to map host offset `+5532` to the exact generated guest instruction and source file, then enumerate the pointer-producing loads immediately before that instruction. Hypotheses: H-overlay-alias (the local symbol names the wrong overlay body), H-other-generated-load (a different `MEM_*` site supplies the pointer), H-host-deref (the fault occurs in host/runtime code after the generated load), H-stale (the correct site reads a stale object). Discriminator: the mapped instruction must classify the fault as one of those four; if generated, add one focused read witness with the existing controls and rerun both arms; if host/runtime, capture its input pointer and writer instead. Do not mitigate.
+-1. **(s6598) Read the mapped `getTextureTlutEntry` return before the `0x800496A8` store.** The new `tlut_return` witness is persistent but the dd4 run did not finish. Run one bounded dd4 route with `ROGUESQ_HUDPTRWATCH=1` and inspect `[hudptrr] stage=tlut_return` against the known controls. Hypotheses: H-return-wild (the function returns `0x951335B0`), H-between-store (the return is valid but another generated store changes `r4`), H-host-alias (valid guest state is changed by host address conversion), H-stale (the return is an old object). Discriminator: return value equal to `0x951335B0` selects the return writer; a valid return followed by the mapped store selects an intervening generated write; a host-only mismatch selects conversion; retail/dd4-valid returns with divergent lifetime select stale state. Do not add a guard.
 -1. **(s6581) True dd4 (DD_UNSAFE=1, bundle) is clean on lvl1/5/10: 300 s holds each, 0 stall, 0 crashlines, log `multiplier 4` (one run per level; the rare dd4 gfx SIGBUS, rate <=~1/9, is not excluded). (s6582 DONE: cap lifted, dd4 allowed without UNSAFE, 150 s lvl1 clean.) Remaining: a valid same-pose dd1-vs-dd4 sheet (log g_rs64_dd_blk per fb dump; s6582 sheet invalid). Old text: lift the dd>3 cap in apply_s6036_dd.py:7 (cap to 4 without DD_UNSAFE) -> regen/rebuild, then dd1-vs-dd4 same-pose contact sheet for the owner. Default stays retail.** (s6583 DONE: valid same-pose dd1 vs dd4 sheet at docs/owner_sheet_s6583.png, [fbdump] now carries dd= tag; dd4 shows only slightly more far terrain at lvl1 pose 3 — extent-bound per s6576; sheet sent to owner for judging.)
 - [s6576, do first] lvl1 footprint saturates at the level's own terrain extent by dd6 (post area 4096=64x64; s6575's 'table too small' was mis-framed - tw/th are level dims). Census tw/th/cap per level (1,5,10 + others) via ROGUESQ_DD_LOG; if every level is extent-bound, dd range is done at ~6: bundle far/pool/cap behind the single knob and run 300 s holds on lvl 1,5,10 at dd6 + contact sheet for owner. See NEXT.md.
 - [s6567] dd6 px2/px3 with RAMTOP_MB=16 all die with Bus error si_addr=0x38000000x (A/B/C identical): pool size is NOT the px2 limit; the chunk list also still collapses. Next: symbolize the crash pc / backtrace, name the writer of the 0x80000000-offset access (see NEXT.md).

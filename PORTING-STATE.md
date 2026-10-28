@@ -171273,3 +171273,31 @@ host-side dereference, or stale state. No mitigation was added. The next
 discriminator is unchanged: map the saved host crash offset to the exact
 generated instruction and enumerate its pointer-producing loads before adding
 another witness.
+
+## Session 6598 (2026-10-28) — mapped the HUD SIGBUS to the generated TLUT-return store
+
+Ran the required offline mapping before adding a witness. `nm`/`atos` resolved
+the saved host `hudDisplayUpdateWorker+5532` offset to host instruction
+`str w8,[x9,x10]`; disassembly showed the guest PC argument at `0x800496A8`.
+The preserved generated source identifies that instruction as `sw $v0,0($a0)`.
+Immediately before it, `a0/r4` is loaded from `s2/r17`, which is the return of
+`getTextureTlutEntry` at `0x8002333C` (saved at `0x80049660`); `v0/r2` is the
+value copied. This is a generated guest store, not a host/runtime dereference,
+and the bad destination therefore comes from the TLUT-return path or a later
+generated register mutation. The earlier `0x80049644/54` material/TLUT-ID
+loads are upstream inputs, not the faulting dereference. H-host-deref and
+H-overlay-alias are ruled out by this mapping; H-other-generated-load and
+H-stale remain open.
+
+Added a persistent `tlut_return` witness to `tools/apply_s6595_hudptrread.py`
+and the vendored fixup replay, rebuilt successfully, and ran the required
+retail/full-dd4 route pair. Retail passed its positive-controlled route and
+130-second verification (`alive_at_end=1`, `vi_stalls30s=0`, `crashlines=0`).
+The dd4 shared harness cycled retries without producing a durable summary or
+completed witness capture and was explicitly SIGKILLed; this is an incomplete
+dd4 run, not a null result. The next unit is a bounded dd4 run that reads the
+new `tlut_return` value before adding any mitigation.
+
+ORIGIN: the mapped writer is the generated `0x800496A8` store; its destination
+writer/source is not yet named beyond the `getTextureTlutEntry` return path.
+No guard or skip was added.
