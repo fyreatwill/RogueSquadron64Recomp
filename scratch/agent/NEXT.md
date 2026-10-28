@@ -1,6 +1,34 @@
-# NEXT: trace the source/read path of guest HUD pointer 0x951335B0 (s6594)
+# NEXT: map the actual HUD SIGBUS instruction before adding another witness
 HYPOTHESIS-ID: g1c-dd-phase2
-Hypotheses: H-dd-source (dd4 changes the guest source word/value), H-host-alias (the same guest source is translated to a different host address), H-stale (the level reload leaves a freed HUD object), H-non-generated-writer (DMA/host code supplies the pointer outside generated stores).
-Discriminator: one build with a generated-code read witness at `hudDisplayUpdateWorker+5084` and its immediately preceding pointer-producing loads, logging source guest address/value, `s0`, guest PC, RA, phase, and VI origin; retain the active player-record control. Run the same lvl7 route in retail and full dd4 arms.
-Outcomes: differing source words/values select H-dd-source; identical guest source but differing host translation selects H-host-alias; unchanged source with lifetime divergence selects H-stale; no generated source/store witness with a host/DMA trace selects H-non-generated-writer. Do not add a guard or skip.
-Exact command: implement through the regeneration/fixup path, `cmake --build build --config Debug --target RogueSquadron64Recomp`, then run `env ROGUESQ_HUDPTRWATCH=1 zsh scratch/agent/s6591_run.sh ret` and `env ROGUESQ_HUDPTRWATCH=1 zsh scratch/agent/s6591_run.sh dd4`; compare `[hudptrr]` records before the crash.
+
+One bounded offline work unit: map the saved dd4 crash PC
+`hudDisplayUpdateWorker+5532` to the exact generated guest instruction and
+source file, then enumerate the pointer-producing loads immediately before it.
+
+Competing hypotheses:
+- H-overlay-alias: the local symbol/offset names the wrong overlay body.
+- H-other-generated-load: another generated `MEM_*` site supplies the bad
+  `0x951335B0` pointer; the s6595 `0x80049644/54` witness was simply the wrong
+  load chain.
+- H-host-deref: generated code supplies a value, but host/runtime code performs
+  the faulting dereference after the load.
+- H-stale: the correctly mapped site reads a stale object whose lifetime differs
+  between retail and dd4.
+
+Discriminator: use the captured crash PC and binary symbols/disassembly (`nm`,
+`atos`, `llvm-objdump`/`otool`) to classify the faulting instruction. A generated
+load selects H-other-generated-load or H-stale and gets one focused witness with
+the existing `[hudptrw]` player-record positive control; a host instruction
+selects H-host-deref and gets a host-side input/writer trace; an address/body
+mismatch selects H-overlay-alias. Do not add a guard or skip.
+
+Exact checks before any build:
+`grep -n -A8 -B8 'pc-symbol.*hudDisplayUpdateWorker+5532' scratch/agent/m6/g1_lvl7s6591_dd4/run.log`
+`nm -an build/RogueSquadron64Recomp | rg 'hudDisplayUpdateWorker|transformWorldPosToGridSpace'`
+`otool -tvV build/RogueSquadron64Recomp | rg -n -C4 '951335|80049644|80049654'`
+
+If the mapped site is generated, add the persistent fixup before rebuilding and
+rerun `zsh scratch/agent/s6591_run.sh ret` and `zsh scratch/agent/s6591_run.sh dd4`
+with the same envs. The oracle remains unavailable until its missing
+`libmupen64plus.dylib` core/plugin is installed; do not treat runtime output as
+independent retail ground truth.

@@ -41924,6 +41924,7 @@ RS64_REPLAY = [
     "apply_s6570_svcnull.py",
     "apply_s6591_descwatch.py",
     "apply_s6593_hudptrwatch.py",
+    "apply_s6595_hudptrread.py",
     "apply_s6088_bucketlog.py",
     "apply_s6098_dlpool.py",
     "apply_s6287_ppcount.py",

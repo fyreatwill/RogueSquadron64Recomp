@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6594 (2026-10-28).
+Compact operational handoff, as of Session 6595 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -22,6 +22,17 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
     `0x951335B0`. Direct generated-store writer H-dd-writer is refuted; the
     pointer source/read path or a host/DMA writer remains open. `prev` is only
     last-observed because the existing hook runs after stores. No guard landed.
+  - s6595: the generated read witness at `0x80049644/54` fired its same-worker
+    positive control (retail 276 rows; dd4 258 rows) and the active player-record
+    store control also fired (retail 400; dd4 251). The witnessed source address
+    stayed `0x80137634` for the phase-7 worker, but the loaded material pointer
+    differed (`0x80361808` retail vs `0x811DDDFC` dd4); neither arm read
+    `0x951335B0` at these sites. dd4 still reached the known
+    `hudDisplayUpdateWorker+5532` SIGBUS in one captured run. This selects a
+    draw-distance-dependent source difference for this worker path but does not
+    identify the crash dereference: the symbol/offset path or another generated
+    load remains open. The independent retail oracle could not run because its
+    `libmupen64plus.dylib` core/plugin was absent.
   - s6549-s6551: `ROGUESQ_DD_POOLX` > 1 at dd4 lvl1 lifts the 0x80130C4C
     2048-cell cap (2400 observed) but SIGSEGVs in `renderFlatMeshFaceGroup`
     (si_addr=0x380000004). px2/px3/px4 (cap 800/1200/1600) ALL fault at the
@@ -153,7 +164,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
--1. **(s6594) Trace the source/read path of guest HUD pointer 0x951335B0.** Add one generated-code read witness at the `hudDisplayUpdateWorker+5084` dereference and its immediately preceding pointer-producing loads, logging guest PC, source address/value, `s0`, RA, phase, and VI origin; retain the active player-record store/read control. Run retail and full dd4 with `ROGUESQ_HUDPTRWATCH=1`, `ROGUESQ_DESCWATCH=1`, `ROGUESQ_TBLNULL_LOG=1`, and `ROGUESQ_G1B=1`. If dd4 and retail read different source words/values, the differing guest source selects H-dd-interaction; if both read the same guest value but host addresses differ, select H-host-alias; if the source is unchanged but the object lifetime differs, select H-stale. Do not mitigate until the writer/source and legitimacy are established.
+-1. **(s6595) Map the actual `hudDisplayUpdateWorker+5532` crash instruction before adding another witness.** The `0x80049644/54` read witness passed its positive controls but never observed `0x951335B0`; therefore it is not yet evidence about the faulting dereference. Use the saved dd4 crash PC and binary symbols/disassembly to map host offset `+5532` to the exact generated guest instruction and source file, then enumerate the pointer-producing loads immediately before that instruction. Hypotheses: H-overlay-alias (the local symbol names the wrong overlay body), H-other-generated-load (a different `MEM_*` site supplies the pointer), H-host-deref (the fault occurs in host/runtime code after the generated load), H-stale (the correct site reads a stale object). Discriminator: the mapped instruction must classify the fault as one of those four; if generated, add one focused read witness with the existing controls and rerun both arms; if host/runtime, capture its input pointer and writer instead. Do not mitigate.
 -1. **(s6581) True dd4 (DD_UNSAFE=1, bundle) is clean on lvl1/5/10: 300 s holds each, 0 stall, 0 crashlines, log `multiplier 4` (one run per level; the rare dd4 gfx SIGBUS, rate <=~1/9, is not excluded). (s6582 DONE: cap lifted, dd4 allowed without UNSAFE, 150 s lvl1 clean.) Remaining: a valid same-pose dd1-vs-dd4 sheet (log g_rs64_dd_blk per fb dump; s6582 sheet invalid). Old text: lift the dd>3 cap in apply_s6036_dd.py:7 (cap to 4 without DD_UNSAFE) -> regen/rebuild, then dd1-vs-dd4 same-pose contact sheet for the owner. Default stays retail.** (s6583 DONE: valid same-pose dd1 vs dd4 sheet at docs/owner_sheet_s6583.png, [fbdump] now carries dd= tag; dd4 shows only slightly more far terrain at lvl1 pose 3 — extent-bound per s6576; sheet sent to owner for judging.)
 - [s6576, do first] lvl1 footprint saturates at the level's own terrain extent by dd6 (post area 4096=64x64; s6575's 'table too small' was mis-framed - tw/th are level dims). Census tw/th/cap per level (1,5,10 + others) via ROGUESQ_DD_LOG; if every level is extent-bound, dd range is done at ~6: bundle far/pool/cap behind the single knob and run 300 s holds on lvl 1,5,10 at dd6 + contact sheet for owner. See NEXT.md.
 - [s6567] dd6 px2/px3 with RAMTOP_MB=16 all die with Bus error si_addr=0x38000000x (A/B/C identical): pool size is NOT the px2 limit; the chunk list also still collapses. Next: symbolize the crash pc / backtrace, name the writer of the 0x80000000-offset access (see NEXT.md).
