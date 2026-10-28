@@ -171119,3 +171119,4 @@ rules out: needing manual env recipe for dd>1; the NULL-node fault as an unknown
 ORIGIN: n/a (bundle sets pool sizes; the NULL was legitimate pool exhaustion, writer = demand scaling, not a corruption).
 oddity: log prints "[dd] multiplier 3" for dd=4 (not investigated).
 next: 300 s bundle-only holds at dd4 on lvl 1/5/10, then 2 dd values for terrain fraction.
+DISCRIMINATION (s6578): the change is behavioural, not instrumentation (a ~15-line env-policy function in main.cpp that alters pool sizes/guards at startup). It selects H-fixedarr (fixed-size DL-chunk pool + 8 MB guard limit) over H-uninit and H-clamp for the NULL node: same build, same level, same dd4/px4, recipe on = clean 130 s, recipe vetoed = identical fault si_addr=0x380000004. Next discriminator: does the bundle-only recipe hold 300 s on lvl5/lvl10 (a fault there names a second limit); see NEXT.md.
