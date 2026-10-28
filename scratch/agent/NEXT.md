@@ -1,6 +1,6 @@
-# NEXT: px3 limit = allocAndInitDoublyLinkedNodePool12 returns NULL (s6568)
+# NEXT: px3 + MALLOC_SPILL faults NULL+0x14 in hudDisplayUpdateWorker+3332 (s6569)
 HYPOTHESIS-ID: g1c-dd-phase2
-Fact: px2 clean with ROGUESQ_DLPOOLX=1 (+DLPOOLX_MB=4, _AT=3000, RAMTOP_MB=16); px3 5/5 crash at allocAndInitDoublyLinkedNodePool12+2588, si_addr=0x380000002 (NULL+2). Arena not exhausted.
-Hypotheses: H-heap (guest rs_malloc/heap alloc inside that function returns 0: heap full at px3 -> needs 2nd arena / bigger heap); H-count (node count scales with dd and exceeds a fixed table); H-ptr (caller passes NULL pool header).
-Discriminator: read the generated allocAndInitDoublyLinkedNodePool12 source near the +2588 fault, name the callee that returned 0 (log its args/ret under env), run px3 once with that log. Also repeat px2 D arm 2x for reproducibility. One game at a time.
-Repro: zsh scratch/agent/s6553_run.sh 6 3 "ROGUESQ_RAMTOP_MB=16 ROGUESQ_DLPOOLX=1 ROGUESQ_DLPOOLX_MB=4 ROGUESQ_DLPOOLX_AT=3000" F
+Fact: px3 pool alloc now succeeds via ROGUESQ_MALLOC_SPILL=1. Next crash: hudDisplayUpdateWorker+3332, si_addr=0x380000014.
+Hypotheses: H-hud-malloc (a hud-side rs_malloc still NULL: arena full? no, 'arena full' count 0; or alloc failure path returning 0 before spill because inner not called); H-dd-table (hud reads per-object table indexed by a dd-scaled count -> NULL slot); H-spill-side (spill at boot altered a retail-NULL flag; px1 clean argues against).
+Discriminator: map +3332 to the generated hudDisplayUpdateWorker source line (funcs_*.c), name the NULL pointer's source global, log it once under env; then px3 run with ROGUESQ_HEAPLOG=1 too.
+Repro: zsh scratch/agent/s6553_run.sh 6 3 "ROGUESQ_RAMTOP_MB=16 ROGUESQ_DLPOOLX=1 ROGUESQ_DLPOOLX_MB=4 ROGUESQ_DLPOOLX_AT=3000 ROGUESQ_MALLOC_SPILL=1" X

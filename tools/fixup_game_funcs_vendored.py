@@ -37824,6 +37824,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6086:
             changed = True
             report.append(f"{p.name}: s6086 bigarena x{_n6086}")
+        import apply_s6569_spill as _a6569
+        text, _n6569 = _a6569.apply0(text)
+        if _n6569:
+            changed = True
+            report.append(f"{p.name}: s6569 spill x{_n6569}")
         text, _n6201c = _a6031p.apply_s6201_carve(text)
         if _n6201c:
             changed = True
@@ -41910,6 +41915,7 @@ RS64_REPLAY = [
     "apply_s6061_mallocnull.py",
     "apply_s6063_heaplog.py",
     "apply_s6086_bigarena.py",
+    "apply_s6569_spill.py",
     "apply_s6088_bucketlog.py",
     "apply_s6098_dlpool.py",
     "apply_s6287_ppcount.py",

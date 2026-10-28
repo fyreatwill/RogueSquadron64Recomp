@@ -2702,6 +2702,17 @@ extern "C" uint32_t rs64_s6086_divert(uint32_t req) {
     std::fprintf(stderr, "[bigarena] pool req=0x%X -> %08X\n", req, p);
     return p;
 }
+static uint32_t s_s6569_bump = 0;
+extern "C" uint32_t rs64_s6569_spill(uint32_t req) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_MALLOC_SPILL"); return e && e[0] && e[0] != '0'; }();
+    if (!on || !req) return 0;
+    uint32_t sz = (req + 15u) & ~15u;
+    if (s_s6569_bump + sz > 0x400000u) { std::fprintf(stderr, "[spill] req=0x%X arena full\n", req); return 0; }
+    uint32_t p = 0x80800000u + s_s6569_bump; s_s6569_bump += sz;
+    std::fprintf(stderr, "[spill] req=0x%X -> %08X (used 0x%X)\n", req, p, s_s6569_bump);
+    return p;
+}
+extern "C" int rs64_s6569_isspill(uint32_t p) { return p >= 0x80800000u && p < 0x80C00000u; }
 extern "C" void rs64_s5041_malloc(uint32_t ptr) {
     if (!s5041_on() || ptr == 0) return;
     s_s5041_freed.erase(ptr);
