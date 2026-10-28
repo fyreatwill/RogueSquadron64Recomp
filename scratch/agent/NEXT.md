@@ -1,7 +1,9 @@
-# NEXT: determine whether the wide-only hangar band is already in source pixels
+# NEXT: resume the source-pixel discriminator for the wide-only hangar band
 HYPOTHESIS-ID: g3-hangar-artifacts
 
-One work unit: add one phase-gated source-pixel fingerprint immediately before
+Checkpoint close-out: s6603 completed the copy/flip witness and ruled out a
+malformed wide stride. Do not rerun that experiment. The next work unit is to
+add one phase-gated source-pixel fingerprint immediately before
 the existing `present.storage` memcpy, then run retail 4:3, ASPECT 16:9, and
 ASPECT 21:9 hangar arms in one build. Keep `[fbdump]`, `[vi]`, and
 `[fb-flip-range]` enabled; the retail arm is the positive control. Fingerprint
@@ -25,12 +27,14 @@ H-width. Every null requires the retail phase/dump positive control in the same
 run. The retail oracle remains unavailable because its built core/plugin dylib
 is absent locally.
 
-Commands:
+Exact commands:
 
 ```sh
 rg -n 'screenFbBytes|present\.storage|FB_DUMP|VI_ORIGIN|viewport|scissor' lib/rt64/src/hle/rt64_state.cpp src/main
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
-# Run the three s6603 route arms with the witness and SIGKILL cleanup.
+# Reuse the saved s6602 route arms; run all three with the witness and SIGKILL
+# cleanup. Do not interpret a null unless all phase controls and the retail
+# positive-control dump fire.
 ```
 
 Do not add a guard, skip, or default change until the writer is named and its

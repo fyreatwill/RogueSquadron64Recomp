@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6603 (2026-10-28).
+Compact operational handoff, as of Session 6604 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -214,6 +214,16 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
+-1. **(s6604 resume) Determine whether the wide-only hangar band exists in source pixels.**
+  Add the phase-gated source-pixel fingerprint immediately before the
+  `present.storage` memcpy in `lib/rt64/src/hle/rt64_state.cpp`, then run the
+  saved s6602 retail 4:3, ASPECT 16:9, and ASPECT 21:9 route arms in one build.
+  Keep `[fbdump]`, `[vi]`, and `[fb-flip-range]` enabled; retail is the positive
+  control. Source-band pixels select H-source; clean source with a band only in
+  the owner-visible output selects H-viewport/H-rdp; identical source hashes
+  with a wide-only displayed band select H-width. Do not add a mitigation.
+
+### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
   Build one instrumented binary and rerun the three same-phase arms only if
   needed for the new witness. Log, per hangar VI phase, the selected width,

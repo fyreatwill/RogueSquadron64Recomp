@@ -171395,3 +171395,21 @@ mitigation was added.
 
 ORIGIN: the visible bands are a symptom; the source-copy stride is legitimate
   and is not the writer. No mitigation was added.
+
+## Session 6604 (2026-10-28) — checkpointed the source-pixel discriminator
+
+This retry followed the checkpoint-closeout rule and did not rerun s6603. The
+saved s6603 three-arm run completed with its positive control in retail 4:3,
+ASPECT 16:9, and ASPECT 21:9; it measured legitimate width-matched row strides
+(1024, 1592, and 2048 bytes) and complete selected-framebuffer source ranges.
+Therefore the wide-only hangar band is not attributed to a malformed copy/flip
+stride. The source-pixel fingerprint remains the next discriminator: inspect
+the pixels immediately before `present.storage` memcpy and compare them with
+the same-phase owner-visible captures. No new null result, writer attribution,
+or mitigation was produced in this retry.
+
+Rules out this iteration: no new runtime cause and no conclusion about
+viewport/RDP versus source pixels beyond the s6603 stride result.
+
+ORIGIN: the source-copy stride is a legitimate reader/copy path, not the band
+writer; the actual band writer remains unnamed.
