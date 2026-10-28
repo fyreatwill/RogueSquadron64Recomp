@@ -171134,3 +171134,8 @@ Grep of tools/apply_s6036_dd.py:7: ROGUESQ_DRAW_DISTANCE>3 is clamped to 3 unles
 - s6580_dd4_unsafe_lvl1: hold=302 s, alive_at_end=1, vi_stalls30s=0, crashlines=0; lvl10 (MISSION_RE='6A2900|644D00'): hold=303 s, same zeros. Both logs show `[dd] ROGUESQ_DRAW_DISTANCE multiplier 4` (true dd4, not the s6446 cap).
 - With s6579 lvl5: true dd4 is 3/3 clean on levels 1, 5, 10 at 300 s, one run each. Does not exclude the rare (<=~1/9) dd4 gfx-thread SIGBUS. No code change.
 - Next: lift the dd>3 cap behind the knob (apply_s6036_dd.py:7), rebuild, dd1-vs-dd4 contact sheet.
+
+## Session 6582 (2026-10-28) — lifted the dd>3 cap (dd4 now allowed without ROGUESQ_DD_UNSAFE)
+Removed the `v>3 && !DD_UNSAFE -> capped to 3` clause from tools/apply_s6036_dd.py:7 and from the generated funcs_9.c (same text, regex), rebuilt. Run scratch/agent/s6582_run.sh (lvl1, DRAW_DISTANCE=4 WITHOUT DD_UNSAFE, DD_TOGGLE=120, pose lock, 150 s hold): log prints `[dd] ROGUESQ_DRAW_DISTANCE multiplier 4`, 0 "capped" lines, ddtog alternates m=1/m=4, vi_stalls30s=0, crashlines=0, alive_at_end=1. UNSAFE still lifts the clamp to 8; default stays retail 1.0. ORIGIN: not a mitigation — this removes one (cap was only a qualification gate; s6581 qualified dd4 clean lvl1/5/10 x300 s).
+Contact sheet docs/owner_sheet_s6582.png is NOT a valid dd1-vs-dd4 pair: toggle-call to frame-index mapping was assumed (period 240), poses differ (ship position), and which panel is dd4 is unverified. Do not show it to the owner as evidence; a proper pair needs the toggle block logged per swap (g_rs64_dd_blk next to fb dump).
+Rule-out: "fixup did not re-apply" — the generated file had to be patched by hand once because apply script is idempotent-skip when marker present; regen will apply the new text.
