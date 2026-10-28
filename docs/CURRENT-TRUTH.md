@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6610 (2026-10-28).
+Compact operational handoff, as of Session 6611 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,6 +15,17 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-tear).**
+  - s6611: the step-column metric is blind. Control passed (flight `none`; a
+    pasted 200×640 block scores H-composite at x=640). n=1400/1500/1600
+    score `none`; stride fit R≤0.061 for slopes ±384/±512. Outer-third
+    row-to-row luma in the worst 70 rows is 24.3/19.1/18.3 versus 7.7 on
+    the 16:9 level-select and 3.8–5.1 on the quiet rows of the same 21:9
+    frames. Shift 384 or 512 makes that window worse (SAD ~50–62 vs
+    ~17–22). Refutes a 1024-vs-640/512 framebuffer shear and a stable
+    512/640 seam. The pixels are horizontal slices of the hangar floor
+    in the outer thirds; the center ring stays near the 16:9 ring.
+    Summary: `scratch/agent/s6611_tear/summary.json`. No default change.
+    Next: name that floor primitive.
   - s6610: 16:9 flight-radar clip fixed (opt-in only). The s6155 right-half add
     places the ring at retail_right+second. second=A+RA (334 at fb 796) is
     50 px past that frame. second=fbw-512 alone moved the ring to x 671..764
@@ -190,8 +201,9 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   judder (s6455, s6458).
 - **G1d (aspect): flight radar inset matches retail (s6610).** Extra width
   is real scene and the left HUD stays pinned. Open opt-in defect: 21:9
-  level-select mid-frame tear in source. The OS window remains 640x480, so
-  wider modes letterbox.
+  level-select floor is sliced into horizontal scanlines in the outer
+  thirds (s6611); not a framebuffer stride and not a 512/640 seam. The OS
+  window remains 640x480, so wider modes letterbox.
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
@@ -290,13 +302,14 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6609) Attribute the 21:9 level-select tear.** It is in the VI-bounded
-   source and in the window, on n=1400/1500/1600, and absent from the 16:9
-   and retail level-select frames and from later 21:9 bay/flight frames.
-   Discriminate a level-select-only writer (bad stride or a narrower element
-   composited into rows ~150-260) from a global 1024-wide copy. No cull or
-   skip before the writer is named. The s6610 dumps already contain those
-   frames; start offline.
+1. **(s6611) Name the 21:9 level-select floor primitive.** Outer thirds of
+   phase-4 1024×336, rows ~179–258, are horizontal slices (side dy 18–24 vs
+   7.7 at 16:9 and ~4 on the quiet rows above). Center ring dy stays near
+   the 16:9 ring. Not a 384/512-px row shear and not a 512/640 seam. Find
+   the textured primitive that covers x<width/3 in that band; compare its
+   texture stride or UV derivative at FB 1024 vs 796. No cull or default
+   change. `ROGUESQ_ASPECT_SCALE` is only the projection/footprint/viewport
+   scale (`apply_s6031_far.py`, `apply_s6144_fpx.py`).
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

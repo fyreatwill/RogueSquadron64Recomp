@@ -1,41 +1,34 @@
-# NEXT: 21:9 level-select tear
+# NEXT: name the 21:9 level-select floor primitive
 HYPOTHESIS-ID: g1d-levelselect-tear
 
-s6610 closed the flight-radar clip. Do not retune `ROGUESQ_HUD_ANCHOR` or
-`ROGUESQ_SHIFT_REGION`. The open opt-in defect is the 21:9 level-select
-tear: VI-bounded source and the paired window, frames n=1400/1500/1600,
-absent from 16:9 and retail level-select and from later 21:9 bay/flight
-(s6609). The s6610 run wrote the same frames again:
+s6611 closed the step-column test. Do not retune `ROGUESQ_HUD_ANCHOR` or
+`ROGUESQ_SHIFT_REGION`, and do not add a cull or a default change.
 
-- torn candidates: `scratch/agent/s6610_hud_anchor/wide21/fbd/fb_0001400_w1024.ppm`
-  and n=1500, n=1600
-- clean 1024 control, same run: `fb_0002500_w1024.ppm` (flight, ring inset 31)
-- 16:9 level-select control, not torn in s6609:
-  `scratch/agent/s6608_capture_bounds/wide16/fbd/fb_0001400_w796.ppm`
+The tear is horizontal slices of the hangar floor in the outer thirds of
+the phase-4 1024×336 buffer (n=1400/1500/1600). Outer-third dy over the
+worst 70 rows is 24.3 / 19.1 / 18.3, against 7.7 on the 16:9 level-select
+(sides quiet, center ring hot) and 3.8–5.1 on the quiet rows of the same
+21:9 frames. Shift 384 or 512 makes the SAD worse (~50–62 vs ~17–22).
+The center ring stays solid. Evidence: `scratch/agent/s6611_tear/summary.json`,
+`zoom_left.png`, `zoom_left_16.png`, `zoom_ring.png`.
 
-ONE work unit, offline, no rebuild. For each frame, per row, record the
-column of the strongest horizontal step and whether that column is stable
-down the frame.
+ONE work unit: name the textured primitive that paints x < width/3,
+y in 170..260, of that phase-4 frame.
 
-Hypotheses:
-- H-stride: the step's x changes linearly with y (a shear). Slope times
-  bytes-per-pixel equals a stride error (1024-wide row vs 640 or 512).
-  The clean flight frame must not shear.
-- H-composite: one y-band (around rows 150-260) has a stable vertical step,
-  and the segment on one side of it matches a narrower buffer (512 or 640)
-  while rows outside the band are one coherent 1024-wide image. Flight
-  control has no such band.
-- H-game: the step follows a silhouette, not a straight or sheared line,
-  in the torn frames only. Then the writer is the level-select draw, and
-  the next unit names that draw. No copy fix.
+Offline first. `ROGUESQ_ASPECT_SCALE` and `ROGUESQ_VPW_SCALE` are consumed
+only as the projection aspect, the footprint x scale, and the viewport
+width (`tools/apply_s6031_far.py`, `tools/apply_s6144_fpx.py`, the s6112
+viewport patch). Read those consumers. If one of them also scales a floor
+texture stride or S/T, that consumer is the suspect: say which instruction,
+and stop.
 
-Positive control, same script: copy the clean flight frame, paste a
-200-row-tall 640-wide block into its middle, and the metric must flag
-that band and must not flag the untouched flight frame. If both the
-synthetic band and the real level-select frame score the same class,
-that class is the writer family. If the real frame scores nothing, the
-metric is blind — do not add another field; look at the rows.
-
-No cull, skip, or default change. Do not run the game unless the three
-existing 1024 frames are missing or not actually level-select (check
-the shot json phase/width first).
+If they only widen the projection, the discriminator is one instrumented
+build and two arms (ASPECT 21:9 and 16:9, same route as s6610). During
+phase 4 only, log each textured primitive whose screen box hits
+x < width/3 and y in 170..260: guest PC, texture width/stride, and the
+UV derivative if the ucode stream has it. The primitive whose stride or
+derivative jumps between width 796 and 1024 is the writer. Negative
+control: 16:9 side dy stays near 7.7. Positive control: 21:9 side dy
+stays above 18 on a frame in that phase. If both arms log the same
+primitive with the same derivative, the wider frustum itself is the
+cause and the next unit says so — do not patch yet.

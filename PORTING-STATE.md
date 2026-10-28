@@ -171598,3 +171598,33 @@ bytes are not established as display pixels. Runtime artifact origin is open.
   second=fbw-512 is the inset-preserving value because the hook adds it
   on top of a position that already includes A. The wedge writer is
   SHIFT_REGION; shift=A is the value that keeps that wedge inside the ring.
+
+## Session 6611 (2026-10-28) — level-select tear is floor scanlines, not a stride
+
+- Maintenance check: CURRENT-TRUTH 38,389 bytes, below 60,000. Soak tail
+  still ends at the s6580 dd4 holds already in the ledger. No game run.
+  shots.json already tags n=1400/1500/1600 as phase 4, 1024×336, and
+  n=2500 as phase 6 flight.
+- Step-column metric in `tools/g1d_levelselect_tear.py`. Positive control
+  passed: untouched flight scores none; a 200×640 block pasted from the
+  lower flight frame into the middle scores H-composite at x=640 (median
+  23, outside 1.5, y=150..232). The three torn frames score none. Circular
+  fit R is 0.061/0.034/0.017 for slopes ±384 and ±512 (gate 0.90). This
+  refutes H-stride and H-composite. The step column does not see the tear.
+- Row inspection, same dumps, `scratch/agent/s6611_tear/summary.json`.
+  Outer-third mean |row−row| over the worst 70 rows: 21:9 n=1400
+  y=179..249 dy=24.3 (L/C/R 23.7/19.1/24.9), quiet rows dy=3.8; n=1500
+  y=188..258 dy=19.1 (18.3/14.8/19.8), quiet 5.1; n=1600 y=188..258
+  dy=18.3 (17.9/15.1/18.6), quiet 5.0. 16:9 level-select dy=7.7
+  (7.8/13.6/7.5): the center ring is the hot part and the sides are quiet.
+  Flight 1024 dy=5.3. Aligning the torn window at shift 384 or 512 raises
+  SAD from ~17–22 to ~49–62. Shift 0 wins on n=1400 and n=1600; n=1500
+  prefers shift +1 by 0.45 luma. This refutes a 1024-vs-640 or
+  1024-vs-512 framebuffer shear.
+- The rows are horizontal slices of the hangar floor in the outer thirds
+  (`scratch/agent/s6611_tear/zoom_left.png` vs `zoom_left_16.png`). The
+  center ring stays solid (`zoom_ring.png`) and its dy stays near the
+  16:9 ring. This selects the level-select floor draw under ASPECT 21:9
+  (FB 1024, ASPECT_SCALE = fbw/512 = 2). The primitive is not named.
+  No default, guard, or anchor change.
+  ORIGIN: no mitigation.
