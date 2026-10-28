@@ -1,4 +1,4 @@
-# NEXT: is desc+4 (0x80136DC4) ever non-NULL on lvl7? (H-retail-null vs H-unbuilt)
+# NEXT: does streamTerrainGridCellsByDistance run inside load_level_hmp on lvl7 dd4? (H-load-race vs H-teardown-zero)
 HYPOTHESIS-ID: g1c-dd-phase2
-State (s6589): window x0=0 w=64 z0=31 d=65 inside grid 93x96 -> overrun refuted. desc w0=w4=0 at fault.
-Work unit: log desc+0/+4 each frame transition on lvl7 at dd1 (retail) and at dd4 CAPX=2, plus a write-watch hook on 0x80136DC4. Outcomes: retail also NULL with idx!=0 cells -> retail never indexes record table for these cells (CAPX reaches cells whose flag bits retail skips): inspect cell flag bits (cellh 0x8001) in the visit gate. Retail non-NULL -> our dd4 path runs before the table is built/was freed: find the writer.
+State (s6590): retail desc+4 valid; dd4 CAPX=2 fault sees desc+0/+4 NULL with dims 93x96 already set.
+Work unit: patch logs (via fixup script) at load_level_hmp (0x80043DD8 region) entry/exit, the 0x6DC0/0x4 publish stores, loadLevelAssets zeroing, and the first streaming call with desc+4==0, each with VI number; run scratch/agent/s6590_run.sh dd4 and ret. Outcome: streaming call between dims set and publish => load race (find who calls streaming from the other thread/frame, defer it or gate on desc+4!=0); zeroing after publish => find the teardown writer.

@@ -5,7 +5,9 @@ SIGBUS). Updates $a3/$a2 (min x/z) too since the polygon is re-based on them. Re
 import pathlib
 base = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
 OLD = "    // 0x800429C0: addu        $a1, $zero, $zero\n"
-NEW = r'''    { /* PATCH: s6037 ddclamp */ static int on6037 = -1;
+NEW = r'''    { /* s6590 desc log */ static int dl = -1, dn = 0; if (dl < 0) dl = getenv("ROGUESQ_TBLNULL_LOG") ? 1 : 0;
+      if (dl && (dn++ % 300) == 0 && dn < 3000) fprintf(stderr, "[desc6590] call=%d w0=%08X w4=%08X w8=%08X wC=%08X tw=%u th=%u\\n", dn, (uint32_t)MEM_W(0, (int64_t)(int32_t)0x80136DC0), (uint32_t)MEM_W(4, (int64_t)(int32_t)0x80136DC0), (uint32_t)MEM_W(8, (int64_t)(int32_t)0x80136DC0), (uint32_t)MEM_W(0xC, (int64_t)(int32_t)0x80136DC0), (unsigned)MEM_HU(0xDF8, (int64_t)(int32_t)0x80136000), (unsigned)MEM_HU(0xDFA, (int64_t)(int32_t)0x80136000)); }
+    { /* PATCH: s6037 ddclamp */ static int on6037 = -1;
       if (on6037 < 0) { const char* e = getenv("ROGUESQ_DRAW_DISTANCE"); on6037 = (e && *e && atof(e) != 1.0) ? 1 : 0; }
       if (on6037 && MEM_W(4, (int64_t)(int32_t)0x80136DC0) != 0) {
         int64_t h = (int64_t)(int32_t)0x80132000, t = (int64_t)(int32_t)0x80136000;
@@ -29,9 +31,9 @@ NEW = r'''    { /* PATCH: s6037 ddclamp */ static int on6037 = -1;
       } }
 '''
 def apply9(text):
-    if "PATCH: s6037 ddclamp" in text and "s6586b capx" in text or OLD not in text: return text, 0
+    if "PATCH: s6037 ddclamp" in text and "s6586b capx" in text and "s6590 desc log" in text or OLD not in text: return text, 0
     if "PATCH: s6037 ddclamp" in text:
-        i = text.index("    { /* PATCH: s6037 ddclamp */"); j = text.index(OLD, i); text = text[:i] + text[j:]
+        i = text.index("    { /* s6590 desc log */") if "s6590 desc log" in text else text.index("    { /* PATCH: s6037 ddclamp */"); j = text.index(OLD, i); text = text[:i] + text[j:]
     assert text.count(OLD) == 1
     return text.replace(OLD, NEW + OLD), 1
 if __name__ == "__main__":

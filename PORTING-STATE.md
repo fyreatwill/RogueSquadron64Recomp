@@ -171190,3 +171190,10 @@ Next discriminator: log cell-array base/length vs cellp at the first [tblnull]; 
 - ORIGIN: desc+0 and desc+4 are both zero while cells with idx!=0 exist; writer of the real cell data/record table unidentified (allocation of desc+4 not traced). Not mitigated; no guard landed.
 Discrimination: refuted H-overrun (window within 93x96, 5/5 hits); selected H-unbuilt (record table pointer null for lvl7 plane) over window-clamp. Positive control: [tblnull2] fired alongside [tblnull] in every hit.
 Next: write-watch desc 0x80136DC4 on lvl7 dd1 retail (does retail ever fill it? if retail also has tbl=0 with idx!=0 cells, retail reads cells differently and CAPX widens an index-0-only region).
+
+## Session 6590 (2026-10-28) — lvl7 desc+4 is filled in retail; dd4 CAPX=2 fault sees it NULL mid-load (H-unbuilt refuted, H-load-race favoured)
+Ran: added `[desc6590]` log (ROGUESQ_TBLNULL_LOG, in apply_s6037_ddclamp.py, every 300th streaming call) and ran lvl7 at dd1 retail and dd4 CAPX=2 bundle (tools/../scratch/agent/s6590_run.sh).
+Retail arm: desc w0/w4/w8/wC are all valid heap pointers (e.g. w4=802F1254) at 93x96 across calls 301-1201, 0 crashes (positive control: dd4 arm fired [tblnull] on same build). So retail DOES fill desc+4 for lvl7; "retail never builds it" is refuted.
+dd4 arm: call=1 desc valid (32x32, pre-level); the fault then logs tbl=00000000 with cols/rows already 93x96 (s6589) and w0=w4=0 -> the dims are published but the interior pointers are not: streamTerrainGridCellsByDistance runs inside load_level_hmp's window between dims set and the relocation stores (`sw 0x6DC0 / 0x4(0x80136DC0)`, audit doc M3-S3642), or desc was zeroed by a teardown/reload. Single-source for the ordering (one dd4 run set, 5/5 earlier deterministic).
+ORIGIN: not yet a writer — the zeroing/ordering is the open question; no guard landed (TBLNULL_SKIP stays opt-in).
+Next: log at load_level_hmp entry/exit and at each streaming call's first-NULL transition with VI number, dd1 vs dd4, to see whether streaming overlaps the load.
