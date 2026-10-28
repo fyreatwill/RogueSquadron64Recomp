@@ -1745,7 +1745,7 @@ index 944e9fe..72c5fcd 100644
      std::unique_ptr<char[]> to_print = std::make_unique<char[]>(size + 1);
  
 diff --git a/librecomp/src/recomp.cpp b/librecomp/src/recomp.cpp
-index 4276b7d..decf7fc 100644
+index 4276b7d..02ce722 100644
 --- a/librecomp/src/recomp.cpp
 +++ b/librecomp/src/recomp.cpp
 @@ -398,7 +398,7 @@ recomp::RomValidationError recomp::select_rom(const std::filesystem::path& rom_p
@@ -1778,7 +1778,7 @@ index 4276b7d..decf7fc 100644
      if (game_entry.thread_create_callback != nullptr) {
          game_entry.thread_create_callback(rdram, &ctx);
      }
-@@ -543,7 +557,13 @@ void init(uint8_t* rdram, recomp_context* ctx, gpr entrypoint) {
+@@ -543,7 +557,18 @@ void init(uint8_t* rdram, recomp_context* ctx, gpr entrypoint) {
      MEM_W(osTvType, 0) = 1; // NTSC
      MEM_W(osRomBase, 0) = 0xB0000000u; // standard rom base
      MEM_W(osResetType, 0) = 0; // cold reset
@@ -1789,11 +1789,16 @@ index 4276b7d..decf7fc 100644
 +        if (mb < 4 || mb > 16) mb = 8; // s6130: allow up to 16 MB (24-bit RSP span); s6114 saw RT64 abort >8 MB
 +        MEM_W(osMemSize, 0) = mb * 1024 * 1024;
 +        rs64_ram_top = 0x80000000u + (uint32_t)mb * 1024u * 1024u;
++        {   // s6567: ROGUESQ_RAMTOP_MB=<n> widens ONLY the pointer-guard / RT64 read limit (not osMemSize) so arena DL chunks above 8 MB are not rejected as wild.
++            const char* t = std::getenv("ROGUESQ_RAMTOP_MB");
++            int tm = (t && *t) ? std::atoi(t) : 0;
++            if (tm > mb && tm <= 16) rs64_ram_top = 0x80000000u + (uint32_t)tm * 1024u * 1024u;
++        }
 +    }
  }
  
  std::u8string recomp::current_game_id() {
-@@ -726,6 +746,17 @@ bool wait_for_game_started(uint8_t* rdram, recomp_context* context) {
+@@ -726,6 +751,17 @@ bool wait_for_game_started(uint8_t* rdram, recomp_context* context) {
                  save_type = game_entry.save_type;
                  ultramodern::init_saving(rdram);
  

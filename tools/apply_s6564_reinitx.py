@@ -10,7 +10,7 @@ HOOK = r'''    { /* PATCH: s6564 reinitx */ static double _k = -1.0; if (_k < 0)
         uint32_t _want = _n0 >= 2000u ? (uint32_t)((_k - 1.0) * _n0) : 0u, _add = 0;
         static int _tail = -1; if (_tail < 0) { const char* _m = getenv("ROGUESQ_DD_REINITX_MODE"); _tail = (_m && _m[0] == 't') ? 1 : 0; }
         uint32_t _l = 0; if (_tail) { _l = _h; while (U32(MEM_W(0, (gpr)(int32_t)_l))) _l = U32(MEM_W(0, (gpr)(int32_t)_l)); }
-        for (uint32_t _g = 0; _g < _want; _g += 128u) { uint32_t _c = rs64_s6099_alloc(U32(ctx->r31)); if (!_c) break; for (uint32_t _q = 0; _q < 128u; ++_q, _c += 0x108u) {
+        for (uint32_t _g = 0; _g < _want; _g += 128u) { uint32_t _c = rs64_s6099_alloc(U32(ctx->r31)); if (!_c) break; static int _asc = -1; if (_asc < 0) { const char* _a = getenv("ROGUESQ_DD_REINITX_ASC"); _asc = (_a && *_a == '1'); } if (_asc) _c += 127u * 0x108u; for (uint32_t _q = 0; _q < 128u; ++_q, _c = _asc ? _c - 0x108u : _c + 0x108u) {
           if (_tail) { MEM_W(0, (gpr)(int32_t)_c) = 0; MEM_W(4, (gpr)(int32_t)_c) = (int32_t)_l; MEM_W(0, (gpr)(int32_t)_l) = (int32_t)_c; _l = _c; }
           else { MEM_W(0, (gpr)(int32_t)_c) = (int32_t)_h; MEM_W(4, (gpr)(int32_t)_c) = 0; if (_h) MEM_W(4, (gpr)(int32_t)_h) = (int32_t)_c; _h = _c; }
           ++_add; } }

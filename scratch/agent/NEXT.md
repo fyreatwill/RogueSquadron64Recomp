@@ -1,9 +1,7 @@
-# NEXT: name the writer of the wild 0x38000000 link when arena DL chunks are popped (head11 faults at px1)
+# NEXT: H-D2 retest with guards widened (px2 / px3, scaled DL-chunk pool)
 HYPOTHESIS-ID: g1c-dd-phase2
-Facts (s6565): tail-append (+2944, head unchanged) is fault-free at px1 but pool never emptied (min len 77) so nothing popped. Head-prepend of only +384 chunks (k=1.1, MB=1, head=0x80F18AF8) faults: NULL-node SIGBUS si_addr=0x380000004 in 4/4 attempts.
-Hypotheses:
-- H-W1: DL words written over the chunk's +0 link (the game writes >0x100 B into a chunk, harmless in the contiguous low pool because the next chunk is simply overwritten link-first, but here something else relies on it).
-- H-W2: a DL/RSP-side reader or host mirror masks addresses to 8 MB (0x7FFFFF) so arena chunks alias low RAM and get clobbered / read wrong.
-- H-W3: an uninitialised field in my chunks (only +0/+4 set; original chunks identical per relink loop 0x80018044-0x80018054, so unlikely).
-Discriminator (one build/run, scratch/agent/s6553_run.sh 6 1 "ROGUESQ_DD_REINITX=1.1 ROGUESQ_DLPOOLX_MB=1 ROGUESQ_CHUNKCUT=1" watch): add a write-watch (rs64 store hook or lldb watchpoint) on +0 of the first 8 arena chunks after [reinitx]; log PC + value of every write. Value 0x38xxxxxx written by a DL-emit PC => H-W1; writes appear at a low aliased address (arena & 0x7FFFFF) => H-W2; no foreign writes yet fault => look at the reader. Positive control: the watch fires on the chunk's own pop (+0 rewritten by the allocator).
-Then: if fixable, retest tail/head at px2 x3 for the H-D2 verdict.
+Fact (s6567): ROGUESQ_RAMTOP_MB=16 makes arena DL chunks >=0x80800000 valid to the 442 generated guards; head-prepend +384 at px1 is clean.
+Arms (build once, already built; run sequentially, one game at a time), lvl1 pinned via `zsh scratch/agent/s6553_run.sh 6 <px> "<env>" <arm>`:
+ A: px2, REINITX=2 DLPOOLX_MB=4 CHUNKCUT=1 RAMTOP_MB=16 ; B: same, REINITX unset (control, shows the s6062-style px2 chunk collapse) ; C: px3 with REINITX=3.
+Outcomes: A survives and chunk-pool min len stays >0 while B collapses -> H-D2 confirmed (pool size was the px2 limit); A collapses like B -> pool size not binding, look at per-node submit leak; A faults -> another guard/alias (grep rs64_ram_top, 0x7FFFFF masks in rt64 and ucode) .
+Then bundle RAMTOP_MB=16 into ROGUESQ_DRAW_DISTANCE>=3 handling.
