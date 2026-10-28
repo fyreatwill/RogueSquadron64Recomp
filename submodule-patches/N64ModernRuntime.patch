@@ -1745,7 +1745,7 @@ index 944e9fe..72c5fcd 100644
      std::unique_ptr<char[]> to_print = std::make_unique<char[]>(size + 1);
  
 diff --git a/librecomp/src/recomp.cpp b/librecomp/src/recomp.cpp
-index 4276b7d..02ce722 100644
+index 4276b7d..add6acb 100644
 --- a/librecomp/src/recomp.cpp
 +++ b/librecomp/src/recomp.cpp
 @@ -398,7 +398,7 @@ recomp::RomValidationError recomp::select_rom(const std::filesystem::path& rom_p
@@ -1792,7 +1792,7 @@ index 4276b7d..02ce722 100644
 +        {   // s6567: ROGUESQ_RAMTOP_MB=<n> widens ONLY the pointer-guard / RT64 read limit (not osMemSize) so arena DL chunks above 8 MB are not rejected as wild.
 +            const char* t = std::getenv("ROGUESQ_RAMTOP_MB");
 +            int tm = (t && *t) ? std::atoi(t) : 0;
-+            if (tm > mb && tm <= 16) rs64_ram_top = 0x80000000u + (uint32_t)tm * 1024u * 1024u;
++            if (tm > mb && tm <= 24) rs64_ram_top = 0x80000000u + (uint32_t)tm * 1024u * 1024u;
 +        }
 +    }
  }

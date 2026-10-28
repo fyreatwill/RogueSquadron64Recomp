@@ -171166,3 +171166,10 @@ Conclusion (two sources: 5/5 crash aligned to the 2x window + 0/10 without): the
 Rules out: "cap is a free knob" (H-cap-free). Open: does DLPOOLX scaled with CAPX (e.g. 8MB) let capx=2 survive? Keep default off.
 Discrimination (s6586): this run REFUTES H-cap-free (cap is an arbitrary trim; raising it is harmless) and SELECTS H-pool (cap = pool capacity; exceeding it exhausts DL chunks, NULL node 0x380000022). Next discriminator: same toggle run with the DL-chunk pool doubled (DLPOOLX 4MB -> 8MB) alongside CAPX=2 — if crashes go 5/5 -> 0/5 H-pool-size is confirmed as the lever; if they persist H-other (another retail-sized per-cell array, read function at pc 0x800547bc) is selected.
 This run refutes H-cap-free and selects H-pool; the next run must discriminate H-pool-size from H-other with the pool doubled.
+
+## Session 6587 (2026-10-28) — lvl7 dd4 CAPX=2 with 8 MB DL pool: crash persists, pool refuted
+Ran: added ROGUESQ_SPILL_HI=1 (spill arena moved to 0x81000000, RAMTOP up to 24 MB in recomp.cpp, lib patch exported) and ROGUESQ_DLPOOLX_MB up to 8 (upstream_compat.cpp). Recipe scratch/agent/s6587_run.sh: lvl7 dd4 bundle, CAPX=2 toggled in one run, SPILL_HI, RAMTOP 20, DLPOOLX_MB=8.
+Result: 4/4 attempts Bus error, same far=0x380000022 as s6586 (4 MB pool). Each log shows only 256 DL chunks ever allocated from the arena (+128 at 80808400), so the pool was never near exhaustion: H-pool (cap = pool capacity) REFUTED; the 700*px cap is not what the NULL node is waiting on. Last probe before the fault: [cellprobe] tbl=0x00000000 idx=1 cell=0x8001 win x0=0 w=64 z0=31 d=65 terr=93x96 (window deeper than 64 rows on a 93x96 terrain).
+Leading remaining suspect (H-table64, single-source): a retail-sized per-cell/64-wide table indexed by the widened window (s6035 64-wide stride).
+ORIGIN: no mitigation added; SPILL_HI/DLPOOLX_MB>4 are opt-in env switches.
+Single-source: one run, 4 attempts, all same fault.

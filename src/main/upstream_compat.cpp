@@ -2644,7 +2644,7 @@ extern "C" int rs64_s6286_pre(void) {  /* s6286: 0 until the AT-th beginFrameDLC
     static const int at = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_AT"); return e ? std::atoi(e) : 3000; }();
     static int calls = 0; if (++calls < at) return 0; s_s6286_armed = 1; return pre > 0 ? pre : -1; }
 extern "C" uint32_t rs64_s6099_alloc(uint32_t ra) {  /* s6099/s6284: 128 DL chunks (0x108 B) from a bump arena ending at 0x81000000 (ROGUESQ_DLPOOLX_MB, default 1, max 4); 0 when exhausted */
-    static const uint32_t cap = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_MB"); int m = e ? std::atoi(e) : 1; if (m < 1) m = 1; if (m > 4) m = 4; return (uint32_t)m << 20; }();
+    static const uint32_t cap = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_MB"); int m = e ? std::atoi(e) : 1; if (m < 1) m = 1; if (m > 8) m = 8; return (uint32_t)m << 20; }();  /* s6587: >4 needs ROGUESQ_SPILL_HI=1 (frees 0x80800000..0x81000000) */
     static uint32_t bump = 0; const uint32_t bytes = 128u * 0x108u;
     if (bump + bytes > cap) { static int w = 0; if (!w++) std::fprintf(stderr, "[dlpoolx] arena exhausted (cap %u MB)\n", cap >> 20); return 0; }
     uint32_t p = (0x81000000u - cap) + bump; bump += bytes; s_s6558_blocks.push_back(p);
@@ -2704,12 +2704,13 @@ extern "C" uint32_t rs64_s6086_divert(uint32_t req) {
     return p;
 }
 static uint32_t s_s6569_bump = 0;
+static uint32_t rs64_s6587_spill_base() { static const uint32_t b = [] { const char* e = std::getenv("ROGUESQ_SPILL_HI"); return (e && e[0] && e[0] != '0') ? 0x81000000u : 0x80800000u; }(); return b; }  /* s6587: spill arena above the RSP-visible 16 MB so the DL pool can take 8 MB */
 extern "C" uint32_t rs64_s6569_spill(uint32_t req) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_MALLOC_SPILL"); return e && e[0] && e[0] != '0'; }();
     if (!on || !req) return 0;
     uint32_t sz = (req + 15u) & ~15u;
     if (s_s6569_bump + sz > 0x400000u) { std::fprintf(stderr, "[spill] req=0x%X arena full\n", req); return 0; }
-    uint32_t p = 0x80800000u + s_s6569_bump; s_s6569_bump += sz;
+    uint32_t p = rs64_s6587_spill_base() + s_s6569_bump; s_s6569_bump += sz;
     std::fprintf(stderr, "[spill] req=0x%X -> %08X (used 0x%X)\n", req, p, s_s6569_bump);
     return p;
 }
@@ -2732,7 +2733,7 @@ extern "C" void rs64_s6571_svc(char k, uint32_t a, uint32_t b, uint32_t c, uint3
     if (c == 0) g_s6571_last_null = true;
     std::fprintf(stderr, "[svcrecv] r svc=%08X ret=%08X slot=%08X validCount=%u\n", a, b, c, d);
 }
-extern "C" int rs64_s6569_isspill(uint32_t p) { return p >= 0x80800000u && p < 0x80C00000u; }
+extern "C" int rs64_s6569_isspill(uint32_t p) { uint32_t b = rs64_s6587_spill_base(); return p >= b && p < b + 0x400000u; }
 extern "C" void rs64_s5041_malloc(uint32_t ptr) {
     if (!s5041_on() || ptr == 0) return;
     s_s5041_freed.erase(ptr);
