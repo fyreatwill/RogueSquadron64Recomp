@@ -40,6 +40,7 @@
 #include <execinfo.h>
 
 #include "recomp.h"
+#include "hle/rt64_vi.h"
 
 extern "C" uint32_t g_s6491[4]; // s6491 terrain-grid call/list/chain counters
 extern "C" uint32_t g_s6489[8]; // s6489 cumulative cell-gate exit counters (patched funcs_10.c)
@@ -583,7 +584,6 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         }
         fprintf(stderr, "[fbhash #%d] fb=0x%08X h=%016llx\n", n, fb, (unsigned long long)h);
     }
-    // ROGUESQ_FB_DUMP_DIR=<dir> (s5420): write the 320x224 RGBA16 fb as PPM every 1000th swap.
     static const char* s_fbd = std::getenv("ROGUESQ_FB_DUMP_DIR");
     static const int s_fbd_every = [] { const char* e = std::getenv("ROGUESQ_FB_DUMP_EVERY"); int v = e ? atoi(e) : 0; return v > 0 ? v : 500; }();
     static const int s_fbd_phase = [] { const char* e = std::getenv("ROGUESQ_FB_DUMP_PHASE"); return (e && *e) ? std::atoi(e) : -1; }();
@@ -592,41 +592,68 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     const bool phase_ok = !phase_gate || ((int)rs64_phase_ord() == s_fbd_phase && s_fbd_phase_left > 0);
     if (s_fbd && *s_fbd && phase_ok && (phase_gate || n % s_fbd_every == 0)) {
         if (phase_gate) --s_fbd_phase_left;
-        char path[512];
-        // s5486: dump at the VI line pitch (hi-res 640/1024 phases were previously cropped to 320x224).
-        uint32_t stride = ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG;
-        if (stride < 64u || stride > 1024u) stride = 320u;
-        // Default VI_WIDTH=1024 frames use the retail paired-row layout; an
-        // explicit widened framebuffer overrides that interpretation.
-        static const uint32_t s_fbw = [] { const char* e = std::getenv("ROGUESQ_FB_WIDTH"); return (e && *e) ? (uint32_t)std::atoi(e) : 0u; }();
-        const bool wide_fb = s_fbw > 0 && stride > 640u && s_fbw <= stride;
-        if (wide_fb) stride = s_fbw;
-        const uint32_t dw = (stride > 640u && !wide_fb) ? stride / 2u : stride;
-        const uint32_t dh = wide_fb ? 448u : (stride > 640u ? 448u : stride * 224u / 320u);
-        if (stride > 640u && !wide_fb) stride = dw;
-        snprintf(path, sizeof path, "%s/fb_%07d_w%u.ppm", s_fbd, n, stride);
-        fprintf(stderr, "[fbdump] n=%d fb=0x%08X stride=%u dd=%d\n", n, fb, stride, g_rs64_dd_blk);
-        { // s6489: cumulative buildGridCellMesh exit counters (e7 = cell passed all gates); defined in patched funcs_10.c
-            fprintf(stderr, "[cellcum] n=%d e0=%u e1=%u e2=%u e3=%u e4=%u e5=%u e6=%u e7pass=%u\n", n,
-                    g_s6489[0], g_s6489[1], g_s6489[2], g_s6489[3], g_s6489[4], g_s6489[5], g_s6489[6], g_s6489[7]);
-        }
-        fprintf(stderr, "[gridcum] n=%d calls=%u listnz=%u chainnz=%u\n", n, g_s6491[0], g_s6491[1], g_s6491[2]);
-        { extern uint32_t g_s6492[12]; fprintf(stderr, "[forface] n=%d iter=%u jal=%u lastexit=%u lastnear=%u pass=%u headset=%u epi=%u epi_s5zero=%u entries=%u a0zero=%u\n", n, g_s6492[0], g_s6492[1], g_s6492[2], g_s6492[3], g_s6492[4], g_s6492[5], g_s6492[6], g_s6492[7], g_s6492[8], g_s6492[9]); }
-        { extern uint32_t g_s6493[16]; fprintf(stderr, "[streamcum] n=%d entries=%u zearly=%u xskip=%u poolcap=%u spaneq=%u r3=%u r4=%u sbDB4=%u sbDC0=%u nonode=%u empty=%u nonempty=%u sumz=%u sumx=%u\n", n, g_s6493[0], g_s6493[1], g_s6493[2], g_s6493[3], g_s6493[4], g_s6493[5], g_s6493[6], g_s6493[7], g_s6493[8], g_s6493[9], g_s6493[10], g_s6493[11], g_s6493[12], g_s6493[13]); }
-        if (FILE* f = fopen(path, "wb")) {
-            // s5746: raw guest-RDRAM readback, NOT the RT64 window (s5745: the "crawl garbage band" was only in this dump).
-            fprintf(f, "P6\n# source=rdram-readback-not-window vi_width=%u\n%u %u\n255\n", ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG, dw, dh);
-            // s6135: ROGUESQ_FB_DUMP_VI=1 dumps the buffer the VI actually scans out (at 12 MB the swap-time fb argument is 0x70000 below VI origin).
+        [&] {
+            char path[512];
+            const auto regs = *ultramodern::renderer::get_vi_regs();
+            RT64::VI vi{};
+            vi.status.word = regs.VI_STATUS_REG;
+            vi.origin = regs.VI_ORIGIN_REG;
+            vi.width = regs.VI_WIDTH_REG;
+            vi.vCurrentLine = regs.VI_V_CURRENT_LINE_REG;
+            vi.hRegion.word = regs.VI_H_START_REG;
+            vi.vRegion.word = regs.VI_V_START_REG;
+            vi.xTransform.word = regs.VI_X_SCALE_REG;
+            vi.yTransform.word = regs.VI_Y_SCALE_REG;
+            if (!vi.width || !vi.xTransform.xScale || !vi.yTransform.yScale ||
+                vi.hRegion.hEnd <= vi.hRegion.hStart || vi.vRegion.vEnd <= vi.vRegion.vStart ||
+                vi.fbSiz() < 2) return;
+            const auto size = vi.fbSize();
+            const uint32_t dw = size.x, dh = size.y;
+            const uint32_t stride = dw;
+            const uint32_t bpp = 1u << (vi.fbSiz() - 1);
             static const bool s_fbd_vi = [] { const char* e = std::getenv("ROGUESQ_FB_DUMP_VI"); return e && *e && e[0] != '0'; }();
-            const uint32_t phys = s_fbd_vi ? (ultramodern::renderer::get_vi_regs()->VI_ORIGIN_REG & 0x00FFFFFF) : (fb & 0x00FFFFFF);
-            for (uint32_t i = 0; i < dw * dh; ++i) {
-                const uint32_t o = ((i / dw) * stride + (i % dw)) * 2u;
-                uint16_t px = (uint16_t)((rdram[((phys + o) & 0xFFFFFFu) ^ 3] << 8) | rdram[((phys + o + 1) & 0xFFFFFFu) ^ 3]);
-                unsigned char rgb[3] = {(unsigned char)(((px >> 11) & 31) * 255 / 31), (unsigned char)(((px >> 6) & 31) * 255 / 31), (unsigned char)(((px >> 1) & 31) * 255 / 31)};
-                fwrite(rgb, 1, 3, f);
+            const uint32_t phys = (s_fbd_vi ? vi.fbAddress() : fb) & 0x00FFFFFFu;
+            if (!dw || !dh || uint64_t(phys) + uint64_t(dw) * dh * bpp > 0x1000000u) return;
+            snprintf(path, sizeof path, "%s/fb_%07d_w%u.ppm", s_fbd, n, stride);
+            fprintf(stderr, "[fbdump] n=%d fb=0x%08X stride=%u dd=%d phase=%u origin=0x%08X source=0x%08X width=%u height=%u bpp=%u vi_width=%u base=%s\n",
+                    n, fb, stride, g_rs64_dd_blk, rs64_phase_ord(), vi.origin, phys,
+                    dw, dh, bpp, vi.width, s_fbd_vi ? "vi-fbAddress" : "swap");
+            { // s6489: cumulative buildGridCellMesh exit counters (e7 = cell passed all gates); defined in patched funcs_10.c
+                fprintf(stderr, "[cellcum] n=%d e0=%u e1=%u e2=%u e3=%u e4=%u e5=%u e6=%u e7pass=%u\n", n,
+                        g_s6489[0], g_s6489[1], g_s6489[2], g_s6489[3], g_s6489[4], g_s6489[5], g_s6489[6], g_s6489[7]);
             }
-            fclose(f);
-        }
+            fprintf(stderr, "[gridcum] n=%d calls=%u listnz=%u chainnz=%u\n", n, g_s6491[0], g_s6491[1], g_s6491[2]);
+            { extern uint32_t g_s6492[12]; fprintf(stderr, "[forface] n=%d iter=%u jal=%u lastexit=%u lastnear=%u pass=%u headset=%u epi=%u epi_s5zero=%u entries=%u a0zero=%u\n", n, g_s6492[0], g_s6492[1], g_s6492[2], g_s6492[3], g_s6492[4], g_s6492[5], g_s6492[6], g_s6492[7], g_s6492[8], g_s6492[9]); }
+            { extern uint32_t g_s6493[16]; fprintf(stderr, "[streamcum] n=%d entries=%u zearly=%u xskip=%u poolcap=%u spaneq=%u r3=%u r4=%u sbDB4=%u sbDC0=%u nonode=%u empty=%u nonempty=%u sumz=%u sumx=%u\n", n, g_s6493[0], g_s6493[1], g_s6493[2], g_s6493[3], g_s6493[4], g_s6493[5], g_s6493[6], g_s6493[7], g_s6493[8], g_s6493[9], g_s6493[10], g_s6493[11], g_s6493[12], g_s6493[13]); }
+            auto write_dump = [&](const char* filename, uint32_t height, bool tail_reference) {
+                if (uint64_t(phys) + uint64_t(stride) * height * bpp > 0x1000000u) return;
+                if (FILE* f = fopen(filename, "wb")) {
+                    fprintf(f, "P6\n# source=rdram-readback-not-window vi_width=%u phase=%u origin=0x%X base=0x%X stride_bytes=%u source_height=%u outside_source_tail=%u\n%u %u\n255\n",
+                            vi.width, rs64_phase_ord(), vi.origin, phys, stride * bpp, dh,
+                            tail_reference ? height - dh : 0u, dw, height);
+                    for (uint32_t i = 0; i < dw * height; ++i) {
+                        const uint32_t o = phys + i * bpp;
+                        unsigned char rgb[3];
+                        if (bpp == 2) {
+                            const uint16_t px = (uint16_t(rdram[o ^ 3]) << 8) | rdram[(o + 1) ^ 3];
+                            rgb[0] = ((px >> 11) & 31) * 255 / 31;
+                            rgb[1] = ((px >> 6) & 31) * 255 / 31;
+                            rgb[2] = ((px >> 1) & 31) * 255 / 31;
+                        } else {
+                            for (uint32_t c = 0; c < 3; ++c) rgb[c] = rdram[(o + c) ^ 3];
+                        }
+                        fwrite(rgb, 1, 3, f);
+                    }
+                    fclose(f);
+                }
+            };
+            write_dump(path, dh, false);
+            static const uint32_t tail_rows = [] { const char* e = std::getenv("ROGUESQ_FB_DUMP_TAIL_ROWS"); return e ? uint32_t(std::clamp(atoi(e), 0, 448)) : 0u; }();
+            if (tail_rows) {
+                snprintf(path, sizeof path, "%s/fb_%07d_w%u_tail-reference.ppm", s_fbd, n, stride);
+                write_dump(path, dh + tail_rows, true);
+            }
+        }();
     }
     // ROGUESQ_TRAP_AT_SWAP=N (s5466): print the host address of guest RDRAM and raise a debugger trap once at swap N,
     // so an attached lldb can arm hardware write-watchpoints on guest words (only set this under lldb).

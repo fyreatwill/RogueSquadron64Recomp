@@ -31,6 +31,9 @@ To disable: unset, set to `0`, or leave undefined.
 | Env Var | Default | Tags Enabled | When To Enable |
 |---|---|---|---|
 | `ROGUESQ_LOG_AUDIO_OBJECTS` | off | `[audio-objects-task]`, `[audio-objects-frame]` | Compare live audio task headers, state buffers, and voice records with retail. Bounded samples in title and hangar. |
+| `ROGUESQ_FB_DUMP_DIR` | unset | `[fbdump]`, raw PPM files | Guest RDRAM diagnostic, not a window capture. Uses RT64 VI source dimensions, paired-row handling and 16/32-bit pixel format; logs phase, origin, source base and byte depth. `ROGUESQ_FB_DUMP_EVERY` defaults to 500 swaps; `ROGUESQ_FB_DUMP_PHASE=N` selects one dump in that phase. |
+| `ROGUESQ_FB_DUMP_VI` | off | `base=vi-fbAddress` | Select RT64's VI source base (including its row-offset correction) instead of the requested swap address. |
+| `ROGUESQ_FB_DUMP_TAIL_ROWS` | 0 | `*_tail-reference.ppm` | Additional diagnostic reference extending 0..448 rows beyond the VI source. Header explicitly marks these rows outside the source; never interpret them as window pixels. |
 | `ROGUESQ_LOG_FB_BAND_WB` | off | `[fb-band-wb-control]`, `[fb-band-wb]` | Source-band before/after colour writeback hashes, changed bytes, control pixels and physical overlap; first 128 writebacks per VI phase. Sources registered at VI copies; earlier writes are not covered. |
 | `ROGUESQ_LOG_ALL` | off | everything below | Quick "show me everything" — heavy output, OK for one-shot diagnostic. |
 | `ROGUESQ_LOG_THREADS` | off | `[NAME] set_native_thread_name`, `[NAME] wstring`, `[NAME] SetThreadDescription`, `[RT64] Thread::setCurrentThreadName begin/done`, `[RT64] wstring ok` | Thread-name registration crashed (utf-8/utf-16 conversion, COM init). Useful only when investigating thread-naming code. |

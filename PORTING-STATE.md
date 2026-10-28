@@ -171500,3 +171500,62 @@ an actual window capture, before adding any further rendering instrument.
 ORIGIN: no mitigation. The oversized dump is written by the diagnostic
 osViSwapBuffer_recomp PPM loop, reading beyond the actual source; those tail
 bytes are not established as display pixels. Runtime artifact origin is open.
+
+## Session 6608 (2026-10-28) — bounded the framebuffer dump to the VI source
+
+- The previous iteration's exit commit had not landed. This entry records
+  that work from the capture already on disk; session 6609 is the new run.
+- Maintenance check at the follow-up was under the 60,000-byte cap. No new
+  soak verdict sat past the s6580 lines already folded into CURRENT-TRUTH.
+- `osViSwapBuffer_recomp` was reading a hardcoded dump height (448 wide,
+  358 for 512-wide) instead of `RT64::VI::fbSize`. Retail and 16:9 captures
+  from that binary match the RT64 copy tuples: title 512x444, hangar
+  512x336 and 796x336 (`matched_rt64` true in
+  `scratch/agent/s6608_capture_bounds/bounds_summary.json`). The OS window
+  shots at hangar phase 5 do not show the bottom tail. The +112-row
+  reference PPMs do contain neighbouring framebuffer bytes below the source.
+- This selects H-dump-overread for the bottom band previously treated as a
+  wide-only renderer defect. It refutes using the raw PPM height as the
+  presented image. It does not adjudicate other hangar geometry.
+- Sheet: `docs/owner_sheet_s6608_capture_bounds.png`. Defaults unchanged.
+  ORIGIN: no mitigation. The extra rows were the diagnostic reader, not
+  display pixels.
+
+## Session 6609 (2026-10-28) — compared real windows at 4:3, 16:9 and 21:9
+
+- Maintenance check: CURRENT-TRUTH 36,345 bytes, below 60,000. Soak tail
+  still ends at the s6580 dd4 holds already recorded. Screen lock check
+  via ioreg (`CGSSessionScreenIsLocked` / `IOConsoleLocked`) was false.
+- Work unit was the actual-window owner sheet, not another writeback census.
+  Retail and 16:9 reuse the s6608 capture (same binary and route). 21:9 was
+  a new 160 s run, SIGKILL, alive, rc=-9, 0 crash lines
+  (`scratch/s6609_owner_sheet/wide21/summary.json`). `ROGUESQ_ASPECT=21:9`
+  logged FB_WIDTH=1024 (the 1045 cap), scales=2.0000, hud anchor=256.0,515.0.
+- Positive control: retail hangar source 512x336 is edge-filled and its
+  window has no letterbox bars; retail flight radar is a complete disc at
+  source x 388..476 (right inset 35, width 89) and the left shield is
+  x 44..71, y 375..413.
+- 16:9 hangar source 796x336 shows side walls and the SELECT LEVEL / JADE
+  MOON text that retail crops. Flight left shield is the same x 44..71.
+  Flight radar is x 722..794 (right inset 1, width 73). The window shot
+  shows the same clip. 21:9 flight radar is x 903..991 (inset 32, width 89)
+  and the left shield is again x 44..71. Both right edges equal
+  476 plus the logged anchor right term (334 and 515). That selects the
+  s6155 HUD-anchor right-half add as the clip writer, and refutes a
+  presentation-only clip. Per-sprite f4 was not traced; the next unit
+  changes that constant and remeasures.
+- 21:9 level-select source frames n=1400, 1500 and 1600 are torn through
+  the middle, and the phase-4 window shot matches n=1400. The 16:9 and
+  retail level-select sources are not torn. Later 21:9 bay/craft frames
+  (n=1700+) and flight (1024x444) are clean. This selects H-game for that
+  tear and refutes H-present. The writer is not named.
+- Window black bands, rows with >95% near-black pixels: none on retail
+  hangar; 16:9 about 120 px top and bottom; 21:9 about 205 px. The SDL
+  window is hardcoded 640x480, so this is letterboxing of a wider
+  framebuffer, not missing source rows. Flight content aspect matches
+  1024/444. fb-flip-range keeps 64 lines per phase, and the 21:9 hangar
+  stayed in phase 4 after a 512x444 title, so that log does not contain
+  size=1024x336. The dump header and the window are the hangar witnesses.
+- Sheet: `docs/owner_sheet_s6609_aspect.png`. No default, guard, or anchor
+  constant was changed.
+  ORIGIN: no mitigation.

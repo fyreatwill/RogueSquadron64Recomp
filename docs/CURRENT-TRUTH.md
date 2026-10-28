@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6607 (2026-10-28).
+Compact operational handoff, as of Session 6609 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -14,7 +14,30 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   first-mission endurance (3x600 s lvl1/5/7, s6442), and G2 audio are closed.
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
-- **Active thread: G3 render fidelity / hangar artifacts (HYPOTHESIS-ID g3-hangar-artifacts).**
+- **Active thread: G1d aspect owner sheet (HYPOTHESIS-ID g1d-hud-anchor-right).**
+  - s6609: retail, 16:9 and 21:9 hangar+flight, window backing-store paired
+    with VI-bounded source. Screen was unlocked. All three arms alive, 0 crash
+    lines. Extra width is additional scene (level-select text and side walls
+    that retail crops). Left flight shield stays at source x 44..71 on every
+    width. Retail radar x 388..476 (inset 35, width 89); 21:9 radar x 903..991
+    (inset 32, width 89); 16:9 radar x 722..794 (inset 1, width 73) and the
+    window shows the same clip. Those edges are exactly retail+334 and
+    retail+515, the logged `ROGUESQ_HUD_ANCHOR` right terms (A+RA in
+    `rs64_g1d_apply_aspect_policy`, consumed by `tools/apply_s6155_hudcpos.py`).
+    Per-sprite f4 was not logged. 21:9 level-select source is torn across the
+    middle on n=1400/1500/1600 and the paired window matches; 16:9 and retail
+    level-select are not torn. Later 21:9 bay/craft frames and flight are
+    clean. Black bars (none / ~120 px / ~205 px) are the fixed 640x480 SDL
+    window letterboxing a wider framebuffer, not missing source rows. This
+    selects H-game for the 16:9 radar clip and the 21:9 level-select tear, and
+    refutes H-present for both. Sheet: `docs/owner_sheet_s6609_aspect.png`.
+    Defaults unchanged. fb-flip-range logs only 64 rows per phase, so the
+    21:9 hangar copy (still phase 4 after the 512 title) is not in that log.
+  - s6608: VI fbSize/fbAddress dumper. Retail and 16:9 copies match
+    512x444 / 512x336 / 796x336. Window captures lack the old bottom tail;
+    +112-row references show pixels outside the source. Selects
+    H-dump-overread for that band, not renderer corruption. Sheet:
+    `docs/owner_sheet_s6608_capture_bounds.png`. Do not repeat the band census.
   - s6607: a before/after colour-writeback witness passed its injected-byte
     control in retail and ASPECT 16:9 (12 MB); both 95 s arms finished alive,
     0 crash markers. In hangar phase 5, the two wide sources had 48/25
@@ -154,11 +177,17 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   (b) spike wedges: H-hw-draws, angrylion lights the same 16/79 wedges
   (s6454), `ROGUESQ_CULL_SPIKE` stays opt-in; (c) turning shake: retail 30 fps
   judder (s6455, s6458).
-- **G1d (aspect): closed on engineering** (s6430 flight fill/HUD/logo, s6438
-  hangar rows); owner contact sheet outstanding; native hangar artifacts parked.
+- **G1d (aspect): owner sheet landed (s6609).** Extra width is real scene
+  and the left HUD stays pinned. Open opt-in defects, not retail defaults:
+  16:9 flight radar clipped in source; 21:9 level-select mid-frame tear in
+  source. The OS window remains 640x480, so wider modes letterbox.
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
+- s6602 "wide-only bottom garbage selects a stale/stride renderer family"
+  (s6607-s6608: diagnostic height exceeded the VI source; corrected bounded
+  dumps and OS window captures lack the tail). Believable because raw guest
+  PPMs looked like window captures. This does not close native geometry issues.
 - s6606 "the wide hangar band is already in source pixels" (s6607: source
   fingerprint checks columns 269..335 in 336 rows; visible bottom garbage is
   in a raw 448-row dump beyond that copy). Believable because the raw PPM
@@ -249,14 +278,20 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
--1. **(s6607) Correct diagnostic framebuffer bounds, then check the actual window.**
-  `upstream_compat.cpp` forces wide dumps to 448 rows (retail 512 -> 358)
-  while the hangar source is 336 rows. Use the actual VI/source shape for
-  dumps, preserving the source base/stride and explicit provenance. Validate
-  retail and 16:9 in one build; compare the corrected dump with an actual
-  game-window capture in the same phase. Hypotheses: H-dump-overread,
-  H-window-present, H-real-source. Do not infer an image defect from a
-  nonzero fingerprint or writeback overlap. No rendering mitigation yet.
+1. **(s6609) Correct the 16:9 flight-radar anchor.** The observed disc edges
+   are retail + the logged `ROGUESQ_HUD_ANCHOR` right term (334 at 796, 515
+   at 1024). 334 pushes the retail right edge 476 to 810, 14 px past a
+   796-wide source; 515 lands at 991 (inset 32) and the disc stays whole.
+   Change only the right-half add so a 796-wide frame keeps inset ~35 and
+   width ~89, and confirm 21:9 stays within a few pixels of inset 32.
+   Positive control: the left shield stays at x 44..71. One build, retail
+   control plus both wide arms, same route as s6609. Opt-in only.
+2. **(s6609) Attribute the 21:9 level-select tear.** It is in the VI-bounded
+   source and in the window, on n=1400/1500/1600, and absent from the 16:9
+   and retail level-select frames and from later 21:9 bay/flight frames.
+   Do this after item 1. Discriminate a level-select-only writer (bad stride
+   or a narrower element composited into rows ~150-260) from a global
+   1024-wide copy. No cull or skip before the writer is named.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
@@ -304,7 +339,8 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
 7. **G3c owner judgement**: edge sheet `docs/owner_sheet_s6449_edge.png`,
    `docs/owner_sheet_s6439.png`; ask whether `ROGUESQ_CULL_SPIKE` should be
    default-on.
-8. **G1d owner contact sheet** (16:9/21:9 flight and hangar).
+8. **G1d owner contact sheet: done (s6609,** `docs/owner_sheet_s6609_aspect.png`).
+   Follow-ups are next-steps 1 and 2, not another capture pass.
 9. **G1 coverage (c)+(d)**: framebuffer terrain/craft/HUD evidence and a
    forced-hit objective response for every level 0..18.
 10. **Ladder (ITERATION.md 3c)**: after the above, G3 render fidelity

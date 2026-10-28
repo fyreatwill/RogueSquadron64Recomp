@@ -1,51 +1,54 @@
-# NEXT: FIX DIAGNOSTIC CAPTURE BOUNDS AND VERIFY THE WINDOW
-HYPOTHESIS-ID: g3-hangar-artifacts
+# NEXT: 16:9 flight radar anchor
+HYPOTHESIS-ID: g1d-hud-anchor-right
 
-s6607 completed the requested writeback census in retail and wide16 (12 MB).
-The narrow no-writeback hypothesis is refuted: hangar wide sources have 48
-and 25 intersecting writebacks, each changing the watched columns. Neither
-arm's initial source fingerprints match a preceding writeback post hash.
-Do not repeat this census or call overlap an artifact attribution.
+s6609 closed the owner-sheet question. Retail, 16:9 and 21:9 hangar+flight
+windows were paired with VI-bounded sources (`docs/owner_sheet_s6609_aspect.png`).
+Extra width is additional scene. The left shield is x 44..71 at every width.
+The flight radar's right edge is retail 476, 16:9 794 (clipped, width 73 vs
+89), 21:9 991 (whole, inset 32). Those are exactly 476+334 and 476+515.
 
-The decisive correction: raw dumps exceed the actual logged source height.
-Retail: 512x358 vs 512x336. Wide16: 796x448 vs 796x336. Same-frame wide
-bottom garbage lies below the 336-row boundary; the dump code explicitly
-forces 448 rows. The previous column ROI is not that bottom band.
-See docs/owner_sheet_s6607_capture_bounds.png. This is a capture diagnosis,
-not proof of what the RT64 window displays, and not a rendering fix.
+The logged anchor pairs are `142,334` at fb 796 and `256,515` at fb 1024
+(`A, A+RA` from `rs64_g1d_apply_aspect_policy`). `tools/apply_s6155_hudcpos.py`
+does `n = x - A`; left items keep `n`, right items get `n + second`. If the
+game already added `A` before that hook, the right edge becomes retail+second.
+second=`fbw-512` would preserve the retail inset (796 -> 760, 1024 -> 988).
+The current second term overshoots 796 by 50 px and clips, and overshoots
+1024 by only 3 px. Per-sprite f4 was not logged; this run is the test.
 
-ONE bounded change: correct the existing framebuffer dumper to derive its
-height/layout from the actual VI/source geometry instead of width heuristics.
-Keep the raw dump's provenance and log base, stride and dimensions. Read the
-RT64 shape calculation first; reuse its semantics rather than a hangar-only
-336 constant. Preserve paired-row retail modes and validate the title too.
+ONE work unit: change only the second `ROGUESQ_HUD_ANCHOR` number from
+`A+RA` to `fbw-512` in `src/main/main.cpp` (`rs64_g1d_apply_aspect_policy`).
+Do not change `ROGUESQ_SHIFT_REGION` or `ROGUESQ_LOG_REGION` in the same arm.
+Rebuild the game target only (the patch already reads the env). No regen.
 
-Competing hypotheses and discriminator, written before building:
-- H-dump-overread: garbage exists only in rows outside the actual source;
-  correctly bounded dump and an actual window capture both lack it.
-- H-window-present: bounded source is clean but actual window still shows
-  a band; presentation/layout is the remaining owner.
-- H-real-source: the same visible band exists within both bounded source
-  and window; only then pursue the producing RDP/guest writer.
-The positive control is actual image content plus a deliberately oversized
-reference crop showing the known tail. Match by VI transition/source address,
-not dump ordinal or elapsed time. A nonzero hash alone is not a control.
+Hypotheses:
+- H-anchor: the s6155 right-half add is the writer. After the change, 16:9
+  radar right edge moves from 794 to about 760 (inset ~35, width ~89) and
+  21:9 moves from 991 to about 988. Left shield stays x 44..71.
+- H-not-live: the boxes matched the constants by coincidence. The radar box
+  does not move. Revert the constant in this same iteration.
+- H-other-hud: the radar moves as predicted but another right-edge HUD
+  element (the green reticle) leaves the frame or doubles its error. Then
+  the single second-term is not safe for every right-half sprite; report
+  which element and do not keep the change.
 
-Preparation/build:
+Discriminator: radar bounding box on the VI-bounded flight source, same
+route as s6609, 16:9 and 21:9, one binary. Positive control: left shield
+box unchanged, and both arms reach flight (phase width 796 or 1024, height
+444) with 0 crash lines. Retail inset 35 from s6609 is the control; do not
+spend a third run unless the wide arms fail to reach flight.
+
 ```sh
-rg -n 'const uint32_t dh|source=rdram-readback|s_fbd_vi' src/main/upstream_compat.cpp
-rg -n 'screenFbSize|screenFbAddress|VI.*[Ss]ize' lib/rt64/src/hle/rt64_state.cpp
+# edit main.cpp second anchor term, then:
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
+# screen unlocked (ioreg CGSSessionScreenIsLocked / IOConsoleLocked)
+# reuse scratch/agent/s6609_capture_run.py env with ROGUESQ_ASPECT=16:9 then 21:9
+# SIGKILL after the flight window shot. Measure green-left and red-right boxes.
 ```
-Reference recipe (capture driver lives in scratch and has no build changes):
-```sh
-python3 scratch/agent/s6607_band_wb_run.py
-python3 tools/g3_hangar_writeback.py scratch/agent/s6607_band_wb/retail/run.log scratch/agent/s6607_band_wb/wide16/run.log
-```
-Use NEW output paths for the next run; preserve s6607 artifacts. Arm retail
-and ASPECT=16:9 with OSMEM_MB=12 from the same binary, one game at a time,
-phase-gated autopilot as in the driver, screen unlocked. Capture the actual
-window using a window screenshot (e.g. screencapture -x -l <window-id> PATH),
-not a PPM read of guest RAM. Check screenshot permission before starting;
-a denial is not evidence about rendering. SIGKILL game at the deadline.
-Do not add a rendering guard, cull or default change.
+
+Do not touch the 21:9 level-select tear in this unit. It is next-steps item 2:
+source and window both torn on n=1400/1500/1600, absent at 16:9 and retail,
+so the writer is still unnamed. No cull.
+
+The 21:9 fb-flip-range log missed the hangar copy because it keeps only 64
+lines per phase and the hangar stayed in phase 4. Do not read that absence
+as "RT64 never copied 1024x336".
