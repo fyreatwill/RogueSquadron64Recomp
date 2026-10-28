@@ -171079,3 +171079,8 @@ Discrimination (s6571): this refutes H-stop (zero [svcstop] events) and refutes 
 - Fix (ORIGIN: the mask itself; the writer of the zero is nobody, the host queue ops used an aliased address): TO_PTR mask 0x7FFFFF -> 0x1FFFFFF (still bounded inside the 512 MB map, so s5240's wild-pointer protection holds). Result: px3+spill 1 run: mission_verified_130s, 0 CRASH, svcrecv slots real (validCount=31); before: 8/8 faults. One run -> confirm 3x before claiming.
 - Hygiene incident: re-running recipes with pkill of the game made the OLD driver loops retry and spawn concurrent games (5 at once) — kill drivers by PID, not just the game.
 - lib edited: ultra64.h, mesgqueue.cpp (createmq cap); submodule-patches refreshed via export.sh.
+
+## Session 6573 (2026-10-28) — confirmed TO_PTR 8 MB-alias fix: dd6 px3+spill 3/3 clean; host 0x7FFFFF class audited
+- Ran `s6553_run.sh 6 3 <spill recipe>` arms A, B, C one at a time (lvl1, hold 130 s). All three: alive_at_end=1, vi_stalls30s=0, crashlines=0. With s6572's 1/1 this is 4/4 clean vs 8/8 faults before the 0x1FFFFFF mask. The px3+spill HUD fault is closed.
+- Alias-class grep (`0x7FFFFF` in lib/N64ModernRuntime, src): the only functional site was ultra64.h TO_PTR (already widened). Remaining hits are main.cpp DL-walk/dump probes (6729-6915, 7106-7119, 8479, 9523) and dpc_bridge.cpp 4075/4139 SETTIMG diagnostic; they only affect diagnostic output for >8 MB addresses, not game state. Classified diagnostic-only, not changed. Not tested at runtime beyond reading the code (single-source).
+- Not done: px4 / dd=8 run (next unit).
