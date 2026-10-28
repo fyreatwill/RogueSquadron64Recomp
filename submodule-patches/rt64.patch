@@ -5632,7 +5632,7 @@ index e3d289c..5da989d 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..3d44e74 100644
+index 10f98af..8014c5d 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -7451,13 +7451,41 @@ index 10f98af..3d44e74 100644
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
                              const std::scoped_lock lock(ext.presentQueue->screenFbChangePoolMutex);
-@@ -2018,9 +3429,20 @@ namespace RT64 {
+@@ -2018,9 +3429,48 @@ namespace RT64 {
              // Store the RAM required by the VI so the render thread can display it if necessary.
              if (screenFbSiz >= G_IM_SIZ_16b) {
                  uint32_t screenFbBytes = uint32_t(screenFbSize.x * screenFbSize.y) << (screenFbSiz - 1);
 -                present.storage.resize(screenFbBytes);
 -                memcpy(present.storage.data(), &RDRAM[screenFbAddress], screenFbBytes);
 -                uint64_t newScreenHash = XXH3_64bits(present.storage.data(), screenFbBytes);
++                static const bool s_fb_flip_log = [] {
++                    const char *v = std::getenv("ROGUESQ_LOG_FB_FLIP_RANGE");
++                    return v && v[0] && v[0] != '0';
++                }();
++                if (s_fb_flip_log && (screenFbSize.x == 512u || screenFbSize.x == 796u || screenFbSize.x == 1024u)) {
++                    static uint32_t lastPhase = 0xFFFFFFFFu;
++                    static uint32_t phaseRows = 0;
++                    const uint32_t phase = rs64_phase_ord ? rs64_phase_ord() : 0u;
++                    if (phase != lastPhase) {
++                        lastPhase = phase;
++                        phaseRows = 0;
++                    }
++                    if (phaseRows++ < 64u) {
++                        const uint32_t rowStride = uint32_t(screenFbSize.x) << (screenFbSiz - 1);
++                        std::fprintf(stderr,
++                            "[fb-flip-range] phase=%u early=%d vi_width=%u vi_origin=0x%06X "
++                            "fb=0x%06X size=%ux%u siz=%u row_stride=%u source=[0x%06X,0x%06X) "
++                            "storage_bytes=%u\n",
++                            phase, fromEarlyPresent ? 1 : 0, newVI.width,
++                            newVI.origin & 0x00FFFFFFu, screenFbAddress & 0x00FFFFFFu,
++                            (unsigned)screenFbSize.x, (unsigned)screenFbSize.y,
++                            (unsigned)screenFbSiz, rowStride,
++                            screenFbAddress & 0x00FFFFFFu,
++                            (screenFbAddress + screenFbBytes) & 0x00FFFFFFu,
++                            screenFbBytes);
++                        std::fflush(stderr);
++                    }
++                }
 +                { static const bool s_wbl = std::getenv("ROGUESQ_WBLOG") != nullptr;
 +                  if (s_wbl) fprintf(stderr, "[wblog-vi] ph=%u origin=0x%X w=%d h=%d siz=%u bytes=0x%X\n", rs64_phase_ord ? rs64_phase_ord() : 0u, screenFbAddress, int(screenFbSize.x), int(screenFbSize.y), unsigned(screenFbSiz), screenFbBytes); }
 +                if (uint64_t(screenFbAddress) + screenFbBytes > 0x1000000) screenFbBytes = 0; // s6130 16MB; // s5254: RDRAM above 8MB is PROT_NONE
@@ -7475,7 +7503,7 @@ index 10f98af..3d44e74 100644
                  screenChangesMade = (newScreenHash != lastScreenHash);
                  lastScreenHash = newScreenHash;
              }
-@@ -2033,26 +3455,51 @@ namespace RT64 {
+@@ -2033,26 +3483,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -7545,7 +7573,7 @@ index 10f98af..3d44e74 100644
              }
          }
  
-@@ -2060,6 +3507,7 @@ namespace RT64 {
+@@ -2060,6 +3535,7 @@ namespace RT64 {
          if (fromEarlyPresent || viDifferent || fbChangesMade || screenChangesMade || forceAdvance) {
              // Push a new renderer event to the timeline for presenting this VI.
              present.screenVI = newVI;
@@ -7553,7 +7581,7 @@ index 10f98af..3d44e74 100644
              advancePresent(present, false);
              ext.presentQueue->advanceToNextPresent();
  
-@@ -2910,4 +4358,4 @@ namespace RT64 {
+@@ -2910,4 +4386,4 @@ namespace RT64 {
              break;
          }
      }

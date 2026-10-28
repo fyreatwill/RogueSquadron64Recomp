@@ -171374,3 +171374,24 @@ ORIGIN: generated store `0x800496A8`; its destination source remains the
 
 ORIGIN: the visible bands are a symptom; the writer is not yet named. No
 mitigation was added.
+
+## Session 6603 (2026-10-28) — attributed wide hangar copy stride
+
+- Work unit: added a phase-gated `[fb-flip-range]` witness at RT64's real
+  `present.storage` framebuffer copy, logging VI width/origin, selected source
+  framebuffer, row stride, and copied guest range. Built one Debug binary and
+  ran the same hangar route in retail 4:3, ASPECT 16:9, and ASPECT 21:9.
+- Results: all three arms held clean (0 crash lines, 0 VI stalls), and the
+  witness fired in every arm including the retail positive control. Retail
+  copied 512-wide rows at stride 1024; 16:9 copied 796-wide rows at stride
+  1592; 21:9 copied 1024-wide rows at stride 2048. The source range covered
+  the complete selected framebuffer in each case.
+- Rules out: a malformed wide copy/flip stride as the writer of the bands.
+  Does not yet show whether the band is already in source pixels or is
+  introduced by viewport/RDP presentation. The retail oracle could not be
+  used because the local `tools/oracle` tree has no built core/plugin dylib.
+  Next unit: phase-gated source-pixel fingerprint paired with the same-phase
+  output capture.
+
+ORIGIN: the visible bands are a symptom; the source-copy stride is legitimate
+  and is not the writer. No mitigation was added.

@@ -1,34 +1,36 @@
-# NEXT: attribute the wide-only hangar bands to framebuffer stride
+# NEXT: determine whether the wide-only hangar band is already in source pixels
 HYPOTHESIS-ID: g3-hangar-artifacts
 
-One work unit: add one phase-gated witness for the framebuffer copy/flip path,
-then run the retail 4:3, ASPECT 16:9, and ASPECT 21:9 hangar arms in one build.
-The witness must log VI width/origin, selected framebuffer, row stride, and the
-source/destination range used by the wide framebuffer path. Keep the current
-`[fbdump]` and `[vi]` controls enabled; the retail arm is the positive control.
+One work unit: add one phase-gated source-pixel fingerprint immediately before
+the existing `present.storage` memcpy, then run retail 4:3, ASPECT 16:9, and
+ASPECT 21:9 hangar arms in one build. Keep `[fbdump]`, `[vi]`, and
+`[fb-flip-range]` enabled; the retail arm is the positive control. Fingerprint
+only the measured band and its matching rows: first/last changed x,
+nonzero/color-transition count, and a compact hash of source pixels. Do not
+dump run-lifetime data.
 
 Competing hypotheses:
 
-- H-stride: the wide framebuffer row/flip stride or source range leaves stale
-  data in the measured band.
-- H-viewport: the viewport/scissor is fixed incorrectly and exposes a band at
-  a screen-space boundary.
-- H-rdp: the RDP/RT64 edge treatment produces the band after the source image
-  is already correct.
-- H-game: the submitted hangar geometry or texture itself contains the band.
+- H-source: the game/RDP-produced source framebuffer already contains the band.
+- H-viewport: the source is clean, but a fixed screen-space viewport/scissor
+  boundary exposes it in the displayed output.
+- H-rdp: RT64's RDP/presentation path introduces the band after the source copy.
+- H-width: the source pattern is identical across widths, but only wide output
+  shows the band because of a width-dependent presentation transform.
 
-Discriminator: a logged source range or stride that overlaps the measured
-16:9 x=269..334 band or 21:9 x=347..639 band selects H-stride; identical
-stride/source with a fixed screen-space boundary selects H-viewport/H-rdp;
-identical source geometry and pixels in retail and wide arms selects H-game.
-Every null requires the retail phase/dump positive control in the same run.
+Discriminator: band pixels in the source before `memcpy` select H-source;
+clean source plus band in the owner-visible output selects H-viewport/H-rdp;
+identical source hashes across arms with a wide-only displayed band select
+H-width. Every null requires the retail phase/dump positive control in the same
+run. The retail oracle remains unavailable because its built core/plugin dylib
+is absent locally.
 
 Commands:
 
 ```sh
-rg -n 'FB_WIDTH|FB_DUMP|VI_ORIGIN|stride|copy|flip|scissor|viewport' src lib/rt64
+rg -n 'screenFbBytes|present\.storage|FB_DUMP|VI_ORIGIN|viewport|scissor' lib/rt64/src/hle/rt64_state.cpp src/main
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
-# Run the three s6602 route arms with the new witness and SIGKILL cleanup.
+# Run the three s6603 route arms with the witness and SIGKILL cleanup.
 ```
 
 Do not add a guard, skip, or default change until the writer is named and its

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6601 (2026-10-28).
+Compact operational handoff, as of Session 6603 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,6 +15,7 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G3 render fidelity / hangar artifacts (HYPOTHESIS-ID g3-hangar-artifacts).**
+  - s6603: a phase-gated witness at RT64's actual `present.storage` framebuffer copy ran in retail 4:3, ASPECT 16:9, and ASPECT 21:9 from one Debug build. All arms held clean (0 crash lines, 0 VI stalls) and the witness fired in each positive-control phase. Retail used 512-wide rows with a 1024-byte stride; 16:9 used 796-wide rows with a 1592-byte stride; 21:9 used 1024-wide rows with a 2048-byte stride. Each source range covered the complete selected framebuffer. This rules out a malformed wide copy/flip stride as the band writer, but does not distinguish whether the band is already in source pixels or is introduced by viewport/RDP presentation. The local retail oracle cannot currently run: `tools/oracle` has no built core/plugin dylib. Next: phase-gated source-pixel fingerprint versus the owner-visible output in the same hangar phase.
   - s6602: same-route hangar captures completed for retail 4:3, ASPECT 16:9,
     and ASPECT 21:9 in one Debug build. All three phase controls fired and
     all arms held clean (0 crash lines, 0 VI stalls). Retail's 512-wide hangar
