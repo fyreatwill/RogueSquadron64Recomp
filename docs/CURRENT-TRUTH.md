@@ -177,3 +177,4 @@ background, closed threads, and the archived backlogs are in
 - s6571 (SUPERSEDED by s6572: queue was never zero-written, the host aliased it to 0x80155130 via the 8 MB TO_PTR mask).  Tool note s6572: ROGUESQ_LOG_FL_ZERO_WATCH=1 ROGUESQ_FL_ZERO_ADDR=<phys hex, now up to 32 MB> ROGUESQ_FL_ZERO_ALWAYS=1 is a no-lldb 16-byte write watch with function attribution (lldb launch hangs in dyld under this harness).
 
 - s6573: px3+spill dd6 confirmed 4/4 clean after TO_PTR mask widening (s6572); px3 fault CLOSED. Next: px4/dd=8 (see NEXT.md).
+- s6574: px4/dd8 (2/2) and px5/dd12 (1/1) lvl1 130 s clean with spill recipe; effective dd and terrain fraction not yet verified (NEXT.md).

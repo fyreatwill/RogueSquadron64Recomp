@@ -171084,3 +171084,10 @@ Discrimination (s6571): this refutes H-stop (zero [svcstop] events) and refutes 
 - Ran `s6553_run.sh 6 3 <spill recipe>` arms A, B, C one at a time (lvl1, hold 130 s). All three: alive_at_end=1, vi_stalls30s=0, crashlines=0. With s6572's 1/1 this is 4/4 clean vs 8/8 faults before the 0x1FFFFFF mask. The px3+spill HUD fault is closed.
 - Alias-class grep (`0x7FFFFF` in lib/N64ModernRuntime, src): the only functional site was ultra64.h TO_PTR (already widened). Remaining hits are main.cpp DL-walk/dump probes (6729-6915, 7106-7119, 8479, 9523) and dpc_bridge.cpp 4075/4139 SETTIMG diagnostic; they only affect diagnostic output for >8 MB addresses, not game state. Classified diagnostic-only, not changed. Not tested at runtime beyond reading the code (single-source).
 - Not done: px4 / dd=8 run (next unit).
+
+## Session 6574 (2026-10-28) — px4/dd8 and px5/dd12 hold clean with spill recipe
+
+- Ran `s6553_run.sh` (lvl1, 131 s hold, RAMTOP_MB=16 DLPOOLX=1 MB=4 AT=3000 MALLOC_SPILL=1, DD_UNSAFE=1): dd8 px4 arms A and B, dd12 px5 arm A. All three: alive_at_end=1, vi_stalls30s=0, crashlines=0 (logs scratch/agent/m6/s6553_dd8_px4_{A,B}, s6553_dd12_px5_A).
+- Shows: after the TO_PTR widening (s6572) the px3 wall is gone and px4/px5 do not hit a new heap, DL-segment, or ucode-cap fault at lvl1 in 130 s. Not shown: that dd12 is actually applied (the DD clamp is 4.0 unless DD_UNSAFE; not verified from the log this session), nor terrain-fraction or frame-time at these steps, nor lvl5/lvl10 or 300 s holds.
+- Single-source per arm (2 runs at px4, 1 at px5); no positive control for "limit would have fired" beyond the px3 pre-fix 8/8 faults.
+- Next: terrain-fraction scorer + contact sheet dd1 vs dd8 vs dd12, check effective dd in DD_LOG, then 300 s holds on lvl 1/5/10 (see NEXT.md).
