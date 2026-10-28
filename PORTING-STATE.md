@@ -170880,3 +170880,11 @@ Folded s6540_default_r2 and s6540_explicit120 (tools/g1c_fold.py, g1c_fixed_scor
 - explicit120 (new): mean 68.2 ms, tight 0.0293, loose 0.0897
 The earlier explicit120 arm (87 ms, tight 0.074) did not reproduce when re-run; the default path and the explicit-env path agree, so H-wrapper (cap not applied when unset) is ruled out, and H-noise explains the spread. Consequence: the s6537/s6539 cross-run cap ordering on an animating scene violates iron rule 2 and is retracted; "cap120 beats accept-all" is unproven. ORIGIN: no code change this session (no mitigation machinery added).
 Rules out: wrapper getenv defect. Does not rule out a real cap effect, only that cross-run arms cannot see it at this scatter (tight p10-p90 0.02-0.16 within one run).
+
+## Session 6542 (2026-10-27) — same-run cap toggle: unlimited cap costs ~3x per swap; terrain fraction underpowered
+
+Added ROGUESQ_CAP_ALT=<N> to tools/apply_s6537_bypasscap.py (rotates cap 0 / 120 / inf every N swaps, logs `[capalt] swap cap taken rejected` per swap) and tools/g1c_bycap.py (bins g1b by cap in force). Rebuilt once, ran ONE lvl1 dd4 pinned 300 s run (N=150, scratch/agent/s6542_run.sh), rc=0.
+Positive control passed: cap0 taken 0 / would-reject 684 per swap; inf taken 505; cap120 taken 98 / rejected 678.
+Per-cap g1b sd_wall mean: cap0 95.9 ms (n=88 s), cap120 43.8 ms (n=70 s), inf 129.8 ms (n=229 s) for ~1400-1590 swaps each, i.e. inf takes ~2.9x the wall time per swap of cap120. cap0 slower than cap120 is likely ordering hysteresis (cap0 follows inf in the 0/120/inf rotation) - unresolved.
+Terrain fraction by cap (fbd tags, only 8 frames): inf 0.047 med (n=3), cap0 0.037 (n=2), cap120 0.038 (n=3): underpowered, no conclusion.
+Rules out: cap120 being costlier than accept-all. Does not show cap120 adds terrain over cap0 (needs more frames, reversed rotation order, FB_DUMP_EVERY smaller).

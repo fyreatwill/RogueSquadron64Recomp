@@ -1,5 +1,5 @@
-# NEXT: same-run alternating-cap toggle for the g1c span-reject cap
+# NEXT: rerun CAP_ALT with reversed rotation and denser frame dumps
 HYPOTHESIS-ID: g1c-span-reject-predicate
-State (s6541): cross-run cap arms (s6537-s6540) are noise; 3 same-recipe runs gave tight 0.029-0.031, 56-68 ms/task. Cap effect unproven.
-Work unit: in apply_s6537_bypasscap.py add env ROGUESQ_CAP_ALT=<N> that alternates cap 0 / 120 / inf every N swaps (log cap in force per swap), rebuild once, run ONE lvl1 recipe (copy s6540_explicit120.sh), then bin sd_wall and terrain fraction by cap-in-force with tools/g1c_fold.py (add --by-cap) and the fbd frames tagged by cap.
-Outcomes: per-cap ms/task differ >20% and tight fraction differs -> cap real, pick by cost; no difference within same run -> cap irrelevant at lvl1, leave cap120 and proceed to dd3/dd4 holds lvl 1/5/10. Positive control: cap0 vs inf must show differing reject counts in the log.
+State (s6542): same-run toggle works (positive control ok). inf cap ~2.9x cost per swap; cap0 vs cap120 order-confounded; only 8 fbd frames.
+Work unit: add ROGUESQ_CAP_ORDER=rev (inf,120,0) to s6537_take, rebuild, run lvl1 with ROGUESQ_FB_DUMP_EVERY=20, fold with tools/g1c_bycap.py and the fbd-by-cap scorer (inline in s6542 session, needs w640 + tag via [fbdump] n= after last [capalt]).
+Outcomes: cost cap0 < cap120 in both orders -> cap cost real; terrain fraction cap120 > cap0 with >=15 frames each -> cap buys terrain; else cap irrelevant, then proceed to dd3/dd4 holds on lvl 1/5/10.
