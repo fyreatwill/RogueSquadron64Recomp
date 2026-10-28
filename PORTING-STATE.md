@@ -171226,3 +171226,12 @@ Retail and full dd4 each reached mission and completed the harness verification 
 The positive controls fired: retail and full dd4 completed the same mission gate, and all removal arms reached mission before their repeat crash. No mitigation was landed. ORIGIN: the writer of `0x951335B0` is still unproven; the next unit must add a generated-code first-store watch with PC/RA and a known HUD-store positive control before any guard or skip.
 
 Next: build the first-writer watch for guest `0x951335B0` and run retail versus full dd4 on the same lvl7 route.
+
+## Session 6594 (2026-10-28) — generated store watch finds no writer for the phase-7 HUD pointer
+Ran: added `tools/apply_s6593_hudptrwatch.py`, registered it in `tools/fixup_game_funcs_vendored.py`, rebuilt, and ran the same lvl7 route in retail and full dd4 with `ROGUESQ_HUDPTRWATCH=1`, `ROGUESQ_DESCWATCH=1`, `ROGUESQ_TBLNULL_LOG=1`, and `ROGUESQ_G1B=1`. The watch covered generated stores in `[0x951335A0,0x951335C0)` and retained the low HUD word plus the active player-record range as controls. The first build lacked the handler because its per-file marker suppressed the handler pass; that was corrected, and the second build passed.
+
+Retail reached mission and held clean: `alive_at_end=1`, `vi_stalls30s=0`, `crashlines=0`. Its positive control produced 392 active player-record writes and zero target writes. Full dd4 produced the same positive control (36 rows in the captured attempt), zero target writes, and repeated the known phase-7 SIGBUS at `hudDisplayUpdateWorker+5084` with guest pointer `0x951335B0`; the route-valid dd4 attempts all ended with that crash. The target range was therefore instrumented and the control fired in the same build/run family; the null is meaningful for generated stores.
+
+Discrimination: H-dd-writer is refuted for a direct generated-code store into the watched high range. The pointer is instead supplied by a read/source path, host/DMA write not covered by generated stores, or stale state; H-host-alias and H-stale remain open. No guard or skip was landed. The `prev` field is explicitly last-observed rather than true pre-store because the existing generated hook runs after each store.
+ORIGIN: no generated store wrote the wild pointer range in either arm; root writer remains unnamed and legitimacy remains unproven.
+Next: instrument the crash-path pointer read/source chain around `hudDisplayUpdateWorker+5084`, with a phase-7 read witness and a positive-control read at the same worker in retail, then rerun retail versus full dd4.

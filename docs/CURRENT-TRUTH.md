@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6593 (2026-10-28).
+Compact operational handoff, as of Session 6594 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,6 +15,13 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G1c draw-distance phase 2 (HYPOTHESIS-ID g1c-dd-phase2).**
+  - s6594: the regenerated store watch covered `[0x951335A0,0x951335C0)` and
+    fired its active player-record positive control (retail 392 rows; dd4 36
+    rows) but saw zero target-range stores in both arms. Retail held clean;
+    dd4 still reproduced phase-7 `hudDisplayUpdateWorker+5084` with pointer
+    `0x951335B0`. Direct generated-store writer H-dd-writer is refuted; the
+    pointer source/read path or a host/DMA writer remains open. `prev` is only
+    last-observed because the existing hook runs after stores. No guard landed.
   - s6549-s6551: `ROGUESQ_DD_POOLX` > 1 at dd4 lvl1 lifts the 0x80130C4C
     2048-cell cap (2400 observed) but SIGSEGVs in `renderFlatMeshFaceGroup`
     (si_addr=0x380000004). px2/px3/px4 (cap 800/1200/1600) ALL fault at the
@@ -146,7 +153,7 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
--1. **(s6593) Name the first writer of guest HUD pointer 0x951335B0.** Add one generated-code store watch covering that address and the surrounding HUD pointer word, logging guest PC, RA, old/new value, phase, and VI origin; retain a positive-control watch on a known active HUD store in the same build. Run the lvl7 route in retail and full dd4 arms with `ROGUESQ_DESCWATCH=1`, `ROGUESQ_TBLNULL_LOG=1`, and `ROGUESQ_G1B=1`. If dd4 writes 0x951335B0 before the crash and retail does not, the logged guest writer is the root-cause lead; if neither arm writes it, trace the pointer source/read path and host address translation before any guard. Do not mitigate the dereference until writer and legitimacy are established.
+-1. **(s6594) Trace the source/read path of guest HUD pointer 0x951335B0.** Add one generated-code read witness at the `hudDisplayUpdateWorker+5084` dereference and its immediately preceding pointer-producing loads, logging guest PC, source address/value, `s0`, RA, phase, and VI origin; retain the active player-record store/read control. Run retail and full dd4 with `ROGUESQ_HUDPTRWATCH=1`, `ROGUESQ_DESCWATCH=1`, `ROGUESQ_TBLNULL_LOG=1`, and `ROGUESQ_G1B=1`. If dd4 and retail read different source words/values, the differing guest source selects H-dd-interaction; if both read the same guest value but host addresses differ, select H-host-alias; if the source is unchanged but the object lifetime differs, select H-stale. Do not mitigate until the writer/source and legitimacy are established.
 -1. **(s6581) True dd4 (DD_UNSAFE=1, bundle) is clean on lvl1/5/10: 300 s holds each, 0 stall, 0 crashlines, log `multiplier 4` (one run per level; the rare dd4 gfx SIGBUS, rate <=~1/9, is not excluded). (s6582 DONE: cap lifted, dd4 allowed without UNSAFE, 150 s lvl1 clean.) Remaining: a valid same-pose dd1-vs-dd4 sheet (log g_rs64_dd_blk per fb dump; s6582 sheet invalid). Old text: lift the dd>3 cap in apply_s6036_dd.py:7 (cap to 4 without DD_UNSAFE) -> regen/rebuild, then dd1-vs-dd4 same-pose contact sheet for the owner. Default stays retail.** (s6583 DONE: valid same-pose dd1 vs dd4 sheet at docs/owner_sheet_s6583.png, [fbdump] now carries dd= tag; dd4 shows only slightly more far terrain at lvl1 pose 3 — extent-bound per s6576; sheet sent to owner for judging.)
 - [s6576, do first] lvl1 footprint saturates at the level's own terrain extent by dd6 (post area 4096=64x64; s6575's 'table too small' was mis-framed - tw/th are level dims). Census tw/th/cap per level (1,5,10 + others) via ROGUESQ_DD_LOG; if every level is extent-bound, dd range is done at ~6: bundle far/pool/cap behind the single knob and run 300 s holds on lvl 1,5,10 at dd6 + contact sheet for owner. See NEXT.md.
 - [s6567] dd6 px2/px3 with RAMTOP_MB=16 all die with Bus error si_addr=0x38000000x (A/B/C identical): pool size is NOT the px2 limit; the chunk list also still collapses. Next: symbolize the crash pc / backtrace, name the writer of the 0x80000000-offset access (see NEXT.md).
