@@ -1,6 +1,6 @@
-# NEXT: fold s6529 bypass soak verdicts, then name the span-saturation writer
+# NEXT: fold remaining s6529 soaks (lvl5, dd4off lvl1 control), then name the span-saturation writer
 HYPOTHESIS-ID: g1c-span-reject-predicate
 
-Read SOAK-RESULTS.md s6529_* lines (dd4 bypass lvl1/5/10; opt-out lvl1 is the toggle positive control). Score from logs: G1B frame time/VI per s, terrain fraction (fixed-camera scorer), tri count, crashes, spike log vs s6459/s6463/s6464 pre-bypass.
-Hypotheses: H-bypass-safe (VI 60/s, 0 crash, fraction up) / H-bypass-costly (VI drops or ucode cap hit -> gate bypass to dd<=3 or cap cells) / H-toggle-broken (opt-out arm differs from pre-bypass -> patch not what we think).
-Then: log pre-clamp inputs into scanConvertTriangleToSpanTable at dd4 to name the writer of -128 (ORIGIN).
+1. Read SOAK-RESULTS.md for s6529_dd4_bypass_lvl5 and s6529_dd4off_lvl1; score with `python3 -I tools/g1c_fixed_score.py scratch/agent/m6/<tag>/fbd`. Opt-out arm must match s6459 lvl1 (~0.049) = toggle positive control; if it matches bypass (~0.09) the toggle is broken.
+2. Make g1_level_coverage_common.zsh keep the G1B frame-time/tri lines (grep in the game's stderr) so bypass cost is measurable.
+3. ORIGIN work: log pre-clamp inputs to scanConvertTriangleToSpanTable at dd4 to name the writer of -128 (H-footprint-exceeds-range vs H-wrong-scale-input).

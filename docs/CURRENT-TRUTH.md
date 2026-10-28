@@ -312,6 +312,7 @@ invalid cross-function join even when guest IDs match. H-boundary is selected;
 the exact per-invocation join fix remains to be built.
 
 ## Next steps — s6516 table-selection check (top)
+- **s6530 (top):** s6529 bypass soaks lvl1+lvl10 folded: 0 crash/0 stall; lvl1 tight 0.049->0.089 (cross-run, 1 frame, direction only), lvl10 saturated ~0.98 unchanged. Frame-time cost NOT measured (G1B lines not kept by the soak script). lvl5 + opt-out control soaks still pending.
 - **s6529 (top):** span-reject bypass LANDED (tools/apply_s6529_spanbypass.py): default-on when DRAW_DISTANCE>1, ROGUESQ_SPAN_BYPASS=0 opts out. Workaround; saturation writer unnamed. 4 soaks queued (s6529_dd4_bypass_lvl1/5/10, s6529_dd4_optout_lvl1) - fold verdicts from SOAK-RESULTS.md: terrain fraction, VI/s, tri count, crashes vs s6459/s6463/s6464.
 - **s6528 (top):** same-run SPANFORCE toggle (ROGUESQ_SPANFORCE=toggle, PERIOD swaps) at pinned lvl1 dd4: terrain tight fraction 0.047 off vs 0.209 force, step recurs at 3 toggles; off frames show NO terrain (sky only). H-rejects-hide-terrain CONFIRMED (single run, 2 evidence lines: scores + frame/radar pair). Next: safe dd>1 accept rule or fix span-grid saturation at its writer (s6526), two-arm qualify, wire into DRAW_DISTANCE.
 - **s6527 (top):** -128 clamp irrelevant to span reject (A<rec3 holds clamped or not); SPANFORCE arm (ROGUESQ_SPANFORCE=1) renders sane terrain but pose-confounded (0.031 vs 0.265). Next: same-run toggle at fixed pose (NEXT.md).
