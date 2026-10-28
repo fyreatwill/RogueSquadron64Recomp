@@ -1,4 +1,4 @@
-"""s6537: cap span-bypass force-accepts per swap. ROGUESQ_BYPASS_MAXCELLS=N (unset/<0 = unlimited, bit-identical to s6529).
+"""s6537: cap span-bypass force-accepts per swap. ROGUESQ_BYPASS_MAXCELLS=N (<0 = unlimited; unset = 120 when ROGUESQ_DRAW_DISTANCE>1 (s6540), else unlimited).
 Only counts cells the retail compare WOULD have rejected (r2==1) and the bypass flips to accept; once N are taken in a swap, later rejects stay rejected.
 streamTerrainGridCellsByDistance walks cells by distance, so the cap keeps the nearest N extra cells."""
 from pathlib import Path
@@ -13,7 +13,7 @@ T = P.read_text()
 if "s6537 bypasscap" in T:
     print("already"); raise SystemExit(0)
 helper = r'''static inline int s6537_take(void) { /* PATCH: s6537 bypasscap */
-  static int cap = -2, lastn = -1, used = 0; if (cap == -2) { const char* s = getenv("ROGUESQ_BYPASS_MAXCELLS"); cap = (s && *s) ? atoi(s) : -1; if (cap >= 0) fprintf(stderr, "[bypasscap] maxcells=%d\n", cap); }
+  static int cap = -2, lastn = -1, used = 0; if (cap == -2) { const char* s = getenv("ROGUESQ_BYPASS_MAXCELLS"); cap = (s && *s) ? atoi(s) : -1; if (!(s && *s)) { const char* d = getenv("ROGUESQ_DRAW_DISTANCE"); if (d && atof(d) > 1.0) cap = 120; } /* s6540: dd>1 default 120 */ if (cap >= 0) fprintf(stderr, "[bypasscap] maxcells=%d\n", cap); }
   if (cap < 0) return 1;
   int n = rs64_swap_n(); if (n != lastn) { lastn = n; used = 0; }
   if (used >= cap) return 0; used++; return 1; }
