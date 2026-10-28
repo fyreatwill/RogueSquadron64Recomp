@@ -171413,3 +171413,19 @@ viewport/RDP versus source pixels beyond the s6603 stride result.
 
 ORIGIN: the source-copy stride is a legitimate reader/copy path, not the band
 writer; the actual band writer remains unnamed.
+
+## Session 6605 (2026-10-28) — closed the retry without rerunning the source witness
+
+- This was a checkpoint retry. The saved s6603 evidence was re-read rather
+  than rerun: the phase-gated copy witness fired in retail 4:3, ASPECT 16:9,
+  and ASPECT 21:9, with complete source ranges and width-matched strides.
+- Result carried forward: malformed wide copy/flip stride is ruled out. The
+  source-pixel versus post-copy/presentation discriminator did not run in this
+  retry, so no new runtime cause or mitigation is claimed.
+- Resume unit: build one source-pixel fingerprint immediately before the
+  `present.storage` memcpy and run the three saved s6603 arms in one build;
+  require the retail phase control and compare source fingerprints with the
+  existing same-phase output captures.
+
+ORIGIN: no new mitigation or writer claim; this entry preserves the known
+  legitimate copy-path result and the still-open source/presentation split.
