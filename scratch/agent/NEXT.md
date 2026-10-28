@@ -1,5 +1,5 @@
-# NEXT: lvl7 cap-bound at dd4/dd6 — find the cap that trims it and test raising it
+# NEXT: pair CAPX=2 with a bigger DL-chunk pool on lvl7 dd4
 HYPOTHESIS-ID: g1c-dd-phase2
-State (s6585): lvl7 (93x96) cap-trimmed 3/6 at dd4 and 2/5 at dd6; lvl3 trims only at dd4 (1/9). lvl1/5/10 extent-bound. Harness mission-detect reports failure for lvl3/lvl7 (set MISSION_RE like lvl10's '6A2900|644D00' equivalent for those levels; origins seen: 0x62BD00/0x696100) so no 300 s hold exists yet.
-Work unit: (1) find the lvl7 mission origins and set MISSION_RE so the harness passes; (2) in apply_s6036_dd.py/main.cpp bundle find where cap (2000-3500) is derived and add an env override ROGUESQ_DD_CAPX; (3) run lvl7 dd4 with CAPX=1x vs 2x in ONE run via a toggle (ROGUESQ_DD_TOGGLE style) and compare trim flags + post area in phase-gated windows; then 300 s hold.
-Outcomes: trim 0 and area grows with CAPX => cap is binding, bundle it; trim persists => other limit (pool/px).
+State (s6586): ROGUESQ_DD_CAPX=2 crashes lvl7 dd4 5/5 (0x380000022 NULL list node) in the 2x window; 0/10 without. Cap = pool capacity.
+Work unit: rerun scratch/agent/s6586_run.sh with the DLPOOLX env (see main.cpp bundle, currently 4MB@3000) doubled (find its env name via grep DLPOOLX main.cpp) and MISSION_RE=62BD00 so the harness passes. Hypotheses: H-pool (crash disappears => cap/pool pair is the lever, bundle it for lvl3/7), H-other (crash persists => another per-cell array bounds it; read pc 0x800547bc function).
+Outcomes: 0 crashes with blk=1 samples >2800 cells over 300 s => bundle; crash persists => disassemble 0x800547bc.
