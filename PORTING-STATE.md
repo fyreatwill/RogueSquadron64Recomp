@@ -171091,3 +171091,9 @@ Discrimination (s6571): this refutes H-stop (zero [svcstop] events) and refutes 
 - Shows: after the TO_PTR widening (s6572) the px3 wall is gone and px4/px5 do not hit a new heap, DL-segment, or ucode-cap fault at lvl1 in 130 s. Not shown: that dd12 is actually applied (the DD clamp is 4.0 unless DD_UNSAFE; not verified from the log this session), nor terrain-fraction or frame-time at these steps, nor lvl5/lvl10 or 300 s holds.
 - Single-source per arm (2 runs at px4, 1 at px5); no positive control for "limit would have fired" beyond the px3 pre-fix 8/8 faults.
 - Next: terrain-fraction scorer + contact sheet dd1 vs dd8 vs dd12, check effective dd in DD_LOG, then 300 s holds on lvl 1/5/10 (see NEXT.md).
+
+## Session 6575 (2026-10-28) — dd12 is really dd8 (DD_UNSAFE clamp); footprint bounded by 64x64 table
+ran: grep of s6553_dd12_px5_A run.log + tools/apply_s6036_dd.py clamp + g1c_fixed_score on its fbd (offline, no game run).
+showed: run.log:30213 prints "multiplier 8" for ROGUESQ_DRAW_DISTANCE=12 -> clamp `[0.25, 8]` under ROGUESQ_DD_UNSAFE (apply_s6036_dd.py:7). So s6574 "dd12 clean" was a dd8 run; no dd12 evidence exists. Also [ddclamp] lines at that run show post x[0,64) (tw=64): the visible-terrain footprint saturates at the 64-wide terrain table, so beyond roughly dd4 the multiplier no longer widens the drawn area on x; further reach needs larger terrain dims (s6035 64-wide stride) or a different lever, not a bigger multiplier. dd12 fbd score (45 frames, mixed menu/flight, unfiltered): tight med 0.069 - not comparable cross-run (iron rule 2), single-source.
+rules out: "dd12 holds" as a result; raising the multiplier clamp as the next step.
+next: NEXT.md - quantify z/x saturation per dd from [ddclamp] logs (offline) and decide whether terrain-dims work is the true next limit.
