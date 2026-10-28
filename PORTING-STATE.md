@@ -171259,3 +171259,17 @@ unavailable because its `libmupen64plus.dylib` core/plugin is absent.
 No mitigation was added. Resume by mapping the saved crash PC to the exact
 generated instruction and only then choosing the next witness; do not add another
 read probe before that mapping.
+
+## Session 6597 (2026-10-28) — checkpoint close-out preserves the HUD mapping resume
+
+This retry performed no experiment, build, or rerun, as required by the
+checkpoint-close-out instruction. The saved corrected s6595 artifacts remain
+the only new evidence: the positive-controlled `0x80049644/54` read witness is
+not the `hudDisplayUpdateWorker+5532` fault site, and the independent oracle is still
+unavailable because its `libmupen64plus.dylib` core/plugin is absent.
+
+The unresolved alternatives remain overlay alias, another generated load, a
+host-side dereference, or stale state. No mitigation was added. The next
+discriminator is unchanged: map the saved host crash offset to the exact
+generated instruction and enumerate its pointer-producing loads before adding
+another witness.
