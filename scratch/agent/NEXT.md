@@ -1,6 +1,6 @@
-# NEXT: split the dd4 px crash by cap (s6550 follow-up)
+# NEXT: name the NULL node in the dd>1 pool crash (s6551 follow-up)
 HYPOTHESIS-ID: g1c-dd-phase2
-Known (s6550): POOLX=4 (cap 2400) crashes 5/5 at 0x80011524 sw v0,4(a0), a0=0x80000000; BIGARENA divert does not change it (H-heap refuted).
-Hypotheses: H-table (a sibling table sized for 2048 cells/600 cap overrun when cap>2048), H-ptr (larger window yields stale mesh node), H-flaky (refuted by 5/5).
-Work unit: `zsh scratch/agent/s6549_run.sh 4 3` (cap 1800) then `... 4 2` (cap 1200); each run is ~6 min, run sequentially. Log is scratch/agent/m6/g1_lvl1s6549_dd4_pxN/ (summary file; fail_att*.log hold the CRASH dump).
-Outcomes: px3 clean + px4 crash -> threshold between 1800 and 2400 near 2048 -> H-table: grep the generated code for 2048/0x800 sized arrays or 0x1800-sized strides reachable from renderFlatMeshFaceGroup and find the list head via [0x8011-0x5824]. px3 also crashes -> not cap threshold; bisect px2. Positive control: px1 (retail cap) must reach mission.
+Known (s6551): px2/3/4 all fault at the same `sw ...,{0,2,4}(a0)` with a0=0x80000000; px1 clean. Not a cap threshold.
+Hypotheses: H-uninit (extra pool entries beyond retail size are never initialised: next ptr 0 followed by the walker), H-fixedarr (a retail-sized parallel array/free-list in guest RAM indexed by the cell count is read past its end and yields 0), H-clamp (ddclamp window x[0,32) z[17,32) feeds renderFlatMeshFaceGroup an entry the game never built).
+Work unit: with ROGUESQ_DD_POOLX=2, log in the existing ROGUESQ_DD_LOG path the pool base/stride/count and walk the list from head [0x80115 8-0x5824 -> 0x8011A7DC] at the frame before the crash, printing index of the first node whose next==0 vs the expected count. One build, one run (`zsh scratch/agent/s6549_run.sh 4 2`).
+Outcomes: first-NULL index == retail count (400) -> H-uninit: initialise/link the extra entries in the pool carve (fix in the DD hook, not a guard). Index within retail range -> H-clamp/H-fixedarr: find the writer.
