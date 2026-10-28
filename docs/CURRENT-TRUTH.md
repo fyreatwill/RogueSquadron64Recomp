@@ -184,3 +184,5 @@ background, closed threads, and the archived backlogs are in
 
 - s6573: px3+spill dd6 confirmed 4/4 clean after TO_PTR mask widening (s6572); px3 fault CLOSED. Next: px4/dd=8 (see NEXT.md).
 - s6574: px4/dd8 (2/2) lvl1 130 s clean with spill recipe. The px5 "dd12" run was really dd8 (s6575: clamp [0.25,8] under DD_UNSAFE, apply_s6036_dd.py:7; run.log prints multiplier 8) - no dd12 evidence exists.
+
+- s6579/6580: true dd4 (DD_UNSAFE=1) lvl5 300 s clean; lvl10 s6579 failure was MISSION_RE false-nomission (needs MISSION_RE='6A2900|644D00'); s6580 lvl10/lvl1 soaks queued.

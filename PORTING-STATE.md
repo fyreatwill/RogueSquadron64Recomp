@@ -171123,3 +171123,8 @@ DISCRIMINATION (s6578): the change is behavioural, not instrumentation (a ~15-li
 
 ## Session 6579 (2026-10-28) — "multiplier 3" at dd=4 explained: s6446 cap; true-dd4 soaks queued
 Grep of tools/apply_s6036_dd.py:7: ROGUESQ_DRAW_DISTANCE>3 is clamped to 3 unless ROGUESQ_DD_UNSAFE=1 (s6446 guard). Consequence: s6578's "dd4 bundle" lvl1 130 s run and any dd4 holds without DD_UNSAFE were dd3 (single-source: code reading, not yet confirmed by a log line from a new run). Queued scratch/agent/soak_queue/s6579_dd4_unsafe_lvl5.sh and _lvl10.sh (300 s, DD_UNSAFE=1) for true dd4. No game run this iteration.
+
+## Session 6580 (2026-10-28) — folded s6579 true-dd4 soaks; lvl10 failure was harness false-nomission
+- s6579_dd4_unsafe_lvl5: "multiplier 4" present in log; hold=301 s, vi_stalls30s=0, crashlines=0, alive_at_end=1. PASS (first true-dd4 lvl5 300 s hold).
+- s6579_dd4_unsafe_lvl10 rc=1 "allattempts-failed": NOT a game fault. All 5 attempts (fail_att1-5.log) reached live flight (origins 0x6A2900/0x644D00, ~9700 VI rows, f5 flush counters advancing), CRASH count 0 in each; the recipe's MISSION_RE defaults to 690400 so m6_mission_tmpl declared nomission (same artifact as s6411). Single-source (log-level; no framebuffer inspected this session).
+- Enqueued s6580_dd4_unsafe_lvl10 (MISSION_RE='6A2900|644D00') and lvl1 true-dd4 soaks. No code change.
