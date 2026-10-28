@@ -171198,3 +171198,4 @@ dd4 arm: call=1 desc valid (32x32, pre-level); the fault then logs tbl=00000000 
 ORIGIN: not yet a writer — the zeroing/ordering is the open question; no guard landed (TBLNULL_SKIP stays opt-in).
 Next: log at load_level_hmp entry/exit and at each streaming call's first-NULL transition with VI number, dd1 vs dd4, to see whether streaming overlaps the load.
 Discrimination: refuted H-unbuilt (retail also lacks desc+4 -> false: retail desc+4 valid, positive control [tblnull] fired in the dd4 arm of the same build); selected H-load-race over H-overrun/H-unbuilt (dims 93x96 set while w0=w4=0). Next discriminator: load_level_hmp enter/exit + publish-store + first-NULL streaming call, VI-stamped, dd1 vs dd4 (names H-load-race vs H-teardown-zero).
+Verdict: the retail-arm valid desc+4 refutes H-unbuilt; the dd4 NULL-with-dims-set observation selects H-load-race; the VI-stamped load_level_hmp log will discriminate it from H-teardown-zero.
