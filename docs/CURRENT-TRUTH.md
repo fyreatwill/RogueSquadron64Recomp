@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6598 (2026-10-28).
+Compact operational handoff, as of Session 6599 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -214,7 +214,9 @@ background, closed threads, and the archived backlogs are in
 `scratch/agent/SOAK-RESULTS.md`.
 
 The s6596-s6597 retries were checkpoint close-outs only: they did not rerun the
-s6595 experiment or add a conclusion. The saved s6595 corrected-arm artifacts
+s6595 experiment or add a conclusion. The s6599 retry was also a checkpoint
+close-out: the s6598 retail arm completed, while the dd4 wrapper produced no
+witness-phase summary before termination. The saved s6595/s6598 artifacts
 remain the active evidence for the HUD SIGBUS mapping work.
 
 ## Update s6568

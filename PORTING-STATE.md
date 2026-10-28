@@ -171301,3 +171301,22 @@ new `tlut_return` value before adding any mitigation.
 ORIGIN: the mapped writer is the generated `0x800496A8` store; its destination
 writer/source is not yet named beyond the `getTextureTlutEntry` return path.
 No guard or skip was added.
+
+## Session 6599 (2026-10-28) — checkpointed the incomplete TLUT-return witness run
+
+This was a retry close-out, not a rerun of the s6598 experiment. The saved
+s6598 retail outer log ends `rc=0`; the saved dd4 outer log is empty, so the
+dd4 wrapper stopped before producing a witness-phase result. The previous
+mapping remains: generated guest store `0x800496A8` writes through `a0/r4`,
+which is loaded from the `getTextureTlutEntry` return path at `0x8002333C`.
+No dd4 hypothesis is selected. The next discriminator is the persistent
+`[hudptrr] stage=tlut_return` value immediately before that store, using one
+direct bounded dd4 launch with an explicit SIGKILL watchdog; a null result is
+valid only after the positive controls and witness phase fire.
+
+Rules out this iteration: no new runtime cause, no guard justification, and
+no conclusion from the incomplete dd4 wrapper. The submodules were left
+untouched because they contain pre-existing dirty changes.
+
+ORIGIN: generated store `0x800496A8`; the destination writer/source is still
+the `getTextureTlutEntry` return path or a later generated register mutation.
