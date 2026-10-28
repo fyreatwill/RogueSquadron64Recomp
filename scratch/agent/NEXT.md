@@ -1,6 +1,6 @@
-# NEXT: why is the span grid saturated at -128 at dd4? log pre-clamp operands in streamTerrainGridCellsByDistance
+# NEXT: same-run SPANFORCE toggle to measure whether dd4 span rejects hide terrain
 HYPOTHESIS-ID: g1c-span-reject-predicate
 
-s6526: rejected dd4 cells have populated recs (rec[3]~-38); span operand is -128 (clamp floor). Recs are file data, not the problem.
-Hypotheses: H-overshoot (pre-clamp value legitimately huge-negative because the dd4 distance term is unscaled -> scale the formula input), H-wrong-operand (f12/f10 clamp bounds or f0 derive from a stale/uninitialised float at x>=32), H-by-design (retail clamps far cells to -128 = deliberately empty).
-Discriminator (one build, one run, dd1 vs dd4 pinned lvl1, tools/apply_s6522_clampprobe.py is the base): log pre-clamp f0, f12, f10, row/layer/x at 0x80042820 and 0x800426D8 for the first N saturating stores keys>=745, plus 6 non-saturating stores as positive control. If f0 is hugely negative and tracks distance*dd -> H-overshoot (scale input in fixup). If bounds f12/f10 are garbage -> H-wrong-operand.
+s6527: clamp irrelevant to the reject; SPANFORCE (tools/apply_s6527_spanforce.py, built) renders sane terrain but cross-run pose differs, so 0.031 vs 0.265 terrain fraction is confounded.
+Hypotheses: H-rejects-hide-terrain (toggle raises fraction at identical camera), H-rejects-offscreen (fraction ~equal; rejects are out-of-view = harmless, close thread).
+Discriminator: make s6527_force() read a runtime flag flipped every N VIs (e.g. 300) in ONE run with pose pinned; dump fb at the last frame of each phase; score pairs with tools/g1c_fixed_score.py. Positive control: [spanforce] phase log. Raising fraction >2x at same pose -> design a safe dd>1 accept rule; ~equal -> close thread.
