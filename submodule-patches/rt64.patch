@@ -181,7 +181,7 @@ index a0d4a6a..f6a56a9 100644
              // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
              //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..c99575f 100644
+index 6255872..90db858 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
 @@ -4,12 +4,40 @@
@@ -201,7 +201,7 @@ index 6255872..c99575f 100644
  #include "rt64_f3d.h"
  
 +extern "C" __attribute__((weak)) uint32_t rs64_phase_ord(void);
-+extern "C" void rs64_floor_note(int, int, uint32_t, uint32_t, float, float, float, float, float, float, float, float, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
++extern "C" void rs64_floor_note(int, int, uint32_t, uint32_t, float, float, float, float, float, float, float, float, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, float, float, float, float, float, float, float, float, int, int, uint32_t, uint32_t, uint32_t, uint32_t);
 +extern "C" __attribute__((weak)) uint32_t rs64_e9prov_current_task(void);
 +extern "C" __attribute__((weak)) uint64_t rs64_dpc_get_last_submit_serial(void);
 +extern "C" __attribute__((weak)) void rs64_dpc_get_last_submit(uint32_t *lo, uint32_t *hi);
@@ -922,7 +922,7 @@ index 6255872..c99575f 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -537,7 +1202,74 @@ namespace RT64 {
+@@ -537,7 +1202,96 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
@@ -989,27 +989,51 @@ index 6255872..c99575f 100644
                      curData += triangleTexWords;
 +                    {
 +                        const auto &tt = state->rdp->tiles[tile & 7];
++                        float sample_y = 0.5f * (by0 + by1);
++                        const float y_lo = std::max(by0, 180.0f);
++                        const float y_hi = std::min(by1, 250.0f);
++                        if (y_lo <= y_hi) sample_y = 0.5f * (y_lo + y_hi);
++                        const float dy = sample_y - yFloor;
++                        const float x_major = xh + dxhdy * dy;
++                        const float s0 = float(baseTexcoord[0]) + float(texcoordDe[0]) * dy
++                            + float(texcoordDx[0]) * (0.0f - x_major);
++                        const float t0 = float(baseTexcoord[1]) + float(texcoordDe[1]) * dy
++                            + float(texcoordDx[1]) * (0.0f - x_major);
++                        const float w0 = float(baseTexcoord[2]) + float(texcoordDe[2]) * dy
++                            + float(texcoordDx[2]) * (0.0f - x_major);
++                        float x_other;
++                        if (sample_y <= ym) x_other = xm + dxmdy * dy;
++                        else x_other = xl + dxldy * (sample_y - ym);
++                        const float xa = std::min(x_major, x_other);
++                        const float xb = std::max(x_major, x_other);
++                        const int cover0 = (xa <= 0.0f && xb >= 0.0f) ? 1 : 0;
 +                        rs64_floor_note(0, 1, commandId, tile & 7, bx0, by0, bx1, by1,
 +                            float(texcoordDx[0]), float(texcoordDx[1]), float(texcoordDe[0]), float(texcoordDe[1]),
 +                            tt.line, state->rdp->texture.width, tt.fmt, tt.siz,
-+                            tt.masks, tt.maskt, tt.cms, tt.cmt, state->rdp->colorImage.width);
++                            tt.masks, tt.maskt, tt.cms, tt.cmt, state->rdp->colorImage.width,
++                            float(baseTexcoord[0]), float(baseTexcoord[1]), float(baseTexcoord[2]),
++                            s0, t0, w0, sample_y, x_major,
++                            texturePerspective ? 1 : 0, cover0,
++                            tt.uls, tt.ult, tt.shifts, tt.shiftt);
 +                    }
                  }
                  // No texture coefficients
                  else {
-@@ -547,6 +1279,11 @@ namespace RT64 {
+@@ -547,6 +1301,13 @@ namespace RT64 {
                      texcoordWorkBuffer[workBufferIndex + 0] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 1] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 2] = interop::float2(0.0f, 0.0f);
 +                    {
 +                        rs64_floor_note(0, 0, commandId, tile & 7, bx0, by0, bx1, by1,
 +                            0.0f, 0.0f, 0.0f, 0.0f, 0, 0, 0, 0, 0, 0, 0, 0,
-+                            state->rdp->colorImage.width);
++                            state->rdp->colorImage.width,
++                            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
++                            0, 0, 0, 0, 0, 0);
 +                    }
                  }
  
                  if (hasDepth) {
-@@ -584,6 +1321,68 @@ namespace RT64 {
+@@ -584,6 +1345,68 @@ namespace RT64 {
                  break;
              }
  
@@ -3335,7 +3359,7 @@ index f17db9b..7fb6721 100644
          }
  
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index d1a9f4e..b726070 100644
+index d1a9f4e..285e3e0 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -4,10 +4,53 @@
@@ -3356,7 +3380,7 @@ index d1a9f4e..b726070 100644
 +// Weak so librt64 still links standalone (same pattern as librecomp's
 +// rs64_dmem_lock/unlock hooks).
 +extern "C" __attribute__((weak)) uint32_t rs64_phase_ord(void);
-+extern "C" void rs64_floor_note(int, int, uint32_t, uint32_t, float, float, float, float, float, float, float, float, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
++extern "C" void rs64_floor_note(int, int, uint32_t, uint32_t, float, float, float, float, float, float, float, float, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, float, float, float, float, float, float, float, float, int, int, uint32_t, uint32_t, uint32_t, uint32_t);
 +
 +// PATCH (s6242): ROGUESQ_SKIP_DRAW=<csv of tri-all,tri-ci,texrect-all,texrect-I4,fill,all> skips those draw classes while
 +// rs64_phase_ord()==ROGUESQ_SKIP_PHASE (default 3). Bisect tool for the wide-title garbage rect.
@@ -5378,7 +5402,7 @@ index d1a9f4e..b726070 100644
  
          // Update the tracked texcoords for the used tiles. Use scissor intersection to figure out 
          // what the bounds of the real sampling will be if necessary.
-@@ -1315,10 +3130,99 @@ namespace RT64 {
+@@ -1315,10 +3130,101 @@ namespace RT64 {
      }
      
      void RDP::drawTexRect(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry, uint8_t tile, int16_t uls, int16_t ult, int16_t dsdx, int16_t dtdy, bool flip, const ExtendedAlignment &extAlignment) {
@@ -5391,7 +5415,9 @@ index d1a9f4e..b726070 100644
 +            rs64_floor_note(1, 1, flip ? 0x25u : 0x24u, tile, x0, y0, x1, y1,
 +                dsdx / 1024.0f, 0.0f, 0.0f, dtdy / 1024.0f,
 +                tt.line, texture.width, tt.fmt, tt.siz, tt.masks, tt.maskt, tt.cms, tt.cmt,
-+                colorImage.width);
++                colorImage.width,
++                0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
++                0, 0, 0, 0, 0, 0);
 +        }
  #   ifdef LOG_TEXRECT_METHODS
          RT64_LOG_PRINTF("RDP::drawTexRect(ulx %d, uly %d, lrx %d, lry %d, tile %u, uls %d, ult %d, dsdx %d, dtdy %d, flip %u)", ulx, uly, lrx, lry, tile, uls, ult, dsdx, dtdy, flip);

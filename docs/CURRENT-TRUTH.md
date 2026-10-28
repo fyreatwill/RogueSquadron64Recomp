@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6612 (2026-10-28).
+Compact operational handoff, as of Session 6613 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,6 +15,16 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-frustum).**
+  - s6613: S at screen x=0 is not a 21:9-only walk off the 64-wide mask.
+    One binary, both arms. Perspective on, shift 0, uls 0, texel
+    (S/W)*1024. 16/16 early-table triangles pair on base S and dtde.
+    12 inside [0, 64) on both, 4 outside on both, 0 inside only on
+    16:9. The 4 that cover x=0 are inside on both. Census
+    st_in=21 st_out=19 cover_in=4 cover_out=0 on both widths. Texel S
+    agrees to about 0.2. x_major moves and dsdx shrinks by 796/1024,
+    so they cancel. Per-pixel outer-third dy on rows 180..250 is 5.48
+    (16:9) and 26.9 (21:9); the same scorer on the s6612 dumps is
+    8.32 and 25.4. No patch. Evidence: `scratch/agent/s6613_st/`.
   - s6611: the step-column metric is blind. Control passed (flight `none`; a
     pasted 200×640 block scores H-composite at x=640). n=1400/1500/1600
     score `none`; stride fit R≤0.061 for slopes ±384/±512. Outer-third
@@ -210,11 +220,13 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   is real scene and the left HUD stays pinned. Open opt-in defect: 21:9
   level-select floor is sliced into horizontal scanlines in the outer
   thirds (s6611). s6612 named the triangles (op 0x0F, line 4); their T
-  derivative does not change with width, so the wider frustum is what
-  differs. The OS window remains 640x480, so wider modes letterbox.
+  derivative does not change with width. s6613: S at x=0 does not
+  change either, and it is not outside the 64 mask only at 21:9.
+  The OS window remains 640x480, so wider modes letterbox.
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
+- s6612 "21:9 S at the left edge walks off the 64-wide mask while 16:9 stays inside" (s6613: 0/16 pairs do that; S at x=0 matches). Believable because the x span and dsdx scale with width. x_major moves the other way and the product cancels.
 - s6610 ring-only "second=fbw-512 fixes the 16:9 radar" (the ring reached the retail inset, but the wedge stayed at 769..792 with 0 pixels inside the ring). Believable because s6609's red-ring edge equalled retail+second. The disc is a separate pre-shift `ROGUESQ_SHIFT_REGION` writer; shift must be A, not RA.
 - s6602 "wide-only bottom garbage selects a stale/stride renderer family"
   (s6607-s6608: diagnostic height exceeded the VI source; corrected bounded
@@ -310,14 +322,14 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6612) Explain the 21:9 floor tear without a stride change.** The
-   band is op `0x0F` triangles, tile 0, TMEM line 4, fmt 4/siz 0, mask 6.
-   dtde and Y match at FB 796 and 1024; X span and dsdx scale by 1024/796.
-   Do not patch and do not retune HUD anchor or shift. Next discriminator:
-   log the base S/T (already computed in `decodeTriangles`) for that same
-   key, both arms, one binary. If 21:9's S at the visible left edge is
-   outside the 64-wide mask and 16:9's is inside, the wider frustum walks
-   off the texture. If both sit inside the mask, that walk-off is refuted.
+1. **(s6613) The 21:9 floor tear is not an S walk-off.** Base S and the
+   texel at x=0 match across 796 and 1024. Do not patch, and do not
+   retune HUD anchor or shift. Next discriminator is coverage, not
+   another derivative and not guest PC `80007904`: on scanlines
+   180..250, the union of x intervals of the same op `0x0F` tile 0
+   line 4 triangles, both arms, one binary. If 21:9 has gap scanlines
+   in the outer third and 16:9 does not, the tear is missing coverage.
+   If both outer thirds are solidly covered, coverage is refuted.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

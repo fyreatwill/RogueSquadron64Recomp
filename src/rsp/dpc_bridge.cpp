@@ -7,6 +7,7 @@
 // Reads of DPC_CURRENT/DPC_END return g_rsp_dpc_end so busy-wait loops in
 // the ucode see "RDP completed instantly" and exit.
 
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -3483,13 +3484,24 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
 // walker of the DPC range never locked onto a command (0 sane of thousands).
 extern "C" void rs64_vi_fb_wh(uint32_t *out_w, uint32_t *out_h);
 
+// s6613: base S/T are the s15.16 coefficients decodeTriangles already
+// computed. S at screen x=0 is that base walked to the band scanline
+// (y in 180..250) and then across by dsdx. The texel is the same
+// quantity the vertex buffer stores: (S/W)*1024 when perspective is on,
+// S/16 when it is off. The sampler then multiplies by the tile shift and
+// subtracts uls/4. "Inside the mask" is that sampled S in [0, 2^masks).
 extern "C" void rs64_floor_note(
     int kind, int textured, uint32_t op, uint32_t tile,
     float x0, float y0, float x1, float y1,
     float dsdx, float dtdx, float dsde, float dtde,
     uint32_t line, uint32_t timg_w, uint32_t fmt, uint32_t siz,
     uint32_t masks, uint32_t maskt, uint32_t cms, uint32_t cmt,
-    uint32_t cimg_w) {
+    uint32_t cimg_w,
+    float base_s, float base_t, float base_w,
+    float s0, float t0, float w0,
+    float sample_y, float x_major,
+    int persp, int cover0,
+    uint32_t uls, uint32_t ult, uint32_t shifts, uint32_t shiftt) {
     static const bool on = [] {
         const char *e = std::getenv("ROGUESQ_LOG_FLOOR");
         return e && *e && *e != '0';
@@ -3497,15 +3509,20 @@ extern "C" void rs64_floor_note(
     if (!on) return;
     struct Row {
         uint8_t kind = 0, op = 0, tile = 0, fmt = 0, siz = 0, masks = 0, maskt = 0, cms = 0, cmt = 0;
-        uint16_t line = 0, timg_w = 0, cimg_w = 0;
+        uint8_t persp = 0, shifts = 0, shiftt = 0;
+        uint16_t line = 0, timg_w = 0, cimg_w = 0, uls = 0, ult = 0;
         int32_t qs = 0, qt = 0;
-        uint32_t hits = 0, pc = 0;
+        uint32_t hits = 0, pc = 0, n_in = 0, n_cover = 0;
         double area = 0, dsdx = 0, dtdx = 0, dsde = 0, dtde = 0;
         double minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9;
+        double base_s = 0, base_t = 0, base_w = 0, s0 = 0, t0 = 0, w0 = 0;
+        double sample_y = 0, x_major = 0, tex_s = 0, tex_t = 0;
+        double tex_s_min = 1e300, tex_s_max = -1e300;
     };
     static Row rows[48];
     static int nrows = 0;
     static uint32_t hits = 0, draws = 0, n_tri = 0, n_rect = 0, n_sane = 0, raws = 0;
+    static uint32_t n_in = 0, n_out = 0, n_cover_in = 0, n_cover_out = 0;
     static int dumped = 0;
     static bool was = false;
     static uint32_t gate_w = 0, gate_h = 0;
@@ -3514,9 +3531,11 @@ extern "C" void rs64_floor_note(
     const bool gate = (vh >= 320 && vh <= 352) && (vw == 796 || vw == 1024);
     auto dump_rows = [&](const char *why) {
         fprintf(stderr, "[floor] table why=%s w=%u h=%u submits=%u seen_tex=%u hits=%u keys=%d "
-                "tri=%u sane=%u rect=%u sane_rect=%u cimg=%u settile=%u other=%u\n",
+                "tri=%u sane=%u rect=%u sane_rect=%u cimg=%u settile=%u other=%u "
+                "st_in=%u st_out=%u cover_in=%u cover_out=%u\n",
                 why, gate_w, gate_h, draws, hits, hits, nrows,
-                n_tri, n_sane, n_rect, n_sane, cimg_w, 0u, 0u);
+                n_tri, n_sane, n_rect, n_sane, cimg_w, 0u, 0u,
+                n_in, n_out, n_cover_in, n_cover_out);
         if (!nrows) { fflush(stderr); return; }
         int order[48];
         for (int i = 0; i < nrows; i++) order[i] = i;
@@ -3531,17 +3550,23 @@ extern "C" void rs64_floor_note(
             fprintf(stderr,
                     "[floor] row why=%s kind=%s op=%02X tile=%u line=%u timgw=%u fmt=%u siz=%u "
                     "masks=%u maskt=%u cms=%u cmt=%u dsdx=%.4f dtdx=%.4f dsde=%.4f dtde=%.4f "
-                    "hits=%u area=%.0f x=%.0f..%.0f y=%.0f..%.0f timg=%06X root=%06X pc=%08X f5=%06X cimg=%u\n",
+                    "hits=%u area=%.0f x=%.0f..%.0f y=%.0f..%.0f timg=%06X root=%06X pc=%08X f5=%06X cimg=%u "
+                    "base=%.3f,%.3f,%.5f s0=%.3f t0=%.3f w0=%.5f tex=%.3f,%.3f texS=%.3f..%.3f "
+                    "ys=%.1f xmaj=%.1f persp=%u cover=%u/%u uls=%u ult=%u sh=%u/%u in=%u/%u\n",
                     why, r.kind ? "rect" : "tri", r.op, r.tile, r.line, r.timg_w, r.fmt, r.siz,
                     r.masks, r.maskt, r.cms, r.cmt, r.dsdx, r.dtdx, r.dsde, r.dtde,
                     r.hits, r.area, r.minx, r.maxx, r.miny, r.maxy,
-                    0u, g_e9prov.root_dl & 0xFFFFFFu, r.pc, 0u, r.cimg_w);
+                    0u, g_e9prov.root_dl & 0xFFFFFFu, r.pc, 0u, r.cimg_w,
+                    r.base_s, r.base_t, r.base_w, r.s0, r.t0, r.w0, r.tex_s, r.tex_t,
+                    r.tex_s_min, r.tex_s_max, r.sample_y, r.x_major, r.persp,
+                    r.n_cover, r.hits, r.uls, r.ult, r.shifts, r.shiftt, r.n_in, r.hits);
         }
         fflush(stderr);
     };
     if (was && !gate) {
         dump_rows("leave");
         nrows = 0; hits = 0; draws = 0; n_tri = n_rect = n_sane = 0; dumped = 0; raws = 0;
+        n_in = n_out = n_cover_in = n_cover_out = 0;
     }
     was = gate;
     if (!gate) return;
@@ -3558,6 +3583,34 @@ extern "C" void rs64_floor_note(
     }
     if (band) {
         const float area = (x1 - x0) * (y1 - y0);
+        static const float kShift[16] = {
+            1.f, 0.5f, 0.25f, 0.125f, 1.f / 16.f, 1.f / 32.f, 1.f / 64.f, 1.f / 128.f,
+            1.f / 256.f, 1.f / 512.f, 1.f / 1024.f, 32.f, 16.f, 8.f, 4.f, 2.f
+        };
+        float tex_s = 0.f, tex_t = 0.f;
+        int tex_ok = 0;
+        if (persp) {
+            if (std::fabs(w0) > 1.0e-8f) {
+                tex_s = (s0 / w0) * 1024.0f;
+                tex_t = (t0 / w0) * 1024.0f;
+                tex_ok = 1;
+            }
+        } else {
+            tex_s = s0 / 16.0f;
+            tex_t = t0 / 16.0f;
+            tex_ok = 1;
+        }
+        const float persp_mod = (kind == 0 && !persp) ? 0.5f : 1.0f;
+        const float shift_s = kShift[shifts & 15u];
+        const float shift_t = kShift[shiftt & 15u];
+        if (tex_ok) {
+            tex_s = tex_s * persp_mod * shift_s - float(uls) / 4.0f;
+            tex_t = tex_t * persp_mod * shift_t - float(ult) / 4.0f;
+        }
+        const float span = masks ? float(1u << (masks & 15u)) : 0.0f;
+        const int inside = tex_ok && span > 0.0f && tex_s >= 0.0f && tex_s < span;
+        if (inside) n_in++; else n_out++;
+        if (cover0) { if (inside) n_cover_in++; else n_cover_out++; }
         Row key{};
         key.kind = (uint8_t)kind; key.op = (uint8_t)op; key.tile = (uint8_t)tile;
         key.line = (uint16_t)line; key.timg_w = (uint16_t)timg_w;
@@ -3568,6 +3621,13 @@ extern "C" void rs64_floor_note(
         key.qs = (int32_t)std::lround(dsdx * 64.0); key.qt = (int32_t)std::lround(dtde * 64.0);
         key.dsdx = dsdx; key.dtdx = dtdx; key.dsde = dsde; key.dtde = dtde;
         key.pc = g_rs64_last_guest_pc;
+        key.persp = (uint8_t)(persp ? 1 : 0);
+        key.shifts = (uint8_t)shifts; key.shiftt = (uint8_t)shiftt;
+        key.uls = (uint16_t)uls; key.ult = (uint16_t)ult;
+        key.base_s = base_s; key.base_t = base_t; key.base_w = base_w;
+        key.s0 = s0; key.t0 = t0; key.w0 = w0;
+        key.sample_y = sample_y; key.x_major = x_major;
+        key.tex_s = tex_s; key.tex_t = tex_t;
         int slot = -1;
         for (int i = 0; i < nrows; i++) {
             if (rows[i].kind == key.kind && rows[i].op == key.op && rows[i].tile == key.tile &&
@@ -3584,6 +3644,10 @@ extern "C" void rs64_floor_note(
         if (slot >= 0) {
             Row &r = rows[slot];
             r.hits++; r.area += area;
+            if (inside) r.n_in++;
+            if (cover0) r.n_cover++;
+            if (tex_s < r.tex_s_min) r.tex_s_min = tex_s;
+            if (tex_s > r.tex_s_max) r.tex_s_max = tex_s;
             if (x0 < r.minx) r.minx = x0; if (x1 > r.maxx) r.maxx = x1;
             if (y0 < r.miny) r.miny = y0; if (y1 > r.maxy) r.maxy = y1;
             hits++;

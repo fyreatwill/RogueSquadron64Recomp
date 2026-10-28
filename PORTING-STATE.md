@@ -171662,3 +171662,33 @@ bytes are not established as display pixels. Runtime artifact origin is open.
   texture-stride or derivative that changes with width. No cull, no
   anchor change, no default change.
   ORIGIN: no mitigation.
+
+## Session 6613 (2026-10-28) — level-select floor S at x=0 does not leave the mask
+
+- Maintenance check: CURRENT-TRUTH was 39,954 bytes, under 60,000. The soak
+  tail still ends at the s6580 dd4 holds. No new soak verdict. Screen
+  IOConsoleLocked was false. No other game was running.
+- One Debug binary, `ROGUESQ_LOG_FLOOR=1`, the s6612 route, 16:9 then 21:9,
+  SIGKILL. Both arms alive (rc -9), 0 crash lines. Dumps
+  `scratch/agent/s6613_st/wide16/fbd/fb_0001400_w796.ppm` and
+  `scratch/agent/s6613_st/wide21/fbd/fb_0001400_w1024.ppm`.
+- Logged the s15.16 base S/T/W that `decodeTriangles` already computes, walked
+  to screen x=0 on the scanline inside y 180..250. Perspective was on, tile
+  shift 0, uls 0, so the texel is (S/W)*1024. Compared with mask width 64.
+- Positive control is the per-pixel mean |row-to-row luma| in the outer
+  thirds, rows 180..250. That scorer returns 8.32 and 25.4 on the s6612 dumps
+  (the session's 8.47 / 24.55). This run: 16:9 = 5.48, 21:9 = 26.9. 21:9 is
+  above 18. The runner's first dy figure (0.62 / 7.1) was the difference of
+  the row mean and is not the control.
+- 16 early-table triangles pair across arms on base S and dtde. 12/16 sit
+  inside [0, 64) on both. 4/16 sit outside on both, with the same texel
+  (delta at most 0.16). 0/16 are inside on 16:9 and outside on 21:9. The 4
+  triangles that cover x=0 are inside on both. The early census is
+  st_in=21 st_out=19 cover_in=4 cover_out=0 on both widths. Base S is the
+  same coefficient (169.479 on the largest pair). x_major moves (182.6 to
+  234.6) and dsdx shrinks by 796/1024, so S at x=0 does not change.
+- This refutes a 21:9-only walk off the 64-wide mask. It does not name the
+  tear. Next discriminator is outer-third coverage on scanlines 180..250,
+  not another base-S log and not guest PC 80007904. No cull, no anchor
+  change, no default change.
+  ORIGIN: no mitigation.
