@@ -2712,6 +2712,11 @@ extern "C" uint32_t rs64_s6569_spill(uint32_t req) {
     std::fprintf(stderr, "[spill] req=0x%X -> %08X (used 0x%X)\n", req, p, s_s6569_bump);
     return p;
 }
+extern "C" void rs64_s6570_svcnull(char k, uint32_t a, uint32_t ra, uint32_t b) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_SVCNULL"); return e && e[0] && e[0] != '0'; }();
+    static int n = 0; if (!on || n >= 60) return; ++n;
+    std::fprintf(stderr, "[svcnull] %c a=%08X ra=%08X b=%08X\n", k, a, ra, b);
+}
 extern "C" int rs64_s6569_isspill(uint32_t p) { return p >= 0x80800000u && p < 0x80C00000u; }
 extern "C" void rs64_s5041_malloc(uint32_t ptr) {
     if (!s5041_on() || ptr == 0) return;
