@@ -173947,3 +173947,45 @@ table, duplicate-image limit and reproduction commands. No new soak lines
 since the already-folded s6580 verdicts. No runtime/default change.
 Next: bounded G1(d) existing-evidence table; select the first missing
 level-specific counter response before building any new instrument.
+
+## Session 6656 (2026-10-29) — phase-scoped objective table separates response from end gates
+HYPOTHESIS-ID: g1-coverage-cd
+Maintenance check: CURRENT-TRUTH 48835 bytes, below 60000; not triggered.
+Ran the planned offline reconciliation, no build/game launch. New stdlib
+streaming tool tools/g1_objective_evidence.py --check reads 18 saved
+ctl/TELE gzip logs, plus legacy s5843/s5844/s5845. New durable report
+is docs/G1-OBJECTIVE-RESPONSE.md, including a reproducible generated
+appendix with route, width-epoch boundaries, decompressed line numbers,
+TELE firing, named values, writer call activity and separate gate evidence.
+All 18 B40 selectors match their level. Positive controls: actual lvl7
+id2 0>2>3>0 and lvl8 id6 0>1>2>3>4, absent in their ctl arms; lvl9
+ids1/3/5 match both arms. Synthetic pre/post-flight records are excluded.
+The initial check expected lvl8's 4>0 reset inside first flight and FAILED;
+raw phase boundaries place that reset after flight exit. Fixed the check
+to the measured four transitions and reran successfully. This is a scope
+correction, not suppression of the reset. Lvl7 id1 has 22 first-epoch
+records versus the old run-lifetime 30; lvl9's extra id3 was also later.
+Results select H-response only as descriptive named-counter activity for
+lvl7/8; H-incidental remains for objective success and shared end gates.
+Lvl4 id15 is common baseline; lvl5 tele-only id2 has the historical failure
+interpretation, not successful progress; lvl1 saved ctl has objsnap while
+tele does not, so historical same-build identity cannot be assumed.
+Lvl2/3 have writer-call evidence only. Missing forced-selector lvl0 and
+lvl10–18 pair files select H-missing, not a negative response result.
+Legacy lvl0 logs name lv0_checkComplexObjectives and show c1 pre-states
+0..3 ctl vs 0..12/0..16 TELE, single-source cross-run evidence only.
+Static generated-code cross-check: lv5 reads id2>=4 at 80104168 and id4>=9
+at 801041BC; lvl7 reads ids20/30/40/99 outside the snapshot/get monitor's
+1–15 range. Lvl7's id2 meaning is not established by lv0's fail threshold.
+This single-source scope finding plus inspected monitor bounds explains
+why the old fifteen-slot coverage cannot establish no objective response.
+The lvl6 heartbeat controls execution, not value detection; withdraw the
+s5962 controlled-null claim. All conclusions retain single-source limits;
+no independent retail mission oracle or causal animated A/B was run.
+Two complementary witnesses (saved guest logs, static callback/phase
+semantics) support classification, not retail equivalence. No level gains
+full VERIFIED status. No new soak verdicts since already-folded s6580.
+ORIGIN: no mitigation or runtime change; offline evidence tooling only.
+Next: first missing forced-route lvl0 counter1 witness with existing TELE
+lever, one new phase-scoped off/on/off adapter and joined actual-write
+control. No forced wins, progression, aim work or repeat crash holds.

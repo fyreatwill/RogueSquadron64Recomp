@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6655 (2026-10-29).
+Compact operational handoff, as of Session 6656 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -274,7 +274,31 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   Content-class presence only, not retail equivalence or objective (d).
   Report: `docs/G1-FRAMEBUFFER-COVERAGE.md`. No new queued-soak verdicts.
 
+- **G1(d) saved evidence reconciled (s6656), still partial.** New tool
+  `tools/g1_objective_evidence.py --check` streams 18 ctl/TELE gzip logs
+  plus legacy s5843–s5845, using only the first explicit flight-width epoch.
+  All 18 pair selectors match. Actual lvl7 id2 and lvl8 id6 changes are
+  positive controls; lvl9 baseline ids match in both arms. Lvl7 id2 goes
+  0>2>3>0; lvl8 id6 goes 0>1>2>3>4 (its reset is after the first epoch).
+  Shared end requests do not prove a hit-driven end gate. Lvl6 heartbeat
+  proves execution only, so its silent value monitor is NOT a controlled
+  null. Single-source static read: lvl7 itself tests ids 20/30/40/99,
+  outside the old monitor's 1–15 slots; id2 meaning is not established for
+  lvl7. Saved lvl1 ctl contains objsnap while tele does not: paths were
+  reused across builds, so historical arm identity cannot be assumed.
+  Legacy lvl0 logs name lv0_checkComplexObjectives and show counter1
+  pre-states 0..3 ctl versus 0..12/0..16 TELE; cross-run, single-source.
+  Forced-selector lvl0 ctl/tele and lvl10–18 pairs are absent in this set,
+  not negative results. No level promoted to fully VERIFIED. Full table,
+  semantics and line provenance: `docs/G1-OBJECTIVE-RESPONSE.md`.
+  First missing forced-route witness is lvl0 counter1: one phase-scoped
+  off/on/off TELE experiment, below end thresholds, is next. No new soak
+  verdicts; no runtime/default change in s6656.
+
 ## Superseded conclusions — do not act on these
+- s5962 "lvl6 null is valid because hb ticks fires" (s6656: heartbeat controls execution, not detection of value changes; the monitor covers only ids 1–15 and has a run-lifetime budget). Believable because TELE and hook execution both fired, but no same-run changing-value control established sensitivity to every relevant objective slot.
+- s5995 "lvl7 id2 peak3 matches the objective threshold" (s6656: that threshold belongs to lv0; the lvl7 callback's inspected reads include ids 20/30/40/99, outside the monitor). Believable because all levels reuse the counter array; index meaning and thresholds are level-specific. Lvl7 end remains the lives-loss chain observed in both arms, not id2 causality.
+- s5994–s5995 "lvl8 counter6 resets during the measured response" (s6656: first explicit flight epoch contains only 0>1>2>3>4; 4>0 is later). Believable because the old parser pooled run-lifetime events including re-entry. The reset remains real, but is not part of the first-epoch response.
 - s6653 "level 18 has visual evidence but no numeric terrain acceptance" (s6654: the bounded bright low-chroma snow arm accepts both flight views while every control holds). Believable because their rel 0.046/0.068 is below the original 0.08 floor; that band remains unchanged.
 - s6651 "level 17 does not pass the frozen rule, and the grey trench box is not a sky arm" (s6652: neutral8 ≥ 0.80 inside luma [38, 55] with |channel means| ≤ 8 accepts n=2300, 1/10; canon_bad 0; mission 11/13; both title skies stay false; m3150 stays a sky miss at neutral8 0.613). Believable because dark ≥ 0.60, the blue arm, the orange arm and the tan-cloud arm all miss luma 42.5 with R−G 1.4, and the top 4% of that frame is the same grey, so lowering dark does not accept the chase.
 - s6649 method "the flight set is the phase-7 dumps" (s6650: level 16's flight dumps stay phase 5). Believable because levels 11-15 insert a 640-wide crawl that bumps `rs64_phase_ord` through 6 into 7. The ordinal bumps only on a VI-width change, so a 512-wide flight after a 512-wide hangar does not.
@@ -454,15 +478,15 @@ owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6655) Reconcile G1(d) objective-response evidence before new runs.**
-   Make one bounded, reproducible per-level evidence table from the existing
-   ctl/TELE logs and the targeted s5946-s5996 ledger entries. Separate
-   damage/writer-call activity, named counter transitions, success/failure
-   counters, and end-gate evidence; exclude mission wins/progression from
-   new testing. Record positive-control coverage and missing logs explicitly.
-   Select the first genuinely missing level-specific response, with its
-   exact existing lever and phase gate, for the following work unit.
-   No repeat holds, aim work, default changes or new runtime instrumentation.
+1. **(s6656) Level-0 forced-route counter1 response, one in-run discriminator.**
+   Use the existing TELE_BOLT lever and forced selector LEVEL=0, with a new
+   phase-scoped adapter: off/on/off windows keyed to the first flight VI
+   epoch, joined victim/actual DAT-write before/after records and a live
+   changing-value control. Confirm B40=0 plus the lv0 callback; width 512
+   alone also matches the hangar. Stop before any end threshold, preserve
+   retail defaults and all later win/progression playtest scope. See NEXT.md
+   for the base recipe and exact hypotheses. No cross-run animated A/B,
+   aim work, repeat holds or new crash sweep.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
