@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6646 (2026-10-29).
+Compact operational handoff, as of Session 6647 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -173,6 +173,20 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   (origin `0x006AB400`) fails HUD only (radar 0.002). Sheet
   `docs/g1_lvl12_flight_s6646.png`. 0 crashes in the 30 s
   hold. The classifier was not edited. Objective (d) was not run.
+- **G1 (c) level 13 flight framebuffer: frozen rule accepts it.**
+  s6647, one retail 4:3 capture, draw distance 1, aspect unset.
+  Selector B40=13, cursor=13. Nine phase-7 dumps, n=2800..3200,
+  are 512x444 at origin `0x00690400` (this run sampled the route
+  key; `0x620400` is in the VI log, 13 lines). Dark sky, lava
+  field, Y-wing, radar, reticle, shield badge. 2/9 pass all four
+  clauses (n=3150 rel 0.325, n=3200 rel 0.217). Seven miss the
+  terrain ceiling only (rel 0.362..0.611): the lava is
+  high-contrast and is not required. Same-run title
+  `fb_0000800_w512.ppm` fails sky and terrain (luma 81.2, R-G
+  29.3, rel 0.432). Craft-select `fb_0001700_w512.ppm` (origin
+  `0x006AB400`, Y-wing) fails sky and HUD (radar 0.001). Sheet
+  `docs/g1_lvl13_flight_s6647.png`. 0 crashes in the 30 s hold.
+  The classifier was not edited. Objective (d) was not run.
 
 ## Superseded conclusions — do not act on these
 - s6643 "level 10 is a flight and the frozen rule rejects the sky 0/12" (s6644: tan-cloud arm accepts 11/12; n=2900 stays a craft miss at edge 0.013; title sky stays false because G−B is ~5 while the clouds are ≥22; canon_bad 0; mission 11/13). Believable because dark≥0.60, the blue arm (R−G≤15) and the orange arm (R−G≥40) all miss a luma 73..104 sky with R−G 23..28.
@@ -292,6 +306,9 @@ one capture). n=2450 remains a distant-craft near-miss (metal
 Level 12 passes the frozen rule on 4/5 phase-7 dumps (s6646,
 one capture). n=2400 remains a banked-craft near-miss (metal
 0.078, sil 0.000, edge 0.043) and is not required.
+Level 13 passes the frozen rule on 2/9 phase-7 dumps (s6647,
+one capture). Seven lava frames miss the terrain ceiling only
+(rel 0.362..0.611) and are not required.
 Verification still needs framebuffer
 evidence for the remaining levels, plus a forced-hit objective
 response. Mission wins, autopilot aim, and mission-to-mission
@@ -318,10 +335,10 @@ progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6646) Capture level 13 with the rule frozen.** One retail
-   4:3 run. Clone `scratch/agent/s6646_lvl12.sh` to
-   `scratch/agent/s6647_lvl13.sh` with `ROGUESQ_FORCE_UNLOCK=13`
-   and `ROGUESQ_FORCE_SAVE_MISSION=13`. Do not set
+1. **(s6647) Capture level 14 with the rule frozen.** One retail
+   4:3 run. Clone `scratch/agent/s6647_lvl13.sh` to
+   `scratch/agent/s6648_lvl14.sh` with `ROGUESQ_FORCE_UNLOCK=14`
+   and `ROGUESQ_FORCE_SAVE_MISSION=14`. Do not set
    `ROGUESQ_FORCE_PLANET_UNLOCK` (only levels 10 and 15 need it).
    Draw distance unset, aspect unset. Precontrol
    `python3 tools/g1_flight_class.py` must print `canon_bad 0`
@@ -333,7 +350,7 @@ progression are owner playtest scope.
    a flight and zero frames pass, record the failing clause and
    the sky-box luma / R-G / R-B / G-B, and do not add an arm.
    If there is no post-hangar `0x690400` inside 420 s, record
-   the last origin and stop. Do not start level 14. See NEXT.md.
+   the last origin and stop. Do not start level 15. See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

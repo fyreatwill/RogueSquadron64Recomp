@@ -173449,3 +173449,59 @@ What this rules out: "level 12 produced no post-hangar flight picture"
 and "the frozen rule rejects every level-12 phase-7 frame." What it
 does not show: an objective-counter response, or that level 13 passes.
 Level 13 does not need the planet unlock.
+
+## Session 6647 (2026-10-29) — level 13 lava flight passes the frozen class rule
+
+One retail 4:3 capture. No classifier edit, no heap edit, no aim, draw
+distance unset, aspect unset, no planet unlock. Precontrol
+`python3 tools/g1_flight_class.py` printed canon_bad 0 and mission 11/13
+before launch (oracle, level-2 fb_0002700, and level-3 fb_0002700 pass;
+floor and the s6633 title fail). IOConsoleLocked was No. The route is
+scratch/agent/s6647_lvl13.sh, the s6646 script with FORCE_UNLOCK=13 and
+FORCE_SAVE_MISSION=13. The soak tail in scratch/agent/SOAK-RESULTS.md
+still ends at s6580 (2026-10-28); no new queued verdict to fold.
+
+scratch/agent/s6647_lvl13/keys.log: screen-unlocked, precontrol-ok, title
+t=14, hangar t=32, mission-onset t=103, hold-30s t=133, killed t=133,
+crash=0, abort=0. run.log echoes `[dd] ROGUESQ_DRAW_DISTANCE multiplier 1`,
+`[g1d-drop] aspect=<unset>`, `[lvsel] cursor=13`, and
+`[initMission] call#1 B40=0x0D`. CRASH, abort, SIGSEGV and SIGBUS counts
+in that log are 0. Nine phase-7 dumps, n=2800..3200 step 50, are
+512x444. Every dump's own origin field is `0x00690400` (fb=0x80620000,
+source=0x00690000). The VI origin census has 19 lines of `0x00690400`
+and 13 of `0x00620400`. Sheet `docs/g1_lvl13_flight_s6647.png` is frames
+2900, 3050, 3150 and 3200. Scores are in
+`scratch/agent/s6647_lvl13_score.txt`.
+
+The sheet is a flight. Dark sky over a lava field, a Y-wing with lit
+engines, the round radar, a green reticle and the shield badge. The
+frozen rule scores 2/9. n=3150 and n=3200 pass sky, terrain, craft and
+HUD. Sky on those two is the existing dark arm (luma 15.9 and 24.0).
+Craft is the existing bright-metal hull (metal 0.142 and 0.107) with
+the engine bloom (pure 0.0059 and 0.0070). Terrain rel is 0.325 and
+0.217, inside the 0.08..0.33 band.
+
+n=2800, 2850, 2900, 2950, 3000, 3050 and 3100 are not required. They
+are still flights: the same Y-wing, radar and lava. Each misses terrain
+only (rel 0.379, 0.533, 0.611, 0.583, 0.548, 0.458, 0.362). Sky, craft
+and HUD pass on all seven (luma 19.8..20.7, radar 0.094..0.099, metal
+0.060..0.143). The lava's local edge energy sits above the 0.33
+ceiling. That is the same ceiling family as level 5's rel 0.331/0.338,
+not a new sky class. The classifier was not edited.
+
+Same-run title `fb_0000800_w512.ppm` is the title screen and fails sky
+and terrain (luma 81.2, R-G 29.3, rel 0.432). The origin-`0x006AB400`
+dump `fb_0001700_w512.ppm` is the craft-select screen (Y-wing, select
+your craft), not a flight. It fails overall on sky and HUD (radar
+0.001, luma 49.8). Terrain rel 0.320 and metal 0.246 do not accept it.
+Objective (d) was not run.
+
+This selects H-rule-holds. It refutes H-new-class (2/9 pass, not 0/9)
+and H-no-picture (the sheet is a flight).
+ORIGIN: n/a (no mitigation).
+
+What this rules out: "level 13 produced no post-hangar flight picture"
+and "the frozen rule rejects every level-13 phase-7 frame." What it
+does not show: an objective-counter response, or that level 14 passes.
+The lava ceiling misses are not a reason to raise 0.33 in the next
+session. Level 14 does not need the planet unlock.
