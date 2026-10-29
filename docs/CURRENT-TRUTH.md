@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6624 (2026-10-28).
+Compact operational handoff, as of Session 6625 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -14,7 +14,23 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   first-mission endurance (3x600 s lvl1/5/7, s6442), and G2 audio are closed.
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
-- **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-texel).**
+- **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-upload).**
+  - s6625: the pre-submission writer is `RenderTarget::copyFromChanges`
+    (`fbChangesDrawDepth`). One Debug binary, both widths. 16:9 35.7 s /
+    21:9 33.7 s, 53 good frames, alive, 0 crash markers. On the 21:9 floor
+    depth texture (1024x339) `clearDepthTarget` reads back 1.0 on both
+    columns (142/142). The next event, a full-rect copyFromChanges, replaces
+    that image: 25 exact zeros on rows 0..11 of y=180..250, then x=16 is a
+    smooth ~0.964..0.961 ramp and x=1007 stays 1.0. floor-enter (frame 1357,
+    phase 4) matches that image with max abs diff 0, and matches the shader
+    attachment sample 0. 16:9's 796x339 floor depth has no copyFromChanges;
+    one copyFromTarget leaves 1.0, floor-enter is all 1.0, and a later floor
+    op stores z 0.99524..0.99667. Magenta, pix-match and the 16:9 store all
+    pass. Not a width mismatch (both 1024) and not an unwritten tile (the
+    clear read back). Caller among state.cpp:2604, workload_queue.cpp:966
+    and framebuffer_manager.cpp:345 is not tagged. No default change.
+    Evidence `scratch/agent/s6625_depth/depth_verdict.json` (local, gitignored);
+    runner `tools/g1d_floor_depth.py`.
   - s6624: pre/post color+depth witness selects H-late-test (single-source). One
     Debug binary, both widths. 16:9 36.2 s / 21:9 33.4 s, 50 good frames,
     alive, 0 crash markers, magenta/binding/fixed-function/checker controls
@@ -30,12 +46,12 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
     0..12 (y 180..192). Op 14 passes only where pre-depth is 1.0 (36/92)
     and fails on 0 or ~0.961/0.967/0.984; the columns are largely out of
     phase. Depth-0 pixels are never rewritten. That striped depth is already
-    present at sample 0, before any op in the submission. Not a floor blend
+    present at sample 0, before any op in the submission. s6625 names that
+    writer: copyFromChanges, after a clear that still read back as 1.0. Not a floor blend
     bug. No render/default change. Evidence
     `scratch/agent/s6624_attachment/attachment_verdict.json`; sheet
     `docs/owner_sheet_s6624_attachment.png`; runner
-    `tools/g1d_floor_attachment.py`. Next: name the pre-submission writer
-    of that depth.
+    `tools/g1d_floor_attachment.py`.
   - s6623: actual GPU fragment records select H-backend (single-source).
     One Debug binary, phase-driven 796/1024 arms: 16/24 complete scenes,
     2313/3450 fragment records. Every fragment recovers its sampled uploaded
@@ -406,6 +422,7 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
+- s6625 closes "the 21:9 zeros are unwritten depth tiles (create-clear never applied, so a readback of 0)". Believable because Metal does not clear a D32 texture at creation, and a different 1024x480 target's first sample in the same run was exact 0. Refuted on the floor texture: clearDepthTarget read back 1.0 on both columns, and the following copyFromChanges replaced those pixels.
 - s6623 "shader-to-attachment MAE 37 at 21:9 means the first wrong stage is an attachment write after a sane shader" (s6624: the same shader color is stored at 16:9, where depth is 1.0 and LESS passes, and rejected at 21:9, where a nearer striped depth already occupies the columns). Believable because the UAV record is written before the depth test and matched the 16:9 attachment exactly.
 - s6614 lead "dtdx*x at the outer third diverges on 21:9" (s6615: dtdx shrinks by about 796/1024 and the texel matches to about 0.05). Believable because the sample x grows with the framebuffer and s6613 only cancelled that product at x=0.
 - s6612 "21:9 S at the left edge walks off the 64-wide mask while 16:9 stays inside" (s6613: 0/16 pairs do that; S at x=0 matches). Believable because the x span and dsdx scale with width. x_major moves the other way and the product cancels.
@@ -504,17 +521,16 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6624) Name the writer of the striped depth already present at sample 0.**
-   Same columns (x=16, x=w-17, y=180..250), both widths, one binary. 16:9
-   enters at depth 1.0 and the floor LESS replaces the color. 21:9 serial 1
-   enters with 25 exact zeros on rows 0..12 and then 1.0 interleaved with
-   ~0.961/0.967/0.984, columns out of phase; the floor passes only on the
-   1.0 rows. Hypotheses: H-prior-stripe (a draw after a clear-to-1 stores
-   that pattern on 21:9 only), H-depth-pitch (one draw's z is smooth but
-   its depth stores alternate rows), H-depth-readback (nothing stores 0.0;
-   unwritten tiles read back as 0 while the create clear is 1). A missing
-   clear alone cannot explain values other than the create clear. Do not
-   repeat the in-submission witness or change a default. NEXT.md.
+1. **(s6625) Decide whether copyFromChanges uploads guest depth that is already striped.**
+   The 1024x339 floor depth is cleared to 1.0, then one full-rect
+   `fbChangesDrawDepth` upload writes the stripe the floor loses to. 16:9
+   never takes that upload. Tag the caller (state.cpp:2604,
+   workload_queue.cpp:966, framebuffer_manager.cpp:345) and log the guest
+   depth words for x=16 and x=w-17, y=180..250, beside the GPU post image.
+   H-guest: those words already match the GPU columns. H-upload: the guest
+   field is clear or smooth and the shader/viewport produces the zeros and
+   the column split. A caller difference alone is not the mechanism. Do not
+   change a default. NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

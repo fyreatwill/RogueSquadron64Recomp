@@ -8272,10 +8272,18 @@ index 69a82ac..6e82095 100644
  
              if (device != nullptr) {
 diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
-index b9cb1f5..b305b9b 100644
+index b9cb1f5..f89371f 100644
 --- a/src/render/rt64_framebuffer_renderer.cpp
 +++ b/src/render/rt64_framebuffer_renderer.cpp
-@@ -15,12 +15,15 @@
+@@ -8,6 +8,7 @@
+ #include <cstdio>
+ #include <cstdlib>
+ #include <cstring>
++#include <vector>
+ 
+ #include "../include/rt64_extended_gbi.h"
+ 
+@@ -15,12 +16,15 @@
  #include "common/rt64_math.h"
  #include "hle/rt64_color_converter.h"
  #include "gbi/rt64_f3d.h"
@@ -8291,7 +8299,7 @@ index b9cb1f5..b305b9b 100644
  // TODO: Move to shared.
  
  namespace interop {
-@@ -238,9 +241,24 @@ namespace RT64 {
+@@ -238,9 +242,24 @@ namespace RT64 {
              }
              
              interop::GPUTile &gpuTile = dstGPUTiles[i];
@@ -8317,7 +8325,7 @@ index b9cb1f5..b305b9b 100644
                      const FramebufferManager::TileCopy &tileCopy = it->second;
                      gpuTile.tcScale.x = static_cast<float>(tileCopy.usedWidth) / static_cast<float>(callTile.tileCopyWidth);
                      gpuTile.tcScale.y = static_cast<float>(tileCopy.usedHeight) / static_cast<float>(callTile.tileCopyHeight);
-@@ -255,15 +273,65 @@ namespace RT64 {
+@@ -255,15 +274,65 @@ namespace RT64 {
                      gpuTile.flags.fromCopy = true;
                      gpuTile.flags.rawTMEM = false;
                      gpuTile.flags.hasMipmaps = false;
@@ -8385,7 +8393,18 @@ index b9cb1f5..b305b9b 100644
  
                  // Describe the GPU tile for a regular texture.
                  gpuTile.ulScale.x = gpuTile.tcScale.x;
-@@ -376,6 +444,36 @@ namespace RT64 {
+@@ -311,6 +380,10 @@ namespace RT64 {
+         return dstIndex;
+     }
+     
++    static RenderBuffer *g_rs64FloorFragments = nullptr;
++    static RenderBuffer *g_rs64FloorFragmentZero = nullptr;
++    static uint64_t g_rs64FloorBufferBytes = 0;
++
+     void FramebufferRenderer::updateShaderDescriptorSet(RenderWorker *worker, const DrawBuffers *drawBuffers, const OutputBuffers *outputBuffers, const bool raytracingEnabled) {
+         assert(worker != nullptr);
+         assert(drawBuffers != nullptr);
+@@ -376,6 +449,39 @@ namespace RT64 {
          }
  #   endif
  
@@ -8393,9 +8412,12 @@ index b9cb1f5..b305b9b 100644
 +            const bool enabled = std::getenv("ROGUESQ_FLOOR_SHADER_DIR") != nullptr;
 +            floorBufferBytes = enabled ? uint64_t(FloorPrimitiveCap) * 142 * FloorRecordBytes : 16;
 +            floorFragments = worker->device->createBuffer(RenderBufferDesc::DefaultBuffer(floorBufferBytes, RenderBufferFlag::STORAGE | RenderBufferFlag::UNORDERED_ACCESS));
++            g_rs64FloorFragments = floorFragments.get();
++            g_rs64FloorBufferBytes = floorBufferBytes;
 +            if (enabled) {
 +                floorFragmentReadback = worker->device->createBuffer(RenderBufferDesc::ReadbackBuffer(floorBufferBytes));
 +                floorFragmentZero = worker->device->createBuffer(RenderBufferDesc::UploadBuffer(floorBufferBytes));
++                g_rs64FloorFragmentZero = floorFragmentZero.get();
 +                memset(floorFragmentZero->map(), 0, floorBufferBytes);
 +                floorFragmentZero->unmap();
 +                const uint64_t attachBytes = uint64_t(FloorAttachOps + 1) * 2 * FloorAttachRows * FloorAttachPitch;
@@ -8422,9 +8444,406 @@ index b9cb1f5..b305b9b 100644
          descCommonSet->setBuffer(descCommonSet->FrParams, frameParamsBuffer.get(), sizeof(interop::FrameParams));
          descCommonSet->setBuffer(descCommonSet->instanceRenderIndices, renderIndicesBuffer.get(), RenderBufferStructuredView(sizeof(interop::RenderIndices)));
          descCommonSet->setBuffer(descCommonSet->instanceRDPParams, drawBuffers->rdpParamsBuffer.get(), RenderBufferStructuredView(sizeof(interop::RDPParams)));
-@@ -471,6 +569,29 @@ namespace RT64 {
+@@ -470,7 +576,426 @@ namespace RT64 {
+         return true;
      }
      
++    namespace {
++
++    constexpr uint32_t kDepthRows = 71;
++    constexpr uint32_t kDepthPitch = 256;
++    constexpr uint32_t kDepthPix = 142;
++    constexpr uint32_t kDepthCap = 2048;
++    constexpr uint32_t kDepthZBytes = kDepthPix * 16;
++
++    struct DepthHistEvent {
++        char kind[24];
++        uint64_t depthTex;
++        uint64_t colorTex;
++        uint32_t phase;
++        uint32_t addr;
++        uint32_t colorAddr;
++        uint32_t colorW, colorH, depthW, depthH;
++        uint32_t colorFmt;
++        uint64_t frame;
++        uint32_t pair;
++        float clearValue;
++        int x0, y0, x1, y1, whole;
++        int zCmp, zUpd, depthCmp, depthWr, faces, captureZ, sample;
++    };
++
++    struct DepthTrack {
++        uint64_t ptr = 0;
++        int dirty = 0;
++        int seen = 0;
++    };
++
++    const char *g_depthDir = nullptr;
++    bool g_depthDirReady = false;
++    FILE *g_depthJson = nullptr;
++    bool g_depthClosed = false;
++    bool g_depthFlushed = false;
++    int g_depthOverflow = 0;
++    uint32_t g_depthSamples = 0;
++    uint32_t g_depthSkipped = 0;
++    std::vector<DepthHistEvent> g_depthEvents;
++    DepthTrack g_depthTracks[64];
++    std::unique_ptr<RenderBuffer> g_depthColor;
++    std::unique_ptr<RenderBuffer> g_depthDepth;
++    std::unique_ptr<RenderBuffer> g_depthZ;
++    uint8_t g_depthZCaptured[kDepthCap];
++    uint32_t g_depthColorFmt[kDepthCap];
++
++    bool depthDirOn() {
++        if (!g_depthDirReady) {
++            g_depthDir = std::getenv("ROGUESQ_FLOOR_DEPTH_DIR");
++            if (g_depthDir != nullptr && g_depthDir[0] == '\0') {
++                g_depthDir = nullptr;
++            }
++            g_depthDirReady = true;
++        }
++        return g_depthDir != nullptr;
++    }
++
++    bool depthWatched(uint32_t colorW, uint32_t depthW) {
++        return colorW == 796u || colorW == 1024u || depthW == 796u || depthW == 1024u;
++    }
++
++    bool depthHitsBand(int x0, int y0, int x1, int y1, uint32_t width) {
++        if (width < 34u || y1 <= 180 || y0 >= 251) {
++            return false;
++        }
++        const int right = int(width) - 17;
++        return (x0 <= 16 && x1 > 16) || (x0 <= right && x1 > right);
++    }
++
++    DepthTrack *depthTrack(uint64_t ptr, bool create) {
++        DepthTrack *empty = nullptr;
++        for (DepthTrack &slot : g_depthTracks) {
++            if (slot.ptr == ptr) {
++                return &slot;
++            }
++            if (slot.ptr == 0 && empty == nullptr) {
++                empty = &slot;
++            }
++        }
++        if (!create || empty == nullptr) {
++            return nullptr;
++        }
++        empty->ptr = ptr;
++        empty->dirty = 1;
++        empty->seen = 0;
++        return empty;
++    }
++
++    void depthEnsureJson() {
++        if (g_depthJson != nullptr || !depthDirOn()) {
++            return;
++        }
++        char path[1024];
++        std::snprintf(path, sizeof(path), "%s/history.jsonl", g_depthDir);
++        g_depthJson = std::fopen(path, "wb");
++    }
++
++    void depthWriteEvent(const DepthHistEvent &ev) {
++        depthEnsureJson();
++        if (g_depthJson == nullptr) {
++            return;
++        }
++        std::fprintf(g_depthJson,
++            "{\"kind\":\"%s\",\"depth\":\"0x%llx\",\"color\":\"0x%llx\",\"phase\":%u,\"addr\":%u,\"colorAddr\":%u,"
++            "\"colorW\":%u,\"colorH\":%u,\"depthW\":%u,\"depthH\":%u,\"colorFmt\":%u,\"frame\":%llu,\"pair\":%u,"
++            "\"clear\":%.6g,\"x0\":%d,\"y0\":%d,\"x1\":%d,\"y1\":%d,\"whole\":%d,\"zCmp\":%d,\"zUpd\":%d,"
++            "\"depthCmp\":%d,\"depthWr\":%d,\"faces\":%d,\"captureZ\":%d,\"sample\":%d}\n",
++            ev.kind, (unsigned long long)ev.depthTex, (unsigned long long)ev.colorTex, ev.phase, ev.addr, ev.colorAddr,
++            ev.colorW, ev.colorH, ev.depthW, ev.depthH, ev.colorFmt, (unsigned long long)ev.frame, ev.pair,
++            ev.clearValue, ev.x0, ev.y0, ev.x1, ev.y1, ev.whole, ev.zCmp, ev.zUpd,
++            ev.depthCmp, ev.depthWr, ev.faces, ev.captureZ, ev.sample);
++        std::fflush(g_depthJson);
++    }
++
++    bool depthEnsureBuffers(RenderWorker *worker) {
++        if (g_depthColor != nullptr) {
++            return true;
++        }
++        if (worker == nullptr || worker->device == nullptr) {
++            return false;
++        }
++        const uint64_t bytes = uint64_t(kDepthCap) * 2u * kDepthRows * kDepthPitch;
++        g_depthColor = worker->device->createBuffer(RenderBufferDesc::ReadbackBuffer(bytes));
++        g_depthDepth = worker->device->createBuffer(RenderBufferDesc::ReadbackBuffer(bytes));
++        g_depthZ = worker->device->createBuffer(RenderBufferDesc::ReadbackBuffer(uint64_t(kDepthCap) * kDepthZBytes));
++        std::memset(g_depthZCaptured, 0, sizeof(g_depthZCaptured));
++        return g_depthColor != nullptr && g_depthDepth != nullptr && g_depthZ != nullptr;
++    }
++
++    void depthCopyColumns(RenderWorker *worker, RenderTexture *tex, RenderFormat format, RenderBuffer *buf, uint32_t sample, uint32_t width) {
++        const uint32_t bpp = RenderFormatSize(format);
++        if (tex == nullptr || buf == nullptr || bpp == 0 || (kDepthPitch % bpp) != 0 || width < 34u) {
++            return;
++        }
++        const uint32_t rowWidth = kDepthPitch / bpp;
++        const int xs[2] = { 16, int(width) - 17 };
++        for (uint32_t col = 0; col < 2; col++) {
++            const uint64_t off = (uint64_t(sample) * 2u + col) * kDepthRows * kDepthPitch;
++            const RenderBox box(xs[col], 180, xs[col] + 1, 251);
++            worker->commandList->copyTextureRegion(
++                RenderTextureCopyLocation::PlacedFootprint(buf, format, rowWidth, kDepthRows, 1, rowWidth, off),
++                RenderTextureCopyLocation::Subresource(tex), 0, 0, 0, &box);
++        }
++    }
++
++    }
++
++    void rs64DepthHistSetup(RenderWorker *worker, RenderTexture *depth, uint32_t address, uint32_t width, uint32_t height, RenderFormat format, float clearValue) {
++        (void)worker;
++        if (!depthDirOn() || depth == nullptr || !depthWatched(width, width)) {
++            return;
++        }
++        const uint64_t ptr = reinterpret_cast<uint64_t>(depth);
++        if (DepthTrack *slot = depthTrack(ptr, true)) {
++            slot->dirty = 1;
++            slot->seen = 0;
++        }
++        if (g_depthEvents.size() >= 8192u) {
++            return;
++        }
++        DepthHistEvent ev = {};
++        std::snprintf(ev.kind, sizeof(ev.kind), "setup");
++        ev.depthTex = ptr;
++        ev.phase = rs64_phase_ord();
++        ev.addr = address;
++        ev.depthW = width;
++        ev.depthH = height;
++        ev.colorFmt = uint32_t(format);
++        ev.clearValue = clearValue;
++        ev.sample = -1;
++        g_depthEvents.push_back(ev);
++        depthWriteEvent(ev);
++    }
++
++    bool rs64DepthHistBeginZ(RenderWorker *worker) {
++        if (!depthDirOn() || g_depthClosed || worker == nullptr || worker->commandList == nullptr) {
++            return false;
++        }
++        if (g_rs64FloorFragments == nullptr || g_rs64FloorFragmentZero == nullptr || g_rs64FloorBufferBytes < kDepthZBytes) {
++            return false;
++        }
++        if (!depthEnsureBuffers(worker)) {
++            return false;
++        }
++        worker->commandList->barriers(RenderBarrierStage::COPY, RenderBufferBarrier(g_rs64FloorFragments, RenderBufferAccess::WRITE));
++        worker->commandList->copyBufferRegion(g_rs64FloorFragments, g_rs64FloorFragmentZero, kDepthZBytes);
++        worker->commandList->barriers(RenderBarrierStage::GRAPHICS, RenderBufferBarrier(g_rs64FloorFragments, RenderBufferAccess::WRITE));
++        return true;
++    }
++
++    bool rs64DepthHistCaptureDraw(uint32_t width, int zUpd, int x0, int y0, int x1, int y1) {
++        if (!depthDirOn() || g_depthClosed || !zUpd || rs64_phase_ord() < 4 || !depthWatched(width, width)) {
++            return false;
++        }
++        if (g_depthSamples + 1u >= kDepthCap) {
++            g_depthOverflow = 1;
++            return false;
++        }
++        return depthHitsBand(x0, y0, x1, y1, width);
++    }
++
++    void rs64DepthHistSample(RenderWorker *worker, const char *kind, RenderTexture *depth, RenderTexture *color, RenderFormat colorFormat, uint32_t colorAddr, uint32_t colorW, uint32_t colorH, uint32_t depthW, uint32_t depthH, uint64_t frame, uint32_t pair, int x0, int y0, int x1, int y1, int whole, int zCmp, int zUpd, int depthCmp, int depthWr, int faces, int captureZ) {
++        if (!depthDirOn() || g_depthClosed || depth == nullptr || kind == nullptr) {
++            return;
++        }
++        if (rs64_phase_ord() < 4) {
++            return;
++        }
++        if (!depthWatched(colorW, depthW)) {
++            if (std::strcmp(kind, "floor-enter") == 0) {
++                g_depthClosed = true;
++            }
++            return;
++        }
++        const bool isEnter = std::strcmp(kind, "enter") == 0;
++        const bool isFloor = std::strcmp(kind, "floor-enter") == 0;
++        const uint64_t ptr = reinterpret_cast<uint64_t>(depth);
++        DepthTrack *slot = depthTrack(ptr, true);
++        // Unchanged wide targets stay out of the sample cap. Writers and the
++        // floor-enter sample always record. setup() marks a new texture dirty.
++        if (isEnter && slot != nullptr && slot->seen && !slot->dirty) {
++            g_depthSkipped++;
++            return;
++        }
++        const uint32_t bandW = colorW != 0 ? colorW : depthW;
++        const bool canCopy = worker != nullptr && worker->commandList != nullptr && depthH >= 251u && bandW >= 34u &&
++            (isFloor || g_depthSamples + 1u < kDepthCap) && g_depthSamples < kDepthCap && depthEnsureBuffers(worker);
++        if (!canCopy && !isFloor && g_depthSamples + 1u >= kDepthCap) {
++            g_depthOverflow = 1;
++        }
++        DepthHistEvent ev = {};
++        std::snprintf(ev.kind, sizeof(ev.kind), "%s", kind);
++        ev.depthTex = ptr;
++        ev.colorTex = reinterpret_cast<uint64_t>(color);
++        ev.phase = rs64_phase_ord();
++        ev.addr = colorAddr;
++        ev.colorAddr = colorAddr;
++        ev.colorW = colorW;
++        ev.colorH = colorH;
++        ev.depthW = depthW;
++        ev.depthH = depthH;
++        ev.colorFmt = uint32_t(colorFormat);
++        ev.frame = frame;
++        ev.pair = pair;
++        ev.x0 = x0;
++        ev.y0 = y0;
++        ev.x1 = x1;
++        ev.y1 = y1;
++        ev.whole = whole;
++        ev.zCmp = zCmp;
++        ev.zUpd = zUpd;
++        ev.depthCmp = depthCmp;
++        ev.depthWr = depthWr;
++        ev.faces = faces;
++        ev.captureZ = 0;
++        ev.sample = -1;
++        if (canCopy) {
++            const uint32_t sample = g_depthSamples++;
++            ev.sample = int(sample);
++            g_depthColorFmt[sample] = uint32_t(colorFormat);
++            if (captureZ && g_rs64FloorFragments != nullptr && g_depthZ != nullptr) {
++                worker->commandList->barriers(RenderBarrierStage::COPY, RenderBufferBarrier(g_rs64FloorFragments, RenderBufferAccess::READ));
++                worker->commandList->copyBufferRegion(g_depthZ->at(uint64_t(sample) * kDepthZBytes), g_rs64FloorFragments, kDepthZBytes);
++                ev.captureZ = 1;
++                g_depthZCaptured[sample] = 1;
++            }
++            RenderTextureBarrier bars[2];
++            bars[0] = RenderTextureBarrier(depth, RenderTextureLayout::COPY_SOURCE);
++            uint32_t barrierCount = 1;
++            const bool copyColor = color != nullptr && RenderFormatSize(colorFormat) != 0 && (kDepthPitch % RenderFormatSize(colorFormat)) == 0;
++            if (copyColor) {
++                bars[1] = RenderTextureBarrier(color, RenderTextureLayout::COPY_SOURCE);
++                barrierCount = 2;
++            }
++            worker->commandList->barriers(RenderBarrierStage::COPY, bars, barrierCount);
++            const uint32_t depthBand = depthW >= bandW ? bandW : depthW;
++            depthCopyColumns(worker, depth, RenderFormat::D32_FLOAT, g_depthDepth.get(), sample, depthBand);
++            if (copyColor && colorW >= bandW) {
++                depthCopyColumns(worker, color, colorFormat, g_depthColor.get(), sample, bandW);
++            }
++            bars[0] = RenderTextureBarrier(depth, RenderTextureLayout::DEPTH_WRITE);
++            if (copyColor) {
++                bars[1] = RenderTextureBarrier(color, RenderTextureLayout::COLOR_WRITE);
++            }
++            worker->commandList->barriers(RenderBarrierStage::GRAPHICS, bars, barrierCount);
++        }
++        if (slot != nullptr && ev.sample >= 0) {
++            slot->seen = 1;
++            slot->dirty = 0;
++        }
++        if (g_depthEvents.size() < 8192u) {
++            g_depthEvents.push_back(ev);
++        }
++        depthWriteEvent(ev);
++        if (isFloor) {
++            g_depthClosed = true;
++        }
++    }
++
++    void rs64DepthHistFlush(const char *reason) {
++        if (!depthDirOn() || g_depthFlushed) {
++            return;
++        }
++        g_depthFlushed = true;
++        if (g_depthJson != nullptr) {
++            std::fclose(g_depthJson);
++            g_depthJson = nullptr;
++        }
++        char path[1024];
++        const uint32_t nsample = g_depthSamples;
++        uint32_t headerW = 0;
++        uint32_t headerFmt = 0;
++        for (const DepthHistEvent &ev : g_depthEvents) {
++            if (ev.sample >= 0 && ev.colorW != 0) {
++                headerW = ev.colorW;
++                headerFmt = ev.colorFmt;
++                break;
++            }
++        }
++        if (headerW == 0) {
++            for (const DepthHistEvent &ev : g_depthEvents) {
++                if (ev.depthW != 0) {
++                    headerW = ev.depthW;
++                    break;
++                }
++            }
++        }
++        std::snprintf(path, sizeof(path), "%s/history.pix", g_depthDir);
++        if (FILE *pf = std::fopen(path, "wb")) {
++            const uint32_t magic = 0x66346624u;
++            std::fwrite(&magic, 4, 1, pf);
++            std::fwrite(&nsample, 4, 1, pf);
++            std::fwrite(&headerW, 4, 1, pf);
++            std::fwrite(&headerFmt, 4, 1, pf);
++            const uint64_t nbytes = uint64_t(nsample) * 2u * kDepthRows * kDepthPitch;
++            RenderRange range(0, nbytes == 0 ? 1 : nbytes);
++            const auto *colorBytes = (g_depthColor != nullptr && nbytes != 0) ? reinterpret_cast<const uint8_t *>(g_depthColor->map(0, &range)) : nullptr;
++            const auto *depthBytes = (g_depthDepth != nullptr && nbytes != 0) ? reinterpret_cast<const uint8_t *>(g_depthDepth->map(0, &range)) : nullptr;
++            for (uint32_t s = 0; s < nsample; s++) {
++                const uint32_t fmt = g_depthColorFmt[s];
++                for (uint32_t col = 0; col < 2; col++) {
++                    for (uint32_t row = 0; row < kDepthRows; row++) {
++                        const uint64_t off = ((uint64_t(s) * 2u + col) * kDepthRows + row) * kDepthPitch;
++                        float px[4] = { -1.0f, -1.0f, -1.0f, -1.0f };
++                        float zd = -1.0f;
++                        if (colorBytes != nullptr && fmt == uint32_t(RenderFormat::R8G8B8A8_UNORM)) {
++                            const uint8_t *cp = colorBytes + off;
++                            px[0] = cp[0] / 255.0f; px[1] = cp[1] / 255.0f; px[2] = cp[2] / 255.0f; px[3] = cp[3] / 255.0f;
++                        }
++                        else if (colorBytes != nullptr && fmt == uint32_t(RenderFormat::R16G16B16A16_UNORM)) {
++                            const auto *u = reinterpret_cast<const uint16_t *>(colorBytes + off);
++                            px[0] = u[0] / 65535.0f; px[1] = u[1] / 65535.0f; px[2] = u[2] / 65535.0f; px[3] = u[3] / 65535.0f;
++                        }
++                        if (depthBytes != nullptr) {
++                            std::memcpy(&zd, depthBytes + off, 4);
++                        }
++                        std::fwrite(px, sizeof(float), 4, pf);
++                        std::fwrite(&zd, sizeof(float), 1, pf);
++                    }
++                }
++            }
++            if (colorBytes != nullptr) g_depthColor->unmap();
++            if (depthBytes != nullptr) g_depthDepth->unmap();
++            std::fclose(pf);
++        }
++        std::snprintf(path, sizeof(path), "%s/history.z", g_depthDir);
++        if (FILE *zf = std::fopen(path, "wb")) {
++            const uint32_t magic = 0x66346625u;
++            std::fwrite(&magic, 4, 1, zf);
++            std::fwrite(&nsample, 4, 1, zf);
++            const uint64_t zbytes = uint64_t(nsample) * kDepthZBytes;
++            RenderRange range(0, zbytes == 0 ? 1 : zbytes);
++            const auto *zbytesPtr = (g_depthZ != nullptr && zbytes != 0) ? reinterpret_cast<const uint8_t *>(g_depthZ->map(0, &range)) : nullptr;
++            std::vector<float> zeros(kDepthPix * 4u, 0.0f);
++            for (uint32_t s = 0; s < nsample; s++) {
++                if (zbytesPtr != nullptr && g_depthZCaptured[s]) {
++                    std::fwrite(zbytesPtr + uint64_t(s) * kDepthZBytes, 1, kDepthZBytes, zf);
++                }
++                else {
++                    std::fwrite(zeros.data(), sizeof(float), zeros.size(), zf);
++                }
++            }
++            if (zbytesPtr != nullptr) g_depthZ->unmap();
++            std::fclose(zf);
++        }
++        std::snprintf(path, sizeof(path), "%s/history_meta.json", g_depthDir);
++        if (FILE *mf = std::fopen(path, "wb")) {
++            std::fprintf(mf, "{\"reason\":\"%s\",\"events\":%zu,\"samples\":%u,\"overflow\":%d,\"skipped\":%u,\"closed\":%d}\n",
++                reason != nullptr ? reason : "", g_depthEvents.size(), nsample, g_depthOverflow, g_depthSkipped, g_depthClosed ? 1 : 0);
++            std::fclose(mf);
++        }
++        std::fprintf(stderr, "[floor-depth] flush reason=%s events=%zu samples=%u overflow=%d skipped=%u\n",
++            reason != nullptr ? reason : "", g_depthEvents.size(), nsample, g_depthOverflow, g_depthSkipped);
++        std::fflush(stderr);
++    }
++
      void FramebufferRenderer::submitRasterScene(RenderWorker *worker, const Framebuffer &framebuffer, RenderFramebufferStorage *fbStorage, const RasterScene &rasterScene, bool &depthState) {
 +        static const char *floorDir = std::getenv("ROGUESQ_FLOOR_SHADER_DIR");
 +        static uint32_t floorPhase = UINT32_MAX, floorCount = 0;
@@ -8452,7 +8871,7 @@ index b9cb1f5..b305b9b 100644
          InstanceDrawCall::Type previousCallType = InstanceDrawCall::Type::Unknown;
          bool previousVertexTestZ = false;
          const RenderPipeline *previousPipeline = nullptr;
-@@ -543,6 +664,119 @@ namespace RT64 {
+@@ -543,6 +1068,135 @@ namespace RT64 {
              }
          }
  
@@ -8552,6 +8971,14 @@ index b9cb1f5..b305b9b 100644
 +            return op;
 +        };
 +        if (floorCapture) {
++            RenderTarget *histDepth = fbStorage->depthTarget;
++            if (histDepth != nullptr && histDepth->texture != nullptr) {
++                rs64DepthHistSample(worker, "floor-enter", histDepth->texture.get(), floorTarget->texture.get(), floorTarget->format,
++                    fbStorage->framebufferKey.colorTargetKey.address, floorTarget->width, floorTarget->height,
++                    histDepth->width, histDepth->height, framebuffer.submissionFrame, framebuffer.pairIndex,
++                    0, 0, int(floorTarget->width), int(floorTarget->height), 1,
++                    0, 0, 0, 0, 0, 0);
++            }
 +            sampleAttach(0);
 +            const RenderRect controlRect(16, 180, 17, 181);
 +            const RenderColor controlColor(1.0f, 0.0f, 1.0f, 1.0f);
@@ -8568,11 +8995,19 @@ index b9cb1f5..b305b9b 100644
 +            control.y1 = 181;
 +            commitOp(control);
 +        }
++        else if (floorTarget != nullptr && fbStorage->depthTarget != nullptr && fbStorage->depthTarget->texture != nullptr) {
++            RenderTarget *histDepth = fbStorage->depthTarget;
++            rs64DepthHistSample(worker, "enter", histDepth->texture.get(), floorTarget->texture.get(), floorTarget->format,
++                fbStorage->framebufferKey.colorTargetKey.address, floorTarget->width, floorTarget->height,
++                histDepth->width, histDepth->height, framebuffer.submissionFrame, framebuffer.pairIndex,
++                0, 0, int(floorTarget->width), int(floorTarget->height), 1,
++                0, 0, 0, 0, 0, 0);
++        }
 +
          for (uint32_t i : rasterScene.instanceIndices) {
              const InstanceDrawCall &drawCall = instanceDrawCallVector[i];
  
-@@ -573,9 +807,16 @@ namespace RT64 {
+@@ -573,9 +1227,16 @@ namespace RT64 {
                      int nt = ++n_total;
                      if (nf == 1 || (nf % 50) == 0 || nt <= 5) {
                          const uint32_t lo = (uint32_t)(drawCall.triangles.shaderDesc.colorCombiner.L);
@@ -8591,7 +9026,7 @@ index b9cb1f5..b305b9b 100644
                          std::fflush(stderr);
                      }
                  }
-@@ -585,6 +826,53 @@ namespace RT64 {
+@@ -585,6 +1246,53 @@ namespace RT64 {
              case InstanceDrawCall::Type::IndexedTriangles:
              case InstanceDrawCall::Type::RawTriangles:
              case InstanceDrawCall::Type::RegularRect: {
@@ -8645,7 +9080,7 @@ index b9cb1f5..b305b9b 100644
                  // ROGUESQ: skip draws with null colorTarget instead of
                  // asserting. Some workloads route instances through a
                  // rasterScene whose fbStorage has no allocated colorTarget
-@@ -657,6 +945,45 @@ namespace RT64 {
+@@ -657,6 +1365,45 @@ namespace RT64 {
                      continue;
                  }
  
@@ -8691,7 +9126,7 @@ index b9cb1f5..b305b9b 100644
                  // A new pass must be started if decals are required and something wrote to the depth buffer before this call.
                  const interop::OtherMode otherMode = triangles.shaderDesc.otherMode;
                  bool depthDecal = (otherMode.zMode() == ZMODE_DEC);
-@@ -668,9 +995,9 @@ namespace RT64 {
+@@ -668,9 +1415,9 @@ namespace RT64 {
                      switchToDepthWrite();
                  }
  
@@ -8704,7 +9139,7 @@ index b9cb1f5..b305b9b 100644
                  }
  
                  if (previousPipeline != triangles.pipeline) {
-@@ -679,25 +1006,55 @@ namespace RT64 {
+@@ -679,25 +1426,67 @@ namespace RT64 {
                  }
                  
                  rasterParams.renderIndex = i;
@@ -8722,8 +9157,13 @@ index b9cb1f5..b305b9b 100644
 +                    return static_cast<uint>(m);
 +                }();
 +                rasterParams.padding.x = s_shadeWrap;
-+                rasterParams.padding.y = floorBase;
-+                rasterParams.padding.z = floorCapture ? floorTarget->width : 0;
++                const bool copyMode = otherMode.cycleType() == G_CYC_COPY;
++                const int histZCmp = (!copyMode && otherMode.zCmp() && otherMode.zMode() != ZMODE_DEC) ? 1 : 0;
++                const int histZUpd = (!copyMode && otherMode.zUpd()) ? 1 : 0;
++                const bool histDraw = rs64DepthHistCaptureDraw(floorTarget->width, histZUpd, clampedScissor.left, clampedScissor.top, clampedScissor.right, clampedScissor.bottom);
++                const bool histZ = histDraw && rs64DepthHistBeginZ(worker);
++                rasterParams.padding.y = histZ ? floorTarget->width : floorBase;
++                rasterParams.padding.z = histZ ? 6625u : (floorCapture ? floorTarget->width : 0);
 +                const uint32_t face0 = floorBase;
 +                floorBase += triangles.faceCount;
                  rasterParams.screenScale = triangles.screenScale;
@@ -8731,6 +9171,13 @@ index b9cb1f5..b305b9b 100644
                  worker->commandList->setGraphicsPushConstants(0, &rasterParams);
  
                  drawCallTriangles(drawCall);
++                if (histDraw && fbStorage->depthTarget != nullptr && fbStorage->depthTarget->texture != nullptr) {
++                    rs64DepthHistSample(worker, "tri", fbStorage->depthTarget->texture.get(), floorTarget->texture.get(), floorTarget->format,
++                        fbStorage->framebufferKey.colorTargetKey.address, floorTarget->width, floorTarget->height,
++                        fbStorage->depthTarget->width, fbStorage->depthTarget->height, framebuffer.submissionFrame, framebuffer.pairIndex,
++                        clampedScissor.left, clampedScissor.top, clampedScissor.right, clampedScissor.bottom, 0,
++                        histZCmp, histZUpd, histZCmp ? 2 : 8, histZUpd, int(triangles.faceCount), histZ ? 1 : 0);
++                }
 +                if (floorCapture) {
 +                    commitOp(triMeta("tri", triangles.pipeline, &triangles.shaderDesc, face0, triangles.faceCount));
 +                }
@@ -8762,7 +9209,7 @@ index b9cb1f5..b305b9b 100644
                      previousPipeline = nullptr;
                  }
  
-@@ -735,10 +1092,57 @@ namespace RT64 {
+@@ -735,13 +1524,70 @@ namespace RT64 {
                      break;
                  }
  
@@ -8820,7 +9267,20 @@ index b9cb1f5..b305b9b 100644
                  }
                  else {
                      worker->commandList->clearDepth(true, clearRect.depth, clearRects, clearRectCount);
-@@ -773,6 +1177,157 @@ namespace RT64 {
++                    RenderTarget *dt = fbStorage->depthTarget;
++                    if (dt != nullptr && dt->texture != nullptr) {
++                        const int whole = rectCoversWholeTarget ? 1 : 0;
++                        rs64DepthHistSample(worker, "clear-rect", dt->texture.get(), nullptr, RenderFormat::UNKNOWN,
++                            fbStorage->framebufferKey.colorTargetKey.address, 0, 0, dt->width, dt->height,
++                            framebuffer.submissionFrame, framebuffer.pairIndex,
++                            whole ? 0 : clearRect.rect.left, whole ? 0 : clearRect.rect.top,
++                            whole ? int(dt->width) : clearRect.rect.right, whole ? int(dt->height) : clearRect.rect.bottom,
++                            whole, 0, 1, 8, 1, 0, 0);
++                    }
+                 }
+ 
+                 break;
+@@ -773,6 +1619,158 @@ namespace RT64 {
              }
          }
  
@@ -8832,6 +9292,7 @@ index b9cb1f5..b305b9b 100644
 +            worker->execute();
 +            worker->wait();
 +            worker->commandList->begin();
++            rs64DepthHistFlush("floor");
 +            const std::string prefix = std::string(floorDir) + "/shader_" + std::to_string(++floorSerial);
 +            RenderRange range(0, bytes);
 +            const float *records = reinterpret_cast<const float *>(floorFragmentReadback->map(0, &range));
@@ -8978,7 +9439,7 @@ index b9cb1f5..b305b9b 100644
          // Mark targets for resolve.
          if (fbStorage->colorTarget != nullptr) {
              fbStorage->colorTarget->markForResolve();
-@@ -1462,6 +2017,15 @@ namespace RT64 {
+@@ -1462,6 +2460,15 @@ namespace RT64 {
          fbParams.horizontalMisalignment = p.horizontalMisalignment;
          framebufferCount++;
  
@@ -8994,7 +9455,7 @@ index b9cb1f5..b305b9b 100644
          while (framebufferCount > framebufferVector.size()) {
              framebufferVector.emplace_back();
              framebufferVector.back().paramsBuffer = p.worker->device->createBuffer(RenderBufferDesc::UploadBuffer(256, RenderBufferFlag::CONSTANT));
-@@ -1470,6 +2034,8 @@ namespace RT64 {
+@@ -1470,6 +2477,8 @@ namespace RT64 {
          }
  
          Framebuffer &framebuffer = framebufferVector[framebufferCount - 1];
@@ -9341,7 +9802,7 @@ index 721a01e..eb7c721 100644
              "   pixelAlpha = resultAlpha;"
              "}";
 diff --git a/src/render/rt64_render_target.cpp b/src/render/rt64_render_target.cpp
-index 81917bc..0e730ed 100644
+index 81917bc..7cb5eff 100644
 --- a/src/render/rt64_render_target.cpp
 +++ b/src/render/rt64_render_target.cpp
 @@ -5,6 +5,8 @@
@@ -9403,7 +9864,54 @@ index 81917bc..0e730ed 100644
  
          downsampledTextureMultiplier = 0;
          format = depthBufferFormat();
-@@ -413,6 +441,7 @@ namespace RT64 {
+@@ -114,6 +142,7 @@ namespace RT64 {
+         textureView = texture->createTextureView(RenderTextureViewDesc::Texture2D(format));
+         texture->setName("Render Target Depth #" + std::to_string(addressForName));
+         textureRevision++;
++        rs64DepthHistSetup(worker, texture.get(), addressForName, width, height, format, 1.0f);
+     }
+ 
+     void RenderTarget::setupDummy(RenderWorker *worker) {
+@@ -210,6 +239,12 @@ namespace RT64 {
+         worker->commandList->setGraphicsPushConstants(0, &copyCB);
+         worker->commandList->setVertexBuffers(0, nullptr, 0, nullptr);
+         worker->commandList->drawInstanced(3, 1, 0, 0);
++        if (format == depthBufferFormat()) {
++            rs64DepthHistSample(worker, "copy-target", texture.get(), nullptr, RenderFormat::UNKNOWN,
++                addressForName, 0, 0, this->width, this->height, 0, 0,
++                int(x), int(y), int(x + width), int(y + height), 0,
++                0, 1, 8, 1, 1, 0);
++        }
+ 
+         markForResolve();
+     }
+@@ -318,6 +353,12 @@ namespace RT64 {
+         worker->commandList->setGraphicsDescriptorSet(fbChange.drawDescSet->get(), 0);
+         worker->commandList->setVertexBuffers(0, nullptr, 0, nullptr);
+         worker->commandList->drawInstanced(3, 1, 0, 0);
++        if (format == depthBufferFormat()) {
++            rs64DepthHistSample(worker, "copy-changes", texture.get(), nullptr, RenderFormat::UNKNOWN,
++                addressForName, 0, 0, this->width, this->height, 0, 0,
++                int(scissorLeft), int(scissorTop), int(scissorRight), int(scissorBottom), 0,
++                0, 1, 8, 1, 1, 0);
++        }
+ 
+         markForResolve();
+     }
+@@ -347,7 +388,11 @@ namespace RT64 {
+         worker->commandList->barriers(RenderBarrierStage::GRAPHICS, clearBarriers, uint32_t(std::size(clearBarriers)));
+         worker->commandList->setFramebuffer(textureFramebuffer.get());
+         worker->commandList->clearDepth();
+-        
++        rs64DepthHistSample(worker, "clear-target", texture.get(), nullptr, RenderFormat::UNKNOWN,
++            addressForName, 0, 0, width, height, 0, 0,
++            0, 0, int(width), int(height), 1,
++            0, 1, 8, 1, 0, 0);
++
+         markForResolve();
+     }
+ 
+@@ -413,6 +458,7 @@ namespace RT64 {
          }
  
          const bool hwResolve = shaderLibrary->usesHardwareResolve;
@@ -9411,13 +9919,29 @@ index 81917bc..0e730ed 100644
          RenderTextureBarrier resolveBarriers[] = {
              RenderTextureBarrier(texture.get(), hwResolve ? RenderTextureLayout::RESOLVE_SOURCE : RenderTextureLayout::SHADER_READ),
              RenderTextureBarrier(resolvedTexture.get(), hwResolve ? RenderTextureLayout::RESOLVE_DEST : RenderTextureLayout::COLOR_WRITE)
-@@ -512,4 +541,4 @@ namespace RT64 {
+@@ -512,4 +558,4 @@ namespace RT64 {
      RenderFormat RenderTarget::depthBufferFormat() {
          return RenderFormat::D32_FLOAT;
      }
 -};
 \ No newline at end of file
 +};
+diff --git a/src/render/rt64_render_target.h b/src/render/rt64_render_target.h
+index 82d8a36..d2a647e 100644
+--- a/src/render/rt64_render_target.h
++++ b/src/render/rt64_render_target.h
+@@ -75,4 +75,10 @@ namespace RT64 {
+         static RenderFormat colorBufferFormat(bool usesHDR);
+         static RenderFormat depthBufferFormat();
+     };
++
++    void rs64DepthHistSetup(RenderWorker *worker, RenderTexture *depth, uint32_t address, uint32_t width, uint32_t height, RenderFormat format, float clearValue);
++    bool rs64DepthHistBeginZ(RenderWorker *worker);
++    bool rs64DepthHistCaptureDraw(uint32_t width, int zUpd, int x0, int y0, int x1, int y1);
++    void rs64DepthHistSample(RenderWorker *worker, const char *kind, RenderTexture *depth, RenderTexture *color, RenderFormat colorFormat, uint32_t colorAddr, uint32_t colorW, uint32_t colorH, uint32_t depthW, uint32_t depthH, uint64_t frame, uint32_t pair, int x0, int y0, int x1, int y1, int whole, int zCmp, int zUpd, int depthCmp, int depthWr, int faces, int captureZ);
++    void rs64DepthHistFlush(const char *reason);
+ };
+\ No newline at end of file
 diff --git a/src/render/rt64_texture_cache.cpp b/src/render/rt64_texture_cache.cpp
 index 0848f3e..22c84a9 100644
 --- a/src/render/rt64_texture_cache.cpp
@@ -9562,7 +10086,7 @@ index b4ff4e9..cf58a14 100644
          RenderRect scissor;
          getViewportAndScissor(p.swapChain, *p.vi, p.resolutionScale, p.downsamplingScale, p.removeBlackBorders, viewport, scissor);
 diff --git a/src/shaders/RasterPS.hlsl b/src/shaders/RasterPS.hlsl
-index f5beee9..642799c 100644
+index f5beee9..f6d692a 100644
 --- a/src/shaders/RasterPS.hlsl
 +++ b/src/shaders/RasterPS.hlsl
 @@ -13,6 +13,8 @@
@@ -9627,11 +10151,20 @@ index f5beee9..642799c 100644
      float4 combinerColor;
      float alphaCompareValue;
      ColorCombiner::Inputs ccInputs;
-@@ -259,6 +298,31 @@ LIBRARY_EXPORT bool RasterPS(const RenderParams rp, float4 vertexPosition, float
+@@ -259,6 +298,40 @@ LIBRARY_EXPORT bool RasterPS(const RenderParams rp, float4 vertexPosition, float
      }
  #endif
      
-+    if (gConstants.padding.z != 0u) {
++    // 6625: record interpolated z for the two level-select columns. Not a floor slot.
++    if (gConstants.padding.z == 6625u) {
++        uint width = gConstants.padding.y;
++        int2 pos = int2(floor(vertexPosition.xy));
++        if ((pos.x == 16 || pos.x == int(width) - 17) && pos.y >= 180 && pos.y <= 250) {
++            uint pix = (pos.x == 16 ? 0u : 71u) + uint(pos.y - 180);
++            floorFragments[pix] = float4(vertexPosition.z, vertexPosition.w, 6625.0f, 1.0f);
++        }
++    }
++    else if (gConstants.padding.z != 0u) {
 +        uint width = gConstants.padding.z;
 +        int2 pos = int2(floor(vertexPosition.xy));
 +        if ((pos.x == 16 || pos.x == int(width) - 17) && pos.y >= 180 && pos.y <= 250) {
@@ -9659,7 +10192,7 @@ index f5beee9..642799c 100644
      return true;
  }
  
-@@ -274,6 +338,7 @@ RenderParams getRenderParams() {
+@@ -274,6 +347,7 @@ RenderParams getRenderParams() {
  #if defined(DYNAMIC_RENDER_PARAMS) || defined(SPEC_CONSTANT_RENDER_PARAMS)
  void PSMain(
        in float4 vertexPosition : SV_POSITION
@@ -9667,7 +10200,7 @@ index f5beee9..642799c 100644
      , in float2 vertexUV : TEXCOORD
      , in float4 vertexSmoothColor : COLOR0
  #if defined(DYNAMIC_RENDER_PARAMS) || defined(VERTEX_FLAT_COLOR)
-@@ -295,7 +360,7 @@ void PSMain(
+@@ -295,7 +369,7 @@ void PSMain(
      float4 resultColor;
      float4 resultAlpha;
      float resultDepth;
@@ -9677,10 +10210,10 @@ index f5beee9..642799c 100644
      }
  
 diff --git a/src/shared/rt64_raster_params.h b/src/shared/rt64_raster_params.h
-index 0a5c332..9c6e6c7 100644
+index 0a5c332..98b4216 100644
 --- a/src/shared/rt64_raster_params.h
 +++ b/src/shared/rt64_raster_params.h
-@@ -11,6 +11,11 @@ namespace interop {
+@@ -11,6 +11,14 @@ namespace interop {
  #endif
      struct RasterParams {
          uint renderIndex;
@@ -9688,7 +10221,10 @@ index 0a5c332..9c6e6c7 100644
 +        //   0 off, 1 per-channel mod-256 after interp (s26 default),
 +        //   2 unused here (CPU bias +128), 3 shared-RGB wrap (s31),
 +        //   4 unused here (CPU per-channel vertex wrap).
-+        // padding.yz reserved.
++        // padding.y is the floor-record face base, or the fb width when
++        // padding.z == 6625 (depth-history interpolated-z write).
++        // padding.z is the fb width for the floor record, 6625 for that
++        // history write, or 0 when neither record is active.
          uint3 padding;
          float2 screenScale;
          float2 screenOffset;

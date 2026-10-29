@@ -172255,3 +172255,50 @@ runner: tools/g1d_floor_attachment.py. lib/rt64 changes exported with
 submodule-patches/export.sh.
 Next unit: name the pre-submission writer of this depth pattern. Do not
 repeat the in-submission witness.
+
+## Session 6625 (2026-10-28) — 21:9 depth stripe is a copyFromChanges upload
+
+HYPOTHESIS-ID: g1d-levelselect-texel
+Outcome: ADVANCED. Named the draw that stores the striped depth the 21:9
+level-select floor loses to. No rendering fix or default change.
+
+- Read CURRENT-TRUTH, NEXT and the soak tail in order. CURRENT-TRUTH was
+  54,219 bytes, so maintenance did not trigger. Soak tail still ends at
+  s6580; nothing new to fold. Screen was unlocked. No game was already running.
+- One Debug binary. History from phase>=4 setup of each 796/1024 depth
+  texture through the first captured floor submission: setup clear value,
+  clearDepthTarget, depth-only FillRect clears, copyFromTarget,
+  copyFromChanges, and z-writing triangles whose scissor hits x=16 and
+  x=w-17, y=180..250. GPU column readback uses the same barrier-then-blit
+  path as the s6624 attachment sample. Floor attachment capture is
+  unchanged and supplies the magenta and 16:9 z~0.995 controls.
+  `tools/g1d_floor_attachment.py --selftest` and
+  `tools/g1d_floor_depth.py --selftest` passed. lib/rt64 changes exported
+  with submodule-patches/export.sh.
+- Both arms, phase-gated route, SIGKILL after tex+dump. 16:9 35.7 s and
+  21:9 33.7 s, 53 good frames, alive, 0 crash markers. Classifier selects
+  H-prior-stripe with an empty control-failure list.
+- 21:9 floor depth texture 1024x339: setup logs create-clear 1.0,
+  clearDepthTarget reads back exact 1.0 on both columns (142/142), then
+  one full-rect copyFromChanges (fbChangesDrawDepth, scissor
+  (0,0)-(1024,339)) stores the stripe. Rows 0..11 of y=180..250 are exact
+  0 on both columns (25 exact zeros in the 26 head cells). After that,
+  x=16 is a smooth ramp 0.96408..0.96146 and x=1007 stays 1.0. floor-enter
+  frame 1357 phase 4 matches that image with max abs diff 0 and matches
+  shader attachment sample 0. No z-writing triangle hit these columns
+  before that upload. Overflow 0.
+- 16:9 floor depth texture 796x339: no copyFromChanges. One copyFromTarget
+  leaves 1.0. floor-enter is all 1.0 and matches shader sample 0. shader_2
+  sample 11 later stores z 0.99524..0.99667 (95 pixels). Magenta passes
+  on both widths. A different 796x480 / 1024x480 texture read back as all
+  zeros on its first enter; that is not the floor target.
+- Ruled out H-depth-readback: the clear on the floor texture read back as
+  1.0, so the zeros are a store. Ruled out H-depth-pitch: depth and color
+  are both 1024, and this upload is not a RasterPS draw so there is no
+  interpolated-z witness of a pitch scramble. The caller among
+  state.cpp:2604, workload_queue.cpp:966 and framebuffer_manager.cpp:345
+  is not tagged. state.cpp's clear-when-readHeight-is-0 path computes
+  depth row bytes from colorImg.width; that is a lead, not a verdict.
+- Evidence (local, gitignored): scratch/agent/s6625_depth/depth_verdict.json.
+  Runner: tools/g1d_floor_depth.py.
+Next unit: compare the guest depth words at that upload to the GPU columns.
