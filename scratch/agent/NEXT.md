@@ -1,52 +1,37 @@
-# NEXT: one retail capture of level 18
+# NEXT: offline level-18 snow-terrain arm
 HYPOTHESIS-ID: g1-coverage-cd
 
-s6652 accepted the level-17 trench chase offline. Do not recapture
-level 17. Do not edit `tools/g1_flight_class.py`. Do not move 0.08,
-0.33, or dark >= 0.60. Do not change the sky sample window
-(y 0.02-0.18, x 0.15-0.85). Do not lower the new luma floor from 38
-to chase n=2250. n=2250 is not required.
+Do not launch or recapture. s6653 recovered the existing level-18 capture.
+It selects H-new-class: zero of eight dumps pass; the two flight pictures
+n=2200/2250 pass sky/craft/HUD but miss terrain rel 0.046/0.068 < 0.08.
+Inspect docs/g1_lvl18_flight_s6653.png. The other six frames are crest/pause.
 
-The grey-trench arm is already in the classifier: luma in [38, 55],
-|R-G| <= 8, |R-B| <= 8, |G-B| <= 8, and at least 0.80 of the
-sky-window samples have channel spread <= 8. It accepted
-`scratch/agent/s6651_lvl17/fbd/fb_0002300_w512.ppm` (1/10). mission
-stayed 11/13 because m3150's neutral8 is 0.613. Both title skies
-stayed false.
+One bounded change: test an additional snow-surface terrain arm in
+ tools/g1_flight_class.py, without moving the existing [0.08,0.33] band,
+ dark>=0.60, any sky arm/window, or craft/HUD cuts.
 
-This session captures level 18 only. Copy
-`scratch/agent/s6651_lvl17.sh` to `scratch/agent/s6653_lvl18.sh`.
-Change the output directory to `scratch/agent/s6653_lvl18` and set
-`ROGUESQ_FORCE_UNLOCK=18` and `ROGUESQ_FORCE_SAVE_MISSION=18`. Leave
-draw distance unset, aspect unset, and do not set
-`ROGUESQ_FORCE_PLANET_UNLOCK`. The screen must be unlocked
-(`IOConsoleLocked` is not Yes, and `CGSSessionScreenIsLocked` is not
-true) or the run is void.
+Hypotheses:
+- H-snow: bright neutral snow with nonzero local relief separates the two
+  flight pictures from non-flight art. An extra arm can accept both while
+  preserving all controls.
+- H-overlap: those surface features also accept title/floor/crest/pause
+  art. Reject the candidate; retain visual-only evidence.
+- H-window: relief is outside the fixed terrain window. If snow brightness
+  and neutrality do not separate surfaces, do not widen windows blindly.
 
-Before launch:
+Discriminator: ONE offline table of terrain-window mean luma, low-chroma
+fraction, bright-neutral fraction and relative edge energy for both snow
+positives, every same-run negative, all CANON entries, and the 13 level-3
+mission controls. Choose/test one physically meaningful conjunction from
+that table; record exact thresholds and all outcomes. If it cannot
+separate surfaces, do not land it. Do not turn a null into another field.
 
+Commands:
     python3 tools/g1_flight_class.py
+    python3 tools/g1_flight_class.py scratch/agent/s6653_lvl18/fbd/fb_0002200_w512.ppm scratch/agent/s6653_lvl18/fbd/fb_0002250_w512.ppm
 
-That must print `canon_bad 0` and `mission 11/13`. Then:
-
-    zsh scratch/agent/s6653_lvl18.sh
-
-Confirm `run.log` echoes `[dd] ROGUESQ_DRAW_DISTANCE multiplier 1`,
-`[g1d-drop] aspect=<unset>`, `[lvsel] cursor=18`, and
-`[initMission] call#1 B40=0x12`. Score every post-hangar dump with
-the frozen classifier. Levels 16 and 17 stayed phase 5 because the
-hangar and the flight were both width 512. Do not require phase 7.
-A dump whose own origin field is the other buffer is still the
-flight picture when `0x690400` is in the VI log.
-
-H-rule-holds: at least one post-hangar dump passes sky, terrain,
-craft and HUD. Record the pass count and stop. Do not edit the
-classifier.
-H-new-class: the sheet is a flight (terrain, craft, HUD visible)
-and zero dumps pass all four clauses. Leave the classifier frozen.
-Name which clause misses on the clearest chase frame, with the
-numbers. The next session tries one arm.
-H-no-picture: no post-hangar `0x690400`, or the dumps are not a
-flight. Record the last origin and stop.
-
-Do not start an objective-hit run in the same session.
+Required pre/post control: canon_bad 0, mission 11/13. Same-run title n=800
+must fail sky/terrain; craft-select n=1700 must fail HUD; crest n=2050..2150
+and pause n=2300..2400 must stay overall fails. Score all eight, not only
+selected positives. Any accepted change is classifier coverage, not a
+runtime render fix or retail equivalence. No objective-hit run this unit.

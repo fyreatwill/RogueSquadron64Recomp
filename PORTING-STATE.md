@@ -173845,3 +173845,38 @@ accepting a title sky or moving mission off 11/13." What it does not
 show: an objective-counter response, or that level 18 passes. Do not
 lower the luma floor from 38 to chase n=2250. Do not lower dark from
 0.60.
+
+## Session 6653 (2026-10-29) — level 18 snow flight misses the frozen terrain floor
+
+HYPOTHESIS-ID: g1-coverage-cd
+
+Recovered the already-written s6653 level-18 capture, score table and contact
+sheet left without a ledger entry/commit. This continuation launched no game
+and performed no build. Re-ran the unchanged classifier precontrol and scored
+all eight post-hangar mission-origin dumps directly from their PPM headers.
+The planned hypotheses were H-rule-holds (one four-clause pass), H-new-class
+(visible flight but zero passes), and H-no-picture (no mission picture).
+
+The saved script/logs establish retail 4:3, multiplier 1, aspect unset, no
+planet unlock, cursor=18 and initMission B40=0x12. Saved keys.log records
+screen-unlocked, title 14 s, hangar 32 s, mission onset 62 s, hold-30s at
+92 s, SIGKILL, crash=0 and abort=0. These timing claims are saved-run evidence,
+not a new reproduction. No new queued-soak verdicts postdate those already
+folded through s6581.
+
+Result: H-new-class. All eight dumps n=2050..2400 are phase 5, 512x444,
+origin 0x690400. Direct visual inspection of docs/g1_lvl18_flight_s6653.png
+shows snow, snowspeeder, radar and reticle in n=2200 and n=2250. Both pass
+sky/craft/HUD but miss terrain only: rel 0.046 / 0.068 vs floor 0.08;
+sil 0.125 / 0.121, radar 0.103 / 0.124, sky luma 196.5 / 212.8.
+The first three frames are crest frames with radar 0; the last three are
+pause overlays with radar 0. Thus the 0/8 is a classifier limitation; it
+does not establish a game render defect. No claim of retail equivalence.
+Independent content evidence is the inspected image; route identity is
+corroborated by selector/initMission and dump origin metadata.
+
+Positive controls rerun this continuation: canon_bad 0, mission 11/13.
+Same-run title n=800 fails sky and terrain (rel 0.416); craft-select n=1700
+fails HUD (radar 0). The classifier was not edited. Objective response was
+not attempted. Next: one offline snow-surface arm against these positives
+and negative controls, preserving the relative-edge band and all sky cuts.

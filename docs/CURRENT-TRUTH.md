@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6652 (2026-10-29).
+Compact operational handoff, as of Session 6653 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -249,6 +249,23 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   sky sample window were not moved. Sheet remains
   `docs/g1_lvl17_flight_s6651.png`. Objective (d) was not run.
 
+- **G1 (c) level 18: picture present, frozen terrain clause rejects it.**
+  s6653 closes out the existing uncommitted capture; no new launch or build.
+  Retail 4:3, draw distance 1, no planet unlock. Selector cursor=18,
+  `initMission` B40=0x12. Eight mission-origin dumps, n=2050..2400,
+  are 512x444, phase 5, origin `0x00690400`. Zero pass all four
+  clauses. Visual inspection of `docs/g1_lvl18_flight_s6653.png`
+  shows snow terrain, snowspeeder, radar and reticle in n=2200 and
+  n=2250; both pass sky/craft/HUD but miss terrain only (rel 0.046
+  and 0.068, below 0.08). n=2050..2150 are crest frames, and
+  n=2300..2400 are pause overlays (radar 0). H-new-class selected;
+  this is a classifier limitation, not evidence of missing terrain.
+  Same-run title fails sky and terrain; craft-select fails HUD.
+  Precontrol rerun: `canon_bad 0`, mission 11/13. Saved keys log
+  records screen unlocked, mission onset 62 s, hold complete 92 s,
+  0 crashes/aborts. Run timing is saved-run evidence, not a fresh
+  reproduction. Classifier unchanged; objective (d) was not run.
+
 ## Superseded conclusions — do not act on these
 - s6651 "level 17 does not pass the frozen rule, and the grey trench box is not a sky arm" (s6652: neutral8 ≥ 0.80 inside luma [38, 55] with |channel means| ≤ 8 accepts n=2300, 1/10; canon_bad 0; mission 11/13; both title skies stay false; m3150 stays a sky miss at neutral8 0.613). Believable because dark ≥ 0.60, the blue arm, the orange arm and the tan-cloud arm all miss luma 42.5 with R−G 1.4, and the top 4% of that frame is the same grey, so lowering dark does not accept the chase.
 - s6649 method "the flight set is the phase-7 dumps" (s6650: level 16's flight dumps stay phase 5). Believable because levels 11-15 insert a 640-wide crawl that bumps `rs64_phase_ord` through 6 into 7. The ordinal bumps only on a VI-width change, so a 512-wide flight after a 512-wide hangar does not.
@@ -397,7 +414,12 @@ only an extra sky accept. m3150 stays a sky miss (neutral8
 mission stays 11/13. Both title skies stay false. dark was
 not moved from 0.60. The 0.08 floor and the 0.33 ceiling
 were not moved.
-Verification still needs framebuffer evidence for level 18,
+Level 18 has visual framebuffer evidence but no frozen-rule acceptance
+(s6653): snow terrain rel 0.046/0.068 falls below 0.08 on both
+flight views; sky/craft/HUD pass. Six other mission-origin dumps
+show the crest or pause overlay. Next is one offline snow-terrain
+arm with the same canonical and same-run negative controls.
+Verification still needs numeric acceptance for level 18,
 plus a forced-hit objective response. Mission wins, autopilot
 aim, and mission-to-mission progression are owner playtest
 scope.
@@ -423,20 +445,14 @@ scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6652) One retail 4:3 capture of level 18.** The grey-trench
-   arm is already in `tools/g1_flight_class.py`. Do not edit the
-   classifier in the capture session. Do not recapture level 17.
-   Do not move 0.08, 0.33, dark ≥ 0.60, or the sky window.
-   Precontrol must print `canon_bad 0` and `mission 11/13`.
-   Recipe is `scratch/agent/s6651_lvl17.sh` with
-   `ROGUESQ_FORCE_UNLOCK=18` and `ROGUESQ_FORCE_SAVE_MISSION=18`.
-   No planet unlock, no aspect, draw distance left at 1. Hold
-   30 s after the first post-hangar `0x690400`. Score every
-   post-hangar dump with the frozen classifier. The flight set
-   may be phase 5 if the width stays 512, as on levels 16 and 17.
-   A four-clause pass selects H-rule-holds. Zero passes on a
-   flight picture selects H-new-class and the classifier stays
-   frozen. No post-hangar mission origin selects H-no-picture.
+1. **(s6653) Offline level-18 snow-terrain classifier arm.** Do not
+   recapture. Use `scratch/agent/s6653_lvl18/fbd/` n=2200/2250 as
+   flight positives and title, craft-select, crest and pause frames as
+   controls. Test one bounded snow-surface arm alongside the unchanged
+   relative-edge band. Do not lower 0.08 globally. Require `canon_bad 0`,
+   mission 11/13, and same-run title/craft-select rejection. If the snow
+   feature also admits negative surfaces, reject the arm and retain the
+   visual-only result. No runtime fix is justified by a classifier miss.
    See NEXT.md.
 
 ### Archived historical next-step entries
