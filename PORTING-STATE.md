@@ -173921,3 +173921,29 @@ Evidence: scratch/agent/s6654_snow/{table_before.tsv,table_snow.tsv,post.txt}.
 Objective response was not run. Next: offline numeric verdict on existing
 level-0 flight captures; no repeat hold or aim work.
 ORIGIN: no corruption mitigation; classifier-only change, runtime unchanged.
+
+## Session 6655 (2026-10-29) — saved level-0 crop passes the unchanged framebuffer rule
+HYPOTHESIS-ID: g1-coverage-cd
+Maintenance check: CURRENT-TRUTH 47851 bytes, below 60000; not triggered.
+Ran the NEXT.md offline experiment: canonical g1_flight_class.py table,
+both saved port lvl0 PNGs and the saved retail oracle, plus direct visual
+inspection of all three. No build, runtime launch or classifier edit.
+Controls: canon_bad 0, level-3 mission 11/13. Both port files pass
+sky/terrain/craft/HUD; rel=0.115, metal=0.119, radar=0.095, luma=179.2.
+Decoded RGB SHA-256 is identical for the two 512x358 port files:
+3f7061b7752672aee0d81d9025c157cb871ba0ae7f2738bdd8a9451ee78abddd.
+They are one capture. Inspection shows blue sky, sandy terrain, banked
+X-wing, reticle, wingman icon and radar within the crop. Craft clears the
+metal arm; terrain clears the original band, not snow. No fixed-window
+feature required by the rule is missing. Selects H-rule-holds; rules out
+H-crop and H-no-picture for these saved images only.
+Retail oracle also passes all clauses, but decodes to 512x440 (historical
+s5985/s5998 height 412 is inaccurate). Its filename says lvl1, s5985 says
+different level, s5998 says same-level; identity remains unresolved. Neither
+this visual comparison nor scoring proves retail equivalence. Visual and
+numeric evidence agree on saved-image content, not independent captures.
+New durable report docs/G1-FRAMEBUFFER-COVERAGE.md records the complete
+table, duplicate-image limit and reproduction commands. No new soak lines
+since the already-folded s6580 verdicts. No runtime/default change.
+Next: bounded G1(d) existing-evidence table; select the first missing
+level-specific counter response before building any new instrument.

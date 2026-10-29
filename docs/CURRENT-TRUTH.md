@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6654 (2026-10-29).
+Compact operational handoff, as of Session 6655 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -264,6 +264,16 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   numeric generalization remains single-capture evidence, not retail
   equivalence. No runtime change; objective (d) was not run.
 
+- **G1 (c) level 0: unchanged rule accepts the saved crop.** s6655,
+  offline, no launch/build. Both port PNGs are 512x358 and decode to identical
+  RGB pixels (one capture, not two). Sky/terrain/craft/HUD all pass; rel
+  0.115, metal 0.119, radar 0.095. Visual inspection agrees: sandy terrain,
+  banked X-wing, sky and radar are present. Canon_bad 0, mission 11/13.
+  Saved retail oracle measures 512x440, not the historical 512x412 claim;
+  its lvl1 filename versus s5998 same-level wording remains unresolved.
+  Content-class presence only, not retail equivalence or objective (d).
+  Report: `docs/G1-FRAMEBUFFER-COVERAGE.md`. No new queued-soak verdicts.
+
 ## Superseded conclusions — do not act on these
 - s6653 "level 18 has visual evidence but no numeric terrain acceptance" (s6654: the bounded bright low-chroma snow arm accepts both flight views while every control holds). Believable because their rel 0.046/0.068 is below the original 0.08 floor; that band remains unchanged.
 - s6651 "level 17 does not pass the frozen rule, and the grey trench box is not a sky arm" (s6652: neutral8 ≥ 0.80 inside luma [38, 55] with |channel means| ≤ 8 accepts n=2300, 1/10; canon_bad 0; mission 11/13; both title skies stay false; m3150 stays a sky miss at neutral8 0.613). Believable because dark ≥ 0.60, the blue arm, the orange arm and the tan-cloud arm all miss luma 42.5 with R−G 1.4, and the top 4% of that frame is the same grey, so lowering dark does not accept the chase.
@@ -416,8 +426,10 @@ were not moved.
 Level 18 passes the snow-surface arm on 2/8 mission-origin dumps
 (s6654, offline on s6653): n=2200/2250. Crest/pause frames remain
 fails. Numeric acceptance and inspected imagery agree; no claim of
-retail equivalence. Next is the existing level-0 capture, omitted from
-this recent numeric sweep. Objective response coverage remains partial;
+retail equivalence. Level 0 also passes the unchanged rule on its existing 512x358 crop
+(s6655; both saved port files have identical pixels). Visual inspection
+agrees with the numeric result; retail level identity is unresolved.
+Objective response coverage remains partial;
 mission wins, autopilot aim and mission-to-mission progression stay
 owner playtest scope.
 
@@ -442,13 +454,15 @@ owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6654) Close the level-0 framebuffer class table offline.** Use
-   `docs/g3_port_lvl0_oracle_pair_f5000.png` and
-   `docs/g3_port_lvl0_flight.png`, already inspected in s5985/s5998.
-   Score with the current rule and inspect against the saved retail oracle;
-   do not launch a repeat hold. Report whether these cropped images can
-   meet the unchanged four-part rule. Do not relabel level 1 as level 0
-   from the oracle filename. See NEXT.md for hypotheses and commands.
+1. **(s6655) Reconcile G1(d) objective-response evidence before new runs.**
+   Make one bounded, reproducible per-level evidence table from the existing
+   ctl/TELE logs and the targeted s5946-s5996 ledger entries. Separate
+   damage/writer-call activity, named counter transitions, success/failure
+   counters, and end-gate evidence; exclude mission wins/progression from
+   new testing. Record positive-control coverage and missing logs explicitly.
+   Select the first genuinely missing level-specific response, with its
+   exact existing lever and phase gate, for the following work unit.
+   No repeat holds, aim work, default changes or new runtime instrumentation.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

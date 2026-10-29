@@ -1,32 +1,40 @@
-# NEXT: level-0 framebuffer class coverage from existing captures
+# NEXT: reconcile objective-response coverage from saved evidence
 HYPOTHESIS-ID: g1-coverage-cd
 
-One offline experiment, no build or game launch. Level 18 now passes the
-bounded snow arm (s6654); the recent numeric sweep omitted level 0.
-The existing port frames were inspected in s5985/s5998, but no numeric
-four-clause verdict is recorded in the current handoff.
+One bounded offline tool/report change: build a reproducible per-level G1(d)
+evidence table from saved ctl/TELE logs, then choose the first missing
+level-specific response. Do not run the game in this unit.
 
 Hypotheses:
-- H-rule-holds: at least one saved level-0 flight image passes the unchanged
-  classifier; numeric and visual content evidence agree.
-- H-crop: saved 512x358 crops omit or relocate a fixed-window feature; visible
-  flight can fail the rule. Attribute the miss to the exact window, do not
-  lower a global threshold or declare a render defect.
-- H-no-picture: neither image shows all terrain/craft/HUD; retain the earlier
-  single-source visual claim with its limits and name the missing evidence.
+- H-response: a phase-scoped, named objective counter changes under forced
+  hits and its meaning matches that level's objective, with a firing hit
+  positive control; existing evidence suffices for that counter response.
+- H-incidental: only damage/writer-call counts or fail counters change, or
+  the same transition occurs in ctl; objective success response is unproven.
+- H-missing: logs, phase keys, counter meaning or a firing hit control are
+  absent; keep the level unknown rather than treating zero as a result.
 
-Discriminator: score BOTH saved port images with every clause and inspect
-both alongside the retail oracle. Report dimensions, clause failures and
-which visible content falls outside each fixed window. Positive control:
-full canonical table canon_bad 0, level-3 mission 11/13. Do not alter the
-classifier in this unit. Do not reopen aim, wins or repeat crash holds.
+Discriminator: one table with level, route identity, log/phase provenance,
+TELE firing, exact counter id and transition, matched ctl transition,
+success/failure semantics and evidence source. An end callback occurring
+in both arms is not a hit-driven end gate. No new mission wins/progression,
+aim, bolt tracking or repeat crash holds. Two independent lines before
+promoting an established fact; otherwise label single-source.
 
-Commands from repo root:
-    python3 tools/g1_flight_class.py
-    python3 tools/g1_flight_class.py docs/g3_port_lvl0_oracle_pair_f5000.png docs/g3_port_lvl0_flight.png docs/g3_retail_lvl1_flight_oracle.png
+Commands from repo root (bounded ledger windows only):
+    rg -n '^## Session (594[6-9]|595[0-9]|596[0-2]|599[3-6])' PORTING-STATE.md
+    sed -n '1,160p' tools/g1_d_compare.sh
+    sed -n '1,180p' tools/objsnap_summary.py
+    rg --files scratch/agent/soak_results | rg 'g1_lvl.*(ctl|tele)'
+    rg --files scratch/agent/m6 | rg 'g1_lvl.*(ctl|tele)/run.log$'
 
-Use view_image for the three files. If a path is absent, locate its saved
-source through `rg -n 'g3_port_lvl0|g1_lvl0_oracle_pair' PORTING-STATE.md | tail -15`
-and read a <=60-line window; do not recreate a capture unnecessarily.
-The oracle's filename says lvl1; s5998 calls it a same-level pair. Preserve
-that provenance ambiguity rather than assert retail identity from a name.
+Inspect <=60-line windows at the relevant ledger hits. Stream plain/gzip
+logs to extract only phase, sph TELE, objsnap/objsnap-t and objcount lines;
+never dump a full log. Read existing parsers before reusing them: raw writer
+call counts and run-lifetime maxima are insufficient. Add a bounded report
+or extend an existing parser to print the whole table, checking a known
+nonzero lvl7/lvl8 transition as the positive control and the corresponding
+ctl and ambiguous lvl9 as controls. Do not manufacture phase keys if old
+logs lack them. Name the first level-specific missing discriminator and
+its exact saved recipe for the following unit. Missing files are evidence
+limits, not human blocks. This is not an excuse to re-open aim or wins.
