@@ -173573,3 +173573,76 @@ and "the frozen rule rejects every level-14 phase-7 frame." What it
 does not show: an objective-counter response, or that level 15 passes.
 The floor and ceiling misses are not a reason to move 0.08 or 0.33.
 Level 15 needs the planet unlock.
+
+## Session 6649 (2026-10-29) — level 15 coastal flight passes the frozen class rule
+
+One retail 4:3 capture. No classifier edit, no heap edit, no aim, draw
+distance unset, aspect unset. Planet unlock was `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF`.
+Precontrol `python3 tools/g1_flight_class.py` printed canon_bad 0 and
+mission 11/13 before launch (oracle, level-2 fb_0002700, and level-3
+fb_0002700 pass; floor and the s6633 title fail). IOConsoleLocked was
+No. The route is scratch/agent/s6649_lvl15.sh, the s6643 script with
+FORCE_UNLOCK=15, FORCE_SAVE_MISSION=15, the planet unlock kept, and the
+mission-wait wall put back at 420 s. The soak tail in
+scratch/agent/SOAK-RESULTS.md still ends at s6580 (2026-10-28); no new
+queued verdict to fold.
+
+scratch/agent/s6649_lvl15/keys.log: screen-unlocked, precontrol-ok, title
+t=14, hangar t=32, mission-onset t=138, hold-30s t=168, killed t=168,
+crash=0, abort=0. run.log echoes `[dd] ROGUESQ_DRAW_DISTANCE multiplier 1`,
+`[g1d-drop] aspect=<unset>`, `[lvsel] cursor=15`, and
+`[initMission] call#1 B40=0x0F`. CRASH, abort, SIGSEGV and SIGBUS counts
+in that log are 0. Eight phase-7 dumps, n=3050..3400 step 50, are
+512x444. Every dump's own origin field is `0x00620400` (fb=0x80690000,
+source=0x00620000). The VI origin census has 16 lines of `0x00690400`
+and 15 of `0x00620400`. Sheet `docs/g1_lvl15_flight_s6649.png` is frames
+3100, 3200, 3250 and 3300. Scores are in
+`scratch/agent/s6649_lvl15_score.txt`.
+
+Phase 6, between the hangar and that chase, is a 640-wide crawl card
+(n=2200, Star Wars logo on a starfield) and then a cinematic (n=2600,
+a TIE between two structures over the coast). Those frames are not in
+the phase-7 score. The post-hangar `0x690400` still arrives at 136 s,
+inside the 420 s wall.
+
+The sheet is a flight. Blue sky over open water and sandy islands, a
+V-wing with lit engines, distant craft on the earlier frames, the round
+radar, a green reticle and the shield badge. The same-run craft-select
+names that ship V-WING. The frozen rule scores 6/8. n=3050, 3100, 3150,
+3200, 3250 and 3300 pass sky, terrain, craft and HUD. Sky on those six
+is the existing blue arm (luma 150.1..184.4, R-G -120.3..-91.6). Terrain
+rel is 0.084..0.104, inside the 0.08..0.33 band. Craft is the dark-hull
+arm on n=3050 (sil 0.100; pink 0.0030 also sits on the engine floor) and
+the bright-metal arm on the other five (metal 0.273..0.376). Radar is
+0.086..0.116.
+
+n=3350 is not required. It is still a flight: the V-wing is in a sandy
+canyon, with the radar, the reticle and the shield badge. It misses
+terrain only (rel 0.079). Sky, craft and HUD pass (luma 165.1, sil
+0.284, radar 0.127). That is the same terrain-floor family as level 4's
+n=2300 at rel 0.065 and level 14's n=2450 at rel 0.065, one thousandth
+under the existing floor, not a new sky class.
+
+n=3400 is not required. It is still a flight: the same V-wing over water
+between cliffs, radar and engines lit. It misses terrain only (rel
+0.075). Sky, craft and HUD pass (luma 136.0, metal 0.264, radar 0.120).
+Same floor family. The classifier was not edited.
+
+Same-run title `fb_0000800_w512.ppm` is the title screen and fails sky
+and terrain (luma 78.7, R-G 27.6, R-B 32.8, G-B 5.2, rel 0.423). The
+phase-5 dump `fb_0001700_w512.ppm` is 512x336. Its own origin field is
+`0x00656400`; `0x006AB400` is in the VI log (12 lines) and was not the
+sampled buffer. The picture is the craft-select screen (V-wing, select
+your craft), not a flight. It fails overall on HUD only (radar 0). Sky,
+terrain and craft each pass on that menu (luma 19.1, rel 0.175, metal
+0.142) and do not accept it. Objective (d) was not run.
+
+This selects H-rule-holds. It refutes H-new-class (6/8 pass, not 0/8)
+and H-no-picture (the sheet is a flight).
+ORIGIN: n/a (no mitigation).
+
+What this rules out: "level 15 produced no post-hangar flight picture"
+and "the frozen rule rejects every level-15 phase-7 frame." What it
+does not show: an objective-counter response, or that level 16 passes.
+The floor misses are not a reason to move 0.08. Level 16 does not need
+the planet unlock.
