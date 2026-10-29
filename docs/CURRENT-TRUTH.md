@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6642 (2026-10-29).
+Compact operational handoff, as of Session 6643 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -133,6 +133,26 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   only (radar 0.001). Sheet `docs/g1_lvl9_flight_s6642.png`.
   0 crashes in the 30 s hold. The classifier was not edited.
   Objective (d) was not run.
+- **G1 (c) level 10 flight framebuffer: visible, frozen rule rejects the sky.**
+  s6643, one retail 4:3 capture, draw distance 1, aspect unset,
+  `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF`. Selector B40=10, cursor=10.
+  Twelve phase-7 dumps, n=2850..3400, are 512x444 at origin
+  `0x00620400` (the other buffer; `0x690400` is in the VI log, 12
+  lines). Tan cloud sky, the station and rocks, an A-wing, radar,
+  reticle. 0/12 pass. Every frame fails sky only, except n=2900
+  which also misses craft (edge 0.013, ship beside the station).
+  Sky box: dark 0.063..0.248, luma 72.7..104.0, R−G 23.1..28.5.
+  That misses dark≥0.60, the blue arm (R−G≤15) and the orange arm
+  (R−G≥40). Terrain and HUD pass on 12/12; craft on 11/12.
+  Same-run title fails sky and terrain (luma 78.1, R−G 27.1, rel
+  0.419). That title sky sits in the same chroma band as the
+  flight, so a bare R−G window also marks the title sky as sky;
+  the title still fails terrain. Craft-select
+  `fb_0001700_w512.ppm` fails HUD only (radar 0.002). No dump
+  landed on hangar origin `0x006AB400` (16 VI lines, EVERY=50
+  missed it). Sheet `docs/g1_lvl10_flight_s6643.png`. 0 crashes
+  in the 30 s hold. The classifier was not edited. Objective (d)
+  was not run.
 
 ## Superseded conclusions — do not act on these
 - s6640 "level 8 is a flight and no craft clause accepts it without breaking canon, so the rule stays 0/7" (s6641: lower-centre metal against a coloured neighbour, edge≥0.05, plus luma≥80 orange sky, accepts 6/7; n=2600 stays a side-view near-miss at edge 0.041; canon_bad 0; mission 11/13; title and craft-select still fail). Believable because the engine, bright-metal, reticle and median≥120 dark-hull arms all missed, and a raw grey fraction in the same box also matched the title.
@@ -240,7 +260,10 @@ on the s6640 capture). n=2600 remains a side-view craft near-miss
 at edge 0.041 and is not required. Level 9 passes the frozen rule
 on 8/13 phase-7 dumps (s6642, one capture). Not required: n=2350
 craft (edge 0.019), n=2600 and n=2650 sky (luma 74.8 and 56.9),
-n=2700 and n=2800 terrain (rel 0.074 and 0.076). The s6641 arms are a superset
+n=2700 and n=2800 terrain (rel 0.074 and 0.076). Level 10
+is a flight and the frozen rule rejects it 0/12 (s6643): every
+phase-7 frame fails the sky clause (tan clouds, R−G 23..28). The
+s6641 arms are a superset
 of the s6636/s6639 cuts, so a level 2–7 frame that already passed
 still passes. Those earlier pass counts were not re-opened.
 Verification still needs framebuffer
@@ -269,20 +292,19 @@ progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6642) Capture level 10 with the class rule frozen.**
-   Do not edit `tools/g1_flight_class.py`. Retail 4:3, draw distance
-   unset, aspect unset. Copy `scratch/agent/s6642_lvl9.sh` to
-   `scratch/agent/s6643_lvl10.sh`. Set `ROGUESQ_FORCE_UNLOCK=10`,
-   `ROGUESQ_FORCE_SAVE_MISSION=10`, and
-   `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF`. Raise the shell wall from
-   420 s to 720 s so a late onset still gets the 30 s hold. Precontrol
-   must print `canon_bad 0`. The screen must be unlocked. H-rule-holds:
-   at least one phase-7 frame passes all four clauses and the same-run
-   title still fails overall. H-new-class: the sheet is a flight and
-   every phase-7 frame fails; record the failing clause and do not
-   edit the tool. H-no-picture: no post-hangar flight dump; record the
-   last VI origin and do not retune the route. No heap, aim,
-   draw-distance, aspect, or default change. See NEXT.md.
+1. **(s6643) Accept the level-10 tan cloud sky. Offline only.**
+   Do not run the game. Do not move 0.08, 0.33, the luma≥70 blue
+   arm, the luma≥80 / R−G≥40 orange arm, or the edge≥0.05 cut.
+   Add a sky arm so at least one phase-7 frame in
+   `scratch/agent/s6643_lvl10/fbd` (n=2850..3400, step 50) passes
+   all four clauses. `python3 tools/g1_flight_class.py` must still
+   print `canon_bad 0` and `mission 11/13`. Same-run title
+   `fb_0000800_w512.ppm` must still fail overall. Craft-select
+   `fb_0001700_w512.ppm` must still fail HUD. A chroma window on
+   R−G 23..28 also matches that title sky (luma 78.1, R−G 27.1);
+   allowed only while the title's overall verdict stays fail.
+   n=2900's craft miss is not required. Do not start level 11.
+   See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

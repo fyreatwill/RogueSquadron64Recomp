@@ -173246,3 +173246,62 @@ What this rules out: "level 9 produced no post-hangar flight picture"
 and "the frozen rule rejects every level-9 phase-7 frame." What it
 does not show: an objective-counter response, or that level 10 passes.
 Level 10 needs `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF`.
+
+## Session 6643 (2026-10-29) — level 10 cloud flight is visible and the frozen rule rejects the sky
+
+One retail 4:3 capture. No classifier edit, no heap edit, no aim, draw
+distance unset, aspect unset. Planet unlock was `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF`.
+Precontrol `python3 tools/g1_flight_class.py` printed canon_bad 0 and
+mission 11/13 before launch. IOConsoleLocked was No. The route is
+scratch/agent/s6643_lvl10.sh, the s6642 script with FORCE_UNLOCK=10,
+FORCE_SAVE_MISSION=10, the planet unlock, and the mission-wait wall
+raised from 420 s to 720 s. The soak tail in scratch/agent/SOAK-RESULTS.md
+still ends at s6580 (2026-10-28); no new queued verdict to fold.
+
+scratch/agent/s6643_lvl10/keys.log: screen-unlocked, precontrol-ok, title
+t=14, hangar t=32, mission-onset t=104, hold-30s t=134, killed t=134,
+crash=0, abort=0. run.log echoes `[dd] ROGUESQ_DRAW_DISTANCE multiplier 1`,
+`[g1d-drop] aspect=<unset>`, `[lvsel] cursor=10`, and
+`[initMission] call#1 B40=0x0A`. CRASH, abort, SIGSEGV and SIGBUS counts
+in that log are 0. Twelve phase-7 dumps, n=2850..3400 step 50, are
+512x444 at origin `0x00620400` (fb=0x80690000). The route key
+`0x00690400` is in the VI origin census (12 lines) and was not the
+sampled buffer. Sheet `docs/g1_lvl10_flight_s6643.png` is frames 2900,
+3100, 3250 and 3400. The title, craft-select, a logo card, a pre-radar
+station view and four flights are `s6643_lvl10_overview.png`. Scores
+are in `s6643_lvl10_score.txt`.
+
+The sheet is a flight. Tan cloud sky, the disc station and the rocks, an
+A-wing with engine glow, the round radar, a green reticle and the
+shield badge. The frozen rule scores 0/12. Every phase-7 frame fails
+the sky clause. Sky-box dark is 0.063..0.248 (needs >=0.60), luma is
+72.7..104.0 and R-G is 23.1..28.5. That misses the blue arm (R-G<=15)
+and the orange arm (R-G>=40, luma>=80). Terrain passes on 12/12 (rel
+0.096..0.193). HUD passes on 12/12 (radar 0.082..0.133). Craft passes
+on 11/12.
+
+n=2900 is not required. It misses craft as well as sky (edge 0.013).
+The ship is small, beside the station, outside the chase box. The
+other eleven frames show the A-wing in the centre.
+
+Same-run title `fb_0000800_w512.ppm` is the title screen and fails sky
+and terrain (luma 78.1, R-G 27.1, rel 0.419, dark 0.298). That sky box
+sits in the same chroma band as the flight, so a bare R-G window of
+23..28 would also mark the title sky as sky. The title still fails
+terrain, so the overall verdict can stay fail. Craft-select
+`fb_0001700_w512.ppm`, origin `0x00656400`, is the A-wing select screen
+and fails HUD only (radar 0.002; sky already passes on the blue arm,
+luma 77.3, R-G -1.5). VI saw hangar origin `0x006AB400` (16 lines) but
+EVERY=50 did not dump it. The classifier was not edited. Objective (d)
+was not run.
+
+This selects H-new-class. It refutes H-rule-holds (0/12 pass all four
+clauses) and H-no-picture (the sheet is a flight, onset at 104 s, not
+the planet viewer).
+ORIGIN: n/a (no mitigation).
+
+What this rules out: "level 10 produced no post-hangar flight picture"
+and "the frozen sky arms already cover this cloud field." What it does
+not show: an objective-counter response, or a sky arm that accepts the
+frame without breaking canon. The title sky shares the flight's R-G
+band, so the next edit has to keep the title's overall verdict fail.
