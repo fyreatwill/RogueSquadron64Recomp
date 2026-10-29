@@ -8314,18 +8314,20 @@ index 69a82ac..6e82095 100644
  
              if (device != nullptr) {
 diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
-index b9cb1f5..c8f2ae4 100644
+index b9cb1f5..52ef047 100644
 --- a/src/render/rt64_framebuffer_renderer.cpp
 +++ b/src/render/rt64_framebuffer_renderer.cpp
-@@ -8,6 +8,7 @@
+@@ -8,6 +8,9 @@
  #include <cstdio>
  #include <cstdlib>
  #include <cstring>
++#include <mutex>
++#include <string>
 +#include <vector>
  
  #include "../include/rt64_extended_gbi.h"
  
-@@ -15,12 +16,15 @@
+@@ -15,12 +18,15 @@
  #include "common/rt64_math.h"
  #include "hle/rt64_color_converter.h"
  #include "gbi/rt64_f3d.h"
@@ -8341,7 +8343,7 @@ index b9cb1f5..c8f2ae4 100644
  // TODO: Move to shared.
  
  namespace interop {
-@@ -238,9 +242,24 @@ namespace RT64 {
+@@ -238,9 +244,24 @@ namespace RT64 {
              }
              
              interop::GPUTile &gpuTile = dstGPUTiles[i];
@@ -8367,7 +8369,7 @@ index b9cb1f5..c8f2ae4 100644
                      const FramebufferManager::TileCopy &tileCopy = it->second;
                      gpuTile.tcScale.x = static_cast<float>(tileCopy.usedWidth) / static_cast<float>(callTile.tileCopyWidth);
                      gpuTile.tcScale.y = static_cast<float>(tileCopy.usedHeight) / static_cast<float>(callTile.tileCopyHeight);
-@@ -255,15 +274,65 @@ namespace RT64 {
+@@ -255,15 +276,65 @@ namespace RT64 {
                      gpuTile.flags.fromCopy = true;
                      gpuTile.flags.rawTMEM = false;
                      gpuTile.flags.hasMipmaps = false;
@@ -8435,7 +8437,7 @@ index b9cb1f5..c8f2ae4 100644
  
                  // Describe the GPU tile for a regular texture.
                  gpuTile.ulScale.x = gpuTile.tcScale.x;
-@@ -311,6 +380,10 @@ namespace RT64 {
+@@ -311,6 +382,10 @@ namespace RT64 {
          return dstIndex;
      }
      
@@ -8446,7 +8448,7 @@ index b9cb1f5..c8f2ae4 100644
      void FramebufferRenderer::updateShaderDescriptorSet(RenderWorker *worker, const DrawBuffers *drawBuffers, const OutputBuffers *outputBuffers, const bool raytracingEnabled) {
          assert(worker != nullptr);
          assert(drawBuffers != nullptr);
-@@ -376,6 +449,39 @@ namespace RT64 {
+@@ -376,6 +451,39 @@ namespace RT64 {
          }
  #   endif
  
@@ -8486,7 +8488,7 @@ index b9cb1f5..c8f2ae4 100644
          descCommonSet->setBuffer(descCommonSet->FrParams, frameParamsBuffer.get(), sizeof(interop::FrameParams));
          descCommonSet->setBuffer(descCommonSet->instanceRenderIndices, renderIndicesBuffer.get(), RenderBufferStructuredView(sizeof(interop::RenderIndices)));
          descCommonSet->setBuffer(descCommonSet->instanceRDPParams, drawBuffers->rdpParamsBuffer.get(), RenderBufferStructuredView(sizeof(interop::RDPParams)));
-@@ -470,7 +576,580 @@ namespace RT64 {
+@@ -470,7 +578,757 @@ namespace RT64 {
          return true;
      }
      
@@ -8709,6 +8711,182 @@ index b9cb1f5..c8f2ae4 100644
 +        }
 +    }
 +
++    // nativeSwappedRAM / copyToRAM readback: 32-bit byteswap of the RDRAM
++    // word is already applied. rawBe is the following 16-bit swap.
++    static uint16_t rs64DepthRawBe(const uint8_t *native, uint32_t byteOff) {
++        uint16_t le = 0;
++        std::memcpy(&le, native + byteOff, 2);
++        return (uint16_t)((le << 8) | (le >> 8));
++    }
++
++    extern "C" volatile uint8_t *volatile g_recomp_rdram_for_wp_raw;
++
++    namespace {
++    struct CopyRamLog {
++        std::mutex mu;
++        FILE *fp = nullptr;
++        uint64_t seq = 0;
++        uint64_t bySiz[8] = {};
++        int opened = 0;
++    };
++
++    CopyRamLog &copyRamLog() {
++        static CopyRamLog log;
++        return log;
++    }
++
++    void copyRamCounts(char *dst, size_t n, const CopyRamLog &log) {
++        std::snprintf(dst, n, "[%llu,%llu,%llu,%llu,%llu,%llu,%llu,%llu]",
++            (unsigned long long)log.bySiz[0], (unsigned long long)log.bySiz[1],
++            (unsigned long long)log.bySiz[2], (unsigned long long)log.bySiz[3],
++            (unsigned long long)log.bySiz[4], (unsigned long long)log.bySiz[5],
++            (unsigned long long)log.bySiz[6], (unsigned long long)log.bySiz[7]);
++    }
++
++    bool copyRamOpen(CopyRamLog &log) {
++        if (log.fp != nullptr) {
++            return true;
++        }
++        if (!depthDirOn() || g_depthDir == nullptr) {
++            return false;
++        }
++        char path[1024];
++        std::snprintf(path, sizeof(path), "%s/copytoram.jsonl", g_depthDir);
++        log.fp = std::fopen(path, "wb");
++        if (!log.opened) {
++            log.opened = 1;
++            std::fprintf(stderr, "[copytoram] open %s ok=%d\n", path, log.fp != nullptr);
++            std::fflush(stderr);
++        }
++        return log.fp != nullptr;
++    }
++    }
++
++    void rs64FloorCopyNoteUpload(const char *site, uint32_t width, uint32_t rowCount, uint32_t rowStart, uint32_t stride, uint32_t storeAddr, uint32_t lookupAddr) {
++        if (!depthDirOn() || g_guestPending.armed != 2) {
++            return;
++        }
++        CopyRamLog &log = copyRamLog();
++        std::lock_guard<std::mutex> lock(log.mu);
++        if (!copyRamOpen(log)) {
++            return;
++        }
++        const uint64_t n = ++log.seq;
++        char counts[160];
++        copyRamCounts(counts, sizeof(counts), log);
++        std::string raw;
++        raw.reserve(256);
++        for (uint32_t col = 0; col < 2; col++) {
++            for (uint32_t row = 0; row < 13; row++) {
++                const uint32_t slot = col * kDepthRows + row;
++                if (!raw.empty()) {
++                    raw += ',';
++                }
++                raw += std::to_string(g_guestPending.rawBe[slot]);
++            }
++        }
++        std::fprintf(log.fp,
++            "{\"k\":\"up\",\"n\":%llu,\"site\":\"%s\",\"width\":%u,\"height\":%u,\"rowStart\":%u,"
++            "\"stride\":%u,\"store\":%u,\"lookup\":%u,\"calls\":%s,\"rawBe\":[%s]}\n",
++            (unsigned long long)n, site != nullptr ? site : "", width, rowCount, rowStart,
++            stride, storeAddr, lookupAddr, counts, raw.c_str());
++        std::fflush(log.fp);
++    }
++
++    void rs64FloorCopyToRamWitness(uint32_t rowStart, uint32_t rowEnd, uint32_t width, uint8_t siz, uint8_t *destination, const uint8_t *native, uint32_t nativeBytes) {
++        if (!depthDirOn()) {
++            return;
++        }
++        CopyRamLog &log = copyRamLog();
++        std::lock_guard<std::mutex> lock(log.mu);
++        const uint32_t bucket = siz < 8u ? siz : 7u;
++        log.bySiz[bucket]++;
++        const uint64_t n = ++log.seq;
++        if (!copyRamOpen(log)) {
++            return;
++        }
++        char counts[160];
++        copyRamCounts(counts, sizeof(counts), log);
++        const bool wide = siz == G_IM_SIZ_16b && (width == 796u || width == 1024u);
++        if (!wide) {
++            if (n == 1u || (n % 64u) == 0u) {
++                std::fprintf(log.fp, "{\"k\":\"n\",\"n\":%llu,\"siz\":%u,\"width\":%u,\"calls\":%s}\n",
++                    (unsigned long long)n, siz, width, counts);
++                std::fflush(log.fp);
++            }
++            return;
++        }
++        uint32_t phys = 0xFFFFFFFFu;
++        const uintptr_t base = reinterpret_cast<uintptr_t>(g_recomp_rdram_for_wp_raw);
++        const uintptr_t dest = reinterpret_cast<uintptr_t>(destination);
++        if (destination != nullptr && base != 0 && dest >= base) {
++            const uintptr_t off = dest - base;
++            if (off <= 0x1FFFFFFFu) {
++                phys = (uint32_t)off;
++            }
++        }
++        const int copied = (native != nullptr && nativeBytes >= 2u && rowEnd > rowStart) ? 1 : 0;
++        const uint32_t rowBytes = width << 1;
++        std::string words;
++        if (copied && rowBytes != 0 && uint64_t(rowEnd - rowStart) * rowBytes <= nativeBytes) {
++            static const uint32_t ys[14] = {180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 200};
++            const uint32_t xs[2] = {16u, width - 17u};
++            for (uint32_t y : ys) {
++                if (y < rowStart || y >= rowEnd) {
++                    continue;
++                }
++                for (uint32_t x : xs) {
++                    if (x >= width) {
++                        continue;
++                    }
++                    const uint32_t rel = (y - rowStart) * rowBytes + x * 2u;
++                    if (uint64_t(rel) + 2u > nativeBytes) {
++                        continue;
++                    }
++                    const uint16_t rawBe = rs64DepthRawBe(native, rel);
++                    const uint32_t pix = phys == 0xFFFFFFFFu ? 0xFFFFFFFFu : phys + rel;
++                    if (!words.empty()) {
++                        words += ',';
++                    }
++                    words += "{\"x\":" + std::to_string(x) + ",\"y\":" + std::to_string(y)
++                        + ",\"rawBe\":" + std::to_string(rawBe) + ",\"phys\":" + std::to_string(pix) + "}";
++                }
++            }
++            // Depth pixels live at 0xB56000, which a taller color writeback can cover
++            // at a different image y. Sample those absolute addresses too.
++            if (phys != 0xFFFFFFFFu) {
++                const uint32_t span = (rowEnd - rowStart) * rowBytes;
++                const uint32_t depthOrigin = 0x00B56000u;
++                const uint32_t depthStride = 2048u;
++                const uint32_t depthXs[2] = {16u, 1024u - 17u};
++                for (uint32_t y : ys) {
++                    for (uint32_t x : depthXs) {
++                        const uint32_t addr = depthOrigin + y * depthStride + x * 2u;
++                        if (addr < phys || uint64_t(addr) + 2u > uint64_t(phys) + span) {
++                            continue;
++                        }
++                        const uint32_t rel = addr - phys;
++                        if (uint64_t(rel) + 2u > nativeBytes) {
++                            continue;
++                        }
++                        const uint16_t rawBe = rs64DepthRawBe(native, rel);
++                        if (!words.empty()) {
++                            words += ',';
++                        }
++                        words += "{\"x\":" + std::to_string(x) + ",\"y\":" + std::to_string(y)
++                            + ",\"rawBe\":" + std::to_string(rawBe) + ",\"phys\":" + std::to_string(addr)
++                            + ",\"watch\":1}";
++                    }
++                }
++            }
++        }
++        std::fprintf(log.fp,
++            "{\"k\":\"w\",\"n\":%llu,\"siz\":%u,\"width\":%u,\"phys\":%u,\"rowStart\":%u,\"rowEnd\":%u,"
++            "\"bytes\":%u,\"copied\":%d,\"calls\":%s,\"words\":[%s]}\n",
++            (unsigned long long)n, siz, width, phys, rowStart, rowEnd, nativeBytes, copied, counts, words.c_str());
++        std::fflush(log.fp);
++    }
++
 +    void rs64DepthHistCaptureGuest(const char *site, const uint8_t *swapped, uint32_t swappedBytes, uint32_t width, uint32_t rowCount, uint32_t rowStart, uint32_t storeStride, uint32_t storeAddr, uint32_t lookupAddr) {
 +        rs64DepthHistNoteSite(site, width, rowCount, rowStart, storeStride, lookupAddr);
 +        if (g_guestPending.armed != 1 || swapped == nullptr || rowCount == 0 || width < 34u) {
@@ -8733,7 +8911,7 @@ index b9cb1f5..c8f2ae4 100644
 +                const uint32_t index = (y - rowStart) * width + x;
 +                uint16_t le = 0;
 +                std::memcpy(&le, swapped + size_t(index) * 2u, 2);
-+                const uint16_t be = (uint16_t)((le << 8) | (le >> 8));
++                const uint16_t be = rs64DepthRawBe(swapped, index * 2u);
 +                g_guestPending.rawLe[slot] = le;
 +                g_guestPending.rawBe[slot] = be;
 +                g_guestPending.dec[slot] = ColorConverter::D16::toF(be);
@@ -8745,6 +8923,7 @@ index b9cb1f5..c8f2ae4 100644
 +        }
 +        g_guestPending.covers = covers;
 +        g_guestPending.armed = 2;
++        rs64FloorCopyNoteUpload(site, width, rowCount, rowStart, storeStride, storeAddr, lookupAddr);
 +    }
 +
 +    void rs64DepthHistSetup(RenderWorker *worker, RenderTexture *depth, uint32_t address, uint32_t width, uint32_t height, RenderFormat format, float clearValue) {
@@ -9067,7 +9246,7 @@ index b9cb1f5..c8f2ae4 100644
          InstanceDrawCall::Type previousCallType = InstanceDrawCall::Type::Unknown;
          bool previousVertexTestZ = false;
          const RenderPipeline *previousPipeline = nullptr;
-@@ -543,6 +1222,135 @@ namespace RT64 {
+@@ -543,6 +1401,135 @@ namespace RT64 {
              }
          }
  
@@ -9203,7 +9382,7 @@ index b9cb1f5..c8f2ae4 100644
          for (uint32_t i : rasterScene.instanceIndices) {
              const InstanceDrawCall &drawCall = instanceDrawCallVector[i];
  
-@@ -573,9 +1381,16 @@ namespace RT64 {
+@@ -573,9 +1560,16 @@ namespace RT64 {
                      int nt = ++n_total;
                      if (nf == 1 || (nf % 50) == 0 || nt <= 5) {
                          const uint32_t lo = (uint32_t)(drawCall.triangles.shaderDesc.colorCombiner.L);
@@ -9222,7 +9401,7 @@ index b9cb1f5..c8f2ae4 100644
                          std::fflush(stderr);
                      }
                  }
-@@ -585,6 +1400,53 @@ namespace RT64 {
+@@ -585,6 +1579,53 @@ namespace RT64 {
              case InstanceDrawCall::Type::IndexedTriangles:
              case InstanceDrawCall::Type::RawTriangles:
              case InstanceDrawCall::Type::RegularRect: {
@@ -9276,7 +9455,7 @@ index b9cb1f5..c8f2ae4 100644
                  // ROGUESQ: skip draws with null colorTarget instead of
                  // asserting. Some workloads route instances through a
                  // rasterScene whose fbStorage has no allocated colorTarget
-@@ -657,6 +1519,45 @@ namespace RT64 {
+@@ -657,6 +1698,45 @@ namespace RT64 {
                      continue;
                  }
  
@@ -9322,7 +9501,7 @@ index b9cb1f5..c8f2ae4 100644
                  // A new pass must be started if decals are required and something wrote to the depth buffer before this call.
                  const interop::OtherMode otherMode = triangles.shaderDesc.otherMode;
                  bool depthDecal = (otherMode.zMode() == ZMODE_DEC);
-@@ -668,9 +1569,9 @@ namespace RT64 {
+@@ -668,9 +1748,9 @@ namespace RT64 {
                      switchToDepthWrite();
                  }
  
@@ -9335,7 +9514,7 @@ index b9cb1f5..c8f2ae4 100644
                  }
  
                  if (previousPipeline != triangles.pipeline) {
-@@ -679,25 +1580,67 @@ namespace RT64 {
+@@ -679,25 +1759,67 @@ namespace RT64 {
                  }
                  
                  rasterParams.renderIndex = i;
@@ -9405,7 +9584,7 @@ index b9cb1f5..c8f2ae4 100644
                      previousPipeline = nullptr;
                  }
  
-@@ -735,13 +1678,70 @@ namespace RT64 {
+@@ -735,13 +1857,70 @@ namespace RT64 {
                      break;
                  }
  
@@ -9476,7 +9655,7 @@ index b9cb1f5..c8f2ae4 100644
                  }
  
                  break;
-@@ -773,6 +1773,158 @@ namespace RT64 {
+@@ -773,6 +1952,158 @@ namespace RT64 {
              }
          }
  
@@ -9635,7 +9814,7 @@ index b9cb1f5..c8f2ae4 100644
          // Mark targets for resolve.
          if (fbStorage->colorTarget != nullptr) {
              fbStorage->colorTarget->markForResolve();
-@@ -1462,6 +2614,15 @@ namespace RT64 {
+@@ -1462,6 +2793,15 @@ namespace RT64 {
          fbParams.horizontalMisalignment = p.horizontalMisalignment;
          framebufferCount++;
  
@@ -9651,7 +9830,7 @@ index b9cb1f5..c8f2ae4 100644
          while (framebufferCount > framebufferVector.size()) {
              framebufferVector.emplace_back();
              framebufferVector.back().paramsBuffer = p.worker->device->createBuffer(RenderBufferDesc::UploadBuffer(256, RenderBufferFlag::CONSTANT));
-@@ -1470,6 +2631,8 @@ namespace RT64 {
+@@ -1470,6 +2810,8 @@ namespace RT64 {
          }
  
          Framebuffer &framebuffer = framebufferVector[framebufferCount - 1];
@@ -9690,7 +9869,7 @@ index 3add9c3..29d5c05 100644
              std::unique_ptr<FramebufferRendererDescriptorFramebufferSet> descRealFbSet;
              std::unique_ptr<FramebufferRendererDescriptorFramebufferSet> descDummyFbSet;
 diff --git a/src/render/rt64_native_target.cpp b/src/render/rt64_native_target.cpp
-index 6891b7b..b0a8bb1 100644
+index 6891b7b..7222f5b 100644
 --- a/src/render/rt64_native_target.cpp
 +++ b/src/render/rt64_native_target.cpp
 @@ -3,16 +3,38 @@
@@ -9860,7 +10039,7 @@ index 6891b7b..b0a8bb1 100644
          
          const uint32_t bufferSize = getNativeSize(rowWidth, rowEnd, siz);
          if (readBuffer->nativeBufferSize < bufferSize) {
-@@ -357,16 +479,67 @@ namespace RT64 {
+@@ -357,16 +479,71 @@ namespace RT64 {
          worker->commandList->copyBufferRegion(writeBuffer.nativeReadbackBuffer->at(regionBufferOffset), readBuffer->nativeBuffer->at(regionBufferOffset), regionBufferSize);
      }
  
@@ -9876,6 +10055,7 @@ index 6891b7b..b0a8bb1 100644
 +        // Paired with the 4-bit copyToNative skip: if the writeback was
 +        // skipped, there is no history entry to read back — leave RAM as-is.
 +        if (writeBufferHistoryCount == 0) {
++            rs64FloorCopyToRamWitness(rowStart, rowEnd, width, siz, data, nullptr, 0);
 +            return;
 +        }
          assert(writeBufferHistoryCount > 0);
@@ -9888,6 +10068,7 @@ index 6891b7b..b0a8bb1 100644
 +            writeBufferHistory[writeBufferHistoryIndex].nativeReadbackBuffer == nullptr) {
 +            fprintf(stderr, "[rt64] copyToRAM: history index %u out of range (count %u), skipping readback\n",
 +                    writeBufferHistoryIndex, writeBufferHistoryCount);
++            rs64FloorCopyToRamWitness(rowStart, rowEnd, width, siz, data, nullptr, 0);
 +            return;
 +        }
 +
@@ -9899,6 +10080,7 @@ index 6891b7b..b0a8bb1 100644
 +        if (uint64_t(bufferOffset) + bufferSize > writeBuffer.nativeReadbackBufferSize) {
 +            fprintf(stderr, "[rt64] copyToRAM: range off=%u size=%u exceeds readback buf %llu (w=%u rows %u..%u), skipping\n",
 +                    bufferOffset, bufferSize, (unsigned long long)writeBuffer.nativeReadbackBufferSize, width, rowStart, rowEnd);
++            rs64FloorCopyToRamWitness(rowStart, rowEnd, width, siz, data, nullptr, 0);
 +            writeBufferHistoryIndex++;
 +            return;
 +        }
@@ -9924,6 +10106,7 @@ index 6891b7b..b0a8bb1 100644
 +                writeBuffer.floorPair, writeBuffer.sourceTarget, width, rowStart, rowEnd);
 +        }
          memcpy(data, readbackData + bufferOffset, bufferSize);
++        rs64FloorCopyToRamWitness(rowStart, rowEnd, width, siz, data, readbackData + bufferOffset, bufferSize);
          writeBuffer.nativeReadbackBuffer->unmap();
          writeBufferHistoryIndex++;
      }
@@ -10123,10 +10306,10 @@ index 81917bc..7cb5eff 100644
 \ No newline at end of file
 +};
 diff --git a/src/render/rt64_render_target.h b/src/render/rt64_render_target.h
-index 82d8a36..e55bb4a 100644
+index 82d8a36..aa0d278 100644
 --- a/src/render/rt64_render_target.h
 +++ b/src/render/rt64_render_target.h
-@@ -75,4 +75,15 @@ namespace RT64 {
+@@ -75,4 +75,18 @@ namespace RT64 {
          static RenderFormat colorBufferFormat(bool usesHDR);
          static RenderFormat depthBufferFormat();
      };
@@ -10141,6 +10324,9 @@ index 82d8a36..e55bb4a 100644
 +    // Guest columns for the depth copyFromChanges that follows. `swapped` is nativeSwappedRAM
 +    // (32-bit byteswapped). Decoded with ColorConverter::D16::toF, the CPU copy of Depth16ToFloat.
 +    void rs64DepthHistCaptureGuest(const char *site, const uint8_t *swapped, uint32_t swappedBytes, uint32_t width, uint32_t rowCount, uint32_t rowStart, uint32_t storeStride, uint32_t storeAddr, uint32_t lookupAddr);
++    // Every copyToRAM while ROGUESQ_FLOOR_DEPTH_DIR is set. native is the
++    // pre-RDRAM-swap readback, the same byte order as nativeSwappedRAM.
++    void rs64FloorCopyToRamWitness(uint32_t rowStart, uint32_t rowEnd, uint32_t width, uint8_t siz, uint8_t *destination, const uint8_t *native, uint32_t nativeBytes);
  };
 \ No newline at end of file
 diff --git a/src/render/rt64_texture_cache.cpp b/src/render/rt64_texture_cache.cpp

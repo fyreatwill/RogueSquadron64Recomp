@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6626 (2026-10-28).
+Compact operational handoff, as of Session 6627 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,6 +15,20 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-ram).**
+  - s6627: the 0x0000 stripe is not a `copyToRAM` payload. One Debug binary,
+    both widths. 16:9 34.2 s / 21:9 33.5 s, 54/52 good frames, alive,
+    0 crash markers. Classifier selects H-later-zero; upload control
+    stays H-guest, mae 0. All 935 wide writebacks before that upload
+    are 1024x447 at phys `0x00B20000` (rows 0..447). That span covers
+    `0x00BB0020` (depth x=16, y=180 = this image's y=288). The native
+    rawBe there is `0x9F4C` on every one of them, never `0x0000`; other
+    sampled words in the same write include `0xFFFC`. The upload is the
+    next log event (n=2093, 16-bit call count still 2092) and its head
+    is still `0x0000`. Image y=180 of the same write is rawBe 0 at
+    `0x00B7A020`, a different pixel. The only later rawBe 0 at
+    `0x00BB0020` is the depth image's own writeback at `0x00B56000`
+    after the upload. 16:9 floor z store is 0.99195..0.99669. No
+    default change. Evidence `scratch/agent/s6627_ram/depth_verdict.json`.
   - s6626: `copyFromChanges` is faithful. One Debug binary, both widths.
     16:9 35.5 s / 21:9 33.5 s, 52 good frames, alive, 0 crash markers.
     The only depth `copyFromChanges` is `state.cpp:2604` on the 21:9
@@ -428,6 +442,7 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
+- s6627 closes "the 1024x447 `copyToRAM` at `0x00B20000` writes the `0x0000` stripe" (it covers `0x00BB0020`). Believable because that span contains every stripe address and the same write's own image y=180 is rawBe 0. Refuted: the absolute sample is rawBe `0x9F4C` on all 935 covering writebacks, the call count does not move, and the upload still reads `0x0000`. The image-y zero is phys `0x00B7A020`.
 - s6626 closes "fbChangesDrawDepth, its boolean mask, or its viewport manufactures the 21:9 depth stripe from a clear or smooth guest field" (H-upload). Believable because the GPU image goes from a read-back clear of 1.0 to the stripe inside copyFromChanges, and a discard mask cannot paint 0 by itself. Refuted: the guest words already are the stripe and match the GPU on 142/142 samples (mae 0), shader endian, site state.cpp:2604.
 - s6625 "after the zero head, x=16 is a smooth 0.964..0.961 ramp and x=1007 stays 1.0". Believable because x=16 does contain 0.96408 and x=1007 has more exact-1 samples (31 vs 13). Both columns actually interleave ~0.96 and 1.0. The stable part is the exact-0 head.
 - s6625 closes "the 21:9 zeros are unwritten depth tiles (create-clear never applied, so a readback of 0)". Believable because Metal does not clear a D32 texture at creation, and a different 1024x480 target's first sample in the same run was exact 0. Refuted on the floor texture: clearDepthTarget read back 1.0 on both columns, and the following copyFromChanges replaced those pixels.
@@ -529,17 +544,17 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6626) Name the writer of the literal `0x0000` depth words at guest `0x00B56000`.**
-   The state.cpp:2604 upload already matches the GPU stripe (mae 0). Those
-   words are `0x0000` at y=180..192, while later rows of the same columns
-   contain the real clear word `0xFFFC`. Log every 16-bit `copyToRAM` of
-   width 796 or 1024 from boot, not phase-gated, with phys, rows, and the
-   two column words decoded the same way as the s6626 guest capture.
-   H-writeback: a recorded write stored `0x0000` at that pixel.
-   H-later-zero: a write stored `0xFFFC` and the upload still reads
-   `0x0000`. H-unwritten: `copyToRAM` count is >0 but none covers those
-   pixels before the upload. A zero count is H-witness. Keep the s6626
-   guest-vs-GPU check. Do not change a default. NEXT.md.
+1. **(s6627) Name what zeros guest `0x00BB0020` after the overlapping writeback.**
+   `copyToRAM` of the 1024x447 image at `0x00B20000` covers that byte and
+   stores rawBe `0x9F4C`, not `0x0000`, on every copy before the upload.
+   The next event is state.cpp:2604 and it still reads `0x0000`. Sample
+   the live RDRAM bytes at the end of `copyNativeToRAM` (after the 32-bit
+   byteswap) and at the `fbStorage.store` the upload copies. Compare the
+   two bases. H-swap: post-byteswap bytes are already 0. H-alias: the
+   writeback base and `&RDRAM[0x00BB0020]` differ and only the latter is 0.
+   H-between: same base, nonzero after the byteswap, 0 at the store. Do
+   not start a guest-store watch in that unit. Keep the s6626 guest-vs-GPU
+   check and the s6627 native witness. No default change. NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

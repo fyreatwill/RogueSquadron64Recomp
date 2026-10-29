@@ -277,6 +277,15 @@ def load_arm(root, tag, width):
         guest=guest,
     )
     arm['table'] = classify(arm)
+    arm['copies'], arm['copy_calls'] = load_copies(depth / 'copytoram.jsonl')
+    writer = arm['table'].get('stripe_writer')
+    rec = guest_of(arm, writer) if writer else None
+    arm['head_raw'] = rec['rawBe'][:13] if rec and rec.get('rawBe') else None
+    if rec is not None and writer is not None and writer['sample'] < len(arm['samples']):
+        worst, _endian, _dec, _n = best_decode(rec, arm['samples'][writer['sample']])
+        arm['guest_mae'] = worst
+    else:
+        arm['guest_mae'] = None
     text = (root / tag / 'run.log').read_text(errors='replace') if (root / tag / 'run.log').exists() else ''
     arm['crashlines'] = sum(text.count(tok) for tok in ('[CRASH]', '[ABORT]', 'SIGSEGV', 'SIGBUS'))
     arm['alive'] = 'alive_at_end'  # filled by summary if present
@@ -312,9 +321,11 @@ def load_guest(path, nsample):
         site = data[base + 32:base + 80].split(b'\0', 1)[0].decode()
         dec = list(struct.unpack_from('<142f', data, base + 80))
         alt = list(struct.unpack_from('<142f', data, base + 80 + 568))
+        raw_be = list(struct.unpack_from('<142H', data, base + 1216))
+        raw_le = list(struct.unpack_from('<142H', data, base + 1500))
         rows.append(dict(present=present, site=site, width=width, height=height, rowStart=row_start,
                          stride=stride, address=address, storeAddr=store_addr, covers=covers,
-                         dec=dec, alt=alt))
+                         dec=dec, alt=alt, rawBe=raw_be, rawLe=raw_le))
     return rows
 
 
@@ -498,6 +509,134 @@ def decide_upload(wide16, wide21):
     return 'H-witness', ['decode-unrecognized'], detail
 
 
+ORIGIN = 0x00B56000
+STRIDE = 2048
+HEAD_YS = list(range(180, 193))
+
+
+def load_copies(path):
+    rows = []
+    calls = [0] * 8
+    if not path.exists():
+        return rows, calls
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        rec = json.loads(line)
+        rows.append(rec)
+        got = rec.get('calls')
+        if isinstance(got, list) and len(got) == 8:
+            calls = got
+    return rows, calls
+
+
+def target_phys(x, y):
+    return ORIGIN + y * STRIDE + x * 2
+
+
+def byte_span(rec):
+    phys = rec.get('phys')
+    width = rec.get('width')
+    row0 = rec.get('rowStart')
+    row1 = rec.get('rowEnd')
+    if not isinstance(phys, int) or phys >= 0xF0000000 or not isinstance(width, int):
+        return None
+    if not isinstance(row0, int) or not isinstance(row1, int) or row1 <= row0:
+        return None
+    return phys, phys + (row1 - row0) * width * 2
+
+
+def covering_word(rec, x, y):
+    if rec.get('k') != 'w' or not rec.get('copied'):
+        return None
+    want = target_phys(x, y)
+    for word in rec.get('words') or []:
+        same_pixel = word.get('x') == x and word.get('y') == y
+        if word.get('phys') == want and (word.get('watch') or same_pixel):
+            return word
+    span = byte_span(rec)
+    if span is not None and span[0] <= want < span[1]:
+        return 'missing-word'
+    return None
+
+
+def upload_cutoff(rows):
+    for rec in rows:
+        if rec.get('k') != 'up' or rec.get('site') != 'state.cpp:2604' or rec.get('width') != 1024:
+            continue
+        raw = rec.get('rawBe') or []
+        if len(raw) >= 13 and all(v == 0 for v in raw[:13]):
+            return rec.get('n')
+    return None
+
+
+def call_total(calls):
+    return sum(calls) if isinstance(calls, list) else 0
+
+
+def decide_ram(wide16, wide21):
+    bad = list(controls(wide16, wide21))
+    detail = {}
+    if call_total(wide16.get('copy_calls')) <= 0 or call_total(wide21.get('copy_calls')) <= 0:
+        bad.append('copy-count')
+    head = wide21.get('head_raw')
+    if not isinstance(head, list) or len(head) < 13 or any(v != 0 for v in head[:13]):
+        bad.append('head-raw')
+    mae = wide21.get('guest_mae')
+    if mae is None or mae > 1e-3:
+        bad.append('gpu-match')
+    if bad:
+        return 'H-witness', bad, detail
+    rows = wide21.get('copies') or []
+    cutoff = upload_cutoff(rows)
+    if cutoff is None:
+        return 'H-witness', ['upload-marker'], detail
+    last = {}
+    logger_bad = False
+    for rec in rows:
+        if rec.get('k') != 'w' or rec.get('n', 0) >= cutoff:
+            continue
+        for y in HEAD_YS:
+            got = covering_word(rec, 16, y)
+            if got in ('missing-word', 'mismatch'):
+                logger_bad = True
+            elif got is not None:
+                last[y] = (rec, got)
+    if logger_bad:
+        return 'H-witness', ['word-layout'], detail
+    records = []
+    seen = set()
+    fffc = 0
+    for y in HEAD_YS:
+        if y not in last:
+            continue
+        rec, _word = last[y]
+        key = rec.get('n')
+        if key in seen:
+            continue
+        seen.add(key)
+        words = rec.get('words') or []
+        fffc += sum(1 for w in words if w.get('rawBe') == 0xFFFC)
+        records.append(dict(
+            n=key, width=rec.get('width'), phys=rec.get('phys'),
+            rowStart=rec.get('rowStart'), rowEnd=rec.get('rowEnd'), copied=rec.get('copied'),
+        ))
+    zeros = sum(1 for y in last if last[y][1].get('rawBe') == 0)
+    detail = dict(
+        cutoff=cutoff, covered=len(last), zeros=zeros, nonzero=len(last) - zeros, fffc=fffc,
+        records=records, calls=wide21.get('copy_calls'), calls16=wide16.get('copy_calls'),
+        head=[None if y not in last else last[y][1].get('rawBe') for y in HEAD_YS],
+    )
+    if not last:
+        return 'H-unwritten', [], detail
+    if len(last) == 13 and zeros == 13:
+        return 'H-writeback', [], detail
+    if len(last) == 13 and zeros == 0:
+        return 'H-later-zero', [], detail
+    return 'H-split', [], detail
+
+
 def blank(color, depth, n=71):
     sample = {}
     for col in (0, 1):
@@ -627,6 +766,59 @@ def selftest():
     noisy['table'] = guest_arm['table']
     assert decide_upload(w16, noisy)[0] == 'H-witness'
     assert decide_upload(dict(w16, guest=None), guest_arm)[1] == ['guest-file']
+
+    def ram_arm(base, head, calls, copies, mae=0.0):
+        arm = dict(base)
+        arm['head_raw'] = head
+        arm['guest_mae'] = mae
+        arm['copy_calls'] = calls
+        arm['copies'] = copies
+        return arm
+
+    def pix(x, y, raw):
+        return dict(x=x, y=y, rawBe=raw, phys=ORIGIN + y * STRIDE + x * 2)
+
+    def wide_rec(n, raw_of):
+        words = []
+        for y in list(HEAD_YS) + [200]:
+            for x in (16, 1024 - 17):
+                words.append(pix(x, y, raw_of(x, y)))
+        return dict(k='w', n=n, siz=2, width=1024, phys=ORIGIN, rowStart=0, rowEnd=339,
+                    copied=1, calls=[0, 0, 8, 0, 0, 0, 0, 0], words=words)
+
+    def up(n):
+        return dict(k='up', n=n, site='state.cpp:2604', width=1024, rawBe=[0] * 26,
+                    calls=[0, 0, 8, 0, 0, 0, 0, 0])
+
+    calls = [0, 0, 8, 0, 0, 0, 0, 0]
+    left0 = lambda x, y: 0 if y <= 192 and x == 16 else (0xFFFC if y == 200 else 0x9E40)
+    w16r = ram_arm(wide16, [1] * 13, [0, 0, 4, 0, 0, 0, 0, 0], [])
+    wrote0 = ram_arm(prior, [0] * 13, calls, [wide_rec(1, lambda x, y: 0xFFFC), wide_rec(2, left0), up(3)])
+    got = decide_ram(w16r, wrote0)
+    assert got[0] == 'H-writeback' and got[2]['fffc'] >= 1 and got[2]['covered'] == 13, got
+    later = ram_arm(prior, [0] * 13, calls, [wide_rec(1, lambda x, y: 0xFFFC), up(2)])
+    assert decide_ram(w16r, later)[0] == 'H-later-zero', decide_ram(w16r, later)
+    after = ram_arm(prior, [0] * 13, calls, [up(1), wide_rec(2, lambda x, y: 0)])
+    assert decide_ram(w16r, after)[0] == 'H-unwritten', decide_ram(w16r, after)
+    other = ram_arm(prior, [0] * 13, calls, [
+        dict(k='w', n=1, copied=1, width=796, phys=0x1000, rowStart=0, rowEnd=336, words=[], calls=calls),
+        up(2)])
+    assert decide_ram(w16r, other)[0] == 'H-unwritten'
+    assert decide_ram(w16r, ram_arm(prior, [0] * 13, [0] * 8, []))[0] == 'H-witness'
+    assert decide_ram(w16r, ram_arm(prior, [0] * 13, calls, [wide_rec(2, left0)]))[1] == ['upload-marker']
+    # A 447-row color write at 0xB20000 covers depth 0xB56000 at a different image y.
+    # Image y=180 of that write is not the depth pixel. Only the absolute phys counts.
+    overlap_words = [dict(x=16, y=y, rawBe=0, phys=target_phys(16, y), watch=1) for y in HEAD_YS]
+    overlap_words.append(dict(x=16, y=200, rawBe=0xFFFC, phys=target_phys(16, 200), watch=1))
+    overlap = dict(k='w', n=1, siz=2, width=1024, phys=0xB20000, rowStart=0, rowEnd=447,
+                   copied=1, calls=calls, words=overlap_words)
+    assert byte_span(overlap)[0] <= target_phys(16, 180) < byte_span(overlap)[1]
+    got = decide_ram(w16r, ram_arm(prior, [0] * 13, calls, [overlap, up(2)]))
+    assert got[0] == 'H-writeback' and got[2]['fffc'] == 1, got
+    decoy_words = [dict(x=16, y=180, rawBe=0, phys=0xB20000 + 180 * 2048 + 32)]
+    decoy = dict(k='w', n=1, siz=2, width=1024, phys=0xB20000, rowStart=0, rowEnd=447,
+                 copied=1, calls=calls, words=decoy_words)
+    assert decide_ram(w16r, ram_arm(prior, [0] * 13, calls, [decoy, up(2)]))[1] == ['word-layout']
     print('selftest ok', flush=True)
 
 
@@ -652,9 +844,14 @@ def main():
     arms = {}
     for tag, width in (('wide16', 796), ('wide21', 1024)):
         arms[tag] = load_arm(root, tag, width)
-    verdict, why, detail = decide_upload(arms['wide16'], arms['wide21'])
+    upload_verdict, upload_why, detail = decide_upload(arms['wide16'], arms['wide21'])
+    verdict, why, ram = decide_ram(arms['wide16'], arms['wide21'])
+    if upload_verdict != 'H-guest':
+        verdict = 'H-witness'
+        why = ['upload-control', upload_verdict] + list(why)
     result = dict(
-        selects=verdict, why=why, upload=detail,
+        selects=verdict, why=why, ram=ram, upload_selects=upload_verdict,
+        upload_why=upload_why, upload=detail,
         arms={tag: dict(
             table={k: public_event(v) if k.endswith('writer') or k == 'floor' else v
                    for k, v in arm['table'].items()},
@@ -669,7 +866,8 @@ def main():
         for key in ('zero_writer', 'mid_writer', 'stripe_writer', 'writer', 'floor'):
             result['arms'][tag]['table'][key] = public_event(table[key])
     (root / 'depth_verdict.json').write_text(json.dumps(result, indent=2) + '\n')
-    print(json.dumps(dict(selects=verdict, why=why, upload=detail,
+    print(json.dumps(dict(selects=verdict, why=why, ram=ram, upload_selects=upload_verdict,
+                          upload=detail,
                           wide21=result['arms']['wide21']['table'].get('stripe_writer'),
                           smooth=arms['wide21']['table']['smooth'],
                           pitch=arms['wide21']['table']['pitch'])), flush=True)

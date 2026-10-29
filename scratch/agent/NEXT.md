@@ -1,72 +1,75 @@
-# NEXT: name the writer of the 0x0000 words at guest depth 0x00B56000
+# NEXT: read RDRAM at 0x00BB0020 after the byteswap and at the depth store
 HYPOTHESIS-ID: g1d-levelselect-ram
 
-s6626 selects H-guest and refutes H-upload. One Debug binary, both widths.
-16:9 35.5 s / 21:9 33.5 s, 52 good frames, alive, 0 crash markers. The only
-depth copyFromChanges is state.cpp:2604 on the 21:9 floor depth texture
-1024x339. Guest address 0x00B56000, stride 2048, rowStart 0, lookup address
-equals store address. ColorConverter::D16::toF of the shader-endian guest
-words (rawBe) matches the GPU columns on all 142 samples, max abs 0.
-clearDepthTarget read back 1.0 (142/142) on that texture before the upload.
-floor-enter matches the upload with max abs 0. The head words are literal
-0x0000: x=16 for y=180..192 (13 words) and x=1007 for y=180..191 (12 words).
-0x0000 is not the RDP depth-clear word. Later rows of the same columns
-include 0xFFFC, which decodes to 1.0, and words such as 0x9E40 (~0.967).
-16:9 has no copyFromChanges. Its one depth copy is copyFromTarget at
-state.cpp:2570, floor-enter is all 1.0, and shader_11 stores z
-0.99416..0.99574. Magenta and pix-match pass. workload_queue.cpp:966 and
-framebuffer_manager.cpp:345 did not run. The color-width stride lead does
-not apply: this call's stride is 2048. Do not patch the shader. Do not
-change a default. Do not repeat the guest-versus-GPU comparison except as
-the control below.
+s6627 selects H-later-zero and refutes H-writeback and H-unwritten. One
+Debug binary, both widths. 16:9 34.2 s / 21:9 33.5 s, 54/52 good frames,
+alive, 0 crash markers. The upload at state.cpp:2604 is n=2093. The
+previous event is n=2092, and the 16-bit call count is still 2092, so no
+copyToRAM of any width entered the witness in between. That write, and
+all 935 wide writes before it, is phys 0x00B20000, width 1024, rows
+0..447. The span covers 0x00BB0020. That address is this image's pixel
+x=16, y=288, not its y=180. The native rawBe there is 0x9F4C on every
+cover and 0x0000 on none. Other words in the same write are 0xFFFC.
+The upload head is still 13 zeros at x=16, y=180..192, and the GPU match
+stays max abs 0. Image y=180 of the 0x00B20000 write is rawBe 0 at
+0x00B7A020. Do not treat that pixel as the stripe. The only later rawBe
+0 at 0x00BB0020 is n=2095, the depth image's own copyToRAM at 0x00B56000
+after the upload. Do not patch the shader. Do not change a default.
 
-Pixel (x, y) of this image is at 0x00B56000 + y*2048 + x*2. The 0x0000
-bytes at x=16, y=180 therefore sit at 0x00BB0020. The 1024x480 depth
-texture that enters at all zeros is a different GPU texture. Do not treat
-it as 0x00B56000.
+The native witness reads the pre-byteswap readback. copyNativeToRAM then
+byteswaps those words into RDRAM. A 32-bit byteswap cannot turn a nonzero
+word into 0. The freelist restore in that function runs only for a range
+that contains 0x001F3CC0. This span does not. The remaining question is
+what the live RDRAM bytes are, on the pointer the upload actually copies.
 
-ONE work unit, one binary, both widths. Extend the existing copyToRAM
-trace. Do not use the phase==4 hash log (ROGUESQ_LOG_G1D_COPY caps at 400
-rows and drops earlier phases) as the witness. When ROGUESQ_FLOOR_DEPTH_DIR
-is set, every NativeTarget::copyToRAM whose siz is 16-bit and whose width
-is 796 or 1024 appends one record from boot, not only phase >= 4:
-- phys, width, rowStart, rowEnd
-- the rawBe uint16 at x=16 and x=width-17 for each y in 180..192 and for
-  y=200, when that row is inside the write
-rawBe is the s6626 guest capture's word: 32-bit byteswap of the RDRAM
-bytes, then the 16-bit swap, the same path as rs64DepthHistCaptureGuest.
-Do not invent a third conversion. Also record the total copyToRAM call
-count for every siz, so an empty overlap list is not a dead logger. Keep
-the s6626 guest column capture on the state.cpp:2604 upload.
+ONE work unit, one binary, both widths. Keep the s6627 copyToRAM witness
+and the s6626 guest column capture. Add two RDRAM reads, gated by
+ROGUESQ_FLOOR_DEPTH_DIR, from boot, not phase-gated. Each read logs the
+4 bytes at 0x00BB0020 and the rawBe uint16 at x=16 and x=1007 for
+y=180..192 and y=200 (stride 2048, origin 0x00B56000). rawBe is the
+s6626 conversion of those RDRAM bytes: 32-bit byteswap, then the 16-bit
+swap. Also log the host pointer and whether it equals
+g_recomp_rdram_for_wp_raw.
+
+- Site A: end of Framebuffer::copyNativeToRAM, after the byteswap and
+  after the freelist restore, when the written range covers 0x00BB0020.
+  Include that call's native rawBe at the same address so a swap that
+  zeroed the bytes is visible.
+- Site B: the fbStorage.store that feeds state.cpp:2604, on the source
+  pointer about to be copied, when the stored range covers 0x00BB0020.
+  This is the bytes the upload turns into nativeSwappedRAM.
 
 Hypotheses and discriminating outcomes:
-- H-writeback: a recorded copyToRAM covers 0x00B56000 + y*2048 + 16*2 for
-  y=180..192, and the stored rawBe is 0x0000. Name width, row range, and
-  whether another sampled word in that write is 0xFFFC.
-- H-later-zero: a recorded write covers those pixels and stored 0xFFFC or
-  another nonzero depth word, and the later state.cpp:2604 upload still
-  reads rawBe 0x0000.
-- H-unwritten: the copyToRAM count is >0 and no record's byte range covers
-  those 0x0000 pixels before the upload. Host writeback is not the writer.
-  Do not start a guest-store watch in this unit. Name it as the residual.
-- H-witness: the copyToRAM count is 0, the upload's guest file is missing,
-  the 21:9 clear-then-0x0000 sequence does not recur, or the 16:9 z store
-  is absent. Repair the log in this same iteration before interpreting a
-  null.
+- H-swap: site A fires, its native rawBe at 0x00BB0020 is nonzero, and
+  the post-byteswap RDRAM rawBe is 0. The writer is inside
+  copyNativeToRAM. Name the step (byteswap versus anything after it).
+- H-alias: site A's bytes are nonzero, site B's bytes are 0, and the two
+  host pointers are not the same base plus the same offset. Name both
+  pointers. copyToRAM wrote a different mapping than the upload reads.
+- H-between: both sites see the same base, site A's rawBe is nonzero
+  (0x9F4C on the s6627 control), and site B's rawBe head is 0x0000.
+  The zero is written after copyNativeToRAM returns and before the
+  store. Do not start a guest-store watch in this unit.
+- H-witness: the 21:9 clear-then-0x0000 upload does not recur, either
+  site count is 0, the native witness no longer shows 0x9F4C before the
+  upload, or the 16:9 z store is absent. Repair the log in this same
+  iteration before interpreting a null.
 
 Positive controls, required: magenta pixel (16,180) still changes; 16:9
 floor-enter depth stays 1.0 and a later floor op stores z in 0.990..0.998;
-the 21:9 upload's rawBe head is 0x0000 on x=16 for y=180..192 and the GPU
-match stays max abs 0; copyToRAM count is >0 on both arms. A silent log is
-not a result. Phase-gate the route. No cross-run animation compare. Screen
-must be unlocked. SIGKILL. One game run at a time. Do not overwrite
-scratch/agent/s6624_attachment, scratch/agent/s6625_depth, or
-scratch/agent/s6626_guest.
+the 21:9 upload rawBe head is 0x0000 on x=16 for y=180..192 and the GPU
+match stays max abs 0; the s6627 native witness still reports nonzero
+rawBe at 0x00BB0020 on the last covering copyToRAM; both new sites fire
+at least once on 21:9. A silent log is not a result. Phase-gate the
+route. No cross-run animation compare. Screen must be unlocked. SIGKILL.
+One game run at a time. Do not overwrite scratch/agent/s6624_attachment,
+scratch/agent/s6625_depth, scratch/agent/s6626_guest, or
+scratch/agent/s6627_ram.
 
 Build and run from build/ with the ROM beside it:
 
     env DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --target RogueSquadron64Recomp
-    python3 tools/g1d_floor_depth.py --output-root scratch/agent/s6627_ram
+    python3 tools/g1d_floor_depth.py --output-root scratch/agent/s6628_rdram
 
 Keep tools/g1d_floor_depth.py --selftest and tools/g1d_floor_attachment.py
 --selftest green. If lib/ changes, ./submodule-patches/export.sh is part

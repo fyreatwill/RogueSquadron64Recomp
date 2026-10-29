@@ -172355,3 +172355,74 @@ H-upload. No rendering fix or default change.
   Runner: tools/g1d_floor_depth.py.
 Next unit: name the copyToRAM writer of the 0x0000 words at 0x00B56000,
 or show that host writeback never covers them.
+
+## Session 6627 (2026-10-28) — overlapping copyToRAM stores nonzero depth words
+
+HYPOTHESIS-ID: g1d-levelselect-ram
+Outcome: ADVANCED. The 0x0000 stripe selects H-later-zero. Host writeback
+covers the bytes and does not store the zero. No rendering fix or default
+change.
+
+- Read CURRENT-TRUTH, NEXT and the soak tail in order. CURRENT-TRUTH was
+  56,778 bytes, so maintenance did not trigger. Soak tail still ends at
+  s6580; nothing new to fold. No game was already running. The runner
+  refuses a locked screen (CGSSessionScreenIsLocked) before each arm.
+- One Debug binary. When ROGUESQ_FLOOR_DEPTH_DIR is set, every
+  NativeTarget::copyToRAM records its siz. Width 796 or 1024 and 16-bit
+  also records phys, rows, and rawBe at x=16 and x=width-17 for
+  y=180..192 and y=200, plus the same columns at absolute depth addresses
+  0x00B56000+y*2048+x*2 when that byte falls inside the write. rawBe is
+  rs64DepthRawBe, the s6626 guest conversion. The state.cpp:2604 upload
+  appends its own rawBe head on the same sequence. tools/g1d_floor_depth.py
+  --selftest and tools/g1d_floor_attachment.py --selftest passed, including
+  an overlap case whose image y is not the depth pixel. lib/rt64 changes
+  exported with submodule-patches/export.sh. N64ModernRuntime's patch did
+  not change.
+- A first coverage test treated the write's own image (x, y) as the depth
+  pixel. The 0x00B20000 span contains 0x00BB0020, but that address is the
+  write's y=288, so the test scored no coverage and would have selected
+  H-unwritten. That count was not published. The logger and the analyzer
+  were corrected in this session and both widths were run again. The
+  output root was overwritten.
+- Corrected run, phase-gated, SIGKILL after tex+dump. 16:9 34.2 s, 54 good
+  frames; 21:9 33.5 s, 52 good frames. Both alive, 0 crash markers.
+  Classifier selects H-later-zero with an empty control-failure list.
+  Upload control stays H-guest: state.cpp:2604, stride 2048, guest and
+  store 0x00B56000, rowStart 0, height 339, covers 71, mae 0. Upload rawBe
+  head is 13 zeros on x=16. The 26 logged upload words are 25 zeros plus
+  0x0084 at x=1007, y=192. Magenta, pix-match and alpha-fill pass. 21:9
+  row step at the tear is 20.03 versus 5.67 at 16:9.
+- 21:9 copyToRAM log: 1088 lines (19 non-wide heartbeats, 1067 wide,
+  2 uploads). Every call through the cutoff is 16-bit. The cutoff upload
+  is n=2093 and the call counter is still 2092, so no copyToRAM of any
+  width entered the witness between the previous record and the upload.
+  That previous record, and all 935 wide records before it, is phys
+  0x00B20000, width 1024, rows 0..447, copied. Watch phys 0x00BB0020
+  (depth x=16, y=180) is rawBe 0x9F4C on every one of them: 935 covers,
+  0 zeros. The left head is 0x9F4C, 0xFFFC, 0x9F94, 0xFFFC, 0xFFFC,
+  0x9F30, 0xFFFC, 0x9F80, 0xFFFC, 0xFFFC, 0x9F18, 0xFFFC, 0x9F6C. y=200
+  left is 0x9D48. Sixteen words in that record are the clear word 0xFFFC.
+  The same write's own image y=180, x=16 is rawBe 0 at phys 0x00B7A020.
+  That pixel is not the stripe.
+- The only later rawBe 0 at 0x00BB0020 is n=2095, a copyToRAM of the
+  depth image itself at phys 0x00B56000, rows 0..339. It is logged after
+  the upload and is the writeback of the zeros just uploaded. Later
+  copies of that address store rawBe 0xEC68 and its neighbors. No
+  0x00B20000 write occurs after the upload. The next record after the
+  upload, n=2094 at phys 0x00961000, does not cover 0x00BB0020.
+- 16:9: 1212 wide copies, all width 796, phys 0x009DE900, 0x00A62B80,
+  0x00B51E00 and 0x00B7BD80. One upload, not this stripe. floor-enter
+  stays the clear. Shader samples after the enter store z
+  0.99195..0.99669 (16437 pixels). Final 16-bit call count 2408.
+- This refutes H-writeback and H-unwritten. The in-place 32-bit byteswap
+  after memcpy cannot turn a nonzero native word into 0, and the freelist
+  header restore in copyNativeToRAM runs only when the written range
+  contains 0x001F3CC0, which 0x00B20000..0x00BFF800 does not. The zero
+  appears after that writeback returns and before fbStorage.store copies
+  the depth image. The writer is not named. Do not start a guest-store
+  watch until a direct RDRAM read shows the bytes are nonzero at the end
+  of copyNativeToRAM and zero at the store.
+- Evidence (local, gitignored): scratch/agent/s6627_ram/depth_verdict.json.
+  Runner: tools/g1d_floor_depth.py.
+Next unit: read the live RDRAM bytes at 0x00BB0020 after the byteswap and
+at the depth store, and split H-swap / H-alias / H-between.
