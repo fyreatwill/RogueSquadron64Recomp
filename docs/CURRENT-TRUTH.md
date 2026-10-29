@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6649 (2026-10-29).
+Compact operational handoff, as of Session 6650 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -213,8 +213,26 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   sky and terrain. Craft-select fails HUD only (radar 0). Sheet
   `docs/g1_lvl15_flight_s6649.png`. 0 crashes in the 30 s hold.
   The classifier was not edited. Objective (d) was not run.
+- **G1 (c) level 16 flight framebuffer: frozen rule accepts it.**
+  s6650, one retail 4:3 capture, draw distance 1, aspect unset.
+  No planet unlock. Selector B40=16, cursor=16. Beggar's Canyon,
+  "WIN THE RACE", skyhopper. Eleven post-hangar dumps,
+  n=1600..2100, are 512x444. Every dump's own origin field is
+  `0x00620400`; `0x690400` is in the VI log (13 lines). The
+  phase field stays 5: `rs64_phase_ord` bumps only on a VI-width
+  change, and the hangar and the flight are both width 512.
+  There is no phase-7 dump. 3/11 pass all four clauses (n=1600
+  chase, edge 0.076, rel 0.083; n=1650 and n=1850 cockpit,
+  metal 0.187 and 0.177). Not required: n=1700, 1900 and 1950
+  miss craft only (small or oversized engine), and five dumps
+  are the start-key pause overlay (radar 0). Same-run title
+  fails sky and terrain. Craft-select `fb_0001550_w512.ppm`
+  fails terrain and HUD. Sheet `docs/g1_lvl16_flight_s6650.png`.
+  0 crashes in the 30 s hold. The classifier was not edited.
+  Objective (d) was not run.
 
 ## Superseded conclusions — do not act on these
+- s6649 method "the flight set is the phase-7 dumps" (s6650: level 16's flight dumps stay phase 5). Believable because levels 11-15 insert a 640-wide crawl that bumps `rs64_phase_ord` through 6 into 7. The ordinal bumps only on a VI-width change, so a 512-wide flight after a 512-wide hangar does not.
 - s6643 "level 10 is a flight and the frozen rule rejects the sky 0/12" (s6644: tan-cloud arm accepts 11/12; n=2900 stays a craft miss at edge 0.013; title sky stays false because G−B is ~5 while the clouds are ≥22; canon_bad 0; mission 11/13). Believable because dark≥0.60, the blue arm (R−G≤15) and the orange arm (R−G≥40) all miss a luma 73..104 sky with R−G 23..28.
 - s6640 "level 8 is a flight and no craft clause accepts it without breaking canon, so the rule stays 0/7" (s6641: lower-centre metal against a coloured neighbour, edge≥0.05, plus luma≥80 orange sky, accepts 6/7; n=2600 stays a side-view near-miss at edge 0.041; canon_bad 0; mission 11/13; title and craft-select still fail). Believable because the engine, bright-metal, reticle and median≥120 dark-hull arms all missed, and a raw grey fraction in the same box also matched the title.
 - s6636 "the orange flight sky is the luma≥140 sunset arm" (s6640: level 8's orange sky is luma 84.4..97.0, R−G 86.8..94.3, and that arm misses 7/7; s6641 lowered the floor to 80). Believable because the only orange flight measured before that capture was the level-4 sunset, which cleared 140. Level 4's own acceptance is unchanged.
@@ -344,6 +362,12 @@ Level 15 passes the frozen rule on 6/8 phase-7 dumps (s6649,
 one capture, planet unlock on). Not required: n=3350 terrain
 floor (rel 0.079) and n=3400 terrain floor (rel 0.075). Both
 are still flights. Those are not a reason to move 0.08.
+Level 16 passes the frozen rule on 3/11 post-hangar
+mission-origin dumps (s6650, one capture, no planet unlock).
+Those dumps are phase 5, not phase 7: the width stayed 512.
+Not required: three craft-only misses and five pause-overlay
+frames (radar 0). n=1600 rel 0.083 is inside the band and is
+not a reason to move 0.08.
 Verification still needs framebuffer
 evidence for the remaining levels, plus a forced-hit objective
 response. Mission wins, autopilot aim, and mission-to-mission
@@ -370,24 +394,25 @@ progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6649) Capture level 16 with the rule frozen.** One retail
-   4:3 run. Clone `scratch/agent/s6648_lvl14.sh` (no planet
-   unlock; 16 is not 10 or 15) to `scratch/agent/s6650_lvl16.sh`.
-   Output dir `scratch/agent/s6650_lvl16`. Set
-   `ROGUESQ_FORCE_UNLOCK=16` and `ROGUESQ_FORCE_SAVE_MISSION=16`.
+1. **(s6650) Capture level 17 with the rule frozen.** One retail
+   4:3 run. Clone `scratch/agent/s6650_lvl16.sh` (no planet
+   unlock; 17 is not 10 or 15) to `scratch/agent/s6651_lvl17.sh`.
+   Output dir `scratch/agent/s6651_lvl17`. Set
+   `ROGUESQ_FORCE_UNLOCK=17` and `ROGUESQ_FORCE_SAVE_MISSION=17`.
    Do not set `ROGUESQ_FORCE_PLANET_UNLOCK`. Draw distance unset,
    aspect unset. Precontrol `python3 tools/g1_flight_class.py`
    must print `canon_bad 0` and `mission 11/13` before launch.
    Screen must be unlocked. Do not edit
-   `tools/g1_flight_class.py`. Do not move 0.08 because of the
-   level-15 misses at rel 0.079 and 0.075. Score the phase-7
-   dumps after joining them to the VI origin. Same-run title
-   must still fail overall. If at least one phase-7 frame passes
-   all four clauses, record the count and stop. If the sheet is
-   a flight and zero frames pass, record the failing clause and
-   the sky-box luma / R-G / R-B / G-B, and do not add an arm.
-   If there is no post-hangar `0x690400` inside 420 s, record
-   the last origin and stop. Do not start level 17. See NEXT.md.
+   `tools/g1_flight_class.py`. Do not move 0.08. Score the
+   post-hangar dumps whose origin is `0x620400` or `0x690400`,
+   even when the phase field is still 5. A pause overlay
+   (radar 0) is the start-key menu, not a new HUD class. Same-run
+   title must still fail overall. If at least one of those frames
+   passes all four clauses, record the count and stop. If the
+   sheet is a flight and zero frames pass, record the failing
+   clause and do not add an arm. If there is no post-hangar
+   `0x690400` inside 420 s, record the last origin and stop.
+   Do not start level 18. See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

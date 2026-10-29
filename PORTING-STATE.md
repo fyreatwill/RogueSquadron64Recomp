@@ -173646,3 +173646,83 @@ and "the frozen rule rejects every level-15 phase-7 frame." What it
 does not show: an objective-counter response, or that level 16 passes.
 The floor misses are not a reason to move 0.08. Level 16 does not need
 the planet unlock.
+
+## Session 6650 (2026-10-29) — level 16 canyon race passes the frozen class rule
+
+One retail 4:3 capture. No classifier edit, no heap edit, no aim, draw
+distance unset, aspect unset, no planet unlock. Precontrol
+`python3 tools/g1_flight_class.py` printed canon_bad 0 and mission 11/13
+before launch (oracle, level-2 fb_0002700, and level-3 fb_0002700 pass;
+floor and the s6633 title fail). IOConsoleLocked was No. The route is
+scratch/agent/s6650_lvl16.sh, the s6648 script with FORCE_UNLOCK=16 and
+FORCE_SAVE_MISSION=16. The soak tail in scratch/agent/SOAK-RESULTS.md
+still ends at s6580 (2026-10-28); no new queued verdict to fold.
+
+scratch/agent/s6650_lvl16/keys.log: screen-unlocked, precontrol-ok, title
+t=14, hangar t=32, mission-onset t=47, hold-30s t=77, killed t=77,
+crash=0, abort=0. run.log echoes `[dd] ROGUESQ_DRAW_DISTANCE multiplier 1`,
+`[g1d-drop] aspect=<unset>`, `[lvsel] cursor=16`, and
+`[initMission] call#1 B40=0x10`. CRASH, SIGSEGV and SIGBUS counts in
+that log are 0. Scores are in scratch/agent/s6650_lvl16_score.txt.
+Sheet `docs/g1_lvl16_flight_s6650.png` is frames 1600, 1650, 1850 and
+1900.
+
+The phase field on the flight dumps is 5, not 7. `rs64_phase_ord`
+(`src/main/rt64_render_context.cpp`) increments only when the VI width
+changes. The hangar dumps (n=1300..1550, origin `0x006AB400`, 512x336)
+and the flight dumps are both width 512, so the ordinal never leaves 5.
+Levels 11-15 reached phase 7 because a 640-wide crawl sat between the
+hangar and the chase. There is no phase-7 dump in this run. The mission
+picture is the post-hangar set n=1600..2100: eleven 512x444 dumps, every
+one with its own origin field `0x00620400` (fb sampled the other buffer).
+The VI origin census has 13 lines of `0x00690400` and 16 of `0x00620400`.
+
+The sheet is a flight. Beggar's Canyon, mission text "WIN THE RACE", a
+skyhopper over sand. n=1600 is the chase view (red-striped wing, engine,
+radar, reticle). n=1650 and n=1850 are the cockpit over the canyon, with
+the radar, the reticle and distant skimmers. n=1900 is the same cockpit
+closer to a dune. The frozen rule scores 3/11. n=1600, 1650 and 1850
+pass sky, terrain, craft and HUD. Sky on those three is the existing
+bright arm (luma 172.1, 210.2 and 218.8; R-G -74.8, -4.3 and -21.1).
+Terrain rel is 0.083, 0.104 and 0.091, inside 0.08..0.33. Craft is the
+lower-centre edge arm on n=1600 (edge 0.076) and the bright-metal arm on
+n=1650 and n=1850 (metal 0.187 and 0.177). Radar is 0.097, 0.110 and
+0.109. n=1600 at rel 0.083 is not a reason to move 0.08.
+
+n=1700 is not required. It is still a flight: the cockpit, a small
+engine, the radar and the reticle. It misses craft only (metal 0.028,
+sil 0.013, edge 0.024, pink 0.0011). Sky, terrain and HUD pass.
+
+n=1900 and n=1950 are not required. Both are still flights (cockpit,
+radar, reticle). They miss craft only because the engine bloom is above
+the 0.05 pink cap (pink 0.1573 and 0.0887) and the metal arm misses
+(0.023 and 0.000). That is the existing oversized-engine cap, not a new
+craft class. The classifier was not edited.
+
+n=1750, 1800, 2000, 2050 and 2100 are not required. The start/z schedule
+opened the pause overlay (rebel crest, "PAUSED", "WIN THE RACE" on the
+earlier ones). They miss HUD only (radar 0). Sky, terrain and craft
+still pass on those frames and do not make the overlay a flight accept
+by themselves; the overall line is fail. That is the key schedule, not
+a missing radar.
+
+Same-run title `fb_0000800_w512.ppm` is the title screen and fails sky
+and terrain (luma 76.6, R-G 25.9, R-B 31.4, G-B 5.4, rel 0.416). The
+craft-select dump is `fb_0001550_w512.ppm`, 512x336, origin field
+`0x006AB400` (AVAILABLE CRAFT, Beggar's Canyon, skyhopper hologram). It
+fails overall on terrain (rel 0.982) and HUD (radar 0). Sky and craft
+each pass on that menu and do not accept it. `fb_0001700_w512.ppm` is
+not the menu on this run; it is the n=1700 flight frame above.
+Objective (d) was not run.
+
+This selects H-rule-holds. It refutes H-new-class (3/11 pass, not 0/11)
+and H-no-picture (the sheet is a flight). It also refutes "no phase-7
+dump means this route never reached flight."
+ORIGIN: n/a (no mitigation).
+
+What this rules out: "level 16 produced no post-hangar flight picture"
+and "the frozen rule rejects every level-16 mission-origin frame." What
+it does not show: an objective-counter response, or that level 17
+passes. The pause overlays are not a reason to add a HUD arm. Level 17
+does not need the planet unlock. Score its flight by origin, not by
+phase==7.
