@@ -172117,3 +172117,141 @@ actual GPU fragment full-value witness with texture/binding snapshot.
 Boundary precision: GPU snapshot follows resolveTarget and precedes native
 conversion. Resolve/downsample is still inside the selected upstream family;
 this capture does not separately prove the original draw attachment was torn.
+
+
+## Session 6623 (2026-10-28) — GPU fragment RGB is smooth while the original 21:9 attachment tears
+
+HYPOTHESIS-ID: g1d-levelselect-texel
+Outcome: ADVANCED. One GPU-fragment/attachment experiment, both width arms
+from the same Debug binary. No rendering fix or default change.
+
+- Read CURRENT-TRUTH, NEXT and soak tail in order. CURRENT-TRUTH was 50,603
+  bytes, so maintenance did not trigger. Latest queued verdicts (through
+  s6580 lvl10) were already consumed in the handoff; no new soak datum.
+- Ground truth before instrumentation: F5-UCODE-REFERENCE and the independent
+  paraLLEl-RDP varying/raster semantics linked in the new runner. These do
+  not independently validate our GPU; conclusions below are single-source.
+- Added phase-budgeted per-primitive fragment records: submission frame,
+  framebuffer/pair, draw, primitive, instance, column/row; actual UV/lowResUV,
+  smooth/selected/wrapped shade, tex0/tex1, combiner and blender outputs,
+  alpha, tile/index/format/dimensions, and actual shader modes. Separate slots
+  preserve primitive submission order without overlapping-fragment UAV races.
+  Captured the original non-MSAA color attachment and every referenced cache
+  texture from the stopped command stream. A checker uploaded to a separate
+  GPU texture is sampled by each fragment and independently read back.
+- Initial build failed because PrimitiveId requires MSL 2.2 (converter used
+  2.1). Converter now selects 2.2 when that builtin is active. A subsequent
+  build exposed the missing Metal compiler component; Xcode's component
+  installer downloaded Metal Toolchain 17F109 successfully. Set DEVELOPER_DIR
+  to full Xcode. Corrected constness/RenderRange compile errors. Final build
+  passes. Parser/mesh selftest and Python syntax checks pass. All lib changes
+  exported with submodule-patches/export.sh.
+- Ran tools/g1d_floor_shader.py, one phase-driven route per width, screen
+  unlocked; SIGKILL at the existing stop gate. 796/1024: 34.7/33.7 s,
+  52/53 stop-gate frames, 65/66 closed floor frames, alive at end, 0 crash
+  markers, all prior floor/I4/alpha/fill controls pass. No repeat endurance soak.
+- 16/24 complete shader scenes, 2313/3450 records. Every record recovers the
+  shader-sampled checker; all 64 checker pixels pass each texture snapshot.
+  All referenced textures captured and grayscale (max RGB spread 0), actual
+  tex0 sample chroma 0 on both arms. Actual smooth/wrapped shade steps are
+  2.657/2.511 vs 1.950/1.965; wrapped-pixel count 0 on both. Combiner/result
+  RGB steps are 4.391/5.317 vs 4.978/4.777. Original attachment steps are
+  4.391/5.317 vs 47.611/51.020. Shader-to-attachment MAE 0.000963 vs 37.0845
+  on the 0..255 scale. Selected complete scenes have secondary alpha 1 at
+  all 142 samples. This is not a measured backend pipeline blend descriptor.
+- Same-run GPU/native/RAM checker also passes. GPU edge-step ratios are
+  9.385/7.782; native and RAM agree exactly at all sampled floor pixels.
+  Earlier controls retained, no null inferred from a silent instrument.
+- Selects H-backend under the prewritten table. Refutes H-binding's colored
+  texture prediction and a shader-wrap/combiner first divergence at these
+  samples. Original attachment capture is before resolve, excluding resolve
+  and native conversion as FIRST writers. Does not yet identify a backend
+  defect: fragment execution can precede late depth rejection; fill/clear or
+  another later writer can change the attachment. No blend workaround landed.
+
+ORIGIN: diagnostic only. The first wrong measured stage is the original GPU
+attachment; the individual attachment writer and depth/blend legitimacy remain
+open. No skip, guard, restore or other corruption mitigation was added.
+
+Evidence: scratch/agent/s6623_shader/{shader_verdict.json,verdict.json}, each
+arm's shader_summary.json, summary.json, shader/*.records and texture/target
+snapshots. Owner-visible sheet: docs/owner_sheet_s6623_shader.png (each panel
+is its own captured frame; not claimed pose-matched). Persistent runners:
+tools/g1d_floor_shader.py and output-root support in g1d_floor_pipe.py.
+Next unit: pre/post per-draw attachment/depth changes plus exact backend
+pipeline state; distinguish late-test rejection, blending and later writes.
+
+## Session 6624 (2026-10-28) — 21:9 floor tear is a late depth reject
+
+HYPOTHESIS-ID: g1d-levelselect-texel
+Outcome: ADVANCED. One pre/post attachment and depth witness, both width
+arms, one Debug binary. No rendering fix or default change.
+
+- Read CURRENT-TRUTH, NEXT and the soak tail in order. CURRENT-TRUTH was
+  52,339 bytes, so maintenance did not trigger. Soak tail still ends at
+  s6580; nothing new to fold.
+- Extended the s6623 fragment capture. For every draw and clear that can
+  touch x=16 and x=w-17, y=180..250, the same submission now stores pre/post
+  color, pre/post depth, shader z and secondary alpha, the bound color and
+  depth textures, and the fixed-function state Metal kept after the
+  descriptor was released. A one-pixel magenta clear at (16,180) is the
+  control. `python3 tools/g1d_floor_attachment.py --selftest` passed
+  (injected reject selects H-late-test; injected pass does not).
+- Build with DEVELOPER_DIR pointed at full Xcode succeeded. The runner
+  refused a locked screen, then ran one phase-driven route per width and
+  SIGKILLed at the existing tex+dump stop. 16:9: 36.2 s, 50 good frames,
+  dy180 6.21, edges 5.34/5.30, fail []. 21:9: 33.4 s, 50 good frames,
+  dy180 20.34, edges 25.01/31.77, fail ["edge-px"]. Both alive, rc -9,
+  0 crash markers. Combiner stayed `(T0-0)*SHADE+0`. Controls passed on
+  every complete scene: magenta pixel, bound-texture identity, fixed-function
+  copy, z-magic 6624, and the uploaded checker.
+- This selects H-late-test. It refutes H-fixed-function for the floor and
+  refutes H-later-writer. Picked scenes are the max final-step scenes that
+  have fragment records. 16:9 serial 2 (frame 1345, pair 2, 0x9de900): all
+  12 scenes enter at depth exactly 1.0. Floor op 10 is LESS with depth
+  write, blend off, source ONE, dest ZERO. It covers 95 samples, passes 95,
+  fails 0. Shader z is 0.99524..0.99667. The torn entry step 40.4/36.9
+  falls to 5.0/5.7, and post color matches the shader. 21:9 serial 7
+  (frame 1357, pair 1, 0x961000): entry step 60.5/51.7 stays 60.8/52.5.
+  Floor op 14 is the same LESS/replace state, covers 122, passes 10, fails
+  112. Shader z median 0.99364 is farther than pre-depth median 0.9839, so
+  LESS keeps the pre-draw color. rejected_frac 0.873, later_frac 0,
+  simulated-versus-attachment MAE 0, CPU-versus-Metal mismatches on that
+  scene {}. The 9 wide16 blend/src/dst mismatches are ops 1-9 only
+  (zCmp 0, alphaBlend 0, but Metal blend is on with SRC1_ALPHA). They are
+  not the floor draws and do not select the floor equation.
+- The large 21:9 step is created inside the first captured scene, by that
+  same reject, from a depth image that is already striped. Serial 1
+  (frame 1351, pair 1, 0x961000) enters at step 19.3/18.8 with 25 samples
+  at depth exactly 0, on rows 0..12 (screen y 180..192): 13 at x=16 and
+  12 at x=1007. Op 14 (LESS, 117 faces) covers 92, passes 36, fails 56.
+  It passes only where pre-depth is 1.0 and writes the smooth shader luma
+  (~75-90). It fails where pre-depth is 0 or about 0.961/0.967/0.984, and
+  the two columns are largely out of phase. Step goes 20.3/18.8 ->
+  42.2/45.6 on that op; ops 15 and 27, also LESS, leave 39.7/52.8.
+  The depth-0 pixels never change depth. Only the magenta control changes
+  one of their colors. Later scenes keep a high step because the floor
+  keeps losing LESS. 16:9 has no depth-0 samples and the floor replaces
+  the color.
+- Depth create/clear default is 1.0 (`RenderDepth` and `clearDepth`). A
+  missing clear can leave 1.0. It cannot by itself write 0.0 or the
+  ~0.96 cluster. Those values are already in sample 0, before any op of
+  this submission, including its color fills. The in-submission witness
+  cannot name that earlier writer. No skip, guard, restore, or default
+  change.
+
+ORIGIN: diagnostic only. The floor shader color is legitimate on both
+widths. At 21:9 the attachment keeps its pre-draw color because LESS
+rejects against a nearer striped depth that is already stored at
+submission entry. Who stored that depth, and whether 0.0 is a real store
+or an unwritten-tile readback, is the next discriminator. No corruption
+mitigation was added.
+
+Evidence: scratch/agent/s6624_attachment/attachment_verdict.json, each arm's
+attachment_summary.json, shader_*.pix and shader_*.ops.json. Run log
+scratch/agent/s6624_run.txt. Owner sheet docs/owner_sheet_s6624_attachment.png
+(each panel is its own captured frame; not claimed pose-matched). Persistent
+runner: tools/g1d_floor_attachment.py. lib/rt64 changes exported with
+submodule-patches/export.sh.
+Next unit: name the pre-submission writer of this depth pattern. Do not
+repeat the in-submission witness.

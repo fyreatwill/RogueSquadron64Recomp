@@ -8249,11 +8249,49 @@ index 5a331aa..7a1871b 100644
                      framebufferRenderer->recordFramebuffer(ext.workloadGraphicsWorker, framebufferIndex++);
  
                      // Transition the render targets in case the present queue will show them so it doesn't have to perform transitions.
+diff --git a/src/render/rt64_descriptor_sets.h b/src/render/rt64_descriptor_sets.h
+index 69a82ac..6e82095 100644
+--- a/src/render/rt64_descriptor_sets.h
++++ b/src/render/rt64_descriptor_sets.h
+@@ -212,6 +212,8 @@ namespace RT64 {
+         uint32_t gFilteredDirectLight;
+         uint32_t gFilteredIndirectLight;
+         uint32_t gBlueNoise;
++        uint32_t floorFragments;
++        uint32_t floorControl;
+ 
+         FramebufferRendererDescriptorCommonSet(const SamplerLibrary &samplerLibrary, bool raytracing, RenderDevice *device = nullptr) {
+             builder.begin();
+@@ -282,6 +284,8 @@ namespace RT64 {
+             gFilteredDirectLight = builder.addReadWriteTexture(65);
+             gFilteredIndirectLight = builder.addReadWriteTexture(66);
+             gBlueNoise = builder.addTexture(67);
++            floorFragments = builder.addReadWriteStructuredBuffer(68);
++            floorControl = builder.addTexture(69);
+             builder.end();
+ 
+             if (device != nullptr) {
 diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
-index b9cb1f5..2493e46 100644
+index b9cb1f5..b305b9b 100644
 --- a/src/render/rt64_framebuffer_renderer.cpp
 +++ b/src/render/rt64_framebuffer_renderer.cpp
-@@ -238,9 +238,24 @@ namespace RT64 {
+@@ -15,12 +15,15 @@
+ #include "common/rt64_math.h"
+ #include "hle/rt64_color_converter.h"
+ #include "gbi/rt64_f3d.h"
++#include "shared/rt64_blender.h"
+ #include "shared/rt64_framebuffer_params.h"
+ #include "shared/rt64_raster_params.h"
+ 
+ #include "rt64_descriptor_sets.h"
+ #include "rt64_render_worker.h"
+ 
++extern "C" uint32_t rs64_phase_ord(void);
++
+ // TODO: Move to shared.
+ 
+ namespace interop {
+@@ -238,9 +241,24 @@ namespace RT64 {
              }
              
              interop::GPUTile &gpuTile = dstGPUTiles[i];
@@ -8279,7 +8317,7 @@ index b9cb1f5..2493e46 100644
                      const FramebufferManager::TileCopy &tileCopy = it->second;
                      gpuTile.tcScale.x = static_cast<float>(tileCopy.usedWidth) / static_cast<float>(callTile.tileCopyWidth);
                      gpuTile.tcScale.y = static_cast<float>(tileCopy.usedHeight) / static_cast<float>(callTile.tileCopyHeight);
-@@ -255,15 +270,65 @@ namespace RT64 {
+@@ -255,15 +273,65 @@ namespace RT64 {
                      gpuTile.flags.fromCopy = true;
                      gpuTile.flags.rawTMEM = false;
                      gpuTile.flags.hasMipmaps = false;
@@ -8347,7 +8385,194 @@ index b9cb1f5..2493e46 100644
  
                  // Describe the GPU tile for a regular texture.
                  gpuTile.ulScale.x = gpuTile.tcScale.x;
-@@ -573,9 +638,16 @@ namespace RT64 {
+@@ -376,6 +444,36 @@ namespace RT64 {
+         }
+ #   endif
+ 
++        if (!floorFragments) {
++            const bool enabled = std::getenv("ROGUESQ_FLOOR_SHADER_DIR") != nullptr;
++            floorBufferBytes = enabled ? uint64_t(FloorPrimitiveCap) * 142 * FloorRecordBytes : 16;
++            floorFragments = worker->device->createBuffer(RenderBufferDesc::DefaultBuffer(floorBufferBytes, RenderBufferFlag::STORAGE | RenderBufferFlag::UNORDERED_ACCESS));
++            if (enabled) {
++                floorFragmentReadback = worker->device->createBuffer(RenderBufferDesc::ReadbackBuffer(floorBufferBytes));
++                floorFragmentZero = worker->device->createBuffer(RenderBufferDesc::UploadBuffer(floorBufferBytes));
++                memset(floorFragmentZero->map(), 0, floorBufferBytes);
++                floorFragmentZero->unmap();
++                const uint64_t attachBytes = uint64_t(FloorAttachOps + 1) * 2 * FloorAttachRows * FloorAttachPitch;
++                floorAttachColor = worker->device->createBuffer(RenderBufferDesc::ReadbackBuffer(attachBytes));
++                floorAttachDepth = worker->device->createBuffer(RenderBufferDesc::ReadbackBuffer(attachBytes));
++            }
++            floorControl = worker->device->createTexture(RenderTextureDesc::Texture2D(8, 8, 1, RenderFormat::R8G8B8A8_UNORM));
++            floorControlUpload = worker->device->createBuffer(RenderBufferDesc::UploadBuffer(8 * 256));
++            auto *ctl = reinterpret_cast<uint8_t *>(floorControlUpload->map());
++            memset(ctl, 0, 8 * 256);
++            for (uint32_t y = 0; y < 8; y++) for (uint32_t x = 0; x < 8; x++) {
++                bool red = ((x / 2 + y / 2) & 1) == 0;
++                ctl[y * 256 + x * 4 + (red ? 0 : 1)] = 255;
++                ctl[y * 256 + x * 4 + 3] = 255;
++            }
++            floorControlUpload->unmap();
++            worker->commandList->barriers(RenderBarrierStage::COPY, RenderTextureBarrier(floorControl.get(), RenderTextureLayout::COPY_DEST));
++            worker->commandList->copyTextureRegion(RenderTextureCopyLocation::Subresource(floorControl.get()),
++                RenderTextureCopyLocation::PlacedFootprint(floorControlUpload.get(), RenderFormat::R8G8B8A8_UNORM, 8, 8, 1, 64));
++            worker->commandList->barriers(RenderBarrierStage::GRAPHICS, RenderTextureBarrier(floorControl.get(), RenderTextureLayout::SHADER_READ));
++        }
++        descCommonSet->setBuffer(descCommonSet->floorFragments, floorFragments.get(), floorBufferBytes, RenderBufferStructuredView(16));
++        descCommonSet->setTexture(descCommonSet->floorControl, floorControl.get(), RenderTextureLayout::SHADER_READ);
+         descCommonSet->setBuffer(descCommonSet->FrParams, frameParamsBuffer.get(), sizeof(interop::FrameParams));
+         descCommonSet->setBuffer(descCommonSet->instanceRenderIndices, renderIndicesBuffer.get(), RenderBufferStructuredView(sizeof(interop::RenderIndices)));
+         descCommonSet->setBuffer(descCommonSet->instanceRDPParams, drawBuffers->rdpParamsBuffer.get(), RenderBufferStructuredView(sizeof(interop::RDPParams)));
+@@ -471,6 +569,29 @@ namespace RT64 {
+     }
+     
+     void FramebufferRenderer::submitRasterScene(RenderWorker *worker, const Framebuffer &framebuffer, RenderFramebufferStorage *fbStorage, const RasterScene &rasterScene, bool &depthState) {
++        static const char *floorDir = std::getenv("ROGUESQ_FLOOR_SHADER_DIR");
++        static uint32_t floorPhase = UINT32_MAX, floorCount = 0;
++        static uint64_t floorSerial = 0;
++        const uint32_t phase = rs64_phase_ord();
++        if (floorPhase != phase) { floorPhase = phase; floorCount = 0; }
++        auto *floorTarget = fbStorage->colorTarget;
++        uint32_t floorFaces = 0;
++        for (uint32_t index : rasterScene.instanceIndices) {
++            auto &call = instanceDrawCallVector[index];
++            if (call.type == InstanceDrawCall::Type::IndexedTriangles || call.type == InstanceDrawCall::Type::RawTriangles || call.type == InstanceDrawCall::Type::RegularRect)
++                floorFaces += call.triangles.faceCount;
++        }
++        const bool floorCapture = floorDir && phase >= 4 && floorTarget &&
++            (floorTarget->width == 796 || floorTarget->width == 1024) &&
++            floorTarget->height >= 320 && floorTarget->height <= 352 &&
++            floorTarget->multisampling.sampleCount <= 1 && floorFaces > 0 && floorFaces <= FloorPrimitiveCap && floorCount < 12;
++        uint32_t floorBase = 0;
++        if (floorCapture) {
++            ++floorCount;
++            worker->commandList->barriers(RenderBarrierStage::COPY, RenderBufferBarrier(floorFragments.get(), RenderBufferAccess::WRITE));
++            worker->commandList->copyBufferRegion(floorFragments.get(), floorFragmentZero.get(), uint64_t(floorFaces) * 142 * FloorRecordBytes);
++            worker->commandList->barriers(RenderBarrierStage::GRAPHICS, RenderBufferBarrier(floorFragments.get(), RenderBufferAccess::WRITE));
++        }
+         InstanceDrawCall::Type previousCallType = InstanceDrawCall::Type::Unknown;
+         bool previousVertexTestZ = false;
+         const RenderPipeline *previousPipeline = nullptr;
+@@ -543,6 +664,119 @@ namespace RT64 {
+             }
+         }
+ 
++        struct FloorOpMeta {
++            const char *kind = "";
++            float cr = 0, cg = 0, cb = 0, ca = 0;
++            int32_t x0 = 0, y0 = 0, x1 = 0, y1 = 0;
++            uint64_t pipe = 0;
++            RenderFixedFunctionState ff = {};
++            int32_t ffOk = 0;
++            int32_t zCmp = 0, zUpd = 0, cvgAdd = 0, alphaBlend = 0, copyMode = 0;
++            uint32_t face0 = 0, faces = 0;
++            int32_t depthRO = 0;
++            uint64_t colorTex = 0, depthTex = 0, fbPtr = 0;
++        };
++        std::vector<FloorOpMeta> floorOps;
++        bool floorOverflow = false;
++        auto boundFb = [&]() -> RenderFramebuffer * {
++            return depthState ? fbStorage->colorWriteDepthRead.get() : fbStorage->colorDepthWrite.get();
++        };
++        auto sampleAttach = [&](uint32_t sample) {
++            if (!floorCapture || floorAttachColor == nullptr || sample > FloorAttachOps) {
++                return;
++            }
++            RenderTexture *colorTex = floorTarget->texture.get();
++            RenderTexture *depthTex = (fbStorage->depthTarget != nullptr) ? fbStorage->depthTarget->texture.get() : nullptr;
++            const uint32_t cbpp = RenderFormatSize(floorTarget->format);
++            const RenderFormat depthFormat = (fbStorage->depthTarget != nullptr) ? fbStorage->depthTarget->format : RenderFormat::D32_FLOAT;
++            const uint32_t dbpp = RenderFormatSize(depthFormat);
++            if (cbpp == 0 || (FloorAttachPitch % cbpp) != 0) {
++                return;
++            }
++            worker->commandList->setFramebuffer(boundFb());
++            RenderTextureBarrier bars[2];
++            bars[0] = RenderTextureBarrier(colorTex, RenderTextureLayout::COPY_SOURCE);
++            uint32_t barrierCount = 1;
++            const bool copyDepth = depthTex != nullptr && dbpp != 0 && (FloorAttachPitch % dbpp) == 0;
++            if (copyDepth) {
++                bars[1] = RenderTextureBarrier(depthTex, RenderTextureLayout::COPY_SOURCE);
++                barrierCount = 2;
++            }
++            worker->commandList->barriers(RenderBarrierStage::COPY, bars, barrierCount);
++            const int xs[2] = { 16, int(floorTarget->width) - 17 };
++            auto copyColumn = [&](RenderTexture *tex, RenderBuffer *buf, RenderFormat fmt, uint32_t bpp, int col) {
++                const uint32_t rowWidth = FloorAttachPitch / bpp;
++                const uint64_t off = (uint64_t(sample) * 2u + uint32_t(col)) * FloorAttachRows * FloorAttachPitch;
++                const RenderBox box(xs[col], 180, xs[col] + 1, 251);
++                worker->commandList->copyTextureRegion(
++                    RenderTextureCopyLocation::PlacedFootprint(buf, fmt, rowWidth, FloorAttachRows, 1, rowWidth, off),
++                    RenderTextureCopyLocation::Subresource(tex), 0, 0, 0, &box);
++            };
++            for (int col = 0; col < 2; col++) {
++                copyColumn(colorTex, floorAttachColor.get(), floorTarget->format, cbpp, col);
++            }
++            if (copyDepth) {
++                for (int col = 0; col < 2; col++) {
++                    copyColumn(depthTex, floorAttachDepth.get(), depthFormat, dbpp, col);
++                }
++            }
++            bars[0] = RenderTextureBarrier(colorTex, RenderTextureLayout::COLOR_WRITE);
++            if (copyDepth) {
++                bars[1] = RenderTextureBarrier(depthTex, depthState ? RenderTextureLayout::DEPTH_READ : RenderTextureLayout::DEPTH_WRITE);
++            }
++            worker->commandList->barriers(RenderBarrierStage::GRAPHICS, bars, barrierCount);
++            worker->commandList->setFramebuffer(boundFb());
++        };
++        auto commitOp = [&](FloorOpMeta op) {
++            if (!floorCapture) {
++                return;
++            }
++            if (floorOps.size() >= FloorAttachOps) {
++                floorOverflow = true;
++                return;
++            }
++            op.depthRO = depthState ? 1 : 0;
++            op.colorTex = reinterpret_cast<uint64_t>(floorTarget->texture.get());
++            op.depthTex = reinterpret_cast<uint64_t>(fbStorage->depthTarget != nullptr ? fbStorage->depthTarget->texture.get() : nullptr);
++            op.fbPtr = reinterpret_cast<uint64_t>(boundFb());
++            floorOps.push_back(op);
++            sampleAttach(uint32_t(floorOps.size()));
++        };
++        auto triMeta = [&](const char *kind, const RenderPipeline *pipeline, const ShaderDescription *desc, uint32_t face0, uint32_t faces) {
++            FloorOpMeta op;
++            op.kind = kind;
++            op.pipe = reinterpret_cast<uint64_t>(pipeline);
++            op.ffOk = (pipeline != nullptr && pipeline->copyFixedFunction(&op.ff)) ? 1 : 0;
++            op.face0 = face0;
++            op.faces = faces;
++            if (desc != nullptr) {
++                const bool copyMode = desc->otherMode.cycleType() == G_CYC_COPY;
++                op.copyMode = copyMode ? 1 : 0;
++                op.zCmp = (!copyMode && desc->otherMode.zCmp() && desc->otherMode.zMode() != ZMODE_DEC) ? 1 : 0;
++                op.zUpd = (!copyMode && desc->otherMode.zUpd()) ? 1 : 0;
++                op.cvgAdd = (desc->otherMode.cvgDst() == CVG_DST_WRAP || desc->otherMode.cvgDst() == CVG_DST_SAVE) ? 1 : 0;
++                op.alphaBlend = (!copyMode && interop::Blender::usesAlphaBlend(desc->otherMode)) ? 1 : 0;
++            }
++            return op;
++        };
++        if (floorCapture) {
++            sampleAttach(0);
++            const RenderRect controlRect(16, 180, 17, 181);
++            const RenderColor controlColor(1.0f, 0.0f, 1.0f, 1.0f);
++            worker->commandList->clearColor(0, controlColor, &controlRect, 1);
++            FloorOpMeta control;
++            control.kind = "control";
++            control.cr = 1.0f;
++            control.cg = 0.0f;
++            control.cb = 1.0f;
++            control.ca = 1.0f;
++            control.x0 = 16;
++            control.y0 = 180;
++            control.x1 = 17;
++            control.y1 = 181;
++            commitOp(control);
++        }
++
+         for (uint32_t i : rasterScene.instanceIndices) {
+             const InstanceDrawCall &drawCall = instanceDrawCallVector[i];
+ 
+@@ -573,9 +807,16 @@ namespace RT64 {
                      int nt = ++n_total;
                      if (nf == 1 || (nf % 50) == 0 || nt <= 5) {
                          const uint32_t lo = (uint32_t)(drawCall.triangles.shaderDesc.colorCombiner.L);
@@ -8366,7 +8591,7 @@ index b9cb1f5..2493e46 100644
                          std::fflush(stderr);
                      }
                  }
-@@ -585,6 +657,53 @@ namespace RT64 {
+@@ -585,6 +826,53 @@ namespace RT64 {
              case InstanceDrawCall::Type::IndexedTriangles:
              case InstanceDrawCall::Type::RawTriangles:
              case InstanceDrawCall::Type::RegularRect: {
@@ -8420,7 +8645,7 @@ index b9cb1f5..2493e46 100644
                  // ROGUESQ: skip draws with null colorTarget instead of
                  // asserting. Some workloads route instances through a
                  // rasterScene whose fbStorage has no allocated colorTarget
-@@ -657,6 +776,45 @@ namespace RT64 {
+@@ -657,6 +945,45 @@ namespace RT64 {
                      continue;
                  }
  
@@ -8466,7 +8691,7 @@ index b9cb1f5..2493e46 100644
                  // A new pass must be started if decals are required and something wrote to the depth buffer before this call.
                  const interop::OtherMode otherMode = triangles.shaderDesc.otherMode;
                  bool depthDecal = (otherMode.zMode() == ZMODE_DEC);
-@@ -668,9 +826,9 @@ namespace RT64 {
+@@ -668,9 +995,9 @@ namespace RT64 {
                      switchToDepthWrite();
                  }
  
@@ -8479,7 +8704,7 @@ index b9cb1f5..2493e46 100644
                  }
  
                  if (previousPipeline != triangles.pipeline) {
-@@ -679,6 +837,22 @@ namespace RT64 {
+@@ -679,25 +1006,55 @@ namespace RT64 {
                  }
                  
                  rasterParams.renderIndex = i;
@@ -8497,12 +8722,47 @@ index b9cb1f5..2493e46 100644
 +                    return static_cast<uint>(m);
 +                }();
 +                rasterParams.padding.x = s_shadeWrap;
-+                rasterParams.padding.y = 0;
-+                rasterParams.padding.z = 0;
++                rasterParams.padding.y = floorBase;
++                rasterParams.padding.z = floorCapture ? floorTarget->width : 0;
++                const uint32_t face0 = floorBase;
++                floorBase += triangles.faceCount;
                  rasterParams.screenScale = triangles.screenScale;
                  rasterParams.screenOffset = triangles.screenOffset;
                  worker->commandList->setGraphicsPushConstants(0, &rasterParams);
-@@ -735,6 +909,32 @@ namespace RT64 {
+ 
+                 drawCallTriangles(drawCall);
++                if (floorCapture) {
++                    commitOp(triMeta("tri", triangles.pipeline, &triangles.shaderDesc, face0, triangles.faceCount));
++                }
+ 
+                 // Simulate dither noise.
+                 if (triangles.postBlendDitherNoise) {
+                     if (triangles.postBlendDitherNoiseNegative) {
+                         worker->commandList->setPipeline(postBlendDitherNoiseSubNegativePipeline);
++                        drawCallTriangles(drawCall);
++                        if (floorCapture) {
++                            commitOp(triMeta("dither-neg", postBlendDitherNoiseSubNegativePipeline, nullptr, face0, 0));
++                        }
+                     }
+                     else {
+                         worker->commandList->setPipeline(postBlendDitherNoiseAddPipeline);
+                         drawCallTriangles(drawCall);
++                        if (floorCapture) {
++                            commitOp(triMeta("dither-add", postBlendDitherNoiseAddPipeline, nullptr, face0, 0));
++                        }
+ 
+                         worker->commandList->setPipeline(postBlendDitherNoiseSubPipeline);
++                        drawCallTriangles(drawCall);
++                        if (floorCapture) {
++                            commitOp(triMeta("dither-sub", postBlendDitherNoiseSubPipeline, nullptr, face0, 0));
++                        }
+                     }
+-
+-                    drawCallTriangles(drawCall);
+                     previousPipeline = nullptr;
+                 }
+ 
+@@ -735,10 +1092,57 @@ namespace RT64 {
                      break;
                  }
  
@@ -8535,7 +8795,190 @@ index b9cb1f5..2493e46 100644
                  const RenderRect *clearRects = rectCoversWholeTarget ? nullptr : &clearRect.rect;
                  uint32_t clearRectCount = rectCoversWholeTarget ? 0 : 1;
                  if (fbStorage->colorTarget != nullptr) {
-@@ -1462,6 +1662,15 @@ namespace RT64 {
+                     worker->commandList->clearColor(0, clearRect.color, clearRects, clearRectCount);
++                    if (floorCapture) {
++                        FloorOpMeta op;
++                        op.kind = "fill";
++                        op.cr = clearRect.color.r;
++                        op.cg = clearRect.color.g;
++                        op.cb = clearRect.color.b;
++                        op.ca = clearRect.color.a;
++                        if (rectCoversWholeTarget) {
++                            op.x0 = 0;
++                            op.y0 = 0;
++                            op.x1 = int32_t(floorTarget->width);
++                            op.y1 = int32_t(floorTarget->height);
++                        }
++                        else {
++                            op.x0 = clearRect.rect.left;
++                            op.y0 = clearRect.rect.top;
++                            op.x1 = clearRect.rect.right;
++                            op.y1 = clearRect.rect.bottom;
++                        }
++                        commitOp(op);
++                    }
+                 }
+                 else {
+                     worker->commandList->clearDepth(true, clearRect.depth, clearRects, clearRectCount);
+@@ -773,6 +1177,157 @@ namespace RT64 {
+             }
+         }
+ 
++        if (floorCapture) {
++            const uint64_t bytes = uint64_t(floorFaces) * 142 * FloorRecordBytes;
++            worker->commandList->barriers(RenderBarrierStage::COPY, RenderBufferBarrier(floorFragments.get(), RenderBufferAccess::READ));
++            worker->commandList->copyBufferRegion(floorFragmentReadback.get(), floorFragments.get(), bytes);
++            worker->commandList->end();
++            worker->execute();
++            worker->wait();
++            worker->commandList->begin();
++            const std::string prefix = std::string(floorDir) + "/shader_" + std::to_string(++floorSerial);
++            RenderRange range(0, bytes);
++            const float *records = reinterpret_cast<const float *>(floorFragmentReadback->map(0, &range));
++            std::set<uint32_t> textureIndices;
++            uint32_t valid = 0;
++            if (FILE *f = fopen((prefix + ".records").c_str(), "wb")) {
++                for (uint32_t slot = 0; slot < floorFaces * 142; slot++) {
++                    const float *record = records + slot * (FloorRecordBytes / 4);
++                    if (record[0] != 6623.0f) continue;
++                    fwrite(&slot, 4, 1, f);
++                    fwrite(record, FloorRecordBytes, 1, f);
++                    if (record[33] >= 0 && record[33] < textureCacheTextures.size()) textureIndices.insert(uint32_t(record[33]));
++                    ++valid;
++                }
++                fclose(f);
++            }
++            floorFragmentReadback->unmap();
++            if (floorAttachColor != nullptr && floorAttachDepth != nullptr) {
++                const uint32_t nsample = uint32_t(floorOps.size()) + 1u;
++                const uint64_t nbytes = uint64_t(nsample) * 2u * FloorAttachRows * FloorAttachPitch;
++                RenderRange attachRange(0, nbytes);
++                const auto *colorBytes = reinterpret_cast<const uint8_t *>(floorAttachColor->map(0, &attachRange));
++                const auto *depthBytes = reinterpret_cast<const uint8_t *>(floorAttachDepth->map(0, &attachRange));
++                const RenderFormat depthFormat = (fbStorage->depthTarget != nullptr) ? fbStorage->depthTarget->format : RenderFormat::UNKNOWN;
++                const uint32_t dbpp = RenderFormatSize(depthFormat);
++                if (FILE *pf = fopen((prefix + ".pix").c_str(), "wb")) {
++                    const uint32_t magic = 0x66346624u;
++                    const uint32_t width = floorTarget->width;
++                    const uint32_t fmt = uint32_t(floorTarget->format);
++                    fwrite(&magic, 4, 1, pf);
++                    fwrite(&nsample, 4, 1, pf);
++                    fwrite(&width, 4, 1, pf);
++                    fwrite(&fmt, 4, 1, pf);
++                    for (uint32_t s = 0; s < nsample; s++) {
++                        for (uint32_t col = 0; col < 2; col++) {
++                            for (uint32_t row = 0; row < FloorAttachRows; row++) {
++                                const uint8_t *cp = colorBytes + ((uint64_t(s) * 2u + col) * FloorAttachRows + row) * FloorAttachPitch;
++                                const uint8_t *dp = depthBytes + ((uint64_t(s) * 2u + col) * FloorAttachRows + row) * FloorAttachPitch;
++                                float px[4] = { -1.0f, -1.0f, -1.0f, -1.0f };
++                                if (floorTarget->format == RenderFormat::R8G8B8A8_UNORM) {
++                                    px[0] = cp[0] / 255.0f; px[1] = cp[1] / 255.0f; px[2] = cp[2] / 255.0f; px[3] = cp[3] / 255.0f;
++                                }
++                                else if (floorTarget->format == RenderFormat::R16G16B16A16_UNORM) {
++                                    const auto *u = reinterpret_cast<const uint16_t *>(cp);
++                                    px[0] = u[0] / 65535.0f; px[1] = u[1] / 65535.0f; px[2] = u[2] / 65535.0f; px[3] = u[3] / 65535.0f;
++                                }
++                                float zd = -1.0f;
++                                if (dbpp >= 4) {
++                                    memcpy(&zd, dp, 4);
++                                }
++                                fwrite(px, sizeof(float), 4, pf);
++                                fwrite(&zd, sizeof(float), 1, pf);
++                            }
++                        }
++                    }
++                    fclose(pf);
++                }
++                floorAttachColor->unmap();
++                floorAttachDepth->unmap();
++                if (FILE *jf = fopen((prefix + ".ops.json").c_str(), "w")) {
++                    fprintf(jf, "{\"serial\":%llu,\"overflow\":%d,\"samples\":%u,\"colorTex\":%llu,\"depthTex\":%llu,\"ops\":[",
++                        (unsigned long long)floorSerial, floorOverflow ? 1 : 0, nsample,
++                        (unsigned long long)reinterpret_cast<uint64_t>(floorTarget->texture.get()),
++                        (unsigned long long)reinterpret_cast<uint64_t>(fbStorage->depthTarget != nullptr ? fbStorage->depthTarget->texture.get() : nullptr));
++                    for (size_t oi = 0; oi < floorOps.size(); oi++) {
++                        const FloorOpMeta &op = floorOps[oi];
++                        fprintf(jf,
++                            "%s{\"id\":%zu,\"kind\":\"%s\",\"cr\":%.6f,\"cg\":%.6f,\"cb\":%.6f,\"ca\":%.6f,"
++                            "\"x0\":%d,\"y0\":%d,\"x1\":%d,\"y1\":%d,\"pipe\":%llu,\"ff\":%d,"
++                            "\"blend\":%u,\"src\":%u,\"dst\":%u,\"opb\":%u,\"srcA\":%u,\"dstA\":%u,\"opa\":%u,\"mask\":%u,"
++                            "\"depthEn\":%u,\"depthWr\":%u,\"depthCmp\":%u,\"msc\":%u,\"cff\":%u,"
++                            "\"zCmp\":%d,\"zUpd\":%d,\"cvgAdd\":%d,\"alphaBlend\":%d,\"copyMode\":%d,"
++                            "\"face0\":%u,\"faces\":%u,\"depthRO\":%d,\"colorTex\":%llu,\"depthTex\":%llu,\"fb\":%llu}",
++                            oi ? "," : "", oi, op.kind, op.cr, op.cg, op.cb, op.ca,
++                            op.x0, op.y0, op.x1, op.y1, (unsigned long long)op.pipe, op.ffOk,
++                            op.ff.blendEnabled, op.ff.srcRgb, op.ff.dstRgb, op.ff.opRgb, op.ff.srcA, op.ff.dstA, op.ff.opA, op.ff.writeMask,
++                            op.ff.depthEnabled, op.ff.depthWrite, op.ff.depthCompare, op.ff.sampleCount, op.ff.colorFormat,
++                            op.zCmp, op.zUpd, op.cvgAdd, op.alphaBlend, op.copyMode,
++                            op.face0, op.faces, op.depthRO,
++                            (unsigned long long)op.colorTex, (unsigned long long)op.depthTex, (unsigned long long)op.fbPtr);
++                    }
++                    fprintf(jf, "]}\n");
++                    fclose(jf);
++                }
++            }
++            struct Snapshot {
++                std::string name;
++                RenderTexture *texture;
++                RenderFormat format;
++                uint32_t width, height, pitch, bpp;
++                std::unique_ptr<RenderBuffer> buffer;
++            };
++            std::vector<Snapshot> snapshots;
++            auto capture = [&](const std::string &name, RenderTexture *texture, RenderFormat format, uint32_t width, uint32_t height) {
++                uint32_t bpp = RenderFormatSize(format);
++                if (!texture || !bpp || !width || !height) return;
++                uint32_t pitch = ((width * bpp + 255) & ~255u);
++                Snapshot s{ name, texture, format, width, height, pitch, bpp, worker->device->createBuffer(RenderBufferDesc::ReadbackBuffer(uint64_t(pitch) * height)) };
++                worker->commandList->barriers(RenderBarrierStage::COPY, RenderTextureBarrier(texture, RenderTextureLayout::COPY_SOURCE));
++                worker->commandList->copyTextureRegion(RenderTextureCopyLocation::PlacedFootprint(s.buffer.get(), format, width, height, 1, pitch / bpp), RenderTextureCopyLocation::Subresource(texture));
++                snapshots.emplace_back(std::move(s));
++            };
++            // Snapshot the original attachment; this diagnostic rejects multisampling.
++            capture("target", floorTarget->texture.get(), floorTarget->format, floorTarget->width, floorTarget->height);
++            capture("control", floorControl.get(), RenderFormat::R8G8B8A8_UNORM, 8, 8);
++            for (uint32_t index : textureIndices) {
++                Texture *t = textureCacheTextures[index];
++                if (textureCacheReplacementMapEnabled && textureCacheTextureReplacements[index]) t = textureCacheTextureReplacements[index];
++                bool dynamic = false;
++                for (const auto &view : dynamicTextureViewVector) if (view.dstIndex == index) dynamic = true;
++                if (t && !dynamic) {
++                    if (t->texture) capture("tex_" + std::to_string(index), t->texture.get(), t->format, t->width, t->height);
++                    else if (t->tmem) capture("tmem_" + std::to_string(index), t->tmem.get(), t->format, uint32_t(t->bytesTMEM.size()), 1);
++                }
++            }
++            for (auto &s : snapshots) worker->commandList->barriers(RenderBarrierStage::GRAPHICS,
++                RenderTextureBarrier(s.texture, s.texture == floorTarget->texture.get() ? RenderTextureLayout::COLOR_WRITE : RenderTextureLayout::SHADER_READ));
++            worker->commandList->end();
++            worker->execute();
++            worker->wait();
++            worker->commandList->begin();
++            if (FILE *f = fopen((prefix + ".json").c_str(), "w")) {
++                fprintf(f, "{\"serial\":%llu,\"phase\":%u,\"frame\":%llu,\"pair\":%u,\"address\":%u,\"width\":%u,\"height\":%u,\"faces\":%u,\"valid\":%u,\"snapshots\":[",
++                    (unsigned long long)floorSerial, phase, (unsigned long long)framebuffer.submissionFrame, framebuffer.pairIndex,
++                    floorTarget->addressForName, floorTarget->width, floorTarget->height, floorFaces, valid);
++                for (size_t j = 0; j < snapshots.size(); j++) {
++                    auto &s = snapshots[j];
++                    fprintf(f, "%s{\"name\":\"%s\",\"format\":%u,\"width\":%u,\"height\":%u,\"pitch\":%u,\"bpp\":%u}", j ? "," : "", s.name.c_str(), uint32_t(s.format), s.width, s.height, s.pitch, s.bpp);
++                    RenderRange r(0, uint64_t(s.pitch) * s.height);
++                    const void *data = s.buffer->map(0, &r);
++                    if (FILE *out = fopen((prefix + "." + s.name).c_str(), "wb")) { fwrite(data, 1, r.end - r.begin, out); fclose(out); }
++                    s.buffer->unmap();
++                }
++                fprintf(f, "]}\n");
++                fclose(f);
++            }
++            fprintf(stderr, "[floor-shader] phase=%u frame=%llu pair=%u addr=%06X width=%u faces=%u records=%u serial=%llu ops=%zu overflow=%d\n", phase,
++                (unsigned long long)framebuffer.submissionFrame, framebuffer.pairIndex, floorTarget->addressForName, floorTarget->width, floorFaces, valid, (unsigned long long)floorSerial,
++                floorOps.size(), floorOverflow ? 1 : 0);
++            worker->commandList->setFramebuffer(depthState ? fbStorage->colorWriteDepthRead.get() : fbStorage->colorDepthWrite.get());
++            switchToGraphicsPipeline();
++        }
++
+         // Mark targets for resolve.
+         if (fbStorage->colorTarget != nullptr) {
+             fbStorage->colorTarget->markForResolve();
+@@ -1462,6 +2017,15 @@ namespace RT64 {
          fbParams.horizontalMisalignment = p.horizontalMisalignment;
          framebufferCount++;
  
@@ -8551,6 +8994,44 @@ index b9cb1f5..2493e46 100644
          while (framebufferCount > framebufferVector.size()) {
              framebufferVector.emplace_back();
              framebufferVector.back().paramsBuffer = p.worker->device->createBuffer(RenderBufferDesc::UploadBuffer(256, RenderBufferFlag::CONSTANT));
+@@ -1470,6 +2034,8 @@ namespace RT64 {
+         }
+ 
+         Framebuffer &framebuffer = framebufferVector[framebufferCount - 1];
++        framebuffer.submissionFrame = p.curWorkload->submissionFrame;
++        framebuffer.pairIndex = p.fbPairIndex;
+         void *paramBufferBytes = framebuffer.paramsBuffer->map();
+         memcpy(paramBufferBytes, &fbParams, sizeof(interop::FramebufferParams));
+         framebuffer.paramsBuffer->unmap();
+diff --git a/src/render/rt64_framebuffer_renderer.h b/src/render/rt64_framebuffer_renderer.h
+index 3add9c3..29d5c05 100644
+--- a/src/render/rt64_framebuffer_renderer.h
++++ b/src/render/rt64_framebuffer_renderer.h
+@@ -87,6 +87,15 @@ namespace RT64 {
+         RenderPipeline *postBlendDitherNoiseAddPipeline = nullptr;
+         RenderPipeline *postBlendDitherNoiseSubPipeline = nullptr;
+         RenderPipeline *postBlendDitherNoiseSubNegativePipeline = nullptr;
++        std::unique_ptr<RenderBuffer> floorFragments, floorFragmentReadback, floorFragmentZero, floorControlUpload;
++        std::unique_ptr<RenderBuffer> floorAttachColor, floorAttachDepth;
++        std::unique_ptr<RenderTexture> floorControl;
++        static constexpr uint32_t FloorPrimitiveCap = 4096;
++        static constexpr uint32_t FloorRecordBytes = 15 * 16;
++        static constexpr uint32_t FloorAttachRows = 71;
++        static constexpr uint32_t FloorAttachPitch = 256;
++        static constexpr uint32_t FloorAttachOps = 640;
++        uint64_t floorBufferBytes = 0;
+         std::unique_ptr<FramebufferRendererDescriptorCommonSet> descCommonSet;
+         std::unique_ptr<FramebufferRendererDescriptorTextureSet> descTextureSet;
+         std::unique_ptr<RenderTexture> dummyColorTarget;
+@@ -112,6 +121,8 @@ namespace RT64 {
+ #   endif
+ 
+         struct Framebuffer {
++            uint64_t submissionFrame = 0;
++            uint32_t pairIndex = 0;
+             std::unique_ptr<RenderBuffer> paramsBuffer;
+             std::unique_ptr<FramebufferRendererDescriptorFramebufferSet> descRealFbSet;
+             std::unique_ptr<FramebufferRendererDescriptorFramebufferSet> descDummyFbSet;
 diff --git a/src/render/rt64_native_target.cpp b/src/render/rt64_native_target.cpp
 index 6891b7b..b0a8bb1 100644
 --- a/src/render/rt64_native_target.cpp
@@ -8833,6 +9314,32 @@ index eb944a4..98a631a 100644
 -};
 \ No newline at end of file
 +};
+diff --git a/src/render/rt64_raster_shader.cpp b/src/render/rt64_raster_shader.cpp
+index 721a01e..eb7c721 100644
+--- a/src/render/rt64_raster_shader.cpp
++++ b/src/render/rt64_raster_shader.cpp
+@@ -275,10 +275,11 @@ namespace RT64 {
+         pss << std::string_view(RenderParamsText, sizeof(RenderParamsText));
+         pss << "RenderParams getRenderParams() {" + renderParamsCode + "; return rp; }";
+         pss <<
+-            "bool RasterPS(const RenderParams, float4, float2, float4, float4, bool, out float4, out float4);"
++            "bool RasterPS(const RenderParams, float4, float2, float4, float4, bool, uint, out float4, out float4);"
+             "[shader(\"pixel\")]"
+             "void PSMain("
+             "  in float4 vertexPosition : SV_POSITION"
++            ", uint primitiveIndex : SV_PrimitiveID"
+             ", in float2 vertexUV : TEXCOORD"
+             ", in float4 vertexSmoothColor : COLOR0";
+ 
+@@ -298,7 +299,7 @@ namespace RT64 {
+         pss <<
+             "   float4 resultColor;"
+             "   float4 resultAlpha;"
+-            "   if (!RasterPS(getRenderParams(), vertexPosition, vertexUV, vertexSmoothColor, vertexFlatColor, false, resultColor, resultAlpha)) discard;"
++            "   if (!RasterPS(getRenderParams(), vertexPosition, vertexUV, vertexSmoothColor, vertexFlatColor, false, primitiveIndex, resultColor, resultAlpha)) discard;"
+             "   pixelColor = resultColor;"
+             "   pixelAlpha = resultAlpha;"
+             "}";
 diff --git a/src/render/rt64_render_target.cpp b/src/render/rt64_render_target.cpp
 index 81917bc..0e730ed 100644
 --- a/src/render/rt64_render_target.cpp
@@ -9055,10 +9562,28 @@ index b4ff4e9..cf58a14 100644
          RenderRect scissor;
          getViewportAndScissor(p.swapChain, *p.vi, p.resolutionScale, p.downsamplingScale, p.removeBlackBorders, viewport, scissor);
 diff --git a/src/shaders/RasterPS.hlsl b/src/shaders/RasterPS.hlsl
-index f5beee9..f255ea0 100644
+index f5beee9..642799c 100644
 --- a/src/shaders/RasterPS.hlsl
 +++ b/src/shaders/RasterPS.hlsl
-@@ -156,6 +156,43 @@ LIBRARY_EXPORT bool RasterPS(const RenderParams rp, float4 vertexPosition, float
+@@ -13,6 +13,8 @@
+ #include "TextureSampler.hlsli"
+ 
+ [[vk::push_constant]] ConstantBuffer<RasterParams> gConstants : register(b0, space0);
++RWStructuredBuffer<float4> floorFragments : register(u68, space0);
++Texture2D<float4> floorControl : register(t69, space0);
+ 
+ #if defined(MULTISAMPLING)
+ Texture2DMS<float> gBackgroundDepth : register(t2, space3);
+@@ -46,7 +48,7 @@ float sampleBackgroundDepth(int2 pixelPos, uint sampleCount) {
+ #endif
+ 
+ LIBRARY_EXPORT bool RasterPS(const RenderParams rp, float4 vertexPosition, float2 vertexUV, float4 vertexSmoothColor, float4 vertexFlatColor,
+-    bool isFrontFace, out float4 resultColor, out float4 resultAlpha) 
++    bool isFrontFace, uint primitiveIndex, out float4 resultColor, out float4 resultAlpha) 
+ {
+     const OtherMode otherMode = { rp.omL, rp.omH };
+ #if defined(DYNAMIC_RENDER_PARAMS)
+@@ -156,6 +158,43 @@ LIBRARY_EXPORT bool RasterPS(const RenderParams rp, float4 vertexPosition, float
      
      // Color combiner.
      float4 shadeColor = vertexColor;
@@ -9102,6 +9627,55 @@ index f5beee9..f255ea0 100644
      float4 combinerColor;
      float alphaCompareValue;
      ColorCombiner::Inputs ccInputs;
+@@ -259,6 +298,31 @@ LIBRARY_EXPORT bool RasterPS(const RenderParams rp, float4 vertexPosition, float
+     }
+ #endif
+     
++    if (gConstants.padding.z != 0u) {
++        uint width = gConstants.padding.z;
++        int2 pos = int2(floor(vertexPosition.xy));
++        if ((pos.x == 16 || pos.x == int(width) - 17) && pos.y >= 180 && pos.y <= 250) {
++            uint slot = ((gConstants.padding.y + primitiveIndex) * 142u + (pos.x == 16 ? 0u : 71u) + uint(pos.y - 180)) * 15u;
++            uint tile = instanceRenderIndices[gConstants.renderIndex].rdpTileIndex + tileIndex0;
++            GPUTile gt = GPUTiles[tile];
++            RDPTile rt = RDPTiles[tile];
++            floorFragments[slot + 0] = float4(6623, gConstants.renderIndex, primitiveIndex, instanceIndex);
++            floorFragments[slot + 1] = float4(vertexUV, lowResUV);
++            floorFragments[slot + 2] = vertexSmoothColor;
++            floorFragments[slot + 3] = shadeColor;
++            floorFragments[slot + 4] = texVal0;
++            floorFragments[slot + 5] = combinerColor;
++            floorFragments[slot + 6] = resultColor;
++            floorFragments[slot + 7] = resultAlpha;
++            floorFragments[slot + 8] = float4(tile, gt.textureIndex, gt.flags, rt.fmt);
++            floorFragments[slot + 9] = float4(gt.textureDimensions, rt.siz);
++            floorFragments[slot + 10] = floorControl.Load(int3(pos.x & 7, pos.y & 7, 0));
++            floorFragments[slot + 11] = texVal1;
++            floorFragments[slot + 12] = asfloat(uint4(rp.ccL, rp.ccH, rp.omL, rp.omH));
++            floorFragments[slot + 13] = float4(vertexColor.rgb, alphaCompareValue);
++            floorFragments[slot + 14] = float4(vertexPosition.z, vertexPosition.w, resultAlpha.a, 6624.0f);
++        }
++    }
+     return true;
+ }
+ 
+@@ -274,6 +338,7 @@ RenderParams getRenderParams() {
+ #if defined(DYNAMIC_RENDER_PARAMS) || defined(SPEC_CONSTANT_RENDER_PARAMS)
+ void PSMain(
+       in float4 vertexPosition : SV_POSITION
++    , uint primitiveIndex : SV_PrimitiveID
+     , in float2 vertexUV : TEXCOORD
+     , in float4 vertexSmoothColor : COLOR0
+ #if defined(DYNAMIC_RENDER_PARAMS) || defined(VERTEX_FLAT_COLOR)
+@@ -295,7 +360,7 @@ void PSMain(
+     float4 resultColor;
+     float4 resultAlpha;
+     float resultDepth;
+-    if (!RasterPS(getRenderParams(), vertexPosition, vertexUV, vertexSmoothColor, vertexFlatColor, isFrontFace, resultColor, resultAlpha)) {
++    if (!RasterPS(getRenderParams(), vertexPosition, vertexUV, vertexSmoothColor, vertexFlatColor, isFrontFace, primitiveIndex, resultColor, resultAlpha)) {
+         discard;
+     }
+ 
 diff --git a/src/shared/rt64_raster_params.h b/src/shared/rt64_raster_params.h
 index 0a5c332..9c6e6c7 100644
 --- a/src/shared/rt64_raster_params.h
@@ -9118,3 +9692,18 @@ index 0a5c332..9c6e6c7 100644
          uint3 padding;
          float2 screenScale;
          float2 screenOffset;
+diff --git a/src/tools/spirv_cross_msl/spirv_cross_msl.cpp b/src/tools/spirv_cross_msl/spirv_cross_msl.cpp
+index 2ddad6e..c2da711 100644
+--- a/src/tools/spirv_cross_msl/spirv_cross_msl.cpp
++++ b/src/tools/spirv_cross_msl/spirv_cross_msl.cpp
+@@ -127,6 +127,10 @@ int main(int argc, char* argv[]) {
+         // Configure MSL options
+         spirv_cross::CompilerMSL::Options msl_options;
+         msl_options.msl_version = spirv_cross::CompilerMSL::Options::make_msl_version(2, 1);
++        msl.update_active_builtins();
++        if (msl.has_active_builtin(spv::BuiltInPrimitiveId, spv::StorageClassInput)) {
++            msl_options.msl_version = spirv_cross::CompilerMSL::Options::make_msl_version(2, 2);
++        }
+         msl_options.argument_buffers = true;
+         msl_options.texture_buffer_native = true;
+         msl_options.enable_decoration_binding = true;

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6622 (2026-10-28).
+Compact operational handoff, as of Session 6624 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,6 +15,46 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-texel).**
+  - s6624: pre/post color+depth witness selects H-late-test (single-source). One
+    Debug binary, both widths. 16:9 36.2 s / 21:9 33.4 s, 50 good frames,
+    alive, 0 crash markers, magenta/binding/fixed-function/checker controls
+    pass. Every 16:9 scene enters these columns at depth 1.0. Picked serial 2
+    floor op 10 is LESS, 95/95 pass, shader z 0.99524..0.99667, step
+    40.4/36.9 -> 5.0/5.7. 21:9 picked serial 7 enters already torn (step
+    60.5/51.7); floor op 14 LESS covers 122, passes 10, fails 112 because
+    shader z (med 0.99364) is farther than pre-depth (med 0.9839).
+    rejected_frac 0.873, later_frac 0, sim MAE 0, no CPU/Metal mismatch on
+    that scene. The 9 wide16 blend mismatches are early zCmp=0 tris (ops
+    1-9), not the floor. First 21:9 scene (serial 1, frame 1351, 0x961000)
+    creates the step: entry 19.3/18.8 with 25 samples at depth 0 on rows
+    0..12 (y 180..192). Op 14 passes only where pre-depth is 1.0 (36/92)
+    and fails on 0 or ~0.961/0.967/0.984; the columns are largely out of
+    phase. Depth-0 pixels are never rewritten. That striped depth is already
+    present at sample 0, before any op in the submission. Not a floor blend
+    bug. No render/default change. Evidence
+    `scratch/agent/s6624_attachment/attachment_verdict.json`; sheet
+    `docs/owner_sheet_s6624_attachment.png`; runner
+    `tools/g1d_floor_attachment.py`. Next: name the pre-submission writer
+    of that depth.
+  - s6623: actual GPU fragment records select H-backend (single-source).
+    One Debug binary, phase-driven 796/1024 arms: 16/24 complete scenes,
+    2313/3450 fragment records. Every fragment recovers its sampled uploaded
+    checker; independent snapshots recover all 64 checker pixels. All referenced
+    textures captured, all grayscale; sampled tex0 chroma 0 on both. Actual
+    smooth/wrapped shade row steps 2.66/2.51 vs 1.95/1.97, no wrapped pixels.
+    Combiner/result RGB steps 4.39/5.32 vs 4.98/4.78; original non-MSAA
+    attachment steps 4.39/5.32 vs 47.61/51.02. Shader-to-attachment MAE is
+    0.00096 vs 37.08 (0..255 scale). This excludes colored texture binding
+    and shade wrap as the first divergence at these samples; the tear exists
+    before resolve in the original attachment. A fragment record witnesses
+    execution, not passage of late depth tests. s6624 is that measurement:
+    the 21:9 disagreement is a LESS reject, not a blend store. Prior floor/alpha/fill controls
+    pass, 52/53 stop-gate frames, 0 crash markers. GPU/native/RAM checker also
+    passes in both arms. Evidence `scratch/agent/s6623_shader/shader_verdict.json`;
+    owner sheet `docs/owner_sheet_s6623_shader.png`; persistent runner
+    `tools/g1d_floor_shader.py`. Exported renderer/shader/converter changes;
+    converter selects MSL 2.2 only when PrimitiveId requires it. No rendering
+    fix/default change.
   - s6622: three-stage GPU/native/RAM capture selects H-raster
     (single-source runtime evidence). After retaining only the final recorded
     pair per submission frame and displayed framebuffer address, 39 captures
@@ -366,6 +406,7 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
+- s6623 "shader-to-attachment MAE 37 at 21:9 means the first wrong stage is an attachment write after a sane shader" (s6624: the same shader color is stored at 16:9, where depth is 1.0 and LESS passes, and rejected at 21:9, where a nearer striped depth already occupies the columns). Believable because the UAV record is written before the depth test and matched the 16:9 attachment exactly.
 - s6614 lead "dtdx*x at the outer third diverges on 21:9" (s6615: dtdx shrinks by about 796/1024 and the texel matches to about 0.05). Believable because the sample x grows with the framebuffer and s6613 only cancelled that product at x=0.
 - s6612 "21:9 S at the left edge walks off the 64-wide mask while 16:9 stays inside" (s6613: 0/16 pairs do that; S at x=0 matches). Believable because the x span and dsdx scale with width. x_major moves the other way and the product cancels.
 - s6610 ring-only "second=fbw-512 fixes the 16:9 radar" (the ring reached the retail inset, but the wedge stayed at 769..792 with 0 pixels inside the ring). Believable because s6609's red-ring edge equalled retail+second. The disc is a separate pre-shift `ROGUESQ_SHIFT_REGION` writer; shift must be A, not RA.
@@ -463,12 +504,17 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6622) Tear is already in the GPU target before native conversion.**
-   Next: capture actual floor fragment UV/shade/sample/combiner/blender values
-   and the bound texture in the same operation to split texture/binding,
-   shader interpolation/evaluation, and fixed-function blend/attachment state.
-   Retain the GPU/native/RAM checker and baseline tear controls. NEXT.md has
-   the hypotheses and full table. No additional CPU plane replay.
+1. **(s6624) Name the writer of the striped depth already present at sample 0.**
+   Same columns (x=16, x=w-17, y=180..250), both widths, one binary. 16:9
+   enters at depth 1.0 and the floor LESS replaces the color. 21:9 serial 1
+   enters with 25 exact zeros on rows 0..12 and then 1.0 interleaved with
+   ~0.961/0.967/0.984, columns out of phase; the floor passes only on the
+   1.0 rows. Hypotheses: H-prior-stripe (a draw after a clear-to-1 stores
+   that pattern on 21:9 only), H-depth-pitch (one draw's z is smooth but
+   its depth stores alternate rows), H-depth-readback (nothing stores 0.0;
+   unwritten tiles read back as 0 while the create clear is 1). A missing
+   clear alone cannot explain values other than the create clear. Do not
+   repeat the in-submission witness or change a default. NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

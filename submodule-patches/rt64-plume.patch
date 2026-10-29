@@ -1,5 +1,5 @@
 diff --git a/plume_metal.cpp b/plume_metal.cpp
-index a5f30a3..51f3a69 100644
+index a5f30a3..a22d35e 100644
 --- a/plume_metal.cpp
 +++ b/plume_metal.cpp
 @@ -14,12 +14,76 @@
@@ -125,7 +125,45 @@ index a5f30a3..51f3a69 100644
          mtl->release();
      }
  
-@@ -1667,6 +1751,11 @@ namespace plume {
+@@ -1575,6 +1659,23 @@ namespace plume {
+         state.renderPipelineState = device->mtl->newRenderPipelineState(descriptor, &error);
+         state.primitiveType = mapPrimitiveType(desc.primitiveTopology);
+         state.stencilReference = desc.stencilEnabled ? desc.stencilReference : 0;
++        if (desc.renderTargetCount > 0) {
++            const RenderBlendDesc &blendDesc = desc.renderTargetBlend[0];
++            fixedFunction.valid = 1;
++            fixedFunction.blendEnabled = blendDesc.blendEnabled ? 1u : 0u;
++            fixedFunction.srcRgb = uint32_t(blendDesc.srcBlend);
++            fixedFunction.dstRgb = uint32_t(blendDesc.dstBlend);
++            fixedFunction.opRgb = uint32_t(blendDesc.blendOp);
++            fixedFunction.srcA = uint32_t(blendDesc.srcBlendAlpha);
++            fixedFunction.dstA = uint32_t(blendDesc.dstBlendAlpha);
++            fixedFunction.opA = uint32_t(blendDesc.blendOpAlpha);
++            fixedFunction.writeMask = blendDesc.renderTargetWriteMask;
++            fixedFunction.colorFormat = uint32_t(desc.renderTargetFormat[0]);
++            fixedFunction.depthEnabled = desc.depthEnabled ? 1u : 0u;
++            fixedFunction.depthWrite = desc.depthWriteEnabled ? 1u : 0u;
++            fixedFunction.depthCompare = uint32_t(desc.depthEnabled ? desc.depthFunction : RenderComparisonFunction::ALWAYS);
++            fixedFunction.sampleCount = desc.multisampling.sampleCount;
++        }
+ 
+         if (desc.dynamicDepthBiasEnabled) {
+             state.dynamicDepthBiasEnabled = true;
+@@ -1618,6 +1719,13 @@ namespace plume {
+         return RenderPipelineProgram();
+     }
+ 
++    bool MetalGraphicsPipeline::copyFixedFunction(RenderFixedFunctionState *out) const {
++        if (out != nullptr) {
++            *out = fixedFunction;
++        }
++        return fixedFunction.valid != 0;
++    }
++
+     // MetalDescriptorSet
+ 
+     MetalDescriptorSet::MetalDescriptorSet(MetalDevice *device, const RenderDescriptorSetDesc &desc) {
+@@ -1667,6 +1775,11 @@ namespace plume {
              .offset = 0,
          };
  
@@ -137,7 +175,7 @@ index a5f30a3..51f3a69 100644
          if (!device->useArgumentBuffersTier2) {
              argumentBuffer.argumentEncoder->setArgumentBuffer(argumentBuffer.mtl, argumentBuffer.offset);
          }
-@@ -1676,6 +1765,11 @@ namespace plume {
+@@ -1676,6 +1789,11 @@ namespace plume {
      }
  
      MetalDescriptorSet::~MetalDescriptorSet() {
@@ -149,7 +187,7 @@ index a5f30a3..51f3a69 100644
          if (residencySet != nullptr) {
              residencySet->endResidency();
              residencySet->release();
-@@ -1987,6 +2081,8 @@ namespace plume {
+@@ -1987,6 +2105,8 @@ namespace plume {
          }
      }
  
@@ -158,7 +196,7 @@ index a5f30a3..51f3a69 100644
      bool MetalSwapChain::resize() {
          getWindowSize(width, height);
  
-@@ -1996,6 +2092,10 @@ namespace plume {
+@@ -1996,6 +2116,10 @@ namespace plume {
  
          const CGSize drawableSize = CGSizeMake(width, height);
          if (const CGSize current = layer->drawableSize(); !CGSizeEqualToSize(current, drawableSize)) {
@@ -169,7 +207,7 @@ index a5f30a3..51f3a69 100644
              layer->setDrawableSize(drawableSize);
  
              for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
-@@ -2118,6 +2218,14 @@ namespace plume {
+@@ -2118,6 +2242,14 @@ namespace plume {
          for (uint32_t i = 0; i < desc.colorAttachmentsCount; i++) {
              const MetalTextureView *colorAttachmentView = desc.colorAttachmentViews && desc.colorAttachmentViews[i] ? static_cast<const MetalTextureView *>(desc.colorAttachmentViews[i]) : nullptr;
              const MetalTexture *colorAttachment = colorAttachmentView ? colorAttachmentView->parentTexture : static_cast<const MetalTexture *>(desc.colorAttachments[i]);
@@ -184,7 +222,7 @@ index a5f30a3..51f3a69 100644
              assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
  
              MetalAttachment attachment;
-@@ -3008,6 +3116,17 @@ namespace plume {
+@@ -3008,6 +3140,17 @@ namespace plume {
                  dstOrigin
              );
              activeBlitEncoder->popDebugGroup();
@@ -202,3 +240,61 @@ index a5f30a3..51f3a69 100644
          } else {
              assert(dstTexture != nullptr);
              assert(srcTexture != nullptr);
+diff --git a/plume_metal.h b/plume_metal.h
+index 8de188d..ffa506a 100644
+--- a/plume_metal.h
++++ b/plume_metal.h
+@@ -680,11 +680,13 @@ namespace plume {
+ 
+     struct MetalGraphicsPipeline : MetalPipeline {
+         MetalRenderState state;
++        RenderFixedFunctionState fixedFunction;
+ 
+         MetalGraphicsPipeline(const MetalDevice *device, const RenderGraphicsPipelineDesc &desc);
+         ~MetalGraphicsPipeline() override;
+         void setName(const std::string &name) override;
+         RenderPipelineProgram getProgram(const std::string &name) const override;
++        bool copyFixedFunction(RenderFixedFunctionState *out) const override;
+     };
+ 
+     struct MetalPipelineLayout : RenderPipelineLayout {
+diff --git a/plume_render_interface.h b/plume_render_interface.h
+index 2048557..6d719e3 100644
+--- a/plume_render_interface.h
++++ b/plume_render_interface.h
+@@ -55,10 +55,35 @@ namespace plume {
+         virtual ~RenderSampler() { }
+     };
+ 
++    // Values actually submitted when the graphics pipeline was created.
++    // Enum fields are the plume enum ordinals, not backend-native constants.
++    struct RenderFixedFunctionState {
++        uint32_t valid = 0;
++        uint32_t blendEnabled = 0;
++        uint32_t srcRgb = 0;
++        uint32_t dstRgb = 0;
++        uint32_t opRgb = 0;
++        uint32_t srcA = 0;
++        uint32_t dstA = 0;
++        uint32_t opA = 0;
++        uint32_t writeMask = 0;
++        uint32_t colorFormat = 0;
++        uint32_t depthEnabled = 0;
++        uint32_t depthWrite = 0;
++        uint32_t depthCompare = 0;
++        uint32_t sampleCount = 0;
++    };
++
+     struct RenderPipeline {
+         virtual ~RenderPipeline() { }
+         virtual void setName(const std::string &name) = 0;
+         virtual RenderPipelineProgram getProgram(const std::string &name) const = 0;
++        virtual bool copyFixedFunction(RenderFixedFunctionState *out) const {
++            if (out != nullptr) {
++                *out = {};
++            }
++            return false;
++        }
+     };
+ 
+     struct RenderPipelineLayout {

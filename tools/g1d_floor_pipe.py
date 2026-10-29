@@ -13,6 +13,8 @@ import sys
 import g1d_floor_inputs as base
 
 ROOT = Path.cwd() / 'scratch/agent/s6622_pipe'
+if '--output-root' in sys.argv:
+    ROOT = Path(sys.argv[sys.argv.index('--output-root') + 1]).resolve()
 
 
 def pixels(meta, raw, stage):
@@ -134,7 +136,9 @@ def main():
             x,y = 10+col*522,30+row*240
             sheet.paste(im,(x,y))
             draw.text((x,y-20),f'{tag} / {stage} / serial {summaries[tag]["selected"]["serial"]}',fill='white')
-    sheet.save('docs/owner_sheet_s6622_pipe.png')
+    sheet.save(str(ROOT / 'owner_sheet_pipe.png'))
+    if ROOT.name == 's6622_pipe':
+        sheet.save('docs/owner_sheet_s6622_pipe.png')
     result=dict(selects=selected,controls=controls,ratios=ratios,arms=summaries)
     (ROOT/'verdict.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps(result),flush=True)
