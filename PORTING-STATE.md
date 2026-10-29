@@ -173801,3 +173801,47 @@ does not show: an objective-counter response, a sky arm that keeps the
 title sky false, or that level 18 passes. Do not lower dark from 0.60
 to chase n=2250's 0.590. Do not start level 18 until n=2300 is accepted
 or the arm is shown not to separate.
+
+## Session 6652 (2026-10-29) — grey-trench sky arm accepts the level-17 chase
+
+Offline. No game launch, no recapture, no level 18. The soak tail in
+scratch/agent/SOAK-RESULTS.md still ends at s6580 (2026-10-28); no new
+queued verdict to fold. Pre-edit `python3 tools/g1_flight_class.py`
+printed canon_bad 0 and mission 11/13.
+
+One sky arm in tools/g1_flight_class.py. The sky window is unchanged
+(y 0.02-0.18, x 0.15-0.85). The arm accepts when mean luma is in
+[38, 55], |R-G|, |R-B| and |G-B| are each <= 8, and at least 0.80 of
+the samples have channel spread <= 8. It does not move 0.08, 0.33, or
+dark >= 0.60.
+
+Measured on that same window: n=2300 neutral8 0.845, luma 42.5, R-G
+1.4, R-B 0.7, G-B -0.7. The level-3 sky miss m3150 is luma 40.0, which
+is inside [38, 55], with neutral8 0.613, so the 0.80 gate is what
+keeps that dump a sky miss and mission at 11/13. The canon title is
+neutral8 0.344, luma 75.0, R-G 24.7. The same-run title is neutral8
+0.345, luma 73.4, R-G 23.6. n=2250 is neutral8 0.937 but luma 32.8, so
+the 38 floor leaves it a sky miss. That floor was not lowered.
+
+Post-edit scores are in scratch/agent/s6652_lvl17_rescore.txt.
+canon_bad 0 and mission 11/13. n=2300 passes all four clauses (rel
+0.224, metal 0.180, radar 0.078). That is 1/10 of the post-hangar
+dumps n=2050..2500. n=2250 stays fail (sky 0, craft 0). The six pause
+dumps (n=2100, 2150, 2350, 2400, 2450, 2500) stay fail on HUD (radar
+0). The two crest dumps (n=2050, n=2200) stay fail on HUD. Same-run
+title fb_0000800_w512.ppm stays sky 0 and terrain 0. Craft-select
+fb_0001550_w512.ppm stays an overall fail (terrain rel 1.040, radar
+0). Sheet remains docs/g1_lvl17_flight_s6651.png. Objective (d) was
+not run.
+
+This selects H-grey-arm. It refutes H-no-separation: a cut exists that
+accepts n=2300, leaves both title skies false, leaves canon_bad 0,
+leaves mission 11/13, and leaves every pause dump and the craft-select
+frame as overall fails.
+ORIGIN: n/a (no mitigation).
+
+What this rules out: "no sky arm accepts the trench chase without
+accepting a title sky or moving mission off 11/13." What it does not
+show: an objective-counter response, or that level 18 passes. Do not
+lower the luma floor from 38 to chase n=2250. Do not lower dark from
+0.60.

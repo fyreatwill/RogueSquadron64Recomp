@@ -7,6 +7,7 @@ adds a chase-camera metal hull, a saturated green reticle, a dark hull
 against a bright sky, or low-chroma metal against a coloured neighbour.
 A third sky arm accepts an orange sky, including the dimmer dusk.
 A fourth accepts the level-10 tan cloud field.
+A fifth accepts the level-17 grey trench wall.
 
 Canonical check (no args) exits 0 only when the five-file table holds:
   pass  docs/g3_retail_lvl1_flight_oracle.png
@@ -71,11 +72,19 @@ def classes(p):
     rg = sm[0] - sm[1]
     rb = sm[0] - sm[2]
     gb = sm[1] - sm[2]
+    # Grey trench wall (level 17 chase, n=2300). The sky window is panel
+    # grey, not a starfield: mean luma is ~42 with almost no cast, and
+    # 0.845 of the samples have channel spread <= 8. The level-3 dump
+    # that misses dark>=0.60 (m3150) has the same mean luma (~40) but
+    # only 0.613 of its samples are that neutral, so 0.80 keeps mission
+    # at 11/13. Both title skies are luma ~74 with R-G ~25.
+    neutral8 = sum(1 for c in sky if max(c) - min(c) <= 8) / len(sky)
     sky_ok = (
         dark >= 0.60
         or (luma >= 70 and sm[0] <= sm[1] + 15)
         or (luma >= 80 and sm[0] >= sm[1] + 40 and sm[0] >= sm[2] + 20)
         or (luma >= 70 and 20 <= rg <= 32 and rb >= 40 and gb >= 18)
+        or (38 <= luma <= 55 and abs(rg) <= 8 and abs(rb) <= 8 and abs(gb) <= 8 and neutral8 >= 0.80)
     )
 
     # Relative local edge energy. Absolute stddev stays under 18 on the
