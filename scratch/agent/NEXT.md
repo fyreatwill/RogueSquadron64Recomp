@@ -1,45 +1,45 @@
-# NEXT: level 4 flight capture under the extended class rule
+# NEXT: offline sunset cut for the level-4 flight
 HYPOTHESIS-ID: g1-coverage-cd
 
-s6634 closed the level-3 numeric proxy. Do not retune
-tools/g1_flight_class.py and do not recapture level 3. Do not edit the
-heap or any default. No aim or steer work. No queued soak.
+s6635 selected H-new-class. The level-4 sheet is a flight and the frozen
+rule rejects 7/7. Do not recapture. Do not launch the game. Do not edit
+the heap or any default. No aim or steer work. No queued soak.
 
-Precontrol, before any game launch. It must print canon_bad 0:
+The binding miss is sky. On y 0.02-0.18 the phase-7 frames are about
+R 215, G 155, B 120, luma 160, dark 0.01, R-G 48..67. The clause is
+dark>=0.60 or (luma>=70 and R<=G+15). Oracle uses the second arm
+(R-G about -64). Level 3 uses the first (dark 0.93). A third arm has
+to accept this orange sky. The same-run title sky is milder and must
+not become the thing that flips the canon: R 102, G 73, B 67, luma 80.5,
+R-G 29, dark 0.299, and it already fails terrain (rel 0.431).
+
+Craft is the second miss on 5/7. Pink in the center box is 0.13..0.53
+because that box is the sunset, above the 0.05 engine cap. n=2350 and
+n=2400 already pass craft on the metal hull (0.359 and 0.316). n=2300
+also misses terrain at rel 0.065; the other six pass terrain. Do not
+lower 0.08 unless the floor (rel 0.709) and the title (rel 0.410) still
+fail. Prefer leaving n=2300 as a recorded near-miss.
+
+Precontrol, before any edit. It must print canon_bad 0:
 
     python3 tools/g1_flight_class.py
 
-That table is oracle pass, level-2 fb_0002700 pass, level-3 fb_0002700
-pass, level-select floor fail, s6633 title dump fail. If it does not
-hold, the tool on disk is not the s6634 rule. Stop and do not launch.
+Edit only tools/g1_flight_class.py. Then both of these must hold:
 
-Then one retail 4:3 capture. Copy scratch/agent/s6633_lvl3.sh to a new
-script, change only the mission index and the output directory:
+    python3 tools/g1_flight_class.py
+    python3 tools/g1_flight_class.py scratch/agent/s6635_lvl4/fbd/fb_0002{300,350,400,450,500,550,600}_w512.ppm scratch/agent/s6635_lvl4/fbd/fb_0000800_w512.ppm scratch/agent/s6635_lvl4/fbd/fb_0001700_w512.ppm
 
-- ROGUESQ_FORCE_UNLOCK=4
-- ROGUESQ_FORCE_SAVE_MISSION=4
-- output scratch/agent/s6635_lvl4/ (do not rm the s6633 dumps)
-- same in-process start/z schedule, draw distance unset, aspect unset
-- SIGKILL 30 s after the first post-hangar origin 0x690400
-- run from build/ with the ROM beside it; one game; screen unlocked
+H-sunset-cut: canon_bad stays 0, and every phase-7 frame except possibly
+n=2300 passes. The title and the hangar craft-select still fail overall.
+That closes level 4 (c) under the new rule. The next capture is level 5
+with that rule frozen.
+H-canon-moves: the only predicates that accept the sunset also make the
+five-file table print canon_bad above 0, or make fb_0000800 or
+fb_0001700 pass. Revert the edit. Level 4 (c) stays a picture only.
+H-dumps-missing: the s6635 ppm files are gone. Stop. Do not recapture
+in the same session; say so in the ledger.
 
-After the run, score every mission-origin dump:
-
-    python3 tools/g1_flight_class.py scratch/agent/s6635_lvl4/fbd/fb_*.ppm
-
-and build one contact sheet of four of those frames. Read the sheet.
-
-H-rule-holds: the mission frames that show sky, terrain, a craft and
-the radar also pass the tool, and title or hangar frames from the same
-run fail it.
-H-new-class: the sheet shows a flight (terrain, craft, HUD) but the
-tool rejects those frames. Record the miss. Do not edit thresholds in
-this session.
-H-no-picture: the route never reaches a post-hangar 0x690400, or the
-dumps are empty or a menu. That is a route failure, not a scorer
-failure.
-
-DISCRIMINATOR: the sheet plus the tool lines for the mission dumps.
-H-rule-holds advances level 4 (c) and the next capture is level 5 with
-the same frozen rule. H-new-class leaves level 4 (c) as a picture only.
-H-no-picture does not change the class rule.
+DISCRIMINATOR: canon_bad plus the seven phase-7 lines and the two
+same-run negatives. Do not add a fourth scene to the canon table in
+this session. Read the existing sheet docs/g1_lvl4_flight_s6635.png
+before deciding a frame is not a flight.

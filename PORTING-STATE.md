@@ -172823,3 +172823,51 @@ What this rules out: "no numeric cut accepts the level-3 night frame
 without also accepting the level-select floor or the title card." What
 it does not show: that the same cuts accept every later level, or that
 n=2550's small hull is inside the craft cut.
+
+## Session 6635 (2026-10-29) — level 4 sunset flight is visible and the class rule rejects it
+
+One retail 4:3 capture. No heap edit, no threshold edit, no aim, draw
+distance unset, aspect unset. Precontrol `python3 tools/g1_flight_class.py`
+printed canon_bad 0 (oracle, level-2 fb_0002700, level-3 fb_0002700 pass;
+floor and the s6633 title fail; the thirteen level-3 mission lines stay
+11/13). IOConsoleLocked was No. The route is scratch/agent/s6635_lvl4.sh,
+the s6633 script with FORCE_UNLOCK=4 and FORCE_SAVE_MISSION=4. The soak
+tail in scratch/agent/SOAK-RESULTS.md still ends at s6580 (2026-10-28);
+nothing there is newer than the s6634 ledger entry.
+
+scratch/agent/s6635_lvl4/keys.log: screen-unlocked, title t=14, hangar
+t=32, mission-onset t=83, hold-30s t=113, killed t=113, crash=0, abort=0.
+run.log echoes `[dd] ROGUESQ_DRAW_DISTANCE multiplier 1` and
+`[initMission] call#1 B40=0x04`. Seven phase-7 dumps, n=2300..2600 step
+50, width 512, origin 0x00690400, fb=0x80620000. Sheet
+docs/g1_lvl4_flight_s6635.png is frames 2300, 2400, 2500 and 2600.
+
+The sheet is a flight. An X-wing, an orange sunset, desert ground, the
+round radar, a green reticle and a missile badge are all in the frame.
+The frozen rule scores 0/7. Sky fails on every one. The y 0.02-0.18 band
+on those frames is about R 215, G 155, B 120, luma 156..173, dark 0.01,
+R-G 48..67. The clause is dark>=0.60 or (luma>=70 and R<=G+15). The
+oracle uses the second arm (R-G about -64). Level 3 uses the first
+(dark 0.927). Orange matches neither. Terrain passes on six frames
+(rel 0.091..0.203) and misses n=2300 at rel 0.065, where the ground is
+only a bottom strip. Craft passes on n=2350 (metal 0.359) and n=2400
+(metal 0.316) and fails the other five: pink in the center box is
+0.13..0.53 because that box is the sunset, above the 0.05 engine cap,
+and the hull and reticle fractions miss.
+
+Same-run negatives still fail overall. Title fb_0000800_w512.ppm is
+sky 0, terr 0, rel 0.431; its sky is R 102, G 73, B 67, luma 80.5,
+R-G 29, dark 0.299. Hangar craft-select fb_0001700_w512.ppm fails HUD
+only (radar 0.002) and already passes sky by the dark cut (dark 0.729).
+
+This selects H-new-class. It refutes H-rule-holds and H-no-picture for
+this route: the post-hangar 0x690400 dumps are a flight, not a menu, and
+the frozen cuts reject them. It does not change tools/g1_flight_class.py
+and it does not run objective (d).
+
+What this rules out: "level 4 never produced a post-hangar flight
+picture" and "the s6634 sky clause accepts every bright flight sky."
+What it does not show: that a third sky disjunct, or a craft predicate
+that ignores a sunset-filled center box, can accept these frames while
+canon_bad stays 0. That gap (sunset R-G about 50 versus the title's
+R-G 29) was measured and not turned into a predicate.

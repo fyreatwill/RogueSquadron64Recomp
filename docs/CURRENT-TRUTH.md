@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6634 (2026-10-29).
+Compact operational handoff, as of Session 6635 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -61,8 +61,22 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   pass. n=2550 fails craft (hull 0.054, no reticle; the picture is
   still a flight). n=3150 fails the unchanged sky cut (dark fraction
   0.41). Tool: `tools/g1_flight_class.py`. Objective (d) was not run.
+- **G1 (c) level 4 flight framebuffer: picture only, rule rejects it.**
+  s6635, retail 4:3, draw distance 1, `B40=0x04`. Hangar t=32, post-hangar
+  origin `0x690400` at t=83, 30 s hold, 0 crashes. Seven phase-7 dumps
+  n=2300..2600 are width 512. Sheet `docs/g1_lvl4_flight_s6635.png` shows
+  an X-wing, orange sky, desert ground, radar, reticle and a missile
+  count. The frozen rule scores 0/7. Binding miss is sky: band mean
+  about R 215, G 155, B 120, luma 160, dark 0.01, R−G 48..67, so neither
+  dark≥0.60 nor R≤G+15 fires. Craft also fails on 5/7 because the center
+  box is that sunset (pink 0.13..0.53, above the 0.05 engine cap);
+  n=2350 and n=2400 pass craft on the metal hull. n=2300 also misses
+  terrain (rel 0.065). Same-run title and the hangar craft-select fail
+  the rule overall. Thresholds were not edited. Evidence:
+  `scratch/agent/s6635_lvl4/`. Objective (d) was not run.
 
 ## Superseded conclusions — do not act on these
+- s6634 "a flight sky is either dark (dark≥0.60) or bright with R≤G+15" (s6635: the level-4 sunset is bright, R−G about 48..67, and sky fails 7/7). Believable because the only flight skies measured before this capture were level 1's blue sky and level 3's night. The level-3 acceptance itself still holds.
 - s6633 "the level-3 night flight has no numeric acceptance that still rejects the floor and the title" (s6634: relative edge energy in [0.08, 0.33], plus a metal hull or green reticle, accepts 11/13 night dumps; floor rel 0.709 and title rel 0.410 fail). Believable because the only rule that had been run, luma stddev and engine colour, scored 0/13.
 - s6632 class rule "those four numeric cuts accept a frame that shows sky, terrain, craft and HUD" (s6633: the level-3 night flight shows all four and scores 0/13). Believable because level 1 and level 2 are bright scenes and both passed the same cuts.
 - s6632 "only a dump whose own origin field is 0x690400 is the mission picture" (same run: that origin is in the VI log, and every dump in the window is the other buffer 0x620400, which is the flight picture). Believable because the route key is 0x690400 and EVERY=50 phase-locked onto one of the two buffers.
@@ -150,7 +164,9 @@ Playable levels are 0..18 (`NUM_LEVELS=0x13`; 19 and 20 are sentinels). Levels
 1–9 and 11–18 have route/hold coverage; levels 10 and 15 need the planet
 unlock or its long retail intro. Level 1 has a retail flight match. Level 2 passes the numeric class
 rule (s6632). Level 3 passes the extended rule (s6634, 11/13 of the
-s6633 dumps; floor and title rejected). Verification still needs
+s6633 dumps; floor and title rejected). Level 4 has a sunset flight
+picture (s6635) that the same rule rejects 0/7; that is not a numeric
+pass. Verification still needs a rule that accepts that picture, then
 framebuffer evidence for the remaining levels, plus a forced-hit
 objective response. Mission wins, autopilot aim, and mission-to-mission
 progression are owner playtest scope.
@@ -176,14 +192,17 @@ progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6634) Capture level 4 with the extended flight class rule.**
-   Do not retune `tools/g1_flight_class.py`. Precontrol is
-   `python3 tools/g1_flight_class.py` and it must print `canon_bad 0`.
-   Then one retail 4:3 capture, the s6633 route with FORCE_UNLOCK=4
-   and FORCE_SAVE_MISSION=4, 30 s hold after the hangar and origin
-   0x690400. Score that run's mission dumps with the same tool. If the
-   sheet shows a flight the rule rejects, record the miss and do not
-   edit thresholds. No heap edit, no aim, no default change. See NEXT.md.
+1. **(s6635) Extend the flight class rule offline for the level-4 sunset.**
+   Do not recapture and do not launch. The sky clause misses a bright
+   orange sky (R−G about 48..67) and the craft pink cap treats that sky,
+   filling the center box, as an oversized engine. Keep `canon_bad 0`
+   on the five-file table. The seven phase-7 dumps in
+   `scratch/agent/s6635_lvl4/fbd/` that show sky, ground, the X-wing and
+   the radar should then pass; the same-run title `fb_0000800_w512.ppm`
+   and hangar `fb_0001700_w512.ppm` must still fail overall. Do not
+   lower the terrain floor just to collect n=2300 (rel 0.065) unless
+   floor and title still fail. No heap edit, no aim, no default change.
+   See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
