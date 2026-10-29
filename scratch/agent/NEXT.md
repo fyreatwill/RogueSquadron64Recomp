@@ -1,76 +1,74 @@
-# NEXT: read RDRAM at 0x00BB0020 after the byteswap and at the depth store
+# NEXT: name the store that zeros the depth-upload source
 HYPOTHESIS-ID: g1d-levelselect-ram
 
-s6627 selects H-later-zero and refutes H-writeback and H-unwritten. One
-Debug binary, both widths. 16:9 34.2 s / 21:9 33.5 s, 54/52 good frames,
-alive, 0 crash markers. The upload at state.cpp:2604 is n=2093. The
-previous event is n=2092, and the 16-bit call count is still 2092, so no
-copyToRAM of any width entered the witness in between. That write, and
-all 935 wide writes before it, is phys 0x00B20000, width 1024, rows
-0..447. The span covers 0x00BB0020. That address is this image's pixel
-x=16, y=288, not its y=180. The native rawBe there is 0x9F4C on every
-cover and 0x0000 on none. Other words in the same write are 0xFFFC.
-The upload head is still 13 zeros at x=16, y=180..192, and the GPU match
-stays max abs 0. Image y=180 of the 0x00B20000 write is rawBe 0 at
-0x00B7A020. Do not treat that pixel as the stripe. The only later rawBe
-0 at 0x00BB0020 is n=2095, the depth image's own copyToRAM at 0x00B56000
-after the upload. Do not patch the shader. Do not change a default.
+s6628 selects H-between, single-source runtime evidence. Evidence:
+scratch/agent/s6628_rdram/depth_verdict.json. One Debug binary, both widths,
+54/55 good frames, all controls pass, 0 crash markers. On 21:9:
+- copyToRAM n=3499 covers physical 0x00BB0020; native rawBe=0x9EC4.
+- site A n=3500: native=swap=exit=0x9EC4, bytes CC9EC49E, fl=0.
+- site B n=3501: bytes 00000000, left head 13 zeros.
+- upload n=3502: guest/GPU MAE 0 on 142 samples.
+A and B use the identical host address 0x300bb0020, runtime base 0x300000000.
+The native value varies with animation; do not require the old 0x9F4C.
+No shader patch, skip, restore, or default change is justified.
 
-The native witness reads the pre-byteswap readback. copyNativeToRAM then
-byteswaps those words into RDRAM. A 32-bit byteswap cannot turn a nonzero
-word into 0. The freelist restore in that function runs only for a range
-that contains 0x001F3CC0. This span does not. The remaining question is
-what the live RDRAM bytes are, on the pointer the upload actually copies.
+ONE unit: attribute the actual writer, not another join-field increment.
+Build the whole discriminator in ONE binary, both widths. Before building,
+check the boring possibilities: depth buffer allocation/clear ranges, existing
+host zero/copy calls and the higher-memory masks. Read bounded source windows
+before adding probes. Consult F5-UCODE-REFERENCE and oracle/README; retail
+has no corresponding >8MB framebuffer allocation, so label this mapping
+single-source until independent semantics or a writer instruction corroborates it.
 
-ONE work unit, one binary, both widths. Keep the s6627 copyToRAM witness
-and the s6626 guest column capture. Add two RDRAM reads, gated by
-ROGUESQ_FLOOR_DEPTH_DIR, from boot, not phase-gated. Each read logs the
-4 bytes at 0x00BB0020 and the rawBe uint16 at x=16 and x=1007 for
-y=180..192 and y=200 (stride 2048, origin 0x00B56000). rawBe is the
-s6626 conversion of those RDRAM bytes: 32-bit byteswap, then the 16-bit
-swap. Also log the host pointer and whether it equals
-g_recomp_rdram_for_wp_raw.
+Hypotheses:
+- H-guest-store: a generated MIPS store/loop clears this physical address.
+- H-host-write: a host memset/bzero/memcpy/DMA writes it (possibly a range
+  intended for another allocation). Attribute caller, src/dst/length.
+- H-uncovered: A/B transition recurs but no intersecting writer is captured;
+  the instrumentation is incomplete, not proof of absent guest stores.
 
-- Site A: end of Framebuffer::copyNativeToRAM, after the byteswap and
-  after the freelist restore, when the written range covers 0x00BB0020.
-  Include that call's native rawBe at the same address so a swap that
-  zeroed the bytes is visible.
-- Site B: the fbStorage.store that feeds state.cpp:2604, on the source
-  pointer about to be copied, when the stored range covers 0x00BB0020.
-  This is the bytes the upload turns into nativeSwappedRAM.
+Discriminating measurement: actual before/after bytes for every intersecting
+store or bulk operation, joined to A/B/upload on their existing sequence.
+The winning record must contain PC/function or host call stack, exact byte
+range, source/length, width and old/new bytes; distinguish a zero already
+present from the operation that changes it. Trace the named writer's caller
+and allocation/range arithmetic to decide whether that value is legitimate.
+Do not land a guard in lieu of that explanation.
 
-Hypotheses and discriminating outcomes:
-- H-swap: site A fires, its native rawBe at 0x00BB0020 is nonzero, and
-  the post-byteswap RDRAM rawBe is 0. The writer is inside
-  copyNativeToRAM. Name the step (byteswap versus anything after it).
-- H-alias: site A's bytes are nonzero, site B's bytes are 0, and the two
-  host pointers are not the same base plus the same offset. Name both
-  pointers. copyToRAM wrote a different mapping than the upload reads.
-- H-between: both sites see the same base, site A's rawBe is nonzero
-  (0x9F4C on the s6627 control), and site B's rawBe head is 0x0000.
-  The zero is written after copyNativeToRAM returns and before the
-  store. Do not start a guest-store watch in this unit.
-- H-witness: the 21:9 clear-then-0x0000 upload does not recur, either
-  site count is 0, the native witness no longer shows 0x9F4C before the
-  upload, or the 16:9 z store is absent. Repair the log in this same
-  iteration before interpreting a null.
+Use existing generated callbacks where coverage is proven:
+rs64_m5_writer_parity in funcs_*.c calls rs64_m5_route_value_writer before
+its enabled early return. The latter lives in src/main/upstream_compat.cpp.
+Audit coverage for scalar, FP, double and unaligned stores; do not assume
+all are covered. Log at the actual store (or correctly resolve a pending
+pre-store record), not the next unrelated store. Hook existing host memory
+begin/end paths too; some currently mask to 8MB, so compute this diagnostic's
+physical range from the real destination/base, not their masked field.
+rs64_g1d_blk_dma exists but filters to specific fill words and is insufficient
+for a zero-write witness as-is. A poller backtrace is not writer attribution.
 
-Positive controls, required: magenta pixel (16,180) still changes; 16:9
-floor-enter depth stays 1.0 and a later floor op stores z in 0.990..0.998;
-the 21:9 upload rawBe head is 0x0000 on x=16 for y=180..192 and the GPU
-match stays max abs 0; the s6627 native witness still reports nonzero
-rawBe at 0x00BB0020 on the last covering copyToRAM; both new sites fire
-at least once on 21:9. A silent log is not a result. Phase-gate the
-route. No cross-run animation compare. Screen must be unlocked. SIGKILL.
-One game run at a time. Do not overwrite scratch/agent/s6624_attachment,
-scratch/agent/s6625_depth, scratch/agent/s6626_guest, or
-scratch/agent/s6627_ram.
+Keep A/B/native/guest/GPU controls. Arm from boot or every covering A after
+its write; do not depend on a stopwatch or run-lifetime budget. Positive
+control BOTH guest-store and host-zero paths in the SAME run on a reserved,
+non-game scratch word: visibly produce known nonzero->zero transitions and
+recover the expected PC/caller. Do not inject zero into the real depth image.
+A branch count or a silent log is not a control. If only one writer class
+passes its control, repair before interpreting a null. Preserve diagnostic
+changes through existing fixup scripts if generated code needs edits.
 
-Build and run from build/ with the ROM beside it:
+Commands after implementing the complete witness:
 
+    python3 tools/g1d_floor_depth.py --selftest
+    python3 tools/g1d_floor_attachment.py --selftest
     env DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --target RogueSquadron64Recomp
-    python3 tools/g1d_floor_depth.py --output-root scratch/agent/s6628_rdram
+    python3 tools/g1d_floor_depth.py --output-root scratch/agent/s6629_writer
+    ./submodule-patches/export.sh
 
-Keep tools/g1d_floor_depth.py --selftest and tools/g1d_floor_attachment.py
---selftest green. If lib/ changes, ./submodule-patches/export.sh is part
-of the commit.
+Extend the existing runner/classifier to analyze the writer table, not only
+A/B; add synthetic classifier cases for both writer classes, unchanged
+writes, missing controls and unmatched transitions. For a host-only callback
+change regeneration is unnecessary; any generated change follows
+make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake, with the actual
+local paths checked first. Do not hand-edit load-bearing generated logic.
+The runner checks screen unlock, runs from build/ beside the ROM, phase-gates
+the route, runs one instance at a time and SIGKILLs it. Preserve s6624..s6628
+artifact roots. No repeat-hold soak or aim/steering work.

@@ -278,6 +278,7 @@ def load_arm(root, tag, width):
     )
     arm['table'] = classify(arm)
     arm['copies'], arm['copy_calls'] = load_copies(depth / 'copytoram.jsonl')
+    arm['rdram'] = load_events(depth / 'rdram.jsonl') if (depth / 'rdram.jsonl').exists() else []
     writer = arm['table'].get('stripe_writer')
     rec = guest_of(arm, writer) if writer else None
     arm['head_raw'] = rec['rawBe'][:13] if rec and rec.get('rawBe') else None
@@ -637,6 +638,107 @@ def decide_ram(wide16, wide21):
     return 'H-split', [], detail
 
 
+def b4_zero(rec):
+    return str(rec.get('b4', '')).upper() in ('00000000', '0X00000000')
+
+
+def same_host(a, b):
+    host = a.get('host')
+    if host and host == b.get('host') and host not in ('0x0', '0'):
+        return True
+    return a.get('eq') == 1 and b.get('eq') == 1
+
+
+def head_raw(rec):
+    cols = {}
+    for col in rec.get('cols') or []:
+        if col.get('in'):
+            cols[(col.get('x'), col.get('y'))] = col.get('raw')
+    vals = []
+    for y in HEAD_YS:
+        raw = cols.get((16, y))
+        if not isinstance(raw, int) or raw < 0:
+            return None
+        vals.append(raw)
+    return vals
+
+
+def last_cover_n(copies, cutoff):
+    last = None
+    for rec in copies or []:
+        if rec.get('k') != 'w' or not isinstance(rec.get('n'), int) or rec['n'] >= cutoff:
+            continue
+        got = covering_word(rec, 16, 180)
+        if isinstance(got, dict):
+            last = rec['n']
+    return last
+
+
+def classify_sites(sites, cutoff, copies):
+    if cutoff is None:
+        return 'H-witness', ['upload-marker'], {}
+    bs = [r for r in sites or [] if r.get('k') == 'b' and isinstance(r.get('n'), int) and r['n'] < cutoff]
+    if not bs:
+        return 'H-witness', ['site-b'], {}
+    store = max(bs, key=lambda r: r['n'])
+    writes = [r for r in sites or [] if r.get('k') == 'a' and isinstance(r.get('n'), int) and r['n'] < store['n']]
+    if not writes:
+        return 'H-witness', ['site-a'], {}
+    write = max(writes, key=lambda r: r['n'])
+    detail = dict(
+        a_n=write.get('n'), b_n=store.get('n'), cutoff=cutoff, wn=write.get('wn'),
+        a_count=sum(1 for r in sites or [] if r.get('k') == 'a'),
+        b_count=sum(1 for r in sites or [] if r.get('k') == 'b'),
+        a_host=write.get('host'), b_host=store.get('host'),
+        a_rdram=write.get('rdram'), b_rdram=store.get('rdram'),
+        a_eq=write.get('eq'), b_eq=store.get('eq'),
+        a_phys0=write.get('phys0'), b_phys0=store.get('phys0'),
+        a_native=write.get('native'), a_swap=write.get('swap'), a_raw=write.get('raw'),
+        a_b4=write.get('b4'), b_raw=store.get('raw'), b_b4=store.get('b4'),
+        a_fl=write.get('fl'), same_host=int(same_host(write, store)),
+    )
+    cover = last_cover_n(copies, cutoff)
+    detail['cover_n'] = cover
+    if cover is None or write.get('wn') != cover:
+        return 'H-witness', ['pair'], detail
+    native = write.get('native')
+    raw = write.get('raw')
+    swap = write.get('swap')
+    if not isinstance(native, int) or native < 0:
+        return 'H-witness', ['native-missing'], detail
+    if native == 0:
+        return 'H-witness', ['native-zero'], detail
+    if raw == 0:
+        if not isinstance(swap, int) or swap < 0:
+            return 'H-witness', ['swap-missing'], detail
+        detail['step'] = 'byteswap' if swap == 0 else 'after-byteswap'
+        return 'H-swap', [], detail
+    b_head = head_raw(store)
+    detail['b_head'] = b_head
+    if b4_zero(store) and not same_host(write, store):
+        return 'H-alias', [], detail
+    if b_head is not None and all(v == 0 for v in b_head) and same_host(write, store):
+        return 'H-between', [], detail
+    if b_head is not None and all(v == 0 for v in b_head):
+        return 'H-alias', [], detail
+    if isinstance(store.get('raw'), int) and store['raw'] != 0 and same_host(write, store):
+        return 'H-after-store', [], detail
+    return 'H-witness', ['unmatched'], detail
+
+
+def finish_rdram(upload_verdict, ram_verdict, ram, sites, copies):
+    if upload_verdict != 'H-guest' or ram_verdict != 'H-later-zero':
+        return 'H-witness', ['control', upload_verdict, ram_verdict], {}
+    cutoff = upload_cutoff(copies)
+    selects, why, detail = classify_sites(sites, cutoff, copies)
+    if selects == 'H-witness':
+        return selects, why, detail
+    head = (ram or {}).get('head') or []
+    if not head or head[0] != detail.get('a_native'):
+        return 'H-witness', ['native-mismatch'], detail
+    return selects, why, detail
+
+
 def blank(color, depth, n=71):
     sample = {}
     for col in (0, 1):
@@ -819,6 +921,58 @@ def selftest():
     decoy = dict(k='w', n=1, siz=2, width=1024, phys=0xB20000, rowStart=0, rowEnd=447,
                  copied=1, calls=calls, words=decoy_words)
     assert decide_ram(w16r, ram_arm(prior, [0] * 13, calls, [decoy, up(2)]))[1] == ['word-layout']
+
+    def rcol(x, y, raw, native=-1, swap=-1):
+        return {'x': x, 'y': y, 'in': 1, 'raw': raw, 'native': native, 'swap': swap}
+
+    def rsite(k, n, host, raw, native=-1, swap=-1, b4=None, wn=0, head=None):
+        cols = []
+        for x in (16, 1007):
+            for y in list(HEAD_YS) + [200]:
+                val = head if head is not None and x == 16 and y in HEAD_YS else raw
+                cols.append(rcol(x, y, val, native if k == 'a' else -1, swap if k == 'a' else -1))
+        if b4 is None:
+            b4 = '00000000' if raw == 0 else '4C9F0000'
+        return dict(k=k, n=n, wn=wn, host=host, rdram='0x10', eq=1 if host == '0xA' else 0,
+                    b4=b4, raw=raw, native=native, swap=swap, fl=0, phys0=1, cols=cols)
+
+    cover = wide_rec(4, lambda x, y: 0x9F4C)
+    copies = [cover, up(9)]
+    ram = dict(head=[0x9F4C] * 13)
+    base_sites = [
+        rsite('a', 5, '0xA', 0, native=0x9F4C, swap=0, wn=4),
+        rsite('b', 8, '0xA', 0, head=0),
+    ]
+    got = finish_rdram('H-guest', 'H-later-zero', ram, base_sites, copies)
+    assert got[0] == 'H-swap' and got[2]['step'] == 'byteswap', got
+    after = [
+        rsite('a', 5, '0xA', 0, native=0x9F4C, swap=0x9F4C, wn=4),
+        rsite('b', 8, '0xA', 0, head=0),
+    ]
+    got = finish_rdram('H-guest', 'H-later-zero', ram, after, copies)
+    assert got[0] == 'H-swap' and got[2]['step'] == 'after-byteswap', got
+    alias = [
+        rsite('a', 5, '0xA', 0x9F4C, native=0x9F4C, swap=0x9F4C, wn=4),
+        rsite('b', 8, '0xB', 0, head=0),
+    ]
+    assert finish_rdram('H-guest', 'H-later-zero', ram, alias, copies)[0] == 'H-alias'
+    between = [
+        rsite('a', 5, '0xA', 0x9F4C, native=0x9F4C, swap=0x9F4C, wn=4),
+        rsite('b', 8, '0xA', 0, head=0),
+    ]
+    assert finish_rdram('H-guest', 'H-later-zero', ram, between, copies)[0] == 'H-between'
+    later = [
+        rsite('a', 5, '0xA', 0x9F4C, native=0x9F4C, swap=0x9F4C, wn=4),
+        rsite('b', 8, '0xA', 0x9F4C, b4='4C9F0000'),
+    ]
+    assert finish_rdram('H-guest', 'H-later-zero', ram, later, copies)[0] == 'H-after-store'
+    mismatch = [
+        rsite('a', 5, '0xA', 0x9F4C, native=0x1111, swap=0x9F4C, wn=4),
+        rsite('b', 8, '0xA', 0, head=0),
+    ]
+    assert finish_rdram('H-guest', 'H-later-zero', ram, mismatch, copies)[1] == ['native-mismatch']
+    assert finish_rdram('H-guest', 'H-later-zero', ram, [], copies)[1] == ['site-b']
+    assert finish_rdram('H-upload', 'H-later-zero', ram, between, copies)[0] == 'H-witness'
     print('selftest ok', flush=True)
 
 
@@ -845,12 +999,12 @@ def main():
     for tag, width in (('wide16', 796), ('wide21', 1024)):
         arms[tag] = load_arm(root, tag, width)
     upload_verdict, upload_why, detail = decide_upload(arms['wide16'], arms['wide21'])
-    verdict, why, ram = decide_ram(arms['wide16'], arms['wide21'])
-    if upload_verdict != 'H-guest':
-        verdict = 'H-witness'
-        why = ['upload-control', upload_verdict] + list(why)
+    ram_verdict, ram_why, ram = decide_ram(arms['wide16'], arms['wide21'])
+    verdict, why, rdram = finish_rdram(
+        upload_verdict, ram_verdict, ram, arms['wide21'].get('rdram'), arms['wide21'].get('copies'))
     result = dict(
-        selects=verdict, why=why, ram=ram, upload_selects=upload_verdict,
+        selects=verdict, why=why, rdram=rdram, ram_selects=ram_verdict, ram_why=ram_why,
+        ram=ram, upload_selects=upload_verdict,
         upload_why=upload_why, upload=detail,
         arms={tag: dict(
             table={k: public_event(v) if k.endswith('writer') or k == 'floor' else v
@@ -866,7 +1020,7 @@ def main():
         for key in ('zero_writer', 'mid_writer', 'stripe_writer', 'writer', 'floor'):
             result['arms'][tag]['table'][key] = public_event(table[key])
     (root / 'depth_verdict.json').write_text(json.dumps(result, indent=2) + '\n')
-    print(json.dumps(dict(selects=verdict, why=why, ram=ram, upload_selects=upload_verdict,
+    print(json.dumps(dict(selects=verdict, why=why, rdram=rdram, ram_selects=ram_verdict, ram=ram, upload_selects=upload_verdict,
                           upload=detail,
                           wide21=result['arms']['wide21']['table'].get('stripe_writer'),
                           smooth=arms['wide21']['table']['smooth'],

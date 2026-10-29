@@ -1238,13 +1238,15 @@ index 6255872..b2203c4 100644
  
              return trianglesEnd;
 diff --git a/src/hle/rt64_framebuffer.cpp b/src/hle/rt64_framebuffer.cpp
-index 873883d..c0fa851 100644
+index 873883d..998654c 100644
 --- a/src/hle/rt64_framebuffer.cpp
 +++ b/src/hle/rt64_framebuffer.cpp
-@@ -16,6 +16,73 @@
+@@ -15,6 +15,74 @@
+ #include "common/rt64_elapsed_timer.h"
  
  #include "render/rt64_render_worker.h"
- 
++#include "render/rt64_render_target.h"
++
 +#include <atomic>
 +#include <mutex>
 +
@@ -1311,11 +1313,10 @@ index 873883d..c0fa851 100644
 +        fflush(stderr);
 +    }
 +}
-+
+ 
  #ifdef __GNUC__
  #define _byteswap_ulong __builtin_bswap32
- #endif
-@@ -91,7 +158,58 @@ namespace RT64 {
+@@ -91,7 +159,58 @@ namespace RT64 {
              dstWords++;
          }
  
@@ -1374,7 +1375,7 @@ index 873883d..c0fa851 100644
          return differentPixels;
      }
  
-@@ -143,7 +261,154 @@ namespace RT64 {
+@@ -143,9 +262,160 @@ namespace RT64 {
          uint8_t *dstBytes = dst + dstRowStart * imageRowBytes(dstRowWidth);
          uint32_t *dstWords = reinterpret_cast<uint32_t *>(dstBytes);
          uint32_t bytesToSwap = (dstRowEnd - dstRowStart) * imageRowBytes(dstRowWidth);
@@ -1528,11 +1529,19 @@ index 873883d..c0fa851 100644
 +                                  bytesToSwap);
          nativeTarget.copyToRAM(dstRowStart, dstRowEnd, dstRowWidth, siz, dstBytes);
  
++        const uint32_t rdramPhys0 = addressStart + dstRowStart * imageRowBytes(dstRowWidth);
++        Rs64RdramSnap rdramSnap;
++        rs64FloorRdramPrepare(dstBytes, rdramPhys0, bytesToSwap, &rdramSnap);
++
          // Write back to RDRAM by swapping every word.
-@@ -165,6 +430,98 @@ namespace RT64 {
+         if (bytesToSwap >= sizeof(uint32_t)) {
+             uint32_t wordsToSwap = (bytesToSwap) / sizeof(uint32_t);
+@@ -165,6 +435,102 @@ namespace RT64 {
              dstWords[0] = dstFirstWord;
          }
  
++        rs64FloorRdramNoteSwap(dstBytes, rdramPhys0, bytesToSwap, &rdramSnap);
++
 +        nativeTarget.captureFloorRAM(dstBytes, bytesToSwap);
 +
 +        {
@@ -1625,10 +1634,12 @@ index 873883d..c0fa851 100644
 +            fl_snap = nullptr;
 +        }
 +
++        rs64FloorRdramLog("a", dstBytes, rdramPhys0, bytesToSwap, &rdramSnap, do_fl_restore ? 1 : 0);
++
  #   ifdef DUMP_RAW_RDRAM
          char path[1024];
          snprintf(path, sizeof(path), "dumps/FB_0x%X_W_%d_H_%d_SIZ_%d.rdram", addressStart, dstRowWidth, height, siz);
-@@ -199,4 +556,4 @@ namespace RT64 {
+@@ -199,4 +565,4 @@ namespace RT64 {
      uint64_t FramebufferTile::hash() const {
          return XXH3_64bits(this, sizeof(FramebufferTile));
      }
@@ -5871,7 +5882,7 @@ index e3d289c..5da989d 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..c1dc315 100644
+index 10f98af..21a63da 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -5918,7 +5929,7 @@ index 10f98af..c1dc315 100644
  #include "rt64_interpreter.h"
  
  //#define ASSERT_ON_BLENDER_EMULATION
-@@ -27,7 +55,513 @@
+@@ -27,7 +55,515 @@
  #define MI_INTR_DP          0x00000020
  #define MI_INTR_SP          0x00000001
  
@@ -6387,6 +6398,8 @@ index 10f98af..c1dc315 100644
 +    }
 +
  namespace RT64 {
++    struct Rs64RdramSnap;
++    void rs64FloorRdramLog(const char *site, const uint8_t *buf, uint32_t phys0, uint32_t nbytes, const Rs64RdramSnap *snap, int flRestore);
 +    extern "C" __attribute__((weak)) void rs64_e9prov_fullsync_dispatch();
 +    // Defined in rt64_present_queue.cpp; written by the renderer when a draw
 +    // lands in a colour target, read by updateScreen to keep presents flowing.
@@ -6432,7 +6445,7 @@ index 10f98af..c1dc315 100644
      const float ShiftScaleMap[] = {
          1.0f,
          1.0f / 2.0f,
-@@ -259,7 +793,11 @@ namespace RT64 {
+@@ -259,7 +795,11 @@ namespace RT64 {
  
                      // Failsafe cases.
                      if (tile.line == 0) {
@@ -6445,7 +6458,7 @@ index 10f98af..c1dc315 100644
                          dstCallTile.valid = false;
                          continue;
                      }
-@@ -270,13 +808,31 @@ namespace RT64 {
+@@ -270,13 +810,31 @@ namespace RT64 {
                      dstCallTile.reinterpretSiz = 0;
                      dstCallTile.reinterpretFmt = 0;
                      dstCallTile.tlut = rdp->otherMode.textLUT();
@@ -6478,7 +6491,7 @@ index 10f98af..c1dc315 100644
  
                      // Estimate sampling width and height based on masks ands tiles, whichever are smaller.
                      const bool clampS = (tile.masks == 0) || (tile.cms & G_TX_CLAMP);
-@@ -288,14 +844,302 @@ namespace RT64 {
+@@ -288,14 +846,302 @@ namespace RT64 {
                      dstCallTile.sampleWidth = static_cast<uint16_t>(std::min(tileWidth, maskWidth));
                      dstCallTile.sampleHeight = static_cast<uint16_t>(std::min(tileHeight, maskHeight));
  
@@ -6784,7 +6797,7 @@ index 10f98af..c1dc315 100644
                      dstRDPTile.address = int(tile.tmem) << 3;
                      dstRDPTile.palette = tile.palette;
                      dstRDPTile.masks = (tile.masks > 0) ? (1 << tile.masks) : 0;
-@@ -435,9 +1279,12 @@ namespace RT64 {
+@@ -435,9 +1281,12 @@ namespace RT64 {
      }
  
      void State::flush() {
@@ -6797,7 +6810,7 @@ index 10f98af..c1dc315 100644
  
          // Assign some parameters to the draw call.
          const int workloadCursor = ext.workloadQueue->writeCursor;
-@@ -522,6 +1369,12 @@ namespace RT64 {
+@@ -522,6 +1371,12 @@ namespace RT64 {
          if (!fbPair.drawColorRect.isEmpty()) {
              auto &colorImg = fbPair.colorImage;
              auto &depthImg = fbPair.depthImage;
@@ -6810,7 +6823,7 @@ index 10f98af..c1dc315 100644
              uint32_t colorHeight = fbPair.drawColorRect.bottom(true);
              uint32_t colorWriteWidth = (colorHeight > 1) ? colorImg.width : std::min(fbPair.drawColorRect.right(true), int32_t(colorImg.width));
              uint32_t depthWriteWidth = 0;
-@@ -574,6 +1427,7 @@ namespace RT64 {
+@@ -574,6 +1429,7 @@ namespace RT64 {
                  depthFb->lastWriteTimestamp = writeTimestamp;
                  framebufferManager.changeRAM(depthFb, depthFb->addressStart, depthFb->addressStart + depthFbBytes);
              }
@@ -6818,7 +6831,7 @@ index 10f98af..c1dc315 100644
          }
  
          // Store the process Id this framebuffer pair was submitted under.
-@@ -593,8 +1447,15 @@ namespace RT64 {
+@@ -593,8 +1449,15 @@ namespace RT64 {
              return;
          }
          
@@ -6836,7 +6849,7 @@ index 10f98af..c1dc315 100644
  
          const int workloadCursor = ext.workloadQueue->writeCursor;
          Workload &workload = ext.workloadQueue->workloads[workloadCursor];
-@@ -618,7 +1479,7 @@ namespace RT64 {
+@@ -618,7 +1481,7 @@ namespace RT64 {
              const auto &loadOp = workload.drawData.loadOperations[loadOpIndex];
  
              // For emulating how Rice hashes textures, we need information about the load operation that was performed in the particular TMEM address.
@@ -6845,7 +6858,7 @@ index 10f98af..c1dc315 100644
  
              switch (loadOp.type) {
              case LoadOperation::Type::Block:
-@@ -640,6 +1501,113 @@ namespace RT64 {
+@@ -640,6 +1503,113 @@ namespace RT64 {
              }
  
              if (!callTile.tileCopyUsed) {
@@ -6959,7 +6972,7 @@ index 10f98af..c1dc315 100644
                  if (callTile.tmemHashOrID != 0) {
                      textureManager.uploadEmpty(this, ext.textureCache, workload.submissionFrame, callTile.sampleWidth, callTile.sampleHeight, callTile.tmemHashOrID);
                  }
-@@ -649,6 +1617,118 @@ namespace RT64 {
+@@ -649,6 +1619,118 @@ namespace RT64 {
                  else {
                      callTile.tmemHashOrID = textureManager.uploadTexture(this, callTile.loadTile, ext.textureCache, workload.submissionFrame, callTile.sampleWidth, callTile.sampleHeight, callTile.tlut);
                  }
@@ -7078,7 +7091,7 @@ index 10f98af..c1dc315 100644
              }
              else if (callTile.reinterpretTile) {
                  struct ReinterpretHashData {
-@@ -762,8 +1842,65 @@ namespace RT64 {
+@@ -762,8 +1844,65 @@ namespace RT64 {
      }
  
      void State::fullSync() {
@@ -7146,7 +7159,7 @@ index 10f98af..c1dc315 100644
  
          // Append any framebuffer operations to the end of the last framebuffer pair.
          int workloadCursor = ext.workloadQueue->writeCursor;
-@@ -1092,6 +2229,7 @@ namespace RT64 {
+@@ -1092,6 +2231,7 @@ namespace RT64 {
              }
          }
  
@@ -7154,7 +7167,7 @@ index 10f98af..c1dc315 100644
          // Ensure there's as many GPU tiles as call tiles available in the vector.
          workload.drawData.gpuTiles.resize(workload.drawData.callTiles.size());
  
-@@ -1106,6 +2244,7 @@ namespace RT64 {
+@@ -1106,6 +2246,7 @@ namespace RT64 {
              { workload.drawData.worldTransforms.data(), workload.drawRanges.worldTransforms, sizeof(interop::float4x4), RenderBufferFlag::STORAGE, { }, &workload.drawBuffers.worldTransformsBuffer},
          });
  
@@ -7162,7 +7175,7 @@ index 10f98af..c1dc315 100644
          if (renderToRDRAM) {
              // Run RSP processor.
              RSPProcessor::ProcessParams rspParams;
-@@ -1126,7 +2265,8 @@ namespace RT64 {
+@@ -1126,7 +2267,8 @@ namespace RT64 {
  
          // Make sure pipelines for the ubershader have been created before rendering. This condition is executed regardless
          // of whether rendering to RAM is active so the workload queue is guaranteed to have the pipelines ready as well.
@@ -7172,7 +7185,7 @@ index 10f98af..c1dc315 100644
  
          if (renderToRDRAM) {
              const hlslpp::float2 resolutionScale(1.0f, 1.0f);
-@@ -1142,6 +2282,7 @@ namespace RT64 {
+@@ -1142,6 +2284,7 @@ namespace RT64 {
              uint32_t rtHeight = 0;
              uint32_t colorRowStart = 0;
              uint32_t colorRowEnd = 0;
@@ -7180,7 +7193,7 @@ index 10f98af..c1dc315 100644
              uint32_t depthRowStart = 0;
              uint32_t depthRowEnd = 0;
              auto getFramebufferPairs = [&](uint32_t f) {
-@@ -1149,8 +2290,24 @@ namespace RT64 {
+@@ -1149,8 +2292,24 @@ namespace RT64 {
                  if (!fbPair.drawColorRect.isEmpty()) {
                      const auto &colorImg = fbPair.colorImage;
                      const auto &depthImg = fbPair.depthImage;
@@ -7205,7 +7218,7 @@ index 10f98af..c1dc315 100644
                      depthWriteWidth = 0;
                      colorFb = &framebufferManager.get(colorImg.address, colorImg.siz, colorImg.width, colorHeight);
                      depthFb = nullptr;
-@@ -1165,6 +2322,8 @@ namespace RT64 {
+@@ -1165,6 +2324,8 @@ namespace RT64 {
  
                      colorRowStart = fbPair.drawColorRect.top(false);
                      colorRowEnd = fbPair.drawColorRect.bottom(true);
@@ -7214,7 +7227,7 @@ index 10f98af..c1dc315 100644
                      depthRowStart = 0;
                      depthRowEnd = 0;
                      if (depthWriteWidth > 0) {
-@@ -1282,7 +2441,7 @@ namespace RT64 {
+@@ -1282,7 +2443,7 @@ namespace RT64 {
                  }
  
                  // Synchronize all texture uploads before filling out the GPU tiles and update the texture cache on the framebuffer renderer.
@@ -7223,7 +7236,7 @@ index 10f98af..c1dc315 100644
                  framebufferRenderer->updateTextureCache(ext.textureCache);
  
                  thread_local std::vector<BufferUploader *> bufferUploaders;
-@@ -1357,12 +2516,36 @@ namespace RT64 {
+@@ -1357,12 +2518,36 @@ namespace RT64 {
                              uint32_t readRowCount = colorFb->height - colorFb->readHeight;
                              uint32_t readFbBytes = readRowBytes * readRowCount;
                              uint32_t storageAddress = colorImg.address + readRowBytes * colorFb->readHeight;
@@ -7265,7 +7278,7 @@ index 10f98af..c1dc315 100644
                              }
  
                              colorFb->readHeight = colorFb->height;
-@@ -1384,6 +2567,7 @@ namespace RT64 {
+@@ -1384,6 +2569,7 @@ namespace RT64 {
                                  RenderTarget &otherDepthTarget = renderTargetManager.get(otherDepthTargetKey);
                                  if (!otherDepthTarget.isEmpty()) {
                                      const FixedRect &r = depthFb->lastWriteRect;
@@ -7273,7 +7286,7 @@ index 10f98af..c1dc315 100644
                                      depthTarget->copyFromTarget(ext.framebufferGraphicsWorker, &otherDepthTarget, r.left(false), r.top(false), r.width(false, true), r.height(false, true), ext.shaderLibrary);
                                      depthFb->discardLastWrite();
                                      depthFormatUpdated = true;
-@@ -1401,14 +2585,31 @@ namespace RT64 {
+@@ -1401,14 +2587,32 @@ namespace RT64 {
                                  uint32_t readRowCount = depthFb->height - depthFb->readHeight;
                                  uint32_t readFbBytes = readRowBytes * readRowCount;
                                  uint32_t storageAddress = depthImg.address + readRowBytes * depthFb->readHeight;
@@ -7289,6 +7302,7 @@ index 10f98af..c1dc315 100644
 +                                    }
 +                                }
 +                                else {
++                                rs64FloorRdramLog("b", &RDRAM[storageAddress], storageAddress, readFbBytes, nullptr, 0);
                                  workload.fbStorage.store(pairCursor, storageAddress, &RDRAM[storageAddress], readFbBytes);
                                  FramebufferChange *depthFbChange = depthFb->readChangeFromStorage(ext.framebufferGraphicsWorker, workload.fbStorage, scratchFbChangePool, Framebuffer::Type::Depth,
                                      G_IM_FMT_DEPTH, pairCursor, depthFb->readHeight, readRowCount, ext.shaderLibrary);
@@ -7305,7 +7319,7 @@ index 10f98af..c1dc315 100644
  
                                  depthFb->readHeight = depthFb->height;
                              }
-@@ -1426,11 +2627,23 @@ namespace RT64 {
+@@ -1426,11 +2630,23 @@ namespace RT64 {
                              depthFb->lastWriteType = Framebuffer::Type::Depth;
                          }
  
@@ -7333,7 +7347,7 @@ index 10f98af..c1dc315 100644
                          }
                      }
  
-@@ -1441,9 +2654,9 @@ namespace RT64 {
+@@ -1441,9 +2657,9 @@ namespace RT64 {
                  }
  
                  ext.framebufferGraphicsWorker->commandList->end();
@@ -7345,7 +7359,7 @@ index 10f98af..c1dc315 100644
  
                  pairCursor = framebufferPairCursor;
                  while (pairCursor < maxFramebufferPair) {
-@@ -1461,12 +2674,120 @@ namespace RT64 {
+@@ -1461,12 +2677,120 @@ namespace RT64 {
                          // RT64 sees the real fb address; until then this
                          // 1MB gate is safe (real N64 framebuffers are always
                          // at >=0x80100000) and unblocks Factor 5 boot.
@@ -7469,7 +7483,7 @@ index 10f98af..c1dc315 100644
                          }
                      }
  
-@@ -1527,6 +2848,7 @@ namespace RT64 {
+@@ -1527,6 +2851,7 @@ namespace RT64 {
  
              // Perform any preliminar setup before processing the framebuffer pairs.
              renderSetup();
@@ -7477,7 +7491,7 @@ index 10f98af..c1dc315 100644
  
              // Start loading tiles, sampling tiles and drawing the framebuffer pairs as required.
              for (uint32_t f = 0; f < workload.fbPairCount; f++) {
-@@ -1540,15 +2862,21 @@ namespace RT64 {
+@@ -1540,15 +2865,21 @@ namespace RT64 {
                  }
  
                  if (fbPair.syncRequired) {
@@ -7501,7 +7515,7 @@ index 10f98af..c1dc315 100644
          }
          else {
              // Process all tiles.
-@@ -1565,18 +2893,20 @@ namespace RT64 {
+@@ -1565,18 +2896,20 @@ namespace RT64 {
              ext.drawDataUploader->commandListAfterBarriers(ext.framebufferGraphicsWorker);
              ext.transformsUploader->commandListAfterBarriers(ext.framebufferGraphicsWorker);
              ext.framebufferGraphicsWorker->commandList->end();
@@ -7524,7 +7538,7 @@ index 10f98af..c1dc315 100644
  
          if (renderToRDRAM) {
              // Indicate to the texture cache it's safe to delete the textures if no locks are active.
-@@ -1589,6 +2919,7 @@ namespace RT64 {
+@@ -1589,6 +2922,7 @@ namespace RT64 {
              // Indicate the next time a display list is parsed, RDRAM should be checked.
              rdramCheckPending = true;
          }
@@ -7532,7 +7546,7 @@ index 10f98af..c1dc315 100644
  
  #   if SCRIPT_ENABLED
          // Notify the current script the frame is about to end and should be processed.
-@@ -1597,6 +2928,7 @@ namespace RT64 {
+@@ -1597,6 +2931,7 @@ namespace RT64 {
              workload.pointLights = scriptLights;
          }
  #   endif
@@ -7540,7 +7554,7 @@ index 10f98af..c1dc315 100644
  
          // Store the presentation rate in the workload.
          if (extended.refreshRate != UINT16_MAX) {
-@@ -1622,6 +2954,7 @@ namespace RT64 {
+@@ -1622,6 +2957,7 @@ namespace RT64 {
              inspect();
          }
  
@@ -7548,7 +7562,7 @@ index 10f98af..c1dc315 100644
          // Add any lights to the workload from the presets that are activated.
          for (const auto &it : lightsLibrary.presetMap) {
              if (!it.second.enabled) {
-@@ -1761,9 +3094,11 @@ namespace RT64 {
+@@ -1761,9 +3097,11 @@ namespace RT64 {
              }
          }
          
@@ -7560,7 +7574,7 @@ index 10f98af..c1dc315 100644
  
          // Make sure the profiler starts after the workload is advanced to ignore any waiting time.
          dlCpuProfiler.reset();
-@@ -1837,7 +3172,7 @@ namespace RT64 {
+@@ -1837,7 +3175,7 @@ namespace RT64 {
                                  colorImg.address, colorImg.width, (unsigned)colorImg.siz, h);
                              std::fflush(stderr);
                          }
@@ -7569,7 +7583,7 @@ index 10f98af..c1dc315 100644
                          viPresented = true;
                      }
                      else if (s_rs64_log_pe) {
-@@ -1873,7 +3208,27 @@ namespace RT64 {
+@@ -1873,7 +3211,27 @@ namespace RT64 {
          clearExtended();
      }
      
@@ -7597,7 +7611,7 @@ index 10f98af..c1dc315 100644
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
              if (ext.userConfig->developerMode) {
-@@ -1899,6 +3254,132 @@ namespace RT64 {
+@@ -1899,6 +3257,132 @@ namespace RT64 {
              }
          }
          
@@ -7730,7 +7744,7 @@ index 10f98af..c1dc315 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1915,6 +3396,22 @@ namespace RT64 {
+@@ -1915,6 +3399,22 @@ namespace RT64 {
              viDifferent = (newVI != lastScreenVI);
              lastScreenVI = newVI;
  
@@ -7753,7 +7767,7 @@ index 10f98af..c1dc315 100644
              // Diagnostic (ROGUESQ_LOG_PRESENT_EARLY=1) — track why viHistory stays empty.
              // We reuse the same env flag the present-early matcher uses.
              static const bool s_us_log_pe = [](){
-@@ -1959,12 +3456,25 @@ namespace RT64 {
+@@ -1959,12 +3459,25 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -7781,7 +7795,7 @@ index 10f98af..c1dc315 100644
          screenCpuProfiler.start();
          bool fbChangesMade = false;
          bool screenChangesMade = false;
-@@ -1972,7 +3482,11 @@ namespace RT64 {
+@@ -1972,7 +3485,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -7794,7 +7808,7 @@ index 10f98af..c1dc315 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -1989,6 +3503,7 @@ namespace RT64 {
+@@ -1989,6 +3506,7 @@ namespace RT64 {
                      uint64_t currentHash = XXH3_64bits(fbRAM, screenFb->RAMBytes);
                      if (currentHash != screenFb->RAMHash) {
                          {
@@ -7802,7 +7816,7 @@ index 10f98af..c1dc315 100644
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
                              const std::scoped_lock lock(ext.presentQueue->screenFbChangePoolMutex);
-@@ -2018,9 +3533,110 @@ namespace RT64 {
+@@ -2018,9 +3536,110 @@ namespace RT64 {
              // Store the RAM required by the VI so the render thread can display it if necessary.
              if (screenFbSiz >= G_IM_SIZ_16b) {
                  uint32_t screenFbBytes = uint32_t(screenFbSize.x * screenFbSize.y) << (screenFbSiz - 1);
@@ -7916,7 +7930,7 @@ index 10f98af..c1dc315 100644
                  screenChangesMade = (newScreenHash != lastScreenHash);
                  lastScreenHash = newScreenHash;
              }
-@@ -2033,26 +3649,51 @@ namespace RT64 {
+@@ -2033,26 +3652,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -7986,7 +8000,7 @@ index 10f98af..c1dc315 100644
              }
          }
  
-@@ -2060,6 +3701,7 @@ namespace RT64 {
+@@ -2060,6 +3704,7 @@ namespace RT64 {
          if (fromEarlyPresent || viDifferent || fbChangesMade || screenChangesMade || forceAdvance) {
              // Push a new renderer event to the timeline for presenting this VI.
              present.screenVI = newVI;
@@ -7994,7 +8008,7 @@ index 10f98af..c1dc315 100644
              advancePresent(present, false);
              ext.presentQueue->advanceToNextPresent();
  
-@@ -2910,4 +4552,4 @@ namespace RT64 {
+@@ -2910,4 +4555,4 @@ namespace RT64 {
              break;
          }
      }
@@ -8314,7 +8328,7 @@ index 69a82ac..6e82095 100644
  
              if (device != nullptr) {
 diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
-index b9cb1f5..52ef047 100644
+index b9cb1f5..6ce6057 100644
 --- a/src/render/rt64_framebuffer_renderer.cpp
 +++ b/src/render/rt64_framebuffer_renderer.cpp
 @@ -8,6 +8,9 @@
@@ -8488,7 +8502,7 @@ index b9cb1f5..52ef047 100644
          descCommonSet->setBuffer(descCommonSet->FrParams, frameParamsBuffer.get(), sizeof(interop::FrameParams));
          descCommonSet->setBuffer(descCommonSet->instanceRenderIndices, renderIndicesBuffer.get(), RenderBufferStructuredView(sizeof(interop::RenderIndices)));
          descCommonSet->setBuffer(descCommonSet->instanceRDPParams, drawBuffers->rdpParamsBuffer.get(), RenderBufferStructuredView(sizeof(interop::RDPParams)));
-@@ -470,7 +578,757 @@ namespace RT64 {
+@@ -470,7 +578,957 @@ namespace RT64 {
          return true;
      }
      
@@ -8725,10 +8739,85 @@ index b9cb1f5..52ef047 100644
 +    struct CopyRamLog {
 +        std::mutex mu;
 +        FILE *fp = nullptr;
++        FILE *rd = nullptr;
 +        uint64_t seq = 0;
 +        uint64_t bySiz[8] = {};
 +        int opened = 0;
++        int rdOpened = 0;
 +    };
++
++    struct RdramHold {
++        int copied = 0;
++        uint64_t n = 0;
++    };
++
++    thread_local RdramHold g_rdramHold;
++
++    static constexpr uint32_t kRdramWatch = 0x00BB0020u;
++    static constexpr uint32_t kDepthOrigin = 0x00B56000u;
++    static constexpr uint32_t kDepthStride = 2048u;
++    static const uint32_t kRdramYs[14] = {
++        180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 200
++    };
++    static const uint32_t kRdramXs[2] = {16u, 1007u};
++
++    static bool rdramWatchInside(uint32_t phys0, uint32_t nbytes) {
++        if (nbytes < 4u || phys0 > kRdramWatch) {
++            return false;
++        }
++        const uint64_t end = uint64_t(phys0) + nbytes;
++        return uint64_t(kRdramWatch) + 4u <= end;
++    }
++
++    static int rdramColInside(uint32_t phys0, uint32_t nbytes, uint32_t abs) {
++        if (nbytes < 2u || abs < phys0) {
++            return 0;
++        }
++        return uint64_t(abs) - phys0 + 2u <= nbytes;
++    }
++
++    // pre-swap readback: 16-bit swap. RDRAM: undo the 32-bit byteswap first,
++    // then the same 16-bit swap, so a faithful writeback matches native.
++    static int rdramSample(const uint8_t *buf, uint32_t phys0, uint32_t nbytes, uint32_t abs, int rdramOrder, uint16_t *out) {
++        if (buf == nullptr || abs < phys0) {
++            return 0;
++        }
++        const uint64_t rel64 = uint64_t(abs) - phys0;
++        if (rel64 + 2u > nbytes) {
++            return 0;
++        }
++        const uint32_t rel = (uint32_t)rel64;
++        if (!rdramOrder) {
++            *out = rs64DepthRawBe(buf, rel);
++            return 1;
++        }
++        const uint32_t word = rel & ~3u;
++        if (uint64_t(word) + 4u > nbytes) {
++            return 0;
++        }
++        uint32_t w = 0;
++        std::memcpy(&w, buf + word, 4);
++        w = __builtin_bswap32(w);
++        uint8_t tmp[4];
++        std::memcpy(tmp, &w, 4);
++        *out = rs64DepthRawBe(tmp, rel & 3u);
++        return 1;
++    }
++
++    static void rdramFillCols(const uint8_t *buf, uint32_t phys0, uint32_t nbytes, int rdramOrder, uint16_t *cols, uint8_t *inside) {
++        for (uint32_t xi = 0; xi < 2u; xi++) {
++            for (uint32_t yi = 0; yi < 14u; yi++) {
++                const uint32_t slot = xi * 14u + yi;
++                const uint32_t abs = kDepthOrigin + kRdramYs[yi] * kDepthStride + kRdramXs[xi] * 2u;
++                uint16_t raw = 0;
++                const int ok = rdramSample(buf, phys0, nbytes, abs, rdramOrder, &raw);
++                if (inside != nullptr) {
++                    inside[slot] = ok ? 1u : 0u;
++                }
++                cols[slot] = ok ? raw : 0u;
++            }
++        }
++    }
 +
 +    CopyRamLog &copyRamLog() {
 +        static CopyRamLog log;
@@ -8759,6 +8848,24 @@ index b9cb1f5..52ef047 100644
 +            std::fflush(stderr);
 +        }
 +        return log.fp != nullptr;
++    }
++
++    bool rdramOpen(CopyRamLog &log) {
++        if (log.rd != nullptr) {
++            return true;
++        }
++        if (!depthDirOn() || g_depthDir == nullptr) {
++            return false;
++        }
++        char path[1024];
++        std::snprintf(path, sizeof(path), "%s/rdram.jsonl", g_depthDir);
++        log.rd = std::fopen(path, "wb");
++        if (!log.rdOpened) {
++            log.rdOpened = 1;
++            std::fprintf(stderr, "[rdram] open %s ok=%d\n", path, log.rd != nullptr);
++            std::fflush(stderr);
++        }
++        return log.rd != nullptr;
 +    }
 +    }
 +
@@ -8802,6 +8909,8 @@ index b9cb1f5..52ef047 100644
 +        const uint32_t bucket = siz < 8u ? siz : 7u;
 +        log.bySiz[bucket]++;
 +        const uint64_t n = ++log.seq;
++        g_rdramHold.n = n;
++        g_rdramHold.copied = (native != nullptr && nativeBytes >= 2u) ? 1 : 0;
 +        if (!copyRamOpen(log)) {
 +            return;
 +        }
@@ -8885,6 +8994,111 @@ index b9cb1f5..52ef047 100644
 +            "\"bytes\":%u,\"copied\":%d,\"calls\":%s,\"words\":[%s]}\n",
 +            (unsigned long long)n, siz, width, phys, rowStart, rowEnd, nativeBytes, copied, counts, words.c_str());
 +        std::fflush(log.fp);
++    }
++
++    void rs64FloorRdramPrepare(const uint8_t *nativeBytes, uint32_t phys0, uint32_t nbytes, Rs64RdramSnap *snap) {
++        std::memset(snap, 0, sizeof(*snap));
++        if (!depthDirOn() || !rdramWatchInside(phys0, nbytes)) {
++            return;
++        }
++        snap->present = 1;
++        snap->witnessN = g_rdramHold.n;
++        for (uint32_t xi = 0; xi < 2u; xi++) {
++            for (uint32_t yi = 0; yi < 14u; yi++) {
++                const uint32_t slot = xi * 14u + yi;
++                const uint32_t abs = kDepthOrigin + kRdramYs[yi] * kDepthStride + kRdramXs[xi] * 2u;
++                snap->colIn[slot] = (uint8_t)rdramColInside(phys0, nbytes, abs);
++            }
++        }
++        if (!g_rdramHold.copied || nativeBytes == nullptr) {
++            return;
++        }
++        uint16_t raw = 0;
++        if (rdramSample(nativeBytes, phys0, nbytes, kRdramWatch, 0, &raw)) {
++            snap->nativeValid = 1;
++            snap->nativeWatch = raw;
++            rdramFillCols(nativeBytes, phys0, nbytes, 0, snap->nativeCol, nullptr);
++        }
++    }
++
++    void rs64FloorRdramNoteSwap(const uint8_t *swapped, uint32_t phys0, uint32_t nbytes, Rs64RdramSnap *snap) {
++        if (snap == nullptr || !snap->present || swapped == nullptr) {
++            return;
++        }
++        uint16_t raw = 0;
++        if (!rdramSample(swapped, phys0, nbytes, kRdramWatch, 1, &raw)) {
++            return;
++        }
++        snap->swapValid = 1;
++        snap->swapWatch = raw;
++        rdramFillCols(swapped, phys0, nbytes, 1, snap->swapCol, nullptr);
++    }
++
++    void rs64FloorRdramLog(const char *site, const uint8_t *buf, uint32_t phys0, uint32_t nbytes, const Rs64RdramSnap *snap, int flRestore) {
++        if (!depthDirOn() || buf == nullptr || !rdramWatchInside(phys0, nbytes)) {
++            return;
++        }
++        if (snap != nullptr && !snap->present) {
++            return;
++        }
++        CopyRamLog &log = copyRamLog();
++        std::lock_guard<std::mutex> lock(log.mu);
++        if (!rdramOpen(log)) {
++            return;
++        }
++        const uint64_t n = ++log.seq;
++        const uint32_t rel = kRdramWatch - phys0;
++        const uintptr_t host = reinterpret_cast<uintptr_t>(buf) + rel;
++        const uintptr_t rdram = reinterpret_cast<uintptr_t>(g_recomp_rdram_for_wp_raw);
++        const int eq = (rdram != 0 && host == rdram + kRdramWatch) ? 1 : 0;
++        const unsigned b0 = buf[rel];
++        const unsigned b1 = buf[rel + 1];
++        const unsigned b2 = buf[rel + 2];
++        const unsigned b3 = buf[rel + 3];
++        uint16_t rawWatch = 0;
++        rdramSample(buf, phys0, nbytes, kRdramWatch, 1, &rawWatch);
++        uint16_t rawCol[28] = {};
++        rdramFillCols(buf, phys0, nbytes, 1, rawCol, nullptr);
++        const int nativeValid = snap != nullptr && snap->nativeValid;
++        const int swapValid = snap != nullptr && snap->swapValid;
++        const int nativeWatch = nativeValid ? (int)snap->nativeWatch : -1;
++        const int swapWatch = swapValid ? (int)snap->swapWatch : -1;
++        std::string cols;
++        cols.reserve(28u * 96u);
++        for (uint32_t xi = 0; xi < 2u; xi++) {
++            for (uint32_t yi = 0; yi < 14u; yi++) {
++                const uint32_t slot = xi * 14u + yi;
++                const uint32_t abs = kDepthOrigin + kRdramYs[yi] * kDepthStride + kRdramXs[xi] * 2u;
++                const int inside = snap != nullptr ? (int)snap->colIn[slot] : rdramColInside(phys0, nbytes, abs);
++                const int native = (nativeValid && inside) ? (int)snap->nativeCol[slot] : -1;
++                const int sw = (swapValid && inside) ? (int)snap->swapCol[slot] : -1;
++                const int raw = inside ? (int)rawCol[slot] : -1;
++                if (!cols.empty()) {
++                    cols += ',';
++                }
++                cols += "{\"x\":" + std::to_string(kRdramXs[xi]) + ",\"y\":" + std::to_string(kRdramYs[yi])
++                    + ",\"in\":" + std::to_string(inside) + ",\"native\":" + std::to_string(native)
++                    + ",\"swap\":" + std::to_string(sw) + ",\"raw\":" + std::to_string(raw) + "}";
++            }
++        }
++        std::fprintf(log.rd,
++            "{\"k\":\"%s\",\"n\":%llu,\"wn\":%llu,\"phys0\":%u,\"nbytes\":%u,"
++            "\"host\":\"0x%llx\",\"rdram\":\"0x%llx\",\"eq\":%d,\"b4\":\"%02X%02X%02X%02X\","
++            "\"native\":%d,\"swap\":%d,\"raw\":%u,\"fl\":%d,\"cols\":[%s]}\n",
++            site != nullptr ? site : "", (unsigned long long)n,
++            (unsigned long long)(snap != nullptr ? snap->witnessN : 0u),
++            phys0, nbytes, (unsigned long long)host, (unsigned long long)rdram, eq,
++            b0, b1, b2, b3, nativeWatch, swapWatch, rawWatch, flRestore, cols.c_str());
++        std::fflush(log.rd);
++        static int seenA = 0;
++        static int seenB = 0;
++        int *seen = (site != nullptr && site[0] == 'b') ? &seenB : &seenA;
++        const int shown = ++*seen;
++        if (shown <= 2) {
++            std::fprintf(stderr, "[rdram] site=%s n=%llu eq=%d native=%d swap=%d raw=%u fl=%d\n",
++                site != nullptr ? site : "", (unsigned long long)n, eq, nativeWatch, swapWatch, rawWatch, flRestore);
++            std::fflush(stderr);
++        }
 +    }
 +
 +    void rs64DepthHistCaptureGuest(const char *site, const uint8_t *swapped, uint32_t swappedBytes, uint32_t width, uint32_t rowCount, uint32_t rowStart, uint32_t storeStride, uint32_t storeAddr, uint32_t lookupAddr) {
@@ -9246,7 +9460,7 @@ index b9cb1f5..52ef047 100644
          InstanceDrawCall::Type previousCallType = InstanceDrawCall::Type::Unknown;
          bool previousVertexTestZ = false;
          const RenderPipeline *previousPipeline = nullptr;
-@@ -543,6 +1401,135 @@ namespace RT64 {
+@@ -543,6 +1601,135 @@ namespace RT64 {
              }
          }
  
@@ -9382,7 +9596,7 @@ index b9cb1f5..52ef047 100644
          for (uint32_t i : rasterScene.instanceIndices) {
              const InstanceDrawCall &drawCall = instanceDrawCallVector[i];
  
-@@ -573,9 +1560,16 @@ namespace RT64 {
+@@ -573,9 +1760,16 @@ namespace RT64 {
                      int nt = ++n_total;
                      if (nf == 1 || (nf % 50) == 0 || nt <= 5) {
                          const uint32_t lo = (uint32_t)(drawCall.triangles.shaderDesc.colorCombiner.L);
@@ -9401,7 +9615,7 @@ index b9cb1f5..52ef047 100644
                          std::fflush(stderr);
                      }
                  }
-@@ -585,6 +1579,53 @@ namespace RT64 {
+@@ -585,6 +1779,53 @@ namespace RT64 {
              case InstanceDrawCall::Type::IndexedTriangles:
              case InstanceDrawCall::Type::RawTriangles:
              case InstanceDrawCall::Type::RegularRect: {
@@ -9455,7 +9669,7 @@ index b9cb1f5..52ef047 100644
                  // ROGUESQ: skip draws with null colorTarget instead of
                  // asserting. Some workloads route instances through a
                  // rasterScene whose fbStorage has no allocated colorTarget
-@@ -657,6 +1698,45 @@ namespace RT64 {
+@@ -657,6 +1898,45 @@ namespace RT64 {
                      continue;
                  }
  
@@ -9501,7 +9715,7 @@ index b9cb1f5..52ef047 100644
                  // A new pass must be started if decals are required and something wrote to the depth buffer before this call.
                  const interop::OtherMode otherMode = triangles.shaderDesc.otherMode;
                  bool depthDecal = (otherMode.zMode() == ZMODE_DEC);
-@@ -668,9 +1748,9 @@ namespace RT64 {
+@@ -668,9 +1948,9 @@ namespace RT64 {
                      switchToDepthWrite();
                  }
  
@@ -9514,7 +9728,7 @@ index b9cb1f5..52ef047 100644
                  }
  
                  if (previousPipeline != triangles.pipeline) {
-@@ -679,25 +1759,67 @@ namespace RT64 {
+@@ -679,25 +1959,67 @@ namespace RT64 {
                  }
                  
                  rasterParams.renderIndex = i;
@@ -9584,7 +9798,7 @@ index b9cb1f5..52ef047 100644
                      previousPipeline = nullptr;
                  }
  
-@@ -735,13 +1857,70 @@ namespace RT64 {
+@@ -735,13 +2057,70 @@ namespace RT64 {
                      break;
                  }
  
@@ -9655,7 +9869,7 @@ index b9cb1f5..52ef047 100644
                  }
  
                  break;
-@@ -773,6 +1952,158 @@ namespace RT64 {
+@@ -773,6 +2152,158 @@ namespace RT64 {
              }
          }
  
@@ -9814,7 +10028,7 @@ index b9cb1f5..52ef047 100644
          // Mark targets for resolve.
          if (fbStorage->colorTarget != nullptr) {
              fbStorage->colorTarget->markForResolve();
-@@ -1462,6 +2793,15 @@ namespace RT64 {
+@@ -1462,6 +2993,15 @@ namespace RT64 {
          fbParams.horizontalMisalignment = p.horizontalMisalignment;
          framebufferCount++;
  
@@ -9830,7 +10044,7 @@ index b9cb1f5..52ef047 100644
          while (framebufferCount > framebufferVector.size()) {
              framebufferVector.emplace_back();
              framebufferVector.back().paramsBuffer = p.worker->device->createBuffer(RenderBufferDesc::UploadBuffer(256, RenderBufferFlag::CONSTANT));
-@@ -1470,6 +2810,8 @@ namespace RT64 {
+@@ -1470,6 +3010,8 @@ namespace RT64 {
          }
  
          Framebuffer &framebuffer = framebufferVector[framebufferCount - 1];
@@ -10306,10 +10520,10 @@ index 81917bc..7cb5eff 100644
 \ No newline at end of file
 +};
 diff --git a/src/render/rt64_render_target.h b/src/render/rt64_render_target.h
-index 82d8a36..aa0d278 100644
+index 82d8a36..4630ae4 100644
 --- a/src/render/rt64_render_target.h
 +++ b/src/render/rt64_render_target.h
-@@ -75,4 +75,18 @@ namespace RT64 {
+@@ -75,4 +75,35 @@ namespace RT64 {
          static RenderFormat colorBufferFormat(bool usesHDR);
          static RenderFormat depthBufferFormat();
      };
@@ -10327,6 +10541,23 @@ index 82d8a36..aa0d278 100644
 +    // Every copyToRAM while ROGUESQ_FLOOR_DEPTH_DIR is set. native is the
 +    // pre-RDRAM-swap readback, the same byte order as nativeSwappedRAM.
 +    void rs64FloorCopyToRamWitness(uint32_t rowStart, uint32_t rowEnd, uint32_t width, uint8_t siz, uint8_t *destination, const uint8_t *native, uint32_t nativeBytes);
++    // Live bytes at phys 0x00BB0020. native fields are the pre-swap readback
++    // (16-bit swap). swap/raw fields are RDRAM order: 32-bit byteswap, then
++    // that same 16-bit swap. snap is null for the upload's fbStorage.store.
++    struct Rs64RdramSnap {
++        int present;
++        int nativeValid;
++        int swapValid;
++        uint64_t witnessN;
++        uint16_t nativeWatch;
++        uint16_t swapWatch;
++        uint16_t nativeCol[28];
++        uint16_t swapCol[28];
++        uint8_t colIn[28];
++    };
++    void rs64FloorRdramPrepare(const uint8_t *nativeBytes, uint32_t phys0, uint32_t nbytes, Rs64RdramSnap *snap);
++    void rs64FloorRdramNoteSwap(const uint8_t *swapped, uint32_t phys0, uint32_t nbytes, Rs64RdramSnap *snap);
++    void rs64FloorRdramLog(const char *site, const uint8_t *buf, uint32_t phys0, uint32_t nbytes, const Rs64RdramSnap *snap, int flRestore);
  };
 \ No newline at end of file
 diff --git a/src/render/rt64_texture_cache.cpp b/src/render/rt64_texture_cache.cpp

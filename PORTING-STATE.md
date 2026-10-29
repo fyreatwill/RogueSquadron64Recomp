@@ -172426,3 +172426,60 @@ change.
   Runner: tools/g1d_floor_depth.py.
 Next unit: read the live RDRAM bytes at 0x00BB0020 after the byteswap and
 at the depth store, and split H-swap / H-alias / H-between.
+
+
+## Session 6628 (2026-10-29) — live depth bytes zero between writeback and upload
+
+HYPOTHESIS-ID: g1d-levelselect-ram
+Outcome: ADVANCED. Paired live-RDRAM witnesses select H-between, with no
+control failures. This is single-source runtime evidence; the writer is
+still unknown. No rendering fix, guard, or default change.
+
+- Read CURRENT-TRUTH, NEXT and the soak tail in order. CURRENT-TRUTH was
+  58,182 bytes, below the maintenance threshold. The soak tail still ends
+  at s6580; those results are already in the handoff. The workspace already
+  contained uncommitted s6628 diagnostic implementation and an older output
+  root. Reviewed that implementation and ran the complete work unit anew;
+  final s6628_rdram artifacts below belong to this run.
+- Ground-truth check: consulted F5-UCODE-REFERENCE and the oracle README.
+  This target is opt-in RAM above retail's 8 MB, so a retail address watch
+  cannot independently witness this host writeback/upload mapping. Do not
+  promote the exact writer to a fact without its store/copy attribution.
+- One Debug binary, built with the Xcode DEVELOPER_DIR. The existing
+  ROGUESQ_FLOOR_DEPTH_DIR now also writes rdram.jsonl. Site A reads after
+  byteswapping and at the end of copyNativeToRAM (after freelist restore);
+  site B reads the source just before the depth fbStorage.store. Records
+  include host address, runtime base equality, four bytes, both columns
+  y=180..192/200, native and swapped words, and shared copytoram sequence.
+  Native snapshot and swap snapshot are retained separately, so an internal
+  writer is distinguishable from a later one. All probes are env-gated.
+  Catalogued the flag; exported lib patches. Only rt64.patch changed.
+- tools/g1d_floor_depth.py --selftest and g1d_floor_attachment.py --selftest
+  passed. The classifier tests swap, post-swap overwrite, alias, between,
+  after-store, missing sites, and mismatched-native rejection. Full Debug
+  target built successfully. The runner checked screen unlock before each
+  arm, phase-gated the route, ran one game at a time, then used SIGKILL.
+- Current run: 16:9 35.0 s / 21:9 33.5 s; 54/55 qualifying frames; both
+  alive at stop, 0 crash markers. Magenta, pixel match, alpha/fill controls
+  pass. 16:9 floor-enter is all 1.0 and a later sample stores depth in
+  0.990..0.998. Edge row steps 5.15/5.71 versus 42.04/51.55 confirm the
+  intended width-dependent defect is still present, not an animation A/B.
+- 21:9 site counts A=1447, B=1 (16:9 A=1561, B=0; no depth upload there).
+  Last covering copyToRAM n=3499: 1024x447 at physical 0x00B20000,
+  rows 0..447. At watch physical 0x00BB0020, native rawBe=0x9EC4.
+  Site A n=3500: native=swap=exit=0x9EC4, actual four bytes CC9EC49E,
+  fl=0. Site B n=3501: rawBe=0, bytes 00000000, left head 13 zeros.
+  Both target host pointers are exactly 0x300bb0020, runtime RDRAM base
+  0x300000000, eq=1. Thus neither byteswap nor a mapping alias creates the
+  zero in this measurement. Native color values vary with scene animation;
+  the prior run's 0x9F4C is not an exact-value control across runs.
+- Upload n=3502 stays H-guest: site state.cpp:2604, stride 2048,
+  guest/store 0x00B56000, rowStart 0, 142 guest/GPU samples, MAE 0.
+  Classifier selects H-between, why=[], prior native classifier stays
+  H-later-zero. The same bytes are overwritten between A and B. This does
+  not identify guest stores versus host bulk writes and justifies no skip.
+- Evidence: scratch/agent/s6628_rdram/depth_verdict.json and each arm's
+  summary.json, depth/rdram.jsonl, depth/copytoram.jsonl and history captures.
+  Next: one complete writer table covering generated stores and host bulk
+  writes, with both classes positively controlled, to name the actual writer
+  and the legitimacy of its range. No repeated-soak recipe was queued.
