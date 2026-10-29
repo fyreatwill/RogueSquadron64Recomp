@@ -1,45 +1,55 @@
-# NEXT: offline sunset cut for the level-4 flight
+# NEXT: level-5 flight capture under the frozen class rule
 HYPOTHESIS-ID: g1-coverage-cd
 
-s6635 selected H-new-class. The level-4 sheet is a flight and the frozen
-rule rejects 7/7. Do not recapture. Do not launch the game. Do not edit
-the heap or any default. No aim or steer work. No queued soak.
+s6636 closed the level-4 sunset offline. The rule in
+tools/g1_flight_class.py now accepts a bright orange sky (luma >= 140,
+R >= G+40, R >= B+20) and a dark hull against a bright chase band
+(median >= 120, fraction >= 0.06 at least 50 below that median).
+canon_bad stayed 0. Six of seven s6635 phase-7 frames pass. n=2300
+stays a terrain near-miss at rel 0.065. Do not edit the classifier
+in this session. Do not lower 0.08. No heap edit, no aim, no
+draw-distance, no aspect, no default change. No objective (d).
 
-The binding miss is sky. On y 0.02-0.18 the phase-7 frames are about
-R 215, G 155, B 120, luma 160, dark 0.01, R-G 48..67. The clause is
-dark>=0.60 or (luma>=70 and R<=G+15). Oracle uses the second arm
-(R-G about -64). Level 3 uses the first (dark 0.93). A third arm has
-to accept this orange sky. The same-run title sky is milder and must
-not become the thing that flips the canon: R 102, G 73, B 67, luma 80.5,
-R-G 29, dark 0.299, and it already fails terrain (rel 0.431).
-
-Craft is the second miss on 5/7. Pink in the center box is 0.13..0.53
-because that box is the sunset, above the 0.05 engine cap. n=2350 and
-n=2400 already pass craft on the metal hull (0.359 and 0.316). n=2300
-also misses terrain at rel 0.065; the other six pass terrain. Do not
-lower 0.08 unless the floor (rel 0.709) and the title (rel 0.410) still
-fail. Prefer leaving n=2300 as a recorded near-miss.
-
-Precontrol, before any edit. It must print canon_bad 0:
+Precontrol, before any launch. It must print canon_bad 0:
 
     python3 tools/g1_flight_class.py
 
-Edit only tools/g1_flight_class.py. Then both of these must hold:
+If the screen is locked, stop and write BLOCKED with NEEDS-HUMAN:
+physical. Check both of these; either Yes/true means locked:
 
-    python3 tools/g1_flight_class.py
-    python3 tools/g1_flight_class.py scratch/agent/s6635_lvl4/fbd/fb_0002{300,350,400,450,500,550,600}_w512.ppm scratch/agent/s6635_lvl4/fbd/fb_0000800_w512.ppm scratch/agent/s6635_lvl4/fbd/fb_0001700_w512.ppm
+    ioreg -n Root -d1 | grep IOConsoleLocked
+    ioreg -n Root -d1 -a | grep -A1 CGSSessionScreenIsLocked
 
-H-sunset-cut: canon_bad stays 0, and every phase-7 frame except possibly
-n=2300 passes. The title and the hangar craft-select still fail overall.
-That closes level 4 (c) under the new rule. The next capture is level 5
-with that rule frozen.
-H-canon-moves: the only predicates that accept the sunset also make the
-five-file table print canon_bad above 0, or make fb_0000800 or
-fb_0001700 pass. Revert the edit. Level 4 (c) stays a picture only.
-H-dumps-missing: the s6635 ppm files are gone. Stop. Do not recapture
-in the same session; say so in the ledger.
+Adapt scratch/agent/s6635_lvl4.sh into scratch/agent/s6637_lvl5.sh.
+Change the output directory, and set ROGUESQ_FORCE_UNLOCK=5 and
+ROGUESQ_FORCE_SAVE_MISSION=5. Delete the inline Python classifier
+in that script. Its precontrol is the command above, and a non-zero
+exit must abort before the game starts. Keep the retail 4:3 route:
+menu start/z schedule, no stick, SIGKILL 30 s after the first
+post-hangar origin 0x690400, dumps every 50 VIs. Run from build/
+with the ROM beside the binary. Kill with SIGKILL only.
 
-DISCRIMINATOR: canon_bad plus the seven phase-7 lines and the two
-same-run negatives. Do not add a fourth scene to the canon table in
-this session. Read the existing sheet docs/g1_lvl4_flight_s6635.png
-before deciding a frame is not a flight.
+One game run. Then:
+
+    python3 tools/g1_flight_class.py <phase-7 ppm paths> <one title ppm> <one hangar ppm>
+
+Read the contact sheet before calling a frame a flight. Build it
+from four post-hangar dumps the way docs/g1_lvl4_flight_s6635.png
+was built, and write it to docs/g1_lvl5_flight_s6637.png.
+
+H-rule-holds: the post-hangar frames that show sky, terrain, craft
+and HUD pass, and the same-run title and hangar dumps fail overall.
+Level 5 (c) closes. The next capture is level 6 with the rule
+still frozen.
+H-new-class: the sheet is a flight and the frozen rule rejects it.
+Record which clause misses and the measured numbers. Do not edit
+tools/g1_flight_class.py in this session.
+H-no-picture: the post-hangar dumps are a menu, a hangar, or a
+black frame. Say which origin they carry. Do not retune the rule.
+H-screen-locked or H-route-miss: no phase-7 flight dumps. Do not
+invent a score. One retry is allowed only if the first run died
+before the hangar and the screen was unlocked.
+
+DISCRIMINATOR: the frozen tool's pass/fail lines on the phase-7
+dumps plus the two same-run negatives, joined to the sheet. Do not
+add a file to the five-file canon table in this session.

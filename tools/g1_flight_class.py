@@ -1,9 +1,10 @@
-"""Flight framebuffer class rule (s6632 sky/HUD, s6634 night terrain and craft).
+"""Flight framebuffer class rule (s6632 sky/HUD, s6634 night, s6636 sunset).
 
 Sky and the radar HUD are the bright-scene cuts from s6632. Terrain replaces
 luma stddev with relative local edge energy so a dark ridged surface counts
 and high-contrast menu art does not. Craft keeps the s6632 engine bloom and
-adds a chase-camera metal hull or a saturated green reticle.
+adds a chase-camera metal hull, a saturated green reticle, or a dark hull
+against a bright sky. A third sky arm accepts a bright orange sunset.
 
 Canonical check (no args) exits 0 only when the five-file table holds:
   pass  docs/g3_retail_lvl1_flight_oracle.png
@@ -57,7 +58,14 @@ def classes(p):
     sky = box(0.15, 0.85, 0.02, 0.18)
     sm = [sum(c[i] for c in sky) / len(sky) for i in range(3)]
     dark = sum(1 for c in sky if _luma(c) < 35) / len(sky)
-    sky_ok = dark >= 0.60 or (sum(sm) / 3 >= 70 and sm[0] <= sm[1] + 15)
+    luma = sum(sm) / 3.0
+    # Orange sunset: bright, R well above G and B. The title's warm cast
+    # is dimmer (luma ~80) and closer in R and G (~29), so it stays out.
+    sky_ok = (
+        dark >= 0.60
+        or (luma >= 70 and sm[0] <= sm[1] + 15)
+        or (luma >= 140 and sm[0] >= sm[1] + 40 and sm[0] >= sm[2] + 20)
+    )
 
     # Relative local edge energy. Absolute stddev stays under 18 on the
     # level-3 night ground; dividing the neighbor delta by local luma
@@ -92,22 +100,29 @@ def classes(p):
     band = [_pix(px, w, x, y) for y in ys for x in xs]
     med = statistics.median(_luma(c) for c in band)
     metal_n = 0
+    sil_n = 0
     for c in band:
         L = _luma(c)
         ch = max(c) - min(c)
         if L >= med + 30 and ch <= 80 and L >= 40:
             metal_n += 1
+        # Sunset fills the chase band, so the hull is darker than the
+        # median rather than brighter. Only count that when the band
+        # itself is a bright sky; a dark menu median never qualifies.
+        if med >= 120 and L <= med - 50 and ch <= 90 and L >= 15:
+            sil_n += 1
     metal = metal_n / len(band)
+    sil = sil_n / len(band)
 
     rg = box(0.35, 0.65, 0.28, 0.55, 1)
     pure = sum(1 for r, g, b in rg if g >= 80 and r <= 50 and b <= 50 and g >= r + 40 and g >= b + 40) / len(rg)
-    craft_ok = engines or metal >= 0.10 or pure >= 0.004
+    craft_ok = engines or metal >= 0.10 or pure >= 0.004 or sil >= 0.06
 
     ok = sky_ok and terr_ok and craft_ok and hud_ok
     return {
         "ok": ok, "sky": sky_ok, "terr": terr_ok, "craft": craft_ok, "hud": hud_ok,
-        "rel": rel, "metal": metal, "pure": pure, "pink": pink, "yel": yel, "radar": radar,
-        "dark": dark,
+        "rel": rel, "metal": metal, "sil": sil, "pure": pure, "pink": pink, "yel": yel,
+        "radar": radar, "dark": dark, "luma": luma, "rg": sm[0] - sm[1],
     }
 
 
@@ -128,8 +143,9 @@ def line(name, d, want=None):
     return (
         f"{flag} {name} sky={int(d['sky'])} terr={int(d['terr'])} "
         f"craft={int(d['craft'])} hud={int(d['hud'])} "
-        f"rel={d['rel']:.3f} metal={d['metal']:.3f} pure={d['pure']:.4f} "
-        f"pink={d['pink']:.4f} yel={d['yel']:.4f} radar={d['radar']:.3f}{extra}"
+        f"rel={d['rel']:.3f} metal={d['metal']:.3f} sil={d['sil']:.3f} pure={d['pure']:.4f} "
+        f"pink={d['pink']:.4f} yel={d['yel']:.4f} radar={d['radar']:.3f} "
+        f"luma={d['luma']:.1f} rg={d['rg']:.1f}{extra}"
     )
 
 

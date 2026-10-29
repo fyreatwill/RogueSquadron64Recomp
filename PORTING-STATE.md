@@ -172871,3 +172871,43 @@ What it does not show: that a third sky disjunct, or a craft predicate
 that ignores a sunset-filled center box, can accept these frames while
 canon_bad stays 0. That gap (sunset R-G about 50 versus the title's
 R-G 29) was measured and not turned into a predicate.
+
+## Session 6636 (2026-10-29) — sunset class rule accepts the level-4 flight
+
+Offline only. No game launch, no recapture, no heap edit, no default
+change. Precontrol `python3 tools/g1_flight_class.py` printed canon_bad 0
+before the edit (oracle, level-2 fb_0002700, level-3 fb_0002700 pass;
+floor and the s6633 title fail; level-3 mission lines stay 11/13). The
+s6635 dumps and docs/g1_lvl4_flight_s6635.png are still on disk. The
+sheet is a flight: an X-wing, an orange sky, desert ground, the radar,
+a reticle and a missile badge. The soak tail still ends at s6580.
+
+The edit is only tools/g1_flight_class.py. Sky gains a third arm:
+luma >= 140 and R >= G+40 and R >= B+20. Craft gains a dark hull
+against a bright chase band: when that band's median luma is >= 120,
+a low-chroma body at least 50 below the median covering >= 0.06 of the
+band counts. The terrain floor stays 0.08. n=2300 is left as a
+near-miss on purpose.
+
+After the edit, canon_bad is still 0 and the level-3 mission lines are
+still 11/13. The seven phase-7 dumps score 6/7. n=2350..2600 pass sky,
+terrain, craft and HUD. n=2300 now passes sky (luma 173.4, R-G 47.6)
+and craft (sil 0.242) and still fails terrain at rel 0.065. The
+sunset frames that used to miss craft on the pink cap now pass on the
+hull: sil 0.092, 0.088, 0.100, 0.071 at n=2450..2600. n=2350 and
+n=2400 still pass on the existing metal hull (0.359, 0.316).
+
+Same-run negatives still fail overall. Title fb_0000800_w512.ppm is
+sky 0, terr 0 (luma 80.5, R-G 29.0, rel 0.431). Hangar
+fb_0001700_w512.ppm still fails HUD only (radar 0.002); its sky stays
+on the dark arm (luma 29.4, R-G 6.7) and its silhouette fraction is 0.
+The canon title stays sky 0 (luma 75.0, R-G 24.7). The floor stays
+craft 0 (sil 0). m3150 stays sky 0 (luma 40, R-G -3.1).
+
+This selects H-sunset-cut. It refutes H-canon-moves and H-dumps-missing.
+It does not run objective (d) and it does not capture level 5.
+
+What this rules out: "no orange-sky arm can accept the s6635 sunset
+while canon_bad stays 0" and "the sunset-filled center box cannot
+count as a craft without accepting the title or the hangar."
+What it does not show: that the same frozen rule accepts level 5.
