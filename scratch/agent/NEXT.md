@@ -1,52 +1,65 @@
-# NEXT: split GPU raster output from native conversion/writeback
+# NEXT: split actual GPU shader inputs from blend/attachment output
 HYPOTHESIS-ID: g1d-levelselect-texel
 
-s6621 selects H-pipe, single-source: complete emitted mesh versus coefficient
-replay agrees within 25% in both sample conventions, yet framebuffer edge
-steps are 6.75/5.68 at 796 versus 56.45/53.40 at 1024. Do NOT repeat a
-coefficient/vertex scalar. Evidence: scratch/agent/s6621_mesh/verdict.json.
+s6622 locates the tear BEFORE native conversion. Do not repeat GPU/native/RAM
+localization or CPU plane scalars. Evidence scratch/agent/s6622_pipe/verdict.json;
+owner sheet docs/owner_sheet_s6622_pipe.png. Single-source runtime result.
 
-ONE work unit: phase/frame/address-joined pixels at three stages of the same
-floor frame, before changing rendering. Hypotheses:
-- H-raster: GPU color target already contains torn rows. Investigate shader,
-  actual interpolants/texture state/raster backend, not CPU coefficients.
-- H-convert: GPU target is smooth but the native converted readback is torn.
-  Name the native-conversion shader/address/width expression.
-- H-copy: native pixels are smooth; post-copy RDRAM is torn or later changes.
-  Name copy stride or subsequent writer; retain the before/after write keys.
-- H-witness: captures do not join on framebuffer/frame, or the GPU/native
-  positive control fails. Repair association before drawing any null verdict.
+ONE work unit: actual GPU floor-fragment value table plus bound texture snapshot,
+from the same captured draw/frame. Hypotheses:
+- H-binding: GPU sampled texture/binding/format differs from the intended I4
+  TMEM decode (RGB channels should be equal before shade). A non-grayscale
+  texVal0 or a bound-texture mismatch selects this, name upload/binding writer.
+- H-shader: sampled texture is correct but actual interpolated UV/shade or
+  combiner/blender evaluation diverges from the logged mesh/CPU walk. Select
+  the FIRST divergent GPU field, name its producer; do not guard the output.
+- H-backend: actual shader pre-attachment result is sane but the final GPU
+  target contains rainbow rows. Inspect dual-source blend factors, pipeline
+  format/attachment state, shader specialization, and resolve/downsample
+  operations for that draw. The s6622 GPU snapshot is AFTER resolveTarget,
+  not a readback of the original multisampled attachment.
+- H-witness: stage/draw/pixel keys fail to join, or known GPU pattern cannot
+  be recovered. Repair the control in this iteration before using nulls.
 
-Ground truth first: read docs/F5-UCODE-REFERENCE.md; retain the independent
-paraLLEl-RDP edge/plane reference linked in tools/g1d_floor_mesh.py. Inspect
-existing readback/target capture helpers BEFORE implementing a new one.
-Existing source anchors:
-`rg -n 'copyNativeToRAM|ROGUESQ_WBLOG' lib/rt64/src/hle/rt64_state.cpp`
-`rg -n 'copyToRAM|readback|copyToNative' lib/rt64/src/render/rt64_native_target.cpp`
-`rg -n 'copyNativeToRAM' lib/rt64/src/hle/rt64_framebuffer.cpp`
-`rg -n 'halfPixelOffset|screenScale' lib/rt64/src/render/rt64_framebuffer_renderer.cpp`
-The prior pixel dumps are RDRAM/VI sources, not pre-conversion GPU witnesses.
-Do not assume those two are identical. Preserve actual render resolution and
-sample-center transform; halfPixelOffset adds half a target pixel.
+Ground truth first: docs/F5-UCODE-REFERENCE.md and independent paraLLEl-RDP
+reference linked in tools/g1d_floor_mesh.py. Inspect existing shader/descriptor
+and debug-output facilities before adding any. The GPU target is RGBA16 UNORM,
+scale 1; source height 339, VI crop 336. Integer FbWriteColorCS.Load sampling.
 
-Build all stage captures in ONE binary and collect both 16:9/21:9 arms this
-iteration, sequentially, using tools/g1d_floor_inputs.py run_arm output_root
-parameter. The exact baseline recipe is there (12 MB; phase-driven start/z;
-LOG_FLOOR=1; wide hangar, height 336; >=50 closed frames plus matching dump).
-`python3 tools/g1d_floor_mesh.py --selftest`
-`cmake --build build --target RogueSquadron64Recomp -j 5 > scratch/agent/s6622_build.log 2>&1`
-Use a fresh s6622 capture root. Check screen lock before each arm; SIGKILL.
-Export any lib/ edits: `./submodule-patches/export.sh`.
+Complete table in ONE instrument/build, not one field per iteration: submission
+frame + framebuffer address + pair + draw/triangle id + pixel x/y; actual UV,
+vertexSmoothColor/selected shade, tile/gpuTile/texture ID and format, sampled
+texVal0 RGBA, combinerColor, Blender::run resultColor/resultAlpha, and final
+attachment RGB. Read back the ACTUAL bound texture with s6622 blit support.
+Instrument only the two floor columns rows 180..250 and the known checker,
+with per-phase budgets. Preserve primitive last-writer order: overlapping
+fragment writes to one unordered record are NOT a valid last-writer witness.
+Use per-primitive records or replay same-frame draws to scratch targets if
+needed; do not infer GPU values from another CPU formula. No extra baseline
+soak or repeated coverage sweep.
 
-Measurement: x=16 and x=w-17, y=180..250, row-step luma at all three stages;
-record fb address, target id, width/height/pitch, render-scale, task/frame and
-conversion/copy serial. Positive control: known checker target must visibly
-survive the GPU-readback and conversion path with known row/column bounds;
-a fabricated host array alone does not test GPU readback. Retain same-run
-tear reproduction and baseline controls. Match source pixel centers exactly.
+Anchors:
+rg -n 'sampleTexture|shadeColor|combinerColor|resultColor|resultAlpha' lib/rt64/src/shaders/RasterPS.hlsl
+rg -n 'padding|renderIndex|set.*Descriptor|shader' lib/rt64/src/render/rt64_framebuffer_renderer.cpp
+rg -n 'floorSerial|floorGPU|captureFloorRAM' lib/rt64/src/render/rt64_native_target.cpp
+rg -n 'textureCache|gpuTile' lib/rt64/src/render/rt64_framebuffer_renderer.cpp
 
-Outcome: tear first present at GPU -> H-raster; first present in native
-conversion -> H-convert; first present after RAM copy -> H-copy. Missing
-stage/failed control -> H-witness, fix now. No guard/skip/default change
-without naming the writer and establishing value legitimacy. Keep any
-CPU reconstruction-based conclusion explicitly single-source until replayed.
+Positive control: known GPU-uploaded checker must survive texture snapshot AND
+actual shader sample/output witness; controls must exercise the new path,
+not just a fabricated host array. Retain existing same-run tear and floor
+controls. The existing ROGUESQ_FLOOR_PIPE_DIR checker changes x/y32..39 on
+purpose; keep it off in ordinary play.
+
+Exact baseline verification/run commands (adapt scorer only for new fields):
+python3 tools/g1d_floor_mesh.py --selftest
+cmake --build build --target RogueSquadron64Recomp -j 5 > scratch/agent/s6623_build.log 2>&1
+python3 tools/g1d_floor_pipe.py
+The runner currently roots at s6622; add an output-root parameter or change
+it to s6623 BEFORE running to preserve s6622 evidence. It runs both width
+arms sequentially, checks screen lock, uses phase input, and SIGKILLs.
+python3 tools/g1d_floor_pipe.py --analyze
+./submodule-patches/export.sh
+
+A discriminating field must select H-binding/H-shader/H-backend. A table of
+only pipeline IDs or CPU reconstructed values does not finish this unit.
+Defaults remain retail; no mitigation without naming the writer.

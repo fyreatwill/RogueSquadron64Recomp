@@ -1238,7 +1238,7 @@ index 6255872..b2203c4 100644
  
              return trianglesEnd;
 diff --git a/src/hle/rt64_framebuffer.cpp b/src/hle/rt64_framebuffer.cpp
-index 873883d..b28d33b 100644
+index 873883d..c0fa851 100644
 --- a/src/hle/rt64_framebuffer.cpp
 +++ b/src/hle/rt64_framebuffer.cpp
 @@ -16,6 +16,73 @@
@@ -1529,10 +1529,12 @@ index 873883d..b28d33b 100644
          nativeTarget.copyToRAM(dstRowStart, dstRowEnd, dstRowWidth, siz, dstBytes);
  
          // Write back to RDRAM by swapping every word.
-@@ -165,6 +430,96 @@ namespace RT64 {
+@@ -165,6 +430,98 @@ namespace RT64 {
              dstWords[0] = dstFirstWord;
          }
  
++        nativeTarget.captureFloorRAM(dstBytes, bytesToSwap);
++
 +        {
 +            uint8_t *base = (uint8_t *)g_recomp_rdram_for_wp_raw;
 +            if (base != nullptr && bytesToSwap >= 4u) {
@@ -1626,7 +1628,7 @@ index 873883d..b28d33b 100644
  #   ifdef DUMP_RAW_RDRAM
          char path[1024];
          snprintf(path, sizeof(path), "dumps/FB_0x%X_W_%d_H_%d_SIZ_%d.rdram", addressStart, dstRowWidth, height, siz);
-@@ -199,4 +554,4 @@ namespace RT64 {
+@@ -199,4 +556,4 @@ namespace RT64 {
      uint64_t FramebufferTile::hash() const {
          return XXH3_64bits(this, sizeof(FramebufferTile));
      }
@@ -5859,7 +5861,7 @@ index e3d289c..5da989d 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..80586c3 100644
+index 10f98af..134591b 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -7280,7 +7282,7 @@ index 10f98af..80586c3 100644
  
                                  depthFb->readHeight = depthFb->height;
                              }
-@@ -1426,11 +2622,21 @@ namespace RT64 {
+@@ -1426,11 +2622,23 @@ namespace RT64 {
                              depthFb->lastWriteType = Framebuffer::Type::Depth;
                          }
  
@@ -7293,6 +7295,8 @@ index 10f98af..80586c3 100644
 +                            colorFb->width > 0 && colorFb->width <= kMaxSaneFbWidth &&
 +                            colorRowStart < colorFb->height) {
 +                            const uint32_t cEnd = std::min(colorRowEnd, colorFb->height);
++                            colorFb->nativeTarget.floorFrame = workload.submissionFrame;
++                            colorFb->nativeTarget.floorPair = pairCursor;
 +                            colorFb->copyRenderTargetToNative(ext.framebufferGraphicsWorker, colorTarget, colorWriteWidth, colorRowStart, cEnd, colorImg.fmt, ditherRandomSeed++, ext.shaderLibrary);
 +                        }
  
@@ -7306,7 +7310,7 @@ index 10f98af..80586c3 100644
                          }
                      }
  
-@@ -1441,9 +2647,9 @@ namespace RT64 {
+@@ -1441,9 +2649,9 @@ namespace RT64 {
                  }
  
                  ext.framebufferGraphicsWorker->commandList->end();
@@ -7318,7 +7322,7 @@ index 10f98af..80586c3 100644
  
                  pairCursor = framebufferPairCursor;
                  while (pairCursor < maxFramebufferPair) {
-@@ -1461,12 +2667,120 @@ namespace RT64 {
+@@ -1461,12 +2669,120 @@ namespace RT64 {
                          // RT64 sees the real fb address; until then this
                          // 1MB gate is safe (real N64 framebuffers are always
                          // at >=0x80100000) and unblocks Factor 5 boot.
@@ -7442,7 +7446,7 @@ index 10f98af..80586c3 100644
                          }
                      }
  
-@@ -1527,6 +2841,7 @@ namespace RT64 {
+@@ -1527,6 +2843,7 @@ namespace RT64 {
  
              // Perform any preliminar setup before processing the framebuffer pairs.
              renderSetup();
@@ -7450,7 +7454,7 @@ index 10f98af..80586c3 100644
  
              // Start loading tiles, sampling tiles and drawing the framebuffer pairs as required.
              for (uint32_t f = 0; f < workload.fbPairCount; f++) {
-@@ -1540,15 +2855,21 @@ namespace RT64 {
+@@ -1540,15 +2857,21 @@ namespace RT64 {
                  }
  
                  if (fbPair.syncRequired) {
@@ -7474,7 +7478,7 @@ index 10f98af..80586c3 100644
          }
          else {
              // Process all tiles.
-@@ -1565,18 +2886,20 @@ namespace RT64 {
+@@ -1565,18 +2888,20 @@ namespace RT64 {
              ext.drawDataUploader->commandListAfterBarriers(ext.framebufferGraphicsWorker);
              ext.transformsUploader->commandListAfterBarriers(ext.framebufferGraphicsWorker);
              ext.framebufferGraphicsWorker->commandList->end();
@@ -7497,7 +7501,7 @@ index 10f98af..80586c3 100644
  
          if (renderToRDRAM) {
              // Indicate to the texture cache it's safe to delete the textures if no locks are active.
-@@ -1589,6 +2912,7 @@ namespace RT64 {
+@@ -1589,6 +2914,7 @@ namespace RT64 {
              // Indicate the next time a display list is parsed, RDRAM should be checked.
              rdramCheckPending = true;
          }
@@ -7505,7 +7509,7 @@ index 10f98af..80586c3 100644
  
  #   if SCRIPT_ENABLED
          // Notify the current script the frame is about to end and should be processed.
-@@ -1597,6 +2921,7 @@ namespace RT64 {
+@@ -1597,6 +2923,7 @@ namespace RT64 {
              workload.pointLights = scriptLights;
          }
  #   endif
@@ -7513,7 +7517,7 @@ index 10f98af..80586c3 100644
  
          // Store the presentation rate in the workload.
          if (extended.refreshRate != UINT16_MAX) {
-@@ -1622,6 +2947,7 @@ namespace RT64 {
+@@ -1622,6 +2949,7 @@ namespace RT64 {
              inspect();
          }
  
@@ -7521,7 +7525,7 @@ index 10f98af..80586c3 100644
          // Add any lights to the workload from the presets that are activated.
          for (const auto &it : lightsLibrary.presetMap) {
              if (!it.second.enabled) {
-@@ -1761,9 +3087,11 @@ namespace RT64 {
+@@ -1761,9 +3089,11 @@ namespace RT64 {
              }
          }
          
@@ -7533,7 +7537,7 @@ index 10f98af..80586c3 100644
  
          // Make sure the profiler starts after the workload is advanced to ignore any waiting time.
          dlCpuProfiler.reset();
-@@ -1837,7 +3165,7 @@ namespace RT64 {
+@@ -1837,7 +3167,7 @@ namespace RT64 {
                                  colorImg.address, colorImg.width, (unsigned)colorImg.siz, h);
                              std::fflush(stderr);
                          }
@@ -7542,7 +7546,7 @@ index 10f98af..80586c3 100644
                          viPresented = true;
                      }
                      else if (s_rs64_log_pe) {
-@@ -1873,7 +3201,27 @@ namespace RT64 {
+@@ -1873,7 +3203,27 @@ namespace RT64 {
          clearExtended();
      }
      
@@ -7570,7 +7574,7 @@ index 10f98af..80586c3 100644
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
              if (ext.userConfig->developerMode) {
-@@ -1899,6 +3247,132 @@ namespace RT64 {
+@@ -1899,6 +3249,132 @@ namespace RT64 {
              }
          }
          
@@ -7703,7 +7707,7 @@ index 10f98af..80586c3 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1915,6 +3389,22 @@ namespace RT64 {
+@@ -1915,6 +3391,22 @@ namespace RT64 {
              viDifferent = (newVI != lastScreenVI);
              lastScreenVI = newVI;
  
@@ -7726,7 +7730,7 @@ index 10f98af..80586c3 100644
              // Diagnostic (ROGUESQ_LOG_PRESENT_EARLY=1) — track why viHistory stays empty.
              // We reuse the same env flag the present-early matcher uses.
              static const bool s_us_log_pe = [](){
-@@ -1959,12 +3449,25 @@ namespace RT64 {
+@@ -1959,12 +3451,25 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -7754,7 +7758,7 @@ index 10f98af..80586c3 100644
          screenCpuProfiler.start();
          bool fbChangesMade = false;
          bool screenChangesMade = false;
-@@ -1972,7 +3475,11 @@ namespace RT64 {
+@@ -1972,7 +3477,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -7767,7 +7771,7 @@ index 10f98af..80586c3 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -1989,6 +3496,7 @@ namespace RT64 {
+@@ -1989,6 +3498,7 @@ namespace RT64 {
                      uint64_t currentHash = XXH3_64bits(fbRAM, screenFb->RAMBytes);
                      if (currentHash != screenFb->RAMHash) {
                          {
@@ -7775,7 +7779,7 @@ index 10f98af..80586c3 100644
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
                              const std::scoped_lock lock(ext.presentQueue->screenFbChangePoolMutex);
-@@ -2018,9 +3526,110 @@ namespace RT64 {
+@@ -2018,9 +3528,110 @@ namespace RT64 {
              // Store the RAM required by the VI so the render thread can display it if necessary.
              if (screenFbSiz >= G_IM_SIZ_16b) {
                  uint32_t screenFbBytes = uint32_t(screenFbSize.x * screenFbSize.y) << (screenFbSiz - 1);
@@ -7889,7 +7893,7 @@ index 10f98af..80586c3 100644
                  screenChangesMade = (newScreenHash != lastScreenHash);
                  lastScreenHash = newScreenHash;
              }
-@@ -2033,26 +3642,51 @@ namespace RT64 {
+@@ -2033,26 +3644,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -7959,7 +7963,7 @@ index 10f98af..80586c3 100644
              }
          }
  
-@@ -2060,6 +3694,7 @@ namespace RT64 {
+@@ -2060,6 +3696,7 @@ namespace RT64 {
          if (fromEarlyPresent || viDifferent || fbChangesMade || screenChangesMade || forceAdvance) {
              // Push a new renderer event to the timeline for presenting this VI.
              present.screenVI = newVI;
@@ -7967,7 +7971,7 @@ index 10f98af..80586c3 100644
              advancePresent(present, false);
              ext.presentQueue->advanceToNextPresent();
  
-@@ -2910,4 +4545,4 @@ namespace RT64 {
+@@ -2910,4 +4547,4 @@ namespace RT64 {
              break;
          }
      }
@@ -8548,15 +8552,16 @@ index b9cb1f5..2493e46 100644
              framebufferVector.emplace_back();
              framebufferVector.back().paramsBuffer = p.worker->device->createBuffer(RenderBufferDesc::UploadBuffer(256, RenderBufferFlag::CONSTANT));
 diff --git a/src/render/rt64_native_target.cpp b/src/render/rt64_native_target.cpp
-index 6891b7b..e1471f3 100644
+index 6891b7b..b0a8bb1 100644
 --- a/src/render/rt64_native_target.cpp
 +++ b/src/render/rt64_native_target.cpp
-@@ -3,16 +3,37 @@
+@@ -3,16 +3,38 @@
  //
  
  #include <cstring>
 +#include <cstdio>
 +#include <cstdlib>
++#include <string>
  
  #include "rt64_native_target.h"
  
@@ -8589,7 +8594,7 @@ index 6891b7b..e1471f3 100644
      // NativeTarget
  
      NativeTarget::NativeTarget() { }
-@@ -60,9 +81,32 @@ namespace RT64 {
+@@ -60,9 +82,32 @@ namespace RT64 {
          return rowSize * height;
      }
  
@@ -8622,7 +8627,7 @@ index 6891b7b..e1471f3 100644
          // Create the buffers for change count readback if they've not been created yet.
          if ((changeCountBuffer == nullptr) || (changeReadbackBuffer == nullptr)) {
              changeCountBuffer = worker->device->createBuffer(RenderBufferDesc::DefaultBuffer(sizeof(uint32_t), RenderBufferFlag::STORAGE | RenderBufferFlag::UNORDERED_ACCESS));
-@@ -232,10 +276,37 @@ namespace RT64 {
+@@ -232,10 +277,37 @@ namespace RT64 {
      }
  
      void NativeTarget::copyToNative(RenderWorker *worker, RenderTarget *srcTarget, uint32_t rowWidth, uint32_t rowStart, uint32_t rowEnd, uint8_t siz, uint8_t fmt, uint32_t ditherPattern, uint32_t ditherRandomSeed, const ShaderLibrary *shaderLibrary) {
@@ -8660,19 +8665,75 @@ index 6891b7b..e1471f3 100644
          if (srcTarget->fbWriteDescSet == nullptr) {
              srcTarget->fbWriteDescSet = std::make_unique<FramebufferWriteDescriptorTextureSet>(worker->device);
              srcTarget->fbWriteDescSet->setTexture(srcTarget->fbWriteDescSet->gInput, srcTarget->getResolvedTexture(), RenderTextureLayout::SHADER_READ, srcTarget->getResolvedTextureView());
-@@ -287,6 +358,9 @@ namespace RT64 {
+@@ -287,6 +359,56 @@ namespace RT64 {
          ReadBuffer *readBuffer = &readBufferHistory[readBufferHistoryCount - 1];
          WriteBuffer &writeBuffer = writeBufferHistory[writeBufferHistoryCount];
          writeBufferHistoryCount++;
 +        writeBuffer.sourceTarget = srcTarget->addressForName;
 +        writeBuffer.sourceWidth = srcTarget->width;
 +        writeBuffer.sourceHeight = srcTarget->height;
++        writeBuffer.floorSerial = 0;
++        static const char *floorDir = std::getenv("ROGUESQ_FLOOR_PIPE_DIR");
++        const uint32_t phase = rs64_phase_ord();
++        static uint32_t lastPhase = UINT32_MAX, floorCount = 0;
++        static uint64_t floorSerial = 0;
++        if (phase != lastPhase) { lastPhase = phase; floorCount = 0; }
++        if (floorDir && phase >= 4 && (rowWidth == 796 || rowWidth == 1024) &&
++            srcTarget->height >= 320 && srcTarget->height <= 352 &&
++            rowStart == 0 && rowEnd >= 251 && fmt == G_IM_FMT_RGBA && siz == G_IM_SIZ_16b &&
++            (srcTarget->format == RenderFormat::R8G8B8A8_UNORM || srcTarget->format == RenderFormat::R16G16B16A16_UNORM) && floorCount++ < 100) {
++            writeBuffer.floorSerial = ++floorSerial;
++            writeBuffer.floorPhase = phase;
++            writeBuffer.floorFrame = floorFrame;
++            writeBuffer.floorPair = floorPair;
++            writeBuffer.floorBpp = RenderFormatSize(srcTarget->format);
++            const uint32_t pitchPixels = (srcTarget->width + 255) & ~255u;
++            writeBuffer.floorPitch = pitchPixels * writeBuffer.floorBpp;
++            writeBuffer.floorGPU = worker->device->createBuffer(RenderBufferDesc::ReadbackBuffer(uint64_t(writeBuffer.floorPitch) * srcTarget->height));
++            // A GPU-uploaded checker outside the floor samples verifies both readback and native conversion.
++            writeBuffer.floorChecker = worker->device->createBuffer(RenderBufferDesc::UploadBuffer(8 * 256));
++            uint8_t *checker = reinterpret_cast<uint8_t *>(writeBuffer.floorChecker->map());
++            memset(checker, 0, 8 * 256);
++            for (uint32_t y = 0; y < 8; y++) for (uint32_t x = 0; x < 8; x++) {
++                const bool red = ((x / 2 + y / 2) & 1) == 0;
++                for (uint32_t c = 0; c < 4; c++) {
++                    const uint8_t v = (c == 3 || (c == 0 && red) || (c == 1 && !red)) ? 255 : 0;
++                    for (uint32_t b = 0; b < writeBuffer.floorBpp / 4; b++)
++                        checker[y * 256 + x * writeBuffer.floorBpp + c * (writeBuffer.floorBpp / 4) + b] = v;
++                }
++            }
++            writeBuffer.floorChecker->unmap();
++            worker->commandList->barriers(RenderBarrierStage::COPY, RenderTextureBarrier(srcTarget->getResolvedTexture(), RenderTextureLayout::COPY_DEST));
++            worker->commandList->copyTextureRegion(RenderTextureCopyLocation::Subresource(srcTarget->getResolvedTexture()),
++                RenderTextureCopyLocation::PlacedFootprint(writeBuffer.floorChecker.get(), srcTarget->format, 8, 8, 1, 256 / writeBuffer.floorBpp), 32, 32);
++            worker->commandList->barriers(RenderBarrierStage::COPY, RenderTextureBarrier(srcTarget->getResolvedTexture(), RenderTextureLayout::COPY_SOURCE));
++            worker->commandList->copyTextureRegion(RenderTextureCopyLocation::PlacedFootprint(writeBuffer.floorGPU.get(), srcTarget->format, srcTarget->width, srcTarget->height, 1, pitchPixels),
++                RenderTextureCopyLocation::Subresource(srcTarget->getResolvedTexture()));
++            std::string prefix = std::string(floorDir) + "/pipe_" + std::to_string(writeBuffer.floorSerial);
++            if (FILE *f = fopen((prefix + ".json").c_str(), "w")) {
++                fprintf(f, "{\"serial\":%llu,\"phase\":%u,\"frame\":%llu,\"pair\":%u,\"address\":%u,\"target\":\"%p\",\"width\":%u,\"height\":%u,\"pitch\":%u,\"bpp\":%u,\"native_width\":%u,\"row_start\":%u,\"row_end\":%u,\"scale_x\":%.8f,\"scale_y\":%.8f}\n",
++                    (unsigned long long)writeBuffer.floorSerial, phase, (unsigned long long)floorFrame, floorPair, srcTarget->addressForName, (void *)srcTarget,
++                    srcTarget->width, srcTarget->height, writeBuffer.floorPitch, writeBuffer.floorBpp, rowWidth, rowStart, rowEnd,
++                    float(srcTarget->resolutionScale.x), float(srcTarget->resolutionScale.y));
++                fclose(f);
++            }
++        }
++
          
          const uint32_t bufferSize = getNativeSize(rowWidth, rowEnd, siz);
          if (readBuffer->nativeBufferSize < bufferSize) {
-@@ -358,15 +432,44 @@ namespace RT64 {
+@@ -357,16 +479,67 @@ namespace RT64 {
+         worker->commandList->copyBufferRegion(writeBuffer.nativeReadbackBuffer->at(regionBufferOffset), readBuffer->nativeBuffer->at(regionBufferOffset), regionBufferSize);
      }
  
++    void NativeTarget::captureFloorRAM(const uint8_t *data, uint32_t bytes) {
++        if (!writeBufferHistoryIndex || writeBufferHistoryIndex > writeBufferHistory.size()) return;
++        const WriteBuffer &wb = writeBufferHistory[writeBufferHistoryIndex - 1];
++        if (!wb.floorSerial) return;
++        const std::string path = std::string(std::getenv("ROGUESQ_FLOOR_PIPE_DIR")) + "/pipe_" + std::to_string(wb.floorSerial) + ".ram";
++        if (FILE *f = fopen(path.c_str(), "wb")) { fwrite(data, 1, bytes, f); fclose(f); }
++    }
++
      void NativeTarget::copyToRAM(uint32_t rowStart, uint32_t rowEnd, uint32_t width, uint8_t siz, uint8_t *data) {
 +        // Paired with the 4-bit copyToNative skip: if the writeback was
 +        // skipped, there is no history entry to read back — leave RAM as-is.
@@ -8710,6 +8771,20 @@ index 6891b7b..e1471f3 100644
 +                                   writeBuffer.sourceTarget,
 +                                   writeBuffer.sourceWidth,
 +                                   writeBuffer.sourceHeight);
++        if (writeBuffer.floorSerial) {
++            const std::string prefix = std::string(std::getenv("ROGUESQ_FLOOR_PIPE_DIR")) + "/pipe_" + std::to_string(writeBuffer.floorSerial);
++            auto save = [&](const char *suffix, const void *p, size_t size) {
++                if (FILE *f = fopen((prefix + suffix).c_str(), "wb")) { fwrite(p, 1, size, f); fclose(f); }
++            };
++            RenderRange gpuRange = { 0, uint64_t(writeBuffer.floorPitch) * writeBuffer.sourceHeight };
++            const void *gpu = writeBuffer.floorGPU->map(0, &gpuRange);
++            save(".gpu", gpu, gpuRange.end);
++            writeBuffer.floorGPU->unmap();
++            save(".native", readbackData + bufferOffset, bufferSize);
++            fprintf(stderr, "[floor-pipe] serial=%llu phase=%u frame=%llu pair=%u addr=%06X width=%u rows=%u..%u\n",
++                (unsigned long long)writeBuffer.floorSerial, writeBuffer.floorPhase, (unsigned long long)writeBuffer.floorFrame,
++                writeBuffer.floorPair, writeBuffer.sourceTarget, width, rowStart, rowEnd);
++        }
          memcpy(data, readbackData + bufferOffset, bufferSize);
          writeBuffer.nativeReadbackBuffer->unmap();
          writeBufferHistoryIndex++;
@@ -8718,29 +8793,40 @@ index 6891b7b..e1471f3 100644
 \ No newline at end of file
 +};
 diff --git a/src/render/rt64_native_target.h b/src/render/rt64_native_target.h
-index eb944a4..a5dc797 100644
+index eb944a4..98a631a 100644
 --- a/src/render/rt64_native_target.h
 +++ b/src/render/rt64_native_target.h
-@@ -34,6 +34,9 @@ namespace RT64 {
+@@ -34,6 +34,16 @@ namespace RT64 {
              std::unique_ptr<FramebufferWriteDescriptorBufferSet> writeDescSet;
              std::unique_ptr<RenderBuffer> nativeReadbackBuffer;
              uint32_t nativeReadbackBufferSize = 0;
 +            uint32_t sourceTarget = 0;
 +            uint32_t sourceWidth = 0;
 +            uint32_t sourceHeight = 0;
++            std::unique_ptr<RenderBuffer> floorGPU;
++            std::unique_ptr<RenderBuffer> floorChecker;
++            uint64_t floorSerial = 0;
++            uint32_t floorPhase = 0, floorPitch = 0, floorBpp = 0;
++            uint64_t floorFrame = 0;
++            uint32_t floorPair = 0;
++
          };
  
          std::unique_ptr<RenderBuffer> changeCountBuffer;
-@@ -44,6 +47,8 @@ namespace RT64 {
+@@ -44,6 +54,12 @@ namespace RT64 {
          uint32_t readBufferHistoryCount = 0;
          uint32_t writeBufferHistoryCount = 0;
          uint32_t writeBufferHistoryIndex = 0;
++        uint64_t floorFrame = 0;
++        uint32_t floorPair = 0;
++        void captureFloorRAM(const uint8_t *data, uint32_t bytes);
++
 +        // Consume one recorded writeback whose readback was skipped, keeping the index in step.
 +        void skipReadback() { if (writeBufferHistoryIndex < writeBufferHistoryCount) writeBufferHistoryIndex++; }
  
          NativeTarget();
          ~NativeTarget();
-@@ -59,4 +64,4 @@ namespace RT64 {
+@@ -59,4 +75,4 @@ namespace RT64 {
  
          static uint32_t getNativeSize(uint32_t width, uint32_t height, uint8_t siz);
      };

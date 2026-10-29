@@ -172048,3 +172048,72 @@ raster-versus-conversion boundary. Do not repeat another coefficient scalar.
 Evidence: scratch/agent/s6621_mesh/{verdict,comparison}.json and each arm's
 summary.json, mesh_summary.json, mesh_legacy_summary.json, run.log and dumps;
 build log scratch/agent/s6621_build.log. Outcome ADVANCED.
+
+
+## Session 6622 (2026-10-28) — 21:9 level-select tear exists before GPU native conversion
+
+Work unit: g1d-levelselect-texel three-stage capture from NEXT.md.
+CURRENT-TRUTH 49,091 bytes: no maintenance. SOAK-RESULTS tail ends at
+already-accounted s6580 runs; no new queued verdict. Consulted README's
+Where it actually stops, docs/F5-UCODE-REFERENCE.md, existing readbacks,
+and the independent paraLLEl-RDP edge/interpolation reference before editing.
+That reference gives semantics, not execution evidence for this GPU backend.
+
+One Debug binary built successfully with cmake --build build --target
+RogueSquadron64Recomp -j 5. Metal copyTextureRegion had upload and
+texture-to-texture paths but lacked texture-to-buffer; added its blit path.
+NativeTarget now optionally captures resolved GPU target before native
+conversion, converted native bytes, and immediate post-swap RDRAM bytes,
+joined by conversion serial, submission frame, framebuffer pair/address,
+target pointer, dimensions, pitch and scale. ROGUESQ_FLOOR_PIPE_DIR is off
+by default. It uploads a red/green 8x8 checker at x/y 32..39, away from
+floor rows 180..250. This is deliberate diagnostic pixel modification,
+not a rendering fix. Exported lib changes with submodule-patches/export.sh.
+
+Ran python3 tools/g1d_floor_pipe.py, sequential unlocked-screen width arms,
+12 MB, phase-driven start/z, SIGKILL on >=50 closed frames plus source dump:
+- 16:9: 34.7 s; 50 stop-gate frames, 62 closed floor frames, alive, 0 crash
+  markers, prior fail=[]. Same-run VI source edge steps 6.87/7.46; dy 8.07.
+- 21:9: 33.4 s; 51 stop-gate frames, 62 closed floor frames, alive, 0 crash
+  markers, prior fail=[]. Source edge steps 49.47/38.86; dy 29.26.
+- Both: I4, alpha/fill controls pass; lastF/touchR/over=1, touchU=0.
+
+Initial analysis included an intermediate noisy 16:9 render pass and a
+non-displayed temporary target. Fixed the scorer this iteration: retain
+only the final recorded pair per submission frame/address for displayed
+framebuffers, exclude the final frame (capture budget might cut it mid-pass).
+The old g1d-join phase budget expires before the 21:9 floor because movie and
+hangar share phase 4; use the same-run fbdump source/fb addresses too. No
+zero-count claim was made from that expired join. Re-ran --analyze after repair.
+
+Final 39/63 complete capture table (left/right x=16,w-17; y=180..250):
+                     796                 1024
+GPU median step      4.0839 / 4.9921       36.8094 / 33.6708
+native median step   6.4942 / 7.0770       39.3070 / 35.3196
+RAM median step      6.4942 / 7.0770       39.3070 / 35.3196
+All 64 checker pixels pass in every retained capture at ALL three stages.
+0 native/RAM RGB mismatches across 142 measured pixels per capture.
+GPU/native RGB MAE 3.042 / 1.896 (native color quantization/dither is expected;
+this is not a hardware fidelity claim). Source targets use 8 bytes/pixel,
+RGBA16 UNORM components, scale 1, pitch 8192. FbWriteColorCS.Load uses direct
+integer pixel coordinates, which this scorer follows; no inferred screen
+resampling. Snapshot height is 339; existing VI sources crop it to 336.
+
+Selection: H-raster-single-source. The 21:9 GPU snapshot visibly contains
+the rainbow stripe band before conversion; native and RAM preserve it.
+H-convert/H-copy as FIRST origin are ruled out for these captured frames.
+This does not prove the upstream writer: actual sampled texture/binding,
+fragment interpolation/evaluation, and blend/attachment state remain open.
+No guard, skip, geometry change or default change. CPU coefficient replay
+and GPU readback are complementary observations of our runtime, not two
+independent implementations. Ground-truth execution remains unmeasured.
+
+Persistent runner/scorer tools/g1d_floor_pipe.py; raw captures and verdict
+scratch/agent/s6622_pipe/; owner sheet docs/owner_sheet_s6622_pipe.png
+visually inspected (21:9 tear visible at every stage, 16:9 clear). Mesh
+selftest and Python compilation passed; git diff --check passed. Next unit:
+actual GPU fragment full-value witness with texture/binding snapshot.
+
+Boundary precision: GPU snapshot follows resolveTarget and precedes native
+conversion. Resolve/downsample is still inside the selected upstream family;
+this capture does not separately prove the original draw attachment was torn.

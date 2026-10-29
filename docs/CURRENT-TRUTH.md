@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6621 (2026-10-28).
+Compact operational handoff, as of Session 6622 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,6 +15,27 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-texel).**
+  - s6622: three-stage GPU/native/RAM capture selects H-raster
+    (single-source runtime evidence). After retaining only the final recorded
+    pair per submission frame and displayed framebuffer address, 39 captures
+    at 796 and 63 at 1024: GPU edge row steps 4.084/4.992 versus
+    36.809/33.671; native 6.494/7.077 versus 39.307/35.320. RAM matches
+    native exactly at all 142 floor pixels per capture (0 mismatches).
+    All 64 GPU-uploaded checker pixels pass in GPU, native and RAM in every
+    retained capture. Both source targets are RGBA16 UNORM per component,
+    scale 1; pitch 8192. The GPU image visibly contains the 21:9 rainbow
+    row tear before native conversion. Conversion/copy cannot be its first
+    writer. This does not identify the actual shader/interpolant/texture or
+    blend-state defect; no render fix/default change. One binary, both
+    phase-driven arms, 62 closed floor frames each, prior controls pass,
+    0 crash markers. Evidence: `scratch/agent/s6622_pipe/verdict.json`;
+    owner sheet `docs/owner_sheet_s6622_pipe.png`; persistent runner
+    `tools/g1d_floor_pipe.py`. Metal texture-to-buffer blit support added
+    and exported. Diagnostic flag injects a 64-pixel checker outside the
+    sampled floor band; keep it disabled during play. Next: actual GPU
+    fragment values plus sampled texture/binding, not another CPU replay.
+    Snapshot is after resolveTarget: resolve/downsample remains a possible
+    upstream writer along with raster/shader/blend state.
   - s6621: emitted-mesh replay does not reproduce the tear (single-source).
     Both widths: 66 closed frames, 54 stop-gate frames, 0 crash markers,
     all earlier controls pass. Legacy samples: 9372/9369 common points;
@@ -442,12 +463,12 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6621) Mesh replay agrees with the coefficient walk; the visible tear remains.**
-   H-pipe is selected by the stated step-agreement test, single-source.
-   Next: one phase/frame/address-joined capture of GPU color target before
-   native conversion, converted native pixels, and post-writeback RDRAM.
-   Split raster/shader from conversion/writeback before changing rendering.
-   NEXT.md contains controls, arm recipe and expected outcomes.
+1. **(s6622) Tear is already in the GPU target before native conversion.**
+   Next: capture actual floor fragment UV/shade/sample/combiner/blender values
+   and the bound texture in the same operation to split texture/binding,
+   shader interpolation/evaluation, and fixed-function blend/attachment state.
+   Retain the GPU/native/RAM checker and baseline tear controls. NEXT.md has
+   the hypotheses and full table. No additional CPU plane replay.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
