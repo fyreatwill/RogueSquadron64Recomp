@@ -3681,147 +3681,187 @@ extern "C" void rs64_floor_cover(
     }
 }
 
-// Perspective-correct T and S at the outer-third sample, plus shade luma.
-// Each plane is base + De*(y-yFloor) + Dx*(x - XH). Texels are (T/W)*1024
-// and (S/W)*1024, with the same W. Luma is 0.2126 R + 0.7152 G + 0.0722 B.
-// Last floor triangle in submission order wins.
-extern "C" void rs64_floor_texel(
-    uint32_t op, uint32_t tile, uint32_t line, int persp,
-    float y_floor, float ym,
+// Perspective-correct T and S at the outer-third sample, plus shade luma,
+// the I4 texel the RDP would fetch, and whether an untextured triangle or
+// a rectangle covers the same point. Each plane is base + De*(y-yFloor) +
+// Dx*(x - XH). Texels are (T/W)*1024 and (S/W)*1024. Luma is
+// 0.2126 R + 0.7152 G + 0.0722 B. Last floor triangle wins.
+//
+// The I4 address matches TextureDecoder.hlsli implLoadTMEM: odd rows swap
+// 32-bit words inside the 8-byte group. Factor 5's I4 is pre-interleaved
+// for that unswap, so skipping it reads the neighbouring word and a flat
+// intensity would refute the row step for a decoder bug.
+namespace {
+int rs64_imod(int x, int y) {
+    if (y == 0) return x;
+    return x - y * (int)std::floor((float)x / (float)y);
+}
+
+const float kRs64Shift[16] = {
+    1.0f, 0.5f, 0.25f, 0.125f, 1.0f / 16.0f, 1.0f / 32.0f, 1.0f / 64.0f, 1.0f / 128.0f,
+    1.0f / 256.0f, 1.0f / 512.0f, 1.0f / 1024.0f, 32.0f, 16.0f, 8.0f, 4.0f, 2.0f
+};
+
+int rs64_i4_wrap(int v, uint32_t logmask, uint32_t cm, uint32_t ul, uint32_t lr) {
+    uint32_t mode = cm;
+    if (logmask == 0) mode |= 2u;
+    if (mode & 2u) {
+        const double hi_d = std::round((double)lr) / 4.0 - std::round((double)ul) / 4.0;
+        int hi = (int)hi_d;
+        if (v < 0) return 0;
+        if (v > hi) return hi;
+        return v;
+    }
+    const int masks = (logmask > 0 && logmask < 16) ? (1 << logmask) : 0;
+    if ((mode & 1u) && masks > 0 && rs64_imod(v, masks * 2) >= masks)
+        return (masks - 1) - rs64_imod(v, masks);
+    return rs64_imod(v, masks);
+}
+
+float rs64_i4_texel(const uint8_t *T, int tx, int ty, int stride, int base, int mask, unsigned tlut, unsigned palette) {
+    if (!T || stride <= 0) return 0.f;
+    const int oddRow = ty & 1;
+    const int oddCol = tx & 1;
+    const int rel = ty * stride + (tx >> 1);
+    const int rowStart = (rel / stride) * stride;
+    const int wordIndex = (rel - rowStart) / 4;
+    int finalAddr = oddRow
+        ? base + rowStart + ((wordIndex ^ 1) * 4) + (rel & 3)
+        : base + rel;
+    if (finalAddr < 0) finalAddr = 0;
+    const uint8_t byte = T[finalAddr & mask];
+    const unsigned nibble = oddCol ? (byte & 0xFu) : (byte >> 4);
+    if (tlut == 0u) return (float)((nibble << 4) | nibble);
+    const int addr = 0x800 + (int)(palette << 7) + (int)(nibble << 3);
+    const unsigned pix = (unsigned)T[(addr + 1) & 0xFFF] | ((unsigned)T[addr & 0xFFF] << 8);
+    if (tlut == 2u) {
+        const unsigned r = (pix >> 11) & 0x1Fu;
+        const unsigned g = (pix >> 6) & 0x1Fu;
+        const unsigned b = (pix >> 1) & 0x1Fu;
+        const float rf = ((r << 3) | (r >> 2)) / 255.0f;
+        const float gf = ((g << 3) | (g >> 2)) / 255.0f;
+        const float bf = ((b << 3) | (b >> 2)) / 255.0f;
+        return (0.2126f * rf + 0.7152f * gf + 0.0722f * bf) * 255.0f;
+    }
+    if (tlut == 3u) return (float)((pix >> 8) & 0xFFu);
+    return 0.f;
+}
+
+float rs64_i4_fetch(const uint8_t *T, float texel_s, float texel_t,
+    uint32_t line, uint32_t tmem, uint32_t masks, uint32_t maskt,
+    uint32_t cms, uint32_t cmt, uint32_t shifts, uint32_t shiftt,
+    uint32_t uls, uint32_t ult, uint32_t lrs, uint32_t lrt,
+    uint32_t palette, uint32_t om_h) {
+    const float u = texel_s * kRs64Shift[shifts & 15] - (float)uls / 4.0f;
+    const float v = texel_t * kRs64Shift[shiftt & 15] - (float)ult / 4.0f;
+    const int stride = (int)line << 3;
+    const int base = (int)tmem << 3;
+    const unsigned tlut = (om_h >> 14) & 3u;
+    const unsigned filt = (om_h >> 12) & 3u;
+    const unsigned cyc = (om_h >> 20) & 3u;
+    const int mask = tlut != 0u ? 0x7FF : 0xFFF;
+    auto at = [&](int x, int y) {
+        return rs64_i4_texel(T, rs64_i4_wrap(x, masks, cms, uls, lrs), rs64_i4_wrap(y, maskt, cmt, ult, lrt),
+            stride, base, mask, tlut, palette);
+    };
+    const int x0 = (int)std::floor(u);
+    const int y0 = (int)std::floor(v);
+    const float s00 = at(x0, y0);
+    if (filt == 0u || cyc == 2u) return s00;
+    const float fx = u - (float)x0;
+    const float fy = v - (float)y0;
+    const float s10 = at(x0 + 1, y0);
+    const float s01 = at(x0, y0 + 1);
+    const float s11 = at(x0 + 1, y0 + 1);
+    if (filt == 3u && std::fabs(fx - 0.5f) <= (1.0f / 128.0f) && std::fabs(fy - 0.5f) <= (1.0f / 128.0f))
+        return (s00 + s01 + s10 + s11) * 0.25f;
+    const float tri0 = s00 + (s10 - s00) * fx + (s01 - s00) * fy;
+    const float tri1 = s11 + (s01 - s11) * (1.0f - fx) + (s10 - s11) * (1.0f - fy);
+    return (fx + fy >= 1.0f) ? tri1 : tri0;
+}
+
+void rs64_bl_eq(uint32_t om_l, uint32_t om_h, char *out, size_t n) {
+    static const char *pm[] = { "CC", "MEM", "BL", "FOG" };
+    static const char *a[] = { "CCA", "FOGA", "SHA", "0" };
+    static const char *b[] = { "1mA", "MEMA", "1", "0" };
+    const uint32_t blend = (om_l >> 16) & 0xFFFFu;
+    const unsigned cyc = (om_h >> 20) & 3u;
+    const int force = (om_l & 0x4000u) ? 1 : 0;
+    char c0[48], c1[48];
+    auto one = [&](int second, char *dst) {
+        const unsigned P = second ? (blend >> 12) & 3u : (blend >> 14) & 3u;
+        const unsigned M = second ? (blend >> 4) & 3u : (blend >> 6) & 3u;
+        const unsigned A = second ? (blend >> 8) & 3u : (blend >> 10) & 3u;
+        const unsigned B = second ? (blend & 3u) : (blend >> 2) & 3u;
+        std::snprintf(dst, 48, "(%s*%s+%s*%s)", pm[P], a[A], pm[M], b[B]);
+    };
+    one(0, c0);
+    one(1, c1);
+    std::snprintf(out, n, "cyc%uf%d%s|%s", cyc, force, c0, c1);
+}
+
+void rs64_i4_selftest() {
+    uint8_t T[4096] = {};
+    T[0] = 0xA0;
+    T[36] = 0x50;
+    const float a = rs64_i4_fetch(T, 0.2f, 0.2f, 4, 0, 6, 6, 0, 0, 0, 0, 0, 0, 252, 252, 0, 0);
+    const float b = rs64_i4_fetch(T, 1.2f, 0.2f, 4, 0, 6, 6, 0, 0, 0, 0, 0, 0, 252, 252, 0, 0);
+    const float c = rs64_i4_fetch(T, 0.2f, 1.2f, 4, 0, 6, 6, 0, 0, 0, 0, 0, 0, 252, 252, 0, 0);
+    const float d = rs64_i4_fetch(T, 64.2f, 0.2f, 4, 0, 6, 6, 0, 0, 0, 0, 0, 0, 252, 252, 0, 0);
+    if (a == 170.f && b == 0.f && c == 85.f && d == 170.f)
+        std::fprintf(stderr, "[floor-i4] selftest ok a=170 b=0 c=85 d=170\n");
+    else
+        std::fprintf(stderr, "[floor-i4] selftest FAIL a=%.1f b=%.1f c=%.1f d=%.1f\n", a, b, c, d);
+    std::fflush(stderr);
+}
+
+bool rs64_ft_span(float y, float y_floor, float ym,
     float xh, float dxhdy, float xm, float dxmdy, float xl, float dxldy,
-    float yh, float yl,
-    float scx0, float scy0, float scx1, float scy1,
-    float base_t, float dtde, float dtdx,
-    float base_w, float dwde, float dwdx,
-    float base_s, float dsde, float dsdx,
-    float base_r, float base_g, float base_b,
-    float de_r, float de_g, float de_b,
-    float dx_r, float dx_g, float dx_b,
-    uint32_t om_l, const char *cc_eq) {
-    static const bool on = [] {
-        const char *e = std::getenv("ROGUESQ_LOG_FLOOR");
-        return e && *e && *e != '0';
-    }();
-    if (!on) return;
-    struct Pt { float texel, texel_s, luma; uint16_t floor_n, other_n; uint8_t ok, ok_s, ok_l, cc_i; };
-    struct Key { uint32_t op, tile, line, hits; };
-    static Pt pts[71][2];
-    static Key keys[24];
-    static char cc_str[4][64];
-    static uint32_t cc_omv[4];
-    static int nkeys = 0, ncc = 0;
-    static uint32_t spill = 0;
-    static uint32_t cur_w = 0, origin = 0;
-    static int origin_set = 0, was = 0, raws = 0;
-    static char cc_printed[64];
-    static uint32_t om_printed = 0;
-    static int cc_print_set = 0;
-    auto clear_pts = [&]() {
-        memset(pts, 0, sizeof(pts));
+    float x_lo, float x_hi, float &xa, float &xb) {
+    const float dy = y - y_floor;
+    const float x_major = xh + dxhdy * dy;
+    const float x_other = (y <= ym) ? (xm + dxmdy * dy) : (xl + dxldy * (y - ym));
+    if (!std::isfinite(x_major) || !std::isfinite(x_other)) return false;
+    xa = x_major < x_other ? x_major : x_other;
+    xb = x_major > x_other ? x_major : x_other;
+    if (xa < x_lo) xa = x_lo;
+    if (xb > x_hi) xb = x_hi;
+    if (!(xb > xa) || xb - xa > 8000.f) return false;
+    return true;
+}
+
+struct Rs64FtPt {
+    float texel, texel_s, luma, inten;
+    uint16_t floor_n, other_n, untex_n;
+    uint8_t ok, ok_s, ok_l, ok_i, cc_i, bl_i;
+};
+
+struct Rs64Ft {
+    Rs64FtPt pts[71][2];
+    struct Key { uint32_t op, tile, line, hits; } keys[24];
+    char cc_str[4][64];
+    uint32_t cc_omv[4];
+    char bl_str[4][80];
+    char untex_bl[80];
+    int nkeys, ncc, nbl, untex_bl_set;
+    uint32_t spill;
+    uint32_t cur_w, origin;
+    int origin_set, was, raws, cc_print_set, selftest, tile_logged;
+    char cc_printed[64];
+    uint32_t om_printed;
+
+    void clear() {
+        std::memset(pts, 0, sizeof(pts));
+        std::memset(keys, 0, sizeof(keys));
         nkeys = 0;
         ncc = 0;
+        nbl = 0;
         spill = 0;
-        memset(keys, 0, sizeof(keys));
-    };
-    auto emit = [&](const char *why) {
-        const int rows = 71, cols = 2;
-        int covered = 0, other = 0, multi = 0, nok = 0, npair = 0, npl = 0, npr = 0, jump4 = 0, jump8 = 0;
-        int have = 0, nS = 0, nL = 0;
-        int cc_count[4] = {};
-        double sum = 0, suml = 0, sumr = 0, maxd = 0, sumS = 0, sumL = 0;
-        double texlo = 1e300, texhi = -1e300;
-        for (int c = 0; c < cols; c++) {
-            for (int r = 0; r < rows; r++) {
-                const Pt &p = pts[r][c];
-                if (p.floor_n) {
-                    covered++;
-                    have = 1;
-                    if (p.floor_n > 1) multi++;
-                    if (p.cc_i) cc_count[p.cc_i - 1]++;
-                    if (p.ok) {
-                        nok++;
-                        if (p.texel < texlo) texlo = p.texel;
-                        if (p.texel > texhi) texhi = p.texel;
-                    }
-                }
-                if (p.other_n) { other++; have = 1; }
-            }
-            int *np = c == 0 ? &npl : &npr;
-            double *sm = c == 0 ? &suml : &sumr;
-            for (int r = 0; r < rows - 1; r++) {
-                const Pt &a = pts[r][c];
-                const Pt &b = pts[r + 1][c];
-                if (a.ok_s && b.ok_s) {
-                    sumS += std::fabs((double)b.texel_s - (double)a.texel_s);
-                    nS++;
-                }
-                if (a.ok_l && b.ok_l) {
-                    sumL += std::fabs((double)b.luma - (double)a.luma);
-                    nL++;
-                }
-                if (!a.ok || !b.ok) continue;
-                const double d = std::fabs((double)b.texel - (double)a.texel);
-                sum += d;
-                *sm += d;
-                (*np)++;
-                npair++;
-                if (d > maxd) maxd = d;
-                if (d > 4.0) jump4++;
-                if (d > 8.0) jump8++;
-            }
-        }
-        int mode = -1, mode_n = 0, second = -1, second_n = 0, distinct = 0;
-        for (int i = 0; i < ncc; i++) {
-            if (!cc_count[i]) continue;
-            distinct++;
-            if (cc_count[i] > mode_n) {
-                second = mode; second_n = mode_n;
-                mode_n = cc_count[i]; mode = i;
-            } else if (cc_count[i] > second_n) {
-                second_n = cc_count[i]; second = i;
-            }
-        }
-        const char *cc_mode = mode >= 0 ? cc_str[mode] : "-";
-        const uint32_t om_mode = mode >= 0 ? cc_omv[mode] : 0u;
-        const char *cc_second = second >= 0 ? cc_str[second] : "-";
-        const uint32_t om_second = second >= 0 ? cc_omv[second] : 0u;
-        if (!have) return;
-        if (!nok) { texlo = 0; texhi = 0; }
-        const double denom = (double)(rows * cols);
-        fprintf(stderr,
-                "[floor-tex] why=%s w=%u floor_frac=%.4f other_frac=%.4f multi_frac=%.4f "
-                "dT=%.4f dTl=%.4f dTr=%.4f npair=%d maxdT=%.3f jump4=%d jump8=%d "
-                "tex=%.3f..%.3f badw=%d spill=%u dS=%.4f dL=%.4f nS=%d nL=%d "
-                "cc=%s omL=%08X ccn=%d n0=%d n1=%d cc2=%s om2=%08X\n",
-                why, cur_w, covered / denom, other / denom, multi / denom,
-                npair ? sum / npair : 0.0, npl ? suml / npl : 0.0, npr ? sumr / npr : 0.0,
-                npair, maxd, jump4, jump8, texlo, texhi, covered - nok, spill,
-                nS ? sumS / nS : 0.0, nL ? sumL / nL : 0.0, nS, nL,
-                cc_mode, om_mode, distinct, mode_n, second_n, cc_second, om_second);
-        if (mode >= 0 && (!cc_print_set || std::strcmp(cc_printed, cc_mode) != 0 || om_printed != om_mode)) {
-            fprintf(stderr, "[floor-cc] w=%u cc=%s omL=%08X\n", cur_w, cc_mode, om_mode);
-            std::snprintf(cc_printed, sizeof(cc_printed), "%s", cc_mode);
-            om_printed = om_mode;
-            cc_print_set = 1;
-        }
-        int order[24];
-        const int nk = nkeys < 24 ? nkeys : 24;
-        for (int i = 0; i < nk; i++) order[i] = i;
-        for (int i = 1; i < nk; i++) {
-            int v = order[i], j = i;
-            while (j > 0 && keys[order[j - 1]].hits < keys[v].hits) { order[j] = order[j - 1]; j--; }
-            order[j] = v;
-        }
-        const int nprint = nk < 4 ? nk : 4;
-        for (int i = 0; i < nprint; i++) {
-            const Key &k = keys[order[i]];
-            if (!k.hits) continue;
-            fprintf(stderr, "[floor-tex] other why=%s w=%u op=%02X tile=%u line=%u hits=%u\n",
-                    why, cur_w, k.op, k.tile, k.line, k.hits);
-        }
-        fflush(stderr);
-    };
-    auto add_key = [&](uint32_t kop, uint32_t ktile, uint32_t kline) {
+        untex_bl_set = 0;
+        untex_bl[0] = 0;
+    }
+
+    void add_key(uint32_t kop, uint32_t ktile, uint32_t kline) {
         for (int i = 0; i < nkeys; i++) {
             if (keys[i].op == kop && keys[i].tile == ktile && keys[i].line == kline) {
                 keys[i].hits++;
@@ -3846,35 +3886,193 @@ extern "C" void rs64_floor_texel(
         } else {
             spill++;
         }
-    };
-    uint32_t vw = 0, vh = 0;
-    rs64_vi_fb_wh(&vw, &vh);
-    const bool gate = (vh >= 320 && vh <= 352) && (vw == 796 || vw == 1024);
-    if (was && !gate) {
-        emit("leave");
-        clear_pts();
-        origin_set = 0;
-        cur_w = 0;
-        was = 0;
-        return;
     }
-    was = gate;
-    if (!gate) return;
-    if (cur_w && cur_w != vw) {
-        emit("width");
-        clear_pts();
-        origin_set = 0;
+
+    void emit(const char *why) {
+        const int rows = 71, cols = 2;
+        int covered = 0, other = 0, multi = 0, nok = 0, npair = 0, npl = 0, npr = 0, jump4 = 0, jump8 = 0;
+        int have = 0, nS = 0, nL = 0, nI = 0, nUntex = 0, anyI = 0, iLo = 0, iHi = 0;
+        int cc_count[4] = {}, bl_count[4] = {};
+        double sum = 0, suml = 0, sumr = 0, maxd = 0, sumS = 0, sumL = 0, sumI = 0;
+        double texlo = 1e300, texhi = -1e300;
+        for (int c = 0; c < cols; c++) {
+            for (int r = 0; r < rows; r++) {
+                const Rs64FtPt &p = pts[r][c];
+                if (p.untex_n) { nUntex++; have = 1; }
+                if (p.floor_n) {
+                    covered++;
+                    have = 1;
+                    if (p.floor_n > 1) multi++;
+                    if (p.cc_i) cc_count[p.cc_i - 1]++;
+                    if (p.bl_i) bl_count[p.bl_i - 1]++;
+                    if (p.ok) {
+                        nok++;
+                        if (p.texel < texlo) texlo = p.texel;
+                        if (p.texel > texhi) texhi = p.texel;
+                    }
+                    if (p.ok_i) {
+                        int iv = (int)std::lround(p.inten);
+                        if (iv < 0) iv = 0;
+                        if (iv > 255) iv = 255;
+                        if (!anyI) { iLo = iHi = iv; anyI = 1; }
+                        else { if (iv < iLo) iLo = iv; if (iv > iHi) iHi = iv; }
+                    }
+                }
+                if (p.other_n) { other++; have = 1; }
+            }
+            int *np = c == 0 ? &npl : &npr;
+            double *sm = c == 0 ? &suml : &sumr;
+            for (int r = 0; r < rows - 1; r++) {
+                const Rs64FtPt &a = pts[r][c];
+                const Rs64FtPt &b = pts[r + 1][c];
+                if (a.ok_s && b.ok_s) {
+                    sumS += std::fabs((double)b.texel_s - (double)a.texel_s);
+                    nS++;
+                }
+                if (a.ok_l && b.ok_l) {
+                    sumL += std::fabs((double)b.luma - (double)a.luma);
+                    nL++;
+                }
+                if (a.ok_i && b.ok_i) {
+                    sumI += std::fabs((double)b.inten - (double)a.inten);
+                    nI++;
+                }
+                if (!a.ok || !b.ok) continue;
+                const double d = std::fabs((double)b.texel - (double)a.texel);
+                sum += d;
+                *sm += d;
+                (*np)++;
+                npair++;
+                if (d > maxd) maxd = d;
+                if (d > 4.0) jump4++;
+                if (d > 8.0) jump8++;
+            }
+        }
+        int mode = -1, mode_n = 0, second = -1, second_n = 0, distinct = 0;
+        int bmode = -1, bmode_n = 0;
+        for (int i = 0; i < ncc; i++) {
+            if (!cc_count[i]) continue;
+            distinct++;
+            if (cc_count[i] > mode_n) {
+                second = mode; second_n = mode_n;
+                mode_n = cc_count[i]; mode = i;
+            } else if (cc_count[i] > second_n) {
+                second_n = cc_count[i]; second = i;
+            }
+        }
+        for (int i = 0; i < nbl; i++) {
+            if (bl_count[i] > bmode_n) { bmode_n = bl_count[i]; bmode = i; }
+        }
+        const char *cc_mode = mode >= 0 ? cc_str[mode] : "-";
+        const uint32_t om_mode = mode >= 0 ? cc_omv[mode] : 0u;
+        const char *cc_second = second >= 0 ? cc_str[second] : "-";
+        const uint32_t om_second = second >= 0 ? cc_omv[second] : 0u;
+        const char *bl_mode = bmode >= 0 ? bl_str[bmode] : "-";
+        const char *blu = untex_bl_set ? untex_bl : "-";
+        if (!have) return;
+        if (!nok) { texlo = 0; texhi = 0; }
+        const double denom = (double)(rows * cols);
+        std::fprintf(stderr,
+            "[floor-tex] why=%s w=%u floor_frac=%.4f other_frac=%.4f multi_frac=%.4f "
+            "dT=%.4f dTl=%.4f dTr=%.4f npair=%d maxdT=%.3f jump4=%d jump8=%d "
+            "tex=%.3f..%.3f badw=%d spill=%u dS=%.4f dL=%.4f nS=%d nL=%d "
+            "cc=%s omL=%08X ccn=%d n0=%d n1=%d cc2=%s om2=%08X "
+            "dI=%.4f nI=%d iLo=%d iHi=%d untex=%.4f bl=%s blu=%s\n",
+            why, cur_w, covered / denom, other / denom, multi / denom,
+            npair ? sum / npair : 0.0, npl ? suml / npl : 0.0, npr ? sumr / npr : 0.0,
+            npair, maxd, jump4, jump8, texlo, texhi, covered - nok, spill,
+            nS ? sumS / nS : 0.0, nL ? sumL / nL : 0.0, nS, nL,
+            cc_mode, om_mode, distinct, mode_n, second_n, cc_second, om_second,
+            nI ? sumI / nI : 0.0, nI, iLo, iHi, nUntex / denom, bl_mode, blu);
+        if (mode >= 0 && (!cc_print_set || std::strcmp(cc_printed, cc_mode) != 0 || om_printed != om_mode)) {
+            std::fprintf(stderr, "[floor-cc] w=%u cc=%s omL=%08X\n", cur_w, cc_mode, om_mode);
+            std::snprintf(cc_printed, sizeof(cc_printed), "%s", cc_mode);
+            om_printed = om_mode;
+            cc_print_set = 1;
+        }
+        int order[24];
+        const int nk = nkeys < 24 ? nkeys : 24;
+        for (int i = 0; i < nk; i++) order[i] = i;
+        for (int i = 1; i < nk; i++) {
+            int v = order[i], j = i;
+            while (j > 0 && keys[order[j - 1]].hits < keys[v].hits) { order[j] = order[j - 1]; j--; }
+            order[j] = v;
+        }
+        const int nprint = nk < 4 ? nk : 4;
+        for (int i = 0; i < nprint; i++) {
+            const Key &k = keys[order[i]];
+            if (!k.hits) continue;
+            std::fprintf(stderr, "[floor-tex] other why=%s w=%u op=%02X tile=%u line=%u hits=%u\n",
+                why, cur_w, k.op, k.tile, k.line, k.hits);
+        }
+        std::fflush(stderr);
     }
-    cur_w = vw;
-    const uint32_t now = rs64_vi_committed_origin();
-    if (!origin_set) {
-        origin = now;
-        origin_set = 1;
-    } else if (now != origin) {
-        emit("frame");
-        clear_pts();
-        origin = now;
+
+    bool sync() {
+        uint32_t vw = 0, vh = 0;
+        rs64_vi_fb_wh(&vw, &vh);
+        const bool gate = (vh >= 320 && vh <= 352) && (vw == 796 || vw == 1024);
+        if (was && !gate) {
+            emit("leave");
+            clear();
+            origin_set = 0;
+            cur_w = 0;
+            was = 0;
+            return false;
+        }
+        was = gate ? 1 : 0;
+        if (!gate) return false;
+        if (cur_w && cur_w != vw) {
+            emit("width");
+            clear();
+            origin_set = 0;
+        }
+        cur_w = vw;
+        const uint32_t now = rs64_vi_committed_origin();
+        if (!origin_set) {
+            origin = now;
+            origin_set = 1;
+        } else if (now != origin) {
+            emit("frame");
+            clear();
+            origin = now;
+        }
+        return true;
     }
+};
+
+Rs64Ft g_ft;
+} // namespace
+
+extern "C" void rs64_floor_texel(
+    uint32_t op, uint32_t tile, uint32_t line, int persp,
+    float y_floor, float ym,
+    float xh, float dxhdy, float xm, float dxmdy, float xl, float dxldy,
+    float yh, float yl,
+    float scx0, float scy0, float scx1, float scy1,
+    float base_t, float dtde, float dtdx,
+    float base_w, float dwde, float dwdx,
+    float base_s, float dsde, float dsdx,
+    float base_r, float base_g, float base_b,
+    float de_r, float de_g, float de_b,
+    float dx_r, float dx_g, float dx_b,
+    uint32_t om_l, const char *cc_eq,
+    uint32_t om_h,
+    uint32_t fmt, uint32_t siz, uint32_t tmem,
+    uint32_t masks, uint32_t maskt, uint32_t cms, uint32_t cmt,
+    uint32_t shifts, uint32_t shiftt,
+    uint32_t uls, uint32_t ult, uint32_t lrs, uint32_t lrt,
+    uint32_t palette, const uint8_t *tmem_bytes) {
+    static const bool on = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_FLOOR");
+        return e && *e && *e != '0';
+    }();
+    if (!on) return;
+    if (!g_ft.selftest) {
+        g_ft.selftest = 1;
+        rs64_i4_selftest();
+    }
+    if (!g_ft.sync()) return;
     if (!std::isfinite(y_floor) || !std::isfinite(ym) || !std::isfinite(xh) || !std::isfinite(dxhdy) ||
         !std::isfinite(xm) || !std::isfinite(dxmdy) || !std::isfinite(xl) || !std::isfinite(dxldy) ||
         !std::isfinite(yh) || !std::isfinite(yl)) {
@@ -3889,10 +4087,23 @@ extern "C" void rs64_floor_texel(
     if (y_hi < 180.5f || y_lo > 250.5f) return;
     const float x_lo_sc = (scx1 > scx0) ? scx0 : -1.0e9f;
     const float x_hi_sc = (scx1 > scx0) ? scx1 : 1.0e9f;
-    const float xs[2] = { vw / 6.0f, (5.0f * vw) / 6.0f };
+    const float xs[2] = { g_ft.cur_w / 6.0f, (5.0f * g_ft.cur_w) / 6.0f };
     const bool is_floor = op == 0x0Fu && tile == 0u && line == 4u;
     const bool tex_ok = std::isfinite(base_t) && std::isfinite(dtde) && std::isfinite(dtdx) &&
         std::isfinite(base_w) && std::isfinite(dwde) && std::isfinite(dwdx);
+    char tri_bl[80];
+    rs64_bl_eq(om_l, om_h, tri_bl, sizeof(tri_bl));
+    if (is_floor && !g_ft.tile_logged) {
+        g_ft.tile_logged = 1;
+        std::fprintf(stderr,
+            "[floor-i4] tile w=%u fmt=%u siz=%u line=%u tmem=%u masks=%u maskt=%u "
+            "cms=%u cmt=%u shifts=%u shiftt=%u uls=%u ult=%u lrs=%u lrt=%u pal=%u "
+            "tlut=%u filt=%u cyc=%u\n",
+            g_ft.cur_w, fmt, siz, line, tmem, masks, maskt, cms, cmt, shifts, shiftt,
+            uls, ult, lrs, lrt, palette,
+            (om_h >> 14) & 3u, (om_h >> 12) & 3u, (om_h >> 20) & 3u);
+        std::fflush(stderr);
+    }
     for (int s = 180; s <= 250; s++) {
         const float y = (float)s + 0.5f;
         if (y < y_lo || y > y_hi) continue;
@@ -3908,20 +4119,29 @@ extern "C" void rs64_floor_texel(
         for (int c = 0; c < 2; c++) {
             const float x = xs[c];
             if (x < xa || x > xb) continue;
-            Pt &p = pts[s - 180][c];
+            Rs64FtPt &p = g_ft.pts[s - 180][c];
             if (is_floor) {
                 p.floor_n++;
                 const char *eqs = (cc_eq && cc_eq[0]) ? cc_eq : "-";
                 int idx = -1;
-                for (int i = 0; i < ncc; i++) {
-                    if (cc_omv[i] == om_l && std::strcmp(cc_str[i], eqs) == 0) { idx = i; break; }
+                for (int i = 0; i < g_ft.ncc; i++) {
+                    if (g_ft.cc_omv[i] == om_l && std::strcmp(g_ft.cc_str[i], eqs) == 0) { idx = i; break; }
                 }
-                if (idx < 0 && ncc < 4) {
-                    idx = ncc++;
-                    std::snprintf(cc_str[idx], sizeof(cc_str[idx]), "%s", eqs);
-                    cc_omv[idx] = om_l;
+                if (idx < 0 && g_ft.ncc < 4) {
+                    idx = g_ft.ncc++;
+                    std::snprintf(g_ft.cc_str[idx], sizeof(g_ft.cc_str[idx]), "%s", eqs);
+                    g_ft.cc_omv[idx] = om_l;
                 }
                 if (idx >= 0) p.cc_i = (uint8_t)(idx + 1);
+                int bidx = -1;
+                for (int i = 0; i < g_ft.nbl; i++) {
+                    if (std::strcmp(g_ft.bl_str[i], tri_bl) == 0) { bidx = i; break; }
+                }
+                if (bidx < 0 && g_ft.nbl < 4) {
+                    bidx = g_ft.nbl++;
+                    std::snprintf(g_ft.bl_str[bidx], sizeof(g_ft.bl_str[bidx]), "%s", tri_bl);
+                }
+                if (bidx >= 0) p.bl_i = (uint8_t)(bidx + 1);
                 if (persp && tex_ok) {
                     const float T = base_t + dtde * dy + dtdx * (x - x_major);
                     const float W = base_w + dwde * dy + dwdx * (x - x_major);
@@ -3937,26 +4157,34 @@ extern "C" void rs64_floor_texel(
                                 p.ok_s = 1;
                             }
                         }
-                        if (raws < 4 && (s == 200 || s == 230)) {
-                            raws++;
+                        p.ok_i = 0;
+                        if (tmem_bytes && fmt == 4u && siz == 0u && p.ok_s) {
+                            p.inten = rs64_i4_fetch(tmem_bytes, p.texel_s, p.texel, line, tmem,
+                                masks, maskt, cms, cmt, shifts, shiftt, uls, ult, lrs, lrt, palette, om_h);
+                            p.ok_i = 1;
+                        }
+                        if (g_ft.raws < 4 && (s == 200 || s == 230)) {
+                            g_ft.raws++;
                             const float R = base_r + de_r * dy + dx_r * (x - x_major);
                             const float G = base_g + de_g * dy + dx_g * (x - x_major);
                             const float B = base_b + de_b * dy + dx_b * (x - x_major);
                             const float luma = 0.2126f * R + 0.7152f * G + 0.0722f * B;
-                            fprintf(stderr,
-                                    "[floor-tex] raw w=%u y=%d x=%.2f T=%.5f W=%.5f texel=%.3f texelS=%.3f luma=%.3f "
-                                    "dtdx=%.5f dsdx=%.5f dwdx=%.5f dtde=%.5f cc=%s omL=%08X\n",
-                                    vw, s, x, T, W, p.texel, texel_s, luma, dtdx, dsdx, dwdx, dtde,
-                                    eqs, om_l);
-                            fflush(stderr);
+                            std::fprintf(stderr,
+                                "[floor-tex] raw w=%u y=%d x=%.2f T=%.5f W=%.5f texel=%.3f texelS=%.3f luma=%.3f "
+                                "dtdx=%.5f dsdx=%.5f dwdx=%.5f dtde=%.5f cc=%s omL=%08X i4=%.1f\n",
+                                g_ft.cur_w, s, x, T, W, p.texel, texel_s, luma, dtdx, dsdx, dwdx, dtde,
+                                eqs, om_l, p.ok_i ? p.inten : -1.0f);
+                            std::fflush(stderr);
                         }
                     } else {
                         p.ok = 0;
                         p.ok_s = 0;
+                        p.ok_i = 0;
                     }
                 } else {
                     p.ok = 0;
                     p.ok_s = 0;
+                    p.ok_i = 0;
                 }
                 const float R = base_r + de_r * dy + dx_r * (x - x_major);
                 const float G = base_g + de_g * dy + dx_g * (x - x_major);
@@ -3969,11 +4197,97 @@ extern "C" void rs64_floor_texel(
                 }
             } else {
                 p.other_n++;
-                add_key(op, tile, line);
+                g_ft.add_key(op, tile, line);
             }
         }
     }
 }
+
+extern "C" void rs64_floor_untex(
+    float y_floor, float ym,
+    float xh, float dxhdy, float xm, float dxmdy, float xl, float dxldy,
+    float yh, float yl,
+    float scx0, float scy0, float scx1, float scy1,
+    uint32_t om_l, uint32_t om_h) {
+    static const bool on = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_FLOOR");
+        return e && *e && *e != '0';
+    }();
+    if (!on) return;
+    if (!g_ft.sync()) return;
+    if (!std::isfinite(y_floor) || !std::isfinite(ym) || !std::isfinite(xh) || !std::isfinite(dxhdy) ||
+        !std::isfinite(xm) || !std::isfinite(dxmdy) || !std::isfinite(xl) || !std::isfinite(dxldy) ||
+        !std::isfinite(yh) || !std::isfinite(yl)) {
+        return;
+    }
+    float y_lo = yh < yl ? yh : yl;
+    float y_hi = yh > yl ? yh : yl;
+    if (scy1 > scy0) {
+        if (scy0 > y_lo) y_lo = scy0;
+        if (scy1 < y_hi) y_hi = scy1;
+    }
+    if (y_hi < 180.5f || y_lo > 250.5f) return;
+    const float x_lo_sc = (scx1 > scx0) ? scx0 : -1.0e9f;
+    const float x_hi_sc = (scx1 > scx0) ? scx1 : 1.0e9f;
+    const float xs[2] = { g_ft.cur_w / 6.0f, (5.0f * g_ft.cur_w) / 6.0f };
+    int hit = 0;
+    for (int s = 180; s <= 250; s++) {
+        const float y = (float)s + 0.5f;
+        if (y < y_lo || y > y_hi) continue;
+        float xa, xb;
+        if (!rs64_ft_span(y, y_floor, ym, xh, dxhdy, xm, dxmdy, xl, dxldy, x_lo_sc, x_hi_sc, xa, xb)) continue;
+        for (int c = 0; c < 2; c++) {
+            if (xs[c] < xa || xs[c] > xb) continue;
+            Rs64FtPt &p = g_ft.pts[s - 180][c];
+            if (p.untex_n < 65535) p.untex_n++;
+            hit = 1;
+        }
+    }
+    if (hit) {
+        rs64_bl_eq(om_l, om_h, g_ft.untex_bl, sizeof(g_ft.untex_bl));
+        g_ft.untex_bl_set = 1;
+    }
+}
+
+extern "C" void rs64_floor_rect(
+    float x0, float y0, float x1, float y1,
+    float scx0, float scy0, float scx1, float scy1,
+    uint32_t om_l, uint32_t om_h) {
+    static const bool on = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_FLOOR");
+        return e && *e && *e != '0';
+    }();
+    if (!on) return;
+    if (!g_ft.sync()) return;
+    if (x0 > x1) { float t = x0; x0 = x1; x1 = t; }
+    if (y0 > y1) { float t = y0; y0 = y1; y1 = t; }
+    if (scx1 > scx0) {
+        if (x0 < scx0) x0 = scx0;
+        if (x1 > scx1) x1 = scx1;
+    }
+    if (scy1 > scy0) {
+        if (y0 < scy0) y0 = scy0;
+        if (y1 > scy1) y1 = scy1;
+    }
+    if (!(x1 > x0) || !(y1 > y0)) return;
+    const float xs[2] = { g_ft.cur_w / 6.0f, (5.0f * g_ft.cur_w) / 6.0f };
+    int hit = 0;
+    for (int s = 180; s <= 250; s++) {
+        const float y = (float)s + 0.5f;
+        if (y < y0 || y > y1) continue;
+        for (int c = 0; c < 2; c++) {
+            if (xs[c] < x0 || xs[c] > x1) continue;
+            Rs64FtPt &p = g_ft.pts[s - 180][c];
+            if (p.untex_n < 65535) p.untex_n++;
+            hit = 1;
+        }
+    }
+    if (hit) {
+        rs64_bl_eq(om_l, om_h, g_ft.untex_bl, sizeof(g_ft.untex_bl));
+        g_ft.untex_bl_set = 1;
+    }
+}
+
 
 // s6613: base S/T are the s15.16 coefficients decodeTriangles already
 // computed. S at screen x=0 is that base walked to the band scanline

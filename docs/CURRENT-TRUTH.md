@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6616 (2026-10-28).
+Compact operational handoff, as of Session 6617 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,6 +15,19 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-texel).**
+  - s6617: I4 intensity, untextured/rect coverage, and the blender are not
+    the tear at x=w/6 and x=5w/6. One binary, 66 and 69 closed frames.
+    I4 self-test passed. Tile is fmt 4 / siz 0, bilerp, no TLUT, on both.
+    Pooled |ΔI| is 51.18 vs 45.16 (21:9 smaller, rel 0.12). Untex fraction
+    is 1.0 on both (a fill and a 2-cycle rect cover every sample; same
+    blender set). Floor blender is
+    `cyc0f0(CC*CCA+MEM*MEMA)|(CC*CCA+MEM*MEMA)` on both. |ΔT| 4.70 vs 4.15
+    and |Δ shade| 2.65 vs 3.45 stay inside 25% of s6616. Raw S matches
+    s6616 to 0.02. Outer-third dy is 5.55 vs 23.11. This refutes H-i4,
+    H-untex, and H-blender at that sample. On the same fb 1400 frames the
+    row step at x=16 and x=w-17 is 3.9 vs 46.2 and 4.5 vs 46.4, while
+    x=w/6 is only 5.9 vs 12.7. The next sample is the edge. No patch.
+    Evidence: `scratch/agent/s6617_i4/verdict.json`.
   - s6616: outer-third S and shade luma are not the tear. One binary, both
     arms, 67 closed frames each, same edge walk as s6615. floor_frac 1,
     badw 0, nS=nL=npair=9380. Raw T matches s6615 to the printed digits.
@@ -268,8 +281,10 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   textured triangle covers the sample. The sampler's T is not the
   tear. s6616: that sample's S is smaller on 21:9 (3.93 vs 2.69),
   shade luma agrees within 25% (2.66 vs 3.52), and the combiner is
-  `(T0-0)*SHADE+0` on both widths. The OS window remains 640x480, so
-  wider modes letterbox.
+  `(T0-0)*SHADE+0` on both widths. s6617: I4 |Δ| there is 51 vs 45,
+  untex coverage is 1.0 on both, and the blender string matches. The
+  4x row step is in the outer 1/12 of the width, not at x=w/6.
+  The OS window remains 640x480, so wider modes letterbox.
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
@@ -370,12 +385,11 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6616) Floor S and shade luma are not the 21:9 tear.** Combiner
-   is `(T0-0)*SHADE+0` on both widths. |ΔS| is smaller on 21:9
-   (3.93 vs 2.69); |Δ shade luma| agrees within 25% (2.66 vs 3.52)
-   while pixel dy is 5.97 vs 20.0. Do not patch. Next discriminator
-   is the I4 texel at that S,T, untextured/rect coverage of the same
-   points, and the blender equation. See NEXT.md.
+1. **(s6617) I4, untex, and blender are not the 21:9 tear at x=w/6.**
+   |ΔI| is 51.18 vs 45.16, untex is 1.0 vs 1.0, and the blender string
+   matches. The framebuffer row step on fb 1400 is ~12x at x=16 and
+   x=w-17 (3.9 vs 46.2, 4.5 vs 46.4) and only ~2x at x=w/6. Do not patch.
+   Next sample is those edge columns. See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

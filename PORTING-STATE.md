@@ -171806,3 +171806,52 @@ bytes are not established as display pixels. Runtime artifact origin is open.
   21:9 jump is contradicted. No cull, no anchor change, no default change.
   ORIGIN: no mitigation.
   Evidence: `scratch/agent/s6616_ss/verdict.json` (selects mixed).
+
+## Session 6617 (2026-10-28) — level-select I4, untex, and blender do not track the tear
+
+- Maintenance check: CURRENT-TRUTH was 44,050 bytes, under 60,000. The soak
+  tail still ends at the s6580 dd4 holds. No new soak verdict. IOConsoleLocked
+  was false. No other game was running.
+- One Debug binary, `ROGUESQ_LOG_FLOOR=1`, the s6616 route, 16:9 then 21:9,
+  SIGKILL after 50 good frames plus a width-matched dump. 16:9 ran 35.7 s,
+  66 closed frames, dy 5.55, stop tex+dump, rc -9, 0 crash lines. 21:9 ran
+  33.3 s, 69 closed frames, dy 23.11. Dumps
+  `scratch/agent/s6617_i4/wide16/fbd/fb_0001400_w796.ppm` and
+  `scratch/agent/s6617_i4/wide21/fbd/fb_0001400_w1024.ppm`. Verdict
+  `scratch/agent/s6617_i4/verdict.json`.
+- New fields on the s6616 sample (y 180..250, x=w/6 and x=5w/6, last floor
+  triangle wins): the I4 texel (fmt 4 / siz 0, odd-row word swap, bilerp),
+  whether an untextured triangle or a rectangle covers the point, and the
+  blender equation. The address self-test printed
+  `[floor-i4] selftest ok a=170 b=0 c=85 d=170` once per arm. The tile line
+  is fmt 4, siz 0, line 4, tmem 0, masks 6, shift 0, uls 0, lrs 252, tlut 0,
+  filt 2, cycle 0, on both widths.
+- Positive controls, same run. floor_frac is 1, badw is 0, and nI = nS = nL
+  = npair (9240 and 9660). Pooled |ΔT| is 4.70 vs 4.15, inside 25% of the
+  s6616 4.79 vs 4.09. Pooled |Δ shade luma| is 2.65 vs 3.45, inside 25% of
+  2.66 vs 3.52. Raw S matches s6616: y=200 left 23.199 vs 23.215, y=230 left
+  34.814 vs 34.813, and the right column 9.463 vs 9.445 and 31.044 vs 31.041.
+  Raw I4 at those four points is 51.7/51.9, 17.8/17.7, 0.0/0.0, and 14.4/13.4.
+  dy is 5.55 (under 12) and 23.11 (above 18). Combiner remains
+  `(T0-0)*SHADE+0` on every closed frame.
+- Pooled mean |ΔI| is 51.18 on 16:9 and 45.16 on 21:9 (relative gap 0.12,
+  ratio 0.88). 21:9 is smaller, not more than twice. iLo..iHi is 0..255 on
+  both, so this is not a flat texture and not a stuck-zero decoder. This
+  refutes H-i4.
+- Untex fraction is 1.000 on every closed frame of both arms. The covering
+  primitive's blender set is the same on both:
+  `cyc1f1(CC*0+CC*1)|(CC*CCA+MEM*1mA)` and
+  `cyc3f1(CC*0+CC*1)|(CC*0+CC*1)` (2-cycle and fill). A rect covers the
+  sample on 16:9 as well as on 21:9, so this refutes H-untex. The fraction
+  is saturated, so it cannot see a second 21:9-only primitive underneath
+  that rect. It does answer the stated test.
+- The floor blender is `cyc0f0(CC*CCA+MEM*MEMA)|(CC*CCA+MEM*MEMA)` on every
+  closed frame of both arms. The strings match, so this refutes H-blender.
+  filt and tlut do not differ (2 and 0).
+- Offline on those same fb 1400 dumps, the row step is not uniform across
+  the outer third. The sample columns are 5.86 and 4.78 (16:9) versus 12.67
+  and 7.92 (21:9). x=16 is 3.89 vs 46.17 and x=w-17 is 4.49 vs 46.35. The
+  w/6 sample is the mild part of the tear. No patch.
+- Next discriminator: the same I4 and shade step at x=16 and x=w-17, where
+  the framebuffer row step is about 12x. Do not retune the anchor or the shift.
+  ORIGIN: no mitigation.
