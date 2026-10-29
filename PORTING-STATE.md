@@ -173505,3 +173505,71 @@ and "the frozen rule rejects every level-13 phase-7 frame." What it
 does not show: an objective-counter response, or that level 14 passes.
 The lava ceiling misses are not a reason to raise 0.33 in the next
 session. Level 14 does not need the planet unlock.
+
+## Session 6648 (2026-10-29) — level 14 overcast flight passes the frozen class rule
+
+One retail 4:3 capture. No classifier edit, no heap edit, no aim, draw
+distance unset, aspect unset, no planet unlock. Precontrol
+`python3 tools/g1_flight_class.py` printed canon_bad 0 and mission 11/13
+before launch (oracle, level-2 fb_0002700, and level-3 fb_0002700 pass;
+floor and the s6633 title fail). IOConsoleLocked was No. The route is
+scratch/agent/s6648_lvl14.sh, the s6647 script with FORCE_UNLOCK=14 and
+FORCE_SAVE_MISSION=14. The soak tail in scratch/agent/SOAK-RESULTS.md
+still ends at s6580 (2026-10-28); no new queued verdict to fold.
+
+scratch/agent/s6648_lvl14/keys.log: screen-unlocked, precontrol-ok, title
+t=14, hangar t=32, mission-onset t=82, hold-30s t=112, killed t=112,
+crash=0, abort=0. run.log echoes `[dd] ROGUESQ_DRAW_DISTANCE multiplier 1`,
+`[g1d-drop] aspect=<unset>`, `[lvsel] cursor=14`, and
+`[initMission] call#1 B40=0x0E`. CRASH, abort, SIGSEGV and SIGBUS counts
+in that log are 0. Nine phase-7 dumps, n=2450..2850 step 50, are
+512x444. Every dump's own origin field is `0x00690400` (fb=0x80620000,
+source=0x00690000). The VI origin census has 16 lines of `0x00690400`
+and 14 of `0x00620400`. Sheet `docs/g1_lvl14_flight_s6648.png` is frames
+2550, 2650, 2750 and 2800. Scores are in
+`scratch/agent/s6648_lvl14_score.txt`.
+
+The sheet is a flight. Grey cloud over a rocky ridge, an X-wing with
+lit engines, a distant craft, the round radar, a green reticle and the
+shield badge. The frozen rule scores 6/9. n=2550, 2600, 2650, 2700,
+2750 and 2800 pass sky, terrain, craft and HUD. Sky on those six is
+the existing blue arm (luma 201.7..211.5, R-G -2.8..-0.8). Craft is
+the existing dark-hull arm (sil 0.161..0.226) against that bright sky;
+the engine bloom also fires (pink 0.0059..0.0105). Terrain rel is
+0.207..0.301, inside the 0.08..0.33 band. Radar is 0.108..0.110.
+
+n=2450 is not required. It is still a flight: the X-wing is banked in
+cloud, with the radar and the shield badge, and the ground is a thin
+strip. It misses terrain only (rel 0.065). Sky, craft and HUD pass
+(luma 231.0, sil 0.316, radar 0.132). That is the same terrain-floor
+family as level 4's n=2300 at rel 0.065, not a new sky class.
+
+n=2500 is not required. It is still a flight: the same X-wing, radar,
+reticle and ridge. It misses terrain only (rel 0.357). Sky, craft and
+HUD pass (luma 200.5, sil 0.369, radar 0.135). That is the same
+terrain-ceiling family as level 5's rel 0.331/0.338 and level 13's
+lava frames, not a new sky class.
+
+n=2850 is not a four-part frame. It is a ground view: forest, two
+buildings and turrets, with no chase craft and no radar. Terrain,
+craft and HUD all miss (rel 0.625, sil 0.000, edge 0.000, radar 0).
+Sky still passes on the blue arm (luma 77.8, R-G -2.5). That is the
+same no-chase family as level 6's n=2850 and n=2900. The classifier
+was not edited.
+
+Same-run title `fb_0000800_w512.ppm` is the title screen and fails sky
+and terrain (luma 81.9, R-G 30.0, rel 0.437). The origin-`0x006AB400`
+dump `fb_0001700_w512.ppm` is the craft-select screen (X-wing, select
+your craft), not a flight. It fails overall on HUD only (radar 0).
+Sky, terrain and craft each pass on that menu (luma 34.4, rel 0.192,
+metal 0.173) and do not accept it. Objective (d) was not run.
+
+This selects H-rule-holds. It refutes H-new-class (6/9 pass, not 0/9)
+and H-no-picture (the sheet is a flight).
+ORIGIN: n/a (no mitigation).
+
+What this rules out: "level 14 produced no post-hangar flight picture"
+and "the frozen rule rejects every level-14 phase-7 frame." What it
+does not show: an objective-counter response, or that level 15 passes.
+The floor and ceiling misses are not a reason to move 0.08 or 0.33.
+Level 15 needs the planet unlock.

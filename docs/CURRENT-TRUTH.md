@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6647 (2026-10-29).
+Compact operational handoff, as of Session 6648 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -187,6 +187,20 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   `0x006AB400`, Y-wing) fails sky and HUD (radar 0.001). Sheet
   `docs/g1_lvl13_flight_s6647.png`. 0 crashes in the 30 s hold.
   The classifier was not edited. Objective (d) was not run.
+- **G1 (c) level 14 flight framebuffer: frozen rule accepts it.**
+  s6648, one retail 4:3 capture, draw distance 1, aspect unset.
+  Selector B40=14, cursor=14. Nine phase-7 dumps, n=2450..2850,
+  are 512x444 at origin `0x00690400` (this run sampled the route
+  key; `0x620400` is in the VI log, 14 lines). Grey cloud, rocky
+  ridge, X-wing, radar, reticle, shield badge. 6/9 pass all four
+  clauses (n=2550, 2600, 2650, 2700, 2750, 2800). Not required:
+  n=2450 terrain floor only (rel 0.065; the ship is in cloud and
+  the ground is a sliver), n=2500 terrain ceiling only (rel
+  0.357), and n=2850, a ground view with no chase craft and no
+  radar (rel 0.625, radar 0). Same-run title fails sky and
+  terrain. Craft-select fails HUD only (radar 0). Sheet
+  `docs/g1_lvl14_flight_s6648.png`. 0 crashes in the 30 s hold.
+  The classifier was not edited. Objective (d) was not run.
 
 ## Superseded conclusions — do not act on these
 - s6643 "level 10 is a flight and the frozen rule rejects the sky 0/12" (s6644: tan-cloud arm accepts 11/12; n=2900 stays a craft miss at edge 0.013; title sky stays false because G−B is ~5 while the clouds are ≥22; canon_bad 0; mission 11/13). Believable because dark≥0.60, the blue arm (R−G≤15) and the orange arm (R−G≥40) all miss a luma 73..104 sky with R−G 23..28.
@@ -309,6 +323,11 @@ one capture). n=2400 remains a banked-craft near-miss (metal
 Level 13 passes the frozen rule on 2/9 phase-7 dumps (s6647,
 one capture). Seven lava frames miss the terrain ceiling only
 (rel 0.362..0.611) and are not required.
+Level 14 passes the frozen rule on 6/9 phase-7 dumps (s6648,
+one capture). Not required: n=2450 terrain floor (rel 0.065),
+n=2500 terrain ceiling (rel 0.357), and n=2850, a ground view
+with no chase craft and no radar. Those are not a reason to
+move 0.08 or 0.33.
 Verification still needs framebuffer
 evidence for the remaining levels, plus a forced-hit objective
 response. Mission wins, autopilot aim, and mission-to-mission
@@ -335,22 +354,24 @@ progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6647) Capture level 14 with the rule frozen.** One retail
-   4:3 run. Clone `scratch/agent/s6647_lvl13.sh` to
-   `scratch/agent/s6648_lvl14.sh` with `ROGUESQ_FORCE_UNLOCK=14`
-   and `ROGUESQ_FORCE_SAVE_MISSION=14`. Do not set
-   `ROGUESQ_FORCE_PLANET_UNLOCK` (only levels 10 and 15 need it).
+1. **(s6648) Capture level 15 with the rule frozen.** One retail
+   4:3 run. Clone `scratch/agent/s6643_lvl10.sh` (it already sets
+   `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF`) to
+   `scratch/agent/s6649_lvl15.sh`. Output dir
+   `scratch/agent/s6649_lvl15`. Set `ROGUESQ_FORCE_UNLOCK=15` and
+   `ROGUESQ_FORCE_SAVE_MISSION=15`. Keep the planet unlock.
    Draw distance unset, aspect unset. Precontrol
    `python3 tools/g1_flight_class.py` must print `canon_bad 0`
    and `mission 11/13` before launch. Screen must be unlocked.
-   Do not edit `tools/g1_flight_class.py`. Score the phase-7
+   Do not edit `tools/g1_flight_class.py`. Do not move 0.08 or
+   0.33 because of the level-14 near-misses. Score the phase-7
    dumps after joining them to the VI origin. Same-run title
    must still fail overall. If at least one phase-7 frame passes
    all four clauses, record the count and stop. If the sheet is
    a flight and zero frames pass, record the failing clause and
    the sky-box luma / R-G / R-B / G-B, and do not add an arm.
    If there is no post-hangar `0x690400` inside 420 s, record
-   the last origin and stop. Do not start level 15. See NEXT.md.
+   the last origin and stop. Do not start level 16. See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
