@@ -3681,10 +3681,10 @@ extern "C" void rs64_floor_cover(
     }
 }
 
-// Perspective-correct T at the outer-third sample, not at x=0. T(x) and
-// W(x) are the RDP plane at the pixel center: base + De*(y-yFloor) +
-// Dx*(x - XH). dwdx is texcoordDx[2], which the x=0 note does not keep.
-// The texel is (T/W)*1024. Last floor triangle in submission order wins.
+// Perspective-correct T and S at the outer-third sample, plus shade luma.
+// Each plane is base + De*(y-yFloor) + Dx*(x - XH). Texels are (T/W)*1024
+// and (S/W)*1024, with the same W. Luma is 0.2126 R + 0.7152 G + 0.0722 B.
+// Last floor triangle in submission order wins.
 extern "C" void rs64_floor_texel(
     uint32_t op, uint32_t tile, uint32_t line, int persp,
     float y_floor, float ym,
@@ -3692,31 +3692,43 @@ extern "C" void rs64_floor_texel(
     float yh, float yl,
     float scx0, float scy0, float scx1, float scy1,
     float base_t, float dtde, float dtdx,
-    float base_w, float dwde, float dwdx) {
+    float base_w, float dwde, float dwdx,
+    float base_s, float dsde, float dsdx,
+    float base_r, float base_g, float base_b,
+    float de_r, float de_g, float de_b,
+    float dx_r, float dx_g, float dx_b,
+    uint32_t om_l, const char *cc_eq) {
     static const bool on = [] {
         const char *e = std::getenv("ROGUESQ_LOG_FLOOR");
         return e && *e && *e != '0';
     }();
     if (!on) return;
-    struct Pt { float texel; uint16_t floor_n, other_n; uint8_t ok; };
+    struct Pt { float texel, texel_s, luma; uint16_t floor_n, other_n; uint8_t ok, ok_s, ok_l, cc_i; };
     struct Key { uint32_t op, tile, line, hits; };
     static Pt pts[71][2];
     static Key keys[24];
-    static int nkeys = 0;
+    static char cc_str[4][64];
+    static uint32_t cc_omv[4];
+    static int nkeys = 0, ncc = 0;
     static uint32_t spill = 0;
     static uint32_t cur_w = 0, origin = 0;
     static int origin_set = 0, was = 0, raws = 0;
+    static char cc_printed[64];
+    static uint32_t om_printed = 0;
+    static int cc_print_set = 0;
     auto clear_pts = [&]() {
         memset(pts, 0, sizeof(pts));
         nkeys = 0;
+        ncc = 0;
         spill = 0;
         memset(keys, 0, sizeof(keys));
     };
     auto emit = [&](const char *why) {
         const int rows = 71, cols = 2;
         int covered = 0, other = 0, multi = 0, nok = 0, npair = 0, npl = 0, npr = 0, jump4 = 0, jump8 = 0;
-        int have = 0;
-        double sum = 0, suml = 0, sumr = 0, maxd = 0;
+        int have = 0, nS = 0, nL = 0;
+        int cc_count[4] = {};
+        double sum = 0, suml = 0, sumr = 0, maxd = 0, sumS = 0, sumL = 0;
         double texlo = 1e300, texhi = -1e300;
         for (int c = 0; c < cols; c++) {
             for (int r = 0; r < rows; r++) {
@@ -3725,6 +3737,7 @@ extern "C" void rs64_floor_texel(
                     covered++;
                     have = 1;
                     if (p.floor_n > 1) multi++;
+                    if (p.cc_i) cc_count[p.cc_i - 1]++;
                     if (p.ok) {
                         nok++;
                         if (p.texel < texlo) texlo = p.texel;
@@ -3738,6 +3751,14 @@ extern "C" void rs64_floor_texel(
             for (int r = 0; r < rows - 1; r++) {
                 const Pt &a = pts[r][c];
                 const Pt &b = pts[r + 1][c];
+                if (a.ok_s && b.ok_s) {
+                    sumS += std::fabs((double)b.texel_s - (double)a.texel_s);
+                    nS++;
+                }
+                if (a.ok_l && b.ok_l) {
+                    sumL += std::fabs((double)b.luma - (double)a.luma);
+                    nL++;
+                }
                 if (!a.ok || !b.ok) continue;
                 const double d = std::fabs((double)b.texel - (double)a.texel);
                 sum += d;
@@ -3749,16 +3770,40 @@ extern "C" void rs64_floor_texel(
                 if (d > 8.0) jump8++;
             }
         }
+        int mode = -1, mode_n = 0, second = -1, second_n = 0, distinct = 0;
+        for (int i = 0; i < ncc; i++) {
+            if (!cc_count[i]) continue;
+            distinct++;
+            if (cc_count[i] > mode_n) {
+                second = mode; second_n = mode_n;
+                mode_n = cc_count[i]; mode = i;
+            } else if (cc_count[i] > second_n) {
+                second_n = cc_count[i]; second = i;
+            }
+        }
+        const char *cc_mode = mode >= 0 ? cc_str[mode] : "-";
+        const uint32_t om_mode = mode >= 0 ? cc_omv[mode] : 0u;
+        const char *cc_second = second >= 0 ? cc_str[second] : "-";
+        const uint32_t om_second = second >= 0 ? cc_omv[second] : 0u;
         if (!have) return;
         if (!nok) { texlo = 0; texhi = 0; }
         const double denom = (double)(rows * cols);
         fprintf(stderr,
                 "[floor-tex] why=%s w=%u floor_frac=%.4f other_frac=%.4f multi_frac=%.4f "
                 "dT=%.4f dTl=%.4f dTr=%.4f npair=%d maxdT=%.3f jump4=%d jump8=%d "
-                "tex=%.3f..%.3f badw=%d spill=%u\n",
+                "tex=%.3f..%.3f badw=%d spill=%u dS=%.4f dL=%.4f nS=%d nL=%d "
+                "cc=%s omL=%08X ccn=%d n0=%d n1=%d cc2=%s om2=%08X\n",
                 why, cur_w, covered / denom, other / denom, multi / denom,
                 npair ? sum / npair : 0.0, npl ? suml / npl : 0.0, npr ? sumr / npr : 0.0,
-                npair, maxd, jump4, jump8, texlo, texhi, covered - nok, spill);
+                npair, maxd, jump4, jump8, texlo, texhi, covered - nok, spill,
+                nS ? sumS / nS : 0.0, nL ? sumL / nL : 0.0, nS, nL,
+                cc_mode, om_mode, distinct, mode_n, second_n, cc_second, om_second);
+        if (mode >= 0 && (!cc_print_set || std::strcmp(cc_printed, cc_mode) != 0 || om_printed != om_mode)) {
+            fprintf(stderr, "[floor-cc] w=%u cc=%s omL=%08X\n", cur_w, cc_mode, om_mode);
+            std::snprintf(cc_printed, sizeof(cc_printed), "%s", cc_mode);
+            om_printed = om_mode;
+            cc_print_set = 1;
+        }
         int order[24];
         const int nk = nkeys < 24 ? nkeys : 24;
         for (int i = 0; i < nk; i++) order[i] = i;
@@ -3866,25 +3911,61 @@ extern "C" void rs64_floor_texel(
             Pt &p = pts[s - 180][c];
             if (is_floor) {
                 p.floor_n++;
+                const char *eqs = (cc_eq && cc_eq[0]) ? cc_eq : "-";
+                int idx = -1;
+                for (int i = 0; i < ncc; i++) {
+                    if (cc_omv[i] == om_l && std::strcmp(cc_str[i], eqs) == 0) { idx = i; break; }
+                }
+                if (idx < 0 && ncc < 4) {
+                    idx = ncc++;
+                    std::snprintf(cc_str[idx], sizeof(cc_str[idx]), "%s", eqs);
+                    cc_omv[idx] = om_l;
+                }
+                if (idx >= 0) p.cc_i = (uint8_t)(idx + 1);
                 if (persp && tex_ok) {
                     const float T = base_t + dtde * dy + dtdx * (x - x_major);
                     const float W = base_w + dwde * dy + dwdx * (x - x_major);
                     if (std::fabs(W) > 1.0e-8f && std::isfinite(T) && std::isfinite(W)) {
                         p.texel = (T / W) * 1024.0f;
                         p.ok = 1;
+                        float texel_s = 0.f;
+                        if (std::isfinite(base_s) && std::isfinite(dsde) && std::isfinite(dsdx)) {
+                            const float S = base_s + dsde * dy + dsdx * (x - x_major);
+                            if (std::isfinite(S)) {
+                                texel_s = (S / W) * 1024.0f;
+                                p.texel_s = texel_s;
+                                p.ok_s = 1;
+                            }
+                        }
                         if (raws < 4 && (s == 200 || s == 230)) {
                             raws++;
+                            const float R = base_r + de_r * dy + dx_r * (x - x_major);
+                            const float G = base_g + de_g * dy + dx_g * (x - x_major);
+                            const float B = base_b + de_b * dy + dx_b * (x - x_major);
+                            const float luma = 0.2126f * R + 0.7152f * G + 0.0722f * B;
                             fprintf(stderr,
-                                    "[floor-tex] raw w=%u y=%d x=%.2f T=%.5f W=%.5f texel=%.3f "
-                                    "dtdx=%.5f dwdx=%.5f dtde=%.5f\n",
-                                    vw, s, x, T, W, p.texel, dtdx, dwdx, dtde);
+                                    "[floor-tex] raw w=%u y=%d x=%.2f T=%.5f W=%.5f texel=%.3f texelS=%.3f luma=%.3f "
+                                    "dtdx=%.5f dsdx=%.5f dwdx=%.5f dtde=%.5f cc=%s omL=%08X\n",
+                                    vw, s, x, T, W, p.texel, texel_s, luma, dtdx, dsdx, dwdx, dtde,
+                                    eqs, om_l);
                             fflush(stderr);
                         }
                     } else {
                         p.ok = 0;
+                        p.ok_s = 0;
                     }
                 } else {
                     p.ok = 0;
+                    p.ok_s = 0;
+                }
+                const float R = base_r + de_r * dy + dx_r * (x - x_major);
+                const float G = base_g + de_g * dy + dx_g * (x - x_major);
+                const float B = base_b + de_b * dy + dx_b * (x - x_major);
+                if (std::isfinite(R) && std::isfinite(G) && std::isfinite(B)) {
+                    p.luma = 0.2126f * R + 0.7152f * G + 0.0722f * B;
+                    p.ok_l = 1;
+                } else {
+                    p.ok_l = 0;
                 }
             } else {
                 p.other_n++;

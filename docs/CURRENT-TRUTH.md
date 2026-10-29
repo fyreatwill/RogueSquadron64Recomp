@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6615 (2026-10-28).
+Compact operational handoff, as of Session 6616 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,6 +15,21 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-texel).**
+  - s6616: outer-third S and shade luma are not the tear. One binary, both
+    arms, 67 closed frames each, same edge walk as s6615. floor_frac 1,
+    badw 0, nS=nL=npair=9380. Raw T matches s6615 to the printed digits.
+    Pooled |ΔT| is 4.79 vs 4.09 (within 25% of 4.32 vs 3.63). dy 5.97
+    vs 20.0. Combiner is `(T0-0)*SHADE+0` on every frame of both arms.
+    othermode L alternates `00552230` and `00552078` on both arms
+    (AA_EN|IM_RD vs CVG_DST_FULL); not a width split. Within-frame
+    second identity is 0.5% / 5.2% of sample points, same equation.
+    Pooled |ΔS| is 3.93 vs 2.69 (21:9 smaller, rel 0.32). Pooled
+    |Δ shade luma| is 2.66 vs 3.52 (rel 0.24). Neither is more than
+    twice on 21:9, so H-s-row and H-shade are not selected. |ΔS| is
+    outside the 25% band, so the strict both-agree refutation is not
+    met; the predicted direction is contradicted in every quartile.
+    Pixel dy is 3.3x and shade is 1.3x. No patch. Evidence:
+    `scratch/agent/s6616_ss/verdict.json`.
   - s6615: perspective-correct texel T at x=w/6 and x=5w/6 does not
     jump more on 21:9. One binary, both arms, the s6614 edge walk.
     Floor texel is (T/W)*1024 from the last op 0x0F tile 0 line 4
@@ -251,7 +266,10 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   covered pixels. s6615: texel T at x=w/6 and x=5w/6 has the same
   row step on both widths (mean |ΔT| 4.32 vs 3.63) and no other
   textured triangle covers the sample. The sampler's T is not the
-  tear. The OS window remains 640x480, so wider modes letterbox.
+  tear. s6616: that sample's S is smaller on 21:9 (3.93 vs 2.69),
+  shade luma agrees within 25% (2.66 vs 3.52), and the combiner is
+  `(T0-0)*SHADE+0` on both widths. The OS window remains 640x480, so
+  wider modes letterbox.
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
@@ -352,11 +370,12 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6615) Floor texel T is not the 21:9 tear.** Mean |ΔT| at
-   x=w/6 and x=5w/6 agrees within 16% (4.32 vs 3.63) and other_frac
-   is 0. Do not patch, and do not log another T. Next discriminator
-   is perspective-correct texel S and the shade luma of that same
-   floor triangle, plus the combiner equation. See NEXT.md.
+1. **(s6616) Floor S and shade luma are not the 21:9 tear.** Combiner
+   is `(T0-0)*SHADE+0` on both widths. |ΔS| is smaller on 21:9
+   (3.93 vs 2.69); |Δ shade luma| agrees within 25% (2.66 vs 3.52)
+   while pixel dy is 5.97 vs 20.0. Do not patch. Next discriminator
+   is the I4 texel at that S,T, untextured/rect coverage of the same
+   points, and the blender equation. See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

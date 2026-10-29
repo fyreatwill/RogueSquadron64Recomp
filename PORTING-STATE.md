@@ -171762,3 +171762,47 @@ bytes are not established as display pixels. Runtime artifact origin is open.
   no default change.
   ORIGIN: no mitigation.
   Evidence: `scratch/agent/s6615_tex/verdict.json`.
+
+## Session 6616 (2026-10-28) — level-select floor S and shade do not track the tear
+
+- Maintenance check: CURRENT-TRUTH was 42,819 bytes, under 60,000. The soak
+  tail still ends at the s6580 dd4 holds. No new soak verdict. IOConsoleLocked
+  was false and the runner's screen-lock check passed. No other game was running.
+- One Debug binary, `ROGUESQ_LOG_FLOOR=1`, the s6615 route, 16:9 then 21:9,
+  SIGKILL. A first stop at the first dump collected only 25 and 33 frames.
+  Those |ΔT| series match the s6615 prefix (21:9 first 10 frames identical;
+  s6615's own first 25 average 3.04 and 2.53). That window is the early,
+  low-step part of the animation, so it cannot be compared with the s6615
+  means 4.32 and 3.63. The recorded run waits for 50 closed frames. Both
+  arms then ran 67 frames, alive (rc -9), 0 crash lines, stop tex+dump.
+  Dumps `scratch/agent/s6616_ss/wide16/fbd/fb_0001400_w796.ppm` (dy 5.97)
+  and `wide21/fbd/fb_0001400_w1024.ppm` (dy 20.0).
+- Same sample as s6615: y in 180..250, x=w/6 and x=5w/6, op 0x0F tile 0
+  line 4, last writer wins. S is (S/W)*1024 with S = baseS + dsde*(y-yFloor)
+  + dsdx*(x-XH). Shade luma is 0.2126 R + 0.7152 G + 0.0722 B from the
+  shade plane. The combiner equation and othermode L come from that triangle.
+- Positive controls, same run. floor_frac is 1.0, badw is 0, and nS = nL =
+  npair = 9380 on both arms. Raw T matches the s6615 digits (16:9 y=230
+  texel 32.918, dtdx -8.30666; 21:9 texel 32.921, dtdx -6.46603). Pooled
+  |ΔT| is 4.79 and 4.09, within 25% of 4.32 and 3.63. dy is 5.97 (under 12)
+  and 20.0 (above 18).
+- Raw S at those control points also matches across widths: y=200 left
+  23.199 vs 23.215, y=230 left 34.814 vs 34.813. Raw shade luma there is
+  83.766 vs 83.772 and 68.690 vs 68.695.
+- Pooled mean |ΔS| is 3.930 on 16:9 and 2.689 on 21:9 (relative gap 0.316).
+  21:9 is smaller in every quartile (about 2.63..2.73 while 16:9 rises from
+  3.42 to 4.28). That is not "more than twice", and it is the wrong
+  direction for H-s-row. Pooled mean |Δ shade luma| is 2.664 vs 3.518
+  (relative gap 0.243, within 25%, ratio 1.32). The largest quartile ratio
+  is 1.79. Pixel dy is 3.3x over the same window, so the shade step does
+  not track the tear. H-shade is not selected.
+- Combiner equation is `(T0-0)*SHADE+0` on all 67 frames of both arms.
+  othermode L alternates `00552230` and `00552078` on both arms (the
+  difference is AA_EN|IM_RD versus CVG_DST_FULL). The within-frame second
+  identity is the same equation at omL `00552220` (Z_CMP), on 0.5% and
+  5.2% of sample points. Not a width split.
+- H-s-row and H-shade are not selected. |ΔS| is outside the 25% agreement
+  band, so the strict "both agree" refutation is not met; the predicted
+  21:9 jump is contradicted. No cull, no anchor change, no default change.
+  ORIGIN: no mitigation.
+  Evidence: `scratch/agent/s6616_ss/verdict.json` (selects mixed).

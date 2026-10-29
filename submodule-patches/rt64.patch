@@ -181,10 +181,10 @@ index a0d4a6a..f6a56a9 100644
              // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
              //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..0ba8832 100644
+index 6255872..24b7495 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
-@@ -4,12 +4,42 @@
+@@ -4,12 +4,78 @@
  
  #include "rt64_gbi_rdp.h"
  
@@ -203,7 +203,7 @@ index 6255872..0ba8832 100644
 +extern "C" __attribute__((weak)) uint32_t rs64_phase_ord(void);
 +extern "C" void rs64_floor_note(int, int, uint32_t, uint32_t, float, float, float, float, float, float, float, float, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, float, float, float, float, float, float, float, float, int, int, uint32_t, uint32_t, uint32_t, uint32_t);
 +extern "C" void rs64_floor_cover(uint32_t, uint32_t, uint32_t, float, float, float, float, float, float, float, float, float, float, float, float, float, float);
-+extern "C" void rs64_floor_texel(uint32_t, uint32_t, uint32_t, int, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float);
++extern "C" void rs64_floor_texel(uint32_t, uint32_t, uint32_t, int, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, uint32_t, const char *);
 +extern "C" __attribute__((weak)) uint32_t rs64_e9prov_current_task(void);
 +extern "C" __attribute__((weak)) uint64_t rs64_dpc_get_last_submit_serial(void);
 +extern "C" __attribute__((weak)) void rs64_dpc_get_last_submit(uint32_t *lo, uint32_t *hi);
@@ -224,10 +224,46 @@ index 6255872..0ba8832 100644
 +            return ++next[key];
 +        }
 +
++        static const char *rs64_cc_iname(interop::ColorCombiner::ColorInput c) {
++            using CI = interop::ColorCombiner::ColorInput;
++            switch (c) {
++            case CI::C_COMBINED: return "COMB";
++            case CI::C_TEXEL0: return "T0";
++            case CI::C_TEXEL1: return "T1";
++            case CI::C_PRIMITIVE: return "PRIM";
++            case CI::C_SHADE: return "SHADE";
++            case CI::C_ENVIRONMENT: return "ENV";
++            case CI::C_KEY_CENTER: return "KEYC";
++            case CI::C_KEY_SCALE: return "KEYS";
++            case CI::C_COMBINED_ALPHA: return "COMBA";
++            case CI::C_TEXEL0_ALPHA: return "T0A";
++            case CI::C_TEXEL1_ALPHA: return "T1A";
++            case CI::C_PRIMITIVE_ALPHA: return "PRIMA";
++            case CI::C_SHADE_ALPHA: return "SHA";
++            case CI::C_ENV_ALPHA: return "ENVA";
++            case CI::C_LOD_FRACTION: return "LODF";
++            case CI::C_PRIM_LOD_FRAC: return "PLODF";
++            case CI::C_NOISE: return "NOISE";
++            case CI::C_K4: return "K4";
++            case CI::C_K5: return "K5";
++            case CI::C_ONE: return "1";
++            case CI::C_ZERO: return "0";
++            }
++            return "Q";
++        }
++
++        static void rs64_cc_equation(const interop::ColorCombiner &cc, bool slot, char *out, size_t n) {
++            std::snprintf(out, n, "(%s-%s)*%s+%s",
++                rs64_cc_iname(cc.decodeColorInput(0, slot)),
++                rs64_cc_iname(cc.decodeColorInput(1, slot)),
++                rs64_cc_iname(cc.decodeColorInput(2, slot)),
++                rs64_cc_iname(cc.decodeColorInput(3, slot)));
++        }
++
          void noOp(State *state, DisplayList **dl) {
              // Do nothing.
          }
-@@ -19,7 +49,9 @@ namespace RT64 {
+@@ -19,7 +85,9 @@ namespace RT64 {
              const uint8_t siz = (*dl)->p0(19, 2);
              const uint16_t width = (*dl)->p0(0, 12) + 1;
              const uint32_t address = (*dl)->w1;
@@ -237,7 +273,7 @@ index 6255872..0ba8832 100644
          }
  
          void setDepthImage(State *state, DisplayList **dl) {
-@@ -253,6 +285,17 @@ namespace RT64 {
+@@ -253,6 +321,17 @@ namespace RT64 {
          }
  
          void fullSync(State *state, DisplayList **dl) {
@@ -255,7 +291,7 @@ index 6255872..0ba8832 100644
              RT64_LOG_PRINTF("GBI_RDP::fullSync()");
              state->fullSync();
              state->dpInterrupt();
-@@ -336,9 +379,11 @@ namespace RT64 {
+@@ -336,9 +415,11 @@ namespace RT64 {
              size_t workBufferIndex = 0;
              uint32_t tile = -1;
              uint32_t level = -1;
@@ -267,7 +303,7 @@ index 6255872..0ba8832 100644
                  // TODO flush when tile and level change
                  tile = (curData[0].w0 >> 16) & 0x7;
                  level = (curData[0].w0 >> 19) & 0x7;
-@@ -406,6 +451,11 @@ namespace RT64 {
+@@ -406,6 +487,11 @@ namespace RT64 {
                  posWorkBuffer[workBufferIndex + 1].y = y2;
                  posWorkBuffer[workBufferIndex + 2].x = x3;
                  posWorkBuffer[workBufferIndex + 2].y = y3;
@@ -279,7 +315,7 @@ index 6255872..0ba8832 100644
  
                  curData += triangleBaseWords;
  
-@@ -420,6 +470,22 @@ namespace RT64 {
+@@ -420,6 +506,23 @@ namespace RT64 {
                  // Calculate x distance from the point opposite vertex 3 to vertex 3 itself.
                  float dx_3 = x3 - x3_opposite;
  
@@ -287,6 +323,7 @@ index 6255872..0ba8832 100644
 +                // (outside the shaded block so the chroma log below can read).
 +                float shadeDxR = 0, shadeDxG = 0, shadeDxB = 0;
 +                float shadeDeR = 0, shadeDeG = 0, shadeDeB = 0;
++                float shadeBaseR = 0, shadeBaseG = 0, shadeBaseB = 0;
 +                float shadeSpanX = dx_3;
 +                uint32_t shadeW0 = 0, shadeW1 = 0, shadeW2 = 0, shadeW3 = 0;
 +                uint32_t shadeW4 = 0, shadeW5 = 0;
@@ -302,12 +339,13 @@ index 6255872..0ba8832 100644
                  if (shaded) {
                      hlslpp::int4 baseColorFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -455,6 +521,14 @@ namespace RT64 {
+@@ -455,6 +558,15 @@ namespace RT64 {
                      hlslpp::float4 colorDe = hlslpp::float4(colorDeFixed) * (1.0f / 65536.0f);
                      // hlslpp::float4 colorDy   = hlslpp::float4(colorDyFixed)   * (1.0f / 65536.0f);
  
 +                    shadeDxR = float(colorDx.x); shadeDxG = float(colorDx.y); shadeDxB = float(colorDx.z);
 +                    shadeDeR = float(colorDe.x); shadeDeG = float(colorDe.y); shadeDeB = float(colorDe.z);
++                    shadeBaseR = float(baseColor.x); shadeBaseG = float(baseColor.y); shadeBaseB = float(baseColor.z);
 +                    // Raw coefficient words for hangar chroma forensics (session 31).
 +                    // Visible only when ROGUESQ_LOG_SHADE_CHROMA dumps an outlier.
 +                    shadeW0 = curData[0].w0; shadeW1 = curData[0].w1;
@@ -317,7 +355,7 @@ index 6255872..0ba8832 100644
                      // Offset the base color (which seems to start at XH) by the distance between YH and the y-coord of XH.
                      hlslpp::float4 v1Color = baseColor + colorDe * dy_1;
                      // Use the edge derivative to calculate the color at the middle vertex from the color at the major vertex
-@@ -464,6 +538,179 @@ namespace RT64 {
+@@ -464,6 +576,179 @@ namespace RT64 {
                      // Use the x derivative to calculate the color at the last vertex, starting from its opposite point
                      hlslpp::float4 v3Color = v3OppositeColor + colorDx * dx_3;
  
@@ -497,7 +535,7 @@ index 6255872..0ba8832 100644
                      colorWorkBuffer[workBufferIndex + 0] = v1Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 1] = v2Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 2] = v3Color * (1/255.0f);
-@@ -477,6 +724,426 @@ namespace RT64 {
+@@ -477,6 +762,426 @@ namespace RT64 {
                      colorWorkBuffer[workBufferIndex + 2] = interop::float4(0.0f, 0.0f, 0.0f, 0.0f);
                  }
  
@@ -924,7 +962,7 @@ index 6255872..0ba8832 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -537,7 +1204,111 @@ namespace RT64 {
+@@ -537,7 +1242,123 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
@@ -1026,17 +1064,29 @@ index 6255872..0ba8832 100644
 +                        rs64_floor_cover(commandId, tile & 7, tt.line,
 +                            yFloor, ym, xh, dxhdy, xm, dxmdy, xl, dxldy, y1, y2,
 +                            scx0, scy0, scx1, scy1);
++                        char cc_eq[64] = "-";
++                        uint32_t om_l = state->rdp->otherMode.L;
++                        if (state->rdp->colorCombinerStackSize > 0) {
++                            const auto &cc = state->rdp->colorCombinerStack[state->rdp->colorCombinerStackSize - 1];
++                            const bool cyc2 = state->rdp->otherMode.cycleType() == G_CYC_2CYCLE;
++                            rs64_cc_equation(cc, !cyc2, cc_eq, sizeof(cc_eq));
++                        }
 +                        rs64_floor_texel(commandId, tile & 7, tt.line,
 +                            texturePerspective ? 1 : 0,
 +                            yFloor, ym, xh, dxhdy, xm, dxmdy, xl, dxldy, y1, y2,
 +                            scx0, scy0, scx1, scy1,
 +                            float(baseTexcoord[1]), float(texcoordDe[1]), float(texcoordDx[1]),
-+                            float(baseTexcoord[2]), float(texcoordDe[2]), float(texcoordDx[2]));
++                            float(baseTexcoord[2]), float(texcoordDe[2]), float(texcoordDx[2]),
++                            float(baseTexcoord[0]), float(texcoordDe[0]), float(texcoordDx[0]),
++                            shadeBaseR, shadeBaseG, shadeBaseB,
++                            shadeDeR, shadeDeG, shadeDeB,
++                            shadeDxR, shadeDxG, shadeDxB,
++                            om_l, cc_eq);
 +                    }
                  }
                  // No texture coefficients
                  else {
-@@ -547,6 +1318,13 @@ namespace RT64 {
+@@ -547,6 +1368,13 @@ namespace RT64 {
                      texcoordWorkBuffer[workBufferIndex + 0] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 1] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 2] = interop::float2(0.0f, 0.0f);
@@ -1050,7 +1100,7 @@ index 6255872..0ba8832 100644
                  }
  
                  if (hasDepth) {
-@@ -584,6 +1362,68 @@ namespace RT64 {
+@@ -584,6 +1412,68 @@ namespace RT64 {
                  break;
              }
  

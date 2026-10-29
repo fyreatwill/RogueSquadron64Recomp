@@ -1,58 +1,56 @@
-# NEXT: does outer-third S or shade jump between rows?
+# NEXT: does the I4 texel, or an untextured cover, jump between rows?
 HYPOTHESIS-ID: g1d-levelselect-texel
 
-s6615 refuted H-t-row and H-overdraw. Do not retune
+s6616 did not select H-s-row or H-shade. Do not retune
 `ROGUESQ_HUD_ANCHOR` or `ROGUESQ_SHIFT_REGION`. Do not add a cull or
-a default change. Do not log another texel T, another base-S at x=0,
-or another coverage union. Do not treat the higher 21:9 multi_frac
-(median 0.38 vs 0.007) as a different primitive: other_frac was 0,
-and the last-writer T still matched.
+a default change. Do not log another T, S, or shade luma except as
+the walker controls below.
 
-The floor primitive is still op `0x0F`, tile 0, line 4, perspective
-on. Every closed frame covers both sample columns (floor_frac 1,
-badw 0, npair 140). dy was 5.42 (16:9) and 24.82 (21:9). Raw texels
-at y=200 and y=230 agree to about 0.05, and dtdx scales by about
-796/1024. Logs: `scratch/agent/s6615_tex/wide16/tex.txt` and
-`wide21/tex.txt`. Verdict: `scratch/agent/s6615_tex/verdict.json`.
+The floor primitive is still op `0x0F`, tile 0, line 4, fmt 4 siz 0
+(I4), mask 6, perspective on. Combiner on every closed frame of both
+widths: `(T0-0)*SHADE+0`. othermode L alternates `00552230` and
+`00552078` on both arms; that is the animation, not the width.
+Pooled |ΔS| was 3.93 (16:9) vs 2.69 (21:9). Pooled |Δ shade luma|
+was 2.66 vs 3.52. Pixel dy was 5.97 vs 20.0. Logs:
+`scratch/agent/s6616_ss/wide16/tex.txt` and `wide21/tex.txt`.
+Verdict: `scratch/agent/s6616_ss/verdict.json`.
 
-The tear is inside those covered pixels, and it is not T. Three ways
-the colour can still change between scanlines:
+The pixel is texel times shade. Shade does not track the 3.3x dy.
+Three ways the colour can still change between scanlines:
 
-- H-s-row. Perspective-correct S at x=w/6 and x=5w/6 changes by many
-  texels from one scanline to the next on 21:9, and not on 16:9.
-  s6613 cancelled S only at x=0.
-- H-shade. S agrees, and the shade luma of the same floor triangle
-  changes by more than twice as much between those scanlines on 21:9.
-- H-neither. S and shade both agree within 25%. The split is not the
-  floor plane's S, T, or shade. The following unit then has to name
-  a combiner, blender, or prim/env difference. If the combiner
-  equation string already differs between the two widths, that is
-  H-combiner on its own.
+- H-i4. The I4 intensity fetched at the same perspective-correct
+  S,T changes by more than twice as much between those scanlines
+  on 21:9 as on 16:9.
+- H-untex. An untextured triangle or a rectangle covers the sample
+  on 21:9 (fraction above 0.15) and not on 16:9 (fraction under
+  0.05). The s6616 logger only sees textured triangles.
+- H-blender. I4 |Δ| agrees within 25% and untextured coverage
+  agrees within 0.05, and the blender equation string differs.
+  If the blender strings already differ, that is H-blender on its
+  own.
 
-ONE work unit, one binary, both arms, the s6615 runner
-(`scratch/agent/s6615_tex_run.py`, `ROGUESQ_LOG_FLOOR=1`). Extend the
-same sample (y in 180..250, x=w/6 and x=5w/6, same edge walk, last
-floor triangle wins). S is (S/W)*1024 with
-S = baseS + dsde*(y-yFloor) + dsdx*(x-XH) and the same W used for T.
-Shade luma is 0.2126 R + 0.7152 G + 0.0722 B from
-base + colorDe*(y-yFloor) + colorDx*(x-XH). baseColor is local to
-the shaded block in `rt64_gbi_rdp.cpp`; pass those three floats out.
-Also print the decoded colour-combiner equation and othermode L for
-that floor triangle, once per arm. Keep the s6615 |ΔT| on the same
-line as a walker control: it must still agree within 25%.
+ONE work unit, one binary, both arms, the s6616 runner
+(`scratch/agent/s6616_ss_run.py`, `ROGUESQ_LOG_FLOOR=1`), stopping
+at 50 good frames so the window matches this run. Same sample
+(y in 180..250, x=w/6 and x=5w/6, same edge walk, last floor
+triangle wins). Decode the I4 texel the way the RDP fetch does for
+fmt 4 / siz 0 at that S,T (TMEM in `rt64_rdp.h`). Intensity is
+0..255. Also count untextured triangles and rectangles that cover
+the point, and print the blender equation once per arm.
 
-Print, per arm, mean |ΔS| and mean |Δ shade luma|.
+Keep |ΔT| and |Δ shade luma| on the same line. |ΔT| must stay
+within 25% of 4.79 vs 4.09. |Δ shade luma| must stay within 25%
+of 2.66 vs 3.52. Raw S at y=200 and y=230 must still agree across
+widths to about 0.05 (s6616: 23.199 vs 23.215 and 34.814 vs
+34.813). dy stays the scene control: 16:9 under 12, 21:9 above 18.
+floor_frac near 1, badw 0. Screen must be unlocked.
 
-- If 21:9 |ΔS| is more than twice 16:9 and |Δluma| agrees within
-  25%, this selects H-s-row. Say so. Do not patch yet.
-- If 21:9 |Δluma| is more than twice 16:9 and |ΔS| agrees within
-  25%, this selects H-shade. Say so. Do not patch yet.
-- If the combiner strings differ, this selects H-combiner. Quote
-  both equations. Do not patch yet.
-- If |ΔS| and |Δluma| both agree within 25% and the combiner
-  strings match, H-s-row and H-shade are refuted.
-
-Sample points must still be covered (floor_frac near 1, badw 0).
-That is the instrument control. |ΔT| staying within 25% of the
-s6615 pair (4.32 vs 3.63) is the walker control. dy stays the scene
-control: 16:9 under 12, 21:9 above 18. Screen must be unlocked.
+- If 21:9 untex fraction is above 0.15 and 16:9 is under 0.05,
+  this selects H-untex. Say so. Do not patch yet.
+- If 21:9 |ΔI| is more than twice 16:9 and untex agrees, this
+  selects H-i4. Say so. Do not patch yet.
+- If the blender strings differ, this selects H-blender. Quote
+  both. Do not patch yet.
+- If |ΔI| agrees within 25%, untex fractions agree within 0.05,
+  and the blender strings match, H-i4, H-untex and H-blender are
+  refuted.
