@@ -171855,3 +171855,45 @@ bytes are not established as display pixels. Runtime artifact origin is open.
 - Next discriminator: the same I4 and shade step at x=16 and x=w-17, where
   the framebuffer row step is about 12x. Do not retune the anchor or the shift.
   ORIGIN: no mitigation.
+
+## Session 6618 (2026-10-28) — level-select edge I4 and shade do not track the tear
+
+- Maintenance check: CURRENT-TRUTH was 45,050 bytes, under 60,000. The soak
+  tail still ends at the s6580 dd4 holds. No new soak verdict. IOConsoleLocked
+  was false. No other game was running.
+- Moved the floor sample from x=w/6 and x=5w/6 to x=16 and x=w-17 in
+  `rs64_floor_texel`, the untextured-triangle note, and the rect note.
+  The frame line now prints `x0` and `x1`. One Debug binary,
+  `ROGUESQ_LOG_FLOOR=1`, the s6617 route, 16:9 then 21:9, SIGKILL after
+  50 good frames plus a width-matched dump. 16:9 ran 34.6 s, 69 closed
+  frames, rc -9, 0 crash lines. 21:9 ran 33.1 s, 65 closed frames.
+  Samples are x=16 and x=779 on 796, and x=16 and x=1007 on 1024.
+  Dumps `scratch/agent/s6618_edge/wide16/fbd/fb_0001400_w796.ppm` and
+  `scratch/agent/s6618_edge/wide21/fbd/fb_0001400_w1024.ppm`. Verdict
+  `scratch/agent/s6618_edge/verdict.json`.
+- The I4 fetch is the filt=2 bilerp (three-texel), not a point sample.
+  Tile line is unchanged: fmt 4, siz 0, line 4, masks 6, tlut 0, filt 2.
+  `[floor-i4] selftest ok` printed once per arm. Combiner is
+  `(T0-0)*SHADE+0` on every closed frame. Floor blender is
+  `cyc0f0(CC*CCA+MEM*MEMA)|(CC*CCA+MEM*MEMA)` on both widths.
+- Positive controls, same run. Outer-third dy is 7.49 (under 12) and
+  27.01 (above 18). Pixel |Δ| at x=16 and x=w-17 on the fb nearest 1400
+  is 5.71 and 5.04 on 16:9 (under 12) and 54.37 and 51.82 on 21:9
+  (above 30). floor_frac is 1, badw is 0, nI = nS = nL = npair
+  (9660 and 9100). Pooled |ΔT| is 4.61 vs 4.99, inside 25% of the
+  s6617 4.70 vs 4.15. The edge columns are the torn pixels, and the
+  walker is still the same floor triangles.
+- Pooled |ΔI| is 46.03 on 16:9 and 41.18 on 21:9 (relative gap 0.11).
+  21:9 is smaller, not more than twice. This refutes H-i4-edge.
+  Pooled |Δ shade luma| is 2.94 vs 2.97 (relative gap 0.01). This
+  refutes H-shade-edge. The blender strings match, so the floor blend
+  equation is not the split either. The pixel step is about 10x on
+  21:9 while both combiner inputs agree, so the tear is after the
+  combiner. Untex fraction is still 1.0 on both and was not used as
+  a discriminator. No patch.
+- Next discriminator: the class of the last primitive that covers
+  x=16 and x=w-17 (floor triangle, other triangle, or rect/fill).
+  A width split in that class selects H-last. Both widths ending on
+  the floor triangle refutes H-last and leaves the blend memory term
+  or the pixel pipe. Do not retune the anchor or the shift.
+  ORIGIN: no mitigation.

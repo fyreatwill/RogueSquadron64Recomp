@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6617 (2026-10-28).
+Compact operational handoff, as of Session 6618 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,6 +15,13 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-texel).**
+  - s6618: filtered I4 and shade at x=16 and x=w-17 are not the tear. One
+    binary, 69 and 65 closed frames. Pixel step on fb 1400 is 5.71/5.04
+    vs 54.37/51.82. |ΔI| is 46.03 vs 41.18 (rel 0.11, 21:9 smaller).
+    |Δ shade| is 2.94 vs 2.97. Blender string matches. |ΔT| 4.61 vs
+    4.99 stays inside 25% of 4.70 vs 4.15. This refutes H-i4-edge and
+    H-shade-edge. The tear is after the combiner. No patch.
+    Evidence: `scratch/agent/s6618_edge/verdict.json`.
   - s6617: I4 intensity, untextured/rect coverage, and the blender are not
     the tear at x=w/6 and x=5w/6. One binary, 66 and 69 closed frames.
     I4 self-test passed. Tile is fmt 4 / siz 0, bilerp, no TLUT, on both.
@@ -284,6 +291,8 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   `(T0-0)*SHADE+0` on both widths. s6617: I4 |Δ| there is 51 vs 45,
   untex coverage is 1.0 on both, and the blender string matches. The
   4x row step is in the outer 1/12 of the width, not at x=w/6.
+  s6618 measured those columns: filtered I4 and shade agree, and the
+  pixel step does not, so the tear is after the combiner.
   The OS window remains 640x480, so wider modes letterbox.
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
@@ -385,11 +394,10 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6617) I4, untex, and blender are not the 21:9 tear at x=w/6.**
-   |ΔI| is 51.18 vs 45.16, untex is 1.0 vs 1.0, and the blender string
-   matches. The framebuffer row step on fb 1400 is ~12x at x=16 and
-   x=w-17 (3.9 vs 46.2, 4.5 vs 46.4) and only ~2x at x=w/6. Do not patch.
-   Next sample is those edge columns. See NEXT.md.
+1. **(s6618) Filtered I4 and shade are not the 21:9 tear at x=16 and x=w-17.**
+   |ΔI| is 46.03 vs 41.18, |Δ shade| is 2.94 vs 2.97, and the blender
+   string matches. The same frames' pixel step is 5.71/5.04 vs 54.37/51.82.
+   Do not patch. Next: which primitive writes those pixels last. See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

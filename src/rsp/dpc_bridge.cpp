@@ -3830,6 +3830,12 @@ bool rs64_ft_span(float y, float y_floor, float ym,
     return true;
 }
 
+// The torn rows sit in the outer 1/12 (x=16 and x=w-17). x=w/6 is quiet.
+static void rs64_ft_xs(uint32_t w, float xs[2]) {
+    xs[0] = 16.f;
+    xs[1] = (float)w - 17.f;
+}
+
 struct Rs64FtPt {
     float texel, texel_s, luma, inten;
     uint16_t floor_n, other_n, untex_n;
@@ -3972,18 +3978,21 @@ struct Rs64Ft {
         if (!have) return;
         if (!nok) { texlo = 0; texhi = 0; }
         const double denom = (double)(rows * cols);
+        float xsamp[2];
+        rs64_ft_xs(cur_w, xsamp);
         std::fprintf(stderr,
             "[floor-tex] why=%s w=%u floor_frac=%.4f other_frac=%.4f multi_frac=%.4f "
             "dT=%.4f dTl=%.4f dTr=%.4f npair=%d maxdT=%.3f jump4=%d jump8=%d "
             "tex=%.3f..%.3f badw=%d spill=%u dS=%.4f dL=%.4f nS=%d nL=%d "
             "cc=%s omL=%08X ccn=%d n0=%d n1=%d cc2=%s om2=%08X "
-            "dI=%.4f nI=%d iLo=%d iHi=%d untex=%.4f bl=%s blu=%s\n",
+            "dI=%.4f nI=%d iLo=%d iHi=%d untex=%.4f bl=%s blu=%s x0=%.2f x1=%.2f\n",
             why, cur_w, covered / denom, other / denom, multi / denom,
             npair ? sum / npair : 0.0, npl ? suml / npl : 0.0, npr ? sumr / npr : 0.0,
             npair, maxd, jump4, jump8, texlo, texhi, covered - nok, spill,
             nS ? sumS / nS : 0.0, nL ? sumL / nL : 0.0, nS, nL,
             cc_mode, om_mode, distinct, mode_n, second_n, cc_second, om_second,
-            nI ? sumI / nI : 0.0, nI, iLo, iHi, nUntex / denom, bl_mode, blu);
+            nI ? sumI / nI : 0.0, nI, iLo, iHi, nUntex / denom, bl_mode, blu,
+            xsamp[0], xsamp[1]);
         if (mode >= 0 && (!cc_print_set || std::strcmp(cc_printed, cc_mode) != 0 || om_printed != om_mode)) {
             std::fprintf(stderr, "[floor-cc] w=%u cc=%s omL=%08X\n", cur_w, cc_mode, om_mode);
             std::snprintf(cc_printed, sizeof(cc_printed), "%s", cc_mode);
@@ -4087,7 +4096,8 @@ extern "C" void rs64_floor_texel(
     if (y_hi < 180.5f || y_lo > 250.5f) return;
     const float x_lo_sc = (scx1 > scx0) ? scx0 : -1.0e9f;
     const float x_hi_sc = (scx1 > scx0) ? scx1 : 1.0e9f;
-    const float xs[2] = { g_ft.cur_w / 6.0f, (5.0f * g_ft.cur_w) / 6.0f };
+    float xs[2];
+    rs64_ft_xs(g_ft.cur_w, xs);
     const bool is_floor = op == 0x0Fu && tile == 0u && line == 4u;
     const bool tex_ok = std::isfinite(base_t) && std::isfinite(dtde) && std::isfinite(dtdx) &&
         std::isfinite(base_w) && std::isfinite(dwde) && std::isfinite(dwdx);
@@ -4229,7 +4239,8 @@ extern "C" void rs64_floor_untex(
     if (y_hi < 180.5f || y_lo > 250.5f) return;
     const float x_lo_sc = (scx1 > scx0) ? scx0 : -1.0e9f;
     const float x_hi_sc = (scx1 > scx0) ? scx1 : 1.0e9f;
-    const float xs[2] = { g_ft.cur_w / 6.0f, (5.0f * g_ft.cur_w) / 6.0f };
+    float xs[2];
+    rs64_ft_xs(g_ft.cur_w, xs);
     int hit = 0;
     for (int s = 180; s <= 250; s++) {
         const float y = (float)s + 0.5f;
@@ -4270,7 +4281,8 @@ extern "C" void rs64_floor_rect(
         if (y1 > scy1) y1 = scy1;
     }
     if (!(x1 > x0) || !(y1 > y0)) return;
-    const float xs[2] = { g_ft.cur_w / 6.0f, (5.0f * g_ft.cur_w) / 6.0f };
+    float xs[2];
+    rs64_ft_xs(g_ft.cur_w, xs);
     int hit = 0;
     for (int s = 180; s <= 250; s++) {
         const float y = (float)s + 0.5f;
