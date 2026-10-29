@@ -1,57 +1,59 @@
-# NEXT: level-8 flight capture under the frozen class rule
+# NEXT: level-8 dusk class rule, offline
 HYPOTHESIS-ID: g1-coverage-cd
 
-s6639 closed level 7 (c) under the frozen rule. Four of twelve
-phase-7 dumps pass (n=2550, 2600, 2800, 2850). Five miss sky only
-(luma 46.3..60.1, dark 0.371..0.536, R-G -6.3..2.0) and three miss
-the terrain ceiling only (rel 0.332, 0.353, 0.359). Those stay
-near-misses. Do not edit tools/g1_flight_class.py in this session.
-Do not move 0.08, 0.33, or the luma>=70 sky arm. No heap edit, no
-aim, no draw-distance, no aspect, no default change. No objective (d).
+s6640 captured level 8. The sheet `docs/g1_lvl8_flight_s6640.png`
+is a flight (desert, orange dusk, X-wing, radar, reticle) and the
+frozen rule scores 0/7. This session edits `tools/g1_flight_class.py`
+only. No game run. No heap, aim, draw-distance, aspect, or default
+change. Do not move 0.08, 0.33, or the luma>=70 blue arm. Do not
+add a file to the five-file canon table.
 
-Precontrol, before any launch. It must print canon_bad 0:
+Dumps, already on disk:
 
-    python3 tools/g1_flight_class.py
+    scratch/agent/s6640_lvl8/fbd/fb_0002600_w512.ppm
+    through fb_0002900_w512.ppm
 
-If the screen is locked, stop and write BLOCKED with NEEDS-HUMAN:
-physical. Check both of these; either Yes/true means locked:
+Same-run negatives:
 
-    ioreg -n Root -d1 | grep IOConsoleLocked
-    ioreg -n Root -d1 -a | grep -A1 CGSSessionScreenIsLocked
+    scratch/agent/s6640_lvl8/fbd/fb_0000800_w512.ppm
+    scratch/agent/s6640_lvl8/fbd/fb_0001700_w512.ppm
 
-Adapt scratch/agent/s6639_lvl7.sh into scratch/agent/s6640_lvl8.sh.
-Change the output directory, and set ROGUESQ_FORCE_UNLOCK=8 and
-ROGUESQ_FORCE_SAVE_MISSION=8. Keep the precontrol as
-`python3 tools/g1_flight_class.py`; a non-zero exit must abort
-before the game starts. Do not paste an inline classifier. Keep
-the retail 4:3 route: menu start/z schedule, no stick, SIGKILL
-30 s after the first post-hangar origin 0x690400, dumps every
-50 VIs. Run from build/ with the ROM beside the binary. Kill
-with SIGKILL only.
+Before editing, `python3 tools/g1_flight_class.py` must print
+canon_bad 0.
 
-One game run. Then:
+Sky is measured. Lower the sunset luma floor from 140 to 80 and
+keep R>=G+40 and R>=B+20. That accepts all seven level-8 skies
+(luma 84.4..97.0, R-G 86.8..94.3, R-B 133.7..154.7, dark<=0.014).
+It rejects the canon floor, both title dumps, the craft-select
+frame, the oracle, level 2 and level 3. luma>=90 misses n=2600
+(luma 84.4). Do not drop the chroma gates: the same-run title is
+luma 85.2 with R-G only 32.1.
 
-    python3 tools/g1_flight_class.py <phase-7 ppm paths> <one title ppm> <one hangar ppm>
+Craft is the open clause. Do not raise the pink cap. Pink
+0.184..0.328 is the orange sky in the center box. Chase-band
+median is 68.3..81.7, so the median>=120 dark-hull arm does not
+fire. A median>=80 dark-hull test hits only n=2600 (0.140); the
+other six hulls sit below y 0.62. Saturated green (9..33 pixels,
+g>=80, r<=50, b<=50) is the top-left HUD icon at y 0.10-0.30, not
+a center reticle. The title and the craft-select frame have zero
+of those pixels. That icon is not a craft signal. Terrain already
+passes (rel 0.095..0.310). Do not retune the HUD cut: radar
+0.665..0.993 matches the orange sky, and the ring is visibly there.
 
-Read the contact sheet before calling a frame a flight. Build it
-from four post-hangar dumps the way docs/g1_lvl7_flight_s6639.png
-was built, and write it to docs/g1_lvl8_flight_s6640.png.
-Phase-7 may land on either 0x690400 or 0x620400; score the dumps
-the log tags phase=7, not a hardcoded origin.
+H-craft-found: one new craft clause, plus the luma>=80 orange
+arm, makes at least one phase-7 frame pass all four clauses.
+`python3 tools/g1_flight_class.py` prints canon_bad 0 and
+mission 11/13. The same-run title and craft-select dumps still
+fail overall. Land that edit.
+H-no-craft: every craft clause that accepts a chase frame also
+makes canon_bad nonzero, flips a level-3 mission line, or makes
+the title or the craft-select frame pass overall. Do not land
+the sky arm alone. Record the clause and the file it broke.
 
-H-rule-holds: the post-hangar frames that show sky, terrain, craft
-and HUD pass, and the same-run title and hangar dumps fail overall.
-Level 8 (c) closes. The next capture is level 9 with the rule
-still frozen.
-H-new-class: the sheet is a flight and the frozen rule rejects it.
-Record which clause misses and the measured numbers. Do not edit
-tools/g1_flight_class.py in this session.
-H-no-picture: the post-hangar dumps are a menu, a hangar, or a
-black frame. Say which origin they carry. Do not retune the rule.
-H-screen-locked or H-route-miss: no phase-7 flight dumps. Do not
-invent a score. One retry is allowed only if the first run died
-before the hangar and the screen was unlocked.
+DISCRIMINATOR: the tool's pass/fail lines on the seven phase-7
+dumps and the two same-run negatives, plus canon_bad and
+mission 11/13 from a no-arg run. A sky-only edit that still
+scores 0/7 is not a result to land.
 
-DISCRIMINATOR: the frozen tool's pass/fail lines on the phase-7
-dumps plus the two same-run negatives, joined to the sheet. Do not
-add a file to the five-file canon table in this session.
+If H-craft-found, the session after that captures level 9 with
+the new rule frozen. Do not start level 9 in this session.

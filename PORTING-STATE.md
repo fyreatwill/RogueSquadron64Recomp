@@ -173080,3 +173080,73 @@ terrain, craft and HUD." What it does not show: that every phase-7
 dump passes, or objective-counter response. The dim-cloud frames
 (luma 46.3..60.1) and the cliff frames (rel 0.332..0.359) were
 measured and not turned into new bounds.
+
+## Session 6640 (2026-10-29) — level 8 dusk flight is visible and the frozen class rule rejects it
+
+One retail 4:3 capture. No classifier edit, no heap edit, no aim, draw
+distance unset, aspect unset. Precontrol `python3 tools/g1_flight_class.py`
+printed canon_bad 0 before launch (oracle, level-2 fb_0002700, level-3
+fb_0002700 pass; floor and the s6633 title fail; the thirteen level-3
+mission lines stay 11/13). IOConsoleLocked was No. The route is
+scratch/agent/s6640_lvl8.sh, the s6639 script with FORCE_UNLOCK=8 and
+FORCE_SAVE_MISSION=8. The soak tail in scratch/agent/SOAK-RESULTS.md
+still ends at s6580 (2026-10-28); no new queued verdict to fold.
+
+scratch/agent/s6640_lvl8/keys.log: screen-unlocked, precontrol-ok, title
+t=15, hangar t=33, mission-onset t=100, hold-30s t=130, killed t=130,
+crash=0, abort=0. run.log echoes `[dd] ROGUESQ_DRAW_DISTANCE multiplier 1`,
+`[g1d-drop] aspect=<unset>`, `[lvsel] cursor=8`, and
+`[initMission] call#1 B40=0x08`. CRASH, abort, SIGSEGV and SIGBUS counts
+in that log are 0. Seven phase-7 dumps, n=2600..2900 step 50, width 512,
+height 444. Six are origin 0x00620400 (fb=0x80690000, source 0x00620000).
+n=2750 is origin 0x00690400. The other buffer is in the VI log. Sheet
+docs/g1_lvl8_flight_s6640.png is frames 2600, 2700, 2800 and 2900.
+
+The sheet is a flight. Orange dusk sky, rocky desert, an X-wing (side
+view at n=2600, chase view on the other three cells), a round radar, a
+green reticle on the chase frames, and the shield badge. The frozen
+rule scores 0/7. Both sky and craft fail on every dump. Terrain passes
+on every dump (rel 0.095, 0.276, 0.304, 0.285, 0.310, 0.267, 0.241).
+The HUD clause also passes on every dump.
+
+Sky, upper band y 0.02-0.18: dark fraction 0.000..0.014, luma 84.4..97.0,
+R-G 86.8..94.3, R-B 133.7..154.7. n=2600 is the dimmest (luma 84.4,
+R 157.9, G 71.1, B 24.2). The dark arm needs 0.60, the blue arm needs
+R<=G+15, and the sunset arm needs luma>=140. None of the three fires.
+A relaxed orange arm, luma>=80 with the same R>=G+40 and R>=B+20 gates,
+would accept all seven skies. The same test rejects the same-run title
+(luma 85.2, R-G 32.1, R-B 37.7), the canon title (luma 75.0, R-G 24.7),
+the floor, the craft-select frame, the oracle, level 2 and level 3.
+luma>=90 would miss n=2600. That arm was measured and not landed.
+
+Craft: pink 0.184..0.328, metal 0.035..0.074, pure 0.0000..0.0004, sil 0.
+The pink count is the orange sky in the center box, above the 0.05 engine
+cap, so raising that cap would call the sky an engine. Chase-band median
+luma is 81.7 on the side view and 68.3..71.0 on the six chase frames,
+under the median>=120 dark-hull gate. A median>=80 dark-hull test is
+0.140 on n=2600 only, where the hull is inside y 0.40-0.62, and 0.000 on
+the chase frames, where the hull sits lower. Saturated-green pixels
+(g>=80, r<=50, b<=50) number 9..33 and sit in y 0.10-0.30, the top-left
+HUD ship icon, not a center reticle. Title and craft-select have 0 such
+pixels; the floor has 2. The existing pure box does not see them, and
+they are not by themselves a craft signal.
+
+HUD: radar fraction 0.665..0.993. Level 7's passing flight radar was
+about 0.07. The orange sky matches the red-pixel test inside the radar
+box. The ring is visible on the sheet. The clause was not retuned.
+
+Same-run negatives still fail overall. Title fb_0000800_w512.ppm is the
+logo menu: sky 0, terr 0 (luma 85.2, R-G 32.1, rel 0.454). Craft-select
+fb_0001700_w512.ppm is the X-wing on the pad, origin 0x006AB400, and
+fails HUD only (radar 0.000). Its sky, terrain and craft clauses pass,
+so the overall fail depends on the radar cut.
+
+This selects H-new-class. It refutes H-rule-holds (0/7 pass) and
+H-no-picture (the sheet is a flight). It does not run objective (d).
+ORIGIN: n/a (no mitigation).
+
+What this rules out: "level 8 never produced a post-hangar flight
+picture" and "the luma>=140 sunset arm covers this orange sky." What it
+does not show: a craft clause that accepts these frames without
+accepting the floor or the title. The 0.08 floor, the 0.33 ceiling and
+the luma>=70 arm were not moved.
