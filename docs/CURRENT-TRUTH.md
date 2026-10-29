@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6620 (2026-10-28).
+Compact operational handoff, as of Session 6621 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,6 +15,25 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-texel).**
+  - s6621: emitted-mesh replay does not reproduce the tear (single-source).
+    Both widths: 66 closed frames, 54 stop-gate frames, 0 crash markers,
+    all earlier controls pass. Legacy samples: 9372/9369 common points;
+    actual half-pixel-corrected samples: 9372/9370. All five missing points
+    across both sample conventions lie 0.005..0.020 px outside reconstructed
+    edges (retained, not filled); no interior coverage mismatch. Actual
+    coefficient/mesh |ΔT|: 4.789/4.789 at 796, 4.889/4.889 at 1024;
+    |Δ shade luma|: 2.943/2.948 and 2.978/2.966. Wrapped luma gives the
+    same numbers. UV error is 0.000009/0.00926 texel. Perspective shade
+    differs from the reference affine model by 0.191/0.887 luma, far too
+    small for framebuffer edge steps 6.75/5.68 vs 56.45/53.40. Synthetic
+    vertex W/UV perturbation raises row steps from 0.425 to 208.230.
+    This selects H-pipe under the prewritten 25% step-agreement test,
+    not a verified backend writer: this is CPU replay, not independent
+    GPU/RDP execution. Independent paraLLEl-RDP documentation supplies
+    plane/edge semantics only. No render fix or default change. Evidence:
+    `scratch/agent/s6621_mesh/verdict.json`; persistent discriminator:
+    `tools/g1d_floor_mesh.py`. Next: capture the GPU target, native-converted
+    pixels and post-writeback RDRAM together to split raster from conversion.
   - s6620: fill-word H-mem refuted at the edge samples (single-source).
     One Debug binary, 64 closed frames per width, 9088 samples each:
     exactly one fill word `FFFCFFFC`, dF=0, nFs=9088 on both. Alpha
@@ -423,11 +442,12 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6620) Constant fill words and zero alpha equation do not explain the tear.**
-   Strict shade-alpha agreement failed (0.08538 vs 0), so H-pipe is not
-   established. Next: the complete emitted-mesh versus RDP-coefficient
-   interpolation discriminator in NEXT.md. Keep this single-source until
-   independently witnessed. No rendering patch/default change is justified.
+1. **(s6621) Mesh replay agrees with the coefficient walk; the visible tear remains.**
+   H-pipe is selected by the stated step-agreement test, single-source.
+   Next: one phase/frame/address-joined capture of GPU color target before
+   native conversion, converted native pixels, and post-writeback RDRAM.
+   Split raster/shader from conversion/writeback before changing rendering.
+   NEXT.md contains controls, arm recipe and expected outcomes.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

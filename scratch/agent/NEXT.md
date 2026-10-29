@@ -1,58 +1,52 @@
-# NEXT: compare emitted-mesh interpolation with the RDP coefficient walk
+# NEXT: split GPU raster output from native conversion/writeback
 HYPOTHESIS-ID: g1d-levelselect-texel
 
-s6620 completed the fill/alpha experiment. Both widths have one constant
-fill word FFFCFFFC and alpha equation (0-0)*0+0. dA=0.08538 versus 0:
-strict agreement fails, so verdict is unresolved. Do not silently relabel
-it H-pipe. Shader source confirms shade alpha is unused by that equation;
-this is single-source. The CPU coefficient walk is not necessarily what
-RT64's emitted mesh interpolates at the actual framebuffer pixels.
+s6621 selects H-pipe, single-source: complete emitted mesh versus coefficient
+replay agrees within 25% in both sample conventions, yet framebuffer edge
+steps are 6.75/5.68 at 796 versus 56.45/53.40 at 1024. Do NOT repeat a
+coefficient/vertex scalar. Evidence: scratch/agent/s6621_mesh/verdict.json.
 
-ONE whole discriminator, not another scalar per iteration. Before building,
-read decodeTriangles vertex construction and shader interpolation, then
-consult an independent RDP triangle specification/reference (existing local
-reference first). State which interpolation model is required by that
-reference. Do not treat our shader as the independent witness.
+ONE work unit: phase/frame/address-joined pixels at three stages of the same
+floor frame, before changing rendering. Hypotheses:
+- H-raster: GPU color target already contains torn rows. Investigate shader,
+  actual interpolants/texture state/raster backend, not CPU coefficients.
+- H-convert: GPU target is smooth but the native converted readback is torn.
+  Name the native-conversion shader/address/width expression.
+- H-copy: native pixels are smooth; post-copy RDRAM is torn or later changes.
+  Name copy stride or subsequent writer; retain the before/after write keys.
+- H-witness: captures do not join on framebuffer/frame, or the GPU/native
+  positive control fails. Repair association before drawing any null verdict.
 
-Hypotheses:
-- H-mesh: triangulation/perspective reconstruction differs from the original
-  RDP edge coefficients at 1024 only. Actual emitted vertex interpolation
-  introduces the row step before the pixel pipe.
-- H-pipe: the emitted mesh and original coefficients agree, but observed
-  framebuffer steps do not. Raster/texture/blend backend remains the target.
-- H-witness: sample-to-command/frame association or coefficient interpretation
-  was wrong; the supposed agreement across widths was an instrument artifact.
+Ground truth first: read docs/F5-UCODE-REFERENCE.md; retain the independent
+paraLLEl-RDP edge/plane reference linked in tools/g1d_floor_mesh.py. Inspect
+existing readback/target capture helpers BEFORE implementing a new one.
+Existing source anchors:
+`rg -n 'copyNativeToRAM|ROGUESQ_WBLOG' lib/rt64/src/hle/rt64_state.cpp`
+`rg -n 'copyToRAM|readback|copyToNative' lib/rt64/src/render/rt64_native_target.cpp`
+`rg -n 'copyNativeToRAM' lib/rt64/src/hle/rt64_framebuffer.cpp`
+`rg -n 'halfPixelOffset|screenScale' lib/rt64/src/render/rt64_framebuffer_renderer.cpp`
+The prior pixel dumps are RDRAM/VI sources, not pre-conversion GPU witnesses.
+Do not assume those two are identical. Preserve actual render resolution and
+sample-center transform; halfPixelOffset adds half a target pixel.
 
-Log the WHOLE necessary table in one build: width, VI origin/frame boundary,
-RDP command ordinal and coefficients, all emitted vertex xy/w/uv/RGBA for
-that primitive, triangle topology, viewport/scissor, effective sampler,
-combiner and blend/coverage flags. Include only the phase and sample-crossing
-floor primitives, preserving command order. At x=16 and x=w-17, y=180..250,
-reconstruct the last covering emitted triangle and its perspective-correct
-UV and shade. Compare to the original coefficient walk and framebuffer
-steps in the same phase. Include the exact vertex-position transform used
-before rasterization; do not compare normalized coordinates to source pixels.
+Build all stage captures in ONE binary and collect both 16:9/21:9 arms this
+iteration, sequentially, using tools/g1d_floor_inputs.py run_arm output_root
+parameter. The exact baseline recipe is there (12 MB; phase-driven start/z;
+LOG_FLOOR=1; wide hangar, height 336; >=50 closed frames plus matching dump).
+`python3 tools/g1d_floor_mesh.py --selftest`
+`cmake --build build --target RogueSquadron64Recomp -j 5 > scratch/agent/s6622_build.log 2>&1`
+Use a fresh s6622 capture root. Check screen lock before each arm; SIGKILL.
+Export any lib/ edits: `./submodule-patches/export.sh`.
 
-Positive controls: synthetic mesh with known interpolation; perturb one
-vertex's W/UV so the scorer visibly detects a row step, and verify values
-at vertices. Retain I4 and alpha/fill selftests, original sample totals,
-lastF/touchR/over=1, touchU=0, and same-run visible tear at 1024 and smooth
-796 pixels. Null backend verdict is invalid unless all controls pass.
+Measurement: x=16 and x=w-17, y=180..250, row-step luma at all three stages;
+record fb address, target id, width/height/pitch, render-scale, task/frame and
+conversion/copy serial. Positive control: known checker target must visibly
+survive the GPU-readback and conversion path with known row/column bounds;
+a fabricated host array alone does not test GPU readback. Retain same-run
+tear reproduction and baseline controls. Match source pixel centers exactly.
 
-Discriminator:
-- A 1024-only >2x reconstructed row step absent in the coefficient walk
-  selects H-mesh. Name the responsible vertex-construction expression.
-- Mesh/coefficient agreement within 25% on both widths with the reproduced
-  pixel tear leaves H-pipe, explicitly single-source until independent replay.
-- Failure to match commands, coverage or phase selects H-witness; correct
-  the association in this iteration rather than concluding from a null.
-
-Baseline runner and exact build/run commands:
-`python3 tools/g1d_floor_inputs.py --selftest`
-`cmake --build build --target RogueSquadron64Recomp -j 5 > scratch/agent/s6621_build.log 2>&1`
-Copy/adapt tools/g1d_floor_inputs.py's run_arm to a fresh s6621 output root;
-run both widths in this iteration, sequentially (one game at a time),
-phase-gated, SIGKILL after >=50 closed frames plus the width-matched dump.
-Check CGSSessionScreenIsLocked before each arm. Export any lib/ edit using
-`./submodule-patches/export.sh`. Do not patch rendering or change defaults
-until the writer and value legitimacy are established. Do not retune HUD.
+Outcome: tear first present at GPU -> H-raster; first present in native
+conversion -> H-convert; first present after RAM copy -> H-copy. Missing
+stage/failed control -> H-witness, fix now. No guard/skip/default change
+without naming the writer and establishing value legitimacy. Keep any
+CPU reconstruction-based conclusion explicitly single-source until replayed.

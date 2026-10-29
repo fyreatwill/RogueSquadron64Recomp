@@ -4124,6 +4124,35 @@ struct Rs64Ft {
 Rs64Ft g_ft;
 } // namespace
 
+extern "C" void rs64_floor_mesh(uint32_t op, uint32_t width, const float *edge,
+    const float *plane, const float *vertices, const uint32_t *flags,
+    const char *cc, const char *cca) {
+    if (!g_ft.sync() || width != g_ft.cur_w) return;
+    if (edge[9] < 180.f || edge[8] > 251.f) return;
+    const float lo = std::fmin(vertices[0], std::fmin(vertices[10], vertices[20]));
+    const float hi = std::fmax(vertices[0], std::fmax(vertices[10], vertices[20]));
+    if (!((lo <= 16.f && hi >= 16.f) || (lo <= width - 17.f && hi >= width - 17.f))) return;
+    static uint32_t prevOrigin = ~0u, prevWidth = 0, frame = 0, ordinal = 0;
+    if (prevOrigin != g_ft.origin || prevWidth != width) {
+        frame++; ordinal = 0; prevOrigin = g_ft.origin; prevWidth = width;
+    }
+    char buf[8192];
+    int n = std::snprintf(buf, sizeof(buf), "[floor-mesh] {\"w\":%u,\"origin\":%u,\"frame\":%u,\"ordinal\":%u,\"op\":%u,\"cc\":\"%s\",\"cca\":\"%s\"",
+        width, g_ft.origin, frame, ++ordinal, op, cc, cca);
+    auto floats = [&](const char *key, const float *v, int count) {
+        n += std::snprintf(buf + n, sizeof(buf) - n, ",\"%s\":[", key);
+        for (int i = 0; i < count; i++)
+            n += std::snprintf(buf + n, sizeof(buf) - n, "%s%.9g", i ? "," : "", v[i]);
+        n += std::snprintf(buf + n, sizeof(buf) - n, "]");
+    };
+    floats("edge", edge, 14); floats("plane", plane, 21); floats("v", vertices, 30);
+    n += std::snprintf(buf + n, sizeof(buf) - n, ",\"flags\":[");
+    for (int i = 0; i < 21; i++)
+        n += std::snprintf(buf + n, sizeof(buf) - n, "%s%u", i ? "," : "", flags[i]);
+    std::snprintf(buf + n, sizeof(buf) - n, "]}\n");
+    std::fputs(buf, stderr);
+}
+
 extern "C" void rs64_floor_texel(
     uint32_t op, uint32_t tile, uint32_t line, int persp,
     float y_floor, float ym,

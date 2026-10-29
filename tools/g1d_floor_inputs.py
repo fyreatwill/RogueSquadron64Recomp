@@ -373,9 +373,9 @@ def selftest():
     print('selftest ok: parser, H-mem, H-alpha, H-pipe, rejected control',flush=True)
 
 
-def run_arm(aspect, tag, width_expect):
+def run_arm(aspect, tag, width_expect, output_root=None):
     assert not screen_locked(), 'screen locked'
-    out = ROOT / 'scratch/agent/s6620_alpha' / tag
+    out = (pathlib.Path(output_root) if output_root else ROOT / 'scratch/agent/s6620_alpha') / tag
     fbd = out / 'fbd'
     fbd.mkdir(parents=True, exist_ok=True)
     base = dict(

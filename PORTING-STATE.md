@@ -171988,3 +171988,63 @@ bytes are not established as display pixels. Runtime artifact origin is open.
   the shader, comparing its pixel interpolation with the original coefficient
   walk and the framebuffer in one table. The earlier CPU walk is not proof
   of the interpolated GPU values. ORIGIN: no mitigation; writer unresolved.
+
+## Session 6621 (2026-10-28) — emitted floor mesh agrees while 21:9 pixels tear
+
+Work unit: the g1d-levelselect-texel emitted-mesh discriminator from NEXT.md.
+CURRENT-TRUTH was 47,632 bytes; no maintenance trigger. Queued verdict tail
+ends at the already-recorded s6580 runs; no new soak result to fold in.
+
+Ground truth consulted before instrumentation: docs/F5-UCODE-REFERENCE.md,
+local GLideN64 reference inventory, and Themaister's independent paraLLEl-RDP
+article, https://www.libretro.com/index.php/parallel-rdp-how-the-upscaled-rendering-works/.
+Its edge/attribute sections require screen-space RGBA and STW planes, with
+texture ST/W division. This is independent semantic evidence, NOT a hardware
+replay of these commands. RasterVS preserves source xy after perspective divide;
+its half-pixel offset maps native pixel centers back to integer source xy.
+RasterPS perspective-interpolates COLOR0; non-viewport triangles force smooth
+shade in rt64_state.cpp. Both legacy y+0.5 and corrected integer-y samples
+were scored. Recorded z precedes depth construction and is not used.
+
+One Debug build (cmake --build build --target RogueSquadron64Recomp -j 5)
+carried the complete floor table: edge/scissor, seven base/de/dx planes,
+three xyzw/UV/RGBA vertices, framebuffer address, width, VI origin, frame and
+command ordinals, task, sampler flags, OM and combiner equations. Exported
+lib changes with ./submodule-patches/export.sh. New persistent runner/scorer
+is tools/g1d_floor_mesh.py; baseline runner now accepts an output directory.
+
+Both same-binary width arms ran sequentially with unlocked-screen checks,
+phase-driven input, >=50 stop-gate frames and width-matched dumps, SIGKILL:
+- 796: 34.6 s, 54 stop-gate / 66 closed frames, 9372 shared samples.
+  Pixel edge steps 6.75/5.68, outer dy 8.04. Actual coefficient vs mesh:
+  S 3.014548/3.014548, T 4.788986/4.788986, luma 2.943366/2.947825.
+- 1024: 33.7 s, 54 stop-gate / 66 closed frames, 9370 actual and 9369 legacy
+  shared samples. Pixel edge steps 56.45/53.40, outer dy 27.11. Actual:
+  S 1.914032/1.907333, T 4.889431/4.889430, luma 2.977504/2.966119.
+- Both: 0 crash markers, baseline fail=[], I4 and alpha/fill controls pass,
+  lastF/touchR/over=1, touchU=0; 142 legacy coefficient samples each frame.
+  Wrapped luma steps equal raw steps. UV errors 0.000009/0.009262 texel;
+  affine-shade errors 0.000004/0.008114; perspective-shade errors 0.191/0.887.
+
+Initial strict mesh coverage check failed on five points across both sample
+conventions. Traced each: distance outside mesh edge 0.0052..0.0198 px;
+no interior missing sample. The table retains them and reports the counts;
+scorer accepts only boundary discrepancies <=1/8 pixel (the independent
+reference's edge quantization), with >=141/142 common samples per frame.
+Synthetic 1-pixel missing coverage fails; 0.01-pixel boundary case passes.
+No geometry was moved or samples fabricated to make the control pass.
+Synthetic mesh controls also recover UV at vertices; W/UV perturbation
+raises mean row step 0.42545 -> 208.22996. Parser/I4/alpha controls pass.
+
+Result: H-pipe selected by the prewritten <=25% mesh/coefficient step
+agreement test in both sample conventions; H-mesh's >2x 1024-only row jump
+is absent. The reference-required affine shade differs from shader smooth
+shade, but its observed magnitude does not explain the tear. Backend
+attribution remains single-source CPU replay, not a real GPU/RDP witness.
+No mitigation/render fix/default change. Next: one joined pre-conversion
+GPU / converted-native / post-writeback pixel table, splitting the remaining
+raster-versus-conversion boundary. Do not repeat another coefficient scalar.
+
+Evidence: scratch/agent/s6621_mesh/{verdict,comparison}.json and each arm's
+summary.json, mesh_summary.json, mesh_legacy_summary.json, run.log and dumps;
+build log scratch/agent/s6621_build.log. Outcome ADVANCED.
