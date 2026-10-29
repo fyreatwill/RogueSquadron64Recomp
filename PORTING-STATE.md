@@ -173345,3 +173345,52 @@ ORIGIN: n/a (no mitigation).
 What this rules out: "no sky arm accepts the level-10 clouds without
 breaking the canon table." What it does not show: an objective-counter
 response, or a level-11 picture. The rule stays frozen for that capture.
+
+## Session 6645 (2026-10-29) — level 11 snow flight passes the frozen class rule
+
+One retail 4:3 capture. No classifier edit, no heap edit, no aim, draw
+distance unset, aspect unset, no planet unlock. Precontrol
+`python3 tools/g1_flight_class.py` printed canon_bad 0 and mission 11/13
+before launch (oracle, level-2 fb_0002700, and level-3 fb_0002700 pass;
+floor and the s6633 title fail). IOConsoleLocked was No. The route is
+scratch/agent/s6645_lvl11.sh, the s6642 script with FORCE_UNLOCK=11 and
+FORCE_SAVE_MISSION=11. The soak tail in scratch/agent/SOAK-RESULTS.md
+still ends at s6580 (2026-10-28); no new queued verdict to fold.
+
+scratch/agent/s6645_lvl11/keys.log: screen-unlocked, precontrol-ok, title
+t=14, hangar t=32, mission-onset t=86, hold-30s t=116, killed t=116,
+crash=0, abort=0. run.log echoes `[dd] ROGUESQ_DRAW_DISTANCE multiplier 1`,
+`[g1d-drop] aspect=<unset>`, `[lvsel] cursor=11`, and
+`[initMission] call#1 B40=0x0B`. CRASH, abort, SIGSEGV and SIGBUS counts
+in that log are 0. Nine phase-7 dumps, n=2450..2850 step 50, are
+512x444 at origin `0x00690400` (fb=0x80620000). The other buffer
+`0x00620400` is in the VI origin census (19 lines) and was not the
+sampled buffer. Sheet `docs/g1_lvl11_flight_s6645.png` is frames 2500,
+2600, 2700 and 2850. Scores are in `s6645_lvl11_score.txt`.
+
+The sheet is a flight. Grey cloud over a snow field, a snowspeeder,
+the round radar, a green reticle and the shield badge. The frozen rule
+scores 8/9. n=2500, 2550, 2600, 2650, 2700, 2750, 2800 and 2850 pass
+sky, terrain, craft and HUD.
+
+n=2450 is not required. It misses craft only (metal 0.014, sil 0.044,
+edge 0.003, pure 0.0005). The speeder is in the picture but small and
+low, so it does not fill the chase box. Sky, terrain and HUD pass.
+That is the same distant-craft family as level 9's n=2350, not a new
+sky class.
+
+Same-run title `fb_0000800_w512.ppm` is the title screen and fails sky
+and terrain (luma 82.8, R-G 30.5, rel 0.441). Hangar
+`fb_0001700_w512.ppm`, origin `0x006AB400`, is the hangar deck and
+fails overall: sky 0 and HUD 0 (radar 0). Its terrain rel 0.195 sits
+inside the flight band and does not accept the frame. The classifier
+was not edited. Objective (d) was not run.
+
+This selects H-rule-holds. It refutes H-new-class (8/9 pass) and
+H-no-picture (the sheet is a flight).
+ORIGIN: n/a (no mitigation).
+
+What this rules out: "level 11 produced no post-hangar flight picture"
+and "the frozen rule rejects every level-11 phase-7 frame." What it
+does not show: an objective-counter response, or that level 12 passes.
+Level 12 does not need the planet unlock.
