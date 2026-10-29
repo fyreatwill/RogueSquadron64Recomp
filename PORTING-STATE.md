@@ -172961,3 +172961,62 @@ that shows sky, terrain, craft and HUD." What it does not show: that
 every phase-7 dump sits inside the 0.33 ceiling, or objective-counter
 response. The gap between these ridges (0.331, 0.338) and the title
 (0.432) was measured and not turned into a new bound.
+
+## Session 6638 (2026-10-29) — level 6 canyon flight passes the frozen class rule
+
+One retail 4:3 capture. No classifier edit, no heap edit, no aim, draw
+distance unset, aspect unset. Precontrol `python3 tools/g1_flight_class.py`
+printed canon_bad 0 before launch (oracle, level-2 fb_0002700, level-3
+fb_0002700 pass; floor and the s6633 title fail; the thirteen level-3
+mission lines stay 11/13). IOConsoleLocked was No. The route is
+scratch/agent/s6638_lvl6.sh, the s6637 script with FORCE_UNLOCK=6 and
+FORCE_SAVE_MISSION=6. The soak tail in scratch/agent/SOAK-RESULTS.md
+still ends at s6580 (2026-10-28); no new queued verdict to fold.
+
+scratch/agent/s6638_lvl6/keys.log: screen-unlocked, precontrol-ok, title
+t=14, hangar t=32, mission-onset t=95, hold-30s t=125, killed t=125,
+crash=0, abort=0. run.log echoes `[dd] ROGUESQ_DRAW_DISTANCE multiplier 1`,
+`[g1d-drop] aspect=<unset>`, `[lvsel] cursor=6`, and
+`[initMission] call#1 B40=0x06`. CRASH, abort, SIGSEGV and SIGBUS counts
+in that log are 0. Eleven phase-7 dumps, n=2650..3150 step 50, width 512,
+height 444, origin 0x00620400, fb=0x80690000. The route key 0x690400 is
+in the VI log (17 lines in the keys origin summary) and was not the
+sampled buffer. Sheet docs/g1_lvl6_flight_s6638.png is frames 2650,
+2800, 3000 and 3150.
+
+The sheet is a flight. A canyon, a snowspeeder, the round radar, a
+green reticle and a shield badge are in every cell. n=2800 is the
+open ridge under orange cloud; the other three are the canyon chase.
+The frozen rule scores 8/11. n=2650, 2700, 2750, 2950, 3000, 3050,
+3100 and 3150 pass sky, terrain, craft and HUD (terrain rel
+0.125..0.222; craft on the green reticle, pure 0.0070..0.0084, with
+metal 0.004..0.120; radar 0.072..0.133). n=2800 passes terrain, craft
+and HUD and misses sky only: dark fraction 0.019, luma 56.0, R-G
+10.2. That is under the dark arm (0.60), under the luma>=70 blue arm,
+and under the luma>=140 sunset arm. The picture is the same flight
+with a dimmer orange sky. It is recorded and not required. The sky
+bounds were not moved.
+
+n=2850 and n=2900 fail craft and HUD. n=2850 is a dark canyon with
+no chase craft and no radar (pure 0, metal 0, radar 0, luma 10.1,
+rel 0.120). n=2900 is a canyon wall with the same absence (metal
+0.049, pure 0, radar 0, rel 0.226). They are not frames that show
+sky, terrain, craft and HUD, so they do not ask for a new clause.
+
+Same-run negatives still fail overall. Title fb_0000800_w512.ppm is
+sky 0, terr 0 (luma 78.7, R-G 27.6, rel 0.423). Hangar craft-select
+fb_0001700_w512.ppm fails HUD only (radar 0.000). Its sky, terrain
+and craft clauses pass, because that frame is the parked speeder on
+the hangar floor, so the overall fail depends on the radar cut.
+
+This selects H-rule-holds. It refutes H-no-picture. It does not
+select H-new-class: the rule accepts the flight class, and the one
+sky miss is not a reason to edit tools/g1_flight_class.py. It does
+not run objective (d). ORIGIN: n/a (no mitigation).
+
+What this rules out: "level 6 never produced a post-hangar flight
+picture" and "the frozen rule rejects a level-6 frame that shows
+sky, terrain, craft and HUD." What it does not show: that every
+phase-7 dump passes the sky clause, or objective-counter response.
+The orange-cloud frame (luma 56.0) was measured and not turned into
+a new bound.
