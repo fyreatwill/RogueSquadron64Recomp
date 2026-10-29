@@ -356,6 +356,108 @@ def apply_s6201_alloc(text):
     body = body.replace(st, log, 1)
     return text[:a] + body + text[b:], 1
 
+def apply_s6631_heapcap(text):
+    if "PATCH: s6631 heapcap" in text:
+        return text, 0
+    helper = (
+        "/* PATCH: s6631 heapcap\n"
+        "   The flags&4 heap (head 0x8010FEFC) is built by ensureHeapInitialized.\n"
+        "   Its gap path sets the arena end to 801163E4+fbsize. After the wide\n"
+        "   carve that pointer is the live depth image, so the tail free block\n"
+        "   is the image. Heap 8010FF18 already ends on the depth pointer. Stop\n"
+        "   8010FEFC there too, at init and again at each carve. 4:3 does not\n"
+        "   write. */\n"
+        "static int rs64_g1d_wide(void) {\n"
+        "    static int wide = -1;\n"
+        "    if (wide >= 0) return wide;\n"
+        "    wide = 0;\n"
+        "    const char* as = getenv(\"ROGUESQ_ASPECT\");\n"
+        "    const char* c = as ? as : \"\";\n"
+        "    while (as && *c && *c != ':') ++c;\n"
+        "    double aw = (as && *c == ':') ? atof(as) : 0.0;\n"
+        "    double ah = (as && *c == ':') ? atof(c + 1) : 0.0;\n"
+        "    if (aw > 0.0 && ah > 0.0 && aw / ah > 4.0 / 3.0 + 1e-3) wide = 1;\n"
+        "    return wide;\n"
+        "}\n"
+        "static void rs64_g1d_heapcap(uint8_t* rdram) {\n"
+        "    if (!rs64_g1d_wide()) return;\n"
+        "    uint32_t e4 = U32(MEM_W(S32(0x8011 << 16), 0x63E4));\n"
+        "    uint32_t head = U32(MEM_W(S32(0x8011 << 16), -0x104));\n"
+        "    int did = 0;\n"
+        "    uint32_t cut = 0, oldsz = 0, newsz = 0, flcut = 0, seen_a = 0, seen_fl = 0, seen_sz = 0;\n"
+        "    if ((e4 & 0xFu) == 0u && e4 >= 0x80000020u && e4 < 0x81000000u &&\n"
+        "        head >= 0x80000000u && head < e4) {\n"
+        "        uint32_t a = head, prev = 0;\n"
+        "        for (int g = 0; g < 200000; ++g) {\n"
+        "            uint32_t w0 = U32(MEM_W(S32(a), 0));\n"
+        "            uint32_t sz = U32(MEM_W(S32(a), 4));\n"
+        "            uint32_t fl = w0 >> 16;\n"
+        "            seen_a = a; seen_fl = fl; seen_sz = sz;\n"
+        "            if ((fl & 8u) || sz == 0u || sz > 0x1000000u) break;\n"
+        "            uint32_t nxt = a + 0x10u + sz;\n"
+        "            if (nxt <= a || nxt >= 0x81000000u) break;\n"
+        "            /* Wide gap punch: the free tail's header is exactly e4, so the\n"
+        "               image's first bytes are a heap header. Do not write there.\n"
+        "               Shorten the previous block and plant the terminator at e4-0x10. */\n"
+        "            if (a >= e4) {\n"
+        "                if ((fl & 1u) && !(fl & 2u) && prev >= 0x80000000u && prev + 0x20u <= e4) {\n"
+        "                    uint32_t nsz = e4 - prev - 0x20u;\n"
+        "                    uint32_t term = e4 - 0x10u;\n"
+        "                    cut = prev; oldsz = U32(MEM_W(S32(prev), 4)); flcut = fl;\n"
+        "                    MEM_W(4, S32(prev)) = (int32_t)nsz;\n"
+        "                    MEM_H(0, S32(term)) = 8;\n"
+        "                    MEM_H(2, S32(term)) = 0;\n"
+        "                    MEM_W(4, S32(term)) = 0;\n"
+        "                    newsz = nsz; did = 3;\n"
+        "                }\n"
+        "                break;\n"
+        "            }\n"
+        "            if (nxt > e4) {\n"
+        "                cut = a; oldsz = sz; flcut = fl;\n"
+        "                if (a + 0x10u == e4) {\n"
+        "                    MEM_H(0, S32(a)) = 8;\n"
+        "                    MEM_H(2, S32(a)) = 0;\n"
+        "                    MEM_W(4, S32(a)) = 0;\n"
+        "                    newsz = 0; did = 1;\n"
+        "                } else if (a + 0x20u <= e4) {\n"
+        "                    uint32_t nsz = e4 - a - 0x20u;\n"
+        "                    uint32_t term = e4 - 0x10u;\n"
+        "                    MEM_W(4, S32(a)) = (int32_t)nsz;\n"
+        "                    MEM_H(0, S32(term)) = 8;\n"
+        "                    MEM_H(2, S32(term)) = 0;\n"
+        "                    MEM_W(4, S32(term)) = 0;\n"
+        "                    newsz = nsz; did = 2;\n"
+        "                }\n"
+        "                break;\n"
+        "            }\n"
+        "            prev = a;\n"
+        "            a = nxt;\n"
+        "        }\n"
+        "        if (!did) { cut = seen_a; flcut = seen_fl; oldsz = seen_sz; }\n"
+        "    }\n"
+        "    static int quiet = 0, cuts = 0;\n"
+        "    if ((did && cuts < 16) || (!did && quiet < 8)) {\n"
+        "        fprintf(stderr, \"[g1d-heapcap] e4=0x%08X head=0x%08X did=%d cut=0x%08X fl=%04X oldsz=0x%X newsz=0x%X\\n\",\n"
+        "            e4, head, did, cut, (unsigned)flcut, oldsz, newsz);\n"
+        "        fflush(stderr);\n"
+        "        if (did) ++cuts; else ++quiet;\n"
+        "    }\n"
+        "}\n"
+    )
+    anchor = "RECOMP_FUNC void partitionFramebufferMemory(uint8_t* rdram, recomp_context* ctx) {\n"
+    ret = "    return;\n    // 0x80001084: nop\n"
+    site = "    after_5:\nL_800019B4:\n    // 0x800019B4: lw          $ra, 0x28($sp)\n"
+    if text.count(anchor) != 1 or text.count(ret) != 1 or text.count(site) != 1:
+        return text, 0
+    text = text.replace(anchor, helper + anchor, 1)
+    text = text.replace(ret, "    rs64_g1d_heapcap(rdram); /* PATCH: s6631 heapcap carve */\n" + ret, 1)
+    text = text.replace(
+        site,
+        "    after_5:\n    rs64_g1d_heapcap(rdram); /* PATCH: s6631 heapcap init */\n"
+        "L_800019B4:\n    // 0x800019B4: lw          $ra, 0x28($sp)\n",
+        1)
+    return text, 1
+
 if __name__ == "__main__":
     p = base / "funcs_4.c"; t = p.read_text(); t2, n = apply4(t)
     t2, m = apply_s6201_pool(t2)
@@ -367,8 +469,9 @@ if __name__ == "__main__":
     t2, r = apply_s6202_retarget(t2)
     t2, h = apply_s6203_heapclass(t2)
     t2, d = apply_s6207_drop(t2)
-    if n or c or r or h or d: p0.write_text(t2)
-    print("funcs_0.c live patched x%d carve=%d retarget=%d heapclass=%d drop=%d" % (n, c, r, h, d))
+    t2, cap = apply_s6631_heapcap(t2)
+    if n or c or r or h or d or cap: p0.write_text(t2)
+    print("funcs_0.c live patched x%d carve=%d retarget=%d heapclass=%d drop=%d heapcap=%d" % (n, c, r, h, d, cap))
     p3 = base / "funcs_3.c"; t = p3.read_text(); t2, k = apply_s6201_alloc(t)
     if k: p3.write_text(t2)
     print("funcs_3.c alloc=%d" % k)

@@ -172620,3 +172620,68 @@ this result pushed the file over 60 KB. The conclusions are not withdrawn;
 PORTING-STATE and the superseded list keep them. Next is to cap heap
 8010FEFC at the live depth pointer, the way 8010FF18 already ends, and rerun
 this same two-arm table. HYPOTHESIS-ID for that unit: g1d-levelselect-heap.
+
+## Session 6631 (2026-10-29) — heap 8010FEFC stops at the depth image
+
+2026-10-29. HYPOTHESIS-ID: g1d-levelselect-heap, closed. Step 0: CURRENT-TRUTH
+27,310 bytes, so this was not a maintenance iteration. Queued-soak tail still
+ends at the ledgered s6580 verdicts; nothing new to fold. Two builds of one
+change, both widths each, screen unlocked, SIGKILL from build/. No second
+game. No zero-skip, depth restore, or default change. 4:3 is not written:
+the cap returns unless ROGUESQ_ASPECT is wider than 4:3.
+
+ORIGIN: ensureHeapInitialized's gap path (store at 0x800019A8) sets the
+flags&4 heap end to 801163E4+fbsize. buildHeapFreeList punches the reserved
+hole [slot+fbsize, e4). That hole's size lands the free-tail header exactly
+on e4, and the tail then covers the live depth image. Heap 8010FF18 already
+ended on e4. The cap does not change the game's 4:3 path (gap 0).
+
+First binary, scratch/agent/s6631_heapcap. The walker stopped at a >= e4, so
+every log line is did=0, including the level-select call (21:9 e4=0x80B56000
+head=0x80961000; 16:9 e4=0x80B7BD80 head=0x809DE900). Ownership is unchanged
+from s6630: 21:9 H-live-overlap, malloc 0xBADB50 len 0x8000, heap end
+0x80C00000, one depth-read. 16:9 no-depth-upload. 16:9 49.0 s / 53 frames,
+fail []; 21:9 46.5 s / 50, fail edge-px+dy (dy180 15.86, edges 20.41/20.01).
+Both alive, rc -9, 0 crash markers. The cap was not in force, so the
+stop-if-the-tear-remains rule did not apply. Guest-bzero and host-memset
+controls passed (depth_verdict writers.controls).
+
+The corrected walker, same call sites, remembers the previous block. When
+the free header (flags 1) sits on e4, it shortens that previous block by
+0x10 and plants the terminator at e4-0x10. It does not store into the image.
+Persisted in tools/apply_s6031_far.py (apply_s6631_heapcap) and called from
+tools/fixup_game_funcs_vendored.py. Live funcs_0.c matches. No lib/ edit, so
+export.sh was not run.
+
+Second binary, scratch/agent/s6631_heapcap_at. Level-select lines: 21:9
+did=3 cut=0x80A0AFF0 fl=0001 oldsz=0x14B000 newsz=0x14AFF0 at e4=0x80B56000
+head=0x80961000; 16:9 did=3 cut=0x80A62B50 fl=0001 oldsz=0x119220 newsz=
+0x119210 at e4=0x80B7BD80 head=0x809DE900. Both widths select no-overlap:
+no malloc range contains 0xBB0020. While the 21:9 heap is still live, its
+end is 0x80B56000 (head 0x80961000, 714 blocks). The last 0x8000 zlib return
+is phys 0xB4BA20, block end 0xB53A20, below the image. The depth-read is
+n=12544, fb 00B56000-00BFF800, 1024x339, and 801163E4 is still 0x80B56000.
+The head word is already 0 by n=12540 (same later release s6630 saw); that
+is after the chain had already been cut. The native-swap of that upload
+(n=12550, len 694272) reads 0xBB0020 as 0xFFFCFFFC, not the memset zero.
+This 21:9 arm has 0 guest-exact stores at 0xBB0020, so it does not witness
+rs_memset on the moved window. The same binary's 16:9 arm does: pc
+0x800078EC drives that watched word to 0 at n=6628, during an earlier heap,
+which is the clear-function control. 16:9's level-select heap ends at
+0x80B7BD80. Its 0x8000 return 0xB6F4C0 ends at 0xB774C0, still below e4.
+0 depth-reads on 16:9.
+
+Visual, same scorer as s6630. wide21 passes only when edge_l>30, edge_r>30
+and dy180>18; the torn s6630 frame failed those (edges 7.57/7.17, dy180
+6.79). This run: 16:9 45.9 s / 50 good frames, fail [], dy180 6.18, edges
+6.33/5.39, floor_frac 1.0; 21:9 45.2 s / 54, fail [] (edge-px and dy gone),
+dy180 20.11, edges 46.72/31.59, floor_frac 1.0. Both alive, rc -9, stop
+tex+dump, 0 crash markers. alpha_fill_control and selftest_ok are 1.
+Guest-bzero (pc 2147655952, 120->0) and host control-memset are present.
+
+What this rules out: the 21:9 floor tear being independent of heap
+8010FEFC owning the depth image. What it does not show: a guest-exact
+memset of the moved 21:9 zlib block itself, or a 4:3 run. 4:3 never enters
+the cap. The game's own free header is still planted at e4 before the cap
+runs; the chain no longer reaches it, and the upload word is a depth clear
+rather than a zlib zero.

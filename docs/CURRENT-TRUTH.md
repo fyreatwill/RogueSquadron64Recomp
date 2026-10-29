@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6630 (2026-10-29).
+Compact operational handoff, as of Session 6631 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -14,56 +14,38 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   first-mission endurance (3x600 s lvl1/5/7, s6442), and G2 audio are closed.
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
-- **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-heap).**
-  - s6630: H-live-overlap, single-source (this layout is above 8 MB; the
-    oracle cannot witness it). One Debug binary, both widths. 16:9
-    47.5 s / 51 good frames, fail []; 21:9 46.5 s / 53, fail edge-px+dy
-    (dy180 6.79 vs 11.36, edge 7.57/7.17 vs 16.33/14.88). Alive, rc -9,
-    0 crash markers. Guest-bzero, host-memset, magenta, floor-store and
-    pix-match pass. The last 21:9 carve leaves depth `801163E4=0x80B56000`
-    and image `[0xB56000,0xC00000)` under top `0x80C00000`. Heap
-    `8010FF18` ends on that pointer. Heap `8010FEFC` does not: head
-    `0x80961000`, chain end `0x80C00000`. `rs_zcalloc`'s `rs_malloc`
-    returns `0x80BADB50` len `0x8000` inside the live image (n=13559)
-    while `801163E4` still names it; `rs_memset` `0x800078EC` zeros
-    `0xBB0020`. `inflateEnd` frees that heap block (n=13633) and does
-    not move `801163E4`. SETZIMG n=13640 and the one depth-read n=13643
-    upload `[0xB56000,0xBFF800)` (1024x339). A later free is not a
-    framebuffer release. 16:9 has the same heap class at its level-select
-    carve (`e4=0x80B7BD80`, heap end `0x80BFFFE0`, malloc `0xBAA1B0` len
-    `0x8000` covers `0xBB0020`) but records 0 depth-reads and the floor
-    enters at 1.0, so it does not tear. The overlap is not 21:9-only;
-    the upload is. The three words outside the 32 KB window are later
-    heap blocks in the same image: `0xBB5B60+0x4C4` holds `0xBB5FDE`
-    (last change stays 0, same memset) and `0xBB6020` (last change 6,
-    pc `0x80027E8C`); `0xBB6460+0x1008` holds `0xBB67DE` (last change
-    8650761, pc `0x8002958C`). Not one memset. Do not skip the clear,
-    restore depth, or change a default. Evidence:
-    `scratch/agent/s6630_ownership/ownership_verdict.json`.
-  - s6629 named that `rs_memset` store (`dst=0x80BADB50`, len `0x8000`,
-    retail `0x84EC=A0450000`). Do not re-attribute or suppress it.
-  - s6611-s6628 are closed leads, not open work. The stripe is not stride,
-    scissor, texel T/S, shade, I4, blender, the last primitive, a CPU mesh
-    replay, a shader blend, copyToRAM, or a byteswap. copyFromChanges is
-    faithful: clearDepthTarget read 1.0, then the guest depth words were
-    already the stripe. s6629 named the watched store. Detail is in
-    PORTING-STATE sessions 6611-6629 and the superseded list below.
-    The OS window stays 640x480, so wider modes letterbox.
+- **Active thread closed: G1d 21:9 level-select tear (g1d-levelselect-heap).**
+  s6631. The wide gap punch in `buildHeapFreeList` places the `8010FEFC`
+  free-tail header exactly on `801163E4`. A walker that stops at `a >= e4`
+  never cuts it (first binary, `did=0`, overlap unchanged). The fix, aspect
+  > 4:3 only, shortens the previous block and plants the terminator at
+  `e4-0x10`. It does not write the image and does not run at 4:3. Second
+  binary, both widths, screen unlocked: level-select `did=3`. 21:9
+  `e4=0x80B56000` head `0x80961000` cut `0x80A0AFF0` oldsz `0x14B000` newsz
+  `0x14AFF0`; heap end becomes `0x80B56000`. 16:9 end becomes `0x80B7BD80`.
+  Neither width has a malloc covering `0xBB0020`. The 21:9 zlib `0x8000`
+  block ends at `0xB53A20`, below the image. The upload word is
+  `0xFFFCFFFC`, not the memset zero. 16:9 45.9 s / 50 frames, fail [];
+  21:9 45.2 s / 54, fail [] (edge-px and dy reasons gone; dy180 20.11,
+  edges 46.72/31.59). Both floor_frac 1.0, alive, rc -9, 0 crashes.
+  Evidence: `scratch/agent/s6631_heapcap_at/`. Pre-fix baseline remains
+  s6630. Do not skip `rs_memset` or restore depth. OS window stays 640x480.
 - **G3c (owner visual report): engineering closed, owner judgement pending.**
   (a) far-edge stair: no opt-in rougher than retail (s6449, s6544);
   (b) spike wedges: H-hw-draws, angrylion lights the same 16/79 wedges
   (s6454), `ROGUESQ_CULL_SPIKE` stays opt-in; (c) turning shake: retail 30 fps
   judder (s6455, s6458).
-- **G1d (aspect): flight radar inset matches retail (s6610).** Extra width
-  is real scene and the left HUD stays pinned. The open opt-in defect is
-  the 21:9 level-select floor tear; s6630 names it as heap `8010FEFC`
-  still owning the live depth image. The OS window stays 640x480, so
-  wider modes letterbox. Do not return to the combiner or the pixel pipe.
+- **G1d (aspect): level-select floor tear closed (s6631).** Flight radar
+  inset matches retail (s6610). Extra width is real scene and the left HUD
+  stays pinned. Heap `8010FEFC` now stops at the depth pointer when aspect
+  is wider than 4:3. The OS window stays 640x480, so wider modes letterbox.
+  Do not return to the combiner or the pixel pipe.
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
+- s6631 first cut "any block with next > e4 is the tail, so walking until then caps the arena" (same session, did=3 at a header exactly equal to e4). Believable because s6630 described the free block as covering [e4, top) and the header as e4-0x10. The punch's reserved size ends on e4, so the free header is e4 and the old walker returned before cutting.
 - s6630's first classifier label "H-stale-target, because inflateEnd frees the zlib window before the depth upload" (same session, H-live-overlap). Believable because that free is real and precedes the read. It does not move `801163E4`, which still names `0x80B56000` at malloc, free, SETZIMG and the upload.
-- s6629 "why the zlib window overlaps the depth image is open" (s6630: the image is still reserved when `rs_malloc` returns inside it). Believable because s6629 named only the store. Heap `8010FEFC` still runs through to RAM top; heap `8010FF18` already stops at the depth pointer.
+- s6629 "why the zlib window overlaps the depth image is open" (s6630: the image was still reserved when `rs_malloc` returned inside it; s6631 then stopped that heap at the depth pointer). Believable because s6629 named only the store. At s6630 heap `8010FEFC` still ran through to RAM top; heap `8010FF18` already stopped at the depth pointer.
 - s6628 "writer between A/B unknown" is resolved at the watched word by s6629 exact pre/post stores and caller context: rs_zcalloc clears a zlib window there. The earlier witness lacked store hooks. s6630 resolves the ownership class; it does not make the whole stripe one 32 KB zero.
 - s6628 closes H-swap/H-alias for the measured upload (single-source): believable because the earlier native witness preceded byteswapping and did not record the live mapping. Post-swap and exit preserve `0x9EC4`, and both sites use the identical host address; the zero appears between them.
 - s6627 closes "the 1024x447 `copyToRAM` at `0x00B20000` writes the `0x0000` stripe" (it covers `0x00BB0020`). Believable because that span contains every stripe address and the same write's own image y=180 is rawBe 0. Refuted: the absolute sample is rawBe `0x9F4C` on all 935 covering writebacks, the call count does not move, and the upload still reads `0x0000`. The image-y zero is phys `0x00B7A020`.
@@ -168,16 +150,11 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6630) Stop heap `8010FEFC` from owning the live depth image.**
-   `8010FF18` already ends at `801163E4`. `8010FEFC` keeps a free block
-   through RAM top on both widths; 21:9 then uploads that image and tears,
-   16:9 records no depth-read and stays clean. Cap or split that arena at
-   the depth pointer inside the carve, then rerun the same two-arm
-   ownership table. Success: the 21:9 depth-read interval contains no
-   live heap block, `0xBB0020` is not the zlib zero, and the edge-px/dy
-   fails clear, while 16:9 stays fail [] and enters at 1.0. The zlib
-   allocation must still return and still be cleared. No zero-skip, depth
-   restore, or default change. See NEXT.md.
+1. **(s6631) G1 (c) for the next level without a flight framebuffer verdict.**
+   Level 1 already matches retail in `docs/G3-INFLIGHT-DIFF.md`. Do not
+   reopen the heap cap or the level-select floor. One retail 4:3 flight
+   capture of the next uncovered level, forced route, framebuffer scored
+   for terrain, craft and HUD. No aim, steer, or default change. See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
@@ -226,8 +203,8 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
    `docs/owner_sheet_s6439.png`; ask whether `ROGUESQ_CULL_SPIKE` should be
    default-on.
 8. **G1d owner sheets: aspect `docs/owner_sheet_s6609_aspect.png`, radar
-   `docs/owner_sheet_s6610_radar.png`.** Follow-up is the level-select tear
-   (next-steps 1), not another radar capture.
+   `docs/owner_sheet_s6610_radar.png`.** The level-select tear closed in
+   s6631. Do not recapture the radar.
 9. **G1 coverage (c)+(d)**: framebuffer terrain/craft/HUD evidence and a
    forced-hit objective response for every level 0..18.
 10. **Ladder (ITERATION.md 3c)**: after the above, G3 render fidelity
