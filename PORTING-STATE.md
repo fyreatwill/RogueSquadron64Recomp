@@ -172732,3 +172732,51 @@ What this rules out: level 2 flight as a missing-class framebuffer
 (no terrain, no craft, or no HUD) on the retail route. What it does
 not show: objective-counter response, any level past 2, or a dump
 whose own origin field is 0x690400.
+
+## Session 6633 (2026-10-29) — level 3 night flight is visible but fails the bright-scene class rule
+
+Retail 4:3, draw distance unset (run.log: multiplier 1, `[g1d-drop] aspect=<unset>`).
+One game from build/, SIGKILL. Screen was unlocked. Menu input was the
+s6632 in-process start/z schedule. FORCE_UNLOCK=3 and
+FORCE_SAVE_MISSION=3. [saveslot] force=3, [lvsel] cursor=3, cursorMask
+0x8, initMission B40=0x03. Keys: scratch/agent/s6633_lvl3/keys.log.
+
+Route: title t=14 s (origin 0x790400), hangar t=32 s (0x6AB400), mission
+onset t=89 s (0x690400, hangar already seen), hold 30 s, killed t=119 s.
+crash lines 0, abort lines 0.
+
+After the hangar the VI origin alternates 0x690400 and 0x620400. Dumps
+every 50 landed on 0x690400 (512x444), thirteen frames n=2550..3150.
+That buffer is the flight picture.
+
+Class rule, same cuts as s6632, checked before the run: the level-1
+retail oracle and scratch/agent/s6632_lvl2/fbd/fb_0002700_w512.ppm pass;
+the s6631 level-select ppm fails. Operational boxes, required for that
+level-2 frame to clear terrain stddev 18: sky y 0.02-0.18, ground
+y 0.45-0.95, radar the top-right red fraction, craft center pink in
+[0.003, 0.05] or near-white yellow (r>=230, g>=210, 150<=b<230) in
+[0.002, 0.015] with pink < 0.001. The narrower ground band 0.62-0.90
+scores the level-2 positive control at stddev 13.3 and would have
+failed precontrol.
+
+Level 3 numeric result: 0/13 of the 0x690400 dumps pass. Sky passes on
+12/13 (upper dark fraction 0.79-0.96; n=3150 is 0.41 and fails sky).
+HUD passes on 13/13 (radar-red 0.073-0.101). Terrain fails on 13/13
+(lower luma stddev 6.8-17.4, all under 18). Craft fails on 13/13
+(pink <= 0.0008, yellow 0). Same run, every other origin scores 0,
+including the title dump fb_0000450_w512.ppm.
+
+The picture is not empty. docs/g1_lvl3_flight_s6633.png (n=2700, 2850,
+3000, 3150) shows a night flight: dark sky, dark ground, a craft in
+the center, and the radar. The bright-scene engine bands do not cover
+this craft, and the dark ground does not reach stddev 18.
+
+This selects H-absent for the frozen numeric rule. It refutes a blank
+or menu framebuffer at the mission origin. It does not select H-present,
+it does not run the forced-hit objective check, and it does not change
+a default or the game.
+
+What this rules out: level 3 as a missing framebuffer on the retail
+route. What it does not show: a numeric class rule that accepts this
+night frame without also accepting the level-select floor, or
+objective-counter response.
