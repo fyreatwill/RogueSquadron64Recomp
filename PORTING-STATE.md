@@ -172780,3 +172780,46 @@ What this rules out: level 3 as a missing framebuffer on the retail
 route. What it does not show: a numeric class rule that accepts this
 night frame without also accepting the level-select floor, or
 objective-counter response.
+
+## Session 6634 (2026-10-29) — night-flight class rule accepts level 3 and rejects the floor
+
+Offline only. No game launch, no heap edit, no default change. The soak
+tail in scratch/agent/SOAK-RESULTS.md ends at s6580 (2026-10-28); nothing
+there is newer than the s6633 ledger entry.
+
+The s6632 cuts stay for sky and the radar HUD. Terrain replaces luma
+stddev with relative local edge energy on y 0.45-0.95, x 0.15-0.85:
+mean of (|dLx|+|dLy|)/(L+12), accepted only inside [0.08, 0.33]. Craft
+keeps the pink/white-yellow engine bloom and also accepts a chase-band
+metal hull (x 0.32-0.68, y 0.40-0.62; fraction >= 0.10 of pixels at
+least 30 luma above the band median, chroma <= 80, luma >= 40) or a
+saturated green reticle (g>=80, r<=50, b<=50, fraction >= 0.004 in
+x 0.35-0.65, y 0.28-0.55). The predicate is tools/g1_flight_class.py.
+Running it is the measurement.
+
+Five-file table, all as required: pass oracle (rel 0.129, pink 0.0173),
+pass level-2 fb_0002700 (rel 0.106, yellow 0.0086), pass level-3
+fb_0002700 (rel 0.262, metal 0.165, reticle 0.0071, pink 0, yellow 0),
+fail the level-select floor (rel 0.709, metal 0.067, radar 0), fail the
+s6633 title dump fb_0000450 (sky 0, rel 0.410). The title still passes
+craft and HUD, because the orange suit hits the old pink band and the
+logo hits the radar box; sky and terrain reject it. The floor fails
+terrain, craft, and HUD. Sky on the floor stays true: the hangar ceiling
+is dark enough for the night-sky cut.
+
+Of the thirteen s6633 mission dumps n=2550..3150, 11 pass. n=2550 fails
+craft only (metal 0.054, reticle 0, pink 0.0008). That frame is still a
+flight: a small craft left of center, dark ground, and the radar. n=3150
+fails the unchanged sky cut (dark fraction under 0.60 and the sky is not
+bright); terrain, craft, and HUD pass, and the picture is the dark end
+of the same flight. Neither miss is the floor or the title.
+
+This selects H-local-contrast. It refutes H-inseparable for this pair of
+measures: the night frame passes and both negatives fail. It does not
+retune after the table held, does not run objective (d), and does not
+capture level 4.
+
+What this rules out: "no numeric cut accepts the level-3 night frame
+without also accepting the level-select floor or the title card." What
+it does not show: that the same cuts accept every later level, or that
+n=2550's small hull is inside the craft cut.
