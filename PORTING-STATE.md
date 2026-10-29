@@ -172685,3 +172685,50 @@ memset of the moved 21:9 zlib block itself, or a 4:3 run. 4:3 never enters
 the cap. The game's own free header is still planted at e4 before the cap
 runs; the chain no longer reaches it, and the upload word is a depth clear
 rather than a zlib zero.
+
+## Session 6632 (2026-10-29) — level 2 flight frame shows sky, terrain, craft and HUD
+
+Retail 4:3, draw distance left unset (run.log: multiplier 1, no ASPECT).
+One game from build/, SIGKILL. Screen was unlocked (IOConsoleLocked = No).
+Menu input was the in-process start/z schedule (hold 1800 ms), not winctl:
+s6604 and s6631 recorded autopilot fires and no winctl key. FORCE_UNLOCK=2
+with FORCE_SAVE_MISSION=2, because the level-select patch uses
+cursorMask = 1<<unlock and NEXT's unlock=1 would select level 1.
+[saveslot] force=2, [lvsel] cursor=2, initMission B40=2.
+
+Route: title t=15 s (origin 0x790400), hangar t=33 s (0x6AB400), mission
+onset t=84 s (0x690400, hangar already seen), hold 30 s, killed t=114 s.
+crash lines 0, abort lines 0. Keys: scratch/agent/s6632_lvl2/keys.log.
+
+After the hangar the VI origin alternates 0x690400 and 0x620400. Dumps
+every 50 swaps phase-locked onto 0x620400 (512x444), eight frames
+n=2500..2850. That is the flight picture, not a second scene. The route
+key 0x690400 did fire; it was the other buffer and was not sampled.
+
+Class rule, checked before the run on the level-1 retail oracle and the
+s6604 space-flight frame (both pass) and on the s6631 level-select ppm
+(fails; file is 802527 bytes, non-empty): sky = upper dark fraction
+>= 0.60 or upper luma >= 70 with R <= G+15; terrain = lower luma
+stddev >= 18; craft = center pink-engine fraction in [0.003, 0.05] or
+yellow-engine fraction in [0.002, 0.015] with pink < 0.001; HUD =
+top-right radar-red fraction >= 0.02. A frame must pass all four.
+
+Level 2 result: 7/8 of the 0x620400 dumps pass (n=2550..2850). n=2500
+has sky, terrain and HUD but the craft engines are still too small
+(yellow fraction 0.0004). Same run, other origins: title 0/17, hangar
+0/7, 0x656400 0/7, 0x696100 0/13, 0x66A500 0/5. Controls: retail oracle
+pass, space-flight pass, level-select floor fail, title fail, debrief
+fail. Sheet: docs/g1_lvl2_flight_s6632.png. Example frame
+scratch/agent/s6632_lvl2/fbd/fb_0002700_w512.ppm.
+
+This selects H-present for level 2 (c). It does not run the forced-hit
+objective check (d), and it does not change a default. A pink-only
+engine test would have called the craft absent; that marker is the
+level-1 X-wing glow, and this level's engines are yellow. The yellow
+band is bounded so desert sand (yellow fraction 0.34) and the
+level-select floor (yellow 0.012 with pink 0.0025) still fail.
+
+What this rules out: level 2 flight as a missing-class framebuffer
+(no terrain, no craft, or no HUD) on the retail route. What it does
+not show: objective-counter response, any level past 2, or a dump
+whose own origin field is 0x690400.

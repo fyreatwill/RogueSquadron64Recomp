@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6631 (2026-10-29).
+Compact operational handoff, as of Session 6632 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -41,8 +41,16 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   is wider than 4:3. The OS window stays 640x480, so wider modes letterbox.
   Do not return to the combiner or the pixel pipe.
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
+- **G1 (c) level 2 flight framebuffer: present.** s6632, retail 4:3, draw
+  distance left at 1. Selector B40=2, cursor=2. After the hangar, VI
+  alternates `0x690400` and `0x620400`; every-50 dumps landed on
+  `0x620400` (512x444). 7/8 of those frames pass sky, terrain, craft and
+  HUD. Title, hangar and the other origins in the same run score 0/49.
+  Sheet `docs/g1_lvl2_flight_s6632.png`. Objective hit-response (d) was
+  not run. No crash in the 30 s hold.
 
 ## Superseded conclusions — do not act on these
+- s6632 "only a dump whose own origin field is 0x690400 is the mission picture" (same run: that origin is in the VI log, and every dump in the window is the other buffer 0x620400, which is the flight picture). Believable because the route key is 0x690400 and EVERY=50 phase-locked onto one of the two buffers.
 - s6631 first cut "any block with next > e4 is the tail, so walking until then caps the arena" (same session, did=3 at a header exactly equal to e4). Believable because s6630 described the free block as covering [e4, top) and the header as e4-0x10. The punch's reserved size ends on e4, so the free header is e4 and the old walker returned before cutting.
 - s6630's first classifier label "H-stale-target, because inflateEnd frees the zlib window before the depth upload" (same session, H-live-overlap). Believable because that free is real and precedes the read. It does not move `801163E4`, which still names `0x80B56000` at malloc, free, SETZIMG and the upload.
 - s6629 "why the zlib window overlaps the depth image is open" (s6630: the image was still reserved when `rs_malloc` returned inside it; s6631 then stopped that heap at the depth pointer). Believable because s6629 named only the store. At s6630 heap `8010FEFC` still ran through to RAM top; heap `8010FF18` already stopped at the depth pointer.
@@ -125,9 +133,11 @@ One line each: claim (superseded by; why it was believable).
 
 Playable levels are 0..18 (`NUM_LEVELS=0x13`; 19 and 20 are sentinels). Levels
 1–9 and 11–18 have route/hold coverage; levels 10 and 15 need the planet
-unlock or its long retail intro. Verification still needs framebuffer evidence
-of terrain, craft, and HUD plus a forced-hit objective response. Mission wins,
-autopilot aim, and mission-to-mission progression are owner playtest scope.
+unlock or its long retail intro. Level 1 has a retail flight match. Level 2
+has a scored flight framebuffer (s6632). Verification still needs that
+framebuffer evidence for the remaining levels, plus a forced-hit objective
+response. Mission wins, autopilot aim, and mission-to-mission progression
+are owner playtest scope.
 
 ## Durable constraints
 
@@ -150,11 +160,12 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6631) G1 (c) for the next level without a flight framebuffer verdict.**
-   Level 1 already matches retail in `docs/G3-INFLIGHT-DIFF.md`. Do not
-   reopen the heap cap or the level-select floor. One retail 4:3 flight
-   capture of the next uncovered level, forced route, framebuffer scored
-   for terrain, craft and HUD. No aim, steer, or default change. See NEXT.md.
+1. **(s6632) G1 (c) for level 3.** Level 1 matches retail. Level 2 passes
+   sky, terrain, craft and HUD (`docs/g1_lvl2_flight_s6632.png`). Same
+   retail 4:3 route with `FORCE_SAVE_MISSION=3` and `FORCE_UNLOCK=3`
+   (the unlock value is the cursor bit index; 1 selects level 1). Score
+   with the s6632 class rule. No aim, no heap edit, no default change.
+   See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
