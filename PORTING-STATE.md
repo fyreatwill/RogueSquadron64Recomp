@@ -172911,3 +172911,53 @@ What this rules out: "no orange-sky arm can accept the s6635 sunset
 while canon_bad stays 0" and "the sunset-filled center box cannot
 count as a craft without accepting the title or the hangar."
 What it does not show: that the same frozen rule accepts level 5.
+
+## Session 6637 (2026-10-29) — level 5 night flight passes the frozen class rule
+
+One retail 4:3 capture. No classifier edit, no heap edit, no aim, draw
+distance unset, aspect unset. Precontrol `python3 tools/g1_flight_class.py`
+printed canon_bad 0 before launch (oracle, level-2 fb_0002700, level-3
+fb_0002700 pass; floor and the s6633 title fail; the thirteen level-3
+mission lines stay 11/13). IOConsoleLocked was No. The route is
+scratch/agent/s6637_lvl5.sh, the s6635 script with the inline classifier
+removed, FORCE_UNLOCK=5 and FORCE_SAVE_MISSION=5. The soak tail in
+scratch/agent/SOAK-RESULTS.md still ends at s6580 (2026-10-28).
+
+scratch/agent/s6637_lvl5/keys.log: screen-unlocked, precontrol-ok, title
+t=14, hangar t=32, mission-onset t=78, hold-30s t=108, killed t=108,
+crash=0, abort=0. run.log echoes `[dd] ROGUESQ_DRAW_DISTANCE multiplier 1`,
+`[g1d-drop] aspect=<unset>`, `[lvsel] cursor=5`, and
+`[initMission] call#1 B40=0x05`. CRASH, abort, SIGSEGV and SIGBUS counts
+in that log are 0. Nine phase-7 dumps, n=2450..2850 step 50, width 512,
+height 444, origin 0x00620400, fb=0x80690000. The route key 0x690400 is
+in the VI log (12 lines) and was not the sampled buffer. Sheet
+docs/g1_lvl5_flight_s6637.png is frames 2450, 2600, 2750 and 2850.
+
+The sheet is a flight. A dark sky with stars, rocky ground, an X-wing,
+the round radar, a green reticle and a missile badge are in every cell.
+The frozen rule scores 7/9. n=2450..2750 pass sky, terrain, craft and
+HUD (sky on the dark arm, luma 10.7..16.4; terrain rel 0.207..0.306;
+craft on the green reticle, pure 0.0057..0.0074, with metal
+0.055..0.199; radar 0.091..0.096). n=2800 and n=2850 pass sky, craft
+and HUD and miss terrain only: rel 0.338 and 0.331, both above the
+0.33 ceiling. Those two frames are the same flight with closer ridges.
+They are recorded and not required, the same way s6636 left the
+level-4 floor near-miss. The ceiling was not raised.
+
+Same-run negatives still fail overall. Title fb_0000800_w512.ppm is
+sky 0, terr 0 (luma 81.2, R-G 29.3, rel 0.432). Hangar craft-select
+fb_0001700_w512.ppm fails HUD only (radar 0.000). Its sky, terrain and
+craft clauses pass, because that frame is the parked X-wing on the
+hangar floor, so the overall fail depends on the radar cut.
+
+This selects H-rule-holds. It refutes H-no-picture. It does not select
+H-new-class: the rule accepts the flight class, and the two ceiling
+misses are not a reason to edit tools/g1_flight_class.py. It does not
+run objective (d).
+
+What this rules out: "level 5 never produced a post-hangar flight
+picture" and "the frozen night-flight rule rejects a level-5 frame
+that shows sky, terrain, craft and HUD." What it does not show: that
+every phase-7 dump sits inside the 0.33 ceiling, or objective-counter
+response. The gap between these ridges (0.331, 0.338) and the title
+(0.432) was measured and not turned into a new bound.
