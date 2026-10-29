@@ -173880,3 +173880,44 @@ Same-run title n=800 fails sky and terrain (rel 0.416); craft-select n=1700
 fails HUD (radar 0). The classifier was not edited. Objective response was
 not attempted. Next: one offline snow-surface arm against these positives
 and negative controls, preserving the relative-edge band and all sky cuts.
+
+## Session 6654 (2026-10-29) — bounded snow-surface terrain arm accepts level 18
+
+HYPOTHESIS-ID: g1-coverage-cd
+
+Step 0: CURRENT-TRUTH 47862 bytes, below maintenance trigger. Read current
+truth, NEXT and soak tail in order. No new soak verdicts after s6581. One
+bounded offline classifier change; no game launch, regeneration or build.
+Precontrol: canon_bad 0, mission 11/13. Competing hypotheses were H-snow
+(bright low-chroma relief separates flight), H-overlap (also admits menu
+surfaces), H-window (relief outside the terrain window).
+
+Measured the whole planned table: original five CANON files, thirteen
+level-3 frames, both level-18 positives and all eight same-run negatives.
+Strict spread<=22 neutral/bright-neutral counts miss the snow: n2200/2250
+neutral fractions 0.0199/0.0518, bright fractions 0.00080/0.00025. This
+failed candidate is retained in table_before.tsv. The snow is blue tinted,
+not grey. With spread<=64 and luma>=180, bright low-chroma fractions are
+0.977277/0.936637, mean terrain luma 217.499/210.517, relative local edge
+energy 0.046395/0.068064. Every other table entry has mean luma<=153.919,
+bright fraction<=0.133535. Result selects H-snow in this saved capture;
+H-overlap and H-window are not needed to explain these two misses.
+
+Landed terrain OR arm: mean luma>=180, fraction>=0.50 of terrain samples
+with luma>=180 and channel spread<=64, and 0.02<=rel<0.08. Existing
+[0.08,0.33] arm and all sky/craft/HUD cuts and windows stay unchanged.
+Nonzero relief excludes a flat bright clear. No runtime render fix or
+retail-equivalence claim. Two content witnesses: direct inspection of
+s6653 contact sheet shows snow/ship/radar/reticle in both accepted views;
+pixel table supplies the bounded numerical separator. Generalization is
+single-capture evidence; this is classifier coverage only.
+
+Postcontrol: canon_bad 0 over the expanded 15-file table, mission 11/13.
+Level-18 n2200/2250 pass all four clauses. Title n800 still fails sky and
+terrain; craft-select n1700 fails HUD. Crest n2050..2150 and pause
+n2300..2400 remain overall fails, and none selects the snow arm. Added all
+ten level-18 files to CANON for repeatable positive and negative controls.
+Evidence: scratch/agent/s6654_snow/{table_before.tsv,table_snow.tsv,post.txt}.
+Objective response was not run. Next: offline numeric verdict on existing
+level-0 flight captures; no repeat hold or aim work.
+ORIGIN: no corruption mitigation; classifier-only change, runtime unchanged.

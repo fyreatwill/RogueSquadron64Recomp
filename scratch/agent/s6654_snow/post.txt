@@ -1,0 +1,30 @@
+pass oracle sky=1 terr=1 craft=1 hud=1 rel=0.129 metal=0.156 sil=0.215 pure=0.0000 edge=0.083 pink=0.0173 yel=0.0267 radar=0.088 luma=183.7 rg=-64.1 terrain_luma=153.9 snow_frac=0.134 snow=0 table=OK
+pass lvl2 sky=1 terr=1 craft=1 hud=1 rel=0.106 metal=0.021 sil=0.000 pure=0.0001 edge=0.015 pink=0.0000 yel=0.0086 radar=0.103 luma=108.4 rg=-4.5 terrain_luma=105.5 snow_frac=0.003 snow=0 table=OK
+pass lvl3 sky=1 terr=1 craft=1 hud=1 rel=0.262 metal=0.165 sil=0.000 pure=0.0071 edge=0.005 pink=0.0000 yel=0.0000 radar=0.087 luma=25.3 rg=2.7 terrain_luma=16.3 snow_frac=0.001 snow=0 table=OK
+fail floor sky=1 terr=0 craft=0 hud=0 rel=0.709 metal=0.067 sil=0.000 pure=0.0000 edge=0.001 pink=0.0029 yel=0.0319 radar=0.000 luma=23.7 rg=2.1 terrain_luma=40.6 snow_frac=0.060 snow=0 table=OK
+fail title sky=0 terr=0 craft=1 hud=1 rel=0.410 metal=0.059 sil=0.000 pure=0.0000 edge=0.017 pink=0.0469 yel=0.0011 radar=0.031 luma=75.0 rg=24.7 terrain_luma=47.8 snow_frac=0.013 snow=0 table=OK
+fail lvl18_800 sky=0 terr=0 craft=1 hud=1 rel=0.416 metal=0.059 sil=0.000 pure=0.0000 edge=0.017 pink=0.0469 yel=0.0011 radar=0.033 luma=77.3 rg=26.6 terrain_luma=47.9 snow_frac=0.013 snow=0 table=OK
+fail lvl18_1700 sky=1 terr=1 craft=1 hud=0 rel=0.203 metal=0.150 sil=0.000 pure=0.0000 edge=0.001 pink=0.0006 yel=0.0000 radar=0.000 luma=24.0 rg=-7.0 terrain_luma=35.6 snow_frac=0.000 snow=0 table=OK
+fail lvl18_2050 sky=0 terr=1 craft=1 hud=0 rel=0.103 metal=0.465 sil=0.000 pure=0.0000 edge=0.025 pink=0.0000 yel=0.0000 radar=0.000 luma=61.7 rg=-0.6 terrain_luma=63.6 snow_frac=0.000 snow=0 table=OK
+fail lvl18_2100 sky=0 terr=1 craft=1 hud=0 rel=0.220 metal=0.293 sil=0.000 pure=0.0000 edge=0.001 pink=0.0198 yel=0.0000 radar=0.000 luma=61.7 rg=-0.6 terrain_luma=60.9 snow_frac=0.004 snow=0 table=OK
+fail lvl18_2150 sky=0 terr=1 craft=1 hud=0 rel=0.221 metal=0.305 sil=0.000 pure=0.0000 edge=0.002 pink=0.0197 yel=0.0000 radar=0.000 luma=63.3 rg=-0.6 terrain_luma=61.2 snow_frac=0.004 snow=0 table=OK
+pass lvl18_2200 sky=1 terr=1 craft=1 hud=1 rel=0.046 metal=0.000 sil=0.125 pure=0.0000 edge=0.022 pink=0.0002 yel=0.0000 radar=0.103 luma=196.5 rg=-7.3 terrain_luma=217.5 snow_frac=0.977 snow=1 table=OK
+pass lvl18_2250 sky=1 terr=1 craft=1 hud=1 rel=0.068 metal=0.000 sil=0.121 pure=0.0006 edge=0.008 pink=0.0000 yel=0.0000 radar=0.124 luma=212.8 rg=-29.7 terrain_luma=210.5 snow_frac=0.937 snow=1 table=OK
+fail lvl18_2300 sky=1 terr=1 craft=1 hud=0 rel=0.217 metal=0.285 sil=0.000 pure=0.0000 edge=0.011 pink=0.0174 yel=0.0000 radar=0.000 luma=93.2 rg=-10.3 terrain_luma=61.5 snow_frac=0.004 snow=0 table=OK
+fail lvl18_2350 sky=1 terr=1 craft=1 hud=0 rel=0.217 metal=0.314 sil=0.000 pure=0.0000 edge=0.015 pink=0.0174 yel=0.0000 radar=0.000 luma=94.3 rg=-10.0 terrain_luma=62.8 snow_frac=0.006 snow=0 table=OK
+fail lvl18_2400 sky=1 terr=1 craft=1 hud=0 rel=0.221 metal=0.291 sil=0.000 pure=0.0000 edge=0.010 pink=0.0199 yel=0.0000 radar=0.000 luma=90.4 rg=-9.1 terrain_luma=62.3 snow_frac=0.004 snow=0 table=OK
+fail m2550 sky=1 terr=1 craft=0 hud=1 rel=0.148 metal=0.054 sil=0.000 pure=0.0000 edge=0.011 pink=0.0008 yel=0.0000 radar=0.075 luma=29.7 rg=1.6 terrain_luma=39.2 snow_frac=0.001 snow=0
+pass m2600 sky=1 terr=1 craft=1 hud=1 rel=0.248 metal=0.085 sil=0.000 pure=0.0078 edge=0.002 pink=0.0000 yel=0.0000 radar=0.073 luma=27.1 rg=2.0 terrain_luma=15.9 snow_frac=0.001 snow=0
+pass m2650 sky=1 terr=1 craft=1 hud=1 rel=0.266 metal=0.178 sil=0.000 pure=0.0075 edge=0.007 pink=0.0001 yel=0.0000 radar=0.073 luma=25.5 rg=2.8 terrain_luma=16.2 snow_frac=0.001 snow=0
+pass m2700 sky=1 terr=1 craft=1 hud=1 rel=0.262 metal=0.165 sil=0.000 pure=0.0071 edge=0.005 pink=0.0000 yel=0.0000 radar=0.087 luma=25.3 rg=2.7 terrain_luma=16.3 snow_frac=0.001 snow=0
+pass m2750 sky=1 terr=1 craft=1 hud=1 rel=0.212 metal=0.058 sil=0.000 pure=0.0097 edge=0.002 pink=0.0000 yel=0.0000 radar=0.097 luma=29.3 rg=1.6 terrain_luma=18.7 snow_frac=0.000 snow=0
+pass m2800 sky=1 terr=1 craft=1 hud=1 rel=0.196 metal=0.017 sil=0.000 pure=0.0158 edge=0.003 pink=0.0000 yel=0.0000 radar=0.098 luma=31.2 rg=1.3 terrain_luma=21.0 snow_frac=0.000 snow=0
+pass m2850 sky=1 terr=1 craft=1 hud=1 rel=0.236 metal=0.074 sil=0.000 pure=0.0198 edge=0.007 pink=0.0000 yel=0.0000 radar=0.096 luma=25.0 rg=2.0 terrain_luma=23.2 snow_frac=0.001 snow=0
+pass m2900 sky=1 terr=1 craft=1 hud=1 rel=0.215 metal=0.069 sil=0.000 pure=0.0200 edge=0.006 pink=0.0000 yel=0.0000 radar=0.096 luma=26.1 rg=-1.6 terrain_luma=31.5 snow_frac=0.001 snow=0
+pass m2950 sky=1 terr=1 craft=1 hud=1 rel=0.150 metal=0.013 sil=0.000 pure=0.0157 edge=0.002 pink=0.0000 yel=0.0000 radar=0.097 luma=25.6 rg=-1.9 terrain_luma=39.1 snow_frac=0.000 snow=0
+pass m3000 sky=1 terr=1 craft=1 hud=1 rel=0.177 metal=0.064 sil=0.000 pure=0.0117 edge=0.008 pink=0.0000 yel=0.0000 radar=0.097 luma=25.0 rg=-2.0 terrain_luma=46.1 snow_frac=0.001 snow=0
+pass m3050 sky=1 terr=1 craft=1 hud=1 rel=0.114 metal=0.030 sil=0.000 pure=0.0097 edge=0.003 pink=0.0000 yel=0.0000 radar=0.097 luma=21.2 rg=-2.1 terrain_luma=31.9 snow_frac=0.000 snow=0
+pass m3100 sky=1 terr=1 craft=1 hud=1 rel=0.202 metal=0.159 sil=0.000 pure=0.0091 edge=0.006 pink=0.0000 yel=0.0000 radar=0.097 luma=19.2 rg=-2.3 terrain_luma=20.9 snow_frac=0.001 snow=0
+fail m3150 sky=0 terr=1 craft=1 hud=1 rel=0.133 metal=0.039 sil=0.000 pure=0.0100 edge=0.001 pink=0.0000 yel=0.0000 radar=0.101 luma=40.0 rg=-3.1 terrain_luma=19.7 snow_frac=0.000 snow=0
+mission 11/13
+canon_bad 0

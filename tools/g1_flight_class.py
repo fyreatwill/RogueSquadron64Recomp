@@ -8,8 +8,10 @@ against a bright sky, or low-chroma metal against a coloured neighbour.
 A third sky arm accepts an orange sky, including the dimmer dusk.
 A fourth accepts the level-10 tan cloud field.
 A fifth accepts the level-17 grey trench wall.
+Terrain also accepts bright, low-chroma snow with measurable relief.
 
-Canonical check (no args) exits 0 only when the five-file table holds:
+Canonical check (no args) checks the original five-file table plus the
+level-18 snow positives and title/craft-select/crest/pause negatives:
   pass  docs/g3_retail_lvl1_flight_oracle.png
   pass  scratch/agent/s6632_lvl2/fbd/fb_0002700_w512.ppm
   pass  scratch/agent/s6633_lvl3/fbd/fb_0002700_w512.ppm
@@ -101,7 +103,15 @@ def classes(p):
             acc += d / (L + 12.0)
             n += 1
     rel = acc / n
-    terr_ok = 0.08 <= rel <= 0.33
+    terrain = box(0.15, 0.85, 0.45, 0.95)
+    terrain_luma = sum(_luma(c) for c in terrain) / len(terrain)
+    snow_fraction = sum(
+        _luma(c) >= 180 and max(c) - min(c) <= 64 for c in terrain
+    ) / len(terrain)
+    # Snow reflects blue sky, so a strict grey cut misses it. Require a
+    # bright majority and nonzero relief to keep flat clears out.
+    snow = terrain_luma >= 180 and snow_fraction >= 0.50 and 0.02 <= rel < 0.08
+    terr_ok = 0.08 <= rel <= 0.33 or snow
 
     rad = box(0.70, 0.98, 0.02, 0.32, 1)
     radar = sum(1 for r, g, b in rad if r > 140 and r > g + 50 and r > b + 50) / len(rad)
@@ -165,6 +175,7 @@ def classes(p):
     ok = sky_ok and terr_ok and craft_ok and hud_ok
     return {
         "ok": ok, "sky": sky_ok, "terr": terr_ok, "craft": craft_ok, "hud": hud_ok,
+        "terrain_luma": terrain_luma, "snow_fraction": snow_fraction, "snow": snow,
         "rel": rel, "metal": metal, "sil": sil, "pure": pure, "pink": pink, "yel": yel,
         "radar": radar, "dark": dark, "luma": luma, "rg": sm[0] - sm[1], "edge": edge,
     }
@@ -176,6 +187,10 @@ CANON = [
     ("lvl3", "scratch/agent/s6633_lvl3/fbd/fb_0002700_w512.ppm", True),
     ("floor", "scratch/agent/s6631_heapcap_at/wide16/fbd/fb_0001400_w796.ppm", False),
     ("title", "scratch/agent/s6633_lvl3/fbd/fb_0000450_w512.ppm", False),
+]
+CANON += [
+    (f"lvl18_{n}", f"scratch/agent/s6653_lvl18/fbd/fb_{n:07d}_w512.ppm", n in (2200, 2250))
+    for n in (800, 1700, *range(2050, 2401, 50))
 ]
 
 
@@ -189,7 +204,8 @@ def line(name, d, want=None):
         f"craft={int(d['craft'])} hud={int(d['hud'])} "
         f"rel={d['rel']:.3f} metal={d['metal']:.3f} sil={d['sil']:.3f} pure={d['pure']:.4f} edge={d['edge']:.3f} "
         f"pink={d['pink']:.4f} yel={d['yel']:.4f} radar={d['radar']:.3f} "
-        f"luma={d['luma']:.1f} rg={d['rg']:.1f}{extra}"
+        f"luma={d['luma']:.1f} rg={d['rg']:.1f} "
+        f"terrain_luma={d['terrain_luma']:.1f} snow_frac={d['snow_fraction']:.3f} snow={int(d['snow'])}{extra}"
     )
 
 

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6653 (2026-10-29).
+Compact operational handoff, as of Session 6654 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -249,24 +249,23 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   sky sample window were not moved. Sheet remains
   `docs/g1_lvl17_flight_s6651.png`. Objective (d) was not run.
 
-- **G1 (c) level 18: picture present, frozen terrain clause rejects it.**
-  s6653 closes out the existing uncommitted capture; no new launch or build.
-  Retail 4:3, draw distance 1, no planet unlock. Selector cursor=18,
-  `initMission` B40=0x12. Eight mission-origin dumps, n=2050..2400,
-  are 512x444, phase 5, origin `0x00690400`. Zero pass all four
-  clauses. Visual inspection of `docs/g1_lvl18_flight_s6653.png`
-  shows snow terrain, snowspeeder, radar and reticle in n=2200 and
-  n=2250; both pass sky/craft/HUD but miss terrain only (rel 0.046
-  and 0.068, below 0.08). n=2050..2150 are crest frames, and
-  n=2300..2400 are pause overlays (radar 0). H-new-class selected;
-  this is a classifier limitation, not evidence of missing terrain.
-  Same-run title fails sky and terrain; craft-select fails HUD.
-  Precontrol rerun: `canon_bad 0`, mission 11/13. Saved keys log
-  records screen unlocked, mission onset 62 s, hold complete 92 s,
-  0 crashes/aborts. Run timing is saved-run evidence, not a fresh
-  reproduction. Classifier unchanged; objective (d) was not run.
+- **G1 (c) level 18: snow-surface rule accepts both flight frames.**
+  s6654, offline on the s6653 capture; no launch or build. n=2200/2250
+  pass all four clauses. The extra terrain arm requires mean luma ≥180,
+  at least 0.50 of terrain samples with luma ≥180 and channel spread ≤64,
+  and relative edge energy in [0.02,0.08). Measured luma 217.5/210.5,
+  bright low-chroma fraction 0.977/0.937, rel 0.046/0.068. A stricter
+  spread≤22 grey test misses blue-tinted snow (fraction <0.001).
+  All eight same-run negatives (title, craft-select, three crest and
+  three pause frames) reject overall and none selects the snow arm.
+  Full table: canon_bad 0; level-3 mission remains 11/13. The original
+  [0.08,0.33] arm, sky/craft/HUD cuts and windows are unchanged.
+  Independent content evidence is the inspected s6653 contact sheet;
+  numeric generalization remains single-capture evidence, not retail
+  equivalence. No runtime change; objective (d) was not run.
 
 ## Superseded conclusions — do not act on these
+- s6653 "level 18 has visual evidence but no numeric terrain acceptance" (s6654: the bounded bright low-chroma snow arm accepts both flight views while every control holds). Believable because their rel 0.046/0.068 is below the original 0.08 floor; that band remains unchanged.
 - s6651 "level 17 does not pass the frozen rule, and the grey trench box is not a sky arm" (s6652: neutral8 ≥ 0.80 inside luma [38, 55] with |channel means| ≤ 8 accepts n=2300, 1/10; canon_bad 0; mission 11/13; both title skies stay false; m3150 stays a sky miss at neutral8 0.613). Believable because dark ≥ 0.60, the blue arm, the orange arm and the tan-cloud arm all miss luma 42.5 with R−G 1.4, and the top 4% of that frame is the same grey, so lowering dark does not accept the chase.
 - s6649 method "the flight set is the phase-7 dumps" (s6650: level 16's flight dumps stay phase 5). Believable because levels 11-15 insert a 640-wide crawl that bumps `rs64_phase_ord` through 6 into 7. The ordinal bumps only on a VI-width change, so a 512-wide flight after a 512-wide hangar does not.
 - s6643 "level 10 is a flight and the frozen rule rejects the sky 0/12" (s6644: tan-cloud arm accepts 11/12; n=2900 stays a craft miss at edge 0.013; title sky stays false because G−B is ~5 while the clouds are ≥22; canon_bad 0; mission 11/13). Believable because dark≥0.60, the blue arm (R−G≤15) and the orange arm (R−G≥40) all miss a luma 73..104 sky with R−G 23..28.
@@ -414,15 +413,13 @@ only an extra sky accept. m3150 stays a sky miss (neutral8
 mission stays 11/13. Both title skies stay false. dark was
 not moved from 0.60. The 0.08 floor and the 0.33 ceiling
 were not moved.
-Level 18 has visual framebuffer evidence but no frozen-rule acceptance
-(s6653): snow terrain rel 0.046/0.068 falls below 0.08 on both
-flight views; sky/craft/HUD pass. Six other mission-origin dumps
-show the crest or pause overlay. Next is one offline snow-terrain
-arm with the same canonical and same-run negative controls.
-Verification still needs numeric acceptance for level 18,
-plus a forced-hit objective response. Mission wins, autopilot
-aim, and mission-to-mission progression are owner playtest
-scope.
+Level 18 passes the snow-surface arm on 2/8 mission-origin dumps
+(s6654, offline on s6653): n=2200/2250. Crest/pause frames remain
+fails. Numeric acceptance and inspected imagery agree; no claim of
+retail equivalence. Next is the existing level-0 capture, omitted from
+this recent numeric sweep. Objective response coverage remains partial;
+mission wins, autopilot aim and mission-to-mission progression stay
+owner playtest scope.
 
 ## Durable constraints
 
@@ -445,15 +442,13 @@ scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6653) Offline level-18 snow-terrain classifier arm.** Do not
-   recapture. Use `scratch/agent/s6653_lvl18/fbd/` n=2200/2250 as
-   flight positives and title, craft-select, crest and pause frames as
-   controls. Test one bounded snow-surface arm alongside the unchanged
-   relative-edge band. Do not lower 0.08 globally. Require `canon_bad 0`,
-   mission 11/13, and same-run title/craft-select rejection. If the snow
-   feature also admits negative surfaces, reject the arm and retain the
-   visual-only result. No runtime fix is justified by a classifier miss.
-   See NEXT.md.
+1. **(s6654) Close the level-0 framebuffer class table offline.** Use
+   `docs/g3_port_lvl0_oracle_pair_f5000.png` and
+   `docs/g3_port_lvl0_flight.png`, already inspected in s5985/s5998.
+   Score with the current rule and inspect against the saved retail oracle;
+   do not launch a repeat hold. Report whether these cropped images can
+   meet the unchanged four-part rule. Do not relabel level 1 as level 0
+   from the oracle filename. See NEXT.md for hypotheses and commands.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

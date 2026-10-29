@@ -1,37 +1,32 @@
-# NEXT: offline level-18 snow-terrain arm
+# NEXT: level-0 framebuffer class coverage from existing captures
 HYPOTHESIS-ID: g1-coverage-cd
 
-Do not launch or recapture. s6653 recovered the existing level-18 capture.
-It selects H-new-class: zero of eight dumps pass; the two flight pictures
-n=2200/2250 pass sky/craft/HUD but miss terrain rel 0.046/0.068 < 0.08.
-Inspect docs/g1_lvl18_flight_s6653.png. The other six frames are crest/pause.
-
-One bounded change: test an additional snow-surface terrain arm in
- tools/g1_flight_class.py, without moving the existing [0.08,0.33] band,
- dark>=0.60, any sky arm/window, or craft/HUD cuts.
+One offline experiment, no build or game launch. Level 18 now passes the
+bounded snow arm (s6654); the recent numeric sweep omitted level 0.
+The existing port frames were inspected in s5985/s5998, but no numeric
+four-clause verdict is recorded in the current handoff.
 
 Hypotheses:
-- H-snow: bright neutral snow with nonzero local relief separates the two
-  flight pictures from non-flight art. An extra arm can accept both while
-  preserving all controls.
-- H-overlap: those surface features also accept title/floor/crest/pause
-  art. Reject the candidate; retain visual-only evidence.
-- H-window: relief is outside the fixed terrain window. If snow brightness
-  and neutrality do not separate surfaces, do not widen windows blindly.
+- H-rule-holds: at least one saved level-0 flight image passes the unchanged
+  classifier; numeric and visual content evidence agree.
+- H-crop: saved 512x358 crops omit or relocate a fixed-window feature; visible
+  flight can fail the rule. Attribute the miss to the exact window, do not
+  lower a global threshold or declare a render defect.
+- H-no-picture: neither image shows all terrain/craft/HUD; retain the earlier
+  single-source visual claim with its limits and name the missing evidence.
 
-Discriminator: ONE offline table of terrain-window mean luma, low-chroma
-fraction, bright-neutral fraction and relative edge energy for both snow
-positives, every same-run negative, all CANON entries, and the 13 level-3
-mission controls. Choose/test one physically meaningful conjunction from
-that table; record exact thresholds and all outcomes. If it cannot
-separate surfaces, do not land it. Do not turn a null into another field.
+Discriminator: score BOTH saved port images with every clause and inspect
+both alongside the retail oracle. Report dimensions, clause failures and
+which visible content falls outside each fixed window. Positive control:
+full canonical table canon_bad 0, level-3 mission 11/13. Do not alter the
+classifier in this unit. Do not reopen aim, wins or repeat crash holds.
 
-Commands:
+Commands from repo root:
     python3 tools/g1_flight_class.py
-    python3 tools/g1_flight_class.py scratch/agent/s6653_lvl18/fbd/fb_0002200_w512.ppm scratch/agent/s6653_lvl18/fbd/fb_0002250_w512.ppm
+    python3 tools/g1_flight_class.py docs/g3_port_lvl0_oracle_pair_f5000.png docs/g3_port_lvl0_flight.png docs/g3_retail_lvl1_flight_oracle.png
 
-Required pre/post control: canon_bad 0, mission 11/13. Same-run title n=800
-must fail sky/terrain; craft-select n=1700 must fail HUD; crest n=2050..2150
-and pause n=2300..2400 must stay overall fails. Score all eight, not only
-selected positives. Any accepted change is classifier coverage, not a
-runtime render fix or retail equivalence. No objective-hit run this unit.
+Use view_image for the three files. If a path is absent, locate its saved
+source through `rg -n 'g3_port_lvl0|g1_lvl0_oracle_pair' PORTING-STATE.md | tail -15`
+and read a <=60-line window; do not recreate a capture unnecessarily.
+The oracle's filename says lvl1; s5998 calls it a same-level pair. Preserve
+that provenance ambiguity rather than assert retail identity from a name.
