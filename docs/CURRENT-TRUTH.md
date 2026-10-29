@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6638 (2026-10-29).
+Compact operational handoff, as of Session 6639 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -96,6 +96,19 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   fails HUD only (radar 0). Sheet `docs/g1_lvl6_flight_s6638.png`.
   0 crashes in the 30 s hold. The classifier was not edited.
   Objective (d) was not run.
+- **G1 (c) level 7 flight framebuffer: frozen rule accepts it.**
+  s6639, retail 4:3, draw distance 1, aspect unset. Selector B40=7,
+  cursor=7. Twelve phase-7 dumps, n=2450..3000, are 512x444 at origin
+  `0x00690400` (this run sampled the route key; `0x620400` is in the
+  VI log). Canyon, Y-wing, radar, reticle. 4/12 pass all four clauses
+  (n=2550, 2600, 2800, 2850). Five miss sky only (luma 46.3..60.1,
+  dark 0.371..0.536) and three miss the terrain ceiling only (rel
+  0.332, 0.353, 0.359). Those are the same near-miss families as
+  level 6's luma-56 sky and level 5's rel 0.331/0.338, and they are
+  not required. Same-run title `fb_0000800_w512.ppm` fails sky and
+  terrain (rel 0.437). Hangar `fb_0001700_w512.ppm` fails HUD only
+  (radar 0). Sheet `docs/g1_lvl7_flight_s6639.png`. 0 crashes in the
+  30 s hold. The classifier was not edited. Objective (d) was not run.
 
 ## Superseded conclusions — do not act on these
 - s6635 "level 4 is a picture only; the class rule rejects it 0/7, and no sunset arm was shown to keep canon_bad at 0" (s6636: luma≥140 with R≥G+40 and R≥B+20, plus a dark hull against a bright chase band, accepts 6/7; n=2300 stays a terrain near-miss at rel 0.065; canon_bad 0; same-run title and hangar still fail). Believable because the s6634 sky clause had no orange arm and the center-box pink cap treated that sunset as an oversized engine.
@@ -193,7 +206,10 @@ Level 5 passes the frozen rule on 7/9 phase-7 dumps (s6637);
 n=2800 and n=2850 remain terrain-ceiling near-misses at rel 0.338
 and 0.331 and are not required. Level 6 passes the frozen rule on
 8/11 phase-7 dumps (s6638); n=2800 remains a sky near-miss at luma
-56.0 and is not required. Verification still needs framebuffer
+56.0 and is not required. Level 7 passes the frozen rule on 4/12
+phase-7 dumps (s6639); five sky misses (luma 46.3..60.1) and three
+terrain-ceiling misses (rel 0.332..0.359) are not required.
+Verification still needs framebuffer
 evidence for the remaining levels, plus a forced-hit objective
 response. Mission wins, autopilot aim, and mission-to-mission
 progression are owner playtest scope.
@@ -219,15 +235,16 @@ progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6638) Capture level 7 under the frozen flight class rule.**
+1. **(s6639) Capture level 8 under the frozen flight class rule.**
    Retail 4:3. No draw-distance, aspect, heap, or aim change. Adapt
-   `scratch/agent/s6638_lvl6.sh` with `ROGUESQ_FORCE_UNLOCK=7` and
-   `ROGUESQ_FORCE_SAVE_MISSION=7`. The precontrol is
+   `scratch/agent/s6639_lvl7.sh` with `ROGUESQ_FORCE_UNLOCK=8` and
+   `ROGUESQ_FORCE_SAVE_MISSION=8`. The precontrol is
    `python3 tools/g1_flight_class.py` and must print `canon_bad 0`
    before launch. Do not inline a classifier and do not edit
-   `tools/g1_flight_class.py`. Do not move the 0.08 floor or the
-   0.33 ceiling. The level-6 n=2800 sky miss (luma 56.0) stays a
-   near-miss. The screen must be unlocked. Score the post-hangar
+   `tools/g1_flight_class.py`. Do not move the 0.08 floor, the 0.33
+   ceiling, or the luma>=70 sky arm. The level-7 sky misses (luma
+   46.3..60.1) and terrain-ceiling misses (rel 0.332..0.359) stay
+   near-misses. The screen must be unlocked. Score the post-hangar
    phase-7 dumps with that same tool, plus one same-run title dump
    and one hangar dump. H-rule-holds: the flight frames pass and
    those two negatives fail overall. H-new-class: the sheet is a

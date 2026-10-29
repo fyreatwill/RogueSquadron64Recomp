@@ -173020,3 +173020,63 @@ sky, terrain, craft and HUD." What it does not show: that every
 phase-7 dump passes the sky clause, or objective-counter response.
 The orange-cloud frame (luma 56.0) was measured and not turned into
 a new bound.
+
+## Session 6639 (2026-10-29) — level 7 canyon flight passes the frozen class rule
+
+One retail 4:3 capture. No classifier edit, no heap edit, no aim, draw
+distance unset, aspect unset. Precontrol `python3 tools/g1_flight_class.py`
+printed canon_bad 0 before launch (oracle, level-2 fb_0002700, level-3
+fb_0002700 pass; floor and the s6633 title fail; the thirteen level-3
+mission lines stay 11/13). IOConsoleLocked was No. The route is
+scratch/agent/s6639_lvl7.sh, the s6638 script with FORCE_UNLOCK=7 and
+FORCE_SAVE_MISSION=7. The soak tail in scratch/agent/SOAK-RESULTS.md
+still ends at s6580 (2026-10-28); no new queued verdict to fold.
+
+scratch/agent/s6639_lvl7/keys.log: screen-unlocked, precontrol-ok, title
+t=14, hangar t=32, mission-onset t=87, hold-30s t=117, killed t=117,
+crash=0, abort=0. run.log echoes `[dd] ROGUESQ_DRAW_DISTANCE multiplier 1`,
+`[g1d-drop] aspect=<unset>`, `[lvsel] cursor=7`, and
+`[initMission] call#1 B40=0x07`. CRASH, abort, SIGSEGV and SIGBUS counts
+in that log are 0. Twelve phase-7 dumps, n=2450..3000 step 50, width 512,
+height 444, origin 0x00690400, fb=0x80620000. Unlike levels 5 and 6,
+EVERY=50 landed on the route key. The other buffer 0x00620400 is in the
+VI log (18 lines in the keys origin summary) and was not the sampled
+buffer. Sheet docs/g1_lvl7_flight_s6639.png is frames 2450, 2650, 2800
+and 3000.
+
+The sheet is a flight. A canyon wall, a cloudy sky, a Y-wing, the round
+radar, a green reticle and a shield badge are in every cell. The frozen
+rule scores 4/12. n=2550, 2600, 2800 and 2850 pass sky, terrain, craft
+and HUD (sky on the dark arm, dark 0.717..0.981, luma 13.3..30.1;
+terrain rel 0.238..0.330; craft on the green reticle, pure
+0.0073..0.0082, with metal 0.115..0.137; radar 0.072). n=2550 sits on
+the terrain ceiling (rel 0.330) and still passes.
+
+Five dumps miss sky only. n=2450, 2500, 2900, 2950 and 3000 have dark
+fraction 0.371..0.536 (under 0.60), luma 46.3..60.1 (under the luma>=70
+blue arm) and R-G -6.3..2.0 (not the sunset arm). They are the same
+flight with the upper band on cliff and dim cloud. That is the level-6
+luma-56 sky near-miss, not a new sky colour. Three dumps miss terrain
+only. n=2650 rel 0.359, n=2700 rel 0.353 and n=2750 rel 0.332 are the
+cliff filling the lower frame, the same ceiling family as the level-5
+rel 0.331 and 0.338 near-misses. All eight still have craft and HUD.
+They are recorded and not required. The 0.08 floor, the 0.33 ceiling
+and the luma>=70 arm were not moved.
+
+Same-run negatives still fail overall. Title fb_0000800_w512.ppm is the
+logo menu: sky 0, terr 0 (luma 81.9, R-G 30.0, rel 0.437). Hangar
+fb_0001700_w512.ppm is the parked Y-wing and fails HUD only (radar
+0.000). Its sky, terrain and craft clauses pass, so the overall fail
+depends on the radar cut.
+
+This selects H-rule-holds. It refutes H-no-picture. It does not select
+H-new-class: four frames that show sky, terrain, craft and HUD pass,
+and the eight one-clause misses sit next to bounds already left
+unedited. It does not run objective (d). ORIGIN: n/a (no mitigation).
+
+What this rules out: "level 7 never produced a post-hangar flight
+picture" and "the frozen rule rejects a level-7 frame that shows sky,
+terrain, craft and HUD." What it does not show: that every phase-7
+dump passes, or objective-counter response. The dim-cloud frames
+(luma 46.3..60.1) and the cliff frames (rel 0.332..0.359) were
+measured and not turned into new bounds.
