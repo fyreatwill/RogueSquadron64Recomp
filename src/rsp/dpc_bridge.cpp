@@ -3839,10 +3839,32 @@ static void rs64_ft_xs(uint32_t w, float xs[2]) {
     xs[1] = (float)w - 17.f;
 }
 
+// 16-bit color-image fill: the low half is one RGBA5551 pixel. A word
+// change whose luma does not move (alpha bit, or the high half) still
+// counts as a step of 1 so a flat color stays at 0.
+static float rs64_fill_luma(uint32_t word) {
+    const unsigned c = word & 0xFFFFu;
+    const unsigned r = (c >> 11) & 31u;
+    const unsigned g = (c >> 6) & 31u;
+    const unsigned b = (c >> 1) & 31u;
+    const float rf = (float)((r << 3) | (r >> 2));
+    const float gf = (float)((g << 3) | (g >> 2));
+    const float bf = (float)((b << 3) | (b >> 2));
+    return 0.2126f * rf + 0.7152f * gf + 0.0722f * bf;
+}
+
+static float rs64_fill_delta(uint32_t a, uint32_t b) {
+    if (a == b) return 0.f;
+    float d = std::fabs(rs64_fill_luma(a) - rs64_fill_luma(b));
+    if (d < 1.f) d = 1.f;
+    return d;
+}
+
 struct Rs64FtPt {
-    float texel, texel_s, luma, inten;
+    float texel, texel_s, luma, inten, alpha;
+    uint32_t fill;
     uint16_t floor_n, other_n, untex_n;
-    uint8_t ok, ok_s, ok_l, ok_i, cc_i, bl_i, last, rect_n, utri_n;
+    uint8_t ok, ok_s, ok_l, ok_i, ok_a, ok_f, cc_i, cca_i, bl_i, last, rect_n, utri_n;
 };
 
 struct Rs64Ft {
@@ -3850,9 +3872,10 @@ struct Rs64Ft {
     struct Key { uint32_t op, tile, line, hits; } keys[24];
     char cc_str[4][64];
     uint32_t cc_omv[4];
+    char cca_str[4][64];
     char bl_str[4][80];
     char untex_bl[80];
-    int nkeys, ncc, nbl, untex_bl_set;
+    int nkeys, ncc, ncca, nbl, untex_bl_set;
     uint32_t spill;
     uint32_t cur_w, origin;
     int origin_set, was, raws, cc_print_set, selftest, tile_logged;
@@ -3864,6 +3887,7 @@ struct Rs64Ft {
         std::memset(keys, 0, sizeof(keys));
         nkeys = 0;
         ncc = 0;
+        ncca = 0;
         nbl = 0;
         spill = 0;
         untex_bl_set = 0;
@@ -3903,8 +3927,10 @@ struct Rs64Ft {
         int have = 0, nS = 0, nL = 0, nI = 0, nUntex = 0, anyI = 0, iLo = 0, iHi = 0;
         int nF = 0, nO = 0, nR = 0, nZ = 0, nBoth = 0, nTouchR = 0, nTouchU = 0, nOver = 0;
         int colF[2] = {}, colO[2] = {}, colR[2] = {};
-        int cc_count[4] = {}, bl_count[4] = {};
-        double sum = 0, suml = 0, sumr = 0, maxd = 0, sumS = 0, sumL = 0, sumI = 0;
+        int cc_count[4] = {}, cca_count[4] = {}, bl_count[4] = {};
+        int nFs = 0, nFw = 0, nFp = 0, nAa = 0;
+        uint32_t fill_words[16];
+        double sum = 0, suml = 0, sumr = 0, maxd = 0, sumS = 0, sumL = 0, sumI = 0, sumF = 0, sumA = 0;
         double texlo = 1e300, texhi = -1e300;
         for (int c = 0; c < cols; c++) {
             for (int r = 0; r < rows; r++) {
@@ -3918,11 +3944,18 @@ struct Rs64Ft {
                 if (p.rect_n && p.last != 3) nOver++;
                 if (p.floor_n && (p.untex_n || p.other_n)) nBoth++;
                 if (p.untex_n) { nUntex++; have = 1; }
+                if (p.ok_f) {
+                    nFs++;
+                    int seen = 0;
+                    for (int i = 0; i < nFw; i++) if (fill_words[i] == p.fill) { seen = 1; break; }
+                    if (!seen && nFw < 16) fill_words[nFw++] = p.fill;
+                }
                 if (p.floor_n) {
                     covered++;
                     have = 1;
                     if (p.floor_n > 1) multi++;
                     if (p.cc_i) cc_count[p.cc_i - 1]++;
+                    if (p.cca_i) cca_count[p.cca_i - 1]++;
                     if (p.bl_i) bl_count[p.bl_i - 1]++;
                     if (p.ok) {
                         nok++;
@@ -3956,6 +3989,14 @@ struct Rs64Ft {
                     sumI += std::fabs((double)b.inten - (double)a.inten);
                     nI++;
                 }
+                if (a.ok_f && b.ok_f) {
+                    sumF += rs64_fill_delta(a.fill, b.fill);
+                    nFp++;
+                }
+                if (a.ok_a && b.ok_a) {
+                    sumA += std::fabs((double)b.alpha - (double)a.alpha);
+                    nAa++;
+                }
                 if (!a.ok || !b.ok) continue;
                 const double d = std::fabs((double)b.texel - (double)a.texel);
                 sum += d;
@@ -3968,6 +4009,7 @@ struct Rs64Ft {
             }
         }
         int mode = -1, mode_n = 0, second = -1, second_n = 0, distinct = 0;
+        int amode = -1, amode_n = 0, adistinct = 0;
         int bmode = -1, bmode_n = 0;
         for (int i = 0; i < ncc; i++) {
             if (!cc_count[i]) continue;
@@ -3979,10 +4021,17 @@ struct Rs64Ft {
                 second_n = cc_count[i]; second = i;
             }
         }
+        for (int i = 0; i < ncca; i++) {
+            if (!cca_count[i]) continue;
+            adistinct++;
+            if (cca_count[i] > amode_n) { amode_n = cca_count[i]; amode = i; }
+        }
         for (int i = 0; i < nbl; i++) {
             if (bl_count[i] > bmode_n) { bmode_n = bl_count[i]; bmode = i; }
         }
         const char *cc_mode = mode >= 0 ? cc_str[mode] : "-";
+        const char *cca_mode = amode >= 0 ? cca_str[amode] : "-";
+        const uint32_t fw = (nFw == 1) ? fill_words[0] : 0u;
         const uint32_t om_mode = mode >= 0 ? cc_omv[mode] : 0u;
         const char *cc_second = second >= 0 ? cc_str[second] : "-";
         const uint32_t om_second = second >= 0 ? cc_omv[second] : 0u;
@@ -4001,7 +4050,8 @@ struct Rs64Ft {
             "dI=%.4f nI=%d iLo=%d iHi=%d untex=%.4f bl=%s blu=%s x0=%.2f x1=%.2f "
             "lastF=%.4f lastO=%.4f lastR=%.4f lastN=%.4f nF=%d nO=%d nR=%d nZ=%d "
             "both=%.4f touchR=%.4f touchU=%.4f over=%.4f "
-            "nFL=%d nOL=%d nRL=%d nFR=%d nOR=%d nRR=%d\n",
+            "nFL=%d nOL=%d nRL=%d nFR=%d nOR=%d nRR=%d "
+            "nFs=%d nFw=%d fw=%08X dF=%.4f nFp=%d dA=%.4f nAa=%d cca=%s ccaN=%d\n",
             why, cur_w, covered / denom, other / denom, multi / denom,
             npair ? sum / npair : 0.0, npl ? suml / npl : 0.0, npr ? sumr / npr : 0.0,
             npair, maxd, jump4, jump8, texlo, texhi, covered - nok, spill,
@@ -4011,7 +4061,9 @@ struct Rs64Ft {
             xsamp[0], xsamp[1],
             nF / denom, nO / denom, nR / denom, nZ / denom, nF, nO, nR, nZ,
             nBoth / denom, nTouchR / denom, nTouchU / denom, nOver / denom,
-            colF[0], colO[0], colR[0], colF[1], colO[1], colR[1]);
+            colF[0], colO[0], colR[0], colF[1], colO[1], colR[1],
+            nFs, nFw, fw, nFp ? sumF / nFp : 0.0, nFp,
+            nAa ? sumA / nAa : 0.0, nAa, cca_mode, adistinct);
         if (mode >= 0 && (!cc_print_set || std::strcmp(cc_printed, cc_mode) != 0 || om_printed != om_mode)) {
             std::fprintf(stderr, "[floor-cc] w=%u cc=%s omL=%08X\n", cur_w, cc_mode, om_mode);
             std::snprintf(cc_printed, sizeof(cc_printed), "%s", cc_mode);
@@ -4090,7 +4142,8 @@ extern "C" void rs64_floor_texel(
     uint32_t masks, uint32_t maskt, uint32_t cms, uint32_t cmt,
     uint32_t shifts, uint32_t shiftt,
     uint32_t uls, uint32_t ult, uint32_t lrs, uint32_t lrt,
-    uint32_t palette, const uint8_t *tmem_bytes) {
+    uint32_t palette, const uint8_t *tmem_bytes,
+    float base_a, float de_a, float dx_a, const char *cca_eq) {
     static const bool on = [] {
         const char *e = std::getenv("ROGUESQ_LOG_FLOOR");
         return e && *e && *e != '0';
@@ -4099,6 +4152,17 @@ extern "C" void rs64_floor_texel(
     if (!g_ft.selftest) {
         g_ft.selftest = 1;
         rs64_i4_selftest();
+        Rs64Ft control{};
+        control.cur_w = 796;
+        for (int r = 0; r < 71; r++) {
+            for (int c = 0; c < 2; c++) {
+                auto &p = control.pts[r][c];
+                p.floor_n = p.last = p.ok_a = p.ok_f = 1;
+                p.alpha = (r & 1) ? 64.f : 0.f;
+                p.fill = (r & 1) ? 0xFFFFFFFFu : 0x00010001u;
+            }
+        }
+        control.emit("selftest-alpha-fill");
     }
     if (!g_ft.sync()) return;
     if (!std::isfinite(y_floor) || !std::isfinite(ym) || !std::isfinite(xh) || !std::isfinite(dxhdy) ||
@@ -4163,6 +4227,16 @@ extern "C" void rs64_floor_texel(
                     g_ft.cc_omv[idx] = om_l;
                 }
                 if (idx >= 0) p.cc_i = (uint8_t)(idx + 1);
+                const char *aeq = (cca_eq && cca_eq[0]) ? cca_eq : "-";
+                int aidx = -1;
+                for (int i = 0; i < g_ft.ncca; i++) {
+                    if (std::strcmp(g_ft.cca_str[i], aeq) == 0) { aidx = i; break; }
+                }
+                if (aidx < 0 && g_ft.ncca < 4) {
+                    aidx = g_ft.ncca++;
+                    std::snprintf(g_ft.cca_str[aidx], sizeof(g_ft.cca_str[aidx]), "%s", aeq);
+                }
+                if (aidx >= 0) p.cca_i = (uint8_t)(aidx + 1);
                 int bidx = -1;
                 for (int i = 0; i < g_ft.nbl; i++) {
                     if (std::strcmp(g_ft.bl_str[i], tri_bl) == 0) { bidx = i; break; }
@@ -4225,6 +4299,13 @@ extern "C" void rs64_floor_texel(
                 } else {
                     p.ok_l = 0;
                 }
+                const float A = base_a + de_a * dy + dx_a * (x - x_major);
+                if (std::isfinite(A)) {
+                    p.alpha = A;
+                    p.ok_a = 1;
+                } else {
+                    p.ok_a = 0;
+                }
             } else {
                 p.other_n++;
                 p.last = 2;
@@ -4286,7 +4367,7 @@ extern "C" void rs64_floor_untex(
 extern "C" void rs64_floor_rect(
     float x0, float y0, float x1, float y1,
     float scx0, float scy0, float scx1, float scy1,
-    uint32_t om_l, uint32_t om_h) {
+    uint32_t om_l, uint32_t om_h, uint32_t fill_word, int is_fill) {
     static const bool on = [] {
         const char *e = std::getenv("ROGUESQ_LOG_FLOOR");
         return e && *e && *e != '0';
@@ -4316,6 +4397,13 @@ extern "C" void rs64_floor_rect(
             if (p.untex_n < 65535) p.untex_n++;
             if (p.rect_n < 255) p.rect_n++;
             p.last = 3;
+            if (is_fill) {
+                p.fill = fill_word;
+                p.ok_f = 1;
+            } else {
+                p.fill = 0;
+                p.ok_f = 0;
+            }
             hit = 1;
         }
     }

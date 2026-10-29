@@ -171942,3 +171942,49 @@ bytes are not established as display pixels. Runtime artifact origin is open.
   alpha, or a different alpha combiner, selects H-alpha. Both agreeing
   leaves the pixel pipe. Do not retune the anchor or the shift.
   ORIGIN: no mitigation.
+
+
+## Session 6620 (2026-10-28) — constant floor fill and zero alpha equation do not explain the tear
+
+- Maintenance check: CURRENT-TRUTH 46,383 bytes, below 60,000. Soak tail
+  unchanged through s6580; no new queued verdicts to fold in. Screen-lock
+  check passed before each arm; no other game process was running.
+- Completed the interrupted workspace's fill/alpha hook extension in
+  dpc_bridge.cpp and RT64's RDP rectangle/triangle decoder. The last floor
+  triangle supplies shade alpha and the active alpha equation; fill rectangles
+  stamp their raw fill word. The frame reporter counts distinct fill words,
+  adjacent-row fill/alpha steps, and sample totals. Added a same-run synthetic
+  checker through that reporter: 142 samples, two fill words, dF=255,
+  dA=64 over 140 adjacent-row pairs. Both arms passed it and the I4 selftest.
+  Exported submodule-patches/rt64.patch. Persistent runner/analyzer:
+  tools/g1d_floor_inputs.py; parser/classifier tests cover H-mem, H-alpha,
+  H-pipe and rejected controls. Existing defaults and rendering are unchanged.
+- Ground truth consulted before the build: F5-UCODE-REFERENCE and oracle
+  README. The oracle frontend exists, but no core dylib exists under
+  tools/oracle (rdplog.dylib is a plugin). No independent oracle was run.
+  All causal exclusions below are explicitly single-source, runtime evidence.
+- One Debug build passed. Ran the s6619 phase-driven route, 16:9 then 21:9,
+  from build/ with ROM present; SIGKILL after >=50 good frames plus a dump.
+  wide16: 35.0 s, 64 closed frames, alive at stop, 0 crash markers.
+  wide21: 33.2 s, 64 closed frames, alive at stop, 0 crash markers.
+  Evidence: scratch/agent/s6620_alpha/{wide16,wide21}/summary.json and
+  verdict.json. fb_0001400_w796.ppm / fb_0001400_w1024.ppm are the compared
+  dumps. Outer-third dy 8.40 vs 29.05; edge pixel steps 7.31/7.92 versus
+  65.80/60.49. The defect and clean control both visibly register.
+- At x=16 and x=w-17, rows 180..250: lastF=1, touchR=1, over=1,
+  touchU=0, badw=0 on both. 9088/9088 fill samples per arm carry exactly
+  FFFCFFFC, and dF=0. This refutes the hypothesized varying fill word.
+  Shade-alpha dA=0.0853797 versus 0, 8960 adjacent pairs per arm. The
+  proposed larger 21:9 alpha step is contradicted, but these values do NOT
+  agree within 25%. The strict planned H-pipe criterion therefore fails:
+  verdict is unresolved, not a proven RT64/blender defect.
+- Both alpha equations are (0-0)*0+0; inspecting ColorCombiner::runCycle
+  confirms that this equation consumes no shade alpha. This is a second
+  code-level observation but belongs to the same runtime, not an independent
+  hardware reference. Color equation and blender match s6619. dI=46.1526
+  vs 41.7342; dL=2.95168 vs 2.92377; dT=4.64316 vs 4.94080, all within
+  the prior-control bands. No fill/alpha patch is supported by this result.
+- Next: audit/reconstruct the actual mesh that decodeTriangles sends to
+  the shader, comparing its pixel interpolation with the original coefficient
+  walk and the framebuffer in one table. The earlier CPU walk is not proof
+  of the interpolated GPU values. ORIGIN: no mitigation; writer unresolved.

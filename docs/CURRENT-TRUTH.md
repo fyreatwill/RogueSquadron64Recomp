@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6619 (2026-10-28).
+Compact operational handoff, as of Session 6620 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,6 +15,22 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-texel).**
+  - s6620: fill-word H-mem refuted at the edge samples (single-source).
+    One Debug binary, 64 closed frames per width, 9088 samples each:
+    exactly one fill word `FFFCFFFC`, dF=0, nFs=9088 on both. Alpha
+    equation is `(0-0)*0+0` throughout both arms. Shade-alpha |Δ| is
+    0.08538 vs 0: the proposed larger 21:9 step is contradicted, but
+    the strict 25% agreement test FAILS, so the prewritten verdict is
+    unresolved, not H-pipe. Shader equation evaluation also shows that
+    this equation does not consume shade alpha (same-runtime source,
+    not an independent hardware witness). Positive injected checker:
+    nFw=2/dF=255/dA=64 on both. Framebuffer edge steps 7.31/7.92 vs
+    65.80/60.49; dy 8.40 vs 29.05. All prior controls passed, 0 crash
+    markers. No rendering fix/default change. Evidence:
+    `scratch/agent/s6620_alpha/verdict.json`; persistent runner
+    `tools/g1d_floor_inputs.py`. Next: compare actual emitted mesh
+    interpolation against the original RDP coefficient walk as one
+    complete table; do not assume the CPU walk is what the GPU shaded.
   - s6619: the last primitive at x=16 and x=w-17 is the floor triangle on
     both widths. One binary, 68 and 63 closed frames. lastF is 1.0
     vs 1.0, both columns. A fill rect touches every sample
@@ -407,9 +423,11 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6619) The floor triangle writes the torn edge last on both widths.**
-   lastF is 1.0 vs 1.0. The fill under it is overwritten. Do not patch.
-   Next: fill color and shade alpha at x=16 and x=w-17. See NEXT.md.
+1. **(s6620) Constant fill words and zero alpha equation do not explain the tear.**
+   Strict shade-alpha agreement failed (0.08538 vs 0), so H-pipe is not
+   established. Next: the complete emitted-mesh versus RDP-coefficient
+   interpolation discriminator in NEXT.md. Keep this single-source until
+   independently witnessed. No rendering patch/default change is justified.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

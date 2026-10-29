@@ -1,59 +1,58 @@
-# NEXT: do fill color or shade alpha step with the tear?
+# NEXT: compare emitted-mesh interpolation with the RDP coefficient walk
 HYPOTHESIS-ID: g1d-levelselect-texel
 
-s6619 refuted H-last. At x=16 and x=w-17, y 180..250, the last
-primitive is the floor triangle on every sample of both widths
-(lastF 1.0 vs 1.0, both columns). A fill rect touches every sample
-first (touchR 1.0, touchU 0, over 1.0). Median multi_frac is 0 on
-16:9 and 0.18 on 21:9, so most torn pixels are one floor triangle
-over that fill. The floor blend is
-`cyc0f0(CC*CCA+MEM*MEMA)|(CC*CCA+MEM*MEMA)`.
-Filtered I4 and shade luma do not carry the row step.
-Do not retune `ROGUESQ_HUD_ANCHOR` or `ROGUESQ_SHIFT_REGION`.
-Do not add a cull or a default change. Do not sample x=w/6.
-Logs: `scratch/agent/s6619_last/verdict.json`.
+s6620 completed the fill/alpha experiment. Both widths have one constant
+fill word FFFCFFFC and alpha equation (0-0)*0+0. dA=0.08538 versus 0:
+strict agreement fails, so verdict is unresolved. Do not silently relabel
+it H-pipe. Shader source confirms shade alpha is unused by that equation;
+this is single-source. The CPU coefficient walk is not necessarily what
+RT64's emitted mesh interpolates at the actual framebuffer pixels.
 
-The blend is CC*CCA + MEM*MEMA. CC's inputs agree. What is left:
+ONE whole discriminator, not another scalar per iteration. Before building,
+read decodeTriangles vertex construction and shader interpolation, then
+consult an independent RDP triangle specification/reference (existing local
+reference first). State which interpolation model is required by that
+reference. Do not treat our shader as the independent witness.
 
-- H-mem. The fill word under the triangle (color and its alpha bits)
-  changes from row to row on 21:9 only.
-- H-alpha. Shade alpha, or the alpha combiner, changes from row to
-  row on 21:9 only. Memory does not.
-- H-pipe. Fill word, shade alpha, and the alpha combiner agree.
-  The tear is RT64's raster or blender. Coverage is part of this
-  until a later pass can log it.
+Hypotheses:
+- H-mesh: triangulation/perspective reconstruction differs from the original
+  RDP edge coefficients at 1024 only. Actual emitted vertex interpolation
+  introduces the row step before the pixel pipe.
+- H-pipe: the emitted mesh and original coefficients agree, but observed
+  framebuffer steps do not. Raster/texture/blend backend remains the target.
+- H-witness: sample-to-command/frame association or coefficient interpretation
+  was wrong; the supposed agreement across widths was an instrument artifact.
 
-ONE work unit, one binary, both arms, the s6619 runner
-(`scratch/agent/s6619_last_run.py`, `ROGUESQ_LOG_FLOOR=1`), stopping
-at 50 good frames. Keep the sample at x=16 and x=w-17, y 180..250.
+Log the WHOLE necessary table in one build: width, VI origin/frame boundary,
+RDP command ordinal and coefficients, all emitted vertex xy/w/uv/RGBA for
+that primitive, triangle topology, viewport/scissor, effective sampler,
+combiner and blend/coverage flags. Include only the phase and sample-crossing
+floor primitives, preserving command order. At x=16 and x=w-17, y=180..250,
+reconstruct the last covering emitted triangle and its perspective-correct
+UV and shade. Compare to the original coefficient walk and framebuffer
+steps in the same phase. Include the exact vertex-position transform used
+before rasterization; do not compare normalized coordinates to source pixels.
 
-Pass three new values into the existing hooks. `drawRect` already
-sees `fillColorStack`. Stamp that word on each sample a FILL rect
-covers. The triangle decoder already has `baseColor.w`, `colorDe.w`,
-and `colorDx.w` and does not pass them. Stamp shade alpha the same
-way as shade luma: base + De*(y-yFloor) + Dx*(x-XH), last floor
-triangle wins. Log the alpha combiner beside the color combiner
-(`decodeAlphaInput`, same shape as `rs64_cc_equation`). A lib/ edit
-needs `./submodule-patches/export.sh` in this same iteration.
+Positive controls: synthetic mesh with known interpolation; perturb one
+vertex's W/UV so the scorer visibly detects a row step, and verify values
+at vertices. Retain I4 and alpha/fill selftests, original sample totals,
+lastF/touchR/over=1, touchU=0, and same-run visible tear at 1024 and smooth
+796 pixels. Null backend verdict is invalid unless all controls pass.
 
-On each closed frame emit, over the 142 samples: the number of
-distinct fill words, the fill word if there is only one, mean
-|Δ shade alpha|, and the alpha combiner string.
+Discriminator:
+- A 1024-only >2x reconstructed row step absent in the coefficient walk
+  selects H-mesh. Name the responsible vertex-construction expression.
+- Mesh/coefficient agreement within 25% on both widths with the reproduced
+  pixel tear leaves H-pipe, explicitly single-source until independent replay.
+- Failure to match commands, coverage or phase selects H-witness; correct
+  the association in this iteration rather than concluding from a null.
 
-Positive controls, same run:
-- lastF 1.0 on both, touchR 1.0, over 1.0, touchU 0.
-- Outer-third dy: 16:9 under 12, 21:9 above 18.
-- Pixel |Δ| at x=16 and x=w-17, fb nearest 1400: 16:9 under 12,
-  21:9 above 30.
-- |ΔI| within 25% of 45.21 vs 42.15. |Δ shade| within 25% of
-  2.95 vs 2.96. Combiner still `(T0-0)*SHADE+0`. Floor blender
-  string unchanged. Screen unlocked. `[floor-i4] selftest ok`.
-
-- If 21:9 has more than one fill word, or its fill-word row step
-  is more than twice the 16:9 step, this selects H-mem. Do not patch.
-- If the fill word is one constant on both and |Δ shade alpha| is
-  more than twice on 21:9, or the alpha combiner string differs,
-  this selects H-alpha. Do not patch.
-- If the fill word is one constant on both, |Δ shade alpha| agrees
-  within 25%, and the alpha combiner string matches, H-mem and
-  H-alpha are refuted. The tear is the pixel pipe. Do not patch.
+Baseline runner and exact build/run commands:
+`python3 tools/g1d_floor_inputs.py --selftest`
+`cmake --build build --target RogueSquadron64Recomp -j 5 > scratch/agent/s6621_build.log 2>&1`
+Copy/adapt tools/g1d_floor_inputs.py's run_arm to a fresh s6621 output root;
+run both widths in this iteration, sequentially (one game at a time),
+phase-gated, SIGKILL after >=50 closed frames plus the width-matched dump.
+Check CGSSessionScreenIsLocked before each arm. Export any lib/ edit using
+`./submodule-patches/export.sh`. Do not patch rendering or change defaults
+until the writer and value legitimacy are established. Do not retune HUD.
