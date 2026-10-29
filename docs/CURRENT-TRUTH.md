@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6650 (2026-10-29).
+Compact operational handoff, as of Session 6651 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -230,6 +230,25 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   fails terrain and HUD. Sheet `docs/g1_lvl16_flight_s6650.png`.
   0 crashes in the 30 s hold. The classifier was not edited.
   Objective (d) was not run.
+- **G1 (c) level 17 flight framebuffer: frozen rule rejects the chase.**
+  s6651, one retail 4:3 capture, draw distance 1, aspect unset.
+  No planet unlock. Selector B40=0x11, cursor=17. Death Star
+  trench. Ten post-hangar dumps, n=2050..2500, are 512x444.
+  Every dump's own origin field is `0x00620400`; `0x690400` is
+  in the VI log (19 lines). Phase stays 5, same width reason as
+  level 16. 0/10 pass all four clauses. n=2300 is the chase
+  (X-wing, radar, reticle, shield) and misses sky only: luma
+  42.5, R−G 1.4, R−B 0.7, G−B −0.7, dark 0.304. That box is
+  grey trench surface, including the top 4% (luma 34.1, dark
+  0.336), so a dark-threshold nudge does not accept it. n=2250
+  is also a flight and misses sky (dark 0.590) and craft.
+  Six dumps are the start-key pause overlay (radar 0). n=2050
+  and n=2200 are the rebel crest over the trench, no radar.
+  Same-run title fails sky and terrain. Craft-select
+  `fb_0001550_w512.ppm` (origin `0x00656400`, AVAILABLE CRAFT)
+  fails terrain and HUD. Sheet `docs/g1_lvl17_flight_s6651.png`.
+  0 crashes in the 30 s hold. The classifier was not edited.
+  Objective (d) was not run.
 
 ## Superseded conclusions — do not act on these
 - s6649 method "the flight set is the phase-7 dumps" (s6650: level 16's flight dumps stay phase 5). Believable because levels 11-15 insert a 640-wide crawl that bumps `rs64_phase_ord` through 6 into 7. The ordinal bumps only on a VI-width change, so a 512-wide flight after a 512-wide hangar does not.
@@ -368,10 +387,19 @@ Those dumps are phase 5, not phase 7: the width stayed 512.
 Not required: three craft-only misses and five pause-overlay
 frames (radar 0). n=1600 rel 0.083 is inside the band and is
 not a reason to move 0.08.
-Verification still needs framebuffer
-evidence for the remaining levels, plus a forced-hit objective
-response. Mission wins, autopilot aim, and mission-to-mission
-progression are owner playtest scope.
+Level 17 does not pass the frozen rule (s6651, one capture,
+no planet unlock). 0/10 post-hangar mission-origin dumps
+pass, and those dumps are phase 5. n=2300 is a chase flight
+and misses sky only (luma 42.5, R−G 1.4, R−B 0.7, G−B −0.7,
+dark 0.304). That is grey trench surface in the sky window,
+not a starfield, so it is not a reason to move dark from
+0.60. Six pause overlays (radar 0) and two crest frames are
+not required. The same-run title still fails sky and terrain.
+Verification still needs a sky arm that accepts n=2300
+without accepting the title sky, then framebuffer evidence
+for level 18, plus a forced-hit objective response. Mission
+wins, autopilot aim, and mission-to-mission progression are
+owner playtest scope.
 
 ## Durable constraints
 
@@ -394,25 +422,19 @@ progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6650) Capture level 17 with the rule frozen.** One retail
-   4:3 run. Clone `scratch/agent/s6650_lvl16.sh` (no planet
-   unlock; 17 is not 10 or 15) to `scratch/agent/s6651_lvl17.sh`.
-   Output dir `scratch/agent/s6651_lvl17`. Set
-   `ROGUESQ_FORCE_UNLOCK=17` and `ROGUESQ_FORCE_SAVE_MISSION=17`.
-   Do not set `ROGUESQ_FORCE_PLANET_UNLOCK`. Draw distance unset,
-   aspect unset. Precontrol `python3 tools/g1_flight_class.py`
-   must print `canon_bad 0` and `mission 11/13` before launch.
-   Screen must be unlocked. Do not edit
-   `tools/g1_flight_class.py`. Do not move 0.08. Score the
-   post-hangar dumps whose origin is `0x620400` or `0x690400`,
-   even when the phase field is still 5. A pause overlay
-   (radar 0) is the start-key menu, not a new HUD class. Same-run
-   title must still fail overall. If at least one of those frames
-   passes all four clauses, record the count and stop. If the
-   sheet is a flight and zero frames pass, record the failing
-   clause and do not add an arm. If there is no post-hangar
-   `0x690400` inside 420 s, record the last origin and stop.
-   Do not start level 18. See NEXT.md.
+1. **(s6651) One offline sky arm for the trench chase.** Do not
+   recapture. Do not start level 18. Do not move 0.08, 0.33, or
+   dark ≥ 0.60, and do not move the sky sample window.
+   `fb_0002300_w512.ppm` misses sky only (luma 42.5, R−G 1.4,
+   R−B 0.7, G−B −0.7, dark 0.304; the top 4% is the same grey).
+   Add at most one arm. It must make that frame pass all four
+   clauses, leave `canon_bad 0` and `mission 11/13`, and leave
+   both title skies false (the canon title and
+   `scratch/agent/s6651_lvl17/fbd/fb_0000800_w512.ppm`).
+   Craft-select `fb_0001550_w512.ppm` stays an overall fail.
+   Pause dumps stay overall fails. If no cut separates n=2300
+   from those title skies, revert the classifier and record
+   the conflict. See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

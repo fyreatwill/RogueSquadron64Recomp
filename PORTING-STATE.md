@@ -173726,3 +173726,78 @@ it does not show: an objective-counter response, or that level 17
 passes. The pause overlays are not a reason to add a HUD arm. Level 17
 does not need the planet unlock. Score its flight by origin, not by
 phase==7.
+
+## Session 6651 (2026-10-29) — level 17 trench flight fails the frozen sky clause
+
+One retail 4:3 capture. No classifier edit, no heap edit, no aim, draw
+distance unset, aspect unset, no planet unlock. Precontrol
+`python3 tools/g1_flight_class.py` printed canon_bad 0 and mission 11/13
+before launch (oracle, level-2 fb_0002700, and level-3 fb_0002700 pass;
+floor and the s6633 title fail). IOConsoleLocked was No. The route is
+scratch/agent/s6651_lvl17.sh, the s6650 script with FORCE_UNLOCK=17 and
+FORCE_SAVE_MISSION=17. The soak tail in scratch/agent/SOAK-RESULTS.md
+still ends at s6580 (2026-10-28); no new queued verdict to fold.
+
+scratch/agent/s6651_lvl17/keys.log: screen-unlocked, precontrol-ok, title
+t=14, hangar t=32, mission-onset t=62, hold-30s t=92, killed t=92,
+crash=0, abort=0. run.log echoes `[dd] ROGUESQ_DRAW_DISTANCE multiplier 1`,
+`[g1d-drop] aspect=<unset>`, `[lvsel] cursor=17`, and
+`[initMission] call#1 B40=0x11`. CRASH, SIGSEGV and SIGBUS counts in
+that log are 0. Scores are in scratch/agent/s6651_lvl17_score.txt.
+Sheet `docs/g1_lvl17_flight_s6651.png` is frames 2050, 2200, 2250 and
+2300.
+
+The phase field on the flight dumps is 5, not 7. Same cause as level 16:
+the hangar and the flight are both width 512, so `rs64_phase_ord` does
+not bump. There is no phase-7 dump. Ten post-hangar dumps, n=2050..2500,
+are 512x444. Every dump's own origin field is `0x00620400` (fb sampled
+the other buffer). The VI origin census has 19 lines of `0x00690400` and
+11 of `0x00620400`.
+
+The sheet is a flight. Death Star trench, mission text "CHASE THE
+IMPERIALS THROUGH THE TRENCH". n=2050 and n=2200 are the rebel crest
+over the trench, stars behind it, no radar. n=2250 is inside the trench
+with a distant craft, the radar, the reticle and the shield badge.
+n=2300 is the chase: X-wing, engine glow, trench floor, radar, reticle,
+shield badge.
+
+The frozen rule scores 0/10. n=2300 passes terrain (rel 0.224), craft
+(metal 0.180) and HUD (radar 0.078) and misses sky only. The sky box is
+grey trench surface, not a starfield: luma 42.5, R-G 1.4, R-B 0.7,
+G-B -0.7, dark 0.304. The top 4% of that same frame is the same grey
+(luma 34.1, dark 0.336). The dark>=0.60 arm, the blue arm (luma>=70),
+the orange arm and the tan-cloud arm all miss it. n=2250 is also a
+flight. It misses sky (luma 32.8, R-G 2.8, R-B 2.3, G-B -0.5, dark
+0.590) and craft (metal 0.027, sil 0.000, edge 0.012; the ship is
+small). Its top 4% is a starfield (dark 0.984), so nudging 0.60 would
+not accept the chase frame. The classifier was not edited.
+
+n=2050 and n=2200 are not required. They are the crest approach, not a
+four-part flight. Both miss craft and HUD (radar 0). Sky and terrain
+pass on those frames and do not accept them.
+
+n=2100, 2150, 2350, 2400, 2450 and 2500 are not required. The start/z
+schedule opened the pause overlay (rebel crest, "PAUSED", the trench
+goals). They miss HUD (radar 0). That is the key schedule, not a missing
+radar, and it is not why the unpaused flights score 0.
+
+Same-run title `fb_0000800_w512.ppm` is the title screen and fails sky
+and terrain (luma 73.4, R-G 23.6, R-B 29.1, G-B 5.5, dark 0.301, rel
+0.407). Craft-select is `fb_0001550_w512.ppm`, 512x336, origin field
+`0x00656400` (AVAILABLE CRAFT, THE DEATH STAR TRENCH RUN). It fails
+overall on terrain (rel 1.040) and HUD (radar 0). Hangar
+`fb_0001700_w512.ppm`, origin `0x006AB400`, is SELECT YOUR CRAFT with an
+X-wing and fails HUD only (radar 0). Objective (d) was not run.
+
+This selects H-new-class. It refutes H-rule-holds (0/10, not at least
+one four-clause pass) and H-no-picture (the VI log has post-hangar
+`0x00690400`, and n=2300 is a chase flight). It does not select a sky
+formula. The next session tries one arm offline on these dumps.
+ORIGIN: n/a (no mitigation).
+
+What this rules out: "level 17 produced no post-hangar flight picture"
+and "the frozen rule already accepts the trench chase frame." What it
+does not show: an objective-counter response, a sky arm that keeps the
+title sky false, or that level 18 passes. Do not lower dark from 0.60
+to chase n=2250's 0.590. Do not start level 18 until n=2300 is accepted
+or the arm is shown not to separate.

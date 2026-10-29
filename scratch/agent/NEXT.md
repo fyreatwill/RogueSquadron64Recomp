@@ -1,56 +1,55 @@
-# NEXT: level 17 flight framebuffer, rule frozen
+# NEXT: one offline sky arm for the level-17 chase
 HYPOTHESIS-ID: g1-coverage-cd
 
-s6650 accepted the level-16 Beggar's Canyon race with the rule
-frozen (3/11 of the post-hangar mission-origin dumps). The flight
-stayed phase=5 because `rs64_phase_ord` bumps only on a VI-width
-change and both the hangar and the flight are width 512. Do not
-require phase==7. Score every post-hangar dump whose origin field
-is `0x620400` or `0x690400`.
+s6651 captured the Death Star trench. The sheet is a flight and
+the frozen rule scores 0/10. Do not recapture. Do not launch the
+game. Do not start level 18. Do not move 0.08, 0.33, or the
+dark >= 0.60 cut. Do not change the sky sample window
+(y 0.02-0.18, x 0.15-0.85). A window change would rescore every
+earlier level.
 
-Do not edit `tools/g1_flight_class.py`. Do not move 0.08. The
-level-16 pass at rel 0.083 is inside the band. Pause overlays
-(radar 0, rebel-crest menu) are the start-key schedule, not a
-missing HUD. Do not add an arm for them. Do not set
-`ROGUESQ_FORCE_PLANET_UNLOCK` (level 17 is not 10 or 15). Do not
-start level 18. No heap, aim, draw-distance, aspect, or default
-change.
+The chase frame is
+`scratch/agent/s6651_lvl17/fbd/fb_0002300_w512.ppm`. It passes
+terrain (rel 0.224), craft (metal 0.180) and HUD (radar 0.078)
+and misses sky only. Sky box: luma 42.5, R-G 1.4, R-B 0.7,
+G-B -0.7, dark 0.304. The top 4% of that frame is the same grey
+trench surface (luma 34.1, dark 0.336), not a starfield. Lowering
+0.60 to catch n=2250 (dark 0.590) does not accept n=2300.
 
-Clone `scratch/agent/s6650_lvl16.sh` to
-`scratch/agent/s6651_lvl17.sh`. Change the output dir to
-`scratch/agent/s6651_lvl17` and set `ROGUESQ_FORCE_UNLOCK=17`
-and `ROGUESQ_FORCE_SAVE_MISSION=17`. Keep the 420 s mission
-wait and the 30 s hold. Retail 4:3, draw distance unset, aspect
-unset.
+n=2250 is a flight that misses sky and craft. It is not required.
+The six pause dumps (radar 0) and the two crest dumps are not
+required. Same-run title `fb_0000800_w512.ppm` fails sky
+(luma 73.4, R-G 23.6, R-B 29.1, G-B 5.5, dark 0.301).
+Craft-select `fb_0001550_w512.ppm` fails overall.
 
-Before launch, the screen must be unlocked
-(`IOConsoleLocked` / `CGSSessionScreenIsLocked`) and
-`python3 tools/g1_flight_class.py` must print `canon_bad 0` and
-`mission 11/13`. Abort if either fails. Run from `build/` with
-the ROM beside the binary. SIGKILL the game. One instance.
+H-grey-arm: one new sky arm accepts n=2300 and keeps both title
+skies false.
+H-no-separation: every cut that accepts n=2300's sky box also
+makes a title sky true, or makes canon_bad nonzero, or makes a
+pause dump pass all four clauses.
 
-After the run, score the post-hangar mission-origin dumps. Also
-score the same-run title and the craft-select dump.
+Before editing, `python3 tools/g1_flight_class.py` must print
+`canon_bad 0` and `mission 11/13`. Edit `tools/g1_flight_class.py`
+with one arm. Then run that same command again, and:
 
-    python3 tools/g1_flight_class.py <mission dumps> <title> <craft-select>
+    python3 tools/g1_flight_class.py \
+      scratch/agent/s6651_lvl17/fbd/fb_0002300_w512.ppm \
+      scratch/agent/s6651_lvl17/fbd/fb_0002250_w512.ppm \
+      scratch/agent/s6651_lvl17/fbd/fb_0002050_w512.ppm \
+      scratch/agent/s6651_lvl17/fbd/fb_0002100_w512.ppm \
+      scratch/agent/s6651_lvl17/fbd/fb_0002150_w512.ppm \
+      scratch/agent/s6651_lvl17/fbd/fb_0002200_w512.ppm \
+      scratch/agent/s6651_lvl17/fbd/fb_0002350_w512.ppm \
+      scratch/agent/s6651_lvl17/fbd/fb_0002400_w512.ppm \
+      scratch/agent/s6651_lvl17/fbd/fb_0002450_w512.ppm \
+      scratch/agent/s6651_lvl17/fbd/fb_0002500_w512.ppm \
+      scratch/agent/s6651_lvl17/fbd/fb_0000800_w512.ppm \
+      scratch/agent/s6651_lvl17/fbd/fb_0001550_w512.ppm
 
-Write a contact sheet of four flight frames to
-`docs/g1_lvl17_flight_s6651.png` only if a post-hangar flight
-picture exists.
-
-H-rule-holds: at least one mission-origin frame passes all four
-clauses, the same-run title fails overall, and the run has
-0 crashes. Record the pass count. The rule stays frozen.
-H-new-class: the sheet is a flight and zero mission-origin
-frames pass all four clauses. Record which clause fails and,
-for a sky miss, luma / R-G / R-B / G-B of the sky box. Do not
-add an arm in this session.
-H-no-picture: no post-hangar `0x690400` inside 420 s. Record
-the last VI origin and stop. Do not raise the wait in this
-session.
-
-DISCRIMINATOR: the pass/fail lines on the mission-origin dumps
-plus the same-run title. A visible flight that scores 0/N is
-not a license to edit the classifier in the same session. A
-pause overlay with radar 0 is not H-new-class if another frame
-in the same window passes.
+DISCRIMINATOR: n=2300 passes all four clauses, canon_bad stays 0,
+mission stays 11/13, both title skies stay false, craft-select
+stays an overall fail, and every pause dump stays an overall
+fail. That selects H-grey-arm. Record the new pass count and
+stop. If the arm fails any of those, revert it. That selects
+H-no-separation. Do not ship a dirty classifier. Do not start
+level 18 in the same session.
