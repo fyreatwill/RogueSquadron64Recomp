@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6614 (2026-10-28).
+Compact operational handoff, as of Session 6615 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,6 +15,18 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-texel).**
+  - s6615: perspective-correct texel T at x=w/6 and x=5w/6 does not
+    jump more on 21:9. One binary, both arms, the s6614 edge walk.
+    Floor texel is (T/W)*1024 from the last op 0x0F tile 0 line 4
+    triangle. Pooled mean |ΔT| is 4.32 (16:9, 49 frames, 6860 pairs)
+    vs 3.63 (21:9, 46 frames, 6440 pairs), relative gap 0.16.
+    other_frac is 0 on both. floor_frac is 1.0, badw 0, dy 5.42 /
+    24.82. Raw texels at y=200 and y=230 agree to about 0.05
+    (9.99 vs 10.00, 32.92 vs 32.92); dtdx scales by about 796/1024
+    and cancels the wider x. This refutes H-t-row and H-overdraw.
+    Median multi_frac is 0.007 vs 0.38, so 21:9 overlaps more floor
+    tris, and the last-writer T still matches. No patch. Evidence:
+    `scratch/agent/s6615_tex/verdict.json`.
   - s6614: those floor triangles cover both outer thirds. One binary.
     Edge spans (not bboxes) of op `0x0F` tile 0 line 4, scanlines
     180..250, clipped to the scissor. Every closed frame is solid:
@@ -236,10 +248,14 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   change either, and it is not outside the 64 mask only at 21:9.
   s6614: the same triangles cover scanlines 180..250 in both outer
   thirds with no gap above 2 px, on either width. The tear is inside
-  covered pixels. The OS window remains 640x480, so wider modes letterbox.
+  covered pixels. s6615: texel T at x=w/6 and x=5w/6 has the same
+  row step on both widths (mean |ΔT| 4.32 vs 3.63) and no other
+  textured triangle covers the sample. The sampler's T is not the
+  tear. The OS window remains 640x480, so wider modes letterbox.
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
+- s6614 lead "dtdx*x at the outer third diverges on 21:9" (s6615: dtdx shrinks by about 796/1024 and the texel matches to about 0.05). Believable because the sample x grows with the framebuffer and s6613 only cancelled that product at x=0.
 - s6612 "21:9 S at the left edge walks off the 64-wide mask while 16:9 stays inside" (s6613: 0/16 pairs do that; S at x=0 matches). Believable because the x span and dsdx scale with width. x_major moves the other way and the product cancels.
 - s6610 ring-only "second=fbw-512 fixes the 16:9 radar" (the ring reached the retail inset, but the wedge stayed at 769..792 with 0 pixels inside the ring). Believable because s6609's red-ring edge equalled retail+second. The disc is a separate pre-shift `ROGUESQ_SHIFT_REGION` writer; shift must be A, not RA.
 - s6602 "wide-only bottom garbage selects a stale/stride renderer family"
@@ -336,13 +352,11 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6614) The 21:9 floor tear is inside covered pixels.** Op `0x0F`
-   tile 0 line 4 spans fill scanlines 180..250 in both outer thirds
-   (hole_rows 0/0, hull_frac 1, scissor is the framebuffer). Do not
-   patch, and do not log another base-S or another coverage union.
-   Next discriminator is the perspective-correct texel T at x=w/6 and
-   x=5w/6 on those scanlines, and whether a non-floor triangle covers
-   the same point. See NEXT.md.
+1. **(s6615) Floor texel T is not the 21:9 tear.** Mean |ΔT| at
+   x=w/6 and x=5w/6 agrees within 16% (4.32 vs 3.63) and other_frac
+   is 0. Do not patch, and do not log another T. Next discriminator
+   is perspective-correct texel S and the shade luma of that same
+   floor triangle, plus the combiner equation. See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

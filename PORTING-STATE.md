@@ -171724,3 +171724,41 @@ bytes are not established as display pixels. Runtime artifact origin is open.
   Not another base-S log and not another coverage union. No cull, no anchor
   change, no default change.
   ORIGIN: no mitigation.
+
+## Session 6615 (2026-10-28) — level-select floor texel T matches at the outer thirds
+
+- Maintenance check: CURRENT-TRUTH was 41,739 bytes, under 60,000. The soak
+  tail still ends at the s6580 dd4 holds. No new soak verdict. Screen
+  IOConsoleLocked was false. No other game was running.
+- One Debug binary, `ROGUESQ_LOG_FLOOR=1`, the s6614 route, 16:9 then 21:9,
+  SIGKILL. Both arms alive (rc -9), 0 crash lines. Stop reason tex+dump.
+  Dumps `scratch/agent/s6615_tex/wide16/fbd/fb_0001400_w796.ppm` and
+  `scratch/agent/s6615_tex/wide21/fbd/fb_0001400_w1024.ppm`.
+- At each scanline y in 180..250, at x=w/6 and x=5w/6, the same edge walk
+  as s6614 tests coverage. For op 0x0F tile 0 line 4 the texel is
+  (T/W)*1024, with T = baseT + dtde*(y-yFloor) + dtdx*(x-XH) and W using
+  dwdx = texcoordDx[2]. The last floor triangle in submission order wins.
+  Every other textured triangle that covers the point is counted.
+- Positive controls, same run. dy (mean |row-to-row luma| on the outer
+  thirds) is 5.42 on 16:9 and 24.82 on 21:9. floor_frac is 1.0 on both,
+  npair is 140 on every closed frame, badw is 0. The first raw samples are
+  finite and not a flat zero: 16:9 y=230 x=132.67 texel 32.918, dtdx
+  -8.307, dtde 50.116, W 14910.9; 21:9 y=230 x=170.67 texel 32.921, dtdx
+  -6.466, dtde 50.115, W 14910.9.
+- Pooled mean |ΔT| is 4.318 on 16:9 (49 frames, 6860 pairs) and 3.626 on
+  21:9 (46 frames, 6440 pairs). Relative gap 0.160, inside 25%. Per-side
+  means are 3.88/4.76 versus 3.69/3.56. other_frac is 0 on both, and there
+  are 0 `[floor-tex] other` lines. jump8 is 563/6860 versus 400/6440, so
+  the large steps are slightly more common on the smooth 16:9 image.
+  Paired raw texels at y=200 are 9.988 versus 9.999 and at y=230 are
+  32.918 versus 32.921. dtdx scales by about 796/1024, so the wider sample
+  x cancels.
+- This refutes H-t-row and H-overdraw. The floor sampler's T is not the
+  split, and no non-floor textured triangle covers the sample. Median
+  multi_frac is 0.007 versus 0.380: 21:9 overlaps more copies of the same
+  floor primitive, and the last-writer T still matches on those frames
+  (a 0.75-overlap 21:9 frame has |ΔT| 5.38, next to a 16:9 frame at 5.99).
+  That overlap is not a different primitive. No cull, no anchor change,
+  no default change.
+  ORIGIN: no mitigation.
+  Evidence: `scratch/agent/s6615_tex/verdict.json`.

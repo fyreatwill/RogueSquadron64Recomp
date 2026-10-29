@@ -3681,6 +3681,219 @@ extern "C" void rs64_floor_cover(
     }
 }
 
+// Perspective-correct T at the outer-third sample, not at x=0. T(x) and
+// W(x) are the RDP plane at the pixel center: base + De*(y-yFloor) +
+// Dx*(x - XH). dwdx is texcoordDx[2], which the x=0 note does not keep.
+// The texel is (T/W)*1024. Last floor triangle in submission order wins.
+extern "C" void rs64_floor_texel(
+    uint32_t op, uint32_t tile, uint32_t line, int persp,
+    float y_floor, float ym,
+    float xh, float dxhdy, float xm, float dxmdy, float xl, float dxldy,
+    float yh, float yl,
+    float scx0, float scy0, float scx1, float scy1,
+    float base_t, float dtde, float dtdx,
+    float base_w, float dwde, float dwdx) {
+    static const bool on = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_FLOOR");
+        return e && *e && *e != '0';
+    }();
+    if (!on) return;
+    struct Pt { float texel; uint16_t floor_n, other_n; uint8_t ok; };
+    struct Key { uint32_t op, tile, line, hits; };
+    static Pt pts[71][2];
+    static Key keys[24];
+    static int nkeys = 0;
+    static uint32_t spill = 0;
+    static uint32_t cur_w = 0, origin = 0;
+    static int origin_set = 0, was = 0, raws = 0;
+    auto clear_pts = [&]() {
+        memset(pts, 0, sizeof(pts));
+        nkeys = 0;
+        spill = 0;
+        memset(keys, 0, sizeof(keys));
+    };
+    auto emit = [&](const char *why) {
+        const int rows = 71, cols = 2;
+        int covered = 0, other = 0, multi = 0, nok = 0, npair = 0, npl = 0, npr = 0, jump4 = 0, jump8 = 0;
+        int have = 0;
+        double sum = 0, suml = 0, sumr = 0, maxd = 0;
+        double texlo = 1e300, texhi = -1e300;
+        for (int c = 0; c < cols; c++) {
+            for (int r = 0; r < rows; r++) {
+                const Pt &p = pts[r][c];
+                if (p.floor_n) {
+                    covered++;
+                    have = 1;
+                    if (p.floor_n > 1) multi++;
+                    if (p.ok) {
+                        nok++;
+                        if (p.texel < texlo) texlo = p.texel;
+                        if (p.texel > texhi) texhi = p.texel;
+                    }
+                }
+                if (p.other_n) { other++; have = 1; }
+            }
+            int *np = c == 0 ? &npl : &npr;
+            double *sm = c == 0 ? &suml : &sumr;
+            for (int r = 0; r < rows - 1; r++) {
+                const Pt &a = pts[r][c];
+                const Pt &b = pts[r + 1][c];
+                if (!a.ok || !b.ok) continue;
+                const double d = std::fabs((double)b.texel - (double)a.texel);
+                sum += d;
+                *sm += d;
+                (*np)++;
+                npair++;
+                if (d > maxd) maxd = d;
+                if (d > 4.0) jump4++;
+                if (d > 8.0) jump8++;
+            }
+        }
+        if (!have) return;
+        if (!nok) { texlo = 0; texhi = 0; }
+        const double denom = (double)(rows * cols);
+        fprintf(stderr,
+                "[floor-tex] why=%s w=%u floor_frac=%.4f other_frac=%.4f multi_frac=%.4f "
+                "dT=%.4f dTl=%.4f dTr=%.4f npair=%d maxdT=%.3f jump4=%d jump8=%d "
+                "tex=%.3f..%.3f badw=%d spill=%u\n",
+                why, cur_w, covered / denom, other / denom, multi / denom,
+                npair ? sum / npair : 0.0, npl ? suml / npl : 0.0, npr ? sumr / npr : 0.0,
+                npair, maxd, jump4, jump8, texlo, texhi, covered - nok, spill);
+        int order[24];
+        const int nk = nkeys < 24 ? nkeys : 24;
+        for (int i = 0; i < nk; i++) order[i] = i;
+        for (int i = 1; i < nk; i++) {
+            int v = order[i], j = i;
+            while (j > 0 && keys[order[j - 1]].hits < keys[v].hits) { order[j] = order[j - 1]; j--; }
+            order[j] = v;
+        }
+        const int nprint = nk < 4 ? nk : 4;
+        for (int i = 0; i < nprint; i++) {
+            const Key &k = keys[order[i]];
+            if (!k.hits) continue;
+            fprintf(stderr, "[floor-tex] other why=%s w=%u op=%02X tile=%u line=%u hits=%u\n",
+                    why, cur_w, k.op, k.tile, k.line, k.hits);
+        }
+        fflush(stderr);
+    };
+    auto add_key = [&](uint32_t kop, uint32_t ktile, uint32_t kline) {
+        for (int i = 0; i < nkeys; i++) {
+            if (keys[i].op == kop && keys[i].tile == ktile && keys[i].line == kline) {
+                keys[i].hits++;
+                return;
+            }
+        }
+        if (nkeys < 24) {
+            keys[nkeys].op = kop;
+            keys[nkeys].tile = ktile;
+            keys[nkeys].line = kline;
+            keys[nkeys].hits = 1;
+            nkeys++;
+            return;
+        }
+        int small = 0;
+        for (int i = 1; i < nkeys; i++) if (keys[i].hits < keys[small].hits) small = i;
+        if (keys[small].hits <= 1) {
+            keys[small].op = kop;
+            keys[small].tile = ktile;
+            keys[small].line = kline;
+            keys[small].hits = 1;
+        } else {
+            spill++;
+        }
+    };
+    uint32_t vw = 0, vh = 0;
+    rs64_vi_fb_wh(&vw, &vh);
+    const bool gate = (vh >= 320 && vh <= 352) && (vw == 796 || vw == 1024);
+    if (was && !gate) {
+        emit("leave");
+        clear_pts();
+        origin_set = 0;
+        cur_w = 0;
+        was = 0;
+        return;
+    }
+    was = gate;
+    if (!gate) return;
+    if (cur_w && cur_w != vw) {
+        emit("width");
+        clear_pts();
+        origin_set = 0;
+    }
+    cur_w = vw;
+    const uint32_t now = rs64_vi_committed_origin();
+    if (!origin_set) {
+        origin = now;
+        origin_set = 1;
+    } else if (now != origin) {
+        emit("frame");
+        clear_pts();
+        origin = now;
+    }
+    if (!std::isfinite(y_floor) || !std::isfinite(ym) || !std::isfinite(xh) || !std::isfinite(dxhdy) ||
+        !std::isfinite(xm) || !std::isfinite(dxmdy) || !std::isfinite(xl) || !std::isfinite(dxldy) ||
+        !std::isfinite(yh) || !std::isfinite(yl)) {
+        return;
+    }
+    float y_lo = yh < yl ? yh : yl;
+    float y_hi = yh > yl ? yh : yl;
+    if (scy1 > scy0) {
+        if (scy0 > y_lo) y_lo = scy0;
+        if (scy1 < y_hi) y_hi = scy1;
+    }
+    if (y_hi < 180.5f || y_lo > 250.5f) return;
+    const float x_lo_sc = (scx1 > scx0) ? scx0 : -1.0e9f;
+    const float x_hi_sc = (scx1 > scx0) ? scx1 : 1.0e9f;
+    const float xs[2] = { vw / 6.0f, (5.0f * vw) / 6.0f };
+    const bool is_floor = op == 0x0Fu && tile == 0u && line == 4u;
+    const bool tex_ok = std::isfinite(base_t) && std::isfinite(dtde) && std::isfinite(dtdx) &&
+        std::isfinite(base_w) && std::isfinite(dwde) && std::isfinite(dwdx);
+    for (int s = 180; s <= 250; s++) {
+        const float y = (float)s + 0.5f;
+        if (y < y_lo || y > y_hi) continue;
+        const float dy = y - y_floor;
+        const float x_major = xh + dxhdy * dy;
+        const float x_other = (y <= ym) ? (xm + dxmdy * dy) : (xl + dxldy * (y - ym));
+        if (!std::isfinite(x_major) || !std::isfinite(x_other)) continue;
+        float xa = x_major < x_other ? x_major : x_other;
+        float xb = x_major > x_other ? x_major : x_other;
+        if (xa < x_lo_sc) xa = x_lo_sc;
+        if (xb > x_hi_sc) xb = x_hi_sc;
+        if (!(xb > xa) || xb - xa > 8000.f) continue;
+        for (int c = 0; c < 2; c++) {
+            const float x = xs[c];
+            if (x < xa || x > xb) continue;
+            Pt &p = pts[s - 180][c];
+            if (is_floor) {
+                p.floor_n++;
+                if (persp && tex_ok) {
+                    const float T = base_t + dtde * dy + dtdx * (x - x_major);
+                    const float W = base_w + dwde * dy + dwdx * (x - x_major);
+                    if (std::fabs(W) > 1.0e-8f && std::isfinite(T) && std::isfinite(W)) {
+                        p.texel = (T / W) * 1024.0f;
+                        p.ok = 1;
+                        if (raws < 4 && (s == 200 || s == 230)) {
+                            raws++;
+                            fprintf(stderr,
+                                    "[floor-tex] raw w=%u y=%d x=%.2f T=%.5f W=%.5f texel=%.3f "
+                                    "dtdx=%.5f dwdx=%.5f dtde=%.5f\n",
+                                    vw, s, x, T, W, p.texel, dtdx, dwdx, dtde);
+                            fflush(stderr);
+                        }
+                    } else {
+                        p.ok = 0;
+                    }
+                } else {
+                    p.ok = 0;
+                }
+            } else {
+                p.other_n++;
+                add_key(op, tile, line);
+            }
+        }
+    }
+}
+
 // s6613: base S/T are the s15.16 coefficients decodeTriangles already
 // computed. S at screen x=0 is that base walked to the band scanline
 // (y in 180..250) and then across by dsdx. The texel is the same
