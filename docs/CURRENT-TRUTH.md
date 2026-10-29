@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6629 (2026-10-29).
+Compact operational handoff, as of Session 6630 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -14,455 +14,57 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   first-mission endurance (3x600 s lvl1/5/7, s6442), and G2 audio are closed.
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
-- **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-ram).**
-  - s6629: the watched zero writer is `rs_memset` guest PC `800078EC`,
-    called by `rs_zcalloc -> zcalloc -> inflate_blocks_new` in
-    `processAssetLoadStep/mainEventQueueWorker`. Final paired arms: 16:9
-    35.1 s/51 good frames, 21:9 33.8 s/55, alive, 0 crash markers,
-    guest-bzero/host-memset and prior GPU controls pass. A n=4635 preserves
-    native/swap/live `0x9540`; immediate post-store callbacks n=4637..4640
-    zero all four bytes; B n=4641 reads zero, upload n=4642 matches guest.
-    Actual clear arguments: dst `0x80BADB50`, fill 0, len `0x8000`;
-    interval `[0x00BADB50,0x00BB5B50)` intersects depth `0x00B56000`.
-    Retail ROM offset `0x84EC` contains `A0450000` (`sb a1,0(v0)`),
-    independently corroborating the named instruction. Generated rs_zcalloc
-    allocates then clears its returned block: the zero is legitimate for
-    the zlib window. Why heap and renderer depth ownership overlap is OPEN,
-    single-source; do not suppress the clear. The range explains 23/26
-    changed column samples (12 left/11 right head rows); three changes
-    outside it are not attributed. Earlier paired capture independently
-    reproduced the same store, without caller arguments. Evidence:
-    `scratch/agent/s6629_writer_context/{depth_verdict,writer_origin,clear_interval_check}.json`;
-    first capture `scratch/agent/s6629_writer/depth_verdict.json`.
-    s6628's identical-mapping/native-postswap witness remains valid.
-  - s6627: the 0x0000 stripe is not a `copyToRAM` payload. One Debug binary,
-    both widths. 16:9 34.2 s / 21:9 33.5 s, 54/52 good frames, alive,
-    0 crash markers. Classifier selects H-later-zero; upload control
-    stays H-guest, mae 0. All 935 wide writebacks before that upload
-    are 1024x447 at phys `0x00B20000` (rows 0..447). That span covers
-    `0x00BB0020` (depth x=16, y=180 = this image's y=288). The native
-    rawBe there is `0x9F4C` on every one of them, never `0x0000`; other
-    sampled words in the same write include `0xFFFC`. The upload is the
-    next log event (n=2093, 16-bit call count still 2092) and its head
-    is still `0x0000`. Image y=180 of the same write is rawBe 0 at
-    `0x00B7A020`, a different pixel. The only later rawBe 0 at
-    `0x00BB0020` is the depth image's own writeback at `0x00B56000`
-    after the upload. 16:9 floor z store is 0.99195..0.99669. No
-    default change. Evidence `scratch/agent/s6627_ram/depth_verdict.json`.
-  - s6626: `copyFromChanges` is faithful. One Debug binary, both widths.
-    16:9 35.5 s / 21:9 33.5 s, 52 good frames, alive, 0 crash markers.
-    The only depth `copyFromChanges` is `state.cpp:2604` on the 21:9
-    1024x339 floor depth (guest `0x00B56000`, stride 2048, rowStart 0,
-    lookup address equals store address). `ColorConverter::D16::toF` of
-    the shader-endian guest words matches the GPU columns on all 142
-    samples, max abs 0. The head is literal `0x0000` (x=16, y=180..192;
-    x=1007, y=180..191), not the RDP clear word `0xFFFC`, which does
-    appear on later rows of the same columns. `clearDepthTarget` still
-    read back 1.0 before that upload; floor-enter matches it. 16:9 has
-    no `copyFromChanges`; floor-enter is 1.0; a later floor op stores
-    z 0.99416..0.99574. Magenta and pix-match pass. This refutes the
-    depth shader, the boolean mask, and the viewport as the stripe
-    writer. `workload_queue.cpp:966` and `framebuffer_manager.cpp:345`
-    did not run. The color-width stride lead does not apply to this
-    call. No default change. Evidence
-    `scratch/agent/s6626_guest/depth_verdict.json`; runner
-    `tools/g1d_floor_depth.py`.
-  - s6625: named that upload and showed the clear read back as 1.0.
-    Its "x=16 is a 0.964 ramp and x=1007 stays 1.0" sentence is not the
-    column record; both columns interleave ~0.96 and 1.0 after a shared
-    exact-0 head. Evidence `scratch/agent/s6625_depth/depth_verdict.json`.
-  - s6624: pre/post color+depth witness selects H-late-test (single-source). One
-    Debug binary, both widths. 16:9 36.2 s / 21:9 33.4 s, 50 good frames,
-    alive, 0 crash markers, magenta/binding/fixed-function/checker controls
-    pass. Every 16:9 scene enters these columns at depth 1.0. Picked serial 2
-    floor op 10 is LESS, 95/95 pass, shader z 0.99524..0.99667, step
-    40.4/36.9 -> 5.0/5.7. 21:9 picked serial 7 enters already torn (step
-    60.5/51.7); floor op 14 LESS covers 122, passes 10, fails 112 because
-    shader z (med 0.99364) is farther than pre-depth (med 0.9839).
-    rejected_frac 0.873, later_frac 0, sim MAE 0, no CPU/Metal mismatch on
-    that scene. The 9 wide16 blend mismatches are early zCmp=0 tris (ops
-    1-9), not the floor. First 21:9 scene (serial 1, frame 1351, 0x961000)
-    creates the step: entry 19.3/18.8 with 25 samples at depth 0 on rows
-    0..12 (y 180..192). Op 14 passes only where pre-depth is 1.0 (36/92)
-    and fails on 0 or ~0.961/0.967/0.984; the columns are largely out of
-    phase. Depth-0 pixels are never rewritten. That striped depth is already
-    present at sample 0, before any op in the submission. s6625 names that
-    writer: copyFromChanges, after a clear that still read back as 1.0. Not a floor blend
-    bug. No render/default change. Evidence
-    `scratch/agent/s6624_attachment/attachment_verdict.json`; sheet
-    `docs/owner_sheet_s6624_attachment.png`; runner
-    `tools/g1d_floor_attachment.py`.
-  - s6623: actual GPU fragment records select H-backend (single-source).
-    One Debug binary, phase-driven 796/1024 arms: 16/24 complete scenes,
-    2313/3450 fragment records. Every fragment recovers its sampled uploaded
-    checker; independent snapshots recover all 64 checker pixels. All referenced
-    textures captured, all grayscale; sampled tex0 chroma 0 on both. Actual
-    smooth/wrapped shade row steps 2.66/2.51 vs 1.95/1.97, no wrapped pixels.
-    Combiner/result RGB steps 4.39/5.32 vs 4.98/4.78; original non-MSAA
-    attachment steps 4.39/5.32 vs 47.61/51.02. Shader-to-attachment MAE is
-    0.00096 vs 37.08 (0..255 scale). This excludes colored texture binding
-    and shade wrap as the first divergence at these samples; the tear exists
-    before resolve in the original attachment. A fragment record witnesses
-    execution, not passage of late depth tests. s6624 is that measurement:
-    the 21:9 disagreement is a LESS reject, not a blend store. Prior floor/alpha/fill controls
-    pass, 52/53 stop-gate frames, 0 crash markers. GPU/native/RAM checker also
-    passes in both arms. Evidence `scratch/agent/s6623_shader/shader_verdict.json`;
-    owner sheet `docs/owner_sheet_s6623_shader.png`; persistent runner
-    `tools/g1d_floor_shader.py`. Exported renderer/shader/converter changes;
-    converter selects MSL 2.2 only when PrimitiveId requires it. No rendering
-    fix/default change.
-  - s6622: three-stage GPU/native/RAM capture selects H-raster
-    (single-source runtime evidence). After retaining only the final recorded
-    pair per submission frame and displayed framebuffer address, 39 captures
-    at 796 and 63 at 1024: GPU edge row steps 4.084/4.992 versus
-    36.809/33.671; native 6.494/7.077 versus 39.307/35.320. RAM matches
-    native exactly at all 142 floor pixels per capture (0 mismatches).
-    All 64 GPU-uploaded checker pixels pass in GPU, native and RAM in every
-    retained capture. Both source targets are RGBA16 UNORM per component,
-    scale 1; pitch 8192. The GPU image visibly contains the 21:9 rainbow
-    row tear before native conversion. Conversion/copy cannot be its first
-    writer. This does not identify the actual shader/interpolant/texture or
-    blend-state defect; no render fix/default change. One binary, both
-    phase-driven arms, 62 closed floor frames each, prior controls pass,
-    0 crash markers. Evidence: `scratch/agent/s6622_pipe/verdict.json`;
-    owner sheet `docs/owner_sheet_s6622_pipe.png`; persistent runner
-    `tools/g1d_floor_pipe.py`. Metal texture-to-buffer blit support added
-    and exported. Diagnostic flag injects a 64-pixel checker outside the
-    sampled floor band; keep it disabled during play. Next: actual GPU
-    fragment values plus sampled texture/binding, not another CPU replay.
-    Snapshot is after resolveTarget: resolve/downsample remains a possible
-    upstream writer along with raster/shader/blend state.
-  - s6621: emitted-mesh replay does not reproduce the tear (single-source).
-    Both widths: 66 closed frames, 54 stop-gate frames, 0 crash markers,
-    all earlier controls pass. Legacy samples: 9372/9369 common points;
-    actual half-pixel-corrected samples: 9372/9370. All five missing points
-    across both sample conventions lie 0.005..0.020 px outside reconstructed
-    edges (retained, not filled); no interior coverage mismatch. Actual
-    coefficient/mesh |ΔT|: 4.789/4.789 at 796, 4.889/4.889 at 1024;
-    |Δ shade luma|: 2.943/2.948 and 2.978/2.966. Wrapped luma gives the
-    same numbers. UV error is 0.000009/0.00926 texel. Perspective shade
-    differs from the reference affine model by 0.191/0.887 luma, far too
-    small for framebuffer edge steps 6.75/5.68 vs 56.45/53.40. Synthetic
-    vertex W/UV perturbation raises row steps from 0.425 to 208.230.
-    This selects H-pipe under the prewritten 25% step-agreement test,
-    not a verified backend writer: this is CPU replay, not independent
-    GPU/RDP execution. Independent paraLLEl-RDP documentation supplies
-    plane/edge semantics only. No render fix or default change. Evidence:
-    `scratch/agent/s6621_mesh/verdict.json`; persistent discriminator:
-    `tools/g1d_floor_mesh.py`. Next: capture the GPU target, native-converted
-    pixels and post-writeback RDRAM together to split raster from conversion.
-  - s6620: fill-word H-mem refuted at the edge samples (single-source).
-    One Debug binary, 64 closed frames per width, 9088 samples each:
-    exactly one fill word `FFFCFFFC`, dF=0, nFs=9088 on both. Alpha
-    equation is `(0-0)*0+0` throughout both arms. Shade-alpha |Δ| is
-    0.08538 vs 0: the proposed larger 21:9 step is contradicted, but
-    the strict 25% agreement test FAILS, so the prewritten verdict is
-    unresolved, not H-pipe. Shader equation evaluation also shows that
-    this equation does not consume shade alpha (same-runtime source,
-    not an independent hardware witness). Positive injected checker:
-    nFw=2/dF=255/dA=64 on both. Framebuffer edge steps 7.31/7.92 vs
-    65.80/60.49; dy 8.40 vs 29.05. All prior controls passed, 0 crash
-    markers. No rendering fix/default change. Evidence:
-    `scratch/agent/s6620_alpha/verdict.json`; persistent runner
-    `tools/g1d_floor_inputs.py`. Next: compare actual emitted mesh
-    interpolation against the original RDP coefficient walk as one
-    complete table; do not assume the CPU walk is what the GPU shaded.
-  - s6619: the last primitive at x=16 and x=w-17 is the floor triangle on
-    both widths. One binary, 68 and 63 closed frames. lastF is 1.0
-    vs 1.0, both columns. A fill rect touches every sample
-    (touchR 1.0, touchU 0) and is overwritten on every sample
-    (over 1.0). Median multi_frac is 0 vs 0.18, so most torn pixels
-    are one floor triangle over that fill. Pixel step 5.36/5.19 vs
-    44.07/35.74, including x=16. |ΔI| 45.21 vs 42.15 and |Δ shade|
-    2.95 vs 2.96. Blender and combiner unchanged. This refutes
-    H-last. The tear is the blend memory term or the pixel pipe.
-    No patch. Evidence: `scratch/agent/s6619_last/verdict.json`.
-  - s6618: filtered I4 and shade at x=16 and x=w-17 are not the tear. One
-    binary, 69 and 65 closed frames. Pixel step on fb 1400 is 5.71/5.04
-    vs 54.37/51.82. |ΔI| is 46.03 vs 41.18 (rel 0.11, 21:9 smaller).
-    |Δ shade| is 2.94 vs 2.97. Blender string matches. |ΔT| 4.61 vs
-    4.99 stays inside 25% of 4.70 vs 4.15. This refutes H-i4-edge and
-    H-shade-edge. The tear is after the combiner. No patch.
-    Evidence: `scratch/agent/s6618_edge/verdict.json`.
-  - s6617: I4 intensity, untextured/rect coverage, and the blender are not
-    the tear at x=w/6 and x=5w/6. One binary, 66 and 69 closed frames.
-    I4 self-test passed. Tile is fmt 4 / siz 0, bilerp, no TLUT, on both.
-    Pooled |ΔI| is 51.18 vs 45.16 (21:9 smaller, rel 0.12). Untex fraction
-    is 1.0 on both (a fill and a 2-cycle rect cover every sample; same
-    blender set). Floor blender is
-    `cyc0f0(CC*CCA+MEM*MEMA)|(CC*CCA+MEM*MEMA)` on both. |ΔT| 4.70 vs 4.15
-    and |Δ shade| 2.65 vs 3.45 stay inside 25% of s6616. Raw S matches
-    s6616 to 0.02. Outer-third dy is 5.55 vs 23.11. This refutes H-i4,
-    H-untex, and H-blender at that sample. On the same fb 1400 frames the
-    row step at x=16 and x=w-17 is 3.9 vs 46.2 and 4.5 vs 46.4, while
-    x=w/6 is only 5.9 vs 12.7. The next sample is the edge. No patch.
-    Evidence: `scratch/agent/s6617_i4/verdict.json`.
-  - s6616: outer-third S and shade luma are not the tear. One binary, both
-    arms, 67 closed frames each, same edge walk as s6615. floor_frac 1,
-    badw 0, nS=nL=npair=9380. Raw T matches s6615 to the printed digits.
-    Pooled |ΔT| is 4.79 vs 4.09 (within 25% of 4.32 vs 3.63). dy 5.97
-    vs 20.0. Combiner is `(T0-0)*SHADE+0` on every frame of both arms.
-    othermode L alternates `00552230` and `00552078` on both arms
-    (AA_EN|IM_RD vs CVG_DST_FULL); not a width split. Within-frame
-    second identity is 0.5% / 5.2% of sample points, same equation.
-    Pooled |ΔS| is 3.93 vs 2.69 (21:9 smaller, rel 0.32). Pooled
-    |Δ shade luma| is 2.66 vs 3.52 (rel 0.24). Neither is more than
-    twice on 21:9, so H-s-row and H-shade are not selected. |ΔS| is
-    outside the 25% band, so the strict both-agree refutation is not
-    met; the predicted direction is contradicted in every quartile.
-    Pixel dy is 3.3x and shade is 1.3x. No patch. Evidence:
-    `scratch/agent/s6616_ss/verdict.json`.
-  - s6615: perspective-correct texel T at x=w/6 and x=5w/6 does not
-    jump more on 21:9. One binary, both arms, the s6614 edge walk.
-    Floor texel is (T/W)*1024 from the last op 0x0F tile 0 line 4
-    triangle. Pooled mean |ΔT| is 4.32 (16:9, 49 frames, 6860 pairs)
-    vs 3.63 (21:9, 46 frames, 6440 pairs), relative gap 0.16.
-    other_frac is 0 on both. floor_frac is 1.0, badw 0, dy 5.42 /
-    24.82. Raw texels at y=200 and y=230 agree to about 0.05
-    (9.99 vs 10.00, 32.92 vs 32.92); dtdx scales by about 796/1024
-    and cancels the wider x. This refutes H-t-row and H-overdraw.
-    Median multi_frac is 0.007 vs 0.38, so 21:9 overlaps more floor
-    tris, and the last-writer T still matches. No patch. Evidence:
-    `scratch/agent/s6615_tex/verdict.json`.
-  - s6614: those floor triangles cover both outer thirds. One binary.
-    Edge spans (not bboxes) of op `0x0F` tile 0 line 4, scanlines
-    180..250, clipped to the scissor. Every closed frame is solid:
-    16:9 n=44 median 223 tris, 21:9 n=26 median 163 tris, hole_rows 0,
-    rect_gap_rows 0, hull_frac 1, mean hull equal to the third
-    (265 and 341). rect_frac 0.9981 / 0.9985 is about one uncovered
-    pixel per row, and no run is longer than 2 px. Scissor is the
-    full framebuffer (0..795 and 0..1023). x0spans stays 6-23 while
-    a frame has ~160-230 tris, so the walker is not painting every
-    triangle full-width. dy control 7.61 / 26.08. This refutes
-    missing coverage, an edge walk, and a scissor clip. The tear is
-    inside covered pixels. No patch. Evidence: `scratch/agent/s6614_cov/`.
-  - s6613: S at screen x=0 is not a 21:9-only walk off the 64-wide mask.
-    One binary, both arms. Perspective on, shift 0, uls 0, texel
-    (S/W)*1024. 16/16 early-table triangles pair on base S and dtde.
-    12 inside [0, 64) on both, 4 outside on both, 0 inside only on
-    16:9. The 4 that cover x=0 are inside on both. Census
-    st_in=21 st_out=19 cover_in=4 cover_out=0 on both widths. Texel S
-    agrees to about 0.2. x_major moves and dsdx shrinks by 796/1024,
-    so they cancel. Per-pixel outer-third dy on rows 180..250 is 5.48
-    (16:9) and 26.9 (21:9); the same scorer on the s6612 dumps is
-    8.32 and 25.4. No patch. Evidence: `scratch/agent/s6613_st/`.
-  - s6611: the step-column metric is blind. Control passed (flight `none`; a
-    pasted 200×640 block scores H-composite at x=640). n=1400/1500/1600
-    score `none`; stride fit R≤0.061 for slopes ±384/±512. Outer-third
-    row-to-row luma in the worst 70 rows is 24.3/19.1/18.3 versus 7.7 on
-    the 16:9 level-select and 3.8–5.1 on the quiet rows of the same 21:9
-    frames. Shift 384 or 512 makes that window worse (SAD ~50–62 vs
-    ~17–22). Refutes a 1024-vs-640/512 framebuffer shear and a stable
-    512/640 seam. The pixels are horizontal slices of the hangar floor
-    in the outer thirds; the center ring stays near the 16:9 ring.
-    Summary: `scratch/agent/s6611_tear/summary.json`. No default change.
-  - s6612: the floor primitive is an RDP triangle, op `0x0F`, tile 0,
-    TMEM line 4, fmt 4 / siz 0, mask 6. Logged from RT64's decoded
-    triangles (the DPC byte walk had 0 sane of 3577 and 3389). On the
-    same route, dtde matches across FB 796 and 1024 (19.53, 20.42,
-    29.79, 31.27, 50.12, …) and Y spans match; X span and dsdx scale by
-    1024/796. Same-run floor-band dy is 8.47 (16:9) vs 24.55 (21:9).
-    Not a stride or derivative that jumps with width. No patch.
-    Guest PC `80007904` is on every row and is not the writer.
-  - s6610: 16:9 flight-radar clip fixed (opt-in only). The s6155 right-half add
-    places the ring at retail_right+second. second=A+RA (334 at fb 796) is
-    50 px past that frame. second=fbw-512 alone moved the ring to x 671..764
-    (inset 31, width 94; retail measurer 387..480, same inset and width) but
-    split the disc: wedge stayed at 769..792, 0 orange pixels inside the ring.
-    Disc tris are selected pre-shift; the shift that tracks the ring is
-    second-A, which is A once second=ex. With shift=A, 16:9 wedge 719..742 is
-    271/271 inside and 21:9 wedge 947..971 is 417/417 inside. Both rings
-    inset 31, width 94. Left shield stayed x 44..71 (16:9 x1=72). Both arms
-    reached flight, 0 crash lines. Retail was not rerun. Sheet:
-    `docs/owner_sheet_s6610_radar.png`. Defaults unchanged.
-  - s6609: retail, 16:9 and 21:9 hangar+flight, window backing-store paired
-    with VI-bounded source. Screen was unlocked. All three arms alive, 0 crash
-    lines. Extra width is additional scene (level-select text and side walls
-    that retail crops). Left flight shield stays at source x 44..71 on every
-    width. Retail radar x 388..476 (inset 35, width 89); 21:9 radar x 903..991
-    (inset 32, width 89); 16:9 radar x 722..794 (inset 1, width 73) and the
-    window shows the same clip. Those edges are exactly retail+334 and
-    retail+515, the logged `ROGUESQ_HUD_ANCHOR` right terms (A+RA in
-    `rs64_g1d_apply_aspect_policy`, consumed by `tools/apply_s6155_hudcpos.py`).
-    Per-sprite f4 was not logged. 21:9 level-select source is torn across the
-    middle on n=1400/1500/1600 and the paired window matches; 16:9 and retail
-    level-select are not torn. Later 21:9 bay/craft frames and flight are
-    clean. Black bars (none / ~120 px / ~205 px) are the fixed 640x480 SDL
-    window letterboxing a wider framebuffer, not missing source rows. This
-    selects H-game for the 16:9 radar clip and the 21:9 level-select tear, and
-    refutes H-present for both. Sheet: `docs/owner_sheet_s6609_aspect.png`.
-    Defaults unchanged. fb-flip-range logs only 64 rows per phase, so the
-    21:9 hangar copy (still phase 4 after the 512 title) is not in that log.
-  - s6608: VI fbSize/fbAddress dumper. Retail and 16:9 copies match
-    512x444 / 512x336 / 796x336. Window captures lack the old bottom tail;
-    +112-row references show pixels outside the source. Selects
-    H-dump-overread for that band, not renderer corruption. Sheet:
-    `docs/owner_sheet_s6608_capture_bounds.png`. Do not repeat the band census.
-  - s6607: a before/after colour-writeback witness passed its injected-byte
-    control in retail and ASPECT 16:9 (12 MB); both 95 s arms finished alive,
-    0 crash markers. In hangar phase 5, the two wide sources had 48/25
-    intersecting writebacks, all changing the watched columns with changing
-    control pixels; non-overlapping writes changed none. This refutes only
-    "no RT64 writeback touches the region", not the artifact's origin.
-    No preceding post-writeback hash matched the eight initial source
-    fingerprints. Crucially, raw PPMs extend past the logged source:
-    retail dumps 512x358 versus copy 512x336 (+22 rows), wide 796x448
-    versus copy 796x336 (+112). The wide bottom garbage is below the copy
-    boundary in the same captured frame; source code hardcodes the excess
-    height. The earlier column fingerprint does not measure that bottom band.
-    **s6606's H-source attribution is superseded.** Real window appearance is
-    unmeasured; capture bounds must be corrected before a rendering fix.
-    Evidence: `scratch/agent/s6607_band_wb/summary.json`,
-    `docs/owner_sheet_s6607_capture_bounds.png`; analyser
-    `tools/g3_hangar_writeback.py`. No mitigation/default change landed.
-  - s6606 (source attribution superseded s6607): the phase-gated source fingerprint ran immediately after the
-    `present.storage` copy. Retail 4:3 fired its control at width 512/origin
-    `0x790400` (nonzero 512, transitions 82, hash `42020AE708518CD0`). A
-    clean ASPECT 16:9 arm fired at width 796/origin `0xA631B8`, exactly across
-    the measured band 269..335 (first/last nonzero 269/334, nonzero 7722,
-    transitions 2336, hash `02408104333BE1AE`). Together with the s6602
-    owner-visible wide-only band, this selects H-source: the band is already
-    in source pixels before presentation. The 21:9 retry reached only a
-    pre-hangar 1024 phase and then returned to 640; its 512 control was all
-    zero and is not evidence about the wide band. Retail completed a 131 s
-    mission hold clean (0 VI stalls, 0 crash lines). No mitigation landed.
-  - s6603: a phase-gated witness at RT64's actual `present.storage` framebuffer copy ran in retail 4:3, ASPECT 16:9, and ASPECT 21:9 from one Debug build. All arms held clean (0 crash lines, 0 VI stalls) and the witness fired in each positive-control phase. Retail used 512-wide rows with a 1024-byte stride; 16:9 used 796-wide rows with a 1592-byte stride; 21:9 used 1024-wide rows with a 2048-byte stride. Each source range covered the complete selected framebuffer. This rules out a malformed wide copy/flip stride as the band writer, but does not distinguish whether the band is already in source pixels or is introduced by viewport/RDP presentation. The local retail oracle cannot currently run: `tools/oracle` has no built core/plugin dylib. Next: phase-gated source-pixel fingerprint versus the owner-visible output in the same hangar phase.
-  - s6602: same-route hangar captures completed for retail 4:3, ASPECT 16:9,
-    and ASPECT 21:9 in one Debug build. All three phase controls fired and
-    all arms held clean (0 crash lines, 0 VI stalls). Retail's 512-wide hangar
-    frames have no interior roughness band; the 16:9 arm has a visible striped
-    band at approximately x=269..334 of 796 pixels, and 21:9 has one at
-    x=347..639 of 1024 pixels. Contact sheets are in
-    `scratch/agent/s6602_hangar_capture/`. This selects a wide-only stale
-    framebuffer/row-stride family over identical game geometry, but is not yet
-    a writer attribution: the existing `[tricnt]`/`[rt64drawn]` logs report
-    task ordinals and do not join commands to the dumped framebuffer. No guard
-    or skip landed. Next: instrument the wide framebuffer write/flip stride
-    and join its source range to the same hangar phase.
-  - s6601 pivoted after three stalled `g1c-dd-phase2` iterations. The retained
-    G3c camera-jerk analyzer was rerun with its positive control: synthetic
-    smooth motion scored 0.152 sign alternation and injected alternating shake
-    scored 1.000. Archived flight arms scored retail 0.395, FPS60 0.625, and
-    FPS60+21:9 0.632, with the same camera-minus-craft heading offset (~1.566
-    rad). This does not identify a new FPS60-owned shake defect and supports
-    the existing retail-cadence closure. The next work unit is the parked
-    hangar-artifact audit, with a same-phase framebuffer comparison as the
-    discriminator.
-  - **G1c draw-distance phase 2 is paused, not resolved.** The TLUT-return
-    witness remains unevaluable because the last dd4 wrapper ended before its
-    witness phase; do not repeat it under the old hypothesis ID without a new
-    discriminating design.
-  - s6598: static Mach-O mapping resolves `hudDisplayUpdateWorker+5532` to
-    generated guest store `0x800496A8: sw v0,0(a0)`. The host instruction is
-    `str w8,[x9,x10]`, with `x10 = ctx->r4 + 0x80000000`; the old source copy
-    confirms `r4` is the return saved from `getTextureTlutEntry` at
-    `0x8002333C` (`0x80049660`), while `r2` is the copied value. This rules
-    out a host/runtime dereference and the already-witnessed `0x80049644/54`
-    reads; H-other-generated-load/H-stale remains open. A persistent
-    `tlut_return` witness was added beside the existing controls and the binary
-    rebuilt. Retail completed route/130 s verification clean
-    (`alive_at_end=1`, `vi_stalls30s=0`, `crashlines=0`); the concurrent dd4
-    harness cycled retries without a durable summary before SIGKILL, so it
-    supplies no dd4 witness verdict.
-  - s6598: static Mach-O mapping resolves `hudDisplayUpdateWorker+5532` to
-    generated guest store `0x800496A8: sw v0,0(a0)`. The host instruction is
-    `str w8,[x9,x10]`, with `x10 = ctx->r4 + 0x80000000`; the old source copy
-    confirms `r4` is the return saved from `getTextureTlutEntry` at
-    `0x8002333C` (`0x80049660`), while `r2` is the copied value. This rules
-    out a host/runtime dereference and the already-witnessed `0x80049644/54`
-    reads; H-other-generated-load/H-stale remains open. A persistent
-    `tlut_return` witness was added beside the existing controls and the binary
-    rebuilt. Retail completed route/130 s verification clean
-    (`alive_at_end=1`, `vi_stalls30s=0`, `crashlines=0`); the concurrent dd4
-    harness cycled retries without a durable summary before SIGKILL, so it
-    supplies no dd4 witness verdict.
-  - s6594: the regenerated store watch covered `[0x951335A0,0x951335C0)` and
-    fired its active player-record positive control (retail 392 rows; dd4 36
-    rows) but saw zero target-range stores in both arms. Retail held clean;
-    dd4 still reproduced phase-7 `hudDisplayUpdateWorker+5084` with pointer
-    `0x951335B0`. Direct generated-store writer H-dd-writer is refuted; the
-    pointer source/read path or a host/DMA writer remains open. `prev` is only
-    last-observed because the existing hook runs after stores. No guard landed.
-  - s6595: the generated read witness at `0x80049644/54` fired its same-worker
-    positive control (retail 276 rows; dd4 258 rows) and the active player-record
-    store control also fired (retail 400; dd4 251). The witnessed source address
-    stayed `0x80137634` for the phase-7 worker, but the loaded material pointer
-    differed (`0x80361808` retail vs `0x811DDDFC` dd4); neither arm read
-    `0x951335B0` at these sites. dd4 still reached the known
-    `hudDisplayUpdateWorker+5532` SIGBUS in one captured run. This selects a
-    draw-distance-dependent source difference for this worker path but does not
-    identify the crash dereference: the symbol/offset path or another generated
-    load remains open. The independent retail oracle could not run because its
-    `libmupen64plus.dylib` core/plugin was absent.
-  - s6549-s6551: `ROGUESQ_DD_POOLX` > 1 at dd4 lvl1 lifts the 0x80130C4C
-    2048-cell cap (2400 observed) but SIGSEGVs in `renderFlatMeshFaceGroup`
-    (si_addr=0x380000004). px2/px3/px4 (cap 800/1200/1600) ALL fault at the
-    same store, 0x80011524 `sw v0,4(a0)` with a0=0x80000000 (a NULL list
-    node); px1 clean. Deterministic (5/5); BIGARENA pool divert does not change
-    it (2/2), so not a heap-alloc failure and not a cap threshold (H-table
-    refuted). `docs/DRAW-DISTANCE.md`'s "POOLX 1..2.5 fit" is therefore stale.
-    Open hypotheses (NEXT.md): H-uninit (extra pool entries never linked),
-    H-fixedarr (retail-sized parallel array read past its end), H-clamp
-    (ddclamp window feeds an entry the game never built).
-  - s6588: the s6586/87 "pc 0x800547bc" is the stale breadcrumb, not the fault. Real fault = streamTerrainGridCellsByDistance guest 0x80042D88/9C (and a later store site): record table *(0x80136DC0+4) is NULL, idx 1/3 *30 -> far 0x22/0x5e/0x1e/0x5a. 5/5 deterministic first bad cell ptr 0x803118E2 cellh 0x8001. Skip guard (ROGUESQ_TBLNULL_SKIP) only moves crash to a store 5/5. Leading (unverified) cause: CAPX=2 window overruns the real cell array. See PORTING-STATE s$N.
-  - s6587: lvl7 dd4 CAPX=2 with an 8 MB DL pool (new opt-in ROGUESQ_SPILL_HI=1 + DLPOOLX_MB<=8): still 4/4 Bus error far=0x380000022; only 256 chunks allocated, so pool capacity is NOT the lever (H-pool refuted). Last cellprobe: tbl=0 window 64x65 on terr 93x96 -> suspect a 64-wide per-cell table (H-table64, single-source).
-  - s6586: lvl7 dd4 with host-side clamp cap x2 (ROGUESQ_DD_CAPX=2, toggled 1x/2x in one run): admits 3200-3850-cell footprints but 5/5 attempts Bus error (far=0x380000022, pc 0x800547bc) in the 2x window; 0/10 without (s6585). Cap 700*px is the pool capacity, so lvl3/lvl7 beyond dd4 needs a bigger DL-chunk pool paired with CAPX. Harness mission regex for lvl7 is 62BD00 (reported allattempts-failed though flight ran).
-  - s6585: dd4/dd6 bundle runs on lvl3/lvl7 (150 s, harness mission-detect said failed but flight ran; no 300 s hold): lvl3 cap-trim 1/9 at dd4, 0/10 at dd6; lvl7 3/6 at dd4, 2/5 at dd6 (cap-bound even at dd6). Single-source, small n. Next: lvl7 cap/px raise test with fixed pose (NEXT.md).
-  - s6584: census over existing logs: with the dd4 bundle (px4) cap trimming is gone on lvl5/lvl10 (0/48, 0/6); lvl1/5/10 are extent-bound, dd>4 cannot add terrain there. Only lvl3 (78x78) and lvl7 (93x96) can still pay at dd5+ (pre-bundle logs only). Next: dd5/dd6 bundle runs on lvl3/lvl7 (NEXT.md).
-  - s6578: ROGUESQ_DRAW_DISTANCE>1 now bundles the validated recipe (RAMTOP_MB=16, MALLOC_SPILL, DLPOOLX 4MB@3000, DD_POOLX=ceil(dd)<=5) in main.cpp; lvl1 dd4 bundle-only 130 s clean vs vetoed control Bus error si_addr=0x380000004 (single run/arm). The s6549-s6551 NULL node = DL-chunk pool exhaustion (not unknown corruption). s6579: "multiplier 3" at dd4 is the s6446 cap (apply_s6036_dd.py:7, dd>3 -> 3 unless ROGUESQ_DD_UNSAFE=1), so this "dd4" run was dd3 (code reading; confirm via log). True-dd4 300 s soaks queued: soak_queue/s6579_dd4_unsafe_lvl5/lvl10.sh.
-  - s6548: `[ddclamp]` lvl1 terrain is 64x64 with a 2048-cell cap; dd4
-    (~88x137) and dd6 (~101x174) footprints both clamp to the terrain, so dd6
-    draws no more than dd4 on lvl1 (s6547: dd6 cheaper, 56 vs 109 ms/s).
-  - Span-reject bypass is default-on for dd>1 (s6529). The dd>=4 missing
-    ground was the per-cell span filter rejecting saturated (-128) cells
-    (s6515-s6528; same-run SPANFORCE terrain 0.047 -> 0.209). The saturation
-    writer is unnamed; the bypass is a workaround.
-  - Bypass cap (`ROGUESQ_BYPASS_MAXCELLS`, default 120 for dd>1, s6540):
-    cap120 buys no terrain over cap0 in either rotation order (two-source,
-    s6543 + same-pose sheet s6546); only unlimited accept buys terrain (~3x
-    tight) at ~1.7x wall. Owner recommendation pending: inf for dd>1 (cap0
-    visibly drops ground).
-  - Rare dd4-family gfx-thread SIGBUS (factor5_ucode, si_addr ~17 MB above
-    rdram base; s6461 lvl10, s6466 dd8 lvl1 att1, s6529 lvl5): 0 crashes in
-    the last 8 lvl5 dd4 runs, rate <=~1/9, not bypass-specific (s6534).
-  - s6556: DL-chunk census (s6287) shows pushes == real pops per frame at px1 and px2 (counted pops = pops+pushes because push sites also load head). Yet px2 len falls ~600 chunks/frame (1553->0 in 24 begins ~5932-5956) with ~20 pops/frame: chunks leave the free list off-census (chain cut / unmatched consumer). Leak and bad-free refuted. Next: log the list cut point (NEXT.md). s6558: instrument ROGUESQ_CHUNKCUT built; run e3 partial (begin 41 cut only, uncontrolled); read g1_lvl1s6553_dd4_px2_e3/run.log past begin 5900, then run the _st selftest arm.
-  - s6559: guest-store watch on head 0x801163B0 (ROGUESQ_HEADWATCH=1): over begins 5800-6240 at dd4 px2, 0 far pops, 0 mid pops, 0 null stores; only ~4 real pops/begin.
-  - s6560: tracked-vs-actual head check (positive-controlled by SELFTEST poke): mismatch 0 / match 199 over begins 5800-6047, so the head is never rewritten outside the hooked guest-store path (MEM_W grow, fixup zeroing, host writes all refuted). New suspect: the 134+ OTHER head stores at guest pc 80007A44/AA0/AFC install a node off the old chain. Reclaim (kind 1) never runs. Next: walk lengths before/after those stores and read the function (NEXT.md).
-  - s6561: the 134 OTHER head stores (pc 80007A44/AA0/AFC) are heapWalker (0x800079F0) splicing per-mode lists IN FRONT of the free list (tail->next=oldhead): old chain stays reachable (REACH>=0, lenNV~=lenOH+k) in all but 1-2/attempt. Not the loss writer (refutes H-A/H-C). Only REACH=-1 cases: oh=0, and pc 80018094 = the DL-chunk pool (re)initialiser (relinks 2909 chunks, head=base) at begin 6016-6067. Open: caller (ra) and trigger of that reinit vs the cache emptying ~6047; and supply (heapWalker returns) vs demand (pops) at px2.
-  - s6562: pool reinit at pc 80018094 = `buildAndRegisterDefaultMaterial` called from `advanceVideoFrame` (0x800183F8) at flight-scene start (switch to 512x448 = the flight view, confirmed by framebuffer). It is legitimate and happens in px1 too. In 14/14 px2 runs the cache empties 70-130 begins after it; px1 (4/4) never. So the collapse is real in-flight demand>supply at px2 on a fresh 2909-chunk pool, not corruption. Open: per-begin demand after reinit at px2 vs px1.
-  - s6563: px2 head pops/begin ~100 vs px1 ~50 (2x demand); splice (supply) rate identical in both arms (0.3-1.0/begin). H-D3 unsupported; H-D1/H-D2 (pool fixed at 2909) remain. Post-reinit returns unmeasured (OTHER-row cap ~120, DLPOOLLOG off). Next: scale reinit chunk count by px at 0x80018044 and rerun px2.
-  - s6564: `ROGUESQ_DD_REINITX=k` (apply_s6564_reinitx.py) prepends extra chunks after the flight reinit. It faults with the SAME NULL-node signature at px1 (control c3) and px2 (r4, 6/6) ~105 log lines after `2909 -> 5853`, so the test is confounded (manipulation itself breaks; census blind >= 0x80800000). H-D2 undecided.
+- **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-heap).**
+  - s6630: H-live-overlap, single-source (this layout is above 8 MB; the
+    oracle cannot witness it). One Debug binary, both widths. 16:9
+    47.5 s / 51 good frames, fail []; 21:9 46.5 s / 53, fail edge-px+dy
+    (dy180 6.79 vs 11.36, edge 7.57/7.17 vs 16.33/14.88). Alive, rc -9,
+    0 crash markers. Guest-bzero, host-memset, magenta, floor-store and
+    pix-match pass. The last 21:9 carve leaves depth `801163E4=0x80B56000`
+    and image `[0xB56000,0xC00000)` under top `0x80C00000`. Heap
+    `8010FF18` ends on that pointer. Heap `8010FEFC` does not: head
+    `0x80961000`, chain end `0x80C00000`. `rs_zcalloc`'s `rs_malloc`
+    returns `0x80BADB50` len `0x8000` inside the live image (n=13559)
+    while `801163E4` still names it; `rs_memset` `0x800078EC` zeros
+    `0xBB0020`. `inflateEnd` frees that heap block (n=13633) and does
+    not move `801163E4`. SETZIMG n=13640 and the one depth-read n=13643
+    upload `[0xB56000,0xBFF800)` (1024x339). A later free is not a
+    framebuffer release. 16:9 has the same heap class at its level-select
+    carve (`e4=0x80B7BD80`, heap end `0x80BFFFE0`, malloc `0xBAA1B0` len
+    `0x8000` covers `0xBB0020`) but records 0 depth-reads and the floor
+    enters at 1.0, so it does not tear. The overlap is not 21:9-only;
+    the upload is. The three words outside the 32 KB window are later
+    heap blocks in the same image: `0xBB5B60+0x4C4` holds `0xBB5FDE`
+    (last change stays 0, same memset) and `0xBB6020` (last change 6,
+    pc `0x80027E8C`); `0xBB6460+0x1008` holds `0xBB67DE` (last change
+    8650761, pc `0x8002958C`). Not one memset. Do not skip the clear,
+    restore depth, or change a default. Evidence:
+    `scratch/agent/s6630_ownership/ownership_verdict.json`.
+  - s6629 named that `rs_memset` store (`dst=0x80BADB50`, len `0x8000`,
+    retail `0x84EC=A0450000`). Do not re-attribute or suppress it.
+  - s6611-s6628 are closed leads, not open work. The stripe is not stride,
+    scissor, texel T/S, shade, I4, blender, the last primitive, a CPU mesh
+    replay, a shader blend, copyToRAM, or a byteswap. copyFromChanges is
+    faithful: clearDepthTarget read 1.0, then the guest depth words were
+    already the stripe. s6629 named the watched store. Detail is in
+    PORTING-STATE sessions 6611-6629 and the superseded list below.
+    The OS window stays 640x480, so wider modes letterbox.
 - **G3c (owner visual report): engineering closed, owner judgement pending.**
   (a) far-edge stair: no opt-in rougher than retail (s6449, s6544);
   (b) spike wedges: H-hw-draws, angrylion lights the same 16/79 wedges
   (s6454), `ROGUESQ_CULL_SPIKE` stays opt-in; (c) turning shake: retail 30 fps
   judder (s6455, s6458).
 - **G1d (aspect): flight radar inset matches retail (s6610).** Extra width
-  is real scene and the left HUD stays pinned. Open opt-in defect: 21:9
-  level-select floor is sliced into horizontal scanlines in the outer
-  thirds (s6611). s6612 named the triangles (op 0x0F, line 4); their T
-  derivative does not change with width. s6613: S at x=0 does not
-  change either, and it is not outside the 64 mask only at 21:9.
-  s6614: the same triangles cover scanlines 180..250 in both outer
-  thirds with no gap above 2 px, on either width. The tear is inside
-  covered pixels. s6615: texel T at x=w/6 and x=5w/6 has the same
-  row step on both widths (mean |ΔT| 4.32 vs 3.63) and no other
-  textured triangle covers the sample. The sampler's T is not the
-  tear. s6616: that sample's S is smaller on 21:9 (3.93 vs 2.69),
-  shade luma agrees within 25% (2.66 vs 3.52), and the combiner is
-  `(T0-0)*SHADE+0` on both widths. s6617: I4 |Δ| there is 51 vs 45,
-  untex coverage is 1.0 on both, and the blender string matches. The
-  4x row step is in the outer 1/12 of the width, not at x=w/6.
-  s6618 measured those columns: filtered I4 and shade agree, and the
-  pixel step does not, so the tear is after the combiner.
-  s6619: that triangle is also the last primitive on every edge sample.
-  A fill rect touches first and is overwritten. H-last is refuted.
-  The tear is the blend memory term or the pixel pipe.
-  The OS window remains 640x480, so wider modes letterbox.
+  is real scene and the left HUD stays pinned. The open opt-in defect is
+  the 21:9 level-select floor tear; s6630 names it as heap `8010FEFC`
+  still owning the live depth image. The OS window stays 640x480, so
+  wider modes letterbox. Do not return to the combiner or the pixel pipe.
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
-- s6628 "writer between A/B unknown" is resolved at the watched word by s6629 exact pre/post stores and caller context: rs_zcalloc clears a zlib window there. The earlier witness lacked store hooks. This does not resolve allocation ownership or every stripe sample.
+- s6630's first classifier label "H-stale-target, because inflateEnd frees the zlib window before the depth upload" (same session, H-live-overlap). Believable because that free is real and precedes the read. It does not move `801163E4`, which still names `0x80B56000` at malloc, free, SETZIMG and the upload.
+- s6629 "why the zlib window overlaps the depth image is open" (s6630: the image is still reserved when `rs_malloc` returns inside it). Believable because s6629 named only the store. Heap `8010FEFC` still runs through to RAM top; heap `8010FF18` already stops at the depth pointer.
+- s6628 "writer between A/B unknown" is resolved at the watched word by s6629 exact pre/post stores and caller context: rs_zcalloc clears a zlib window there. The earlier witness lacked store hooks. s6630 resolves the ownership class; it does not make the whole stripe one 32 KB zero.
 - s6628 closes H-swap/H-alias for the measured upload (single-source): believable because the earlier native witness preceded byteswapping and did not record the live mapping. Post-swap and exit preserve `0x9EC4`, and both sites use the identical host address; the zero appears between them.
 - s6627 closes "the 1024x447 `copyToRAM` at `0x00B20000` writes the `0x0000` stripe" (it covers `0x00BB0020`). Believable because that span contains every stripe address and the same write's own image y=180 is rawBe 0. Refuted: the absolute sample is rawBe `0x9F4C` on all 935 covering writebacks, the call count does not move, and the upload still reads `0x0000`. The image-y zero is phys `0x00B7A020`.
 - s6626 closes "fbChangesDrawDepth, its boolean mask, or its viewport manufactures the 21:9 depth stripe from a clear or smooth guest field" (H-upload). Believable because the GPU image goes from a read-back clear of 1.0 to the stripe inside copyFromChanges, and a discard mask cannot paint 0 by itself. Refuted: the guest words already are the stripe and match the GPU on 142/142 samples (mae 0), shader endian, site state.cpp:2604.
@@ -566,14 +168,16 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6629) Resolve heap-versus-framebuffer ownership at the named zlib clear.**
-   `rs_zcalloc` legitimately clears `[0xBADB50,0xBB5B50)`, while RT64
-   uploads it as depth for `0xB56000`. Join framebuffer reservation/heap
-   bounds and allocation/free lifetimes to the actual RDP depth use, in
-   both widths. Split live guest overlap from an obsolete RT64 target or
-   workload reference. Account for the three column changes outside the
-   named clear before claiming the whole stripe explained. No zero-skip,
-   depth restore, or default change. See NEXT.md.
+1. **(s6630) Stop heap `8010FEFC` from owning the live depth image.**
+   `8010FF18` already ends at `801163E4`. `8010FEFC` keeps a free block
+   through RAM top on both widths; 21:9 then uploads that image and tears,
+   16:9 records no depth-read and stays clean. Cap or split that arena at
+   the depth pointer inside the carve, then rerun the same two-arm
+   ownership table. Success: the 21:9 depth-read interval contains no
+   live heap block, `0xBB0020` is not the zlib zero, and the edge-px/dy
+   fails clear, while 16:9 stays fail [] and enters at 1.0. The zlib
+   allocation must still return and still be cleared. No zero-skip, depth
+   restore, or default change. See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

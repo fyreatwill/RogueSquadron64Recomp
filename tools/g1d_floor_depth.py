@@ -6,6 +6,7 @@ unchanged and supplies the magenta and 16:9 ~0.996 controls.
 """
 import json
 import os
+import re
 from pathlib import Path
 import struct
 
@@ -740,7 +741,7 @@ def finish_rdram(upload_verdict, ram_verdict, ram, sites, copies):
 
 
 def classify_writers(sites, prior, detail):
-    writers = [r for r in sites or [] if r.get('k') == 'writer']
+    writers = [r for r in sites or [] if r.get('k') == 'writer' and r.get('class') != 'ownership']
     controls = {}
     for cls in ('guest', 'host'):
         controls[cls] = [r for r in writers if r.get('target') == 0x1FF0020
@@ -1016,7 +1017,230 @@ def selftest():
     assert classify_writers(wc+[delayed], 'H-between', d)[1] == ['delayed-store-needs-post-witness']
     assert classify_writers(wc[:1], 'H-between', d)[1] == ['writer-controls']
     assert classify_writers(wc, 'H-swap', d)[1] == ['writer-transition', 'H-swap']
+    own_selftest()
     print('selftest ok', flush=True)
+
+
+WATCH = 0x00BB0020
+OUTSIDE = (0x00BB5FDE, 0x00BB6020, 0x00BB67DE)
+FB_PTRS = tuple(0x801163D8 + 4 * i for i in range(9))
+
+
+def own_fields(row):
+    return {k: int(v, 16) for k, v in re.findall(
+        r'(?:^|;)([0-9A-F]{8})=([0-9A-F]{8})(?=;|$)', row.get('caller') or '')}
+
+
+def byte_covers(phys, length, addr):
+    return phys <= addr < phys + length
+
+
+def parse_fb(api):
+    m = re.search(r'fb=([0-9A-Fa-f]+)-([0-9A-Fa-f]+),w=(\d+),h=(\d+)', api or '')
+    if not m:
+        return None
+    return dict(start=int(m.group(1), 16), end=int(m.group(2), 16),
+                w=int(m.group(3)), h=int(m.group(4)))
+
+
+def named_fb(fields, fb_start):
+    want = fb_start & 0x1FFFFFFF
+    return [p for p in FB_PTRS if (fields.get(f'{p:08X}') or 0) & 0x1FFFFFFF == want and fields.get(f'{p:08X}')]
+
+
+def outside_hits(events, lo, hi):
+    found = {}
+    for addr in OUTSIDE:
+        hits = []
+        for r in events:
+            n = r.get('n', -1)
+            if not (lo < n < hi):
+                continue
+            if (r.get('class') in ('guest-exact', 'host') and r.get('target') == addr
+                    and r.get('before') != r.get('after')):
+                hits.append(dict(n=n, cls=r['class'], api=r.get('api'), pc=r.get('pc'),
+                                  before=r.get('before'), after=r.get('after')))
+            elif (r.get('class') == 'ownership' and r.get('api') in ('malloc', 'clear')
+                    and byte_covers(r.get('phys', 0), r.get('len', 0), addr)):
+                hits.append(dict(n=n, cls='ownership', api=r['api'], phys=r['phys'], len=r['len']))
+        found[f'{addr:08X}'] = hits[:8]
+    return found
+
+
+def decide_ownership(events):
+    own = [r for r in events if r.get('class') == 'ownership']
+    reads = []
+    for r in own:
+        if str(r.get('api', '')).startswith('depth-read'):
+            fb = parse_fb(r.get('api'))
+            if fb and fb['start'] <= WATCH < fb['end']:
+                reads.append((r, fb))
+    pairs = []
+    for m in own:
+        if m.get('api') != 'malloc' or not byte_covers(m.get('phys', 0), m.get('len', 0), WATCH):
+            continue
+        clear = next((c for c in own if c.get('api') == 'clear' and c['n'] > m['n']
+                      and c.get('phys') == m.get('phys') and c.get('len') == m.get('len')), None)
+        if clear:
+            pairs.append((m, clear))
+    base = dict(mallocs=sum(r.get('api') == 'malloc' for r in own),
+                clears=sum(r.get('api') == 'clear' for r in own),
+                reads=len(reads), pairs=len(pairs))
+    if not any(r.get('api') == 'malloc' and byte_covers(r.get('phys', 0), r.get('len', 0), WATCH) for r in own):
+        return dict(selects='no-overlap', why='no malloc range contains 0xBB0020', **base)
+    if not pairs:
+        return dict(selects='instrument-fail', why='malloc covers 0xBB0020 but no matching clear', **base)
+    chosen = None
+    for m, c in pairs:
+        later = [(r, fb) for r, fb in reads if r['n'] > c['n']]
+        store = next((r for r in events if r.get('class') == 'guest-exact' and r.get('target') == WATCH
+                      and r.get('after') == 0 and m['n'] <= r.get('n', -1) <= c['n'] + 8), None)
+        if later and store:
+            chosen = (m, c, later[0][0], later[0][1], store)
+    if chosen is None and pairs and not reads:
+        return dict(selects='no-depth-upload', why='zlib clear covers 0xBB0020 but no later depth upload does', **base)
+    if chosen is None:
+        return dict(selects='incomplete', why='missing the clear store or a later covering depth-read', **base)
+    m, c, read, fb, store = chosen
+    if not (fb['start'] <= read.get('phys', -1) < fb['end']):
+        return dict(selects='H-address', why='depth-read address is outside the recorded fb interval',
+                    fb=fb, read_phys=read.get('phys'), **base)
+    named_set = [r for r in own if r.get('api') == 'setzimg' and r['n'] < read['n']
+                 and (r.get('phys', 0) & 0x1FFFFFFF) == (fb['start'] & 0x1FFFFFFF)]
+    if not named_set:
+        return dict(selects='H-address', why='no SETZIMG before the upload names this fb', fb=fb, **base)
+    freed = [r for r in own if r.get('api') in ('free', 'free-entry') and m['n'] < r['n'] < read['n']
+             and r.get('phys') == m.get('phys')]
+    names = named_fb(own_fields(m), fb['start']) or named_fb(own_fields(c), fb['start'])
+    names_read = named_fb(own_fields(read), fb['start'])
+    common = dict(fb=fb, malloc_phys=m['phys'], malloc_len=m['len'], malloc_n=m['n'],
+                  clear_n=c['n'], read_n=read['n'], setzimg_n=named_set[-1]['n'],
+                  named_ptrs=[f'{p:08X}' for p in (names or names_read)], freed=len(freed),
+                  workload=read.get('api'), outside=outside_hits(events, m['n'], read['n']), **base)
+    # A later free of the zlib window does not release the framebuffer. Stale means
+    # the reservation no longer named this image when the malloc returned.
+    if names or names_read:
+        return dict(selects='H-live-overlap',
+                    why='guest framebuffer pointer still names this depth image when the overlapping malloc returns',
+                    **common)
+    if freed:
+        return dict(selects='H-stale-target',
+                    why='the overlapping malloc was freed before the upload and the reservation did not name the image',
+                    **common)
+    return dict(selects='H-stale-target',
+                why='zlib block overlaps a depth upload whose reservation pointers no longer name it', **common)
+
+
+def own_row(api, n, phys, length, caller='', **extra):
+    row = dict(k='writer', n=n, **{'class': 'ownership'}, pc=0, phys=phys, len=length,
+               target=WATCH, before=0, after=0, api=api, caller=caller)
+    row.update(extra)
+    return row
+
+
+def own_selftest():
+    fb = 'depth-read:pair=1,workload=9,present=3,fb=00B56000-00C00000,w=1024,h=340'
+    snap = '801163D8=80B56000;801163DC=00000000;'
+    store = dict(k='writer', n=12, **{'class': 'guest-exact'}, pc=0x800078EC, phys=WATCH,
+                 len=1, target=WATCH, before=0x9F4C, after=0, api='scalar', caller='')
+    live = [
+        own_row('setzimg', 5, 0xB56000, 1024),
+        own_row('malloc', 10, 0xBADB50, 0x8000, snap),
+        store,
+        own_row('clear', 13, 0xBADB50, 0x8000, snap),
+        own_row('setzimg', 14, 0xB56000, 1024),
+        own_row(fb, 20, 0xB56000, 0xAA000),
+    ]
+    assert decide_ownership(live)['selects'] == 'H-live-overlap'
+    stale = [
+        own_row('setzimg', 5, 0xB56000, 1024),
+        own_row('malloc', 10, 0xBADB50, 0x8000, '801163D8=80C10000;'),
+        store,
+        own_row('clear', 13, 0xBADB50, 0x8000, '801163D8=80C10000;'),
+        own_row(fb, 20, 0xB56000, 0xAA000),
+    ]
+    assert decide_ownership(stale)['selects'] == 'H-stale-target'
+    freed = stale + [own_row('free', 15, 0xBADB50, 0)]
+    assert decide_ownership(freed)['selects'] == 'H-stale-target'
+    live_freed = live + [own_row('free', 16, 0xBADB50, 0, snap)]
+    assert decide_ownership(live_freed)['selects'] == 'H-live-overlap'
+    assert decide_ownership(live_freed)['freed'] == 1
+    alien = [
+        own_row('setzimg', 5, 0xA00000, 1024),
+        own_row('malloc', 10, 0xBADB50, 0x8000, snap),
+        store,
+        own_row('clear', 13, 0xBADB50, 0x8000, snap),
+        own_row(fb, 20, 0xB56000, 0xAA000),
+    ]
+    assert decide_ownership(alien)['selects'] == 'H-address'
+    assert decide_ownership([own_row('setzimg', 1, 0xB56000, 1024)])['selects'] == 'no-overlap'
+    assert decide_ownership([
+        own_row('malloc', 10, 0xBADB50, 0x8000, snap), store,
+        own_row('clear', 13, 0xBADB50, 0x8000, snap),
+    ])['selects'] == 'no-depth-upload'
+    moved = outside_hits([
+        dict(k='writer', n=11, **{'class': 'host'}, target=0xBB6020, before=1, after=2, api='native-swap', pc=0),
+    ], 10, 20)
+    assert moved['00BB6020'] and not moved['00BB67DE']
+
+
+def ownership_table(root, rdram_detail):
+    import re
+    report = {}
+    for tag in ('wide16', 'wide21'):
+        path = root / tag / 'depth' / 'rdram.jsonl'
+        events = load_events(path)
+        own = [r for r in events if r.get('class') == 'ownership']
+        if not own:
+            continue
+        def fields(row):
+            return {k: int(v, 16) for k, v in re.findall(r'(?:^|;)([0-9A-F]{8})=([0-9A-F]{8})(?=;|$)', row['caller'])}
+        transitions = []
+        prior = None
+        for row in own:
+            if row['api'] != 'metadata':
+                continue
+            f = fields(row)
+            state = tuple(f.get(k) for k in ('8010FEFC', '801163D8', '801163DC', '801163E4'))
+            if state != prior:
+                transitions.append(dict(n=row['n'], pc=row['pc'], state=state, snapshot=row))
+                prior = state
+        readins = [r for r in own if r['api'].startswith('depth-read')]
+        bs = [r for r in events if r.get('k') == 'b']
+        first_b = bs[0] if bs else None
+        prev_a = [r for r in events if r.get('k') == 'a' and first_b and r['n'] < first_b['n']]
+        lo = rdram_detail.get('a_n', prev_a[-1]['n'] if prev_a else 0) if tag == 'wide21' else 0
+        hi = rdram_detail.get('b_n', first_b['n'] if first_b else float('inf')) if tag == 'wide21' else float('inf')
+        allocs = [r for r in own if r['api'] == 'malloc' and
+                  r['phys'] < 0xBB67E0 and r['phys'] + r['len'] > 0xBB0020]
+        changes = [r for r in events if r.get('class') in ('guest-exact', 'host') and
+                   r.get('target') in (0xBB0020, 0xBB6020, 0xBB5FDE, 0xBB67DE) and
+                   r.get('before') != r.get('after') and lo < r['n'] < hi]
+        owners = []
+        for alloc in allocs:
+            last = readins[0]['n'] if readins else max(r['n'] for r in events)
+            releases = [r for r in own if alloc['n'] < r['n'] <= last and
+                        ((r['api'] in ('free-entry', 'free') and r['phys'] == alloc['phys']) or
+                         (r['api'] == 'metadata' and r['phys'] == 0x10FEFC and
+                          fields(r).get('8010FEFC') == 0))]
+            owners.append(dict(allocation=alloc, releases=releases[:2]))
+        commands = []
+        for read in readins:
+            candidates = [r for r in own if r['api'] == 'setzimg' and r['n'] < read['n'] and r['phys'] == read['phys']]
+            commands.append(dict(read=read, command=candidates[-1] if candidates else None))
+        verdict = decide_ownership(events)
+        verdict['outside_window'] = outside_hits(events, lo if lo else -1, hi if hi != float('inf') else 10**12)
+        log = root / tag / 'run.log'
+        if log.exists():
+            kept = [line for line in log.read_text(errors='replace').splitlines()
+                    if line.startswith(('[fballoc]', '[g1d-carve]', '[g1d-drop]'))]
+            verdict['reservation'] = kept[-24:]
+        report[tag] = dict(transitions=transitions, owners=owners, readins=commands,
+                           changed_words=changes, phase_window=[lo, hi if hi != float('inf') else None],
+                           verdict=verdict)
+    (root / 'ownership_table.json').write_text(json.dumps(report, indent=2) + '\n')
+    (root / 'ownership_verdict.json').write_text(json.dumps(
+        {tag: report[tag]['verdict'] for tag in report if 'verdict' in report[tag]}, indent=2) + '\n')
 
 
 def main():
@@ -1064,6 +1288,7 @@ def main():
         for key in ('zero_writer', 'mid_writer', 'stripe_writer', 'writer', 'floor'):
             result['arms'][tag]['table'][key] = public_event(table[key])
     (root / 'depth_verdict.json').write_text(json.dumps(result, indent=2) + '\n')
+    ownership_table(root, rdram)
     print(json.dumps(dict(selects=verdict, why=why, rdram=rdram, writer_selects=writer_verdict, writer_why=writer_why, writers=writers, ram_selects=ram_verdict, ram=ram, upload_selects=upload_verdict,
                           upload=detail,
                           wide21=result['arms']['wide21']['table'].get('stripe_writer'),

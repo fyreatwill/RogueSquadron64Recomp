@@ -172543,3 +172543,80 @@ passes. Evidence: scratch/agent/s6629_writer_context/depth_verdict.json,
 writer_origin.json, clear_interval_check.json; first capture retained separately.
 Next is the complete heap/framebuffer ownership table at the named clear,
 not another writer join-field increment or a zero-skip workaround.
+
+## Session 6630 (2026-10-29) — live heap still owns the 21:9 depth image
+
+2026-10-29. HYPOTHESIS-ID: g1d-levelselect-ram, closed. Step 0: CURRENT-TRUTH
+59,942 bytes, so this was not a maintenance iteration. Queued-soak tail still
+ends at the ledgered s6580 verdicts; nothing new to fold. One ownership
+experiment, both widths, one Debug binary. No second game. Screen was
+unlocked. Runner SIGKILL (rc -9). No zero-skip, depth restore, or default change.
+
+Arms, scratch/agent/s6630_ownership: 16:9 47.5 s, 51 good frames, fail [];
+21:9 46.5 s, 53 good frames, fail edge-px and dy (dy180 6.79 vs 11.36,
+edge_l 7.57 vs 16.33, edge_r 7.17 vs 14.88). Both alive, 0 crash markers,
+stop tex+dump. alpha_fill_control and selftest_ok are 1. Magenta, floor-store
+and pix-match pass. Guest-bzero and host-memset controls are in
+depth_verdict.json writers.controls (guest pc 2147655952, 120->0; host
+control-memset 0x12345678->0). Depth and attachment selftests pass, including
+a new case where the zlib block is freed and the framebuffer pointer still
+names the image.
+
+21:9 selects H-live-overlap. Last carve: in 512x340, outw 1024, top
+0x80C00000, a3=t0=0xAA000, e4=0x80B56000, dc=0x80961000. Drop: aspect 21:9,
+fbw 1024, t0=0xE0000, drop=0x4B000. Reserved image [0x80B56000, 0x80C00000).
+The upload is [0x00B56000, 0x00BFF800), 1024x339, 694272 bytes, one depth-read
+(n=13643, pair 1, workload 0, present 1651). SETZIMG n=13640 names 0x00B56000.
+At malloc n=13559, 801163E4 is already 0x80B56000. Heap 8010FF18 ends on that
+pointer (head 0x80154690, end 0x80B56000, 123 blocks). Heap 8010FEFC does not:
+head 0x80961000, chain end 0x80C00000, 902 blocks. rs_malloc returns
+0x80BADB50 len 0x8000 inside the live image. Block header 0x80BADB40 size
+0x8000 flags 0x0002 tag 0x0004. The next free block, 0x80BB5B50 size 0x4A490
+flags 0x0001, runs to the RAM top. Caller: rs_malloc, rs_zcalloc, zcalloc,
+inflate_blocks_new, inflateInit2_, inflateInit_, processAssetLoadStep,
+mainEventQueueWorker. rs_memset at 0x800078EC then zeros 0xBB0020 (last change
+n=13567, 220->0). inflateEnd frees the heap block at n=13633 via rs_free,
+rs_zcfree, zcfree, inflate_blocks_free. 801163E4 stays 0x80B56000 and the
+heap end stays 0x80C00000. The depth-read covers all four watched words.
+A free of the zlib window is not a framebuffer release. The first faulty
+boundary is heap 8010FEFC's free block continuing through the depth image
+after the wide carve. Do not patch rs_memset.
+
+This is not a 21:9-only overlap. 16:9's level-select carve is e4=0x80B7BD80
+(drop fbw 796, t0=0xAE200, drop=0x19200). Malloc n=13099 phys 0xBAA1B0 len
+0x8000 covers 0xBB0020 while 801163E4 is 0x80B7BD80 and 8010FEFC ends at
+0x80BFFFE0. 8010FF18 again ends on e4. That arm records 0 depth-reads, the
+floor enters at 1.0 (enter_ones, enter_zeros 0), and the tear metric does
+not fire. The classifier therefore says no-depth-upload, which means "this
+address was not uploaded", not "the heap stays out of the image". The visual
+difference is the upload.
+
+The 32 KB window explains the zero at 0xBB0020 only. 0xBB5FDE and 0xBB6020
+are inside the later malloc at 0xBB5B60 len 0x4C4. 0xBB67DE is inside
+0xBB6460 len 0x1008. All three are also inside the uploaded image. Last
+pre-upload changes: 0xBB5FDE stays 0 at the same memset (n=13576); 0xBB6020
+becomes 6 at guest pc 0x80027E8C (n=13588); 0xBB67DE becomes 8650761 at
+guest pc 0x8002958C (n=13600). Not one memset, and not uncovered. After the
+free, guest pc 0x80001884 stores 0 to the 8010FEFC head word (n=13637) while
+801163E4 is unchanged. That is after the clear; it is not the release of the
+framebuffer.
+
+The first analyzer label was H-stale-target because the free precedes the
+read. That was believable and wrong. The classifier now keeps H-live-overlap
+when the reservation still names the image. Reanalyze of the same logs
+selects H-live-overlap, freed=1, named_ptrs 801163E4. Single-source: the
+oracle cannot witness this above-8MB layout. The top-level depth classifier
+still prints H-witness because its older public dicts are empty; the arm
+table still shows the prior stripe arriving through copyFromChanges. That
+does not overturn s6626-s6629.
+
+Instrumentation kept: ownership rows for malloc, free, the rs_free entry
+(apply_s6063_heaplog.py, applied in the external funcs_0.c), framebuffer
+metadata, SETCIMG, SETZIMG and the depth read. lib/rt64 hooks exported with
+submodule-patches/export.sh. No render fix landed.
+
+Closed s6611-s6564 essays were pruned from the CURRENT-TRUTH headline after
+this result pushed the file over 60 KB. The conclusions are not withdrawn;
+PORTING-STATE and the superseded list keep them. Next is to cap heap
+8010FEFC at the live depth pointer, the way 8010FF18 already ends, and rerun
+this same two-arm table. HYPOTHESIS-ID for that unit: g1d-levelselect-heap.

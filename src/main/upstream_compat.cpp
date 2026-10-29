@@ -2542,7 +2542,9 @@ static uint8_t* g_s6127_rd = nullptr;
 static inline uint32_t s5042_rd(const uint8_t* rd, uint32_t off);
 static uint32_t g_s6127_flags;
 extern "C" void rs64_s6127_fl(uint32_t f) { g_s6127_flags = f; }
+extern "C" void rs64_floor_ownership(const char*, uint32_t, uint32_t, uint32_t);
 extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
+    rs64_floor_ownership("malloc", ptr, req, ra);
     if (!s6063_on()) return;
     if (!ptr && req == 0x1000u) s6127_walk(req);
     if (ptr && req == 0x1000u) { static int k1 = 0; if (k1++ < 40) { s6127_walk(req, true); uint8_t* r = g_s6127_rd; std::fprintf(stderr, "[heaplog-1000ok] flags=%X -> %08X slot100=%08X slotE8=%08X slot104=%08X\n", g_s6127_flags, ptr, r?s5042_rd(r,0x10FF00u):0xFFFFFFFFu, r?s5042_rd(r,0x10FF18u):0xFFFFFFFFu, r?s5042_rd(r,0x10FEFCu):0xFFFFFFFFu); } }
@@ -2559,6 +2561,7 @@ extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
     }
 }
 extern "C" void rs64_s6063_free(uint32_t ptr) {
+    rs64_floor_ownership("free", ptr, 0, 0);
     if (!s6063_on() || !ptr) return;
     auto it = s_s6063_live.find(ptr); if (it == s_s6063_live.end()) return;
     s_s6063_bytes -= it->second; s_s6063_live.erase(it);
@@ -3441,6 +3444,7 @@ extern "C" void rs64FloorWriterRecord(const char*, uint32_t, uint32_t, uint32_t,
                                         uint32_t, uint32_t, uint32_t, const char*, const char*);
 namespace {
 constexpr uint32_t kFloorWriterTarget = 0x00BB0020u;
+constexpr uint32_t kFloorWriterOther[] = {0x00BB6020u, 0x00BB5FDEu, 0x00BB67DEu};
 constexpr uint32_t kFloorWriterControl = 0x01FF0020u;
 bool floorWriterOn() {
     static const bool on = std::getenv("ROGUESQ_FLOOR_DEPTH_DIR") != nullptr;
@@ -3453,7 +3457,7 @@ uint32_t floorWriterWord(uint32_t p) {
     return w;
 }
 uint32_t floorWriterHit(uint32_t p, uint32_t len) {
-    for (uint32_t t : {kFloorWriterTarget, kFloorWriterControl})
+    for (uint32_t t : {kFloorWriterTarget, kFloorWriterControl, kFloorWriterOther[0], kFloorWriterOther[1], kFloorWriterOther[2]})
         if (p < t + 4u && uint64_t(p) + len > t) return t;
     return 0;
 }
@@ -3479,8 +3483,86 @@ void floorWriterGuest(char width, uint32_t pc, uint32_t addr) {
     if (target) floorGuest = {pc, p, len, target, floorWriterWord(target), 0, "scalar", {}};
 }
 }
+extern "C" void rs64_floor_ownership(const char* kind, uint32_t ptr, uint32_t len, uint32_t pc) {
+    if (!floorWriterOn() || kind == nullptr) return;
+    const bool alloc = std::strcmp(kind, "malloc") == 0 || std::strcmp(kind, "free") == 0 ||
+        std::strcmp(kind, "free-entry") == 0;
+    if (alloc && (ptr < 0x80800000u || ptr >= 0x81000000u)) return;
+    const uint32_t phys = ptr & 0x1FFFFFFFu;
+    const bool image = std::strcmp(kind, "setzimg") == 0 || std::strcmp(kind, "setcimg") == 0;
+    if (image) {
+        if (phys < 0x100000u || phys >= 0x1000000u) return;
+        static std::atomic<uint64_t> prev{0};
+        const uint64_t key = (uint64_t(kind[3]) << 32) | phys;
+        if (prev.exchange(key) == key) return;
+    }
+    auto rd = [](uint32_t a) { return floorWriterWord(a & 0x1FFFFFFFu); };
+    std::string detail;
+    char buf[512];
+    for (uint32_t a = 0x801163D8u; a <= 0x801163F8u; a += 4) {
+        std::snprintf(buf, sizeof buf, "%08X=%08X;", a, rd(a)); detail += buf;
+    }
+    for (uint32_t a : {0x8011A838u, 0x8011A83Cu, 0x8010FEFCu}) {
+        std::snprintf(buf, sizeof buf, "%08X=%08X;", a, rd(a)); detail += buf;
+    }
+    const bool bytes = alloc || std::strcmp(kind, "clear") == 0 || std::strncmp(kind, "depth-read", 10) == 0;
+    if (bytes) {
+        const uint64_t end = uint64_t(phys) + len;
+        for (uint32_t w : {0x00BB0020u, 0x00BB5FDEu, 0x00BB6020u, 0x00BB67DEu}) {
+            std::snprintf(buf, sizeof buf, "cover%08X=%d;", w, phys <= w && end > w); detail += buf;
+        }
+    }
+    const bool heavy = alloc || std::strcmp(kind, "clear") == 0 || std::strcmp(kind, "metadata") == 0;
+    if (heavy) {
+        if (ptr >= 0x80000010u && ptr < 0x81000000u) {
+            std::snprintf(buf, sizeof buf, "ptr-header=%08X/%08X/%08X/%08X;", rd(ptr-16), rd(ptr-12), rd(ptr-8), rd(ptr-4)); detail += buf;
+        }
+        uint32_t desc = rd(0x8010FCB0u);
+        if (desc >= 0x80000000u && desc < 0x81000000u - 0x48u) {
+            for (uint32_t off : {0x18u, 0x24u, 0x28u, 0x2Cu, 0x30u, 0x34u, 0x38u, 0x44u}) {
+                std::snprintf(buf, sizeof buf, "desc+%02X=%08X;", off, rd(desc + off)); detail += buf;
+            }
+        }
+        static const uint32_t kWatchGuest[] = {0x80BB0020u, 0x80BB5FDEu, 0x80BB6020u, 0x80BB67DEu};
+        for (uint32_t slot : {0x8010FEFCu, 0x8010FF00u, 0x8010FF18u}) {
+            uint32_t a = rd(slot), end = 0; unsigned count = 0;
+            while (a >= 0x80000000u && a < 0x81000000u - 16u && count < 4096u) {
+                ++count;
+                uint32_t w = rd(a), size = rd(a + 4), fl = w >> 16;
+                if (size > 0x1000000u || uint64_t(a) + 16 + size > 0x81000000u) break;
+                end = a + 16 + size;
+                bool hit = ptr >= a && ptr < end;
+                if (!hit) for (uint32_t g : kWatchGuest) if (a <= g && end > g) hit = true;
+                if (hit) {
+                    std::snprintf(buf, sizeof buf, "heap%08X:block=%08X,size=%08X,flags=%04X,tag=%04X;", slot, a, size, fl, w & 0xFFFFu);
+                    detail += buf;
+                }
+                if (fl & 8u || size == 0) break;
+                a = end;
+            }
+            std::snprintf(buf, sizeof buf, "heap%08X:head=%08X,end=%08X,n=%u%s;", slot, rd(slot), end, count,
+                count >= 4096u ? ",trunc=1" : ""); detail += buf;
+        }
+        if (alloc) {
+            void* bt[10]; int n = backtrace(bt, 10);
+            for (int i = 1; i < n; ++i) {
+                Dl_info info{}; dladdr(bt[i], &info);
+                const char* name = info.dli_sname ? info.dli_sname : "?";
+                std::snprintf(buf, sizeof buf, "%s+%llu;", name,
+                    (unsigned long long)((uintptr_t)bt[i] - (uintptr_t)info.dli_saddr));
+                for (char* c = buf; *c; ++c) if (*c == '"' || *c == '\n' || *c == '\\') *c = '_';
+                detail += buf;
+            }
+        }
+    }
+    rs64FloorWriterRecord("ownership", pc, phys, len, kFloorWriterTarget,
+        rd(0x801163E4u), rd(0x801163DCu), kind, detail.c_str());
+}
 extern "C" void rs64_floor_writer_post(char, uint32_t pc, uint32_t addr) {
     if (!floorWriterOn()) return;
+    const uint32_t p = addr & 0x1FFFFFFFu;
+    if ((p >= 0x1163D8u && p <= 0x1163F8u) || p == 0x10FEFCu || p == 0x10FF00u || p == 0x10FF18u)
+        rs64_floor_ownership("metadata", addr, 4, pc);
     if (floorGuest.target && floorGuest.pc == pc && floorGuest.p == (addr & 0x1FFFFFFFu))
         floorWriterFinish(floorGuest, "guest-exact");
 }
@@ -3491,6 +3573,7 @@ extern "C" void rs64_floor_writer_context(uint32_t pc, uint32_t ra,
     std::snprintf(args, sizeof args, "dst=%08X fill=%08X len=%08X ra=%08X callsite=%08X;",
         dst, fill, len, ra, callsite);
     floorGuest.caller = args;
+    rs64_floor_ownership("clear", dst, len, pc);
     void* bt[10];
     const int n = backtrace(bt, 10);
     for (int i = 1; i < n; ++i) {
