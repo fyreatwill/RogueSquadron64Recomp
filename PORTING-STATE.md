@@ -172302,3 +172302,56 @@ level-select floor loses to. No rendering fix or default change.
 - Evidence (local, gitignored): scratch/agent/s6625_depth/depth_verdict.json.
   Runner: tools/g1d_floor_depth.py.
 Next unit: compare the guest depth words at that upload to the GPU columns.
+
+## Session 6626 (2026-10-28) — 21:9 depth stripe is already in the guest depth words
+
+HYPOTHESIS-ID: g1d-levelselect-upload
+Outcome: ADVANCED. The copyFromChanges upload selects H-guest and refutes
+H-upload. No rendering fix or default change.
+
+- Read CURRENT-TRUTH, NEXT and the soak tail in order. CURRENT-TRUTH was
+  55,684 bytes, so maintenance did not trigger. Soak tail still ends at
+  s6580; nothing new to fold. No game was already running. Screen was
+  unlocked (the runner asserts CGSSessionScreenIsLocked before each arm).
+- One Debug binary. Before each depth copyFromChanges and copyFromTarget
+  of width 796 or 1024, the call site is tagged (state.cpp:2570,
+  state.cpp:2604, workload_queue.cpp:949, workload_queue.cpp:966,
+  framebuffer_manager.cpp:345). copyFromChanges also logs the guest depth
+  words at x=16 and x=width-17, y=180..250, decoded with
+  ColorConverter::D16::toF, the same scale as fbChangesDrawDepth. The s6625
+  GPU column readback stays on that call. tools/g1d_floor_depth.py
+  --selftest and tools/g1d_floor_attachment.py --selftest passed.
+  lib/rt64 changes exported with submodule-patches/export.sh.
+- Both arms, phase-gated route, SIGKILL after tex+dump. 16:9 35.5 s and
+  21:9 33.5 s, 52 good frames each, alive, 0 crash markers. Classifier
+  selects H-guest with an empty control-failure list.
+- 21:9 floor depth texture 1024x339, guest address 0x00B56000. setup logs
+  create-clear 1.0. clearDepthTarget reads back 1.0 on both columns
+  (142/142). The next event is one full-rect copyFromChanges at
+  state.cpp:2604, scissor (0,0)-(1024,339), stride 2048, rowStart 0,
+  lookup address equal to the store address. Shader-endian guest words
+  match the GPU columns on all 142 samples, max abs 0. The head is
+  literal 0x0000: x=16 for y=180..192 (13 words) and x=1007 for y=180..191
+  (12 words). 0x0000 is not the RDP clear. Later rows of the same columns
+  include 0xFFFC (decodes to 1.0) and words such as 0x9E40 (~0.967).
+  floor-enter frame 1331 phase 4 matches that image with max abs 0.
+  workload_queue.cpp:966 and framebuffer_manager.cpp:345 did not run.
+  A different 1024x480 texture still reads back as all zeros on its first
+  enter; that is not this address and not this texture.
+- 16:9 floor depth texture 796x339: no copyFromChanges and no guest
+  attachment. One copyFromTarget at state.cpp:2570. floor-enter is all
+  1.0. shader_11 sample 11 stores z 0.99416..0.99574 (63 pixels; later
+  samples cover all 142). Magenta is (1, 0, 1) at the control pixel.
+  pix-match passes on both widths. Overflow 0.
+- This refutes H-upload: the boolean mask, the viewport, and
+  fbChangesDrawDepth did not create the stripe. The guest field already
+  is the stripe. This also refutes the color-width stride lead on this
+  call: the logged stride is 2048, which is 1024*2, and the two addresses
+  match. The s6625 sentence that x=16 is a smooth 0.964 ramp while
+  x=1007 stays 1.0 does not match that run's own columns; both columns
+  interleave ~0.96 and 1.0 after the shared exact-0 head. The stable
+  signature is the 0x0000 head, not a one-sided ramp.
+- Evidence (local, gitignored): scratch/agent/s6626_guest/depth_verdict.json.
+  Runner: tools/g1d_floor_depth.py.
+Next unit: name the copyToRAM writer of the 0x0000 words at 0x00B56000,
+or show that host writeback never covers them.

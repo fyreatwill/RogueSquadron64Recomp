@@ -267,11 +267,14 @@ def load_arm(root, tag, width):
     shader = shader_controls(root / tag / 'shader')
     floor = next((ev for ev in events if ev['kind'] == 'floor-enter' and ev['sample'] >= 0), None)
     hist_enter = pix['samples'][floor['sample']] if floor is not None else None
+    guest_path = depth / 'history.guest'
+    guest = load_guest(guest_path, pix['nsample']) if guest_path.exists() else None
     arm = dict(
         events=events, samples=pix['samples'], z=zs, width=width,
         magenta=shader['magenta'], floor_store=shader['floor_store'],
         pix_match=pix_match(hist_enter, shader['enter']),
         overflow=meta.get('overflow', 0), meta=meta, serial=shader['serial'],
+        guest=guest,
     )
     arm['table'] = classify(arm)
     text = (root / tag / 'run.log').read_text(errors='replace') if (root / tag / 'run.log').exists() else ''
@@ -288,8 +291,211 @@ def public_event(ev):
     if ev is None:
         return None
     keys = ('kind', 'frame', 'pair', 'phase', 'depth', 'colorW', 'depthW', 'x0', 'y0', 'x1', 'y1',
-            'zCmp', 'zUpd', 'depthCmp', 'depthWr', 'faces', 'sample', 'captureZ', 'whole')
+            'zCmp', 'zUpd', 'depthCmp', 'depthWr', 'faces', 'sample', 'captureZ', 'whole',
+            'site', 'rowStart', 'stride', 'guestAddr', 'storeAddr', 'guestCovers', 'guest')
     return {k: ev[k] for k in keys if k in ev}
+
+
+GUEST_REC = 32 + 48 + 142 * 4 * 2 + 142 * 2 * 2
+GUEST_MAGIC = 0x66346627
+
+
+def load_guest(path, nsample):
+    data = path.read_bytes()
+    magic, n = struct.unpack_from('<2I', data)
+    assert magic == GUEST_MAGIC and n == nsample, (path, magic, n, nsample)
+    assert len(data) == 8 + nsample * GUEST_REC, (path, len(data), nsample, GUEST_REC)
+    rows = []
+    for s in range(nsample):
+        base = 8 + s * GUEST_REC
+        present, width, height, row_start, stride, address, store_addr, covers = struct.unpack_from('<8I', data, base)
+        site = data[base + 32:base + 80].split(b'\0', 1)[0].decode()
+        dec = list(struct.unpack_from('<142f', data, base + 80))
+        alt = list(struct.unpack_from('<142f', data, base + 80 + 568))
+        rows.append(dict(present=present, site=site, width=width, height=height, rowStart=row_start,
+                         stride=stride, address=address, storeAddr=store_addr, covers=covers,
+                         dec=dec, alt=alt))
+    return rows
+
+
+def flat_mae(dec, sample):
+    errs = []
+    for col in (0, 1):
+        for y in range(71):
+            g = dec[col * 71 + y]
+            if g < 0:
+                continue
+            errs.append(abs(g - sample[(col, y)][4]))
+    if not errs:
+        return None, 0
+    return max(errs), len(errs)
+
+
+def as_depth_sample(dec):
+    sample = {}
+    for col in (0, 1):
+        for y in range(71):
+            z = dec[col * 71 + y]
+            sample[(col, y)] = (0.0, 0.0, 0.0, 1.0, -1.0 if z < 0 else z)
+    return sample
+
+
+def is_guest_stripe(dec):
+    return is_stripe(as_depth_sample(dec))
+
+
+def is_clear_dec(dec):
+    vals = [z for z in dec if z >= 0]
+    return len(vals) >= 60 and all(abs(z - 1.0) < 1e-3 for z in vals)
+
+
+def is_smooth_dec(dec):
+    if is_clear_dec(dec) or is_guest_stripe(dec):
+        return False
+    for col in (0, 1):
+        colv = [dec[col * 71 + y] for y in range(71)]
+        if any(v < 0 for v in colv):
+            return False
+        if sum(abs(v) < 1e-6 for v in colv[:13]) >= 8:
+            return False
+        second = [abs(colv[i + 2] - 2 * colv[i + 1] + colv[i]) for i in range(69)]
+        if not second or max(second) > 0.02:
+            return False
+    return True
+
+
+def best_decode(guest, sample):
+    ranked = []
+    for name, dec in (('be', guest['dec']), ('le', guest['alt'])):
+        worst, n = flat_mae(dec, sample)
+        ranked.append((1e9 if worst is None else worst, name, dec, n))
+    ranked.sort(key=lambda row: row[0])
+    return ranked[0]
+
+
+def differ_span(dec, sample):
+    rows = []
+    for y in range(71):
+        for col in (0, 1):
+            g = dec[col * 71 + y]
+            if g < 0:
+                continue
+            if abs(g - sample[(col, y)][4]) > 0.02:
+                rows.append(180 + y)
+                break
+    if not rows:
+        return None
+    return [rows[0], rows[-1]]
+
+
+def name_input(ev, dec, sample):
+    notes = []
+    width = ev.get('depthW') or ev.get('colorW') or 0
+    if ev.get('stride') and width and ev['stride'] != width * 2:
+        notes.append('stride')
+    if ev.get('storeAddr') and ev.get('guestAddr') and ev['storeAddr'] != ev['guestAddr']:
+        notes.append('lookup-addr')
+    best_shift, best = 0, 1e9
+    for shift in range(-20, 21):
+        err = []
+        for col in (0, 1):
+            for y in range(71):
+                ys = y + shift
+                if ys < 0 or ys >= 71:
+                    continue
+                g = dec[col * 71 + ys]
+                if g < 0:
+                    continue
+                err.append(abs(g - sample[(col, y)][4]))
+        if len(err) >= 40:
+            worst = max(err)
+            if worst < best:
+                best, best_shift = worst, shift
+    if best_shift != 0 and best <= 1e-3:
+        notes.append('viewport-shift-%d' % best_shift)
+    else:
+        # A boolean discard keeps the cleared 1.0. It cannot paint the zeros.
+        notes.append('pixel-texture')
+    return notes, best_shift, best
+
+
+def guest_of(arm, ev):
+    if ev is None or ev.get('sample', -1) < 0 or not ev.get('guest'):
+        return None
+    guests = arm.get('guest')
+    if not guests or ev['sample'] >= len(guests):
+        return None
+    rec = guests[ev['sample']]
+    if not rec or not rec.get('present'):
+        return None
+    return rec
+
+
+def floor_guest_copies(arm):
+    floor = arm['table'].get('floor')
+    if floor is None:
+        return []
+    out = []
+    for ev in arm['events']:
+        if ev.get('kind') == 'copy-changes' and ev.get('depth') == floor.get('depth') and ev.get('guest') == 1:
+            out.append(ev)
+    return out
+
+
+def decide_upload(wide16, wide21):
+    bad = list(controls(wide16, wide21))
+    detail = {}
+    if wide16.get('guest') is None or wide21.get('guest') is None:
+        bad.append('guest-file')
+    if bad:
+        return 'H-witness', bad, detail
+    for ev in floor_guest_copies(wide16):
+        rec = guest_of(wide16, ev)
+        if rec is None or rec.get('covers', 0) < 60:
+            bad.append('wide16-guest')
+            break
+        sample = wide16['samples'][ev['sample']]
+        worst, _name, _dec, n = best_decode(rec, sample)
+        if n < 60 or worst > 1e-3 or not all_ones(sample):
+            bad.append('wide16-guest')
+            break
+    if bad:
+        return 'H-witness', bad, detail
+    writer = wide21['table'].get('stripe_writer')
+    if writer is None or writer.get('kind') != 'copy-changes':
+        return 'H-witness', ['no-stripe-upload'], detail
+    rec = guest_of(wide21, writer)
+    if rec is None or rec.get('covers', 0) < 60:
+        return 'H-witness', ['guest-missing'], detail
+    gpu = wide21['samples'][writer['sample']]
+    if not is_stripe(gpu):
+        return 'H-witness', ['upload-not-stripe'], detail
+    worst, endian, dec, n = best_decode(rec, gpu)
+    detail = dict(
+        site=writer.get('site') or rec.get('site'),
+        stride=writer.get('stride', rec.get('stride')),
+        guestAddr=writer.get('guestAddr', rec.get('address')),
+        storeAddr=writer.get('storeAddr', rec.get('storeAddr')),
+        rowStart=writer.get('rowStart', rec.get('rowStart')),
+        covers=rec.get('covers'),
+        endian=endian, mae=worst, npix=n,
+        guest_stripe=is_guest_stripe(dec),
+        guest_clear=is_clear_dec(rec['dec']),
+        guest_smooth=is_smooth_dec(rec['dec']),
+    )
+    if n < 60:
+        return 'H-witness', ['guest-short'], detail
+    if worst <= 1e-3 and is_guest_stripe(dec):
+        detail['input'] = 'faithful'
+        return 'H-guest', [], detail
+    if is_clear_dec(rec['dec']) or is_smooth_dec(rec['dec']) or is_guest_stripe(rec['dec']):
+        notes, shift, shift_mae = name_input(writer, rec['dec'], gpu)
+        detail['input'] = notes
+        detail['shift'] = shift
+        detail['shift_mae'] = shift_mae
+        detail['rows'] = differ_span(rec['dec'], gpu)
+        return 'H-upload', [], detail
+    return 'H-witness', ['decode-unrecognized'], detail
 
 
 def blank(color, depth, n=71):
@@ -379,6 +585,48 @@ def selftest():
     mixed['table'] = classify(mixed)
     assert mixed['table']['zero_writer'] is None and mixed['table']['mid_writer']['kind'] == 'tri', mixed['table']
     assert decide(wide16, mixed)[0] == 'H-prior-stripe'
+
+    def dec_from(fn):
+        out = [-1.0] * 142
+        for col in (0, 1):
+            for y in range(71):
+                out[col * 71 + y] = fn(col, y)
+        return out
+
+    def grec(dec, alt=None):
+        return dict(present=1, site='state.cpp:2604', covers=71, stride=2048, address=1, storeAddr=1,
+                    rowStart=0, width=1024, height=339, dec=dec, alt=dec if alt is None else alt)
+
+    ramp = lambda col, y: 0.0 if y < 13 else (0.964 if col == 0 else 1.0)
+    ramp_dec = dec_from(ramp)
+    gpu_ramp = blank(0.2, ramp)
+    w16 = dict(wide16, guest=[])
+    upload = ev('copy-changes', 1, guest=1, site='state.cpp:2604', stride=2048, guestAddr=1, storeAddr=1, depth='0xfloor')
+    floor_u = ev('floor-enter', 2, depth='0xfloor', zCmp=0, zUpd=0, depthWr=0, captureZ=0)
+    guest_arm = dict(base_arm, events=[setup, clear, upload, floor_u], samples=[one, gpu_ramp, gpu_ramp],
+                     z=[[(0, 0, 0, 0)] * 142] * 3, guest=[None, grec(ramp_dec), None])
+    guest_arm['table'] = classify(guest_arm)
+    assert decide_upload(w16, guest_arm)[0] == 'H-guest', decide_upload(w16, guest_arm)
+    clear_guest = dict(guest_arm, guest=[None, grec(dec_from(lambda col, y: 1.0)), None])
+    clear_guest['table'] = guest_arm['table']
+    got = decide_upload(w16, clear_guest)
+    assert got[0] == 'H-upload' and 'pixel-texture' in got[2]['input'], got
+    stride_guest = dict(clear_guest, events=[setup, clear, ev('copy-changes', 1, guest=1, site='state.cpp:2604', stride=1280, guestAddr=1, storeAddr=9, depth='0xfloor'), floor_u])
+    stride_guest['table'] = classify(stride_guest)
+    got = decide_upload(w16, stride_guest)
+    assert got[0] == 'H-upload' and 'stride' in got[2]['input'] and 'lookup-addr' in got[2]['input'], got
+    le_guest = dict(guest_arm, guest=[None, grec(dec_from(lambda col, y: 0.2), ramp_dec), None])
+    le_guest['table'] = guest_arm['table']
+    got = decide_upload(w16, le_guest)
+    assert got[0] == 'H-guest' and got[2]['endian'] == 'le', got
+    bare = dict(guest_arm, events=[setup, clear, ev('copy-changes', 1, guest=0, depth='0xfloor'), floor_u], guest=[None, None, None])
+    bare['table'] = classify(bare)
+    assert decide_upload(w16, bare)[1] == ['guest-missing']
+    noise = dec_from(lambda col, y: 0.2 if y % 2 == 0 else 0.55)
+    noisy = dict(guest_arm, guest=[None, grec(noise, noise), None])
+    noisy['table'] = guest_arm['table']
+    assert decide_upload(w16, noisy)[0] == 'H-witness'
+    assert decide_upload(dict(w16, guest=None), guest_arm)[1] == ['guest-file']
     print('selftest ok', flush=True)
 
 
@@ -387,7 +635,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--selftest', action='store_true')
     ap.add_argument('--analyze', action='store_true')
-    ap.add_argument('--output-root', type=Path, default=Path('scratch/agent/s6625_depth'))
+    ap.add_argument('--output-root', type=Path, default=Path('scratch/agent/s6626_guest'))
     args = ap.parse_args()
     if args.selftest:
         selftest()
@@ -404,9 +652,9 @@ def main():
     arms = {}
     for tag, width in (('wide16', 796), ('wide21', 1024)):
         arms[tag] = load_arm(root, tag, width)
-    verdict, why = decide(arms['wide16'], arms['wide21'])
+    verdict, why, detail = decide_upload(arms['wide16'], arms['wide21'])
     result = dict(
-        selects=verdict, why=why,
+        selects=verdict, why=why, upload=detail,
         arms={tag: dict(
             table={k: public_event(v) if k.endswith('writer') or k == 'floor' else v
                    for k, v in arm['table'].items()},
@@ -421,9 +669,8 @@ def main():
         for key in ('zero_writer', 'mid_writer', 'stripe_writer', 'writer', 'floor'):
             result['arms'][tag]['table'][key] = public_event(table[key])
     (root / 'depth_verdict.json').write_text(json.dumps(result, indent=2) + '\n')
-    print(json.dumps(dict(selects=verdict, why=why,
-                          wide21=result['arms']['wide21']['table'].get('writer'),
-                          zeros=result['arms']['wide21']['table'].get('zero_writer'),
+    print(json.dumps(dict(selects=verdict, why=why, upload=detail,
+                          wide21=result['arms']['wide21']['table'].get('stripe_writer'),
                           smooth=arms['wide21']['table']['smooth'],
                           pitch=arms['wide21']['table']['pitch'])), flush=True)
 
