@@ -3484,6 +3484,203 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
 // walker of the DPC range never locked onto a command (0 sane of thousands).
 extern "C" void rs64_vi_fb_wh(uint32_t *out_w, uint32_t *out_h);
 
+// The bbox rs64_floor_note stores is not coverage: a triangle does not
+// fill its box. These spans use the same edge walk as the x=0 test
+// (XH at floor(YH), XL at YM). Only op 0x0F tile 0 line 4, scanlines
+// 180..250, outer thirds. A second accumulator is never cleared on a
+// VI-origin change, so a per-frame split cannot hide a hole.
+struct Rs64CovAcc {
+    uint32_t bits[71][32];
+    uint32_t tris = 0, x0 = 0, reject = 0;
+};
+static Rs64CovAcc s_cov_frame, s_cov_union;
+static uint32_t s_cov_w = 0, s_cov_origin = 0xFFFFFFFFu, s_cov_frames = 0;
+static int s_cov_origin_set = 0;
+static float s_scx0 = 0, s_scy0 = 0, s_scx1 = 0, s_scy1 = 0;
+
+static int rs64_cov_bit(const Rs64CovAcc &a, int row, int x) {
+    return (a.bits[row][x >> 5] >> (x & 31)) & 1;
+}
+
+static void rs64_floor_cover_emit(const char *why, const Rs64CovAcc &a) {
+    if (!s_cov_w || !a.tris) return;
+    const int w = (int)s_cov_w;
+    const int L = w / 3;
+    const int R = (2 * w) / 3;
+    const int segs[2][2] = {{0, L}, {R, w}};
+    int covered = 0, total = 0, hole_rows = 0, rect_gap_rows = 0;
+    int hull_px = 0, hull_cov = 0, rows_hull = 0;
+    int max_hole = 0, max_gap = 0, left_holes = 0, right_holes = 0;
+    for (int row = 0; row < 71; row++) {
+        int row_hole = 0, row_gap = 0;
+        for (int s = 0; s < 2; s++) {
+            const int a0 = segs[s][0], b0 = segs[s][1];
+            if (b0 <= a0) continue;
+            total += b0 - a0;
+            int first = -1, last = -1, cov = 0, run = 0, gap = 0;
+            for (int x = a0; x < b0; x++) {
+                if (rs64_cov_bit(a, row, x)) {
+                    if (first < 0) first = x;
+                    last = x;
+                    cov++;
+                    if (run > max_gap) max_gap = run;
+                    if (run > 2) gap = 1;
+                    run = 0;
+                } else {
+                    run++;
+                }
+            }
+            if (run > max_gap) max_gap = run;
+            if (run > 2) gap = 1;
+            covered += cov;
+            if (gap) row_gap = 1;
+            if (first >= 0 && last >= first) {
+                rows_hull++;
+                hull_px += last - first + 1;
+                int hrun = 0, hole = 0, hcov = 0;
+                for (int x = first; x <= last; x++) {
+                    if (rs64_cov_bit(a, row, x)) {
+                        hcov++;
+                        if (hrun > max_hole) max_hole = hrun;
+                        if (hrun > 2) hole = 1;
+                        hrun = 0;
+                    } else {
+                        hrun++;
+                    }
+                }
+                hull_cov += hcov;
+                if (hole) {
+                    row_hole = 1;
+                    if (s == 0) left_holes++; else right_holes++;
+                }
+            }
+        }
+        if (row_hole) hole_rows++;
+        if (row_gap) rect_gap_rows++;
+    }
+    const double rect_frac = total ? (double)covered / (double)total : 0;
+    const double hull_frac = hull_px ? (double)hull_cov / (double)hull_px : 0;
+    const double mean_hull = rows_hull ? (double)hull_px / (double)rows_hull : 0;
+    fprintf(stderr,
+            "[floor-cov] why=%s w=%u tris=%u frames_closed=%u x0spans=%u reject=%u "
+            "rect_frac=%.4f rect_gap_rows=%d max_gap=%d "
+            "hull_frac=%.4f hole_rows=%d left_holes=%d right_holes=%d max_hole=%d "
+            "hull_rows=%d mean_hull=%.1f scissor=%.1f,%.1f,%.1f,%.1f\n",
+            why, s_cov_w, a.tris, s_cov_frames, a.x0, a.reject,
+            rect_frac, rect_gap_rows, max_gap,
+            hull_frac, hole_rows, left_holes, right_holes, max_hole,
+            rows_hull, mean_hull, s_scx0, s_scy0, s_scx1, s_scy1);
+    fflush(stderr);
+}
+
+static void rs64_cov_clear(Rs64CovAcc &a) {
+    memset(a.bits, 0, sizeof(a.bits));
+    a.tris = a.x0 = a.reject = 0;
+}
+
+extern "C" void rs64_floor_cover(
+    uint32_t op, uint32_t tile, uint32_t line,
+    float y_floor, float ym,
+    float xh, float dxhdy, float xm, float dxmdy, float xl, float dxldy,
+    float yh, float yl,
+    float scx0, float scy0, float scx1, float scy1) {
+    static const bool on = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_FLOOR");
+        return e && *e && *e != '0';
+    }();
+    if (!on || op != 0x0Fu || tile != 0u || line != 4u) return;
+    uint32_t vw = 0, vh = 0;
+    rs64_vi_fb_wh(&vw, &vh);
+    const bool gate = (vh >= 320 && vh <= 352) && (vw == 796 || vw == 1024);
+    if (!gate) return;
+    if (s_cov_w && s_cov_w != vw) {
+        rs64_floor_cover_emit("width-frame", s_cov_frame);
+        rs64_floor_cover_emit("width-union", s_cov_union);
+        rs64_cov_clear(s_cov_frame);
+        rs64_cov_clear(s_cov_union);
+        s_cov_frames = 0;
+        s_cov_origin_set = 0;
+    }
+    s_cov_w = vw;
+    const uint32_t origin = rs64_vi_committed_origin();
+    if (!s_cov_origin_set) {
+        s_cov_origin = origin;
+        s_cov_origin_set = 1;
+    } else if (origin != s_cov_origin) {
+        if (s_cov_frame.tris) {
+            rs64_floor_cover_emit("frame", s_cov_frame);
+            s_cov_frames++;
+            if (s_cov_frames == 1 || s_cov_frames == 2 || (s_cov_frames % 30u) == 0u)
+                rs64_floor_cover_emit("union", s_cov_union);
+        }
+        rs64_cov_clear(s_cov_frame);
+        s_cov_origin = origin;
+    }
+    if (!std::isfinite(y_floor) || !std::isfinite(ym) || !std::isfinite(xh) || !std::isfinite(dxhdy) ||
+        !std::isfinite(xm) || !std::isfinite(dxmdy) || !std::isfinite(xl) || !std::isfinite(dxldy) ||
+        !std::isfinite(yh) || !std::isfinite(yl)) {
+        s_cov_frame.reject++;
+        s_cov_union.reject++;
+        return;
+    }
+    s_scx0 = scx0; s_scy0 = scy0; s_scx1 = scx1; s_scy1 = scy1;
+    float y_lo = yh < yl ? yh : yl;
+    float y_hi = yh > yl ? yh : yl;
+    if (scy1 > scy0) {
+        if (scy0 > y_lo) y_lo = scy0;
+        if (scy1 < y_hi) y_hi = scy1;
+    }
+    const float x_lo_sc = (scx1 > scx0) ? scx0 : -1.0e9f;
+    const float x_hi_sc = (scx1 > scx0) ? scx1 : 1.0e9f;
+    const int w = (int)vw;
+    const int L = w / 3;
+    const int R = (2 * w) / 3;
+    int painted = 0, hit_x0 = 0, insane = 0;
+    for (int s = 180; s <= 250; s++) {
+        const float y = (float)s + 0.5f;
+        if (y < y_lo || y > y_hi) continue;
+        const float dy = y - y_floor;
+        const float x_major = xh + dxhdy * dy;
+        const float x_other = (y <= ym) ? (xm + dxmdy * dy) : (xl + dxldy * (y - ym));
+        if (!std::isfinite(x_major) || !std::isfinite(x_other)) { insane = 1; continue; }
+        float xa = x_major < x_other ? x_major : x_other;
+        float xb = x_major > x_other ? x_major : x_other;
+        if (xa < x_lo_sc) xa = x_lo_sc;
+        if (xb > x_hi_sc) xb = x_hi_sc;
+        if (!(xb > xa) || xb - xa > 8000.f) { if (xb - xa > 8000.f) insane = 1; continue; }
+        if (xa <= 0.f && xb >= 0.f) hit_x0 = 1;
+        int xa_i = (int)std::floor(xa);
+        int xb_i = (int)std::ceil(xb);
+        if (xa_i < 0) xa_i = 0;
+        if (xb_i > w) xb_i = w;
+        auto paint = [&](Rs64CovAcc &acc, int lo, int hi) {
+            const int row = s - 180;
+            for (int x = lo; x < hi; x++) acc.bits[row][x >> 5] |= 1u << (x & 31);
+        };
+        int nlo = 0, nhi = 0;
+        if (xa_i < L && xb_i > 0) {
+            nlo = xa_i > 0 ? xa_i : 0;
+            nhi = xb_i < L ? xb_i : L;
+            if (nhi > nlo) { paint(s_cov_frame, nlo, nhi); paint(s_cov_union, nlo, nhi); painted += nhi - nlo; }
+        }
+        if (xa_i < w && xb_i > R) {
+            nlo = xa_i > R ? xa_i : R;
+            nhi = xb_i < w ? xb_i : w;
+            if (nhi > nlo) { paint(s_cov_frame, nlo, nhi); paint(s_cov_union, nlo, nhi); painted += nhi - nlo; }
+        }
+    }
+    if (insane) { s_cov_frame.reject++; s_cov_union.reject++; }
+    if (!painted) return;
+    s_cov_frame.tris++;
+    s_cov_union.tris++;
+    if (hit_x0) { s_cov_frame.x0++; s_cov_union.x0++; }
+    const uint32_t n = s_cov_frame.tris;
+    if (s_cov_frames == 0 && (n == 40u || n == 120u || n == 240u)) {
+        rs64_floor_cover_emit("open", s_cov_frame);
+        rs64_floor_cover_emit("union", s_cov_union);
+    }
+}
+
 // s6613: base S/T are the s15.16 coefficients decodeTriangles already
 // computed. S at screen x=0 is that base walked to the band scanline
 // (y in 180..250) and then across by dsdx. The texel is the same
@@ -3565,6 +3762,13 @@ extern "C" void rs64_floor_note(
     };
     if (was && !gate) {
         dump_rows("leave");
+        rs64_floor_cover_emit("leave-frame", s_cov_frame);
+        rs64_floor_cover_emit("leave-union", s_cov_union);
+        rs64_cov_clear(s_cov_frame);
+        rs64_cov_clear(s_cov_union);
+        s_cov_frames = 0;
+        s_cov_origin_set = 0;
+        s_cov_w = 0;
         nrows = 0; hits = 0; draws = 0; n_tri = n_rect = n_sane = 0; dumped = 0; raws = 0;
         n_in = n_out = n_cover_in = n_cover_out = 0;
     }

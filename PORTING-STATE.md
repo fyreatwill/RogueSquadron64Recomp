@@ -171692,3 +171692,35 @@ bytes are not established as display pixels. Runtime artifact origin is open.
   not another base-S log and not guest PC 80007904. No cull, no anchor
   change, no default change.
   ORIGIN: no mitigation.
+
+## Session 6614 (2026-10-28) — level-select floor covers both outer thirds
+
+- Maintenance check: CURRENT-TRUTH was 40,876 bytes, under 60,000. The soak
+  tail still ends at the s6580 dd4 holds. No new soak verdict. Screen
+  IOConsoleLocked was false. No other game was running.
+- One Debug binary, `ROGUESQ_LOG_FLOOR=1`, the s6613 route, 16:9 then 21:9,
+  SIGKILL. Both arms alive (rc -9), 0 crash lines. Dumps
+  `scratch/agent/s6614_cov/wide16/fbd/fb_0001400_w796.ppm` and
+  `scratch/agent/s6614_cov/wide21/fbd/fb_0001400_w1024.ppm`.
+- Coverage is the union of op 0x0F tile 0 line 4 edge spans on scanlines
+  180..250, outer thirds only. Spans use the same edge walk as the s6613
+  x=0 test (XH at floor(YH), XL at YM), clipped to the RDP scissor, and are
+  split on VI-origin changes. A phase-long union is logged beside them.
+- Positive control: the per-pixel mean |row-to-row luma| scorer returns
+  5.48 / 26.9 on the s6613 dumps and 8.32 / 25.4 on the s6612 dumps. This
+  run: 16:9 = 7.61, 21:9 = 26.08. 21:9 is above 18. The edge walker is not
+  painting every triangle full-width: x0spans is 6-23 on a typical frame
+  against 157-238 triangles.
+- Every closed frame is solid. 16:9: 44 frames, median 223 tris, hole_rows
+  0, rect_gap_rows 0, hull_frac 1, mean hull 265 (the whole third),
+  rect_frac 0.9981. 21:9: 26 frames, median 163 tris, the same zeros, mean
+  hull 341, rect_frac 0.9985. The uncovered fraction is about one pixel per
+  row, and no run is longer than 2 px. The phase union matches. Scissor is
+  0..795 and 0..1023, the full framebuffer.
+- This refutes missing coverage of those triangles, an edge walk that opens
+  a gap only at 21:9, and a scissor clip. The tear is inside covered pixels.
+  Next discriminator is the perspective-correct texel T at x=w/6 and x=5w/6
+  on those scanlines, and whether a non-floor triangle covers that point.
+  Not another base-S log and not another coverage union. No cull, no anchor
+  change, no default change.
+  ORIGIN: no mitigation.

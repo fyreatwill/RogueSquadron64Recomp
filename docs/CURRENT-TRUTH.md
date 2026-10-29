@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6613 (2026-10-28).
+Compact operational handoff, as of Session 6614 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -14,7 +14,19 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   first-mission endurance (3x600 s lvl1/5/7, s6442), and G2 audio are closed.
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
-- **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-frustum).**
+- **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-texel).**
+  - s6614: those floor triangles cover both outer thirds. One binary.
+    Edge spans (not bboxes) of op `0x0F` tile 0 line 4, scanlines
+    180..250, clipped to the scissor. Every closed frame is solid:
+    16:9 n=44 median 223 tris, 21:9 n=26 median 163 tris, hole_rows 0,
+    rect_gap_rows 0, hull_frac 1, mean hull equal to the third
+    (265 and 341). rect_frac 0.9981 / 0.9985 is about one uncovered
+    pixel per row, and no run is longer than 2 px. Scissor is the
+    full framebuffer (0..795 and 0..1023). x0spans stays 6-23 while
+    a frame has ~160-230 tris, so the walker is not painting every
+    triangle full-width. dy control 7.61 / 26.08. This refutes
+    missing coverage, an edge walk, and a scissor clip. The tear is
+    inside covered pixels. No patch. Evidence: `scratch/agent/s6614_cov/`.
   - s6613: S at screen x=0 is not a 21:9-only walk off the 64-wide mask.
     One binary, both arms. Perspective on, shift 0, uls 0, texel
     (S/W)*1024. 16/16 early-table triangles pair on base S and dtde.
@@ -222,7 +234,9 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   thirds (s6611). s6612 named the triangles (op 0x0F, line 4); their T
   derivative does not change with width. s6613: S at x=0 does not
   change either, and it is not outside the 64 mask only at 21:9.
-  The OS window remains 640x480, so wider modes letterbox.
+  s6614: the same triangles cover scanlines 180..250 in both outer
+  thirds with no gap above 2 px, on either width. The tear is inside
+  covered pixels. The OS window remains 640x480, so wider modes letterbox.
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
@@ -322,14 +336,13 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6613) The 21:9 floor tear is not an S walk-off.** Base S and the
-   texel at x=0 match across 796 and 1024. Do not patch, and do not
-   retune HUD anchor or shift. Next discriminator is coverage, not
-   another derivative and not guest PC `80007904`: on scanlines
-   180..250, the union of x intervals of the same op `0x0F` tile 0
-   line 4 triangles, both arms, one binary. If 21:9 has gap scanlines
-   in the outer third and 16:9 does not, the tear is missing coverage.
-   If both outer thirds are solidly covered, coverage is refuted.
+1. **(s6614) The 21:9 floor tear is inside covered pixels.** Op `0x0F`
+   tile 0 line 4 spans fill scanlines 180..250 in both outer thirds
+   (hole_rows 0/0, hull_frac 1, scissor is the framebuffer). Do not
+   patch, and do not log another base-S or another coverage union.
+   Next discriminator is the perspective-correct texel T at x=w/6 and
+   x=5w/6 on those scanlines, and whether a non-floor triangle covers
+   the same point. See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
