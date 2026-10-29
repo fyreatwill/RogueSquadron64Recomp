@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6641 (2026-10-29).
+Compact operational handoff, as of Session 6642 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -121,6 +121,18 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   0.08 floor, the 0.33 ceiling and the luma≥70 blue arm were not
   moved. Sheet remains `docs/g1_lvl8_flight_s6640.png`. Objective
   (d) was not run.
+- **G1 (c) level 9 flight framebuffer: frozen rule accepts it.**
+  s6642, one retail 4:3 capture, draw distance 1, aspect unset.
+  Selector B40=9, cursor=9. Thirteen phase-7 dumps, n=2350..2950,
+  are 512x444 at origin `0x00690400` (this run sampled the route
+  key; `0x620400` is in the VI log). Orange canyon, X-wing, radar,
+  reticle. 8/13 pass all four clauses. Not required: n=2350 craft
+  only (edge 0.019), n=2600 and n=2650 sky only (luma 74.8 and
+  56.9), n=2700 and n=2800 terrain only (rel 0.074 and 0.076).
+  Same-run title fails sky and terrain. Craft-select fails HUD
+  only (radar 0.001). Sheet `docs/g1_lvl9_flight_s6642.png`.
+  0 crashes in the 30 s hold. The classifier was not edited.
+  Objective (d) was not run.
 
 ## Superseded conclusions — do not act on these
 - s6640 "level 8 is a flight and no craft clause accepts it without breaking canon, so the rule stays 0/7" (s6641: lower-centre metal against a coloured neighbour, edge≥0.05, plus luma≥80 orange sky, accepts 6/7; n=2600 stays a side-view near-miss at edge 0.041; canon_bad 0; mission 11/13; title and craft-select still fail). Believable because the engine, bright-metal, reticle and median≥120 dark-hull arms all missed, and a raw grey fraction in the same box also matched the title.
@@ -225,7 +237,10 @@ phase-7 dumps (s6639); five sky misses (luma 46.3..60.1) and three
 terrain-ceiling misses (rel 0.332..0.359) are not required.
 Level 8 passes the dusk rule on 6/7 phase-7 dumps (s6641, offline
 on the s6640 capture). n=2600 remains a side-view craft near-miss
-at edge 0.041 and is not required. The s6641 arms are a superset
+at edge 0.041 and is not required. Level 9 passes the frozen rule
+on 8/13 phase-7 dumps (s6642, one capture). Not required: n=2350
+craft (edge 0.019), n=2600 and n=2650 sky (luma 74.8 and 56.9),
+n=2700 and n=2800 terrain (rel 0.074 and 0.076). The s6641 arms are a superset
 of the s6636/s6639 cuts, so a level 2–7 frame that already passed
 still passes. Those earlier pass counts were not re-opened.
 Verification still needs framebuffer
@@ -254,18 +269,20 @@ progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6641) Capture level 9 with the class rule frozen.**
+1. **(s6642) Capture level 10 with the class rule frozen.**
    Do not edit `tools/g1_flight_class.py`. Retail 4:3, draw distance
-   unset, aspect unset. Copy `scratch/agent/s6640_lvl8.sh` and set
-   `ROGUESQ_FORCE_UNLOCK=9` and `ROGUESQ_FORCE_SAVE_MISSION=9`.
-   Precontrol must print `canon_bad 0`. The screen must be unlocked.
-   Score the phase-7 dumps with the frozen tool. H-rule-holds: at
-   least one phase-7 frame passes all four clauses and the same-run
+   unset, aspect unset. Copy `scratch/agent/s6642_lvl9.sh` to
+   `scratch/agent/s6643_lvl10.sh`. Set `ROGUESQ_FORCE_UNLOCK=10`,
+   `ROGUESQ_FORCE_SAVE_MISSION=10`, and
+   `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF`. Raise the shell wall from
+   420 s to 720 s so a late onset still gets the 30 s hold. Precontrol
+   must print `canon_bad 0`. The screen must be unlocked. H-rule-holds:
+   at least one phase-7 frame passes all four clauses and the same-run
    title still fails overall. H-new-class: the sheet is a flight and
    every phase-7 frame fails; record the failing clause and do not
-   edit the tool in that session. H-no-picture: no post-hangar flight
-   dump. No heap, aim, draw-distance, aspect, or default change.
-   See NEXT.md.
+   edit the tool. H-no-picture: no post-hangar flight dump; record the
+   last VI origin and do not retune the route. No heap, aim,
+   draw-distance, aspect, or default change. See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

@@ -173194,3 +173194,55 @@ What this rules out: "no craft clause accepts a level-8 chase frame
 while canon_bad stays 0 and mission stays 11/13." What it does not
 show: that the edge term accepts the side-view frame, or that level 9
 passes the frozen rule.
+
+## Session 6642 (2026-10-29) — level 9 canyon flight passes the frozen class rule
+
+One retail 4:3 capture. No classifier edit, no heap edit, no aim, draw
+distance unset, aspect unset. Precontrol `python3 tools/g1_flight_class.py`
+printed canon_bad 0 and mission 11/13 before launch (oracle, level-2
+fb_0002700, and level-3 fb_0002700 pass; floor and the s6633 title
+fail). IOConsoleLocked was No. The route is scratch/agent/s6642_lvl9.sh,
+the s6640 script with FORCE_UNLOCK=9 and FORCE_SAVE_MISSION=9. The soak
+tail in scratch/agent/SOAK-RESULTS.md still ends at s6580 (2026-10-28);
+no new queued verdict to fold.
+
+scratch/agent/s6642_lvl9/keys.log: screen-unlocked, precontrol-ok, title
+t=15, hangar t=33, mission-onset t=81, hold-30s t=111, killed t=111,
+crash=0, abort=0. run.log echoes `[dd] ROGUESQ_DRAW_DISTANCE multiplier 1`,
+`[g1d-drop] aspect=<unset>`, `[lvsel] cursor=9`, and
+`[initMission] call#1 B40=0x09`. CRASH, abort, SIGSEGV and SIGBUS counts
+in that log are 0. Thirteen phase-7 dumps, n=2350..2950 step 50, are
+512x444 at origin `0x00690400` (fb=0x80620000). The other buffer
+`0x00620400` is in the VI origin census (16 lines) and was not the
+sampled buffer. Sheet `docs/g1_lvl9_flight_s6642.png` is frames 2400,
+2550, 2700 and 2900. The full phase-7 row plus the same-run title and
+craft-select is `s6642_lvl9_overview.png`. Scores are in
+`s6642_lvl9_score.txt`.
+
+The sheet is a flight. Orange sky, a rocky canyon, an X-wing, the round
+radar, a green reticle and the shield badge. The frozen rule scores
+8/13. n=2400, 2450, 2500, 2550, 2750, 2850, 2900 and 2950 pass sky,
+terrain, craft and HUD.
+
+Five are not required. n=2350 misses craft only (edge 0.019, pink
+0.566): a side view, the same family as level 8's n=2600 at edge 0.041.
+n=2600 and n=2650 miss sky only (luma 74.8 and 56.9, R-G 65.4 and
+50.2), under the luma>=80 orange floor, the same family as level 7's
+luma-46..60 sky misses. n=2700 and n=2800 miss terrain only (rel 0.074
+and 0.076). n=2700 is the dive into the canyon wall; the wall is in the
+picture and the relative-edge floor is 0.08. Sky, craft and HUD pass
+on both.
+
+Same-run title `fb_0000800_w512.ppm` is the title screen and fails sky
+and terrain (luma 83.7, R-G 31.2, rel 0.445). Craft-select
+`fb_0001700_w512.ppm`, origin `0x006AB400`, fails HUD only (radar
+0.001). The classifier was not edited. Objective (d) was not run.
+
+This selects H-rule-holds. It refutes H-new-class (8/13 pass) and
+H-no-picture (the sheet is a flight).
+ORIGIN: n/a (no mitigation).
+
+What this rules out: "level 9 produced no post-hangar flight picture"
+and "the frozen rule rejects every level-9 phase-7 frame." What it
+does not show: an objective-counter response, or that level 10 passes.
+Level 10 needs `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF`.
