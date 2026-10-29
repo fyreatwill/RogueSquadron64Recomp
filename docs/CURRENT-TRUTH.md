@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6628 (2026-10-29).
+Compact operational handoff, as of Session 6629 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,17 +15,26 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-ram).**
-  - s6628: paired live-RDRAM reads select H-between (single-source runtime
-    evidence). One Debug binary, 16:9 35.0 s / 21:9 33.5 s, 54/55 good
-    frames, alive, 0 crash markers; all controls pass. Last covering native
-    write n=3499 is rawBe `0x9EC4`; site A n=3500 reads that same value
-    after the byteswap and at function exit, freelist restore off. Site B
-    n=3501 reads `00000000` before depth storage. Both point at
-    `0x300bb0020`, base `0x300000000`, eq=1. Upload n=3502 has 13 zero
-    head words and guest/GPU MAE 0. This narrows the writer to between the
-    two sites; it does not name it. H-swap and H-alias are refuted in this
-    run. Evidence `scratch/agent/s6628_rdram/depth_verdict.json`. No fix
-    or default change. Next: attribute the actual intersecting store/copy.
+  - s6629: the watched zero writer is `rs_memset` guest PC `800078EC`,
+    called by `rs_zcalloc -> zcalloc -> inflate_blocks_new` in
+    `processAssetLoadStep/mainEventQueueWorker`. Final paired arms: 16:9
+    35.1 s/51 good frames, 21:9 33.8 s/55, alive, 0 crash markers,
+    guest-bzero/host-memset and prior GPU controls pass. A n=4635 preserves
+    native/swap/live `0x9540`; immediate post-store callbacks n=4637..4640
+    zero all four bytes; B n=4641 reads zero, upload n=4642 matches guest.
+    Actual clear arguments: dst `0x80BADB50`, fill 0, len `0x8000`;
+    interval `[0x00BADB50,0x00BB5B50)` intersects depth `0x00B56000`.
+    Retail ROM offset `0x84EC` contains `A0450000` (`sb a1,0(v0)`),
+    independently corroborating the named instruction. Generated rs_zcalloc
+    allocates then clears its returned block: the zero is legitimate for
+    the zlib window. Why heap and renderer depth ownership overlap is OPEN,
+    single-source; do not suppress the clear. The range explains 23/26
+    changed column samples (12 left/11 right head rows); three changes
+    outside it are not attributed. Earlier paired capture independently
+    reproduced the same store, without caller arguments. Evidence:
+    `scratch/agent/s6629_writer_context/{depth_verdict,writer_origin,clear_interval_check}.json`;
+    first capture `scratch/agent/s6629_writer/depth_verdict.json`.
+    s6628's identical-mapping/native-postswap witness remains valid.
   - s6627: the 0x0000 stripe is not a `copyToRAM` payload. One Debug binary,
     both widths. 16:9 34.2 s / 21:9 33.5 s, 54/52 good frames, alive,
     0 crash markers. Classifier selects H-later-zero; upload control
@@ -453,6 +462,7 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
 ## Superseded conclusions — do not act on these
+- s6628 "writer between A/B unknown" is resolved at the watched word by s6629 exact pre/post stores and caller context: rs_zcalloc clears a zlib window there. The earlier witness lacked store hooks. This does not resolve allocation ownership or every stripe sample.
 - s6628 closes H-swap/H-alias for the measured upload (single-source): believable because the earlier native witness preceded byteswapping and did not record the live mapping. Post-swap and exit preserve `0x9EC4`, and both sites use the identical host address; the zero appears between them.
 - s6627 closes "the 1024x447 `copyToRAM` at `0x00B20000` writes the `0x0000` stripe" (it covers `0x00BB0020`). Believable because that span contains every stripe address and the same write's own image y=180 is rawBe 0. Refuted: the absolute sample is rawBe `0x9F4C` on all 935 covering writebacks, the call count does not move, and the upload still reads `0x0000`. The image-y zero is phys `0x00B7A020`.
 - s6626 closes "fbChangesDrawDepth, its boolean mask, or its viewport manufactures the 21:9 depth stripe from a clear or smooth guest field" (H-upload). Believable because the GPU image goes from a read-back clear of 1.0 to the stripe inside copyFromChanges, and a discard mask cannot paint 0 by itself. Refuted: the guest words already are the stripe and match the GPU on 142/142 samples (mae 0), shader endian, site state.cpp:2604.
@@ -556,18 +566,14 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6628) Attribute the write between copyNativeToRAM and depth storage.**
-   Same pointer, native/post-swap/exit rawBe `0x9EC4`, then pre-store zero.
-   Build the complete writer discriminator in one binary: generated stores
-   (including unaligned/64-bit/FP), host bulk-copy/zero/DMA paths, and the
-   existing A/B witnesses on the same event sequence. A record must include
-   exact intersecting physical range, before/after bytes, guest PC or host
-   caller, and operation length/source. Positive-control both writer classes
-   on a reserved scratch word, then arm only the real target interval.
-   Guest writer selects H-guest-store; host copy/zero selects H-host-write;
-   neither with a reproduced A/B transition selects incomplete coverage,
-   never "no writer". No guard or rendering change before naming the writer
-   and deciding whether its range is legitimate. See NEXT.md.
+1. **(s6629) Resolve heap-versus-framebuffer ownership at the named zlib clear.**
+   `rs_zcalloc` legitimately clears `[0xBADB50,0xBB5B50)`, while RT64
+   uploads it as depth for `0xB56000`. Join framebuffer reservation/heap
+   bounds and allocation/free lifetimes to the actual RDP depth use, in
+   both widths. Split live guest overlap from an obsolete RT64 target or
+   workload reference. Account for the three column changes outside the
+   named clear before claiming the whole stripe explained. No zero-skip,
+   depth restore, or default change. See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

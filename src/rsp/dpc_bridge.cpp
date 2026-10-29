@@ -1635,8 +1635,10 @@ static void rs64_f5_last_writer_update(char width, uint32_t pc,
     }
 }
 
+extern "C" void rs64_floor_writer_post(char, uint32_t, uint32_t);
 extern "C" void rs64_f5_store_shadow_post(char width, uint32_t pc,
                                              uint32_t addr) {
+    rs64_floor_writer_post(width, pc, addr);
     if (!rs64_f5_shadow_on() || addr < 0x80000000u ||
         addr >= 0x80800000u || !g_recomp_rdram_for_wp_raw) return;
     const uint32_t span = width == 'D' ? 8u : (width == 'B' ? 1u :
@@ -1841,8 +1843,11 @@ extern "C" void rs64_f5_host_bulk_shadow(uint32_t phys, uint32_t len,
     }
 }
 
+extern "C" void rs64_floor_writer_begin(const uint8_t*, uint32_t, uint32_t, const char*);
+extern "C" void rs64_floor_writer_after(const uint8_t*, uint32_t, uint32_t, const char*);
 extern "C" void rs64_f5_host_write_begin(const uint8_t* rdram, uint32_t phys,
                                            uint32_t len, const char* api) {
+    rs64_floor_writer_begin(rdram, phys, len, api);
     if (!rs64_f5_shadow_on() || !rdram || len == 0u) return;
     const uint32_t start = phys & 0x7FFFFFu;
     const uint32_t end = std::min(start + len, 0x800000u);
@@ -1889,6 +1894,7 @@ extern "C" void rs64_f5_host_write_begin(const uint8_t* rdram, uint32_t phys,
 
 extern "C" void rs64_f5_host_write_after(const uint8_t* rdram, uint32_t phys,
                                            uint32_t len, const char* api) {
+    rs64_floor_writer_after(rdram, phys, len, api);
     if (!rs64_f5_shadow_on() || !rdram || len == 0u) return;
     std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
     if (g_f5_hosttgt_pending.valid) {

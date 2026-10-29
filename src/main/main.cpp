@@ -1587,10 +1587,12 @@ void rs64_pcm_writer_note(uint32_t phys, uint32_t len, uint32_t pc,
     }
 }
 
+extern "C" void rs64_floor_writer_context(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 extern "C" void rs64_m5_source_context(uint8_t*, uint32_t pc, uint32_t ra,
                             uint32_t a0, uint32_t a1, uint32_t a2,
                             uint32_t a3, uint32_t source_ptr,
                             uint32_t destination, uint32_t value) {
+    rs64_floor_writer_context(pc, ra, a0, a1, a2, g_rs64_m5_field348_static_callsite);
     static const bool enabled = [] {
         const char* own = std::getenv("ROGUESQ_LOG_M5_SOURCE_CONTEXT");
         const char* all = std::getenv("ROGUESQ_LOG_ALL");

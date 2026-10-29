@@ -739,6 +739,32 @@ def finish_rdram(upload_verdict, ram_verdict, ram, sites, copies):
     return selects, why, detail
 
 
+def classify_writers(sites, prior, detail):
+    writers = [r for r in sites or [] if r.get('k') == 'writer']
+    controls = {}
+    for cls in ('guest', 'host'):
+        controls[cls] = [r for r in writers if r.get('target') == 0x1FF0020
+                         and r.get('class', '').startswith(cls)
+                         and r.get('before', 0) != 0 and r.get('after') == 0]
+    if not all(controls.values()):
+        return 'H-witness', ['writer-controls'], dict(controls=controls)
+    if prior != 'H-between':
+        return 'H-witness', ['writer-transition', prior], dict(controls=controls)
+    rows = [r for r in writers if r.get('target') == 0xBB0020
+            and detail['a_n'] < r['n'] < detail['b_n']
+            and r['phys'] < 0xBB0024 and r['phys'] + r['len'] > 0xBB0020]
+    changed = [r for r in rows if r.get('before', 0) != 0 and r.get('after') == 0]
+    out = dict(controls=controls, rows=rows, zero_writers=changed)
+    if not changed:
+        return 'H-uncovered', ['no-intersecting-zero-transition'], out
+    if any(r['class'] == 'guest-delayed' for r in changed):
+        return 'H-uncovered', ['delayed-store-needs-post-witness'], out
+    classes = {r['class'].split('-')[0] for r in changed}
+    if len(classes) != 1:
+        return 'H-uncovered', ['multiple-writer-classes'], out
+    return ('H-guest-store' if 'guest' in classes else 'H-host-write'), [], out
+
+
 def blank(color, depth, n=71):
     sample = {}
     for col in (0, 1):
@@ -973,6 +999,23 @@ def selftest():
     assert finish_rdram('H-guest', 'H-later-zero', ram, mismatch, copies)[1] == ['native-mismatch']
     assert finish_rdram('H-guest', 'H-later-zero', ram, [], copies)[1] == ['site-b']
     assert finish_rdram('H-upload', 'H-later-zero', ram, between, copies)[0] == 'H-witness'
+    wc = [dict(k='writer', n=1, target=0x1FF0020, before=0x78, after=0,
+               **{'class': c}) for c in ('guest-delayed', 'host')]
+    d = dict(a_n=10, b_n=20)
+    for cls, verdict in [('guest-exact', 'H-guest-store'), ('host', 'H-host-write')]:
+        row = dict(k='writer', n=15, target=0xBB0020, phys=0xBB0020, len=4,
+                   before=0x9EC49ECC, after=0, **{'class': cls})
+        assert classify_writers(wc+[row], 'H-between', d)[0] == verdict
+        row['before'] = 0
+        assert classify_writers(wc+[row], 'H-between', d)[0] == 'H-uncovered'
+        row['before'] = 1
+        row['n'] = 21
+        assert classify_writers(wc+[row], 'H-between', d)[0] == 'H-uncovered'
+    delayed = dict(k='writer', n=15, target=0xBB0020, phys=0xBB0020, len=4,
+                   before=1, after=0, **{'class': 'guest-delayed'})
+    assert classify_writers(wc+[delayed], 'H-between', d)[1] == ['delayed-store-needs-post-witness']
+    assert classify_writers(wc[:1], 'H-between', d)[1] == ['writer-controls']
+    assert classify_writers(wc, 'H-swap', d)[1] == ['writer-transition', 'H-swap']
     print('selftest ok', flush=True)
 
 
@@ -1002,8 +1045,9 @@ def main():
     ram_verdict, ram_why, ram = decide_ram(arms['wide16'], arms['wide21'])
     verdict, why, rdram = finish_rdram(
         upload_verdict, ram_verdict, ram, arms['wide21'].get('rdram'), arms['wide21'].get('copies'))
+    writer_verdict, writer_why, writers = classify_writers(arms['wide21'].get('rdram'), verdict, rdram)
     result = dict(
-        selects=verdict, why=why, rdram=rdram, ram_selects=ram_verdict, ram_why=ram_why,
+        selects=verdict, why=why, rdram=rdram, writer_selects=writer_verdict, writer_why=writer_why, writers=writers, ram_selects=ram_verdict, ram_why=ram_why,
         ram=ram, upload_selects=upload_verdict,
         upload_why=upload_why, upload=detail,
         arms={tag: dict(
@@ -1020,7 +1064,7 @@ def main():
         for key in ('zero_writer', 'mid_writer', 'stripe_writer', 'writer', 'floor'):
             result['arms'][tag]['table'][key] = public_event(table[key])
     (root / 'depth_verdict.json').write_text(json.dumps(result, indent=2) + '\n')
-    print(json.dumps(dict(selects=verdict, why=why, rdram=rdram, ram_selects=ram_verdict, ram=ram, upload_selects=upload_verdict,
+    print(json.dumps(dict(selects=verdict, why=why, rdram=rdram, writer_selects=writer_verdict, writer_why=writer_why, writers=writers, ram_selects=ram_verdict, ram=ram, upload_selects=upload_verdict,
                           upload=detail,
                           wide21=result['arms']['wide21']['table'].get('stripe_writer'),
                           smooth=arms['wide21']['table']['smooth'],

@@ -172483,3 +172483,63 @@ still unknown. No rendering fix, guard, or default change.
   Next: one complete writer table covering generated stores and host bulk
   writes, with both classes positively controlled, to name the actual writer
   and the legitimacy of its range. No repeated-soak recipe was queued.
+
+## Session 6629 (2026-10-29) — zlib calloc clears the depth-upload source
+
+2026-10-29. HYPOTHESIS-ID: g1d-levelselect-ram. Step 0: CURRENT-TRUTH
+59,356 bytes, maintenance did not trigger. Queued-soak tail ends at the
+already-ledgered s6580 verdicts; no new queued run. Boring checks: inherited
+ROGUESQ/PROBE env empty; old RI_CLEAR/WB_CLEAR probes unarmed; old host-write
+witnesses masked to 8MB and could not see this target. Read the prescribed
+handoffs, F5 reference, oracle notes and README blocker (historical).
+
+ONE work unit: discriminate the actual intersecting writer. Added paired
+writer rows to the existing renderer sequence, scalar pre/immediate post
+callbacks, direct unaligned old/new records, full-address host begin/end pairs
+and source-context arguments/caller frames. No generated C edits or regeneration.
+The existing 48,984 s6336 post callbacks avoid delayed attribution; delayed-only
+zero records are rejected. Census of stores found 25 without scalar prehooks,
+all constant $zero-relative destinations that cannot reach 0xBB0020. Stored
+census: scratch/agent/s6629_store_coverage.json. Positive controls execute real
+generated bzero at reserved physical 0x01FF0020 and paired host memset there;
+both visibly recover nonzero->zero. No real image is modified by controls.
+
+First Debug paired capture s6629_writer: 16:9 34.5 s/51 good frames, 21:9
+34.0 s/50, both alive, 0 crash markers, prior controls pass. A n4677
+raw/native/swap=0x9824, native-swap n4678 unchanged; exact rs_memset byte
+stores n4679..4682 turn the word 0x98249820 into zero; B n4683 zero,
+upload n4684 faithful. Selects H-guest-store. Caller arguments were missing
+in this first table: this did not establish why the clear happened. Extended
+the already-present source-context callback before its enable gate, rebuilt,
+and completed BOTH width arms in this iteration to resolve that limitation.
+
+Final paired capture s6629_writer_context: 16:9 35.1 s/51 good frames,
+21:9 33.8 s/55, alive, 0 crash markers, guest/host/GPU controls pass. A n4635
+raw/native/swap=0x9540; host native-swap n4636 unchanged; exact post-store
+records n4637..4640 zero all four bytes at physical 0xBB0020..23; B n4641
+zero, upload n4642 guest/GPU matches. Guest store PC 0x800078EC is rs_memset
+`sb a1,0(v0)`. Caller stack: mainEventQueueWorker -> processAssetLoadStep ->
+inflateInit_ -> inflateInit2_ -> inflate_blocks_new -> zcalloc -> rs_zcalloc
+-> rs_memset. Arguments dst=0x80BADB50, fill=0, len=0x8000. Original retail
+ROM offset 0x84EC contains word A0450000, independently corroborating the
+instruction semantics. Generated rs_zcalloc at 0x8000527C allocates and clears
+the returned block (jal rs_memset 0x800052C4); zcalloc forwards count/size.
+
+ORIGIN: the named writer is a legitimate 32KiB zlib-window allocation clear,
+not a malformed fill or unwanted renderer zero. Its physical interval
+[BADB50,BB5B50) intersects RT64's depth image at B56000. This identifies the
+watched word's writer, not why heap and depth ownership overlap. Ownership is
+still single-source/unresolved: a live reservation overlap and an obsolete
+renderer target/workload require different fixes. The clear's interval explains
+23 of 26 changed A/B column samples (12 left head rows, 11 right); three
+outside changes remain unattributed. Do not suppress calloc or claim the whole
+stripe explained. No mitigation, render fix, or default change landed.
+
+Validation: both discriminator/attachment selftests pass; synthetic writer
+cases include guest/host selection, unchanged stores, missing controls and
+out-of-window events. Final analyzer rerun passes. Debug target builds.
+All lib changes exported via submodule-patches/export.sh; git diff --check
+passes. Evidence: scratch/agent/s6629_writer_context/depth_verdict.json,
+writer_origin.json, clear_interval_check.json; first capture retained separately.
+Next is the complete heap/framebuffer ownership table at the named clear,
+not another writer join-field increment or a zero-skip workaround.

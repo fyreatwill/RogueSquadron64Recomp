@@ -3436,6 +3436,127 @@ extern "C" void rs64_g1d_fillpc_note(char width, uint32_t pc, uint32_t addr) {
     }
 }
 
+
+extern "C" void rs64FloorWriterRecord(const char*, uint32_t, uint32_t, uint32_t,
+                                        uint32_t, uint32_t, uint32_t, const char*, const char*);
+namespace {
+constexpr uint32_t kFloorWriterTarget = 0x00BB0020u;
+constexpr uint32_t kFloorWriterControl = 0x01FF0020u;
+bool floorWriterOn() {
+    static const bool on = std::getenv("ROGUESQ_FLOOR_DEPTH_DIR") != nullptr;
+    return on;
+}
+uint32_t floorWriterWord(uint32_t p) {
+    uint32_t w = 0;
+    volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+    if (rd) for (uint32_t i = 0; i < 4; ++i) w = (w << 8) | rd[(p + i) ^ 3u];
+    return w;
+}
+uint32_t floorWriterHit(uint32_t p, uint32_t len) {
+    for (uint32_t t : {kFloorWriterTarget, kFloorWriterControl})
+        if (p < t + 4u && uint64_t(p) + len > t) return t;
+    return 0;
+}
+struct FloorWriterPending {
+    uint32_t pc = 0, p = 0, len = 0, target = 0, before = 0, src = 0;
+    const char* api = nullptr;
+    std::string caller;
+};
+thread_local FloorWriterPending floorGuest, floorHost;
+void floorWriterFinish(FloorWriterPending& pending, const char* cls) {
+    if (!pending.target) return;
+    FloorWriterPending old = pending;
+    pending = {};
+    rs64FloorWriterRecord(cls, old.pc, old.p, old.len, old.target, old.before,
+        floorWriterWord(old.target), old.api, old.caller.c_str());
+}
+void floorWriterGuest(char width, uint32_t pc, uint32_t addr) {
+    if (!floorWriterOn()) return;
+    floorWriterFinish(floorGuest, "guest-delayed");
+    uint32_t len = width == 'B' ? 1 : width == 'H' ? 2 : width == 'D' ? 8 : 4;
+    uint32_t p = addr & 0x1FFFFFFFu;
+    uint32_t target = floorWriterHit(p, len);
+    if (target) floorGuest = {pc, p, len, target, floorWriterWord(target), 0, "scalar", {}};
+}
+}
+extern "C" void rs64_floor_writer_post(char, uint32_t pc, uint32_t addr) {
+    if (!floorWriterOn()) return;
+    if (floorGuest.target && floorGuest.pc == pc && floorGuest.p == (addr & 0x1FFFFFFFu))
+        floorWriterFinish(floorGuest, "guest-exact");
+}
+extern "C" void rs64_floor_writer_context(uint32_t pc, uint32_t ra,
+    uint32_t dst, uint32_t fill, uint32_t len, uint32_t callsite) {
+    if (!floorWriterOn() || !floorGuest.target || floorGuest.pc != pc) return;
+    char args[180];
+    std::snprintf(args, sizeof args, "dst=%08X fill=%08X len=%08X ra=%08X callsite=%08X;",
+        dst, fill, len, ra, callsite);
+    floorGuest.caller = args;
+    void* bt[10];
+    const int n = backtrace(bt, 10);
+    for (int i = 1; i < n; ++i) {
+        Dl_info info{};
+        dladdr(bt[i], &info);
+        char frame[256];
+        std::snprintf(frame, sizeof frame, "%s+%llu;", info.dli_sname ? info.dli_sname : "?",
+            (unsigned long long)((uintptr_t)bt[i] - (uintptr_t)info.dli_saddr));
+        floorGuest.caller += frame;
+    }
+}
+extern "C" void rs64_floor_writer_flush() {
+    if (floorWriterOn()) floorWriterFinish(floorGuest, "guest-delayed");
+}
+extern "C" void rs64_floor_writer_unaligned(char kind, uint32_t addr,
+                                             uint32_t before, uint32_t after) {
+    if (!floorWriterOn()) return;
+    const uint32_t p = addr & 0x1FFFFFFFu;
+    const uint32_t target = floorWriterHit(p, 4);
+    if (!target) return;
+    const char* api = kind == 'L' ? "swl" : kind == 'R' ? "swr" : kind == 'l' ? "sdl" : "sdr";
+    rs64FloorWriterRecord("guest-exact", g_rs64_blk_ustore_pc, p, 4, target, before, after, api, "helper");
+}
+extern "C" void rs64_floor_writer_begin(const uint8_t* rd, uint32_t p,
+                                          uint32_t len, const char* api) {
+    if (!floorWriterOn() || rd != g_recomp_rdram_for_wp_raw) return;
+    floorWriterFinish(floorGuest, "guest-delayed");
+    const uint32_t target = floorWriterHit(p, len);
+    if (!target) return;
+    void* bt[10];
+    int n = backtrace(bt, 10);
+    std::string caller;
+    for (int i = 1; i < n; ++i) {
+        Dl_info info{};
+        char frame[256];
+        dladdr(bt[i], &info);
+        std::snprintf(frame, sizeof frame, "%s+%llu;", info.dli_sname ? info.dli_sname : "?",
+            (unsigned long long)((uintptr_t)bt[i] - (uintptr_t)info.dli_saddr));
+        caller += frame;
+    }
+    floorHost = {0, p, len, target, floorWriterWord(target), 0, api, caller};
+}
+extern "C" void rs64_floor_writer_after(const uint8_t* rd, uint32_t p,
+                                          uint32_t len, const char* api) {
+    if (!floorWriterOn() || rd != g_recomp_rdram_for_wp_raw) return;
+    if (floorHost.target && floorHost.p == p && floorHost.len == len &&
+        std::strcmp(floorHost.api, api) == 0) floorWriterFinish(floorHost, "host");
+}
+extern "C" void bzero_recomp(uint8_t*, recomp_context*);
+extern "C" void rs64_floor_writer_control() {
+    static std::atomic<bool> done{false};
+    if (!floorWriterOn() || !g_recomp_rdram_for_wp_raw || done.exchange(true)) return;
+    uint8_t* rd = const_cast<uint8_t*>(g_recomp_rdram_for_wp_raw);
+    const uint32_t marker = 0x12345678u;
+    for (uint32_t i = 0; i < 4; ++i) rd[(kFloorWriterControl+i)^3u] = marker >> (24-8*i);
+    recomp_context ctx{};
+    ctx.r4 = (uint64_t)(int64_t)(int32_t)(0x80000000u + kFloorWriterControl);
+    ctx.r5 = 4;
+    bzero_recomp(rd, &ctx);
+    rs64_floor_writer_flush();
+    for (uint32_t i = 0; i < 4; ++i) rd[(kFloorWriterControl+i)^3u] = marker >> (24-8*i);
+    rs64_floor_writer_begin(rd, kFloorWriterControl, 4, "control-memset");
+    std::memset(rd + kFloorWriterControl, 0, 4);
+    rs64_floor_writer_after(rd, kFloorWriterControl, 4, "control-memset");
+}
+
 extern "C" void rs64_m5_route_value_writer(char width, uint32_t pc,
                                               uint32_t addr,
                                               uint32_t value) {
@@ -3443,6 +3564,7 @@ extern "C" void rs64_m5_route_value_writer(char width, uint32_t pc,
         const char* e = std::getenv("ROGUESQ_LOG_G1D_FILLPC");
         return e && *e && *e != '0';
     }();
+    floorWriterGuest(width, pc, addr);
     if (g1d_fillpc) rs64_g1d_fillpc_note(width, pc, addr);
     rs64_m5_pre_dma_writer_store(width, pc, addr, value);
     static const bool enabled = [] {
@@ -3785,12 +3907,12 @@ extern "C" void zmemcpy(uint8_t* rdram, recomp_context* ctx) {
     gpr dest_reg = ctx->r4;
     gpr src_reg  = ctx->r5;
     uint32_t len = (uint32_t)len_full;
-    rs64_f5_host_write_begin(rdram, (uint32_t)dest_reg & 0x007FFFFFu, len, "zmemcpy");
+    rs64_f5_host_write_begin(rdram, (uint32_t)dest_reg & 0x1FFFFFFFu, len, "zmemcpy");
     for (uint32_t i = 0; i < len; ++i) {
         ctx->r2 = MEM_BU(i, src_reg);
         MEM_B(i, dest_reg) = ctx->r2;
     }
-    rs64_m5_host_write_census(rdram, (uint32_t)dest_reg & 0x007FFFFFu,
+    rs64_m5_host_write_census(rdram, (uint32_t)dest_reg & 0x1FFFFFFFu,
                               len, "zmemcpy");
     {
         uint32_t pc = (uint32_t)ctx->r31;
