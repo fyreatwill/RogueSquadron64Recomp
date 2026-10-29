@@ -1,15 +1,15 @@
-# NEXT: level 12 flight framebuffer, rule frozen
+# NEXT: level 13 flight framebuffer, rule frozen
 HYPOTHESIS-ID: g1-coverage-cd
 
-s6645 accepted the level-11 snow flight with the rule frozen
-(8/9). Do not edit `tools/g1_flight_class.py` in this session.
+s6646 accepted the level-12 ridge flight with the rule frozen
+(4/5). Do not edit `tools/g1_flight_class.py` in this session.
 No heap, aim, draw-distance, aspect, or default change. Do not
-start level 13. Do not set `ROGUESQ_FORCE_PLANET_UNLOCK` (only
+start level 14. Do not set `ROGUESQ_FORCE_PLANET_UNLOCK` (only
 levels 10 and 15 need it).
 
-Clone `scratch/agent/s6645_lvl11.sh` to `scratch/agent/s6646_lvl12.sh`.
-Change the output dir to `scratch/agent/s6646_lvl12` and set
-`ROGUESQ_FORCE_UNLOCK=12` and `ROGUESQ_FORCE_SAVE_MISSION=12`.
+Clone `scratch/agent/s6646_lvl12.sh` to `scratch/agent/s6647_lvl13.sh`.
+Change the output dir to `scratch/agent/s6647_lvl13` and set
+`ROGUESQ_FORCE_UNLOCK=13` and `ROGUESQ_FORCE_SAVE_MISSION=13`.
 Keep the 420 s mission wait and the 30 s hold. Retail 4:3,
 draw distance unset, aspect unset.
 
@@ -27,7 +27,7 @@ the craft-select or hangar dump.
     python3 tools/g1_flight_class.py <phase-7 dumps> <title> <craft-select>
 
 Write a contact sheet of four flight frames to
-`docs/g1_lvl12_flight_s6646.png` only if a post-hangar flight
+`docs/g1_lvl13_flight_s6647.png` only if a post-hangar flight
 picture exists.
 
 H-rule-holds: at least one phase-7 frame passes all four

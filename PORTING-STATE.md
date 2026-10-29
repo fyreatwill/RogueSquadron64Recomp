@@ -173394,3 +173394,58 @@ What this rules out: "level 11 produced no post-hangar flight picture"
 and "the frozen rule rejects every level-11 phase-7 frame." What it
 does not show: an objective-counter response, or that level 12 passes.
 Level 12 does not need the planet unlock.
+
+## Session 6646 (2026-10-29) — level 12 ridge flight passes the frozen class rule
+
+One retail 4:3 capture. No classifier edit, no heap edit, no aim, draw
+distance unset, aspect unset, no planet unlock. Precontrol
+`python3 tools/g1_flight_class.py` printed canon_bad 0 and mission 11/13
+before launch (oracle, level-2 fb_0002700, and level-3 fb_0002700 pass;
+floor and the s6633 title fail). IOConsoleLocked was No. The route is
+scratch/agent/s6646_lvl12.sh, the s6645 script with FORCE_UNLOCK=12 and
+FORCE_SAVE_MISSION=12. The soak tail in scratch/agent/SOAK-RESULTS.md
+still ends at s6580 (2026-10-28); no new queued verdict to fold.
+
+scratch/agent/s6646_lvl12/keys.log: screen-unlocked, precontrol-ok, title
+t=14, hangar t=32, mission-onset t=90, hold-30s t=120, killed t=120,
+crash=0, abort=0. run.log echoes `[dd] ROGUESQ_DRAW_DISTANCE multiplier 1`,
+`[g1d-drop] aspect=<unset>`, `[lvsel] cursor=12`, and
+`[initMission] call#1 B40=0x0C`. CRASH, abort, SIGSEGV and SIGBUS counts
+in that log are 0. Five phase-7 dumps, n=2400..2600 step 50, are
+512x444. The phase-7 transition origin is `0x00690400`. Every dump's own
+origin field is the other buffer `0x00620400` (fb=0x80690000). The VI
+origin census has 16 lines of `0x00690400` and 15 of `0x00620400`. Sheet
+`docs/g1_lvl12_flight_s6646.png` is frames 2450, 2500, 2550 and 2600.
+Scores are in `scratch/agent/s6646_lvl12_score.txt`.
+
+The sheet is a flight. Bright blue sky over a green ridge, an X-wing,
+TIE fighters, the round radar, a green reticle and the shield badge.
+The frozen rule scores 4/5. n=2450, 2500, 2550 and 2600 pass sky,
+terrain, craft and HUD. Craft on those four is the existing dark-hull
+arm (sil 0.135..0.243) against the bright sky. Sky is the existing blue
+arm (luma 173.7..176.8, R-G -46.4..-45.3).
+
+n=2400 is not required. It is still a flight: the X-wing is banked
+against cloud, with the radar and the shield badge. It misses craft
+only (metal 0.078, sil 0.000, edge 0.043, pure 0.0000). The chase band
+is not bright enough for the dark-hull arm (sky-box luma 94.8) and the
+hull fraction stays under 0.10. Sky, terrain and HUD pass (rel 0.122,
+radar 0.096). That is the same craft-near-miss family as level 11's
+n=2450, not a new sky class.
+
+Same-run title `fb_0000800_w512.ppm` is the title screen and fails sky
+and terrain (luma 83.7, R-G 31.2, rel 0.444). The origin-`0x006AB400`
+dump `fb_0001700_w512.ppm` is the craft-select screen (X-wing, select
+your craft), not a flight. It fails overall on HUD only (radar 0.002).
+Sky, terrain and craft each pass on that menu (dark sky, rel 0.258,
+metal 0.226) and do not accept it. The classifier was not edited.
+Objective (d) was not run.
+
+This selects H-rule-holds. It refutes H-new-class (4/5 pass) and
+H-no-picture (the sheet is a flight).
+ORIGIN: n/a (no mitigation).
+
+What this rules out: "level 12 produced no post-hangar flight picture"
+and "the frozen rule rejects every level-12 phase-7 frame." What it
+does not show: an objective-counter response, or that level 13 passes.
+Level 13 does not need the planet unlock.

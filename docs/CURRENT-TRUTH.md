@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6645 (2026-10-29).
+Compact operational handoff, as of Session 6646 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -158,6 +158,21 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   HUD (radar 0); terrain rel 0.195 does not accept it. Sheet
   `docs/g1_lvl11_flight_s6645.png`. 0 crashes in the 30 s hold.
   The classifier was not edited. Objective (d) was not run.
+- **G1 (c) level 12 flight framebuffer: frozen rule accepts it.**
+  s6646, one retail 4:3 capture, draw distance 1, aspect unset.
+  Selector B40=12, cursor=12. Five phase-7 dumps, n=2400..2600,
+  are 512x444. The phase transition origin is `0x00690400`;
+  every dump's own origin field is the other buffer
+  `0x00620400` (16 and 15 VI lines). Blue sky, green ridge,
+  X-wing, TIEs, radar, reticle, shield badge. 4/5 pass all
+  four clauses. n=2400 misses craft only (metal 0.078, sil
+  0.000, edge 0.043): the ship is banked against cloud and
+  does not clear the chase cuts. Not required. Same-run title
+  `fb_0000800_w512.ppm` fails sky and terrain (luma 83.7,
+  R-G 31.2, rel 0.444). Craft-select `fb_0001700_w512.ppm`
+  (origin `0x006AB400`) fails HUD only (radar 0.002). Sheet
+  `docs/g1_lvl12_flight_s6646.png`. 0 crashes in the 30 s
+  hold. The classifier was not edited. Objective (d) was not run.
 
 ## Superseded conclusions — do not act on these
 - s6643 "level 10 is a flight and the frozen rule rejects the sky 0/12" (s6644: tan-cloud arm accepts 11/12; n=2900 stays a craft miss at edge 0.013; title sky stays false because G−B is ~5 while the clouds are ≥22; canon_bad 0; mission 11/13). Believable because dark≥0.60, the blue arm (R−G≤15) and the orange arm (R−G≥40) all miss a luma 73..104 sky with R−G 23..28.
@@ -274,6 +289,9 @@ passed still passes. Those earlier pass counts were not re-opened.
 Level 11 passes the frozen rule on 8/9 phase-7 dumps (s6645,
 one capture). n=2450 remains a distant-craft near-miss (metal
 0.014, sil 0.044, edge 0.003) and is not required.
+Level 12 passes the frozen rule on 4/5 phase-7 dumps (s6646,
+one capture). n=2400 remains a banked-craft near-miss (metal
+0.078, sil 0.000, edge 0.043) and is not required.
 Verification still needs framebuffer
 evidence for the remaining levels, plus a forced-hit objective
 response. Mission wins, autopilot aim, and mission-to-mission
@@ -300,10 +318,10 @@ progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6645) Capture level 12 with the rule frozen.** One retail
-   4:3 run. Clone `scratch/agent/s6645_lvl11.sh` to
-   `scratch/agent/s6646_lvl12.sh` with `ROGUESQ_FORCE_UNLOCK=12`
-   and `ROGUESQ_FORCE_SAVE_MISSION=12`. Do not set
+1. **(s6646) Capture level 13 with the rule frozen.** One retail
+   4:3 run. Clone `scratch/agent/s6646_lvl12.sh` to
+   `scratch/agent/s6647_lvl13.sh` with `ROGUESQ_FORCE_UNLOCK=13`
+   and `ROGUESQ_FORCE_SAVE_MISSION=13`. Do not set
    `ROGUESQ_FORCE_PLANET_UNLOCK` (only levels 10 and 15 need it).
    Draw distance unset, aspect unset. Precontrol
    `python3 tools/g1_flight_class.py` must print `canon_bad 0`
@@ -313,9 +331,9 @@ progression are owner playtest scope.
    must still fail overall. If at least one phase-7 frame passes
    all four clauses, record the count and stop. If the sheet is
    a flight and zero frames pass, record the failing clause and
-   the sky-box luma / R−G / R−B / G−B, and do not add an arm.
+   the sky-box luma / R-G / R-B / G-B, and do not add an arm.
    If there is no post-hangar `0x690400` inside 420 s, record
-   the last origin and stop. Do not start level 13. See NEXT.md.
+   the last origin and stop. Do not start level 14. See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
