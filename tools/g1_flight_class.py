@@ -1,10 +1,11 @@
-"""Flight framebuffer class rule (s6632 sky/HUD, s6634 night, s6636 sunset).
+"""Flight framebuffer class rule (s6632 sky/HUD, s6634 night, s6636 sunset, s6641 dusk).
 
 Sky and the radar HUD are the bright-scene cuts from s6632. Terrain replaces
 luma stddev with relative local edge energy so a dark ridged surface counts
 and high-contrast menu art does not. Craft keeps the s6632 engine bloom and
-adds a chase-camera metal hull, a saturated green reticle, or a dark hull
-against a bright sky. A third sky arm accepts a bright orange sunset.
+adds a chase-camera metal hull, a saturated green reticle, a dark hull
+against a bright sky, or low-chroma metal against a coloured neighbour.
+A third sky arm accepts an orange sky, including the dimmer dusk.
 
 Canonical check (no args) exits 0 only when the five-file table holds:
   pass  docs/g3_retail_lvl1_flight_oracle.png
@@ -59,12 +60,13 @@ def classes(p):
     sm = [sum(c[i] for c in sky) / len(sky) for i in range(3)]
     dark = sum(1 for c in sky if _luma(c) < 35) / len(sky)
     luma = sum(sm) / 3.0
-    # Orange sunset: bright, R well above G and B. The title's warm cast
-    # is dimmer (luma ~80) and closer in R and G (~29), so it stays out.
+    # Orange sky: R well above G and B. Level 4 clears luma 140; level 8's
+    # dusk is 84..97 with the same chroma. The title reaches luma ~85, but
+    # its R-G stays near 32, so the +40 gate keeps that cast out.
     sky_ok = (
         dark >= 0.60
         or (luma >= 70 and sm[0] <= sm[1] + 15)
-        or (luma >= 140 and sm[0] >= sm[1] + 40 and sm[0] >= sm[2] + 20)
+        or (luma >= 80 and sm[0] >= sm[1] + 40 and sm[0] >= sm[2] + 20)
     )
 
     # Relative local edge energy. Absolute stddev stays under 18 on the
@@ -116,13 +118,37 @@ def classes(p):
 
     rg = box(0.35, 0.65, 0.28, 0.55, 1)
     pure = sum(1 for r, g, b in rg if g >= 80 and r <= 50 and b <= 50 and g >= r + 40 and g >= b + 40) / len(rg)
-    craft_ok = engines or metal >= 0.10 or pure >= 0.004 or sil >= 0.06
+
+    # Chase X-wing: low-chroma metal in the lower centre with a strongly
+    # coloured neighbour (the desert). Flat menu grey in that box has no
+    # such neighbour. Measured chase frames are 0.063..0.115; the title
+    # is 0.017 and craft-select is 0.021. The side view is 0.041.
+    x0e, x1e = int(w * 0.34), int(w * 0.66)
+    y0e, y1e = int(h * 0.48), int(h * 0.70)
+    nedge = nbox = 0
+    for y in range(y0e, y1e):
+        for x in range(x0e, x1e):
+            c = _pix(px, w, x, y)
+            L = _luma(c)
+            ch = max(c) - min(c)
+            nbox += 1
+            if 60 <= L <= 160 and ch <= 22:
+                best = 0
+                for dx, dy in ((4, 0), (-4, 0), (0, 4), (0, -4), (8, 0), (-8, 0)):
+                    xx, yy = x + dx, y + dy
+                    if 0 <= xx < w and 0 <= yy < h:
+                        nc = _pix(px, w, xx, yy)
+                        best = max(best, max(nc) - min(nc))
+                if best >= 45:
+                    nedge += 1
+    edge = nedge / nbox if nbox else 0.0
+    craft_ok = engines or metal >= 0.10 or pure >= 0.004 or sil >= 0.06 or edge >= 0.05
 
     ok = sky_ok and terr_ok and craft_ok and hud_ok
     return {
         "ok": ok, "sky": sky_ok, "terr": terr_ok, "craft": craft_ok, "hud": hud_ok,
         "rel": rel, "metal": metal, "sil": sil, "pure": pure, "pink": pink, "yel": yel,
-        "radar": radar, "dark": dark, "luma": luma, "rg": sm[0] - sm[1],
+        "radar": radar, "dark": dark, "luma": luma, "rg": sm[0] - sm[1], "edge": edge,
     }
 
 
@@ -143,7 +169,7 @@ def line(name, d, want=None):
     return (
         f"{flag} {name} sky={int(d['sky'])} terr={int(d['terr'])} "
         f"craft={int(d['craft'])} hud={int(d['hud'])} "
-        f"rel={d['rel']:.3f} metal={d['metal']:.3f} sil={d['sil']:.3f} pure={d['pure']:.4f} "
+        f"rel={d['rel']:.3f} metal={d['metal']:.3f} sil={d['sil']:.3f} pure={d['pure']:.4f} edge={d['edge']:.3f} "
         f"pink={d['pink']:.4f} yel={d['yel']:.4f} radar={d['radar']:.3f} "
         f"luma={d['luma']:.1f} rg={d['rg']:.1f}{extra}"
     )

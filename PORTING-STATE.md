@@ -173150,3 +173150,47 @@ picture" and "the luma>=140 sunset arm covers this orange sky." What it
 does not show: a craft clause that accepts these frames without
 accepting the floor or the title. The 0.08 floor, the 0.33 ceiling and
 the luma>=70 arm were not moved.
+
+## Session 6641 (2026-10-29) — dusk class rule accepts the level-8 flight
+
+Offline edit of `tools/g1_flight_class.py` only. No game run, no heap,
+aim, draw-distance, aspect, or default change. The soak tail in
+scratch/agent/SOAK-RESULTS.md still ends at s6580 (2026-10-28); no new
+queued verdict to fold. Before the edit, `python3 tools/g1_flight_class.py`
+printed canon_bad 0 and mission 11/13.
+
+The sky arm's orange floor moved from luma>=140 to luma>=80. The
+R>=G+40 and R>=B+20 gates stayed. All seven s6640 phase-7 skies pass
+(luma 84.4..97.0, R-G 86.8..94.3, R-B 133.7..154.7). The same-run title
+stays out (luma 85.2, R-G 32.1). The canon title stays out (luma 75.0,
+R-G 24.7). A level-4 menu frame at luma 92.2 and R-G 37.2 also stays
+out, so the chroma gate is what rejects the warm cast, not the luma floor.
+
+Craft is a new lower-centre term. In the box x 0.34-0.66, y 0.48-0.70,
+a pixel counts when luma is 60..160, chroma is at most 22, and a
+neighbour 4 or 8 pixels away has chroma at least 45. The cut is
+edge>=0.05. Chase frames n=2650..2900 measure 0.088, 0.070, 0.115,
+0.063, 0.078, 0.115 and pass all four clauses. n=2600, the side view,
+is 0.041 and misses craft only. It is not required. The same-run title
+is edge 0.017 and still fails sky and terrain. Craft-select is edge
+0.021 and still fails HUD only (radar 0). The canon floor is edge
+0.001. m2550, the mission line that fails craft, is edge 0.011, so
+mission stays 11/13. canon_bad stays 0. The pink cap was not raised.
+The 0.08 floor, the 0.33 ceiling and the luma>=70 blue arm were not
+moved. No file was added to the five-file canon table.
+
+A median>=80 dark-hull remeasure of the existing chase band does not
+land. With the code's delta of 50, n=2600 is sil 0.028, under the 0.06
+cut. The 0.140 figure in s6640 is delta 40, not the arm in the tool.
+That change was not needed once the edge term took six frames.
+
+This selects H-craft-found. It refutes H-no-craft. It does not run
+objective (d) and it does not capture level 9. The added arms only
+grant passes, so a level 2-7 frame that already passed still passes.
+Those pass counts were not re-opened.
+ORIGIN: n/a (no mitigation).
+
+What this rules out: "no craft clause accepts a level-8 chase frame
+while canon_bad stays 0 and mission stays 11/13." What it does not
+show: that the edge term accepts the side-view frame, or that level 9
+passes the frozen rule.

@@ -1,59 +1,41 @@
-# NEXT: level-8 dusk class rule, offline
+# NEXT: level-9 flight capture, class rule frozen
 HYPOTHESIS-ID: g1-coverage-cd
 
-s6640 captured level 8. The sheet `docs/g1_lvl8_flight_s6640.png`
-is a flight (desert, orange dusk, X-wing, radar, reticle) and the
-frozen rule scores 0/7. This session edits `tools/g1_flight_class.py`
-only. No game run. No heap, aim, draw-distance, aspect, or default
-change. Do not move 0.08, 0.33, or the luma>=70 blue arm. Do not
-add a file to the five-file canon table.
+s6641 accepted level 8 offline (6/7 phase-7 dumps). This session
+captures level 9. Do not edit `tools/g1_flight_class.py`. No heap,
+aim, draw-distance, aspect, or default change. Do not move 0.08,
+0.33, the luma>=70 blue arm, the luma>=80 orange arm, or the
+edge>=0.05 cut.
 
-Dumps, already on disk:
+Copy `scratch/agent/s6640_lvl8.sh` to `scratch/agent/s6642_lvl9.sh`.
+Change only the output directory and the two level selectors:
 
-    scratch/agent/s6640_lvl8/fbd/fb_0002600_w512.ppm
-    through fb_0002900_w512.ppm
+    ROGUESQ_FORCE_UNLOCK=9
+    ROGUESQ_FORCE_SAVE_MISSION=9
 
-Same-run negatives:
+Retail 4:3. Draw distance stays unset. Aspect stays unset. Run from
+`build/` with the ROM beside it. SIGKILL the game. Before launch,
+`python3 tools/g1_flight_class.py` must print `canon_bad 0` and
+`mission 11/13`. Refuse the run if `IOConsoleLocked` is Yes or
+`CGSSessionScreenIsLocked` is true.
 
-    scratch/agent/s6640_lvl8/fbd/fb_0000800_w512.ppm
-    scratch/agent/s6640_lvl8/fbd/fb_0001700_w512.ppm
+After the run, score every phase-7 dump, plus the same-run title
+and the craft-select or hangar dump, with:
 
-Before editing, `python3 tools/g1_flight_class.py` must print
-canon_bad 0.
+    python3 tools/g1_flight_class.py <those files>
 
-Sky is measured. Lower the sunset luma floor from 140 to 80 and
-keep R>=G+40 and R>=B+20. That accepts all seven level-8 skies
-(luma 84.4..97.0, R-G 86.8..94.3, R-B 133.7..154.7, dark<=0.014).
-It rejects the canon floor, both title dumps, the craft-select
-frame, the oracle, level 2 and level 3. luma>=90 misses n=2600
-(luma 84.4). Do not drop the chroma gates: the same-run title is
-luma 85.2 with R-G only 32.1.
+H-rule-holds: at least one phase-7 frame passes all four clauses,
+the same-run title fails overall, crash count is 0, and the sheet
+shows sky, terrain, craft and HUD. Leave the tool frozen. The
+session after that captures level 10, which needs
+`ROGUESQ_FORCE_PLANET_UNLOCK=0xFF`. Do not start level 10 here.
+H-new-class: the sheet is a flight and every phase-7 frame fails.
+Record sky, terrain, craft, HUD, edge, luma and R-G for each
+phase-7 dump. Do not edit the tool in this session.
+H-no-picture: no post-hangar flight dump. Record the last VI
+origin and do not retune the route.
 
-Craft is the open clause. Do not raise the pink cap. Pink
-0.184..0.328 is the orange sky in the center box. Chase-band
-median is 68.3..81.7, so the median>=120 dark-hull arm does not
-fire. A median>=80 dark-hull test hits only n=2600 (0.140); the
-other six hulls sit below y 0.62. Saturated green (9..33 pixels,
-g>=80, r<=50, b<=50) is the top-left HUD icon at y 0.10-0.30, not
-a center reticle. The title and the craft-select frame have zero
-of those pixels. That icon is not a craft signal. Terrain already
-passes (rel 0.095..0.310). Do not retune the HUD cut: radar
-0.665..0.993 matches the orange sky, and the ring is visibly there.
-
-H-craft-found: one new craft clause, plus the luma>=80 orange
-arm, makes at least one phase-7 frame pass all four clauses.
-`python3 tools/g1_flight_class.py` prints canon_bad 0 and
-mission 11/13. The same-run title and craft-select dumps still
-fail overall. Land that edit.
-H-no-craft: every craft clause that accepts a chase frame also
-makes canon_bad nonzero, flips a level-3 mission line, or makes
-the title or the craft-select frame pass overall. Do not land
-the sky arm alone. Record the clause and the file it broke.
-
-DISCRIMINATOR: the tool's pass/fail lines on the seven phase-7
-dumps and the two same-run negatives, plus canon_bad and
-mission 11/13 from a no-arg run. A sky-only edit that still
-scores 0/7 is not a result to land.
-
-If H-craft-found, the session after that captures level 9 with
-the new rule frozen. Do not start level 9 in this session.
+DISCRIMINATOR: the frozen tool's pass/fail lines on the phase-7
+dumps and the same-run title, plus crash count from that run's
+log. A visible flight that scores 0/N is not a license to edit
+the classifier in the capture session.

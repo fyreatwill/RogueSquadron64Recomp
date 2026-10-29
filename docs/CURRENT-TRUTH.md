@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6640 (2026-10-29).
+Compact operational handoff, as of Session 6641 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -109,25 +109,22 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   terrain (rel 0.437). Hangar `fb_0001700_w512.ppm` fails HUD only
   (radar 0). Sheet `docs/g1_lvl7_flight_s6639.png`. 0 crashes in the
   30 s hold. The classifier was not edited. Objective (d) was not run.
-- **G1 (c) level 8 flight framebuffer: visible, frozen rule rejects it.**
-  s6640, retail 4:3, draw distance 1, aspect unset. Selector B40=8,
-  cursor=8. Seven phase-7 dumps, n=2600..2900, are 512x444. Six are
-  origin `0x00620400`; n=2750 is `0x00690400`. Desert, orange dusk,
-  X-wing, radar, reticle. Sheet `docs/g1_lvl8_flight_s6640.png`
-  (n=2600, 2700, 2800, 2900) is a flight. The frozen rule scores
-  0/7. Every frame misses sky (luma 84.4..97.0, R−G 86.8..94.3,
-  dark ≤0.014; the luma≥140 sunset arm does not reach it) and craft
-  (pink 0.184..0.328 is the sky in the center box, above the 0.05
-  engine cap; metal 0.035..0.074; chase-band median 68.3..81.7).
-  Terrain passes (rel 0.095..0.310). The HUD clause passes, but
-  radar 0.665..0.993 is the orange sky in that box, not a clean
-  radar measurement. Same-run title fails sky and terrain.
-  Craft-select `fb_0001700_w512.ppm` fails HUD only. 0 crashes in
-  the 30 s hold. The classifier was not edited. Objective (d) was
-  not run.
+- **G1 (c) level 8 flight framebuffer: dusk rule accepts it.**
+  s6641, offline on the s6640 dumps. No new capture. The orange sky
+  arm is now luma≥80 with the same R≥G+40 and R≥B+20 gates. Craft
+  adds a lower-centre metal edge: low-chroma grey with a coloured
+  neighbour, fraction ≥0.05. Six of seven phase-7 dumps pass all
+  four clauses (edge 0.063..0.115). n=2600 is the side view and
+  misses craft only (edge 0.041). Same-run title fails sky and
+  terrain (edge 0.017, luma 85.2, R−G 32.1). Craft-select fails HUD
+  only (edge 0.021, radar 0). `canon_bad 0`, mission 11/13. The
+  0.08 floor, the 0.33 ceiling and the luma≥70 blue arm were not
+  moved. Sheet remains `docs/g1_lvl8_flight_s6640.png`. Objective
+  (d) was not run.
 
 ## Superseded conclusions — do not act on these
-- s6636 "the orange flight sky is the luma≥140 sunset arm" (s6640: level 8's orange sky is luma 84.4..97.0, R−G 86.8..94.3, and that arm misses 7/7). Believable because the only orange flight measured before this capture was the level-4 sunset, which cleared 140. Level 4's own acceptance is unchanged.
+- s6640 "level 8 is a flight and no craft clause accepts it without breaking canon, so the rule stays 0/7" (s6641: lower-centre metal against a coloured neighbour, edge≥0.05, plus luma≥80 orange sky, accepts 6/7; n=2600 stays a side-view near-miss at edge 0.041; canon_bad 0; mission 11/13; title and craft-select still fail). Believable because the engine, bright-metal, reticle and median≥120 dark-hull arms all missed, and a raw grey fraction in the same box also matched the title.
+- s6636 "the orange flight sky is the luma≥140 sunset arm" (s6640: level 8's orange sky is luma 84.4..97.0, R−G 86.8..94.3, and that arm misses 7/7; s6641 lowered the floor to 80). Believable because the only orange flight measured before that capture was the level-4 sunset, which cleared 140. Level 4's own acceptance is unchanged.
 - s6635 "level 4 is a picture only; the class rule rejects it 0/7, and no sunset arm was shown to keep canon_bad at 0" (s6636: luma≥140 with R≥G+40 and R≥B+20, plus a dark hull against a bright chase band, accepts 6/7; n=2300 stays a terrain near-miss at rel 0.065; canon_bad 0; same-run title and hangar still fail). Believable because the s6634 sky clause had no orange arm and the center-box pink cap treated that sunset as an oversized engine.
 - s6634 "a flight sky is either dark (dark≥0.60) or bright with R≤G+15" (s6635: the level-4 sunset is bright, R−G about 48..67, and sky fails 7/7). Believable because the only flight skies measured before this capture were level 1's blue sky and level 3's night. The level-3 acceptance itself still holds.
 - s6633 "the level-3 night flight has no numeric acceptance that still rejects the floor and the title" (s6634: relative edge energy in [0.08, 0.33], plus a metal hull or green reticle, accepts 11/13 night dumps; floor rel 0.709 and title rel 0.410 fail). Believable because the only rule that had been run, luma stddev and engine colour, scored 0/13.
@@ -226,10 +223,11 @@ and 0.331 and are not required. Level 6 passes the frozen rule on
 56.0 and is not required. Level 7 passes the frozen rule on 4/12
 phase-7 dumps (s6639); five sky misses (luma 46.3..60.1) and three
 terrain-ceiling misses (rel 0.332..0.359) are not required.
-Level 8 is a flight picture and the frozen rule rejects it 0/7
-(s6640): sky and craft miss on every phase-7 dump. Terrain
-(rel 0.095..0.310) passes. The HUD clause also passes, but that
-radar fraction (0.665..0.993) matches the orange sky.
+Level 8 passes the dusk rule on 6/7 phase-7 dumps (s6641, offline
+on the s6640 capture). n=2600 remains a side-view craft near-miss
+at edge 0.041 and is not required. The s6641 arms are a superset
+of the s6636/s6639 cuts, so a level 2–7 frame that already passed
+still passes. Those earlier pass counts were not re-opened.
 Verification still needs framebuffer
 evidence for the remaining levels, plus a forced-hit objective
 response. Mission wins, autopilot aim, and mission-to-mission
@@ -256,24 +254,18 @@ progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6640) Extend the flight class rule for the level-8 dusk, offline.**
-   No new capture. No heap, aim, draw-distance, aspect, or default
-   change. The seven phase-7 dumps are
-   `scratch/agent/s6640_lvl8/fbd/fb_0002600_w512.ppm` through
-   `fb_0002900_w512.ppm`. A measured sky arm, luma≥80 with R≥G+40
-   and R≥B+20, accepts all seven skies and rejects the canon floor,
-   both title dumps, the craft-select frame, the oracle, level 2
-   and level 3. Craft is still open: do not raise the pink cap
-   (that count is the sky). The chase-band median is 68..82, so the
-   median≥120 dark-hull arm does not fire, and on six of the seven
-   frames the hull sits below the band. Land an edit only if at
-   least one phase-7 frame passes all four clauses,
-   `python3 tools/g1_flight_class.py` still prints `canon_bad 0`
-   and `mission 11/13`, and the same-run title and craft-select
-   dumps still fail overall. Do not move 0.08, 0.33, or the luma≥70
-   blue arm. Do not add a file to the five-file canon table. If no
-   craft clause keeps `canon_bad` at 0, do not land a sky-only edit
-   that still scores 0/7. See NEXT.md.
+1. **(s6641) Capture level 9 with the class rule frozen.**
+   Do not edit `tools/g1_flight_class.py`. Retail 4:3, draw distance
+   unset, aspect unset. Copy `scratch/agent/s6640_lvl8.sh` and set
+   `ROGUESQ_FORCE_UNLOCK=9` and `ROGUESQ_FORCE_SAVE_MISSION=9`.
+   Precontrol must print `canon_bad 0`. The screen must be unlocked.
+   Score the phase-7 dumps with the frozen tool. H-rule-holds: at
+   least one phase-7 frame passes all four clauses and the same-run
+   title still fails overall. H-new-class: the sheet is a flight and
+   every phase-7 frame fails; record the failing clause and do not
+   edit the tool in that session. H-no-picture: no post-hangar flight
+   dump. No heap, aim, draw-distance, aspect, or default change.
+   See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
