@@ -173305,3 +173305,43 @@ and "the frozen sky arms already cover this cloud field." What it does
 not show: an objective-counter response, or a sky arm that accepts the
 frame without breaking canon. The title sky shares the flight's R-G
 band, so the next edit has to keep the title's overall verdict fail.
+
+## Session 6644 (2026-10-29) — tan-cloud sky arm accepts the level-10 flight
+
+Offline only. No game run. No heap, aim, draw-distance, aspect, or
+default change. The soak tail in scratch/agent/SOAK-RESULTS.md still
+ends at s6580 (2026-10-28); no new queued verdict to fold.
+docs/CURRENT-TRUTH.md was 37698 bytes, under the maintenance cap.
+
+Pre-edit `python3 tools/g1_flight_class.py` printed canon_bad 0 and
+mission 11/13. The twelve s6643 phase-7 dumps (n=2850..3400) scored
+sky=0 with terrain and HUD passing on 12/12 and craft on 11/12.
+Sky-box means on those frames: luma 72.7..104.0, R-G 23.1..28.5,
+R-B 48.7..61.1, G-B 21.7..32.6. The same-run title
+`fb_0000800_w512.ppm` is luma 78.1, R-G 27.1, R-B 32.6, G-B 5.5.
+The canon title `fb_0000450_w512.ppm` is luma 75.0, R-G 24.7,
+R-B 30.0, G-B 5.3. A bare R-G window of 23..28 marks both titles
+as sky. The blue-channel gap does not: clouds sit at G-B >= 22
+and the titles sit at G-B about 5.
+
+The arm added in tools/g1_flight_class.py is luma>=70, R-G in
+[20, 32], R-B>=40 and G-B>=18. It does not move 0.08, 0.33, the
+luma>=70 blue arm, the luma>=80 / R-G>=40 orange arm, or the
+edge>=0.05 cut.
+
+After the edit the same command still prints canon_bad 0 and
+mission 11/13. m3150 stays a sky miss (luma 40.0, R-G -3.1). The
+canon title stays sky=0. Eleven of the twelve phase-7 dumps pass
+all four clauses. n=2900 passes sky and still fails craft (edge
+0.013); not required. Same-run title stays sky=0 and terr=0
+(rel 0.419). Craft-select `fb_0001700_w512.ppm` stays hud=0
+(radar 0.002).
+
+This selects H-chroma. It refutes H-canon-break (canon_bad stays 0,
+the title's overall verdict stays fail, and the craft-select still
+fails HUD) and H-no-accept (11/12, not 0/12).
+ORIGIN: n/a (no mitigation).
+
+What this rules out: "no sky arm accepts the level-10 clouds without
+breaking the canon table." What it does not show: an objective-counter
+response, or a level-11 picture. The rule stays frozen for that capture.

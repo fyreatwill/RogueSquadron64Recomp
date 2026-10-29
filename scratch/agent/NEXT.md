@@ -1,70 +1,46 @@
-# NEXT: level-10 tan cloud sky, offline
+# NEXT: level 11 flight framebuffer, rule frozen
 HYPOTHESIS-ID: g1-coverage-cd
 
-s6643 captured level 10. The sheet is a flight (tan clouds, station,
-A-wing, radar, reticle) and the frozen rule scores 0/12. Every
-phase-7 frame fails the sky clause. Do not run the game. Do not
-move 0.08, 0.33, the luma>=70 blue arm, the luma>=80 / R-G>=40
-orange arm, or the edge>=0.05 cut. No heap, aim, draw-distance,
-aspect, or default change. Do not start level 11.
+s6644 accepted the level-10 tan clouds offline. Do not edit
+`tools/g1_flight_class.py` in this session. No heap, aim,
+draw-distance, aspect, or default change. Do not start level 12.
+Do not set `ROGUESQ_FORCE_PLANET_UNLOCK` (only levels 10 and 15
+need it).
 
-Sky box on n=2850..3400 (step 50), all 512x444 at origin
-0x00620400:
+Clone `scratch/agent/s6642_lvl9.sh` to `scratch/agent/s6645_lvl11.sh`.
+Change the output dir to `scratch/agent/s6645_lvl11` and set
+`ROGUESQ_FORCE_UNLOCK=11` and `ROGUESQ_FORCE_SAVE_MISSION=11`.
+Keep the 420 s mission wait and the 30 s hold. Retail 4:3,
+draw distance unset, aspect unset.
 
-    dark 0.063..0.248
-    luma 72.7..104.0
-    R-G 23.1..28.5
+Before launch, the screen must be unlocked
+(`IOConsoleLocked` / `CGSSessionScreenIsLocked`) and
+`python3 tools/g1_flight_class.py` must print `canon_bad 0` and
+`mission 11/13`. Abort if either fails. Run from `build/` with
+the ROM beside the binary. SIGKILL the game. One instance.
 
-That misses dark>=0.60, the blue arm (needs R-G<=15) and the
-orange arm (needs R-G>=40). Terrain and HUD pass on 12/12. Craft
-passes on 11/12. n=2900 also misses craft (edge 0.013): the ship
-is beside the station. Not required.
+After the run, score every phase-7 dump whose VI origin is the
+mission buffer (the dump's own origin field may be the other
+of `0x690400` / `0x620400`). Also score the same-run title and
+the craft-select or hangar dump.
 
-Same-run title `scratch/agent/s6643_lvl10/fbd/fb_0000800_w512.ppm`
-fails sky and terrain (luma 78.1, R-G 27.1, rel 0.419). That sky
-sits inside the flight's chroma band, so a bare R-G window of
-23..28 also marks the title sky as sky. The title still fails
-terrain, so the overall verdict can stay fail. Craft-select
-`fb_0001700_w512.ppm` fails HUD only (radar 0.002, luma 77.3,
-R-G -1.5). It already passes sky by the blue arm.
+    python3 tools/g1_flight_class.py <phase-7 dumps> <title> <craft-select>
 
-Before the edit, `python3 tools/g1_flight_class.py` must print
-`canon_bad 0` and `mission 11/13`. After the edit, the same
-command must still print both. Then score:
+Write a contact sheet of four flight frames to
+`docs/g1_lvl11_flight_s6645.png` only if a post-hangar flight
+picture exists.
 
-    python3 tools/g1_flight_class.py \
-      scratch/agent/s6643_lvl10/fbd/fb_0002850_w512.ppm \
-      scratch/agent/s6643_lvl10/fbd/fb_0002900_w512.ppm \
-      scratch/agent/s6643_lvl10/fbd/fb_0002950_w512.ppm \
-      scratch/agent/s6643_lvl10/fbd/fb_0003000_w512.ppm \
-      scratch/agent/s6643_lvl10/fbd/fb_0003050_w512.ppm \
-      scratch/agent/s6643_lvl10/fbd/fb_0003100_w512.ppm \
-      scratch/agent/s6643_lvl10/fbd/fb_0003150_w512.ppm \
-      scratch/agent/s6643_lvl10/fbd/fb_0003200_w512.ppm \
-      scratch/agent/s6643_lvl10/fbd/fb_0003250_w512.ppm \
-      scratch/agent/s6643_lvl10/fbd/fb_0003300_w512.ppm \
-      scratch/agent/s6643_lvl10/fbd/fb_0003350_w512.ppm \
-      scratch/agent/s6643_lvl10/fbd/fb_0003400_w512.ppm \
-      scratch/agent/s6643_lvl10/fbd/fb_0000800_w512.ppm \
-      scratch/agent/s6643_lvl10/fbd/fb_0001700_w512.ppm
+H-rule-holds: at least one phase-7 frame passes all four
+clauses, the same-run title fails overall, and the run has
+0 crashes. Record the pass count. The rule stays frozen.
+H-new-class: the sheet is a flight and zero phase-7 frames
+pass all four clauses. Record which clause fails and, for a
+sky miss, luma / R-G / R-B / G-B of the sky box. Do not add
+an arm in this session.
+H-no-picture: no post-hangar `0x690400` inside 420 s. Record
+the last VI origin and stop. Do not raise the wait and do
+not add the planet unlock in this session.
 
-H-chroma: one added sky arm accepts at least 11 of the 12
-phase-7 frames, canon_bad stays 0, mission stays 11/13, the
-title still fails overall, and the craft-select still fails HUD.
-Land that arm. The session after that captures level 11 with
-the rule frozen. Do not start level 11 here.
-H-canon-break: the arm that accepts the clouds also makes
-canon_bad nonzero, or makes the title or the craft-select pass
-overall. Revert that arm in this session and try one spatial
-feature of the cloud box (local variance, or a dark-cloud
-fraction) that the title photo does not share. If that also
-breaks canon, leave the tool as it was at s6643 and record the
-two failed arms. Do not add a third.
-H-no-accept: the new arm still scores 0/12 on these dumps.
-The measurement was wrong. Record the sky-box numbers the arm
-actually saw and do not loosen 0.08 or 0.33 to compensate.
-
-DISCRIMINATOR: `canon_bad`, `mission 11/13`, and the pass/fail
-lines on the twelve phase-7 dumps plus the same-run title and
-the craft-select. A flight that still scores 0/12 is not a
-license to move the terrain cuts.
+DISCRIMINATOR: the pass/fail lines on the phase-7 dumps plus
+the same-run title. A visible flight that scores 0/N is not
+a license to edit the classifier in the same session.

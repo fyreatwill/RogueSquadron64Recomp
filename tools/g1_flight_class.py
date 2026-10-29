@@ -6,6 +6,7 @@ and high-contrast menu art does not. Craft keeps the s6632 engine bloom and
 adds a chase-camera metal hull, a saturated green reticle, a dark hull
 against a bright sky, or low-chroma metal against a coloured neighbour.
 A third sky arm accepts an orange sky, including the dimmer dusk.
+A fourth accepts the level-10 tan cloud field.
 
 Canonical check (no args) exits 0 only when the five-file table holds:
   pass  docs/g3_retail_lvl1_flight_oracle.png
@@ -63,10 +64,18 @@ def classes(p):
     # Orange sky: R well above G and B. Level 4 clears luma 140; level 8's
     # dusk is 84..97 with the same chroma. The title reaches luma ~85, but
     # its R-G stays near 32, so the +40 gate keeps that cast out.
+    # Tan clouds (level 10): R-G is 23..28, between the blue and orange
+    # arms, at luma 73..104. The title photo shares that R-G (about 25..27)
+    # but G stays near B (G-B about 5, R-B about 30). Clouds drop B
+    # (R-B 49..61, G-B 22..33). The B gates keep the title sky false.
+    rg = sm[0] - sm[1]
+    rb = sm[0] - sm[2]
+    gb = sm[1] - sm[2]
     sky_ok = (
         dark >= 0.60
         or (luma >= 70 and sm[0] <= sm[1] + 15)
         or (luma >= 80 and sm[0] >= sm[1] + 40 and sm[0] >= sm[2] + 20)
+        or (luma >= 70 and 20 <= rg <= 32 and rb >= 40 and gb >= 18)
     )
 
     # Relative local edge energy. Absolute stddev stays under 18 on the
