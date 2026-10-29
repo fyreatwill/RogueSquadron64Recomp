@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6618 (2026-10-28).
+Compact operational handoff, as of Session 6619 (2026-10-28).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -15,6 +15,16 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
 - **Active thread: G1d 21:9 level-select tear (HYPOTHESIS-ID g1d-levelselect-texel).**
+  - s6619: the last primitive at x=16 and x=w-17 is the floor triangle on
+    both widths. One binary, 68 and 63 closed frames. lastF is 1.0
+    vs 1.0, both columns. A fill rect touches every sample
+    (touchR 1.0, touchU 0) and is overwritten on every sample
+    (over 1.0). Median multi_frac is 0 vs 0.18, so most torn pixels
+    are one floor triangle over that fill. Pixel step 5.36/5.19 vs
+    44.07/35.74, including x=16. |ΔI| 45.21 vs 42.15 and |Δ shade|
+    2.95 vs 2.96. Blender and combiner unchanged. This refutes
+    H-last. The tear is the blend memory term or the pixel pipe.
+    No patch. Evidence: `scratch/agent/s6619_last/verdict.json`.
   - s6618: filtered I4 and shade at x=16 and x=w-17 are not the tear. One
     binary, 69 and 65 closed frames. Pixel step on fb 1400 is 5.71/5.04
     vs 54.37/51.82. |ΔI| is 46.03 vs 41.18 (rel 0.11, 21:9 smaller).
@@ -293,6 +303,9 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   4x row step is in the outer 1/12 of the width, not at x=w/6.
   s6618 measured those columns: filtered I4 and shade agree, and the
   pixel step does not, so the tear is after the combiner.
+  s6619: that triangle is also the last primitive on every edge sample.
+  A fill rect touches first and is overwritten. H-last is refuted.
+  The tear is the blend memory term or the pixel pipe.
   The OS window remains 640x480, so wider modes letterbox.
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 
@@ -394,10 +407,9 @@ autopilot aim, and mission-to-mission progression are owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6618) Filtered I4 and shade are not the 21:9 tear at x=16 and x=w-17.**
-   |ΔI| is 46.03 vs 41.18, |Δ shade| is 2.94 vs 2.97, and the blender
-   string matches. The same frames' pixel step is 5.71/5.04 vs 54.37/51.82.
-   Do not patch. Next: which primitive writes those pixels last. See NEXT.md.
+1. **(s6619) The floor triangle writes the torn edge last on both widths.**
+   lastF is 1.0 vs 1.0. The fill under it is overwritten. Do not patch.
+   Next: fill color and shade alpha at x=16 and x=w-17. See NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

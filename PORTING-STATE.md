@@ -171897,3 +171897,48 @@ bytes are not established as display pixels. Runtime artifact origin is open.
   the floor triangle refutes H-last and leaves the blend memory term
   or the pixel pipe. Do not retune the anchor or the shift.
   ORIGIN: no mitigation.
+
+## Session 6619 (2026-10-28) — level-select edge last writer is the floor triangle
+
+- Maintenance check: CURRENT-TRUTH was 45,618 bytes, under 60,000. The soak
+  tail still ends at the s6580 dd4 holds. No new soak verdict. The screen
+  was unlocked. No other game was running.
+- Question: which primitive writes x=16 and x=w-17 last, the floor
+  triangle (op 0x0F tile 0 line 4), any other triangle, or a rect/fill.
+  `rs64_floor_texel`, `rs64_floor_untex`, and `rs64_floor_rect` now stamp
+  that class in command order. Rects also count `rect_n`, untextured
+  triangles count `utri_n`, and a rect that is not last counts as
+  overwritten. Texel, shade, and I4 stay on the last floor triangle.
+  One Debug binary, `ROGUESQ_LOG_FLOOR=1`, the s6618 route, 16:9 then
+  21:9, SIGKILL after 50 good frames plus a width-matched dump.
+  16:9 ran 35.5 s, 68 closed frames in the pool, rc -9, 0 crash lines.
+  21:9 ran 33.2 s, 63 closed frames. Samples are x=16 and x=779 on 796,
+  and x=16 and x=1007 on 1024. Dumps
+  `scratch/agent/s6619_last/wide16/fbd/fb_0001400_w796.ppm` and
+  `scratch/agent/s6619_last/wide21/fbd/fb_0001400_w1024.ppm`. Verdict
+  `scratch/agent/s6619_last/verdict.json`.
+- Positive controls, same run. `[floor-i4] selftest ok` printed.
+  Outer-third dy is 5.73 (under 12) and 21.01 (above 18). Pixel |Δ|
+  at x=16 and x=w-17 on the fb nearest 1400 is 5.36 and 5.19 on 16:9
+  (under 12) and 44.07 and 35.74 on 21:9 (above 30). The left column
+  is the same screen x on both widths and still tears only at 1024.
+  floor_frac is 1, badw is 0, x0 is 16, x1 is w-17. Pooled |ΔT| is
+  4.59 vs 4.97, inside 25% of the s6618 4.61 vs 4.99. Pooled |ΔI| is
+  45.21 vs 42.15 and |Δ shade| is 2.95 vs 2.96, inside 25% of
+  46.03 vs 41.18 and 2.94 vs 2.97. Combiner is `(T0-0)*SHADE+0`.
+  Floor blender is `cyc0f0(CC*CCA+MEM*MEMA)|(CC*CCA+MEM*MEMA)` on both.
+  touchR is 1.0 and over is 1.0, so the rect stamp is visible and then
+  overwritten. That is the control that last-writer order is not stuck.
+- lastF is 1.0 on both widths (9656 and 8946 samples). lastO and lastR
+  are 0. Both columns agree. touchU is 0. A fill rect
+  (`cyc3f1(CC*0+CC*1)|(CC*0+CC*1)`) touches every sample and the floor
+  triangle is later on every sample. Median multi_frac is 0 on 16:9
+  and 0.18 on 21:9, so most torn pixels are one floor triangle over
+  that fill, not a stack of floor triangles. This refutes H-last.
+  The tear is the blend memory term or the pixel pipe after this
+  triangle. No patch.
+- Next discriminator: the fill word and shade alpha at the same
+  samples. A fill word that steps on 21:9 only selects H-mem. Shade
+  alpha, or a different alpha combiner, selects H-alpha. Both agreeing
+  leaves the pixel pipe. Do not retune the anchor or the shift.
+  ORIGIN: no mitigation.

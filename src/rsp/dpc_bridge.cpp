@@ -3685,7 +3685,10 @@ extern "C" void rs64_floor_cover(
 // the I4 texel the RDP would fetch, and whether an untextured triangle or
 // a rectangle covers the same point. Each plane is base + De*(y-yFloor) +
 // Dx*(x - XH). Texels are (T/W)*1024 and (S/W)*1024. Luma is
-// 0.2126 R + 0.7152 G + 0.0722 B. Last floor triangle wins.
+// 0.2126 R + 0.7152 G + 0.0722 B. Texel, shade and I4 stay on the last
+// floor triangle. `last` is the class of whichever primitive covered the
+// sample latest in command order: 1 floor tri, 2 any other tri, 3 rect
+// or fill. rect_n / utri_n count touches even after a later primitive wins.
 //
 // The I4 address matches TextureDecoder.hlsli implLoadTMEM: odd rows swap
 // 32-bit words inside the 8-byte group. Factor 5's I4 is pre-interleaved
@@ -3839,7 +3842,7 @@ static void rs64_ft_xs(uint32_t w, float xs[2]) {
 struct Rs64FtPt {
     float texel, texel_s, luma, inten;
     uint16_t floor_n, other_n, untex_n;
-    uint8_t ok, ok_s, ok_l, ok_i, cc_i, bl_i;
+    uint8_t ok, ok_s, ok_l, ok_i, cc_i, bl_i, last, rect_n, utri_n;
 };
 
 struct Rs64Ft {
@@ -3898,12 +3901,22 @@ struct Rs64Ft {
         const int rows = 71, cols = 2;
         int covered = 0, other = 0, multi = 0, nok = 0, npair = 0, npl = 0, npr = 0, jump4 = 0, jump8 = 0;
         int have = 0, nS = 0, nL = 0, nI = 0, nUntex = 0, anyI = 0, iLo = 0, iHi = 0;
+        int nF = 0, nO = 0, nR = 0, nZ = 0, nBoth = 0, nTouchR = 0, nTouchU = 0, nOver = 0;
+        int colF[2] = {}, colO[2] = {}, colR[2] = {};
         int cc_count[4] = {}, bl_count[4] = {};
         double sum = 0, suml = 0, sumr = 0, maxd = 0, sumS = 0, sumL = 0, sumI = 0;
         double texlo = 1e300, texhi = -1e300;
         for (int c = 0; c < cols; c++) {
             for (int r = 0; r < rows; r++) {
                 const Rs64FtPt &p = pts[r][c];
+                if (p.last == 1) { nF++; colF[c]++; }
+                else if (p.last == 2) { nO++; colO[c]++; }
+                else if (p.last == 3) { nR++; colR[c]++; }
+                else nZ++;
+                if (p.rect_n) nTouchR++;
+                if (p.utri_n) nTouchU++;
+                if (p.rect_n && p.last != 3) nOver++;
+                if (p.floor_n && (p.untex_n || p.other_n)) nBoth++;
                 if (p.untex_n) { nUntex++; have = 1; }
                 if (p.floor_n) {
                     covered++;
@@ -3985,14 +3998,20 @@ struct Rs64Ft {
             "dT=%.4f dTl=%.4f dTr=%.4f npair=%d maxdT=%.3f jump4=%d jump8=%d "
             "tex=%.3f..%.3f badw=%d spill=%u dS=%.4f dL=%.4f nS=%d nL=%d "
             "cc=%s omL=%08X ccn=%d n0=%d n1=%d cc2=%s om2=%08X "
-            "dI=%.4f nI=%d iLo=%d iHi=%d untex=%.4f bl=%s blu=%s x0=%.2f x1=%.2f\n",
+            "dI=%.4f nI=%d iLo=%d iHi=%d untex=%.4f bl=%s blu=%s x0=%.2f x1=%.2f "
+            "lastF=%.4f lastO=%.4f lastR=%.4f lastN=%.4f nF=%d nO=%d nR=%d nZ=%d "
+            "both=%.4f touchR=%.4f touchU=%.4f over=%.4f "
+            "nFL=%d nOL=%d nRL=%d nFR=%d nOR=%d nRR=%d\n",
             why, cur_w, covered / denom, other / denom, multi / denom,
             npair ? sum / npair : 0.0, npl ? suml / npl : 0.0, npr ? sumr / npr : 0.0,
             npair, maxd, jump4, jump8, texlo, texhi, covered - nok, spill,
             nS ? sumS / nS : 0.0, nL ? sumL / nL : 0.0, nS, nL,
             cc_mode, om_mode, distinct, mode_n, second_n, cc_second, om_second,
             nI ? sumI / nI : 0.0, nI, iLo, iHi, nUntex / denom, bl_mode, blu,
-            xsamp[0], xsamp[1]);
+            xsamp[0], xsamp[1],
+            nF / denom, nO / denom, nR / denom, nZ / denom, nF, nO, nR, nZ,
+            nBoth / denom, nTouchR / denom, nTouchU / denom, nOver / denom,
+            colF[0], colO[0], colR[0], colF[1], colO[1], colR[1]);
         if (mode >= 0 && (!cc_print_set || std::strcmp(cc_printed, cc_mode) != 0 || om_printed != om_mode)) {
             std::fprintf(stderr, "[floor-cc] w=%u cc=%s omL=%08X\n", cur_w, cc_mode, om_mode);
             std::snprintf(cc_printed, sizeof(cc_printed), "%s", cc_mode);
@@ -4132,6 +4151,7 @@ extern "C" void rs64_floor_texel(
             Rs64FtPt &p = g_ft.pts[s - 180][c];
             if (is_floor) {
                 p.floor_n++;
+                p.last = 1;
                 const char *eqs = (cc_eq && cc_eq[0]) ? cc_eq : "-";
                 int idx = -1;
                 for (int i = 0; i < g_ft.ncc; i++) {
@@ -4207,6 +4227,7 @@ extern "C" void rs64_floor_texel(
                 }
             } else {
                 p.other_n++;
+                p.last = 2;
                 g_ft.add_key(op, tile, line);
             }
         }
@@ -4251,6 +4272,8 @@ extern "C" void rs64_floor_untex(
             if (xs[c] < xa || xs[c] > xb) continue;
             Rs64FtPt &p = g_ft.pts[s - 180][c];
             if (p.untex_n < 65535) p.untex_n++;
+            if (p.utri_n < 255) p.utri_n++;
+            p.last = 2;
             hit = 1;
         }
     }
@@ -4291,6 +4314,8 @@ extern "C" void rs64_floor_rect(
             if (xs[c] < x0 || xs[c] > x1) continue;
             Rs64FtPt &p = g_ft.pts[s - 180][c];
             if (p.untex_n < 65535) p.untex_n++;
+            if (p.rect_n < 255) p.rect_n++;
+            p.last = 3;
             hit = 1;
         }
     }
