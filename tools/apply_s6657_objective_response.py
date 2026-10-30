@@ -4,7 +4,7 @@ import re
 import sys
 
 TAG = 'PATCH: s6657 objective response'
-FILES = ('funcs_13.c', 'funcs_15.c', 'funcs_16.c', 'funcs_35.c', 'funcs_38.c', 'funcs_41.c', 'funcs_43.c')
+FILES = ('funcs_8.c', 'funcs_13.c', 'funcs_15.c', 'funcs_16.c', 'funcs_35.c', 'funcs_38.c', 'funcs_41.c', 'funcs_43.c')
 DECL = r'''
 extern int rs6657_gate(uint8_t*);
 extern void rs6657_callback(uint8_t*);
@@ -149,7 +149,82 @@ static int rs6660_selected(uint32_t f[6]) {
         !(f[3] && (f[2] == 1 || f[2] == 2 || f[2] == 3 || f[2] == 4 || f[2] == 31 || f[2] == 32 || f[2] == 33 || f[2] == 99));
     return !(f[2] == 6 && f[3]) && ((rs6660_named(f[0]) && f[1]) || (rs6660_named(f[4]) && f[5]));
 }
+static uint8_t rs6663_free[2048];
+static int rs6663_valid;
+static uint32_t rs6663_table;
+static uint32_t rs6663_half(uint8_t* rdram, uint32_t a) { return MEM_HU(S32((int32_t)a), 0); }
+static int rs6663_refresh(uint8_t* rdram) {
+    rs6663_valid = 0;
+    rs6663_table = rs6657_word(rdram, 0x80130BB0u);
+    if (!rs6660_ok(rs6663_table) || rs6663_table > 0x807FC000u) return 0;
+    memset(rs6663_free, 0, sizeof(rs6663_free));
+    uint32_t i = rs6663_half(rdram, 0x80130BB4u), n = 0;
+    while (i != 0xFFFFu) {
+        if (i >= 2048 || rs6663_free[i] || ++n > 2048) return 0;
+        rs6663_free[i] = 1;
+        i = rs6663_half(rdram, rs6663_table + i * 8 + 4);
+    }
+    return rs6663_valid = 1;
+}
+static int rs6663_owned(uint8_t* rdram, uint32_t node) {
+    uint32_t pool = rs6657_word(rdram, 0x80130BB8u);
+    return rs6660_ok(pool) && node >= pool && node - pool < 192 * 60 && (node - pool) % 60 == 0;
+}
+static int rs6663_kind(uint32_t handler) {
+    return handler == 0x800DE80Cu || handler == 0x800CABD4u;
+}
+static uint32_t rs6663_descriptor(uint8_t* rdram, uint32_t node, uint32_t* npc, uint32_t* handler) {
+    *npc = *handler = 0;
+    if (!rs6663_owned(rdram, node)) return 0;
+    *handler = rs6657_word(rdram, node);
+    *npc = rs6657_word(rdram, node + 4);
+    return rs6663_kind(*handler) ? rs6657_desc(rdram, *npc) : 0;
+}
+void rs6663_scan(uint8_t* rdram) {
+    static int busy;
+    static uint32_t seen[2048][10], generation[2048], birth[2048], last_report = 0xFFFFFFFFu;
+    if (busy || !rs6657_enabled() || rs6657_level != 2 || !rs6657_started || rs6657_done) return;
+    busy = 1;
+    int valid = rs6663_refresh(rdram);
+    uint32_t active = 0, stale = 0, unknown = 0, named = 0, typed = 0;
+    static unsigned controls[3];
+    if (valid) for (unsigned i = 0; i < 2048; i++) {
+        uint32_t raw = rs6657_word(rdram, rs6663_table + i * 8);
+        stale += rs6663_free[i] && raw != 0;
+        uint32_t node = rs6663_free[i] ? 0 : raw, npc = 0, handler = 0;
+        uint32_t desc = rs6663_descriptor(rdram, node, &npc, &handler), f[6];
+        rs6660_fields(rdram, desc, f);
+        int owned = node && rs6663_owned(rdram, node), known = owned && rs6663_kind(handler);
+        int selected = known && rs6660_selected(f);
+        if (known && rs6660_ok(desc) && controls[rs6657_arm] == 0) {
+            uint32_t control[6] = {40, 1, 0, 0, 0, 0};
+            int accepts = rs6660_selected(control);
+            control[2] = 31; control[3] = 1;
+            fprintf(stderr, "[objresp-select-control] epoch=1 vi=%u arm=%u slot=%u node=%08x handler=%08x desc=%08x local_fixture=1 accepts40=%d rejects_success=%d guest_writes=0\n", rs64_vi_n_g, rs6657_arm, i, node, handler, desc, accepts, !rs6660_selected(control));
+            controls[rs6657_arm]++;
+        }
+
+        active += node != 0; unknown += node && !known; typed += known; named += selected;
+        uint32_t values[10] = {node, npc, handler, desc, f[0], f[1], f[2], f[3], f[4], f[5]};
+        int changed = memcmp(seen[i], values, sizeof(values)) != 0;
+        if (changed) {
+            if (seen[i][0] && (seen[i][0] != node || seen[i][1] != npc || seen[i][2] != handler))
+                fprintf(stderr, "[objresp-retire] epoch=1 vi=%u arm=%u slot=%u generation=%u birth=%u node=%08x npc=%08x handler=%08x desc=%08x\n", rs64_vi_n_g, rs6657_arm, i, generation[i], birth[i], seen[i][0], seen[i][1], seen[i][2], seen[i][3]);
+            if (node && (!seen[i][0] || seen[i][0] != node || seen[i][1] != npc || seen[i][2] != handler)) { generation[i]++; birth[i] = rs64_vi_n_g; }
+            memcpy(seen[i], values, sizeof(values));
+            if (node) fprintf(stderr, "[objresp-live] epoch=1 vi=%u arm=%u slot=%u generation=%u birth=%u node=%08x npc=%08x handler=%08x owned=%d typed=%d canonical=%u desc=%08x id=%u delta=%d bool=%u bval=%u id2=%u delta2=%d selected=%d\n", rs64_vi_n_g, rs6657_arm, i, generation[i], birth[i], node, npc, handler, owned, known, owned ? rs6663_half(rdram, node + 0x16) : 0xFFFFu, desc, f[0], (int32_t)f[1], f[2], f[3], f[4], (int32_t)f[5], selected);
+        }
+    }
+    uint32_t report = (rs64_vi_n_g - rs6657_start) / 300 + rs6657_arm * 100;
+    if (report != last_report) {
+        last_report = report;
+        fprintf(stderr, "[objresp-census] epoch=1 vi=%u arm=%u valid=%d live=%u named=%u typed=%u unknown=%u stale_free=%u slots=2048\n", rs64_vi_n_g, rs6657_arm, valid, active, named, typed, unknown, stale);
+    }
+    busy = 0;
+}
 static void rs6660_census(uint8_t* rdram) {
+    if (rs6657_level == 2) { rs6663_scan(rdram); return; }
+
     static uint32_t tick = 0xFFFFFFFFu, seen[3][2048][8];
     uint32_t now = (rs64_vi_n_g - rs6657_start) / 300;
     if (now == tick) return;
@@ -173,13 +248,19 @@ static int rs6660_candidate(uint8_t* rdram, uint32_t slot, uint32_t shape, uint3
     if (!rs6657_flight(rdram)) return 0;
     uint32_t tb = rs6657_word(rdram, 0x80130BB0u);
     uint32_t node = rs6660_ok(tb) && slot < 2048 ? rs6657_word(rdram, tb + slot * 8) : 0;
-    uint32_t npc = rs6660_ok(node) ? rs6657_word(rdram, node + 4) : 0, desc = rs6657_desc(rdram, npc), f[6];
+    uint32_t npc = rs6660_ok(node) ? rs6657_word(rdram, node + 4) : 0, desc = rs6657_desc(rdram, npc), f[6], handler = 0;
+    int typed = 1;
+    if (rs6657_level == 2) {
+        if (!rs6663_refresh(rdram) || slot >= 2048 || rs6663_free[slot]) { node = npc = desc = 0; typed = 0; }
+        else { desc = rs6663_descriptor(rdram, node, &npc, &handler); typed = rs6663_owned(rdram, node) && rs6663_kind(handler); }
+    }
     rs6660_fields(rdram, desc, f);
-    int selected = rs6660_selected(f);
-    static uint32_t last[3][2048]; static unsigned rows[3];
-    if (slot < 2048 && (last[rs6657_arm][slot] != shape || !last[rs6657_arm][slot]) && rows[rs6657_arm] < 4096) {
-        last[rs6657_arm][slot] = shape; rows[rs6657_arm]++;
-        fprintf(stderr, "[objresp-candidate] epoch=1 vi=%u arm=%u slot=%u shape=%08x proj=%08x node=%08x npc=%08x desc=%08x id=%u delta=%d bool=%u bval=%u id2=%u delta2=%d mark_all=1 c1f=%d radius=%g selected=%d reason=%s\n", rs64_vi_n_g, rs6657_arm, slot, shape, proj, node, npc, desc, f[0], (int32_t)f[1], f[2], f[3], f[4], (int32_t)f[5], c1f, radius, selected, selected ? (radius > 0 ? "eligible" : "radius") : "descriptor");
+    int selected = typed && rs6660_selected(f);
+    static uint32_t last[3][2048][4];
+    uint32_t identity[4] = {shape, node, desc, handler};
+    if (slot < 2048 && memcmp(last[rs6657_arm][slot], identity, sizeof(identity))) {
+        memcpy(last[rs6657_arm][slot], identity, sizeof(identity));
+        fprintf(stderr, "[objresp-candidate] epoch=1 vi=%u arm=%u slot=%u shape=%08x proj=%08x node=%08x npc=%08x handler=%08x typed=%d desc=%08x id=%u delta=%d bool=%u bval=%u id2=%u delta2=%d mark_all=1 c1f=%d radius=%g selected=%d reason=%s\n", rs64_vi_n_g, rs6657_arm, slot, shape, proj, node, npc, handler, typed, desc, f[0], (int32_t)f[1], f[2], f[3], f[4], (int32_t)f[5], c1f, radius, selected, selected ? (radius > 0 ? "eligible" : "radius") : typed ? "descriptor" : "untyped");
     }
     if (rs6657_level == 2) {
         for (unsigned m = 0; m < rs6657_ne; m++)
@@ -283,6 +364,23 @@ def apply(text, name):
         body = body.replace(a, '    rs6661_transport(rdram, ctx, 2);\n    { uint32_t saved = rs6657_victim; rs6657_victim = U32(ctx->r17);\n' + a + '\n    rs6657_victim = saved; }')
         text = text[:start] + body + text[stop:]
         text = text.replace('#include "funcs.h"', '#include "funcs.h"\n' + marker + '\nextern void rs6661_transport(uint8_t*, recomp_context*, int);\nextern _Thread_local uint32_t rs6657_victim;', 1)
+        return text, 1
+    if name == 'funcs_8.c':
+        marker = '/* PATCH: s6663 slot lifetime */'
+        if marker in text: return text, 0
+        text = text.replace('#include "funcs.h"', '#include "funcs.h"\n' + marker + '\nextern void rs6663_scan(uint8_t*);', 1)
+        for fn in ('slotDispatcherIter', 'unregisterAndFreeNpcSlot'):
+            start = text.index('RECOMP_FUNC void ' + fn + '(')
+            stop = text.index('RECOMP_FUNC void ', start + 1)
+            body = text[start:stop]
+            if fn == 'slotDispatcherIter':
+                body = body.replace('    uint64_t hi', '    rs6663_scan(rdram);\n    uint64_t hi', 1)
+                anchor = '    LOOKUP_FUNC(ctx->r2)(rdram, ctx);'
+                assert body.count(anchor) == 1
+                body = body.replace(anchor, anchor + '\n    rs6663_scan(rdram);')
+            else:
+                body = body.replace('    return;', '    rs6663_scan(rdram);\n    return;')
+            text = text[:start] + body + text[stop:]
         return text, 1
     if name == 'funcs_13.c':
         hook = '    rs6660_send(rdram, (uint32_t)ctx->r17, (uint32_t)(ctx->r4 & 0xFFFF));'

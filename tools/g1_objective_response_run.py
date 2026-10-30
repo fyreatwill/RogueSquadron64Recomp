@@ -89,6 +89,33 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
         populations.append(dict(arm=arm, sampled_named_live=len(live), named_eligible_candidates=len(candidates),
                                 id10_mark_all_controls=len(control), mark_all_eligible_controls=len(eligible_control), named_send_identities=len(accepted),
                                 live_without_candidate=[list(k) for k in sorted(live - candidates)]))
+    ownership = {'census': [], 'handlers': {}, 'retirements': 0, 'selection_controls': [],
+                 'candidate_rows': [0, 0, 0], 'unresolved_is_not_absent': True}
+    lifetimes = {}
+    for row in rows:
+        f = dict(re.findall(r'(\w+)=([^\s]+)', row['event']))
+        if '[objresp-census]' in row['event'] and 'valid' in f:
+            ownership['census'].append(f)
+        elif '[objresp-select-control]' in row['event']:
+            ownership['selection_controls'].append(f)
+        elif '[objresp-retire]' in row['event']:
+            ownership['retirements'] += 1
+            key = (f['slot'], f['generation'])
+            if key in lifetimes: lifetimes[key]['retirement_vi'] = f['vi']
+        elif '[objresp-live]' in row['event'] and 'generation' in f:
+            key = (f['slot'], f['generation'])
+            lifetimes[key] = lifetimes.get(key, {}) | f
+        elif '[objresp-candidate]' in row['event']:
+            ownership['candidate_rows'][int(f['arm'])] += 1
+    ownership['lifetimes'] = list(lifetimes.values())
+    for f in lifetimes.values():
+        h = ownership['handlers'].setdefault(f['handler'], {'slot_generations': 0, 'typed': f['typed'], 'nodes': set(), 'descriptors': set()})
+        h['slot_generations'] += 1
+        h['nodes'].add(f['node'])
+        h['descriptors'].add(f['desc'])
+    for h in ownership['handlers'].values():
+        h['nodes'] = sorted(h['nodes'])
+        h['descriptors'] = sorted(h['descriptors'])
     transport = []
     pending = {}
     effects = {}
@@ -144,14 +171,14 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
     relevant = [j for j in joins if j['callback_relevant']]
     incidental = [j for j in joins if not j['callback_relevant']]
     result = dict(tag=tag, level=level, analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), elapsed_s=elapsed_s, done=done, crashlines=crash,
-                  populations=populations, transport=transport, dose_validation=dose_validation, arms=arms, readback_changes=changes, linked_objective_changes=relevant, linked_incidental_changes=incidental,
+                  populations=populations, ownership=ownership, transport=transport, dose_validation=dose_validation, arms=arms, readback_changes=changes, linked_objective_changes=relevant, linked_incidental_changes=incidental,
                   completed_chains=sum('readback_line' in j for j in relevant),
                   completed_incidental_chains=sum('readback_line' in j for j in incidental), linked_counter1_changes=relevant if level == 0 else [], rows=rows)
     (out / 'response.json').write_text(json.dumps(result, indent=2) + '\n')
     with (out / 'response.log').open('w') as stream:
         for row in rows:
             stream.write(f"L{row['line']} {row['event']}\n")
-    print(json.dumps({k: v for k, v in result.items() if k not in ('rows', 'arms', 'readback_changes', 'linked_counter1_changes', 'linked_objective_changes', 'linked_incidental_changes', 'transport')}
+    print(json.dumps({k: v for k, v in result.items() if k not in ('rows', 'arms', 'readback_changes', 'linked_counter1_changes', 'linked_objective_changes', 'linked_incidental_changes', 'transport', 'ownership')}
                      | {'linked_objective_changes': len(relevant), 'linked_incidental_changes': len(incidental), 'readback_changes': len(changes)}))
     return 0 if done and not crash else 1
 

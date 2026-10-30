@@ -625,3 +625,71 @@ helper_control.log,level1_control.c,level1_control.log,elf.sha256}`.
 Next: use original level2 initialization and object-table consumers to
 establish typed descriptor ownership, then correct the complete census
 and target predicate before another flight. No repeat of this recipe.
+
+
+## Session 6663: slot ownership correction
+
+Original ELF establishes a specific flaw in the earlier population census.
+`initNpcSlotList` allocates 0x4000 bytes (2048 records of eight bytes) at
+8003E56C..E584. BB0 holds that table. BB4 is a halfword free-list head;
+record+4 and +6 are halfword links, with 0xFFFF as sentinel. Original
+`unregisterAndFreeNpcSlot` 8003E88C..E8C8 puts a slot on the free list but
+**does not clear record+0**. Pointer-looking free records are legitimate
+stale aliases, not live NPCs or corruption. Zero/nonzero alone is invalid.
+Original `allocNpcContextArrays` 8003FD58..FDA8 allocates BB8's 192 contexts
+of 60 bytes. The spawn stores at 8003FF60..FFAC and 800400B0..400FC set
+context+0=handler, +4=payload, +0x16=primary slot. Additional registered
+slots may share a context; slot counts are not object counts.
+
+The opt-in level2 adapter now walks the free list with cycle/bounds checks,
+records every non-free slot and its context ownership, handler, payload,
+primary slot, generation, observed birth and retirement. It scans at the
+objective callback, dispatcher entry/return from a handler, and slot-free
+returns. Birth means first observation, including objects present at epoch
+start; this is not an omniscient spawn timeline. Invalid lists suppress
+experimental forcing and are reported explicitly. No game memory is changed
+by ownership classification. The original slot-free writer is named above;
+its retained pointers are legitimate, and the fix corrects the host witness.
+
+Descriptor typing is deliberately incomplete. Independently read original
+handlers CABD4 (CAC18/CAC5C/CAC64) and DE80C (DE860/DE88C) establish
+context+4 -> NPC+0x34. Only those kinds can select a level2 forced target;
+other kinds retain their handler/payload identity and `typed=0`, with no
+invented objective fields. The original shuttle handler D3894 also uses
+NPC+0x34, including a flag0x20 spawn variant (D3920/D394C), and its death
+path D4B80..D4BA8 passes the descriptor fields to the objective writer.
+That static observation is not yet in this binary's type map.
+
+Candidate records no longer stop at4096 per arm. The analyzer preserves the
+whole ownership/lifetime table plus handler, candidate, accepted SEND,
+health/effect and actual objective-store joins. Local same-phase selector
+fixtures accept40 and reject success Boolean31 without guest writes. These
+validate predicate sensitivity, not the presence of a genuine count40 target.
+Real mark-all eligible candidates and changing callback readbacks remain
+separate controls. Unknown handlers forbid an absent-target conclusion.
+
+Validation flight `scratch/agent/m6/g1_lvl2s6663_owner/` completed in171.84s,
+B40=2, first epoch VI4939..10339, off/on/off, zero crashes or forced hits.
+All20 census snapshots have valid free lists: active slots33..516,
+stale nonzero free slots0..235, typed slots0..46, unresolved slots33..470.
+This selects H-stale-free for part of the old inflated population, supported
+by independent original instructions and the live membership witness.
+It does not close H-kind or H-late for an actual counter40 target.
+8,763 observed slot generations,8,364 retirements;23 handlers (22 unresolved),
+117 probe-droid slot generations across12 reused context addresses.
+Zero ground-transport handler identities observed. Candidate rows per arm
+59,747/134,473/64,666; eligible mark-all identities15/17/11. All three
+local selector controls accept40/reject-success; six real counter changes
+control readback sensitivity. No selected descriptor, damage-dose test,
+objective-response claim, win or VERIFIED promotion. All six launch-manifest
+hashes match at completion. Original ELF hash and bounded disassemblies,
+helper control sources/logs, build log and computed summary are preserved in
+`scratch/agent/s6663_lvl2_owner/`. First helper compilation lacked string.h;
+adding the fixture include fixed it; both helper control executables then
+passed. Generated replay is idempotent across8 files; build passes.
+
+The runner's ownership summary retains explicit unresolved status, full
+slot-generation records, retirements, handlers, phase-scoped candidate totals
+and selection controls. This run is single-source dynamic evidence;
+original ELF independently establishes ownership semantics, not retail
+behavioral equivalence. No new queued-soak verdicts or library edits.

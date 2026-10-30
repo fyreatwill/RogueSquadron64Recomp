@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6662 (2026-10-30).
+Compact operational handoff, as of Session 6663 (2026-10-30).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -384,7 +384,25 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   has different hashes and is not pooled. No library/default change or
   new queued-soak verdict. Next: original-backed typed ownership audit.
 
+- **G1(d) level2 population ownership corrected (s6663).** Original
+  slot-free8003E88C..E8C8 leaves word0 intact: free slots carry legitimate
+  stale pointers. The adapter now excludes the original BB4 free list,
+  validates BB8 context ownership, records handler/primary-slot/generation
+  and observed birth/retirement, and removes candidate4096 caps. One
+  unlocked flight171.84s, VI4939..10339,0 crashes/forces. All20 census
+  lists valid; active slots33..516, stale free pointers0..235;23 handlers,
+  22 descriptor kinds unresolved. Only original-backed CABD4/DE80C paths
+  can select level2 forcing; unknown kinds remain explicit. Mark-all
+  controls15/17/11 and local selector40/success31 fixtures fire all arms;
+  six natural counter changes. No absence, hit-response or VERIFIED claim.
+  Original instructions plus live free-list membership select H-stale-free
+  for inflated counts; actual target ownership remains open. Full report
+  G1-OBJECTIVE-RESPONSE.md; artifacts scratch/agent/s6663_lvl2_owner/ and
+  scratch/agent/m6/g1_lvl2s6663_owner/. All6 manifest hashes match; helper
+  controls/build/replay pass. No library/default change or new soak verdict.
+
 ## Superseded conclusions — do not act on these
+- s6662 pointer-like census counts are not live-object counts (s6663 original free-slot writer retains pointers; live free-list walk finds up to235 such entries). Believable because the old census checked pointer shape without free-list membership. Its zero target result was already labelled inconclusive and remains so.
 - s6656/s6657 "level1 counter13 meaning unresolved" (s6659 original ELF identifies it in friendlies-saved subtraction and the >=5 Bit4 gate). Believable because historical activity logs supplied indices but no per-level semantics. Hit causality for counter13 remains unresolved; the corrected live flight changes only id10.
 - s5962 "lvl6 null is valid because hb ticks fires" (s6656: heartbeat controls execution, not detection of value changes; the monitor covers only ids 1–15 and has a run-lifetime budget). Believable because TELE and hook execution both fired, but no same-run changing-value control established sensitivity to every relevant objective slot.
 - s5995 "lvl7 id2 peak3 matches the objective threshold" (s6656: that threshold belongs to lv0; the lvl7 callback's inspected reads include ids 20/30/40/99, outside the monitor). Believable because all levels reuse the counter array; index meaning and thresholds are level-specific. Lvl7 end remains the lives-loss chain observed in both arms, not id2 causality.
@@ -568,17 +586,18 @@ owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6662) Level2 typed target ownership.** The ordinary-only flight
-   reaches all arms and controls fire, but no sampled descriptor selects
-   counter40. Do not repeat it or dose an arbitrary target. Read original
-   lv2_initializeObjectTracking (80101CD0..80101EF4) and original object-table
-   producers/consumers to establish node kinds, table bounds and descriptor
-   ownership. Correct the persistent adapter's whole population table and
-   its target predicate together; add a same-phase selected-target control
-   and budgets that preserve late relevant candidates. Original count40 loss
-   semantics stay authoritative. Do not infer a broken objective or absent
-   target from the untyped/capped s6662 census. NEXT.md has commands and
-   discriminating outcomes; no direct state writes, wins, aim or progression.
+1. **(s6663) Finish level2 original handler ownership class.** The corrected
+   free-list census proves stale aliases inflated prior counts, but22 of23
+   observed handler kinds have no classified descriptor path. Audit the
+   entire captured roster against original ELF; encode descriptor offsets
+   or prove non-objective/message-ineligible, then extend the persistent
+   adapter's map and target predicate together. Prioritize WingmanUpdate,
+   TieVariantUpdate and datItemActorNpcHandler (its descriptor is payload+0,
+   not +0x34). Do not repeat the same sparse-map flight or add another
+   diagnostic field. Existing full lifetime/candidate/SEND/health/store
+   table is sufficient. Only validate a new original-backed eligible
+   target; never dose an arbitrary object or infer absent targets from
+   unresolved kinds. No direct state writes, wins, aim or progression.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

@@ -174318,3 +174318,61 @@ scratch/agent/m6/g1_lvl2s6662_lvl2_final/. Next unit is the original-backed
 typed ownership/census correction (lv2 init80101CD0..80101EF4), not another
 unchanged flight or an arbitrary dose. ADVANCED: persistent adapter/runner
 extension and completed discriminating pre-hit boundary experiment.
+
+## Session 6663 (2026-10-30) — original free-slot semantics correct the level-2 ownership census
+
+Read CURRENT-TRUTH, NEXT and soak tail in order; maintenance not triggered
+(57,876 bytes). No new queued-soak verdicts. Followed the original-backed
+ownership correction rather than repeating s6662. Original init8003E56C
+allocates2048*8 slots; BB4 free-list head and slot+4/+6 halfword links.
+Original unregister8003E88C..E8C8 relinks a freed slot without clearing its
+word0. BB8 context pool is192*60 bytes (8003FD58..FDA8); spawn stores set
+handler+0, payload+4 and primary-slot+16. Multiple active slots can share
+one context. Original CABD4/DE80C establish payload+34 descriptor ownership.
+ORIGIN: legitimate stale pointers are written as live context references
+by spawn8003FFAC/800400FC and retained by original free8003E88C..E8C8.
+The host census wrongly treated every pointer-like word as live. Excluding
+free slots corrects the witness, not game state or a corrupt game value.
+Unknown-handler rejection limits experimental forcing to independently
+established descriptor layouts; it is not a game-logic mitigation.
+
+Persistent adapter now walks and validates the whole free list, records
+handler/context ownership/primary-slot/observed generation/birth/retirement,
+scans callbacks, dispatch entry/post-handler and free returns, and removes
+candidate4096 row caps. Only original-backed CABD4 and DE80C descriptors
+may select level2 forcing; others remain explicit typed0, not zero-objective
+NPCs. Full analyzer records lifetimes, handler roster, candidate totals and
+selector controls alongside existing SEND/health/effect/store/readback joins.
+Level0/1 and ordinary default TELE preserved; level2 remains ordinary-only.
+
+One unlocked flight s6663_owner:171.84s, B40=2, epoch VI4939..10339,
+off/on/off,0 crashes or forces. All20 census lists valid. Active slots33..516,
+stale nonzero free slots0..235, known typed slots0..46, unresolved33..470.
+8,763 observed slot generations and8,364 retirements,23 handler kinds.
+Twenty-two kinds unresolved; observed probe117 slot generations across12
+reused context addresses; ground-transport absent from this captured roster.
+Candidate rows59,747/134,473/64,666, proving the old4096 cap hid later data.
+Real eligible mark-all controls15/17/11; local same-phase40-accept and
+success31-reject fixtures fire all arms without guest writes. Six actual
+counter changes control readback sensitivity. Fixtures do NOT control
+existence of a genuine count40 target, and no target null is claimed.
+
+Original instructions plus live membership select H-stale-free for part of
+the inflated old population. H-kind and target timing remain open. No
+hit-response, damage-survival, win or VERIFIED promotion. Static follow-up
+also reads shuttle D3894's descriptor stores D3920/D394C and objective call
+D4BA8 (not in this binary's map or observed roster), and dat actor ECE10's
+payload+0 descriptor (payload+34 is a float, ECEC4). Runtime evidence remains
+single-source; original ELF independently establishes semantics only.
+
+Both helper controls pass, including free aliases, unknown handlers, cyclic
+free list and preserved level1 dose behavior. Initial fixture compilation
+missed string.h; corrected include, rebuilt and reran successfully. Replay
+idempotent on8 files; build passes; all6 manifest hashes still match at end.
+Artifacts: scratch/agent/s6663_lvl2_owner/{summary.json,elf_manifest.json,
+*_elf.txt,helper_control*,level1_control*,build.log}; full run/response table
+scratch/agent/m6/g1_lvl2s6663_owner/. No library/default edit. ADVANCED:
+persistent ownership/predicate/analyzer correction plus completed validation
+with a discriminating stale-pointer result. Next: classify the entire
+23-handler original ownership class and actual count40 producer before
+another flight, not a one-field/one-kind diagnostic campaign.
