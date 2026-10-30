@@ -4,7 +4,7 @@ import re
 import sys
 
 TAG = 'PATCH: s6657 objective response'
-FILES = ('funcs_13.c', 'funcs_15.c', 'funcs_16.c', 'funcs_35.c', 'funcs_41.c', 'funcs_43.c')
+FILES = ('funcs_13.c', 'funcs_15.c', 'funcs_16.c', 'funcs_35.c', 'funcs_38.c', 'funcs_41.c', 'funcs_43.c')
 DECL = r'''
 extern int rs6657_gate(uint8_t*);
 extern void rs6657_callback(uint8_t*);
@@ -21,8 +21,9 @@ _Thread_local uint32_t rs6657_victim;
 static int rs6657_en = -1, rs6657_seen, rs6657_started, rs6657_done;
 static uint32_t rs6657_start, rs6657_arm = 99, rs6657_rows[3], rs6657_hits[3], rs6657_dmg[3], rs6657_seq;
 static int rs6657_level;
+static int rs6661_dosed;
 static uint32_t rs6657_prev[128], rs6657_bool6; static unsigned rs6657_read_init;
-static struct { uint32_t seq, vi, shape, node, npc, desc, proj; } rs6657_events[256];
+static struct { uint32_t seq, vi, shape, node, npc, desc, proj, send_seq, send_vi, send_proj; } rs6657_events[256];
 static unsigned rs6657_ne;
 static uint32_t rs6660_pending_id, rs6660_pending_value, rs6660_observed;
 static int rs6660_ok(uint32_t a) { return a >= 0x80000400u && a < 0x807FFF00u && !(a & 3); }
@@ -61,7 +62,7 @@ static int rs6657_flight(uint8_t* rdram) {
     }
     return 1;
 }
-int rs6657_gate(uint8_t* rdram) { return !rs6657_enabled() || (rs6657_flight(rdram) && rs6657_arm == 1 && !rs6660_pending_id); }
+int rs6657_gate(uint8_t* rdram) { return !rs6657_enabled() || (rs6657_flight(rdram) && rs6657_arm == 1 && !rs6660_pending_id && !rs6661_dosed); }
 void rs6657_callback_level(uint8_t* rdram, int level) {
     if (!rs6657_enabled() || level != rs6657_level) return;
     rs6657_seen = 1;
@@ -178,7 +179,69 @@ void rs6660_send(uint8_t* rdram, uint32_t proj, uint32_t slot) {
     uint32_t node = rs6660_ok(tb) && slot < 2048 ? rs6657_word(rdram, tb + slot * 8) : 0;
     uint32_t npc = rs6660_ok(node) ? rs6657_word(rdram, node + 4) : 0, desc = rs6657_desc(rdram, npc);
     unsigned m = rs6657_match(npc, desc); static unsigned rows[3];
+    if (m < 256 && rs6657_events[m].npc == npc && rs6657_events[m].desc == desc && rs6657_events[m].proj == proj) {
+        rs6657_events[m].send_seq = rs6657_events[m].seq;
+        rs6657_events[m].send_vi = rs64_vi_n_g;
+        rs6657_events[m].send_proj = proj;
+    }
     if (rows[rs6657_arm]++ < 512) fprintf(stderr, "[objresp-send] epoch=1 vi=%u arm=%u proj=%08x node=%08x npc=%08x desc=%08x force_seq=%u\n", rs64_vi_n_g, rs6657_arm, proj, node, npc, desc, m < 256 ? rs6657_events[m].seq : 0);
+}
+
+
+static int rs6661_hp(uint8_t* rdram, uint32_t actor) {
+    if (!rs6660_ok(actor) || actor > 0x807FFC00u) return -999999;
+    uint32_t base = rs6657_word(rdram, actor + 0x190);
+    if (MEM_BU(S32((int32_t)actor), 0x1A7)) return (int32_t)base;
+    uint32_t detail = rs6657_word(rdram, 0x80137CE4u);
+    uint32_t address = base + 4u * detail;
+    if (detail > 32 || !rs6660_ok(address)) return -999998;
+    return (int32_t)rs6657_word(rdram, address);
+}
+static struct { uint32_t node, npc, desc, actor; int controlled; } rs6661_target;
+static _Thread_local struct { uint32_t node, npc, desc, actor, msg, raw, requested, seq, proj, send_vi; int hp, eligible, lethal, active; } rs6661_hit;
+void rs6661_transport(uint8_t* rdram, recomp_context* ctx, int stage) {
+    if (!rs6657_enabled() || rs6657_level != 1 || !rs6657_started || rs6657_done) return;
+    if (stage == 0) {
+        rs6661_hit.active = 0;
+        if (!rs6657_flight(rdram)) return;
+        uint32_t npc = U32(ctx->r17), actor = U32(ctx->r4), desc = rs6657_desc(rdram, npc), f[6];
+        rs6660_fields(rdram, desc, f);
+        unsigned m = rs6657_match(npc, desc);
+        int exact = m < 256 && rs6657_events[m].npc == npc && rs6657_events[m].desc == desc &&
+            rs6657_events[m].send_seq == rs6657_events[m].seq && rs6657_events[m].send_seq &&
+            rs64_vi_n_g - rs6657_events[m].send_vi <= 60;
+        rs6661_hit.npc = npc; rs6661_hit.actor = actor; rs6661_hit.desc = desc;
+        rs6661_hit.msg = U32(ctx->r19); rs6661_hit.raw = U32(ctx->r5);
+        rs6661_hit.hp = rs6661_hp(rdram, actor); rs6661_hit.lethal = 0;
+        rs6661_hit.node = exact ? rs6657_events[m].node : 0;
+        rs6661_hit.seq = exact ? rs6657_events[m].seq : 0;
+        rs6661_hit.proj = exact ? rs6657_events[m].send_proj : 0;
+        rs6661_hit.send_vi = exact ? rs6657_events[m].send_vi : 0;
+        rs6661_hit.eligible = exact && rs6657_arm == 1 && rs6660_ok(npc) &&
+            actor == rs6657_word(rdram, npc + 0x38) &&
+            ((f[0] == 13 && f[1] > 0 && f[1] < 3) || (f[4] == 13 && f[5] > 0 && f[5] < 3)) &&
+            !(f[2] == 6 && f[3]) && rs6661_hit.hp > 0 && rs6661_hit.hp < 1000000;
+        const char* lethal = getenv("ROGUESQ_OBJECTIVE_RESPONSE_LETHAL");
+        if (lethal && lethal[0] == '1' && rs6661_hit.eligible && !rs6661_dosed &&
+            rs6661_target.controlled && rs6661_target.node == rs6661_hit.node &&
+            rs6661_target.npc == npc && rs6661_target.desc == desc && rs6661_target.actor == actor) {
+            ctx->r5 = S32(rs6661_hit.hp + 1); rs6661_hit.lethal = 1; rs6661_dosed = 1;
+        }
+        rs6661_hit.requested = U32(ctx->r5); rs6661_hit.active = 1;
+        fprintf(stderr, "[objresp-transport-pre] vi=%u arm=%u node=%08x npc=%08x desc=%08x actor=%08x msg=%08x raw=%u requested=%u hp=%d force_seq=%u proj=%08x send_vi=%u eligible=%d lethal=%d id=%u delta=%d bool=%u bval=%u id2=%u delta2=%d\n", rs64_vi_n_g, rs6657_arm, rs6661_hit.node, npc, desc, actor, rs6661_hit.msg, rs6661_hit.raw, rs6661_hit.requested, rs6661_hit.hp, rs6661_hit.seq, rs6661_hit.proj, rs6661_hit.send_vi, rs6661_hit.eligible, rs6661_hit.lethal, f[0], (int32_t)f[1], f[2], f[3], f[4], (int32_t)f[5]);
+    } else if (rs6661_hit.active && rs6661_hit.npc == U32(ctx->r17)) {
+        if (stage == 1) {
+            int hp = rs6661_hp(rdram, rs6661_hit.actor), ret = (int32_t)ctx->r2;
+            if (!rs6661_target.controlled && rs6661_hit.eligible && !rs6661_hit.lethal && hp > 0 &&
+                rs6661_hit.raw > 0 && rs6661_hit.hp - hp == (int)rs6661_hit.raw && ret == hp) {
+                rs6661_target.node = rs6661_hit.node; rs6661_target.npc = rs6661_hit.npc;
+                rs6661_target.desc = rs6661_hit.desc; rs6661_target.actor = rs6661_hit.actor; rs6661_target.controlled = 1;
+            }
+            fprintf(stderr, "[objresp-transport-return] vi=%u arm=%u node=%08x npc=%08x desc=%08x actor=%08x msg=%08x raw=%u requested=%u hp_old=%d hp_new=%d returned=%d death=%d force_seq=%u proj=%08x lethal=%d controlled=%d\n", rs64_vi_n_g, rs6657_arm, rs6661_hit.node, rs6661_hit.npc, rs6661_hit.desc, rs6661_hit.actor, rs6661_hit.msg, rs6661_hit.raw, rs6661_hit.requested, rs6661_hit.hp, hp, ret, ret <= 0, rs6661_hit.seq, rs6661_hit.proj, rs6661_hit.lethal, rs6661_target.controlled);
+        } else if (stage == 2) {
+            fprintf(stderr, "[objresp-transport-effect] vi=%u arm=%u node=%08x npc=%08x desc=%08x actor=%08x force_seq=%u lethal=%d bool=%u bval=%u id=%u delta=%d id2=%u delta2=%d\n", rs64_vi_n_g, rs6657_arm, rs6661_hit.node, rs6661_hit.npc, rs6661_hit.desc, rs6661_hit.actor, rs6661_hit.seq, rs6661_hit.lethal, U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), (int32_t)ctx->r7, rs6657_word(rdram, U32(ctx->r29) + 0x10), (int32_t)rs6657_word(rdram, U32(ctx->r29) + 0x14));
+        }
+    }
 }
 
 '''
@@ -191,6 +254,22 @@ WRITERS = {
 def apply(text, name):
     if name not in FILES:
         return text, 0
+    if name == 'funcs_38.c':
+        marker = '/* PATCH: s6661 transport dose */'
+        if marker in text:
+            return text, 0
+        start = text.index('RECOMP_FUNC void npcGroundTransportUpdate(')
+        stop = text.index('\nRECOMP_FUNC ', start + 1)
+        body = text[start:stop]
+        a = '    dealDamageToNpc(rdram, ctx);'
+        assert body.count(a) == 1
+        body = body.replace(a, '    rs6661_transport(rdram, ctx, 0);\n' + a + '\n    rs6661_transport(rdram, ctx, 1);')
+        a = '    datItemSetObjectiveBooleanCount(rdram, ctx);'
+        assert body.count(a) == 1
+        body = body.replace(a, '    rs6661_transport(rdram, ctx, 2);\n    { uint32_t saved = rs6657_victim; rs6657_victim = U32(ctx->r17);\n' + a + '\n    rs6657_victim = saved; }')
+        text = text[:start] + body + text[stop:]
+        text = text.replace('#include "funcs.h"', '#include "funcs.h"\n' + marker + '\nextern void rs6661_transport(uint8_t*, recomp_context*, int);\nextern _Thread_local uint32_t rs6657_victim;', 1)
+        return text, 1
     if name == 'funcs_13.c':
         hook = '    rs6660_send(rdram, (uint32_t)ctx->r17, (uint32_t)(ctx->r4 & 0xFFFF));'
         if hook in text:

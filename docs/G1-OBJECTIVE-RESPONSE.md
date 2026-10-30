@@ -10,7 +10,7 @@ writer calls, Boolean dumps and result-mode requests separately.
 | Level | Response evidence | Success/failure meaning and coverage verdict |
 | --- | --- | --- |
 | 0 | s6657: forced selector B40=0 and lv0 callback; same-flight off/on/off counter1 0→2→13→13, 13 live readback changes, eight exact force/send/store joins. | Named counter1 hit response observed in one instrumented flight, supported by original ELF descriptor-to-counter stores. Dynamic evidence remains single-source; no win, progression, player-shot or retail-equivalence claim. |
-| 1 | s6659 corrected forced-route flight: off/on/off, 25 forces; two complete force/SEND/store/readback chains for id10, eight changing id10 readbacks. ids13/40/41 and Boolean6 stay zero. | Original ELF identifies 13/40/41 as friendly-loss counters, with id13>=5 failing. H-incidental selected by the planned direct-callback-counter discriminator; no named loss-counter response or fully VERIFIED promotion. Older ctl/tele paths have inconsistent instrument identity. |
+| 1 | s6661: exact seq4 ordinary hit HP390→386, then seq6 one requested387 dose HP386→−1; death effect, actual id13 store0→1, callback readback four VI later. | Named friendly-loss response observed. Original ELF proves id13>=5 fails and friendlies=19−(40+13+41). Stopped at1, Boolean6=0; no success, retail-equivalence or fully VERIFIED claim. Dynamic chain remains single-source. |
 | 2 | TELE fires; writer call records only. | No named counter response or controlled null. |
 | 3 | TELE fires; writer call records only. | No named counter response or controlled null. |
 | 4 | id15 0>1>2>3 in both arms; ctl additionally id5 0>1. | Shared baseline movement. No tele-specific objective response proved. Both arms request result mode a0=2. |
@@ -518,3 +518,56 @@ flight, with actual health actor→accepted SEND→damage return→death branch�
 named store→callback readback. Inspect original handler/health code first;
 never write an objective counter directly or force a win. Stop after the
 first named loss response (id13 must remain below5).
+
+## Session 6661: level-1 one-victim death threshold
+
+One adapter build and one flight, unlocked screen; retail aspect/draw-distance
+settings. `ROGUESQ_OBJECTIVE_RESPONSE_LETHAL=1` permits only one damage-request
+register change after an ordinary exact accepted hit has visibly reduced
+positive health on the same node/NPC/descriptor/health actor. All forced
+segments stop after that dose. No health or counter is directly written.
+
+| Witness | VI / raw-log line | Result |
+| --- | --- | --- |
+| Flight/callback | 5265 / 266035 | B40=1, width512, origin690400 |
+| Ordinary accepted SEND seq4 | 7076 / 295090 | projectile80359A5C, node8021B628, NPC8035B35C, descriptor80319AF4 |
+| Ordinary pre/return | 7076 / 295094–295097 | actor8035D3A0=NPC+38; raw/requested4, HP390→386, return386 |
+| Later force/SEND seq6 | 7744 / 303260,303268 | same victim and descriptor, projectile8035A65C |
+| Lethal pre/return | 7744 / 303272–303275 | raw10, requested387, HP386→−1, return−1 |
+| Actual death-effect call | 7744 / 303276 | Boolean24=1, counter13 delta1, second counter0 delta1 |
+| Actual counter writer | 7744 / 303278 | guest8006594C, id13 old0 new1, exact victim and seq6 |
+| Callback readback/stop | 7748 / 303310,303314 | id13 old0 new1; no further forces |
+
+128.32s wall, six forces in arm1 only, 0 crashes. Five changing id10
+readbacks in natural arm0 control value detection; mark-all eligible id10
+identities count3/2 in arms0/1. Eight sampled named live and eligible
+identities in both arms. Arm2 is absent because the safe readback stop
+ends the experiment early. c13=1, c40=c41=0 and Boolean6=0; no end gate
+was intentionally reached and no win/progression was tested.
+
+H-dose is selected for this victim: the ordinary message survives and
+skips effects, the one lethal request invokes them. H-routing is not
+selected: the original NPC+38 load and measured actor agree. H-effect
+is not selected: the measured return, effect call, real store and callback
+all agree. The runtime remains the only behavioral witness; label dynamic
+causality single-source. Independent original-ELF disassembly proves the
+load chain, damage subtraction and positive-return branch semantics; its
+SHA256 f6809909002b407b339ca0331e54faea895ac2730f15152ab5221307442f6cc9
+matches the prior saved original. This is loss-response coverage only.
+
+Adapter replay is idempotent. Build passes; extracted-C controls pass for
+defaults, exact SEND eligibility, ordinary reduction, lethal opt-in off,
+Boolean6 exclusion, actor mismatch, globally single dose and force stop.
+Analyzer now reports pre/return/effect and requires a prior ordinary exact
+hit with a different sequence for a qualified lethal chain. Launch manifest
+preserves the initial analyzer hash; response.json stores the final analyzer
+hash after re-analysis. Binary and adapter hashes match the launch manifest.
+Evidence: `scratch/agent/m6/g1_lvl1s6661_dose/`,
+`scratch/agent/s6661_dose/{chain.json,helper_control.c,helper_control.log,
+transport_damage_elf.txt,health_elf.txt,elf.sha256}`. No queued-soak verdicts
+were added. No library worktree changed.
+
+Parser controls: complete saved chain accepts; removing the ordinary control,
+changing the lethal projectile, omitting the actual store, or omitting the
+callback readback all yield zero qualified completed lethal chains. Evidence:
+`scratch/agent/s6661_dose/parser_control/results.json`.

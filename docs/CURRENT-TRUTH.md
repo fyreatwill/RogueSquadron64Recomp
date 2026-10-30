@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6660 (2026-10-30).
+Compact operational handoff, as of Session 6661 (2026-10-30).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -347,6 +347,24 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   at actual counter readback below failure/completion. Evidence/table:
   docs/G1-OBJECTIVE-RESPONSE.md; scratch/agent/s6660_targeted/chains.tsv.
 
+- **G1(d) level1 named loss response observed (s6661).** One opt-in build
+  and flight, 128.32s wall, VI5265..7748, six forces, 0 crashes. Ordinary
+  exact accepted hit seq4 reduces health390→386; same node8021B628,
+  NPC8035B35C, descriptor80319AF4, actor8035D3A0. Subsequent exact seq6
+  requests387 instead of raw10 once: actual damage returns−1, death-effect
+  call800DF8C8 runs, actual writer8006594C changes id13 0→1 at VI7744,
+  callback reads1 at VI7748. All further forcing stops at the dose;
+  named readback ends the run, below c13>=5 failure. Boolean6 stays0.
+  Same-run id10 changes five times in natural arm; mark-all controls fire
+  in arms0/1. Off/on observed; arm2 intentionally not reached. Original
+  ELF independently proves actorNPC+38, subtraction and death/effect gate
+  (re-disassembly/hash agrees with s6660). H-dose selected for this victim;
+  no routing mismatch or bypassed death effect observed. Dynamic causality
+  remains single-source, not retail equivalence, success or full VERIFIED.
+  No direct health/counter stores, lib edit or default change. Evidence:
+  scratch/agent/m6/g1_lvl1s6661_dose/ and scratch/agent/s6661_dose/chain.json.
+  Level1 named response unit closes; next is level2 objective response.
+
 ## Superseded conclusions — do not act on these
 - s6656/s6657 "level1 counter13 meaning unresolved" (s6659 original ELF identifies it in friendlies-saved subtraction and the >=5 Bit4 gate). Believable because historical activity logs supplied indices but no per-level semantics. Hit causality for counter13 remains unresolved; the corrected live flight changes only id10.
 - s5962 "lvl6 null is valid because hb ticks fires" (s6656: heartbeat controls execution, not detection of value changes; the monitor covers only ids 1–15 and has a run-lifetime budget). Believable because TELE and hook execution both fired, but no same-run changing-value control established sensitivity to every relevant objective slot.
@@ -531,18 +549,17 @@ owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6660) One-victim level1 lethal-dose response.**
-   Descriptor targeting now reaches13/40 victims:46 forces,23 exact SENDs,
-   but remaining health stays positive and the original death branch skips
-   counter effects. Ground truth:800DF830..800DF8CC and800F20EC..800F2158.
-   Build one opt-in probe with the full accepted-victim→health actor→damage
-   return→death branch→actual named store→callback readback table. Preserve
-   natural-damage control in the same flight; allow one lethal message only
-   to a proven named-loss victim, exclude Boolean6 and stop at first named
-   readback. No direct counter writes, wins/progression/aim or repeat holds.
-   H-dose (crossing health0 yields response), H-routing (actor/victim join
-   differs), H-effect (proven death still bypasses descriptor writer).
-   NEXT.md carries the exact constraints; defaults remain retail.
+1. **(s6661) Level2 objective response.** Level1 now has a full exact
+   force→SEND→health→death→named-store→callback chain; do not repeat its
+   lethal dose. Read level2 callback and friendlies code from the original
+   ELF first (80101EF4..80102A98), identify counter/Boolean meanings and
+   end gates, then extend the adapter and runner to one level2 flight.
+   Build the complete victim/actor/descriptor/effect/store/readback table
+   once, with same-flight natural control and mark-all eligibility control.
+   Distinguish a named response, a surviving victim, and a missed routing
+   join; silent values without a changing control remain unknown. No
+   borrowed level1 thresholds, direct state writes, wins, aim or progression.
+   NEXT.md has commands and safety constraints. Defaults remain retail.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

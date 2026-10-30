@@ -86,17 +86,69 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
         populations.append(dict(arm=arm, sampled_named_live=len(live), named_eligible_candidates=len(candidates),
                                 id10_mark_all_controls=len(control), named_send_identities=len(accepted),
                                 live_without_candidate=[list(k) for k in sorted(live - candidates)]))
+    transport = []
+    pending = {}
+    effects = {}
+    transport_sends = []
+    for row in rows:
+        fields = dict(re.findall(r'(\w+)=([^\s]+)', row['event']))
+        key = (fields.get('npc'), fields.get('desc'), fields.get('force_seq'))
+        if '[objresp-send]' in row['event']:
+            transport_sends.append(row | {'fields': fields})
+        if '[objresp-transport-pre]' in row['event']:
+            pending[key] = row | {'fields': fields}
+        elif '[objresp-transport-return]' in row['event']:
+            pre = pending.get(key)
+            if pre:
+                transport.append({'pre_line': pre['line'], 'return_line': row['line'],
+                                  'pre': pre['fields'], 'returned': fields})
+        elif '[objresp-transport-effect]' in row['event']:
+            effects[key] = row | {'fields': fields}
+    for hit in transport:
+        f = hit['pre']
+        key = (f['npc'], f['desc'], f['force_seq'])
+        effect = effects.get(key)
+        force = forces.get(f['force_seq'])
+        hit['exact_force'] = bool(force and (force[1]['node'], force[1]['npc'], force[1]['desc'], force[1]['proj']) ==
+                                 (f['node'], f['npc'], f['desc'], f['proj']) and force[0] < hit['pre_line'])
+        matching_sends = [r for r in transport_sends if r['line'] < hit['pre_line'] and
+            all(r['fields'].get(k) == f.get(k) for k in ('node', 'npc', 'desc', 'proj', 'force_seq'))]
+        if matching_sends:
+            hit['send_line'] = matching_sends[-1]['line']
+        hit['exact_send'] = bool(matching_sends and force and force[0] < matching_sends[-1]['line'])
+        hit['ordinary_health_control'] = (f['lethal'] == '0' and f['eligible'] == '1' and
+            int(hit['returned']['hp_new']) > 0 and int(f['hp']) - int(hit['returned']['hp_new']) == int(f['raw']) and
+            int(f['raw']) > 0 and hit['returned']['returned'] == hit['returned']['hp_new'])
+        if effect and effect['line'] > hit['return_line']:
+            hit['effect_line'] = effect['line']
+            hit['effect'] = effect['fields']
+            hit['objective_chains'] = [
+                j for j in joins if j['seq'] == f['force_seq'] and j['npc'] == f['npc'] and
+                j['desc'] == f['desc'] and j['write_line'] > effect['line']]
+    lethal_hits = [h for h in transport if h['pre']['lethal'] == '1']
+    for hit in lethal_hits:
+        f = hit['pre']
+        hit['prior_ordinary_control'] = any(
+            h['ordinary_health_control'] and h['exact_force'] and h['exact_send'] and
+            h['return_line'] < hit['pre_line'] and h['pre']['force_seq'] != f['force_seq'] and
+            all(h['pre'][k] == f[k] for k in ('node', 'npc', 'desc', 'actor')) for h in transport)
+        hit['qualified_lethal'] = (hit['exact_force'] and hit['exact_send'] and hit['prior_ordinary_control'] and
+            int(f['requested']) == int(f['hp']) + 1 and hit['returned']['returned'] == '-1' and
+            hit['returned']['hp_new'] == '-1' and hit.get('effect', {}).get('lethal') == '1')
+    dose_validation = dict(lethal_count=len(lethal_hits),
+        ordinary_controls=sum(h['ordinary_health_control'] for h in transport),
+        completed_lethal_chains=sum('readback_line' in j for h in lethal_hits if h['qualified_lethal'] for j in h.get('objective_chains', [])))
     relevant = [j for j in joins if j['callback_relevant']]
     incidental = [j for j in joins if not j['callback_relevant']]
     result = dict(tag=tag, level=level, analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), elapsed_s=elapsed_s, done=done, crashlines=crash,
-                  populations=populations, arms=arms, readback_changes=changes, linked_objective_changes=relevant, linked_incidental_changes=incidental,
+                  populations=populations, transport=transport, dose_validation=dose_validation, arms=arms, readback_changes=changes, linked_objective_changes=relevant, linked_incidental_changes=incidental,
                   completed_chains=sum('readback_line' in j for j in relevant),
                   completed_incidental_chains=sum('readback_line' in j for j in incidental), linked_counter1_changes=relevant if level == 0 else [], rows=rows)
     (out / 'response.json').write_text(json.dumps(result, indent=2) + '\n')
     with (out / 'response.log').open('w') as stream:
         for row in rows:
             stream.write(f"L{row['line']} {row['event']}\n")
-    print(json.dumps({k: v for k, v in result.items() if k not in ('rows', 'arms', 'readback_changes', 'linked_counter1_changes', 'linked_objective_changes', 'linked_incidental_changes')}
+    print(json.dumps({k: v for k, v in result.items() if k not in ('rows', 'arms', 'readback_changes', 'linked_counter1_changes', 'linked_objective_changes', 'linked_incidental_changes', 'transport')}
                      | {'linked_objective_changes': len(relevant), 'linked_incidental_changes': len(incidental), 'readback_changes': len(changes)}))
     return 0 if done and not crash else 1
 

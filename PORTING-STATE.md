@@ -174212,3 +174212,61 @@ single-victim lethal-dose test through the real damage call: ordinary-dose
 positive control then one lethal request, full actor/death/store/readback
 chain, stop at first loss response below c13>=5. No counter/health stores,
 mission completion or progression forcing.
+
+## Session 6661 (2026-10-30) — one accepted lethal request proves level-1 loss-counter response
+
+Read CURRENT-TRUTH, NEXT and soak tail in order. Maintenance not triggered
+(55,379 bytes); no new queued verdicts. One bounded persistent adapter change,
+one build and one forced-route level1 flight. Screen unlocked, default aspect
+and draw distance, no library edits, no regeneration or repeat holds.
+
+Ground truth before instrumentation: original800DF830 loads actor=NPC+38,
+message+6 supplies unsigned damage,800F2120 subtracts and returns HP;
+800DF840 skips descriptor effect800DF8C8 when HP>0. Re-disassembly from
+../rogue_squadron64/build/roguesquadron.elf matches s6660 and original SHA256
+f6809909002b407b339ca0331e54faea895ac2730f15152ab5221307442f6cc9.
+Persistent adapter adds complete pre/return/effect context in funcs38,
+exact force/SEND joins, actual objective stores and callback readbacks.
+Explicit ROGUESQ_OBJECTIVE_RESPONSE_LETHAL opt-in changes only one requested
+damage argument, after a positive ordinary-damage control on the same live
+node/NPC/descriptor/actor. Boolean6 setters excluded; forcing stops at dose,
+readback closes run. Ordinary TELE/default behavior preserved.
+ORIGIN: writer of experimental requested damage is rs6661_transport at the
+original800DF838 call; original dealDamageToNpc800F2148/58 legitimately
+subtracts it from health. This is diagnostic input, not a corruption guard,
+health/counter store, skipped game logic or mitigation.
+
+Run g1_lvl1s6661_dose:128.32s, epoch VI5265..7748, six forces in arm1,
+0 crashes. Exact ordinary seq4/SEND at7076: node8021B628, NPC8035B35C,
+descriptor80319AF4, actor8035D3A0, projectile80359A5C; request4 HP390→386.
+A prior raw10 hit HP400→390 lacks an exact projectile join and is NOT the
+lethal-dose control. Later exact seq6/SEND at7744, projectile8035A65C:
+raw10, requested387 once, HP386→−1, return−1. Actual death-effect call
+logs Boolean24=1 and counter13 delta1. Actual writer8006594C changes id13
+0→1 at7744; callback reads1 at7748. Named c40/c41 and Boolean6 stay0.
+No force after dose. Stop below c13>=5 failure; no success/progression.
+
+H-dose selected for this victim. H-routing not selected: original NPC+38
+and measured actor agree. H-effect not selected: actual death, descriptor
+call, store and readback form an exact chain. Dynamic causality remains
+single-source; ELF is independent semantic evidence, not a retail behavior
+oracle. Five actual changing id10 readbacks in natural arm0 control value
+detection; mark-all id10 identities3/2 in arms0/1. Eight sampled named
+live/eligible identities each arm. Arm2 intentionally absent due early stop.
+Level1 named loss-response unit closes; no fully VERIFIED promotion.
+
+Build passes; adapter applied twice, second stable. Extracted C controls
+pass defaults, exact SEND, ordinary reduction, opt-in off, Boolean6 exclusion,
+actor mismatch, single dose and force inhibition. Analyzer requires a prior
+ordinary exact hit with a different force sequence for qualified lethal
+chains; one completed chain. Final re-analysis records final analyzer hash;
+launch manifest preserves initial hash. Binary/adapter unchanged since launch.
+Evidence: scratch/agent/m6/g1_lvl1s6661_dose/ and scratch/agent/s6661_dose/
+(chain.json, helper controls, original-ELF windows/hash). CURRENT-TRUTH and
+G1 objective report updated; NEXT selects one level2 objective-response
+adapter/flight after original per-level semantics, with no borrowed gates.
+
+Parser controls: complete saved chain accepts; removing the ordinary control,
+changing the lethal projectile, omitting the actual store, or omitting the
+callback readback all yield zero qualified completed lethal chains. Evidence:
+`scratch/agent/s6661_dose/parser_control/results.json`.

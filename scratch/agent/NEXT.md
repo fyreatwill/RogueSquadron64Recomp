@@ -1,86 +1,57 @@
-# Level-1 single-victim lethal-dose response
+# Level-2 objective response
 HYPOTHESIS-ID: g1-coverage-cd
 
-s6660 completed one descriptor-targeted flight. Do not repeat that dose:
-46 forces→23 exact projectile SENDs, but target health remained positive
-(999→859 and400→322). Original transport code skips descriptor effects
-while damage return>0. id10 mark-all and changing-value controls fired.
-No named13/40/41 response, no win/progression, no full VERIFIED promotion.
-Read CURRENT-TRUTH, NEXT, SOAK-RESULTS tail in order; maintenance at>60000.
+s6661 closes the level1 named loss-response unit: ordinary seq4 HP390→386,
+then exact later seq6 requested387, HP386→−1, death effect→writer8006594C
+id13 0→1→callback at+4 VI. No repeat dose, success claim or full VERIFIED.
+Read CURRENT-TRUTH,NEXT,SOAK-RESULTS tail first; maintenance at>60000 bytes.
 
-ONE bounded change and ONE level1 flight: keep descriptor targeting, add
-an opt-in single-victim damage-dose lever that exercises the actual death
-branch. Do not directly write health/counters/Boolean6, force a win, steer,
-or run repeat holds. Defaults and ordinary TELE remain unchanged.
+ONE bounded adapter extension and ONE forced-route level2 flight. First
+establish level2 counter/Boolean meanings from original ELF; do not borrow
+level1 ids/thresholds. Ground truth commands (save outputs, bounded reads):
+    mkdir -p scratch/agent/s6662_lvl2
+    python3 tools/disasm_mips_elf.py ../rogue_squadron64/build/roguesquadron.elf 0x80101EF4 0x80102A98 > scratch/agent/s6662_lvl2/callback_elf.txt
+    rg -n '800C759C|800C761C|800C7738|800C776C|800C76B0' scratch/agent/s6662_lvl2/callback_elf.txt
+    python3 tools/disasm_mips_elf.py ../rogue_squadron64/build/roguesquadron.elf 0x80102A6C 0x80102A98
+    rg -n 'RECOMP_FUNC void lv2_checkComplexObjectives|RECOMP_FUNC void lv2_calculateFriendliesSaved' ../N64Recomp/RecompiledFuncs/funcs_4[34].c
+Read <=60-line windows around the ELF hits. Friendlies callback lead is
+1−counter40 (generated source, confirm original). Read the actual end/fail
+gates before allowing a forced hit; exclude completion Boolean setters.
+Original descriptor/damage references remain s6661_dose/*_elf.txt.
 
-Hypotheses:
-- H-dose: a proven named-loss victim survives ordinary damage, but one
-  accepted lethal message reaches the death branch, descriptor writer and
-  callback readback. This establishes a loss response, not success progress.
-- H-routing: the accepted victim's actual health actor differs from the
-  assumed actor. Exact original load chain plus before/after actor identity
-  selects this; repair the test join before interpreting behavior.
-- H-effect: actual remaining health<=0 and death branch execute for the
-  selected victim, yet its descriptor writer/readback does not respond.
-  This requires same-run changing-value and eligibility controls; absent
-  controls/route/death remain unknown, not broken-logic conclusions.
+Hypotheses and discriminator:
+- H-response: exact accepted victim/descriptor hit invokes a level2-named
+  objective writer and callback readback. Full force→SEND→actor HP→effect
+  →actual store→readback selects it; count activity alone does not.
+- H-dose: exact relevant accepted hits reduce HP but return positive and
+  skip death effects. Original branch plus actual positive returns selects
+  survival, not broken objective logic.
+- H-routing: named live victims never become eligible or accepted, or the
+  health actor/descriptor join differs. Whole live/candidate/SEND/actor table
+  with mark-all eligibility control selects the first missing boundary.
+No null without changing-value and same-phase eligibility controls.
 
-Ground truth BEFORE instrumentation (original ELF;40/28-line windows):
-    cat scratch/agent/s6660_targeted/transport_damage_elf.txt
-    cat scratch/agent/s6660_targeted/health_elf.txt
-    cat scratch/agent/s6659_response/lv1_callback_elf.txt
-    cat scratch/agent/s6659_response/lv1_friendlies_elf.txt
-    sed -n '1,60p' scratch/agent/s6660_targeted/chains.tsv
-    rg -n 'RECOMP_FUNC void npcGroundTransportUpdate|0x800DF830|0x800DF840|0x800DF8C8' ../N64Recomp/RecompiledFuncs/funcs_38.c
-    rg -n 'rs6660_|rs6657_write|def apply' tools/apply_s6657_objective_response.py
-    sed -n '30,35p' docs/debug-trace-env-vars.md
-Original: health actor=NPC+38; message damage=lhu(message+6); call800F2120;
-return>0 at800DF840 skips to800DF928; death loads descriptor+70/+74,
-+78/+7C,+80/+84 then calls80065914 at800DF8C8. Counter writer8006594C/74.
-NPC is node+4, descriptorNPC+34. Do NOT treat node+34 as descriptor.
-Counter13 address80138090,40=801380FC,41=80138100; Boolean6=801388A5.
-Friendlies saved=19-(40+13+41); c13>=5 fails; Boolean6 completes.
+Extend tools/apply_s6657_objective_response.py and runner --level2 with all
+counters/readbacks, relevant Boolean gates, live census, candidates, exact
+force/SEND identities, actual health actor and effect-call victim context.
+Replay extra generated files as needed. Preserve level0/1 and ordinary TELE
+behavior. Start with ordinary damage only; LETHAL must remain disabled on
+level2 unless independent original semantics establish a single loss target
+that cannot trigger a win/failure. If no safe target exists, implement the
+whole ordinary-dose table and report the selected boundary honestly.
+Natural/off then forced/on in one flight; stop further forcing on first
+named changing store and finish callback readback. No direct health/counter
+stores, intentional win/failure, steering, aim, progression or repeat holds.
+Before build rewrite this file with final targets, exact gates and controls.
 
-Implement the WHOLE table in one persistent adapter/build, not one join
-field per session. Extend FILES/replay to funcs38 as necessary. Hook the
-original damage call and return/death branch with selected NPC/node,
-health actor, descriptor counter/delta, message identity/raw damage,
-actual requested damage and returned HP, force seq/projectile/SEND VI,
-actual counter PC/old/new and independent callback readback. Do not guess
-health pointer layout: use original ELF health accessor and existing fixed
-s5857 helper arithmetic (unsigned offsets once manufactured a4GiB read).
-
-Use a new explicit opt-in env, e.g. ROGUESQ_OBJECTIVE_RESPONSE_LETHAL=1,
-passed and hashed by the runner. In the existing on window: select ONE
-actual accepted ground-transport counter13 target (nonzero delta, Boolean6
-not set). First accepted hit uses original damage and must visibly reduce
-positive HP (dose control). A subsequent accepted hit to the SAME live
-node/NPC/descriptor may set only the call's requested damage register to
-currentHealth+1, ONCE globally. This is a test input at the real hit path,
-not a counter or health store. Log the change and original values. Exclude
-all other victims from the lethal lever; continue mark-all eligibility
-controls. Inhibit further forces immediately on a named changing store,
-finish callback readback, then SIGKILL. Keep fallback c13>=3/Boolean6 and
-5400-VI stops; no intentional failure/completion. If exact eligibility
-cannot be established, do not apply the dose and classify the failed join.
-
-Before build, write exact final lever/controls/stop design into this file.
-Then:
     python3 tools/apply_s6657_objective_response.py
     cmake --build build --target RogueSquadron64Recomp -j5
     /usr/sbin/ioreg -n Root -d1 | rg 'CGSSessionScreenIsLocked'
-    env ROGUESQ_OBJECTIVE_RESPONSE_LETHAL=1 python3 tools/g1_objective_response_run.py s6661_dose --level 1
-    python3 tools/g1_objective_response_run.py s6661_dose --level 1 --analyze
-Use fresh paths, unlocked screen, build/ROM and SIGKILL watchdog. No full
-fixup on existing tree. If regen is needed: make_elf→N64Recomp→fixup→cmake.
-Preserve lib worktrees; no export needed unless you edit them.
+    python3 tools/g1_objective_response_run.py s6662_lvl2 --level 2
+    python3 tools/g1_objective_response_run.py s6662_lvl2 --level 2 --analyze
+Fresh paths, unlocked screen, build/ROM, SIGKILL watchdog. Do not full-fixup
+an existing tree; regen only in prescribed order if necessary. Preserve lib.
 
-s6660 evidence: scratch/agent/m6/g1_lvl1s6660_targeted/ and
-scratch/agent/s6660_targeted/.175.61s, VI5234..10634,0 crashes. Eight unique
-named live/eligible identities per arm; candidate4096-row budgets reached,
-so later unlogged identities stay unknown.46 exact force rows,23 SENDs:
-14 id40 node8021b358/NPC8035ab5c/desc8031b278;9 id13
-node8021b628/NPC8035b35c/desc80319af4. Six id10 readback changes0→5→6→6.
-The health-parent association is currently single-source temporal/layout
-support: legacy damage matching reports force_seq0 for actor subobjects.
-Original ELF independently proves the damage/death-gate semantics.
+Current evidence: scratch/agent/m6/g1_lvl1s6661_dose/ and
+scratch/agent/s6661_dose/chain.json. 128.32s, VI5265..7748, 0 crashes.
+The early readback stop intentionally omits arm2. No queued soak additions.
