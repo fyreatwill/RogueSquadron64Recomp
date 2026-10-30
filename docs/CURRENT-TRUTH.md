@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6664 (2026-10-30).
+Compact operational handoff, as of Session 6665 (2026-10-30).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -586,19 +586,22 @@ owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6664) Identify level2 count40's DAT producer/spawn boundary.**
-   Handler audit closed: all25 observed kinds classified from original ELF.
-   Probe/debris-field/wingman/TIE use payload+34 ordinary death fields;
-   DAT actor uses payload+0 spawn metadata, never death +70. One flight
-   VI4955..10356,171.81s,0 crashes/forces; no count40 observed. Mark-all
-   15/17/16, six natural counter changes and ten actual health reductions
-   control sensitivity, not target existence. Two late kinds were unknown
-   in the capture, independently proved message5-ineligible and added after
-   it (build/fixtures only). Do not report capture unknown=0. Next: original
-   DAT producer/conditions and a complete typed descriptor inventory with
-   spawn causality if needed; no repeat map flight, lethal dose, arbitrary
-   victim, win or direct state write. Full evidence G1-OBJECTIVE-RESPONSE.md
-   and scratch/agent/s6664_lvl2_kinds/. Dynamic evidence single-source.
+1. **(s6665) Join level2 rescue timer, gate, spawn and ordinary hit.**
+   Retail DAT has three subtype24 rescue shuttles: death count40/+1,
+   HP2000, activation Booleans21/22/23. Known id71 SHIP_01..03 decode
+   positively. Original ELF dispatches D3894; message5 D49FC -> ordinary
+   damage -> D4BA8 effect -> actual counter store6594C. Callback requires
+   Boolean59=0 and timer1>=100 before setting21/22/23 from ship states.
+   Saved s6664 first epoch keeps21/22/23=0; five real Boolean changes
+   control readback sensitivity. Thus closed activation gates explain the
+   missing sampled targets; timer cause is unmeasured, not a proven short
+   hold. Tool g1_dat_inventory.py checks401 structural records, original
+   dispatch/store words and id71 controls. Unknown layouts stay raw.
+   Next: ONE instrument/build/capture for timer initialization/values,
+   gate setter, descriptor activation, shuttle ownership and ordinary
+   force/SEND/health joins; no direct state writes or lethal level2 dose.
+   Full table and limits: G1-OBJECTIVE-RESPONSE.md s6665. No new run/soak,
+   runtime change, forced response or VERIFIED claim this iteration.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

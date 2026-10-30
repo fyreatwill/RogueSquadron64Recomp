@@ -11,7 +11,7 @@ writer calls, Boolean dumps and result-mode requests separately.
 | --- | --- | --- |
 | 0 | s6657: forced selector B40=0 and lv0 callback; same-flight off/on/off counter1 0→2→13→13, 13 live readback changes, eight exact force/send/store joins. | Named counter1 hit response observed in one instrumented flight, supported by original ELF descriptor-to-counter stores. Dynamic evidence remains single-source; no win, progression, player-shot or retail-equivalence claim. |
 | 1 | s6661: exact seq4 ordinary hit HP390→386, then seq6 one requested387 dose HP386→−1; death effect, actual id13 store0→1, callback readback four VI later. | Named friendly-loss response observed. Original ELF proves id13>=5 fails and friendlies=19−(40+13+41). Stopped at1, Boolean6=0; no success, retail-equivalence or fully VERIFIED claim. Dynamic chain remains single-source. |
-| 2 | s6662: one off/on/off flight, zero selected forces; mark-all eligible controls 5/13/10, eight natural counter changes. | No counter40 descriptor sampled; target availability is unresolved. Damage survival and objective response were not tested. Census is untyped and candidate budgets saturate. |
+| 2 | s6665: retail DAT identifies three count40 rescue shuttles, gated by Booleans21–23; saved s6664 capture keeps those gates0. Original ELF supplies shuttle damage/death writer. | Activation boundary identified; timer1>=100 gate not dynamically measured. No forced shuttle hit or objective response established. |
 | 3 | TELE fires; writer call records only. | No named counter response or controlled null. |
 | 4 | id15 0>1>2>3 in both arms; ctl additionally id5 0>1. | Shared baseline movement. No tele-specific objective response proved. Both arms request result mode a0=2. |
 | 5 | tele id2 0>1, ctl id2 remains observed 0; id4 observed 0 in both. | Historical failure-counter interpretation; static lv5 tests id2>=4 through Bit4, id4>=9 separately. Does not prove a successful objective response. |
@@ -797,3 +797,78 @@ findings remain single-source; independent ELF backs structure/dispatch
 only. No VERIFIED promotion, win, default change, library edit or new soak
 verdict. Next is the original level2 DAT producer/spawn boundary for count40,
 not a repeat of this map flight or another per-handler census.
+
+### s6665 — count40 is a gated rescue-shuttle death effect
+
+Offline work only: no game launch, new soak, regeneration or runtime build.
+`tools/g1_dat_inventory.py` walks the retail ROM manifest, inflates
+`level/lv_2/dat`, bounds-checks all offset lists/records/names and rejects
+record overlap. It emits all 401 definitions: type0=127, type3=59,
+type6=99, type7=116. Unknown layouts remain raw words, not objective fields.
+Only audited type0 subtypes 0x21/0x24 receive semantic death fields.
+This is a complete structural inventory, not a claim that all subtypes have
+been semantically decoded. Asset ROM offset 0x008F11C8, inflated size86040,
+compressed size23683 (including the format's ten extra bytes), SHA256
+`7e27a6753b1fa491a29ee17abff4aa955720f90daaf1381adf50106263d75616`.
+
+| DAT offset | Type/subtype | Name | Activation Boolean / counter / minimum | HP | Death counter/delta |
+| --- | --- | --- | --- | --- | --- |
+| 1270 | 0/21 | SHIP_01 | 1 / 0 / 0 | 4500 | 71/+1; Boolean7=1 |
+| 1350 | 0/21 | SHIP_02 | 2 / 0 / 0 | 4500 | 71/+1; Boolean8=1 |
+| 1430 | 0/21 | SHIP_03 | 3 / 0 / 0 | 4500 | 71/+1; Boolean9=1 |
+| 1510 | 0/24 | 40_Rebel_Rescue_Shuttle_01 | 21 / 0 / 0 | 2000 | 40/+1 |
+| 1628 | 0/24 | 50_Rebel_Rescue_Shuttle_02 | 22 / 0 / 0 | 2000 | 40/+1 |
+| 1740 | 0/24 | 60_Rebel_Rescue_Shuttle_03 | 23 / 0 / 0 | 2000 | 40/+1 |
+
+Offsets/subtypes above are hexadecimal; counters, Booleans and HP are decimal.
+The known D5208-associated id71 ships are the positive decode control, not a
+claim of new hits. All three shuttle death tuples are (40,1,0,0,0,1).
+
+Original ELF, independent of generated runtime code:
+
+- 8003BFF0[0x24] = 800657DC: subtype24 returns category1 because
+  descriptor+88 is zero for these definitions. Grid activation checks
+  reference range at 80047554, then isDatItemConditionMet at 80047570.
+- 8003C140[0x24-12] = 80065854: nonzero descriptor+60 requires the
+  corresponding Boolean at 801388A0[id-1]; +64/+68 are a counter minimum.
+- 8003BDB8[0x24-12] = 800654C8 dispatches npcShuttleUpdate800D3894;
+  8003BED8[0x24-12] = 80065708 selects the same handler for structure
+  spawning. Therefore this is not ECE10's incompatible payload+0 layout.
+- Shuttle message1 stores descriptor to payload+34 at 800D3920 (or
+  incoming wrapper+0C at 800D3948). 800A74C8[4] = 800D49FC is message5.
+  It calls dealDamageToNpc at 800D4B0C. Nonpositive health enters
+  destruction, then reads descriptor+70..+84 and calls80065914 at
+  800D4BA8. Actual counter store is8006594C. This names the original
+  damage-to-counter producer; no live shuttle or hit is asserted.
+- lv2_checkComplexObjectives at80102174..8010226C requires Boolean59=0 and timer1>=100.0 before
+  considering rescue. If Boolean1=1 and7=0 it sets21=1,59=1; corresponding
+  alternatives are2=1/8=0 ->22, and3=1/9=0 ->23. The constant at800A95F4
+  is IEEE754100.0. GNU mips64-elf-objdump independently decodes
+  80102194 as `c.le.s $f2,$f0` and8010219C as `bc1f`, confirming direction.
+  Timer1 is read from8010C9FC by800C76E0; it is guest time, not wall time.
+
+Saved s6664 first flight epoch, VI4955..10356 (5401 VIs), joins to the
+original predicates: Booleans21/22/23 and59 initialize0 and never report a
+change; Boolean1 becomes1 atVI5881;2/3 and7/8/9 stay0. Five actual Boolean
+changes control monitor sensitivity (128,1,127,71,72). Start/end and exact
+line provenance are in inventory.json; no later epochs are pooled. The
+phase-scoped readback logs are sampled at callbacks, so they do not exclude
+an unobserved transient between callbacks. No timer value was captured:
+the tempting "90 VI-seconds < 100" explanation remains unproved because
+timer initialization and accumulation have not been joined dynamically.
+
+Result: the retail level2 definition-without40 hypothesis is refuted; an
+ordinary shuttle layout supplies the real count40 producer. H-activation
+is supported for the saved capture by original predicates plus observed
+closed gate values. Why the timer gate never opened remains unresolved.
+No forced response, success, retail equivalence or VERIFIED promotion.
+No guard, lethal dose, counter/health write or default change.
+
+Reproduce:
+`python3 tools/g1_dat_inventory.py --check-level2 --log scratch/agent/m6/g1_lvl2s6664_kinds/run.log --output scratch/agent/s6665_lvl2_producer/inventory.json`.
+All assertions pass, including original dispatch/store opcodes and known
+id71 decode. Malformed list and record bounds are rejected. Original ELF
+disassemblies, GNU gate disassembly and full inventory live in
+`scratch/agent/s6665_lvl2_producer/`. Next: one fully joined timer/gate/spawn
+capture with original shuttle ownership and ordinary-hit witness, rather
+than repeating the old sparse map census.

@@ -174430,3 +174430,48 @@ Evidence scratch/agent/s6664_lvl2_kinds/ (original manifests/disassemblies,
 summary, fixtures/build logs) and scratch/agent/m6/g1_lvl2s6664_kinds/.
 NEXT: original level2 DAT definition/activation/ownership table for count40;
 no repeat map flight, no one-handler-per-session campaign.
+
+## Session 6665 (2026-10-30) — locate count40 rescue-shuttle definitions and activation gates
+
+2026-10-30. HYPOTHESIS-ID: g1-coverage-cd. Step0 CURRENT-TRUTH=59505 bytes,
+so no maintenance trigger. Read handoffs in order; no new queued-soak
+verdicts. One offline original-data/ELF work unit; no game run or build.
+
+Added tools/g1_dat_inventory.py: walk retail ROM manifest, validate zlib EOF
+and output size, bounds-check DAT lists/records/names/non-overlap, emit401
+structural definitions (127/59/99/116 for types0/3/6/7). Only audited
+subtypes21/24 receive death-objective semantics; other words remain raw.
+Known SHIP_01..03 correctly decode id71, HP4500, Booleans7/8/9. Found three
+rescue shuttles at DAT offsets1510/1628/1740, subtype24, HP2000, death40/+1,
+activation Boolean21/22/23, no counter-minimum gate. Original DAT SHA256
+7e27a6753b1fa491a29ee17abff4aa955720f90daaf1381adf50106263d75616.
+
+Original ELF tables independently select npcShuttleUpdate D3894 from both
+setup and structure spawn; condition is descriptor+60/+64/+68. Descriptor
+store D3920/D3948 -> payload+34. Message5 table A74C8[4]=D49FC; ordinary
+damage D4B0C -> nonpositive health -> effect D4BA8 -> actual counter store
+6594C. This is an ordinary death layout, not ECE10 spawn metadata.
+Callback80102174..226C requires59=0, timer1>=100.0, then ship1=1/7=0 ->21,
+2=1/8=0 ->22,3=1/9=0 ->23; chosen branch also sets59. GNU objdump confirms
+c.le.s direction; original constant800A95F4=100.0. Timer1 at8010C9FC.
+
+Joined saved s6664 FIRST epoch (VI4955..10356, lines227960..539711):21/22/23
+and59 initialize0 and remain0 at callback samples;1 becomes1 at5881,
+2/3/7/8/9 remain0. Five actual Boolean changes (128,1,127,71,72) control
+monitor sensitivity. There is no timer sample, so "90 VI-seconds <100"
+is an unproved timing explanation, not a conclusion. The monitor cannot
+exclude transients between callback samples. No new dynamic evidence.
+
+Discriminator selects a closed activation boundary in the saved capture,
+supported by original predicates and live readbacks; retail DAT lacking40
+is refuted. No forced shuttle hit or objective response is established.
+No success, retail equivalence or VERIFIED promotion. Full table/limits in
+docs/G1-OBJECTIVE-RESPONSE.md s6665; artifacts scratch/agent/s6665_lvl2_producer/.
+Validation: reproducible decoder --check-level2 passes401 records, id71
+controls, original dispatch/store opcodes and phase-scoped readback joins;
+malformed list/record bounds reject. Initial ad-hoc ELF64-only reader failed
+because ELF is32-bit; final reader supports both. Initial literal lvl2 asset
+search missed nested level/lv_2/dat; final manifest walker resolves nesting.
+No mitigation, library edit, default change or repeat soak. Next: ONE joined
+timer/gate/spawn/ordinary-hit capture, all fields/arms in one build; no direct
+state writes or lethal dose. CURRENT-TRUTH and NEXT updated. ADVANCED.
