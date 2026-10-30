@@ -40,13 +40,13 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
                         send = sends.get((fields.get('node', ''), fields.get('desc', '')))
                         if force and send and force[0] < send[0] < n:
                             f = force[1]
-                            if level == 1 and (send[1].get('force_seq') != fields['force_seq'] or send[1].get('proj') != f.get('proj') or send[1].get('npc') != f['npc']):
+                            if level >= 1 and (send[1].get('force_seq') != fields['force_seq'] or send[1].get('proj') != f.get('proj') or send[1].get('npc') != f['npc']):
                                 continue
                             if (f['node'], f['npc'], f['desc']) == (fields['node'], fields['victim'], fields['desc']):
                                 joins.append({'force_line': force[0], 'send_line': send[0], 'write_line': n,
                                               'seq': fields['force_seq'], 'vi': fields['vi'], 'age_vi': fields['age_vi'],
                                               'node': fields['node'], 'npc': fields['victim'], 'desc': fields['desc'],
-                                              'id': int(fields['id']), 'callback_relevant': int(fields['id']) in ((1,) if level == 0 else (13, 40, 41)), 'pc': fields['pc'], 'old': fields['old'], 'new': fields['new']})
+                                              'id': int(fields['id']), 'callback_relevant': int(fields['id']) in ((1,) if level == 0 else (40,) if level == 2 else (13, 40, 41)), 'pc': fields['pc'], 'old': fields['old'], 'new': fields['new']})
                     if '[objresp-done]' in line:
                         done = line.strip()
                         in_epoch = False
@@ -61,7 +61,7 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
                 break
     populations = []
     for arm in range(3):
-        live, candidates, control, accepted = set(), set(), set(), set()
+        live, candidates, control, eligible_control, accepted = set(), set(), set(), set(), set()
         identities = {}
         for row in rows:
             fields = dict(re.findall(r'(\w+)=([^\s]+)', row['event']))
@@ -76,6 +76,9 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
                     elif fields.get('reason') == 'eligible':
                         candidates.add(key)
                 if ('[objresp-candidate]' in row['event'] and fields.get('mark_all') == '1'
+                        and fields.get('c1f') == '1' and float(fields.get('radius', 0)) > 0):
+                    eligible_control.add(key)
+                if ('[objresp-candidate]' in row['event'] and fields.get('mark_all') == '1'
                         and fields.get('id') == '10' and fields.get('c1f') == '1'
                         and float(fields.get('radius', 0)) > 0):
                     control.add(key)
@@ -84,7 +87,7 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
                 if identity.get('selected') == '1':
                     accepted.add(key)
         populations.append(dict(arm=arm, sampled_named_live=len(live), named_eligible_candidates=len(candidates),
-                                id10_mark_all_controls=len(control), named_send_identities=len(accepted),
+                                id10_mark_all_controls=len(control), mark_all_eligible_controls=len(eligible_control), named_send_identities=len(accepted),
                                 live_without_candidate=[list(k) for k in sorted(live - candidates)]))
     transport = []
     pending = {}
@@ -157,7 +160,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('tag', help='fresh TAG_SUFFIX (never overwrite evidence)')
     parser.add_argument('--analyze', action='store_true', help='rebuild the joined table from an existing tag')
-    parser.add_argument('--level', type=int, choices=(0, 1), default=0)
+    parser.add_argument('--level', type=int, choices=(0, 1, 2), default=0)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     out = root / 'scratch/agent/m6' / (f'g1_lvl{args.level}' + args.tag)

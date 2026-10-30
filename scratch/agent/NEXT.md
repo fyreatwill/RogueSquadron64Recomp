@@ -1,57 +1,60 @@
-# Level-2 objective response
+# Level-2 typed objective-target ownership
 HYPOTHESIS-ID: g1-coverage-cd
 
-s6661 closes the level1 named loss-response unit: ordinary seq4 HP390→386,
-then exact later seq6 requested387, HP386→−1, death effect→writer8006594C
-id13 0→1→callback at+4 VI. No repeat dose, success claim or full VERIFIED.
-Read CURRENT-TRUTH,NEXT,SOAK-RESULTS tail first; maintenance at>60000 bytes.
+s6662 lands level2 ordinary-only adapter and completes one clean flight,
+VI5080..10483,169.97s. Zero forces: no sampled descriptor passes count40
+selection; mark-all eligibility controls5/13/10, counter changes8, Boolean
+changes7. Do NOT repeat that recipe. Its census is untyped and every arm
+saturates candidate4096. No claim that the mission lacks a loss target.
 
-ONE bounded adapter extension and ONE forced-route level2 flight. First
-establish level2 counter/Boolean meanings from original ELF; do not borrow
-level1 ids/thresholds. Ground truth commands (save outputs, bounded reads):
-    mkdir -p scratch/agent/s6662_lvl2
-    python3 tools/disasm_mips_elf.py ../rogue_squadron64/build/roguesquadron.elf 0x80101EF4 0x80102A98 > scratch/agent/s6662_lvl2/callback_elf.txt
-    rg -n '800C759C|800C761C|800C7738|800C776C|800C76B0' scratch/agent/s6662_lvl2/callback_elf.txt
-    python3 tools/disasm_mips_elf.py ../rogue_squadron64/build/roguesquadron.elf 0x80102A6C 0x80102A98
-    rg -n 'RECOMP_FUNC void lv2_checkComplexObjectives|RECOMP_FUNC void lv2_calculateFriendliesSaved' ../N64Recomp/RecompiledFuncs/funcs_4[34].c
-Read <=60-line windows around the ELF hits. Friendlies callback lead is
-1−counter40 (generated source, confirm original). Read the actual end/fail
-gates before allowing a forced hit; exclude completion Boolean setters.
-Original descriptor/damage references remain s6661_dose/*_elf.txt.
+ONE bounded ownership/census correction, grounded in original game code,
+with one validation flight only after the full table can discriminate.
+No lethal level2 dose, direct state writes, success/failure, aim or progression.
 
-Hypotheses and discriminator:
-- H-response: exact accepted victim/descriptor hit invokes a level2-named
-  objective writer and callback readback. Full force→SEND→actor HP→effect
-  →actual store→readback selects it; count activity alone does not.
-- H-dose: exact relevant accepted hits reduce HP but return positive and
-  skip death effects. Original branch plus actual positive returns selects
-  survival, not broken objective logic.
-- H-routing: named live victims never become eligible or accepted, or the
-  health actor/descriptor join differs. Whole live/candidate/SEND/actor table
-  with mark-all eligibility control selects the first missing boundary.
-No null without changing-value and same-phase eligibility controls.
+Competing hypotheses:
+- H-kind: relevant target is in the object table under a different node kind
+  or descriptor path. Original producer/consumer loads and a typed same-flight
+  descriptor join select it; fix the join, do not guard the target away.
+- H-late: correct kind/path, but the target arrives after the old candidate
+  budget is exhausted or between census samples. Persistent spawn/retire
+  records plus phase-scoped relevant-row logging select late availability.
+- H-absent: original level2 setup/script legitimately does not instantiate
+  a counter40 target in the measured first-flight window. Original spawn
+  conditions AND a complete typed table with a selected-target detection
+  positive control are both required; an untyped zero never selects this.
 
-Extend tools/apply_s6657_objective_response.py and runner --level2 with all
-counters/readbacks, relevant Boolean gates, live census, candidates, exact
-force/SEND identities, actual health actor and effect-call victim context.
-Replay extra generated files as needed. Preserve level0/1 and ordinary TELE
-behavior. Start with ordinary damage only; LETHAL must remain disabled on
-level2 unless independent original semantics establish a single loss target
-that cannot trigger a win/failure. If no safe target exists, implement the
-whole ordinary-dose table and report the selected boundary honestly.
-Natural/off then forced/on in one flight; stop further forcing on first
-named changing store and finish callback readback. No direct health/counter
-stores, intentional win/failure, steering, aim, progression or repeat holds.
-Before build rewrite this file with final targets, exact gates and controls.
+Discriminator: one table keyed by node kind, slot/generation, NPC, descriptor,
+objective counter/Boolean payload, birth/retirement VI, candidate/accepted
+SEND and health actor. Establish original node-kind and table-bound rules
+first. Log all relevant transitions, not4096 arbitrary early shape rows.
+Preserve mark-all controls and actual changing-value readbacks in the same
+phase. If no safe relevant target exists, land the complete ownership
+correction and report the proved boundary; never infer response failure.
 
+Ground truth first (fresh paths; bounded reads):
+    mkdir -p scratch/agent/s6663_lvl2_owner
+    python3 tools/disasm_mips_elf.py ../rogue_squadron64/build/roguesquadron.elf 0x80101CD0 0x80101EF4 > scratch/agent/s6663_lvl2_owner/init_elf.txt
+    rg -n 'jal|lw|lhu|sw' scratch/agent/s6663_lvl2_owner/init_elf.txt
+    rg -n 'lv2_initializeObjectTracking|lv2_checkComplexObjectives|lv2_calculateFriendliesSaved' syms/rogue_squadron.syms.toml
+    rg -n '80130BB0|80130BB4|80130BB8|rs5841_cand' tools/apply_s5812_npc_spawn_class.py tools/apply_s5813_npc_fate.py tools/apply_s6657_objective_response.py
+Read original functions called by the initializer and the table's actual
+producer/consumer in <=60-line windows; use original ELF rather than host
+census as witness. Read s6662 population.json and final response.json with
+computed summaries, never cat the log. All7 manifest hashes matched.
+
+Edit tools/apply_s6657_objective_response.py and the complete analyzer together;
+fixup replay already includes the adapter. Write final targets, original
+ownership rules, all controls and stop gates here BEFORE build. Preserve
+level0/1 and ordinary default TELE. Then:
     python3 tools/apply_s6657_objective_response.py
     cmake --build build --target RogueSquadron64Recomp -j5
     /usr/sbin/ioreg -n Root -d1 | rg 'CGSSessionScreenIsLocked'
-    python3 tools/g1_objective_response_run.py s6662_lvl2 --level 2
-    python3 tools/g1_objective_response_run.py s6662_lvl2 --level 2 --analyze
-Fresh paths, unlocked screen, build/ROM, SIGKILL watchdog. Do not full-fixup
-an existing tree; regen only in prescribed order if necessary. Preserve lib.
+    python3 tools/g1_objective_response_run.py s6663_owner --level 2
+Fresh capture, unlocked screen, build/ROM, SIGKILL watchdog. No lib edits or
+full fixup of an existing tree. Ordinary damage only, stop on first named
+changing store and finish readback; no intentional end gate.
 
-Current evidence: scratch/agent/m6/g1_lvl1s6661_dose/ and
-scratch/agent/s6661_dose/chain.json. 128.32s, VI5265..7748, 0 crashes.
-The early readback stop intentionally omits arm2. No queued soak additions.
+Previous artifacts: scratch/agent/m6/g1_lvl2s6662_lvl2_final/ and
+scratch/agent/s6662_lvl2/{population.json,*_elf.txt,helper_control.log,
+level1_control.log}. g1_lvl2s6662_lvl2 is an incomplete DIFFERENT build;
+never overwrite or pool it. No queued-soak additions.

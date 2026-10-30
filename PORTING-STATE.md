@@ -174270,3 +174270,51 @@ Parser controls: complete saved chain accepts; removing the ordinary control,
 changing the lethal projectile, omitting the actual store, or omitting the
 callback readback all yield zero qualified completed lethal chains. Evidence:
 `scratch/agent/s6661_dose/parser_control/results.json`.
+
+
+## Session 6662 (2026-10-30) — level-2 adapter exposes an unexercised target boundary
+
+Read CURRENT-TRUTH, NEXT and soak tail in order; maintenance not triggered
+(56,561 bytes). No new queued verdicts. Continued inherited unfinished level2
+adapter edits; no library worktree changed. Original ELF independently
+re-disassembled:801020B8 reads c40; positive c40 sets Boolean109 at801020D8,
+Boolean109==1 requests failure at80102124. Friendlies=1−c40 at80102A74..84;
+success requires Boolean31/32/33/99 at80102658..A8. This is loss semantics,
+not permission for a lethal target. Extended all128 counters/Booleans,
+ordinary health/effect table, exact SEND joins and per-arm eligibility
+controls. Level2 lethal env hard-disabled; success1/2/3/4/31/32/33/99
+setters excluded; at most one forced segment per victim/descriptor.
+ORIGIN: original transport800DF838 calls dealDamageToNpc; original800DF840
+skips descriptor effect800DF8C8 on positive return. Level2 makes no damage
+argument change. Once-per-victim suppression is diagnostic exposure control,
+not a corruption mitigation or replacement for identifying a game writer.
+
+Inherited g1_lvl2s6662_lvl2 capture is incomplete in arm0 and has different
+binary/helper hashes. Existing-tag launch rejected without overwrite. Fresh
+idempotent replay and build succeed; final g1_lvl2s6662_lvl2_final runs169.97s,
+B40=2/lv2 callback, epoch VI5080..10483, all three arms, zero crashes.
+No selected forces, no exact forced health/effect/store chains. Eighteen
+sampled census snapshots have33..628 pointer-like entries and zero selected
+counter40 records. Mark-all eligible identities5/13/10; all4096 candidate
+row budgets saturate. Eight real counter readback changes (ids61/3), seven
+Boolean changes; no silent-detector interpretation. Zero forces means all
+changes are natural, even those occurring during the on interval.
+
+The observed selection boundary precedes damage. H-response and H-dose
+are untested; neither a missing game target nor a broken damage route is
+proved. The host census is untyped: some interpreted ids are out of objective
+range; counter71 appears18 times but its meaning is unestablished. Late
+candidates after budget exhaustion remain unknown. Dynamic population data
+is single-source; independent original ELF establishes semantics only.
+No VERIFIED promotion, default change, win, aim or progression.
+
+All7 final launch-manifest file hashes match. Extracted current-helper C
+controls pass level1 behavior and level2 exact SEND, ordinary health
+reduction, every success exclusion, one force/victim and lethal-env
+inhibition. Replay is idempotent on all7 generated files; build and diff
+whitespace check pass. Full bounded evidence and limitations are in
+G1-OBJECTIVE-RESPONSE.md, scratch/agent/s6662_lvl2/population.json and
+scratch/agent/m6/g1_lvl2s6662_lvl2_final/. Next unit is the original-backed
+typed ownership/census correction (lv2 init80101CD0..80101EF4), not another
+unchanged flight or an arbitrary dose. ADVANCED: persistent adapter/runner
+extension and completed discriminating pre-hit boundary experiment.

@@ -11,7 +11,7 @@ writer calls, Boolean dumps and result-mode requests separately.
 | --- | --- | --- |
 | 0 | s6657: forced selector B40=0 and lv0 callback; same-flight off/on/off counter1 0→2→13→13, 13 live readback changes, eight exact force/send/store joins. | Named counter1 hit response observed in one instrumented flight, supported by original ELF descriptor-to-counter stores. Dynamic evidence remains single-source; no win, progression, player-shot or retail-equivalence claim. |
 | 1 | s6661: exact seq4 ordinary hit HP390→386, then seq6 one requested387 dose HP386→−1; death effect, actual id13 store0→1, callback readback four VI later. | Named friendly-loss response observed. Original ELF proves id13>=5 fails and friendlies=19−(40+13+41). Stopped at1, Boolean6=0; no success, retail-equivalence or fully VERIFIED claim. Dynamic chain remains single-source. |
-| 2 | TELE fires; writer call records only. | No named counter response or controlled null. |
+| 2 | s6662: one off/on/off flight, zero selected forces; mark-all eligible controls 5/13/10, eight natural counter changes. | No counter40 descriptor sampled; target availability is unresolved. Damage survival and objective response were not tested. Census is untyped and candidate budgets saturate. |
 | 3 | TELE fires; writer call records only. | No named counter response or controlled null. |
 | 4 | id15 0>1>2>3 in both arms; ctl additionally id5 0>1. | Shared baseline movement. No tele-specific objective response proved. Both arms request result mode a0=2. |
 | 5 | tele id2 0>1, ctl id2 remains observed 0; id4 observed 0 in both. | Historical failure-counter interpretation; static lv5 tests id2>=4 through Bit4, id4>=9 separately. Does not prove a successful objective response. |
@@ -571,3 +571,57 @@ Parser controls: complete saved chain accepts; removing the ordinary control,
 changing the lethal projectile, omitting the actual store, or omitting the
 callback readback all yield zero qualified completed lethal chains. Evidence:
 `scratch/agent/s6661_dose/parser_control/results.json`.
+
+
+## Session 6662: level-2 ordinary-dose adapter and target boundary
+
+Original ELF was consulted before the level-2 extension. At 801020B8 the
+callback reads counter40; a positive value sets Boolean109 at 801020D8,
+then Boolean109==1 requests failure at 80102124. Friendlies saved at
+80102A74..84 is 1−counter40. Success at 80102658..A8 requires
+Booleans31/32/33/99. Counter40 is therefore a loss witness, not a safe
+completion target. Lethal dosing is hard-disabled for level2. The filter
+excludes success Boolean1/2/3/4/31/32/33/99 setters and allows at most one
+ordinary forced segment per matched NPC/descriptor. No direct state writes.
+
+The completed fresh capture is `scratch/agent/m6/g1_lvl2s6662_lvl2_final/`:
+169.97s, B40=2 and lv2 callback, first-flight VI5080..10483. All three
+arms occur; zero crashes, zero forced segments, zero exact damage/effect
+chains. All seven manifest file hashes match the final files/binary.
+An inherited incomplete capture `g1_lvl2s6662_lvl2/` stops in arm0;
+its binary/helper hashes differ and it is not combined with this flight.
+An attempted launch with that existing tag was rejected without overwrite.
+
+| Per-arm witness | Natural 0 | Forced 1 | Natural 2 |
+| --- | ---: | ---: | ---: |
+| Unique mark-all eligible identities | 5 | 13 | 10 |
+| Counter40-selected sampled live/candidates | 0/0 | 0/0 | 0/0 |
+| Logged candidate rows (budget) | 4096 | 4096 | 4096 |
+| Forced segments | 0 | 0 | 0 |
+
+Eight changing counter readbacks (ids61 and3) and seven Boolean changes
+control the full-table readback detector; all are natural. Eligibility
+controls have valid nonzero NPC/descriptor joins, positive radius and c1f1.
+The census samples every300 VI, yielding18 snapshots and33..628
+pointer-like entries. It is NOT a typed entity census: some interpreted
+counter fields are outside the objective-id range. Counter71 is seen in
+18 descriptor rows, but its meaning is unproven. Every arm exhausts its
+4096 candidate-log budget, so late candidates are unknown.
+
+The measured selection boundary precedes forcing: no observed descriptor
+passes the counter40 predicate. This distinguishes unexercised damage
+from a positive-health survival result; it does not prove that no level2
+loss target exists, that damage routing is broken, or that objective logic
+fails. H-response and H-dose remain untested. Dynamic population evidence
+is single-source; original ELF independently establishes gate semantics,
+not the completeness of our host census. No VERIFIED promotion.
+
+Build and seven-file idempotent replay pass. Extracted current-helper C
+controls pass level1 behavior and level2 exact SEND, ordinary health
+control, all success exclusions, once-per-victim force and lethal-env
+inhibition. Artifacts: `scratch/agent/s6662_lvl2/{population.json,
+callback_elf.txt,getters_elf.txt,health_gate_elf.txt,helper_control.c,
+helper_control.log,level1_control.c,level1_control.log,elf.sha256}`.
+Next: use original level2 initialization and object-table consumers to
+establish typed descriptor ownership, then correct the complete census
+and target predicate before another flight. No repeat of this recipe.

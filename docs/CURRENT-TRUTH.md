@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6661 (2026-10-30).
+Compact operational handoff, as of Session 6662 (2026-10-30).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -365,6 +365,25 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   scratch/agent/m6/g1_lvl1s6661_dose/ and scratch/agent/s6661_dose/chain.json.
   Level1 named response unit closes; next is level2 objective response.
 
+- **G1(d) level2 adapter exercised; target boundary remains open (s6662).**
+  Original ELF: counter40 is loss (friendlies=1−c40); positive c40 sets
+  Boolean109 and failure; success requires Booleans31/32/33/99. One fresh
+  ordinary-only off/on/off flight, VI5080..10483,169.97s,0 crashes.
+  Zero forces: no sampled descriptor passes the counter40 predicate.
+  Mark-all eligible controls5/13/10; eight natural counter changes and
+  seven Boolean changes control readback sensitivity. No damage survival
+  or hit-driven objective response tested. Census is untyped (some fields
+  out of objective range), sampled every300 VI; candidate4096/arm budgets
+  all saturate. Thus target availability remains unknown, not a controlled
+  objective null or proof of a broken route. Dynamic evidence single-source;
+  independent ELF establishes semantics only. Lethal env is hard-disabled
+  for level2; success setters excluded, one ordinary force/victim maximum.
+  Build, replay, level1/level2 helper controls and manifest hashes pass.
+  Evidence: scratch/agent/m6/g1_lvl2s6662_lvl2_final/ and
+  scratch/agent/s6662_lvl2/population.json. Earlier incomplete arm0 capture
+  has different hashes and is not pooled. No library/default change or
+  new queued-soak verdict. Next: original-backed typed ownership audit.
+
 ## Superseded conclusions — do not act on these
 - s6656/s6657 "level1 counter13 meaning unresolved" (s6659 original ELF identifies it in friendlies-saved subtraction and the >=5 Bit4 gate). Believable because historical activity logs supplied indices but no per-level semantics. Hit causality for counter13 remains unresolved; the corrected live flight changes only id10.
 - s5962 "lvl6 null is valid because hb ticks fires" (s6656: heartbeat controls execution, not detection of value changes; the monitor covers only ids 1–15 and has a run-lifetime budget). Believable because TELE and hook execution both fired, but no same-run changing-value control established sensitivity to every relevant objective slot.
@@ -549,17 +568,17 @@ owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6661) Level2 objective response.** Level1 now has a full exact
-   force→SEND→health→death→named-store→callback chain; do not repeat its
-   lethal dose. Read level2 callback and friendlies code from the original
-   ELF first (80101EF4..80102A98), identify counter/Boolean meanings and
-   end gates, then extend the adapter and runner to one level2 flight.
-   Build the complete victim/actor/descriptor/effect/store/readback table
-   once, with same-flight natural control and mark-all eligibility control.
-   Distinguish a named response, a surviving victim, and a missed routing
-   join; silent values without a changing control remain unknown. No
-   borrowed level1 thresholds, direct state writes, wins, aim or progression.
-   NEXT.md has commands and safety constraints. Defaults remain retail.
+1. **(s6662) Level2 typed target ownership.** The ordinary-only flight
+   reaches all arms and controls fire, but no sampled descriptor selects
+   counter40. Do not repeat it or dose an arbitrary target. Read original
+   lv2_initializeObjectTracking (80101CD0..80101EF4) and original object-table
+   producers/consumers to establish node kinds, table bounds and descriptor
+   ownership. Correct the persistent adapter's whole population table and
+   its target predicate together; add a same-phase selected-target control
+   and budgets that preserve late relevant candidates. Original count40 loss
+   semantics stay authoritative. Do not infer a broken objective or absent
+   target from the untyped/capped s6662 census. NEXT.md has commands and
+   discriminating outcomes; no direct state writes, wins, aim or progression.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
