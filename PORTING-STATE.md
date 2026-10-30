@@ -174632,3 +174632,58 @@ arm table in docs/G1-OBJECTIVE-RESPONSE.md s6668; compact machine proof
 scratch/agent/s6668_lvl2_loss/qualification.json; full response.json under
 scratch/agent/m6/g1_lvl2s6668_named/. CURRENT-TRUTH updated, NEXT advances
 level3 original-backed named response, same hypothesis slug. No default change.
+
+## Session 6669 (2026-10-30) — check level-3 retail building objective contracts
+
+HYPOTHESIS-ID: g1-coverage-cd. Step0 CURRENT-TRUTH35222 bytes, no maintenance;
+no new soak verdict (latest20261028-075640 already consumed). One bounded
+source/tool change, scoped before any build: reconcile level3 saved evidence
+and validate original callback/DAT target semantics before enabling forcing.
+Saved ctl/TELE counts remain writer-call records, not named objective chains.
+No game run/build attempted; no failed runtime experiment hidden as a null.
+
+Original80102D08 reads lossBooleans4/18/21 and successcounter22, not level2's
+c40 contract. Original friendlies reader80103530 reads27/28, adds them and
+reports100-sum. Retail DAT independently supplies City_1(+048C), subtype20,
++6C word2000, counter28+1 with no Boolean/second counter. GVT main adds28
+AND failureBoolean4; Tech main adds7 AND failureBoolean18; Madine shuttle
+setsBoolean21 with both counter IDs0. These three are excluded static controls.
+There are95 counter28-only subtype20 candidates; this is NOT a live census.
+
+Original C7390 DAT halfword+6 comparison branches toC748C whenFFFF. That
+branch subtracts detail-indexed health at+6C, storesC74AC, checks subtype20,
+loads+70/+74/+78/+7C/+80/+84 and calls65914 atC74E0 without a health gate.
+Registered branch instead sendsmessage5 atC73F8; its actual live handler is
+not yet qualified. H-shuttle named counter is contradicted for the inspected
+shuttle; H-building-death is contradicted ONLY for the FFFF fallback;
+H-building-message selects the explicit fallback contract. No claim about
+live City_1 slot state or dynamic response follows. This matters: previous
+NEXT's generic ordinary-then-lethal sequence is not justified for this route.
+
+Implemented tools/g1_dat_inventory.py --check-level3:62 literal original
+instruction checks plus four named DAT assertions, separate subtype20
+unregistered-damage-objective layout and damage_effect/health_detail0 fields.
+No shuttle activation layout or death label applied to buildings. Selects
+City_1 and emits route preconditions, writer/reader PCs,95 static candidates,
+excluded controls and explicit live_qualified=false in the CLI summary.
+ORIGIN: original C74E0 forwards legitimate subtype20 DAT fields to65914;
+6594C writes the counter delta. No guest mitigation/skip/guard was added.
+
+Validation: original positive contract passes; all11 altered fixtures reject
+(ELF slot/subtype branches, effectcall, counterwriter, callback argument,
+friendlies argument; DAT selected counter/Boolean and three excluded controls).
+All19 playable inventories match HEAD after stripping ONLY new subtype20
+fields; level3 adds100 layouts. Level2 --check-level2 unchanged, three rescue
+and three SHIP controls pass. py_compile and git diff --check pass. Validation
+script and compact JSON in scratch/agent/s6669_lvl3_response; checked.json
+retains full source hashes, instruction anchors and selected records.
+
+Static DAT+original consumers/readers corroborate contract semantics; code
+ordering is original-source evidence, not an independent live oracle. No
+actual force/SEND/health/store/readback experiment, retail equivalence or
+VERIFIED promotion claimed. No runtime defaults/generated/lib edits; inherited
+dirty submodules untouched. Updated objective table/current truth and NEXT:
+one complete ordinary City_1 slot/handler/damage/store/friendlies-reader unit,
+including original registered-handler audit before enabling, no assumed lethal
+dose and no failure/success/progression tests. ADVANCED is the completed
+checked-parser/tool change, not completion of level3 dynamic coverage.

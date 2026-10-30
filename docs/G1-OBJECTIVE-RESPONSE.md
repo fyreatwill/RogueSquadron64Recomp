@@ -1018,3 +1018,71 @@ with no evidence change. Final analyzer fixtures, original-word assertions,
 hash comparisons pass. No lib edit, default change or new soak verdict.
 Compact proof: `scratch/agent/s6668_lvl2_loss/qualification.json`; full joins:
 `scratch/agent/m6/g1_lvl2s6668_named/response.json` and raw736326..736691.
+
+## s6669 — level 3 checked retail contract; live response remains open
+
+One bounded tool change before enabling level3 forcing. The prior proposed
+shuttle-style counter/death probe does not match this level's inspected
+contracts. `tools/g1_dat_inventory.py --level 3 --check-level3 --output PATH`
+now checks 62 original ELF instructions and four named retail DAT definitions.
+It decodes subtype0x14 as `unregistered-damage-objective`, with a separate
+`damage_effect` field and `health_detail0`; it does not label this a death
+trigger or apply the shuttle activation layout to it. Existing subtype0x21/
+0x24 fields and legacy level2 checks remain unchanged.
+
+Original callback80102D08 reads Booleans4/18/21 into failure calls800C7738;
+that helper ORs bit4 at800C7754. It separately reads counter22 into the
+completion helper800C776C (bit8 at800C7788). Friendlies reader80103530 reads
+c27/c28, adds them, subtracts from100, and calls800C77B0. These are different
+contracts: a death Boolean is not a named loss counter.
+
+| Retail definition | DAT offset | subtype | +6C word | Effect at +70..84 | Qualification choice |
+|---|---|---|---|---|---|
+| City_1 | 0x048C | 0x14 | 2000 | c28+1, no Boolean, no second counter | selected static candidate |
+| GVT_BLDG_main | 0x1548 | 0x14 | 6000 | c28+1 and Boolean4=1 | exclude failure setter |
+| Tech_Center_Main | 0x391C | 0x14 | 5000 | c7+1 and Boolean18=1 | exclude failure setter |
+| Madine_Shuttle | 0x7788 | 0x24 | 200 | Boolean21=1; both counter IDs0 | exclude; no named counter |
+
+There are95 subtype0x14 counter28+1 candidates without any Boolean setter or
+second counter; this is a static inventory, not95 live hittable objects.
+Original `dealDamagetoDatItem`800C7390 checks DAT halfword+6 againstFFFF at
+800C73BC/C0. The FFFF branch800C748C subtracts damage from the detail-indexed
+word at+6C, stores at800C74AC, tests subtype0x14 at800C74B4/B8, then loads
++70/+74/+78/+7C/+80/+84 and calls80065914 at800C74E0. There is NO health
+threshold between the store and effect call in this branch. The original
+writer8006594C applies the first counter delta;80065928 stores the Boolean.
+The registered-slot branch instead sends message5 at800C73F8; its actual
+handler and effect timing have NOT been qualified by this unit. Do not
+assume live City_1 is unregistered, or that every projectile hit follows the
+fallback. A currentHP+1 request is not justified by this static result.
+
+Competing hypotheses: H-shuttle counter target is contradicted for the
+inspected shuttle; H-building-death is contradicted ONLY for the FFFF path;
+H-building-message selects the explicit subtype0x14 fallback contract.
+DAT fields and original consumer/reader instructions corroborate semantics;
+all code-path evidence is original-source static evidence. No independent
+emulator/live damage observation, dynamic causality, retail equivalence or
+VERIFIED promotion is claimed. Saved level3 ctl/TELE writer-call counts
+above still do not establish the named chain.
+
+Validation: all19 playable-level inventories match the prior tool after
+removing only the new subtype0x14 fields (100 new layouts on level3).
+Level2 --check-level2 passes with the same three rescues/three SHIP controls.
+Positive controls decode the three excluded named definitions and selected
+City_1; all11 negative fixtures reject (six changed ELF branch/call/writer/
+reader instructions, five changed named DAT counter/Boolean fields).
+Compile and diff checks pass. Reproduce and inspect:
+
+```sh
+python3 tools/g1_dat_inventory.py --level 3 --check-level3 --output scratch/agent/s6669_lvl3_response/checked.json
+python3 tools/g1_dat_inventory.py --level 2 --check-level2 --output scratch/agent/s6669_lvl3_response/level2_regression.json
+python3 scratch/agent/s6669_lvl3_response/check_contract.py
+```
+
+Artifacts: `scratch/agent/s6669_lvl3_response/checked.json`, `validation.json`,
+original callback/helper/shuttle disassembly and rejection fixture script.
+No game build/run, generated adapter change, lib edit or default change.
+Next: one complete ordinary City_1 hit/slot/health/store/friendlies-readback
+experiment, with original registered-handler audit in the same unit. Stop
+forcing after one named change; exclude all success/failure setters. Do not
+reuse the level2 NPC+34/D3894 ownership layout for subtype0x14.

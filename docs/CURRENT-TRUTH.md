@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6668 (2026-10-30).
+Compact operational handoff, as of Session 6669 (2026-10-30).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -214,6 +214,21 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   verdict. Details: G1-OBJECTIVE-RESPONSE s6668; compact proof
   scratch/agent/s6668_lvl2_loss/qualification.json. Next: level3 named response.
 
+- **G1(d) level3 original contract checked (s6669); response still open.**
+  Bounded DAT-tool change selects City_1(+048C), subtype0x14, c28+1 with no
+  Boolean/second counter. Original friendlies reader80103530 computes
+  100-(c27+c28); complex callback loss flags are Booleans4/18/21 and success
+  counter22. GVT main adds c28 AND failure Boolean4; Tech main sets18;
+  Madine shuttle sets21 but has no counter. All excluded by the static choice.
+  Original C7390 FFFF-slot branch subtracts health then calls the effect at
+  C74E0 with NO death threshold. Registered-slot message5 handler remains
+  unqualified; live eligibility is unknown. Thus do not assume a lethal dose
+  or shuttle ownership layout. --check-level3 verifies62 original anchors;
+  11 mutation fixtures reject; all19 inventories preserve prior fields;
+  level2 checks pass. Source+DAT support static contracts only, no live
+  response/retail-equivalence/VERIFIED claim. No game run/build, defaults or
+  lib edits. Full limits: G1-OBJECTIVE-RESPONSE s6669. No new soak verdicts.
+
 ## Superseded conclusions — do not act on these
 
 - s6664's missing counter40 target is not evidence of a broken spawn/hit
@@ -347,14 +362,14 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **G1(d) level3 named response qualification (next bounded unit).**
-   Reconcile saved level3 evidence, audit original callback80102D08 and retail
-   DAT before selecting a victim. Extend the opt-in adapter with level3-specific
-   semantics and typed ownership. One same-flight ordinary force/SEND/health
-   control then a named counter response, with at most one same-actor dose if
-   original ordering permits stopping before failure/end. Exact identity and
-   original store/callback readback are required. No arbitrary victim, direct
-   guest health/objective writes, success/win/progression or aim work.
+1. **G1(d) level3 ordinary building response (next bounded unit).**
+   s6669 checked retail contract selects City_1 c28+1, no Boolean setters;
+   friendlies reader is100-(c27+c28). Audit its actual registered-slot handler
+   before extending the adapter: original C7390 FFFF fallback applies the
+   effect WITHOUT a death threshold. One complete ordinary named hit joins
+   slot/handler/descriptor/health/store/callback-reader in one build/flight.
+   No lethal dose assumed, shuttle layout reuse, direct guest stores,
+   failure/success/win/progression or aim work. Stop forces after one change.
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
@@ -376,9 +391,9 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
 - Per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence):
   verbatim per-level paragraphs, duplicate coverage, historical backlog and updates.
-- `PORTING-STATE.md` sessions 6656–6668 contain recent chronology; search bounded
+- `PORTING-STATE.md` sessions 6656–6669 contain recent chronology; search bounded
   windows only. Earlier durable context remains in PROJECT-OVERVIEW.
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest remains
-  20261028-075640 (already consumed). No new verdicts in s6668.
+  20261028-075640 (already consumed). No new verdicts in s6669.
 - s6596/s6597 and s6599 were checkpoint close-outs, not reruns. The saved
   s6595/s6598 HUD artifacts retain their original evidence limits.
