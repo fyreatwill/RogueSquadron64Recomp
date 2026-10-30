@@ -1,10 +1,12 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6666 (2026-10-30).
+Compact operational handoff, as of Session 6667 (2026-10-30).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
-and "Archive: CURRENT-TRUTH body s6378-s6551").
+and "Archive: CURRENT-TRUTH body s6378-s6551"). Per-level framebuffer
+evidence, duplicate coverage notes and historical backlog/update chains from
+s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 
 ## Headline
 
@@ -41,238 +43,15 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   is wider than 4:3. The OS window stays 640x480, so wider modes letterbox.
   Do not return to the combiner or the pixel pipe.
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
-- **G1 (c) level 2 flight framebuffer: present.** s6632, retail 4:3, draw
-  distance left at 1. Selector B40=2, cursor=2. After the hangar, VI
-  alternates `0x690400` and `0x620400`; every-50 dumps landed on
-  `0x620400` (512x444). 7/8 of those frames pass sky, terrain, craft and
-  HUD. Title, hangar and the other origins in the same run score 0/49.
-  Sheet `docs/g1_lvl2_flight_s6632.png`. Objective hit-response (d) was
-  not run. No crash in the 30 s hold.
-- **G1 (c) level 3 flight framebuffer: extended class rule accepts it.**
-  s6634, offline on the s6633 dumps. No new capture. Sky and HUD stay
-  the s6632 cuts. Terrain is relative local edge energy on y 0.45-0.95,
-  mean((|dLx|+|dLy|)/(L+12)) in [0.08, 0.33]: night dumps 0.114-0.266,
-  oracle 0.129, level 2 0.106, title 0.410, level-select floor 0.709.
-  Craft keeps the engine bloom, or a chase-band metal hull (fraction
-  >= 0.10 of pixels at least 30 luma above the band median, chroma
-  <= 80), or a saturated green reticle (fraction >= 0.004). Five-file
-  table holds: oracle, level-2 `fb_0002700`, and level-3 `fb_0002700`
-  pass; the floor and the s6633 title dump fail. 11/13 mission dumps
-  pass. n=2550 fails craft (hull 0.054, no reticle; the picture is
-  still a flight). n=3150 fails the unchanged sky cut (dark fraction
-  0.41). Tool: `tools/g1_flight_class.py`. Objective (d) was not run.
-- **G1 (c) level 4 flight framebuffer: extended class rule accepts it.**
-  s6636, offline on the s6635 dumps. No new capture. Sky gains a third
-  arm, luma ≥ 140 and R ≥ G+40 and R ≥ B+20. Craft gains a dark hull
-  when the chase-band median is ≥ 120 (fraction ≥ 0.06 at least 50
-  below that median, chroma ≤ 90). Terrain floor stays 0.08. Canon
-  table still prints canon_bad 0; the level-3 mission lines stay
-  11/13. Six of the seven phase-7 dumps pass. n=2300 passes sky and
-  craft and still misses terrain (rel 0.065); left as a near-miss.
-  Same-run title `fb_0000800_w512.ppm` stays sky 0 / terr 0 (luma 80.5,
-  R−G 29). Hangar `fb_0001700_w512.ppm` still fails HUD only. Sheet
-  `docs/g1_lvl4_flight_s6635.png`. Tool: `tools/g1_flight_class.py`.
-  Objective (d) was not run.
-- **G1 (c) level 5 flight framebuffer: frozen rule accepts it.**
-  s6637, retail 4:3, draw distance 1, aspect unset. Selector B40=5,
-  cursor=5. Nine phase-7 dumps, n=2450..2850, are 512x444 at origin
-  `0x00620400` (the other buffer; `0x690400` is in the VI log). Night
-  sky, rocky ground, X-wing, radar, reticle. 7/9 pass all four
-  clauses. n=2800 rel 0.338 and n=2850 rel 0.331 miss only the 0.33
-  terrain ceiling and are not required. Same-run title
-  `fb_0000800_w512.ppm` fails sky and terrain (rel 0.432). Hangar
-  `fb_0001700_w512.ppm` fails HUD only (radar 0). Sheet
-  `docs/g1_lvl5_flight_s6637.png`. 0 crashes in the 30 s hold. The
-  classifier was not edited. Objective (d) was not run.
-- **G1 (c) level 6 flight framebuffer: frozen rule accepts it.**
-  s6638, retail 4:3, draw distance 1, aspect unset. Selector B40=6,
-  cursor=6. Eleven phase-7 dumps, n=2650..3150, are 512x444 at origin
-  `0x00620400` (the other buffer; `0x690400` is in the VI log). Canyon,
-  snowspeeder, radar, reticle. 8/11 pass all four clauses. n=2800
-  misses sky only (dark 0.019, luma 56.0, R−G 10.2) and is not
-  required. n=2850 and n=2900 show no chase craft and no radar, so
-  they are not four-part frames. Same-run title `fb_0000800_w512.ppm`
-  fails sky and terrain (rel 0.423). Hangar `fb_0001700_w512.ppm`
-  fails HUD only (radar 0). Sheet `docs/g1_lvl6_flight_s6638.png`.
-  0 crashes in the 30 s hold. The classifier was not edited.
-  Objective (d) was not run.
-- **G1 (c) level 7 flight framebuffer: frozen rule accepts it.**
-  s6639, retail 4:3, draw distance 1, aspect unset. Selector B40=7,
-  cursor=7. Twelve phase-7 dumps, n=2450..3000, are 512x444 at origin
-  `0x00690400` (this run sampled the route key; `0x620400` is in the
-  VI log). Canyon, Y-wing, radar, reticle. 4/12 pass all four clauses
-  (n=2550, 2600, 2800, 2850). Five miss sky only (luma 46.3..60.1,
-  dark 0.371..0.536) and three miss the terrain ceiling only (rel
-  0.332, 0.353, 0.359). Those are the same near-miss families as
-  level 6's luma-56 sky and level 5's rel 0.331/0.338, and they are
-  not required. Same-run title `fb_0000800_w512.ppm` fails sky and
-  terrain (rel 0.437). Hangar `fb_0001700_w512.ppm` fails HUD only
-  (radar 0). Sheet `docs/g1_lvl7_flight_s6639.png`. 0 crashes in the
-  30 s hold. The classifier was not edited. Objective (d) was not run.
-- **G1 (c) level 8 flight framebuffer: dusk rule accepts it.**
-  s6641, offline on the s6640 dumps. No new capture. The orange sky
-  arm is now luma≥80 with the same R≥G+40 and R≥B+20 gates. Craft
-  adds a lower-centre metal edge: low-chroma grey with a coloured
-  neighbour, fraction ≥0.05. Six of seven phase-7 dumps pass all
-  four clauses (edge 0.063..0.115). n=2600 is the side view and
-  misses craft only (edge 0.041). Same-run title fails sky and
-  terrain (edge 0.017, luma 85.2, R−G 32.1). Craft-select fails HUD
-  only (edge 0.021, radar 0). `canon_bad 0`, mission 11/13. The
-  0.08 floor, the 0.33 ceiling and the luma≥70 blue arm were not
-  moved. Sheet remains `docs/g1_lvl8_flight_s6640.png`. Objective
-  (d) was not run.
-- **G1 (c) level 9 flight framebuffer: frozen rule accepts it.**
-  s6642, one retail 4:3 capture, draw distance 1, aspect unset.
-  Selector B40=9, cursor=9. Thirteen phase-7 dumps, n=2350..2950,
-  are 512x444 at origin `0x00690400` (this run sampled the route
-  key; `0x620400` is in the VI log). Orange canyon, X-wing, radar,
-  reticle. 8/13 pass all four clauses. Not required: n=2350 craft
-  only (edge 0.019), n=2600 and n=2650 sky only (luma 74.8 and
-  56.9), n=2700 and n=2800 terrain only (rel 0.074 and 0.076).
-  Same-run title fails sky and terrain. Craft-select fails HUD
-  only (radar 0.001). Sheet `docs/g1_lvl9_flight_s6642.png`.
-  0 crashes in the 30 s hold. The classifier was not edited.
-  Objective (d) was not run.
-- **G1 (c) level 10 flight framebuffer: tan-cloud rule accepts it.**
-  s6644, offline on the s6643 dumps. No new capture. Sky gains a
-  fourth arm: luma≥70, R−G in [20, 32], R−B≥40 and G−B≥18.
-  Eleven of twelve phase-7 dumps pass all four clauses. n=2900
-  now passes sky and still misses craft (edge 0.013, ship beside
-  the station); not required. The title shares R−G 27.1 but
-  G−B is 5.5, so its sky stays false and the overall verdict
-  stays fail. Craft-select still fails HUD only (radar 0.002).
-  `canon_bad 0`, mission 11/13. The 0.08 floor, the 0.33 ceiling,
-  the blue arm, the orange arm and the edge≥0.05 cut were not
-  moved. Sheet remains `docs/g1_lvl10_flight_s6643.png`.
-  Objective (d) was not run.
-- **G1 (c) level 11 flight framebuffer: frozen rule accepts it.**
-  s6645, one retail 4:3 capture, draw distance 1, aspect unset.
-  Selector B40=11, cursor=11. Nine phase-7 dumps, n=2450..2850,
-  are 512x444 at origin `0x00690400` (this run sampled the route
-  key; `0x620400` is in the VI log, 19 lines). Snow field,
-  snowspeeder, radar, reticle. 8/9 pass all four clauses. n=2450
-  misses craft only (metal 0.014, sil 0.044, edge 0.003): the
-  speeder is small and low. Not required. Same-run title
-  `fb_0000800_w512.ppm` fails sky and terrain (luma 82.8, R−G
-  30.5, rel 0.441). Hangar `fb_0001700_w512.ppm` fails sky and
-  HUD (radar 0); terrain rel 0.195 does not accept it. Sheet
-  `docs/g1_lvl11_flight_s6645.png`. 0 crashes in the 30 s hold.
-  The classifier was not edited. Objective (d) was not run.
-- **G1 (c) level 12 flight framebuffer: frozen rule accepts it.**
-  s6646, one retail 4:3 capture, draw distance 1, aspect unset.
-  Selector B40=12, cursor=12. Five phase-7 dumps, n=2400..2600,
-  are 512x444. The phase transition origin is `0x00690400`;
-  every dump's own origin field is the other buffer
-  `0x00620400` (16 and 15 VI lines). Blue sky, green ridge,
-  X-wing, TIEs, radar, reticle, shield badge. 4/5 pass all
-  four clauses. n=2400 misses craft only (metal 0.078, sil
-  0.000, edge 0.043): the ship is banked against cloud and
-  does not clear the chase cuts. Not required. Same-run title
-  `fb_0000800_w512.ppm` fails sky and terrain (luma 83.7,
-  R-G 31.2, rel 0.444). Craft-select `fb_0001700_w512.ppm`
-  (origin `0x006AB400`) fails HUD only (radar 0.002). Sheet
-  `docs/g1_lvl12_flight_s6646.png`. 0 crashes in the 30 s
-  hold. The classifier was not edited. Objective (d) was not run.
-- **G1 (c) level 13 flight framebuffer: frozen rule accepts it.**
-  s6647, one retail 4:3 capture, draw distance 1, aspect unset.
-  Selector B40=13, cursor=13. Nine phase-7 dumps, n=2800..3200,
-  are 512x444 at origin `0x00690400` (this run sampled the route
-  key; `0x620400` is in the VI log, 13 lines). Dark sky, lava
-  field, Y-wing, radar, reticle, shield badge. 2/9 pass all four
-  clauses (n=3150 rel 0.325, n=3200 rel 0.217). Seven miss the
-  terrain ceiling only (rel 0.362..0.611): the lava is
-  high-contrast and is not required. Same-run title
-  `fb_0000800_w512.ppm` fails sky and terrain (luma 81.2, R-G
-  29.3, rel 0.432). Craft-select `fb_0001700_w512.ppm` (origin
-  `0x006AB400`, Y-wing) fails sky and HUD (radar 0.001). Sheet
-  `docs/g1_lvl13_flight_s6647.png`. 0 crashes in the 30 s hold.
-  The classifier was not edited. Objective (d) was not run.
-- **G1 (c) level 14 flight framebuffer: frozen rule accepts it.**
-  s6648, one retail 4:3 capture, draw distance 1, aspect unset.
-  Selector B40=14, cursor=14. Nine phase-7 dumps, n=2450..2850,
-  are 512x444 at origin `0x00690400` (this run sampled the route
-  key; `0x620400` is in the VI log, 14 lines). Grey cloud, rocky
-  ridge, X-wing, radar, reticle, shield badge. 6/9 pass all four
-  clauses (n=2550, 2600, 2650, 2700, 2750, 2800). Not required:
-  n=2450 terrain floor only (rel 0.065; the ship is in cloud and
-  the ground is a sliver), n=2500 terrain ceiling only (rel
-  0.357), and n=2850, a ground view with no chase craft and no
-  radar (rel 0.625, radar 0). Same-run title fails sky and
-  terrain. Craft-select fails HUD only (radar 0). Sheet
-  `docs/g1_lvl14_flight_s6648.png`. 0 crashes in the 30 s hold.
-  The classifier was not edited. Objective (d) was not run.
-- **G1 (c) level 15 flight framebuffer: frozen rule accepts it.**
-  s6649, one retail 4:3 capture, draw distance 1, aspect unset,
-  `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF`. Selector B40=15, cursor=15.
-  Eight phase-7 dumps, n=3050..3400, are 512x444 at origin
-  `0x00620400` (this run sampled the other buffer; `0x690400` is
-  in the VI log, 16 lines). Blue sky, ocean and islands, V-wing,
-  radar, reticle, shield badge. 6/8 pass all four clauses. Not
-  required: n=3350 and n=3400 miss the terrain floor only (rel
-  0.079 and 0.075). Both are still flights. Same-run title fails
-  sky and terrain. Craft-select fails HUD only (radar 0). Sheet
-  `docs/g1_lvl15_flight_s6649.png`. 0 crashes in the 30 s hold.
-  The classifier was not edited. Objective (d) was not run.
-- **G1 (c) level 16 flight framebuffer: frozen rule accepts it.**
-  s6650, one retail 4:3 capture, draw distance 1, aspect unset.
-  No planet unlock. Selector B40=16, cursor=16. Beggar's Canyon,
-  "WIN THE RACE", skyhopper. Eleven post-hangar dumps,
-  n=1600..2100, are 512x444. Every dump's own origin field is
-  `0x00620400`; `0x690400` is in the VI log (13 lines). The
-  phase field stays 5: `rs64_phase_ord` bumps only on a VI-width
-  change, and the hangar and the flight are both width 512.
-  There is no phase-7 dump. 3/11 pass all four clauses (n=1600
-  chase, edge 0.076, rel 0.083; n=1650 and n=1850 cockpit,
-  metal 0.187 and 0.177). Not required: n=1700, 1900 and 1950
-  miss craft only (small or oversized engine), and five dumps
-  are the start-key pause overlay (radar 0). Same-run title
-  fails sky and terrain. Craft-select `fb_0001550_w512.ppm`
-  fails terrain and HUD. Sheet `docs/g1_lvl16_flight_s6650.png`.
-  0 crashes in the 30 s hold. The classifier was not edited.
-  Objective (d) was not run.
-- **G1 (c) level 17 flight framebuffer: grey-trench rule accepts it.**
-  s6652, offline on the s6651 dumps. No new capture. Sky gains a
-  fifth arm: luma in [38, 55], |R−G| ≤ 8, |R−B| ≤ 8, |G−B| ≤ 8,
-  and at least 0.80 of the sky-window samples have channel
-  spread ≤ 8. n=2300 is the chase (neutral8 0.845, luma 42.5)
-  and passes all four clauses. That is 1/10 of the post-hangar
-  dumps. Not required: n=2250 stays a sky miss (luma 32.8, below
-  the 38 floor) and a craft miss; six pause overlays stay HUD
-  fails (radar 0); n=2050 and n=2200 stay crest frames (radar 0).
-  The binding separator from the level-3 sky miss m3150 is
-  neutral8 (0.845 vs 0.613). m3150's luma 40.0 is inside
-  [38, 55], so the luma band is not what keeps mission at 11/13.
-  Both title skies stay false (canon neutral8 0.344, luma 75.0,
-  R−G 24.7; same-run title neutral8 0.345, luma 73.4, R−G 23.6).
-  Craft-select stays an overall fail. `canon_bad 0`, mission
-  11/13. The 0.08 floor, the 0.33 ceiling, dark ≥ 0.60, and the
-  sky sample window were not moved. Sheet remains
-  `docs/g1_lvl17_flight_s6651.png`. Objective (d) was not run.
-
-- **G1 (c) level 18: snow-surface rule accepts both flight frames.**
-  s6654, offline on the s6653 capture; no launch or build. n=2200/2250
-  pass all four clauses. The extra terrain arm requires mean luma ≥180,
-  at least 0.50 of terrain samples with luma ≥180 and channel spread ≤64,
-  and relative edge energy in [0.02,0.08). Measured luma 217.5/210.5,
-  bright low-chroma fraction 0.977/0.937, rel 0.046/0.068. A stricter
-  spread≤22 grey test misses blue-tinted snow (fraction <0.001).
-  All eight same-run negatives (title, craft-select, three crest and
-  three pause frames) reject overall and none selects the snow arm.
-  Full table: canon_bad 0; level-3 mission remains 11/13. The original
-  [0.08,0.33] arm, sky/craft/HUD cuts and windows are unchanged.
-  Independent content evidence is the inspected s6653 contact sheet;
-  numeric generalization remains single-capture evidence, not retail
-  equivalence. No runtime change; objective (d) was not run.
-
-- **G1 (c) level 0: unchanged rule accepts the saved crop.** s6655,
-  offline, no launch/build. Both port PNGs are 512x358 and decode to identical
-  RGB pixels (one capture, not two). Sky/terrain/craft/HUD all pass; rel
-  0.115, metal 0.119, radar 0.095. Visual inspection agrees: sandy terrain,
-  banked X-wing, sky and radar are present. Canon_bad 0, mission 11/13.
-  Saved retail oracle measures 512x440, not the historical 512x412 claim;
-  its lvl1 filename versus s5998 same-level wording remains unresolved.
-  Content-class presence only, not retail equivalence or objective (d).
-  Report: `docs/G1-FRAMEBUFFER-COVERAGE.md`. No new queued-soak verdicts.
+- **G1(c) framebuffer presence covered for levels 0..18.** Level 1 has a
+  retail flight match; the remaining evidence establishes content presence,
+  not retail equivalence. Saved level-0 port images are duplicate pixels
+  from one crop; its retail level identity is unresolved. Numeric rules,
+  near-misses and inspected sheets are retained in
+  [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md) and
+  [the s6667 migration](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
+  Classifier controls reject title/craft-select; phase ordinals alone do not
+  identify flight (levels 16–18 can remain phase 5). Objective(d) stays partial.
 
 - **G1(d) saved evidence reconciled (s6656), still partial.** New tool
   `tools/g1_objective_evidence.py --check` streams 18 ctl/TELE gzip logs
@@ -506,7 +285,8 @@ One line each: claim (superseded by; why it was believable).
 
 - Run from `build/` with the ROM beside it; SIGKILL to stop; one game run at a time.
 - Current pinned dd4 lvl1 run: `zsh scratch/agent/s6549_run.sh <dd> <poolx>`.
-- dd>2 needs `ROGUESQ_DD_UNSAFE=1` (clamp 8); confirm run.log echoes `multiplier N`.
+- dd4 was enabled without `ROGUESQ_DD_UNSAFE` in s6582; higher exploratory
+  settings use DD_UNSAFE (clamp 8). Confirm run.log echoes `multiplier N`.
 - lvl10/15 need `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF`. Wide soaks need
   `MISSION_WIDTH=796|1024` + `WIDE_ROUTE=1`; ASPECT implies `OSMEM_MB=12`.
 - Pose control: `ROGUESQ_POSE_LOCK=1` + `ROGUESQ_POSE_PIN_POSITION=1`; dump
@@ -520,72 +300,13 @@ One line each: claim (superseded by; why it was believable).
 
 ## G1 mission coverage
 
-Playable levels are 0..18 (`NUM_LEVELS=0x13`; 19 and 20 are sentinels). Levels
-1–9 and 11–18 have route/hold coverage; levels 10 and 15 need the planet
-unlock or its long retail intro. Level 1 has a retail flight match. Level 2 passes the numeric class
-rule (s6632). Level 3 passes the extended rule (s6634, 11/13 of the
-s6633 dumps; floor and title rejected). Level 4 passes the extended rule on 6/7 phase-7 dumps (s6636);
-n=2300 remains a terrain near-miss at rel 0.065 and is not required.
-Level 5 passes the frozen rule on 7/9 phase-7 dumps (s6637);
-n=2800 and n=2850 remain terrain-ceiling near-misses at rel 0.338
-and 0.331 and are not required. Level 6 passes the frozen rule on
-8/11 phase-7 dumps (s6638); n=2800 remains a sky near-miss at luma
-56.0 and is not required. Level 7 passes the frozen rule on 4/12
-phase-7 dumps (s6639); five sky misses (luma 46.3..60.1) and three
-terrain-ceiling misses (rel 0.332..0.359) are not required.
-Level 8 passes the dusk rule on 6/7 phase-7 dumps (s6641, offline
-on the s6640 capture). n=2600 remains a side-view craft near-miss
-at edge 0.041 and is not required. Level 9 passes the frozen rule
-on 8/13 phase-7 dumps (s6642, one capture). Not required: n=2350
-craft (edge 0.019), n=2600 and n=2650 sky (luma 74.8 and 56.9),
-n=2700 and n=2800 terrain (rel 0.074 and 0.076). Level 10 passes the tan-cloud rule on 11/12 phase-7 dumps
-(s6644, offline on the s6643 capture). n=2900 remains a craft
-near-miss at edge 0.013 and is not required. The new arm is
-only an extra sky accept, so a level 2–9 frame that already
-passed still passes. Those earlier pass counts were not re-opened.
-Level 11 passes the frozen rule on 8/9 phase-7 dumps (s6645,
-one capture). n=2450 remains a distant-craft near-miss (metal
-0.014, sil 0.044, edge 0.003) and is not required.
-Level 12 passes the frozen rule on 4/5 phase-7 dumps (s6646,
-one capture). n=2400 remains a banked-craft near-miss (metal
-0.078, sil 0.000, edge 0.043) and is not required.
-Level 13 passes the frozen rule on 2/9 phase-7 dumps (s6647,
-one capture). Seven lava frames miss the terrain ceiling only
-(rel 0.362..0.611) and are not required.
-Level 14 passes the frozen rule on 6/9 phase-7 dumps (s6648,
-one capture). Not required: n=2450 terrain floor (rel 0.065),
-n=2500 terrain ceiling (rel 0.357), and n=2850, a ground view
-with no chase craft and no radar. Those are not a reason to
-move 0.08 or 0.33.
-Level 15 passes the frozen rule on 6/8 phase-7 dumps (s6649,
-one capture, planet unlock on). Not required: n=3350 terrain
-floor (rel 0.079) and n=3400 terrain floor (rel 0.075). Both
-are still flights. Those are not a reason to move 0.08.
-Level 16 passes the frozen rule on 3/11 post-hangar
-mission-origin dumps (s6650, one capture, no planet unlock).
-Those dumps are phase 5, not phase 7: the width stayed 512.
-Not required: three craft-only misses and five pause-overlay
-frames (radar 0). n=1600 rel 0.083 is inside the band and is
-not a reason to move 0.08.
-Level 17 passes the grey-trench rule on 1/10 post-hangar
-mission-origin dumps (s6652, offline on the s6651 capture).
-n=2300 is the chase. Not required: n=2250 (luma 32.8, under
-the new arm's 38 floor, and a craft miss), six pause overlays
-(radar 0), and two crest frames (radar 0). The new arm is
-only an extra sky accept. m3150 stays a sky miss (neutral8
-0.613) even though its luma 40.0 sits inside [38, 55], so
-mission stays 11/13. Both title skies stay false. dark was
-not moved from 0.60. The 0.08 floor and the 0.33 ceiling
-were not moved.
-Level 18 passes the snow-surface arm on 2/8 mission-origin dumps
-(s6654, offline on s6653): n=2200/2250. Crest/pause frames remain
-fails. Numeric acceptance and inspected imagery agree; no claim of
-retail equivalence. Level 0 also passes the unchanged rule on its existing 512x358 crop
-(s6655; both saved port files have identical pixels). Visual inspection
-agrees with the numeric result; retail level identity is unresolved.
-Objective response coverage remains partial;
-mission wins, autopilot aim and mission-to-mission progression stay
-owner playtest scope.
+Playable levels are 0..18 (`NUM_LEVELS=0x13`); 19/20 are sentinels. Route/hold
+coverage and framebuffer presence are distinct from objective response.
+Level 1 has a retail flight match. Level 0/1 named counter responses are
+observed; level 2 has an ordinary surviving hit only. No level is promoted
+here to fully VERIFIED. See [framebuffer coverage](G1-FRAMEBUFFER-COVERAGE.md)
+and [objective contracts, evidence and limits](G1-OBJECTIVE-RESPONSE.md).
+Mission wins, aim/steer and mission-to-mission progression remain owner playtest.
 
 ## Durable constraints
 
@@ -608,101 +329,42 @@ owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6666) Maintenance threshold first; then G1(d) loss-response qualification.**
-   Run Step0 byte check. If >60000, compact CURRENT-TRUTH by>=200 net lines:
-   migrate per-level framebuffer detail and archived backlogs to overview,
-   keep current evidence and constraints, one monotonic live backlog.
-   Level2 duration/gate/live/ordinary damage are now positively joined.
-   Counter40 is a death effect, so an ordinary surviving hit cannot prove
-   objective(d). After maintenance, design one bounded loss-response arm
-   using the existing level1 discipline: ordinary exact force/SEND/health
-   control first, then at most one same-owned rescue01 damage request
-   currentHP+1 through the original handler, inhibit forces, join original
-   counter40 store and callback readback, stop before failure/end handling.
-   No direct timer/Boolean/counter/health writes, arbitrary victims, success
-   or progression; default remains no level2 lethal dose. Audit the original
-   message5 death/end ordering before enabling such an opt-in qualification.
-   Use one build and same-flight arms, carry the existing whole table.
-   Do not repeat a5400VI route or add another timer/descriptor field.
-
-### Archived historical next-step entries
--1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
-  Build one instrumented binary and rerun the three same-phase arms only if
-  needed for the new witness. Log, per hangar VI phase, the selected width,
-  VI origin, source framebuffer address, row stride, and the copy/flip source
-  range; include a positive control from the retail 512-wide arm. Discriminator:
-  a source range or row stride that lands on the measured 16:9/21:9 band selects
-  H-stride; matching stride with a fixed screen-space scissor selects
-  H-viewport/H-RDP; identical source geometry and pixels across arms selects
-  H-game. Do not add a cull, skip, or default change until the writer is named.
--1. **(s6601) Audit the parked hangar artifacts under `g3-hangar-artifacts`.**
-  Build/run one same-phase capture table for retail 4:3, ASPECT 16:9, and
-  ASPECT 21:9 at the hangar origin, joining the framebuffer dumps to the VI
-  origin and width. Competing hypotheses are H-viewport (wrong scissor or
-  viewport exposes the rim band), H-stride (wide framebuffer row/flip stride
-  leaves stale right-edge data), H-rdp (RT64/RDP edge treatment produces the
-  holo spikes), and H-game (the submitted hangar geometry itself contains the
-  artifact). Discriminator: the artifact's first/last changed pixel bounds
-  and command-range attribution in the same phase; width-proportional stale
-  bands select H-stride, fixed screen-space clipping selects H-viewport or
-  H-rdp, and identical geometry in the retail control selects H-game. Keep
-  default retail behavior unchanged and produce an owner-viewable contact
-  sheet before any mitigation.
--1. **(s6598) Read the mapped `getTextureTlutEntry` return before the `0x800496A8` store.** The new `tlut_return` witness is persistent but the dd4 run did not finish. Run one bounded dd4 route with `ROGUESQ_HUDPTRWATCH=1` and inspect `[hudptrr] stage=tlut_return` against the known controls. Hypotheses: H-return-wild (the function returns `0x951335B0`), H-between-store (the return is valid but another generated store changes `r4`), H-host-alias (valid guest state is changed by host address conversion), H-stale (the return is an old object). Discriminator: return value equal to `0x951335B0` selects the return writer; a valid return followed by the mapped store selects an intervening generated write; a host-only mismatch selects conversion; retail/dd4-valid returns with divergent lifetime select stale state. Do not add a guard.
--1. **(s6581) True dd4 (DD_UNSAFE=1, bundle) is clean on lvl1/5/10: 300 s holds each, 0 stall, 0 crashlines, log `multiplier 4` (one run per level; the rare dd4 gfx SIGBUS, rate <=~1/9, is not excluded). (s6582 DONE: cap lifted, dd4 allowed without UNSAFE, 150 s lvl1 clean.) Remaining: a valid same-pose dd1-vs-dd4 sheet (log g_rs64_dd_blk per fb dump; s6582 sheet invalid). Old text: lift the dd>3 cap in apply_s6036_dd.py:7 (cap to 4 without DD_UNSAFE) -> regen/rebuild, then dd1-vs-dd4 same-pose contact sheet for the owner. Default stays retail.** (s6583 DONE: valid same-pose dd1 vs dd4 sheet at docs/owner_sheet_s6583.png, [fbdump] now carries dd= tag; dd4 shows only slightly more far terrain at lvl1 pose 3 — extent-bound per s6576; sheet sent to owner for judging.)
-- [s6576, do first] lvl1 footprint saturates at the level's own terrain extent by dd6 (post area 4096=64x64; s6575's 'table too small' was mis-framed - tw/th are level dims). Census tw/th/cap per level (1,5,10 + others) via ROGUESQ_DD_LOG; if every level is extent-bound, dd range is done at ~6: bundle far/pool/cap behind the single knob and run 300 s holds on lvl 1,5,10 at dd6 + contact sheet for owner. See NEXT.md.
-- [s6567] dd6 px2/px3 with RAMTOP_MB=16 all die with Bus error si_addr=0x38000000x (A/B/C identical): pool size is NOT the px2 limit; the chunk list also still collapses. Next: symbolize the crash pc / backtrace, name the writer of the 0x80000000-offset access (see NEXT.md).
-
-0. **(s6572 SOLVED the px3+spill hud fault; supersedes s6570/s6571 "zeroed/empty record" framing.) ROOT CAUSE = `TO_PTR` in lib/N64ModernRuntime/ultramodern/include/ultramodern/ultra64.h masked guest addresses to 8 MB (`& 0x7FFFFF`, s5240), so host osCreateMesgQueue/osSendMesg/osRecvMesg on a queue above 8 MB (record 0x80954F60 + 0x1D0 = 0x80955130, which exists only with RAMTOP_MB=16 + spill) read/wrote the ALIASED low-RAM copy 0x80155130 while generated guest code (MEM_W, unmasked) saw the real address, still all-zero. Two lines of evidence: (a) ROGUESQ_RECV_TRACE `[createmq] mq=0x80955130 msg=0x80955150 count=66` fired while a 16-byte poller watch on 0x955138..0x955147 saw 0 writes over a whole run (same-arm positive control: the record head 0x954F60 showed writes); (b) mask widened to 0x1FFFFFF -> px3+spill hold `mission_verified_130s`, 0 CRASH, svcrecv now returns real slots (validCount=31) vs 8/8 faults before. 1 clean run so far -> NEXT: 3-run px3/px4 confirm, then re-measure the dd3/dd4 limits. Any other host-side `& 0x7FFFFF` on guest pointers (ultramodern/librecomp, src/main) is the same bug class: audit them.** 
-0. **(s6569) px3 NULL = guest heap0 exhaustion** (malloc 0x192CC -> NULL, 5.4 MB live). `ROGUESQ_MALLOC_SPILL=1` (+RAMTOP_MB=16) serves NULLs from 0x80800000-0x80C00000; px1+spill clean, px3+spill gets past the pool but faults NULL+0x14 in hudDisplayUpdateWorker+3332. NEXT: name that NULL's writer (what hud pointer is 0 at px3?). Single-run each.
-1. **(s6567 SOLVED the px1 arena-chunk fault: ROOT CAUSE = `rs64_ram_top` (default 0x80800000, set from osMemSize in recomp.cpp:565) is the limit of 442 generated `RS64_RAM_TOP` pointer guards in funcs_3.c plus the RT64 DL-read masks (rt64_render_context.cpp), so every arena chunk at 0x80F… was rejected as a wild pointer. `ROGUESQ_RAMTOP_MB=16` (new, widens only the guard limit, not osMemSize) makes head-prepend +384 at px1 clean (0 crashes, alive 131 s; ASC order and prior 4/4 runs without it fault) -- single-source until repeated.)** NEXT: with RAMTOP_MB=16 retest REINITX=2 at px2 and px3 (H-D2: does a scaled DL-chunk pool stop the px2 chunk collapse?), then fold RAMTOP_MB=16 into the ROGUESQ_DRAW_DISTANCE bundle for dd>=3. (g1c-dd-phase2, top; NEXT.md). Older: s6555 REFUTED traverseSceneGraphRecursive as the runaway. Chunk drain is inside per-node submit work or a failed chunk return (reclaim=0 everywhere; px1 len rises, px2 leaks ~5/frame then collapses).
-2. **Lift the 0x80130C4C 2048-cell cap with its pool** once item 1 is fixed;
-   qualify on lvl1, then on a level with terrain larger than 64x64 (s6548).
-3. **Owner decision: dd>1 bypass cap.** cap120 is pointless; choose cap0
-   (cheap, drops ground) or inf (terrain, ~1.7x wall). Sheets
-   `docs/owner_sheet_s6546.png` (same-pose), `docs/owner_sheet_s6540_cap.png`
-   (not pose-matched).
-4. **Name the span-grid saturation writer** (edge loop at 0x80042820/0x800426D8
-   `sb trunc(clamp(f0,f12,f10))`, s6521) and fix at the writer to retire the
-   bypass workaround; two-arm qualify.
-5. **dd4/dd8 gfx-thread SIGBUS (rare).** On recurrence: backtrace, map si_addr
-   to a guest address, test H-16MB (keep gfx-read data below 0x81000000).
-6. **dd8 hangar scanline garbage** (s6468, unresolved, single-source).
-7. **G3c owner judgement**: edge sheet `docs/owner_sheet_s6449_edge.png`,
-   `docs/owner_sheet_s6439.png`; ask whether `ROGUESQ_CULL_SPIKE` should be
-   default-on.
-8. **G1d owner sheets: aspect `docs/owner_sheet_s6609_aspect.png`, radar
-   `docs/owner_sheet_s6610_radar.png`.** The level-select tear closed in
-   s6631. Do not recapture the radar.
-9. **G1 coverage (c)+(d)**: framebuffer terrain/craft/HUD evidence and a
-   forced-hit objective response for every level 0..18.
-10. **Ladder (ITERATION.md 3c)**: after the above, G3 render fidelity
-    (hangar artifacts, in-flight diffs vs retail frames). G4 and aim/steer stay
-    parked; G2, G5 closed.
+1. **G1(d) level-2 loss-response qualification (next bounded unit).**
+   s6666 positively joins duration/gate/live rescue01/ordinary damage. Counter40
+   is a death effect; an ordinary surviving hit cannot prove objective(d).
+   Audit original message5 death/end ordering before enabling an opt-in dose.
+   In one flight: exact ordinary force/SEND/health control first, then at most
+   one same-owned rescue01 request currentHP+1 via the original damage handler;
+   inhibit further forces, join original counter40 store and callback readback,
+   stop before failure/end handling. If original ordering cannot permit that
+   stop, redesign the qualification before running. Preserve default no lethal
+   dose for level2, no direct timer/Boolean/counter/health writes, no arbitrary
+   victims, success or progression. Carry the existing whole table in one
+   build; do not repeat a 5400VI route or add another timer/descriptor field.
+2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
+   the existing evidence table before choosing the next level; scope counters
+   to that level's original callback and require actual changing-value controls.
+   Saved level7 id2 activity does not establish that level's objective semantics.
+3. **Owner visual judgement and parked boundaries.** G3c sheets and optional
+   spike cull await owner judgement; keep retail defaults. Native hangar
+   geometry, rare dd4/dd8 gfx SIGBUS and dd8 hangar garbage remain parked,
+   single-source where unresolved. Reopen on a new owner report or relevant
+   side-effect failure, not repeat crash-hunt holds. Historical proposed probes
+   are archived in PROJECT-OVERVIEW, not an alternate live backlog.
+4. **Then G3 render fidelity.** Follow the standing ladder for hangar artifacts
+   and flight comparison against retail. G2/G5 are closed; G4 and aim/steer stay
+   parked. No backlog-exhausted block.
 
 ## Evidence index
 
-Recent session findings are in `PORTING-STATE.md` sessions 6378–6551. Durable
-background, closed threads, and the archived backlogs are in
-`docs/PROJECT-OVERVIEW.md`. Queued-soak verdicts are in
-`scratch/agent/SOAK-RESULTS.md`.
-
-The s6596-s6597 retries were checkpoint close-outs only: they did not rerun the
-s6595 experiment or add a conclusion. The s6599 retry was also a checkpoint
-close-out: the s6598 retail arm completed, while the dd4 wrapper produced no
-witness-phase summary before termination. The saved s6595/s6598 artifacts
-remain the active evidence for the HUD SIGBUS mapping work.
-
-## Update s6568
-- s6567 conclusion 'pool size not px2 limit' SUPERSEDED: recipe lacked ROGUESQ_DLPOOLX=1. px2 with DLPOOLX=1 DLPOOLX_MB=4 DLPOOLX_AT=3000 RAMTOP_MB=16 holds clean (1/1 90s; control 3/3 crash). px3 5/5 crashes in allocAndInitDoublyLinkedNodePool12 (NULL+2): next binding limit is that node-pool allocator, not the DL arena.
-
-- s6571 (SUPERSEDED by s6572: queue was never zero-written, the host aliased it to 0x80155130 via the 8 MB TO_PTR mask).  Tool note s6572: ROGUESQ_LOG_FL_ZERO_WATCH=1 ROGUESQ_FL_ZERO_ADDR=<phys hex, now up to 32 MB> ROGUESQ_FL_ZERO_ALWAYS=1 is a no-lldb 16-byte write watch with function attribution (lldb launch hangs in dyld under this harness).
-
-- s6573: px3+spill dd6 confirmed 4/4 clean after TO_PTR mask widening (s6572); px3 fault CLOSED. Next: px4/dd=8 (see NEXT.md).
-- s6574: px4/dd8 (2/2) lvl1 130 s clean with spill recipe. The px5 "dd12" run was really dd8 (s6575: clamp [0.25,8] under DD_UNSAFE, apply_s6036_dd.py:7; run.log prints multiplier 8) - no dd12 evidence exists.
-
-- s6579/6580: true dd4 (DD_UNSAFE=1) lvl5 300 s clean; lvl10 s6579 failure was MISSION_RE false-nomission (needs MISSION_RE='6A2900|644D00'); s6580 lvl10 (MISSION_RE='6A2900|644D00') and lvl1 true-dd4 300 s holds PASS (s6581).
-
-- s6589: lvl7 dd4 CAPX=2 fault: window (x0=0,w=64,z0=31,d=65) is inside the 93x96 grid, so not an overrun; desc 0x80136DC0 words +0/+4 are NULL. Next: is desc+4 ever filled in retail on lvl7 (NEXT.md).
-- s6591: lvl7 dd4 desc+0/+4 NULL root-caused: streamTerrainGridCellsByDistance slot-clear (pc 80043020) indexes a 64x64-word slot array at 0x80132DC0 that ends at the descriptor 0x80136DC0; window d=65 rows overran it. Fixed by capping the dd clamp window at 64x64 (apply_s6037_ddclamp.py). Supersedes s6586-s6590 (overrun/unbuilt/load-race hypotheses). New open: phase-7 SIGBUS in hudDisplayUpdateWorker (wild ptr 0x951335B0) on lvl7 dd4 after the fix. ROGUESQ_DESCWATCH=1 is the store-watch for 0x80136DC0..+0x40.
-- s6593: one-setting removal bisect: retail and the full dd4 bundle reached the route cleanly, while removing any one of SPILL_HI, RAMTOP_MB=20, DLPOOLX_MB=8, DD_CAPX=2, or DD_UNSAFE reproduced the same phase-7 SIGBUS at hudDisplayUpdateWorker+5084 with guest pointer 0x951335B0 (5/5 attempts per arm; all arms reached mission before dying). This rules out H-retail and any single bundle setting as sufficient; H-dd-interaction remains. No guard is justified: the writer and legitimacy of 0x951335B0 are still unknown.
+- Active objective source contracts, exact commands and result limits:
+  [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md), especially s6661 and s6666.
+- Per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
+- [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence):
+  verbatim per-level paragraphs, duplicate coverage, historical backlog and updates.
+- `PORTING-STATE.md` sessions 6656–6667 contain recent chronology; search bounded
+  windows only. Earlier durable context remains in PROJECT-OVERVIEW.
+- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest remains
+  20261028-075640 (already consumed). No new verdicts in s6667.
+- s6596/s6597 and s6599 were checkpoint close-outs, not reruns. The saved
+  s6595/s6598 HUD artifacts retain their original evidence limits.

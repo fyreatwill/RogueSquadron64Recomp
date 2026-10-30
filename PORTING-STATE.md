@@ -174532,3 +174532,41 @@ scratch/agent/s6666_lvl2_activation/. No passive repeat soak queued.
 CURRENT-TRUTH now61170 bytes/708 lines: NEXT is mandatory>=200-line
 maintenance, then bounded loss-response qualification from the controlled
 ordinary-hit baseline. OUTCOME ADVANCED, STATUS DONE.
+
+
+## Session 6667 (2026-10-30) — compact current truth and consolidate the live backlog
+
+Mandatory maintenance: Step0 measured CURRENT-TRUTH at61170 bytes/708 lines,
+above60000. Followed NEXT current-truth-maintenance; no build, experiment,
+game launch, runtime change or queued soak. Latest soak verdict remains
+20261028-075640, already accounted for; no new run evidence to fold.
+
+Moved four exact blocks verbatim to PROJECT-OVERVIEW under Maintenance s6667
+retained evidence: per-level framebuffer paragraphs s6632-s6655, duplicate
+mission-coverage detail, colliding historical next-step chains, and Update
+s6568 history. Script verified every original block occurs intact in the
+archive. Replaced repetitions with compact coverage/evidence links and one
+live monotonic backlog1..4. Refreshed headline/evidence index to6667; retained
+active objective contracts, s6666 duration/gate/ordinary-hit evidence, current
+constraints and all superseded-conclusion warnings. Corrected stale recipe
+text dd>2 needs DD_UNSAFE using the already-recorded s6582 dd4 opt-in status;
+no new draw-distance qualification is claimed.
+
+Result:34276 bytes/370 lines, net shrink338 lines, toward the35KB cap.
+H-history selected structurally: relocating exact historical/duplicate blocks
+accounts for the shrink; H-active protected by retaining objective evidence,
+constraints, supersessions and actionable next-unit handoff. Independent
+structural checks are exact moved-block comparison and git numstat/heading/
+local-link checks; this is document maintenance, not runtime ground truth.
+No conclusion about the game changed and no failed experiment was run.
+
+Next unit returns to g1-coverage-cd: original-backed level2 death/end-order
+audit, then one same-owned rescue01 loss-response qualification if the
+callback can be observed before failure/end handling. NEXT includes the
+three competing hypotheses, whole identity/store/readback discriminator,
+original-source commands and bounded build/run recipe. Default level2 lethal
+dose stays disabled until that unit implements and validates the opt-in.
+Validation: moved blocks retained (trailing whitespace normalized after the
+first diff check flagged inherited whitespace), net shrink>=200, one
+monotonic live backlog, retained local Markdown targets, git diff --check. Existing
+uncommitted lib submodule contents were not edited or staged as gitlinks.
