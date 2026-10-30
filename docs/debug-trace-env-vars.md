@@ -30,6 +30,7 @@ To disable: unset, set to `0`, or leave undefined.
 
 | Env Var | Default | Tags Enabled | When To Enable |
 |---|---|---|---|
+| `ROGUESQ_OBJECTIVE_RESPONSE` | off | `[objresp-epoch/arm/force/damage/write/readback/done]` | First forced-level-0 flight adapter. Requires `ROGUESQ_TELE_BOLT=1` and `ROGUESQ_LOG_HITS=1`; off/on/off at flight-relative VI 0/1800/4200, stops at VI 5400 or c1>=18, c2>=1, c3>=1, or flight exit. Seven actual counter-store PCs, destruction-victim joins, separate lv0 callback readback. `tools/g1_objective_response_run.py <fresh-tag>` watchdogs and SIGKILLs at done. Silent counters without a changing-value control stay inconclusive. |
 | `ROGUESQ_LOG_AUDIO_OBJECTS` | off | `[audio-objects-task]`, `[audio-objects-frame]` | Compare live audio task headers, state buffers, and voice records with retail. Bounded samples in title and hangar. |
 | `ROGUESQ_FB_DUMP_DIR` | unset | `[fbdump]`, raw PPM files | Guest RDRAM diagnostic, not a window capture. Uses RT64 VI source dimensions, paired-row handling and 16/32-bit pixel format; logs phase, origin, source base and byte depth. `ROGUESQ_FB_DUMP_EVERY` defaults to 500 swaps; `ROGUESQ_FB_DUMP_PHASE=N` selects one dump in that phase. |
 | `ROGUESQ_FB_DUMP_VI` | off | `base=vi-fbAddress` | Select RT64's VI source base (including its row-offset correction) instead of the requested swap address. |

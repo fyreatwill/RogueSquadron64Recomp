@@ -1,73 +1,73 @@
-# NEXT: level-0 forced-route counter1 response in one flight
+# NEXT: level-1 named forced-victim objective response
 HYPOTHESIS-ID: g1-coverage-cd
 
-One bounded engineering experiment: adapt the existing ROGUESQ_TELE_BOLT
-lever to off/on/off windows inside ONE forced-level-0 flight, and join
-forced intersection -> victim -> actual DAT counter write. No wins,
-progression, aim/steer tuning, repeat holds or cross-run animated A/B.
+One bounded adapter generalization plus ONE forced-level-1 flight. Reuse
+s6657's complete off/on/off and actual-store join; do not build a new
+instrument one field at a time. Level0 now has eight complete triads and
+13 live readbacks (docs/G1-OBJECTIVE-RESPONSE.md), single-source dynamic
+response. Do not repeat it or tune aim, steering, wins or progression.
 
-Hypotheses:
-- H-response: forced intersections reach the named counter1 writer and
-  yield nonzero before/after changes with victim attribution in that flight.
-- H-incidental: the attributed writes are only counter2/failure or Boolean
-  activity, or counter1 moves without attribution to the forced victim.
-- H-wrong-route/control: selector/callback identity or the hit/value-change
-  positive control is absent; the result is unevaluated, never a null.
+Competing hypotheses:
+- H-response: an actual objective counter read by the lv1 callback changes
+  for a forced victim, with descriptor index/delta semantics supporting it.
+- H-incidental: the changes are baseline, Boolean-only, failure-related or
+  counters not used by lv1's objectives (saved id13 meaning is unresolved).
+- H-route/control: forced selector/callback or live changing-value control
+  is absent. This outcome is unevaluated, never a controlled null.
 
-Discriminator: a single event table keyed by explicit flight epoch and VI,
-arm off/on/off, victim object+descriptor, counter index, actual old/new,
-writer PC and callback level. A victim-linked nonzero counter1 delta in
-on selects H-response; only counter2/different state selects H-incidental;
-missing identity or no live value-detector control selects H-wrong-route.
-Arm rate differences alone cannot prove causality on an animating scene.
-No mission completion is required. Stop at counter1 >= 18 or counter2 >= 1
-(or 90 flight seconds), before an objective end threshold; do not poke wins.
+Discriminator: ONE event table joins explicit selected flight epoch + VI +
+off/on/off arm + forced shape/projectile + parent node + NPC payload +
+descriptor + accepted hit SEND + actual writer PC/index/old/new + callback
+readback. Exact victim/index/delta identity, not arm rates, selects response.
+Classify success/failure semantics from the original ELF before running.
 
-Ground truth / boring checks BEFORE instrumentation:
-    python3 tools/g1_objective_evidence.py --check > scratch/agent/objectives_before.md
-    sed -n '1,105p' docs/G1-OBJECTIVE-RESPONSE.md
+Ground truth and boring checks first:
+    wc -c < docs/CURRENT-TRUTH.md
+    sed -n '1,100p' docs/G1-OBJECTIVE-RESPONSE.md
     sed -n '1,100p' docs/M6-OBJECTIVE-COUNTER-WRITERS.md
-    sed -n '1,100p' tools/apply_s5809_ctr1_log.py
-    sed -n '1,130p' tools/apply_s5835_sphere_probe.py
-    rg -n 'elf_path|output_func_path' rogue_squadron.toml
-Read original ELF instructions at the DAT writer and lv0 gate with
-`python3 tools/disasm_mips_elf.py <elf_path> <start> <stop>` (<=60 lines
-per output), rather than relying only on our generated instrumentation.
-Read docs/debug-trace-env-vars.md before adding logging. Existing retail
-oracle is undriven in missions; a boot-only null cannot settle this test.
+    sed -n '1,200p' tools/apply_s6657_objective_response.py
+    sed -n '1,160p' tools/g1_objective_response_run.py
+    rg -n 'RECOMP_FUNC void lv1_(checkComplexObjectives|calculateFriendliesSaved|objectiveSlot1)' ../N64Recomp/RecompiledFuncs/funcs_43.c
+Read bounded windows around those hits (never whole generated files),
+extract their guest PCs, and inspect the ORIGINAL ELF, <=60 lines/output:
+    python3 tools/disasm_mips_elf.py ../rogue_squadron64/build/roguesquadron.elf <start> <stop>
+Read docs/debug-trace-env-vars.md before adding logging. Existing oracle
+is undriven in missions; a boot-only null is not a witness.
 
-Existing exact lever: ROGUESQ_TELE_BOLT=1 changes the tested segment at
-intersectSegmentWithObjectSphere, tools/apply_s5835_sphere_probe.py.
-It is cached at run start and currently lacks in-run switching. Add one
-opt-in diagnostic adapter there; do not claim the windows already exist.
-Use committed VI origin/width and count, exported by host helpers, to gate
-on first selected mission at origin 0x00690400 or 0x00620400, width512.
-PROBE_PHASE_WIDTH=512 / PROBE_KEYS_FROM_PHASE=1 gates the route autopilot,
-NOT the measurement: the hangar also has width512. Confirm selector B40=0
-and lv0_checkComplexObjectives before accepting the flight. Use e.g.
-0..299 VIs off, 300..599 on, >=600 off; stop earlier at the counter limit.
-Reset log/value-control budgets per flight epoch. Batch all joins and a
-changing-value positive control in this same build. Record real old/new
-at the writer; ctr1/setter call counts and heartbeat are insufficient.
+Implement explicit ROGUESQ_OBJECTIVE_RESPONSE_LEVEL=1 (default 0 preserves
+s6657) in the existing adapter, a lv1 callback hook, and --level 1 in the
+existing runner (both currently hardcode level0). Scope the full selected
+counter readback to the flight; seven actual stores already cover the known
+writer class. Do not assume counters 1..3 suffice for lv1. Pick conservative
+stop limits from the original callback gates; stop well below success or
+failure/end gates. If necessary stop after the first full named response.
+The existing 0/1800/4200/5400 VI windows are flight-relative, not wall-clock.
+Resolve slots as table[id*8] -> parent; parent+4 -> NPC; NPC+0x34 -> desc.
+Attribution may use exact s-register identity plus live descriptor equality;
+label it as a join, not an independently observed call stack. Keep the
+accepted [eff2] SEND witness; it must visibly fire in the measured arm.
+The legacy health helper can read meaningless values on some objects; it
+is NOT damage proof. The lever includes NPC bolts (w hardcoded0), so do not
+claim player shots or aim. Nulls still require live value-detection controls.
 
-Persist generated diagnostics in fixup scripts, apply them to live output,
-then build once:
+Persist every generated hook through the fixup replay, apply to the live
+tree and build once (fix any actual implementation failure this iteration):
+    python3 tools/apply_s6657_objective_response.py
     cmake --build build --target RogueSquadron64Recomp -j5
-If full regeneration is needed, obey make_elf.py -> N64Recomp ->
-fixup_game_funcs.py -> cmake; do not partially regenerate a source tree.
+If regenerating, obey make_elf -> N64Recomp -> fixup -> cmake; do not run
+full fixup on the existing tree. Preserve submodule patches.
 
-Base existing route (run only AFTER the diagnostic adapter is installed,
-using a fresh tag so saved logs are not overwritten):
+AFTER the above CLI/adapter generalization exists, exact planned run:
     /usr/sbin/ioreg -n Root -d1 | rg 'CGSSessionScreenIsLocked'
-    env ROGUESQ_TELE_BOLT=1 ROGUESQ_LOG_HITS=1 LEVEL=0 TAG_SUFFIX=s6657_response HOLD_S=150 zsh scratch/agent/g1_level_coverage_common.zsh
-This exports FORCE_SAVE_MISSION=0, FORCE_UNLOCK=0, NO_SAVE_WRITE=1,
-LOG_OBJBOOL=1, LOG_HUDBIT=1; m6_god_common.sh runs from build with ROM,
-watchdogs and SIGKILLs. Install a stop-on-response condition in the
-experiment wrapper; the old runner otherwise waits a fixed 130s verify.
-Off/on/off instrumentation needs an explicit new opt-in, recorded in
-NEXT.md before running. Defaults and ordinary TELE behavior stay unchanged.
+    python3 tools/g1_objective_response_run.py s6658_response --level 1
+    python3 tools/g1_objective_response_run.py s6658_response --level 1 --analyze
+The wrapper must update its output path to g1_lvl1s6658_response; refuse
+reuse, record binary/source/env manifest, run from build/ with ROM, watchdog
+itself and SIGKILL the recipe group at done (360s hard timeout). Screen must
+be unlocked. All arms belong to this one flight. No repeat-soak queue needed.
 
-First missing witness was selected because g1_lvl0ctl/tele are absent;
-legacy s5843/s5844/s5845 do name lv0 and show c1 activity but use the old
-route. lvl10–18 also have no saved ctl/tele pairs. Do not revive the old
-lvl6 "valid null" (heartbeat only) or transfer lv0 id2 semantics to lvl7.
+Expected outcomes: a complete force/SEND/store/readback chain for a named
+lv1 objective counter selects H-response; classified failure/other activity
+selects H-incidental. Missing identity/control stays unknown. Record every
+failed arm or hook honestly. No full VERIFIED promotion on single-source
+retail equivalence, no mission completion, no default-setting change.

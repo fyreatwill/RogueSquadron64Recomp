@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6656 (2026-10-29).
+Compact operational handoff, as of Session 6657 (2026-10-29).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -291,9 +291,26 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   Forced-selector lvl0 ctl/tele and lvl10–18 pairs are absent in this set,
   not negative results. No level promoted to fully VERIFIED. Full table,
   semantics and line provenance: `docs/G1-OBJECTIVE-RESPONSE.md`.
-  First missing forced-route witness is lvl0 counter1: one phase-scoped
-  off/on/off TELE experiment, below end thresholds, is next. No new soak
+  That was the s6656 handoff; s6657 below now supplies the forced-route
+  lvl0 counter1 witness. No new soak
   verdicts; no runtime/default change in s6656.
+
+- **G1(d) level 0 forced-route counter1 response observed (s6657).**
+  One corrected flight, B40=0/cursor0 plus lv0 callback, first flight epoch
+  VI4672..10074. Off/on/off c1 0→2→13→13; 77 forced segments in on only,
+  13 actual changing-value readbacks, 0 crash lines, 167.87 s wall. Eight
+  exact force→accepted SEND→store triads match node, NPC payload and
+  descriptor; actual writer is datItemSetObjectiveBooleanCount at
+  0x8006594C, each +1. Example seq24: node8021B22C, payload80356230,
+  descriptor8031AA94, c1 4→5 after 4 VI. Original ELF independently shows
+  node+4→payload, payload+0x34→descriptor and descriptor+0x70/+0x74→
+  counter/delta. First binary's node+0x34 join was wrong; rerun corrected
+  it before interpretation. Dynamic chain remains single-source, not
+  retail equivalence or player-shot proof (example SEND is N). c1 stops
+  at13, below lv0's21 gate; c2/c3 stay0. No win/progression tested or full
+  VERIFIED promotion. Durable adapter: tools/apply_s6657_objective_response.py;
+  runner/analyzer: tools/g1_objective_response_run.py. Table and limits:
+  docs/G1-OBJECTIVE-RESPONSE.md. Next missing named response is level1.
 
 ## Superseded conclusions — do not act on these
 - s5962 "lvl6 null is valid because hb ticks fires" (s6656: heartbeat controls execution, not detection of value changes; the monitor covers only ids 1–15 and has a run-lifetime budget). Believable because TELE and hook execution both fired, but no same-run changing-value control established sensitivity to every relevant objective slot.
@@ -478,15 +495,15 @@ owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6656) Level-0 forced-route counter1 response, one in-run discriminator.**
-   Use the existing TELE_BOLT lever and forced selector LEVEL=0, with a new
-   phase-scoped adapter: off/on/off windows keyed to the first flight VI
-   epoch, joined victim/actual DAT-write before/after records and a live
-   changing-value control. Confirm B40=0 plus the lv0 callback; width 512
-   alone also matches the hangar. Stop before any end threshold, preserve
-   retail defaults and all later win/progression playtest scope. See NEXT.md
-   for the base recipe and exact hypotheses. No cross-run animated A/B,
-   aim work, repeat holds or new crash sweep.
+1. **(s6657) Level-1 named forced-victim objective response.**
+   Generalize the existing single-flight adapter for level1 after checking
+   lv1_checkComplexObjectives and descriptor counter semantics in the
+   original ELF. Saved id13 activity has unresolved meaning; do not assume
+   it is success or transplant lv0 counter1/threshold21. One build carries
+   off/on/off gating, all seven actual writer sites, a callback readback
+   of the relevant counters, and node→NPC payload→descriptor→accepted SEND
+   joins. Use one forced LEVEL=1 flight; no cross-run animated A/B, wins,
+   progression, aim work, repeat holds or crash sweep. Exact handoff NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

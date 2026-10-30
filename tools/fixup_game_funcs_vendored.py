@@ -41902,6 +41902,7 @@ RS64_REPLAY = [
     "apply_s5886_m5post.py",
     "apply_s5910_postra.py",
     "apply_s5912_shadow.py",
+    "apply_s6657_objective_response.py",
     "apply_s5817_bit3_setters.py",
     "apply_s6027_cellmul.py",
     "apply_s6034_gridlog.py",

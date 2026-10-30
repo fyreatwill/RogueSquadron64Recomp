@@ -1,6 +1,7 @@
 # G1(d) objective-response reconciliation
 
-Session 6656, 2026-10-29. Offline analysis only; no build or game launch.
+Initial reconciliation: Session 6656, 2026-10-29, offline only.
+Session 6657 adds the live level-0 response experiment below.
 The appendix is reproduced by `python3 tools/g1_objective_evidence.py --check`.
 It streams the saved plain/gzip logs and preserves decompressed line numbers,
 route witnesses, explicit width epochs, counter records, firing controls,
@@ -8,7 +9,7 @@ writer calls, Boolean dumps and result-mode requests separately.
 
 | Level | Response evidence | Success/failure meaning and coverage verdict |
 | --- | --- | --- |
-| 0 | Legacy s5843/s5844/s5845: lv0 caller observed; c1 pre-states 0..3 / 0..12 / 0..16, TELE records 0 / 10 / 10. | Named counter activity under the legacy route; single-source, cross-run. No forced-selector ctl/tele logs. First missing forced-route response. |
+| 0 | s6657: forced selector B40=0 and lv0 callback; same-flight off/on/off counter1 0→2→13→13, 13 live readback changes, eight exact force/send/store joins. | Named counter1 hit response observed in one instrumented flight, supported by original ELF descriptor-to-counter stores. Dynamic evidence remains single-source; no win, progression, player-shot or retail-equivalence claim. |
 | 1 | id13 gets 0..2 ctl versus 0..4 tele; ctl also has snapshots of id10 and id13, tele has no snapshot records. | Saved arms have different instrument evidence; do not assume identical builds. Counter13 meaning and hit causality unresolved. Earlier ledger maxima of 4 in both arms do not describe the currently saved first epochs. |
 | 2 | TELE fires; writer call records only. | No named counter response or controlled null. |
 | 3 | TELE fires; writer call records only. | No named counter response or controlled null. |
@@ -69,24 +70,118 @@ accessors and a run-lifetime budget. Neither heartbeat nor a TELE line
 proves that every relevant counter write would have been observed.
 No runtime, patch, mitigation, default or mission-win change was made.
 
+## Session 6657: forced-level-0 response
+
+One bounded adapter and its validation experiment, 2026-10-29. Maintenance
+threshold was not triggered (51,237 bytes). No new queued-soak verdicts.
+`tools/apply_s6657_objective_response.py` persists the generated diagnostics
+through the vendored fixup replay. The opt-in `ROGUESQ_OBJECTIVE_RESPONSE=1`
+gates the existing TELE lever inside the first flight confirmed by B40=0,
+lv0_checkComplexObjectives, width 512 and origin 0x690400/0x620400. Retail
+defaults and ordinary TELE behavior stay unchanged. Seven known objective
+store PCs record actual pre/post words; the callback independently reads
+counters 1–3. Budgets belong to the flight and each off/on/off arm.
+
+The first binary completed the windows, counter1 0→1→12→12, 99 forced
+segments, 0 crash lines, 169.87 s wall. Its candidate-to-victim join was
+WRONG: the slot contains a parent node, not the NPC payload. Reading
+node+0x34 produced meaningless descriptor words. Do not use its victim or
+legacy health fields as damage proof. Original ELF `lw s1,4(s5)` at
+0x8006CBF8 and the already-correct s5886 send helper identify node+4 as the
+NPC payload. The corrected binary records node, payload and payload+0x34
+descriptor separately, retaining identity through actual writer registers.
+
+Corrected run: `scratch/agent/m6/g1_lvl0s6657_response_v2/`, 167.87 s wall,
+0 crash lines, screen-lock flag clear at launch. Forced selector is B40=0,
+cursor 0; initMission and the lv0 callback both execute. Epoch starts at
+VI 4672 (raw log L205649); callback entry is later than the first flight
+VI, deliberately excluding initialization and the hangar.
+
+| Arm | Flight-relative VI interval observed | TELE segments | Counter1 | Counter2/3 |
+| --- | --- | ---: | --- | --- |
+| Off | 0..1801 | 0 | 0→2 | 0/0 |
+| On | 1802..4199 | 77 | 2→13 | 0/0 |
+| Off | 4200..5402 (stop) | 0 | 13→13 | 0/0 |
+
+Thirteen independent callback readback changes agree with the actual
+counter1 stores, including the two off-arm baseline changes. These are
+live value-detector controls, not heartbeats or synthetic marks. No null
+about another level, other counters, or omitted writers is inferred.
+
+Eight complete same-run joins have exact node/payload/descriptor identity
+and ordering force < accepted hit SEND < actual counter1 write. All use
+writer 0x8006594C in datItemSetObjectiveBooleanCount; each delta is +1.
+The existing `[eff2] SEND` hook is after accepted intersection selection
+at 0x8005D35C. It visibly fires in the on arm, so its run-lifetime budget
+does not invalidate these positive records. It would not qualify a null.
+
+| Force seq | VI at store | Age (VI) | Node | NPC payload | Descriptor | Counter1 | Raw lines force / SEND / store |
+| --- | ---: | ---: | --- | --- | --- | --- | --- |
+| 9 | 6496 | 7 | `8021b718` | `803519b0` | `8031c520` | 2→3 | 230681 / 230783 / 230824 |
+| 17 | 6527 | 5 | `8021b6a0` | `80353ca0` | `803175a4` | 3→4 | 231134 / 231177 / 231215 |
+| 24 | 6549 | 4 | `8021b22c` | `80356230` | `8031aa94` | 4→5 | 231432 / 231488 / 231513 |
+| 31 | 6573 | 4 | `8021ac8c` | `80359880` | `8031c244` | 5→6 | 231736 / 231798 / 231822 |
+| 44 | 6650 | 3 | `8021a9f8` | `8035a8d0` | `8031c338` | 6→7 | 232551 / 232599 / 232623 |
+| 55 | 6939 | 6 | `8021ae30` | `803599b0` | `8031c614` | 7→8 | 234971 / 235013 / 235038 |
+| 57 | 7035 | 2 | `8021a980` | `803594b0` | `80317698` | 8→9 | 235819 / 235842 / 235850 |
+| 60 | 7612 | 2 | `8021a944` | `8035bbd0` | `8031c7fc` | 9→10 | 240619 / 240643 / 240651 |
+
+For example seq24 forces shape 0x8021F850 with projectile 0x8035421C at
+VI 6545; SEND names node 0x8021B22C and descriptor 0x8031AA94; the writer
+at VI 6549 changes counter1 4→5 with s1=0x80356230 and s5=0x8021B22C.
+The legacy shooter classifier calls this SEND N (NPC), not P. The lever
+historically treats all bolts as w=0; this run does not establish a
+player-shot-specific response or improve aim. Eight of eleven on-arm
+counter changes have the complete logged triad; no claim is made for the
+other three (force rows are limited to 64 per arm).
+
+Original ELF independently fixes the static semantics: npcProbeDriod at
+0x800CB858..0x800CB884 loads payload+0x34, then descriptor+0x70/+0x74 as
+counter index/delta and calls the setter; the setter adds the delta and
+stores at 0x8006594C. The separate trigger writer 0x80065A34 was observed
+statically, not selected by this runtime witness. lv0 at 0x80101834 tests
+counter1>=21; stop was c1=13, c2=c3=0 at VI 10074, below all configured
+stop thresholds. No win or progression was poked or tested.
+
+This selects H-response for named counter1 activity from forced-hit
+victims. H-incidental-only is ruled out for these eight writes: they are
+counter1 stores, not counter2, Boolean-only effects or bare call totals.
+The observed chain plus original ELF supports the address/type meaning;
+dynamic behavior is still one runtime source, not independent retail
+behavior or a randomized causal estimate. Arm-rate differences are not
+the proof. No level is promoted to fully VERIFIED here.
+
+Validation: both builds succeeded; extracted C helper checks cover default
+behavior, hangar exclusion, exact VI boundaries, parent/payload resolution,
+register join, actual store/readback and stop. Parser checks accept a
+measured triad and reject a deliberately mismatched descriptor. Adapter
+reapplication is idempotent for all five files. The wrapper watches itself,
+SIGKILLs its recipe process group at done (360 s hard timeout), refuses
+reused output tags and records binary/source hashes for future runs.
+Legacy HP samples are not used as evidence of damage or victim identity.
+
+Reproduce the analysis without launching the game:
+
+```sh
+python3 tools/g1_objective_response_run.py s6657_response_v2 --analyze
+```
+
+This prints eight linked changes and thirteen readback changes. The raw
+log, joined response.log/response.json and binary manifest stay under the
+fresh run directory. Original ELF windows and helper controls are under
+`scratch/agent/s6657_response/`. First-version evidence is retained under
+`scratch/agent/m6/g1_lvl0s6657_response/`; it is a failed join control, not a
+second independent behavioral source.
+
 ## Next discriminating unit
 
-First missing forced-route witness: level 0, counter1. Use the existing
-ROGUESQ_TELE_BOLT lever and forced-selector recipe with LEVEL=0,
-ROGUESQ_FORCE_UNLOCK=0, ROGUESQ_FORCE_SAVE_MISSION=0,
-ROGUESQ_NO_SAVE_WRITE=1. Confirm B40=0 and lv0 callback identity.
-PROBE_PHASE_WIDTH=512 is only the autopilot route gate: the hangar is also
-512 wide. The measurement must start at the explicit first flight origin
-0x00690400/0x00620400 after selection and stop on exit from that flight.
-
-Implement one phase-scoped diagnostic adapter around the existing TELE
-lever, with off/on/off windows in one run and a joined before/after witness
-of the DAT counter1 write, victim identity and firing marker. Capture actual
-writes (including a naturally changing counter as the value-detector
-positive control), not additional call totals. Classify counter2 separately.
-No aim/steer tuning, forced win, mission progression or repeat hold is needed.
-Stop well below an objective end threshold; a nonzero response suffices.
-NEXT.md carries the hypotheses, exact base recipe and build commands.
+Level 1 remains the first level without a named forced-victim objective
+response. Generalize this same adapter for a selected callback/level only
+after checking lv1's counter/gate semantics in the original ELF. Keep the
+same in-run windows, actual-store/readback controls and node→payload→
+descriptor→hit-SEND join; never inherit lv0's counter1 or its stop limits.
+Preserve ordinary TELE behavior, retail defaults and the owner's win /
+progression / aim scope. NEXT.md carries the bounded unit and commands.
 
 ## Generated evidence appendix
 

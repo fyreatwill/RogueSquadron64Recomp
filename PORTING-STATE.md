@@ -173989,3 +173989,71 @@ ORIGIN: no mitigation or runtime change; offline evidence tooling only.
 Next: first missing forced-route lvl0 counter1 witness with existing TELE
 lever, one new phase-scoped off/on/off adapter and joined actual-write
 control. No forced wins, progression, aim work or repeat crash holds.
+
+## Session 6657 (2026-10-29) — level-0 forced victims join to real counter1 writes
+HYPOTHESIS-ID: g1-coverage-cd
+Read CURRENT-TRUTH, NEXT, SOAK-RESULTS tail in order. Maintenance check:
+51237 bytes, below 60000; not triggered. No new queued-soak verdicts.
+One bounded adapter plus its validation experiment. Original ELF inspected
+before instrumentation: DAT trigger 80065980..80065A54 and lv0 c1>=21 gate
+80101834..80101880; later corroborated NPC parent/payload link and setter
+call sites with original ELF. No new oracle instrument or retail run.
+Added tools/apply_s6657_objective_response.py, replayed by vendored fixup,
+with opt-in OBJECTIVE_RESPONSE + existing TELE_BOLT/HITS: first selected
+lv0 callback + 512-wide 690400/620400 flight epoch; off/on/off VI windows
+0/1800/4200, stop5400 or below end thresholds. Actual pre/post objective
+stores at seven known PCs; separate per-callback c1..3 value readback;
+forced shape/projectile/node/NPC/descriptor identity and writer-register
+joins. Defaults and ordinary TELE behavior preserved. New runner/analyzer
+tools/g1_objective_response_run.py refuses reused tags, checks screen lock,
+launches the existing forced route from build with ROM, watchdogs, SIGKILLs
+the recipe group at done (360s hard timeout), and exports line-keyed tables.
+Future launches record binary/source/env manifests; current v2 binary hash
+was also saved while unchanged. Submodule dirt was pre-existing and untouched.
+First build/run completed: 169.87s, c1 0>1>12>12, 99 forced segments, 0
+crashes. FAILED JOIN: the slot's pointer was a parent node, not NPC payload;
+node+34 read meaningless descriptor fields. Do not treat those victim/HP
+labels as evidence. Original lw s1,4(s5) at 8006CBF8, plus existing correct
+s5886 SEND helper, identify node+4 as NPC, whose +34 is descriptor. Fixed
+the adapter this iteration, rebuilt and ran the corrected full experiment.
+Corrected run g1_lvl0s6657_response_v2: B40=0/cursor0, initMission plus lv0
+callback. Epoch VI4672..10074 (dv5402), all three arms, 167.87s, 0 crashes.
+Off 0..1801: c1 0>2, 0 forces; on 1802..4199: c1 2>13, 77 forces; off
+4200..5402: c1 stays13, 0 forces. c2/c3 stay0. Thirteen actual changing
+readbacks agree with stores, including two off-arm baseline transitions:
+live value-detector positive control, not a heartbeat or synthetic mark.
+Eight complete force<SEND<actual-store triads have exact node/payload/desc
+identity, age2..7 VI, writer8006594C, delta+1. Example seq24 VI6545 shape
+8021F850/projectile8035421C -> SEND node8021B22C/desc8031AA94 -> VI6549
+NPC80356230, c1 4>5. Raw lines231432/231488/231513; s1=payload,s5=node.
+The existing accepted-intersection SEND hook visibly fires in this arm;
+its lifetime budget cannot support nulls but these positives are observed.
+Eight of eleven on-arm counter changes have fully logged triads (force
+rows cap64); no full-join claim for the other three. Legacy SEND classifier
+labels the example N, not player P. TELE's historical w=0 includes NPC
+bolts; no player-shot, aim or win inference. Legacy HP samples are not
+used as damage proof or victim identity.
+Independent static ground truth: original ELF npcProbeDriod CB858..CB884
+loads payload+34 descriptor, +70 counter index/+74 delta, calls setter;
+setter really adds/stores at6594C. The trigger writer65A34 is not the
+selected runtime path. lv0 c1 gate21, final13; no win/progression pokes.
+Select H-response for these named c1 writes; rules out incidental-only
+(counter2/Boolean/call-count) interpretation for the eight triads. Dynamic
+behavior remains single-source, not retail equivalence or randomized
+causality. Arm rate differences alone are NOT the proof. No full VERIFIED
+promotion. No reactive crash work, repeat holds, aim tuning or default change.
+Validation: both builds pass; extracted C helper checks pass default,
+hangar exclusion, VI boundaries, corrected parent/payload resolution,
+register join, write/readback and stop. Parser measured triad positive
+passes; deliberately mismatched descriptor is rejected. All five generated
+files pass reapplication/idempotence. Python syntax and git diff checks pass.
+Artifacts: scratch/agent/m6/g1_lvl0s6657_response{,_v2}/; ELF windows and
+helper controls scratch/agent/s6657_response/. Report updated in
+G1-OBJECTIVE-RESPONSE.md. Analyzer --analyze v2 prints 8 joins/13 readbacks;
+first binary prints 0 joins/12 readbacks and stays a failed attribution arm.
+ORIGIN: no corruption mitigation. Legitimate DAT counter delta is written by
+8006594C, sourced from NPC descriptor+70/+74; diagnostic TELE gating is
+explicit opt-in and all game stores are preserved.
+Next: level1 named forced-victim response; original lv1 callback/descriptor
+semantics first, then generalize the same adapter/runner for level selection,
+all relevant readback counters and safe stop limits. No lv0 threshold reuse.
