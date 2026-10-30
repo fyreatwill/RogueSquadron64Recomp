@@ -16,12 +16,15 @@ extern _Thread_local uint32_t rs6657_victim;
 '''
 HELPERS = r'''
 extern uint32_t rs64_vi_committed_width(void), rs64_vi_committed_origin(void);
+#include <signal.h>
 extern volatile uint32_t rs64_vi_n_g;
 _Thread_local uint32_t rs6657_victim;
 static int rs6657_en = -1, rs6657_seen, rs6657_started, rs6657_done;
 static uint32_t rs6657_start, rs6657_arm = 99, rs6657_rows[3], rs6657_hits[3], rs6657_dmg[3], rs6657_seq;
 static int rs6657_level;
 static int rs6661_dosed;
+static uint32_t rs6666_dat;
+static int rs6668_repeat(uint8_t*, uint32_t, uint32_t, uint32_t);
 static uint32_t rs6666_limit = 5400, rs6666_on;
 static void rs6666_sample(uint8_t*, recomp_context*, const char*);
 static uint32_t rs6657_prev[128], rs6657_bool6, rs6662_bools[128]; static unsigned rs6657_read_init;
@@ -29,6 +32,9 @@ static struct { uint32_t seq, vi, shape, node, npc, desc, proj, send_seq, send_v
 static unsigned rs6657_ne;
 static uint32_t rs6660_pending_id, rs6660_pending_value, rs6660_observed;
 static int rs6660_ok(uint32_t a) { return a >= 0x80000400u && a < 0x807FFF00u && !(a & 3); }
+static int rs6668_named_rescue(uint32_t desc) {
+    return rs6666_dat && (desc == rs6666_dat + 0x1510 || desc == rs6666_dat + 0x1628 || desc == rs6666_dat + 0x1740);
+}
 static int rs6660_named(uint32_t id) { return rs6657_level == 2 ? id == 40 : (id == 13 || id == 40 || id == 41); }
 static void rs6660_census(uint8_t*);
 static unsigned rs6657_match(uint32_t, uint32_t);
@@ -53,7 +59,7 @@ static int rs6657_flight(uint8_t* rdram) {
     }
     uint32_t dv = rs64_vi_n_g - rs6657_start;
     uint32_t c1 = rs6657_word(rdram, 0x80138060u), c2 = rs6657_word(rdram, 0x80138064u), c3 = rs6657_word(rdram, 0x80138068u);
-    if (rs6660_observed || !selected || !flight || dv >= rs6666_limit || (rs6657_level == 0 ? (c1 >= 18 || c2 >= 1 || c3 >= 1) : rs6657_level == 2 ? (rs6657_read_init && (rs6657_prev[39] || MEM_BU(S32((int32_t)0x80138903u), 0) || MEM_BU(S32((int32_t)0x8013890Cu), 0))) : (rs6657_read_init && (rs6657_prev[12] >= 3 || MEM_BU(S32((int32_t)0x801388A5u), 0))))) {
+    if ((rs6660_observed && !(rs6657_level == 2 && rs6661_dosed)) || !selected || !flight || dv >= rs6666_limit || (rs6657_level == 0 ? (c1 >= 18 || c2 >= 1 || c3 >= 1) : rs6657_level == 2 ? (rs6657_read_init && ((rs6657_prev[39] && !rs6661_dosed) || MEM_BU(S32((int32_t)0x80138903u), 0) || MEM_BU(S32((int32_t)0x8013890Cu), 0))) : (rs6657_read_init && (rs6657_prev[12] >= 3 || MEM_BU(S32((int32_t)0x801388A5u), 0))))) {
         rs6657_done = 1;
         fprintf(stderr, "[objresp-done] epoch=1 vi=%u dv=%u selected=%d flight=%d c=%u,%u,%u forces=%u,%u,%u writes=%u,%u,%u damage=%u,%u,%u\n", rs64_vi_n_g, dv, selected, flight, c1, c2, c3, rs6657_hits[0], rs6657_hits[1], rs6657_hits[2], rs6657_rows[0], rs6657_rows[1], rs6657_rows[2], rs6657_dmg[0], rs6657_dmg[1], rs6657_dmg[2]);
         fflush(stderr); return 0;
@@ -296,6 +302,9 @@ static int rs6660_candidate(uint8_t* rdram, uint32_t slot, uint32_t shape, uint3
     }
     rs6660_fields(rdram, typed == 1 ? desc : 0, f);
     int selected = typed == 1 && rs6660_selected(f);
+    const char* dose = getenv("ROGUESQ_OBJECTIVE_RESPONSE_LETHAL");
+    if (rs6657_level == 2 && dose && dose[0] == '1')
+        selected = selected && handler == 0x800D3894u && rs6668_named_rescue(desc);
     static uint32_t last[3][2048][4];
     uint32_t identity[4] = {shape, node, desc, handler};
     if (slot < 2048 && memcmp(last[rs6657_arm][slot], identity, sizeof(identity))) {
@@ -304,7 +313,7 @@ static int rs6660_candidate(uint8_t* rdram, uint32_t slot, uint32_t shape, uint3
     }
     if (rs6657_level == 2) {
         for (unsigned m = 0; m < rs6657_ne; m++)
-            if (rs6657_events[m].npc == npc && rs6657_events[m].desc == desc) return 0;
+            if (rs6657_events[m].npc == npc && rs6657_events[m].desc == desc && !rs6668_repeat(rdram, node, npc, desc)) return 0;
     }
     return selected && !rs6660_pending_id;
 }
@@ -333,6 +342,29 @@ static int rs6661_hp(uint8_t* rdram, uint32_t actor) {
     return (int32_t)rs6657_word(rdram, address);
 }
 static struct { uint32_t node, npc, desc, actor; int controlled; } rs6661_target;
+static int rs6668_repeat(uint8_t* rdram, uint32_t node, uint32_t npc, uint32_t desc) {
+    const char* e = getenv("ROGUESQ_OBJECTIVE_RESPONSE_LETHAL");
+    return rs6657_level == 2 && e && e[0] == '1' && !rs6661_dosed &&
+        rs6668_named_rescue(desc) && rs6661_target.controlled &&
+        node == rs6661_target.node && npc == rs6661_target.npc && desc == rs6661_target.desc &&
+        rs6663_owned(rdram, node) && rs6657_word(rdram, node) == 0x800D3894u &&
+        rs6657_word(rdram, npc + 0x38) == rs6661_target.actor;
+}
+void rs6668_counter_return(uint8_t* rdram, recomp_context* ctx) {
+    if (!rs6657_enabled() || rs6657_level != 2 || !rs6657_started) return;
+    static uint32_t previous = 0xffffffffu;
+    uint32_t value = U32(ctx->r2), memory = rs6657_word(rdram, 0x801380FCu);
+    if (value != previous) {
+        fprintf(stderr, "[objresp-counter-return] vi=%u pc=801020b8 id=40 returned=%u memory=%u dosed=%d observed=%u bool109=%u bool101=%u\n", rs64_vi_n_g, value, memory, rs6661_dosed, rs6660_observed, MEM_BU(S32((int32_t)0x8013890Cu),0), MEM_BU(S32((int32_t)0x80138904u),0));
+        previous = value;
+    }
+    if (rs6661_dosed && rs6660_observed && rs6660_pending_id == 40 && value == rs6660_pending_value && value == memory) {
+        fprintf(stderr, "[objresp-done] epoch=1 vi=%u dv=%u reason=counter40-getter-before-failure forces=%u,%u,%u\n", rs64_vi_n_g, rs64_vi_n_g-rs6657_start, rs6657_hits[0],rs6657_hits[1],rs6657_hits[2]);
+        fflush(stderr);
+        raise(SIGSTOP);
+    }
+}
+
 static _Thread_local struct { uint32_t node, npc, desc, actor, msg, raw, requested, seq, proj, send_vi; int hp, eligible, lethal, active; } rs6661_hit;
 static void rs6664_transport_common(uint8_t* rdram, recomp_context* ctx, int stage, uint32_t npc, uint32_t msg) {
     if (!rs6657_enabled() || rs6657_level == 0 || !rs6657_started || rs6657_done) return;
@@ -357,7 +389,7 @@ static void rs6664_transport_common(uint8_t* rdram, recomp_context* ctx, int sta
             (rs6657_level == 2 ? rs6660_selected(f) :
                 (((f[0] == 13 && f[1] > 0 && f[1] < 3) || (f[4] == 13 && f[5] > 0 && f[5] < 3)) && !(f[2] == 6 && f[3]))) && rs6661_hit.hp > 0 && rs6661_hit.hp < 1000000;
         const char* lethal = getenv("ROGUESQ_OBJECTIVE_RESPONSE_LETHAL");
-        if (rs6657_level == 1 && lethal && lethal[0] == '1' && rs6661_hit.eligible && !rs6661_dosed &&
+        if ((rs6657_level == 1 || rs6668_repeat(rdram, rs6661_hit.node, npc, desc)) && lethal && lethal[0] == '1' && rs6661_hit.eligible && !rs6661_dosed &&
             rs6661_target.controlled && rs6661_target.node == rs6661_hit.node &&
             rs6661_target.npc == npc && rs6661_target.desc == desc && rs6661_target.actor == actor) {
             ctx->r5 = S32(rs6661_hit.hp + 1); rs6661_hit.lethal = 1; rs6661_dosed = 1;
@@ -386,7 +418,6 @@ void rs6664_transport(uint8_t* rdram, recomp_context* ctx, int stage, uint32_t n
     if (rs6657_enabled() && rs6657_level == 2) rs6664_transport_common(rdram, ctx, stage, npc, msg);
 }
 
-static uint32_t rs6666_dat;
 static uint32_t rs6666_offsets[6] = {0x1510,0x1628,0x1740,0x1270,0x1350,0x1430};
 static int rs6666_index(uint32_t desc) {
     for (int i = 0; i < 6; i++) if (rs6666_dat && desc == rs6666_dat + rs6666_offsets[i]) return i;
@@ -493,6 +524,13 @@ def _apply(text, name):
         assert text.count(a) == 1
         return text.replace('#include "funcs.h"', '#include "funcs.h"\nextern void rs6660_send(uint8_t*, uint32_t, uint32_t);', 1).replace(a, hook + '\n' + a), 1
     callback_changed = 0
+    if name == 'funcs_43.c' and 'rs6668_counter_return(rdram, ctx);' not in text:
+        anchor = '    getObjectiveCount(rdram, ctx);\n        goto after_26;'
+        start = text.index('RECOMP_FUNC void lv2_checkComplexObjectives(')
+        at = text.index(anchor, start)
+        text = text[:at] + text[at:].replace(anchor, '    getObjectiveCount(rdram, ctx);\n    rs6668_counter_return(rdram, ctx);\n        goto after_26;', 1)
+        text = text.replace('#include "funcs.h"', '#include "funcs.h"\nextern void rs6668_counter_return(uint8_t*, recomp_context*);', 1)
+        callback_changed = 1
     if name == 'funcs_43.c' and 'rs6657_callback_level(rdram, 2);' not in text:
         a = 'RECOMP_FUNC void lv2_checkComplexObjectives(uint8_t* rdram, recomp_context* ctx) {'
         assert text.count(a) == 1
@@ -506,10 +544,12 @@ def _apply(text, name):
             text = text.replace(a, b, 1); candidate_changed = 1
     if TAG in text:
         if name == 'funcs_16.c':
+            original = text
+            text = text.replace('#include <signal.h>\n', '')
             start = text.index('extern uint32_t rs64_vi_committed_width(void), rs64_vi_committed_origin(void);', text.index('/* ' + TAG))
             stop = text.index('static void rs5835_probe(', start)
             updated = text[:start] + HELPERS.lstrip('\n') + '\n' + text[stop:]
-            return updated, int(updated != text or candidate_changed)
+            return updated, int(updated != original or candidate_changed)
         if name == 'funcs_43.c' and 'rs6657_callback_level(rdram, 1);' not in text:
             text = text.replace('extern void rs6657_callback(uint8_t*);', 'extern void rs6657_callback(uint8_t*);\nextern void rs6657_callback_level(uint8_t*, int);', 1)
             a = 'RECOMP_FUNC void lv1_checkComplexObjectives(uint8_t* rdram, recomp_context* ctx) {'

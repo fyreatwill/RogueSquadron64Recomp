@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6667 (2026-10-30).
+Compact operational handoff, as of Session 6668 (2026-10-30).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -196,6 +196,24 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   Full table/limits: docs/G1-OBJECTIVE-RESPONSE.md s6666. Evidence:
   scratch/agent/s6666_lvl2_activation/summary.json. No new soak verdicts.
 
+- **G1(d) level2 named loss response observed (s6668).** Original ELF/DAT
+  audit precedes an opt-in one-shot dose. Same node802191D4/NPC8037680C/
+  desc8031D2A0/actor80372398: seq1 ordinary2000→1990, seq2 requested1991
+  returns−1, death effect then writer8006594C counter40 0→1 atVI14690.
+  Callback memory and original getter return1 atVI14694, failure flags
+  109/101 still0; host SIGSTOP then SIGKILL before failure branch. Epoch
+  VI4941..14694, forces0/2/0, 0 crash lines,8 actual counter changes,
+  getter0→1 and mark-all17/8 controls. Off2 intentionally not reached.
+  First rescue01-only attempt instead spawned rescue02 and forced nothing;
+  inconclusive, retained separately. Corrected opt-in admits only original
+  rescue01/02/03 definitions and requires same-owned ordinary control.
+  All6 launch hashes, analyzer fixtures, original assertions, replay and
+  build pass. Dynamic causality single-flight; no retail equivalence/full
+  VERIFIED. Wrapper's3 stalls follow intentional SIGSTOP, not flight stalls;
+  active-flight wall duration unavailable. No default/lib change or new soak
+  verdict. Details: G1-OBJECTIVE-RESPONSE s6668; compact proof
+  scratch/agent/s6668_lvl2_loss/qualification.json. Next: level3 named response.
+
 ## Superseded conclusions — do not act on these
 
 - s6664's missing counter40 target is not evidence of a broken spawn/hit
@@ -302,8 +320,8 @@ One line each: claim (superseded by; why it was believable).
 
 Playable levels are 0..18 (`NUM_LEVELS=0x13`); 19/20 are sentinels. Route/hold
 coverage and framebuffer presence are distinct from objective response.
-Level 1 has a retail flight match. Level 0/1 named counter responses are
-observed; level 2 has an ordinary surviving hit only. No level is promoted
+Level 1 has a retail flight match. Level 0/1/2 named counter responses are
+observed; remaining objective response coverage is partial. No level is promoted
 here to fully VERIFIED. See [framebuffer coverage](G1-FRAMEBUFFER-COVERAGE.md)
 and [objective contracts, evidence and limits](G1-OBJECTIVE-RESPONSE.md).
 Mission wins, aim/steer and mission-to-mission progression remain owner playtest.
@@ -329,18 +347,14 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **G1(d) level-2 loss-response qualification (next bounded unit).**
-   s6666 positively joins duration/gate/live rescue01/ordinary damage. Counter40
-   is a death effect; an ordinary surviving hit cannot prove objective(d).
-   Audit original message5 death/end ordering before enabling an opt-in dose.
-   In one flight: exact ordinary force/SEND/health control first, then at most
-   one same-owned rescue01 request currentHP+1 via the original damage handler;
-   inhibit further forces, join original counter40 store and callback readback,
-   stop before failure/end handling. If original ordering cannot permit that
-   stop, redesign the qualification before running. Preserve default no lethal
-   dose for level2, no direct timer/Boolean/counter/health writes, no arbitrary
-   victims, success or progression. Carry the existing whole table in one
-   build; do not repeat a 5400VI route or add another timer/descriptor field.
+1. **G1(d) level3 named response qualification (next bounded unit).**
+   Reconcile saved level3 evidence, audit original callback80102D08 and retail
+   DAT before selecting a victim. Extend the opt-in adapter with level3-specific
+   semantics and typed ownership. One same-flight ordinary force/SEND/health
+   control then a named counter response, with at most one same-actor dose if
+   original ordering permits stopping before failure/end. Exact identity and
+   original store/callback readback are required. No arbitrary victim, direct
+   guest health/objective writes, success/win/progression or aim work.
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
@@ -358,13 +372,13 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
 ## Evidence index
 
 - Active objective source contracts, exact commands and result limits:
-  [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md), especially s6661 and s6666.
+  [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md), especially s6661, s6666 and s6668.
 - Per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence):
   verbatim per-level paragraphs, duplicate coverage, historical backlog and updates.
-- `PORTING-STATE.md` sessions 6656–6667 contain recent chronology; search bounded
+- `PORTING-STATE.md` sessions 6656–6668 contain recent chronology; search bounded
   windows only. Earlier durable context remains in PROJECT-OVERVIEW.
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest remains
-  20261028-075640 (already consumed). No new verdicts in s6667.
+  20261028-075640 (already consumed). No new verdicts in s6668.
 - s6596/s6597 and s6599 were checkpoint close-outs, not reruns. The saved
   s6595/s6598 HUD artifacts retain their original evidence limits.

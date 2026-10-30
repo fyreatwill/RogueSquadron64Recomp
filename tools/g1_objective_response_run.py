@@ -36,6 +36,95 @@ def activation_table(rows, ownership):
     return table
 
 
+def qualify_level2_loss(transport, rows):
+    lethal = [h for h in transport if h['pre']['lethal'] == '1']
+    getters = []
+    for row in rows:
+        if '[objresp-counter-return]' in row['event']:
+            getters.append(row | {'fields': dict(re.findall(r'(\w+)=([^\s]+)', row['event']))})
+    dose_count = sum('[objresp-transport-pre]' in r['event'] and 'lethal=1' in r['event'] for r in rows)
+    chains = []
+    if len(lethal) == dose_count == 1:
+        hit = lethal[0]
+        for chain in hit.get('objective_chains', []):
+            if (hit.get('qualified_lethal') and chain['id'] == 40 and chain['pc'] == '8006594c'
+                    and chain['old'] == '0' and chain['new'] == '1' and 'readback_line' in chain):
+                for getter in getters:
+                    f = getter['fields']
+                    if (getter['line'] > chain['readback_line'] and f['pc'] == '801020b8'
+                            and f['returned'] == f['memory'] == '1' and f['observed'] == '1'
+                            and f['bool109'] == f['bool101'] == '0'):
+                        chains.append(chain | {'getter': getter})
+    return {'qualified': bool(chains), 'lethal_count': dose_count, 'chains': chains,
+            'getter_zero_control': any(g['fields']['returned'] == g['fields']['memory'] == '0' for g in getters),
+            'getters': getters}
+
+
+def dose_self_test():
+    import copy
+    chain = dict(id=40, pc='8006594c', old='0', new='1', readback_line=40)
+    hit = dict(pre={'lethal': '1'}, qualified_lethal=True, objective_chains=[chain])
+    rows = [dict(line=30, event='[objresp-transport-pre] lethal=1'), dict(line=50, event='[objresp-counter-return] pc=801020b8 returned=1 memory=1 observed=1 bool109=0 bool101=0')]
+    assert qualify_level2_loss([hit], rows)['qualified']
+    assert not qualify_level2_loss([hit, hit], rows)['qualified']
+    assert not qualify_level2_loss([hit], rows + [dict(line=60, event='[objresp-transport-pre] lethal=1')])['qualified']
+    assert not qualify_level2_loss([hit], [])['qualified']
+    bad = copy.deepcopy(hit); bad['qualified_lethal'] = False
+    assert not qualify_level2_loss([bad], rows)['qualified']
+    for key in ('readback_line', 'pc'):
+        bad = copy.deepcopy(hit)
+        if key == 'readback_line': del bad['objective_chains'][0][key]
+        else: bad['objective_chains'][0][key] = 'wrong'
+        assert not qualify_level2_loss([bad], rows)['qualified']
+    bad = copy.deepcopy(hit); bad['objective_chains'] = []
+    assert not qualify_level2_loss([bad], rows)['qualified']
+    print('level2 dose fixtures pass: complete, second dose, missing getter, unqualified identity/control, missing readback/store, wrong writer')
+    import contextlib
+    import io
+    import tempfile
+    identity = 'node=80210000 npc=80350000 desc=80310000 proj=80370000'
+    actor = 'actor=80360000'
+    lines = [
+        '[objresp-epoch] epoch=1 vi=5000 B40=2',
+        '[objresp-counter-return] vi=5000 pc=801020b8 id=40 returned=0 memory=0 observed=0 bool109=0 bool101=0',
+        f'[objresp-force] vi=15000 seq=1 {identity}',
+        f'[objresp-send] vi=15001 force_seq=1 {identity}',
+        f'[objresp-transport-pre] vi=15001 force_seq=1 {identity} {actor} lethal=0 eligible=1 hp=2000 raw=10 requested=10',
+        f'[objresp-transport-return] vi=15001 force_seq=1 {identity} {actor} hp_new=1990 returned=1990',
+        f'[objresp-force] vi=15020 seq=2 {identity}',
+        f'[objresp-send] vi=15021 force_seq=2 {identity}',
+        f'[objresp-transport-pre] vi=15021 force_seq=2 {identity} {actor} lethal=1 eligible=1 hp=1990 raw=10 requested=1991',
+        f'[objresp-transport-return] vi=15021 force_seq=2 {identity} {actor} hp_new=-1 returned=-1',
+        f'[objresp-transport-effect] vi=15021 force_seq=2 {identity} {actor} lethal=1',
+        '[objresp-write] vi=15021 node=80210000 victim=80350000 desc=80310000 force_seq=2 age_vi=1 id=40 pc=8006594c old=0 new=1',
+        '[objresp-readback] vi=15025 id=40 old=0 new=1 initialized=1',
+        '[objresp-counter-return] vi=15025 pc=801020b8 id=40 returned=1 memory=1 observed=1 bool109=0 bool101=0',
+        '[objresp-done] vi=15025',
+    ]
+    fixtures = {
+        'complete': (lines, True),
+        'wrong_actor': ([s.replace(actor, 'actor=80360004') if 'force_seq=2' in s else s for s in lines], False),
+        'missing_ordinary': ([s for s in lines if not ('transport-' in s and 'force_seq=1' in s)], False),
+        'missing_force': ([s for s in lines if not ('objresp-force' in s and 'seq=2' in s)], False),
+        'wrong_projectile': ([s.replace('proj=80370000', 'proj=80370004') if 'objresp-send' in s and 'force_seq=2' in s else s for s in lines], False),
+        'missing_store': ([s for s in lines if 'objresp-write' not in s], False),
+        'missing_readback': ([s for s in lines if 'objresp-readback' not in s], False),
+        'missing_getter': ([s for s in lines if not ('counter-return' in s and 'returned=1' in s)], False),
+        'failure_already_set': ([s.replace('bool109=0', 'bool109=1') for s in lines], False),
+        'second_pre_only': (lines + [s.replace('force_seq=2', 'force_seq=3') for s in lines if 'transport-pre' in s and 'force_seq=2' in s], False),
+        'second_dose': (lines + [s.replace('force_seq=2', 'force_seq=3') for s in lines if 'transport-' in s and 'force_seq=2' in s], False),
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp)
+        for name, (rows, expected) in fixtures.items():
+            (out / 'run.log').write_text('\n'.join(rows)+'\n')
+            with contextlib.redirect_stdout(io.StringIO()):
+                summarize(out, name, level=2)
+            result = json.loads((out / 'response.json').read_text())
+            assert result['level2_loss']['qualified'] == expected, (name, result['transport'])
+            print(name, 'PASS')
+
+
 def summarize(out, tag, elapsed_s=None, done=None, level=0):
     rows, joins, forces, sends, changes, arms = [], [], {}, {}, [], []
     crash = 0
@@ -181,16 +270,17 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
                 j for j in joins if j['seq'] == f['force_seq'] and j['npc'] == f['npc'] and
                 j['desc'] == f['desc'] and j['write_line'] > effect['line']]
     lethal_hits = [h for h in transport if h['pre']['lethal'] == '1']
+    lethal_requests = sum('[objresp-transport-pre]' in r['event'] and 'lethal=1' in r['event'] for r in rows)
     for hit in lethal_hits:
         f = hit['pre']
         hit['prior_ordinary_control'] = any(
             h['ordinary_health_control'] and h['exact_force'] and h['exact_send'] and
             h['return_line'] < hit['pre_line'] and h['pre']['force_seq'] != f['force_seq'] and
             all(h['pre'][k] == f[k] for k in ('node', 'npc', 'desc', 'actor')) for h in transport)
-        hit['qualified_lethal'] = (hit['exact_force'] and hit['exact_send'] and hit['prior_ordinary_control'] and
+        hit['qualified_lethal'] = (len(lethal_hits) == lethal_requests == 1 and hit['exact_force'] and hit['exact_send'] and hit['prior_ordinary_control'] and
             int(f['requested']) == int(f['hp']) + 1 and hit['returned']['returned'] == '-1' and
             hit['returned']['hp_new'] == '-1' and hit.get('effect', {}).get('lethal') == '1')
-    dose_validation = dict(lethal_count=len(lethal_hits),
+    dose_validation = dict(lethal_count=lethal_requests,
         ordinary_controls=sum(h['ordinary_health_control'] for h in transport),
         completed_lethal_chains=sum('readback_line' in j for h in lethal_hits if h['qualified_lethal'] for j in h.get('objective_chains', [])))
     relevant = [j for j in joins if j['callback_relevant']]
@@ -200,6 +290,7 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
                   completed_chains=sum('readback_line' in j for j in relevant),
                   completed_incidental_chains=sum('readback_line' in j for j in incidental), linked_counter1_changes=relevant if level == 0 else [], rows=rows)
     result['activation'] = activation_table(rows, ownership)
+    if level == 2: result['level2_loss'] = qualify_level2_loss(transport, rows)
     (out / 'response.json').write_text(json.dumps(result, indent=2) + '\n')
     with (out / 'response.log').open('w') as stream:
         for row in rows:
@@ -211,11 +302,17 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('tag', help='fresh TAG_SUFFIX (never overwrite evidence)')
+    parser.add_argument('tag', nargs='?', help='fresh TAG_SUFFIX (never overwrite evidence)')
     parser.add_argument('--analyze', action='store_true', help='rebuild the joined table from an existing tag')
     parser.add_argument('--level', type=int, choices=(0, 1, 2), default=0)
     parser.add_argument('--flight-vi', type=int, default=5400, help='level 2 activation-aware window, 5400..12000 VI')
+    parser.add_argument('--self-test', action='store_true')
     args = parser.parse_args()
+    if args.self_test:
+        dose_self_test()
+        return 0
+    if not args.tag:
+        parser.error('a fresh tag is required')
     if not 5400 <= args.flight_vi <= 12000 or (args.level != 2 and args.flight_vi != 5400):
         parser.error('extended flight window requires level 2 and 5400..12000 VI')
     root = Path(__file__).resolve().parents[1]

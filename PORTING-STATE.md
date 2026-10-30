@@ -174570,3 +174570,65 @@ Validation: moved blocks retained (trailing whitespace normalized after the
 first diff check flagged inherited whitespace), net shrink>=200, one
 monotonic live backlog, retained local Markdown targets, git diff --check. Existing
 uncommitted lib submodule contents were not edited or staged as gitlinks.
+
+
+## Session 6668 (2026-10-30) — join level-2 shuttle death to original loss-counter getter
+
+HYPOTHESIS-ID: g1-coverage-cd. Step0 CURRENT-TRUTH34276 bytes, no maintenance.
+Resumed the unfinished s6668 unit and preserved both builds/runs. No new
+queued soak verdict (latest20261028-075640 already consumed). Original
+message5/callback audit precedes dose: damage800F2120 call800D4B0C,
+positive-health branch800D4B14, death effect800D4BA8, getter40 call801020B8,
+then failure flag setters801020D8/20E8. Retail DAT independently identifies
+rescue01/02/03 (+1510/+1628/+1740), subtype36,HP2000,counter40+1.
+Original instruction assertions are now part of g1_dat_inventory --check-level2.
+
+Implemented opt-in level2 one-shot loss qualification in persistent fixup
+adapter: only those three definitions, D3894 handler, current ownership and
+same node/NPC/descriptor/health actor after exact ordinary force/SEND/health
+control. Second request currentHP+1 enters the ORIGINAL damage function;
+inhibit all further forcing at dose. After original store and callback memory
+readback, hook immediately after original getter40 flushes done and SIGSTOPs
+before the failure branch; runner SIGKILLs the process group. No direct guest
+health/objective/timer/Boolean writes, success or progression. Default level2
+remains ordinary-only. No lib edit; inherited dirty submodules untouched.
+
+First g1_lvl2s6668_loss:281.03s,VI5090..17092,0 crash lines/forces/doses.
+Boolean22/rescue02 spawned, so rescue01-only predicate could not test damage.
+Inconclusive, not H-routing. First adapter source reconstructed and SHA256
+matched to launch manifest, saved separately. Corrected whitelist admits only
+the three original-backed named rescues, retaining same-actor control/dose.
+
+Corrected g1_lvl2s6668_named, epochVI4941..14694: off4941..14662, on14663..
+14694, no off2 (intentional stop). Mark-all eligible identities17/8, eight
+actual counter readback changes, getter40 actual0->1 control. Same
+node802191D4,NPC8037680C,desc8031D2A0=DAT8031BD90+1510,actor80372398.
+Seq1 force14664->SEND14669->ordinary10 HP2000->1990 return1990.
+Seq2 force14684->SEND14690->requested1991 HP1990->-1 return-1.
+Death effect raw736424; original writer8006594C store0->1 raw736426.
+Callback memory readback736689 and original getter736690 see1 atVI14694,
+flags109/101 both0. Done736691, forces0/2/0,exactly1 dose,0 crash lines.
+ORIGIN: datItemSetObjectiveBooleanCount8006594C is the legitimate writer of
+counter40 through the original shuttle death effect; dose modifies one input
+argument after a proven ordinary hit. This is no corruption repair/skip/guard.
+
+H-dose selected for this victim by the complete chain; H-routing and
+H-observation contradicted. Original ELF/DAT independently support contracts
+and ordering; dynamic causality is single-flight/single-source, not retail
+equivalence, successful mission or full VERIFIED. Level2 named response closes.
+The saved corrected flight had completed before its observer was interrupted;
+reanalysis recovered it without another run. Wrapper's3 30s stalls occur
+after deliberate SIGSTOP, not evidence of a flight stall. Active-flight wall
+duration was not preserved and is not inferred from wrapper hold. An early
+postprocessing display requested absent field name after printing passing
+checks; corrected display uses existing definition fields. No game rerun.
+
+Validation: all6 launch-manifest hashes match binary/adapter/analyzer/recipes;
+original DAT/instruction assertions pass, all11 adapter files replay unchanged,
+CMake target passes. Full analyzer positive chain accepts; wrong actor/projectile,
+missing ordinary control/force/store/readback/getter, failure already set and
+duplicate dose including unmatched pre-call reject. Evidence/limitations and
+arm table in docs/G1-OBJECTIVE-RESPONSE.md s6668; compact machine proof
+scratch/agent/s6668_lvl2_loss/qualification.json; full response.json under
+scratch/agent/m6/g1_lvl2s6668_named/. CURRENT-TRUTH updated, NEXT advances
+level3 original-backed named response, same hypothesis slug. No default change.

@@ -11,7 +11,7 @@ writer calls, Boolean dumps and result-mode requests separately.
 | --- | --- | --- |
 | 0 | s6657: forced selector B40=0 and lv0 callback; same-flight off/on/off counter1 0→2→13→13, 13 live readback changes, eight exact force/send/store joins. | Named counter1 hit response observed in one instrumented flight, supported by original ELF descriptor-to-counter stores. Dynamic evidence remains single-source; no win, progression, player-shot or retail-equivalence claim. |
 | 1 | s6661: exact seq4 ordinary hit HP390→386, then seq6 one requested387 dose HP386→−1; death effect, actual id13 store0→1, callback readback four VI later. | Named friendly-loss response observed. Original ELF proves id13>=5 fails and friendlies=19−(40+13+41). Stopped at1, Boolean6=0; no success, retail-equivalence or fully VERIFIED claim. Dynamic chain remains single-source. |
-| 2 | s6665: retail DAT identifies three count40 rescue shuttles, gated by Booleans21–23; saved s6664 capture keeps those gates0. Original ELF supplies shuttle damage/death writer. | Activation boundary identified; timer1>=100 gate not dynamically measured. No forced shuttle hit or objective response established. |
+| 2 | s6668: same-owned rescue01 ordinary HP2000→1990, one requested1991 dose HP1990→−1, original counter40 store0→1, callback memory and getter return1 four VI later. | Named friendly-loss response observed, single-flight dynamic evidence. Original ELF/DAT independently establish damage/death and failure ordering. SIGSTOP before failure flags109/101; no win, progression, retail-equivalence or fully VERIFIED claim. |
 | 3 | TELE fires; writer call records only. | No named counter response or controlled null. |
 | 4 | id15 0>1>2>3 in both arms; ctl additionally id5 0>1. | Shared baseline movement. No tele-specific objective response proved. Both arms request result mode a0=2. |
 | 5 | tele id2 0>1, ctl id2 remains observed 0; id4 observed 0 in both. | Historical failure-counter interpretation; static lv5 tests id2>=4 through Bit4, id4>=9 separately. Does not prove a successful objective response. |
@@ -928,3 +928,93 @@ completion of the asynchronous reanalysis and read the old schema; waiting
 and rerunning succeeded. No extra game run/build was needed. Evidence:
 `scratch/agent/s6666_lvl2_activation/{original.json,timer_init.txt,timer_tick.txt,
 build.log,summary.json,analysis.txt}`. No new queued-soak verdicts.
+
+
+### s6668 — level-2 named loss response qualification
+
+Original ELF audit: message5 calls damage800F2120 at800D4B0C; the
+800D4B14 positive-health branch skips the death effect. When health is
+nonpositive, descriptor fields feed datItemSetObjectiveBooleanCount at
+800D4BA8. The later level2 callback calls getObjectiveCount(40) at
+801020B8; its returned value is tested at801020C0. Failure flags109/101
+are first set at801020D8/20E8. Retail DAT identifies rescue01 at+1510,
+health2000, counter40 delta1. g1_dat_inventory.py --check-level2 now
+asserts those original instruction words before a run.
+
+The opt-in lethal adapter admits only original DAT rescue01/02/03
+(+1510/+1628/+1740), handlerD3894. Each has the same counter40+1 death contract.
+An exact ordinary force/SEND and surviving health reduction must establish
+the same node/NPC/descriptor/health actor before one currentHP+1 request
+can enter the original damage handler. That dose disables further forcing.
+After actual counter store and callback memory readback, a host hook after
+the original counter40 getter flushes the completion record and SIGSTOPs;
+the runner SIGKILLs the process group. Guest failure code is neither
+suppressed nor resumed. No direct health, counter, Boolean or timer writes.
+Level2 remains ordinary-only unless OBJECTIVE_RESPONSE_LETHAL=1.
+
+Analyzer self-test: `python3 tools/g1_objective_response_run.py --self-test`.
+Complete chain accepts; wrong actor/projectile, missing ordinary control,
+force, actual store, readback or getter, failure already set, and a second
+lethal request (including an unmatched pre-call) reject. The full adapter
+replays byte-identically on all11 generated files. CMake target passes.
+The analyzer source at launch is retained in the evidence directory because
+its later strengthening counts unmatched lethal pre-calls and adds full
+synthetic fixtures; final reanalysis records its own source hash.
+
+First attempt `g1_lvl2s6668_loss`: 281.03s, VI5090..17092, 0 crashes,
+0 forces/doses. Timer100 activates Boolean22 and rescue02 at DAT+1628;
+rescue01-only selection therefore cannot test the death path. Ordinary
+controls0, so this is explicitly inconclusive for objective response. The
+first-build adapter source is reconstructed and SHA256-verified against its
+launch manifest in `adapter_rescue01_at_launch.py`. The corrected build
+allows only the three original-backed named rescues and retains same-actor
+control/dose requirements. Evidence from the two builds is never pooled.
+
+
+Corrected attempt `g1_lvl2s6668_named` supplies the positive result. All six
+launch-manifest hashes match the current binary, adapter, analyzer and recipe
+sources. Screen-lock preflight passed; manifest contains only response/TELE/
+hit logging opt-ins, no aspect/dd/FPS opt-ins. Epoch VI4941..14694. This
+flight activates rescue01; permitting the three original-backed definitions
+does not force extra victims. Live descriptor8031D2A0 equals DAT8031BD90+1510,
+subtype36, initialHP2000, activation21, counter40+1. Node802191D4,
+NPC8037680C and health actor80372398 remain identical across both hits.
+
+| Arm | VI observed | Forces | Actual controls / response |
+| --- | --- | ---: | --- |
+| Off | 4941..14662 | 0 | Getter40 returns0 with memory0; changing counter readbacks and17 mark-all eligible identities. |
+| On | 14663..14694 | 2 | Seq1 ordinary damage then seq2 one dose;8 mark-all eligible identities; original store and callback getter0→1. |
+| Off2 | Not reached | 0 | Deliberate process stop before the failure branch; no null claimed. |
+
+Seq1 force14664, accepted SEND14669, ordinary damage10: HP2000→1990,
+return1990 (raw log735124/735127). Seq2 force14684, SEND14690, raw10
+changed only at the original damage call to requested1991: HP1990→−1,
+return−1 (736326/736329). Death effect736424 feeds writer8006594C;
+actual counter40 store0→1 at736426. Callback memory readback736689 and
+original getter return736690 both see1 atVI14694, flags109/101 still0.
+Completion736691 flushes before SIGSTOP. Eight actual changing counter
+readbacks and the getter's observed0→1 control detection. All further
+forcing is inhibited at the dose. H-dose selected for this named victim;
+H-routing and H-observation are contradicted by the exact positive chain.
+
+ORIGIN: legitimate original shuttle damage/death effect is the counter40
+writer (datItemSetObjectiveBooleanCount at8006594C). The opt-in changes one
+requested damage argument after an ordinary control; it does not repair
+corruption, bypass a death effect, or write health/objective memory directly.
+Dynamic causality remains single-flight, single-source; original ELF/DAT
+independently corroborate the contracts, not runtime or retail equivalence.
+Level2 named response unit closes; full VERIFIED remains unclaimed.
+
+The observer was interrupted before writing analysis; the saved game log
+already contains completion. Reanalysis recovered it without another game
+run. The wrapper later reports three30s stalls while the process is
+intentionally SIGSTOPped: these do not establish a flight stall. An active
+flight wall duration was not preserved by that observer and is not inferred
+from the wrapper hold. First rescue01-only flight remains separate. One
+postprocessing display asked for nonexistent definition field `name` after
+printing all qualification checks; corrected display uses definition fields,
+with no evidence change. Final analyzer fixtures, original-word assertions,
+11-file byte-identical adapter replay, no-op CMake target and six manifest
+hash comparisons pass. No lib edit, default change or new soak verdict.
+Compact proof: `scratch/agent/s6668_lvl2_loss/qualification.json`; full joins:
+`scratch/agent/m6/g1_lvl2s6668_named/response.json` and raw736326..736691.
