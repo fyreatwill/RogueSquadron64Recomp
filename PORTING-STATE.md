@@ -174475,3 +174475,60 @@ search missed nested level/lv_2/dat; final manifest walker resolves nesting.
 No mitigation, library edit, default change or repeat soak. Next: ONE joined
 timer/gate/spawn/ordinary-hit capture, all fields/arms in one build; no direct
 state writes or lethal dose. CURRENT-TRUTH and NEXT updated. ADVANCED.
+
+## Session 6666 (2026-10-30) — measure level-2 rescue timer through an exact ordinary shuttle hit
+
+Step0 CURRENT-TRUTH59691 bytes: no maintenance this iteration. No new queued
+soak verdicts. Followed g1-coverage-cd NEXT: one persistent instrument/build/
+flight for initialization, timer return, exact gate, DAT definitions, grid
+calls, owned shuttle and ordinary force/SEND/health joins. No lib edits.
+Original retail ELF/DAT checked before instrumenting; g1_dat_inventory.py
+now asserts reset/tick/get/set/compare instructions too.
+
+One CMake build passed; adapter reapplication across11 generated files is
+idempotent. Added level2-only --flight-vi up to12000 with activation-aware
+off/on/off and600s watchdog; default level0/1 hold150/window5400 preserved.
+Shuttle D3894 typed from original contract, message5 health/effect hooks;
+no direct mission-state writes and no level2 lethal dose. Screen lock query
+showed no locked state; actual B40=2/callback/flight route confirms entry.
+
+Run scratch/agent/m6/g1_lvl2s6666_activation/: VI5020..17021,dv12001,
+281.27s wall,0 crash lines; SIGKILL at done. Timer reset800FA618=0, first
+tick800FA924=0.0333333351. At old dv5401 it is55.5496902, actual return
+identical. At VI14859,dv9839 it is100.033333; Boolean59=0,1=1,7=0.
+Original setter800C7564 writes21 and59=1. VI14863 canonical slot254 is
+rescue01: node80219E04, payload80375F0C, handler800D3894,
+desc8031D2A0=final DAT8031BD90+1510. Seq1 force14873 projectile80376D0C
+-> accepted SEND14881 -> health actor803721EC, damage10,2000->1990,
+return1990, exact identity join. Forces0/1/0, arm transitions5020/14864/
+16665. All35 sampled getter returns match memory; nine counter and13 Boolean
+readback changes,38 mark-all eligible candidate rows and all-arm40-accept/
+success31-reject fixtures pass. SHIP_01 id71 matches final DAT+1270 and
+canonical slot251. Repeated slot aliases are not separate objects.
+
+ORIGIN: legitimate timer writer800FA924 advances timer1 after reset800FA618;
+original callback80102174..226C sets21/59 through800C7564 when timer>=100.
+Original shuttle message5 calls dealDamageToNpc800F2120; real health store
+reduces2000->1990. This is an opt-in probe/harness extension, no corruption
+mitigation or shipping behavior change.
+
+H-duration selected for this recipe: old5400VI cannot reach100. H-state and
+H-spawn as explanations preventing any rescue activation are rejected here;
+H-hit excluding this named shuttle is rejected by exact ordinary health
+control. Runtime observation plus independent original DAT/ELF contract are
+two lines of evidence; repeatability/timer rate remain single-flight.
+Counter40 stays0: shuttle survived, so no objective(d)/VERIFIED/win claim.
+Only rescue01 is live/hit-proved;02/03 own gates remain. Grid witnesses show
+two preflight SHIP setup returns and no first-epoch rescue range/condition/
+setup call: exact rescue spawn caller was not dynamically attributed.
+
+Failed commands: original inventory output directory initially absent;
+mkdir then rerun passed. Postprocessor initially read old schema before the
+asynchronous reanalysis finished; waited and reran successfully. No second
+game run/build. Tools Python compile and git diff --check passed. Complete
+arm table/limits in docs/G1-OBJECTIVE-RESPONSE.md s6666; original.json,
+timer_init.txt,timer_tick.txt,build.log,summary.json,analysis.txt under
+scratch/agent/s6666_lvl2_activation/. No passive repeat soak queued.
+CURRENT-TRUTH now61170 bytes/708 lines: NEXT is mandatory>=200-line
+maintenance, then bounded loss-response qualification from the controlled
+ordinary-hit baseline. OUTCOME ADVANCED, STATUS DONE.

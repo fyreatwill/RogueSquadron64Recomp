@@ -4,7 +4,7 @@ import re
 import sys
 
 TAG = 'PATCH: s6657 objective response'
-FILES = ('funcs_8.c', 'funcs_13.c', 'funcs_15.c', 'funcs_16.c', 'funcs_35.c', 'funcs_36.c', 'funcs_38.c', 'funcs_41.c', 'funcs_43.c')
+FILES = ('funcs_10.c', 'funcs_42.c', 'funcs_8.c', 'funcs_13.c', 'funcs_15.c', 'funcs_16.c', 'funcs_35.c', 'funcs_36.c', 'funcs_38.c', 'funcs_41.c', 'funcs_43.c')
 DECL = r'''
 extern int rs6657_gate(uint8_t*);
 extern void rs6657_callback(uint8_t*);
@@ -22,6 +22,8 @@ static int rs6657_en = -1, rs6657_seen, rs6657_started, rs6657_done;
 static uint32_t rs6657_start, rs6657_arm = 99, rs6657_rows[3], rs6657_hits[3], rs6657_dmg[3], rs6657_seq;
 static int rs6657_level;
 static int rs6661_dosed;
+static uint32_t rs6666_limit = 5400, rs6666_on;
+static void rs6666_sample(uint8_t*, recomp_context*, const char*);
 static uint32_t rs6657_prev[128], rs6657_bool6, rs6662_bools[128]; static unsigned rs6657_read_init;
 static struct { uint32_t seq, vi, shape, node, npc, desc, proj, send_seq, send_vi, send_proj; } rs6657_events[256];
 static unsigned rs6657_ne;
@@ -32,7 +34,7 @@ static void rs6660_census(uint8_t*);
 static unsigned rs6657_match(uint32_t, uint32_t);
 static int rs6660_candidate(uint8_t*, uint32_t, uint32_t, uint32_t, float, int);
 static int rs6657_enabled(void) {
-    if (rs6657_en < 0) { const char* e = getenv("ROGUESQ_OBJECTIVE_RESPONSE"); rs6657_en = e && e[0] == '1'; const char* l = getenv("ROGUESQ_OBJECTIVE_RESPONSE_LEVEL"); rs6657_level = l ? atoi(l) : 0; if (rs6657_level != 0 && rs6657_level != 1 && rs6657_level != 2) rs6657_en = 0; }
+    if (rs6657_en < 0) { const char* e = getenv("ROGUESQ_OBJECTIVE_RESPONSE"); rs6657_en = e && e[0] == '1'; const char* l = getenv("ROGUESQ_OBJECTIVE_RESPONSE_LEVEL"); rs6657_level = l ? atoi(l) : 0; const char* v = getenv("ROGUESQ_OBJECTIVE_RESPONSE_VI"); if (rs6657_level == 2 && v && atoi(v) > 5400 && atoi(v) <= 12000) rs6666_limit = atoi(v); if (rs6657_level != 0 && rs6657_level != 1 && rs6657_level != 2) rs6657_en = 0; }
     return rs6657_en;
 }
 static uint32_t rs6657_word(uint8_t* rdram, uint32_t a) { return (uint32_t)MEM_W(S32((int32_t)a), 0); }
@@ -51,12 +53,14 @@ static int rs6657_flight(uint8_t* rdram) {
     }
     uint32_t dv = rs64_vi_n_g - rs6657_start;
     uint32_t c1 = rs6657_word(rdram, 0x80138060u), c2 = rs6657_word(rdram, 0x80138064u), c3 = rs6657_word(rdram, 0x80138068u);
-    if (rs6660_observed || !selected || !flight || dv >= 5400 || (rs6657_level == 0 ? (c1 >= 18 || c2 >= 1 || c3 >= 1) : rs6657_level == 2 ? (rs6657_read_init && (rs6657_prev[39] || MEM_BU(S32((int32_t)0x80138903u), 0) || MEM_BU(S32((int32_t)0x8013890Cu), 0))) : (rs6657_read_init && (rs6657_prev[12] >= 3 || MEM_BU(S32((int32_t)0x801388A5u), 0))))) {
+    if (rs6660_observed || !selected || !flight || dv >= rs6666_limit || (rs6657_level == 0 ? (c1 >= 18 || c2 >= 1 || c3 >= 1) : rs6657_level == 2 ? (rs6657_read_init && (rs6657_prev[39] || MEM_BU(S32((int32_t)0x80138903u), 0) || MEM_BU(S32((int32_t)0x8013890Cu), 0))) : (rs6657_read_init && (rs6657_prev[12] >= 3 || MEM_BU(S32((int32_t)0x801388A5u), 0))))) {
         rs6657_done = 1;
         fprintf(stderr, "[objresp-done] epoch=1 vi=%u dv=%u selected=%d flight=%d c=%u,%u,%u forces=%u,%u,%u writes=%u,%u,%u damage=%u,%u,%u\n", rs64_vi_n_g, dv, selected, flight, c1, c2, c3, rs6657_hits[0], rs6657_hits[1], rs6657_hits[2], rs6657_rows[0], rs6657_rows[1], rs6657_rows[2], rs6657_dmg[0], rs6657_dmg[1], rs6657_dmg[2]);
         fflush(stderr); return 0;
     }
     uint32_t arm = dv < 1800 ? 0 : dv < 4200 ? 1 : 2;
+    if (rs6657_level == 2 && rs6666_limit > 5400)
+        arm = !rs6666_on ? 0 : rs64_vi_n_g - rs6666_on < 1800 ? 1 : 2;
     if (arm != rs6657_arm) {
         rs6657_arm = arm;
         fprintf(stderr, "[objresp-arm] epoch=1 vi=%u dv=%u arm=%u tele=%u c=%u,%u,%u\n", rs64_vi_n_g, dv, arm, arm == 1, c1, c2, c3);
@@ -172,6 +176,7 @@ static int rs6663_owned(uint8_t* rdram, uint32_t node) {
 }
 static int rs6663_kind(uint32_t handler) {
     switch (handler) {
+    case 0x800D3894u:
     case 0x800DE80Cu:
     case 0x800CABD4u:
     case 0x800D5208u:
@@ -238,6 +243,7 @@ void rs6663_scan(uint8_t* rdram) {
             controls[rs6657_arm]++;
         }
 
+        if (selected && !rs6666_on && rs64_vi_n_g - rs6657_start >= 1800) rs6666_on = rs64_vi_n_g;
         active += node != 0; unknown += node && !known; typed += known != 0; named += selected;
         uint32_t values[10] = {node, npc, handler, desc, f[0], f[1], f[2], f[3], f[4], f[5]};
         int changed = memcmp(seen[i], values, sizeof(values)) != 0;
@@ -380,6 +386,62 @@ void rs6664_transport(uint8_t* rdram, recomp_context* ctx, int stage, uint32_t n
     if (rs6657_enabled() && rs6657_level == 2) rs6664_transport_common(rdram, ctx, stage, npc, msg);
 }
 
+static uint32_t rs6666_dat;
+static uint32_t rs6666_offsets[6] = {0x1510,0x1628,0x1740,0x1270,0x1350,0x1430};
+static int rs6666_index(uint32_t desc) {
+    for (int i = 0; i < 6; i++) if (rs6666_dat && desc == rs6666_dat + rs6666_offsets[i]) return i;
+    return -1;
+}
+static float rs6666_float(uint8_t* rdram, uint32_t a) {
+    uint32_t w = rs6657_word(rdram, a); float f; memcpy(&f, &w, 4); return f;
+}
+void rs6666_dat_loaded(uint8_t* rdram, uint32_t base) {
+    if (!rs6657_enabled() || rs6657_level != 2 || MEM_BU(S32((int32_t)0x80130B40u),0) != 2 || !rs6660_ok(base)) return;
+    rs6666_dat = base;
+    for (unsigned i = 0; i < 6; i++) {
+        uint32_t d = base + rs6666_offsets[i];
+        fprintf(stderr,"[objresp-definition] vi=%u index=%u base=%08x offset=%x desc=%08x subtype=%u hp=%u activation=%u id=%u delta=%u\n",rs64_vi_n_g,i,base,rs6666_offsets[i],d,MEM_HU(S32((int32_t)d),0),rs6657_word(rdram,d+0x6c),rs6657_word(rdram,d+0x60),rs6657_word(rdram,d+0x70),rs6657_word(rdram,d+0x74));
+    }
+}
+static void rs6666_sample(uint8_t* rdram, recomp_context* ctx, const char* stage) {
+    if (!rs6657_enabled() || rs6657_level != 2 || !rs6657_started || rs6657_done) return;
+    static uint32_t last[2] = {0xffffffffu,0xffffffffu}, predicate[2];
+    unsigned k = stage[0] == 'r';
+    uint32_t ids[10] = {1,2,3,7,8,9,21,22,23,59}, b[10], bits = 0;
+    for (unsigned i=0;i<10;i++) { b[i]=MEM_BU(S32((int32_t)(0x8013889fu+ids[i])),0); bits |= !!b[i] << i; }
+    float t = rs6666_float(rdram,0x8010c9fcu);
+    bits |= (t >= 100.0f) << 10;
+    uint32_t tick=(rs64_vi_n_g-rs6657_start)/300;
+    if(last[k]==tick && predicate[k]==bits) return;
+    last[k]=tick; predicate[k]=bits;
+    fprintf(stderr,"[objresp-activation] vi=%u dv=%u arm=%u stage=%s timer1=%.9g returned=%.9g gate59=%u threshold=%d b1=%u b2=%u b3=%u b7=%u b8=%u b9=%u b21=%u b22=%u b23=%u\n",rs64_vi_n_g,rs64_vi_n_g-rs6657_start,rs6657_arm,stage,t,ctx->f0.fl,b[9],t>=100.0f,b[0],b[1],b[2],b[3],b[4],b[5],b[6],b[7],b[8]);
+}
+void rs6666_gate_sample(uint8_t* rdram, recomp_context* ctx, int returned) { rs6666_sample(rdram,ctx,returned?"return":"decision"); }
+void rs6666_scalar(uint8_t* rdram, uint32_t pc, uint32_t addr, uint32_t requested) {
+    if (!rs6657_enabled() || rs6657_level != 2 || rs6657_done || MEM_BU(S32((int32_t)0x80130b40u),0)!=2) return;
+    int timer = addr == 0x8010c9fcu;
+    if (!timer && (addr < 0x801388a0u || addr >= 0x80138920u)) return;
+    static uint32_t tick = 0xffffffffu, rows[2];
+    if (timer && pc == 0x800fa924u) {
+        uint32_t now = rs6657_started ? (rs64_vi_n_g-rs6657_start)/300 : 0;
+        if(tick == now) return;
+        tick=now;
+    } else if (++rows[!!rs6657_started] > 512) return;
+    fprintf(stderr,"[objresp-scalar] vi=%u epoch=%d pc=%08x addr=%08x requested=%08x actual=%08x timer1=%.9g\n",rs64_vi_n_g,rs6657_started,pc,addr,requested,timer?rs6657_word(rdram,addr):MEM_BU(S32((int32_t)addr),0),rs6666_float(rdram,0x8010c9fcu));
+}
+void rs6666_spawn(uint8_t* rdram, uint32_t pc, uint32_t desc, uint32_t result) {
+    if (!rs6657_enabled() || rs6657_level != 2 || rs6657_done) return;
+    int i=rs6666_index(desc);
+    if(i<0) return;
+    static uint32_t seen[2][6][3], value[2][6][3];
+    unsigned epoch=!!rs6657_started, col=pc==0x80047554u?0:pc==0x80047570u?1:2;
+    uint32_t tick=epoch?(rs64_vi_n_g-rs6657_start)/300+1:1;
+    if(seen[epoch][i][col]==tick && value[epoch][i][col]==result) return;
+    seen[epoch][i][col]=tick; value[epoch][i][col]=result;
+    uint32_t id=rs6657_word(rdram,desc+0x60);
+    fprintf(stderr,"[objresp-spawn] vi=%u epoch=%u pc=%08x index=%d base=%08x offset=%x desc=%08x result=%08x activation=%u actual=%u\n",rs64_vi_n_g,epoch,pc,i,rs6666_dat,rs6666_offsets[i],desc,result,id,id&&id<=128?MEM_BU(S32((int32_t)(0x8013889fu+id)),0):0);
+}
+
 '''
 WRITERS = {
     'funcs_15.c': (0x8006594C, 0x80065974, 0x80065A34),
@@ -497,6 +559,44 @@ def _apply(text, name):
         text = text.replace('    if (rs5837_en && rs6657_gate(rdram) && w == 0 && cc[3] > 0.0f && c1f &&', '    int rs6660_eligible = rs6660_candidate(rdram, rs5841_cand & 0xFFFF, rs5839_obj, rs5856_proj, cc[3], c1f);\n    if (rs5837_en && rs6657_gate(rdram) && w == 0 && cc[3] > 0.0f && rs6660_eligible &&')
     return text, 1
 
+def activation_hooks(text, name):
+    if name not in ('funcs_10.c','funcs_35.c','funcs_42.c','funcs_43.c') or '/* PATCH: s6666 activation join */' in text:
+        return text, 0
+    declaration = ('\n/* PATCH: s6666 activation join */\n'
+        'extern void rs6666_dat_loaded(uint8_t*, uint32_t);\n'
+        'extern void rs6666_gate_sample(uint8_t*, recomp_context*, int);\n'
+        'extern void rs6666_scalar(uint8_t*, uint32_t, uint32_t, uint32_t);\n'
+        'extern void rs6666_spawn(uint8_t*, uint32_t, uint32_t, uint32_t);\n')
+    text = text.replace('#include "funcs.h"', '#include "funcs.h"' + declaration, 1)
+    if name == 'funcs_10.c':
+        start = text.index('RECOMP_FUNC void loadDatFile(')
+        stop = text.index('\nRECOMP_FUNC ',start+1)
+        body=text[start:stop]
+        anchor='    load_asset(rdram, ctx);'
+        assert body.count(anchor)==1
+        body=body.replace(anchor,anchor+'\n    rs6666_dat_loaded(rdram, U32(ctx->r2));')
+        text=text[:start]+body+text[stop:]
+        for pc, call, desc in ((0x80047554,'isPointXzWithinRangeOfRef','U32(ctx->r5)-0x10u'),(0x80047570,'isDatItemConditionMet','U32(ctx->r4)'),(0x80047640,'setupNpcUpdateFunctions','U32(ctx->r4)')):
+            at=text.index(f'// 0x{pc:08X}: jal')
+            at=text.index(f'    {call}(rdram, ctx);',at)
+            anchor=f'    {call}(rdram, ctx);'
+            replacement=f'    {{ uint32_t rs6666_desc = {desc};\n{anchor}\n    rs6666_spawn(rdram, 0x{pc:08x}u, rs6666_desc, U32(ctx->r2)); }}'
+            text=text[:at]+text[at:].replace(anchor,replacement,1)
+    if name == 'funcs_43.c':
+        anchor='L_80102174:\n'
+        assert text.count(anchor)==1
+        text=text.replace(anchor,anchor+'    rs6666_gate_sample(rdram, ctx, 0);\n')
+        anchor='    after_40:\n    // 0x8010218C:'
+        assert text.count(anchor)==1
+        text=text.replace(anchor,'    after_40:\n    rs6666_gate_sample(rdram, ctx, 1);\n    // 0x8010218C:')
+    sites = {'funcs_35.c':((0x800C7564,'ctx->r3','ctx->r5'),(0x800C7714,'ctx->r4','ctx->r5')),
+             'funcs_42.c':((0x800FA618,'ctx->r3','0'),(0x800FA924,'ctx->r5','ctx->f0.u32l'))}
+    for pc, address, requested in sites.get(name,()):
+        pattern = r'(?m)^(    \{ MEM_[BW]\(0X0, '+re.escape(address)+r'\) = [^\n]+RS64_S5798_ST\(0x'+f'{pc:08X}'+r'u,[^\n]+\})$'
+        text,n=re.subn(pattern,lambda m:m[0]+f'\n    rs6666_scalar(rdram, 0x{pc:08x}u, U32({address}), U32({requested}));',text)
+        assert n in (1,2),(name,hex(pc),n)
+    return text, 1
+
 def apply(text, name):
     text, changed = _apply(text, name)
     handlers = {
@@ -505,6 +605,21 @@ def apply(text, name):
                        ('npcWingmanUpdate', 16, 18, (0x800D9D28,)),
                        ('npcTieVariantUpdate', 17, 16, (0x800DBF68,))),
     }
+    if name == 'funcs_38.c' and '/* PATCH: s6666 shuttle damage */' not in text:
+        start = text.index('RECOMP_FUNC void npcShuttleUpdate(')
+        stop = text.index('\nRECOMP_FUNC ', start + 1)
+        body = text[start:stop]
+        anchor = '    dealDamageToNpc(rdram, ctx);'
+        assert body.count(anchor) == 1
+        body = body.replace(anchor, '    rs6664_transport(rdram, ctx, 0, U32(ctx->r17), U32(ctx->r18));\n' + anchor + '\n    rs6664_transport(rdram, ctx, 1, U32(ctx->r17), U32(ctx->r18));')
+        anchor = '    datItemSetObjectiveBooleanCount(rdram, ctx);'
+        assert body.count(anchor) == 1
+        body = body.replace(anchor, '    rs6664_transport(rdram, ctx, 2, U32(ctx->r17), U32(ctx->r18));\n    { uint32_t saved = rs6657_victim; rs6657_victim = U32(ctx->r17);\n' + anchor + '\n    rs6657_victim = saved; }')
+        text = text[:start] + body + text[stop:]
+        text = text.replace('#include "funcs.h"', '#include "funcs.h"\n/* PATCH: s6666 shuttle damage */\nextern void rs6664_transport(uint8_t*, recomp_context*, int, uint32_t, uint32_t);\nextern _Thread_local uint32_t rs6657_victim;', 1)
+        changed = 1
+    text, extra = activation_hooks(text, name)
+    changed |= extra
     if name not in handlers:
         return text, changed
     marker = '/* PATCH: s6664 typed objective damage */'

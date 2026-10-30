@@ -872,3 +872,59 @@ disassemblies, GNU gate disassembly and full inventory live in
 `scratch/agent/s6665_lvl2_producer/`. Next: one fully joined timer/gate/spawn
 capture with original shuttle ownership and ordinary-hit witness, rather
 than repeating the old sparse map census.
+
+### s6666 — timer, rescue activation and ordinary damage join
+
+The persistent adapter now carries the whole original-source table in one
+build: timer reset800FA618, timer tick800FA924, timer setter800C7714,
+Boolean setter800C7564, callback80102174 and actual timer return after
+80102184, loaded DAT base plus six known offsets, grid range47554 /
+condition47570 / setup47640, D3894 ownership and its message5 health/effect
+path. Original ELF words are asserted by g1_dat_inventory.py --check-level2;
+the decoded retail DAT independently supplies the three rescue offsets and
+the three id71 SHIP controls. These are independent of generated execution.
+The adapter never writes timer, Boolean, counter or health state. Level2
+lethal dosing remains disabled. --flight-vi12000 extends the first epoch;
+force stays off until a named live arrival after1800VI, on1800VI, then off.
+The default5400VI level0/1 behavior is preserved. Reapplying all11 files is
+idempotent; CMake target built successfully.
+
+One new unlocked-screen flight, `scratch/agent/m6/g1_lvl2s6666_activation/`,
+B40=2, retail aspect/draw distance. It ends at VI17021, dv12001, after281.27s
+wall; no crash lines, SIGKILL at probe completion. Off/on/off transitions
+VI5020 /14864 /16665; exactly one forced segment, in on only. The raw log
+is about180MB; read response.json/response.log or bounded windows.
+
+| Boundary | Observed evidence | Discrimination |
+|---|---|---|
+| Initialization / tick | VI5018 reset timer1=0 at800FA618; VI5020 tick0.0333333351 at800FA924 | Actual changing-value positive control, not callback execution alone |
+| Old cutoff | VI10421, dv5401, timer1=55.5496902; actual get return agrees;59=0,1=1,7=0,21=0 | H-duration selected for this recipe; old5400VI cannot reach100 |
+| Threshold / gate writer | VI14859,dv9839,100.033333; original setObjectiveBoolean store800C7564 writes21 and59 to1 | Other predicates permit activation; H-state blocked-gate explanation rejected here |
+| Named live shuttle | VI14863, canonical slot254, node80219E04, payload80375F0C, handler800D3894, descriptor8031D2A0=DAT8031BD90+1510 | Original rescue01 definition matches; H-spawn prevents any live shuttle rejected here |
+| Ordinary force / SEND / health | force VI14873 seq1 projectile80376D0C; accepted SEND VI14881; same node/payload/descriptor/projectile; health actor803721EC, requested10,2000->1990, return1990 | Exact ordinary hit control passes; H-hit excludes named shuttle rejected here |
+| Counter40 | No forced objective store or callback change; lethal_count0 | Expected surviving-shuttle behavior, not evidence of broken death/objective logic |
+
+All35 sampled actual timer returns equal memory values. Sampled timer range
+0.0333333351..120.3508; nine counter and thirteen Boolean readback changes
+control monitors. Mark-all produces38 positive eligible candidate rows;
+local fixtures accept40 and reject success31 in every arm. SHIP_01 id71
+also matches the final DAT base+1270 and a live canonical slot251. The
+scanner records redundant slot aliases; these are not extra objects.
+Only rescue01 is proved live/hit. Rescue02/03 stay gated by their own ship
+states; no conclusion about their hit routes.
+
+Grid trace sees two preflight SHIP setup returns, no rescue range/condition/
+setup return in the first flight epoch. Thus the exact rescue spawn caller
+is not dynamically attributed; do not claim that grid path executed. The
+positive descriptor/primary-slot join still proves the named shuttle exists.
+The original ELF independently supports D3894 descriptor+34 and message5
+ordinary damage; dynamic changes match those contracts. Timing/route
+repeatability remains single-flight evidence. No retail equivalence,
+objective(d) completion, level VERIFIED, win or progression claim.
+
+Original-source command first failed because its fresh output directory did
+not exist; mkdir then rerun passed. An early postprocessor call preceded
+completion of the asynchronous reanalysis and read the old schema; waiting
+and rerunning succeeded. No extra game run/build was needed. Evidence:
+`scratch/agent/s6666_lvl2_activation/{original.json,timer_init.txt,timer_tick.txt,
+build.log,summary.json,analysis.txt}`. No new queued-soak verdicts.

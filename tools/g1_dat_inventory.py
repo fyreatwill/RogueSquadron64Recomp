@@ -152,6 +152,10 @@ def main():
         assert elf_word(elf, 0x800D3920) == 0xAE320034
         assert elf_word(elf, 0x800D4BA8) == 0x0C019645
         assert elf_word(elf, 0x800A95F4) == 0x42c80000
+        for pc, instruction in {0x800FA618: 0xAC600000, 0x800FA924: 0xE4A00000,
+                                0x800C76E4: 0x2442C9F8, 0x800C76F0: 0xC4800000,
+                                0x800C7714: 0xAC850000, 0x80102194: 0x4600103E}.items():
+            assert elf_word(elf, pc) == instruction, hex(pc)
         if args.log:
             assert controls and 'end' in epoch
             assert all(watch[i] and all(e['new'] == 0 for e in watch[i]) for i in (21, 22, 23))

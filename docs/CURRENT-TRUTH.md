@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6665 (2026-10-30).
+Compact operational handoff, as of Session 6666 (2026-10-30).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -401,7 +401,29 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   scratch/agent/m6/g1_lvl2s6663_owner/. All6 manifest hashes match; helper
   controls/build/replay pass. No library/default change or new soak verdict.
 
+- **G1(d) level2 rescue activation and ordinary hit controlled (s6666).**
+  One retail-settings flight, VI5020..17021,281.27s wall,0 crash lines.
+  Reset800FA618 writes timer1=0; tick800FA924 and35 actual getter returns
+  prove changing values. At the old dv5401 cutoff timer1 is55.5496902,
+  below100. At dv9839 it reaches100.033333; writer800C7564 sets21/59=1.
+  Four VIs later rescue01 is live at canonical slot254, handlerD3894,
+  desc8031D2A0=DAT8031BD90+1510. Seq1 force14873 -> exact SEND14881 ->
+  ordinary damage10, health2000->1990, return1990. One forced segment;
+  off/on/off VI5020/14864/16665; no lethal dose. Counter40 stays0 as the
+  shuttle survives; objective(d) remains open, no VERIFIED claim. Retail
+  DAT/ELF independently corroborate definition, timer/gate and damage
+  contracts; timing generalization is single-flight. Grid rescue spawn
+  caller was not dynamically observed; do not infer it from the live join.
+  Full table/limits: docs/G1-OBJECTIVE-RESPONSE.md s6666. Evidence:
+  scratch/agent/s6666_lvl2_activation/summary.json. No new soak verdicts.
+
 ## Superseded conclusions — do not act on these
+
+- s6664's missing counter40 target is not evidence of a broken spawn/hit
+  route. Its5400VI window looked sufficient when VI time was treated as
+  mission timer time. s6666 measures55.55 at that cutoff, then naturally
+  opens the gate at9839VI and joins an ordinary hit. This establishes a
+  duration boundary for the recipe, not a universal timer rate.
 - s6662 pointer-like census counts are not live-object counts (s6663 original free-slot writer retains pointers; live free-list walk finds up to235 such entries). Believable because the old census checked pointer shape without free-list membership. Its zero target result was already labelled inconclusive and remains so.
 - s6656/s6657 "level1 counter13 meaning unresolved" (s6659 original ELF identifies it in friendlies-saved subtraction and the >=5 Bit4 gate). Believable because historical activity logs supplied indices but no per-level semantics. Hit causality for counter13 remains unresolved; the corrected live flight changes only id10.
 - s5962 "lvl6 null is valid because hb ticks fires" (s6656: heartbeat controls execution, not detection of value changes; the monitor covers only ids 1–15 and has a run-lifetime budget). Believable because TELE and hook execution both fired, but no same-run changing-value control established sensitivity to every relevant objective slot.
@@ -586,22 +608,22 @@ owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6665) Join level2 rescue timer, gate, spawn and ordinary hit.**
-   Retail DAT has three subtype24 rescue shuttles: death count40/+1,
-   HP2000, activation Booleans21/22/23. Known id71 SHIP_01..03 decode
-   positively. Original ELF dispatches D3894; message5 D49FC -> ordinary
-   damage -> D4BA8 effect -> actual counter store6594C. Callback requires
-   Boolean59=0 and timer1>=100 before setting21/22/23 from ship states.
-   Saved s6664 first epoch keeps21/22/23=0; five real Boolean changes
-   control readback sensitivity. Thus closed activation gates explain the
-   missing sampled targets; timer cause is unmeasured, not a proven short
-   hold. Tool g1_dat_inventory.py checks401 structural records, original
-   dispatch/store words and id71 controls. Unknown layouts stay raw.
-   Next: ONE instrument/build/capture for timer initialization/values,
-   gate setter, descriptor activation, shuttle ownership and ordinary
-   force/SEND/health joins; no direct state writes or lethal level2 dose.
-   Full table and limits: G1-OBJECTIVE-RESPONSE.md s6665. No new run/soak,
-   runtime change, forced response or VERIFIED claim this iteration.
+1. **(s6666) Maintenance threshold first; then G1(d) loss-response qualification.**
+   Run Step0 byte check. If >60000, compact CURRENT-TRUTH by>=200 net lines:
+   migrate per-level framebuffer detail and archived backlogs to overview,
+   keep current evidence and constraints, one monotonic live backlog.
+   Level2 duration/gate/live/ordinary damage are now positively joined.
+   Counter40 is a death effect, so an ordinary surviving hit cannot prove
+   objective(d). After maintenance, design one bounded loss-response arm
+   using the existing level1 discipline: ordinary exact force/SEND/health
+   control first, then at most one same-owned rescue01 damage request
+   currentHP+1 through the original handler, inhibit forces, join original
+   counter40 store and callback readback, stop before failure/end handling.
+   No direct timer/Boolean/counter/health writes, arbitrary victims, success
+   or progression; default remains no level2 lethal dose. Audit the original
+   message5 death/end ordering before enabling such an opt-in qualification.
+   Use one build and same-flight arms, carry the existing whole table.
+   Do not repeat a5400VI route or add another timer/descriptor field.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

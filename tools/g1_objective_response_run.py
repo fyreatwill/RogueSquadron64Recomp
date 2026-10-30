@@ -11,6 +11,31 @@ import subprocess
 import time
 
 
+def activation_table(rows, ownership):
+    table = {'definitions': [], 'predicates': [], 'scalar_writers': {}, 'spawn': {},
+             'named_lifetimes': [], 'timer_min': None, 'timer_max': None}
+    for row in rows:
+        event = row['event']
+        f = dict(re.findall(r'(\w+)=([^\s]+)', event))
+        if '[objresp-definition]' in event:
+            table['definitions'].append(row | {'fields': f})
+        elif '[objresp-activation]' in event:
+            table['predicates'].append(row | {'fields': f})
+            timer = float(f['timer1'])
+            table['timer_min'] = timer if table['timer_min'] is None else min(timer, table['timer_min'])
+            table['timer_max'] = timer if table['timer_max'] is None else max(timer, table['timer_max'])
+        elif '[objresp-scalar]' in event:
+            table['scalar_writers'].setdefault(f['pc'], []).append(row | {'fields': f})
+        elif '[objresp-spawn]' in event:
+            key = f['index'] + ':' + f['pc']
+            table['spawn'].setdefault(key, []).append(row | {'fields': f})
+    definitions = {d['fields']['desc']: d['fields'] for d in table['definitions']}
+    for life in ownership['lifetimes']:
+        if life.get('desc') in definitions:
+            table['named_lifetimes'].append(life | {'definition': definitions[life['desc']]})
+    return table
+
+
 def summarize(out, tag, elapsed_s=None, done=None, level=0):
     rows, joins, forces, sends, changes, arms = [], [], {}, {}, [], []
     crash = 0
@@ -174,11 +199,12 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
                   populations=populations, ownership=ownership, transport=transport, dose_validation=dose_validation, arms=arms, readback_changes=changes, linked_objective_changes=relevant, linked_incidental_changes=incidental,
                   completed_chains=sum('readback_line' in j for j in relevant),
                   completed_incidental_chains=sum('readback_line' in j for j in incidental), linked_counter1_changes=relevant if level == 0 else [], rows=rows)
+    result['activation'] = activation_table(rows, ownership)
     (out / 'response.json').write_text(json.dumps(result, indent=2) + '\n')
     with (out / 'response.log').open('w') as stream:
         for row in rows:
             stream.write(f"L{row['line']} {row['event']}\n")
-    print(json.dumps({k: v for k, v in result.items() if k not in ('rows', 'arms', 'readback_changes', 'linked_counter1_changes', 'linked_objective_changes', 'linked_incidental_changes', 'transport', 'ownership')}
+    print(json.dumps({k: v for k, v in result.items() if k not in ('rows', 'arms', 'readback_changes', 'linked_counter1_changes', 'linked_objective_changes', 'linked_incidental_changes', 'transport', 'ownership', 'activation')}
                      | {'linked_objective_changes': len(relevant), 'linked_incidental_changes': len(incidental), 'readback_changes': len(changes)}))
     return 0 if done and not crash else 1
 
@@ -188,7 +214,10 @@ def main():
     parser.add_argument('tag', help='fresh TAG_SUFFIX (never overwrite evidence)')
     parser.add_argument('--analyze', action='store_true', help='rebuild the joined table from an existing tag')
     parser.add_argument('--level', type=int, choices=(0, 1, 2), default=0)
+    parser.add_argument('--flight-vi', type=int, default=5400, help='level 2 activation-aware window, 5400..12000 VI')
     args = parser.parse_args()
+    if not 5400 <= args.flight_vi <= 12000 or (args.level != 2 and args.flight_vi != 5400):
+        parser.error('extended flight window requires level 2 and 5400..12000 VI')
     root = Path(__file__).resolve().parents[1]
     out = root / 'scratch/agent/m6' / (f'g1_lvl{args.level}' + args.tag)
     if args.analyze:
@@ -203,7 +232,8 @@ def main():
         parser.error('screen locked: key-driven route cannot run')
     out.mkdir(parents=True)
     env = os.environ.copy()
-    env.update(LEVEL=str(args.level), TAG_SUFFIX=args.tag, HOLD_S='150',
+    env.update(LEVEL=str(args.level), TAG_SUFFIX=args.tag, HOLD_S=str(150 if args.flight_vi == 5400 else args.flight_vi // 60 + 90),
+               ROGUESQ_OBJECTIVE_RESPONSE_VI=str(args.flight_vi),
                ROGUESQ_OBJECTIVE_RESPONSE='1', ROGUESQ_OBJECTIVE_RESPONSE_LEVEL=str(args.level), ROGUESQ_TELE_BOLT='1', ROGUESQ_LOG_HITS='1')
     manifest = {'git_head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
                 'files': {}, 'env': {k: v for k, v in env.items()
@@ -223,7 +253,7 @@ def main():
         crashed = False
         offset = 0
         try:
-            while time.monotonic() - start < 360:
+            while time.monotonic() - start < (600 if args.flight_vi > 5400 else 360):
                 log = out / 'run.log'
                 if log.exists():
                     if log.stat().st_size < offset:
