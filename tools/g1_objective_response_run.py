@@ -27,8 +27,10 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
                     fields = dict(re.findall(r'(\w+)=([^\s]+)', line))
                     if '[objresp-force]' in line:
                         forces[fields['seq']] = (n, fields)
-                    elif '[eff2] SEND' in line:
-                        sends[(fields['n'], fields['d'])] = n
+                    elif '[objresp-send]' in line:
+                        sends[(fields['node'], fields['desc'])] = (n, fields)
+                    elif '[eff2] SEND' in line and level == 0:
+                        sends[(fields['n'], fields['d'])] = (n, fields)
                     elif '[objresp-arm]' in line:
                         arms.append(row)
                     elif '[objresp-readback]' in line and fields.get('initialized') == '1' and fields['old'] != fields['new']:
@@ -36,10 +38,12 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
                     elif '[objresp-write]' in line and fields['old'] != fields['new']:
                         force = forces.get(fields['force_seq'])
                         send = sends.get((fields.get('node', ''), fields.get('desc', '')))
-                        if force and send and force[0] < send < n:
+                        if force and send and force[0] < send[0] < n:
                             f = force[1]
+                            if level == 1 and (send[1].get('force_seq') != fields['force_seq'] or send[1].get('proj') != f.get('proj') or send[1].get('npc') != f['npc']):
+                                continue
                             if (f['node'], f['npc'], f['desc']) == (fields['node'], fields['victim'], fields['desc']):
-                                joins.append({'force_line': force[0], 'send_line': send, 'write_line': n,
+                                joins.append({'force_line': force[0], 'send_line': send[0], 'write_line': n,
                                               'seq': fields['force_seq'], 'vi': fields['vi'], 'age_vi': fields['age_vi'],
                                               'node': fields['node'], 'npc': fields['victim'], 'desc': fields['desc'],
                                               'id': int(fields['id']), 'callback_relevant': int(fields['id']) in ((1,) if level == 0 else (13, 40, 41)), 'pc': fields['pc'], 'old': fields['old'], 'new': fields['new']})
@@ -55,10 +59,37 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
                 join['readback_line'] = read['line']
                 join['readback_vi'] = fields['vi']
                 break
+    populations = []
+    for arm in range(3):
+        live, candidates, control, accepted = set(), set(), set(), set()
+        identities = {}
+        for row in rows:
+            fields = dict(re.findall(r'(\w+)=([^\s]+)', row['event']))
+            if fields.get('arm') != str(arm):
+                continue
+            key = (fields.get('node'), fields.get('npc'), fields.get('desc'))
+            if '[objresp-live]' in row['event'] or '[objresp-candidate]' in row['event']:
+                identities[key] = fields
+                if fields.get('selected') == '1':
+                    if '[objresp-live]' in row['event']:
+                        live.add(key)
+                    elif fields.get('reason') == 'eligible':
+                        candidates.add(key)
+                if ('[objresp-candidate]' in row['event'] and fields.get('mark_all') == '1'
+                        and fields.get('id') == '10' and fields.get('c1f') == '1'
+                        and float(fields.get('radius', 0)) > 0):
+                    control.add(key)
+            elif '[objresp-send]' in row['event']:
+                identity = identities.get(key, {})
+                if identity.get('selected') == '1':
+                    accepted.add(key)
+        populations.append(dict(arm=arm, sampled_named_live=len(live), named_eligible_candidates=len(candidates),
+                                id10_mark_all_controls=len(control), named_send_identities=len(accepted),
+                                live_without_candidate=[list(k) for k in sorted(live - candidates)]))
     relevant = [j for j in joins if j['callback_relevant']]
     incidental = [j for j in joins if not j['callback_relevant']]
     result = dict(tag=tag, level=level, analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), elapsed_s=elapsed_s, done=done, crashlines=crash,
-                  arms=arms, readback_changes=changes, linked_objective_changes=relevant, linked_incidental_changes=incidental,
+                  populations=populations, arms=arms, readback_changes=changes, linked_objective_changes=relevant, linked_incidental_changes=incidental,
                   completed_chains=sum('readback_line' in j for j in relevant),
                   completed_incidental_chains=sum('readback_line' in j for j in incidental), linked_counter1_changes=relevant if level == 0 else [], rows=rows)
     (out / 'response.json').write_text(json.dumps(result, indent=2) + '\n')

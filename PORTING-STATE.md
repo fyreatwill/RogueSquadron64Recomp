@@ -174154,3 +174154,61 @@ docs/G1-OBJECTIVE-RESPONSE.md; CURRENT-TRUTH headline/supersession/backlog
 updated. NEXT is one descriptor-targeted lvl1 named loss response below
 failure gates, full census/candidate/effect table in one build/run.
 Outcome ADVANCED; STATUS DONE.
+
+## Session 6660 (2026-10-30) — descriptor-targeted hits survive above the objective death gate
+
+Read CURRENT-TRUTH,NEXT,SOAK-RESULTS tail in order; maintenance not triggered
+at54,084 bytes. No new queued verdicts. One bounded adapter change, one build,
+one selected-level1 flight; unlocked screen, retail aspect/dd defaults,
+no library edits, no regeneration, no win/progression/aim or repeat holds.
+
+Original ELF first: descriptor+70/+74 and+80/+84 are counter/delta pairs,
++78/+7C Boolean pair; slot table allocation0x4000 is2048 eight-byte entries.
+80130BB4 is a free-list head, not a count. Persistent s6657 adapter now
+selects named13/40/41 descriptors (nonzero delta, exclude Boolean6 setters),
+censuses live descriptors every300 VI, records mark-all eligibility and
+explicit SEND identity. It inhibits forces on any named changing store,
+lets callback readback finish, then stops. Other modes keep the old filter.
+Analyzer requires exact projectile/sequence/node/NPC/descriptor identity.
+ORIGIN: this is an opt-in diagnostic input filter and readback stop, not a
+corruption guard or mitigation. Its forced segment-start writer is the
+existing sphere probe; no retail guest value was declared invalid or skipped.
+
+One run g1_lvl1s6660_targeted:175.61s wall, VI5234..10634, off/on/off at
+5234/7034/9434;46 forces in on only,23 exact accepted SENDs,0 crash lines.
+14 accepted hits target counter40(node8021b358,NPC8035ab5c,desc8031b278);
+9 counter13(node8021b628,NPC8035b35c,desc80319af4). No named13/40/41 store
+or readback change; Boolean6 stays0. Same-run id10 mark-all control fires
+in every arm(3/1/2 identities);6 actual id10 readback changes0→5→6→6
+independently control changing-value detection. Eight unique named live
+and eligible identities per arm; old c1f0 on relevant candidates explains
+why the old class filter excluded them.45–46 census slot entries alias
+those identities. Candidate4096-row budgets reach their cap in each arm;
+no claim is made about unlogged later candidates.
+
+H-effect selected only in its bounded sense: accepted relevant hits do not
+invoke descriptor writer during this flight. The boring dose limit is
+visible: on-arm health actor80362000 has14 samples999→859;8035d3a0 has
+9 samples400→322. Both remain positive. Legacy damage join reports seq0
+for actor subobjects; parent attribution stays single-source temporal/layout
+evidence(node8021b628+10 contains8035d3a0 in ctx41), not an exact damage join.
+Independent original ELF npcGroundTransportUpdate at800DF830 loads actor
+NPC+38, damage from message+6, calls800F2120, then800DF840 bgtz skips the
+descriptor effect at800DF8C8 while returned HP>0. Original damage routine
+subtracts requested damage and returns HP. Nonlethal hits therefore do not
+exercise this destruction-counter threshold. No broken-logic claim or full
+VERIFIED promotion; dynamic response remains single-source.
+
+Build passed. Six-file adapter replay stable. Extracted-C controls cover
+defaults,both descriptor pairs,Boolean6 exclusion,force inhibition and
+readback-stop. Five parser controls accept exact chain and reject wrong
+NPC/projectile/sequence or absent readback. Final --analyze rerun after
+analyzer tightening; launch manifest preserves earlier analyzer hash.
+Evidence: scratch/agent/m6/g1_lvl1s6660_targeted/ plus
+scratch/agent/s6660_targeted/{chains.tsv,transport_damage_elf.txt,
+health_elf.txt,helper_control.log,replay_checks.json,parser_control/}.
+CURRENT-TRUTH and objective report updated. NEXT selects one accepted
+single-victim lethal-dose test through the real damage call: ordinary-dose
+positive control then one lethal request, full actor/death/store/readback
+chain, stop at first loss response below c13>=5. No counter/health stores,
+mission completion or progression forcing.

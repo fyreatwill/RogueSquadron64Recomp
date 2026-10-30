@@ -457,3 +457,64 @@ analyzer hash is in response.json (the launch manifest preserves its
 pre-analysis-edit source hash). No lib/ edit or default change.
 Next: target a descriptor whose documented loss-counter field is13/40/41
 and stop at the first named loss response, below failure thresholds.
+
+
+## s6660: descriptor-targeted level-1 hits stay above the death gate
+
+One build and one retail-settings selected-level1 flight, screen unlocked,
+175.61 s wall, epoch VI5234..10634, off/on/off at5234/7034/9434. Zero
+crash lines, no win/progression, no library or default changes. The persistent
+adapter now selects actual descriptor counter13/40/41 with nonzero delta in
+either +70/+74 or +80/+84 pair, excludes Boolean6 setters, and records live
+slots, eligibility, exact projectile SEND identity, stores and readbacks.
+Original ELF initNpcSlotList allocates0x4000 bytes for2048 eight-byte entries;
+80130BB4 is the free-list head, not the capacity. Census every300 VI is a
+sample, not exhaustive lifetime coverage. Candidate logs cap at4096 rows
+per arm (all three budgets reached); unseen later candidates remain unknown.
+
+The same-run mark-all control records id10 candidates in every arm (unique
+identities3/1/2); six actual changing id10 readbacks independently control
+value detection. Named eligible candidates include id13 and40 with c1f=0,
+so the old c1f-only lever excluded them. Eight unique named identities appear
+in both sampled live and eligible candidate populations in each arm. The
+census's45–46 selected slot entries are aliases, not45 distinct victims.
+
+All46 force records survive the log budget. Exact node/NPC/descriptor plus
+projectile/sequence joins find23 SENDs, all in on:14 to node8021b358,
+NPC8035ab5c, descriptor8031b278 (counter40), and9 to node8021b628,
+NPC8035b35c, descriptor80319af4 (counter13). There are no13/40/41 stores or
+changes and Boolean6 stays0. id10 goes0→5→6→6 (five off changes, one on).
+This is the bounded H-effect observation: accepted relevant hits did not
+reach the descriptor writer in the measured flight. It is not broken
+objective logic or a level VERIFIED result.
+
+The boring limit is damage dose: on-arm health samples are14 calls on
+actor80362000,999→859, and9 on actor8035d3a0,400→322. Both remain positive.
+The latter actor also appears at node8021b628+0x10 in the earlier ctx41
+snapshot. These health records have force_seq=0: the old damage join does
+not resolve actor subobjects, so per-hit parent attribution remains
+single-source temporal/layout evidence, not a completed force→damage join.
+Independent original ELF npcGroundTransportUpdate at800DF830 loads the
+health actor from NPC+0x38, takes damage from message+6, calls800F2120,
+then bgtz at800DF840 skips to800DF928 while health remains positive.
+Only the death branch loads the descriptor pairs and calls80065914 at
+800DF8C8. Original dealDamageToNpc subtracts the requested damage at
+800F2140/800F2150 and returns remaining health. Thus nonlethal hits are
+not expected to increment these destruction counters. No mitigation added.
+
+Artifacts: scratch/agent/m6/g1_lvl1s6660_targeted/{manifest.json,run.log,
+response.json,response.log}; scratch/agent/s6660_targeted/chains.tsv contains
+all46 force→SEND rows (empty store/readback columns are deliberate).
+Original ELF windows, helper controls and six-file replay hashes are in the
+same scratch directory. Analyzer was tightened after launch; manifest keeps
+the launch hash, and final --analyze records the final analyzer hash.
+Helper controls cover defaults, both descriptor pairs, Boolean6 exclusion,
+and immediate force inhibition followed by actual readback stop. Parser
+controls accept the exact projectile chain and reject wrong NPC, projectile,
+sequence or missing readback. No queued-soak verdicts were added.
+
+Next: one opt-in, single-victim lethal-dose test in a forced-route level1
+flight, with actual health actor→accepted SEND→damage return→death branch→
+named store→callback readback. Inspect original handler/health code first;
+never write an objective counter directly or force a win. Stop after the
+first named loss response (id13 must remain below5).

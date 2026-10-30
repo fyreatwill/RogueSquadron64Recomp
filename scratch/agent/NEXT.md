@@ -1,82 +1,86 @@
-# Level-1 descriptor-targeted loss-counter response
+# Level-1 single-victim lethal-dose response
 HYPOTHESIS-ID: g1-coverage-cd
 
-s6659 completed the generalized adapter and one corrected flight. Do not
-repeat the generic recipe: it produced two complete id10 chains, no named
-13/40/41 response. No win/progression/aim/steering work. No repeat holds.
+s6660 completed one descriptor-targeted flight. Do not repeat that dose:
+46 forces→23 exact projectile SENDs, but target health remained positive
+(999→859 and400→322). Original transport code skips descriptor effects
+while damage return>0. id10 mark-all and changing-value controls fired.
+No named13/40/41 response, no win/progression, no full VERIFIED promotion.
+Read CURRENT-TRUTH, NEXT, SOAK-RESULTS tail in order; maintenance at>60000.
 
-Read CURRENT-TRUTH, this file, SOAK-RESULTS tail in that order; wc -c first.
-Maintenance threshold is60000. Current iteration did not trigger it.
-
-One bounded change + ONE selected-level1 flight: target forced collision
-candidates whose actual NPC descriptor declares counter13/40/41, preserving
-the existing off/on/off and exact identity table. Stop at the FIRST live
-named loss-counter response (including its readback), far below id13>=5.
-Default behavior remains retail. Do not force completion/Boolean6.
+ONE bounded change and ONE level1 flight: keep descriptor targeting, add
+an opt-in single-victim damage-dose lever that exercises the actual death
+branch. Do not directly write health/counters/Boolean6, force a win, steer,
+or run repeat holds. Defaults and ordinary TELE remain unchanged.
 
 Hypotheses:
-- H-response: a descriptor-selected victim reaches accepted SEND, actual
-  counter writer and callback readback for13/40/41. It is a loss response,
-  not successful progress; original ELF proves the semantics.
-- H-victim-selection: relevant live NPC descriptors exist but are absent
-  from the collision candidate population or rejected before the lever.
-- H-effect: relevant forced candidates receive accepted SEND, but do not
-  invoke their descriptor's objective counter writer within the measured
-  flight. This is a limited no-response result, not proof of broken logic.
+- H-dose: a proven named-loss victim survives ordinary damage, but one
+  accepted lethal message reaches the death branch, descriptor writer and
+  callback readback. This establishes a loss response, not success progress.
+- H-routing: the accepted victim's actual health actor differs from the
+  assumed actor. Exact original load chain plus before/after actor identity
+  selects this; repair the test join before interpreting behavior.
+- H-effect: actual remaining health<=0 and death branch execute for the
+  selected victim, yet its descriptor writer/readback does not respond.
+  This requires same-run changing-value and eligibility controls; absent
+  controls/route/death remain unknown, not broken-logic conclusions.
 
-Discriminator, ONE instrument/build/run: per-arm live NPC descriptor census
-with index/delta and Boolean fields, candidate eligibility and rejection
-reason, force shape/projectile/node/NPC/descriptor, accepted SEND, actual
-store PC/id/old/new and callback readback. Include a mark-all ELIGIBILITY
-control that visibly labels the known id10 candidates in this SAME run;
-keep actual changing counter values as the independent detection control.
-A live-target/candidate population split selects H-victim-selection; a
-complete named chain selects H-response; accepted named hits without their
-writer select H-effect only with all controls firing. Missing target/control
-means unknown. Do not spend another iteration threading one join field.
-
-Ground truth BEFORE instrumentation:
-    sed -n '150,245p' docs/G1-OBJECTIVE-RESPONSE.md
-    cat scratch/agent/s6659_response/lv1_friendlies_elf.txt
+Ground truth BEFORE instrumentation (original ELF;40/28-line windows):
+    cat scratch/agent/s6660_targeted/transport_damage_elf.txt
+    cat scratch/agent/s6660_targeted/health_elf.txt
     cat scratch/agent/s6659_response/lv1_callback_elf.txt
-    cat scratch/agent/s6657_response/destruction_elf.txt
-    rg -n 'rs5841_cand|rs5837_en &&|rs6657_gate|rs6657_force' tools/apply_s5835_sphere_probe.py tools/apply_s6657_objective_response.py
-    sed -n '1,210p' tools/apply_s6657_objective_response.py
-    sed -n '1,165p' tools/g1_objective_response_run.py
-    sed -n '28,39p' docs/debug-trace-env-vars.md
-Verify descriptor offsets/field meaning with original ELF, <=60 lines per
-window, before filtering. node+4->NPC; NPC+0x34->descriptor. Do not mistake
-SEND cls13 for a proven counter13 target without the original load chain.
-Use tools/disasm_mips_elf.py ../rogue_squadron64/build/roguesquadron.elf.
-Counter13 at80138090; 40 at801380FC;41 at80138100; Boolean6 at801388A5.
-Friendlies-saved=19-(40+13+41); c13>=5 fails, Boolean6==1 completes.
+    cat scratch/agent/s6659_response/lv1_friendlies_elf.txt
+    sed -n '1,60p' scratch/agent/s6660_targeted/chains.tsv
+    rg -n 'RECOMP_FUNC void npcGroundTransportUpdate|0x800DF830|0x800DF840|0x800DF8C8' ../N64Recomp/RecompiledFuncs/funcs_38.c
+    rg -n 'rs6660_|rs6657_write|def apply' tools/apply_s6657_objective_response.py
+    sed -n '30,35p' docs/debug-trace-env-vars.md
+Original: health actor=NPC+38; message damage=lhu(message+6); call800F2120;
+return>0 at800DF840 skips to800DF928; death loads descriptor+70/+74,
++78/+7C,+80/+84 then calls80065914 at800DF8C8. Counter writer8006594C/74.
+NPC is node+4, descriptorNPC+34. Do NOT treat node+34 as descriptor.
+Counter13 address80138090,40=801380FC,41=80138100; Boolean6=801388A5.
+Friendlies saved=19-(40+13+41); c13>=5 fails; Boolean6 completes.
 
-All generated hooks go in persistent adapter/fixup replay. The s5857 health
-helper was FIXED this iteration: unsigned C arithmetic manufactured a4GiB
-host offset. Do not restore the old expression or add a guest-pointer guard.
-Reproduction/ELF/control evidence: scratch/agent/s6659_response/.
-Adapter/health replay stability passed six checks. Do not run full fixup on
-the existing tree. If regeneration is needed: make_elf -> N64Recomp ->
-fixup_game_funcs -> cmake. Preserve lib worktrees.
+Implement the WHOLE table in one persistent adapter/build, not one join
+field per session. Extend FILES/replay to funcs38 as necessary. Hook the
+original damage call and return/death branch with selected NPC/node,
+health actor, descriptor counter/delta, message identity/raw damage,
+actual requested damage and returned HP, force seq/projectile/SEND VI,
+actual counter PC/old/new and independent callback readback. Do not guess
+health pointer layout: use original ELF health accessor and existing fixed
+s5857 helper arithmetic (unsigned offsets once manufactured a4GiB read).
 
-After implementing the entire discriminator and writing the exact selected
-counter stop/positive-control design here, use:
+Use a new explicit opt-in env, e.g. ROGUESQ_OBJECTIVE_RESPONSE_LETHAL=1,
+passed and hashed by the runner. In the existing on window: select ONE
+actual accepted ground-transport counter13 target (nonzero delta, Boolean6
+not set). First accepted hit uses original damage and must visibly reduce
+positive HP (dose control). A subsequent accepted hit to the SAME live
+node/NPC/descriptor may set only the call's requested damage register to
+currentHealth+1, ONCE globally. This is a test input at the real hit path,
+not a counter or health store. Log the change and original values. Exclude
+all other victims from the lethal lever; continue mark-all eligibility
+controls. Inhibit further forces immediately on a named changing store,
+finish callback readback, then SIGKILL. Keep fallback c13>=3/Boolean6 and
+5400-VI stops; no intentional failure/completion. If exact eligibility
+cannot be established, do not apply the dose and classify the failed join.
+
+Before build, write exact final lever/controls/stop design into this file.
+Then:
     python3 tools/apply_s6657_objective_response.py
     cmake --build build --target RogueSquadron64Recomp -j5
     /usr/sbin/ioreg -n Root -d1 | rg 'CGSSessionScreenIsLocked'
-    python3 tools/g1_objective_response_run.py s6660_targeted --level 1
-    python3 tools/g1_objective_response_run.py s6660_targeted --level 1 --analyze
-Screen must be unlocked. Runner uses a fresh path, binary/source/env
-manifest, 360s hard timeout, SIGKILL recipe group on done/crash. Run from
-build with ROM via existing recipe. No queued repeat soak needed.
+    env ROGUESQ_OBJECTIVE_RESPONSE_LETHAL=1 python3 tools/g1_objective_response_run.py s6661_dose --level 1
+    python3 tools/g1_objective_response_run.py s6661_dose --level 1 --analyze
+Use fresh paths, unlocked screen, build/ROM and SIGKILL watchdog. No full
+fixup on existing tree. If regen is needed: make_elf→N64Recomp→fixup→cmake.
+Preserve lib worktrees; no export needed unless you edit them.
 
-Preserved s6659 evidence:
-- g1_lvl1s6659_response/: one host diagnostic SIGSEGV before TELE-on,
-  rs5857_hp+212, far400319130; first flight is not a behavioral arm.
-- g1_lvl1s6659_response_v2/:176.59s, VI5271..10674,25 forces,0 crashes,
-  id10 0->4->8->8,8 live readbacks; two exact incidental chains seq14/17.
-  ids13/40/41 and Boolean6 stay0. No full VERIFIED promotion.
-- response.json records final analyzer hash; launch manifest preserves the
-  earlier analyzer version. Neither log was overwritten. Dynamic chain
-  causality remains single-source; original ELF supplies independent
-  semantic/address-calculation constraints, not retail equivalence.
+s6660 evidence: scratch/agent/m6/g1_lvl1s6660_targeted/ and
+scratch/agent/s6660_targeted/.175.61s, VI5234..10634,0 crashes. Eight unique
+named live/eligible identities per arm; candidate4096-row budgets reached,
+so later unlogged identities stay unknown.46 exact force rows,23 SENDs:
+14 id40 node8021b358/NPC8035ab5c/desc8031b278;9 id13
+node8021b628/NPC8035b35c/desc80319af4. Six id10 readback changes0→5→6→6.
+The health-parent association is currently single-source temporal/layout
+support: legacy damage matching reports force_seq0 for actor subobjects.
+Original ELF independently proves the damage/death-gate semantics.

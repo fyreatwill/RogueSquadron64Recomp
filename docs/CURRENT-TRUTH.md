@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6659 (2026-10-30).
+Compact operational handoff, as of Session 6660 (2026-10-30).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -329,6 +329,24 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   Details: docs/G1-OBJECTIVE-RESPONSE.md; scratch/agent/m6/g1_lvl1s6659_response_v2/.
   Next: one descriptor-targeted lv1 loss-counter response below its gate.
 
+- **G1(d) level1 targeted hits: nonlethal dose, no named response (s6660).**
+  One build/flight, VI5234..10634, 175.61s, 0 crashes; forces0/46/0.
+  Twenty-three exact projectile/sequence/node/NPC/descriptor SEND joins:
+  14 counter40,9 counter13. Mark-all id10 eligibility fires in every arm;
+  six changing id10 readbacks control value detection. ids13/40/41 and
+  Boolean6 remain0. Health actors stay positive:999→859 and400→322.
+  Original ELF independently proves transport800DF840 bgtz skips the
+  descriptor effect call800DF8C8 while remaining health is positive.
+  Thus this flight does not test the destruction threshold. Per-hit health
+  parent attribution remains single-source: the legacy damage join logs
+  force_seq0 for actor subobjects. Eight unique named live/candidate
+  identities per arm; c1f0 shows the old lever excluded relevant targets.
+  Census is sampled;4096 candidate rows/arm cap means unseen later targets
+  are unknown. No VERIFIED promotion or retail-equivalence claim.
+  Next: a single controlled lethal hit on one named loss victim, then stop
+  at actual counter readback below failure/completion. Evidence/table:
+  docs/G1-OBJECTIVE-RESPONSE.md; scratch/agent/s6660_targeted/chains.tsv.
+
 ## Superseded conclusions — do not act on these
 - s6656/s6657 "level1 counter13 meaning unresolved" (s6659 original ELF identifies it in friendlies-saved subtraction and the >=5 Bit4 gate). Believable because historical activity logs supplied indices but no per-level semantics. Hit causality for counter13 remains unresolved; the corrected live flight changes only id10.
 - s5962 "lvl6 null is valid because hb ticks fires" (s6656: heartbeat controls execution, not detection of value changes; the monitor covers only ids 1–15 and has a run-lifetime budget). Believable because TELE and hook execution both fired, but no same-run changing-value control established sensitivity to every relevant objective slot.
@@ -513,17 +531,18 @@ owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6659) Descriptor-targeted level-1 loss-counter response.**
-   The generic lever now has two complete id10 chains but no13/40/41 change.
-   Select candidates by their original-ELF descriptor counter/delta fields,
-   not guessed shape class or aim. Build the entire candidate→force→SEND→
-   actual writer→callback table once, with a mark-all eligibility control
-   inside the same flight; off/on/off and conservative stops remain. Stop
-   at the first named loss response, below c13>=5/Boolean6 completion.
-   H-response: exact named loss chain; H-victim-selection: live relevant
-   targets never reach the candidate lever; H-effect: accepted relevant
-   hits do not reach the descriptor writer. Missing controls stay unknown.
-   No wins, progression, steering, repeat holds or crash sweep. NEXT.md.
+1. **(s6660) One-victim level1 lethal-dose response.**
+   Descriptor targeting now reaches13/40 victims:46 forces,23 exact SENDs,
+   but remaining health stays positive and the original death branch skips
+   counter effects. Ground truth:800DF830..800DF8CC and800F20EC..800F2158.
+   Build one opt-in probe with the full accepted-victim→health actor→damage
+   return→death branch→actual named store→callback readback table. Preserve
+   natural-damage control in the same flight; allow one lethal message only
+   to a proven named-loss victim, exclude Boolean6 and stop at first named
+   readback. No direct counter writes, wins/progression/aim or repeat holds.
+   H-dose (crossing health0 yields response), H-routing (actor/victim join
+   differs), H-effect (proven death still bypasses descriptor writer).
+   NEXT.md carries the exact constraints; defaults remain retail.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
