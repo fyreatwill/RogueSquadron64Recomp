@@ -9,7 +9,8 @@ static int rs5857_hp(uint8_t* rdram, uint32_t o) {
     uint32_t b = (uint32_t)MEM_W(S32((int32_t)o), 0x190);
     if (MEM_BU(S32((int32_t)o), 0x1A7)) return (int)b;
     if ((b >> 24) != 0x80) return -999998;
-    return (int)MEM_W(S32((int32_t)b), 4 * (uint32_t)MEM_W(S32((int32_t)0x80137CE4u), 0));
+    uint32_t address = b + 4u * (uint32_t)MEM_W(0, (int32_t)0x80137CE4u);
+    return (int)MEM_W(0, (int32_t)address);
 }
 """
 W = r"""RECOMP_FUNC void dealDamageToNpc(uint8_t* rdram, recomp_context* ctx) { /* PATCH: s5857 dmg log wrapper */
@@ -29,7 +30,9 @@ W = r"""RECOMP_FUNC void dealDamageToNpc(uint8_t* rdram, recomp_context* ctx) { 
 FN = "RECOMP_FUNC void dealDamageToNpc("
 NXT = "RECOMP_FUNC void getNpcMissingHealth("
 def apply(text, name=None):
-    if T in text: return text, 0
+    if T in text:
+        updated = text.replace('    return (int)MEM_W(S32((int32_t)b), 4 * (uint32_t)MEM_W(S32((int32_t)0x80137CE4u), 0));', '    uint32_t address = b + 4u * (uint32_t)MEM_W(0, (int32_t)0x80137CE4u);\n    return (int)MEM_W(0, (int32_t)address);')
+        return updated, int(updated != text)
     i = text.find(FN); j = text.find(NXT, i)
     if i < 0 or j < 0: return text, 0
     body = text[i:j].replace(FN, "static void rs5857_inner(", 1)

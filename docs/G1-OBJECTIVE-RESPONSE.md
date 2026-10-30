@@ -10,7 +10,7 @@ writer calls, Boolean dumps and result-mode requests separately.
 | Level | Response evidence | Success/failure meaning and coverage verdict |
 | --- | --- | --- |
 | 0 | s6657: forced selector B40=0 and lv0 callback; same-flight off/on/off counter1 0→2→13→13, 13 live readback changes, eight exact force/send/store joins. | Named counter1 hit response observed in one instrumented flight, supported by original ELF descriptor-to-counter stores. Dynamic evidence remains single-source; no win, progression, player-shot or retail-equivalence claim. |
-| 1 | id13 gets 0..2 ctl versus 0..4 tele; ctl also has snapshots of id10 and id13, tele has no snapshot records. | Saved arms have different instrument evidence; do not assume identical builds. Counter13 meaning and hit causality unresolved. Earlier ledger maxima of 4 in both arms do not describe the currently saved first epochs. |
+| 1 | s6659 corrected forced-route flight: off/on/off, 25 forces; two complete force/SEND/store/readback chains for id10, eight changing id10 readbacks. ids13/40/41 and Boolean6 stay zero. | Original ELF identifies 13/40/41 as friendly-loss counters, with id13>=5 failing. H-incidental selected by the planned direct-callback-counter discriminator; no named loss-counter response or fully VERIFIED promotion. Older ctl/tele paths have inconsistent instrument identity. |
 | 2 | TELE fires; writer call records only. | No named counter response or controlled null. |
 | 3 | TELE fires; writer call records only. | No named counter response or controlled null. |
 | 4 | id15 0>1>2>3 in both arms; ctl additionally id5 0>1. | Shared baseline movement. No tele-specific objective response proved. Both arms request result mode a0=2. |
@@ -379,3 +379,81 @@ counter pre-state at setter entry, not the resulting write.
 - `scratch/agent/m6/s5845/run.log.gz`: scope (205604, '[phase] vi_width=512 (was 640) origin=0x00690400 at 77.1s update_screen #4563') through EOF.
   Caller [(205695, 'lv0_checkComplexObjectives')]; TELE lines [280306, 280330, 280352, 280373, 280390, 280704, 280708, 280711, 280713, 281100].
   Counter pre-states (line, c1, c2, c10): [(223724, 0, 0, 0), (230636, 1, 0, 0), (280503, 2, 0, 0), (280770, 3, 0, 0), (281469, 4, 0, 0), (284845, 5, 0, 0), (285331, 6, 0, 0), (287755, 7, 0, 0), (289576, 8, 0, 0), (289870, 9, 0, 0), (290009, 10, 0, 0), (292192, 11, 0, 0), (292395, 12, 0, 0), (308337, 13, 0, 0), (311458, 14, 0, 0), (314594, 15, 0, 0), (376801, 16, 1, 0)].
+
+## Session 6659: level-1 adapter and diagnostic address correction
+
+2026-10-30. Maintenance not triggered (52,392 bytes); no new soak verdicts.
+The persistent adapter supports `ROGUESQ_OBJECTIVE_RESPONSE_LEVEL=0|1`
+(default 0), a selected lv1 callback, all 128 count readbacks and Boolean6.
+The runner accepts `--level 1`, preserves fresh evidence paths, and now kills
+the recipe group immediately on a crash marker, before retries overwrite it.
+Seven existing actual-store hooks remain. Analyzer reports relevant and
+incidental exact-identity chains separately and records its own source hash.
+All windows are within one selected flight; no cross-run rate comparison.
+
+Original ELF at 0x80101BEC..0x80101C44 computes friendlies saved as
+19-(count40+count13+count41). At 0x80101C60..0x80101C8C, id13>=5 sets
+Bit4; Boolean6==1 separately sets Bit8/complete1. The probe stops at a
+read-back id13>=3 or Boolean6, or the original 5400-VI/flight-exit bound.
+These are loss semantics, not a successful objective-progress claim.
+ELF disassembly and SHA are in `scratch/agent/s6659_response/`.
+
+First flight, `scratch/agent/m6/g1_lvl1s6659_response/`, reached B40=1
+and lv1 callback at VI5313, then crashed before TELE-on. One SIGSEGV,
+37 crash-related lines; no completed epoch or changing-value control.
+The handler names rs5857_hp+212, called by dealDamageToNpc+168 from
+npcProbeDriod, host address 0x400319130 with rdram=0x300000000.
+This is a diagnostic-address defect, not a new guest corruption finding.
+
+ORIGIN: rs5857_hp forms MEM_W(int32_t(b), uint32_t(4*index)). C converts
+the sum to unsigned 32-bit before the macro subtracts the 64-bit guest
+base, giving physical_offset+0x100000000. The original MIPS health reader
+0x800F20EC performs SLL/ADDU then a signed guest-address load; it does not
+create that extra 4 GiB. The host diagnostic is the erroneous address
+writer; a valid effective guest address can trigger it. No wild-value
+skip or guest guard was added. The corrected persistent s5857 helper
+first forms the complete uint32 address, then sign-extends it for MEM_W.
+A same-input two-arm reproduction with the real memory macro returns
+SIGSEGV (-11) for the old expression and passes for the corrected one:
+index0, base0x80319130, old offset0x100319130 vs correct0x319130. Fixed
+indices0..3 return7..10, and the immediate-health branch returns-2.
+Evidence: health_control.c/json in the above diagnostic directory.
+
+Corrected flight: `scratch/agent/m6/g1_lvl1s6659_response_v2/`, screen
+unlocked, first launch, 176.59 s wall, epoch VI5271..10674, 0 crash lines.
+The first failed flight is preserved; it is not an animated A/B arm.
+
+| Arm | VI boundaries | Forces | Counter10 | ids13/40/41; Boolean6 |
+| --- | --- | --- | --- | --- |
+| off | 5271..7071 | 0 | 0→4 | 0; 0 |
+| on | 7072..9471 | 25 | 4→8 | 0; 0 |
+| off | 9472..10674 | 0 | 8 | 0; 0 |
+
+Eight changing id10 readbacks and ten actual-store records (eight id10
+increments, two id1 unchanged stores) control value detection in this same
+flight. Exact on-arm chains:
+
+| Force seq | node / NPC / descriptor | SEND line | Actual store | Readback |
+| --- | --- | --- | --- | --- |
+| 14, VI8656 | 8021b790 / 803586b0 / 8031929c | 300414, N, cls10 | 300420, VI8659, pc8006594c, id10 6→7 | 300445, VI8662, 6→7 |
+| 17, VI8843 | 8021b754 / 803589e0 / 803191b0 | 301916, N, cls10 | 301922, VI8846, pc8006594c, id10 7→8 | 301952, VI8850, 7→8 |
+
+The writer is datItemSetObjectiveBooleanCount. Register/live-descriptor
+identity is a join, not an independently captured stack. N SENDs do not
+prove player shots. Actual id10 changes select H-incidental under this
+unit's direct-callback-used-counter definition; the lv1 callback reads
+id13 and Boolean6, while friendlies-saved reads 13/40/41. This does not
+prove id10 is irrelevant to every data-driven mission script. The zero
+loss-counter values mean those named responses remain unexercised here;
+they are not proof of broken objective logic or a universal null. Dynamic
+causality is single-source; ELF semantics independently constrain meaning,
+not retail behavioral equivalence. No win, progression or aim test.
+
+Validation: both builds passed; helper controls cover selected callback,
+VI boundaries, readbacks and early stops; final parser controls reject
+wrong NPC, missing SEND and missing changing readback, and separate id10
+incidental chains; all six live fixup replay checks are stable. Final
+analyzer hash is in response.json (the launch manifest preserves its
+pre-analysis-edit source hash). No lib/ edit or default change.
+Next: target a descriptor whose documented loss-counter field is13/40/41
+and stop at the first named loss response, below failure thresholds.

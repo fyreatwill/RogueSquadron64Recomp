@@ -174094,3 +174094,63 @@ OUTCOME ADVANCED under the explicit retry checkpoint exception: verified
 artifact inventory and runnable-prerequisite handoff landed, not a new
 experimental discrimination. STATUS DONE closes this checkpoint only;
 level1 remains pending. No corruption mitigation and no default change.
+
+## Session 6659 (2026-10-30) — level-1 forced hits expose incidental id10 and a diagnostic address bug
+
+Read CURRENT-TRUTH, NEXT, SOAK-RESULTS tail in order. Maintenance not
+triggered:52,392 bytes. No new queued-soak verdicts. Resumed pre-existing
+partial level1 adapter edits, checked original ELF before building, and
+completed the planned adapter/flight unit including a failed-run correction.
+No lib edits, regeneration, win/progression/aim test or default change.
+
+Original ELF: lv1 friendlies-saved=19-(c40+c13+c41), c13>=5 sets Bit4,
+Boolean6 sets Bit8/complete1. Persistent adapter now selects level0/1,
+reads128 level1 counters plus Boolean6, and stops below the c13 gate.
+Runner CLI supports --level1 and fresh manifests. The discriminator was
+written in NEXT before either build: relevant named force/SEND/store/readback
+chain vs incidental counter activity vs missing route/control.
+
+First flight g1_lvl1s6659_response reached B40=1/lv1 callback VI5313,
+then one SIGSEGV (37 crash-related lines) before TELE-on. Backtrace:
+rs5857_hp+212 <- dealDamageToNpc+168 <- npcProbeDriod. far=400319130,
+rdram=300000000. No response result from that incomplete epoch.
+ORIGIN: the s5857 host diagnostic expression MEM_W(int32(b),uint32(4*ix))
+performs unsigned32 addition, then subtracts a64-bit KSEG base, manufacturing
+physical+4GiB. The erroneous writer is that host address expression;
+a legitimate effective guest address can fault. Original MIPS health load
+uses SLL/ADDU and sign-extended guest addressing. No guest corruption was
+established and no guard/skip added. Fixed persistent helper forms uint32
+address first and then sign-extends. Same-input real-MEM_W reproduction:
+old arm SIGSEGV(-11), fixed arm pass; ix0 old100319130 vs fixed319130,
+fixed ix0..3 returns7..10 and immediate branch returns-2. Evidence:
+scratch/agent/s6659_response/health_control.c/json and original ELF windows.
+The runner now stops on crash markers before recipe retries overwrite logs.
+
+Rebuilt and ran corrected g1_lvl1s6659_response_v2 this iteration:
+176.59s wall, screen unlocked, first launch, selected callback epoch
+VI5271..10674. off/on/off boundaries5271/7072/9472; forces0/25/0;
+actual-store records4/6/0; eight changing id10 readbacks0->4->8->8;
+ids13/40/41 and Boolean6 remain0. Zero crash lines. Two exact incidental
+chains: seq14 node8021b790/NPC803586b0/desc8031929c, SEND L300414,
+pc8006594c id10 6->7 L300420 VI8659, readback L300445 VI8662;
+seq17 node8021b754/NPC803589e0/desc803191b0, SEND L301916,
+store7->8 L301922 VI8846, readback L301952 VI8850. Both SEND N.
+DatItemSetObjectiveBooleanCount is the actual counter writer. Register/live
+identity is a join, not an independently observed stack or player-shot proof.
+
+H-incidental selected under the planned directly callback-used-counter
+criterion: the actual forced response is id10, not13/40/41 or Boolean6.
+Whether id10 feeds another data-driven script remains untested. No named
+loss response, universal null, retail equivalence or VERIFIED promotion.
+Dynamic chains remain single-source; original ELF independently constrains
+counter meaning and diagnostic address arithmetic. Both flights preserved.
+
+Both builds passed; six live fixup replay checks stable; helper controls
+cover selection, VI boundaries/readback/early stops; parser controls reject
+wrong NPC/missing SEND/missing changing readback and separate incidental
+id10. Syntax and diff checks pass. Final analyzer hash in response.json;
+launch manifest retains its pre-analysis-edit hash. Durable report updated:
+docs/G1-OBJECTIVE-RESPONSE.md; CURRENT-TRUTH headline/supersession/backlog
+updated. NEXT is one descriptor-targeted lvl1 named loss response below
+failure gates, full census/candidate/effect table in one build/run.
+Outcome ADVANCED; STATUS DONE.

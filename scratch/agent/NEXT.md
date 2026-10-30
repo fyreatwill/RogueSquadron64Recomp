@@ -1,89 +1,82 @@
-# RESUME: level-1 named forced-victim objective response
+# Level-1 descriptor-targeted loss-counter response
 HYPOTHESIS-ID: g1-coverage-cd
 
-Checkpoint s6658: no build, launch, regeneration or adapter change. HEAD at
-entry was aa14d847f (s6657). The corrected saved result exists at
-scratch/agent/m6/g1_lvl0s6657_response_v2/response.json: 8 linked counter1
-changes, 13 changing readbacks, 0 crash lines, 167.87 s. Original failed
-join artifacts remain in g1_lvl0s6657_response/. Static ELF windows/helper
-controls are in scratch/agent/s6657_response/. Do not rerun level0.
+s6659 completed the generalized adapter and one corrected flight. Do not
+repeat the generic recipe: it produced two complete id10 chains, no named
+13/40/41 response. No win/progression/aim/steering work. No repeat holds.
 
-The level1 work has NOT started: runner has only tag/--analyze and sets
-LEVEL='0'; adapter selection is still level0. The --level 1 command below
-is a future command AFTER implementing the adapter and CLI, not runnable
-against the checkpoint. Exact first command for the resumed unit:
-    rg -n 'RECOMP_FUNC void lv1_(checkComplexObjectives|calculateFriendliesSaved|objectiveSlot1)' ../N64Recomp/RecompiledFuncs/funcs_43.c
-Then read bounded windows and original ELF as below, implement the entire
-level1 discriminator before one build/run. Do not confuse the existing
-level0 positive result with evidence about level1.
+Read CURRENT-TRUTH, this file, SOAK-RESULTS tail in that order; wc -c first.
+Maintenance threshold is60000. Current iteration did not trigger it.
 
-One bounded adapter generalization plus ONE forced-level-1 flight. Reuse
-s6657's complete off/on/off and actual-store join; do not build a new
-instrument one field at a time. Level0 now has eight complete triads and
-13 live readbacks (docs/G1-OBJECTIVE-RESPONSE.md), single-source dynamic
-response. Do not repeat it or tune aim, steering, wins or progression.
+One bounded change + ONE selected-level1 flight: target forced collision
+candidates whose actual NPC descriptor declares counter13/40/41, preserving
+the existing off/on/off and exact identity table. Stop at the FIRST live
+named loss-counter response (including its readback), far below id13>=5.
+Default behavior remains retail. Do not force completion/Boolean6.
 
-Competing hypotheses:
-- H-response: an actual objective counter read by the lv1 callback changes
-  for a forced victim, with descriptor index/delta semantics supporting it.
-- H-incidental: the changes are baseline, Boolean-only, failure-related or
-  counters not used by lv1's objectives (saved id13 meaning is unresolved).
-- H-route/control: forced selector/callback or live changing-value control
-  is absent. This outcome is unevaluated, never a controlled null.
+Hypotheses:
+- H-response: a descriptor-selected victim reaches accepted SEND, actual
+  counter writer and callback readback for13/40/41. It is a loss response,
+  not successful progress; original ELF proves the semantics.
+- H-victim-selection: relevant live NPC descriptors exist but are absent
+  from the collision candidate population or rejected before the lever.
+- H-effect: relevant forced candidates receive accepted SEND, but do not
+  invoke their descriptor's objective counter writer within the measured
+  flight. This is a limited no-response result, not proof of broken logic.
 
-Discriminator: ONE event table joins explicit selected flight epoch + VI +
-off/on/off arm + forced shape/projectile + parent node + NPC payload +
-descriptor + accepted hit SEND + actual writer PC/index/old/new + callback
-readback. Exact victim/index/delta identity, not arm rates, selects response.
-Classify success/failure semantics from the original ELF before running.
+Discriminator, ONE instrument/build/run: per-arm live NPC descriptor census
+with index/delta and Boolean fields, candidate eligibility and rejection
+reason, force shape/projectile/node/NPC/descriptor, accepted SEND, actual
+store PC/id/old/new and callback readback. Include a mark-all ELIGIBILITY
+control that visibly labels the known id10 candidates in this SAME run;
+keep actual changing counter values as the independent detection control.
+A live-target/candidate population split selects H-victim-selection; a
+complete named chain selects H-response; accepted named hits without their
+writer select H-effect only with all controls firing. Missing target/control
+means unknown. Do not spend another iteration threading one join field.
 
-Ground truth and boring checks first:
-    wc -c < docs/CURRENT-TRUTH.md
-    sed -n '1,100p' docs/G1-OBJECTIVE-RESPONSE.md
-    sed -n '1,100p' docs/M6-OBJECTIVE-COUNTER-WRITERS.md
-    sed -n '1,200p' tools/apply_s6657_objective_response.py
-    sed -n '1,160p' tools/g1_objective_response_run.py
-    rg -n 'RECOMP_FUNC void lv1_(checkComplexObjectives|calculateFriendliesSaved|objectiveSlot1)' ../N64Recomp/RecompiledFuncs/funcs_43.c
-Read bounded windows around those hits (never whole generated files),
-extract their guest PCs, and inspect the ORIGINAL ELF, <=60 lines/output:
-    python3 tools/disasm_mips_elf.py ../rogue_squadron64/build/roguesquadron.elf <start> <stop>
-Read docs/debug-trace-env-vars.md before adding logging. Existing oracle
-is undriven in missions; a boot-only null is not a witness.
+Ground truth BEFORE instrumentation:
+    sed -n '150,245p' docs/G1-OBJECTIVE-RESPONSE.md
+    cat scratch/agent/s6659_response/lv1_friendlies_elf.txt
+    cat scratch/agent/s6659_response/lv1_callback_elf.txt
+    cat scratch/agent/s6657_response/destruction_elf.txt
+    rg -n 'rs5841_cand|rs5837_en &&|rs6657_gate|rs6657_force' tools/apply_s5835_sphere_probe.py tools/apply_s6657_objective_response.py
+    sed -n '1,210p' tools/apply_s6657_objective_response.py
+    sed -n '1,165p' tools/g1_objective_response_run.py
+    sed -n '28,39p' docs/debug-trace-env-vars.md
+Verify descriptor offsets/field meaning with original ELF, <=60 lines per
+window, before filtering. node+4->NPC; NPC+0x34->descriptor. Do not mistake
+SEND cls13 for a proven counter13 target without the original load chain.
+Use tools/disasm_mips_elf.py ../rogue_squadron64/build/roguesquadron.elf.
+Counter13 at80138090; 40 at801380FC;41 at80138100; Boolean6 at801388A5.
+Friendlies-saved=19-(40+13+41); c13>=5 fails, Boolean6==1 completes.
 
-Implement explicit ROGUESQ_OBJECTIVE_RESPONSE_LEVEL=1 (default 0 preserves
-s6657) in the existing adapter, a lv1 callback hook, and --level 1 in the
-existing runner (both currently hardcode level0). Scope the full selected
-counter readback to the flight; seven actual stores already cover the known
-writer class. Do not assume counters 1..3 suffice for lv1. Pick conservative
-stop limits from the original callback gates; stop well below success or
-failure/end gates. If necessary stop after the first full named response.
-The existing 0/1800/4200/5400 VI windows are flight-relative, not wall-clock.
-Resolve slots as table[id*8] -> parent; parent+4 -> NPC; NPC+0x34 -> desc.
-Attribution may use exact s-register identity plus live descriptor equality;
-label it as a join, not an independently observed call stack. Keep the
-accepted [eff2] SEND witness; it must visibly fire in the measured arm.
-The legacy health helper can read meaningless values on some objects; it
-is NOT damage proof. The lever includes NPC bolts (w hardcoded0), so do not
-claim player shots or aim. Nulls still require live value-detection controls.
+All generated hooks go in persistent adapter/fixup replay. The s5857 health
+helper was FIXED this iteration: unsigned C arithmetic manufactured a4GiB
+host offset. Do not restore the old expression or add a guest-pointer guard.
+Reproduction/ELF/control evidence: scratch/agent/s6659_response/.
+Adapter/health replay stability passed six checks. Do not run full fixup on
+the existing tree. If regeneration is needed: make_elf -> N64Recomp ->
+fixup_game_funcs -> cmake. Preserve lib worktrees.
 
-Persist every generated hook through the fixup replay, apply to the live
-tree and build once (fix any actual implementation failure this iteration):
+After implementing the entire discriminator and writing the exact selected
+counter stop/positive-control design here, use:
     python3 tools/apply_s6657_objective_response.py
     cmake --build build --target RogueSquadron64Recomp -j5
-If regenerating, obey make_elf -> N64Recomp -> fixup -> cmake; do not run
-full fixup on the existing tree. Preserve submodule patches.
-
-AFTER the above CLI/adapter generalization exists, exact planned run:
     /usr/sbin/ioreg -n Root -d1 | rg 'CGSSessionScreenIsLocked'
-    python3 tools/g1_objective_response_run.py s6659_response --level 1
-    python3 tools/g1_objective_response_run.py s6659_response --level 1 --analyze
-The wrapper must update its output path to g1_lvl1s6659_response; refuse
-reuse, record binary/source/env manifest, run from build/ with ROM, watchdog
-itself and SIGKILL the recipe group at done (360s hard timeout). Screen must
-be unlocked. All arms belong to this one flight. No repeat-soak queue needed.
+    python3 tools/g1_objective_response_run.py s6660_targeted --level 1
+    python3 tools/g1_objective_response_run.py s6660_targeted --level 1 --analyze
+Screen must be unlocked. Runner uses a fresh path, binary/source/env
+manifest, 360s hard timeout, SIGKILL recipe group on done/crash. Run from
+build with ROM via existing recipe. No queued repeat soak needed.
 
-Expected outcomes: a complete force/SEND/store/readback chain for a named
-lv1 objective counter selects H-response; classified failure/other activity
-selects H-incidental. Missing identity/control stays unknown. Record every
-failed arm or hook honestly. No full VERIFIED promotion on single-source
-retail equivalence, no mission completion, no default-setting change.
+Preserved s6659 evidence:
+- g1_lvl1s6659_response/: one host diagnostic SIGSEGV before TELE-on,
+  rs5857_hp+212, far400319130; first flight is not a behavioral arm.
+- g1_lvl1s6659_response_v2/:176.59s, VI5271..10674,25 forces,0 crashes,
+  id10 0->4->8->8,8 live readbacks; two exact incidental chains seq14/17.
+  ids13/40/41 and Boolean6 stay0. No full VERIFIED promotion.
+- response.json records final analyzer hash; launch manifest preserves the
+  earlier analyzer version. Neither log was overwritten. Dynamic chain
+  causality remains single-source; original ELF supplies independent
+  semantic/address-calculation constraints, not retail equivalence.

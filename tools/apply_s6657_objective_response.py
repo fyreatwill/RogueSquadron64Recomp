@@ -8,6 +8,7 @@ FILES = ('funcs_15.c', 'funcs_16.c', 'funcs_35.c', 'funcs_41.c', 'funcs_43.c')
 DECL = r'''
 extern int rs6657_gate(uint8_t*);
 extern void rs6657_callback(uint8_t*);
+extern void rs6657_callback_level(uint8_t*, int);
 extern void rs6657_force(uint8_t*, uint32_t, uint32_t, uint32_t);
 extern void rs6657_damage(uint8_t*, uint32_t, int, int);
 extern void rs6657_write(uint8_t*, recomp_context*, uint32_t, uint32_t, uint32_t, uint32_t);
@@ -19,11 +20,12 @@ extern volatile uint32_t rs64_vi_n_g;
 _Thread_local uint32_t rs6657_victim;
 static int rs6657_en = -1, rs6657_seen, rs6657_started, rs6657_done;
 static uint32_t rs6657_start, rs6657_arm = 99, rs6657_rows[3], rs6657_hits[3], rs6657_dmg[3], rs6657_seq;
-static uint32_t rs6657_prev[3]; static unsigned rs6657_read_init;
+static int rs6657_level;
+static uint32_t rs6657_prev[128], rs6657_bool6; static unsigned rs6657_read_init;
 static struct { uint32_t seq, vi, shape, node, npc, desc, proj; } rs6657_events[256];
 static unsigned rs6657_ne;
 static int rs6657_enabled(void) {
-    if (rs6657_en < 0) { const char* e = getenv("ROGUESQ_OBJECTIVE_RESPONSE"); rs6657_en = e && e[0] == '1'; }
+    if (rs6657_en < 0) { const char* e = getenv("ROGUESQ_OBJECTIVE_RESPONSE"); rs6657_en = e && e[0] == '1'; const char* l = getenv("ROGUESQ_OBJECTIVE_RESPONSE_LEVEL"); rs6657_level = l ? atoi(l) : 0; if (rs6657_level != 0 && rs6657_level != 1) rs6657_en = 0; }
     return rs6657_en;
 }
 static uint32_t rs6657_word(uint8_t* rdram, uint32_t a) { return (uint32_t)MEM_W(S32((int32_t)a), 0); }
@@ -33,16 +35,16 @@ static uint32_t rs6657_desc(uint8_t* rdram, uint32_t o) {
 static int rs6657_flight(uint8_t* rdram) {
     if (!rs6657_enabled() || rs6657_done) return 0;
     uint32_t origin = rs64_vi_committed_origin() & 0xFFFFFFu;
-    int selected = MEM_BU(S32((int32_t)0x80130B40u), 0) == 0;
+    int selected = MEM_BU(S32((int32_t)0x80130B40u), 0) == rs6657_level;
     int flight = rs64_vi_committed_width() == 512 && (origin == 0x690400 || origin == 0x620400);
     if (!rs6657_started) {
         if (!rs6657_seen || !selected || !flight) return 0;
         rs6657_started = 1; rs6657_start = rs64_vi_n_g;
-        fprintf(stderr, "[objresp-epoch] epoch=1 vi=%u origin=%06x width=512 B40=0 callback=lv0_checkComplexObjectives\n", rs6657_start, origin);
+        fprintf(stderr, "[objresp-epoch] epoch=1 vi=%u origin=%06x width=512 B40=%d callback=lv%d_checkComplexObjectives\n", rs6657_start, origin, rs6657_level, rs6657_level);
     }
     uint32_t dv = rs64_vi_n_g - rs6657_start;
     uint32_t c1 = rs6657_word(rdram, 0x80138060u), c2 = rs6657_word(rdram, 0x80138064u), c3 = rs6657_word(rdram, 0x80138068u);
-    if (!selected || !flight || dv >= 5400 || c1 >= 18 || c2 >= 1 || c3 >= 1) {
+    if (!selected || !flight || dv >= 5400 || (rs6657_level == 0 ? (c1 >= 18 || c2 >= 1 || c3 >= 1) : (rs6657_read_init && (rs6657_prev[12] >= 3 || MEM_BU(S32((int32_t)0x801388A5u), 0))))) {
         rs6657_done = 1;
         fprintf(stderr, "[objresp-done] epoch=1 vi=%u dv=%u selected=%d flight=%d c=%u,%u,%u forces=%u,%u,%u writes=%u,%u,%u damage=%u,%u,%u\n", rs64_vi_n_g, dv, selected, flight, c1, c2, c3, rs6657_hits[0], rs6657_hits[1], rs6657_hits[2], rs6657_rows[0], rs6657_rows[1], rs6657_rows[2], rs6657_dmg[0], rs6657_dmg[1], rs6657_dmg[2]);
         fflush(stderr); return 0;
@@ -55,18 +57,24 @@ static int rs6657_flight(uint8_t* rdram) {
     return 1;
 }
 int rs6657_gate(uint8_t* rdram) { return !rs6657_enabled() || (rs6657_flight(rdram) && rs6657_arm == 1); }
-void rs6657_callback(uint8_t* rdram) {
-    if (!rs6657_enabled()) return;
+void rs6657_callback_level(uint8_t* rdram, int level) {
+    if (!rs6657_enabled() || level != rs6657_level) return;
     rs6657_seen = 1;
     if (!rs6657_flight(rdram)) return;
-    for (unsigned i = 0; i < 3; i++) {
+    for (unsigned i = 0; i < (rs6657_level == 0 ? 3u : 128u); i++) {
         uint32_t value = rs6657_word(rdram, 0x80138060u + i * 4);
         if (!rs6657_read_init || value != rs6657_prev[i])
             fprintf(stderr, "[objresp-readback] epoch=1 vi=%u arm=%u id=%u old=%u new=%u initialized=%u\n", rs64_vi_n_g, rs6657_arm, i + 1, rs6657_prev[i], value, rs6657_read_init);
         rs6657_prev[i] = value;
     }
+    uint32_t bool6 = MEM_BU(S32((int32_t)0x801388A5u), 0);
+    if (rs6657_level == 1 && (!rs6657_read_init || bool6 != rs6657_bool6))
+        fprintf(stderr, "[objresp-bool] epoch=1 vi=%u arm=%u id=6 old=%u new=%u initialized=%u\n", rs64_vi_n_g, rs6657_arm, rs6657_bool6, bool6, rs6657_read_init);
+    rs6657_bool6 = bool6;
+    if (!rs6657_read_init) fprintf(stderr, "[objresp-semantics] level=%d vi=%u c13=%u c40=%u c41=%u bool6=%u friendlies=19-(c40+c13+c41)\n", rs6657_level, rs64_vi_n_g, rs6657_word(rdram, 0x80138090u), rs6657_word(rdram, 0x801380FCu), rs6657_word(rdram, 0x80138100u), MEM_BU(S32((int32_t)0x801388A5u), 0));
     rs6657_read_init = 1;
 }
+void rs6657_callback(uint8_t* rdram) { rs6657_callback_level(rdram, 0); }
 void rs6657_force(uint8_t* rdram, uint32_t shape, uint32_t npc, uint32_t proj) {
     if (!rs6657_enabled() || !rs6657_flight(rdram)) return;
     uint32_t node = npc;
@@ -121,7 +129,19 @@ WRITERS = {
 }
 
 def apply(text, name):
-    if name not in FILES or TAG in text:
+    if name not in FILES:
+        return text, 0
+    if TAG in text:
+        if name == 'funcs_16.c':
+            start = text.index('extern uint32_t rs64_vi_committed_width(void), rs64_vi_committed_origin(void);', text.index('/* ' + TAG))
+            stop = text.index('static void rs5835_probe(', start)
+            updated = text[:start] + HELPERS.lstrip('\n') + '\n' + text[stop:]
+            return updated, int(updated != text)
+        if name == 'funcs_43.c' and 'rs6657_callback_level(rdram, 1);' not in text:
+            text = text.replace('extern void rs6657_callback(uint8_t*);', 'extern void rs6657_callback(uint8_t*);\nextern void rs6657_callback_level(uint8_t*, int);', 1)
+            a = 'RECOMP_FUNC void lv1_checkComplexObjectives(uint8_t* rdram, recomp_context* ctx) {'
+            assert text.count(a) == 1
+            return text.replace(a, a + '\n    rs6657_callback_level(rdram, 1);'), 1
         return text, 0
     text = text.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + DECL + '/* ' + TAG + ' */\n', 1)
     assert TAG in text
@@ -142,6 +162,9 @@ def apply(text, name):
         a = 'RECOMP_FUNC void lv0_checkComplexObjectives(uint8_t* rdram, recomp_context* ctx) {'
         assert text.count(a) == 1
         text = text.replace(a, a + '\n    rs6657_callback(rdram);')
+        a = 'RECOMP_FUNC void lv1_checkComplexObjectives(uint8_t* rdram, recomp_context* ctx) {'
+        assert text.count(a) == 1
+        text = text.replace(a, a + '\n    rs6657_callback_level(rdram, 1);')
     if name == 'funcs_41.c':
         a = '    int post = rs5857_hp(rdram, o); unsigned z;'
         assert text.count(a) == 1

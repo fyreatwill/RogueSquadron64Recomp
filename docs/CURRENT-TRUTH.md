@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6657 (2026-10-29).
+Compact operational handoff, as of Session 6659 (2026-10-30).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -312,7 +312,25 @@ and "Archive: CURRENT-TRUTH body s6378-s6551").
   runner/analyzer: tools/g1_objective_response_run.py. Table and limits:
   docs/G1-OBJECTIVE-RESPONSE.md. Next missing named response is level1.
 
+- **G1(d) level 1: generic forced victims hit id10, not the named loss counters (s6659).**
+  Corrected single-flight off/on/off, B40=1 plus lv1 callback, VI5271..10674,
+  176.59 s, 25 forces, 0 crashes. Two exact force→N SEND→pc8006594c→readback
+  chains increment id10 6→7 and7→8. Eight actual id10 readback changes are
+  the live value-detection control. ids13/40/41 and Boolean6 remain0.
+  Original ELF: friendlies saved=19-(c40+c13+c41), c13>=5 fails;
+  Boolean6 completes. Thus H-incidental under the direct-callback-counter
+  discriminator; no named loss response or VERIFIED promotion. Whether id10
+  feeds another mission script is untested. Dynamic response is single-source.
+  First attempt crashed in the s5857 host health diagnostic before TELE-on:
+  unsigned C promotion made a valid guest address read4GiB too high.
+  Persistent address calculation corrected to match MIPS32 SLL/ADDU;
+  same-input old expression SIGSEGV, fixed expression passes. Corrected
+  flight passes the fault point. No guest guard, lib edit or default change.
+  Details: docs/G1-OBJECTIVE-RESPONSE.md; scratch/agent/m6/g1_lvl1s6659_response_v2/.
+  Next: one descriptor-targeted lv1 loss-counter response below its gate.
+
 ## Superseded conclusions — do not act on these
+- s6656/s6657 "level1 counter13 meaning unresolved" (s6659 original ELF identifies it in friendlies-saved subtraction and the >=5 Bit4 gate). Believable because historical activity logs supplied indices but no per-level semantics. Hit causality for counter13 remains unresolved; the corrected live flight changes only id10.
 - s5962 "lvl6 null is valid because hb ticks fires" (s6656: heartbeat controls execution, not detection of value changes; the monitor covers only ids 1–15 and has a run-lifetime budget). Believable because TELE and hook execution both fired, but no same-run changing-value control established sensitivity to every relevant objective slot.
 - s5995 "lvl7 id2 peak3 matches the objective threshold" (s6656: that threshold belongs to lv0; the lvl7 callback's inspected reads include ids 20/30/40/99, outside the monitor). Believable because all levels reuse the counter array; index meaning and thresholds are level-specific. Lvl7 end remains the lives-loss chain observed in both arms, not id2 causality.
 - s5994–s5995 "lvl8 counter6 resets during the measured response" (s6656: first explicit flight epoch contains only 0>1>2>3>4; 4>0 is later). Believable because the old parser pooled run-lifetime events including re-entry. The reset remains real, but is not part of the first-epoch response.
@@ -495,15 +513,17 @@ owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6657) Level-1 named forced-victim objective response.**
-   Generalize the existing single-flight adapter for level1 after checking
-   lv1_checkComplexObjectives and descriptor counter semantics in the
-   original ELF. Saved id13 activity has unresolved meaning; do not assume
-   it is success or transplant lv0 counter1/threshold21. One build carries
-   off/on/off gating, all seven actual writer sites, a callback readback
-   of the relevant counters, and node→NPC payload→descriptor→accepted SEND
-   joins. Use one forced LEVEL=1 flight; no cross-run animated A/B, wins,
-   progression, aim work, repeat holds or crash sweep. Exact handoff NEXT.md.
+1. **(s6659) Descriptor-targeted level-1 loss-counter response.**
+   The generic lever now has two complete id10 chains but no13/40/41 change.
+   Select candidates by their original-ELF descriptor counter/delta fields,
+   not guessed shape class or aim. Build the entire candidate→force→SEND→
+   actual writer→callback table once, with a mark-all eligibility control
+   inside the same flight; off/on/off and conservative stops remain. Stop
+   at the first named loss response, below c13>=5/Boolean6 completion.
+   H-response: exact named loss chain; H-victim-selection: live relevant
+   targets never reach the candidate lever; H-effect: accepted relevant
+   hits do not reach the descriptor writer. Missing controls stay unknown.
+   No wins, progression, steering, repeat holds or crash sweep. NEXT.md.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**
