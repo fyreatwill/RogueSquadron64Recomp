@@ -693,3 +693,107 @@ slot-generation records, retirements, handlers, phase-scoped candidate totals
 and selection controls. This run is single-source dynamic evidence;
 original ELF independently establishes ownership semantics, not retail
 behavioral equivalence. No new queued-soak verdicts or library edits.
+
+
+### s6664 — complete captured level-2 handler class
+
+Original ELF SHA256: `f6809909002b407b339ca0331e54faea895ac2730f15152ab5221307442f6cc9`.
+
+Original ELF audit covers all 23 handler addresses in the s6663 roster, using
+symbol-bounded disassembly and the original dispatch tables, rather than
+inferences from placeholder names or host execution. Typed values now mean
+1 = ordinary objective damage, 2 = excluded from that route, 3 = DAT spawn
+trigger, 0 = unknown. An unknown kind still rejects forcing. A classified
+kind is not proof that a count40 target exists. This table covers the captured
+roster, not every handler the game could ever spawn.
+
+| Original handler | Message-5 route / original witness | Class |
+|---|---|---|
+| 800403EC randomBurstNpcHandlerVariant | switch falls to 80040978 | 2 |
+| 80044724 cutsceneActorNpcHandler | switch falls to 80044BC4 | 2 |
+| 8004C6C8 byteAnimatedDebrisNpcHandler | switch falls to 8004CBE0 | 2 |
+| 8005427C attachedMeshOverlayNpcHandler | switch falls to 800543DC | 2 |
+| 8005BCC4 cinematicSplineWalkerNpcHandler | switch falls to 8005C59C | 2 |
+| 8005C874 audioCueDispatcherNpcHandler | table 8003AFA8[4] = 8005D914, return | 2 |
+| 80060690 randomlyScaledEffectNpcHandler | switch falls to 800608E8 | 2 |
+| 80060D8C minimalRandomNpcHandler | switch falls to 80061074 | 2 |
+| 8006F6A0 npcDebris1Update | switch falls to 8006FC70 | 2 |
+| 8006FC90 orientedNpcHandler | switch falls to 80070088 | 2 |
+| 800700A8 multiEventTemplateNpcHandler | table 8003CC30[4] = 80071038, return | 2 |
+| 80072EC4 npcWaterSprayUpdate | switch falls to 8007372C | 2 |
+| 80076BE4 npcWakeUpdate | switch falls to 80077220 | 2 |
+| 800B7168 playerAwingUpdate | table 800A5AE0[4] = 800B745C; sound, slot cleanup | 2 |
+| 800BF4A0 attached3DSoundEmitterNpcHandler | switch falls to 800BF764 | 2 |
+| 800C0084 handleHUD | table 800A6458[4] = 800C1050; shake floats +248/+24C, random byte +F7F | 2 |
+| 800C68A0 hangarVehicleDisplayNpcHandler | switch falls to 800C6FD8 | 2 |
+| 800CABD4 npcProbeDriod | table 800A6C10[4] = 800CB8D4; damage CB934, objective CBD34 | 1 |
+| 800D5208 npcDebrisFieldUpdate | table 800A7610[4] = 800D5AA0; ordinary damage D5D1C, objective D5DA8 | 1 |
+| 800D93C0 npcWingmanUpdate | table 800A7A00[4] = 800D9BB0; damage D9C54, objective D9D28 | 1 |
+| 800DB11C npcTieVariantUpdate | table 800A7C10[4] = 800DBE08; damage DBECC, objective DBF68 | 1 |
+| 800ECC28 craftMountedAnimationNpcHandler | switch falls to 800ECDCC | 2 |
+| 800ECE10 datItemActorNpcHandler | no message5; default ED130, descriptor store ECE48 | 3 |
+
+Table indices are zero-based after message-minus-one dispatch. All damage
+rows use node+4 payload, payload+34 descriptor, payload+38 actor and the
+six descriptor fields +70..+84 on ordinary death. Original descriptor stores:
+CAC64, D52A4/D52D0, D94B0, DB1B0/DB1B4. D5208 has a distinct message5
+subevent12 path (D5AA0..D5C10) whose objective fields start at +B0. The
+adapter does not treat those as ordinary death fields or dose that event.
+
+ECE10 stores the incoming spawn descriptor at payload+0. Its +34 is a
+float, zeroed at ECEC4. The descriptor's +34/+38/+3C are Boolean/counter
+conditions (ECF04..ECF58); +6C/+70 limit spawn totals (ECF60..ECFCC).
+It eventually calls spawnDatStructureNpcByType, not the ordinary damage
+writer. Thus payload+0 is recorded for ownership, but its +70 is never
+interpreted as an objective index and it cannot select a projectile force.
+This establishes a script boundary, not a claim that this script writes40.
+
+The persistent adapter now classifies the whole roster and extends the
+existing exact SEND / ordinary-health / death-effect witness to all four
+damage handlers. NPC/message registers come from the original sites:
+probe r17/r19, debris r17/r19, wingman r16/r18, TIE r17/r16. The additional
+witness runs only for the opt-in level2 probe; level0/1 and disabled behavior
+are preserved. No lethal level2 dose is enabled. Fixture checks cover all23
+kinds, every descriptor variant, deliberately count-like data in excluded
+kinds, free/stale/unknown/cyclic cases, parameterized health context,
+success exclusions and the level1 controls. These are local controls, not
+retail evidence. Generated replay is idempotent on nine files; build passes.
+Original hash, disassemblies, tables, fixtures and build logs are in
+`scratch/agent/s6664_lvl2_kinds/`.
+
+
+The single flight completed in 171.81 s, first epoch VI4955..10356, B40=2,
+off/on/off, zero crashes and zero forces. All20 free-list snapshots validate;
+active slots33..607, stale pointers0..335. The23 mapped kinds classify
+7,836 slot generations (688 damage,7,130 excluded,18 DAT trigger).
+Two later kinds contribute six more generations and up to three concurrent
+unknown slots: 8006C3A0 splineWalkerCraftNpcHandler and 80075720
+heavyRandomBurstNpcHandler. Their original switches send message5 directly
+to 8006C4E0 and 80075B88 respectively; neither has an ordinary damage path.
+Both are now class2 in the final adapter and reject count-like fixtures.
+That last two-kind change was applied AFTER the flight and rebuilt/tested,
+not flight-tested; both class0 and class2 reject forcing. The saved
+captured_adapter.py and six all-true capture_hash_check.json entries identify
+the actual capture revision. Do not retroactively report unknown=0 for it.
+
+All25 observed kinds now have an original-backed classification. This closes
+the sparse-handler-map work unit; it does not close target availability.
+No count40 live descriptor, eligible candidate or accepted forced SEND was
+observed. Some birth/retirement rows have uninitialized/cleared descriptor
+pointers; classification alone does not make those valid descriptor reads.
+The run does not test a forced count40 hit or exclude later script spawns.
+Positive controls: mark-all eligible identities15/17/16; all three local
+selector fixtures accept40/reject success; six actual callback counter
+changes. The new health witness records ten natural damage pre/returns:
+200→190,20→10,10→0,20→10,20→10,10→0,10→2,10→0,20→10,10→0;
+all match raw damage and returned health, including four deaths. Those
+actual reductions control health sensitivity; no force_seq is associated
+with them. Descriptor death fields are count0, not40. Thus natural damage
+route observability is established; forced objective causality is not.
+Candidate rows62498/125562/61216;7,842 slot generations and7,481 retirements.
+Full rows/joins are in scratch/agent/m6/g1_lvl2s6664_kinds/response.json;
+compact summary is scratch/agent/s6664_lvl2_kinds/summary.json. Dynamic
+findings remain single-source; independent ELF backs structure/dispatch
+only. No VERIFIED promotion, win, default change, library edit or new soak
+verdict. Next is the original level2 DAT producer/spawn boundary for count40,
+not a repeat of this map flight or another per-handler census.

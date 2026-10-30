@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6663 (2026-10-30).
+Compact operational handoff, as of Session 6664 (2026-10-30).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -586,18 +586,19 @@ owner playtest scope.
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **(s6663) Finish level2 original handler ownership class.** The corrected
-   free-list census proves stale aliases inflated prior counts, but22 of23
-   observed handler kinds have no classified descriptor path. Audit the
-   entire captured roster against original ELF; encode descriptor offsets
-   or prove non-objective/message-ineligible, then extend the persistent
-   adapter's map and target predicate together. Prioritize WingmanUpdate,
-   TieVariantUpdate and datItemActorNpcHandler (its descriptor is payload+0,
-   not +0x34). Do not repeat the same sparse-map flight or add another
-   diagnostic field. Existing full lifetime/candidate/SEND/health/store
-   table is sufficient. Only validate a new original-backed eligible
-   target; never dose an arbitrary object or infer absent targets from
-   unresolved kinds. No direct state writes, wins, aim or progression.
+1. **(s6664) Identify level2 count40's DAT producer/spawn boundary.**
+   Handler audit closed: all25 observed kinds classified from original ELF.
+   Probe/debris-field/wingman/TIE use payload+34 ordinary death fields;
+   DAT actor uses payload+0 spawn metadata, never death +70. One flight
+   VI4955..10356,171.81s,0 crashes/forces; no count40 observed. Mark-all
+   15/17/16, six natural counter changes and ten actual health reductions
+   control sensitivity, not target existence. Two late kinds were unknown
+   in the capture, independently proved message5-ineligible and added after
+   it (build/fixtures only). Do not report capture unknown=0. Next: original
+   DAT producer/conditions and a complete typed descriptor inventory with
+   spawn causality if needed; no repeat map flight, lethal dose, arbitrary
+   victim, win or direct state write. Full evidence G1-OBJECTIVE-RESPONSE.md
+   and scratch/agent/s6664_lvl2_kinds/. Dynamic evidence single-source.
 
 ### Archived historical next-step entries
 -1. **(s6602) Attribute the wide-only hangar bands to the framebuffer stride path.**

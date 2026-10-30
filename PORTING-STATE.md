@@ -174376,3 +174376,57 @@ persistent ownership/predicate/analyzer correction plus completed validation
 with a discriminating stale-pointer result. Next: classify the entire
 23-handler original ownership class and actual count40 producer before
 another flight, not a one-field/one-kind diagnostic campaign.
+
+
+## Session 6664 (2026-10-30) — classify the full level-2 handler roster from original dispatch
+
+Work unit: finish the captured ownership class, not another sparse-map
+flight. Maintenance check59419 bytes (<60000); no new queued-soak verdicts.
+Original ELF SHA256 f6809909002b407b339ca0331e54faea895ac2730f15152ab5221307442f6cc9;
+23 symbol-bounded handlers and eight original message tables audited.
+Four observed kinds have ordinary damage/objective paths (probe, debris
+field, wingman, TIE variant);18 reject that route; DAT actor has payload+0
+spawn descriptor, not payload+34 death metadata. The persistent adapter now
+classifies those kinds separately and only class1 can select forced hits.
+Debris special event12 uses descriptor+B0, ordinary death uses+70; DAT
+actor's+70 is a spawn limit and never interpreted as an objective index.
+ORIGIN: original descriptor writers CAC64,D52A4/D52D0,D94B0,DB1B0/DB1B4
+establish payload+34; ECE48 establishes payload+0. Player message5 is
+sound/slot cleanup; HUD message5 changes shake fields, not death counters.
+These values are legitimate heterogeneous structures; no game corruption
+or skip/restore mitigation is claimed. Complete original-address table in
+docs/G1-OBJECTIVE-RESPONSE.md. Existing SEND/health/effect witness extended
+to all four damage handlers with their original NPC/message registers;
+new hooks run for opt-in level2 only. Level0/1/default behavior preserved.
+
+One unlocked off/on/off flight, VI4955..10356,171.81s,0 crashlines,0 forces.
+20/20 free-list snapshots valid;33..607 active slots,0..335 stale pointers;
+7,842 observed slot generations,7,481 retirements,25 handler kinds.
+Mapped classes:688 damage,7,130 excluded,18 DAT-trigger generations.
+Two late types (six generations, up to3 live slots) remained unknown in
+THIS capture: splineWalkerCraft6C3A0 and heavyRandomBurst75720. Independent
+ELF switches send message5 to returns6C4E0/75B88. Both were added as excluded
+AFTER the flight, then rebuilt and fixture-tested; no second flight or
+retroactive unknown=0 claim. Both old class0/new class2 reject forcing.
+Actual captured adapter saved; all six manifest hashes matched before the
+postcapture exclusion-only update. Final build/replay/fixtures pass.
+Fixtures cover all25 roster kinds, descriptor variants, planted count-like
+excluded data, free/stale/unknown/cyclic cases, parameterized health context,
+level1 controls, success exclusions and level2 lethal-env inhibition.
+
+No count40 descriptor/eligible candidate/forced SEND observed. Mark-all
+controls15/17/16; local selector fixtures in all arms; six real callback
+counter changes. Ten natural damage pre/returns change health by raw amount
+and return the new health, including four deaths. Those control health
+sensitivity, not count40 target existence or forced-hit causality. Some
+birth/retirement rows have cleared descriptors; no absence claim. This
+closes the sparse-handler-map unit and rules out treating these known
+non-damage structures as missing objective layouts. H-activation/H-layout
+for the actual count40 producer remain open; dynamic evidence single-source.
+No forced objective response, win, VERIFIED promotion, library/default
+change or new queued soak. No failed game experiment; preflight helper
+wrapper tightened to keep new hooks level2-only, tested before launch.
+Evidence scratch/agent/s6664_lvl2_kinds/ (original manifests/disassemblies,
+summary, fixtures/build logs) and scratch/agent/m6/g1_lvl2s6664_kinds/.
+NEXT: original level2 DAT definition/activation/ownership table for count40;
+no repeat map flight, no one-handler-per-session campaign.
