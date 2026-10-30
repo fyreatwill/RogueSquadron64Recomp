@@ -1086,3 +1086,90 @@ Next: one complete ordinary City_1 hit/slot/health/store/friendlies-readback
 experiment, with original registered-handler audit in the same unit. Stop
 forcing after one named change; exclude all success/failure setters. Do not
 reuse the level2 NPC+34/D3894 ownership layout for subtype0x14.
+
+## s6670 — level 3 ordinary named-damage route qualification
+
+Original-ground-truth audit preceded runtime changes. The original subtype20
+setup-table entry8003BDD8 selects800653F4, whose handler is8006CBB0. Its
+spawn store8006CC24 sets payload+34=DAT; message5 table8003CA30 selects
+8006CF88. Health is DAT+6C+4*detail; store8006CFE8 subtracts message+6.
+The positive-health branch8006D278 skips effect8006D6F0. This differs from
+C7390's FFFF fallback, which applies subtype20 effect without a death gate.
+The retail City_1 definition independently supplies subtype20, health2000,
+counter28+1 only. No shuttle layout or lethal threshold was assumed.
+
+Two failed hit controls are retained separately:
+
+| recipe | first-flight VI epoch | wall s | requests | crash lines | limit |
+|---|---|---:|---:|---:|---|
+| s6670_response |5255..10657|176.42|0|0|No projectile-context candidates or accepted hits; no damage conclusion|
+| s6670_script |5312..10712|178.00|0|0|Adapter eligibility prevented script request; which extra filter stopped it was unmeasured|
+
+Both had actual counter readback changes3/12. The second also explicitly
+invoked original pure getterC761C: getter3 changes0→1 and equals memory.
+City_1 is observed with owned registered handler6CBB0 during the first
+epoch, but that does not establish its registration at a later request.
+No game-invoked friendlies-reader events were observed in either flight;
+there is no positive-control qualification of that hook here.
+Thus neither flight qualifies a silent objective or damage-path null.
+
+The corrected instrument calls original named script-damage API C7390 once
+with request10, after original name lookup equals the selected DAT entry and
+its health is positive. It observes the registration tuple and lets the API
+choose registered vs FFFF. This is a script-route test, not player-shot proof.
+A copied context preserves caller registers; the original API uses ordinary
+guest call-stack space. Explicit probe calls to the original stackless pure
+getter read3/27/28; they are labelled probe_call=1. The friendlies routine
+writes UI state and is never invoked by the probe. No direct health, counter,
+Boolean or timer stores, win or progression test are introduced.
+
+Original validation now checks97 literal ELF anchors, including handler
+tables, health arithmetic/gate, name lookup, pure getter and existing lv3
+script API callers. All97 individually changed instruction/table fixtures
+reject; level2 DAT controls remain unchanged. Both completed builds pass;
+the corrected third build passes. Positive/negative analyzer fixtures cover
+missing stages, mismatched identity/message, duplicate request and wrong
+health arithmetic/handler/return; generated-hook replay is idempotent.
+
+Corrected result (`s6670_script_v3`): one178.00s flight, epochVI5291..10692,
+off/on/off starts5291/7095/9491,0 crash lines. One request atVI7095:
+
+| link | observed value |
+|---|---|
+| original lookup | City_1 pointer80325F94 returns DAT80325EEC, base80325A60+048C |
+| live ownership | canonical slot429, generation1/birth5414, node8021A728, payload8038770C, handler8006CBB0 |
+| API / message5 | request10, stack message80165E80, sourceFFFF (script), api_seq1 |
+| original health writer | pc8006CFE8, DAT80325EEC+6C at80325F58, detail0,2000→1990 |
+| handler / API return | same message/node/payload/DAT; health1990, API return1990 |
+| counter28 |0 before and after; explicit original getter returns0/memory0 atVI9493 |
+
+The actual changing health store is the damage instrument's positive control.
+Actual getter3 changes0→1 atVI5361 and equals memory; all getter samples
+match memory. No second damage request occurs. `forces=0,0,0` is the separate
+TELE counter, not the script-request count. No fallback or effect-hook events
+were observed; those silent hooks have no same-run firing control and are NOT
+independent proof of absence. The original positive-health branch plus the
+joined store/return establishes a surviving registered ordinary hit; counter28
+remaining0 is consistent with it. H-registered selected for this request.
+The original game-invoked friendlies routine remains unqualified, with zero
+events; its100-(c27+c28) arithmetic is original-source evidence only. Explicit
+probe getters are not mislabelled as game invocations.
+
+ORIGIN: legitimate request10 enters original C7390, forwards message5 at
+C73F8, and original8006CFE8 writes1990 to the detail0 DAT health word. The
+value is ordinary surviving health, not corruption. No mitigation was added.
+Dynamic causality is single-flight; static retail DAT/ELF independently
+corroborate identity, health and route contracts. No death/counter response,
+retail equivalence, player-shot result or VERIFIED promotion is claimed.
+
+All6 current launch hashes match; twelve generated files replay unchanged.
+Build logs: scratch/agent/s6670_build{,_v2,_v3}.log. Compact proof with log
+line numbers/ownership/readers: scratch/agent/s6670_qualification.json; final
+full rows: scratch/agent/m6/g1_lvl3s6670_script_v3/response.{json,log}. Original
+97-anchor report and mutation controls: s6670_lvl3_original_v2.json and
+s6670_original_validation_v2.json under scratch/agent/. The two failed hit
+controls remain in g1_lvl3s6670_response/ and g1_lvl3s6670_script/. All runs
+were screen-unlocked at launch, retail rendering settings, SIGKILL stopped.
+Next bounded unit: same-flight ordinary control then one exact-owned City_1
+destruction dose, requiring actual counter28 store/readback/getter, with all
+Boolean setters excluded and no win/progression test.

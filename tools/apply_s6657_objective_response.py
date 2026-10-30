@@ -4,7 +4,7 @@ import re
 import sys
 
 TAG = 'PATCH: s6657 objective response'
-FILES = ('funcs_10.c', 'funcs_42.c', 'funcs_8.c', 'funcs_13.c', 'funcs_15.c', 'funcs_16.c', 'funcs_35.c', 'funcs_36.c', 'funcs_38.c', 'funcs_41.c', 'funcs_43.c')
+FILES = ('funcs_10.c', 'funcs_42.c', 'funcs_8.c', 'funcs_13.c', 'funcs_15.c', 'funcs_16.c', 'funcs_35.c', 'funcs_36.c', 'funcs_38.c', 'funcs_41.c', 'funcs_43.c', 'funcs_44.c')
 DECL = r'''
 extern int rs6657_gate(uint8_t*);
 extern void rs6657_callback(uint8_t*);
@@ -23,6 +23,8 @@ static int rs6657_en = -1, rs6657_seen, rs6657_started, rs6657_done;
 static uint32_t rs6657_start, rs6657_arm = 99, rs6657_rows[3], rs6657_hits[3], rs6657_dmg[3], rs6657_seq;
 static int rs6657_level;
 static int rs6661_dosed;
+static int rs6670_forced;
+static _Thread_local uint32_t rs6670_api_active;
 static uint32_t rs6666_dat;
 static int rs6668_repeat(uint8_t*, uint32_t, uint32_t, uint32_t);
 static uint32_t rs6666_limit = 5400, rs6666_on;
@@ -35,12 +37,12 @@ static int rs6660_ok(uint32_t a) { return a >= 0x80000400u && a < 0x807FFF00u &&
 static int rs6668_named_rescue(uint32_t desc) {
     return rs6666_dat && (desc == rs6666_dat + 0x1510 || desc == rs6666_dat + 0x1628 || desc == rs6666_dat + 0x1740);
 }
-static int rs6660_named(uint32_t id) { return rs6657_level == 2 ? id == 40 : (id == 13 || id == 40 || id == 41); }
+static int rs6660_named(uint32_t id) { return rs6657_level == 3 ? id == 28 : rs6657_level == 2 ? id == 40 : (id == 13 || id == 40 || id == 41); }
 static void rs6660_census(uint8_t*);
 static unsigned rs6657_match(uint32_t, uint32_t);
 static int rs6660_candidate(uint8_t*, uint32_t, uint32_t, uint32_t, float, int);
 static int rs6657_enabled(void) {
-    if (rs6657_en < 0) { const char* e = getenv("ROGUESQ_OBJECTIVE_RESPONSE"); rs6657_en = e && e[0] == '1'; const char* l = getenv("ROGUESQ_OBJECTIVE_RESPONSE_LEVEL"); rs6657_level = l ? atoi(l) : 0; const char* v = getenv("ROGUESQ_OBJECTIVE_RESPONSE_VI"); if (rs6657_level == 2 && v && atoi(v) > 5400 && atoi(v) <= 12000) rs6666_limit = atoi(v); if (rs6657_level != 0 && rs6657_level != 1 && rs6657_level != 2) rs6657_en = 0; }
+    if (rs6657_en < 0) { const char* e = getenv("ROGUESQ_OBJECTIVE_RESPONSE"); rs6657_en = e && e[0] == '1'; const char* l = getenv("ROGUESQ_OBJECTIVE_RESPONSE_LEVEL"); rs6657_level = l ? atoi(l) : 0; const char* v = getenv("ROGUESQ_OBJECTIVE_RESPONSE_VI"); if (rs6657_level == 2 && v && atoi(v) > 5400 && atoi(v) <= 12000) rs6666_limit = atoi(v); if (rs6657_level != 0 && rs6657_level != 1 && rs6657_level != 2 && rs6657_level != 3) rs6657_en = 0; }
     return rs6657_en;
 }
 static uint32_t rs6657_word(uint8_t* rdram, uint32_t a) { return (uint32_t)MEM_W(S32((int32_t)a), 0); }
@@ -59,7 +61,7 @@ static int rs6657_flight(uint8_t* rdram) {
     }
     uint32_t dv = rs64_vi_n_g - rs6657_start;
     uint32_t c1 = rs6657_word(rdram, 0x80138060u), c2 = rs6657_word(rdram, 0x80138064u), c3 = rs6657_word(rdram, 0x80138068u);
-    if ((rs6660_observed && !(rs6657_level == 2 && rs6661_dosed)) || !selected || !flight || dv >= rs6666_limit || (rs6657_level == 0 ? (c1 >= 18 || c2 >= 1 || c3 >= 1) : rs6657_level == 2 ? (rs6657_read_init && ((rs6657_prev[39] && !rs6661_dosed) || MEM_BU(S32((int32_t)0x80138903u), 0) || MEM_BU(S32((int32_t)0x8013890Cu), 0))) : (rs6657_read_init && (rs6657_prev[12] >= 3 || MEM_BU(S32((int32_t)0x801388A5u), 0))))) {
+    if ((rs6660_observed && !(rs6657_level == 2 && rs6661_dosed)) || !selected || !flight || dv >= rs6666_limit || (rs6657_level == 0 ? (c1 >= 18 || c2 >= 1 || c3 >= 1) : rs6657_level == 2 ? (rs6657_read_init && ((rs6657_prev[39] && !rs6661_dosed) || MEM_BU(S32((int32_t)0x80138903u), 0) || MEM_BU(S32((int32_t)0x8013890Cu), 0))) : rs6657_level == 3 ? (MEM_BU(S32((int32_t)0x801388A3u),0) || MEM_BU(S32((int32_t)0x801388B1u),0) || MEM_BU(S32((int32_t)0x801388B4u),0) || rs6657_word(rdram,0x801380B4u)) : (rs6657_read_init && (rs6657_prev[12] >= 3 || MEM_BU(S32((int32_t)0x801388A5u), 0))))) {
         rs6657_done = 1;
         fprintf(stderr, "[objresp-done] epoch=1 vi=%u dv=%u selected=%d flight=%d c=%u,%u,%u forces=%u,%u,%u writes=%u,%u,%u damage=%u,%u,%u\n", rs64_vi_n_g, dv, selected, flight, c1, c2, c3, rs6657_hits[0], rs6657_hits[1], rs6657_hits[2], rs6657_rows[0], rs6657_rows[1], rs6657_rows[2], rs6657_dmg[0], rs6657_dmg[1], rs6657_dmg[2]);
         fflush(stderr); return 0;
@@ -73,7 +75,7 @@ static int rs6657_flight(uint8_t* rdram) {
     }
     return 1;
 }
-int rs6657_gate(uint8_t* rdram) { return !rs6657_enabled() || (rs6657_flight(rdram) && rs6657_arm == 1 && !rs6660_pending_id && !rs6661_dosed); }
+int rs6657_gate(uint8_t* rdram) { return !rs6657_enabled() || (rs6657_flight(rdram) && rs6657_arm == 1 && !rs6660_pending_id && !rs6661_dosed && !(rs6657_level == 3 && rs6670_forced)); }
 void rs6657_callback_level(uint8_t* rdram, int level) {
     if (!rs6657_enabled() || level != rs6657_level) return;
     rs6657_seen = 1;
@@ -89,7 +91,7 @@ void rs6657_callback_level(uint8_t* rdram, int level) {
     uint32_t bool6 = MEM_BU(S32((int32_t)0x801388A5u), 0);
     if (rs6657_level == 1 && (!rs6657_read_init || bool6 != rs6657_bool6))
         fprintf(stderr, "[objresp-bool] epoch=1 vi=%u arm=%u id=6 old=%u new=%u initialized=%u\n", rs64_vi_n_g, rs6657_arm, rs6657_bool6, bool6, rs6657_read_init);
-    if (rs6657_level == 2) for (unsigned i = 0; i < 128; i++) {
+    if (rs6657_level >= 2) for (unsigned i = 0; i < 128; i++) {
         uint32_t value = MEM_BU(S32((int32_t)(0x801388A0u + i)), 0);
         if (!rs6657_read_init || value != rs6662_bools[i])
             fprintf(stderr, "[objresp-bool] epoch=1 vi=%u arm=%u id=%u old=%u new=%u initialized=%u\n", rs64_vi_n_g, rs6657_arm, i + 1, rs6662_bools[i], value, rs6657_read_init);
@@ -97,12 +99,14 @@ void rs6657_callback_level(uint8_t* rdram, int level) {
     }
     rs6657_bool6 = bool6;
     if (!rs6657_read_init && rs6657_level == 2) fprintf(stderr, "[objresp-semantics] level=2 vi=%u c40=%u friendlies=1-c40 fail=c40-positive-to-bool109 success=bool31+32+33+99\n", rs64_vi_n_g, rs6657_word(rdram, 0x801380FCu));
-    if (!rs6657_read_init && rs6657_level != 2) fprintf(stderr, "[objresp-semantics] level=%d vi=%u c13=%u c40=%u c41=%u bool6=%u friendlies=19-(c40+c13+c41)\n", rs6657_level, rs64_vi_n_g, rs6657_word(rdram, 0x80138090u), rs6657_word(rdram, 0x801380FCu), rs6657_word(rdram, 0x80138100u), MEM_BU(S32((int32_t)0x801388A5u), 0));
+    if (!rs6657_read_init && rs6657_level < 2) fprintf(stderr, "[objresp-semantics] level=%d vi=%u c13=%u c40=%u c41=%u bool6=%u friendlies=19-(c40+c13+c41)\n", rs6657_level, rs64_vi_n_g, rs6657_word(rdram, 0x80138090u), rs6657_word(rdram, 0x801380FCu), rs6657_word(rdram, 0x80138100u), MEM_BU(S32((int32_t)0x801388A5u), 0));
+    if (!rs6657_read_init && rs6657_level == 3) fprintf(stderr, "[objresp-semantics] level=3 vi=%u friendlies=100-(c27+c28) loss=bool4+18+21 success=c22\n", rs64_vi_n_g);
     rs6657_read_init = 1;
 }
 void rs6657_callback(uint8_t* rdram) { rs6657_callback_level(rdram, 0); }
 void rs6657_force(uint8_t* rdram, uint32_t shape, uint32_t npc, uint32_t proj) {
     if (!rs6657_enabled() || !rs6657_flight(rdram)) return;
+    if (rs6657_level == 3) rs6670_forced = 1;
     uint32_t node = npc;
     npc = node >= 0x80000400u && node < 0x80800000u && !(node & 3) ? rs6657_word(rdram, node + 4) : 0;
     uint32_t desc = rs6657_desc(rdram, npc);
@@ -136,6 +140,7 @@ void rs6657_write(uint8_t* rdram, recomp_context* ctx, uint32_t pc, uint32_t add
     if (rs64_vi_committed_width() != 512 || (origin != 0x690400 && origin != 0x620400)) return;
     if (addr < 0x80138060u || addr >= 0x801388A0u || (addr & 3)) return;
     uint32_t value = rs6657_word(rdram, addr), npc = rs6657_victim;
+    if (rs6657_level == 3 && rs6670_api_active) desc = rs6666_dat + 0x48c;
     if (!desc) desc = rs6657_desc(rdram, npc);
     if (rs6657_level >= 1 && rs6660_named((addr - 0x80138060u) / 4 + 1) && old != value) {
         rs6660_pending_id = (addr - 0x80138060u) / 4 + 1; rs6660_pending_value = value;
@@ -155,6 +160,7 @@ static void rs6660_fields(uint8_t* rdram, uint32_t desc, uint32_t f[6]) {
     for (unsigned i = 0; i < 6; i++) f[i] = rs6660_ok(desc) ? rs6657_word(rdram, desc + 0x70 + i * 4) : 0;
 }
 static int rs6660_selected(uint32_t f[6]) {
+    if (rs6657_level == 3) return f[0] == 28 && f[1] == 1 && !f[2] && !f[3] && !f[4];
     if (rs6657_level == 2) return ((f[0] == 40 && f[1]) || (f[4] == 40 && f[5])) &&
         !(f[3] && (f[2] == 1 || f[2] == 2 || f[2] == 3 || f[2] == 4 || f[2] == 31 || f[2] == 32 || f[2] == 33 || f[2] == 99));
     return !(f[2] == 6 && f[3]) && ((rs6660_named(f[0]) && f[1]) || (rs6660_named(f[4]) && f[5]));
@@ -182,6 +188,7 @@ static int rs6663_owned(uint8_t* rdram, uint32_t node) {
 }
 static int rs6663_kind(uint32_t handler) {
     switch (handler) {
+    case 0x8006CBB0u:
     case 0x800D3894u:
     case 0x800DE80Cu:
     case 0x800CABD4u:
@@ -228,7 +235,7 @@ static uint32_t rs6663_descriptor(uint8_t* rdram, uint32_t node, uint32_t* npc, 
 void rs6663_scan(uint8_t* rdram) {
     static int busy;
     static uint32_t seen[2048][10], generation[2048], birth[2048], last_report = 0xFFFFFFFFu;
-    if (busy || !rs6657_enabled() || rs6657_level != 2 || !rs6657_started || rs6657_done) return;
+    if (busy || !rs6657_enabled() || (rs6657_level != 2 && rs6657_level != 3) || !rs6657_started || rs6657_done) return;
     busy = 1;
     int valid = rs6663_refresh(rdram);
     uint32_t active = 0, stale = 0, unknown = 0, named = 0, typed = 0;
@@ -242,10 +249,10 @@ void rs6663_scan(uint8_t* rdram) {
         rs6660_fields(rdram, known == 1 ? desc : 0, f);
         int selected = known == 1 && rs6660_selected(f);
         if (known == 1 && rs6660_ok(desc) && controls[rs6657_arm] == 0) {
-            uint32_t control[6] = {40, 1, 0, 0, 0, 0};
+            uint32_t control[6] = {rs6657_level == 3 ? 28u : 40u, 1, 0, 0, 0, 0};
             int accepts = rs6660_selected(control);
-            control[2] = 31; control[3] = 1;
-            fprintf(stderr, "[objresp-select-control] epoch=1 vi=%u arm=%u slot=%u node=%08x handler=%08x desc=%08x local_fixture=1 accepts40=%d rejects_success=%d guest_writes=0\n", rs64_vi_n_g, rs6657_arm, i, node, handler, desc, accepts, !rs6660_selected(control));
+            control[2] = rs6657_level == 3 ? 4 : 31; control[3] = 1;
+            fprintf(stderr, "[objresp-select-control] epoch=1 vi=%u arm=%u slot=%u node=%08x handler=%08x desc=%08x local_fixture=1 accepts_named=%d rejects_success=%d guest_writes=0\n", rs64_vi_n_g, rs6657_arm, i, node, handler, desc, accepts, !rs6660_selected(control));
             controls[rs6657_arm]++;
         }
 
@@ -269,7 +276,7 @@ void rs6663_scan(uint8_t* rdram) {
     busy = 0;
 }
 static void rs6660_census(uint8_t* rdram) {
-    if (rs6657_level == 2) { rs6663_scan(rdram); return; }
+    if (rs6657_level >= 2) { rs6663_scan(rdram); return; }
 
     static uint32_t tick = 0xFFFFFFFFu, seen[3][2048][8];
     uint32_t now = (rs64_vi_n_g - rs6657_start) / 300;
@@ -296,12 +303,13 @@ static int rs6660_candidate(uint8_t* rdram, uint32_t slot, uint32_t shape, uint3
     uint32_t node = rs6660_ok(tb) && slot < 2048 ? rs6657_word(rdram, tb + slot * 8) : 0;
     uint32_t npc = rs6660_ok(node) ? rs6657_word(rdram, node + 4) : 0, desc = rs6657_desc(rdram, npc), f[6], handler = 0;
     int typed = 1;
-    if (rs6657_level == 2) {
+    if (rs6657_level >= 2) {
         if (!rs6663_refresh(rdram) || slot >= 2048 || rs6663_free[slot]) { node = npc = desc = 0; typed = 0; }
         else { desc = rs6663_descriptor(rdram, node, &npc, &handler); typed = rs6663_owned(rdram, node) ? rs6663_kind(handler) : 0; }
     }
     rs6660_fields(rdram, typed == 1 ? desc : 0, f);
     int selected = typed == 1 && rs6660_selected(f);
+    if (rs6657_level == 3) selected = 0;
     const char* dose = getenv("ROGUESQ_OBJECTIVE_RESPONSE_LETHAL");
     if (rs6657_level == 2 && dose && dose[0] == '1')
         selected = selected && handler == 0x800D3894u && rs6668_named_rescue(desc);
@@ -427,7 +435,8 @@ static float rs6666_float(uint8_t* rdram, uint32_t a) {
     uint32_t w = rs6657_word(rdram, a); float f; memcpy(&f, &w, 4); return f;
 }
 void rs6666_dat_loaded(uint8_t* rdram, uint32_t base) {
-    if (!rs6657_enabled() || rs6657_level != 2 || MEM_BU(S32((int32_t)0x80130B40u),0) != 2 || !rs6660_ok(base)) return;
+    if (!rs6657_enabled() || (rs6657_level != 2 && rs6657_level != 3) || MEM_BU(S32((int32_t)0x80130B40u),0) != rs6657_level || !rs6660_ok(base)) return;
+    if (rs6657_level == 3) { rs6666_dat = base; fprintf(stderr,"[objresp-definition] vi=%u index=0 base=%08x offset=48c desc=%08x name=City_1 subtype=%u hp=%u id=%u delta=%u\n",rs64_vi_n_g,base,base+0x48c,MEM_HU(S32((int32_t)(base+0x48c)),0),rs6657_word(rdram,base+0x48c+0x6c),rs6657_word(rdram,base+0x48c+0x70),rs6657_word(rdram,base+0x48c+0x74)); return; }
     rs6666_dat = base;
     for (unsigned i = 0; i < 6; i++) {
         uint32_t d = base + rs6666_offsets[i];
@@ -471,6 +480,75 @@ void rs6666_spawn(uint8_t* rdram, uint32_t pc, uint32_t desc, uint32_t result) {
     seen[epoch][i][col]=tick; value[epoch][i][col]=result;
     uint32_t id=rs6657_word(rdram,desc+0x60);
     fprintf(stderr,"[objresp-spawn] vi=%u epoch=%u pc=%08x index=%d base=%08x offset=%x desc=%08x result=%08x activation=%u actual=%u\n",rs64_vi_n_g,epoch,pc,i,rs6666_dat,rs6666_offsets[i],desc,result,id,id&&id<=128?MEM_BU(S32((int32_t)(0x8013889fu+id)),0):0);
+}
+
+void rs6670_building(uint8_t* rdram, recomp_context* ctx, int stage, uint32_t node, uint32_t message, uint32_t action) {
+    if (!rs6657_enabled() || rs6657_level != 3 || !rs6657_started || rs6657_done || action != 5 || !rs6663_owned(rdram,node)) return;
+    uint32_t npc=rs6657_word(rdram,node+4), desc=rs6657_desc(rdram,npc), detail=rs6657_word(rdram,0x80137ce4u);
+    if (!rs6660_ok(desc) || detail>32 || !rs6660_ok(message)) return;
+    unsigned m=rs6657_match(npc,desc);
+    static unsigned rows[3][4];
+    if (m==256 && rows[rs6657_arm][stage]++>=32) return;
+    uint32_t address=desc+0x6c+detail*4;
+    int hp=(int32_t)rs6657_word(rdram,address);
+    uint32_t request=rs6663_half(rdram,message+6);
+    fprintf(stderr,"[objresp-building] epoch=1 vi=%u arm=%u stage=%d api_seq=%u pc=%08x node=%08x npc=%08x desc=%08x name=%s slot=%u handler=%08x message=%08x source=%u subtype=%u detail=%u health_addr=%08x hp=%d request=%u store_old=%d store_new=%d force_seq=%u proj=%08x c28=%u\n",rs64_vi_n_g,rs6657_arm,stage,rs6670_api_active,stage==1?0x8006cfe8u:stage==2?0x8006d6f0u:stage==3?0x8006d8c0u:0x8006cbb0u,node,npc,desc,rs6666_dat&&desc==rs6666_dat+0x48c?"City_1":"other",rs6663_half(rdram,node+0x16),rs6657_word(rdram,node),message,rs6663_half(rdram,message+2),rs6663_half(rdram,desc),detail,address,hp,request,stage==1?(int32_t)rs6657_word(rdram,U32(ctx->r2)):hp,stage==1?(int32_t)ctx->r3:hp,m<256?rs6657_events[m].seq:0,m<256?rs6657_events[m].proj:0,rs6657_word(rdram,0x801380ccu));
+}
+void rs6670_reader(uint8_t* rdram, recomp_context* ctx, uint32_t pc) {
+    if (!rs6657_enabled() || rs6657_level!=3 || !rs6657_started || rs6657_done) return;
+    static uint32_t values[3][3], initialized[3];
+    uint32_t c27=rs6657_word(rdram,0x801380c8u),c28=rs6657_word(rdram,0x801380ccu);
+    uint32_t value=pc==0x80103560u?U32(ctx->r4):U32(ctx->r2);
+    unsigned k=pc==0x80103540u?0:pc==0x80103550u?1:2;
+    if (!(initialized[rs6657_arm]&(1u<<k)) || values[rs6657_arm][k]!=value) {
+        values[rs6657_arm][k]=value; initialized[rs6657_arm]|=1u<<k;
+        fprintf(stderr,"[objresp-building-reader] epoch=1 vi=%u arm=%u pc=%08x value=%u c27=%u c28=%u expected=%u\n",rs64_vi_n_g,rs6657_arm,pc,value,c27,c28,k==0?c27:k==1?c28:100-c27-c28);
+    }
+}
+
+void rs6670_tick(uint8_t* rdram, recomp_context* ctx) {
+    if (!rs6657_enabled() || rs6657_level!=3 || !rs6657_started || rs6657_done) return;
+    uint32_t ids[3]={3,27,28}, got[3];
+    static uint32_t previous[3][3], initialized[3];
+    for (unsigned i=0;i<3;i++) {
+        recomp_context probe=*ctx; probe.r4=ids[i];
+        getObjectiveCount(rdram,&probe); got[i]=U32(probe.r2);
+        if (!initialized[rs6657_arm] || got[i]!=previous[rs6657_arm][i])
+            fprintf(stderr,"[objresp-probe-getter] epoch=1 vi=%u arm=%u probe_call=1 id=%u returned=%u memory=%u\n",rs64_vi_n_g,rs6657_arm,ids[i],got[i],rs6657_word(rdram,0x80138060u+(ids[i]-1)*4));
+        previous[rs6657_arm][i]=got[i];
+    }
+    initialized[rs6657_arm]=1;
+    if (rs6657_arm!=1 || rs6670_forced || !rs6666_dat) return;
+    uint32_t desc=rs6666_dat+0x48c, name=rs6657_word(rdram,desc+0xc), detail=rs6657_word(rdram,0x80137ce4u);
+    if (!rs6660_ok(desc) || name<0x80000400u || name>0x807fff00u || detail>32 || rs6663_half(rdram,desc)!=20) return;
+    recomp_context probe=*ctx; probe.r4=S32(name);
+    getLevelDatItemByName(rdram,&probe);
+    uint32_t slot=rs6663_half(rdram,desc+6),node=0,npc=0,handler=0,owned=0;
+    int valid=rs6663_refresh(rdram);
+    if (valid && slot<2048 && !rs6663_free[slot]) {
+        node=rs6657_word(rdram,rs6663_table+slot*8);
+        owned=rs6663_descriptor(rdram,node,&npc,&handler)==desc;
+    }
+    static uint32_t report[3][5];
+    uint32_t state[5]={name,U32(probe.r2),slot,handler,owned};
+    if (memcmp(report[rs6657_arm],state,sizeof(state))) {
+        memcpy(report[rs6657_arm],state,sizeof(state));
+        fprintf(stderr,"[objresp-api-eligibility] vi=%u arm=%u desc=%08x name_ptr=%08x name_bytes=%02x%02x%02x%02x%02x%02x%02x lookup=%08x slot=%u handler=%08x owned=%u valid=%d\n",rs64_vi_n_g,rs6657_arm,desc,name,MEM_BU(S32((int32_t)name),0),MEM_BU(S32((int32_t)name),1),MEM_BU(S32((int32_t)name),2),MEM_BU(S32((int32_t)name),3),MEM_BU(S32((int32_t)name),4),MEM_BU(S32((int32_t)name),5),MEM_BU(S32((int32_t)name),6),U32(probe.r2),slot,handler,owned,valid);
+    }
+    if (U32(probe.r2)!=desc || (int32_t)rs6657_word(rdram,desc+0x6c+detail*4)<=10) return;
+    rs6670_forced=1; rs6670_api_active=1;
+    int hp=(int32_t)rs6657_word(rdram,desc+0x6c+detail*4);
+    fprintf(stderr,"[objresp-api] epoch=1 vi=%u arm=%u stage=pre api_seq=1 route=named-script name=City_1 name_ptr=%08x base=%08x desc=%08x slot=%u node=%08x npc=%08x handler=%08x detail=%u hp=%d request=10 c28=%u\n",rs64_vi_n_g,rs6657_arm,name,rs6666_dat,desc,slot,node,npc,handler,detail,hp,got[2]);
+    probe=*ctx; probe.r4=S32(name); probe.r5=10;
+    dealDamagetoDatItem(rdram,&probe);
+    fprintf(stderr,"[objresp-api] epoch=1 vi=%u arm=%u stage=post api_seq=1 desc=%08x node=%08x npc=%08x hp=%d returned=%d c28=%u\n",rs64_vi_n_g,rs6657_arm,desc,node,npc,(int32_t)rs6657_word(rdram,desc+0x6c+detail*4),(int32_t)probe.r2,rs6657_word(rdram,0x801380ccu));
+    rs6670_api_active=0;
+}
+
+void rs6670_fallback(uint8_t* rdram,recomp_context* ctx,int stage) {
+    if (!rs6657_enabled() || rs6657_level!=3 || !rs6670_api_active) return;
+    uint32_t desc=U32(ctx->r16),detail=rs6657_word(rdram,0x80137ce4u);
+    fprintf(stderr,"[objresp-fallback] vi=%u arm=%u api_seq=%u stage=%d desc=%08x detail=%u slot=%u hp=%d result=%d request=%u c28=%u\n",rs64_vi_n_g,rs6657_arm,rs6670_api_active,stage,desc,detail,rs6663_half(rdram,desc+6),(int32_t)rs6657_word(rdram,desc+0x6c+detail*4),(int32_t)ctx->r17,U32(ctx->r18),rs6657_word(rdram,0x801380ccu));
 }
 
 '''
@@ -637,8 +715,67 @@ def activation_hooks(text, name):
         assert n in (1,2),(name,hex(pc),n)
     return text, 1
 
+def level3_hooks(text, name):
+    marker = '/* PATCH: s6670 ordinary building response */'
+    if name not in ('funcs_16.c', 'funcs_44.c') or marker in text:
+        if name == 'funcs_44.c' and 'rs6670_tick(rdram,ctx);' not in text:
+            text=text.replace('    rs6657_callback_level(rdram,3);','    rs6657_callback_level(rdram,3);\n    rs6670_tick(rdram,ctx);',1)
+            text=text.replace(marker,marker+'\nextern void rs6670_tick(uint8_t*,recomp_context*);',1)
+            return text,1
+        return text, 0
+    if name == 'funcs_16.c':
+        start = text.index('RECOMP_FUNC void updateDestructionDebrisNpc(')
+        stop = text.index('\nRECOMP_FUNC ', start + 1)
+        body = text[start:stop]
+        at = body.index('{') + 1
+        body = body[:at] + '\n    uint32_t rs6670_node=U32(ctx->r4), rs6670_action=U32(ctx->r5)&0xFFFF, rs6670_message=U32(ctx->r6);\n    rs6670_building(rdram,ctx,0,rs6670_node,rs6670_message,rs6670_action);' + body[at:]
+        anchor = '    { MEM_W(0X0, ctx->r2) = ctx->r3; RS64_S5798_ST(0x8006CFE8u, 0X0, ctx->r2, 4); }'
+        assert body.count(anchor) == 1
+        body = body.replace(anchor, '    rs6670_building(rdram,ctx,1,rs6670_node,rs6670_message,rs6670_action);\n'+anchor)
+        anchor = '    datItemSetObjectiveBooleanCount(rdram, ctx);'
+        assert body.count(anchor) == 1
+        body = body.replace(anchor, '    rs6670_building(rdram,ctx,2,rs6670_node,rs6670_message,rs6670_action);\n    { uint32_t saved=rs6657_victim; rs6657_victim=U32(ctx->r17);\n'+anchor+'\n    rs6657_victim=saved; }')
+        body = body.replace('L_8006D8C0:\n', 'L_8006D8C0:\n    rs6670_building(rdram,ctx,3,rs6670_node,rs6670_message,rs6670_action);\n')
+        text=text[:start]+body+text[stop:]
+    else:
+        anchor='RECOMP_FUNC void lv3_checkComplexObjectives(uint8_t* rdram, recomp_context* ctx) {'
+        assert text.count(anchor)==1
+        text=text.replace(anchor,anchor+'\n    rs6657_callback_level(rdram,3);\n    rs6670_tick(rdram,ctx);')
+        start=text.index('RECOMP_FUNC void lv3_calculateFriendliesSaved(')
+        stop=text.index('\nRECOMP_FUNC ',start+1)
+        body=text[start:stop]
+        # after_N labels are beyond jal delay-slot duplication.
+        for label, pc in (('after_0:',0x80103540),('after_1:',0x80103550)):
+            assert body.count(label)==1
+            body=body.replace(label,label+f'\n    rs6670_reader(rdram,ctx,0x{pc:08x}u);')
+        anchor='    setFriendliesSaved(rdram, ctx);'
+        assert body.count(anchor)==1
+        body=body.replace(anchor,'    rs6670_reader(rdram,ctx,0x80103560u);\n'+anchor)
+        text=text[:start]+body+text[stop:]
+    text=text.replace('#include "funcs.h"','#include "funcs.h"\n'+marker+'\nextern void rs6670_tick(uint8_t*,recomp_context*);\nextern void rs6670_building(uint8_t*,recomp_context*,int,uint32_t,uint32_t,uint32_t);\nextern void rs6670_reader(uint8_t*,recomp_context*,uint32_t);\nextern void rs6657_callback_level(uint8_t*,int);',1)
+    return text, 1
+
+def level3_fallback_hooks(text,name):
+    marker='/* PATCH: s6670 fallback health and effect */'
+    if name!='funcs_35.c' or marker in text:return text,0
+    start=text.index('RECOMP_FUNC void dealDamagetoDatItem(')
+    stop=text.index('\nRECOMP_FUNC ',start+1)
+    body=text[start:stop]
+    anchor='    { MEM_W(0X6C, ctx->r3) = ctx->r17; RS64_S5798_ST(0x800C74ACu, 0X6C, ctx->r3, 4); }'
+    assert body.count(anchor)==1
+    body=body.replace(anchor,'    rs6670_fallback(rdram,ctx,0);\n'+anchor+'\n    rs6670_fallback(rdram,ctx,1);')
+    anchor='    datItemSetObjectiveBooleanCount(rdram, ctx);'
+    assert body.count(anchor)==1
+    body=body.replace(anchor,'    rs6670_fallback(rdram,ctx,2);\n'+anchor)
+    text=text[:start]+body+text[stop:]
+    return text.replace('#include "funcs.h"','#include "funcs.h"\n'+marker+'\nextern void rs6670_fallback(uint8_t*,recomp_context*,int);',1),1
+
 def apply(text, name):
     text, changed = _apply(text, name)
+    text, extra = level3_fallback_hooks(text,name)
+    changed |= extra
+    text, extra = level3_hooks(text, name)
+    changed |= extra
     handlers = {
         'funcs_36.c': (('npcProbeDriod', 17, 19, (0x800CBD34,)),),
         'funcs_38.c': (('npcDebrisFieldUpdate', 17, 19, (0x800D5DA8,)),

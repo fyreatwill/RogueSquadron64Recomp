@@ -160,7 +160,7 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
                                 joins.append({'force_line': force[0], 'send_line': send[0], 'write_line': n,
                                               'seq': fields['force_seq'], 'vi': fields['vi'], 'age_vi': fields['age_vi'],
                                               'node': fields['node'], 'npc': fields['victim'], 'desc': fields['desc'],
-                                              'id': int(fields['id']), 'callback_relevant': int(fields['id']) in ((1,) if level == 0 else (40,) if level == 2 else (13, 40, 41)), 'pc': fields['pc'], 'old': fields['old'], 'new': fields['new']})
+                                              'id': int(fields['id']), 'callback_relevant': int(fields['id']) in ((1,) if level == 0 else (40,) if level == 2 else (28,) if level == 3 else (13, 40, 41)), 'pc': fields['pc'], 'old': fields['old'], 'new': fields['new']})
                     if '[objresp-done]' in line:
                         done = line.strip()
                         in_epoch = False
@@ -290,6 +290,9 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
                   completed_chains=sum('readback_line' in j for j in relevant),
                   completed_incidental_chains=sum('readback_line' in j for j in incidental), linked_counter1_changes=relevant if level == 0 else [], rows=rows)
     result['activation'] = activation_table(rows, ownership)
+    if level == 3:
+        result['level3_building'] = qualify_level3(rows)
+        result['level3_api'] = qualify_level3_api(rows)
     if level == 2: result['level2_loss'] = qualify_level2_loss(transport, rows)
     (out / 'response.json').write_text(json.dumps(result, indent=2) + '\n')
     with (out / 'response.log').open('w') as stream:
@@ -300,16 +303,108 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
     return 0 if done and not crash else 1
 
 
+def qualify_level3(rows):
+    parsed = [(r['line'], r['event'], dict(re.findall(r'(\w+)=([^\s]+)', r['event']))) for r in rows]
+    forces = [(n, f) for n, e, f in parsed if '[objresp-force]' in e]
+    chains = []
+    for n, event, f in parsed:
+        if '[objresp-building]' not in event or f.get('stage') != '1' or f.get('name') != 'City_1':
+            continue
+        identity = ('node', 'npc', 'desc', 'proj')
+        matching = [(fn, ff) for fn, ff in forces if fn < n and ff['seq'] == f['force_seq'] and all(ff[k] == f[k] for k in identity)]
+        sends = [(sn, sf) for sn, se, sf in parsed if '[objresp-send]' in se and sn < n and sf.get('force_seq') == f['force_seq'] and all(sf.get(k) == f[k] for k in identity)]
+        entries = [(en, ef) for en, ee, ef in parsed if '[objresp-building]' in ee and ef.get('stage') == '0' and en < n and all(ef.get(k) == f[k] for k in identity + ('message','force_seq'))]
+        returns = [(rn, rf) for rn, revent, rf in parsed if '[objresp-building]' in revent and rf.get('stage') == '3' and rn > n and all(rf.get(k) == f[k] for k in identity + ('message','force_seq'))]
+        health = int(f['store_old']) - int(f['store_new']) == int(f['request']) > 0 and int(f['store_new']) > 0
+        ordered = bool(matching and sends and entries and matching[-1][0] < sends[-1][0] < entries[-1][0] < n)
+        complete = bool(len(forces) == 1 and ordered and returns and health and f['pc'] == '8006cfe8' and f['handler'] == '8006cbb0' and f['subtype'] == '20' and returns[0][1]['hp'] == f['store_new'])
+        effects = [en for en, ee, ef in parsed if '[objresp-building]' in ee and ef.get('stage') == '2' and ef.get('force_seq') == f['force_seq'] and ef.get('desc') == f['desc']]
+        chains.append(dict(store_line=n, fields=f, qualified_ordinary=complete, effect_lines=effects, return_line=returns[0][0] if returns else None))
+    readers = [dict(line=n, fields=f) for n, e, f in parsed if '[objresp-building-reader]' in e]
+    return dict(force_count=len(forces), ordinary_chains=chains, qualified_ordinary=any(c['qualified_ordinary'] for c in chains), readers=readers,
+                reader_values_match=bool(readers) and all(r['fields']['value'] == r['fields']['expected'] for r in readers))
+
+
+def building_self_test():
+    import copy
+    identity='node=80210000 npc=80350000 desc=80310000 proj=80370000'
+    base=f'{identity} message=80380000 force_seq=1 handler=8006cbb0 subtype=20 name=City_1'
+    lines=[f'[objresp-force] seq=1 {identity}', f'[objresp-send] force_seq=1 {identity}',
+           f'[objresp-building] stage=0 {base}',
+           f'[objresp-building] stage=1 {base} pc=8006cfe8 store_old=2000 store_new=1990 request=10',
+           f'[objresp-building] stage=3 {base} hp=1990',
+           '[objresp-building-reader] value=100 expected=100']
+    def check(ls): return qualify_level3([dict(line=i,event=e) for i,e in enumerate(ls)])['qualified_ordinary']
+    assert check(lines)
+    for omit in range(5): assert not check(lines[:omit]+lines[omit+1:]),omit
+    for old,new in [('store_new=1990','store_new=2000'),('handler=8006cbb0','handler=800ece10'),('hp=1990','hp=1980')]:
+        assert not check([l.replace(old,new) for l in lines]), old
+    assert not check(lines+[lines[0]])
+    assert not check([l.replace('proj=80370000','proj=80370004') if 'objresp-send' in l else l for l in lines])
+    print('level3 building fixtures pass: complete, missing joins, health, handler, return, duplicate force, projectile mismatch')
+
+def qualify_level3_api(rows):
+    parsed=[(r['line'],r['event'],dict(re.findall(r'(\w+)=([^\s]+)',r['event']))) for r in rows]
+    pre=[(n,f) for n,e,f in parsed if '[objresp-api]' in e and f['stage']=='pre']
+    post=[(n,f) for n,e,f in parsed if '[objresp-api]' in e and f['stage']=='post']
+    matches=[]
+    if len(pre)==len(post)==1:
+        pn,p=pre[0]; qn,q=post[0]
+        identity=('api_seq','desc','node','npc')
+        chain=[]
+        for stage in ('0','1','3'):
+            found=[(n,f) for n,e,f in parsed if '[objresp-building]' in e and f['stage']==stage and pn<n<qn and all(f.get(k)==p[k] for k in identity)]
+            if len(found)!=1: break
+            chain.append(found[0])
+        if len(chain)==3:
+            (en,e),(sn,st),(rn,r)=chain
+            health=(int(st['store_old'])==int(p['hp']) and int(st['store_new'])==int(p['hp'])-10>0 and
+                    int(st['request'])==int(p['request'])==10 and st['hp']==st['store_old'] and
+                    r['hp']==q['hp']==q['returned']==st['store_new'])
+            route=(p['route']=='named-script' and p['name']=='City_1' and p['handler']==st['handler']=='8006cbb0' and st['pc']=='8006cfe8' and
+                   all(f[k]==p[k] for f in (e,st,r) for k in ('slot','handler','detail')) and
+                   all(f['subtype']=='20' for f in (e,st,r)) and e['message']==st['message']==r['message'])
+            if pn<en<sn<rn<qn and health and route and all(q[k]==p[k] for k in identity):
+                matches.append(dict(pre_line=pn,entry_line=en,store_line=sn,return_line=rn,post_line=qn,pre=p,store=st,post=q))
+    getters=[dict(line=n,fields=f) for n,e,f in parsed if '[objresp-probe-getter]' in e]
+    values={}
+    for g in getters: values.setdefault(g['fields']['id'],set()).add(g['fields']['returned'])
+    return dict(qualified_ordinary=bool(matches),request_count=len(pre),chains=matches,probe_getters=getters,
+                probe_getters_match=bool(getters) and all(g['fields']['probe_call']=='1' and g['fields']['returned']==g['fields']['memory'] for g in getters),
+                changing_getter_ids=[i for i,v in values.items() if len(v)>1],
+                scope='instrument-invoked original named script damage and pure getters; not player-shot or game-invoked friendlies proof')
+
+
+def api_self_test():
+    ident='api_seq=1 desc=80310000 node=80210000 npc=80350000'
+    common=f'{ident} slot=42 handler=8006cbb0 detail=0 subtype=20 message=80400000'
+    events=[f'[objresp-api] stage=pre {ident} slot=42 handler=8006cbb0 detail=0 route=named-script name=City_1 hp=2000 request=10',
+            f'[objresp-building] stage=0 {common}',
+            f'[objresp-building] stage=1 {common} pc=8006cfe8 hp=2000 store_old=2000 store_new=1990 request=10',
+            f'[objresp-building] stage=3 {common} hp=1990',
+            f'[objresp-api] stage=post {ident} hp=1990 returned=1990']
+    def check(es):return qualify_level3_api([dict(line=i,event=e) for i,e in enumerate(es)])['qualified_ordinary']
+    assert check(events)
+    for i in range(5):assert not check(events[:i]+events[i+1:]),i
+    for old,new in [('request=10','request=11'),('store_new=1990','store_new=1991'),('handler=8006cbb0','handler=800ece10'),('returned=1990','returned=2000')]:
+        assert not check([e.replace(old,new) for e in events]),old
+    assert not check(events+[events[0]])
+    assert not check([e.replace('message=80400000','message=80400004') if 'stage=3' in e else e for e in events])
+    assert not check([e.replace('npc=80350000','npc=80350004') if 'stage=1' in e else e for e in events])
+    print('level3 API fixtures pass: complete, missing stages, dose/store/handler/return, duplicate request, message/identity mismatch')
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('tag', nargs='?', help='fresh TAG_SUFFIX (never overwrite evidence)')
     parser.add_argument('--analyze', action='store_true', help='rebuild the joined table from an existing tag')
-    parser.add_argument('--level', type=int, choices=(0, 1, 2), default=0)
+    parser.add_argument('--level', type=int, choices=(0, 1, 2, 3), default=0)
     parser.add_argument('--flight-vi', type=int, default=5400, help='level 2 activation-aware window, 5400..12000 VI')
     parser.add_argument('--self-test', action='store_true')
     args = parser.parse_args()
     if args.self_test:
         dose_self_test()
+        building_self_test()
+        api_self_test()
         return 0
     if not args.tag:
         parser.error('a fresh tag is required')

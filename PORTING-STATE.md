@@ -174687,3 +174687,70 @@ one complete ordinary City_1 slot/handler/damage/store/friendlies-reader unit,
 including original registered-handler audit before enabling, no assumed lethal
 dose and no failure/success/progression tests. ADVANCED is the completed
 checked-parser/tool change, not completion of level3 dynamic coverage.
+
+## Session 6670 (2026-10-30) — qualify level-3 registered ordinary script damage
+
+HYPOTHESIS-ID: g1-coverage-cd. Step0 CURRENT-TRUTH36256 bytes, no maintenance;
+latest soak20261028-075640 already consumed, no new verdict. One ordinary
+City_1 damage-response unit, including failed controls and corrected builds.
+Read required state files first and original ELF/DAT before instrumentation.
+
+Original setup table8003BDD8 ->800653F4 -> handler8006CBB0. Spawn stores
+payload+34=DAT at8006CC24. Message5 table8003CA30 ->8006CF88; health
+DAT+6C+4*detail, subtraction/store8006CFE8. Original bgtz8006D278 skips
+death effect8006D6F0 on positive health. This contrasts with C7390 FFFF
+fallback, where ordinary subtype20 damage applies the effect without a
+threshold. Retail City_1 DAT independently supplies subtype20, health2000,
+counter28+1 only. No assumption of shuttle layout or lethal dose.
+
+First full flight s6670_response: VI5255..10657,176.42s,0 crashes,0 forces.
+No projectile-context/accepted-hit control. City_1 live owned registered
+handler observed, but no damage conclusion. Second s6670_script:
+VI5312..10712,178.00s,0 crashes,0 API requests. Extra eligibility filters
+prevented request; which one was unmeasured, not proof of retirement or API
+failure. Both have actual counter3/12 changes; second's explicit original
+pure getter3 changes0→1 matching memory. Retained separately as failed hit
+controls. No game-invoked friendlies-reader events; that hook has no firing
+control and supplies no behavioral conclusion.
+
+Corrected third binary disables level3 TELE forcing, invokes original named
+script API once with ordinary10 after original lookup equals selected DAT
+and health positive; observes registration and lets original API choose route.
+Full eligibility tuple and both registered/fallback stores/effects instrumented
+in this correction. Copied context preserves registers; original calls use
+guest call-stack space. Pure getterC761C is proven stackless/read-only and
+probe calls are explicitly labelled, not misrepresented as game invocations.
+
+s6670_script_v3: VI5291..10692,178.00s,off/on/off5291/7095/9491,0 crashes.
+At7095 original name lookup City_1@80325F94 returns DAT80325EEC=
+80325A60+048C; slot429/gen1/birth5414, node8021A728, payload8038770C,
+handler8006CBB0. One API request10 -> message5 at80165E80, sourceFFFF
+(script). Exact original store8006CFE8, detail0 health80325F58:2000→1990.
+Same handler/message returns; original API returns1990. Counter28 remains0;
+post-request explicit original getter28 returns0/memory0 at9493. Getter3
+actually changes0→1 at5361. No second request. TELE forces0 is separate
+from the one script request. H-registered selected for this ordinary hit.
+No fallback/effect events observed; their silent hooks are not independent
+absence proof. Original positive-health gate plus actual surviving health
+explains the unchanged counter. Destruction response remains open.
+
+ORIGIN: legitimate ordinary request10 through original C7390/C73F8;
+original8006CFE8 writes health1990. This value is surviving health, not
+corruption. No mitigation, direct health/counter/Boolean/timer store or
+lethal/default/lib change. No player-shot, game-invoked friendlies,
+retail-equivalence, win/progression or VERIFIED claim. Dynamic causality
+single-flight; original DAT/ELF corroborate static contracts independently.
+
+Validation:97 original instruction/table anchors pass and all97 individually
+mutated fixtures reject; level2 rescue/SHIP controls pass. Existing dose and
+new ordinary/API positive-negative analyzer fixtures pass (missing stages,
+message/identity/handler mismatches, dose arithmetic, duplicate request).
+All3 builds succeed,12 generated files replay unchanged,all6 current launch
+hashes match. Screen unlocked before launches, retail rendering, SIGKILL stops.
+Proof with exact lines/ownership/getter/hash checks:
+scratch/agent/s6670_qualification.json. Full final flight in
+scratch/agent/m6/g1_lvl3s6670_script_v3/response.json. Original97-anchor,
+mutation and build artifacts under scratch/agent/s6670_*. Docs/objective table
+updated; NEXT is one same-flight ordinary-control then exact-owned City_1
+destruction/c28 response, no aim or progression. ADVANCED: persistent probe,
+checked original contracts/analyzer and discriminating ordinary damage datum.

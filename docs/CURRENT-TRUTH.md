@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6669 (2026-10-30).
+Compact operational handoff, as of Session 6670 (2026-10-30).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -229,6 +229,26 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   response/retail-equivalence/VERIFIED claim. No game run/build, defaults or
   lib edits. Full limits: G1-OBJECTIVE-RESPONSE s6669. No new soak verdicts.
 
+- **G1(d) level3 registered ordinary script damage qualified (s6670).**
+  Original subtype20 setup table selects handler8006CBB0, payload+34=DAT.
+  Its message5 store8006CFE8 subtracts damage, and positive-health branch
+  8006D278 skips the death effect; C7390's FFFF fallback differs. Corrected
+  flight178.00s, VI5291..10692,0 crashes: one original named API request10
+  on City_1 (DAT80325EEC, slot429/gen1, node8021A728, payload8038770C)
+  reaches exact message80165E80 and health2000→1990; API returns1990.
+  Counter28 remains0; explicit original probe getter28 returns0 after hit
+  atVI9493. Getter3 actually changes0→1, matching memory. H-registered for
+  this ordinary request; no destruction/counter response or VERIFIED claim.
+  Original DAT/ELF support contracts; dynamic causality single-flight.
+  No player-shot or game-invoked friendlies-reader proof. First full flight
+  forced nothing (no projectile-context control); second issued no API
+  request (extra adapter eligibility filters, exact reason unmeasured). Both
+  had0 crashes and are retained as failed hit controls, not damage nulls.
+  Third build uses original lookup equality and lets the API select the route;
+  one request only, no lethal/default/lib change. All6 launch hashes,97 ELF
+  mutation checks, analyzer fixtures and replay pass. Proof: scratch/agent/
+  s6670_qualification.json; details G1-OBJECTIVE-RESPONSE s6670. No new soaks.
+
 ## Superseded conclusions — do not act on these
 
 - s6664's missing counter40 target is not evidence of a broken spawn/hit
@@ -362,14 +382,16 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **G1(d) level3 ordinary building response (next bounded unit).**
-   s6669 checked retail contract selects City_1 c28+1, no Boolean setters;
-   friendlies reader is100-(c27+c28). Audit its actual registered-slot handler
-   before extending the adapter: original C7390 FFFF fallback applies the
-   effect WITHOUT a death threshold. One complete ordinary named hit joins
-   slot/handler/descriptor/health/store/callback-reader in one build/flight.
-   No lethal dose assumed, shuttle layout reuse, direct guest stores,
-   failure/success/win/progression or aim work. Stop forces after one change.
+1. **G1(d) level3 controlled building destruction response (next unit).**
+   s6670 qualifies one original named-script request10 through registered
+   City_1 handler8006CBB0, health2000→1990, counter28 still0 as expected
+   from the original positive-health branch. In ONE flight, require a fresh
+   exact-owned ordinary control, then one currentHealth+1 dose on that same
+   City_1. Join original death effect, counter28 writer, callback readback and
+   explicit original getter; stop at first named response. Exclude all Boolean
+   setters and successcounter22. No direct health/counter/timer stores, wins,
+   progression or aim work. Probe API/getters must remain labelled as such;
+   no game-invoked friendlies-reader proof is yet available.
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
@@ -391,9 +413,9 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
 - Per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence):
   verbatim per-level paragraphs, duplicate coverage, historical backlog and updates.
-- `PORTING-STATE.md` sessions 6656–6669 contain recent chronology; search bounded
+- `PORTING-STATE.md` sessions 6656–6670 contain recent chronology; search bounded
   windows only. Earlier durable context remains in PROJECT-OVERVIEW.
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest remains
-  20261028-075640 (already consumed). No new verdicts in s6669.
+  20261028-075640 (already consumed). No new verdicts in s6670.
 - s6596/s6597 and s6599 were checkpoint close-outs, not reruns. The saved
   s6595/s6598 HUD artifacts retain their original evidence limits.
