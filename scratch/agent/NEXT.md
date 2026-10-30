@@ -1,5 +1,21 @@
-# NEXT: level-1 named forced-victim objective response
+# RESUME: level-1 named forced-victim objective response
 HYPOTHESIS-ID: g1-coverage-cd
+
+Checkpoint s6658: no build, launch, regeneration or adapter change. HEAD at
+entry was aa14d847f (s6657). The corrected saved result exists at
+scratch/agent/m6/g1_lvl0s6657_response_v2/response.json: 8 linked counter1
+changes, 13 changing readbacks, 0 crash lines, 167.87 s. Original failed
+join artifacts remain in g1_lvl0s6657_response/. Static ELF windows/helper
+controls are in scratch/agent/s6657_response/. Do not rerun level0.
+
+The level1 work has NOT started: runner has only tag/--analyze and sets
+LEVEL='0'; adapter selection is still level0. The --level 1 command below
+is a future command AFTER implementing the adapter and CLI, not runnable
+against the checkpoint. Exact first command for the resumed unit:
+    rg -n 'RECOMP_FUNC void lv1_(checkComplexObjectives|calculateFriendliesSaved|objectiveSlot1)' ../N64Recomp/RecompiledFuncs/funcs_43.c
+Then read bounded windows and original ELF as below, implement the entire
+level1 discriminator before one build/run. Do not confuse the existing
+level0 positive result with evidence about level1.
 
 One bounded adapter generalization plus ONE forced-level-1 flight. Reuse
 s6657's complete off/on/off and actual-store join; do not build a new
@@ -59,9 +75,9 @@ full fixup on the existing tree. Preserve submodule patches.
 
 AFTER the above CLI/adapter generalization exists, exact planned run:
     /usr/sbin/ioreg -n Root -d1 | rg 'CGSSessionScreenIsLocked'
-    python3 tools/g1_objective_response_run.py s6658_response --level 1
-    python3 tools/g1_objective_response_run.py s6658_response --level 1 --analyze
-The wrapper must update its output path to g1_lvl1s6658_response; refuse
+    python3 tools/g1_objective_response_run.py s6659_response --level 1
+    python3 tools/g1_objective_response_run.py s6659_response --level 1 --analyze
+The wrapper must update its output path to g1_lvl1s6659_response; refuse
 reuse, record binary/source/env manifest, run from build/ with ROM, watchdog
 itself and SIGKILL the recipe group at done (360s hard timeout). Screen must
 be unlocked. All arms belong to this one flight. No repeat-soak queue needed.

@@ -174057,3 +174057,40 @@ explicit opt-in and all game stores are preserved.
 Next: level1 named forced-victim response; original lv1 callback/descriptor
 semantics first, then generalize the same adapter/runner for level selection,
 all relevant readback counters and safe stop limits. No lv0 threshold reuse.
+
+## Session 6658 (2026-10-29) — checkpoint preserves level-0 response and resumes level 1
+
+Retry close-out only, as explicitly requested. Read CURRENT-TRUTH, NEXT,
+and SOAK-RESULTS tail in order; CURRENT-TRUTH is 52392 bytes, so maintenance
+is not triggered. No new queued-soak verdicts beyond those already recorded.
+No build, game launch, regeneration, instrumentation or submodule edit.
+Entry HEAD aa14d847f already commits the s6657 implementation and evidence;
+there is no uncommitted 18-line diagnostic change in the parent repository.
+Existing lib/ worktrees are dirty and were left untouched.
+
+Checkpoint verification, not a new experiment: the saved corrected
+scratch/agent/m6/g1_lvl0s6657_response_v2/response.json exists and contains
+8 linked_counter1_changes, 13 readback_changes, three arms, zero crashlines,
+and elapsed_s 167.87. Its done witness is epoch1 VI10074/dv5402, c=13,0,0,
+forces=0,77,0. The failed first join remains under g1_lvl0s6657_response/;
+static ELF windows/helper controls remain under scratch/agent/s6657_response/.
+The prior selection of H-response applies only to the named level0 c1
+triads, not level1, retail equivalence, player aim or mission completion.
+No conclusion changes and CURRENT-TRUTH is intentionally unchanged.
+
+Inspected runner CLI/source: only tag and --analyze exist and LEVEL is
+hardcoded to 0. Thus no level1 run or generalized adapter is claimed.
+NEXT is rewritten as RESUME with this prerequisite, preserved artifact
+paths, the exact first source-search command, and a fresh s6659 run tag.
+Next discriminator remains one selected level1 flight's exact
+force->accepted SEND->actual store->callback readback identity, with
+original-ELF counter semantics: named relevant changes select H-response;
+failure/unrelated counter semantics select H-incidental; absent selected
+route or changing-value control leaves H-route/control unevaluated.
+Complete adapter/CLI generalization and all joins together before building;
+do not rerun level0 or add isolated diagnostic fields.
+
+OUTCOME ADVANCED under the explicit retry checkpoint exception: verified
+artifact inventory and runnable-prerequisite handoff landed, not a new
+experimental discrimination. STATUS DONE closes this checkpoint only;
+level1 remains pending. No corruption mitigation and no default change.
