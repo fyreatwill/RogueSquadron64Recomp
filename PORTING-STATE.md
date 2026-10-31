@@ -175804,3 +175804,39 @@ Verdict: selects H-clear-lost; refutes H-reload (kill-switch modulates 19->11, n
 refutes H-fastclear (NO_DEPTH_FASTCLEAR still torn), refutes H-writeback (diff never set at 21:9).
 Next discriminator: log every fillRectOnly clear pair in submitFramebufferPair and fullSync (cimg
 addr/width/rect, clearDepthOnly) at 21:9 vs 16:9 to split H-cimg / H-manager / H-skip (NEXT.md).
+
+## Session 6694 (2026-10-31) — 21:9 level-select floor tear fixed: the game's scissor lrx (w*4)&0xFFF wraps to 0 at w=1024, so the depth clear is clipped empty
+
+What ran: NEXT.md discriminator (H-cimg / H-manager / H-skip). One RT64 census build under
+ROGUESQ_LOG_DEPTH_PAIR: [clr-submit] (wide 16b fill-only pairs after FramebufferManager::get in
+submitFramebufferPair), [clr-sync] (same pairs in fullSync getFramebufferPairs), [clr-lwt] (pairs that mark
+an fb colour-written), [clr-pre] (raw drawColorRect before the isEmpty/s78 gates), and [scissor-raw]
+(raw G_SETSCISSOR words per distinct cimg, lib/rt64/src/gbi/rt64_gbi_rdp.cpp). Harness
+scratch/agent/s6694_clr/run.py (g1d_floor_inputs.run_arm + g1d_row_noise vhf). 5 build-run cycles, 0 crashes.
+
+Results:
+- [clr-submit]/[clr-sync]/[clr-lwt] at 21:9 list every other clear (640-wide, 00B6A000/00B95C00) but
+  never 00B56000; at 16:9 the 796 clear 00B7BD80 appears in all three (positive control).
+- [clr-pre] 21:9: `addr=00B56000 w=1024 raw=0,0-0,1360 empty=1` x291, while the RDP fill itself is
+  (0,0)-(4095,1359) FFFCFFFC (ROGUESQ_LOG_FILLALL). So the rect was clipped to zero width: H-skip, by scissor.
+- [scissor-raw]: the full-fb scissor at 21:9 is `w1=00000550` / `02000700` (lrx=0); at 16:9 `00C70550`
+  (lrx=3184 = 796*4). Writer: setupCameraMatrices, 0x80017370 `andi v0,v0,0xFFF; sll a0,v0,12` on
+  (int)(width[0x8011A838]*4.0) -> 0x1000 & 0xFFF = 0. Second builder 0x80017814 (camera scissor) emits 4092.
+- Value is NOT legitimate: 1024.0 is unrepresentable in the RDP's 12-bit 10.2 field; our FB_WIDTH=1024
+  widening put it there. ORIGIN: writer = game scissor builder 0x80017370 fed by our s6113 fb-width patch;
+  fix clamps at the writer, not downstream.
+
+Fix: tools/apply_s6031_far.py apply_s6694_scissor clamps lrx to 0xFFF (1023.75, covers pixel 1023) before
+the mask at 0x80017370 and 0x80017814; wired into tools/fixup_game_funcs_vendored.py (funcs_4.c) and live
+patched. No-op at retail widths (<=640 -> 2560). A first attempt patched only 0x80017814 and changed nothing
+(still lrx=0, vhf 19-26) - that dead end is how the second site was found.
+
+After (same harness): 21:9 [scissor-raw] `00FFF550`/`02FFF700`; depth fb 00B56000 `h=340 lwt=1 diff=1 lwr
+1024x340` every frame (16:9 shape); select frames VI 1400-1650 vhf 7.15-7.98 (was 19.1-26.0); post-select
+3.9-5.6; 16:9 control 4.9. Visual: floor and console ring drawn
+(screenshots/s6694_21x9_levelselect_before_after.png: top=before, middle=after, bottom=16:9).
+Two lines of evidence: the depth-fb bookkeeping census and the scorer/visual.
+Residual: noise at the top-right block (x~690-760, top rows) and right column (x>~950) of the 21:9 select
+frame - undrawn pixels, which is why vhf sits at 7.2 rather than <7. Separate defect, next unit.
+Verdict: selects H-skip (by zero-width scissor); refutes H-cimg (addr/width correct) and H-manager (no
+manager split; the clear never reached either). The census logs stay env-gated (ROGUESQ_LOG_DEPTH_PAIR).

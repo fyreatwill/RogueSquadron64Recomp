@@ -37807,6 +37807,10 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6204:
             changed = True
             report.append(f"{p.name}: s6204 poolclass x{_n6204}")
+        text, _n6694 = _a6031.apply_s6694_scissor(text)
+        if _n6694:
+            changed = True
+            report.append(f"{p.name}: s6694 scissor lrx clamp x{_n6694}")
 
     if p.name == "funcs_0.c":
         import apply_s6031_far as _a6031p

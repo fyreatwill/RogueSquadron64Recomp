@@ -1,21 +1,18 @@
-# NEXT: 21:9 level-select tear: where is the 1024-wide depth clear lost?
-HYPOTHESIS-ID: g1d-levelselect-rt64-depth
+# NEXT: 21:9 level-select right-edge residual (after the s6694 scissor fix)
+HYPOTHESIS-ID: g1d-levelselect-right-residual
 
-s6693 census (scratch/agent/s6693_depthrl, ab.py; fc/ subdir for fast-clear arms): at 21:9 the depth
-fb 00B56000 is always h=339 lastWriteType=Depth diff=0 in fullSync; at 16:9 the 796 fb is h=340 lwt=Color
-diff=1 (clear copied colour->depth each frame). Reload kill-switches only modulate; NO_DEPTH_FASTCLEAR no effect.
+s6694 fixed the floor tear (game scissor lrx (w*4)&0xFFF wrapped to 0 at w=1024; clamped to 0xFFF at
+0x80017370/0x80017814). Remaining in the 21:9 select frame (scratch/agent/s6694_clr/w21/wide21/fbd/
+fb_0001450_w1024.ppm, screenshots/s6694_21x9_levelselect_before_after.png middle row): noise block at
+x~690-760 rows 0-60 and a noise column x>~950. vhf 7.2-8.0 vs target <7.
 
 Hypotheses:
-- H-cimg: at 21:9 the clear pair's cimg differs (width != 1024, or address != 00B56000, e.g. 00B55FFx),
-  so get() keys/sizes it elsewhere. Then the draw pair's depth fb never sees it.
-- H-manager: the clear is applied only in the workload-queue fbManager (as type Depth via the fast path, or
-  as Color), and the state-thread manager used by fullSync never learns it. That is harmless at 16:9 only
-  because the 16:9 pairs take fullSync for the clear pair too.
-- H-skip: the clear pair is dropped (drawColorRect empty or flushed) before submitFramebufferPair at 1024.
-Discriminator (one build, one 21:9 + one 16:9 run): under ROGUESQ_LOG_DEPTH_PAIR, also log every pair with
-fillRectOnly=1 in submitFramebufferPair (cimg addr/width/siz/rect, clearDepthOnly) and in fullSync
-getFramebufferPairs (whether reached, colorFb addr/h/lwt after the write), keyed by submissionFrame.
-Clear pair at 21:9 with a different addr/width -> H-cimg; reaches submit but not fullSync -> H-manager;
-absent from submit -> H-skip. Positive control: 16:9 clear pair shows up in both and sets lwt=Color.
-Then fix the cause and score 21:9 level-select with g1d_row_noise (target vhf < 7). Send the owner the
-before/after frames. After that: G3d turning-shake.
+- H-wrap2: another game-built 12-bit x field (fill rect, tex rect, viewport scale/translate) encodes
+  1024*4 and wraps, so something meant to cover the right edge (backdrop clear / wall rect) is clipped.
+- H-fov: the 3D geometry genuinely ends before x=1024 (camera not widened enough for 1024), so those pixels
+  are never drawn and only the colour clear would hide them (is the colour image cleared at all here?).
+- H-stale: the pixels are drawn, but RT64 write-back/read-in at w=1024 leaves stale rows (old s6625 class).
+Discriminator (one run, python3 scratch/agent/s6694_clr/run.py w21 with ROGUESQ_LOG_FILLALL=1): list every
+fill/tex rect on the 1024 colour images with lrx<ulx or lrx==0 (H-wrap2); [floor-frame]/RDP tri x-extent max
+per frame vs 1023 (H-fov); compare the noise pixels against the previous frame dump (stale = identical, H-stale).
+Then fix and send the owner the before/after. After that: G3d turning-shake (ITERATION 3c).

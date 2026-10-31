@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6689 (2026-10-31).
+Compact operational handoff, as of Session 6694 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -37,27 +37,23 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   overwrote the free header the game put there (writer named with ROGUESQ_FLOOR_WATCH). Wider than
   4:3 the game now takes the retail gap==0 branch (heap [slot, slot+fbsize)). 16:9 lvl1 still
   mission_verified_130s. Does not affect the 21:9 level-select tear (s6691 A/B, ROGUESQ_G1D_HEAPSLOT=0).
-- **REOPENED s6691, localized s6692: G1d 21:9 level-select tear = floor/console ring drawn but
-  rejected inside RT64.** Every 21:9 level-select frame (VI 1400-1650) loses the floor and the front
-  console ring; the stripes are undrawn framebuffer. 16:9 clean. Scorer tools/g1d_row_noise.py (clean
-  3.8-6.8, torn 15-28). s6692 RDP-stream census (ROGUESQ_LOG_FLOOR [floor-src]/[floor-frame]/
-  [floor-zclear], src/rsp/dpc_bridge.cpp rs64_floor_scan), same run 16:9 vs 21:9: floor tris sample
-  the same-shape LoadBlock (2048 B, same submit, source not in CI/ZI); ~960 lower-screen tris/frame at
-  both widths, z-compare on, Z 32157..32694 (in range), one full-screen depth clear (fill FFFCFFFC,
-  0..W-1 x 0..339) per frame, colour images double-buffered. CULL_SPIKE=0 still torn (24.3), heapslot
-  on/off torn (s6691). Writer watch on 4 depth words in the torn rows: only RT64 native-swap depth
-  write-back writes them during select (no guest store). So the input is equivalent; the loss is in
-  RT64's depth/target handling at w=1024 (s6625 saw copyFromChanges overwrite the cleared depth).
-  s6693: reload kill-switches only modulate (vhf 19->11, not clean); NO_DEPTH_FASTCLEAR no effect.
-  [depth-pair] census: 21:9 depth fb 00B56000 stays h=339 lastWriteType=Depth diff=0 every pair,
-  while 16:9 fb 00B7BD80 is h=340 lastWriteType=Color diff=1: the 340-row clear never registers
-  against the 1024-wide depth fb, so depth is never cleared per frame (single-source).
+- **FIXED s6694: G1d 21:9 level-select floor tear.** Writer = the game's own G_SETSCISSOR builder in
+  setupCameraMatrices: lrx = (int)(w*4) & 0xFFF at 0x80017370 (full-fb scissor from 0x8011A838, set
+  before the depth clear) and 0x80017814. The RDP field is 12-bit 10.2, so w=1024 gives 0x1000 -> 0:
+  zero-wide scissor, the 0..1023 x 0..339 depth-clear fill clipped to an empty rect, depth never cleared,
+  static floor fails the Z test in stripes. 16:9 (3184) fits. Fix: clamp lrx to 0xFFF (1023.75, the
+  hardware max) at both sites (tools/apply_s6031_far.py apply_s6694_scissor, mirrored in the vendored
+  fixup; no-op at retail widths). Evidence: raw [scissor-raw] w1=00000550 -> 00FFF550; depth fb 00B56000
+  now h=340 lwt=Color diff=1 per frame like 16:9; select-frame vhf 19-26 -> 7.2-8.0; floor and ring
+  visible (screenshots/s6694_21x9_levelselect_before_after.png). Residual: noise strip at the top right
+  and right edge (x>~950) of the 21:9 select frame = undrawn pixels, separate defect (open).
+  The s6692/s6693 "RT64 depth handling" reading was right about where the clear was lost, wrong about why.
 - **G3c (owner visual report): engineering closed, owner judgement pending.**
   (a) far-edge stair: no opt-in rougher than retail (s6449, s6544);
   (b) spike wedges: H-hw-draws, angrylion lights the same 16/79 wedges
   (s6454), `ROGUESQ_CULL_SPIKE` now DEFAULT ON per owner 2026-10-31 (=0 to disable); (c) turning shake: retail 30 fps
   judder (s6455, s6458).
-- **G1d (aspect): level-select floor tear OPEN again (s6691, see above).** Flight radar
+- **G1d (aspect): level-select floor tear FIXED s6694 (see above); right-edge noise residual open.** Flight radar
   inset matches retail (s6610). Extra width is real scene and the left HUD
   stays pinned. Heap `8010FEFC` now stops at the depth pointer when aspect
   is wider than 4:3. The OS window stays 640x480, so wider modes letterbox.
@@ -338,6 +334,8 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   Level4 response unit closes; next: level5 original objective/target contract.
 
 ## Superseded conclusions — do not act on these
+
+- s6692/s6693 "21:9 floor tear is lost in RT64 depth handling at w=1024" (s6694: the game's scissor lrx w*4 wraps to 0 in the 12-bit field, so the depth-clear fill is clipped empty before RT64 bookkeeping). Believable because RDP triangle input matched and only RT64 touched the depth rows.
 
 - s6631 "21:9 level-select tear closed: heap 8010FEFC stops at the depth image" (s6691: the s6631
   passing frame is visibly torn; heapslot on/off both torn). Believable because the s6631 scorer
@@ -668,10 +666,10 @@ so statically they should be owned on the scripted route (H-load over H-prox).
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **21:9 level-select tear: RT64 depth side (s6692 localized it there).** RDP input is equivalent
-   at 16:9 and 21:9. s6693: the 1024-wide clear pair never registers on the depth fb (h=339, lwt=Depth);
-   log the clear pair's cimg (addr/width/height) in submit + fullSync to name where it is lost, then fix.
-   Env tools: ROGUESQ_LOG_DEPTH_PAIR, ROGUESQ_DEPTH_RELOAD, ROGUESQ_NO_DEPTH_FASTCLEAR. See NEXT.md.
+1. **21:9 level-select right-edge residual (after the s6694 scissor fix).** Top-right block (x~690-760,
+   rows 0-60) and right column (x>~950) of the 21:9 select frame are noise (undrawn/stale). Check the
+   other 0xFFF-masked x encodings (fill/tex rect, viewport) for the same w*4 wrap first, then whether
+   the geometry simply ends there (camera FOV vs fb width). Send the owner the s6694 before/after frame.
 2. **G3d turning-shake timing follow-up** (ITERATION 3c).
 3. **(PARKED by owner) G1(d) level8 live ownership + disable response.** s6687
    contract: extend g1_objective_response_run.py to level 8. One run with

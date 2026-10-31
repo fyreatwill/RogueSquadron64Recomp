@@ -485,12 +485,33 @@ def apply_s6689_heapslot(text):
         return text, 0
     return text.replace(old, new, 1), 1
 
+# s6694 G1d: setupCameraMatrices builds G_SETSCISSOR lrx as (int)(w*4) & 0xFFF at two sites: 0x80017370
+# (full-fb scissor from the video-state width 0x8011A838, set before the depth clear) and 0x80017814 (camera
+# viewport scissor). The RDP field is 12-bit 10.2, so a 1024-wide fb (21:9) gives 0x1000 -> 0: the scissor is
+# zero-wide, the depth-clear fill is clipped to nothing and the depth fb is never cleared (level-select floor
+# tear). Clamp to 0xFFF (1023.75, the hardware maximum; covers pixel 1023). Retail widths (<=640) never reach it.
+S6694_SITES = ("0x80017370", "0x80017814")
+def apply_s6694_scissor(text):
+    n = 0
+    for pc in S6694_SITES:
+        tag = "PATCH: s6694 scissor lrx clamp %s" % pc
+        old = ("    // %s: andi        $v0, $v0, 0xFFF\n"
+               "    ctx->r2 = ctx->r2 & 0XFFF;\n") % pc
+        if tag in text or text.count(old) != 1:
+            continue
+        new = ("    // %s: andi        $v0, $v0, 0xFFF\n"
+               "    if (SIGNED(ctx->r2) > 0xFFF) ctx->r2 = 0xFFF; /* %s */\n"
+               "    ctx->r2 = ctx->r2 & 0XFFF;\n") % (pc, tag)
+        text = text.replace(old, new, 1); n += 1
+    return text, n
+
 if __name__ == "__main__":
     p = base / "funcs_4.c"; t = p.read_text(); t2, n = apply4(t)
     t2, m = apply_s6201_pool(t2)
     t2, q = apply_s6204_poolclass(t2)
-    if n or m or q: p.write_text(t2)
-    print("funcs_4.c live patched x%d pool=%d poolclass=%d" % (n, m, q))
+    t2, sc = apply_s6694_scissor(t2)
+    if n or m or q or sc: p.write_text(t2)
+    print("funcs_4.c live patched x%d pool=%d poolclass=%d scissor=%d" % (n, m, q, sc))
     p0 = base / "funcs_0.c"; t = p0.read_text(); t2, n = applypfm(t)
     t2, c = apply_s6201_carve(t2)
     t2, r = apply_s6202_retarget(t2)
