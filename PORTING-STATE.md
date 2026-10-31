@@ -175755,3 +175755,7 @@ Rules out: texture source, TMEM load, stale TMEM, spike cull, game-side cull of 
 heap writes into depth. Does not yet name the RT64 step.
 
 Code: rs64_floor_scan census (diagnostic, env-gated, default off). No lib/ edit.
+Verdict: this selects H-rt64-depth (the loss is downstream of the RDP stream) and refutes H-src-overlap,
+H-load-geometry, H-split-draw (NEXT s6691) plus H-spikecull and H-guest-depth-writer. Next
+discriminator: an RT64 kill-switch for the RAM->depth reload, 21:9 on/off + 16:9 control, scored with
+g1d_row_noise.py (torn->clean selects H-reload; still torn -> H-size, depth target 339 vs clear 340 rows).
