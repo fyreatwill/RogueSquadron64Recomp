@@ -643,6 +643,9 @@ so statically they should be owned on the scripted route (H-load over H-prox).
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
+  s6688: G1f code (ROGUESQ_ASPECT=auto, ROGUESQ_FULLSCREEN=1, F11/Alt+Enter/Cmd+Ctrl+F)
+  is committed (bcede238c) but NOT built or run; verify it on a real display before
+  calling G1f done, then G3d.
 1. **G1(d) level8 live ownership + disable response (next unit).** s6687
    contract: extend g1_objective_response_run.py to level 8. One run with
    ROGUESQ_LOG_GRIDSPAWN=1 records each train car's desc+6 slot. If one
