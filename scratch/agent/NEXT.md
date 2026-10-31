@@ -1,44 +1,43 @@
-# G1(d): level6 spline-event remap and counter reader ownership
+# G1(d): level6 pending-song counter source ownership
 HYPOTHESIS-ID: g1-coverage-cd
 
-ONE bounded original-backed extension of tools/g1_dat_inventory.py. s6681
-closed kind3/subtype3 inline scripts statically:21 records/168 slots, no op3;
-completion selectors0. Context24 constructor source and fixed8 bounds proven.
-No live fallback request, lethal dose, repeat hold, stores or win gate.
+ONE bounded original-backed extension of tools/g1_dat_inventory.py. s6682
+closes the scoped spline-event common prefix (21 records/10 bounded kind7
+joins; all counter condition/effect selectors0). Counter90 graph stays open.
+No live fallback request, lethal dose, repeat hold, direct stores or win gate.
 
 Hypotheses:
-H-typed: spline event stride8 + remap points into bounded level6 DAT kind7
-records; condition counter+2C and effect counter+34 can be enumerated.
-H-derived: remap/relocation transforms another source; prove that transform
-before reading raw selectors or asserting a missing90.
-H-computed: owner/index bounds depend on runtime state or unresolved kinds;
-retain the precise edge and do not claim absence or fallback safety.
-DISCRIMINATOR: original F4660..46AC source+28 count/+2C event array, event+6
-index, source+D8 remap at source+D4+value, remap+2 index -> DAT header3C kind7
-table -> F3CB0 a1 -> F3D28 counter read (+2C selector/+30 threshold) and
-F3D74 read/modify/write (+34 selector/+38 delta). Join every selected level6
-event to its typed record. A retail nonzero selector in this exact family
-(other level if needed) plus synthetic90 and bound violations controls the
-whole decoder. Function-entry/heartbeat or raw float90 is not a control.
+H-typed: pending-song selectors originate in enumerable typed level6 DAT
+request records and queue copies preserve the source selector/threshold.
+H-derived: a producer transforms or substitutes the selector; qualify the
+transform before interpreting the raw DAT descriptor fields.
+H-computed: runtime callers/queue producers remain unresolved; preserve exact
+open edges, do not claim global absence or fallback safety.
+DISCRIMINATOR: trace original readers EDC2C/EDC5C -> globals8010C2F7/F8 ->
+writers EE18C/EE1A0 -> descriptor byte2B/word2C -> every producer/copy ->
+typed retail sources. Enumerate qualified level6 selectors with owner/kind/
+subtype/offset and signed threshold semantics. A nonzero retail control from
+this exact family and synthetic90 must traverse the full decoder. Heartbeats
+and raw-word searches do not control a missing90 result.
 
-Ground truth/regression baseline:
-    python3 tools/g1_dat_inventory.py --level 6 --check-level6-scripts --output scratch/agent/s6682_baseline.json
-    mips64-elf-objdump -d -j .ovl.mission --start-address=0x800f4648 --stop-address=0x800f46f4 ../rogue_squadron64/build/roguesquadron.elf
-    mips64-elf-objdump -d -j .ovl.mission --start-address=0x800f3cb0 --stop-address=0x800f3d84 ../rogue_squadron64/build/roguesquadron.elf
-    rg -n 'jal.*800f3cb0' scratch/agent/s6681_mission_disasm.txt
-    rg -n 'case 7|unk3C|unk34|unk38' ../rogue_squadron64/docs/dat_files/load_level_dat.c
-Read <=60-line windows. Follow original DAT kind7 relocation and subtype
-semantics before decoding fields; do not assume all events share layouts.
-Original s6681_*.json are static evidence, not live/hardware witnesses.
+Ground truth and baseline (bounded windows <=60 lines):
+    python3 tools/g1_dat_inventory.py --level 6 --check-level6-events --output scratch/agent/s6683_baseline.json
+    mips64-elf-objdump -d -j .ovl.mission --start-address=0x800edbb0 --stop-address=0x800edc90 ../rogue_squadron64/build/roguesquadron.elf
+    mips64-elf-objdump -d -j .ovl.mission --start-address=0x800ee158 --stop-address=0x800ee1bc ../rogue_squadron64/build/roguesquadron.elf
+    rg -n 'c2f7|c2f8|<processPendingSoundCueRequest>|<stageSongFromRequestDescriptor>' scratch/agent/s6681_mission_disasm.txt
+Reader uses unsigned selector byte, signed threshold word: nonnegative waits
+for count<threshold, negative threshold waits for count>=-threshold; verify
+original branch exits before naming polarity. ProcessPendingSoundCueRequest
+writes globals from s0+2B/+2C; trace s0 origin and all queue stores/copies,
+including resident callers. StageSongFromRequestDescriptor EED7C is only a
+lead until its relationship to the actual pending-request owner is proven.
 
-Land complete checked record edges and sensitivity/mutation controls in the
-existing tool, preserving all19 inventories and level2..6 prior contracts.
-Current script check1282 anchors/1502 rejected mutations. Both old safety and
-script checks retain unresolved NPC/actor/radar/music/handle and alias edges.
+Land checked complete edges and sensitivity/bounds/mutation controls in the
+existing tool. Preserve all19 inventories and prior level2..6, safety, script,
+event contracts (1399 anchors/1798 mutations in the event contract).
     python3 tools/g1_objective_response_run.py --self-test
-No runtime build, lib/default changes or queued repeat soak. Close this family
-only when ownership/bounds and positive control qualify; scoped missing90
-never admits a fallback hit because eager c50 coupling already exists.
+Static findings stay static; no runtime/default/lib changes or queued repeats.
+If source is not bounded, name that boundary instead of inventing selectors.
 
-Record Session6682, CURRENT-TRUTH and G1-OBJECTIVE-RESPONSE, rewrite NEXT for
-one unit, STATUS/OUTCOME and a NEW iter commit. No new soaks in s6681.
+Record Session6683, update CURRENT-TRUTH/G1-OBJECTIVE-RESPONSE, rewrite NEXT,
+STATUS/OUTCOME, and make a NEW iter commit. No new soak verdicts in s6682.

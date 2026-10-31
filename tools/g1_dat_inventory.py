@@ -1291,6 +1291,162 @@ def check_script_decoder_controls(rom):
                 evidence='retail bytes and original ELF contracts; synthetic decoder mutations are same-source, not runtime evidence')
 
 
+def decode_spline_events(rows):
+    tables = {kind: {r['index']: r for r in rows if r['kind'] == kind} for kind in (3,7)}
+    decoded = []
+    for row in tables[3].values():
+        if row['subtype'] != 3:
+            continue
+        raw = b''.join(struct.pack('>I', row['words'][f'{i:02x}'])
+                       for i in range(0, row['size'] - 3, 4))
+        if len(raw) < 0xdc or len(raw) != row['size']:
+            raise ValueError('spline event header outside record')
+        count, events_at = word(raw,0x28), word(raw,0x2c)
+        remap_count, relative = struct.unpack_from('>II',raw,0xd4)
+        remap_at = 0xd4 + relative
+        points_at = word(raw,0x20)
+        if (relative < 8 or remap_at + 4*remap_count != points_at
+                or points_at > len(raw)):
+            raise ValueError('spline remap span does not end at point array')
+        if count and (events_at < points_at or events_at + 8*count > len(raw)):
+            raise ValueError('spline events outside owning record')
+        events = []
+        for index in range(count):
+            at = events_at + 8*index
+            time, unused, remap_index = struct.unpack_from('>fHH',raw,at)
+            if not math.isfinite(time) or remap_index >= remap_count:
+                raise ValueError('spline event time/remap index outside qualified domain')
+            mapped_at = remap_at + 4*remap_index
+            kind, target_index = struct.unpack_from('>HH',raw,mapped_at)
+            if kind != 7 or target_index not in tables[7]:
+                raise ValueError('spline remap does not select an owned kind7 record')
+            target = tables[7][target_index]
+            if target['size'] < 0x44:
+                raise ValueError('spline effect common prefix outside target')
+            fields = {label: target['words'][f'{offset:02x}'] for label,offset in
+                      (('boolean_condition',0x28),('counter',0x2c),('threshold',0x30),
+                       ('effect_counter',0x34),('delta',0x38),('effect_boolean',0x3c),('value',0x40))}
+            events.append(dict(index=index,at=at,time=time,unused=unused,remap_index=remap_index,
+                               remap_at=mapped_at,kind=kind,target_index=target_index,
+                               target_offset=target['offset'],target_name=target['name'],
+                               subtype=target['subtype'],fields=fields,
+                               reads_counter=fields['counter'] != 0,
+                               writes_counter=fields['effect_counter'] != 0))
+        decoded.append(dict(name=row['name'],offset=row['offset'],size=row['size'],
+                            count=count,events_at=events_at,remap_at=remap_at,
+                            remap_count=remap_count,points_at=points_at,events=events))
+    return decoded
+
+
+def level6_events_contract(elf, rows):
+    spans = {
+        0x80046c24: (
+            '8e420038 10400017 00008821 8e42003c 8e430038 02422821 10600013 ae45003c '
+            '3406ffff 00a02021 8c820000 00a21821 ac830000 8c62000c 10400003 00621021 '
+            'ac62000c a4660006 8e420038 26310001 0222102b 1440fff4 24840004 08011b23 '
+            '00000000 ae40003c '
+        ),
+        0x800f4450: (
+            'e6b40014 aea0003c 8c620028 10400005 00000000 8c62002c c4400000 0803d120 '
+            'e6a00040 3c01800b c4208bd4 e6a00040 '
+        ),
+        0x800f4648: (
+            'c6a20030 c6a00040 4602003e 00000000 45000026 00000000 8ea30024 8c6400d8 '
+            '8ea2003c 248400d4 00642021 8c63002c 000210c0 00431021 3c038013 94420006 '
+            '8c6375d8 00021080 00441021 94420002 8c63003c 00021080 00431021 8c450000 '
+            '0c03cf2c 02e02021 8ea3003c 8ea50024 24640001 aea4003c 8ca30028 0083182a '
+            '10600007 a3a20168 8ca2002c 000418c0 00621821 c4600000 0803d1bd e6a00040 '
+            '3c01800b c4208be0 e6a00040 '
+        ),
+        0x800f3cb0: (
+            '27bdffc0 afb20038 00809021 afb00030 00a08021 afbf003c afb10034 8e050028 '
+            '10a0000e 02008821 28a20081 10400006 3c028014 244288a0 00a21021 9042ffff '
+            '0803cf40 0002102b 0c03cc96 02402021 304200ff 104000fb 00001021 8e22002c '
+            '1040000a 3c038014 24638060 2442ffff 00021080 00431021 8c420000 8e230030 '
+            '0043102a 144000ef 00001021 8e24003c 10800005 3c028014 244288a0 92230043 '
+            '00821021 a043ffff 8e230034 10600009 3c028014 24428060 2463ffff 00031880 '
+            '00621821 8c620000 8e240038 00441021 ac620000 96020000 2443ffe6 2c620035 '
+            '104000d7 3c02800b 24428ac8 00031880 00621821 8c620000 00400008 00000000 '
+        ),
+    }
+    expected = {start+4*i:int(value,16) for start,values in spans.items()
+                for i,value in enumerate(values.split())}
+    for pc,value in expected.items():
+        if elf_word(elf,pc) != value:
+            raise ValueError(f'spline event instruction changed at {pc:08x}')
+    decoded = decode_spline_events(rows)
+    signature = [(r['name'],e['index'],e['remap_index'],e['target_index'],e['subtype'])
+                 for r in decoded for e in r['events']]
+    wanted = [('Wingman_Spline_01',0,0,46,27),('Wingman_Spline_01',1,1,47,27),
+              ('Shuttle_Escape_01',0,1,42,34),('Shuttle_Escape_01',1,4,39,27),
+              ('Shuttle_Escape_01',2,0,38,26),('Shuttle_Escape_01',3,3,40,27),
+              ('Shuttle_Escape_01',4,2,41,27),('AT_ST_Spline_01',0,0,44,34),
+              ('AT_ST_Spline_02',0,0,45,34),('Hangar_ATST_Spline_01',0,0,48,34)]
+    if len(decoded) != 21 or signature != wanted:
+        raise ValueError('level6 spline event ownership census changed')
+    for record in decoded:
+        for event in record['events']:
+            if event['fields'] != dict(boolean_condition=0,counter=0,threshold=0,
+                                      effect_counter=0,delta=1,effect_boolean=0,value=1):
+                raise ValueError('level6 spline event common effect changed')
+    contract = level6_scripts_contract(elf,rows)
+    contract['instruction_checks'].update({f'{pc:08x}':f'{v:08x}' for pc,v in expected.items()})
+    contract['safety_audit']['spline_events'] = dict(
+        selection='H-typed for kind3/subtype3 spline events; no complete counter90 safety proof',
+        source='context24; source28 count/source2c relocated event array, stride8, event+6 unsigned remap index',
+        remap='source+d4+word(source+d8)+4*index; halfword+2 selects DAT header3c kind7 table',
+        bounds='Offline file bounds only: remap span ends at source20 point array; every event/index/target is within its owner. Original consumer does not enforce remap bounds.',
+        relocation='46c24..6c88 relocates kind7 table, table-relative records and names only; common selectors stay unmodified',
+        prefix='F3CB0 uses unshifted a1: +28 Boolean gate, +2c counter >= signed +30, +34 counter += +38, +3c Boolean := byte+43; all before subtype dispatchF3D84',
+        records=decoded,events=10,enabled_counter_conditions=0,enabled_counter_effects=0,
+        unresolved='Static typed inputs only; no live activation/all-constructor-arguments proof. Other kind7 producers, subtype-specific effects and NPC/radar/music/handle readers remain outside this closure.')
+    return contract
+
+
+def check_event_decoder_controls(rom):
+    data,_ = extract(rom,3)
+    rows = inventory(data)
+    def event(current,name,index):
+        return next(r for r in decode_spline_events(current) if r['name']==name)['events'][index]
+    condition = event(rows,'Madine_TO',0)
+    effect = event(rows,'CS_New_Wedge',0)
+    if (condition['target_index'],condition['fields']['counter'],condition['fields']['threshold'],
+            effect['target_index'],effect['fields']['effect_counter'],effect['fields']['delta']) != (88,26,3,54,16,1):
+        raise ValueError('retail nonzero spline event controls failed')
+    changed = bytearray(data)
+    struct.pack_into('>I',changed,int(condition['target_offset'],16)+0x2c,90)
+    struct.pack_into('>I',changed,int(effect['target_offset'],16)+0x34,90)
+    c,e = event(inventory(changed),'Madine_TO',0),event(inventory(changed),'CS_New_Wedge',0)
+    if c['fields']['counter'] != 90 or e['fields']['effect_counter'] != 90:
+        raise AssertionError('synthetic spline counter90 not detected')
+    disabled = bytearray(data)
+    struct.pack_into('>I',disabled,int(condition['target_offset'],16)+0x2c,0)
+    struct.pack_into('>I',disabled,int(effect['target_offset'],16)+0x34,0)
+    if event(inventory(disabled),'Madine_TO',0)['reads_counter'] or event(inventory(disabled),'CS_New_Wedge',0)['writes_counter']:
+        raise AssertionError('disabled spline selector treated as enabled')
+    owner = next(r for r in decode_spline_events(rows) if r['name']=='Madine_TO')
+    at = int(owner['offset'],16)
+    rejected=[]
+    for label,offset,fmt,value in (
+            ('event span OOB',0x2c,'I',owner['size']),
+            ('remap span OOB',0xd8,'I',owner['size']),
+            ('remap count',0xd4,'I',owner['remap_count']+1),
+            ('event index OOB',condition['at']+6,'H',owner['remap_count']),
+            ('remap kind',condition['remap_at'],'H',6),
+            ('target index OOB',condition['remap_at']+2,'H',65535),
+            ('nonfinite time',condition['at'],'I',0x7fc00000)):
+        mutated=bytearray(data);struct.pack_into('>'+fmt,mutated,at+offset,value)
+        try:
+            decode_spline_events(inventory(mutated))
+        except ValueError:
+            rejected.append(label)
+        else:
+            raise AssertionError('accepted '+label)
+    return dict(retail_level=3,condition_control=condition,effect_control=effect,
+                synthetic90=dict(condition=c,effect=e),disabled_selectors=True,rejected=rejected,
+                evidence='Retail DAT and original instructions support static interpretation only; controls are not live/hardware evidence')
+
+
 def check_contract_mutations(elf, data, contract, qualify):
     rejected = []
     for pc in contract['instruction_checks']:
@@ -1325,6 +1481,27 @@ def check_contract_mutations(elf, data, contract, qualify):
                 rejected.append(f"script-op:{record['offset']}:{slot['index']}")
             else:
                 raise AssertionError('accepted changed script opcode')
+    event_records = contract.get('safety_audit', {}).get('spline_events', {}).get('records', [])
+    mutations = set()
+    for record in event_records:
+        start = int(record['offset'],16)
+        for field in (0x20,0x28,0xd4,0xd8) + ((0x2c,) if record['count'] else ()):
+            mutations.add((start+field,'I'))
+        for event in record['events']:
+            mutations.add((start+event['at']+6,'H'))
+            mutations.add((start+event['remap_at']+2,'H'))
+            for field in range(0x28,0x44,4):
+                mutations.add((int(event['target_offset'],16)+field,'I'))
+    for at,fmt in sorted(mutations):
+        changed=bytearray(data)
+        value=struct.unpack_from('>'+fmt,changed,at)[0]
+        struct.pack_into('>'+fmt,changed,at,value+1)
+        try:
+            qualify(elf,inventory(changed))
+        except ValueError:
+            rejected.append(f'spline-event:{at:08x}')
+        else:
+            raise AssertionError(f'accepted changed spline event {at:08x}')
     if 'safety_audit' in contract:
         conditions = contract['safety_audit']['typed_DAT_conditions']
         for selector in (0,14,16,17,18,19):
@@ -1353,6 +1530,8 @@ def main():
     ap.add_argument('--mutation-check-level4', action='store_true')
     ap.add_argument('--check-level5', action='store_true')
     ap.add_argument('--mutation-check-level5', action='store_true')
+    ap.add_argument('--check-level6-events', action='store_true')
+    ap.add_argument('--mutation-check-level6-events', action='store_true')
     ap.add_argument('--check-level6-scripts', action='store_true')
     ap.add_argument('--mutation-check-level6-scripts', action='store_true')
     ap.add_argument('--check-level6-safety', action='store_true')
@@ -1402,6 +1581,13 @@ def main():
         contract['script_decoder_controls'] = check_script_decoder_controls(rom)
         if args.mutation_check_level6_scripts:
             contract['mutation_checks'] = check_contract_mutations(elf, data, contract, level6_scripts_contract)
+    if args.check_level6_events or args.mutation_check_level6_events:
+        if args.level != 6:
+            ap.error('--check-level6-events requires --level 6')
+        contract = level6_events_contract(elf, rows)
+        contract['event_decoder_controls'] = check_event_decoder_controls(rom)
+        if args.mutation_check_level6_events:
+            contract['mutation_checks'] = check_contract_mutations(elf, data, contract, level6_events_contract)
     tables = {f'{a:08x}': f'{elf_word(elf, a):08x}' for a in
               (0x8003bdb8 + 24 * 4, 0x8003bed8 + 24 * 4,
                0x8003c140 + 24 * 4, 0x8003bff0 + 36 * 4, 0x800a74c8 + 4 * 4)}

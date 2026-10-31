@@ -1876,3 +1876,75 @@ contract objects compare identical to HEAD; level2 assertions and objective
 analyzer self-tests pass. Neither already-dirty lib submodule was edited.
 Next unit: spline events through F4660..46AC remap into kind7 records consumed
 by updateNpcEffectIntensity; classify +2C counter condition and +34 effect.
+
+
+## s6682 — level6 spline-event remap and common counter prefix
+
+ONE bounded extension of `tools/g1_dat_inventory.py`, flags
+`--level 6 --check-level6-events --mutation-check-level6-events`.
+No runtime build/run, fallback request, lethal dose, direct stores or win gate.
+No new queued-soak verdicts; latest20261028-075640 already consumed.
+
+H-typed / H-derived / H-computed discriminator: original spline source ->
+stride8 event -> record-relative remap -> kind7 table entry -> unshifted
+updateNpcEffectIntensity input. **H-typed selected for the level6 kind3/subtype3
+file inputs.** Original F4660..46AC reads context24, source28 count/source2C
+relocated event array, unsigned event+6 index, remap at source+D4+word(D8),
+unsigned remap+2 target index, DAT header3C table, then passes the entire target
+record as a1. Loader46C24..6C88 relocates the table-relative kind7 records and
+names, leaving selectors unchanged. The record's remap kind halfword is7 in
+every selected entry; the consumer itself reads only its index halfword.
+
+Original F3CB0..3D80 processes the common prefix BEFORE subtype dispatch at
+F3D84: +28 Boolean gate; +2C counter selector with signed +30 threshold;
++34 counter selector incremented by +38; +3C Boolean set from byte+43.
+Subtype-specific effects remain outside this closure. Field values in the
+report retain raw words. A zero selector disables its common counter access.
+
+| Spline | Event order -> kind7 table indices | Subtypes (decimal) |
+| --- | --- | --- |
+| Wingman_Spline_01 |46,47 |27,27 |
+| Shuttle_Escape_01 |42,39,38,40,41 |34,27,26,27,27 |
+| AT_ST_Spline_01 |44 |34 |
+| AT_ST_Spline_02 |45 |34 |
+| Hangar_ATST_Spline_01 |48 |34 |
+
+All21 type3 records are decoded;5 have events,10 events total,10 distinct
+targets. Every selected target has common tuple(0,0,0,0,1,0,1) at28..40:
+Boolean/counter gates and common counter/Boolean writes disabled. Thus this
+specific static family neither reads nor increments90 through the common
+prefix. Every event span lies inside its source record; each event index is
+within the remap span; each target is an owned kind7 table entry. The remap
+span described by D4/D8 ends exactly at source20's point-array start. These
+are offline file bounds, NOT checks enforced by the original consumer, nor
+proof that all possible constructor arguments are typed spline records.
+
+Same-command retail positive controls in level3: Madine_TO event0 remap0 ->
+kind7[88], subtype34, common condition counter26>=3; CS_New_Wedge event0
+remap1 -> kind7[54], subtype26, common effect counter16+=1. Synthetic90 is
+observed in both exact fields; zero disables each. Seven malformed fixtures
+reject event/remap spans, remap count, event index, kind, target index and
+nonfinite time. Direct struct reads independently cross-check all10 original
+level6 record joins/7-word tuples without calling the event decoder; these
+remain same-data verification, not an independent live witness.
+
+1399 original instruction assertions and1798 rejected mutations pass, including
+original/safety/script regressions and active event ownership/prefix fields.
+All19 inventories and six prior contract objects(level3/4/5/6/safety/scripts)
+compare identical to pre-change HEAD. Existing level2 checks, original script
+controls and objective analyzer self-tests pass. Initial mutation run correctly
+accepted a changed source2C in a zero-event record: that pointer is unused.
+The mutation suite was corrected to require rejection only for active event
+pointers, then rerun completely; no decoder/runtime guard was added for it.
+
+Original ELF plus retail DAT establish static format/content. Decoder execution,
+struct cross-check and mutations use those same sources; no independent dynamic
+activation, full counter90 safety, retail-equivalence or VERIFIED claim follows.
+FFFF API10's eager c50/90 coupling stays inadmissible. NPC/actor/radar/music,
+other handle producers and arbitrary constructor arguments remain unresolved.
+Neither already-dirty lib submodule was edited; retail defaults unchanged.
+
+Evidence: scratch/agent/s6682_events.json, s6682_validation.json,
+s6682_baseline.json, s6682_level2.json. Next: original-backed ownership of the
+two pending-song counter readers, including descriptor/queue copying and a
+nonzero typed retail control; no repeat admission hold.

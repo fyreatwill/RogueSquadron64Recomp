@@ -175282,3 +175282,52 @@ Next: spline event stride8/remap into kind7 and updateNpcEffectIntensity's
 counter condition/effect fields, with a nonzero typed retail control.
 ADVANCED: persistent typed decoder plus ownership qualification selects H-DAT
 and closes this scoped static edge. No new live request authorized.
+
+
+## Session 6682 (2026-10-31) — qualify level6 spline-event remap and common counter prefix
+
+HYPOTHESIS-ID: g1-coverage-cd. ONE bounded original-backed tool change.
+CURRENT-TRUTH51377 bytes, maintenance not triggered. No new queued verdicts;
+latest20261028-075640 already consumed. No game build/run, fallback request,
+lethal dose, direct stores, win/progression or runtime/default/lib edits.
+
+H-typed/H-derived/H-computed discriminator: original context24 source ->
+stride8 event+6 remap index -> source+D4+word(D8) -> unsigned remap+2 target
+index -> DAT header3C kind7 -> unshifted F3CB0 input. Original loader46C24..6C88
+relocates table/records/names only. F3CB0..3D80 handles Boolean/counter gates
+and counter/Boolean effects BEFORE subtype dispatchF3D84. Counter readF3D28
+uses selector2C/threshold30; RMW F3D74 uses selector34/delta38.
+
+H-typed selected for this scoped static family: all21 level6 type3 records,
+10 events from5 sources,10 distinct owned kind7 targets. Wingman_Spline_01
+->46/47; Shuttle_Escape_01->42/39/38/40/41; AT_ST_Spline_01->44;
+AT_ST_Spline_02->45; Hangar_ATST_Spline_01->48. Every common tuple28..40 is
+(0,0,0,0,1,0,1), so counter conditions/effects disabled. All event/remap/target
+spans bounded; remap ends at source20 point-array start. Offline file bounds
+are NOT original enforced checks, arbitrary constructor-input safety or live
+activation. Subtype-specific effects remain outside this closure.
+
+Persistent decoder/contracts in tools/g1_dat_inventory.py add
+--check-level6-events/--mutation-check-level6-events. Same-command retail
+positive controls level3 Madine_TO event0->[88] c26>=3, CS_New_Wedge event0
+->[54] c16+=1; synthetic90 detected in both fields, zero disables each.
+Seven malformed fixtures reject.1399 instruction assertions/1798 rejected
+mutations pass. Direct struct cross-check10 joins/7-word tuples; all19
+inventories and six prior contract objects unchanged; level2 assertions,
+original script controls and objective analyzer self-tests pass.
+
+Failed initial mutation suite: changed source2C in a zero-event record was
+accepted because the pointer is unused. Corrected mutation scope to active
+pointers, reran complete suite successfully; no decoder guard added for it.
+Original ELF+retail DAT corroborate static format/content. Decoder, struct and
+mutation execution remain same-source; no independent dynamic witness,
+complete counter90 safety, retail-equivalence or VERIFIED claim follows.
+FFFF eager c50/90 coupling remains inadmissible. Other NPC/radar/music/handle
+and constructor-input/alias edges stay explicit. No conclusion overturned.
+
+Evidence: scratch/agent/s6682_events.json, s6682_validation.json,
+s6682_baseline.json, s6682_level2.json. Full table/limits in
+G1-OBJECTIVE-RESPONSE s6682. Next: pending-song counter source ownership,
+EDC2C/EDC5C via EE18C/EE1A0 descriptor/queue producers, typed retail control.
+ADVANCED: persistent bounded decoder closes a scoped original-backed edge;
+no live damage admission or safety claim.
