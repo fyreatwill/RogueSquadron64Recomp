@@ -650,6 +650,452 @@ def level6_contract(elf, rows):
         next_measurement='One ordinary original named API10 on owned OBJ_ConYard_Barracks, detail0, global80130B39=0; join slot/gen/node/payload/DAT/message/health writer and API return, original getters50/90 and actual changing-value control. No lethal dose; counter90 consumers require proof before a later destruction test.')
 
 
+def run_level6_original_slice(elf, counts=None, booleans=None, fallback=False):
+    """Execute the checked integer slice; external presentation calls are recorded."""
+    memory, regs, calls, writes = {}, [0] * 32, [], []
+
+    def store(address, value, size):
+        for i in range(size):
+            memory[address + i] = (value >> (8 * (size - i - 1))) & 255
+
+    def load(address, size):
+        if any(address + i not in memory for i in range(size)):
+            raise ValueError(f'uninitialized slice read {address:08x}')
+        return int.from_bytes(bytes(memory[address + i] for i in range(size)), 'big')
+
+    for i in range(128):
+        store(0x80138060 + 4*i, (counts or {}).get(i+1, 0), 4)
+        store(0x801388a0 + i, (booleans or {}).get(i+1, 0), 1)
+    store(0x8010ca20, 0, 4)
+    store(0x8010c9e0, 0, 4)
+    regs[29], regs[31] = 0x81001000, 0x7ffffffc
+    pc, end = 0x80104210, 0x7ffffffc
+    if fallback:
+        pc, end = 0x800c748c, 0x800c74e8
+        regs[16], regs[18] = 0x81002000, 10
+        store(0x80137ce4, 0, 4)
+        store(regs[16], 0x14, 2)
+        store(regs[16]+0x6c, 500, 4)
+        for i, value in enumerate((50, 1, 0, 0, 90, 1)):
+            store(regs[16]+0x70+4*i, value, 4)
+    allowed = ((0x80104210, 0x8010439c), (0x800c7540, 0x800c7568),
+               (0x800c759c, 0x800c7648), (0x800c7738, 0x800c77a0),
+               (0x80065914, 0x80065980), (0x800c748c, 0x800c74e8))
+    external = {0x800c7cf8, 0x800c7d1c, 0x800c7c6c, 0x800c76b0, 0x80067938}
+
+    def instruction(at, delay=False):
+        if not any(a <= at < b for a,b in allowed):
+            raise ValueError(f'outside audited slice {at:08x}')
+        w = elf_word(elf, at)
+        op, rs, rt, rd = w >> 26, w >> 21 & 31, w >> 16 & 31, w >> 11 & 31
+        imm = w & 65535
+        signed = imm if imm < 32768 else imm - 65536
+        target = None
+        if op in (2, 3):
+            target = ((at+4) & 0xf0000000) | ((w & 0x3ffffff) << 2)
+            if op == 3:
+                regs[31] = at+8
+        elif op in (4, 5):
+            take = (regs[rs] == regs[rt]) == (op == 4)
+            target = at+4+signed*4 if take else at+8
+        elif op == 0 and w & 63 == 8:
+            target = regs[rs]
+        elif op == 0 and w & 63 == 0:
+            regs[rd] = regs[rt] << (w >> 6 & 31) & 0xffffffff
+        elif op == 0 and w & 63 in (0x21, 0x23):
+            regs[rd] = (regs[rs] + (regs[rt] if w & 63 == 0x21 else -regs[rt])) & 0xffffffff
+        elif op == 9:
+            regs[rt] = (regs[rs] + signed) & 0xffffffff
+        elif op == 15:
+            regs[rt] = imm << 16
+        elif op == 13:
+            regs[rt] = regs[rs] | imm
+        elif op in (35, 36, 37):
+            regs[rt] = load((regs[rs]+signed) & 0xffffffff, {35:4,36:1,37:2}[op])
+        elif op in (43, 40):
+            address = (regs[rs]+signed) & 0xffffffff
+            size = 4 if op == 43 else 1
+            store(address, regs[rt], size)
+            writes.append(dict(pc=f'{at:08x}', address=f'{address:08x}', value=regs[rt], size=size))
+        else:
+            raise ValueError(f'unsupported slice instruction {at:08x}:{w:08x}')
+        regs[0] = 0
+        if target is not None:
+            if delay:
+                raise ValueError('control transfer in slice delay slot')
+            instruction(at+4, True)
+            if op == 3:
+                calls.append(dict(pc=f'{at:08x}', target=f'{target:08x}', a0=regs[4], a1=regs[5]))
+                if target in external:
+                    regs[2] = 1
+                    return at+8
+            return target
+        return at+4
+
+    for _ in range(3000):
+        if pc == end:
+            break
+        pc = instruction(pc)
+    else:
+        raise ValueError('slice instruction budget exhausted')
+    return dict(counts={i:load(0x80138060+4*(i-1),4) for i in (50,90,99)},
+                booleans={i:load(0x801388a0+i-1,1) for i in (11,98,99)},
+                hud_bits=load(0x8010c9e0,4), calls=calls, writes=writes,
+                health=load(0x8100206c,4) if fallback else None,
+                limitation='Original integer slice with presentation/audio calls stubbed; static fixture, not a game run')
+
+
+def level6_safety_contract(elf, rows):
+    contract = level6_contract(elf, rows)
+    spans = {
+        0x80065828: (
+            '94820000 2443fff4 2c620047 10400032 3c028004 2442c140 00031880 00621821 '
+            '8c620000 00400008 00000000 8c830060 10600006 3c028014 244288a0 00621021 '
+            '9042ffff 10400017 00000000 8c820064 1040000a 3c038014 24638060 2442ffff '
+            '00021080 00431021 8c430000 8c840068 0064182a 14600019 00001021 03e00008 '
+            '24020001 8c830034 10600008 3c028014 244288a0 00621021 9042ffff 14400003 '
+            '00000000 03e00008 00001021 8c820038 1040fff2 3c038014 24638060 2442ffff '
+            '00021080 00431021 8c430000 8c84003c 08019627 0064182a 24020001 03e00008 '
+            '00000000'
+        ),
+        0x800c748c: (
+            '3c028013 8c437ce4 02003821 00031880 00671821 8c62006c 00521023 00408821 '
+            'ac71006c 94e30000 24020014 1462000c 02201021 8ce20080 afa20010 8ce20084 '
+            'afa20014 8ce40078 8ce5007c 8ce60070 8ce70074 0c019645 00000000'
+        ),
+        0x800c7540: (
+            '14800003 3c028014 03e00008 24020001 244288a0 2483ffff 00621821 90620000 '
+            '03e00008 a0650000'
+        ),
+        0x800c759c: (
+            '14800003 3c028014 03e00008 24020001 244288a0 00821021 9042ffff 03e00008 '
+            '00000000 14800003 3c028014 03e00008 00001021 24428060 2483ffff 00031880 '
+            '00621821 8c620000 03e00008 ac650000 14800003 3c028014 03e00008 00001021 '
+            '24428060 2483ffff 00031880 00621821 8c620000 00451021 03e00008 ac620000 '
+            '14800003 3c038014 03e00008 00001021 24638060 2482ffff 00021080 00431021 '
+            '8c420000 03e00008 00000000'
+        ),
+        0x800c7738: (
+            '3c028011 8c42ca20 27bdffe8 14400006 afbf0010 3c038011 8c62c9e0 34420004 '
+            '0c019e4e ac62c9e0 8fbf0010 03e00008 27bd0018 3c028011 8c42ca20 27bdffe8 '
+            '14400006 afbf0010 3c038011 8c62c9e0 34420008 0c019e4e ac62c9e0 8fbf0010 '
+            '03e00008 27bd0018'
+        ),
+        0x800f9fd0: (
+            '27bdffd0 f7b40028 46006506 afb20018 00009021 3c028011 afb10014 2451c6e0 '
+            '3c028014 afb40020 245488a0 3c028014 afb3001c 24538060 afb00010 2630000d '
+            'afbf0024 92050001 24020001 54a20037 26520001 9202ffff 10400005 00000000 '
+            '10450024 00000000 0803e83f 26520001 9202fff7 10400005 00541021 9043ffff '
+            '9202fff8 54620029 26520001 9202fff9 1040001f 00000000 9204fffa 14800008 '
+            '2442ffff 00021080 00531021 8c420000 8e03fffb 0043102a 5440001c 26520001 '
+            '14850013 00000000 9202fff9 8e03fffb 2442ffff 00021080 00531021 8c420000 '
+            '0043102a 50400011 26520001 0803e838 00000000 c600fff7 46140001 44801000 '
+            '4600103c 00000000 45010007 e600fff7 92020000 14400004 a2000001 8e220000 '
+            '0040f809 00000000 26520001 26100010 2a420030 1440ffc3 26310010 8fbf0024 '
+            '8fb40020 8fb3001c 8fb20018 8fb10014 8fb00010 d7b40028 24020001 03e00008 '
+            '27bd0030'
+        ),
+        0x800fa15c: (
+            '00805021 00001821 3c028011 2448c6e0 01002021 93a90017 9082000e 10400006 '
+            '24020030 24630001 28620030 1440fffa 24840010 24020030 1062000f 24020001 '
+            '00031900 00681821 00402021 a064000e a060000d a060000c ac6a0000 a0650004 '
+            'a0660005 a0670006 8fa40010 a0690007 03e00008 ac640008 03e00008 00001021'
+        ),
+        0x8010439c: (
+            '3c01800b c42c9778 27bdffe0 afbf001c 0c031f3b afb00018 3c048010 2484444c '
+            '00002821 00a03021 24070014 24100001 0c031e0c afb00010 3c048010 2484447c '
+            '00002821 00a03021 24070015 0c031e0c afb00010 3c048010 24844498 00002821 '
+            '00a03021 2407000d 0c031e0c afb00010 3c048010 248444b4 2405007f 02003021 '
+            '00003821 0c031e0c afa00010 8fbf001c 8fb00018 00001021 03e00008 27bd0020'
+        ),
+        0x800a8a20: (
+            '800f3320 800f3344 800f339c 800f33dc 800f33f0 800f3418 800f3434'
+        ),
+        0x800f32d8: (
+            '8e220024 24150001 24530054 24500058 8e240024 8e020008 8e630000 00829021 '
+            '2463ffff 2c620007 1040005f 00031080 3c07800b 24e78a20 00471021 8c420000 '
+            '00400008 00000000'
+        ),
+        0x800f339c: (
+            'c6000000 4600010d 44022000 18400038 2442ffff 00021080 00571021 c6000004 '
+            '8c420000 4600010d 44032000 0043102a 14400030 26100010 0803ccfd 02402021'
+        ),
+        0x800f4350: (
+            '8ca30040 10600009 3c028014 24428060 2463ffff 00031880 00621821 8c620000 '
+            '8ca40044 00441021 ac620000 8ca40048 10800005 3c028014'
+        ),
+        0x8003c140: (
+            '80065854 80065854 80065854 80065854 80065900 80065900 80065854 80065854 '
+            '80065854 80065900 80065900 80065900 80065900 800658ac 80065900 80065900 '
+            '80065900 80065900 80065854 80065854 80065900 80065854 80065900 80065900 '
+            '80065854 80065854 80065900 80065854 80065854 80065854 80065854 80065854 '
+            '80065854 80065854 80065854 80065854 80065854 80065854 80065854 80065854 '
+            '80065854 80065854 80065854 80065854 80065900 80065900 80065900 80065854 '
+            '80065854 80065854 80065854 80065900 80065854 80065854 80065854 80065854 '
+            '80065854 80065900 80065854 80065854 80065854 80065900 80065854 80065854 '
+            '80065854 80065854 80065900 80065854 80065854 80065900 80065854'
+        ),
+        0x80065874: (
+            '8c820064 1040000a 3c038014 24638060 2442ffff 00021080 00431021 8c430000 '
+            '8c840068 0064182a 14600019 00001021 03e00008 24020001'
+        ),
+        0x800658d4: (
+            '8c820038 1040fff2 3c038014 24638060 2442ffff 00021080 00431021 8c430000 '
+            '8c84003c 08019627 0064182a 24020001 03e00008 00000000'
+        ),
+        0x80065928: (
+            'a045ffff 10c00008 3c028014 24428060 24c3ffff 00031880 00621821 8c620000 '
+            '00471021 ac620000 11000009 3c028014 24428060 2503ffff'
+        ),
+        0x8006594c: (
+            'ac620000 11000009 3c028014 24428060 2503ffff 00031880 00621821 8c620000 '
+            '8fa40014 00441021 ac620000 03e00008 00000000 94830000'
+        ),
+        0x800659c4: (
+            '8c82002c 1040000c 3c038014 24638060 2442ffff 00021080 00431021 8c420000 '
+            '8c830030 0043102a 1440ffea 30a300ff 08019681 24020001'
+        ),
+        0x80065a0c: (
+            '8cc30000 10600009 3c028014 24428060 2463ffff 00031880 00621821 8c620000 '
+            '8cc40004 00441021 ac620000 8cc40008 1080ffd6 3c028014'
+        ),
+        0x8007b310: (
+            '8e420074 1040000b 3c038014 24638060 2442ffff 00021080 00431021 8c420000 '
+            '8e430078 0043102a 14400002 24020001 a262017c c6600130'
+        ),
+        0x8007cb2c: (
+            '8c8200c0 1040000a 3c038014 24638060 2442ffff 00021080 00431021 8c420000 '
+            '8c8300c4 0043102a 14400084 00001021 8e440038 0c03ca62'
+        ),
+        0x800afd44: (
+            '3c028014 245588a0 3c028014 24548060 8c6275d8 8c430004 00111080 00431021 '
+            '8c500000 96020000 54560025 3c038013 8e020060 10400004'
+        ),
+        0x800c55d8: (
+            '3c028014 245e88a0 3c028014 24578060 3c028011 2455c000 8eb10000 8e220030 '
+            '18400004 24040001 005e1021 9042ffff 0002202b 8e220034'
+        ),
+        0x800c75c4: (
+            '3c028014 03e00008 00001021 24428060 2483ffff 00031880 00621821 8c620000 '
+            '03e00008 ac650000 14800003 3c028014 03e00008 00001021'
+        ),
+        0x800c75f0: (
+            '3c028014 03e00008 00001021 24428060 2483ffff 00031880 00621821 8c620000 '
+            '00451021 03e00008 ac620000 14800003 3c038014 03e00008'
+        ),
+        0x800c7620: (
+            '3c038014 03e00008 00001021 24638060 2482ffff 00021080 00431021 8c420000 '
+            '03e00008 00000000 3c028014 244299f8 00822021 90820000'
+        ),
+        0x800d98c0: (
+            '8c820064 1040000f 3c038014 24638060 2442ffff 00021080 00431021 8c420000 '
+            '8c830068 0043102a 10400007 02002021 96640016 0c00fb5d'
+        ),
+        0x800e0be8: (
+            '8c82012c 1040000a 3c038014 24638060 2442ffff 00021080 00431021 8c420000 '
+            '8c830130 0043102a 1440002a 00000000 92a200b3 14400015'
+        ),
+        0x800e3c10: (
+            '8c820120 1040000a 3c038014 24638060 2442ffff 00021080 00431021 8c420000 '
+            '8c830124 0043102a 14400068 00000000 924300b2 24020003'
+        ),
+        0x800e3c74: (
+            '8c8200cc 1040000a 3c038014 24638060 2442ffff 00021080 00431021 8c420000 '
+            '8c8300d0 0043102a 1440004f 00000000 8e440038 0c03ca1f'
+        ),
+        0x800e8084: (
+            '8c820064 1040000f 3c038014 24638060 2442ffff 00021080 00431021 8c420000 '
+            '8c830068 0043102a 10400006 00000000 96840016 0c00fb5d'
+        ),
+        0x800ecd5c: (
+            '8ca2008c 1040000a 3c038014 24638060 2442ffff 00021080 00431021 8c420000 '
+            '8ca30090 0043102a 14400011 24020001 44050000 0c03b1bc'
+        ),
+        0x800ecf30: (
+            '8c820038 1040000a 3c038014 24638060 2442ffff 00021080 00431021 8c420000 '
+            '8c83003c 0043102a 14400075 24020001 8e030000 8c620030'
+        ),
+        0x800edc20: (
+            '3c028014 3c038014 90a2c2f7 24638060 2442ffff 00021080 00431021 8c420000 '
+            '00041823 0043102a 1440000c 00001021 03e00008 00000000'
+        ),
+        0x800edc50: (
+            '03e00008 00000000 90a3c2f7 24428060 2463ffff 00031880 00621821 8c630000 '
+            '0064182a 1460fff6 00001021 03e00008 24020001 00001021'
+        ),
+        0x800f32b4: (
+            '245e88a0 3c028014 afb7006c 24578060 afbf0074 afb50064 afb3005c afb20058 '
+            'afb00050 8e220024 24150001 24530054 24500058 8e240024'
+        ),
+        0x800f3d0c: (
+            '8e22002c 1040000a 3c038014 24638060 2442ffff 00021080 00431021 8c420000 '
+            '8e230030 0043102a 144000ef 00001021 8e24003c 10800005'
+        ),
+        0x800f3d58: (
+            '8e230034 10600009 3c028014 24428060 2463ffff 00031880 00621821 8c620000 '
+            '8e240038 00441021 ac620000 96020000 2443ffe6 2c620035'
+        ),
+        0x800f3ff4: (
+            '8c820050 1040000d 3c038014 24638060 2442ffff 00021080 00431021 8c420000 '
+            '8c830054 0043102a 14400004 00000000 a3a00018 0803d010'
+        ),
+        0x800f41f4: (
+            '92a200fe 1040000c 3c038014 24638060 2442ffff 00021080 00431021 8c420000 '
+            '8ea30100 0043102a 10400003 00000000 0803d120 241e0001'
+        ),
+        0x800f9ff8: (
+            '245488a0 3c028014 afb3001c 24538060 afb00010 2630000d afbf0024 92050001 '
+            '24020001 54a20037 26520001 9202ffff 10400005 00000000'
+        ),
+        0x800fa3e8: (
+            '34420080 ae22ca1c 3c048014 24848060 00002821 24060200 3c028013 a0407cf4 '
+            '3c028014 a0408890 3c028014 a0408925 3c028014 a0408838'
+        ),
+    }
+    base_sites = {
+        0x80065880: 0x24638060,
+        0x800658e0: 0x24638060,
+        0x80065934: 0x24428060,
+        0x80065958: 0x24428060,
+        0x800659d0: 0x24638060,
+        0x80065a18: 0x24428060,
+        0x8007b31c: 0x24638060,
+        0x8007cb38: 0x24638060,
+        0x800afd50: 0x24548060,
+        0x800c55e4: 0x24578060,
+        0x800c75d0: 0x24428060,
+        0x800c75fc: 0x24428060,
+        0x800c762c: 0x24638060,
+        0x800d98cc: 0x24638060,
+        0x800e0bf4: 0x24638060,
+        0x800e3c1c: 0x24638060,
+        0x800e3c80: 0x24638060,
+        0x800e8090: 0x24638060,
+        0x800ecd68: 0x24638060,
+        0x800ecf3c: 0x24638060,
+        0x800edc2c: 0x24638060,
+        0x800edc5c: 0x24428060,
+        0x800f32c0: 0x24578060,
+        0x800f3d18: 0x24638060,
+        0x800f3d64: 0x24428060,
+        0x800f4000: 0x24638060,
+        0x800f4200: 0x24638060,
+        0x800f435c: 0x24428060,
+        0x800fa004: 0x24538060,
+        0x800fa3f4: 0x24848060,
+    }
+    expected = {int(pc,16):int(value,16) for pc,value in contract['instruction_checks'].items()}
+    for start, words in spans.items():
+        expected.update({start+4*i:int(value,16) for i,value in enumerate(words.split())})
+    expected.update(base_sites)
+    for pc, value in expected.items():
+        if elf_word(elf, pc) != value:
+            raise ValueError(f'level6 safety instruction changed at {pc:08x}')
+    found = {pc:elf_word(elf,pc) for start,end in
+             ((0x80000440,0x800a5130),(0x800a5130,0x8010b6d0))
+             for pc in range(start,end,4)
+             if elf_word(elf,pc) >> 26 == 9 and elf_word(elf,pc) & 65535 == 0x8060}
+    if found != base_sites:
+        raise ValueError('counter-base candidate census changed')
+    classes = {
+        'DAT condition read, subtype-dispatched; source offsets64/38': [0x80065880,0x800658e0],
+        'effect read/modify/write, input selectors': [0x80065934,0x80065958,0x80065a18,0x800f3d64,0x800f435c],
+        'DAT trigger condition read, offset2c': [0x800659d0],
+        'NPC/actor condition read, runtime descriptor; reachability unresolved':
+            [0x8007b31c,0x8007cb38,0x800d98cc,0x800e0bf4,0x800e3c1c,0x800e3c80,
+             0x800e8090,0x800ecd68,0x800ecf3c,0x800f3d18,0x800f4000,0x800f4200],
+        'scene activation indexed read, DAT64': [0x800afd50],
+        'radar condition indexed read, contact34/40': [0x800c55e4],
+        'public set/add/get, parameter selector': [0x800c75d0,0x800c75fc,0x800c762c],
+        'music condition read, request-dependent selector': [0x800edc2c,0x800edc5c],
+        'typed script opcode3, float selector converted to integer': [0x800f32c0],
+        'objective handle indexed read, record+6': [0x800fa004],
+        'initialization, memset512 bytes': [0x800fa3f4],
+    }
+    if sorted(pc for sites in classes.values() for pc in sites) != sorted(found):
+        raise ValueError('unclassified or duplicated counter-base candidate')
+    controls = {}
+    for label, counters, booleans in (
+        ('below', {50:3,99:1}, {}), ('threshold', {50:4,99:1}, {}),
+        ('latched', {50:4,99:1}, {99:1}), ('one_stage', {50:4}, {}),
+        ('both_stages', {50:4,98:6}, {}), ('failure', {34:1,50:4,99:1}, {}),
+        ('counter90_only', {90:1}, {})):
+        controls[label] = run_level6_original_slice(elf,counters,booleans)
+    if not (controls['below']['hud_bits'] == 0 and controls['threshold']['hud_bits'] == 8
+            and controls['threshold']['counts'][99] == 2 and controls['threshold']['booleans'][99] == 1
+            and controls['latched']['hud_bits'] == 0 and controls['one_stage']['hud_bits'] == 0
+            and controls['one_stage']['counts'][99] == 1 and controls['both_stages']['hud_bits'] == 8
+            and controls['failure']['hud_bits'] == 4 and controls['counter90_only']['hud_bits'] == 0):
+        raise ValueError('original c50->Boolean99->counter99->Bit8 control failed')
+    fallback = run_level6_original_slice(elf, fallback=True)
+    if (fallback['health'], fallback['counts'][50], fallback['counts'][90]) != (490,1,1):
+        raise ValueError('FFFF ordinary-request eager effect control failed')
+    margin_hit = run_level6_original_slice(elf, {50:3,99:1}, fallback=True)
+    margin_callback = run_level6_original_slice(elf, margin_hit['counts'])
+    if margin_callback['hud_bits'] != 8:
+        raise ValueError('FFFF request at c50 margin did not reach original Bit8 gate')
+    # Table dispatch makes the +64 field typed, rather than a raw-word search.
+    typed = []
+    for row in rows:
+        if row['kind'] != 0 or not 12 <= row['subtype'] <= 82:
+            continue
+        target = elf_word(elf,0x8003c140+4*(row['subtype']-12))
+        if target not in (0x80065854,0x800658ac):
+            continue
+        field = 0x64 if target == 0x80065854 else 0x38
+        selector = row['words'][f'{field:02x}']
+        typed.append(dict(name=row['name'],offset=row['offset'],subtype=row['subtype'],
+                          dispatch=f'{target:08x}',field=f'{field:02x}',counter=selector,
+                          threshold=row['words'][f'{field+4:02x}']))
+    getters = []
+    for start, end in ((0x80000440,0x800a5130),(0x800a5130,0x8010b6d0)):
+        for pc in range(start,end,4):
+            if elf_word(elf,pc) != 0x0c031d87:
+                continue
+            selector, evidence = None, None
+            for at in range(pc+4,max(start,pc-32)-1,-4):
+                value = elf_word(elf,at)
+                op, rt, rd = value >> 26, value >> 16 & 31, value >> 11 & 31
+                if op in (2,3,4,5,6,7) or (op == 0 and value & 63 in (8,9)):
+                    if at != pc:
+                        break
+                    continue
+                if op in (9,13) and rt == 4 and (value >> 21 & 31) == 0:
+                    selector, evidence = value & 65535, f'{at:08x}'
+                    break
+                if (op in (9,13,15,32,33,35,36,37) and rt == 4) or (op == 0 and rd == 4):
+                    break
+            getters.append(dict(pc=f'{pc:08x}',counter=selector,constant_at=evidence,
+                                classification='constant selector' if selector is not None else 'unresolved reaching definition'))
+    condition_summary = Counter((r['counter'],r['threshold']) for r in typed)
+    if condition_summary != Counter({(0,0):154,(17,1):4,(18,1):3,(19,1):3,(16,1):2,(14,1):1}):
+        raise ValueError('typed level6 DAT condition census changed')
+    contract['instruction_checks'] = {f'{pc:08x}':f'{value:08x}' for pc,value in sorted(expected.items())}
+    contract['safety_audit'] = dict(
+        selection='H-unresolved: no complete consumer graph or live fallback safety admission',
+        base_candidates=[dict(pc=f'{pc:08x}',classification=kind) for kind,sites in classes.items() for pc in sites],
+        census_scope='Every ADDIU immediate8060 in resident text and mission overlay. Not an alias/pointer proof; shifted bases and indirect calls remain outside the census.',
+        original_slice_controls=controls, fallback_control=fallback,
+        fallback_margin_control=dict(hit=margin_hit,callback=margin_callback),
+        direct_getter_calls=getters,
+        typed_DAT_conditions=typed,
+        typed_counter90_conditions=[r for r in typed if r['counter']==90],
+        script_edge=dict(dispatch_table='800a8a20',opcode=3,entry='800f339c',read='800f33bc',
+                         selector='trunc.w.s(record+0x58+16*i)',threshold='trunc.w.s(record+0x5c+16*i)',
+                         effect='counter >= threshold selects pipe-delimited DAT name; no direct terminal store in this slice',
+                         unresolved='owner at effect-context+24 and its original constructor/record bounds not yet joined to retail DAT'),
+        handle_edge=dict(selector='byte at record+6',threshold='signed word record+8',
+                         effect='mode0 >= threshold, mode1 < threshold; calls record function pointer',
+                         level6_initializer_counters=[20,21,13,0],
+                         unresolved='other handle producers/callback reachability not exhaustively qualified'),
+        unresolved=['Runtime descriptor selectors at NPC/actor, radar, music and effect readers need typed ownership proofs.',
+                    'Script owner+24 constructor and embedded records need typed retail DAT join.',
+                    'Aliases, shifted base materializations, indirect getObjectiveCount callers and other handle producers are not excluded.'],
+        safety='FFFF API10 changes c50 AND c90 with health500->490. Repeated requests can reach c50==4 success-stage gate; no destruction boundary protects it. No live request authorized.',
+        evidence='Original ELF instructions and retail DAT fields corroborate static contracts; slice execution is same-source, not independent hardware/runtime evidence.')
+    return contract
+
+
 def check_contract_mutations(elf, data, contract, qualify):
     rejected = []
     for pc in contract['instruction_checks']:
@@ -672,6 +1118,19 @@ def check_contract_mutations(elf, data, contract, qualify):
                 rejected.append(f"DAT:{row['name']}:{field:02x}")
             else:
                 raise AssertionError(f"accepted mutated DAT {row['name']}:{field:02x}")
+    if 'safety_audit' in contract:
+        conditions = contract['safety_audit']['typed_DAT_conditions']
+        for selector in (0,14,16,17,18,19):
+            row = next(r for r in conditions if r['counter'] == selector)
+            for field in (int(row['field'],16), int(row['field'],16)+4):
+                changed = bytearray(data)
+                struct.pack_into('>I',changed,int(row['offset'],16)+field,90)
+                try:
+                    qualify(elf,inventory(changed))
+                except ValueError:
+                    rejected.append(f"typed-DAT:{row['offset']}:{field:02x}->90")
+                else:
+                    raise AssertionError('accepted changed typed condition')
     return dict(rejected=len(rejected), mutations=rejected, live_qualified=False)
 
 
@@ -687,6 +1146,8 @@ def main():
     ap.add_argument('--mutation-check-level4', action='store_true')
     ap.add_argument('--check-level5', action='store_true')
     ap.add_argument('--mutation-check-level5', action='store_true')
+    ap.add_argument('--check-level6-safety', action='store_true')
+    ap.add_argument('--mutation-check-level6-safety', action='store_true')
     ap.add_argument('--check-level6', action='store_true')
     ap.add_argument('--mutation-check-level6', action='store_true')
     ap.add_argument('--output', type=Path, required=True)
@@ -719,6 +1180,12 @@ def main():
         contract = level6_contract(elf, rows)
         if args.mutation_check_level6:
             contract['mutation_checks'] = check_contract_mutations(elf, data, contract, level6_contract)
+    if args.check_level6_safety or args.mutation_check_level6_safety:
+        if args.level != 6:
+            ap.error('--check-level6-safety requires --level 6')
+        contract = level6_safety_contract(elf, rows)
+        if args.mutation_check_level6_safety:
+            contract['mutation_checks'] = check_contract_mutations(elf, data, contract, level6_safety_contract)
     tables = {f'{a:08x}': f'{elf_word(elf, a):08x}' for a in
               (0x8003bdb8 + 24 * 4, 0x8003bed8 + 24 * 4,
                0x8003c140 + 24 * 4, 0x8003bff0 + 36 * 4, 0x800a74c8 + 4 * 4)}

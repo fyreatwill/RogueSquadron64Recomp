@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6678 (2026-10-31).
+Compact operational handoff, as of Session 6680 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -524,15 +524,54 @@ no new live response/VERIFIED claim. Old level6 heartbeat is still no value
 control. No build/run/default/lib change or new soaks. Full table/limits:
 G1-OBJECTIVE-RESPONSE s6678; scratch/agent/s6678_validation.json.
 
+## s6679 update — level6 ordinary admission remains unregistered
+
+Corrected unlocked flight, 184.02s runner wall, VI5744..11154, done
+dv5410 selected1 flight1,0 crashes/requests/forces. Three admission arms:
+Barracks base8031B9B0/DAT803203DC lookup matches; subtype14(hex),detail0,
+HP500, source/effect gates0, valid free list, but registrationFFFF/owned0.
+No damage route tested. Actual getters 20,21,64,65,66,67,98 change and match memory;
+10 callback changes. Target owned mark-all never fires: no controlled
+health/objective null or VERIFIED claim. Original ELF/DAT independently support
+contracts only; live evidence single-source. New ordinary-only adapter/analyzer
+records all identities/gates/returns; generic TELE/lethal disabled. First run
+late done15119 was outside flight: shared dispatcher census outlived callbacks.
+Corrected level6 census checks flight at every scan; rebuilt/reran v2, preserved
+v1 separately. Both builds/fixtures,294 anchors/334 mutations,8 extra original
+return assertions, level3..5 regressions,13-file idempotence,3 hook replays and
+6/6 v2 launch hashes pass; prior level3/4/5 helpers unchanged. No lib/default
+change or new soaks. Proof/table: G1-OBJECTIVE-RESPONSE s6679;
+scratch/agent/s6679_qualification.json. Next: counter90 consumer/fallback safety
+audit; no repeat hold or destruction admission.
+
+## s6680 update — level6 eager fallback coupling checked; counter90 graph open
+
+Bounded original-contract tool extension; no game run/build. Original-instruction
+slice controls recover c50=4 -> Boolean99 latch -> c99+=1 -> c99=2 -> Bit8,
+including below-threshold/latch/other-stage/Bit4 controls. FFFF subtype14 API10
+writes HP500->490 AND increments50/90. Synthetic baseline c50=3/c99=1 then
+reaches Bit8 despite surviving health. All30 ADDIU8060 candidates classified;
+125 direct getter calls have constant selectors, none90. Original subtype table
+selects167 typed DAT conditions (154 disabled;13 counters14/16/17/18/19), none90.
+These are scoped static results, not a complete absence/safety proof. Original
+script table opcode3 -> F339C reads counter trunc.w.s(record+58+16*i) atF33BC;
+owner context+24 constructor remains unjoined. Handle and NPC/actor/radar/music
+computed edges stay explicit. H-unresolved for90; no fallback/lethal admission,
+VERIFIED or retail-equivalence claim. ELF+DAT support static contracts only;
+slice execution is same-source, not independent dynamic evidence. Safety996 original anchors/1048 rejected mutations pass; existing
+level2..6 contracts, all19 inventories and analyzer controls pass. No lib/default
+change or new soak verdict. Full limits: G1-OBJECTIVE-RESPONSE s6680; proof
+scratch/agent/s6680_safety.json and s6680_validation.json.
+
 ## Next steps (single monotonic backlog)
-1. **G1(d) level6 owned ordinary Barracks API response (next unit).**
-   Static target/route contract closes at s6678; two-counter coupling90 stays
-   explicit. Add one ordinary-only API10 adapter on owned Barracks detail0/HP>10,
-   join slot/gen/node/payload/DAT/message/health store/return and original getters
-   50/90, with owned mark-all and actual changing-value controls. No lethal dose,
-   generic TELE or direct health/counter stores. Unknown counter90 consumers
-   require proof before any later destruction test; do not infer an objective
-   null from an ordinary surviving victim or the historical heartbeat.
+1. **G1(d) level6 typed-script ownership audit (next unit).** s6680's
+   checked original slice recovers c50->Boolean99->c99->Bit8 and proves FFFF
+   API10 eagerly increments50/90 with HP500->490. Scoped167 typed conditions
+   and125 direct getters contain no90; computed consumers remain unresolved.
+   Trace effect-context+24 constructor and embedded record bounds through
+   executeActorType1Effect -> resolveScriptedNameTokenList; classify original
+   opcode3 selectors and selected DAT targets in retail level6. No repeated
+   admission hold, fallback request, lethal dose, direct stores or win gate.
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
@@ -554,9 +593,9 @@ G1-OBJECTIVE-RESPONSE s6678; scratch/agent/s6678_validation.json.
 - Per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence):
   verbatim per-level paragraphs, duplicate coverage, historical backlog and updates.
-- `PORTING-STATE.md` sessions 6656–6678 contain recent chronology; search bounded
+- `PORTING-STATE.md` sessions 6656–6680 contain recent chronology; search bounded
   windows only. Earlier durable context remains in PROJECT-OVERVIEW.
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest remains
-  20261028-075640 (already consumed). No new verdicts in s6678.
+  20261028-075640 (already consumed). No new verdicts in s6680.
 - s6596/s6597 and s6599 were checkpoint close-outs, not reruns. The saved
   s6595/s6598 HUD artifacts retain their original evidence limits.

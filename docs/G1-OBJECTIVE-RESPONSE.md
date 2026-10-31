@@ -15,7 +15,7 @@ writer calls, Boolean dumps and result-mode requests separately.
 | 3 | s6671: City_1 script request10 HP2000→1990, then same-owned request1991 HP1990→−1; death effect, counter28 store0→1, callback and explicit getter1. | Named friendly-loss response observed, single-flight dynamic evidence; original DAT/ELF corroborate contracts. Flags4/18/21 and successcounter22 stay0. No player-shot, win, retail-equivalence or fully VERIFIED claim. |
 | 4 | s6674: same-owned Hobbie API10 HP380→370, then request371 HP370→−1; death effect(40,1,0,0,0,1), original counter40 store0→1, callback/getter1. | Named friendly-loss response observed, single-flight dynamic evidence. Original ELF/DAT corroborate contracts. c15/c16/c28 and Boolean26 stay0; SIGSTOP then SIGKILL. Actual getter40 change controls sensitivity. No player-shot, win, retail-equivalence or fully VERIFIED claim. |
 | 5 | s6677: same-owned Wedge API10 health200→190, then one API191 health190→−1; death effectD9D28 tuple(40,1,0,0,0,1) -> writer6594C counter40 0→1 -> callback/original getter1. | Original friendlies=7−(c40+c2); c2>=4 sets Bit4, c4>=9 sets Bit8. Named loss response observed, c2/c4/latches remain0 at stop. Dynamic causality single-flight; no player-shot, retail-equivalence or VERIFIED promotion. Historical id2 writer stays unknown. |
-| 6 | s6678: original callback/reader plus retail Barracks DAT contract checked; (50,1,0,0,90,1), registered subtype14 route. Saved TELE/heartbeat still lacks value controls. | Static two-counter contract only. Counter90 downstream uses and live ownership/health/response remain unqualified. No controlled null or VERIFIED promotion; ordinary-only probe next. |
+| 6 | s6678 original Barracks two-counter contract; s6679 corrected ordinary admission capture: lookup matches, registrationFFFF/owned0 in all3 arms, no API request. Original getters change; target owned control absent. | No health/objective response tested. Sampled admission boundary only, not absence or counter null. Counter90 consumers/fallback safety next; no lethal admission or VERIFIED promotion. |
 | 7 | tele id2 0>2>3>0, absent ctl; id1 moves in both. | Named response, single-source; id2 semantics are not established for this level. Three a0=1 death requests precede cleanup in both arms. The lv0 id2 threshold does not apply to lvl7. |
 | 8 | tele id6 0>1>2>3>4, ctl get(id6)=0. | Named response, single-source; id6 purpose remains unclassified. Identical Boolean gate sets and a0=2 requests in both arms; no hit-driven end gate. Reset 4>0 is outside the first flight epoch. |
 | 9 | id1/id3/id5 each 0>1 in both arms. | Baseline response; no tele-specific counter transition. The old extra id3 transition came from a later epoch. Both arms request a0=2. |
@@ -1710,3 +1710,118 @@ self-tests pass. Proof `scratch/agent/s6678_validation.json`.
 Next: one original named API10 on live owned Barracks with HP>10/detail0,
 join registered handler/message/actual health store and return, original getters
 50/90 and changing-value controls. Keep lethal and generic TELE disabled.
+
+## Session 6679: level6 ordinary admission is unregistered; response untested
+
+Bounded opt-in adapter/analyzer change and one corrected single-flight capture.
+`tools/apply_s6657_objective_response.py` admits level6, records original Barracks
+lookup/registration/ownership/generation/detail/source/effect gates, and permits
+at most one named API10 on an owned subtype14 instance with detail0 and HP>10.
+Generic TELE and every lethal branch remain disabled for level6. Registered
+message5 entry/store/effect/return and FFFF fallback hooks carry exact identities;
+all128 original getters expose50/90 plus actual changing-value controls.
+The analyzer keeps exact health-chain qualification separate from owned mark-all
+and getter sensitivity. Fixtures reject missing links, wrong identity, route,
+detail, generation, source, health address, dose, return, duplicate request,
+fallback/effect and missing controls. No direct health/counter stores.
+
+Ground truth preceded instrumentation: original ELF/DAT294 anchors and334
+mutations pass. Additional8 literal original instructions, independently decoded
+by GNU objdump, establish that message5 returns status1 (D754 delay slot),
+whereas original API C7474..C7488 returns detail-indexed remaining health. These
+are distinct returns, not interchangeable. Original ELF/DAT establish contracts,
+not an independent live witness.
+
+Corrected unlocked run `g1_lvl6s6679_lvl6_ordinary_v2`: 184.02s total runner
+wall, first epoch VI5744..11154, done dv5410 selected1 flight1,
+0 crash lines, reached arms0/1/2, no generic forces, no API requests, no
+registered health/effect chain or fallback. Admission samples: VI5745/arm0, VI7614/arm1, VI9949/arm2.
+Every sample has base8031B9B0, desc803203DC, name80320484, lookup==desc,
+subtype20(decimal), detail0, HP500, source/effect gates0, valid free-list1;
+slot65535/FFFF, generation0, node/NPC/handler0, owned0. Thus the checked
+registration field inhibits the request. Do not infer whole-world absence from
+these sampled callbacks or assume that an offscreen Barracks is defective.
+
+Original getters match memory and actually change for ids20,21,64,65,66,67,98;
+10 callback changing-value readbacks are observed. Shared local selector
+fixtures accept the original50/90 tuple and reject the Boolean-mutated tuple,
+but those are local fixtures, not a target ownership control. The actual owned
+Barracks mark-all control never fires. `qualified_health_chain` and
+`qualified_ordinary` are both false. No surviving-health/counter null, hit-driven
+objective response, player-shot proof, retail equivalence or VERIFIED promotion.
+H-ownership is observed at the admission checks; registered-vs-fallback health
+behavior was not exercised. Live evidence remains single-source.
+
+First capture `g1_lvl6s6679_lvl6_ordinary` is retained separately:248.78s wall,
+epoch starts5833, same unregistered state in all3 arms,0 requests/0 crashes. Its
+shared census continued after lv6 callbacks stopped and later DAT-load reports
+were outside flight; doneVI15119/dv9286 is NOT a first-flight duration.
+ORIGIN: slotDispatcherIter legitimately keeps invoking rs6663_scan after the
+mission callback stops; the scan inherited `started` without checking current
+flight. Level6 now calls the flight gate before each census scan. This changes
+diagnostic lifetime only; no guest guard or object restoration. Fixed build and
+fresh v2 capture above close the epoch at the actual checked boundary. Do not
+pool first-run late rows with corrected flight evidence. Exact first-run adapter
+snapshot matches its launch hash; v2 all6 current launch hashes match.
+
+Validation: both builds complete, runner fixtures and level3/4/5 original-contract
+regressions pass. All13 outputs are idempotent; all3 new hook-free replays are
+byte-exact, and qualified level3/4/5 helper bodies are unchanged. The adapter
+is already included by the vendored fixup sequence. Additional original-return
+assertions and full proof are in `scratch/agent/s6679_qualification.json`;
+`original_handler_return.txt`/`original_api_return.txt` use the s6679 prefix.
+No library edits, default changes or new queued-soak verdicts.
+
+Next: original counter90 consumer/use graph plus FFFF-route effect safety
+contract, recovering known c50->99->Bit8 as the positive control. No fallback
+or lethal admission until that contract is qualified. Do not repeat this hold.
+
+
+## s6680 — level6 counter90 and FFFF-route safety audit (2026-10-31)
+
+ONE bounded original-backed tool change; no runtime build or game run. The
+admission boundary from s6679 is retained: named Barracks resolves but is
+unregistered, so no ordinary request was issued. The new flags are
+`--check-level6-safety` and `--mutation-check-level6-safety` on
+`tools/g1_dat_inventory.py`. They preserve the existing level6 contract and
+add original instruction assertions, a classified base-site census, typed DAT
+conditions, direct getter-call selectors, and bounded execution of the original
+integer instructions. Presentation/audio calls in that slice are recorded stubs;
+this is a static fixture, not an independent emulator or live-game result.
+
+| Discriminator | Original-backed result | Limit |
+| --- | --- | --- |
+| Known c50 -> c99 -> Bit8 control | c50=3/c99=1 yields no Bit8; c50=4/c99=1 sets Boolean99, increments c99 to2, sets Boolean11 and Bit8 | Integer slice with mission-state HUD gate initialized0 |
+| Latch / other stage / failure controls | Boolean99=1 inhibits repeat increment; c50=4 alone increments c99 to1; c98=6 plus c50=4 reaches2; c34=1 takes Bit4 early return | Synthetic initial states, no live baseline claim |
+| FFFF nonlethal request | Original C748C..74E4 and65914..6597C, subtype14, detail0: API10 writes HP500->490 and counters50/90 each0->1 | Effects are eager, independent of death threshold |
+| FFFF gate margin | With c50=3/c99=1, same API10 reaches c50=4, then original callback sets Bit8 | Demonstrates a possible terminal coupling, not the captured flight's baseline |
+| Counter-base materialization census | All30 ADDIU-immediate8060 candidates in resident text plus mission classified as reads, effects, public helpers or initialization | No complete pointer/alias proof; shifted bases not excluded |
+| Direct getter calls | All125 JAL800C761C sites have locally recoverable constant selectors; none90 | Direct calls only; computed readers remain explicit |
+| Typed DAT condition census | Original switch8003C140 selects +64/+68 or +38/+3C layouts for167 level6 records:154 disabled,13 use14/16/17/18/19 at threshold1; none90 | Only this audited condition family, not all DAT/script readers |
+| Script reader | Original table800A8A20 opcode3 dispatches339C; F33BC reads a counter whose index is trunc.w.s(record+58+16*i), threshold at+5C | Effect-context+24 constructor and retail record ownership unresolved |
+| Handle reader | Original FA07C/FA0AC read record+6 counter against signed record+8; mode0 >=, mode1 <, then indirect callback | Level6 initializer supplies20/21/13/0; other producers/reachability unqualified |
+
+**H-unresolved selected.** Neither H-terminal nor H-tally is established for
+counter90. The c50 coupling already prevents treating repeated fallback hits as
+ordinary health-only probes. No fallback request, lethal dose, direct store,
+mission win/progression or VERIFIED promotion is admitted. Original ELF and
+retail DAT corroborate static contracts; execution of those ELF bytes is the
+same source and does not supply a second independent dynamic witness. The
+scoped missing90 results must not become “counter90 unused.”
+
+Evidence: `scratch/agent/s6680_safety.json`, `s6680_validation.json` and
+`s6680_validation.log`; original objdump files `s6680_{all,mission}_disasm.txt`.
+Run the safety tool with both new flags for reproducibility. Safety checks pass996 original anchors and1048 rejected mutations, including
+12 typed selector/threshold substitutions to90. Existing level2..6 contracts,
+all19 DAT inventories and analyzer fixtures pass separately; prior level3..6
+contract objects compare identical to HEAD.
+The first validation harness incorrectly applied the level4+ generic DAT mutation
+runner to level3; its malformed subtype raises KeyError rather than ValueError.
+The corrected harness tests level3's original instruction mutations directly;
+no production behavior changed for that harness error. No new soak verdicts,
+lib changes, runtime defaults, or game-run evidence in this unit.
+
+Next single unit: trace the original effect-context+24 constructor through
+executeActorType1Effect -> resolveScriptedNameTokenList, prove the record bounds
+and typed retail level6 ownership, and classify each opcode3 selector and chosen
+DAT target. Keep all other computed edges explicit; no damage run.

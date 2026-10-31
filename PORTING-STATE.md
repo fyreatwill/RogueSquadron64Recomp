@@ -175142,3 +175142,100 @@ scratch/agent/s6678_lvl6_contract.json,s6678_validation.json and lvl2..5
 regression reports. Full semantics, hashes and limits G1-OBJECTIVE-RESPONSE
 s6678. Next: one owned ordinary Barracks API10 at detail0/HP>10, registered
 health/store/return joins and getters50/90 with live value controls; no lethal.
+
+## Session 6679 (2026-10-31) — bound level-6 admission probe; Barracks remains unregistered
+
+HYPOTHESIS-ID: g1-coverage-cd. ONE bounded opt-in adapter/analyzer unit and
+corrected flight. Maintenance not triggered (CURRENT-TRUTH47319 bytes); no new
+queued-soak verdicts. Hypotheses registered damage / alternate route / ownership;
+discriminator exact API-slot-generation-node-NPC-DAT-message-health-return join,
+original getters50/90, owned mark-all and actual changing-value controls.
+
+Original ELF/DAT294 anchors/334 mutations and8 additional original return
+assertions pass; independent objdump distinguishes handler status1 from API
+remaining health. Original data is ground truth for static contracts only.
+Adapter supports level6 ordinary API10 only; requires owned named Barracks
+detail0/HP>10/subtype14/source0, disables generic TELE and lethal admission.
+All route/store/effect/return/fallback keys and128 getters carried in one build.
+
+Corrected unlocked v2: 184.02s runner wall, epochVI5744..11154,
+done dv5410 selected1 flight1,0 crashes/forces/requests.
+Barracks lookup matches DAT803203DC/base8031B9B0 in arms0/1/2, but
+registrationFFFF/owned0, no node/NPC/handler, detail0 HP500 and source/effect
+gates0. Registration inhibits request; no damage route exercised. Actual getter
+ids20,21,64,65,66,67,98 change, match memory;10 callback changes. Owned Barracks
+mark-all control absent; both health/ordinary qualifications false. Not a
+controlled objective null, whole-world absence, player-shot or retail-equivalence
+claim; objective response remains untested, no VERIFIED promotion. Admission
+data single-source, original contract independent. H-ownership observed only at
+checked callback samples; alternative damage hypotheses untested.
+
+First capture248.78s/0 crashes/0 requests retained: done15119/dv9286 arrived
+after mission callbacks ceased and census reported later DAT loads. This is not
+first-flight duration; do not pool late rows.
+ORIGIN: slotDispatcherIter legitimately continued rs6663_scan after the level
+callback stopped; scan kept `started` without rechecking flight. Added level6-only
+flight gate before census, rebuilt and ran fresh v2 now. Diagnostic lifetime fix,
+no guest mitigation. v1 source snapshot matches its launch manifest; v2 all6
+current launch hashes match. Two builds and fixtures pass, all13 outputs
+idempotent,3 hook-free replays exact, prior level3/4/5 helpers unchanged and
+original contracts regress cleanly. No lib/default change or repeat soaks.
+
+Evidence: scratch/agent/s6679_qualification.json, s6679_replay.json,
+s6679_extra_original.json, both s6679 build/test logs; captures in
+scratch/agent/m6/g1_lvl6s6679_lvl6_ordinary{,_v2}/. Full evidence/limits
+in docs/G1-OBJECTIVE-RESPONSE.md s6679. Next original counter90 consumer and
+FFFF-route effect safety contract; recover c50->99->Bit8 positive control, no
+new damage/fallback/destruction admission or repeat hold. ADVANCED: persistent
+probe/analyzer change plus measured admission boundary and corrected lifetime.
+
+
+## Session 6680 (2026-10-31) — qualify level6 eager fallback coupling and scope counter90 readers
+
+HYPOTHESIS-ID: g1-coverage-cd. ONE bounded original-backed static tool change.
+CURRENT-TRUTH48589 bytes: no maintenance. No new queued-soak verdicts; latest
+20261028-075640 already consumed. H-terminal / H-tally / H-unresolved for90;
+discriminator original typed consumer graph with c50->99->Bit8 positive control.
+No game build/run, repeat hold, damage/fallback request, lethal dose or win.
+
+Extended tools/g1_dat_inventory.py with --check-level6-safety and
+--mutation-check-level6-safety. Every30 ADDIU-immediate8060 candidate in resident
+text+mission has a classified read/write/initialization role;125 direct getter
+JALs have local constant selectors, none90. Original subtype table proves167
+DAT condition layouts,154 disabled and13 selectors14/16/17/18/19 at threshold1;
+none90 IN THIS FAMILY. Original script table opcode3 -> F339C -> counter load
+F33BC uses trunc.w.s(record+58+16*i), threshold+5C. Context+24 ownership and
+constructor remain unresolved. Indexed NPC/actor/radar/music readers, other
+handle producers, aliases/shifted bases/indirect calls remain explicit.
+H-unresolved selected; scoped missing90 does not establish unused or safe.
+
+Original integer slice executes callback/helpers/effect/fallback instruction
+bytes with recorded presentation/audio stubs, no game runtime. Positive control:
+c50=3/c99=1 no Bit8; c50=4/c99=1 sets Boolean99, increments99 to2, Boolean11 and
+Bit8. Latch inhibits repeat; one stage increments99 only to1; c98=6 plus c50=4
+reaches2; c34=1 selects Bit4 early return. c90-only does not affect THIS callback.
+ORIGIN: legitimate original FFFF writerC74AC subtracts10 from DAT health500->490;
+C74E0 applies the subtype14 tuple immediately, writers6594C/65974 increment50/90
+before any destruction threshold. Synthetic c50=3/c99=1 plus one such surviving
+hit then selects Bit8. No corruption mitigation or runtime behavior change.
+This is same-source static execution, not an independent emulator/live witness.
+Original ELF+retail DAT corroborate tuple/contracts; no dynamic causal, complete
+consumer-absence, retail-equivalence or VERIFIED claim.
+
+Safety996 original instruction assertions and1048 rejected mutations pass,
+including typed selector/threshold changes to90. Level2 contract, unchanged
+level3..6 contract objects, level3 original instruction mutations, level4..6
+mutation checks, all19 identical inventory fields and analyzer self-tests pass.
+First validation harness applied level4+ generic DAT mutation logic to level3;
+malformed subtype raises KeyError instead of ValueError. Corrected harness tests
+level3 instruction mutations directly and reran full validation successfully.
+No production change for that harness mistake. Pre-existing uncommitted s6679
+changes preserved and included under the required git add -A contract; neither
+already-dirty lib submodule edited in this iteration.
+
+Evidence: scratch/agent/s6680_safety.json, s6680_validation.json/.log and original
+s6680_all_disasm.txt/s6680_mission_disasm.txt. Full limits/table in
+G1-OBJECTIVE-RESPONSE s6680. Next single unit: original script owner constructor,
+record bounds and typed retail level6 opcode3 target join; no new damage run.
+ADVANCED: persistent original-contract checker and discriminating gate/eager
+fallback controls, no runtime/default/lib change.

@@ -39,12 +39,12 @@ static int rs6660_ok(uint32_t a) { return a >= 0x80000400u && a < 0x807FFF00u &&
 static int rs6668_named_rescue(uint32_t desc) {
     return rs6666_dat && (desc == rs6666_dat + 0x1510 || desc == rs6666_dat + 0x1628 || desc == rs6666_dat + 0x1740);
 }
-static int rs6660_named(uint32_t id) { return rs6657_level == 3 ? id == 28 : rs6657_level == 2 ? id == 40 : (id == 13 || id == 40 || id == 41); }
+static int rs6660_named(uint32_t id) { return rs6657_level == 6 ? (id == 50 || id == 90) : rs6657_level == 3 ? id == 28 : rs6657_level == 2 ? id == 40 : (id == 13 || id == 40 || id == 41); }
 static void rs6660_census(uint8_t*);
 static unsigned rs6657_match(uint32_t, uint32_t);
 static int rs6660_candidate(uint8_t*, uint32_t, uint32_t, uint32_t, float, int);
 static int rs6657_enabled(void) {
-    if (rs6657_en < 0) { const char* e = getenv("ROGUESQ_OBJECTIVE_RESPONSE"); rs6657_en = e && e[0] == '1'; const char* l = getenv("ROGUESQ_OBJECTIVE_RESPONSE_LEVEL"); rs6657_level = l ? atoi(l) : 0; const char* v = getenv("ROGUESQ_OBJECTIVE_RESPONSE_VI"); if (rs6657_level == 2 && v && atoi(v) > 5400 && atoi(v) <= 12000) rs6666_limit = atoi(v); if (rs6657_level != 0 && rs6657_level != 1 && rs6657_level != 2 && rs6657_level != 3 && rs6657_level != 4 && rs6657_level != 5) rs6657_en = 0; }
+    if (rs6657_en < 0) { const char* e = getenv("ROGUESQ_OBJECTIVE_RESPONSE"); rs6657_en = e && e[0] == '1'; const char* l = getenv("ROGUESQ_OBJECTIVE_RESPONSE_LEVEL"); rs6657_level = l ? atoi(l) : 0; const char* v = getenv("ROGUESQ_OBJECTIVE_RESPONSE_VI"); if (rs6657_level == 2 && v && atoi(v) > 5400 && atoi(v) <= 12000) rs6666_limit = atoi(v); if (rs6657_level != 0 && rs6657_level != 1 && rs6657_level != 2 && rs6657_level != 3 && rs6657_level != 4 && rs6657_level != 5 && rs6657_level != 6) rs6657_en = 0; }
     return rs6657_en;
 }
 static uint32_t rs6657_word(uint8_t* rdram, uint32_t a) { return (uint32_t)MEM_W(S32((int32_t)a), 0); }
@@ -63,7 +63,7 @@ static int rs6657_flight(uint8_t* rdram) {
     }
     uint32_t dv = rs64_vi_n_g - rs6657_start;
     uint32_t c1 = rs6657_word(rdram, 0x80138060u), c2 = rs6657_word(rdram, 0x80138064u), c3 = rs6657_word(rdram, 0x80138068u);
-    if ((rs6660_observed && !((rs6657_level == 2 || rs6657_level == 3 || rs6657_level == 4 || rs6657_level == 5) && rs6661_dosed)) || !selected || !flight || dv >= rs6666_limit || (rs6657_level == 0 ? (c1 >= 18 || c2 >= 1 || c3 >= 1) : rs6657_level == 2 ? (rs6657_read_init && ((rs6657_prev[39] && !rs6661_dosed) || MEM_BU(S32((int32_t)0x80138903u), 0) || MEM_BU(S32((int32_t)0x8013890Cu), 0))) : rs6657_level == 5 ? (rs6657_prev[1] >= 3 || rs6657_prev[3] >= 8) : rs6657_level == 4 ? (rs6657_prev[14] >= 2 || rs6657_prev[15] >= 2 || MEM_BU(S32((int32_t)0x801388B9u),0)) : rs6657_level == 3 ? (MEM_BU(S32((int32_t)0x801388A3u),0) || MEM_BU(S32((int32_t)0x801388B1u),0) || MEM_BU(S32((int32_t)0x801388B4u),0) || rs6657_word(rdram,0x801380B4u)) : (rs6657_read_init && (rs6657_prev[12] >= 3 || MEM_BU(S32((int32_t)0x801388A5u), 0))))) {
+    if ((rs6660_observed && rs6657_level!=6 && !((rs6657_level == 2 || rs6657_level == 3 || rs6657_level == 4 || rs6657_level == 5) && rs6661_dosed)) || !selected || !flight || dv >= rs6666_limit || (rs6657_level == 0 ? (c1 >= 18 || c2 >= 1 || c3 >= 1) : rs6657_level == 2 ? (rs6657_read_init && ((rs6657_prev[39] && !rs6661_dosed) || MEM_BU(S32((int32_t)0x80138903u), 0) || MEM_BU(S32((int32_t)0x8013890Cu), 0))) : rs6657_level == 6 ? (rs6657_prev[33]==1 || rs6657_prev[34]==1 || rs6657_prev[35]==1 || rs6657_prev[36]==1 || rs6657_prev[37]==1 || rs6657_prev[38]==1 || MEM_BU(S32((int32_t)0x801388aau),0)) : rs6657_level == 5 ? (rs6657_prev[1] >= 3 || rs6657_prev[3] >= 8) : rs6657_level == 4 ? (rs6657_prev[14] >= 2 || rs6657_prev[15] >= 2 || MEM_BU(S32((int32_t)0x801388B9u),0)) : rs6657_level == 3 ? (MEM_BU(S32((int32_t)0x801388A3u),0) || MEM_BU(S32((int32_t)0x801388B1u),0) || MEM_BU(S32((int32_t)0x801388B4u),0) || rs6657_word(rdram,0x801380B4u)) : (rs6657_read_init && (rs6657_prev[12] >= 3 || MEM_BU(S32((int32_t)0x801388A5u), 0))))) {
         rs6657_done = 1;
         fprintf(stderr, "[objresp-done] epoch=1 vi=%u dv=%u selected=%d flight=%d c=%u,%u,%u forces=%u,%u,%u writes=%u,%u,%u damage=%u,%u,%u\n", rs64_vi_n_g, dv, selected, flight, c1, c2, c3, rs6657_hits[0], rs6657_hits[1], rs6657_hits[2], rs6657_rows[0], rs6657_rows[1], rs6657_rows[2], rs6657_dmg[0], rs6657_dmg[1], rs6657_dmg[2]);
         fflush(stderr); return 0;
@@ -77,7 +77,7 @@ static int rs6657_flight(uint8_t* rdram) {
     }
     return 1;
 }
-int rs6657_gate(uint8_t* rdram) { return !rs6657_enabled() || (rs6657_level != 4 && rs6657_level != 5 && rs6657_flight(rdram) && rs6657_arm == 1 && !rs6660_pending_id && !rs6661_dosed && !(rs6657_level == 3 && rs6670_forced)); }
+int rs6657_gate(uint8_t* rdram) { return !rs6657_enabled() || (rs6657_level != 4 && rs6657_level != 5 && rs6657_level != 6 && rs6657_flight(rdram) && rs6657_arm == 1 && !rs6660_pending_id && !rs6661_dosed && !(rs6657_level == 3 && rs6670_forced)); }
 void rs6657_callback_level(uint8_t* rdram, int level) {
     if (!rs6657_enabled() || level != rs6657_level) return;
     rs6657_seen = 1;
@@ -162,6 +162,7 @@ static void rs6660_fields(uint8_t* rdram, uint32_t desc, uint32_t f[6]) {
     for (unsigned i = 0; i < 6; i++) f[i] = rs6660_ok(desc) ? rs6657_word(rdram, desc + 0x70 + i * 4) : 0;
 }
 static int rs6660_selected(uint32_t f[6]) {
+    if (rs6657_level == 6) return f[0]==50 && f[1]==1 && !f[2] && !f[3] && f[4]==90 && f[5]==1;
     if (rs6657_level == 4 || rs6657_level == 5) return f[0] == 40 && f[1] == 1 && !f[2] && !f[3] && !f[4];
     if (rs6657_level == 3) return f[0] == 28 && f[1] == 1 && !f[2] && !f[3] && !f[4];
     if (rs6657_level == 2) return ((f[0] == 40 && f[1]) || (f[4] == 40 && f[5])) &&
@@ -238,7 +239,8 @@ static uint32_t rs6663_descriptor(uint8_t* rdram, uint32_t node, uint32_t* npc, 
 void rs6663_scan(uint8_t* rdram) {
     static int busy;
     static uint32_t seen[2048][10], birth[2048], last_report = 0xFFFFFFFFu;
-    if (busy || !rs6657_enabled() || (rs6657_level != 2 && rs6657_level != 3 && rs6657_level != 4 && rs6657_level != 5) || !rs6657_started || rs6657_done) return;
+    if (busy || !rs6657_enabled() || (rs6657_level != 2 && rs6657_level != 3 && rs6657_level != 4 && rs6657_level != 5 && rs6657_level != 6) || !rs6657_started || rs6657_done) return;
+    if (rs6657_level==6 && !rs6657_flight(rdram)) return;
     busy = 1;
     int valid = rs6663_refresh(rdram);
     uint32_t active = 0, stale = 0, unknown = 0, named = 0, typed = 0;
@@ -252,7 +254,7 @@ void rs6663_scan(uint8_t* rdram) {
         rs6660_fields(rdram, known == 1 ? desc : 0, f);
         int selected = known == 1 && rs6660_selected(f);
         if (known == 1 && rs6660_ok(desc) && controls[rs6657_arm] == 0) {
-            uint32_t control[6] = {rs6657_level == 3 ? 28u : 40u, 1, 0, 0, 0, 0};
+            uint32_t control[6] = {rs6657_level == 6 ? 50u : rs6657_level == 3 ? 28u : 40u, 1, 0, 0, rs6657_level == 6 ? 90u : 0u, rs6657_level == 6 ? 1u : 0u};
             int accepts = rs6660_selected(control);
             control[2] = rs6657_level == 3 ? 4 : 31; control[3] = 1;
             fprintf(stderr, "[objresp-select-control] epoch=1 vi=%u arm=%u slot=%u node=%08x handler=%08x desc=%08x local_fixture=1 accepts_named=%d rejects_success=%d guest_writes=0\n", rs64_vi_n_g, rs6657_arm, i, node, handler, desc, accepts, !rs6660_selected(control));
@@ -438,7 +440,8 @@ static float rs6666_float(uint8_t* rdram, uint32_t a) {
     uint32_t w = rs6657_word(rdram, a); float f; memcpy(&f, &w, 4); return f;
 }
 void rs6666_dat_loaded(uint8_t* rdram, uint32_t base) {
-    if (!rs6657_enabled() || (rs6657_level != 2 && rs6657_level != 3 && rs6657_level != 4 && rs6657_level != 5) || MEM_BU(S32((int32_t)0x80130B40u),0) != rs6657_level || !rs6660_ok(base)) return;
+    if (!rs6657_enabled() || (rs6657_level != 2 && rs6657_level != 3 && rs6657_level != 4 && rs6657_level != 5 && rs6657_level != 6) || MEM_BU(S32((int32_t)0x80130B40u),0) != rs6657_level || !rs6660_ok(base)) return;
+    if (rs6657_level == 6) { rs6666_dat=base; fprintf(stderr,"[objresp-definition] vi=%u index=0 base=%08x offset=4a2c desc=%08x name=OBJ_ConYard_Barracks subtype=%u hp=%u id=%u id2=%u\n",rs64_vi_n_g,base,base+0x4a2c,rs6663_half(rdram,base+0x4a2c),rs6657_word(rdram,base+0x4a98),rs6657_word(rdram,base+0x4a9c),rs6657_word(rdram,base+0x4aac)); return; }
     if (rs6657_level == 5) { rs6666_dat=base; fprintf(stderr,"[objresp-definition] vi=%u index=0 base=%08x offset=1afc desc=%08x name=x_wing_wedge subtype=%u hp=%u id=%u delta=%u\n",rs64_vi_n_g,base,base+0x1afc,rs6663_half(rdram,base+0x1afc),rs6657_word(rdram,base+0x1b68),rs6657_word(rdram,base+0x1b6c),rs6657_word(rdram,base+0x1b70)); return; }
     if (rs6657_level == 4) { rs6666_dat=base; fprintf(stderr,"[objresp-definition] vi=%u index=0 base=%08x offset=6a7c desc=%08x name=x_wing_hobbie subtype=%u hp=%u id=%u delta=%u\n",rs64_vi_n_g,base,base+0x6a7c,rs6663_half(rdram,base+0x6a7c),rs6657_word(rdram,base+0x6ae8),rs6657_word(rdram,base+0x6aec),rs6657_word(rdram,base+0x6af0)); return; }
     if (rs6657_level == 3) { rs6666_dat = base; fprintf(stderr,"[objresp-definition] vi=%u index=0 base=%08x offset=48c desc=%08x name=City_1 subtype=%u hp=%u id=%u delta=%u\n",rs64_vi_n_g,base,base+0x48c,MEM_HU(S32((int32_t)(base+0x48c)),0),rs6657_word(rdram,base+0x48c+0x6c),rs6657_word(rdram,base+0x48c+0x70),rs6657_word(rdram,base+0x48c+0x74)); return; }
@@ -678,6 +681,58 @@ void rs6673_tick(uint8_t* rdram,recomp_context* ctx) {
     rs6673_active=0;
 }
 
+static int rs6679_forced;
+static _Thread_local int rs6679_active;
+void rs6679_building(uint8_t* rdram,recomp_context* ctx,int stage,uint32_t node,uint32_t message,uint32_t action) {
+    if (!rs6657_enabled() || rs6657_level!=6 || !rs6679_active || action!=5) return;
+    uint32_t npc=rs6657_word(rdram,node+4),desc=rs6657_desc(rdram,npc),detail=rs6657_word(rdram,0x80137ce4u);
+    if (!rs6660_ok(desc) || detail>32 || !rs6660_ok(message)) return;
+    uint32_t address=desc+0x6c+4*detail;
+    int hp=(int32_t)rs6657_word(rdram,address);
+    fprintf(stderr,"[objresp-lvl6-building] epoch=1 vi=%u arm=%u api_seq=1 stage=%d pc=%08x node=%08x npc=%08x desc=%08x slot=%u generation=%u handler=%08x message=%08x source=%u subtype=%u detail=%u health_addr=%08x hp=%d request=%u store_addr=%08x store_old=%d store_new=%d returned=%d source_gate=%u effect_gate=%u\n",rs64_vi_n_g,rs6657_arm,stage,stage==1?0x8006cfe8u:stage==2?0x8006d6f0u:stage==3?0x8006d8c0u:0x8006cbb0u,node,npc,desc,rs6663_half(rdram,node+0x16),rs6671_generation[rs6663_half(rdram,node+0x16)&2047],rs6657_word(rdram,node),message,rs6663_half(rdram,message+2),rs6663_half(rdram,desc),detail,address,hp,rs6663_half(rdram,message+6),stage==1?U32(ctx->r2):address,hp,stage==1?(int32_t)ctx->r3:hp,(int32_t)ctx->r2,rs6657_word(rdram,desc+0xa0),MEM_BU(S32((int32_t)0x80130b39u),0));
+}
+void rs6679_fallback(uint8_t* rdram,recomp_context* ctx,int stage) {
+    if (rs6657_enabled() && rs6657_level==6 && rs6679_active)
+        fprintf(stderr,"[objresp-lvl6-fallback] epoch=1 vi=%u arm=%u api_seq=1 stage=%d desc=%08x result=%d\n",rs64_vi_n_g,rs6657_arm,stage,U32(ctx->r16),(int32_t)ctx->r17);
+}
+void rs6679_tick(uint8_t* rdram,recomp_context* ctx) {
+    if (!rs6657_enabled() || rs6657_level!=6 || !rs6657_started || rs6657_done) return;
+    static uint32_t previous[3][128],init[3],after_request;
+    for (unsigned i=0;i<128;i++) {
+        recomp_context probe=*ctx; probe.r4=i+1; getObjectiveCount(rdram,&probe);
+        uint32_t value=U32(probe.r2);
+        if (!init[rs6657_arm] || previous[rs6657_arm][i]!=value || (rs6679_forced && !after_request && (i==49 || i==89)))
+            fprintf(stderr,"[objresp-lvl6-getter] epoch=1 vi=%u arm=%u probe_call=1 id=%u returned=%u memory=%u\n",rs64_vi_n_g,rs6657_arm,i+1,value,rs6657_word(rdram,0x80138060u+4*i));
+        previous[rs6657_arm][i]=value;
+    }
+    init[rs6657_arm]=1; if(rs6679_forced) after_request=1;
+    if (!rs6666_dat) return;
+    uint32_t desc=rs6666_dat+0x4a2c,name=rs6657_word(rdram,desc+0xc),detail=rs6657_word(rdram,0x80137ce4u);
+    if(!rs6660_ok(desc) || !rs6660_ok(name)) return;
+    recomp_context probe=*ctx; probe.r4=S32(name); getLevelDatItemByName(rdram,&probe);
+    uint32_t lookup=U32(probe.r2),slot=rs6663_half(rdram,desc+6),node=0,npc=0,handler=0,owned=0;
+    int valid=rs6663_refresh(rdram);
+    if(valid && slot<2048 && !rs6663_free[slot]) { node=rs6657_word(rdram,rs6663_table+slot*8); owned=rs6663_descriptor(rdram,node,&npc,&handler)==desc; }
+    int hp=detail<=32?(int32_t)rs6657_word(rdram,desc+0x6c+4*detail):-999999;
+    uint32_t subtype=rs6663_half(rdram,desc),source=rs6657_word(rdram,desc+0xa0),effect=MEM_BU(S32((int32_t)0x80130b39u),0);
+    static uint32_t state[3][12],marked[3];
+    uint32_t now[12]={lookup,slot,node,npc,handler,owned,valid,detail,(uint32_t)hp,source,effect,slot<2048?rs6671_generation[slot]:0};
+    if(memcmp(state[rs6657_arm],now,sizeof(now))) {
+        memcpy(state[rs6657_arm],now,sizeof(now));
+        fprintf(stderr,"[objresp-lvl6-eligibility] epoch=1 vi=%u arm=%u base=%08x desc=%08x name_ptr=%08x lookup=%08x slot=%u generation=%u node=%08x npc=%08x handler=%08x owned=%u valid=%d subtype=%u detail=%u hp=%d source_gate=%u effect_gate=%u\n",rs64_vi_n_g,rs6657_arm,rs6666_dat,desc,name,lookup,slot,now[11],node,npc,handler,owned,valid,subtype,detail,hp,source,effect);
+    }
+    if(owned && !marked[rs6657_arm]) {
+        marked[rs6657_arm]=1;
+        fprintf(stderr,"[objresp-lvl6-control] epoch=1 vi=%u arm=%u mark_all=1 node=%08x npc=%08x desc=%08x slot=%u generation=%u handler=%08x\n",rs64_vi_n_g,rs6657_arm,node,npc,desc,slot,now[11],handler);
+    }
+    if(rs6657_arm!=1 || rs6679_forced || lookup!=desc || !owned || handler!=0x8006cbb0u || subtype!=20 || detail!=0 || hp<=10 || source) return;
+    rs6679_forced=1; rs6679_active=1;
+    fprintf(stderr,"[objresp-lvl6-api] epoch=1 vi=%u arm=%u stage=pre api_seq=1 route=named-script name=OBJ_ConYard_Barracks base=%08x desc=%08x slot=%u generation=%u node=%08x npc=%08x handler=%08x detail=%u hp=%d request=10 source_gate=%u effect_gate=%u\n",rs64_vi_n_g,rs6657_arm,rs6666_dat,desc,slot,now[11],node,npc,handler,detail,hp,source,effect);
+    probe=*ctx; probe.r4=S32(name); probe.r5=10; dealDamagetoDatItem(rdram,&probe);
+    fprintf(stderr,"[objresp-lvl6-api] epoch=1 vi=%u arm=%u stage=post api_seq=1 desc=%08x node=%08x npc=%08x hp=%d returned=%d c50=%u c90=%u\n",rs64_vi_n_g,rs6657_arm,desc,node,npc,(int32_t)rs6657_word(rdram,desc+0x6c),(int32_t)probe.r2,rs6657_word(rdram,0x80138124u),rs6657_word(rdram,0x801381c4u));
+    rs6679_active=0;
+}
+
 '''
 WRITERS = {
     'funcs_15.c': (0x8006594C, 0x80065974, 0x80065A34),
@@ -898,6 +953,27 @@ def level3_fallback_hooks(text,name):
     return text.replace('#include "funcs.h"','#include "funcs.h"\n'+marker+'\nextern void rs6670_fallback(uint8_t*,recomp_context*,int);',1),1
 
 
+def level6_hooks(text,name):
+    marker='/* PATCH: s6679 ordinary Barracks response */'
+    if name not in ('funcs_16.c','funcs_35.c','funcs_45.c') or marker in text: return text,0
+    if name=='funcs_45.c':
+        anchor='RECOMP_FUNC void lv6_checkComplexObjectives(uint8_t* rdram, recomp_context* ctx) {'
+        assert text.count(anchor)==1
+        text=text.replace(anchor,anchor+'\n    rs6657_callback_level(rdram,6);\n    rs6679_tick(rdram,ctx);')
+    elif name=='funcs_16.c':
+        for stage in range(4):
+            anchor=f'    rs6670_building(rdram,ctx,{stage},rs6670_node,rs6670_message,rs6670_action);'
+            assert text.count(anchor)==1
+            text=text.replace(anchor,anchor+f'\n    rs6679_building(rdram,ctx,{stage},rs6670_node,rs6670_message,rs6670_action);')
+    else:
+        for stage in range(3):
+            anchor=f'    rs6670_fallback(rdram,ctx,{stage});'
+            assert text.count(anchor)==1
+            text=text.replace(anchor,anchor+f'\n    rs6679_fallback(rdram,ctx,{stage});')
+    decl='\n'+marker+'\nextern void rs6679_tick(uint8_t*,recomp_context*);\nextern void rs6657_callback_level(uint8_t*,int);\nextern void rs6679_building(uint8_t*,recomp_context*,int,uint32_t,uint32_t,uint32_t);\nextern void rs6679_fallback(uint8_t*,recomp_context*,int);'
+    return text.replace('#include "funcs.h"','#include "funcs.h"'+decl,1),1
+
+
 def level5_hooks(text,name):
     marker='/* PATCH: s6676 level5 ordinary wingman response */'
     if name != 'funcs_45.c' or marker in text: return text,0
@@ -939,6 +1015,8 @@ def apply(text, name):
     text, extra = level3_fallback_hooks(text,name)
     changed |= extra
     text, extra = level3_hooks(text, name)
+    changed |= extra
+    text, extra = level6_hooks(text, name)
     changed |= extra
     handlers = {
         'funcs_36.c': (('npcProbeDriod', 17, 19, (0x800CBD34,)),),

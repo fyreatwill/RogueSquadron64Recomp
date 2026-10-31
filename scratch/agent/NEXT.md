@@ -1,66 +1,53 @@
-# G1(d): level6 owned ordinary Barracks API health response
+# G1(d): level6 typed-script ownership before counter90 safety
 HYPOTHESIS-ID: g1-coverage-cd
 
-s6678 closes the bounded offline static contract. Original callback80104210
-reads c34..39/98/50/99; friendlies reader80104444 returns0. Retail Barracks
-+4A2C subtype14 nominal detail0HP500, effect(50,1,0,0,90,1). This is TWO
-counters, not an isolated c50 effect. Counter90 consumers remain unqualified;
-no lethal admission. Setup653F4 -> handler6CBB0/message5CF88, health writer
-6CFE8, death gate6D278, effect6D6F0. DAT+a0 source gate(selected0), global
-80130B39 effect gate, live detail and FFFF API fallback must remain explicit.
-294 original anchors/334 mutations pass; all19 inventories and level5 contract
-unchanged. Proof scratch/agent/s6678_validation.json, full semantics/hashes
-in docs/G1-OBJECTIVE-RESPONSE.md s6678. No new queued-soak verdicts.
+ONE bounded original-backed extension of tools/g1_dat_inventory.py. s6680
+recovers the complete c50->Boolean99->counter99->Boolean11/Bit8 control and
+proves FFFF API10 eagerly increments50/90 while HP500->490. It does not prove
+counter90 unused or admit a live fallback request. s6679 Barracks is still
+unregistered; do not repeat its admission hold. No damage/lethal/run unit here.
 
-ONE bounded opt-in adapter/analyzer change plus one flight: ordinary original
-named API10 on ONE owned OBJ_ConYard_Barracks with detail0, HP>10 and named
-lookup equality. Reuse the original-backed City subtype14 route helpers, NOT
-the wingman actor+38 health layout. Disable level6 generic TELE and every
-lethal branch. No direct health/counter stores. Scope counters/budgets to
-first actual flight epoch, validate selector B40=6 plus executing lv6 callback.
+Hypotheses:
+H-DAT: resolveScriptedNameTokenList's owner at effect-context+24 is a bounded
+retail DAT record; opcode3 counter selectors can be enumerated for level6.
+H-derived: constructor copies/transforms another source; raw level6 DAT-word
+search cannot establish the selectors. Trace the original transform first.
+H-computed: owner/record extent or selected targets remain runtime-dependent;
+retain the exact unresolved constructor/edge, not an absent90 conclusion.
+DISCRIMINATOR: original constructor -> context+24 -> record+50 count and
+record+54/58/5c stride16 -> opcode3 -> selected DAT name join, checked against
+retail bytes and original opcode semantics. A typed nonzero counter case in
+this script family (another level if necessary) is the positive control; a raw
+float90 hit or function-entry count is not. Enumerate EVERY level6 record only
+when its owner and bounds are proven. Unresolved target effects remain explicit.
 
-Competing hypotheses:
-H-registered: exact owned request dispatches message5 to6CF88, writer6CFE8
-subtracts10 from DAT+6C, health remains positive, API returns the new health.
-H-route: original lookup/dispatcher chooses FFFF fallback or another handler;
-observe it and do not pool its immediate effect with registered damage.
-H-ownership: named DAT definition is not live or ownership/detail/source gates
-differ; record which checked field inhibits the request rather than guessing.
-DISCRIMINATOR: exact API sequence + slot/gen/node/NPC/DAT/message identity,
-registered entry, pre/post health address/store, damage/API return and original
-getters50/90 compared with memory. Carry all keys in one build. An owned
-mark-all candidate must visibly fire in each reached arm; actual changing
-original-getter readbacks are the value-detection control. Silent surviving
-victim counters cannot prove an objective null. Positive health means no
-registered death effect is expected. If fallback appears, stop before issuing
-further damage and classify its effect explicitly. No wins/progression.
+Ground truth and regression baseline first:
+    python3 tools/g1_dat_inventory.py --level 6 --check-level6-safety --mutation-check-level6-safety --output scratch/agent/s6681_baseline.json
+    mips64-elf-objdump -d -j .ovl.mission ../rogue_squadron64/build/roguesquadron.elf > scratch/agent/s6681_mission_disasm.txt
+    rg -n 'jal.*800f410c|jal.*800f3290|<executeActorType1Effect>|<resolveScriptedNameTokenList>' scratch/agent/s6681_mission_disasm.txt
+    mips64-elf-objdump -d -j .ovl.mission --start-address=0x800f410c --stop-address=0x800f41a0 ../rogue_squadron64/build/roguesquadron.elf
+    mips64-elf-objdump -d -j .ovl.mission --start-address=0x800f3290 --stop-address=0x800f3320 ../rogue_squadron64/build/roguesquadron.elf
+    mips64-elf-objdump -d -j .ovl.mission --start-address=0x800f3480 --stop-address=0x800f34b8 ../rogue_squadron64/build/roguesquadron.elf
+    rg -n 'executeActorType1Effect|resolveScriptedNameTokenList|Effect' ../rogue_squadron64/symbol_files/mission_overlay.txt
+Read <=60-line windows; never the whole ledger. Table800A8A20 opcode3 points
+F339C; F33BC reads counter trunc.w.s(record+58+16*i), threshold+5C. Caller
+F439C passes s5 effect context; F32D8 loads context+24. Follow that context's
+original constructor and DAT relocation contract. Do not confuse NPC subtype3B
+(troopers) with the script opcode or assume DAT tables share layouts.
 
-Start:
-    wc -c < docs/CURRENT-TRUTH.md
-    python3 tools/g1_dat_inventory.py --level 6 --check-level6 --mutation-check-level6 --output scratch/agent/s6679_lvl6_original.json
-    rg -n 'rs6670|level3_hooks|level5_hooks|OBJECTIVE_RESPONSE_LEVEL|FILES' tools/apply_s6657_objective_response.py
-    rg -n 'qualify_level3|api_self_test|choices=|args.level|manifest' tools/g1_objective_response_run.py
-    rg -n 'npcDebrisFieldUpdate|lv6_checkComplexObjectives' ../N64Recomp/RecompiledFuncs/funcs_*.c
-Read bounded windows only. Consult original ELF before new assumptions, using
-mips64-elf-objdump ranges from s6678. Extend existing adapter and analyzer for
-level6, including complete/absent-link/wrong-route/wrong-detail/identity/
-HP/return/getter fixtures; preserve existing level3/4/5 hooks exactly.
-
-After implementing level6 support (current runner choices stop at5):
+Land checked typed ownership/record edges and mutation negatives in the
+existing tool, preserving all19 inventories and level2..6 prior contracts.
+Current validations: safety996 anchors/1048 rejected mutations,30 base candidates,
+167 typed condition rows (not scripts),125 direct getters; both scoped reader
+sets contain no90. They are NOT a complete consumer graph. Original integer
+slice uses recorded presentation/audio stubs and is same-source evidence.
+Run analyzer self-tests too:
     python3 tools/g1_objective_response_run.py --self-test
-    python3 tools/apply_s6657_objective_response.py ../N64Recomp/RecompiledFuncs
-    python3 tools/apply_s6657_objective_response.py ../N64Recomp/RecompiledFuncs
-    cmake --build build --target RogueSquadron64Recomp -j 6 > scratch/agent/s6679_build.log 2>&1
-    python3 tools/g1_objective_response_run.py s6679_lvl6_ordinary --level 6
-    python3 tools/g1_objective_response_run.py s6679_lvl6_ordinary --level 6 --analyze
-Require 13-file idempotence and hook-free replay through fixup; any full regen
-must follow make_elf -> N64Recomp -> fixup -> cmake. Runner checks screen lock,
-launches from build, records all6 manifest hashes and SIGKILLs the game. Screen
-must be unlocked. No parallel game runs. Never overwrite a tag; if correcting
-and rerunning, suffix v2 and preserve failed evidence. Keep passive instruments.
+No runtime build, lib/default edits, fallback request, win/progression or queued
+repeat soak. If this ownership edge resolves, select the next actual computed
+consumer edge; do not authorize a dose on the strength of a scoped null.
 
-Qualify ordinary health only when exact joins pass. If getters never actually
-change, explicitly leave counter sensitivity unqualified even if health chain
-passes. No live availability conclusion from static DAT. Counter90 consumers
-must be proven before a later destruction step, not hidden by a guard. Write
-Session6679/CURRENT-TRUTH/response table/NEXT, STATUS/OUTCOME and NEW iter commit.
+Record Session6681, CURRENT-TRUTH and G1-OBJECTIVE-RESPONSE, rewrite NEXT for
+one unit, STATUS/OUTCOME and a NEW iter commit. No new queued-soak verdicts in
+s6680. s6680_validation.json records all19 unchanged inventories, prior-contract
+regressions and checker controls; s6680_safety.json holds the full typed graph.
