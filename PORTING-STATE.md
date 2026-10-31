@@ -175580,3 +175580,12 @@ the terminator placement. Single-source on the 0x7FFF writer (not watched).
 ORIGIN: corrupt heap header at/just below e4 (0x80B56000-class); candidate writers are the w1024
 colour image (its first bytes at e4) and the owner of the live 0x14B000 block; neither watched yet.
 No mitigation landed.
+
+Verdict: the WINDOW_FIT=0 arm refutes H-g1f (the window/high-DPI/aspect-rewrite code as the
+cause of the 21:9 hangar SIGBUS: crash persists with all of it off), and the 16:9 arm selects
+H-w1024-layout (the crash is specific to the 21:9 / FB_WIDTH 1024 / 12 MB heap layout). The
+free-only heapcap variant refutes H-terminator-only (moving the terminator off the live block
+does not stop the crash). Root cause localised to the heap tail meeting the image at e4.
+Next discriminator: a first-change watch on the 32 bytes at e4-0x10..e4+0x10 with writer PC
+selects H-image (colour image / RT64 write-back) vs H-owner (live 0x14B000 block's owner).
+G1f itself closes for 16:9: window, fullscreen toggle and fullscreen start verified.
