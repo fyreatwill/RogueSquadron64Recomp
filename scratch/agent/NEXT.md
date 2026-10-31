@@ -1,53 +1,44 @@
-# G1(d): level6 typed-script ownership before counter90 safety
+# G1(d): level6 spline-event remap and counter reader ownership
 HYPOTHESIS-ID: g1-coverage-cd
 
-ONE bounded original-backed extension of tools/g1_dat_inventory.py. s6680
-recovers the complete c50->Boolean99->counter99->Boolean11/Bit8 control and
-proves FFFF API10 eagerly increments50/90 while HP500->490. It does not prove
-counter90 unused or admit a live fallback request. s6679 Barracks is still
-unregistered; do not repeat its admission hold. No damage/lethal/run unit here.
+ONE bounded original-backed extension of tools/g1_dat_inventory.py. s6681
+closed kind3/subtype3 inline scripts statically:21 records/168 slots, no op3;
+completion selectors0. Context24 constructor source and fixed8 bounds proven.
+No live fallback request, lethal dose, repeat hold, stores or win gate.
 
 Hypotheses:
-H-DAT: resolveScriptedNameTokenList's owner at effect-context+24 is a bounded
-retail DAT record; opcode3 counter selectors can be enumerated for level6.
-H-derived: constructor copies/transforms another source; raw level6 DAT-word
-search cannot establish the selectors. Trace the original transform first.
-H-computed: owner/record extent or selected targets remain runtime-dependent;
-retain the exact unresolved constructor/edge, not an absent90 conclusion.
-DISCRIMINATOR: original constructor -> context+24 -> record+50 count and
-record+54/58/5c stride16 -> opcode3 -> selected DAT name join, checked against
-retail bytes and original opcode semantics. A typed nonzero counter case in
-this script family (another level if necessary) is the positive control; a raw
-float90 hit or function-entry count is not. Enumerate EVERY level6 record only
-when its owner and bounds are proven. Unresolved target effects remain explicit.
+H-typed: spline event stride8 + remap points into bounded level6 DAT kind7
+records; condition counter+2C and effect counter+34 can be enumerated.
+H-derived: remap/relocation transforms another source; prove that transform
+before reading raw selectors or asserting a missing90.
+H-computed: owner/index bounds depend on runtime state or unresolved kinds;
+retain the precise edge and do not claim absence or fallback safety.
+DISCRIMINATOR: original F4660..46AC source+28 count/+2C event array, event+6
+index, source+D8 remap at source+D4+value, remap+2 index -> DAT header3C kind7
+table -> F3CB0 a1 -> F3D28 counter read (+2C selector/+30 threshold) and
+F3D74 read/modify/write (+34 selector/+38 delta). Join every selected level6
+event to its typed record. A retail nonzero selector in this exact family
+(other level if needed) plus synthetic90 and bound violations controls the
+whole decoder. Function-entry/heartbeat or raw float90 is not a control.
 
-Ground truth and regression baseline first:
-    python3 tools/g1_dat_inventory.py --level 6 --check-level6-safety --mutation-check-level6-safety --output scratch/agent/s6681_baseline.json
-    mips64-elf-objdump -d -j .ovl.mission ../rogue_squadron64/build/roguesquadron.elf > scratch/agent/s6681_mission_disasm.txt
-    rg -n 'jal.*800f410c|jal.*800f3290|<executeActorType1Effect>|<resolveScriptedNameTokenList>' scratch/agent/s6681_mission_disasm.txt
-    mips64-elf-objdump -d -j .ovl.mission --start-address=0x800f410c --stop-address=0x800f41a0 ../rogue_squadron64/build/roguesquadron.elf
-    mips64-elf-objdump -d -j .ovl.mission --start-address=0x800f3290 --stop-address=0x800f3320 ../rogue_squadron64/build/roguesquadron.elf
-    mips64-elf-objdump -d -j .ovl.mission --start-address=0x800f3480 --stop-address=0x800f34b8 ../rogue_squadron64/build/roguesquadron.elf
-    rg -n 'executeActorType1Effect|resolveScriptedNameTokenList|Effect' ../rogue_squadron64/symbol_files/mission_overlay.txt
-Read <=60-line windows; never the whole ledger. Table800A8A20 opcode3 points
-F339C; F33BC reads counter trunc.w.s(record+58+16*i), threshold+5C. Caller
-F439C passes s5 effect context; F32D8 loads context+24. Follow that context's
-original constructor and DAT relocation contract. Do not confuse NPC subtype3B
-(troopers) with the script opcode or assume DAT tables share layouts.
+Ground truth/regression baseline:
+    python3 tools/g1_dat_inventory.py --level 6 --check-level6-scripts --output scratch/agent/s6682_baseline.json
+    mips64-elf-objdump -d -j .ovl.mission --start-address=0x800f4648 --stop-address=0x800f46f4 ../rogue_squadron64/build/roguesquadron.elf
+    mips64-elf-objdump -d -j .ovl.mission --start-address=0x800f3cb0 --stop-address=0x800f3d84 ../rogue_squadron64/build/roguesquadron.elf
+    rg -n 'jal.*800f3cb0' scratch/agent/s6681_mission_disasm.txt
+    rg -n 'case 7|unk3C|unk34|unk38' ../rogue_squadron64/docs/dat_files/load_level_dat.c
+Read <=60-line windows. Follow original DAT kind7 relocation and subtype
+semantics before decoding fields; do not assume all events share layouts.
+Original s6681_*.json are static evidence, not live/hardware witnesses.
 
-Land checked typed ownership/record edges and mutation negatives in the
+Land complete checked record edges and sensitivity/mutation controls in the
 existing tool, preserving all19 inventories and level2..6 prior contracts.
-Current validations: safety996 anchors/1048 rejected mutations,30 base candidates,
-167 typed condition rows (not scripts),125 direct getters; both scoped reader
-sets contain no90. They are NOT a complete consumer graph. Original integer
-slice uses recorded presentation/audio stubs and is same-source evidence.
-Run analyzer self-tests too:
+Current script check1282 anchors/1502 rejected mutations. Both old safety and
+script checks retain unresolved NPC/actor/radar/music/handle and alias edges.
     python3 tools/g1_objective_response_run.py --self-test
-No runtime build, lib/default edits, fallback request, win/progression or queued
-repeat soak. If this ownership edge resolves, select the next actual computed
-consumer edge; do not authorize a dose on the strength of a scoped null.
+No runtime build, lib/default changes or queued repeat soak. Close this family
+only when ownership/bounds and positive control qualify; scoped missing90
+never admits a fallback hit because eager c50 coupling already exists.
 
-Record Session6681, CURRENT-TRUTH and G1-OBJECTIVE-RESPONSE, rewrite NEXT for
-one unit, STATUS/OUTCOME and a NEW iter commit. No new queued-soak verdicts in
-s6680. s6680_validation.json records all19 unchanged inventories, prior-contract
-regressions and checker controls; s6680_safety.json holds the full typed graph.
+Record Session6682, CURRENT-TRUTH and G1-OBJECTIVE-RESPONSE, rewrite NEXT for
+one unit, STATUS/OUTCOME and a NEW iter commit. No new soaks in s6681.

@@ -7,6 +7,7 @@ import argparse
 from collections import Counter
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
 import struct
@@ -1096,6 +1097,200 @@ def level6_safety_contract(elf, rows):
     return contract
 
 
+def decode_type3_scripts(rows):
+    names = {}
+    for row in rows:
+        if row['name']:
+            names.setdefault(row['name'], []).append(row)
+    result = []
+    for row in rows:
+        if row['kind'] != 3 or row['subtype'] != 3:
+            continue
+        raw = b''.join(struct.pack('>I', row['words'][f'{i:02x}'])
+                       for i in range(0, row['size'] - 3, 4))
+        if len(raw) != row['size'] or len(raw) < 0xd4:
+            raise ValueError('type3 script slots exceed record')
+        slots = []
+        for index in range(8):
+            at = 0x54 + 16 * index
+            opcode, a, b, relative = struct.unpack_from('>IffI', raw, at)
+            slot = dict(index=index, opcode=opcode, operand_words=[word(raw, at+4), word(raw, at+8)],
+                        token_offset=relative, targets=[])
+            if opcode == 3:
+                if not all(math.isfinite(x) and -2147483648 <= x < 2147483648 for x in (a,b)):
+                    raise ValueError('script float outside TRUNC.W.S qualified domain')
+                slot.update(counter=int(a), threshold=int(b), reads_counter=int(a) > 0)
+            if opcode in (1,2,3,4,5,7):
+                if not 0xd4 <= relative < len(raw) or b'\0' not in raw[relative+1:]:
+                    raise ValueError('script token outside owning record')
+                token = raw[relative+1:].split(b'\0', 1)[0].decode('ascii')
+                slot.update(token_count=raw[relative], token=token)
+                for name in token.split('|'):
+                    matches = names.get(name, [])
+                    slot['targets'].append(dict(name=name,
+                        matches=[dict(offset=r['offset'], kind=r['kind'], subtype=r['subtype']) for r in matches]))
+            slots.append(slot)
+        result.append(dict(name=row['name'], offset=row['offset'], size=row['size'],
+                           slots=slots, field50=word(raw,0x50),
+                           completion_effect=dict(counter=word(raw,0x40), delta=word(raw,0x44),
+                                                  boolean=word(raw,0x48), value=word(raw,0x4c))))
+    return result
+
+
+def level6_scripts_contract(elf, rows):
+    spans = {
+        0x800f947c: (
+            '27bdffd8 00804021 afb00018 00a08021 24020001 afb1001c 25110008 afbf0020 '
+            'a1020112 ae300024 ae200028 8e02001c 44861000 3c01800b c4248f2c ad020008 '
+            '8e020020 ae220004 8e04001c 8e030020 ae200014 ae200010 ae20000c ae200034 '
+            'ae200020 ae200018 e624001c e6220048 e6220050 00041040 00441021 00021080 '
+            '00621821 ae230008'
+        ),
+        0x800f9674: (
+            '27bdffd8 00804021 afb1001c 00a08821 24020001 afb00018 25100008 afbf0020 '
+            'a1020112 ae110024 ae000028 8e22001c 44861000 3c01800b c4248f48 ad020008 '
+            '8e220020 ae020004 8e24001c 8e230020 ae000014 ae000010 ae00000c ae000034 '
+            'ae000020 ae000018 e604001c e6020048 e6020050 00041040 00441021 00021080 '
+            '00621821 ae030008'
+        ),
+        0x80046abc: (
+            '8e420018 1040001f 00008821 8e42001c 8e430018 02422821 1060001b ae45001c '
+            '00a02021 8c820000 00a21821 ac830000 8c62000c 10400002 00621021 ac62000c '
+            '8c620020 10400002 00621021 ac620020 8c620028 10400004 00000000 8c62002c '
+            '00621021 ac62002c 8e420018 26310001 0222102b 1440ffeb 24840004 08011ad1 '
+            '00000000 ae40001c'
+        ),
+        0x800f3290: (
+            '27bdff88 afb60068 0080b021 afb10054 00a08821 afb40060 0000a021 3c028014 '
+            'afbe0070 245e88a0 3c028014 afb7006c 24578060 afbf0074 afb50064 afb3005c '
+            'afb20058 afb00050 8e220024 24150001 24530054 24500058 8e240024 8e020008 '
+            '8e630000 00829021 2463ffff 2c620007 1040005f 00031080 3c07800b 24e78a20 '
+            '00471021 8c420000 00400008 00000000 c6000000 8e230034 4600010d 44022000 '
+            '0043102a 14400056 26100010 0803cd28 00000000 c6000000 4600010d 44052000 '
+            '14a00003 28a20081 0803ccdf 24020001 10400004 00be1021 9042ffff 0803ccdf '
+            '0002102b 0c03cc96 02c02021 c6000004 304300ff 4600010d 44022000 14620040 '
+            '26100010 0803ccfd 02402021 c6000000 4600010d 44022000 18400038 2442ffff '
+            '00021080 00571021 c6000004 8c420000 4600010d 44032000 0043102a 14400030 '
+            '26100010 0803ccfd 02402021 02402021 0c03cc51 27a50010 0803cd00 00000000 '
+            '02402021 00002821 0c03cc2b 27a60010 0c011ed2 27a40010 ae220028 24020001 '
+            '0803cd2b ae200034 c6000000 4600010d 44022000 50550001 a2d501a5 0803cd2b '
+            '00001021 02402021 00002821 0c03cc2b 27a60010 0c011ed2 27a40010 ae220028 '
+            'ae200034 c6000000 e6200104 8c420050 14550012 24020001 c6200014 3c01800b '
+            'c4228a3c 46020000 0803cd2b e6200014 ae240028 0803cd2b 24020001 26100010 '
+            '26940001 2a820008 1440ff93 26730010 8e230024 24020001 ae230028'
+        ),
+        0x800f30ac: (
+            '24840001 90820000 10400020 00001821 2407007c 24a80001 14470003 00000000 '
+            '0803cc38 24840001 90820001 14400002 00000000 24630001 54650011 24840001 '
+            '90820000 50400009 a0c00000 50470007 a0c00000 24840001 a0c20000 90820000 '
+            '1440fffa 24c60001 a0c00000 90830000 10600007 00001021 03e00008 01001021 '
+            '90820000 1440ffe4 00000000 00001021 03e00008 00000000'
+        ),
+        0x800f3144: (
+            '27bdffe0 afb00010 00808021 afbf0018 afb10014 92020000 10400037 00a08821 '
+            '0c000d0c 00000000 02202821'
+        ),
+        0x800d9604: (
+            '8e220094 00512021 90830000 2402002d 1062001b 3c028014 0c011ed2 00000000 '
+            '8e050034 c4a000a0 e7a00010 8e030034 3c01800a c4207a54 c46200a4 e7a00018 '
+            'e7a20014 8e040038 8ca60098 8ca700a8 0c03e51f 00402821'
+        ),
+        0x800f4110: (
+            'afb7018c 0080b821'
+        ),
+        0x800f4150: (
+            '0c010057 26f50008'
+        ),
+        0x800f4340: (
+            '8ea20034 8ea50024 24420001 aea20034 8ca30040 10600009 3c028014 24428060 '
+            '2463ffff 00031880 00621821 8c620000 8ca40044 00441021 ac620000 8ca40048 '
+            '10800005 3c028014 244288a0 90a3004f 00821021 a043ffff 02e02021 0c03cca4 '
+            '02a02821'
+        ),
+        0x800f43ec: (
+            'c6a00048 aea20024 8ea30024 8ea50024 26a600d0 aea00028'
+        ),
+    }
+    expected = {start+4*i:int(value,16) for start,values in spans.items()
+                for i,value in enumerate(values.split())}
+    for pc,value in expected.items():
+        if elf_word(elf,pc) != value:
+            raise ValueError(f'type3 ownership instruction changed at {pc:08x}')
+    scripts = decode_type3_scripts(rows)
+    active = [(r['name'],s['index'],s['opcode'],s.get('token'))
+              for r in scripts for s in r['slots'] if s['opcode']]
+    if len(scripts) != 21 or active != [
+            ('ATAT_Spline_01',0,5,'ATAT_Spline_02'),
+            ('Wingman_Spline_01',0,5,'Wingman_Loop'),
+            ('Shuttle_Escape_01',0,6,None)]:
+        raise ValueError('level6 typed script census changed')
+    if any(r['completion_effect']['counter'] or r['completion_effect']['boolean'] for r in scripts):
+        raise ValueError('level6 type3 completion effect selector changed')
+    for record in scripts:
+        for slot in record['slots']:
+            for target in slot['targets']:
+                if len(target['matches']) != 1 or target['matches'][0]['kind'] != 3:
+                    raise ValueError('level6 script target not uniquely owned type3')
+    contract = level6_safety_contract(elf, rows)
+    contract['instruction_checks'].update({f'{pc:08x}':f'{v:08x}' for pc,v in expected.items()})
+    audit = contract['safety_audit']
+    audit['script_edge'] = dict(
+        selection='H-DAT for kind3/subtype3 script sources; no full counter90 safety proof',
+        constructors=['800f94a0','800f9698'], context='actor+8', source='context+24 = unmodified a1',
+        named_source_example='800d9604..9658: DAT+94 relative name -> getLevelDatItemByName -> constructor a1',
+        relocation='80046abc..6b40: DAT header18/1c count/table; table-relative records; only record0c/20/2c relocated',
+        bounds='eight fixed slots at record54+16*i, end-exclusive d4; field50 is not a count',
+        selector='opcode3 trunc.w.s(record58+16*i); <=0 skips read; positive counter >= trunc.w.s(record5c+16*i)',
+        tokens='record-relative offset60+16*i; copyPipeDelimitedField skips leading count byte',
+        transition='resolver stores named lookup in context28; executor43f0 copies it to context24',
+        scripts=scripts, opcode3_slots=[], completion_effects_enabled=0,
+        unresolved='No dynamic activation proof or exhaustive constructor-argument proof. Other subtypes, arbitrary named-source API inputs and other computed reader families are outside this census.')
+    audit['unresolved'] = [x for x in audit['unresolved'] if not x.startswith('Script owner+24')]
+    audit['unresolved'].append('Typed type3 script family closed statically for level6; constructor live arguments and other record kinds remain unqualified.')
+    return contract
+
+
+def check_script_decoder_controls(rom):
+    data,_ = extract(rom,1)
+    rows = inventory(data)
+    def selected(current):
+        return next(r for r in decode_type3_scripts(current) if r['name']=='x_wing_vs_probe_d')['slots'][0]
+    control = selected(rows)
+    if (control['opcode'],control['counter'],control['threshold'],control['token']) != (3,10,3,'x_wing_to_rendezvous'):
+        raise ValueError('retail nonzero opcode3 control failed')
+    if len(control['targets'][0]['matches']) != 1 or control['targets'][0]['matches'][0]['kind'] != 3:
+        raise ValueError('retail nonzero control target join failed')
+    owner = next(r for r in rows if r['name']=='x_wing_vs_probe_d')
+    start = int(owner['offset'],16)
+    controls = []
+    for value,wanted in ((90.0,90),(10.75,10),(-1.75,-1),(0.0,0)):
+        changed=bytearray(data)
+        struct.pack_into('>f',changed,start+0x58,value)
+        slot=selected(inventory(changed))
+        if slot['counter'] != wanted or slot['reads_counter'] != (wanted>0):
+            raise AssertionError('script selector sensitivity/truncation control failed')
+        controls.append(dict(input=value,counter=slot['counter'],reads_counter=slot['reads_counter']))
+    rejected=[]
+    for label,field,value in (('token OOB',0x60,owner['size']),('token in header',0x60,0x40),
+                              ('nonfinite selector',0x58,0x7fc00000)):
+        changed=bytearray(data);struct.pack_into('>I',changed,start+field,value)
+        try:
+            selected(inventory(changed))
+        except ValueError:
+            rejected.append(label)
+        else:
+            raise AssertionError('accepted '+label)
+    changed=bytearray(data)
+    struct.pack_into('>I',changed,start+0xc4,3)
+    struct.pack_into('>ffI',changed,start+0xc8,90.0,1.0,owner['words']['60'])
+    last=next(r for r in decode_type3_scripts(inventory(changed)) if r['name']==owner['name'])['slots'][7]
+    if last['counter']!=90 or last['token']!=control['token']:
+        raise AssertionError('eighth script slot control failed')
+    return dict(retail_level=1,nonzero_control=control,selector_controls=controls,
+                last_slot_control=last,rejected=rejected,
+                evidence='retail bytes and original ELF contracts; synthetic decoder mutations are same-source, not runtime evidence')
+
+
 def check_contract_mutations(elf, data, contract, qualify):
     rejected = []
     for pc in contract['instruction_checks']:
@@ -1118,6 +1313,18 @@ def check_contract_mutations(elf, data, contract, qualify):
                 rejected.append(f"DAT:{row['name']}:{field:02x}")
             else:
                 raise AssertionError(f"accepted mutated DAT {row['name']}:{field:02x}")
+    scripts = contract.get('safety_audit', {}).get('script_edge', {}).get('scripts', [])
+    for record in scripts:
+        for slot in record['slots']:
+            changed = bytearray(data)
+            at = int(record['offset'],16) + 0x54 + 16*slot['index']
+            struct.pack_into('>I',changed,at,3 if slot['opcode'] != 3 else 0)
+            try:
+                qualify(elf,inventory(changed))
+            except ValueError:
+                rejected.append(f"script-op:{record['offset']}:{slot['index']}")
+            else:
+                raise AssertionError('accepted changed script opcode')
     if 'safety_audit' in contract:
         conditions = contract['safety_audit']['typed_DAT_conditions']
         for selector in (0,14,16,17,18,19):
@@ -1146,6 +1353,8 @@ def main():
     ap.add_argument('--mutation-check-level4', action='store_true')
     ap.add_argument('--check-level5', action='store_true')
     ap.add_argument('--mutation-check-level5', action='store_true')
+    ap.add_argument('--check-level6-scripts', action='store_true')
+    ap.add_argument('--mutation-check-level6-scripts', action='store_true')
     ap.add_argument('--check-level6-safety', action='store_true')
     ap.add_argument('--mutation-check-level6-safety', action='store_true')
     ap.add_argument('--check-level6', action='store_true')
@@ -1186,6 +1395,13 @@ def main():
         contract = level6_safety_contract(elf, rows)
         if args.mutation_check_level6_safety:
             contract['mutation_checks'] = check_contract_mutations(elf, data, contract, level6_safety_contract)
+    if args.check_level6_scripts or args.mutation_check_level6_scripts:
+        if args.level != 6:
+            ap.error('--check-level6-scripts requires --level 6')
+        contract = level6_scripts_contract(elf, rows)
+        contract['script_decoder_controls'] = check_script_decoder_controls(rom)
+        if args.mutation_check_level6_scripts:
+            contract['mutation_checks'] = check_contract_mutations(elf, data, contract, level6_scripts_contract)
     tables = {f'{a:08x}': f'{elf_word(elf, a):08x}' for a in
               (0x8003bdb8 + 24 * 4, 0x8003bed8 + 24 * 4,
                0x8003c140 + 24 * 4, 0x8003bff0 + 36 * 4, 0x800a74c8 + 4 * 4)}

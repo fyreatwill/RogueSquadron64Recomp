@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6680 (2026-10-31).
+Compact operational handoff, as of Session 6681 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -563,15 +563,36 @@ level2..6 contracts, all19 inventories and analyzer controls pass. No lib/defaul
 change or new soak verdict. Full limits: G1-OBJECTIVE-RESPONSE s6680; proof
 scratch/agent/s6680_safety.json and s6680_validation.json.
 
+## s6681 update — level6 typed spline-script edge closed statically
+
+Original F94A0/F9698 store unmodified constructor a1 at actor+8+24.
+DAT loader46ABC..6B40 relocates kind3 records and0C/20/2C, leaving inline
+scripts/token offsets relative. ResolverF3494 scans8 fixed slots54..D3;
+field50 is NOT a count. All21 level6 subtype3 records/168 slots have no
+opcode3; only ATAT_Spline_01->02 and Wingman_Spline_01->Wingman_Loop
+(op5, unique DAT joins), plus Shuttle_Escape_01 op6. Completion40/48
+counter/Boolean selectors all0. H-DAT selected for this family, not full
+counter90 absence/safety. Level1 retail x_wing_vs_probe_d supplies opcode3
+c10>=3 -> x_wing_to_rendezvous; decoder detects synthetic90 in slot8,
+float truncation, disabled selectors and invalid offsets.1282 original
+anchors/1502 rejected mutations pass; all19 inventories, prior3..6/safety
+contracts unchanged, level2/analyzer controls pass. ELF+DAT support static
+contracts; no live activation/all-constructor-arguments proof or VERIFIED
+promotion. No game build/run, defaults/lib edits or new soaks. Tool flags
+--check-level6-scripts/--mutation-check-level6-scripts; full evidence/limits
+G1-OBJECTIVE-RESPONSE s6681, scratch/agent/s6681_{scripts,validation}.json.
+Next is the spline-event remap into kind7, not another admission hold.
+
 ## Next steps (single monotonic backlog)
-1. **G1(d) level6 typed-script ownership audit (next unit).** s6680's
-   checked original slice recovers c50->Boolean99->c99->Bit8 and proves FFFF
-   API10 eagerly increments50/90 with HP500->490. Scoped167 typed conditions
-   and125 direct getters contain no90; computed consumers remain unresolved.
-   Trace effect-context+24 constructor and embedded record bounds through
-   executeActorType1Effect -> resolveScriptedNameTokenList; classify original
-   opcode3 selectors and selected DAT targets in retail level6. No repeated
-   admission hold, fallback request, lethal dose, direct stores or win gate.
+1. **G1(d) level6 spline-event ownership audit (next unit).** s6681 closes
+   the scoped type3 script family:21 records/168 slots, no opcode3 reads,
+   two uniquely resolved transitions; completion selectors all0. Next trace
+   original F4660..46AC: spline+28/+2C stride8 event -> spline+D8 remap ->
+   level DAT kind7 table -> updateNpcEffectIntensity input. Qualify the
+   counter read at F3D28 (+2C selector/+30 threshold) and effect at F3D74
+   (+34 selector/+38 delta) for every selected level6 event. Require a
+   nonzero typed retail control. Other computed readers remain open; no
+   fallback request, lethal dose, direct stores or win gate.
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
@@ -593,9 +614,9 @@ scratch/agent/s6680_safety.json and s6680_validation.json.
 - Per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence):
   verbatim per-level paragraphs, duplicate coverage, historical backlog and updates.
-- `PORTING-STATE.md` sessions 6656–6680 contain recent chronology; search bounded
+- `PORTING-STATE.md` sessions 6656–6681 contain recent chronology; search bounded
   windows only. Earlier durable context remains in PROJECT-OVERVIEW.
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest remains
-  20261028-075640 (already consumed). No new verdicts in s6680.
+  20261028-075640 (already consumed). No new verdicts in s6681.
 - s6596/s6597 and s6599 were checkpoint close-outs, not reruns. The saved
   s6595/s6598 HUD artifacts retain their original evidence limits.

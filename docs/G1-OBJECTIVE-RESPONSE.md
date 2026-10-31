@@ -1825,3 +1825,54 @@ Next single unit: trace the original effect-context+24 constructor through
 executeActorType1Effect -> resolveScriptedNameTokenList, prove the record bounds
 and typed retail level6 ownership, and classify each opcode3 selector and chosen
 DAT target. Keep all other computed edges explicit; no damage run.
+
+## s6681 — level6 type3 script ownership and bounded selector census
+
+ONE bounded extension of `tools/g1_dat_inventory.py`, flags
+`--check-level6-scripts --mutation-check-level6-scripts --level 6`.
+No game build/run, request, lethal dose, direct stores or win/progression.
+No new queued-soak verdicts (latest20261028-075640 already consumed).
+
+H-DAT / H-derived / H-computed discriminator: original constructor source ->
+context+24 -> inline slot bounds -> opcode3 -> retail token and DAT target.
+**H-DAT selected for kind3/subtype3 sources.** Both original constructors
+F94A0/F9698 store unmodified a1 in context+24, context=actor+8. Example original
+wingman path D9604..9658 resolves DAT+94 relative name through
+getLevelDatItemByName, passes its result as constructor a1. Loader46ABC..6B40
+uses header18/1C count/table, table-relative record addresses, relocates
+record0C/20/2C only in this loop. Inline scripts and token offsets stay relative.
+Resolver sets context28 from named lookup; executorF43F0 moves it to context24.
+This is a static ownership contract, not observed activation or a proof that
+every constructor argument is subtype3. Arbitrary named API inputs and other
+record kinds remain outside the census.
+
+| Measurement | Result | Limit |
+| --- | --- | --- |
+| Original loop bound | F3494 SLTI v0,s4,8; slots54+16*i throughD3 | NEXT's proposed field50 count was wrong;0/1 values resembled a count, but are not read as one here |
+| Every level6 kind3/subtype3 record |21 records,168 slots;0 opcode3 slots | Overapproximates possible scans, not a live reachability proof |
+| Active opcodes | ATAT_Spline_01 op5 -> ATAT_Spline_02; Wingman_Spline_01 op5 -> Wingman_Loop; Shuttle_Escape_01 op6 | Both named targets uniquely join kind3/subtype3; no other nonzero opcodes |
+| Completion effects | All21 record40 counter and48 Boolean selectors0 | Only this executor's direct completion fields |
+| Retail nonzero control | Level1 x_wing_vs_probe_d+4840: op3 counter10>=3 -> x_wing_to_rendezvous+49C4 | Static decoder control, no new runtime control |
+| Sensitivity/bounds | Synthetic selector90 detected;10.75 truncates10;-1.75 truncates-1 and skips read;0 skips; counter90 in eighth slot detected | Synthetic bytes test decoder; not independent hardware execution |
+| Rejections | Token offset in header/OOB and nonfinite selector rejected; all168 slot opcode mutations rejected | Qualified float domain only |
+| Regression |1282 ELF anchors,1502 rejected mutations; direct struct cross-check168 slots; field50=FFFFFFFF leaves slots unchanged | Mutation execution uses the same ELF/data sources |
+
+The pipe-list helperF30AC skips the leading byte before copying the selected
+name; raw token searches that include that byte misidentify names. The decoder
+retains all slot indices, operand words, typed selectors, relative offsets and
+target matches in the report. Original opcode3 ignores nonpositive selectors;
+positive selectors read counters and compare against trunc.w.s(threshold).
+
+Original ELF instructions and retail DAT bytes corroborate static format and
+content. The decoder/mutation fixtures are same-source; no independent dynamic
+causal, retail-equivalence, complete counter90-absence or VERIFIED claim follows.
+Other computed NPC/actor/radar/music/handle readers remain unresolved, and FFFF
+API10 remains inadmissible because its eager c50/90 coupling is unchanged.
+
+Evidence: `scratch/agent/s6681_scripts.json`, `s6681_validation.json`,
+`s6681_baseline.json`, `s6681_level2.json`, original
+`s6681_{mission,dat}_disasm.txt`. All19 inventories and prior level3..6/safety
+contract objects compare identical to HEAD; level2 assertions and objective
+analyzer self-tests pass. Neither already-dirty lib submodule was edited.
+Next unit: spline events through F4660..46AC remap into kind7 records consumed
+by updateNpcEffectIntensity; classify +2C counter condition and +34 effect.

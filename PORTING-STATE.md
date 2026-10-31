@@ -175239,3 +175239,46 @@ G1-OBJECTIVE-RESPONSE s6680. Next single unit: original script owner constructor
 record bounds and typed retail level6 opcode3 target join; no new damage run.
 ADVANCED: persistent original-contract checker and discriminating gate/eager
 fallback controls, no runtime/default/lib change.
+
+## Session 6681 (2026-10-31) — close level6 typed spline-script ownership edge
+
+HYPOTHESIS-ID: g1-coverage-cd. ONE bounded original-backed tool change.
+CURRENT-TRUTH50027 bytes, no maintenance. No new queued-soak verdicts;
+latest20261028-075640 already consumed. No game build/run, admission hold,
+fallback request, lethal dose, direct health/counter stores or win/progression.
+
+H-DAT / H-derived / H-computed discriminator: original constructors -> context24
+source -> bounded inline scripts -> opcode3 selector and retail named target.
+Original F94A0/F9698 store unmodified constructor a1 at actor+8+24. Example
+D9604..9658 passes named DAT lookup directly. Loader46ABC..6B40 establishes
+kind3 table-relative records and relocates0C/20/2C only; token offsets stay
+record-relative. ResolverF3494 scans8 slots54..D3, NOT field50 as a count.
+NEXT's count proposal was plausible from0/1 raw values but original instructions
+refute it. F3408 stores next named record in context28; F43F0 copies it to24.
+
+Extended tools/g1_dat_inventory.py with typed script decoder and checked
+--check-level6-scripts/--mutation-check-level6-scripts contracts. All21 level6
+kind3/subtype3 records/168 slots contain no opcode3 reads. Nonzero slots are
+ATAT_Spline_01 op5 -> ATAT_Spline_02, Wingman_Spline_01 op5 -> Wingman_Loop,
+Shuttle_Escape_01 op6. Both target joins unique; completion40/48 selectors0
+on every record. H-DAT selected for this family. Other constructor arguments,
+other kinds, live activation and computed reader families remain unresolved.
+No general counter90-unused/safety or VERIFIED claim.
+
+Same-command retail positive control: level1 x_wing_vs_probe_d op3 c10>=3
+selects x_wing_to_rendezvous. Decoder detects synthetic90 including eighth slot,
+TRUNC.W.S fractional/negative/zero controls, rejects token header/OOB/nonfinite
+fields. Direct struct cross-check168 slots, field50=FFFFFFFF preserves decoding.
+1282 original anchors/1502 rejected mutations pass (including all168 slot opcode
+changes). All19 inventories, prior level3..6 and safety contracts unchanged;
+level2 original checks and analyzer self-tests pass. ELF+DAT corroborate static
+contracts; decoder/mutation execution is same-source, not independent dynamic
+evidence. No failed run or hidden null; no runtime/default/lib edits.
+
+Proof: scratch/agent/s6681_scripts.json, s6681_validation.json,
+s6681_baseline.json, s6681_level2.json; original s6681_mission_disasm.txt and
+s6681_dat_disasm.txt. Full table/limits G1-OBJECTIVE-RESPONSE s6681.
+Next: spline event stride8/remap into kind7 and updateNpcEffectIntensity's
+counter condition/effect fields, with a nonzero typed retail control.
+ADVANCED: persistent typed decoder plus ownership qualification selects H-DAT
+and closes this scoped static edge. No new live request authorized.
