@@ -20,6 +20,7 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   load and s6375's SDV snapshot ran unarmed; lvl1 gfx task 10.9 -> 52 ms, 29.7 -> 17.6 game fps, presents bunched (41% <2 ms
   apart, 10% >50 ms gaps) = the owner's turning shake (G3d). Same-run toggle A/B (ROGUESQ_G3D_LEGACY_TOGGLE) + 631-run census
   step. ALL frame-cost numbers s6390-s6695 (dd cost tables, sd_wall, tasks/s) carry the overhead and are void as absolutes.
+  s6697: no residual shake (retail + FPS60 jerk arms); dd4 re-baseline lvl1 24.1 fps/24 ms, lvl5 19.6 fps/33.9 ms per task.
 - **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
   ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
   lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
@@ -681,10 +682,10 @@ so statically they should be owned on the scripted route (H-load over H-prox).
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G3d follow-up (s6696 fixed the cause).** Owner judges turning feel on the fixed build (retail and FPS60); only if
-   shake is still reported, re-run the s6455 G3c jerk arms on the fixed build. Re-baseline dd4 lvl1/lvl5 cost with
-   ROGUESQ_G1B (s6390-s6582 numbers void). Owner: send s6694+s6695 21:9 level-select frames. Optional: grey radar wedge
-   left at x~690 top in 21:9 flight.
+1. **G3d CLOSED on data (s6697), owner to judge feel.** Fixed build, same-run legacy toggle: retail 90% of game frames
+   2 VIs apart, yaw accel rms 0.66 (legacy 4.69); FPS60 56 tasks/s, 91% 1 VI apart, rms 0.39 (legacy 5.45, 16.6 tasks/s).
+   No sign-alternating jerk (0.44/0.61 < 0.7). Next: dd4 gfx-task cost (lvl5 dd4 19.6 fps / 33.9 ms per task vs dd1
+   30.0 / 14.7) - profile where send_dl time goes at dd4. Owner: send s6694+s6695 21:9 level-select frames.
 2. **(PARKED by owner) G1(d) level8 live ownership + disable response.** s6687
    contract: extend g1_objective_response_run.py to level 8. One run with
    ROGUESQ_LOG_GRIDSPAWN=1 records each train car's desc+6 slot. If one

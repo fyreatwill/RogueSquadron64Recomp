@@ -175904,3 +175904,25 @@ ORIGIN: no mitigation; the writer of the cost is our own diagnostic code (s6372 
 SDV snapshot). Removing the per-op cost is the root-cause fix; ROGUESQ_SPIKE_DMEM probes behave as before when armed.
 Next: owner judges the feel (retail and FPS60); re-measure G3c(c) camera jerk on the fixed build if shake is still reported;
 re-baseline dd4 cost (s6390-s6582 cost numbers are void).
+
+## Session 6697 (2026-10-31) — G3d closed on data: no residual turning jerk on the fixed build (retail + FPS60); dd4 cost re-baselined (lvl5 19.6 fps)
+Ran: (1) offline: split the s6696 lvl1 toggle run (G3C_LOG on) by [g3d] arm and ran tools/g3c_jerk.py per arm (retail).
+(2) one FPS60 lvl1 run, same s6457 recipe + ROGUESQ_FPS60=1 + ROGUESQ_G3D_LEGACY_TOGGLE=20, 203 s, alive, 0 stalls, 0 crashlines
+(scratch/agent/m6/g1_lvl1s6697_fps60_toggle). (3) three G1B cost runs, 180 s holds, all alive/0 stalls/0 crashlines:
+lvl1 dd4, lvl5 dd1, lvl5 dd4 (g1_lvl{1,5}s6697_dd{1,4}).
+Jerk (distinct-camera frames, VI spacing, yaw accel rms rad/s^2, sign-alternation):
+  retail fixed : spacing {1:94, 2:1745, 3:83}, rms 0.662, alt 0.442 | retail legacy: spacing 3-8 VIs, rms 4.686, alt 0.567
+  FPS60  fixed : 56.3 tasks/s, spacing {1:3282, 2:293}, rms 0.391, alt 0.608, present p50/p95 16.5/19.8 ms, <2 ms 1%
+  FPS60  legacy: 16.6 tasks/s, spacing 3-8 VIs, rms 5.447, alt 0.523, present p50/p95 6.0/64.2 ms, <2 ms 44%
+Positive control: the legacy windows of the same runs reproduce the irregular 3-8 VI spacing and bunched presents.
+Verdict: selects H-fixed - the shake was the s6372 overhead's 17 fps bunching; with it removed retail delivers even 30 Hz
+(2-VI) frames and FPS60 delivers 60 Hz, alternation below the 0.7 shake mark in both. H-residual refuted. Two lines: retail
+from the s6696 capture, FPS60 from a new run, each with a same-run legacy control. FPS60 had been silently capped at ~17 fps
+by the same overhead since s6372, so every FPS60 feel report after 10-26 was of a broken build.
+dd cost (flight seconds t>=60, medians via g3d_toggle_fold pre-toggle bucket):
+  lvl1 dd1 29.7 fps / send_dl 10.9 ms (s6696 fixed arm) -> dd4 24.1 / 24.0 ms
+  lvl5 dd1 30.0 / 14.7 ms -> dd4 19.6 / 33.9 ms (cpu 32.9)
+dd4 still drops game fps below retail 30 on both levels; the trade-off is smaller than the void s6390-s6582 tables said but real.
+Dead end noted: a zsh `set -- $spec` loop does not word-split, the first dd batch launched with LEVEL="1 4"; deleted, rerun.
+ORIGIN: no mitigation; measurement only.
+Next: profile the dd4 send_dl cost on lvl5 (which ucode ops / RSP recompiled paths dominate the extra 19 ms per task).
