@@ -37,13 +37,17 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   overwrote the free header the game put there (writer named with ROGUESQ_FLOOR_WATCH). Wider than
   4:3 the game now takes the retail gap==0 branch (heap [slot, slot+fbsize)). 16:9 lvl1 still
   mission_verified_130s. Does not affect the 21:9 level-select tear (s6691 A/B, ROGUESQ_G1D_HEAPSLOT=0).
-- **REOPENED s6691: G1d 21:9 level-select floor tear is NOT closed.** Every 21:9 level-select
-  frame (VI 1400-1700) shows the floor as horizontal stripes of unrelated texels, including s6631's
-  own "passing" frame; 16:9 same-run frames clean. Heapslot on/off (ROGUESQ_G1D_HEAPSLOT=0, same
-  binary) both torn, so neither the s6631 heap cap nor s6689 heapslot is the cause or cure.
-  Scorer: tools/g1d_row_noise.py (side-band vertical dLuma; clean 3.9-6.8, torn 19.1-28.2, self-test
-  passes). The s6611/s6631 edge/dy180 scorer cannot see this tear. Single-source lead: 21:9
-  [floor-tex] floor_frac 0.5 with two combiner modes and dTr=0. Evidence scratch/agent/s6691_recheck/.
+- **REOPENED s6691, localized s6692: G1d 21:9 level-select tear = floor/console ring drawn but
+  rejected inside RT64.** Every 21:9 level-select frame (VI 1400-1650) loses the floor and the front
+  console ring; the stripes are undrawn framebuffer. 16:9 clean. Scorer tools/g1d_row_noise.py (clean
+  3.8-6.8, torn 15-28). s6692 RDP-stream census (ROGUESQ_LOG_FLOOR [floor-src]/[floor-frame]/
+  [floor-zclear], src/rsp/dpc_bridge.cpp rs64_floor_scan), same run 16:9 vs 21:9: floor tris sample
+  the same-shape LoadBlock (2048 B, same submit, source not in CI/ZI); ~960 lower-screen tris/frame at
+  both widths, z-compare on, Z 32157..32694 (in range), one full-screen depth clear (fill FFFCFFFC,
+  0..W-1 x 0..339) per frame, colour images double-buffered. CULL_SPIKE=0 still torn (24.3), heapslot
+  on/off torn (s6691). Writer watch on 4 depth words in the torn rows: only RT64 native-swap depth
+  write-back writes them during select (no guest store). So the input is equivalent; the loss is in
+  RT64's depth/target handling at w=1024 (s6625 saw copyFromChanges overwrite the cleared depth).
 - **G3c (owner visual report): engineering closed, owner judgement pending.**
   (a) far-edge stair: no opt-in rougher than retail (s6449, s6544);
   (b) spike wedges: H-hw-draws, angrylion lights the same 16/79 wedges
@@ -53,7 +57,7 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   inset matches retail (s6610). Extra width is real scene and the left HUD
   stays pinned. Heap `8010FEFC` now stops at the depth pointer when aspect
   is wider than 4:3. The OS window stays 640x480, so wider modes letterbox.
-  Do not return to the combiner or the pixel pipe.
+  Do not return to the combiner; the s6692 lead is RT64 depth (see above).
 - **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
 - **G1(c) framebuffer presence covered for levels 0..18.** Level 1 has a
   retail flight match; the remaining evidence establishes content presence,
@@ -660,10 +664,9 @@ so statically they should be owned on the scripted route (H-load over H-prox).
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **21:9 level-select floor tear (reopened s6691): name what the floor samples.** One build,
-   16:9 vs 21:9: per floor draw, texture image address/width/fmt, tile line/size, the TMEM load
-   source rows, and whether that source range overlaps a colour/depth/heap buffer at 21:9.
-   Score with tools/g1d_row_noise.py. See scratch/agent/NEXT.md.
+1. **21:9 level-select tear: RT64 depth side (s6692 localized it there).** RDP input is equivalent
+   at 16:9 and 21:9; find which RT64 depth step rejects the floor at w=1024 (RAM->depth reload after
+   the clear, depth target size/tiling, write-back granularity). See scratch/agent/NEXT.md.
 2. **G3d turning-shake timing follow-up** (ITERATION 3c).
 3. **(PARKED by owner) G1(d) level8 live ownership + disable response.** s6687
    contract: extend g1_objective_response_run.py to level 8. One run with

@@ -175717,3 +175717,41 @@ tex 0.45..57 — the right half of the floor sample pairs is not the same draw.
 Code: tools/apply_s6031_far.py apply_s6689_heapslot now emits the env-gated form
 (ROGUESQ_G1D_HEAPSLOT=0 restores the gap branch at wide aspect; default unchanged), upgrades
 the s6689 line in place; live funcs_0.c patched, build relinked. No lib/ edit.
+
+## Session 6692 (2026-10-31) — 21:9 level-select tear localized: floor and console ring are emitted with equivalent RDP input at 16:9 and 21:9 and rejected inside RT64 depth handling
+
+2026-10-31. HYPOTHESIS-ID: g1d-levelselect-floor-source. CURRENT-TRUTH 57,434 bytes (no maintenance).
+No new SOAK-RESULTS lines. Screen unlocked (g1d_floor_inputs.screen_locked). One game at a time,
+SIGKILL, run from build/, recipe tools/g1d_floor_inputs.run_arm (s6631/s6691 harness), drivers
+scratch/agent/s6692_floorsrc/{ab,cull,watch}.py.
+
+Instrument (one function, src/rsp/dpc_bridge.cpp rs64_floor_scan, which was a stub; ROGUESQ_LOG_FLOOR,
+gated on the level-select VI fb shape h 320..352 / w 796|1024): walks every RDP submit and tracks
+SetTImg/SetTile/LoadBlock/LoadTile/SetCImg/SetZImg/SetOtherMode/SetFillColor/FillRect.
+[floor-src]: per textured tri in the g1d_row_noise side band, the tile's last TMEM load (source range,
+how many submits ago, overlap with CI / ZI / other CI). [floor-frame]: per swap, tri count, lower-screen
+(centre y>170) tris / textured / z-compare / Z min-max / out-of-range Z, fills, depth clears, colour
+images. [floor-zclear]: depth-clear rect and fill value.
+
+Looking at the frame first (scratch/agent/s6692_floorsrc/t21.png vs t16.png): at 21:9 the floor tiles
+AND the front console ring are missing; the stripes are undrawn framebuffer, not wrong texels.
+
+Results (vhf = g1d_row_noise score; 16:9 VI1400 5.0-5.4, 21:9 VI1400-1650 15.2-21.8, >=1700 clean):
+- Positive control: 16:9 [floor-src] prints the floor's LoadBlock (2048 B, p1 073FF000, age=same).
+- 21:9 floor tris: same 6 keys as 16:9 (LoadBlock 2048/1024 B, same submit, own=free), hits
+  2672-5773 per key over sw 1367..1659. H-src-overlap, H-load-geometry, H-split-draw all refuted.
+- [floor-frame] 270 21:9 select frames: ~1289 tris, ~1003 lower, 730 textured, 938 z-compare; 16:9
+  ~960 lower. Z 32157..32694 (16:9 32075..32694), zneg=0, zover=0. One depth clear per frame,
+  fill FFFCFFFC, rect 0..W-1 x 0..339, both widths. Colour images double-buffered (961000/A0B000).
+- Arm CULL_SPIKE=0 (21:9): still torn, vhf 24.31. Spike cull (default on since today) is not it.
+- Writer watch (ROGUESQ_FLOOR_DEPTH_DIR + ROGUESQ_FLOOR_WATCH on 4 depth words inside the torn rows,
+  both widths): during select only host RT64 `native-swap` depth write-back writes them; guest-exact
+  hits only at boot memset (initVideoSubsystem). Instrument control (0x1FF0020) fired.
+
+Selects: the game emits equivalent floor/ring geometry, textures, Z and depth clear at 21:9; nothing
+foreign writes the depth rows. The loss is inside RT64 at w=1024 (depth reload/target/write-back),
+consistent with s6625's single observation that copyFromChanges replaced cleared depth pixels.
+Rules out: texture source, TMEM load, stale TMEM, spike cull, game-side cull of these tris, guest
+heap writes into depth. Does not yet name the RT64 step.
+
+Code: rs64_floor_scan census (diagnostic, env-gated, default off). No lib/ edit.

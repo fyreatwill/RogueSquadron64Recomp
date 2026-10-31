@@ -4648,8 +4648,186 @@ extern "C" void rs64_floor_note(
     }
 }
 
+// s6692 G1d: floor texture-source census (ROGUESQ_LOG_FLOOR). For every textured
+// triangle whose bbox centre falls in the g1d_row_noise side band (rows 180..330,
+// outer 22% each side) while the VI fb is the level-select shape, record the tile
+// it samples (SetTile), the last load into that tile's TMEM address (LoadBlock /
+// LoadTile, the SetTImg it read from, source byte range), how many submits ago
+// that load ran (never = stale TMEM), and whether the source range overlaps the
+// current colour image, the depth image, or another colour image seen recently.
+// Positive control: the 16:9 run must print its floor's load with bytes > 0.
 static void rs64_floor_scan(uint32_t lo, uint32_t hi) {
-    (void)lo; (void)hi;
+    static const bool on = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_FLOOR");
+        return e && *e && *e != '0';
+    }();
+    if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
+    struct Tile { uint8_t fmt = 0, siz = 0, cmt = 0, cms = 0, maskt = 0, masks = 0; uint16_t line = 0, tmem = 0; };
+    struct Load { uint8_t kind = 0, tile = 0, fmt = 0, siz = 0; uint16_t tmem = 0xFFFF, timg_w = 0;
+                  uint32_t timg = 0, src_lo = 0, src_hi = 0, p0 = 0, p1 = 0; uint32_t sub = 0; };
+    static Tile tiles[8];
+    static Load loads[16]; static int nload = 0;           // ring of loads keyed by tmem
+    static uint32_t timg = 0, timg_w = 0, timg_fmt = 0, timg_siz = 0;
+    static uint32_t cimg = 0, cimg_w = 0, zimg = 0;
+    static uint32_t recent_ci[8] = {}, recent_ciw[8] = {}; static int nci = 0;
+    static uint32_t sub = 0, gated = 0, lines = 0;
+    struct Key { uint8_t side, op, tile, fmt, siz, kind, lfmt, lsiz, own, age; uint16_t line, tmem, timg_w;
+                 uint32_t timg, src_lo, src_hi, p0, p1, cimg, cimg_w, zimg; uint32_t hits; int sw0, sw1;
+                 double x0, x1, y0, y1; };
+    static Key keys[96]; static int nkeys = 0;
+    // Per-swap frame census: tris low (bbox centre y>170) / textured / z-compare on,
+    // fill rects into the depth image (z clear), colour images used.
+    struct Fr { int sw = -1; uint32_t tri = 0, low = 0, low_tex = 0, low_zc = 0, low_zc_noz = 0, zclear = 0, fill = 0;
+                double low_area = 0; uint32_t ci[4] = {}, nci = 0;
+                double zmin = 1e30, zmax = -1e30; uint32_t zneg = 0, zover = 0, zn = 0;
+                uint32_t zc_rect = 0, zc_fill = 0; };
+    static uint32_t fill_color = 0;
+    static Fr fr; static uint32_t fr_lines = 0; static uint32_t othermode_hi = 0, othermode_lo = 0;
+    sub++;
+    uint32_t vw = 0, vh = 0;
+    rs64_vi_fb_wh(&vw, &vh);
+    const bool gate = (vh >= 320 && vh <= 352) && (vw == 796 || vw == 1024);
+    const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
+    auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
+    auto sx14 = [](uint32_t v) { return (double)(((int32_t)(v << 18)) >> 18) / 4.0; };
+    auto ovl = [](uint32_t a0, uint32_t a1, uint32_t b0, uint32_t b1) { return a0 < b1 && b0 < a1; };
+    const uint32_t fbh = vh ? vh : 336;
+    if (gate && sw != fr.sw) {
+        if (fr.sw >= 0 && fr_lines++ < 600)
+            fprintf(stderr, "[floor-frame] w=%u sw=%d tri=%u low=%u low_tex=%u low_zc=%u low_zc_noz=%u low_area=%.0f "
+                    "fill=%u zclear=%u ci=%06X,%06X,%06X nci=%u zimg=%06X z=%.1f..%.1f zn=%u zneg=%u zover=%u zc_rect=%08X zc_fill=%08X\n",
+                    vw, fr.sw, fr.tri, fr.low, fr.low_tex,
+                    fr.low_zc, fr.low_zc_noz, fr.low_area, fr.fill, fr.zclear, fr.ci[0], fr.ci[1], fr.ci[2], fr.nci, zimg,
+                    fr.zmin, fr.zmax, fr.zn, fr.zneg, fr.zover, fr.zc_rect, fr.zc_fill);
+        fr = Fr{}; fr.sw = sw;
+    }
+    auto print_key = [&](const char *why, const Key &k) {
+        fprintf(stderr,
+                "[floor-src] why=%s cimg_w=%u side=%c op=%02X tile=%u tfmt=%u tsiz=%u line=%u tmem=%03X "
+                "load=%s ltile_fmt=%u lsiz=%u timg=%06X timg_w=%u src=%06X..%06X bytes=%u p0=%08X p1=%08X "
+                "age=%s own=%s%s%s%s cimg=%06X zimg=%06X heap=%08X hits=%u sw=%d..%d bbox=(%.0f..%.0f,%.0f..%.0f)\n",
+                why, k.cimg_w, k.side, k.op, k.tile, k.fmt, k.siz, k.line, k.tmem,
+                k.kind == 0 ? "none" : k.kind == 1 ? "block" : "tile", k.lfmt, k.lsiz, k.timg, k.timg_w,
+                k.src_lo, k.src_hi, k.src_hi - k.src_lo, k.p0, k.p1,
+                k.age == 0 ? "same" : k.age == 1 ? "older" : "never",
+                k.own ? "" : "free", (k.own & 1) ? "CI," : "", (k.own & 2) ? "ZI," : "", (k.own & 4) ? "otherCI," : "",
+                k.cimg, k.zimg, rd(0x1163E4u), k.hits, k.sw0, k.sw1, k.x0, k.x1, k.y0, k.y1);
+    };
+    for (uint32_t a = lo & ~3u; a + 8 <= hi;) {
+        const uint32_t w0 = rd(a), w1 = rd(a + 4);
+        const uint32_t op = (w0 >> 24) & 0x3F;
+        if (op == 0x24 || op == 0x25) { a += 16; continue; }
+        if (op >= 0x08 && op <= 0x0F) {
+            const uint32_t len = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
+            if (a + 32 > hi) break;
+            if (gate) {
+                const double yl_ = sx14(w0 & 0x3FFF), yh_ = sx14(w1 & 0x3FFF);
+                fr.tri++;
+                if ((yl_ + yh_) / 2 > 170.0) {
+                    const bool zc = (othermode_lo >> 4) & 1;
+                    fr.low++; if (op & 2) fr.low_tex++; if (zc) { fr.low_zc++; if (!(op & 1)) fr.low_zc_noz++; }
+                    const double xa = (double)(int32_t)rd(a + 8) / 65536.0, xb = (double)(int32_t)rd(a + 16) / 65536.0;
+                    fr.low_area += std::fabs(xa - xb) * (yl_ - yh_);
+                    if (op & 1) {
+                        const double z = (double)(int32_t)rd(a + len - 16) / 65536.0;
+                        fr.zn++; if (z < 0) fr.zneg++; if (z > 32767.0) fr.zover++;
+                        fr.zmin = z < fr.zmin ? z : fr.zmin; fr.zmax = z > fr.zmax ? z : fr.zmax;
+                    }
+                }
+            }
+            if (gate && (op & 2)) {
+                const double yl = sx14(w0 & 0x3FFF), ym = sx14((w1 >> 16) & 0x3FFF), yh = sx14(w1 & 0x3FFF);
+                auto fx = [&](uint32_t o) { return (double)(int32_t)rd(a + o) / 65536.0; };
+                const double xl = fx(8), dl = fx(12), xh = fx(16), dh = fx(20), xm = fx(24), dm = fx(28);
+                const double xs[5] = {xh, xm + dm * (ym - yh), xl, xl + dl * (yl - ym), xh + dh * (yl - yh)};
+                double mn = 1e9, mx = -1e9; for (double x : xs) { mn = x < mn ? x : mn; mx = x > mx ? x : mx; }
+                const double cx = (mn + mx) / 2, cy = (yh + yl) / 2;
+                const char side = cx < 0.22 * vw ? 'L' : cx > 0.78 * vw ? 'R' : 0;
+                if (side && cy >= 180.0 && cy <= 330.0) {
+                    const uint32_t t = (w0 >> 16) & 7;
+                    const Tile &T = tiles[t];
+                    const Load *L = nullptr;
+                    for (int i = 0; i < nload && i < 16; i++) {
+                        const Load &c = loads[(nload - 1 - i) & 15];
+                        if (c.tmem == T.tmem) { L = &c; break; }
+                    }
+                    Key k{}; k.side = side; k.op = op; k.tile = t; k.fmt = T.fmt; k.siz = T.siz; k.line = T.line;
+                    k.tmem = T.tmem; k.cimg = cimg; k.cimg_w = cimg_w; k.zimg = zimg;
+                    if (L) { k.kind = L->kind; k.lfmt = L->fmt; k.lsiz = L->siz; k.timg = L->timg; k.timg_w = L->timg_w;
+                             k.src_lo = L->src_lo; k.src_hi = L->src_hi; k.p0 = L->p0; k.p1 = L->p1;
+                             k.age = L->sub == sub ? 0 : 1; }
+                    else k.age = 2;
+                    const uint32_t ci_bytes = cimg_w * fbh * 2;
+                    if (L && ovl(k.src_lo, k.src_hi, cimg, cimg + ci_bytes)) k.own |= 1;
+                    if (L && zimg && ovl(k.src_lo, k.src_hi, zimg, zimg + cimg_w * fbh * 2)) k.own |= 2;
+                    for (int i = 0; L && i < nci && i < 8; i++)
+                        if (recent_ci[i] != cimg && ovl(k.src_lo, k.src_hi, recent_ci[i], recent_ci[i] + recent_ciw[i] * fbh * 2)) k.own |= 4;
+                    int hit = -1;
+                    for (int i = 0; i < nkeys; i++) {
+                        const Key &q = keys[i];
+                        if (q.side == k.side && q.op == k.op && q.tile == k.tile && q.tmem == k.tmem && q.line == k.line &&
+                            q.timg == k.timg && q.src_lo == k.src_lo && q.src_hi == k.src_hi && q.kind == k.kind &&
+                            q.age == k.age && q.own == k.own && q.cimg_w == k.cimg_w && q.fmt == k.fmt && q.siz == k.siz) { hit = i; break; }
+                    }
+                    if (hit < 0 && nkeys < 96) {
+                        k.sw0 = k.sw1 = sw; k.x0 = mn; k.x1 = mx; k.y0 = yh; k.y1 = yl; k.hits = 1;
+                        keys[nkeys] = k; hit = nkeys++;
+                        if (lines++ < 400) print_key("new", k);
+                    } else if (hit >= 0) {
+                        Key &q = keys[hit]; q.hits++; q.sw1 = sw;
+                        q.x0 = mn < q.x0 ? mn : q.x0; q.x1 = mx > q.x1 ? mx : q.x1;
+                        q.y0 = yh < q.y0 ? yh : q.y0; q.y1 = yl > q.y1 ? yl : q.y1;
+                    }
+                }
+            }
+            a += len; continue;
+        }
+        switch (op) {
+        case 0x3D: timg = w1 & 0xFFFFFF; timg_w = (w0 & 0xFFF) + 1; timg_fmt = (w0 >> 21) & 7; timg_siz = (w0 >> 19) & 3; break;
+        case 0x3F: {
+            cimg = w1 & 0xFFFFFF; cimg_w = (w0 & 0xFFF) + 1;
+            bool seen = false;
+            if (gate) { bool f = false; for (uint32_t i = 0; i < fr.nci && i < 4; i++) f |= fr.ci[i] == cimg;
+                        if (!f) { if (fr.nci < 4) fr.ci[fr.nci] = cimg; fr.nci++; } }
+            for (int i = 0; i < nci && i < 8; i++) if (recent_ci[i] == cimg) { seen = true; recent_ciw[i] = cimg_w; }
+            if (!seen) { recent_ci[nci & 7] = cimg; recent_ciw[nci & 7] = cimg_w; nci++; }
+            break; }
+        case 0x3E: zimg = w1 & 0xFFFFFF; break;
+        case 0x2F: othermode_hi = w0; othermode_lo = w1; break;
+        case 0x37: fill_color = w1; break;
+        case 0x36: if (gate) { fr.fill++; if (zimg && cimg == zimg) { fr.zclear++; fr.zc_rect = w0 & 0xFFFFFF; fr.zc_fill = fill_color;
+                       if (fr_lines < 600) fprintf(stderr, "[floor-zclear] w=%u sw=%d lr=(%u,%u) ul=(%u,%u) fill=%08X cimg_w=%u\n", vw, sw,
+                           ((w0 >> 12) & 0xFFF) >> 2, (w0 & 0xFFF) >> 2, ((w1 >> 12) & 0xFFF) >> 2, (w1 & 0xFFF) >> 2, fill_color, cimg_w); } } break;
+        case 0x35: {
+            const uint32_t t = (w1 >> 24) & 7; Tile &T = tiles[t];
+            T.fmt = (w0 >> 21) & 7; T.siz = (w0 >> 19) & 3; T.line = (w0 >> 9) & 0x1FF; T.tmem = w0 & 0x1FF;
+            T.cmt = (w1 >> 18) & 3; T.maskt = (w1 >> 14) & 0xF; T.cms = (w1 >> 8) & 3; T.masks = (w1 >> 4) & 0xF;
+            break; }
+        case 0x33: case 0x34: {
+            const uint32_t t = (w1 >> 24) & 7;
+            Load &L = loads[nload & 15]; nload++;
+            L.kind = op == 0x33 ? 1 : 2; L.tile = t; L.fmt = timg_fmt; L.siz = timg_siz; L.tmem = tiles[t].tmem;
+            L.timg = timg; L.timg_w = timg_w; L.p0 = w0; L.p1 = w1; L.sub = sub;
+            const uint32_t uls = (w0 >> 12) & 0xFFF, ult = w0 & 0xFFF, lrs = (w1 >> 12) & 0xFFF, lrt = w1 & 0xFFF;
+            if (op == 0x33) {
+                const uint32_t texels = lrs >= uls ? lrs - uls + 1 : 0;
+                L.src_lo = timg + (((ult * timg_w + uls) << timg_siz) >> 1);
+                L.src_hi = L.src_lo + ((texels << timg_siz) >> 1);
+            } else {
+                const uint32_t r0 = ult >> 2, r1 = lrt >> 2, c0 = uls >> 2, c1 = lrs >> 2;
+                L.src_lo = timg + (((r0 * timg_w + c0) << timg_siz) >> 1);
+                L.src_hi = timg + (((r1 * timg_w + c1 + 1) << timg_siz) >> 1);
+            }
+            break; }
+        default: break;
+        }
+        a += 8;
+    }
+    if (gate && ++gated % 300 == 0) {
+        fprintf(stderr, "[floor-src] table gated=%u keys=%d w=%u sw=%d\n", gated, nkeys, vw, sw);
+        for (int i = 0; i < nkeys; i++) print_key("table", keys[i]);
+        fflush(stderr);
+    }
 }
 
 
