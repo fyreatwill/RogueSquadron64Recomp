@@ -1447,6 +1447,230 @@ def check_event_decoder_controls(rom):
                 evidence='Retail DAT and original instructions support static interpretation only; controls are not live/hardware evidence')
 
 
+
+def decode_pending_song_sources(rows):
+    decoded = []
+    for row in rows:
+        if row['kind'] not in (0, 6) or row['subtype'] != 16:
+            continue
+        if row['size'] < 0xac:
+            raise ValueError('short subtype16 pending-song owner')
+        fields = row['words']
+        threshold = fields['a0']
+        threshold = threshold if threshold < 0x80000000 else threshold-0x100000000
+        decoded.append(dict(kind=row['kind'], index=row['index'], name=row['name'],
+                            offset=row['offset'], subtype=16,
+                            eager_spawn=bool(fields['34'] & 0x80),
+                            handler_boolean=fields['84'], handler_value=fields['88'],
+                            handler_counter=fields['8c'], handler_threshold=fields['90'],
+                            pending_boolean=fields['94'] & 255,
+                            pending_value=fields['98'] & 255,
+                            counter=fields['9c'] & 255, threshold=threshold,
+                            predicate='count < -threshold' if threshold < 0 else 'count >= threshold'))
+    return decoded
+
+
+def run_pending_song_slice(elf, row, count=0, boolean=1, pending=True):
+    """Execute original selector transfers and reader, excluding scheduling/spatial gates."""
+    memory, regs, stores = {}, [0]*32, []
+    def put(at, value, size):
+        for i in range(size):
+            memory[at+i] = (value >> (8*(size-1-i))) & 255
+    def get(at, size):
+        try:
+            return int.from_bytes(bytes(memory[at+i] for i in range(size)), 'big')
+        except KeyError:
+            raise ValueError(f'uninitialized pending-song slice read {at:08x}') from None
+    def signed(value):
+        return value if value < 0x80000000 else value-0x100000000
+    def step(pc, delay=False):
+        w=elf_word(elf,pc)
+        op,rs,rt,rd=w>>26,w>>21&31,w>>16&31,w>>11&31
+        imm=w&65535; imm=imm if imm<32768 else imm-65536
+        target=None
+        if op == 15: regs[rt]=(w&65535)<<16
+        elif op == 9: regs[rt]=(regs[rs]+imm)&0xffffffff
+        elif op in (35,36): regs[rt]=get((regs[rs]+imm)&0xffffffff,4 if op==35 else 1)
+        elif op in (40,43):
+            at=(regs[rs]+imm)&0xffffffff; size=1 if op==40 else 4
+            put(at,regs[rt],size); stores.append(dict(pc=f'{pc:08x}',address=f'{at:08x}',size=size,value=regs[rt]))
+        elif op == 0:
+            fn=w&63
+            if fn==0: regs[rd]=(regs[rt]<<(w>>6&31))&0xffffffff
+            elif fn==0x21: regs[rd]=(regs[rs]+regs[rt])&0xffffffff
+            elif fn==0x23: regs[rd]=(regs[rs]-regs[rt])&0xffffffff
+            elif fn==0x2a: regs[rd]=int(signed(regs[rs])<signed(regs[rt]))
+            elif fn==0x2b: regs[rd]=int(regs[rs]<regs[rt])
+            elif fn==8: target=regs[rs]
+            else: raise ValueError(f'unsupported pending-song special {pc:08x}')
+        elif op in (4,5):
+            take=(regs[rs]==regs[rt])==(op==4)
+            target=pc+4+imm*4 if take else pc+8
+        elif op==1 and rt==1:
+            target=pc+4+imm*4 if signed(regs[rs])>=0 else pc+8
+        else: raise ValueError(f'unsupported pending-song instruction {pc:08x}:{w:08x}')
+        regs[0]=0
+        if target is not None:
+            if delay: raise ValueError('transfer in delay slot')
+            step(pc+4,True)
+            return target
+        return pc+4
+    dat, stack, request=0x80200000,0x81001000,0x8010c230
+    for field,value in row['words'].items(): put(dat+int(field,16),value,4)
+    for i in range(0x40): put(stack+0x38+i,0,1)
+    for i in range(0x30): put(request+i,0,1)
+    regs[4],regs[29],regs[3]=dat,stack,1
+    for pc in range(0x800ecbc8,0x800ecbf0,4): step(pc)
+    regs[16],regs[4]=stack+0x38,request
+    for pc in range(0x800ef724,0x800ef74c,4): step(pc)
+    regs[16]=request
+    for pc in range(0x800ee16c,0x800ee19c,4): step(pc)
+    step(0x800ee1a0)
+    selector=get(0x8010c2f7,1); threshold=get(0x8010c2f8,4)
+    put(0x8010c2f1,int(pending),1)
+    if selector: put(0x80138060+4*(selector-1),count,4)
+    bool_selector=get(0x8010c2f5,1)
+    if bool_selector: put(0x801388a0+bool_selector-1,boolean,1)
+    regs[31]=0x7ffffffc; pc=0x800edbb0
+    for _ in range(100):
+        if pc==regs[31]: break
+        pc=step(pc)
+    else: raise ValueError('pending-song reader budget exhausted')
+    return dict(counter=selector,threshold=signed(threshold),switch=regs[2],stores=stores,
+                limitation='Selected original load/store slices plus complete reader; no live spatial gate, scheduler, or song-switch execution')
+
+
+def level6_music_contract(elf, rows):
+    spans = {
+        0x80046b44: (
+            '8e420030 10400035 00008821 8e420034 8e430030 02429821 10600031 ae530034 '
+            '3416ffff 24150004 24140005 02608021 8e020000 02621821 ae030000 8c62000c '
+            '10400003 00621021 ac62000c a4760006 94620000 10550005 00000000 1054000e '
+            '00000000 08011b01 26100004 '
+        ),
+        0x8004723c: (
+            '8e420030 10400010 00008821 8e420034 00111880 00621821 8c640000 8c820034 '
+            '30420080 10400003 00000000 0c0194ed 00000000 8e420030 26310001 0222102b '
+            '1440fff2 00000000 '
+        ),
+        0x800653c8: (
+            '96220000 2443fff4 2c620047 1040009e 3c028004 2442bdb8 00031880 00621821 '
+            '8c620000 00400008 00000000 '
+        ),
+        0x80065558: (
+            '3c04800f 2484cc28 02202821 24060001 08019599 24070064 '
+        ),
+        0x80065664: (
+            '0c00fffb 00000000 00401821 3070ffff 3c018004 c420bed4 3402ffff 12020006 '
+            'e7a00010 a6230006 02002021 24050003 0c00fa37 27a60010 '
+        ),
+        0x800ecc80: (
+            'ae020008 ac860004 c4c00010 e4800008 c4c00014 e480000c c4c00018 00c01821 '
+        ),
+        0x800ecd30: (
+            '8c850004 8ca30084 c4c00000 10600007 3c028014 244288a0 00621021 9043ffff '
+            '8ca20088 1462001d 24020001 8ca2008c 1040000a 3c038014 24638060 2442ffff '
+            '00021080 00431021 8c420000 8ca30090 0043102a 14400011 24020001 44050000 '
+            '0c03b1bc 00000000 '
+        ),
+        0x800ecbc8: (
+            '90820097 a3a2006b 9082009b a3a2006c 9082009f a3a2006d 8c8200a0 27a40038 '
+            'a3a30068 afa20070 0c03bd44 00000000 '
+        ),
+        0x800ec970: (
+            '90820097 a3a2006b 9082009b a3a2006c 9082009f a3a2006d 8c8200a0 a3a00068 '
+            'afa20070 '
+        ),
+        0x800ef6d8: (
+            '9202002e 2464c230 a0820028 c6000000 e460c230 c6000004 e4800004 8e020008 '
+            'ac820018 8e02000c ac82001c 96020022 a4820020 96020024 a4820022 96020026 '
+            'a4820024 92020030 a0820026 92020033 a0820029 92020034 a082002a 92020035 '
+            '3c058011 a082002b 8e030038 00001021 ac83002c 92060031 24030001 a0a3c262 '
+            'a0860027 '
+        ),
+        0x800ee050: (
+            '3c128011 9242c267 145100c0 3c038011 3c138011 2670c230 92020028 1440003a '
+            '3c028011 '
+        ),
+        0x800ee158: (
+            'a040c2f3 3c028011 a040c2f2 3c028011 a051c2f1 92030029 3c028011 a043c2f5 '
+            '9203002a 3c028011 a043c2f6 9203002b 3c028011 a043c2f7 8e03002c 92040027 '
+            '3c028011 14910005 ac43c2f8 3c028011 a040c2fd 3c028011 a040c2fc '
+        ),
+        0x800edbb0: (
+            '3c028011 9043c2f1 24020001 14620024 00001021 3c038011 9062c2f5 1040000b '
+            '3c028014 9063c2f5 244288a0 00621821 3c028011 9063ffff 9042c2f6 10620007 '
+            '3c058011 03e00008 00001021 3c028011 9042c2f7 1040001f 3c058011 90a2c2f7 '
+            '1040001a 3c028011 8c44c2f8 0481000e 3c028014 3c038014 90a2c2f7 24638060 '
+            '2442ffff 00021080 00431021 8c420000 00041823 0043102a 1440000c 00001021 '
+            '03e00008 00000000 90a3c2f7 24428060 2463ffff 00031880 00621821 8c630000 '
+            '0064182a 1460fff6 00001021 03e00008 24020001 00001021 03e00008 00000000 '
+        ),
+    }
+    expected={start+4*i:int(v,16) for start,values in spans.items() for i,v in enumerate(values.split())}
+    expected[0x8003bdb8+4*(16-12)]=0x80065558
+    for pc,value in expected.items():
+        if elf_word(elf,pc)!=value: raise ValueError(f'pending-song instruction changed at {pc:08x}')
+    decoded=decode_pending_song_sources(rows)
+    wanted=[('MUSICRNG_ATATs','0000fddc',90,-3),('MUSICRNG_ATSTs','0000fed8',91,-1),
+            ('MUSICRNG_LevelSettings','0000ffd4',0,0)]
+    if [(r['name'],r['offset'],r['counter'],r['threshold']) for r in decoded]!=wanted:
+        raise ValueError('level6 pending-song census changed')
+    if any(not r['eager_spawn'] or (r['handler_boolean'],r['handler_value'],r['handler_counter'],
+            r['handler_threshold'],r['pending_boolean'],r['pending_value'])!=(0,1,0,0,0,1) for r in decoded):
+        raise ValueError('level6 pending-song gates changed')
+    controls=[]
+    for record in decoded:
+        row=next(r for r in rows if r['offset']==record['offset'])
+        for count in (0,1,2,3,4):
+            result=run_pending_song_slice(elf,row,count)
+            want=int(count < -record['threshold']) if record['threshold']<0 else 0
+            if (result['counter'],result['threshold'],result['switch'])!=(record['counter'],record['threshold'],want):
+                raise ValueError('original pending-song reader boundary failed')
+            controls.append(dict(name=record['name'],count=count,**result))
+    contract=level6_events_contract(elf,rows)
+    contract['instruction_checks'].update({f'{pc:08x}':f'{v:08x}' for pc,v in expected.items()})
+    contract['safety_audit']['pending_song']=dict(
+        selection='H-typed: retail level6 has pending-song counter90; no complete consumer safety proof',
+        records=decoded,original_slice_controls=controls,
+        ownership='kind6 table header30/34 -> flag34 bit80 -> setup table subtype16 ->65558 ->ECC28; constructor stores unmodified a2 at payload+4; tickECD90 passes same payload toEC6F0',
+        copies='DAT+97/+9b/+9f/+a0 -> stack request+33/+34/+35/+38 -> C230+29/+2a/+2b/+2c -> C2F5/F6/F7/F8; selector unsigned low byte, threshold signed word',
+        queue_distinction='C170 holds the 0x24-byte song handle/config, C230 holds conditions; copies of C170 toC110/C400 do not supply condition selectors. EED7C builds background-song config, not these C230 fields.',
+        effect='With pending state1 and Boolean gate disabled: negative threshold switches while count < -threshold; nonnegative threshold switches at count >= threshold. Both selectors disabled returns0.',
+        counter90_consequence='ATATs condition passes at c90=0..2, blocks at >=3, conditional on spatial/handler/pending state. No mission win or live activation inferred.',
+        unresolved=['Grid/deferred dynamic activation and arbitrary descriptor/indirect aliases are not exhaustively joined.',
+                    'Other NPC/actor/radar/handle readers remain unresolved; FFFF c50/90 eager effect stays inadmissible.'],
+        evidence='Original ELF plus retail DAT establish static contracts; slice execution and mutation controls are same-source, not independent dynamic evidence.')
+    return contract
+
+
+def check_music_decoder_controls(elf, rom):
+    data,_=extract(rom,1); rows=inventory(data)
+    control=next(r for r in rows if r['kind']==6 and r['subtype']==16 and r['name']=='MUSICRNG_Zone01')
+    result=run_pending_song_slice(elf,control,2)
+    assert (result['counter'],result['threshold'],result['switch'])==(110,-3,1)
+    controls=[dict(name='retail level1 Zone01',**result)]
+    for selector,threshold,count,pending,bgate,bvalue,observed,want in (
+        (90,-3,2,True,0,1,1,1),(90,-3,3,True,0,1,1,0),
+        (90,3,2,True,0,1,1,0),(90,3,3,True,0,1,1,1),
+        (0,3,3,True,0,1,1,0),(90,-3,2,False,0,1,1,0),
+        (90,-3,2,True,7,1,0,0),(90,-3,2,True,7,1,1,1),
+        (0,0,0,True,7,1,1,1),(0x1234005a,-3,2,True,0,1,1,1)):
+        changed=dict(control,words=dict(control['words']))
+        for field,value in (('9c',selector),('a0',threshold&0xffffffff),('94',bgate),('98',bvalue)):
+            changed['words'][field]=value
+        result=run_pending_song_slice(elf,changed,count,observed,pending)
+        assert (result['counter'],result['threshold'],result['switch'])==(selector&255,threshold,want)
+        controls.append(dict(input=[selector,threshold,count,pending,bgate,bvalue,observed],**result))
+    changed=bytearray(data); struct.pack_into('>I',changed,int(control['offset'],16)+0x9c,90)
+    assert next(r for r in decode_pending_song_sources(inventory(changed)) if r['name']==control['name'])['counter']==90
+    short=dict(control,size=0xa8)
+    try: decode_pending_song_sources([short])
+    except ValueError: pass
+    else: raise AssertionError('short music owner accepted')
+    return dict(controls=controls,synthetic90_decoded=True,short_owner_rejected=True,live_qualified=False)
+
+
 def check_contract_mutations(elf, data, contract, qualify):
     rejected = []
     for pc in contract['instruction_checks']:
@@ -1502,6 +1726,13 @@ def check_contract_mutations(elf, data, contract, qualify):
             rejected.append(f'spline-event:{at:08x}')
         else:
             raise AssertionError(f'accepted changed spline event {at:08x}')
+    for record in contract.get('safety_audit', {}).get('pending_song', {}).get('records', []):
+        for field in (0x34,0x84,0x88,0x8c,0x90,0x94,0x98,0x9c,0xa0):
+            changed=bytearray(data); at=int(record['offset'],16)+field
+            struct.pack_into('>I',changed,at,word(changed,at)^0x80 if field==0x34 else word(changed,at)^1)
+            try: qualify(elf,inventory(changed))
+            except ValueError: rejected.append(f'music:{record["offset"]}:{field:02x}')
+            else: raise AssertionError('accepted changed music field')
     if 'safety_audit' in contract:
         conditions = contract['safety_audit']['typed_DAT_conditions']
         for selector in (0,14,16,17,18,19):
@@ -1530,6 +1761,8 @@ def main():
     ap.add_argument('--mutation-check-level4', action='store_true')
     ap.add_argument('--check-level5', action='store_true')
     ap.add_argument('--mutation-check-level5', action='store_true')
+    ap.add_argument('--check-level6-music', action='store_true')
+    ap.add_argument('--mutation-check-level6-music', action='store_true')
     ap.add_argument('--check-level6-events', action='store_true')
     ap.add_argument('--mutation-check-level6-events', action='store_true')
     ap.add_argument('--check-level6-scripts', action='store_true')
@@ -1588,6 +1821,13 @@ def main():
         contract['event_decoder_controls'] = check_event_decoder_controls(rom)
         if args.mutation_check_level6_events:
             contract['mutation_checks'] = check_contract_mutations(elf, data, contract, level6_events_contract)
+    if args.check_level6_music or args.mutation_check_level6_music:
+        if args.level != 6:
+            ap.error('--check-level6-music requires --level 6')
+        contract = level6_music_contract(elf, rows)
+        contract['music_decoder_controls'] = check_music_decoder_controls(elf, rom)
+        if args.mutation_check_level6_music:
+            contract['mutation_checks'] = check_contract_mutations(elf, data, contract, level6_music_contract)
     tables = {f'{a:08x}': f'{elf_word(elf, a):08x}' for a in
               (0x8003bdb8 + 24 * 4, 0x8003bed8 + 24 * 4,
                0x8003c140 + 24 * 4, 0x8003bff0 + 36 * 4, 0x800a74c8 + 4 * 4)}

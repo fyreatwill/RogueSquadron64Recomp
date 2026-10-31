@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6682 (2026-10-31).
+Compact operational handoff, as of Session 6683 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -603,15 +603,34 @@ corrected active-field mutation scope and reran completely. No game run,
 default/lib edits or new soaks. Full table/limits G1-OBJECTIVE-RESPONSE s6682;
 proof scratch/agent/s6682_{events,validation}.json. Next: pending-song sources.
 
+## s6683 update — level6 pending-song counter90 owner found
+
+Original kind6/subtype16 setup -> ECC28 payload+4 -> EC6F0 stack request ->
+EF724 C230 condition copy -> EE18C/1A0 globals -> EDBB0 reader is checked.
+MUSICRNG_ATATs(FDDC,index132) selects90/−3; ATSTs(FED8,index134)91/−1;
+LevelSettings(FFD4,index136)0/0. Negative thresholds switch BELOW magnitude,
+so c90=2→3 disables the ATATs pending-song condition, subject to spatial/
+handler/pending gates. No live activation or complete safety claim. H-typed
+for this family; no transformation in copies.1587 ELF anchors match retail
+ROM bytes,2013 mutations reject.15 original-slice level6 boundary cases plus
+retail level1 selector110/−3 and10 synthetic/gate/sign/byte controls pass;
+short owner rejects. All19 inventories/seven prior contracts unchanged,
+level2/analyzer/compile/whitespace checks pass. Static ELF+DAT evidence only;
+slice execution is same-source, not a dynamic witness. FFFF eager c50/90
+request stays inadmissible; other consumer/alias edges open. No game build/
+run/default/lib change, new verdict or VERIFIED claim. Full table/limits:
+G1-OBJECTIVE-RESPONSE s6683; scratch/agent/s6683_{music,validation}.json.
+Park level6's unqualified boundary and advance to level7 named contracts.
+
 ## Next steps (single monotonic backlog)
-1. **G1(d) level6 pending-song counter ownership audit (next unit).**
-   s6682 closes the scoped spline-event common prefix:21 records/10 events,
-   all bounded kind7 joins, disabled counter conditions/effects. Next trace
-   original EDC2C/EDC5C readers through globals8010C2F7/F8 back to writer
-   EE18C/EE1A0, source descriptor bytes2B/word2C, queue copies and typed
-   level6 retail requests. Enumerate every qualified source; require a
-   nonzero retail selector and synthetic90 control. Preserve unresolved
-   producer/alias edges. No fallback request, lethal dose or win gate.
+1. **G1(d) level7 original-backed named response contract (next unit).**
+   Read callback801044E0 and friendlies reader80104A60, qualify every named
+   counter/Boolean, then join the retail DAT to one nonterminal response
+   candidate and its original damage route. Historical level7 id2 activity
+   is not a semantic witness. No live dose until ownership/route is qualified.
+   Level6 pending-song ownership is now checked: retail c90/−3 and c91/−1;
+   other consumer/alias and live-activation boundaries remain open. Do not
+   repeat admission holds or infer complete fallback safety.
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
@@ -633,9 +652,9 @@ proof scratch/agent/s6682_{events,validation}.json. Next: pending-song sources.
 - Per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence):
   verbatim per-level paragraphs, duplicate coverage, historical backlog and updates.
-- `PORTING-STATE.md` sessions 6656–6682 contain recent chronology; search bounded
+- `PORTING-STATE.md` sessions 6656–6683 contain recent chronology; search bounded
   windows only. Earlier durable context remains in PROJECT-OVERVIEW.
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest remains
-  20261028-075640 (already consumed). No new verdicts in s6682.
+  20261028-075640 (already consumed). No new verdicts in s6683.
 - s6596/s6597 and s6599 were checkpoint close-outs, not reruns. The saved
   s6595/s6598 HUD artifacts retain their original evidence limits.

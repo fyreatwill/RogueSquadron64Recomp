@@ -1948,3 +1948,66 @@ Evidence: scratch/agent/s6682_events.json, s6682_validation.json,
 s6682_baseline.json, s6682_level2.json. Next: original-backed ownership of the
 two pending-song counter readers, including descriptor/queue copying and a
 nonzero typed retail control; no repeat admission hold.
+
+
+## s6683 — level6 pending-song counter90 ownership qualified statically
+
+ONE bounded extension of `tools/g1_dat_inventory.py`, no game build/run.
+H-typed selected for the qualified original family; H-derived is rejected for
+its selector copies. Arbitrary descriptor producers/aliases remain H-computed.
+
+Original loader46B44..6C20 relocates kind6(header30/34) records/names, not
+condition fields; loader4723C..7280 sends flag34 bit80 records to setup.
+Subtype16 selects table8003BDC8 ->65558 -> ECC28; spawn uses the unmodified
+DAT pointer. ConstructorECC84 stores it at payload+4. Action3 ECD30..D90
+checks DAT84/88 Boolean and8C/90 counter, then ticks that payload. TickEC6F0
+makes enter/exit stack requests; both paths copy DAT bytes97/9B/9F and
+wordA0 into request33/34/35/38. EF724..748 copies those into C230+29/2A/2B/2C;
+EE064 selects C230 as s0; EE16C..1A0 stores globals8010C2F5/F6/F7/F8.
+Selector is an unsigned BYTE (low byte of DAT9C); threshold a signed word.
+C170's 0x24-byte song config copies are separate from C230 conditions;
+EED7C builds background-song config, not this condition payload. Full alias/
+indirect-producer closure is not claimed.
+
+| kind6/subtype16 owner | index / DAT offset | pending counter | signed threshold | original reader switch condition |
+| --- | --- | --- | --- | --- |
+| MUSICRNG_ATATs |132 / FDDC |90 |−3 |c90 < 3 |
+| MUSICRNG_ATSTs |134 / FED8 |91 |−1 |c91 < 1 |
+| MUSICRNG_LevelSettings |136 / FFD4 |0 |0 |both selectors disabled: returns0 |
+
+All3 have eager-spawn bit80, handler Boolean0/value1/counter0/threshold0,
+pending Boolean0/value1. Their live spatial entry/exit and pending state
+remain unobserved. EDC44's signed comparison/branch returns1 BELOW the
+magnitude of a negative threshold; a nonnegative threshold returns1 at
+count>=threshold. NEXT.md's tentative negative wording described waiting,
+not the actual switch return; branches now establish polarity explicitly.
+No prior CURRENT-TRUTH conclusion is overturned: counter90 was unresolved,
+never proven unused. The original eager Barracks effect's c90 increment can
+change this music condition at2→3. Its coupled c50 success-stage effect
+remains a separate reason not to admit fallback requests.
+
+New flags `--check-level6-music` / `--mutation-check-level6-music` qualify
+1587 total original anchors; all1587 independently compared byte-for-byte
+with their retail ROM text/mission offsets,0 mismatches.2013 instruction/DAT
+mutations reject, including all27 checked level6 music gate/selector fields.
+Original selected transfer slices plus the complete EDBB0 reader execute
+15 level6 boundary cases (counts0..4 on each owner). A same-command retail
+level1 MUSICRNG_Zone01 control copies selector110/threshold−3 and returns1
+at2. Ten additional slice fixtures test synthetic90, both threshold signs,
+equality, disabled selectors, pending-state gating, Boolean match/mismatch,
+and byte truncation(0x1234005A→90). Synthetic90 also passes the typed DAT
+decoder, and a short owner rejects. This is same-source static execution;
+it is NOT a dynamic independent witness or a full scheduler/spatial replay.
+
+All19 inventories and seven prior contract objects(level3/4/5/6/safety/scripts/
+events) compare identical to pre-change HEAD. Existing level2 assertions,
+objective analyzer fixtures, Python compilation and diff whitespace checks
+pass. No failed run, new soak verdict, mitigation, default/lib change,
+VERIFIED promotion, live fallback/lethal request or mission-win test.
+
+Evidence: scratch/agent/s6683_music.json, s6683_validation.json,
+s6683_baseline.json, s6683_level2.json. Counter90 safety remains partial:
+other NPC/actor/radar/handle readers, runtime aliases and dynamic activation
+are open. Park that boundary without repeat admission holds; move coverage
+to the next missing named objective contract, level7 (historical id2 has no
+proven level7 meaning). No complete consumer-absence claim follows.

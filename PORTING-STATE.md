@@ -175331,3 +175331,50 @@ G1-OBJECTIVE-RESPONSE s6682. Next: pending-song counter source ownership,
 EDC2C/EDC5C via EE18C/EE1A0 descriptor/queue producers, typed retail control.
 ADVANCED: persistent bounded decoder closes a scoped original-backed edge;
 no live damage admission or safety claim.
+
+## Session 6683 (2026-10-31) — qualify level6 pending-song counter90 ownership
+
+HYPOTHESIS-ID: g1-coverage-cd. ONE bounded original-backed tool change.
+CURRENT-TRUTH52662 bytes, maintenance not triggered. Latest queued verdict
+20261028-075640 already consumed; no new verdicts. No game build/run,
+fallback/lethal request, direct guest stores, win, default or lib edit.
+
+H-typed/H-derived/H-computed discriminator: trace readerEDBB0's globals back
+through EE18C/EE1A0 and C230 condition request to the actual typed DAT owner.
+Original loader kind6 header30/34, flag34 bit80 -> setup subtype16 tableBDC8
+->65558 ->ECC28 stores unmodified DAT at payload+4; action3 ECD90 ticks it.
+EC6F0 enter/exit paths copy DAT97/9B/9F/A0 to stack request33/34/35/38;
+EF724..748 copies to C230+29/2A/2B/2C; EE064/16C..1A0 loads globalsF5/F6/F7/F8.
+C170 song-handle/config copies are distinct from C230 condition descriptors.
+
+H-typed selected for the qualified static family: level6 kind6/subtype16
+MUSICRNG_ATATs index132 DATFDDC counter90 threshold−3, MUSICRNG_ATSTs
+index134 DATFED8 counter91 threshold−1; LevelSettings index136 DATFFD4
+selector0/threshold0. All eager-spawn, handler Boolean0/value1/counter0/
+threshold0, pending Boolean0/value1. Original negative branch switches when
+count < -threshold; nonnegative switches at >= threshold. Both selectors
+zero returns0. Thus c90=2→3 disables the ATATs condition when other gates
+permit it, not a mission win. Live spatial/pending activation unobserved.
+No claim of global absence had been made or is overturned; counter90 was open.
+
+Persistent flags --check-level6-music/--mutation-check-level6-music:1587
+instruction anchors, all byte-matched to retail ROM,0 mismatches;2013 rejected
+mutations, including27 music gate/selector fields. Selected original transfer
+slices plus full reader execute15 level6 count0..4 boundary cases. Same-command
+retail lvl1 MUSICRNG_Zone01 counter110/−3 at2 returns1;10 fixtures cover90,
+threshold signs/equality, disabled selectors, pending-state and Boolean gates,
+unsigned-byte truncation0x1234005A→90. Synthetic90 typed decoder fires; short
+owner rejects. All19 inventories/seven earlier contract objects identical to
+pre-change HEAD; level2 checks, analyzer fixtures, compilation, whitespace pass.
+No failed experiment. Original ELF+retail DAT support static format/contents;
+slice/struct/ROM checks share source lineage, not independent dynamic evidence.
+
+Counter90 is consumed by music, but the FFFF Barracks effect also advances50;
+no fallback safety admission, live response, retail-equivalence or VERIFIED
+promotion. Other NPC/actor/radar/handle/alias and activation edges remain open.
+No mitigation-shaped machinery; no source corruption repair claimed.
+Evidence: scratch/agent/s6683_music.json, s6683_validation.json,
+s6683_baseline.json, s6683_level2.json. Full limits G1-OBJECTIVE-RESPONSE s6683.
+Next: park level6 partial boundary and qualify level7 original named objective
+contract; historical id2 alone is not semantics. ADVANCED: checked tool change
+selects a real typed counter90 consumer and its signed boundary.
