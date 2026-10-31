@@ -175800,3 +175800,7 @@ The cause is still open: either a different FramebufferManager instance (the wor
 its own fbManager, which the fast path updates as type Depth), or the clear pair carries a different
 cimg width/address at 21:9. Single-source so far (one census, two arms agreeing).
 ORIGIN: no mitigation landed; kill switches are diagnostic, default off.
+Verdict: selects H-clear-lost; refutes H-reload (kill-switch modulates 19->11, never clean),
+refutes H-fastclear (NO_DEPTH_FASTCLEAR still torn), refutes H-writeback (diff never set at 21:9).
+Next discriminator: log every fillRectOnly clear pair in submitFramebufferPair and fullSync (cimg
+addr/width/rect, clearDepthOnly) at 21:9 vs 16:9 to split H-cimg / H-manager / H-skip (NEXT.md).
