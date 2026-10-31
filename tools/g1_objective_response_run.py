@@ -294,6 +294,7 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
         result['level3_building'] = qualify_level3(rows)
         result['level3_api'] = qualify_level3_api([r for r in rows if 'api_seq=2' not in r['event']])
         result['level3_loss'] = qualify_level3_loss(rows)
+    if level == 4: result['level4_ordinary'] = qualify_level4(rows)
     if level == 2: result['level2_loss'] = qualify_level2_loss(transport, rows)
     (out / 'response.json').write_text(json.dumps(result, indent=2) + '\n')
     with (out / 'response.log').open('w') as stream:
@@ -457,11 +458,75 @@ def level3_loss_self_test():
     print('level3 loss fixtures pass: complete, missing links, ownership, dose, health, writer, victim, flags, repeat dose')
 
 
+
+def qualify_level4(rows):
+    parsed=[(r['line'],r['event'],dict(re.findall(r'(\w+)=([^\s]+)',r['event']))) for r in rows]
+    stages={}
+    for n,e,f in parsed:
+        if '[objresp-wingman]' in e: stages.setdefault(f['stage'],[]).append((n,f))
+    names=('api-pre','entry','damage-pre','store','damage-post','api-post')
+    chains=[]
+    if all(len(stages.get(k,[]))==1 for k in names) and not stages.get('effect'):
+        chain=[stages[k][0] for k in names]; ns=[n for n,f in chain]; fs=[f for n,f in chain]
+        p,en,b,st,r,q=fs
+        identity=('api_seq','node','npc','desc','slot','generation','handler','actor','detail','mode','health_addr')
+        exact=all(f.get(k)==p[k] for f in fs for k in identity)
+        addr=int(p['health_addr'],16); actor=int(p['actor'],16)
+        storage=(st['pc']=='800f2158' and int(p['mode'])!=0 and addr==actor+0x190) or (st['pc']=='800f2148' and p['mode']=='0')
+        hp=int(p['hp']); health=hp>10 and all(int(f['hp'])==hp for f in (en,b,st)) and int(st['next'])==hp-10 and all(int(f['hp'])==int(f['returned'])==hp-10 for f in (r,q))
+        messages=en['message']==b['message']==st['message']==r['message']==q['message']!='00000000'
+        live=[(n,f) for n,e,f in parsed if '[objresp-live]' in e and n<ns[0] and all(f.get(k)==p[k] for k in ('node','npc','desc','slot','generation','handler')) and f.get('owned')=='1' and f.get('canonical')==p['slot']]
+        eligible=[(n,f) for n,e,f in parsed if '[objresp-wingman-eligibility]' in e and n<ns[0] and all(f.get(k)==p[k] for k in ('node','npc','desc','slot','generation','handler','actor','health_addr')) and f.get('lookup')==p['desc'] and f.get('reason')=='eligible' and f.get('owned')==f.get('valid')=='1']
+        control=[(n,f) for n,e,f in parsed if '[objresp-wingman-control]' in e and n<ns[0] and f.get('mark_all')=='1' and all(f.get(k)==p[k] for k in ('node','actor','mode','detail','health_addr'))]
+        getter=[(n,f) for n,e,f in parsed if '[objresp-probe-getter]' in e and n>ns[-1] and f.get('id')=='40' and f.get('returned')==f.get('memory')==q['c40'] and f.get('probe_call')=='1']
+        observed=[]
+        for stage,left,right in (('0',ns[0],ns[1]),('1',ns[1],ns[2]),('2',ns[3],ns[4])):
+            observed.append(any('[objresp-wingman-observed]' in e and left<n<right and f.get('stage')==stage and f.get('action')=='5' and all(f.get(k)==p[k] for k in ('node','npc','desc','actor')) and f.get('message')==en['message'] for n,e,f in parsed))
+        store_observed=any('[objresp-wingman-store-observed]' in e and ns[2]<n<ns[3] and f.get('pc')==st['pc'] and f.get('actor')==p['actor'] and f.get('address')==p['health_addr'] and all(f.get(k)==p[k] for k in ('mode','detail')) for n,e,f in parsed)
+        no_reap=not any('[objresp-retire]' in e and ns[0]<n<ns[-1] and f.get('slot')==p['slot'] for n,e,f in parsed)
+        if (all(observed) and store_observed and ns==sorted(set(ns)) and exact and storage and health and messages and live and eligible and control and getter and no_reap and
+            p['api_seq']=='1' and p['handler']=='800d93c0' and all(f['request']=='10' for f in fs) and all(f['c40']==p['c40'] for f in fs) and
+            en['pc']=='800d93c0' and b['pc']=='800d9c54' and r['pc']=='800d9c5c'):
+            chains.append(dict(lines=dict(zip(names,ns)),pre=p,store=st,post=q,live_line=live[-1][0],eligibility_line=eligible[-1][0],control_line=control[-1][0],getter_line=getter[0][0]))
+    values={};getters=[]
+    for n,e,f in parsed:
+        if '[objresp-probe-getter]' in e:
+            getters.append(f); values.setdefault(f['id'],set()).add(f['returned'])
+    changing=[k for k,v in values.items() if len(v)>1]
+    getters_ok=bool(getters) and all(f['returned']==f['memory'] and f.get('probe_call')=='1' for f in getters)
+    return dict(qualified_ordinary=bool(chains) and bool(changing) and getters_ok,exact_health_chain=bool(chains),request_count=len(stages.get('api-pre',[])),chains=chains,changing_getter_ids=changing,getters_match=getters_ok,
+                scope='one instrument-invoked original named API ordinary hit; no destruction, named counter response, player-shot or retail-equivalence proof')
+
+
+def level4_self_test():
+    key='api_seq=1 node=80210000 npc=80350000 desc=80310000 slot=42 generation=1 handler=800d93c0 actor=80360000 detail=0 mode=1 health_addr=80360190'
+    events=['[objresp-live] node=80210000 npc=80350000 desc=80310000 slot=42 generation=1 handler=800d93c0 owned=1 canonical=42',
+        '[objresp-wingman-eligibility] node=80210000 npc=80350000 desc=80310000 slot=42 generation=1 handler=800d93c0 actor=80360000 health_addr=80360190 lookup=80310000 reason=eligible owned=1 valid=1',
+        '[objresp-wingman-control] node=80210000 actor=80360000 mode=1 detail=0 health_addr=80360190 mark_all=1']
+    for stage,pc,hp,nxt,ret in [('api-pre','800c7390',400,0,0),('entry','800d93c0',400,0,0),('damage-pre','800d9c54',400,0,400),('store','800f2158',400,390,390),('damage-post','800d9c5c',390,0,390),('api-post','800c7390',390,0,390)]:
+        if stage in ('entry','damage-pre','damage-post'):
+            ordinal={'entry':0,'damage-pre':1,'damage-post':2}[stage]
+            events.append(f'[objresp-wingman-observed] stage={ordinal} node=80210000 npc=80350000 desc=80310000 actor=80360000 message=80400000 action=5')
+        if stage=='store': events.append('[objresp-wingman-store-observed] pc=800f2158 actor=80360000 address=80360190 mode=1 detail=0')
+        events.append(f'[objresp-wingman] {key} stage={stage} pc={pc} hp={hp} next={nxt} returned={ret} request=10 c40=0 message='+('00000000' if stage=='api-pre' else '80400000'))
+    events += ['[objresp-probe-getter] id=40 returned=0 memory=0 probe_call=1','[objresp-probe-getter] id=3 returned=0 memory=0 probe_call=1','[objresp-probe-getter] id=3 returned=1 memory=1 probe_call=1']
+    def check(es): return qualify_level4([dict(line=i,event=e) for i,e in enumerate(es)])['qualified_ordinary']
+    assert check(events)
+    assert check([e.replace('mode=1','mode=0').replace('health_addr=80360190','health_addr=80370000').replace('address=80360190','address=80370000').replace('800f2158','800f2148') for e in events])
+    for i in range(len(events)): assert not check(events[:i]+events[i+1:]),i
+    for old,new in [('request=10','request=11'),('next=390','next=391'),('returned=390','returned=400'),('pc=800f2158','pc=800f2148'),('owned=1','owned=0'),('lookup=80310000','lookup=80310004'),('health_addr=80360190','health_addr=80360194')]:
+        assert not check([e.replace(old,new) for e in events]),old
+    for key in ('node','npc','desc','slot','generation','handler','actor','detail','mode','health_addr','message'):
+        changed=events.copy(); store_index=next(i for i,e in enumerate(events) if '[objresp-wingman] ' in e and 'stage=store' in e); changed[store_index]=re.sub(r'\b'+key+r'=\S+',key+'=99999999',changed[store_index]); assert not check(changed),key
+    assert not check(events+[events[3]])
+    assert not check(events+['[objresp-wingman] stage=effect'])
+    print('level4 fixtures pass: inline/array, missing links/controls, identity, dose, health, writer, lookup, duplication and effect')
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('tag', nargs='?', help='fresh TAG_SUFFIX (never overwrite evidence)')
     parser.add_argument('--analyze', action='store_true', help='rebuild the joined table from an existing tag')
-    parser.add_argument('--level', type=int, choices=(0, 1, 2, 3), default=0)
+    parser.add_argument('--level', type=int, choices=(0, 1, 2, 3, 4), default=0)
     parser.add_argument('--flight-vi', type=int, default=5400, help='level 2 activation-aware window, 5400..12000 VI')
     parser.add_argument('--self-test', action='store_true')
     args = parser.parse_args()
@@ -470,6 +535,7 @@ def main():
         building_self_test()
         api_self_test()
         level3_loss_self_test()
+        level4_self_test()
         return 0
     if not args.tag:
         parser.error('a fresh tag is required')

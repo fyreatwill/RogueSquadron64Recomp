@@ -13,7 +13,7 @@ writer calls, Boolean dumps and result-mode requests separately.
 | 1 | s6661: exact seq4 ordinary hit HP390→386, then seq6 one requested387 dose HP386→−1; death effect, actual id13 store0→1, callback readback four VI later. | Named friendly-loss response observed. Original ELF proves id13>=5 fails and friendlies=19−(40+13+41). Stopped at1, Boolean6=0; no success, retail-equivalence or fully VERIFIED claim. Dynamic chain remains single-source. |
 | 2 | s6668: same-owned rescue01 ordinary HP2000→1990, one requested1991 dose HP1990→−1, original counter40 store0→1, callback memory and getter return1 four VI later. | Named friendly-loss response observed, single-flight dynamic evidence. Original ELF/DAT independently establish damage/death and failure ordering. SIGSTOP before failure flags109/101; no win, progression, retail-equivalence or fully VERIFIED claim. |
 | 3 | s6671: City_1 script request10 HP2000→1990, then same-owned request1991 HP1990→−1; death effect, counter28 store0→1, callback and explicit getter1. | Named friendly-loss response observed, single-flight dynamic evidence; original DAT/ELF corroborate contracts. Flags4/18/21 and successcounter22 stay0. No player-shot, win, retail-equivalence or fully VERIFIED claim. |
-| 4 | Historical id15 0>1>2>3 in both arms; ctl additionally id5 0>1. s6672 original DAT/ELF qualifies x_wing_hobbie as a counter40-only loss target. | Friendlies=6−(40+15); counter15>=3 fails. Counter5 is absent from the callback/reader; Boolean5 is a separate Y-wing effect. Live ownership/damage/response remain unqualified; historical shared movement is not hit causality. |
+| 4 | Historical id15 0>1>2>3 in both arms; ctl additionally id5 0>1. s6672 original DAT/ELF qualifies x_wing_hobbie as a counter40-only loss target. | Friendlies=6−(40+15); counter15>=3 fails. Counter5 is absent from the callback/reader; Boolean5 is a separate Y-wing effect. s6673 observes exact owned ordinary health370→360; no changing counter control, so no qualified counter null or named response. Historical shared movement is not hit causality. |
 | 5 | tele id2 0>1, ctl id2 remains observed 0; id4 observed 0 in both. | Historical failure-counter interpretation; static lv5 tests id2>=4 through Bit4, id4>=9 separately. Does not prove a successful objective response. |
 | 6 | TELE fires; no snapshot value changes; heartbeat occurs in both arms. | Inconclusive: hook execution is not a positive control for detecting changes. Neither full-table coverage nor a valid null is established. |
 | 7 | tele id2 0>2>3>0, absent ctl; id1 moves in both. | Named response, single-source; id2 semantics are not established for this level. Three a0=1 death requests precede cleanup in both arms. The lv0 id2 threshold does not apply to lvl7. |
@@ -1249,14 +1249,14 @@ Retail DAT `level/lv_4/dat` (ROM00929AF0,68652 bytes) independently supplies:
 
 | Definition | DAT offset | Subtype | Detail0 health | Effect (counter,delta,Boolean,value,counter2,delta2) | Selection |
 | --- | --- | --- | --- | --- | --- |
-| x_wing_hobbie | 6A7C | 27 | 400 | 40,1,0,0,0,1 | Selected ordinary-control target |
-| x_wing_dack | 6E08 | 27 | 9999 | 40,1,0,0,0,1 | Alternate, no live availability claim |
-| x_wing_corpselighter | 6F08 | 27 | 300 | 40,1,0,0,0,1 | Alternate, no live availability claim |
-| Y_Wing_uno | 62F4 | 27 | 180 | 15,1,5,1,0,1 | Excluded; counter15 plus Boolean5 |
-| Y_Wing_dos | 6888 | 27 | 300 | 15,1,6,1,0,1 | Excluded; counter15 plus Boolean6 |
-| Y_Wing_tres | 6980 | 27 | 300 | 15,1,7,1,0,1 | Excluded; counter15 plus Boolean7 |
+| x_wing_hobbie | 6A7C | 0x27 | 400 | 40,1,0,0,0,1 | Selected ordinary-control target |
+| x_wing_dack | 6E08 | 0x27 | 9999 | 40,1,0,0,0,1 | Alternate, no live availability claim |
+| x_wing_corpselighter | 6F08 | 0x27 | 300 | 40,1,0,0,0,1 | Alternate, no live availability claim |
+| Y_Wing_uno | 62F4 | 0x27 | 180 | 15,1,5,1,0,1 | Excluded; counter15 plus Boolean5 |
+| Y_Wing_dos | 6888 | 0x27 | 300 | 15,1,6,1,0,1 | Excluded; counter15 plus Boolean6 |
+| Y_Wing_tres | 6980 | 0x27 | 300 | 15,1,7,1,0,1 | Excluded; counter15 plus Boolean7 |
 
-Original subtype table8003BE24 selects setup80065510, which registers
+Original subtype0x27 table8003BE24 selects setup80065510, which registers
 handler800D93C0 through80065664; runtime slot is stored to DAT+6 at80065688.
 Handler loads payload=node+4 at800D93F4 and stores DAT at payload+34 via800D94B0.
 Message5 table800A7A10 selects800D9BB0. Actor is payload+38. Initialization
@@ -1301,3 +1301,75 @@ No live target availability, damage, objective response, retail equivalence or
 fully VERIFIED claim. No runtime/default/library change or new soak verdict.
 Next: one original named API ordinary request10 on an actually owned Hobbie,
 with complete registered-handler/actor-health/return/getter joins; no lethal dose.
+
+
+## s6673 — level 4 owned ordinary wingman health chain; counter control absent
+
+Persistent adapter/analyzer/runner now support level4. One named original
+API800C7390 request10 is allowed after original name-lookup equality, valid
+BB4 free-list exclusion, BB8 ownership, canonical slot and handler validation.
+The original F2148 array and F2158 inline stores are both hooked; handler live
+arguments and actual store actor/address are observed separately from the API
+identity snapshot. Legacy projectile forcing is disabled in this opt-in arm.
+All runtime changes require OBJECTIVE_RESPONSE=1/LEVEL=4; defaults unchanged.
+
+Ground truth preceded the instrument: original ELF/DAT checker332 anchors,
+380 rejected mutations, original D9BB0..D9D40/F20EC..F215C disassembly.
+The subtype is **0x27 (39 decimal)**. The first adapter incorrectly compared
+it to decimal27; stopped that attempt with SIGKILL after73.03s,0 crashes,
+no epoch/API request, and retained it as `g1_lvl4s6673_lvl4_ordinary`.
+The loaded mission DAT and original checker agree on39; corrected predicate
+and live-argument/store observations went into the second binary before launch.
+Pre-flight DAT loads are not mission definitions: earlier callbacks atVI1770
+and2732 show unrelated subtype0 bytes. The final flight DAT base is8031CF50.
+
+Corrected unlocked run `scratch/agent/m6/g1_lvl4s6673_lvl4_ordinary_v2`:
+172.03s runner wall, first epochVI4971..10371, width512/origin690400,
+B40=4 plus lv4 callback. Arms off/on/off atVI4971/6771/9171;0 crash lines.
+Saved frame `fbd/fb_0002500_w512.ppm` visually contains craft, HUD and terrain;
+this is flight presence, not a retail equivalence comparison. OS capture not used.
+
+| Link | Observation | run.log line |
+| --- | --- | --- |
+| Original-owned live target | slot187/gen1, canonical187, node8021B268, NPC8035F68C, handler800D93C0, DAT803239CC | 245844 |
+| Same-run mark-all health control | actor80361D58, mode0/detail0, address80323A38, HP400 (off0),370 (on) | 245919,370656 |
+| Original lookup equality | lookup=DAT803239CC, owned=valid=1, same slot/gen/node/NPC/actor/address | 370655 |
+| API request | one request10, VI6777, prehealth370, counter40=0 | 370657 |
+| Accepted handler | action5, exact node/NPC/DAT/actor, message80165E80 | 370663–370666 |
+| Actual original writer | F2148, actor register80361D58, address80323A38;370→360 | 370667–370668 |
+| Damage/API returns | both360; exact original storage reads360 | 370671–370673 |
+| Original getter after hit | id40 returns0, memory0, VI6784 | 371459 |
+
+Mode0 selects actor+190's detail array; detail0 aliases DAT+6C here. H-registered
+is supported for this API health route; no unexpected storage branch was seen.
+The original positive-return branch atD9C5C skips effectD9D28; no scoped death
+effect event was seen, and no destruction dose was requested. HP400→370 before
+the API is uncontrolled natural damage; its individual attackers were not joined.
+ORIGIN: original dealDamageToNpc800F2120, store800F2148, legitimately subtracts
+message damage10 from this owned actor's selected-detail health. No corruption
+mitigation, direct health/counter store, library edit or default change landed.
+
+**Control limit:** all128 explicit original counter getters match memory, but
+none changes value in this epoch. Actual counter readback changes=0. Mark-all
+health-address controls fire in off/on; the real health store is a positive
+health control. Those do NOT control counter sensitivity. Analyzer reports
+`exact_health_chain=true`, `qualified_ordinary=false`, `changing_getter_ids=[]`.
+Thus zero counter40 is an observation, NOT a controlled counter-response null.
+No named loss response, player-shot/game-invoked friendlies-reader proof,
+retail equivalence or fully VERIFIED promotion. Dynamic health causality remains
+single-flight; original independent ELF/DAT support semantics, not live timing.
+
+Validation: both builds pass; the corrected build is the only interpreted
+flight. All6 launch manifest hashes match. All13 generated files replay
+idempotently; removing the three new hook groups and replaying restores them
+exactly. Level2/3 analyzer fixtures pass; new inline/array fixtures reject missing
+ownership/lookup/health/getter controls, live-argument mismatches, wrong writer,
+wrong dose/return, duplicate request and unexpected effect. Level2/3 original
+contract regressions pass. No new queued-soak verdicts. Artifacts:
+`scratch/agent/s6673_qualification.json`, `s6673_replay.json`,
+`s6673_hook_replay.json`, `s6673_selftest.log`, `s6673_lvl4_original.json`.
+
+Next: one same-owned ordinary-then-lethal API pair, stop at actual counter40
+store/getter response before later script progression. The lethal response itself
+can supply a changing-value counter control; a silent counter remains uncontrolled
+unless another actual getter change occurs. Do not repeat ordinary-only holds.

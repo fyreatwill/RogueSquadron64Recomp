@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6672 (2026-10-30).
+Compact operational handoff, as of Session 6673 (2026-10-30).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -270,7 +270,7 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   Original reader80103CC4 computes6−(c40+c15); callback fails on c16>=3,
   c15>=3 or Boolean26, succeeds on c28>0 with word8010D060==1. Counter5
   is absent from these readers; Boolean5 is a distinct Y-wing effect.
-  Retail DAT x_wing_hobbie(+6A7C), subtype27, nominal detail0 HP400,
+  Retail DAT x_wing_hobbie(+6A7C), subtype0x27, nominal detail0 HP400,
   effect(40,1,0,0,0,1), selects named loss without direct Boolean effects.
   Original table/setup selects wingman handler800D93C0, message5 atD9BB0;
   payload+34=DAT,+38=actor. Damage800F2120 writes array or inline health
@@ -282,7 +282,28 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   change or new soaks. Full table/limits G1-OBJECTIVE-RESPONSE s6672;
   scratch/agent/s6672_validation.json. Next: one owned ordinary Hobbie API hit.
 
+- **G1(d) level4 ordinary health chain observed (s6673); counter control absent.**
+  One corrected unlocked flight172.03s, VI4971..10371,0 crashes. Hobbie
+  slot187/gen1,node8021B268,NPC8035F68C,DAT803239CC,actor80361D58 is owned
+  and original lookup-equal. One API request10 atVI6777 -> exact message5
+  80165E80 -> original array storeF2148 at80323A38, health370→360; damage
+  and API return360. Mode0/detail0; mark-all health controls fire off/on.
+  Getter40 returns0 after hit; all128 counter getters match memory, but0
+  actual counter changes. Thus exact_health_chain=true, qualified_ordinary=false:
+  no controlled counter null or named response/VERIFIED claim. Original
+  ELF/DAT independently support contracts; dynamic causality single-flight.
+  First attempt stopped73.03s/0 crashes/no API: decimal27 predicate was wrong;
+  original subtype is0x27=39. Corrected and rerun. Both health branches hooked;
+  all6 hashes,13-file idempotence, hook-free replay and fixtures pass.
+  No lethal/direct store/default/lib change or new soaks. Proof:
+  scratch/agent/s6673_qualification.json; G1-OBJECTIVE-RESPONSE s6673.
+  Next: same-owned ordinary-then-lethal pair to test named counter40 effect.
+
 ## Superseded conclusions — do not act on these
+
+- s6673 first adapter treated wingman subtype “27” as decimal27. Believable
+  because the prior prose omitted its base; original checker uses0x27 and
+  loaded mission DAT reads39. Fixed before the interpreted flight.
 
 - s6664's missing counter40 target is not evidence of a broken spawn/hit
   route. Its5400VI window looked sufficient when VI time was treated as
@@ -415,12 +436,13 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **G1(d) level4 owned ordinary wingman hit (next unit).** Static contracts
-   close in s6672. Extend the persistent adapter and analyzer for one named
-   x_wing_hobbie request10 through original API800C7390, with exact live
-   slot/generation/node/payload/DAT/actor identity, both original health-storage
-   branches and getter40 joins. Require same-run changing-value control. No
-   lethal dose or direct guest store; do not inherit City's health hook.
+1. **G1(d) level4 named loss response (next unit).** s6673 supplies an exact
+   owned ordinary health chain, but no changing counter control. Extend that
+   opt-in adapter for ONE request10 control then ONE same-owned HP+1 dose,
+   requiring both actual storage/return joins, effectD9D28, writer6594C,
+   callback readback and explicit getter40. Stop at response before later
+   mission scripts; no direct stores/wins/progression. A silent counter needs
+   another actual changing getter control; do not call it a controlled null.
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
@@ -442,9 +464,9 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
 - Per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence):
   verbatim per-level paragraphs, duplicate coverage, historical backlog and updates.
-- `PORTING-STATE.md` sessions 6656–6672 contain recent chronology; search bounded
+- `PORTING-STATE.md` sessions 6656–6673 contain recent chronology; search bounded
   windows only. Earlier durable context remains in PROJECT-OVERVIEW.
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest remains
-  20261028-075640 (already consumed). No new verdicts in s6672.
+  20261028-075640 (already consumed). No new verdicts in s6673.
 - s6596/s6597 and s6599 were checkpoint close-outs, not reruns. The saved
   s6595/s6598 HUD artifacts retain their original evidence limits.

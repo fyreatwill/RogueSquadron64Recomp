@@ -174843,3 +174843,58 @@ build/run, default/runtime/lib edit or VERIFIED promotion. Details/provenance:
 docs/G1-OBJECTIVE-RESPONSE.md s6672; scratch/agent/s6672_validation.json and
 s6672_lvl4_checked.json. Next: one owned Hobbie ordinary API request10 with
 complete actor-health/message/return/getter join and actual value-change control.
+
+## Session 6673 (2026-10-30) — observe owned level-4 ordinary wingman health chain
+
+One bounded opt-in adapter/analyzer/runner change and corrected ordinary-hit
+experiment. Maintenance threshold39873 bytes, no maintenance trigger. Read the
+ordered handoff and soak tail; latest20261028-075640 already consumed, no new
+verdict. Original ground truth first: level4 ELF/DAT332 anchors/380 mutations
+pass; D9BB0..D9D40 and F20EC..F215C disassembly checks health/death contracts.
+
+Added level4 runner support, original callback gate, named lookup/ownership/
+canonical slot/generation census and one original API800C7390 request10. Hooked
+both original F2148/F2158 stores and handler entry/damage-return/effect. Separate
+observations read live handler arguments and store actor/address. All128 original
+counter getters join memory; mark-all owned health controls scope to each arm.
+Legacy projectile forcing is disabled for this level4 opt-in; no direct guest
+health/counter stores, library or default changes. Persistent tooling survives
+fixup regeneration. The new analyzer requires full ownership/message/storage/
+return chain, post-hit getter and changing-counter control for full qualification.
+
+Failed first attempt g1_lvl4s6673_lvl4_ordinary: stopped with SIGKILL after73.03s,
+0 crashes, no epoch/API request. Adapter compared decimal27 instead of original
+0x27=39; prior prose's base-free "27" was misleading, while original checker
+and loaded DAT agree on39. Corrected predicate and added live-argument/register
+observations, rebuilt and ran fresh; no pooling with the first attempt.
+
+Corrected unlocked g1_lvl4s6673_lvl4_ordinary_v2:172.03s runner wall,
+VI4971..10371, off/on/off at4971/6771/9171,0 crash lines. Final mission DAT
+base8031CF50/Hobbie803239CC. Exact original-owned slot187/gen1, canonical187,
+node8021B268,NPC8035F68C,handler800D93C0,actor80361D58. Mode0/detail0 selects
+health80323A38=DAT+6C. Mark-all health controls see400 off0 and370 on; earlier
+400→370 damage is natural and its individual attackers were not joined.
+API seq1 request10 atVI6777 reaches message80165E80/action5 with exact live
+arguments, original F2148 subtracts370→360, actual actor register/address match;
+damage/API both return360. Original getter40 atVI6784 returns0/memory0.
+No scoped death-effect event, no dose. Saved fb_0002500_w512 visibly has craft,
+HUD and terrain; establishes flight presence only.
+
+ORIGIN: original dealDamageToNpc800F2120 store800F2148 legitimately writes
+selected-detail health minus message damage10 for this original-owned actor.
+No corruption mitigation or skip/restore added. Independent original ELF/DAT
+support storage/routing semantics; live health causality remains single-flight.
+H-registered is supported for this health request; unexpected storage not observed.
+All128 getter values match memory but NONE changes; actual counter readback
+changes0. Thus exact_health_chain=true, qualified_ordinary=false: zero counter40
+is NOT a controlled counter-response null. No named response, player-shot/
+game-invoked friendlies proof, retail equivalence or VERIFIED promotion.
+
+Validation: both builds pass, interpreted second launch all6 hashes match;
+13-file idempotence, hook-free three-file replay exact; inline/array positive
+fixtures and missing/mismatch/duplicate/effect negatives pass, existing level2/3
+fixtures and original contracts pass. Full provenance/line table in
+G1-OBJECTIVE-RESPONSE s6673. Compact proof scratch/agent/s6673_qualification.json,
+replay and original checker JSON, selftest/build logs retained. NEXT is one
+same-owned ordinary-then-lethal level4 pair to test counter40 with a real value
+change; do not repeat an ordinary-only hold searching for a counter control.
