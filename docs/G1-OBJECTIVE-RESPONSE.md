@@ -2167,3 +2167,80 @@ position stores/teleports stay excluded. Level7 counter20 live response is
 parked at this boundary; next unit moves to level 8 named contracts.
 Evidence: scratch/agent/s6686_gridspawn.json,
 scratch/agent/m6/g1_lvl7s6686_lvl7_{spawn2,long,spawn_badref}/.
+
+## s6687 — level8 original objective contract: protect-and-disable train (2026-10-31)
+
+One bounded extension of `tools/g1_dat_inventory.py` (`--check-level8`,
+`--mutation-check-level8`); no game build/run. Retail ROM + original ELF only.
+**Single-source static qualification** (ROM, ELF and DAT share lineage). No
+live ownership, response, player-weapon or VERIFIED claim.
+
+Callback `lv8_checkComplexObjectives` 80104AA0..80104CCC:
+
+| Condition | Latch word | Effect |
+|---|---|---|
+| distance(train_1_engine) <= 15.0 (800A980C) | 8010D0B0 | Boolean8=1, hidden flag0, voice 346/614, word8010D0C4=1 |
+| distance(imp_trans2) <= 10.0 (800A9810) | 8010D0B4 | Boolean6=1, voice 344/613/226 |
+| Boolean5 == 1 | 8010D0B8 | **Bit4 (failure)**, camera1 cue, effect on train_1_engine, sound cue 6 |
+| counter3 == 1 | 8010D0B8 (shared) | **Bit4 (failure)**, voice 351/253 |
+| counter5 == 7 (exact) | 8010D0BC | **Bit8 (success)**, complete slots 1 and 2, voice 286/631 |
+
+Getter census: counters {3,5}, Booleans {5}. Tail call 80104CCC (symbol
+`lv9_triggerEventOnPlayerProximity`; its level ownership is not checked).
+Init 80104D8C zeroes words D0B0..D0C8 and registers handles Boolean10 ->
+80104EC8, Boolean12 -> 80104EE4, Boolean14 -> 80104F00, and (a3=5, arg5=2)
+-> 80104F1C, read here as counter5>=2 (argument semantics single-source).
+Friendlies = 6 - counter6.
+
+Targets: seven train cars (subtypes 0x2F engine, 0x30 def, 0x31 cargo) all
+set up through 80065588 -> `npcTrainCarUpdate` 800E2818. That handler has two
+damage routes, selected by message kind (msg+4):
+
+| Route | Selector | Pool | Applied tuple | Objective meaning |
+|---|---|---|---|---|
+| disable | msg+4 == 12 | DAT+C4+4*detail (80137CE4), latch payload+177 | DAT+AC..C0 at 800E3B38 | counter5 +1 on every car |
+| hull | any other kind (kind 11 from own source skipped) | dealDamageToNpc 800F2120 <= 0 | DAT+70..84 at 800E3D70 | counter3 +1 on the six non-engine cars |
+
+| Car | Offset | Sub | Hull HP | +70 tuple | +AC tuple | disable pool detail0 |
+|---|---|---|---|---|---|---|
+| train_1_engine | 06D4 | 2F | 1000000 | (0,0,0,0,0,1) | (5,1,0,0,0,1) | 20 |
+| train_2_cargo | 0978 | 31 | 500 | (3,1,0,0,0,1) | (5,1,0,0,0,1) | 18 |
+| train_3_def | 0834 | 30 | 500 | (3,1,0,0,0,1) | (5,1,0,0,0,1) | 20 |
+| train_4_cargo | 0A78 | 31 | 500 | (3,1,0,0,0,1) | (5,1,0,0,0,1) | 18 |
+| train_5_cargo | 0B78 | 31 | 500 | (3,1,0,0,0,1) | (5,1,0,0,0,1) | 18 |
+| train_6_def | 0C78 | 30 | 500 | (3,1,0,0,0,1) | (5,1,0,1,0,1) | 20 |
+| train_7_def | 0DBC | 30 | 500 | (3,1,0,0,0,1) | (5,1,0,1,0,1) | 20 |
+
+(train_6/7 +B8=1 is a Boolean value with Boolean id +B4=0, so no Boolean
+write.) Seven cars x one latched disable each = counter5==7 = win; destroying
+any non-engine car's hull = counter3==1 = loss. Kind 12 is very likely the ion
+cannon: weapon-name table 8009ED00[12] = `ion_laser` (8003AF68). That
+index-to-kind mapping is inferred, single-source.
+
+Spawn path (s6686 method): parseDatSpawnPositions case 800657DC returns
+category 2 (condition list) for these subtypes because DAT+88==0;
+isDatItemConditionMet case 80065854 gates on DAT+60/+64/+68, all zero, so the
+cars are ungated condition-list spawns, NOT proximity grid items. This selects
+**H-load** over H-prox statically: the scripted route should own them.
+Live registration remains unobserved.
+
+Boolean5 writer: kind-7 subtype 0x18 `EVENT_train_pulls_in` decoded through
+applyDatObjectiveTriggerEffect 80065980 (non-player path: tuple at +38:
+counter0, Boolean +40=5, value byte +47=1). So the train reaching the station
+sets Boolean5 and fails the mission. `EVENT_not_gonna_make_it` sets Boolean14
+(the Luke dialogue handle). No kind-7 row carries counter5. The only other
+`increaseObjectiveCount(5)` site in the ELF is `lv3_setMissionStateBooleans`.
+Kind-3 spline-event counter edges (s6682 class) were not re-audited for
+level 8: limitation.
+
+Validation: 335 original anchors (callback, init, friendlies, both train
+routes, setup/spawn/condition cases and table words, effect writer, name
+strings + thresholds, weapon-table word). Every word of the audited ranges
+byte-matches the retail ROM at pc-80000000+C00 (0 mismatches). 468/468
+one-field mutations reject (335 ELF + 133 DAT). Level 2/3/4/5/6-music/7
+checks pass. The level7 contract equals s6684 after JSON normalisation;
+py_compile and whitespace pass. Evidence: scratch/agent/s6687_level8_checked.json,
+s6687_level8.json, s6687_lv8_contract.txt.
+
+Live follow-up constraint: never send hull damage to a train car. One
+counter3 increment ends the mission in failure.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6686 (2026-10-31).
+Compact operational handoff, as of Session 6687 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -453,57 +453,7 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
   Never reset, clean, checkout, or update submodules. If editing `lib/`, run
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
-## s6675 update — level5 original contract qualified
-
-Original ELF reader80104118 computes7−(c40+c2); callback8010415C sets Bit4
-at c2>=4 and Bit8 at c4>=9 (with latches). Retail x_wing_wedge(+1AFC),
-subtype0x27, detail0HP200, effect(40,1,0,0,0,1), selects a named loss response
-through the original wingman route800D93C0/message5D9BB0. Health writers
-F2148/F2158 and death-gated effectD9D28 are asserted. Historical id2 writer
-remains unknown; Reb_combat1..4 raw counter2 tuples also carry Booleans21..24,
-and their subtype0x2E route is unqualified. Tool adds level5 checks:334
-ELF assertions/390 rejected mutations, direct DAT struct cross-check, all19
-inventories and full level4 contract unchanged; lvl2/3/4/analyzer checks pass.
-ELF+DAT establish static contracts only; no live availability/response or
-VERIFIED promotion. No runtime/default/lib change or new soak verdict.
-Full contracts: G1-OBJECTIVE-RESPONSE s6675; scratch/agent/s6675_validation.json.
-
-## s6676 update — level5 ordinary health route observed
-
-One corrected unlocked flight167.02s, VI4682..10086,0 crashes. Wedge
-DAT8031BCCC,slot87/gen1,node8021B6DC,NPC8035421C,actor80354898,
-handlerD93C0,detail0/mode0. API10 atVI6486 -> exact message80165E80 ->
-actual writerF2148 health190→180 -> damage/API returns180; original getter40
-returns0=memory0 atVI6489. Owned mark-all controls fire arms0/1. No objective
-getter changes: exact named health chain passes, full ordinary qualification
-remains false for absent counter sensitivity control. Silent counter40 is not
-a controlled null. Original ELF/DAT independently support contracts only;
-dynamic chain single-flight. No named response/VERIFIED promotion. Adapter
-persists through fixup; level5 lethal/generic TELE disabled. First pre-flight
-attempt stopped to undo an accidental level3-only edit; corrected build/run,
-6/6 hashes, fixtures,13-file idempotence and new hook replay pass. Level3 tick
-unchanged. No lib/default changes or new soak verdicts. Proof/table:
-G1-OBJECTIVE-RESPONSE s6676; scratch/agent/s6676_qualification.json.
-
-## s6677 update — level5 named loss response observed
-
-One unlocked flight107.76s total runner wall,VI4696..6508,0 crashes. Same
-Wedge DAT8031BCCC,slot87/gen1,node8021B6DC,NPC8035421C,actor80354898,
-detail0/mode0: original named API10 atVI6498 writes health200→190, both
-returns190; original getter40=memory0. One explicit opt-in API191 atVI6503
-writes190→−1, original death effectD9D28 passes tuple(40,1,0,0,0,1), actual
-writer6594C increments40 0→1. Callback readback and explicit original getter
-read1 atVI6508; c2/c4/latches8010D080/84 all0, SIGSTOP then SIGKILL.
-Off/on reached; off2 intentionally not reached. Owned mark-all controls fire
-arms0/1; actual getter40 changes0→1. H-death for this victim, no observed
-identity/route mismatch. Original ELF/DAT independently support contracts;
-dynamic causality single-flight, no player-shot/game-invoked friendlies-reader,
-retail-equivalence or full VERIFIED claim. Historical id2 writer stays unknown.
-Adapter survives fixup; level3 helpers unchanged, saved level4 analyzer result
-identical. Original334 anchors/390 mutations, build/fixtures,13-file idempotence,
-hook replay and6/6 launch hashes pass. No direct stores/default/lib changes
-or new soak verdict. Proof:scratch/agent/s6677_qualification.json; full table
-G1-OBJECTIVE-RESPONSE s6677. Next: level6 original-backed target contract.
+(s6675-s6677 level5 updates: see G1-OBJECTIVE-RESPONSE.md, same headings.)
 
 ## s6678 update — level6 original target contract checked
 
@@ -671,19 +621,36 @@ behaviour for a route that never gets close. Reaching the tanks needs steering
 (owner playtest), so level7 counter20 live response is parked at this
 boundary. Evidence: scratch/agent/s6686_gridspawn.json.
 
+## s6687 update — level8 contract: disable 7 train cars, destroy none
+
+Original lv8_checkComplexObjectives 80104AA0: counter5==7 -> Bit8 (win);
+counter3==1 -> Bit4 and Boolean5==1 -> Bit4 (both losses, shared latch
+8010D0B8); proximity to train_1_engine (<=15) / imp_trans2 (<=10) only sets
+Booleans 8/6 for dialogue. All seven train cars (subtypes 2F/30/31,
+npcTrainCarUpdate 800E2818) have two damage routes. A kind-12 message (table
+index 12 = `ion_laser`, inferred) drains a per-detail disable pool at DAT+C4
+and, once per car, applies the +AC tuple counter5+1. Any other kind does hull
+damage; hull death applies +70 = counter3+1 on the six non-engine cars, which
+fails the mission. EVENT_train_pulls_in sets Boolean5 (train reaches the
+station, so the player loses). The cars are spawn category 2, ungated (DAT+88/60/64/68 all 0),
+so statically they should be owned on the scripted route (H-load over H-prox).
+`--check-level8`: 335 anchors match ROM, 468/468 mutations reject, levels
+2-7 checks unchanged. Static, single-source; no live claim.
+
 ## Next steps (single monotonic backlog)
 
 - **Owner 2026-10-31:** spike cull default ON (also fixed: it only ran with LOG_SPIKE).
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1(d) level8 named contract (next unit).** Same s6684 method: decode
-   the level8 checkComplexObjectives callback and its named DAT targets from
-   the original ELF + retail ROM; for each candidate record its spawn path
-   (grid category 1 = proximity <=48, category 2 = condition list, +34&0x80 =
-   load-time) so live work only targets items the scripted route can own.
-   Level7 counter20 is parked: tanks are proximity-spawned and the route
-   stays >=63 units away (s6686). No fallback, lethal request or stores.
+1. **G1(d) level8 live ownership + disable response (next unit).** s6687
+   contract: extend g1_objective_response_run.py to level 8. One run with
+   ROGUESQ_LOG_GRIDSPAWN=1 records each train car's desc+6 slot. If one
+   registers, send ONE ordinary kind-12 damage message (original
+   API/ownership, no FFFF fallback) to a registered car below its disable
+   pool. Read counter5 via the original getter, with a same-run
+   changing-value control. NEVER send hull damage: counter3==1 fails the
+   mission. Level7 counter20 stays parked (s6686: proximity tanks).
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.

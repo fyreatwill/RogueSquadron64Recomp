@@ -839,6 +839,160 @@ def level7_contract(elf, rows):
         next_measurement='One original named API10 on owned 20_Dest_Tanks_01; join slot/generation/node/payload/DAT, message5, actual detail/health writer/return, counter20 original getter and changing-value control. No lethal or fallback request.')
 
 
+def level8_contract(elf, rows):
+    spans = {
+        0x80104AA0: (
+            '27bdffd8 f7b60020 46006586 3c04800b afbf0014 afb00010 f7b40018 0c031e28 '
+            '248497e8 3c01800b c422980c 4602003e 00000000 45000014 3c038011 8c62d0b0 '
+            '54400012 3c04800b 24040008 24050001 00a08021 0c031d50 ac70d0b0 00002021 '
+            '0c031d98 24050001 2404015a 0c031f47 00002821 3c054000 0c031f47 24040266 '
+            '3c028011 ac50d0c4 3c04800b 0c031e28 248497f8 3c01800b c4229810 4602003e '
+            '00000000 45000012 3c038011 8c62d0b4 1440000f 24040006 24050001 4480a000 '
+            '00a01021 0c031d50 ac62d0b4 4405a000 0c031f47 24040158 3c054000 0c031f47 '
+            '24040265 4405a000 0c031f47 240400e2 0c031d67 24040005 00401821 24020001 '
+            '14620015 3c048011 8c82d0b8 14400012 00000000 0c031dce ac83d0b8 3c04800b '
+            '0c031e21 24849804 24040267 0c031f47 00002821 3c04800b 248497e8 3c053d4c '
+            '34a5cccd 3c0740a0 0c031e5e 00003021 0c031f66 24040006 0c031d87 24040003 '
+            '00401821 24020001 1462000c 3c048011 8c82d0b8 14400009 00000000 0c031dce '
+            'ac83d0b8 2404015f 0c031f47 00002821 3c054000 0c031f47 240400fd 0c031d87 '
+            '24040005 24030007 14430017 3c038011 8c62d0bc 14400014 24020001 0c031ddb '
+            'ac62d0bc 0c031dac 24040001 0c031dac 24040002 3c04800b 248497e8 3c053ccc '
+            '34a5cccd 3c0740a0 0c031e5e 00003021 3c053f80 0c031f47 2404011e 24040277 '
+            '0c031f47 00002821 0c041333 4600b306 8fbf0014 8fb00010 d7b60020 d7b40018 '
+            '00001021 03e00008 27bd0028 '
+        ),
+        0x80104D8C: (
+            '27bdffe0 3c048010 24844ec8 2405000a 24060001 00003821 3c028011 ac40d0b0 '
+            '3c028011 ac40d0b4 3c028011 ac40d0b8 3c028011 ac40d0bc 3c028011 ac40d0c0 '
+            '3c028011 ac40d0c4 3c028011 afbf0018 ac40d0c8 0c031e0c afa00010 3c048010 '
+            '24844ee4 2405000c 24060001 00003821 0c031e0c afa00010 3c048010 24844f00 '
+            '2405000e 24060001 00003821 0c031e0c afa00010 3c048010 24844f1c 00002821 '
+            '00a03021 24070005 24020002 0c031e0c afa20010 24040001 0c031d98 00802821 '
+            '0c0413db 00000000 8fbf0018 00001021 03e00008 27bd0020 '
+        ),
+        0x80104E9C: (
+            '27bdffe8 afbf0010 0c031d87 24040006 24040006 0c031dec 00822023 8fbf0010 '
+            '00001021 03e00008 27bd0018 '
+        ),
+        0x800E3A28: (
+            '96830004 2402000b 10620050 2402000c 14620053 00000000 '
+        ),
+        0x800E3AD4: (
+            '8e420034 924300b1 146000bf 244400c4 3c028013 8c437ce4 00031880 00641821 '
+            '96840006 8c620000 00441023 1c4000b6 ac620000 8e430034 24020001 a24200b1 '
+            '8c6200bc afa20010 8e420034 8c4200c0 afa20014 8c6400b4 8c6500b8 8c6600ac '
+            '8c6700b0 0c019645 '
+        ),
+        0x800E3CD0: (
+            '8e440038 96850006 0c03c848 00000000 1c40003e '
+        ),
+        0x800E3D48: (
+            '8e430034 8c620080 afa20010 8e420034 8c420084 afa20014 8c640078 8c65007c '
+            '8c660070 8c670074 0c019645 24100001 '
+        ),
+        0x80065588: (
+            '3c04800e 24842818 02202821 24060002 08019599 24070064 '
+        ),
+        0x800657DC: (
+            '8c820088 10400002 24030002 24030001 03e00008 00601021 '
+        ),
+        0x80065854: (
+            '8c830060 10600006 3c028014 244288a0 00621021 9042ffff 10400017 00000000 '
+            '8c820064 1040000a 3c038014 24638060 2442ffff 00021080 00431021 8c430000 '
+            '8c840068 0064182a 14600019 00001021 03e00008 24020001 '
+        ),
+        0x80065914: (
+            '8fa80010 10800004 3c028014 244288a0 00821021 a045ffff 10c00008 3c028014 '
+            '24428060 24c3ffff 00031880 00621821 8c620000 00471021 ac620000 11000009 '
+            '3c028014 24428060 2503ffff 00031880 00621821 8c620000 8fa40014 00441021 '
+            'ac620000 03e00008 00000000 '
+        ),
+        0x800A97E8: (
+            '74726169 6e5f315f 656e6769 6e650000 696d705f 7472616e 73320000 63616d65 '
+            '72613100 41700000 41200000 '
+        ),
+    }
+    instructions = {
+        0x8003BE44: 0x80065588,
+        0x8003C0AC: 0x800657DC,
+        0x8003C1CC: 0x80065854,
+        0x8003BE48: 0x80065588,
+        0x8003C0B0: 0x800657DC,
+        0x8003C1D0: 0x80065854,
+        0x8003BE4C: 0x80065588,
+        0x8003C0B4: 0x800657DC,
+        0x8003C1D4: 0x80065854,
+        0x8009ED30: 0x8003AF68,
+    }
+    instructions.update({start + 4*i: int(value, 16)
+                         for start, values in spans.items() for i, value in enumerate(values.split())})
+    for pc, expected in instructions.items():
+        if elf_word(elf, pc) != expected:
+            raise ValueError(f'level8 original instruction changed at {pc:08x}')
+    by_name = {r['name']: r for r in rows if r['kind'] == 0 and r['name']}
+    # name, offset, subtype, hull HP (+6c), destroy tuple (+70..+84), disable tuple (+ac..+c0), disable pool detail0 (+c4)
+    expected = (
+        ('train_1_engine', '000006d4', 0x2f, 1000000, (0, 0, 0, 0, 0, 1), (5, 1, 0, 0, 0, 1), 20),
+        ('train_2_cargo', '00000978', 0x31, 500, (3, 1, 0, 0, 0, 1), (5, 1, 0, 0, 0, 1), 18),
+        ('train_3_def', '00000834', 0x30, 500, (3, 1, 0, 0, 0, 1), (5, 1, 0, 0, 0, 1), 20),
+        ('train_4_cargo', '00000a78', 0x31, 500, (3, 1, 0, 0, 0, 1), (5, 1, 0, 0, 0, 1), 18),
+        ('train_5_cargo', '00000b78', 0x31, 500, (3, 1, 0, 0, 0, 1), (5, 1, 0, 0, 0, 1), 18),
+        ('train_6_def', '00000c78', 0x30, 500, (3, 1, 0, 0, 0, 1), (5, 1, 0, 1, 0, 1), 20),
+        ('train_7_def', '00000dbc', 0x30, 500, (3, 1, 0, 0, 0, 1), (5, 1, 0, 1, 0, 1), 20),
+    )
+    for name, offset, subtype, hp, destroy, disable, pool in expected:
+        row = by_name[name]
+        w = row['words']
+        actual = (row['offset'], row['subtype'], w['6c'],
+                  tuple(w[f'{p:02x}'] for p in range(0x70, 0x88, 4)),
+                  tuple(w[f'{p:02x}'] for p in range(0xac, 0xc4, 4)), w['c4'],
+                  w['88'], w['60'], w['64'], w['68'])
+        if actual != (offset, subtype, hp, destroy, disable, pool, 0, 0, 0, 0):
+            raise ValueError(f'level8 DAT contract changed for {name}: {actual}')
+    selectors = {0x800c761c: set(), 0x800c759c: set()}
+    for pc in range(0x80104aa0, 0x80104ccc, 4):
+        instruction = elf_word(elf, pc)
+        if instruction >> 26 != 3:
+            continue
+        target = 0x80000000 | ((instruction & 0x3ffffff) << 2)
+        if target in selectors:
+            delay = elf_word(elf, pc + 4)
+            if delay >> 16 != 0x2404:
+                raise ValueError(f'nonconstant level8 objective selector at {pc:08x}')
+            selectors[target].add(delay & 65535)
+    if selectors != {0x800c761c: {3, 5}, 0x800c759c: {5}}:
+        raise ValueError('level8 callback getter census changed')
+    names = [n for n, *_ in expected]
+    return dict(
+        scope='original ELF and retail DAT static contract only; no live ownership or response',
+        instruction_checks={f'{pc:08x}': f'{v:08x}' for pc, v in instructions.items()},
+        dat_checked_fields=[0, 0x60, 0x64, 0x68, 0x6c, 0x70, 0x74, 0x78, 0x7c, 0x80, 0x84, 0x88,
+                            0xac, 0xb0, 0xb4, 0xb8, 0xbc, 0xc0, 0xc4],
+        callback=dict(address='80104aa0', end='80104ccc', init='80104d8c', friendlies='80104e9c',
+                      counter_reads=sorted(selectors[0x800c761c]),
+                      boolean_reads=sorted(selectors[0x800c759c]),
+                      success='counter5==7 (exact) with latch word8010D0BC -> Bit8, complete slots1+2',
+                      failures=['counter3==1 with latch word8010D0B8 -> Bit4',
+                                'Boolean5==1 with the same latch word8010D0B8 -> Bit4, camera1 cue, effect on train_1_engine'],
+                      proximity=['train_1_engine XZ<=15.0 (800A980C) -> Boolean8, hidden flag0, word8010D0B0/D0C4',
+                                 'imp_trans2 <=10.0 (800A9810) -> Boolean6, word8010D0B4'],
+                      handles=['Boolean10 -> 80104EC8', 'Boolean12 -> 80104EE4', 'Boolean14 -> 80104F00',
+                               'counter5>=2 (a3=5, arg5=2; semantics single-source) -> 80104F1C'],
+                      friendlies_saved='6 - counter6',
+                      tail_call='80104ccc (labelled lv9_triggerEventOnPlayerProximity; name not checked)'),
+        route=dict(subtypes=[0x2f, 0x30, 0x31], setup='80065588 -> npcTrainCarUpdate 800e2818',
+                   spawn='parseDatSpawnPositions case800657DC: DAT+88==0 -> category2 condition list',
+                   gate='isDatItemConditionMet case80065854: DAT+60 Boolean/+64 counter>=+68; all zero = ungated',
+                   message_select='msg+4==12 -> disable route; 11 from own source skipped; others -> hull route',
+                   disable_route='DAT+c4+4*detail(80137CE4) -= msg+6; <=0 and payload+177==0 -> latch, apply +ac tuple (counter5+1) at800e3b38',
+                   hull_route='dealDamageToNpc800f2120 <=0 -> apply +70 tuple (counter3+1 on non-engine cars) at800e3d70',
+                   kind12='weapon-name table 8009ED00[12] = ion_laser (inferred mapping, single-source)'),
+        selected=by_name['train_3_def'],
+        candidates=[by_name[n] for n in names],
+        excluded_controls=[],
+        next_measurement='Live: confirm train cars register (desc+6 != FFFF) on the scripted route, then one ordinary kind-12 (ion) damage message to a registered car that drains the disable pool; read counter5 via original getter with a same-run changing-value control. Never send hull damage (counter3==1 fails the mission).')
+
+
 def run_level6_original_slice(elf, counts=None, booleans=None, fallback=False):
     """Execute the checked integer slice; external presentation calls are recorded."""
     memory, regs, calls, writes = {}, [0] * 32, [], []
@@ -1949,6 +2103,8 @@ def main():
     ap.add_argument('--mutation-check-level4', action='store_true')
     ap.add_argument('--check-level7', action='store_true')
     ap.add_argument('--mutation-check-level7', action='store_true')
+    ap.add_argument('--check-level8', action='store_true')
+    ap.add_argument('--mutation-check-level8', action='store_true')
     ap.add_argument('--check-level5', action='store_true')
     ap.add_argument('--mutation-check-level5', action='store_true')
     ap.add_argument('--check-level6-music', action='store_true')
@@ -1985,6 +2141,12 @@ def main():
         contract = level7_contract(elf, rows)
         if args.mutation_check_level7:
             contract['mutation_checks'] = check_contract_mutations(elf, data, contract, level7_contract)
+    if args.check_level8 or args.mutation_check_level8:
+        if args.level != 8:
+            ap.error('--check-level8 requires --level 8')
+        contract = level8_contract(elf, rows)
+        if args.mutation_check_level8:
+            contract['mutation_checks'] = check_contract_mutations(elf, data, contract, level8_contract)
     if args.check_level5 or args.mutation_check_level5:
         if args.level != 5:
             ap.error('--check-level5 requires --level 5')

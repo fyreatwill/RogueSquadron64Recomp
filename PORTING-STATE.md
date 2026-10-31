@@ -175508,3 +175508,35 @@ condition gate), H-never (same-subtype Dest_Tanks_06 activates through the
 same grid path) and H-pool (all six tank records stay linked). Next
 discriminator: per-target spawn path for the level8 counter targets
 (category 1 grid vs category 2 condition list vs load-time), NEXT.md.
+
+## Session 6687 (2026-10-31) — level8 contract: win = disable all 7 train cars (counter5==7), loss = any car destroyed (counter3==1)
+
+Ran the NEXT.md static unit (s6684 method, retail ROM + original ELF, no game
+build/run). `lv8_checkComplexObjectives` 80104AA0: counter5==7 -> Bit8;
+counter3==1 or Boolean5==1 -> Bit4 (shared latch 8010D0B8); proximity checks
+on train_1_engine (<=15.0) and imp_trans2 (<=10.0) set Booleans 8/6 only.
+The seven train cars (subtypes 2F/30/31 -> setup 80065588 ->
+npcTrainCarUpdate 800E2818) have two damage routes. msg+4==12 drains a
+per-detail disable pool DAT+C4 and applies the +AC tuple (counter5+1,
+latched by payload+177). Any other kind does hull damage via dealDamageToNpc;
+death applies +70 (counter3+1 on the six non-engine cars). Kind 12 ->
+`ion_laser` via weapon table 8009ED00[12] (inferred). EVENT_train_pulls_in
+(kind7 sub18) sets Boolean5 through applyDatObjectiveTriggerEffect. Cars are
+spawn category 2 with zero condition gates, so H-load is selected over
+H-prox statically. H-none is refuted because counter5 has seven ungated DAT
+writers. No other level-8 counter5 writer: the only other
+increaseObjectiveCount(5) site is lv3_setMissionStateBooleans. Kind-3 spline
+counter edges were not re-audited (limitation).
+
+Landed `level8_contract` + `--check-level8/--mutation-check-level8` in
+tools/g1_dat_inventory.py: 335 anchors, all audited ranges byte-match the
+retail ROM (0 mismatches), and 468/468 one-field mutations reject. Level
+2/3/4/5/6-music/7 checks pass, and the level7 contract equals s6684 after
+JSON normalisation. First regression loop failed only because zsh does not
+word-split "$a"; reran with explicit args, all pass. Static, single-source;
+no live ownership/response/VERIFIED claim. Evidence: G1-OBJECTIVE-RESPONSE
+s6687, scratch/agent/s6687_level8_checked.json, s6687_lv8_contract.txt.
+CURRENT-TRUTH: s6675-s6677 level5 update blocks pruned (already in the
+G1-OBJECTIVE-RESPONSE doc).
+Next: live level-8 run for car ownership, plus the kind of message the
+request API emits. Never send hull damage, because it fails the mission.
