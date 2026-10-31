@@ -175503,3 +175503,8 @@ position stores/teleports stay excluded. Level7 counter20 live response is
 parked at this boundary; next unit moves to level 8 named contracts.
 Evidence: scratch/agent/s6686_gridspawn.json,
 scratch/agent/m6/g1_lvl7s6686_lvl7_{spawn2,long,spawn_badref}/.
+Verdict: selects H-proximity; refutes H-trigger (tank +60/+64/+68 = 0, no
+condition gate), H-never (same-subtype Dest_Tanks_06 activates through the
+same grid path) and H-pool (all six tank records stay linked). Next
+discriminator: per-target spawn path for the level8 counter targets
+(category 1 grid vs category 2 condition list vs load-time), NEXT.md.
