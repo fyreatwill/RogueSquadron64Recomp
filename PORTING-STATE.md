@@ -175636,3 +175636,11 @@ was not resolved offline. Not watched yet. lib/ not edited (export.sh not needed
 
 Rules out: heap-tail/depth-image overlap as the 21:9 hangar SIGBUS cause (fix in force, crash
 persists, same site). Level-select tear check (s6631 scorer) not re-run with heapslot.
+
+Verdict: the watch run selects H-image (the depth-image overlap is real: RT64 native-swap depth
+write-back is the writer of the heap header at e4) and refutes H-owner (no guest owner store
+corrupts it). The fixed run (heapslot in force, crash 4/4, same site) then refutes H-heap-image as
+the cause of the 21:9 hangar SIGBUS, and the fault decode localises the crash to the voice-list
+pointer from table 0x800CC4F8. Next discriminator: ROGUESQ_FLOOR_WATCH on 0x0CC4F4..0x0CC500,
+0x0CD6E8, 0x0CDA18 at 21:9 and 16:9 — a writer touching the table selects H-overwrite, no writer
+with an out-of-range s1 selects H-index.
