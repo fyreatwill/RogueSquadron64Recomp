@@ -458,6 +458,27 @@ def apply_s6631_heapcap(text):
         1)
     return text, 1
 
+def apply_s6689_heapslot(text):
+    """s6689: ensureHeapInitialized's gap path builds the flags&4 heap over
+    [slot, *801163E4 + fbsize) with the gap punched, i.e. it also takes the
+    buffer at 801163E4. Retail 4:3 has gap 0 and never does. The wide carve
+    makes 801163E4 the live depth image, so the game put a free block on the
+    depth buffer and RT64's depth write-back overwrote its header (21:9 hangar
+    SIGBUS 0x7FFF0002, s6688/s6689). Wider than 4:3, take the retail gap==0
+    branch: heap = [slot, slot + fbsize). Needs apply_s6631_heapcap first
+    (rs64_g1d_wide)."""
+    if "PATCH: s6689 heapslot" in text:
+        return text, 0
+    old = ("    // 0x80001944: bne         $v1, $zero, L_8000197C\n"
+           "    if (ctx->r3 != 0) {\n")
+    new = ("    // 0x80001944: bne         $v1, $zero, L_8000197C\n"
+           "    if (ctx->r3 != 0 && !rs64_g1d_wide()) { /* PATCH: s6689 heapslot */\n")
+    if text.count(old) != 1 or "static int rs64_g1d_wide(void)" not in text:
+        return text, 0
+    if text.index("static int rs64_g1d_wide(void)") > text.index(old):
+        return text, 0
+    return text.replace(old, new, 1), 1
+
 if __name__ == "__main__":
     p = base / "funcs_4.c"; t = p.read_text(); t2, n = apply4(t)
     t2, m = apply_s6201_pool(t2)
@@ -470,8 +491,9 @@ if __name__ == "__main__":
     t2, h = apply_s6203_heapclass(t2)
     t2, d = apply_s6207_drop(t2)
     t2, cap = apply_s6631_heapcap(t2)
-    if n or c or r or h or d or cap: p0.write_text(t2)
-    print("funcs_0.c live patched x%d carve=%d retarget=%d heapclass=%d drop=%d heapcap=%d" % (n, c, r, h, d, cap))
+    t2, hs = apply_s6689_heapslot(t2)
+    if n or c or r or h or d or cap or hs: p0.write_text(t2)
+    print("funcs_0.c live patched x%d carve=%d retarget=%d heapclass=%d drop=%d heapcap=%d heapslot=%d" % (n, c, r, h, d, cap, hs))
     p3 = base / "funcs_3.c"; t = p3.read_text(); t2, k = apply_s6201_alloc(t)
     if k: p3.write_text(t2)
     print("funcs_3.c alloc=%d" % k)

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6687 (2026-10-31).
+Compact operational handoff, as of Session 6689 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -22,11 +22,16 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   fullscreen (verified with synthetic F11 `ROGUESQ_FS_TEST_TOGGLE_S`: 3024x1898 and back).
   ROGUESQ_FULLSCREEN=1 starts fullscreen; ROGUESQ_ASPECT=auto takes display 0's aspect. The game
   width is fixed at boot, so a later resize letterboxes. ROGUESQ_WINDOW_FIT=0 gives the old 640x480 window.
-- **OPEN, take next: 21:9 forced-route hangar SIGBUS (s6688).** si_addr guest 0x7FFF0002 in
-  mallocVoiceLineStruct (craft-select voice). 5/5 at 21:9, also with WINDOW_FIT=0; 16:9 clean.
-  s6631's did=3 cut shortens a LIVE block (fl 0x0006, 0x14B000); a free-only variant still
-  crashed (tail header then sits at e4 in the image). Root cause: the heap reaches the w1024
-  image at e4. See Next steps 1.
+- **OPEN, take next: 21:9 forced-route hangar SIGBUS (s6688/s6689).** si_addr guest 0x7FFF0002
+  in mallocVoiceLineStruct: its first arg (voice-id list) is 0x7FFF0000, loaded by
+  craftSelectionVoiceLineHelper from word[0x800CC4F8 + (s1-1)*4], s1 = byte[0x800CC404 +
+  byte[0x800CD6E8]]. 4/4 at 21:9 even with s6689 heapslot; 16:9 clean. Not a heap/image overlap
+  (s6689). See Next steps 1.
+- **s6689 heapslot (landed, wide only):** ensureHeapInitialized's gap path took the buffer at
+  801163E4 as heap; at wide aspect that is the live depth image, and RT64's depth write-back
+  overwrote the free header the game put there (writer named with ROGUESQ_FLOOR_WATCH). Wider than
+  4:3 the game now takes the retail gap==0 branch (heap [slot, slot+fbsize)). 16:9 lvl1 still
+  mission_verified_130s; s6631 level-select tear check not yet re-run with it.
 - **Active thread closed: G1d 21:9 level-select tear (g1d-levelselect-heap).**
   s6631. The wide gap punch in `buildHeapFreeList` places the `8010FEFC`
   free-tail header exactly on `801163E4`. A walker that stops at `a >= e4`
@@ -654,12 +659,13 @@ so statically they should be owned on the scripted route (H-load over H-prox).
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **21:9 hangar SIGBUS root cause (g1d-heap-image-overlap).** Recipe:
-   `env HOLD_S=150 zsh tools/g1_lvl1_aspect_arm.sh <tag> 21:9 ""` (crashes in about 2 min). Name the writer of
-   the corrupt header at e4-0x10/e4 (watch those 32 bytes per rebuild, log PC + value), then
-   end the heap below the image (cap e4 by one header + guard) so neither the image nor a
-   live block owns the terminator. Done = 21:9 forced lvl1 mission_verified, level-select tear
-   still gone (s6631 check), 16:9 unchanged. Then the 21:9 G1f window capture.
+1. **21:9 hangar SIGBUS: bad voice-list pointer (g1d-hangar-voice-ptr).** One run,
+   `env HOLD_S=150 zsh tools/g1_lvl1_aspect_arm.sh <tag> 21:9 "ROGUESQ_FLOOR_DEPTH_DIR=<abs dir>
+   ROGUESQ_FLOOR_WATCH=0x0CC4F4,0x0CC4F8,0x0CC4FC,0x0CC500,0x0CD6E8,0x0CDA18"` (phys, word-aligned;
+   0x0CC404+idx byte needs the idx first), plus a 16:9 arm with the same watch. Writer PCs and the
+   final values split: H-index (s1 0 / out of range at 21:9: no corrupting writer, the table is
+   intact) vs H-overwrite (a store/DMA writes the table). Also re-run the s6631 level-select
+   check with heapslot. Then the 21:9 G1f window capture.
 2. **G3d turning-shake timing follow-up** (ITERATION 3c).
 3. **(PARKED by owner) G1(d) level8 live ownership + disable response.** s6687
    contract: extend g1_objective_response_run.py to level 8. One run with

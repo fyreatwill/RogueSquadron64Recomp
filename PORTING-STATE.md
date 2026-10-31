@@ -175589,3 +175589,50 @@ does not stop the crash). Root cause localised to the heap tail meeting the imag
 Next discriminator: a first-change watch on the 32 bytes at e4-0x10..e4+0x10 with writer PC
 selects H-image (colour image / RT64 write-back) vs H-owner (live 0x14B000 block's owner).
 G1f itself closes for 16:9: window, fullscreen toggle and fullscreen start verified.
+
+## Session 6689 (2026-10-31) — 21:9 heap tail on the depth image named and removed (RT64 depth write-back was the writer); hangar SIGBUS persists, real fault is a bad voice-list pointer from table 0x800CC4F8
+
+HYPOTHESIS-ID: g1d-heap-image-overlap (closed) -> g1d-hangar-voice-ptr. Step 0: CURRENT-TRUTH
+56,776 bytes, no maintenance. No new soak verdicts. Screen check script lacks Quartz (module
+missing); runs drove the route normally (mission reached every attempt), so the screen was unlocked.
+
+Instrument (one build): `ROGUESQ_FLOOR_WATCH=hex,...` (src/main/upstream_compat.cpp) adds up to 8
+physical watch words to the existing floor-writer instrument (guest-exact store PC via the
+store-parity hook, host RT64 writes via rs64_floor_writer_begin/after; requires
+ROGUESQ_FLOOR_DEPTH_DIR, writes rdram.jsonl). Positive control: the instrument's own
+bzero/memset control at 0x1FF0020 fired (4 guest-exact records), and boot-time F5 ucode RDP
+output stores at the same words fired (208 host records each).
+
+Run 1, 21:9 forced lvl1, watch e4-0x10..e4+0xC (0xB55FF0..0xB5600C): 5/5 crash, same SIGBUS
+0x7FFF0002. Writer timeline (last attempt): guest coalesceFreeHeapBlocks 0x800024A4 writes the
+flags-8 terminator at e4-0x10, guest buildHeapFreeList 0x800020F4/FC writes a FREE header at e4
+(0x00010000, size 0xA9FE0 = exactly the w1024 depth image 0xAA000-0x20). Then host RT64
+`native-swap` depth write-back (phys 0xB56000 len 694272 = 1024x339x2) overwrites it; at the next
+rebuild the header word reads 0xEB8CEB90 (depth values). ORIGIN: ensureHeapInitialized
+(0x80001940-0x800019A8) computes gap = *801163E4 - (slot+fbsize); gap==0 (retail 4:3) -> heap
+[slot, slot+fbsize); gap!=0 -> heap [slot, e4+fbsize) with the gap punched, i.e. it ALSO takes the
+buffer at e4 as heap. Retail treats that buffer as spare; our wide carve made it the live depth
+image. So the game legitimately hands out the depth buffer, and RT64 legitimately writes depth
+there: the layout is ours (s6201 carve), the value is legitimate from both writers.
+
+Fix (tools/apply_s6031_far.py apply_s6689_heapslot, wired in fixup_game_funcs_vendored.py, live
+funcs_0.c patched): wider than 4:3, `bne $v1,$zero` at 0x80001944 falls through to the retail
+gap==0 branch, so the flags&4 heap is [slot, slot+fbsize) and never reaches e4. 4:3 untouched
+(rs64_g1d_wide()). With it the s6631 heapcap walker hits the game's own terminator (fl=0008,
+did=0) at every rebuild: 21:9 cut=0x80A0AFF0, 16:9 0x80662B50.
+
+Run 2, 21:9 with the fix, same watch: heapslot in force (did=0 fl=0008 every rebuild) but STILL
+4/4 crash (3x si_addr 0x7FFF0002, 1x 0x4DF24008 si_code=2). So H-heap-image was a real overlap
+but NOT the crash cause. Run 3, 16:9 with the fix: mission_verified_130s, 0 crash (fbhash
+distinct 2952/3765) -> 16:9 unchanged.
+
+Fault decode (static, single-source): mallocVoiceLineStruct (0x800CBF60) does `lhu 0($a0)` on its
+first argument; MEM_HU swizzles addr^2, so 0x7FFF0002 means a0 == 0x7FFF0000. The caller
+craftSelectionVoiceLineHelper (0x800AE264) loads a0 = word[0x800CC4F8 + (s1-1)*4] with
+s1 = byte[0x800CC404 + byte[0x800CD6E8]], gated on word[0x800CDA18]==0 and byte[0x800CDA08+s1-1]==0.
+Either s1 is 0/out of range at 21:9 (index -1 or past the table) or the table/index memory is
+overwritten. The ELF's segment vaddrs do not map 0x800CC4F8 to data (reads code), so the table
+was not resolved offline. Not watched yet. lib/ not edited (export.sh not needed).
+
+Rules out: heap-tail/depth-image overlap as the 21:9 hangar SIGBUS cause (fix in force, crash
+persists, same site). Level-select tear check (s6631 scorer) not re-run with heapslot.

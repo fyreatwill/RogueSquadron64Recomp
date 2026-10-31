@@ -3456,9 +3456,29 @@ uint32_t floorWriterWord(uint32_t p) {
     if (rd) for (uint32_t i = 0; i < 4; ++i) w = (w << 8) | rd[(p + i) ^ 3u];
     return w;
 }
+// s6689: ROGUESQ_FLOOR_WATCH=hex,hex,... adds physical watch words (max 8).
+struct FloorWriterExtra { uint32_t t[8]; int n; };
+const FloorWriterExtra& floorWriterExtra() {
+    static const FloorWriterExtra extra = [] {
+        FloorWriterExtra x{{}, 0};
+        const char* e = std::getenv("ROGUESQ_FLOOR_WATCH");
+        while (e && *e && x.n < 8) {
+            char* end = nullptr;
+            unsigned long v = std::strtoul(e, &end, 16);
+            if (end == e) break;
+            x.t[x.n++] = uint32_t(v) & 0x1FFFFFFCu;
+            e = *end == ',' ? end + 1 : end;
+        }
+        return x;
+    }();
+    return extra;
+}
 uint32_t floorWriterHit(uint32_t p, uint32_t len) {
     for (uint32_t t : {kFloorWriterTarget, kFloorWriterControl, kFloorWriterOther[0], kFloorWriterOther[1], kFloorWriterOther[2]})
         if (p < t + 4u && uint64_t(p) + len > t) return t;
+    const FloorWriterExtra& x = floorWriterExtra();
+    for (int i = 0; i < x.n; ++i)
+        if (p < x.t[i] + 4u && uint64_t(p) + len > x.t[i]) return x.t[i];
     return 0;
 }
 struct FloorWriterPending {
