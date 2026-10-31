@@ -175046,3 +175046,55 @@ s6676_lvl5_contract.json. Full table/limits docs/G1-OBJECTIVE-RESPONSE s6676.
 Next unit: one same-owned ordinary-control -> lethal-dose Wedge counter40
 response, actual death effect/store/readback/original getter and immediate stop,
 below c2/c4 gates. Objective response remains open; no repeat ordinary soak.
+
+
+## Session 6677 (2026-10-31) — qualify level-5 Wedge named loss response
+
+HYPOTHESIS-ID: g1-coverage-cd
+Maintenance check44646 bytes, below60000. No new queued-soak verdict after
+20261028-075640. ONE bounded opt-in adapter/analyzer change plus one unlocked
+flight. Original ELF/DAT334 anchors and390 mutated negatives precede change.
+H-death: same-owned ordinary then HP+1 invokes original effect/count writer;
+H-route: death routing differs despite ordinary control; H-identity: changed
+ownership/health inhibits dose. Discriminator is the exact owned API/message/
+health/death-effect/counter-writer/callback/original-getter chain.
+
+Run scratch/agent/m6/g1_lvl5s6677_lvl5_loss/,107.76s total runner wall,
+VI4696..6508,0 crash lines. Off/on VI4696/6498; off2 intentionally not reached.
+Wedge DAT8031BCCC,slot87/gen1,node8021B6DC,NPC8035421C,actor80354898,
+handlerD93C0,detail0/mode0,health array8031BD38,message80165E80.
+Ordinary API10 VI6498 -> actualF2148 health200→190 -> both returns190;
+original getter40=memory0 before dose. API191 VI6503 on exact same owned
+identity -> F2148 health190→−1 -> damage/API returns−1; actual original
+D9D28 tuple(40,1,0,0,0,1) -> writer6594C counter40 0→1. Callback readback and
+explicit original getter read1 atVI6508; c2/c4/latches8010D080/84 remain0.
+SIGSTOP immediately, runner SIGKILL. Owned mark-all controls fire arms0/1;
+actual getter40 0→1 supplies changing-value control. H-death selected for
+this victim; no observed routing/identity mismatch. Ordinary alone does not
+change objectives. Dynamic causality single-flight/single-source; original
+ELF/DAT independently establish static contracts only. No player-shot,
+game-invoked friendlies reader, id2 writer, retail-equivalence, win/progression
+or full VERIFIED claim. Named level5 loss-response unit closes.
+
+Adapter adds explicit level5 one-dose admission after same-owned ordinary
+entry/store/return control, revalidating all identity/name/storage/health
+fields, original effect tuple and zero c2/c4/latches/c40. Changed identity
+inhibits with named field. Dose readback bypasses only the generic observed
+stop until explicit getter agreement. Generic TELE stays disabled; no direct
+health/counter stores. Analyzer extends original wingman loss qualification
+with level5 named definition/epoch and before-dose/done safety witnesses.
+
+ORIGIN: original800F2120 F2148 legitimately writes selected array health minus
+accepted message damage; originalD9D28 consumes Wedge's DAT effect and
+original6594C legitimately increments40. No corruption mitigation added.
+
+Build and fixtures pass (missing links/ordinary control, identity/storage,
+dose HP/count, writer/effect/getter, named definition/selector, safety fields).
+All13 adapters idempotent; hook-free level5 replay exact. Level3 helpers
+byte-identical and saved level4 loss analyzer output identical.6/6 manifest
+hashes match after collection. No lib/default change. Proof:
+scratch/agent/s6677_qualification.json; s6677_lvl5_original.json,
+s6677_replay.json,s6677_lvl4_regression.json,s6677_build.log,
+s6677_selftest.log. Full line table/limits docs/G1-OBJECTIVE-RESPONSE s6677.
+Next: one original-backed level6 objective/target contract audit with executable
+ELF/DAT assertions and mutation fixtures before any live instrument.

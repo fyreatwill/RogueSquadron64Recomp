@@ -295,7 +295,8 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
         result['level3_api'] = qualify_level3_api([r for r in rows if 'api_seq=2' not in r['event']])
         result['level3_loss'] = qualify_level3_loss(rows)
     if level == 5:
-        result['level5_ordinary'] = qualify_level5(rows)
+        result['level5_ordinary'] = qualify_level5([r for r in rows if 'api_seq=2' not in r['event']])
+        result['level5_loss'] = qualify_level4_loss(rows, level=5)
     if level == 4:
         result['level4_ordinary'] = qualify_level4([r for r in rows if 'api_seq=2' not in r['event']])
         result['level4_loss'] = qualify_level4_loss(rows)
@@ -512,8 +513,8 @@ def qualify_level5(rows):
     return result
 
 
-def qualify_level4_loss(rows):
-    ordinary=qualify_level4([r for r in rows if 'api_seq=2' not in r['event']])
+def qualify_level4_loss(rows, level=4):
+    ordinary=(qualify_level5 if level==5 else qualify_level4)([r for r in rows if 'api_seq=2' not in r['event']])
     parsed=[(r['line'],r['event'],dict(re.findall(r'(\w+)=([^\s]+)',r['event']))) for r in rows]
     stages={}
     for n,e,f in parsed:
@@ -539,9 +540,12 @@ def qualify_level4_loss(rows):
         writes=[(n,f) for n,e,f in parsed if '[objresp-write]' in e and ns[5]<n<ns[6] and f.get('pc')=='8006594c' and f.get('id')=='40' and f.get('old')=='0' and f.get('new')=='1' and f.get('victim')==p['npc'] and f.get('desc')==p['desc']]
         reads=[(n,f) for n,e,f in parsed if '[objresp-readback]' in e and n>ns[6] and f.get('id')=='40' and f.get('old')=='0' and f.get('new')=='1' and f.get('initialized')=='1']
         getters=[(n,f) for n,e,f in parsed if '[objresp-probe-getter]' in e and n>ns[6] and f.get('id')=='40' and f.get('returned')==f.get('memory')=='1' and f.get('probe_call')=='1']
-        done=[(n,f) for n,e,f in parsed if '[objresp-done]' in e and f.get('reason')=='level4-named-response' and f.get('c40')==f.get('getter')=='1' and all(f.get(k)=='0' for k in ('c15','c16','c28','bool26'))]
+        done=[(n,f) for n,e,f in parsed if '[objresp-done]' in e and f.get('reason')==f'level{level}-named-response' and f.get('c40')==f.get('getter')=='1' and all(f.get(k)=='0' for k in (('c2','c4','latch2','latch4') if level==5 else ('c15','c16','c28','bool26')))]
+        safety=True
+        if level==5:
+            safety=ordinary['named_identity'] and all(any('[objresp-wingman-safety]' in e and f.get('api_seq')==seq and lo<n<hi and all(f.get(k)=='0' for k in ('c2','c4','latch2','latch4')) for n,e,f in parsed) for seq,lo,hi in (('1',0,control['lines']['api-pre']),('2',control['lines']['api-post'],ns[0])))
         no_reap=not any('[objresp-retire]' in e and control['lines']['api-pre']<n<ns[0] and f.get('slot')==p['slot'] for n,e,f in parsed)
-        if (same and health and messages and requests and storage and all(observed) and len(stores)==len(effects)==len(writes)==1 and reads and getters and done and no_reap and
+        if (safety and same and health and messages and requests and storage and all(observed) and len(stores)==len(effects)==len(writes)==1 and reads and getters and done and no_reap and
             ns==sorted(set(ns)) and control['getter_line']<ns[0] and reads[0][0]<getters[0][0]<done[0][0] and all(f['c40']=='0' for f in (p,en,b,st,r,ef)) and q['c40']=='1' and ordinary['getters_match'] and '40' in ordinary['changing_getter_ids']):
             chains.append(dict(control=control,lines=dict(zip(names,ns)),pre=p,store=st,effect=effects[0],writer=writes[0],readback=reads[0],getter=getters[0],done=done[0]))
     return dict(qualified=bool(chains),chains=chains,changing_getter_ids=ordinary['changing_getter_ids'],scope='instrument-invoked named API death response; dynamic causality single-flight, no player-shot or retail-equivalence proof')
@@ -598,6 +602,21 @@ def level4_loss_self_test(ordinary):
     assert not check(events+dose)
     for key in ('node','npc','desc','slot','generation','handler','actor','detail','mode','health_addr','message'):
         changed=events.copy(); i=next(i for i,e in enumerate(changed) if '[objresp-wingman]' in e and 'api_seq=2' in e and 'stage=store' in e);changed[i]=re.sub(r'\b'+key+r'=\S+',key+'=99999999',changed[i]);assert not check(changed),key
+    prefix=['[objresp-definition] base=8030e504 offset=1afc desc=80310000 name=x_wing_wedge subtype=39 id=40 delta=1', '[objresp-epoch] B40=5 callback=lv5_checkComplexObjectives width=512', '[objresp-wingman-safety] api_seq=1 c2=0 c4=0 latch2=0 latch4=0']
+    five=prefix+ordinary+['[objresp-wingman-safety] api_seq=2 c2=0 c4=0 latch2=0 latch4=0']+events[len(ordinary):]
+    five=[e.replace('level4-named-response','level5-named-response').replace('c15=0 c16=0 c28=0 bool26=0','c2=0 c4=0 latch2=0 latch4=0') for e in five]
+    def check5(es): return qualify_level4_loss([dict(line=i,event=e) for i,e in enumerate(es)],level=5)['qualified']
+    assert check5(five)
+    for i in range(len(five)):
+        # id3 changes are optional: counter40 itself controls getter sensitivity.
+        if '[objresp-probe-getter]' in five[i] and 'id=3 ' in five[i]: continue
+        assert not check5(five[:i]+five[i+1:]),i
+    for key in ('c2','c4','latch2','latch4'):
+        assert not check5([e.replace(key+'=0',key+'=1') for e in five]),key
+    for old,new in [('B40=5','B40=4'),('x_wing_wedge','x_wing_hobbie'),('request=391','request=390'),('pc=8006594c','pc=80065974'),('delta2=1','delta2=0')]:
+        assert not check5([e.replace(old,new) for e in five]),old
+    assert not check5(five+dose)
+    print('level5 loss fixtures pass: named identity, safety, ordinary control, every chain link, dose count, HP, writer/effect/getter')
     print('level4 loss fixtures pass: complete and missing-link, duplicate-dose, identity, writer, effect, safety negatives')
 
 

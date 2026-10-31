@@ -14,7 +14,7 @@ writer calls, Boolean dumps and result-mode requests separately.
 | 2 | s6668: same-owned rescue01 ordinary HP2000→1990, one requested1991 dose HP1990→−1, original counter40 store0→1, callback memory and getter return1 four VI later. | Named friendly-loss response observed, single-flight dynamic evidence. Original ELF/DAT independently establish damage/death and failure ordering. SIGSTOP before failure flags109/101; no win, progression, retail-equivalence or fully VERIFIED claim. |
 | 3 | s6671: City_1 script request10 HP2000→1990, then same-owned request1991 HP1990→−1; death effect, counter28 store0→1, callback and explicit getter1. | Named friendly-loss response observed, single-flight dynamic evidence; original DAT/ELF corroborate contracts. Flags4/18/21 and successcounter22 stay0. No player-shot, win, retail-equivalence or fully VERIFIED claim. |
 | 4 | s6674: same-owned Hobbie API10 HP380→370, then request371 HP370→−1; death effect(40,1,0,0,0,1), original counter40 store0→1, callback/getter1. | Named friendly-loss response observed, single-flight dynamic evidence. Original ELF/DAT corroborate contracts. c15/c16/c28 and Boolean26 stay0; SIGSTOP then SIGKILL. Actual getter40 change controls sensitivity. No player-shot, win, retail-equivalence or fully VERIFIED claim. |
-| 5 | s6676: owned Wedge original named API10 -> message5 -> actual F2148 health190→180, both returns180; getter40=memory0. No changing objective getter control. | Original friendlies=7−(c40+c2); c2>=4 sets Bit4, c4>=9 sets Bit8. Ordinary health chain observed only; silent counter monitor uncontrolled. Historical id2 writer and named counter40 death response remain open; no VERIFIED promotion. |
+| 5 | s6677: same-owned Wedge API10 health200→190, then one API191 health190→−1; death effectD9D28 tuple(40,1,0,0,0,1) -> writer6594C counter40 0→1 -> callback/original getter1. | Original friendlies=7−(c40+c2); c2>=4 sets Bit4, c4>=9 sets Bit8. Named loss response observed, c2/c4/latches remain0 at stop. Dynamic causality single-flight; no player-shot, retail-equivalence or VERIFIED promotion. Historical id2 writer stays unknown. |
 | 6 | TELE fires; no snapshot value changes; heartbeat occurs in both arms. | Inconclusive: hook execution is not a positive control for detecting changes. Neither full-table coverage nor a valid null is established. |
 | 7 | tele id2 0>2>3>0, absent ctl; id1 moves in both. | Named response, single-source; id2 semantics are not established for this level. Three a0=1 death requests precede cleanup in both arms. The lv0 id2 threshold does not apply to lvl7. |
 | 8 | tele id6 0>1>2>3>4, ctl get(id6)=0. | Named response, single-source; id6 purpose remains unclassified. Identical Boolean gate sets and a0=2 requests in both arms; no hit-driven end gate. Reset 4>0 is outside the first flight epoch. |
@@ -1566,3 +1566,81 @@ replay byte-exact. Proof: `scratch/agent/s6676_qualification.json`,
 Next: same-owned one-shot Wedge death-counter response, not a repeat ordinary
 soak. Reuse the observed ordinary control, revalidate identity/current health,
 and stop at actual counter40 store/readback/getter before any gate/progression.
+
+
+## s6677 — level 5 same-owned Wedge named loss response
+
+2026-10-31. One opt-in adapter/analyzer change and one unlocked flight.
+Original ELF/DAT contract checks preceded the change:334 instruction anchors
+and390 deliberately mutated inputs rejected. Original subtype27 wingman
+message5, array/inline health storage, death-gated effect800D9D28 and
+counter writer8006594C establish the static contract independently of the
+live witness. No retail gameplay oracle was run.
+
+The existing explicit `ROGUESQ_OBJECTIVE_RESPONSE_LETHAL=1` now admits one
+level5 currentHealth+1 request only after an exact same-owned ordinary API10
+entry/store/damage-return/API-return control. Before either request the
+adapter checks c2/c4/latches8010D080/84/c40 zero and the original effect tuple;
+before the dose it revalidates canonical ownership, slot generation, DAT,
+relocated name lookup, NPC/actor, detail/mode/health address and current HP.
+Changed identity inhibits the request with a field-specific report. Generic
+TELE remains disabled. After the actual named write, the callback readback and
+explicit original getter must agree; SIGSTOP then runner SIGKILL ends the run.
+Level3 helpers remain byte-identical; the level4 saved loss capture produces
+identical analyzer output. No guest health/counter stores or default changes.
+
+Run `scratch/agent/m6/g1_lvl5s6677_lvl5_loss/`:107.76s total runner wall,
+VI4696..6508,0 crash lines. Off/on atVI4696/6498; off2 intentionally not
+reached. Wedge DAT8031BCCC,slot87/gen1,node8021B6DC,NPC8035421C,
+actor80354898,handler800D93C0,detail0/mode0,health array8031BD38.
+Both API requests use original message80165E80 and the same owned identity.
+
+| Link | run.log line | Actual observation |
+| --- | --- | --- |
+| Owned mark-all controls |210578 /231039|arms0/1, HP200, same node/actor/storage|
+| Ordinary API / entry / actual store / returns |231041 /231047 /231051 /231055 /231057|VI6498, request10, F2148 health200→190, both returns190|
+| Original getter40 after ordinary |231169|returned0=memory0 before dose|
+| Dose API / entry / actual store / return |231171 /231175 /231179 /231183|VI6503, request191, F2148 health190→−1, damage returns−1|
+| Original death effect / counter writer |231216 /231220|D9D28 tuple(40,1,0,0,0,1);6594C id40 0→1, exact NPC/DAT|
+| API return |231222|−1, c40=1|
+| Callback / original getter / done |231334 /231335 /231336|VI6508, actual readback0→1, getter1=memory1; c2/c4/latches all0|
+
+H-death selected for this victim: the registered same-owned request crosses
+zero, invokes the original effect and changes the named friendly-loss count.
+H-route/H-identity are not observed for these two requests. The ordinary hit
+alone did not change objectives; the dose's actual counter40 getter0→1
+supplies the epoch's changing-value sensitivity control. Owned mark-all
+controls fire in both reached arms. No silent counter is treated as a null.
+Dynamic causality remains single-flight/single-source; original ELF/DAT
+corroborate contracts, not live retail behavior. No player-shot, game-invoked
+friendlies reader, historical id2 attribution, win/progression, retail-equivalence
+or full VERIFIED claim. Named level5 loss-response unit closes.
+
+ORIGIN: original dealDamageToNpc800F2120 legitimately stores accepted message
+damage subtracted from the selected health array atF2148. Original wingman
+death effectD9D28 consumes Wedge's DAT tuple; original6594C legitimately
+increments counter40. No corruption mitigation or compensating store added.
+
+Validation: build and analyzer fixtures pass, including every missing loss
+chain link, named definition/selector, ordinary control, storage/identity,
+dose HP/count, effect tuple, writer/getter and safety negatives. All13 adapter
+outputs are idempotent; level5 hook-free replay is byte-exact. All6 manifest
+hashes still match after collection. No lib edit or new queued-soak verdict
+(latest20261028-075640 already consumed). Proof:
+`scratch/agent/s6677_qualification.json`; original assertions/mutations:
+`s6677_lvl5_original.json`; replay:`s6677_replay.json`; prior-level analyzer
+regression:`s6677_lvl4_regression.json`; build/self-test logs:`s6677_build.log`
+and`s6677_selftest.log`.
+
+Reproduce:
+
+```sh
+python3 tools/g1_dat_inventory.py --level 5 --check-level5 --mutation-check-level5 --output scratch/agent/s6677_lvl5_original.json
+python3 tools/apply_s6657_objective_response.py ../N64Recomp/RecompiledFuncs
+cmake --build build --target RogueSquadron64Recomp -j6
+python3 tools/g1_objective_response_run.py --self-test
+env ROGUESQ_OBJECTIVE_RESPONSE_LETHAL=1 python3 tools/g1_objective_response_run.py <fresh-tag> --level 5
+```
+
+Next: original-backed level6 named objective/target contract, before any live
+instrument. The historical silent level6 heartbeat is not a value control.

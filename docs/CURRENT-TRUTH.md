@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6676 (2026-10-31).
+Compact operational handoff, as of Session 6677 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -427,7 +427,7 @@ One line each: claim (superseded by; why it was believable).
 
 Playable levels are 0..18 (`NUM_LEVELS=0x13`); 19/20 are sentinels. Route/hold
 coverage and framebuffer presence are distinct from objective response.
-Level 1 has a retail flight match. Level 0/1/2/3/4 named counter responses are
+Level 1 has a retail flight match. Level 0/1/2/3/4/5 named counter responses are
 observed; remaining objective response coverage is partial. No level is promoted
 here to fully VERIFIED. See [framebuffer coverage](G1-FRAMEBUFFER-COVERAGE.md)
 and [objective contracts, evidence and limits](G1-OBJECTIVE-RESPONSE.md).
@@ -485,15 +485,33 @@ attempt stopped to undo an accidental level3-only edit; corrected build/run,
 unchanged. No lib/default changes or new soak verdicts. Proof/table:
 G1-OBJECTIVE-RESPONSE s6676; scratch/agent/s6676_qualification.json.
 
+## s6677 update — level5 named loss response observed
+
+One unlocked flight107.76s total runner wall,VI4696..6508,0 crashes. Same
+Wedge DAT8031BCCC,slot87/gen1,node8021B6DC,NPC8035421C,actor80354898,
+detail0/mode0: original named API10 atVI6498 writes health200→190, both
+returns190; original getter40=memory0. One explicit opt-in API191 atVI6503
+writes190→−1, original death effectD9D28 passes tuple(40,1,0,0,0,1), actual
+writer6594C increments40 0→1. Callback readback and explicit original getter
+read1 atVI6508; c2/c4/latches8010D080/84 all0, SIGSTOP then SIGKILL.
+Off/on reached; off2 intentionally not reached. Owned mark-all controls fire
+arms0/1; actual getter40 changes0→1. H-death for this victim, no observed
+identity/route mismatch. Original ELF/DAT independently support contracts;
+dynamic causality single-flight, no player-shot/game-invoked friendlies-reader,
+retail-equivalence or full VERIFIED claim. Historical id2 writer stays unknown.
+Adapter survives fixup; level3 helpers unchanged, saved level4 analyzer result
+identical. Original334 anchors/390 mutations, build/fixtures,13-file idempotence,
+hook replay and6/6 launch hashes pass. No direct stores/default/lib changes
+or new soak verdict. Proof:scratch/agent/s6677_qualification.json; full table
+G1-OBJECTIVE-RESPONSE s6677. Next: level6 original-backed target contract.
+
 ## Next steps (single monotonic backlog)
-1. **G1(d) level5 same-owned Wedge loss-counter response (next unit).**
-   Ordinary health delivery is observed (s6676), but no getter changed.
-   Add one opt-in currentHP+1 request after same-owned ordinary API10
-   entry/store/return qualify; revalidate slot/generation/DAT/NPC/actor,
-   detail/mode/storage/name/current health and original effect tuple.
-   Require actual death effect, counter40 writer/readback/original getter;
-   stop immediately with c2/c4 and latches unchanged, below their gates.
-   No direct stores, wins/progression or repeat ordinary soak.
+1. **G1(d) level6 original-backed named objective/target contract (next unit).**
+   Level5 named loss response closes at s6677. Reconcile saved level6 evidence
+   (heartbeat alone is not a value control), audit its original callback/reader
+   and DAT definitions, then select one typed target/effect route without coupled
+   success/failure flags. Add executable original-ELF/DAT assertions and mutated
+   negative fixtures before any new live adapter. Unknown routes stay explicit.
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
@@ -515,9 +533,9 @@ G1-OBJECTIVE-RESPONSE s6676; scratch/agent/s6676_qualification.json.
 - Per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence):
   verbatim per-level paragraphs, duplicate coverage, historical backlog and updates.
-- `PORTING-STATE.md` sessions 6656–6676 contain recent chronology; search bounded
+- `PORTING-STATE.md` sessions 6656–6677 contain recent chronology; search bounded
   windows only. Earlier durable context remains in PROJECT-OVERVIEW.
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest remains
-  20261028-075640 (already consumed). No new verdicts in s6676.
+  20261028-075640 (already consumed). No new verdicts in s6677.
 - s6596/s6597 and s6599 were checkpoint close-outs, not reruns. The saved
   s6595/s6598 HUD artifacts retain their original evidence limits.
