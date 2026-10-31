@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6684 (2026-10-31).
+Compact operational handoff, as of Session 6685 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -641,16 +641,30 @@ No build/run/default/lib change or new soaks. Full contract/limits:
 G1-OBJECTIVE-RESPONSE s6684; scratch/agent/s6684_validation.json.
 Next: one owned surviving ordinary API10 chain, not a destruction test.
 
+## s6685 update — level7 tank target never registered in first 90 s flight
+
+Adapter/analyzer extended to level7 (ordinary-only, lethal/TELE disabled;
+13-file replay idempotent, all analyzer fixtures incl. new level7 pass,
+538 anchors/598 mutations still pass). One unlocked flight, 154.5 s wall,
+0 crashes, arms0/1/2 reached, VI6888..12288. Original name lookup returns
+the 20_Dest_Tanks_01 descriptor (80324970, subtype20, detail0, HP50, gates0)
+in every arm, but its slot word desc+6 stays 0xFFFF throughout: no owned
+node, so the API10 request was correctly withheld (0 requests, 0 fallback).
+Second line: the full registry walk resolved 25..520 typed live nodes in all
+19 census samples yet found 0 live nodes with a counter20 descriptor. Same-run
+select-control fixture fires each arm (slot66, handler800D93C0). H-fallback
+boundary: target unregistered during the scripted route, NOT absent from the
+mission and NOT an objective null. Proof: scratch/agent/s6685_qualification.json.
+
 ## Next steps (single monotonic backlog)
-1. **G1(d) level7 ordinary named API response (next unit).** Static contract
-   s6684 selects retail 20_Dest_Tanks_01(+05D0), subtype0x14, HP50, effect
-   c20+1 with no Boolean/second counter. Add one ordinary-only registered
-   API10 ownership/health chain using the original lookup and message5 route.
-   Observe live detail and survival; join actual store6CFE8, API return and
-   original getter20. Require owned mark-all and changing-value controls.
-   No FFFF fallback, lethal request, direct stores, threshold or win. Callback
-   thresholds20/30/40 are21/10/6, latch Booleans97/98/99, c99>=3 completes.
-   Level6 remains parked at partial counter90 ownership/safety; no repeat hold.
+1. **G1(d) level7: find what registers the tank (next unit).** s6685 shows
+   20_Dest_Tanks_01 stays slot FFFF for the first 90 s of flight. Statically
+   find the original writer of DAT item+6 (registration slot) and the level7
+   trigger that spawns the tanks (script/trigger zone/timer referencing the
+   tank names or the 05D0/0754/0818 items); then one run that watches all
+   three tanks' slot words and the trigger state over a longer hold. Admit
+   API10 only once a tank is owned and surviving. No FFFF fallback, lethal
+   request, direct stores, threshold or win. Thresholds 21/10/6, c99>=3.
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
@@ -672,9 +686,9 @@ Next: one owned surviving ordinary API10 chain, not a destruction test.
 - Per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence):
   verbatim per-level paragraphs, duplicate coverage, historical backlog and updates.
-- `PORTING-STATE.md` sessions 6656–6684 contain recent chronology; search bounded
+- `PORTING-STATE.md` sessions 6656–6685 contain recent chronology; search bounded
   windows only. Earlier durable context remains in PROJECT-OVERVIEW.
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest remains
-  20261028-075640 (already consumed). No new verdicts in s6684.
+  20261028-075640 (already consumed). No new verdicts in s6685.
 - s6596/s6597 and s6599 were checkpoint close-outs, not reruns. The saved
   s6595/s6598 HUD artifacts retain their original evidence limits.

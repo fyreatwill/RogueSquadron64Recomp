@@ -2083,3 +2083,37 @@ both sides through JSON, rerun all eight, identical. No tool/runtime behavior
 was changed to accommodate that comparison. No new soak verdicts/defaults/
 lib edits. Evidence: scratch/agent/s6684_level7_checked.json,
 s6684_validation.json, s6684_baseline.json, s6684_lv7_contract.txt.
+
+## s6685 — level7 ordinary admission: tank unregistered (2026-10-31)
+
+Extended `tools/apply_s6657_objective_response.py` (rs6685 tick/building/
+fallback hooks on lv7_checkComplexObjectives, funcs_16 handler stages,
+funcs_35 fallback stages) and `tools/g1_objective_response_run.py`
+(`--level 7`, `qualify_level6(level=7)`, level7 fixtures: complete chain,
+every missing link, base/detail/handler/store/request/return/epoch/gate/
+generation/store-address mutations, identity breaks, extra fallback/effect/
+duplicate request). Level7 lethal and generic TELE stay disabled (rs6657_gate
+excludes level7). Adapter replay on the patched tree changes 0 files.
+
+Run `s6685_lvl7_ordinary`: unlocked, 154.48 s wall, crashlines 0, VI6888..
+12288, arms 0/1/2, 6 manifest hashes recorded. Definitions: two early loads
+are other levels' memory (subtype0); the live lvl7 DAT at 803243A0 shows
+05D0 subtype20 HP50 id20. Eligibility (3 rows, unchanged per arm):
+
+| Field | Value |
+|---|---|
+| lookup (original getLevelDatItemByName) | 80324970 == desc |
+| slot desc+6 / generation | FFFF / 0 |
+| node / npc / handler / owned | 0 / 0 / 0 / 0 |
+| registry valid, subtype, detail, HP | 1, 20, 0, 50 |
+| source gate A0 / effect gate 0B39 | 0 / 0 |
+
+Result: request_count 0, fallback 0, effect 0; qualified_ordinary false.
+Census over all 2048 registry slots: 19 samples, typed live 25..520, named
+(counter20 descriptor) 0 in every sample. Select-control fixture fires once
+per arm on slot66 (handler800D93C0), so the walk resolves descriptors.
+Counter id1 changed 0->4 in arm1 (ordinary game activity, not our request).
+Interpretation: H-fallback boundary — the tank is defined but not spawned or
+registered during the first ~90 s of the scripted route. No target-absence,
+objective-null, player-shot or VERIFIED claim. Evidence:
+scratch/agent/s6685_qualification.json, m6/g1_lvl7s6685_lvl7_ordinary/.

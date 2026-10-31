@@ -175424,3 +175424,26 @@ Full target/route/consumer table:docs/G1-OBJECTIVE-RESPONSE.md s6684.
 Next: one ordinary registered API10 chain on owned tank01, live health must
 survive; counters need actual changing-value control. ADVANCED: checked tool
 change establishes a named objective candidate and discriminates eager fallback.
+
+## Session 6685 (2026-10-31) — level7 tank target stays unregistered (slot FFFF) through first flight
+
+Completed and committed the level7 ordinary adapter/analyzer left uncommitted
+by the previous iteration (tools/apply_s6657_objective_response.py rs6685
+hooks; tools/g1_objective_response_run.py --level 7 + level7 fixtures).
+Checks: g1_dat_inventory --check-level7 --mutation-check-level7 pass (538
+anchors); --self-test passes every level incl. level7; adapter applied to
+../N64Recomp/RecompiledFuncs, replay changes 0 (idempotent). Note:
+fixup_game_funcs_vendored.py refuses the live tree without
+RS64_FIXUP_ALLOW_LIVE=1, so the adapter was applied directly (as its
+__main__ intends); build rc0.
+Run s6685_lvl7_ordinary (screen unlocked): 154.48 s, 0 crashes, arms0/1/2,
+VI6888..12288. Original name lookup returns 20_Dest_Tanks_01 desc 80324970
+(subtype20 detail0 HP50, gates 0) but desc+6 slot = FFFF in every arm: no
+owned node, request correctly withheld (0 requests/fallback/effect). Second
+line: registry census 19/19 samples named=0 with 25..520 typed live nodes;
+select-control fixture fires per arm. Rules out: admission defects in the
+lookup/detail/HP/gates (all as contracted). Does NOT rule out the tank
+existing later in the mission. Next: find the original registration writer
+(DAT+6) and the level7 tank spawn trigger, then watch all three tanks.
+ORIGIN: no mitigation added; instrument only.
+Evidence: scratch/agent/s6685_qualification.json; G1-OBJECTIVE-RESPONSE s6685.

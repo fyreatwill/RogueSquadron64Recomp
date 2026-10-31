@@ -294,6 +294,8 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
         result['level3_building'] = qualify_level3(rows)
         result['level3_api'] = qualify_level3_api([r for r in rows if 'api_seq=2' not in r['event']])
         result['level3_loss'] = qualify_level3_loss(rows)
+    if level == 7:
+        result['level7_ordinary'] = qualify_level6(rows, level=7)
     if level == 6:
         result['level6_ordinary'] = qualify_level6(rows)
     if level == 5:
@@ -384,14 +386,17 @@ def qualify_level3_api(rows):
                 scope='instrument-invoked original named script damage and pure getters; not player-shot or game-invoked friendlies proof')
 
 
-def qualify_level6(rows):
+def qualify_level6(rows, level=6):
+    target = "20_Dest_Tanks_01" if level == 7 else "OBJ_ConYard_Barracks"
+    offset = 0x05d0 if level == 7 else 0x4a2c
+    prefix = f"[objresp-lvl{level}-"
     parsed=[(r['line'],r['event'],dict(re.findall(r'(\w+)=([^\s]+)',r['event']))) for r in rows]
-    pre=[(n,f) for n,e,f in parsed if '[objresp-lvl6-api]' in e and f.get('stage')=='pre']
-    post=[(n,f) for n,e,f in parsed if '[objresp-lvl6-api]' in e and f.get('stage')=='post']
-    fallback=[n for n,e,f in parsed if '[objresp-lvl6-fallback]' in e]
-    effects=[n for n,e,f in parsed if '[objresp-lvl6-building]' in e and f.get('stage')=='2']
-    getters=[dict(line=n,fields=f) for n,e,f in parsed if '[objresp-lvl6-getter]' in e]
-    controls=[dict(line=n,fields=f) for n,e,f in parsed if '[objresp-lvl6-control]' in e and f.get('mark_all')=='1']
+    pre=[(n,f) for n,e,f in parsed if (prefix+'api]') in e and f.get('stage')=='pre']
+    post=[(n,f) for n,e,f in parsed if (prefix+'api]') in e and f.get('stage')=='post']
+    fallback=[n for n,e,f in parsed if (prefix+'fallback]') in e]
+    effects=[n for n,e,f in parsed if (prefix+'building]') in e and f.get('stage')=='2']
+    getters=[dict(line=n,fields=f) for n,e,f in parsed if (prefix+'getter]') in e]
+    controls=[dict(line=n,fields=f) for n,e,f in parsed if (prefix+'control]') in e and f.get('mark_all')=='1']
     values={}
     for g in getters:
         if g['fields'].get('returned')==g['fields'].get('memory'):
@@ -401,15 +406,15 @@ def qualify_level6(rows):
     if len(pre)==len(post)==1 and not fallback and not effects:
         pn,p=pre[0];qn,q=post[0]; chain=[]
         for stage in ('0','1','3'):
-            found=[(n,f) for n,e,f in parsed if '[objresp-lvl6-building]' in e and f.get('stage')==stage and pn<n<qn]
+            found=[(n,f) for n,e,f in parsed if (prefix+'building]') in e and f.get('stage')==stage and pn<n<qn]
             if len(found)!=1: break
             chain.append(found[0])
         if len(chain)==3:
             (en,e),(sn,st),(rn,r)=chain
             identity=('api_seq','desc','node','npc')
             route=(p.get('epoch')=='1' and p.get('arm')=='1' and p.get('route')=='named-script' and
-                p.get('name')=='OBJ_ConYard_Barracks' and p.get('handler')=='8006cbb0' and p.get('detail')=='0' and
-                int(p['desc'],16)==int(p['base'],16)+0x4a2c and int(p['generation'])>0 and
+                p.get('name')==target and p.get('handler')=='8006cbb0' and p.get('detail')=='0' and
+                int(p['desc'],16)==int(p['base'],16)+offset and int(p['generation'])>0 and
                 p.get('source_gate')=='0' and all(q.get(k)==p.get(k) for k in identity) and
                 all(f.get(k)==p.get(k) for f in (e,st,r) for k in identity+('slot','generation','handler','detail','epoch','arm','source_gate','effect_gate')) and
                 all(f.get('subtype')=='20' for f in (e,st,r)) and e.get('message')==st.get('message')==r.get('message') and
@@ -423,14 +428,14 @@ def qualify_level6(rows):
             if pn<en<sn<rn<qn and route and health:
                 matches.append(dict(pre_line=pn,entry_line=en,store_line=sn,return_line=rn,post_line=qn,pre=p,store=st,handler_return=r,post=q))
     getter_match=bool(getters) and all(g['fields'].get('probe_call')=='1' and g['fields']['returned']==g['fields']['memory'] for g in getters)
-    after=bool(matches) and all(any(g['line']>matches[0]['post_line'] and g['fields']['id']==i for g in getters) for i in ('50','90'))
+    after=bool(matches) and all(any(g['line']>matches[0]['post_line'] and g['fields']['id']==i for g in getters) for i in (('20',) if level == 7 else ('50','90')))
     reached={f['arm'] for n,e,f in parsed if '[objresp-arm]' in e}
     controlled=reached and reached<={g['fields']['arm'] for g in controls}
     return dict(qualified_health_chain=bool(matches),qualified_ordinary=bool(matches and getter_match and after and controlled and changing),
         request_count=len(pre),chains=matches,fallback_lines=fallback,effect_lines=effects,controls=controls,
         reached_arms=sorted(reached),owned_controls_each_arm=bool(controlled),probe_getters_match=getter_match,
         named_getters_after_request=after,changing_getter_ids=changing,probe_getters=getters,
-        scope='ordinary original named API health only; two-counter destruction untested; no player-shot or retail-equivalence claim')
+        scope='ordinary original named API health only; destruction untested; no player-shot or retail-equivalence claim')
 
 
 def level6_self_test():
@@ -460,6 +465,34 @@ def level6_self_test():
         assert not result(events+[extra])['qualified_ordinary']
     assert result(events[:-1])['qualified_health_chain'] and not result(events[:-1])['qualified_ordinary']
     print('level6 fixtures pass: chain links, ownership/detail/route/HP/return, getter and mark-all controls; sensitivity stays separate')
+
+
+def level7_self_test():
+    ident='epoch=1 arm=1 api_seq=1 desc=803105d0 node=80210000 npc=80350000'
+    common=ident+' slot=42 generation=1 handler=8006cbb0 detail=0 source_gate=0 effect_gate=0 subtype=20 message=80400000 source=65535 health_addr=8031063c'
+    events=['[objresp-arm] epoch=1 arm=1',
+        '[objresp-lvl7-control] epoch=1 arm=1 mark_all=1',
+        '[objresp-lvl7-getter] probe_call=1 id=3 returned=0 memory=0',
+        f'[objresp-lvl7-api] stage=pre {ident} base=80310000 slot=42 generation=1 handler=8006cbb0 detail=0 source_gate=0 effect_gate=0 route=named-script name=20_Dest_Tanks_01 hp=50 request=10',
+        f'[objresp-lvl7-building] stage=0 {common}',
+        f'[objresp-lvl7-building] stage=1 {common} pc=8006cfe8 hp=50 store_addr=8031063c store_old=50 store_new=40 request=10',
+        f'[objresp-lvl7-building] stage=3 {common} pc=8006d8c0 hp=40 returned=1',
+        f'[objresp-lvl7-api] stage=post {ident} hp=40 returned=40',
+        '[objresp-lvl7-getter] probe_call=1 id=20 returned=0 memory=0',
+        '[objresp-lvl7-getter] probe_call=1 id=3 returned=1 memory=1']
+    def result(es):return qualify_level6([dict(line=i,event=e) for i,e in enumerate(es)], level=7)
+    assert result(events)['qualified_ordinary']
+    for i in range(len(events)):
+        assert not result(events[:i]+events[i+1:])['qualified_ordinary'],i
+    for old,new in [('base=80310000','base=80310004'),('detail=0','detail=1'),('handler=8006cbb0','handler=800d93c0'),('store_new=40','store_new=41'),('request=10','request=11'),('returned=40','returned=50'),('epoch=1','epoch=2'),('source_gate=0','source_gate=1'),('generation=1','generation=0'),('store_addr=8031063c','store_addr=80310640')]:
+        assert not result([e.replace(old,new) for e in events])['qualified_ordinary'],old
+    for key in ('node','npc','desc','message','generation','source'):
+        bad=[e.replace(key+'=',key+'=bad') if 'stage=3' in e else e for e in events]
+        assert not result(bad)['qualified_ordinary'],key
+    for extra in ('[objresp-lvl7-fallback] stage=0','[objresp-lvl7-building] stage=2',events[3]):
+        assert not result(events+[extra])['qualified_ordinary']
+    assert result(events[:-1])['qualified_health_chain'] and not result(events[:-1])['qualified_ordinary']
+    print('level7 fixtures pass: chain links, ownership/detail/route/HP/return, getter and mark-all controls; sensitivity stays separate')
 
 
 def api_self_test():
@@ -704,7 +737,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('tag', nargs='?', help='fresh TAG_SUFFIX (never overwrite evidence)')
     parser.add_argument('--analyze', action='store_true', help='rebuild the joined table from an existing tag')
-    parser.add_argument('--level', type=int, choices=(0, 1, 2, 3, 4, 5, 6), default=0)
+    parser.add_argument('--level', type=int, choices=(0, 1, 2, 3, 4, 5, 6, 7), default=0)
     parser.add_argument('--flight-vi', type=int, default=5400, help='level 2 activation-aware window, 5400..12000 VI')
     parser.add_argument('--self-test', action='store_true')
     args = parser.parse_args()
@@ -713,6 +746,7 @@ def main():
         building_self_test()
         api_self_test()
         level6_self_test()
+        level7_self_test()
         level3_loss_self_test()
         level4_self_test()
         return 0
