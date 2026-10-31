@@ -499,6 +499,157 @@ def level5_contract(elf, rows):
         next_measurement='One original named API request10 on owned x_wing_wedge; join slot/gen/node/payload/DAT/actor, message5, health writer/return, counter40 original getter and friendlies arithmetic. No lethal dose.')
 
 
+def level6_contract(elf, rows):
+    instructions = {
+        0x8003BDD8: 0x800653F4, 0x8003CA30: 0x8006CF88, 0x80046878: 0xAC82000C,
+        0x80046DBC: 0xAC5275D8, 0x80047B50: 0x8C4475D8, 0x80047B5C: 0x0C011EDC,
+        0x800653B4: 0x27BDFFD8, 0x800653B8: 0xAFB1001C, 0x800653BC: 0x00808821,
+        0x800653C0: 0xAFBF0020, 0x800653C4: 0xAFB00018, 0x800653C8: 0x96220000,
+        0x800653CC: 0x2443FFF4, 0x800653D0: 0x2C620047, 0x800653D4: 0x1040009E,
+        0x800653D8: 0x3C028004, 0x800653DC: 0x2442BDB8, 0x800653E0: 0x00031880,
+        0x800653E4: 0x00621821, 0x800653E8: 0x8C620000, 0x800653EC: 0x00400008,
+        0x800653F0: 0x00000000, 0x800653F4: 0x3C048007, 0x800653F8: 0x2484CBB0,
+        0x800653FC: 0x02202821, 0x80065400: 0x24070028, 0x80065404: 0x9622008A,
+        0x80065408: 0x24060003, 0x8006540C: 0x00C23023, 0x80065410: 0x00063180,
+        0x80065414: 0x34C60001, 0x80065418: 0x08019599, 0x8006541C: 0x30C6FFC1,
+        0x80065664: 0x0C00FFFB, 0x80065668: 0x00000000, 0x8006566C: 0x00401821,
+        0x80065670: 0x3070FFFF, 0x80065674: 0x3C018004, 0x80065678: 0xC420BED4,
+        0x8006567C: 0x3402FFFF, 0x80065680: 0x12020006, 0x80065684: 0xE7A00010,
+        0x80065688: 0xA6230006, 0x8006568C: 0x02002021, 0x80065690: 0x24050003,
+        0x80065694: 0x0C00FA37, 0x80065698: 0x27A60010, 0x80065914: 0x8FA80010,
+        0x80065918: 0x10800004, 0x8006591C: 0x3C028014, 0x80065920: 0x244288A0,
+        0x80065924: 0x00821021, 0x80065928: 0xA045FFFF, 0x8006592C: 0x10C00008,
+        0x80065930: 0x3C028014, 0x80065934: 0x24428060, 0x80065938: 0x24C3FFFF,
+        0x8006593C: 0x00031880, 0x80065940: 0x00621821, 0x80065944: 0x8C620000,
+        0x80065948: 0x00471021, 0x8006594C: 0xAC620000, 0x80065950: 0x11000009,
+        0x80065954: 0x3C028014, 0x80065958: 0x24428060, 0x8006595C: 0x2503FFFF,
+        0x80065960: 0x00031880, 0x80065964: 0x00621821, 0x80065968: 0x8C620000,
+        0x8006596C: 0x8FA40014, 0x80065970: 0x00441021, 0x80065974: 0xAC620000,
+        0x80065978: 0x03E00008, 0x8006597C: 0x00000000, 0x8006CBB0: 0x27BDFF20,
+        0x8006CBB4: 0xAFB500AC, 0x8006CBB8: 0x0080A821, 0x8006CBBC: 0xAFB00098,
+        0x8006CBC0: 0x30A5FFFF, 0x8006CBC4: 0x24A3FFFF, 0x8006CBC8: 0x2C62000B,
+        0x8006CBCC: 0xAFBF00B4, 0x8006CBD0: 0xAFB600B0, 0x8006CBD4: 0xAFB400A8,
+        0x8006CBD8: 0xAFB300A4, 0x8006CBDC: 0xAFB200A0, 0x8006CBE0: 0xAFB1009C,
+        0x8006CBE4: 0xF7BC00D8, 0x8006CBE8: 0xF7BA00D0, 0x8006CBEC: 0xF7B800C8,
+        0x8006CBF0: 0xF7B600C0, 0x8006CBF4: 0xF7B400B8, 0x8006CBF8: 0x8EB10004,
+        0x8006CBFC: 0x1040032F, 0x8006CC00: 0x00C08021, 0x8006CC04: 0x3C028004,
+        0x8006CC08: 0x2442CA20, 0x8006CC0C: 0x00031880, 0x8006CC10: 0x00621821,
+        0x8006CC14: 0x8C620000, 0x8006CC18: 0x00400008, 0x8006CC1C: 0x00000000,
+        0x8006CC20: 0xAEB10008, 0x8006CC24: 0xAE300034, 0x8006CF88: 0x3C128013,
+        0x8006CF8C: 0x8E230034, 0x8006CF90: 0x8E427CE4, 0x8006CF94: 0x2473006C,
+        0x8006CF98: 0x00021080, 0x8006CF9C: 0x00531021, 0x8006CFA0: 0x8C420000,
+        0x8006CFA4: 0x184001E9, 0x8006CFA8: 0x0200B021, 0x8006CFAC: 0x8C6200A0,
+        0x8006CFB0: 0x10400007, 0x8006CFB4: 0x00000000, 0x8006CFB8: 0x0C01B265,
+        0x8006CFBC: 0x00002021, 0x8006CFC0: 0x96030002, 0x8006CFC4: 0x3042FFFF,
+        0x8006CFC8: 0x10620008, 0x8006CFCC: 0x00000000, 0x8006CFD0: 0x8E427CE4,
+        0x8006CFD4: 0x96040006, 0x8006CFD8: 0x00021080, 0x8006CFDC: 0x00531021,
+        0x8006CFE0: 0x8C430000, 0x8006CFE4: 0x00641823, 0x8006CFE8: 0xAC430000,
+        0x8006D264: 0x3C028013, 0x8006D268: 0x8C427CE4, 0x8006D26C: 0x00021080,
+        0x8006D270: 0x00531021, 0x8006D274: 0x8C420000, 0x8006D278: 0x1C400134,
+        0x8006D27C: 0x00000000, 0x8006D6B8: 0x3C028013, 0x8006D6BC: 0x90420B39,
+        0x8006D6C0: 0x54400012, 0x8006D6C4: 0x02A02021, 0x8006D6C8: 0x8E230034,
+        0x8006D6CC: 0x8C620080, 0x8006D6D0: 0xAFA20010, 0x8006D6D4: 0x8E220034,
+        0x8006D6D8: 0x8C420084, 0x8006D6DC: 0xAFA20014, 0x8006D6E0: 0x8C640078,
+        0x8006D6E4: 0x8C65007C, 0x8006D6E8: 0x8C660070, 0x8006D6EC: 0x8C670074,
+        0x8006D6F0: 0x0C019645, 0x8006D6F4: 0x00000000, 0x800C73B8: 0x3403FFFF,
+        0x800C73BC: 0x96020006, 0x800C73C0: 0x10430032, 0x800C7490: 0x8C437CE4,
+        0x800C7494: 0x02003821, 0x800C7498: 0x00031880, 0x800C749C: 0x00671821,
+        0x800C74A0: 0x8C62006C, 0x800C74A4: 0x00521023, 0x800C74A8: 0x00408821,
+        0x800C74AC: 0xAC71006C, 0x800C74B0: 0x94E30000, 0x800C74B4: 0x24020014,
+        0x800C74B8: 0x1462000C, 0x800C74BC: 0x02201021, 0x800C74C0: 0x8CE20080,
+        0x800C74C4: 0xAFA20010, 0x800C74C8: 0x8CE20084, 0x800C74CC: 0xAFA20014,
+        0x800C74D0: 0x8CE40078, 0x800C74D4: 0x8CE5007C, 0x800C74D8: 0x8CE60070,
+        0x800C74DC: 0x8CE70074, 0x800C74E0: 0x0C019645, 0x800C74E4: 0x00000000,
+        0x800C75B4: 0x9042FFFF, 0x800C761C: 0x14800003, 0x800C7620: 0x3C038014,
+        0x800C7624: 0x03E00008, 0x800C7628: 0x00001021, 0x800C762C: 0x24638060,
+        0x800C7630: 0x2482FFFF, 0x800C7634: 0x00021080, 0x800C7638: 0x00431021,
+        0x800C763C: 0x8C420000, 0x800C7640: 0x03E00008, 0x800C7644: 0x00000000,
+        0x800C7754: 0x34420004, 0x800C7788: 0x34420008, 0x80104210: 0x27BDFFE8,
+        0x80104214: 0x24040022, 0x80104218: 0xAFBF0014, 0x8010421C: 0x0C031D87,
+        0x80104220: 0xAFB00010, 0x80104224: 0x24100001, 0x80104228: 0x14500007,
+        0x8010422C: 0x00000000, 0x80104230: 0x0C031DCE, 0x80104234: 0x00000000,
+        0x80104238: 0x0C031F3E, 0x8010423C: 0x24040065, 0x80104240: 0x080410E3,
+        0x80104244: 0x00001021, 0x80104248: 0x0C031D87, 0x8010424C: 0x24040023,
+        0x80104250: 0x1050FFF7, 0x80104254: 0x00000000, 0x80104258: 0x0C031D87,
+        0x8010425C: 0x24040024, 0x80104260: 0x1050FFF3, 0x80104264: 0x00000000,
+        0x80104268: 0x0C031D87, 0x8010426C: 0x24040025, 0x80104270: 0x1050FFEF,
+        0x80104274: 0x00000000, 0x80104278: 0x0C031D87, 0x8010427C: 0x24040026,
+        0x80104280: 0x1050FFEB, 0x80104284: 0x00000000, 0x80104288: 0x0C031D87,
+        0x8010428C: 0x24040027, 0x80104290: 0x1050FFE7, 0x80104294: 0x00000000,
+        0x80104298: 0x0C031D87, 0x8010429C: 0x24040062, 0x801042A0: 0x24030006,
+        0x801042A4: 0x1443000F, 0x801042A8: 0x00000000, 0x801042AC: 0x0C031D67,
+        0x801042B0: 0x24040062, 0x801042B4: 0x1440000B, 0x801042B8: 0x24040062,
+        0x801042BC: 0x0C031D50, 0x801042C0: 0x24050001, 0x801042C4: 0x24040063,
+        0x801042C8: 0x0C031D7B, 0x801042CC: 0x24050001, 0x801042D0: 0x24040064,
+        0x801042D4: 0x0C031F47, 0x801042D8: 0x00002821, 0x801042DC: 0x0C031DAC,
+        0x801042E0: 0x24040001, 0x801042E4: 0x0C031D87, 0x801042E8: 0x24040032,
+        0x801042EC: 0x24030004, 0x801042F0: 0x1443000A, 0x801042F4: 0x00000000,
+        0x801042F8: 0x0C031D67, 0x801042FC: 0x24040063, 0x80104300: 0x14400006,
+        0x80104304: 0x24040063, 0x80104308: 0x0C031D50, 0x8010430C: 0x24050001,
+        0x80104310: 0x24040063, 0x80104314: 0x0C031D7B, 0x80104318: 0x24050001,
+        0x8010431C: 0x0C031D67, 0x80104320: 0x24040028, 0x80104324: 0x24100001,
+        0x80104328: 0x14500003, 0x8010432C: 0x00000000, 0x80104330: 0x0C031DAC,
+        0x80104334: 0x24040002, 0x80104338: 0x0C031D67, 0x8010433C: 0x2404007D,
+        0x80104340: 0x14500003, 0x80104344: 0x00000000, 0x80104348: 0x0C031DAC,
+        0x8010434C: 0x24040003, 0x80104350: 0x0C031D87, 0x80104354: 0x24040063,
+        0x80104358: 0x24030002, 0x8010435C: 0x1443000B, 0x80104360: 0x00001021,
+        0x80104364: 0x0C031D67, 0x80104368: 0x2404000B, 0x8010436C: 0x14400007,
+        0x80104370: 0x00001021, 0x80104374: 0x2404000B, 0x80104378: 0x0C031D50,
+        0x8010437C: 0x24050001, 0x80104380: 0x0C031DDB, 0x80104384: 0x00000000,
+        0x80104388: 0x00001021, 0x8010438C: 0x8FBF0014, 0x80104390: 0x8FB00010,
+        0x80104394: 0x03E00008, 0x80104398: 0x27BD0018, 0x8010443C: 0x03E00008,
+        0x80104440: 0x00001021, 0x80104444: 0x03E00008, 0x80104448: 0x00001021,
+    }
+    for pc, expected in instructions.items():
+        if elf_word(elf, pc) != expected:
+            raise ValueError(f'level6 original instruction changed at {pc:08x}')
+    by_name = {r['name']: r for r in rows if r['kind'] == 0 and r['name']}
+    expected = (
+        ('OBJ_ConYard_Barracks', '00004a2c', 500, (50, 1, 0, 0, 90, 1)),
+        ('OBJ_Factory_01', '00000af4', 650, (50, 1, 125, 1, 90, 1)),
+        ('OBJ_Hangar_01', '000017a8', 500, (50, 1, 121, 1, 90, 1)),
+        ('OBJ_Hangar_02', '00002274', 750, (50, 1, 40, 1, 91, 1)),
+    )
+    for name, offset, hp, effect in expected:
+        row = by_name[name]
+        actual = (row['offset'], row['subtype'], row['words']['6c'],
+                  tuple(row['words'][f'{p:02x}'] for p in range(0x70, 0x88, 4)),
+                  row['words']['88'], row['words']['a0'])
+        if actual != (offset, 0x14, hp, effect, 1, 0):
+            raise ValueError(f'level6 DAT contract changed for {name}: {actual}')
+    return dict(
+        scope='original static contract only; live ownership, damage and objective response unqualified',
+        instruction_checks={f'{pc:08x}': f'{value:08x}' for pc, value in instructions.items()},
+        dat_checked_fields=[0, 0x6c, 0x70, 0x74, 0x78, 0x7c, 0x80, 0x84, 0x88, 0xa0],
+        callback=dict(callback='80104210', reader='80104444', friendlies_saved='returns 0; no counter reads',
+                      counter_reads=[34, 35, 36, 37, 38, 39, 98, 50, 99],
+                      boolean_reads=[98, 99, 40, 125, 11],
+                      failure='any counter34..39 == 1 -> Bit4 and voice101, early return',
+                      success='counter99 == 2 and Boolean11==0 -> Boolean11=1 and Bit8',
+                      intermediate=['counter98==6 and Boolean98==0 -> Boolean98=1, counter99+=1, objective1 complete',
+                                    'counter50==4 and Boolean99==0 -> Boolean99=1, counter99+=1',
+                                    'Boolean40==1 -> objective2 complete',
+                                    'Boolean125==1 -> objective3 complete'],
+                      namespace_warning='Counter40 is not read here; Boolean40 is. Counter98/99 and Boolean98/99 are distinct.'),
+        route=dict(subtype=0x14, setup_table='8003bdd8', setup='800653f4', handler='8006cbb0',
+                   message5_table='8003ca30', message5='8006cf88',
+                   payload='node+4', descriptor='payload+0x34',
+                   health_storage='DAT+0x6c+4*word80137CE4; qualify detail0 only',
+                   source_gate='DAT+a0==0 or message+2 differs from getPlayerField2(0); selected DAT+a0=0',
+                   health_gate='prehealth>0 at8006cfa4; posthealth>0 at8006d278 skips death effect',
+                   damage_writer='8006cfe8 subtracts unsigned message halfword+6',
+                   effect_gate='byte80130B39==0 at8006d6bc/8006d6c0; otherwise effect skipped',
+                   effect_call='8006d6f0', counter_writer='8006594c', counter2_writer='80065974',
+                   boolean_writer='80065928', selected_effect=[50, 1, 0, 0, 90, 1],
+                   effect_tuple_order='counter,delta,boolean,value,counter2,delta2',
+                   limitation='Original named API registered message5 only; FFFF fallback800c74ac/800c74e0 subtracts then applies subtype14 effect without a death threshold. Observe actual route, detail and global effect gate.'),
+        selected=by_name['OBJ_ConYard_Barracks'], candidates=[by_name['OBJ_ConYard_Barracks']],
+        excluded_controls=[by_name[n] for n in ('OBJ_Factory_01', 'OBJ_Hangar_01', 'OBJ_Hangar_02')],
+        exclusions='Barracks also increments counter90; its downstream uses remain unqualified. Factory sets Boolean125, hangar1 Boolean121, hangar2 Boolean40 and counter91. Wingman_01/02 have zero effect counters/Boolean. Radar_Dish subtype0x2a has raw +0x80=98 but its layout/route is unqualified; never interpret its raw tuple as the subtype14 effect.',
+        selection='H-coupled: Barracks has two counters, no direct Boolean. Static route supports ordinary probing only, not lethal admission or a single-counter claim.',
+        next_measurement='One ordinary original named API10 on owned OBJ_ConYard_Barracks, detail0, global80130B39=0; join slot/gen/node/payload/DAT/message/health writer and API return, original getters50/90 and actual changing-value control. No lethal dose; counter90 consumers require proof before a later destruction test.')
+
+
 def check_contract_mutations(elf, data, contract, qualify):
     rejected = []
     for pc in contract['instruction_checks']:
@@ -512,7 +663,7 @@ def check_contract_mutations(elf, data, contract, qualify):
         else:
             raise AssertionError('accepted mutated instruction ' + pc)
     for row in contract['candidates'] + contract['excluded_controls']:
-        for field in (0, 0x6c, 0x70, 0x74, 0x78, 0x7c, 0x80, 0x84):
+        for field in contract.get('dat_checked_fields', (0, 0x6c, 0x70, 0x74, 0x78, 0x7c, 0x80, 0x84)):
             changed = bytearray(data)
             changed[int(row['offset'], 16) + field + (1 if field == 0 else 3)] ^= 1
             try:
@@ -536,6 +687,8 @@ def main():
     ap.add_argument('--mutation-check-level4', action='store_true')
     ap.add_argument('--check-level5', action='store_true')
     ap.add_argument('--mutation-check-level5', action='store_true')
+    ap.add_argument('--check-level6', action='store_true')
+    ap.add_argument('--mutation-check-level6', action='store_true')
     ap.add_argument('--output', type=Path, required=True)
     args = ap.parse_args()
     rom, elf = args.rom.read_bytes(), args.elf.read_bytes()
@@ -560,6 +713,12 @@ def main():
         contract = level5_contract(elf, rows)
         if args.mutation_check_level5:
             contract['mutation_checks'] = check_contract_mutations(elf, data, contract, level5_contract)
+    if args.check_level6 or args.mutation_check_level6:
+        if args.level != 6:
+            ap.error('--check-level6 requires --level 6')
+        contract = level6_contract(elf, rows)
+        if args.mutation_check_level6:
+            contract['mutation_checks'] = check_contract_mutations(elf, data, contract, level6_contract)
     tables = {f'{a:08x}': f'{elf_word(elf, a):08x}' for a in
               (0x8003bdb8 + 24 * 4, 0x8003bed8 + 24 * 4,
                0x8003c140 + 24 * 4, 0x8003bff0 + 36 * 4, 0x800a74c8 + 4 * 4)}

@@ -15,7 +15,7 @@ writer calls, Boolean dumps and result-mode requests separately.
 | 3 | s6671: City_1 script request10 HP2000→1990, then same-owned request1991 HP1990→−1; death effect, counter28 store0→1, callback and explicit getter1. | Named friendly-loss response observed, single-flight dynamic evidence; original DAT/ELF corroborate contracts. Flags4/18/21 and successcounter22 stay0. No player-shot, win, retail-equivalence or fully VERIFIED claim. |
 | 4 | s6674: same-owned Hobbie API10 HP380→370, then request371 HP370→−1; death effect(40,1,0,0,0,1), original counter40 store0→1, callback/getter1. | Named friendly-loss response observed, single-flight dynamic evidence. Original ELF/DAT corroborate contracts. c15/c16/c28 and Boolean26 stay0; SIGSTOP then SIGKILL. Actual getter40 change controls sensitivity. No player-shot, win, retail-equivalence or fully VERIFIED claim. |
 | 5 | s6677: same-owned Wedge API10 health200→190, then one API191 health190→−1; death effectD9D28 tuple(40,1,0,0,0,1) -> writer6594C counter40 0→1 -> callback/original getter1. | Original friendlies=7−(c40+c2); c2>=4 sets Bit4, c4>=9 sets Bit8. Named loss response observed, c2/c4/latches remain0 at stop. Dynamic causality single-flight; no player-shot, retail-equivalence or VERIFIED promotion. Historical id2 writer stays unknown. |
-| 6 | TELE fires; no snapshot value changes; heartbeat occurs in both arms. | Inconclusive: hook execution is not a positive control for detecting changes. Neither full-table coverage nor a valid null is established. |
+| 6 | s6678: original callback/reader plus retail Barracks DAT contract checked; (50,1,0,0,90,1), registered subtype14 route. Saved TELE/heartbeat still lacks value controls. | Static two-counter contract only. Counter90 downstream uses and live ownership/health/response remain unqualified. No controlled null or VERIFIED promotion; ordinary-only probe next. |
 | 7 | tele id2 0>2>3>0, absent ctl; id1 moves in both. | Named response, single-source; id2 semantics are not established for this level. Three a0=1 death requests precede cleanup in both arms. The lv0 id2 threshold does not apply to lvl7. |
 | 8 | tele id6 0>1>2>3>4, ctl get(id6)=0. | Named response, single-source; id6 purpose remains unclassified. Identical Boolean gate sets and a0=2 requests in both arms; no hit-driven end gate. Reset 4>0 is outside the first flight epoch. |
 | 9 | id1/id3/id5 each 0>1 in both arms. | Baseline response; no tele-specific counter transition. The old extra id3 transition came from a later epoch. Both arms request a0=2. |
@@ -1644,3 +1644,69 @@ env ROGUESQ_OBJECTIVE_RESPONSE_LETHAL=1 python3 tools/g1_objective_response_run.
 
 Next: original-backed level6 named objective/target contract, before any live
 instrument. The historical silent level6 heartbeat is not a value control.
+
+## Session 6678: level6 original two-counter target contract
+
+ONE bounded offline tool change; no game build/run. Ground truth is original
+ELF SHA256 `f6809909002b407b339ca0331e54faea895ac2730f15152ab5221307442f6cc9`
+and retail `level/lv_6/dat`, ROM `009662C8`, decoded length78648, SHA256
+`a5c2a4a2882a4e3efc5a44844526517e99387cf827536ec7bd2cd224d9188703`.
+These establish static code/data contracts, not independent live causality.
+
+Original callback80104210..80104398 reads counters34..39/98/50/99 and
+Booleans98/99/40/125/11. Any c34..39==1 sets Bit4, plays voice101 and
+returns early. c98==6 with Boolean98==0 sets that Boolean, increments99
+and completes objective1. c50==4 with Boolean99==0 sets that Boolean and
+increments99. Boolean40/125 complete objectives2/3. c99==2 with Boolean11==0
+sets that Boolean and Bit8. Equality thresholds are exact, not >=. Original
+reader80104444 and slot8010443C both return0 without counter reads. Do not
+borrow the level5 friendlies arithmetic. Counter40 and Boolean40 are distinct;
+the callback does not read counter40. The old fifteen-counter heartbeat was
+outside this callback's counter set; it remains no changing-value control.
+
+| Retail definition | DAT offset | subtype | nominal detail0 HP | effect (counter,delta,Boolean,value,counter2,delta2) | disposition |
+|---|---|---|---|---|---|
+| OBJ_ConYard_Barracks | 4A2C | 14 | 500 | (50,1,0,0,90,1) | ordinary-probe candidate; second counter90 unresolved |
+| OBJ_Factory_01 | 0AF4 | 14 | 650 | (50,1,125,1,90,1) | direct objective Boolean125 coupling |
+| OBJ_Hangar_01 | 17A8 | 14 | 500 | (50,1,121,1,90,1) | Boolean121 coupling |
+| OBJ_Hangar_02 | 2274 | 14 | 750 | (50,1,40,1,91,1) | direct objective Boolean40 coupling |
+
+Offsets/subtypes in the table are hexadecimal. All four have DAT+a0=0 and
+halfword+8A=1. Wingman_01/02 have zero effect counters/Boolean. Radar_Dish
+subtype2A has raw+80=98, but its layout/handler is unqualified; its raw words
+must not be interpreted as a subtype14 effect. This is not an exhaustive
+proof that no other safely isolated level6 target exists.
+
+Original setup table8003BDD8 selects800653F4 for subtype14, then handler
+8006CBB0; setup stores descriptor at payload+34. Message5 table8003CA30
+selects8006CF88, with payload=node+4 and health DAT+6C+4*word80137CE4.
+Require live detail0: other detail indices alias raw effect words and are not
+qualified here. Prehealth<=0 skips at8006CFA4. DAT+a0 nonzero can suppress
+subtraction for a player-source message; selected DAT+a0=0 removes that
+specific source gate. Actual subtraction/store8006CFE4/E8 uses unsigned
+message halfword+6. Posthealth>0 at8006D278 skips death effect. Global
+byte80130B39 nonzero at8006D6BC/C0 also skips it. Otherwise call8006D6F0
+loads all six DAT effect fields; original6594C increments counter50 and
+65974 increments90 for Barracks, with no Boolean store. This names the
+writers and the legitimate two-counter effect; it does not prove live execution.
+FFFF named-API fallback differs: C74AC subtracts and C74E0 applies subtype14
+effect without a death threshold. Never pool that route with registered message5.
+
+H-coupled selected for the Barracks definition; a single-counter interpretation
+is rejected. H-layout is statically resolved only for subtype14. Live availability,
+source/global gates and counter90 downstream consumers stay open. No lethal
+admission, objective-response claim, retail behavioral equivalence or VERIFIED
+promotion. No default/runtime/lib change; no new queued-soak verdicts.
+
+Validation: `tools/g1_dat_inventory.py --level 6 --check-level6
+--mutation-check-level6 --output scratch/agent/s6678_lvl6_contract.json` passes
+294 literal original-ELF anchors and334 mutated negatives: each anchor and
+10 fields on each of four DAT definitions, including counter2, detail/setup
+word88 and source-gate wordA0. Direct `struct.unpack_from` plus name checks
+cross-check all four DAT tuples independently of inventory semantic decoding.
+All19 pre/post inventories and complete prior level5 contract are identical;
+level2/3/4/5 contract regressions, level4/5 mutation suites and objective-runner
+self-tests pass. Proof `scratch/agent/s6678_validation.json`.
+Next: one original named API10 on live owned Barracks with HP>10/detail0,
+join registered handler/message/actual health store and return, original getters
+50/90 and changing-value controls. Keep lethal and generic TELE disabled.

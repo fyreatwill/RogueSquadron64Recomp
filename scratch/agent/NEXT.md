@@ -1,56 +1,66 @@
-# G1(d): level6 original-backed named objective/target contract
+# G1(d): level6 owned ordinary Barracks API health response
 HYPOTHESIS-ID: g1-coverage-cd
 
-s6677 closes level5 named loss response: one same-owned Wedge API10
-health200→190, then opt-in API191 health190→−1; original D9D28 effect
-(40,1,0,0,0,1) ->6594C counter40 0→1 -> callback/original getter1.
-c2/c4/latches stay0, SIGSTOP then SIGKILL. VI4696..6508,107.76s total
-runner wall,0 crashes,6/6 launch hashes. Original ELF/DAT support contracts;
-dynamic causality single-flight; no player-shot/retail equivalence/VERIFIED.
-Proof scratch/agent/s6677_qualification.json. No new queued-soak verdict.
+s6678 closes the bounded offline static contract. Original callback80104210
+reads c34..39/98/50/99; friendlies reader80104444 returns0. Retail Barracks
++4A2C subtype14 nominal detail0HP500, effect(50,1,0,0,90,1). This is TWO
+counters, not an isolated c50 effect. Counter90 consumers remain unqualified;
+no lethal admission. Setup653F4 -> handler6CBB0/message5CF88, health writer
+6CFE8, death gate6D278, effect6D6F0. DAT+a0 source gate(selected0), global
+80130B39 effect gate, live detail and FFFF API fallback must remain explicit.
+294 original anchors/334 mutations pass; all19 inventories and level5 contract
+unchanged. Proof scratch/agent/s6678_validation.json, full semantics/hashes
+in docs/G1-OBJECTIVE-RESPONSE.md s6678. No new queued-soak verdicts.
 
-ONE bounded offline tool change: audit level6 original objective callback,
-friendlies/remaining-count reader and retail DAT definitions. Select one
-named callback-relevant effect and prove its typed setup/message/damage/
-effect route from original ELF before adding any live adapter. Extend the
-existing g1_dat_inventory.py with --check-level6 and mutation fixtures.
-Level6's saved heartbeat without a changed value is not an objective null.
-No aim/steer, wins/progression, repeat ordinary flight or crash-hunt hold.
+ONE bounded opt-in adapter/analyzer change plus one flight: ordinary original
+named API10 on ONE owned OBJ_ConYard_Barracks with detail0, HP>10 and named
+lookup equality. Reuse the original-backed City subtype14 route helpers, NOT
+the wingman actor+38 health layout. Disable level6 generic TELE and every
+lethal branch. No direct health/counter stores. Scope counters/budgets to
+first actual flight epoch, validate selector B40=6 plus executing lv6 callback.
 
 Competing hypotheses:
-H-direct: a typed named victim has a simple effect consumed by a reader/callback;
-select it only if its original handler demonstrably applies those fields.
-H-coupled: the apparent relevant tuples also set failure/success Booleans or
-other counters; enumerate the couplings and find a safer response, don't dose.
-H-layout: common raw DAT offsets are not effects for that subtype; original
-setup/handler uses another layout or activation gate. Keep unknowns explicit.
-DISCRIMINATOR: original ELF reader/callback instructions joined to retail DAT
-name/subtype/health/effect tuple and original setup->message5->health->effect
-contract. Counter/Boolean namespaces must remain distinct. This selects a
-live-probe target or identifies the exact unqualified route; raw tuples alone
-cannot prove behavioral effects or absence. Two source artifacts establish
-static contracts, not live causality or retail behavioral equivalence.
+H-registered: exact owned request dispatches message5 to6CF88, writer6CFE8
+subtracts10 from DAT+6C, health remains positive, API returns the new health.
+H-route: original lookup/dispatcher chooses FFFF fallback or another handler;
+observe it and do not pool its immediate effect with registered damage.
+H-ownership: named DAT definition is not live or ownership/detail/source gates
+differ; record which checked field inhibits the request rather than guessing.
+DISCRIMINATOR: exact API sequence + slot/gen/node/NPC/DAT/message identity,
+registered entry, pre/post health address/store, damage/API return and original
+getters50/90 compared with memory. Carry all keys in one build. An owned
+mark-all candidate must visibly fire in each reached arm; actual changing
+original-getter readbacks are the value-detection control. Silent surviving
+victim counters cannot prove an objective null. Positive health means no
+registered death effect is expected. If fallback appears, stop before issuing
+further damage and classify its effect explicitly. No wins/progression.
 
-Start (bounded reads; never read PORTING-STATE whole):
+Start:
     wc -c < docs/CURRENT-TRUTH.md
-    rg -n 'level.?6|lvl6|lv6|s6656' docs/G1-OBJECTIVE-RESPONSE.md
-    python3 tools/g1_dat_inventory.py --level 6 --output scratch/agent/s6678_lvl6_inventory.json
-    rg -n 'lv6_|level5_contract|check_contract_mutations' ../N64Recomp/RecompiledFuncs/funcs.h tools/g1_dat_inventory.py
-    rg -n 'lv6_' syms/rogue_squadron.syms.toml
-Read bounded windows of matched source/contracts; generated code is a lead,
-original ELF ../rogue_squadron64/build/roguesquadron.elf and retail DAT are
-witnesses. Reuse tools/g1_dat_inventory.py original instruction extraction and
-DAT decoding. Assert every selected instruction/table/data word and mutate
-anchors, subtype/HP/effect fields, and route-specific assumptions. Fixtures
-must reject changed inputs and positively accept the original contract.
+    python3 tools/g1_dat_inventory.py --level 6 --check-level6 --mutation-check-level6 --output scratch/agent/s6679_lvl6_original.json
+    rg -n 'rs6670|level3_hooks|level5_hooks|OBJECTIVE_RESPONSE_LEVEL|FILES' tools/apply_s6657_objective_response.py
+    rg -n 'qualify_level3|api_self_test|choices=|args.level|manifest' tools/g1_objective_response_run.py
+    rg -n 'npcDebrisFieldUpdate|lv6_checkComplexObjectives' ../N64Recomp/RecompiledFuncs/funcs_*.c
+Read bounded windows only. Consult original ELF before new assumptions, using
+mips64-elf-objdump ranges from s6678. Extend existing adapter and analyzer for
+level6, including complete/absent-link/wrong-route/wrong-detail/identity/
+HP/return/getter fixtures; preserve existing level3/4/5 hooks exactly.
 
-After bounded change (no game build/run for this unit):
-    python3 tools/g1_dat_inventory.py --level 6 --check-level6 --mutation-check-level6 --output scratch/agent/s6678_lvl6_contract.json
-    python3 tools/g1_dat_inventory.py --level 5 --check-level5 --mutation-check-level5 --output scratch/agent/s6678_lvl5_regression.json
+After implementing level6 support (current runner choices stop at5):
     python3 tools/g1_objective_response_run.py --self-test
-Compare all19 inventories and existing level5 contract against pre-change
-outputs; record exact original code/data addresses, selected target, couplings
-and unknowns. Write Session6678/CURRENT-TRUTH/response table/NEXT, STATUS and
-OUTCOME, then git add -A and a NEW iter commit. If the original contract offers
-no safely isolated counter, name the precise route proof to obtain next;
-no invented no-discriminator block. Defaults/lib untouched.
+    python3 tools/apply_s6657_objective_response.py ../N64Recomp/RecompiledFuncs
+    python3 tools/apply_s6657_objective_response.py ../N64Recomp/RecompiledFuncs
+    cmake --build build --target RogueSquadron64Recomp -j 6 > scratch/agent/s6679_build.log 2>&1
+    python3 tools/g1_objective_response_run.py s6679_lvl6_ordinary --level 6
+    python3 tools/g1_objective_response_run.py s6679_lvl6_ordinary --level 6 --analyze
+Require 13-file idempotence and hook-free replay through fixup; any full regen
+must follow make_elf -> N64Recomp -> fixup -> cmake. Runner checks screen lock,
+launches from build, records all6 manifest hashes and SIGKILLs the game. Screen
+must be unlocked. No parallel game runs. Never overwrite a tag; if correcting
+and rerunning, suffix v2 and preserve failed evidence. Keep passive instruments.
+
+Qualify ordinary health only when exact joins pass. If getters never actually
+change, explicitly leave counter sensitivity unqualified even if health chain
+passes. No live availability conclusion from static DAT. Counter90 consumers
+must be proven before a later destruction step, not hidden by a guard. Write
+Session6679/CURRENT-TRUTH/response table/NEXT, STATUS/OUTCOME and NEW iter commit.

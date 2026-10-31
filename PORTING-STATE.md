@@ -175098,3 +175098,47 @@ s6677_replay.json,s6677_lvl4_regression.json,s6677_build.log,
 s6677_selftest.log. Full line table/limits docs/G1-OBJECTIVE-RESPONSE s6677.
 Next: one original-backed level6 objective/target contract audit with executable
 ELF/DAT assertions and mutation fixtures before any live instrument.
+
+## Session 6678 (2026-10-31) — qualify level-6 original Barracks two-counter contract
+
+HYPOTHESIS-ID: g1-coverage-cd
+Maintenance check45920 bytes, below60000. No new queued-soak verdict after
+20261028-075640. ONE bounded offline tool change; no game build/run.
+H-direct: simple named callback-relevant effect; H-coupled: additional counters/
+Booleans; H-layout: raw offsets do not denote the apparent effect. Discriminator:
+original ELF callback/reader -> retail DAT tuple -> typed original setup,
+message5, health/death gates and effect writers. Hypotheses recorded in NEXT
+before implementation; original instructions and DAT inspected first.
+
+Original lv6 callback80104210 reads c34..39/98/50/99, not old monitor1..15.
+c34..39==1 sets Bit4/voice101 with early return; c98==6/c50==4 advance99
+through distinct Boolean latches; c99==2/Boolean11==0 sets Bit8. Boolean40/125
+complete objective2/3. Original friendlies reader80104444 returns0; no
+friendlies-counter arithmetic exists there. Old heartbeat remains uncontrolled.
+Retail Barracks+4A2C subtype14 HP500 has effect(50,1,0,0,90,1).
+H-coupled selected: no direct Boolean, but second counter90 is real, its
+consumers unresolved. Factory/hangars couple Boolean125/121/40 and90/91;
+wingmen effects zero; radar2A raw words stay unqualified. No exhaustive
+absence claim or lethal admission.
+
+Original setup653F4 -> handler6CBB0 -> message5 table3CA30/entry6CF88.
+payload=node+4, DAT=payload+34. Detail0 healthDAT+6C; writer6CFE8 subtracts
+unsigned message+6 after prehealth/source gate; posthealth>0 at6D278 skips
+effect6D6F0. Nonzero global80130B39 suppresses effect; DAT+a0=0 for selected
+victim removes player-source immunity. Effect loads complete six-field tuple;
+6594C/65974 legitimately increment50/90, no Boolean. FFFF API fallback lacks
+death threshold; live route must be observed. Original ELF/DAT independently
+establish static contracts only; live identity/availability/response unproven.
+No objective/retail-equivalence/VERIFIED promotion, no default/lib change.
+
+Tool adds --check-level6/--mutation-check-level6:294 original anchors and334
+rejected mutations, including four definitions' subtype/HP/six effect words/
+setup88/sourceA0. Positive original contract accepted. Direct struct decoding
+and names cross-check all four definitions. All19 pre/post inventories and
+full level5 contract identical; level2/3/4/5 regressions, lvl4/5 mutations and
+objective-runner self-tests pass. No runtime instrument/counter-only work:
+landed executable original contract and mutation coverage. Evidence:
+scratch/agent/s6678_lvl6_contract.json,s6678_validation.json and lvl2..5
+regression reports. Full semantics, hashes and limits G1-OBJECTIVE-RESPONSE
+s6678. Next: one owned ordinary Barracks API10 at detail0/HP>10, registered
+health/store/return joins and getters50/90 with live value controls; no lethal.

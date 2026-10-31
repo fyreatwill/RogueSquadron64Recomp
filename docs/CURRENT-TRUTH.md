@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6677 (2026-10-31).
+Compact operational handoff, as of Session 6678 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -505,13 +505,34 @@ hook replay and6/6 launch hashes pass. No direct stores/default/lib changes
 or new soak verdict. Proof:scratch/agent/s6677_qualification.json; full table
 G1-OBJECTIVE-RESPONSE s6677. Next: level6 original-backed target contract.
 
+## s6678 update — level6 original target contract checked
+
+Original callback80104210 reads counters34..39/98/50/99; friendlies reader
+80104444 returns0 without reads. c34..39==1 fails; c98==6/c50==4 increment99
+through separate Boolean latches; c99==2 sets Bit8. Retail Barracks+4A2C,
+subtype14, nominal detail0HP500, effect(50,1,0,0,90,1), has no direct Boolean
+but DOES increment second counter90. H-coupled selected, not a single-counter
+response. Factory/hangars also set Booleans125/121/40. Original setup653F4
+selectsCBB0/message5CF88; writer6CFE8 subtracts message+6, positive health
+skips effect6D6F0. Global byte80130B39 can suppress effect; DAT+a0 controls
+source immunity (selected0). FFFF API fallback lacks the death threshold.
+Counter90 consumers and live ownership/detail/route remain unqualified; no
+lethal admission.294 ELF anchors/334 rejected mutations, direct DAT struct
+checks, all19 unchanged inventories, identical level5 contract, lvl2..5 and
+analyzer regressions pass. Original ELF+DAT support static contracts only;
+no new live response/VERIFIED claim. Old level6 heartbeat is still no value
+control. No build/run/default/lib change or new soaks. Full table/limits:
+G1-OBJECTIVE-RESPONSE s6678; scratch/agent/s6678_validation.json.
+
 ## Next steps (single monotonic backlog)
-1. **G1(d) level6 original-backed named objective/target contract (next unit).**
-   Level5 named loss response closes at s6677. Reconcile saved level6 evidence
-   (heartbeat alone is not a value control), audit its original callback/reader
-   and DAT definitions, then select one typed target/effect route without coupled
-   success/failure flags. Add executable original-ELF/DAT assertions and mutated
-   negative fixtures before any new live adapter. Unknown routes stay explicit.
+1. **G1(d) level6 owned ordinary Barracks API response (next unit).**
+   Static target/route contract closes at s6678; two-counter coupling90 stays
+   explicit. Add one ordinary-only API10 adapter on owned Barracks detail0/HP>10,
+   join slot/gen/node/payload/DAT/message/health store/return and original getters
+   50/90, with owned mark-all and actual changing-value controls. No lethal dose,
+   generic TELE or direct health/counter stores. Unknown counter90 consumers
+   require proof before any later destruction test; do not infer an objective
+   null from an ordinary surviving victim or the historical heartbeat.
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
@@ -533,9 +554,9 @@ G1-OBJECTIVE-RESPONSE s6677. Next: level6 original-backed target contract.
 - Per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence):
   verbatim per-level paragraphs, duplicate coverage, historical backlog and updates.
-- `PORTING-STATE.md` sessions 6656–6677 contain recent chronology; search bounded
+- `PORTING-STATE.md` sessions 6656–6678 contain recent chronology; search bounded
   windows only. Earlier durable context remains in PROJECT-OVERVIEW.
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest remains
-  20261028-075640 (already consumed). No new verdicts in s6677.
+  20261028-075640 (already consumed). No new verdicts in s6678.
 - s6596/s6597 and s6599 were checkpoint close-outs, not reruns. The saved
   s6595/s6598 HUD artifacts retain their original evidence limits.
