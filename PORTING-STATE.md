@@ -175934,7 +175934,7 @@ scanConvertTriangleToSpanTable self 1425 samples + ~1780 in the store-hook chain
 (rs64_m5_writer_parity -> route_value_writer -> pre_dma_writer_store with an unconditional atomic exchange, f5_store_shadow(_post),
 probe_submit_gate_store, s65xx notes, RS64_S5798_ST). Gfx thread: 483 samples (14% of send_dl) in getenv("ROGUESQ_LOG_TRI_DISPATCH")
 called per RDP command in lib/rt64 Interpreter::processRDPLists.
-Selects H-overhead (NEXT.md s6697: H-verts/H-tris/H-ucap/H-overhead).
+Verdict: this selects H-overhead as the largest dd4 term (NEXT.md s6697: H-verts/H-tris/H-ucap/H-overhead); H-verts/H-tris untested.
 Change: tools/apply_s6698_storediag.py (last in the replay list; post-condition: no ungated hook line) prefixes 142,928 hook call
 lines in 51 funcs files with `if (__builtin_expect(g_rs64_store_diag, 0))` and makes RS64_S5798_ST break out first.
 g_rs64_store_diag (main.cpp): ROGUESQ_STORE_DIAG=0/1 forces it; otherwise ON iff any ROGUESQ_LOG_* / *WATCH* / FLOOR_DEPTH_DIR /
