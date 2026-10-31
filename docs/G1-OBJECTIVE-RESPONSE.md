@@ -13,7 +13,7 @@ writer calls, Boolean dumps and result-mode requests separately.
 | 1 | s6661: exact seq4 ordinary hit HP390→386, then seq6 one requested387 dose HP386→−1; death effect, actual id13 store0→1, callback readback four VI later. | Named friendly-loss response observed. Original ELF proves id13>=5 fails and friendlies=19−(40+13+41). Stopped at1, Boolean6=0; no success, retail-equivalence or fully VERIFIED claim. Dynamic chain remains single-source. |
 | 2 | s6668: same-owned rescue01 ordinary HP2000→1990, one requested1991 dose HP1990→−1, original counter40 store0→1, callback memory and getter return1 four VI later. | Named friendly-loss response observed, single-flight dynamic evidence. Original ELF/DAT independently establish damage/death and failure ordering. SIGSTOP before failure flags109/101; no win, progression, retail-equivalence or fully VERIFIED claim. |
 | 3 | s6671: City_1 script request10 HP2000→1990, then same-owned request1991 HP1990→−1; death effect, counter28 store0→1, callback and explicit getter1. | Named friendly-loss response observed, single-flight dynamic evidence; original DAT/ELF corroborate contracts. Flags4/18/21 and successcounter22 stay0. No player-shot, win, retail-equivalence or fully VERIFIED claim. |
-| 4 | Historical id15 0>1>2>3 in both arms; ctl additionally id5 0>1. s6672 original DAT/ELF qualifies x_wing_hobbie as a counter40-only loss target. | Friendlies=6−(40+15); counter15>=3 fails. Counter5 is absent from the callback/reader; Boolean5 is a separate Y-wing effect. s6673 observes exact owned ordinary health370→360; no changing counter control, so no qualified counter null or named response. Historical shared movement is not hit causality. |
+| 4 | s6674: same-owned Hobbie API10 HP380→370, then request371 HP370→−1; death effect(40,1,0,0,0,1), original counter40 store0→1, callback/getter1. | Named friendly-loss response observed, single-flight dynamic evidence. Original ELF/DAT corroborate contracts. c15/c16/c28 and Boolean26 stay0; SIGSTOP then SIGKILL. Actual getter40 change controls sensitivity. No player-shot, win, retail-equivalence or fully VERIFIED claim. |
 | 5 | tele id2 0>1, ctl id2 remains observed 0; id4 observed 0 in both. | Historical failure-counter interpretation; static lv5 tests id2>=4 through Bit4, id4>=9 separately. Does not prove a successful objective response. |
 | 6 | TELE fires; no snapshot value changes; heartbeat occurs in both arms. | Inconclusive: hook execution is not a positive control for detecting changes. Neither full-table coverage nor a valid null is established. |
 | 7 | tele id2 0>2>3>0, absent ctl; id1 moves in both. | Named response, single-source; id2 semantics are not established for this level. Three a0=1 death requests precede cleanup in both arms. The lv0 id2 threshold does not apply to lvl7. |
@@ -1373,3 +1373,65 @@ Next: one same-owned ordinary-then-lethal API pair, stop at actual counter40
 store/getter response before later script progression. The lethal response itself
 can supply a changing-value counter control; a silent counter remains uncontrolled
 unless another actual getter change occurs. Do not repeat ordinary-only holds.
+
+
+## s6674 — level 4 named wingman loss response qualified
+
+One opt-in adapter/analyzer change and one unlocked flight. Independent ground
+truth was checked before instrumenting: retail ELF/DAT332 anchors/380 mutations;
+D9C4C..D9D40 proves positive health skips the death effect and passes the DAT
+six-field effect tuple on death. F2120..F215C establishes array/inline storage.
+Level2/3 original contract regressions still pass. Static contracts are independent
+of the live runtime; dynamic causality remains single-flight/single-source.
+
+The existing adapter now admits exactly one requestHP+1 only after a prior
+same-owned ordinary request10 has actual entry/store/return observations. It
+revalidates canonical slot/free-list ownership, generation, NPC/DAT/actor,
+mode/detail/storage, name lookup, current health and the original effect tuple.
+Counter40 and the monitored loss/success fields must be zero before dosing.
+The actual effect registers/stack arguments, original counter store, callback
+readback and explicit original getter are joined in the analyzer. The flight
+latch permits the dosed response through to getter agreement, then SIGSTOP;
+the runner SIGKILLs its process group. No direct health/counter stores, library
+edit, win/progression test or default changes.
+
+Run: `scratch/agent/m6/g1_lvl4s6674_lvl4_loss/`,113.56s runner wall,
+first flight epochVI4966..6784, B40=4 and lv4 callback. Off/on at4966/6766;
+off2 intentionally not reached.0 crash lines. Exact Hobbie identity:
+DAT803239CC,slot187/gen1,node8021B268,NPC8035F68C,actor80361D58,
+handler800D93C0,mode0/detail0,health address80323A38.
+
+| Link | Observation | run.log line |
+| --- | --- | --- |
+| Ordinary control | seq1 API10 atVI6768; actual F2148 store380→370, damage/API returns370 | 361871..361887 |
+| Same-owned dose | seq2 atVI6776, request371 on observed HP370 | 362819 |
+| Actual accepted message | action5, message80165E80, same node/NPC/DAT/actor | 362823..362825 |
+| Original health writer | F2148, exact actor/address,370→−1; damage/API return−1 | 362827..362871 |
+| Death effect | D9D28 passes(40,1,0,0,0,1) | 362865..362867 |
+| Objective writer |8006594C counter40 0→1, victimNPC8035F68C/DAT803239CC, VI6777 |362869 |
+| Callback and getter | VI6784: initialized c40 0→1, original getter returns1/memory1 |363454..363455 |
+| Stop/safety | c15=0,c16=0,c28=0,Boolean26=0 |363456 |
+
+qualification.json retains the exact joined line table. The dose's actual getter40 0→1 is the
+changing-value counter control missing in s6673; mark-all owned health controls
+also fire in both reached arms. H-death selected for this named victim. H-route
+mismatch and H-identity change were not observed for the qualified pair.
+ORIGIN: original dealDamageToNpc800F2120 store800F2148 legitimately writes
+selected-detail health minus accepted message damage. Original wingman death
+effectD9D28 invokes datItemSetObjectiveBooleanCount; its8006594C store legitimately
+increments counter40. No mitigation-shaped guard/skip/restore was introduced.
+
+Both ordinary and loss analyzers qualify; all6 launch hashes match. Build,
+level2/3/4 analyzer fixtures and inline/array controls pass; missing-link,
+identity/message/storage, wrong dose/effect/writer/getter, unsafe fields and
+duplicate-dose fixtures reject. Saved s6673 ordinary chain still qualifies as
+health only, with its uncontrolled counter-null limitation retained. All13
+adapter outputs are idempotent; hook-free replay of all3 level4 hook groups
+is exact. The replay harness initially removed the wrong number of blank lines;
+corrected removal restores byte identity. No failed game attempts or new queued
+soak verdicts this iteration. Proof: scratch/agent/s6674_qualification.json,
+s6674_replay.json,s6674_selftest.log,s6674_lvl4_original.json.
+
+Named level4 loss response is observed, not player-shot proof, game-invoked
+friendlies-reader proof, retail equivalence or full VERIFIED status. Next:
+original-backed level5 callback/target contract qualification.

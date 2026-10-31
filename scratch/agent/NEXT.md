@@ -1,71 +1,53 @@
-# G1(d): level4 one-shot named loss response
+# G1(d): level5 original objective and target contract
 HYPOTHESIS-ID: g1-coverage-cd
 
-s6673 lands level4 support and one exact owned ordinary wingman health chain.
-Corrected run g1_lvl4s6673_lvl4_ordinary_v2, VI4971..10371/172.03s/0 crashes:
-Hobbie DAT803239CC, slot187/gen1,node8021B268,NPC8035F68C,actor80361D58,
-mode0/detail0, address80323A38. API10 atVI6777 -> message80165E80 -> actual
-F2148 health370→360, damage/API returns360. Getter40 returns0 afterward.
-Health controls fire; NONE of128 original counter getters changes. Analyzer
-exact_health_chain=true but qualified_ordinary=false. This is NOT a controlled
-counter null. First run stopped73.03s/no epoch/no API because adapter compared
-decimal27; correct original subtype is0x27=39. Never pool those attempts.
-Static original contracts from s6672 still stand; dynamic causality single-flight.
+s6674 closes level4 named loss response: one unlocked flight113.56s,0 crashes,
+VI4966..6784. Same-owned Hobbie API10 HP380→370, then request371 HP370→−1;
+original D9D28 tuple(40,1,0,0,0,1), writer6594C counter40 0→1, callback and
+original getter1. c15/c16/c28/Boolean26 stay0. SIGSTOP then SIGKILL before
+later scripts; off2 intentionally not reached. Actual getter40 0→1 controls
+sensitivity. All6 launch hashes and fixture/replay/build checks pass.
+Dynamic evidence single-flight; no player-shot, retail equivalence or VERIFIED
+promotion. Full contracts/evidence: docs/G1-OBJECTIVE-RESPONSE.md s6674.
 
-ONE work unit: extend existing opt-in level4 API/health analyzer for one ordinary
-control and one same-owned lethal request, then one unlocked flight; stop at actual
-counter40 response before later mission script progression. No direct guest health/
-counter stores, player aim, wins or mission-to-mission tests. Do not repeat an
-ordinary-only hold in search of a changing counter. Retail defaults stay unchanged.
+ONE bounded work unit: add original-backed level5 objective/target contract
+qualification to tools/g1_dat_inventory.py. No game build/run this unit.
+First reconcile level5's historical id2 change against the original callback
+and friendlies reader, choose a named relevant DAT target, and qualify the
+handler's storage, damage acceptance and death/effect routing in original ELF.
+Do not assume the wingman or City_1 layout. Preserve unknown DAT layouts.
 
 Hypotheses:
-H-death: the same named actor gets requestHP+1 through original message5, its
-selected-detail health becomes−1, original effectD9D28 passes(40,1,0,0,0,1),
-original writer8006594C increments40; callback and getter return the new value.
-H-route: health depletion happens but original routing does not invoke that tuple
-or counter store. Identify the actual observed branch/arguments, do not add a guard.
-H-identity: live slot/generation, actor, mode/detail/storage or health changes before
-the dose, so a valid same-owned experiment cannot issue. Log the exact eligibility
-failure/retirement; absence is not evidence that the death effect is broken.
-Discriminator: ONE seq-keyed table joining lookup/live ownership/API pre/accepted
-message/live handler arguments/actual actor+address/writer pre+post/return/effect
-args/objective writer/readback/getter plus safety flags. All fields in ONE build.
+H-loss: historical id2 is a named friendly-loss counter, and a retail named
+victim can produce its response through an original damage/death route.
+H-other: id2 has another meaning or a different named counter is the safer
+callback-relevant response. Select from actual original consumers/effects.
+H-route: no simple counter-only victim exists; a registered route has coupled
+Boolean/second-counter effects or a different health contract. Prove the actual
+route and safety stop rather than reusing the level4 assumptions.
+Discriminator: ONE original-source table joining callback/reader counter uses,
+thresholds, retail DAT name/type/effect tuple, setup-handler dispatch, actual
+health store/branch and effect call. Each claimed anchor must be executable
+ELF/DAT-backed with mutation fixtures that reject wrong ids/route/store/tuple.
+These are static contract conclusions only; they cannot prove live availability.
 
-Read original ground truth before edits:
-    python3 tools/g1_dat_inventory.py --level 4 --check-level4 --mutation-check-level4 --output scratch/agent/s6674_lvl4_original.json
-    python3 tools/disasm_mips_elf.py ../rogue_squadron64/build/roguesquadron.elf 0x800D9C4C 0x800D9D40
-    python3 tools/disasm_mips_elf.py ../rogue_squadron64/build/roguesquadron.elf 0x800F2120 0x800F215C
-Read bounded rs6673 helpers/level4_hooks and qualify_level4 in existing tools.
-Current level4 code ALWAYS requests10; merely setting LETHAL does not implement
-this next unit. Generalize fixed api_seq=1 before any claimed dose run. Preserve
-level2/3 and ordinary-only fixtures. Dose opt-in only; without opt-in preserve s6673.
+Exact starting commands:
+    wc -c < docs/CURRENT-TRUTH.md
+    python3 tools/g1_dat_inventory.py --level 5 --output scratch/agent/s6675_lvl5_inventory.json
+    python3 tools/disasm_mips_elf.py ../rogue_squadron64/build/roguesquadron.elf 0x80104118 0x80104208
+    rg -n 'level5|level 5|lv5|s584[3-5]' docs/G1-OBJECTIVE-RESPONSE.md tools/g1_dat_inventory.py
+    rg -n 'check_level4|mutation.*level4|check-level4' tools/g1_dat_inventory.py
+Read bounded windows around hits, not whole large files. Use original ELF
+instructions and retail DAT bytes first; symbols/generated code are navigation
+only. Inventory current tool has NO --check-level5 option: implement it after
+qualification, with subtype setup/handler plus effect/health anchor assertions.
+Add matching negative fixtures, preserve all19 inventories' existing fields,
+and re-run original lvl2/3/4 checks and analyzer self-tests. Do not qualify a
+live hit or infer availability from static data. No direct health/counter writes,
+winning/progression/aim tests, defaults or library edits. If target selection
+needs unknown layout, retain raw words and explicitly say what remains unknown.
 
-Require an actual prior same-owned request10/store/return control. Validate the
-six-field original DAT effect, original name equality, free-list exclusion,
-canonical slot, generation, mode/detail, exact actor/address and positive health.
-Dose once atHP+1 (<65536) only with counter40 initially0 and no failure/success
-state. Never assume nominal400 after natural damage. Ideally issue the pair
-synchronously after validation; otherwise revalidate all identities and health.
-Original array vs inline branches both stay supported. Add real effect args at
-D9D28 and keep actual store observations. Record unused counter2=0/delta2=1
-as original, not a second active effect. Keep named relevance/stop handling level4
-aware: rs6657_flight's observed latch must not close before actual getter join.
-After writer+callback+getter agree, log all counters15/16/28 and Boolean26, then
-SIGSTOP/SIGKILL before unrelated progression. No host-written fake counter control.
-The dose's actual counter change can control sensitivity. If no counter changes,
-report an uncontrolled null unless another actual changing getter controls it.
-
-Test hook-free replay + idempotence on scratch copies, both ordinary/dose fixtures,
-wrong/missing actor/message/writer/getter/ownership/flags/duplicate dose negatives.
-    python3 tools/apply_s6657_objective_response.py ../N64Recomp/RecompiledFuncs
-    python3 tools/g1_objective_response_run.py --self-test
-    cmake --build build --target RogueSquadron64Recomp -j5 > scratch/agent/s6674_build.log 2>&1
-Only AFTER dose support exists, fresh tag, unlocked screen checked by runner:
-    env ROGUESQ_OBJECTIVE_RESPONSE_LETHAL=1 python3 tools/g1_objective_response_run.py s6674_lvl4_loss --level 4
-Keep first flight epoch and phase-relative arms; no stopwatch A/B or run-lifetime
-budgets. Manifest all6 hashes, retain failed attempts separately. One instance at a
-time, run from build with ROM; SIGKILL cleanup. No lib edit expected. If needed,
-export submodule patches before committing. No new soak verdicts in s6673.
-
-Append Session6674, update CURRENT-TRUTH/objective response table with explicit
-control/source limits, rewrite NEXT, STATUS/OUTCOME, git add -A/new iter commit.
+Then write Session6675, update CURRENT-TRUTH/response table and NEXT with the
+single next live unit only if its original contract is qualified. STATUS/OUTCOME,
+git add -A and a new iter commit. No queued-soak verdicts newer than20261028-075640
+were present in s6674. Never repeat G4 crash-hunt holds.

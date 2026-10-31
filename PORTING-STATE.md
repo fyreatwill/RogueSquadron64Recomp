@@ -174898,3 +174898,65 @@ G1-OBJECTIVE-RESPONSE s6673. Compact proof scratch/agent/s6673_qualification.jso
 replay and original checker JSON, selftest/build logs retained. NEXT is one
 same-owned ordinary-then-lethal level4 pair to test counter40 with a real value
 change; do not repeat an ordinary-only hold searching for a counter control.
+
+
+## Session 6674 (2026-10-30) — qualify level-4 named wingman loss response
+
+One opt-in adapter/analyzer change and one unlocked flight. Independent ground
+truth was checked before instrumenting: retail ELF/DAT332 anchors/380 mutations;
+D9C4C..D9D40 proves positive health skips the death effect and passes the DAT
+six-field effect tuple on death. F2120..F215C establishes array/inline storage.
+Level2/3 original contract regressions still pass. Static contracts are independent
+of the live runtime; dynamic causality remains single-flight/single-source.
+
+The existing adapter now admits exactly one requestHP+1 only after a prior
+same-owned ordinary request10 has actual entry/store/return observations. It
+revalidates canonical slot/free-list ownership, generation, NPC/DAT/actor,
+mode/detail/storage, name lookup, current health and the original effect tuple.
+Counter40 and the monitored loss/success fields must be zero before dosing.
+The actual effect registers/stack arguments, original counter store, callback
+readback and explicit original getter are joined in the analyzer. The flight
+latch permits the dosed response through to getter agreement, then SIGSTOP;
+the runner SIGKILLs its process group. No direct health/counter stores, library
+edit, win/progression test or default changes.
+
+Run: `scratch/agent/m6/g1_lvl4s6674_lvl4_loss/`,113.56s runner wall,
+first flight epochVI4966..6784, B40=4 and lv4 callback. Off/on at4966/6766;
+off2 intentionally not reached.0 crash lines. Exact Hobbie identity:
+DAT803239CC,slot187/gen1,node8021B268,NPC8035F68C,actor80361D58,
+handler800D93C0,mode0/detail0,health address80323A38.
+
+| Link | Observation | run.log line |
+| --- | --- | --- |
+| Ordinary control | seq1 API10 atVI6768; actual F2148 store380→370, damage/API returns370 | 361871..361887 |
+| Same-owned dose | seq2 atVI6776, request371 on observed HP370 | 362819 |
+| Actual accepted message | action5, message80165E80, same node/NPC/DAT/actor | 362823..362825 |
+| Original health writer | F2148, exact actor/address,370→−1; damage/API return−1 | 362827..362871 |
+| Death effect | D9D28 passes(40,1,0,0,0,1) | 362865..362867 |
+| Objective writer |8006594C counter40 0→1, victimNPC8035F68C/DAT803239CC, VI6777 |362869 |
+| Callback and getter | VI6784: initialized c40 0→1, original getter returns1/memory1 |363454..363455 |
+| Stop/safety | c15=0,c16=0,c28=0,Boolean26=0 |363456 |
+
+qualification.json retains the exact joined line table. The dose's actual getter40 0→1 is the
+changing-value counter control missing in s6673; mark-all owned health controls
+also fire in both reached arms. H-death selected for this named victim. H-route
+mismatch and H-identity change were not observed for the qualified pair.
+ORIGIN: original dealDamageToNpc800F2120 store800F2148 legitimately writes
+selected-detail health minus accepted message damage. Original wingman death
+effectD9D28 invokes datItemSetObjectiveBooleanCount; its8006594C store legitimately
+increments counter40. No mitigation-shaped guard/skip/restore was introduced.
+
+Both ordinary and loss analyzers qualify; all6 launch hashes match. Build,
+level2/3/4 analyzer fixtures and inline/array controls pass; missing-link,
+identity/message/storage, wrong dose/effect/writer/getter, unsafe fields and
+duplicate-dose fixtures reject. Saved s6673 ordinary chain still qualifies as
+health only, with its uncontrolled counter-null limitation retained. All13
+adapter outputs are idempotent; hook-free replay of all3 level4 hook groups
+is exact. The replay harness initially removed the wrong number of blank lines;
+corrected removal restores byte identity. No failed game attempts or new queued
+soak verdicts this iteration. Proof: scratch/agent/s6674_qualification.json,
+s6674_replay.json,s6674_selftest.log,s6674_lvl4_original.json.
+
+Named level4 loss response is observed, not player-shot proof, game-invoked
+friendlies-reader proof, retail equivalence or full VERIFIED status. Next:
+original-backed level5 callback/target contract qualification.

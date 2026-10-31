@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6673 (2026-10-30).
+Compact operational handoff, as of Session 6674 (2026-10-30).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -299,6 +299,24 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   scratch/agent/s6673_qualification.json; G1-OBJECTIVE-RESPONSE s6673.
   Next: same-owned ordinary-then-lethal pair to test named counter40 effect.
 
+
+- **G1(d) level4 named loss response observed (s6674).** One unlocked flight,
+  113.56s runner wall,VI4966..6784,0 crashes. Same Hobbie slot187/gen1,
+  node8021B268,NPC8035F68C,DAT803239CC,actor80361D58,mode0/detail0,
+  health80323A38: seq1 API10 actual F2148 store380→370/returns370;
+  seq2 request371 actual370→−1/returns−1. Death effectD9D28 passes original
+  tuple(40,1,0,0,0,1); writer8006594C counter40 0→1 atVI6777; callback
+  and original getter read1 atVI6784. c15/c16/c28 and Boolean26 stay0.
+  SIGSTOP then SIGKILL; off2 intentionally not reached. Actual getter40
+  0→1 supplies the counter control missing in s6673; both analyzers qualify.
+  Original ELF/DAT332 anchors/380 mutations independently support contracts;
+  dynamic causality single-flight, no player-shot/retail-equivalence/full
+  VERIFIED claim. All6 launch hashes, build, fixtures, original lvl2/3
+  regressions,13-file idempotence and3 hook-free replays pass. No direct
+  stores/default/lib edits or new soak verdicts. Evidence:
+  scratch/agent/s6674_qualification.json; G1-OBJECTIVE-RESPONSE s6674.
+  Level4 response unit closes; next: level5 original objective/target contract.
+
 ## Superseded conclusions — do not act on these
 
 - s6673 first adapter treated wingman subtype “27” as decimal27. Believable
@@ -409,7 +427,7 @@ One line each: claim (superseded by; why it was believable).
 
 Playable levels are 0..18 (`NUM_LEVELS=0x13`); 19/20 are sentinels. Route/hold
 coverage and framebuffer presence are distinct from objective response.
-Level 1 has a retail flight match. Level 0/1/2/3 named counter responses are
+Level 1 has a retail flight match. Level 0/1/2/3/4 named counter responses are
 observed; remaining objective response coverage is partial. No level is promoted
 here to fully VERIFIED. See [framebuffer coverage](G1-FRAMEBUFFER-COVERAGE.md)
 and [objective contracts, evidence and limits](G1-OBJECTIVE-RESPONSE.md).
@@ -436,13 +454,12 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **G1(d) level4 named loss response (next unit).** s6673 supplies an exact
-   owned ordinary health chain, but no changing counter control. Extend that
-   opt-in adapter for ONE request10 control then ONE same-owned HP+1 dose,
-   requiring both actual storage/return joins, effectD9D28, writer6594C,
-   callback readback and explicit getter40. Stop at response before later
-   mission scripts; no direct stores/wins/progression. A silent counter needs
-   another actual changing getter control; do not call it a controlled null.
+1. **G1(d) level5 original objective/target contract (next unit).** Reconcile
+   historical id2/id4 evidence with the original callback/friendlies reader,
+   then select a named retail DAT target with relevant effects. Qualify its
+   handler/health/death route in the original ELF before adapting live probes.
+   Add bounded original-backed assertions/mutation controls to the existing
+   inventory tool; no runtime experiment or speculative health layout yet.
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
@@ -464,9 +481,9 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
 - Per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence):
   verbatim per-level paragraphs, duplicate coverage, historical backlog and updates.
-- `PORTING-STATE.md` sessions 6656–6673 contain recent chronology; search bounded
+- `PORTING-STATE.md` sessions 6656–6674 contain recent chronology; search bounded
   windows only. Earlier durable context remains in PROJECT-OVERVIEW.
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest remains
-  20261028-075640 (already consumed). No new verdicts in s6673.
+  20261028-075640 (already consumed). No new verdicts in s6674.
 - s6596/s6597 and s6599 were checkpoint close-outs, not reruns. The saved
   s6595/s6598 HUD artifacts retain their original evidence limits.
