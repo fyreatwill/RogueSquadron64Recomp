@@ -10815,6 +10815,31 @@ static ultramodern::input::connected_device_info_t get_connected_device_info(int
 // ---------------------------------------------------------------------------
 // Graphics (SDL2 window creation — rt64 takes over from here)
 // ---------------------------------------------------------------------------
+// G1f (s6688): window size follows the game aspect, fullscreen toggle, ROGUESQ_FULLSCREEN=1.
+// rs64_g1f_* are filled by rs64_g1d_apply_aspect_policy() before the window exists.
+static SDL_Window* g_rs64_window = nullptr;
+static std::atomic<bool> g_rs64_fs_toggle{false};
+static int rs64_g1f_win_w = 640, rs64_g1f_win_h = 480;
+static bool rs64_g1f_fullscreen = false;
+static bool rs64_g1f_optin = false;  // ASPECT or FULLSCREEN set: high-DPI drawable; unset = retail window
+
+// Size a window of aspect r to ~90% of the usable desktop of display 0.
+static void rs64_g1f_fit_window(double r) {
+    SDL_Rect ub{0, 0, 1280, 800};
+    if (SDL_WasInit(SDL_INIT_VIDEO) && SDL_GetDisplayUsableBounds(0, &ub) != 0) ub = {0, 0, 1280, 800};
+    double h = ub.h * 0.9, w = h * r;
+    if (w > ub.w * 0.9) { w = ub.w * 0.9; h = w / r; }
+    rs64_g1f_win_w = ((int)w) & ~1;
+    rs64_g1f_win_h = ((int)h) & ~1;
+}
+
+static void rs64_g1f_apply_fs_toggle() {
+    if (!g_rs64_window || !g_rs64_fs_toggle.exchange(false)) return;
+    const bool fs = (SDL_GetWindowFlags(g_rs64_window) & SDL_WINDOW_FULLSCREEN) != 0;
+    SDL_SetWindowFullscreen(g_rs64_window, fs ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
+    fprintf(stderr, "[g1f] fullscreen %s\n", fs ? "off" : "on");
+}
+
 ultramodern::gfx_callbacks_t::gfx_data_t create_gfx() {
     SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "permonitorv2");
     SDL_SetHint(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, "0");
@@ -10831,6 +10856,14 @@ ultramodern::gfx_callbacks_t::gfx_data_t create_gfx() {
         const bool win = ev->type == SDL_WINDOWEVENT &&
             (ev->window.event == SDL_WINDOWEVENT_FOCUS_GAINED ||
              ev->window.event == SDL_WINDOWEVENT_FOCUS_LOST);
+        // G1f: F11, Alt+Enter, Cmd+Ctrl+F toggle fullscreen; applied by update_gfx on the main thread.
+        if (ev->type == SDL_KEYDOWN && !ev->key.repeat) {
+            const SDL_Keycode k = ev->key.keysym.sym;
+            const Uint16 m = ev->key.keysym.mod;
+            if (k == SDLK_F11 || (k == SDLK_RETURN && (m & KMOD_ALT)) ||
+                (k == SDLK_f && (m & KMOD_GUI) && (m & KMOD_CTRL)))
+                g_rs64_fs_toggle.store(true);
+        }
         static std::atomic<int> any{0};
         const bool first = any.fetch_add(1) < 40;
         if (first) { fprintf(stderr, "[keywitness] anyevent type=0x%X\n", (unsigned)ev->type); fflush(stderr); }
@@ -10855,13 +10888,16 @@ ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::
     SDL_Window* sdl_window = SDL_CreateWindow(
         "Star Wars: Rogue Squadron 64 Recompiled",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        640, 480,
-        SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN
+        rs64_g1f_win_w, rs64_g1f_win_h,
+        SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN | (rs64_g1f_optin ? SDL_WINDOW_ALLOW_HIGHDPI : 0) |
+            (rs64_g1f_fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0)
     );
     if (!sdl_window) {
         fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
         exit(EXIT_FAILURE);
     }
+    g_rs64_window = sdl_window;
+    fprintf(stderr, "[g1f] window %dx%d fullscreen=%d\n", rs64_g1f_win_w, rs64_g1f_win_h, (int)rs64_g1f_fullscreen);
 #if defined(_WIN32)
     SDL_SysWMinfo wm{};
     SDL_VERSION(&wm.version);
@@ -10872,6 +10908,7 @@ ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::
     SDL_VERSION(&wm.version);
     SDL_GetWindowWMInfo(sdl_window, &wm);
     SDL_MetalView view = SDL_Metal_CreateView(sdl_window);
+    { int dw = 0, dh = 0; SDL_Metal_GetDrawableSize(sdl_window, &dw, &dh); fprintf(stderr, "[g1f] drawable %dx%d\n", dw, dh); }
     return ultramodern::renderer::WindowHandle{ wm.info.cocoa.window, SDL_Metal_GetLayer(view) };
 #else
     return sdl_window;
@@ -10891,6 +10928,7 @@ void update_gfx(ultramodern::gfx_callbacks_t::gfx_data_t) {
     // intercepts F1-F4 here (filters run before SDL_PollEvent dequeues), so
     // the controller-input poll on the game thread never sees those keys.
     SDL_PumpEvents();
+    rs64_g1f_apply_fs_toggle();
 }
 
 // ---------------------------------------------------------------------------
@@ -11105,9 +11143,32 @@ static void rs64_g1c_apply_dd_policy() {
 // G1d (s6121): ROGUESQ_ASPECT=<w>:<h> with w/h > 4:3 derives the game-side widescreen
 // knobs (framebuffer width = round(448*r), projection + viewport scales = width/512).
 // Explicit ROGUESQ_FB_WIDTH / VPW_SCALE / ASPECT_SCALE win. 4:3, orig, expand: untouched (retail).
+// G1f (s6688): ROGUESQ_ASPECT=auto takes the aspect of display 0 (clamped to 4:3..1024/448,
+// the verified framebuffer widths) and rewrites itself to "<r>:1" for both consumers;
+// the window opens at the game aspect, sized to the desktop. ROGUESQ_FULLSCREEN=1 starts
+// in desktop fullscreen. Game width is fixed at boot: a later resize letterboxes.
 static void rs64_g1d_apply_aspect_policy() {
+    const char* fs = std::getenv("ROGUESQ_FULLSCREEN");
+    rs64_g1f_fullscreen = fs && std::atoi(fs) != 0;
     const char* as = std::getenv("ROGUESQ_ASPECT");
+    rs64_g1f_optin = as || rs64_g1f_fullscreen;
+    if (!rs64_g1f_optin) return;
+    SDL_InitSubSystem(SDL_INIT_VIDEO);  // refcounted; create_gfx's SDL_Init keeps it
+    if (as && !std::strcmp(as, "auto")) {
+        SDL_DisplayMode dm{};
+        double r = 4.0 / 3.0;
+        if (SDL_GetDesktopDisplayMode(0, &dm) == 0 && dm.h > 0) r = (double)dm.w / dm.h;
+        r = std::clamp(r, 4.0 / 3.0, 1024.0 / 448.0);
+        char rb[32];
+        std::snprintf(rb, sizeof rb, "%.4f:1", r);
+        setenv("ROGUESQ_ASPECT", rb, 1);
+        std::fprintf(stderr, "[g1f] ROGUESQ_ASPECT=auto display=%dx%d -> %s\n", dm.w, dm.h, rb);
+        as = std::getenv("ROGUESQ_ASPECT");
+    }
     const char* c = as ? std::strchr(as, ':') : nullptr;
+    double wr = c ? std::atof(as) : 0.0, hr = c ? std::atof(c + 1) : 0.0;
+    rs64_g1f_fit_window(wr > 0.0 && hr > 0.0 ? std::clamp(wr / hr, 4.0 / 3.0, 1024.0 / 448.0) : 4.0 / 3.0);
+    if (!c && !rs64_g1f_fullscreen) { rs64_g1f_win_w = 640; rs64_g1f_win_h = 480; }
     if (!c) return;
     double w = std::atof(as), h = std::atof(c + 1);
     if (!(w > 0.0 && h > 0.0) || w / h <= 4.0 / 3.0 + 1e-3) return;
