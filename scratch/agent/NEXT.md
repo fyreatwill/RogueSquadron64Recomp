@@ -1,21 +1,21 @@
-# NEXT: 21:9 level-select tear — which RT64 depth step rejects the floor at w=1024
+# NEXT: 21:9 level-select tear: where is the 1024-wide depth clear lost?
 HYPOTHESIS-ID: g1d-levelselect-rt64-depth
 
-s6692: RDP input is equivalent at 16:9/21:9 (same floor loads, ~1000 lower tris z-compare on, Z in
-range, one full-screen depth clear FFFCFFFC 0..W-1 x 0..339 per frame); CULL_SPIKE=0 still torn; only
-RT64 native-swap writes the depth rows. Frames: scratch/agent/s6692_floorsrc/t21.png (floor + front
-console ring missing) vs t16.png. Harness: scratch/agent/s6692_floorsrc/ab.py (census in run.log).
+s6693 census (scratch/agent/s6693_depthrl, ab.py; fc/ subdir for fast-clear arms): at 21:9 the depth
+fb 00B56000 is always h=339 lastWriteType=Depth diff=0 in fullSync; at 16:9 the 796 fb is h=340 lwt=Color
+diff=1 (clear copied colour->depth each frame). Reload kill-switches only modulate; NO_DEPTH_FASTCLEAR no effect.
 
-Hypotheses (all in lib/rt64; edits need submodule-patches/export.sh + commit):
-- H-reload: after the depth clear, RT64 reloads depth from RDRAM (copyFromChanges / RAM->native
-  upload) and the RDRAM image holds last frame's (or partial) depth, so near geometry fails the test.
-  s6625 saw copyFromChanges replace cleared pixels (single-source).
-- H-size: RT64 sizes the depth target from cimg width but the fill/clear covers 340 rows and the
-  write-back covers 339 (depth-read h=339) — row/stride mismatch at 1024 shifts the depth by rows.
-- H-writeback: native-swap depth write-back granularity (35840 B chunks = 17.5 rows at w1024)
-  leaves half-rows that the next frame's reload treats as changed.
-Discriminator (one build, two env arms, same run pair): an RT64 env kill-switch that skips the
-RAM->depth reload for the depth image (or forces a GPU-side clear after any reload), run 21:9 with
-and without it, score with g1d_row_noise.py. Torn->clean selects H-reload; still torn -> log the
-depth target dims vs fill rect (H-size). Positive control: the 16:9 arm stays clean with the switch on.
-Then send owner the before/after 21:9 level-select frames. After that: G3d turning-shake.
+Hypotheses:
+- H-cimg: at 21:9 the clear pair's cimg differs (width != 1024, or address != 00B56000, e.g. 00B55FFx),
+  so get() keys/sizes it elsewhere. Then the draw pair's depth fb never sees it.
+- H-manager: the clear is applied only in the workload-queue fbManager (as type Depth via the fast path, or
+  as Color), and the state-thread manager used by fullSync never learns it. That is harmless at 16:9 only
+  because the 16:9 pairs take fullSync for the clear pair too.
+- H-skip: the clear pair is dropped (drawColorRect empty or flushed) before submitFramebufferPair at 1024.
+Discriminator (one build, one 21:9 + one 16:9 run): under ROGUESQ_LOG_DEPTH_PAIR, also log every pair with
+fillRectOnly=1 in submitFramebufferPair (cimg addr/width/siz/rect, clearDepthOnly) and in fullSync
+getFramebufferPairs (whether reached, colorFb addr/h/lwt after the write), keyed by submissionFrame.
+Clear pair at 21:9 with a different addr/width -> H-cimg; reaches submit but not fullSync -> H-manager;
+absent from submit -> H-skip. Positive control: 16:9 clear pair shows up in both and sets lwt=Color.
+Then fix the cause and score 21:9 level-select with g1d_row_noise (target vhf < 7). Send the owner the
+before/after frames. After that: G3d turning-shake.

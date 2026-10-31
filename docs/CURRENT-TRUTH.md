@@ -48,6 +48,10 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   on/off torn (s6691). Writer watch on 4 depth words in the torn rows: only RT64 native-swap depth
   write-back writes them during select (no guest store). So the input is equivalent; the loss is in
   RT64's depth/target handling at w=1024 (s6625 saw copyFromChanges overwrite the cleared depth).
+  s6693: reload kill-switches only modulate (vhf 19->11, not clean); NO_DEPTH_FASTCLEAR no effect.
+  [depth-pair] census: 21:9 depth fb 00B56000 stays h=339 lastWriteType=Depth diff=0 every pair,
+  while 16:9 fb 00B7BD80 is h=340 lastWriteType=Color diff=1: the 340-row clear never registers
+  against the 1024-wide depth fb, so depth is never cleared per frame (single-source).
 - **G3c (owner visual report): engineering closed, owner judgement pending.**
   (a) far-edge stair: no opt-in rougher than retail (s6449, s6544);
   (b) spike wedges: H-hw-draws, angrylion lights the same 16/79 wedges
@@ -665,8 +669,9 @@ so statically they should be owned on the scripted route (H-load over H-prox).
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
 1. **21:9 level-select tear: RT64 depth side (s6692 localized it there).** RDP input is equivalent
-   at 16:9 and 21:9; find which RT64 depth step rejects the floor at w=1024 (RAM->depth reload after
-   the clear, depth target size/tiling, write-back granularity). See scratch/agent/NEXT.md.
+   at 16:9 and 21:9. s6693: the 1024-wide clear pair never registers on the depth fb (h=339, lwt=Depth);
+   log the clear pair's cimg (addr/width/height) in submit + fullSync to name where it is lost, then fix.
+   Env tools: ROGUESQ_LOG_DEPTH_PAIR, ROGUESQ_DEPTH_RELOAD, ROGUESQ_NO_DEPTH_FASTCLEAR. See NEXT.md.
 2. **G3d turning-shake timing follow-up** (ITERATION 3c).
 3. **(PARKED by owner) G1(d) level8 live ownership + disable response.** s6687
    contract: extend g1_objective_response_run.py to level 8. One run with

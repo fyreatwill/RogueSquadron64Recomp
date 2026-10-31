@@ -175759,3 +175759,44 @@ Verdict: this selects H-rt64-depth (the loss is downstream of the RDP stream) an
 H-load-geometry, H-split-draw (NEXT s6691) plus H-spikecull and H-guest-depth-writer. Next
 discriminator: an RT64 kill-switch for the RAM->depth reload, 21:9 on/off + 16:9 control, scored with
 g1d_row_noise.py (torn->clean selects H-reload; still torn -> H-size, depth target 339 vs clear 340 rows).
+
+## Session 6693 (2026-10-31) — 21:9 level-select tear: RAM->depth reload and the clearDepthOnly fast path are refuted as sole causes; the 1024-wide depth fb never registers the per-frame clear
+
+What ran: one RT64 build (lib/rt64/src/hle/rt64_state.cpp, exported to submodule-patches/rt64.patch)
+adding `ROGUESQ_DEPTH_RELOAD=skip|clear|nocopy` (fullSync depth reload kill-switches),
+`ROGUESQ_NO_DEPTH_FASTCLEAR=1` (disable the clearDepthOnly fast path) and `ROGUESQ_LOG_DEPTH_PAIR=1`
+([depth-pair] per fullSync pair: fb range, w/h/readHeight, lastWriteType, isLastWriteDifferent,
+lastWriteRect; [depth-reload]; [depth-fastclear]). Harness scratch/agent/s6693_depthrl/ab.py
+(g1d_floor_inputs.run_arm, scorer g1d_row_noise vhf, clean 3.8-6.8, torn 15-28). 9 runs, 0 crashes.
+(First attempt aborted on `FixedRect::left()` of a null lastWriteRect in my log; fixed with isNull.)
+
+Scores, level-select frames VI 1350-1650 (later frames are post-select, clean in every arm):
+| arm | select-frame vhf |
+|---|---|
+| 21:9 base | 15.3-21.3 (torn) |
+| 21:9 reload=skip | 10.5-11.5 |
+| 21:9 reload=clear | 9.5-11.4 |
+| 21:9 reload=nocopy | 23.5-25.0 (no-op at 21:9: diff is always 0) |
+| 21:9 NO_DEPTH_FASTCLEAR | 20.7-23.7 (torn) |
+| 21:9 fast clear on (repeat base) | 11.0, 19.2-20.3 |
+| 16:9 base / reload=skip / NO_FASTCLEAR | 5.1 / 5.6-6.8 / 5.1 (clean: positive control) |
+
+Census (same runs): at 16:9 the 796-wide depth fb 00B7BD80 reads `h=340 lastWriteType=Color diff=1
+lwr=0,0 796x340` on every pair, so the clear (fill FFFC with cimg = zimg) reaches the depth target
+via copyFromTarget each frame. At 21:9 the 1024-wide depth fb 00B56000-00BFF800 reads `h=339
+lastWriteType=Depth diff=0 lwr 1023x339` on all ~590 pairs: the state-thread FramebufferManager never
+sees the 340-row colour write. A 340-row get() would raise maxHeight to 340 and set lwt=Color. The
+640-wide fbs at both aspects behave like 16:9. [depth-fastclear] shows identical conditions at both widths
+(prev pair fillRectOnly=1, siz=2, rect bottom 340), so the fast path is not the width split. Only one
+RAM->depth reload per run (rows=339 at start).
+
+Reading: the depth is not cleared per frame at 21:9. The level-select camera is static, so the floor
+is redrawn at the same Z it wrote last frame and the strict compare rejects it in stripes. That
+fits a one-time reload change (skip/clear) shifting the score for the whole run without fixing it.
+Rules out: H-reload as the cause (it modulates, does not cure), clearDepthOnly fast path (kill switch
+no effect), H-writeback chunking (diff never set, so no reload chain to feed). Selects: the 1024-wide
+clear pair is not registered against fb 00B56000 in the fullSync/submit bookkeeping (H-clear-lost).
+The cause is still open: either a different FramebufferManager instance (the workload queue keeps
+its own fbManager, which the fast path updates as type Depth), or the clear pair carries a different
+cimg width/address at 21:9. Single-source so far (one census, two arms agreeing).
+ORIGIN: no mitigation landed; kill switches are diagnostic, default off.
