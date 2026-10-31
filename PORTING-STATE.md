@@ -175541,3 +175541,11 @@ G1-OBJECTIVE-RESPONSE doc).
 Next: live level-8 run for car ownership, plus the kind of message the
 request API emits. Never send hull damage, because it fails the mission.
 Verdict: this selects H-load (train cars are ungated condition-list spawns) and refutes H-prox and H-none, statically and single-source. Next discriminator: the per-car desc+6 slot in one level-8 run, plus the msg+4 kind the request API writes.
+
+## s6688 (housekeeping iteration, no experiment run)
+Committed the pending owner G1f change in src/main/main.cpp (bcede238c):
+ROGUESQ_ASPECT=auto sizes the window to display 0 aspect (clamped 4:3..1024/448),
+ROGUESQ_FULLSCREEN=1, and F11 / Alt+Enter / Cmd+Ctrl+F toggle fullscreen. It is
+opt-in; with neither env var the window is the retail 640x480. NOT built or run
+in this session, so it is unverified. No game run, no regen, nothing under lib/.
+Next: unchanged, the G1(d) level-8 run in scratch/agent/NEXT.md.
