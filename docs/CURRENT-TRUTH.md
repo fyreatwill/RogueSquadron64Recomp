@@ -36,29 +36,20 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   801163E4 as heap; at wide aspect that is the live depth image, and RT64's depth write-back
   overwrote the free header the game put there (writer named with ROGUESQ_FLOOR_WATCH). Wider than
   4:3 the game now takes the retail gap==0 branch (heap [slot, slot+fbsize)). 16:9 lvl1 still
-  mission_verified_130s; s6631 level-select tear check not yet re-run with it.
-- **Active thread closed: G1d 21:9 level-select tear (g1d-levelselect-heap).**
-  s6631. The wide gap punch in `buildHeapFreeList` places the `8010FEFC`
-  free-tail header exactly on `801163E4`. A walker that stops at `a >= e4`
-  never cuts it (first binary, `did=0`, overlap unchanged). The fix, aspect
-  > 4:3 only, shortens the previous block and plants the terminator at
-  `e4-0x10`. It does not write the image and does not run at 4:3. Second
-  binary, both widths, screen unlocked: level-select `did=3`. 21:9
-  `e4=0x80B56000` head `0x80961000` cut `0x80A0AFF0` oldsz `0x14B000` newsz
-  `0x14AFF0`; heap end becomes `0x80B56000`. 16:9 end becomes `0x80B7BD80`.
-  Neither width has a malloc covering `0xBB0020`. The 21:9 zlib `0x8000`
-  block ends at `0xB53A20`, below the image. The upload word is
-  `0xFFFCFFFC`, not the memset zero. 16:9 45.9 s / 50 frames, fail [];
-  21:9 45.2 s / 54, fail [] (edge-px and dy reasons gone; dy180 20.11,
-  edges 46.72/31.59). Both floor_frac 1.0, alive, rc -9, 0 crashes.
-  Evidence: `scratch/agent/s6631_heapcap_at/`. Pre-fix baseline remains
-  s6630. Do not skip `rs_memset` or restore depth. OS window stays 640x480.
+  mission_verified_130s. Does not affect the 21:9 level-select tear (s6691 A/B, ROGUESQ_G1D_HEAPSLOT=0).
+- **REOPENED s6691: G1d 21:9 level-select floor tear is NOT closed.** Every 21:9 level-select
+  frame (VI 1400-1700) shows the floor as horizontal stripes of unrelated texels, including s6631's
+  own "passing" frame; 16:9 same-run frames clean. Heapslot on/off (ROGUESQ_G1D_HEAPSLOT=0, same
+  binary) both torn, so neither the s6631 heap cap nor s6689 heapslot is the cause or cure.
+  Scorer: tools/g1d_row_noise.py (side-band vertical dLuma; clean 3.9-6.8, torn 19.1-28.2, self-test
+  passes). The s6611/s6631 edge/dy180 scorer cannot see this tear. Single-source lead: 21:9
+  [floor-tex] floor_frac 0.5 with two combiner modes and dTr=0. Evidence scratch/agent/s6691_recheck/.
 - **G3c (owner visual report): engineering closed, owner judgement pending.**
   (a) far-edge stair: no opt-in rougher than retail (s6449, s6544);
   (b) spike wedges: H-hw-draws, angrylion lights the same 16/79 wedges
   (s6454), `ROGUESQ_CULL_SPIKE` now DEFAULT ON per owner 2026-10-31 (=0 to disable); (c) turning shake: retail 30 fps
   judder (s6455, s6458).
-- **G1d (aspect): level-select floor tear closed (s6631).** Flight radar
+- **G1d (aspect): level-select floor tear OPEN again (s6691, see above).** Flight radar
   inset matches retail (s6610). Extra width is real scene and the left HUD
   stays pinned. Heap `8010FEFC` now stops at the depth pointer when aspect
   is wider than 4:3. The OS window stays 640x480, so wider modes letterbox.
@@ -339,6 +330,11 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   Level4 response unit closes; next: level5 original objective/target contract.
 
 ## Superseded conclusions — do not act on these
+
+- s6631 "21:9 level-select tear closed: heap 8010FEFC stops at the depth image" (s6691: the s6631
+  passing frame is visibly torn; heapslot on/off both torn). Believable because the s6631 scorer
+  (edge columns at x=16/w-17, dy180) flipped from fail to pass with the cap; it never measured the
+  floor rows themselves, and nobody looked at the frame.
 
 - s6673 first adapter treated wingman subtype “27” as decimal27. Believable
   because the prior prose omitted its base; original checker uses0x27 and
@@ -664,8 +660,10 @@ so statically they should be owned on the scripted route (H-load over H-prox).
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **s6631 level-select tear re-check at 21:9** with heapslot + s6690 fix (21:9 hangar SIGBUS closed
-   s6690; 21:9 window geometry + F11 verified s6690, window PNGs are white so use game FB dumps).
+1. **21:9 level-select floor tear (reopened s6691): name what the floor samples.** One build,
+   16:9 vs 21:9: per floor draw, texture image address/width/fmt, tile line/size, the TMEM load
+   source rows, and whether that source range overlaps a colour/depth/heap buffer at 21:9.
+   Score with tools/g1d_row_noise.py. See scratch/agent/NEXT.md.
 2. **G3d turning-shake timing follow-up** (ITERATION 3c).
 3. **(PARKED by owner) G1(d) level8 live ownership + disable response.** s6687
    contract: extend g1_objective_response_run.py to level 8. One run with

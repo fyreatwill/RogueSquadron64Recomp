@@ -467,12 +467,18 @@ def apply_s6689_heapslot(text):
     SIGBUS 0x7FFF0002, s6688/s6689). Wider than 4:3, take the retail gap==0
     branch: heap = [slot, slot + fbsize). Needs apply_s6631_heapcap first
     (rs64_g1d_wide)."""
-    if "PATCH: s6689 heapslot" in text:
+    # s6691: ROGUESQ_G1D_HEAPSLOT=0 restores the gap branch at wide aspect,
+    # for a same-binary A/B of the 21:9 level-select tear.
+    v1 = "    if (ctx->r3 != 0 && !rs64_g1d_wide()) { /* PATCH: s6689 heapslot */\n"
+    v2 = ("    if (ctx->r3 != 0 && !(rs64_g1d_wide() && !(getenv(\"ROGUESQ_G1D_HEAPSLOT\") && "
+          "getenv(\"ROGUESQ_G1D_HEAPSLOT\")[0] == '0'))) { /* PATCH: s6689 heapslot s6691 env */\n")
+    if v2 in text:
         return text, 0
+    if v1 in text:
+        return text.replace(v1, v2, 1), 1
     old = ("    // 0x80001944: bne         $v1, $zero, L_8000197C\n"
            "    if (ctx->r3 != 0) {\n")
-    new = ("    // 0x80001944: bne         $v1, $zero, L_8000197C\n"
-           "    if (ctx->r3 != 0 && !rs64_g1d_wide()) { /* PATCH: s6689 heapslot */\n")
+    new = "    // 0x80001944: bne         $v1, $zero, L_8000197C\n" + v2
     if text.count(old) != 1 or "static int rs64_g1d_wide(void)" not in text:
         return text, 0
     if text.index("static int rs64_g1d_wide(void)") > text.index(old):

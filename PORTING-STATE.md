@@ -175671,3 +175671,49 @@ G1f 21:9 window check (scratch/s6690/win21): window 1360x594 (2720x1188 drawable
 fullscreen 1512x949/3024x1898 -> back to 1360x594. screencapture -l of the Metal window gives a white
 image (s6688 captures were white too), so window PNGs prove geometry only, not content.
 Not done: s6631 level-select tear re-check with heapslot + this fix.
+
+## Session 6691 (2026-10-31) — 21:9 level-select floor tear was never closed: s6631's passing frame is torn too; heapslot neither causes nor cures it
+
+2026-10-31. HYPOTHESIS-ID: g1d-levelselect-recheck. CURRENT-TRUTH 57,376 bytes (no maintenance).
+No new SOAK-RESULTS lines. Screen unlocked (IOConsoleLocked=No). One game at a time, SIGKILL,
+run from build/, current binary (s6690 kSubmitRamMask + s6689 heapslot + CULL_SPIKE default on).
+
+Recipe: tools/g1d_floor_inputs.py run_arm (the s6631 harness: OSMEM 12, LOG_FLOOR, FB dumps
+every 50 VIs, phase-keyed start/z), driven by scratch/agent/s6691_recheck/run.py and ab.py.
+First try wrote no PPMs: a relative output root is resolved against build/ (the game's cwd), so
+ROGUESQ_FB_DUMP_DIR pointed nowhere; the driver now resolves() it (try1_* kept, no frames).
+
+Runs (all alive at kill, rc -9, 0 crash markers, stop tex+dump):
+- 16:9 34.5 s / 52 good frames, s6631 scorer fail [] (dy180 8.37, edges 7.80/7.72).
+- 21:9 heapslot on 57.3 s / 51, scorer fail [overlap, dI, dL, walker-dT, edge-px] (edge_r 19.34).
+- A/B, one binary, ROGUESQ_G1D_HEAPSLOT=1 vs =0 (new env kill-switch, s6691): on 58.4 s / 54,
+  off 58.1 s / 53. heapcap lines confirm the branch flipped: on did=0 fl=0008 (heap = the slot),
+  off did=3 fl=0001 cut=0x80A0AFF0 (the s6631 cap, as in s6631).
+
+Looking at the frames: every 21:9 level-select frame (VI 1400-1700) shows the floor as horizontal
+stripes of unrelated texels, in BOTH heapslot arms and in s6631's own "passing" frame
+(s6631_heapcap_at/wide21/fb_0001400_w1024). 16:9 frames from the same runs are clean. The s6611/
+s6631 step-column + dy180 scorer never measured this (it passed s6631 with edges 46.7/31.6).
+
+New scorer tools/g1d_row_noise.py: mean vertical |dLuma| over the side floor band (rows 180-330,
+outer 22% each side). Self-test (2-row strip shuffle of a clean frame) passes on a 16:9 frame
+(6.77 -> 20.38) and a dark 21:9 hangar frame (5.17 -> 11.71), threshold 10. Scores
+(scratch/agent/s6691_recheck/vhf_scores.json):
+  16:9 this run 6.77/5.69; s6631 16:9 6.80/5.08                      -> clean
+  21:9 level select VI 1400-1700: run2 19.1-23.2, heapslot-on 25.6-28.2, heapslot-off 19.8-22.4,
+  s6631 19.66                                                         -> torn
+  21:9 VI >= 1750 (hangar after select) 3.9-6.0                       -> clean
+A first per-row window-noise metric missed the stripe form (it scored the A/B frames 0 torn);
+replaced, not used.
+
+Selects: tear present at 21:9 regardless of heapslot (both arms, two lines: the s6631 frame and
+three s6691 runs; 16:9 same-run control clean). Rules out H-regress (heapslot/s6690 brought it
+back) and the s6631 conclusion that heap 8010FEFC owning the depth image was the cause: the cap
+fired (did=3) in the off arm and the floor is still torn. Does not say what the floor samples.
+Supporting single-source: [floor-tex] at 21:9 floor_frac=0.5, multi_frac 0.5, two combiner
+modes (omL 00552230 + om2 00552220), dTr=0, tex range 3.6..126 vs 16:9 floor_frac 1.0, one mode,
+tex 0.45..57 — the right half of the floor sample pairs is not the same draw.
+
+Code: tools/apply_s6031_far.py apply_s6689_heapslot now emits the env-gated form
+(ROGUESQ_G1D_HEAPSLOT=0 restores the gap branch at wide aspect; default unchanged), upgrades
+the s6689 line in place; live funcs_0.c patched, build relinked. No lib/ edit.
