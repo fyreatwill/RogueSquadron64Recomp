@@ -24,6 +24,8 @@ static uint32_t rs6657_start, rs6657_arm = 99, rs6657_rows[3], rs6657_hits[3], r
 static int rs6657_level;
 static int rs6661_dosed;
 static int rs6670_forced;
+static uint32_t rs6671_generation[2048];
+static struct { uint32_t node,npc,desc,slot,generation,detail,name,store,effect; int hp,ordinary; } rs6671_control;
 static _Thread_local uint32_t rs6670_api_active;
 static uint32_t rs6666_dat;
 static int rs6668_repeat(uint8_t*, uint32_t, uint32_t, uint32_t);
@@ -61,7 +63,7 @@ static int rs6657_flight(uint8_t* rdram) {
     }
     uint32_t dv = rs64_vi_n_g - rs6657_start;
     uint32_t c1 = rs6657_word(rdram, 0x80138060u), c2 = rs6657_word(rdram, 0x80138064u), c3 = rs6657_word(rdram, 0x80138068u);
-    if ((rs6660_observed && !(rs6657_level == 2 && rs6661_dosed)) || !selected || !flight || dv >= rs6666_limit || (rs6657_level == 0 ? (c1 >= 18 || c2 >= 1 || c3 >= 1) : rs6657_level == 2 ? (rs6657_read_init && ((rs6657_prev[39] && !rs6661_dosed) || MEM_BU(S32((int32_t)0x80138903u), 0) || MEM_BU(S32((int32_t)0x8013890Cu), 0))) : rs6657_level == 3 ? (MEM_BU(S32((int32_t)0x801388A3u),0) || MEM_BU(S32((int32_t)0x801388B1u),0) || MEM_BU(S32((int32_t)0x801388B4u),0) || rs6657_word(rdram,0x801380B4u)) : (rs6657_read_init && (rs6657_prev[12] >= 3 || MEM_BU(S32((int32_t)0x801388A5u), 0))))) {
+    if ((rs6660_observed && !((rs6657_level == 2 || rs6657_level == 3) && rs6661_dosed)) || !selected || !flight || dv >= rs6666_limit || (rs6657_level == 0 ? (c1 >= 18 || c2 >= 1 || c3 >= 1) : rs6657_level == 2 ? (rs6657_read_init && ((rs6657_prev[39] && !rs6661_dosed) || MEM_BU(S32((int32_t)0x80138903u), 0) || MEM_BU(S32((int32_t)0x8013890Cu), 0))) : rs6657_level == 3 ? (MEM_BU(S32((int32_t)0x801388A3u),0) || MEM_BU(S32((int32_t)0x801388B1u),0) || MEM_BU(S32((int32_t)0x801388B4u),0) || rs6657_word(rdram,0x801380B4u)) : (rs6657_read_init && (rs6657_prev[12] >= 3 || MEM_BU(S32((int32_t)0x801388A5u), 0))))) {
         rs6657_done = 1;
         fprintf(stderr, "[objresp-done] epoch=1 vi=%u dv=%u selected=%d flight=%d c=%u,%u,%u forces=%u,%u,%u writes=%u,%u,%u damage=%u,%u,%u\n", rs64_vi_n_g, dv, selected, flight, c1, c2, c3, rs6657_hits[0], rs6657_hits[1], rs6657_hits[2], rs6657_rows[0], rs6657_rows[1], rs6657_rows[2], rs6657_dmg[0], rs6657_dmg[1], rs6657_dmg[2]);
         fflush(stderr); return 0;
@@ -234,7 +236,7 @@ static uint32_t rs6663_descriptor(uint8_t* rdram, uint32_t node, uint32_t* npc, 
 }
 void rs6663_scan(uint8_t* rdram) {
     static int busy;
-    static uint32_t seen[2048][10], generation[2048], birth[2048], last_report = 0xFFFFFFFFu;
+    static uint32_t seen[2048][10], birth[2048], last_report = 0xFFFFFFFFu;
     if (busy || !rs6657_enabled() || (rs6657_level != 2 && rs6657_level != 3) || !rs6657_started || rs6657_done) return;
     busy = 1;
     int valid = rs6663_refresh(rdram);
@@ -262,10 +264,10 @@ void rs6663_scan(uint8_t* rdram) {
         int changed = memcmp(seen[i], values, sizeof(values)) != 0;
         if (changed) {
             if (seen[i][0] && (seen[i][0] != node || seen[i][1] != npc || seen[i][2] != handler))
-                fprintf(stderr, "[objresp-retire] epoch=1 vi=%u arm=%u slot=%u generation=%u birth=%u node=%08x npc=%08x handler=%08x desc=%08x\n", rs64_vi_n_g, rs6657_arm, i, generation[i], birth[i], seen[i][0], seen[i][1], seen[i][2], seen[i][3]);
-            if (node && (!seen[i][0] || seen[i][0] != node || seen[i][1] != npc || seen[i][2] != handler)) { generation[i]++; birth[i] = rs64_vi_n_g; }
+                fprintf(stderr, "[objresp-retire] epoch=1 vi=%u arm=%u slot=%u generation=%u birth=%u node=%08x npc=%08x handler=%08x desc=%08x\n", rs64_vi_n_g, rs6657_arm, i, rs6671_generation[i], birth[i], seen[i][0], seen[i][1], seen[i][2], seen[i][3]);
+            if (node && (!seen[i][0] || seen[i][0] != node || seen[i][1] != npc || seen[i][2] != handler)) { rs6671_generation[i]++; birth[i] = rs64_vi_n_g; }
             memcpy(seen[i], values, sizeof(values));
-            if (node) fprintf(stderr, "[objresp-live] epoch=1 vi=%u arm=%u slot=%u generation=%u birth=%u node=%08x npc=%08x handler=%08x owned=%d typed=%d canonical=%u desc=%08x id=%u delta=%d bool=%u bval=%u id2=%u delta2=%d selected=%d\n", rs64_vi_n_g, rs6657_arm, i, generation[i], birth[i], node, npc, handler, owned, known, owned ? rs6663_half(rdram, node + 0x16) : 0xFFFFu, desc, f[0], (int32_t)f[1], f[2], f[3], f[4], (int32_t)f[5], selected);
+            if (node) fprintf(stderr, "[objresp-live] epoch=1 vi=%u arm=%u slot=%u generation=%u birth=%u node=%08x npc=%08x handler=%08x owned=%d typed=%d canonical=%u desc=%08x id=%u delta=%d bool=%u bval=%u id2=%u delta2=%d selected=%d\n", rs64_vi_n_g, rs6657_arm, i, rs6671_generation[i], birth[i], node, npc, handler, owned, known, owned ? rs6663_half(rdram, node + 0x16) : 0xFFFFu, desc, f[0], (int32_t)f[1], f[2], f[3], f[4], (int32_t)f[5], selected);
         }
     }
     uint32_t report = (rs64_vi_n_g - rs6657_start) / 300 + rs6657_arm * 100;
@@ -483,15 +485,22 @@ void rs6666_spawn(uint8_t* rdram, uint32_t pc, uint32_t desc, uint32_t result) {
 }
 
 void rs6670_building(uint8_t* rdram, recomp_context* ctx, int stage, uint32_t node, uint32_t message, uint32_t action) {
-    if (!rs6657_enabled() || rs6657_level != 3 || !rs6657_started || rs6657_done || action != 5 || !rs6663_owned(rdram,node)) return;
+    if (!rs6657_enabled() || rs6657_level != 3 || !rs6657_started || rs6657_done || action != 5 || (!rs6663_owned(rdram,node) && !(stage==3 && rs6670_api_active && node==rs6671_control.node))) return;
     uint32_t npc=rs6657_word(rdram,node+4), desc=rs6657_desc(rdram,npc), detail=rs6657_word(rdram,0x80137ce4u);
     if (!rs6660_ok(desc) || detail>32 || !rs6660_ok(message)) return;
+    if (stage==3 && rs6670_api_active && node==rs6671_control.node) { npc=rs6671_control.npc; desc=rs6671_control.desc; }
+    if (stage==2 && rs6670_api_active)
+        fprintf(stderr,"[objresp-building-effect] vi=%u api_seq=%u pc=8006d6f0 node=%08x npc=%08x desc=%08x bool=%u bval=%u id=%u delta=%u id2=%u delta2=%u\n",rs64_vi_n_g,rs6670_api_active,node,npc,desc,U32(ctx->r4),U32(ctx->r5),U32(ctx->r6),U32(ctx->r7),rs6657_word(rdram,U32(ctx->r29)+16),rs6657_word(rdram,U32(ctx->r29)+20));
     unsigned m=rs6657_match(npc,desc);
     static unsigned rows[3][4];
     if (m==256 && rows[rs6657_arm][stage]++>=32) return;
     uint32_t address=desc+0x6c+detail*4;
     int hp=(int32_t)rs6657_word(rdram,address);
     uint32_t request=rs6663_half(rdram,message+6);
+    if (rs6670_api_active && node==rs6671_control.node && npc==rs6671_control.npc && desc==rs6671_control.desc) {
+        if (stage==1 && (int32_t)rs6657_word(rdram,U32(ctx->r2))==rs6671_control.hp && (int32_t)ctx->r3==rs6671_control.hp-(int)request && U32(ctx->r2)==address) rs6671_control.store=rs6670_api_active;
+        if (stage==2) rs6671_control.effect=rs6670_api_active;
+    }
     fprintf(stderr,"[objresp-building] epoch=1 vi=%u arm=%u stage=%d api_seq=%u pc=%08x node=%08x npc=%08x desc=%08x name=%s slot=%u handler=%08x message=%08x source=%u subtype=%u detail=%u health_addr=%08x hp=%d request=%u store_old=%d store_new=%d force_seq=%u proj=%08x c28=%u\n",rs64_vi_n_g,rs6657_arm,stage,rs6670_api_active,stage==1?0x8006cfe8u:stage==2?0x8006d6f0u:stage==3?0x8006d8c0u:0x8006cbb0u,node,npc,desc,rs6666_dat&&desc==rs6666_dat+0x48c?"City_1":"other",rs6663_half(rdram,node+0x16),rs6657_word(rdram,node),message,rs6663_half(rdram,message+2),rs6663_half(rdram,desc),detail,address,hp,request,stage==1?(int32_t)rs6657_word(rdram,U32(ctx->r2)):hp,stage==1?(int32_t)ctx->r3:hp,m<256?rs6657_events[m].seq:0,m<256?rs6657_events[m].proj:0,rs6657_word(rdram,0x801380ccu));
 }
 void rs6670_reader(uint8_t* rdram, recomp_context* ctx, uint32_t pc) {
@@ -518,7 +527,13 @@ void rs6670_tick(uint8_t* rdram, recomp_context* ctx) {
         previous[rs6657_arm][i]=got[i];
     }
     initialized[rs6657_arm]=1;
-    if (rs6657_arm!=1 || rs6670_forced || !rs6666_dat) return;
+    if (rs6661_dosed && rs6660_observed && got[2]==rs6660_pending_value && got[2]==rs6657_word(rdram,0x801380ccu)) {
+        fprintf(stderr,"[objresp-done] epoch=1 vi=%u reason=level3-named-response c28=%u getter=%u bool4=%u bool18=%u bool21=%u c22=%u\n",rs64_vi_n_g,got[2],got[2],MEM_BU(S32((int32_t)0x801388a3u),0),MEM_BU(S32((int32_t)0x801388b1u),0),MEM_BU(S32((int32_t)0x801388b4u),0),rs6657_word(rdram,0x801380b4u));
+        rs6657_done=1; fflush(stderr); raise(SIGSTOP); return;
+    }
+    const char* lethal=getenv("ROGUESQ_OBJECTIVE_RESPONSE_LETHAL");
+    int dose=rs6670_forced && lethal && lethal[0]=='1' && rs6671_control.ordinary && !rs6661_dosed;
+    if (rs6657_arm!=1 || (rs6670_forced && !dose) || !rs6666_dat) return;
     uint32_t desc=rs6666_dat+0x48c, name=rs6657_word(rdram,desc+0xc), detail=rs6657_word(rdram,0x80137ce4u);
     if (!rs6660_ok(desc) || name<0x80000400u || name>0x807fff00u || detail>32 || rs6663_half(rdram,desc)!=20) return;
     recomp_context probe=*ctx; probe.r4=S32(name);
@@ -536,12 +551,21 @@ void rs6670_tick(uint8_t* rdram, recomp_context* ctx) {
         fprintf(stderr,"[objresp-api-eligibility] vi=%u arm=%u desc=%08x name_ptr=%08x name_bytes=%02x%02x%02x%02x%02x%02x%02x lookup=%08x slot=%u handler=%08x owned=%u valid=%d\n",rs64_vi_n_g,rs6657_arm,desc,name,MEM_BU(S32((int32_t)name),0),MEM_BU(S32((int32_t)name),1),MEM_BU(S32((int32_t)name),2),MEM_BU(S32((int32_t)name),3),MEM_BU(S32((int32_t)name),4),MEM_BU(S32((int32_t)name),5),MEM_BU(S32((int32_t)name),6),U32(probe.r2),slot,handler,owned,valid);
     }
     if (U32(probe.r2)!=desc || (int32_t)rs6657_word(rdram,desc+0x6c+detail*4)<=10) return;
-    rs6670_forced=1; rs6670_api_active=1;
+    if (!owned || handler!=0x8006cbb0u || slot>=2048) return;
+    if (dose && (node!=rs6671_control.node || npc!=rs6671_control.npc || desc!=rs6671_control.desc || slot!=rs6671_control.slot || rs6671_generation[slot]!=rs6671_control.generation || detail!=rs6671_control.detail || name!=rs6671_control.name)) {
+        fprintf(stderr,"[objresp-dose-inhibit] vi=%u reason=ownership-changed\n",rs64_vi_n_g); rs6671_control.ordinary=0; return;
+    }
     int hp=(int32_t)rs6657_word(rdram,desc+0x6c+detail*4);
-    fprintf(stderr,"[objresp-api] epoch=1 vi=%u arm=%u stage=pre api_seq=1 route=named-script name=City_1 name_ptr=%08x base=%08x desc=%08x slot=%u node=%08x npc=%08x handler=%08x detail=%u hp=%d request=10 c28=%u\n",rs64_vi_n_g,rs6657_arm,name,rs6666_dat,desc,slot,node,npc,handler,detail,hp,got[2]);
-    probe=*ctx; probe.r4=S32(name); probe.r5=10;
+    if (dose && (hp!=rs6671_control.hp || hp<=0 || hp>=65535 || got[2])) { rs6671_control.ordinary=0; return; }
+    uint32_t request=dose?(uint32_t)hp+1:10;
+    rs6670_forced=1; rs6670_api_active=dose?2:1;
+    rs6671_control.node=node; rs6671_control.npc=npc; rs6671_control.desc=desc; rs6671_control.slot=slot; rs6671_control.generation=rs6671_generation[slot]; rs6671_control.detail=detail; rs6671_control.name=name; rs6671_control.hp=hp;
+    if (dose) rs6661_dosed=1;
+    fprintf(stderr,"[objresp-api] epoch=1 vi=%u arm=%u stage=pre api_seq=%u route=named-script name=City_1 name_ptr=%08x base=%08x desc=%08x slot=%u node=%08x npc=%08x handler=%08x detail=%u hp=%d request=%u c28=%u generation=%u\n",rs64_vi_n_g,rs6657_arm,rs6670_api_active,name,rs6666_dat,desc,slot,node,npc,handler,detail,hp,request,got[2],rs6671_generation[slot]);
+    probe=*ctx; probe.r4=S32(name); probe.r5=request;
     dealDamagetoDatItem(rdram,&probe);
-    fprintf(stderr,"[objresp-api] epoch=1 vi=%u arm=%u stage=post api_seq=1 desc=%08x node=%08x npc=%08x hp=%d returned=%d c28=%u\n",rs64_vi_n_g,rs6657_arm,desc,node,npc,(int32_t)rs6657_word(rdram,desc+0x6c+detail*4),(int32_t)probe.r2,rs6657_word(rdram,0x801380ccu));
+    fprintf(stderr,"[objresp-api] epoch=1 vi=%u arm=%u stage=post api_seq=%u desc=%08x node=%08x npc=%08x hp=%d returned=%d c28=%u\n",rs64_vi_n_g,rs6657_arm,rs6670_api_active,desc,node,npc,(int32_t)rs6657_word(rdram,desc+0x6c+detail*4),(int32_t)probe.r2,rs6657_word(rdram,0x801380ccu));
+    if (!dose && rs6671_control.store==1 && !rs6671_control.effect && (int32_t)probe.r2==hp-10 && (int32_t)rs6657_word(rdram,desc+0x6c+detail*4)==hp-10 && hp>10) { rs6671_control.ordinary=1; rs6671_control.hp=hp-10; }
     rs6670_api_active=0;
 }
 

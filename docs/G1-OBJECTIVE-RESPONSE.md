@@ -12,7 +12,7 @@ writer calls, Boolean dumps and result-mode requests separately.
 | 0 | s6657: forced selector B40=0 and lv0 callback; same-flight off/on/off counter1 0→2→13→13, 13 live readback changes, eight exact force/send/store joins. | Named counter1 hit response observed in one instrumented flight, supported by original ELF descriptor-to-counter stores. Dynamic evidence remains single-source; no win, progression, player-shot or retail-equivalence claim. |
 | 1 | s6661: exact seq4 ordinary hit HP390→386, then seq6 one requested387 dose HP386→−1; death effect, actual id13 store0→1, callback readback four VI later. | Named friendly-loss response observed. Original ELF proves id13>=5 fails and friendlies=19−(40+13+41). Stopped at1, Boolean6=0; no success, retail-equivalence or fully VERIFIED claim. Dynamic chain remains single-source. |
 | 2 | s6668: same-owned rescue01 ordinary HP2000→1990, one requested1991 dose HP1990→−1, original counter40 store0→1, callback memory and getter return1 four VI later. | Named friendly-loss response observed, single-flight dynamic evidence. Original ELF/DAT independently establish damage/death and failure ordering. SIGSTOP before failure flags109/101; no win, progression, retail-equivalence or fully VERIFIED claim. |
-| 3 | TELE fires; writer call records only. | No named counter response or controlled null. |
+| 3 | s6671: City_1 script request10 HP2000→1990, then same-owned request1991 HP1990→−1; death effect, counter28 store0→1, callback and explicit getter1. | Named friendly-loss response observed, single-flight dynamic evidence; original DAT/ELF corroborate contracts. Flags4/18/21 and successcounter22 stay0. No player-shot, win, retail-equivalence or fully VERIFIED claim. |
 | 4 | id15 0>1>2>3 in both arms; ctl additionally id5 0>1. | Shared baseline movement. No tele-specific objective response proved. Both arms request result mode a0=2. |
 | 5 | tele id2 0>1, ctl id2 remains observed 0; id4 observed 0 in both. | Historical failure-counter interpretation; static lv5 tests id2>=4 through Bit4, id4>=9 separately. Does not prove a successful objective response. |
 | 6 | TELE fires; no snapshot value changes; heartbeat occurs in both arms. | Inconclusive: hook execution is not a positive control for detecting changes. Neither full-table coverage nor a valid null is established. |
@@ -1173,3 +1173,61 @@ were screen-unlocked at launch, retail rendering settings, SIGKILL stopped.
 Next bounded unit: same-flight ordinary control then one exact-owned City_1
 destruction dose, requiring actual counter28 store/readback/getter, with all
 Boolean setters excluded and no win/progression test.
+
+
+## s6671 — level 3 controlled City_1 destruction response
+
+One unlocked retail-settings flight, VI5384..7211,120.13s total runner wall
+(includes boot/route),0 crash lines. Baseline arm0 then arm1 atVI7192;
+off2 intentionally not reached. One binary carries both ordinary and lethal
+arms, selected by VI. `ROGUESQ_OBJECTIVE_RESPONSE_LETHAL=1` permits the
+second request only after an exact observed ordinary health store and API
+return on the same owned target. No guest health/counter/timer stores or
+success setters were added. SIGSTOP after callback/getter then runner SIGKILL.
+
+| Link | Observed value |
+| --- | --- |
+| Definition / lookup | Original City_1 DAT+048C; relocated80325EEC, name80325F94; original lookup returns80325EEC |
+| Ownership before both requests | slot429, generation1, node8021A728, payload8038770C, handler8006CBB0, detail0 |
+| Ordinary API seq1, VI7192 | request10; original message5 stack80165E80; pc8006CFE8 writes2000→1990 at80325F58; handler/API return1990 |
+| Dose API seq2, VI7202..7203 | request1991; same message/owner; pc8006CFE8 writes1990→−1; handler/API return−1 |
+| Original effect8006D6F0 | Boolean0/value0, counter28/delta1, counter2=0/delta2=1 |
+| Actual writer, VI7203 | pc8006594C id28 0→1; victim8038770C, DAT80325EEC, inside seq2 API window |
+| Callback then explicit getter, VI7211 | actual readback28 0→1, original getter28 returns1/memory1; flags4/18/21=0, successcounter22=0 |
+
+Same-run value controls: actual getter3/memory changes0→1 atVI5446; the
+ordinary health reduction controls the damage witness, and actual counter28
+change controls the named response detector. All observed probe getter values
+match memory. The named API and pure getters are instrument invocations,
+not player shots or proof the game called the friendlies reader. Dynamic
+causality remains single-flight; original retail DAT/ELF independently support
+the identity, subtract/bgtz/death-effect and objective contracts. H-dose is
+selected for this request. No full VERIFIED or retail-equivalence promotion.
+
+The first analyzer rejected the chain because it demanded delta2=0 when
+counter2=0. Original DAT+84 is1, and the original effect passes1. Counter ID0
+disables the second counter; the contract is not a zero unused delta. Corrected
+the analyzer to require the original tuple(28,1,0,0,0,1), reprocessed this same
+capture, and qualified the chain. No binary rerun or runtime correction was
+needed. Fixtures now reject missing entry/store/effect/return/readback/getter,
+wrong message/owner/generation/dose/store/writer/victim, nonzero second counter,
+wrong original delta2, repeat dose and pre-set failure flags. Replay of all12
+generated files is unchanged; builds and all analyzer fixtures pass.
+
+ORIGIN: legitimate script requests10 and1991 reach original registered
+handler8006CBB0. Original8006CFE8 writes health1990 then−1; original death
+effect8006D6F0 invokes80065914 and original8006594C increments counter28.
+These are intended game damage/objective values, not corruption. Added only
+opt-in test dosing and read-only witnesses, no runtime mitigation/default/lib
+change, win or progression test. Slot generation is observed by the existing
+census; it is not a hardware lifetime oracle.
+
+Reproduce: `env ROGUESQ_OBJECTIVE_RESPONSE_LETHAL=1 python3 tools/g1_objective_response_run.py <fresh-tag> --level 3`.
+Saved evidence: `scratch/agent/m6/g1_lvl3s6671_dose/response.{json,log}`,
+`manifest.json`, `run.log`; compact joined proof
+`scratch/agent/s6671_qualification.json`; original97-anchor report
+`scratch/agent/s6671_original.json`; build `scratch/agent/s6671_build.log`.
+Five of six current launch hashes match; the analyzer differs solely because
+its post-run contract correction and stricter message-chain checks are recorded
+above. Binary, adapter and launch helpers match. No new queued-soak verdicts.
+Next: bounded level4 original objective/target contract qualification.

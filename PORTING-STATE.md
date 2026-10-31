@@ -174754,3 +174754,62 @@ mutation and build artifacts under scratch/agent/s6670_*. Docs/objective table
 updated; NEXT is one same-flight ordinary-control then exact-owned City_1
 destruction/c28 response, no aim or progression. ADVANCED: persistent probe,
 checked original contracts/analyzer and discriminating ordinary damage datum.
+
+
+## Session 6671 (2026-10-30) — qualify level-3 controlled City_1 destruction response
+
+Maintenance check37829 bytes, not triggered. Read CURRENT-TRUTH/NEXT/soak
+tail in order; no new queued verdicts (latest20261028-075640 already consumed).
+Planned one same-flight ordinary-control/dose work unit, HYPOTHESIS-ID
+`g1-coverage-cd`. Original97-anchor level3 DAT/ELF checks pass; bounded
+re-disassembly confirms8006CFE8 subtract,8006D278 positive-health skip,
+8006D6F0 effect arguments and distinct FFFF fallback. Ground truth before
+instrumenting; old README overlay/audio claims superseded by CURRENT-TRUTH.
+
+Changed persistent adapter to opt into one currentHealth+1 named-script
+request only after exact ordinary store/return, same owned slot generation,
+node/payload/DAT/name/detail, registered8006CBB0 and16-bit-safe dose. No
+health/objective/timer store, skip or repair added. Record actual health,
+original effect arguments, writer/readback/getter and end at named response.
+Whole-table analyzer/negative fixtures cover missing stages, message/identity,
+owner generation, duplicate request, arithmetic, effect, writer/victim,
+callback/getter and watched failure flags. Defaults remain retail; no lib edits.
+Two completed builds (second adds effect-argument capture), then ONE flight
+using the second binary; no per-counter build/run cycles. All12 generated
+files replay unchanged; prior analyzer fixtures and new loss fixtures pass.
+
+Run: `env ROGUESQ_OBJECTIVE_RESPONSE_LETHAL=1 python3 tools/g1_objective_response_run.py s6671_dose --level 3`.
+Unlocked screen, no preexisting game. EpochVI5384..7211, runner120.13s
+including boot/route,0 crashes. arm0 then arm1VI7192; off2 intentionally not
+reached. Same City_1 slot429/gen1,node8021A728,payload8038770C,
+DAT80325EEC,detail0. Seq1 request10 at7192: original message5 and health
+store8006CFE8 2000→1990, handler/API return1990. Seq2 request1991
+at7202..7203: exact message80165E80, health1990→−1, effect8006D6F0
+passes(28,1,0,0,0,1); writer8006594C increments28 0→1 at7203.
+Callback and explicit original getter28 read1 at7211. Flags4/18/21 and
+successcounter22 remain0; SIGSTOP then runner SIGKILL. Actual getter3
+changes0→1 at5446, matching memory; ordinary health and counter28 changes
+supply live detection controls. H-dose selected for this request; ownership
+and route match. No missing-control counter null claimed.
+
+First analyzer falsely required unused delta2=0: original retail City_1
+DAT+84=1 and the effect passes1, while counter2=0 disables that slot.
+Corrected parser/fixtures to exact original tuple, strengthened lethal
+entry/message/return ordering, and reanalyzed same saved run; qualified.
+No additional run or binary change.5/6 current launch hashes match; analyzer
+is the explicitly corrected artifact; binary/adapter/helpers match launch.
+
+ORIGIN: original registered8006CBB0 receives legitimate script requests10
+and1991. Original8006CFE8 writes1990 then−1; original death effect8006D6F0
+calls80065914 and original8006594C increments counter28. Values legitimate,
+not corruption; test gating prevents unqualified dosing, not a game mitigation.
+Original DAT/ELF independently corroborate contracts; dynamic chain remains
+single-flight and instrument-invoked API/getters. No player-shot or
+game-invoked friendlies-reader proof, win/progression, retail equivalence or
+full VERIFIED promotion. No default or submodule changes.
+
+Compact proof:scratch/agent/s6671_qualification.json; full response/log and
+manifest:scratch/agent/m6/g1_lvl3s6671_dose/; original report:
+scratch/agent/s6671_original.json; build:scratch/agent/s6671_build.log.
+Updated objective table/CURRENT-TRUTH and debug env catalog; next bounded
+unit is original-backed level4 objective/target contract checks. ADVANCED.

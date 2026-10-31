@@ -292,7 +292,8 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
     result['activation'] = activation_table(rows, ownership)
     if level == 3:
         result['level3_building'] = qualify_level3(rows)
-        result['level3_api'] = qualify_level3_api(rows)
+        result['level3_api'] = qualify_level3_api([r for r in rows if 'api_seq=2' not in r['event']])
+        result['level3_loss'] = qualify_level3_loss(rows)
     if level == 2: result['level2_loss'] = qualify_level2_loss(transport, rows)
     (out / 'response.json').write_text(json.dumps(result, indent=2) + '\n')
     with (out / 'response.log').open('w') as stream:
@@ -393,6 +394,69 @@ def api_self_test():
     assert not check([e.replace('npc=80350000','npc=80350004') if 'stage=1' in e else e for e in events])
     print('level3 API fixtures pass: complete, missing stages, dose/store/handler/return, duplicate request, message/identity mismatch')
 
+def qualify_level3_loss(rows):
+    parsed=[(r['line'],r['event'],dict(re.findall(r'(\w+)=([^\s]+)',r['event']))) for r in rows]
+    ordinary=qualify_level3_api([r for r in rows if 'api_seq=2' not in r['event']])
+    pres=[(n,f) for n,e,f in parsed if '[objresp-api]' in e and f.get('stage')=='pre']
+    chains=[]
+    if len(pres)==2 and ordinary['qualified_ordinary']:
+        control=ordinary['chains'][0]
+        pn,p=pres[1]
+        def find(tag, **fields):
+            return [(n,f) for n,e,f in parsed if n>pn and tag in e and all(f.get(k)==v for k,v in fields.items())]
+        identity={k:p[k] for k in ('api_seq','desc','node','npc')}
+        entries=find('[objresp-building]',stage='0',**identity)
+        returns=find('[objresp-building]',stage='3',**identity)
+        stores=find('[objresp-building]',stage='1',**identity)
+        effects=find('[objresp-building-effect]',**identity)
+        posts=find('[objresp-api]',stage='post',**identity)
+        if len(entries)==len(returns)==len(stores)==len(effects)==len(posts)==1:
+            entryn,entry=entries[0]; rn,ret=returns[0]
+            sn,st=stores[0]; en,ef=effects[0]; qn,q=posts[0]
+            same=all(p[k]==control['pre'][k] for k in ('desc','node','npc','slot','handler','detail','generation'))
+            health=(p['api_seq']=='2' and int(p['request'])==int(p['hp'])+1<=65535 and p['hp']==control['post']['hp'] and st['pc']=='8006cfe8' and
+                    st['hp']==st['store_old']==p['hp'] and st['store_new']=='-1' and st['request']==p['request'] and q['hp']==q['returned']=='-1')
+            route=(p['handler']==st['handler']=='8006cbb0' and p['slot']==st['slot'] and p['detail']==st['detail'] and st['subtype']=='20' and
+                   all(f[k]==p[k] for f in (entry,st,ret) for k in ('slot','handler','detail')) and entry['message']==st['message']==ret['message'] and ret['hp']=='-1' and
+                   ef['pc']=='8006d6f0' and ef['id']=='28' and ef['delta']=='1' and ef['delta2']=='1' and all(ef[k]=='0' for k in ('bool','bval','id2')))
+            for wn,e,w in parsed:
+                if ('[objresp-write]' not in e or not en<wn<qn or w.get('id')!='28' or w.get('pc')!='8006594c' or w.get('old')!='0' or w.get('new')!='1' or w.get('desc')!=p['desc'] or w.get('victim')!=p['npc']): continue
+                reads=[(n,f) for n,e,f in parsed if '[objresp-readback]' in e and n>qn and f.get('id')=='28' and f.get('old')=='0' and f.get('new')=='1']
+                getters=[(n,f) for n,e,f in parsed if '[objresp-probe-getter]' in e and n>qn and f.get('id')=='28' and f.get('returned')==f.get('memory')=='1']
+                done=[(n,f) for n,e,f in parsed if '[objresp-done]' in e and f.get('reason')=='level3-named-response' and all(f.get(k)=='0' for k in ('bool4','bool18','bool21','c22'))]
+                if same and health and route and control['post_line']<pn<entryn<sn<en<wn<rn<qn and reads and getters and done and reads[0][0]<getters[0][0]<done[0][0]:
+                    chains.append(dict(control=control,pre=p,store=st,effect=ef,post=q,writer=w,readback=reads[0],getter=getters[0],done=done[0]))
+    return dict(qualified=bool(chains),requests=len(pres),chains=chains,changing_getter_ids=ordinary['changing_getter_ids'])
+
+
+def level3_loss_self_test():
+    ident='desc=80310000 node=80210000 npc=80350000'
+    owner='slot=42 handler=8006cbb0 detail=0 generation=1'
+    events=[]
+    for seq,hp,request,new in ((1,2000,10,1990),(2,1990,1991,-1)):
+        key=f'api_seq={seq} {ident}'
+        events += [f'[objresp-api] stage=pre {key} {owner} route=named-script name=City_1 hp={hp} request={request}',
+                   f'[objresp-building] stage=0 {key} {owner} subtype=20 message=80400000',
+                   f'[objresp-building] stage=1 {key} {owner} subtype=20 message=80400000 pc=8006cfe8 hp={hp} store_old={hp} store_new={new} request={request}']
+        if seq==2:
+            events += [f'[objresp-building-effect] {key} pc=8006d6f0 bool=0 bval=0 id=28 delta=1 id2=0 delta2=1',
+                       f'[objresp-write] pc=8006594c id=28 old=0 new=1 desc=80310000 victim=80350000']
+        events += [f'[objresp-building] stage=3 {key} {owner} subtype=20 message=80400000 hp={new}',
+                   f'[objresp-api] stage=post {key} hp={new} returned={new}']
+    events += ['[objresp-readback] id=28 old=0 new=1',
+               '[objresp-probe-getter] probe_call=1 id=28 returned=1 memory=1',
+               '[objresp-done] reason=level3-named-response bool4=0 bool18=0 bool21=0 c22=0']
+    def check(es): return qualify_level3_loss([dict(line=i,event=e) for i,e in enumerate(es)])['qualified']
+    assert check(events)
+    for i in range(len(events)): assert not check(events[:i]+events[i+1:]),i
+    for old,new in [('generation=1','generation=2'),('request=1991','request=1992'),('store_new=-1','store_new=0'),('pc=8006594c','pc=80065974'),('victim=80350000','victim=80350004'),('bool4=0','bool4=1'),('id2=0','id2=22'),('delta2=1','delta2=0')]:
+        mutated=[e.replace(old,new) if ('api_seq=2' in e or '[objresp-write]' in e or '[objresp-done]' in e) else e for e in events]
+        assert not check(mutated),old
+    assert not check([e.replace('message=80400000','message=80400004') if 'api_seq=2' in e and 'stage=3' in e else e for e in events])
+    assert not check(events+[events[5]])
+    print('level3 loss fixtures pass: complete, missing links, ownership, dose, health, writer, victim, flags, repeat dose')
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('tag', nargs='?', help='fresh TAG_SUFFIX (never overwrite evidence)')
@@ -405,6 +469,7 @@ def main():
         dose_self_test()
         building_self_test()
         api_self_test()
+        level3_loss_self_test()
         return 0
     if not args.tag:
         parser.error('a fresh tag is required')
