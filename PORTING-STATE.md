@@ -175876,3 +175876,31 @@ ORIGIN: both writers are our own host-side scanners (spike cull s6083/s6084, reg
   The values they hit were legitimate game geometry. The fixes narrow each scanner to where its premise holds.
 Verdict: selects H-host-scanner (two host-side writers), refutes H-wrap2 (no further 12-bit wrap), H-footprint and
   H-stale (holes are undrawn, not stale). G1d level-select residual closed. Next: G3d turning-shake timing (ITERATION 3c).
+
+## Session 6696 (2026-10-31) — G3d turning shake root-caused and fixed: s6372's per-vector-load getenv() made every gfx task ~5x slower (30 -> 17 game fps, bunched presents)
+Ran: (1) offline census of every archived scratch/agent/m6/*lvl1*/run.log [g1b] line (new tools/g3d_g1b_census.sh, 631 runs,
+flight seconds t>=60, medians). Retail/dd1 lvl1 sat at 30 tasks/s and ~9-11 ms send_dl per task from s6013 through s6363
+(10-26 21:10); from s6390 (10-26 23:29) every lvl1 dd1 run is 8-17 tasks/s at 50-110 ms/task, cpu ~= wall, and it never
+recovered (s6442 l1 17/48.8, s6457 17/50, s6582 12/70). lvl10 moved 6-8 -> 23-25 ms. The window holds only the s6364-s6390
+spike-probe commits. (2) Diff of that window: s6372 added rs64_vld_note() (src/main/main.cpp), called from every RSP vector
+LOAD (LBV..LWV in librecomp rsp_vu_impl.hpp), which ran `getenv("ROGUESQ_SPIKE_DMEM")` uncached on each call (~2.4M loads/s
+in flight); s6375 made SDV copy 96 lanes into a snapshot on every SDV, armed or not. (3) Fix: flag cached once in a static,
+SDV snapshot gated on new rs64_sdv_snap_enabled(); ROGUESQ_G3D_LEGACY_TOGGLE=<sec> re-enables the old per-load getenv + SDV
+copy in alternating windows inside ONE run ([g3d] line per flip). (4) One run, lvl1 forced route, s6457 recipe (G1B + G3C_LOG
+per-VI stamps), toggle 20 s, 10 flips, 203 s hold, alive, 0 crashlines, 0 stalls. New tools/g3d_toggle_fold.py:
+  fixed : 65 s, VI 61.1/s, tasks 29.7/s, send_dl 10.9 ms (cpu 9.7), present dt p50 16.5 / p95 20.0 ms, <2 ms 1%, >50 ms 0%
+  legacy: 76 s, VI 61.1/s, tasks 17.6/s, send_dl 52.1 ms (cpu 45.9), present dt p50 7.5 / p95 61.5 ms, <2 ms 41%, >50 ms 10%
+Positive control: the legacy windows reproduce the s6457/s6458 numbers (17-18 tasks/s, ~50 ms, 3-4 bunched presents then a
+~60 ms gap) inside the same process, and already pre-flight (3.7 -> 7.0 ms at the first flip).
+Mechanism of the shake: send_dl runs the LLE F5 ucode on the Gfx thread; ScreenUpdateActions queue behind it, so a 50 ms task
+holds 3-4 VI presents which then drain within 0.1 ms. Owner sees ~17 game fps delivered in bursts.
+Two lines of evidence: cross-run census step aligned with the introducing commits + same-run toggle A/B.
+Verdict: selects H-thread (Gfx thread busy ~50 ms per task), named writer = our own s6372/s6375 diagnostic hooks. Refutes H-log
+(logging identical in both arms; fixed arm is clean with full soak logging) and H-present as an independent cause (presents bunch
+only because they queue behind send_dl on the same thread). Supersedes s6458 "G3c(c) closed as retail judder" and the s6390-s6695
+absolute frame-cost numbers (G1c dd cost tables, sd_wall/tasks/s figures): all carry the ~40 ms/task overhead; dd ratios measured
+then are distorted. s6455's arm-independent camera jerk was measured in that era too (10-27; census s6448/s6450 lvl1 at 14-17 tasks/s).
+ORIGIN: no mitigation; the writer of the cost is our own diagnostic code (s6372 rs64_vld_note uncached getenv, s6375 unconditional
+SDV snapshot). Removing the per-op cost is the root-cause fix; ROGUESQ_SPIKE_DMEM probes behave as before when armed.
+Next: owner judges the feel (retail and FPS60); re-measure G3c(c) camera jerk on the fixed build if shake is still reported;
+re-baseline dd4 cost (s6390-s6582 cost numbers are void).

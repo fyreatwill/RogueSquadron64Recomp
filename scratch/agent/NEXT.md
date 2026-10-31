@@ -1,20 +1,16 @@
-# NEXT: G3d turning-shake timing follow-up (ITERATION item 3c)
+# NEXT: G3d close-out on the fixed build, then dd cost re-baseline
 HYPOTHESIS-ID: g3d-turning-shake-timing
 
-G1d level select is closed (s6694 scissor wrap, s6695 spike-cull bound + radar-shift gate). Spec: ITERATION.md G3d.
-Evidence that reopens G3c(c): s6458 VI stamps arrive in bursts (3-4 VIs within 0.1 ms, then ~66 ms gaps) and lvl1
-ran ~18 gfx tasks/s vs ~30/s retail (s6452, 0x8011A890).
+s6696 fixed the cause: our s6372 per-vector-load getenv + s6375 unarmed SDV snapshot made gfx tasks ~5x slower
+(lvl1 29.7 -> 17.6 game fps, bunched presents). Same-run toggle (ROGUESQ_G3D_LEGACY_TOGGLE=<sec>) + census
+(tools/g3d_g1b_census.sh, tools/g3d_toggle_fold.py).
 
-Hypotheses:
-- H-log: the soak's G1B/G3C logging slows the game thread and bunches VI delivery; normal play is fine.
-- H-thread: VI events go to a game thread busy for ~66 ms, i.e. real ~15-18 fps in normal play too.
-- H-present: game frames are even but RT64 presents bunch.
-Discriminator (ONE build): cheap ring buffer (no per-frame stderr) stamping wall time of (a) VI event delivery,
-(b) game gfx-task submit (osSpTaskStart of the gfx task), (c) RT64 present; dumped at exit. Arms, same build,
-sequential runs: lvl1 forced route steady turn (autopilot yaw hold), minimal logging vs usual soak logging, retail
-and FPS60. Report per arm: game fps, submit-interval and present-interval distribution (p50/p95, burst count).
-Outcomes: minimal-logging arm even ~30 fps -> H-log (fix: cheaper logging); both ~18 fps bursty -> H-thread
-(find what blocks the game thread: QoS/priority, VI delivery path); submits even but presents bunched -> H-present.
-Owner judges feel after any fix.
-Side item (small, optional): grey radar wedge stays at x~690 top in 21:9 flight (screenshots/s6695_21x9_flight_radar_gate_check.png);
-the s6159 shift leaves it behind. Owner: send screenshots/s6694_* and s6695_21x9_levelselect_before_after.png.
+Work unit (one run, two arms in-process where possible):
+1. Re-run the s6455 jerk arms on the fixed build (retail and FPS60, lvl1 steady turn, ROGUESQ_G3C_LOG=1;
+   tools/g3c_jerk.py). Hypotheses: H-fixed (shake was the 17 fps bunching; retail now shows even 16.5 ms presents
+   and jerk only at the 30 Hz game-frame cadence), H-residual (sign-alternating camera jerk remains at 30 fps:
+   FPS60/camera cadence issue, G3c(c) leads). Discriminator: present-interval p95 <= 34 ms and no
+   sign-alternating jerk in retail -> H-fixed; else H-residual with the arm that owns it.
+2. Re-baseline dd4 lvl1 + lvl5 cost with ROGUESQ_G1B (s6390-s6582 cost tables are void); record tasks/s and
+   sd_wall for dd1/dd4 and update docs/DRAW-DISTANCE.md if the dd4 trade-off changed.
+Owner: judge turning feel on the fixed build; send s6694/s6695 21:9 level-select frames.

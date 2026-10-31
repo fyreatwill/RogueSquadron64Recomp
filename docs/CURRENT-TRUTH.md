@@ -16,6 +16,10 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   first-mission endurance (3x600 s lvl1/5/7, s6442), and G2 audio are closed.
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
+- **FIXED s6696: game ran ~17 fps since s6372 (10-26).** Our s6372 rs64_vld_note() called getenv() on every RSP vector
+  load and s6375's SDV snapshot ran unarmed; lvl1 gfx task 10.9 -> 52 ms, 29.7 -> 17.6 game fps, presents bunched (41% <2 ms
+  apart, 10% >50 ms gaps) = the owner's turning shake (G3d). Same-run toggle A/B (ROGUESQ_G3D_LEGACY_TOGGLE) + 631-run census
+  step. ALL frame-cost numbers s6390-s6695 (dd cost tables, sd_wall, tasks/s) carry the overhead and are void as absolutes.
 - **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
   ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
   lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
@@ -341,6 +345,10 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   Level4 response unit closes; next: level5 original objective/target contract.
 
 ## Superseded conclusions — do not act on these
+
+- s6458 "G3c(c) turning shake closed as retail 30 Hz judder" and s6455 "camera jerk identical in all arms" (s6696: every run
+  since s6372 ran at ~17 game fps with bunched presents from our own per-vector-load getenv). Believable because the jerk
+  was arm-independent: the overhead was in every arm, retail included.
 
 - s6692/s6693 "21:9 floor tear is lost in RT64 depth handling at w=1024" (s6694: the game's scissor lrx w*4 wraps to 0 in the 12-bit field, so the depth-clear fill is clipped empty before RT64 bookkeeping). Believable because RDP triangle input matched and only RT64 touched the depth rows.
 
@@ -673,8 +681,10 @@ so statically they should be owned on the scripted route (H-load over H-prox).
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G3d turning-shake timing follow-up** (ITERATION 3c). Owner: send s6694+s6695 21:9 level-select
-   before/after frames. Optional small G1d item: the grey radar wedge left behind at x~690 top in 21:9 flight.
+1. **G3d follow-up (s6696 fixed the cause).** Owner judges turning feel on the fixed build (retail and FPS60); only if
+   shake is still reported, re-run the s6455 G3c jerk arms on the fixed build. Re-baseline dd4 lvl1/lvl5 cost with
+   ROGUESQ_G1B (s6390-s6582 numbers void). Owner: send s6694+s6695 21:9 level-select frames. Optional: grey radar wedge
+   left at x~690 top in 21:9 flight.
 2. **(PARKED by owner) G1(d) level8 live ownership + disable response.** s6687
    contract: extend g1_objective_response_run.py to level 8. One run with
    ROGUESQ_LOG_GRIDSPAWN=1 records each train car's desc+6 slot. If one

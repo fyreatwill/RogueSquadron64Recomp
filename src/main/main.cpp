@@ -4715,11 +4715,31 @@ static thread_local uint32_t g_spike_sdv_reg = 0, g_spike_sdv_e = 0, g_spike_sdv
 struct Rs64VuRingEnt { uint16_t op, vd, e, vtr, vl[8], all[48], post[8]; uint32_t src; const char* kind; };
 static thread_local uint32_t g_vld_addr[32]; static thread_local const char* g_vld_kind[32];
 static thread_local uint32_t g_vte_pend_reg; static thread_local uint16_t g_vte_pend_l[8];
-extern "C" void rs64_vld_note(uint32_t reg, uint32_t addr, const char* kind) { if (reg < 32 && getenv("ROGUESQ_SPIKE_DMEM")) { g_vld_addr[reg] = addr; g_vld_kind[reg] = kind; } }
+// s6696 G3d: the s6372 version called getenv() on EVERY RSP vector load and the SDV hook copied 96 lanes on every SDV, armed or not;
+// lvl1 gfx task cost went ~10 -> ~50-80 ms (30 -> 11-17 game fps, bursty presents = the owner's turning shake). Flag is cached now.
+// ROGUESQ_G3D_LEGACY_TOGGLE=<sec>: same-run A/B, re-enables the old per-load getenv + SDV snapshot in alternate <sec> windows ([g3d] line per flip).
+static const bool g_spike_dmem_on = getenv("ROGUESQ_SPIKE_DMEM") != nullptr;
+static const double g_g3d_toggle_s = [] { const char* e = getenv("ROGUESQ_G3D_LEGACY_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
+static bool g_g3d_legacy = false;
+extern "C" int rs64_sdv_snap_enabled(void) { return g_spike_dmem_on || g_g3d_legacy; }
+extern "C" void rs64_vld_note(uint32_t reg, uint32_t addr, const char* kind) {
+    if (g_g3d_toggle_s > 0.0) {
+        static uint32_t n = 0; static auto t_flip = std::chrono::steady_clock::now(); static const auto t0 = t_flip;
+        if ((++n & 0xFFFFu) == 0) {
+            auto now = std::chrono::steady_clock::now();
+            if (std::chrono::duration<double>(now - t_flip).count() >= g_g3d_toggle_s) {
+                t_flip = now; g_g3d_legacy = !g_g3d_legacy;
+                fprintf(stderr, "[g3d] legacy=%d t=%.3f loads=%u\n", g_g3d_legacy ? 1 : 0, std::chrono::duration<double>(now - t0).count(), n);
+            }
+        }
+        if (g_g3d_legacy && getenv("ROGUESQ_SPIKE_DMEM")) { g_vld_addr[reg & 31] = addr; }
+    }
+    if (reg < 32 && g_spike_dmem_on) { g_vld_addr[reg] = addr; g_vld_kind[reg] = kind; }
+}
 extern "C" void rs64_vu_ring_vte(uint32_t reg, const uint16_t* l) { g_vte_pend_reg = reg & 31; for (int i = 0; i < 8; i++) g_vte_pend_l[i] = l[i]; }
 static thread_local Rs64VuRingEnt g_vu_ring[128];
 static thread_local uint32_t g_vu_ring_n = 0;
-extern "C" int rs64_vu_ring_enabled(void) { static const int on = getenv("ROGUESQ_SPIKE_DMEM") != nullptr; return on; }
+extern "C" int rs64_vu_ring_enabled(void) { return g_spike_dmem_on; }
 extern "C" uint32_t rs64_vu_ring_prev_vd(void) { return g_vu_ring_n ? g_vu_ring[(g_vu_ring_n - 1) % 128].vd : 0; }
 extern "C" void rs64_vu_ring_capture_prev(const uint16_t* lanes) {
     if (!g_vu_ring_n) return;
