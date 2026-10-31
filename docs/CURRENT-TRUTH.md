@@ -35,7 +35,7 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 - **G3c (owner visual report): engineering closed, owner judgement pending.**
   (a) far-edge stair: no opt-in rougher than retail (s6449, s6544);
   (b) spike wedges: H-hw-draws, angrylion lights the same 16/79 wedges
-  (s6454), `ROGUESQ_CULL_SPIKE` stays opt-in; (c) turning shake: retail 30 fps
+  (s6454), `ROGUESQ_CULL_SPIKE` now DEFAULT ON per owner 2026-10-31 (=0 to disable); (c) turning shake: retail 30 fps
   judder (s6455, s6458).
 - **G1d (aspect): level-select floor tear closed (s6631).** Flight radar
   inset matches retail (s6610). Extra width is real scene and the left HUD
@@ -672,6 +672,11 @@ behaviour for a route that never gets close. Reaching the tanks needs steering
 boundary. Evidence: scratch/agent/s6686_gridspawn.json.
 
 ## Next steps (single monotonic backlog)
+
+- **Owner 2026-10-31:** spike cull default ON (also fixed: it only ran with LOG_SPIKE).
+  G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
+  fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
+  ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
 1. **G1(d) level8 named contract (next unit).** Same s6684 method: decode
    the level8 checkComplexObjectives callback and its named DAT targets from
    the original ELF + retail ROM; for each candidate record its spawn path

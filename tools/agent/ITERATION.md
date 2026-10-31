@@ -76,6 +76,9 @@ When choosing the work unit, this order overrides Next-steps ordering:
      -> objective path works. If NEXT.md proposes aim/steer/bolt work, discard it
      and take the next G1 coverage item. Mission-to-mission progression after a
      real win is also the owner's playtest; do not poke wins to test it.
+     **(d) PARKED by owner 2026-10-31.** Objective-counter qualification (s6640-s6686:
+     per-level counter contracts, spawn paths, lvl7 proximity tanks) is completability
+     work and belongs to the owner's playtest. Do not continue it; (a)-(c) stand as done.
    - G1b **Frame pacing (owner report 2026-10-23).** Take this once the G1 per-level
      (a)+(b) sweep is done. Owner watching mission play: ~70% of missions run
      flawlessly, but the whole game intermittently slows as if "buffering" — sometimes
@@ -176,6 +179,9 @@ When choosing the work unit, this order overrides Next-steps ordering:
      H-retail (run the same level in an accurate emulator and look for wedges). If no
      reference shows them, fix the emulation. If retail truly has them, ask the owner
      about making ROGUESQ_CULL_SPIKE default-on.
+     **Owner 2026-10-31: ROGUESQ_CULL_SPIKE is now DEFAULT ON** (src/rsp/dpc_bridge.cpp;
+     =0 restores the retail wedges). The cull previously ran only under ROGUESQ_LOG_SPIKE=1,
+     so CULL_SPIKE=1 alone was a no-op; it is now independent of logging.
      (c) **Screen shake while turning.** Slight shaking of the whole view whenever the
      ship turns. Leads: H-fps60 (FPS60 camera follow/smoothing is frame-count-based or
      updated on a different cadence from the craft, so camera vs craft alternates),
@@ -185,6 +191,32 @@ When choosing the work unit, this order overrides Next-steps ordering:
      present timestamp, during a scripted steady turn; compute the second difference
      (jerk) of camera yaw per real second. Arms: retail, FPS60, ASPECT, both. Shake =
      sign-alternating jerk that retail lacks.
+   - G1f **Window fills the owner's display (owner 2026-10-31): take NOW.** Owner plays on a
+     21:9 ultrawide and a 65" 16:9 TV. Today the OS window opens 640x480 (main.cpp
+     SDL_CreateWindow, resizable) so ROGUESQ_ASPECT=16:9/21:9 letterboxes inside a 4:3
+     window. Goals: (1) the window opens at the chosen aspect (e.g. 21:9 -> 1680x720-class,
+     sized to fit the current display); (2) a fullscreen toggle (borderless desktop
+     fullscreen, Cmd+Ctrl+F / F11 / Alt+Enter) and ROGUESQ_FULLSCREEN=1 to start in it;
+     (3) ROGUESQ_ASPECT=auto derives the game aspect from the window/display (clamped to the
+     verified widths, s6142 w<=1024), so fullscreen on either screen fills it with no bars,
+     including after a resize or moving between displays if feasible; (4) internal
+     resolution follows the window so a 4K TV is sharp. Verify with window screenshots at
+     4:3, 16:9 and 21:9 window sizes and a fullscreen capture on the built-in display;
+     update docs/OWNER-OPT-INS.md with the one-line command for each screen. Defaults stay
+     4:3 retail unless the owner says otherwise.
+   - G3d **Turning shake follow-up (owner 2026-10-31): after G1f.** G3c(c) was closed as
+     retail judder, but its own data contradicts that reading: s6458 VI stamps arrive in
+     bursts (3-4 VIs within 0.1 ms, then ~66 ms gaps) and lvl1 ran ~18 gfx tasks/s, not
+     the ~30/s retail rate measured by s6452 (0x8011A890). Uneven, slow presentation
+     would look like shake. Hypotheses: H-log (G1B/G3C logging in the soak recipe slows
+     the game thread and bunches VI delivery; normal play is fine), H-thread (VI events
+     are delivered to a game thread busy for ~66 ms, i.e. real ~15-18 fps in normal play
+     too), H-present (presents bunch even when game frames are even). Discriminator, one
+     build: stamp game-frame submit and RT64 present wall times (cheap ring buffer, dumped
+     at exit, no per-frame stderr) in a minimal-logging arm vs the usual soak logging,
+     lvl1 steady turn, retail and FPS60. Report game fps and present-interval
+     distribution per arm. If normal play is below ~30 or bursty, root-cause and fix
+     (thread priority/QoS, VI delivery, present pacing). Owner judges the feel after.
    - G2 **Audio fidelity: CLOSED** (owner live listen 2026-10-22: dialogue clean, no
      fuzz; agrees with s5669-s5674 PCM evidence). Reopen only on a new owner report.
    - G3 **Render fidelity.** Hangar artifacts (CURRENT-TRUTH list) and in-flight frame
