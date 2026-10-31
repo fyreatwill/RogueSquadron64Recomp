@@ -174996,3 +174996,53 @@ docs/G1-OBJECTIVE-RESPONSE.md s6675. Artifacts scratch/agent/s6675_validation.js
 s6675_lvl5_checked.json, lvl2/3/4 regressions. Next: one same-owned ordinary
 API10 Wedge hit joining health store/return and original counter40 getter;
 no lethal dose until that live route is qualified. Outcome ADVANCED.
+
+## Session 6676 (2026-10-31) — observe level-5 Wedge ordinary health chain
+
+One bounded opt-in adapter/runner/analyzer extension and corrected unlocked
+flight. Original ELF/DAT checked first:334 anchors/390 mutations; level2/3/4
+contracts and level4 mutations still pass. Level5 selects x_wing_wedge at
+DAT+1AFC through the original named API, using actual canonical ownership,
+slot generation, original lookup, handler, actor, mode/detail/storage and
+six-field effect tuple. Generic TELE and lethal dosing are disabled for level5;
+one API10 request only. Original c2>=4/c4>=9 gates yield conservative diagnostic
+stops c2>=3/c4>=8. No game health/counter stores or default/library changes.
+
+Run scratch/agent/m6/g1_lvl5s6676_ordinary_v2/:167.02s runner wall,
+VI4682..10086, B40=5/lv5 callback,0 crash lines. Off/on/off at4682/6482/8882.
+DAT8031BCCC=8031A1D0+1AFC,slot87/gen1,node8021B6DC,NPC8035421C,
+handler800D93C0,actor80354898,detail0/mode0,health8031BD38. Actual owned
+mark-all controls fire arms0/1. HP initially200,190 before our request;
+that earlier damage is unattributed. AtVI6486 API10 -> message5 80165E80 ->
+D9C54 -> actual F2148 store190→180 -> D9C5C damage/API returns180, no effect.
+Exact joined lines277124/277132/277134/277136/277140/277141; original getter40
+at277443 (VI6489) returns0=memory0. Owned live210884, eligibility277122,
+control277123. End417359, dv5404; SIGKILL by runner. No TELE forces.
+
+H-wingman selected for named health delivery; H-route/H-availability not seen
+for this request. No objective getter changes in the epoch, so exact health
+chain/named identity pass but qualified_ordinary=false: the counter sensitivity
+control is absent. Do not call unchanged counter40 a controlled null. This
+unit establishes no destruction/named response, player-shot/game-invoked
+friendlies-reader, retail-equivalence or VERIFIED result. Dynamic evidence
+single-flight/single-source; original ELF/DAT independently support contracts.
+ORIGIN: original dealDamageToNpc800F2120 storeF2148 legitimately writes the
+selected detail-health array minus the accepted message damage. No mitigation
+or direct health/counter store was added.
+
+First attempt SIGKILLed before flight after review caught an overly broad
+edit changing the level3-only dose expression. Restored byte-identical level3
+tick, rebuilt and reran now; incomplete evidence retained separately, not
+pooled. Corrected build and all6 launch manifest hashes match. Existing
+level2/3/4 fixtures pass; new level5 analyzer requires exact named definition,
+selector/callback and all ordinary-chain witnesses. Inline/array, missing
+links/controls, wrong identity/dose/health/writer/lookup and duplicate-request
+fixtures reject. All13 generated adapter outputs idempotent; hook-free level5
+replay exact. No lib edits; existing dirty submodules preserved. No new queued
+verdicts (latest20261028-075640 already consumed). Proof:
+scratch/agent/s6676_qualification.json,s6676_replay.json,s6676_selftest.log,
+s6676_lvl5_contract.json. Full table/limits docs/G1-OBJECTIVE-RESPONSE s6676.
+
+Next unit: one same-owned ordinary-control -> lethal-dose Wedge counter40
+response, actual death effect/store/readback/original getter and immediate stop,
+below c2/c4 gates. Objective response remains open; no repeat ordinary soak.

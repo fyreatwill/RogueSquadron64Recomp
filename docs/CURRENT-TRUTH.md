@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6675 (2026-10-30).
+Compact operational handoff, as of Session 6676 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -468,14 +468,32 @@ ELF+DAT establish static contracts only; no live availability/response or
 VERIFIED promotion. No runtime/default/lib change or new soak verdict.
 Full contracts: G1-OBJECTIVE-RESPONSE s6675; scratch/agent/s6675_validation.json.
 
+## s6676 update — level5 ordinary health route observed
+
+One corrected unlocked flight167.02s, VI4682..10086,0 crashes. Wedge
+DAT8031BCCC,slot87/gen1,node8021B6DC,NPC8035421C,actor80354898,
+handlerD93C0,detail0/mode0. API10 atVI6486 -> exact message80165E80 ->
+actual writerF2148 health190→180 -> damage/API returns180; original getter40
+returns0=memory0 atVI6489. Owned mark-all controls fire arms0/1. No objective
+getter changes: exact named health chain passes, full ordinary qualification
+remains false for absent counter sensitivity control. Silent counter40 is not
+a controlled null. Original ELF/DAT independently support contracts only;
+dynamic chain single-flight. No named response/VERIFIED promotion. Adapter
+persists through fixup; level5 lethal/generic TELE disabled. First pre-flight
+attempt stopped to undo an accidental level3-only edit; corrected build/run,
+6/6 hashes, fixtures,13-file idempotence and new hook replay pass. Level3 tick
+unchanged. No lib/default changes or new soak verdicts. Proof/table:
+G1-OBJECTIVE-RESPONSE s6676; scratch/agent/s6676_qualification.json.
+
 ## Next steps (single monotonic backlog)
-1. **G1(d) level5 ordinary named wingman API hit (next unit).** Adapt the
-   existing opt-in wingman probe to retail x_wing_wedge(+1AFC), handlerD93C0.
-   One owned API10 request; join slot/generation/node/payload/DAT/actor,
-   message5, actual health store/return, and original counter40 getter.
-   No lethal dose; qualify live route before any death-counter experiment.
-   Require firing ownership and actual changing-value controls; preserve
-   the no-availability/no-null limit if no target is encountered.
+1. **G1(d) level5 same-owned Wedge loss-counter response (next unit).**
+   Ordinary health delivery is observed (s6676), but no getter changed.
+   Add one opt-in currentHP+1 request after same-owned ordinary API10
+   entry/store/return qualify; revalidate slot/generation/DAT/NPC/actor,
+   detail/mode/storage/name/current health and original effect tuple.
+   Require actual death effect, counter40 writer/readback/original getter;
+   stop immediately with c2/c4 and latches unchanged, below their gates.
+   No direct stores, wins/progression or repeat ordinary soak.
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
@@ -497,9 +515,9 @@ Full contracts: G1-OBJECTIVE-RESPONSE s6675; scratch/agent/s6675_validation.json
 - Per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence):
   verbatim per-level paragraphs, duplicate coverage, historical backlog and updates.
-- `PORTING-STATE.md` sessions 6656–6675 contain recent chronology; search bounded
+- `PORTING-STATE.md` sessions 6656–6676 contain recent chronology; search bounded
   windows only. Earlier durable context remains in PROJECT-OVERVIEW.
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest remains
-  20261028-075640 (already consumed). No new verdicts in s6675.
+  20261028-075640 (already consumed). No new verdicts in s6676.
 - s6596/s6597 and s6599 were checkpoint close-outs, not reruns. The saved
   s6595/s6598 HUD artifacts retain their original evidence limits.

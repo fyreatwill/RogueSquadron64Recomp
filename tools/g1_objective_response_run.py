@@ -294,6 +294,8 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
         result['level3_building'] = qualify_level3(rows)
         result['level3_api'] = qualify_level3_api([r for r in rows if 'api_seq=2' not in r['event']])
         result['level3_loss'] = qualify_level3_loss(rows)
+    if level == 5:
+        result['level5_ordinary'] = qualify_level5(rows)
     if level == 4:
         result['level4_ordinary'] = qualify_level4([r for r in rows if 'api_seq=2' not in r['event']])
         result['level4_loss'] = qualify_level4_loss(rows)
@@ -500,6 +502,16 @@ def qualify_level4(rows):
                 scope='one instrument-invoked original named API ordinary hit; no destruction, named counter response, player-shot or retail-equivalence proof')
 
 
+def qualify_level5(rows):
+    result=qualify_level4(rows)
+    parsed=[(r['line'],r['event'],dict(re.findall(r'(\w+)=([^\s]+)',r['event']))) for r in rows]
+    epochs=[n for n,e,f in parsed if '[objresp-epoch]' in e and f.get('B40')=='5' and f.get('callback')=='lv5_checkComplexObjectives' and f.get('width')=='512']
+    definitions=[(n,f) for n,e,f in parsed if '[objresp-definition]' in e and f.get('name')=='x_wing_wedge' and f.get('offset')=='1afc' and f.get('subtype')=='39' and f.get('id')=='40' and f.get('delta')=='1' and int(f['desc'],16)==int(f['base'],16)+0x1afc]
+    result['named_identity']=bool(result['chains']) and len(epochs)==1 and all(any(n<c['lines']['api-pre'] and f['desc']==c['pre']['desc'] for n,f in definitions) and epochs[0]<c['lines']['api-pre'] for c in result['chains'])
+    result['qualified_ordinary'] &= result['named_identity']
+    return result
+
+
 def qualify_level4_loss(rows):
     ordinary=qualify_level4([r for r in rows if 'api_seq=2' not in r['event']])
     parsed=[(r['line'],r['event'],dict(re.findall(r'(\w+)=([^\s]+)',r['event']))) for r in rows]
@@ -558,6 +570,13 @@ def level4_self_test():
     assert not check(events+[events[3]])
     assert not check(events+['[objresp-wingman] stage=effect'])
     level4_loss_self_test(events)
+    prefix=['[objresp-definition] base=8030e504 offset=1afc desc=80310000 name=x_wing_wedge subtype=39 id=40 delta=1', '[objresp-epoch] B40=5 callback=lv5_checkComplexObjectives width=512']
+    def check5(es): return qualify_level5([dict(line=i,event=e) for i,e in enumerate(es)])['qualified_ordinary']
+    assert check5(prefix+events)
+    for i in range(len(prefix+events)): assert not check5((prefix+events)[:i]+(prefix+events)[i+1:]),i
+    for old,new in [('B40=5','B40=4'),('x_wing_wedge','x_wing_hobbie'),('offset=1afc','offset=6a7c'),('base=8030e504','base=8030e508'),('subtype=39','subtype=20')]:
+        assert not check5([e.replace(old,new) for e in prefix+events]),old
+    print('level5 fixtures pass: exact named definition/epoch and every ordinary-chain missing link')
     print('level4 fixtures pass: inline/array, missing links/controls, identity, dose, health, writer, lookup, duplication and effect')
 
 def level4_loss_self_test(ordinary):
@@ -586,7 +605,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('tag', nargs='?', help='fresh TAG_SUFFIX (never overwrite evidence)')
     parser.add_argument('--analyze', action='store_true', help='rebuild the joined table from an existing tag')
-    parser.add_argument('--level', type=int, choices=(0, 1, 2, 3, 4), default=0)
+    parser.add_argument('--level', type=int, choices=(0, 1, 2, 3, 4, 5), default=0)
     parser.add_argument('--flight-vi', type=int, default=5400, help='level 2 activation-aware window, 5400..12000 VI')
     parser.add_argument('--self-test', action='store_true')
     args = parser.parse_args()
