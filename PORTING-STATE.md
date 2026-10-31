@@ -175542,3 +175542,41 @@ Next: live level-8 run for car ownership, plus the kind of message the
 request API emits. Never send hull damage, because it fails the mission.
 Verdict: this selects H-load (train cars are ungated condition-list spawns) and refutes H-prox and H-none, statically and single-source. Next discriminator: the per-car desc+6 slot in one level-8 run, plus the msg+4 kind the request API writes.
 
+
+## Session 6688 (2026-10-31) — G1f window-fit verified (16:9 flight, fullscreen toggle); 21:9 forced-route hangar SIGBUS 0x7FFF0002 found, not G1f
+
+Finished and verified iteration 4's uncommitted G1f work (bcede238c code + 21:9 RT64 aspect
+rewrite `1024:448`, s6688 working tree). Added: `ROGUESQ_FS_TEST_TOGGLE_S=a[,b]` (synthetic F11
+pushed through the real SDL event watch, because harness keys never reach SDL on macOS, s5416),
+`[g1f] resized` / fullscreen on/off size logs, `ROGUESQ_WINDOW_FIT=0` (pre-G1f 640x480 window,
+no high-DPI, no fullscreen, no aspect rewrite), `tools/g1f_window_check.sh` (toggle uses the
+synthetic key).
+
+Results (display 1512x982 built-in, 2x):
+- Window sizes (iteration-4 logs, same binary family): retail 640x480 drawable 640x480; 16:9 1360x764
+  drawable 2720x1528; 21:9 1360x594 drawable 2720x1188; auto -> 1.5397:1, 1226x796 drawable
+  2452x1592; ROGUESQ_FULLSCREEN=1 drawable 3024x1898 (whole desktop below the menu bar).
+- 16:9 lvl1 forced route (`tools/g1_lvl1_aspect_arm.sh a169`): mission_verified_130s, 0 crash; window
+  capture `scratch/s6688/run3/w120_13357.png` shows flight filling the 16:9 window, HUD at edges,
+  no bars, sharp at 2720x1528.
+- Fullscreen toggle (`scratch/s6688/run4`): synthetic F11 at 15 s -> keywitness saw sym F11
+  (delivery control), `fullscreen on window 1512x949 drawable 3024x1898`; at 30 s -> `off window
+  1360x764 drawable 2720x1528`. Captures 2720x1592 / 3024x1898 / 2720x1592.
+- Not verified: 21:9 window content in flight (crash below), 4K TV, moving between displays.
+
+Side-effect crash (G4 clause: fix-or-record): 21:9 lvl1 forced level-select route
+(FORCE_SAVE_MISSION/UNLOCK, NO_SAVE_WRITE) SIGBUS in hangar, si_addr=0x37fff0002 (guest
+0x7FFF0002), stack mallocVoiceLineStruct <- craftSelectionVoiceLineHelper <- updateHangarBayScene.
+Arms, same recipe: G1f on 4/4 crash; ROGUESQ_WINDOW_FIT=0 1/1 crash (same site) -> G1f
+excluded; 16:9 0 crash (mission verified). s6434 (21:9, natural hangar route, before s6631) was
+clean. Heapcap evidence: the s6631 did=3 path shortens the block before e4, and that block is
+LIVE (flags 0x0006, size 0x14B000, cut 0x80A0AFF0, e4 0x80B56000), so the planted terminator
+lands in a live allocation's last 16 bytes. Tried: only cut when that block is free, else leave
+the retail heap (did=4): still crashed 5/5 with the same site (did=4 logged every rebuild),
+because the free-tail header then sits at e4, inside the framebuffer image. Reverted (s6631
+behaviour restored, rebuilt). Conclusion: at 21:9/12 MB the heap's tail touches the w1024 image at
+e4 in every variant; the root fix is the heap/image layout (end the heap below the image), not
+the terminator placement. Single-source on the 0x7FFF writer (not watched).
+ORIGIN: corrupt heap header at/just below e4 (0x80B56000-class); candidate writers are the w1024
+colour image (its first bytes at e4) and the owner of the live 0x14B000 block; neither watched yet.
+No mitigation landed.

@@ -16,6 +16,17 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   first-mission endurance (3x600 s lvl1/5/7, s6442), and G2 audio are closed.
   G4 crash hunting is parked after clean coverage. G1 is mission coverage and
   visual quality, not autopilot work.
+- **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
+  ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
+  lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
+  fullscreen (verified with synthetic F11 `ROGUESQ_FS_TEST_TOGGLE_S`: 3024x1898 and back).
+  ROGUESQ_FULLSCREEN=1 starts fullscreen; ROGUESQ_ASPECT=auto takes display 0's aspect. The game
+  width is fixed at boot, so a later resize letterboxes. ROGUESQ_WINDOW_FIT=0 gives the old 640x480 window.
+- **OPEN, take next: 21:9 forced-route hangar SIGBUS (s6688).** si_addr guest 0x7FFF0002 in
+  mallocVoiceLineStruct (craft-select voice). 5/5 at 21:9, also with WINDOW_FIT=0; 16:9 clean.
+  s6631's did=3 cut shortens a LIVE block (fl 0x0006, 0x14B000); a free-only variant still
+  crashed (tail header then sits at e4 in the image). Root cause: the heap reaches the w1024
+  image at e4. See Next steps 1.
 - **Active thread closed: G1d 21:9 level-select tear (g1d-levelselect-heap).**
   s6631. The wide gap punch in `buildHeapFreeList` places the `8010FEFC`
   free-tail header exactly on `801163E4`. A walker that stops at `a >= e4`
@@ -643,7 +654,14 @@ so statically they should be owned on the scripted route (H-load over H-prox).
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1(d) level8 live ownership + disable response (next unit).** s6687
+1. **21:9 hangar SIGBUS root cause (g1d-heap-image-overlap).** Recipe:
+   `env HOLD_S=150 zsh tools/g1_lvl1_aspect_arm.sh <tag> 21:9 ""` (crashes in about 2 min). Name the writer of
+   the corrupt header at e4-0x10/e4 (watch those 32 bytes per rebuild, log PC + value), then
+   end the heap below the image (cap e4 by one header + guard) so neither the image nor a
+   live block owns the terminator. Done = 21:9 forced lvl1 mission_verified, level-select tear
+   still gone (s6631 check), 16:9 unchanged. Then the 21:9 G1f window capture.
+2. **G3d turning-shake timing follow-up** (ITERATION 3c).
+3. **(PARKED by owner) G1(d) level8 live ownership + disable response.** s6687
    contract: extend g1_objective_response_run.py to level 8. One run with
    ROGUESQ_LOG_GRIDSPAWN=1 records each train car's desc+6 slot. If one
    registers, send ONE ordinary kind-12 damage message (original
@@ -651,17 +669,17 @@ so statically they should be owned on the scripted route (H-load over H-prox).
    pool. Read counter5 via the original getter, with a same-run
    changing-value control. NEVER send hull damage: counter3==1 fails the
    mission. Level7 counter20 stays parked (s6686: proximity tanks).
-2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
+4. **(PARKED) Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
    Saved level7 id2 activity does not establish that level's objective semantics.
-3. **Owner visual judgement and parked boundaries.** G3c sheets and optional
+5. **Owner visual judgement and parked boundaries.** G3c sheets and optional
    spike cull await owner judgement; keep retail defaults. Native hangar
    geometry, rare dd4/dd8 gfx SIGBUS and dd8 hangar garbage remain parked,
    single-source where unresolved. Reopen on a new owner report or relevant
    side-effect failure, not repeat crash-hunt holds. Historical proposed probes
    are archived in PROJECT-OVERVIEW, not an alternate live backlog.
-4. **Then G3 render fidelity.** Follow the standing ladder for hangar artifacts
+6. **Then G3 render fidelity.** Follow the standing ladder for hangar artifacts
    and flight comparison against retail. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 

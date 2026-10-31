@@ -11,9 +11,12 @@ cd build && env ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=2 ./RogueSquadron64Recomp
 | 60 game frames/s (retail ~30) | `ROGUESQ_FPS60=1` | 300 s holds on levels 1, 5, 10: 0 crash, 0 VI stall; hangar soak clean. Craft path per real second unchanged (sim is delta-time); mission clocks time-based; audio tick is per-VI. Not checked: direct NPC position control, other levels. **Owner to judge feel.** | s6255-s6261 |
 | More terrain drawn | `ROGUESQ_DRAW_DISTANCE=2` (2 qualified on levels 1/5/10; 3 qualified on levels 1/5/10 (s6446: holds 302 s/301 s, 'multiplier 3' echoed, alive_at_end=1, 0 VI stalls, 0 crash lines); >3 needs `ROGUESQ_DD_UNSAFE=1`) | Levels 1, 5, 10 clean for 300 s; triangles x2.3 on level 1. Look (pop-in, haze) unjudged. | `docs/DRAW-DISTANCE.md` |
 | Widescreen | `ROGUESQ_ASPECT=16:9` or `21:9`, plus `ROGUESQ_OSMEM_MB=12`, `ROGUESQ_FP_XSCALE`, `ROGUESQ_HUD_ANCHOR` | Level-1 flight frames correct at 796 and 1024 wide, mission held ~182 s. KNOWN DEFECT: wide title screen shows a corrupt block / tiled background (defect B, unresolved, cosmetic, title only). | CURRENT-TRUTH "G1d widescreen" |
+| Window fills your screen | `ROGUESQ_ASPECT=16:9` (TV) or `21:9` (ultrawide), or `auto` (match this display); add `ROGUESQ_FULLSCREEN=1` to start fullscreen. F11, Alt+Enter or Cmd+Ctrl+F toggles fullscreen. `ROGUESQ_WINDOW_FIT=0` = old 640x480 window | 16:9: window and fullscreen verified, flight fills it (s6688). **21:9: hangar crash on the forced level-select route (s6688, under investigation; not caused by the window code).** Window size is fixed at launch; resizing letterboxes. | CURRENT-TRUTH "G1f" |
 | Spike lines in flight | **ON by default** since 2026-10-31; `ROGUESQ_CULL_SPIKE=0` shows them (retail) | Culls the ucode clip-plane wedge triangles (s6085; retail draws them too, s6454). | CURRENT-TRUTH "G3b/G3c" |
 | Frame-time instrument | `ROGUESQ_G1B=1` | Per-VI timing log. | s6017 |
 
 Combos: FPS60 + DRAW_DISTANCE=2 held 300 s clean on levels 1 and 5 (s6262, alive_at_end=1, 0 stalls, 0 crash lines). Widescreen + FPS60 (16:9 and 21:9, lvl1, s6264; needs TITLE_ORIGIN='0x[0-9A-F]*' MISSION_RE='[0-9A-F]+'): flight reached at width=796/1024, ~205 s hold (not the full 300 s), alive_at_end=1, 0 VI stalls, 0 crash lines.
+
+TV (16:9): `cd build && env ROGUESQ_ASPECT=16:9 ROGUESQ_FULLSCREEN=1 ./RogueSquadron64Recomp`. Ultrawide: same with `ROGUESQ_ASPECT=21:9` (see crash note). Any screen: `ROGUESQ_ASPECT=auto ROGUESQ_FULLSCREEN=1`.
 
 Rules of thumb: combine settings freely only after checking the table. Kill the game with SIGKILL.

@@ -10833,11 +10833,46 @@ static void rs64_g1f_fit_window(double r) {
     rs64_g1f_win_h = ((int)h) & ~1;
 }
 
+// Test lever: ROGUESQ_FS_TEST_TOGGLE_S="a[,b]" pushes a synthetic F11 keydown a (and b) seconds
+// after the window opens, through the same event watch as a real key. Harness keys never reach
+// SDL on macOS (s5416), so this is the only way to drive the toggle path unattended.
+static void rs64_g1f_test_toggle_tick() {
+    static const char* e = std::getenv("ROGUESQ_FS_TEST_TOGGLE_S");
+    static double at[2] = {-1.0, -1.0};
+    static int next = 0;
+    static Uint64 t0 = 0;
+    if (!e || !g_rs64_window || next >= 2) return;
+    if (!t0) {
+        t0 = SDL_GetPerformanceCounter();
+        at[0] = std::atof(e);
+        const char* c = std::strchr(e, ',');
+        at[1] = c ? std::atof(c + 1) : -1.0;
+    }
+    const double t = (double)(SDL_GetPerformanceCounter() - t0) / SDL_GetPerformanceFrequency();
+    if (at[next] < 0.0) { next = 2; return; }
+    if (t < at[next]) return;
+    SDL_Event ev{};
+    ev.type = SDL_KEYDOWN;
+    ev.key.windowID = SDL_GetWindowID(g_rs64_window);
+    ev.key.state = SDL_PRESSED;
+    ev.key.keysym.sym = SDLK_F11;
+    ev.key.keysym.scancode = SDL_SCANCODE_F11;
+    SDL_PushEvent(&ev);
+    fprintf(stderr, "[g1f] test F11 pushed t=%.1f\n", t);
+    next++;
+}
+
 static void rs64_g1f_apply_fs_toggle() {
+    rs64_g1f_test_toggle_tick();
     if (!g_rs64_window || !g_rs64_fs_toggle.exchange(false)) return;
     const bool fs = (SDL_GetWindowFlags(g_rs64_window) & SDL_WINDOW_FULLSCREEN) != 0;
     SDL_SetWindowFullscreen(g_rs64_window, fs ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
-    fprintf(stderr, "[g1f] fullscreen %s\n", fs ? "off" : "on");
+    int ww = 0, wh = 0, dw = 0, dh = 0;
+    SDL_GetWindowSize(g_rs64_window, &ww, &wh);
+#if defined(__APPLE__)
+    SDL_Metal_GetDrawableSize(g_rs64_window, &dw, &dh);
+#endif
+    fprintf(stderr, "[g1f] fullscreen %s window %dx%d drawable %dx%d\n", fs ? "off" : "on", ww, wh, dw, dh);
 }
 
 ultramodern::gfx_callbacks_t::gfx_data_t create_gfx() {
@@ -10864,6 +10899,8 @@ ultramodern::gfx_callbacks_t::gfx_data_t create_gfx() {
                 (k == SDLK_f && (m & KMOD_GUI) && (m & KMOD_CTRL)))
                 g_rs64_fs_toggle.store(true);
         }
+        if (ev->type == SDL_WINDOWEVENT && ev->window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
+            fprintf(stderr, "[g1f] resized %dx%d\n", ev->window.data1, ev->window.data2);
         static std::atomic<int> any{0};
         const bool first = any.fetch_add(1) < 40;
         if (first) { fprintf(stderr, "[keywitness] anyevent type=0x%X\n", (unsigned)ev->type); fflush(stderr); }
@@ -11169,12 +11206,20 @@ static void rs64_g1d_apply_aspect_policy() {
     double wr = c ? std::atof(as) : 0.0, hr = c ? std::atof(c + 1) : 0.0;
     rs64_g1f_fit_window(wr > 0.0 && hr > 0.0 ? std::clamp(wr / hr, 4.0 / 3.0, 1024.0 / 448.0) : 4.0 / 3.0);
     if (!c && !rs64_g1f_fullscreen) { rs64_g1f_win_w = 640; rs64_g1f_win_h = 480; }
+    // ROGUESQ_WINDOW_FIT=0: pre-G1f window (640x480, no high-DPI, no fullscreen, no RT64 aspect rewrite).
+    const char* wf = std::getenv("ROGUESQ_WINDOW_FIT");
+    const bool fit = !wf || std::atoi(wf) != 0;
+    if (!fit) { rs64_g1f_win_w = 640; rs64_g1f_win_h = 480; rs64_g1f_optin = false; rs64_g1f_fullscreen = false; }
     if (!c) return;
     double w = std::atof(as), h = std::atof(c + 1);
     if (!(w > 0.0 && h > 0.0) || w / h <= 4.0 / 3.0 + 1e-3) return;
     int fbw = (int)(448.0 * w / h + 0.5);
-    if (fbw > 1024) fbw = 1024;  // s6142: 1024 renders, 1032/1045 do not (stripe garbage, guest stall); cap source unnamed
     char b[32];
+    if (fbw > 1024) {
+        fbw = 1024;  // s6142: 1024 renders, 1032/1045 do not (stripe garbage, guest stall); cap source unnamed
+        // s6688: RT64's output aspect must match the clamped game width, or 21:9 stretches ~2%.
+        if (fit) setenv("ROGUESQ_ASPECT", "1024:448", 1);
+    }
     std::snprintf(b, sizeof b, "%d", fbw);
     setenv("ROGUESQ_FB_WIDTH", b, 0);
     if (fbw > 796) setenv("ROGUESQ_OSMEM_MB", "12", 0);  // s6425: 21:9 (w1024) framebuffers exhaust the 8 MB heap -> level-1 load_level_hmp NULL-dst crash (s6424 a219 3/3); 16:9 fits in 8 MB
