@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6695 (2026-10-31).
+Compact operational handoff, as of Session 6698 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -21,6 +21,10 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   apart, 10% >50 ms gaps) = the owner's turning shake (G3d). Same-run toggle A/B (ROGUESQ_G3D_LEGACY_TOGGLE) + 631-run census
   step. ALL frame-cost numbers s6390-s6695 (dd cost tables, sd_wall, tasks/s) carry the overhead and are void as absolutes.
   s6697: no residual shake (retail + FPS60 jerk arms); dd4 re-baseline lvl1 24.1 fps/24 ms, lvl5 19.6 fps/33.9 ms per task.
+- **s6698: per-store diagnostic hooks gated (g_rs64_store_diag).** ~143k hook calls (3-5 per guest store) ran unarmed:
+  52% of the game thread's busy time at lvl5 dd4. Auto-OFF with no ROGUESQ_LOG_*/*WATCH* env (owner play), auto-ON in every
+  logging recipe; ROGUESQ_STORE_DIAG=0/1 forces it. Same-run toggle lvl5 dd4: off 24.4 fps / 23.9 ms per task vs on 18.4 / 38.0.
+  Soak recipes measure the ON arm: add ROGUESQ_STORE_DIAG=0 for frame-cost numbers. Build is Debug: game code and src/ are -O0.
 - **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
   ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
   lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
@@ -682,29 +686,19 @@ so statically they should be owned on the scripted route (H-load over H-prox).
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G3d CLOSED on data (s6697), owner to judge feel.** Fixed build, same-run legacy toggle: retail 90% of game frames
-   2 VIs apart, yaw accel rms 0.66 (legacy 4.69); FPS60 56 tasks/s, 91% 1 VI apart, rms 0.39 (legacy 5.45, 16.6 tasks/s).
-   No sign-alternating jerk (0.44/0.61 < 0.7). Next: dd4 gfx-task cost (lvl5 dd4 19.6 fps / 33.9 ms per task vs dd1
-   30.0 / 14.7) - profile where send_dl time goes at dd4. Owner: send s6694+s6695 21:9 level-select frames.
-2. **(PARKED by owner) G1(d) level8 live ownership + disable response.** s6687
-   contract: extend g1_objective_response_run.py to level 8. One run with
-   ROGUESQ_LOG_GRIDSPAWN=1 records each train car's desc+6 slot. If one
-   registers, send ONE ordinary kind-12 damage message (original
-   API/ownership, no FFFF fallback) to a registered car below its disable
-   pool. Read counter5 via the original getter, with a same-run
-   changing-value control. NEVER send hull damage: counter3==1 fails the
-   mission. Level7 counter20 stays parked (s6686: proximity tanks).
-3. **(PARKED) Continue G1(d) named response coverage for remaining levels.** Reconcile
-   the existing evidence table before choosing the next level; scope counters
-   to that level's original callback and require actual changing-value controls.
-   Saved level7 id2 activity does not establish that level's objective semantics.
-4. **Owner visual judgement and parked boundaries.** G3c sheets and optional
+1. **G1c dd4 frame cost (s6698): -O2 arms next.** Store-hook gate + cached RT64 per-command getenv took lvl5 dd4 from
+   18.4 to 24.4 fps (Gfx thread now the bottleneck, 71% busy; game thread 26%). The Debug build compiles RecompiledFuncs and
+   src/ (dpc_bridge.cpp rsp_dpc_submit: unoptimised std::vector helpers in the profile) at -O0. Next: arms -O2 src/rsp+main
+   vs +RecompiledFuncs -O2, lvl5 dd4, ROGUESQ_STORE_DIAG=0. G3d closed (s6697); owner judges feel and the 21:9 frames.
+2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
+   PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
+3. **Owner visual judgement and parked boundaries.** G3c sheets and optional
    spike cull await owner judgement; keep retail defaults. Native hangar
    geometry, rare dd4/dd8 gfx SIGBUS and dd8 hangar garbage remain parked,
    single-source where unresolved. Reopen on a new owner report or relevant
    side-effect failure, not repeat crash-hunt holds. Historical proposed probes
    are archived in PROJECT-OVERVIEW, not an alternate live backlog.
-5. **Then G3 render fidelity.** Follow the standing ladder for hangar artifacts
+4. **Then G3 render fidelity.** Follow the standing ladder for hangar artifacts
    and flight comparison against retail. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 

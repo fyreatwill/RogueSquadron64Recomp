@@ -4719,6 +4719,38 @@ static thread_local uint32_t g_vte_pend_reg; static thread_local uint16_t g_vte_
 // lvl1 gfx task cost went ~10 -> ~50-80 ms (30 -> 11-17 game fps, bursty presents = the owner's turning shake). Flag is cached now.
 // ROGUESQ_G3D_LEGACY_TOGGLE=<sec>: same-run A/B, re-enables the old per-load getenv + SDV snapshot in alternate <sec> windows ([g3d] line per flip).
 static const bool g_spike_dmem_on = getenv("ROGUESQ_SPIKE_DMEM") != nullptr;
+// s6698 G1c: master gate for the per-guest-store diagnostic hooks (tools/apply_s6698_storediag.py gates ~143k call sites).
+// They cost 52% of the game thread's busy time in lvl5 dd4 flight with nothing armed. Auto-on whenever a logging/watch env
+// var is set, so every existing soak recipe keeps its instruments; ROGUESQ_STORE_DIAG=0/1 overrides.
+// ROGUESQ_STORE_DIAG_TOGGLE=<sec>: same-run A/B, flips the gate every <sec> s at osViSwapBuffer ([storediag] line per flip).
+extern "C" int g_rs64_store_diag = [] {
+    if (const char* e = getenv("ROGUESQ_STORE_DIAG"); e && *e) {
+        fprintf(stderr, "[storediag] on=%d reason=ROGUESQ_STORE_DIAG\n", *e != '0' ? 1 : 0);
+        return *e != '0' ? 1 : 0;
+    }
+    extern char** environ;
+    for (char** v = environ; v && *v; ++v) {
+        const char* s = *v;
+        if (strncmp(s, "ROGUESQ_", 8)) continue;
+        const char* eq = strchr(s, '='); std::string name(s, eq ? eq - s : strlen(s));
+        if (!name.compare(0, 12, "ROGUESQ_LOG_") || name.find("WATCH") != std::string::npos ||
+            name == "ROGUESQ_FLOOR_DEPTH_DIR" || name == "ROGUESQ_VSRC_STORES" || name == "ROGUESQ_SPANW") {
+            fprintf(stderr, "[storediag] on=1 reason=%s\n", name.c_str());
+            return 1;
+        }
+    }
+    fprintf(stderr, "[storediag] on=0 reason=no-logging-env\n");
+    return 0;
+}();
+extern "C" void rs64_store_diag_tick(void) {
+    static const double sec = [] { const char* e = getenv("ROGUESQ_STORE_DIAG_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
+    if (sec <= 0.0) return;
+    static const auto t0 = std::chrono::steady_clock::now(); static auto t_flip = t0;
+    const auto now = std::chrono::steady_clock::now();
+    if (std::chrono::duration<double>(now - t_flip).count() < sec) return;
+    t_flip = now; g_rs64_store_diag = !g_rs64_store_diag;
+    fprintf(stderr, "[storediag] on=%d t=%.3f\n", g_rs64_store_diag, std::chrono::duration<double>(now - t0).count());
+}
 static const double g_g3d_toggle_s = [] { const char* e = getenv("ROGUESQ_G3D_LEGACY_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
 static bool g_g3d_legacy = false;
 extern "C" int rs64_sdv_snap_enabled(void) { return g_spike_dmem_on || g_g3d_legacy; }

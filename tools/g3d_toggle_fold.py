@@ -12,6 +12,8 @@ rg = re.compile(r'^\[g1b\] t=(\d+) vi=(\d+) tasks=(\d+) sd_wall=([\d.]+)/\d+ sd_
 for ln in open(args[0], errors='replace'):
     if ln.startswith('[g3d] legacy='):
         state = int(ln.split('legacy=')[1].split()[0]); fresh = True; last_t = None; flips += 1; continue
+    if ln.startswith('[storediag] on=') and ' t=' in ln:  # s6698: legacy arm = store hooks live
+        state = int(ln.split('on=')[1].split()[0]); fresh = True; last_t = None; flips += 1; continue
     m = rg.match(ln)
     if m:
         t, vi, tk, w, c = int(m[1]), int(m[2]), int(m[3]), float(m[4]), float(m[5])

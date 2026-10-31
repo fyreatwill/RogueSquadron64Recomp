@@ -2104,7 +2104,7 @@ index c944393..d8803d4 100644
          auto &proj = projections[projectionCount - 1];
          proj.addGameCall(gameCall);
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..1d4bda0 100644
+index dccaa87..bbdc5cf 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
 @@ -5,12 +5,539 @@
@@ -2857,7 +2857,7 @@ index dccaa87..1d4bda0 100644
                      uint32_t toCopy = (uint32_t)((uintptr_t)dlEnd - (uintptr_t)dl);
                      memcpy(state->rdp->pendingCommandBuffer.data(), dl, toCopy);
                      state->rdp->pendingCommandCurrentBytes = toCopy;
-@@ -136,13 +825,213 @@ namespace RT64 {
+@@ -136,13 +825,215 @@ namespace RT64 {
                      break;
                  }
  
@@ -2924,7 +2924,9 @@ index dccaa87..1d4bda0 100644
 +                    // Phase-scoped positive-control breadcrumb for the Factor 5
 +                    // triangle-handler audit. This is before the handler call,
 +                    // so a dispatch row can be paired with drawIndexedTri.
-+                    if (std::getenv("ROGUESQ_LOG_TRI_DISPATCH") &&
++                    // s6698: was a getenv() per RDP command (7% of the Gfx thread in lvl5 dd4 flight).
++                    static const bool s_triDispatchLog = std::getenv("ROGUESQ_LOG_TRI_DISPATCH") != nullptr;
++                    if (s_triDispatchLog &&
 +                        (rawOpCode == 0xB1 || rawOpCode == 0xB4 || rawOpCode == 0xBF)) {
 +                        static uint32_t lastWidth = 0xFFFFFFFFu;
 +                        static uint32_t phaseRows = 0;
@@ -3073,7 +3075,7 @@ index dccaa87..1d4bda0 100644
              }
  
              if (dl != nullptr) {
-@@ -153,6 +1042,79 @@ namespace RT64 {
+@@ -153,6 +1044,79 @@ namespace RT64 {
          state->dlCpuProfiler.end();
      }
  
@@ -3153,7 +3155,7 @@ index dccaa87..1d4bda0 100644
      void Interpreter::processDisplayLists(uint32_t dlStartAdddress, DisplayList *dlStart) {
          assert(hleGBI != nullptr);
  
-@@ -169,8 +1131,11 @@ namespace RT64 {
+@@ -169,8 +1133,11 @@ namespace RT64 {
          DisplayList *dl = dlStart;
          uint8_t opCode;
          GBIFunction func;
@@ -3165,7 +3167,7 @@ index dccaa87..1d4bda0 100644
  
              if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
                  extendedFunction(state, &dl);
-@@ -190,6 +1155,7 @@ namespace RT64 {
+@@ -190,6 +1157,7 @@ namespace RT64 {
                  }
              }
  

@@ -352,11 +352,13 @@ extern "C" void rs64_s5078_flight_store(uint32_t pc, uint32_t addr) {
 }
 
 extern std::atomic<int> g_rs64_swap_n;
+extern "C" void rs64_store_diag_tick(void);
 extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     g_rs64_g1d_rdram.store(rdram, std::memory_order_relaxed);
     static int s_count = 0;
     int n = ++s_count;
     g_rs64_swap_n.store(n, std::memory_order_relaxed);
+    rs64_store_diag_tick(); // s6698 same-run A/B
     {
         // s4727: per-frame poll of the colour-image-struct site 0x1F0D70..80
         // (+ control: hangar state word 0xCC3E4, which retail/port both move).

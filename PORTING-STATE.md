@@ -175926,3 +175926,31 @@ dd4 still drops game fps below retail 30 on both levels; the trade-off is smalle
 Dead end noted: a zsh `set -- $spec` loop does not word-split, the first dd batch launched with LEVEL="1 4"; deleted, rerun.
 ORIGIN: no mitigation; measurement only.
 Next: profile the dd4 send_dl cost on lvl5 (which ucode ops / RSP recompiled paths dominate the extra 19 ms per task).
+
+## Session 6698 (2026-10-31) — G1c dd4 cost: unarmed per-store diagnostic hooks were 52% of the game thread; gated (lvl5 dd4 18.4 -> 24.4 fps same-run)
+Ran: (1) `sample` 10 s of lvl5 dd4 flight on the s6697 build (g1_lvl5s6698_dd4prof, 151 s hold, alive, 0 stalls/crashlines),
+folded per thread with new tools/sample_self.py. Gfx thread 51% busy (send_dl), 48% waiting; [Game] MAIN 50% busy, and of that
+scanConvertTriangleToSpanTable self 1425 samples + ~1780 in the store-hook chain it calls on every guest store
+(rs64_m5_writer_parity -> route_value_writer -> pre_dma_writer_store with an unconditional atomic exchange, f5_store_shadow(_post),
+probe_submit_gate_store, s65xx notes, RS64_S5798_ST). Gfx thread: 483 samples (14% of send_dl) in getenv("ROGUESQ_LOG_TRI_DISPATCH")
+called per RDP command in lib/rt64 Interpreter::processRDPLists.
+Selects H-overhead (NEXT.md s6697: H-verts/H-tris/H-ucap/H-overhead).
+Change: tools/apply_s6698_storediag.py (last in the replay list; post-condition: no ungated hook line) prefixes 142,928 hook call
+lines in 51 funcs files with `if (__builtin_expect(g_rs64_store_diag, 0))` and makes RS64_S5798_ST break out first.
+g_rs64_store_diag (main.cpp): ROGUESQ_STORE_DIAG=0/1 forces it; otherwise ON iff any ROGUESQ_LOG_* / *WATCH* / FLOOR_DEPTH_DIR /
+VSRC_STORES / SPANW env var is set, so every existing soak recipe keeps its instruments and owner play (no env) gets OFF.
+Verified at startup: no env -> on=0, LOG_PHASE -> on=1, LOG_PHASE+STORE_DIAG=0 -> on=0. ROGUESQ_STORE_DIAG_TOGGLE=<sec> flips it
+at osViSwapBuffer for same-run A/B; g3d_toggle_fold.py folds [storediag] lines (legacy = hooks on). RT64 getenv cached in a static
+(lib/rt64, rt64.patch exported).
+(2) same-run A/B, lvl5 dd4, toggle 20 s, 203 s hold, alive, 0 stalls, 0 crashlines (g1_lvl5s6698_dd4_storediag), flight t>=60:
+  hooks OFF n=76 s: vi 62.4/s, 24.4 game tasks/s, send_dl 23.9 ms wall / 22.0 cpu
+  hooks ON  n=65 s: vi 61.2/s, 18.4 game tasks/s, send_dl 38.0 ms wall / 34.9 cpu   (= s6697 baseline 19.6 / 33.9: control)
+Second line: `sample` in an OFF window: game thread busy 26% (was 50%), hook symbols absent, Gfx thread now 71% busy (bottleneck)
+and no getenv in it. send_dl cpu also fell with the hooks off although the hooks run on the game thread: not explained
+(single-source guess: core contention / E-core placement when both threads are hot).
+RT64 getenv fix: profile-only evidence (no arm, constant in both windows); single-source.
+Remaining Gfx-thread cost is visible -O0 code: the project is CMAKE_BUILD_TYPE=Debug; RT64 and the ucode get -O2, but
+RecompiledFuncs and src/ (dpc_bridge.cpp rsp_dpc_submit: std::__to_address / vector destroy / pair ctors as separate frames,
+mach_continuous_time from the G1B timer) are -O0. dd4 still below retail 30 fps (24.4).
+ORIGIN: no mitigation; diagnostic hooks gated behind their own enable (writer = our fixup scripts, observation only).
+Next: -O2 arms (src/rsp+main.cpp; RecompiledFuncs) on lvl5 dd4 with ROGUESQ_STORE_DIAG=0.
