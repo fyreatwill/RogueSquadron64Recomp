@@ -175445,5 +175445,11 @@ select-control fixture fires per arm. Rules out: admission defects in the
 lookup/detail/HP/gates (all as contracted). Does NOT rule out the tank
 existing later in the mission. Next: find the original registration writer
 (DAT+6) and the level7 tank spawn trigger, then watch all three tanks.
+Discrimination: this selects H-fallback (name exists, slot FFFF, unowned) for
+the whole first flight and refutes H-registered (no owned CBB0 victim, census
+named=0 in 19/19) and H-route (no divergence: lookup/detail/HP/gates all match
+the s6684 contract). Next discriminator: the original DAT+6 registration
+writer and lv7 tank spawn condition (trigger vs proximity vs never), which
+splits H-trigger/H-proximity/H-never in NEXT.md.
 ORIGIN: no mitigation added; instrument only.
 Evidence: scratch/agent/s6685_qualification.json; G1-OBJECTIVE-RESPONSE s6685.
