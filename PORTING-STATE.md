@@ -175644,3 +175644,30 @@ the cause of the 21:9 hangar SIGBUS, and the fault decode localises the crash to
 pointer from table 0x800CC4F8. Next discriminator: ROGUESQ_FLOOR_WATCH on 0x0CC4F4..0x0CC500,
 0x0CD6E8, 0x0CDA18 at 21:9 and 16:9 — a writer touching the table selects H-overwrite, no writer
 with an out-of-range s1 selects H-index.
+
+## Session 6690 (2026-10-31) — 21:9 hangar SIGBUS root-caused: spike cull's 8 MB mask folded the 12 MB RDP buffer onto hangar overlay code; fixed, 3/3 clean
+
+Ran the s6689 NEXT discriminator (ROGUESQ_FLOOR_WATCH on the voice table + index bytes, 21:9 vs 16:9).
+- Watch: idx byte 0x800CD6E8 = 8 at 21:9 (updateHangarBayScene 0x800ABC9C fall-through: craft id not in
+  the 8-entry list 0x800CC404), 0 at 16:9 (mallocCraftSelectionData found it). Table 0x800CC4F8 never
+  rewritten after the overlay DMA -> neither pure H-index nor a table overwrite: the LIST was corrupted.
+- RDRAM swap dumps (rd21/rd16, COARSE=20): 21:9 3/3 attempts, list word 0x800CC404 02080504 -> 00000000
+  within 20 swaps of overlay load (also 0x800CC384); 16:9 intact. Signature: 103 aligned dwords become
+  old & 0xFFFFC000 (w1=0), only where word A decodes as a j/jal/lw opcode, i.e. "RDP triangle" culls.
+- lldb hardware watch on 0x800CC404 (scratch/s6690/wp_list.sh, s6690_wp21b/lldb.log): positive control =
+  4 hits from do_rom_read (overlay DMA); the zeroing hits are Gfx Thread rs64_spike_scan <-
+  rs64_dpc_record_submit with lo=0x892800; same run then EXC_BAD_ACCESS in mallocVoiceLineStruct.
+ORIGIN: the writer is our own host-side spike cull, not the game. It masked addresses with 0x7FFFFC
+(8 MB). 21:9 sets ROGUESQ_OSMEM_MB=12 (s6425), so the game's RDP buffer at 0x892800 folded onto
+0x092800 (hangar overlay), and pseudo-triangles it judged "bad" were zeroed in place. Value is not
+legitimate. Latent until the owner made CULL_SPIKE default-on today (previously it needed LOG_SPIKE=1),
+which is why s6688 first saw it. Fix (src/rsp/dpc_bridge.cpp): kSubmitRamMask=0xFFFFFC and hi<=16 MB
+bound in rs64_spike_scan and rs64_region_scan. Class audit: grep of every 0x7FFFF[F/C/8] mask in src/
+and lib/rt64/src: these two scanners are the only masked rdram WRITE sites; all others read or log.
+Result: 21:9 forced lvl1 route, mission_verified_130s, 0 caught signals, 3/3 (fixA, fixR2, fixR3)
+vs 4/4 SIGBUS before (s6688/s6689). nocullB (fixed binary, cull off) also clean. Two lines: writer
+named by hw watch + dump signature; crash gone with the fix.
+G1f 21:9 window check (scratch/s6690/win21): window 1360x594 (2720x1188 drawable), synthetic F11 ->
+fullscreen 1512x949/3024x1898 -> back to 1360x594. screencapture -l of the Metal window gives a white
+image (s6688 captures were white too), so window PNGs prove geometry only, not content.
+Not done: s6631 level-select tear re-check with heapslot + this fix.

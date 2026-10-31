@@ -328,6 +328,11 @@ static std::atomic<bool> g_synthetic_consumer_pending{false};
 static std::atomic<uint64_t> g_synthetic_submit_serial{0};
 static uint32_t g_e9_boundary_lines = 0;
 static uint8_t *g_rdram_for_submit = nullptr;
+// s6690: submit-range scanners that WRITE rdram must use the full guest RAM size, not 8 MB.
+// ROGUESQ_OSMEM_MB (21:9 sets 12) and RT64 allow up to 16 MB; the old 0x7FFFFC mask folded
+// RDP commands at 0x892800+ onto 0x092800+ and the spike cull zeroed hangar overlay data.
+static constexpr uint32_t kSubmitRamMask = 0xFFFFFCu;
+static constexpr uint32_t kSubmitRamEnd = 0x1000000u;
 
 static bool log_e9_unified();
 static bool log_e9_boundary();
@@ -3405,7 +3410,7 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     // 2026-10-31 owner: cull is DEFAULT ON (ROGUESQ_CULL_SPIKE=0 restores retail wedges). It used to run only
     // under ROGUESQ_LOG_SPIKE=1, so the documented CULL_SPIKE=1 opt-in alone was a no-op.
     static const bool cull = [] { const char *e = std::getenv("ROGUESQ_CULL_SPIKE"); return !(e && *e == '0'); }();
-    if (!(on || cull) || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u) return;
+    if (!(on || cull) || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
     static const double guard = [] { const char *e = std::getenv("ROGUESQ_SPIKE_CTL"); return e && *e ? atof(e) : 640.0; }();
     static uint64_t s_tris = 0, s_bad = 0, s_logged = 0, s_culled = 0;
     static int s_swap = -1; static uint32_t s_swap_tris = 0, s_swap_bad = 0;
@@ -3414,7 +3419,7 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         if (on && s_swap_bad) { fprintf(stderr, "[spike-swap] swap=%d tris=%u bad=%u total_tris=%llu total_bad=%llu culled=%llu\n", s_swap, s_swap_tris, s_swap_bad, (unsigned long long)s_tris, (unsigned long long)s_bad, (unsigned long long)s_culled); fflush(stderr); }
         s_swap = sw; s_swap_tris = 0; s_swap_bad = 0;
     }
-    auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & 0x7FFFFCu), 4); return v; };
+    auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
     auto sx14 = [](uint32_t v) { return (double)(((int32_t)(v << 18)) >> 18) / 4.0; };
     for (uint32_t a = lo & ~3u; a + 8 <= hi;) {
         const uint32_t w0 = rd(a), w1 = rd(a + 4);
@@ -3432,7 +3437,7 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         s_tris++; s_swap_tris++;
         if (bad && cull) {
             // s6084: zero the triangle height (yl=ym=yh=0) so the rasteriser emits no scanlines; length is unchanged.
-            uint32_t n0 = w0 & ~0x3FFFu, n1 = 0; memcpy(g_rdram_for_submit + (a & 0x7FFFFCu), &n0, 4); memcpy(g_rdram_for_submit + ((a + 4) & 0x7FFFFCu), &n1, 4);
+            uint32_t n0 = w0 & ~0x3FFFu, n1 = 0; memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &n0, 4); memcpy(g_rdram_for_submit + ((a + 4) & kSubmitRamMask), &n1, 4);
             s_culled++;
         }
         if (bad && on) {
@@ -4660,11 +4665,11 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
         const char *d = std::getenv("ROGUESQ_SHIFT_REGION");
         if (d && *d) { dxs = atof(d); shiftOn = 1; }
         return true; }();
-    if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u) return;
+    if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
     static uint32_t s_logged = 0, s_hits = 0;
     const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
-    auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & 0x7FFFFCu), 4); return v; };
-    auto wr = [&](uint32_t a, uint32_t v) { memcpy(g_rdram_for_submit + (a & 0x7FFFFCu), &v, 4); };
+    auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
+    auto wr = [&](uint32_t a, uint32_t v) { memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &v, 4); };
     auto sx14 = [](uint32_t v) { return (double)(((int32_t)(v << 18)) >> 18) / 4.0; };
     for (uint32_t a = lo & ~3u; a + 8 <= hi;) {
         const uint32_t w0 = rd(a), w1 = rd(a + 4);
