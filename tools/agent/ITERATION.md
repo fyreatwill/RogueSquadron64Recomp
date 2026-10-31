@@ -273,6 +273,12 @@ CURRENT-TRUTH "Next steps" (or NEXT.md if present). Before building anything:
   each possible outcome would prove, redesign before running.
 - Batch instrumentation: one build carrying every counter you will want, one
   run collecting all of them. Never spend a build-run cycle per counter.
+- Batch your reads too (owner 2026-10-31, token cost). Every tool call re-reads the
+  whole conversation from cache, so a session of 50 small calls costs far more than one
+  of 15 larger ones. Decide up front what you need, then fetch it in ONE Bash call
+  (several sed/grep/tail joined with `;` and short `echo ---` separators). Print only
+  the lines you need: grep -n with tight patterns, sed ranges under ~60 lines, `| head`.
+  Never cat large files or dump whole logs; summarise them with a short python/awk pass.
 
 ## Iron rules (each one bought with multiple lost sessions)
 1. A null result is WORTHLESS until the instrument passes a positive control

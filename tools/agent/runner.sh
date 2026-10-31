@@ -29,6 +29,20 @@ set -u
 cd "$(dirname "$0")/../.."
 PROMPT_FILE="${1:?usage: runner.sh <prompt-file> | runner.sh --describe}"
 RUNNER="${RUNNER:-claude}"
+# Marks sessions launched by the loop; stop_gate.sh only gates these (2026-10-31: an
+# ad-hoc `claude -p "reply ok"` in this repo was forced through the exit contract and
+# committed/edited loop state). Inherited by every runner's child process.
+export RS64_LOOP=1
+# Lean claude sessions (2026-10-31, measured from /tmp with haiku "reply ok"): the owner's
+# user-level plugins (~8.5k tok), Fable Mode output style (~3.6k) and MCP servers (~2k)
+# were loaded into every turn of every iteration (~14k of a ~44k base; ~700k cache reads
+# per 50-turn Opus session). Project hooks/permissions are unaffected. Opt out with
+# CLAUDE_LEAN=0.
+if [ "${CLAUDE_LEAN:-1}" = "1" ]; then
+  CLAUDE_LEAN_ARGS=(--strict-mcp-config --settings '{"outputStyle":"default","enabledPlugins":{"openai-developers@openai-developers":false,"codex@openai-codex":false,"vercel@claude-plugins-official":false}}')
+else
+  CLAUDE_LEAN_ARGS=()
+fi
 
 # Portable timeout: macOS ships no timeout(1). Same watchdog idiom as
 # loop.sh's soak runner (setpgrp so the whole process tree dies together).
@@ -102,6 +116,7 @@ case "$RUNNER" in
     # Roll back with CLAUDE_PERMISSION_MODE=acceptEdits.
     AGD="scratch/agent"; tmpout="$(mktemp -t rs64-claude-out)"
     claude -p "$(cat "$PROMPT_FILE")" \
+      "${CLAUDE_LEAN_ARGS[@]+"${CLAUDE_LEAN_ARGS[@]}"}" \
       --model "${RUNNER_MODEL:-${LOOP_MODEL:-claude-sonnet-5-5}}" \
       --permission-mode "${CLAUDE_PERMISSION_MODE:-bypassPermissions}" \
       --output-format json > "$tmpout" 2>&1 &
@@ -166,6 +181,7 @@ case "$RUNNER" in
     esac
 
     out="$(claude -p "$ds_prompt" \
+      "${CLAUDE_LEAN_ARGS[@]+"${CLAUDE_LEAN_ARGS[@]}"}" \
       --model "$ds_model" \
       --permission-mode "${CLAUDE_PERMISSION_MODE:-bypassPermissions}" \
       --output-format json 2>&1)"

@@ -7,6 +7,10 @@
 # stdout: {"decision":"block","reason":"..."} to keep the turn going, or nothing to allow.
 set -u
 cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../..}" || exit 0
+# Only gate sessions the loop launched (runner.sh exports RS64_LOOP=1). An interactive
+# or ad-hoc claude session in this repo must not be driven into the exit contract
+# (2026-10-31 incident). --verify (loop.sh's post-hoc check) is unaffected.
+if [ "${1:-}" != "--verify" ] && [ "${RS64_LOOP:-}" != "1" ]; then exit 0; fi
 
 AG=scratch/agent
 mkdir -p "$AG"
