@@ -1,18 +1,20 @@
-# NEXT: 21:9 level-select right-edge residual (after the s6694 scissor fix)
-HYPOTHESIS-ID: g1d-levelselect-right-residual
+# NEXT: G3d turning-shake timing follow-up (ITERATION item 3c)
+HYPOTHESIS-ID: g3d-turning-shake-timing
 
-s6694 fixed the floor tear (game scissor lrx (w*4)&0xFFF wrapped to 0 at w=1024; clamped to 0xFFF at
-0x80017370/0x80017814). Remaining in the 21:9 select frame (scratch/agent/s6694_clr/w21/wide21/fbd/
-fb_0001450_w1024.ppm, screenshots/s6694_21x9_levelselect_before_after.png middle row): noise block at
-x~690-760 rows 0-60 and a noise column x>~950. vhf 7.2-8.0 vs target <7.
+G1d level select is closed (s6694 scissor wrap, s6695 spike-cull bound + radar-shift gate). Spec: ITERATION.md G3d.
+Evidence that reopens G3c(c): s6458 VI stamps arrive in bursts (3-4 VIs within 0.1 ms, then ~66 ms gaps) and lvl1
+ran ~18 gfx tasks/s vs ~30/s retail (s6452, 0x8011A890).
 
 Hypotheses:
-- H-wrap2: another game-built 12-bit x field (fill rect, tex rect, viewport scale/translate) encodes
-  1024*4 and wraps, so something meant to cover the right edge (backdrop clear / wall rect) is clipped.
-- H-fov: the 3D geometry genuinely ends before x=1024 (camera not widened enough for 1024), so those pixels
-  are never drawn and only the colour clear would hide them (is the colour image cleared at all here?).
-- H-stale: the pixels are drawn, but RT64 write-back/read-in at w=1024 leaves stale rows (old s6625 class).
-Discriminator (one run, python3 scratch/agent/s6694_clr/run.py w21 with ROGUESQ_LOG_FILLALL=1): list every
-fill/tex rect on the 1024 colour images with lrx<ulx or lrx==0 (H-wrap2); [floor-frame]/RDP tri x-extent max
-per frame vs 1023 (H-fov); compare the noise pixels against the previous frame dump (stale = identical, H-stale).
-Then fix and send the owner the before/after. After that: G3d turning-shake (ITERATION 3c).
+- H-log: the soak's G1B/G3C logging slows the game thread and bunches VI delivery; normal play is fine.
+- H-thread: VI events go to a game thread busy for ~66 ms, i.e. real ~15-18 fps in normal play too.
+- H-present: game frames are even but RT64 presents bunch.
+Discriminator (ONE build): cheap ring buffer (no per-frame stderr) stamping wall time of (a) VI event delivery,
+(b) game gfx-task submit (osSpTaskStart of the gfx task), (c) RT64 present; dumped at exit. Arms, same build,
+sequential runs: lvl1 forced route steady turn (autopilot yaw hold), minimal logging vs usual soak logging, retail
+and FPS60. Report per arm: game fps, submit-interval and present-interval distribution (p50/p95, burst count).
+Outcomes: minimal-logging arm even ~30 fps -> H-log (fix: cheaper logging); both ~18 fps bursty -> H-thread
+(find what blocks the game thread: QoS/priority, VI delivery path); submits even but presents bunched -> H-present.
+Owner judges feel after any fix.
+Side item (small, optional): grey radar wedge stays at x~690 top in 21:9 flight (screenshots/s6695_21x9_flight_radar_gate_check.png);
+the s6159 shift leaves it behind. Owner: send screenshots/s6694_* and s6695_21x9_levelselect_before_after.png.

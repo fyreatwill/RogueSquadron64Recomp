@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6694 (2026-10-31).
+Compact operational handoff, as of Session 6695 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -45,15 +45,22 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   hardware max) at both sites (tools/apply_s6031_far.py apply_s6694_scissor, mirrored in the vendored
   fixup; no-op at retail widths). Evidence: raw [scissor-raw] w1=00000550 -> 00FFF550; depth fb 00B56000
   now h=340 lwt=Color diff=1 per frame like 16:9; select-frame vhf 19-26 -> 7.2-8.0; floor and ring
-  visible (screenshots/s6694_21x9_levelselect_before_after.png). Residual: noise strip at the top right
-  and right edge (x>~950) of the 21:9 select frame = undrawn pixels, separate defect (open).
+  visible (screenshots/s6694_21x9_levelselect_before_after.png). Residual fixed s6695 (next bullet).
+- **FIXED s6695: 21:9 level-select right-edge residual = two of OUR host-side scanners.** (1) rs64_spike_scan
+  bounded x at 320+640=960 (320-wide viewport assumption) and zeroed every normal tri past x=960 at w1024
+  (1850 in one select run). It now tracks SET_COLOR_IMAGE width; images >640 wide get the guard from their own
+  edge, <=640 unchanged. (2) rs64_region_scan (s6159 radar-disc shift, box x669-810 y20-135, +256) shifted
+  scenery in every scene (doorway room at select, title texrects). It now shifts only within 8 swaps of
+  renderRadarMinimap (fixup tools/apply_s6695_radarmark.py; ROGUESQ_SHIFT_REGION_ANYWHERE=1 = old behaviour).
+  Select vhf 7.2-8 -> 5.4; flight radar still aligned (positive control), lvl1 21:9 mission_verified_130s.
+  screenshots/s6695_21x9_levelselect_before_after.png. Pre-existing: grey radar wedge left at x~690 in flight.
   The s6692/s6693 "RT64 depth handling" reading was right about where the clear was lost, wrong about why.
 - **G3c (owner visual report): engineering closed, owner judgement pending.**
   (a) far-edge stair: no opt-in rougher than retail (s6449, s6544);
   (b) spike wedges: H-hw-draws, angrylion lights the same 16/79 wedges
   (s6454), `ROGUESQ_CULL_SPIKE` now DEFAULT ON per owner 2026-10-31 (=0 to disable); (c) turning shake: retail 30 fps
   judder (s6455, s6458).
-- **G1d (aspect): level-select floor tear FIXED s6694 (see above); right-edge noise residual open.** Flight radar
+- **G1d (aspect): level-select floor tear FIXED s6694, right-edge residual FIXED s6695 (see above).** Flight radar
   inset matches retail (s6610). Extra width is real scene and the left HUD
   stays pinned. Heap `8010FEFC` now stops at the depth pointer when aspect
   is wider than 4:3. The OS window stays 640x480, so wider modes letterbox.
@@ -666,12 +673,9 @@ so statically they should be owned on the scripted route (H-load over H-prox).
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **21:9 level-select right-edge residual (after the s6694 scissor fix).** Top-right block (x~690-760,
-   rows 0-60) and right column (x>~950) of the 21:9 select frame are noise (undrawn/stale). Check the
-   other 0xFFF-masked x encodings (fill/tex rect, viewport) for the same w*4 wrap first, then whether
-   the geometry simply ends there (camera FOV vs fb width). Send the owner the s6694 before/after frame.
-2. **G3d turning-shake timing follow-up** (ITERATION 3c).
-3. **(PARKED by owner) G1(d) level8 live ownership + disable response.** s6687
+1. **G3d turning-shake timing follow-up** (ITERATION 3c). Owner: send s6694+s6695 21:9 level-select
+   before/after frames. Optional small G1d item: the grey radar wedge left behind at x~690 top in 21:9 flight.
+2. **(PARKED by owner) G1(d) level8 live ownership + disable response.** s6687
    contract: extend g1_objective_response_run.py to level 8. One run with
    ROGUESQ_LOG_GRIDSPAWN=1 records each train car's desc+6 slot. If one
    registers, send ONE ordinary kind-12 damage message (original
@@ -679,17 +683,17 @@ so statically they should be owned on the scripted route (H-load over H-prox).
    pool. Read counter5 via the original getter, with a same-run
    changing-value control. NEVER send hull damage: counter3==1 fails the
    mission. Level7 counter20 stays parked (s6686: proximity tanks).
-4. **(PARKED) Continue G1(d) named response coverage for remaining levels.** Reconcile
+3. **(PARKED) Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
    Saved level7 id2 activity does not establish that level's objective semantics.
-5. **Owner visual judgement and parked boundaries.** G3c sheets and optional
+4. **Owner visual judgement and parked boundaries.** G3c sheets and optional
    spike cull await owner judgement; keep retail defaults. Native hangar
    geometry, rare dd4/dd8 gfx SIGBUS and dd8 hangar garbage remain parked,
    single-source where unresolved. Reopen on a new owner report or relevant
    side-effect failure, not repeat crash-hunt holds. Historical proposed probes
    are archived in PROJECT-OVERVIEW, not an alternate live backlog.
-6. **Then G3 render fidelity.** Follow the standing ladder for hangar artifacts
+5. **Then G3 render fidelity.** Follow the standing ladder for hangar artifacts
    and flight comparison against retail. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 

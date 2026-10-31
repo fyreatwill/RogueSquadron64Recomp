@@ -175840,3 +175840,39 @@ Residual: noise at the top-right block (x~690-760, top rows) and right column (x
 frame - undrawn pixels, which is why vhf sits at 7.2 rather than <7. Separate defect, next unit.
 Verdict: selects H-skip (by zero-width scissor); refutes H-cimg (addr/width correct) and H-manager (no
 manager split; the clear never reached either). The census logs stay env-gated (ROGUESQ_LOG_DEPTH_PAIR).
+
+## Session 6695 (2026-10-31) — 21:9 level-select right-edge residual fixed: two host-side scanners assumed retail screen geometry (spike cull x>960, radar-disc box shift in every scene)
+Unit: NEXT.md g1d-levelselect-right-residual (noise block x~690-770 rows 20-130, noise column x>~955 rows 170-336).
+Hypotheses at start: H-wrap2 (another 12-bit x field wraps at w*4=4096), H-fov (geometry ends), H-stale, plus H-footprint.
+Runs (all 21:9 level-select route via tools/g1d_floor_inputs.run_arm, ~35-60 s each; scripts in scratch/agent/s6695_fpx/):
+- Window capture (shot.py, screencapture of the RT64 window): the holes are on screen too, not only in the RDRAM dump.
+- FP_XSCALE 1 vs 4 (run.py): pixel-identical holes -> terrain footprint (s6144) is not the cull. H-footprint refuted.
+- FILLALL at w1008 and w1024 (w1008.py): level select only fills depth (one 0..W x 0..340 fill/frame), no colour clear,
+  so holes = pixels nothing draws. (The w1008 frame lacked the doorway hole, but that was a different pose: confound.)
+- Static: setupCameraMatrices' other 5 andi 0xFFF sites are y/ulx fields; emitFrameRdpInitDl's 3 are width-1.
+  No further game-side wrap. H-wrap2 refuted (single-source, static).
+Writer 1 (right column): our rs64_spike_scan (src/rsp/dpc_bridge.cpp) bounds x at 320+guard(640)=960, a 320-wide
+  viewport assumption. At w1024 every ordinary triangle past x=960 was zeroed. Evidence: CULL_SPIKE=0 + LOG_SPIKE arm
+  logged 1850 "bad" tris in level select, e.g. op 0F V=(950.8,242)(983.5,267.5), normal wall tris, and the column
+  filled in. Fix: track SET_COLOR_IMAGE width in the scan; images wider than 640 get the guard measured from their own
+  right edge (<=640 unchanged, so 4:3 culling is byte-identical). Fixed arm: 0 bad tris, column vhf 13 -> 5.5.
+Writer 2 (doorway block): our rs64_region_scan (s6158/s6159 radar-disc HUD shift) moves every <=130 px tri/texrect
+  centred in the fixed box x 669-810, y 20-135 by +256 px in EVERY scene. At level select that box holds the room seen
+  through the doorway ([region] TRI op=0F x=625..753 y=37..168 at swap 384), pushed off-screen. It also shifted
+  thousands of title-phase texrects (flight-route census: swaps 250-1250 TEXRECT 12k matches). The disc tris are op 0F
+  like scene geometry, so no opcode gate exists. Fix: fixup tools/apply_s6695_radarmark.py stamps the swap number at
+  renderRadarMinimap entry (0x800C5F90, funcs_34.c, registered in fixup_game_funcs_vendored.py); the shift applies only
+  within 8 swaps of a radar draw (ROGUESQ_SHIFT_REGION_ANYWHERE=1 restores the old behaviour). New
+  ROGUESQ_REGION_LOG_CAP (default 400) for the census.
+Verification: level-select arm: [region-gate] shift=off for the whole run, 0 spike tris, select frame vhf 5.41
+  (s6694 7.2-8.0; target <7), doorway-box noise 6.1 (was 15-23). Positive control, lvl1 21:9 flight
+  (tools/g1_lvl1_aspect_arm.sh s6695gate): gate turns on at swap 2482 (flight) and stays on, radar disc still inside
+  its ring at the right edge like the ungated run, mission_verified_130s, 0 crashes.
+  Sheets: screenshots/s6695_21x9_levelselect_before_after.png, screenshots/s6695_21x9_flight_radar_gate_check.png.
+Caveat: the after-frame pose doesn't show the doorway, so the doorway fix rests on the mechanism (gate off + logged
+  doorway tris in the box) plus the box metric, not on a same-pose visual. Pre-existing, not touched: a grey radar
+  wedge stays at x~690 top in flight (s6159 "RA leaves the wedge behind").
+ORIGIN: both writers are our own host-side scanners (spike cull s6083/s6084, region shift s6158/s6159), not the game.
+  The values they hit were legitimate game geometry. The fixes narrow each scanner to where its premise holds.
+Verdict: selects H-host-scanner (two host-side writers), refutes H-wrap2 (no further 12-bit wrap), H-footprint and
+  H-stale (holes are undrawn, not stale). G1d level-select residual closed. Next: G3d turning-shake timing (ITERATION 3c).

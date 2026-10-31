@@ -37812,6 +37812,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s6694 scissor lrx clamp x{_n6694}")
 
+    if p.name == "funcs_34.c":
+        import apply_s6695_radarmark as _a6695
+        text, _n6695 = _a6695.apply34(text)
+        if _n6695:
+            changed = True
+            report.append(f"{p.name}: s6695 radar mark x{_n6695}")
+
     if p.name == "funcs_0.c":
         import apply_s6031_far as _a6031p
         text, _n6115 = _a6031p.applypfm(text)
@@ -41949,6 +41956,7 @@ RS64_REPLAY = [
     "apply_s6146_hudwatch.py",
     "apply_s6146b_hudpc.py",
     "apply_s6031_far.py",
+    "apply_s6695_radarmark.py",
     "apply_s5818_destroy_health.py",
     "apply_s5846_mission_end.py",
     "apply_s5847_mask_log.py",

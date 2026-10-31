@@ -3413,6 +3413,7 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     if (!(on || cull) || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
     static const double guard = [] { const char *e = std::getenv("ROGUESQ_SPIKE_CTL"); return e && *e ? atof(e) : 640.0; }();
     static uint64_t s_tris = 0, s_bad = 0, s_logged = 0, s_culled = 0;
+    static uint32_t s_cw = 320;  // s6695: width of the last SET_COLOR_IMAGE seen in a submitted range
     static int s_swap = -1; static uint32_t s_swap_tris = 0, s_swap_bad = 0;
     const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
     if (sw != s_swap) {
@@ -3425,6 +3426,7 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         const uint32_t w0 = rd(a), w1 = rd(a + 4);
         const uint32_t op = (w0 >> 24) & 0x3F;
         if (op == 0x24 || op == 0x25) { a += 16; continue; }
+        if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; a += 8; continue; }
         if (op < 0x08 || op > 0x0F) { a += 8; continue; }
         const uint32_t len = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
         if (a + 32 > hi) break;
@@ -3433,7 +3435,11 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         const double xl = fx(8), dl = fx(12), xh = fx(16), dh = fx(20), xm = fx(24), dm = fx(28);
         const double v[5][2] = {{xh, yh}, {xm + dm * (ym - yh), ym}, {xl, ym}, {xl + dl * (yl - ym), yl}, {xh + dh * (yl - yh), yl}};
         bool bad = !(yh <= ym && ym <= yl);
-        for (auto &p : v) if (p[0] < -guard || p[0] > 320.0 + guard || p[1] < -guard || p[1] > 240.0 + guard) bad = true;
+        // s6695: the right bound assumed a 320-wide viewport, so at 21:9 (colour image 1024 wide) every
+        // ordinary triangle reaching x>960 was zeroed (level-select right-edge wall hole). Images wider
+        // than 640 (widescreen only) get the guard measured from their own right edge; <=640 is unchanged.
+        const double xr = 320.0 + guard + (s_cw > 640u ? (double)s_cw - 320.0 : 0.0);
+        for (auto &p : v) if (p[0] < -guard || p[0] > xr || p[1] < -guard || p[1] > 240.0 + guard) bad = true;
         s_tris++; s_swap_tris++;
         if (bad && cull) {
             // s6084: zero the triangle height (yl=ym=yh=0) so the rasteriser emits no scanlines; length is unchanged.
@@ -4831,6 +4837,10 @@ static void rs64_floor_scan(uint32_t lo, uint32_t hi) {
 }
 
 
+// s6695: swap number of the last renderRadarMinimap call (fixup tools/apply_s6695_radarmark.py).
+static std::atomic<int> g_rs64_radar_swap{-1000};
+extern "C" void rs64_radar_mark(void) { g_rs64_radar_swap.store(g_rs64_swap_n.load(std::memory_order_relaxed), std::memory_order_relaxed); }
+
 // s6158 G1d: region scan. ROGUESQ_LOG_REGION="x0,x1,y0,y1" (raw RDP px) logs every
 // triangle (bbox centre in region) and texrect (ul in region) with its range and
 // offset; ROGUESQ_SHIFT_REGION=<dx px> additionally shifts matching tris/rects in x
@@ -4845,7 +4855,15 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
         return true; }();
     if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
     static uint32_t s_logged = 0, s_hits = 0;
+    static const uint32_t s_cap = [] { const char *e = std::getenv("ROGUESQ_REGION_LOG_CAP"); return e && *e ? (uint32_t)atoi(e) : 400u; }();  // s6695
     const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
+    // s6695: the box is a fixed screen region, so the shift also moved level-select scenery (the room seen
+    // through the doorway, leaving a hole) and title texrects. Shift only while the flight radar is drawn;
+    // =0 on ROGUESQ_SHIFT_REGION_ANYWHERE restores the ungated s6158 behaviour. Logging is unchanged.
+    static const bool anywhere = [] { const char *e = std::getenv("ROGUESQ_SHIFT_REGION_ANYWHERE"); return e && *e && *e != '0'; }();
+    const bool radar = anywhere || (sw - g_rs64_radar_swap.load(std::memory_order_relaxed)) <= 8;
+    static int s_radar_prev = -1;
+    if (shiftOn && (int)radar != s_radar_prev) { fprintf(stderr, "[region-gate] swap=%d radar=%d shift=%s\n", sw, (int)radar, radar ? "on" : "off"); fflush(stderr); s_radar_prev = (int)radar; }
     auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
     auto wr = [&](uint32_t a, uint32_t v) { memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &v, 4); };
     auto sx14 = [](uint32_t v) { return (double)(((int32_t)(v << 18)) >> 18) / 4.0; };
@@ -4858,8 +4876,8 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
             const double xl = ((w0 >> 12) & 0xFFF) / 4.0, yl = (w0 & 0xFFF) / 4.0;
             if (xl >= R[0] && xl <= R[1] && yl >= R[2] && yl <= R[3]) {
                 s_hits++;
-                if (s_logged++ < 400) { fprintf(stderr, "[region] swap=%d TEXRECT off=%06X ul=(%.1f,%.1f) lr=(%.1f,%.1f) range=%06X..%06X\n", sw, a, xh, yh, xl, yl, lo, hi); fflush(stderr); }
-                if (shiftOn) { const int32_t d4 = (int32_t)(dxs * 4); wr(a, (w0 & ~0xFFF000u) | ((((w0 >> 12) & 0xFFF) + d4) & 0xFFF) << 12); wr(a + 4, (w1 & ~0xFFF000u) | ((((w1 >> 12) & 0xFFF) + d4) & 0xFFF) << 12); }
+                if (s_logged++ < s_cap) { fprintf(stderr, "[region] swap=%d TEXRECT off=%06X ul=(%.1f,%.1f) lr=(%.1f,%.1f) range=%06X..%06X\n", sw, a, xh, yh, xl, yl, lo, hi); fflush(stderr); }
+                if (shiftOn && radar) { const int32_t d4 = (int32_t)(dxs * 4); wr(a, (w0 & ~0xFFF000u) | ((((w0 >> 12) & 0xFFF) + d4) & 0xFFF) << 12); wr(a + 4, (w1 & ~0xFFF000u) | ((((w1 >> 12) & 0xFFF) + d4) & 0xFFF) << 12); }
             }
             a += 16; continue;
         }
@@ -4874,8 +4892,8 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
         const double cx = (mn + mx) / 2, cy = (yh + yl) / 2;
         if (cx >= R[0] && cx <= R[1] && cy >= R[2] && cy <= R[3] && (mx - mn) <= 130.0 && (yl - yh) <= 130.0) {  // size cap: skip sky/terrain tris
             s_hits++;
-            if (s_logged++ < 400) { fprintf(stderr, "[region] swap=%d TRI off=%06X op=%02X x=%.1f..%.1f y=%.1f..%.1f range=%06X..%06X\n", sw, a, op, mn, mx, yh, yl, lo, hi); fflush(stderr); }
-            if (shiftOn) { const int32_t d = (int32_t)(dxs * 65536.0); wr(a + 8, rd(a + 8) + d); wr(a + 16, rd(a + 16) + d); wr(a + 24, rd(a + 24) + d); }
+            if (s_logged++ < s_cap) { fprintf(stderr, "[region] swap=%d TRI off=%06X op=%02X x=%.1f..%.1f y=%.1f..%.1f range=%06X..%06X\n", sw, a, op, mn, mx, yh, yl, lo, hi); fflush(stderr); }
+            if (shiftOn && radar) { const int32_t d = (int32_t)(dxs * 65536.0); wr(a + 8, rd(a + 8) + d); wr(a + 16, rd(a + 16) + d); wr(a + 24, rd(a + 24) + d); }
         }
         a += len;
     }
