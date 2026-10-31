@@ -13,7 +13,7 @@ writer calls, Boolean dumps and result-mode requests separately.
 | 1 | s6661: exact seq4 ordinary hit HP390→386, then seq6 one requested387 dose HP386→−1; death effect, actual id13 store0→1, callback readback four VI later. | Named friendly-loss response observed. Original ELF proves id13>=5 fails and friendlies=19−(40+13+41). Stopped at1, Boolean6=0; no success, retail-equivalence or fully VERIFIED claim. Dynamic chain remains single-source. |
 | 2 | s6668: same-owned rescue01 ordinary HP2000→1990, one requested1991 dose HP1990→−1, original counter40 store0→1, callback memory and getter return1 four VI later. | Named friendly-loss response observed, single-flight dynamic evidence. Original ELF/DAT independently establish damage/death and failure ordering. SIGSTOP before failure flags109/101; no win, progression, retail-equivalence or fully VERIFIED claim. |
 | 3 | s6671: City_1 script request10 HP2000→1990, then same-owned request1991 HP1990→−1; death effect, counter28 store0→1, callback and explicit getter1. | Named friendly-loss response observed, single-flight dynamic evidence; original DAT/ELF corroborate contracts. Flags4/18/21 and successcounter22 stay0. No player-shot, win, retail-equivalence or fully VERIFIED claim. |
-| 4 | id15 0>1>2>3 in both arms; ctl additionally id5 0>1. | Shared baseline movement. No tele-specific objective response proved. Both arms request result mode a0=2. |
+| 4 | Historical id15 0>1>2>3 in both arms; ctl additionally id5 0>1. s6672 original DAT/ELF qualifies x_wing_hobbie as a counter40-only loss target. | Friendlies=6−(40+15); counter15>=3 fails. Counter5 is absent from the callback/reader; Boolean5 is a separate Y-wing effect. Live ownership/damage/response remain unqualified; historical shared movement is not hit causality. |
 | 5 | tele id2 0>1, ctl id2 remains observed 0; id4 observed 0 in both. | Historical failure-counter interpretation; static lv5 tests id2>=4 through Bit4, id4>=9 separately. Does not prove a successful objective response. |
 | 6 | TELE fires; no snapshot value changes; heartbeat occurs in both arms. | Inconclusive: hook execution is not a positive control for detecting changes. Neither full-table coverage nor a valid null is established. |
 | 7 | tele id2 0>2>3>0, absent ctl; id1 moves in both. | Named response, single-source; id2 semantics are not established for this level. Three a0=1 death requests precede cleanup in both arms. The lv0 id2 threshold does not apply to lvl7. |
@@ -1231,3 +1231,73 @@ Five of six current launch hashes match; the analyzer differs solely because
 its post-run contract correction and stricter message-chain checks are recorded
 above. Binary, adapter and launch helpers match. No new queued-soak verdicts.
 Next: bounded level4 original objective/target contract qualification.
+
+
+## s6672 — level 4 original wingman loss contract
+
+One bounded offline tool change, no game build or run. Added
+`--check-level4` and `--mutation-check-level4` to `tools/g1_dat_inventory.py`.
+The original ELF callback80103720..80103990 and reader80103CC4..80103D04
+establish friendlies saved =6−(counter40+counter15). The callback tests counters
+16>=3 and15>=3 and Boolean26==1 for Bit4 failure. Its success test is counter28>0
+with word8010D060==1, calling800C776C (Bit8). It also reads counters29/30/31
+and Booleans12/32 for speech/staging. Historical counter15 is thus named loss;
+counter5 is not read by these functions. This does not classify every other
+mission script or prove the writer of historical id5.
+
+Retail DAT `level/lv_4/dat` (ROM00929AF0,68652 bytes) independently supplies:
+
+| Definition | DAT offset | Subtype | Detail0 health | Effect (counter,delta,Boolean,value,counter2,delta2) | Selection |
+| --- | --- | --- | --- | --- | --- |
+| x_wing_hobbie | 6A7C | 27 | 400 | 40,1,0,0,0,1 | Selected ordinary-control target |
+| x_wing_dack | 6E08 | 27 | 9999 | 40,1,0,0,0,1 | Alternate, no live availability claim |
+| x_wing_corpselighter | 6F08 | 27 | 300 | 40,1,0,0,0,1 | Alternate, no live availability claim |
+| Y_Wing_uno | 62F4 | 27 | 180 | 15,1,5,1,0,1 | Excluded; counter15 plus Boolean5 |
+| Y_Wing_dos | 6888 | 27 | 300 | 15,1,6,1,0,1 | Excluded; counter15 plus Boolean6 |
+| Y_Wing_tres | 6980 | 27 | 300 | 15,1,7,1,0,1 | Excluded; counter15 plus Boolean7 |
+
+Original subtype table8003BE24 selects setup80065510, which registers
+handler800D93C0 through80065664; runtime slot is stored to DAT+6 at80065688.
+Handler loads payload=node+4 at800D93F4 and stores DAT at payload+34 via800D94B0.
+Message5 table800A7A10 selects800D9BB0. Actor is payload+38. Initialization
+callback800D7850 passes DAT+6C into original setNpcHealth800F2070; damage uses
+original getNpcCurrentHealth800F20EC and dealDamageToNpc800F2120. When actor+1A7
+is zero, actor+190 points at the detail health array; otherwise it is inline
+health. Actual subtraction writers are800F2148/800F2158. Do not assume DAT
+health is always the live storage or reuse City's inline store hook.
+
+Message5 requires prehealth>0 (800D9BBC), subtracts message halfword+6 at
+800D9C54, and skips the death effect if returned health>0 (800D9C5C). Otherwise
+800D9D00..D2C loads the six DAT effect fields and calls80065914 at800D9D28.
+Counter writer8006594C adds delta; Boolean/counter2 indices zero disable those
+slots. Hobbie's counter40 effect therefore changes named friendlies arithmetic
+without setting a Boolean or satisfying the callback's direct failure/success
+tests. Other script reactions remain untested. The named API800C7390's registered
+branch sends message5 at800C73F8; the FFFF fallback is a different route.
+
+Validation:332 original instruction/table assertions;380 deliberately changed
+inputs rejected (all332 ELF anchors, plus subtype/health/six effect fields on
+all six DAT definitions). The first mutation fixture changed the ignored
+halfword at record+2 instead of subtype+0 and was correctly accepted; corrected
+the fixture to mutate the actual subtype, then reran the complete batch.
+Raw struct decoding agrees for all six selected/excluded tuples. All19 level
+inventories exactly match the pre-change tool; level2 and level3 contract checks,
+Python compilation and diff whitespace check pass.
+
+Reproduce:
+
+```sh
+python3 tools/g1_dat_inventory.py --level 4 --check-level4 --mutation-check-level4 --output scratch/agent/s6672_lvl4_checked.json
+python3 tools/g1_dat_inventory.py --level 3 --check-level3 --output scratch/agent/s6672_lvl3_regression.json
+python3 tools/g1_dat_inventory.py --level 2 --check-level2 --output scratch/agent/s6672_lvl2_regression.json
+```
+
+Artifacts: `scratch/agent/s6672_validation.json`, checked inventories above,
+and `scratch/agent/s6672_wingman.disasm`. DAT SHA256
+`df908872f2c38081e1452c184b63ac3eefaf2fe49bb832ad782b52198179b8c5`;
+ELF SHA256 `f6809909002b407b339ca0331e54faea895ac2730f15152ab5221307442f6cc9`.
+These are complementary static contracts, not an independent behavioral replay.
+No live target availability, damage, objective response, retail equivalence or
+fully VERIFIED claim. No runtime/default/library change or new soak verdict.
+Next: one original named API ordinary request10 on an actually owned Hobbie,
+with complete registered-handler/actor-health/return/getter joins; no lethal dose.

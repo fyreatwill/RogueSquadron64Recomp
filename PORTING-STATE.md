@@ -174813,3 +174813,33 @@ manifest:scratch/agent/m6/g1_lvl3s6671_dose/; original report:
 scratch/agent/s6671_original.json; build:scratch/agent/s6671_build.log.
 Updated objective table/CURRENT-TRUTH and debug env catalog; next bounded
 unit is original-backed level4 objective/target contract checks. ADVANCED.
+
+
+## Session 6672 (2026-10-30) — qualify level-4 original wingman loss contract
+
+Bounded offline tool change; CURRENT-TRUTH38830 bytes, maintenance not triggered.
+No new SOAK-RESULTS verdicts. Original ELF reader computes6−(counter40+counter15);
+callback failure tests16>=3,15>=3,Boolean26; success counter28>0 with8010D060==1.
+Historical15 is named loss; counter5 absent from these readers, distinct from
+Y_Wing_uno Boolean5. Retail DAT x_wing_hobbie+6A7C subtype27 HP400 detail0
+writes(40,1,0,0,0,1). Three counter40-only wingmen; three excluded counter15
+Y-wings set Booleans5/6/7. Selected Hobbie changes friendlies arithmetic without
+a direct callback failure/success effect; other script reactions untested.
+
+Original table8003BE24/setup65510 selects wingmanD93C0; node+4=payload,
+payload+34=DAT,+38=actor. Message5 tableA7A10 selectsD9BB0; prehealth>0,
+damageF2120, return<=0 gates effectD9D28, writer6594C increments counter40.
+Actor+1A7 selects detail-array pointer versus inline actor+190; writersF2148/F2158.
+City inline-health hooks must not be reused. Static API registered route sends
+message5; FFFF fallback differs. No live target/damage/response qualification.
+
+Added --check-level4/--mutation-check-level4 to tools/g1_dat_inventory.py:
+332 ELF instruction/table assertions and380 input mutations rejected. Initial
+subtype mutation touched ignored halfword+2 and was accepted; corrected fixture
+to subtype+0 and reran all. Raw DAT tuple checks pass; all19 inventories match
+HEAD; level2/3 regressions, py_compile and git diff --check pass. DAT/ELF are
+complementary static sources, not independent behavioral evidence. No game
+build/run, default/runtime/lib edit or VERIFIED promotion. Details/provenance:
+docs/G1-OBJECTIVE-RESPONSE.md s6672; scratch/agent/s6672_validation.json and
+s6672_lvl4_checked.json. Next: one owned Hobbie ordinary API request10 with
+complete actor-health/message/return/getter join and actual value-change control.

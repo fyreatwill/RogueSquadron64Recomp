@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6671 (2026-10-30).
+Compact operational handoff, as of Session 6672 (2026-10-30).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -266,6 +266,22 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   or new soaks. Proof scratch/agent/s6671_qualification.json; full evidence
   G1-OBJECTIVE-RESPONSE s6671. Next: original-backed level4 target contract.
 
+- **G1(d) level4 original wingman contract checked (s6672); live response open.**
+  Original reader80103CC4 computes6−(c40+c15); callback fails on c16>=3,
+  c15>=3 or Boolean26, succeeds on c28>0 with word8010D060==1. Counter5
+  is absent from these readers; Boolean5 is a distinct Y-wing effect.
+  Retail DAT x_wing_hobbie(+6A7C), subtype27, nominal detail0 HP400,
+  effect(40,1,0,0,0,1), selects named loss without direct Boolean effects.
+  Original table/setup selects wingman handler800D93C0, message5 atD9BB0;
+  payload+34=DAT,+38=actor. Damage800F2120 writes array or inline health
+  atF2148/F2158; positive return skips effectD9D28. Do not reuse City hooks.
+  Tool adds --check-level4/--mutation-check-level4:332 anchors and380
+  mutations pass; all19 inventories unchanged, lvl2/3 regressions pass.
+  DAT+ELF establish static contracts only, no live ownership/hit/response,
+  player-shot/retail-equivalence or VERIFIED claim. No runtime/default/lib
+  change or new soaks. Full table/limits G1-OBJECTIVE-RESPONSE s6672;
+  scratch/agent/s6672_validation.json. Next: one owned ordinary Hobbie API hit.
+
 ## Superseded conclusions — do not act on these
 
 - s6664's missing counter40 target is not evidence of a broken spawn/hit
@@ -399,13 +415,12 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
 ## Next steps (single monotonic backlog)
-1. **G1(d) level4 original objective/target contracts (next unit).**
-   Level3 named response closes in s6671. Reconcile saved level4 baseline
-   ids15/5, inspect original lv4 callback/friendlies reader and DAT death effects,
-   then qualify one named nonsuccess target with exact original handler and
-   health/effect gate. Add bounded contract/mutation checks to existing tools.
-   No live dose until that level's ownership and effects are established;
-   shared baseline movement alone does not establish hit causality.
+1. **G1(d) level4 owned ordinary wingman hit (next unit).** Static contracts
+   close in s6672. Extend the persistent adapter and analyzer for one named
+   x_wing_hobbie request10 through original API800C7390, with exact live
+   slot/generation/node/payload/DAT/actor identity, both original health-storage
+   branches and getter40 joins. Require same-run changing-value control. No
+   lethal dose or direct guest store; do not inherit City's health hook.
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
@@ -427,9 +442,9 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
 - Per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence):
   verbatim per-level paragraphs, duplicate coverage, historical backlog and updates.
-- `PORTING-STATE.md` sessions 6656–6671 contain recent chronology; search bounded
+- `PORTING-STATE.md` sessions 6656–6672 contain recent chronology; search bounded
   windows only. Earlier durable context remains in PROJECT-OVERVIEW.
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest remains
-  20261028-075640 (already consumed). No new verdicts in s6671.
+  20261028-075640 (already consumed). No new verdicts in s6672.
 - s6596/s6597 and s6599 were checkpoint close-outs, not reruns. The saved
   s6595/s6598 HUD artifacts retain their original evidence limits.
