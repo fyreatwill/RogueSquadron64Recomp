@@ -175378,3 +175378,49 @@ s6683_baseline.json, s6683_level2.json. Full limits G1-OBJECTIVE-RESPONSE s6683.
 Next: park level6 partial boundary and qualify level7 original named objective
 contract; historical id2 alone is not semantics. ADVANCED: checked tool change
 selects a real typed counter90 consumer and its signed boundary.
+
+
+## Session 6684 (2026-10-31) — qualify level7 named counter20 original contract
+
+HYPOTHESIS-ID: g1-coverage-cd. ONE bounded tools/g1_dat_inventory.py change.
+CURRENT-TRUTH53939 bytes at entry; maintenance not triggered. Latest queued
+verdict20261028-075640 already consumed; no new verdicts. No game build/run,
+lethal/fallback request, direct guest stores, win, defaults or lib edit.
+
+H-named/H-coupled/H-unresolved discriminator: original callback/getter census
+plus retail typed DAT tuple joined to original setup/message5/health/death
+route. Callback801044E0..4A08 reads c20/30/40/99 and B97/98/99/106. Stage
+thresholds21/10/6 set latch97/98/99, increment99, complete slots2/1/3 and set
+B120/121/122. c99>=3 -> Bit8; no failure call inside this callback. Reader
+80104A60..A9C twice reads128 then passes negative sum; preserve both reads.
+Historical id2 is absent, not a semantic progress witness. Notification/latch
+branches and Boolean writes are retained in the contract, not ignored.
+
+H-named selected statically for20_Dest_Tanks_01(+05D0), subtype0x14,
+HP50/detail0, effect(20,1,0,0,0,1). Tank03/04 are alternatives. Barracks03,
+Spaceport02 and SensorMain couple B28/106/2, respectively; excluded controls.
+All6 DAT88=1/A0=0. Original setup653F4 ->CBB0, message5CF88, payload34=DAT,
+healthDAT6C+4*detail, prehealth gateCFA4, source immunityDATa0, writer6CFE8,
+posthealth>0 skip6D278, effect6D6F0 with global80130B39 gate; writer6594C.
+FFFF fallbackC748C instead eagerly applies effect; no fallback/lethal admission.
+H-unresolved remains for live availability, ownership, detail and route.
+No live response, player-shot proof, retail equivalence or VERIFIED promotion.
+
+Persistent --check-level7/--mutation-check-level7:538 original anchors pass,
+all538 match retail ROM bytes at pc-80000000+C00;598 mutations reject.
+Six raw DAT struct joins agree with typed decoder including nonzero counter20
+and coupled Boolean28/106/2 controls. All19 inventories/eight prior contract
+objects unchanged; lvl2 check, lvl6 music regression, response-analyzer fixtures,
+Python compilation and whitespace pass. Initial regression comparison failed
+on integer-key in-memory maps versus string-key saved JSON; normalized both
+through JSON and reran all eight successfully. No experimental runtime null.
+ELF/ROM/DAT share original lineage: static single-source, not an independent
+live witness. No claim superseded beyond the existing historical-id2 warning.
+No mitigation machinery added or corruption repair claimed.
+
+Evidence:scratch/agent/s6684_level7_checked.json, s6684_validation.json,
+s6684_baseline.json, s6684_lv7_contract.txt, level2/level6 regressions.
+Full target/route/consumer table:docs/G1-OBJECTIVE-RESPONSE.md s6684.
+Next: one ordinary registered API10 chain on owned tank01, live health must
+survive; counters need actual changing-value control. ADVANCED: checked tool
+change establishes a named objective candidate and discriminates eager fallback.

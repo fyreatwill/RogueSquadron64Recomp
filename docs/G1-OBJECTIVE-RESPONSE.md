@@ -2011,3 +2011,75 @@ other NPC/actor/radar/handle readers, runtime aliases and dynamic activation
 are open. Park that boundary without repeat admission holds; move coverage
 to the next missing named objective contract, level7 (historical id2 has no
 proven level7 meaning). No complete consumer-absence claim follows.
+
+
+## s6684 — level7 original named counter20 contract (2026-10-31)
+
+One bounded extension of `tools/g1_dat_inventory.py`; no game build/run.
+The retail ROM and original ELF, rather than the recompiled runtime, supply
+all instructions and target definitions. This is **single-source static
+qualification**: ROM, ELF, DAT and decoder checks share original lineage.
+No live response, player-shot, retail-equivalence or VERIFIED claim.
+
+Original callback801044E0..80104A08 reads counters20/30/40/99 and
+Booleans97/98/99/106. For each stage, a zero Boolean latch permits exactly
+one counter99 increment, objective-slot activation, and two Boolean writes:
+
+| Counter threshold | Latch Boolean | Completed slot | Extra Boolean |
+|---|---|---|---|
+| c20 >= 21 | 97 | 2 | 120 |
+| c30 >= 10 | 98 | 1 | 121 |
+| c40 >= 6 | 99 | 3 | 122 |
+
+At c99>=3 it calls setHudEnableBit8. There is no Bit4/failure call in this
+callback; that is not a global assertion that the mission cannot fail.
+Exactly one of Booleans97/98/99 also triggers the corresponding61/64/67
+notification behind latch words8010D098/90/94. c40>=6 AND c30>=10 with
+Boolean106==0 and word8010D09C==0 sets Boolean41. Near-completion cases
+(c20==19 with B98/B99, c30==8 with B97/B99, c40==4 with B97/B98) set
+Boolean50 behind shared word8010D0A0. Here the paired Booleans must equal1.
+Friendlies reader80104A60..A9C unusually reads counter128 twice and passes
+negative sum to setFriendliesSaved. Preserve both calls; do not simplify
+an observed runtime value or invent friendly-loss semantics. Neither reader
+uses counter2. Historical id2 activity remains unrelated evidence.
+
+| Retail DAT name | Offset | Subtype | Detail0 HP | Effect (counter,delta,Boolean,value,counter2,delta2) | Decision |
+|---|---|---|---|---|---|
+| 20_Dest_Tanks_01 | 05D0 | 0x14 | 50 | (20,1,0,0,0,1) | selected |
+| 20_Dest_Tanks_03 | 0754 | 0x14 | 50 | (20,1,0,0,0,1) | alternate |
+| 20_Dest_Tanks_04 | 0818 | 0x14 | 50 | (20,1,0,0,0,1) | alternate |
+| 40_Destroy_Imp_Barracks_03 | 0B90 | 0x14 | 100 | (40,1,28,1,0,1) | Boolean coupling |
+| 20_Spaceport_02 | 18B8 | 0x14 | 300 | (20,1,106,1,0,1) | callback Boolean coupling |
+| 30_Sensor_Array_Main | 1F94 | 0x14 | 100 | (30,1,2,1,0,1) | Boolean coupling |
+
+All six checked definitions have detail word88=1 and source-immunity wordA0=0.
+Original setup table8003BDD8 ->653F4 ->handler6CBB0; message5 table8003CA30
+->6CF88. Node+4 is payload; payload+34 points at DAT. Selected detail health
+is DAT+6C+4*detail. Prehealth<=0 exits at6CFA4. A nonzero DAT+A0 enables
+source-player immunity; otherwise actual store6CFE8 subtracts message+6.
+Positive posthealth exits at6D278 before effect6D6F0. Global byte80130B39
+can suppress the effect. Original writer6594C increments the first counter;
+second selector0 disables its unused delta1. The FFFF API fallback atC748C
+instead applies the effect after subtraction without a death threshold.
+Live registration, ownership, detail, health and gates are unobserved; no
+fallback or lethal admission follows from this static contract.
+
+H-named selects a counter20-only candidate whose callback meaning is checked;
+H-coupled applies to the excluded Boolean-bearing targets and eager fallback.
+H-unresolved remains for live availability/ownership. One future ordinary
+API10 request must use the original named lookup, valid registered ownership,
+and a surviving target. Do not set counters/health directly, trigger a stage
+threshold or attempt a win. No inference that the tank definition is mobile.
+
+Validation: --check-level7/--mutation-check-level7 checks538 original anchors,
+all538 byte-match retail ROM at pc-80000000+C00;598 one-field/instruction
+mutations reject. Six raw struct tuples agree with typed retail decoder
+controls (counter20 and nonzero Booleans28/106/2); this is not a live null
+control. All19 inventories and eight earlier contract objects are unchanged.
+Level2 checks, level6 music regression, full response-analyzer self-tests,
+Python compilation and whitespace checks pass. Initial regression equality
+failed because saved JSON stringifies integer keys in slice maps; normalize
+both sides through JSON, rerun all eight, identical. No tool/runtime behavior
+was changed to accommodate that comparison. No new soak verdicts/defaults/
+lib edits. Evidence: scratch/agent/s6684_level7_checked.json,
+s6684_validation.json, s6684_baseline.json, s6684_lv7_contract.txt.

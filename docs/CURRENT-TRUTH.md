@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6683 (2026-10-31).
+Compact operational handoff, as of Session 6684 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -622,15 +622,35 @@ run/default/lib change, new verdict or VERIFIED claim. Full table/limits:
 G1-OBJECTIVE-RESPONSE s6683; scratch/agent/s6683_{music,validation}.json.
 Park level6's unqualified boundary and advance to level7 named contracts.
 
+## s6684 update — level7 named counter20 contract checked
+
+Original callback801044E0 reads20/30/40/99; thresholds21/10/6 with Boolean
+latches97/98/99 increment99;99>=3 sets Bit8. No failure call in this callback.
+Friendlies reader80104A60 reads128 twice, passes negative sum; id2 is absent.
+Retail 20_Dest_Tanks_01(+05D0), subtype14, detail0HP50, effect(20,1,0,0,0,1),
+selects a counter-only progress candidate. Original setup653F4 ->CBB0/message5
+CF88, writer6CFE8, positive-health skip6D278, effect6D6F0/global0B39 gate
+checked. FFFF fallback is eager and excluded. Barracks03/Spaceport02/SensorMain
+couple Booleans28/106/2 and are excluded.538 ELF anchors match retail ROM;
+598 mutations reject; six raw/typed DAT controls, all19 inventories/eight
+prior contracts unchanged, lvl2/lvl6-music/analyzer/compile/whitespace pass.
+Initial regression equality used integer keys against JSON strings; normalized
+and reran completely. Static ELF+DAT evidence only, single-source lineage;
+no live ownership/response, fallback/lethal admission or VERIFIED claim.
+No build/run/default/lib change or new soaks. Full contract/limits:
+G1-OBJECTIVE-RESPONSE s6684; scratch/agent/s6684_validation.json.
+Next: one owned surviving ordinary API10 chain, not a destruction test.
+
 ## Next steps (single monotonic backlog)
-1. **G1(d) level7 original-backed named response contract (next unit).**
-   Read callback801044E0 and friendlies reader80104A60, qualify every named
-   counter/Boolean, then join the retail DAT to one nonterminal response
-   candidate and its original damage route. Historical level7 id2 activity
-   is not a semantic witness. No live dose until ownership/route is qualified.
-   Level6 pending-song ownership is now checked: retail c90/−3 and c91/−1;
-   other consumer/alias and live-activation boundaries remain open. Do not
-   repeat admission holds or infer complete fallback safety.
+1. **G1(d) level7 ordinary named API response (next unit).** Static contract
+   s6684 selects retail 20_Dest_Tanks_01(+05D0), subtype0x14, HP50, effect
+   c20+1 with no Boolean/second counter. Add one ordinary-only registered
+   API10 ownership/health chain using the original lookup and message5 route.
+   Observe live detail and survival; join actual store6CFE8, API return and
+   original getter20. Require owned mark-all and changing-value controls.
+   No FFFF fallback, lethal request, direct stores, threshold or win. Callback
+   thresholds20/30/40 are21/10/6, latch Booleans97/98/99, c99>=3 completes.
+   Level6 remains parked at partial counter90 ownership/safety; no repeat hold.
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
@@ -652,9 +672,9 @@ Park level6's unqualified boundary and advance to level7 named contracts.
 - Per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence):
   verbatim per-level paragraphs, duplicate coverage, historical backlog and updates.
-- `PORTING-STATE.md` sessions 6656–6683 contain recent chronology; search bounded
+- `PORTING-STATE.md` sessions 6656–6684 contain recent chronology; search bounded
   windows only. Earlier durable context remains in PROJECT-OVERVIEW.
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest remains
-  20261028-075640 (already consumed). No new verdicts in s6683.
+  20261028-075640 (already consumed). No new verdicts in s6684.
 - s6596/s6597 and s6599 were checkpoint close-outs, not reruns. The saved
   s6595/s6598 HUD artifacts retain their original evidence limits.

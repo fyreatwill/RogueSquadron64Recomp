@@ -651,6 +651,194 @@ def level6_contract(elf, rows):
         next_measurement='One ordinary original named API10 on owned OBJ_ConYard_Barracks, detail0, global80130B39=0; join slot/gen/node/payload/DAT/message/health writer and API return, original getters50/90 and actual changing-value control. No lethal dose; counter90 consumers require proof before a later destruction test.')
 
 
+def level7_contract(elf, rows):
+    spans = {
+        0x801044E0: (
+            '27bdffd0 afbf0018 afb10014 afb00010 f7b60028 f7b40020 0c031d67 24040061 '
+            '00408021 24020001 1602001a 00000000 0c031d67 24040062 14400016 00000000 '
+            '0c031d67 24040063 14400012 3c038011 8c62d098 1440000f 3c04800b 24849780 '
+            '0c031e21 ac70d098 2404003d 3c01800b c43497b8 0c031d50 24050001 4405a000 '
+            '0c031f47 2404008a 4405a000 0c031f47 2404011a 0c031d67 24040061 1440001a '
+            '00000000 0c031d67 24040062 00408021 24020001 16020014 00000000 0c031d67 '
+            '24040063 14400010 3c038011 8c62d090 1440000d 3c04800b 24849788 0c031e21 '
+            'ac70d090 24040040 0c031d50 24050001 3c053f00 0c031f47 240402a6 3c054040 '
+            '0c031f47 2404008b 0c031d67 24040061 1440001a 00000000 0c031d67 24040062 '
+            '14400016 00000000 0c031d67 24040063 00401821 24020001 14620010 3c058011 '
+            '8ca2d094 1440000d 3c04800b 24849790 0c031e21 aca3d094 24040043 0c031d50 '
+            '24050001 3c053f00 0c031f47 240402a6 3c054040 0c031f47 2404008a 0c031d87 '
+            '24040014 28420015 1440000f 00000000 0c031d67 24040061 1440000b 24040061 '
+            '0c031d50 24050001 24040063 0c031d7b 24050001 0c031dac 24040002 24040078 '
+            '0c031d50 24050001 0c031d87 2404001e 2842000a 1440000f 00000000 0c031d67 '
+            '24040062 1440000b 24040062 0c031d50 24050001 24040063 0c031d7b 24050001 '
+            '0c031dac 24040001 24040079 0c031d50 24050001 0c031d87 24040028 28420006 '
+            '1440000f 00000000 0c031d67 24040063 1440000b 24040063 0c031d50 24050001 '
+            '24040063 0c031d7b 24050001 0c031dac 24040003 2404007a 0c031d50 24050001 '
+            '0c031d87 24040028 28420006 14400016 00000000 0c031d87 2404001e 2842000a '
+            '14400011 00000000 0c031d67 2404006a 1440000d 3c038011 8c62d09c 1440000a '
+            '24020001 ac62d09c 24040029 0c031d50 00402821 3c04800b 0c031e21 24849798 '
+            '0c031f66 24040003 0c031d87 24040014 24030013 1443002a 00000000 0c031d67 '
+            '24040062 00408021 24020001 16020024 00000000 0c031d67 24040063 00401821 '
+            '1470001f 3c068011 8cc2d0a0 1440001c 24040032 24050001 0c031d50 acc3d0a0 '
+            '3c04800b 0c031e21 248497ac 4480a000 4405a000 3c01800b c43697bc 0c031f47 '
+            '2404023d 4405b000 0c031f47 24040155 4405a000 0c031f47 24040089 4405a000 '
+            '0c031f47 24040103 4405b000 0c031f47 24040156 4405b000 0c031f47 24040149 '
+            '0c031d67 24040061 00408021 24020001 16020029 00000000 0c031d87 2404001e '
+            '24030008 14430024 00000000 0c031d67 24040063 00401821 1470001f 3c068011 '
+            '8cc2d0a0 1440001c 24040032 24050001 0c031d50 acc3d0a0 3c04800b 0c031e21 '
+            '248497ac 4480a000 4405a000 3c01800b c43697c0 0c031f47 2404023d 4405b000 '
+            '0c031f47 24040155 4405a000 0c031f47 24040089 4405a000 0c031f47 24040103 '
+            '4405b000 0c031f47 24040156 4405b000 0c031f47 24040149 0c031d67 24040061 '
+            '00408021 24020001 16020029 00000000 0c031d67 24040062 00408821 16300024 '
+            '00000000 0c031d87 24040028 24030004 1443001f 3c038011 8c62d0a0 1440001c '
+            '24040032 24050001 0c031d50 ac71d0a0 3c04800b 0c031e21 248497ac 4480a000 '
+            '4405a000 3c01800b c43697c4 0c031f47 2404023d 4405b000 0c031f47 24040155 '
+            '4405a000 0c031f47 24040089 4405a000 0c031f47 24040103 4405b000 0c031f47 '
+            '24040156 4405b000 0c031f47 24040149 0c031d87 24040063 28420003 14400003 '
+            '00000000 0c031ddb 00000000 8fbf0018 8fb10014 8fb00010 d7b60028 d7b40020 '
+            '00001021 03e00008 27bd0030 '
+        ),
+        0x80104A60: (
+            '27bdffe8 24040080 afbf0014 0c031d87 afb00010 24040080 0c031d87 00408021 '
+            '02028021 0c031dec 00102023 8fbf0014 8fb00010 00001021 03e00008 27bd0018 '
+        ),
+    }
+    instructions = {
+        0x8003BDD8: 0x800653F4, 0x8003CA30: 0x8006CF88, 0x80046878: 0xAC82000C,
+        0x80046DBC: 0xAC5275D8, 0x80047B50: 0x8C4475D8, 0x80047B5C: 0x0C011EDC,
+        0x800653B4: 0x27BDFFD8, 0x800653B8: 0xAFB1001C, 0x800653BC: 0x00808821,
+        0x800653C0: 0xAFBF0020, 0x800653C4: 0xAFB00018, 0x800653C8: 0x96220000,
+        0x800653CC: 0x2443FFF4, 0x800653D0: 0x2C620047, 0x800653D4: 0x1040009E,
+        0x800653D8: 0x3C028004, 0x800653DC: 0x2442BDB8, 0x800653E0: 0x00031880,
+        0x800653E4: 0x00621821, 0x800653E8: 0x8C620000, 0x800653EC: 0x00400008,
+        0x800653F0: 0x00000000, 0x800653F4: 0x3C048007, 0x800653F8: 0x2484CBB0,
+        0x800653FC: 0x02202821, 0x80065400: 0x24070028, 0x80065404: 0x9622008A,
+        0x80065408: 0x24060003, 0x8006540C: 0x00C23023, 0x80065410: 0x00063180,
+        0x80065414: 0x34C60001, 0x80065418: 0x08019599, 0x8006541C: 0x30C6FFC1,
+        0x80065664: 0x0C00FFFB, 0x80065668: 0x00000000, 0x8006566C: 0x00401821,
+        0x80065670: 0x3070FFFF, 0x80065674: 0x3C018004, 0x80065678: 0xC420BED4,
+        0x8006567C: 0x3402FFFF, 0x80065680: 0x12020006, 0x80065684: 0xE7A00010,
+        0x80065688: 0xA6230006, 0x8006568C: 0x02002021, 0x80065690: 0x24050003,
+        0x80065694: 0x0C00FA37, 0x80065698: 0x27A60010, 0x80065914: 0x8FA80010,
+        0x80065918: 0x10800004, 0x8006591C: 0x3C028014, 0x80065920: 0x244288A0,
+        0x80065924: 0x00821021, 0x80065928: 0xA045FFFF, 0x8006592C: 0x10C00008,
+        0x80065930: 0x3C028014, 0x80065934: 0x24428060, 0x80065938: 0x24C3FFFF,
+        0x8006593C: 0x00031880, 0x80065940: 0x00621821, 0x80065944: 0x8C620000,
+        0x80065948: 0x00471021, 0x8006594C: 0xAC620000, 0x80065950: 0x11000009,
+        0x80065954: 0x3C028014, 0x80065958: 0x24428060, 0x8006595C: 0x2503FFFF,
+        0x80065960: 0x00031880, 0x80065964: 0x00621821, 0x80065968: 0x8C620000,
+        0x8006596C: 0x8FA40014, 0x80065970: 0x00441021, 0x80065974: 0xAC620000,
+        0x80065978: 0x03E00008, 0x8006597C: 0x00000000, 0x8006CBB0: 0x27BDFF20,
+        0x8006CBB4: 0xAFB500AC, 0x8006CBB8: 0x0080A821, 0x8006CBBC: 0xAFB00098,
+        0x8006CBC0: 0x30A5FFFF, 0x8006CBC4: 0x24A3FFFF, 0x8006CBC8: 0x2C62000B,
+        0x8006CBCC: 0xAFBF00B4, 0x8006CBD0: 0xAFB600B0, 0x8006CBD4: 0xAFB400A8,
+        0x8006CBD8: 0xAFB300A4, 0x8006CBDC: 0xAFB200A0, 0x8006CBE0: 0xAFB1009C,
+        0x8006CBE4: 0xF7BC00D8, 0x8006CBE8: 0xF7BA00D0, 0x8006CBEC: 0xF7B800C8,
+        0x8006CBF0: 0xF7B600C0, 0x8006CBF4: 0xF7B400B8, 0x8006CBF8: 0x8EB10004,
+        0x8006CBFC: 0x1040032F, 0x8006CC00: 0x00C08021, 0x8006CC04: 0x3C028004,
+        0x8006CC08: 0x2442CA20, 0x8006CC0C: 0x00031880, 0x8006CC10: 0x00621821,
+        0x8006CC14: 0x8C620000, 0x8006CC18: 0x00400008, 0x8006CC1C: 0x00000000,
+        0x8006CC20: 0xAEB10008, 0x8006CC24: 0xAE300034, 0x8006CF88: 0x3C128013,
+        0x8006CF8C: 0x8E230034, 0x8006CF90: 0x8E427CE4, 0x8006CF94: 0x2473006C,
+        0x8006CF98: 0x00021080, 0x8006CF9C: 0x00531021, 0x8006CFA0: 0x8C420000,
+        0x8006CFA4: 0x184001E9, 0x8006CFA8: 0x0200B021, 0x8006CFAC: 0x8C6200A0,
+        0x8006CFB0: 0x10400007, 0x8006CFB4: 0x00000000, 0x8006CFB8: 0x0C01B265,
+        0x8006CFBC: 0x00002021, 0x8006CFC0: 0x96030002, 0x8006CFC4: 0x3042FFFF,
+        0x8006CFC8: 0x10620008, 0x8006CFCC: 0x00000000, 0x8006CFD0: 0x8E427CE4,
+        0x8006CFD4: 0x96040006, 0x8006CFD8: 0x00021080, 0x8006CFDC: 0x00531021,
+        0x8006CFE0: 0x8C430000, 0x8006CFE4: 0x00641823, 0x8006CFE8: 0xAC430000,
+        0x8006D264: 0x3C028013, 0x8006D268: 0x8C427CE4, 0x8006D26C: 0x00021080,
+        0x8006D270: 0x00531021, 0x8006D274: 0x8C420000, 0x8006D278: 0x1C400134,
+        0x8006D27C: 0x00000000, 0x8006D6B8: 0x3C028013, 0x8006D6BC: 0x90420B39,
+        0x8006D6C0: 0x54400012, 0x8006D6C4: 0x02A02021, 0x8006D6C8: 0x8E230034,
+        0x8006D6CC: 0x8C620080, 0x8006D6D0: 0xAFA20010, 0x8006D6D4: 0x8E220034,
+        0x8006D6D8: 0x8C420084, 0x8006D6DC: 0xAFA20014, 0x8006D6E0: 0x8C640078,
+        0x8006D6E4: 0x8C65007C, 0x8006D6E8: 0x8C660070, 0x8006D6EC: 0x8C670074,
+        0x8006D6F0: 0x0C019645, 0x8006D6F4: 0x00000000, 0x800C73B8: 0x3403FFFF,
+        0x800C73BC: 0x96020006, 0x800C73C0: 0x10430032, 0x800C7490: 0x8C437CE4,
+        0x800C7494: 0x02003821, 0x800C7498: 0x00031880, 0x800C749C: 0x00671821,
+        0x800C74A0: 0x8C62006C, 0x800C74A4: 0x00521023, 0x800C74A8: 0x00408821,
+        0x800C74AC: 0xAC71006C, 0x800C74B0: 0x94E30000, 0x800C74B4: 0x24020014,
+        0x800C74B8: 0x1462000C, 0x800C74BC: 0x02201021, 0x800C74C0: 0x8CE20080,
+        0x800C74C4: 0xAFA20010, 0x800C74C8: 0x8CE20084, 0x800C74CC: 0xAFA20014,
+        0x800C74D0: 0x8CE40078, 0x800C74D4: 0x8CE5007C, 0x800C74D8: 0x8CE60070,
+        0x800C74DC: 0x8CE70074, 0x800C74E0: 0x0C019645, 0x800C74E4: 0x00000000,
+        0x800C75B4: 0x9042FFFF, 0x800C761C: 0x14800003, 0x800C7620: 0x3C038014,
+        0x800C7624: 0x03E00008, 0x800C7628: 0x00001021, 0x800C762C: 0x24638060,
+        0x800C7630: 0x2482FFFF, 0x800C7634: 0x00021080, 0x800C7638: 0x00431021,
+        0x800C763C: 0x8C420000, 0x800C7640: 0x03E00008, 0x800C7644: 0x00000000,
+        0x800C7754: 0x34420004, 0x800C7788: 0x34420008,
+    }
+    instructions.update({start + 4*i: int(value, 16)
+                         for start, values in spans.items() for i, value in enumerate(values.split())})
+    for pc, expected in instructions.items():
+        if elf_word(elf, pc) != expected:
+            raise ValueError(f'level7 original instruction changed at {pc:08x}')
+    by_name = {r['name']: r for r in rows if r['kind'] == 0 and r['name']}
+    expected = (
+        ('20_Dest_Tanks_01', '000005d0', 50, (20, 1, 0, 0, 0, 1)),
+        ('20_Dest_Tanks_03', '00000754', 50, (20, 1, 0, 0, 0, 1)),
+        ('20_Dest_Tanks_04', '00000818', 50, (20, 1, 0, 0, 0, 1)),
+        ('40_Destroy_Imp_Barracks_03', '00000b90', 100, (40, 1, 28, 1, 0, 1)),
+        ('20_Spaceport_02', '000018b8', 300, (20, 1, 106, 1, 0, 1)),
+        ('30_Sensor_Array_Main', '00001f94', 100, (30, 1, 2, 1, 0, 1)),
+    )
+    for name, offset, hp, effect in expected:
+        row = by_name[name]
+        actual = (row['offset'], row['subtype'], row['words']['6c'],
+                  tuple(row['words'][f'{p:02x}'] for p in range(0x70, 0x88, 4)),
+                  row['words']['88'], row['words']['a0'])
+        if actual != (offset, 0x14, hp, effect, 1, 0):
+            raise ValueError(f'level7 DAT contract changed for {name}: {actual}')
+    selectors = {0x800c761c: set(), 0x800c759c: set()}
+    for pc in range(0x801044e0, 0x80104a0c, 4):
+        instruction = elf_word(elf, pc)
+        if instruction >> 26 != 3:
+            continue
+        target = 0x80000000 | ((instruction & 0x3ffffff) << 2)
+        if target in selectors:
+            delay = elf_word(elf, pc + 4)
+            if delay >> 16 != 0x2404:
+                raise ValueError(f'nonconstant level7 objective selector at {pc:08x}')
+            selectors[target].add(delay & 65535)
+    if selectors != {0x800c761c: {20, 30, 40, 99}, 0x800c759c: {97, 98, 99, 106}}:
+        raise ValueError('level7 callback getter census changed')
+    return dict(
+        scope='original ELF and retail DAT static contract only; no live ownership or response',
+        instruction_checks={f'{pc:08x}': f'{v:08x}' for pc, v in instructions.items()},
+        dat_checked_fields=[0, 0x6c, 0x70, 0x74, 0x78, 0x7c, 0x80, 0x84, 0x88, 0xa0],
+        callback=dict(address='801044e0', end='80104a0c', reader='80104a60', reader_end='80104aa0',
+                      counter_reads=sorted(selectors[0x800c761c]),
+                      boolean_reads=sorted(selectors[0x800c759c]),
+                      stages=[dict(counter=c, minimum=n, latch=b, complete_slot=s, extra_boolean=e)
+                              for c, n, b, s, e in ((20,21,97,2,120),(30,10,98,1,121),(40,6,99,3,122))],
+                      stage_effect='if counter>=minimum and Boolean latch==0: latch=1, counter99+=1, complete_slot, extra_boolean=1',
+                      success='counter99>=3 -> Bit8', failure='no Bit4/failure call in this callback',
+                      friendlies_saved='-(getCounter128()+getCounter128()); two separate reads, not a typo',
+                      notifications=['exactly Boolean97 -> Boolean61 with word8010D098 latch',
+                                     'exactly Boolean98 -> Boolean64 with word8010D090 latch',
+                                     'exactly Boolean99 -> Boolean67 with word8010D094 latch',
+                                     'c40>=6 and c30>=10 and Boolean106==0 and word8010D09C==0 -> Boolean41=1',
+                                     'c20==19 and B98==B99==1, or c30==8 and B97==B99==1, or c40==4 and B97==B98==1 -> Boolean50=1 with shared word8010D0A0 latch'],
+                      boolean_writes=[41,50,61,64,67,97,98,99,120,121,122],
+                      historical_id2='not read by either callback or friendlies reader'),
+        route=dict(subtype=0x14, setup='800653f4', handler='8006cbb0', message5='8006cf88',
+                   payload='node+4', descriptor='payload+0x34', health='DAT+0x6c+4*detail',
+                   writer='8006cfe8', prehealth_gate='blez8006cfa4',
+                   source_immunity='DAT+a0 nonzero and message source matches player -> skips subtraction',
+                   death_gate='bgtz8006d278 skips effect while health>0',
+                   effect_gate='byte80130B39 must be zero', effect_call='8006d6f0',
+                   counter_writer='8006594c', boolean_writer='80065928',
+                   selected_effect=[20,1,0,0,0,1],
+                   fallback='FFFF API branch800c748c subtracts and applies effect eagerly; no death gate',
+                   limitation='Registered message5 ownership/detail must be observed; no FFFF or lethal admission'),
+        selected=by_name['20_Dest_Tanks_01'],
+        candidates=[by_name[n] for n, _, _, _ in expected[:3]],
+        excluded_controls=[by_name[n] for n, _, _, _ in expected[3:]],
+        typed_retail_controls=[dict(name=n, **by_name[n]['damage_effect']) for n, _, _, _ in expected],
+        exclusions='Barracks03 couples Boolean28; Spaceport02 couples Boolean106 used by callback; SensorMain couples Boolean2. Turret and dish subtypes remain raw, not this damage route.',
+        next_measurement='One original named API10 on owned 20_Dest_Tanks_01; join slot/generation/node/payload/DAT, message5, actual detail/health writer/return, counter20 original getter and changing-value control. No lethal or fallback request.')
+
+
 def run_level6_original_slice(elf, counts=None, booleans=None, fallback=False):
     """Execute the checked integer slice; external presentation calls are recorded."""
     memory, regs, calls, writes = {}, [0] * 32, [], []
@@ -1759,6 +1947,8 @@ def main():
     ap.add_argument('--check-level3', action='store_true')
     ap.add_argument('--check-level4', action='store_true')
     ap.add_argument('--mutation-check-level4', action='store_true')
+    ap.add_argument('--check-level7', action='store_true')
+    ap.add_argument('--mutation-check-level7', action='store_true')
     ap.add_argument('--check-level5', action='store_true')
     ap.add_argument('--mutation-check-level5', action='store_true')
     ap.add_argument('--check-level6-music', action='store_true')
@@ -1789,6 +1979,12 @@ def main():
         contract = level4_contract(elf, rows)
         if args.mutation_check_level4:
             contract['mutation_checks'] = check_contract_mutations(elf, data, contract, level4_contract)
+    if args.check_level7 or args.mutation_check_level7:
+        if args.level != 7:
+            ap.error('--check-level7 requires --level 7')
+        contract = level7_contract(elf, rows)
+        if args.mutation_check_level7:
+            contract['mutation_checks'] = check_contract_mutations(elf, data, contract, level7_contract)
     if args.check_level5 or args.mutation_check_level5:
         if args.level != 5:
             ap.error('--check-level5 requires --level 5')
