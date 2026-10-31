@@ -175453,3 +175453,53 @@ writer and lv7 tank spawn condition (trigger vs proximity vs never), which
 splits H-trigger/H-proximity/H-never in NEXT.md.
 ORIGIN: no mitigation added; instrument only.
 Evidence: scratch/agent/s6685_qualification.json; G1-OBJECTIVE-RESPONSE s6685.
+
+## Session 6686 (2026-10-31) — level7 tanks are proximity-spawned (48 units); scripted route never gets within 63
+
+Question (NEXT.md g1-coverage-cd): what registers the level7 20_Dest_Tanks_*
+descriptors (slot word desc+6), given s6685 saw them stay FFFF for 90 s?
+
+Static, original ELF only (mips64-elf-objdump of ../rogue_squadron64 ELF):
+- Subtype 20 -> parseDatSpawnPositions 800657D4 returns category 1 -> loadDatFile
+  80047100 parseDatItemCommon inserts a 12-byte grid record (+4 state 3, +6 cell,
+  +8 descriptor) into the cell list at 801375D8+1C (pool *80136FCC).
+- updateActiveGridCellState 80047368 (from runInMissionFrame via
+  lookupActivePlayerCraftGridCell) activates a linked state-3 record when the
+  craft (getCraftRecordByIdx(0)=80137DC0, +0/+8 x/z) is within +-10 cells
+  (scale 0.25, constant 8003A7BC=10.0), isPointXzWithinRangeOfRef passes
+  (0.25*d squared <= 144.0, i.e. XZ distance <= 48) and isDatItemConditionMet
+  passes. Activation calls setupNpcUpdateFunctions, whose 80065688
+  `sh v1,6(s1)` is the desc+6 slot writer, and unlinks the record.
+- isDatItemConditionMet for subtype 20 is 80065854 (+60 Boolean, +64/+68
+  counter minimum). All six level7 tank descriptors have +60/+64/+68 = 0, so
+  there is no trigger gate. Other paths (load-time +34&0x80, pending list for
+  category 2) do not apply to the tanks.
+So H-trigger and H-never are killed statically; H-proximity is the original
+mechanism.
+
+Runtime, one host-side instrument (src/main/main.cpp ROGUESQ_LOG_GRIDSPAWN=1,
+ROGUESQ_GRIDSPAWN_EVERY=N): walks every cell chain each Nth mission poll and
+logs craft XZ, linked total, records within 48, records that vanished since
+the previous sample (activation control) and every "Tank" item's link state,
+distance and slot word. First run (s6686_lvl7_spawn_badref) read the craft
+record at 80137DBC (missed the delay-slot +4) - its distances are invalid,
+kept only as a crash-free run. Fixed and rerun twice, screen unlocked, 0 crashes:
+| run | samples | activations (dist range) | Tanks_01 / 03 / 04 min dist | slot |
+| spawn2 | 33 | 21 (25.2..47.6) | 63.7 / 90.5 / 92.3 | FFFF all |
+| long* | 32 | 16 (27.6..39.0) | 78.6 / 105.0 / 107.3 | FFFF all |
+*the runner's --flight-vi is honoured only for level 2 by the C patch, so
+"long" was the same 5400-VI window on a different route; runner edit reverted.
+All six tanks stay linked (state 3) the whole flight, so H-pool (record never
+inserted) is killed. Positive control in the same runs: the activation path
+fires for 37 items, every one within 48, including the same-subtype
+Dest_Tanks_06 (slot FFFF -> 0113/0114 at 33.8/35.5). Dest_Tanks_02 sampled
+at 47.7 without activating (sample-resolution boundary, not a contradiction).
+Conclusion (two lines: original-code decode + runtime distances with a
+same-run control): the counter20 tanks spawn only on approach within 48 XZ
+units, and the blind scripted route never comes within 63 units of them. The
+s6685 FFFF is retail-correct behaviour of this route, not a defect.
+Steering the craft there is out of scope (aim/steer = owner playtest); direct
+position stores/teleports stay excluded. Level7 counter20 live response is
+parked at this boundary; next unit moves to level 8 named contracts.
+Evidence: scratch/agent/s6686_gridspawn.json,
+scratch/agent/m6/g1_lvl7s6686_lvl7_{spawn2,long,spawn_badref}/.

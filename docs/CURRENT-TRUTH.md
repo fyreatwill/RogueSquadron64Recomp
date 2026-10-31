@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6685 (2026-10-31).
+Compact operational handoff, as of Session 6686 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -656,15 +656,29 @@ select-control fixture fires each arm (slot66, handler800D93C0). H-fallback
 boundary: target unregistered during the scripted route, NOT absent from the
 mission and NOT an objective null. Proof: scratch/agent/s6685_qualification.json.
 
+## s6686 update — level7 tanks spawn on approach only (48 units)
+
+Original ELF: subtype20 tanks are grid items (parseDatSpawnPositions cat1 ->
+parseDatItemCommon). updateActiveGridCellState 80047368 activates one when
+the craft (80137DC0 x/z) is within +-10 cells and XZ distance 48, and
+isDatItemConditionMet passes (tank +60/+64/+68 = 0: no trigger gate);
+setupNpcUpdateFunctions 80065688 then writes desc+6. Runtime
+(ROGUESQ_LOG_GRIDSPAWN=1, 2 runs, 0 crashes): all six tanks stay linked,
+slot FFFF; closest approach to 20_Dest_Tanks_01/03/04 is 63.7/90.5/92.3 and
+78.6/105/107. Same-run control: 37 activations, all within 48, including
+same-subtype Dest_Tanks_06 (FFFF -> 0113). The s6685 FFFF is correct game
+behaviour for a route that never gets close. Reaching the tanks needs steering
+(owner playtest), so level7 counter20 live response is parked at this
+boundary. Evidence: scratch/agent/s6686_gridspawn.json.
+
 ## Next steps (single monotonic backlog)
-1. **G1(d) level7: find what registers the tank (next unit).** s6685 shows
-   20_Dest_Tanks_01 stays slot FFFF for the first 90 s of flight. Statically
-   find the original writer of DAT item+6 (registration slot) and the level7
-   trigger that spawns the tanks (script/trigger zone/timer referencing the
-   tank names or the 05D0/0754/0818 items); then one run that watches all
-   three tanks' slot words and the trigger state over a longer hold. Admit
-   API10 only once a tank is owned and surviving. No FFFF fallback, lethal
-   request, direct stores, threshold or win. Thresholds 21/10/6, c99>=3.
+1. **G1(d) level8 named contract (next unit).** Same s6684 method: decode
+   the level8 checkComplexObjectives callback and its named DAT targets from
+   the original ELF + retail ROM; for each candidate record its spawn path
+   (grid category 1 = proximity <=48, category 2 = condition list, +34&0x80 =
+   load-time) so live work only targets items the scripted route can own.
+   Level7 counter20 is parked: tanks are proximity-spawned and the route
+   stays >=63 units away (s6686). No fallback, lethal request or stores.
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.

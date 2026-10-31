@@ -1,30 +1,29 @@
-# G1(d): level7 — what registers 20_Dest_Tanks_* (slot word DAT+6)?
+# G1(d): level8 named objective contract + per-target spawn path
 HYPOTHESIS-ID: g1-coverage-cd
 
-s6685: original lookup finds 20_Dest_Tanks_01 (desc=DAT+05D0, HP50) but its
-slot word desc+6 stays FFFF for VI6888..12288 (~90 s flight, 3 arms); census
-finds 0 live counter20 nodes. Request correctly withheld.
+Level7 counter20 is parked (s6686): tanks are grid items that spawn only when
+the craft is within 48 XZ units (updateActiveGridCellState 80047368); the
+scripted route stays >=63 units away. Steering there is owner playtest.
 
-Hypotheses:
-H-trigger: tanks spawn from a level7 script/trigger (zone, timer, prior
-  objective) the scripted route never reaches.
-H-proximity: tanks register only within a player distance (streaming).
-H-never: the 05D0/0754/0818 items are only registered via some other path
-  (e.g. spawned as a different object type that does not write DAT+6).
-DISCRIMINATOR (static first, original ELF + retail ROM only): enumerate
-original writers of the halfword at DAT item +6 (sh ...,6(desc) after a
-registry slot allocate) and every lv7 script/trigger reference to the tank
-item offsets or names. Classify the spawn condition: trigger state, distance
-test, or none. Then ONE run (existing --level 7 runner) that additionally
-logs the slot words of 05D0/0754/0818 and the identified trigger/distance
-input each 300 VI, over a longer hold, with the existing mark-all control.
-Admission stays: owned + surviving + HP>10 + detail observed; API10 only.
-No FFFF fallback, lethal request, direct stores, threshold or win.
+Unit: static contract for lv8_checkComplexObjectives (original ELF 80104AA0)
+using the s6684 method (tools/g1_dat_inventory.py, retail ROM + original ELF):
+counters/Booleans read, thresholds, latches, failure calls; named DAT targets
+whose damage effect feeds those counters; AND for each target its spawn path:
+- parseDatSpawnPositions (80065790, table 8003BFF0[subtype]) category 1 =
+  grid/proximity (<=48 units, +-10 cells), category 2 = condition list
+  (801375D0, isDatItemConditionMet), +34&0x80 = spawned at load;
+- isDatItemConditionMet gate fields (table 8003C140[subtype-12]).
+Hypotheses for the live follow-up:
+H-load: some level8 counter target is load-time/condition spawned -> ownable
+  on the scripted route -> one API10 ordinary run is admissible.
+H-prox: all level8 counter targets are proximity grid items -> check with
+  ROGUESQ_LOG_GRIDSPAWN=1 whether the route enters 48 units before any run.
+H-none: no counter-only damage target -> record the boundary, go to level9.
 
 Commands:
-    python3 tools/g1_dat_inventory.py --level 7 --check-level7
-    python3 tools/g1_objective_response_run.py --self-test
-    python3 tools/apply_s6657_objective_response.py   # applies to ../N64Recomp/RecompiledFuncs
-    cmake --build build --target RogueSquadron64Recomp -j6
-    /usr/sbin/ioreg -n Root -d1 | grep CGSSessionScreenIsLocked   # absent = unlocked
-    python3 tools/g1_objective_response_run.py s6686_lvl7_spawn --level 7
+    python3 tools/g1_dat_inventory.py --level 8 --output scratch/agent/s6687_level8.json
+    mips64-elf-objdump -d --start-address=0x80104aa0 --stop-address=0x801051cc ../rogue_squadron64/build/roguesquadron.elf
+    # if a live run is justified (runner supports levels 0..7 today; extend first):
+    env ROGUESQ_LOG_GRIDSPAWN=1 python3 tools/g1_objective_response_run.py <tag> --level 8
+Constraints: no FFFF fallback, lethal request, direct stores, threshold or win.
+Note: --flight-vi >5400 is honoured only for level 2 in the C patch.

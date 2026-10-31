@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <string>
 #include <cmath>
 #include "rs64_rdram_peek.h"
 #include <dlfcn.h>
@@ -10209,6 +10211,66 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                     float m1[9], m2[9]; for (int i = 0; i < 9; i++) { uint32_t u = rs64_rdram_u32(rd, p + 0x74 + 4 * i); memcpy(&m1[i], &u, 4); u = rs64_rdram_u32(rd, p + 0xC0 + 4 * i); memcpy(&m2[i], &u, 4); }
                     fprintf(stderr, "[plmat] n=%u A=%g,%g,%g,%g,%g,%g,%g,%g,%g B=%g,%g,%g,%g,%g,%g,%g,%g,%g\n", s_n, (double)m1[0],(double)m1[1],(double)m1[2],(double)m1[3],(double)m1[4],(double)m1[5],(double)m1[6],(double)m1[7],(double)m1[8],(double)m2[0],(double)m2[1],(double)m2[2],(double)m2[3],(double)m2[4],(double)m2[5],(double)m2[6],(double)m2[7],(double)m2[8]);
                 }
+            }
+        }
+    }
+
+    // s6686: ROGUESQ_LOG_GRIDSPAWN=1 walks the DAT-item activation grid (801375D8: +4/+8 origin, +14/+18 dims,
+    // +1C u16 cell heads; 12-byte records in pool *80136FCC, +2 next, +4 state, +6 cell, +8 descriptor).
+    // Original updateActiveGridCellState 80047368 activates a linked state-3 record when the craft record
+    // 80137DC0 (+0/+8 x/z; 801375F8 when 8010CA1C&8) is within +-1.5 cells and XZ distance 48, and
+    // isDatItemConditionMet passes; activation unlinks the record. Logs every Nth mission poll: linked total,
+    // records within 48, records that vanished since the last sample (activation control) and every "Tank" item.
+    {
+        static int s_gs = -1; static unsigned s_n = 0;
+        static const unsigned s_every = std::getenv("ROGUESQ_GRIDSPAWN_EVERY") ? (unsigned)atoi(std::getenv("ROGUESQ_GRIDSPAWN_EVERY")) : 60u;
+        static std::vector<uint32_t> s_prev, s_tanks;
+        if (s_gs < 0) { const char* g = std::getenv("ROGUESQ_LOG_GRIDSPAWN"); s_gs = (g && *g == '1') ? 1 : 0; }
+        volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+        if (s_gs && rd && ((uint32_t)rs64_vi_committed_origin() & 0xFFFFFFu) == 0x690400u && (++s_n % s_every) == 0) {
+            auto u16 = [&](uint32_t a) -> uint32_t { return (rs64_rdram_u32(rd, a & ~3u) >> ((a & 2u) ? 0 : 16)) & 0xFFFFu; };
+            auto fl = [&](uint32_t a) -> float { uint32_t u = rs64_rdram_u32(rd, a); float f; memcpy(&f, &u, 4); return f; };
+            auto name = [&](uint32_t d) -> std::string { std::string s; for (uint32_t i = 0; i < 24; i++) { uint32_t c = rs64_rdram_u8(rd, d + 0xA8u + i); if (c < 0x20 || c > 0x7E) break; s.push_back((char)c); } return s; };
+            const uint32_t G = 0x1375D8u;
+            const float ox = fl(G + 4), oz = fl(G + 8);
+            const uint32_t w = rs64_rdram_u32(rd, G + 0x14), h = rs64_rdram_u32(rd, G + 0x18);
+            const uint32_t cells = rs64_rdram_u32(rd, G + 0x1C) & 0xFFFFFFu, pool = rs64_rdram_u32(rd, 0x136FCCu) & 0xFFFFFFu;
+            const uint32_t rec = (rs64_rdram_u32(rd, 0x10CA1Cu) & 8u) ? 0x1375F8u : 0x137DC0u;  // getCraftRecordByIdx(0) = 80137DBC+4 (delay-slot addiu)
+            const float px = fl(rec), pz = fl(rec + 8);
+            const unsigned b39 = rs64_rdram_u8(rd, 0x130B39u), pend = rs64_rdram_u32(rd, 0x1375D4u);
+            if (w && h && w <= 1024 && h <= 1024 && w * h <= 65536u && cells < 0x7F0000u && pool < 0x7F0000u) {
+                std::vector<uint32_t> cur; unsigned near48 = 0, steps = 0;
+                for (uint32_t c = 0; c < w * h; c++) {
+                    uint32_t idx = u16(cells + 2 * c);
+                    for (int k = 0; idx != 0xFFFFu && k < 4096; k++, steps++) {
+                        const uint32_t r = pool + 12u * idx, d = rs64_rdram_u32(rd, r + 8) & 0xFFFFFFu;
+                        if (d >= 0x1000u && d < 0x7FFF00u) {
+                            cur.push_back(d);
+                            const float dx = fl(d + 0x10) - px, dz = fl(d + 0x18) - pz;
+                            if (dx * dx + dz * dz <= 48.0f * 48.0f) near48++;
+                            if (u16(d) == 0x14u && name(d).find("Tank") != std::string::npos &&
+                                std::find(s_tanks.begin(), s_tanks.end(), d) == s_tanks.end()) s_tanks.push_back(d);
+                        }
+                        idx = u16(r + 2);
+                    }
+                }
+                std::sort(cur.begin(), cur.end());
+                fprintf(stderr, "[gridspawn] el=%.1f n=%u p=(%g,%g) pcell=(%d,%d) o=(%g,%g) dims=%ux%u linked=%zu near48=%u b39=%u pend=%u steps=%u\n",
+                        (double)SDL_GetTicks() / 1000.0, s_n, (double)px, (double)pz, (int)((px - ox) * 0.25f), (int)((pz - oz) * 0.25f),
+                        (double)ox, (double)oz, w, h, cur.size(), near48, b39, pend, steps);
+                unsigned gone = 0;
+                for (uint32_t d : s_prev) if (!std::binary_search(cur.begin(), cur.end(), d) && gone++ < 12) {
+                    const float dx = fl(d + 0x10) - px, dz = fl(d + 0x18) - pz;
+                    fprintf(stderr, "[gridspawn-act] n=%u desc=%06X type=%u name=%s dist=%.1f slot=%04X\n", s_n, d, u16(d), name(d).c_str(),
+                            (double)std::sqrt(dx * dx + dz * dz), u16(d + 6));
+                }
+                for (uint32_t d : s_tanks) {
+                    const float tx = fl(d + 0x10), tz = fl(d + 0x18), dx = tx - px, dz = tz - pz;
+                    fprintf(stderr, "[gridspawn-tank] n=%u desc=%06X name=%s pos=(%g,%g) tcell=(%d,%d) dist=%.1f linked=%d slot=%04X\n",
+                            s_n, d, name(d).c_str(), (double)tx, (double)tz, (int)((tx - ox) * 0.25f), (int)((tz - oz) * 0.25f),
+                            (double)std::sqrt(dx * dx + dz * dz), (int)std::binary_search(cur.begin(), cur.end(), d), u16(d + 6));
+                }
+                s_prev.swap(cur);
             }
         }
     }
