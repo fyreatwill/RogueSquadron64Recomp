@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6674 (2026-10-30).
+Compact operational handoff, as of Session 6675 (2026-10-30).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -453,13 +453,29 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
   Never reset, clean, checkout, or update submodules. If editing `lib/`, run
   `./submodule-patches/export.sh` and commit the refreshed patches.
 
+## s6675 update — level5 original contract qualified
+
+Original ELF reader80104118 computes7−(c40+c2); callback8010415C sets Bit4
+at c2>=4 and Bit8 at c4>=9 (with latches). Retail x_wing_wedge(+1AFC),
+subtype0x27, detail0HP200, effect(40,1,0,0,0,1), selects a named loss response
+through the original wingman route800D93C0/message5D9BB0. Health writers
+F2148/F2158 and death-gated effectD9D28 are asserted. Historical id2 writer
+remains unknown; Reb_combat1..4 raw counter2 tuples also carry Booleans21..24,
+and their subtype0x2E route is unqualified. Tool adds level5 checks:334
+ELF assertions/390 rejected mutations, direct DAT struct cross-check, all19
+inventories and full level4 contract unchanged; lvl2/3/4/analyzer checks pass.
+ELF+DAT establish static contracts only; no live availability/response or
+VERIFIED promotion. No runtime/default/lib change or new soak verdict.
+Full contracts: G1-OBJECTIVE-RESPONSE s6675; scratch/agent/s6675_validation.json.
+
 ## Next steps (single monotonic backlog)
-1. **G1(d) level5 original objective/target contract (next unit).** Reconcile
-   historical id2/id4 evidence with the original callback/friendlies reader,
-   then select a named retail DAT target with relevant effects. Qualify its
-   handler/health/death route in the original ELF before adapting live probes.
-   Add bounded original-backed assertions/mutation controls to the existing
-   inventory tool; no runtime experiment or speculative health layout yet.
+1. **G1(d) level5 ordinary named wingman API hit (next unit).** Adapt the
+   existing opt-in wingman probe to retail x_wing_wedge(+1AFC), handlerD93C0.
+   One owned API10 request; join slot/generation/node/payload/DAT/actor,
+   message5, actual health store/return, and original counter40 getter.
+   No lethal dose; qualify live route before any death-counter experiment.
+   Require firing ownership and actual changing-value controls; preserve
+   the no-availability/no-null limit if no target is encountered.
 2. **Continue G1(d) named response coverage for remaining levels.** Reconcile
    the existing evidence table before choosing the next level; scope counters
    to that level's original callback and require actual changing-value controls.
@@ -481,9 +497,9 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
 - Per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence):
   verbatim per-level paragraphs, duplicate coverage, historical backlog and updates.
-- `PORTING-STATE.md` sessions 6656–6674 contain recent chronology; search bounded
+- `PORTING-STATE.md` sessions 6656–6675 contain recent chronology; search bounded
   windows only. Earlier durable context remains in PROJECT-OVERVIEW.
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest remains
-  20261028-075640 (already consumed). No new verdicts in s6674.
+  20261028-075640 (already consumed). No new verdicts in s6675.
 - s6596/s6597 and s6599 were checkpoint close-outs, not reruns. The saved
   s6595/s6598 HUD artifacts retain their original evidence limits.

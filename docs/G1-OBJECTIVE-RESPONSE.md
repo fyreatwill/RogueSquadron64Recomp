@@ -14,7 +14,7 @@ writer calls, Boolean dumps and result-mode requests separately.
 | 2 | s6668: same-owned rescue01 ordinary HP2000→1990, one requested1991 dose HP1990→−1, original counter40 store0→1, callback memory and getter return1 four VI later. | Named friendly-loss response observed, single-flight dynamic evidence. Original ELF/DAT independently establish damage/death and failure ordering. SIGSTOP before failure flags109/101; no win, progression, retail-equivalence or fully VERIFIED claim. |
 | 3 | s6671: City_1 script request10 HP2000→1990, then same-owned request1991 HP1990→−1; death effect, counter28 store0→1, callback and explicit getter1. | Named friendly-loss response observed, single-flight dynamic evidence; original DAT/ELF corroborate contracts. Flags4/18/21 and successcounter22 stay0. No player-shot, win, retail-equivalence or fully VERIFIED claim. |
 | 4 | s6674: same-owned Hobbie API10 HP380→370, then request371 HP370→−1; death effect(40,1,0,0,0,1), original counter40 store0→1, callback/getter1. | Named friendly-loss response observed, single-flight dynamic evidence. Original ELF/DAT corroborate contracts. c15/c16/c28 and Boolean26 stay0; SIGSTOP then SIGKILL. Actual getter40 change controls sensitivity. No player-shot, win, retail-equivalence or fully VERIFIED claim. |
-| 5 | tele id2 0>1, ctl id2 remains observed 0; id4 observed 0 in both. | Historical failure-counter interpretation; static lv5 tests id2>=4 through Bit4, id4>=9 separately. Does not prove a successful objective response. |
+| 5 | Historical TELE id2 0>1 versus ctl0; id4 observed0 in both. s6675 original ELF/DAT contract selects x_wing_wedge, counter40-only effect; no new live run. | Original friendlies=7−(c40+c2); c2>=4 sets Bit4, c4>=9 sets Bit8. Historical id2 writer unproven. Named counter40 live response remains open; no VERIFIED promotion. |
 | 6 | TELE fires; no snapshot value changes; heartbeat occurs in both arms. | Inconclusive: hook execution is not a positive control for detecting changes. Neither full-table coverage nor a valid null is established. |
 | 7 | tele id2 0>2>3>0, absent ctl; id1 moves in both. | Named response, single-source; id2 semantics are not established for this level. Three a0=1 death requests precede cleanup in both arms. The lv0 id2 threshold does not apply to lvl7. |
 | 8 | tele id6 0>1>2>3>4, ctl get(id6)=0. | Named response, single-source; id6 purpose remains unclassified. Identical Boolean gate sets and a0=2 requests in both arms; no hit-driven end gate. Reset 4>0 is outside the first flight epoch. |
@@ -1435,3 +1435,77 @@ s6674_replay.json,s6674_selftest.log,s6674_lvl4_original.json.
 Named level4 loss response is observed, not player-shot proof, game-invoked
 friendlies-reader proof, retail equivalence or full VERIFIED status. Next:
 original-backed level5 callback/target contract qualification.
+
+
+## s6675 — level 5 original friendly-loss contract
+
+One bounded offline tool change, 2026-10-30; no game build/run. Added
+`--check-level5` and `--mutation-check-level5` to `tools/g1_dat_inventory.py`.
+Shared wingman instruction anchors and mutation runner are reused by level4/5;
+the level4 contract output remains exactly unchanged.
+
+Original reader80104118..80104158 computes friendlies saved=7−(counter40+counter2).
+Callback8010415C..80104204 reads counter2, compares against4 and, when
+word8010D080 is zero, sets that latch and calls800C7738 (Bit4), then schedules
+speech. Counter4>=9 with word8010D084 zero sets that latch, calls800C776C
+(Bit8), and sets Booleans1/3. Original getter800C761C reads the 1-based counter
+array at80138060. Thus the historical id2 transition is consistent with a
+friendly-loss count, but neither its writer nor victim is established by the
+old cross-run logs. Counter4 is a separate success path, excluded here.
+
+Retail `level/lv_5/dat`, ROM00949038, 43760 decompressed bytes supplies:
+
+| Definition | DAT offset | Subtype | Raw detail0 HP | Raw effect words +70..84 (counter,delta,Boolean,value,counter2,delta2) | Decision |
+| --- | --- | --- | --- | --- | --- |
+| x_wing_wedge | 1AFC | 0x27 | 200 | 40,1,0,0,0,1 | Selected ordinary control |
+| x_wing_kasan | 19F4 | 0x27 | 9999 | 40,1,0,0,0,1 | Alternative; availability unknown |
+| x_wing_rogue_meat | 1C04 | 0x27 | 100 | 40,1,0,0,0,1 | Alternative; availability unknown |
+| Reb_combat1..4 | 2070/2170/2270/2370 | 0x2E | 125 | 2,1,21..24,1,0,1 | Excluded coupled raw tuples; handler route unqualified |
+
+H-other selects a simpler callback-relevant response through counter40;
+H-loss's id2 interpretation is corroborated by the original reader, not
+refuted. H-route applies to the excluded subtype0x2E definitions: the raw
+common-offset fields alone do not prove their damage/death handler consumes
+them. Unknown layouts remain raw. No historical id2 writer attribution.
+
+Original subtype0x27 setup table8003BE24 points at80065510, registering
+handler800D93C0 via80065664. Handler payload=node+4; DAT=payload+34;
+message5 table800A7A10 selects800D9BB0 and actor is read from payload+38.
+Initialization800D7880 calls800F2070 with DAT+6C. Actor+190 is a detail-health
+array pointer if actor+1A7==0, otherwise inline health; live detail must be
+observed. Message5 rejects prehealth<=0 at800D9BBC, subtracts the message
+halfword+6 through800F2120 at800D9C54, writers800F2148/800F2158, and skips
+the effect while returned health>0 at800D9C5C. On death,800D9D28 passes the
+six DAT fields to80065914; counter writer8006594C increments40. Wedge's
+zero Boolean/counter2 indices disable those effects. Original named
+API800C7390's registered branch sends message5; its FFFF fallback differs.
+No live identity, availability, health, route, player-shot causality, retail
+behavioral equivalence or full VERIFIED status follows from this audit.
+
+Validation:334 executable/table instruction assertions and390 deliberately
+changed inputs rejected (334 ELF anchors plus subtype/health/six tuple words
+for seven DAT definitions). Direct struct decoding corroborates the seven
+raw tuples. All19 inventories match the pre-change tool exactly; the entire
+level4 contract dictionary matches too. Level2/3/4 checks, level4 mutation
+checks, response-analyzer self-tests, Python compilation and whitespace
+checks pass. DAT+ELF are independent source artifacts establishing data and
+code contracts; neither is a new live behavioral observation. No library,
+runtime, default or queued-soak change; latest soak verdict remains
+20261028-075640, already consumed.
+
+Reproduce:
+
+```sh
+python3 tools/g1_dat_inventory.py --level 5 --check-level5 --mutation-check-level5 --output scratch/agent/s6675_lvl5_checked.json
+python3 tools/g1_dat_inventory.py --level 4 --check-level4 --mutation-check-level4 --output scratch/agent/s6675_lvl4_regression.json
+python3 tools/g1_dat_inventory.py --level 3 --check-level3 --output scratch/agent/s6675_lvl3_regression.json
+python3 tools/g1_dat_inventory.py --level 2 --check-level2 --output scratch/agent/s6675_lvl2_regression.json
+python3 tools/g1_objective_response_run.py --self-test
+```
+
+Artifacts: scratch/agent/s6675_validation.json and s6675_lvl5_checked.json.
+DAT SHA2563750527765697056173bea035f5498f8565c13ce97e8e8630163202d5d90b90e;
+ELF SHA256f6809909002b407b339ca0331e54faea895ac2730f15152ab5221307442f6cc9.
+Next: one same-owned ordinary API10 request on x_wing_wedge, join health
+store/return and original counter40 getter, with actual changing-value and
+ownership controls. No lethal dose in that unit.

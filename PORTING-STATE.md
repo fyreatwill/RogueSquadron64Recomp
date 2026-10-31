@@ -174960,3 +174960,39 @@ s6674_replay.json,s6674_selftest.log,s6674_lvl4_original.json.
 Named level4 loss response is observed, not player-shot proof, game-invoked
 friendlies-reader proof, retail equivalence or full VERIFIED status. Next:
 original-backed level5 callback/target contract qualification.
+
+## Session 6675 (2026-10-30) — qualify level-5 original wingman loss contract
+
+HYPOTHESIS-ID: g1-coverage-cd
+One bounded offline tool change; no game build/run. CURRENT-TRUTH42476 bytes,
+maintenance not triggered. NEXT followed; no soak verdict newer than already
+consumed20261028-075640. Original ELF reader80104118 proves7−(c40+c2);
+callback8010415C sets Bit4 at c2>=4 and Bit8 at c4>=9, subject to latches.
+Historical id2 is consistent with named friendly loss, not an attributed writer.
+Retail DAT x_wing_wedge(+1AFC), subtype27, nominal detail0HP200, effect
+(40,1,0,0,0,1), selects counter40 as the simpler relevant loss response.
+Reb_combat1..4 raw tuples couple counter2 with Booleans21..24; subtype2E
+handler consumption remains unqualified, explicitly excluded. Counter4 success
+path excluded. H-other selects the simpler target; H-loss is not refuted.
+Original subtype27 setup65510/handlerD93C0, message5D9BB0, payload+34 DAT,
+payload+38 actor, health array/inline writersF2148/F2158, return>0 skip,
+and death effectD9D28 are checked. Original named API registered route differs
+from FFFF fallback; do not infer live availability or detail from DAT health.
+
+Engineering: tools/g1_dat_inventory.py adds --check-level5 and
+--mutation-check-level5, shares wingman anchors and mutation runner with level4.
+334 original ELF assertions and390 mutated-input rejection checks pass;
+raw struct decode agrees on seven selected/excluded DAT tuples. All19 level
+inventories and complete level4 contract match pre-change output. Level2/3/4
+regression checks, level4 mutations, response-analyzer self-tests, Python
+compilation and diff whitespace checks pass. An initial census print used
+'items' instead of 'rows' and failed before decoding; corrected and reran.
+No experiment evidence was inferred from that failure.
+
+Original ELF+retail DAT establish code/data contracts only, not live damage,
+retail behavioral equivalence, player-shot proof or full VERIFIED status.
+No runtime/default/lib change. Full table, exact commands and limitations:
+docs/G1-OBJECTIVE-RESPONSE.md s6675. Artifacts scratch/agent/s6675_validation.json,
+s6675_lvl5_checked.json, lvl2/3/4 regressions. Next: one same-owned ordinary
+API10 Wedge hit joining health store/return and original counter40 getter;
+no lethal dose until that live route is qualified. Outcome ADVANCED.
