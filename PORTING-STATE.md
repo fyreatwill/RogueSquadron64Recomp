@@ -177131,3 +177131,6 @@ Rules out: H-clear/H-scale (presenter rect rounding). The column is in the sourc
 reading is superseded.
 Verdict: H-src selected (source column cw-1 holds the clear colour, never content), H-clear and H-scale refuted. G3 load-frame
 edge lines are both closed (horizontal s6735, vertical s6736). Side effect: the 4:3 flight and briefing right-edge 1 px sky column is gone too.
+Summary: this selects H-src and refutes H-clear and H-scale; it closes the G3 load-frame vertical line (root cause: the game's
+clear is the only writer of source column cw-1). Next discriminator (NEXT.md g3-edge-reach-audit): min x0 / min y0 / max y1
+content reach per epoch, to split H-none / H-bottom / H-left for the other three borders.
