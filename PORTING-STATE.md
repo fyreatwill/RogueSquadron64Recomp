@@ -177847,4 +177847,8 @@ Positive control: g3_rand_ticks.py scratch/s6754/retail2/oracle.log scratch/s675
 2153 (reproduced this session).
 Rules out: a port sim defect on lvl8 within the first 1818 flight ticks (two lines: rand stream + NPC/object state).
 Not covered: lvl8 after the song-3 end.
+Cross-check (g3_song_windows.py): the handle 2 window t894-t1683 is 789 ticks in both arms but 1853 retail VI /
+3543 buffers vs 1578 port VI / 3019 buffers. So the switch to song 3 is sim-driven (same tick, different audio
+time), while the song 1 and song 3 ends are audio-driven (same audio, different ticks). This is a same-run control that
+the tool tells the two kinds apart.
 Next: mission 9 (g3-mission9-pinned), eep +0x31=8.
