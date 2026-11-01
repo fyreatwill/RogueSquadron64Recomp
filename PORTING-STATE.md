@@ -176189,3 +176189,41 @@ and selects H-fixed-sync (the ~3.3 ms is a per-task fixed cost of the final FULL
 refuted for streamed ranges (frames sane, 0 drop-after-stream); H-producer-bound refuted (copy 0.29 -> 0.08 ms, rsp 6.08 -> 5.80).
 Next discriminator: S4267 fullSync segment split (fsFlush/fsSubmitFb vs fsUpload/fsRender vs wait phases) in the async arm;
 the segment owning >=2 ms selects H-fsflush, H-fsupload/render or H-fswait (scratch/agent/NEXT.md).
+
+## Session 6708 (2026-10-31) — G1e: the 3.3 ms task-end tail is State::fullSync's fb-pair render (encode + GPU execute/wait); ROGUESQ_RDP_NODRAIN lets send_dl skip it: same-run lvl5 FPS60 dd2 Gfx task 8.88 -> 4.54 ms, 57.8 -> 59.9 tasks/s, frames sane
+
+What ran (two game runs, both lvl5 FPS60 dd2 STORE_DIAG=0, 300 s hold, 0 crash / 0 VI stall):
+1. `scratch/agent/s6708_fs.zsh` (no rebuild): ROGUESQ_RDP_ASYNC_TOGGLE=10 + ROGUESQ_S4267=1, folded by new `tools/g1e_fs.py`
+   (joins [s4267] per-second phase sums to [g1e-aq] per-second arm tags; drops toggle-edge seconds and t<140).
+   Positive control: the time-ordered top-level segments (10,11,12,13,19,14,22,23,24,15,16,17,18) sum to 3.193 / 3.270 ms vs
+   fullSync 3.209 / 3.283 ms (sync / async), and fullSync 3.28 ms matches the independent [g1e-aq] last_ms 3.33 ms.
+   ms per fullSync, sync arm / async+stream arm:
+   | segment | sync | async |
+   | fullSync total | 3.21 | 3.28 |
+   | fsRender (fb-pair loop) | 3.03 | 3.10 |
+   |   fsRenderSync (renderAndSynchronize) | 2.16 | 2.08 |
+   |     fbwait (fb worker execute()+wait(), GPU) | 1.38 | 1.31 |
+   |   fsTiles (fullSyncFramebufferPairTiles x4) | 0.87 | 1.02 |
+   | everything else (flush/submitFb/validate/upload/pipeline/evict/...) | <0.06 each | same |
+   Verdict: H-fsflush and H-fsupload refuted (flush, submitFb, upload, pipeline wait all ~0). The tail is the fb-pair
+   render itself: ~1.7 ms CPU command encoding (tiles + addFramebuffer/setupOperations) + ~1.3 ms GPU execute/wait
+   (H-fswait for that part). Identical in both arms, so it is a per-frame render cost, not an async artefact.
+2. Lever landed: `ROGUESQ_RDP_NODRAIN` (src/main/rt64_render_context.cpp rdpq). With async on, task_exit only flushes the
+   pending range instead of draining, so send_dl returns (dp_complete) while the worker still runs fullSync; the next
+   task's RSP overlaps it and its ranges queue FIFO behind. update_screen / shutdown / any sync submit still drain, so
+   present ordering is unchanged; task_async and the s4280 event count are cleared at the next real drain. =1 always,
+   =2 alternates per async window. [g1e-aq] arm as=3 = not drained.
+   Same-run 3-arm A/B (`scratch/agent/s6708_nd.zsh`: ASYNC_TOGGLE=10 + NODRAIN=2; seconds t>=40 with one arm):
+   | arm | secs | tasks/s | Gfx-thread ms/task | rsp | drain |
+   | as=0 sync | 130 | 50.1 | 10.18 | 10.18 | 0 |
+   | as=2 async drained | 57 | 57.8 | 8.88 | 5.55 | 3.34 |
+   | as=3 async no-drain | 63 | 59.9 | 4.54 | 4.54 | 0 |
+   Render check: fbd dumps mapped to arms by cumulative g1b VI count; flight frames (t>=90) per arm in
+   docs/img/g1e_s6708_nodrain_sheet.png (rows sync / drained / no-drain): terrain, craft, HUD in every frame; the faint
+   horizontal line seen in some frames is present in the sync row too (pre-existing). Non-black fraction / colour counts
+   overlap across arms.
+What it shows: at lvl5 dd2 FPS60 the Gfx thread is no longer the binder with no-drain (4.5 ms of a 16.7 ms budget;
+tasks/s at the 60 cap). Caveat (unqualified): without the drain the guest can run ahead while RT64 still reads RDRAM
+(texture loads in the last job, fb writeback); single run, not yet seen on lvl1/lvl10 or dd4. Opt-in only; defaults unchanged.
+Queued: soak_queue/s6708_nodrain_lvl1_dd1.sh, s6708_nodrain_lvl10_dd4.sh (ASYNC=1 NODRAIN=1 constant, 300 s).
+ORIGIN: not a mitigation — a scheduling change; the cost's owner is RT64 State::fullSync's fb-pair render (named above).

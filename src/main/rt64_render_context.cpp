@@ -1229,7 +1229,7 @@ namespace ultramodern {
         static double t_copy = 0, t_sync = 0; static uint64_t t_bytes = 0, t_jobs = 0, t_calls = 0;
         struct AqAcc { uint64_t n = 0; double rsp = 0, drain = 0, wk = 0, wk_tail = 0, copy = 0, sync = 0, bytes = 0, jobs = 0, calls = 0,
                        pend_jobs = 0, last_kb = 0, last_ms = 0, max_ms = 0, total = 0; };
-        static AqAcc aq[3]; static int aq_sec = -1;
+        static AqAcc aq[4]; static int aq_sec = -1;
         // s6707 G1e: as=2 = async task whose deferred RDP ranges the bridge streams to the worker every ROGUESQ_RDP_STREAM_KB
         // (default 16, 0 = off) while the RSP runs, instead of one commit after it exits. ROGUESQ_RDP_STREAM_TOGGLE=1 streams
         // only every other async window (same-run as=1 vs as=2). Latched per task at entry.
@@ -1237,8 +1237,14 @@ namespace ultramodern {
         static const bool stream_toggle = [] { const char *e = std::getenv("ROGUESQ_RDP_STREAM_TOGGLE"); return e && *e && *e != '0'; }();
         static int last_async = 0; static uint64_t async_windows = 0;
         static uint32_t task_stream = 0; // bytes per streamed flush for the current task, 0 = commit at task end
+        // s6708 G1e: the drained tail is State::fullSync (~3.3 ms: fb-pair encode + GPU execute/wait), so ROGUESQ_RDP_NODRAIN=1
+        // lets send_dl return (dp_complete) without waiting for it; the next task's RSP overlaps the tail and its ranges queue
+        // FIFO behind it. update_screen/shutdown/sync submits still drain. =2 alternates per async window (same-run A/B:
+        // as=2 drained vs as=3 not drained). Latched per task at entry.
+        static const int nodrain_env = [] { const char *e = std::getenv("ROGUESQ_RDP_NODRAIN"); return e ? atoi(e) : 0; }();
+        static bool task_nodrain = false;
         static void aq_print(int sec) {
-            for (int a = 0; a < 3; ++a) {
+            for (int a = 0; a < 4; ++a) {
                 AqAcc &x = aq[a]; if (!x.n) continue; const double n = (double)x.n;
                 std::fprintf(stderr, "[g1e-aq] t=%d as=%d n=%llu total=%.2f rsp=%.2f drain=%.2f wk=%.2f wk_tail=%.2f copy=%.3f sync_rt64=%.2f "
                     "kB=%.1f jobs=%.1f calls=%.1f pend_jobs=%.2f last_kB=%.2f last_ms=%.2f max_job_ms=%.2f\n", sec, a, (unsigned long long)x.n,
@@ -1303,16 +1309,20 @@ namespace ultramodern {
             return true;
         }
     }
-    void rs64_rdpq_drain() { rdpq::drain(); }
+    void rs64_rdpq_drain() {
+        rdpq::drain();
+        if (rdpq::in_task == 0 && rdpq::task_async) { rdpq::task_async = false; RT64::g_s4280_n = 0; } // s6708 no-drain tasks
+    }
     void rs64_rdpq_task_enter() {
         using namespace rdpq;
         if (in_task == 0) {
             if (rs64_rdp_async_on && !last_async) ++async_windows;
             last_async = rs64_rdp_async_on;
             task_stream = (rs64_rdp_async_on && stream_bytes && (!stream_toggle || (async_windows & 1) == 0)) ? stream_bytes : 0;
+            task_nodrain = rs64_rdp_async_on && (nodrain_env == 1 || (nodrain_env == 2 && (async_windows & 1) == 1));
         }
         if (in_task++ == 0 && aq_on) {
-            task_t0 = aclk::now(); task_mode = rs64_rdp_async_on ? (task_stream ? 2 : 1) : 0; t_copy = t_sync = 0; t_bytes = t_jobs = t_calls = 0;
+            task_t0 = aclk::now(); task_mode = rs64_rdp_async_on ? (task_nodrain ? 3 : task_stream ? 2 : 1) : 0; t_copy = t_sync = 0; t_bytes = t_jobs = t_calls = 0;
             wk_busy_ns = 0; wk_max_ns = 0; wk_last_ns = 0; wk_last_bytes = 0;
         }
     }
@@ -1324,7 +1334,7 @@ namespace ultramodern {
             const aclk::time_point d0 = aclk::now();
             double pj = 0; uint64_t wk0;
             { std::lock_guard<std::mutex> lk(m); pj = (double)q.size() + (busy ? 1 : 0) + (pend_has ? 1 : 0); wk0 = wk_busy_ns.load(); }
-            drain();
+            if (task_nodrain) flush_pend(); else drain();
             const aclk::time_point d1 = aclk::now();
             AqAcc &x = aq[task_mode]; ++x.n;
             x.rsp += aq_ms(task_t0, d0); x.drain += aq_ms(d0, d1); x.total += aq_ms(task_t0, d1);
@@ -1336,6 +1346,7 @@ namespace ultramodern {
             if (aq_sec < 0) aq_sec = sec;
             if (sec != aq_sec) { aq_print(aq_sec); aq_sec = sec; }
         }
+        if (in_task == 0 && task_nodrain) { flush_pend(); return; } // s6708: task_async stays set until a real drain
         rdpq::drain(); if (rdpq::task_async) { rdpq::task_async = false; RT64::g_s4280_n = 0; } }
 }
 extern "C" int rs64_rdpq_task_async() { return ultramodern::rdpq::task_async ? 1 : 0; }

@@ -58,7 +58,11 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   (ROGUESQ_RDP_STREAM_KB, default 16 with async; same-run ROGUESQ_RDP_STREAM_TOGGLE) shrank the last job 150 -> 7.7 kB and
   RT64 calls 8.9k -> 0.6k per task, but last-job time stayed 3.26 -> 3.29 ms and drain 3.28 -> 3.33 ms (total 9.36 vs 9.13,
   noise). So ~3.3 ms is spent in what the final range triggers (fullSync: flush/submitFramebufferPair/workload), not in
-  parsing. Next: time fullSync segments (ROGUESQ_S4267=1 phases 4/8/9/10..18) in the async arm.
+  parsing. **s6708: fullSync = fb-pair render** (fsRender 3.0 of 3.2 ms: ~1.7 ms CPU encode, 1.3 ms GPU execute/wait;
+  flush/submitFb/upload ~0; tools/g1e_fs.py, segments sum to total). **ROGUESQ_RDP_NODRAIN=1** (with ROGUESQ_RDP_ASYNC=1)
+  skips the task-end drain so the next task's RSP overlaps it (present/sync submits still drain). Same-run lvl5 FPS60 dd2:
+  Gfx ms/task 10.18 sync / 8.88 drained / 4.54 no-drain, tasks/s 50.1 / 57.8 / 59.9, frames sane
+  (docs/img/g1e_s6708_nodrain_sheet.png). Single run, opt-in; lvl1 dd1 + lvl10 dd4 soaks queued.
 - **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
   ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
   lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
@@ -548,9 +552,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1e: where does the fixed ~3.3 ms task-end RT64 cost go (s6708 next).** s6707: streaming moved the bytes but not
-   the tail; the cost sits in the final range's fullSync. Split it with the existing S4267 phase timers (no rebuild) in the
-   async+stream arm, then make that segment cheaper or asynchronous. See NEXT.md.
+1. **G1e: qualify ROGUESQ_RDP_ASYNC=1 + RDP_NODRAIN=1 (s6709 next).** s6708 removed the 3.3 ms fullSync tail from the Gfx
+   thread (lvl5 dd2 at the 60 tasks/s cap). Fold the queued lvl1 dd1 / lvl10 dd4 soaks, then measure real game fps
+   (distinct frames/s) at dd4 where FPS60 fell to 44-50 (s6704) and check RDRAM-race symptoms. See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional
