@@ -19,9 +19,10 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   1.866->1.914 (retail 1.912), song 343->334 VI (retail 332). The rest of the tick gap is pacing: retail drops frames
   (2.115 VI/tick), the port never does (2.000). tools/g3_ai_clock.py, g3_vi_edges.py, g3_tick_mem.py. s6754 (dt
   pinned): sim identical to retail for 2301 ticks, frames H-match.
-- **s6756 G3: mission 5 (Gerrard V) dt-pinned = H-match:** 20635 rand calls, NPC state, event mask and song handle
-  identical for all 1972 retail ticks; 17/20 frames d 4.1-8.2 vs median 21-37 (outliers = retail mid-draw dumps). The
-  lvl5 cue stops at the same tick (scripted, sim clock); lvl4's ran out on the audio clock. Recipe scratch/s6757/*.sh.
+- **s6756/s6757 G3: missions 5 and 6 dt-pinned = H-match.** lvl5: 20635 rand calls, NPCs, event mask, song identical for
+  1972 retail ticks, 17/20 frames match (outliers = retail mid-draw dumps). lvl6 (Jade Moon): 9438 rand calls / 941 ticks,
+  12 NPCs, 10/10 flight frames d 2.1-2.6 (median 22-25); only render-pacing words differ (snap w2 last-drawn tick +-1,
+  0x8011A8C8 arbiter slot). lvl6 intro is long: retail flight at VI 12912, so port needs SECS>=330. Recipes scratch/s6758.
   s6753 lvl3: pin = oracle RS64_XTRACE_POKE / port ROGUESQ_XTRACE_POKE=800FA730:29:30:3d088889 (needs RAND_TRACE).
 - **s6748 G3: mission 2 (Barkhesh) flight + bolts = H-match vs retail angrylion** (40 frames d 6.5-15 vs median 36-47,
   monotonic; bolts 24.8% vs 26.5%). tools/g3_eep_patch.py selects a mission on the checksummed save (two copies, adler32
@@ -501,7 +502,7 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
    history is one term). s6751-s6752: rand identical for 12 frames; the NPC gate lag = variable dt (retail 3-VI frame drops, port flat
    2 VI); s6753 dt-pinned arms identical for 283 ticks = lvl3 desync CLOSED as pacing. s6754 mission 4 dt-pinned: sim exact 2301 ticks,
    frames H-match; s6755 the late event = song end on the audio clock; lvl4 CLOSED as pacing after fixing duplicate VI
-   edges (VI thread now exactly 60/s). s6756 mission 5 dt-pinned H-match (1972 ticks, frames). Next (g3-mission6-pinned): mission 6 the same way. G2/G5 are closed; G4 and aim/steer stay
+   edges (VI thread now exactly 60/s). s6756/s6757 missions 5-6 dt-pinned H-match. Next (g3-mission7-pinned): mission 7 the same way. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index

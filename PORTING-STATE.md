@@ -177754,3 +177754,29 @@ Result:
 Two lines (sim state + rand stream; framebuffers) agree: lvl5 H-match through tick 1971 (~65 s of port flight).
 Does NOT cover: ticks beyond 1971 (retail mupen runs ~3 VI/tick here, so 200 s reached only 1972 ticks).
 Next: g3-mission6-pinned, mission 6 (The Jade Moon, +0x31=5) with the same recipe and retail SECS 260.
+
+## Session 6757 (2026-11-01) — G3: mission 6 (Jade Moon) with dt pinned: port sim identical to retail for all 941 retail ticks (9438 rand calls, 12 NPCs) and 10/10 flight frames H-match; only render-pacing words differ
+
+What ran (scratch/s6758, recipes = s6757 retail.sh/port.sh with lvl6.eep = s6754 lvl4.eep +0x31=5, dt pin
+800FA730:29:30:3d088889 both arms):
+- Retail oracle (angrylion + cxd4), SECS=260: the intro is long; the flight-switch seed poke fired at VI 12912 (~215 s),
+  so the run holds only 941 sim ticks (9438 rand calls). 12 fb dumps (2 black at the switch, 10 in flight).
+- Port, SECS=150 (first try): still in the letterboxed intro cutscene at 150 s (w_0149.94.png, width 640), so no
+  width-512 VI -> ROGUESQ_RAND_TRACE never opened (no port.rand.txt). Kept as scratch/s6758/port_150s. Rerun SECS=330:
+  flight at port VI 10664, 2652 ticks, 1013 captures, 0 crash/abort lines.
+Results:
+- g3_rand_ticks.py: compared all 9438 retail calls, first mismatch None.
+- g3_frame_snap.py (941 ticks): NPC points and object words identical on every tick for all 12 NPCs. Snap diffs are the
+  clock words 3-6/9 on 935 ticks, plus word 2 on 3 ticks (ticks 268/720/722: last-drawn tick counter, port 1 behind or
+  ahead = render cadence) and glob word 18 on 1 tick (tick 897: 0x8011A8C8, the buffer-arbiter slot bytes from s4913,
+  host-scheduling dependent). Both are render pacing, not sim; everything else in 8011A880 diffs only in words 20-31.
+- g3_tick_mem.py (G3_IGN=04,0c,18, 8010c9e0/8010c0e0): first arm diff tick None.
+- g3_ai_clock.py: retail 1.9123 AI buf/VI, port 1.9093 (VI fix from s6755 holds); no song start/end inside the 941 retail
+  ticks (port's song runs ticks 1307-1519, outside the compared window).
+- g3_oracle_match.py: 10/10 flight frames d 2.10-2.60 vs median 21.6-24.5; worst (vi 13390) sheet differs only in engine
+  glow sprites. Colour fit a=0.955/0.972/0.982.
+Positive control: the s6754 pair must be read with scratch/s6754/retail2/oracle.log (mismatch at index 2153 reproduced);
+scratch/s6754/retail/ is a short 224-tick run that reports None, so NEXT.md's control path was corrected.
+Rules out: a port sim defect on lvl6 within the first 941 flight ticks. Not covered: lvl6 ticks past 941 (retail run too
+short) and the intro cutscene itself.
+Next: mission 7 (g3-mission7-pinned), retail SECS=360 / port SECS=330.
