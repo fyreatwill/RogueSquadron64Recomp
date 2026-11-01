@@ -176279,3 +176279,5 @@ so guest CPU and the gfx task never overlap and any frame with cpu + gfx above ~
 budget is ~10 ms rather than 16.7 (VI phase of the ack, kick/done delivery latency) is not yet measured.
 Rules out: further Gfx-thread overlap tricks alone reaching 60 at dd4 without also cutting guest CPU or RSP time.
 ORIGIN: not a mitigation — diagnostic instrument only.
+Discrimination: selects H-serial; refutes H-guest (as sole cause) and H-audio-rsp. Next discriminator: one per-frame
+timeline ring (VI edge, ack recv, kick, RSP end, DP-done send/recv, swap) splits H-phase vs H-latency vs H-rsp vs H-cpu.
