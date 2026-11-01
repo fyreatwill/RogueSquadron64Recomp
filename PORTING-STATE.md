@@ -176527,7 +176527,7 @@ frame appear in both arms (transitions), so they are not from this change.
 The s6104 perspective factor also applies to every other unwidened scene (640x480 menus). If any of those draw
 3D, they carry the same squeeze. That is the next unit.
 ORIGIN: not a mitigation; the writer of the pillarbox is our own FB_WIDTH patch set (s6113/s6115 width match list).
-**Discrimination.** Selects H-fbw-cap (the intro fb is 640 wide; widening it to 768 removes the bars, and the
-same-build control keeps them). Refutes H-scissor (the fb was 640, not a 1024 fb with a narrow scissor) and H-vi (the VI
+**Discrimination.** This selects H-fbw-cap (the intro fb is 640 wide; widening it to 768 removes the bars, and the
+same-build control keeps them) and refutes H-scissor (the fb was 640, not a 1024 fb with a narrow scissor) and H-vi (the VI
 did not crop a full-width image). Next discriminator: H-squeeze vs H-none for 640x480 scenes (NEXT.md), using an object
 width ratio at 4:3 vs 21:9 on the hangar route.
