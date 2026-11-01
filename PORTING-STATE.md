@@ -177408,3 +177408,34 @@ Next: same route with scripted fire presses in both (retail --press a/b/z, port 
   H-rt64-fx (wrong blend/colour) for bolts. Not covered: explosions (one ground explosion in retail vi 7774, none caught
   in a matched port capture) and their additive/alpha blend; a different level/biome.
 - New tool: tools/g3_effect_count.py (per-arm effect-pixel rate + mean colour, retail fb-dump logs and port capture dirs).
+
+## Session 6747 (2026-11-01) — G3: lvl1 ground impacts/explosions match retail angrylion by population (H-match); orange-pixel rate and colour equal across 2 retail + 2 port fire runs with no-fire controls; autopilot phase gates
+
+- Ran (one game at a time): retail rs64_oracle (cxd4 + angrylion) scratch/s6747/retail_flight.sh, the s6746 B/Z recipe
+  with 160 x 512 dumps 0.25 s apart at flight +2..+41.75 s (SECS=160; the first try at SECS=135 ended after 86 dumps).
+  rs64_oracle MAX_FB_DUMPS raised 96 -> 192. Port scratch/s6747/port.sh = s6746 port recipe (B/Z every 0.5 s from 72 s).
+- Harness datum: the first port run (scratch/s6747/port_bz_crawlmiss) stayed in the opening crawl for the whole capture
+  window. The hangar->crawl transition came after 50 s (s6746: 42.5 s), so the fixed-time Start at 50 s landed in the
+  hangar and nothing skipped the crawl; 0 bolt frames, all captures show crawl text. Not a game defect: wall-clock input
+  scheduling vs a phase that drifts by seconds.
+- Fix (src/main/main.cpp autopilot): a "<sec>:w<width>" token is a phase gate, not a press. The schedule waits there until
+  the committed VI width equals <width> (and el >= sec), then rebases its clock so that instant reads <sec>; later events
+  keep their times relative to it. Rerun with 42.5:w640 (scratch/s6747/port_bz2): "[autopilot] gate 9/94 width=640 reached
+  at wall 42.5 s -> clock rebased to 42.5", crawl skipped at 50 s, flight at 68.9 s, 0 CRASH. In this run the crawl came on
+  time, so the gate was a pass-through: the drifted case itself is not yet exercised (single-run).
+- tools/g3_effect_count.py: --class orange (R>200, 90<G<190, B<90), repeatable --mask rectangles, --top K DIR (saves the
+  K highest-count frames per arm). A whole-frame orange heat map of the no-fire arms showed the static sources: the radar
+  sweep (x 400-512, y 30-190) and the engine glow (x 220-300, y 260-300); masked at 390,0,512,200 and 220,260,300,300.
+- Bolt control (same windows): retail fire 27.3% (new run, n 150) / 34.7% (s6746, n 75) vs port 32.1% (port_bz2, n 168) /
+  32.0% (s6746, n 169) frames with >=4 bolt px; no-fire 0.0% / 0.0%. Inputs equivalent in both arms.
+- Orange, masked, whole frame: frames with >=4 px retail fire 10.7% (n 150) / 13.3% (n 75), port fire 14.4% (n 195) /
+  19.8% (n 197); no-fire retail 4.0% (n 75) / port 2.0% (n 199). >=15 px retail 2.0% / 4.0% vs port 4.1% / 4.6%. Mean colour
+  retail (219,116,76) / (221,121,57) vs port (219,119,72) / (218,114,73). Port fire rate sits ~1-2 binomial SE above retail
+  (different flight paths: the craft is not steered, so terrain hit geometry differs per run).
+- Eyeballed top-4 frames per arm (scratch/s6747/top_orange_sheet2.png): in both retail and port fire arms the orange
+  pixels are small impact puffs/sparks where bolts hit the dunes or targets; remaining retail-arm top counts include
+  radar-edge and target-marker pixels. No large fireball (like retail vi 7774 in s6746) occurs in either 40 s window.
+- Selects H-match for lvl1 impact effects: same rate class, same colour, same look. Rules out H-geom (no effects in port)
+  and a gross H-rt64-fx blend/colour difference for impacts. Not covered: a large fireball (a destroyed vehicle), which
+  needs a hit the unsteered craft does not land; a second biome. Two retail and two port runs, but one instrument.
+- Next: g3-second-biome-oracle-diff (second level, whole-frame match + bolt/orange population).

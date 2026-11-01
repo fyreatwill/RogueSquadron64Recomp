@@ -1,16 +1,19 @@
-# NEXT: G3 render fidelity -- lvl1 explosions (hit effects) vs retail, population method
-HYPOTHESIS-ID: g3-flight-effects-oracle-diff
+# NEXT: G3 render fidelity -- second biome (level 2) vs retail angrylion
+HYPOTHESIS-ID: g3-second-biome-oracle-diff
 
-s6746: bolts H-match (rate 34.7% retail vs 33.3% port, hue equal; tools/g3_effect_count.py). `a` = throttle, B/Z fire.
-Explosions were seen in only one retail dump (vi 7774, orange fireball + debris), never in a matched port capture.
-Hypotheses: H-match (explosion rate and colour equal); H-rt64-fx (additive/alpha blend of the fireball differs: hue or
-brightness of explosion pixels differs while the rate matches); H-geom (no explosions in port: rate 0 vs >0); H-sim (port
-hits fewer targets: rate differs but colour matches -- check with the bolt rate as the input control).
+s6747: lvl1 impacts H-match by population (tools/g3_effect_count.py --class orange --mask 390,0,512,200 --mask
+220,260,300,300); bolts H-match (s6746). lvl1 is now covered for intro, crawl, flight, fire, impacts. Next a different
+biome so terrain textures, fog/haze colour, sky and enemy types are tested on a second level.
+Hypotheses: H-match (d within same-run 4-8 band, monotonic); H-biome-tex (a texture/palette/combiner used only on that
+level differs: localized high-d region in otherwise matched frames); H-fog (haze colour/distance differs: low-frequency
+whole-frame bias rising with depth); H-desync (no monotonic match: route or level differs -> fix the harness first).
 Steps (one game run at a time):
-1. Reuse scratch/s6746/retail_flight.sh and port.sh (B/Z every 0.5 s). Extend: retail dumps every 0.25 s (160 dumps,
-   flight +2..+41.75 s, check rs64_oracle accepts 160 --fb-dump args), port unchanged (~4 captures/s).
-2. Add an orange/explosion class to tools/g3_effect_count.py (e.g. --class orange: R>200, 90<G<190, B<90, box = whole
-   picture below the horizon excluding the craft/engine glow area and HUD) and report rate + mean colour per arm,
-   bolt class alongside as the input control. Eyeball the top-K explosion frames from each arm side by side.
-3. If explosions stay too rare to measure (<3 frames per arm), move on to a second biome (hangar level select in both:
-   retail --press dright before the hangar Start, port autopilot "right" at the same point) and repeat the whole-frame match.
+1. Check what the oracle EEPROM unlocks (scratch/s6746/oracle.eep is the retail save): run retail with --press dright
+   before the hangar Start (scratch/s6747/retail_flight.sh, PRESS=...) and dump the level-select frames to see the
+   selected level name. If only lvl1 is unlocked, look for the save's level-unlock byte (ROGUESQ_FORCE_UNLOCK in
+   src/main writes it on the port side) and patch a copy of the .eep so BOTH arms use the same unlocked save.
+2. Retail: 80 x 512 dumps at flight +2..+41.5 s, no input. Port: tools/g3_port_capture.sh with SAVE_FROM=<patched eep>,
+   AP with "right" at the same point and the "42.5:w640"-style phase gate (s6747 autopilot) before the crawl-skip Start
+   (gate width/time must be re-read from the new run's [phase] lines).
+3. g3_oracle_match.py --dec shift (s6745 geometry) + --worst 6; then a B/Z fire arm and g3_effect_count.py bolt+orange.
+Owner save must be restored and cmp-verified after every port run (g3_port_capture.sh does it).

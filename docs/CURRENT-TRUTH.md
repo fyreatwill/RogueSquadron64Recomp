@@ -14,12 +14,11 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   every 0.5 s, all 73 complete retail frames match at d 4.2-7.6 vs median 15-22, monotonic, 2.2% timing. Bolts cannot
   be paired frame by frame (few-frame lifetime vs capture phase), so tools/g3_effect_count.py counts bolt-red pixels per
   arm: frames with bolts retail 34.7% vs port 33.3%, no-fire controls 0%/0%, hue (219,27,21) vs (218,42,33).
-  Explosions are not yet compared.
-- **s6745 G3: lvl1 no-input flight +20..60 s = H-match vs retail angrylion, no desync** (80 retail dumps: 69 complete
-  frames d 4.8-8.0 vs same-run median 16-22, port match times monotonic, 2249 retail VIs = 37.5 s vs 37.0 s port; dunes,
-  Mos Eisley town, wingmen, HUD, radar identical, scratch/s6745/sheet_mid.png). All 11 frames with d > 8 are retail
-  buffers caught mid-draw (terrain/HUD rows missing, sheet_worst.png), not port differences. No laser fire or explosion
-  occurs with no input, so effects stay untested; g3_oracle_match.py gained --worst K (sheets of the K worst pairs).
+- **s6747 G3: lvl1 ground explosions/impacts = H-match by population.** 160 retail dumps 0.25 s apart (rs64_oracle
+  MAX_FB_DUMPS 96->192) + two port fire runs; g3_effect_count.py --class orange --mask (radar/engine excluded): frames with
+  >=4 orange px retail fire 10.7%/13.3% vs port 14.4%/19.8%, no-fire 4.0%/2.0%; >=15 px 2-4% vs 4.1-4.6%; mean colour
+  (219-221,116-121,57-76) vs (218-219,114-119,72-73). Top frames are small orange impact puffs in both arms; no large
+  fireball in either 40 s window. Autopilot gained "<s>:w<width>" phase gates (one port run missed the crawl skip).
 - **s6744 G3: first lvl1 flight frames with HUD = H-match vs retail angrylion** (vi 7116-7926 d 4.4-5.8 vs same-run
   median 17-21, monotonic, 13.5 s retail = 13.3 s port; HUD, craft, wingmen, enemies, dunes identical,
   scratch/s6744/sheet_early_best.png). A Start during the port crawl skips it (flight at 69.5 s, not 156 s). The
@@ -483,8 +482,8 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
    s6742 the 640 phase after the hangar = opening crawl, H-match. s6743 mission-intro cinematic, H-match. s6744 first
    ~15 s of lvl1 flight with HUD, H-match; brightness gain = decode convention (--dec shift). s6745 flight
    +20..60 s with no input H-match, no desync. s6746 B/Z fire (`a` = throttle): bolts H-match by population rate/hue
-   (tools/g3_effect_count.py). Next (g3-flight-effects-oracle-diff): explosions (orange/additive) by the same
-   population method over a longer fire window, then a second biome level. G2/G5 are closed; G4 and aim/steer stay
+   (tools/g3_effect_count.py). s6747 impact puffs/explosions H-match by the same population method (--class orange).
+   Next (g3-second-biome-oracle-diff): a second level/biome, whole-frame match + bolt/orange population. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index

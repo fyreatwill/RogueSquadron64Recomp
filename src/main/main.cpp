@@ -10273,8 +10273,12 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
     //   ROGUESQ_AUTOPILOT_STOP_WIDTH  stop all presses once this VI width is
     //     reached (set 512 to stop at the hangar, avoiding a mash into stubbed
     //     mission code that blacks the screen).
+    //   s6747: "<sec>:w<width>" is a phase gate, not a press: the schedule waits
+    //     there until the committed VI width equals <width>, then rebases its
+    //     clock so that instant reads <sec>. Later events keep their absolute
+    //     times, now relative to the gate (hangar->crawl drifts by seconds per run).
     {
-        struct ApEv { double t; uint16_t btn; float sx, sy; };
+        struct ApEv { double t; uint16_t btn; float sx, sy; uint32_t waitw; };
         static bool     s_init = false;
         static bool     s_on = false;
         static ApEv     s_ev[512];
@@ -10316,8 +10320,13 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 for (char* tok = strtok_r(buf, ",", &save);
                      tok && s_nev < 512; tok = strtok_r(nullptr, ",", &save)) {
                     double t = 0.0; char kbuf[16]; kbuf[0] = '\0';
+                    unsigned ww = 0;
+                    if (sscanf(tok, " %lf:w%u", &t, &ww) == 2 && ww) {
+                        s_ev[s_nev].t = t; s_ev[s_nev].btn = 0; s_ev[s_nev].sx = s_ev[s_nev].sy = 0.0f;
+                        s_ev[s_nev].waitw = ww; s_nev++; continue;
+                    }
                     if (sscanf(tok, " %lf:%15[a-z]", &t, kbuf) < 1) continue;
-                    s_ev[s_nev].t = t;
+                    s_ev[s_nev].t = t; s_ev[s_nev].waitw = 0;
                     // s5418: stick pseudo-keys (sl/sr/su/sd) for in-mission flight.
                     s_ev[s_nev].sx = s_ev[s_nev].sy = 0.0f;
                     if (!strcmp(kbuf, "sl")) { s_ev[s_nev].btn = 0; s_ev[s_nev].sx = -1.0f; }
@@ -10342,7 +10351,14 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
             const double el = (SDL_GetTicks() - s_t0) / 1000.0;
             const bool stop = (s_stop_w != 0 && rs64_vi_committed_width() == s_stop_w);
             if ((s_held || s_held_sx != 0.0f || s_held_sy != 0.0f) && el >= s_release_at) { s_held = 0; s_held_sx = s_held_sy = 0.0f; }
-            if (!stop && !s_held && s_held_sx == 0.0f && s_held_sy == 0.0f && s_idx < s_nev && el >= s_ev[s_idx].t) {
+            if (!stop && s_idx < s_nev && s_ev[s_idx].waitw && el >= s_ev[s_idx].t &&
+                rs64_vi_committed_width() == s_ev[s_idx].waitw) {
+                s_t0 = SDL_GetTicks() - (Uint32)(s_ev[s_idx].t * 1000.0);
+                fprintf(stderr, "[autopilot] gate %d/%d width=%u reached at wall %.1f s -> clock rebased to %.1f\n",
+                        s_idx + 1, s_nev, s_ev[s_idx].waitw, el, s_ev[s_idx].t);
+                fflush(stderr);
+                s_idx++;
+            } else if (!stop && !s_held && s_held_sx == 0.0f && s_held_sy == 0.0f && s_idx < s_nev && !s_ev[s_idx].waitw && el >= s_ev[s_idx].t) {
                 s_held = s_ev[s_idx].btn;
                 s_held_sx = s_ev[s_idx].sx; s_held_sy = s_ev[s_idx].sy;
                 s_release_at = el + s_hold;
