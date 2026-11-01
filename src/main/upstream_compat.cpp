@@ -46,7 +46,7 @@ extern "C" uint32_t g_s6491[4]; // s6491 terrain-grid call/list/chain counters
 extern "C" uint32_t g_s6489[8]; // s6489 cumulative cell-gate exit counters (patched funcs_10.c)
 extern "C" uint32_t rs64_phase_ord(void);
 // s6718 G1d: widened 640x340 mission-intro width (0 = off) and "live video state is the 640x340 intro"; set by fixup patches.
-extern "C" { int rs64_g1d_intro_w = 0; int rs64_g1d_vs_intro = 0; int rs64_g1d_title_vi = 0; }  // s6720: title_vi = wide title mode live
+extern "C" { int rs64_g1d_intro_w = 0; int rs64_g1d_vs_intro = 0; int rs64_g1d_title_vi = 0; int rs64_g1d_vi_epoch = 0; }  // s6720: title_vi = wide title mode live
 extern "C" volatile int g_rs64_dd_blk; // s6583: dd toggle state, tagged on [fbdump]
 extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
                                              uint32_t phys,
@@ -770,6 +770,10 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
         fflush(stderr);
     }
     uint32_t mode_ptr = (uint32_t)ctx->r4;
+    {   // s6724 G1d: a new VI mode starts a new pillar-draw epoch (dpc_bridge rs64_g1d_pillar_scan).
+        static uint32_t s_last_mode = 0;
+        if (mode_ptr != s_last_mode) { s_last_mode = mode_ptr; __atomic_add_fetch(&rs64_g1d_vi_epoch, 1, __ATOMIC_RELAXED); }
+    }
     uint32_t rdram_off = mode_ptr & 0x00FFFFFF;
     auto read_u32 = [&](uint32_t off) -> uint32_t {
         uint32_t v = 0;

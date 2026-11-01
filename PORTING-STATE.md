@@ -176719,3 +176719,34 @@ All 12 runs mission_verified_130s, 0 crash lines. screenshots/s6723_pausedim_deb
 differed but fixb219/ACF0 failed and a219/ACF0 passed). For the debrief, the 4:3 metadata run selects H-retail-heap
 (the residue is retail's own heap, hidden by retail's full draw) and refutes H-ours (not our heap carve / s6689 slot).
 Next: blank the debrief target's pillars inside RT64 (host-only), not in guest RDRAM.
+
+## Session 6724 (2026-11-01) — G1d debrief pillars fixed: content-gated present crop (RT64 VI renderer) when a VI-mode epoch draws only the centre 512 columns of its wide image
+
+**Question (NEXT g1d-menu-sweep).** Hide the s6723 debrief pillar residue (the game's own live debrief heap) host-side.
+**Arm 1, VI-mode gate (built, run crop219, replaced).** Present crop in lib/rt64 render/rt64_vi_renderer.cpp (scissor
+narrowed to the centre 512/fbw of the viewport; the swapchain is clearColor'd first so the rest is black), gated on
+rs64_g1d_title_vi == 2. Result: only the stats page cropped (w150); the MISSION FAILED page (w132-w148) kept the residue.
+Why: that page runs in VI mode 0x80128E40 (shared with hangar/flight transitions), and the osViSetMode hook also resets
+title_vi to 0 whenever the game re-applies an already-widened mode (#1076 DA0 width=1024). A VI-mode gate cannot cover it.
+**Fix, content gate (crop is display-only, never writes RDRAM or the RT64 target).** src/rsp/dpc_bridge.cpp
+rs64_g1d_pillar_scan (in rs64_dpc_record_submit): per VI-mode epoch (rs64_g1d_vi_epoch, bumped in upstream_compat on a
+mode_ptr change), count draws (texrect/fill x range, triangle x extent from the 3 edge endpoints) clipped to the scissor on
+>512-wide 16-bit colour images, and those reaching outside the centre 512. rs64_g1d_pillar_crop = >=64 draws and 0 outside;
+the RT64 VI renderer crops while it is 1. ROGUESQ_G1D_DEBRIEF=0 = off. H-target-clear deliberately not built: a GPU clear
+of the target is written back to RDRAM by native-swap, i.e. the same live-heap write s6723 ruled unsafe.
+**Runs (lvl1 forced route, scratch/s6724/abort.sh, final binary unless noted; all mission_verified_130s, 0 CRASH):**
+pillar luma (x .02-.15 / .85-.98 of the window) over debrief captures w131-w151:
+| arm | pillars | crops engaged |
+| ctl219 21:9 DEBRIEF=0 (same binary) | 11.7-109.6 (residue) | none |
+| gate219 21:9 (draws>0 build) | 0.0/0.0 all 9 frames | epoch 9 (title), 27 (debrief) |
+| fix169 16:9 | 0.0/0.0 all 9 frames | epoch 9, 27 (cw=796) |
+| fix43 4:3 | unchanged (window bars) | never (cw<=512) |
+Flight, pause, hangar, level select never cropped (thousands of outside draws per epoch). Epoch 9 = the title (title-vi
+mode): crop = black bars, same look as the s6720 pillar clear. The >=64 threshold removed a 1-submit crop toggle at
+epoch 16/35 starts (draws=1..3) seen in gate219. Epoch 28 (stats page after the DA0 switch) uncropped after 42 swaps
+when 160 outside draws arrived (end-of-debrief transition, ~21 swaps); not captured at 2 s cadence, unverified look.
+ORIGIN: residue = retail's own debrief heap in the presented buffer (s6723, two lines); the crop changes only the present.
+Also seen: 4:3 debrief shows a thin noisy column at the right window edge (fix43 w139; unrelated to this change, cw<=512
+never crops), single-source, open. screenshots/s6724_debrief_crop.png (ctl / 21:9 / 16:9 / 4:3).
+**Discrimination.** Same-binary control shows residue, fix arms show 0 -> selects H-present-crop as sufficient; the
+VI-mode-gated arm refutes "title_vi==2 covers the debrief".

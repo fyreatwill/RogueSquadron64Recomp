@@ -122,14 +122,14 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   RT64, so any RDP rewrite in a wrap-restored range was discarded (b219: band back, 9x more restored words than a good run;
   s6722 fixb219 too). record_submit now runs after the shadow copy; ROGUESQ_G1D_PREWRAP_RECORD=1 = old. Full dim 6/6 runs
   on the new build vs 1/2 old. Applies to every RDP-rewrite hook (title clear, pause dim, spike cull, region/floor scans).
-- **OPEN s6723: debrief pillars show the game's own debrief heap (single mechanism, 21:9 and 16:9).** Debrief = mode
-  0x80128DA0 (512, yScale 0x800), widened to fbw by [fbw]; the game draws ~510 backdrop texrects x 256..768 + ~212 tris, no
-  fill rect. ensureHeapInitialized puts the debrief heap at 8010FEFC = 801163DC, the buffer it then draws and presents
-  (retail 4:3 too: heap 0x720000, presented 60x; retail's 512-wide draw covers it). FLOOR_WATCH: guest bzero 0x800077EC +
-  stores 0x80028D90 in the pillar words, and RT64 native-swap writes back. Failed levers (all same build, removed): one-time
-  and per-frame RDRAM pillar zeroing (RT64 target/writeback keeps the residue), VI field-origin centre window (RT64
-  presents the drawn 1024 target, ignores the VI offset). ROGUESQ_LOG_G1D_RECT=1 logs the debrief stream ([g1d-debrief]).
-  Also seen: 21:9 level-select name clipped at the left edge ("NDEZVOUS"); 16:9 fits. screenshots/s6723_pausedim_debrief.png.
+- **FIXED s6724: G1d debrief pillars (21:9 + 16:9).** The pillars held the game's own live debrief heap (s6723; retail
+  too, hidden by its full-width draw), so nothing may write RDRAM there. rs64_g1d_pillar_scan (dpc_bridge) counts, per
+  VI-mode epoch, draws on >512-wide images reaching outside the centre 512 (scissor-clipped); with >=64 draws and none
+  outside, the RT64 VI renderer crops the present to the centre (black bars, display only). Content-gated, so it covers
+  both debrief pages (MISSION FAILED is VI mode 0x80128E40, which a mode gate missed) and the title; flight/hangar
+  never crop. Same-binary control (ROGUESQ_G1D_DEBRIEF=0) shows residue; fix 0 luma at 21:9 and 16:9; 4:3 untouched.
+  Open: 21:9 level-select name clipped at the left edge ("NDEZVOUS"); 4:3 debrief thin noisy right-edge column
+  (single-source). screenshots/s6724_debrief_crop.png.
 - **FIXED s6721: G1d pause-menu text split at wide aspect.** Writer = our s6156 HUD anchor (vp 0x80138D20 also carries
   the pause text; right-of-centre items got +fbw-512). Anchor-off arm centres it (flight HUD unanchored = live control).
   Fix tools/apply_s6721_pausegate.py: anchor skipped while initHudStruct's pause byte (HUD+0x258) is set;
@@ -369,10 +369,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 - **Owner 2026-10-31:** spike cull default ON (also fixed: it only ran with LOG_SPIKE).
   G1(d) objective qualification PARKED (owner playtest). G1f window/fullscreen
   CLOSED s6717; G3d turning shake closed s6697 (s6696 fps fix). Spec: ITERATION.md item 3c.
-1. **G1d debrief pillars (s6723 open)**: blank the pillar columns of the debrief colour target inside RT64 (host-only,
-   e.g. a clear of the target outside x 256..768 when rs64_g1d_title_vi == 2, or crop at present), never in guest RDRAM
-   (live debrief heap). Then the 21:9 level-select name clip, then game-over at 21:9/16:9.
-   Recipe: scratch/s6723/abort.sh <tag> 21:9 "ROGUESQ_AUTOPILOT_HOLD_MS=200" (pause, down, A, left, A = ABORT/YES).
+1. **G1d 21:9 level-select name clip** (s6723/s6724: "NDEZVOUS ON BARKHESH" clipped at the left edge at 21:9, 16:9
+   fits), then game-over at 21:9/16:9, then the 4:3 debrief right-edge column. Recipe: scratch/s6724/abort.sh <tag>
+   21:9 "ROGUESQ_AUTOPILOT_HOLD_MS=200" (pause, down, A, left, A = ABORT/YES; level select appears ~w153).
    Open single-source (s6719): why a wider terrain footprint changes the LucasArts logo shape.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).

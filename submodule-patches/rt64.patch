@@ -10898,20 +10898,29 @@ index 0848f3e..22c84a9 100644
  
          TextureUpload newUpload;
 diff --git a/src/render/rt64_vi_renderer.cpp b/src/render/rt64_vi_renderer.cpp
-index b4ff4e9..cf58a14 100644
+index b4ff4e9..377b572 100644
 --- a/src/render/rt64_vi_renderer.cpp
 +++ b/src/render/rt64_vi_renderer.cpp
-@@ -4,6 +4,9 @@
+@@ -4,9 +4,18 @@
  
  #include "rt64_vi_renderer.h"
  
++#include <algorithm>
++#include <cmath>
 +#include <cstdio>
 +#include <cstdlib>
 +
  #include "shared/rt64_hlsl.h"
  #include "shared/rt64_video_interface.h"
  
-@@ -67,6 +70,21 @@ namespace RT64 {
++// RS64 s6724 G1d: 1 while the current VI-mode epoch drew only the centre 512 columns of its wide colour image
++// (src/rsp/dpc_bridge.cpp rs64_g1d_pillar_scan).
++extern "C" __attribute__((weak)) int rs64_g1d_pillar_crop;
++
+ namespace RT64 {
+     // VIRenderer
+ 
+@@ -67,9 +76,34 @@ namespace RT64 {
  
          descriptorSet->setTexture(descriptorSet->gInput, p.texture, RenderTextureLayout::SHADER_READ);
  
@@ -10933,6 +10942,19 @@ index b4ff4e9..cf58a14 100644
          RenderViewport viewport;
          RenderRect scissor;
          getViewportAndScissor(p.swapChain, *p.vi, p.resolutionScale, p.downsamplingScale, p.removeBlackBorders, viewport, scissor);
++        // RS64 s6724 G1d: screens such as the debrief draw only the centre 512 columns of their widened colour image;
++        // the pillars hold the game's own live heap (s6723). Crop the present to the drawn columns so the window shows
++        // black bars there, as on OPTIONS. Display-only: the target and RDRAM are untouched. ROGUESQ_G1D_DEBRIEF=0 = old.
++        if ((&rs64_g1d_pillar_crop != nullptr) && (__atomic_load_n(&rs64_g1d_pillar_crop, __ATOMIC_RELAXED) == 1) && (uint32_t(fbSize.x) > 512u)) {
++            const float fbw = float(uint32_t(fbSize.x)), side = viewport.width * (fbw - 512.0f) * 0.5f / fbw;
++            scissor.left = std::max(scissor.left, int32_t(lround(viewport.x + side)));
++            scissor.right = std::min(scissor.right, int32_t(lround(viewport.x + viewport.width - side)));
++            static int s_lines = 0;
++            if (s_lines++ < 4 || (s_lines & 1023) == 0) { std::fprintf(stderr, "[g1d-debrief-crop] fbw=%u scissor x %d..%d (viewport x %.1f w %.1f)\n", (unsigned)uint32_t(fbSize.x), scissor.left, scissor.right, viewport.x, viewport.width); }
++        }
+         p.commandList->setViewports(viewport);
+         p.commandList->setScissors(scissor);
+ 
 diff --git a/src/shaders/RasterPS.hlsl b/src/shaders/RasterPS.hlsl
 index f5beee9..f6d692a 100644
 --- a/src/shaders/RasterPS.hlsl

@@ -5091,8 +5091,55 @@ static void rs64_g1d_pause_dim(uint32_t lo, uint32_t hi) {
     }
 }
 
+// s6724 G1d: some 4:3 screens (the debrief pages, MISSION FAILED + stats) draw only the centre 512 columns of their
+// widened colour image, and the pillars show whatever the buffer held (s6723: the game's own live debrief heap, so it
+// must not be cleared in RDRAM). Per VI-mode epoch (rs64_g1d_vi_epoch, bumped on a mode_ptr change), note whether any
+// draw (texrect, fill rect, triangle; clipped to the scissor) reaches outside the centre 512 of a >512-wide image.
+// rs64_g1d_pillar_crop = >= 64 draws seen and none outside: RT64's VI renderer then crops the present to the centre (black
+// bars, display only). Content-gated, so flight / hangar (full-width draws) are never cropped. ROGUESQ_G1D_DEBRIEF=0 = off.
+extern "C" int rs64_g1d_vi_epoch;
+extern "C" { int rs64_g1d_pillar_crop = 0; }
+static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
+    static const bool on = [] { const char *v = std::getenv("ROGUESQ_G1D_DEBRIEF"); return !(v && *v == '0'); }();
+    static int s_epoch = -1, s_lines = 0; static uint32_t s_draws = 0, s_out = 0, s_cw = 0, s_sx0 = 0, s_sx1 = 0xFFF;
+    if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
+    const int ep = __atomic_load_n(&rs64_g1d_vi_epoch, __ATOMIC_RELAXED);
+    if (ep != s_epoch) {
+        if (s_lines < 200 && s_epoch >= 0) { s_lines++; fprintf(stderr, "[g1d-pillar] epoch=%d end draws=%u outside=%u crop=%d sw=%d\n", s_epoch, s_draws, s_out, rs64_g1d_pillar_crop, g_rs64_swap_n.load(std::memory_order_relaxed)); }
+        s_epoch = ep; s_draws = 0; s_out = 0;
+    }
+    auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
+    for (uint32_t a = lo & ~3u, step = 8; a + 8 <= hi; a += step) {
+        const uint32_t w0 = rd(a), w1 = rd(a + 4), op = (w0 >> 24) & 0x3F;
+        step = (op == 0x24 || op == 0x25) ? 16u : (op >= 0x08 && op <= 0x0F) ? 32u + ((op & 4) ? 64u : 0u) + ((op & 2) ? 64u : 0u) + ((op & 1) ? 16u : 0u) : 8u;
+        if (op == 0x3F) { s_cw = ((w0 >> 19) & 3u) == 2u ? (w0 & 0x3FFu) + 1u : 0u; continue; }
+        if (op == 0x2D) { s_sx0 = (w0 >> 12) & 0xFFFu; s_sx1 = (w1 >> 12) & 0xFFFu; continue; }
+        double x0, x1;
+        if (op == 0x24 || op == 0x25 || op == 0x36) { x0 = ((w1 >> 12) & 0xFFFu) / 4.0; x1 = ((w0 >> 12) & 0xFFFu) / 4.0; }
+        else if (op >= 0x08 && op <= 0x0F) {
+            if (a + 32 > hi) continue;
+            const double yl = ((int32_t)(w0 << 18) >> 18) / 4.0, ym = ((int32_t)(w1 << 2) >> 18) / 4.0, yh = ((int32_t)(w1 << 18) >> 18) / 4.0;
+            auto fx = [&](uint32_t o) { return (int32_t)rd(a + o) / 65536.0; };
+            const double xl = fx(8), dl = fx(12), xh = fx(16), dh = fx(20), xm = fx(24), dm = fx(28);
+            const double v[6] = {xh, xh + dh * (yl - yh), xm, xm + dm * (ym - yh), xl, xl + dl * (yl - ym)};
+            x0 = *std::min_element(v, v + 6); x1 = *std::max_element(v, v + 6);
+            if (yl <= yh) continue;  // degenerate (zapped / empty)
+        } else continue;
+        if (s_cw <= 512u) continue;
+        x0 = std::max(x0, s_sx0 / 4.0); x1 = std::min(x1, s_sx1 / 4.0);
+        if (x1 <= x0) continue;
+        const double c0 = (s_cw - 512u) / 2.0, c1 = c0 + 512.0;
+        s_draws++;
+        if (x0 < c0 - 1.0 || x1 > c1 + 1.0) s_out++;
+    }
+    const int crop = (s_draws >= 64 && s_out == 0) ? 1 : 0;  // >= 64: no 1-submit flash at an epoch start (s6724: draws=1..3)
+    if (crop != rs64_g1d_pillar_crop && s_lines < 200) { s_lines++; fprintf(stderr, "[g1d-pillar] epoch=%d crop %d->%d draws=%u cw=%u sw=%d\n", ep, rs64_g1d_pillar_crop, crop, s_draws, s_cw, g_rs64_swap_n.load(std::memory_order_relaxed)); }
+    __atomic_store_n(&rs64_g1d_pillar_crop, crop, __ATOMIC_RELAXED);
+}
+
 static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
     rs64_g1d_title_clear(lo, hi);
+    rs64_g1d_pillar_scan(lo, hi);
     rs64_g1d_pause_dim(lo, hi);
     rs64_g1d_rect_scan(lo, hi);
     rs64_spike_scan(lo, hi);
