@@ -65,6 +65,13 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   (docs/img/g1e_s6708_nodrain_sheet.png). **s6709 qualified** (ASYNC=1 NODRAIN=1, FPS60, 300 s): lvl1 dd1 / lvl10 dd4 / lvl5 dd4
   0 crash, 0 stall, frames sane; lvl1/lvl10 59.5 tasks/s; same-run lvl5 dd4 Gfx 9.56 -> 5.16 ms, 51.6 -> 55.9 tasks/s (p10
   30 -> 42), worker keeps up (pend_jobs 2.0). In OWNER-OPT-INS (default off). Remaining dd4 gap is not the Gfx thread.
+  **s6710: the dd4 gap is the game's serial frame loop (H-serial).** [g1b-gt] (ROGUESQ_G1B=1: per guest thread CPU ms + ms
+  blocked in osRecvMesg; control: every slot's cpu+blk+rest ~1000 ms/s) + s4911 queue table (ROGUESQ_S4908=1), tools/g1e_gt.py.
+  Game thread = OSId 3 (slot 8), the only real guest CPU: 0.29-0.42 s/s, so not saturated (H-guest refuted as sole cause);
+  audio SP queue wait 0.01 ms (H-audio-rsp refuted). Its blocked time is submitGfxFrame waiting for its own just-kicked gfx
+  task (mq 0x8011A7E8, as=3 fast 151 / slow 345 ms/s) plus waitForPostSwapAck for the VI (0x80128CF0, 420-550 ms/s).
+  Per second, (cpu + gfx wait)/frame vs tasks/s r=-0.63 (139 s): <10 ms -> 55.7/s, 10-14 -> ~44, >18 -> 38.5. Two runs
+  (osid-keyed and slot-keyed builds) agree. The game itself has no CPU/RSP overlap, so 60 needs cpu+gfx per frame < ~10 ms.
 - **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
   ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
   lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
@@ -554,8 +561,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1e: what binds lvl5 FPS60 dd4 at ~56 tasks/s with NODRAIN (s6710 next).** s6709 qualified ASYNC+NODRAIN (clean on
-   3 levels, Gfx 5.2 ms/task). Split the per-frame game-thread time (guest CPU vs VI/event waits) at dd4 in one run; also
+1. **G1e: shrink cpu+gfx per frame under the ~10 ms budget at lvl5 FPS60 dd4 (s6711 next).** s6710: the game's own
+   submitGfxFrame is serial (kick -> wait task done -> swap -> wait VI ack). Next: one per-frame timeline (VI, ack recv, kick,
+   RSP end, DP-done send, done recv, swap) to name why the budget is ~10 ms not 16.7 and which segment to cut; also
    hangar/menu render check under NODRAIN before the owner relies on it. See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).

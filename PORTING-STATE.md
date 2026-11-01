@@ -176254,3 +176254,28 @@ H-worker refuted (pend_jobs flat 2.0, present drain wait only 0.38 ms); H-race n
 levels; not covered: hangar/menus and fb-readback effects). With Gfx at 5.2 of 16.7 ms the lvl5 dd4 shortfall from 60 is
 elsewhere (game thread / guest CPU per frame at dd4) — unmeasured, next unit.
 ORIGIN: not a mitigation — qualification of an opt-in scheduling lever (s6708); no new machinery.
+
+## Session 6710 (2026-10-31) — G1e: lvl5 FPS60 dd4 shortfall is the game's serial frame loop (cpu + own gfx-task wait > ~10 ms/frame), not guest-CPU saturation or audio
+
+Instrument (lib/N64ModernRuntime/ultramodern, exported to submodule-patches): under ROGUESQ_G1B=1 a new per-second
+`[g1b-gt] t= sum_cpu= slot.osid:cpu/blk ...` line. threads.cpp registers each host thread running a guest thread in a slot
+(mach port + OSId; first build keyed by OSId&63 collided, OSId 0/1/2 are reused); events.cpp reads thread_info CPU deltas;
+mesgqueue.cpp books osRecvMesg blocked time (empty queue, BLOCK) clipped to the [g1b] window, with still-blocked threads
+booked at the tick. tools/g1e_gt.py joins [g1b], [g1e-aq] (arm 0/2/3, Gfx ms/task), [g1b-gt], [s4265-agg] aud and the
+s4911 per-(mq, site) blocked table for one OSId.
+Runs: scratch/agent/s6710_gt.zsh (s6708 recipe: lvl5 FPS60 dd4, ASYNC_TOGGLE=10 + NODRAIN=2, STORE_DIAG=0, + S4265,
+second run + S4908), m6/g1_lvl5s6710_gt_dd4 and _gt2_dd4: both 300 s, 0 crashlines, 0 VI stalls.
+Positive control: in the slot build every guest thread's cpu+blk+rest sums to 1000 +-2 ms/s (rest = runnable-not-running
+<= 46 ms/s); in the first build the unique OSId 3 already summed to ~991-993.
+Result (t>=160, gt2): game thread = OSId 3 (slot 8), the only guest thread with real CPU. CPU 0.29-0.42 s/s in every arm and
+quartile (as=3 slow 25%: cpu 292, blocked 682 ms/s at 42.8 tasks/s). Its blocked time is two waits inside its own frame:
+mq 0x8011A7E8 at submitGfxFrame (the "wait for task done" after kicking the SP task; scales with the gfx task: as=3 fast
+151 / slow 345, as=0 175 / 388 ms/s) and mq 0x80128CF0 at waitForPostSwapAck (VI ack, 420-550 ms/s). Audio: ~53 tasks/s,
+SP queue wait 0.01 ms everywhere. Per second (139 s), (cpu + 0x8011A7E8 wait)/frame vs tasks/s r = -0.63: <10 ms 55.7/s
+(n=65), 10-12 43.3, 12-14 44.2, 14-16 40.4, 16-18 40.9, >18 38.5. Run 1 shows the same cpu/blocked split for OSId 3.
+Verdict: H-guest refuted as the sole cause (guest CPU < half the wall even in the slow seconds); H-audio-rsp refuted;
+H-wait refined to H-serial: the game's submitGfxFrame kicks the gfx task, waits for it, swaps, then waits for the VI ack,
+so guest CPU and the gfx task never overlap and any frame with cpu + gfx above ~10 ms costs an extra VI. Why the
+budget is ~10 ms rather than 16.7 (VI phase of the ack, kick/done delivery latency) is not yet measured.
+Rules out: further Gfx-thread overlap tricks alone reaching 60 at dd4 without also cutting guest CPU or RSP time.
+ORIGIN: not a mitigation — diagnostic instrument only.
