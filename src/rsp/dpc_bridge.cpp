@@ -4903,7 +4903,84 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
     }
 }
 
+// s6720 G1d: ROGUESQ_LOG_G1D_RECT=1 logs, per swap, the colour-image width, scissor and the x extents of texrects
+// (with first rect + dsdx) and triangles in submitted RDP ranges. Read-only. Cap ROGUESQ_G1D_RECT_CAP lines (400).
+static void rs64_g1d_rect_scan(uint32_t lo, uint32_t hi) {
+    static const bool on = [] { const char *e = std::getenv("ROGUESQ_LOG_G1D_RECT"); return e && *e && *e != '0'; }();
+    if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
+    static const int cap = [] { const char *e = std::getenv("ROGUESQ_G1D_RECT_CAP"); return e && *e ? atoi(e) : 400; }();
+    static int s_lines = 0, s_swap = -1;
+    static uint32_t s_cw, s_cimg, s_nr, s_nt, s_sc0, s_sc1, s_first[4];
+    static double s_rx0, s_rx1, s_tx0, s_tx1;
+    const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
+    if (sw != s_swap) {
+        if (s_swap >= 0 && (s_nr || s_nt) && s_lines < cap) {
+            s_lines++;
+            fprintf(stderr, "[g1d-rect] swap=%d cimg=%06X cw=%u sc=%08X,%08X rects=%u x=%.1f..%.1f first=%08X %08X %08X %08X tris=%u x=%.1f..%.1f\n",
+                    s_swap, s_cimg, s_cw, s_sc0, s_sc1, s_nr, s_rx0, s_rx1, s_first[0], s_first[1], s_first[2], s_first[3], s_nt, s_tx0, s_tx1);
+        }
+        s_swap = sw; s_nr = s_nt = 0; s_rx0 = s_tx0 = 1e9; s_rx1 = s_tx1 = -1e9;
+    }
+    auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
+    for (uint32_t a = lo & ~3u; a + 8 <= hi;) {
+        const uint32_t w0 = rd(a), w1 = rd(a + 4), op = (w0 >> 24) & 0x3F;
+        if (op == 0x24 || op == 0x25) {
+            const double xl = ((w0 >> 12) & 0xFFF) / 4.0, xh = ((w1 >> 12) & 0xFFF) / 4.0;
+            if (s_nr == 0) { s_first[0] = w0; s_first[1] = w1; s_first[2] = a + 16 <= hi ? rd(a + 8) : 0; s_first[3] = a + 16 <= hi ? rd(a + 12) : 0; }
+            s_nr++; s_rx0 = std::min(s_rx0, xh); s_rx1 = std::max(s_rx1, xl);
+            a += 16; continue;
+        }
+        if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; s_cimg = w1 & 0xFFFFFF; a += 8; continue; }
+        if (op == 0x2D) { s_sc0 = w0; s_sc1 = w1; a += 8; continue; }
+        if (op < 0x08 || op > 0x0F) { a += 8; continue; }
+        const uint32_t len = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
+        if (a + 32 > hi) break;
+        for (uint32_t o : {8u, 16u, 24u}) { const double x = (double)(int32_t)rd(a + o) / 65536.0; s_tx0 = std::min(s_tx0, x); s_tx1 = std::max(s_tx1, x); }
+        s_nt++;
+        a += len;
+    }
+}
+
+// s6720 G1d: while the widened title mode is live (rs64_g1d_title_vi, set by the osViSetMode hook), the title still
+// covers only the centre 512 columns of its fbw-wide colour image; the pillar columns are never drawn and showed stale
+// heap bytes (white / noise / smeared strips). Zero each new >512-wide colour image once, before RT64 sees the task.
+extern "C" int rs64_g1d_title_vi;
+static void rs64_g1d_title_clear(uint32_t lo, uint32_t hi) {
+    static uint32_t s_done[4]; static int s_n = 0, s_lines = 0;
+    if (!rs64_g1d_title_vi) { s_n = 0; return; }
+    if (g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
+    auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
+    // The menu bar slides in from x<256 (rects x 172->256): in this single-buffered, never-cleared image its trail
+    // stayed in the left pillar. A full-width scissor is clamped to the centre 512 columns (the retail visible area).
+    static uint32_t s_cw = 0;
+    for (uint32_t a = lo & ~3u, step = 8; a + 8 <= hi; a += step) {
+        const uint32_t w0 = rd(a), op = (w0 >> 24) & 0x3F;
+        // Walk command boundaries (texrect 16 B, triangles 32..176 B) so payload words are never parsed as commands.
+        step = (op == 0x24 || op == 0x25) ? 16u : (op >= 0x08 && op <= 0x0F) ? 32u + ((op & 4) ? 64u : 0u) + ((op & 2) ? 64u : 0u) + ((op & 1) ? 16u : 0u) : 8u;
+        if (op == 0x2D && s_cw > 512u) {
+            const uint32_t w1 = rd(a + 4), ulx = (w0 >> 12) & 0xFFFu, lrx = (w1 >> 12) & 0xFFFu;
+            if (ulx == 0 && lrx + 8u >= s_cw * 4u) {
+                const uint32_t x0 = (s_cw - 512u) / 2u * 4u, x1 = (s_cw + 512u) / 2u * 4u;
+                const uint32_t n0 = (w0 & ~(0xFFFu << 12)) | (x0 << 12), n1 = (w1 & ~(0xFFFu << 12)) | (x1 << 12);
+                memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &n0, 4); memcpy(g_rdram_for_submit + ((a + 4) & kSubmitRamMask), &n1, 4);
+            }
+            continue;
+        }
+        if (op != 0x3F) continue;
+        const uint32_t cw = (w0 & 0x3FFu) + 1u, ci = rd(a + 4) & 0xFFFFFFu, bytes = cw * 448u * 2u;
+        s_cw = ((w0 >> 19) & 3u) == 2u ? cw : 0u;
+        if (cw <= 512u || ((w0 >> 19) & 3u) != 2u || (ci & 0x3Fu) || ci + bytes > kSubmitRamEnd) continue;  // 16-bit, aligned, wide only
+        bool seen = false; for (int i = 0; i < s_n; i++) seen |= (s_done[i] == ci);
+        if (seen || s_n >= 4) continue;
+        s_done[s_n++] = ci;
+        memset(g_rdram_for_submit + ci, 0, bytes);
+        if (s_lines++ < 16) fprintf(stderr, "[g1d-title-clear] cimg=%06X cw=%u bytes=%u\n", ci, cw, bytes);
+    }
+}
+
 static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
+    rs64_g1d_title_clear(lo, hi);
+    rs64_g1d_rect_scan(lo, hi);
     rs64_spike_scan(lo, hi);
     rs64_region_scan(lo, hi);
     rs64_floor_scan(lo, hi);

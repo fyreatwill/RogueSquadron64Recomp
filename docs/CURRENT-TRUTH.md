@@ -113,15 +113,22 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   starts in it; ROGUESQ_ASPECT=auto takes display 0's aspect. Game width is fixed at boot (a resize letterboxes).
   Datum: default 4:3 flight shows 85/1280 px side bars (512-wide VI mode), same with WINDOW_FIT=0, so pre-G1f;
   retail hStart unchecked, single-source.
+- **FIXED s6720: G1d wide-aspect title screen.** The game drew the title correctly (texrects centred at x 256..768 of
+  the 1024 image, [g1d-rect] log, ROGUESQ_LOG_G1D_RECT=1). Writer = the VI mode: the interlaced 512x448 title mode is
+  width 1024 (= two 512-px lines), xScale 0x333, field origins 1024/2048. Retail 4:3 uses the same values. Our s6113 hook
+  only widened width-512 modes, so at wide aspect the VI showed fb x 0..~512 stretched (black left half, still 2x in the
+  right half). Fix (src/main/upstream_compat.cpp): width 2*fbw, xScale and field origins *fbw/512. Pillar columns held
+  stale heap bytes and the sliding menu bar's trail (rects from x=172), so dpc_bridge rs64_g1d_title_clear zeroes each
+  wide colour image once and clamps the full-width scissor to the centre 512 columns while that mode is live.
+  ROGUESQ_G1D_TITLE_VI=0 = old path. screenshots/s6720_title_before_after.png; lvl1 21:9 route
+  mission_verified_130s, select and flight still fill the window.
 - **FIXED s6719: G1d boot LucasArts-logo intro drawn wrong at wide aspect.** The 3D LucasArts logo (carved from Hoth
   terrain) renders in the 640x340 intro state. At 16:9/21:9 it was ~1.75x too wide and at 21:9 never formed face-on;
   the camera ended on a smeared mountain. Writer = our own s6144 terrain-footprint x-scale (ROGUESQ_ASPECT_SCALE applied
   in every video state); the s6104 guPerspective factor alone changed nothing (measured). Fix (tools/apply_s6144_fpx.py
   apply9_s6719 + apply_s6031_far.py apply_s6719_persp640, vendored fixup): footprint and perspective factor = 1.0 when
   the video-state width (0x8011A838) <= 640, intro_w/640 in the s6718-widened intro state; ROGUESQ_G1D_640PERSP=0 =
-  old path. Settled-logo purple bbox w/h (dense window captures, peak-pixel frame as phase gate): retail 4:3 1.23-1.25;
-  21:9 1.33 (same-build control 2.15); 16:9 1.14 (before 2.17). screenshots/s6719_lucasarts_logo_before_after.png.
-  Open, single-source: WHY a wider footprint changes the logo's shape (it should only add off-screen cells).
+  old path. Logo w/h: retail 1.23-1.25; 21:9 2.15->1.33; 16:9 2.17->1.14 (screenshots/s6719_*).
 - **FIXED s6718: G1d mission-intro pillarbox.** The 640x340 intro state was never widened (227 px/side bars at 21:9).
   Now intro_w = fbw*3/4 (768 at 21:9) for pfm, video state, 640 VI mode, camera viewport and perspective
   (tools/apply_s6031_far.py apply_s6718_intro0/4, upstream_compat osViSetMode, rt64 width allowlists);
@@ -146,8 +153,7 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   before the depth clear) and 0x80017814. The RDP field is 12-bit 10.2, so w=1024 gives 0x1000 -> 0:
   zero-wide scissor, the 0..1023 x 0..339 depth-clear fill clipped to an empty rect, depth never cleared,
   static floor fails the Z test in stripes. 16:9 (3184) fits. Fix: clamp lrx to 0xFFF (1023.75, the
-  hardware max) at both sites (tools/apply_s6031_far.py apply_s6694_scissor, mirrored in the vendored
-  fixup; no-op at retail widths). Evidence: raw [scissor-raw] w1=00000550 -> 00FFF550; depth fb 00B56000
+  hardware max) at both sites (apply_s6694_scissor; no-op at retail widths). Evidence: raw [scissor-raw] w1=00000550 -> 00FFF550; depth fb 00B56000
   now h=340 lwt=Color diff=1 per frame like 16:9; select-frame vhf 19-26 -> 7.2-8.0; floor and ring
   visible (screenshots/s6694_21x9_levelselect_before_after.png). Residual fixed s6695 (next bullet).
 - **FIXED s6695: 21:9 level-select right-edge residual = two of OUR host-side scanners.** (1) rs64_spike_scan
@@ -158,17 +164,11 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   renderRadarMinimap (fixup tools/apply_s6695_radarmark.py; ROGUESQ_SHIFT_REGION_ANYWHERE=1 = old behaviour).
   Select vhf 7.2-8 -> 5.4; flight radar still aligned (positive control), lvl1 21:9 mission_verified_130s.
   screenshots/s6695_21x9_levelselect_before_after.png. Pre-existing: grey radar wedge left at x~690 in flight.
-  The s6692/s6693 "RT64 depth handling" reading was right about where the clear was lost, wrong about why.
 - **G3c (owner visual report): engineering closed, owner judgement pending.**
   (a) far-edge stair: no opt-in rougher than retail (s6449, s6544);
   (b) spike wedges: H-hw-draws, angrylion lights the same 16/79 wedges
   (s6454), `ROGUESQ_CULL_SPIKE` now DEFAULT ON per owner 2026-10-31 (=0 to disable); (c) turning shake: retail 30 fps
   judder (s6455, s6458).
-- **G1d (aspect): level-select floor tear FIXED s6694, right-edge residual FIXED s6695 (see above).** Flight radar
-  inset matches retail (s6610). Extra width is real scene and the left HUD
-  stays pinned. Heap `8010FEFC` now stops at the depth pointer when aspect
-  is wider than 4:3. The OS window stays 640x480, so wider modes letterbox.
-  Do not return to the combiner; the s6692 lead is RT64 depth (see above).
 - **G1e (frame rate), -O2 build (s6704):** FPS60 holds 60.0 fps at dd1 on lvl1/lvl5 (s6703); dd2 ~48-50, dd3 ~47, dd4
   ~44. Two lines: per-second frame period tracks gfx task ms (r 0.91-0.98 within each run) and sample(1) shows the game
   thread 5% busy vs the Gfx thread doing all the work. The gfx task (RSP LLE ~55%, RT64 submit ~46% inclusive, run
@@ -608,11 +608,10 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 - **Owner 2026-10-31:** spike cull default ON (also fixed: it only ran with LOG_SPIKE).
   G1(d) objective qualification PARKED (owner playtest). G1f window/fullscreen
   CLOSED s6717; G3d turning shake closed s6697 (s6696 fps fix). Spec: ITERATION.md item 3c.
-1. **G1d wide-aspect title-screen garble** (s6719 datum): at 16:9 and 21:9 the title still (Luke/X-wing behind the
-   logo) is garbled: left ~half black with a smeared strip, right half zoomed ~2x (scratch/s6718/a219/w20_*.png, also
-   with ROGUESQ_G1D_INTRO=0); 4:3 is clean. Arm table in NEXT.md (HUD anchor, VPW, WINDOW_FIT, 640PERSP). s6719
-   closed the "640 squeeze" lead: it was a stretch in the logo intro, fixed. G1e dd4 ceiling is interpreter-bound
-   (s6716); reopen only with an interpreter-level idea.
+1. **G1d wide-aspect menu sweep** (after s6720 title fix): the s6720 rule (VI mode width 1024 = 2x512 interlaced,
+   xScale 0x333) applies to every 512x448 interlaced screen. Check the title OPTIONS submenu, in-flight pause menu and
+   mission debrief at 21:9/16:9 against 4:3 (scratch/s6720/title.sh + autopilot keys). Open single-source (s6719): why a
+   wider terrain footprint changes the LucasArts logo shape.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional

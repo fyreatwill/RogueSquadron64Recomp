@@ -176568,3 +176568,49 @@ why a wider footprint changes the logo's shape instead of only adding off-screen
 **Discrimination.** This refutes H-squeeze and H-none (the 640-state scene IS affected, and by a stretch) and selects
 the footprint lever over guPerspective (fix 1 alone: no change; fix 2/3: retail ratio). New datum for the next unit:
 the title still is garbled at every wide aspect (s6717/s6718 w20 captures), 4:3 clean. NEXT.md: g1d-title-garble.
+
+## Session 6720 (2026-11-01) — G1d wide-aspect title screen fixed: the interlaced 512x448 title VI mode (width 1024 = 2x512, xScale 0x333) was never widened; now width 2*fbw, xScale/field origins *fbw/512, pillar clear + centre scissor
+
+**Question (NEXT g1d-title-garble).** Why is the title still (Luke / X-wing, START/OPTIONS) garbled at 16:9/21:9
+(left half black with an orange smear, right half the still at ~2x) and clean at 4:3?
+
+**Runs (scratch/s6720/).** title.sh: boot with ROGUESQ_AUTOPILOT=10:start (single press; the title appears at
+t~12), window captures every ~0.5 s. Reproduced at 21:9 on the first run (a219).
+Arm table, 21:9, one setting off per arm (w012 frames):
+| arm | title |
+| 4:3 retail (r43) | clean (positive control) |
+| default 21:9 | garbled: black left half, still 2x in the right half |
+| ROGUESQ_HUD_ANCHOR_AUTO=0 / G1D_640PERSP=0 / WINDOW_FIT=0 / CULL_SPIKE=0 / ASPECT_SCALE=1 | same as default |
+| ROGUESQ_VPW_SCALE=1 | still at 1:1, still in the right half |
+So no x shift on our side: VPW scales the camera only, and the right-half offset is not the camera centre
+([vpw] title cam 800CF090 w512 cx256 -> w1024 cx512).
+New instrument ROGUESQ_LOG_G1D_RECT=1 (dpc_bridge rs64_g1d_rect_scan, read-only; per swap: colour image, width, scissor,
+texrect/tri x extents). Title: 4:3 cw=512 rects=161 x=0..512; 21:9 cw=1024 rects=161 x=256..768. **The game draws
+the title correctly, centred in the wide image.** The display was the fault: osViSetMode #10 (initVideoSubsystem,
+mode 80128DA0 type 0x08) has width=1024 xScale=0x333 fld origins 1024/2048 at EVERY aspect, 4:3 retail included. For
+this interlaced 512x448 mode the VI width is the two-line field stride (2x512). The s6113 hook only widens modes
+requested at width 512, so at 21:9 the VI read 512 px per line from a 1024-wide image: fb x 0..~512 across the screen,
+i.e. pillar + left half of the still at 2x. That matches the symptom exactly.
+ORIGIN: writer = the game's own mode builder (the 2x512 stride constant, legitimate at 4:3) combined with our s6113
+fbw widening, which made the colour image fbw wide without rescaling this mode.
+
+**Fix (src/main/upstream_compat.cpp osViSetMode hook).** fbw>512 and width==1024 and xScale<=0x333: width = 2*fbw,
+xScale*fbw/512, field origins (+0x28/+0x3C)*fbw/512 (21:9: 2048 / 0x666 / 2048,4096; 16:9: 1592 / 0x4F9). Later
+1024-wide flight modes carry 0x666 and are excluded. First attempt (xScale only) centred the still but squeezed it
+vertically, which confirmed the stride reading. Two residuals: (1) pillar columns showed stale heap bytes (white at 21:9,
+noise at 16:9): the title image is single-buffered and never cleared because at 4:3 the still covers it, so
+dpc_bridge rs64_g1d_title_clear zeroes each wide 16-bit colour image once while the mode is live
+(rs64_g1d_title_vi); (2) an orange strip left of START = trail of the menu bar sliding in (rects start at x=172 and
+move toward 256; at 4:3 that is off-screen / overdrawn), so the same pass clamps a full-width SET_SCISSOR to the centre
+512 columns (the retail visible area). ROGUESQ_G1D_TITLE_VI=0 = old path (verified, c219 garbled).
+**Bug caught by the regression and fixed:** the first clear pass walked the RDP stream at a fixed 8-byte stride, read
+texrect/triangle payload words as SET_COLOR_IMAGE and zeroed ~900 KB at bogus addresses (cimg=0103CD/CE03CD/9003CD).
+Every crashed attempt (3/3: SIGBUS, abort, SIGBUS) logged one. It now walks command boundaries (texrect 16 B,
+triangles by op length) and requires a 64-byte-aligned address. Rerun: att=1 mission_verified_130s, 0 crash.
+**Result.** screenshots/s6720_title_before_after.png: 21:9 before, 21:9 after, 16:9 after, 4:3 retail; after =
+retail framing with clean black pillars. lvl1 21:9 forced route mission_verified_130s; level select, craft select and
+flight still fill the window (scratch/s6720/r219). 16:9 route: see the result line below.
+**Discrimination.** Rect x extents (game output sane, centred) vs the VI mode values select H-stride (VI side, mode
+stride/xScale) and refute H-texrect-shift (no host x shift: anchor/region/spike arms were inert, and the rects are
+already at 256..768) and H-vpw (VPW changes only the zoom). Next: menu sweep (NEXT g1d-menu-sweep).
+16:9 route (scratch/s6720/r169): att=1 mission_verified_130s, 0 crash; title [fbw] title-vi width 1024->1592 xScale 0x4F9 + one clear (cimg 751E00 cw 796); title still pillarboxed and clean at t=20, select and flight full width.

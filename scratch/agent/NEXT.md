@@ -1,25 +1,21 @@
-# NEXT: G1d wide-aspect title-screen garble (s6719 datum)
-HYPOTHESIS-ID: g1d-title-garble
+# NEXT: G1d wide-aspect menu sweep (after the s6720 title fix)
+HYPOTHESIS-ID: g1d-menu-sweep
 
-s6717/s6718 forced-route runs (autopilot presses Start from t=10) show the title screen (the Luke / X-wing still
-behind the STAR WARS ROGUE SQUADRON logo) garbled at EVERY wide aspect and clean at 4:3:
-scratch/s6718/a219/w20_*.png (21:9: left ~half black with an orange smeared strip and a white vertical bar; right half
-the still zoomed ~2x), scratch/s6718/a169/w20_* and s6717/a219/w20_* (same), scratch/s6718/off219 (ROGUESQ_G1D_INTRO=0,
-same), s6717/a43 w20 and dflt w20 (4:3, clean). The owner sees this on every boot at 16:9/21:9.
+s6720 fixed the title at 16:9/21:9. The interlaced 512x448 VI mode (width 1024 = 2x512, xScale 0x333) is now widened
+to 2*fbw, and while it is live (rs64_g1d_title_vi) dpc_bridge zeroes each wide colour image once and clamps the
+full-width scissor to the centre 512 columns. Other screens that use this mode or a sibling state have not been looked
+at wide.
 
 ## Hypotheses
-- H-stride: the still is CPU/DMA-written into a 640-wide image while the presenting VI/RT64 path uses another width
-  (FB_WIDTH 1024 or the s6718 intro 768), so rows shear / the left part reads stale memory.
-- H-texrect-shift: a host-side x shift (HUD anchor s6155/s6156, region shift s6159/s6695, spike-scan guard) moves the
-  still's texrect tiles right of a pivot (the image starts at ~x=1360/2720 of the window = a fixed offset).
-- H-vpw: the s6112 camera viewport widening (0.8*kv for 640 cams) scales the 2D tiles about the centre (2x zoom on the
-  right half fits a viewport scale applied to texrects).
-## Discriminator (one build, boot-only runs, no flight needed)
-scratch/s6719/dense.sh with the forced-route autopilot schedule (or ROGUESQ_AUTOPILOT=10:start) so the title appears;
-arms in ONE batch, sequential: 21:9 default; ROGUESQ_HUD_ANCHOR_AUTO=0; ROGUESQ_VPW_SCALE=1; ROGUESQ_G1D_640PERSP=0;
-ROGUESQ_WINDOW_FIT=0. Log the title's video state ([fbw] pfm/vsu + osViSetMode width at the title) and the
-SET_COLOR_IMAGE widths during it. The arm whose title is clean names the lever; then fix its state rule like s6718/s6719
-and show the owner before/after at 16:9 and 21:9.
-Also open (single-source, s6719): WHY a wider terrain footprint x-extent changes the LucasArts logo shape (the cell
-set should only add off-screen cells). Read buildVisibleTerrainGridAroundCamera's other uses of the corner vector at
-0x40($sp) if the title work leaves time.
+- H-ok: every other 512x448 screen (title OPTIONS submenu, controller/sound settings, pause menu, debrief, game-over)
+  is drawn centred like the title and now displays clean.
+- H-full: some menu draws full-width content (extra width wanted, e.g. a 3D backdrop) that the s6720 centre-512
+  scissor clamp now clips; that screen needs the clamp off.
+- H-other-mode: a menu uses a different VI mode that still carries 512-based stride/xScale (same garble as pre-s6720).
+## Discriminator (one build, ONE batch of boot runs)
+scratch/s6720/title.sh with an autopilot schedule that opens OPTIONS (10:start, then dpad down + A at the title) and a
+forced-route run that pauses in flight (start at t~100) - window captures at 21:9, 16:9, 4:3. Log [osViSetMode #],
+[fbw] title-vi, [g1d-title-clear] and ROGUESQ_LOG_G1D_RECT=1 (rect x extents per swap: a full-width screen shows
+rects outside 256..768 before clamping). Compare each screen with its 4:3 frame. A garbled screen -> name its mode
+from the log and extend the rule. A clipped screen -> narrow the clamp to the title state.
+Secondary (single-source, s6719): why a wider terrain footprint changes the LucasArts logo shape.

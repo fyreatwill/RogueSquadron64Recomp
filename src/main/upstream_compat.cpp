@@ -46,7 +46,7 @@ extern "C" uint32_t g_s6491[4]; // s6491 terrain-grid call/list/chain counters
 extern "C" uint32_t g_s6489[8]; // s6489 cumulative cell-gate exit counters (patched funcs_10.c)
 extern "C" uint32_t rs64_phase_ord(void);
 // s6718 G1d: widened 640x340 mission-intro width (0 = off) and "live video state is the 640x340 intro"; set by fixup patches.
-extern "C" { int rs64_g1d_intro_w = 0; int rs64_g1d_vs_intro = 0; }
+extern "C" { int rs64_g1d_intro_w = 0; int rs64_g1d_vs_intro = 0; int rs64_g1d_title_vi = 0; }  // s6720: title_vi = wide title mode live
 extern "C" volatile int g_rs64_dd_blk; // s6583: dd toggle state, tagged on [fbdump]
 extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
                                              uint32_t phys,
@@ -844,6 +844,7 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
         static const uint32_t fbw = [] { const char* e = std::getenv("ROGUESQ_FB_WIDTH"); return (e && *e) ? (uint32_t)std::atoi(e) : 0u; }();
         // s6718 G1d: the 640x340 mission-intro state is widened to rs64_g1d_intro_w (set by the pfm fixup); widen its 640 VI mode to match.
         const uint32_t base = (fbw > 0 && width == 512u) ? 512u : (rs64_g1d_intro_w > 640 && width == 640u) ? 640u : 0u;
+        rs64_g1d_title_vi = 0;
         const uint32_t tw = base == 512u ? fbw : (uint32_t)rs64_g1d_intro_w;
         if (base) {
             auto write_u32 = [&](uint32_t off, uint32_t v) {
@@ -859,6 +860,29 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
             }
             fprintf(stderr, "[fbw] osViSetMode mode_ptr=0x%08X width %u->%u xScale 0x%X->0x%X\n", mode_ptr, width, tw, xScale, nx);
             width = tw;
+        } else if (fbw > 512u && width == 1024u && xScale <= 0x333u) {
+            // s6720 G1d: the interlaced 512x448 title/menu mode has width 1024 = TWO 512-px lines (field stride),
+            // xScale 0x333 (retail 4:3 logs the same). At wide aspect its colour image is fbw wide (title rects
+            // centred at 256..768 of 1024), but the mode kept the 512-based stride/xScale/field offsets, so the VI
+            // showed fb x 0..~512 across the screen (black left half, still 2x in the right half). Rescale all three
+            // like the 512 path: width 2*fbw, xScale*fbw/512, field origins*fbw/512. ROGUESQ_G1D_TITLE_VI=0 = old.
+            static const bool on = [] { const char* e = std::getenv("ROGUESQ_G1D_TITLE_VI"); return !(e && *e == '0'); }();
+            if (on) {
+                auto rd_u32 = [&](uint32_t off) { uint32_t v = 0; for (int i = 0; i < 4; ++i) v = (v << 8) | rdram[((rdram_off + off + i) & 0xFFFFFFu) ^ 3]; return v; };
+                auto write_u32 = [&](uint32_t off, uint32_t v) {
+                    for (int i = 0; i < 4; ++i) rdram[((rdram_off + off + i) & 0xFFFFFFu) ^ 3] = (uint8_t)(v >> (24 - 8 * i));
+                };
+                const uint32_t tw = 2u * fbw, nx = (uint32_t)((uint64_t)xScale * fbw / 512u);
+                const uint32_t f0 = rd_u32(0x28), f1 = rd_u32(0x3C);
+                write_u32(0x08, tw);
+                write_u32(0x20, nx);
+                write_u32(0x28, (uint32_t)((uint64_t)f0 * fbw / 512u));
+                write_u32(0x3C, (uint32_t)((uint64_t)f1 * fbw / 512u));
+                fprintf(stderr, "[fbw] title-vi mode_ptr=0x%08X width %u->%u xScale 0x%X->0x%X fld %u/%u -> %u/%u\n", mode_ptr, width, tw, xScale, nx,
+                        f0, f1, (uint32_t)((uint64_t)f0 * fbw / 512u), (uint32_t)((uint64_t)f1 * fbw / 512u));
+                width = tw;
+                rs64_g1d_title_vi = 1;
+            }
         }
     }
     extern void osViSetMode(uint8_t* rdram, int32_t modePtr);
