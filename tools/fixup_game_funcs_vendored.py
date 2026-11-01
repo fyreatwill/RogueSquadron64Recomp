@@ -37815,6 +37815,10 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6718:
             changed = True
             report.append(f"{p.name}: s6718 intro widen x{_n6718}")
+        text, _n6719 = _a6031.apply_s6719_persp640(text)
+        if _n6719:
+            changed = True
+            report.append(f"{p.name}: s6719 640 persp x{_n6719}")
 
     if p.name == "funcs_34.c":
         import apply_s6695_radarmark as _a6695
@@ -38016,6 +38020,10 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6144:
             changed = True
             report.append(f"{p.name}: s6144 fpx x{_n6144}")
+        text, _n6719f = _a6144.apply9_s6719(text)
+        if _n6719f:
+            changed = True
+            report.append(f"{p.name}: s6719 640 footprint x{_n6719f}")
         import apply_s6294_edgewriter as _a6294
         text, _n6294 = _a6294.apply9(text)
         if _n6294:

@@ -176531,3 +176531,40 @@ ORIGIN: not a mitigation; the writer of the pillarbox is our own FB_WIDTH patch 
 same-build control keeps them) and refutes H-scissor (the fb was 640, not a 1024 fb with a narrow scissor) and H-vi (the VI
 did not crop a full-width image). Next discriminator: H-squeeze vs H-none for 640x480 scenes (NEXT.md), using an object
 width ratio at 4:3 vs 21:9 on the hangar route.
+
+## Session 6719 (2026-11-01) — G1d boot LucasArts-logo intro fixed at wide aspect: s6144 footprint x-scale was applied in unwidened states; logo w/h 2.15 -> 1.33 (21:9), 2.17 -> 1.14 (16:9), retail 1.23
+
+**Question (NEXT g1d-640-persp-squeeze).** Does the s6104 guPerspective xASPECT_SCALE squeeze 3D drawn in the
+unwidened 640-wide video states?
+
+**Runs (scratch/s6719/).** Boot-only, no keys, window captured ~10/s from t=15 s (dense.sh; boot.sh first needed the
+harness LLE env: without ROGUESQ_LLE_FORCE etc. every arm, retail included, sticks on white after the N64 logo).
+Boot sequence: 320x224 (N64 logo), 640x480 (copyright), 640x340 (LucasArts 3D logo carved from Hoth terrain, then
+the attract flyover). Metric: logo_peak.py, purple-logo bbox w/h on the frame with the most logo pixels (settled
+face-on logo = phase gate; trajectories around the peak have the same shape in every arm).
+| arm | settled logo w/h |
+| retail 4:3 (2 runs) | 1.23, 1.25 |
+| 21:9 default (3 runs, pre-fix builds and same-build control ROGUESQ_G1D_640PERSP=0) | 2.13-2.22, never face-on |
+| 21:9 ROGUESQ_ASPECT_SCALE=1 (+/- VPW_SCALE=1) | 1.27 / 1.22 |
+| 16:9 default / ASPECT_SCALE=1 | 2.17 / 1.16 |
+| fix 1 (guPerspective factor 1.0 at fbw<=640 only) | 21:9 2.19, 16:9 2.17 (no effect) |
+| fix 2 (+ footprint x 1.0 at fbw<=640) | 16:9 1.14; 21:9 2.19 (log: logo state is fbw 768 = s6718 intro) |
+| fix 3 (footprint = intro_w/640 in the intro state) | 21:9 1.33; same-build control 2.15 |
+Two lines: the ratio table and the frames (screenshots/s6719_lucasarts_logo_before_after.png: before, the 21:9
+camera ends on a horizontally smeared mountain and the logo never forms; after, upright logo at 16:9 and 21:9).
+The hypothesis named the right scene and the wrong direction: no squeeze, a stretch, and the lever is the s6144
+terrain footprint, not guPerspective.
+
+**Fix.** tools/apply_s6144_fpx.py apply9_s6719 (funcs_9.c buildVisibleTerrainGridAroundCamera): footprint x factor =
+intro_w/640 in the s6718-widened intro state, 1.0 when the video-state width at 0x8011A838 is <= 640, otherwise
+ASPECT_SCALE. tools/apply_s6031_far.py apply_s6719_persp640 (setupCameraMatrices): same rule for the guPerspective
+factor, matching the 640 camera viewport which is already unscaled there (no visible effect measured; kept for
+consistency). Both are in the vendored fixup and log `[g1d-640p]` on change. ROGUESQ_G1D_640PERSP=0 = old path.
+Retail (ASPECT unset) is inert: kx=1.
+**Regression.** lvl1 21:9 forced route mission_verified_130s, flight log fbw 1024 persp x2 / footprint x2,
+w120 bars 1/1 lit 0.994.
+ORIGIN: writer = our own s6144 fpx patch (ROGUESQ_ASPECT_SCALE applied in every video state). Open, single-source:
+why a wider footprint changes the logo's shape instead of only adding off-screen cells.
+**Discrimination.** This refutes H-squeeze and H-none (the 640-state scene IS affected, and by a stretch) and selects
+the footprint lever over guPerspective (fix 1 alone: no change; fix 2/3: retail ratio). New datum for the next unit:
+the title still is garbled at every wide aspect (s6717/s6718 w20 captures), 4:3 clean. NEXT.md: g1d-title-garble.

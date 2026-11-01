@@ -1,5 +1,6 @@
 """s6031 G1c: ROGUESQ_DD_FAR=<m> scales the `far` stack arg (sp+0x14) and ROGUESQ_DD_NEAR=<m> the `near` arg (sp+0x10)
 of the guPerspective call in setupCameraMatrices (0x80016D10, funcs_4.c). Default unset = retail. Idempotent; mirrored into fixup."""
+import re
 import pathlib
 base = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
 HDR = '''/* PATCH: s6031 far */
@@ -552,12 +553,35 @@ def apply_s6718_intro4(text):
     text = text.replace(o_asp, "af = (float)(af * (rs64_g1d_vs_intro ? (rs64_g1d_intro_w > 640 ? rs64_g1d_intro_w / 640.0 : 1.0) : k6104)); /* PATCH: s6718 intro persp */"); n += 1
     return _decl(text, "setupCameraMatrices"), n
 
+# s6719 G1d: the 640x480 video state (boot logos: the 3D LucasArts logo over Hoth) is never widened, yet guPerspective
+# still took xASPECT_SCALE there. Measured (s6719 dense window captures, settled-logo purple bbox w/h): retail 4:3
+# 1.23; 21:9 default 2.13, 16:9 default 2.17 (drawn ~1.75x too wide; at 21:9 the face-on logo never shows); with
+# ROGUESQ_ASPECT_SCALE=1 1.27 (21:9) / 1.16 (16:9). The 640 camera viewport already stays unscaled when the
+# video-state width at 0x8011A838 is <= 640, so give the perspective the same rule: factor 1.0 there.
+# ROGUESQ_G1D_640PERSP=0 restores the old factor.
+S6719_OLD = ": k6104)); /* PATCH: s6718 intro persp */"
+S6719_NEW = ": rs64_s6719_k(k6104, (int32_t)MEM_W(-0X57C8, (gpr)(int32_t)0x80120000)))); /* PATCH: s6718 intro persp */ /* PATCH: s6719 persp640 */"
+S6719_FN = ("static double rs64_s6719_k(double k, int w) { static int on = -1, lw = -1; if (on < 0) { const char* e = getenv(\"ROGUESQ_G1D_640PERSP\"); on = !(e && *e == '0'); }\n"
+            "  double r = (on && w <= 640) ? 1.0 : k; if (w != lw) { lw = w; fprintf(stderr, \"[g1d-640p] fbw %d persp x%g (on %d)\\n\", w, r, on); } return r; }\n")
+def apply_s6719_persp640(text):
+    if "PATCH: s6719 persp640" in text:
+        if "rs64_s6719_k(" in text: return text, 0
+        # s6719 first cut (inline, no log) -> helper with a width-change log
+        text = re.sub(r'static int rs64_s6719_on\(void\)[^\n]*\n', '', text, count=1)
+        text = text.replace(": (rs64_s6719_on() && (int32_t)MEM_W(-0X57C8, (gpr)(int32_t)0x80120000) <= 640 ? 1.0 : k6104))); /* PATCH: s6718 intro persp */ /* PATCH: s6719 persp640 */", S6719_NEW, 1)
+    else:
+        if text.count(S6719_OLD) != 1: return text, 0
+        text = text.replace(S6719_OLD, S6719_NEW, 1)
+    a = text.find("RECOMP_FUNC void setupCameraMatrices("); assert a > 0
+    return text[:a] + S6719_FN + text[a:], 1
+
 if __name__ == "__main__":
     p = base / "funcs_4.c"; t = p.read_text(); t2, n = apply4(t)
     t2, m = apply_s6201_pool(t2)
     t2, q = apply_s6204_poolclass(t2)
     t2, sc = apply_s6694_scissor(t2)
     t2, ii = apply_s6718_intro4(t2); sc += ii
+    t2, ii = apply_s6719_persp640(t2); sc += ii
     if n or m or q or sc: p.write_text(t2)
     print("funcs_4.c live patched x%d pool=%d poolclass=%d scissor=%d" % (n, m, q, sc))
     p0 = base / "funcs_0.c"; t = p0.read_text(); t2, n = applypfm(t)

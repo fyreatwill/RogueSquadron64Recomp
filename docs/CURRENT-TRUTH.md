@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6716 (2026-10-31).
+Compact operational handoff, as of Session 6719 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -111,18 +111,21 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   21:9 windows edge to edge (tools/g1f_bar_score.py: bar 0-1 px, lit 0.995; HUD at the real edges,
   scratch/s6717/a219/w120_*.png). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless fullscreen; ROGUESQ_FULLSCREEN=1
   starts in it; ROGUESQ_ASPECT=auto takes display 0's aspect. Game width is fixed at boot (a resize letterboxes).
-  Data, not G1f defects: (1) default (ASPECT unset) 4:3 flight runs the game's 512-wide VI mode (xScale 0x333) and
-  shows 85/1280 px side bars per side, identical with ROGUESQ_WINDOW_FIT=0 (pre-G1f window), so pre-existing;
-  whether retail hardware shows the same narrow active region (VI hStart) is unchecked, single-source.
-  (2) 21:9 mission-intro pillarbox FIXED s6718 (next bullet).
-- **FIXED s6718: G1d mission-intro pillarbox.** The intro/attract flyovers render a 640x340 video state (pfm/vsu
-  640x340, VI 640 mode) that FB_WIDTH never widened (only 512x448/512x340), so RT64 showed a 640x340 (~1.9:1) image
-  height-filled, 227 px/side bars of 2720 at 21:9, while guPerspective still took xASPECT_SCALE (squeezed). Fix
-  (tools/apply_s6031_far.py apply_s6718_intro0/4 + upstream_compat osViSetMode + rt64 last-drawn/vi-follow width
-  allowlists): intro_w = fbw*3/4 (768 at 21:9) for pfm, video-state width, the 640 VI mode, the 640 camera
-  viewport; perspective factor intro_w/640 (1.0 when intro_w<=640, i.e. 16:9). ROGUESQ_G1D_INTRO=0 = old path.
-  Same-build arms (lvl1 21:9, s6718): on bars 0-1 px at t60/t70 vs off 227/225; both mission_verified_130s; 16:9
-  fills, verified. screenshots/s6718_21x9_intro_before_after.png. Owner judges the look.
+  Datum: default 4:3 flight shows 85/1280 px side bars (512-wide VI mode), same with WINDOW_FIT=0, so pre-G1f;
+  retail hStart unchecked, single-source.
+- **FIXED s6719: G1d boot LucasArts-logo intro drawn wrong at wide aspect.** The 3D LucasArts logo (carved from Hoth
+  terrain) renders in the 640x340 intro state. At 16:9/21:9 it was ~1.75x too wide and at 21:9 never formed face-on;
+  the camera ended on a smeared mountain. Writer = our own s6144 terrain-footprint x-scale (ROGUESQ_ASPECT_SCALE applied
+  in every video state); the s6104 guPerspective factor alone changed nothing (measured). Fix (tools/apply_s6144_fpx.py
+  apply9_s6719 + apply_s6031_far.py apply_s6719_persp640, vendored fixup): footprint and perspective factor = 1.0 when
+  the video-state width (0x8011A838) <= 640, intro_w/640 in the s6718-widened intro state; ROGUESQ_G1D_640PERSP=0 =
+  old path. Settled-logo purple bbox w/h (dense window captures, peak-pixel frame as phase gate): retail 4:3 1.23-1.25;
+  21:9 1.33 (same-build control 2.15); 16:9 1.14 (before 2.17). screenshots/s6719_lucasarts_logo_before_after.png.
+  Open, single-source: WHY a wider footprint changes the logo's shape (it should only add off-screen cells).
+- **FIXED s6718: G1d mission-intro pillarbox.** The 640x340 intro state was never widened (227 px/side bars at 21:9).
+  Now intro_w = fbw*3/4 (768 at 21:9) for pfm, video state, 640 VI mode, camera viewport and perspective
+  (tools/apply_s6031_far.py apply_s6718_intro0/4, upstream_compat osViSetMode, rt64 width allowlists);
+  ROGUESQ_G1D_INTRO=0 = old path. Bars 227 -> 0-1 px, lvl1 21:9/16:9 mission_verified_130s.
 - **CLOSED s6690: 21:9 forced-route hangar SIGBUS (0x7FFF0002).** Writer = our own
   rs64_spike_scan (src/rsp/dpc_bridge.cpp), named by an lldb hardware watch on list word 0x800CC404
   (positive control: 4 overlay-DMA hits from do_rom_read first). It masked submit addresses with
@@ -605,11 +608,11 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 - **Owner 2026-10-31:** spike cull default ON (also fixed: it only ran with LOG_SPIKE).
   G1(d) objective qualification PARKED (owner playtest). G1f window/fullscreen
   CLOSED s6717; G3d turning shake closed s6697 (s6696 fps fix). Spec: ITERATION.md item 3c.
-1. **G1d unwidened-640 perspective squeeze** (s6718 lead): the s6104 guPerspective xASPECT_SCALE also hits
-   640x480 3D scenes that stay 640 wide (menus/hangar?), the same squeeze the intro had. Measure which 640x480
-   scenes render 3D at wide aspect and their object width vs 4:3 retail; fix like s6718 if squeezed. See NEXT.md.
-   Also s6718 datum: one thin line from the left edge in the 16:9 intro (scratch/s6718/a169/w60_*.png). G1e dd4
-   ceiling is interpreter-bound (s6716); reopen only with an interpreter-level idea.
+1. **G1d wide-aspect title-screen garble** (s6719 datum): at 16:9 and 21:9 the title still (Luke/X-wing behind the
+   logo) is garbled: left ~half black with a smeared strip, right half zoomed ~2x (scratch/s6718/a219/w20_*.png, also
+   with ROGUESQ_G1D_INTRO=0); 4:3 is clean. Arm table in NEXT.md (HUD anchor, VPW, WINDOW_FIT, 640PERSP). s6719
+   closed the "640 squeeze" lead: it was a stretch in the logo intro, fixed. G1e dd4 ceiling is interpreter-bound
+   (s6716); reopen only with an interpreter-level idea.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional
