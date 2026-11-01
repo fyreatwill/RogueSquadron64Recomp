@@ -177330,3 +177330,34 @@ Next: G3 hangar vs retail (oracle reaches the hangar with Start presses, tools/o
 - Checked and dismissed: a contact-sheet tile near 153 s that looked half-drawn; quarter-column means of every 120-160 s
   capture show no left/right asymmetry (the 155.0 s fade frame is 65/65), so it was dark content, not a defect.
 - Rules out H-rt64 / H-geom / H-pos for the mission-intro cinematic. Next: the first lvl1 flight frames with HUD.
+
+## Session 6744 (2026-11-01) — G3: first lvl1 (Ambush at Mos Eisley) flight frames with HUD match retail angrylion (H-match); the retail>port brightness gain is mostly the 5->8-bit decode convention (v*255/31 vs v<<3)
+
+- Ran: retail dump run scratch/s6744/retail_flight.sh (Start 6..61 s + 90 s, --fb-arm-after 105, 40 x 512 dumps
+  0.5 s apart from the flight width switch at 112.6 s; flight origin 0x690400/0x690800). A first attempt without the
+  61 s Start stayed in the hangar until 108.6 s and armed every dump on the hangar (scratch/s6744/retail_nopress61,
+  discarded: the 61 s press is required, as s6742 said). One port run (tools/g3_port_capture.sh, oracle EEPROM via
+  SAVE_FROM, AP Start 6..41 s + 50 s, SECS=175, 455 captures, 0 CRASH, owner save restored and cmp-verified).
+- Datum: a Start during the PORT crawl skips it exactly like retail: crawl 42.6 s -> flight 512 @0x690400 at 69.5 s
+  (was 156.1 s without it). Cheaper recipe for any post-intro G3 work: AP=...,41:start,50:start.
+- Geometry: retail 512x446 (rows >=446 are other data); port picture box in the 1280x1024 Retina window x 85..1190,
+  y 64..1023 (the s6739 box). Match: g3_oracle_match.py --w 512 --bases 690000,620000 --h 446 --win 60,1024 --winx 85,1191.
+- Result: retail flight frames vi 7116-7926 match port at d 4.4-5.8 (shift decode; 4.7-6.3 full) against same-run
+  medians 16.6-20.8; matched port times rise monotonically, retail 810 VIs = 13.5 s -> port 72.14-85.41 s = 13.3 s.
+  Visual sheet scratch/s6744/sheet_early_best.png: HUD (lives icon, radar, reticle, shield counter 6), player craft,
+  wingmen, enemies, shadow, dunes and sky identical. Outliers: retail vi 6996-7087 (d 10-15) = the intro camera swoop
+  past the X-wing (fast motion, port sampled at ~4/s) and one retail buffer caught mid-draw (terrain streaks, the s6743
+  dump-timing artifact). Rules out H-rt64 (HUD), H-geom, H-pos for the first ~15 s of lvl1 flight.
+- Brightness gain (new tool option, g3_oracle_match.py --dec full|shift plus a per-channel block-mean linear fit
+  retail = a*port + b over the best pairs): the RDP dithers then truncates to 5 bits, and the sum over dither 0..7
+  of floor((x+d)/8) is x, so the unbiased 5->8 inverse is v<<3. The old decode v*255/31 inflates by 255/248 = 1.028.
+  - lvl1 flight: full a = 1.011/1.032/1.035 (R/G/B), shift a = 0.982/1.000/1.003, b within +-2.3 -> the gain is gone.
+  - s6743 mission-intro cinematic (re-analysed offline): full a = 1.017-1.024, shift a = 0.980-0.990, b +0.8..+2.9;
+    best-pair d 3.6 -> 1.9 with shift. Binned by intensity (scratch/s6744/gain_bins.py) the full-decode ratio is flat
+    1.016-1.019 from 96 to 255, so a residual ~-1% (shift) remains in the intro; open, tiny.
+  - Why s6740 refuted this "decoder convention" idea: the static LucasArts logo and snow frames had gain ~1.00. A
+    texture copied to the framebuffer is 5-bit on both sides (RT64 expands it with v*255/31 too) and snow saturates
+    at 31, so those frames could not show the shading gain. That refutation is superseded for shaded 3D content.
+  Two lines: two scenes (512 flight and 640 cinematic) both lose most of the gain under shift, and the Hermite
+  identity predicts the 1.028 factor that bounds every observed full-decode gain (1.011-1.035).
+- Default decode left at full (reproduces earlier numbers and fits textured/2D content); use --dec shift for shaded 3D.

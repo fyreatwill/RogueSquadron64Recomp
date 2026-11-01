@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6743 (2026-11-01).
+Compact operational handoff, as of Session 6744 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -10,6 +10,11 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 
 ## Headline
 
+- **s6744 G3: first lvl1 flight frames with HUD = H-match vs retail angrylion** (vi 7116-7926 d 4.4-5.8 vs same-run
+  median 17-21, monotonic, 13.5 s retail = 13.3 s port; HUD, craft, wingmen, enemies, dunes identical,
+  scratch/s6744/sheet_early_best.png). A Start during the port crawl skips it (flight at 69.5 s, not 156 s). The
+  retail>port 1.8-2.5% "gain" is mostly the 5->8 decode: v*255/31 overstates dithered 5-bit shading by up to 1.028;
+  g3_oracle_match.py --dec shift (v<<3) removes it in flight (a 0.98-1.00) and halves intro d (3.6->1.9), ~-1% left there.
 - **s6743 G3: the mission-intro cinematic after the crawl (X-wings over Tatooine to Mos Eisley, 640x336 letterbox,
   buffers 0x695C00/0x62B800 = the boot-cinematic pair) = H-match vs retail angrylion** (complete frames d 3.6-4.5 vs
   same-run median 137-157, port match times monotonic, 990 VIs = 16.5 s retail vs 16.3 s port). Retail: crawl 79.7-183 s
@@ -277,6 +282,10 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   "Migrated from CURRENT-TRUTH (s6721)"; tables in docs/G1-OBJECTIVE-RESPONSE.md.
 
 ## Superseded conclusions — do not act on these
+
+- **s6740 "the 255/248 decoder-convention idea is refuted; the 2.5% gain is 512-flight-only"** -> superseded s6744. Believable
+  because the cinematic logo/snow frames showed gain ~1.00 with the same decoder; but those are textures (5-bit on both
+  sides) or saturated, so they cannot show it. Shaded 3D loses the gain under v<<3 in flight and in the 640 intro.
 - s6739 "retail G channel +3.6..+3.9/255 above the port, possible H-shade" (believable: 12/12 pairs, two runs). s6740: the
   port side was raw Display-P3 screencapture values; after P3->sRGB the hue-dependent part vanishes, leaving a uniform
   2.5% gain in the 512 flight only. Lesson: convert tagged captures before any colour comparison.
@@ -461,9 +470,10 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
    are archived in PROJECT-OVERVIEW, not an alternate live backlog.
 4. **Then G3 render fidelity (NEXT: g3-hangar-oracle-diff).** s6738 boot cinematic, s6739 Tatooine attract flight and
    s6740 cinematic replay are H-match; the green offset is the P3 capture tag (s6740). s6741 hangar (4:3 retail settings) H-match.
-   s6742 the 640 phase after the hangar = opening crawl, H-match. s6743 mission-intro cinematic, H-match. Next
-   (g3-mission-start-oracle-diff): first lvl1 flight frames with HUD (retail 512 from 112.6 s with a Start at 90 s) vs
-   port, and the uniform retail>port brightness gain (1.8-2.5%) measured on the same pairs. G2/G5 are closed; G4 and aim/steer stay
+   s6742 the 640 phase after the hangar = opening crawl, H-match. s6743 mission-intro cinematic, H-match. s6744 first
+   ~15 s of lvl1 flight with HUD, H-match; brightness gain = decode convention (--dec shift). Next
+   (g3-flight-effects-oracle-diff): lvl1 flight 20-60 s with no input (laser fire, explosions, transparency, smoke)
+   vs retail; checks determinism holds past the scripted start. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index
