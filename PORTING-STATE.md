@@ -175954,3 +175954,27 @@ RecompiledFuncs and src/ (dpc_bridge.cpp rsp_dpc_submit: std::__to_address / vec
 mach_continuous_time from the G1B timer) are -O0. dd4 still below retail 30 fps (24.4).
 ORIGIN: no mitigation; diagnostic hooks gated behind their own enable (writer = our fixup scripts, observation only).
 Next: -O2 arms (src/rsp+main.cpp; RecompiledFuncs) on lvl5 dd4 with ROGUESQ_STORE_DIAG=0.
+
+## Session 6699 (2026-10-31) — G1c dd4 cost: -O2 host + RecompiledFuncs reaches retail 30 fps at lvl5 dd4 (opt-in cmake options)
+Planned unit (NEXT.md s6698): -O2 arms. Hypotheses H-src-O0 / H-guest-O0 / H-ucode.
+Change: CMakeLists.txt options ROGUESQ_SRC_OPT (target -O2 on RogueSquadron64Recomp exe = src/main+src/rsp, librecomp,
+ultramodern) and ROGUESQ_FUNCS_OPT (-O2 on RecompiledFuncs + PatchesLib), both default OFF. Verified in compile_commands
+(dpc_bridge.cpp and funcs_0.c carry -O2). Build cost: B 18 s, C 31 s wall (-j8). Binary 57 MB (A) / 52 MB (B) / 38 MB (C).
+Ran: four sequential lvl5 dd4 runs, same recipe (g1_level_coverage_common, HOLD_S=200, ROGUESQ_STORE_DIAG=0, G1B timer),
+scratch/agent/s6699_arms.zsh, binaries swapped into build/ per arm; folded g3d_toggle_fold.py --skip 60:
+  A  baseline (-O0 src+funcs)   n=150 s: vi 62.2/s, 23.1 game tasks/s, send_dl 29.2 ms wall / 27.8 cpu
+  B  src+runtime -O2           n=149 s: vi 62.0/s, 25.6 tasks/s, send_dl 12.8 / 11.6
+  C  B + RecompiledFuncs -O2   n=148 s: vi 63.8/s, 30.5 tasks/s, send_dl 13.2 / 11.9
+  A2 baseline repeat (control) n=149 s: vi 61.8/s, 21.6 tasks/s, send_dl 25.7 / 24.2
+All four: alive_at_end=1, vi_stalls30s=0, crashlines=0. Last fb dump C (frame 7000) and A (frame 5500): terrain, X-wing, HUD,
+radar all sane. Second line: fb dump frame index reached 7000 in C vs 5500 in A over the same hold (game frames, independent of
+the G1B task counter).
+Verdict: H-src-O0 confirmed for the gfx thread (task host cost -56%) but alone gives +2.5 fps because the game thread then
+binds; H-guest-O0 confirmed: -O2 RecompiledFuncs brings lvl5 dd4 to 30.5 fps = the retail 30 Hz cap. H-ucode refuted as the
+binding term (ucode cost unchanged, already -O2). Caveat: cross-run (sequential) A/B, not same-run; the A/A2 bracket (21.6-23.1)
+is far from C (30.5), so run-to-run noise does not explain it.
+Not qualified yet: -O2 on recompiled guest code can expose UB the -O0 build hid (signed-overflow arithmetic, uninit locals).
+Queued soak_queue/s6699_o2_lvl1_dd1.sh and s6699_o2_lvl10_dd4.sh (300 s, binary in build_s6699_o2/ with symlinked ROM/saves).
+build/ reconfigured back to both options OFF and rebuilt (default unchanged).
+ORIGIN: no mitigation; compiler optimisation level only.
+Next: fold the two soaks; hangar route + lvl7 on -O2; then propose default ON to the owner.

@@ -25,6 +25,11 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   52% of the game thread's busy time at lvl5 dd4. Auto-OFF with no ROGUESQ_LOG_*/*WATCH* env (owner play), auto-ON in every
   logging recipe; ROGUESQ_STORE_DIAG=0/1 forces it. Same-run toggle lvl5 dd4: off 24.4 fps / 23.9 ms per task vs on 18.4 / 38.0.
   Soak recipes measure the ON arm: add ROGUESQ_STORE_DIAG=0 for frame-cost numbers. Build is Debug: game code and src/ are -O0.
+- **s6699: -O2 build reaches retail 30 fps at lvl5 dd4 (opt-in cmake options, default OFF, not yet qualified).**
+  ROGUESQ_SRC_OPT=ON (src/, librecomp, ultramodern -O2) cuts the gfx task 29.2 -> 12.8 ms but fps only 23.1 -> 25.6 (game
+  thread then binds); +ROGUESQ_FUNCS_OPT=ON (RecompiledFuncs/PatchesLib -O2) -> 30.5 game tasks/s, 13.2 ms. Baseline repeat
+  A2 21.6 fps (control). All arms 203 s alive, 0 stalls/crashlines, fb sane. Sequential runs (not same-run); second line:
+  fb dump frame index 7000 (C) vs 5500 (A) over the same hold. Qualification soaks queued (lvl1 dd1, lvl10 dd4).
 - **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
   ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
   lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
@@ -498,187 +503,9 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
 
 (s6675-s6677 level5 updates: see G1-OBJECTIVE-RESPONSE.md, same headings.)
 
-## s6678 update — level6 original target contract checked
+## Parked G1(d) objective notes
 
-Original callback80104210 reads counters34..39/98/50/99; friendlies reader
-80104444 returns0 without reads. c34..39==1 fails; c98==6/c50==4 increment99
-through separate Boolean latches; c99==2 sets Bit8. Retail Barracks+4A2C,
-subtype14, nominal detail0HP500, effect(50,1,0,0,90,1), has no direct Boolean
-but DOES increment second counter90. H-coupled selected, not a single-counter
-response. Factory/hangars also set Booleans125/121/40. Original setup653F4
-selectsCBB0/message5CF88; writer6CFE8 subtracts message+6, positive health
-skips effect6D6F0. Global byte80130B39 can suppress effect; DAT+a0 controls
-source immunity (selected0). FFFF API fallback lacks the death threshold.
-Counter90 consumers and live ownership/detail/route remain unqualified; no
-lethal admission.294 ELF anchors/334 rejected mutations, direct DAT struct
-checks, all19 unchanged inventories, identical level5 contract, lvl2..5 and
-analyzer regressions pass. Original ELF+DAT support static contracts only;
-no new live response/VERIFIED claim. Old level6 heartbeat is still no value
-control. No build/run/default/lib change or new soaks. Full table/limits:
-G1-OBJECTIVE-RESPONSE s6678; scratch/agent/s6678_validation.json.
-
-## s6679 update — level6 ordinary admission remains unregistered
-
-Corrected unlocked flight, 184.02s runner wall, VI5744..11154, done
-dv5410 selected1 flight1,0 crashes/requests/forces. Three admission arms:
-Barracks base8031B9B0/DAT803203DC lookup matches; subtype14(hex),detail0,
-HP500, source/effect gates0, valid free list, but registrationFFFF/owned0.
-No damage route tested. Actual getters 20,21,64,65,66,67,98 change and match memory;
-10 callback changes. Target owned mark-all never fires: no controlled
-health/objective null or VERIFIED claim. Original ELF/DAT independently support
-contracts only; live evidence single-source. New ordinary-only adapter/analyzer
-records all identities/gates/returns; generic TELE/lethal disabled. First run
-late done15119 was outside flight: shared dispatcher census outlived callbacks.
-Corrected level6 census checks flight at every scan; rebuilt/reran v2, preserved
-v1 separately. Both builds/fixtures,294 anchors/334 mutations,8 extra original
-return assertions, level3..5 regressions,13-file idempotence,3 hook replays and
-6/6 v2 launch hashes pass; prior level3/4/5 helpers unchanged. No lib/default
-change or new soaks. Proof/table: G1-OBJECTIVE-RESPONSE s6679;
-scratch/agent/s6679_qualification.json. Next: counter90 consumer/fallback safety
-audit; no repeat hold or destruction admission.
-
-## s6680 update — level6 eager fallback coupling checked; counter90 graph open
-
-Bounded original-contract tool extension; no game run/build. Original-instruction
-slice controls recover c50=4 -> Boolean99 latch -> c99+=1 -> c99=2 -> Bit8,
-including below-threshold/latch/other-stage/Bit4 controls. FFFF subtype14 API10
-writes HP500->490 AND increments50/90. Synthetic baseline c50=3/c99=1 then
-reaches Bit8 despite surviving health. All30 ADDIU8060 candidates classified;
-125 direct getter calls have constant selectors, none90. Original subtype table
-selects167 typed DAT conditions (154 disabled;13 counters14/16/17/18/19), none90.
-These are scoped static results, not a complete absence/safety proof. Original
-script table opcode3 -> F339C reads counter trunc.w.s(record+58+16*i) atF33BC;
-owner context+24 constructor remains unjoined. Handle and NPC/actor/radar/music
-computed edges stay explicit. H-unresolved for90; no fallback/lethal admission,
-VERIFIED or retail-equivalence claim. ELF+DAT support static contracts only;
-slice execution is same-source, not independent dynamic evidence. Safety996 original anchors/1048 rejected mutations pass; existing
-level2..6 contracts, all19 inventories and analyzer controls pass. No lib/default
-change or new soak verdict. Full limits: G1-OBJECTIVE-RESPONSE s6680; proof
-scratch/agent/s6680_safety.json and s6680_validation.json.
-
-## s6681 update — level6 typed spline-script edge closed statically
-
-Original F94A0/F9698 store unmodified constructor a1 at actor+8+24.
-DAT loader46ABC..6B40 relocates kind3 records and0C/20/2C, leaving inline
-scripts/token offsets relative. ResolverF3494 scans8 fixed slots54..D3;
-field50 is NOT a count. All21 level6 subtype3 records/168 slots have no
-opcode3; only ATAT_Spline_01->02 and Wingman_Spline_01->Wingman_Loop
-(op5, unique DAT joins), plus Shuttle_Escape_01 op6. Completion40/48
-counter/Boolean selectors all0. H-DAT selected for this family, not full
-counter90 absence/safety. Level1 retail x_wing_vs_probe_d supplies opcode3
-c10>=3 -> x_wing_to_rendezvous; decoder detects synthetic90 in slot8,
-float truncation, disabled selectors and invalid offsets.1282 original
-anchors/1502 rejected mutations pass; all19 inventories, prior3..6/safety
-contracts unchanged, level2/analyzer controls pass. ELF+DAT support static
-contracts; no live activation/all-constructor-arguments proof or VERIFIED
-promotion. No game build/run, defaults/lib edits or new soaks. Tool flags
---check-level6-scripts/--mutation-check-level6-scripts; full evidence/limits
-G1-OBJECTIVE-RESPONSE s6681, scratch/agent/s6681_{scripts,validation}.json.
-Next is the spline-event remap into kind7, not another admission hold.
-
-## s6682 update — level6 spline-event common counter edge closed statically
-
-Original F4660..46AC joins source28/2C stride8 events via unsigned+6 index,
-source+D4+word(D8) remap+2 -> DAT header3C kind7 table -> unshifted F3CB0
-input. Loader46C24..6C88 relocates records/names only. All21 type3 records,
-10 events across5 sources, target indices46/47,42/39/38/40/41,44,45,48;
-all common condition2C/effect34 selectors0, before subtype dispatch. Bounds
-are offline file checks, not original enforcement or arbitrary-input safety.
-Level3 retail controls Madine_TO->kind7[88] c26>=3 and CS_New_Wedge->[54]
-c16+=1 fire; synthetic90 and disabled-selector controls pass,7 malformed
-fixtures reject.1399 anchors/1798 rejected mutations;10 raw struct joins,
-all19 inventories and six previous contracts unchanged; level2/analyzer
-regressions pass. H-typed for this static family only; ELF+DAT support
-contracts, same-source decoder execution is no independent dynamic witness.
-No complete90 safety/live activation/VERIFIED claim or fallback admission.
-Initial suite wrongly demanded rejection of an unused zero-event pointer;
-corrected active-field mutation scope and reran completely. No game run,
-default/lib edits or new soaks. Full table/limits G1-OBJECTIVE-RESPONSE s6682;
-proof scratch/agent/s6682_{events,validation}.json. Next: pending-song sources.
-
-## s6683 update — level6 pending-song counter90 owner found
-
-Original kind6/subtype16 setup -> ECC28 payload+4 -> EC6F0 stack request ->
-EF724 C230 condition copy -> EE18C/1A0 globals -> EDBB0 reader is checked.
-MUSICRNG_ATATs(FDDC,index132) selects90/−3; ATSTs(FED8,index134)91/−1;
-LevelSettings(FFD4,index136)0/0. Negative thresholds switch BELOW magnitude,
-so c90=2→3 disables the ATATs pending-song condition, subject to spatial/
-handler/pending gates. No live activation or complete safety claim. H-typed
-for this family; no transformation in copies.1587 ELF anchors match retail
-ROM bytes,2013 mutations reject.15 original-slice level6 boundary cases plus
-retail level1 selector110/−3 and10 synthetic/gate/sign/byte controls pass;
-short owner rejects. All19 inventories/seven prior contracts unchanged,
-level2/analyzer/compile/whitespace checks pass. Static ELF+DAT evidence only;
-slice execution is same-source, not a dynamic witness. FFFF eager c50/90
-request stays inadmissible; other consumer/alias edges open. No game build/
-run/default/lib change, new verdict or VERIFIED claim. Full table/limits:
-G1-OBJECTIVE-RESPONSE s6683; scratch/agent/s6683_{music,validation}.json.
-Park level6's unqualified boundary and advance to level7 named contracts.
-
-## s6684 update — level7 named counter20 contract checked
-
-Original callback801044E0 reads20/30/40/99; thresholds21/10/6 with Boolean
-latches97/98/99 increment99;99>=3 sets Bit8. No failure call in this callback.
-Friendlies reader80104A60 reads128 twice, passes negative sum; id2 is absent.
-Retail 20_Dest_Tanks_01(+05D0), subtype14, detail0HP50, effect(20,1,0,0,0,1),
-selects a counter-only progress candidate. Original setup653F4 ->CBB0/message5
-CF88, writer6CFE8, positive-health skip6D278, effect6D6F0/global0B39 gate
-checked. FFFF fallback is eager and excluded. Barracks03/Spaceport02/SensorMain
-couple Booleans28/106/2 and are excluded.538 ELF anchors match retail ROM;
-598 mutations reject; six raw/typed DAT controls, all19 inventories/eight
-prior contracts unchanged, lvl2/lvl6-music/analyzer/compile/whitespace pass.
-Initial regression equality used integer keys against JSON strings; normalized
-and reran completely. Static ELF+DAT evidence only, single-source lineage;
-no live ownership/response, fallback/lethal admission or VERIFIED claim.
-No build/run/default/lib change or new soaks. Full contract/limits:
-G1-OBJECTIVE-RESPONSE s6684; scratch/agent/s6684_validation.json.
-Next: one owned surviving ordinary API10 chain, not a destruction test.
-
-## s6685 update — level7 tank target never registered in first 90 s flight
-
-Adapter/analyzer extended to level7 (ordinary-only, lethal/TELE disabled;
-13-file replay idempotent, all analyzer fixtures incl. new level7 pass,
-538 anchors/598 mutations still pass). One unlocked flight, 154.5 s wall,
-0 crashes, arms0/1/2 reached, VI6888..12288. Original name lookup returns
-the 20_Dest_Tanks_01 descriptor (80324970, subtype20, detail0, HP50, gates0)
-in every arm, but its slot word desc+6 stays 0xFFFF throughout: no owned
-node, so the API10 request was correctly withheld (0 requests, 0 fallback).
-Second line: the full registry walk resolved 25..520 typed live nodes in all
-19 census samples yet found 0 live nodes with a counter20 descriptor. Same-run
-select-control fixture fires each arm (slot66, handler800D93C0). H-fallback
-boundary: target unregistered during the scripted route, NOT absent from the
-mission and NOT an objective null. Proof: scratch/agent/s6685_qualification.json.
-
-## s6686 update — level7 tanks spawn on approach only (48 units)
-
-Original ELF: subtype20 tanks are grid items (parseDatSpawnPositions cat1 ->
-parseDatItemCommon). updateActiveGridCellState 80047368 activates one when
-the craft (80137DC0 x/z) is within +-10 cells and XZ distance 48, and
-isDatItemConditionMet passes (tank +60/+64/+68 = 0: no trigger gate);
-setupNpcUpdateFunctions 80065688 then writes desc+6. Runtime
-(ROGUESQ_LOG_GRIDSPAWN=1, 2 runs, 0 crashes): all six tanks stay linked,
-slot FFFF; closest approach to 20_Dest_Tanks_01/03/04 is 63.7/90.5/92.3 and
-78.6/105/107. Same-run control: 37 activations, all within 48, including
-same-subtype Dest_Tanks_06 (FFFF -> 0113). The s6685 FFFF is correct game
-behaviour for a route that never gets close. Reaching the tanks needs steering
-(owner playtest), so level7 counter20 live response is parked at this
-boundary. Evidence: scratch/agent/s6686_gridspawn.json.
-
-## s6687 update — level8 contract: disable 7 train cars, destroy none
-
-Original lv8_checkComplexObjectives 80104AA0: counter5==7 -> Bit8 (win);
-counter3==1 -> Bit4 and Boolean5==1 -> Bit4 (both losses, shared latch
-8010D0B8); proximity to train_1_engine (<=15) / imp_trans2 (<=10) only sets
-Booleans 8/6 for dialogue. All seven train cars (subtypes 2F/30/31,
-npcTrainCarUpdate 800E2818) have two damage routes. A kind-12 message (table
-index 12 = `ion_laser`, inferred) drains a per-detail disable pool at DAT+C4
-and, once per car, applies the +AC tuple counter5+1. Any other kind does hull
-damage; hull death applies +70 = counter3+1 on the six non-engine cars, which
-fails the mission. EVENT_train_pulls_in sets Boolean5 (train reaches the
-station, so the player loses). The cars are spawn category 2, ungated (DAT+88/60/64/68 all 0),
-so statically they should be owned on the scripted route (H-load over H-prox).
-`--check-level8`: 335 anchors match ROM, 468/468 mutations reject, levels
-2-7 checks unchanged. Static, single-source; no live claim.
+s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by owner).
 
 ## Next steps (single monotonic backlog)
 
@@ -686,10 +513,10 @@ so statically they should be owned on the scripted route (H-load over H-prox).
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1c dd4 frame cost (s6698): -O2 arms next.** Store-hook gate + cached RT64 per-command getenv took lvl5 dd4 from
-   18.4 to 24.4 fps (Gfx thread now the bottleneck, 71% busy; game thread 26%). The Debug build compiles RecompiledFuncs and
-   src/ (dpc_bridge.cpp rsp_dpc_submit: unoptimised std::vector helpers in the profile) at -O0. Next: arms -O2 src/rsp+main
-   vs +RecompiledFuncs -O2, lvl5 dd4, ROGUESQ_STORE_DIAG=0. G3d closed (s6697); owner judges feel and the 21:9 frames.
+1. **G1c dd4 frame cost (s6699): qualify the -O2 build, then decide its default.** -O2 host + guest code gives lvl5 dd4
+   30.5 fps (from ~22). Fold soak_queue s6699_o2_lvl1_dd1 / lvl10_dd4 (binary in build_s6699_o2/), then hangar route +
+   lvl7 300 s on the -O2 build. If clean, switch the two options ON by default (build flags, not game behaviour; owner told).
+   Watch for UB-sensitive divergence (signed overflow, uninitialised reads) as crashes or render deltas vs -O0.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional
