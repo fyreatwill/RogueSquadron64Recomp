@@ -176953,4 +176953,6 @@ AND same epoch; used by the region shift and rs64_g1d_hud_flight (s6156 HUD anch
 it was given; the bridge rewrote the stream after its own log point.
 ORIGIN: writer = rs64_region_scan's texrect x rewrite (s6158 radar-disc shift), applied outside flight because the
 8-swap radar gate spans the VI mode change; the value is not legitimate (the backdrop is not the radar).
-Verdict: fixed; supersedes s6729 H-rt64-target. Next: G1d close-out (Elite Rogues / Select Game look, menu contact sheet).
+Verdict: selects H-region-shift (bridge rewrite after the log point, fixed); refutes H-rt-resize / H-rt-pair /
+H-rt-clear / H-rt64-target. Next discriminator: per-screen window captures at 16:9/21:9 vs 4:3 for Elite Rogues and
+Select Game, with [rtrdp] vs bridge rect positions for any misplaced item.
