@@ -176682,3 +176682,40 @@ draw; removed, since the scissor was already full width.
 Verdict: the paused-swap signature log selects H-tri and refutes H-fill and H-scissor (scissor full width, fills are
 clears); the zap/half/off arms in one build confirm the fix and resolve the dim band. Next discriminator: debrief /
 game-over captures at 21:9, 16:9, 4:3 (NEXT.md, g1d-menu-sweep).
+
+## Session 6723 (2026-11-01) — G1d: intermittent pause-dim failure = record_submit ran before the s4286 wrap-shadow restore (fixed); debrief pillars = the game's own debrief heap in the drawn buffer (open)
+
+**Question (NEXT g1d-menu-sweep).** Debrief / game-over screens at wide aspect. New recipe scratch/s6723/abort.sh
+(lvl1 forced route, START at t=112, down, A, then the confirm). Two recipe facts: with ROGUESQ_AUTOPILOT_HOLD_MS=600 one
+"down" auto-repeats two items (a219 opened GAME SETTINGS, which is clean at 21:9); the ABORT LEVEL confirm defaults to
+NO, so the recipe needs left,A. Final recipe: HOLD_MS=200, 120:down,124:a,128:left,131:a.
+**Finding 1: the s6722 pause-dim fix failed intermittently (b219: band back, edge-minus-inner luma +67).** Both a219 (good)
+and b219 (bad) logged [g1d-dim] widened tris and the rect scan saw the widened x range, so the rewrite reached RDRAM.
+ORIGIN: our own ordering in the wrap-flush path (src/rsp/dpc_bridge.cpp, s4286 restore): rs64_dpc_record_submit
+(title clear, pause dim, spike/region/floor scans) ran BEFORE the bump-time shadow was copied over the range for RT64,
+so every rewrite in a wrap-restored range was overwritten. Whether the dim tris fall in such a range varies by run:
+b219 restored 174,682 words vs a219 19,736. Fix: record_submit runs after the shadow copy (it is restored to live after
+submit anyway); ROGUESQ_G1D_PREWRAP_RECORD=1 = old. Result: 6/6 runs on the new build full-width dim (edge-minus-inner
+-12..-2) vs 1/2 on the old build (plus s6722 fixb219). Two lines: code ordering + per-run restored-word count matching
+the failing run. No same-build PREWRAP=1 control was run (single build A/B only across builds).
+**Finding 2: debrief pillars show garbage at 21:9 and 16:9 (colour noise, a pink decompressed image); 4:3 clean.**
+Debrief = osViSetMode 0x80128DA0 (512, yScale 0x800), widened to fbw by [fbw]; buffers 0xA40000/0xB20000 alternate.
+ROGUESQ_FLOOR_WATCH on 7 pillar words (w219): at the debrief partition, ensureHeapInitialized sets heap head
+8010FEFC = 0x80A40000 = 801163DC; guest bzero 0x800077EC (dst 0x80A40090/0x80A71F50/0x80AD2A60) and stores 0x80028D90
+hit the pillar words; RT64 native-swap host writes too. ORIGIN: the game's own debrief heap, built inside the buffer it
+draws and presents. Retail does the same (m43, 4:3 metadata: heap 0x80720000 = 801163DC, VI presents 0x720000 60x /
+0x790000 32x) but its 512-wide draw covers the whole buffer; at wide aspect only the centre 512 is drawn.
+Failed levers (all built and run, removed): (a) one-time pillar zero of each new colour image (d219: black at first,
+residue returns); (b) per-frame pillar zero at the first full-width scissor (e219: no visible change; RT64's target and
+native-swap writeback keep the residue, and guest heap stores land after); (c) VI centre window (keep xScale 0x333,
+field origin + (fbw-512)) (f219: no change; RT64 presents the drawn 1024 target, not the VI window). Writing RDRAM there
+is also unsafe in principle (live heap). Stream log ([g1d-debrief], ROGUESQ_LOG_G1D_RECT=1, kept): per frame scissor
+full width (lrx 1023, 448 lines), setcimg 1024, ~510 texrects x 256..768, ~212 tris, NO fill rect, so there is no
+game primitive to widen.
+**Also seen.** 21:9 hangar level select after the debrief: the level name is clipped at the left edge ("NDEZVOUS ON
+BARKHESH"); 16:9 fits. 16:9 i169 (final binary): pause, dim, confirm clean, debrief residue as 21:9, 0 crash.
+All 12 runs mission_verified_130s, 0 crash lines. screenshots/s6723_pausedim_debrief.png.
+**Discrimination.** Shadow-restore ordering selects H-race for the intermittent dim (refutes H-signature: om bit 15
+differed but fixb219/ACF0 failed and a219/ACF0 passed). For the debrief, the 4:3 metadata run selects H-retail-heap
+(the residue is retail's own heap, hidden by retail's full draw) and refutes H-ours (not our heap carve / s6689 slot).
+Next: blank the debrief target's pillars inside RT64 (host-only), not in guest RDRAM.

@@ -846,6 +846,9 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
         const uint32_t base = (fbw > 0 && width == 512u) ? 512u : (rs64_g1d_intro_w > 640 && width == 640u) ? 640u : 0u;
         rs64_g1d_title_vi = 0;
         const uint32_t tw = base == 512u ? fbw : (uint32_t)rs64_g1d_intro_w;
+        // s6723 G1d: the mission debrief (abort / end -> MISSION FAILED + stats) uses mode 0x80128DA0, 512 wide, yScale
+        // 0x800; rs64_g1d_title_vi = 2 marks it for the RDP-stage pillar handling in dpc_bridge (rs64_g1d_debrief).
+        const bool debrief = base == 512u && mode_ptr == 0x80128DA0u && yScale == 0x800u && fbw > 512u;
         if (base) {
             auto write_u32 = [&](uint32_t off, uint32_t v) {
                 for (int i = 0; i < 4; ++i) rdram[((rdram_off + off + i) & 0xFFFFFFu) ^ 3] = (uint8_t)(v >> (24 - 8 * i));
@@ -860,6 +863,7 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
             }
             fprintf(stderr, "[fbw] osViSetMode mode_ptr=0x%08X width %u->%u xScale 0x%X->0x%X\n", mode_ptr, width, tw, xScale, nx);
             width = tw;
+            if (debrief) rs64_g1d_title_vi = 2;
         } else if (fbw > 512u && width == 1024u && xScale <= 0x333u) {
             // s6720 G1d: the interlaced 512x448 title/menu mode has width 1024 = TWO 512-px lines (field stride),
             // xScale 0x333 (retail 4:3 logs the same). At wide aspect its colour image is fbw wide (title rects

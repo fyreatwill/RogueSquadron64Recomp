@@ -4995,9 +4995,30 @@ static void rs64_g1d_rect_scan(uint32_t lo, uint32_t hi) {
 // covers only the centre 512 columns of its fbw-wide colour image; the pillar columns are never drawn and showed stale
 // heap bytes (white / noise / smeared strips). Zero each new >512-wide colour image once, before RT64 sees the task.
 extern "C" int rs64_g1d_title_vi;
+// s6723 G1d debrief (title_vi == 2, ROGUESQ_LOG_G1D_RECT=1): log per colour image the scissor/cimg/fill commands and
+// texrect x extent. s6723 showed no fill rects at all: ~510 backdrop texrects x 256..768 + ~212 tris, scissor full width.
+static void rs64_g1d_debrief(uint32_t lo, uint32_t hi) {
+    static const bool on = [] { const char *e = std::getenv("ROGUESQ_LOG_G1D_RECT"); return e && *e == '1'; }();
+    if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
+    static int s_lines = 0;
+    if (s_lines > 400) return;
+    auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
+    double tx0 = 1e9, tx1 = -1e9; uint32_t ntr = 0, ntx = 0;
+    for (uint32_t a = lo & ~3u, step = 8; a + 8 <= hi; a += step) {
+        const uint32_t w0 = rd(a), w1 = rd(a + 4), op = (w0 >> 24) & 0x3F;
+        step = (op == 0x24 || op == 0x25) ? 16u : (op >= 0x08 && op <= 0x0F) ? 32u + ((op & 4) ? 64u : 0u) + ((op & 2) ? 64u : 0u) + ((op & 1) ? 16u : 0u) : 8u;
+        if (op == 0x24 || op == 0x25) { ntx++; tx0 = std::min(tx0, ((w1 >> 12) & 0xFFF) / 4.0); tx1 = std::max(tx1, ((w0 >> 12) & 0xFFF) / 4.0); continue; }
+        if (op >= 0x08 && op <= 0x0F) { ntr++; continue; }
+        if (op == 0x3F || op == 0x36 || op == 0x37 || op == 0x2D) {
+            if (s_lines++ < 400) fprintf(stderr, "[g1d-debrief] sw=%d off=%06X op=%02X w=%08X %08X\n", g_rs64_swap_n.load(std::memory_order_relaxed), a, op, w0, w1);
+        }
+    }
+    if (s_lines < 400) { s_lines++; fprintf(stderr, "[g1d-debrief] sw=%d range=%06X..%06X tris=%u texrects=%u tx=%.1f..%.1f\n", g_rs64_swap_n.load(std::memory_order_relaxed), lo, hi, ntr, ntx, tx0, tx1); }
+}
 static void rs64_g1d_title_clear(uint32_t lo, uint32_t hi) {
     static uint32_t s_done[4]; static int s_n = 0, s_lines = 0;
     if (!rs64_g1d_title_vi) { s_n = 0; return; }
+    if (rs64_g1d_title_vi == 2) { rs64_g1d_debrief(lo, hi); return; }
     if (g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
     auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
     // The menu bar slides in from x<256 (rects x 172->256): in this single-buffered, never-cleared image its trail
@@ -5466,7 +5487,11 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                 if (should_drop_wrap_rdp(r.first, r.second)) continue;
                 b += r.second - r.first;
                 rs64_e9prov_mark_submitted(r.first, r.second);
-                rs64_dpc_record_submit(r.first, r.second);
+                // s6723: record_submit (which also rewrites RDP words: s6720 title clear, s6722 pause dim) now runs after the
+                // s4286 shadow restore below, so its edits land in the bytes RT64 is fed; before, the restore overwrote them on
+                // any wrap-flushed range (pause dim band back in s6723 b219 / s6722 fixb219). ROGUESQ_G1D_PREWRAP_RECORD=1 = old.
+                static const bool s_prewrap = [] { const char *e = std::getenv("ROGUESQ_G1D_PREWRAP_RECORD"); return e && *e == '1'; }();
+                if (s_prewrap) rs64_dpc_record_submit(r.first, r.second);
                 static const bool s_restore = []{ const char *e = std::getenv("ROGUESQ_WRAP_RESTORE"); return !(e && *e == '0'); }(); /* s4287: default on */
                 const S4272Sh *shp = nullptr;
                 if (s_restore && g_rdram_for_submit) { auto it = shIdx.find(((uint64_t)r.first << 32) | r.second); if (it != shIdx.end()) shp = it->second; }
@@ -5481,6 +5506,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                     for (uint32_t x = r.first; x < r.second; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[shp->off + (x - r.first)], 4); memcpy(&now, g_rdram_for_submit + x, 4); if (was != now) rPostDiff++; }
                     rCtl += 1;
                 } else if (s_restore) rMiss++;
+                if (!s_prewrap) rs64_dpc_record_submit(r.first, r.second);
                 ultramodern::submit_rdp_range(r.first, r.second);
                 if (shp) {
                     memcpy(g_rdram_for_submit + r.first, liveSave.data(), r.second - r.first);
