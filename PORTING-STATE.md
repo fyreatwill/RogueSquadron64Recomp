@@ -177304,3 +177304,29 @@ Next: G3 hangar vs retail (oracle reaches the hangar with Start presses, tools/o
   the port's black fade frame, so they say nothing either way.
 - Rules out H-rt64 / H-geom / H-pos for the opening crawl. The real in-engine phase after the crawl (mission intro / load)
   was not reached: the retail run ended at 110 s mid-crawl.
+
+## Session 6743 (2026-11-01) — G3: the mission-intro cinematic after the opening crawl matches retail angrylion (H-match); a Start press skips the crawl
+
+- Ran: two retail VI traces (scratch/s6743/retail_trace.sh, SECS=200, Start 6..61 s; arm "skip90" adds Start at 90 s),
+  one port run (tools/g3_port_capture.sh, oracle EEPROM via SAVE_FROM, Start 6..41 s, SECS=200, 537 window captures,
+  owner save restored and cmp-verified, 0 CRASH lines), then one retail dump run (scratch/s6743/retail_intro.sh: Start
+  at 90 s, 28 dumps 0.75 s apart from 92 s).
+- Retail timeline (noskip): crawl 79.7 s (0x6A2900 family) until ~183 s, then a new 640 phase on 0x696100/0x62BD00
+  (+0x500 field 1; the boot-cinematic buffer pair 0x695C00/0x62B800), still running at 200 s. skip90: the Start at 90 s
+  leaves the crawl at once, the intro runs 91.8-112.6 s (~21 s), then WIDTH 640 -> 512 at origin 0x690800 = flight.
+  Port: crawl from 42.7 s, flight (512 @0x690400) at 156.1 s, intro frames ~135-155 s.
+- The phase is the mission-intro cinematic: X-wings over the Tatooine desert, a close flyby past Mos Eisley domes,
+  letterboxed 640x336 (port window rows 208..880, the g3_oracle_match.py defaults).
+- Result (g3_oracle_match.py --win 208,880, defaults bases 695C00,62B800 h 336): complete retail frames match at d
+  3.6-4.5 against same-run medians of 137-157; the black lead-in/out frames pair with port black frames (d 0, no
+  information). Second line: matched port times rise monotonically with retail VI (two outliers, see below), and retail
+  vi 5671 -> 6661 (990 VIs = 16.5 s) maps to port 138.30 -> 154.60 s (16.3 s), so the cinematic runs at the same speed.
+- High-d retail frames (d 7-29: vi 5852, 5942, 6076, 6122, 6212, 6302) are retail buffers caught mid-draw: terrain
+  missing below the horizon, horizontal scanline streaks, while the sky and craft present match the time-aligned port
+  captures (scratch/s6743/worst_sheet.png, scratch/s6743/worst.py). They are a dump-timing artifact, not a port defect
+  (single-source on the "why the displayed origin points at an unfinished buffer" question; not chased).
+- Residual: retail>port per-channel mean ratio ~1.018 on every top pair (e.g. 175.7/172.6, 190.8/187.3, 172.7/169.6),
+  the same uniform gain s6740 saw (2.5%) in the 512 flight. So it is not 512-only. Still small and open.
+- Checked and dismissed: a contact-sheet tile near 153 s that looked half-drawn; quarter-column means of every 120-160 s
+  capture show no left/right asymmetry (the 155.0 s fade frame is 65/65), so it was dark content, not a defect.
+- Rules out H-rt64 / H-geom / H-pos for the mission-intro cinematic. Next: the first lvl1 flight frames with HUD.

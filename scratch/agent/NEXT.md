@@ -1,18 +1,17 @@
-# NEXT: G3 render fidelity -- the phase after the opening crawl (mission intro / first Mos Eisley flight) vs retail
-HYPOTHESIS-ID: g3-mission-intro-oracle-diff
+# NEXT: G3 render fidelity -- first lvl1 (Ambush at Mos Eisley) flight frames with HUD vs retail, plus the brightness gain
+HYPOTHESIS-ID: g3-mission-start-oracle-diff
 
-s6738-s6742: boot cinematic, attract flight, cinematic replay, 4:3 hangar and the opening crawl (640x300 @0x6A2900, s6742)
-are H-match vs retail (angrylion). Next: what the game shows after the crawl ends (retail crawl started at 79.7 s and was
-still running at 110 s).
-Hypotheses: H-match, H-rt64 (port draws differently on the same RDP stream), H-geom (missing/extra objects),
-H-pos (camera/time differs -> compare only min-d matched frames; scripted mission-start cameras should match).
+s6738-s6743: boot cinematic, attract flight, cinematic replay, 4:3 hangar, opening crawl and the mission-intro cinematic
+(640x336 @0x695C00/0x62B800) are H-match vs retail angrylion. Next: the in-mission 512 flight right after the intro.
+Retail recipe (s6743 skip90): Start 6..61 s and 90 s -> flight 512 @0x690400/0x690800 at 112.6 s (buffers 0x690000 /
+0x620000 per s6739, check origin0 in the log). Port: AP=6:start,...,41:start reaches flight at ~156 s; a Start during the
+port crawl (e.g. AP+=,50:start) should skip to the intro the same way -- check it, saves ~100 s.
+Hypotheses: H-match; H-rt64 (HUD/radar/reticle drawn differently); H-geom (missing/extra objects); H-pos (no input ->
+both should fly the same scripted start for a few seconds; compare only the first ~5 s and min-d matched frames).
 Steps:
-1. Retail: env PRESS=6:start,...,56:start,61:start SECS=200 ARM=115 RD=retail2 zsh scratch/s6742/retail_brief.sh, but first
-   change the dump width to the post-crawl width (unknown: run once with --vi-trace only, SECS=200, and read the WIDTH
-   transitions after 110 s; mission flight was 512 wide in s6739). Do NOT press Start during the crawl (it may skip it;
-   that would also be a cheap way to reach the mission faster -- test it in the trace run with a press at 90 s).
-2. Port: SAVE_FROM=<oracle .eep> AP=6:start,...,41:start SECS=<match> CAP0=<crawl end> tools/g3_port_capture.sh
-   scratch/s6743/port1 (port crawl starts 59.9 s, ~20 s earlier than retail). Measure the picture box (s6742: 640x300 -> rows
-   244..844; 512x336 -> 124..964).
-3. tools/g3_oracle_match.py <oracle.log> <portdir> <out> --w <W> --bases <origin-0x500,...> --h <rows> --win y0,y1
-   Control: same-run median over other port frames, plus a wrong-box --win run.
+1. Retail: copy scratch/s6743/retail_intro.sh, dumps width 512 (--fb-dump 512:...), ARM=110, SECS=125, 20 dumps 0.5 s apart.
+2. Port: SAVE_FROM=<oracle .eep> AP=...,41:start,50:start SECS=<flight+15> CAP0=<flight-2> tools/g3_port_capture.sh
+   scratch/s6744/port1. Measure the pillar box (s6739: --win 124,964 --winx <x0,x1> for 512x336? check row count).
+3. tools/g3_oracle_match.py <log> <port> <out> --w 512 --bases 690000,620000 --h <rows> --win ... --winx ...
+   Control: same-run median + wrong-box run. Also tabulate retail/port per-channel mean ratio on d<6 pairs (brightness
+   gain 1.8-2.5% seen s6740/s6743; if it holds on the HUD's flat colours too, it is a global output gain, not shading).

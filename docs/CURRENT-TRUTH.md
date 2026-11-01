@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6742 (2026-11-01).
+Compact operational handoff, as of Session 6743 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -10,6 +10,12 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 
 ## Headline
 
+- **s6743 G3: the mission-intro cinematic after the crawl (X-wings over Tatooine to Mos Eisley, 640x336 letterbox,
+  buffers 0x695C00/0x62B800 = the boot-cinematic pair) = H-match vs retail angrylion** (complete frames d 3.6-4.5 vs
+  same-run median 137-157, port match times monotonic, 990 VIs = 16.5 s retail vs 16.3 s port). Retail: crawl 79.7-183 s
+  then intro ~21 s then 512 flight; a Start press during the crawl skips straight to the intro (Start at 90 s -> flight
+  at 112.6 s). High-d retail dumps (d 7-29) are buffers caught mid-draw (terrain missing, scanline streaks), not port
+  differences. Retail>port brightness gain ~1.8% on every channel here too (see s6740 residual).
 - **s6742 G3: the 640 phase after the hangar (0x6A2900) is the Star Wars opening crawl, not a fly-over; it matches retail
   angrylion** (lit frames d 2.4-8.2 vs same-run median 23-26; crawl speed within 2%). 640x300, port window rows 244..844.
   rs64_oracle gained --fb-arm-after (a 640 dump otherwise arms on the boot intro). Retail needs a Start at 61 s (-> 79.7 s).
@@ -21,7 +27,7 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   on audio_device now holds audio_device_mutex. Repro tools/audio_race (unlocked 3/3 SIGSEGV, locked 3/3 clean).
 - **s6739 G3: attract-demo Tatooine flight = H-match vs retail** (two port runs, best d 4.6-5.5, monotonic, so the demo is
   deterministic). Residuals: a thin HUD-text edge residual, and (s6740) a uniform 2.5% brightness gain retail>port in
-  the 512 flight only (all hues/rows, offset ~0; cinematic means match within +-1, so not a decoder convention; open, small).
+  the 512 flight (s6743: ~1.8% also in the 640 mission-intro cinematic, so not 512-only) (all hues/rows, offset ~0; cinematic means match within +-1, so not a decoder convention; open, small).
 - **s6740 G3: window captures are Display-P3-tagged; tools/g3_oracle_match.py now converts them to sRGB** (--no-icc = raw).
   The s6739 "+4 green" was mostly this (raw: blue R-8/G+8/B+8, warm R+9/B-3, dark channels -20; converted: hue pattern
   gone). Static logo control d 0.86 -> 0.36. The "white Hoth demo" after the attract flight is the boot intro cinematic
@@ -455,8 +461,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
    are archived in PROJECT-OVERVIEW, not an alternate live backlog.
 4. **Then G3 render fidelity (NEXT: g3-hangar-oracle-diff).** s6738 boot cinematic, s6739 Tatooine attract flight and
    s6740 cinematic replay are H-match; the green offset is the P3 capture tag (s6740). s6741 hangar (4:3 retail settings) H-match.
-   s6742 the 640 phase after the hangar = opening crawl, H-match. Next (g3-mission-intro-oracle-diff): what follows the
-   crawl (mission intro / first flight frames, retail run >=180 s), same oracle EEPROM. G2/G5 are closed; G4 and aim/steer stay
+   s6742 the 640 phase after the hangar = opening crawl, H-match. s6743 mission-intro cinematic, H-match. Next
+   (g3-mission-start-oracle-diff): first lvl1 flight frames with HUD (retail 512 from 112.6 s with a Start at 90 s) vs
+   port, and the uniform retail>port brightness gain (1.8-2.5%) measured on the same pairs. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index
