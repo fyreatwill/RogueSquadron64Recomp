@@ -176056,3 +176056,7 @@ Also NEXT item 2 answered offline (no run): refolding s6701 lvl5 dd4 vs dd4 FPS6
 pause, which the 95 s flight keys clear): dd4 30.5/30.7 tasks/s gfx 13.6/13.2 ms; FPS60 44.0/45.4 tasks/s, gfx 16.3/15.2 ms,
 p10 27/29. H-fps60-cost: FPS60 at dd4 reaches ~45 fps, not 60; the pause barely moved the s6701 numbers.
 Rules out: the lvl1 dd8 crash as a parked "rare dd4/dd8 gfx SIGBUS" recurrence (only run with "arena full" in m6/).
+Verdict: selects H-spill-leak (our allocator never reclaimed, so exhaustion was certain under sustained dd8 play) and refutes
+H-heap-demand (the game's real overflow demand exceeds 4 MB): live spill plateaus at 1.74 MB. Root cause fixed, not guarded.
+Next discriminator: the queued same-binary ROGUESQ_SPILL_LEAK=1 control must reproduce "arena full"; if it does not within
+300 s, compare its bump growth rate against s6701's (~18 KB/s) before trusting the cross-binary A/B.
