@@ -3633,6 +3633,29 @@ if "#include <cstdio>" not in text:
     text = text.replace('#include "librecomp/rsp.hpp"',
                         '#include <cstdio>\n#include "librecomp/rsp.hpp"', 1)
 
+# s6715 G1e: call-site gate for the in-ucode diagnostic probes (main ucode only). Every gated callee is void and starts
+# with an early return on its own LOG_/DLWALK/G3C env; the call itself (arg setup + spills in the one huge function)
+# cost ~10% of the gfx task in owner play (s6714 sample). A function-like macro named after the function does not
+# re-expand inside its own body, so `name(args)` -> `(probes ? name(args) : (void)0)`; args are not evaluated when off.
+# Placed after every extern declaration (all precede the factor5_ucode definition). rs64_g1e_probes lives in main.cpp.
+PROBE_GATE_MARKER = "/* fixup: s6715 G1e probe gate */"
+PROBE_GATE_FNS = (
+    "rs64_dlw_jump", "rs64_dlw_root", "rs64_e9prov_source_fetch", "rs64_f5_state_probe", "rs64_f5_vtx_probe",
+    "rs64_m4_accum_probe", "rs64_m4_end_probe", "rs64_m4_dma_probe", "rs64_m4_src_probe", "rs64_m4_norm_sample",
+    "rs64_m4_y8000_entry", "rs64_m4_y8000_flush", "rs64_m4_y8000_store", "rs64_m4_index_probe", "rs64_m4_branch_probe",
+    "rs64_inline_probe_resume", "rs64_inline_probe_dispatch", "rs64_inline_probe_route", "rs64_inline_probe_step",
+    "rs64_inline_probe_overlay", "rs64_inline_probe_trigen_entry", "rs64_inline_probe_trigen_reload",
+    "rs64_inline_probe_trigen_exit", "rs64_inline_probe_trigen_sources", "rs64_inline_probe_trigen_chunk",
+    "rs64_inline_probe_trigen_branch", "rs64_inline_probe_trigen_return",
+)
+_main_sig = "RspExitReason factor5_ucode(uint8_t* rdram,"
+if is_main_ucode and PROBE_GATE_MARKER not in text and text.count(_main_sig) == 1:
+    _gate = [PROBE_GATE_MARKER, 'extern "C" int rs64_g1e_probes;']
+    for _fn in PROBE_GATE_FNS:
+        if re.search(r"\b" + _fn + r"\(", text.split(_main_sig, 1)[1]):
+            _gate.append(f"#define {_fn}(...) (__builtin_expect(rs64_g1e_probes, 0) ? {_fn}(__VA_ARGS__) : (void)0)")
+    text = text.replace(_main_sig, "\n".join(_gate) + "\n" + _main_sig, 1)
+
 if text == original:
     sys.exit(0)
 

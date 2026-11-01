@@ -4779,6 +4779,38 @@ extern "C" int rs64_g1e_fast = [] {
     fprintf(stderr, "[g1e-fast] on=1 reason=no-diag-env\n");
     return 1;
 }();
+// s6715 G1e: in-ucode diagnostic probes (rs64_dlw_*, rs64_inline_probe_*, rs64_m4_*, rs64_f5_*_probe, source_fetch) are
+// gated at the call site (tools/fixup_factor5_ucode.py macro block). Default on iff an env that any of them reads is armed
+// (any ROGUESQ_LOG_*, ROGUESQ_DLWALK, ROGUESQ_G3C_DMALOG); ROGUESQ_G1E_PROBES=0/1 overrides, ROGUESQ_G1E_PROBES_TOGGLE=<sec>
+// flips it every <sec> s ([g1e-probes] line per flip). Off = the callees' early return was all they did.
+extern "C" int rs64_g1e_probes = [] {
+    if (const char* e = getenv("ROGUESQ_G1E_PROBES"); e && *e) {
+        fprintf(stderr, "[g1e-probes] on=%d reason=ROGUESQ_G1E_PROBES\n", *e != '0' ? 1 : 0);
+        return *e != '0' ? 1 : 0;
+    }
+    extern char** environ;
+    for (char** v = environ; v && *v; ++v) {
+        const char* s = *v;
+        const char* eq = strchr(s, '=');
+        if (!eq || !eq[1] || strncmp(s, "ROGUESQ_", 8)) continue;
+        std::string name(s, eq - s);
+        if (!name.compare(0, 12, "ROGUESQ_LOG_") || name == "ROGUESQ_DLWALK" || name == "ROGUESQ_G3C_DMALOG") {
+            fprintf(stderr, "[g1e-probes] on=1 reason=%s\n", name.c_str());
+            return 1;
+        }
+    }
+    fprintf(stderr, "[g1e-probes] on=0 reason=no-probe-env\n");
+    return 0;
+}();
+static void rs64_g1e_probes_tick() {
+    static const double sec = [] { const char* e = getenv("ROGUESQ_G1E_PROBES_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
+    if (sec <= 0.0) return;
+    static const auto t0 = std::chrono::steady_clock::now(); static auto t_flip = t0;
+    const auto now = std::chrono::steady_clock::now();
+    if (std::chrono::duration<double>(now - t_flip).count() < sec) return;
+    t_flip = now; rs64_g1e_probes = !rs64_g1e_probes;
+    fprintf(stderr, "[g1e-probes] on=%d t=%.3f\n", rs64_g1e_probes, std::chrono::duration<double>(now - t0).count());
+}
 // ROGUESQ_G1E_FAST_TOGGLE=<sec>: flip rs64_g1e_fast every <sec> s at osViSwapBuffer ([g1e-fast] line per flip).
 static void rs64_g1e_fast_tick() {
     static const double sec = [] { const char* e = getenv("ROGUESQ_G1E_FAST_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
@@ -4791,6 +4823,7 @@ static void rs64_g1e_fast_tick() {
 }
 extern "C" void rs64_store_diag_tick(void) {
     rs64_g1e_fast_tick();
+    rs64_g1e_probes_tick();
     static const double sec = [] { const char* e = getenv("ROGUESQ_STORE_DIAG_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
     if (sec <= 0.0) return;
     static const auto t0 = std::chrono::steady_clock::now(); static auto t_flip = t0;
@@ -6608,7 +6641,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         const char *e = std::getenv("ROGUESQ_G1E_AQ");
         const char *sp = std::getenv("ROGUESQ_G1E_AQ_SPIN_NS");
         s_aq_spin_cfg = sp ? (uint32_t)std::strtoul(sp, nullptr, 0) : 0u;
-        g_rs64_aq_on = (e && *e && *e != '0') ? 1 : 0;
+        g_rs64_aq_on = (e && *e && *e != '0') ? (*e == '2' ? 2 : 1) : 0;  // s6715: 2 = per-task ucode timing only (no per-submit clock)
     }
     const uint64_t aq_sub0 = g_rs64_aq_submit_ns, aq_calls0 = g_rs64_aq_submit_calls, aq_com0 = g_rs64_aq_commit_ns;
     const auto aq_t0 = g_rs64_aq_on > 0 ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
@@ -6719,10 +6752,10 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         if (now - sec0 >= std::chrono::seconds(1)) {
             const double n = (double)acc.n, sn = acc.slow_n ? (double)acc.slow_n : 1.0;
             fprintf(stderr, "[g1e-split] phase=%u spin=%u fast=%d tasks=%llu ucode_ms=%.3f submit_ms=%.3f rest_ms=%.3f commit_ms=%.3f "
-                    "calls=%.0f max_ms=%.2f slow_n=%llu slow_ucode_ms=%.3f slow_submit_ms=%.3f\n",
+                    "calls=%.0f max_ms=%.2f slow_n=%llu slow_ucode_ms=%.3f slow_submit_ms=%.3f probes=%d\n",
                     rs64_phase_ord(), g_rs64_aq_spin_ns, rs64_g1e_fast, (unsigned long long)acc.n, acc.ucode / n / 1e6, acc.sub / n / 1e6,
                     (acc.ucode - acc.sub) / n / 1e6, acc.com / n / 1e6, acc.calls / n, acc.max / 1e6,
-                    (unsigned long long)acc.slow_n, acc.slow_ucode / sn / 1e6, acc.slow_sub / sn / 1e6);
+                    (unsigned long long)acc.slow_n, acc.slow_ucode / sn / 1e6, acc.slow_sub / sn / 1e6, rs64_g1e_probes);
             acc = AqAcc{};
             sec0 = now;
         }

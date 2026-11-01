@@ -6876,6 +6876,7 @@ extern "C" void rsp_force_fullsync() {
 
 // s6712 G1e: split the gfx task's RSP segment into bridge (per-DPC_END submit, task-end commit) vs the rest
 // (LLE interpreter + in-ucode probes). ROGUESQ_G1E_AQ=1 arms it (main.cpp reports [g1e-split]); off = one load per call.
+// ROGUESQ_G1E_AQ=2 (s6715): per-task ucode wall + call count only; submit_ms/commit_ms read 0.
 // g_rs64_aq_spin_ns > 0 busy-waits that long inside the timed submit: the same-run positive control.
 #include <chrono>
 extern "C" {
@@ -6890,7 +6891,10 @@ extern "C" __attribute__((noinline)) void rs64_g1e_aq_spin(uint64_t until) {
     while (rs64_aq_now() < until) {}
 }
 void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
-    if (g_rs64_aq_on <= 0) { rsp_dpc_submit_impl(rdram, start, end); return; }
+    if (g_rs64_aq_on != 1) {  // s6715: AQ=2 counts calls without the per-call clock pair (which cost more than the bridge)
+        if (g_rs64_aq_on == 2) ++g_rs64_aq_submit_calls;
+        rsp_dpc_submit_impl(rdram, start, end); return;
+    }
     const uint64_t t0 = rs64_aq_now();
     rsp_dpc_submit_impl(rdram, start, end);
     if (g_rs64_aq_spin_ns) rs64_g1e_aq_spin(t0 + g_rs64_aq_spin_ns);
@@ -6898,7 +6902,7 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     ++g_rs64_aq_submit_calls;
 }
 extern "C" void rs64_dpc_defer_end(int commit) {
-    if (g_rs64_aq_on <= 0) { rs64_dpc_defer_end_impl(commit); return; }
+    if (g_rs64_aq_on != 1) { rs64_dpc_defer_end_impl(commit); return; }
     const uint64_t t0 = rs64_aq_now();
     rs64_dpc_defer_end_impl(commit);
     g_rs64_aq_commit_ns += rs64_aq_now() - t0;

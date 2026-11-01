@@ -176403,3 +176403,30 @@ Remaining Gfx-thread split (sample B, factor5_ucode subtree): interp 61%, bridge
 is the G1E_AQ instrument (absent in owner play).
 Discrimination: H-vops selected (>=10% bar, land). Not a mitigation (performance; no ORIGIN needed).
 Queued: s6714_inl_lvl1_dd1, s6714_inl_lvl10_dd4 (300 s qualification on the threshold-4000 build/ binary).
+
+## Session 6715 (2026-10-31) — G1e H-probes: call-site gate on the in-ucode diagnostic probes cuts the dense lvl5 dd4 gfx task 9.48 -> 8.61 ms (-9.2%, same-run toggle); the per-submit [g1e-split] timer cost more than the bridge it measured
+
+Soak fold: s6714_inl_lvl1_dd1 (304 s) and s6714_inl_lvl10_dd4 (303 s): alive, 0 VI stalls, 0 crashlines, 0 refills. The
+threshold-4000 inlined ucode TU is qualified on lvl1/5/10.
+Offline (scratch/s6714/sample_B.txt re-read): Gfx thread factor5_gfx_runner 1125 samples; rsp_dpc_submit_impl 149, but the
+[g1e-split] AQ=1 clock pair around every submit 185 (clock_gettime_nsec_np) -> the "bridge 31%" of s6714 was ~half
+instrument. Probe self samples ~108 (dlw_jump 29, inline_probe_route 21, m4_accum 15, y8000_flush 9, inline_probe_resume 7,
+source_fetch 5, norm_sample 5...). Every probe callee already early-returns on its own env; the cost is the call itself.
+Change: tools/fixup_factor5_ucode.py adds a macro block before the factor5_ucode definition (main ucode only, idempotent,
+marker "s6715 G1e probe gate"): each of 27 void probe functions becomes `(__builtin_expect(rs64_g1e_probes,0) ? f(args) :
+(void)0)`; args unevaluated when off. src/main/main.cpp: rs64_g1e_probes default ON iff any ROGUESQ_LOG_*, ROGUESQ_DLWALK or
+ROGUESQ_G3C_DMALOG is set (every env those callees read), ROGUESQ_G1E_PROBES=0/1 overrides, ROGUESQ_G1E_PROBES_TOGGLE=<sec>
+same-run flip ([g1e-probes] lines); [g1e-split] rows gain probes=. dpc_bridge.cpp: ROGUESQ_G1E_AQ=2 = per-task ucode wall +
+submit call count only (no per-submit clock). tools/g1e_fast_ab.py --key probes.
+Run (scratch/agent/s6715_probes.zsh: lvl5 FPS60 dd4 ASYNC+NODRAIN, STORE_DIAG=0, G1E_FAST=1, AQ=2, PROBES_TOGGLE=10),
+203 s, alive, 0 stalls, 0 crashlines, 20 flips; g1e_fast_ab.py --key probes --phase 7:
+- probes=1: 61 rows, ucode = 0.220 ms + 231.5 ns/cmd; dense n=20 ucode 9.48 ms @39.8k calls, 55.2 tasks/s
+- probes=0: 58 rows, ucode = 0.184 ms + 202.4 ns/cmd; dense n=20 ucode 8.61 ms @41.3k calls, 57.1 tasks/s
+Slope -12.6%, dense -9.2% at slightly MORE calls. Control: same binary, same run, interleaved 10 s windows; the arm
+difference appears only with the flag (positive control = the toggle itself moving the slope). Frames: fbd every 600 VIs
+non-blank (asteroid field, mean 16-37, sd 21-42) across both arms. Note AQ=2 slopes are whole-ucode (bridge included) and
+not comparable to the AQ=1 rest-only slopes of s6713/s6714.
+Discrimination: H-probes selected (>=5% bar, land; owner play already has no LOG_ env so it gets probes=0 by default).
+H-bridge undecided: xctrace attach for line-level bridge attribution failed (`xctrace requires Xcode` - needs
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer); next unit.
+Not a mitigation (performance; no ORIGIN needed). Queued: s6715_pg_lvl1_dd1, s6715_pg_lvl10_dd4 (PROBES=0 forced, 300 s).

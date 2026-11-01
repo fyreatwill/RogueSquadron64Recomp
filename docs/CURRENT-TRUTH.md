@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6714 (2026-10-31).
+Compact operational handoff, as of Session 6715 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -59,6 +59,11 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   calls 336 -> 71. Interleaved ABAB lvl5 FPS60 dd4 (fast DMA on): 207.1 -> 185.3 ns/RDP cmd (-10.5%), dense ~10.3 -> ~8.9 ms;
   sample(1) control: RSP:: self time (~11%) gone in B. s6713 fast DMA qualified lvl1 dd1 / lvl10 dd4 300 s clean. s6714 build
   qualification soaks queued (s6714_inl_*). Remaining Gfx subtree: interp 61%, DPC bridge 31%, in-ucode probes ~4%.
+- **s6715 G1e: in-ucode probe calls gated (rs64_g1e_probes, fixup macro block).** Default off unless a ROGUESQ_LOG_*,
+  DLWALK or G3C_DMALOG env is set; ROGUESQ_G1E_PROBES=0/1, ROGUESQ_G1E_PROBES_TOGGLE=<sec>. Same-run lvl5 FPS60 dd4: dense
+  gfx task 9.48 -> 8.61 ms, 55.2 -> 57.1 tasks/s (slope 231 -> 202 ns/cmd, whole ucode). ROGUESQ_G1E_AQ=2 = per-task timing
+  only: the AQ=1 per-submit clock pair cost MORE than the bridge (s6714 sample: 185 vs 149 samples), so "bridge 31%" was half
+  instrument. Qualification soaks s6715_pg_* queued.
 - **s6705 G1e: ROGUESQ_RDP_ASYNC=1 (opt-in) runs RT64 RDP processing on a worker thread** (command words copied at submit,
   drained before dp_complete/present). Same-run toggle, lvl5 FPS60 dd2: 11.70 -> 10.46 ms/task, 49.3 -> 54.9 tasks/s, 301 s
   clean, frames sane (docs/img/g1e_s6705_async_sheet.png). Short of 60: only ~1.2 of the ~5 ms RT64 share overlaps. Default off.
@@ -584,11 +589,10 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1e: dense dd4 tasks ~8.9 ms / ~185 ns per RDP cmd after s6713 fast DMA + s6714 inlining (dense 56 tasks/s).** Fold
-   s6714_inl_* soaks first (a failure there = root-cause the inlined build). Next, one build, same-run toggle: gate the
-   in-ucode per-dispatch probes (rs64_dlw_jump/inline_probe_route/m4 ~4%, fixup_factor5_ucode.py) and trim the DPC bridge
-   per-command path (rsp_dpc_submit_impl + submit_rdp_range, ~31% of the subtree). If dense dd4 still misses 60, write the
-   G1e dd4 ceiling and move to G3. See NEXT.md.
+1. **G1e: dense lvl5 dd4 ~8.6 ms / 57 tasks/s after s6715 probe gate.** Fold s6715_pg_* soaks first (failure = the
+   work unit). Then H-bridge with line-level data: xctrace Time Profiler (DEVELOPER_DIR=/Applications/Xcode.app/...) on
+   rsp_dpc_submit_impl self, trim the hot per-call blocks behind a same-run toggle. <3% -> write the G1e dd4 ceiling and
+   move to G3. See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional
