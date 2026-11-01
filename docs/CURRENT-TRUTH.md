@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6728 (2026-11-01).
+Compact operational handoff, as of Session 6729 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -386,15 +386,16 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). G1f window/fullscreen
   CLOSED s6717; G3d turning shake closed s6697 (s6696 fps fix). Spec: ITERATION.md item 3c.
 1. **G1d close-out sweep** (game-over + 4:3 edge fixed s6726): remaining unvisited wide-aspect screens (Elite Rogues /
-   Select Game pillarbox look; the game-over backdrop entry sliver — s6727/s6728: a screen-shaped block at x 640..768
-   (cw 1024), rows 0..N (N = 13..128, varies run to run) of the backdrop stays undrawn for ~7 swaps at 21:9; 4:3 clean.
-   s6728 cleared the game side: the 112 texrects (y, timg, LOADBLOCK, SETTILE, om, cc) are byte-identical across aspects
-   and across undrawn/drawn swaps, no fill/tri covers the corner in swaps 0-6, and the 4 KB texture blocks are complete
-   (2048/2048 nonzero texels, alpha set, same sum) in guest RDRAM at submit from swap 0. RT64 texture cache: 0 misses in
-   the run (first-30 control fired). Lead (single-source): the widened 21:9 colour images overlap live guest writes; a
-   word in cimg B20000 (0xB21578, row 2 x 700) was written ~2250x by RSP DMA (rsp_dmem_to_rdram) and the game's bzero
-   PC 0x800078EC (dst 0x80A0B000 len 0x55000) clears cimg A40000 rows 0..63; their timing vs epoch 27 is not stamped.
-   Next: stamp swap/epoch on ROGUESQ_FLOOR_WATCH writer records and name the writer of the block pixels on swaps 0-6),
+   Select Game pillarbox look; the game-over backdrop entry sliver — s6727-s6729: a block at x 640..768 (cw 1024), rows
+   0..N (N 13..128, shape varies run to run, 9/9 21:9 runs) of the backdrop stays undrawn for ~7 swaps at 21:9; 4:3
+   clean). s6728 cleared the game side (texrects identical across aspects and undrawn/drawn swaps, texture complete).
+   s6729 cleared RDRAM and RT64's inputs: swap-stamped writer log shows the texture words written once (guest, swap
+   4103) and never touched after; RT64's own writeback reads 0 at the block pixel (its render target lacks the draw);
+   0 RT64 RDRAM->fb uploads during the undrawn swaps (41 logged elsewhere); TMEM loads for tiles 0/6/7 carry identical
+   src+TMEM hashes on undrawn and drawn swaps; ROGUESQ_NO_GPU_COPY=1 still shows it; ROGUESQ_RAM_PATTERN=1 magenta
+   fires elsewhere but 0 px in the block. Selects H-rt64-target: RT64 drops/overwrites the draw on the GPU side.
+   Next: RT64 render-target resize/recreate (A40000/B20000 targets sized from an older 640/768-wide fb?) and the
+   per-draw GPU record for texrects 6/7 (scissor, viewport, target, textureIndex) on undrawn vs drawn swaps),
    then an owner-judgement contact sheet of every menu at 4:3/16:9/21:9. Recipe: scratch/s6726/gameover.sh <tag>
    <aspect|none> "ROGUESQ_LIVES_CAP=1 ...". Open single-source (s6719): why a wider terrain footprint changes the LucasArts
    logo shape.

@@ -176880,3 +176880,41 @@ images (1024x444, 0xDE000 each) share memory with live guest writes (RSP DMA out
 ORIGIN: n/a (diagnostics only, no mitigation).
 Verdict: refutes H-tex / H-g1d / H-clip / H-texmiss; selects H-overlap as the lead (single-source). Next: stamp
 swap+epoch on the writer records and watch the block pixels on swaps 0-6.
+
+## Session 6729 (2026-11-01) — G1d game-over sliver: RDRAM, uploads, TMEM and GPU-copy paths cleared; RT64's render target itself lacks the draw (H-rt64-target)
+
+**Question (NEXT g1d-menu-sweep).** Who writes the undrawn 21:9 game-over block (x 640..768, rows 0..N) on swaps 0-6 of
+epoch 27: H-overlap-rsp (RSP DMA into the widened cimg), H-overlap-heap (guest bzero/decompress), H-rt64 (RT64 itself)?
+**Instruments (kept).** lib/rt64 rt64_framebuffer_renderer.cpp: writer records (ROGUESQ_FLOOR_DEPTH_DIR, dir must exist)
+now carry `swap` (g_rs64_swap_n) + `epoch`. rt64_framebuffer_manager.cpp uploadRAM: ROGUESQ_LOG_FBUPLOAD=1 logs every
+RDRAM->framebuffer change upload (path draw/present, fb, diffPx, CPU bbox of changed px, swap, epoch; cap 4000).
+rt64_rdp.cpp rs64LogLoad: ROGUESQ_LOG_LOADS_EPOCH=<e> restricts ROGUESQ_LOG_LOADS to one G1d epoch (dump cap 1600).
+**Runs** (scratch/s6729/gameover.sh = s6728 route, 21:9, FB_DUMP_EPOCH=27; tiles.py per dump): u219 (fbupload; floor dir
+missing -> no writer log), v219 (fbupload + floor watch on block/control words), x219 (watch on texture words
+0x951B40/0x957B40/.., WBLOG, rect2), o219 (LOG_FBOVL windowed on texture), n219 (ROGUESQ_NO_GPU_COPY=1), l219 (LOG_LOADS
+epoch 27), m219 (ROGUESQ_RAM_PATTERN=1). All mission_verified_130s, 0 CRASH; the sliver reproduced in 7/7 (shapes vary:
+rows 0-13/0-15, full tiles 6,7,14,15, or tile 6 rows 6..31 + tile 7 rows 0..12).
+**Results.**
+- v219: the game bzeros each cimg with len 0x70000 (the 4:3 size) at epoch start (B20000 swap 4107, A40000 4108, PC
+  0x800078EC). RT64 native-swap writebacks cover the whole cimg every swap; at A41578 (block, row 2 x 700) they write
+  before=0 after=0 on undrawn swaps 4108-4112 and 0x10001 from 4114: RT64's render target holds no backdrop there.
+  No RSP DMA or other host write lands on block words during epoch 27 (the s6728 2250 RSP writes are other phases).
+- x219: texture words (tile 0/6/7) written once by the guest at swap 4103 (decompress); the last 0x8F5000 writeback
+  covering them is swap 4100; nothing writes them afterwards. RDRAM-clobber variant refuted.
+- u219/v219 fbupload: 41 uploads logged in the run (positive control), none between the epoch-start swap and the first
+  drawn swap (the epoch-start ones are 0x8F5000/0x9D5000 draw + B20000 present at swap 4098/4108). Upload path refuted.
+- l219: every epoch-27 swap loads tiles 0/6/7 with identical srcfnv and tmemfnv (undrawn swaps 1-7 and drawn 8+):
+  RT64's TMEM input is the same whether the block is drawn or not.
+- o219/n219: 0 [fbovl] lines even with the any# control (checkFramebufferOverlap never resolves a framebuffer in this
+  route; the s6728 "any#=0" null is therefore uninformative, not a control). n219 (GPU copies forced off) still shows
+  the sliver: framebuffer-as-texture path refuted by an independent arm.
+- m219: RAM_PATTERN magenta fires (3102-7047 px per dump, outside the block) but the block has 0 magenta px on undrawn
+  swaps 4878/4879/4881: the missing pixels are not RDRAM-sourced via copyRAMToNativeAndChanges.
+- Code read (single-source): fullSync waits on textureCache->waitForGPUUploads() before drawing; async-upload variant out.
+**Discrimination.** Refutes H-overlap-rsp, H-overlap-heap (for block and texture), the RT64 RDRAM-upload path, the
+framebuffer-texture path and a TMEM-content difference. Selects H-rt64-target: identical commands + identical TMEM ->
+different render-target output, so RT64 drops or overwrites the texrect pixels on the GPU side for ~7 swaps.
+ORIGIN: n/a (diagnostics only, no mitigation).
+Verdict: selects H-rt64-target; refutes H-overlap-rsp / H-overlap-heap / H-upload / H-fbtex / H-tmem.
+Next: render-target lifetime for A40000/B20000 (created/resized from an older narrower fb? new region uninitialised)
+and per-draw GPU records for texrects 6/7 on undrawn vs drawn swaps.

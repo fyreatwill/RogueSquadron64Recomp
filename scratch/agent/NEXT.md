@@ -1,19 +1,20 @@
-# NEXT: G1d game-over sliver — name the writer of the undrawn 21:9 block (H-overlap)
+# NEXT: G1d game-over sliver — RT64 render-target side (H-rt64-target)
 HYPOTHESIS-ID: g1d-menu-sweep
 
-s6728: the game side is clean (identical texrects, complete texture, no overdraw; RT64 texture cache 0 misses). The block
-x 640..768 rows 0..N (N 13..128) of cimg A40000/B20000 stays undrawn for ~7 swaps at 21:9. Lead H-overlap: guest writes
-land inside the widened colour images (w219: B21578 written ~2250x by rsp_dmem_to_rdram; bzero PC 0x800078EC dst
-0x80A0B000 len 0x55000 covers A40000 rows 0..63). Records carry no swap stamp, so their timing vs epoch 27 is unknown.
+s6729: RT64 receives identical texrect commands and identical TMEM (same src/TMEM hashes) on undrawn and drawn swaps,
+no RDRAM upload or fb-texture path touches the block (RAM_PATTERN 0 magenta there, NO_GPU_COPY still reproduces), and
+RT64's writeback reads 0 at the block: its render target lacks the draw for ~7 swaps at 21:9.
 Hypotheses:
-- H-overlap-rsp: RSP DMA (gfx output/yield buffer) writes the corner pixels after RT64's writeback; RT64 then re-reads them.
-- H-overlap-heap: a guest heap object (bzero / decompress) lives there on the epoch's first swaps.
-- H-rt64: no guest write lands there on swaps 0-6, so RT64 itself drops the pixels (then test FBOVL_SKIP on a bright photo,
-  and RT64 fb discard/upload regions).
-Instrument (one build): add swap number + rs64_g1d_vi_epoch to rs64FloorWriterRecord (lib/rt64 framebuffer_renderer.cpp;
-pass via an extern "C" int counter bumped in upstream_compat swap), and log the guest PC/ra/len for rsp_dmem_to_rdram
-records. Run scratch/s6728/gameover.sh w2 21:9 "ROGUESQ_FB_DUMP_EPOCH=27 ROGUESQ_FB_DUMP_VI=1 ROGUESQ_FLOOR_DEPTH_DIR=<dir>
-ROGUESQ_FLOOR_WATCH=A41578,A4F578,A5D578,B21578,B2F578,B3D578,A41258,B21258"
-(rows 2, 30, 58 at x 700; controls x 300). Discriminator: the epoch-27 swap 0-6 writers of the block words that the
-controls lack. Fix must be the root (move the colour images / RSP buffer apart), with a 4:3 + flight regression check.
+- H-rt-resize: the A40000/B20000 render targets were created for an older/narrower fb (640/768 wide or fewer rows) and
+  are resized/recreated at epoch start; draws in the grown region are lost or the region is re-initialised for a few
+  frames (fits: only x>=640 region, shape varies).
+- H-rt-pair: RT64 splits the 112 texrects into framebuffer pairs/draw calls and some calls bind a different target or a
+  stale scissor/viewport (per-call record differs on undrawn swaps).
+- H-rt-clear: a later GPU op in the same workload (fill/clear, depth-as-colour reinterpret) paints that region.
+Instrument (one build, lib/rt64): per epoch-27 swap log (a) RenderTargetManager get/resize/create for A40000/B20000
+(width, height, resolution, whether contents were copied), (b) per draw call of texrects with x>=640: target address,
+scissor and viewport as RT64 converts them, textureIndex, fbPair index, (c) any fill/clear op on those targets.
+Run scratch/s6729/gameover.sh <tag> 21:9 "ROGUESQ_FB_DUMP_EPOCH=27 ROGUESQ_FB_DUMP_VI=1 <new flags>" and score with
+scratch/s6729/tiles.py. Discriminator: which record differs between undrawn swaps (tiles.py) and drawn swaps.
+Fix in lib/rt64 (then export.sh + commit), regression: 4:3 game-over + 21:9 flight + title.
 Then: owner contact sheet per aspect, then G3 render fidelity.
