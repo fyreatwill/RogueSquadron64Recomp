@@ -9928,3 +9928,427 @@ so statically they should be owned on the scripted route (H-load over H-prox).
   stores/default/lib edits or new soak verdicts. Evidence:
   scratch/agent/s6674_qualification.json; G1-OBJECTIVE-RESPONSE s6674.
   Level4 response unit closes; next: level5 original objective/target contract.
+
+## Migrated from CURRENT-TRUTH (s6759 maintenance)
+
+Verbatim headline bullets (s6689-s6758) as they stood at s6758; read with the supersessions in CURRENT-TRUTH.
+
+
+- **s6755 G3: lvl4 event trigger = song end (audio clock); FIXED a duplicate-VI defect.** The tick-2302 event is
+  mask bit 0x100 of 0x8010C9E0, posted by tickSongFadeTimer (0x800EE85C) when isSongHandleActive(*0x8010C0E0) turns 0.
+  The cue starts at tick 2145 in both arms and lasts 635 (retail) vs 639-640 (port) AI buffers: same audio length.
+  The VI thread (ultramodern events.cpp) truncated its deadline to whole us, so a spin exit inside the 0.67 us window
+  re-emitted the same total_vis: an extra ScreenUpdate + VI retrace message (123 per 8927 VIs, 60.83/s). Deadline now
+  rounds up to the exact ns (ROGUESQ_VI_TRUNC_DEADLINE=1 = old). Same recipe: repeats 123->0, 59.999/s, AI buf/VI
+  1.866->1.914 (retail 1.912), song 343->334 VI (retail 332). The rest of the tick gap is pacing: retail drops frames
+  (2.115 VI/tick), the port never does (2.000). tools/g3_ai_clock.py, g3_vi_edges.py, g3_tick_mem.py. s6754 (dt
+  pinned): sim identical to retail for 2301 ticks, frames H-match.
+- **s6758 G3: mission 7 dt-pinned = H-match up to the song end (audio clock).** 3721 rand calls / 721 ticks identical,
+  7 NPCs identical; the split is tick 722 (retail) vs 723 (port) = song end, 640 AI buffers in both arms (as lvl4).
+  Pre-split frames d 1.1-4.5 (12 of 13); later retail frames are a mid-draw dump and a diverged no-HUD scene. New
+  render-pacing bytes: glob words 7/8 (0x8011A89C-A3, task/yield flags, 3 ticks, retail only). Recipes scratch/s6759.
+- **s6756/s6757 G3: missions 5 and 6 dt-pinned = H-match.** lvl5: 20635 rand calls, NPCs, event mask, song identical for
+  1972 retail ticks, 17/20 frames match (outliers = retail mid-draw dumps). lvl6 (Jade Moon): 9438 rand calls / 941 ticks,
+  12 NPCs, 10/10 flight frames d 2.1-2.6 (median 22-25); only render-pacing words differ (snap w2 last-drawn tick +-1,
+  0x8011A8C8 arbiter slot). lvl6 intro is long: retail flight at VI 12912, so port needs SECS>=330. Recipes scratch/s6758.
+  s6753 lvl3: pin = oracle RS64_XTRACE_POKE / port ROGUESQ_XTRACE_POKE=800FA730:29:30:3d088889 (needs RAND_TRACE).
+- **s6748 G3: mission 2 (Barkhesh) flight + bolts = H-match vs retail angrylion** (40 frames d 6.5-15 vs median 36-47,
+  monotonic; bolts 24.8% vs 26.5%). tools/g3_eep_patch.py selects a mission on the checksummed save (two copies, adler32
+  at +0/+4; selected mission +0x31). No impacts in window (lvl2 impacts not covered).
+- s6746/s6747 G3: lvl1 bolts and impact puffs H-match by population (tools/g3_effect_count.py; PORTING-STATE).
+- **s6744 G3: first lvl1 flight frames with HUD = H-match vs retail angrylion** (vi 7116-7926 d 4.4-5.8 vs same-run
+  median 17-21, monotonic, 13.5 s retail = 13.3 s port; HUD, craft, wingmen, enemies, dunes identical,
+  scratch/s6744/sheet_early_best.png). A Start during the port crawl skips it (flight at 69.5 s, not 156 s). The
+  retail>port 1.8-2.5% "gain" is mostly the 5->8 decode: v*255/31 overstates dithered 5-bit shading by up to 1.028;
+  g3_oracle_match.py --dec shift (v<<3) removes it in flight (a 0.98-1.00) and halves intro d (3.6->1.9), ~-1% left there.
+- **s6743 G3: the mission-intro cinematic after the crawl (X-wings over Tatooine to Mos Eisley, 640x336 letterbox,
+  buffers 0x695C00/0x62B800 = the boot-cinematic pair) = H-match vs retail angrylion** (complete frames d 3.6-4.5 vs
+  same-run median 137-157, port match times monotonic, 990 VIs = 16.5 s retail vs 16.3 s port). Retail: crawl 79.7-183 s
+  then intro ~21 s then 512 flight; a Start press during the crawl skips straight to the intro (Start at 90 s -> flight
+  at 112.6 s). High-d retail dumps (d 7-29) are buffers caught mid-draw (terrain missing, scanline streaks), not port
+  differences. Retail>port brightness gain ~1.8% on every channel here too (see s6740 residual).
+- **s6742 G3: the 640 phase after the hangar (0x6A2900) is the Star Wars opening crawl, not a fly-over; it matches retail
+  angrylion** (lit frames d 2.4-8.2 vs same-run median 23-26; crawl speed within 2%). 640x300, port window rows 244..844.
+  rs64_oracle gained --fb-arm-after (a 640 dump otherwise arms on the boot intro). Retail needs a Start at 61 s (-> 79.7 s).
+- **s6741 G3: retail-settings 4:3 hangar (level select) = H-match vs retail angrylion** (21 frames d 3.0-4.7, means
+  within 1; wrong-hologram control d 14.7-17.6). The owner save selects a different level: compare with the oracle EEPROM
+  (tools/g3_port_capture.sh SAVE_FROM=, restores the save). Wide-aspect hangar artifacts (s6601) are not covered.
+- **FIXED s6739: plain-launch SIGSEGV in SDL_GetQueuedAudioSize (events thread, boot ~6 s).** osAiSetFrequency closes and
+  reopens the SDL device on the game thread while the events thread polls its queue size (use-after-free). Every SDL call
+  on audio_device now holds audio_device_mutex. Repro tools/audio_race (unlocked 3/3 SIGSEGV, locked 3/3 clean).
+- **s6739 G3: attract-demo Tatooine flight = H-match vs retail** (two port runs, best d 4.6-5.5, monotonic, so the demo is
+  deterministic). Residuals: a thin HUD-text edge residual, and (s6740) a uniform 2.5% brightness gain retail>port in
+  the 512 flight (s6743: ~1.8% also in the 640 mission-intro cinematic, so not 512-only) (all hues/rows, offset ~0; cinematic means match within +-1, so not a decoder convention; open, small).
+- **s6740 G3: window captures are Display-P3-tagged; tools/g3_oracle_match.py now converts them to sRGB** (--no-icc = raw).
+  The s6739 "+4 green" was mostly this (raw: blue R-8/G+8/B+8, warm R+9/B-3, dark channels -20; converted: hue pattern
+  gone). Static logo control d 0.86 -> 0.36. The "white Hoth demo" after the attract flight is the boot intro cinematic
+  replaying (N64 logo, snow canyon, LucasArts logo); retail frames are equally white (meanL 205-240), pairs match
+  visually and in means (scratch/s6740/snow_pairs.png). H-match. s6738/s6739 d values were measured without ICC.
+- **FIXED s6738: the plain launch (owner's command, no env) ran every non-hangar gfx task through RT64 HLE.**
+  ROGUESQ_LLE_FORCE/UNGATED/SOLO defaulted OFF, while every qualification soak (m6_god_common COMMON) sets all three.
+  Seen as the boot intro cinematic drawn solid white (plain 0/71 scene captures; flags 61/64) and attribution glyphs
+  dropped. Now default ON (=0 restores HLE). Same-build arms: 60/63 vs 0/67. The fixed cinematic matches retail angrylion
+  frames (tools/g3_oracle_match.py, d 1.4-2.9 lum on slow-camera frames). Port RDRAM fb dumps do NOT hold RT64's 3D
+  frames (no write-back): use window captures as the port source for pixel diffs.
+- The qualified route boots attribution, N64 logo, intro, Factor 5 logo, title,
+  hangar, and mission origins; mission input reaches flight code.
+- M5 audio de-stubbing, M3 idiom audits, generated-symbol renaming (G5), M6
+  first-mission endurance (3x600 s lvl1/5/7, s6442), and G2 audio are closed.
+  G4 crash hunting is parked after clean coverage. G1 is mission coverage and
+  visual quality, not autopilot work.
+- **FIXED s6696: game ran ~17 fps since s6372 (10-26).** Our s6372 rs64_vld_note() called getenv() on every RSP vector
+  load and s6375's SDV snapshot ran unarmed; lvl1 gfx task 10.9 -> 52 ms, 29.7 -> 17.6 game fps, presents bunched (41% <2 ms
+  apart, 10% >50 ms gaps) = the owner's turning shake (G3d). Same-run toggle A/B (ROGUESQ_G3D_LEGACY_TOGGLE) + 631-run census
+  step. ALL frame-cost numbers s6390-s6695 (dd cost tables, sd_wall, tasks/s) carry the overhead and are void as absolutes.
+  s6697: no residual shake (retail + FPS60 jerk arms); dd4 re-baseline lvl1 24.1 fps/24 ms, lvl5 19.6 fps/33.9 ms per task.
+- **s6698: per-store diagnostic hooks gated (g_rs64_store_diag).** ~143k hook calls (3-5 per guest store) ran unarmed:
+  52% of the game thread's busy time at lvl5 dd4. Auto-OFF with no ROGUESQ_LOG_*/*WATCH* env (owner play), auto-ON in every
+  logging recipe; ROGUESQ_STORE_DIAG=0/1 forces it. Same-run toggle lvl5 dd4: off 24.4 fps / 23.9 ms per task vs on 18.4 / 38.0.
+  Soak recipes measure the ON arm: add ROGUESQ_STORE_DIAG=0 for frame-cost numbers. Build is Debug but -O2 since s6700 (see below).
+- **s6700: -O2 build is the DEFAULT (ROGUESQ_SRC_OPT/ROGUESQ_FUNCS_OPT default ON; build/ rebuilt).** s6699: -O2 host
+  code halves the gfx task (29.2 -> 12.8 ms), +-O2 RecompiledFuncs/PatchesLib takes lvl5 dd4 from ~22 to 30.5 game fps.
+  Qualified s6700 on the -O2 binary: lvl1 dd1, lvl10 dd4, lvl7 dd1 (refills/cycles within -O0 range), natural hangar route
+  -> mission at 80 s; each 300 s, 0 crashlines/stalls, fb terrain+craft+HUD sane, 33 game tasks/s. Rebuilt build/ smoke
+  lvl1 130 s clean, 29.8 tasks/s. -DROGUESQ_*_OPT=OFF restores -O0 for debugging. Not yet watched: UB-only divergence in
+  rare paths (signed overflow); if an -O2-only crash appears, try -fwrapv first.
+- **FIXED s6701: dd>=6.74 rendered the scene in a shrunken centre box ("dd8 hangar garbage").** Writer = our own s6031
+  far scaling (tools/apply_s6031_far.py): libultra guPerspective's u16 perspNorm = (u16)(131072/(near+far)) drops 2 -> 1 once
+  scaled far passes 65536-near (lvl5 far 9728: mf 6.734). Evidence: crossed arms (dd8 terrain + DD_FAR=6 full-screen; dd6
+  terrain + DD_FAR=8 boxed) and the a-priori threshold bracketed (DD_FAR 6.70 full / 6.78 boxed). Fix: scaled far capped at
+  65534-near ([pnormcap] log; ROGUESQ_DD_PNORM_CAP=0 = old). lvl5 dd8 fixed full-screen, =0 control boxed, dd4 full-screen.
+  Why perspNorm 1 shrinks x/y in the F5 ucode is not traced (single mechanism read). s6701 phase-2 table (lvl5, -O2,
+  STORE_DIAG=0, 300 s): dd4 30.3 tasks/s gfx 14.3 ms, dd6 31.7 / 10.5, dd8 (boxed, void) 30.6 / 7.4; all clean. Frame cost no
+  longer binds. Terrain extent binds: lvl5 is a 64x64 table and the clamped window peaks at 3904-3968 cells at dd4, dd6 and dd8
+  alike ([ddclamp]); tri p90 flat 573/576/575. Above dd4 no more terrain exists to draw on lvl1/lvl5.
+- **FIXED s6702: lvl1 dd8 crash at 219 s = s6569 malloc spill arena leak.** rs_free ignored spill pointers, so the 4 MB
+  bump (0x80800000) filled, rs_malloc returned NULL, instantiateNamedMeshInstance read NULL+0xA (SIGBUS 0x38000000a). Spill now
+  has a coalescing free list (rs64_s6569_isspill releases; ROGUESQ_SPILL_LEAK=1 = old). Same recipe 304 s clean, live spill flat
+  ~1.74 MB from 60 s (2.3 MB headroom). Same-binary leak control (s6703 fold, ROGUESQ_SPILL_LEAK=1): bump grew monotonically to 0x3FB380 (99.5% of 4 MB) by the end of a
+  303 s hold, vs fixed-arm max bump 0x1BB2C0. The leak reproduced but stopped 19 KB short of the NULL, so the crash did not. lvl10 dd8 s6701: 301 s clean.
+- **G1c phase 2 CLOSED s6703.** dd4 is the ceiling that adds terrain on lvl1/lvl5; dd8 is sane after s6701/s6702. Owner sheets
+  docs/img/g1c_phase2_dd_sheet_vi{3000,4500}.png (camera differs per cell), docs/DRAW-DISTANCE.md updated. Defaults stay retail.
+  FPS60 dd4 lvl5 (refold past the start pause): ~45 tasks/s, gfx ~16 ms -> not 60.
+- **s6713 G1e: fast RSP DMA (rs64_g1e_fast)** — word-wise swizzled memcpy in dma_rdram_to_dmem/dma_dmem_to_rdram + the
+  ~13 per-DMA diagnostic hooks skipped. Default ON iff no diagnostic env (any ROGUESQ_LOG_*, *WATCH*, ROGUESQ_S<digit>*,
+  hook vars); ROGUESQ_G1E_FAST=0/1 overrides, ROGUESQ_G1E_FAST_TOGGLE=<sec> same-run A/B. Same-run lvl5 FPS60 dd4 owner
+  stack: interpreter slope 258 -> 200 ns/RDP cmd, dense tasks ucode 11.83 -> 9.32 ms, dense tasks/s 46.3 -> 51.6; control =
+  sample(1) shows the hooks (~8.5% of the ucode subtree) in fast=0 windows only; 203 s, 0 stall/crash, frames sane both arms.
+  lvl1/lvl10 300 s qualification queued (s6713_fast_*). Soak recipes with LOG_* still run the old path unless they force it.
+- **s6714 G1e: RSP:: vector templates inlined into the gfx ucode TU** (CMake ROGUESQ_UCODE_INLINE_THRESHOLD, default 4000,
+  0 = old; `-mllvm -inline-threshold` on factor5_ucode_recompiled.c only, no lib/ edit). Out-of-line VMADN/VMADM/SDV/VMUDL
+  calls 336 -> 71. Interleaved ABAB lvl5 FPS60 dd4 (fast DMA on): 207.1 -> 185.3 ns/RDP cmd (-10.5%), dense ~10.3 -> ~8.9 ms;
+  sample(1) control: RSP:: self time (~11%) gone in B. s6713 fast DMA qualified lvl1 dd1 / lvl10 dd4 300 s clean. s6714 build
+  qualification soaks queued (s6714_inl_*). Remaining Gfx subtree: interp 61%, DPC bridge 31%, in-ucode probes ~4%.
+- **s6715 G1e: in-ucode probe calls gated (rs64_g1e_probes, fixup macro block).** Default off unless a ROGUESQ_LOG_*,
+  DLWALK or G3C_DMALOG env is set; ROGUESQ_G1E_PROBES=0/1, ROGUESQ_G1E_PROBES_TOGGLE=<sec>. Same-run lvl5 FPS60 dd4: dense
+  gfx task 9.48 -> 8.61 ms, 55.2 -> 57.1 tasks/s (slope 231 -> 202 ns/cmd, whole ucode). ROGUESQ_G1E_AQ=2 = per-task timing
+  only: the AQ=1 per-submit clock pair cost MORE than the bridge (s6714 sample: 185 vs 149 samples), so "bridge 31%" was half
+  instrument. Qualified s6715_pg lvl1 dd1 / lvl10 dd4 300 s clean.
+- **s6716 G1e dd4 CEILING (bridge is essential work).** xctrace Time Profiler, lvl5 FPS60 dd4 PROBES=0, 15 s dense flight,
+  lines via lldb (tools/xctrace_tp.py): Gfx thread 4259 samples = factor5_ucode self 76% (LLE interpreter) + bridge 18.4%.
+  Bridge split: async stream hand-off (submit_deferred_merged) 4.0%, wrap-flush commit 2.5%, s4272 shadow insert ~2%,
+  functional size-8 head (FULL_SYNC signal, PIPE gate) 1.9%; pure-trace size-8 tail (state shadows/combiner flags/tex16 log,
+  no return or submit) only 2.2% -> below the 3% bar, not trimmed. Remaining dd4 lever is the interpreter itself.
+- **s6705 G1e: ROGUESQ_RDP_ASYNC=1 (opt-in) runs RT64 RDP processing on a worker thread** (command words copied at submit,
+  drained before dp_complete/present). Same-run toggle, lvl5 FPS60 dd2: 11.70 -> 10.46 ms/task, 49.3 -> 54.9 tasks/s, 301 s
+  clean, frames sane (docs/img/g1e_s6705_async_sheet.png). Short of 60: only ~1.2 of the ~5 ms RT64 share overlaps. Default off.
+  s6706 split (same recipe, [g1e-aq], tools/g1e_aq.py): H-endload. The defer layer releases a task's RDP ranges only at ring laps
+  (unmerged, ~9.5k calls) and at ucode exit; that final ~120 kB commit is 3.4-3.5 of the worker's 4.2 ms and cannot overlap the
+  RSP. Producer copy/mutex adds ~0.9 ms. Net same-run gain 0.7 ms/task (s6705 measured 1.2).
+  **s6707 refines H-endload: the tail is a fixed ~3.3 ms, not bytes.** Streaming the deferred list every 16 kB
+  (ROGUESQ_RDP_STREAM_KB, default 16 with async; same-run ROGUESQ_RDP_STREAM_TOGGLE) shrank the last job 150 -> 7.7 kB and
+  RT64 calls 8.9k -> 0.6k per task, but last-job time stayed 3.26 -> 3.29 ms and drain 3.28 -> 3.33 ms (total 9.36 vs 9.13,
+  noise). So ~3.3 ms is spent in what the final range triggers (fullSync: flush/submitFramebufferPair/workload), not in
+  parsing. **s6708: fullSync = fb-pair render** (fsRender 3.0 of 3.2 ms: ~1.7 ms CPU encode, 1.3 ms GPU execute/wait;
+  flush/submitFb/upload ~0; tools/g1e_fs.py, segments sum to total). **ROGUESQ_RDP_NODRAIN=1** (with ROGUESQ_RDP_ASYNC=1)
+  skips the task-end drain so the next task's RSP overlaps it (present/sync submits still drain). Same-run lvl5 FPS60 dd2:
+  Gfx ms/task 10.18 sync / 8.88 drained / 4.54 no-drain, tasks/s 50.1 / 57.8 / 59.9, frames sane
+  (docs/img/g1e_s6708_nodrain_sheet.png). **s6709 qualified** (ASYNC=1 NODRAIN=1, FPS60, 300 s): lvl1 dd1 / lvl10 dd4 / lvl5 dd4
+  0 crash, 0 stall, frames sane; lvl1/lvl10 59.5 tasks/s; same-run lvl5 dd4 Gfx 9.56 -> 5.16 ms, 51.6 -> 55.9 tasks/s (p10
+  30 -> 42), worker keeps up (pend_jobs 2.0). In OWNER-OPT-INS (default off). Remaining dd4 gap is not the Gfx thread.
+  **s6710: the dd4 gap is the game's serial frame loop (H-serial).** [g1b-gt] (ROGUESQ_G1B=1: per guest thread CPU ms + ms
+  blocked in osRecvMesg; control: every slot's cpu+blk+rest ~1000 ms/s) + s4911 queue table (ROGUESQ_S4908=1), tools/g1e_gt.py.
+  Game thread = OSId 3 (slot 8), the only real guest CPU: 0.29-0.42 s/s, so not saturated (H-guest refuted as sole cause);
+  audio SP queue wait 0.01 ms (H-audio-rsp refuted). Its blocked time is submitGfxFrame waiting for its own just-kicked gfx
+  task (mq 0x8011A7E8, as=3 fast 151 / slow 345 ms/s) plus waitForPostSwapAck for the VI (0x80128CF0, 420-550 ms/s).
+  Per second, (cpu + gfx wait)/frame vs tasks/s r=-0.63 (139 s): <10 ms -> 55.7/s, 10-14 -> ~44, >18 -> 38.5. Two runs
+  (osid-keyed and slot-keyed builds) agree. The game itself has no CPU/RSP overlap, so 60 needs cpu+gfx per frame < ~10 ms.
+  **s6711 per-frame timeline (ROGUESQ_G1E_TL=<file>, tools/g1e_tl.py) refines this to H-rsp.** spTaskSchedulerThread
+  kicks the queued gfx task at VI+0.2 ms; the game's ~3.7 ms run overlaps it; the frame makes its VI iff the gfx task
+  (Gfx start -> RSP exit) is < ~14 ms: P(miss) 0.17 at 12-14 ms, 0.56 at 14-16, 0.88 above. Slow camera phase (~8 s
+  autopilot cycle facing dense dd4 terrain): 13.2 ms/task, 789 kB RDP out vs 4.6 ms / 267 kB fast; 17 us per kB in both.
+  Handoff latencies < 1 ms, guest run 3.7-5.5 ms (not the term). The s6710 "~10 ms" was a per-second blend (superseded).
+  **s6712 split of that task (ROGUESQ_G1E_AQ=1 -> [g1e-split] per s; `sample` profiles): H-interp.** Task cost is linear in
+  RDP commands (DPC_END bumps, up to ~50k/task dense): owner-play config (no recipe logging) ~0.6 ms + 257 ns/cmd interp side
+  + 55 ns/cmd bridge (half of that is the timer itself); commit ~0.01 ms. Recipe logging arm: same slope (328 vs 321 ns/cmd
+  pre-fix), so H-log refuted. Positive control: 2 us spin per submit in alternate 10 s windows lands in submit_ms (45k calls
+  -> +91 ms). Profile without instrument terms: LLE interpreter (factor5_ucode + RSP:: vector ops + byte-wise
+  dma_rdram_to_dmem) ~70%, bridge ~10%, in-ucode probes ~10%. Fixed: [m4-y8000] was default-ON (summary+fflush ~600/s,
+  2/3 of the log volume); now opt-in (ROGUESQ_LOG_M4_Y8000=1): dense task 11.98 -> 11.74 ms at ~35k cmds, log 104 -> 45 MB.
+- **G1f window fit: CLOSED s6717 (16:9 + fullscreen s6688, 21:9 + 4:3 s6717).** The window opens at the
+  ROGUESQ_ASPECT shape, sized to the desktop, high-DPI drawable (16:9 1360x764/2720x1528; 21:9 1360x594/2720x1188;
+  4:3 1062x796/2124x1592). lvl1 forced route mission_verified_130s, 0 crash, in every arm; flight fills the 16:9 and
+  21:9 windows edge to edge (tools/g1f_bar_score.py: bar 0-1 px, lit 0.995; HUD at the real edges,
+  scratch/s6717/a219/w120_*.png). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless fullscreen; ROGUESQ_FULLSCREEN=1
+  starts in it; ROGUESQ_ASPECT=auto takes display 0's aspect. Game width is fixed at boot (a resize letterboxes).
+  Datum: default 4:3 flight shows 85/1280 px side bars (512-wide VI mode), same with WINDOW_FIT=0, so pre-G1f;
+  retail hStart unchecked, single-source.
+- **FIXED s6722: G1d pause dim band.** The pause darkening is the game's own 2-tri camera-facing panel sized for the
+  4:3 frustum (runPauseMenuStateMachine object fp+0xC78), clipped to x 221..803 of 1024 at 21:9. rs64_g1d_pause_dim
+  (dpc_bridge) widens tris with its exact RDP signature by ROGUESQ_ASPECT_SCALE about the centre while the pause byte
+  is live; ROGUESQ_G1D_PAUSE_DIM=0 = old. Zap/half/off controls in-build; 21:9 2/2, 16:9 full, 4:3 untouched.
+- **FIXED s6723: pause dim intermittently not applied (race with the s4286 wrap restore).** The wrap-flush path ran
+  rs64_dpc_record_submit (s6720 title clear, s6722 dim rewrite) BEFORE copying the bump-time shadow over the range for
+  RT64, so any RDP rewrite in a wrap-restored range was discarded (b219: band back, 9x more restored words than a good run;
+  s6722 fixb219 too). record_submit now runs after the shadow copy; ROGUESQ_G1D_PREWRAP_RECORD=1 = old. Full dim 6/6 runs
+  on the new build vs 1/2 old. Applies to every RDP-rewrite hook (title clear, pause dim, spike cull, region/floor scans).
+- **FIXED s6731: G1d pause-menu Rebel logo torn at 16:9/21:9.** Same writer as s6730: the s6158 radar-region shift. The
+  radar is still stamped under the pause menu (same epoch), so pause-logo tris centred in the region (upper-right arm tip)
+  were drawn +dx px away as a separate shard. rs64_region_scan now also skips while the pause byte is set
+  (rs64_g1d_pause_live, s6721); [region-gate] logs paused=. ROGUESQ_G1D_PAUSE_ANCHOR=1 = old (also reverts the s6721
+  anchor). Evidence: pre-fix l169/l219 shard on every pause frame, 4:3 clean; fix f169/f219 gate off at the pause swap,
+  logo whole, in-flight radar shift unchanged before and after. s6733 closed the residual: the first unpaused swap of
+  the abort fly-out still draws the 4 pause-UI texrects (x 633..745) and they moved +256 for one frame; the shift now
+  stays off for ROGUESQ_G1D_PAUSE_HOLDOFF swaps (default 1, =0 = s6731) after the last paused swap. Same-build arms: fix
+  0 texrects shifted, control 4; radar-only swaps after it still shifted.
+  NOTE: s6727-s6730 runs did not actually pass ROGUESQ_LIVES_CAP (no [livescap] lines), so their "game-over" epoch 27
+  was the MISSION FAILED -> debrief path. The s6731 route (scratch/s6731/menus.sh, LIVES_CAP=1) reaches the real GAME
+  OVER -> Elite Rogues -> Select Game -> level/craft select -> flight; all screens correct at 4:3/16:9/21:9 (owner sheet
+  scratch/s6731/sheet_menus_owner.png).
+- **FIXED s6730: G1d 21:9 game-over entry sliver.** Writer = our s6158 radar-disc region shift (dpc_bridge
+  rs64_region_scan, ROGUESQ_SHIFT_REGION=256, region x 669..810 y 20..135 at w1024). Its "radar drawn within 8 swaps"
+  gate outlived flight, so for the first ~7 game-over swaps the backdrop texrects whose lower-right corner fell in the
+  region (tiles 6,7,14,15,22,23,30,31) were moved +256: RT64 received 896..960 and a 12-bit-wrapped 960..0, the
+  top-right block stayed undrawn (the bridge rect2 log runs BEFORE the shift, which is why s6728 saw identical rects).
+  The radar stamp now records the G1d VI epoch and the window ends at a mode change; same gate feeds the s6156 HUD
+  anchor (rs64_g1d_hud_flight). ROGUESQ_RADAR_GATE_EPOCH=0 = old. Same build, two arms: control reproduces (swaps
+  4505-4510 undrawn, RT64 rects at 896), fix clean from swap 2 of the epoch (first swap is a transitional fade in both);
+  in-flight shift gate stays on continuously in both arms; 4:3 game-over clean. Sheet: scratch/s6730/sheet_gameover_219.png.
+- **FIXED s6726: G1d game-over screen (21:9/16:9) + 4:3 debrief right-edge line.** Route: ROGUESQ_LIVES_CAP=1 (test-only
+  lever, main.cpp, [livescap] log) + the s6724 abort route (scratch/s6726/gameover.sh, HOLD_MS 250: at 600 the pause-menu
+  `down` auto-repeated into GAME SETTINGS) -> abort takes lives 1->0 -> GAME OVER banner, stats page, Elite Rogues, Select
+  Game. Game-over pillars: the s6724 crop dropped for the whole epoch on ONE stray outside draw (go219b: pink residue; logged
+  in go169: an 0x0D emblem tri x 445..777 at cw 796; stats-page slide texrects overhang the centre by 6 px). Now a latched
+  epoch keeps the crop unless outside > 2% of draws (flight/hangar/level select run 15-30% and never latch);
+  ROGUESQ_G1D_CROP_STRICT=1 = old rule. 16:9 go169 reproduced outside=1 and stayed cropped; 21:9 fin219 clean.
+  4:3 edge line: the game's scissor is xh 0x7FC (511.0, exclusive) on its 512 image, so column 511 is never drawn (RDRAM
+  dumps: col 511 differs from its neighbours in debrief AND flight frames); the debrief presents RDRAM, so the stale heap
+  bytes show (a CRT hides them in overscan; flight renders that column on the GPU, fading to black). rs64_g1d_edge_cols
+  (dpc_bridge, per VI epoch: cw - ceil(max scissor xh), 1..4) -> RT64 VI renderer trims cols+0.5 from the present (display
+  only); ROGUESQ_G1D_EDGE=0 = off. Edge col 1192 luma 216 -> 0 (edge43b vs go43). screenshots/s6726_*.png.
+- **FIXED s6725: G1d 21:9 level-select name clip.** Writer = our s6156 HUD anchor: the level select draws its title,
+  preview and level name on vp 0x800CDC80 (a flight-HUD list), so all moved -A (256 px at w1024; rects 64..419 vs
+  anchor-off 320..675, scissor full width). Anchor now applies only while renderRadarMinimap ran within 8 swaps
+  (rs64_g1d_hud_flight, tools/apply_s6725_hudflight.py); ROGUESQ_G1D_HUD_ANYWHERE=1 = old. Same-binary: fix centred at
+  21:9 and 16:9, control clipped; flight HUD still edge-anchored in both. screenshots/s6725_*.png.
+- **FIXED s6724: G1d debrief pillars (21:9 + 16:9).** The pillars held the game's own live debrief heap (s6723; retail
+  too, hidden by its full-width draw), so nothing may write RDRAM there. rs64_g1d_pillar_scan (dpc_bridge) counts, per
+  VI-mode epoch, draws on >512-wide images reaching outside the centre 512 (scissor-clipped); with >=64 draws and none
+  outside, the RT64 VI renderer crops the present to the centre (black bars, display only). Content-gated, so it covers
+  both debrief pages (MISSION FAILED is VI mode 0x80128E40, which a mode gate missed) and the title; flight/hangar
+  never crop. Same-binary control (ROGUESQ_G1D_DEBRIEF=0) shows residue; fix 0 luma at 21:9 and 16:9; 4:3 untouched.
+  4:3 right-edge column fixed s6726. screenshots/s6724_debrief_crop.png.
+- **FIXED s6721: G1d pause-menu text split at wide aspect.** Writer = our s6156 HUD anchor (vp 0x80138D20 also carries
+  the pause text; right-of-centre items got +fbw-512). Anchor-off arm centres it (flight HUD unanchored = live control).
+  Fix tools/apply_s6721_pausegate.py: anchor skipped while initHudStruct's pause byte (HUD+0x258) is set;
+  ROGUESQ_G1D_PAUSE_ANCHOR=1 = old. OPTIONS/PASSCODES already clean (title VI mode). screenshots/s6721_*.png.
+- **FIXED s6720: G1d wide-aspect title screen.** The game drew the title correctly (texrects centred at x 256..768 of
+  the 1024 image, [g1d-rect] log, ROGUESQ_LOG_G1D_RECT=1). Writer = the VI mode: the interlaced 512x448 title mode is
+  width 1024 (= two 512-px lines), xScale 0x333, field origins 1024/2048. Retail 4:3 uses the same values. Our s6113 hook
+  only widened width-512 modes, so at wide aspect the VI showed fb x 0..~512 stretched (black left half, still 2x in the
+  right half). Fix (src/main/upstream_compat.cpp): width 2*fbw, xScale and field origins *fbw/512. Pillar columns held
+  stale heap bytes and the sliding menu bar's trail (rects from x=172), so dpc_bridge rs64_g1d_title_clear zeroes each
+  wide colour image once and clamps the full-width scissor to the centre 512 columns while that mode is live.
+  ROGUESQ_G1D_TITLE_VI=0 = old path. screenshots/s6720_title_before_after.png; lvl1 21:9 route
+  mission_verified_130s, select and flight still fill the window.
+- **FIXED s6719: G1d boot LucasArts-logo intro drawn wrong at wide aspect.** The 3D LucasArts logo (carved from Hoth
+  terrain) renders in the 640x340 intro state. At 16:9/21:9 it was ~1.75x too wide and at 21:9 never formed face-on;
+  the camera ended on a smeared mountain. Writer = our own s6144 terrain-footprint x-scale (ROGUESQ_ASPECT_SCALE applied
+  in every video state); the s6104 guPerspective factor alone changed nothing (measured). Fix (tools/apply_s6144_fpx.py
+  apply9_s6719 + apply_s6031_far.py apply_s6719_persp640, vendored fixup): footprint and perspective factor = 1.0 when
+  the video-state width (0x8011A838) <= 640, intro_w/640 in the s6718-widened intro state; ROGUESQ_G1D_640PERSP=0 =
+  old path. Logo w/h: retail 1.23-1.25; 21:9 2.15->1.33; 16:9 2.17->1.14 (screenshots/s6719_*).
+- **FIXED s6718: G1d mission-intro pillarbox.** The 640x340 intro state was never widened (227 px/side bars at 21:9).
+  Now intro_w = fbw*3/4 (768 at 21:9) for pfm, video state, 640 VI mode, camera viewport and perspective
+  (tools/apply_s6031_far.py apply_s6718_intro0/4, upstream_compat osViSetMode, rt64 width allowlists);
+  ROGUESQ_G1D_INTRO=0 = old path. Bars 227 -> 0-1 px, lvl1 21:9/16:9 mission_verified_130s.
+- **CLOSED s6690: 21:9 forced-route hangar SIGBUS (0x7FFF0002).** Writer = our own
+  rs64_spike_scan (src/rsp/dpc_bridge.cpp), named by an lldb hardware watch on list word 0x800CC404
+  (positive control: 4 overlay-DMA hits from do_rom_read first). It masked submit addresses with
+  0x7FFFFC (8 MB); 21:9 runs ROGUESQ_OSMEM_MB=12, the RDP buffer at 0x892800 folded onto 0x092800
+  (hangar overlay code), and "bad" pseudo-triangles were culled in place (103 dwords -> old&0xFFFFC000).
+  The craft list zeroed -> idx 8 -> table read past end -> mallocVoiceLineStruct(0x7FFF0000).
+  Latent until the owner made CULL_SPIKE default-on (2026-10-31). Fix: kSubmitRamMask 0xFFFFFC +
+  hi<=16 MB bound in spike_scan and region_scan (the only two masked rdram WRITE sites; every other
+  0x7FFFFF mask in src/ and lib/rt64 is read/log-only). 21:9 lvl1 3/3 mission_verified_130s
+  (was 4/4 crash).
+- **s6689 heapslot (landed, wide only):** ensureHeapInitialized's gap path took the buffer at
+  801163E4 as heap; at wide aspect that is the live depth image, and RT64's depth write-back
+  overwrote the free header the game put there (writer named with ROGUESQ_FLOOR_WATCH). Wider than
+  4:3 the game now takes the retail gap==0 branch (heap [slot, slot+fbsize)). 16:9 lvl1 still
+  mission_verified_130s. Does not affect the 21:9 level-select tear (s6691 A/B, ROGUESQ_G1D_HEAPSLOT=0).
+- **FIXED s6694: G1d 21:9 level-select floor tear.** Writer = the game's own G_SETSCISSOR builder in
+  setupCameraMatrices: lrx = (int)(w*4) & 0xFFF at 0x80017370 (full-fb scissor from 0x8011A838, set
+  before the depth clear) and 0x80017814. The RDP field is 12-bit 10.2, so w=1024 gives 0x1000 -> 0:
+  zero-wide scissor, the 0..1023 x 0..339 depth-clear fill clipped to an empty rect, depth never cleared,
+  static floor fails the Z test in stripes. 16:9 (3184) fits. Fix: clamp lrx to 0xFFF (1023.75, the
+  hardware max) at both sites (apply_s6694_scissor; no-op at retail widths). Evidence: raw [scissor-raw] w1=00000550 -> 00FFF550; depth fb 00B56000
+  now h=340 lwt=Color diff=1 per frame like 16:9; select-frame vhf 19-26 -> 7.2-8.0; floor and ring
+  visible (screenshots/s6694_21x9_levelselect_before_after.png). Residual fixed s6695 (next bullet).
+- **FIXED s6695: 21:9 level-select right-edge residual = two of OUR host-side scanners.** (1) rs64_spike_scan
+  bounded x at 320+640=960 (320-wide viewport assumption) and zeroed every normal tri past x=960 at w1024
+  (1850 in one select run). It now tracks SET_COLOR_IMAGE width; images >640 wide get the guard from their own
+  edge, <=640 unchanged. (2) rs64_region_scan (s6159 radar-disc shift, box x669-810 y20-135, +256) shifted
+  scenery in every scene (doorway room at select, title texrects). It now shifts only within 8 swaps of
+  renderRadarMinimap (fixup tools/apply_s6695_radarmark.py; ROGUESQ_SHIFT_REGION_ANYWHERE=1 = old behaviour).
+  Select vhf 7.2-8 -> 5.4; flight radar still aligned (positive control), lvl1 21:9 mission_verified_130s.
+  screenshots/s6695_21x9_levelselect_before_after.png. Pre-existing: grey radar wedge left at x~690 in flight.
+- **G3c (owner visual report): engineering closed, owner judgement pending.**
+  (a) far-edge stair: no opt-in rougher than retail (s6449, s6544);
+  (b) spike wedges: H-hw-draws, angrylion lights the same 16/79 wedges
+  (s6454), `ROGUESQ_CULL_SPIKE` now DEFAULT ON per owner 2026-10-31 (=0 to disable); (c) turning shake: retail 30 fps
+  judder (s6455, s6458).
+- **G1e (frame rate), -O2 build (s6704):** FPS60 holds 60.0 fps at dd1 on lvl1/lvl5 (s6703); dd2 ~48-50, dd3 ~47, dd4
+  ~44. Two lines: per-second frame period tracks gfx task ms (r 0.91-0.98 within each run) and sample(1) shows the game
+  thread 5% busy vs the Gfx thread doing all the work. The gfx task (RSP LLE ~55%, RT64 submit ~46% inclusive, run
+  serially in send_dl before dp_complete) binds. RSP-hook/RT64-timer overhead refuted by a same-run toggle with a
+  positive control (<0.7 ms/task); the gate (rs64_rsp_hooks_on, ROGUESQ_RT64_PROFILE) is kept, default output unchanged.
+- **G1(c) framebuffer presence covered for levels 0..18.** Level 1 has a
+  retail flight match; the remaining evidence establishes content presence,
+  not retail equivalence. Saved level-0 port images are duplicate pixels
+  from one crop; its retail level identity is unresolved. Numeric rules,
+  near-misses and inspected sheets are retained in
+  [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md) and
+  [the s6667 migration](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
+  Classifier controls reject title/craft-select; phase ordinals alone do not
+  identify flight (levels 16–18 can remain phase 5). Objective(d) stays partial.
+
+- **G1(d) objective response (s6656-s6674): PARKED by owner 2026-10-31.** Levels 0-4 named counter responses observed
+  (single-flight each, no VERIFIED promotion). Headline bullets migrated verbatim to PROJECT-OVERVIEW
+  "Migrated from CURRENT-TRUTH (s6721)"; tables in docs/G1-OBJECTIVE-RESPONSE.md.
+
+
+### Superseded conclusions s6292-s6673 (verbatim, s6758)
+
+- s6673 first adapter treated wingman subtype “27” as decimal27. Believable
+  because the prior prose omitted its base; original checker uses0x27 and
+  loaded mission DAT reads39. Fixed before the interpreted flight.
+
+- s6664's missing counter40 target is not evidence of a broken spawn/hit
+  route. Its5400VI window looked sufficient when VI time was treated as
+  mission timer time. s6666 measures55.55 at that cutoff, then naturally
+  opens the gate at9839VI and joins an ordinary hit. This establishes a
+  duration boundary for the recipe, not a universal timer rate.
+- s6662 pointer-like census counts are not live-object counts (s6663 original free-slot writer retains pointers; live free-list walk finds up to235 such entries). Believable because the old census checked pointer shape without free-list membership. Its zero target result was already labelled inconclusive and remains so.
+- s6656/s6657 "level1 counter13 meaning unresolved" (s6659 original ELF identifies it in friendlies-saved subtraction and the >=5 Bit4 gate). Believable because historical activity logs supplied indices but no per-level semantics. Hit causality for counter13 remains unresolved; the corrected live flight changes only id10.
+- s5962 "lvl6 null is valid because hb ticks fires" (s6656: heartbeat controls execution, not detection of value changes; the monitor covers only ids 1–15 and has a run-lifetime budget). Believable because TELE and hook execution both fired, but no same-run changing-value control established sensitivity to every relevant objective slot.
+- s5995 "lvl7 id2 peak3 matches the objective threshold" (s6656: that threshold belongs to lv0; the lvl7 callback's inspected reads include ids 20/30/40/99, outside the monitor). Believable because all levels reuse the counter array; index meaning and thresholds are level-specific. Lvl7 end remains the lives-loss chain observed in both arms, not id2 causality.
+- s5994–s5995 "lvl8 counter6 resets during the measured response" (s6656: first explicit flight epoch contains only 0>1>2>3>4; 4>0 is later). Believable because the old parser pooled run-lifetime events including re-entry. The reset remains real, but is not part of the first-epoch response.
+- s6653 "level 18 has visual evidence but no numeric terrain acceptance" (s6654: the bounded bright low-chroma snow arm accepts both flight views while every control holds). Believable because their rel 0.046/0.068 is below the original 0.08 floor; that band remains unchanged.
+- s6651 "level 17 does not pass the frozen rule, and the grey trench box is not a sky arm" (s6652: neutral8 ≥ 0.80 inside luma [38, 55] with |channel means| ≤ 8 accepts n=2300, 1/10; canon_bad 0; mission 11/13; both title skies stay false; m3150 stays a sky miss at neutral8 0.613). Believable because dark ≥ 0.60, the blue arm, the orange arm and the tan-cloud arm all miss luma 42.5 with R−G 1.4, and the top 4% of that frame is the same grey, so lowering dark does not accept the chase.
+- s6649 method "the flight set is the phase-7 dumps" (s6650: level 16's flight dumps stay phase 5). Believable because levels 11-15 insert a 640-wide crawl that bumps `rs64_phase_ord` through 6 into 7. The ordinal bumps only on a VI-width change, so a 512-wide flight after a 512-wide hangar does not.
+- s6643 "level 10 is a flight and the frozen rule rejects the sky 0/12" (s6644: tan-cloud arm accepts 11/12; n=2900 stays a craft miss at edge 0.013; title sky stays false because G−B is ~5 while the clouds are ≥22; canon_bad 0; mission 11/13). Believable because dark≥0.60, the blue arm (R−G≤15) and the orange arm (R−G≥40) all miss a luma 73..104 sky with R−G 23..28.
+- s6640 "level 8 is a flight and no craft clause accepts it without breaking canon, so the rule stays 0/7" (s6641: lower-centre metal against a coloured neighbour, edge≥0.05, plus luma≥80 orange sky, accepts 6/7; n=2600 stays a side-view near-miss at edge 0.041; canon_bad 0; mission 11/13; title and craft-select still fail). Believable because the engine, bright-metal, reticle and median≥120 dark-hull arms all missed, and a raw grey fraction in the same box also matched the title.
+- s6636 "the orange flight sky is the luma≥140 sunset arm" (s6640: level 8's orange sky is luma 84.4..97.0, R−G 86.8..94.3, and that arm misses 7/7; s6641 lowered the floor to 80). Believable because the only orange flight measured before that capture was the level-4 sunset, which cleared 140. Level 4's own acceptance is unchanged.
+- s6635 "level 4 is a picture only; the class rule rejects it 0/7, and no sunset arm was shown to keep canon_bad at 0" (s6636: luma≥140 with R≥G+40 and R≥B+20, plus a dark hull against a bright chase band, accepts 6/7; n=2300 stays a terrain near-miss at rel 0.065; canon_bad 0; same-run title and hangar still fail). Believable because the s6634 sky clause had no orange arm and the center-box pink cap treated that sunset as an oversized engine.
+- s6634 "a flight sky is either dark (dark≥0.60) or bright with R≤G+15" (s6635: the level-4 sunset is bright, R−G about 48..67, and sky fails 7/7). Believable because the only flight skies measured before this capture were level 1's blue sky and level 3's night. The level-3 acceptance itself still holds.
+- s6633 "the level-3 night flight has no numeric acceptance that still rejects the floor and the title" (s6634: relative edge energy in [0.08, 0.33], plus a metal hull or green reticle, accepts 11/13 night dumps; floor rel 0.709 and title rel 0.410 fail). Believable because the only rule that had been run, luma stddev and engine colour, scored 0/13.
+- s6632 class rule "those four numeric cuts accept a frame that shows sky, terrain, craft and HUD" (s6633: the level-3 night flight shows all four and scores 0/13). Believable because level 1 and level 2 are bright scenes and both passed the same cuts.
+- s6632 "only a dump whose own origin field is 0x690400 is the mission picture" (same run: that origin is in the VI log, and every dump in the window is the other buffer 0x620400, which is the flight picture). Believable because the route key is 0x690400 and EVERY=50 phase-locked onto one of the two buffers.
+- s6631 first cut "any block with next > e4 is the tail, so walking until then caps the arena" (same session, did=3 at a header exactly equal to e4). Believable because s6630 described the free block as covering [e4, top) and the header as e4-0x10. The punch's reserved size ends on e4, so the free header is e4 and the old walker returned before cutting.
+- s6630's first classifier label "H-stale-target, because inflateEnd frees the zlib window before the depth upload" (same session, H-live-overlap). Believable because that free is real and precedes the read. It does not move `801163E4`, which still names `0x80B56000` at malloc, free, SETZIMG and the upload.
+- s6629 "why the zlib window overlaps the depth image is open" (s6630: the image was still reserved when `rs_malloc` returned inside it; s6631 then stopped that heap at the depth pointer). Believable because s6629 named only the store. At s6630 heap `8010FEFC` still ran through to RAM top; heap `8010FF18` already stopped at the depth pointer.
+- s6628 "writer between A/B unknown" is resolved at the watched word by s6629 exact pre/post stores and caller context: rs_zcalloc clears a zlib window there. The earlier witness lacked store hooks. s6630 resolves the ownership class; it does not make the whole stripe one 32 KB zero.
+- s6628 closes H-swap/H-alias for the measured upload (single-source): believable because the earlier native witness preceded byteswapping and did not record the live mapping. Post-swap and exit preserve `0x9EC4`, and both sites use the identical host address; the zero appears between them.
+- s6627 closes "the 1024x447 `copyToRAM` at `0x00B20000` writes the `0x0000` stripe" (it covers `0x00BB0020`). Believable because that span contains every stripe address and the same write's own image y=180 is rawBe 0. Refuted: the absolute sample is rawBe `0x9F4C` on all 935 covering writebacks, the call count does not move, and the upload still reads `0x0000`. The image-y zero is phys `0x00B7A020`.
+- s6626 closes "fbChangesDrawDepth, its boolean mask, or its viewport manufactures the 21:9 depth stripe from a clear or smooth guest field" (H-upload). Believable because the GPU image goes from a read-back clear of 1.0 to the stripe inside copyFromChanges, and a discard mask cannot paint 0 by itself. Refuted: the guest words already are the stripe and match the GPU on 142/142 samples (mae 0), shader endian, site state.cpp:2604.
+- s6625 "after the zero head, x=16 is a smooth 0.964..0.961 ramp and x=1007 stays 1.0". Believable because x=16 does contain 0.96408 and x=1007 has more exact-1 samples (31 vs 13). Both columns actually interleave ~0.96 and 1.0. The stable part is the exact-0 head.
+- s6625 closes "the 21:9 zeros are unwritten depth tiles (create-clear never applied, so a readback of 0)". Believable because Metal does not clear a D32 texture at creation, and a different 1024x480 target's first sample in the same run was exact 0. Refuted on the floor texture: clearDepthTarget read back 1.0 on both columns, and the following copyFromChanges replaced those pixels.
+- s6623 "shader-to-attachment MAE 37 at 21:9 means the first wrong stage is an attachment write after a sane shader" (s6624: the same shader color is stored at 16:9, where depth is 1.0 and LESS passes, and rejected at 21:9, where a nearer striped depth already occupies the columns). Believable because the UAV record is written before the depth test and matched the 16:9 attachment exactly.
+- s6614 lead "dtdx*x at the outer third diverges on 21:9" (s6615: dtdx shrinks by about 796/1024 and the texel matches to about 0.05). Believable because the sample x grows with the framebuffer and s6613 only cancelled that product at x=0.
+- s6612 "21:9 S at the left edge walks off the 64-wide mask while 16:9 stays inside" (s6613: 0/16 pairs do that; S at x=0 matches). Believable because the x span and dsdx scale with width. x_major moves the other way and the product cancels.
+- s6610 ring-only "second=fbw-512 fixes the 16:9 radar" (the ring reached the retail inset, but the wedge stayed at 769..792 with 0 pixels inside the ring). Believable because s6609's red-ring edge equalled retail+second. The disc is a separate pre-shift `ROGUESQ_SHIFT_REGION` writer; shift must be A, not RA.
+- s6602 "wide-only bottom garbage selects a stale/stride renderer family"
+  (s6607-s6608: diagnostic height exceeded the VI source; corrected bounded
+  dumps and OS window captures lack the tail). Believable because raw guest
+  PPMs looked like window captures. This does not close native geometry issues.
+- s6606 "the wide hangar band is already in source pixels" (s6607: source
+  fingerprint checks columns 269..335 in 336 rows; visible bottom garbage is
+  in a raw 448-row dump beyond that copy). Believable because the raw PPM
+  looked like window output and nonzero/transition counts appeared to confirm
+  it. The PPM header explicitly says rdram-readback-not-window; its fixed
+  height is not the actual VI source height. Actual window fidelity remains
+  open; the source-versus-presentation split was not closed.
+- (s6579) "dd4 bundle-only / dd4 holds without ROGUESQ_DD_UNSAFE ran at dd4" (superseded: they ran dd3). Believable because the knob was set to 4 and nothing warned except a "multiplier 3" log line, which looked like a display quirk; the s6446 cap in apply_s6036_dd.py:7 clamps silently otherwise.
+- s6576 "lvl1 ddclamp area saturates at level extent by dd6, not an engine table" (s6577: at dd6 the cell cap trims the window below the extent in ~55% of samples on lvl1/5/10; the earlier 4096 maximum was a single sample).
+- s6574 "dd12 holds clean": believable because the env var was 12 and the run was clean; overturned s6575 - the multiplier is clamped to 8, so it was dd8. Raising the clamp is not the next step; the 64-wide terrain table saturates first (single-source, one run's log).
+- (s6559, superseded s6560) "The ~600 chunk/frame loss comes from a head write the store hook cannot see (MEM_W grow hooks, fixup force-zero)." Believable because the hook showed no far/mid/null stores yet the list shrank. Refuted: tracked==actual head 199/199 with a firing positive control; the off-chain stores are in the hooked path, mislabelled 'splice'.
+
+One line each: claim (superseded by; why it was believable).
+
+- s6555/s6554 "chunks consumed by a runaway consumer / free path leaks" (s6556: pops==pushes per frame; chunks vanish without a pop).
+- s6554 "runaway consumer in traverseSceneGraphRecursive" (s6555: sibling loop visits 8-17 nodes/frame, 0 revisits at the fault frames; the fault stack merely passes through it).
+
+- s6553 "dd>1 NULL node = DL-chunk supply shortfall" (s6554: a 12x larger arena is consumed in ~24 frames; chunk-empty is the symptom of a runaway scene-graph walk).
+- s6550 "split POOLX=3 vs 4 for a threshold" (s6551: px2-4 all fault; the cap scaled with POOLX).
+- s6545 "cap0 vs inf undecided" / s6544 "pinned pose" sheet (s6546; s6544 pinned only the stair-metric window, not the camera).
+- s6539 cap ordering 0<40<120<inf for terrain (s6541 retracted as run-to-run scatter; 4-10 frames/arm looked monotonic).
+- s6542 cap0 dearer than cap120 (s6543: post-inf hysteresis; rotation order confounded it).
+- s6540 "default path differs from explicit cap120" (s6541 H-noise; single runs differed).
+- s6537 "a cell cap keeps most of the gain cheaply" (s6543: gain is all-or-nothing; cap arms were cross-run).
+- s6525 dd4-rejected cells have sentinel recs -2 (s6526 raw dump: normal recs; the joined log read unpopulated bytes).
+- s6520 span bytes 0x80 "never written" (s6521: clamp/clear values; 0x80 resembled an init fill).
+- s6516 dd4 EMPTY reads another table (s6517: sampling-phase confound; dump rows covered different key ranges).
+- s6509 DC0 writes outside a 24-byte span table (s6510/s6511: it is a 64x64 grid; only 24 bytes were dumped).
+- s6502 thread-local / s6500-s6505 cumulative writer joins (s6505/s6506: cross-function shared counter; guest IDs matched).
+- s6495 all-127 table = rasterizer produced no rows (s6514; snapshot is taken after the filter's own 0x7F stamp).
+- s6491 cell list never empty (s6492: read stale r16; head is v0).
+- s6488/s6489 low-vs-high-ground tri split (suspect: tool hardcodes non-flight fbs).
+- s6472 fixed 64x64 grid tables limit dd3 (s6473 offline: window is post-clamp, kept<cap).
+- s6470/s6471 "game submits shorter DL at dd3" break point (explained by the span-filter chain; pinned vs unpinned recipes disagreed).
+- s6466 dd8 att1 "route failure" (real SIGBUS; soak summary alone mislabelled it).
+- s6446: s6420 "dd3+fix lvl1/5/10 clean" holds were dd2 (run.log said `capped to 2`).
+- s6414 durable constraint "dd>2 exhausts the DL chunk supply" ([dlpool] identical across arms; H-chunk refuted).
+- s6407 ~5% HUD-absent at dd3/dd4 (s6409: scorer counted menu frames).
+- s6399 aspect side-edge lean (s6401 withdrawn: outer-column scalars are noise).
+- s6393/s6391 fixed wide-flight origin gate (origin is allocator-dependent).
+- s6380 zero-FD57 interpretation (s6380long route audit: retry arm took a different route).
+- s6292 FPS60 owns the turning shake (s6455: VI wall-stamp artifact).
+- s6426 menu garble = wide-FB stride defect (s6427: 640-wide cam scaling).
+- s6434 hangar only ~340/448 rows (s6438: 436-448 lit; dumps misread).
+
+### Next steps as of s6758 (verbatim)
+
+
+- **Owner 2026-10-31:** spike cull default ON (also fixed: it only ran with LOG_SPIKE).
+  G1(d) objective qualification PARKED (owner playtest). G1f window/fullscreen
+  CLOSED s6717; G3d turning shake closed s6697 (s6696 fps fix). Spec: ITERATION.md item 3c.
+1. **G1d close-out** (menu sweep done s6731, every screen at 4:3/16:9/21:9 on scratch/s6731/sheet_menus_owner.png,
+   awaiting owner judgement). Abort fly-out region shift fixed s6733 (1-swap pause hold-off). (s6732: the mission-start
+   dark frame with thin edge lines also occurs at 4:3 = the game's intro-mode swap of the new flight buffer during the
+   load, not G1d; s6734: the lines are RT64/present-path, NOT retail: the shown VI buffer 0x690000 is all-zero in RDRAM (FB_DUMP_MODE=0x80128C90 dump, same-run window captures show the lines) and the vertical line sits in the pillar bar where no VI scan reaches; follow-mode 3 presented the last-drawn hangar target 0x62B800 w=640 instead. s6735 FIXED the horizontal line: mode 3 now yields to the VI buffer when the drawn target is idle >=8 presents and the VI origin is not within 16 rows of it (ROGUESQ_VI_FOLLOW_STALE=N, =0 old); 3/3 ctl vs 0/2 fix, boot screens unchanged. s6736 FIXED the right-edge vertical line: it is NOT a stale presenter column but source column cw-1, which only the game's fill-mode sky clear reaches (no triangle/rect content ever covers it: [g1d-reach] max x1 = cw-1.00 exclusive, on briefing cw 640 and flight cw 512). It also showed as a 1 px sky-blue right edge in briefing and 4:3 flight. The s6726 edge trim now keys on content reach and carries across epochs (ROGUESQ_G1D_EDGE_CONTENT, =0 old): sky column 0/440 fix vs 293/430 ctl frames, load line 0/5 vs 2/5. Sheet scratch/s6736/sheet_edge_owner.png. s6737 audited the other three borders with the same reach table ([g1d-reach] min x0 / content y range): column 0 and row 0 are always reached, and the content bottom (447/339 exclusive) lies past the last displayed row (VI 512x444 / 336-row screens), so the edge class is CLOSED; only the right column was clear-only.) Open single-source (s6719): why a wider terrain footprint changes the
+   LucasArts logo shape. Recipe: scratch/s6731/menus.sh <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>".
+   Then G3 render fidelity.
+2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
+   PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
+3. **Owner visual judgement and parked boundaries.** G3c sheets and optional
+   spike cull await owner judgement; keep retail defaults. Native hangar
+   geometry, rare dd4/dd8 gfx SIGBUS remain parked (dd8 hangar garbage = s6701 perspNorm box, fixed),
+   single-source where unresolved. Reopen on a new owner report or relevant
+   side-effect failure, not repeat crash-hunt holds. Historical proposed probes
+   are archived in PROJECT-OVERVIEW, not an alternate live backlog.
+4. **Then G3 render fidelity (NEXT: g3-hangar-oracle-diff).** s6738 boot cinematic, s6739 Tatooine attract flight and
+   s6740 cinematic replay are H-match; the green offset is the P3 capture tag (s6740). s6741 hangar (4:3 retail settings) H-match.
+   s6742 the 640 phase after the hangar = opening crawl, H-match. s6743 mission-intro cinematic, H-match. s6744 first
+   ~15 s of lvl1 flight with HUD, H-match; brightness gain = decode convention (--dec shift). s6745 flight
+   +20..60 s with no input H-match, no desync. s6746 B/Z fire (`a` = throttle): bolts H-match by population rate/hue
+   (tools/g3_effect_count.py). s6747 impact puffs/explosions H-match by the same population method (--class orange).
+   s6748 mission 2 (Barkhesh, green hills) flight + bolts H-match (tools/g3_eep_patch.py selects the mission on a signed save).
+   s6749 mission-2 intro: +3.7 s retail = black load lead-in (H-load), content H-match. Open minor: port update_screen
+   61-62/s vs retail 60 VI/s. s6750 mission 3 early flight H-match, then combat desync at the first player hit (RNG
+   history is one term). s6751-s6752: rand identical for 12 frames; the NPC gate lag = variable dt (retail 3-VI frame drops, port flat
+   2 VI); s6753 dt-pinned arms identical for 283 ticks = lvl3 desync CLOSED as pacing. s6754 mission 4 dt-pinned: sim exact 2301 ticks,
+   frames H-match; s6755 the late event = song end on the audio clock; lvl4 CLOSED as pacing after fixing duplicate VI
+   edges (VI thread now exactly 60/s). s6756-s6758 missions 5-7 dt-pinned H-match. Next (g3-mission8-pinned): mission 8 the same way (after the s6759 maintenance compaction). G2/G5 are closed; G4 and aim/steer stay
+   parked. No backlog-exhausted block.
+

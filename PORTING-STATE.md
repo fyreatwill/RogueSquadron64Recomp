@@ -177810,3 +177810,13 @@ Rules out: a port sim defect on lvl7 within the first 721 flight ticks. Not cove
 audio-clock offset desyncs the arms; same limit as lvl4).
 Next: CURRENT-TRUTH is now 60.4 KB, so the next iteration is a Step-0 maintenance compaction; then mission 8
 (g3-mission8-pinned).
+
+## Session 6759 (2026-11-01) — maintenance: CURRENT-TRUTH compacted 60.4 KB / 524 lines -> 11.8 KB / 153 lines
+
+Step 0 triggered (60413 bytes > 60000). No experiments. Moved verbatim to PROJECT-OVERVIEW "Migrated from
+CURRENT-TRUTH (s6759 maintenance)": the s6689-s6758 headline bullets (G1d/G1e/G1f fixes, G3 oracle matches,
+dt-pinned missions 3-7), superseded entries s6292-s6673, and the s6758 Next-steps list. New headline is a
+one-screen summary per thread (G3 render match, G3 dt-pinned determinism, s6738/s6739/s6755 fixes, G1e, G1c,
+G1d/G1f, G3c, G1, closed milestones). Superseded entries s6631-s6755 kept in place. Next steps renumbered into one
+monotonic list 1-4 with mission 8 dt-pinned first (g3-mission8-pinned, unchanged from s6758 NEXT.md). Soak queue:
+no new verdicts since 20261031-230356.
