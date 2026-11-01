@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6733 (2026-11-01).
+Compact operational handoff, as of Session 6734 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -414,7 +414,7 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 1. **G1d close-out** (menu sweep done s6731, every screen at 4:3/16:9/21:9 on scratch/s6731/sheet_menus_owner.png,
    awaiting owner judgement). Abort fly-out region shift fixed s6733 (1-swap pause hold-off). (s6732: the mission-start
    dark frame with thin edge lines also occurs at 4:3 = the game's intro-mode swap of the new flight buffer during the
-   load, not G1d; whether the lines are RT64 or retail is a G3 item, see s6732 entry for the RDRAM-dump discriminator.) Open single-source (s6719): why a wider terrain footprint changes the
+   load, not G1d; s6734: the lines are RT64/present-path, NOT retail: the shown VI buffer 0x690000 is all-zero in RDRAM (FB_DUMP_MODE=0x80128C90 dump, same-run window captures show the lines) and the vertical line sits in the pillar bar where no VI scan reaches; follow-mode 3 presented the last-drawn hangar target 0x62B800 w=640 instead. Fix = G3 unit in NEXT.md.) Open single-source (s6719): why a wider terrain footprint changes the
    LucasArts logo shape. Recipe: scratch/s6731/menus.sh <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>".
    Then G3 render fidelity.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See

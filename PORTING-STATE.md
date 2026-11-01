@@ -177036,3 +177036,30 @@ flight, where the shift came on as before (fix 10078 tri / ctl 9840 tri, 0 texre
 Rules out: any other in-region element moved by the shift on the lvl1 route (0 texrects in ~20k flight hits per run).
 Not checked: other levels' radar may carry texrects in the region (lvl1 only).
 Summary: this refutes H-benign and H-latch, selects the 1-swap pause-UI lag as the root cause, and closes the G1d fly-out residual. Next discriminator (G3): RDRAM dump of the mission-start intro-mode swap (scratch/agent/NEXT.md).
+
+## Session 6734 (2026-11-01) — G3 mission-start load-frame edge lines are RT64 present-path (follow-mode 3 shows the last-drawn hangar target), not guest RDRAM: H-rt64 selected, H-rdram refuted
+
+What ran: scratch/s6734/dense.sh (s6733 dense recipe, 4:3, no ROGUESQ_ASPECT, ROGUESQ_LIVES_CAP=1). First run i43 with
+ROGUESQ_FB_DUMP_EPOCH=42 dumped nothing, for two reasons: m6_god_common.sh's COMMON re-sets ROGUESQ_FB_DUMP_DIR=$OUT/fbd
+after XENV (dumps land in scratch/agent/m6/<tag>/fbd, not the XENV dir), and the 0x80128C90 load swap's epoch drifts
+run to run (s6732 42; i43's mode sequence puts it one later), so the EPOCH key missed it.
+Instrument change (src/main/upstream_compat.cpp): ROGUESQ_FB_DUMP_MODE=<mode_ptr hex> keys the per-swap dump on the last
+osViSetMode mode_ptr (new rs64_last_vi_mode), from swap ROGUESQ_FB_DUMP_MIN_SWAP on, sharing the EPOCH_N cap.
+Run m43: FB_DUMP_MODE=0x80128C90 MIN_SWAP=9000 N=40 -> exactly one dump, fb_0009348_w640.ppm = swap #9348, fb 0x80690000
+(the freshly allocated 512x448 flight buffer, pfm a2=512 a3=448 just before), 640x336 RGBA16, reached flight
+(mission_verified_130s).
+Positive control (same run): window captures w255_62..w256_66 show the vertical line (x 1278, y 410..818), w256_67..69 the
+horizontal line (x 86..1192, y 736..738), identical to s6732 d43 (scratch/s6732/dark.py).
+Result: the RDRAM dump is 215040/215040 pixels (0,0,0): no line in the right column, last row, or col 511
+(scratch/s6734/ppm_lines.py). Second line: the vertical line at window x=1278 lies inside the right pillar bar (4:3 content
+x 86..1192), where a VI scan of guest RDRAM cannot put a pixel. Third (mechanism): at the same swap the present path logged
+`[vi-follow-draw mode=3] viAddr=0x00690000 viW=512 -> last drawn 0x0062B800 w=640` and `[pe gate] forceAdv=1 addr=0x690000
+drawn=0x62B800`: follow-mode 3 (lib/rt64/src/hle/rt64_present_queue.cpp ~L319) presents whichever target last received
+geometry, here the 640-wide faded hangar target, through the 512-wide VI, instead of VI's undrawn black buffer.
+Verdict: H-rt64 selected (present-path artifact of our follow-mode 3 substitution), H-rdram (retail shows it) refuted.
+A retail N64 would show a black frame for the ~1 s load. Not traced (single-source): which RT64 sampling step draws the
+target edges as light lines (likely the 640-wide target's undrawn border sampled under the 512-wide VI rect).
+Rules out: the game/RDP drawing the lines; G1d machinery (s6732).
+Summary: this selects H-rt64 and refutes H-rdram. Next: gate follow-mode 3 so a VI pointing at an unrelated, never-drawn
+buffer presents that buffer (black) instead of the stale last-drawn target, without breaking the 1024-phase case
+(VI 0x790400 w=1024 vs drawn 0x790000 w=512, which mode 3 exists for).

@@ -1,16 +1,16 @@
-# NEXT: G3 -- mission-start intro-mode swap edge lines: guest RDRAM (retail) or RT64 render-target edge?
+# NEXT: G3 -- fix the mission-start load-frame edge lines (follow-mode 3 presents a stale target)
 HYPOTHESIS-ID: g3-intro-swap-edge-lines
 
-G1d is closed pending owner judgement (s6733 fixed the last residual, the abort fly-out pause-texrect shift).
-s6732: during the hangar->mission load the shown frame is ONE swapBufferWithViMode through the intro mode 0x80128C90
-of a freshly allocated flight buffer; it carries thin light lines on the intro region's right edge and bottom line,
-at 4:3 too (so not G1d).
-Hypotheses: H-rdram (the lines are in guest RDRAM, i.e. the game/RDP drew them; retail shows them too),
-H-rt64 (RDRAM is clean/black at those pixels; RT64 samples or presents the intro render-target edge = RT64 artifact).
-Discriminator, one run at 4:3 (no ASPECT): scratch/s6733/dense.sh i43 none "ROGUESQ_LIVES_CAP=1
-ROGUESQ_FB_DUMP_DIR=<abs>/scratch/s6733/i43/fbd ROGUESQ_FB_DUMP_EPOCH=<intro epoch> ROGUESQ_FB_DUMP_EPOCH_N=40 ROGUESQ_FB_DUMP_VI=1"
-(intro epoch: the one following the E40 epoch, ~42/43; find it first from [g1d-*] epoch lines in
-scratch/agent/m6/g1_lvl1s6732_d43/run.log at the [fbw] pfm a2=512 point). Positive control: the window captures of the
-same run must show the line (s6732 d43 w255..w256 did). Then scan the RDRAM ppm for the line pixels (x=content right
-edge, y=340 row): present -> H-rdram (retail; close as not-ours unless the owner objects); absent -> H-rt64 (find
-the RT64 path that presents the intro-mode swap; fix or clear the target edge).
+s6734: during the hangar->mission load the VI shows 0x80690000 (fresh 512x448 flight buffer, all-zero in RDRAM), but
+follow-mode 3 (lib/rt64/src/hle/rt64_present_queue.cpp ~L319) presents the last-drawn target 0x62B800 w=640 (faded
+hangar) -> thin light edge lines for ~1 s. Retail would show black.
+Change (one build, env-gated so both arms run on one binary): in mode 3, if viAddr is NOT within the last-drawn target's
+span [drawn, drawn + drawnW*h*bpp) and fbManager.find(viAddr)==nullptr (VI buffer never drawn), do not override: let the
+RDRAM path present VI's buffer. Knob ROGUESQ_VI_FOLLOW_STALE=1 (new rule, default) / =0 (old). Must keep the 1024 phase
+(VI origin 0x790400 inside drawn 0x790000 span) and every title/hangar/flight screen unchanged.
+Arms: scratch/s6734/dense.sh fix43 none "ROGUESQ_LIVES_CAP=1" and ctl43 with ROGUESQ_VI_FOLLOW_STALE=0, run back to back.
+Measure: scratch/s6732/dark.py on both capture dirs (fix: dark load frame with bright 0; ctl: the 205/1107-px lines),
+plus a 1024-phase / title / hangar / flight window check (captures t=236.. in the recipe cover hangar+load+flight; also
+check a boot capture of the attract 1024 phase). lib/ edit -> ./submodule-patches/export.sh + commit same iteration.
+Outcomes: fix dark+clean & screens unchanged -> land; lines persist -> the substitution comes from another path (pe gate
+forceAdv in rt64_state.cpp ~L3824), trace that; any screen goes black -> rule too broad, narrow by drawnChg/age.

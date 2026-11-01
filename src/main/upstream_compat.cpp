@@ -46,7 +46,7 @@ extern "C" uint32_t g_s6491[4]; // s6491 terrain-grid call/list/chain counters
 extern "C" uint32_t g_s6489[8]; // s6489 cumulative cell-gate exit counters (patched funcs_10.c)
 extern "C" uint32_t rs64_phase_ord(void);
 // s6718 G1d: widened 640x340 mission-intro width (0 = off) and "live video state is the 640x340 intro"; set by fixup patches.
-extern "C" { int rs64_g1d_intro_w = 0; int rs64_g1d_vs_intro = 0; int rs64_g1d_title_vi = 0; int rs64_g1d_vi_epoch = 0; }  // s6720: title_vi = wide title mode live
+extern "C" { int rs64_g1d_intro_w = 0; int rs64_g1d_vs_intro = 0; int rs64_g1d_title_vi = 0; int rs64_g1d_vi_epoch = 0; uint32_t rs64_last_vi_mode = 0; }  // s6720: title_vi = wide title mode live
 extern "C" volatile int g_rs64_dd_blk; // s6583: dd toggle state, tagged on [fbdump]
 extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
                                              uint32_t phys,
@@ -598,8 +598,15 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     // instead of the n % EVERY cadence: catches 1-swap transients such as the game-over backdrop's tile-by-tile entry.
     static const int s_fbd_epoch = [] { const char* e = std::getenv("ROGUESQ_FB_DUMP_EPOCH"); return (e && *e) ? std::atoi(e) : -1; }();
     static int s_fbd_epoch_left = [] { const char* e = std::getenv("ROGUESQ_FB_DUMP_EPOCH_N"); return (e && *e) ? std::atoi(e) : 160; }();
-    const bool epoch_hit = s_fbd_epoch >= 0 && __atomic_load_n(&rs64_g1d_vi_epoch, __ATOMIC_RELAXED) == s_fbd_epoch && s_fbd_epoch_left > 0;
-    if (s_fbd && *s_fbd && phase_ok && (s_fbd_epoch >= 0 ? epoch_hit : (phase_gate || n % s_fbd_every == 0))) {
+    // s6734 G3: ROGUESQ_FB_DUMP_MODE=<mode_ptr hex> instead keys the epoch dump on the last osViSetMode mode_ptr (epoch numbers
+    // drift run to run: the mission-start 0x80128C90 load swap was epoch 42 in one run, 43 in the next), from swap
+    // ROGUESQ_FB_DUMP_MIN_SWAP on (default 0). Shares the EPOCH_N cap.
+    static const uint32_t s_fbd_mode = [] { const char* e = std::getenv("ROGUESQ_FB_DUMP_MODE"); return (e && *e) ? (uint32_t)strtoul(e, nullptr, 16) : 0u; }();
+    static const int s_fbd_min_swap = [] { const char* e = std::getenv("ROGUESQ_FB_DUMP_MIN_SWAP"); return (e && *e) ? std::atoi(e) : 0; }();
+    const bool epoch_hit = s_fbd_mode
+        ? (__atomic_load_n(&rs64_last_vi_mode, __ATOMIC_RELAXED) == s_fbd_mode && n >= s_fbd_min_swap && s_fbd_epoch_left > 0)
+        : (s_fbd_epoch >= 0 && __atomic_load_n(&rs64_g1d_vi_epoch, __ATOMIC_RELAXED) == s_fbd_epoch && s_fbd_epoch_left > 0);
+    if (s_fbd && *s_fbd && phase_ok && ((s_fbd_epoch >= 0 || s_fbd_mode) ? epoch_hit : (phase_gate || n % s_fbd_every == 0))) {
         if (phase_gate) --s_fbd_phase_left;
         if (epoch_hit) --s_fbd_epoch_left;
         [&] {
@@ -779,6 +786,7 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
     {   // s6724 G1d: a new VI mode starts a new pillar-draw epoch (dpc_bridge rs64_g1d_pillar_scan).
         static uint32_t s_last_mode = 0;
         if (mode_ptr != s_last_mode) { s_last_mode = mode_ptr; __atomic_add_fetch(&rs64_g1d_vi_epoch, 1, __ATOMIC_RELAXED); }
+        __atomic_store_n(&rs64_last_vi_mode, mode_ptr, __ATOMIC_RELAXED);  // s6734: FB_DUMP_MODE trigger
     }
     uint32_t rdram_off = mode_ptr & 0x00FFFFFF;
     auto read_u32 = [&](uint32_t off) -> uint32_t {
