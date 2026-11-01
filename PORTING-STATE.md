@@ -176426,7 +176426,9 @@ Slope -12.6%, dense -9.2% at slightly MORE calls. Control: same binary, same run
 difference appears only with the flag (positive control = the toggle itself moving the slope). Frames: fbd every 600 VIs
 non-blank (asteroid field, mean 16-37, sd 21-42) across both arms. Note AQ=2 slopes are whole-ucode (bridge included) and
 not comparable to the AQ=1 rest-only slopes of s6713/s6714.
-Discrimination: H-probes selected (>=5% bar, land; owner play already has no LOG_ env so it gets probes=0 by default).
+Discrimination: this selects H-probes (same-run -9.2% dense, >=5% bar) and refutes H-floor as stated in s6714 (the
+interpreter was not at its floor; 0.9 ms/task came off). Next discriminator: xctrace line-level self time in
+rsp_dpc_submit_impl, splitting H-bridge-diag vs H-bridge-essential (NEXT.md). Landed (>=5% bar; owner play already has no LOG_ env so it gets probes=0 by default).
 H-bridge undecided: xctrace attach for line-level bridge attribution failed (`xctrace requires Xcode` - needs
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer); next unit.
 Not a mitigation (performance; no ORIGIN needed). Queued: s6715_pg_lvl1_dd1, s6715_pg_lvl10_dd4 (PROBES=0 forced, 300 s).
