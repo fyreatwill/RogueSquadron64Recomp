@@ -4898,9 +4898,13 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
     // through the doorway, leaving a hole) and title texrects. Shift only while the flight radar is drawn;
     // =0 on ROGUESQ_SHIFT_REGION_ANYWHERE restores the ungated s6158 behaviour. Logging is unchanged.
     static const bool anywhere = [] { const char *e = std::getenv("ROGUESQ_SHIFT_REGION_ANYWHERE"); return e && *e && *e != '0'; }();
-    const bool radar = anywhere || rs64_radar_recent(sw);
+    // s6731: the radar is still stamped under the pause menu, so at 16:9/21:9 the pause Rebel logo's upper-right arm
+    // tip (tris centred in the region) was torn off and drawn +dx px away. Skip the shift while the pause byte is set,
+    // like the s6721 HUD anchor; ROGUESQ_G1D_PAUSE_ANCHOR=1 restores both old behaviours.
+    const bool paused = rs64_g1d_pause_live() != 0;
+    const bool radar = anywhere || (rs64_radar_recent(sw) && !paused);
     static int s_radar_prev = -1;
-    if (shiftOn && (int)radar != s_radar_prev) { fprintf(stderr, "[region-gate] swap=%d radar=%d shift=%s\n", sw, (int)radar, radar ? "on" : "off"); fflush(stderr); s_radar_prev = (int)radar; }
+    if (shiftOn && (int)radar != s_radar_prev) { fprintf(stderr, "[region-gate] swap=%d radar=%d paused=%d shift=%s\n", sw, (int)radar, (int)paused, radar ? "on" : "off"); fflush(stderr); s_radar_prev = (int)radar; }
     auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
     auto wr = [&](uint32_t a, uint32_t v) { memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &v, 4); };
     auto sx14 = [](uint32_t v) { return (double)(((int32_t)(v << 18)) >> 18) / 4.0; };

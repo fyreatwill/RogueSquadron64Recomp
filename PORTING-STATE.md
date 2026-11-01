@@ -176956,3 +176956,36 @@ ORIGIN: writer = rs64_region_scan's texrect x rewrite (s6158 radar-disc shift), 
 Verdict: selects H-region-shift (bridge rewrite after the log point, fixed); refutes H-rt-resize / H-rt-pair /
 H-rt-clear / H-rt64-target. Next discriminator: per-screen window captures at 16:9/21:9 vs 4:3 for Elite Rogues and
 Select Game, with [rtrdp] vs bridge rect positions for any misplaced item.
+
+## Session 6731 (2026-11-01) — G1d menu sweep: real GAME OVER -> Elite Rogues -> Select Game route at 4:3/16:9/21:9; pause-menu Rebel logo torn at wide aspects by the s6158 radar-region shift, fixed (pause-gated)
+
+**Question (NEXT g1d-menu-sweep).** Do the remaining post-game-over screens (Elite Rogues, Select Game) and every other menu
+look right at 16:9/21:9 vs 4:3: H-ok, H-anchor (s6156 anchor / s6158 region shift misplaces items), H-pillar (stale RDRAM
+in pillars)?
+**Boring thing first.** scratch/s6730/gameover.sh never set ROGUESQ_LIVES_CAP: s6730 run.logs have no [livescap] lines and
+the window caps show MISSION FAILED -> debrief -> level select. So s6727-s6730's "game-over" epoch was the mission-failed
+entry. New route scratch/s6731/menus.sh = s6730 route + HOLD 300, captures to t=290, extra keys 195..270; pass
+"ROGUESQ_LIVES_CAP=1". Positive control: [livescap] read=3 now=1 (4 lines/run), screens GAME OVER -> Elite Rogues ->
+Select Game -> Select Level -> Available Craft -> Select Your Craft -> hangar launch -> flight, all three aspects.
+**Runs** (one at a time, all mission_verified_130s, 0 CRASH): l43 (4:3), l169, l219 (pre-fix build); f169, f219 (fix);
+c169 (fix build + ROGUESQ_G1D_PAUSE_ANCHOR=1 control). Sheets: scratch/s6731/sheet.py, owner sheet
+scratch/s6731/sheet_menus_owner.png (rows = 10 screens, cols = 4:3/16:9/21:9).
+**Results.**
+- Elite Rogues, Select Game, game-over stats, level/craft select: H-ok at all aspects (pillarboxed/centred, no residue;
+  16:9 content x 488..2232 identical in l169 and f169).
+- Pause menu + abort confirm at 16:9/21:9 (l169/l219, every pause frame): the Rebel logo's upper-right arm tip is cut
+  off and drawn as a separate shard further right; 4:3 whole. [region-gate] in l169 stays radar=1 from swap 2970 to 4510,
+  spanning the whole pause: renderRadarMinimap still stamps under the pause menu (same VI epoch), so the s6730 epoch gate
+  does not end it. Region log (cap raised to 200000): ~3600 TRI hits in the pause swaps in both arms.
+- Fix (src/rsp/dpc_bridge.cpp rs64_region_scan): shift also requires !rs64_g1d_pause_live() (the s6721 pause byte).
+  f169/f219: [region-gate] radar=0 paused=1 at the pause swap (3902/3885), logo whole, MISSION GOALS text centred;
+  in-flight radar disc still shifted to the top-right corner before and after (positive control for "shift still on in
+  flight"). c169 (ROGUESQ_G1D_PAUSE_ANCHOR=1) shows the shard again (that flag also reverts the s6721 text anchor, so the
+  clean single-variable control is l169: same route, only the gate differs).
+- Residual: after abort the pause byte clears ~5 swaps before the epoch changes (f169 4510..4515 radar=1 paused=0), so the
+  fly-out logo is shifted for ~0.1 s; not seen in captures. One dark frame with a thin outline box at the mission-start
+  transition at 16:9 (w242) and 21:9 (w256); 4:3 not caught at 2 s sampling: unresolved, queued.
+ORIGIN: writer = rs64_region_scan's x rewrite (s6158 radar-disc shift) applied to pause-menu logo triangles because the
+radar stamp is refreshed under the pause menu; the value is not legitimate (the logo is not the radar).
+Verdict: selects H-anchor (region-shift variant) for the pause menu, H-ok for Elite Rogues / Select Game and the rest;
+H-pillar refuted at all three aspects. Next: per-swap FB dump of the mission-start transition, then G3.

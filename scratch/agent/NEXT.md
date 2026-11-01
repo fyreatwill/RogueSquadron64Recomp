@@ -1,15 +1,14 @@
-# NEXT: G1d close-out — remaining wide-aspect menu screens + owner contact sheet
+# NEXT: G1d residual -- mission-start transition dark frame with outline box at 16:9/21:9
 HYPOTHESIS-ID: g1d-menu-sweep
 
-s6730 fixed the game-over entry sliver (s6158 radar-region shift outliving flight; gate now epoch-scoped).
-Remaining unvisited: Elite Rogues and Select Game screens after game over (pillarbox look at 16:9/21:9), then a contact
-sheet of every menu (title, main menu, options, passcodes, level select, mission intro, pause, debrief, game over,
-Elite Rogues, Select Game) at 4:3 / 16:9 / 21:9 for the owner.
-Hypotheses per screen: H-ok (correct pillarbox/centre), H-anchor (s6156 HUD anchor / s6158 region shift misplaces items
--- now epoch-gated, so check items that appear inside flight's epoch), H-pillar (stale RDRAM in pillars, crop not latched).
-Command: zsh scratch/s6730/gameover.sh <tag> <16:9|21:9|none> "ROGUESQ_FB_DUMP_EPOCH=<e> ROGUESQ_FB_DUMP_VI=1"
-(window captures t=100..200 in scratch/s6730/<tag>/w*.png; epochs 27 = game over, 28 = next screen). Extend AP_OVERRIDE
-keys past t=180 to page through Elite Rogues -> Select Game. Discriminator per screen: window capture at each aspect vs
-4:3; any misplaced/undrawn item -> grep [region-gate]/[hudc] and RT64 [rtrdp] (ROGUESQ_LOG_RTPAIR_EPOCH=<e>) to see
-whether RT64 received the rect where the bridge logged it.
-Then: owner contact sheet, then G3 render fidelity.
+s6731 finished the menu sweep (owner sheet scratch/s6731/sheet_menus_owner.png) and fixed the pause-logo shard.
+Open: one window capture per wide arm at the hangar->mission transition is black with a thin light outline box
+(l169 w242 16:9, l219 w256 21:9). 4:3 unknown (2 s sampling).
+Hypotheses: H-transition (retail fade frame, also at 4:3: benign), H-crop (s6724/s6726 pillar crop or latched epoch
+draws a box outline in the pillar), H-region (s6158 shift / s6156 anchor active on the first swaps of the mission epoch,
+radar stamped before the fade ends).
+Command: zsh scratch/s6731/menus.sh <tag> <none|16:9|21:9> "ROGUESQ_LIVES_CAP=1 ROGUESQ_FB_DUMP_EPOCH=<e> ROGUESQ_FB_DUMP_VI=1"
+(find the mission-start epoch number from the [g1d] epoch lines in scratch/agent/m6/g1_lvl1s6731_l219/run.log near
+the second launch; dumps in scratch/agent/m6/<tag>/fbd). Discriminator: box in the 4:3 dumps -> H-transition; box only
+wide and inside/at the pillar edge -> H-crop; box coincides with a [region-gate] radar=1 swap -> H-region.
+Then G3 render fidelity (hangar artifacts list in CURRENT-TRUTH).

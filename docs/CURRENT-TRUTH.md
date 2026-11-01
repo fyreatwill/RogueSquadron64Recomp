@@ -122,6 +122,17 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   RT64, so any RDP rewrite in a wrap-restored range was discarded (b219: band back, 9x more restored words than a good run;
   s6722 fixb219 too). record_submit now runs after the shadow copy; ROGUESQ_G1D_PREWRAP_RECORD=1 = old. Full dim 6/6 runs
   on the new build vs 1/2 old. Applies to every RDP-rewrite hook (title clear, pause dim, spike cull, region/floor scans).
+- **FIXED s6731: G1d pause-menu Rebel logo torn at 16:9/21:9.** Same writer as s6730: the s6158 radar-region shift. The
+  radar is still stamped under the pause menu (same epoch), so pause-logo tris centred in the region (upper-right arm tip)
+  were drawn +dx px away as a separate shard. rs64_region_scan now also skips while the pause byte is set
+  (rs64_g1d_pause_live, s6721); [region-gate] logs paused=. ROGUESQ_G1D_PAUSE_ANCHOR=1 = old (also reverts the s6721
+  anchor). Evidence: pre-fix l169/l219 shard on every pause frame, 4:3 clean; fix f169/f219 gate off at the pause swap,
+  logo whole, in-flight radar shift unchanged before and after. Residual: the shift turns back on for ~5 swaps of the
+  abort logo fly-out (pause byte clears before the epoch changes); not visible in 2 s window captures.
+  NOTE: s6727-s6730 runs did not actually pass ROGUESQ_LIVES_CAP (no [livescap] lines), so their "game-over" epoch 27
+  was the MISSION FAILED -> debrief path. The s6731 route (scratch/s6731/menus.sh, LIVES_CAP=1) reaches the real GAME
+  OVER -> Elite Rogues -> Select Game -> level/craft select -> flight; all screens correct at 4:3/16:9/21:9 (owner sheet
+  scratch/s6731/sheet_menus_owner.png).
 - **FIXED s6730: G1d 21:9 game-over entry sliver.** Writer = our s6158 radar-disc region shift (dpc_bridge
   rs64_region_scan, ROGUESQ_SHIFT_REGION=256, region x 669..810 y 20..135 at w1024). Its "radar drawn within 8 swaps"
   gate outlived flight, so for the first ~7 game-over swaps the backdrop texrects whose lower-right corner fell in the
@@ -398,11 +409,12 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 - **Owner 2026-10-31:** spike cull default ON (also fixed: it only ran with LOG_SPIKE).
   G1(d) objective qualification PARKED (owner playtest). G1f window/fullscreen
   CLOSED s6717; G3d turning shake closed s6697 (s6696 fps fix). Spec: ITERATION.md item 3c.
-1. **G1d close-out sweep** (game-over + 4:3 edge fixed s6726, game-over entry sliver fixed s6730): remaining
-   unvisited wide-aspect screens (Elite Rogues / Select Game pillarbox look), then an owner-judgement contact sheet of
-   every menu at 4:3/16:9/21:9. Recipe: scratch/s6730/gameover.sh <tag> <aspect|none> "<env>" (LIVES_CAP route,
-   FB_DUMP_EPOCH=27 per-swap dumps, scratch/s6730/tiles.py). Open single-source (s6719): why a wider terrain footprint
-   changes the LucasArts logo shape.
+1. **G1d close-out** (menu sweep done s6731, every screen at 4:3/16:9/21:9 on scratch/s6731/sheet_menus_owner.png,
+   awaiting owner judgement). Remaining small items: one dark frame with a thin outline box at the mission-start
+   transition at 16:9 (w242) and 21:9 (w256), 4:3 unknown at 2 s sampling -- per-swap FB dump of that epoch in all three
+   aspects; the ~5-swap abort fly-out region shift. Open single-source (s6719): why a wider terrain footprint changes the
+   LucasArts logo shape. Recipe: scratch/s6731/menus.sh <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>".
+   Then G3 render fidelity.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional
