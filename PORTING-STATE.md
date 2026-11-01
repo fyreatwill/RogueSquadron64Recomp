@@ -177852,3 +177852,36 @@ Cross-check (g3_song_windows.py): the handle 2 window t894-t1683 is 789 ticks in
 time), while the song 1 and song 3 ends are audio-driven (same audio, different ticks). This is a same-run control that
 the tool tells the two kinds apart.
 Next: mission 9 (g3-mission9-pinned), eep +0x31=8.
+
+## Session 6761 (2026-11-01) — G3: mission 9 with dt pinned: sim identical to retail for 2216 ticks (22390 rand calls, 25 NPCs), split = song-1 end on the audio clock; NEW port render defect: HUD and engine glows missing for port ticks 292-458 while retail draws them at ticks 331/400
+
+What ran (scratch/s6761; s6760 recipes with lvl9.eep = s6754 lvl4.eep +0x31=8, dt pin 800FA730:29:30:3d088889 both
+arms; retail SECS=360, port SECS=330, concurrently): retail 5094 ticks, 24 fb dumps; port 5807 ticks, 833 captures,
+0 crash/abort lines.
+Results:
+- g3_rand_ticks.py: first mismatch index 22391 = tick 2217 (values identical, caller order differs: retail 8007132c vs port
+  80054174). g3_tick_mem.py first arm diff tick 2217 for 8010c9e0 and 8010c0e0.
+- g3_song_windows.py / g3_ai_clock.py: song 1 (handle 1) starts t2133 in both arms; retail ends it at t2217 (84 ticks,
+  336 VI, 642 AI buffers, 4.000 VI/tick: retail drops to 15 fps here), port at t2300 (167 ticks, 334 VI, 638 buffers).
+  Same audio length, so the split is the song end on the audio clock (s6755/s6760 mechanism).
+- g3_frame_snap.py (2216 ticks): NPC points, gate results and object words identical on every tick for all 25 NPCs.
+  Snap diffs only words 2-6/9; glob diffs only 20-31, plus 7/8 on 13 ticks and 18 on 7 ticks (allowed render pacing).
+- g3_oracle_match.py: 22 retail dumps, best d 3.0-5.4 except two: vi 7870 (d 7.8) and vi 8106 (d 5.3). Looked at both
+  sheets: retail draws the HUD (radar, ship icon, reticle) and engine glows, and the best port capture has neither.
+  Colour fit a=0.998/0.999/0.969.
+- NEW tools/g3_hud_presence.py: radar-ring red fraction per frame, port capture time -> port VI (t0 = median over
+  best-match pairs, 0.31 s from 21 pairs, spread 0.03-0.45) -> sim tick via snap.txt. lvl9: retail HUD on 22/22 dumps;
+  port HUD OFF for ticks 292-458 (86.5-92.1 s, 18 captures, sheet scratch/s6761/hudgap_sheet.png) with retail dumps
+  t331 and t400 inside it both ON. Also port off at ticks 2054-2208 (no retail dump inside).
+  Same tool on earlier levels (control): s6760 lvl8 port off t686-869 and t1664-1813, retail dumps inside OFF too
+  (t785, t1673, t1763: scripted HUD-hide windows, song-1 window t695-862); s6759 lvl7 port off t560-720, retail t637
+  OFF; s6758/s6757 no port gaps. So the tool sees both agreement and disagreement in the same method, and lvl9 t292-458
+  is the first window where the arms disagree.
+- No tracked state flips at the window edges (snap/glob words 288-296, 454-462 show only the usual pacing words).
+  The HUD hide is not in the logged sim words, so the cause is either unlogged guest state or the gfx path.
+Positive control: g3_rand_ticks.py scratch/s6754/retail2/oracle.log scratch/s6754/port.rand.txt -> mismatch at index
+2153 (reproduced this session).
+Rules out: a port sim defect on lvl9 within the first 2216 ticks (rand stream + NPC/object state, two lines).
+Not ruled out: the HUD/engine-glow drop (single run, single-source; 18 consecutive captures plus 2 retail dumps).
+Next: g3-lvl9-hud-drop: reproduce and discriminate H-gate (the game skips the HUD in the port: unlogged guest flag)
+vs H-gfx (the game submits the HUD DL but the port's RSP/RT64 does not draw it).

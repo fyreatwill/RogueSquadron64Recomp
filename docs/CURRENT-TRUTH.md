@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6760 (2026-11-01).
+Compact operational handoff, as of Session 6761 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -14,7 +14,9 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   mission-intro cinematic (s6743), lvl1 flight+HUD/bolts/impacts (s6744-s6747), lvl2 flight+bolts (s6748).
   Colour rules: window captures are Display-P3 -> convert to sRGB (s6740); use `--dec shift` (v<<3), the v*255/31
   decode fakes a ~2% retail>port gain (s6744). Port RDRAM fb dumps lack RT64 3D frames: use window captures.
-- **G3 sim determinism with dt pinned (s6753-s6760).** Missions 3-8: rand stream, NPC state, event mask and song
+- **OPEN s6761 (single-source): lvl9 port drops the HUD + engine glows for ticks 292-458** while retail draws them at
+  ticks 331/400 with identical sim state (tools/g3_hud_presence.py; lvl7/lvl8 port HUD-off windows match retail ones).
+- **G3 sim determinism with dt pinned (s6753-s6761).** Missions 3-9: rand stream, NPC state, event mask and song
   handle identical to retail (lvl5 20635 rand calls / 1972 ticks). Unpinned desyncs = pacing (retail drops frames,
   2.115 VI/tick; port 2.000). Late splits on lvl4/lvl7/lvl8 = song end on the audio clock (equal AI-buffer counts; lvl8 s6760: retail dropped
   frames to 2.43 VI/tick in the song, so the same 331-VI/634-buffer song spans 136 retail ticks vs 167 port ticks).
@@ -133,9 +135,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 sim/frame match, mission 9 dt-pinned (NEXT: g3-mission9-pinned).** Same recipe as s6760 (scratch/s6760
-   retail.sh/port.sh, eep +0x31=8). Then missions 10.. in turn. A split not explained by the audio clock or
-   render-pacing words = real port defect -> bisect with xtrace-mem (s6751-s6753).
+1. **G3 lvl9 HUD drop (NEXT: g3-lvl9-hud-drop).** s6761: port HUD/engine glows off ticks 292-458, retail on. Discriminate
+   H-gate (game skips the HUD draw: unlogged guest flag) vs H-gfx (HUD DL submitted, RSP/RT64 does not draw it). Then
+   G3 sim/frame match missions 10.. (scratch/s6761 retail.sh/port.sh, eep +0x31=N-1).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
