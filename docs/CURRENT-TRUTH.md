@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6702 (2026-10-31).
+Compact operational handoff, as of Session 6703 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -43,7 +43,10 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 - **FIXED s6702: lvl1 dd8 crash at 219 s = s6569 malloc spill arena leak.** rs_free ignored spill pointers, so the 4 MB
   bump (0x80800000) filled, rs_malloc returned NULL, instantiateNamedMeshInstance read NULL+0xA (SIGBUS 0x38000000a). Spill now
   has a coalescing free list (rs64_s6569_isspill releases; ROGUESQ_SPILL_LEAK=1 = old). Same recipe 304 s clean, live spill flat
-  ~1.74 MB from 60 s (2.3 MB headroom). Same-binary leak control queued (s6702_spillleak_ctl). lvl10 dd8 s6701: 301 s clean.
+  ~1.74 MB from 60 s (2.3 MB headroom). Same-binary leak control (s6703 fold, ROGUESQ_SPILL_LEAK=1): bump grew monotonically to 0x3FB380 (99.5% of 4 MB) by the end of a
+  303 s hold, vs fixed-arm max bump 0x1BB2C0. The leak reproduced but stopped 19 KB short of the NULL, so the crash did not. lvl10 dd8 s6701: 301 s clean.
+- **G1c phase 2 CLOSED s6703.** dd4 is the ceiling that adds terrain on lvl1/lvl5; dd8 is sane after s6701/s6702. Owner sheets
+  docs/img/g1c_phase2_dd_sheet_vi{3000,4500}.png (camera differs per cell), docs/DRAW-DISTANCE.md updated. Defaults stay retail.
   FPS60 dd4 lvl5 (refold past the start pause): ~45 tasks/s, gfx ~16 ms -> not 60.
 - **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
   ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
@@ -530,9 +533,8 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1c phase 2 closure (s6702).** s6701 soaks folded (lvl10 dd8 clean; lvl1 dd8 crash fixed s6702, spill free list).
-   FPS60 dd4 cost measured (~45 fps lvl5). Left: fold the s6702 leak control, owner dd1/dd4/dd8 sheet, DRAW-DISTANCE.md, close.
-   See NEXT.md.
+1. **G1e frame rate on the -O2 build (s6703 next).** FPS60 dd4 lvl5 ~45 tasks/s (s6702). Measure FPS60 at dd1 on lvl1/lvl5
+   with STORE_DIAG=0 and find what binds below 60 (gfx task ms vs game-thread CPU vs VI pacing). See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional

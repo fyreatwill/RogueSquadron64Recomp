@@ -176060,3 +176060,19 @@ Verdict: selects H-spill-leak (our allocator never reclaimed, so exhaustion was 
 H-heap-demand (the game's real overflow demand exceeds 4 MB): live spill plateaus at 1.74 MB. Root cause fixed, not guarded.
 Next discriminator: the queued same-binary ROGUESQ_SPILL_LEAK=1 control must reproduce "arena full"; if it does not within
 300 s, compare its bump growth rate against s6701's (~18 KB/s) before trusting the cross-binary A/B.
+
+## Session 6703 (2026-10-31) — G1c phase 2 closed: spill-leak control folded (bump 99.5% of arena at 303 s), owner dd1/dd4/dd8 sheets, DRAW-DISTANCE.md
+Folded soak s6702_spillleak_ctl_dd8_lvl1 (same binary, ROGUESQ_SPILL_LEAK=1, lvl1 dd8, 303 s hold). rc=1 because the script expected
+"arena full"; summary alive_at_end=1, vi_stalls30s=0, crashlines=0. The [spill] log (2103 lines) shows the bump growing monotonically
+with live == used (no frees): 0x20 -> 0x380A50 -> 0x3FB380 at the end, i.e. 99.5% of the 4 MB arena, 19.6 KB short of full. The fixed
+arm (s6702 spillfree_dd8) peaked at bump 0x1BB2C0 with live flat ~1.74 MB. So the leak reproduces in the same binary (positive control
+for the mechanism); this run's autopilot path just allocated slightly less than s6701's before the hold ended, so the NULL crash did not
+arrive. Two lines of evidence now: s6701 old binary crashed after "arena full"; same-binary leak arm grows to the brink while the
+free-list arm plateaus at 43%.
+Owner sheets built from existing captures (no new run): docs/img/g1c_phase2_dd_sheet_vi3000.png and _vi4500.png, rows lvl1/lvl5,
+columns dd1 (s6700 buildsmoke / s6697 dd1), dd4 (s6697 / s6701), dd8 (s6702 spillfree / s6701 fix8). Each cell is a different run, so
+the camera differs: the sheet shows every setting renders full-screen and sane (no s6701 centre box at dd8), not a fixed-camera A/B.
+g1c_fixed_score.py medians are camera-dominated cross-run and are not used as a result.
+docs/DRAW-DISTANCE.md gained a phase-2 section (dd4 ceiling, dd8 fixes, -O2 cost, suggested ROGUESQ_DRAW_DISTANCE=4). Defaults retail.
+G1c phase 2 CLOSED. Next rung G1e: queued s6703_fps60_dd1_lvl1/lvl5 (FPS60 at retail draw on -O2, STORE_DIAG=0, G1B on).
+Rules out: the s6702 fix being untested against its own failure mode in the same binary (the leak arm grows to the brink).

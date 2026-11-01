@@ -19,6 +19,17 @@ cd build && env ROGUESQ_DRAW_DISTANCE=2 ./RogueSquadron64Recomp
 - 300 s holds at dd2 on levels 1, 5, 10: 0 crashes, 0 VI stalls; dd3 on level 1 also clean. VI stays 60/s; RSP host cost about +10 ms per second of play.
 - Cost on the fixed build (s6697, ROGUESQ_G1B, 180 s holds; s6390-s6695 cost figures are void): lvl1 dd1 29.7 game fps / 10.9 ms per gfx task -> dd4 24.1 fps / 24.0 ms; lvl5 dd1 30.0 / 14.7 ms -> dd4 19.6 / 33.9 ms. dd4 costs real frame rate (lvl1 dd1 figure is from the s6696 run, not same-run).
 
+## Phase 2 result (s6699-s6703, -O2 build)
+- Owner sheets: `docs/img/g1c_phase2_dd_sheet_vi3000.png` and `..._vi4500.png` (rows lvl1, lvl5; columns dd1, dd4, dd8). Each
+  column is a different run, so the camera differs per cell: these show that each setting renders sanely, not a fixed-camera A/B.
+- dd4 is the useful ceiling on lvl1/lvl5: above it the clamped terrain window already covers the whole level table (lvl5 64x64,
+  3904-3968 cells at dd4/dd6/dd8, triangles flat), so dd6/dd8 add no terrain.
+- dd8 needed two fixes, both on by default: the far-plane cap at 65534-near (s6701; without it guPerspective perspNorm drops to 1
+  and the scene shrinks into a centre box; `ROGUESQ_DD_PNORM_CAP=0` = old) and a free list for the 4 MB spill arena at 0x80800000
+  (s6702; it used to leak every block and lvl1 dd8 crashed at ~219 s; `ROGUESQ_SPILL_LEAK=1` = old).
+- Cost on -O2 with STORE_DIAG=0: lvl5 dd4 ~30 game fps (retail rate), dd6/dd8 the same. FPS60 at dd4 reaches ~45, not 60.
+- Suggested owner setting: `ROGUESQ_DRAW_DISTANCE=4`. Default stays retail until the owner chooses.
+
 ## Not established
 - How it looks (pop-in, haze) - needs the owner's eyes.
 - Per-step frame time against the G1b baseline (only single-source tri/RSP-time figures).
