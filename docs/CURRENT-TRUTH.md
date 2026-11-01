@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6754 (2026-11-01).
+Compact operational handoff, as of Session 6758 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -19,6 +19,10 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   1.866->1.914 (retail 1.912), song 343->334 VI (retail 332). The rest of the tick gap is pacing: retail drops frames
   (2.115 VI/tick), the port never does (2.000). tools/g3_ai_clock.py, g3_vi_edges.py, g3_tick_mem.py. s6754 (dt
   pinned): sim identical to retail for 2301 ticks, frames H-match.
+- **s6758 G3: mission 7 dt-pinned = H-match up to the song end (audio clock).** 3721 rand calls / 721 ticks identical,
+  7 NPCs identical; the split is tick 722 (retail) vs 723 (port) = song end, 640 AI buffers in both arms (as lvl4).
+  Pre-split frames d 1.1-4.5 (12 of 13); later retail frames are a mid-draw dump and a diverged no-HUD scene. New
+  render-pacing bytes: glob words 7/8 (0x8011A89C-A3, task/yield flags, 3 ticks, retail only). Recipes scratch/s6759.
 - **s6756/s6757 G3: missions 5 and 6 dt-pinned = H-match.** lvl5: 20635 rand calls, NPCs, event mask, song identical for
   1972 retail ticks, 17/20 frames match (outliers = retail mid-draw dumps). lvl6 (Jade Moon): 9438 rand calls / 941 ticks,
   12 NPCs, 10/10 flight frames d 2.1-2.6 (median 22-25); only render-pacing words differ (snap w2 last-drawn tick +-1,
@@ -502,7 +506,7 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
    history is one term). s6751-s6752: rand identical for 12 frames; the NPC gate lag = variable dt (retail 3-VI frame drops, port flat
    2 VI); s6753 dt-pinned arms identical for 283 ticks = lvl3 desync CLOSED as pacing. s6754 mission 4 dt-pinned: sim exact 2301 ticks,
    frames H-match; s6755 the late event = song end on the audio clock; lvl4 CLOSED as pacing after fixing duplicate VI
-   edges (VI thread now exactly 60/s). s6756/s6757 missions 5-6 dt-pinned H-match. Next (g3-mission7-pinned): mission 7 the same way. G2/G5 are closed; G4 and aim/steer stay
+   edges (VI thread now exactly 60/s). s6756-s6758 missions 5-7 dt-pinned H-match. Next (g3-mission8-pinned): mission 8 the same way (after the s6759 maintenance compaction). G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index

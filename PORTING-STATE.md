@@ -177780,3 +177780,33 @@ scratch/s6754/retail/ is a short 224-tick run that reports None, so NEXT.md's co
 Rules out: a port sim defect on lvl6 within the first 941 flight ticks. Not covered: lvl6 ticks past 941 (retail run too
 short) and the intro cutscene itself.
 Next: mission 7 (g3-mission7-pinned), retail SECS=360 / port SECS=330.
+
+## Session 6758 (2026-11-01) — G3: mission 7 with dt pinned: port sim identical to retail for 721 ticks (3721 rand calls, 7 NPCs); the tick 722/723 split is the song end on the audio clock (640 AI buffers in both arms), as in lvl4
+
+What ran (scratch/s6759; recipes = s6758 retail.sh/port.sh with lvl7.eep = s6754 lvl4.eep +0x31=6, dt pin
+800FA730:29:30:3d088889 both arms; retail and port concurrently):
+- Retail oracle (angrylion + cxd4), SECS=360: flight switch at VI 6469 (much earlier than lvl6), 2049 sim ticks,
+  16404 rand calls, 24 fb dumps.
+- Port SECS=330: 1876 ticks, 16036 rand calls, 831 captures, 0 crash/abort lines (lvl7 = the s5712 copyToRAM level).
+Results:
+- g3_rand_ticks.py: first mismatch at index 3722 = retail tick 722 vs port tick 723. Values stay identical index by
+  index across the split; only the caller order shifts by one (port's periodic 800f0f2c call lands before the burst).
+- g3_ai_clock.py: song start tick 556 in both; song end tick 722 retail / 723 port, 640 AI buffers in both (retail
+  335 VI, port 334 VI; retail 2.018 VI/tick vs port 2.000). Flight 1.9123 vs 1.9111 buf/VI. So the trigger is the
+  song end on the audio clock (the s6755 lvl4 mechanism), not a sim divergence.
+- g3_tick_mem.py (G3_IGN=04,0c,18): first arm diff tick 722 for both 8010c9e0 and 8010c0e0 (the song-end mask/handle).
+- g3_frame_snap.py (721 ticks): NPC points and object words identical on every tick for all 7 NPCs. Snap diffs only
+  clock words 3-6/9. Glob 8011A880 diffs = words 20-31 plus words 7/8 on 3 ticks (258, 309, 326): retail reads
+  01010102/01000000 at 0x8011A8A0/A4-side bytes where the port reads 00010100/00000000, one tick each, back to equal on
+  the next tick. These are the RSP task/yield flag bytes (0x8011A89C region, s3300), sampled while retail had a task in
+  flight: render pacing, same class as word 18. Single-source interpretation (no writer watch run).
+- g3_oracle_match.py: 13 pre-split flight frames (retail VI 6946-10048) d 1.14-4.54 except vi 7864 d 10.7 (2nd best
+  36.7, still a clear match). Post-split: vi 10255 is a retail mid-draw dump (tan fill, HUD strip only); vi 10678 shows a
+  smoke-trailing craft with no HUD in retail vs normal flight in the port: the arms have diverged after the song-end
+  event, so these frames are not comparable. Colour fit a=0.978/0.983/0.979.
+Positive control: g3_rand_ticks.py scratch/s6754/retail2/oracle.log scratch/s6754/port.rand.txt -> mismatch at index
+2153 (reproduced this session).
+Rules out: a port sim defect on lvl7 within the first 721 flight ticks. Not covered: lvl7 after the song end (the
+audio-clock offset desyncs the arms; same limit as lvl4).
+Next: CURRENT-TRUTH is now 60.4 KB, so the next iteration is a Step-0 maintenance compaction; then mission 8
+(g3-mission8-pinned).
