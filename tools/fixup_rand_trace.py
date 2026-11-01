@@ -76,3 +76,31 @@ if NPC_TAG not in s:
         s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + decl, 1)
     p.write_text(s)
     print(f"[s6751] npc path trace added to {p.name}")
+
+# s6752: ROGUESQ_XTRACE_MEM marker rows (rs64_xtrace_mark dumps guest words per spec) right after every
+# timeSnapshotFiller call returns (struct at caller sp+0x10; marker PC = jal+8: 0x800AF374 cinematicComputeDt,
+# 0x800C6674 advanceWrappingPhaseAccumulator, 0x800FA730 runInMissionFrame = the in-flight frame) and at the
+# 0x8001DC34 gate call in advanceNpcOnCurvedPath (0x8006C010: $a0 = reference object, sp+0x18 = NPC point).
+# Mirrors oracle RS64_XTRACE_MEM.
+MEM_TAG = "/* PATCH: s6752 xtrace mem */"
+mdecl = ("extern void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64_t* gpr); " + MEM_TAG + "\n")
+def mark(pc):
+    return (f"    if (__builtin_expect(g_rs64_rand_trace, 0)) rs64_xtrace_mark(0x{pc:08X}u, rdram, (const uint64_t*)&ctx->r0); "
+            + MEM_TAG + "\n")
+tick = re.compile(r"(    timeSnapshotFiller\(rdram, ctx\);\n        goto (after_\d+);\n    // 0x([0-9A-F]{8}): addiu       \$a0, \$sp, 0x10\n"
+                  r"    ctx->r4 = ADD32\(ctx->r29, 0X10\);\n    \2:\n)(?!.*s6752 xtrace mem)")
+gcall = "    // 0x8006C010: jal         0x8001DC34\n"
+for p in sorted(base.glob("funcs_*.c")):
+    s = p.read_text()
+    t = len(tick.findall(s))
+    g = s.count(gcall) if mark(0x8006C010) + gcall not in s else 0
+    if not t and not g:
+        continue
+    s = tick.sub(lambda m: m.group(1) + mark(int(m.group(3), 16) + 4), s)
+    if g:
+        s = s.replace(gcall, mark(0x8006C010) + gcall)
+    for d in (decl, mdecl):
+        if d not in s:
+            s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + d, 1)
+    p.write_text(s)
+    print(f"[s6752] xtrace mem hooks in {p.name}: tick {t} gate {g}")

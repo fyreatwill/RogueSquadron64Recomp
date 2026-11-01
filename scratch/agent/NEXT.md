@@ -1,28 +1,27 @@
-# NEXT: G3 -- lvl3 one-frame lag: compare the per-frame time snapshot (osGetTime-derived) port vs retail
-HYPOTHESIS-ID: g3-lvl3-frame-lag
+# NEXT: G3 -- lvl3 trajectories with dt pinned to 2 VI in both arms (H-sim residual)
+HYPOTHESIS-ID: g3-lvl3-dt-pinned
 
-s6751: from the rngSeed=1 poke at the 640->512 flight switch, the rand call sequence is identical in both arms for 75
-calls / 12 game frames (caller, value, calls per frame). Then the NPC gate transformVec3ToNpcLocalWithScale (0x8001DC34,
-called from advanceNpcOnCurvedPath at 0x8006C010, result at 0x8006C018) flips for NPCs ..fc90 (1->0), ..2700 (0->1) and
-later ..fbb0 (1->0) one game frame LATER in the port, every time. So whatever that gate tests (a point vs the object in
-advanceNpcOnCurvedPath's $a1, probably the player craft) is one frame behind in the port.
-The per-frame step is clock-based: frame tick 0x800AF35C bumps 0x8013889C after timeSnapshotFiller (0x8000BC00:
-awaitFrameSyncMesgBlock, osGetTime 0x8002BF00, readBufferSwapState, three cvt/div.s ratios into a struct at its $a0 =
-caller sp+0x10, fields read back at sp+0x2C/0x30).
+s6752: runInMissionFrame (0x800FA728) feeds the sim timeSnapshotFiller's measured frame time (struct at sp+0x10,
++0x20 = seconds, read back at 0x800FA730 `lwc1 $f20, 0x30($sp)`). Retail (mupen) steps 2.04 VI with 3.08-VI drops
+in 34% of frames; port is a flat 2.00. Early NPC gate flips line up in cumulative sim time, so the s6751 "one frame
+late" lag is dt, not arithmetic. Open: does the sim match frame by frame when dt is equal (H-sim residual)?
 Hypotheses:
-- H-time-dt: the snapshot's dt/ratio fields differ (port osGetTime/osGetCount timebase, or 2-VI frame period measured
-  differently: port update_screen 61-62/s), so the player moves a different distance per frame and crosses the gate later.
-- H-sim: snapshot fields identical, but the player/NPC position arithmetic differs (float path in the port).
-- H-start: the player starts the flight one frame behind (one extra/missing frame before the first rand row).
-Discriminator (one port build, one retail run, same recipe as s6751):
-1. Oracle: extend --exec-trace rows with N words at $sp+OFF (e.g. RS64_XTRACE_SP=0x10:10) and add
-   --exec-trace-also 0x800AF374 (just after timeSnapshotFiller returns; struct at sp+0x10..0x37). Also log the player
-   position: find advanceNpcOnCurvedPath's $a1 object (print $a1 at 0x8006BEC8) and dump its position words.
-2. Port: matching marker rows in tools/fixup_rand_trace.py at 0x800AF374 (sp+0x10 words) and the $a1 object.
-3. Commands: port  env AP=6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,42.5:w640,50:start SECS=95
-   CAP0=200 SAVE_FROM=scratch/s6750/lvl3.eep XE="ROGUESQ_DEBUG_WRITE=80003470:1:512:65 ROGUESQ_RAND_TRACE=$PWD/scratch/s6752/port_rand.txt"
-   zsh tools/g3_port_capture.sh scratch/s6752/port ; retail: copy scratch/s6751/retail.sh (D=scratch/s6752), SECS=115.
-   python3 tools/g3_rand_align.py <retail oracle.log> <port txt> 0
-Outcomes: snapshot fields differ per frame -> H-time-dt (fix the port's osGetTime/count timebase or frame-sync delivery
-so dt matches retail's); identical fields but player position drifts -> H-sim (bisect the position update);
-first-frame position already one step behind -> H-start.
+- H-dt-only: with dt pinned to 1/30 s (0x3D088889) in both arms, every NPC point / gate result / rand caller matches
+  through and past the first player hit (s6750's ~6 s desync point).
+- H-sim: with dt pinned, some field still diverges -> first diverging tick + field names the arithmetic to bisect.
+- H-input: divergence starts at a tick where the scripted input lands on different ticks (autopilot is wall-clock):
+  check the controller word per tick in both arms (add a dump of the pad buffer to the tick spec).
+Work:
+1. Oracle: RS64_XTRACE_POKE="PC:REG:OFF:VALUE" -> at an --exec-trace-also PC, pDebugMemWrite32(gpr[REG]+OFF, VALUE)
+   after the row (tools/oracle/rs64_oracle.c next to xtrace_mem). Arm 800FA730:29:30:3d088889.
+2. Port: ROGUESQ_PIN_DT=<hex float> in rs64_xtrace_mark's 0x800FA730 path (write sp+0x30 before the lwc1), same value.
+   Note rs64_xtrace_mark only runs once the rand trace is open (after the poke) -- fine, both arms pin from the poke.
+3. Same recipe as s6752 (scratch/s6752/retail.sh with D=retail3 + RS64_XTRACE_POKE; port command in the s6752
+   PORTING-STATE entry plus ROGUESQ_PIN_DT=3d088889), add the pad state to the tick dump (find the controller buffer
+   the game reads: osContGetReadData destination).
+4. python3 tools/g3_frame_snap.py retail3/oracle.log port_rand.txt 400 | grep -n '!=\|diff \[[0-9]' | head
+Positive control: tick dt words read 3d088889 in every row of both arms (pin fired); unpinned s6752 logs as the
+contrast (divergence at tick 2).
+Outcomes: no diff through the hit -> H-dt-only, close lvl3 desync as pacing; first diff at tick k with equal pad ->
+H-sim, bisect that field's writer; first diff coincides with a pad change on different ticks -> H-input (drive input
+by game tick, not wall clock).

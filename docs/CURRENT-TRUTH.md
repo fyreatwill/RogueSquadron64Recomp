@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6751 (2026-11-01).
+Compact operational handoff, as of Session 6752 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -10,13 +10,11 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 
 ## Headline
 
-- **s6751 G3: the lvl3 desync starts 12 game frames into flight, and it is a one-frame lag, not RNG.** rand call
-  sequences traced in both arms from the rngSeed=1 poke (oracle `--exec-trace`, port `ROGUESQ_RAND_TRACE`,
-  tools/g3_rand_align.py): the first 75 calls match in caller, value and per-frame count, then retail calls rand from
-  advanceNpcOnCurvedPath (jal 0x8006C0FC, an NPC line-of-sight recheck) one game frame before the port. The cause is the
-  gate transformVec3ToNpcLocalWithScale (0x8001DC34): the same three NPCs flip it (1->0, 0->1, 1->0) one game frame later
-  in the port, every time. The per-frame step is clock-based (frame tick 0x800AF35C -> timeSnapshotFiller 0x8000BC00 ->
-  osGetTime). Open: g3-lvl3-frame-lag (H-time-dt vs H-sim).
+- **s6752 G3: the lvl3 one-frame lag is the game's variable dt, not a port defect.** runInMissionFrame (0x800FA728)
+  drives the sim with timeSnapshotFiller's measured frame time (struct+0x20). Retail (mupen) steps 2.04 VI with 3.08-VI
+  drops in 34% of frames; the port is a flat 2.00. Tick 0-1 state identical, divergence starts at the first dt
+  mismatch, and early NPC gate flips line up in cumulative sim time (both arms in the same window). Frame-exact oracle
+  compares need dt pinned in both arms. Tools: oracle RS64_XTRACE_MEM, port ROGUESQ_XTRACE_MEM, tools/g3_frame_snap.py.
 - s6750: lvl3 flight H-match ~6 s then combat desync; rngSeed (0x80003470, LCG, boot-seeded) equalised at the flight
   switch (oracle `--debug-write`, port `ROGUESQ_DEBUG_WRITE`) flips which arm is hit: RNG is one term only.
 - **s6749 G3: mission-2 intro +3.7 s retail = ~3 s black load lead-in (H-load); the cinematic matches frame by frame**
@@ -500,9 +498,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
    s6748 mission 2 (Barkhesh, green hills) flight + bolts H-match (tools/g3_eep_patch.py selects the mission on a signed save).
    s6749 mission-2 intro: +3.7 s retail = black load lead-in (H-load), content H-match. Open minor: port update_screen
    61-62/s vs retail 60 VI/s. s6750 mission 3 early flight H-match, then combat desync at the first player hit (RNG
-   history is one term). s6751: rand sequences identical for 12 frames; the split is the NPC gate 0x8001DC34 flipping
-   one game frame later in the port (clock-based frame step via osGetTime). Next (g3-lvl3-frame-lag): per-frame
-   timeSnapshotFiller outputs + player position, both arms. G2/G5 are closed; G4 and aim/steer stay
+   history is one term). s6751-s6752: rand identical for 12 frames; the NPC gate lag = variable dt (retail 3-VI frame drops, port flat
+   2 VI), not sim arithmetic. Next (g3-lvl3-dt-pinned): pin struct+0x20 to 1/30 s in both arms, then compare
+   trajectories frame by frame past the first hit (H-sim residual). G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index

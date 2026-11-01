@@ -177561,3 +177561,41 @@ Next: same route with scripted fire presses in both (retail --press a/b/z, port 
   (bumps 0x8013889C) calls timeSnapshotFiller 0x8000BC00 = awaitFrameSyncMesgBlock + osGetTime + readBufferSwapState +
   three float ratios (static read, single-source). H-time-dt vs H-sim vs H-start remain; next: g3-lvl3-frame-lag.
 - Saves: owner save restored by g3_port_capture.sh trap on all three port runs; mupen .eep restored by trap (eep-restored).
+
+## Session 6752 (2026-11-01) — G3: the lvl3 "one frame late" NPC gate is the game's variable dt: retail (mupen) frames step 2.04 VI with 3.08-VI drops in 34% of frames, the port a flat 2.00 VI; gate flips fall at the same cumulative sim time in both arms
+
+HYPOTHESIS-ID: g3-lvl3-frame-lag (closed: H-time-dt selected).
+
+Instrument (one port build, one retail run per arm, same s6751 recipe from the rngSeed=1 poke):
+- Oracle `RS64_XTRACE_MEM="PC:REG:OFF:N,..."` (tools/oracle/rs64_oracle.c): every `--exec-trace-also` row whose pc
+  matches appends ` m=ADDR:w0,...` (N words at gpr[REG]+OFF, REG 0 = absolute).
+- Port `ROGUESQ_XTRACE_MEM` (same spec; `rs64_xtrace_mark` in src/main/rt64_render_context.cpp) into the
+  ROGUESQ_RAND_TRACE stream; tools/fixup_rand_trace.py hooks every timeSnapshotFiller return (jal+8: 0x800AF374
+  cinematicComputeDt, 0x800C6674 advanceWrappingPhaseAccumulator, 0x800FA730 runInMissionFrame) and the 0x8001DC34
+  gate call 0x8006C010 ($a0 object 16 words, NPC point sp+0x18, globals 0x8011A830).
+- tools/g3_frame_snap.py pairs tick k vs tick k and gate calls per NPC.
+
+Run 1 (retail, scratch/s6752/retail): ticks hooked at 0x800AF374 only -> 0 tick rows while the same run logged
+3914 gate rows (positive control): NEXT.md's "frame tick 0x800AF35C" was wrong — that is cinematicComputeDt. The
+in-flight frame is runInMissionFrame (jal timeSnapshotFiller at 0x800FA728). Run 2 (retail2) + port: 283 / 523
+runInMissionFrame ticks.
+
+Result:
+- timeSnapshotFiller struct (+0x20 = elapsed seconds since the last frame from count stamps 0x80128ED8/0x8011A900
+  over the clock word 0x80039104; runInMissionFrame loads it into $f20, clamps it and drives the sim with it;
+  +0x1C = 1/60 constant in both arms). So the sim is variable-dt, not frame-locked.
+- dt*60 per tick: retail 0, 0, 3.08, 2.00, 3.08, 2.04, 2.00, 2.04, 2.04 ...; histogram 2.0-2.04 x184, 3.08 x97
+  (mean 2.40). Port 0, 0, 1.67, 2.00, 2.00 ... (513 of 521 = 2.00, mean 1.99, never 3).
+- Tick 0-1 (dt 0): NPC points and the gate's reference object identical in both arms (obj diff []). Tick 2 (first
+  dt mismatch, 3.08 vs 1.67): object words 11-15 (orientation) and every NPC point diverge.
+- Gate flips vs cumulative sim time (VI units): fc90 1->0 / 2700 0->1 retail tick 12 cum 24.42 (tick 11 22.38 no
+  flip), port tick 13 cum 23.67 (tick 12 21.67 no flip): threshold window (22.38, 23.67) fits both. fbb0 1->0
+  (26.46, 27.67) fits both; 13a0 0->1 (40.73, 41.67) fits both. Later flips (2700 1->0 at tick 29/30) no longer
+  share a window (diverged trajectories: the player's input is integrated with different step sizes).
+Two lines: per-tick dt sequence differs from the first non-zero tick, and early flips line up in sim time, not tick
+index. Selects H-time-dt; refutes H-start (tick 0-1 identical) and, for the first 12 frames, H-sim.
+Interpretation: not a port defect. The port is faster than mupen's emulated N64, so it never drops to a 3-VI frame;
+the game advances by measured time, so per-frame state differs whenever frame pacing differs. Retail's 2.04 (not
+2.00) VI step is a mupen count-vs-VI ratio question (single-source, not examined). Frame-by-frame sim equality vs the
+oracle therefore needs equal dt in both arms.
+Rules out: RNG (s6751), H-start. Leaves H-sim open beyond ~12 frames until a dt-pinned run.

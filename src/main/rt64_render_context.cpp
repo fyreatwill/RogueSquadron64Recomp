@@ -38,6 +38,38 @@ extern "C" void rs64_rand_trace(uint32_t ra, uint32_t seed) {
     fprintf(s_rand_trace_f, "%ld %u %08x %08x\n", n++, rs64_vi_n_g, ra, seed);
     fflush(s_rand_trace_f); // runs end in SIGKILL
 }
+// s6752: marker row with guest-memory dumps, same spec as rs64_oracle RS64_XTRACE_MEM: ROGUESQ_XTRACE_MEM=
+// "PC:REG:OFF:N,..." appends " m=ADDR:w0,w1,..." (N words at gpr[REG]+OFF; REG 0 = absolute) for every spec whose PC
+// matches. Row: index, update_screen #, pc, $v0, dumps. Called from tools/fixup_rand_trace.py hooks.
+extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64_t* gpr) {
+    static struct { uint32_t pc, reg, off, n; } spec[16];
+    static int nspec = -1;
+    if (nspec < 0) {
+        nspec = 0;
+        const char* e = std::getenv("ROGUESQ_XTRACE_MEM");
+        while (e && *e && nspec < 16) {
+            unsigned a, r, o, k;
+            if (sscanf(e, "%x:%u:%x:%u", &a, &r, &o, &k) == 4 && r < 32 && k <= 64) spec[nspec++] = {a, r, o, k};
+            e = strchr(e, ',');
+            if (e) e++;
+        }
+    }
+    static long n = 0;
+    if (!s_rand_trace_f || n >= 400000) return;
+    fprintf(s_rand_trace_f, "%ld %u %08x %08x", n++, rs64_vi_n_g, pc, (uint32_t)gpr[2]);
+    for (int i = 0; i < nspec; i++) {
+        if (spec[i].pc != pc) continue;
+        uint32_t a = (uint32_t)gpr[spec[i].reg] + spec[i].off;
+        fprintf(s_rand_trace_f, " m=%08x:", a);
+        for (uint32_t k = 0; k < spec[i].n; k++) {
+            uint32_t w = a + 4 * k, v = 0;
+            if (w >= 0x80000000u && w + 4 <= 0x80800000u && !(w & 3)) v = *reinterpret_cast<const uint32_t*>(rdram + (w - 0x80000000u));
+            fprintf(s_rand_trace_f, k ? ",%08x" : "%08x", v);
+        }
+    }
+    fputc('\n', s_rand_trace_f);
+    fflush(s_rand_trace_f);
+}
 extern "C" int rs64_rdp_async_on;
 int rs64_rdp_async_on = [] { const char *e = std::getenv("ROGUESQ_RDP_ASYNC"); return (e && *e && *e != '0') ? 1 : 0; }();
 namespace RT64 { extern volatile int g_s4280_n; } // rt64_rdp.cpp s4280 cimg events

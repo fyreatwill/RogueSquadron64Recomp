@@ -2727,6 +2727,36 @@ static int g_debug_write_done;
 static unsigned g_xtrace_pc, g_xtrace_peek, g_xtrace_extra[8];
 static int g_xtrace_nextra;
 static long g_xtrace_max = 200000, g_xtrace_n;
+/* s6752: RS64_XTRACE_MEM="PC:REG:OFF:N,..." appends " m=ADDR:w0,w1,..." (N words at gpr[REG]+OFF, REG 0 = absolute)
+ * to every [xtrace] row whose pc matches. Same spec as the port's ROGUESQ_XTRACE_MEM. */
+static struct { unsigned pc, reg, off, n; } g_xmem[16];
+static int g_nxmem = -1;
+static void xtrace_mem(unsigned pc)
+{
+    int i;
+    unsigned k;
+    if (g_nxmem < 0) {
+        const char *e = getenv("RS64_XTRACE_MEM");
+        g_nxmem = 0;
+        while (e && *e && g_nxmem < 16) {
+            unsigned a, r, o, n;
+            if (sscanf(e, "%x:%u:%x:%u", &a, &r, &o, &n) == 4 && r < 32 && n <= 64) {
+                g_xmem[g_nxmem].pc = a; g_xmem[g_nxmem].reg = r; g_xmem[g_nxmem].off = o; g_xmem[g_nxmem].n = n;
+                g_nxmem++;
+            }
+            e = strchr(e, ',');
+            if (e) e++;
+        }
+    }
+    for (i = 0; i < g_nxmem; i++) {
+        unsigned a;
+        if (g_xmem[i].pc != pc) continue;
+        a = gpr32(g_xmem[i].reg) + g_xmem[i].off;
+        printf(" m=%08x:", a);
+        for (k = 0; k < g_xmem[i].n; k++)
+            printf(k ? ",%08x" : "%08x", pDebugMemRead32(debug_rdram_addr(a + 4 * k)));
+    }
+}
 
 static double now_s(void)
 {
@@ -2887,8 +2917,12 @@ static void dbg_update(unsigned int pc)
         for (k = 0; k < g_xtrace_nextra; k++)
             if (pc == g_xtrace_extra[k]) {
                 if ((!g_debug_write_enabled || g_debug_write_done) && g_xtrace_n < g_xtrace_max)
-                    printf("[xtrace] %ld %ld %08x %08x pc=%08x v0=%08x a3=%08x\n", g_xtrace_n++, g_vis, gpr32(31),
+                {
+                    printf("[xtrace] %ld %ld %08x %08x pc=%08x v0=%08x a3=%08x", g_xtrace_n++, g_vis, gpr32(31),
                            0u, pc, gpr32(2), gpr32(7));
+                    xtrace_mem(pc);
+                    printf("\n");
+                }
                 pDebugSetRunState(M64P_DBG_RUNSTATE_RUNNING);
                 pDebugStep();
                 return;
