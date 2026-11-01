@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6738 (2026-11-01).
+Compact operational handoff, as of Session 6739 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -10,6 +10,11 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 
 ## Headline
 
+- **FIXED s6739: plain-launch SIGSEGV in SDL_GetQueuedAudioSize (events thread, boot ~6 s).** osAiSetFrequency closes and
+  reopens the SDL device on the game thread while the events thread polls its queue size (use-after-free). Every SDL call
+  on audio_device now holds audio_device_mutex. Repro tools/audio_race (unlocked 3/3 SIGSEGV, locked 3/3 clean).
+- **s6739 G3: attract-demo Tatooine flight = H-match vs retail** (two port runs, best d 4.6-5.5, monotonic, so the demo is
+  deterministic). Residuals: a consistent ~+4/255 retail green offset, a thin HUD-text edge residual (both small, open).
 - **FIXED s6738: the plain launch (owner's command, no env) ran every non-hangar gfx task through RT64 HLE.**
   ROGUESQ_LLE_FORCE/UNGATED/SOLO defaulted OFF, while every qualification soak (m6_god_common COMMON) sets all three.
   Seen as the boot intro cinematic drawn solid white (plain 0/71 scene captures; flags 61/64) and attribution glyphs
@@ -433,9 +438,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
    single-source where unresolved. Reopen on a new owner report or relevant
    side-effect failure, not repeat crash-hunt holds. Historical proposed probes
    are archived in PROJECT-OVERVIEW, not an alternate live backlog.
-4. **Then G3 render fidelity (NEXT: g3-attract-oracle-diff).** s6738 closed the boot cinematic (H-match after the
-   LLE-default fix). Next: the attract demo (title idle -> scripted Tatooine flight, no input) as a same-camera
-   in-flight diff, tools/g3_boot_diff + tools/g3_oracle_match.py --win; then the briefing fly-over and hangar artifacts. G2/G5 are closed; G4 and aim/steer stay
+4. **Then G3 render fidelity (NEXT: g3-hoth-attract-diff).** s6738 boot cinematic and s6739 Tatooine attract flight are
+   H-match. Next: the second attract demo (Hoth, port ~124 s, looked very white) vs retail (oracle SECS~200) + per-region
+   channel check of the s6739 green offset; then the briefing fly-over and hangar artifacts. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index

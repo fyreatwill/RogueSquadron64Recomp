@@ -5,7 +5,7 @@ Pure PIL (no numpy on this host). Retail dumps are raw big-endian RDRAM windows;
 the base whose VI origin0 the oracle logged (origin = base + 0x500, + one 1280-byte row on interlace field 1). Each
 retail frame is matched to the port frame with min mean |dLum| on a 160x84 grid; the best pairs are written as
 retail | port | 16x16-tile |dLum| heat map (x4). Usage:
-  g3_oracle_match.py ORACLE_LOG PORT_DIR OUT_DIR [--bases 695C00,62B800] [--h 336] [--min-vi N] [--win Y0,Y1]
+  g3_oracle_match.py ORACLE_LOG PORT_DIR OUT_DIR [--bases 695C00,62B800] [--h 336] [--min-vi N] [--win Y0,Y1] [--winx X0,X1] [--w 512]
 --win: PORT_DIR holds window captures (w_<secs>.png, s6738 port_win.sh); rows Y0..Y1 are the letterboxed VI picture
 (1280x1024 Retina 640x480 window, 640x336 VI: 208,880). RDRAM ppm dumps are NOT valid for 3D scenes: RT64 renders on
 the GPU and does not write those frames back (s6738: port RDRAM held the stale N64 logo through the cinematic).
@@ -34,6 +34,8 @@ def main():
     log, pdir, out = sys.argv[1:4]
     a = sys.argv[4:]
     opt = lambda k, d: a[a.index(k) + 1] if k in a else d
+    global W
+    W = int(opt('--w', '640'))  # s6739: 512 for the attract-demo flight (bases 690000,620000)
     bases = [int(x, 16) for x in opt('--bases', '695C00,62B800').split(',')]
     H, minvi = int(opt('--h', '336')), int(opt('--min-vi', '0'))
     os.makedirs(out, exist_ok=True)
@@ -52,7 +54,8 @@ def main():
         y0, y1 = (int(v) for v in opt('--win', '208,880').split(','))
         for f in sorted(glob.glob(os.path.join(pdir, 'w_*.png'))):
             im = Image.open(f).convert('RGB')
-            port.append((int(float(re.search(r'w_([\d.]+)\.png', f)[1]) * 100), im.crop((0, y0, im.size[0], y1)).resize((W, H), Image.BOX)))
+            x0, x1 = (int(v) for v in opt('--winx', '0,%d' % im.size[0]).split(','))  # s6739: pillar-boxed 512 VI
+            port.append((int(float(re.search(r'w_(\d+\.\d+)', f)[1]) * 100), im.crop((x0, y0, x1, y1)).resize((W, H), Image.BOX)))
     for f in sorted(glob.glob(os.path.join(pdir, 'fb_*_w640.ppm'))):
         im = Image.open(f).convert('RGB')
         if im.size[1] >= H:

@@ -177196,3 +177196,40 @@ Rules out: G1E fast DMA and store-diag gating as the cause; "port RDRAM dumps sh
 Not yet checked: missions in plain launch were HLE before this fix (unqualified); they now take the soak-qualified LLE path.
 Verdict: selects H-match for the boot intro cinematic (after the fix) and selects H-hle-default as the white-cinematic cause; refutes H-geom and H-shade for this scene, and refutes H-fast-dma / H-store-diag (same-run-class arms stayed white). Next discriminator: attract-demo same-camera in-flight diff (H-match vs H-geom vs H-shade vs H-desync), NEXT.md g3-attract-oracle-diff.
 Next: the attract demo (title idle -> scripted Tatooine flight, no input) is a same-camera in-flight retail comparison.
+
+## Session 6739 (2026-11-01) — G3 attract-demo flight matches retail (H-match, demo deterministic); plain-launch SIGSEGV in SDL_GetQueuedAudioSize root-caused to an audio-device reopen race and fixed (audio_device_mutex)
+Work unit: g3-attract-oracle-diff (NEXT.md). Side-effect crash fixed per the G4 rule (crash hit by a soak for another goal).
+Retail (scratch/s6739/retail_attract.sh, rs64_oracle + angrylion, no input, controller attached): title 49.2-80.3 s
+(1024), 640 phase 80.3-101.5 s, then the 512-wide Tatooine attract flight from vi 6059 (t=101.5 s), buffers 0x690000 /
+0x620000 (origin = base+0x400, 0x690800 = field 1). 46 fb dumps vi 6089-7168; frames are ~446 rows (garbage below 450).
+Port (scratch/s6739/port_win.sh, plain launch, window captures ~4/s): 640 flyby ~80 s, 512 flight ~89-113 s, cockpit,
+then the Hoth demo, Factor 5 logo, title. 512 picture box in the 1280x1024 Retina window: x 85-1191, y 60-1024.
+Tool: tools/g3_oracle_match.py gains --w (512) and --winx X0,X1 (pillar-boxed crop).
+Measurements (two port runs, attract2 pre-fix and attract3 post-fix build):
+1. Best-match port time rises monotonically with retail VI in both runs (vi 6329-7168 -> port 88.7-97.1 s and 89.4-98.7 s):
+   the demo is deterministic, H-desync refuted. Rate: 14.0 s of retail emulated VI time = ~8.4-9.3 s of port wall time
+   (port plays the demo ~1.5-1.67x faster than the oracle per VI; single-source, likely oracle game fps < hardware).
+2. Best pairs d = 4.83-5.54 (attract2) and 4.61-5.04 (attract3) on 160x84 lum grid; tiles>40 4-14 of 864; heat only on
+   the moving craft, the radar sweep, and a constant thin residual on the "DEMO - PRESS START" text / top row. Visual
+   pairs (scratch/s6739/pairs_sheet.png): terrain, sky, dunes, craft, shadow, HUD, radar identical. Decoding at the
+   origin instead of the base was WORSE (d +0.3), so the text residual is not a 1-row offset (open, small).
+3. Systematic: retail G channel +3.6..+3.9 (of 255) above the port on every one of 12 best pairs (R, B within +-2 except
+   one sky-heavy frame R -11). Two runs, so not noise; small. Possible H-shade (fog/combiner) or VI/gamma; not chased.
+Verdict: selects H-match for the attract-demo flight (two port runs + visual pairs); H-geom not seen; H-shade only as a
+~4/255 green offset; H-desync refuted.
+Crash (attract1, plain launch, t~6.5 s): SIGSEGV si_addr=0x8819b78858668396 in SDL_GetQueuedAudioSize <-
+get_frames_remaining <- ultramodern::get_remaining_audio_bytes on the EVENTS thread (init_events lambda).
+ORIGIN: set_frequency (src/main/main.cpp), called on the GAME thread by osAiSetFrequency (librecomp ai.cpp:152 ->
+ultramodern::set_audio_frequency), does SDL_CloseAudioDevice + reopen while the events thread (events.cpp:1540
+get_remaining_audio_bytes) is inside SDL_GetQueuedAudioSize on the same device -> use-after-free of the device's lock.
+The code comment claimed the audio thread was the only opener/closer; false. Evidence: (a) attract2 logs a reopen
+pair 5 lines after `[vi] update_screen #384`; attract1 crashed 3 lines after the same #384 line with no reopen line
+printed (same osViSetMode #6 / audio-wait-spin sequence before both); (b) standalone two-arm repro
+tools/audio_race/audio_reopen_race.cpp (same libSDL2/sdl2-compat): unlocked 3/3 SIGSEGV rc=139, locked 3/3 survived
+with 4.2-7.6M interleaved polls over 300 reopens. Not a mitigation: it removes the data race.
+Fix: static std::recursive_mutex audio_device_mutex held around every SDL call on audio_device (open_audio_output,
+set_frequency and F9 route close/reopen, queue_samples queue/size, get_frames_remaining, queue snapshot).
+Post-fix game run attract3: 165 s, 16 reopens, 0 CRASH lines, 0 Unhandled, attract demo renders.
+Rules out: H-desync for the attract demo; "only the audio thread opens/closes audio_device".
+Not yet checked: crash frequency pre-fix in plain launches (1/2 here; it needs the reopen to land on a poll).
+Next: the Hoth attract demo (port ~124 s, looked very white) vs retail, plus a per-region channel check of the green offset.

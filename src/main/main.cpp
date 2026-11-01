@@ -7391,6 +7391,10 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
 // Audio (SDL2)
 // ---------------------------------------------------------------------------
 static SDL_AudioDeviceID audio_device = 0;
+// s6739: osAiSetFrequency (game thread) closes and reopens the device while the events thread
+// polls SDL_GetQueuedAudioSize (events.cpp get_remaining_audio_bytes): SIGSEGV in SDL on a freed
+// device (plain launch, boot ~6 s). Every SDL call on audio_device holds this lock.
+static std::recursive_mutex audio_device_mutex;
 static uint32_t audio_sample_rate = 48000;
 
 extern "C" uint32_t rs64_audio_rate_snapshot() {
@@ -7452,6 +7456,7 @@ static void rs64_m5_audio_host_row(const char* edge, uint32_t queued_before,
 }
 
 static uint32_t rs64_m5_audio_queue_snapshot() {
+    std::lock_guard<std::recursive_mutex> lock(audio_device_mutex);
     return audio_device ? SDL_GetQueuedAudioSize(audio_device) : 0;
 }
 
@@ -7568,6 +7573,7 @@ static std::string audio_route_resolve() {
 }
 
 static void open_audio_output() {
+    std::lock_guard<std::recursive_mutex> lock(audio_device_mutex);
     audio_route_load_pref();
     SDL_AudioSpec desired{};
     desired.freq     = (int)audio_sample_rate;
@@ -7593,8 +7599,8 @@ static void open_audio_output() {
 }
 
 // Applies pending F9 presses: advance default -> device 0 -> ... -> default,
-// persist the choice, and reopen. Runs on the audio thread (queue_samples), the
-// only thread that opens, closes, or queues to audio_device.
+// persist the choice, and reopen. Runs on the audio thread (queue_samples); set_frequency
+// also reopens from the game thread, so both hold audio_device_mutex (s6739).
 static void audio_route_apply_cycle() {
     int presses = g_audio_route_cycle.exchange(0, std::memory_order_acq_rel);
     if (presses <= 0) return;
@@ -7616,6 +7622,7 @@ static void audio_route_apply_cycle() {
     }
     fprintf(stderr, "[audio-route] F9 -> '%s' (saved to %s)\n", g_audio_route_pref.c_str(),
             audio_route_file_path().c_str());
+    std::lock_guard<std::recursive_mutex> lock(audio_device_mutex);
     if (audio_device) {
         SDL_CloseAudioDevice(audio_device);
         audio_device = 0;
@@ -7649,6 +7656,7 @@ static void set_frequency(uint32_t freq) {
             }
         }
     }
+    std::lock_guard<std::recursive_mutex> lock(audio_device_mutex);
     if (audio_device) {
         SDL_CloseAudioDevice(audio_device);
         audio_device = 0;
@@ -7723,13 +7731,17 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
         }
     }
 
-    const uint32_t queued_before = audio_device ? SDL_GetQueuedAudioSize(audio_device) : 0;
+    uint32_t queued_before = 0, queued_after = 0;
     int queue_result = -1;
-    if (audio_device) {
-        queue_result = SDL_QueueAudio(audio_device, native_samples.data(),
-                                      (Uint32)(num_samples * sizeof(int16_t)));
+    {
+        std::lock_guard<std::recursive_mutex> lock(audio_device_mutex);
+        queued_before = audio_device ? SDL_GetQueuedAudioSize(audio_device) : 0;
+        if (audio_device) {
+            queue_result = SDL_QueueAudio(audio_device, native_samples.data(),
+                                          (Uint32)(num_samples * sizeof(int16_t)));
+        }
+        queued_after = audio_device ? SDL_GetQueuedAudioSize(audio_device) : 0;
     }
-    const uint32_t queued_after = audio_device ? SDL_GetQueuedAudioSize(audio_device) : 0;
     if (queue_result != 0) {
         static uint32_t failures = 0;
         const uint32_t n = failures++;
@@ -7961,8 +7973,12 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
 }
 
 static size_t get_frames_remaining() {
-    if (!audio_device) return 0;
-    Uint32 queued = SDL_GetQueuedAudioSize(audio_device);
+    Uint32 queued;
+    {
+        std::lock_guard<std::recursive_mutex> lock(audio_device_mutex);
+        if (!audio_device) return 0;
+        queued = SDL_GetQueuedAudioSize(audio_device);
+    }
     rs64_m5_audio_host_row("remaining", queued, queued, 0, 0);
     static const bool probe_enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
