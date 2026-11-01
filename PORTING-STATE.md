@@ -177194,4 +177194,5 @@ scratch/s6738/pairs_moving.png. Verdict: H-match for the intro cinematic (two li
 H-geom/H-shade not seen. Two arms in one build, so not cross-build.
 Rules out: G1E fast DMA and store-diag gating as the cause; "port RDRAM dumps show what RT64 drew" for 3D scenes.
 Not yet checked: missions in plain launch were HLE before this fix (unqualified); they now take the soak-qualified LLE path.
+Verdict: selects H-match for the boot intro cinematic (after the fix) and selects H-hle-default as the white-cinematic cause; refutes H-geom and H-shade for this scene, and refutes H-fast-dma / H-store-diag (same-run-class arms stayed white). Next discriminator: attract-demo same-camera in-flight diff (H-match vs H-geom vs H-shade vs H-desync), NEXT.md g3-attract-oracle-diff.
 Next: the attract demo (title idle -> scripted Tatooine flight, no input) is a same-camera in-flight retail comparison.
