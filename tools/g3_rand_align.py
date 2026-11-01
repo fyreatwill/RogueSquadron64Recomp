@@ -9,7 +9,8 @@ import collections, sys
 
 RAND = 0x80003430
 MARKERS = {0x8006BEC8: "npc_entry a3", 0x8006C018: "dc34_gate v0"}
-XTRACE_ONLY = {0x8006C010, 0x800AF374, 0x800C6674, 0x800FA730}  # s6752 xtrace-mem probe PCs (dump rows)
+XTRACE_ONLY = {0x8006C010, 0x800AF374, 0x800C6674, 0x800FA730,  # s6752 xtrace-mem probe PCs (dump rows)
+               0x8008EE08, 0x8008EE84}  # s6757: s6755 AI-buffer marker rows
 
 def load(path, retail):
     rows, marks = [], []

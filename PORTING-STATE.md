@@ -177723,3 +177723,34 @@ Supersedes: the port "VI" figures in s6749 (update_screen 61-62/s, now explained
 update_screen, including the 1.4% repeated VIs.
 Does NOT establish: why the game swaps at 1-VI intervals outside flight (863 per run); any audible effect of the old
 extra VIs.
+
+## Session 6756 (2026-11-01) — G3: mission 5 (Gerrard V) with dt pinned: port sim identical to retail for all 1972 retail ticks (20635 rand calls, NPC gates, event mask, song handle) and 17/20 frames H-match; the 3 outliers are retail mid-draw dumps
+
+HYPOTHESIS-ID: g3-mission5-pinned (H-match; no divergence in the window).
+
+Recipe (runs in scratch/s6757): lvl5.eep = g3_eep_patch.py scratch/s6754/lvl4.eep --set 0x31=4 (checksums re-signed).
+retail.sh = s6756 retail recipe + the s6754 sim spec (NPC gate/glob blocks) + song words 0x8010C9E0:18 / 0x8010C0E0:1 +
+AI rows (--exec-trace-also 0x8008EE08/0x8008EE84) + 24 fb dumps (--fb-arm-after 103, every 4 s), SECS=200. port.sh =
+s6754 port recipe with the same spec, CAP0=62, SECS=150 (339 window captures). Pin 800FA730:29:30:3d088889 both arms.
+No crash either arm; mupen eep restored, owner save restored.
+Tool fix: the s6755 AI-buffer marker rows (port sites 0x8008EE08/0x8008EE84 in ROGUESQ_RAND_TRACE) were counted as rand
+calls by g3_rand_ticks.py (first "mismatch" at index 0) and g3_rand_align.py; both now skip them.
+Positive control: the s6754 lvl4 pair through the fixed g3_rand_ticks.py still reports its known mismatch at index 2153
+(2260/2258 calls), so the tool still finds real divergences after the fix.
+Result:
+- g3_rand_ticks.py: retail 20635 rand calls over 1972 ticks, port 27940 over 2515; all 20635 compared calls identical
+  (tick, caller, value). lvl5 runs ~10x the rand rate of lvl4.
+- g3_frame_snap.py 1972: every tick differs only in snapshot clock words 3-6/9 and glob words 20-31 (OS queue ring
+  pointers + clocks, as in s6753/s6754); no NPC gate/point mismatch. "port only" NPC rows exist only at the final retail
+  tick 1971 (retail log cut).
+- g3_tick_mem.py 8010c9e0 8010c0e0: first arm diff tick None. Song handle 0->1 at tick 458, 1->0 at 1200, 0->2 at 1815
+  in BOTH arms, although retail took 4326 AI buffers for the 742-tick song and the port 2837 (g3_ai_clock.py; retail
+  3.05 VI/tick in this window, port 2.000). So this cue's end is sim-clocked (a scripted stop), unlike the lvl4 cue that
+  ran to its natural end on the audio clock (s6755). Buffers per VI: retail 1.912, port 1.914 (the s6755 VI fix holds).
+- Frames (g3_oracle_match.py --w 512 --bases 690000,620000 --h 446 --win 60,1024 --winx 85,1191 --dec shift --worst 3):
+  17/20 retail dumps vi 7084-11645 match a port capture at d 4.1-8.2 vs median 21-37; fit a 0.9998-1.0103. Outliers
+  vi 7325 (d 24.6), 9245 (15.3), 10925 (9.4): worst0/worst2 sheets show the retail buffer mid-draw (terrain missing,
+  horizontal streaks, half-drawn HUD), the s6743 artefact class, not a port difference.
+Two lines (sim state + rand stream; framebuffers) agree: lvl5 H-match through tick 1971 (~65 s of port flight).
+Does NOT cover: ticks beyond 1971 (retail mupen runs ~3 VI/tick here, so 200 s reached only 1972 ticks).
+Next: g3-mission6-pinned, mission 6 (The Jade Moon, +0x31=5) with the same recipe and retail SECS 260.

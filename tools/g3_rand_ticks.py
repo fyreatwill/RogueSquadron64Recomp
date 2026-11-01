@@ -6,7 +6,8 @@ different tick; this keys them by sim tick. usage: g3_rand_ticks.py RETAIL_ORACL
 import sys
 
 RAND, TICK = 0x80003430, 0x800FA730
-SKIP = {0x8006BEC8, 0x8006C018, 0x8006C010, 0x800AF374, 0x800C6674, TICK}
+SKIP = {0x8006BEC8, 0x8006C018, 0x8006C010, 0x800AF374, 0x800C6674, TICK,
+        0x8008EE08, 0x8008EE84}  # s6757: s6755 AI-buffer marker rows (osAiSetNextBuffer jal sites)
 
 def walk(path, retail):
     tick, out = -1, []

@@ -1,20 +1,18 @@
-# NEXT: G3 -- mission 5 in-flight sim/frame match with dt pinned (s6753/s6754 method)
-HYPOTHESIS-ID: g3-mission5-pinned
+# NEXT: G3 -- mission 6 (The Jade Moon) in-flight sim/frame match with dt pinned (s6753-s6756 method)
+HYPOTHESIS-ID: g3-mission6-pinned
 
-s6755 closed lvl4: the tick-2302 event is the song-end bit 0x100 (tickSongFadeTimer, isSongHandleActive), audio
-clocked; the song is the same length in AI buffers in both arms. Fixed the duplicate-VI defect in the VI thread (events.cpp
-deadline rounding; ROGUESQ_VI_TRUNC_DEADLINE=1 = old). The rest of the tick gap is retail frame drops (pacing).
-Expect audio-clocked script events to keep landing at different ticks under pinned dt: time them in AI buffers
-(tools/g3_ai_clock.py), not ticks.
+s6756 closed lvl5: H-match for all 1972 retail ticks (20635 rand calls, NPC state, event mask, song handle) and 17/20
+frames (outliers = retail mid-draw dumps). Recipes: scratch/s6757/retail.sh, port.sh (spec + AI rows + fb dumps built in).
+g3_rand_ticks.py / g3_rand_align.py now skip the AI marker rows.
 
-Work:
-1. Mission 5 save: `python3 tools/g3_eep_patch.py scratch/s6754/lvl4.eep scratch/s6757/lvl5.eep` with +0x31=4 (read
-   the tool's usage for the arg form).
-2. Arms (one run at a time): copy scratch/s6756/port.sh and retail.sh (they carry the song-state spec + dt pin), point
-   SAVE_FROM/EEP at lvl5.eep, add XA="--exec-trace-also 0x8008EE08 --exec-trace-also 0x8008EE84" to retail (AI buffer
-   rows; the port markers are built in).
-3. Analyse: tools/g3_rand_ticks.py (sim-tick keyed rand diff), g3_tick_mem.py for 0x8010C9E0 (event mask) and
-   0x8010C0E0 (song handle), g3_ai_clock.py for audio-clocked events, g3_frame_snap.py / g3_oracle_match.py for frames.
-Outcomes: sim identical up to an audio-clocked event = H-match (record its AI-buffer timing); a non-audio divergence
-before any event = a real port defect -> bisect with xtrace-mem as s6751-s6753.
-Positive control: the s6754 pair through g3_rand_ticks.py -> identical for ticks 0-2301.
+Work (runs in scratch/s6758; one game run at a time):
+1. `python3 tools/g3_eep_patch.py scratch/s6754/lvl4.eep scratch/s6758/lvl6.eep --set 0x31=5`
+2. Copy scratch/s6757/retail.sh and port.sh, sed s6757->s6758 and lvl5->lvl6. Retail SECS=260 (lvl5 retail ran ~3 VI per
+   tick, so 200 s gave only 1972 ticks); port SECS=150. Check retail tick 0 VI vs --fb-arm-after 103 (lvl6 intro may be
+   longer: if tick 0 is past ~110 s, raise FARM).
+3. Analyse: g3_rand_ticks.py RETAIL PORT; g3_frame_snap.py RETAIL PORT <retail ticks> (only clock words 3-6/9 and glob
+   20-31 may differ); G3_IGN=04,0c,18 g3_tick_mem.py RETAIL PORT 8010c9e0 8010c0e0; g3_ai_clock.py; g3_oracle_match.py
+   --w 512 --bases 690000,620000 --h 446 --win 60,1024 --winx 85,1191 --dec shift --worst 3 (view worst sheets).
+Outcomes: identical up to an audio-clocked event = H-match (time it in AI buffers); a non-audio divergence = real port
+defect -> bisect with xtrace-mem as s6751-s6753.
+Positive control: the s6754 pair through g3_rand_ticks.py -> mismatch at index 2153.
