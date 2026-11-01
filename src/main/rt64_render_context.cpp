@@ -6,6 +6,11 @@
 #include <mutex>
 #include <string_view>
 #include <vector>
+#include <deque>
+#include <condition_variable>
+#include <thread>
+#include <pthread.h>
+#include <pthread/qos.h>
 
 #define HLSL_CPU
 #include "hle/rt64_application.h"
@@ -17,6 +22,11 @@
 // The bridge needs to forward Factor 5 raw RDP byte ranges via
 // processDisplayLists(isHLE=false). Set on construction, cleared on shutdown.
 static std::atomic<RT64::Application*> g_rt64_app{nullptr};
+// s6705 G1e async RDP consumer (see ultramodern::rdpq below); flipped on the Gfx thread by ROGUESQ_RDP_ASYNC_TOGGLE.
+extern "C" int rs64_rdp_async_on;
+int rs64_rdp_async_on = [] { const char *e = std::getenv("ROGUESQ_RDP_ASYNC"); return (e && *e && *e != '0') ? 1 : 0; }();
+namespace RT64 { extern volatile int g_s4280_n; } // rt64_rdp.cpp s4280 cimg events
+namespace ultramodern { void rs64_rdpq_drain(); void rs64_rdpq_task_enter(); void rs64_rdpq_task_exit(); }
 extern "C" uint32_t rs64_phase_ord(void);
 
 // Host-side observations only; no rendering decision depends on them.
@@ -416,6 +426,7 @@ public:
 
     void send_dl(const OSTask* task) override {
         s4267::T s4267_total(7);
+        struct RdpqScope { RdpqScope() { ultramodern::rs64_rdpq_task_enter(); } ~RdpqScope() { ultramodern::rs64_rdpq_task_exit(); } } rdpq_scope; // s6705
         const uint32_t m5_task_seq = rs64_m5_host_send_begin(
             static_cast<uint32_t>(task->t.data_ptr));
         // ROGUESQ_LLE_FORCE=1: route this GFX task through the LLE RSP
@@ -862,6 +873,7 @@ public:
     }
 
     void update_screen() override {
+        ultramodern::rs64_rdpq_drain(); // s6705: no-op unless ROGUESQ_RDP_ASYNC queued ranges outside a task
         if (app) {
             ultramodern::renderer::ViRegs* boundary_vi =
                 ultramodern::renderer::get_vi_regs();
@@ -1133,6 +1145,7 @@ public:
     }
 
     void shutdown() override {
+        ultramodern::rs64_rdpq_drain(); // s6705
         if (app) {
             g_rt64_app.store(nullptr);
             app->end();
@@ -1184,6 +1197,80 @@ namespace ultramodern {
     // run, just without further graphics output. Better than crashing.
     // TODO: pre-validate at dpc_bridge to drop bad commands BEFORE submit.
     static std::atomic<bool> s_rdp_disabled{false};
+
+    // s6705 G1e: ROGUESQ_RDP_ASYNC=1 moves RT64 processing of LLE RDP ranges onto one worker thread so the RSP keeps
+    // running while RT64 interprets. The ucode reuses its RDP output ring within a task, so each range's command words are
+    // COPIED at submit time and RT64 reads the copy (processDisplayLists takes the command base pointer; textures still come
+    // from core.RDRAM, read later than in sync mode, like the real RDP). Contiguous submits are merged up to 4 KB. Ordering
+    // is FIFO; send_dl (RAII guard) and update_screen drain the queue, so dp_complete and present still follow every
+    // range of the task. Submits outside send_dl run synchronously. ROGUESQ_RDP_ASYNC_TOGGLE=<s> (events.cpp) flips it.
+    namespace rdpq {
+        struct Job { uint32_t lo = 0, hi = 0; std::vector<uint8_t> w; };
+        static std::mutex m;
+        static std::condition_variable cv_job, cv_idle;
+        static std::deque<Job> q;
+        static std::vector<std::vector<uint8_t>> pool;
+        static bool busy = false, started = false;
+        static Job pend;               // producer-side merge buffer (Gfx thread only)
+        static bool pend_has = false;
+        static int in_task = 0;        // Gfx thread only
+        static uint64_t n_jobs = 0, n_ranges = 0;
+        static bool task_async = false; // a range of the current task went to the worker
+        static void worker() {
+            pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
+            pthread_setname_np("RS64 RDP async");
+            for (;;) {
+                Job j;
+                {
+                    std::unique_lock<std::mutex> lk(m);
+                    cv_job.wait(lk, [] { return !q.empty(); });
+                    j = std::move(q.front()); q.pop_front(); busy = true;
+                }
+                RT64::Application *app = g_rt64_app.load();
+                if (app && !s_rdp_disabled.load(std::memory_order_relaxed))
+                    app->processDisplayLists(j.w.data() - j.lo, j.lo, j.hi, /*isHLE*/ false);
+                {
+                    std::lock_guard<std::mutex> lk(m);
+                    j.w.clear(); pool.push_back(std::move(j.w)); busy = false;
+                    if (q.empty()) cv_idle.notify_all();
+                }
+            }
+        }
+        static void flush_pend() {
+            if (!pend_has) return;
+            pend_has = false;
+            std::lock_guard<std::mutex> lk(m);
+            if (!started) { started = true; std::thread(worker).detach(); }
+            q.push_back(std::move(pend)); ++n_jobs;
+            pend = Job{};
+            if (!pool.empty()) { pend.w = std::move(pool.back()); pool.pop_back(); }
+            cv_job.notify_one();
+        }
+        static void drain() {
+            flush_pend();
+            if (!started) return;
+            std::unique_lock<std::mutex> lk(m);
+            cv_idle.wait(lk, [] { return q.empty() && !busy; });
+        }
+        // true = queued; false = caller must process synchronously.
+        static bool submit(RT64::Application *app, uint32_t lo, uint32_t hi) {
+            if (!rs64_rdp_async_on || !in_task || !app->core.RDRAM) { drain(); return false; }
+            if (pend_has && (lo != pend.hi || pend.w.size() >= 4096)) flush_pend();
+            if (!pend_has) { pend.lo = lo; pend.hi = lo; pend.w.clear(); pend_has = true; }
+            const uint8_t *src = app->core.RDRAM + lo;
+            pend.w.insert(pend.w.end(), src, src + (hi - lo));
+            pend.hi = hi; ++n_ranges; task_async = true;
+            return true;
+        }
+    }
+    void rs64_rdpq_drain() { rdpq::drain(); }
+    void rs64_rdpq_task_enter() { ++rdpq::in_task; }
+    // The bridge's s4280 cimg walk (rs64_dpc_defer_end) maps RT64's SetColorImage events back to RDRAM by pointer offset,
+    // meaningless for a copied range; it skips async tasks and the events they left are cleared here once drained.
+    void rs64_rdpq_task_exit() { --rdpq::in_task; rdpq::drain(); if (rdpq::task_async) { rdpq::task_async = false; RT64::g_s4280_n = 0; } }
+}
+extern "C" int rs64_rdpq_task_async() { return ultramodern::rdpq::task_async ? 1 : 0; }
+namespace ultramodern {
 
     static void run_rdp_submission(RT64::Application* app, uint32_t lo_phys, uint32_t hi_phys) {
         if (s_rdp_disabled.load(std::memory_order_relaxed)) {
@@ -1258,6 +1345,7 @@ namespace ultramodern {
             fflush(stderr);
         }
 #else
+        if (rdpq::submit(app, lo_phys, hi_phys)) return; // s6705: queued for the async consumer
         { s4267::T s4267_pd(5); app->processDisplayLists(app->core.RDRAM, lo_phys, hi_phys, /*isHLE*/ false); }
 #endif
     }

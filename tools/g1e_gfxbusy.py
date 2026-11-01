@@ -41,10 +41,10 @@ if __name__ == "__main__":
         print(f"  fit {os.path.basename(d):28s}", "n<10 (capped)" if not f else "n=%d frame_ms = %.1f + %.2f*sd_ms  r=%.2f" % (f[0], f[2], f[1], f[3]))
 
 
-def hk_split(d, tmin=140):
-    """s6704 same-run A/B: [g1b] seconds grouped by the trailing hk=<0|1> (ROGUESQ_RSP_HOOKS_TOGGLE). Skips the first second
+def hk_split(d, tmin=140, key="hk"):
+    """s6704 same-run A/B: [g1b] seconds grouped by <key>=<0|1> (hk: ROGUESQ_RSP_HOOKS_TOGGLE; as: s6705 ROGUESQ_RDP_ASYNC_TOGGLE). Skips the first second
     after each flip so a task straddling the boundary does not smear across arms."""
-    H = re.compile(rb"^\[g1b\] t=(\d+) vi=(\d+) tasks=(\d+) sd_wall=([\d.]+)/.* hk=(\d)")
+    H = re.compile(rb"^\[g1b\] t=(\d+) vi=(\d+) tasks=(\d+) sd_wall=([\d.]+)/.* " + key.encode() + rb"=(\d)")
     arms = {0: [], 1: []}; prev = None
     for ln in open(os.path.join(d, "run.log"), "rb"):
         m = H.match(ln)
@@ -52,9 +52,9 @@ def hk_split(d, tmin=140):
         hk = int(m[5]); fresh = prev is not None and hk != prev; prev = hk
         if int(m[1]) >= tmin and not fresh and int(m[3]): arms[hk].append((int(m[3]), float(m[4])))
     for hk, r in arms.items():
-        if r: print(f"  hk={hk} n={len(r):3d} tasks={st.mean(x[0] for x in r):5.1f} sd_ms={st.mean(x[1] for x in r):5.2f} "
+        if r: print(f"  {key}={hk} n={len(r):3d} tasks={st.mean(x[0] for x in r):5.1f} sd_ms={st.mean(x[1] for x in r):5.2f} "
                     f"sd_ms_median={st.median(x[1] for x in r):5.2f}")
 
 
-if __name__ == "__main__" and os.environ.get("HK"):
-    for d in args: print(os.path.basename(d)); hk_split(d, tmin)
+if __name__ == "__main__" and (os.environ.get("HK") or os.environ.get("AS")):
+    for d in args: print(os.path.basename(d)); hk_split(d, tmin, "as" if os.environ.get("AS") else "hk")

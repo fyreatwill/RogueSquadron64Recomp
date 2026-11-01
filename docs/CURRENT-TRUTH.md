@@ -48,6 +48,9 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 - **G1c phase 2 CLOSED s6703.** dd4 is the ceiling that adds terrain on lvl1/lvl5; dd8 is sane after s6701/s6702. Owner sheets
   docs/img/g1c_phase2_dd_sheet_vi{3000,4500}.png (camera differs per cell), docs/DRAW-DISTANCE.md updated. Defaults stay retail.
   FPS60 dd4 lvl5 (refold past the start pause): ~45 tasks/s, gfx ~16 ms -> not 60.
+- **s6705 G1e: ROGUESQ_RDP_ASYNC=1 (opt-in) runs RT64 RDP processing on a worker thread** (command words copied at submit,
+  drained before dp_complete/present). Same-run toggle, lvl5 FPS60 dd2: 11.70 -> 10.46 ms/task, 49.3 -> 54.9 tasks/s, 301 s
+  clean, frames sane (docs/img/g1e_s6705_async_sheet.png). Short of 60: only ~1.2 of the ~5 ms RT64 share overlaps. Default off.
 - **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
   ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
   lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
@@ -537,9 +540,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1e: overlap RSP LLE with RT64 RDP processing (s6705 next).** FPS60 above dd1 is bound by the serial gfx task
-   (s6704). Move RT64 processing of submitted RDP ranges onto a consumer thread so send_dl wall -> max(RSP, RT64).
-   Measure with ROGUESQ_RSP_HOOKS_TOGGLE-style same-run toggle + tools/g1e_gfxbusy.py. See NEXT.md.
+1. **G1e: why async overlap saves only 1.2 ms (s6706 next).** ROGUESQ_RDP_ASYNC landed (s6705). Split each async task into
+   RSP wall, worker busy and drain wait (same toggle run) to choose between end-loaded RT64 work (fullSync), worker-bound RT64
+   (optimise RT64) and producer-side overhead (copy/merge). See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional

@@ -176106,3 +176106,26 @@ refutes H-cpu; refutes H-hook-overhead (the gated no-op hooks and RT64 timers co
 leaf attribution suggested). H-pace not selected: frame period tracks gfx ms 1:1 rather than VI slots alone.
 Owner page: docs/OWNER-OPT-INS.md now recommends plain ROGUESQ_FPS60=1 for a steady 60 and lists the dd2/dd3/dd4 rates.
 Next: overlap RSP LLE and RT64 processing (async RDP-range consumer) so send_dl wall approaches max(RSP, RT64), not the sum.
+
+## Session 6705 (2026-10-31) — G1e: async RT64 consumer of LLE RDP ranges (ROGUESQ_RDP_ASYNC) lands; same-run toggle lvl5 FPS60 dd2: -1.2 ms/task, +5.6 tasks/s, frames sane; short of the 2 ms target
+Engineering change: src/main/rt64_render_context.cpp `ultramodern::rdpq`. ROGUESQ_RDP_ASYNC=1 queues each LLE RDP range
+(contiguous submits merged up to 4 KB) to one worker thread ("RS64 RDP async", QoS user-interactive) that runs
+processDisplayLists. The command words are COPIED at submit time (the ucode reuses its RDP ring within a task, H-dep), and RT64
+reads the copy (processDisplayLists takes the command base pointer; textures still come from core.RDRAM). FIFO order; send_dl
+(RAII scope) and update_screen/shutdown drain, so dp_complete and present still follow every range of the task. Submits outside
+send_dl stay synchronous. ROGUESQ_RDP_ASYNC_TOGGLE=<s> (events.cpp g1b tick) flips it at the [g1b] second boundary, which now
+ends `as=<0|1>`. tools/g1e_gfxbusy.py: `env AS=1` splits by as= (HK=1 still splits by hk=). Default OFF, behaviour unchanged.
+First run crashed at t=10, exactly when async switched on: SIGBUS in rs64_dpc_defer_end. ORIGIN: our own always-on s4280 cimg
+walk (dpc_bridge.cpp) maps RT64's SetColorImage events (rt64_rdp.cpp:469, off = cmd pointer - state->RDRAM) back to RDRAM by that
+offset. For a copied range the offset is garbage, so the memcpy went wild. This is a diagnostic misreading the copy, not a render
+hazard. Fix: the walk skips tasks that queued async ranges (rs64_rdpq_task_async), and RT64::g_s4280_n is cleared after such a task
+drains, so a later sync task never reads stale offsets. Patches re-exported (events.cpp).
+Run (scratch/agent/s6705_async.zsh; lvl5 FPS60 dd2 STORE_DIAG=0 G1B, toggle 10 s, 301 s hold): alive, 0 crashlines, 0 VI
+stalls. From 140 s on, first second after each flip dropped: as=0 n=80 49.3 tasks/s, sd 11.70 ms (median 12.34); as=1 n=74 54.9
+tasks/s, sd 10.46 ms (median 10.52). From 40 s on: 50.8/9.89 vs 54.5/9.14. The instrument is the s6704 toggle, which resolved
++4.9 ms in its positive control. Render check: fbd frames from both arms (docs/img/g1e_s6705_async_sheet.png, top sync, bottom
+async) show terrain, craft and HUD with no spikes or garbage (single run, eyeball).
+Verdict: H-overlap partly selected. Async overlap is real but saves ~1.2 ms of the ~5 ms RT64 share (s6704 sample: ~46% of
+send_dl). H-dep was handled by construction (copy) and no corruption was seen. H-rt64-bound not yet discriminated: the worker may
+be busy for most of the task, or most RT64 work may land at task end (the fullSync after the RSP finishes), leaving nothing to
+overlap. Next: per-task RSP wall vs worker busy vs drain-wait split, in the same toggle run.

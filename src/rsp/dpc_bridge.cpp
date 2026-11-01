@@ -36,6 +36,7 @@ static std::vector<S4272Sh> g_s4272_sh;
 // processDisplayLists(isHLE=false). Defined in src/main/rt64_render_context.cpp.
 namespace RT64 { class Application; }
 extern "C" RT64::Application* rs64_get_rt64_app();
+extern "C" int rs64_rdpq_task_async(); // s6705 rt64_render_context.cpp
 namespace ultramodern {
     void submit_rdp_range(uint32_t lo_phys, uint32_t hi_phys);
 }
@@ -6540,7 +6541,7 @@ extern "C" void rs64_dpc_defer_end(int commit) {
             }
         }
 
-        {   // s4280: attribute each SetColorImage RT64 saw during this commit to its bump-time shadow range.
+        if (!rs64_rdpq_task_async()) {   // s4280: attribute each SetColorImage RT64 saw during this commit to its bump-time shadow range (s6705: not for async-consumed tasks).
             int n = RT64::g_s4280_n; static unsigned long nOdd = 0, nSane = 0, oddNoShadow = 0, oddDiff = 0, sane_diff = 0; static int shownO = 0, shownS = 0;
             for (int i = 0; i < n && i < 256; i++) {
                 const RT64::S4280Ev &ev = RT64::g_s4280_ev[i];
