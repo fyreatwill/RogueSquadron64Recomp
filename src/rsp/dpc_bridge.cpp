@@ -5185,9 +5185,9 @@ extern "C" { int rs64_g1d_pillar_crop = 0; }
 extern "C" { int rs64_g1d_edge_cols = 0; int rs64_g1d_edge_cw = 0; }
 static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
     static const bool on = [] { const char *v = std::getenv("ROGUESQ_G1D_DEBRIEF"); return !(v && *v == '0'); }();
-    static int s_epoch = -1, s_lines = 0; static uint32_t s_draws = 0, s_out = 0, s_cw = 0, s_sx0 = 0, s_sx1 = 0xFFF;
+    static int s_epoch = -1, s_lines = 0; static uint32_t s_draws = 0, s_out = 0, s_cw = 0, s_sx0 = 0, s_sx1 = 0xFFF, s_sy0 = 0, s_sy1 = 0xFFF;
     static uint32_t s_edraws = 0, s_ecw = 0, s_esx = 0;  // s6726 edge: draws, colour width, max scissor xh (10.2) this epoch
-    struct Reach { uint32_t cw, draws, sx; double rx1, tx1; };
+    struct Reach { uint32_t cw, draws, sx; double rx1, tx1; double cx0 = 1e9, cy0 = 1e9, cy1 = 0, sy0 = 1e9, sy1 = 0; };  // s6737: content min x0 / y0, max y1 (exclusive), scissor y range
     static Reach s_reach[4] = {}; static int s_rlines = 0;
     static const bool edge_on = [] { const char *v = std::getenv("ROGUESQ_G1D_EDGE"); return !(v && *v == '0'); }();
     // s6736 G3: the rule above keys on the scissor, but on the briefing fly-over (cw 640) and in flight (cw 512) the scissor
@@ -5203,7 +5203,7 @@ static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
     if (ep != s_epoch) {
         if (s_lines < 200 && s_epoch >= 0) { s_lines++; fprintf(stderr, "[g1d-pillar] epoch=%d end draws=%u outside=%u crop=%d sw=%d\n", s_epoch, s_draws, s_out, rs64_g1d_pillar_crop, g_rs64_swap_n.load(std::memory_order_relaxed)); }
         // s6736: per-epoch, per-colour-width reach table (which columns any draw touches), for the right-edge column audit
-        for (auto &e : s_reach) { if (e.cw && e.draws && s_rlines < 400) { s_rlines++; fprintf(stderr, "[g1d-reach] epoch=%d cw=%u draws=%u max_sc_xh=%.2f max_rect_x1=%.2f max_tri_x1=%.2f sw=%d\n", s_epoch, e.cw, e.draws, e.sx / 4.0, e.rx1, e.tx1, g_rs64_swap_n.load(std::memory_order_relaxed)); } e = {}; }
+        for (auto &e : s_reach) { if (e.cw && e.draws && s_rlines < 400) { s_rlines++; fprintf(stderr, "[g1d-reach] epoch=%d cw=%u draws=%u max_sc_xh=%.2f max_rect_x1=%.2f max_tri_x1=%.2f min_x0=%.2f sc_y=%.2f..%.2f content_y=%.2f..%.2f sw=%d\n", s_epoch, e.cw, e.draws, e.sx / 4.0, e.rx1, e.tx1, e.cx0, e.sy0, e.sy1, e.cy0, e.cy1, g_rs64_swap_n.load(std::memory_order_relaxed)); } e = {}; }
         s_epoch = ep; s_draws = 0; s_out = 0; s_edraws = 0; s_ecw = 0; s_esx = 0; s_erx = 0.0;
         if (!edge_content) __atomic_store_n(&rs64_g1d_edge_cols, 0, __ATOMIC_RELAXED);
     }
@@ -5212,17 +5212,17 @@ static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
         const uint32_t w0 = rd(a), w1 = rd(a + 4), op = (w0 >> 24) & 0x3F;
         step = (op == 0x24 || op == 0x25) ? 16u : (op >= 0x08 && op <= 0x0F) ? 32u + ((op & 4) ? 64u : 0u) + ((op & 2) ? 64u : 0u) + ((op & 1) ? 16u : 0u) : 8u;
         if (op == 0x3F) { s_cw = ((w0 >> 19) & 3u) == 2u ? (w0 & 0x3FFu) + 1u : 0u; continue; }
-        if (op == 0x2D) { s_sx0 = (w0 >> 12) & 0xFFFu; s_sx1 = (w1 >> 12) & 0xFFFu; continue; }
+        if (op == 0x2D) { s_sx0 = (w0 >> 12) & 0xFFFu; s_sx1 = (w1 >> 12) & 0xFFFu; s_sy0 = w0 & 0xFFFu; s_sy1 = w1 & 0xFFFu; continue; }
         if (op == 0x2F) { s_cyc = (w0 >> 20) & 3u; continue; }
-        double x0, x1;
-        if (op == 0x24 || op == 0x25 || op == 0x36) { x0 = ((w1 >> 12) & 0xFFFu) / 4.0; x1 = ((w0 >> 12) & 0xFFFu) / 4.0; }
+        double x0, x1, y0 = 0, y1 = 0;
+        if (op == 0x24 || op == 0x25 || op == 0x36) { x0 = ((w1 >> 12) & 0xFFFu) / 4.0; x1 = ((w0 >> 12) & 0xFFFu) / 4.0; y0 = (w1 & 0xFFFu) / 4.0; y1 = (w0 & 0xFFFu) / 4.0; }
         else if (op >= 0x08 && op <= 0x0F) {
             if (a + 32 > hi) continue;
             const double yl = ((int32_t)(w0 << 18) >> 18) / 4.0, ym = ((int32_t)(w1 << 2) >> 18) / 4.0, yh = ((int32_t)(w1 << 18) >> 18) / 4.0;
             auto fx = [&](uint32_t o) { return (int32_t)rd(a + o) / 65536.0; };
             const double xl = fx(8), dl = fx(12), xh = fx(16), dh = fx(20), xm = fx(24), dm = fx(28);
             const double v[6] = {xh, xh + dh * (yl - yh), xm, xm + dm * (ym - yh), xl, xl + dl * (yl - ym)};
-            x0 = *std::min_element(v, v + 6); x1 = *std::max_element(v, v + 6);
+            x0 = *std::min_element(v, v + 6); x1 = *std::max_element(v, v + 6); y0 = yh; y1 = yl;
             if (yl <= yh) continue;  // degenerate (zapped / empty)
         } else continue;
         if (s_cw != 0) {
@@ -5233,6 +5233,12 @@ static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
                 const double cx1 = std::min(x1, s_sx1 / 4.0);
                 r->draws++; r->sx = std::max(r->sx, s_sx1);
                 if (op >= 0x08 && op <= 0x0F) r->tx1 = std::max(r->tx1, cx1); else r->rx1 = std::max(r->rx1, cx1);
+                r->sy0 = std::min(r->sy0, s_sy0 / 4.0); r->sy1 = std::max(r->sy1, s_sy1 / 4.0);
+                if (!(op == 0x36 && s_cyc == 3u)) {  // s6737: content reach on the other borders (fill-mode fill rect = the clear)
+                    const bool incl = !(op >= 0x08 && op <= 0x0F) && s_cyc >= 2u;  // copy/fill-mode rects are inclusive
+                    r->cx0 = std::min(r->cx0, std::max(x0, s_sx0 / 4.0)); r->cy0 = std::min(r->cy0, std::max(y0, s_sy0 / 4.0));
+                    r->cy1 = std::max(r->cy1, std::min(incl ? y1 + 1.0 : y1, s_sy1 / 4.0));
+                }
             }
             if (s_cw != s_ecw) { s_ecw = s_cw; s_esx = 0; s_edraws = 0; s_erx = 0.0; }
             s_edraws++; s_esx = std::max(s_esx, s_sx1);

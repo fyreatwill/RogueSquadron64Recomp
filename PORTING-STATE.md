@@ -177134,3 +177134,32 @@ edge lines are both closed (horizontal s6735, vertical s6736). Side effect: the 
 Summary: this selects H-src and refutes H-clear and H-scale; it closes the G3 load-frame vertical line (root cause: the game's
 clear is the only writer of source column cw-1). Next discriminator (NEXT.md g3-edge-reach-audit): min x0 / min y0 / max y1
 content reach per epoch, to split H-none / H-bottom / H-left for the other three borders.
+
+## Session 6737 (2026-11-01) — G3 edge-reach audit of the left/top/bottom borders: every displayed row and column 0 is content-covered (H-none selected, H-bottom/H-left refuted); only the right column was clear-only (s6736)
+
+NEXT.md hypotheses: H-none (content covers column 0 and rows 0 / h-1 on every screen), H-bottom (triangle yl stops at h-1,
+so the last row shows the clear, like the s6736 right column), H-left (min x0 > 0 on some screens).
+Instrument (kept, src/rsp/dpc_bridge.cpp rs64_g1d_pillar_scan): `[g1d-reach]` now also prints min content x0, the
+scissor y range and the content y range per epoch and colour width. Content excludes fill-mode fill rects (the clear),
+treats copy/fill-mode rects as inclusive, and clips to the scissor, using the s6736 x-reach rules.
+Run r (scratch/s6737/dense.sh r none "", lvl1 forced route, 4:3; reached flight, 0 crash lines, 602 captures):
+| screen (epochs) | VI fbSize | scissor y | content y | min x0 | max x1 |
+| flight 9/23/24/25/27/28 (cw 512) | 512x444 | 0..447/448 | 0.00..447.00 | 0.00 | 511.00 (cw-1) |
+| 340-scissor 512 screens 11-18/30-37 | 512x336 | 0..339/340 | 0.00..339.00 | 0.00 | 511.00 |
+| hangar/briefing 6/20/39 (cw 640) | 640x336 | 0..340 | 0.00..339.00 | 0.00 | 639.00 |
+| epoch 4 (cw 640, boot logo) | - | 0..480 | 90.00..432.25 | 85.25 | 400.25 (pillar crop owns it) |
+Column 0 and row 0 are reached on every content epoch. The last content row (exclusive y1 447 / 339) lies beyond the last
+DISPLAYED row (VI heights 444 / 336, `fbSize=` lines in the same log), so no displayed row is clear-only.
+Positive control (same run): the same table still shows the known s6736 defect, right reach cw-1.00 < cw, and the
+content-reach trim latched (`[g1d-edge] epoch=6 cols 0->1 cw=640 reach=639.00`).
+Second line of evidence: pixel border profiles (scratch/s6737/s6737_prof.py: per border, mean |lum(edge+o) - lum(edge+8)|
+for o = 0..7 on lit frames). Run r, 238 frames: left o0..o2 48/18/4, right 65/23/4. That is the same symmetric 2 px bilinear
+ramp on both sides, and left matches right only after the trim. Top 3/2/2 and bottom 5/4/4: no edge line. On the s6736
+captures, ctl's right shows the 4 px sky column (o0..o4 65/55/45/24/11) while fix and the other borders do not, so the
+scorer detects this defect class. The s6736 edge.py scorer gives r 0/238 sky-edge frames. Its one dark-with-line hit (w150) is a
+hangar iris-wipe frame with real content at the edge, a scorer false positive. The hangar/briefing black band below window row
+~964 comes from the 336-row VI (s6608) plus the briefing's cinematic letterbox, not an edge defect.
+Verdict: H-none selected for left, top and bottom. H-bottom refuted: the displayed rows end before content reach. H-left refuted: min x0 = 0.
+The G3 border/edge class is closed: the right column (s6736) was the only clear-only border. No trim extension needed.
+No defaults changed (instrument-only diff).
+Next: G3 in-flight / briefing same-camera diff vs the retail angrylion oracle (NEXT.md g3-briefing-oracle-diff).
