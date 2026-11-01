@@ -9662,3 +9662,269 @@ so statically they should be owned on the scripted route (H-load over H-prox).
 `--check-level8`: 335 anchors match ROM, 468/468 mutations reject, levels
 2-7 checks unchanged. Static, single-source; no live claim.
 
+
+## Migrated from CURRENT-TRUTH (s6721): G1(d) s6656-s6674 headline bullets (parked by owner 2026-10-31)
+
+- **G1(d) saved evidence reconciled (s6656), still partial.** New tool
+  `tools/g1_objective_evidence.py --check` streams 18 ctl/TELE gzip logs
+  plus legacy s5843–s5845, using only the first explicit flight-width epoch.
+  All 18 pair selectors match. Actual lvl7 id2 and lvl8 id6 changes are
+  positive controls; lvl9 baseline ids match in both arms. Lvl7 id2 goes
+  0>2>3>0; lvl8 id6 goes 0>1>2>3>4 (its reset is after the first epoch).
+  Shared end requests do not prove a hit-driven end gate. Lvl6 heartbeat
+  proves execution only, so its silent value monitor is NOT a controlled
+  null. Single-source static read: lvl7 itself tests ids 20/30/40/99,
+  outside the old monitor's 1–15 slots; id2 meaning is not established for
+  lvl7. Saved lvl1 ctl contains objsnap while tele does not: paths were
+  reused across builds, so historical arm identity cannot be assumed.
+  Legacy lvl0 logs name lv0_checkComplexObjectives and show counter1
+  pre-states 0..3 ctl versus 0..12/0..16 TELE; cross-run, single-source.
+  Forced-selector lvl0 ctl/tele and lvl10–18 pairs are absent in this set,
+  not negative results. No level promoted to fully VERIFIED. Full table,
+  semantics and line provenance: `docs/G1-OBJECTIVE-RESPONSE.md`.
+  That was the s6656 handoff; s6657 below now supplies the forced-route
+  lvl0 counter1 witness. No new soak
+  verdicts; no runtime/default change in s6656.
+
+- **G1(d) level 0 forced-route counter1 response observed (s6657).**
+  One corrected flight, B40=0/cursor0 plus lv0 callback, first flight epoch
+  VI4672..10074. Off/on/off c1 0→2→13→13; 77 forced segments in on only,
+  13 actual changing-value readbacks, 0 crash lines, 167.87 s wall. Eight
+  exact force→accepted SEND→store triads match node, NPC payload and
+  descriptor; actual writer is datItemSetObjectiveBooleanCount at
+  0x8006594C, each +1. Example seq24: node8021B22C, payload80356230,
+  descriptor8031AA94, c1 4→5 after 4 VI. Original ELF independently shows
+  node+4→payload, payload+0x34→descriptor and descriptor+0x70/+0x74→
+  counter/delta. First binary's node+0x34 join was wrong; rerun corrected
+  it before interpretation. Dynamic chain remains single-source, not
+  retail equivalence or player-shot proof (example SEND is N). c1 stops
+  at13, below lv0's21 gate; c2/c3 stay0. No win/progression tested or full
+  VERIFIED promotion. Durable adapter: tools/apply_s6657_objective_response.py;
+  runner/analyzer: tools/g1_objective_response_run.py. Table and limits:
+  docs/G1-OBJECTIVE-RESPONSE.md. Next missing named response is level1.
+
+- **G1(d) level 1: generic forced victims hit id10, not the named loss counters (s6659).**
+  Corrected single-flight off/on/off, B40=1 plus lv1 callback, VI5271..10674,
+  176.59 s, 25 forces, 0 crashes. Two exact force→N SEND→pc8006594c→readback
+  chains increment id10 6→7 and7→8. Eight actual id10 readback changes are
+  the live value-detection control. ids13/40/41 and Boolean6 remain0.
+  Original ELF: friendlies saved=19-(c40+c13+c41), c13>=5 fails;
+  Boolean6 completes. Thus H-incidental under the direct-callback-counter
+  discriminator; no named loss response or VERIFIED promotion. Whether id10
+  feeds another mission script is untested. Dynamic response is single-source.
+  First attempt crashed in the s5857 host health diagnostic before TELE-on:
+  unsigned C promotion made a valid guest address read4GiB too high.
+  Persistent address calculation corrected to match MIPS32 SLL/ADDU;
+  same-input old expression SIGSEGV, fixed expression passes. Corrected
+  flight passes the fault point. No guest guard, lib edit or default change.
+  Details: docs/G1-OBJECTIVE-RESPONSE.md; scratch/agent/m6/g1_lvl1s6659_response_v2/.
+  Next: one descriptor-targeted lv1 loss-counter response below its gate.
+
+- **G1(d) level1 targeted hits: nonlethal dose, no named response (s6660).**
+  One build/flight, VI5234..10634, 175.61s, 0 crashes; forces0/46/0.
+  Twenty-three exact projectile/sequence/node/NPC/descriptor SEND joins:
+  14 counter40,9 counter13. Mark-all id10 eligibility fires in every arm;
+  six changing id10 readbacks control value detection. ids13/40/41 and
+  Boolean6 remain0. Health actors stay positive:999→859 and400→322.
+  Original ELF independently proves transport800DF840 bgtz skips the
+  descriptor effect call800DF8C8 while remaining health is positive.
+  Thus this flight does not test the destruction threshold. Per-hit health
+  parent attribution remains single-source: the legacy damage join logs
+  force_seq0 for actor subobjects. Eight unique named live/candidate
+  identities per arm; c1f0 shows the old lever excluded relevant targets.
+  Census is sampled;4096 candidate rows/arm cap means unseen later targets
+  are unknown. No VERIFIED promotion or retail-equivalence claim.
+  Next: a single controlled lethal hit on one named loss victim, then stop
+  at actual counter readback below failure/completion. Evidence/table:
+  docs/G1-OBJECTIVE-RESPONSE.md; scratch/agent/s6660_targeted/chains.tsv.
+
+- **G1(d) level1 named loss response observed (s6661).** One opt-in build
+  and flight, 128.32s wall, VI5265..7748, six forces, 0 crashes. Ordinary
+  exact accepted hit seq4 reduces health390→386; same node8021B628,
+  NPC8035B35C, descriptor80319AF4, actor8035D3A0. Subsequent exact seq6
+  requests387 instead of raw10 once: actual damage returns−1, death-effect
+  call800DF8C8 runs, actual writer8006594C changes id13 0→1 at VI7744,
+  callback reads1 at VI7748. All further forcing stops at the dose;
+  named readback ends the run, below c13>=5 failure. Boolean6 stays0.
+  Same-run id10 changes five times in natural arm; mark-all controls fire
+  in arms0/1. Off/on observed; arm2 intentionally not reached. Original
+  ELF independently proves actorNPC+38, subtraction and death/effect gate
+  (re-disassembly/hash agrees with s6660). H-dose selected for this victim;
+  no routing mismatch or bypassed death effect observed. Dynamic causality
+  remains single-source, not retail equivalence, success or full VERIFIED.
+  No direct health/counter stores, lib edit or default change. Evidence:
+  scratch/agent/m6/g1_lvl1s6661_dose/ and scratch/agent/s6661_dose/chain.json.
+  Level1 named response unit closes; next is level2 objective response.
+
+- **G1(d) level2 adapter exercised; target boundary remains open (s6662).**
+  Original ELF: counter40 is loss (friendlies=1−c40); positive c40 sets
+  Boolean109 and failure; success requires Booleans31/32/33/99. One fresh
+  ordinary-only off/on/off flight, VI5080..10483,169.97s,0 crashes.
+  Zero forces: no sampled descriptor passes the counter40 predicate.
+  Mark-all eligible controls5/13/10; eight natural counter changes and
+  seven Boolean changes control readback sensitivity. No damage survival
+  or hit-driven objective response tested. Census is untyped (some fields
+  out of objective range), sampled every300 VI; candidate4096/arm budgets
+  all saturate. Thus target availability remains unknown, not a controlled
+  objective null or proof of a broken route. Dynamic evidence single-source;
+  independent ELF establishes semantics only. Lethal env is hard-disabled
+  for level2; success setters excluded, one ordinary force/victim maximum.
+  Build, replay, level1/level2 helper controls and manifest hashes pass.
+  Evidence: scratch/agent/m6/g1_lvl2s6662_lvl2_final/ and
+  scratch/agent/s6662_lvl2/population.json. Earlier incomplete arm0 capture
+  has different hashes and is not pooled. No library/default change or
+  new queued-soak verdict. Next: original-backed typed ownership audit.
+
+- **G1(d) level2 population ownership corrected (s6663).** Original
+  slot-free8003E88C..E8C8 leaves word0 intact: free slots carry legitimate
+  stale pointers. The adapter now excludes the original BB4 free list,
+  validates BB8 context ownership, records handler/primary-slot/generation
+  and observed birth/retirement, and removes candidate4096 caps. One
+  unlocked flight171.84s, VI4939..10339,0 crashes/forces. All20 census
+  lists valid; active slots33..516, stale free pointers0..235;23 handlers,
+  22 descriptor kinds unresolved. Only original-backed CABD4/DE80C paths
+  can select level2 forcing; unknown kinds remain explicit. Mark-all
+  controls15/17/11 and local selector40/success31 fixtures fire all arms;
+  six natural counter changes. No absence, hit-response or VERIFIED claim.
+  Original instructions plus live free-list membership select H-stale-free
+  for inflated counts; actual target ownership remains open. Full report
+  G1-OBJECTIVE-RESPONSE.md; artifacts scratch/agent/s6663_lvl2_owner/ and
+  scratch/agent/m6/g1_lvl2s6663_owner/. All6 manifest hashes match; helper
+  controls/build/replay pass. No library/default change or new soak verdict.
+
+- **G1(d) level2 rescue activation and ordinary hit controlled (s6666).**
+  One retail-settings flight, VI5020..17021,281.27s wall,0 crash lines.
+  Reset800FA618 writes timer1=0; tick800FA924 and35 actual getter returns
+  prove changing values. At the old dv5401 cutoff timer1 is55.5496902,
+  below100. At dv9839 it reaches100.033333; writer800C7564 sets21/59=1.
+  Four VIs later rescue01 is live at canonical slot254, handlerD3894,
+  desc8031D2A0=DAT8031BD90+1510. Seq1 force14873 -> exact SEND14881 ->
+  ordinary damage10, health2000->1990, return1990. One forced segment;
+  off/on/off VI5020/14864/16665; no lethal dose. Counter40 stays0 as the
+  shuttle survives; objective(d) remains open, no VERIFIED claim. Retail
+  DAT/ELF independently corroborate definition, timer/gate and damage
+  contracts; timing generalization is single-flight. Grid rescue spawn
+  caller was not dynamically observed; do not infer it from the live join.
+  Full table/limits: docs/G1-OBJECTIVE-RESPONSE.md s6666. Evidence:
+  scratch/agent/s6666_lvl2_activation/summary.json. No new soak verdicts.
+
+- **G1(d) level2 named loss response observed (s6668).** Original ELF/DAT
+  audit precedes an opt-in one-shot dose. Same node802191D4/NPC8037680C/
+  desc8031D2A0/actor80372398: seq1 ordinary2000→1990, seq2 requested1991
+  returns−1, death effect then writer8006594C counter40 0→1 atVI14690.
+  Callback memory and original getter return1 atVI14694, failure flags
+  109/101 still0; host SIGSTOP then SIGKILL before failure branch. Epoch
+  VI4941..14694, forces0/2/0, 0 crash lines,8 actual counter changes,
+  getter0→1 and mark-all17/8 controls. Off2 intentionally not reached.
+  First rescue01-only attempt instead spawned rescue02 and forced nothing;
+  inconclusive, retained separately. Corrected opt-in admits only original
+  rescue01/02/03 definitions and requires same-owned ordinary control.
+  All6 launch hashes, analyzer fixtures, original assertions, replay and
+  build pass. Dynamic causality single-flight; no retail equivalence/full
+  VERIFIED. Wrapper's3 stalls follow intentional SIGSTOP, not flight stalls;
+  active-flight wall duration unavailable. No default/lib change or new soak
+  verdict. Details: G1-OBJECTIVE-RESPONSE s6668; compact proof
+  scratch/agent/s6668_lvl2_loss/qualification.json. Next: level3 named response.
+
+- **G1(d) level3 original contract checked (s6669); response still open.**
+  Bounded DAT-tool change selects City_1(+048C), subtype0x14, c28+1 with no
+  Boolean/second counter. Original friendlies reader80103530 computes
+  100-(c27+c28); complex callback loss flags are Booleans4/18/21 and success
+  counter22. GVT main adds c28 AND failure Boolean4; Tech main sets18;
+  Madine shuttle sets21 but has no counter. All excluded by the static choice.
+  Original C7390 FFFF-slot branch subtracts health then calls the effect at
+  C74E0 with NO death threshold. Registered-slot message5 handler remains
+  unqualified; live eligibility is unknown. Thus do not assume a lethal dose
+  or shuttle ownership layout. --check-level3 verifies62 original anchors;
+  11 mutation fixtures reject; all19 inventories preserve prior fields;
+  level2 checks pass. Source+DAT support static contracts only, no live
+  response/retail-equivalence/VERIFIED claim. No game run/build, defaults or
+  lib edits. Full limits: G1-OBJECTIVE-RESPONSE s6669. No new soak verdicts.
+
+- **G1(d) level3 registered ordinary script damage qualified (s6670).**
+  Original subtype20 setup table selects handler8006CBB0, payload+34=DAT.
+  Its message5 store8006CFE8 subtracts damage, and positive-health branch
+  8006D278 skips the death effect; C7390's FFFF fallback differs. Corrected
+  flight178.00s, VI5291..10692,0 crashes: one original named API request10
+  on City_1 (DAT80325EEC, slot429/gen1, node8021A728, payload8038770C)
+  reaches exact message80165E80 and health2000→1990; API returns1990.
+  Counter28 remains0; explicit original probe getter28 returns0 after hit
+  atVI9493. Getter3 actually changes0→1, matching memory. H-registered for
+  this ordinary request; no destruction/counter response or VERIFIED claim.
+  Original DAT/ELF support contracts; dynamic causality single-flight.
+  No player-shot or game-invoked friendlies-reader proof. First full flight
+  forced nothing (no projectile-context control); second issued no API
+  request (extra adapter eligibility filters, exact reason unmeasured). Both
+  had0 crashes and are retained as failed hit controls, not damage nulls.
+  Third build uses original lookup equality and lets the API select the route;
+  one request only, no lethal/default/lib change. All6 launch hashes,97 ELF
+  mutation checks, analyzer fixtures and replay pass. Proof: scratch/agent/
+  s6670_qualification.json; details G1-OBJECTIVE-RESPONSE s6670. No new soaks.
+
+- **G1(d) level3 named loss response observed (s6671).** One unlocked
+  flight VI5384..7211,120.13s total runner wall,0 crashes. Same City_1
+  slot429/gen1,node8021A728,payload8038770C,DAT80325EEC,detail0: original
+  named API seq1 request10 writes2000→1990; seq2 request1991 writes1990→−1.
+  Death effect8006D6F0 passes original tuple(28,1,0,0,0,1); writer8006594C
+  increments28 0→1 atVI7203; callback and explicit original getter read1
+  atVI7211, flags4/18/21 and successcounter22 still0. SIGSTOP then SIGKILL;
+  off2 intentionally not reached. Actual getter3 0→1 controls value detection.
+  Original DAT/ELF corroborate contracts; dynamic causality remains single-flight,
+  no player-shot/game-invoked friendlies proof or VERIFIED promotion. Analyzer
+  initially demanded unused delta2=0; original counter2=0/delta2=1 disables
+  that effect. Corrected to original tuple, stricter chain fixtures pass,
+  saved capture qualifies. Binary/adapter unchanged;5/6 current launch hashes
+  match, analyzer correction documented. No direct stores/default/lib edits
+  or new soaks. Proof scratch/agent/s6671_qualification.json; full evidence
+  G1-OBJECTIVE-RESPONSE s6671. Next: original-backed level4 target contract.
+
+- **G1(d) level4 original wingman contract checked (s6672); live response open.**
+  Original reader80103CC4 computes6−(c40+c15); callback fails on c16>=3,
+  c15>=3 or Boolean26, succeeds on c28>0 with word8010D060==1. Counter5
+  is absent from these readers; Boolean5 is a distinct Y-wing effect.
+  Retail DAT x_wing_hobbie(+6A7C), subtype0x27, nominal detail0 HP400,
+  effect(40,1,0,0,0,1), selects named loss without direct Boolean effects.
+  Original table/setup selects wingman handler800D93C0, message5 atD9BB0;
+  payload+34=DAT,+38=actor. Damage800F2120 writes array or inline health
+  atF2148/F2158; positive return skips effectD9D28. Do not reuse City hooks.
+  Tool adds --check-level4/--mutation-check-level4:332 anchors and380
+  mutations pass; all19 inventories unchanged, lvl2/3 regressions pass.
+  DAT+ELF establish static contracts only, no live ownership/hit/response,
+  player-shot/retail-equivalence or VERIFIED claim. No runtime/default/lib
+  change or new soaks. Full table/limits G1-OBJECTIVE-RESPONSE s6672;
+  scratch/agent/s6672_validation.json. Next: one owned ordinary Hobbie API hit.
+
+- **G1(d) level4 ordinary health chain observed (s6673); counter control absent.**
+  One corrected unlocked flight172.03s, VI4971..10371,0 crashes. Hobbie
+  slot187/gen1,node8021B268,NPC8035F68C,DAT803239CC,actor80361D58 is owned
+  and original lookup-equal. One API request10 atVI6777 -> exact message5
+  80165E80 -> original array storeF2148 at80323A38, health370→360; damage
+  and API return360. Mode0/detail0; mark-all health controls fire off/on.
+  Getter40 returns0 after hit; all128 counter getters match memory, but0
+  actual counter changes. Thus exact_health_chain=true, qualified_ordinary=false:
+  no controlled counter null or named response/VERIFIED claim. Original
+  ELF/DAT independently support contracts; dynamic causality single-flight.
+  First attempt stopped73.03s/0 crashes/no API: decimal27 predicate was wrong;
+  original subtype is0x27=39. Corrected and rerun. Both health branches hooked;
+  all6 hashes,13-file idempotence, hook-free replay and fixtures pass.
+  No lethal/direct store/default/lib change or new soaks. Proof:
+  scratch/agent/s6673_qualification.json; G1-OBJECTIVE-RESPONSE s6673.
+  Next: same-owned ordinary-then-lethal pair to test named counter40 effect.
+
+
+- **G1(d) level4 named loss response observed (s6674).** One unlocked flight,
+  113.56s runner wall,VI4966..6784,0 crashes. Same Hobbie slot187/gen1,
+  node8021B268,NPC8035F68C,DAT803239CC,actor80361D58,mode0/detail0,
+  health80323A38: seq1 API10 actual F2148 store380→370/returns370;
+  seq2 request371 actual370→−1/returns−1. Death effectD9D28 passes original
+  tuple(40,1,0,0,0,1); writer8006594C counter40 0→1 atVI6777; callback
+  and original getter read1 atVI6784. c15/c16/c28 and Boolean26 stay0.
+  SIGSTOP then SIGKILL; off2 intentionally not reached. Actual getter40
+  0→1 supplies the counter control missing in s6673; both analyzers qualify.
+  Original ELF/DAT332 anchors/380 mutations independently support contracts;
+  dynamic causality single-flight, no player-shot/retail-equivalence/full
+  VERIFIED claim. All6 launch hashes, build, fixtures, original lvl2/3
+  regressions,13-file idempotence and3 hook-free replays pass. No direct
+  stores/default/lib edits or new soak verdicts. Evidence:
+  scratch/agent/s6674_qualification.json; G1-OBJECTIVE-RESPONSE s6674.
+  Level4 response unit closes; next: level5 original objective/target contract.

@@ -4844,6 +4844,14 @@ static void rs64_floor_scan(uint32_t lo, uint32_t hi) {
 // s6695: swap number of the last renderRadarMinimap call (fixup tools/apply_s6695_radarmark.py).
 static std::atomic<int> g_rs64_radar_swap{-1000};
 extern "C" void rs64_radar_mark(void) { g_rs64_radar_swap.store(g_rs64_swap_n.load(std::memory_order_relaxed), std::memory_order_relaxed); }
+// s6721: initHudStruct's pause-menu byte (HUD+0x258, 0x800C1998), stamped every frame (tools/apply_s6721_pausegate.py).
+// The s6156 HUD anchor skips while it is set, so pause-menu text stays centred like retail.
+static std::atomic<int> g_rs64_g1d_paused{0};
+extern "C" void rs64_g1d_pause_mark(int v) { g_rs64_g1d_paused.store(v != 0, std::memory_order_relaxed); }
+extern "C" int rs64_g1d_pause_live(void) {
+    static const bool old = [] { const char *e = std::getenv("ROGUESQ_G1D_PAUSE_ANCHOR"); return e && *e == '1'; }();
+    return !old && g_rs64_g1d_paused.load(std::memory_order_relaxed);
+}
 
 // s6158 G1d: region scan. ROGUESQ_LOG_REGION="x0,x1,y0,y1" (raw RDP px) logs every
 // triangle (bbox centre in region) and texrect (ul in region) with its range and

@@ -37820,6 +37820,13 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s6719 640 persp x{_n6719}")
 
+    if p.name == "funcs_33.c":
+        import apply_s6721_pausegate as _a6721m
+        text, _n6721m = _a6721m.apply33(text)
+        if _n6721m:
+            changed = True
+            report.append(f"{p.name}: s6721 pausemark x{_n6721m}")
+
     if p.name == "funcs_34.c":
         import apply_s6695_radarmark as _a6695
         text, _n6695 = _a6695.apply34(text)
@@ -38041,6 +38048,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6155:
             changed = True
             report.append(f"{p.name}: s6155 hudcpos x{_n6155}")
+        import apply_s6721_pausegate as _a6721
+        text, _n6721 = _a6721.apply4(text)
+        if _n6721:
+            changed = True
+            report.append(f"{p.name}: s6721 pausegate x{_n6721}")
 
     if p.name == "funcs_12.c":
         import apply_s6145_hudx as _a6145
@@ -41973,6 +41985,7 @@ RS64_REPLAY = [
     "apply_s6146b_hudpc.py",
     "apply_s6031_far.py",
     "apply_s6695_radarmark.py",
+    "apply_s6721_pausegate.py",
     "apply_s5818_destroy_health.py",
     "apply_s5846_mission_end.py",
     "apply_s5847_mask_log.py",

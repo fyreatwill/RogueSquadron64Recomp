@@ -176615,3 +176615,41 @@ stride/xScale) and refute H-texrect-shift (no host x shift: anchor/region/spike 
 already at 256..768) and H-vpw (VPW changes only the zoom). Next: menu sweep (NEXT g1d-menu-sweep).
 16:9 route (scratch/s6720/r169): att=1 mission_verified_130s, 0 crash; title [fbw] title-vi width 1024->1592 xScale 0x4F9 + one clear (cimg 751E00 cw 796); title still pillarboxed and clean at t=20, select and flight full width.
 Discrimination: this selects H-stride (VI mode stride/xScale) and refutes H-texrect-shift and H-vpw; next discriminator: g1d-menu-sweep (OPTIONS/pause/debrief rect extents + VI modes at 21:9/16:9 vs 4:3).
+
+## Session 6721 (2026-11-01) — G1d menu sweep: OPTIONS/PASSCODES clean at 16:9/21:9; in-flight pause text split by our s6156 HUD anchor, fixed with a pause-byte gate; dim band open
+
+**Question (NEXT g1d-menu-sweep).** After the s6720 title fix, which other menus are wrong at wide aspect?
+
+**Runs.** (1) scratch/s6720/title.sh with ROGUESQ_AUTOPILOT=10:start,17:down,19:a,25:down,27:down,29:a,35:b,38:b,
+arms 21:9 / 16:9 / 4:3 (o219/o169/o43), ROGUESQ_LOG_G1D_RECT=1. No new VI mode: the OPTIONS and PASSCODES screens stay in
+the s6720 title mode (osViSetMode #10 is the last). Both centred and clean at 16:9/21:9, pillarboxed like the title, 4:3
+the control (screenshots/s6721_options_passcodes_43_169_219.png; backgrounds are a slideshow, phase differs). H-ok for
+these screens. (2) New scratch/s6721/pause.sh: forced lvl1 route, START at autopilot t=112 in flight, captures keyed to
+the "[autopilot] armed" line (the first attempt keyed them to script start; the game launches ~78 s later, so all its
+caps were menus; discarded). Arms 4:3 (pnone), 16:9 (p169), 21:9 (p219): all mission_verified_130s, 0 crash.
+
+**Finding.** Pause screen at wide aspect, two defects vs 4:3: (a) text split: MISSION GOALS and PAUSED/CONTINUE...
+pushed right, the objective line pushed left, while the 3D Rebel logo stays centred; (b) the darkening overlay covers
+only a centre band (~x 222..802 of 1024 at 21:9), the sides stay bright.
+(a) ORIGIN: writer = our own s6156 anchor (tools/apply_s6155_hudcpos.py, env from main.cpp s6159 auto): every emitter
+element on vp 0x80138D20 gets x -= A, and items right of retail centre (x >= 160*scale) get +fbw-512. ROGUESQ_HUD_LOG=1
+(q219log) shows the pause text IS vp 80138d20, elems 8033e944..ea64 (scale 4); the flight HUD on that vp lives at
+8033e74c..e89c (same heap), so the address cannot separate them. Discriminator, same 21:9 recipe with
+ROGUESQ_HUD_ANCHOR_AUTO=0 (q219noanc): pause text centred like 4:3, and the same run's post-unpause flight HUD loses its
+edge anchoring (radar inboard), so anchor off is a live lever, not a null. Selects H-anchor; the dim band is identical in
+both arms, so (b) has a different writer.
+**Fix (tools/apply_s6721_pausegate.py, vendored fixup chain).** initHudStruct tests the HUD struct's pause-menu byte
+(+0x258, 0x800C1998) every frame before calling runPauseMenuStateMachine; the patch stamps that value
+(rs64_g1d_pause_mark, src/rsp/dpc_bridge.cpp), and the s6155 anchor condition now also requires !rs64_g1d_pause_live().
+ROGUESQ_G1D_PAUSE_ANCHOR=1 = old behaviour. Mitigation check: no guest value is altered; the anchor is our host-side
+offset and is simply not applied while the game's own pause flag is set.
+**Result (v219, v169, new build).** Pause text centred on the logo at 21:9 and 16:9 like 4:3; after START unpauses
+(t=140) the flight HUD is anchored to the real edges again (radar at the right edge, lives at the left).
+Both mission_verified_130s, 0 crash lines. screenshots/s6721_pause_before_after.png (4:3, 21:9 before, 21:9 after,
+16:9 after, 21:9 flight after unpause).
+**Open.** (b) dim band: initOrUpdatePauseScreenDim (0x800C1D3C) only calls audio/menu-state helpers, so the name
+misleads and the overlay is drawn elsewhere; the rect log (texrect/tri only, no fill rects) does not show it.
+Not checked: mission debrief / game-over screens.
+**Discrimination.** Anchor-off arm (text centred, flight HUD unanchored) selects H-anchor for the pause text and refutes
+H-other-mode (no new VI mode in OPTIONS/PASSCODES/pause) and H-full for OPTIONS/PASSCODES (no clipped content).
+Maintenance: CURRENT-TRUTH 59994 -> ~42 KB by migrating the parked G1(d) s6656-s6674 bullets verbatim to PROJECT-OVERVIEW.
