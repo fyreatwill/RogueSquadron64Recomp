@@ -9,6 +9,7 @@ import collections, sys
 
 RAND = 0x80003430
 MARKERS = {0x8006BEC8: "npc_entry a3", 0x8006C018: "dc34_gate v0"}
+XTRACE_ONLY = {0x8006C010, 0x800AF374, 0x800C6674, 0x800FA730}  # s6752 xtrace-mem probe PCs (dump rows)
 
 def load(path, retail):
     rows, marks = [], []
@@ -27,7 +28,9 @@ def load(path, retail):
             if pc != RAND:
                 marks.append((len(rows), frame, pc, int(f[6 if pc == 0x8006BEC8 else 5][3:], 16)))
                 continue
-        elif not retail and site in MARKERS:
+        elif not retail and (site in MARKERS or site in XTRACE_ONLY or any(x.startswith(("m=", "pin=")) for x in f[4:])):
+            if site not in MARKERS:
+                continue  # s6753: ROGUESQ_XTRACE_MEM tick/gate-call rows are not rand calls
             marks.append((len(rows), frame, site, val))
             continue
         rows.append((len(rows), frame, site - 8 if retail else site, val))

@@ -1,27 +1,19 @@
-# NEXT: G3 -- lvl3 trajectories with dt pinned to 2 VI in both arms (H-sim residual)
-HYPOTHESIS-ID: g3-lvl3-dt-pinned
+# NEXT: G3 -- mission 4 flight vs retail with dt pinned (state + framebuffer)
+HYPOTHESIS-ID: g3-lvl4-pinned
 
-s6752: runInMissionFrame (0x800FA728) feeds the sim timeSnapshotFiller's measured frame time (struct at sp+0x10,
-+0x20 = seconds, read back at 0x800FA730 `lwc1 $f20, 0x30($sp)`). Retail (mupen) steps 2.04 VI with 3.08-VI drops
-in 34% of frames; port is a flat 2.00. Early NPC gate flips line up in cumulative sim time, so the s6751 "one frame
-late" lag is dt, not arithmetic. Open: does the sim match frame by frame when dt is equal (H-sim residual)?
+s6753: with runInMissionFrame dt pinned to 1/30 s (oracle RS64_XTRACE_POKE / port ROGUESQ_XTRACE_POKE
+800FA730:29:30:3d088889) the lvl3 sim is identical for 283 frames (NPC gates, rand stream). Missions 1-3 are H-match
+(s6744-s6753). Extend G3 coverage to mission 4 using the pinned method, which now gives a frame-exact state witness.
 Hypotheses:
-- H-dt-only: with dt pinned to 1/30 s (0x3D088889) in both arms, every NPC point / gate result / rand caller matches
-  through and past the first player hit (s6750's ~6 s desync point).
-- H-sim: with dt pinned, some field still diverges -> first diverging tick + field names the arithmetic to bisect.
-- H-input: divergence starts at a tick where the scripted input lands on different ticks (autopilot is wall-clock):
-  check the controller word per tick in both arms (add a dump of the pad buffer to the tick spec).
+- H-match: pinned arms identical in rand stream + NPC gates; framebuffers H-match (g3_oracle_match.py d << median).
+- H-sim: a pinned state divergence at tick k -> name the field/caller (g3_frame_snap.py, g3_rand_align.py).
+- H-render: state identical but frames differ (biome-specific texture/combiner) -> crop + name the material.
 Work:
-1. Oracle: RS64_XTRACE_POKE="PC:REG:OFF:VALUE" -> at an --exec-trace-also PC, pDebugMemWrite32(gpr[REG]+OFF, VALUE)
-   after the row (tools/oracle/rs64_oracle.c next to xtrace_mem). Arm 800FA730:29:30:3d088889.
-2. Port: ROGUESQ_PIN_DT=<hex float> in rs64_xtrace_mark's 0x800FA730 path (write sp+0x30 before the lwc1), same value.
-   Note rs64_xtrace_mark only runs once the rand trace is open (after the poke) -- fine, both arms pin from the poke.
-3. Same recipe as s6752 (scratch/s6752/retail.sh with D=retail3 + RS64_XTRACE_POKE; port command in the s6752
-   PORTING-STATE entry plus ROGUESQ_PIN_DT=3d088889), add the pad state to the tick dump (find the controller buffer
-   the game reads: osContGetReadData destination).
-4. python3 tools/g3_frame_snap.py retail3/oracle.log port_rand.txt 400 | grep -n '!=\|diff \[[0-9]' | head
-Positive control: tick dt words read 3d088889 in every row of both arms (pin fired); unpinned s6752 logs as the
-contrast (divergence at tick 2).
-Outcomes: no diff through the hit -> H-dt-only, close lvl3 desync as pacing; first diff at tick k with equal pad ->
-H-sim, bisect that field's writer; first diff coincides with a pad change on different ticks -> H-input (drive input
-by game tick, not wall clock).
+1. python3 tools/g3_eep_patch.py scratch/s6750/lvl3.eep scratch/s6754/lvl4.eep --set 0x31=3 (check lvl3.eep's +0x31 = 2
+   first; use mission index+1 accordingly).
+2. Retail: EEP=scratch/s6754/lvl4.eep RD=... zsh scratch/s6753/retail.sh (copy to scratch/s6754, add FB dumps per the
+   s6748 recipe if window frames are wanted; check the 640->512 poke vi in oracle.log).
+3. Port: copy scratch/s6753/port.sh, SAVE_FROM=lvl4.eep, ARM below the 512 switch time (s6753: flight at 60-67 s),
+   CAP0 at flight for window captures.
+4. g3_frame_snap.py + g3_rand_align.py (state), g3_oracle_match.py (frames).
+Positive control: pin= fields present in both arms' tick rows; unpinned contrast = s6752.

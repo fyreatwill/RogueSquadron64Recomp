@@ -177599,3 +177599,40 @@ the game advances by measured time, so per-frame state differs whenever frame pa
 2.00) VI step is a mupen count-vs-VI ratio question (single-source, not examined). Frame-by-frame sim equality vs the
 oracle therefore needs equal dt in both arms.
 Rules out: RNG (s6751), H-start. Leaves H-sim open beyond ~12 frames until a dt-pinned run.
+
+## Session 6753 (2026-11-01) — G3: with runInMissionFrame's dt pinned to 1/30 s in both arms, the port's lvl3 in-flight sim matches retail exactly for 283 game frames (NPC gates, NPC points, rand calls); the lvl3 desync is frame pacing, not port arithmetic
+
+HYPOTHESIS-ID: g3-lvl3-dt-pinned (closed: H-dt-only selected).
+
+Instrument (one port build, one retail run, one port run; recipe = s6752 + pin + pad dump):
+- Oracle `RS64_XTRACE_POKE="PC:REG:OFF:VALUE,..."` (tools/oracle/rs64_oracle.c xtrace_poke): at every matching
+  `--exec-trace-also` row, before the RS64_XTRACE_MEM dump, writes VALUE at gpr[REG]+OFF and prints ` pin=OLD`.
+- Port `ROGUESQ_XTRACE_POKE` (same spec, rs64_xtrace_mark in src/main/rt64_render_context.cpp; the s6752 fixup hook sits
+  after timeSnapshotFiller returns, before `lwc1 $f20, 0x30($sp)` at 0x800FA730, checked in funcs_42.c).
+- Both arms `800FA730:29:30:3d088889` (sp+0x30 = snapshot struct+0x20 = dt, 1/30 s) plus a pad dump `800FA730:0:8010FF30:2`
+  (osContGetReadData destination: `lui a0,0x8011; addiu a0,-0xD0` at 0x80002F18).
+- Scripts: scratch/s6753/retail.sh, scratch/s6753/port.sh (g3_port_capture.sh, lvl3 save, 10-press AP, rngSeed=1 poke
+  at the 640->512 flight switch). First port run armed the poke at 70 s but this run reached flight at 66.5 s (the
+  50 s press skipped the crawl sooner) -> no trace; rerun with ARM=55 fired at update_screen #4048 t=60.1.
+- tools/g3_rand_align.py now skips xtrace-mem tick/gate dump rows (it counted the new tick rows as rand calls).
+
+Positive controls: every retail tick row and every port tick row reads 3d088889 at struct+0x20 with ` pin=` showing the
+replaced value (retail e.g. pin=3d52059c = a 3.08-VI drop; port pin=3c888889 = 1.67 VI). Contrast, same tools: unpinned
+s6752 pair diverges at tick 2 (snap) and rand caller index 76 (g3_rand_align, re-run today).
+
+Result (tools/g3_frame_snap.py ... 283 + inline summary; g3_rand_align.py):
+- 283 retail ticks (vi 6220-6880, i.e. through and ~180 VI past s6750's hit point vi ~6700; poke vi 5950 in both
+  s6750 and here) vs the first 283 port ticks: 3725 NPC gate calls, gate results, NPC path points and the 16-word
+  reference object all identical; 0 retail-only/port-only NPCs.
+- rand: 2014 retail calls vs the port's first 2014: caller, value and tick index identical for every call (0 seed
+  mismatch, 0 caller mismatch).
+- Pad buffer 0x8010FF30 = 0 in every tick of both arms (no input in flight), so H-input does not apply in this window.
+- Only difference: globals 0x8011A8F0-FC (run-lifetime clock/frame-count words, offset by boot time) and the raw
+  snapshot count words (struct words 3-6, 9) - clocks, not sim state.
+Two lines (per-frame NPC state and the full rand stream) agree. Selects H-dt-only; refutes H-sim and H-input for these
+283 frames. Not observed directly: whether a hit on the player happened inside this pinned window (no framebuffer
+dumps in this recipe; the pinned trajectory differs from s6750's unpinned one) - single-source on that point.
+Interpretation: the port's game arithmetic reproduces retail exactly given equal dt; every lvl3 retail-vs-port
+divergence seen in s6750-s6752 comes from frame pacing (retail mupen 3-VI drops vs port flat 2 VI). Not a port defect;
+lvl3 desync thread CLOSED. dt pinning makes frame-exact oracle comparisons possible from now on.
+Saves: owner save restored by g3_port_capture.sh trap (save-restored, both port runs); mupen .eep restored (eep-restored).
