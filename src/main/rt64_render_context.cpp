@@ -1216,6 +1216,30 @@ namespace ultramodern {
         static int in_task = 0;        // Gfx thread only
         static uint64_t n_jobs = 0, n_ranges = 0;
         static bool task_async = false; // a range of the current task went to the worker
+        // s6706 G1e: per-task split of an async task (ROGUESQ_G1B=1 only): RSP phase (enter -> drain entry), drain wait,
+        // worker busy before/after drain entry, producer copy cost, last job; sync tasks log RT64 time inline. One
+        // [g1e-aq] line per wall second per arm (as = mode at task entry).
+        static const bool aq_on = [] { const char *e = std::getenv("ROGUESQ_G1B"); return e && *e && *e != '0'; }();
+        using aclk = std::chrono::steady_clock;
+        static inline double aq_ms(aclk::time_point a, aclk::time_point b) { return std::chrono::duration<double, std::milli>(b - a).count(); }
+        static std::atomic<uint64_t> wk_busy_ns{0};
+        static std::atomic<uint32_t> wk_last_bytes{0}; static std::atomic<uint64_t> wk_last_ns{0}, wk_max_ns{0};
+        static aclk::time_point aq_t0 = aclk::now(), task_t0;
+        static int task_mode = 0;
+        static double t_copy = 0, t_sync = 0; static uint64_t t_bytes = 0, t_jobs = 0, t_calls = 0;
+        struct AqAcc { uint64_t n = 0; double rsp = 0, drain = 0, wk = 0, wk_tail = 0, copy = 0, sync = 0, bytes = 0, jobs = 0, calls = 0,
+                       pend_jobs = 0, last_kb = 0, last_ms = 0, max_ms = 0, total = 0; };
+        static AqAcc aq[2]; static int aq_sec = -1;
+        static void aq_print(int sec) {
+            for (int a = 0; a < 2; ++a) {
+                AqAcc &x = aq[a]; if (!x.n) continue; const double n = (double)x.n;
+                std::fprintf(stderr, "[g1e-aq] t=%d as=%d n=%llu total=%.2f rsp=%.2f drain=%.2f wk=%.2f wk_tail=%.2f copy=%.3f sync_rt64=%.2f "
+                    "kB=%.1f jobs=%.1f calls=%.1f pend_jobs=%.2f last_kB=%.2f last_ms=%.2f max_job_ms=%.2f\n", sec, a, (unsigned long long)x.n,
+                    x.total / n, x.rsp / n, x.drain / n, x.wk / n, x.wk_tail / n, x.copy / n, x.sync / n, x.bytes / n / 1024.0, x.jobs / n,
+                    x.calls / n, x.pend_jobs / n, x.last_kb / n, x.last_ms / n, x.max_ms / n);
+                x = AqAcc{};
+            }
+        }
         static void worker() {
             pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
             pthread_setname_np("RS64 RDP async");
@@ -1227,8 +1251,14 @@ namespace ultramodern {
                     j = std::move(q.front()); q.pop_front(); busy = true;
                 }
                 RT64::Application *app = g_rt64_app.load();
+                const aclk::time_point jt0 = aq_on ? aclk::now() : aclk::time_point{};
                 if (app && !s_rdp_disabled.load(std::memory_order_relaxed))
                     app->processDisplayLists(j.w.data() - j.lo, j.lo, j.hi, /*isHLE*/ false);
+                if (aq_on) {
+                    const uint64_t ns = (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(aclk::now() - jt0).count();
+                    wk_busy_ns += ns; wk_last_ns = ns; wk_last_bytes = (uint32_t)j.w.size();
+                    if (ns > wk_max_ns.load()) wk_max_ns = ns;
+                }
                 {
                     std::lock_guard<std::mutex> lk(m);
                     j.w.clear(); pool.push_back(std::move(j.w)); busy = false;
@@ -1239,6 +1269,7 @@ namespace ultramodern {
         static void flush_pend() {
             if (!pend_has) return;
             pend_has = false;
+            if (aq_on) { t_bytes += pend.w.size(); ++t_jobs; }
             std::lock_guard<std::mutex> lk(m);
             if (!started) { started = true; std::thread(worker).detach(); }
             q.push_back(std::move(pend)); ++n_jobs;
@@ -1255,19 +1286,45 @@ namespace ultramodern {
         // true = queued; false = caller must process synchronously.
         static bool submit(RT64::Application *app, uint32_t lo, uint32_t hi) {
             if (!rs64_rdp_async_on || !in_task || !app->core.RDRAM) { drain(); return false; }
+            const aclk::time_point ct0 = aq_on ? aclk::now() : aclk::time_point{};
             if (pend_has && (lo != pend.hi || pend.w.size() >= 4096)) flush_pend();
             if (!pend_has) { pend.lo = lo; pend.hi = lo; pend.w.clear(); pend_has = true; }
             const uint8_t *src = app->core.RDRAM + lo;
             pend.w.insert(pend.w.end(), src, src + (hi - lo));
             pend.hi = hi; ++n_ranges; task_async = true;
+            if (aq_on) { t_copy += aq_ms(ct0, aclk::now()); ++t_calls; }
             return true;
         }
     }
     void rs64_rdpq_drain() { rdpq::drain(); }
-    void rs64_rdpq_task_enter() { ++rdpq::in_task; }
+    void rs64_rdpq_task_enter() {
+        using namespace rdpq;
+        if (in_task++ == 0 && aq_on) {
+            task_t0 = aclk::now(); task_mode = rs64_rdp_async_on ? 1 : 0; t_copy = t_sync = 0; t_bytes = t_jobs = t_calls = 0;
+            wk_busy_ns = 0; wk_max_ns = 0; wk_last_ns = 0; wk_last_bytes = 0;
+        }
+    }
     // The bridge's s4280 cimg walk (rs64_dpc_defer_end) maps RT64's SetColorImage events back to RDRAM by pointer offset,
     // meaningless for a copied range; it skips async tasks and the events they left are cleared here once drained.
-    void rs64_rdpq_task_exit() { --rdpq::in_task; rdpq::drain(); if (rdpq::task_async) { rdpq::task_async = false; RT64::g_s4280_n = 0; } }
+    void rs64_rdpq_task_exit() {
+        using namespace rdpq;
+        if (--in_task == 0 && aq_on) {
+            const aclk::time_point d0 = aclk::now();
+            double pj = 0; uint64_t wk0;
+            { std::lock_guard<std::mutex> lk(m); pj = (double)q.size() + (busy ? 1 : 0) + (pend_has ? 1 : 0); wk0 = wk_busy_ns.load(); }
+            drain();
+            const aclk::time_point d1 = aclk::now();
+            AqAcc &x = aq[task_mode]; ++x.n;
+            x.rsp += aq_ms(task_t0, d0); x.drain += aq_ms(d0, d1); x.total += aq_ms(task_t0, d1);
+            const uint64_t wk1 = wk_busy_ns.load();
+            x.wk += wk1 / 1e6; x.wk_tail += (wk1 - wk0) / 1e6; x.copy += t_copy; x.sync += t_sync;
+            x.bytes += t_bytes; x.jobs += t_jobs; x.calls += t_calls; x.pend_jobs += pj;
+            x.last_kb += wk_last_bytes / 1024.0; x.last_ms += wk_last_ns / 1e6; x.max_ms += wk_max_ns / 1e6;
+            const int sec = (int)(aq_ms(aq_t0, d1) / 1000.0);
+            if (aq_sec < 0) aq_sec = sec;
+            if (sec != aq_sec) { aq_print(aq_sec); aq_sec = sec; }
+        }
+        rdpq::drain(); if (rdpq::task_async) { rdpq::task_async = false; RT64::g_s4280_n = 0; } }
 }
 extern "C" int rs64_rdpq_task_async() { return ultramodern::rdpq::task_async ? 1 : 0; }
 namespace ultramodern {
@@ -1346,7 +1403,9 @@ namespace ultramodern {
         }
 #else
         if (rdpq::submit(app, lo_phys, hi_phys)) return; // s6705: queued for the async consumer
+        const auto st0 = (rdpq::aq_on && rdpq::in_task) ? rdpq::aclk::now() : rdpq::aclk::time_point{}; // s6706
         { s4267::T s4267_pd(5); app->processDisplayLists(app->core.RDRAM, lo_phys, hi_phys, /*isHLE*/ false); }
+        if (rdpq::aq_on && rdpq::in_task) { rdpq::t_sync += rdpq::aq_ms(st0, rdpq::aclk::now()); rdpq::t_bytes += hi_phys - lo_phys; ++rdpq::t_calls; }
 #endif
     }
 

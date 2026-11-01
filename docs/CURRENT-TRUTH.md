@@ -51,6 +51,9 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 - **s6705 G1e: ROGUESQ_RDP_ASYNC=1 (opt-in) runs RT64 RDP processing on a worker thread** (command words copied at submit,
   drained before dp_complete/present). Same-run toggle, lvl5 FPS60 dd2: 11.70 -> 10.46 ms/task, 49.3 -> 54.9 tasks/s, 301 s
   clean, frames sane (docs/img/g1e_s6705_async_sheet.png). Short of 60: only ~1.2 of the ~5 ms RT64 share overlaps. Default off.
+  s6706 split (same recipe, [g1e-aq], tools/g1e_aq.py): H-endload. The defer layer releases a task's RDP ranges only at ring laps
+  (unmerged, ~9.5k calls) and at ucode exit; that final ~120 kB commit is 3.4-3.5 of the worker's 4.2 ms and cannot overlap the
+  RSP. Producer copy/mutex adds ~0.9 ms. Net same-run gain 0.7 ms/task (s6705 measured 1.2).
 - **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
   ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
   lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
@@ -540,9 +543,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1e: why async overlap saves only 1.2 ms (s6706 next).** ROGUESQ_RDP_ASYNC landed (s6705). Split each async task into
-   RSP wall, worker busy and drain wait (same toggle run) to choose between end-loaded RT64 work (fullSync), worker-bound RT64
-   (optimise RT64) and producer-side overhead (copy/merge). See NEXT.md.
+1. **G1e: stream deferred RDP ranges to the async worker mid-task (s6707 next).** s6706 selected H-endload: the final
+   deferred commit (~120 kB, ~3.5 ms RT64) only starts after the RSP exits. With ROGUESQ_RDP_ASYNC on, flush the defer list
+   every ~16 kB (the wrap-flush path, merged), then measure wk_tail/drain in the same toggle run. See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional

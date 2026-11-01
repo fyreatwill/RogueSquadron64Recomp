@@ -176132,3 +176132,28 @@ overlap. Next: per-task RSP wall vs worker busy vs drain-wait split, in the same
 Verdict wording: selects H-overlap (async windows -1.24 ms mean / -1.82 ms median per task, +5.6 tasks/s, same run). Refutes
 H-dep as a blocker for the copy design (no garbage or missing geometry in async frames). Next discriminator: per-task RSP wall vs
 worker busy vs drain wait (selects H-endload, H-worker or H-producer; scratch/agent/NEXT.md).
+
+## Session 6706 (2026-10-31) — G1e: async RDP split selects H-endload: 3.4 of 4.0 ms RT64 work is the task's final deferred-commit range (~120 kB), which arrives only after the RSP exits
+Engineering change: src/main/rt64_render_context.cpp `rdpq` gains a per-task split under ROGUESQ_G1B=1 (no cost otherwise): one
+`[g1e-aq] t= as= n=` line per wall second per arm (as = mode at task entry) with per-task means of total (send_dl scope),
+rsp (entry -> drain entry), drain wait, worker busy wk, worker busy after drain entry wk_tail, producer copy, sync RT64 ms
+(processDisplayLists inside a sync task), kB, jobs, submit calls, pending jobs at drain entry, last job kB/ms. New fold
+tools/g1e_aq.py. Recipe scratch/agent/s6706_aq.zsh (= s6705 toggle recipe, lvl5 FPS60 dd2 STORE_DIAG=0, 10 s toggle).
+Run: 301 s hold, alive, 0 crashlines, 0 VI stalls. [g1e-aq] from 140 s (as=0 4353 tasks / as=1 4269 tasks):
+  as=0: total 10.36 ms, sync RT64 4.62 ms, 350 kB, 9462 submit calls per task.
+  as=1: total 10.15, rsp 6.64, drain 3.51, wk 4.20, wk_tail 3.50, copy 0.35, 65 jobs, 10787 calls, last job 122 kB / 3.50 ms.
+From 40 s: as=0 8.98 / sync 4.22; as=1 9.10, rsp 5.67, drain 3.43, wk 3.96, wk_tail 3.41, last job 120 kB / 3.41 ms.
+[g1b] same-run split (g1e_gfxbusy AS=1): as=0 50.8 tasks/s sd 11.34 ms; as=1 53.5 / 10.64 (s6705 was 49.3/11.70 vs 54.9/10.46).
+Positive control for the split: the as=0 arm reports wk=0/drain=0 and sync RT64 4.6 ms, the as=1 arm wk 4.2 ms, i.e. the same
+RT64 cost seen from both sides (single run, two independent clocks: Gfx-thread inline vs worker-side).
+Mechanism (code read, dpc_bridge.cpp): the defer layer holds every DPC_END range until the ucode exits (rs64_dpc_defer_end,
+main.cpp:6658, so RT64 never sees garbage streams on UnhandledJumpTarget). Only a ring lap (s4273 wrap flush) releases ranges
+mid-task, and it submits them one 8-byte bump per call (~9.5k processDisplayLists calls per task, unmerged). The final lap is
+merged at defer_end into one ~120 kB range: that is the last job, 3.4-3.5 ms, and it can only start after the RSP is done.
+Verdict: selects H-endload (wk_tail 3.50 of wk 4.20; only 0.70 ms of RT64 work overlaps the RSP). H-worker refuted (worker busy
+4.2 ms << total 10.2 ms). H-producer partial: rsp(as=1) 6.64 vs sync rsp-minus-RT64 5.74 = +0.9 ms producer cost (copy 0.35 ms,
+the rest mutex/merge), which eats most of the 0.7 ms overlap: net per task -0.2 ms in the aq clock, -0.7 ms in [g1b].
+s6705's -1.2 ms reproduces as -0.7 ms here (cross-run, same recipe; treat the async gain as 0.5-1.2 ms).
+Next lever: stream the deferred ranges to the worker during the task (flush every ~16 kB when async is on, the same path the
+wrap flush already takes mid-task), so the last-lap 120 kB is processed while the RSP still runs. Risk class is the same as the
+existing wrap flush (garbage streams after UnhandledJumpTarget are no longer droppable for already-flushed bytes).
