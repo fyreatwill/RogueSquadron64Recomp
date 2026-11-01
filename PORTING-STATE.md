@@ -177035,3 +177035,4 @@ shift held off; 4500 is radar-only). ctl219 window 4907..4911, tri=36, texrect=4
 flight, where the shift came on as before (fix 10078 tri / ctl 9840 tri, 0 texrect), 0 crashes, 4 [livescap] lines each.
 Rules out: any other in-region element moved by the shift on the lvl1 route (0 texrects in ~20k flight hits per run).
 Not checked: other levels' radar may carry texrects in the region (lvl1 only).
+Summary: this refutes H-benign and H-latch, selects the 1-swap pause-UI lag as the root cause, and closes the G1d fly-out residual. Next discriminator (G3): RDRAM dump of the mission-start intro-mode swap (scratch/agent/NEXT.md).
