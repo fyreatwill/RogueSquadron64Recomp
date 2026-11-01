@@ -4756,7 +4756,41 @@ extern "C" int g_rs64_store_diag = [] {
     fprintf(stderr, "[storediag] on=0 reason=no-logging-env\n");
     return 0;
 }();
+// s6713 G1e: fast RSP DMA (see librecomp rsp.hpp). Default on iff no diagnostic env is armed that the skipped per-DMA hooks
+// could serve: any ROGUESQ_LOG_*, *WATCH*, session-numbered probe (ROGUESQ_S<digit>...), or the hooks' own non-LOG vars.
+extern "C" int rs64_g1e_fast = [] {
+    if (const char* e = getenv("ROGUESQ_G1E_FAST"); e && *e) {
+        fprintf(stderr, "[g1e-fast] on=%d reason=ROGUESQ_G1E_FAST\n", *e != '0' ? 1 : 0);
+        return *e != '0' ? 1 : 0;
+    }
+    if (rs64_rsp_hooks_on) { fprintf(stderr, "[g1e-fast] on=0 reason=rsp_hooks_on\n"); return 0; }
+    static const char* const k_diag[] = {"ROGUESQ_FLOOR_DEPTH_DIR", "ROGUESQ_VSRC_STORES", "ROGUESQ_SPANW", "ROGUESQ_SPIKE_DMEM",
+                                         "ROGUESQ_TRACE_DMA", "ROGUESQ_DUMP_IMEM_DMA", "ROGUESQ_RSP_HOOKS"};
+    extern char** environ;
+    for (char** v = environ; v && *v; ++v) {
+        const char* s = *v;
+        if (strncmp(s, "ROGUESQ_", 8)) continue;
+        const char* eq = strchr(s, '='); std::string name(s, eq ? eq - s : strlen(s));
+        bool diag = !name.compare(0, 12, "ROGUESQ_LOG_") || name.find("WATCH") != std::string::npos ||
+                    (name.size() > 9 && name[8] == 'S' && name[9] >= '0' && name[9] <= '9');
+        for (const char* d : k_diag) diag = diag || name == d;
+        if (diag) { fprintf(stderr, "[g1e-fast] on=0 reason=%s\n", name.c_str()); return 0; }
+    }
+    fprintf(stderr, "[g1e-fast] on=1 reason=no-diag-env\n");
+    return 1;
+}();
+// ROGUESQ_G1E_FAST_TOGGLE=<sec>: flip rs64_g1e_fast every <sec> s at osViSwapBuffer ([g1e-fast] line per flip).
+static void rs64_g1e_fast_tick() {
+    static const double sec = [] { const char* e = getenv("ROGUESQ_G1E_FAST_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
+    if (sec <= 0.0) return;
+    static const auto t0 = std::chrono::steady_clock::now(); static auto t_flip = t0;
+    const auto now = std::chrono::steady_clock::now();
+    if (std::chrono::duration<double>(now - t_flip).count() < sec) return;
+    t_flip = now; rs64_g1e_fast = !rs64_g1e_fast;
+    fprintf(stderr, "[g1e-fast] on=%d t=%.3f\n", rs64_g1e_fast, std::chrono::duration<double>(now - t0).count());
+}
 extern "C" void rs64_store_diag_tick(void) {
+    rs64_g1e_fast_tick();
     static const double sec = [] { const char* e = getenv("ROGUESQ_STORE_DIAG_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
     if (sec <= 0.0) return;
     static const auto t0 = std::chrono::steady_clock::now(); static auto t_flip = t0;
@@ -6684,9 +6718,9 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         const auto now = std::chrono::steady_clock::now();
         if (now - sec0 >= std::chrono::seconds(1)) {
             const double n = (double)acc.n, sn = acc.slow_n ? (double)acc.slow_n : 1.0;
-            fprintf(stderr, "[g1e-split] phase=%u spin=%u tasks=%llu ucode_ms=%.3f submit_ms=%.3f rest_ms=%.3f commit_ms=%.3f "
+            fprintf(stderr, "[g1e-split] phase=%u spin=%u fast=%d tasks=%llu ucode_ms=%.3f submit_ms=%.3f rest_ms=%.3f commit_ms=%.3f "
                     "calls=%.0f max_ms=%.2f slow_n=%llu slow_ucode_ms=%.3f slow_submit_ms=%.3f\n",
-                    rs64_phase_ord(), g_rs64_aq_spin_ns, (unsigned long long)acc.n, acc.ucode / n / 1e6, acc.sub / n / 1e6,
+                    rs64_phase_ord(), g_rs64_aq_spin_ns, rs64_g1e_fast, (unsigned long long)acc.n, acc.ucode / n / 1e6, acc.sub / n / 1e6,
                     (acc.ucode - acc.sub) / n / 1e6, acc.com / n / 1e6, acc.calls / n, acc.max / 1e6,
                     (unsigned long long)acc.slow_n, acc.slow_ucode / sn / 1e6, acc.slow_sub / sn / 1e6);
             acc = AqAcc{};

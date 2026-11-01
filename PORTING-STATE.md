@@ -176346,3 +176346,31 @@ Soak folded: s6711_nodrain_hangar_route rc=0 — natural hangar route under ASYN
 0 crashlines.
 Next: cut the interpreter's per-command cost (probe gating behind rs64_rsp_hooks_on, word-wise RSP DMA copies, vector op
 inlining), same-run toggle.
+
+## Session 6713 (2026-10-31) — G1e: fast RSP DMA (word-wise copy + per-DMA hooks skipped) cuts the interpreter slope 258 -> 200 ns/RDP cmd (-22%); dense lvl5 dd4 tasks 11.83 -> 9.32 ms
+
+Change (lib/ rsp.hpp, exported to submodule-patches/N64ModernRuntime.patch; src/main/main.cpp): `rs64_g1e_fast`. On,
+dma_rdram_to_dmem / dma_dmem_to_rdram copy whole words with memcpy when dmem_addr is 4-aligned (dram_addr is already
+8-aligned; RDRAM and DMEM both store each 32-bit word byte-reversed, so equal alignment mod 4 copies verbatim; tail bytes
+byte-wise; shadow2 and IMEM paths untouched), and skip the per-DMA diagnostic hooks (m5_audio_input_dma, m5 dmem/source/exact/
+source-range, s4209, s4239 incl. the unconditional spike DMA ring, f5_host_write_begin/bulk_payload, probe_dma_write_origin,
+g1d_blk_dma, m5_host_write_census, probe_audio_dma_write). Default on iff no diagnostic env: any ROGUESQ_LOG_*, *WATCH*,
+ROGUESQ_S<digit>*, FLOOR_DEPTH_DIR/VSRC_STORES/SPANW/SPIKE_DMEM/TRACE_DMA/DUMP_IMEM_DMA/RSP_HOOKS, or rs64_rsp_hooks_on.
+ROGUESQ_G1E_FAST=0/1 overrides; ROGUESQ_G1E_FAST_TOGGLE=<sec> flips it at osViSwapBuffer ([g1e-fast] line); [g1e-split] rows
+carry fast=. New tools/g1e_fast_ab.py (per-arm fit rest = a + b*calls, dense-row means, drops rows straddling a flip).
+In-ucode per-dispatch probes left alone (rs64_dlw_jump + inline_probe_route + e9prov ~4% in sample; gating them needs a
+fixup_factor5_ucode.py edit and ucode regen).
+Run (scratch/agent/s6713_toggle.zsh: lvl5 FPS60 dd4 ASYNC+NODRAIN, STORE_DIAG=0, G1E_AQ, toggle 10 s; 203 s hold, alive,
+0 VI stalls, 0 crashlines, 20 flips):
+- fast=0: 96 rows, rest = 0.553 ms + 258.4 ns/cmd; dense (>25k cmds, n=21) ucode 11.83 ms, rest 9.95, 46.3 tasks/s.
+- fast=1: 89 rows, rest = 0.524 ms + 200.1 ns/cmd; dense (n=23) ucode 9.32 ms, rest 7.52, 51.6 tasks/s.
+  All rows: 56.1 -> 57.3 tasks/s. Bridge submit unchanged (0.67/0.72 ms).
+- Positive control (second line of evidence): sample(1) of the Gfx thread in a fast=1 window shows none of the DMA hooks;
+  in a fast=0 window they total ~8.5% of the factor5_ucode subtree (s4209_read 1.7%, g1d_blk_dma 1.1%, s4239 0.9%, census,
+  exact_route, audio route snapshot, floor_writer, f5 host write, source_range, probe_audio_dma, bulk_shadow).
+- Frames: fbd every 600 VIs, alternating arms (scratch/s6713/sheet.png): lvl5 asteroid field, craft, HUD, planet normal in both.
+Discrimination: selects H-dma+H-dma-hooks as worth -22% of the slope (above the 15% bar); remaining 200 ns/cmd is the
+interpreter proper (H-vops next). Not cross-run: same-run windows.
+ORIGIN: not a mitigation — a performance change; the skipped hooks are diagnostics whose own env gates were off (writer of
+the cost: unconditional out-of-line calls + byte loops per DMA, named by sample).
+Queued: s6713_fast_lvl1_dd1, s6713_fast_lvl10_dd4 (G1E_FAST=1 forced, 300 s, fbd every 300 V).
