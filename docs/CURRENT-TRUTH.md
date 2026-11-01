@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6711 (2026-10-31).
+Compact operational handoff, as of Session 6714 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -54,6 +54,11 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   stack: interpreter slope 258 -> 200 ns/RDP cmd, dense tasks ucode 11.83 -> 9.32 ms, dense tasks/s 46.3 -> 51.6; control =
   sample(1) shows the hooks (~8.5% of the ucode subtree) in fast=0 windows only; 203 s, 0 stall/crash, frames sane both arms.
   lvl1/lvl10 300 s qualification queued (s6713_fast_*). Soak recipes with LOG_* still run the old path unless they force it.
+- **s6714 G1e: RSP:: vector templates inlined into the gfx ucode TU** (CMake ROGUESQ_UCODE_INLINE_THRESHOLD, default 4000,
+  0 = old; `-mllvm -inline-threshold` on factor5_ucode_recompiled.c only, no lib/ edit). Out-of-line VMADN/VMADM/SDV/VMUDL
+  calls 336 -> 71. Interleaved ABAB lvl5 FPS60 dd4 (fast DMA on): 207.1 -> 185.3 ns/RDP cmd (-10.5%), dense ~10.3 -> ~8.9 ms;
+  sample(1) control: RSP:: self time (~11%) gone in B. s6713 fast DMA qualified lvl1 dd1 / lvl10 dd4 300 s clean. s6714 build
+  qualification soaks queued (s6714_inl_*). Remaining Gfx subtree: interp 61%, DPC bridge 31%, in-ucode probes ~4%.
 - **s6705 G1e: ROGUESQ_RDP_ASYNC=1 (opt-in) runs RT64 RDP processing on a worker thread** (command words copied at submit,
   drained before dp_complete/present). Same-run toggle, lvl5 FPS60 dd2: 11.70 -> 10.46 ms/task, 49.3 -> 54.9 tasks/s, 301 s
   clean, frames sane (docs/img/g1e_s6705_async_sheet.png). Short of 60: only ~1.2 of the ~5 ms RT64 share overlaps. Default off.
@@ -579,10 +584,11 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1e: dense dd4 tasks now ~9.3 ms ucode / 200 ns per RDP cmd after s6713 fast DMA (-22%).** Remaining levers, one
-   build: out-of-line RSP:: vector templates (VMADN/VMADH/SDV/VMADM/VMUDL; force-inline or -O3 on the ucode TUs, A/B as two
-   build dirs run concurrently), in-ucode per-dispatch probes (rs64_dlw_jump/inline_probe_route ~4%, gate via
-   fixup_factor5_ucode.py), _tlv_get_addr (thread_local g_dmem_cur ~1%). Fold s6713_fast_* soaks first. See NEXT.md.
+1. **G1e: dense dd4 tasks ~8.9 ms / ~185 ns per RDP cmd after s6713 fast DMA + s6714 inlining (dense 56 tasks/s).** Fold
+   s6714_inl_* soaks first (a failure there = root-cause the inlined build). Next, one build, same-run toggle: gate the
+   in-ucode per-dispatch probes (rs64_dlw_jump/inline_probe_route/m4 ~4%, fixup_factor5_ucode.py) and trim the DPC bridge
+   per-command path (rsp_dpc_submit_impl + submit_rdp_range, ~31% of the subtree). If dense dd4 still misses 60, write the
+   G1e dd4 ceiling and move to G3. See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional

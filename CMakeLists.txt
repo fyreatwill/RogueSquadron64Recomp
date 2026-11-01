@@ -294,6 +294,14 @@ endif()
 set_source_files_properties(${FACTOR5_UCODE_C} ${FACTOR5_UCODE_B_C} ${FACTOR5_BOOT_C} PROPERTIES
     LANGUAGE CXX
     COMPILE_OPTIONS "${RS64_UCODE_FLAGS}")
+# s6714 G1e: factor5_ucode is one huge function and the RSP:: vector templates (VMADN/VMADM/VMUDL/SDV...) exceed clang's
+# -O2 inline threshold, so ~250 call sites stay out-of-line bl's. A higher threshold for the gfx ucode TU only inlines
+# them. s6714 interleaved A/B/A/B (lvl5 FPS60 dd4): 207.1 -> 185.3 ns per RDP cmd (-10.5%). 0 = compiler default.
+set(ROGUESQ_UCODE_INLINE_THRESHOLD "4000" CACHE STRING "clang -inline-threshold for the gfx ucode TU (0 = default)")
+if (NOT MSVC AND NOT ROGUESQ_UCODE_INLINE_THRESHOLD STREQUAL "0")
+    set_property(SOURCE ${FACTOR5_UCODE_C} APPEND PROPERTY COMPILE_OPTIONS
+        -mllvm "-inline-threshold=${ROGUESQ_UCODE_INLINE_THRESHOLD}")
+endif()
 
 add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/main/main.cpp

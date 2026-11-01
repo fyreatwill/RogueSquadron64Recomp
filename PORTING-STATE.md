@@ -176374,3 +176374,32 @@ interpreter proper (H-vops next). Not cross-run: same-run windows.
 ORIGIN: not a mitigation — a performance change; the skipped hooks are diagnostics whose own env gates were off (writer of
 the cost: unconditional out-of-line calls + byte loops per DMA, named by sample).
 Queued: s6713_fast_lvl1_dd1, s6713_fast_lvl10_dd4 (G1E_FAST=1 forced, 300 s, fbd every 300 V).
+
+## Session 6714 (2026-10-31) — G1e H-vops: inlining the RSP:: vector templates into the gfx ucode TU cuts the interpreter slope 207 -> 185 ns/RDP cmd (-10.5%, interleaved ABAB); landed as default; s6713 fast-DMA qualification passed
+
+Soak fold (s6713 queue): s6713_fast_lvl1_dd1 (304 s) and s6713_fast_lvl10_dd4 (303 s), both `[g1e-fast] on=1` armed, alive,
+0 VI stalls, 0 crashlines, 0 refills; fbd contact sheet (scratch/s6714/s6713_qual_sheet.png): lvl1 terrain/craft/HUD,
+lvl10 crawl text then desert flight with craft+HUD, sane. rs64_g1e_fast is qualified on lvl1/5/10.
+H-vops check: objdump of factor5_ucode in the linked binary showed 336 out-of-line `bl` to RSP:: templates (VMADN<8> 42,
+VMADM<8> 19, SDV<0> 17, VMUDL<8> 13, SDV<8> 13, VMADH 11+10...): clang -O2 refuses them (callee cost > 225 threshold inside
+the one huge function). sample(1) arm A Gfx thread self: VMADN 3.1%, SDV 2.3%, VMADH 2.0%, VMADM 1.3%, VMUDL 1.3%, VMUDN 0.9%
+(~11% of thread samples, vs factor5_ucode self 7.7%).
+Change (CMakeLists.txt only, no lib/ edit): ROGUESQ_UCODE_INLINE_THRESHOLD cache var (default 4000; 0 = compiler default)
+adds `-mllvm -inline-threshold=N` to factor5_ucode_recompiled.c only. Out-of-line RSP:: calls 336 -> 71, factor5_ucode
+disassembly 21.6k -> 51.4k lines; TU compile still ~8 s.
+Run: two binaries (A = s6713 build, B = threshold 4000), scratch/agent/s6714_ab_driver.zsh runs A,B,A2,B2 back to back
+(one game at a time) with scratch/agent/s6714_vops.zsh = lvl5 FPS60 dd4 ASYNC+NODRAIN, STORE_DIAG=0, G1E_FAST=1, G1E_AQ;
+203 s holds, all 4 alive, 0 stalls, 0 crashlines. tools/g1e_fast_ab.py fit rest = a + b*calls (scene-independent slope):
+- A  206.8 ns/cmd (a 0.251 ms), dense n=49 ucode 10.45 ms @39.2k cmds, 53.0 tasks/s; A2 207.4 (dense 10.16 @38.0k, 54.1/s)
+- B  191.2 ns/cmd (a 0.340), dense n=52 ucode 9.33 @36.9k, 56.6/s;              B2 179.3 (dense 8.40 @34.5k, 56.1/s)
+Mean slope 207.1 -> 185.3 (-10.5%); A arms agree within 0.3%, both B arms lower than both A arms.
+Second line (positive control): sample(1) of arm B in flight shows no RSP:: symbol in the Gfx thread self list (all folded
+into factor5_ucode self 16.2%); arm A shows them at ~11%. Frames A2 vs B2 (scratch/s6714/s6714_vops_sheet.png): same
+asteroid field, craft, HUD, planet.
+Caveat: cross-run (different binaries), mitigated by interleaving and the per-command slope metric; the B arms spread
+191/179 vs A 207/207, so the true gain is ~8-13%.
+Remaining Gfx-thread split (sample B, factor5_ucode subtree): interp 61%, bridge (rsp_dpc_submit_impl/submit_rdp_range)
+31%, in-ucode probes rs64_dlw_jump 1.6% + inline_probe_route 1.4% + m4 probes ~1%. mach_absolute_time 4% of the thread
+is the G1E_AQ instrument (absent in owner play).
+Discrimination: H-vops selected (>=10% bar, land). Not a mitigation (performance; no ORIGIN needed).
+Queued: s6714_inl_lvl1_dd1, s6714_inl_lvl10_dd4 (300 s qualification on the threshold-4000 build/ binary).
