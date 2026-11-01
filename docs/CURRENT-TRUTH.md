@@ -113,11 +113,14 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   starts in it; ROGUESQ_ASPECT=auto takes display 0's aspect. Game width is fixed at boot (a resize letterboxes).
   Datum: default 4:3 flight shows 85/1280 px side bars (512-wide VI mode), same with WINDOW_FIT=0, so pre-G1f;
   retail hStart unchecked, single-source.
+- **FIXED s6722: G1d pause dim band.** The pause darkening is the game's own 2-tri camera-facing panel sized for the
+  4:3 frustum (runPauseMenuStateMachine object fp+0xC78), clipped to x 221..803 of 1024 at 21:9. rs64_g1d_pause_dim
+  (dpc_bridge) widens tris with its exact RDP signature by ROGUESQ_ASPECT_SCALE about the centre while the pause byte
+  is live; ROGUESQ_G1D_PAUSE_DIM=0 = old. Zap/half/off controls in-build; 21:9 2/2, 16:9 full, 4:3 untouched.
 - **FIXED s6721: G1d pause-menu text split at wide aspect.** Writer = our s6156 HUD anchor (vp 0x80138D20 also carries
   the pause text; right-of-centre items got +fbw-512). Anchor-off arm centres it (flight HUD unanchored = live control).
   Fix tools/apply_s6721_pausegate.py: anchor skipped while initHudStruct's pause byte (HUD+0x258) is set;
   ROGUESQ_G1D_PAUSE_ANCHOR=1 = old. OPTIONS/PASSCODES already clean (title VI mode). screenshots/s6721_*.png.
-  Open: pause dim overlay covers only a centre band (~222..802 of 1024 at 21:9), writer unknown.
 - **FIXED s6720: G1d wide-aspect title screen.** The game drew the title correctly (texrects centred at x 256..768 of
   the 1024 image, [g1d-rect] log, ROGUESQ_LOG_G1D_RECT=1). Writer = the VI mode: the interlaced 512x448 title mode is
   width 1024 (= two 512-px lines), xScale 0x333, field origins 1024/2048. Retail 4:3 uses the same values. Our s6113 hook
@@ -353,8 +356,8 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 - **Owner 2026-10-31:** spike cull default ON (also fixed: it only ran with LOG_SPIKE).
   G1(d) objective qualification PARKED (owner playtest). G1f window/fullscreen
   CLOSED s6717; G3d turning shake closed s6697 (s6696 fps fix). Spec: ITERATION.md item 3c.
-1. **G1d pause dim band + debrief** (s6721): name the writer of the pause darkening overlay (centre band only at
-   wide aspect; not drawn by initOrUpdatePauseScreenDim), widen it; then check mission debrief / game-over at 21:9.
+1. **G1d debrief / game-over at wide aspect** (pause dim fixed s6722): reach the mission debrief (abort level from
+   the pause menu) and a game-over screen at 21:9 and 16:9; fix any band, split or pillar the same way.
    Open single-source (s6719): why a wider terrain footprint changes the LucasArts logo shape.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).

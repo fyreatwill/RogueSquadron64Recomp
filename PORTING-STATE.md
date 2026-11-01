@@ -176653,3 +176653,29 @@ Not checked: mission debrief / game-over screens.
 **Discrimination.** Anchor-off arm (text centred, flight HUD unanchored) selects H-anchor for the pause text and refutes
 H-other-mode (no new VI mode in OPTIONS/PASSCODES/pause) and H-full for OPTIONS/PASSCODES (no clipped content).
 Maintenance: CURRENT-TRUTH 59994 -> ~42 KB by migrating the parked G1(d) s6656-s6674 bullets verbatim to PROJECT-OVERVIEW.
+
+## Session 6722 (2026-11-01) — G1d pause dim band fixed: the dim panel is a 2-tri camera-facing quad clipped to the 4:3 frustum; widened at the RDP stage while paused
+
+**Ran.** One instrument (rs64_g1d_rect_scan extension, ROGUESQ_LOG_G1D_RECT=1): per swap, RDP tris grouped by state
+signature (other mode, combine, prim, env, op), printing only paused-swap signatures never seen in flight, plus fill
+rects. lvl1 forced route, 21:9, pause recipe scratch/s6721/pause.sh.
+**Result.** The overlay is ONE pair of op 0x0D (shade+z) tris, other mode 2F18xCF0 (bit 0x8000 = dither, differs
+per run) / C8104240, combine FCFFFFFF,FFFE7638 (shade only), prim alpha fading 0x00->0x80, x 220.8..803 by
+y -127.8..575.8: exactly the observed band. Scissor in force is full width (ED000000,00FFC6FC) and fill rects are
+z/colour clears -> H-fill and H-scissor REFUTED, H-tri SELECTED. ORIGIN: the game's own pause panel (writer
+runPauseMenuStateMachine; object fp+0xC78, alpha byte fp+0xD47 from fade timer fp+0x25C) sized for the retail 4:3
+frustum; the value is legitimate, our s6104-widened projection exposes past it.
+**Failed lever (removed).** Scaling the "matrix" at fp+0xC94 (after addVec3At0x24, 0x800C3B78): contents are not
+floats (1e10/1e-34 garbage), the block runs once per pause and compounded x2 per call. Not the panel transform.
+**Fix.** src/rsp/dpc_bridge.cpp rs64_g1d_pause_dim (before RT64 sees the range, like the s6720 title clear): while the
+s6721 pause byte is live and ROGUESQ_ASPECT_SCALE>1, tris with that exact signature get edge x/slopes scaled by k
+about cw/2, shade and z x-gradients /k. ROGUESQ_G1D_PAUSE_DIM=0 = old; ROGUESQ_G1D_PAUSE_DIM_K overrides k (test).
+**Controls, same build.** zap arm (PAUSE_DIM=z deletes the matched tris): dim disappears entirely (writes reach RT64,
+the pair IS the overlay). k=0.5: band halves (~366..658 of 1024). k=2 (default at 21:9): 2/2 runs (w219, rep219) dim
+full width, edge luma 70 vs 140 in the PAUSE_DIM=0 arm; 16:9 full width; 4:3 untouched (0 matches, retail dim).
+0 crashes in 8 runs. screenshots/s6722_pause_dim_before_after.png (21:9 off, 21:9 fix, 16:9 fix, 4:3).
+**Unexplained, single run.** fixb219 (same logic, earlier build with the per-run om mask just added) logged widened
+tris but its frames still showed the band; not reproduced in 3 later k=2 runs.
+**Also fixed during the session:** a scissor-widening attempt wrote lrx=0x1000 (overflowed into bit 24) and broke the
+draw; removed, since the scissor was already full width.
+**Next.** Mission debrief / game-over screens at 21:9 and 16:9 (the rest of the G1d menu sweep).

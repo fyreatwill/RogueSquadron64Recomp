@@ -1,3 +1,6 @@
+#include <map>
+#include <set>
+#include <array>
 // DPC bridge for RSP graphics ucodes that emit RDP commands directly via
 // mtc0 to DPC_START/DPC_END (Factor5 ucode does this). On DPC_END writes
 // we forward [start..end) RDRAM bytes to RT64's RDP interpreter (LLE path,
@@ -4920,7 +4923,25 @@ static void rs64_g1d_rect_scan(uint32_t lo, uint32_t hi) {
     static int s_lines = 0, s_swap = -1;
     static uint32_t s_cw, s_cimg, s_nr, s_nt, s_sc0, s_sc1, s_first[4];
     static double s_rx0, s_rx1, s_tx0, s_tx1;
+    static uint32_t s_om0, s_om1, s_cc0, s_cc1, s_prim, s_env, s_blend, s_fillc;
+    static int s_plines = 0;
+    static const int pcap = [] { const char *e = std::getenv("ROGUESQ_G1D_PAUSE_CAP"); return e && *e ? atoi(e) : 600; }();
     const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
+    const bool paused = g_rs64_g1d_paused.load(std::memory_order_relaxed) != 0;
+    struct Grp { uint32_t n = 0; double x0, x1, y0, y1; };
+    static std::map<std::array<uint32_t, 7>, Grp> s_grp;
+    static std::set<std::array<uint32_t, 7>> s_flight;
+    static bool s_swap_paused = false;
+    if (sw != s_swap) {
+        for (auto &kv : s_grp) {
+            if (!s_swap_paused) { s_flight.insert(kv.first); continue; }
+            if (s_flight.count(kv.first) || s_plines >= pcap) continue;
+            const auto &k = kv.first; const auto &g = kv.second; s_plines++;
+            fprintf(stderr, "[g1d-pause] swap=%d GRP op=%02X n=%u x=%.1f..%.1f y=%.1f..%.1f om=%08X,%08X cc=%08X,%08X prim=%08X env=%08X cw=%u\n",
+                    s_swap, k[6], g.n, g.x0, g.x1, g.y0, g.y1, k[0], k[1], k[2], k[3], k[4], k[5], s_cw);
+        }
+        s_grp.clear(); s_swap_paused = paused;
+    }
     if (sw != s_swap) {
         if (s_swap >= 0 && (s_nr || s_nt) && s_lines < cap) {
             s_lines++;
@@ -4940,10 +4961,31 @@ static void rs64_g1d_rect_scan(uint32_t lo, uint32_t hi) {
         }
         if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; s_cimg = w1 & 0xFFFFFF; a += 8; continue; }
         if (op == 0x2D) { s_sc0 = w0; s_sc1 = w1; a += 8; continue; }
+        // s6722: while the pause byte is live, log fill rects and every big (>=150 px wide or tall) tri with the RDP
+        // state it was drawn under (other mode, combine, prim/env/blend colour, scissor), so the dim overlay is named.
+        if (op == 0x2F) { s_om0 = w0; s_om1 = w1; }
+        if (op == 0x3C) { s_cc0 = w0; s_cc1 = w1; }
+        if (op == 0x3A) s_prim = w1;
+        if (op == 0x3B) s_env = w1;
+        if (op == 0x39) s_blend = w1;
+        if (op == 0x37) s_fillc = w1;
+        if (op == 0x36 && paused && s_plines < pcap) {
+            s_plines++;
+            fprintf(stderr, "[g1d-pause] swap=%d FILL x=%.1f..%.1f y=%.1f..%.1f fill=%08X om=%08X,%08X sc=%08X,%08X cw=%u\n", sw,
+                    ((w1 >> 12) & 0xFFF) / 4.0, ((w0 >> 12) & 0xFFF) / 4.0, (w1 & 0xFFF) / 4.0, (w0 & 0xFFF) / 4.0, s_fillc, s_om0, s_om1, s_sc0, s_sc1, s_cw);
+        }
         if (op < 0x08 || op > 0x0F) { a += 8; continue; }
         const uint32_t len = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
         if (a + 32 > hi) break;
-        for (uint32_t o : {8u, 16u, 24u}) { const double x = (double)(int32_t)rd(a + o) / 65536.0; s_tx0 = std::min(s_tx0, x); s_tx1 = std::max(s_tx1, x); }
+        double t0 = 1e9, t1 = -1e9;
+        for (uint32_t o : {8u, 16u, 24u}) { const double x = (double)(int32_t)rd(a + o) / 65536.0; s_tx0 = std::min(s_tx0, x); s_tx1 = std::max(s_tx1, x); t0 = std::min(t0, x); t1 = std::max(t1, x); }
+        {
+            auto sx14 = [](uint32_t v) { return (double)(((int32_t)(v << 18)) >> 18) / 4.0; };
+            const double yh = sx14(rd(a + 4) & 0x3FFF), yl = sx14(w0 & 0x3FFF);
+            auto &g = s_grp[std::array<uint32_t, 7>{s_om0, s_om1, s_cc0, s_cc1, s_prim, s_env, op}];
+            if (g.n++ == 0) { g.x0 = t0; g.x1 = t1; g.y0 = yh; g.y1 = yl; }
+            g.x0 = std::min(g.x0, t0); g.x1 = std::max(g.x1, t1); g.y0 = std::min(g.y0, yh); g.y1 = std::max(g.y1, yl);
+        }
         s_nt++;
         a += len;
     }
@@ -4986,8 +5028,51 @@ static void rs64_g1d_title_clear(uint32_t lo, uint32_t hi) {
     }
 }
 
+// s6722 G1d: the pause dim panel is a camera-facing 3D quad sized for the retail 4:3 frustum (runPauseMenuStateMachine
+// object fp+0xC78), so the s6104-widened projection shows past its sides (dark band x 222..802 of 1024 at 21:9). While
+// the pause byte is live, widen the triangles drawn with its RDP state (shade-only combine, blend C8104240, other-mode
+// hi 2F18xCF0 (dither bits vary per run); logged by rs64_g1d_rect_scan, never seen in flight) about the image centre by ROGUESQ_ASPECT_SCALE:
+// edge x and slopes * k, shade/z x-gradients / k. Scissor clips the overshoot. ROGUESQ_G1D_PAUSE_DIM=0 = old.
+static void rs64_g1d_pause_dim(uint32_t lo, uint32_t hi) {
+    static const double k = [] { const char *a = std::getenv("ROGUESQ_ASPECT_SCALE"), *m = std::getenv("ROGUESQ_G1D_PAUSE_DIM");
+        const char *kk = std::getenv("ROGUESQ_G1D_PAUSE_DIM_K");  // test override of the widening factor
+        const double v = (kk && *kk) ? atof(kk) : (a && *a) ? atof(a) : 1.0; return (m && *m == '0') ? 1.0 : v; }();
+    if (k == 1.0 || k <= 0.0 || !rs64_g1d_pause_live() || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
+    static uint32_t s_om0, s_om1, s_cc0, s_cc1, s_cw = 640; static int s_lines = 0;
+    auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
+    auto wr = [&](uint32_t a, uint32_t v) { memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &v, 4); };
+    auto cl = [](double v) { return (uint32_t)(int32_t)std::clamp(v, -2147483648.0, 2147483647.0); };
+    for (uint32_t a = lo & ~3u, step = 8; a + 8 <= hi; a += step) {
+        const uint32_t w0 = rd(a), w1 = rd(a + 4), op = (w0 >> 24) & 0x3F;
+        step = (op == 0x24 || op == 0x25) ? 16u : (op >= 0x08 && op <= 0x0F) ? 32u + ((op & 4) ? 64u : 0u) + ((op & 2) ? 64u : 0u) + ((op & 1) ? 16u : 0u) : 8u;
+        if (op == 0x2F) { s_om0 = w0; s_om1 = w1; continue; }
+        if (op == 0x3C) { s_cc0 = w0; s_cc1 = w1; continue; }
+        if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; continue; }
+        if ((op != 0x0C && op != 0x0D) || a + step > hi) continue;
+        if ((s_om0 & ~0xC000u) != 0x2F182CF0u || s_om1 != 0xC8104240u || s_cc0 != 0xFCFFFFFFu || s_cc1 != 0xFFFE7638u) continue;
+        static const bool zap = [] { const char *m = std::getenv("ROGUESQ_G1D_PAUSE_DIM"); return m && *m == 'z'; }();  // positive control: delete them
+        if (zap) { wr(a, w0 & ~0x3FFFu); wr(a + 4, 0); if (s_lines++ < 8) fprintf(stderr, "[g1d-dim] zapped tri off=%06X\n", a); continue; }
+        const double c = s_cw * 0.5 * 65536.0;
+        for (uint32_t o : {8u, 16u, 24u}) { wr(a + o, cl(c + k * ((double)(int32_t)rd(a + o) - c))); wr(a + o + 4, cl(k * (double)(int32_t)rd(a + o + 4))); }
+        // shade: DxDx int halves at +32+8/+12, frac halves at +32+24/+28 (r,g | b,a)
+        for (uint32_t h = 0; h < 2; h++) {
+            const uint32_t ia = a + 40 + 4 * h, fa = a + 56 + 4 * h, iv = rd(ia), fv = rd(fa);
+            uint32_t ni = 0, nf = 0;
+            for (int sh : {16, 0}) {
+                const int32_t v = (int32_t)((((iv >> sh) & 0xFFFFu) << 16) | ((fv >> sh) & 0xFFFFu));
+                const uint32_t n = cl(v / k); ni |= (n >> 16) << sh; nf |= (n & 0xFFFFu) << sh;
+            }
+            wr(ia, ni); wr(fa, nf);
+        }
+        if (op & 1) { const uint32_t za = a + 32 + 64 + 4; wr(za, cl((double)(int32_t)rd(za) / k)); }
+        if (s_lines++ < 12) { fprintf(stderr, "[g1d-dim] widened tri off=%06X op=%02X k=%g cw=%u range=%06X..%06X sw=%d w=", a, op, k, s_cw, lo, hi, g_rs64_swap_n.load(std::memory_order_relaxed));
+            for (uint32_t o = 0; o < 32; o += 4) fprintf(stderr, " %08X", rd(a + o)); fprintf(stderr, "\n"); }
+    }
+}
+
 static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
     rs64_g1d_title_clear(lo, hi);
+    rs64_g1d_pause_dim(lo, hi);
     rs64_g1d_rect_scan(lo, hi);
     rs64_spike_scan(lo, hi);
     rs64_region_scan(lo, hi);
