@@ -251,3 +251,7 @@ questions. For what the microcode is supposed to emit, read
 - Is a given address ours or the game's, for any "who corrupted this?"
   question — the class that has eaten the most sessions on this project.
 - What PC writes a structure we only see the aftermath of.
+
+`--debug-write VADDR:VALUE[:WIDTH[:ARM_S]]` writes one guest word on the first VI at WIDTH (default 320) at or after
+ARM_S wall seconds. The port mirrors it with `ROGUESQ_DEBUG_WRITE=VADDR:VALUE:WIDTH:ARM_S` (fires on the VI width
+change), so both arms can be put into the same state, e.g. rngSeed `80003470:1:512:85` at the mission flight switch (s6750).

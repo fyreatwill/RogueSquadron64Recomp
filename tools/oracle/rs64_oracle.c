@@ -2718,6 +2718,8 @@ static int g_voice_base_read_after_write_seen;
 static int g_voice_base_post_step_pending;
 static int g_debug_write_enabled;
 static unsigned g_debug_write_addr, g_debug_write_value;
+static unsigned g_debug_write_width = 320; /* s6750: optional :WIDTH[:ARM_S] fields */
+static double g_debug_write_arm_s;
 static int g_debug_write_done;
 
 static double now_s(void)
@@ -3318,7 +3320,7 @@ static void dbg_vi(void)
 
     if (g_debug_write_enabled && !g_debug_write_done) {
         unsigned width = pDebugMemRead32(VI_WIDTH_ADDR);
-        if (width == 320) {
+        if (width == g_debug_write_width && now_s() - g_t0 >= g_debug_write_arm_s) {
             pDebugMemWrite32(g_debug_write_addr, g_debug_write_value);
             g_debug_write_done = 1;
             printf("[debug-write] vi=%ld width=%u addr=0x%08x value=0x%08x\n",
@@ -3740,7 +3742,8 @@ static void usage(void)
         "  --vi-poll             poll VI width/origin through the core API outside callbacks\n"
         "  --status-poll         poll the 18 status-table words through the core API\n"
         "  --pif-trace           log pad-1 buttons as the GAME reads them from PIF RAM\n"
-        "  --debug-write VADDR:VALUE  write one 32-bit word on first VI width 320\n"
+        "  --debug-write VADDR:VALUE[:WIDTH[:ARM_S]]  write one 32-bit word on the first VI at WIDTH (default 320)\n"
+        "                             at or after ARM_S seconds\n"
         "  --state-path PATH     savestate path used by ORACLE_STATE_SMOKE/REACH=1\n"
         "  --verbose             pass through core info messages\n"
         "\n"
@@ -3987,7 +3990,7 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--pif-trace"))                  g_pif_trace = 1;
         else if (!strcmp(argv[i], "--debug-write") && i + 1 < argc) {
             unsigned addr, value;
-            if (sscanf(argv[++i], "%x:%x", &addr, &value) != 2) {
+            if (sscanf(argv[++i], "%x:%x:%u:%lf", &addr, &value, &g_debug_write_width, &g_debug_write_arm_s) < 2) {
                 fprintf(stderr, "[oracle] bad --debug-write '%s'\n", argv[i]);
                 return 2;
             }

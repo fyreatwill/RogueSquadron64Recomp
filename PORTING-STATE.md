@@ -177503,3 +177503,36 @@ Next: same route with scripted fire presses in both (retail --press a/b/z, port 
   and H-tail as the main term (tail is 0.5 s); H-cine-rate is a minor 2.8% term that tracks the port's update_screen rate.
 - Saves: mupen .eep restored by the script trap and cmp-equal to scratch/s6747/oracle.eep; no port run so owner save untouched.
 - Next: g3-lvl3-flight (mission 3 flight vs retail with the same eep-patch recipe, selected mission 2).
+
+## Session 6750 (2026-11-01) — G3: mission 3 (canyon biome) early flight matches retail angrylion, then the arms desync at the first enemy hit on the player; the game RNG is seeded once at boot (=1) and ticks per menu frame, but equalising it at the flight switch flips rather than removes the divergence
+- Save: scratch/s6750/lvl3.eep = oracle EEPROM, selected mission byte +0x31 = 2, re-signed (tools/g3_eep_patch.py, checksums ok).
+  Phases retail (scratch/s6750/retail): 1024 17.3 s, 512 38.4 s, 640 intro 77.4 s, flight 99.6 s (black ~4.3 s, first lit
+  vi ~6250). Port (scratch/s6750/port): 1024 12.8, 512 24.0, 640 57.8, flight 76.2 s. Intro 22.2 s retail vs 18.4 s port
+  (same H-load pattern as lvl2, s6749). No crawl, no crash.
+- Unseeded pair: g3_oracle_match.py --w 512 --bases 690000,620000 --h 446 --win 60,1024 --winx 85,1191 --dec shift.
+  Retail vi 6310-6640 (first ~6 s of lit flight) match port n 7789-8435 monotonic, d 4.3-7.6 vs median 30-36 (pairs d
+  4.25-4.67, means within 1, canyon textures/haze/TIE swarm/HUD identical, scratch/s6750/drift_sheet2.png). From vi ~6670 d
+  10-18 and non-monotonic: both craft get shot at vi ~6700; retail's damage icon turns orange, the port's stays green, and
+  the trajectories drift apart afterwards (retail climbs out of the canyon later than port).
+- RNG (static): rand 0x80003430 is an LCG on rngSeed 0x80003470 (x*0xA8351D63, returns (x>>6)&0x7FFF); setRngSeed 0x80003460
+  has 3 jal sites (0x8003E000 boot, 0x800BEC84, 0x800FA284 gated on flags&0x60), all a0=1. Retail write/exec watch
+  (scratch/s6750/rng, rng2): only the boot reseed fires through flight. rand calls/s: boot 640 ~560, hangar 1024 exactly 60
+  (one per frame), craft select 855, intro 0 while black then ~360, flight load black (99.6-103.9 s) 0, flight 130-390.
+  So the RNG state at mission start is a function of frames spent in menus; the arms differ there (hangar 21 s retail vs
+  11 s port), which alone predicts a combat desync.
+- Seeded pair: new rs64_oracle `--debug-write VADDR:VALUE[:WIDTH[:ARM_S]]` (was fixed to width 320) and port env
+  `ROGUESQ_DEBUG_WRITE=VADDR:VALUE:WIDTH:ARM_S` (rt64_render_context.cpp phase hook) write rngSeed=1 at the 640->512 flight
+  switch in both arms (both fired: retail vi 5949, port update_screen #4683). Early flight matches better (pairs d 3.6-4.0),
+  but the arms diverge at the same point (vi ~6699), now with the PORT damaged (orange) and retail green
+  (scratch/s6750/seed_sheet.png). Retail frames vi 6729/6759/7299 with no HUD are mid-draw buffers, not mismatches.
+- Discrimination: selects H-rng-history as a real term (the seed flips which arm is hit) and refutes it as the sole cause
+  (equal retail state at the first flight frame, since retail makes 0 rand calls during the flight load, does not
+  reproduce the outcome). Remaining: H-port-rand-count (port calls rand a different number of times during its 0.5 s load or
+  per flight frame), H-time (enemy AI/fire uses osGetCount / VI count rather than frames; port update_screen 61-62/s), H-sim
+  (port arithmetic in the bolt/hit path). lvl1 (s6745) and lvl2 (s6748, no enemies) did not hit this in their windows.
+- Saves: owner save sha 1dd1dec4... after both port runs; mupen .eep cmp-equal to scratch/s6747/oracle.eep before each
+  oracle run and restored by trap.
+- Next discriminator: g3-lvl3-rng-desync. Port-side rand call log (fixup in rand's generated function or a runtime hook) with
+  update_screen # and the returned value from the flight switch, vs retail rngSeed rows with --ordinal-join source_value.
+  First differing index names the term: extra port calls during load -> H-port-rand-count; same sequence but hit differs ->
+  H-time/H-sim.

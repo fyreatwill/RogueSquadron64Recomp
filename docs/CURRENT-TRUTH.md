@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6749 (2026-11-01).
+Compact operational handoff, as of Session 6750 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -10,19 +10,17 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 
 ## Headline
 
-- **s6749 G3: the mission-2 intro is longer in retail by load time, not content (H-load).** Retail 640 buffers stay black
-  3.0-3.5 s after the 512->640 switch (port 0.5 s); after that the cinematic matches frame by frame (30 frames d 3.4-10 vs
-  median 45-55, monotonic, no skipped shot), offset 2.8 s from the first lit frame rising to 3.45 s (port 2.8% faster per
-  wall second = port update_screen 61-62/s vs retail 60.0 VI/s, single-source). Retail black tail ~1 s vs 0.5 s.
-  tools/g3_phase_timeline.py; scratch/s6749/timeline.txt.
-- **s6748 G3: second biome (mission 2, Barkhesh green hills) = H-match vs retail angrylion.** Same save in both arms via
-  tools/g3_eep_patch.py (oracle EEPROM, selected-mission byte copy+0x31 = 1, re-signed; per copy +0 = adler32(+0x18..+0xC8),
-  +4 = adler32(+0x08..+0x18); an unsigned patch is rejected -> SELECT GAME with empty slots). No crawl on mission 2. Flight
-  +18..+41.5 s: 40 complete retail frames d 6.5-15.2 vs median 36-47, monotonic, timing 0.981; the d drift 7->13 is a pose
-  offset at the horizon edge while the craft hugs a hill (port captures ~4/s), means within 1-2 (no haze/texture bias).
-  5 retail outliers (meanL ~160) are buffers caught mid-draw (sky only). Bolts B/Z: >=4 px retail 24.8% vs port 26.5%,
-  no-fire 1.4%/0%. No impacts in either fire arm (no positive, so lvl2 impacts are not covered). Retail 640 intro phase
-  25.2-26.2 s vs port 22.2-22.3 s (two runs each): open, next.
+- **s6750 G3: mission 3 (canyon) flight matches retail for the first ~6 s of lit flight (d 4.3-7.6 vs median 30-36), then
+  the arms desync at the first enemy hit on the player** (one arm's damage icon turns orange). Game RNG: rand 0x80003430 LCG
+  on rngSeed 0x80003470, seeded only at boot (=1), 60 calls/s in the hangar, so mission-start state depends on menu dwell.
+  Setting rngSeed=1 at the flight switch in both arms (new oracle `--debug-write A:V:WIDTH:ARM_S`, port
+  `ROGUESQ_DEBUG_WRITE`) flips which arm is hit instead of removing the split: RNG is one term, not the only one. Open:
+  g3-lvl3-rng-desync.
+- **s6749 G3: mission-2 intro +3.7 s retail = ~3 s black load lead-in (H-load); the cinematic matches frame by frame**
+  (d 3.4-10, monotonic, no skipped shot; 2.8% drift tracks port update_screen 61-62/s). tools/g3_phase_timeline.py.
+- **s6748 G3: mission 2 (Barkhesh) flight + bolts = H-match vs retail angrylion** (40 frames d 6.5-15 vs median 36-47,
+  monotonic; bolts 24.8% vs 26.5%). tools/g3_eep_patch.py selects a mission on the checksummed save (two copies, adler32
+  at +0/+4; selected mission +0x31). No impacts in window (lvl2 impacts not covered).
 - **s6746 G3: lvl1 flight with scripted fire = H-match vs retail angrylion.** `a` is throttle; B/Z fire. With B/Z alternating
   every 0.5 s, all 73 complete retail frames match at d 4.2-7.6 vs median 15-22, monotonic, 2.2% timing. Bolts cannot
   be paired frame by frame (few-frame lifetime vs capture phase), so tools/g3_effect_count.py counts bolt-red pixels per
@@ -498,7 +496,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
    (tools/g3_effect_count.py). s6747 impact puffs/explosions H-match by the same population method (--class orange).
    s6748 mission 2 (Barkhesh, green hills) flight + bolts H-match (tools/g3_eep_patch.py selects the mission on a signed save).
    s6749 mission-2 intro: +3.7 s retail = black load lead-in (H-load), content H-match. Open minor: port update_screen
-   61-62/s vs retail 60 VI/s. Next (g3-lvl3-flight): mission 3 flight vs retail, same eep-patch recipe. G2/G5 are closed; G4 and aim/steer stay
+   61-62/s vs retail 60 VI/s. s6750 mission 3 early flight H-match, then combat desync at the first player hit (RNG
+   history is one term; equal seed at flight switch not sufficient). Next (g3-lvl3-rng-desync): port vs retail rand call
+   sequence from the flight switch. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index
