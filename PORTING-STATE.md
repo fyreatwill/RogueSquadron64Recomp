@@ -177090,5 +177090,8 @@ column from the earlier full-width present when the content rect shrinks to 4:3.
 ORIGIN: the line pixels come from our own follow-mode 3 substitution (s6734 dump: the VI buffer is all-zero); the change
 removes the substitution in that state rather than masking pixels.
 Rules out: the horizontal line as game/RDP output (it went away with only a present-target change).
+Verdict: the fix/ctl arms select H-stale-target (follow-mode 3 substitution) as the root cause of the horizontal load
+line and refute it for the vertical x1278 line, which is unchanged in every arm. This closes the horizontal line. Next
+discriminator (NEXT.md): log the present content rect vs the bar/clear rects on the load swaps, to split H-clear / H-scale / H-src.
 Next: find the pillar/letterbox clear in RT64's present (rt64_present_queue / presenter shader rects) that misses the last
 column after a full-width -> 4:3 change.
