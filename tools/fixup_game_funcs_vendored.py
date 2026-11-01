@@ -37811,6 +37811,10 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6694:
             changed = True
             report.append(f"{p.name}: s6694 scissor lrx clamp x{_n6694}")
+        text, _n6718 = _a6031.apply_s6718_intro4(text)
+        if _n6718:
+            changed = True
+            report.append(f"{p.name}: s6718 intro widen x{_n6718}")
 
     if p.name == "funcs_34.c":
         import apply_s6695_radarmark as _a6695
@@ -37825,6 +37829,10 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6115:
             changed = True
             report.append(f"{p.name}: s6115 pfm x{_n6115}")
+        text, _n6718p = _a6031p.apply_s6718_intro0(text)
+        if _n6718p:
+            changed = True
+            report.append(f"{p.name}: s6718 intro pfm x{_n6718p}")
         import apply_s6063_heaplog as _a6063
         text, _n6063 = _a6063.apply0(text)
         if _n6063:

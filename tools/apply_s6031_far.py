@@ -514,11 +514,50 @@ def apply_s6694_scissor(text):
         text = text.replace(old, new, 1); n += 1
     return text, n
 
+# s6718 G1d: the mission-intro flyover renders a 640x340 video state that FB_WIDTH never widened, so at 21:9 RT64
+# pillarboxes it (227 px/side of 2720, s6717) and guPerspective's xASPECT_SCALE squeezes it horizontally. Widen the
+# 640x340 state to intro_w = fbw*3/4 (768 at fbw 1024: the s6717 drawn 2266/2720 px -> 640/0.833) across pfm alloc,
+# the video-state width, the 640 VI mode (upstream_compat.cpp), the 640 camera viewport and the perspective aspect
+# (intro_w/640 instead of fbw/512). fbw*3/4 <= 640 (16:9) leaves the fb at 640 but still drops the perspective
+# squeeze to 1.0. ROGUESQ_G1D_INTRO=0 restores the pre-s6718 path.
+S6718_DECL = "extern int rs64_g1d_intro_w, rs64_g1d_vs_intro;\nstatic int rs64_s6718_on(void) { static int on = -1; if (on < 0) { const char* e = getenv(\"ROGUESQ_G1D_INTRO\"); on = !(e && *e == '0'); } return on; }\n"
+def _decl(text, fn):
+    if "rs64_s6718_on(void)" in text: return text
+    a = text.find("RECOMP_FUNC void %s(" % fn); assert a > 0, fn
+    return text[:a] + S6718_DECL + text[a:]
+def apply_s6718_intro0(text):
+    if "PATCH: s6718 intro pfm" in text: return text, 0
+    old = '      if (wv > 0 && ow == 512 && (oh == 448 || oh == 340)) ctx->r6 = (gpr)wv; }\n'
+    if text.count(old) != 1: return text, 0
+    new = ('      if (wv > 0 && ow == 512 && (oh == 448 || oh == 340)) ctx->r6 = (gpr)wv;\n'
+           '      { /* PATCH: s6718 intro pfm */ int wi = (wv > 0 && ow == 640 && oh == 340 && rs64_s6718_on()) ? ((wv * 3 / 4 + 7) & ~7) : 0; if (wi <= 640) wi = 0;\n'
+           '        if (wi) ctx->r6 = (gpr)wi;\n'
+           '        if (wi != rs64_g1d_intro_w) fprintf(stderr, "[g1d-intro] pfm %dx%d intro_w %d->%d\\n", ow, oh, rs64_g1d_intro_w, wi); rs64_g1d_intro_w = wi; } }\n')
+    text = text.replace(old, new, 1)
+    return _decl(text, "partitionFramebufferMemory"), 1
+def apply_s6718_intro4(text):
+    if "PATCH: s6718 intro vsu" in text: return text, 0
+    n = 0
+    old = '      if (wv > 0 && (int)ctx->r4 == 512 && ((int)ctx->r5 == 448 || (int)ctx->r5 == 340)) ctx->r4 = (gpr)wv; }\n'
+    assert text.count(old) == 1
+    text = text.replace(old, old +
+        '    { /* PATCH: s6718 intro vsu */ int vi = rs64_s6718_on() && (int)ctx->r4 == 640 && (int)ctx->r5 == 340;\n'
+        '      if (vi != rs64_g1d_vs_intro) fprintf(stderr, "[g1d-intro] vsu %dx%d vs_intro %d intro_w %d\\n", (int)ctx->r4, (int)ctx->r5, vi, rs64_g1d_intro_w);\n'
+        '      rs64_g1d_vs_intro = vi; if (vi && rs64_g1d_intro_w > 640) ctx->r4 = (gpr)rs64_g1d_intro_w; }\n', 1); n += 1
+    o_cam = "((int32_t)MEM_W(-0X57C8, (gpr)(int32_t)0x80120000) <= 640 ? 1.0 / kv : "
+    assert text.count(o_cam) == 2
+    text = text.replace(o_cam, "(rs64_g1d_vs_intro && rs64_g1d_intro_w > 640 ? rs64_g1d_intro_w / 640.0 / kv : " + o_cam[1:]); n += 1
+    o_asp = "af = (float)(af * k6104);"
+    assert text.count(o_asp) == 1
+    text = text.replace(o_asp, "af = (float)(af * (rs64_g1d_vs_intro ? (rs64_g1d_intro_w > 640 ? rs64_g1d_intro_w / 640.0 : 1.0) : k6104)); /* PATCH: s6718 intro persp */"); n += 1
+    return _decl(text, "setupCameraMatrices"), n
+
 if __name__ == "__main__":
     p = base / "funcs_4.c"; t = p.read_text(); t2, n = apply4(t)
     t2, m = apply_s6201_pool(t2)
     t2, q = apply_s6204_poolclass(t2)
     t2, sc = apply_s6694_scissor(t2)
+    t2, ii = apply_s6718_intro4(t2); sc += ii
     if n or m or q or sc: p.write_text(t2)
     print("funcs_4.c live patched x%d pool=%d poolclass=%d scissor=%d" % (n, m, q, sc))
     p0 = base / "funcs_0.c"; t = p0.read_text(); t2, n = applypfm(t)
@@ -528,6 +567,7 @@ if __name__ == "__main__":
     t2, d = apply_s6207_drop(t2)
     t2, cap = apply_s6631_heapcap(t2)
     t2, hs = apply_s6689_heapslot(t2)
+    t2, ip = apply_s6718_intro0(t2); hs += ip
     if n or c or r or h or d or cap or hs: p0.write_text(t2)
     print("funcs_0.c live patched x%d carve=%d retarget=%d heapclass=%d drop=%d heapcap=%d heapslot=%d" % (n, c, r, h, d, cap, hs))
     p3 = base / "funcs_3.c"; t = p3.read_text(); t2, k = apply_s6201_alloc(t)

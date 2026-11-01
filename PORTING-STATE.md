@@ -176491,3 +176491,39 @@ does not map 0x80128E40, the mode is built in .bss) is unchecked, single-source.
 the mission-intro flyover is drawn ~1.9:1 centred with side bars and a ragged right edge; 16:9 intro fills (s6688
 run3 w60 bars 1/1). Single run per arm. G1f closed; G3d was already closed s6697. Next: the 21:9 intro pillarbox.
 Captures: scratch/s6717/{a219,a43,dflt,nofit}/w*.png; logs scratch/agent/m6/g1_lvl1s6688_s6717*/run.log.
+
+## Session 6718 (2026-10-31) — G1d 21:9 mission-intro pillarbox fixed: the intro's 640x340 video state is now widened (768 at 21:9) end to end; same-build A/B bars 227 px -> 0-1 px, lvl1 mission_verified_130s at 21:9 and 16:9
+
+**Question (NEXT g1d-intro-pillarbox).** Why is the lvl1 mission-intro flyover pillarboxed at 21:9 (s6717, 227 px/side
+of 2720, ragged right edge) while flight fills?
+
+**Offline (s6717 run.log, no new run).** [fbw] pfm/vsu show the game's video states 320x224, 640x480, 640x340,
+512x448, 512x340; FB_WIDTH (s6113/s6115) widened only 512x448/512x340. The intro (and the ~6 s attract flyover) is
+640x340 with a 640 VI mode (origin 0xA4B100). RT64 showed it height-filled at ~PAR 1 (2266/1188 = 1.907 vs
+640/340 = 1.88), hence the bars. Selected H-fbw-cap (the fb is 640, not a scissor or VI crop). Also the s6104
+guPerspective patch multiplied the intro's aspect by ASPECT_SCALE (2.0) while its viewport stayed 640, so the
+intro was horizontally squeezed: pyramid width ratio 16:9/21:9 measured 1.47 vs 1.54 predicted by k.
+
+**Fix.** intro_w = (fbw*3/4+7)&~7 (768 at fbw 1024; 597 at 16:9 -> stays 640). tools/apply_s6031_far.py
+apply_s6718_intro0 (pfm 640x340 alloc -> intro_w, sets rs64_g1d_intro_w; pfm precedes osViSetMode) and
+apply_s6718_intro4 (vsu 640x340 -> intro_w and rs64_g1d_vs_intro; 640 camera viewport scaled intro_w/640;
+perspective factor intro_w/640, or 1.0 when not widened), wired in the vendored fixup. upstream_compat.cpp
+osViSetMode widens a 640 VI mode (width, xScale, field origins) while intro_w is set. First run: intro BLACK
+(t60-80 lit 0.05): rt64 last-drawn / vi-follow width allowlists (320/512/640/1024/FB_WIDTH) rejected 768 as
+"wild-w", so presents stayed on the old 1024 buffer. Added the intro width to both allowlists (lib/rt64,
+exported to submodule-patches/rt64.patch). ROGUESQ_G1D_INTRO=0 restores the old path.
+
+**Result (one build, three lvl1 runs, scratch/s6718/, tools/g1f_bar_score.py).**
+| arm | intro t60/t70 bars L/R | flight | verdict |
+| 21:9 on | 1/1, 1/1 (lit 0.997) | fills | mission_verified_130s |
+| 21:9 ROGUESQ_G1D_INTRO=0 (control) | 227/225, 227/225 | fills | mission_verified_130s |
+| 16:9 on | 1/1 (intro_w 0, persp 1.0) | fills | mission_verified_130s |
+The control reproduces the s6717 bars in the same build. The 0-1 px bars and the visual frames are two lines of
+evidence. The ragged right edge is gone. The pyramid is wider, consistent with the squeeze removal.
+screenshots/s6718_21x9_intro_before_after.png (top = off, bottom = on). The w20 178 px left bar and the w80 black
+frame appear in both arms (transitions), so they are not from this change.
+
+**Data.** 16:9 intro w60 shows one thin line from the left edge to the hilltop (spike class, single frame).
+The s6104 perspective factor also applies to every other unwidened scene (640x480 menus). If any of those draw
+3D, they carry the same squeeze. That is the next unit.
+ORIGIN: not a mitigation; the writer of the pillarbox is our own FB_WIDTH patch set (s6113/s6115 width match list).

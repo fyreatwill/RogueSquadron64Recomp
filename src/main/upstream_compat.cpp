@@ -45,6 +45,8 @@
 extern "C" uint32_t g_s6491[4]; // s6491 terrain-grid call/list/chain counters
 extern "C" uint32_t g_s6489[8]; // s6489 cumulative cell-gate exit counters (patched funcs_10.c)
 extern "C" uint32_t rs64_phase_ord(void);
+// s6718 G1d: widened 640x340 mission-intro width (0 = off) and "live video state is the 640x340 intro"; set by fixup patches.
+extern "C" { int rs64_g1d_intro_w = 0; int rs64_g1d_vs_intro = 0; }
 extern "C" volatile int g_rs64_dd_blk; // s6583: dd toggle state, tagged on [fbdump]
 extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
                                              uint32_t phys,
@@ -840,20 +842,23 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
     }
     {   // s6113 G1d: ROGUESQ_FB_WIDTH=<w> pairs with the fixup'd video-state patch; widen the 512-wide flight VI mode to w (same output span, xScale scaled).
         static const uint32_t fbw = [] { const char* e = std::getenv("ROGUESQ_FB_WIDTH"); return (e && *e) ? (uint32_t)std::atoi(e) : 0u; }();
-        if (fbw > 0 && width == 512u) {
+        // s6718 G1d: the 640x340 mission-intro state is widened to rs64_g1d_intro_w (set by the pfm fixup); widen its 640 VI mode to match.
+        const uint32_t base = (fbw > 0 && width == 512u) ? 512u : (rs64_g1d_intro_w > 640 && width == 640u) ? 640u : 0u;
+        const uint32_t tw = base == 512u ? fbw : (uint32_t)rs64_g1d_intro_w;
+        if (base) {
             auto write_u32 = [&](uint32_t off, uint32_t v) {
                 for (int i = 0; i < 4; ++i) rdram[((rdram_off + off + i) & 0xFFFFFFu) ^ 3] = (uint8_t)(v >> (24 - 8 * i));
             };
-            const uint32_t nx = (uint32_t)((uint64_t)xScale * fbw / 512u);
-            write_u32(0x08, fbw);
+            const uint32_t nx = (uint32_t)((uint64_t)xScale * tw / base);
+            write_u32(0x08, tw);
             write_u32(0x20, nx);
             // s6117: fldRegs[0/1].origin (+0x28/+0x3C) is the second-field line offset = width*2 bytes; scale it with the width (else VI origin = fb+0x400 misses the 683-wide colour image).
             for (uint32_t off : {0x28u, 0x3Cu}) {
                 uint32_t o = 0; for (int i = 0; i < 4; ++i) o = (o << 8) | rdram[((rdram_off + off + i) & 0xFFFFFFu) ^ 3];
-                if (o) { write_u32(off, (uint32_t)((uint64_t)o * fbw / 512u)); fprintf(stderr, "[fbw] fld origin +0x%X %u->%u\n", off, o, (uint32_t)((uint64_t)o * fbw / 512u)); }
+                if (o) { write_u32(off, (uint32_t)((uint64_t)o * tw / base)); fprintf(stderr, "[fbw] fld origin +0x%X %u->%u\n", off, o, (uint32_t)((uint64_t)o * tw / base)); }
             }
-            fprintf(stderr, "[fbw] osViSetMode mode_ptr=0x%08X width %u->%u xScale 0x%X->0x%X\n", mode_ptr, width, fbw, xScale, nx);
-            width = fbw;
+            fprintf(stderr, "[fbw] osViSetMode mode_ptr=0x%08X width %u->%u xScale 0x%X->0x%X\n", mode_ptr, width, tw, xScale, nx);
+            width = tw;
         }
     }
     extern void osViSetMode(uint8_t* rdram, int32_t modePtr);

@@ -114,8 +114,15 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   Data, not G1f defects: (1) default (ASPECT unset) 4:3 flight runs the game's 512-wide VI mode (xScale 0x333) and
   shows 85/1280 px side bars per side, identical with ROGUESQ_WINDOW_FIT=0 (pre-G1f window), so pre-existing;
   whether retail hardware shows the same narrow active region (VI hStart) is unchecked, single-source.
-  (2) 21:9 mission-intro flyover (640-wide mode, origin 0xA4B100) is pillarboxed 227 px/side with a ragged right
-  edge; 16:9 intro fills (s6688 run3 w60). G1d datum, next unit.
+  (2) 21:9 mission-intro pillarbox FIXED s6718 (next bullet).
+- **FIXED s6718: G1d mission-intro pillarbox.** The intro/attract flyovers render a 640x340 video state (pfm/vsu
+  640x340, VI 640 mode) that FB_WIDTH never widened (only 512x448/512x340), so RT64 showed a 640x340 (~1.9:1) image
+  height-filled, 227 px/side bars of 2720 at 21:9, while guPerspective still took xASPECT_SCALE (squeezed). Fix
+  (tools/apply_s6031_far.py apply_s6718_intro0/4 + upstream_compat osViSetMode + rt64 last-drawn/vi-follow width
+  allowlists): intro_w = fbw*3/4 (768 at 21:9) for pfm, video-state width, the 640 VI mode, the 640 camera
+  viewport; perspective factor intro_w/640 (1.0 when intro_w<=640, i.e. 16:9). ROGUESQ_G1D_INTRO=0 = old path.
+  Same-build arms (lvl1 21:9, s6718): on bars 0-1 px at t60/t70 vs off 227/225; both mission_verified_130s; 16:9
+  fills, verified. screenshots/s6718_21x9_intro_before_after.png. Owner judges the look.
 - **CLOSED s6690: 21:9 forced-route hangar SIGBUS (0x7FFF0002).** Writer = our own
   rs64_spike_scan (src/rsp/dpc_bridge.cpp), named by an lldb hardware watch on list word 0x800CC404
   (positive control: 4 overlay-DMA hits from do_rom_read first). It masked submit addresses with
@@ -598,10 +605,11 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 - **Owner 2026-10-31:** spike cull default ON (also fixed: it only ran with LOG_SPIKE).
   G1(d) objective qualification PARKED (owner playtest). G1f window/fullscreen
   CLOSED s6717; G3d turning shake closed s6697 (s6696 fps fix). Spec: ITERATION.md item 3c.
-1. **G1d 21:9 mission-intro pillarbox** (s6717): at 21:9 the lvl1 intro flyover (640-wide VI mode) is drawn ~1.9:1
-   centred with black side bars and a ragged right edge; 16:9 fills. Find which width/viewport/scissor the intro path
-   uses (vs the 1024 flight path) and widen it like flight. G1f is closed; G3d closed s6697. G1e dd4 ceiling
-   ~8.6 ms / 57 tasks/s is interpreter-bound (s6716); reopen only with an interpreter-level idea. See NEXT.md.
+1. **G1d unwidened-640 perspective squeeze** (s6718 lead): the s6104 guPerspective xASPECT_SCALE also hits
+   640x480 3D scenes that stay 640 wide (menus/hangar?), the same squeeze the intro had. Measure which 640x480
+   scenes render 3D at wide aspect and their object width vs 4:3 retail; fix like s6718 if squeezed. See NEXT.md.
+   Also s6718 datum: one thin line from the left edge in the 16:9 intro (scratch/s6718/a169/w60_*.png). G1e dd4
+   ceiling is interpreter-bound (s6716); reopen only with an interpreter-level idea.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional
