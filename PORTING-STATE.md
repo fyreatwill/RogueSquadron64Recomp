@@ -176805,3 +176805,6 @@ screenshots/s6726_edge43_before_after.png, s6726_gameover_219_sheet.png, s6726_g
 H-game refuted — text centred, no anchored list moved). Edge: H-game-scissor selected (retail scissor) over H-VI-overscan-
 read (the VI shows exactly 512 columns, xScale 0x333) and H-stale-RT64-texel.
 Not checked: retail oracle frame of the debrief edge (mupen64plus reaches attract only).
+Verdict: selects H-pillar and refutes H-anchor-residue / H-game for the game-over screen; selects H-game-scissor and refutes
+H-VI-overscan-read for the 4:3 edge line. Next discriminator: the game-over backdrop entry sliver (H-transition vs H-draw
+vs H-stale, NEXT.md item 1).
