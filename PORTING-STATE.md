@@ -176750,3 +176750,24 @@ Also seen: 4:3 debrief shows a thin noisy column at the right window edge (fix43
 never crops), single-source, open. screenshots/s6724_debrief_crop.png (ctl / 21:9 / 16:9 / 4:3).
 **Discrimination.** Same-binary control shows residue, fix arms show 0 -> selects H-present-crop as sufficient; the
 VI-mode-gated arm refutes "title_vi==2 covers the debrief".
+
+## Session 6725 (2026-11-01) — G1d 21:9 level-select name clip fixed: the s6156 HUD anchor (flight-calibrated) also moved the level-select texts on vp 0x800CDC80; now gated to flight by the renderRadarMinimap stamp
+
+- Recipe: scratch/s6725/abort.sh <tag> <aspect> "<env>" (s6724 abort route, forced lvl1, pause/ABORT/YES -> level select ~w153).
+- Hypotheses (NEXT.md): H-anchor (our s6156 left-anchor shift overshoots), H-game-x (game draws at a 4:3 x), H-scissor.
+- Measurement, 21:9, ROGUESQ_LOG_G1D_RECT=1 (cap 200000; the default cap ran out before the level select in the first
+  run): level-select swaps (cimg A0B000, scissor full 0..1023 x 0..339) texrects x=64..419. Anchor-off arm
+  (ROGUESQ_HUD_ANCHOR_AUTO=0): same swaps x=320..675, i.e. exactly +A (256), and the screen is centred like 4:3 (whole
+  name, left arrow, preview). Scissor is full width -> H-scissor refuted; game positions are centred -> H-game-x refuted;
+  H-anchor selected. ROGUESQ_HUD_LOG: the level-select elems (80219f30, 8020e550, 8020c320/3a0, 8020e590, 8020c360) are on
+  vp 0x800CDC80, one of the three flight-HUD lists the s6156 anchor shifts by -A (x < 160*scale, all of them here).
+- ORIGIN: writer = our own s6156 anchor in the 0x800159B4 emitter patch (apply_s6155_hudcpos), calibrated only in flight.
+  The game's values are legitimate.
+- Fix: dpc_bridge rs64_g1d_hud_flight() = renderRadarMinimap stamped within 8 swaps (s6695 radar mark, flight-only);
+  tools/apply_s6725_hudflight.py adds it to the anchor condition (vendored fixup, after s6721 apply4).
+  ROGUESQ_G1D_HUD_ANYWHERE=1 = old.
+- Same-binary arms (all lvl1 mission_verified_130s, 0 crash): fix219 rects 352..675 (preview-off frame) and level select
+  centred; ctl219 (ANYWHERE=1) 96..419 and "NDEZVOUS" clipped as before; fix169 238..561 and centred. Positive control:
+  flight HUD (craft icon, radar, lives) at the real window edges at w101 in fix219 and ctl219 alike.
+  screenshots/s6725_levelselect_fix_vs_ctl.png, s6725_flight_hud_control.png.
+- Rules out: scissor and game-side x as causes. Open G1d: game-over at 21:9/16:9, 4:3 debrief right-edge column.

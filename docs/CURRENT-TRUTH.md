@@ -122,13 +122,18 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   RT64, so any RDP rewrite in a wrap-restored range was discarded (b219: band back, 9x more restored words than a good run;
   s6722 fixb219 too). record_submit now runs after the shadow copy; ROGUESQ_G1D_PREWRAP_RECORD=1 = old. Full dim 6/6 runs
   on the new build vs 1/2 old. Applies to every RDP-rewrite hook (title clear, pause dim, spike cull, region/floor scans).
+- **FIXED s6725: G1d 21:9 level-select name clip.** Writer = our s6156 HUD anchor: the level select draws its title,
+  preview and level name on vp 0x800CDC80 (a flight-HUD list), so all moved -A (256 px at w1024; rects 64..419 vs
+  anchor-off 320..675, scissor full width). Anchor now applies only while renderRadarMinimap ran within 8 swaps
+  (rs64_g1d_hud_flight, tools/apply_s6725_hudflight.py); ROGUESQ_G1D_HUD_ANYWHERE=1 = old. Same-binary: fix centred at
+  21:9 and 16:9, control clipped; flight HUD still edge-anchored in both. screenshots/s6725_*.png.
 - **FIXED s6724: G1d debrief pillars (21:9 + 16:9).** The pillars held the game's own live debrief heap (s6723; retail
   too, hidden by its full-width draw), so nothing may write RDRAM there. rs64_g1d_pillar_scan (dpc_bridge) counts, per
   VI-mode epoch, draws on >512-wide images reaching outside the centre 512 (scissor-clipped); with >=64 draws and none
   outside, the RT64 VI renderer crops the present to the centre (black bars, display only). Content-gated, so it covers
   both debrief pages (MISSION FAILED is VI mode 0x80128E40, which a mode gate missed) and the title; flight/hangar
   never crop. Same-binary control (ROGUESQ_G1D_DEBRIEF=0) shows residue; fix 0 luma at 21:9 and 16:9; 4:3 untouched.
-  Open: 21:9 level-select name clipped at the left edge ("NDEZVOUS"); 4:3 debrief thin noisy right-edge column
+  Open: 4:3 debrief thin noisy right-edge column
   (single-source). screenshots/s6724_debrief_crop.png.
 - **FIXED s6721: G1d pause-menu text split at wide aspect.** Writer = our s6156 HUD anchor (vp 0x80138D20 also carries
   the pause text; right-of-centre items got +fbw-512). Anchor-off arm centres it (flight HUD unanchored = live control).
@@ -369,9 +374,8 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 - **Owner 2026-10-31:** spike cull default ON (also fixed: it only ran with LOG_SPIKE).
   G1(d) objective qualification PARKED (owner playtest). G1f window/fullscreen
   CLOSED s6717; G3d turning shake closed s6697 (s6696 fps fix). Spec: ITERATION.md item 3c.
-1. **G1d 21:9 level-select name clip** (s6723/s6724: "NDEZVOUS ON BARKHESH" clipped at the left edge at 21:9, 16:9
-   fits), then game-over at 21:9/16:9, then the 4:3 debrief right-edge column. Recipe: scratch/s6724/abort.sh <tag>
-   21:9 "ROGUESQ_AUTOPILOT_HOLD_MS=200" (pause, down, A, left, A = ABORT/YES; level select appears ~w153).
+1. **G1d game-over screen at 21:9/16:9**, then the 4:3 debrief right-edge column (single-source, s6724 fix43 w139).
+   Recipe base: scratch/s6725/abort.sh <tag> <aspect> "<env>" (s6724 abort route; level select ~w153).
    Open single-source (s6719): why a wider terrain footprint changes the LucasArts logo shape.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).

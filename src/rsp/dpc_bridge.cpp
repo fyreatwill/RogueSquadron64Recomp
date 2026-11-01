@@ -4855,6 +4855,13 @@ extern "C" int rs64_g1d_pause_live(void) {
     static const bool old = [] { const char *e = std::getenv("ROGUESQ_G1D_PAUSE_ANCHOR"); return e && *e == '1'; }();
     return !old && g_rs64_g1d_paused.load(std::memory_order_relaxed);
 }
+// s6725: the s6156 HUD anchor is calibrated for the flight HUD, but the hangar level select draws its title, preview and
+// level name through the same emitter list (vp 0x800CDC80), so at 21:9 they moved -256 px and the name clipped at x=0.
+// Anchor only while renderRadarMinimap ran within the last 8 swaps (flight); ROGUESQ_G1D_HUD_ANYWHERE=1 = old.
+extern "C" int rs64_g1d_hud_flight(void) {
+    static const bool old = [] { const char *e = std::getenv("ROGUESQ_G1D_HUD_ANYWHERE"); return e && *e == '1'; }();
+    return old || (g_rs64_swap_n.load(std::memory_order_relaxed) - g_rs64_radar_swap.load(std::memory_order_relaxed)) <= 8;
+}
 
 // s6158 G1d: region scan. ROGUESQ_LOG_REGION="x0,x1,y0,y1" (raw RDP px) logs every
 // triangle (bbox centre in region) and texrect (ul in region) with its range and
