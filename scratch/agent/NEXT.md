@@ -1,12 +1,16 @@
-# NEXT: G1d close-out sweep — owner-judgement contact sheet of every menu at 4:3 / 16:9 / 21:9
+# NEXT: G1d game-over entry — why the backdrop's top-right tile does not land for ~7 swaps at 21:9
 HYPOTHESIS-ID: g1d-menu-sweep
 
-s6726 fixed the game-over pillars (latched crop) and the 4:3 debrief edge line (scissor xh 511 trim). Remaining:
-1. The 1-frame white sliver at the top-right of the centred game-over backdrop on entry (fin219 / go219c w132, 21:9).
-   ROGUESQ_LOG_G1D_RECT=1 ROGUESQ_G1D_RECT_CAP=100000 on the 21:9 route; find the swap where the backdrop first shows
-   (epoch 26/27 boundary) and name the draw at x>=640 y<16. Hypotheses: H-transition (one swap before the crop latches,
-   draws<64 -> uncropped heap row) vs H-draw (a real game rect in the corner) vs H-stale (RT64 target row 0).
-2. One run each at 4:3, 16:9, 21:9 of scratch/s6726/gameover.sh <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1" plus the
-   title/options captures from s6720/s6721 recipes -> one contact sheet per aspect in screenshots/ for the owner.
-   Every screen: centred, no residue, HUD anchored only in flight.
-3. Then G1d is done pending owner judgement; next ladder rung G3 render fidelity (hangar artifacts list in CURRENT-TRUTH).
+s6727: at 21:9, epoch 27 (game-over backdrop) swaps 1-7 leave image x 640..768, rows 0..~70 undrawn (stale buffer shows;
+window = black block + white top row). 4:3 draws everything from swap 1. 112 texrects/swap in both arms.
+Hypotheses:
+- H-tex: the tile's texture (SETTIMG address) is still being streamed/decoded at 21:9 (memory moved by the wide fbs),
+  so the rect draws transparent/zero until it arrives.
+- H-g1d: a G1d rewrite (rs64_g1d_title_clear / pause_dim / anchor shift) edits or drops that rect on early swaps.
+- H-clip: the rect's xh = 768 (edge of centre) with a scissor/clip edge case at the epoch's first swaps.
+Discriminator, one build: extend rs64_g1d_rect_scan (ROGUESQ_LOG_G1D_RECT=2) to log, for the first 12 swaps of a
+chosen epoch (ROGUESQ_G1D_RECT_EPOCH=27), EVERY texrect: x0..x1, y0..y1, the last SETTIMG addr/fmt/width, SETTILE,
+other-mode and combine. Run scratch/s6727/gameover.sh at 21:9 and 4:3 (same FB_DUMP_EPOCH=27 dumps; fbd under
+scratch/agent/m6/<tag>/fbd). Compare the top-right tile's rect: present & identical timg in both -> look at the texture
+bytes (H-tex: dump RDRAM at that timg on swap 1 vs 8); absent/modified at 21:9 -> H-g1d; y/x clipped -> H-clip.
+Then: owner contact sheet per aspect (s6726 NEXT item 2), then G3 render fidelity.

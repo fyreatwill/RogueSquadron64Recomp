@@ -594,8 +594,14 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     static int s_fbd_phase_left = 1;
     const bool phase_gate = s_fbd_phase >= 0;
     const bool phase_ok = !phase_gate || ((int)rs64_phase_ord() == s_fbd_phase && s_fbd_phase_left > 0);
-    if (s_fbd && *s_fbd && phase_ok && (phase_gate || n % s_fbd_every == 0)) {
+    // s6727 G1d: ROGUESQ_FB_DUMP_EPOCH=<e> dumps EVERY swap while rs64_g1d_vi_epoch == e (first ROGUESQ_FB_DUMP_EPOCH_N, 160),
+    // instead of the n % EVERY cadence: catches 1-swap transients such as the game-over backdrop's tile-by-tile entry.
+    static const int s_fbd_epoch = [] { const char* e = std::getenv("ROGUESQ_FB_DUMP_EPOCH"); return (e && *e) ? std::atoi(e) : -1; }();
+    static int s_fbd_epoch_left = [] { const char* e = std::getenv("ROGUESQ_FB_DUMP_EPOCH_N"); return (e && *e) ? std::atoi(e) : 160; }();
+    const bool epoch_hit = s_fbd_epoch >= 0 && __atomic_load_n(&rs64_g1d_vi_epoch, __ATOMIC_RELAXED) == s_fbd_epoch && s_fbd_epoch_left > 0;
+    if (s_fbd && *s_fbd && phase_ok && (s_fbd_epoch >= 0 ? epoch_hit : (phase_gate || n % s_fbd_every == 0))) {
         if (phase_gate) --s_fbd_phase_left;
+        if (epoch_hit) --s_fbd_epoch_left;
         [&] {
             char path[512];
             const auto regs = *ultramodern::renderer::get_vi_regs();

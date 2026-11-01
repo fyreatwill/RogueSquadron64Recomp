@@ -386,8 +386,11 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). G1f window/fullscreen
   CLOSED s6717; G3d turning shake closed s6697 (s6696 fps fix). Spec: ITERATION.md item 3c.
 1. **G1d close-out sweep** (game-over + 4:3 edge fixed s6726): remaining unvisited wide-aspect screens (Elite Rogues /
-   Select Game pillarbox look; the 1-frame white sliver at the top-right of the game-over backdrop entry, fin219/go219c
-   w132), then an owner-judgement contact sheet of every menu at 4:3/16:9/21:9. Recipe: scratch/s6726/gameover.sh <tag>
+   Select Game pillarbox look; the game-over backdrop entry sliver — s6727: it is the backdrop's top-right 128-px tile
+   (x 640..768 of cw 1024) left UNDRAWN for ~7 swaps at 21:9 (RDRAM shows each buffer's stale content: black in B20000,
+   heap noise in A40000; the window shows black + a white top row), while 4:3 draws the full backdrop from its first
+   swap; 112 texrects reaching x 768 are submitted every swap in both arms. Next: per-rect y/x/timg for those swaps),
+   then an owner-judgement contact sheet of every menu at 4:3/16:9/21:9. Recipe: scratch/s6726/gameover.sh <tag>
    <aspect|none> "ROGUESQ_LIVES_CAP=1 ...". Open single-source (s6719): why a wider terrain footprint changes the LucasArts
    logo shape.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See

@@ -176808,3 +176808,34 @@ Not checked: retail oracle frame of the debrief edge (mupen64plus reaches attrac
 Verdict: selects H-pillar and refutes H-anchor-residue / H-game for the game-over screen; selects H-game-scissor and refutes
 H-VI-overscan-read for the 4:3 edge line. Next discriminator: the game-over backdrop entry sliver (H-transition vs H-draw
 vs H-stale, NEXT.md item 1).
+
+## Session 6727 (2026-11-01) — G1d game-over entry sliver localised: at 21:9 the backdrop's top-right tile stays undrawn for ~7 swaps (stale buffer shows); 4:3 draws it from the first swap
+
+**Question (NEXT g1d-menu-sweep item 1).** What is the white sliver at the top-right of the centred game-over backdrop
+(fin219/go219c window capture w132, both runs, 21:9)? H-transition (uncropped swap before the crop latches) vs H-draw (a
+real game rect in the corner) vs H-stale (stale buffer content).
+**Instrument.** ROGUESQ_FB_DUMP_EPOCH=<e> (+ _N, default 160; src/main/upstream_compat.cpp): dump the RDRAM image on EVERY
+swap while rs64_g1d_vi_epoch == e, replacing the n % EVERY cadence. Note: m6_god_common.sh overrides FB_DUMP_DIR to
+$OUT/fbd, so dumps land in scratch/agent/m6/<tag>/fbd. Recipe scratch/s6727/gameover.sh (s6726 route, LIVES_CAP=1) with
+FB_DUMP_EPOCH=27 FB_DUMP_VI=1 LOG_G1D_RECT=1, run ep219 (21:9) then ep43 (4:3), same binary, sequential. Both
+mission_verified_130s, 0 CRASH, game-over reached (epoch 27 crop latched at 112 draws at 21:9 as before).
+Positive control: 160 dumps per arm, epoch-27 numbering identical in both arms (and in s6726 go43/go169/go219c).
+**Result (scratch/s6727/scan.py, screenshots/s6727_gameover_entry_tile_219_vs_43.png).**
+- Window frame w132 (re-read): the "sliver" is the top edge of a black 128x~70 px block at the backdrop's top-right
+  (image x 641..767) while the photo is drawn everywhere else; a white row 1-2 lines tall sits on its top.
+- 21:9 RDRAM: swaps 4514-4519 show that tile undrawn; content alternates with the buffer (B20000 black, A40000 multicolour
+  heap noise in rows 0..~60, white px in rows 0-3 at x 386..496 of the centre), i.e. each buffer's stale content, not a
+  texture. From 4520 on the tile is drawn.
+- 4:3 RDRAM: the full backdrop from swap 4531 (first after the black 4530); no undrawn tile. Only col 511 (s6726 edge) is white.
+- Both arms submit rects=112 every swap, x extent 256..768 (21:9) / 0..512 (4:3): the tile's rect is issued but does
+  not land (or lands transparent) at 21:9 for ~7 swaps.
+- The photo differs between the two runs (random backdrop pick), so the arms are not pixel-identical scenes; fin219 at
+  21:9 showed the 4:3 run's photo with the same black tile, so the delay is not photo-specific (single run per arm).
+**Discrimination.** Refutes H-transition (the crop is latched by 4513; the defect is inside the centre 512, which the crop
+never touches). H-stale holds for the pixels (stale buffer contents show) but the cause is an aspect-dependent missing
+tile draw, not stale RT64 state. H-draw (a game rect painting white) refuted: the white is heap noise / RT64's render of
+the undrawn area. Open: why the x 640..768 tile rect does not land at 21:9 (texture not yet loaded at a wide-aspect
+address, a G1d rewrite touching that rect, or a scissor/clip edge at x 768).
+ORIGIN: n/a (diagnostic dump only, no mitigation).
+Verdict: refutes H-transition and H-draw; selects aspect-dependent undrawn-tile (stale buffer shows). Next discriminator:
+per-rect y/x/timg/tile for epoch-27 swaps 1-10 at 21:9 vs 4:3.
