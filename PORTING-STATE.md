@@ -177480,3 +177480,26 @@ Next: same route with scripted fire presses in both (retail --press a/b/z, port 
   640 frames with no port match, then a constant offset), H-cine-rate (offset grows steadily through the phase), H-skip
   (a retail shot segment has no port match). Retail 640 dumps across the phase vs port window captures from 40 s.
 - Saves: owner save sha-verified after every port run; mupen .eep restored and cmp-equal to scratch/s6747/oracle.eep.
+
+## Session 6749 (2026-11-01) — G3: mission-2 intro is 3.7 s longer in retail because of a ~3 s black load lead-in (H-load); the cinematic itself matches frame by frame, monotonic, no skipped shot
+- Ran: retail rs64_oracle (cxd4 + angrylion) with scratch/s6748/lvl2.eep, `env RD=intro ARM=70 NDUMP=56 D0=0 DT=0.5
+  SECS=112 zsh scratch/s6749/retail.sh` (56 x 640 dumps every 0.5 s from the 512->640 switch at vi 4754 / 79.7 s; 640->512
+  at vi 6311). Port side: existing scratch/s6748/port2 window captures (640 at 59.8 s, 512 at 81.8 s, ~4 caps/s), no new port
+  run. g3_oracle_match.py --bases 696100,62BD00 --h 336 --win 208,880 --dec shift -> scratch/s6749/match.txt; new
+  tools/g3_phase_timeline.py turns it into retail-rel vs port-rel seconds (scratch/s6749/timeline.txt).
+- Lead-in: retail 640 buffers are all black for the first 3.0-3.5 s (vi 4753-4934, meanL 0); port shows black for 0.5 s
+  (59.8 -> first lit capture 60.35 s). Tail: retail black ~1 s before the 512 switch (vi 6253-6311), port ~0.5 s.
+- Body: 30 retail frames match with d 3.4-10 vs same-run median 45-55; port match times monotonic; offset retail-port is
+  2.8-3.1 s from the very first lit frame and grows to 3.2-3.45 s by the end (fit port_rel = 0.972*retail_rel - 2.72). No
+  run of retail frames without a port match (no skipped shot). 12 unmatched retail frames are meanL 165-172 sky-only buffers
+  (d 45-51) or mid-fade frames: the mid-draw class already seen on lvl1 (s6745) and lvl2 flight (s6748).
+- The 2.8% drift: port2 counted 1367 update_screen calls in its 22.0 s 640 phase = 62.1/s (port3 60.9/s, port_bz 61.1/s) vs
+  retail 1557 VIs / 25.95 s = 60.0/s. Per update_screen the cinematic rate is equal (0.972 * 62.1/60 = 1.006). Single-source:
+  update_screen count == VI count is assumed, not proven, and the per-capture timing of the port is +-0.12 s.
+- Account of the 3.7 s: ~2.7 s longer black lead-in + ~0.5 s longer black tail + ~0.6 s rate drift. lvl1 matched (s6743)
+  because its loads happen during the opening crawl, which mission 2 does not have. Retail pays real PI DMA/decompress time
+  while the port's DMA is instant (expected port property; single-source: no PI trace in the oracle log).
+- Discrimination: selects H-load (constant offset established at the first lit frame); refutes H-skip (monotonic, no gap)
+  and H-tail as the main term (tail is 0.5 s); H-cine-rate is a minor 2.8% term that tracks the port's update_screen rate.
+- Saves: mupen .eep restored by the script trap and cmp-equal to scratch/s6747/oracle.eep; no port run so owner save untouched.
+- Next: g3-lvl3-flight (mission 3 flight vs retail with the same eep-patch recipe, selected mission 2).
