@@ -176226,4 +176226,6 @@ What it shows: at lvl5 dd2 FPS60 the Gfx thread is no longer the binder with no-
 tasks/s at the 60 cap). Caveat (unqualified): without the drain the guest can run ahead while RT64 still reads RDRAM
 (texture loads in the last job, fb writeback); single run, not yet seen on lvl1/lvl10 or dd4. Opt-in only; defaults unchanged.
 Queued: soak_queue/s6708_nodrain_lvl1_dd1.sh, s6708_nodrain_lvl10_dd4.sh (ASYNC=1 NODRAIN=1 constant, 300 s).
+Verdict: selects H-fswait/encode (fb-pair render), refutes H-fsflush and H-fsupload; NODRAIN selects the overlap lever.
+Next discriminator: lvl5 dd4 same-run NODRAIN=2 (H-free vs H-worker vs H-race), see NEXT.md.
 ORIGIN: not a mitigation — a scheduling change; the cost's owner is RT64 State::fullSync's fb-pair render (named above).
