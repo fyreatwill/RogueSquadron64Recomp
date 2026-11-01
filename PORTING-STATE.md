@@ -176918,3 +176918,39 @@ ORIGIN: n/a (diagnostics only, no mitigation).
 Verdict: selects H-rt64-target; refutes H-overlap-rsp / H-overlap-heap / H-upload / H-fbtex / H-tmem.
 Next: render-target lifetime for A40000/B20000 (created/resized from an older narrower fb? new region uninitialised)
 and per-draw GPU records for texrects 6/7 on undrawn vs drawn swaps.
+
+## Session 6730 (2026-11-01) — G1d game-over sliver fixed: the s6158 radar-disc region shift (8-swap radar gate) outlived flight and moved backdrop texrects +256 (896..960, wrapped 960..0); gate now also requires the radar stamp's VI epoch
+
+**Question (NEXT g1d-menu-sweep, H-rt64-target).** Why RT64 leaves the 21:9 game-over block (x 640..768) undrawn for ~7
+swaps: H-rt-resize (target created/resized narrow), H-rt-pair (draw calls bound to another target/scissor), H-rt-clear
+(a later op paints the region).
+**Instruments (kept, off by default; ROGUESQ_LOG_RTPAIR_EPOCH=<e>, first 14 swaps of G1d epoch e).**
+lib/rt64 hle/rt64_state.cpp rs64RtPairRel + [rtpair] per framebuffer pair at record (target size before/after, resized,
+formatChanged, lastWrite type/diff, readHeight, depth fb, projections, scissor, start/end op counts by type);
+render/rt64_framebuffer_renderer.cpp [rtcall] (every sliver-block rect call reaching the record loop) and [rtrect]
+(RT64's converted viewport/scissor, aspect scale, misalignment, origins); hle/rt64_rdp.cpp [rtrdp] (RT64 RDP drawRect
+entry: every rect for rel<8, block rects always, with scissor and pair).
+**Runs** (scratch/s6730/gameover.sh = s6729 route, 21:9, FB_DUMP_EPOCH=27; all mission_verified_130s, 0 CRASH):
+a219 (rtpair/rtrect), b219 (+rtcall/rtrdp block), c219 (+rtrdp all rects + bridge G1D_RECT=2), f219 (fix), g219 (fix
+build, ROGUESQ_RADAR_GATE_EPOCH=0 control), r43 (4:3, fix build).
+**Results.**
+- a219: one pair per swap, targets 1024x447/448 never resized in the epoch (rel0 A40000 fmtchg=1 clear+RAM read; rel1
+  B20000 lastWrite=depth copy), no start/end ops. H-rt-resize/H-rt-clear: nothing. But [rtrect] for the block appears
+  only from rel 6: RT64 never converts a block rect on the undrawn swaps.
+- b219: [rtcall] and [rtrdp] also only from rel 6 -> RT64's RDP never receives a rect with ul in the block.
+- c219: RT64 gets 112 rects per swap, but the 7th/8th are x 896..960 and 960..0 (empty) where the bridge rect2 log (same
+  run) shows 640..704 / 704..768. Something between the bridge log and RT64 adds +256: the s6158 rs64_region_scan
+  (ROGUESQ_SHIFT_REGION=256, region 669..810 x 20..135 by texrect LOWER-RIGHT corner at w1024) whose gate is "radar
+  stamped within 8 swaps"; [region-gate] radar=0 logged at swap 4502 = the end of the undrawn window. The region
+  covers exactly tiles 6,7,14,15,22,23,30,31 (rows up to 128), matching every shape seen s6727-s6729.
+**Fix (src/rsp/dpc_bridge.cpp).** rs64_radar_mark also stores rs64_g1d_vi_epoch; rs64_radar_recent(sw) = within 8 swaps
+AND same epoch; used by the region shift and rs64_g1d_hud_flight (s6156 HUD anchor). ROGUESQ_RADAR_GATE_EPOCH=0 = old.
+- f219 (fix): rel0 RT64 rects at 640/704; dumps clean from the epoch's 2nd swap (the 1st is a transitional fade that
+  differs across many tiles in both arms). g219 (control, same build): rel0 rects at 896/960, block undrawn swaps
+  4505-4510 (6,7,14,15,23,31). Both arms: [region-gate] on from ~2970 to game over with no toggle (in-flight disc shift
+  unaffected). r43 4:3: clean, 0 CRASH. Sheet: scratch/s6730/sheet_gameover_219.png (control vs fix, swap 2).
+**Discrimination.** Refutes H-rt-resize / H-rt-pair / H-rt-clear and supersedes s6729's H-rt64-target: RT64 drew what
+it was given; the bridge rewrote the stream after its own log point.
+ORIGIN: writer = rs64_region_scan's texrect x rewrite (s6158 radar-disc shift), applied outside flight because the
+8-swap radar gate spans the VI mode change; the value is not legitimate (the backdrop is not the radar).
+Verdict: fixed; supersedes s6729 H-rt64-target. Next: G1d close-out (Elite Rogues / Select Game look, menu contact sheet).

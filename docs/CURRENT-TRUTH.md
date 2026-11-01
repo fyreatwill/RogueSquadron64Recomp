@@ -122,6 +122,15 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   RT64, so any RDP rewrite in a wrap-restored range was discarded (b219: band back, 9x more restored words than a good run;
   s6722 fixb219 too). record_submit now runs after the shadow copy; ROGUESQ_G1D_PREWRAP_RECORD=1 = old. Full dim 6/6 runs
   on the new build vs 1/2 old. Applies to every RDP-rewrite hook (title clear, pause dim, spike cull, region/floor scans).
+- **FIXED s6730: G1d 21:9 game-over entry sliver.** Writer = our s6158 radar-disc region shift (dpc_bridge
+  rs64_region_scan, ROGUESQ_SHIFT_REGION=256, region x 669..810 y 20..135 at w1024). Its "radar drawn within 8 swaps"
+  gate outlived flight, so for the first ~7 game-over swaps the backdrop texrects whose lower-right corner fell in the
+  region (tiles 6,7,14,15,22,23,30,31) were moved +256: RT64 received 896..960 and a 12-bit-wrapped 960..0, the
+  top-right block stayed undrawn (the bridge rect2 log runs BEFORE the shift, which is why s6728 saw identical rects).
+  The radar stamp now records the G1d VI epoch and the window ends at a mode change; same gate feeds the s6156 HUD
+  anchor (rs64_g1d_hud_flight). ROGUESQ_RADAR_GATE_EPOCH=0 = old. Same build, two arms: control reproduces (swaps
+  4505-4510 undrawn, RT64 rects at 896), fix clean from swap 2 of the epoch (first swap is a transitional fade in both);
+  in-flight shift gate stays on continuously in both arms; 4:3 game-over clean. Sheet: scratch/s6730/sheet_gameover_219.png.
 - **FIXED s6726: G1d game-over screen (21:9/16:9) + 4:3 debrief right-edge line.** Route: ROGUESQ_LIVES_CAP=1 (test-only
   lever, main.cpp, [livescap] log) + the s6724 abort route (scratch/s6726/gameover.sh, HOLD_MS 250: at 600 the pause-menu
   `down` auto-repeated into GAME SETTINGS) -> abort takes lives 1->0 -> GAME OVER banner, stats page, Elite Rogues, Select
@@ -226,6 +235,10 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   "Migrated from CURRENT-TRUTH (s6721)"; tables in docs/G1-OBJECTIVE-RESPONSE.md.
 
 ## Superseded conclusions — do not act on these
+- s6729 "H-rt64-target: identical commands + identical TMEM, RT64's render target drops the draw" (SUPERSEDED s6730).
+  Believable because the dpc_bridge rect2 log showed identical texrects on undrawn/drawn swaps; but that log runs before
+  the s6158 region shift rewrites the stream. RT64's own RDP entry log ([rtrdp]) showed the rects arriving at x 896/960.
+  Lesson: a bridge-side command log is not RT64's input while any RDP-rewrite hook runs after it.
 
 - s6574/s6576 "dd8 lvl1/5 hold clean" as a usable dd8 (s6701: every dd8 frame from the hangar on drew inside a centre box,
   perspNorm 1 from the scaled far). Believable because holds were crash-free and fb checks sampled early or terrain-fraction only.
@@ -385,20 +398,11 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 - **Owner 2026-10-31:** spike cull default ON (also fixed: it only ran with LOG_SPIKE).
   G1(d) objective qualification PARKED (owner playtest). G1f window/fullscreen
   CLOSED s6717; G3d turning shake closed s6697 (s6696 fps fix). Spec: ITERATION.md item 3c.
-1. **G1d close-out sweep** (game-over + 4:3 edge fixed s6726): remaining unvisited wide-aspect screens (Elite Rogues /
-   Select Game pillarbox look; the game-over backdrop entry sliver — s6727-s6729: a block at x 640..768 (cw 1024), rows
-   0..N (N 13..128, shape varies run to run, 9/9 21:9 runs) of the backdrop stays undrawn for ~7 swaps at 21:9; 4:3
-   clean). s6728 cleared the game side (texrects identical across aspects and undrawn/drawn swaps, texture complete).
-   s6729 cleared RDRAM and RT64's inputs: swap-stamped writer log shows the texture words written once (guest, swap
-   4103) and never touched after; RT64's own writeback reads 0 at the block pixel (its render target lacks the draw);
-   0 RT64 RDRAM->fb uploads during the undrawn swaps (41 logged elsewhere); TMEM loads for tiles 0/6/7 carry identical
-   src+TMEM hashes on undrawn and drawn swaps; ROGUESQ_NO_GPU_COPY=1 still shows it; ROGUESQ_RAM_PATTERN=1 magenta
-   fires elsewhere but 0 px in the block. Selects H-rt64-target: RT64 drops/overwrites the draw on the GPU side.
-   Next: RT64 render-target resize/recreate (A40000/B20000 targets sized from an older 640/768-wide fb?) and the
-   per-draw GPU record for texrects 6/7 (scissor, viewport, target, textureIndex) on undrawn vs drawn swaps),
-   then an owner-judgement contact sheet of every menu at 4:3/16:9/21:9. Recipe: scratch/s6726/gameover.sh <tag>
-   <aspect|none> "ROGUESQ_LIVES_CAP=1 ...". Open single-source (s6719): why a wider terrain footprint changes the LucasArts
-   logo shape.
+1. **G1d close-out sweep** (game-over + 4:3 edge fixed s6726, game-over entry sliver fixed s6730): remaining
+   unvisited wide-aspect screens (Elite Rogues / Select Game pillarbox look), then an owner-judgement contact sheet of
+   every menu at 4:3/16:9/21:9. Recipe: scratch/s6730/gameover.sh <tag> <aspect|none> "<env>" (LIVES_CAP route,
+   FB_DUMP_EPOCH=27 per-swap dumps, scratch/s6730/tiles.py). Open single-source (s6719): why a wider terrain footprint
+   changes the LucasArts logo shape.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional

@@ -4846,7 +4846,22 @@ static void rs64_floor_scan(uint32_t lo, uint32_t hi) {
 
 // s6695: swap number of the last renderRadarMinimap call (fixup tools/apply_s6695_radarmark.py).
 static std::atomic<int> g_rs64_radar_swap{-1000};
-extern "C" void rs64_radar_mark(void) { g_rs64_radar_swap.store(g_rs64_swap_n.load(std::memory_order_relaxed), std::memory_order_relaxed); }
+// s6730: the 8-swap window outlived flight: the first ~7 swaps of the 21:9 game-over screen still counted as "radar
+// drawn", so the s6158 disc-region shift moved the backdrop tiles whose lower-right corner fell in the region (tiles
+// 6,7,14,15,22,23,30,31: x 640..768) by +256 -- 896..960 and a wrapped 960..0 -- and the top-right block stayed undrawn.
+// The stamp now also records the G1d VI epoch; a mode change (flight -> game over / debrief) ends the window at once.
+// ROGUESQ_RADAR_GATE_EPOCH=0 restores the swap-only window.
+extern "C" int rs64_g1d_vi_epoch;
+static std::atomic<int> g_rs64_radar_epoch{-1};
+extern "C" void rs64_radar_mark(void) {
+    g_rs64_radar_swap.store(g_rs64_swap_n.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    g_rs64_radar_epoch.store(__atomic_load_n(&rs64_g1d_vi_epoch, __ATOMIC_RELAXED), std::memory_order_relaxed);
+}
+static bool rs64_radar_recent(int sw) {
+    static const bool swapOnly = [] { const char *e = std::getenv("ROGUESQ_RADAR_GATE_EPOCH"); return e && *e == '0'; }();
+    if ((sw - g_rs64_radar_swap.load(std::memory_order_relaxed)) > 8) return false;
+    return swapOnly || g_rs64_radar_epoch.load(std::memory_order_relaxed) == __atomic_load_n(&rs64_g1d_vi_epoch, __ATOMIC_RELAXED);
+}
 // s6721: initHudStruct's pause-menu byte (HUD+0x258, 0x800C1998), stamped every frame (tools/apply_s6721_pausegate.py).
 // The s6156 HUD anchor skips while it is set, so pause-menu text stays centred like retail.
 static std::atomic<int> g_rs64_g1d_paused{0};
@@ -4860,7 +4875,7 @@ extern "C" int rs64_g1d_pause_live(void) {
 // Anchor only while renderRadarMinimap ran within the last 8 swaps (flight); ROGUESQ_G1D_HUD_ANYWHERE=1 = old.
 extern "C" int rs64_g1d_hud_flight(void) {
     static const bool old = [] { const char *e = std::getenv("ROGUESQ_G1D_HUD_ANYWHERE"); return e && *e == '1'; }();
-    return old || (g_rs64_swap_n.load(std::memory_order_relaxed) - g_rs64_radar_swap.load(std::memory_order_relaxed)) <= 8;
+    return old || rs64_radar_recent(g_rs64_swap_n.load(std::memory_order_relaxed));
 }
 
 // s6158 G1d: region scan. ROGUESQ_LOG_REGION="x0,x1,y0,y1" (raw RDP px) logs every
@@ -4883,7 +4898,7 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
     // through the doorway, leaving a hole) and title texrects. Shift only while the flight radar is drawn;
     // =0 on ROGUESQ_SHIFT_REGION_ANYWHERE restores the ungated s6158 behaviour. Logging is unchanged.
     static const bool anywhere = [] { const char *e = std::getenv("ROGUESQ_SHIFT_REGION_ANYWHERE"); return e && *e && *e != '0'; }();
-    const bool radar = anywhere || (sw - g_rs64_radar_swap.load(std::memory_order_relaxed)) <= 8;
+    const bool radar = anywhere || rs64_radar_recent(sw);
     static int s_radar_prev = -1;
     if (shiftOn && (int)radar != s_radar_prev) { fprintf(stderr, "[region-gate] swap=%d radar=%d shift=%s\n", sw, (int)radar, radar ? "on" : "off"); fflush(stderr); s_radar_prev = (int)radar; }
     auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
