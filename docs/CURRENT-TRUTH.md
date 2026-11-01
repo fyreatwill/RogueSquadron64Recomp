@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6746 (2026-11-01).
+Compact operational handoff, as of Session 6748 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -10,6 +10,14 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 
 ## Headline
 
+- **s6748 G3: second biome (mission 2, Barkhesh green hills) = H-match vs retail angrylion.** Same save in both arms via
+  tools/g3_eep_patch.py (oracle EEPROM, selected-mission byte copy+0x31 = 1, re-signed; per copy +0 = adler32(+0x18..+0xC8),
+  +4 = adler32(+0x08..+0x18); an unsigned patch is rejected -> SELECT GAME with empty slots). No crawl on mission 2. Flight
+  +18..+41.5 s: 40 complete retail frames d 6.5-15.2 vs median 36-47, monotonic, timing 0.981; the d drift 7->13 is a pose
+  offset at the horizon edge while the craft hugs a hill (port captures ~4/s), means within 1-2 (no haze/texture bias).
+  5 retail outliers (meanL ~160) are buffers caught mid-draw (sky only). Bolts B/Z: >=4 px retail 24.8% vs port 26.5%,
+  no-fire 1.4%/0%. No impacts in either fire arm (no positive, so lvl2 impacts are not covered). Retail 640 intro phase
+  25.2-26.2 s vs port 22.2-22.3 s (two runs each): open, next.
 - **s6746 G3: lvl1 flight with scripted fire = H-match vs retail angrylion.** `a` is throttle; B/Z fire. With B/Z alternating
   every 0.5 s, all 73 complete retail frames match at d 4.2-7.6 vs median 15-22, monotonic, 2.2% timing. Bolts cannot
   be paired frame by frame (few-frame lifetime vs capture phase), so tools/g3_effect_count.py counts bolt-red pixels per
@@ -483,7 +491,8 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
    ~15 s of lvl1 flight with HUD, H-match; brightness gain = decode convention (--dec shift). s6745 flight
    +20..60 s with no input H-match, no desync. s6746 B/Z fire (`a` = throttle): bolts H-match by population rate/hue
    (tools/g3_effect_count.py). s6747 impact puffs/explosions H-match by the same population method (--class orange).
-   Next (g3-second-biome-oracle-diff): a second level/biome, whole-frame match + bolt/orange population. G2/G5 are closed; G4 and aim/steer stay
+   s6748 mission 2 (Barkhesh, green hills) flight + bolts H-match (tools/g3_eep_patch.py selects the mission on a signed save).
+   Next (g3-lvl2-intro-duration): the mission-2 640 intro lasts 25.2-26.2 s retail vs 22.2-22.3 s port; match it frame by frame. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index

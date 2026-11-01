@@ -177442,3 +177442,41 @@ Next: same route with scripted fire presses in both (retail --press a/b/z, port 
   equal, and the impact rate and colour follow it); H-rt64-fx is refuted for impact puffs only, not for a large fireball.
 - Next discriminator: g3-second-biome-oracle-diff (second level, whole-frame match + bolt/orange population): a localized
   high-d region selects H-biome-tex, a depth-rising whole-frame bias selects H-fog, non-monotonic matching selects H-desync.
+
+## Session 6748 (2026-11-01) — G3: second biome (mission 2, Barkhesh green hills) flight and bolts match retail angrylion (H-match); signed EEPROM patcher selects the mission in both arms
+
+- Selecting mission 2 in retail: patching the oracle EEPROM's selected-mission byte (0x51, owner save = 5 = Jade Moon,
+  oracle = 0 = Mos Eisley) without re-signing made the port show SELECT GAME with empty TRAINEE slots (scratch/s6748/port,
+  port_sheet.png): the save is checksummed. Layout found offline (both saves verify): two copies at 0x20 and 0xE8, per copy
+  +0 = adler32(+0x18..+0xC8) (the 0xB0-byte payload, header length 0x00B0), +4 = adler32(+0x08..+0x18). New tool
+  tools/g3_eep_patch.py IN OUT --set OFF=VAL (copy-relative; selected mission = 0x31) re-signs both copies.
+- scratch/s6748/lvl2.eep (oracle save, mission 1 selected) is accepted: port (port2) goes hangar 1024 -> craft select 512
+  -> 640 intro (green hills, pyramid structures) -> 512 flight. No opening crawl on mission 2. Retail recon (scratch/s6748/
+  recon, same save swapped into mupen's save dir and restored, cmp-verified): 1024 18.2 s, 512 39.4 s, 640 79.7 s, flight 105.9 s.
+- Matched arms, no input after the menu Starts: retail scratch/s6748/retail (80 x 512 dumps flight +2..+41.5 s), port
+  scratch/s6748/port3 (captures 80..135 s, flight at 64.9 s, so overlap is flight +15..+41.5 s). g3_oracle_match.py --w 512
+  --bases 690000,620000 --h 446 --win 60,1024 --winx 85,1191 --dec shift: retail vi >= 7481, 40 complete frames d 6.5-15.2 vs
+  same-run median 36-47, port match times monotonic, slope 0.981 port s per retail s. Retail frames before vi 7481 precede
+  the port capture window (not a mismatch). 5 outliers (vi 7751/7841/7961/8335/8395, meanL 153-166, d 43-52) are retail
+  buffers caught mid-draw (sky only, terrain not yet drawn; scratch/s6748/pair_vs_worst.png), as on lvl1 (s6745).
+- d drifts from ~7 (vi 7500) to 12-15 (vi 8500+). Eyeballed (scratch/s6748/late_pairs.png): same scene, high-d tiles sit
+  only on the hill/sky edge, a small pose offset while the unsteered craft hugs a hill and the port captures only ~4/s.
+  Mean RGB within 1-2 per channel on every pair; far haze and grass/dirt textures look identical.
+- Fire arms (B/Z alternating every 0.5 s through flight +2..+44 s): retail scratch/s6748/retail_bz (160 dumps 0.25 s), port
+  scratch/s6748/port_bz (autopilot gate 42:w640, fire 66..112 s; flight 64.8 s). g3_effect_count.py bolt, port --t 66,107:
+  frames with >=4 bolt px retail 24.8% (n 149) vs port 26.5% (n 162); no-fire 1.4% (n 74) / 0.0% (n 107); colour (211,18,13)
+  vs (203,25,21). >=15 px 12.1% vs 6.8% matches the lvl1 split (s6746 re-counted now: 12.0% vs 7.1%), the thin-bolt
+  downscale of the ~2.2x window capture.
+- Orange (impacts), masked radar/engine/damage icon: 0% in all four arms. The unmasked port no-fire hits were the top-left
+  craft-damage icon turning yellow after the craft scraped a ridge, past the retail window. No impacts occur in this window
+  (bolts hit nothing on the hills), so the orange instrument has no positive here: lvl2 impacts are NOT covered.
+- Timing datum, open: the 640 intro phase lasts 26.2 / 25.2 s retail (recon / bz) vs 22.3 / 22.2 s port (port3 / port_bz),
+  with no input in that phase in any arm. lvl1's intro matched (s6743: 16.5 vs 16.3 s).
+- Selects H-match for mission-2 flight rendering (terrain textures, sky, haze, HUD, craft) and bolts. Refutes H-fog (no
+  depth-rising whole-frame bias: means equal) and H-biome-tex (high-d tiles are only geometric edges) and H-desync (monotonic
+  match). Two retail and two port runs each for no-fire and fire; one matcher.
+- Discrimination: selects H-match, refutes H-biome-tex, H-fog and H-desync for mission 2 flight.
+- Next discriminator: g3-lvl2-intro-duration. H-load (retail loads longer before the cinematic: an initial block of retail
+  640 frames with no port match, then a constant offset), H-cine-rate (offset grows steadily through the phase), H-skip
+  (a retail shot segment has no port match). Retail 640 dumps across the phase vs port window captures from 40 s.
+- Saves: owner save sha-verified after every port run; mupen .eep restored and cmp-equal to scratch/s6747/oracle.eep.
