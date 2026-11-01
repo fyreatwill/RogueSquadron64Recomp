@@ -176839,3 +176839,44 @@ address, a G1d rewrite touching that rect, or a scissor/clip edge at x 768).
 ORIGIN: n/a (diagnostic dump only, no mitigation).
 Verdict: refutes H-transition and H-draw; selects aspect-dependent undrawn-tile (stale buffer shows). Next discriminator:
 per-rect y/x/timg/tile for epoch-27 swaps 1-10 at 21:9 vs 4:3.
+
+## Session 6728 (2026-11-01) — G1d game-over sliver: game side cleared (identical texrects, complete texture, no overdraw), RT64 texture cache never misses; lead = guest writes into the widened 21:9 colour images
+
+**Question (NEXT g1d-menu-sweep).** Why the game-over backdrop's top-right block stays undrawn for ~7 swaps at 21:9:
+H-tex (texture not in RDRAM yet), H-g1d (a G1d rewrite edits/drops the rect), H-clip (scissor/clip edge at x 768).
+**Instruments (one build family, all kept).**
+- dpc_bridge rs64_g1d_rect_scan: ROGUESQ_LOG_G1D_RECT=2 + ROGUESQ_G1D_RECT_EPOCH=<e> (+_SWAPS 12, ROGUESQ_G1D_RECT2_CAP
+  4000) logs, for the first swaps of VI epoch e, EVERY texrect (x, y, s/t, dsdx, SETTIMG fmt:addr, LOADBLOCK/LOADTILE,
+  SETTILE/SETTILESIZE tile 0, om, cc, cw, scissor) with a census of the 4 KB source block in guest RDRAM at submit
+  (nonzero halfwords, alpha bits, sum), plus every fill rect, triangle bbox, SETCIMG and SETSCISSOR.
+- lib/rt64 rt64_rdp.cpp checkFramebufferOverlap: ROGUESQ_LOG_FBOVL=1 (window ROGUESQ_FBOVL_LO/HI hex) logs loads RT64
+  resolves to a tracked framebuffer + an unwindowed any# counter; ROGUESQ_FBOVL_SKIP=1 ignores the framebuffer.
+- lib/rt64 rt64_framebuffer_renderer.cpp s6234 texhash log: miss cap ROGUESQ_TEXHASH_MISS_CAP, lines carry the G1d epoch.
+- Existing ROGUESQ_FLOOR_WATCH (+FLOOR_DEPTH_DIR) writer log on fb pixels (block A41578/A54578/A71578, B21578/B34578;
+  controls A41258/B21258 at x 300).
+**Runs** (scratch/s6728/gameover.sh = s6727 route, LIVES_CAP abort -> game over, FB_DUMP_EPOCH=27): r219 21:9 + r43 4:3
+(rect2), t219 (rect2 + texel census), f219/s219 (fbovl log / skip), h219 (fbovl + texhash), d219 (all draws), w219
+(floor watch). All mission_verified_130s, 0 CRASH. Tile map per dump: scratch/s6728/tiles.py.
+**Results.**
+- The 112 epoch-27 texrects are byte-identical between 21:9 (x+256) and 4:3 except the texture base (0x951B40 vs
+  0x637B40) and scissor width, and identical between undrawn swaps 0-7 and drawn swap 8+ (r219/r43, 12 swaps each).
+- Texture: every top-right block (tiles 6,7,14,15,22,23,30,31: 0x957B40.. etc.) has 2048/2048 nonzero texels, alpha 1,
+  constant sum from swap 0 (t219). H-tex refuted on the guest side.
+- d219: swaps 0-6 carry only the 112 texrects (+2 SETCIMG A40000/B20000, scissors 1024x448); no fill/tri until swap 7
+  (emblem tris). Nothing overdraws the corner. H-g1d and H-clip refuted at the command level.
+- h219: RT64 texture-cache misses = 0 over the whole run (first-30 any-use control fired, cap 20000). fbovl any# = 0
+  over the run (no positive control: unqualified, single-source).
+- tiles.py: the undrawn area is screen-shaped, x 640..768, rows 0..N, N = 128 (t219), ~70 (s6727), 13-15 (d219, w219),
+  on alternating buffers; f219 (FBOVL log only) reproduced the black block (scratch/s6728/sheet_f_s.png); s219 (skip)
+  drew a dark photo, so it is unreadable (no verdict on SKIP).
+- w219 watch (no swap stamps): 0xB21578 (cimg B20000 row 2 x 700) is written ~2250x by host rsp_dmem_to_rdram and never
+  by RT64 writeback in that run; the game's bzero PC 0x800078EC (dst 0x80A0B000 len 0x55000) clears cimg A40000 rows
+  0..63, and A41578 gets 2485 RT64 native-swap writebacks. When those land relative to epoch 27 is not resolved (the
+  writer log carries only a sequence number).
+**Discrimination.** Refutes H-tex, H-g1d, H-clip, and the RT64 texture-cache-miss variant. The commands and texture are
+correct, so the pixels are lost after or outside the draw. Lead H-overlap (single-source): at 21:9 the widened colour
+images (1024x444, 0xDE000 each) share memory with live guest writes (RSP DMA output, heap bzero). The x-limited shape
+(only x 640..768) is not explained yet.
+ORIGIN: n/a (diagnostics only, no mitigation).
+Verdict: refutes H-tex / H-g1d / H-clip / H-texmiss; selects H-overlap as the lead (single-source). Next: stamp
+swap+epoch on the writer records and watch the block pixels on swaps 0-6.

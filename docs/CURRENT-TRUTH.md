@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6726 (2026-11-01).
+Compact operational handoff, as of Session 6728 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -386,10 +386,15 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). G1f window/fullscreen
   CLOSED s6717; G3d turning shake closed s6697 (s6696 fps fix). Spec: ITERATION.md item 3c.
 1. **G1d close-out sweep** (game-over + 4:3 edge fixed s6726): remaining unvisited wide-aspect screens (Elite Rogues /
-   Select Game pillarbox look; the game-over backdrop entry sliver — s6727: it is the backdrop's top-right 128-px tile
-   (x 640..768 of cw 1024) left UNDRAWN for ~7 swaps at 21:9 (RDRAM shows each buffer's stale content: black in B20000,
-   heap noise in A40000; the window shows black + a white top row), while 4:3 draws the full backdrop from its first
-   swap; 112 texrects reaching x 768 are submitted every swap in both arms. Next: per-rect y/x/timg for those swaps),
+   Select Game pillarbox look; the game-over backdrop entry sliver — s6727/s6728: a screen-shaped block at x 640..768
+   (cw 1024), rows 0..N (N = 13..128, varies run to run) of the backdrop stays undrawn for ~7 swaps at 21:9; 4:3 clean.
+   s6728 cleared the game side: the 112 texrects (y, timg, LOADBLOCK, SETTILE, om, cc) are byte-identical across aspects
+   and across undrawn/drawn swaps, no fill/tri covers the corner in swaps 0-6, and the 4 KB texture blocks are complete
+   (2048/2048 nonzero texels, alpha set, same sum) in guest RDRAM at submit from swap 0. RT64 texture cache: 0 misses in
+   the run (first-30 control fired). Lead (single-source): the widened 21:9 colour images overlap live guest writes; a
+   word in cimg B20000 (0xB21578, row 2 x 700) was written ~2250x by RSP DMA (rsp_dmem_to_rdram) and the game's bzero
+   PC 0x800078EC (dst 0x80A0B000 len 0x55000) clears cimg A40000 rows 0..63; their timing vs epoch 27 is not stamped.
+   Next: stamp swap/epoch on ROGUESQ_FLOOR_WATCH writer records and name the writer of the block pixels on swaps 0-6),
    then an owner-judgement contact sheet of every menu at 4:3/16:9/21:9. Recipe: scratch/s6726/gameover.sh <tag>
    <aspect|none> "ROGUESQ_LIVES_CAP=1 ...". Open single-source (s6719): why a wider terrain footprint changes the LucasArts
    logo shape.

@@ -4923,6 +4923,7 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
 
 // s6720 G1d: ROGUESQ_LOG_G1D_RECT=1 logs, per swap, the colour-image width, scissor and the x extents of texrects
 // (with first rect + dsdx) and triangles in submitted RDP ranges. Read-only. Cap ROGUESQ_G1D_RECT_CAP lines (400).
+extern "C" int rs64_g1d_vi_epoch;
 static void rs64_g1d_rect_scan(uint32_t lo, uint32_t hi) {
     static const bool on = [] { const char *e = std::getenv("ROGUESQ_LOG_G1D_RECT"); return e && *e && *e != '0'; }();
     if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
@@ -4958,8 +4959,54 @@ static void rs64_g1d_rect_scan(uint32_t lo, uint32_t hi) {
         s_swap = sw; s_nr = s_nt = 0; s_rx0 = s_tx0 = 1e9; s_rx1 = s_tx1 = -1e9;
     }
     auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
+    // s6728: ROGUESQ_LOG_G1D_RECT=2 + ROGUESQ_G1D_RECT_EPOCH=<e>: for the first ROGUESQ_G1D_RECT_SWAPS (12) swaps of VI
+    // epoch e, log EVERY texrect with its y extent and the SETTIMG / LOADBLOCK|LOADTILE / SETTILE / other-mode / combine
+    // it draws under, so one rect can be followed across aspects. Own cap ROGUESQ_G1D_RECT2_CAP (4000).
+    static const int r2_ep = [] { const char *e = std::getenv("ROGUESQ_LOG_G1D_RECT"); const char *p = std::getenv("ROGUESQ_G1D_RECT_EPOCH");
+                                  return (e && *e == '2' && p && *p) ? atoi(p) : -1; }();
+    static const int r2_swaps = [] { const char *e = std::getenv("ROGUESQ_G1D_RECT_SWAPS"); return e && *e ? atoi(e) : 12; }();
+    static const int r2_cap = [] { const char *e = std::getenv("ROGUESQ_G1D_RECT2_CAP"); return e && *e ? atoi(e) : 4000; }();
+    static int r2_first = -1, r2_lines = 0, r2_idx = 0, r2_sw = -1;
+    static uint32_t r2_timg, r2_load0, r2_load1, r2_tile0, r2_tile1, r2_tsz0, r2_tsz1;
+    const bool r2 = r2_ep >= 0 && __atomic_load_n(&rs64_g1d_vi_epoch, __ATOMIC_RELAXED) == r2_ep;
+    if (r2 && r2_first < 0) r2_first = sw;
+    if (r2 && sw != r2_sw) { r2_sw = sw; r2_idx = 0; }
+    const bool r2_log = r2 && sw - r2_first < r2_swaps;
     for (uint32_t a = lo & ~3u; a + 8 <= hi;) {
         const uint32_t w0 = rd(a), w1 = rd(a + 4), op = (w0 >> 24) & 0x3F;
+        if (op == 0x3D) r2_timg = (w1 & 0xFFFFFFu) | (((w0 >> 19) & 0x1Fu) << 24);
+        if (op == 0x33 || op == 0x34) { r2_load0 = w0; r2_load1 = w1; }
+        if (op == 0x35 && ((w1 >> 24) & 7u) == 0u) { r2_tile0 = w0; r2_tile1 = w1; }
+        if (op == 0x32 && ((w1 >> 24) & 7u) == 0u) { r2_tsz0 = w0; r2_tsz1 = w1; }
+        if (r2_log && (op == 0x24 || op == 0x25) && r2_lines < r2_cap) {
+            r2_lines++;
+            // texel census of the 4 KB LOADBLOCK source as guest RDRAM holds it at submit: nonzero halfwords, alpha-bit set,
+            // and an additive sum, so "rect issued but texture not there yet" splits from "texture there, renderer drops it"
+            uint32_t tnz = 0, tal = 0, tsum = 0;
+            for (uint32_t o = 0; o < 0x1000u; o += 2) {
+                const uint32_t ta = (r2_timg & 0xFFFFFFu) + o; const uint16_t h = (uint16_t)((rd(ta & ~3u) >> ((ta & 2) ? 0 : 16)) & 0xFFFFu);
+                tnz += h != 0; tal += h & 1u; tsum += h;
+            }
+            fprintf(stderr, "[g1d-rect2] tex nz=%u alpha=%u sum=%08X\n", tnz, tal, tsum);
+            fprintf(stderr, "[g1d-rect2] ep=%d swap=%d+%d i=%d x=%.2f..%.2f y=%.2f..%.2f st=%08X dd=%08X timg=%02X:%06X load=%08X,%08X tile=%08X,%08X tsz=%08X,%08X om=%08X,%08X cc=%08X,%08X cw=%u sc=%08X,%08X\n",
+                    r2_ep, sw, sw - r2_first, r2_idx, ((w1 >> 12) & 0xFFF) / 4.0, ((w0 >> 12) & 0xFFF) / 4.0, (w1 & 0xFFF) / 4.0, (w0 & 0xFFF) / 4.0,
+                    a + 16 <= hi ? rd(a + 8) : 0, a + 16 <= hi ? rd(a + 12) : 0, r2_timg >> 24, r2_timg & 0xFFFFFF, r2_load0, r2_load1,
+                    r2_tile0, r2_tile1, r2_tsz0, r2_tsz1, s_om0, s_om1, s_cc0, s_cc1, s_cw, s_sc0, s_sc1);
+        }
+        if (r2_log && (op == 0x24 || op == 0x25)) r2_idx++;
+        // s6728: every other draw / target change of the same window (fill rects, triangle bboxes, SETCIMG, SETSCISSOR)
+        if (r2_log && r2_lines < r2_cap && (op == 0x36 || op == 0x3F || op == 0x2D || (op >= 0x08 && op <= 0x0F && a + 32 <= hi))) {
+            r2_lines++;
+            if (op >= 0x08 && op <= 0x0F) {
+                auto sx14 = [](uint32_t v) { return (double)(((int32_t)(v << 18)) >> 18) / 4.0; };
+                double t0 = 1e9, t1 = -1e9;
+                for (uint32_t o : {8u, 16u, 24u}) { const double x = (double)(int32_t)rd(a + o) / 65536.0; t0 = std::min(t0, x); t1 = std::max(t1, x); }
+                fprintf(stderr, "[g1d-rect2] ep=%d swap=%d+%d TRI op=%02X x~%.1f..%.1f y=%.1f..%.1f om=%08X,%08X cc=%08X,%08X timg=%02X:%06X cw=%u\n", r2_ep, sw, sw - r2_first, op,
+                        t0, t1, sx14(rd(a + 4) & 0x3FFF), sx14(w0 & 0x3FFF), s_om0, s_om1, s_cc0, s_cc1, r2_timg >> 24, r2_timg & 0xFFFFFF, s_cw);
+            } else {
+                fprintf(stderr, "[g1d-rect2] ep=%d swap=%d+%d CMD op=%02X w0=%08X w1=%08X om=%08X,%08X\n", r2_ep, sw, sw - r2_first, op, w0, w1, s_om0, s_om1);
+            }
+        }
         if (op == 0x24 || op == 0x25) {
             const double xl = ((w0 >> 12) & 0xFFF) / 4.0, xh = ((w1 >> 12) & 0xFFF) / 4.0;
             if (s_nr == 0) { s_first[0] = w0; s_first[1] = w1; s_first[2] = a + 16 <= hi ? rd(a + 8) : 0; s_first[3] = a + 16 <= hi ? rd(a + 12) : 0; }
