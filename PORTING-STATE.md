@@ -176184,3 +176184,8 @@ async default because it is harmless and puts the remaining cost in one place. T
 drain (Gfx-thread clock) agree.
 Next: split State::fullSync with the existing S4267 segment timers (fsFlush/fsSubmitFb/fsUpload/fsRender/... ) in the async
 arm, no rebuild (NEXT.md).
+Verdict wording: refutes H-stream (byte volume of the end commit is not the tail: last job 150 -> 7.7 kB, last_ms 3.26 -> 3.29)
+and selects H-fixed-sync (the ~3.3 ms is a per-task fixed cost of the final FULL_SYNC in RT64 State::fullSync). H-dep-late
+refuted for streamed ranges (frames sane, 0 drop-after-stream); H-producer-bound refuted (copy 0.29 -> 0.08 ms, rsp 6.08 -> 5.80).
+Next discriminator: S4267 fullSync segment split (fsFlush/fsSubmitFb vs fsUpload/fsRender vs wait phases) in the async arm;
+the segment owning >=2 ms selects H-fsflush, H-fsupload/render or H-fswait (scratch/agent/NEXT.md).
