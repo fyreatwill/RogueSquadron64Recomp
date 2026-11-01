@@ -176989,3 +176989,25 @@ ORIGIN: writer = rs64_region_scan's x rewrite (s6158 radar-disc shift) applied t
 radar stamp is refreshed under the pause menu; the value is not legitimate (the logo is not the radar).
 Verdict: selects H-anchor (region-shift variant) for the pause menu, H-ok for Elite Rogues / Select Game and the rest;
 H-pillar refuted at all three aspects. Next: per-swap FB dump of the mission-start transition, then G3.
+
+## Session 6732 (2026-11-01) — G1d mission-start dark frame with outline line is NOT a G1d defect: 4:3 shows the same intro-region edge lines on the load frame (H-transition selected; H-crop/H-region refuted)
+
+What ran: scratch/s6732/dense.sh (copy of s6731 menus.sh, captures every ~0.3 s from t=244..272 instead of every 2 s)
+at 4:3 (tag d43, ROGUESQ_LIVES_CAP=1, no ROGUESQ_ASPECT): 174 window captures, run reached flight (mission_verified_130s).
+Scorer scratch/s6732/dark.py (dark frame = mean luminance < 15, lists bright > 60 px extents).
+
+Result (4:3, d43): the hangar->mission load holds a black frame for ~1 s (captures w255_62..w256_73), and it carries the
+same thin light line family as the wide arms: first a vertical line on the right edge of the content (x 1278, y 410..818),
+then a horizontal line spanning the full 4:3 content width (x 86..1192 inside the 85-px bars) at the bottom of the
+340-line intro region (pixel 56,72,81 / 108,141,158). 21:9 l219 w256 (s6731) shows the same pair: vertical at x=768 of
+1024 and horizontal at line ~340, i.e. the edges of the 768x340 widened intro region.
+Second line: the logs show the same VI sequence in both aspects at that moment: `[fbw] pfm a2=512 a3=448` (flight
+buffers allocated) -> ONE swapBufferWithViMode through the intro mode 0x80128C90 (4:3 width 640 #2117; 21:9 width 768
+#2042, fb 0x809D5000) -> initVideoSubsystem 0x80128DA0 flight mode -> mission load. The displayed frame during the load is
+that intro-mode swap of a freshly allocated, cleared flight buffer. 4:3 has no FB_WIDTH, pillar crop or s6158 region
+shift, so the lines are not from our G1d machinery.
+Verdict: H-transition selected (the game's own mode/buffer hand-off, present at 4:3); H-crop and H-region refuted.
+Open, single-source and not G1d: whether the light edge lines are in guest RDRAM (retail N64 shows them) or are RT64
+sampling the intro render-target edge (RT64 artifact). Discriminator for G3: ROGUESQ_FB_DUMP_DIR + FB_DUMP_EPOCH on the
+0x80128C90 epoch (4:3: the epoch after the E40 epoch, ~42/43; dump N=40) and look for the line in the RDRAM readback.
+Rules out: G1d widening/crop/region-shift as the cause of the mission-start dark frame.

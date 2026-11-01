@@ -1,14 +1,13 @@
-# NEXT: G1d residual -- mission-start transition dark frame with outline box at 16:9/21:9
+# NEXT: G1d residual -- abort logo fly-out region shift (~5 swaps at 16:9/21:9)
 HYPOTHESIS-ID: g1d-menu-sweep
 
-s6731 finished the menu sweep (owner sheet scratch/s6731/sheet_menus_owner.png) and fixed the pause-logo shard.
-Open: one window capture per wide arm at the hangar->mission transition is black with a thin light outline box
-(l169 w242 16:9, l219 w256 21:9). 4:3 unknown (2 s sampling).
-Hypotheses: H-transition (retail fade frame, also at 4:3: benign), H-crop (s6724/s6726 pillar crop or latched epoch
-draws a box outline in the pillar), H-region (s6158 shift / s6156 anchor active on the first swaps of the mission epoch,
-radar stamped before the fade ends).
-Command: zsh scratch/s6731/menus.sh <tag> <none|16:9|21:9> "ROGUESQ_LIVES_CAP=1 ROGUESQ_FB_DUMP_EPOCH=<e> ROGUESQ_FB_DUMP_VI=1"
-(find the mission-start epoch number from the [g1d] epoch lines in scratch/agent/m6/g1_lvl1s6731_l219/run.log near
-the second launch; dumps in scratch/agent/m6/<tag>/fbd). Discriminator: box in the 4:3 dumps -> H-transition; box only
-wide and inside/at the pillar edge -> H-crop; box coincides with a [region-gate] radar=1 swap -> H-region.
-Then G3 render fidelity (hangar artifacts list in CURRENT-TRUTH).
+s6731 pause-gated the s6158 radar-region shift, but the pause byte clears before the VI epoch changes, so the shift turns
+back on for ~5 swaps of the abort-mission logo fly-out ([region-gate] lines in scratch/agent/m6/g1_lvl1s6731_f219/run.log).
+s6732 closed the mission-start dark frame as non-G1d (also at 4:3).
+Hypotheses: H-latch (once paused within an epoch, the shift must stay off until the next epoch: fix = latch the pause
+gate per epoch in rs64_region_scan, dpc_bridge.cpp), H-benign (the fly-out tris are outside the radar region, nothing moves).
+Discriminator, one build, one run: scratch/s6732/dense.sh f219 21:9 "ROGUESQ_LIVES_CAP=1 ROGUESQ_FB_DUMP_DIR=<abs>/fbd
+ROGUESQ_FB_DUMP_EPOCH=<abort epoch from f219 log> ROGUESQ_FB_DUMP_VI=1" (adjust the dense window to the abort, ~t=225-235).
+If any dumped fly-out swap has a shard in x 669..810 shifted +256 -> H-latch, land the latch with ROGUESQ_* =old switch and
+re-run; if none of the ~5 swaps draws tris in the region -> H-benign, close G1d and move to G3 (first G3 item: RDRAM dump of
+the mission-start intro-mode swap to decide RT64-vs-retail for its edge lines, s6732 entry).
