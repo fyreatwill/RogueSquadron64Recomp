@@ -176614,3 +176614,4 @@ flight still fill the window (scratch/s6720/r219). 16:9 route: see the result li
 stride/xScale) and refute H-texrect-shift (no host x shift: anchor/region/spike arms were inert, and the rects are
 already at 256..768) and H-vpw (VPW changes only the zoom). Next: menu sweep (NEXT g1d-menu-sweep).
 16:9 route (scratch/s6720/r169): att=1 mission_verified_130s, 0 crash; title [fbw] title-vi width 1024->1592 xScale 0x4F9 + one clear (cimg 751E00 cw 796); title still pillarboxed and clean at t=20, select and flight full width.
+Discrimination: this selects H-stride (VI mode stride/xScale) and refutes H-texrect-shift and H-vpw; next discriminator: g1d-menu-sweep (OPTIONS/pause/debrief rect extents + VI modes at 21:9/16:9 vs 4:3).
