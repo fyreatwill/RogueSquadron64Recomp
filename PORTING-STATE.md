@@ -176771,3 +176771,4 @@ VI-mode-gated arm refutes "title_vi==2 covers the debrief".
   flight HUD (craft icon, radar, lives) at the real window edges at w101 in fix219 and ctl219 alike.
   screenshots/s6725_levelselect_fix_vs_ctl.png, s6725_flight_hud_control.png.
 - Rules out: scissor and game-side x as causes. Open G1d: game-over at 21:9/16:9, 4:3 debrief right-edge column.
+- Verdict: selects H-anchor; refutes H-game-x and H-scissor (anchor-off arm moves every level-select rect by exactly +A and centres the screen; scissor full width). Next discriminator: ROGUESQ_HUD_ANCHOR_AUTO=0 vs default on the game-over screen (NEXT.md).
