@@ -176679,3 +176679,6 @@ tris but its frames still showed the band; not reproduced in 3 later k=2 runs.
 **Also fixed during the session:** a scissor-widening attempt wrote lrx=0x1000 (overflowed into bit 24) and broke the
 draw; removed, since the scissor was already full width.
 **Next.** Mission debrief / game-over screens at 21:9 and 16:9 (the rest of the G1d menu sweep).
+Verdict: the paused-swap signature log selects H-tri and refutes H-fill and H-scissor (scissor full width, fills are
+clears); the zap/half/off arms in one build confirm the fix and resolve the dim band. Next discriminator: debrief /
+game-over captures at 21:9, 16:9, 4:3 (NEXT.md, g1d-menu-sweep).
