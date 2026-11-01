@@ -177830,7 +177830,7 @@ What ran (scratch/s6760; recipes = s6759 retail.sh/port.sh with lvl8.eep = s6754
 Results:
 - g3_rand_ticks.py: first mismatch at index 13273 = tick 1819 (retail's 800f0f2c call lands before port's 80054174
   burst; values identical index by index around it).
-- Song handle 0x8010C0E0: identical transitions 0->1 (t695), ->0 (t862), ->ff (t863), ->2 (t894), ->3 (t1683) in both
+- Song handle 0x8010C0E0 (new tools/g3_song_windows.py): identical transitions 0->1 (t695), ->0 (t862), ->ff (t863), ->2 (t894), ->3 (t1683) in both
   arms. Song 1 (695-862): 167 ticks, retail 333 VI/638 AI buffers, port 334 VI/640. Song 3 ends at tick 1819 retail vs
   1850 port: retail 331 VI / 634 AI buffers over 136 ticks (2.434 VI/tick, retail dropping frames), port 334 VI / 639
   buffers over 167 ticks (2.000 VI/tick). Same audio length, so the song ends on the audio clock (the s6755 lvl4
