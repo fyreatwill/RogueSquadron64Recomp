@@ -3,12 +3,13 @@
 Everything here is OFF by default; unset = retail behaviour. Run from `build/` with the ROM beside it:
 
 ```sh
-cd build && env ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=2 ./RogueSquadron64Recomp
+cd build && env ROGUESQ_FPS60=1 ./RogueSquadron64Recomp            # steady 60 fps (s6703)
+cd build && env ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=2 ./RogueSquadron64Recomp   # more terrain, ~48-50 fps
 ```
 
 | Goal | Setting | Verified state | Detail |
 |---|---|---|---|
-| 60 game frames/s (retail ~30) | `ROGUESQ_FPS60=1` | 300 s holds on levels 1, 5, 10: 0 crash, 0 VI stall; hangar soak clean. Craft path per real second unchanged (sim is delta-time); mission clocks time-based; audio tick is per-VI. Not checked: direct NPC position control, other levels. **Owner to judge feel.** | s6255-s6261 |
+| 60 game frames/s (retail ~30) | `ROGUESQ_FPS60=1` | 300 s holds on levels 1, 5, 10: 0 crash, 0 VI stall; hangar soak clean. Craft path per real second unchanged (sim is delta-time); mission clocks time-based; audio tick is per-VI. Not checked: direct NPC position control, other levels. **Owner to judge feel.** Measured on the -O2 build (s6703-s6704, 300 s holds, mission seconds 140+): retail draw distance gives a solid **60.0 fps on levels 1 and 5** (p10 60). With more draw distance it drops: dd2 ~48-50, dd3 ~47, dd4 ~44 fps. The cap is the host cost of each graphics task, so for a steady 60 use FPS60 without DRAW_DISTANCE. | s6255-s6261, s6703-s6704 |
 | More terrain drawn | `ROGUESQ_DRAW_DISTANCE=2` (2 qualified on levels 1/5/10; 3 qualified on levels 1/5/10 (s6446: holds 302 s/301 s, 'multiplier 3' echoed, alive_at_end=1, 0 VI stalls, 0 crash lines); >3 needs `ROGUESQ_DD_UNSAFE=1`) | Levels 1, 5, 10 clean for 300 s; triangles x2.3 on level 1. Look (pop-in, haze) unjudged. | `docs/DRAW-DISTANCE.md` |
 | Widescreen | `ROGUESQ_ASPECT=16:9` or `21:9`, plus `ROGUESQ_OSMEM_MB=12`, `ROGUESQ_FP_XSCALE`, `ROGUESQ_HUD_ANCHOR` | Level-1 flight frames correct at 796 and 1024 wide, mission held ~182 s. KNOWN DEFECT: wide title screen shows a corrupt block / tiled background (defect B, unresolved, cosmetic, title only). | CURRENT-TRUTH "G1d widescreen" |
 | Window fills your screen | `ROGUESQ_ASPECT=16:9` (TV) or `21:9` (ultrawide), or `auto` (match this display); add `ROGUESQ_FULLSCREEN=1` to start fullscreen. F11, Alt+Enter or Cmd+Ctrl+F toggles fullscreen. `ROGUESQ_WINDOW_FIT=0` = old 640x480 window | 16:9: window and fullscreen verified, flight fills it (s6688). **21:9: hangar crash on the forced level-select route (s6688, under investigation; not caused by the window code).** Window size is fixed at launch; resizing letterboxes. | CURRENT-TRUTH "G1f" |

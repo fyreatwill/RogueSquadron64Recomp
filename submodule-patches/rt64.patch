@@ -16,6 +16,39 @@ index 6bbc094..75a2255 100644
          return (rect.ulx >= ulx) && (rect.uly >= uly) && (rect.lrx <= lrx) && (rect.lry <= lry);
      }
  
+diff --git a/src/common/rt64_profiling_timer.cpp b/src/common/rt64_profiling_timer.cpp
+index 804835f..df326f8 100644
+--- a/src/common/rt64_profiling_timer.cpp
++++ b/src/common/rt64_profiling_timer.cpp
+@@ -5,6 +5,14 @@
+ #include "rt64_profiling_timer.h"
+ 
+ #include <numeric>
++#include <cstdlib>
++
++// s6704 G1e (RS64): these timers only feed the inspector plots, yet dlCpuProfiler brackets every RDP submit (hundreds per
++// frame on the LLE path), so two clock reads per submit cost ~4% of the Gfx thread. ROGUESQ_RT64_PROFILE=1 restores them.
++// Non-const + extern "C" so ROGUESQ_RSP_HOOKS_TOGGLE (ultramodern events.cpp) can flip it mid-run; end() keys on startedTimestamp,
++// not the flag, so a flip between start() and end() is safe.
++extern "C" int rs64_rt64_profiling_on;
++int rs64_rt64_profiling_on = [] { const char *e = std::getenv("ROGUESQ_RT64_PROFILE"); return (e && *e && *e != '0') ? 1 : 0; }();
+ 
+ namespace RT64 {
+     // ProfilingTimer
+@@ -35,11 +43,13 @@ namespace RT64 {
+     }
+ 
+     void ProfilingTimer::start() {
++        if (!rs64_rt64_profiling_on) return;
+         assert(startedTimestamp == Timestamp{});
+         startedTimestamp = Timer::current();
+     }
+ 
+     void ProfilingTimer::end() {
++        if (startedTimestamp == Timestamp{}) return;
+         assert(startedTimestamp > Timestamp{});
+         accumulation += Timer::deltaMicroseconds(startedTimestamp, Timer::current()) / 1000.0;
+         startedTimestamp = {};
 diff --git a/src/contrib/hlslpp b/src/contrib/hlslpp
 --- a/src/contrib/hlslpp
 +++ b/src/contrib/hlslpp
@@ -1257,6 +1290,19 @@ index 6255872..7b2edfc 100644
              state->rdp->drawTris(1, &posWorkBuffer.data()[0][0], &texcoordWorkBuffer.data()[0][0], &colorWorkBuffer[0][0], tile, level);
  
              return trianglesEnd;
+diff --git a/src/hle/rt64_application.cpp b/src/hle/rt64_application.cpp
+index 785de27..3fc321b 100644
+--- a/src/hle/rt64_application.cpp
++++ b/src/hle/rt64_application.cpp
+@@ -473,8 +473,6 @@ namespace RT64 {
+ #   ifdef LOG_DISPLAY_LISTS
+             RT64_LOG_PRINTF("Application::processDisplayLists(0x%X, 0x%X)", dlStartAddress, dlEndAddress);
+ #   endif
+-
+-            ElapsedTimer displayListTimer;
+             DisplayList *dlStart = reinterpret_cast<DisplayList *>(&memory[dlStartAddress]);
+             DisplayList *dlEnd = (dlEndAddress > 0) ? reinterpret_cast<RT64::DisplayList *>(&memory[dlEndAddress]) : nullptr;
+ 
 diff --git a/src/hle/rt64_framebuffer.cpp b/src/hle/rt64_framebuffer.cpp
 index 873883d..998654c 100644
 --- a/src/hle/rt64_framebuffer.cpp

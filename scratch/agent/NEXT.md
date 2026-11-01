@@ -1,16 +1,24 @@
-# NEXT: G1e frame rate on the -O2 build — what binds FPS60 below 60
-HYPOTHESIS-ID: g1e-fps60-o2
+# NEXT: G1e — overlap the RSP LLE with RT64 RDP processing inside the gfx task
+HYPOTHESIS-ID: g1e-gfx-overlap
 
-G1c phase 2 closed s6703 (sheets docs/img/g1c_phase2_dd_sheet_vi*.png, docs/DRAW-DISTANCE.md). Ladder: G1d/G1f/G3c/G3d closed,
-so G1e (higher frame rate) is the next open rung. s6702: FPS60 dd4 lvl5 ~45 tasks/s on -O2. Unknown: FPS60 at dd1 (retail draw).
+s6704 established (two lines + same-run toggle with positive control): FPS60 = 60.0 fps at dd1, 44-50 at dd2-dd4, and the
+binding term is the per-task gfx cost on the Gfx thread (send_dl), which runs RSP LLE emulation (~55% self) and RT64
+processing of each DPC submit (submit_rdp_range -> processRDPLists, ~46% inclusive) SERIALLY; dp_complete only after both.
+Game thread 5% busy. The no-op hook gate was refuted as the lever (<0.7 ms/task).
 
-Queued soaks (loop runs them): s6703_fps60_dd1_lvl1, s6703_fps60_dd1_lvl5 (ROGUESQ_FPS60=1, STORE_DIAG=0, G1B on, 300 s).
-1. Fold both: game tasks/s, gfx task ms p50/p90, present-interval distribution, crash/stall (same G1B fold as s6697/s6701).
-2. Hypotheses for any shortfall below ~58 tasks/s:
-   H-gfx: gfx task ms p50 > ~16 ms (RSP LLE cost binds) -> profile the ucode loop (perf/sample on the RSP thread).
-   H-cpu: gfx task < 12 ms but the game thread is busy >16 ms per frame -> sample the game thread (sample(1) 10 s), name the top
-          host functions.
-   H-pace: both under budget but tasks bunch / wait on VI -> FPS60 divisor/VI-delivery path.
-   Discriminator: per-frame gfx ms vs game-thread busy ms, from the same run.
-3. If dd1 FPS60 already holds ~60 on both levels, record it in docs/OWNER-OPT-INS.md (FPS60 row) as the recommended combo and
-   measure FPS60+dd2 next.
+## Work unit
+1. Read first: src/rsp/dpc_bridge.cpp (rsp_dpc_submit -> submit_rdp_range), src/main/rt64_render_context.cpp:1265
+   (submit_rdp_range), events.cpp send_dl/dp_complete ordering (~l.1160-1205).
+2. Hypotheses:
+   H-overlap: RT64 work can run on a consumer thread while the RSP continues; send_dl wall falls toward max(RSP, RT64).
+   H-dep: the RSP reuses the RDP output buffer (ring) within a task or RT64 must see RDRAM state as of submit time, so a
+          naive async consumer reads overwritten commands (expect: garbage triangles/missing geometry in the toggle's on windows).
+   H-rt64-bound: RT64 processing itself (TMEM hash, loadBlock, decodeTriangles) dominates once overlapped -> next lever is RT64.
+3. Build ONE binary: ROGUESQ_RDP_ASYNC=1 queues (lo,hi) ranges (COPY the command words at submit time if the output buffer
+   is a ring: check the ucode's DPC_START/END pattern in a [g1d-word]-style dump first) to one consumer thread; send_dl waits
+   for the queue to drain before dp_complete. Make it flippable at the [g1b] boundary like ROGUESQ_RSP_HOOKS_TOGGLE (extend
+   that toggle or add ROGUESQ_RDP_ASYNC_TOGGLE=10, tag hk/async in the [g1b] line).
+4. Run lvl5 FPS60 dd2 300 s with the toggle; fold with `env HK=1 python3 tools/g1e_gfxbusy.py <dir> --tmin 140` (extend the
+   split for the new tag). Positive control already exists: ROGUESQ_SPIKE_DMEM=1 under the toggle resolves +4.9 ms.
+   Render check: fbd dumps in async windows vs sync windows, g1c terrain fraction + eyeball; any spike/garbage -> H-dep.
+5. Success: async windows sd_ms down >=2 ms and tasks/s up, with identical frames. Then qualify 300 s lvl1/5/10 dd2 FPS60.

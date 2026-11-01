@@ -176076,3 +176076,33 @@ g1c_fixed_score.py medians are camera-dominated cross-run and are not used as a 
 docs/DRAW-DISTANCE.md gained a phase-2 section (dd4 ceiling, dd8 fixes, -O2 cost, suggested ROGUESQ_DRAW_DISTANCE=4). Defaults retail.
 G1c phase 2 CLOSED. Next rung G1e: queued s6703_fps60_dd1_lvl1/lvl5 (FPS60 at retail draw on -O2, STORE_DIAG=0, G1B on).
 Rules out: the s6702 fix being untested against its own failure mode in the same binary (the leak arm grows to the brink).
+
+## Session 6704 (2026-10-31) — G1e on -O2: FPS60 holds 60.0 fps at dd1 (lvl1/lvl5) and falls to 44-50 at dd2-dd4; Gfx-thread gfx task cost binds (H-gfx), hook-overhead gate refuted by a same-run toggle with positive control
+Folded queued soaks s6703_fps60_dd1_lvl1/lvl5 (FPS60, STORE_DIAG=0, G1B, 300 s, both clean): mission seconds 140+ give
+60.0/59.9 tasks/s, p10 60, gfx task 5.8/6.4 ms. Ran three more FPS60 holds on the same binary (all 300 s, alive, 0 stall,
+0 crash lines): lvl1 dd2 49.9 tasks/s (gfx 11.7 ms), lvl5 dd2 47.8 (11.4 ms), lvl5 dd3 46.6 (14.9 ms); s6701 lvl5 dd4 44.0
+(16.3 ms). New tool tools/g1e_gfxbusy.py: Gfx-thread budget (tasks*send_dl + vi*update_screen) and a within-run per-second fit
+frame_ms = c + k*sd_ms over uncapped seconds. FPS60 runs: k 0.83-1.62, r 0.91-0.98 (dd4 0.83/0.98, dd3 0.87/0.96, dd2
+1.25-1.62/0.91-0.94; k>1 = VI quantisation, frames slip from 1 to 2 VIs). Non-FPS60 dd4/dd6: k 0.09/0.25 (VI-capped at 30).
+Gfx thread busy only 47-57% of wall on average (p90 64-83%), so it is not saturated: the game frame waits on each task's DP
+complete (events.cpp sends sp_complete early but dp_complete only after the whole send_dl).
+sample(1) of lvl5 FPS60 dd2 in flight (15 s, new tool tools/sample_busy.py): Gfx thread 5138/10364 busy, [Game] MAIN 549
+(5%), SP Task Thread 220. Rules out H-cpu (game thread). Gfx self-time: RSP LLE + rs64 hooks 55%, RT64 17%, clock reads 9%
+(RT64 ProfilingTimer per RDP submit), logging 4%. Inclusive: send_dl ~5650 samples, of which RT64 submit_rdp_range ~2580
+(~46%), run synchronously inside the ucode's DPC submits.
+Engineering change: one inline master gate rs64_rsp_hooks_on (main.cpp; on iff ROGUESQ_SPIKE_DMEM / LOG_ALL /
+LOG_M5_SOURCE_WRITER / G3D_LEGACY_TOGGLE / RSP_HOOKS is set, echoed as "[s6704] rsp_hooks_on=") now guards every per-load/
+store RSP hook in librecomp rsp.hpp + rsp_vu_impl.hpp (DMEM store, vector store, vld_note, VU ring, SDV snapshot), and RT64
+ProfilingTimer start/end (inspector-only) are skipped unless ROGUESQ_RT64_PROFILE=1 (end() keys on startedTimestamp so a
+mid-run flip is safe). Removed the unused per-list ElapsedTimer in Application::processDisplayLists. Default behaviour and
+output unchanged. ROGUESQ_RSP_HOOKS_TOGGLE=<s> (events.cpp g1b tick) flips both gates at the [g1b] second boundary; [g1b]
+lines end hk=<state>. Patches re-exported.
+A/B: cross-run same binary (hooks off 11.0 ms / 50.7 tasks/s vs on 13.2 / 46.9) disagreed with the old binary (11.4 / 47.8,
+should equal "on"), so cross-run noise ~±1.5 ms. Same-run toggle (10 s windows, lvl5 FPS60 dd2, 300 s): hooks-only run 11.08
+vs 11.14 ms; full gate run 9.90 (off) vs 10.05 (on) ms, 51.5 vs 51.2 tasks/s. Positive control in the same instrument
+(toggle + ROGUESQ_SPIKE_DMEM=1): off 10.04 ms / 51.0 vs on 14.96 ms / 45.2 tasks/s, so the toggle resolves a gate's cost.
+Verdict: selects H-gfx (the per-task gfx cost on the Gfx thread sets the FPS60 rate above dd1; game thread 5% busy) and
+refutes H-cpu; refutes H-hook-overhead (the gated no-op hooks and RT64 timers cost < ~0.7 ms/task, not the ~1 ms the sample's
+leaf attribution suggested). H-pace not selected: frame period tracks gfx ms 1:1 rather than VI slots alone.
+Owner page: docs/OWNER-OPT-INS.md now recommends plain ROGUESQ_FPS60=1 for a steady 60 and lists the dd2/dd3/dd4 rates.
+Next: overlap RSP LLE and RT64 processing (async RDP-range consumer) so send_dl wall approaches max(RSP, RT64), not the sum.

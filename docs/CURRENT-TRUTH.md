@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6703 (2026-10-31).
+Compact operational handoff, as of Session 6704 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -97,7 +97,11 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   stays pinned. Heap `8010FEFC` now stops at the depth pointer when aspect
   is wider than 4:3. The OS window stays 640x480, so wider modes letterbox.
   Do not return to the combiner; the s6692 lead is RT64 depth (see above).
-- **G1e (frame rate): closed** (retail ~30 fps vs FPS60 ~59, s6452).
+- **G1e (frame rate), -O2 build (s6704):** FPS60 holds 60.0 fps at dd1 on lvl1/lvl5 (s6703); dd2 ~48-50, dd3 ~47, dd4
+  ~44. Two lines: per-second frame period tracks gfx task ms (r 0.91-0.98 within each run) and sample(1) shows the game
+  thread 5% busy vs the Gfx thread doing all the work. The gfx task (RSP LLE ~55%, RT64 submit ~46% inclusive, run
+  serially in send_dl before dp_complete) binds. RSP-hook/RT64-timer overhead refuted by a same-run toggle with a
+  positive control (<0.7 ms/task); the gate (rs64_rsp_hooks_on, ROGUESQ_RT64_PROFILE) is kept, default output unchanged.
 - **G1(c) framebuffer presence covered for levels 0..18.** Level 1 has a
   retail flight match; the remaining evidence establishes content presence,
   not retail equivalence. Saved level-0 port images are duplicate pixels
@@ -533,8 +537,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1e frame rate on the -O2 build (s6703 next).** FPS60 dd4 lvl5 ~45 tasks/s (s6702). Measure FPS60 at dd1 on lvl1/lvl5
-   with STORE_DIAG=0 and find what binds below 60 (gfx task ms vs game-thread CPU vs VI pacing). See NEXT.md.
+1. **G1e: overlap RSP LLE with RT64 RDP processing (s6705 next).** FPS60 above dd1 is bound by the serial gfx task
+   (s6704). Move RT64 processing of submitted RDP ranges onto a consumer thread so send_dl wall -> max(RSP, RT64).
+   Measure with ROGUESQ_RSP_HOOKS_TOGGLE-style same-run toggle + tools/g1e_gfxbusy.py. See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional

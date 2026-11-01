@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..c4fe8fe 100644
+index b0d6bef..0b45ff6 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,7 @@
@@ -22,7 +22,7 @@ index b0d6bef..c4fe8fe 100644
  
  #include "rsp_vu.hpp"
  #include "recomp.h"
-@@ -34,15 +35,33 @@ struct RspContext {
+@@ -34,15 +35,36 @@ struct RspContext {
  
  using RspUcodeFunc = RspExitReason(uint8_t* rdram, uint32_t ucode_addr);
  
@@ -36,6 +36,9 @@ index b0d6bef..c4fe8fe 100644
 +extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
 +                                            uint32_t len, uint32_t value,
 +                                            uint32_t vector_op);
++// s6704 G1e: one plain global read inline gates every per-load/store RSP diagnostic hook (main.cpp sets it from the
++// hooks' own env vars, or ROGUESQ_RSP_HOOKS=1). Off, the gfx LLE no longer pays an out-of-line call per DMEM access.
++extern "C" int rs64_rsp_hooks_on;
 +extern "C" void rs64_spike_sdv_note(uint32_t reg, uint32_t e, const uint32_t* lanes);
 +extern "C" int rs64_sdv_snap_enabled(void);
 +extern "C" void rs64_m5_audio_dmem_vector_store(uint32_t dmem_addr,
@@ -58,23 +61,23 @@ index b0d6bef..c4fe8fe 100644
  
  static inline uint32_t RSP_MEM_W_LOAD(uint32_t offset, uint32_t addr) {
      uint32_t out;
-@@ -56,6 +75,7 @@ static inline void RSP_MEM_W_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -56,6 +78,7 @@ static inline void RSP_MEM_W_STORE(uint32_t offset, uint32_t addr, uint32_t val)
      for (int i = 0; i < 4; i++) {
          RSP_MEM_BU(offset + i, addr) = reinterpret_cast<uint8_t*>(&val)[i ^ 3];
      }
-+    rs64_m5_audio_dmem_store((offset + addr) & 0xFFFu, 4u, val, 0u);
++    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_store((offset + addr) & 0xFFFu, 4u, val, 0u);
  }
  
  static inline uint32_t RSP_MEM_HU_LOAD(uint32_t offset, uint32_t addr) {
-@@ -78,6 +98,7 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -78,6 +101,7 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
      for (int i = 0; i < 2; i++) {
          RSP_MEM_BU(offset + i, addr) = reinterpret_cast<uint8_t*>(&val)[(i + 2) ^ 3];
      }
-+    rs64_m5_audio_dmem_store((offset + addr) & 0xFFFu, 2u, val, 0u);
++    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_store((offset + addr) & 0xFFFu, 2u, val, 0u);
  }
  
  #define RSP_ADD32(a, b) \
-@@ -94,36 +115,217 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -94,36 +118,217 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -298,10 +301,10 @@ index b0d6bef..c4fe8fe 100644
  
  namespace recomp {
 diff --git a/librecomp/include/librecomp/rsp_vu_impl.hpp b/librecomp/include/librecomp/rsp_vu_impl.hpp
-index dbf46b2..9658d24 100644
+index dbf46b2..7fdedda 100644
 --- a/librecomp/include/librecomp/rsp_vu_impl.hpp
 +++ b/librecomp/include/librecomp/rsp_vu_impl.hpp
-@@ -20,12 +20,30 @@
+@@ -20,12 +20,31 @@
  // ----------------------------------------------------------------------
  
  #include <cstdint>
@@ -315,6 +318,7 @@ index dbf46b2..9658d24 100644
  #define ACCL vpu.accl
 +
 +// s6376: ring of the last multiply/accumulate ops (lane 1, PRE-op state) lives in main.cpp.
++extern "C" int rs64_rsp_hooks_on; // s6704: inline master gate, see rsp.hpp
 +extern "C" int rs64_vu_ring_enabled(void);
 +extern "C" void rs64_vld_note(uint32_t reg, uint32_t addr, const char* kind);
 +extern "C" void rs64_vu_ring_vte(uint32_t reg, const uint16_t* lanes);
@@ -322,7 +326,7 @@ index dbf46b2..9658d24 100644
 +extern "C" void rs64_vu_ring_capture_prev(const uint16_t* lanes);
 +extern "C" void rs64_vu_ring_push(uint32_t op, uint32_t vd, uint32_t e, const uint16_t* all);
 +// s6380: `all` = vs[8] vte[8] ACCH[8] ACCM[8] ACCL[8] prevVd[8] (PRE-op state; prevVd = result of the previous ring op's vd).
-+#define RS64_VU_RING(OP, VD, VS, VT, E) do { if (rs64_vu_ring_enabled()) { \
++#define RS64_VU_RING(OP, VD, VS, VT, E) do { if (rs64_rsp_hooks_on && rs64_vu_ring_enabled()) { \
 +    cr128 vte_r = (VT)(E); \
 +    { uint16_t vl_[8]; for (int i_ = 0; i_ < 8; i_++) vl_[i_] = (uint16_t)(VT).element(i_); rs64_vu_ring_vte((uint32_t)(&(VT) - &vpu.r[0]), vl_); } \
 +    uint16_t all_[48]; uint32_t pv_ = rs64_vu_ring_prev_vd() & 31; \
@@ -332,26 +336,26 @@ index dbf46b2..9658d24 100644
  #define VCOH vpu.vcoh
  #define VCOL vpu.vcol
  #define VCCH vpu.vcch
-@@ -168,12 +186,14 @@ auto RSP::CTC2(cr32& rt, u8 rd) -> void {
+@@ -168,12 +187,14 @@ auto RSP::CTC2(cr32& rt, u8 rd) -> void {
  template<u8 e>
  auto RSP::LBV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm;
-+    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LBV");
++    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LBV");
      vt.byte(e) = RSP_MEM_B(0, address);
  }
  
  template<u8 e>
  auto RSP::LDV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 8;
-+    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LDV");
++    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LDV");
      auto start = e;
      auto end = std::min(start + 8, 16);
      for (u32 offset = start; offset < end; offset++) {
-@@ -184,14 +204,15 @@ auto RSP::LDV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -184,14 +205,15 @@ auto RSP::LDV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LFV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 16;
-+    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LFV");
++    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LFV");
      auto index = (address & 7) - e;
      address &= ~7;
      auto start = e;
@@ -365,11 +369,11 @@ index dbf46b2..9658d24 100644
      }
      for (u32 offset = start; offset < end; offset++) {
          vt.byte(offset) = tmp.byte(offset);
-@@ -201,16 +222,18 @@ auto RSP::LFV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -201,16 +223,18 @@ auto RSP::LFV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LHV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 16;
-+    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LHV");
++    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LHV");
      auto index = (address & 7) - e;
      address &= ~7;
      for (u32 offset = 0; offset < 8; offset++) {
@@ -381,47 +385,47 @@ index dbf46b2..9658d24 100644
  template<u8 e>
  auto RSP::LLV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 4;
-+    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LLV");
++    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LLV");
      auto start = e;
      auto end = std::min(start + 4, 16);
      for (u32 offset = start; offset < end; offset++) {
-@@ -221,6 +244,7 @@ auto RSP::LLV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -221,6 +245,7 @@ auto RSP::LLV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LPV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 8;
-+    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LPV");
++    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LPV");
      auto index = (address & 7) - e;
      address &= ~7;
      for (u32 offset = 0; offset < 8; offset++) {
-@@ -231,6 +255,7 @@ auto RSP::LPV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -231,6 +256,7 @@ auto RSP::LPV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LQV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 16;
-+    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LQV");
++    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LQV");
      auto start = e;
      auto end = std::min((u32)(16 + e - (address & 15)), (u32)16);
      for (u32 offset = start; offset < end; offset++) {
-@@ -241,6 +266,7 @@ auto RSP::LQV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -241,6 +267,7 @@ auto RSP::LQV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LRV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 16;
-+    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LRV");
++    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LRV");
      auto index = e;
      auto start = 16 - ((address & 15) - index);
      address &= ~15;
-@@ -252,6 +278,7 @@ auto RSP::LRV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -252,6 +279,7 @@ auto RSP::LRV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LSV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 2;
-+    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LSV");
++    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LSV");
      auto start = e;
      auto end = std::min(start + 2, 16);
      for (u32 offset = start; offset < end; offset++) {
-@@ -278,16 +305,18 @@ auto RSP::LTV(u8 vt, cr32& rs, s8 imm) -> void {
+@@ -278,16 +306,18 @@ auto RSP::LTV(u8 vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LUV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 8;
-+    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LUV");
++    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LUV");
      auto index = (address & 7) - e;
      address &= ~7;
      for (u32 offset = 0; offset < 8; offset++) {
@@ -433,23 +437,23 @@ index dbf46b2..9658d24 100644
  template<u8 e>
  auto RSP::LWV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 16;
-+    rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LWV");
++    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LWV");
      auto start = 16 - e;
      auto end = e + 16;
      for (u32 offset = start; offset < end; offset++) {
-@@ -313,6 +342,7 @@ template<u8 e>
+@@ -313,6 +343,7 @@ template<u8 e>
  auto RSP::SBV(cr128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm;
      RSP_MEM_B(0, address) = vt.byte(e);
-+    rs64_m5_audio_dmem_vector_store(address, 1, 0x53425600u);
++    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(address, 1, 0x53425600u);
  }
  
  template<u8 e>
-@@ -323,6 +353,15 @@ auto RSP::SDV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -323,6 +354,15 @@ auto RSP::SDV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset & 15);
      }
-+    if (rs64_sdv_snap_enabled()) { // s6696: was unconditional (gfx hot path)
++    if (rs64_rsp_hooks_on && rs64_sdv_snap_enabled()) { // s6696: was unconditional (gfx hot path)
 +        uint32_t sdv_lanes[96];
 +        for (u32 i = 0; i < 8; i++) sdv_lanes[i] = (uint16_t)vt.element(i);
 +        static const u32 snap[8] = {0, 1, 2, 3, 4, 5, 6, 29};
@@ -457,91 +461,91 @@ index dbf46b2..9658d24 100644
 +        for (u32 i = 0; i < 8; i++) { sdv_lanes[72 + i] = ACCH.u16(i); sdv_lanes[80 + i] = ACCM.u16(i); sdv_lanes[88 + i] = ACCL.u16(i); }
 +        rs64_spike_sdv_note((uint32_t)(&vt - &vpu.r[0]), e, sdv_lanes);
 +    }
-+    rs64_m5_audio_dmem_vector_store(rs + imm * 8, 8, 0x53445600u);
++    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(rs + imm * 8, 8, 0x53445600u);
  }
  
  template<u8 e>
-@@ -380,6 +419,7 @@ auto RSP::SFV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -380,6 +420,7 @@ auto RSP::SFV(cr128& vt, cr32& rs, s8 imm) -> void {
          RSP_MEM_B(0, address + (base + 12 & 15)) = 0;
          break;
      }
-+    rs64_m5_audio_dmem_vector_store(address, 16, 0x53465600u);
++    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(address, 16, 0x53465600u);
  }
  
  template<u8 e>
-@@ -392,6 +432,7 @@ auto RSP::SHV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -392,6 +433,7 @@ auto RSP::SHV(cr128& vt, cr32& rs, s8 imm) -> void {
          auto value = vt.byte(byte + 0 & 15) << 1 | vt.byte(byte + 1 & 15) >> 7;
          RSP_MEM_B(0, address + (index + offset * 2 & 15)) = value;
      }
-+    rs64_m5_audio_dmem_vector_store(address, 16, 0x53485600u);
++    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(address, 16, 0x53485600u);
  }
  
  template<u8 e>
-@@ -402,6 +443,7 @@ auto RSP::SLV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -402,6 +444,7 @@ auto RSP::SLV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset & 15);
      }
-+    rs64_m5_audio_dmem_vector_store(rs + imm * 4, 4, 0x534C5600u);
++    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(rs + imm * 4, 4, 0x534C5600u);
  }
  
  template<u8 e>
-@@ -416,6 +458,7 @@ auto RSP::SPV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -416,6 +459,7 @@ auto RSP::SPV(cr128& vt, cr32& rs, s8 imm) -> void {
              RSP_MEM_B(0, address++) = vt.element(offset & 7) >> 7;
          }
      }
-+    rs64_m5_audio_dmem_vector_store(rs + imm * 8, 8, 0x53505600u);
++    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(rs + imm * 8, 8, 0x53505600u);
  }
  
  template<u8 e>
-@@ -426,6 +469,7 @@ auto RSP::SQV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -426,6 +470,7 @@ auto RSP::SQV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset & 15);
      }
-+    rs64_m5_audio_dmem_vector_store(address, end - start, 0x53515600u);
++    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(address, end - start, 0x53515600u);
  }
  
  template<u8 e>
-@@ -438,6 +482,7 @@ auto RSP::SRV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -438,6 +483,7 @@ auto RSP::SRV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset + base & 15);
      }
-+    rs64_m5_audio_dmem_vector_store(address, end - start, 0x53525600u);
++    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(address, end - start, 0x53525600u);
  }
  
  template<u8 e>
-@@ -448,6 +493,7 @@ auto RSP::SSV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -448,6 +494,7 @@ auto RSP::SSV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset & 15);
      }
-+    rs64_m5_audio_dmem_vector_store(rs + imm * 2, 2, 0x53535600u);
++    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(rs + imm * 2, 2, 0x53535600u);
  }
  
  template<u8 e>
-@@ -462,6 +508,7 @@ auto RSP::STV(u8 vt, cr32& rs, s8 imm) -> void {
+@@ -462,6 +509,7 @@ auto RSP::STV(u8 vt, cr32& rs, s8 imm) -> void {
          RSP_MEM_B(0, address + (base++ & 15)) = vpu.r[offset].byte(element++ & 15);
          RSP_MEM_B(0, address + (base++ & 15)) = vpu.r[offset].byte(element++ & 15);
      }
-+    rs64_m5_audio_dmem_vector_store(address, 16, 0x53545600u);
++    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(address, 16, 0x53545600u);
  }
  
  template<u8 e>
-@@ -476,6 +523,7 @@ auto RSP::SUV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -476,6 +524,7 @@ auto RSP::SUV(cr128& vt, cr32& rs, s8 imm) -> void {
              RSP_MEM_B(0, address++) = vt.byte((offset & 7) << 1);
          }
      }
-+    rs64_m5_audio_dmem_vector_store(rs + imm * 8, 8, 0x53555600u);
++    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(rs + imm * 8, 8, 0x53555600u);
  }
  
  template<u8 e>
-@@ -488,6 +536,7 @@ auto RSP::SWV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -488,6 +537,7 @@ auto RSP::SWV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address + (base++ & 15)) = vt.byte(offset & 15);
      }
-+    rs64_m5_audio_dmem_vector_store(address, 16, 0x53575600u);
++    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(address, 16, 0x53575600u);
  }
  
  template<u8 e>
-@@ -844,6 +893,7 @@ auto RSP::VLT(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -844,6 +894,7 @@ auto RSP::VLT(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<bool U, u8 e>
  auto RSP::VMACF(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -549,7 +553,7 @@ index dbf46b2..9658d24 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -911,6 +961,7 @@ auto RSP::VMACQ(r128& vd) -> void {
+@@ -911,6 +962,7 @@ auto RSP::VMACQ(r128& vd) -> void {
  
  template<u8 e>
  auto RSP::VMADH(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -557,7 +561,7 @@ index dbf46b2..9658d24 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -941,6 +992,7 @@ auto RSP::VMADH(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -941,6 +993,7 @@ auto RSP::VMADH(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMADL(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -565,7 +569,7 @@ index dbf46b2..9658d24 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -976,6 +1028,7 @@ auto RSP::VMADL(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -976,6 +1029,7 @@ auto RSP::VMADL(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMADM(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -573,7 +577,7 @@ index dbf46b2..9658d24 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1013,6 +1066,7 @@ auto RSP::VMADM(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1013,6 +1067,7 @@ auto RSP::VMADM(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMADN(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -581,7 +585,7 @@ index dbf46b2..9658d24 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1083,6 +1137,7 @@ auto RSP::VMRG(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1083,6 +1138,7 @@ auto RSP::VMRG(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMUDH(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -589,7 +593,7 @@ index dbf46b2..9658d24 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1106,6 +1161,7 @@ auto RSP::VMUDH(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1106,6 +1162,7 @@ auto RSP::VMUDH(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMUDL(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -597,7 +601,7 @@ index dbf46b2..9658d24 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1126,6 +1182,7 @@ auto RSP::VMUDL(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1126,6 +1183,7 @@ auto RSP::VMUDL(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMUDM(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -605,7 +609,7 @@ index dbf46b2..9658d24 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1150,6 +1207,7 @@ auto RSP::VMUDM(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1150,6 +1208,7 @@ auto RSP::VMUDM(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMUDN(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -613,7 +617,7 @@ index dbf46b2..9658d24 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1174,6 +1232,7 @@ auto RSP::VMUDN(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1174,6 +1233,7 @@ auto RSP::VMUDN(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<bool U, u8 e>
  auto RSP::VMULF(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -4340,7 +4344,7 @@ index 3198be0..55a15a5 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..e1a28fe 100644
+index 149e770..b7cc0ae 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -8,11 +8,24 @@
@@ -5041,7 +5045,7 @@ index 149e770..e1a28fe 100644
                  // Send a message to the VI queue, and do not set it to be requeued if the queue was full for the same reason as the VI message above.
                  ultramodern::enqueue_external_message_src(events_context.ai.mq, events_context.ai.msg, false, ultramodern::EventMessageSource::Ai);
              }
-@@ -249,15 +804,221 @@ void vi_thread_func() {
+@@ -249,15 +804,227 @@ void vi_thread_func() {
      }
  }
  
@@ -5091,8 +5095,13 @@ index 149e770..e1a28fe 100644
 +#include <pthread/qos.h>
 +#include <unistd.h>
 +#include <time.h>
++extern "C" int rs64_rsp_hooks_on; // s6704 (main.cpp): inline RSP-hook gate, flipped here by ROGUESQ_RSP_HOOKS_TOGGLE
++extern "C" int rs64_rt64_profiling_on; // s6704 (rt64_profiling_timer.cpp): RT64 inspector timers, flipped together with the hooks
 +namespace g1b {
 +using clk = std::chrono::steady_clock;
++// s6704 G1e: ROGUESQ_RSP_HOOKS_TOGGLE=<sec> flips the RSP-hook gate every <sec> wall seconds at the [g1b] boundary (same-run
++// A/B; each [g1b] line ends hk=<state during that second>).
++static const int hk_toggle_s = [] { const char* e = std::getenv("ROGUESQ_RSP_HOOKS_TOGGLE"); return (e && *e) ? std::atoi(e) : 0; }();
 +static const bool on = [] { const char* e = std::getenv("ROGUESQ_G1B"); return e && *e && *e != '0'; }();
 +static clk::time_point t0 = clk::now();
 +static int last_sec = -1;
@@ -5107,9 +5116,10 @@ index 149e770..e1a28fe 100644
 +    qos_class_t q = QOS_CLASS_UNSPECIFIED; int rp = 0; pthread_get_qos_class_np(pthread_self(), &q, &rp);
 +    double la[1] = {0}; getloadavg(la, 1);
 +    off_t off = lseek(2, 0, SEEK_CUR); long long dl = (off >= 0 && off >= last_off) ? (long long)(off - last_off) : -1; if (off >= 0) last_off = off;
-+    std::fprintf(stderr, "[g1b] t=%d vi=%llu tasks=%llu sd_wall=%.2f/%.0f sd_cpu=%.2f/%.0f us_wall=%.2f/%.0f load1=%.2f qos=0x%x logB=%lld\n",
++    std::fprintf(stderr, "[g1b] t=%d vi=%llu tasks=%llu sd_wall=%.2f/%.0f sd_cpu=%.2f/%.0f us_wall=%.2f/%.0f load1=%.2f qos=0x%x logB=%lld hk=%d\n",
 +        last_sec, (unsigned long long)vi, (unsigned long long)tasks, tasks ? sd_w / tasks : 0.0, sd_wmax, tasks ? sd_c / tasks : 0.0, sd_cmax,
-+        us_n ? us_w / us_n : 0.0, us_wmax, la[0], (unsigned)q, dl);
++        us_n ? us_w / us_n : 0.0, us_wmax, la[0], (unsigned)q, dl, rs64_rsp_hooks_on);
++    if (hk_toggle_s > 0 && ((last_sec + 1) % hk_toggle_s) == 0) { rs64_rsp_hooks_on = !rs64_rsp_hooks_on; rs64_rt64_profiling_on = rs64_rsp_hooks_on; }
 +    vi = tasks = us_n = 0; sd_w = sd_wmax = sd_c = sd_cmax = us_w = us_wmax = 0; last_sec = sec;
 +}
 +struct Span { double w0, c0; Span() : w0(wall_ms()), c0(thr_cpu_ms()) {} double w() const { return wall_ms() - w0; } double c() const { return thr_cpu_ms() - c0; } };
@@ -5263,7 +5273,7 @@ index 149e770..e1a28fe 100644
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
-@@ -277,17 +1038,51 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
+@@ -277,17 +1044,51 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
              return;
          }
  
@@ -5317,7 +5327,7 @@ index 149e770..e1a28fe 100644
  
          (void)task_type;
      }
-@@ -359,6 +1154,11 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -359,6 +1160,11 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
          if (events_context.action_queue.wait_dequeue_timed(action, 1ms)) {
              // Determine the action type and act on it
              if (const auto* task_action = std::get_if<SpTaskAction>(&action)) {
@@ -5329,7 +5339,7 @@ index 149e770..e1a28fe 100644
                  // Turn on instant present if the game has been started and it hasn't been turned on yet.
                  if (ultramodern::is_game_started() && !enabled_instant_present) {
                      renderer_context->enable_instant_present();
-@@ -368,11 +1168,21 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -368,11 +1174,21 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  // start another graphics task until the RDP is also complete. Games usually preserve the RSP inputs until the RDP
                  // is finished as well, so sending this early shouldn't be an issue in most cases.
                  // If this causes issues then the logic can be replaced with responding to yield requests.
@@ -5352,7 +5362,7 @@ index 149e770..e1a28fe 100644
  
                  [[maybe_unused]] auto renderer_start = std::chrono::high_resolution_clock::now();
                  // RogueSquadron64Recomp: send_dl RE-ENABLED. RT64 has a
-@@ -383,18 +1193,38 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -383,18 +1199,38 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  // bypasses the registered GBI and submits raw RDP that
                  // confuses RT64 state. See project_factor5_lle_breakthrough.md
                  // for context but supersede with HLE path.
@@ -5392,7 +5402,7 @@ index 149e770..e1a28fe 100644
                  display_refresh_rate = renderer_context->get_display_framerate();
                  resolution_scale = renderer_context->get_resolution_scale();
              }
-@@ -456,6 +1286,7 @@ static const OSViMode dummy_mode = []() {
+@@ -456,6 +1292,7 @@ static const OSViMode dummy_mode = []() {
  void set_dummy_vi(bool odd) {
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = &dummy_mode;
@@ -5400,7 +5410,7 @@ index 149e770..e1a28fe 100644
      // Set up a dummy framebuffer.
      next_state->framebuffer = 0x80700000;
      if (odd) {
-@@ -463,8 +1294,16 @@ void set_dummy_vi(bool odd) {
+@@ -463,8 +1300,16 @@ void set_dummy_vi(bool odd) {
      }
  }
  
@@ -5417,7 +5427,7 @@ index 149e770..e1a28fe 100644
      events_context.vi.get_next_state()->framebuffer = frameBufPtr;
  }
  
-@@ -473,6 +1312,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
+@@ -473,6 +1318,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
      OSViMode* mode = TO_PTR(OSViMode, mode_);
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = mode;
@@ -5425,7 +5435,7 @@ index 149e770..e1a28fe 100644
      next_state->control = next_state->mode->comRegs.ctrl;
  }
  
-@@ -567,16 +1407,22 @@ extern "C" PTR(void) osViGetCurrentFramebuffer() {
+@@ -567,16 +1413,22 @@ extern "C" PTR(void) osViGetCurrentFramebuffer() {
  }
  
  void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
@@ -5448,7 +5458,7 @@ index 149e770..e1a28fe 100644
          events_context.sp_task_queue.enqueue(task);
      }
  }
-@@ -632,6 +1478,37 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
+@@ -632,6 +1484,37 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
      events_context.vi.states[1].mode = &dummy_mode;
  
      events_context.vi.thread = std::thread{ vi_thread_func };

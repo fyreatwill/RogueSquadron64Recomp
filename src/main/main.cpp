@@ -4719,6 +4719,17 @@ static thread_local uint32_t g_vte_pend_reg; static thread_local uint16_t g_vte_
 // lvl1 gfx task cost went ~10 -> ~50-80 ms (30 -> 11-17 game fps, bursty presents = the owner's turning shake). Flag is cached now.
 // ROGUESQ_G3D_LEGACY_TOGGLE=<sec>: same-run A/B, re-enables the old per-load getenv + SDV snapshot in alternate <sec> windows ([g3d] line per flip).
 static const bool g_spike_dmem_on = getenv("ROGUESQ_SPIKE_DMEM") != nullptr;
+// s6704 G1e: inline master gate for the per-RSP-load/store hooks (rs64_vld_note, rs64_m5_audio_dmem_store/_vector_store, the
+// VU ring, the SDV snapshot). On iff one of the env vars those hooks read is set, or ROGUESQ_RSP_HOOKS=1, so default output
+// is unchanged; off, the gfx LLE skips ~10% of its Gfx-thread time in out-of-line no-op calls (s6704 sample).
+extern "C" int rs64_rsp_hooks_on;
+int rs64_rsp_hooks_on = [] {
+    auto on = [](const char* n) { const char* e = getenv(n); return e && *e && *e != '0'; };
+    const int v = (g_spike_dmem_on || on("ROGUESQ_LOG_ALL") || on("ROGUESQ_LOG_M5_SOURCE_WRITER") || on("ROGUESQ_RSP_HOOKS") ||
+                   on("ROGUESQ_G3D_LEGACY_TOGGLE")) ? 1 : 0;
+    fprintf(stderr, "[s6704] rsp_hooks_on=%d rt64_profile=%d\n", v, on("ROGUESQ_RT64_PROFILE") ? 1 : 0);
+    return v;
+}();
 // s6698 G1c: master gate for the per-guest-store diagnostic hooks (tools/apply_s6698_storediag.py gates ~143k call sites).
 // They cost 52% of the game thread's busy time in lvl5 dd4 flight with nothing armed. Auto-on whenever a logging/watch env
 // var is set, so every existing soak recipe keeps its instruments; ROGUESQ_STORE_DIAG=0/1 overrides.
