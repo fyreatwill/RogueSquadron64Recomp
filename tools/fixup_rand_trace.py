@@ -104,3 +104,23 @@ for p in sorted(base.glob("funcs_*.c")):
             s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + d, 1)
     p.write_text(s)
     print(f"[s6752] xtrace mem hooks in {p.name}: tick {t} gate {g}")
+
+# s6755: marker rows at runAiAudioStreamPlaybackLoop's two osAiSetNextBuffer calls (fixed 0x300-byte buffers), so the
+# rand-trace file carries one row per AI buffer with the VI count: AI buffers per VI = the audio clock vs the VI clock.
+# Mirrors oracle --exec-trace-also 0x8008EE08 / 0x8008EE84.
+AI_TAG = "/* PATCH: s6755 ai buffer mark */"
+for p in sorted(base.glob("funcs_*.c")):
+    s = p.read_text()
+    n = 0
+    for pc in (0x8008EE08, 0x8008EE84):
+        call = f"    // 0x{pc:08X}: jal         0x80029E80\n"
+        m = mark(pc).replace(MEM_TAG, AI_TAG)
+        if call in s and m + call not in s:
+            s = s.replace(call, m + call); n += 1
+    if not n:
+        continue
+    for d in (decl, mdecl):
+        if d not in s:
+            s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + d, 1)
+    p.write_text(s)
+    print(f"[s6755] ai buffer marks in {p.name}: {n}")

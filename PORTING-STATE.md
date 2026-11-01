@@ -177672,3 +177672,54 @@ Result:
 Two lines (sim state + rand stream; framebuffers) agree on H-match through tick 2301. Rules out H-render for this window.
 Next: g3-lvl4-event-trigger - exec-trace initActorMotionParams 0x800F2888 / its caller ($ra chain) in both arms and read
 the gating condition, then compare that condition's inputs per tick.
+
+## Session 6755 (2026-11-01) — G3: lvl4's late scripted event is a song end on the audio clock (same length in AI buffers in both arms); fixed duplicate VI edges in the VI thread (deadline truncated to whole us)
+
+Context: the first attempt at this iteration timed out (rc=124) with no entry. Its runs are in scratch/s6755 (retail_a..g,
+retail, port1..5; dt-pinned lvl4 s6754 recipe with different XTRACE_MEM blocks). This session's runs are in scratch/s6756.
+Ran / read:
+- tools/g3_tick_mem.py (left uncommitted by the timed-out attempt; now takes G3_FROM/G3_TO/G3_IGN and prints the VI
+  column) on scratch/s6755/retail vs port5, block 0x8010C9E0:18. Event mask word +0 = 0x100 at tick 2302 retail and
+  2315 port. Its dt timer +0x0C is bit-identical in both arms. +0x3C = 0x100 at tick 2123 and +0x00 = 2 at tick 2143 in
+  both arms.
+- Static (generated C; PROJECT-OVERVIEW s5753 store map): bit 0x100 is set at 0x800EE85C in tickSongFadeTimer
+  (0x800EE730) when byte 0x8010C264 != 0 and isSongHandleActive(*0x8010C0E0) (0x800957AC: 8 MusyX song slots at
+  0x80149A00 stride 0xEF8, active byte +0xEC1) returns 0. So the event waits for a song to finish.
+- s6756 retail/port (song-state spec: 0x8010C0E0, 0x8010C260:44, slot headers 0-3): handle 0 -> 1 at tick 2145 in both
+  arms (0x8010C270 slot = 0x0007000f), back to 0 at tick 2303 retail / 2318 port. No playback-position word in the slot
+  headers.
+- Instrument: runAiAudioStreamPlaybackLoop feeds fixed 0x300-byte AI buffers (osAiSetNextBuffer jal at 0x8008EE08 /
+  0x8008EE84). Port marker rows added there (tools/fixup_rand_trace.py s6755 block, also wired through the vendored
+  regen); retail uses --exec-trace-also on the same PCs. New tools/g3_ai_clock.py (oracle rows: the pc= field is the
+  executed PC; column 3 is the trace site).
+  Positive control: rows fire in both arms (retail 11213, port 9075 buffers).
+- Result (retailb vs portb): song = 635 retail vs 640 port AI buffers, equal within 1%, so the sequencer runs on the
+  audio clock. Buffers per "VI": retail 1.912 (nominal 22048/192/59.94 = 1.916), port 1.866 over the flight and 1.788
+  in the song. Port s4245 setnext in flight (phase 7): 114.9 buf/s = 22055 Hz wall, nominal. So the port's audio was
+  right and its VI column was ~3% fast.
+- rs64_vi_n_g counts update_screen. The [phase] rows give 61.9-63.3 update_screen per wall second. The G1E timeline
+  (ROGUESQ_G1E_TL, portc) shows 9050 VI-thread edges against total_vis 29..8955 (59.999/s), with 123 edges repeating
+  the previous total_vis. Each repeat is followed 0.00-0.01 ms later by arg+1, i.e. two loop passes at one instant.
+ORIGIN: the writer is ultramodern vi_thread_func. Its deadline `start + (total_vis * 1000000us) / 60` truncates to
+whole us, up to 0.67 us before the true boundary. When sleep_until(next - 2ms) wakes early, the s6456 spin exits inside
+that window, and `floor(now * 60) + 1` returns the previous total_vis. The loop then runs again with no sleep, enqueuing
+an extra ScreenUpdateAction and an extra VI retrace message (remaining_retraces--). The value is not legitimate: it is a
+VI that hardware never delivers.
+Fix (lib/N64ModernRuntime events.cpp, patch exported): the deadline rounds up to the exact ns boundary, plus a guard
+that total_vis always advances. ROGUESQ_VI_TRUNC_DEADLINE=1 restores the old deadline.
+Two arms, same recipe (portc control on the old binary, portd fix; tools/g3_vi_edges.py):
+- repeats 123 -> 0
+- VI edges 60.828 -> 59.999/s
+- AI buf/VI 1.866 -> 1.914 (retail 1.912)
+- song 343 -> 334 VI (retail 332), 640 -> 639 buffers
+- song end tick 2316 -> 2312 (retail 2302-2303)
+The residual tick gap is pacing: retail mupen drops frames (2.115 VI/tick in the song), while the port holds 2.000.
+With dt pinned, retail therefore runs fewer ticks per audio second. In normal play dt is measured, so sim time per
+audio time agrees. Swap rate is 32.4 -> 32.1/s whole run (1-VI swap intervals 956 -> 863, mostly outside the mission
+loop: in flight the port is exactly 2.000 VI/tick). Not chased.
+Rules out: H-pi and H-clock for the lvl4 event (the trigger is song end, measured in audio buffers); a slow port audio
+clock (wall 22055 Hz).
+Supersedes: the port "VI" figures in s6749 (update_screen 61-62/s, now explained) and s6752-s6754. Those counted
+update_screen, including the 1.4% repeated VIs.
+Does NOT establish: why the game swaps at 1-VI intervals outside flight (863 per run); any audible effect of the old
+extra VIs.

@@ -10,27 +10,21 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 
 ## Headline
 
-- **s6754 G3: mission 4, dt pinned, port sim = retail for 2301 ticks (~77 s of flight); frames H-match.** 7575 NPC
-  rows (4 NPCs) and 2152 rand calls (caller, value, tick) identical through tick 2301. At tick 2302 retail fires a
-  scripted event (initActorMotionParams + dispatchDatSubtypeByRandomIndex burst, camera object 0x80138D20 re-linked to
-  0x803623AC, NPC 803663D0 reactivated); the port fires the identical event (same camera values) at tick 2317. The
-  15-tick lag follows neither tick count, elapsed VI (retail 5166 VI, port 4633) nor any measured-time snapshot word:
-  an async-completion trigger (audio/dialogue, PI streaming or an unpinned clock), single-source. Framebuffers: 19/19
-  retail dumps (vi 6511-10831) match a port window capture at d 1.3-9 vs median 10-21 (worst = capture phase offset).
+- **s6755 G3: lvl4 event trigger = song end (audio clock); FIXED a duplicate-VI defect.** The tick-2302 event is
+  mask bit 0x100 of 0x8010C9E0, posted by tickSongFadeTimer (0x800EE85C) when isSongHandleActive(*0x8010C0E0) turns 0.
+  The cue starts at tick 2145 in both arms and lasts 635 (retail) vs 639-640 (port) AI buffers: same audio length.
+  The VI thread (ultramodern events.cpp) truncated its deadline to whole us, so a spin exit inside the 0.67 us window
+  re-emitted the same total_vis: an extra ScreenUpdate + VI retrace message (123 per 8927 VIs, 60.83/s). Deadline now
+  rounds up to the exact ns (ROGUESQ_VI_TRUNC_DEADLINE=1 = old). Same recipe: repeats 123->0, 59.999/s, AI buf/VI
+  1.866->1.914 (retail 1.912), song 343->334 VI (retail 332). The rest of the tick gap is pacing: retail drops frames
+  (2.115 VI/tick), the port never does (2.000). tools/g3_ai_clock.py, g3_vi_edges.py, g3_tick_mem.py. s6754 (dt
+  pinned): sim identical to retail for 2301 ticks, frames H-match.
 - s6753 lvl3: dt pinned (oracle RS64_XTRACE_POKE / port ROGUESQ_XTRACE_POKE=800FA730:29:30:3d088889, needs
   ROGUESQ_RAND_TRACE open) makes the sim exact for 283 ticks; lvl3 desync CLOSED as frame pacing (retail 3-VI drops).
 - **s6748 G3: mission 2 (Barkhesh) flight + bolts = H-match vs retail angrylion** (40 frames d 6.5-15 vs median 36-47,
   monotonic; bolts 24.8% vs 26.5%). tools/g3_eep_patch.py selects a mission on the checksummed save (two copies, adler32
   at +0/+4; selected mission +0x31). No impacts in window (lvl2 impacts not covered).
-- **s6746 G3: lvl1 flight with scripted fire = H-match vs retail angrylion.** `a` is throttle; B/Z fire. With B/Z alternating
-  every 0.5 s, all 73 complete retail frames match at d 4.2-7.6 vs median 15-22, monotonic, 2.2% timing. Bolts cannot
-  be paired frame by frame (few-frame lifetime vs capture phase), so tools/g3_effect_count.py counts bolt-red pixels per
-  arm: frames with bolts retail 34.7% vs port 33.3%, no-fire controls 0%/0%, hue (219,27,21) vs (218,42,33).
-- **s6747 G3: lvl1 ground explosions/impacts = H-match by population.** 160 retail dumps 0.25 s apart (rs64_oracle
-  MAX_FB_DUMPS 96->192) + two port fire runs; g3_effect_count.py --class orange --mask (radar/engine excluded): frames with
-  >=4 orange px retail fire 10.7%/13.3% vs port 14.4%/19.8%, no-fire 4.0%/2.0%; >=15 px 2-4% vs 4.1-4.6%; mean colour
-  (219-221,116-121,57-76) vs (218-219,114-119,72-73). Top frames are small orange impact puffs in both arms; no large
-  fireball in either 40 s window. Autopilot gained "<s>:w<width>" phase gates (one port run missed the crawl skip).
+- s6746/s6747 G3: lvl1 bolts and impact puffs H-match by population (tools/g3_effect_count.py; PORTING-STATE).
 - **s6744 G3: first lvl1 flight frames with HUD = H-match vs retail angrylion** (vi 7116-7926 d 4.4-5.8 vs same-run
   median 17-21, monotonic, 13.5 s retail = 13.3 s port; HUD, craft, wingmen, enemies, dunes identical,
   scratch/s6744/sheet_early_best.png). A Start during the port crawl skips it (flight at 69.5 s, not 156 s). The
@@ -303,6 +297,10 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   "Migrated from CURRENT-TRUTH (s6721)"; tables in docs/G1-OBJECTIVE-RESPONSE.md.
 
 ## Superseded conclusions — do not act on these
+- **(s6749/s6752-s6754 -> s6755)** "port runs a flat 2.00 VI per frame" / "port update_screen 61-62/s" and the
+  s6754 elapsed-VI figures: the port VI column (rs64_vi_n_g) counts update_screen, and the VI thread re-emitted 1.4%
+  of VIs, so port "VI" counts were ~1.4% high before the s6755 deadline fix. Believable because update_screen is
+  driven once per VI loop pass, so it looked like a VI count. Relative tick comparisons stand.
 
 - **s6740 "the 255/248 decoder-convention idea is refuted; the 2.5% gain is 512-flight-only"** -> superseded s6744. Believable
   because the cinematic logo/snow frames showed gain ~1.00 with the same decoder; but those are textures (5-bit on both
@@ -500,8 +498,8 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
    61-62/s vs retail 60 VI/s. s6750 mission 3 early flight H-match, then combat desync at the first player hit (RNG
    history is one term). s6751-s6752: rand identical for 12 frames; the NPC gate lag = variable dt (retail 3-VI frame drops, port flat
    2 VI); s6753 dt-pinned arms identical for 283 ticks = lvl3 desync CLOSED as pacing. s6754 mission 4 dt-pinned: sim exact 2301 ticks,
-   frames H-match; a scripted event fires 15 ticks later in the port. Next (g3-lvl4-event-trigger): name that event's
-   trigger condition and its timebase. G2/G5 are closed; G4 and aim/steer stay
+   frames H-match; s6755 the late event = song end on the audio clock; lvl4 CLOSED as pacing after fixing duplicate VI
+   edges (VI thread now exactly 60/s). Next (g3-mission5-pinned): mission 5 with the dt-pinned method. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index
