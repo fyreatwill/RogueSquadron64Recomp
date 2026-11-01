@@ -177438,4 +177438,7 @@ Next: same route with scripted fire presses in both (retail --press a/b/z, port 
 - Selects H-match for lvl1 impact effects: same rate class, same colour, same look. Rules out H-geom (no effects in port)
   and a gross H-rt64-fx blend/colour difference for impacts. Not covered: a large fireball (a destroyed vehicle), which
   needs a hit the unsteered craft does not land; a second biome. Two retail and two port runs, but one instrument.
-- Next: g3-second-biome-oracle-diff (second level, whole-frame match + bolt/orange population).
+- Discrimination: this selects H-match and refutes H-geom and H-sim for lvl1 impacts (the bolt-rate input control is
+  equal, and the impact rate and colour follow it); H-rt64-fx is refuted for impact puffs only, not for a large fireball.
+- Next discriminator: g3-second-biome-oracle-diff (second level, whole-frame match + bolt/orange population): a localized
+  high-d region selects H-biome-tex, a depth-rising whole-frame bias selects H-fog, non-monotonic matching selects H-desync.
