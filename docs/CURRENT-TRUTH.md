@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6734 (2026-11-01).
+Compact operational handoff, as of Session 6736 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -248,6 +248,8 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   "Migrated from CURRENT-TRUTH (s6721)"; tables in docs/G1-OBJECTIVE-RESPONSE.md.
 
 ## Superseded conclusions — do not act on these
+
+- s6735 "the load-frame right-edge vertical line is a stale presenter column from the full-width hangar present" (believable: it sat outside the horizontal line's extent and survived the follow-mode fix). s6736: it is source column cw-1 holding the game's clear colour, also visible in briefing/flight. The pre-load screen is the briefing fly-over, not the hangar.
 - s6729 "H-rt64-target: identical commands + identical TMEM, RT64's render target drops the draw" (SUPERSEDED s6730).
   Believable because the dpc_bridge rect2 log showed identical texrects on undrawn/drawn swaps; but that log runs before
   the s6158 region shift rewrites the stream. RT64's own RDP entry log ([rtrdp]) showed the rects arriving at x 896/960.
@@ -414,7 +416,7 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 1. **G1d close-out** (menu sweep done s6731, every screen at 4:3/16:9/21:9 on scratch/s6731/sheet_menus_owner.png,
    awaiting owner judgement). Abort fly-out region shift fixed s6733 (1-swap pause hold-off). (s6732: the mission-start
    dark frame with thin edge lines also occurs at 4:3 = the game's intro-mode swap of the new flight buffer during the
-   load, not G1d; s6734: the lines are RT64/present-path, NOT retail: the shown VI buffer 0x690000 is all-zero in RDRAM (FB_DUMP_MODE=0x80128C90 dump, same-run window captures show the lines) and the vertical line sits in the pillar bar where no VI scan reaches; follow-mode 3 presented the last-drawn hangar target 0x62B800 w=640 instead. s6735 FIXED the horizontal line: mode 3 now yields to the VI buffer when the drawn target is idle >=8 presents and the VI origin is not within 16 rows of it (ROGUESQ_VI_FOLLOW_STALE=N, =0 old); 3/3 ctl vs 0/2 fix, boot screens unchanged. The right-edge vertical line (x1278) persists in all arms: a stale presenter column left from the full-width hangar present, not follow-mode. Next = that clear, NEXT.md.) Open single-source (s6719): why a wider terrain footprint changes the
+   load, not G1d; s6734: the lines are RT64/present-path, NOT retail: the shown VI buffer 0x690000 is all-zero in RDRAM (FB_DUMP_MODE=0x80128C90 dump, same-run window captures show the lines) and the vertical line sits in the pillar bar where no VI scan reaches; follow-mode 3 presented the last-drawn hangar target 0x62B800 w=640 instead. s6735 FIXED the horizontal line: mode 3 now yields to the VI buffer when the drawn target is idle >=8 presents and the VI origin is not within 16 rows of it (ROGUESQ_VI_FOLLOW_STALE=N, =0 old); 3/3 ctl vs 0/2 fix, boot screens unchanged. s6736 FIXED the right-edge vertical line: it is NOT a stale presenter column but source column cw-1, which only the game's fill-mode sky clear reaches (no triangle/rect content ever covers it: [g1d-reach] max x1 = cw-1.00 exclusive, on briefing cw 640 and flight cw 512). It also showed as a 1 px sky-blue right edge in briefing and 4:3 flight. The s6726 edge trim now keys on content reach and carries across epochs (ROGUESQ_G1D_EDGE_CONTENT, =0 old): sky column 0/440 fix vs 293/430 ctl frames, load line 0/5 vs 2/5. Sheet scratch/s6736/sheet_edge_owner.png.) Open single-source (s6719): why a wider terrain footprint changes the
    LucasArts logo shape. Recipe: scratch/s6731/menus.sh <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>".
    Then G3 render fidelity.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See

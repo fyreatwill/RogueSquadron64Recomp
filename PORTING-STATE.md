@@ -177095,3 +177095,39 @@ line and refute it for the vertical x1278 line, which is unchanged in every arm.
 discriminator (NEXT.md): log the present content rect vs the bar/clear rects on the load swaps, to split H-clear / H-scale / H-src.
 Next: find the pillar/letterbox clear in RT64's present (rt64_present_queue / presenter shader rects) that misses the last
 column after a full-width -> 4:3 change.
+
+## Session 6736 (2026-11-01) — G3 right-edge sky column (mission-load vertical line, briefing and 4:3 flight) is the game's fill-mode clear in the one source column no content draw reaches; s6726 edge trim now keys on content reach (ROGUESQ_G1D_EDGE_CONTENT)
+
+NEXT.md hypotheses were H-clear / H-scale / H-src for the load-frame vertical line (window x 1277-1279). Check-the-boring-thing
+first on the existing s6735 captures refuted the "stale presenter column" premise: the same 3 px profile
+(36,47,53)/(108,141,158)/(144,188,211) and the same rows (470..879) sit at window x 1277-1279 in every pre-load frame, which
+is the pre-mission briefing fly-over (cw 640), not the hangar. Its rows grow upward as the terrain rises: source column 639 shows the
+sky colour wherever terrain is drawn. In 4:3 flight (cw 512, content x 85..1194) the last content column is the same
+light blue over ground. So: H-src (the presented source has a lit last column), not a presenter clear.
+Instrument (src/rsp/dpc_bridge.cpp rs64_g1d_pillar_scan, kept): `[g1d-reach]` per VI epoch and colour width: max scissor
+xh, max rect x1, max triangle x1. Run r1: the briefing epoch cw=640 max_sc_xh 640.00, rect 639.00, tri 639.00, and every flight
+epoch cw=512 512.00 / 511.00 / 511.00. x1 is exclusive for triangles and 1-2-cycle rects, so no content draw ever covers
+column cw-1. Only the fill-mode clear (inclusive x1 = cw-1) reaches it. The s6726 trim never fired there because it keys on the
+scissor (full width on these screens). The load frame is that column on the faded briefing target (the game's fade stops
+at cw-1 too). The rule also reset at every epoch change, and the load epoch draws nothing.
+Change: ROGUESQ_G1D_EDGE_CONTENT (default 1, =0 = s6726 scissor rule). The edge trim's column count now uses the max reach of
+content draws (triangles, texrects, 1-2-cycle fill rects; copy/fill-mode rects treated as inclusive; fill-mode fill
+rects excluded as the clear), clipped to the scissor. It keeps the last decision across an epoch change until the new
+epoch has 64 draws. RT64 still applies it only when the latched colour width equals the VI fbSize (unchanged
+rt64_vi_renderer.cpp). In practice it latched cols=1 at boot epoch 6 (cw 640, reach 639.00) and never changed. Every 640/512 screen in the
+route has reach cw-1.
+Runs (scratch/s6736/dense.sh, lvl1 forced route, 4:3, scorer scratch/s6736/edge.py; all reached flight, 0 crash lines):
+| arm | briefing/flight frames with sky edge column | dark load frames with the line |
+| r2 (instrument only = old rule) | 91/157 | 1 (w225_551, 207 rows) |
+| ctl / ctlb (EDGE_CONTENT=0) | 134/195, 159/235 | 0/1 (capture missed), 2/4 (w225_512/513, 205/206 rows) |
+| fix / fixb (default) | 0/196, 0/244 | 0/1, 0/4 (w225_518..w226_521) |
+Positive control: ctlb shows the load line in the same-recipe dense window that shows none in fixb. Second line of evidence:
+the reach table (no content draw reaches cw-1) agrees with the pixel data (the column holds the clear colour).
+Owner sheet: scratch/s6736/sheet_edge_owner.png (ctl | fix, right-edge crops: load frame, briefing, flight).
+ORIGIN: writer = the game's own fill-mode clear (sky colour), which reaches column cw-1 while every content draw stops at
+x = cw-1.00 exclusive. The value is legitimate retail RDRAM content that a CRT hides in overscan. The change is a display-only crop of that
+column (the s6726 mechanism), not a pixel edit. RDRAM and targets are untouched.
+Rules out: H-clear/H-scale (presenter rect rounding). The column is in the source. The s6735 "stale presenter column"
+reading is superseded.
+Verdict: H-src selected (source column cw-1 holds the clear colour, never content), H-clear and H-scale refuted. G3 load-frame
+edge lines are both closed (horizontal s6735, vertical s6736). Side effect: the 4:3 flight and briefing right-edge 1 px sky column is gone too.

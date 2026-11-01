@@ -5187,13 +5187,25 @@ static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
     static const bool on = [] { const char *v = std::getenv("ROGUESQ_G1D_DEBRIEF"); return !(v && *v == '0'); }();
     static int s_epoch = -1, s_lines = 0; static uint32_t s_draws = 0, s_out = 0, s_cw = 0, s_sx0 = 0, s_sx1 = 0xFFF;
     static uint32_t s_edraws = 0, s_ecw = 0, s_esx = 0;  // s6726 edge: draws, colour width, max scissor xh (10.2) this epoch
+    struct Reach { uint32_t cw, draws, sx; double rx1, tx1; };
+    static Reach s_reach[4] = {}; static int s_rlines = 0;
     static const bool edge_on = [] { const char *v = std::getenv("ROGUESQ_G1D_EDGE"); return !(v && *v == '0'); }();
+    // s6736 G3: the rule above keys on the scissor, but on the briefing fly-over (cw 640) and in flight (cw 512) the scissor
+    // is the full width while no triangle / texrect / 1-2-cycle rect ever covers the last column (max x1 = cw-1.00,
+    // exclusive): only the fill-mode clear reaches it, so a sky-coloured 1 px column shows at the right edge (and on the
+    // faded briefing target during the mission load). Key on the reach of content draws instead, and keep the last decision
+    // across a VI-mode epoch change until the new epoch has its own (the load epoch draws nothing).
+    // ROGUESQ_G1D_EDGE_CONTENT=0 = s6726 scissor rule.
+    static const bool edge_content = [] { const char *v = std::getenv("ROGUESQ_G1D_EDGE_CONTENT"); return !(v && *v == '0'); }();
+    static uint32_t s_cyc = 0; static double s_erx = 0.0;  // current cycle type; max content reach (exclusive px) this epoch
     if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
     const int ep = __atomic_load_n(&rs64_g1d_vi_epoch, __ATOMIC_RELAXED);
     if (ep != s_epoch) {
         if (s_lines < 200 && s_epoch >= 0) { s_lines++; fprintf(stderr, "[g1d-pillar] epoch=%d end draws=%u outside=%u crop=%d sw=%d\n", s_epoch, s_draws, s_out, rs64_g1d_pillar_crop, g_rs64_swap_n.load(std::memory_order_relaxed)); }
-        s_epoch = ep; s_draws = 0; s_out = 0; s_edraws = 0; s_ecw = 0; s_esx = 0;
-        __atomic_store_n(&rs64_g1d_edge_cols, 0, __ATOMIC_RELAXED);
+        // s6736: per-epoch, per-colour-width reach table (which columns any draw touches), for the right-edge column audit
+        for (auto &e : s_reach) { if (e.cw && e.draws && s_rlines < 400) { s_rlines++; fprintf(stderr, "[g1d-reach] epoch=%d cw=%u draws=%u max_sc_xh=%.2f max_rect_x1=%.2f max_tri_x1=%.2f sw=%d\n", s_epoch, e.cw, e.draws, e.sx / 4.0, e.rx1, e.tx1, g_rs64_swap_n.load(std::memory_order_relaxed)); } e = {}; }
+        s_epoch = ep; s_draws = 0; s_out = 0; s_edraws = 0; s_ecw = 0; s_esx = 0; s_erx = 0.0;
+        if (!edge_content) __atomic_store_n(&rs64_g1d_edge_cols, 0, __ATOMIC_RELAXED);
     }
     auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
     for (uint32_t a = lo & ~3u, step = 8; a + 8 <= hi; a += step) {
@@ -5201,6 +5213,7 @@ static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
         step = (op == 0x24 || op == 0x25) ? 16u : (op >= 0x08 && op <= 0x0F) ? 32u + ((op & 4) ? 64u : 0u) + ((op & 2) ? 64u : 0u) + ((op & 1) ? 16u : 0u) : 8u;
         if (op == 0x3F) { s_cw = ((w0 >> 19) & 3u) == 2u ? (w0 & 0x3FFu) + 1u : 0u; continue; }
         if (op == 0x2D) { s_sx0 = (w0 >> 12) & 0xFFFu; s_sx1 = (w1 >> 12) & 0xFFFu; continue; }
+        if (op == 0x2F) { s_cyc = (w0 >> 20) & 3u; continue; }
         double x0, x1;
         if (op == 0x24 || op == 0x25 || op == 0x36) { x0 = ((w1 >> 12) & 0xFFFu) / 4.0; x1 = ((w0 >> 12) & 0xFFFu) / 4.0; }
         else if (op >= 0x08 && op <= 0x0F) {
@@ -5213,8 +5226,21 @@ static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
             if (yl <= yh) continue;  // degenerate (zapped / empty)
         } else continue;
         if (s_cw != 0) {
-            if (s_cw != s_ecw) { s_ecw = s_cw; s_esx = 0; s_edraws = 0; }
+            Reach *r = nullptr;
+            for (auto &e : s_reach) if (e.cw == s_cw || e.cw == 0) { r = &e; break; }
+            if (r) {
+                if (!r->cw) r->cw = s_cw;
+                const double cx1 = std::min(x1, s_sx1 / 4.0);
+                r->draws++; r->sx = std::max(r->sx, s_sx1);
+                if (op >= 0x08 && op <= 0x0F) r->tx1 = std::max(r->tx1, cx1); else r->rx1 = std::max(r->rx1, cx1);
+            }
+            if (s_cw != s_ecw) { s_ecw = s_cw; s_esx = 0; s_edraws = 0; s_erx = 0.0; }
             s_edraws++; s_esx = std::max(s_esx, s_sx1);
+            const bool tri = op >= 0x08 && op <= 0x0F;
+            if (!(op == 0x36 && s_cyc == 3u)) {  // fill-mode fill rects are the clear, not content
+                const double reach = (!tri && s_cyc >= 2u) ? x1 + 1.0 : x1;  // copy/fill-mode rects are inclusive
+                s_erx = std::max(s_erx, std::min(reach, s_sx1 / 4.0));
+            }
         }
         if (s_cw <= 512u) continue;
         x0 = std::max(x0, s_sx0 / 4.0); x1 = std::min(x1, s_sx1 / 4.0);
@@ -5237,9 +5263,10 @@ static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
                              : (s_draws >= 64 && s_out == 0) ? 1 : 0;  // >= 64: no 1-submit flash at an epoch start (s6724: draws=1..3)
     s_latch_ep = crop ? ep : -1;
     if (edge_on && s_edraws >= 64 && s_ecw != 0) {
-        const int n = (int)s_ecw - (int)((s_esx + 3u) / 4u);  // xh is exclusive: columns >= ceil(xh) are never drawn
+        const int n = edge_content ? (int)s_ecw - (int)std::ceil(s_erx - 1e-6)  // columns >= ceil(reach) only ever see the clear
+                                   : (int)s_ecw - (int)((s_esx + 3u) / 4u);  // xh is exclusive: columns >= ceil(xh) are never drawn
         const int cols = (n >= 1 && n <= 4) ? n : 0;
-        if (cols != rs64_g1d_edge_cols && s_lines < 200) { s_lines++; fprintf(stderr, "[g1d-edge] epoch=%d cols %d->%d cw=%u scissor_xh=%.2f draws=%u sw=%d\n", ep, rs64_g1d_edge_cols, cols, s_ecw, s_esx / 4.0, s_edraws, g_rs64_swap_n.load(std::memory_order_relaxed)); }
+        if (cols != rs64_g1d_edge_cols && s_lines < 200) { s_lines++; fprintf(stderr, "[g1d-edge] epoch=%d cols %d->%d cw=%u scissor_xh=%.2f reach=%.2f draws=%u sw=%d\n", ep, rs64_g1d_edge_cols, cols, s_ecw, s_esx / 4.0, s_erx, s_edraws, g_rs64_swap_n.load(std::memory_order_relaxed)); }
         __atomic_store_n(&rs64_g1d_edge_cw, (int)s_ecw, __ATOMIC_RELAXED);
         __atomic_store_n(&rs64_g1d_edge_cols, cols, __ATOMIC_RELAXED);
     }
