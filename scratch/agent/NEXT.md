@@ -1,23 +1,23 @@
-# NEXT: G1e — qualify ROGUESQ_RDP_ASYNC=1 + ROGUESQ_RDP_NODRAIN=1 and measure game fps at dd4
+# NEXT: G1e — what binds lvl5 FPS60 dd4 at ~56 tasks/s once the Gfx thread is at 5.2 ms (ASYNC+NODRAIN)
 HYPOTHESIS-ID: g1e-gfx-overlap
 
-s6708: the task-end tail is State::fullSync's fb-pair render (1.7 ms CPU encode + 1.3 ms GPU wait). NODRAIN lets send_dl
-return without waiting: lvl5 FPS60 dd2 Gfx 8.88 -> 4.54 ms/task, 57.8 -> 59.9 tasks/s (same run, 3 arms), frames sane.
-Opt-in, single run.
+s6709: ASYNC+NODRAIN qualified (lvl1 dd1, lvl10 dd4, lvl5 dd4: 0 crash, 0 stall, frames sane). Same-run lvl5 dd4:
+Gfx 9.56 -> 5.16 ms/task, 51.6 -> 55.9 tasks/s, p10 30 -> 42; worker keeps up (pend_jobs 2.0). lvl10 dd4 already 59.5.
+The Gfx thread is now ~30% of a 16.7 ms frame, so the lvl5 dd4 shortfall is elsewhere.
 
 ## Hypotheses
-- H-free: no-drain is safe and the Gfx thread stops binding at dd4 too -> game fps at dd4 FPS60 rises from 44-50 (s6704)
-  toward 60, or the binder moves to the game thread (G1B sd_cpu / game-thread busy).
-- H-race: running the guest ahead of RT64 shows up as render defects (texture garbage, missing fb effects, stale frames)
-  or crashes: RT64 reads RDRAM textures / writes fb back while the guest changes it.
-- H-worker: at dd4 the worker itself (>16 ms fullSync+ranges per task) binds -> pend_jobs grows, update_screen drains long.
+- H-guest: the game thread's guest CPU per frame at dd4 (terrain cell build/submit, more objects) exceeds 16.7 ms in busy
+  seconds -> game-thread busy ms/frame ~ 16-20 in the dip seconds, low tasks/s seconds = high busy seconds.
+- H-wait: the game thread waits on something else (audio task / SP busy while the Gfx task still holds the RSP, msg queue
+  for dp_complete) -> busy is low but wall between frames is high; time sits in osRecvMesg blocks.
+- H-audio-rsp: audio RSP tasks queue behind gfx on the single SP thread -> aud task latency spikes in dip seconds.
 
-## Work unit
-1. Fold the queued soaks (SOAK-RESULTS: s6708_nodrain_lvl1_dd1, s6708_nodrain_lvl10_dd4): crash/stall verdict, [g1e-aq]
-   as=3 tasks/s + total ms, g1b tasks/s, fbd sheet per level (reuse the s6708 sheet snippet in PORTING-STATE s6708 / make
-   it a tool if used twice).
-2. One same-run run lvl5 dd4 FPS60, ASYNC_TOGGLE=10 + NODRAIN=2 (copy scratch/agent/s6708_nd.zsh, dd=4): per arm tasks/s,
-   Gfx ms/task, pend_jobs, update_screen drain wait (add a g1b field if missing, in the SAME build as any other field).
-   Game fps = distinct fb hashes/s if the G1B instrument gives it; otherwise tasks/s.
-3. If clean and faster at dd4: write the one-line opt-in command into docs/OWNER-OPT-INS.md (ROGUESQ_RDP_ASYNC=1
-   ROGUESQ_RDP_NODRAIN=1 with FPS60) and ask the owner to judge feel. Default stays off until the owner says.
+## Work unit (ONE build, ONE run)
+1. Add to the existing [g1b] line in lib/N64ModernRuntime/ultramodern/src/events.cpp (edit under lib/ -> run
+   ./submodule-patches/export.sh + commit): per second, game-thread busy ms (thread CPU time of the guest main/game thread
+   via thread_info or clock_gettime(CLOCK_THREAD_CPUTIME_ID) sampled at each gfx task submit), blocked-in-osRecvMesg ms
+   on the game thread, and audio task count + mean SP-queue wait. Positive control: busy + blocked ~= wall per second.
+2. Run `zsh scratch/agent/s6708_nd.zsh ndtog_dd4b 5 4` (same 3 arms). Correlate per second tasks/s against busy/blocked/audio
+   wait in the as=3 arm. The term that co-varies with the low seconds selects the hypothesis.
+3. Side check, same build, queue as a soak: hangar route + menus with ASYNC=1 NODRAIN=1 (fbd every 300 VI) for H-race in
+   fb-effect scenes the in-flight sheets did not cover.

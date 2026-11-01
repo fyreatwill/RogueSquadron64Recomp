@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6707 (2026-10-31).
+Compact operational handoff, as of Session 6709 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -62,7 +62,9 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   flush/submitFb/upload ~0; tools/g1e_fs.py, segments sum to total). **ROGUESQ_RDP_NODRAIN=1** (with ROGUESQ_RDP_ASYNC=1)
   skips the task-end drain so the next task's RSP overlaps it (present/sync submits still drain). Same-run lvl5 FPS60 dd2:
   Gfx ms/task 10.18 sync / 8.88 drained / 4.54 no-drain, tasks/s 50.1 / 57.8 / 59.9, frames sane
-  (docs/img/g1e_s6708_nodrain_sheet.png). Single run, opt-in; lvl1 dd1 + lvl10 dd4 soaks queued.
+  (docs/img/g1e_s6708_nodrain_sheet.png). **s6709 qualified** (ASYNC=1 NODRAIN=1, FPS60, 300 s): lvl1 dd1 / lvl10 dd4 / lvl5 dd4
+  0 crash, 0 stall, frames sane; lvl1/lvl10 59.5 tasks/s; same-run lvl5 dd4 Gfx 9.56 -> 5.16 ms, 51.6 -> 55.9 tasks/s (p10
+  30 -> 42), worker keeps up (pend_jobs 2.0). In OWNER-OPT-INS (default off). Remaining dd4 gap is not the Gfx thread.
 - **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
   ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
   lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
@@ -552,9 +554,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1e: qualify ROGUESQ_RDP_ASYNC=1 + RDP_NODRAIN=1 (s6709 next).** s6708 removed the 3.3 ms fullSync tail from the Gfx
-   thread (lvl5 dd2 at the 60 tasks/s cap). Fold the queued lvl1 dd1 / lvl10 dd4 soaks, then measure real game fps
-   (distinct frames/s) at dd4 where FPS60 fell to 44-50 (s6704) and check RDRAM-race symptoms. See NEXT.md.
+1. **G1e: what binds lvl5 FPS60 dd4 at ~56 tasks/s with NODRAIN (s6710 next).** s6709 qualified ASYNC+NODRAIN (clean on
+   3 levels, Gfx 5.2 ms/task). Split the per-frame game-thread time (guest CPU vs VI/event waits) at dd4 in one run; also
+   hangar/menu render check under NODRAIN before the owner relies on it. See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional

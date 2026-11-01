@@ -176229,3 +176229,28 @@ Queued: soak_queue/s6708_nodrain_lvl1_dd1.sh, s6708_nodrain_lvl10_dd4.sh (ASYNC=
 Verdict: selects H-fswait/encode (fb-pair render), refutes H-fsflush and H-fsupload; NODRAIN selects the overlap lever.
 Next discriminator: lvl5 dd4 same-run NODRAIN=2 (H-free vs H-worker vs H-race), see NEXT.md.
 ORIGIN: not a mitigation — a scheduling change; the cost's owner is RT64 State::fullSync's fb-pair render (named above).
+
+## Session 6709 (2026-10-31) — G1e: ROGUESQ_RDP_ASYNC+NODRAIN qualified on lvl1 dd1 / lvl10 dd4 / lvl5 dd4 (0 crash, 0 stall, frames sane); same-run lvl5 FPS60 dd4: Gfx 9.56 -> 5.16 ms/task, 51.6 -> 55.9 tasks/s, worker keeps up (pend_jobs 2.0) — the remaining dd4 gap is no longer the Gfx thread
+
+What ran:
+1. Folded the queued soaks (ASYNC=1 NODRAIN=1 constant, FPS60, STORE_DIAG=0, 300 s): s6708_nodrain_lvl1_dd1 and
+   s6708_nodrain_lvl10_dd4 both alive_at_end=1, 0 VI stalls, 0 crashlines. [g1e-aq] as=3 (t>=40): lvl1 dd1 2.87 ms/task,
+   59.6 tasks/s; lvl10 dd4 2.82 ms/task, 59.5 tasks/s; pend_jobs 2.0-2.1 (no backlog). Frames t>=250:
+   docs/img/g1e_s6709_lvl1_dd1_nodrain.png, g1e_s6709_lvl10_dd4_nodrain.png (terrain, craft, HUD). The lvl10 run's dark
+   w640 frames at t~90-140 are the pre-flight sequence: the no-NODRAIN s6699_o2_lvl10_dd4 control shows the same dark w640 run.
+2. Same-run 3-arm A/B lvl5 FPS60 dd4 (`zsh scratch/agent/s6708_nd.zsh ndtog_dd4 5 4`: ASYNC_TOGGLE=10 + NODRAIN=2), 301 s,
+   0 crash / 0 stall. Per arm (seconds t>=40 with one arm; g1b tasks joined to [g1e-aq] arm by second):
+   | arm | Gfx ms/task | rsp | drain | tasks/s | p10 | min | sd_cpu | update_screen wait |
+   | as=0 sync | 9.56 | 9.56 (sync_rt64 4.06) | 0 | 51.6 | 30 | 23 | 9.91 | 0.03 |
+   | as=2 async drained | 9.17 | 6.11 | 3.07 | 53.2 | 35 | 22 | 6.53 | 0.01 |
+   | as=3 async no-drain | 5.16 | 5.16 | 0 | 55.9 | 42 | 33 | 5.60 | 0.38 |
+   Render check (new tools/g1e_fbd_arms.py: fbd VI -> second via cumulative g1b vi, second -> arm via [g1e-aq]):
+   docs/img/g1e_s6709_dd4_nodrain_sheet.png, rows sync/drained/no-drain: no texture garbage, stale or torn frames in the
+   no-drain row; the faint horizontal line appears in the other rows too (pre-existing, s6708).
+3. tools/g1e_aq.py now accepts any arm id (as=3 raised KeyError before). docs/OWNER-OPT-INS.md: one-line command
+   FPS60 + DD4 + RDP_ASYNC + RDP_NODRAIN and a table row (owner to judge; default off).
+Verdict: H-free partly selected: no-drain is clean on three levels and raises dd4 fps (51.6 -> 55.9, dips p10 30 -> 42);
+H-worker refuted (pend_jobs flat 2.0, present drain wait only 0.38 ms); H-race not seen (single sheet per level, three
+levels; not covered: hangar/menus and fb-readback effects). With Gfx at 5.2 of 16.7 ms the lvl5 dd4 shortfall from 60 is
+elsewhere (game thread / guest CPU per frame at dd4) — unmeasured, next unit.
+ORIGIN: not a mitigation — qualification of an opt-in scheduling lever (s6708); no new machinery.

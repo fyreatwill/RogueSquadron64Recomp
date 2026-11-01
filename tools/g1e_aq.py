@@ -2,20 +2,20 @@
 rsp = send_dl entry -> drain entry (RSP + producer work), drain = wait for the worker at task end, wk = worker busy per task,
 wk_tail = worker busy after drain entry. H-endload: drain ~ wk_tail ~ large, wk - wk_tail small. H-worker: wk ~ total.
 H-producer: rsp(as=1) > rsp(as=0) - sync_rt64(as=0). s6707: as=2 = async + streamed deferred flushes
-(ROGUESQ_RDP_STREAM_KB / _TOGGLE). Usage: g1e_aq.py <run_dir>... [--tmin S]"""
+(ROGUESQ_RDP_STREAM_KB / _TOGGLE); as=3 = async no-drain (s6708 ROGUESQ_RDP_NODRAIN). Usage: g1e_aq.py <run_dir>... [--tmin S]"""
 import sys, os, re, statistics as st
 args = sys.argv[1:]; tmin = 140
 if "--tmin" in args: i = args.index("--tmin"); tmin = int(args[i + 1]); del args[i:i + 2]
 R = re.compile(r"^\[g1e-aq\] t=(\d+) as=(\d) n=(\d+) (.*)$")
 for d in args:
-    arms = {0: [], 1: [], 2: []}
+    arms = {}
     for ln in open(os.path.join(d, "run.log"), errors="replace"):
         m = R.match(ln)
         if m and int(m[1]) >= tmin:
             kv = dict(x.split("=") for x in m[4].split()); kv = {k: float(v) for k, v in kv.items()}; kv["n"] = int(m[3])
-            arms[int(m[2])].append(kv)
+            arms.setdefault(int(m[2]), []).append(kv)
     print(os.path.basename(d))
-    for a, rows in arms.items():
+    for a, rows in sorted(arms.items()):
         if not rows: continue
         N = sum(r["n"] for r in rows)
         w = lambda k: sum(r[k] * r["n"] for r in rows) / N
