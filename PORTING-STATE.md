@@ -176129,3 +176129,6 @@ Verdict: H-overlap partly selected. Async overlap is real but saves ~1.2 ms of t
 send_dl). H-dep was handled by construction (copy) and no corruption was seen. H-rt64-bound not yet discriminated: the worker may
 be busy for most of the task, or most RT64 work may land at task end (the fullSync after the RSP finishes), leaving nothing to
 overlap. Next: per-task RSP wall vs worker busy vs drain-wait split, in the same toggle run.
+Verdict wording: selects H-overlap (async windows -1.24 ms mean / -1.82 ms median per task, +5.6 tasks/s, same run). Refutes
+H-dep as a blocker for the copy design (no garbage or missing geometry in async frames). Next discriminator: per-task RSP wall vs
+worker busy vs drain wait (selects H-endload, H-worker or H-producer; scratch/agent/NEXT.md).
