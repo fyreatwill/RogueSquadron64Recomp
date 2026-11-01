@@ -1,24 +1,23 @@
-# NEXT: G1e — stream deferred RDP ranges to the async worker during the task
+# NEXT: G1e — split the fixed ~3.3 ms task-end RT64 cost (fullSync) in the async+stream arm
 HYPOTHESIS-ID: g1e-gfx-overlap
 
-s6706 ([g1e-aq], lvl5 FPS60 dd2 toggle): async worker busy 4.2 ms/task, of which 3.5 ms is the LAST job (~120 kB) = the
-defer layer's final commit at rs64_dpc_defer_end (main.cpp:6658), which only exists after the ucode exits. Mid-task, only
-ring-lap wrap flushes (dpc_bridge.cpp ~5241, s4273) release ranges, one 8-byte range per submit call (~9.5k calls/task).
-Producer side costs ~0.9 ms (copy 0.35 + mutex/merge).
+s6707: streaming the deferred RDP list every 16 kB (ROGUESQ_RDP_STREAM_KB, on whenever ROGUESQ_RDP_ASYNC=1) worked mechanically
+(last job 150 -> 7.7 kB, RT64 calls 8.9k -> 0.6k/task, 0 drop-after-stream) but the worker's last job still takes 3.29 ms and
+drain 3.33 ms. The tail is a FIXED cost triggered by the final range (the task's FULL_SYNC -> RT64 State::fullSync), not parsing.
 
-## Hypotheses
-- H-stream: feeding the deferred list to the worker every ~16 kB while the RSP runs moves most of the 3.5 ms tail into the RSP
-  phase. Expect wk_tail < 1 ms, drain < 1 ms, total down ~2.5 ms vs as=0 in the same run.
-- H-dep-late: bytes in the ring are rewritten after bump but before the periodic flush (s4272 latewrite says 0 diffs at commit
-  time, so unlikely); render check catches it (fbd frames both arms).
-- H-producer-bound: the extra flushes add mutex/copy cost that cancels the gain (copy column grows past ~1.5 ms).
+## Hypotheses (State::fullSync segments, rt64_state.cpp:1881; S4267 phase names in rt64_render_context.cpp:170)
+- H-fsflush: State::flush / submitFramebufferPair (fsFlush, fsSubmitFb) dominate -> CPU-side draw-call building; could run
+  incrementally (submit fb pairs as they close mid-task) now that the worker sees the stream.
+- H-fsupload/render: fsUpload / fsRender / fsRspPipe dominate -> GPU command encoding + uploads; move to the present thread or
+  overlap with the next task (only the dp_complete ordering needs the drain).
+- H-fswait: a wait (texwait/fbwait/ddwait/pipeline) dominates -> the worker blocks on the GPU / prior workload; pipelining
+  (don't wait for the workload) is the lever.
 
-## Work unit (ONE build, ONE run)
-1. dpc_bridge.cpp defer path (~6429): when rs64_rdp_async_on and deferred bytes since the last flush >= ROGUESQ_RDP_STREAM_KB
-   (default 16, 0 = off), submit the pending deferred ranges merged (same code as defer_end's merge loop; factor it into a
-   helper) and clear them + the s4272 shadow entries already consumed. Keep sync mode byte-identical.
-   Also consider merging contiguous ranges in the wrap flush (it submits unmerged).
-2. `zsh scratch/agent/s6706_aq.zsh astog 5 2` with a new tag (copy to s6707_stream.zsh), fold `python3 tools/g1e_aq.py <dir>`
-   and `env AS=1 python3 tools/g1e_gfxbusy.py <dir>`; contact sheet of fbd frames from both arms.
-3. If total drops >=2 ms with sane frames: qualify lvl1/5/10 dd2 FPS60 300 s (queue as soaks), then offer ROGUESQ_RDP_ASYNC in
-   docs/OWNER-OPT-INS.md.
+## Work unit (no rebuild needed)
+1. Copy scratch/agent/s6707_stream.zsh to s6708_fs.zsh; XENV_EXTRA: ROGUESQ_RDP_ASYNC=1 (constant, drop both toggles),
+   add ROGUESQ_S4267=1. Plus a second arm ROGUESQ_RDP_ASYNC=0 with S4267=1 (sequential runs, compare per-task segment ms only,
+   not frame rates — segment costs are per-call, not scene-phase sensitive at t>=140 averages; label cross-run).
+2. Fold [s4267] lines: per second, segment sum / fullSync n => ms per fullSync for fsFlush..fsAdvance; positive control =
+   segments sum ~= fullSync total (phase 4) and fullSync ms ~= last_ms 3.3 from [g1e-aq].
+3. Whichever segment owns >=2 ms selects the lever; implement it in the same session if bounded (patches under lib/rt64 ->
+   ./submodule-patches/export.sh + commit).

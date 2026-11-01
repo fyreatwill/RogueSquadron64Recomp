@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6704 (2026-10-31).
+Compact operational handoff, as of Session 6707 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -54,6 +54,11 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   s6706 split (same recipe, [g1e-aq], tools/g1e_aq.py): H-endload. The defer layer releases a task's RDP ranges only at ring laps
   (unmerged, ~9.5k calls) and at ucode exit; that final ~120 kB commit is 3.4-3.5 of the worker's 4.2 ms and cannot overlap the
   RSP. Producer copy/mutex adds ~0.9 ms. Net same-run gain 0.7 ms/task (s6705 measured 1.2).
+  **s6707 refines H-endload: the tail is a fixed ~3.3 ms, not bytes.** Streaming the deferred list every 16 kB
+  (ROGUESQ_RDP_STREAM_KB, default 16 with async; same-run ROGUESQ_RDP_STREAM_TOGGLE) shrank the last job 150 -> 7.7 kB and
+  RT64 calls 8.9k -> 0.6k per task, but last-job time stayed 3.26 -> 3.29 ms and drain 3.28 -> 3.33 ms (total 9.36 vs 9.13,
+  noise). So ~3.3 ms is spent in what the final range triggers (fullSync: flush/submitFramebufferPair/workload), not in
+  parsing. Next: time fullSync segments (ROGUESQ_S4267=1 phases 4/8/9/10..18) in the async arm.
 - **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
   ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
   lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
@@ -543,9 +548,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1e: stream deferred RDP ranges to the async worker mid-task (s6707 next).** s6706 selected H-endload: the final
-   deferred commit (~120 kB, ~3.5 ms RT64) only starts after the RSP exits. With ROGUESQ_RDP_ASYNC on, flush the defer list
-   every ~16 kB (the wrap-flush path, merged), then measure wk_tail/drain in the same toggle run. See NEXT.md.
+1. **G1e: where does the fixed ~3.3 ms task-end RT64 cost go (s6708 next).** s6707: streaming moved the bytes but not
+   the tail; the cost sits in the final range's fullSync. Split it with the existing S4267 phase timers (no rebuild) in the
+   async+stream arm, then make that segment cheaper or asynchronous. See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional

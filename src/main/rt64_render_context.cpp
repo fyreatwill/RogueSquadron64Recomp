@@ -1229,9 +1229,16 @@ namespace ultramodern {
         static double t_copy = 0, t_sync = 0; static uint64_t t_bytes = 0, t_jobs = 0, t_calls = 0;
         struct AqAcc { uint64_t n = 0; double rsp = 0, drain = 0, wk = 0, wk_tail = 0, copy = 0, sync = 0, bytes = 0, jobs = 0, calls = 0,
                        pend_jobs = 0, last_kb = 0, last_ms = 0, max_ms = 0, total = 0; };
-        static AqAcc aq[2]; static int aq_sec = -1;
+        static AqAcc aq[3]; static int aq_sec = -1;
+        // s6707 G1e: as=2 = async task whose deferred RDP ranges the bridge streams to the worker every ROGUESQ_RDP_STREAM_KB
+        // (default 16, 0 = off) while the RSP runs, instead of one commit after it exits. ROGUESQ_RDP_STREAM_TOGGLE=1 streams
+        // only every other async window (same-run as=1 vs as=2). Latched per task at entry.
+        static const uint32_t stream_bytes = [] { const char *e = std::getenv("ROGUESQ_RDP_STREAM_KB"); return (e ? (uint32_t)strtoul(e, nullptr, 0) : 16u) * 1024u; }();
+        static const bool stream_toggle = [] { const char *e = std::getenv("ROGUESQ_RDP_STREAM_TOGGLE"); return e && *e && *e != '0'; }();
+        static int last_async = 0; static uint64_t async_windows = 0;
+        static uint32_t task_stream = 0; // bytes per streamed flush for the current task, 0 = commit at task end
         static void aq_print(int sec) {
-            for (int a = 0; a < 2; ++a) {
+            for (int a = 0; a < 3; ++a) {
                 AqAcc &x = aq[a]; if (!x.n) continue; const double n = (double)x.n;
                 std::fprintf(stderr, "[g1e-aq] t=%d as=%d n=%llu total=%.2f rsp=%.2f drain=%.2f wk=%.2f wk_tail=%.2f copy=%.3f sync_rt64=%.2f "
                     "kB=%.1f jobs=%.1f calls=%.1f pend_jobs=%.2f last_kB=%.2f last_ms=%.2f max_job_ms=%.2f\n", sec, a, (unsigned long long)x.n,
@@ -1299,8 +1306,13 @@ namespace ultramodern {
     void rs64_rdpq_drain() { rdpq::drain(); }
     void rs64_rdpq_task_enter() {
         using namespace rdpq;
+        if (in_task == 0) {
+            if (rs64_rdp_async_on && !last_async) ++async_windows;
+            last_async = rs64_rdp_async_on;
+            task_stream = (rs64_rdp_async_on && stream_bytes && (!stream_toggle || (async_windows & 1) == 0)) ? stream_bytes : 0;
+        }
         if (in_task++ == 0 && aq_on) {
-            task_t0 = aclk::now(); task_mode = rs64_rdp_async_on ? 1 : 0; t_copy = t_sync = 0; t_bytes = t_jobs = t_calls = 0;
+            task_t0 = aclk::now(); task_mode = rs64_rdp_async_on ? (task_stream ? 2 : 1) : 0; t_copy = t_sync = 0; t_bytes = t_jobs = t_calls = 0;
             wk_busy_ns = 0; wk_max_ns = 0; wk_last_ns = 0; wk_last_bytes = 0;
         }
     }
@@ -1327,6 +1339,7 @@ namespace ultramodern {
         rdpq::drain(); if (rdpq::task_async) { rdpq::task_async = false; RT64::g_s4280_n = 0; } }
 }
 extern "C" int rs64_rdpq_task_async() { return ultramodern::rdpq::task_async ? 1 : 0; }
+extern "C" uint32_t rs64_rdpq_task_stream() { return ultramodern::rdpq::in_task ? ultramodern::rdpq::task_stream : 0; }
 namespace ultramodern {
 
     static void run_rdp_submission(RT64::Application* app, uint32_t lo_phys, uint32_t hi_phys) {

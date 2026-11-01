@@ -37,6 +37,7 @@ static std::vector<S4272Sh> g_s4272_sh;
 namespace RT64 { class Application; }
 extern "C" RT64::Application* rs64_get_rt64_app();
 extern "C" int rs64_rdpq_task_async(); // s6705 rt64_render_context.cpp
+extern "C" uint32_t rs64_rdpq_task_stream(); // s6707: bytes per streamed flush for this task, 0 = commit at task end
 namespace ultramodern {
     void submit_rdp_range(uint32_t lo_phys, uint32_t hi_phys);
 }
@@ -5169,6 +5170,34 @@ namespace {
     }
 }
 
+// The ucode bumps DPC_END one 8-byte command at a time, so a task's deferred list is mostly runs of contiguous ranges;
+// submit each run as one range (byte-for-byte identical content and order, far fewer RT64 entries). Used by the
+// task-end commit and by the s6707 streamed flush.
+static uint32_t g_defer_stream_pending = 0, g_defer_stream_task_flushes = 0;
+static uint64_t g_defer_stream_flushes = 0, g_defer_stream_bytes = 0;
+static void submit_deferred_merged(uint32_t &bytes, size_t &calls) {
+    if (g_deferred_ranges.empty()) return;
+    uint32_t lo = g_deferred_ranges[0].first;
+    uint32_t hi = g_deferred_ranges[0].second;
+    for (size_t i = 1; i <= g_deferred_ranges.size(); i++) {
+        if (i < g_deferred_ranges.size() && g_deferred_ranges[i].first == hi) {
+            hi = g_deferred_ranges[i].second;
+            continue;
+        }
+        if (!should_drop_wrap_rdp(lo, hi)) {
+            rs64_e9prov_mark_submitted(lo, hi);
+            bytes += hi - lo;
+            calls++;
+            rs64_dpc_record_submit(lo, hi);
+            ultramodern::submit_rdp_range(lo, hi);
+        }
+        if (i < g_deferred_ranges.size()) {
+            lo = g_deferred_ranges[i].first;
+            hi = g_deferred_ranges[i].second;
+        }
+    }
+}
+
 void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     if (end <= start) {
         return;
@@ -6436,6 +6465,20 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
                 g_s4272_shadow.insert(g_s4272_shadow.end(), rdram + submit_lo, rdram + submit_hi);
             }
         }
+        // s6707 G1e: in a streaming async task, hand the pending ranges to the RT64 worker every stream_bytes so it runs
+        // while the RSP does, instead of one ~120 kB commit after the ucode exits (s6706 H-endload). Same risk class as the
+        // s4273 wrap flush: bytes already flushed cannot be dropped if the task later ends on UnhandledJumpTarget.
+        if (const uint32_t sb = rs64_rdpq_task_stream()) {
+            g_defer_stream_pending += submit_hi - submit_lo;
+            if (g_defer_stream_pending >= sb) {
+                uint32_t bytes = 0; size_t calls = 0;
+                submit_deferred_merged(bytes, calls);
+                g_deferred_ranges.clear(); g_s4272_sh.clear(); g_s4272_shadow.clear();
+                g_defer_stream_pending = 0; ++g_defer_stream_flushes;
+                g_defer_stream_task_flushes++;
+                g_defer_stream_bytes += bytes;
+            }
+        }
         return;
     }
 
@@ -6450,6 +6493,7 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
 
 extern "C" void rs64_dpc_defer_begin() {
     g_defer_active = true;
+    g_defer_stream_pending = 0; g_defer_stream_task_flushes = 0;
     g_deferred_ranges.clear();
     g_s4272_sh.clear(); g_s4272_shadow.clear();
     s_task_first_lo = 0;
@@ -6500,33 +6544,7 @@ extern "C" void rs64_dpc_defer_end(int commit) {
         uint32_t bytes = 0;
         size_t calls = 0;
         if (merge_enabled && !g_deferred_ranges.empty()) {
-            uint32_t lo = g_deferred_ranges[0].first;
-            uint32_t hi = g_deferred_ranges[0].second;
-            for (size_t i = 1; i < g_deferred_ranges.size(); i++) {
-                const auto &r = g_deferred_ranges[i];
-                if (r.first == hi) {
-                    hi = r.second;
-                    continue;
-                }
-
-                if (!should_drop_wrap_rdp(lo, hi)) {
-                    rs64_e9prov_mark_submitted(lo, hi);
-                    bytes += hi - lo;
-                    calls++;
-                    rs64_dpc_record_submit(lo, hi);
-                    ultramodern::submit_rdp_range(lo, hi);
-                }
-                lo = r.first;
-                hi = r.second;
-            }
-
-            if (!should_drop_wrap_rdp(lo, hi)) {
-                rs64_e9prov_mark_submitted(lo, hi);
-                bytes += hi - lo;
-                calls++;
-                rs64_dpc_record_submit(lo, hi);
-                ultramodern::submit_rdp_range(lo, hi);
-            }
+            submit_deferred_merged(bytes, calls);
         }
         else {
             for (const auto& r : g_deferred_ranges) {
@@ -6608,7 +6626,12 @@ extern "C" void rs64_dpc_defer_end(int commit) {
             fprintf(stderr, "[defer-commit #%d] %zu ranges, %u bytes\n",
                     s_c, g_deferred_ranges.size(), bytes);
         }
-    } else if (!g_deferred_ranges.empty()) {
+    } else if (!g_deferred_ranges.empty() || g_defer_stream_task_flushes) {
+        if (g_defer_stream_task_flushes) {   // s6707: the task failed after streamed flushes already reached RT64
+            static unsigned long n = 0;
+            if (++n <= 16 || (n & 63) == 0)
+                fprintf(stderr, "[g1e-stream] drop-after-stream #%lu flushes=%u pending_ranges=%zu\n", n, g_defer_stream_task_flushes, g_deferred_ranges.size());
+        }
         uint32_t bytes = 0;
         for (const auto& r : g_deferred_ranges) bytes += r.second - r.first;
         static int s_n = 0;
@@ -6617,6 +6640,12 @@ extern "C" void rs64_dpc_defer_end(int commit) {
                     s_n, g_deferred_ranges.size(), bytes);
             fflush(stderr);
         }
+    }
+    if (g_defer_stream_task_flushes) {   // s6707 positive control: streamed flushes must fire in as=2 tasks
+        static unsigned long st = 0;
+        if (++st <= 4 || (st % 2000) == 0)
+            fprintf(stderr, "[g1e-stream] tasks=%lu flushes=%llu bytes=%llu last_task_flushes=%u\n", st,
+                    (unsigned long long)g_defer_stream_flushes, (unsigned long long)g_defer_stream_bytes, g_defer_stream_task_flushes);
     }
     s_c4284_laps = 0; s_c4284_maxseen = 0;
     g_deferred_ranges.clear();

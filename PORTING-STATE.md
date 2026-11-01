@@ -176157,3 +176157,30 @@ s6705's -1.2 ms reproduces as -0.7 ms here (cross-run, same recipe; treat the as
 Next lever: stream the deferred ranges to the worker during the task (flush every ~16 kB when async is on, the same path the
 wrap flush already takes mid-task), so the last-lap 120 kB is processed while the RSP still runs. Risk class is the same as the
 existing wrap flush (garbage streams after UnhandledJumpTarget are no longer droppable for already-flushed bytes).
+
+## Session 6707 (2026-10-31) — G1e: streaming deferred RDP ranges to the async worker works (last job 150 -> 7.7 kB) but the ~3.3 ms task-end tail is unchanged: it is a fixed fullSync cost, not bytes
+Engineering change: src/rsp/dpc_bridge.cpp — the defer layer's merge loop is factored into submit_deferred_merged() (task-end
+commit unchanged byte-for-byte), and in a streaming task the defer path flushes the pending ranges merged once >= stream bytes
+accumulate (clearing ranges + s4272 shadow, like the s4273 wrap flush). src/main/rt64_render_context.cpp `rdpq` latches the
+decision per task at send_dl entry: ROGUESQ_RDP_STREAM_KB (default 16 when ROGUESQ_RDP_ASYNC is on, 0 = off), and
+ROGUESQ_RDP_STREAM_TOGGLE=1 streams only on every other async window, giving three arms in one run; [g1e-aq] gains as=2
+(async+stream). Counters: [g1e-stream] tasks/flushes/bytes (positive control) and drop-after-stream (a task ending on
+UnhandledJumpTarget after it already streamed bytes). Default behaviour unchanged (async still default OFF). tools/g1e_aq.py folds as=2.
+Run (scratch/agent/s6707_stream.zsh astog 5 2: lvl5 FPS60 dd2 STORE_DIAG=0, 10 s async toggle + stream toggle, 300 s hold):
+alive, 0 crashlines, 0 VI stalls, 0 defer-drop, 0 drop-after-stream. [g1e-stream] 13 flushes / 214 kB in the first tasks.
+[g1e-aq] t>=140 (as=0 4260 tasks, as=1 2164, as=2 2289):
+  as=0 sync:          total 9.49, sync RT64 4.18 ms
+  as=1 async:         total 9.36, rsp 6.08, drain 3.28, wk 3.84, wk_tail 3.27, copy 0.29, calls 8913, last job 149.7 kB / 3.26 ms
+  as=2 async+stream:  total 9.13, rsp 5.80, drain 3.33, wk 4.32, wk_tail 3.32, copy 0.08, calls 610, last job 7.7 kB / 3.29 ms
+t>=40: as=1 8.27 / last 131.5 kB 3.13 ms; as=2 8.57 / last 7.7 kB 3.15 ms. [g1b] AS split (as=1 pools stream and non-stream):
+as=0 49.5 tasks/s sd 10.75 ms, as=1 55.5 / 9.66. Render: docs/img/g1e_s6707_stream_sheet.png, last 16 fbd frames (spanning all
+three arms): terrain, craft, HUD sane; one thin dashed line at fb_0012600 (bolt-like, single frame; not attributed to an arm).
+Verdict: the streaming instrument passed its control (bytes moved: last job 20x smaller, calls 15x fewer, copy 0.29 -> 0.08 ms)
+yet last-job time and drain did not move (3.26 -> 3.29 ms). So s6706's "H-endload = the 120 kB of bytes" is refuted as stated:
+the tail is a fixed ~3.3 ms cost that the task's final range triggers (FULL_SYNC -> RT64 State::fullSync: flush,
+submitFramebufferPair, workload upload/render), independent of how many bytes it carries. Streaming itself is neutral
+(total -0.23 ms at t>=140, +0.30 at t>=40: noise) and the 15x fewer RT64 entries cost nothing measurable. Kept as the
+async default because it is harmless and puts the remaining cost in one place. Two lines: [g1e-aq] last_ms (worker clock) and
+drain (Gfx-thread clock) agree.
+Next: split State::fullSync with the existing S4267 segment timers (fsFlush/fsSubmitFb/fsUpload/fsRender/... ) in the async
+arm, no rebuild (NEXT.md).
