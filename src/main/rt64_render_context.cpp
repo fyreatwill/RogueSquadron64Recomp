@@ -23,6 +23,21 @@
 // processDisplayLists(isHLE=false). Set on construction, cleared on shutdown.
 static std::atomic<RT64::Application*> g_rt64_app{nullptr};
 // s6705 G1e async RDP consumer (see ultramodern::rdpq below); flipped on the Gfx thread by ROGUESQ_RDP_ASYNC_TOGGLE.
+// s6751: ROGUESQ_RAND_TRACE=<path> logs every guest rand() call (0x80003430) from the ROGUESQ_DEBUG_WRITE poke on:
+// call index, update_screen #, caller jal address, seed before the call (plus marker rows: site = probe PC, value). Hooked by tools/fixup_rand_trace.py; mirrors
+// rs64_oracle --exec-trace so the two arms' call sequences can be aligned offline.
+extern "C" volatile int g_rs64_rand_trace;
+extern "C" volatile uint32_t rs64_vi_n_g;
+extern "C" uint32_t rs64_rand_site;
+uint32_t rs64_rand_site = 0; // jal address of the current rand call site (s6751 fixup)
+volatile int g_rs64_rand_trace = 0;
+static FILE* s_rand_trace_f = nullptr;
+extern "C" void rs64_rand_trace(uint32_t ra, uint32_t seed) {
+    static long n = 0;
+    if (!s_rand_trace_f || n >= 400000) return;
+    fprintf(s_rand_trace_f, "%ld %u %08x %08x\n", n++, rs64_vi_n_g, ra, seed);
+    fflush(s_rand_trace_f); // runs end in SIGKILL
+}
 extern "C" int rs64_rdp_async_on;
 int rs64_rdp_async_on = [] { const char *e = std::getenv("ROGUESQ_RDP_ASYNC"); return (e && *e && *e != '0') ? 1 : 0; }();
 namespace RT64 { extern volatile int g_s4280_n; } // rt64_rdp.cpp s4280 cimg events
@@ -1056,6 +1071,10 @@ public:
                             a >= 0x80000000u && a + 4 <= rs64_ram_top && (a & 3) == 0) {
                             *reinterpret_cast<uint32_t*>(app->core.RDRAM + (a - 0x80000000u)) = v;
                             s_dw_done = true;
+                            if (const char* rt = std::getenv("ROGUESQ_RAND_TRACE")) {
+                                s_rand_trace_f = fopen(rt, "w");
+                                g_rs64_rand_trace = s_rand_trace_f != nullptr;
+                            }
                             fprintf(stderr, "[debug-write] update_screen #%d t=%.1f width=%u addr=0x%08X value=0x%08X\n",
                                     s_n, el, w, a, v);
                         }

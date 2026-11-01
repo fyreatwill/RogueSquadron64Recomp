@@ -255,3 +255,9 @@ questions. For what the microcode is supposed to emit, read
 `--debug-write VADDR:VALUE[:WIDTH[:ARM_S]]` writes one guest word on the first VI at WIDTH (default 320) at or after
 ARM_S wall seconds. The port mirrors it with `ROGUESQ_DEBUG_WRITE=VADDR:VALUE:WIDTH:ARM_S` (fires on the VI width
 change), so both arms can be put into the same state, e.g. rngSeed `80003470:1:512:85` at the mission flight switch (s6750).
+
+`--exec-trace PC[:MAX[:PEEK]]` prints one compact `[xtrace] n vi ra peek pc= v0= a3=` row per execution of PC from
+the `--debug-write` poke on (from boot without one), past `--hit-cap`; `--exec-trace-also PC` (repeatable, max 8) adds
+probe PCs to the same row stream. The port mirrors it with `ROGUESQ_RAND_TRACE=<file>` (rand 0x80003430 call sites via
+tools/fixup_rand_trace.py, plus the advanceNpcOnCurvedPath probes 0x8006BEC8/$a3 and 0x8006C018/$v0); align the two
+with `tools/g3_rand_align.py RETAIL_LOG PORT_TXT` (s6751).

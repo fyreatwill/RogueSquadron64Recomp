@@ -177536,3 +177536,28 @@ Next: same route with scripted fire presses in both (retail --press a/b/z, port 
   update_screen # and the returned value from the flight switch, vs retail rngSeed rows with --ordinal-join source_value.
   First differing index names the term: extra port calls during load -> H-port-rand-count; same sequence but hit differs ->
   H-time/H-sim.
+
+## Session 6751 (2026-11-01) — G3: lvl3 rand call sequences match retail for 12 game frames; the desync is an NPC gate (transformVec3ToNpcLocalWithScale) flipping one game frame later in the port, not the RNG
+- Instruments (new): rs64_oracle `--exec-trace PC[:MAX[:PEEK]]` + `--exec-trace-also PC` (compact `[xtrace]` rows: index,
+  VI, $ra, peek, pc, v0, a3; from the --debug-write poke on, past --hit-cap). Port `ROGUESQ_RAND_TRACE=<file>` (opened
+  when ROGUESQ_DEBUG_WRITE fires; src/main/rt64_render_context.cpp) fed by tools/fixup_rand_trace.py (wired into
+  fixup_game_funcs_vendored.py): rand_recomp entry hook + a host global rs64_rand_site stored before each of the 365
+  `jal 0x80003430` sites (recompiled calls leave ctx->r31 = 0, first port run showed ra=0), plus probes at
+  advanceNpcOnCurvedPath entry (0x8006BEC8, $a3) and its gate result (0x8006C018, $v0). tools/g3_rand_align.py aligns.
+- Runs (lvl3 save scratch/s6750/lvl3.eep, rngSeed=1 poke at the 640->512 switch both arms): port scratch/s6751/port
+  (first port attempt used the 4-press default autopilot and never left the hangar; rerun with the s6748 10-press
+  schedule), port2 (with probes); retail scratch/s6751/retail, retail2 (probes). Pokes fired at retail vi 5949, port
+  update_screen #4709/#4686. First rand call 271 VIs after the poke in retail vs 25 in port (H-load black lead-in, s6749).
+- Result (positive control = the matching prefix itself, both runs of each arm): calls 0-75 identical in caller and
+  value (seed column matches through every compared row) and calls per frame [30,4,4,4,4,4,4,4,5,4,4,5] in both arms.
+  At call 76 retail calls rand from jal 0x8006C0FC (advanceNpcOnCurvedPath, the line-of-sight recheck behind countdown
+  +0x1C and the 3-per-frame budget 0x8013A520/0x8013A524 vs frame counter 0x8013889C); the port makes that call one game
+  frame later. Per-frame NPC table (8 NPCs, same order both arms): the 0x8001DC34 gate flips for ..fc90 1->0 and ..2700
+  0->1 at retail frame f+25 but port f+23 = one frame later; ..fbb0 1->0 likewise one frame later. The countdown gate is
+  only decremented when that gate passes, so the rand call shifts with it.
+- Discrimination: refutes H-port-rand-count (no extra/missing port rand calls before the split) and RNG as the
+  mechanism of this desync; selects a world-state lag of one game frame on whatever transformVec3ToNpcLocalWithScale
+  tests (NPC path point vs advanceNpcOnCurvedPath's $a1 object). The frame step is clock-based: frame tick 0x800AF35C
+  (bumps 0x8013889C) calls timeSnapshotFiller 0x8000BC00 = awaitFrameSyncMesgBlock + osGetTime + readBufferSwapState +
+  three float ratios (static read, single-source). H-time-dt vs H-sim vs H-start remain; next: g3-lvl3-frame-lag.
+- Saves: owner save restored by g3_port_capture.sh trap on all three port runs; mupen .eep restored by trap (eep-restored).

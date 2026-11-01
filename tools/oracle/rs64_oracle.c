@@ -2721,6 +2721,12 @@ static unsigned g_debug_write_addr, g_debug_write_value;
 static unsigned g_debug_write_width = 320; /* s6750: optional :WIDTH[:ARM_S] fields */
 static double g_debug_write_arm_s;
 static int g_debug_write_done;
+/* s6751: --exec-trace PC[:MAX[:PEEK]] arms an exec watch on PC and prints one compact row per execution
+ * (call index, VI, $ra, word at PEEK) from the --debug-write poke on (from boot if none), bypassing --hit-cap.
+ * Mirrors the port's ROGUESQ_RAND_TRACE so the two arms' call sequences can be aligned. */
+static unsigned g_xtrace_pc, g_xtrace_peek, g_xtrace_extra[8];
+static int g_xtrace_nextra;
+static long g_xtrace_max = 200000, g_xtrace_n;
 
 static double now_s(void)
 {
@@ -2876,6 +2882,28 @@ static void dbg_update(unsigned int pc)
 
     pDebugBreakpointTriggeredBy(&flags, &accessed);
     access_flags = flags & (M64P_BKP_FLAG_READ | M64P_BKP_FLAG_WRITE);
+    if (g_xtrace_pc && (flags & M64P_BKP_FLAG_EXEC) && pc != g_xtrace_pc) {
+        int k;
+        for (k = 0; k < g_xtrace_nextra; k++)
+            if (pc == g_xtrace_extra[k]) {
+                if ((!g_debug_write_enabled || g_debug_write_done) && g_xtrace_n < g_xtrace_max)
+                    printf("[xtrace] %ld %ld %08x %08x pc=%08x v0=%08x a3=%08x\n", g_xtrace_n++, g_vis, gpr32(31),
+                           0u, pc, gpr32(2), gpr32(7));
+                pDebugSetRunState(M64P_DBG_RUNSTATE_RUNNING);
+                pDebugStep();
+                return;
+            }
+    }
+    if (g_xtrace_pc && (flags & M64P_BKP_FLAG_EXEC) && pc == g_xtrace_pc) {
+        if ((!g_debug_write_enabled || g_debug_write_done) && g_xtrace_n < g_xtrace_max) {
+            printf("[xtrace] %ld %ld %08x %08x pc=%08x v0=%08x a3=%08x\n", g_xtrace_n++, g_vis, gpr32(31),
+                   g_xtrace_peek ? pDebugMemRead32(debug_rdram_addr(g_xtrace_peek)) : 0u, pc, gpr32(2), gpr32(7));
+            if ((g_xtrace_n & 255) == 0) fflush(stdout);
+        }
+        pDebugSetRunState(M64P_DBG_RUNSTATE_RUNNING);
+        pDebugStep();
+        return;
+    }
     g_event_ordinal++;
 
     if ((access_flags & M64P_BKP_FLAG_WRITE) && pc_phase_log_match()) {
@@ -3742,6 +3770,8 @@ static void usage(void)
         "  --vi-poll             poll VI width/origin through the core API outside callbacks\n"
         "  --status-poll         poll the 18 status-table words through the core API\n"
         "  --pif-trace           log pad-1 buttons as the GAME reads them from PIF RAM\n"
+        "  --exec-trace PC[:MAX[:PEEK]]  one compact [xtrace] row (index, VI, $ra, word at PEEK, pc, v0, a3) per execution of PC\n"
+        "  --exec-trace-also PC          extra PC traced in the same row stream (needs --exec-trace; repeatable, max 8)\n"
         "  --debug-write VADDR:VALUE[:WIDTH[:ARM_S]]  write one 32-bit word on the first VI at WIDTH (default 320)\n"
         "                             at or after ARM_S seconds\n"
         "  --state-path PATH     savestate path used by ORACLE_STATE_SMOKE/REACH=1\n"
@@ -3988,6 +4018,24 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--fb-arm-after") && i + 1 < argc) g_fbd_arm_after = atof(argv[++i]);
         else if (!strcmp(argv[i], "--status-poll"))                g_status_poll = 1;
         else if (!strcmp(argv[i], "--pif-trace"))                  g_pif_trace = 1;
+        else if (!strcmp(argv[i], "--exec-trace") && i + 1 < argc) {
+            char pcs[16];
+            if (sscanf(argv[++i], "%x:%ld:%x", &g_xtrace_pc, &g_xtrace_max, &g_xtrace_peek) < 1) {
+                fprintf(stderr, "[oracle] bad --exec-trace '%s'\n", argv[i]);
+                return 2;
+            }
+            snprintf(pcs, sizeof pcs, "0x%08x", g_xtrace_pc);
+            add_pc_watches(pcs);
+        }
+        else if (!strcmp(argv[i], "--exec-trace-also") && i + 1 < argc) {
+            char pcs[16];
+            if (g_xtrace_nextra >= 8 || sscanf(argv[++i], "%x", &g_xtrace_extra[g_xtrace_nextra]) != 1) {
+                fprintf(stderr, "[oracle] bad --exec-trace-also '%s'\n", argv[i]);
+                return 2;
+            }
+            snprintf(pcs, sizeof pcs, "0x%08x", g_xtrace_extra[g_xtrace_nextra++]);
+            add_pc_watches(pcs);
+        }
         else if (!strcmp(argv[i], "--debug-write") && i + 1 < argc) {
             unsigned addr, value;
             if (sscanf(argv[++i], "%x:%x:%u:%lf", &addr, &value, &g_debug_write_width, &g_debug_write_arm_s) < 2) {

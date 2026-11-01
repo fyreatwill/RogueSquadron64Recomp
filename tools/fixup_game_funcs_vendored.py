@@ -42336,5 +42336,8 @@ else:
 import subprocess as _sp5668
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_label_realign.py")), str(base)])
 
+# s6751 G3: rand() entry trace hook (ROGUESQ_RAND_TRACE); diagnostic, off unless the trace file is open.
+_sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_rand_trace.py")), str(base)])
+
 # s6132 G1d: parameterise the 8 MB pointer-range guards (RS64_RAM_TOP). Must run after every other patch (they emit the literal).
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_ramtop.py")), str(base)])

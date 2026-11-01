@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+"""s6751 G3: entry hook on rand_recomp (0x80003430) for ROGUESQ_RAND_TRACE (src/main/rt64_render_context.cpp).
+Logs the caller's jal address and the seed before the call; off (one predicted branch) unless the trace file is
+open. Recompiled calls do not set $ra, so every `rand_recomp(rdram, ctx);` call site first stores its jal address in
+the host global rs64_rand_site (no guest state touched). Idempotent. Usage: fixup_rand_trace.py <RecompiledFuncs dir>"""
+import pathlib, re, sys
+
+base = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "../N64Recomp/RecompiledFuncs")
+TAG = "/* PATCH: s6751 rand trace */"
+entry = "RECOMP_FUNC void rand_recomp(uint8_t* rdram, recomp_context* ctx) {\n    uint64_t hi = 0, lo = 0, result = 0;\n    int c1cs = 0;\n"
+hook = ("    if (__builtin_expect(g_rs64_rand_trace, 0)) rs64_rand_trace(rs64_rand_site, U32(MEM_W(0X3470, S32(0X8000 << 16)))); "
+        + TAG + "\n")
+decl = ("extern volatile int g_rs64_rand_trace; extern uint32_t rs64_rand_site; extern void rs64_rand_trace(uint32_t ra, uint32_t seed); " + TAG + "\n")
+hits = [p for p in sorted(base.glob("funcs_*.c")) if entry in p.read_text()]
+if len(hits) != 1:
+    sys.exit(f"s6751 rand trace: rand_recomp entry found in {len(hits)} files (expected 1)")
+p = hits[0]
+s = p.read_text()
+if TAG not in s:
+    s = s.replace(entry, entry + hook, 1)
+    if decl not in s:
+        s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + decl, 1)
+    if s.count(TAG) != 2:
+        sys.exit("s6751 rand trace: hook insertion failed")
+    p.write_text(s)
+    print(f"[s6751] rand trace hook added to {p.name}")
+SITE_TAG = "/* PATCH: s6751 rand site */"
+jal = re.compile(r"\s*// 0x([0-9A-F]{8}): jal\s+0x80003430\s*$")
+sites = files = 0
+for p in sorted(base.glob("funcs_*.c")):
+    lines = p.read_text().splitlines(True)
+    if not any(l.strip() == "rand_recomp(rdram, ctx);" for l in lines):
+        continue
+    out, changed = [], False
+    for i, l in enumerate(lines):
+        if l.strip() == "rand_recomp(rdram, ctx);" and (not out or SITE_TAG not in out[-1]):
+            for j in range(i - 1, max(i - 40, 0), -1):
+                m = jal.match(lines[j])
+                if m:
+                    break
+            else:
+                sys.exit(f"s6751 rand site: no jal comment before {p.name}:{i + 1}")
+            ind = l[:len(l) - len(l.lstrip())]
+            out.append(f"{ind}rs64_rand_site = 0x{m.group(1)}u; {SITE_TAG}\n")
+            sites += 1
+            changed = True
+        out.append(l)
+    s = "".join(out)
+    if decl not in s:
+        s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + decl, 1)
+        changed = True
+    if changed:
+        p.write_text(s)
+        files += 1
+print(f"[s6751] rand site stores added: {sites} sites in {files} files")
+
+# advanceNpcOnCurvedPath (0x8006BEC8): its rand at 0x8006C0FC is the first call to diverge (s6751). Log its entry
+# ($a3 = NPC record whose +0x1C countdown gates the call) and the 0x8001DC34 gate result ($v0 at 0x8006C018; 0 skips
+# the countdown decrement) into the same stream, keyed by those PCs.
+NPC_TAG = "/* PATCH: s6751 npc path trace */"
+fentry = "RECOMP_FUNC void advanceNpcOnCurvedPath(uint8_t* rdram, recomp_context* ctx) {\n    uint64_t hi = 0, lo = 0, result = 0;\n    int c1cs = 0;\n"
+gate = "    // 0x8006C018: andi        $v0, $v0, 0xFF\n"
+hits = [p for p in sorted(base.glob("funcs_*.c")) if fentry in p.read_text()]
+if len(hits) != 1:
+    sys.exit(f"s6751 npc trace: advanceNpcOnCurvedPath entry in {len(hits)} files")
+p = hits[0]
+s = p.read_text()
+if NPC_TAG not in s:
+    if s.count(gate) != 1:
+        sys.exit(f"s6751 npc trace: gate anchor count {s.count(gate)}")
+    s = s.replace(fentry, fentry + "    if (__builtin_expect(g_rs64_rand_trace, 0)) rs64_rand_trace(0x8006BEC8u, U32(ctx->r7)); "
+                  + NPC_TAG + "\n", 1)
+    s = s.replace(gate, "    if (__builtin_expect(g_rs64_rand_trace, 0)) rs64_rand_trace(0x8006C018u, U32(ctx->r2)); "
+                  + NPC_TAG + "\n" + gate, 1)
+    if decl not in s:
+        s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + decl, 1)
+    p.write_text(s)
+    print(f"[s6751] npc path trace added to {p.name}")
