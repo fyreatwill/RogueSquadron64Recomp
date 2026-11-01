@@ -177063,3 +177063,32 @@ Rules out: the game/RDP drawing the lines; G1d machinery (s6732).
 Summary: this selects H-rt64 and refutes H-rdram. Next: gate follow-mode 3 so a VI pointing at an unrelated, never-drawn
 buffer presents that buffer (black) instead of the stale last-drawn target, without breaking the 1024-phase case
 (VI 0x790400 w=1024 vs drawn 0x790000 w=512, which mode 3 exists for).
+
+## Session 6735 (2026-11-01) — G3 load-frame horizontal edge line fixed: follow-mode 3 yields to the VI buffer when the last-drawn target is stale and elsewhere (ROGUESQ_VI_FOLLOW_STALE); the right-edge vertical line is a separate presenter stale column
+
+What changed (lib/rt64, exported to submodule-patches/rt64.patch): the renderer bumps a new g_rs64_last_drawn_gen on every
+last-drawn store; follow-mode 3 (rt64_present_queue.cpp) no longer substitutes the last-drawn target when (a) no draw for
+ROGUESQ_VI_FOLLOW_STALE=N presents (default 8; =0 = old always-override) and (b) the VI origin is not within 16 rows of the
+drawn target. Then the stock path presents the VI's own target or its RDRAM. ROGUESQ_VI_FOLLOW_STALE_NOFB=1 also requires
+fbManager to have no target at viAddr (the s6735 fix/fix2 variant). ROGUESQ_LOG_VI_STALE=1 = per-(vi,drawn)-pair diagnostic.
+Dead end on the way: NEXT.md's "VI outside the drawn target's whole span" never fired at the load (run fix43). A 640x480x2
+target at 0x62B800 spans to 0x6C1800, so it contains VI 0x690000; the narrowed 16-row window still covers the 1024 phase
+(+0x400) and the boot -0x400 case (0x78FC00 vs 0x790000).
+Runs (scratch/s6735/dense.sh = s6734 recipe + boot captures t<=80; all reached mission_verified_130s; scorer
+scratch/s6732/dark.py, boot scorer scratch/s6735/boot.py):
+| arm | rule | horizontal line (1107 px, x86..1192 y736) | vertical line (x1278) |
+| ctl43 / ctl2 | STALE=0 | present 2/2 (3 / 3 frames) | present |
+| fix2 | 16-row + NOFB | absent | present |
+| fix3 | 16-row (landed default) | absent | present |
+(fix43 used the whole-span rule, which never fired, so the arm is void; it is not counted.) The s6734 control (same recipe) also showed the horizontal line: 3/3 ctl vs 0/2 fix.
+Boot (positive check that other screens are unchanged): per-capture luminance for t<=80 matches between fix2/fix3 and ctl2
+(black frames 36/37 vs 38, the same attribution/logo/intro/title plateaus). The rule fires only at transitions (attract
+buffer swaps 0x695C00/0x66A000, attribution->1024 0x78FC00 vs stale 0x62B800, ~20 presents each) and at the load.
+Vertical line: the hangar is presented edge to edge (window column W-2 bright in every hangar capture). In the load frames
+only that column stays lit (408 rows) while the rest is black, in both arms. So the presenter leaves one stale right-edge
+column from the earlier full-width present when the content rect shrinks to 4:3. single-source, not yet traced in code.
+ORIGIN: the line pixels come from our own follow-mode 3 substitution (s6734 dump: the VI buffer is all-zero); the change
+removes the substitution in that state rather than masking pixels.
+Rules out: the horizontal line as game/RDP output (it went away with only a present-target change).
+Next: find the pillar/letterbox clear in RT64's present (rt64_present_queue / presenter shader rects) that misses the last
+column after a full-width -> 4:3 change.

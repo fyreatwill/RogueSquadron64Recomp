@@ -1,16 +1,14 @@
-# NEXT: G3 -- fix the mission-start load-frame edge lines (follow-mode 3 presents a stale target)
-HYPOTHESIS-ID: g3-intro-swap-edge-lines
+# NEXT: G3 -- the mission-load right-edge vertical line (stale presenter column after a full-width -> 4:3 change)
+HYPOTHESIS-ID: g3-load-edge-column
 
-s6734: during the hangar->mission load the VI shows 0x80690000 (fresh 512x448 flight buffer, all-zero in RDRAM), but
-follow-mode 3 (lib/rt64/src/hle/rt64_present_queue.cpp ~L319) presents the last-drawn target 0x62B800 w=640 (faded
-hangar) -> thin light edge lines for ~1 s. Retail would show black.
-Change (one build, env-gated so both arms run on one binary): in mode 3, if viAddr is NOT within the last-drawn target's
-span [drawn, drawn + drawnW*h*bpp) and fbManager.find(viAddr)==nullptr (VI buffer never drawn), do not override: let the
-RDRAM path present VI's buffer. Knob ROGUESQ_VI_FOLLOW_STALE=1 (new rule, default) / =0 (old). Must keep the 1024 phase
-(VI origin 0x790400 inside drawn 0x790000 span) and every title/hangar/flight screen unchanged.
-Arms: scratch/s6734/dense.sh fix43 none "ROGUESQ_LIVES_CAP=1" and ctl43 with ROGUESQ_VI_FOLLOW_STALE=0, run back to back.
-Measure: scratch/s6732/dark.py on both capture dirs (fix: dark load frame with bright 0; ctl: the 205/1107-px lines),
-plus a 1024-phase / title / hangar / flight window check (captures t=236.. in the recipe cover hangar+load+flight; also
-check a boot capture of the attract 1024 phase). lib/ edit -> ./submodule-patches/export.sh + commit same iteration.
-Outcomes: fix dark+clean & screens unchanged -> land; lines persist -> the substitution comes from another path (pe gate
-forceAdv in rt64_state.cpp ~L3824), trace that; any screen goes black -> rule too broad, narrow by drawnChg/age.
+s6735 fixed the horizontal load line (follow-mode 3 stale target, ROGUESQ_VI_FOLLOW_STALE). The vertical line remains in
+every arm: window x=1278 (W-2), y 410..818, during the ~1 s dark load. In hangar captures the window is drawn edge to edge
+(column W-2 lit); in the load frames only that column stays lit while everything else is black.
+Hypotheses: H-clear (RT64's presenter clears/draws the pillar bars with a rect that stops 1-2 px short of the right edge,
+so the old hangar pixels survive there); H-scale (the 4:3 content rect is computed with rounding that leaves the last
+column untouched by both the content and the bar fill); H-src (the presented source texture has a lit last column).
+Discriminator, one build: in the present path log the swapchain size, the content rect (x0,x1) and the clear/bar rects on
+the load swaps; plus scratch/s6735/dense.sh with captures. H-src would show the column inside the content rect (it is
+outside: content x 86..1192), so expect H-clear/H-scale. Fix = clear the whole swapchain before drawing the content rect
+(or extend the bar rect to W). Arms: fix vs knob-off on one binary; scorer scratch/s6732/dark.py (vertical 205 px -> 0)
+plus boot scorer scratch/s6735/boot.py. lib/ edit -> export.sh + commit.

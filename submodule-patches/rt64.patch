@@ -3260,7 +3260,7 @@ index dccaa87..bbdc5cf 100644
                  dl++;
              }
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index f17db9b..82790a4 100644
+index f17db9b..7555e40 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
 @@ -4,11 +4,13 @@
@@ -3277,7 +3277,7 @@ index f17db9b..82790a4 100644
  #include "rhi/rt64_render_hooks.h"
  
  #include "rt64_workload_queue.h"
-@@ -16,8 +18,27 @@
+@@ -16,8 +18,29 @@
  namespace RT64 {
      // PresentQueue
  
@@ -3289,6 +3289,8 @@ index f17db9b..82790a4 100644
 +    std::atomic<uint32_t> g_rs64_last_drawn_fb{0};
 +    std::atomic<uint32_t> g_rs64_last_drawn_fb_width{0};
 +    std::atomic<uint32_t> g_rs64_last_drawn_fb_siz{0};
++    // s6735: bumped on every last-drawn store; mode 3 counts presents with no new draw.
++    std::atomic<uint32_t> g_rs64_last_drawn_gen{0};
 +
      PresentQueue::PresentQueue() {
          reset();
@@ -3305,7 +3307,7 @@ index f17db9b..82790a4 100644
      }
  
      PresentQueue::~PresentQueue() {
-@@ -107,6 +128,21 @@ namespace RT64 {
+@@ -107,6 +130,21 @@ namespace RT64 {
          // Frame-advance for pipeline counters.
          g_pipe_frame_idx.fetch_add(1, std::memory_order_relaxed);
  
@@ -3327,7 +3329,7 @@ index f17db9b..82790a4 100644
          FramebufferManager &fbManager = ext.sharedResources->framebufferManager;
          RenderTargetManager &targetManager = ext.sharedResources->renderTargetManager;
          const bool usingMSAA = (targetManager.multisampling.sampleCount > 1);
-@@ -160,9 +196,49 @@ namespace RT64 {
+@@ -160,9 +198,49 @@ namespace RT64 {
          const bool pqVisibleGate = present.screenVI.visible() ||
                                     (s_pq_force && present.screenVI.fbAddress() != 0 && present.screenVI.fbSiz() != 0);
          if (pqVisibleGate) {
@@ -3378,7 +3380,7 @@ index f17db9b..82790a4 100644
              }
  
              // VI_FOLLOW_DRAW (2026-05-13, ported from reverted commit e718774).
-@@ -183,9 +259,18 @@ namespace RT64 {
+@@ -183,9 +261,18 @@ namespace RT64 {
              //                                of VI/recent-set (diagnostic).
              //   ROGUESQ_VI_FOLLOW_DRAW=N modes:
              //     0       — disabled. Original VI lookup only.
@@ -3398,7 +3400,7 @@ index f17db9b..82790a4 100644
              if (!viewRDRAM) {
                  static const uint32_t s_force_fb = []() {
                      const char *e = std::getenv("ROGUESQ_VI_FORCE_FB");
-@@ -194,15 +279,27 @@ namespace RT64 {
+@@ -194,15 +281,27 @@ namespace RT64 {
                  }();
                  static const int s_follow_mode = []() {
                      const char *e = std::getenv("ROGUESQ_VI_FOLLOW_DRAW");
@@ -3428,7 +3430,7 @@ index f17db9b..82790a4 100644
                      if (forceFb != nullptr) {
                          viFb = forceFb;
                          overrideUsed = true;
-@@ -216,7 +313,96 @@ namespace RT64 {
+@@ -216,7 +315,139 @@ namespace RT64 {
                          }
                      }
                  }
@@ -3456,7 +3458,50 @@ index f17db9b..82790a4 100644
 +                            std::fflush(stderr);
 +                        }
 +                    }
-+                    else if (drawn != 0) {
++                    else if (drawn != 0 && [&]{
++                        // s6735 G3: during the hangar->mission load the VI already shows the fresh, never-drawn
++                        // flight buffer (0x690000, black in RDRAM) while the last-drawn target is the stale faded
++                        // hangar 0x62B800; presenting the latter showed ~1 s of thin edge lines (s6734). Retail
++                        // shows the VI's buffer. Keep mode 3 unless ALL hold: VI origin not at the drawn target
++                        // (the 1024 phase has VI 0x790400 at drawn 0x790000), no draw for N presents (the
++                        // attribution phase draws 0x62B800 every frame). The VI's own target (or RDRAM) is presented
++                        // then. ROGUESQ_VI_FOLLOW_STALE_NOFB=1 also requires fbManager to have no target at viAddr.
++                        // ROGUESQ_VI_FOLLOW_STALE=N (default 8 presents), =0 restores the old always-override.
++                        static const uint32_t s_stale_n = []{ const char *e = std::getenv("ROGUESQ_VI_FOLLOW_STALE"); return e ? (uint32_t)std::atoi(e) : 8u; }();
++                        static uint32_t s_gen_seen = 0, s_gen_same = 0;
++                        const uint32_t gen = g_rs64_last_drawn_gen.load(std::memory_order_relaxed);
++                        if (gen != s_gen_seen) { s_gen_seen = gen; s_gen_same = 0; } else if (s_gen_same < 0xFFFFu) { ++s_gen_same; }
++                        // "Same buffer" = VI origin within 16 rows of the drawn target (1024 phase: +0x400; s6735
++                        // boot: -0x400). A whole-target span is too wide: 0x62B800 w=640 x480 covers 0x690000.
++                        const uint32_t bpp = (drawnSiz == G_IM_SIZ_32b) ? 4u : 2u;
++                        const uint32_t v = viAddr & 0x00FFFFFFu, d = drawn & 0x00FFFFFFu, rows16 = drawnW * bpp * 16u;
++                        const bool inSpan = (v + rows16 >= d && v < d + rows16);
++                        static const bool s_stale_log = []{ const char *e = std::getenv("ROGUESQ_LOG_VI_STALE"); return e && *e && *e != '0'; }();
++                        if (s_stale_log && !inSpan) {
++                            // Diagnostic: first 40 presents of each distinct (vi, drawn) pair.
++                            static uint64_t s_pairs[32]; static uint32_t s_pairn[32]; static int s_np = 0;
++                            const uint64_t key = (uint64_t(v) << 32) | d; int i = 0;
++                            while (i < s_np && s_pairs[i] != key) ++i;
++                            if (i == s_np && s_np < 32) { s_pairs[s_np] = key; s_pairn[s_np] = 0; ++s_np; }
++                            if (i < 32 && ++s_pairn[i] <= 40) {
++                                Framebuffer *vf = fbManager.find(viAddr);
++                                std::fprintf(stderr, "[vi-stale-diag] vi=0x%06X drawn=0x%06X w=%u idle=%u gen=%u vifb=%s vifbW=%u n=%u\n",
++                                    v, d, drawnW, s_gen_same, gen, vf ? "Y" : "N", vf ? vf->width : 0u, s_pairn[i]);
++                            }
++                        }
++                        if (s_stale_n == 0 || s_gen_same < s_stale_n) return true;
++                        if (inSpan) return true;
++                        static const bool s_need_nofb = []{ const char *e = std::getenv("ROGUESQ_VI_FOLLOW_STALE_NOFB"); return e && *e == '1'; }();
++                        if (s_need_nofb && fbManager.find(viAddr) != nullptr) return true;
++                        static std::atomic<uint64_t> ns{0};
++                        const uint64_t c = ++ns;
++                        if (c <= 40 || (c % 120) == 0) {
++                            std::fprintf(stderr, "[vi-follow-stale] #%llu viAddr=0x%08X undrawn, last drawn 0x%08X w=%u idle %u presents -> present VI buffer\n",
++                                (unsigned long long)c, viAddr, drawn, drawnW, s_gen_same);
++                            std::fflush(stderr);
++                        }
++                        return false;
++                    }()) {
 +                        Framebuffer *drawnFb = fbManager.find(drawn);
 +                        // Session 21: 1024-phase draws land in a GPU target at
 +                        // 0x790000 (SETCIMG w=512) but performDiscards / the
@@ -3526,7 +3571,7 @@ index f17db9b..82790a4 100644
                      !ext.sharedResources->colorImageAddressVector.empty())
                  {
                      const auto &vec = ext.sharedResources->colorImageAddressVector;
-@@ -308,6 +494,47 @@ namespace RT64 {
+@@ -308,6 +539,47 @@ namespace RT64 {
                  }
              }
              
@@ -3574,7 +3619,7 @@ index f17db9b..82790a4 100644
              if ((presentFb != nullptr) && (viFb != nullptr)) {
                  for (uint32_t colorAddress : ext.sharedResources->colorImageAddressVector) {
                      Framebuffer *colorFb = fbManager.find(colorAddress);
-@@ -353,11 +580,12 @@ namespace RT64 {
+@@ -353,11 +625,12 @@ namespace RT64 {
                  if (s_pq_log) {
                      static int s_n2 = 0;
                      int n = ++s_n2;
@@ -3590,7 +3635,7 @@ index f17db9b..82790a4 100644
                          std::fflush(stderr);
                      }
                  }
-@@ -394,6 +622,25 @@ namespace RT64 {
+@@ -394,6 +667,25 @@ namespace RT64 {
                  lockedWorkloadMutex = true;
                  ext.sharedResources->workloadMutex.lock();
  
@@ -3616,7 +3661,7 @@ index f17db9b..82790a4 100644
                  RenderTargetKey colorTargetKey(fbAddress, scratchFb.width, scratchFb.siz, Framebuffer::Type::Color);
                  colorTarget = &targetManager.get(colorTargetKey, true);
                  colorTarget->resize(ext.presentGraphicsWorker, scratchFb.width, scratchFb.height);
-@@ -418,6 +665,7 @@ namespace RT64 {
+@@ -418,6 +710,7 @@ namespace RT64 {
                  if (!present.paused && (viHistory.top().vi != present.screenVI)) {
                      viHistory.pushVI(present.screenVI, fbSize.x);
                  }
@@ -8674,7 +8719,7 @@ index 69a82ac..6e82095 100644
  
              if (device != nullptr) {
 diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
-index b9cb1f5..1866b75 100644
+index b9cb1f5..f1538fa 100644
 --- a/src/render/rt64_framebuffer_renderer.cpp
 +++ b/src/render/rt64_framebuffer_renderer.cpp
 @@ -8,6 +8,9 @@
@@ -9995,7 +10040,7 @@ index b9cb1f5..1866b75 100644
                          std::fflush(stderr);
                      }
                  }
-@@ -585,6 +1806,55 @@ namespace RT64 {
+@@ -585,6 +1806,58 @@ namespace RT64 {
              case InstanceDrawCall::Type::IndexedTriangles:
              case InstanceDrawCall::Type::RawTriangles:
              case InstanceDrawCall::Type::RegularRect: {
@@ -10010,6 +10055,7 @@ index b9cb1f5..1866b75 100644
 +                    extern std::atomic<uint32_t> g_rs64_last_drawn_fb;
 +                    extern std::atomic<uint32_t> g_rs64_last_drawn_fb_width;
 +                    extern std::atomic<uint32_t> g_rs64_last_drawn_fb_siz;
++                    extern std::atomic<uint32_t> g_rs64_last_drawn_gen;
 +                    const auto &key = fbStorage->framebufferKey.colorTargetKey;
 +                    const bool saneW = (key.width == 320u || key.width == 512u ||
 +                                        key.width == 640u || key.width == 1024u ||
@@ -10033,6 +10079,8 @@ index b9cb1f5..1866b75 100644
 +                        const uint32_t prev = g_rs64_last_drawn_fb.exchange(key.address, std::memory_order_relaxed);
 +                        g_rs64_last_drawn_fb_width.store(key.width, std::memory_order_relaxed);
 +                        g_rs64_last_drawn_fb_siz.store(key.siz, std::memory_order_relaxed);
++                        // s6735: draw generation, lets mode 3 tell a live target from a stale one.
++                        g_rs64_last_drawn_gen.fetch_add(1, std::memory_order_relaxed);
 +                        if (prev != key.address) {
 +                            static std::atomic<int> nchg{0};
 +                            const int c = ++nchg;
@@ -10051,7 +10099,7 @@ index b9cb1f5..1866b75 100644
                  // ROGUESQ: skip draws with null colorTarget instead of
                  // asserting. Some workloads route instances through a
                  // rasterScene whose fbStorage has no allocated colorTarget
-@@ -657,6 +1927,45 @@ namespace RT64 {
+@@ -657,6 +1930,45 @@ namespace RT64 {
                      continue;
                  }
  
@@ -10097,7 +10145,7 @@ index b9cb1f5..1866b75 100644
                  // A new pass must be started if decals are required and something wrote to the depth buffer before this call.
                  const interop::OtherMode otherMode = triangles.shaderDesc.otherMode;
                  bool depthDecal = (otherMode.zMode() == ZMODE_DEC);
-@@ -668,9 +1977,9 @@ namespace RT64 {
+@@ -668,9 +1980,9 @@ namespace RT64 {
                      switchToDepthWrite();
                  }
  
@@ -10110,7 +10158,7 @@ index b9cb1f5..1866b75 100644
                  }
  
                  if (previousPipeline != triangles.pipeline) {
-@@ -679,25 +1988,67 @@ namespace RT64 {
+@@ -679,25 +1991,67 @@ namespace RT64 {
                  }
                  
                  rasterParams.renderIndex = i;
@@ -10180,7 +10228,7 @@ index b9cb1f5..1866b75 100644
                      previousPipeline = nullptr;
                  }
  
-@@ -735,13 +2086,70 @@ namespace RT64 {
+@@ -735,13 +2089,70 @@ namespace RT64 {
                      break;
                  }
  
@@ -10251,7 +10299,7 @@ index b9cb1f5..1866b75 100644
                  }
  
                  break;
-@@ -773,6 +2181,158 @@ namespace RT64 {
+@@ -773,6 +2184,158 @@ namespace RT64 {
              }
          }
  
@@ -10410,7 +10458,7 @@ index b9cb1f5..1866b75 100644
          // Mark targets for resolve.
          if (fbStorage->colorTarget != nullptr) {
              fbStorage->colorTarget->markForResolve();
-@@ -1462,6 +3022,15 @@ namespace RT64 {
+@@ -1462,6 +3025,15 @@ namespace RT64 {
          fbParams.horizontalMisalignment = p.horizontalMisalignment;
          framebufferCount++;
  
@@ -10426,7 +10474,7 @@ index b9cb1f5..1866b75 100644
          while (framebufferCount > framebufferVector.size()) {
              framebufferVector.emplace_back();
              framebufferVector.back().paramsBuffer = p.worker->device->createBuffer(RenderBufferDesc::UploadBuffer(256, RenderBufferFlag::CONSTANT));
-@@ -1470,6 +3039,8 @@ namespace RT64 {
+@@ -1470,6 +3042,8 @@ namespace RT64 {
          }
  
          Framebuffer &framebuffer = framebufferVector[framebufferCount - 1];
@@ -10435,7 +10483,7 @@ index b9cb1f5..1866b75 100644
          void *paramBufferBytes = framebuffer.paramsBuffer->map();
          memcpy(paramBufferBytes, &fbParams, sizeof(interop::FramebufferParams));
          framebuffer.paramsBuffer->unmap();
-@@ -1643,6 +3214,17 @@ namespace RT64 {
+@@ -1643,6 +3217,17 @@ namespace RT64 {
  
              for (uint32_t d = 0; (d < proj.gameCallCount) && (globalCallIndex < p.maxGameCall); d++) {
                  const GameCall &call = proj.gameCalls[d];
@@ -10453,7 +10501,7 @@ index b9cb1f5..1866b75 100644
                  renderIndices.instanceIndex = call.callDesc.callIndex;
                  renderIndices.faceIndicesStart = call.meshDesc.faceIndicesStart;
                  renderIndices.rdpTileIndex = call.callDesc.tileIndex;
-@@ -1789,6 +3371,22 @@ namespace RT64 {
+@@ -1789,6 +3374,22 @@ namespace RT64 {
  
                              RenderViewport viewportRect = convertViewportRect(call.callDesc.rect, p.resolutionScale, p.fbWidth, invRatioScale, extOriginPercentage, horizontalMisalignment, call.callDesc.rectLeftOrigin, call.callDesc.rectRightOrigin);
                              triangles.screenScale = { viewportRect.width / framebuffer.viewport.width, viewportRect.height / framebuffer.viewport.height };
