@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6740 (2026-11-01).
+Compact operational handoff, as of Session 6741 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -10,6 +10,9 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 
 ## Headline
 
+- **s6741 G3: retail-settings 4:3 hangar (level select) = H-match vs retail angrylion** (21 frames d 3.0-4.7, means
+  within 1; wrong-hologram control d 14.7-17.6). The owner save selects a different level: compare with the oracle EEPROM
+  (tools/g3_port_capture.sh SAVE_FROM=, restores the save). Wide-aspect hangar artifacts (s6601) are not covered.
 - **FIXED s6739: plain-launch SIGSEGV in SDL_GetQueuedAudioSize (events thread, boot ~6 s).** osAiSetFrequency closes and
   reopens the SDL device on the game thread while the events thread polls its queue size (use-after-free). Every SDL call
   on audio_device now holds audio_device_mutex. Repro tools/audio_race (unlocked 3/3 SIGSEGV, locked 3/3 clean).
@@ -448,8 +451,8 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
    side-effect failure, not repeat crash-hunt holds. Historical proposed probes
    are archived in PROJECT-OVERVIEW, not an alternate live backlog.
 4. **Then G3 render fidelity (NEXT: g3-hangar-oracle-diff).** s6738 boot cinematic, s6739 Tatooine attract flight and
-   s6740 cinematic replay are H-match; the green offset is the P3 capture tag (s6740). Next: retail hangar (oracle driven
-   by Start presses, tools/oracle/README "Reaching the hangar") vs port hangar window captures; then the briefing fly-over. G2/G5 are closed; G4 and aim/steer stay
+   s6740 cinematic replay are H-match; the green offset is the P3 capture tag (s6740). s6741 hangar (4:3 retail settings) H-match.
+   Next (g3-briefing-oracle-diff): the 640 briefing fly-over (0x6A2900) after the hangar, same oracle EEPROM. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index

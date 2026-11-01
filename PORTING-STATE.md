@@ -177261,3 +177261,25 @@ Caveat: s6738/s6739 d values were computed on raw P3 captures; lum d in the Tato
 because the P3 tag partly cancelled the 2.5% gain there.
 Rules out: a second attract demo; "Hoth looks too white" as a port defect; H-shade for the s6739 green offset.
 Next: G3 hangar vs retail (oracle reaches the hangar with Start presses, tools/oracle/README "Reaching the hangar").
+
+## Session 6741 (2026-11-01) — G3: retail-settings 4:3 hangar (level-select) matches retail angrylion frames (H-match); owner save selects a different level, so retail/port comparisons now share the oracle EEPROM
+
+- Ran: retail ROM under rs64_oracle + angrylion (scratch/s6741/retail_hangar.sh), Start at 6..41 s; 512-wide hangar
+  at 38.4 s (origins 0x6AB400/0x656400 +0x400 field rows, bases 6AB000/656000), 24 fb dumps 1..24 s after.
+  Port plain launch (LLE defaults, no opt-ins) with autopilot Start 6..21 s: hangar at 23.9 s (port reaches the title in
+  12.7 s vs retail 17.4 s; the retail schedule of 8 presses pushed the port out of the hangar into 0x6A2900 at 42.5 s,
+  port1, so the port schedule stops at 21 s). Window captures 22..60 s; picture box rows 124..964 of the 1280x1024
+  window (512x336 x2.5).
+- Datum: the owner's save (build/saves, byte 0x50 = 05) opens the hangar on THE JADE MOON; the oracle's mupen .eep
+  (byte 0x50 = 00) opens on AMBUSH AT MOS EISLEY. port3 ran with the oracle EEPROM copied into the save slot,
+  ROGUESQ_NO_SAVE_WRITE=1, owner save backed up and restored (cmp-verified).
+- Result (g3_oracle_match.py --w 512 --bases 6AB000,656000 --h 336 --win 124,964 --winx 0,1280, ICC->sRGB): all 21
+  settled hangar frames match at d 3.0-4.7 (median over port frames 12-14), means within 1 level per channel, max tile
+  35-48, 0-1 tiles >40. The only visible differences are the animated projector-ring phase and angrylion dither.
+  --no-icc gives the same (d 2.99-3.13 best pairs).
+- Positive control, same instrument, same retail log: port2 (owner save, Jade Moon hologram) scores d 14.7-17.6 on the
+  same frames. So the scorer separates a wrong-hologram scene by ~4x; the matched hangar is H-match.
+- Rules out H-rt64 / H-geom / H-pos for the 4:3 retail-settings hangar. The parked hangar artifacts in the backlog
+  (s6601 g3-hangar-artifacts: wide-aspect bands, holo spikes) are opt-in ASPECT states and are not covered by this.
+- New tool: tools/g3_port_capture.sh (port autopilot + window captures, SAVE_FROM=<eep> swaps the save with
+  backup/restore trap and forces NO_SAVE_WRITE). Pairs: scratch/s6741/m3/pair*.png; control scratch/s6741/m2ctl.
