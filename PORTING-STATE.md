@@ -176463,3 +176463,31 @@ interpreter-level idea, e.g. decode/dispatch caching). G1e dd4 ceiling recorded 
 (21:9/4:3 window captures; 16:9 done s6688), then G3. OWNER-OPT-INS: stale "21:9 hangar crash under investigation" row
 updated to the s6690 fix.
 Not a mitigation (measurement + tool; no ORIGIN needed).
+
+## Session 6717 (2026-10-31) — G1f closed: 21:9 window verified (lvl1 flight fills 1360x594 edge to edge, HUD at edges), 4:3 window verified; 4:3 flight side bars pre-date G1f; new datum: 21:9 mission-intro pillarbox
+
+Work unit: NEXT.md G1f close-out (21:9 and 4:3 window captures). Build = HEAD 48b73fa5c binary (22:53). Screen
+unlocked (no CGSSessionScreenIsLocked key in ioreg). Recipe: `scratch/s6717/go.sh <tag> <aspect|none> "<env>"` =
+`tools/g1_lvl1_aspect_arm.sh` (lvl1 forced level-select route, HOLD_S=130) + `screencapture -l<winid>` every 10 s.
+New tool `tools/g1f_bar_score.py`: per window shot, black-bar width at left/right/bottom (whole near-black columns
+over the middle 80% of rows, so the title bar never counts) + lit fraction. Positive control: s6688 retail title shot
+scores bar_bottom=143 (the known barred title); s6688 16:9 flight scores 0/0.
+`tools/g1_lvl1_aspect_arm.sh` gained aspect `none` (ROGUESQ_ASPECT unset = owner default).
+
+Four arms, sequential, all `mission_verified_130s`, 0 crash (fbrun/mcycles controls OK):
+| arm | window / drawable | flight t=90-130 s bars L/R | intro t=60-70 s |
+| 21:9 + OSMEM_MB=12 | 1360x594 / 2720x1188 | 1/1 px, lit 0.995 | bars 227/225, ragged right edge |
+| ASPECT=4:3 (RT64 Manual 1.333) | 1062x796 / 2124x1592 | 141/143 | 0/0 |
+| ASPECT unset (default) | 640x480 / 640x480 | 85/85 of 1280 | 0/0 (bottom 143 = content) |
+| unset + WINDOW_FIT=0 | 640x480 / 640x480 | 85/85 | identical to default |
+VI phase sequence: 4:3 flight runs the 512-wide mode (origin 0x690400, osViSetMode width=512 xScale=0x333); 21:9
+flight 1024 (0x9D5800); 21:9 intro 640 (0xA4B100).
+
+Verdict: H-ok for flight at 21:9 (window fills, HUD at the real edges: scratch/s6717/a219/w120_89558.png) and for
+the 4:3 window shape. H-letterbox refuted for flight. The 4:3 flight side bars are NOT G1f: the WINDOW_FIT=0 arm is
+pixel-identical in bar width, so they predate the window work; they come from the 512 mode's active region.
+Whether retail hardware shows the same narrow region (VI hStart/hEnd of the runtime-built mode struct; the ELF
+does not map 0x80128E40, the mode is built in .bss) is unchecked, single-source. New datum (G1d, not G1f): at 21:9
+the mission-intro flyover is drawn ~1.9:1 centred with side bars and a ragged right edge; 16:9 intro fills (s6688
+run3 w60 bars 1/1). Single run per arm. G1f closed; G3d was already closed s6697. Next: the 21:9 intro pillarbox.
+Captures: scratch/s6717/{a219,a43,dflt,nofit}/w*.png; logs scratch/agent/m6/g1_lvl1s6688_s6717*/run.log.

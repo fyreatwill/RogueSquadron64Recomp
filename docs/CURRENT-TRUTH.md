@@ -105,12 +105,17 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   -> +91 ms). Profile without instrument terms: LLE interpreter (factor5_ucode + RSP:: vector ops + byte-wise
   dma_rdram_to_dmem) ~70%, bridge ~10%, in-ucode probes ~10%. Fixed: [m4-y8000] was default-ON (summary+fflush ~600/s,
   2/3 of the log volume); now opt-in (ROGUESQ_LOG_M4_Y8000=1): dense task 11.98 -> 11.74 ms at ~35k cmds, log 104 -> 45 MB.
-- **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
-  ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
-  lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
-  fullscreen (verified with synthetic F11 `ROGUESQ_FS_TEST_TOGGLE_S`: 3024x1898 and back).
-  ROGUESQ_FULLSCREEN=1 starts fullscreen; ROGUESQ_ASPECT=auto takes display 0's aspect. The game
-  width is fixed at boot, so a later resize letterboxes. ROGUESQ_WINDOW_FIT=0 gives the old 640x480 window.
+- **G1f window fit: CLOSED s6717 (16:9 + fullscreen s6688, 21:9 + 4:3 s6717).** The window opens at the
+  ROGUESQ_ASPECT shape, sized to the desktop, high-DPI drawable (16:9 1360x764/2720x1528; 21:9 1360x594/2720x1188;
+  4:3 1062x796/2124x1592). lvl1 forced route mission_verified_130s, 0 crash, in every arm; flight fills the 16:9 and
+  21:9 windows edge to edge (tools/g1f_bar_score.py: bar 0-1 px, lit 0.995; HUD at the real edges,
+  scratch/s6717/a219/w120_*.png). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless fullscreen; ROGUESQ_FULLSCREEN=1
+  starts in it; ROGUESQ_ASPECT=auto takes display 0's aspect. Game width is fixed at boot (a resize letterboxes).
+  Data, not G1f defects: (1) default (ASPECT unset) 4:3 flight runs the game's 512-wide VI mode (xScale 0x333) and
+  shows 85/1280 px side bars per side, identical with ROGUESQ_WINDOW_FIT=0 (pre-G1f window), so pre-existing;
+  whether retail hardware shows the same narrow active region (VI hStart) is unchecked, single-source.
+  (2) 21:9 mission-intro flyover (640-wide mode, origin 0xA4B100) is pillarboxed 227 px/side with a ragged right
+  edge; 16:9 intro fills (s6688 run3 w60). G1d datum, next unit.
 - **CLOSED s6690: 21:9 forced-route hangar SIGBUS (0x7FFF0002).** Writer = our own
   rs64_spike_scan (src/rsp/dpc_bridge.cpp), named by an lldb hardware watch on list word 0x800CC404
   (positive control: 4 overlay-DMA hits from do_rom_read first). It masked submit addresses with
@@ -591,13 +596,12 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 ## Next steps (single monotonic backlog)
 
 - **Owner 2026-10-31:** spike cull default ON (also fixed: it only ran with LOG_SPIKE).
-  G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
-  fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
-  ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1f close-out: 21:9 and 4:3 window captures** (s6688 verified 16:9 + fullscreen only; s6690-s6695 fixed the 21:9
-   hangar SIGBUS / level-select tear / right edge since). One run per aspect, lvl1 forced route, window screenshot +
-   fbd frame, then OWNER-OPT-INS one-liners checked. Then G3 render fidelity. G1e dd4 ceiling ~8.6 ms / 57 tasks/s is
-   interpreter-bound (s6716); reopen only with an interpreter-level idea (e.g. dispatch/decode caching). See NEXT.md.
+  G1(d) objective qualification PARKED (owner playtest). G1f window/fullscreen
+  CLOSED s6717; G3d turning shake closed s6697 (s6696 fps fix). Spec: ITERATION.md item 3c.
+1. **G1d 21:9 mission-intro pillarbox** (s6717): at 21:9 the lvl1 intro flyover (640-wide VI mode) is drawn ~1.9:1
+   centred with black side bars and a ragged right edge; 16:9 fills. Find which width/viewport/scissor the intro path
+   uses (vs the 1024 flight path) and widen it like flight. G1f is closed; G3d closed s6697. G1e dd4 ceiling
+   ~8.6 ms / 57 tasks/s is interpreter-bound (s6716); reopen only with an interpreter-level idea. See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional

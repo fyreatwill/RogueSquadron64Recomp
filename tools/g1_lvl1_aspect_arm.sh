@@ -1,10 +1,11 @@
 #!/bin/zsh
 # s6688 arm: forced lvl1 route at <aspect>, extra env; prints keys.log verdict + crash frames.
-# Usage: arm.sh <tag> <aspect> "<extra env>"
+# Usage: arm.sh <tag> <aspect|none> "<extra env>"  (none = ROGUESQ_ASPECT unset, retail default; s6717)
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 T=$1; A=$2; X=$3
+AE="ROGUESQ_ASPECT=$A "; [ "$A" = none ] && AE=""
 env ROGUESQ_NO_PKILL=1 TITLE_ORIGIN='0x[0-9A-F]*' MISSION_RE='[0-9A-F]+' \
-  XENV_EXTRA="ROGUESQ_ASPECT=$A $X" HOLD_S=${HOLD_S:-90} LEVEL=1 TAG_SUFFIX=s6688_$T \
+  XENV_EXTRA="$AE$X" HOLD_S=${HOLD_S:-90} LEVEL=1 TAG_SUFFIX=s6688_$T \
   zsh scratch/agent/g1_level_coverage_common.zsh > scratch/agent/m6/s6688_$T.runner.log 2>&1
 D=scratch/agent/m6/g1_lvl1s6688_$T
 echo "== $T"; cat $D/keys.log
