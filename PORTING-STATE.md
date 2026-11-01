@@ -175978,3 +175978,23 @@ Queued soak_queue/s6699_o2_lvl1_dd1.sh and s6699_o2_lvl10_dd4.sh (300 s, binary 
 build/ reconfigured back to both options OFF and rebuilt (default unchanged).
 ORIGIN: no mitigation; compiler optimisation level only.
 Next: fold the two soaks; hangar route + lvl7 on -O2; then propose default ON to the owner.
+
+## Session 6700 (2026-10-31) — G1c -O2 build qualified and made default (ROGUESQ_SRC_OPT/ROGUESQ_FUNCS_OPT ON)
+
+Work unit (NEXT g1c-o2-build-qualify): qualify the s6699 -O2 binary (build_s6699_o2), then decide its default.
+- Folded queued soaks: s6699_o2_lvl1_dd1 (hold 303 s, alive, 0 stalls, 0 crashlines) and s6699_o2_lvl10_dd4 (hold 301 s,
+  alive, 0 stalls, 0 crashlines).
+- Ran on build_s6699_o2 (sequential, one game at a time, ROGUESQ_G1B=1 ROGUESQ_STORE_DIAG=0):
+  lvl7 dd1 forced route: mission_t=6 s, hold 304 s, alive, 0 stalls, 0 crashlines, godrefills=20 mission_cycles=6
+  (-O0 lvl7 300 s holds: refills 20, cycles 2-5 - same regime); g1b mission phase 32.8 tasks/s, gfx 6.2 ms.
+  Natural hangar route (s6259 recipe minus FPS60, HOLD=300): mission at 80 s, hold 304 s, alive, 0 stalls, 0 crashlines;
+  33.0 tasks/s, gfx 8.3 ms. Last framebuffer dumps of both runs: terrain, craft, HUD, radar correct (viewed).
+- Render compare vs -O0 at the same game frame index was NOT run: the forced-route scene animates under a wall-clock
+  autopilot, so a cross-run pixel diff is not phase-gateable (iron rule 2); fb sanity by eye on 4 runs instead.
+- Decision: CMakeLists.txt options ROGUESQ_SRC_OPT / ROGUESQ_FUNCS_OPT now default ON (build flags, not game behaviour);
+  build/ reconfigured ON and rebuilt (38.07 MB, same size as build_s6699_o2; 4254 differing bytes, no build-dir path
+  strings in either, so differences are link/build metadata). Smoke on rebuilt build/: lvl1 forced route hold 130 s,
+  alive, 0 stalls, 0 crashlines, 29.8 tasks/s. OWNER-OPT-INS row added.
+- Rules out (for these 5 runs): -O2-only crashes or render breakage on lvl1/5/7/10 + hangar route. Not ruled out: UB
+  divergence in rare paths; first response to an -O2-only crash is -fwrapv, then lldb on the recompiled function.
+Next: G1c phase 2 on the -O2 build - lvl5 dd4/dd6/dd8 + FPS60 dd4 frame cost and faults, to find the next binding limit.

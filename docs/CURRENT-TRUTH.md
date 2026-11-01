@@ -24,12 +24,13 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 - **s6698: per-store diagnostic hooks gated (g_rs64_store_diag).** ~143k hook calls (3-5 per guest store) ran unarmed:
   52% of the game thread's busy time at lvl5 dd4. Auto-OFF with no ROGUESQ_LOG_*/*WATCH* env (owner play), auto-ON in every
   logging recipe; ROGUESQ_STORE_DIAG=0/1 forces it. Same-run toggle lvl5 dd4: off 24.4 fps / 23.9 ms per task vs on 18.4 / 38.0.
-  Soak recipes measure the ON arm: add ROGUESQ_STORE_DIAG=0 for frame-cost numbers. Build is Debug: game code and src/ are -O0.
-- **s6699: -O2 build reaches retail 30 fps at lvl5 dd4 (opt-in cmake options, default OFF, not yet qualified).**
-  ROGUESQ_SRC_OPT=ON (src/, librecomp, ultramodern -O2) cuts the gfx task 29.2 -> 12.8 ms but fps only 23.1 -> 25.6 (game
-  thread then binds); +ROGUESQ_FUNCS_OPT=ON (RecompiledFuncs/PatchesLib -O2) -> 30.5 game tasks/s, 13.2 ms. Baseline repeat
-  A2 21.6 fps (control). All arms 203 s alive, 0 stalls/crashlines, fb sane. Sequential runs (not same-run); second line:
-  fb dump frame index 7000 (C) vs 5500 (A) over the same hold. Qualification soaks queued (lvl1 dd1, lvl10 dd4).
+  Soak recipes measure the ON arm: add ROGUESQ_STORE_DIAG=0 for frame-cost numbers. Build is Debug but -O2 since s6700 (see below).
+- **s6700: -O2 build is the DEFAULT (ROGUESQ_SRC_OPT/ROGUESQ_FUNCS_OPT default ON; build/ rebuilt).** s6699: -O2 host
+  code halves the gfx task (29.2 -> 12.8 ms), +-O2 RecompiledFuncs/PatchesLib takes lvl5 dd4 from ~22 to 30.5 game fps.
+  Qualified s6700 on the -O2 binary: lvl1 dd1, lvl10 dd4, lvl7 dd1 (refills/cycles within -O0 range), natural hangar route
+  -> mission at 80 s; each 300 s, 0 crashlines/stalls, fb terrain+craft+HUD sane, 33 game tasks/s. Rebuilt build/ smoke
+  lvl1 130 s clean, 29.8 tasks/s. -DROGUESQ_*_OPT=OFF restores -O0 for debugging. Not yet watched: UB-only divergence in
+  rare paths (signed overflow); if an -O2-only crash appears, try -fwrapv first.
 - **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
   ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
   lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
@@ -513,10 +514,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1c dd4 frame cost (s6699): qualify the -O2 build, then decide its default.** -O2 host + guest code gives lvl5 dd4
-   30.5 fps (from ~22). Fold soak_queue s6699_o2_lvl1_dd1 / lvl10_dd4 (binary in build_s6699_o2/), then hangar route +
-   lvl7 300 s on the -O2 build. If clean, switch the two options ON by default (build flags, not game behaviour; owner told).
-   Watch for UB-sensitive divergence (signed overflow, uninitialised reads) as crashes or render deltas vs -O0.
+1. **G1c phase 2 on the -O2 build (s6700): find the next binding limit above dd4.** -O2 removed the dd4 frame-cost
+   wall (30.5 fps lvl5). Re-measure lvl5 dd4/dd6/dd8 (game tasks/s, gfx ms, crash/stall, fb contact sheet) and FPS60 at dd4
+   in one run batch; whichever step first drops below 30 tasks/s or faults names the limit. See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional

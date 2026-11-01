@@ -327,9 +327,9 @@ if (NOT MSVC)
 endif()
 
 # s6699: the rest of the host code (src/main, src/rsp, librecomp, ultramodern) and the recompiled
-# guest are still -O0 under the Debug config. Opt-in, OFF by default until measured/qualified.
-option(ROGUESQ_SRC_OPT "Compile host code (src/, librecomp, ultramodern) with -O2 under Debug" OFF)
-option(ROGUESQ_FUNCS_OPT "Compile RecompiledFuncs + PatchesLib with -O2 under Debug" OFF)
+# guest were -O0 under the Debug config. ON by default since s6700 (qualified: lvl1/7/10 + hangar route 300 s clean).
+option(ROGUESQ_SRC_OPT "Compile host code (src/, librecomp, ultramodern) with -O2 under Debug" ON)
+option(ROGUESQ_FUNCS_OPT "Compile RecompiledFuncs + PatchesLib with -O2 under Debug" ON)
 if (ROGUESQ_SRC_OPT AND NOT MSVC)
     target_compile_options(RogueSquadron64Recomp PRIVATE -O2)
     target_compile_options(librecomp PRIVATE -O2)
