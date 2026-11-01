@@ -4901,7 +4901,14 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
     // s6731: the radar is still stamped under the pause menu, so at 16:9/21:9 the pause Rebel logo's upper-right arm
     // tip (tris centred in the region) was torn off and drawn +dx px away. Skip the shift while the pause byte is set,
     // like the s6721 HUD anchor; ROGUESQ_G1D_PAUSE_ANCHOR=1 restores both old behaviours.
-    const bool paused = rs64_g1d_pause_live() != 0;
+    // s6733: the byte clears one swap before the pause UI stops drawing: the first unpaused swap of the abort fly-out
+    // still carries the pause texrects (x 633..745), which moved +256 for that frame. Hold the shift off for
+    // ROGUESQ_G1D_PAUSE_HOLDOFF swaps (default 1) after the last paused swap; =0 restores s6731.
+    static const int holdoff = [] { const char *e = std::getenv("ROGUESQ_G1D_PAUSE_HOLDOFF"); return e && *e ? atoi(e) : 1; }();
+    static int s_paused_sw = -1000;
+    bool paused = rs64_g1d_pause_live() != 0;
+    if (paused) s_paused_sw = sw;
+    else if (sw - s_paused_sw <= holdoff) paused = true;
     const bool radar = anywhere || (rs64_radar_recent(sw) && !paused);
     static int s_radar_prev = -1;
     if (shiftOn && (int)radar != s_radar_prev) { fprintf(stderr, "[region-gate] swap=%d radar=%d paused=%d shift=%s\n", sw, (int)radar, (int)paused, radar ? "on" : "off"); fflush(stderr); s_radar_prev = (int)radar; }

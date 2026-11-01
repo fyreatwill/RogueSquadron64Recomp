@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6732 (2026-11-01).
+Compact operational handoff, as of Session 6733 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -127,8 +127,10 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   were drawn +dx px away as a separate shard. rs64_region_scan now also skips while the pause byte is set
   (rs64_g1d_pause_live, s6721); [region-gate] logs paused=. ROGUESQ_G1D_PAUSE_ANCHOR=1 = old (also reverts the s6721
   anchor). Evidence: pre-fix l169/l219 shard on every pause frame, 4:3 clean; fix f169/f219 gate off at the pause swap,
-  logo whole, in-flight radar shift unchanged before and after. Residual: the shift turns back on for ~5 swaps of the
-  abort logo fly-out (pause byte clears before the epoch changes); not visible in 2 s window captures.
+  logo whole, in-flight radar shift unchanged before and after. s6733 closed the residual: the first unpaused swap of
+  the abort fly-out still draws the 4 pause-UI texrects (x 633..745) and they moved +256 for one frame; the shift now
+  stays off for ROGUESQ_G1D_PAUSE_HOLDOFF swaps (default 1, =0 = s6731) after the last paused swap. Same-build arms: fix
+  0 texrects shifted, control 4; radar-only swaps after it still shifted.
   NOTE: s6727-s6730 runs did not actually pass ROGUESQ_LIVES_CAP (no [livescap] lines), so their "game-over" epoch 27
   was the MISSION FAILED -> debrief path. The s6731 route (scratch/s6731/menus.sh, LIVES_CAP=1) reaches the real GAME
   OVER -> Elite Rogues -> Select Game -> level/craft select -> flight; all screens correct at 4:3/16:9/21:9 (owner sheet
@@ -410,7 +412,7 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). G1f window/fullscreen
   CLOSED s6717; G3d turning shake closed s6697 (s6696 fps fix). Spec: ITERATION.md item 3c.
 1. **G1d close-out** (menu sweep done s6731, every screen at 4:3/16:9/21:9 on scratch/s6731/sheet_menus_owner.png,
-   awaiting owner judgement). Remaining small item: the ~5-swap abort fly-out region shift. (s6732: the mission-start
+   awaiting owner judgement). Abort fly-out region shift fixed s6733 (1-swap pause hold-off). (s6732: the mission-start
    dark frame with thin edge lines also occurs at 4:3 = the game's intro-mode swap of the new flight buffer during the
    load, not G1d; whether the lines are RT64 or retail is a G3 item, see s6732 entry for the RDRAM-dump discriminator.) Open single-source (s6719): why a wider terrain footprint changes the
    LucasArts logo shape. Recipe: scratch/s6731/menus.sh <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>".

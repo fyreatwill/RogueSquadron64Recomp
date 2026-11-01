@@ -1,13 +1,16 @@
-# NEXT: G1d residual -- abort logo fly-out region shift (~5 swaps at 16:9/21:9)
-HYPOTHESIS-ID: g1d-menu-sweep
+# NEXT: G3 -- mission-start intro-mode swap edge lines: guest RDRAM (retail) or RT64 render-target edge?
+HYPOTHESIS-ID: g3-intro-swap-edge-lines
 
-s6731 pause-gated the s6158 radar-region shift, but the pause byte clears before the VI epoch changes, so the shift turns
-back on for ~5 swaps of the abort-mission logo fly-out ([region-gate] lines in scratch/agent/m6/g1_lvl1s6731_f219/run.log).
-s6732 closed the mission-start dark frame as non-G1d (also at 4:3).
-Hypotheses: H-latch (once paused within an epoch, the shift must stay off until the next epoch: fix = latch the pause
-gate per epoch in rs64_region_scan, dpc_bridge.cpp), H-benign (the fly-out tris are outside the radar region, nothing moves).
-Discriminator, one build, one run: scratch/s6732/dense.sh f219 21:9 "ROGUESQ_LIVES_CAP=1 ROGUESQ_FB_DUMP_DIR=<abs>/fbd
-ROGUESQ_FB_DUMP_EPOCH=<abort epoch from f219 log> ROGUESQ_FB_DUMP_VI=1" (adjust the dense window to the abort, ~t=225-235).
-If any dumped fly-out swap has a shard in x 669..810 shifted +256 -> H-latch, land the latch with ROGUESQ_* =old switch and
-re-run; if none of the ~5 swaps draws tris in the region -> H-benign, close G1d and move to G3 (first G3 item: RDRAM dump of
-the mission-start intro-mode swap to decide RT64-vs-retail for its edge lines, s6732 entry).
+G1d is closed pending owner judgement (s6733 fixed the last residual, the abort fly-out pause-texrect shift).
+s6732: during the hangar->mission load the shown frame is ONE swapBufferWithViMode through the intro mode 0x80128C90
+of a freshly allocated flight buffer; it carries thin light lines on the intro region's right edge and bottom line,
+at 4:3 too (so not G1d).
+Hypotheses: H-rdram (the lines are in guest RDRAM, i.e. the game/RDP drew them; retail shows them too),
+H-rt64 (RDRAM is clean/black at those pixels; RT64 samples or presents the intro render-target edge = RT64 artifact).
+Discriminator, one run at 4:3 (no ASPECT): scratch/s6733/dense.sh i43 none "ROGUESQ_LIVES_CAP=1
+ROGUESQ_FB_DUMP_DIR=<abs>/scratch/s6733/i43/fbd ROGUESQ_FB_DUMP_EPOCH=<intro epoch> ROGUESQ_FB_DUMP_EPOCH_N=40 ROGUESQ_FB_DUMP_VI=1"
+(intro epoch: the one following the E40 epoch, ~42/43; find it first from [g1d-*] epoch lines in
+scratch/agent/m6/g1_lvl1s6732_d43/run.log at the [fbw] pfm a2=512 point). Positive control: the window captures of the
+same run must show the line (s6732 d43 w255..w256 did). Then scan the RDRAM ppm for the line pixels (x=content right
+edge, y=340 row): present -> H-rdram (retail; close as not-ours unless the owner objects); absent -> H-rt64 (find
+the RT64 path that presents the intro-mode swap; fix or clear the target edge).

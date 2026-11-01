@@ -177011,3 +177011,27 @@ Open, single-source and not G1d: whether the light edge lines are in guest RDRAM
 sampling the intro render-target edge (RT64 artifact). Discriminator for G3: ROGUESQ_FB_DUMP_DIR + FB_DUMP_EPOCH on the
 0x80128C90 epoch (4:3: the epoch after the E40 epoch, ~42/43; dump N=40) and look for the line in the RDRAM readback.
 Rules out: G1d widening/crop/region-shift as the cause of the mission-start dark frame.
+
+## Session 6733 (2026-11-01) — G1d abort fly-out region shift: the first unpaused swap still draws the pause UI, whose 4 texrects the s6158 shift moved +256; fixed with a 1-swap pause hold-off (H-latch refuted, H-benign refuted)
+
+What ran: scratch/s6733/dense.sh (s6732 dense recipe) at 21:9 with ROGUESQ_LIVES_CAP=1 ROGUESQ_REGION_LOG_CAP=3000000
+(the default 400-line [region] cap ran out at swap 426 in s6731 f219, so f219 held no data for the fly-out). Three runs:
+r219 (s6731 build), then on the new build fix219 (default) and ctl219 (ROGUESQ_G1D_PAUSE_HOLDOFF=0 = s6731 behaviour).
+Analysis: scratch/s6733/gate.py (per-swap region-hit signature around each [region-gate] transition) and
+scratch/s6733/verdict.py (tri/texrect hits inside every shift-on window).
+Result (r219): shift-on windows 3148..4243 (flight, 9157 tri hits, 0 texrect), 4919..4923 (fly-out), 9807..end (second
+flight, 10401 tri, 0 texrect). Pause frames carry the radar disc (9 tris, x 651..728) PLUS 4 pause-UI texrects
+(x 633.5..745.5, y 16..112). Swap 4919, the first swap with the pause byte clear, still carries those 4 texrects, and the
+shift was on for it, so they were drawn +256 (x ~889..1001) for one frame. Swaps 4920..4922 carry only the 9 radar tris,
+identical to in-flight frames, so shifting them is correct. 4923 has no hits.
+Verdict: H-benign refuted (one swap does move pause UI). H-latch (shift off for the rest of the epoch) refuted as the fix:
+it would leave the radar disc unshifted in 4920..4922 while the guest HUD anchor is back on. ORIGIN: the writer is our
+own s6158 region shift (rs64_region_scan, dpc_bridge.cpp); the game's pause byte (0x800C1998) clears one swap before
+its pause UI stops drawing, so the value we gate on is legitimate but one swap early for the RDP stream.
+Fix: rs64_region_scan keeps the shift off for ROGUESQ_G1D_PAUSE_HOLDOFF swaps (default 1) after the last swap that saw
+the pause byte set; =0 restores s6731.
+Two arms, same build: fix219 window 4500..4503, tri=27, texrect=0 (swaps 4498/4499 drew the 4 pause texrects with the
+shift held off; 4500 is radar-only). ctl219 window 4907..4911, tri=36, texrect=4 (reproduces). Both reached the second
+flight, where the shift came on as before (fix 10078 tri / ctl 9840 tri, 0 texrect), 0 crashes, 4 [livescap] lines each.
+Rules out: any other in-region element moved by the shift on the lvl1 route (0 texrects in ~20k flight hits per run).
+Not checked: other levels' radar may carry texrects in the region (lvl1 only).
