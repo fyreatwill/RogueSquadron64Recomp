@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6715 (2026-10-31).
+Compact operational handoff, as of Session 6716 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -63,7 +63,12 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   DLWALK or G3C_DMALOG env is set; ROGUESQ_G1E_PROBES=0/1, ROGUESQ_G1E_PROBES_TOGGLE=<sec>. Same-run lvl5 FPS60 dd4: dense
   gfx task 9.48 -> 8.61 ms, 55.2 -> 57.1 tasks/s (slope 231 -> 202 ns/cmd, whole ucode). ROGUESQ_G1E_AQ=2 = per-task timing
   only: the AQ=1 per-submit clock pair cost MORE than the bridge (s6714 sample: 185 vs 149 samples), so "bridge 31%" was half
-  instrument. Qualification soaks s6715_pg_* queued.
+  instrument. Qualified s6715_pg lvl1 dd1 / lvl10 dd4 300 s clean.
+- **s6716 G1e dd4 CEILING (bridge is essential work).** xctrace Time Profiler, lvl5 FPS60 dd4 PROBES=0, 15 s dense flight,
+  lines via lldb (tools/xctrace_tp.py): Gfx thread 4259 samples = factor5_ucode self 76% (LLE interpreter) + bridge 18.4%.
+  Bridge split: async stream hand-off (submit_deferred_merged) 4.0%, wrap-flush commit 2.5%, s4272 shadow insert ~2%,
+  functional size-8 head (FULL_SYNC signal, PIPE gate) 1.9%; pure-trace size-8 tail (state shadows/combiner flags/tex16 log,
+  no return or submit) only 2.2% -> below the 3% bar, not trimmed. Remaining dd4 lever is the interpreter itself.
 - **s6705 G1e: ROGUESQ_RDP_ASYNC=1 (opt-in) runs RT64 RDP processing on a worker thread** (command words copied at submit,
   drained before dp_complete/present). Same-run toggle, lvl5 FPS60 dd2: 11.70 -> 10.46 ms/task, 49.3 -> 54.9 tasks/s, 301 s
   clean, frames sane (docs/img/g1e_s6705_async_sheet.png). Short of 60: only ~1.2 of the ~5 ms RT64 share overlaps. Default off.
@@ -589,10 +594,10 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1e: dense lvl5 dd4 ~8.6 ms / 57 tasks/s after s6715 probe gate.** Fold s6715_pg_* soaks first (failure = the
-   work unit). Then H-bridge with line-level data: xctrace Time Profiler (DEVELOPER_DIR=/Applications/Xcode.app/...) on
-   rsp_dpc_submit_impl self, trim the hot per-call blocks behind a same-run toggle. <3% -> write the G1e dd4 ceiling and
-   move to G3. See NEXT.md.
+1. **G1f close-out: 21:9 and 4:3 window captures** (s6688 verified 16:9 + fullscreen only; s6690-s6695 fixed the 21:9
+   hangar SIGBUS / level-select tear / right edge since). One run per aspect, lvl1 forced route, window screenshot +
+   fbd frame, then OWNER-OPT-INS one-liners checked. Then G3 render fidelity. G1e dd4 ceiling ~8.6 ms / 57 tasks/s is
+   interpreter-bound (s6716); reopen only with an interpreter-level idea (e.g. dispatch/decode caching). See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional

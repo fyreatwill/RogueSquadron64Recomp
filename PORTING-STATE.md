@@ -176432,3 +176432,34 @@ rsp_dpc_submit_impl, splitting H-bridge-diag vs H-bridge-essential (NEXT.md). La
 H-bridge undecided: xctrace attach for line-level bridge attribution failed (`xctrace requires Xcode` - needs
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer); next unit.
 Not a mitigation (performance; no ORIGIN needed). Queued: s6715_pg_lvl1_dd1, s6715_pg_lvl10_dd4 (PROBES=0 forced, 300 s).
+
+## Session 6716 (2026-10-31) — G1e H-bridge discriminated with line-level xctrace: the DPC bridge is 18.4% of the Gfx thread but its pure-trace part is 2.2% (< 3% bar) -> H-bridge-essential; G1e dd4 ceiling ~8.6 ms / 57 tasks/s is interpreter-bound
+
+Soak fold: s6715_pg_lvl1_dd1 (304 s) and s6715_pg_lvl10_dd4 (303 s), ROGUESQ_G1E_PROBES=0 forced: alive, 0 VI stalls,
+0 crashlines. The s6715 probe gate is qualified.
+Run: scratch/agent/s6716_bridge.zsh (= s6715_probes.zsh with ROGUESQ_G1E_PROBES=0 instead of the toggle), lvl5 FPS60 dd4
+ASYNC+NODRAIN, STORE_DIAG=0, G1E_FAST=1, AQ=2; 203 s, alive, 0 stalls, 0 crashlines. At ~100 s (dense flight) attached
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun xctrace record --template 'Time Profiler' --attach <pid>
+--time-limit 15s` (works with DEVELOPER_DIR; s6715's failure was the missing env). New tool tools/xctrace_tp.py aggregates
+the exported time-profile XML (thread totals, inclusive/self, subtree root-frame addrs, --dump-addrs); addresses mapped to
+lines with lldb `image lookup -a` (file addr = addr - load 0x1022f0000 + 0x100000000; callsites -4). atos printed no lines
+for this build (debug-map), lldb did. Raw: scratch/s6716/{tp_gfx.txt,addrs_lines.txt,bridge_lines.txt}.
+Gfx thread 4259 samples: factor5_ucode self 3232 (76%), rsp_dpc_submit_impl inclusive 782 (18.4%; s6714 sample(1) read 13%).
+Bridge split by source region (samples / % of Gfx thread):
+- s6707 stream hand-off submit_deferred_merged call (line 6477): 171 / 4.0% (submit_rdp_range, memmove, cv signal) - essential
+- s4273 wrap-flush commit (5241-5330 incl. shIdx hash build 37): ~105 / 2.5% - essential (lap-1 content)
+- s4272 shadow push_back/insert (6464-6473 + vector.h): ~90 / 2.1% - essential (bump-time restore at commit)
+- size-8 head 5767-5892 (b0 load, PIPE/keep-pipe gate, FULL_SYNC signal g_rsp_full_sync_seen): 81 / 1.9% - functional
+- size-8 tail 5893-6410 (state shadows g_last_*, combiner flags, cimg/tex16 tracers; grep: no return/submit, consumers
+  are logs in this file only): 95 / 2.2% - pure trace
+- dpc-fwd counters, dpcwin static check, op histogram, misc helpers: ~110 / 2.6% (mostly a sample or two per line)
+Discrimination: H-bridge-diag predicted >=5% removable; the removable pure-trace region is 2.2% (+ at most ~1% of scattered
+counters) -> refuted. Selects H-bridge-essential: the bridge cost is the RT64 hand-off, the wrap commit and the shadow,
+all correctness features. No trim landed (below the s6715 3% bar). Control: the instrument resolves known terms - the
+stream flush, shadow insert and hash build appear exactly at their source lines, and the probe callees gated in s6715 are
+absent from the Gfx self list (s6714 had ~108 samples). Single-run, single-source for the percentages.
+H-floor (interpreter at floor) is not claimed: 76% self in factor5_ucode remains the only large lever (needs an
+interpreter-level idea, e.g. decode/dispatch caching). G1e dd4 ceiling recorded in CURRENT-TRUTH; next = G1f close-out
+(21:9/4:3 window captures; 16:9 done s6688), then G3. OWNER-OPT-INS: stale "21:9 hangar crash under investigation" row
+updated to the s6690 fix.
+Not a mitigation (measurement + tool; no ORIGIN needed).
