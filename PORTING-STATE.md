@@ -177361,3 +177361,23 @@ Next: G3 hangar vs retail (oracle reaches the hangar with Start presses, tools/o
   Two lines: two scenes (512 flight and 640 cinematic) both lose most of the gain under shift, and the Hermite
   identity predicts the 1.028 factor that bounds every observed full-decode gain (1.011-1.035).
 - Default decode left at full (reproduces earlier numbers and fits textured/2D content); use --dec shift for shaded 3D.
+
+## Session 6745 (2026-11-01) — G3: lvl1 no-input flight 20-60 s after flight start matches retail angrylion (H-match, no desync); no effects occur without input
+
+HYPOTHESIS-ID: g3-flight-effects-oracle-diff.
+Ran: retail rs64_oracle (cxd4 RSP + angrylion) with the s6744 recipe, Start at 90 s, 80 fb dumps 0.5 s apart at
+20..59.5 s after the first 512 flight frame (scratch/s6745/retail_flight.sh, SECS=185; dumps vi 7926..10296). Port:
+tools/g3_port_capture.sh with the oracle EEPROM, Start-skip of the crawl, SECS=140 CAP0=85 (227 window captures, run.log 0
+crash). Matched with g3_oracle_match.py --w 512 --bases 690000,620000 --h 446 --win 60,1024 --winx 85,1191 --dec shift.
+Result: 69 of 80 retail frames match a port capture at d 4.8-8.0 vs same-run median 16-22 (control); matched port times
+are monotonic through the whole window (no H-desync: the no-input flight stays deterministic past the scripted start);
+retail vi 7986->10235 (2249 VIs = 37.48 s) maps to port 85.66->122.63 s (36.97 s), 1.4% (s6743 crawl 2%, intro 1.5%).
+The 11 frames with d > 8 (8.3-15.8): all retail buffers dumped mid-draw (sky only plus a few terrain rows, or the lower
+rows/HUD not yet drawn; scratch/s6745/sheet_worst.png), 6 of them match the same port capture because no complete frame
+resembles them. The d 6.5-8 complete frames (vi 9096-9306 over the Mos Eisley town, 9966-10146 low over dunes) are
+geometry-identical (town buildings, tower, ridge, wingmen, HUD, radar; sheet_mid.png); the residual heat is the
+close-terrain texture and craft edges, i.e. capture phase within a fast-moving frame. Brightness fit (dec=shift)
+R 0.975/+3.2, G 1.001/-1.4, B 1.006/-2.0, as s6744.
+Rules out: H-desync and H-geom for this window. Does NOT test H-rt64-fx: with no input the player never fires and no
+explosion or bolt appeared in any retail or port frame. Tool: g3_oracle_match.py --worst K writes worstN_*.png sheets.
+Next: same route with scripted fire presses in both (retail --press a/b/z, port autopilot) so bolts and explosions occur.

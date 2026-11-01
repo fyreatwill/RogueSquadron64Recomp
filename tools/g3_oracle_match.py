@@ -5,7 +5,7 @@ Pure PIL (no numpy on this host). Retail dumps are raw big-endian RDRAM windows;
 the base whose VI origin0 the oracle logged (origin = base + 0x500, + one 1280-byte row on interlace field 1). Each
 retail frame is matched to the port frame with min mean |dLum| on a 160x84 grid; the best pairs are written as
 retail | port | 16x16-tile |dLum| heat map (x4). Usage:
-  g3_oracle_match.py ORACLE_LOG PORT_DIR OUT_DIR [--bases 695C00,62B800] [--h 336] [--min-vi N] [--win Y0,Y1] [--winx X0,X1] [--w 512] [--dec full|shift] [--fitd 6]
+  g3_oracle_match.py ORACLE_LOG PORT_DIR OUT_DIR [--bases 695C00,62B800] [--h 336] [--min-vi N] [--win Y0,Y1] [--winx X0,X1] [--w 512] [--dec full|shift] [--fitd 6] [--worst K]
 --win: PORT_DIR holds window captures (w_<secs>.png, s6738 port_win.sh); rows Y0..Y1 are the letterboxed VI picture
 (1280x1024 Retina 640x480 window, 640x336 VI: 208,880). RDRAM ppm dumps are NOT valid for 3D scenes: RT64 renders on
 the GPU and does not write those frames back (s6738: port RDRAM held the stale N64 logo through the cinematic).
@@ -108,7 +108,11 @@ def main():
     if fx[0]:
         print('fit retail=a*port+b (%d blocks, dec=%s): ' % (len(fx[0]), opt('--dec', 'full')) +
               '  '.join('%s a=%.4f b=%+.2f' % ((ch,) + linfit(fx[c], fy[c])) for c, ch in enumerate('RGB')))
-    for rank, (dv, vi0, k, _, r) in enumerate(rows[:6]):
+    # s6745: --worst K also writes sheets for the K worst-matched retail frames (worstN_*.png), so per-element
+    # differences (effects, mid-draw buffers) can be eyeballed next to the best pairs.
+    nw = int(opt('--worst', '0'))
+    sel = [('pair', i, x) for i, x in enumerate(rows[:6])] + [('worst', i, x) for i, x in enumerate(rows[::-1][:nw])]
+    for tag, rank, (dv, vi0, k, _, r) in sel:
         p = port[k][1]
         diff = ImageChops.difference(r.convert('L'), p.convert('L'))
         t = diff.resize((W // 16, H // 16), Image.BOX)
@@ -116,9 +120,9 @@ def main():
         heat = Image.merge('RGB', [t.point(lambda v: min(255, v * 4)).resize((W // 16 * 16, H // 16 * 16), Image.NEAREST),
                                    Image.new('L', (W // 16 * 16, H // 16 * 16)), Image.new('L', (W // 16 * 16, H // 16 * 16))])
         sheet = Image.new('RGB', (W * 3, H)); sheet.paste(r, (0, 0)); sheet.paste(p, (W, 0)); sheet.paste(heat, (2 * W, 0))
-        sheet.save(os.path.join(out, f'pair{rank}_vi{vi0}_n{port[k][0]}.png'))
+        sheet.save(os.path.join(out, f'{tag}{rank}_vi{vi0}_n{port[k][0]}.png'))
         rm, pm = ImageStat.Stat(r).mean, ImageStat.Stat(p).mean
-        print(f'pair{rank}: vi={vi0} n={port[k][0]} d={dv:.2f} tiles>8={sum(v > 8 for v in tv)}/{len(tv)} '
+        print(f'{tag}{rank}: vi={vi0} n={port[k][0]} d={dv:.2f} tiles>8={sum(v > 8 for v in tv)}/{len(tv)} '
               f'tiles>40={sum(v > 40 for v in tv)} max_tile={max(tv)} meanRGB retail={[round(x,1) for x in rm]} port={[round(x,1) for x in pm]}')
 
 if __name__ == '__main__':

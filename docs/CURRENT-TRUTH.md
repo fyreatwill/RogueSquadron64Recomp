@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6744 (2026-11-01).
+Compact operational handoff, as of Session 6745 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -10,6 +10,11 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 
 ## Headline
 
+- **s6745 G3: lvl1 no-input flight +20..60 s = H-match vs retail angrylion, no desync** (80 retail dumps: 69 complete
+  frames d 4.8-8.0 vs same-run median 16-22, port match times monotonic, 2249 retail VIs = 37.5 s vs 37.0 s port; dunes,
+  Mos Eisley town, wingmen, HUD, radar identical, scratch/s6745/sheet_mid.png). All 11 frames with d > 8 are retail
+  buffers caught mid-draw (terrain/HUD rows missing, sheet_worst.png), not port differences. No laser fire or explosion
+  occurs with no input, so effects stay untested; g3_oracle_match.py gained --worst K (sheets of the K worst pairs).
 - **s6744 G3: first lvl1 flight frames with HUD = H-match vs retail angrylion** (vi 7116-7926 d 4.4-5.8 vs same-run
   median 17-21, monotonic, 13.5 s retail = 13.3 s port; HUD, craft, wingmen, enemies, dunes identical,
   scratch/s6744/sheet_early_best.png). A Start during the port crawl skips it (flight at 69.5 s, not 156 s). The
@@ -471,9 +476,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 4. **Then G3 render fidelity (NEXT: g3-hangar-oracle-diff).** s6738 boot cinematic, s6739 Tatooine attract flight and
    s6740 cinematic replay are H-match; the green offset is the P3 capture tag (s6740). s6741 hangar (4:3 retail settings) H-match.
    s6742 the 640 phase after the hangar = opening crawl, H-match. s6743 mission-intro cinematic, H-match. s6744 first
-   ~15 s of lvl1 flight with HUD, H-match; brightness gain = decode convention (--dec shift). Next
-   (g3-flight-effects-oracle-diff): lvl1 flight 20-60 s with no input (laser fire, explosions, transparency, smoke)
-   vs retail; checks determinism holds past the scripted start. G2/G5 are closed; G4 and aim/steer stay
+   ~15 s of lvl1 flight with HUD, H-match; brightness gain = decode convention (--dec shift). s6745 flight
+   +20..60 s with no input H-match, no desync, but no effects appear. Next (g3-flight-effects-oracle-diff): the same
+   route with scripted fire presses (A/B/Z) in both retail and port, so bolts/explosions are compared. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index
