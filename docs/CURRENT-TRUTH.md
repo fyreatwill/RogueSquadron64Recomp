@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6741 (2026-11-01).
+Compact operational handoff, as of Session 6742 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -10,6 +10,9 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 
 ## Headline
 
+- **s6742 G3: the 640 phase after the hangar (0x6A2900) is the Star Wars opening crawl, not a fly-over; it matches retail
+  angrylion** (lit frames d 2.4-8.2 vs same-run median 23-26; crawl speed within 2%). 640x300, port window rows 244..844.
+  rs64_oracle gained --fb-arm-after (a 640 dump otherwise arms on the boot intro). Retail needs a Start at 61 s (-> 79.7 s).
 - **s6741 G3: retail-settings 4:3 hangar (level select) = H-match vs retail angrylion** (21 frames d 3.0-4.7, means
   within 1; wrong-hologram control d 14.7-17.6). The owner save selects a different level: compare with the oracle EEPROM
   (tools/g3_port_capture.sh SAVE_FROM=, restores the save). Wide-aspect hangar artifacts (s6601) are not covered.
@@ -452,7 +455,8 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
    are archived in PROJECT-OVERVIEW, not an alternate live backlog.
 4. **Then G3 render fidelity (NEXT: g3-hangar-oracle-diff).** s6738 boot cinematic, s6739 Tatooine attract flight and
    s6740 cinematic replay are H-match; the green offset is the P3 capture tag (s6740). s6741 hangar (4:3 retail settings) H-match.
-   Next (g3-briefing-oracle-diff): the 640 briefing fly-over (0x6A2900) after the hangar, same oracle EEPROM. G2/G5 are closed; G4 and aim/steer stay
+   s6742 the 640 phase after the hangar = opening crawl, H-match. Next (g3-mission-intro-oracle-diff): what follows the
+   crawl (mission intro / first flight frames, retail run >=180 s), same oracle EEPROM. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index

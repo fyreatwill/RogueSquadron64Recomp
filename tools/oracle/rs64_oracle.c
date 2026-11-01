@@ -3220,12 +3220,13 @@ static volatile int g_poll_running;
 #define MAX_FB_DUMPS 96  /* s6738: 16 -> 96 for dense retail frame series (G3 pixel diff) */
 static struct { unsigned width; double delay; unsigned start, len; char path[512]; double armed_at; int done; } g_fbd[MAX_FB_DUMPS];
 static int g_nfbd;
+static double g_fbd_arm_after;  /* s6742: --fb-arm-after SECS, no dump arms before t (the 640 intro precedes the 640 briefing) */
 static void fb_dump_poll(double t, unsigned width)
 {
     for (int k = 0; k < g_nfbd; k++) {
         if (g_fbd[k].done) continue;
         if (g_fbd[k].armed_at < 0) {
-            if (width != g_fbd[k].width) continue;
+            if (width != g_fbd[k].width || t < g_fbd_arm_after) continue;
             g_fbd[k].armed_at = t;
         }
         if (t - g_fbd[k].armed_at < g_fbd[k].delay) continue;
@@ -3981,6 +3982,7 @@ int main(int argc, char **argv)
             g_fbd[g_nfbd].width = w; g_fbd[g_nfbd].delay = dl; g_fbd[g_nfbd].start = st; g_fbd[g_nfbd].len = ln;
             snprintf(g_fbd[g_nfbd].path, sizeof g_fbd[g_nfbd].path, "%s", pth); g_fbd[g_nfbd].armed_at = -1; g_nfbd++;
         }
+        else if (!strcmp(argv[i], "--fb-arm-after") && i + 1 < argc) g_fbd_arm_after = atof(argv[++i]);
         else if (!strcmp(argv[i], "--status-poll"))                g_status_poll = 1;
         else if (!strcmp(argv[i], "--pif-trace"))                  g_pif_trace = 1;
         else if (!strcmp(argv[i], "--debug-write") && i + 1 < argc) {

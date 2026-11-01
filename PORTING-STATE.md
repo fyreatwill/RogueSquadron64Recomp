@@ -177283,3 +177283,24 @@ Next: G3 hangar vs retail (oracle reaches the hangar with Start presses, tools/o
   (s6601 g3-hangar-artifacts: wide-aspect bands, holo spikes) are opt-in ASPECT states and are not covered by this.
 - New tool: tools/g3_port_capture.sh (port autopilot + window captures, SAVE_FROM=<eep> swaps the save with
   backup/restore trap and forces NO_SAVE_WRITE). Pairs: scratch/s6741/m3/pair*.png; control scratch/s6741/m2ctl.
+
+## Session 6742 (2026-11-01) — G3: the 640 phase after the hangar is the Star Wars opening crawl, and it matches retail angrylion (H-match, crawl speed within 2%)
+
+- Ran: retail ROM under rs64_oracle + angrylion (scratch/s6742/retail_brief.sh). Try 1 (Start presses 6..56 s) stayed in
+  the hangar through 110 s (hangar at 38.4 s), so README's "past ~58 s" was wrong for this video plugin; adding a press at 61 s
+  gave WIDTH 512 -> 640 at 79.7 s. Port (tools/g3_port_capture.sh, oracle EEPROM via SAVE_FROM, owner save restored and
+  cmp-verified; Start 6..41 s) reached 640 @0x6A2900 at 59.9 s, also ~18 s after its last press. 0 crash lines.
+- The phase is not a briefing fly-over: it is the opening crawl (STAR WARS logo recedes, "Chapter I / THE REBEL OPPOSITION",
+  scrolling text; scratch/s6742/retail_sheet.png). Picture 640x300 (retail rows >=300 hold unrelated data), buffers
+  0x6A2400 / 0x644800 (+0x500 origin, +0x500 more on field 1). Port window box: 2x centred, rows 244..844 of 1280x1024.
+- Tool change: rs64_oracle `--fb-arm-after SECS`. `--fb-dump 640:...` armed on the boot intro's 640 VI at 2.1 s otherwise.
+- Result (g3_oracle_match.py --w 640 --bases 6A2400,644800 --h 300 --win 244,844): lit crawl frames match at d 2.4-8.2
+  against a median of 23-26 for the other port frames of the same run (wrong scroll position = control); means within
+  0.4 per channel. Pairs are visually identical (scratch/s6742/m_244_844/pair*.png); the heat map sits on letter edges only
+  (sub-row scroll offset at ~4.6 captures/s). Second line: matched port capture times track retail VI time, 721 VIs
+  (12.0 s) -> 11.77 s of port wall time, so the crawl scrolls at the same speed (within capture jitter).
+- Wrong-box control: --win 64,1024 (full 960-row stretch) scores d 11-18 on the same lit frames, so the box is measured.
+- Single-source oddity, not chased: about half the retail dumps on origin 0x6A2E00 are near-black (meanL 0.1); they pair with
+  the port's black fade frame, so they say nothing either way.
+- Rules out H-rt64 / H-geom / H-pos for the opening crawl. The real in-engine phase after the crawl (mission intro / load)
+  was not reached: the retail run ended at 110 s mid-crawl.

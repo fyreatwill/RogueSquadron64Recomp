@@ -223,6 +223,11 @@ Measured phase timeline (`--vi-trace`), driven vs undriven:
 
 The hangar holds for the rest of the run once the presses stop. Keep pressing
 past ~58s and it advances out of the hangar into a 640 phase at `0x6a2900`.
+(s6742, angrylion video: presses at 6..56 s left it in the hangar through 110 s;
+adding a press at 61 s gave the 640 phase at 79.7 s. That phase is the Star Wars
+opening crawl, 640x300, buffers 0x6a2400/0x644800 + 0x500. `--fb-dump` arms on
+the FIRST VI of the given width, which for 640 is the boot intro; add
+`--fb-arm-after SECS` to keep dumps from arming before that time.)
 Origin distinguishes the two 512 phases: `0x690xxx` is the attract demo,
 `0x6abxxx` is the hangar — the same buffer pair our port reports.
 
