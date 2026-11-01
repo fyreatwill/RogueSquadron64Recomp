@@ -10,8 +10,8 @@ retail | port | 16x16-tile |dLum| heat map (x4). Usage:
 (1280x1024 Retina 640x480 window, 640x336 VI: 208,880). RDRAM ppm dumps are NOT valid for 3D scenes: RT64 renders on
 the GPU and does not write those frames back (s6738: port RDRAM held the stale N64 logo through the cinematic).
 """
-import re, sys, os, glob, struct
-from PIL import Image, ImageChops, ImageStat
+import re, sys, os, glob, struct, io
+from PIL import Image, ImageChops, ImageStat, ImageCms
 
 W = 640
 
@@ -23,6 +23,18 @@ def decode(raw, off, h):
         out[3 * i + 1] = ((v >> 6) & 31) * 255 // 31
         out[3 * i + 2] = ((v >> 1) & 31) * 255 // 31
     return Image.frombytes('RGB', (W, h), bytes(out))
+
+_SRGB = ImageCms.createProfile('sRGB')
+
+def to_srgb(im):
+    # s6740: macOS screencapture tags window PNGs with the Display P3 profile, so their raw values are P3-encoded
+    # (sRGB colours read desaturated: blue sky R+8/G-8, dark channels +19). Retail RDRAM decodes are plain sRGB-ish
+    # 5551, so convert captures to sRGB before any pixel diff. --no-icc keeps the raw values.
+    icc = im.info.get('icc_profile')
+    if not icc or '--no-icc' in sys.argv:
+        return im.convert('RGB')
+    return ImageCms.profileToProfile(im.convert('RGB'), ImageCms.ImageCmsProfile(io.BytesIO(icc)), _SRGB,
+                                     renderingIntent=ImageCms.Intent.RELATIVE_COLORIMETRIC)
 
 def small(im):
     return im.convert('L').resize((160, 84), Image.BOX)
@@ -53,7 +65,7 @@ def main():
     if '--win' in a:
         y0, y1 = (int(v) for v in opt('--win', '208,880').split(','))
         for f in sorted(glob.glob(os.path.join(pdir, 'w_*.png'))):
-            im = Image.open(f).convert('RGB')
+            im = to_srgb(Image.open(f))
             x0, x1 = (int(v) for v in opt('--winx', '0,%d' % im.size[0]).split(','))  # s6739: pillar-boxed 512 VI
             port.append((int(float(re.search(r'w_(\d+\.\d+)', f)[1]) * 100), im.crop((x0, y0, x1, y1)).resize((W, H), Image.BOX)))
     for f in sorted(glob.glob(os.path.join(pdir, 'fb_*_w640.ppm'))):

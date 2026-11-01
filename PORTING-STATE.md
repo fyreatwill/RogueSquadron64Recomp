@@ -177233,3 +177233,31 @@ Post-fix game run attract3: 165 s, 16 reopens, 0 CRASH lines, 0 Unhandled, attra
 Rules out: H-desync for the attract demo; "only the audio thread opens/closes audio_device".
 Not yet checked: crash frequency pre-fix in plain launches (1/2 here; it needs the reopen to land on a poll).
 Next: the Hoth attract demo (port ~124 s, looked very white) vs retail, plus a per-region channel check of the green offset.
+
+## Session 6740 (2026-11-01) — G3: the "white Hoth demo" is the boot cinematic replaying and matches retail (H-match); the s6739 green offset is the Display-P3 tag on window captures, now converted to sRGB in g3_oracle_match.py
+Work unit: g3-hoth-attract-diff (NEXT.md).
+Retail: scratch/s6740/retail_hoth.sh (rs64_oracle + angrylion, no input, SECS 230, 4 Tatooine controls + 92 dumps 40-118 s
+after the first 512 VI). VI timeline: 512 Tatooine flight 101.5 s -> 640 phase from t~148 s (bases 0x695C00/0x62B800,
+origins +0x500/+0xA00) -> 1024 title at ~194 s. No second 512 "Hoth demo" exists.
+Port (scratch/s6739/attract3, existing captures): 118-137 s = N64 logo, snow canyon fly-over, LucasArts logo carved in
+snow (full-width 640 box, y 208-880) = the boot intro cinematic replaying after the attract loop, not a Hoth demo.
+Measurements:
+1. Port window PNGs carry an embedded "Display P3" ICC profile (sips, PIL). tools/g3_oracle_match.py now converts captures
+   with an embedded profile to sRGB (ImageCms, relative colorimetric); --no-icc keeps raw values.
+2. Tatooine pairs (s6739 retail log + attract3), per-pixel split on geometry-matched pixels (scratch/s6740/green_split.py):
+   raw: blue pixels dR/dG/dB -7..-9/+8/+8.5, warm +9/+3/-3, retail G<32 bin -20 (hue- and value-dependent, the P3 signature);
+   converted: blue +5/+7/+7, warm +5/+4/+3, dark bin -5 (hue pattern gone). Linear fit (gain_fit.py) converted:
+   retail = 1.020-1.032 x port, offset -0.9..+1.1, same in R, G, B, all six pairs. Row bands uniform.
+3. Cinematic (retail vi 8816-11315 vs attract3, converted): static white LucasArts logo d 0.36 (raw 0.86, tiles>8 37 -> 0) =
+   positive control for the conversion; slow-camera snow frames d 1.4-3.9 (fast frames 10-26 from ~4/s port sampling);
+   snow-frame means retail vs port equal within +-1 (r211/p211, r225/p225, r240/p240), gain 1.00-1.015.
+   Visual sheet scratch/s6740/snow_pairs.png (retail | port, 6 frames): geometry, craft, logo, snow identical.
+Verdict: selects H-match for the "very white" frames (retail snow canyon is meanL 205-240 too); refutes H-shade and H-grey
+(the flat grey/black port frames are cinematic transitions retail also has: vi 10243 meanL 0.1 matched d 0.02).
+Green offset: two lines (hue-pattern disappearance on 6 flight pairs; static-logo d 0.86 -> 0.36) select H-capture (P3
+tag) for its hue-dependent part. The remaining uniform 2.5% gain is 512-flight-only (cinematic gain ~1.00 with the same
+decoder), so the 255/248 decoder-convention idea is refuted; cause open, small, single-scene.
+Caveat: s6738/s6739 d values were computed on raw P3 captures; lum d in the Tatooine flight rises 4.6 -> 5.3 when converted
+because the P3 tag partly cancelled the 2.5% gain there.
+Rules out: a second attract demo; "Hoth looks too white" as a port defect; H-shade for the s6739 green offset.
+Next: G3 hangar vs retail (oracle reaches the hangar with Start presses, tools/oracle/README "Reaching the hangar").

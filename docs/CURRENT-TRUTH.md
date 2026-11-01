@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6739 (2026-11-01).
+Compact operational handoff, as of Session 6740 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -14,7 +14,13 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   reopens the SDL device on the game thread while the events thread polls its queue size (use-after-free). Every SDL call
   on audio_device now holds audio_device_mutex. Repro tools/audio_race (unlocked 3/3 SIGSEGV, locked 3/3 clean).
 - **s6739 G3: attract-demo Tatooine flight = H-match vs retail** (two port runs, best d 4.6-5.5, monotonic, so the demo is
-  deterministic). Residuals: a consistent ~+4/255 retail green offset, a thin HUD-text edge residual (both small, open).
+  deterministic). Residuals: a thin HUD-text edge residual, and (s6740) a uniform 2.5% brightness gain retail>port in
+  the 512 flight only (all hues/rows, offset ~0; cinematic means match within +-1, so not a decoder convention; open, small).
+- **s6740 G3: window captures are Display-P3-tagged; tools/g3_oracle_match.py now converts them to sRGB** (--no-icc = raw).
+  The s6739 "+4 green" was mostly this (raw: blue R-8/G+8/B+8, warm R+9/B-3, dark channels -20; converted: hue pattern
+  gone). Static logo control d 0.86 -> 0.36. The "white Hoth demo" after the attract flight is the boot intro cinematic
+  replaying (N64 logo, snow canyon, LucasArts logo); retail frames are equally white (meanL 205-240), pairs match
+  visually and in means (scratch/s6740/snow_pairs.png). H-match. s6738/s6739 d values were measured without ICC.
 - **FIXED s6738: the plain launch (owner's command, no env) ran every non-hangar gfx task through RT64 HLE.**
   ROGUESQ_LLE_FORCE/UNGATED/SOLO defaulted OFF, while every qualification soak (m6_god_common COMMON) sets all three.
   Seen as the boot intro cinematic drawn solid white (plain 0/71 scene captures; flags 61/64) and attribution glyphs
@@ -259,6 +265,9 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   "Migrated from CURRENT-TRUTH (s6721)"; tables in docs/G1-OBJECTIVE-RESPONSE.md.
 
 ## Superseded conclusions — do not act on these
+- s6739 "retail G channel +3.6..+3.9/255 above the port, possible H-shade" (believable: 12/12 pairs, two runs). s6740: the
+  port side was raw Display-P3 screencapture values; after P3->sRGB the hue-dependent part vanishes, leaving a uniform
+  2.5% gain in the 512 flight only. Lesson: convert tagged captures before any colour comparison.
 
 - s6735 "the load-frame right-edge vertical line is a stale presenter column from the full-width hangar present" (believable: it sat outside the horizontal line's extent and survived the follow-mode fix). s6736: it is source column cw-1 holding the game's clear colour, also visible in briefing/flight. The pre-load screen is the briefing fly-over, not the hangar.
 - s6729 "H-rt64-target: identical commands + identical TMEM, RT64's render target drops the draw" (SUPERSEDED s6730).
@@ -438,9 +447,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
    single-source where unresolved. Reopen on a new owner report or relevant
    side-effect failure, not repeat crash-hunt holds. Historical proposed probes
    are archived in PROJECT-OVERVIEW, not an alternate live backlog.
-4. **Then G3 render fidelity (NEXT: g3-hoth-attract-diff).** s6738 boot cinematic and s6739 Tatooine attract flight are
-   H-match. Next: the second attract demo (Hoth, port ~124 s, looked very white) vs retail (oracle SECS~200) + per-region
-   channel check of the s6739 green offset; then the briefing fly-over and hangar artifacts. G2/G5 are closed; G4 and aim/steer stay
+4. **Then G3 render fidelity (NEXT: g3-hangar-oracle-diff).** s6738 boot cinematic, s6739 Tatooine attract flight and
+   s6740 cinematic replay are H-match; the green offset is the P3 capture tag (s6740). Next: retail hangar (oracle driven
+   by Start presses, tools/oracle/README "Reaching the hangar") vs port hangar window captures; then the briefing fly-over. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index
