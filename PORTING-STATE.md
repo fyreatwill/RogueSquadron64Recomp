@@ -175998,3 +175998,33 @@ Work unit (NEXT g1c-o2-build-qualify): qualify the s6699 -O2 binary (build_s6699
 - Rules out (for these 5 runs): -O2-only crashes or render breakage on lvl1/5/7/10 + hangar route. Not ruled out: UB
   divergence in rare paths; first response to an -O2-only crash is -fwrapv, then lldb on the recompiled function.
 Next: G1c phase 2 on the -O2 build - lvl5 dd4/dd6/dd8 + FPS60 dd4 frame cost and faults, to find the next binding limit.
+
+## Session 6701 (2026-10-31) — G1c phase 2 on -O2: frame cost no longer binds; dd8 centre-box render = perspNorm 1 from our far scaling, capped
+
+Work unit (NEXT g1c-phase2-o2-limit): lvl5 dd4/dd6/dd8 + dd4 FPS60, 300 s each, -O2 build/, ROGUESQ_G1B=1 STORE_DIAG=0.
+New tool tools/g1c_phase2_fold.py (per-run hold summary, mission [g1b] tasks/s/p10/gfx ms, tricnt p90, terrain fraction).
+- Holds: all four 300 s alive, 0 stalls, 0 crashlines. tasks/s / gfx ms: dd4 30.3 / 14.3, dd6 31.7 / 10.5, dd8 30.6 / 7.4,
+  dd4+FPS60 43.7 / 16.4. H-cost rejected: no step drops below 30 tasks/s.
+- The lvl5 terrain-fraction scorer does not discriminate (dark space level: dd1 0.025, dd4 0.023). Contact sheets instead.
+- Every arm got paused at mission start: the recipe's last START (btn 0x1000) fires at t=74 s, mission onset t=75.9 s; later
+  `a` presses pick CONTINUE. The FPS60 arm's tasks/s includes paused time (contaminated).
+- dd8 defect: from craft select on, the whole 3D scene (pause menu too) draws inside a shrunken centre box; outside it keeps
+  stale pixels (the pause "MISSION GOALS" header and streaks, noise at craft select). Reproduced 2/2 (dd8, ddlog8). dd6 clean.
+  That explains dd8's cheap gfx task (7.4 ms) and lower tri p90 (453 vs 573). It is the parked "dd8 hangar garbage".
+- px is capped at 5 in the dd bundle, so dd6 and dd8 get identical pools; only the s6036 terrain radius and the s6031
+  guPerspective far scale differ. Crossed arms (100 s): dd8 + DD_FAR=6 full-screen; dd6 + DD_FAR=8 boxed; dd8 control boxed.
+- ORIGIN: writer = our s6031 far scaling. [far] shows the flight cameras use near 30 far 9728 / 9420.8. libultra
+  guPerspective writes perspNorm = (u16)(131072/(near+far)) (min 1): 2 at dd6 (58398), 1 at dd8 (77854). Predicted
+  threshold mf = 65506/9728 = 6.734; bracketed DD_FAR=6.70 full-screen / 6.78 boxed in flight (craft select and pause,
+  other cameras, stay clean at 6.78). The value is not legitimate: retail near+far stays below 65536 for these cameras.
+  The F5 ucode path that turns perspNorm 1 into a ~0.6 x/y shrink was not traced.
+- Fix: tools/apply_s6031_far.py apply4 s6701 caps scaled far at 65534-near (never below the retail far); [pnormcap] log;
+  ROGUESQ_DD_PNORM_CAP=0 restores the old behaviour. Applied to RecompiledFuncs/funcs_4.c via apply4 (the vendored fixup
+  calls it), build/ rebuilt. Same-batch verify (100 s, lvl5): dd8 capped full-screen, tri p90 575, 32.1 tasks/s; dd8
+  CAP=0 boxed (positive control), tri p90 464; dd4 capped full-screen, 29.8 tasks/s. The far=24000 camera is now capped too
+  (24000xN -> 65504 at dd>=3); dd4 shows no visible change. screenshots/s6701_*.png.
+- Terrain limit (DD_LOG runs, 150 s): lvl5 terrain 64x64, cap 8192/10240; clamped window max 3904/3904/3968 cells at
+  dd4/6/8 (~ the whole table), pre-clamp footprint 15k/32k/57k. Second line: tri p90 573/576/575 (dd4/dd6/fixed dd8).
+  Above dd4 there is no more terrain to draw on lvl5 (lvl1 the same, s6548).
+- Rules out: frame cost as the phase-2 limit on -O2; dd8's box as a heap/pool problem (pools identical to dd6).
+Queued: s6701_pnormcap_dd8_lvl1 / lvl10 (300 s). Next: fold them, FPS60 dd4 cost after the pause clears, owner sheet, close phase 2.

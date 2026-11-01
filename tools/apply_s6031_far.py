@@ -70,6 +70,15 @@ def apply4(text):
     n6428b = "((int32_t)MEM_W(-0X57C8, (gpr)(int32_t)0x80120000) <= 640 ? 1.0 / kv : og6112[f][0] == 640 ? 0.8 : 1.0)"
     if o6428b in text:
         text = text.replace(o6428b, n6428b); n += 1
+    # s6701 G1c: guPerspective's u16 perspNorm = (u16)(131072/(near+far)) drops 2 -> 1 once the scaled far passes
+    # 65536-near (lvl5 far 9728 x6.734); with perspNorm 1 the scene renders in a shrunken centre box (dd8 boxed,
+    # threshold bracketed DD_FAR 6.70 clean / 6.78 boxed). Cap the scaled far at 65534-near; ROGUESQ_DD_PNORM_CAP=0 = old.
+    o6701 = "        if (mf > 0.0) { ff = (float)(ff * mf); memcpy(&fu, &ff, 4); MEM_W(0X14, ctx->r29) = fu; }\n"
+    n6701 = ("        if (mf > 0.0) { static int pc6701 = -1; if (pc6701 < 0) { const char* e = getenv(\"ROGUESQ_DD_PNORM_CAP\"); pc6701 = !(e && *e == '0'); }\n"
+             "          float lim = 65534.0f - nf, sf = (float)(ff * mf); if (pc6701 && sf > lim) { static int nl6701; if (nl6701++ < 8) fprintf(stderr, \"[pnormcap] far %g x%g -> %g (near %g)\\n\", ff, mf, (lim > ff ? lim : ff), nf); sf = lim > ff ? lim : ff; }\n"
+             "          ff = sf; memcpy(&fu, &ff, 4); MEM_W(0X14, ctx->r29) = fu; }\n")
+    if o6701 in text and "pc6701" not in text:
+        text = text.replace(o6701, n6701, 1); n += 1
     text, m = applyfbw(text)
     return text, n + m
 

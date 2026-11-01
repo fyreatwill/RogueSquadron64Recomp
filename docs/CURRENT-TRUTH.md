@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6698 (2026-10-31).
+Compact operational handoff, as of Session 6701 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -31,6 +31,15 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   -> mission at 80 s; each 300 s, 0 crashlines/stalls, fb terrain+craft+HUD sane, 33 game tasks/s. Rebuilt build/ smoke
   lvl1 130 s clean, 29.8 tasks/s. -DROGUESQ_*_OPT=OFF restores -O0 for debugging. Not yet watched: UB-only divergence in
   rare paths (signed overflow); if an -O2-only crash appears, try -fwrapv first.
+- **FIXED s6701: dd>=6.74 rendered the scene in a shrunken centre box ("dd8 hangar garbage").** Writer = our own s6031
+  far scaling (tools/apply_s6031_far.py): libultra guPerspective's u16 perspNorm = (u16)(131072/(near+far)) drops 2 -> 1 once
+  scaled far passes 65536-near (lvl5 far 9728: mf 6.734). Evidence: crossed arms (dd8 terrain + DD_FAR=6 full-screen; dd6
+  terrain + DD_FAR=8 boxed) and the a-priori threshold bracketed (DD_FAR 6.70 full / 6.78 boxed). Fix: scaled far capped at
+  65534-near ([pnormcap] log; ROGUESQ_DD_PNORM_CAP=0 = old). lvl5 dd8 fixed full-screen, =0 control boxed, dd4 full-screen.
+  Why perspNorm 1 shrinks x/y in the F5 ucode is not traced (single mechanism read). s6701 phase-2 table (lvl5, -O2,
+  STORE_DIAG=0, 300 s): dd4 30.3 tasks/s gfx 14.3 ms, dd6 31.7 / 10.5, dd8 (boxed, void) 30.6 / 7.4; all clean. Frame cost no
+  longer binds. Terrain extent binds: lvl5 is a 64x64 table and the clamped window peaks at 3904-3968 cells at dd4, dd6 and dd8
+  alike ([ddclamp]); tri p90 flat 573/576/575. Above dd4 no more terrain exists to draw on lvl1/lvl5.
 - **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
   ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
   lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
@@ -357,6 +366,8 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 
 ## Superseded conclusions — do not act on these
 
+- s6574/s6576 "dd8 lvl1/5 hold clean" as a usable dd8 (s6701: every dd8 frame from the hangar on drew inside a centre box,
+  perspNorm 1 from the scaled far). Believable because holds were crash-free and fb checks sampled early or terrain-fraction only.
 - s6458 "G3c(c) turning shake closed as retail 30 Hz judder" and s6455 "camera jerk identical in all arms" (s6696: every run
   since s6372 ran at ~17 game fps with bunched presents from our own per-vector-load getenv). Believable because the jerk
   was arm-independent: the overhead was in every arm, retail included.
@@ -514,14 +525,14 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1c phase 2 on the -O2 build (s6700): find the next binding limit above dd4.** -O2 removed the dd4 frame-cost
-   wall (30.5 fps lvl5). Re-measure lvl5 dd4/dd6/dd8 (game tasks/s, gfx ms, crash/stall, fb contact sheet) and FPS60 at dd4
-   in one run batch; whichever step first drops below 30 tasks/s or faults names the limit. See NEXT.md.
+1. **G1c phase 2 closure (s6701).** perspNorm far cap landed. Fold the queued s6701_pnormcap_dd8 lvl1/lvl10 300 s soaks;
+   measure FPS60 dd4 cost after the t=74 s START pause clears (s6701 arm was paused at mission start); then send the owner
+   a dd1/dd4/dd8 sheet and close phase 2 (terrain table saturates at dd4). See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional
    spike cull await owner judgement; keep retail defaults. Native hangar
-   geometry, rare dd4/dd8 gfx SIGBUS and dd8 hangar garbage remain parked,
+   geometry, rare dd4/dd8 gfx SIGBUS remain parked (dd8 hangar garbage = s6701 perspNorm box, fixed),
    single-source where unresolved. Reopen on a new owner report or relevant
    side-effect failure, not repeat crash-hunt holds. Historical proposed probes
    are archived in PROJECT-OVERVIEW, not an alternate live backlog.
