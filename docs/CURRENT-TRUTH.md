@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6753 (2026-11-01).
+Compact operational handoff, as of Session 6754 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -10,15 +10,15 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 
 ## Headline
 
-- **s6753 G3: with dt pinned to 1/30 s in both arms the port's lvl3 in-flight sim is exact vs retail (H-dt-only).**
-  283 ticks (vi 6220-6880, spans s6750's ~6700 hit point), 3725 NPC gate calls (results, NPC points, reference object)
-  and 2014 rand calls (caller, value, tick) identical; pad 0 both arms; unpinned s6752 contrast diverges at tick 2 / rand
-  call 76. So the lvl3 desync is frame pacing (variable dt: retail 3-VI drops), not port arithmetic. Pin: oracle
-  RS64_XTRACE_POKE / port ROGUESQ_XTRACE_POKE=800FA730:29:30:3d088889 (needs ROGUESQ_RAND_TRACE open).
-- s6750: lvl3 flight H-match ~6 s then combat desync; rngSeed (0x80003470, LCG, boot-seeded) equalised at the flight
-  switch (oracle `--debug-write`, port `ROGUESQ_DEBUG_WRITE`) flips which arm is hit: RNG is one term only.
-- **s6749 G3: mission-2 intro +3.7 s retail = ~3 s black load lead-in (H-load); the cinematic matches frame by frame**
-  (d 3.4-10, monotonic, no skipped shot; 2.8% drift tracks port update_screen 61-62/s). tools/g3_phase_timeline.py.
+- **s6754 G3: mission 4, dt pinned, port sim = retail for 2301 ticks (~77 s of flight); frames H-match.** 7575 NPC
+  rows (4 NPCs) and 2152 rand calls (caller, value, tick) identical through tick 2301. At tick 2302 retail fires a
+  scripted event (initActorMotionParams + dispatchDatSubtypeByRandomIndex burst, camera object 0x80138D20 re-linked to
+  0x803623AC, NPC 803663D0 reactivated); the port fires the identical event (same camera values) at tick 2317. The
+  15-tick lag follows neither tick count, elapsed VI (retail 5166 VI, port 4633) nor any measured-time snapshot word:
+  an async-completion trigger (audio/dialogue, PI streaming or an unpinned clock), single-source. Framebuffers: 19/19
+  retail dumps (vi 6511-10831) match a port window capture at d 1.3-9 vs median 10-21 (worst = capture phase offset).
+- s6753 lvl3: dt pinned (oracle RS64_XTRACE_POKE / port ROGUESQ_XTRACE_POKE=800FA730:29:30:3d088889, needs
+  ROGUESQ_RAND_TRACE open) makes the sim exact for 283 ticks; lvl3 desync CLOSED as frame pacing (retail 3-VI drops).
 - **s6748 G3: mission 2 (Barkhesh) flight + bolts = H-match vs retail angrylion** (40 frames d 6.5-15 vs median 36-47,
   monotonic; bolts 24.8% vs 26.5%). tools/g3_eep_patch.py selects a mission on the checksummed save (two copies, adler32
   at +0/+4; selected mission +0x31). No impacts in window (lvl2 impacts not covered).
@@ -499,8 +499,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
    s6749 mission-2 intro: +3.7 s retail = black load lead-in (H-load), content H-match. Open minor: port update_screen
    61-62/s vs retail 60 VI/s. s6750 mission 3 early flight H-match, then combat desync at the first player hit (RNG
    history is one term). s6751-s6752: rand identical for 12 frames; the NPC gate lag = variable dt (retail 3-VI frame drops, port flat
-   2 VI); s6753 dt-pinned arms identical for 283 ticks = lvl3 desync CLOSED as pacing. Next (g3-lvl4-pinned): mission 4
-   flight, dt pinned, state + framebuffer vs retail. G2/G5 are closed; G4 and aim/steer stay
+   2 VI); s6753 dt-pinned arms identical for 283 ticks = lvl3 desync CLOSED as pacing. s6754 mission 4 dt-pinned: sim exact 2301 ticks,
+   frames H-match; a scripted event fires 15 ticks later in the port. Next (g3-lvl4-event-trigger): name that event's
+   trigger condition and its timebase. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index

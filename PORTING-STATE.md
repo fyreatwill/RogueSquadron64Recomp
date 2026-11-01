@@ -177636,3 +177636,39 @@ Interpretation: the port's game arithmetic reproduces retail exactly given equal
 divergence seen in s6750-s6752 comes from frame pacing (retail mupen 3-VI drops vs port flat 2 VI). Not a port defect;
 lvl3 desync thread CLOSED. dt pinning makes frame-exact oracle comparisons possible from now on.
 Saves: owner save restored by g3_port_capture.sh trap (save-restored, both port runs); mupen .eep restored (eep-restored).
+
+## Session 6754 (2026-11-01) — G3: mission 4 with dt pinned: port sim identical to retail for 2301 ticks (~77 s of flight) and frames H-match; a scripted event then fires 15 ticks later in the port (async-completion trigger, not tick/VI/dt)
+
+HYPOTHESIS-ID: g3-lvl4-pinned (H-match through tick 2301; H-sim selected from tick 2302, cause = event-trigger timebase).
+
+Recipe: scratch/s6754/lvl4.eep (g3_eep_patch.py from s6750 lvl3.eep, +0x31 2->3, checksums re-signed);
+scratch/s6754/retail.sh (= s6753 recipe, pin 800FA730:29:30:3d088889) run twice: `retail` SECS=115 reached flight at
+104 s (vi 6121) so only 227 ticks; `retail2` SECS=200 + 20 fb dumps (--fb-arm-after 103, every 4 s) gave 2477 ticks.
+scratch/s6754/port.sh (= s6753, ARM=55, CAP0=62): flight switch at update_screen #4321 t=70.3, 2473 ticks, 347 window
+captures. No crash either arm; owner save restored (save-restored), mupen .eep restored (eep-restored, both runs).
+
+Positive controls: every tick row in both arms carries pin= with 3d088889 at struct+0x20 (retail replaced values like
+3d5204da = 3-VI drop). New tools/g3_rand_ticks.py (rand calls keyed by sim tick, not each arm's clock) returns "no
+mismatch" on the s6753 lvl3 pair and finds this one's mismatch at index 2153.
+
+Result:
+- State (g3_frame_snap.py 2473, g3_rand_align.py, g3_rand_ticks.py): ticks 0-2301 identical: every NPC gate result,
+  NPC path point and reference object (4 NPCs, 7534/7575 rows equal over the whole run, all equal before 2302) and 2152
+  rand calls (tick, caller, value). Glob 0x8011A880 diffs before 2302 are words 20-27 (OS message-queue ring pointers
+  80128C70/80128C80/80112AE0, also differing in s6753) and 28-31 (clock words); words 7/8/18 differ transiently on 3
+  ticks (752, 1513, 1591) without any sim effect. Snapshot words 3-6, 9 = raw clocks, as in s6753.
+- Tick 2302 (retail vi 11586): retail calls initActorMotionParams (rand from 0x800F28F4) + 11 dispatchDatSubtypeByRandomIndex
+  (0x8007132C) rand calls, re-links the camera/reference object 0x80138D20 word 0 to 0x803623AC with new orientation
+  (words 11-15 -0.929, 7.45e-9, 0.370, 0.136, 0.930) and reactivates NPC 803663D0. The port runs ticks 2302-2316 as
+  plain sim (advanceNpcOnCurvedPath, computeRandomizedOrientationFrame), then at tick 2317 does the same event with the
+  same camera values. Same rand values throughout: only the event's tick differs.
+- Timebase check: retail elapsed from tick 0 = 5166 VI at 2302; port = 4604 VI at 2302, 4633 at 2317. Cumulative
+  snapshot words 3/4/5/6/9 (measured clocks) at retail 2302 are never matched by the port near 2317. So the trigger is
+  not tick count, not elapsed VI and not the measured-dt words: an async completion (audio/dialogue end, PI asset
+  streaming, or another unpinned clock). Single-source; the event's caller chain is not traced yet.
+- Frames (g3_oracle_match.py --w 512 --bases 690000,620000 --h 446 --win 60,1024 --winx 85,1191 --dec shift): 19 non-black
+  retail dumps vi 6511-10831 all match a port capture at d 1.3-9.0 vs median 9.7-21.5 (14/19 d<2.1); worst (vi 8191 d 9.0)
+  is the same scene one capture phase off (reticle/horizon shift), not a material difference. Render H-match for lvl4.
+Two lines (sim state + rand stream; framebuffers) agree on H-match through tick 2301. Rules out H-render for this window.
+Next: g3-lvl4-event-trigger - exec-trace initActorMotionParams 0x800F2888 / its caller ($ra chain) in both arms and read
+the gating condition, then compare that condition's inputs per tick.
