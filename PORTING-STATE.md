@@ -177381,3 +177381,30 @@ R 0.975/+3.2, G 1.001/-1.4, B 1.006/-2.0, as s6744.
 Rules out: H-desync and H-geom for this window. Does NOT test H-rt64-fx: with no input the player never fires and no
 explosion or bolt appeared in any retail or port frame. Tool: g3_oracle_match.py --worst K writes worstN_*.png sheets.
 Next: same route with scripted fire presses in both (retail --press a/b/z, port autopilot) so bolts and explosions occur.
+
+## Session 6746 (2026-11-01) — G3: lvl1 flight with scripted fire matches retail angrylion (H-match); laser bolts appear in 34.7% of retail vs 33.3% of port frames, 0%/0% in the no-fire arms; `a` is throttle, B/Z fire
+
+- Ran (one game at a time, 4 runs): retail rs64_oracle (cxd4 + angrylion) scratch/s6746/retail_flight.sh, Start 6..61+90 s,
+  80 x 512 dumps at flight +2..+41.5 s, plus key presses every 0.5 s from 115 s; port tools/g3_port_capture.sh with the
+  oracle EEPROM (SAVE_FROM), AP Start 6..41+50 s plus the same keys every 0.5 s from 72 s (flight ~69.5 s), SECS=118,
+  CAP0=70 (scratch/s6746/port.sh). Arm A: `a` presses (retail 97 presses, port 93 autopilot events, 0 CRASH). Arm BZ:
+  `b`/`z` alternating (97 / 93, 0 CRASH, 197 captures). Owner save restored and cmp-verified after both port runs.
+- Datum: `a` does NOT fire. The A arms show zero player bolts in retail and port (it is throttle, as s5821 found: the
+  ship moves only while A is held). With B/Z, retail shows red bolt streaks beside the reticle (vi 7205, 7325, 7745,
+  7774, 8014, 8195; scratch/s6746/retail_bz_sheet.png).
+- Whole-frame match, arm BZ (g3_oracle_match.py --dec shift, s6745 geometry): all 73 complete retail frames match at
+  d 4.2-7.6 vs same-run median 15-22, port match times monotonic; retail vi 7055->9214 (35.98 s) maps to port
+  71.03->106.21 s (35.18 s, 2.2%). The 2 outliers (vi 7714 d 13.3, vi 8645 d 13.0) are blank mid-draw retail buffers. The
+  A arm also matches (d 4.4-7.8, monotonic), so held input does not desync either.
+- Per-frame bolt pairing fails as expected: bolts live a few frames and a port capture lands up to ~0.12 s off the retail
+  phase, so matched pairs disagree on bolt presence (scratch/s6746/bolt_pairs_{a,b}.png: retail bolt beside the reticle
+  with none in the port pair, and vice versa at vi 7774/port 82.75 s, where the port shows bolts by the reticle).
+- Population statistic (new tools/g3_effect_count.py: bolt-red pixels R>170 G<80 B<80 in the band above the craft, port
+  72..106 s): frames with >=4 px retail_A 0.0% (n 75) / port_A 0.0% (n 142) = negative controls; retail_BZ 34.7% (n 75) /
+  port_BZ 33.3% (n 141); >=15 px 12.0% / 8.5%; mean 5.4 / 4.2 px; max 38 / 32. Bolt colour retail (219,27,21) vs port
+  (218,42,33). The port's slightly lower G/B saturation and the lower >=15 px tail fit thin bolts drawn at ~2.2x
+  resolution and box-averaged down to 512 wide (single-source: not tested with a native-res port capture).
+- Selects H-match for laser bolts: same rate, same hue, same place. Rules out H-geom (missing bolt geometry) and a gross
+  H-rt64-fx (wrong blend/colour) for bolts. Not covered: explosions (one ground explosion in retail vi 7774, none caught
+  in a matched port capture) and their additive/alpha blend; a different level/biome.
+- New tool: tools/g3_effect_count.py (per-arm effect-pixel rate + mean colour, retail fb-dump logs and port capture dirs).

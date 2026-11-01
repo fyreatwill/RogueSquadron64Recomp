@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6745 (2026-11-01).
+Compact operational handoff, as of Session 6746 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -10,6 +10,11 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 
 ## Headline
 
+- **s6746 G3: lvl1 flight with scripted fire = H-match vs retail angrylion.** `a` is throttle; B/Z fire. With B/Z alternating
+  every 0.5 s, all 73 complete retail frames match at d 4.2-7.6 vs median 15-22, monotonic, 2.2% timing. Bolts cannot
+  be paired frame by frame (few-frame lifetime vs capture phase), so tools/g3_effect_count.py counts bolt-red pixels per
+  arm: frames with bolts retail 34.7% vs port 33.3%, no-fire controls 0%/0%, hue (219,27,21) vs (218,42,33).
+  Explosions are not yet compared.
 - **s6745 G3: lvl1 no-input flight +20..60 s = H-match vs retail angrylion, no desync** (80 retail dumps: 69 complete
   frames d 4.8-8.0 vs same-run median 16-22, port match times monotonic, 2249 retail VIs = 37.5 s vs 37.0 s port; dunes,
   Mos Eisley town, wingmen, HUD, radar identical, scratch/s6745/sheet_mid.png). All 11 frames with d > 8 are retail
@@ -477,8 +482,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
    s6740 cinematic replay are H-match; the green offset is the P3 capture tag (s6740). s6741 hangar (4:3 retail settings) H-match.
    s6742 the 640 phase after the hangar = opening crawl, H-match. s6743 mission-intro cinematic, H-match. s6744 first
    ~15 s of lvl1 flight with HUD, H-match; brightness gain = decode convention (--dec shift). s6745 flight
-   +20..60 s with no input H-match, no desync, but no effects appear. Next (g3-flight-effects-oracle-diff): the same
-   route with scripted fire presses (A/B/Z) in both retail and port, so bolts/explosions are compared. G2/G5 are closed; G4 and aim/steer stay
+   +20..60 s with no input H-match, no desync. s6746 B/Z fire (`a` = throttle): bolts H-match by population rate/hue
+   (tools/g3_effect_count.py). Next (g3-flight-effects-oracle-diff): explosions (orange/additive) by the same
+   population method over a longer fire window, then a second biome level. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index
