@@ -4344,7 +4344,7 @@ index 3198be0..55a15a5 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..93a9641 100644
+index 149e770..facc77f 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -1,5 +1,6 @@
@@ -4354,7 +4354,7 @@ index 149e770..93a9641 100644
  #include <chrono>
  #include <cinttypes>
  #include <variant>
-@@ -8,11 +9,24 @@
+@@ -8,18 +9,457 @@
  #include <mutex>
  #include <queue>
  #include <cstring>
@@ -4379,7 +4379,8 @@ index 149e770..93a9641 100644
  #include "ultramodern/extensions.h"
  
  #include "ultramodern/rsp.hpp"
-@@ -20,6 +34,431 @@
+ #include "ultramodern/renderer_context.hpp"
++extern "C" int rs64_tl_on; extern "C" void rs64_tl(uint32_t code, uint32_t arg); extern "C" void rs64_tl_flush(); // s6711 (mesgqueue.cpp)
  
  static ultramodern::events::callbacks_t events_callbacks{};
  
@@ -4811,7 +4812,7 @@ index 149e770..93a9641 100644
  void ultramodern::events::set_callbacks(const ultramodern::events::callbacks_t& callbacks) {
      events_callbacks = callbacks;
  }
-@@ -30,6 +469,7 @@ struct SpTaskAction {
+@@ -30,6 +470,7 @@ struct SpTaskAction {
  
  struct ScreenUpdateAction {
      ultramodern::renderer::ViRegs regs;
@@ -4819,7 +4820,7 @@ index 149e770..93a9641 100644
  };
  
  struct UpdateConfigAction {
-@@ -39,6 +479,7 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
+@@ -39,6 +480,7 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
  
  struct ViState {
      const OSViMode* mode;
@@ -4827,7 +4828,7 @@ index 149e770..93a9641 100644
      PTR(void) framebuffer;
      PTR(OSMesg) mq;
      OSMesg msg;
-@@ -65,11 +506,15 @@ static struct {
+@@ -65,11 +507,15 @@ static struct {
          ViState* get_cur_state() {
              return &states[cur_state];
          }
@@ -4845,7 +4846,7 @@ index 149e770..93a9641 100644
              PTR(void) framebuffer = osVirtualToPhysical(next_state->framebuffer);
              PTR(void) origin = framebuffer + field_regs->origin;
  
-@@ -85,11 +530,27 @@ static struct {
+@@ -85,11 +531,27 @@ static struct {
                  origin = framebuffer;
              }
  
@@ -4873,7 +4874,7 @@ index 149e770..93a9641 100644
              regs.VI_TIMING_REG = common_regs->burst;
              regs.VI_V_SYNC_REG = common_regs->vSync;
              regs.VI_H_SYNC_REG = common_regs->hSync;
-@@ -101,7 +562,21 @@ static struct {
+@@ -101,7 +563,21 @@ static struct {
              regs.VI_X_SCALE_REG = common_regs->xScale; // TODO implement osViSetXScale
              regs.VI_Y_SCALE_REG = yScale; // TODO implement osViSetYScale
              regs.VI_STATUS_REG = next_state->control;
@@ -4896,7 +4897,7 @@ index 149e770..93a9641 100644
              // Swap VI states.
              cur_state ^= 1;
              *get_next_state() = *get_cur_state();
-@@ -140,6 +615,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
+@@ -140,6 +616,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
  extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_, OSMesg msg) {
      std::lock_guard lock{ events_context.message_mutex };
  
@@ -4905,7 +4906,7 @@ index 149e770..93a9641 100644
      switch (event_id) {
          case OS_EVENT_SP:
              events_context.sp.msg = msg;
-@@ -161,13 +638,33 @@ extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_,
+@@ -161,13 +639,33 @@ extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_,
  
  extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 retrace_count) {
      std::lock_guard lock{ events_context.message_mutex };
@@ -4939,7 +4940,7 @@ index 149e770..93a9641 100644
  
  
  extern std::atomic_bool exited;
-@@ -175,6 +672,22 @@ extern moodycamel::LightweightSemaphore graphics_shutdown_ready;
+@@ -175,6 +673,22 @@ extern moodycamel::LightweightSemaphore graphics_shutdown_ready;
  
  void set_dummy_vi(bool odd);
  
@@ -4962,7 +4963,7 @@ index 149e770..93a9641 100644
  void vi_thread_func() {
      ultramodern::set_native_thread_name("VI Thread");
      // This thread should be prioritized over every other thread in the application, as it's what allows
-@@ -200,7 +713,17 @@ void vi_thread_func() {
+@@ -200,7 +714,17 @@ void vi_thread_func() {
              // printf("Skipping the next VI wait\n");
              next = std::chrono::high_resolution_clock::now();
          }
@@ -4981,7 +4982,7 @@ index 149e770..93a9641 100644
          auto time_now = ultramodern::time_since_start();
          // Calculate how many VIs have passed
          uint64_t new_total_vis = (time_now * (60 * ultramodern::get_speed_multiplier()) / 1000ms) + 1;
-@@ -209,19 +732,41 @@ void vi_thread_func() {
+@@ -209,19 +733,42 @@ void vi_thread_func() {
          }
          total_vis = new_total_vis;
  
@@ -5012,6 +5013,7 @@ index 149e770..93a9641 100644
 +            events_context.vi.regs.VI_V_CURRENT_LINE_REG ^= 1u;
 +        }
 +
++        if (rs64_tl_on) { rs64_tl(1, static_cast<uint32_t>(total_vis)); rs64_tl_flush(); } // s6711 VI edge
          // Queue a screen update for the graphics thread with the current VI register state.
          // Doing this before the VI update is equivalent to updating the screen after the previous frame's scanout finished.
 -        events_context.action_queue.enqueue(ScreenUpdateAction{ events_context.vi.regs });
@@ -5026,7 +5028,7 @@ index 149e770..93a9641 100644
  
          // If the game has started, handle sending VI and AI events.
          if (ultramodern::is_game_started()) {
-@@ -231,13 +776,24 @@ void vi_thread_func() {
+@@ -231,13 +778,24 @@ void vi_thread_func() {
              ViState* cur_state = events_context.vi.get_cur_state();
              if (remaining_retraces == 0) {
                  if (cur_state->mq != NULLPTR) {
@@ -5052,7 +5054,7 @@ index 149e770..93a9641 100644
                  // Send a message to the VI queue, and do not set it to be requeued if the queue was full for the same reason as the VI message above.
                  ultramodern::enqueue_external_message_src(events_context.ai.mq, events_context.ai.msg, false, ultramodern::EventMessageSource::Ai);
              }
-@@ -249,15 +805,262 @@ void vi_thread_func() {
+@@ -249,15 +807,263 @@ void vi_thread_func() {
      }
  }
  
@@ -5305,6 +5307,7 @@ index 149e770..93a9641 100644
  void dp_complete() {
      uint8_t* rdram = events_context.rdram;
      std::lock_guard lock{ events_context.message_mutex };
++    if (rs64_tl_on) rs64_tl(9, 0); // s6711 DP done
 +    if (rs64_s4899_ev) rs64_s4899_ev('D'); // s4903
 +    log_event_wiring_completion("DP", event_wiring_dp_rows, events_context.dp.mq, events_context.dp.msg);
 +    if (rs64_m5_host_edge != nullptr) {
@@ -5315,7 +5318,7 @@ index 149e770..93a9641 100644
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
-@@ -277,17 +1080,51 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
+@@ -277,17 +1083,51 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
              return;
          }
  
@@ -5369,7 +5372,7 @@ index 149e770..93a9641 100644
  
          (void)task_type;
      }
-@@ -359,6 +1196,11 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -359,6 +1199,11 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
          if (events_context.action_queue.wait_dequeue_timed(action, 1ms)) {
              // Determine the action type and act on it
              if (const auto* task_action = std::get_if<SpTaskAction>(&action)) {
@@ -5381,13 +5384,14 @@ index 149e770..93a9641 100644
                  // Turn on instant present if the game has been started and it hasn't been turned on yet.
                  if (ultramodern::is_game_started() && !enabled_instant_present) {
                      renderer_context->enable_instant_present();
-@@ -368,11 +1210,21 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -368,11 +1213,22 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  // start another graphics task until the RDP is also complete. Games usually preserve the RSP inputs until the RDP
                  // is finished as well, so sending this early shouldn't be an issue in most cases.
                  // If this causes issues then the logic can be replaced with responding to yield requests.
 +                if (rs64_m5_host_edge != nullptr) {
 +                    rs64_m5_host_edge("sp-complete-enter", action_seq, displaylist, 0, 0, 1, -1, -1);
 +                }
++                if (rs64_tl_on) rs64_tl(6, displaylist); // s6711 Gfx thread task start
 +                if (rs64_s4899_ev) rs64_s4899_ev('B'); // s4903
                  sp_complete();
 +                const auto s4265_b = s4265::clk::now();
@@ -5404,13 +5408,14 @@ index 149e770..93a9641 100644
  
                  [[maybe_unused]] auto renderer_start = std::chrono::high_resolution_clock::now();
                  // RogueSquadron64Recomp: send_dl RE-ENABLED. RT64 has a
-@@ -383,18 +1235,38 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -383,18 +1239,41 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  // bypasses the registered GBI and submits raw RDP that
                  // confuses RT64 state. See project_factor5_lle_breakthrough.md
                  // for context but supersede with HLE path.
 -                renderer_context->send_dl(&task_action->task);
 +                g1b::Span g1b_sp;
 +                renderer_context->send_dl(&task_action->task); g1e::tasks++;
++                if (rs64_tl_on) rs64_tl(8, displaylist); // s6711 send_dl returned
 +                if (g1b::on) { double w = g1b_sp.w(), c = g1b_sp.c(); g1b::tasks++; g1b::sd_w += w; g1b::sd_c += c; if (w > g1b::sd_wmax) g1b::sd_wmax = w; if (c > g1b::sd_cmax) g1b::sd_cmax = c; g1b::tick(); }
                  [[maybe_unused]] auto renderer_end = std::chrono::high_resolution_clock::now();
 +                // s4265 gfx mapping: qw=enqueue->dequeue, run=sp_complete(early) path to here is split: run=send_dl total, spc=sp_complete
@@ -5439,12 +5444,14 @@ index 149e770..93a9641 100644
 +                }
 +                g1c::apply(rdram); g1e::apply(rdram); g3c::apply(rdram);
 +                g1b::Span g1b_us;
++                if (rs64_tl_on) rs64_tl(3, static_cast<uint32_t>(screen_update_action->framebuffer)); // s6711
                  renderer_context->update_screen();
++                if (rs64_tl_on) rs64_tl(4, 0); // s6711
 +                if (g1b::on) { double w = g1b_us.w(); g1b::vi++; g1b::us_n++; g1b::us_w += w; if (w > g1b::us_wmax) g1b::us_wmax = w; g1b::tick(); }
                  display_refresh_rate = renderer_context->get_display_framerate();
                  resolution_scale = renderer_context->get_resolution_scale();
              }
-@@ -456,6 +1328,7 @@ static const OSViMode dummy_mode = []() {
+@@ -456,6 +1335,7 @@ static const OSViMode dummy_mode = []() {
  void set_dummy_vi(bool odd) {
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = &dummy_mode;
@@ -5452,7 +5459,7 @@ index 149e770..93a9641 100644
      // Set up a dummy framebuffer.
      next_state->framebuffer = 0x80700000;
      if (odd) {
-@@ -463,8 +1336,16 @@ void set_dummy_vi(bool odd) {
+@@ -463,8 +1343,17 @@ void set_dummy_vi(bool odd) {
      }
  }
  
@@ -5462,6 +5469,7 @@ index 149e770..93a9641 100644
  extern "C" void osViSwapBuffer(RDRAM_ARG PTR(void) frameBufPtr) {
 +    static const int ctl_ms = [] { const char* e = std::getenv("ROGUESQ_S4908_SLEEP_MS"); return e ? std::atoi(e) : 0; }();
 +    if (ctl_ms > 0) std::this_thread::sleep_for(std::chrono::milliseconds(ctl_ms));
++    if (rs64_tl_on) rs64_tl(15, static_cast<uint32_t>(frameBufPtr)); // s6711
      std::lock_guard lock{ events_context.message_mutex };
 +    s4908_event("swap_call", -1, __builtin_return_address(0));
 +    g_s4908_swap_all++;
@@ -5469,7 +5477,7 @@ index 149e770..93a9641 100644
      events_context.vi.get_next_state()->framebuffer = frameBufPtr;
  }
  
-@@ -473,6 +1354,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
+@@ -473,6 +1362,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
      OSViMode* mode = TO_PTR(OSViMode, mode_);
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = mode;
@@ -5477,7 +5485,7 @@ index 149e770..93a9641 100644
      next_state->control = next_state->mode->comRegs.ctrl;
  }
  
-@@ -567,16 +1449,22 @@ extern "C" PTR(void) osViGetCurrentFramebuffer() {
+@@ -567,16 +1457,23 @@ extern "C" PTR(void) osViGetCurrentFramebuffer() {
  }
  
  void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
@@ -5490,6 +5498,7 @@ index 149e770..93a9641 100644
      // RT64's registered F3DFACTOR5 GBI handles them via send_dl →
      // processDisplayLists(isHLE=true). Non-GFX tasks (audio, etc.) still go
      // to sp_task_queue → task_thread_func → rsp::run_task (LLE).
++    if (rs64_tl_on) rs64_tl(5, task->t.type); // s6711 kick
      if (task->t.type == M_GFXTASK) {
 +        s4265::enq(true);
          events_context.action_queue.enqueue(SpTaskAction{ *task });
@@ -5500,7 +5509,7 @@ index 149e770..93a9641 100644
          events_context.sp_task_queue.enqueue(task);
      }
  }
-@@ -632,6 +1520,37 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
+@@ -632,6 +1529,37 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
      events_context.vi.states[1].mode = &dummy_mode;
  
      events_context.vi.thread = std::thread{ vi_thread_func };
@@ -5539,10 +5548,12 @@ index 149e770..93a9641 100644
  
  void ultramodern::join_event_threads() {
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..44a988a 100644
+index 9944a02..80459c3 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
-@@ -1,18 +1,320 @@
+@@ -1,18 +1,323 @@
++#include <unistd.h>
++#include <cstring>
  #include <bitset>
  #include <thread>
 +#include <cstdio>
@@ -5589,6 +5600,7 @@ index 9944a02..44a988a 100644
 +// s4911: per-second table of blocking recvs on ANY queue keyed by (mq, tid, host call site = guest function+offset).
 +#include <map>
 +#include <tuple>
++extern "C" int rs64_tl_on; extern "C" void rs64_tl(uint32_t code, uint32_t arg); extern "C" void rs64_tl_flush(); // s6711 (mesgqueue.cpp)
 +extern "C" uint32_t rs64_ram_top; // s6132
 +static void s4911_all(uint32_t mq, int tid, double ms) {
 +    static std::mutex m; static std::map<std::tuple<uint32_t, int, std::string>, std::pair<uint32_t, double>> tab;
@@ -5778,14 +5790,14 @@ index 9944a02..44a988a 100644
 +    int source = -1;
 +    AudioRouteMessage audio;
 +    uint32_t host_task_seq = 0xFFFFFFFFu;
-+};
-+
+ };
+ 
 +struct AudioSpDelivery {
 +    PTR(OSMesgQueue) mq;
 +    OSMesg msg;
 +    AudioRouteMessage audio;
- };
- 
++};
++
 +static std::deque<AudioSpDelivery> g_audio_sp_deliveries;
 +static thread_local OSMesg g_last_received_message = NULLPTR;
 +static AudioRouteMessage g_current_audio_route;
@@ -5863,7 +5875,7 @@ index 9944a02..44a988a 100644
  static moodycamel::BlockingConcurrentQueue<QueuedMessage> external_messages {};
  std::bitset<32> requeue_enabled;
  
-@@ -27,47 +329,169 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
+@@ -27,47 +332,170 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
      requeue_enabled.set(static_cast<int>(EventMessageSource::Dp), mqc.requeue_dp);
  }
  
@@ -5914,6 +5926,7 @@ index 9944a02..44a988a 100644
 +
  void ultramodern::enqueue_external_message_src(PTR(OSMesgQueue) mq, OSMesg msg, bool jam, EventMessageSource src) {
 -    external_messages.enqueue({mq, msg, jam, requeue_enabled[static_cast<int>(src)]});
++    if (rs64_tl_on) rs64_tl(14, static_cast<uint32_t>(mq)); // s6711
 +    s4585::on_enq(static_cast<int>(src));
 +    QueuedMessage queued{mq, msg, jam, requeue_enabled[static_cast<int>(src)]};
 +    queued.source = static_cast<int>(src);
@@ -6038,7 +6051,7 @@ index 9944a02..44a988a 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      mq->blocked_on_recv = NULLPTR;
      mq->blocked_on_send = NULLPTR;
-@@ -75,6 +499,26 @@ extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) ms
+@@ -75,6 +503,26 @@ extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) ms
      mq->msg = msg;
      mq->validCount = 0;
      mq->first = 0;
@@ -6065,7 +6078,7 @@ index 9944a02..44a988a 100644
  }
  
  s32 MQ_GET_COUNT(OSMesgQueue *mq) {
-@@ -90,6 +534,11 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
+@@ -90,6 +538,11 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
  }
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
@@ -6077,7 +6090,7 @@ index 9944a02..44a988a 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is full.
-@@ -106,6 +555,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -106,6 +559,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
          }
      }
      
@@ -6092,7 +6105,7 @@ index 9944a02..44a988a 100644
      if (jam) {
          // Jams insert at the head of the message queue's buffer.
          mq->first = (mq->first + mq->msgCount - 1) % mq->msgCount;
-@@ -129,6 +586,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -129,6 +590,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
  }
  
  bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
@@ -6103,7 +6116,7 @@ index 9944a02..44a988a 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is empty
-@@ -145,7 +606,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -145,7 +610,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      }
  
      if (msg_ != NULLPTR) {
@@ -6118,7 +6131,7 @@ index 9944a02..44a988a 100644
      }
      
      mq->first = (mq->first + 1) % mq->msgCount;
-@@ -160,8 +627,85 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -160,8 +631,123 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      return true;
  }
  
@@ -6134,6 +6147,43 @@ index 9944a02..44a988a 100644
 +static thread_local int g1b_slot = -1;
 +#endif
 +static bool g1b_blk_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_G1B"); return e && *e && *e != '0'; }(); return on; }
++// s6711 G1e per-frame timeline (ROGUESQ_G1E_TL=<file>, written to <file>.<pid>): lock-free ring of (us, code, arg, osid) marks from the VI thread,
++// Gfx thread, RT64 send_dl and guest osRecvMesg/osSendMesg/osViSwapBuffer, appended to <file> in 4096-mark chunks from
++// the VI mark (no per-frame stderr). Codes and the offline join: tools/g1e_tl.py.
++#if defined(__APPLE__)
++extern "C" std::atomic<int> g_g1b_thread_osid[64];
++#endif
++extern "C" {
++struct Rs64TlEv { int64_t t; uint32_t code, arg; int32_t osid, pad; }; // pad = g1b slot
++static const char* rs64_tl_path = [] { const char* e = std::getenv("ROGUESQ_G1E_TL"); return (e && *e && std::strcmp(e, "0") != 0) ? e : nullptr; }();
++int rs64_tl_on = rs64_tl_path ? 1 : 0;
++static constexpr uint64_t RS64_TL_N = 1u << 18;
++static Rs64TlEv g_rs64_tl[RS64_TL_N];
++static std::atomic<uint64_t> g_rs64_tl_n{0};
++static uint64_t g_rs64_tl_done = 0; // flushed up to (VI thread only)
++void rs64_tl(uint32_t code, uint32_t arg) {
++    if (!rs64_tl_on) return;
++    const uint64_t i = g_rs64_tl_n.fetch_add(1, std::memory_order_relaxed);
++    Rs64TlEv& e = g_rs64_tl[i & (RS64_TL_N - 1)];
++    int osid = -1;
++#if defined(__APPLE__)
++    if (g1b_slot >= 0) osid = g_g1b_thread_osid[g1b_slot].load(std::memory_order_relaxed);
++#endif
++    e.code = code; e.arg = arg; e.osid = osid; e.pad = g1b_slot; // pad = unique guest-thread slot (OSIds repeat), -1 = host thread
++    std::atomic_thread_fence(std::memory_order_release);
++    e.t = g1b_now_us();
++}
++void rs64_tl_flush() { // VI thread; leaves the newest 256 marks (possibly still being written) for the next chunk
++    if (!rs64_tl_on) return;
++    const uint64_t n = g_rs64_tl_n.load(std::memory_order_acquire);
++    if (n < g_rs64_tl_done + 4096 + 256) return;
++    const uint64_t end = n - 256;
++    static FILE* f = [] { char fn[1024]; std::snprintf(fn, sizeof(fn), "%s.%d", rs64_tl_path, (int)getpid()); return std::fopen(fn, "wb"); }(); // <file>.<pid>: one writer per file
++    if (!f) { rs64_tl_on = 0; return; }
++    for (uint64_t i = g_rs64_tl_done; i < end; ++i) std::fwrite(&g_rs64_tl[i & (RS64_TL_N - 1)], sizeof(Rs64TlEv), 1, f);
++    std::fflush(f); g_rs64_tl_done = end;
++}
++}
 +std::atomic<uint64_t> g_s4259_audio_enter{0};
 +namespace {
 +struct S4259Thr {
@@ -6199,13 +6249,14 @@ index 9944a02..44a988a 100644
  extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
 -    OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
 +    log_vi_mq("send", mq_, flags);
++    if (rs64_tl_on) rs64_tl(13, static_cast<uint32_t>(mq_)); // s6711
 +    if (mesgqueue_guard_refuse("osSendMesg", mq_)) {
 +        return -1;
 +    }
      bool jam = false;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -173,8 +717,14 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -173,8 +759,14 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
      // Handle any messages that have been received from an external thread.
      dequeue_external_messages(PASS_RDRAM1);
  
@@ -6220,7 +6271,7 @@ index 9944a02..44a988a 100644
      
      // Check the queue to see if this thread should swap execution to another.
      ultramodern::check_running_queue(PASS_RDRAM1);
-@@ -183,7 +733,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -183,7 +775,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -6233,7 +6284,7 @@ index 9944a02..44a988a 100644
      bool jam = true;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -205,18 +759,78 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -205,18 +801,80 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osRecvMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, s32 flags) {
@@ -6275,7 +6326,9 @@ index 9944a02..44a988a 100644
 +    const auto s4908_t0 = std::chrono::steady_clock::now();
 +    const bool s4911_pre_empty = (mq->validCount == 0);
 +    if (g1b_blk_on() && g1b_slot >= 0 && flags == OS_MESG_BLOCK && s4911_pre_empty) g_g1b_blk_since_us[g1b_slot] = g1b_now_us(); // s6710
++    if (rs64_tl_on && flags == OS_MESG_BLOCK) rs64_tl(s4911_pre_empty ? 10 : 12, static_cast<uint32_t>(mq_)); // s6711
      bool received = do_recv(PASS_RDRAM mq_, msg_, flags == OS_MESG_BLOCK);
++    if (rs64_tl_on && flags == OS_MESG_BLOCK && s4911_pre_empty) rs64_tl(11, static_cast<uint32_t>(mq_)); // s6711
 +    if (g1b_blk_on() && g1b_slot >= 0 && flags == OS_MESG_BLOCK && s4911_pre_empty) { // s6710: blocked-in-recv us for [g1b-gt],
 +        // clipped to the current [g1b] window (the part before it was booked by the tick that saw this thread blocked).
 +        const int64_t now = g1b_now_us(), st = std::max<int64_t>(g_g1b_blk_since_us[g1b_slot].exchange(0), g_g1b_win_us.load());

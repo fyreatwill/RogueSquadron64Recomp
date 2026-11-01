@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6709 (2026-10-31).
+Compact operational handoff, as of Session 6711 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -72,6 +72,11 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   task (mq 0x8011A7E8, as=3 fast 151 / slow 345 ms/s) plus waitForPostSwapAck for the VI (0x80128CF0, 420-550 ms/s).
   Per second, (cpu + gfx wait)/frame vs tasks/s r=-0.63 (139 s): <10 ms -> 55.7/s, 10-14 -> ~44, >18 -> 38.5. Two runs
   (osid-keyed and slot-keyed builds) agree. The game itself has no CPU/RSP overlap, so 60 needs cpu+gfx per frame < ~10 ms.
+  **s6711 per-frame timeline (ROGUESQ_G1E_TL=<file>, tools/g1e_tl.py) refines this to H-rsp.** spTaskSchedulerThread
+  kicks the queued gfx task at VI+0.2 ms; the game's ~3.7 ms run overlaps it; the frame makes its VI iff the gfx task
+  (Gfx start -> RSP exit) is < ~14 ms: P(miss) 0.17 at 12-14 ms, 0.56 at 14-16, 0.88 above. Slow camera phase (~8 s
+  autopilot cycle facing dense dd4 terrain): 13.2 ms/task, 789 kB RDP out vs 4.6 ms / 267 kB fast; 17 us per kB in both.
+  Handoff latencies < 1 ms, guest run 3.7-5.5 ms (not the term). The s6710 "~10 ms" was a per-second blend (superseded).
 - **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
   ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
   lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
@@ -561,10 +566,11 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1e: shrink cpu+gfx per frame under the ~10 ms budget at lvl5 FPS60 dd4 (s6711 next).** s6710: the game's own
-   submitGfxFrame is serial (kick -> wait task done -> swap -> wait VI ack). Next: one per-frame timeline (VI, ack recv, kick,
-   RSP end, DP-done send, done recv, swap) to name why the budget is ~10 ms not 16.7 and which segment to cut; also
-   hangar/menu render check under NODRAIN before the owner relies on it. See NEXT.md.
+1. **G1e: cut the dd4 gfx task's RSP segment below ~14 ms in dense scenes (s6712 next).** s6711: the VI-miss term is the
+   task (Gfx start -> RSP exit), linear in RDP output (17 us/kB), 13-18 ms when the camera faces dense dd4 terrain. Next,
+   one build, same-run toggle: split it into LLE interpreter vs our in-RSP bridge work (dpc_bridge per-command: spike cull,
+   TRICOUNT/FB_HASH/DRAWN logging the recipe arms, ~1600 defer calls/task), then cut the winner. Hangar/menu check under
+   ASYNC+NODRAIN is queued as soak s6711_nodrain_hangar_route. See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional

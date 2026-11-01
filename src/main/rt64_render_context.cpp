@@ -149,6 +149,7 @@ extern "C" void rs64_cine_progress_log(void);
 // against this task's data. Defined in main.cpp. OSTask comes from
 // ultramodern/ultra64.h (already included via ultramodern.hpp).
 extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task);
+extern "C" int rs64_tl_on; extern "C" void rs64_tl(uint32_t code, uint32_t arg); // s6711 G1e timeline (mesgqueue.cpp)
 
 // s4267: per-second phase aggregates (ROGUESQ_S4267=1). Phases: 0 pipeline wait, 1 tex-upload wait (fb), 2 fb uploaders+gfx worker wait,
 // 3 drawdata/transforms uploaders+worker+tex wait, 4 RT64 State::fullSync total, 5 processDisplayLists (RDP submit), 6 rs64_run_lle_gfx, 7 send_dl total.
@@ -491,6 +492,7 @@ public:
                 int n = ++s_n;
                 int r;
                 { s4267::T s4267_run(6); r = rs64_run_lle_gfx(app->core.RDRAM, task); }
+                if (rs64_tl_on) rs64_tl(7, (uint32_t)r); // s6711 RSP ucode exit (events.cpp timeline)
                 if (n <= 8 || (n & 31) == 0) {
                     const char *gate = in_attribution_page ? "attr"
                         : (in_hangar ? "hangar" : "ungated");

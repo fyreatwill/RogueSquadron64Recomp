@@ -1,0 +1,50 @@
+marks=1423844 unstamped=0 span=246.8s analysed_from=40.0s
+game slot (swapper) = 8; gfx kick slots {6: 11347}; 54.9 tasks/s
+kicker slot 6 woken before kick by: blk mq=0x8011A420 x11347
+relay slot (done-mq sender) = 7
+KICK-CENTRIC (latency only, biased: joins only frames whose ack returned before the next kick): joined=524 unjoined=10822
+positive control: max |sum(seg) - kick interval| = 0.0000 ms; swap seen in 524/524
+FAST (<= 20.0 ms): n=342 interval med 17.75 ms, VIs/frame mean 1.16, ack blocked 0/342, kicks with update_screen before task start 0
+   seg    mean   med    p90
+   q       0.01   0.01   0.01
+   rsp     2.14   2.03   3.35
+   rdp     0.00   0.00   0.00
+   dpc     0.00   0.00   0.00
+   wake    0.39   0.03   1.26
+   post    0.59   0.42   0.93
+   ack     0.00   0.00   0.00
+   cpu    14.77  14.87  16.84
+   ph_ack (ms after VI edge) mean 3.35 med 3.02 p90 4.20
+   ph_kick (ms after VI edge) mean 0.22 med 0.26 p90 0.29
+   handoff (last game-thread osSendMesg -> kick, inside cpu) mean 11.79 med 12.08 p90 14.14
+   wake split (n=342): dpc->relay recv 0.19 / 0.00 / 0.20 ms (relay recv, relay->send, send->game recv) means; p90 0.04 / 0.00 / 1.04
+   busy (all but ack) mean 17.90 med 17.75
+SLOW (> 20.0 ms): n=182 interval med 21.47 ms, VIs/frame mean 1.90, ack blocked 4/182, kicks with update_screen before task start 0
+   seg    mean   med    p90
+   q       0.10   0.01   0.01
+   rsp     3.72   2.34   9.67
+   rdp     0.00   0.00   0.00
+   dpc     0.00   0.00   0.00
+   wake    1.05   0.03   2.25
+   post    0.56   0.49   0.91
+   ack     0.18   0.00   0.00
+   cpu    28.75  17.71  19.55
+   ph_ack (ms after VI edge) mean 5.09 med 3.30 p90 11.58
+   ph_kick (ms after VI edge) mean 0.34 med 0.21 p90 0.31
+   handoff (last game-thread osSendMesg -> kick, inside cpu) mean 10.39 med 10.53 p90 14.28
+   wake split (n=182): dpc->relay recv 0.90 / 0.00 / 0.15 ms (relay recv, relay->send, send->game recv) means; p90 2.23 / 0.00 / 0.43
+   busy (all but ack) mean 34.18 med 21.47
+
+SWAP-CENTRIC: frames=11350 (54.9/s)
+ VIs/frame=1: n=9879 T 17.12 run 3.68 (p90 8.16) rsp 4.59 kicks 1.00 swap phase 5.81 | blocked ms/frame: 0x80128CF0 10.73, 0x8011A7E8 2.70, 0x8011A818 0.01, 0x80149990 0.00
+ VIs/frame=2: n=1438 T 23.91 run 5.51 (p90 15.94) rsp 10.65 kicks 1.00 swap phase 3.06 | blocked ms/frame: 0x80128CF0 10.71, 0x8011A7E8 7.28, 0x8011A818 0.27, 0x80149990 0.15
+ VIs/frame=3: n=23 T 30.32 run 14.40 (p90 30.14) rsp 12.45 kicks 1.00 swap phase 9.42 | blocked ms/frame: 0x80128CF0 7.81, 0x8011A7E8 7.64, 0x8011A818 0.46, 0x80149990 0.01
+ rsp ms bin -> n, P(>=2 VIs), mean run ms
+   [ 0, 4) n= 5844 P2=0.09 run=4.27
+   [ 4, 6) n= 2033 P2=0.02 run=2.77
+   [ 6, 8) n= 1053 P2=0.04 run=4.12
+   [ 8,10) n=  787 P2=0.08 run=4.97
+   [10,12) n=  485 P2=0.10 run=4.41
+   [12,14) n=  243 P2=0.17 run=4.25
+   [14,16) n=  252 P2=0.56 run=5.03
+   [16,99) n=  653 P2=0.88 run=5.41

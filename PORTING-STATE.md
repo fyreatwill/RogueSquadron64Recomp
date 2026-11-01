@@ -176281,3 +176281,38 @@ Rules out: further Gfx-thread overlap tricks alone reaching 60 at dd4 without al
 ORIGIN: not a mitigation — diagnostic instrument only.
 Discrimination: selects H-serial; refutes H-guest (as sole cause) and H-audio-rsp. Next discriminator: one per-frame
 timeline ring (VI edge, ack recv, kick, RSP end, DP-done send/recv, swap) splits H-phase vs H-latency vs H-rsp vs H-cpu.
+
+## Session 6711 (2026-10-31) — G1e: per-frame timeline selects H-rsp: lvl5 FPS60 dd4 frames miss the VI when the gfx task's RSP segment exceeds ~14 ms (slow camera phase 13-18 ms, ~1 MB RDP out); guest run (~4 ms), kick/done latency and VI phase are not the cause
+
+Instrument (lib/N64ModernRuntime/ultramodern mesgqueue.cpp/events.cpp + src/main/rt64_render_context.cpp, exported to
+submodule-patches): ROGUESQ_G1E_TL=<file> arms a lock-free 2^18-mark ring of (us, code, arg, OSId, g1b slot), flushed
+in 4096-mark chunks from the VI thread to <file>.<pid> (no per-frame stderr). Marks: VI edge, update_screen begin/end,
+osSpTaskStart kick (type), Gfx-thread task start, RSP ucode exit (after rs64_run_lle_gfx), send_dl return, dp_complete,
+guest osRecvMesg block/return/ready, osSendMesg, host enqueue_external, osViSwapBuffer. Offline: tools/g1e_tl.py.
+Threads are keyed by g1b slot: OSIds repeat (several slots report OSId 0), first build keyed by OSId was unusable.
+Run: scratch/agent/s6711_tl.zsh (lvl5 FPS60 dd4, ASYNC=1 NODRAIN=1 constant, STORE_DIAG=0, G1B=1; forced route),
+mission_t=7 s, hold 241 s, alive, 0 VI stalls, 0 crashlines. A first attempt was void: pkill missed the orphaned
+m6_god_common.sh, which relaunched a second game into the same file (two interleaved VI counters, 109 "tasks/s");
+both killed, dump path now carries the pid, rerun clean.
+Positive controls: ring gfx kicks 54.9/s vs independent [g1b] tasks 54.87/s (207 s); swap-centric frames 54.9/s.
+Frame structure (trace read + table): VI edge -> VI handler (slot 5) posts 0x8011A420 -> spTaskSchedulerThread (slot 6)
+kicks the queued gfx task at VI+0.22 ms; slot 5 acks the game (0x80128CF0, game returns VI+3.0 ms); the game runs
+~3.7 ms (overlapping the RSP), blocks on 0x8011A7E8 (dpInterruptHandlerThread = slot 7 relays dp_complete in 0.2 ms),
+swaps, waits for the next ack. So a frame makes its VI iff kick + gfx task + wake + post-swap fit one VI period.
+Result (t>=40 s, 11350 swap frames): 1-VI frames n=9879: run 3.68 ms, task (start -> RSP exit) 4.59 ms, done-wait 2.70;
+2-VI frames n=1438: run 5.51, task 10.65, done-wait 7.28. P(>=2 VIs) by task ms: <4 0.09, 4-6 0.02, 6-8 0.04, 8-10 0.08,
+10-12 0.10, 12-14 0.17, 14-16 0.56, >=16 0.88. Latencies: kick -> Gfx task start 0.01 ms, dp_complete -> game wake
+0.2-0.9 ms. [g1e-aq] per second: fast seconds (>=45 tasks/s, 175 s) rsp 4.6 ms/task, 267 kB, 398 calls, 17.3 us/kB;
+slow seconds (32 s, 35 tasks/s) rsp 13.2 ms, 789 kB, 1626 calls, 16.8 us/kB; worker 2.0 ms, copy 0.15 ms (no
+back-pressure). Slow seconds recur in a ~8 s cycle (tasks/s 60,60,60,40,31,33,55...) = the autopilot orbit facing the
+dense dd4 terrain; RSP time per kB of RDP output is constant, so it scales with the geometry submitted.
+Verdict: selects H-rsp (the RSP-side gfx task, linear in RDP output, is the VI-miss term; budget ~14 ms, not 10);
+refutes H-phase (kick is VI-aligned at +0.2 ms; the game's 3 ms ack phase overlaps the RSP), H-latency (all handoffs
+<1 ms), H-cpu (guest run 3.7-5.5 ms and overlapped). s6710's "~10 ms cpu+gfx" budget was a per-second blend, superseded.
+Not yet split: inside the 13-18 ms, LLE interpreter vs our in-RSP RDP bridge work (dpc_bridge per-command: spike cull
+default ON, ROGUESQ_LOG_RDP_TRICOUNT/FB_HASH/LOG_RT64_DRAWN armed by the coverage recipe, defer ranges ~1600 calls/task).
+Side check queued (not run here, one game at a time): scratch/agent/soak_queue/s6711_nodrain_hangar_route.sh (natural
+hangar/menu route under ASYNC+NODRAIN, fb dumps).
+ORIGIN: not a mitigation — diagnostic instrument only.
+Discrimination: selects H-rsp; refutes H-phase, H-latency, H-cpu. Next: same-run split of the RSP segment into
+interpreter vs bridge hooks vs recipe logging, then cut the winner.
