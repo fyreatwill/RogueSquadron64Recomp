@@ -463,6 +463,7 @@ extern RspExitReason factor5_ucode_b(uint8_t* rdram, uint32_t ucode_addr);
 extern "C" void rs64_dpc_defer_begin();
 extern "C" void rs64_dpc_reset();
 extern "C" void rs64_dpc_defer_end(int commit);
+extern "C" { extern uint64_t g_rs64_aq_submit_ns, g_rs64_aq_commit_ns, g_rs64_aq_submit_calls; extern uint32_t g_rs64_aq_spin_ns; extern int g_rs64_aq_on; } // s6712
 extern "C" void rs64_dpc_get_task_range(uint32_t *first_lo, uint32_t *first_hi,
                                          uint32_t *last_lo, uint32_t *last_hi,
                                          uint32_t *min_lo, uint32_t *max_hi);
@@ -2157,7 +2158,9 @@ extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
         const uint32_t s_ = phys & 0x007FFFFFu;
         if (s_ < rs64_vsrc_hi && s_ + len > rs64_vsrc_lo) {
             rs64_vsrc_nw++; rs64_vsrc_lastphys = s_; rs64_vsrc_lastlen = len;
-            std::snprintf(rs64_vsrc_lastapi, sizeof rs64_vsrc_lastapi, "%s", api ? api : "?");
+            // s6712: copy only when the api changes (the per-write snprintf was ~11% of the gfx ucode under LOG_HUDBIT).
+            static const char* s_vsrc_api = nullptr;
+            if (api != s_vsrc_api) { s_vsrc_api = api; std::snprintf(rs64_vsrc_lastapi, sizeof rs64_vsrc_lastapi, "%s", api ? api : "?"); }
             if (rs64_vsrc_nw <= 30) std::fprintf(stderr, "[vsrc-hostwrite] #%u api=%s phys=%06X len=%X range=%06X-%06X\n", rs64_vsrc_nw, api ? api : "?", s_, len, rs64_vsrc_lo, rs64_vsrc_hi);
         }
     }
@@ -6564,7 +6567,19 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     g_rs64_lle_depth.fetch_add(1, std::memory_order_release);
     const auto t_start = s_taskms ? std::chrono::steady_clock::now()
                                   : std::chrono::steady_clock::time_point{};
+    // s6712 G1e: [g1e-split] per-second split of the task (ucode wall vs dpc_bridge submit/commit). ROGUESQ_G1E_AQ=1;
+    // ROGUESQ_G1E_AQ_SPIN_NS=<ns> spins that long per submit call in alternate 10 s windows (positive control).
+    static uint32_t s_aq_spin_cfg = 0;
+    if (g_rs64_aq_on < 0) {
+        const char *e = std::getenv("ROGUESQ_G1E_AQ");
+        const char *sp = std::getenv("ROGUESQ_G1E_AQ_SPIN_NS");
+        s_aq_spin_cfg = sp ? (uint32_t)std::strtoul(sp, nullptr, 0) : 0u;
+        g_rs64_aq_on = (e && *e && *e != '0') ? 1 : 0;
+    }
+    const uint64_t aq_sub0 = g_rs64_aq_submit_ns, aq_calls0 = g_rs64_aq_submit_calls, aq_com0 = g_rs64_aq_commit_ns;
+    const auto aq_t0 = g_rs64_aq_on > 0 ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
     RspExitReason r = factor5_ucode(rdram, ucode_addr);
+    const auto aq_t1 = g_rs64_aq_on > 0 ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
     {
         static const bool enabled = [] {
             const char* e = std::getenv("ROGUESQ_LOG_G1D_INPUT");
@@ -6656,6 +6671,32 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     // Drop the task's RDP output if the ucode wandered into garbage (trig
     // data executed as DL) — RT64 must never see those streams.
     rs64_dpc_defer_end(r != RspExitReason::UnhandledJumpTarget);
+    if (g_rs64_aq_on > 0) {
+        struct AqAcc { uint64_t n = 0, ucode = 0, sub = 0, calls = 0, com = 0, slow_n = 0, slow_ucode = 0, slow_sub = 0, max = 0; };
+        static AqAcc acc;
+        static auto win0 = aq_t1, sec0 = aq_t1;
+        const uint64_t ucode_ns = (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(aq_t1 - aq_t0).count();
+        const uint64_t sub_ns = g_rs64_aq_submit_ns - aq_sub0;
+        acc.n++; acc.ucode += ucode_ns; acc.sub += sub_ns; acc.calls += g_rs64_aq_submit_calls - aq_calls0;
+        acc.com += g_rs64_aq_commit_ns - aq_com0;
+        if (ucode_ns > 10000000ull) { acc.slow_n++; acc.slow_ucode += ucode_ns; acc.slow_sub += sub_ns; }
+        if (ucode_ns > acc.max) acc.max = ucode_ns;
+        const auto now = std::chrono::steady_clock::now();
+        if (now - sec0 >= std::chrono::seconds(1)) {
+            const double n = (double)acc.n, sn = acc.slow_n ? (double)acc.slow_n : 1.0;
+            fprintf(stderr, "[g1e-split] phase=%u spin=%u tasks=%llu ucode_ms=%.3f submit_ms=%.3f rest_ms=%.3f commit_ms=%.3f "
+                    "calls=%.0f max_ms=%.2f slow_n=%llu slow_ucode_ms=%.3f slow_submit_ms=%.3f\n",
+                    rs64_phase_ord(), g_rs64_aq_spin_ns, (unsigned long long)acc.n, acc.ucode / n / 1e6, acc.sub / n / 1e6,
+                    (acc.ucode - acc.sub) / n / 1e6, acc.com / n / 1e6, acc.calls / n, acc.max / 1e6,
+                    (unsigned long long)acc.slow_n, acc.slow_ucode / sn / 1e6, acc.slow_sub / sn / 1e6);
+            acc = AqAcc{};
+            sec0 = now;
+        }
+        if (s_aq_spin_cfg && now - win0 >= std::chrono::seconds(10)) {
+            g_rs64_aq_spin_ns = g_rs64_aq_spin_ns ? 0u : s_aq_spin_cfg;
+            win0 = now;
+        }
+    }
     static const bool s_log_f5_state = [] {
         const char *e = std::getenv("ROGUESQ_LOG_F5_STATE");
         return e && *e && *e != '0';

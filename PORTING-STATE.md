@@ -176316,3 +176316,33 @@ hangar/menu route under ASYNC+NODRAIN, fb dumps).
 ORIGIN: not a mitigation — diagnostic instrument only.
 Discrimination: selects H-rsp; refutes H-phase, H-latency, H-cpu. Next: same-run split of the RSP segment into
 interpreter vs bridge hooks vs recipe logging, then cut the winner.
+
+## Session 6712 (2026-10-31) — G1e: dense dd4 gfx task is the LLE interpreter (~257 ns per RDP command), not the DPC bridge or recipe logging; [m4-y8000] default-ON diagnostic made opt-in
+
+Instrument (one build): ROGUESQ_G1E_AQ=1 wraps rsp_dpc_submit (per DPC_END bump) and rs64_dpc_defer_end (task commit) with
+CLOCK_UPTIME_RAW timers, and times the factor5_ucode call in factor5_gfx_runner; [g1e-split] per second prints ucode / submit /
+rest / commit ms per task, submit calls per task, slow (>10 ms) task split. ROGUESQ_G1E_AQ_SPIN_NS=<ns> busy-waits inside the
+timed submit in alternate 10 s windows (positive control). Off = one load per submit. Plus `sample <pid>` profiles of the Gfx
+thread, categorised with new tools/sample_gfx_split.py.
+Runs (lvl5 FPS60 dd4 ASYNC+NODRAIN, STORE_DIAG=0, 200 s holds, all alive, 0 stalls, 0 crashlines):
+- aq (usual recipe logging: OBJBOOL/HUDBIT/TRICOUNT/FB_HASH/DRAWN): control passes — 2 us spin x 45k calls -> submit 96 ms
+  vs ~5 ms base (expected +91). Dense spin-off rows: ucode 18-21 ms, submit 2.9-3.4, rest 15-17.5, commit 0.01.
+- owner (no recipe logging, scratch/agent/s6712_owner.zsh): same linear law. Fit rest = a + b*calls: recipe 0.45 ms + 328 ns,
+  owner 0.55 ms + 321 ns (first 73 rows); bridge 57-65 ns/cmd. Logging does not move the slope -> H-log refuted.
+- Profiles: recipe arm had snprintf in rs64_m5_host_write_census (LOG_HUDBIT's vsrc range) at ~11% of the ucode subtree;
+  owner arm had fprintf+fflush from rs64_m4_y8000_summary("flush-hb") at 15.5%: rs64_m4_y8000_enabled() returned 1 when
+  ROGUESQ_LOG_M4_Y8000 was UNSET (148k summary lines, 2/3 of a 104 MB log). In the bridge, ~half the samples were my own
+  timer (mach_absolute_time under the wrapper); true bridge ~10%. Interpreter (factor5_ucode self + RSP:: VMADN/VMADH/SDV/
+  VMADM/VMUDL + byte-wise dma_rdram_to_dmem) ~70%, unconditional in-ucode probes ~10%.
+Fixes: y8000 now opt-in (env unset -> off); vsrc api copy only on change; timer moved off steady_clock (CLOCK_MONOTONIC_RAW
+cost ~10% of the ucode at 2 reads x 50k calls).
+- fix (owner config, rebuilt): 0 y8000 lines, log 104 -> 45 MB; printf gone from the profile; slope 266 -> 257 ns/cmd
+  (full-run fits), dense rows (>25k cmds) 11.98 ms @35.3k -> 11.74 ms @35.4k, 50 tasks/s. Modest (~2-4%) — the 15.5%
+  profile share was specific to that sample window. Cross-run but slope-per-command, scene-independent.
+Discrimination: selects H-interp (two lines: timer split + profile); refutes H-bridge (~10%) and H-log (same slope).
+ORIGIN: not a mitigation — [m4-y8000] is a pure counter/print diagnostic (s1967-era M4 Y=0x8000 work) whose env default was
+inverted; writer of the cost named (rs64_m4_y8000_summary flush-hb every 64 flushes).
+Soak folded: s6711_nodrain_hangar_route rc=0 — natural hangar route under ASYNC+NODRAIN, mission at 76 s, 305 s hold, 0 stalls,
+0 crashlines.
+Next: cut the interpreter's per-command cost (probe gating behind rs64_rsp_hooks_on, word-wise RSP DMA copies, vector op
+inlining), same-run toggle.

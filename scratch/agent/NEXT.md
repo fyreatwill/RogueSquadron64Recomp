@@ -1,24 +1,22 @@
-# NEXT: G1e — split the dd4 gfx task's RSP segment (13-18 ms in dense scenes) into interpreter vs bridge vs logging, cut the winner
+# NEXT: G1e — cut the LLE interpreter's per-RDP-command cost so dense lvl5 dd4 FPS60 tasks drop below ~14 ms
 HYPOTHESIS-ID: g1e-rsp-segment
 
-s6711 (tools/g1e_tl.py, ROGUESQ_G1E_TL): at lvl5 FPS60 dd4 (ASYNC=1 NODRAIN=1) a frame makes its VI iff the gfx task
-(Gfx-thread start -> RSP ucode exit) < ~14 ms. Dense phase: 13.2 ms/task, 789 kB RDP out, 1626 defer calls; fast 4.6 ms.
-Linear in output at ~17 us/kB. Guest run, VI phase and handoff latency are ruled out.
+s6712 ([g1e-split], ROGUESQ_G1E_AQ=1; `sample` + tools/sample_gfx_split.py, tools/sample_self.py): gfx task = ~0.6 ms + 257 ns per RDP command
+(interp side) + 55 ns/cmd bridge (half is the timer). Dense camera phase 35-50k cmds -> 12-16.6 ms. Profile (owner config,
+y8000 fixed): interpreter ~70% (factor5_ucode self, RSP::VMADN/VMADH/SDV/VMADM/VMUDL out-of-line templates, byte-wise
+dma_rdram_to_dmem ~7%), bridge ~10%, unconditional in-ucode probes ~10% (rs64_dlw_jump, rs64_s4209_read,
+rs64_inline_probe_route, rs64_g1d_blk_dma, rs64_probe_audio_dma_write, census chain, floor_writer, e9prov_ovl_route).
 
-## Hypotheses (what is inside the 13-18 ms)
-- H-interp: the LLE RSP interpreter itself (vector ops / dispatch) dominates -> cut via hot-path work in rsp_vu / ucode recomp.
-- H-bridge: our in-RSP RDP bridge per command (src/rsp/dpc_bridge.cpp: spike cull default ON, defer-range bookkeeping,
-  ~1600 rdpq submit calls/task) dominates -> batch/merge ranges, cheapen the cull.
-- H-log: recipe-armed diagnostics (ROGUESQ_LOG_RDP_TRICOUNT, FB_HASH, LOG_RT64_DRAWN from m6_god_common.sh) cost per
-  triangle -> owner play (no logging) is already fine; fix the recipe, not the game.
+## Hypotheses (which lever buys the ~15-20% needed)
+- H-probes: the ~20 unconditional probe calls per DMA / per ucode site; gate them behind rs64_rsp_hooks_on (check each
+  probe's env list is in the rs64_rsp_hooks_on on-list first, or the gate silently disarms an instrument).
+- H-dma: byte-wise MEM_B/RSP_MEM_B loops in rsp.hpp dma_* (lib/: export.sh + commit) -> word-wise swizzled copy.
+- H-vops: RSP:: vector templates not inlined into factor5_ucode (check -O2 actually applies to build/factor5_ucode; try
+  always_inline / -O3 for that target).
 
-## Work unit (ONE build, ONE run)
-1. Inside rs64_run_lle_gfx (src/main/main.cpp:7069) accumulate per task: total, time inside DPC/XBUS bridge callbacks
-   (dpc_bridge entry points: wrap with a thread-local ns accumulator), time inside rdpq submit, and the RSP instruction
-   count if cheap. Print per second with [g1e-aq] (G1B only).
-2. Same-run toggle (window flip every 10 s at the [g1b] boundary, like ROGUESQ_RDP_ASYNC_TOGGLE): logging recipe vars
-   OFF vs ON via a runtime gate (TRICOUNT/FB_HASH/DRAWN are env-static: add a toggle global), and CULL_SPIKE on/off.
-3. Run scratch/agent/s6711_tl.zsh-style recipe (lvl5 FPS60 dd4 ASYNC NODRAIN, ROGUESQ_G1E_TL kept for the frame view).
-   Positive control: interp + bridge + submit + rest == lleRun total per task.
-Outcomes: bridge share >50% -> H-bridge; logging arm cuts >20% -> H-log; else H-interp.
-Also fold the queued soak s6711_nodrain_hangar_route (hangar/menu render under ASYNC+NODRAIN) when it lands.
+## Work unit (ONE build, same-run toggle)
+1. Implement H-probes + H-dma behind a runtime global (ROGUESQ_G1E_FAST_TOGGLE=<sec> flips it like STORE_DIAG_TOGGLE).
+2. Run `zsh scratch/agent/s6712_owner.zsh 5 4 fast` (owner config + G1E_AQ) with the toggle env added; compare rest ns/cmd
+   per window (fit as in s6712: rest = a + b*calls). Positive control: the toggle window boundary [g1e-split] lines.
+3. If H-vops remains the bulk, check compile flags of the factor5_ucode target (ROGUESQ_SRC_OPT) next.
+Outcomes: slope drop >=15% -> qualify lvl1/5/10 300 s (fb sane) and measure tasks/s; <5% -> H-vops is the lever.

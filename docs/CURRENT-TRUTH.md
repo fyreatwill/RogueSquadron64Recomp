@@ -77,6 +77,13 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   (Gfx start -> RSP exit) is < ~14 ms: P(miss) 0.17 at 12-14 ms, 0.56 at 14-16, 0.88 above. Slow camera phase (~8 s
   autopilot cycle facing dense dd4 terrain): 13.2 ms/task, 789 kB RDP out vs 4.6 ms / 267 kB fast; 17 us per kB in both.
   Handoff latencies < 1 ms, guest run 3.7-5.5 ms (not the term). The s6710 "~10 ms" was a per-second blend (superseded).
+  **s6712 split of that task (ROGUESQ_G1E_AQ=1 -> [g1e-split] per s; `sample` profiles): H-interp.** Task cost is linear in
+  RDP commands (DPC_END bumps, up to ~50k/task dense): owner-play config (no recipe logging) ~0.6 ms + 257 ns/cmd interp side
+  + 55 ns/cmd bridge (half of that is the timer itself); commit ~0.01 ms. Recipe logging arm: same slope (328 vs 321 ns/cmd
+  pre-fix), so H-log refuted. Positive control: 2 us spin per submit in alternate 10 s windows lands in submit_ms (45k calls
+  -> +91 ms). Profile without instrument terms: LLE interpreter (factor5_ucode + RSP:: vector ops + byte-wise
+  dma_rdram_to_dmem) ~70%, bridge ~10%, in-ucode probes ~10%. Fixed: [m4-y8000] was default-ON (summary+fflush ~600/s,
+  2/3 of the log volume); now opt-in (ROGUESQ_LOG_M4_Y8000=1): dense task 11.98 -> 11.74 ms at ~35k cmds, log 104 -> 45 MB.
 - **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
   ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
   lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
@@ -566,11 +573,10 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1e: cut the dd4 gfx task's RSP segment below ~14 ms in dense scenes (s6712 next).** s6711: the VI-miss term is the
-   task (Gfx start -> RSP exit), linear in RDP output (17 us/kB), 13-18 ms when the camera faces dense dd4 terrain. Next,
-   one build, same-run toggle: split it into LLE interpreter vs our in-RSP bridge work (dpc_bridge per-command: spike cull,
-   TRICOUNT/FB_HASH/DRAWN logging the recipe arms, ~1600 defer calls/task), then cut the winner. Hangar/menu check under
-   ASYNC+NODRAIN is queued as soak s6711_nodrain_hangar_route. See NEXT.md.
+1. **G1e: cut the LLE interpreter's per-RDP-command cost (~257 ns/cmd) so dense dd4 tasks (35-50k cmds, 12-16.6 ms)
+   fall below ~14 ms (s6713 next).** s6712 selected H-interp (bridge ~10%, logging refuted). Levers, one build, same-run
+   toggle: word-wise dma_rdram_to_dmem/dmem_to_rdram copies, the remaining unconditional ucode probes behind
+   rs64_rsp_hooks_on, and out-of-line RSP:: vector op templates (VMADN/VMADH/SDV/VMADM/VMUDL). See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional

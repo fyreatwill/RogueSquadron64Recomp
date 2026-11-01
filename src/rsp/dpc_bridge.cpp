@@ -1042,7 +1042,9 @@ static bool rs64_m4_y8000_enabled() {
         const char *all = std::getenv("ROGUESQ_LOG_ALL");
         if (all && *all && *all != '0') return 1;
         const char *e = std::getenv("ROGUESQ_LOG_M4_Y8000");
-        if (!e) return 1;
+        // s6712 G1e: was default-ON (env unset -> 1): a ~500-byte [m4-y8000] summary + fflush every 64 flushes, ~600 lines/s
+        // in lvl5 dd4 flight (148k lines / 90 MB per 4-min run), 15.5% of the gfx ucode's samples in owner play. Opt-in now.
+        if (!e) return 0;
         return (*e && *e != '0') ? 1 : 0;
     }();
     return v == 1;
@@ -5198,7 +5200,7 @@ static void submit_deferred_merged(uint32_t &bytes, size_t &calls) {
     }
 }
 
-void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
+static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
     if (end <= start) {
         return;
     }
@@ -6504,7 +6506,7 @@ extern "C" void rs64_dpc_defer_begin() {
     s_task_max_hi = 0;
 }
 
-extern "C" void rs64_dpc_defer_end(int commit) {
+static void rs64_dpc_defer_end_impl(int commit) {
     g_defer_active = false;
     if (commit && !g_s4272_sh.empty() && g_rdram_for_submit) {
         static unsigned long cmpWords = 0, diffWords = 0, tasks = 0, tasksDiff = 0; static int shown = 0;
@@ -6870,4 +6872,34 @@ extern "C" void rsp_force_fullsync() {
         fflush(stderr);
     }
     ultramodern::submit_rdp_range(addr, addr + 8);
+}
+
+// s6712 G1e: split the gfx task's RSP segment into bridge (per-DPC_END submit, task-end commit) vs the rest
+// (LLE interpreter + in-ucode probes). ROGUESQ_G1E_AQ=1 arms it (main.cpp reports [g1e-split]); off = one load per call.
+// g_rs64_aq_spin_ns > 0 busy-waits that long inside the timed submit: the same-run positive control.
+#include <chrono>
+extern "C" {
+uint64_t g_rs64_aq_submit_ns = 0, g_rs64_aq_commit_ns = 0, g_rs64_aq_submit_calls = 0;
+uint32_t g_rs64_aq_spin_ns = 0;
+int g_rs64_aq_on = -1;
+}
+#include <time.h>
+// CLOCK_UPTIME_RAW is a commpage read; steady_clock (CLOCK_MONOTONIC_RAW) cost ~10% of the ucode at ~50k submits/task (s6712 sample).
+static inline uint64_t rs64_aq_now() { return clock_gettime_nsec_np(CLOCK_UPTIME_RAW); }
+extern "C" __attribute__((noinline)) void rs64_g1e_aq_spin(uint64_t until) {
+    while (rs64_aq_now() < until) {}
+}
+void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
+    if (g_rs64_aq_on <= 0) { rsp_dpc_submit_impl(rdram, start, end); return; }
+    const uint64_t t0 = rs64_aq_now();
+    rsp_dpc_submit_impl(rdram, start, end);
+    if (g_rs64_aq_spin_ns) rs64_g1e_aq_spin(t0 + g_rs64_aq_spin_ns);
+    g_rs64_aq_submit_ns += rs64_aq_now() - t0;
+    ++g_rs64_aq_submit_calls;
+}
+extern "C" void rs64_dpc_defer_end(int commit) {
+    if (g_rs64_aq_on <= 0) { rs64_dpc_defer_end_impl(commit); return; }
+    const uint64_t t0 = rs64_aq_now();
+    rs64_dpc_defer_end_impl(commit);
+    g_rs64_aq_commit_ns += rs64_aq_now() - t0;
 }
