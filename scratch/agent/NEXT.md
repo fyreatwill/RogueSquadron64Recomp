@@ -1,20 +1,20 @@
-# NEXT: G3 render fidelity -- same-camera port vs retail frame pair on the scripted lvl1 briefing fly-over
-HYPOTHESIS-ID: g3-briefing-oracle-diff
+# NEXT: G3 render fidelity -- same-camera in-flight diff on the ATTRACT DEMO (no input on either side)
+HYPOTHESIS-ID: g3-attract-oracle-diff
 
-s6737 closed the G3 border/edge class: the right column (s6736) was the only clear-only border. The earlier in-flight
-retail comparisons (s5978/s5998) were eyeball-only, with different cameras. The pre-mission briefing fly-over (cw 640,
-640x336 VI, epoch ~6 in [g1d-reach]) is a scripted camera path with no player input, so a frame N VIs after its first
-VI should match between the port and retail. That gives a real pixel diff.
-Hypotheses: H-match (port == retail within filtering/dither noise: per-tile mean |diff| < ~8 lum everywhere);
-H-geom (port-only missing or extra geometry: tiles with diff > 40 clustered on objects/terrain);
-H-shade (colour/fog/combiner deltas: diff spread smoothly across the frame, mean offset in one channel).
-Steps:
-1. Retail: docs/G3-RETAIL-PIXEL-ORACLE.md (angrylion m64p) + scratch/agent/s5978_retail_flight.sh route. Note the VI count
-   of the first 640-wide VI after the level-select A press, then dump fb at +60, +120, +240 VIs. Positive control: the
-   dumped frame is non-black and 640 wide.
-2. Port: the same VI offsets via FB dump on the forced lvl1 route (scratch/s6737/dense.sh recipe, FB_DUMP_MODE / fbd tools;
-   key the offset on the first cw=640 epoch after the level select, i.e. the [g1d-reach] epoch 6 start).
-3. Diff 640x336 RGB: per 16x16 tile mean |diff|, heat map, and the top-10 tiles cropped side by side. Check the same-run
-   control first: two port dumps at the same offset from two runs must agree, or the path is not deterministic and
-   the method fails. In that case fall back to the s5978 coarse element-class check and say so.
-Expected: H-match closes G3 in-flight at pixel level. H-geom/H-shade name the draws to chase in the next unit.
+s6738: boot intro cinematic = H-match vs retail after the LLE-default fix (LLE_FORCE/UNGATED/SOLO now default ON).
+The port's title idles into an attract demo (scripted Tatooine flight, seen at t~74 s in scratch/s6738/fix_c2). The
+demo is input-free, so retail and port should show the same camera: a real in-flight pixel diff.
+Hypotheses: H-match (best-match d < ~5 lum on slow-camera frames, no clustered hot tiles); H-geom (tiles > 40 clustered on
+objects/terrain present on one side only); H-shade (smooth per-channel offset / fog-haze difference across the frame);
+H-desync (the demo diverges: best-match port time NOT monotonic in retail VI -> demo not deterministic, fall back to
+element-class check and say so).
+Steps (one retail run + one port run, then offline):
+1. Retail: copy tools/g3_boot_diff/retail_boot.sh; SECS=110; fb-dumps armed on the first 512-wide VI (the demo; boot has
+   no 512 phase: 320 -> 640 -> 1024 title at t=49 s), delays 0.5..35 s step 0.4, region 0x600000 len 0x200000 may not
+   hold the flight buffers: first run with --vi-trace only to read the 512-phase origins (s5978 flight used 0x690400/
+   0x690800 -> dump 0x680000 len 0x100000), keep `--press 999:start` so a controller is attached.
+2. Port: env SECS=130 zsh tools/g3_boot_diff/port_win.sh attract1 (plain launch, window captures ~5/s).
+   Find the 512-wide window crop (4:3 512x440-ish VI in a 640x480 window: measure non-black rows) for --win.
+3. python3 tools/g3_oracle_match.py <oracle.log> scratch/s6738/attract1 <out> --bases <flight bases> --h <rows> --win y0,y1
+   (decoder is hardwired W=640: add a --w option for 512). Inspect top pairs + heat maps.
+Control: the static-title frame (1024 phase) should match too, or the method failed.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6736 (2026-11-01).
+Compact operational handoff, as of Session 6738 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -10,6 +10,12 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
 
 ## Headline
 
+- **FIXED s6738: the plain launch (owner's command, no env) ran every non-hangar gfx task through RT64 HLE.**
+  ROGUESQ_LLE_FORCE/UNGATED/SOLO defaulted OFF, while every qualification soak (m6_god_common COMMON) sets all three.
+  Seen as the boot intro cinematic drawn solid white (plain 0/71 scene captures; flags 61/64) and attribution glyphs
+  dropped. Now default ON (=0 restores HLE). Same-build arms: 60/63 vs 0/67. The fixed cinematic matches retail angrylion
+  frames (tools/g3_oracle_match.py, d 1.4-2.9 lum on slow-camera frames). Port RDRAM fb dumps do NOT hold RT64's 3D
+  frames (no write-back): use window captures as the port source for pixel diffs.
 - The qualified route boots attribution, N64 logo, intro, Factor 5 logo, title,
   hangar, and mission origins; mission input reaches flight code.
 - M5 audio de-stubbing, M3 idiom audits, generated-symbol renaming (G5), M6
@@ -427,9 +433,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
    single-source where unresolved. Reopen on a new owner report or relevant
    side-effect failure, not repeat crash-hunt holds. Historical proposed probes
    are archived in PROJECT-OVERVIEW, not an alternate live backlog.
-4. **Then G3 render fidelity (NEXT: g3-briefing-oracle-diff).** The scripted briefing fly-over (cw 640) gives a
-   same-camera port-vs-retail (angrylion, docs/G3-RETAIL-PIXEL-ORACLE.md) frame pair; then hangar artifacts
-   and flight comparison against retail. G2/G5 are closed; G4 and aim/steer stay
+4. **Then G3 render fidelity (NEXT: g3-attract-oracle-diff).** s6738 closed the boot cinematic (H-match after the
+   LLE-default fix). Next: the attract demo (title idle -> scripted Tatooine flight, no input) as a same-camera
+   in-flight diff, tools/g3_boot_diff + tools/g3_oracle_match.py --win; then the briefing fly-over and hangar artifacts. G2/G5 are closed; G4 and aim/steer stay
    parked. No backlog-exhausted block.
 
 ## Evidence index

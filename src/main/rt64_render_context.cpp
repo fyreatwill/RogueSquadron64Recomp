@@ -439,8 +439,11 @@ public:
         // to actually emit triangles — HLE drops it.
         static int s_lle_force = -1;
         if (s_lle_force < 0) {
+            // s6738: default ON (unset = 1, =0 = old HLE default). Every qualification soak ran LLE_FORCE/UNGATED/SOLO=1,
+            // but a plain launch (the owner's command) took HLE for all non-hangar tasks: the boot intro cinematic drew a
+            // white screen (plain 0/71 scene captures vs 61/64 with the three flags).
             const char* v = std::getenv("ROGUESQ_LLE_FORCE");
-            s_lle_force = (v && *v && v[0] != '0') ? 1 : 0;
+            s_lle_force = (v && *v) ? (v[0] != '0') : 1;
             if (s_lle_force) {
                 fprintf(stderr, "[lle-force] LLE path enabled for M_GFXTASK; "
                                 "HLE send_dl will skip processDisplayLists\n");
@@ -476,7 +479,7 @@ public:
             static int s_lle_ungated = -1;
             if (s_lle_ungated < 0) {
                 const char* v = std::getenv("ROGUESQ_LLE_UNGATED");
-                s_lle_ungated = (v && *v && v[0] != '0') ? 1 : 0;
+                s_lle_ungated = (v && *v) ? (v[0] != '0') : 1;  // s6738: default ON
             }
             const bool in_attribution_page = ((dlp & 0xFFFF0000u) == 0x80720000u);
             static int s_lle_hangar_only = -1;
@@ -507,7 +510,7 @@ public:
                 static int s_lle_solo = -1;
                 if (s_lle_solo < 0) {
                     const char* v = std::getenv("ROGUESQ_LLE_SOLO");
-                    s_lle_solo = (v && *v && v[0] != '0') ? 1 : 0;
+                    s_lle_solo = (v && *v) ? (v[0] != '0') : 1;  // s6738: default ON
                 }
                 if (s_lle_solo || in_hangar) {
                     rs64_m5_host_edge("send-return", m5_task_seq,

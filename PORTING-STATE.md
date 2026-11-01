@@ -177163,3 +177163,35 @@ Verdict: H-none selected for left, top and bottom. H-bottom refuted: the display
 The G3 border/edge class is closed: the right column (s6736) was the only clear-only border. No trim extension needed.
 No defaults changed (instrument-only diff).
 Next: G3 in-flight / briefing same-camera diff vs the retail angrylion oracle (NEXT.md g3-briefing-oracle-diff).
+
+## Session 6738 (2026-11-01) — plain launch (owner command) drew the boot intro cinematic white: non-hangar gfx tasks took HLE because LLE_FORCE/UNGATED/SOLO defaulted off; now default ON, cinematic matches retail at pixel level
+Work unit: g3-briefing-oracle-diff, re-targeted to the boot intro cinematic (scripted camera, no input on either side, so
+no key route is needed to reach it).
+Tools: rs64_oracle `--fb-dump` cap 16 -> 96 and it now logs `vi0`/`origin0` sampled BEFORE the read (the after-read origin
+races a swap). New tools/g3_oracle_match.py (pure PIL, no numpy on this host): decodes retail RDRAM at the logged origin
+(base 0x695C00 / 0x62B800, origin = base+0x500, +1 row on interlace field 1), matches every retail frame to its min-|dLum|
+port frame on a 160x84 grid, writes retail|port|tile-heat sheets. tools/g3_boot_diff/{retail_boot.sh,port_win.sh,score.py}.
+Measurements:
+1. Retail (angrylion, no input): N64 logo vi 609-753, then the in-engine LucasArts cinematic (explosion, X-wing/AT-ST
+   fly-over, LucasArts logo carved in snow, trench) to vi ~1800, title at t=49 s. Positive control: the static logo frame
+   matches the port at d=0.25 (with a controller attached; without one retail prints "NO CONTROLLER", d=0.86, 7 tiles).
+2. Port RDRAM dumps (ROGUESQ_FB_DUMP_VI=1) are NOT a valid port source for 3D frames: the port used the same buffers
+   (0x695C00/0x62B800) from swap ~280 but RDRAM still held the stale N64 logo / white. RT64 renders on the GPU with no
+   write-back. Window captures (screencapture -l) are the port source from now on.
+3. Plain launch (no env) window captures, 12-26 s: white 71/71, 69/69, 71/71, 72/72 (four runs, including
+   G1E_FAST=0 and STORE_DIAG=1 arms, so neither causes it). Soak flag set: 60/64 scene frames. Bisect: LLE_FORCE+UNGATED+SOLO
+   alone 61/64 scene; OVL2C_DROP/SPIN_YIELD/STUB_MISSING/AUDIO_UCODE 0/69; logging flags 0/57.
+ORIGIN: src/main/rt64_render_context.cpp send_dl. Without ROGUESQ_LLE_FORCE (and not at hangar origins) every gfx task fell
+through to RT64's HLE F3DFACTOR5 path, which cannot draw the cinematic (and drops glyphs + the Expansion Pak image on the
+attribution screen). Every qualification soak (m6_god_common.sh COMMON) has always set all three flags, so the qualified
+config and the owner's plain command differed. Not a mitigation: it makes the qualified path the default.
+Fix: LLE_FORCE/LLE_UNGATED/LLE_SOLO default ON when unset (=0 = old HLE behaviour). Same build: plain 60/63 scene vs =0
+control 0/67 white. 75 s plain run: attribution complete (pak image, all glyphs), cinematic, title at ~60 s, attract demo
+flight renders; 0 crash/Unhandled-jump lines. Retail vs port (fixed, window captures): best-match port time rises
+monotonically with retail VI; slow-camera frames match at d=1.80 (explosion vi776), 2.89 (logo vi1424), 2.59 (trench
+vi2217), 1.36 (logo hold); moving-camera frames 8-28 = capture spacing (~0.2 s), not content. Sheet
+scratch/s6738/pairs_moving.png. Verdict: H-match for the intro cinematic (two lines: tile metric + visual pairs);
+H-geom/H-shade not seen. Two arms in one build, so not cross-build.
+Rules out: G1E fast DMA and store-diag gating as the cause; "port RDRAM dumps show what RT64 drew" for 3D scenes.
+Not yet checked: missions in plain launch were HLE before this fix (unqualified); they now take the soak-qualified LLE path.
+Next: the attract demo (title idle -> scripted Tatooine flight, no input) is a same-camera in-flight retail comparison.

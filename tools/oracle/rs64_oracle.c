@@ -3217,7 +3217,7 @@ static volatile int g_poll_running;
 /* --fb-dump WIDTH:DELAY_S:START:LEN:PATH (repeatable via --vi-poll): first time the
  * polled VI width register equals WIDTH, wait DELAY_S then write LEN bytes of
  * physical RDRAM at START (big-endian, raw) to PATH. */
-#define MAX_FB_DUMPS 16
+#define MAX_FB_DUMPS 96  /* s6738: 16 -> 96 for dense retail frame series (G3 pixel diff) */
 static struct { unsigned width; double delay; unsigned start, len; char path[512]; double armed_at; int done; } g_fbd[MAX_FB_DUMPS];
 static int g_nfbd;
 static void fb_dump_poll(double t, unsigned width)
@@ -3229,6 +3229,8 @@ static void fb_dump_poll(double t, unsigned width)
             g_fbd[k].armed_at = t;
         }
         if (t - g_fbd[k].armed_at < g_fbd[k].delay) continue;
+        unsigned origin0 = (unsigned)pDebugMemRead32(VI_ORIGIN_ADDR);  /* s6738: origin BEFORE the read (the after-read value races a swap) */
+        long vi0 = g_vis;
         FILE *f = fopen(g_fbd[k].path, "wb");
         g_fbd[k].done = 1;
         if (!f) { printf("[fb-dump] cannot open %s\n", g_fbd[k].path); continue; }
@@ -3240,8 +3242,8 @@ static void fb_dump_poll(double t, unsigned width)
             fwrite(b, 1, 4, f);
         }
         fclose(f);
-        printf("[fb-dump] t=%6.1fs vi=%ld width=%u origin=0x%08x start=0x%x len=0x%x nonzero_words=%u -> %s\n",
-               t, g_vis, width, (unsigned)pDebugMemRead32(VI_ORIGIN_ADDR), g_fbd[k].start, g_fbd[k].len, nz, g_fbd[k].path);
+        printf("[fb-dump] t=%6.1fs vi=%ld width=%u origin=0x%08x start=0x%x len=0x%x nonzero_words=%u vi0=%ld origin0=0x%08x -> %s\n",
+               t, g_vis, width, (unsigned)pDebugMemRead32(VI_ORIGIN_ADDR), g_fbd[k].start, g_fbd[k].len, nz, vi0, origin0, g_fbd[k].path);
         fflush(stdout);
     }
 }
