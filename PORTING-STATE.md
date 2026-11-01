@@ -177820,3 +177820,31 @@ one-screen summary per thread (G3 render match, G3 dt-pinned determinism, s6738/
 G1d/G1f, G3c, G1, closed milestones). Superseded entries s6631-s6755 kept in place. Next steps renumbered into one
 monotonic list 1-4 with mission 8 dt-pinned first (g3-mission8-pinned, unchanged from s6758 NEXT.md). Soak queue:
 no new verdicts since 20261031-230356.
+
+## Session 6760 (2026-11-01) — G3: mission 8 with dt pinned: port sim identical to retail for 1818 ticks (13273 rand calls, 19 NPCs); the tick 1819/1850 split is the second song (handle 3) ending on the audio clock, with equal audio length in both arms
+
+What ran (scratch/s6760; recipes = s6759 retail.sh/port.sh with lvl8.eep = s6754 lvl4.eep +0x31=7, dt pin
+800FA730:29:30:3d088889 both arms; retail SECS=360 and port SECS=330 concurrently):
+- Retail oracle (angrylion + cxd4): 2504 sim ticks, 22594 rand calls, 24 fb dumps.
+- Port: 2520 ticks, 23465 rand calls, 827 captures, 0 crash/abort lines in run.log.
+Results:
+- g3_rand_ticks.py: first mismatch at index 13273 = tick 1819 (retail's 800f0f2c call lands before port's 80054174
+  burst; values identical index by index around it).
+- Song handle 0x8010C0E0: identical transitions 0->1 (t695), ->0 (t862), ->ff (t863), ->2 (t894), ->3 (t1683) in both
+  arms. Song 1 (695-862): 167 ticks, retail 333 VI/638 AI buffers, port 334 VI/640. Song 3 ends at tick 1819 retail vs
+  1850 port: retail 331 VI / 634 AI buffers over 136 ticks (2.434 VI/tick, retail dropping frames), port 334 VI / 639
+  buffers over 167 ticks (2.000 VI/tick). Same audio length, so the song ends on the audio clock (the s6755 lvl4
+  mechanism). The tick count differs because retail renders this stretch slower. g3_tick_mem.py first arm diff tick 1819
+  for both 8010c9e0 and 8010c0e0.
+- g3_frame_snap.py (1818 ticks): NPC points and object words identical on every tick for all 19 NPCs. Snap diffs only
+  words 3-6/9. Glob 8011A880 diffs only words 20-31, plus 7/8 on 12 ticks (task/yield flag bytes: render pacing,
+  allowed). Tool fix: g3_frame_snap.py crashed on an oracle xtrace row with a [vi-poll] line spliced in by stdout
+  interleaving; malformed retail rows are now skipped.
+- g3_oracle_match.py: 22 non-black retail dumps, best d 4.0-7.6 for most. The three worst (vi 6865 d 27.4, 9276 d 21.9,
+  10649 d 15.1) are retail mid-draw dumps: top part drawn and matching, lower part still clear colour or stale rows
+  (looked at the pngs). vi 10649 is after the split. Colour fit a=1.000/1.016/1.020.
+Positive control: g3_rand_ticks.py scratch/s6754/retail2/oracle.log scratch/s6754/port.rand.txt -> mismatch at index
+2153 (reproduced this session).
+Rules out: a port sim defect on lvl8 within the first 1818 flight ticks (two lines: rand stream + NPC/object state).
+Not covered: lvl8 after the song-3 end.
+Next: mission 9 (g3-mission9-pinned), eep +0x31=8.

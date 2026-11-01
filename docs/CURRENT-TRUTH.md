@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6759 (2026-11-01).
+Compact operational handoff, as of Session 6760 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -14,9 +14,10 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   mission-intro cinematic (s6743), lvl1 flight+HUD/bolts/impacts (s6744-s6747), lvl2 flight+bolts (s6748).
   Colour rules: window captures are Display-P3 -> convert to sRGB (s6740); use `--dec shift` (v<<3), the v*255/31
   decode fakes a ~2% retail>port gain (s6744). Port RDRAM fb dumps lack RT64 3D frames: use window captures.
-- **G3 sim determinism with dt pinned (s6753-s6758).** Missions 3-7: rand stream, NPC state, event mask and song
+- **G3 sim determinism with dt pinned (s6753-s6760).** Missions 3-8: rand stream, NPC state, event mask and song
   handle identical to retail (lvl5 20635 rand calls / 1972 ticks). Unpinned desyncs = pacing (retail drops frames,
-  2.115 VI/tick; port 2.000). Late splits on lvl4/lvl7 = song end on the audio clock (equal AI-buffer counts).
+  2.115 VI/tick; port 2.000). Late splits on lvl4/lvl7/lvl8 = song end on the audio clock (equal AI-buffer counts; lvl8 s6760: retail dropped
+  frames to 2.43 VI/tick in the song, so the same 331-VI/634-buffer song spans 136 retail ticks vs 167 port ticks).
   Pin: oracle RS64_XTRACE_POKE / port ROGUESQ_XTRACE_POKE=800FA730:29:30:3d088889 (needs RAND_TRACE). Mission
   select on a signed save: tools/g3_eep_patch.py (+0x31). Tools: g3_rand_ticks, g3_ai_clock, g3_frame_snap,
   g3_tick_mem, g3_vi_edges. Allowed render-pacing diffs: snap words 2-6/9, glob 7/8 (0x8011A89C-A3), 18, 20-31.
@@ -132,8 +133,8 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 sim/frame match, mission 8 dt-pinned (NEXT: g3-mission8-pinned).** Same recipe as s6758 (scratch/s6759
-   retail.sh/port.sh, eep +0x31=7). Then missions 9.. in turn. A split not explained by the audio clock or
+1. **G3 sim/frame match, mission 9 dt-pinned (NEXT: g3-mission9-pinned).** Same recipe as s6760 (scratch/s6760
+   retail.sh/port.sh, eep +0x31=8). Then missions 10.. in turn. A split not explained by the audio clock or
    render-pacing words = real port defect -> bisect with xtrace-mem (s6751-s6753).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
@@ -150,4 +151,4 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
 - Objective contracts: [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); per-level images:
   [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261031-230356 (s6715 arms, consumed).
-- Recent chronology: PORTING-STATE sessions 6738-6759; search bounded windows only.
+- Recent chronology: PORTING-STATE sessions 6738-6760; search bounded windows only.

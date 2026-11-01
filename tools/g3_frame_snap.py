@@ -22,8 +22,11 @@ def parse(path, retail):
             if not l.startswith("[xtrace] "):
                 continue
             f = l.split()[1:]
-            pc = int(f[4][3:], 16)
-            v0, a3, ra = int(f[5][3:], 16), int(f[6][3:], 16), int(f[2], 16)
+            try:  # s6760: oracle stdout can splice a [vi-poll] line into an xtrace row
+                pc = int(f[4][3:], 16)
+                v0, a3, ra = int(f[5][3:], 16), int(f[6][3:], 16), int(f[2], 16)
+            except (ValueError, IndexError):
+                continue
             mem = f[7:]
         else:
             f = l.split()
