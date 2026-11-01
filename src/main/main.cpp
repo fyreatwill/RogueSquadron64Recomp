@@ -10735,6 +10735,30 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         }
     }
 
+    // s6726: ROGUESQ_LIVES_CAP=<n> is a TEST-ONLY harness lever (G1d game-over screen): while the
+    // player-0 lives byte 0x80130B10 holds a plausible count above n (2..9), set it to n, so the
+    // next life loss reaches the game's own lives==0 GAME OVER path (M6-S5759-DEATH-CHAIN.md).
+    // Every change of the byte is logged ([livescap], cap 40) as the positive control.
+    {
+        static int s_cap = -2;
+        if (s_cap == -2) { const char* e = std::getenv("ROGUESQ_LIVES_CAP"); s_cap = (e && *e) ? std::atoi(e) : -1; }
+        volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+        if (s_cap >= 0 && rd) {
+            static int s_prev = -1;
+            static unsigned s_n = 0;
+            const uint8_t v = (uint8_t)rs64_rdram_u8(rd, 0x130B10u);
+            uint8_t w = v;
+            if (v >= 2 && v <= 9 && v > s_cap) { const_cast<uint8_t*>(rd)[0x130B10u ^ 3u] = (uint8_t)s_cap; w = (uint8_t)s_cap; }
+            if ((int)w != s_prev && s_n < 40) {
+                s_n++;
+                std::fprintf(stderr, "[livescap] t=%lld read=%u now=%u origin=0x%06X\n", rs64_s5773_ms(), v, w,
+                    (unsigned)rs64_vi_committed_origin() & 0xFFFFFFu);
+                std::fflush(stderr);
+            }
+            s_prev = w;
+        }
+    }
+
     // s5680: ROGUESQ_PLAYER_DUMP=1 logs the whole player record (0x137DB8, 0x2A0 bytes) as hex words
     // at ~1 Hz while the mission origin 0x690400 is up, plus the stick/button state, so field
     // tracking vs stick input can be found offline. Passive, read-only.

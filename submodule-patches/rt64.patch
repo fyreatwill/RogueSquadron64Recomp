@@ -10898,10 +10898,10 @@ index 0848f3e..22c84a9 100644
  
          TextureUpload newUpload;
 diff --git a/src/render/rt64_vi_renderer.cpp b/src/render/rt64_vi_renderer.cpp
-index b4ff4e9..377b572 100644
+index b4ff4e9..c6cd9c0 100644
 --- a/src/render/rt64_vi_renderer.cpp
 +++ b/src/render/rt64_vi_renderer.cpp
-@@ -4,9 +4,18 @@
+@@ -4,9 +4,20 @@
  
  #include "rt64_vi_renderer.h"
  
@@ -10916,11 +10916,13 @@ index b4ff4e9..377b572 100644
 +// RS64 s6724 G1d: 1 while the current VI-mode epoch drew only the centre 512 columns of its wide colour image
 +// (src/rsp/dpc_bridge.cpp rs64_g1d_pillar_scan).
 +extern "C" __attribute__((weak)) int rs64_g1d_pillar_crop;
++extern "C" __attribute__((weak)) int rs64_g1d_edge_cols;
++extern "C" __attribute__((weak)) int rs64_g1d_edge_cw;
 +
  namespace RT64 {
      // VIRenderer
  
-@@ -67,9 +76,34 @@ namespace RT64 {
+@@ -67,9 +78,45 @@ namespace RT64 {
  
          descriptorSet->setTexture(descriptorSet->gInput, p.texture, RenderTextureLayout::SHADER_READ);
  
@@ -10951,6 +10953,17 @@ index b4ff4e9..377b572 100644
 +            scissor.right = std::min(scissor.right, int32_t(lround(viewport.x + viewport.width - side)));
 +            static int s_lines = 0;
 +            if (s_lines++ < 4 || (s_lines & 1023) == 0) { std::fprintf(stderr, "[g1d-debrief-crop] fbw=%u scissor x %d..%d (viewport x %.1f w %.1f)\n", (unsigned)uint32_t(fbSize.x), scissor.left, scissor.right, viewport.x, viewport.width); }
++        }
++        // RS64 s6726 G1d: trim right-edge source columns the game's scissor never lets any draw reach (xh = width-1 on the
++        // 4:3 debrief: stale heap bytes a CRT hides in overscan). Display-only. ROGUESQ_G1D_EDGE=0 = old.
++        if ((&rs64_g1d_edge_cols != nullptr) && (&rs64_g1d_edge_cw != nullptr)) {
++            const int cols = __atomic_load_n(&rs64_g1d_edge_cols, __ATOMIC_RELAXED), cw = __atomic_load_n(&rs64_g1d_edge_cw, __ATOMIC_RELAXED);
++            if (cols > 0 && cols <= 4 && cw == int(uint32_t(fbSize.x))) {
++                const float trim = viewport.width * (float(cols) + 0.5f) / float(cw);  // +0.5: drop the filter blend of the stale column into its drawn neighbour
++                scissor.right = std::min(scissor.right, int32_t(lround(viewport.x + viewport.width - trim)));
++                static int s_elines = 0;
++                if (s_elines++ < 4 || (s_elines & 4095) == 0) { std::fprintf(stderr, "[g1d-edge-crop] fbw=%d cols=%d scissor.right=%d\n", cw, cols, scissor.right); }
++            }
 +        }
          p.commandList->setViewports(viewport);
          p.commandList->setScissors(scissor);

@@ -176772,3 +176772,36 @@ VI-mode-gated arm refutes "title_vi==2 covers the debrief".
   screenshots/s6725_levelselect_fix_vs_ctl.png, s6725_flight_hud_control.png.
 - Rules out: scissor and game-side x as causes. Open G1d: game-over at 21:9/16:9, 4:3 debrief right-edge column.
 - Verdict: selects H-anchor; refutes H-game-x and H-scissor (anchor-off arm moves every level-select rect by exactly +A and centres the screen; scissor full width). Next discriminator: ROGUESQ_HUD_ANCHOR_AUTO=0 vs default on the game-over screen (NEXT.md).
+
+## Session 6726 (2026-11-01) — G1d game-over screen fixed at 21:9/16:9 (pillar crop survives stray outside draws) and the 4:3 debrief right-edge line trimmed (game scissor stops at x 511)
+
+**Question (NEXT g1d-menu-sweep).** (1) Game-over screen at wide aspect; (2) the s6724 4:3 debrief right-edge column.
+**Lever.** ROGUESQ_LIVES_CAP=<n> (src/main/main.cpp, get_n64_input poll, TEST-ONLY): while lives byte 0x80130B10 holds 2..9
+and > n, set n; every change logged [livescap]. Route scratch/s6726/gameover.sh (s6725 abort route + cap 1). Positive
+control: [livescap] read=3 now=1 at mission start, then read=0 at the debrief (abort costs a life) -> GAME OVER banner.
+First run go219 failed the route: with AUTOPILOT_HOLD_MS=600 the pause-menu `down` auto-repeated to GAME SETTINGS (abort
+never chosen); the s6724/s6725 recipe is flaky for the same reason. HOLD_MS 250 worked 6/6 since.
+**Runs (lvl1 forced, all mission_verified_130s, 0 CRASH):**
+| run | binary | result |
+| go219b 21:9 | s6724 crop rule | GAME OVER banner + stats page with pink/white residue pillars; [g1d-pillar] epoch 27 crop 0->1 at 112 draws, 1->0 at 15058 (outside=1 for the whole epoch) |
+| go219c 21:9 | + outside-draw names | epoch 27 outside=0 -> clean; epoch 28 (stats, DA0) outside = 0x24 texrects x 250..381 / 642..773 (6 px past centre 256..768, slide-out) |
+| go169 16:9 | latched rule | epoch 27 outside=1 (0x0D tri x 445..777, cw 796, the emblem) and crop HELD; epoch 28 168 outside, held; pages clean |
+| go43 4:3 | latched rule | edge line visible (window col 1192 luma 216); every debrief swap's rects reach x=512, scissor ED000000,007FC6FC |
+| edge43 / edge43b 4:3 | + edge trim (cols / cols+0.5) | 216 -> 77 (bilinear blend left) -> 0 |
+| fin219 21:9 | final | game-over pages clean, flight/pause/level select unchanged, edge trim at cw 1024 only on menu epochs |
+**Game-over fix.** rs64_g1d_pillar_scan: once an epoch has latched the crop, it holds unless outside draws > 2% of draws
+(flight/hangar/level-select epochs run 15-30% outside and never latch: crop=0 on every one of them in all runs).
+ROGUESQ_G1D_CROP_STRICT=1 restores the s6724 any-outside rule. Same-epoch evidence: go219b (old rule, outside=1 -> residue)
+vs go169 (new rule, outside=1 -> held, black pillars). Not a same-binary A/B (the stray draw is nondeterministic: 2/4 runs).
+**Edge line.** ORIGIN: the game's own G_SETSCISSOR xh 0x7FC (511.0, exclusive) on its 512-wide image, so column 511 is never
+drawn. Two lines: (a) RDRAM fb dumps show col 511 differing from cols 505-510 in debrief (254 vs ~30) and flight (59 vs
+~148) frames; (b) the scissor in every [g1d-rect] debrief line. The debrief presents RDRAM (stale heap bytes show); flight
+renders the column on the GPU (fades to black, no line). Retail has the same bytes, hidden in CRT overscan. Fix
+(display only): rs64_g1d_edge_cols/_cw (dpc_bridge, per VI epoch, cw - ceil(max scissor xh), 1..4) -> lib/rt64
+rt64_vi_renderer.cpp trims (cols+0.5)/cw of the viewport from the present scissor when cw == VI fbSize.x;
+ROGUESQ_G1D_EDGE=0 = off. Fires on menu epochs (title 9, intro 16-18, debrief 27-30) at 4:3 and 21:9, never on flight.
+screenshots/s6726_edge43_before_after.png, s6726_gameover_219_sheet.png, s6726_gameover_169_sheet.png.
+**Discrimination.** Game over: H-pillar selected (stray outside draw dropped the content-gated crop; H-anchor-residue and
+H-game refuted — text centred, no anchored list moved). Edge: H-game-scissor selected (retail scissor) over H-VI-overscan-
+read (the VI shows exactly 512 columns, xScale 0x333) and H-stale-RT64-texel.
+Not checked: retail oracle frame of the debrief edge (mupen64plus reaches attract only).

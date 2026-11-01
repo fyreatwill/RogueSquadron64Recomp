@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6723 (2026-11-01).
+Compact operational handoff, as of Session 6726 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -122,6 +122,18 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   RT64, so any RDP rewrite in a wrap-restored range was discarded (b219: band back, 9x more restored words than a good run;
   s6722 fixb219 too). record_submit now runs after the shadow copy; ROGUESQ_G1D_PREWRAP_RECORD=1 = old. Full dim 6/6 runs
   on the new build vs 1/2 old. Applies to every RDP-rewrite hook (title clear, pause dim, spike cull, region/floor scans).
+- **FIXED s6726: G1d game-over screen (21:9/16:9) + 4:3 debrief right-edge line.** Route: ROGUESQ_LIVES_CAP=1 (test-only
+  lever, main.cpp, [livescap] log) + the s6724 abort route (scratch/s6726/gameover.sh, HOLD_MS 250: at 600 the pause-menu
+  `down` auto-repeated into GAME SETTINGS) -> abort takes lives 1->0 -> GAME OVER banner, stats page, Elite Rogues, Select
+  Game. Game-over pillars: the s6724 crop dropped for the whole epoch on ONE stray outside draw (go219b: pink residue; logged
+  in go169: an 0x0D emblem tri x 445..777 at cw 796; stats-page slide texrects overhang the centre by 6 px). Now a latched
+  epoch keeps the crop unless outside > 2% of draws (flight/hangar/level select run 15-30% and never latch);
+  ROGUESQ_G1D_CROP_STRICT=1 = old rule. 16:9 go169 reproduced outside=1 and stayed cropped; 21:9 fin219 clean.
+  4:3 edge line: the game's scissor is xh 0x7FC (511.0, exclusive) on its 512 image, so column 511 is never drawn (RDRAM
+  dumps: col 511 differs from its neighbours in debrief AND flight frames); the debrief presents RDRAM, so the stale heap
+  bytes show (a CRT hides them in overscan; flight renders that column on the GPU, fading to black). rs64_g1d_edge_cols
+  (dpc_bridge, per VI epoch: cw - ceil(max scissor xh), 1..4) -> RT64 VI renderer trims cols+0.5 from the present (display
+  only); ROGUESQ_G1D_EDGE=0 = off. Edge col 1192 luma 216 -> 0 (edge43b vs go43). screenshots/s6726_*.png.
 - **FIXED s6725: G1d 21:9 level-select name clip.** Writer = our s6156 HUD anchor: the level select draws its title,
   preview and level name on vp 0x800CDC80 (a flight-HUD list), so all moved -A (256 px at w1024; rects 64..419 vs
   anchor-off 320..675, scissor full width). Anchor now applies only while renderRadarMinimap ran within 8 swaps
@@ -133,8 +145,7 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   outside, the RT64 VI renderer crops the present to the centre (black bars, display only). Content-gated, so it covers
   both debrief pages (MISSION FAILED is VI mode 0x80128E40, which a mode gate missed) and the title; flight/hangar
   never crop. Same-binary control (ROGUESQ_G1D_DEBRIEF=0) shows residue; fix 0 luma at 21:9 and 16:9; 4:3 untouched.
-  Open: 4:3 debrief thin noisy right-edge column
-  (single-source). screenshots/s6724_debrief_crop.png.
+  4:3 right-edge column fixed s6726. screenshots/s6724_debrief_crop.png.
 - **FIXED s6721: G1d pause-menu text split at wide aspect.** Writer = our s6156 HUD anchor (vp 0x80138D20 also carries
   the pause text; right-of-centre items got +fbw-512). Anchor-off arm centres it (flight HUD unanchored = live control).
   Fix tools/apply_s6721_pausegate.py: anchor skipped while initHudStruct's pause byte (HUD+0x258) is set;
@@ -374,9 +385,11 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 - **Owner 2026-10-31:** spike cull default ON (also fixed: it only ran with LOG_SPIKE).
   G1(d) objective qualification PARKED (owner playtest). G1f window/fullscreen
   CLOSED s6717; G3d turning shake closed s6697 (s6696 fps fix). Spec: ITERATION.md item 3c.
-1. **G1d game-over screen at 21:9/16:9**, then the 4:3 debrief right-edge column (single-source, s6724 fix43 w139).
-   Recipe base: scratch/s6725/abort.sh <tag> <aspect> "<env>" (s6724 abort route; level select ~w153).
-   Open single-source (s6719): why a wider terrain footprint changes the LucasArts logo shape.
+1. **G1d close-out sweep** (game-over + 4:3 edge fixed s6726): remaining unvisited wide-aspect screens (Elite Rogues /
+   Select Game pillarbox look; the 1-frame white sliver at the top-right of the game-over backdrop entry, fin219/go219c
+   w132), then an owner-judgement contact sheet of every menu at 4:3/16:9/21:9. Recipe: scratch/s6726/gameover.sh <tag>
+   <aspect|none> "ROGUESQ_LIVES_CAP=1 ...". Open single-source (s6719): why a wider terrain footprint changes the LucasArts
+   logo shape.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional

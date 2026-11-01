@@ -5106,14 +5106,21 @@ static void rs64_g1d_pause_dim(uint32_t lo, uint32_t hi) {
 // bars, display only). Content-gated, so flight / hangar (full-width draws) are never cropped. ROGUESQ_G1D_DEBRIEF=0 = off.
 extern "C" int rs64_g1d_vi_epoch;
 extern "C" { int rs64_g1d_pillar_crop = 0; }
+// s6726 G1d: right-edge source columns no draw of the current VI epoch can reach (the game's scissor stops at width-1:
+// G_SETSCISSOR xh 0x7FC on a 512 image), and the colour-image width they apply to. RT64's VI renderer trims them from the
+// present: on the 4:3 debrief that column shows stale heap bytes (a CRT hides it in overscan). ROGUESQ_G1D_EDGE=0 = off.
+extern "C" { int rs64_g1d_edge_cols = 0; int rs64_g1d_edge_cw = 0; }
 static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
     static const bool on = [] { const char *v = std::getenv("ROGUESQ_G1D_DEBRIEF"); return !(v && *v == '0'); }();
     static int s_epoch = -1, s_lines = 0; static uint32_t s_draws = 0, s_out = 0, s_cw = 0, s_sx0 = 0, s_sx1 = 0xFFF;
+    static uint32_t s_edraws = 0, s_ecw = 0, s_esx = 0;  // s6726 edge: draws, colour width, max scissor xh (10.2) this epoch
+    static const bool edge_on = [] { const char *v = std::getenv("ROGUESQ_G1D_EDGE"); return !(v && *v == '0'); }();
     if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
     const int ep = __atomic_load_n(&rs64_g1d_vi_epoch, __ATOMIC_RELAXED);
     if (ep != s_epoch) {
         if (s_lines < 200 && s_epoch >= 0) { s_lines++; fprintf(stderr, "[g1d-pillar] epoch=%d end draws=%u outside=%u crop=%d sw=%d\n", s_epoch, s_draws, s_out, rs64_g1d_pillar_crop, g_rs64_swap_n.load(std::memory_order_relaxed)); }
-        s_epoch = ep; s_draws = 0; s_out = 0;
+        s_epoch = ep; s_draws = 0; s_out = 0; s_edraws = 0; s_ecw = 0; s_esx = 0;
+        __atomic_store_n(&rs64_g1d_edge_cols, 0, __ATOMIC_RELAXED);
     }
     auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
     for (uint32_t a = lo & ~3u, step = 8; a + 8 <= hi; a += step) {
@@ -5132,14 +5139,37 @@ static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
             x0 = *std::min_element(v, v + 6); x1 = *std::max_element(v, v + 6);
             if (yl <= yh) continue;  // degenerate (zapped / empty)
         } else continue;
+        if (s_cw != 0) {
+            if (s_cw != s_ecw) { s_ecw = s_cw; s_esx = 0; s_edraws = 0; }
+            s_edraws++; s_esx = std::max(s_esx, s_sx1);
+        }
         if (s_cw <= 512u) continue;
         x0 = std::max(x0, s_sx0 / 4.0); x1 = std::min(x1, s_sx1 / 4.0);
         if (x1 <= x0) continue;
         const double c0 = (s_cw - 512u) / 2.0, c1 = c0 + 512.0;
         s_draws++;
-        if (x0 < c0 - 1.0 || x1 > c1 + 1.0) s_out++;
+        if (x0 < c0 - 1.0 || x1 > c1 + 1.0) {
+            // s6726: name the first outside draws of each epoch (G1d game-over page lost its crop to 1 stray draw)
+            static int s_olines = 0; if (s_out < 4 && s_olines < 400) { s_olines++; fprintf(stderr, "[g1d-pillar] epoch=%d outside#%u op=0x%02X x=%.1f..%.1f sc=%.1f..%.1f cw=%u draws=%u w0=%08X w1=%08X sw=%d\n", ep, s_out + 1, op, x0, x1, s_sx0 / 4.0, s_sx1 / 4.0, s_cw, s_draws, w0, w1, g_rs64_swap_n.load(std::memory_order_relaxed)); }
+            s_out++;
+        }
     }
-    const int crop = (s_draws >= 64 && s_out == 0) ? 1 : 0;  // >= 64: no 1-submit flash at an epoch start (s6724: draws=1..3)
+    // s6726: once an epoch has latched the crop, a few stray outside draws (game-over page: 1 draw in 15058; stats-page
+    // slide-out texrects overhanging the centre by 6 px) no longer drop it; only > 2% outside does (flight/hangar/level
+    // select epochs run 15-30% outside and never latch). ROGUESQ_G1D_CROP_STRICT=1 = s6724 rule (any outside draw drops).
+    static const bool strict = [] { const char *v = std::getenv("ROGUESQ_G1D_CROP_STRICT"); return v && *v == '1'; }();
+    static int s_latch_ep = -1;
+    const bool latched = !strict && s_latch_ep == ep && rs64_g1d_pillar_crop;
+    const int crop = latched ? ((uint64_t)s_out * 50u <= s_draws ? 1 : 0)
+                             : (s_draws >= 64 && s_out == 0) ? 1 : 0;  // >= 64: no 1-submit flash at an epoch start (s6724: draws=1..3)
+    s_latch_ep = crop ? ep : -1;
+    if (edge_on && s_edraws >= 64 && s_ecw != 0) {
+        const int n = (int)s_ecw - (int)((s_esx + 3u) / 4u);  // xh is exclusive: columns >= ceil(xh) are never drawn
+        const int cols = (n >= 1 && n <= 4) ? n : 0;
+        if (cols != rs64_g1d_edge_cols && s_lines < 200) { s_lines++; fprintf(stderr, "[g1d-edge] epoch=%d cols %d->%d cw=%u scissor_xh=%.2f draws=%u sw=%d\n", ep, rs64_g1d_edge_cols, cols, s_ecw, s_esx / 4.0, s_edraws, g_rs64_swap_n.load(std::memory_order_relaxed)); }
+        __atomic_store_n(&rs64_g1d_edge_cw, (int)s_ecw, __ATOMIC_RELAXED);
+        __atomic_store_n(&rs64_g1d_edge_cols, cols, __ATOMIC_RELAXED);
+    }
     if (crop != rs64_g1d_pillar_crop && s_lines < 200) { s_lines++; fprintf(stderr, "[g1d-pillar] epoch=%d crop %d->%d draws=%u cw=%u sw=%d\n", ep, rs64_g1d_pillar_crop, crop, s_draws, s_cw, g_rs64_swap_n.load(std::memory_order_relaxed)); }
     __atomic_store_n(&rs64_g1d_pillar_crop, crop, __ATOMIC_RELAXED);
 }
