@@ -176028,3 +176028,31 @@ New tool tools/g1c_phase2_fold.py (per-run hold summary, mission [g1b] tasks/s/p
   Above dd4 there is no more terrain to draw on lvl5 (lvl1 the same, s6548).
 - Rules out: frame cost as the phase-2 limit on -O2; dd8's box as a heap/pool problem (pools identical to dd6).
 Queued: s6701_pnormcap_dd8_lvl1 / lvl10 (300 s). Next: fold them, FPS60 dd4 cost after the pause clears, owner sheet, close phase 2.
+
+## Session 6702 (2026-10-31) — lvl1 dd8 crash root-caused: s6569 malloc spill arena leaked every block; coalescing free list landed, 304 s clean
+
+Folded the s6701 soaks. lvl10 dd8 (pnorm cap): 301 s clean, late frame full-screen terrain+craft+HUD (fold tri_p90=1 /
+terr 0.99 is a scorer miss on a steep downward view, not a bad render). lvl1 dd8: CRASH at 219 s, SIGBUS
+si_addr=0x38000000a in instantiateNamedMeshInstance+1220 <- orientedNpcHandler <- spawnNpcOfType <- spawnOrientedNpc <-
+sprayEffectEmitterNpcHandler <- destroyNpcSlotByIndex <- runInMissionFrame. 0x38000000a = rdram base + (guest 0x0000000A -
+0xFFFFFFFF80000000): a guest NULL+0xA read. Immediately before it: `[spill] req=0x634 arena full`, then
+`[zmemcpy] OOB skip dst=0x58`.
+ORIGIN: the writer of the NULL is rs_malloc itself, legitimately: the 8 MB heap is full at dd8 and the s6569 spill fallback
+(src/main/upstream_compat.cpp rs64_s6569_spill, a 4 MB bump at 0x80800000) also returned 0 because it NEVER reclaimed.
+tools/apply_s6569_spill.py made rs_free return early on spill pointers, so all 2101 spill allocations in 219 s leaked
+(bump 0x20 -> 0x9B6F0 -> 0x2DF650 -> 0x3E1A30 -> full). Not corruption; our own allocator bug.
+Fix: spill now keeps live/free maps (addr -> rounded size); malloc takes first fit from the free list (split) before bumping;
+rs64_s6569_isspill (called only from the rs_free hook) releases the block, coalesces neighbours, and returns a top block to
+the bump. Unknown/double frees are logged and ignored. ROGUESQ_SPILL_LEAK=1 restores the s6569 leak. No regen needed (the
+generated free hook already calls isspill). Mutex-guarded.
+Run (same recipe as s6701, lvl1 dd8 STORE_DIAG=0 DD_UNSAFE, -O2 build): hold 304 s, alive, 0 stalls, 0 crashlines,
+arena full 0, unknown frees 0, 1059 bump allocs + 769+ reuses, 1537+ frees. Live spill per 30 s: 39K, 1732K @60 s, then flat
+1734-1762K to 300 s, i.e. steady state with ~2.3 MB headroom; max bump 0x1BB2C0. Fold: vi 61.0, 29.8 tasks/s, gfx 8.7 ms,
+terr 0.046. Late fb (fb_0009600) full-screen flight, terrain/craft/HUD.
+Evidence lines: (1) s6701 old binary exhausted at 219 s with monotonically growing bump; (2) fixed binary plateaus at 1.74 MB
+live under the same recipe. Same-binary positive control queued: soak_queue/s6702_spillleak_ctl_dd8_lvl1.sh
+(ROGUESQ_SPILL_LEAK=1, expect "arena full"). Until it folds, the A/B is cross-binary (single run per arm).
+Also NEXT item 2 answered offline (no run): refolding s6701 lvl5 dd4 vs dd4 FPS60 with --tmin 140/200 (past the t=74 START
+pause, which the 95 s flight keys clear): dd4 30.5/30.7 tasks/s gfx 13.6/13.2 ms; FPS60 44.0/45.4 tasks/s, gfx 16.3/15.2 ms,
+p10 27/29. H-fps60-cost: FPS60 at dd4 reaches ~45 fps, not 60; the pause barely moved the s6701 numbers.
+Rules out: the lvl1 dd8 crash as a parked "rare dd4/dd8 gfx SIGBUS" recurrence (only run with "arena full" in m6/).

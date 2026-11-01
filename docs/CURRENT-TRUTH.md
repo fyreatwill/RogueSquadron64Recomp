@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6701 (2026-10-31).
+Compact operational handoff, as of Session 6702 (2026-10-31).
 `PORTING-STATE.md` is the chronological ledger. Historical detail, the
 retired backlog, and the verbatim s6378-s6551 body of this file are in
 `docs/PROJECT-OVERVIEW.md` ("Migrated from CURRENT-TRUTH (s6552 maintenance)"
@@ -40,6 +40,11 @@ s6632–s6666 were migrated in s6667 to the linked maintenance archive below.
   STORE_DIAG=0, 300 s): dd4 30.3 tasks/s gfx 14.3 ms, dd6 31.7 / 10.5, dd8 (boxed, void) 30.6 / 7.4; all clean. Frame cost no
   longer binds. Terrain extent binds: lvl5 is a 64x64 table and the clamped window peaks at 3904-3968 cells at dd4, dd6 and dd8
   alike ([ddclamp]); tri p90 flat 573/576/575. Above dd4 no more terrain exists to draw on lvl1/lvl5.
+- **FIXED s6702: lvl1 dd8 crash at 219 s = s6569 malloc spill arena leak.** rs_free ignored spill pointers, so the 4 MB
+  bump (0x80800000) filled, rs_malloc returned NULL, instantiateNamedMeshInstance read NULL+0xA (SIGBUS 0x38000000a). Spill now
+  has a coalescing free list (rs64_s6569_isspill releases; ROGUESQ_SPILL_LEAK=1 = old). Same recipe 304 s clean, live spill flat
+  ~1.74 MB from 60 s (2.3 MB headroom). Same-binary leak control queued (s6702_spillleak_ctl). lvl10 dd8 s6701: 301 s clean.
+  FPS60 dd4 lvl5 (refold past the start pause): ~45 tasks/s, gfx ~16 ms -> not 60.
 - **G1f window fit (s6688): built and verified at 16:9, not 21:9.** The window opens at the
   ROGUESQ_ASPECT shape, sized to the desktop, with high-DPI drawable (16:9 1360x764 / 2720x1528,
   lvl1 flight fills it, HUD at the edges). F11 / Alt+Enter / Cmd+Ctrl+F toggle borderless desktop
@@ -525,9 +530,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   G1(d) objective qualification PARKED (owner playtest). New: G1f window/fullscreen
   fills the display (take now), then G3d turning-shake follow-up (s6458 bursty VIs,
   ~18 gfx tasks/s contradicts the retail-judder close). Spec: ITERATION.md item 3c.
-1. **G1c phase 2 closure (s6701).** perspNorm far cap landed. Fold the queued s6701_pnormcap_dd8 lvl1/lvl10 300 s soaks;
-   measure FPS60 dd4 cost after the t=74 s START pause clears (s6701 arm was paused at mission start); then send the owner
-   a dd1/dd4/dd8 sheet and close phase 2 (terrain table saturates at dd4). See NEXT.md.
+1. **G1c phase 2 closure (s6702).** s6701 soaks folded (lvl10 dd8 clean; lvl1 dd8 crash fixed s6702, spill free list).
+   FPS60 dd4 cost measured (~45 fps lvl5). Left: fold the s6702 leak control, owner dd1/dd4/dd8 sheet, DRAW-DISTANCE.md, close.
+   See NEXT.md.
 2. **(PARKED by owner) G1(d) objective qualification** (level8 live ownership s6687 contract, remaining levels). See
    PORTING-STATE s6640-s6687 before resuming. NEVER send hull damage on level 8 (counter3==1 fails the mission).
 3. **Owner visual judgement and parked boundaries.** G3c sheets and optional

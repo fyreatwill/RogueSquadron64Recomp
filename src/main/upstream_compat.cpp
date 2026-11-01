@@ -2761,14 +2761,28 @@ extern "C" uint32_t rs64_s6086_divert(uint32_t req) {
     return p;
 }
 static uint32_t s_s6569_bump = 0;
+static std::mutex s_s6702_mu;
+static std::map<uint32_t, uint32_t> s_s6702_free, s_s6702_live;  /* s6702: spill free list / live blocks, addr -> rounded size */
+static uint32_t s_s6702_live_bytes = 0; static unsigned long s_s6702_reused = 0, s_s6702_freed = 0;
 static uint32_t rs64_s6587_spill_base() { static const uint32_t b = [] { const char* e = std::getenv("ROGUESQ_SPILL_HI"); return (e && e[0] && e[0] != '0') ? 0x81000000u : 0x80800000u; }(); return b; }  /* s6587: spill arena above the RSP-visible 16 MB so the DL pool can take 8 MB */
 extern "C" uint32_t rs64_s6569_spill(uint32_t req) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_MALLOC_SPILL"); return e && e[0] && e[0] != '0'; }();
     if (!on || !req) return 0;
     uint32_t sz = (req + 15u) & ~15u;
-    if (s_s6569_bump + sz > 0x400000u) { std::fprintf(stderr, "[spill] req=0x%X arena full\n", req); return 0; }
+    std::lock_guard<std::mutex> lk(s_s6702_mu);
+    /* s6702: reuse freed spill blocks (first fit, split) before bumping; s6569 leaked every block and lvl1 dd8 filled 4 MB in 219 s */
+    for (auto it = s_s6702_free.begin(); it != s_s6702_free.end(); ++it) {
+        if (it->second < sz) continue;
+        uint32_t p = it->first, rest = it->second - sz;
+        s_s6702_free.erase(it); if (rest) s_s6702_free[p + sz] = rest;
+        s_s6702_live[p] = sz; s_s6702_live_bytes += sz; ++s_s6702_reused;
+        if ((s_s6702_reused & 255u) == 1) std::fprintf(stderr, "[spill] reuse#%lu req=0x%X -> %08X live=0x%X bump=0x%X freeblk=%zu\n", s_s6702_reused, req, p, s_s6702_live_bytes, s_s6569_bump, s_s6702_free.size());
+        return p;
+    }
+    if (s_s6569_bump + sz > 0x400000u) { std::fprintf(stderr, "[spill] req=0x%X arena full live=0x%X freeblk=%zu\n", req, s_s6702_live_bytes, s_s6702_free.size()); return 0; }
     uint32_t p = rs64_s6587_spill_base() + s_s6569_bump; s_s6569_bump += sz;
-    std::fprintf(stderr, "[spill] req=0x%X -> %08X (used 0x%X)\n", req, p, s_s6569_bump);
+    s_s6702_live[p] = sz; s_s6702_live_bytes += sz;
+    std::fprintf(stderr, "[spill] req=0x%X -> %08X (used 0x%X live 0x%X)\n", req, p, s_s6569_bump, s_s6702_live_bytes);
     return p;
 }
 extern "C" void rs64_s6570_svcnull(char k, uint32_t a, uint32_t ra, uint32_t b) {
@@ -2790,7 +2804,22 @@ extern "C" void rs64_s6571_svc(char k, uint32_t a, uint32_t b, uint32_t c, uint3
     if (c == 0) g_s6571_last_null = true;
     std::fprintf(stderr, "[svcrecv] r svc=%08X ret=%08X slot=%08X validCount=%u\n", a, b, c, d);
 }
-extern "C" int rs64_s6569_isspill(uint32_t p) { uint32_t b = rs64_s6587_spill_base(); return p >= b && p < b + 0x400000u; }
+/* Called only from the rs_free hook (apply_s6569_spill.py F_NEW): a spill pointer is released here, then rs_free returns. */
+extern "C" int rs64_s6569_isspill(uint32_t p) {
+    uint32_t b = rs64_s6587_spill_base(); if (!(p >= b && p < b + 0x400000u)) return 0;
+    static const bool legacy = [] { const char* e = std::getenv("ROGUESQ_SPILL_LEAK"); return e && e[0] && e[0] != '0'; }();  /* =1: s6569 leak behaviour */
+    if (legacy) return 1;
+    std::lock_guard<std::mutex> lk(s_s6702_mu);
+    auto lv = s_s6702_live.find(p);
+    if (lv == s_s6702_live.end()) { static int nb = 0; if (nb++ < 20) std::fprintf(stderr, "[spill] free of unknown/double-freed %08X ignored\n", p); return 1; }
+    uint32_t sz = lv->second; s_s6702_live.erase(lv); s_s6702_live_bytes -= sz; ++s_s6702_freed;
+    auto it = s_s6702_free.emplace(p, sz).first;  /* coalesce with neighbours */
+    if (it != s_s6702_free.begin()) { auto pv = std::prev(it); if (pv->first + pv->second == it->first) { pv->second += it->second; s_s6702_free.erase(it); it = pv; } }
+    auto nx = std::next(it); if (nx != s_s6702_free.end() && it->first + it->second == nx->first) { it->second += nx->second; s_s6702_free.erase(nx); }
+    if (it->first + it->second == b + s_s6569_bump) { s_s6569_bump = it->first - b; s_s6702_free.erase(it); }  /* top block returns to the bump */
+    if ((s_s6702_freed & 255u) == 1) std::fprintf(stderr, "[spill] free#%lu %08X sz=0x%X live=0x%X bump=0x%X freeblk=%zu\n", s_s6702_freed, p, sz, s_s6702_live_bytes, s_s6569_bump, s_s6702_free.size());
+    return 1;
+}
 extern "C" void rs64_s5041_malloc(uint32_t ptr) {
     if (!s5041_on() || ptr == 0) return;
     s_s5041_freed.erase(ptr);

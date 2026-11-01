@@ -1,6 +1,6 @@
 """s6569 G1c phase 2: ROGUESQ_MALLOC_SPILL=1 -> when the 8 MB guest heap's rs_malloc returns NULL, serve the request from a bump
 arena at 0x80800000..0x80C00000 (mapped behind rdram; needs ROGUESQ_RAMTOP_MB=16 so the RS64_RAM_TOP guards accept it). rs_free ignores
-spill pointers. Unset = retail.
+spill pointers (s6702: rs64_s6569_isspill now RELEASES the block into a coalescing free list; ROGUESQ_SPILL_LEAK=1 = old leak). Unset = retail.
 ORIGIN: s6568 heaplog: px3 load_level_hmp malloc(0x192CC) -> NULL with 5.4 MB live (heap0 full), pool fn then stores at NULL+2 (the
 crash). The NULL is legitimate heap exhaustion, not corruption; the lever supplies more memory, it does not mask a wild value. Idempotent.
 C++ side: src/main/upstream_compat.cpp (rs64_s6569_*)."""

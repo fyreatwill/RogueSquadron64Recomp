@@ -1,14 +1,13 @@
-# NEXT: G1c phase 2 closure after the s6701 perspNorm far cap
+# NEXT: close G1c phase 2 (owner sheet), then G3 render fidelity
 HYPOTHESIS-ID: g1c-phase2-closure
 
-s6701: frame cost no longer binds (lvl5 dd4/dd6 ~30-32 tasks/s on -O2). dd8's centre-box render was perspNorm 1 from our
-s6031 far scaling, now capped (tools/apply_s6031_far.py s6701, ROGUESQ_DD_PNORM_CAP=0 = old). lvl5 terrain table (64x64) is
-fully covered at dd4.
-1. Fold SOAK-RESULTS lines for s6701_pnormcap_dd8_lvl1 / lvl10 (python3 tools/g1c_phase2_fold.py scratch/agent/m6/<tag>), and
-   view late fbd frames: full-screen flight, no centre box. A box or crash there -> backtrace/threshold that camera.
-2. FPS60 dd4 cost without the pause: the recipe START at t=74 s pauses the mission until a later `a`. Run lvl5 dd4 FPS60 and
-   dd4 with --tmin 140 in the fold (or FL_START tweak), same batch. Hypotheses: H-fps60-affordable (>=55 tasks/s, gfx <16 ms)
-   vs H-fps60-cost (game thread binds below 50).
-3. Owner sheet: lvl1 + lvl5 dd1 / dd4 / dd8 (capped) late flight frames, tools/contact_sheet.py; update docs/DRAW-DISTANCE.md
-   (dd>4 adds no terrain on lvl1/lvl5; dd8 renders correctly only with the s6701 cap). Then close G1c phase 2 and move to the
-   next ladder rung (G3 render fidelity), defaults unchanged.
+s6702: the lvl1 dd8 crash (s6701 soak, 219 s) was the s6569 malloc spill arena LEAKING: rs_free ignored spill pointers,
+the 4 MB bump filled, rs_malloc returned NULL, instantiateNamedMeshInstance dereferenced NULL+0xA. Spill now has a coalescing
+free list (src/main/upstream_compat.cpp rs64_s6569_isspill releases; ROGUESQ_SPILL_LEAK=1 = old leak). FPS60 dd4 lvl5 = ~44-45
+tasks/s past the start pause (not affordable at 60).
+1. Fold the queued s6702_spillleak_ctl_dd8_lvl1 soak (SOAK-RESULTS): it MUST show "arena full" (positive control for the fix).
+   If it does not, the leak needs longer than 300 s to bite on that run; compare spill bump growth rate instead
+   (grep -a '\[spill\]' run.log | tail -1, used 0x... vs t).
+2. Owner sheet: lvl1 + lvl5 dd1 / dd4 / dd8 late flight frames (tools/contact_sheet.py), update docs/DRAW-DISTANCE.md (dd>4 adds
+   no terrain on lvl1/lvl5; dd8 needs the s6701 pnorm cap and the s6702 spill free list). Close G1c phase 2, defaults unchanged.
+3. Next rung: G3 render fidelity (hangar artifacts list in CURRENT-TRUTH, flight vs retail frames).
