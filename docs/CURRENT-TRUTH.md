@@ -267,6 +267,13 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
 s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by owner).
 
 ## Next steps (single monotonic backlog)
+- **Owner 2026-11-02 playtest:** terrain drops out for single frames, intermittently but
+  consistently (run: FPS60 + DD4 + RDP_ASYNC + RDP_NODRAIN) -> ITERATION G3e, take now. Pad
+  remapped by owner (src/main/main.cpp get_n64_input): Cross=B lasers, Square=A secondary,
+  Triangle=R camera, R2=C-Up boost, L2=C-Down brake, R1=Z, L1=L, right stick=C buttons; left
+  stick shaped like owner's Starship config (deadzone 10%, sens 104%, notch 45 deg, +-85 range;
+  ROGUESQ_STICK_RAW=1 = old +-127). Boost/brake = C-Up/C-Down is inferred from the LUKE profile
+  table (ROM 0x8009DDD0), not traced: if owner reports otherwise, trace the profile slot readers.
 
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
