@@ -335,8 +335,10 @@ Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s67
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
 1. **G3 cinematic sweep follow-ups (NEXT: g3-cinematic-sweep).** s6792 all 81 AT THE MOVIES shots pair with retail;
-   s6794 sky seam fixed (exact-edge fan). NEXT = TRI shots 48/64 (s6792 list); DUR shots stay single-source. Also re-check the
-   s6736 mission-start vertical line (source column cw-1 clear colour) under EXACT_EDGES=tog: same mechanism class.
+   s6794 sky seam fixed (exact-edge fan). s6795 TRI shots 48/64 CLOSED = frame weighting (per-content tris match: DTW cost
+   0.004/0.014 vs ctl 0.27/0.10, +30% pos ctl 0.10-0.18; tools/g3_cine_tri.py); retail's slow low-tri prefix makes the
+   time-driven cut drop high-tri tail frames. DUR shots stay single-source (oracle H-load). NEXT = re-check the s6736
+   mission-start right-edge column (source column cw-1 clear colour) under EXACT_EDGES=tog.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

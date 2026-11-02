@@ -179030,3 +179030,32 @@ VERDICT: selects H-raster (vertex reconstruction off the true L edge + half-pixe
 H-texsample (half-period S shift leaves the line in place). Two lines: offline edge math plus in-run on/off arms, and the
 playlist line count.
 Not checked: hangar/menus with the fix (any RT64 seams there should only improve); fan tri count overhead not measured.
+
+## Session 6795 (2026-11-02) — G3 cinematic TRI flag on shots 48/64 is frame weighting, not extra tris: per-content tri counts match retail (DTW cost 0.004/0.014 vs cross-shot ctl 0.27/0.10, +30% positive control 0.10-0.18); retail's slow low-tri prefix makes the time-driven cut arrive earlier, dropping 39 high-tri tail frames
+
+Offline only (no build, no game run), on the s6792 dumps: retail scratch/s6792/mr.tsv rows 500:19858 (+ mov/retail/oracle.log
+vi-poll, rt0 200), port scratch/s6792/vp.tsv rows 12595:22039 (VI-stamped). This selection reproduces the sweep_vi.txt pairing
+(81/81 shots, shot 48 r317/p358 tri med 914/1188, shot 64 r185/p202 772/846). New tools/g3_cine_tri.py; output
+scratch/s6792/tri_48_64.txt.
+Hypotheses (NEXT.md): H-lod (denser mesh), H-dup (repeated DL/task), H-clip (more near-plane splits), H-timing (frame weighting).
+Results:
+- Quantiles: shot 48 min/p10/p90/max r 568/638/1387/1547 vs p 568/639/1398/1548; shot 64 r 330/347/1147/1248 vs p 330/347/1152/1254.
+  Only the median differs. Shot 48 ramps from ~600 to ~1350 tris mid-shot, so its median sits on the steep part and moves with
+  how many frames fall either side.
+- DTW content cost (mean |dtri| / mean tri on the best monotonic frame alignment): 48 = 0.004, 64 = 0.014. Cross-shot control
+  (same retail shot vs the neighbouring port shots): 0.272 / 0.097. Positive control (port tris x1.3 on alternate frames =
+  H-dup-like, or on all frames = H-lod-like): 48 = 0.126 / 0.096, 64 = 0.127 / 0.178. A 30% excess is 24x (48) and 9x (64) above
+  the measured cost. The retail-frame-weighted port median along the DTW path is 914 vs retail 914 (48) and 780 vs 772 (64).
+- Mechanism, shot 48: low-tri prefix (before the first frame above the mid tri count) is r 167 frames / 10.3 s vs p 169 frames /
+  5.6 s. Same frame count, so the camera advances per frame there. Retail renders those frames at ~16 fps in the oracle (63 ms each,
+  vs 36 ms in the dense half; slow frames do NOT correlate with tri count, corr -0.05). The shot cut is time-driven, so it arrives
+  earlier in retail content: r 150 vs p 189 frames after the prefix. On a 1:1 alignment (offset +3) the 317 shared frames have
+  median 914 vs 914; the 38 extra port tail frames average 1338 tris. The same retail low-section slowness explains shots 50/54
+  (equal prefix frame counts 91/92 and 161/162, retail 7.2 s/6.8 s vs port 3.1 s/5.4 s). This is the s6792 DUR flag (H-load) seen
+  through the median.
+Verdict: H-timing selected. H-lod / H-dup / H-clip refuted for 48/64 (their +30% signatures read 0.10-0.18, measured 0.004/0.014).
+Two lines: DTW cost with both controls, and matching extreme quantiles plus an equal median over the 1:1 aligned overlap.
+Caveat: the retail low-section slowness itself (oracle frame cost vs real hardware) is still single-source (s6792 H-load).
+Port renders identical per-frame tri counts, so it is not a port render defect either way.
+Not done: duplicate-edge-word scan on port.bin (7.3 GB). The DTW controls already rule out a 30% duplicated share.
+Next: s6736 right-edge column (source column cw-1 = clear colour) under ROGUESQ_EXACT_EDGES=tog, then the G1d owner close-out.
