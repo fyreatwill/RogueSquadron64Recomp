@@ -178947,3 +178947,30 @@ ORIGIN: no mitigation; instrument only. Option for the owner, not built: an opt-
 for cam 800cd670). Default stays retail.
 VERDICT: selects H-retail; refutes H-fps60 and H-proj (constant projection, orthonormal view, identical trajectories); H-present not
 supported (transient tracks the camera move). G3f CLOSED. NEXT: G3 cinematic sweep (g3-cinematic-sweep).
+
+## Session 6792 (2026-11-02) — G3 cinematic sweep: all 81 AT THE MOVIES shots pair with retail; the default-on spike cull zeroed retail's legit 640-wide cinematic tris (right-edge black notch); cull now skips 321..640-wide images (notch 59/60 -> 0)
+Ran (scratch/s6792): MAESTRO+DIRECTOR AT THE MOVIES playlist, retail oracle dump (mov/retail.bin, vi-poll) vs port dumps; new
+tools/g3_cine_sweep.py (stream summariser + per-shot sweep: shots split at the game's 3-frame blank cuts, tri-series correlation,
+time-aligned tri cost with a cross-shot CONTROL); new RS64_RDP_BIN_PORT_VI=1 (src/main/rt64_render_context.cpp) stamps each port
+dump range with the VI counter so port shot seconds are measurable.
+Sweep (sweep_vi.txt): retail 19858 / port 22039 frames, 81 shots each, paired 1:1. Per shot tcost 0.003-0.06 vs control
+0.05-1.13 (H-match for every timed shot); corr_str >= 0.77. Flags: DUR on ~20 shots = retail takes a near-constant +4 s more VIs
+than port with the same content (retail fps drops to 11-21 there; port holds 30). Single-source; likely oracle/emulated CPU or
+load cost (H-load), not a port defect - not chased. TRI on shots 48/64 (retail tri median 914/772 vs port 1188/846), open.
+Render datum: port window shots show a black/tan block at the right edge in shots ~44-47 (notch.png). cullscan.py on both dumps:
+port zeroed 24806 tris (6352 frames) in the 640-wide playlist; retail emits 26869 tris beyond the same 320-based bound, per shot
+counts match port's zeroed counts (e.g. shot 47 port 5963 / retail 6336). So ROGUESQ_CULL_SPIKE (default ON since 2026-10-31,
+bound = 320x240 viewport + 640 guard for ci<=640) was deleting retail geometry in hi-res frames. A width-scaled bound (640x480 +
+1280) still hits 4424 retail tris, 1100-1500/shot in 44-47, so no bound fits: the cull now skips 321..640-wide colour images
+(src/rsp/dpc_bridge.cpp rs64_spike_scan); 320-wide flight and >640 widescreen are unchanged.
+Verification (same build, one run, fix/, 700 s, ROGUESQ_LOG_SPIKE=1): positive control - the scanner still flags 20792 bad tris
+in 640 frames (= old-bound count in this run's dump), culled=0, dump zeroed tris 0 (14437 ci640 + 12153 ci512 + 40 ci320 frames);
+notchscan.py over window shots: 0/797 full frames vs 60/1170 (vi/) and 59/1164 (mov/) in the cull-on runs of the same playlist;
+covered the notch window (31 shots at 630-645 s). Sheet: scratch/s6792/notch_fix_sheet.png (left old, right fixed: notch and the
+dark sky wedge above it both gone). 0 crash lines. Two lines: retail dump tri census + port window-shot scan before/after.
+Not covered: in-flight 320 cull behaviour (code path unchanged); 512-wide hangar frames now also uncull (0 zeroed in this run).
+Open datum: a thin vertical line at x=320 (screen centre) in these cinematic frames, both builds; retail not yet checked.
+ORIGIN: the culled tris are written by the F5 ucode for retail's own cloud/sky geometry (present in the retail oracle dump), i.e.
+legitimate; the writer of the deletion was our cull. No mitigation added - a deviation removed.
+VERDICT: H-render selected for shots 44-47 (our cull), fixed; H-match for all other timed shots; H-timing (DUR) unresolved,
+single-source, attributed to the oracle side.

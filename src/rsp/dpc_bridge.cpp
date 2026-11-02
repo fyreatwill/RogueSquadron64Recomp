@@ -3448,7 +3448,10 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         const double xr = 320.0 + guard + (s_cw > 640u ? (double)s_cw - 320.0 : 0.0);
         for (auto &p : v) if (p[0] < -guard || p[0] > xr || p[1] < -guard || p[1] > 240.0 + guard) bad = true;
         s_tris++; s_swap_tris++;
-        if (bad && cull) {
+        // s6792: 4:3 hi-res images (321..640 wide: cinematics, AT THE MOVIES) are never culled. Their legit cloud/sky
+        // tris overrun even a width-scaled bound (retail dump: 26869 tris past the 320 bound, 4424 past a 640x480 one),
+        // and zeroing them left a black notch at the right edge. The wedges (s6083) were 320-wide flight frames.
+        if (bad && cull && (s_cw <= 320u || s_cw > 640u)) {
             // s6084: zero the triangle height (yl=ym=yh=0) so the rasteriser emits no scanlines; length is unchanged.
             uint32_t n0 = w0 & ~0x3FFFu, n1 = 0; memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &n0, 4); memcpy(g_rdram_for_submit + ((a + 4) & kSubmitRamMask), &n1, 4);
             s_culled++;

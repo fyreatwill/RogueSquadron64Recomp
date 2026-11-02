@@ -1951,7 +1951,10 @@ namespace ultramodern {
                 if (!s_bin_init) { s_bin_init = 1; const char *e = std::getenv("RS64_RDP_BIN_PORT"); if (e && *e) s_bin = fopen(e, "wb");
                     const char *m = std::getenv("RS64_RDP_BIN_PORT_MAX_MB"); if (m && *m) s_bin_cap = (uint64_t)strtoull(m, nullptr, 10) << 20; }
                 if (s_bin && app->core.RDRAM && s_bin_total < s_bin_cap) {
-                    uint32_t hdr[4] = {0x50445250u, lo_phys, hi_phys - lo_phys, rs64_phase_ord()};
+                    // s6792: RS64_RDP_BIN_PORT_VI=1 stamps the VI counter instead of the phase ordinal (per-shot cinematic
+                    // durations in VIs, tools/g3_cine_sweep.py).
+                    static int s_bin_vi = -1; if (s_bin_vi < 0) { const char *v = std::getenv("RS64_RDP_BIN_PORT_VI"); s_bin_vi = (v && *v && *v != '0') ? 1 : 0; }
+                    uint32_t hdr[4] = {0x50445250u, lo_phys, hi_phys - lo_phys, s_bin_vi ? (uint32_t)rs64_vi_n_g : rs64_phase_ord()};
                     fwrite(hdr, 4, 4, s_bin);
                     fwrite(app->core.RDRAM + lo_phys, 1, hi_phys - lo_phys, s_bin);
                     s_bin_total += 16 + (hi_phys - lo_phys);

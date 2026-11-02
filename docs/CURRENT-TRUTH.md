@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6791 (2026-11-02).
+Compact operational handoff, as of Session 6792 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -41,6 +41,9 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   grids; new tools/g3_rdp_phase.py (distribution compare): 153 texrects/frame both, static set 53/53 identical (prompt line
   25/25 rects), tri q05..q95 [1093..1136] vs [1094..1138], mean ratio 1.003 over ~800 frames each; hologram grid visible in
   ~20% of frames in both. Control (retail hangar vs port ENTER NAME) separates on every term.
+- **G3 AT THE MOVIES swept (s6792).** 81/81 shots H-match vs retail per shot; the default spike cull deleted retail's
+  legit 640-wide cinematic tris (port zeroed 24806, retail emits 26869 past the bound); cull now skips 321..640-wide images,
+  notch 59/60 -> 0/797 frames, scanner positive control 20792 flagged / 0 culled. scratch/s6792/notch_fix_sheet.png.
 - **G3 SHOWROOM fully driven (s6787).** AT THE MOVIES does nothing on a lvl1 save in retail or port (cursor on it, A
   fired, 133 texrects unchanged). Passcode DIRECTOR (pair script PASS2=DIRECTOR) enables it: the cutscenes play back to back
   at VI width 640 (+3.0 s port / +3.4 s retail after the press). Cinematic RDP match: 1184 aligned frames, tri-count median |d| 1,
@@ -324,9 +327,10 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 cinematic sweep via AT THE MOVIES (NEXT: g3-cinematic-sweep).** MAESTRO+DIRECTOR route plays every cutscene back
-   to back; match each against retail (scratch/s6787/tools/cine.py + align.py), including ending cutscenes unreachable
-   otherwise. Port dump needs PMAX_MB, retail RBW=all.
+1. **G3 cinematic sweep follow-ups (NEXT: g3-cinematic-sweep).** s6792: all 81 AT THE MOVIES shots pair with retail
+   (tools/g3_cine_sweep.py, tcost << cross-shot control); the spike cull no longer touches 321..640-wide images (it zeroed
+   retail cloud tris -> right-edge notch). Open: vertical line at x=320 in cinematic frames (check retail), TRI shots 48/64,
+   DUR shots (retail +4 s, single-source, likely oracle).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
