@@ -13,6 +13,8 @@
 # Mission 18 (s6772, Death Star trench, X-wing): cursor +1 and a craft-select Start: AP=6:start,11:start,16:start,
 #   21:start,23:w512,25:right,27:start,31:start,42:start  PRESS=6:start,...,36:start,41:dright,44:start,49:start,
 #   54:start,64:start  (retail first race tick ~vi 5153 = 86 s: FARM=88 DSTEP=4), offline G3_SNAP_TICKS=800FA730.
+# Mission 17 also needs ARM=20 DWARM=30 CAP0=33 (the defaults 55/85/62 never arm the port rand trace, s6778). Pause menu
+#   (s6778): add PRESS ...,61:start,65:start and AP ...,40:start,44:start (pause, then resume -> race crash -> debrief).
 # env: G3_TICK (tick/pin pc, 800FA730; must be one of the --exec-trace-also pcs below) PRESS/AP (start schedules) DWARM (retail seed arm s, 85) ARM (port seed arm s, 55) RSECS (360) PSECS (330) NDUMP (24) DSTEP (10) FARM (103) POKE (dt pin) EXTRA (port env)
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 S=$1; L=$2; [ -n "$S" ] && [ -n "$L" ] || { echo "usage: run.sh SDIR LEVEL" >&2; exit 2; }

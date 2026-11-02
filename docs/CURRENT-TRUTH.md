@@ -22,6 +22,11 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   65536 everywhere (=16384 restores). Earlier per-level G3 checks that saw no cap fire are unaffected. s6763: the
   second lvl9 port HUD-off window (t2050-2208) persists with 0 cap fires and retail hides the HUD on 16/16 dumps inside
   it (player death camera): retail behaviour, not a defect.
+- **G3 in-mission menus (s6778, m17):** pause menu H-match (d 6.8-8.3 vs medians 45-48, mismatch controls 44/100);
+  debrief text/emblem match (emblem sway same range both arms); backdrop photo differs only after a sim split
+  (single-source). **Oracle fix:** `--fb-dump` used to copy RDRAM on the VI-poll thread while the emulator drew: 37/42 dumps
+  saw VI_ORIGIN change mid-copy and debrief dumps lost text. Every earlier "torn retail dump" outlier is that race, not
+  retail. Now the copy runs in dbg_vi: 0/42 swaps, 0/7 incomplete vs racy 2/7 in the same run.
 - **G3 mission 3 (s6777, canyon, pinned):** sim identical t0-t1775 (23112 rand calls, 35041 NPC rows, 0 disallowed
   words); split t1776 = song-1 end on the audio clock (retail 167 ticks/637 buffers, port 166/638). Render pre-split
   d 3.90-6.36 vs medians 44-64; vi 9693 = torn retail dump in the song-1 cutscene (HUD off in both arms). 0 cap, 0 crash.
@@ -217,10 +222,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 render match, in-mission menus (NEXT: g3-render-match-menus).** Per-mission sim+render vs retail is complete
-   for missions 1-19 (s6777 closed m3). Not yet compared: the pause menu and the MISSION FAILED / debrief screens at
-   4:3 retail settings. Cheapest route: mission 17 race (unsteered craft crashes ~12 s in -> MISSION FAILED in both arms,
-   s6771 recipe). Recipe tools/g3_mission/run.sh + g3_oracle_match.py with the screen's own width.
+1. **G3 render match, front-end screens (NEXT: g3-render-match-frontend).** Missions 1-19, pause menu and debrief match
+   (s6778). Not yet render-compared: title screen (1024 wide), level select (512), mission briefing (640). Oracle dumps
+   are now copied on the emulator thread (s6778); `RS64_FB_DUMP_RACY=1` keeps the old racy copy as a control.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

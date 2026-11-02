@@ -3316,9 +3316,14 @@ static volatile int g_poll_running;
  * polled VI width register equals WIDTH, wait DELAY_S then write LEN bytes of
  * physical RDRAM at START (big-endian, raw) to PATH. */
 #define MAX_FB_DUMPS 192 /* s6738: 16 -> 96 for dense retail frame series (G3 pixel diff); s6747: 192 for 0.25 s effect sampling */
-static struct { unsigned width; double delay; unsigned start, len; char path[512]; double armed_at; int done; } g_fbd[MAX_FB_DUMPS];
+/* s6778: the poller only decides a dump is due (pending); dbg_vi does the copy ON the emulator thread. The poller-thread
+ * copy raced the interpreter and the RDP: 38/40 s6771 dumps saw VI_ORIGIN change mid-read, and the late debrief dumps
+ * held a half-redrawn buffer (title text missing) while the other buffer had the whole frame - the "torn retail dump"
+ * outliers of s6744-s6777. */
+static struct { unsigned width; double delay; unsigned start, len; char path[512]; double armed_at; int done; volatile int pending; } g_fbd[MAX_FB_DUMPS];
 static int g_nfbd;
 static double g_fbd_arm_after;  /* s6742: --fb-arm-after SECS, no dump arms before t (the 640 intro precedes the 640 briefing) */
+static void fb_dump_write(int k, const char *tag, const char *suffix);
 static void fb_dump_poll(double t, unsigned width)
 {
     for (int k = 0; k < g_nfbd; k++) {
@@ -3328,23 +3333,41 @@ static void fb_dump_poll(double t, unsigned width)
             g_fbd[k].armed_at = t;
         }
         if (t - g_fbd[k].armed_at < g_fbd[k].delay) continue;
-        unsigned origin0 = (unsigned)pDebugMemRead32(VI_ORIGIN_ADDR);  /* s6738: origin BEFORE the read (the after-read value races a swap) */
-        long vi0 = g_vis;
-        FILE *f = fopen(g_fbd[k].path, "wb");
         g_fbd[k].done = 1;
-        if (!f) { printf("[fb-dump] cannot open %s\n", g_fbd[k].path); continue; }
-        unsigned nz = 0;
-        for (unsigned o = 0; o < g_fbd[k].len; o += 4) {
-            unsigned w = pDebugMemRead32(debug_rdram_addr(g_fbd[k].start + o));
-            unsigned char b[4] = { w >> 24, w >> 16, w >> 8, w };
-            if (w) nz++;
-            fwrite(b, 1, 4, f);
-        }
-        fclose(f);
-        printf("[fb-dump] t=%6.1fs vi=%ld width=%u origin=0x%08x start=0x%x len=0x%x nonzero_words=%u vi0=%ld origin0=0x%08x -> %s\n",
-               t, g_vis, width, (unsigned)pDebugMemRead32(VI_ORIGIN_ADDR), g_fbd[k].start, g_fbd[k].len, nz, vi0, origin0, g_fbd[k].path);
-        fflush(stdout);
+        if (getenv("RS64_FB_DUMP_RACY")) fb_dump_write(k, "poller", ".racy");
+        g_fbd[k].pending = 1;
     }
+}
+
+/* s6778: copy one --fb-dump window. From dbg_vi (emulator thread) RDRAM and VI_ORIGIN are frozen for the whole copy;
+ * from the poller (RS64_FB_DUMP_RACY=1 same-run control, written to PATH.racy) it races like the pre-s6778 dumps. */
+static void fb_dump_write(int k, const char *tag, const char *suffix)
+{
+    char path[540];
+    double t = now_s() - g_t0;
+    unsigned width = pDebugMemRead32(VI_WIDTH_ADDR);
+    unsigned origin0 = (unsigned)pDebugMemRead32(VI_ORIGIN_ADDR);
+    long vi0 = g_vis;
+    snprintf(path, sizeof path, "%s%s", g_fbd[k].path, suffix);
+    FILE *f = fopen(path, "wb");
+    if (!f) { printf("[fb-dump] cannot open %s\n", path); return; }
+    unsigned nz = 0;
+    for (unsigned o = 0; o < g_fbd[k].len; o += 4) {
+        unsigned w = pDebugMemRead32(debug_rdram_addr(g_fbd[k].start + o));
+        unsigned char b[4] = { w >> 24, w >> 16, w >> 8, w };
+        if (w) nz++;
+        fwrite(b, 1, 4, f);
+    }
+    fclose(f);
+    printf("[fb-dump%s] t=%6.1fs vi=%ld width=%u origin=0x%08x start=0x%x len=0x%x nonzero_words=%u %s vi0=%ld origin0=0x%08x -> %s\n",
+           suffix, t, g_vis, width, (unsigned)pDebugMemRead32(VI_ORIGIN_ADDR), g_fbd[k].start, g_fbd[k].len, nz, tag, vi0, origin0, path);
+    fflush(stdout);
+}
+
+static void fb_dump_flush(void)
+{
+    for (int k = 0; k < g_nfbd; k++)
+        if (g_fbd[k].pending) { g_fbd[k].pending = 0; fb_dump_write(k, "emu-thread", ""); }
 }
 
 static void dbg_vi(void)
@@ -3358,6 +3381,7 @@ static void dbg_vi(void)
     }
 
     g_vis++;
+    if (g_nfbd) fb_dump_flush();
 
     {   /* s4439: AI_LEN/AI_STATUS sampled at every true VI = known-mid-buffer control for the submit-time AI_LEN=0 reading */
         static long n, nz, busy, full;

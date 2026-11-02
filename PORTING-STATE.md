@@ -178413,3 +178413,38 @@ H-pose not needed, the pairs are pose-equal under the pin). Rules out a port sim
 1775 ticks.
 G3 per-mission status: sim and render vs retail now matched for every mission 1-19 (1-2 s6744-s6748 unpinned, 3 here,
 4-19 s6754-s6773). Next: G3 menus not yet compared vs retail (pause menu, MISSION FAILED / debrief screens), NEXT.md.
+
+## Session 6778 (2026-11-01) — G3: pause menu matches retail; debrief text/emblem match; the "torn retail dump" outliers were the oracle copying RDRAM on the VI-poll thread while the emulator drew (fixed: copy now on the emulator thread)
+
+HYPOTHESIS-ID: g3-render-match-menus (closed: pause H-match, debrief H-match on layout/text/emblem; backdrop differs post-split).
+
+Offline first (s6771/r17 re-analysis, no run): the race data already held the MISSION FAILED banner + debrief (bases
+720000/790000, width 512 throughout from 39 s). Pairs d 3.8-9.7. Emblem extent per frame (red-fill columns, rows 330-360,
+scratch/s6778/emblem.py): port sways continuously width 251-260 / centre 253.5-259.5; every untorn retail dump inside that
+(250-254 / 253-258.5) -> H-phase, not geometry. Text boxes (scratch/s6778/text.py): port title present in every frame,
+retail dumps vi 5345-5526 lost the title / MISSION FAILED / ships lines while medal/rank stayed. Decoding the OTHER buffer of
+the same dump file (scratch/s6778/bothbuf.py) showed the complete frame there every time, and 38/40 r17 dumps logged
+VI_ORIGIN changing during the copy. Cause: rs64_oracle fb_dump_poll copied 2 MB via pDebugMemRead32 from the --vi-poll
+thread while the interpreter + angrylion kept running, so a dump could catch origin0's buffer after the swap, mid-redraw.
+Fix (tools/oracle/rs64_oracle.c): the poller only marks a dump pending; dbg_vi (emulator thread, frozen RDRAM) does the
+copy (fb_dump_write/fb_dump_flush, log tag `emu-thread`). Same-run control RS64_FB_DUMP_RACY=1 keeps the old poller copy as
+PATH.racy, logged as `[fb-dump.racy]` (the matcher's `[fb-dump]` regex ignores it).
+Run (scratch/s6778/r17p, tools/g3_mission/run.sh LEVEL 16, s6771 recipe + ARM=20 DWARM=30 CAP0=33 FARM=54 DSTEP=1
+NDUMP=42 RSECS=150 PSECS=90, PRESS adds 61:start,65:start, AP adds 40:start,44:start = pause then resume). First attempt
+with run.sh defaults ARM=55/DWARM=85/CAP0=62 never armed the port rand trace (r17p_badarm, discarded): mission 17 needs
+the s6771 arm values; now in the run.sh header.
+- Control: emu-thread dumps 0/42 swapped during the copy vs racy 37/42; debrief dumps incomplete emu 0/7 vs racy 2/7
+  (same run, same VIs).
+- Sim: rand identical to t151; split t152 = the pause press (port's Start lands one tick before retail's, extra
+  800e901c call). Expected: press timing is wall-clock per arm.
+- Pause menu (retail vi 3698-3938, port 39.5-45.8 s): both show the emblem, MISSION GOALS / WIN THE RACE, PAUSED,
+  CONTINUE (blinking) / ABORT LEVEL / GAME SETTINGS / SOUND SETTINGS, HUD hidden. d 6.8-8.3 vs same-run medians 45-48;
+  mismatched-pair controls (retail pause vs port flight / port debrief) d 99.8 / 44.2. Sheet scratch/s6778/r17p/pause_sheet.png.
+- Debrief: all six text lines present in every late retail dump now (title 1321-1521 px vs port 1249-1389). d 25-37
+  because the backdrop photo differs (retail picked another hangar still); s6771 (no split before the debrief) had the
+  same backdrop in both arms -> the backdrop is chosen by the post-split sim. Single-source: which call picks it was not
+  traced. Medal/rank boxes 596/573 retail vs 497/531 port in both runs: small white text through the port's 2.16x BOX
+  downscale of the window capture (single-source, not chased).
+Rules out: "torn retail dumps" as a retail/angrylion property (it was the oracle); a pause-menu or debrief layout defect.
+Every earlier G3 worst-list entry labelled "torn retail dump" (m17 vi 3633 etc.) is this oracle race.
+Next: g3-render-match-frontend: title / level select / mission briefing render vs retail with the fixed oracle.
