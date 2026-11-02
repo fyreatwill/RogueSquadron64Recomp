@@ -334,13 +334,12 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 wide-aspect menus/hangar seam pass (NEXT: g3-wide-menus).** Exact-edge thread CLOSED s6797: same-run
-   ROGUESQ_EXACT_EDGES=tog over the 4:3 menus route (title, level-select hangar, SELECT YOUR CRAFT, pause, GAME OVER, Elite
-   Rogues, Select Game): intra-frame seam scorer tools/g3_seam_intra.py (pos ctl 102/102) flags the same content features
-   in both arms (off 25/112 frames, on 24/108, 0 on-only lines); fans 9.8% of tris, +15.8% tris drawn, +99 us/s host,
-   paired [g1b] sd_wall on-off -0.018 ms (SE 0.036) on 4.1 ms. s6795 TRI shots CLOSED = frame weighting; s6796 cw-1 column
-   untouched by the fan. NEXT = the same route + scorer at ROGUESQ_ASPECT=21:9 (owner's monitor), where s6601 wide-only
-   hangar bands were never re-checked after the s6735/s6736/s6794 fixes.
+1. **G3 lvl1 persistent thin flight lines (NEXT: g3-flight-thinline).** s6798 closed the 21:9 menus/hangar seam pass
+   (H-clean: same-run EXACT_EDGES=tog, scorer pos ctl 178/178, same per-frame line set in both arms, every flagged line is
+   a glyph stroke/letter gap by contiguous-run length (tools/g3_seam_runlen.py) and by eye; s6602 wide hangar band absent).
+   Open datum from the same caps: thin straight terrain-coloured lines persisting ~1.5 s in lvl1 flight, thickening as the
+   craft nears, at BOTH 4:3 (s6797 w275/w286) and 21:9 (s6798 w283-w285). Classify: real thin geometry vs a stable knife
+   wedge (rs64_spike_scan guard 640 FB px would miss a near-viewport wedge) vs retail.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

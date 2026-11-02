@@ -1,19 +1,20 @@
-# NEXT: G3 wide-aspect (21:9) menus/hangar seam + artifact pass
-HYPOTHESIS-ID: g3-wide-menus
+# NEXT: G3 classify the persistent thin lines in lvl1 flight
+HYPOTHESIS-ID: g3-flight-thinline
 
-State: s6797 closed the exact-edge thread at 4:3 (no seam change on any menu/hangar screen, negligible cost). The owner plays
-on 21:9; s6601/s6602 found wide-only hangar framebuffer bands, never re-checked after s6735 (horizontal line), s6736
-(cw-1 column) and s6794 (exact-edge fan).
+State: s6798 closed g3-wide-menus (21:9 menus/hangar = content only). Side datum: in lvl1 flight (menus route, after
+continue from pause) thin straight terrain-coloured lines persist ~1.5 s, dotted when thin, thicker as the craft nears.
+Seen at 4:3 (scratch/s6797/tog w275, w286, faint diagonals behind the pause emblem w078-w122) and 21:9
+(scratch/s6798/tog21 w283-w285, scratch/s6798/seq.png). Not wide-only.
 
 Hypotheses:
-- H-clean: 21:9 seam inventory per screen = the 4:3 inventory (content features only), arms equal -> close G1d render side.
-- H-wide-seam: 21:9 adds lines at the widened-region boundaries (old 4:3 edge x, cw-1 at the wide width) or bands on the
-  hangar (s6602), absent at 4:3.
-- H-fan-wide: on/off arms differ at 21:9 (fan interacts with the wide x scale).
-Discriminator, ONE run: `zsh scratch/s6797/menus.sh tog21 21:9 "ROGUESQ_LIVES_CAP=1 ROGUESQ_EXACT_EDGES=tog ROGUESQ_G1B=1"`
-(copy to scratch/s6798/ and change paths; check the run.log echoes the aspect), then
-`python3 tools/g3_seam_intra.py <dir>` (pos ctl must be ~100%) and compare its per-screen line set with the 4:3 run
-(scratch/s6797/tog: off 25/112, on 24/108 frames with lines; features listed in PORTING-STATE s6797). Lines are content if
-they appear at the same relative positions in 4:3; wide-only lines -> view the frame, name the screen and the draw (RDP
-dump RS64_RDP_BIN_PORT on that screen) before any fix.
-Outcomes: same inventory + equal arms -> H-clean; new wide-only lines -> H-wide-seam (root-cause); arm difference -> H-fan-wide.
+- H-object: real thin game geometry (e.g. long cable/beam/bolt trail model) -> present in retail at the same place.
+- H-wedge: a terrain/ object triangle with a vertex near/behind the eye plane, a knife wedge too small to exceed the
+  rs64_spike_scan guard (640 FB px past the viewport) -> its RDP tri has one huge edge slope and near-degenerate height.
+- H-rt64: the RDP tri is sane, RT64 rasterises a sliver hardware would not (exact-edge/fan related -> check tog arms).
+Discriminator, ONE run: menus route (scratch/s6798/menus.sh tag none "ROGUESQ_LIVES_CAP=1 ROGUESQ_LOG_SPIKE=1
+ROGUESQ_SPIKE_CTL=64 RS64_RDP_BIN_PORT=<file>") so every tri past a 64 px guard is logged with its swap number; match
+the swaps of capture frames showing the line to the logged tris (slope/height/texture). Positive control: SPIKE_CTL=64
+must log ordinary near-edge tris. Then render the matching tri set offline. Also check the RDP dump of that swap with
+angrylion (tools used in s6785) for the retail-rasteriser answer.
+Outcomes: line tri is long-thin with sane vertices in the game DL -> H-object (check retail oracle); vertex far
+off-screen with tiny height -> H-wedge (tighten cull or fix clip); tri absent/sane but RT64 draws line -> H-rt64.

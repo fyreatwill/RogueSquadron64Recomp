@@ -179116,3 +179116,37 @@ Verdict: H-clean selected; H-improve and H-regress refuted for hangar/menus. Exa
 ROGUESQ_EXACT_EDGES stays default on.
 Rules out: the fan as a source of menu/hangar seams or of frame-time regressions at 4:3.
 Not covered: wide aspect (ASPECT=16:9/21:9) screens -> NEXT.
+
+## Session 6798 (2026-11-02) — G3: 21:9 menus/hangar seam inventory = content only, exact-edge arms equal; wide-only hangar band (s6602) absent; persistent thin lines in lvl1 flight seen at BOTH 4:3 and 21:9 (not wide-only)
+
+HYPOTHESIS-ID: g3-wide-menus (closed this session). Hypotheses: H-clean (21:9 inventory = content, arms equal),
+H-wide-seam (lines at widened-region boundaries / s6602 hangar bands), H-fan-wide (on/off arms differ at 21:9).
+
+What ran (one run, current build 13:54): scratch/s6798/menus.sh = s6797 menus route at ROGUESQ_ASPECT=21:9 with
+`ROGUESQ_LIVES_CAP=1 ROGUESQ_EXACT_EDGES=tog ROGUESQ_G1B=1`. run.log confirms `[g1d] ROGUESQ_ASPECT=21:9 -> FB_WIDTH=1024`,
+`[g1f] window 1360x594`. 0 crash, mission_verified_130s, 360 caps (2720x1252 px).
+
+Results:
+- tools/g3_seam_intra.py: positive control 178/178. off arm 30/89 frames with a flagged line (93), on arm 23/96 (90).
+  Per-frame check (scratch/s6798/perframe.py): the same line set appears in adjacent off and on frames of one screen
+  (Elite Rogues w154-w160: cols 858/1052/1073/1113/1890 in on frame w157 and off w156/w158; AVAILABLE CRAFT cols
+  1470/1555 in w038 off and w039 on; title rows in w002 off / w003 on). Arm counts differ only by which screens the
+  kept frames landed on. -> H-fan-wide refuted.
+- What the lines are: per-row profiles show 10-30 row segments (glyph vertical strokes: ENSIGN/PRISONS letters, PRIMARY
+  WEAPON, PRESS ... DESCRIPTION; title credit text rows). New tools/g3_seam_runlen.py (longest CONTIGUOUS run per flagged
+  line): 21:9 178/183 flagged lines have runs <80 px; the 5 longest (133-153 px, GAME OVER w136-w140 cols 1368/1517)
+  were viewed at native res (scratch/s6798/z1517.png): the dark gap between the outlined letters M|E (and A|M). 4:3 s6797
+  run: max 112 px, same classes. A rasteriser seam would be one long run spanning the draw; none exists. -> content only.
+- s6602 wide-only hangar band (x 347..639 of 1024): absent from every 21:9 hangar screen viewed (SELECT LEVEL x2,
+  AVAILABLE CRAFT, SELECT YOUR CRAFT, hangar bay; scratch/s6798/overview.png). Single-source visual (no band scorer run),
+  but the s6602 band was a high-roughness block over ~300 FB px and would be obvious at this scale.
+- Noted, not a defect of this thread: 2D backdrops (title FMV, Elite Rogues, GAME OVER) stay 4:3 and pillarbox while
+  3D draws wide (emblem spills onto the black bars at GAME OVER). That is the G1d design (s6731 sheets).
+- Side datum: lvl1 flight shows thin straight terrain-coloured lines that persist across several caps (~1.5 s), dotted
+  when thin, thickening as the craft approaches (21:9 w283-w285 scratch/s6798/seq.png). The 4:3 s6797 run shows the same
+  kind of line (w275, w286, and faint diagonals behind the pause emblem; scratch/s6798/sheet43.png) -> not wide-only.
+  The spike cull (dpc_bridge.cpp rs64_spike_scan, guard 640 FB px) would not catch a line that only just leaves the
+  viewport. Multi-frame persistence + perspective thickening fits a real thin object or a stable knife wedge. Unclassified.
+Verdict: H-clean selected for 21:9 menus/hangar; H-wide-seam and H-fan-wide refuted. g3-wide-menus CLOSED.
+Rules out: wide-only seams or bands on title/hangar/menus/pause/GAME OVER/Elite Rogues at 21:9 after s6735/s6736/s6794.
+Next: classify the persistent lvl1 thin line (RDP dump on those frames; is it in the game's geometry or a wedge?).
