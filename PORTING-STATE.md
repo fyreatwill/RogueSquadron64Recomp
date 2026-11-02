@@ -178354,3 +178354,28 @@ Discrimination: refutes H-lbv and H-other-ld (byte/LUV ops <1% each; the ":75 ac
 refutes H-unaligned for SDV (0 byte-loop samples with DMEM on); selects H-tls-base (DMEM base re-fetch through the spilled TLS
 address), landed as the constant-base TU above. Next discriminator: real game fps per dd (1-4) on this binary with the
 per-task ucode/submit split (NEXT.md g1e-fps-remeasure) selects H-ucode (VU accumulator) vs H-bridge vs H-done.
+
+## Session 6776 (2026-11-01) — G1e re-measure: lvl5 FPS60 holds ~60 game fps at dd1-dd4 on the current binary (dd4 59.3 in the densest half, Gfx thread 15% busy); H-done, G1e closed for the owner's settings
+
+Soak fold: s6775_dmembase_lvl1_dd1 (304 s) and s6775_dmembase_lvl10_dd4 (303 s): alive, 0 VI stalls, 0 crashlines,
+0 "TLS FALLBACK HIT". The s6775 constant-DMEM-base change is qualified.
+Run: `env HOLD_S=200 zsh scratch/agent/s6716_bridge.zsh 5 <dd> s6776fps<dd>` for dd 1..4, sequential (lvl5 forced route,
+FPS60, ASYNC+NODRAIN, STORE_DIAG=0, G1E_AQ=2, probes off, no recipe logging). Binary = build 20:05 (s6775). Every run
+alive 201 s, 0 stalls, 0 crashlines. New tool tools/g1e_dd_table.py folds the per-second [g1e-split] rows of the flight
+phases (6,7; first 10 rows skipped): tasks/s = game fps, per-task ucode ms, calls (per task), ns/cmd, Gfx busy fraction,
+and a dense half (calls above the median). Control: on the s6716 prof3 run it reads dense 58.3 fps / 4.51 ms, the same
+regime s6716 recorded (~57 tasks/s, ~8.6 ms only in the densest windows of a 334 s hold).
+| dd | rows | fps | p10 | ucode ms | calls/task | ns/cmd | Gfx busy | dense fps | dense ucode ms | dense calls |
+| 1 | 135 | 60.3 | 60 | 1.48 | 5438 | 271.6 | 0.09 | 60.5 | 1.62 | 6190 |
+| 2 | 135 | 60.3 | 60 | 1.77 | 7704 | 230.4 | 0.11 | 60.5 | 2.66 | 13292 |
+| 3 | 136 | 60.3 | 60 | 2.25 | 10497 | 213.9 | 0.14 | 59.5 | 4.00 | 20986 |
+| 4 | 136 | 60.1 | 60 | 2.45 | 11843 | 207.2 | 0.15 | 59.3 | 4.65 | 25115 |
+Second line ([g1b] per-second rows, last 140 s): tasks mean 59.5/59.5/59.5/59.4, p5 60/60/60/59, vi 60.0 in every arm;
+each arm has one ~25-27 task second (the same scripted moment at every dd, so not draw-distance load). sd_wall mean
+1.52/1.82/2.25/2.46 ms. load1 3.5-4.6 (normal agent host).
+Discrimination: H-done selected (dd4 reaches ~60 fps; the per-task ucode cost is 2.45 ms mean / 4.65 ms dense, well under
+the 16.7 ms frame). H-ucode and H-bridge refuted for these settings (submit_ms 0 under ASYNC; ucode leaves >80% headroom).
+The CURRENT-TRUTH "dd2 ~48-50, dd3 ~47, dd4 ~44" figures predate s6713-s6775 and are superseded. Caveat: lvl5 only, one run
+per dd, autopilot flight (the densest owner scenes may cost more; s6716 saw up to ~8.6 ms windows, still < 16.7 ms).
+G1e closed for the owner's settings; next rung = G3 render match for missions 3+ (only 1-2 matched against retail).
+Not a mitigation (measurement + tool; no ORIGIN needed).
