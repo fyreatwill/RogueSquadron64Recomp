@@ -178447,4 +178447,8 @@ the s6771 arm values; now in the run.sh header.
   downscale of the window capture (single-source, not chased).
 Rules out: "torn retail dumps" as a retail/angrylion property (it was the oracle); a pause-menu or debrief layout defect.
 Every earlier G3 worst-list entry labelled "torn retail dump" (m17 vi 3633 etc.) is this oracle race.
+Discrimination: selects H-match for the pause menu and H-phase for the debrief emblem; refutes H-menu-diff (layout, text,
+emblem all match). For the torn retail dumps it selects H-oracle-race (racy copy 37/42 swaps, 2/7 incomplete vs
+emu-thread 0/42, 0/7 in the same run) and refutes H-retail-tear.
+Next discriminator: per-screen best-pair d vs same-run median for title / level select / briefing (g3-render-match-frontend).
 Next: g3-render-match-frontend: title / level select / mission briefing render vs retail with the fixed oracle.
