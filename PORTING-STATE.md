@@ -178487,3 +178487,8 @@ different per-VI rate on the title), H-load (inset+medals wait on a ROM DMA / de
 backdrops and stalls for others in the port), H-retail (retail also varies with an untested press time).
 Next: find the backdrop-select call (xtrace rand callers / ROM DMA log during the title->SELECT GAME transition) in both
 arms at matched press offsets, and whether the inset's load completes in r3.
+Discrimination: selects H-match for the title (d 5.4-8.4 vs median 44, mismatch ctl >= 22.7) and the level/craft select
+(d 1.3-3.8 vs mismatch ctl >= 13.5); selects H-diff for SELECT GAME (backdrop + inset/medals differ); refutes H-late-inset
+for the port @21 s arm (no inset in a 14 s hold while retail shows it in ~1 s).
+Next discriminator: rand/counter call at the title -> SELECT GAME transition in port @16 vs @21 vs retail (H-rand), plus the
+inset's ROM DMA issued/completed per arm (H-load), plus a third retail press time (H-retail).
