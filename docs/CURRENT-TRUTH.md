@@ -272,6 +272,8 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   ITERATION G3e, take now. Owner tried a PS4 remap + Starship-style stick shaping (6ed036b97)
   and asked for it reverted: get_n64_input is back to the pre-6ed036b97 mapping. Do not
   change controls without an owner request.
+  Third run: no dropouts with no draw-distance arg -> dropouts are a draw-distance (dd>1) defect.
+  Owner also heard choppy audio on the Chapter II text crawl -> ITERATION G2b (after G3e).
 
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.

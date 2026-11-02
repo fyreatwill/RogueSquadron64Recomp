@@ -216,6 +216,15 @@ When choosing the work unit, this order overrides Next-steps ordering:
      ROGUESQ_DRAW_DISTANCE=4` (no ASYNC/NODRAIN) -> those two are refuted as the sole cause.
      Next arms: FPS60 off at dd4, and dd1 with FPS60, to split H-dd (far terrain window / ucode
      cap / buffer limits at dd4) from H-fps60 (terrain stream or LOD state stepped at 60 Hz).
+     UPDATE owner 2026-11-02 (third run): with NO draw-distance arg (dd1) there were no real
+     dropouts -> H-dd selected by owner observation. Find which dd level starts dropping (dd2,
+     dd3, dd4) and the mechanism (terrain window/LOD, ucode cap, RDP/display-list buffer,
+     far-plane), fix it; until fixed, OWNER-OPT-INS must not recommend the failing dd levels.
+   - G2b **Choppy audio on the Chapter II opening text crawl (owner playtest 2026-11-02): after
+     G3e.** Owner heard choppy audio during the chapter II title scroll (run likely FPS60, dd1).
+     Discriminate FPS60 on/off on the same crawl (AI underrun/[ai] cadence log, host frame
+     times during the crawl), against retail as the control. G2 was closed for in-flight
+     dialogue only; crawls were not covered.
    - G3d **Turning shake follow-up (owner 2026-10-31): after G1f.** G3c(c) was closed as
      retail judder, but its own data contradicts that reading: s6458 VI stamps arrive in
      bursts (3-4 VIs within 0.1 ms, then ~66 ms gaps) and lvl1 ran ~18 gfx tasks/s, not
