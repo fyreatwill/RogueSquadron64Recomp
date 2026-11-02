@@ -178379,3 +178379,37 @@ The CURRENT-TRUTH "dd2 ~48-50, dd3 ~47, dd4 ~44" figures predate s6713-s6775 and
 per dd, autopilot flight (the densest owner scenes may cost more; s6716 saw up to ~8.6 ms windows, still < 16.7 ms).
 G1e closed for the owner's settings; next rung = G3 render match for missions 3+ (only 1-2 matched against retail).
 Not a mitigation (measurement + tool; no ORIGIN needed).
+
+## Session 6777 (2026-11-01) — G3: mission 3 (canyon) with dt pinned: sim identical to retail for 1775 ticks, split t1776 = song-1 end on the audio clock, pre-split flight render matches; per-mission G3 render+sim sweep 1-19 now complete
+
+What ran: `zsh tools/g3_mission/run.sh scratch/s6777 2` (committed s6770 recipe, unchanged: lvl3.eep = s6769 lvl16.eep
+with +0x31=2, dt pin 800FA730:29:30:3d088889 both arms, rngSeed=1 debug-write at the flight switch, retail 360 s angrylion
+24 dumps DSTEP 10, port 330 s concurrently: 585 window captures). s6750-s6753 had compared mission 3 unpinned frames (early
+flight only, then the pacing desync) and pinned sim without frames; this is the first pinned pair with both.
+Results (scratch/s6777/*.txt, run summary scratch/s6777_run.txt):
+- g3_rand_ticks.py: retail 46589 calls / 3805 ticks, port 45149 / 3804; identical (tick, caller, value) to index 23112
+  (t1791); first mismatch t1792 = caller order only (retail 800541fc, port 8006c0fc, same value), the lvl9/lvl10 signature.
+- g3_song_windows.py: song 1 starts t1610 in both arms; retail ends it t1777 (167 ticks, 333 VI, 637 AI buffers), port
+  t1776 (166 ticks, 333 VI, 638 buffers). Same audio length, one tick apart: the s6755 song-end-on-audio-clock split.
+  Later songs (2 at t1809/t1808, 3, 2, 4) keep the one-tick offset with equal lengths. Retail ran ~1.99-2.08 VI/tick here
+  (few frame drops), so the split is one tick, not tens as on lvl8/lvl10.
+- g3_frame_snap.py to t1797: 35041 NPC rows, first object diff t1776, first point diff t1777 (19 point diffs, all
+  post-split), no retail-only rows, first port-only row t1776, 0 disallowed snap/glob words.
+- g3_oracle_match.py (--dec shift, bases from origin0): pre-split dumps vi 6743-9096 d 3.90-6.36 vs same-run medians
+  43.7-64.4 (5 pairs, monotonic port n); colour fit R 0.964/G 0.977/B 0.971 (the known ~1-3% port gain). vi 9693 (d 23.8,
+  ~t1735) is a torn retail dump (angrylion mid-raster: horizontal stripes over haze, scratch/s6777/match/worst0*.png) taken
+  inside the song-1 in-mission cutscene; the port shows that cutscene (HUD off, low terrain/water shot) at the same tick
+  (scratch/s6777/worst0_vs_port_window.png). Single torn frame: the scene equality there is not confirmable from it.
+  Post-split dumps still pair at d 2.8-8.4 except camera/torn outliers (d 10-21), expected after a split.
+- g3_hud_presence.py: retail HUD on 5/6 dumps in the tick range (the off one is the cutscene dump); port HUD off
+  t1591-1777 (13 captures) = the song-1 cutscene; no port-only HUD gap in flight.
+- Port log: 0 `[ucode-cap] fired`, 0 crash lines. Retail EEPROM restored by trap (eep-restored).
+Positive control (same run): flip_ctl.py flips one rand value (line 30008, t460 e7a2da69 -> e7a2da68) and g3_rand_ticks
+flags it at index 4138, well before the real split.
+Two lines: (1) rand stream + per-tick NPC/object snapshots identical to the audio-clocked split; (2) frame match + HUD
+presence agree with retail before the split.
+Discrimination: selects H-match for mission 3 (refutes H-render-diff: no tile/object/combiner difference in pre-split pairs;
+H-pose not needed, the pairs are pose-equal under the pin). Rules out a port sim or render defect on mission 3 within
+1775 ticks.
+G3 per-mission status: sim and render vs retail now matched for every mission 1-19 (1-2 s6744-s6748 unpinned, 3 here,
+4-19 s6754-s6773). Next: G3 menus not yet compared vs retail (pause menu, MISSION FAILED / debrief screens), NEXT.md.

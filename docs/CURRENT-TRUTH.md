@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6776 (2026-11-01).
+Compact operational handoff, as of Session 6777 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -22,11 +22,15 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   65536 everywhere (=16384 restores). Earlier per-level G3 checks that saw no cap fire are unaffected. s6763: the
   second lvl9 port HUD-off window (t2050-2208) persists with 0 cap fires and retail hides the HUD on 16/16 dumps inside
   it (player death camera): retail behaviour, not a defect.
+- **G3 mission 3 (s6777, canyon, pinned):** sim identical t0-t1775 (23112 rand calls, 35041 NPC rows, 0 disallowed
+  words); split t1776 = song-1 end on the audio clock (retail 167 ticks/637 buffers, port 166/638). Render pre-split
+  d 3.90-6.36 vs medians 44-64; vi 9693 = torn retail dump in the song-1 cutscene (HUD off in both arms). 0 cap, 0 crash.
+  **Per-mission G3 sim+render sweep 1-19 COMPLETE.**
 - **G3 mission 19 (s6773, Battle of Hoth, bonus, snowspeeder):** sim identical over the whole retail trace (6077 rand
   calls / 4742 ticks; 34420 NPC rows to t2999 with 0 point/obj diffs, 0 disallowed words); song handle never changes,
   so no split (as m11). Render best d 4.4-5.7, worst = torn retail dumps / camera phase. 0 cap, 0 crash. Reach: two
   d-pad RIGHT on SELECT LEVEL (port `23:w512,25:right,25.7:right`, retail `41:dright,42.5:dright`) + craft Start.
-  **Per-mission G3 sim sweep 3-19 CLOSED** (1-2 render match s6744-s6748).
+  **Per-mission G3 sim sweep 3-19 CLOSED** (1-2 render match s6744-s6748; m3 pinned render s6777).
 - **G3 mission 18 (s6772, Death Star trench run, bonus, X-wing):** sim identical t0-t1097 (16980 rand calls, 31908 NPC
   rows, 0 point diffs, 0 disallowed words), split t1098 = song-3 end (retail t1098 vs port t1115: audio-clock split as
   m10-16); flip control flagged. Render pre-split d 3.47-6.07, outliers torn retail dumps / phase. 0 cap, 0 crash.
@@ -213,9 +217,10 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 render match, missions 3+ (NEXT: g3-render-match-m3).** Sim sweep 3-19 closed (s6760-s6773) but render vs
-   retail angrylion is matched only for missions 1-2 (s6744-s6748). Recipe s6748: tools/g3_eep_patch.py --set 0x31=<m-1>,
-   retail dumps + port window captures, tools/g3_oracle_match.py --dec shift. G1e closed s6776 (60 fps dd1-dd4).
+1. **G3 render match, in-mission menus (NEXT: g3-render-match-menus).** Per-mission sim+render vs retail is complete
+   for missions 1-19 (s6777 closed m3). Not yet compared: the pause menu and the MISSION FAILED / debrief screens at
+   4:3 retail settings. Cheapest route: mission 17 race (unsteered craft crashes ~12 s in -> MISSION FAILED in both arms,
+   s6771 recipe). Recipe tools/g3_mission/run.sh + g3_oracle_match.py with the screen's own width.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
@@ -230,5 +235,5 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts: [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); per-level images:
   [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
-- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261101-202615 (s6775 arms, consumed s6776: clean).
+- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261101-202615 (s6775 arms, consumed s6776: clean; none new at s6777).
 - Recent chronology: PORTING-STATE sessions 6738-6760; search bounded windows only.
