@@ -178350,3 +178350,7 @@ Remaining ucode self is vector math (VMAD*/VMUD* ~35%, accumulator kept in memor
 MIPS GPRs in stack slots in one 48k-instruction function). No single further accessor lever is left.
 Queued: s6775_dmembase_lvl1_dd1, s6775_dmembase_lvl10_dd4 (default-on qualification, 300 s; fail on TLS-fallback line).
 Not a mitigation (performance; no ORIGIN needed).
+Discrimination: refutes H-lbv and H-other-ld (byte/LUV ops <1% each; the ":75 accessor" was the VMAD* vd writeback) and
+refutes H-unaligned for SDV (0 byte-loop samples with DMEM on); selects H-tls-base (DMEM base re-fetch through the spilled TLS
+address), landed as the constant-base TU above. Next discriminator: real game fps per dd (1-4) on this binary with the
+per-task ucode/submit split (NEXT.md g1e-fps-remeasure) selects H-ucode (VU accumulator) vs H-bridge vs H-done.
