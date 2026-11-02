@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6777 (2026-11-01).
+Compact operational handoff, as of Session 6779 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -22,6 +22,8 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   65536 everywhere (=16384 restores). Earlier per-level G3 checks that saw no cap fire are unaffected. s6763: the
   second lvl9 port HUD-off window (t2050-2208) persists with 0 cap fires and retail hides the HUD on 16/16 dumps inside
   it (player death camera): retail behaviour, not a defect.
+- **G3 front-end (s6779):** title + level/craft select H-match vs retail (mismatch controls); SELECT GAME backdrop/inset
+  differ (Next steps 1, single-source). Title decode: --w 512 --h 448 --bases 790000 --win 64,1024 --winx 85,1191.
 - **G3 in-mission menus (s6778, m17):** pause menu H-match (d 6.8-8.3 vs medians 45-48, mismatch controls 44/100);
   debrief text/emblem match (emblem sway same range both arms); backdrop photo differs only after a sim split
   (single-source). **Oracle fix:** `--fb-dump` used to copy RDRAM on the VI-poll thread while the emulator drew: 37/42 dumps
@@ -222,9 +224,11 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 render match, front-end screens (NEXT: g3-render-match-frontend).** Missions 1-19, pause menu and debrief match
-   (s6778). Not yet render-compared: title screen (1024 wide), level select (512), mission briefing (640). Oracle dumps
-   are now copied on the emulator thread (s6778); `RS64_FB_DUMP_RACY=1` keeps the old racy copy as a control.
+1. **G3 SELECT GAME screen (NEXT: g3-render-match-frontend).** s6779: title (d 5.4-8.4 vs median 44) and level/craft
+   select (d 1.3-3.8, mismatch ctl 13-30) match retail. SELECT GAME differs: retail backdrop = wide Hoth hangar for Start at
+   26.1 and 31.1 s, inset + medals ~1 s in; port backdrop changes with press time (Hoth crew @16 s, X-wing hangar @21 s) and
+   the inset + medals never appear in the @21 s arm (14 s hold). Find the backdrop pick (rand/counter) and the inset gate.
+   Recipe tools/g3_frontend/run.sh; mission-1 saves lead to the crawl, not a briefing (briefings: s6753 m3, matched per mission).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

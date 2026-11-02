@@ -178452,3 +178452,38 @@ emblem all match). For the torn retail dumps it selects H-oracle-race (racy copy
 emu-thread 0/42, 0/7 in the same run) and refutes H-retail-tear.
 Next discriminator: per-screen best-pair d vs same-run median for title / level select / briefing (g3-render-match-frontend).
 Next: g3-render-match-frontend: title / level select / mission briefing render vs retail with the fixed oracle.
+
+## Session 6779 (2026-11-01) — G3 front-end: title and level select match retail; SELECT GAME screen differs (backdrop photo depends on port press time, slot-preview inset + medal column missing in one port arm)
+
+HYPOTHESIS-ID: g3-render-match-frontend.
+
+Ran (scratch/s6779, recipe promoted to tools/g3_frontend/run.sh + width_timeline.py + title_sheet.py): r1 = retail
+rs64_oracle (angrylion, emu-thread dumps, mission-1 save from scratch/s6769/lvl16.eep +0x31=0, Start 6..61 s) with 63
+dumps (21 on the 1024 title, 20 on the 512 select, 22 from 78 s) beside a port run (g3_port_capture.sh, same save, Start
+6..50 s, 136 window captures). Port 0 crash lines. Timelines: retail 1024 at 17.3 s, 512 at 38.4, 640 at 79.7 (0x6A2E00
+= the opening CRAWL, not a briefing: with a mission-1 save the select leads to the crawl; s6753's 640 at 77.4 was the
+mission-3 briefing); port 1024 12.9, 512 24.0, 640 crawl 47.7, flight 70.2.
+- Title (1024 = interlaced 512x448, decode --w 512 --h 448 --bases 790000, window box --win 64,1024 --winx 85,1191):
+  logo/Luke title pairs d 5.4 and 8.4 vs same-run median-of-medians 43.8; mismatch control (retail title vs port select
+  captures) best d 22.7-38. H-match for the title proper.
+- Level select / craft select (s6741 geometry: --h 336 --win 124,964 --winx 0,1280; the --h 446 --win 60,1024 mission
+  geometry decodes garbage rows here): settled pairs d 1.30/2.74/2.81/3.75, fit a=1.008-1.014; mismatch control (retail
+  select vs port title captures) best d 13.5-30. H-match. Worst retail frames (vi 4200-4560, d 25-47) are craft-select
+  fly-around camera phases the port did not hold as long (retail stays 41 s in 512, port 24 s): H-phase, no missing element.
+- Crawl: no overlap (port's Start at 50 skipped it), not scored; already matched s6742.
+- SELECT GAME (inside the 1024 phase) is a real difference. Retail r1 (Start on the title at 26.1 s) and r3 (31.1 s): the
+  same backdrop photo (wide Hoth hangar) both times, slot-preview inset (X-wing over Tatooine) + gold/silver/bronze medal
+  column ~1 s after the screen appears (scratch/s6779/retail_title_sheet.png, r3_sheet.png). Port: r1/r2 (Start at 16 s,
+  3.1 s after the title) backdrop = Hoth crew photo; r3 (Start at 21 s, 8.1 s after the title) backdrop = X-wing-in-hangar
+  photo, i.e. the port's backdrop changes with press time while retail's did not across a 5 s shift. Inset + medals: r2
+  (held, no further press) shows them from 20.5 s (~2 s after the screen); r3 held 14 s and NEVER shows them; r1 pressed
+  again at 21 s before they came. Port RDRAM VI-fb dumps (r2, ROGUESQ_FB_DUMP_VI=1) match the window (inset present in r2).
+  Side-by-side: scratch/s6779/selgame_pair.png (retail vi 2094 | port r1 21.14 s).
+Rules out: a title-screen or level/craft-select render defect (both H-match with mismatch controls); "the inset is just
+late" for r3 (14 s hold).
+Open (single-source, two port arms + two retail arms): which code picks the SELECT GAME backdrop and why the inset/medals
+need it. Hypotheses: H-rand (backdrop index from the rand stream / a free-running counter that the port advances at a
+different per-VI rate on the title), H-load (inset+medals wait on a ROM DMA / decompression that completes for some
+backdrops and stalls for others in the port), H-retail (retail also varies with an untested press time).
+Next: find the backdrop-select call (xtrace rand callers / ROM DMA log during the title->SELECT GAME transition) in both
+arms at matched press offsets, and whether the inset's load completes in r3.
