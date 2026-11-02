@@ -178492,3 +178492,31 @@ Discrimination: selects H-match for the title (d 5.4-8.4 vs median 44, mismatch 
 for the port @21 s arm (no inset in a 14 s hold while retail shows it in ~1 s).
 Next discriminator: rand/counter call at the title -> SELECT GAME transition in port @16 vs @21 vs retail (H-rand), plus the
 inset's ROM DMA issued/completed per arm (H-load), plus a third retail press time (H-retail).
+
+## Session 6780 (2026-11-01) — G3 SELECT GAME: backdrop photo is rand-driven in retail too (closed, 4/4 arms predicted); the real port defect is a missing LEFT rebel emblem panel
+
+HYPOTHESIS-ID: g3-render-match-frontend (closed) -> g3-selgame-left-emblem.
+
+Static read first: the backdrop is NOT initMenuBackdropAndPickRandom (0x800C5764, rand%18: never called on this route).
+menuControllerInput picks it: idx = (s16)rand % 7 (jal 0x800B48F8), on the press idx = (idx + (rand&3) + 1) % 7
+(0x800B5274), file name sprintf(fmt 0x800A6644, idx+1). The title animation calls rand once per VI (0x800B4CC0), so the
+index at the press depends on how many title frames ran. Slot preview effect: initCraftPreviewEffectWithRandom(0x800C4DF0)
+gets rand&3 (0x800B599C) and rand&1 inside (0x800C4E0C), with the two emblem objects *0x800CF108/*0x800CF10C.
+Ran (scratch/s6780, recipe tools/g3_frontend/selgame_rand.sh): seed 0x80003470 poked to 1 on the first 1024 VI in both
+arms (oracle --debug-write + --exec-trace 0x80003430; port ROGUESQ_DEBUG_WRITE + ROGUESQ_RAND_TRACE), two run pairs:
+a1 retail Start 31 / port 21, a2 retail Start 26 / port 16. Port trace seeds == 1*M^i for all 1617 calls (no unseen
+rand). Predicted idx: a1 retail 0, port 6; a2 retail 6, port 2. Observed: a1 retail soldier-in-hangar, port Hoth crew;
+a2 retail Hoth crew (= port a1, same idx), port X-wing/Y-wing hangar (new photo). Mapping consistent 4/4 -> H-retail:
+the photo varies with press time in retail; s6779's two retail presses happened to land on the same idx.
+Inset + medal column: present in all 4 arms (port a1 = the s6779 r3 press time, which never showed it then). Not
+reproduced; single prior observation, now 0/2 in the port.
+Left emblem: tools/g3_frontend/emblem.py (reddish px in the left/right emblem panels, 512x448 coords). Retail draws both
+emblems (spinning, edge-on frames) in a1 and a2; port right panel 247-601 px in every SELECT GAME frame (control), LEFT
+panel 0 px in all ~70 SELECT GAME frames of both arms. Retail a2 used the same rand values (idx 6, eff 0, rand&1 1) as
+port a1 and still drew it -> not rand. Side-by-side: scratch/s6780/a1_pair.png; sheets a1_sheet.png, a2_sheet.png.
+Rules out: a port rand/counter defect in the backdrop pick (H-rand) and a stalled inset load (H-load, 0/2 port arms).
+Discrimination: selects H-retail for the backdrop (4/4 predictions from the rand trace, retail a2 photo = port a1 photo at
+the same idx); refutes H-load for the inset in these arms; selects H-diff for the left emblem panel (retail 2/2 arms
+drawn, port 0/2, right panel control drawn in all frames).
+Next: find why the left emblem object (created in menuControllerInput via 0x800B42D4 / 0x800B2A98, stored at
+0x800CF108) is never drawn in the port: is it created, does its DL get submitted, or is it culled/zero-alpha.

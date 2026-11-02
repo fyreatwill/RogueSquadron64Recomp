@@ -22,8 +22,12 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   65536 everywhere (=16384 restores). Earlier per-level G3 checks that saw no cap fire are unaffected. s6763: the
   second lvl9 port HUD-off window (t2050-2208) persists with 0 cap fires and retail hides the HUD on 16/16 dumps inside
   it (player death camera): retail behaviour, not a defect.
-- **G3 front-end (s6779):** title + level/craft select H-match vs retail (mismatch controls); SELECT GAME backdrop/inset
-  differ (Next steps 1, single-source). Title decode: --w 512 --h 448 --bases 790000 --win 64,1024 --winx 85,1191.
+- **G3 front-end (s6779-s6780):** title + level/craft select H-match vs retail. SELECT GAME backdrop = rand: menuControllerInput
+  idx=rand%7 (0x800B48F8) then idx=(idx+(rand&3)+1)%7 (0x800B5274) -> sprintf(0x800A6644, idx+1); title calls rand 1/VI
+  (0x800B4CC0), so the photo depends on press time in retail too (s6780: seed pinned, 4/4 arms predicted, retail a2 idx 6 =
+  port a1 photo). s6779 "inset never" did not recur (inset+medals in all 4 s6780 arms). Real defect: LEFT rebel emblem panel
+  never drawn in the port (0 px over ~70 frames, 2 arms; retail draws it in both; right emblem = control). Title decode:
+  --w 512 --h 448 --bases 790000 --win 64,1024 --winx 85,1191.
 - **G3 in-mission menus (s6778, m17):** pause menu H-match (d 6.8-8.3 vs medians 45-48, mismatch controls 44/100);
   debrief text/emblem match (emblem sway same range both arms); backdrop photo differs only after a sim split
   (single-source). **Oracle fix:** `--fb-dump` used to copy RDRAM on the VI-poll thread while the emulator drew: 37/42 dumps
@@ -224,11 +228,10 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 SELECT GAME screen (NEXT: g3-render-match-frontend).** s6779: title (d 5.4-8.4 vs median 44) and level/craft
-   select (d 1.3-3.8, mismatch ctl 13-30) match retail. SELECT GAME differs: retail backdrop = wide Hoth hangar for Start at
-   26.1 and 31.1 s, inset + medals ~1 s in; port backdrop changes with press time (Hoth crew @16 s, X-wing hangar @21 s) and
-   the inset + medals never appear in the @21 s arm (14 s hold). Find the backdrop pick (rand/counter) and the inset gate.
-   Recipe tools/g3_frontend/run.sh; mission-1 saves lead to the crawl, not a briefing (briefings: s6753 m3, matched per mission).
+1. **G3 SELECT GAME left emblem (NEXT: g3-selgame-left-emblem).** s6780: backdrop/inset differences = rand (retail too,
+   closed). Port never draws the left rebel emblem panel (retail does, same rand values). Emblem objects created by
+   0x800B42D4/0x800B2A98 in menuControllerInput (globals 0x800CF108/0x800CF10C), animated by initCraftPreviewEffectWithRandom
+   (0x800C4DF0). Recipe tools/g3_frontend/selgame_rand.sh SDIR RETAIL_PRESS PORT_AP; scorer tools/g3_frontend/emblem.py.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

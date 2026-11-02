@@ -1,24 +1,19 @@
-# NEXT: G3 SELECT GAME screen — backdrop photo pick and missing slot-preview inset
-HYPOTHESIS-ID: g3-render-match-frontend
+# NEXT: G3 SELECT GAME — left rebel emblem panel never drawn in the port
+HYPOTHESIS-ID: g3-selgame-left-emblem
 
-s6779: title and level/craft select match retail. SELECT GAME (1024 phase, after Start on the title) differs:
-retail backdrop = wide Hoth hangar for Start at 26.1 s and 31.1 s (4.8/9.8 s after the title appears), inset (X-wing over
-Tatooine) + gold/silver/bronze medal column ~1 s in. Port: Start at 16 s (3.1 s after title) -> Hoth crew backdrop, inset
-at ~2 s; Start at 21 s (8.1 s after) -> X-wing-in-hangar backdrop, inset + medals NEVER (14 s hold). Evidence:
-scratch/s6779/{retail_title_sheet,r3_sheet,selgame_pair}.png, r2/sheet.png.
+s6780: SELECT GAME backdrop is rand-driven in retail too (closed). Real defect: the LEFT emblem panel (512x448 box
+70,325-135,390) is never drawn in the port (0 px, ~70 frames, 2 arms), retail draws it in both arms (scorer
+tools/g3_frontend/emblem.py; right panel = control). Emblem objects: menuControllerInput 0x800B4944 jal 0x800B42D4
+(result -> 0x800CF10C), 0x800B2A98 builds, 0x800B448C/0x800B3D08 attach; effect initCraftPreviewEffectWithRandom(0x800C4DF0,
+a2=*0x800CF108, a3=*0x800CF10C).
 Hypotheses:
-- H-rand: the backdrop index comes from the rand stream (0x80003430 callers) or a free-running counter (osGetCount / VI
-  count) that advances at a different rate in the port on the title screen.
-- H-load: inset + medals wait on a ROM DMA / decompression that the port completes for some backdrops and not others
-  (a real port defect: a stalled load).
-- H-retail: retail also varies with press time (only 2 retail press times tried, both gave the same photo).
-Work unit (one run pair, all instruments at once):
-1. Retail: tools/g3_frontend/run.sh-style oracle with --exec-trace 0x80003430 (rand) + --exec-trace-also on the PI DMA
-   entry (grep PROJECT-OVERVIEW for the osPiStartDma / romCopy wrapper pc) over the title -> SELECT GAME window, PRESS at
-   6,11,16,21,26 and a third arm at 36 s (H-retail).
-2. Port: same save, AP Start at 6,11,16 vs 6,11,21, ROGUESQ_RAND_TRACE + PI DMA log (ROGUESQ_LOG_PHASE carries DMA? check)
-   and window captures.
-3. Find the call whose result differs between the port @16 and @21 arms at the transition (backdrop pick), and the DMA
-   (or decompress) that runs in r2 but not r3 (inset).
-Discriminating outcome: backdrop pick = rand/counter call that differs per press time in port but not retail -> H-rand;
-an inset DMA issued but never completed / never issued in the @21 arm -> H-load; retail third arm changes photo -> H-retail.
+- H-create: the left object is never created/attached in the port (pointer 0 or not linked into the draw list).
+- H-draw: it is created and its display list submitted, but the port renders it invisible (zero alpha/scale, culled,
+  bad texture load).
+- H-anim: its animation (spin channel from 0x800C4DF0 / 0x800BC834) leaves it at an edge-on/zero-scale pose in the port.
+Work unit: one run pair with tools/g3_frontend/selgame_rand.sh (seed pinned) plus oracle --exec-trace-also on 0x800B42D4,
+0x800C4DF0, 0x800BC834 and an RDRAM dump at SELECT GAME (fb-dump or --watch-write 0x0CF108:0x0CF110); port
+ROGUESQ_RAND_TRACE markers or a mem dump of 0x800CF108/0x800CF10C and the pointed objects' first 0x40 bytes. Compare
+object words (pos/scale/alpha/flags) retail vs port.
+Discriminating outcome: pointer/obj missing in port -> H-create; obj words equal but no pixels -> H-draw (check its DL);
+scale/rotation words differ -> H-anim.
