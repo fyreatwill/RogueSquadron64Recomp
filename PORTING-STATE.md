@@ -178760,3 +178760,38 @@ Discrimination: selects H-match (texrect sets) and H-rng (ship/pose from rand, p
 screen 10; refutes H-diff-render and, at runtime in both arms, H-overlap (closes the s6784 single-source residual). Next
 discriminator: Concert Hall track changes (one song request per change in both arms vs a second request overtaking the
 port's same-tick completion) and AT THE MOVIES (scratch/agent/NEXT.md).
+
+## Session 6787 (2026-11-02) — G3: SHOWROOM front-end fully driven; AT THE MOVIES is inert on a fresh save in both arms, passcode DIRECTOR enables it and its cinematic playlist matches retail at RDP level; Concert Hall track changes match (same title sequence, no song-worker request per change in either arm)
+
+HYPOTHESIS-ID: g3-showroom-movies (closed).
+
+Soak fold: none new since s6781_menufifo_lvl1_dd1 (already consumed).
+Changes: src/main/rt64_render_context.cpp RS64_RDP_BIN_PORT_MAX_MB (port RDP dump cap, default 600 MB unchanged; the
+two-passcode route hit 600 MB before SHOWROOM). tools/g3_showroom_pair.sh: PASS2=<code> (second passcode after MAESTRO:
+OPTIONS top, down x3 = PASSCODES, wheel, down/a/b, then the usual SHOWROOM route), RMAX_MB/PMAX_MB dump caps,
+RBW=all (drop the retail 1024-wide rdplog filter so 640-wide cinematics are kept). Offline scripts in scratch/s6787/tools.
+Runs (lvl1 save, retail mupen+rdplog vs port, same presses, OFF 7.3 s):
+- mov (MAESTRO, SHOWROOM, 12:down 15:a): highlight pulse (PRIM B94100FE/E0AE09FE) on row y168 = AT THE MOVIES in both
+  arms (control s6786 r2: y136 = CONCERT HALL). The A fired in the port (autopilot btn 0x8000 at t=130.1), yet both arms stay
+  on SHOWROOM: 133 texrects/frame, static sets equal, same screen sequence before it. AT THE MOVIES is inert without the
+  unlock, in retail too.
+- trk (CONCERT HALL, right x3, left): texrect-set sequence identical, title ids 5->6->7->5->7 in both arms with segment
+  lengths 580/581 vs 579/580 frames (3 tracks, wrap). Song worker: exactly one 0x800C3B38 request (at SHOWROOM entry) in
+  both arms, none per track change, so a track change does not go through the song worker and the s6781-class race cannot
+  apply. Port audio tasks continue after every change ([m5-cmd] cum_cmds 14004->20264).
+- dir/dir2/dir3 (MAESTRO + DIRECTOR): DIRECTOR accepted (port capture shows `DIRECTOR` typed, OPTIONS still lists
+  SHOWROOM). AT THE MOVIES -> black -> VI width 1024->640 at +3.0 s in the port (217.0 s, press 214.0) and +3.4 s in retail
+  (224.9 s, press 221.5), then cutscenes back to back (Tatooine intro, then a green-hills level with the Imperial shuttle;
+  scratch/s6787/dir3_port_sheet.png). dir: the port dump hit its 600 MB cap; dir2: retail rdplog dropped 640-wide frames
+  (width filter); dir3 fixed both.
+  Cinematic RDP match (dir3, tail of each arm, tri-count series cross-correlated): best lag cost 23.4 vs median 417 over
+  all lags (control); 1184 aligned frames, tri count exact on 582, median |d| 1, p90 22 (outliers = cut transitions one
+  frame apart); full frame signature (texrects + PRIM-tagged tris) exact on 521/1184. The 1-texrect title-card frames
+  land at port 70-91 / retail 74-94 and 464 / 465 after alignment (second line of evidence).
+Verdict: H-match for AT THE MOVIES (gated by DIRECTOR in both arms; the cinematic viewer and its first cutscenes render
+like retail) and Concert Hall track changes. G3 front-end has no undriven item left.
+Rules out: H-diff (port-only AT THE MOVIES failure), a song-worker race on track change (no request per change in
+either arm).
+Not covered: the remaining cutscenes of the playlist (ran ~90 s of it) and the audio content of each track (G2 closed).
+Next: the AT THE MOVIES playlist as a G3 cinematic sweep (later/ending cutscenes are unreachable any other way without
+winning missions).

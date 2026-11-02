@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6785 (2026-11-01).
+Compact operational handoff, as of Session 6787 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -41,6 +41,12 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   grids; new tools/g3_rdp_phase.py (distribution compare): 153 texrects/frame both, static set 53/53 identical (prompt line
   25/25 rects), tri q05..q95 [1093..1136] vs [1094..1138], mean ratio 1.003 over ~800 frames each; hologram grid visible in
   ~20% of frames in both. Control (retail hangar vs port ENTER NAME) separates on every term.
+- **G3 SHOWROOM fully driven (s6787).** AT THE MOVIES does nothing on a lvl1 save in retail or port (cursor on it, A
+  fired, 133 texrects unchanged). Passcode DIRECTOR (pair script PASS2=DIRECTOR) enables it: the cutscenes play back to back
+  at VI width 640 (+3.0 s port / +3.4 s retail after the press). Cinematic RDP match: 1184 aligned frames, tri-count median |d| 1,
+  521 full-signature exact, wrong-lag control cost 417 vs 23, title cards on the same frames. Concert Hall track changes:
+  same title order in both arms (3 tracks), no song-worker request per change in either arm. Dump caps: RS64_RDP_BIN_PORT_MAX_MB
+  (port), RMAX_MB/PMAX_MB/RBW=all (pair script).
 - **G3 screen 10 = OPTIONS > SHOWROOM matches retail (s6786).** Passcode MAESTRO (tools/g3_passcode_sched.py) adds the
   SHOWROOM row; SHOWROOM (ships fly past the Death Star; CONCERT HALL / AT THE MOVIES / BACK) and the CONCERT HALL song
   player: texrect static sets identical (80/80 + 1595 animated positions, 99/99), controls disjoint. The tri gap is the
@@ -265,8 +271,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 SHOWROOM > AT THE MOVIES + Concert Hall track change (NEXT: g3-showroom-movies).** Last undriven front-end
-   items. tools/g3_showroom_pair.sh EXTRA presses; RDP-match with tools/g3_rdp_phase.py; song marks on track change.
+1. **G3 cinematic sweep via AT THE MOVIES (NEXT: g3-cinematic-sweep).** MAESTRO+DIRECTOR route plays every cutscene back
+   to back; match each against retail (scratch/s6787/tools/cine.py + align.py), including ending cutscenes unreachable
+   otherwise. Port dump needs PMAX_MB, retail RBW=all.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
