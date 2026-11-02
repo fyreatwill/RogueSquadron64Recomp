@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6784 (2026-11-01).
+Compact operational handoff, as of Session 6785 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -34,7 +34,14 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   stream, cross-screen controls 0 exact. Menu worker overlap (s6782 residual) is H-disjoint: the song-load worker exists
   only in screen 10 = passcode (MAESTRO) Concert Hall, which never sends or polls image jobs, and the passcode exit blocks on
   its own image completion first (tools/menu_worker_reach.py, static + runtime null on 3 routes with a same-run positive
-  control; single-source for screen 10 itself, not driven). ENTER NAME (pick the empty slot after an erase) not yet compared.
+  control; single-source for screen 10 itself, not driven).
+- **G3 ENTER NAME + native 4:3 hangar match retail at RDP level (s6785).** ENTER NAME 235/236 exact (odd frame = retail
+  transition), control 0/236. Hangar (SELECT LEVEL, 512 wide): frame-pair matcher never goes exact (median 209/1260)
+  because ~1100 tris share one PRIM that flickers per frame and the hologram picture + lower band are wobbling texrect
+  grids; new tools/g3_rdp_phase.py (distribution compare): 153 texrects/frame both, static set 53/53 identical (prompt line
+  25/25 rects), tri q05..q95 [1093..1136] vs [1094..1138], mean ratio 1.003 over ~800 frames each; hologram grid visible in
+  ~20% of frames in both. Control (retail hangar vs port ENTER NAME) separates on every term. Front-end + hangar CLOSED
+  except the passcode Concert Hall (screen 10, never driven).
 - **CLOSED s6782: stack-payload send class.** tools/audit_service_msg_stack.py (offline, retail ROM, all segments): 8
   stack-formed sendServiceMessage/osSendMesg sites; 1 live (0x800B380C, fixed s6781), 3 doorbells whose receiver never
   dereferences (0x8000582C, 0x800058FC, 0x800C5880), 3 synchronous (0x80004BE4/D0C/F28 block until the stack object
@@ -251,8 +258,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **ENTER NAME RDP compare (NEXT: g3-enter-name), then G3 hangar.** Route scratch/s6784 rdp_name PP + one `a` on the
-   empty slot; then RDP-match the native 4:3 hangar (pixel match s6741) with tools/g3_rdp_frame_match.py.
+1. **G3 passcode Concert Hall (NEXT: g3-concert-hall).** Only front-end screen never driven (screen 10, the only
+   song-worker screen, s6784 single-source). Type the MAESTRO passcode in OPTIONS > PASSCODES on both arms, RDP-match with
+   tools/g3_rdp_frame_match.py / tools/g3_rdp_phase.py (animated), and confirm the song worker marks fire there.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

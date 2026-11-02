@@ -178679,3 +178679,34 @@ RDP pass (tools/g3_menu_pair.sh + rdplog, tools/g3_rdp_frame_match.py):
   3D emblem tri count (PRIM EBE1D7FE) and the selected-row pulse colours (B94100FE..E0AD09FE), the s6783 phase classes.
   ENTER NAME itself is not reached by this route (it opens when the empty slot is picked).
 Rules out: H-overlap (song/image cross-consumption); H-diff on title menu, OPTIONS top level, post-erase SELECT GAME.
+
+## Session 6785 (2026-11-01) — G3: ENTER NAME (235/236 exact) and the native 4:3 hangar SELECT LEVEL match retail at the RDP-stream level; new phase-free compare tool for animated screens
+
+HYPOTHESIS-ID: g3-enter-name (closed).
+
+Soak fold: none new since s6782.
+No build. Pair runner tools/g3_menu_pair.sh (rs64_oracle + rdplog retail, port RS64_RDP_BIN_PORT), oracle EEPROM
+scratch/s6779/r1/lvl1.eep on both arms, mupen eep and owner save restored by the traps.
+- ENTER NAME: PP 17:start,35:down,38:a,44:down,50:a,56:down,62:a,68:a (s6784 erase route + `a` on the empty slot).
+  Port window captures show ENTER NAME from ~74 s (letter wheel, slot `---`). g3_rdp_frame_match: 235/236 exact,
+  median 0, max 214 (one retail frame with 68 items = screen transition); control (s6784 OPTIONS port stream) 0/236,
+  median 225. 176 texrects + 58 tris per frame in both arms.
+- Hangar: PP 17:start,23:start (SELECT GAME, slot 1 -> level-select hangar, AMBUSH AT MOS EISLEY), retail
+  RS64_RDP_BIN_WIDTH=512. Port captures show the hangar fly-in then SELECT LEVEL with the hologram from ~35 s.
+  Frame-pair matcher: exact 0/184, median 209 of ~1260 items (control 1499). Breakdown (scratch/s6785/hdiff.py,
+  hphase.py, hbot.py, htri.py): (1) ~1100 tris per frame are all under ONE PRIM whose value changes every frame
+  (scene-wide flicker), so PRIM-keyed tris never pair; (2) the hologram picture grid (texrects x110-400, y~27-140) is
+  drawn in 0/10/20 rows with wobbling y0/height: retail 35/184 frames, port 53/240, 130 (y0,h) values shared;
+  (3) the lower picture band (y~176-213) wobbles every frame in both arms; (4) the prompt line PRESS (C) FOR LEVEL
+  DESCRIPTION is the same 25 rects in both (retail missing it in 1 frame = its 0-tri transition frame); (5) tris per frame
+  over 240 frames looked off (median 1112 vs 1099) but over ~800 steady frames each the quantiles agree:
+  q05..q95 retail [1093,1104,1117,1126,1136] port [1094,1106,1121,1130,1138].
+- NEW tools/g3_rdp_phase.py: distribution compare for animated screens (modal texrect count, trailing steady run,
+  static rect set, animated position overlap, tri quantiles, autocorrelation). Hangar: 153/153 texrects, static set
+  53 = 53 identical, tri mean ratio 1.003. Positive control, same tool: retail hangar vs port ENTER NAME stream =
+  texrects 153 vs 176, static sets disjoint, 0 shared animated positions, tri ratio 0.067. ENTER NAME through the
+  same tool: static 176 = 176, tris 58 = 58.
+- Verdict: H-match for ENTER NAME and the native 4:3 hangar at RDP level (two lines: the s6741 angrylion pixel match
+  and this RDP stream). The remaining frame-pair differences are animation phase (PRIM flicker, hologram wobble,
+  model rotation). Front-end closed except the passcode Concert Hall (screen 10, never driven).
+Rules out: H-diff (missing/extra items) on ENTER NAME and the 4:3 hangar.
