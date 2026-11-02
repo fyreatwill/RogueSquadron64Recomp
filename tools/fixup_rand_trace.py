@@ -124,3 +124,24 @@ for p in sorted(base.glob("funcs_*.c")):
             s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + d, 1)
     p.write_text(s)
     print(f"[s6755] ai buffer marks in {p.name}: {n}")
+
+# s6781: menu-overlay image worker handshake (SELECT GAME slot panels). Marker rows at the worker's completion send
+# (0x800B380C jal sendServiceMessage, $a2 = completion msg on the WORKER STACK, request id at +0x14), at the menu's
+# request send (0x800B3FA0, $a2 = heap request, id at +0x5C) and at the menu poll's receive (0x800B4004 lbu 0x17($v1),
+# $v1 = received msg). ROGUESQ_XTRACE_MEM=800B380C:6:0:8,800B3FA0:6:58:2,800B4004:3:0:8 dumps the words.
+WK_TAG = "/* PATCH: s6781 menu worker mark */"
+for p in sorted(base.glob("funcs_*.c")):
+    s = p.read_text()
+    n = 0
+    for pc, ins in ((0x800B380C, "jal         0x80006F78"), (0x800B3FA0, "jal         0x80006F78"), (0x800B4004, "lbu         $v0, 0x17($v1)")):
+        line = f"    // 0x{pc:08X}: {ins}\n"
+        m = mark(pc).replace(MEM_TAG, WK_TAG)
+        if s.count(line) == 1 and m + line not in s:
+            s = s.replace(line, m + line); n += 1
+    if not n:
+        continue
+    for d in (decl, mdecl):
+        if d not in s:
+            s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + d, 1)
+    p.write_text(s)
+    print(f"[s6781] menu worker marks in {p.name}: {n}")

@@ -178520,3 +178520,47 @@ the same idx); refutes H-load for the inset in these arms; selects H-diff for th
 drawn, port 0/2, right panel control drawn in all frames).
 Next: find why the left emblem object (created in menuControllerInput via 0x800B42D4 / 0x800B2A98, stored at
 0x800CF108) is never drawn in the port: is it created, does its DL get submitted, or is it culled/zero-alpha.
+
+## Session 6781 (2026-11-01) — G3 SELECT GAME: missing inset / left emblem panel = port-only race on the menu image worker's stack completion message; fixed (completion-id FIFO), 3/3 fix arms retail-state vs same-build control 0/1
+
+HYPOTHESIS-ID: g3-selgame-left-emblem (closed).
+
+Boring check first: ROGUESQ_CULL_SPIKE (default ON since 2026-10-31) is not it: cull-off arm lost the left panel, cull-on
+arm drew it, [spike] log empty on SELECT GAME. State scorer scratch/s6781/state.py (left emblem px + inset sky px per
+frame) shows FOUR port states across 13 runs: EI (retail), E- (no inset), -I (no left panel), -- (neither); retail EI in
+every run. s6779's "inset never" and s6780's "left never" were two faces of one flaky defect.
+RDP stream (RS64_RDP_BIN_PORT, scratch/s6781/rdpbox.py/order.py): in the bad state the whole left panel (22 texrects:
+4x5 black tiles + border, and ~200 emblem tris) is absent from the submitted stream, right panel control present; good
+state = 237 texrects, retail rdplog 237. Not RT64, not a ucode cap (0 [ucode-cap] fires).
+Three-way RAM diff (oracle --fb-dump 0:800000 vs ROGUESQ_RDRAM_DUMP_DIR, scratch/s6781/memdiff.py) over the menu
+overlay data/bss: slot array 0x800CF180 stride 0x48 (built in the 0x800B49A8 loop): slot0 = inset, slot1 = left panel.
+Missing slot = +0x15=1, +0x16=0, alpha(+0x18)=0, state(+0x41)=0. Slot state machine 0x800B883C (jump table
+0x800A68B8): state 4 fades out and requests an image (0x800B3F24 -> sendServiceMessage to the format-message worker,
+request id counter 0x800CC854); state 0 polls 0x800B3FD8 (tryRecvServiceMessage, ONE message per frame) and fades in the
+slot whose id (+0x20) equals received byte +0x17.
+ORIGIN: the worker tickFormatMessageWorker 0x800B3650 builds each completion on ITS OWN STACK (sp+0x10, id word at +0x14,
+written at 0x800B37F8-0x800B3800) and sendServiceMessage queues the POINTER (no copy), then the worker frees the request
+and loops. Marks via tools/fixup_rand_trace.py (0x800B380C send, 0x800B3FA0 request, 0x800B4004 receive;
+ROGUESQ_XTRACE_MEM=800B380C:6:0:8,800B3FA0:6:58:2,800B4004:3:0:8). Port (2 runs): ids 2/3/4 requested on one VI,
+completions 1 VI apart (VI 1096/1097/1098), menu receives at 1097/1099/1100 = ids 2,4,4 from the same buffer 0x801DBE58 -
+id 3 (left panel) lost. Retail (oracle --exec-trace 0x800B380C + -also 0x800B3FA0/0x800B4004, RS64_XTRACE_MEM): each
+completion takes ~60 VI (1753/1873/1930/1992), menu receives each 1 VI later, ids 1,2,3,4 distinct. The value is
+legitimate guest data overwritten by a legitimate later completion: a latent game race that hardware timing never
+exposes (the port's native-speed worker does).
+Fix tried first and REJECTED: block the worker after its send (osSetTimer + osRecvMesg on a private queue below sp) until
+the menu queue drains. Worked (3/3 EI) but unregisterServiceWorker osDestroyThreads the worker and frees the node that
+holds its stack with no exit message, so a pending timer could write freed heap. Replaced by:
+FIX (tools/fixup_menu_worker.py, wired into fixup_game_funcs_vendored.py after fixup_rand_trace; host side
+src/main/rt64_render_context.cpp rs64_menu_worker_sent/recv): after a successful send record (msg pointer, full id word)
+in a host FIFO; after the menu's lbu at 0x800B4004 return the recorded id for that pointer. Stale entries: the id
+counter is reset to 1 by initFormatMessageWorker (0x800B3EC8), so an id <= the last recorded clears the FIFO. A first
+staleness rule using the dest queue validCount popped live entries (validCount read 0 right after a successful send) and
+was dropped. No guest memory or scheduling change. ROGUESQ_MENU_WORKER_FIFO=0 = old.
+Same-build A/B (scratch/s6781/fifo*): fix press16 a/b + press21 -> EI 17/17, 15/17(+2 fade-in), 16/18(+2 fade-in),
+restored ids "2 3" / "3" / "3"; control FIFO=0 press16 -> -I 17/17, received ids 1 2 4 4. 0 crash lines. Owner sheet
+scratch/s6781/selgame_fix_sheet.png (retail | before | after).
+Census seed (main + menu overlay only): stack-payload sendServiceMessage sites 0x8000582C, 0x800058FC (main),
+0x800B380C (fixed), 0x800C5880 (menu); other overlays not yet disassembled. Queued soak s6781_menufifo_lvl1_dd1.
+Discrimination: selects H-create-side (guest never submits the panel) and within it H-race (stack completion overwritten
+before the menu reads it: port completions 1 VI apart, retail ~60 VI; port received 2,4,4 vs retail 2,3,4); refutes
+H-draw/H-rt64 (panel absent from the RDP stream), H-cap (0 fires), H-cull (cull on/off both ways), H-anim.

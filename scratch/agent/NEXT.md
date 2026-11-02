@@ -1,19 +1,20 @@
-# NEXT: G3 SELECT GAME — left rebel emblem panel never drawn in the port
-HYPOTHESIS-ID: g3-selgame-left-emblem
+# NEXT: audit every stack-payload sendServiceMessage (s6781 class)
+HYPOTHESIS-ID: service-msg-stack-payload-audit
 
-s6780: SELECT GAME backdrop is rand-driven in retail too (closed). Real defect: the LEFT emblem panel (512x448 box
-70,325-135,390) is never drawn in the port (0 px, ~70 frames, 2 arms), retail draws it in both arms (scorer
-tools/g3_frontend/emblem.py; right panel = control). Emblem objects: menuControllerInput 0x800B4944 jal 0x800B42D4
-(result -> 0x800CF10C), 0x800B2A98 builds, 0x800B448C/0x800B3D08 attach; effect initCraftPreviewEffectWithRandom(0x800C4DF0,
-a2=*0x800CF108, a3=*0x800CF10C).
-Hypotheses:
-- H-create: the left object is never created/attached in the port (pointer 0 or not linked into the draw list).
-- H-draw: it is created and its display list submitted, but the port renders it invisible (zero alpha/scale, culled,
-  bad texture load).
-- H-anim: its animation (spin channel from 0x800C4DF0 / 0x800BC834) leaves it at an edge-on/zero-scale pose in the port.
-Work unit: one run pair with tools/g3_frontend/selgame_rand.sh (seed pinned) plus oracle --exec-trace-also on 0x800B42D4,
-0x800C4DF0, 0x800BC834 and an RDRAM dump at SELECT GAME (fb-dump or --watch-write 0x0CF108:0x0CF110); port
-ROGUESQ_RAND_TRACE markers or a mem dump of 0x800CF108/0x800CF10C and the pointed objects' first 0x40 bytes. Compare
-object words (pos/scale/alpha/flags) retail vs port.
-Discriminating outcome: pointer/obj missing in port -> H-create; obj words equal but no pixels -> H-draw (check its DL);
-scale/rotation words differ -> H-anim.
+s6781 fixed SELECT GAME panels lost because tickFormatMessageWorker sent a completion that lives on its own stack and
+looped before the menu read it (sendServiceMessage 0x80006F78 queues the POINTER, no copy). Fix pattern: host FIFO of
+(pointer, value) recorded after the send, substituted at the receiver's load (tools/fixup_menu_worker.py).
+Class audit (iron rule: enumerate the whole idiom, classify every site, fix or prove dead):
+1. Disassemble main (/tmp/main.s recipe: ROM 0x1000 -> vram 0x80000400) and EVERY overlay from
+   rogue_squadron64/roguesquadron.yaml (menu 0x10C2D0, mission 0xA5D30, cinematic 0x137580, ... all at vram 0x800A5130),
+   list every jal 0x80006F78 with how $a2 is formed (addiu a2,sp,N = stack payload).
+   Seed (main + menu only): 0x8000582C, 0x800058FC (main), 0x800C5880 (menu), 0x800B380C (fixed s6781).
+2. Per stack site: who receives (dest worker id in $a1), what the receiver reads and when, and whether the sender can
+   reuse the frame first (loops, returns, or blocks on a reply). Sender that blocks on a reply before returning = safe.
+3. Live sites: same xtrace marks (tools/fixup_rand_trace.py s6781 block) on the send and the receive load, oracle
+   --exec-trace on the same PCs for the retail timing, then the FIFO fix; dead sites: write the proof in the entry.
+Hypotheses: H-safe (every other stack send is followed by a blocking reply wait / the receiver copies at once);
+H-live (another worker loop reuses its stack payload, e.g. the main-segment pair, possibly behind other menu/debrief
+glitches). Discriminating outcome: per site, sender reuse-before-read possible (H-live) or not (H-safe).
+Also: fold the s6781_menufifo_lvl1_dd1 soak verdict (expect rc=0, 0 crash, 0 stall).
+After the audit: remaining front-end screens vs retail (options, controller settings, records/medals, ERASE GAME).

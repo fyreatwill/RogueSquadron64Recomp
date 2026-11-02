@@ -94,6 +94,38 @@ extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64
     fputc('\n', s_rand_trace_f);
     fflush(s_rand_trace_f);
 }
+// s6781 G3: SELECT GAME slot panels (inset, left emblem) vanished at random. The menu image worker (0x800B3650) sends
+// each completion as a pointer to a message on its own stack; the menu reads one message per frame (id byte +0x17).
+// Retail jobs take ~60 VI so each completion is read before the next overwrites it; the port's worker finished jobs
+// ~1 VI apart and the menu read the later id twice (oracle + port xtrace, s6781). tools/fixup_menu_worker.py calls
+// rs64_menu_worker_sent after a successful send (records pointer + id) and rs64_menu_worker_recv after the menu's lbu
+// (returns the id recorded for that pointer), so every completion arrives with its own id. ROGUESQ_MENU_WORKER_FIFO=0 = old.
+static bool rs64_menu_fifo_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_MENU_WORKER_FIFO"); return !(e && *e == '0'); }(); return on; }
+static std::mutex s_menu_fifo_mu;
+static std::deque<std::pair<uint32_t, uint32_t>> s_menu_fifo;  // (message pointer, request id)
+extern "C" void rs64_menu_worker_sent(const uint8_t* rdram, const uint64_t* gpr) {
+    if (!rs64_menu_fifo_on() || (uint32_t)gpr[2] == 0) return;  // send failed (queue full): nothing was queued
+    const uint32_t msg = (uint32_t)gpr[29] + 0x10;               // worker stack message, request id word at +0x14
+    const uint32_t id = *reinterpret_cast<const uint32_t*>(rdram + (msg + 0x14 - 0x80000000u));  // full request counter
+    std::lock_guard<std::mutex> lk(s_menu_fifo_mu);
+    // Request ids come from a counter that initFormatMessageWorker resets to 1 (0x800B3EC8) and only grows: an id not
+    // above the last recorded one means a new worker instance, so drop completions a torn-down menu never read.
+    if (!s_menu_fifo.empty() && id <= s_menu_fifo.back().second) s_menu_fifo.clear();
+    if (s_menu_fifo.size() >= 64) s_menu_fifo.pop_front();
+    s_menu_fifo.emplace_back(msg, id);
+}
+extern "C" uint64_t rs64_menu_worker_recv(uint32_t msg, uint32_t v0) {
+    if (!rs64_menu_fifo_on()) return v0;
+    std::lock_guard<std::mutex> lk(s_menu_fifo_mu);
+    if (s_menu_fifo.empty() || s_menu_fifo.front().first != msg) return v0;  // not a recorded completion: guest value
+    const uint32_t id = s_menu_fifo.front().second & 0xFFu;  // the menu reads the low byte (+0x17)
+    s_menu_fifo.pop_front();
+    static int s_fixed = 0;
+    if (id != (v0 & 0xFFu) && s_fixed++ < 16)
+        fprintf(stderr, "[s6781-worker] completion id %u restored (stack slot already rewritten to %u)\n", id, v0 & 0xFFu);
+    return id;
+}
+
 extern "C" int rs64_rdp_async_on;
 int rs64_rdp_async_on = [] { const char *e = std::getenv("ROGUESQ_RDP_ASYNC"); return (e && *e && *e != '0') ? 1 : 0; }();
 namespace RT64 { extern volatile int g_s4280_n; } // rt64_rdp.cpp s4280 cimg events

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6779 (2026-11-01).
+Compact operational handoff, as of Session 6781 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -22,12 +22,17 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   65536 everywhere (=16384 restores). Earlier per-level G3 checks that saw no cap fire are unaffected. s6763: the
   second lvl9 port HUD-off window (t2050-2208) persists with 0 cap fires and retail hides the HUD on 16/16 dumps inside
   it (player death camera): retail behaviour, not a defect.
-- **G3 front-end (s6779-s6780):** title + level/craft select H-match vs retail. SELECT GAME backdrop = rand: menuControllerInput
-  idx=rand%7 (0x800B48F8) then idx=(idx+(rand&3)+1)%7 (0x800B5274) -> sprintf(0x800A6644, idx+1); title calls rand 1/VI
-  (0x800B4CC0), so the photo depends on press time in retail too (s6780: seed pinned, 4/4 arms predicted, retail a2 idx 6 =
-  port a1 photo). s6779 "inset never" did not recur (inset+medals in all 4 s6780 arms). Real defect: LEFT rebel emblem panel
-  never drawn in the port (0 px over ~70 frames, 2 arms; retail draws it in both; right emblem = control). Title decode:
-  --w 512 --h 448 --bases 790000 --win 64,1024 --winx 85,1191.
+- **FIXED s6781: SELECT GAME inset / left emblem panel vanished at random (4 port states EI/E-/-I/--, retail always EI).**
+  ORIGIN: the menu image worker tickFormatMessageWorker (0x800B3650) sends each completion as a pointer to a message on its
+  own stack (sp+0x10, id +0x14) and loops; the menu polls one message per frame (0x800B3FD8, id byte +0x17) and fades in
+  the slot (array 0x800CF180, stride 0x48) whose request id matches. Retail jobs take ~60 VI so each completion is read
+  first (oracle: ids 1,2,3,4); the port's worker finished jobs 1 VI apart and the menu read 2,4,4 (slot 3 stuck in state 0).
+  Fix: tools/fixup_menu_worker.py + rs64_menu_worker_sent/recv (host FIFO of pointer+id; the menu's lbu returns the id
+  that pointer was sent with). ROGUESQ_MENU_WORKER_FIFO=0 = old. Same build: 3/3 arms EI vs control -I (ids 1 2 4 4).
+  Rejected: blocking the worker on a stack timer (worker thread destroyed with its stack, no exit message).
+  Front-end otherwise (s6779-s6780): title + level/craft select H-match; SELECT GAME backdrop = rand (retail too: idx=rand%7
+  at 0x800B48F8, +(rand&3)+1 at 0x800B5274; title calls rand 1/VI). Title decode: --w 512 --h 448 --bases 790000
+  --win 64,1024 --winx 85,1191.
 - **G3 in-mission menus (s6778, m17):** pause menu H-match (d 6.8-8.3 vs medians 45-48, mismatch controls 44/100);
   debrief text/emblem match (emblem sway same range both arms); backdrop photo differs only after a sim split
   (single-source). **Oracle fix:** `--fb-dump` used to copy RDRAM on the VI-poll thread while the emulator drew: 37/42 dumps
@@ -228,10 +233,12 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 SELECT GAME left emblem (NEXT: g3-selgame-left-emblem).** s6780: backdrop/inset differences = rand (retail too,
-   closed). Port never draws the left rebel emblem panel (retail does, same rand values). Emblem objects created by
-   0x800B42D4/0x800B2A98 in menuControllerInput (globals 0x800CF108/0x800CF10C), animated by initCraftPreviewEffectWithRandom
-   (0x800C4DF0). Recipe tools/g3_frontend/selgame_rand.sh SDIR RETAIL_PRESS PORT_AP; scorer tools/g3_frontend/emblem.py.
+1. **Stack-payload service-message audit (NEXT: service-msg-stack-payload-audit).** s6781 class: sendServiceMessage
+   queues a pointer, so a payload on the sender's stack is only valid until the sender reuses that frame. Enumerate every
+   jal 0x80006F78 in main + all overlays, classify (stack vs heap payload; does the sender loop/return before the receiver
+   reads; which fields the receiver reads), and fix each live one with the s6781 pattern or prove it dead. Seed:
+   0x8000582C, 0x800058FC (main), 0x800C5880 (menu). Then the remaining front-end screens vs retail (options, controller
+   settings, records/medals, ERASE GAME).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
@@ -246,5 +253,5 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts: [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); per-level images:
   [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
-- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261101-202615 (s6775 arms, consumed s6776: clean; none new at s6777).
+- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261101-202615 (s6775 arms, consumed s6776: clean; none new at s6781). Queued s6781_menufifo_lvl1_dd1.
 - Recent chronology: PORTING-STATE sessions 6738-6760; search bounded windows only.
