@@ -214,18 +214,20 @@ index a0d4a6a..f6a56a9 100644
              // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
              //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..7b2edfc 100644
+index 6255872..7f0f4f7 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
-@@ -4,12 +4,105 @@
+@@ -4,12 +4,107 @@
  
  #include "rt64_gbi_rdp.h"
  
 +#include <algorithm>
 +#include <atomic>
++#include <chrono>
 +#include <cmath>
 +#include <cstdio>
 +#include <cstdlib>
++#include <cstring>
 +#include <mutex>
 +#include <unordered_map>
 +
@@ -323,7 +325,7 @@ index 6255872..7b2edfc 100644
          void noOp(State *state, DisplayList **dl) {
              // Do nothing.
          }
-@@ -19,7 +112,9 @@ namespace RT64 {
+@@ -19,7 +114,9 @@ namespace RT64 {
              const uint8_t siz = (*dl)->p0(19, 2);
              const uint16_t width = (*dl)->p0(0, 12) + 1;
              const uint32_t address = (*dl)->w1;
@@ -333,7 +335,7 @@ index 6255872..7b2edfc 100644
          }
  
          void setDepthImage(State *state, DisplayList **dl) {
-@@ -138,6 +233,19 @@ namespace RT64 {
+@@ -138,6 +235,19 @@ namespace RT64 {
              const int32_t uly = (*dl)->p0(0, 12);
              const int32_t lrx = (*dl)->p1(12, 12);
              const int32_t lry = (*dl)->p1(0, 12);
@@ -353,7 +355,7 @@ index 6255872..7b2edfc 100644
              state->rdp->setScissor(mode, ulx, uly, lrx, lry);
          }
  
-@@ -253,6 +361,17 @@ namespace RT64 {
+@@ -253,6 +363,17 @@ namespace RT64 {
          }
  
          void fullSync(State *state, DisplayList **dl) {
@@ -371,11 +373,12 @@ index 6255872..7b2edfc 100644
              RT64_LOG_PRINTF("GBI_RDP::fullSync()");
              state->fullSync();
              state->dpInterrupt();
-@@ -336,9 +455,11 @@ namespace RT64 {
+@@ -336,9 +457,12 @@ namespace RT64 {
              size_t workBufferIndex = 0;
              uint32_t tile = -1;
              uint32_t level = -1;
 +            uint32_t consumerCommandId = 0xFFFFFFFFu;
++            uint32_t exactTriCount = 1;
  
              for (const DisplayList* curData : triangles) {
                  uint32_t commandId = (curData[0].w0 >> 24) & 0x3F;
@@ -383,7 +386,7 @@ index 6255872..7b2edfc 100644
                  // TODO flush when tile and level change
                  tile = (curData[0].w0 >> 16) & 0x7;
                  level = (curData[0].w0 >> 19) & 0x7;
-@@ -406,6 +527,11 @@ namespace RT64 {
+@@ -406,6 +530,11 @@ namespace RT64 {
                  posWorkBuffer[workBufferIndex + 1].y = y2;
                  posWorkBuffer[workBufferIndex + 2].x = x3;
                  posWorkBuffer[workBufferIndex + 2].y = y3;
@@ -395,7 +398,7 @@ index 6255872..7b2edfc 100644
  
                  curData += triangleBaseWords;
  
-@@ -420,6 +546,23 @@ namespace RT64 {
+@@ -420,6 +549,23 @@ namespace RT64 {
                  // Calculate x distance from the point opposite vertex 3 to vertex 3 itself.
                  float dx_3 = x3 - x3_opposite;
  
@@ -419,7 +422,7 @@ index 6255872..7b2edfc 100644
                  if (shaded) {
                      hlslpp::int4 baseColorFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -455,6 +598,15 @@ namespace RT64 {
+@@ -455,6 +601,15 @@ namespace RT64 {
                      hlslpp::float4 colorDe = hlslpp::float4(colorDeFixed) * (1.0f / 65536.0f);
                      // hlslpp::float4 colorDy   = hlslpp::float4(colorDyFixed)   * (1.0f / 65536.0f);
  
@@ -435,7 +438,7 @@ index 6255872..7b2edfc 100644
                      // Offset the base color (which seems to start at XH) by the distance between YH and the y-coord of XH.
                      hlslpp::float4 v1Color = baseColor + colorDe * dy_1;
                      // Use the edge derivative to calculate the color at the middle vertex from the color at the major vertex
-@@ -464,6 +616,179 @@ namespace RT64 {
+@@ -464,6 +619,179 @@ namespace RT64 {
                      // Use the x derivative to calculate the color at the last vertex, starting from its opposite point
                      hlslpp::float4 v3Color = v3OppositeColor + colorDx * dx_3;
  
@@ -615,7 +618,7 @@ index 6255872..7b2edfc 100644
                      colorWorkBuffer[workBufferIndex + 0] = v1Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 1] = v2Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 2] = v3Color * (1/255.0f);
-@@ -477,6 +802,426 @@ namespace RT64 {
+@@ -477,6 +805,426 @@ namespace RT64 {
                      colorWorkBuffer[workBufferIndex + 2] = interop::float4(0.0f, 0.0f, 0.0f, 0.0f);
                  }
  
@@ -1042,7 +1045,41 @@ index 6255872..7b2edfc 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -537,7 +1282,155 @@ namespace RT64 {
+@@ -520,6 +1268,33 @@ namespace RT64 {
+                     hlslpp::float2 v2_texcoord = baseTexcoord.xy + texcoordDe.xy * dy_2;
+                     hlslpp::float2 v3_opposite_texcoord = baseTexcoord.xy + texcoordDe.xy * dy_3;
+                     hlslpp::float2 v3_texcoord = v3_opposite_texcoord + texcoordDx.xy * dx_3;
++                    // s6794 ROGUESQ_SEAM_TOG=1: in 640-wide (cinematic) images, cycle by epoch time (2 s per arm,
++                    // arm = (epoch_s/2) % 3) between S+0 (arm 0), S+16 texels (arm 1, half the 32-texel wrap) and
++                    // S+0.5 texel (arm 2). A column that stays dark under the shift is a coverage hole; one that
++                    // moves or vanishes is a texel fetched at the wrap edge. Units: S10.5 x W, so shift by 32*w.
++                    {
++                        static const bool s_tog = []{
++                            const char *e = std::getenv("ROGUESQ_SEAM_TOG");
++                            return e && *e && *e != '0';
++                        }();
++                        if (s_tog && state->rdp->colorImage.width == 640) {
++                            const double now = std::chrono::duration<double>(
++                                std::chrono::system_clock::now().time_since_epoch()).count();
++                            const int arm = int(uint64_t(now / 2.0) % 3);
++                            static int s_lastArm = -1;
++                            if (arm != s_lastArm) {
++                                s_lastArm = arm;
++                                fprintf(stderr, "[seamtog] arm=%d epoch=%.3f\n", arm, now);
++                            }
++                            const float texels = (arm == 1) ? 16.0f : (arm == 2) ? 0.5f : 0.0f;
++                            if (texels != 0.0f) {
++                                const float wScale = 1.0f;
++                                v1_texcoord[0] = float(v1_texcoord[0]) + texels * 32.0f * (texturePerspective ? w1 : wScale);
++                                v2_texcoord[0] = float(v2_texcoord[0]) + texels * 32.0f * (texturePerspective ? w2 : wScale);
++                                v3_texcoord[0] = float(v3_texcoord[0]) + texels * 32.0f * (texturePerspective ? w3 : wScale);
++                            }
++                        }
++                    }
+                     if (texturePerspective) {
+                         posWorkBuffer[workBufferIndex + 0].w = 65536000.0f / w1;
+                         posWorkBuffer[workBufferIndex + 1].w = 65536000.0f / w2;
+@@ -537,7 +1312,155 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
@@ -1198,7 +1235,7 @@ index 6255872..7b2edfc 100644
                  }
                  // No texture coefficients
                  else {
-@@ -547,6 +1440,22 @@ namespace RT64 {
+@@ -547,6 +1470,22 @@ namespace RT64 {
                      texcoordWorkBuffer[workBufferIndex + 0] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 1] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 2] = interop::float2(0.0f, 0.0f);
@@ -1221,10 +1258,95 @@ index 6255872..7b2edfc 100644
                  }
  
                  if (hasDepth) {
-@@ -584,6 +1493,68 @@ namespace RT64 {
+@@ -580,11 +1519,153 @@ namespace RT64 {
+                     posWorkBuffer[workBufferIndex + 2].z = 0.0f;
+                 }
+ 
++                // s6794 ROGUESQ_EXACT_EDGES (default on; =0 off; =tog alternates off/on every 1 s of epoch time (on = odd second),
++                // logging [exactedges]). The triangle above is (H(yh), H(yl), (xl,ym)): only the H edge is exact.
++                // The RDP rasterises the minor side with its own M and L edges, which miss those vertices by
++                // fixed-point rounding (AT THE MOVIES sky: L is x=318.000 vertical, H(yl)=318.036). With the
++                // half-pixel offset the GPU samples pixel 318 at x=318.0, so that column fell outside both sky tris
++                // and showed the clear colour (s6793 port-only seam). Emit the exact polygon H(yh) H(yl) L(yl) L(ym)
++                // M(ym) M(yh) as a fan instead; attributes are extrapolated from the three vertices above (z affine,
++                // tc and colour perspective-consistent with the GPU's interpolation). Edges under one scanline tall
++                // are left alone so no sub-scanline slivers are added.
++                {
++                    static const int s_mode = []{
++                        const char *e = std::getenv("ROGUESQ_EXACT_EDGES");
++                        if (e && std::strcmp(e, "tog") == 0) return 2;
++                        return (e && *e == '0') ? 0 : 1;
++                    }();
++                    bool on = s_mode == 1;
++                    if (s_mode == 2) {
++                        const double now = std::chrono::duration<double>(
++                            std::chrono::system_clock::now().time_since_epoch()).count();
++                        on = (uint64_t(now) & 1) != 0;
++                        static int s_last = -1;
++                        if (int(on) != s_last) {
++                            s_last = int(on);
++                            fprintf(stderr, "[exactedges] on=%d epoch=%.3f\n", int(on), now);
++                        }
++                    }
++                    const float mIntercept2 = xm - dxmdy * yFloor;
++                    const float xC = xl + dxldy * (y2 - y3);
++                    const float xE = dxmdy * y3 + mIntercept2;
++                    const float xF = dxmdy * y1 + mIntercept2;
++                    const float eps = 1.0f / 256.0f;
++                    const bool useC = (y2 - y3) >= 1.0f && std::fabs(xC - x2) > eps;
++                    const bool useEF = (y3 - y1) >= 1.0f && (std::fabs(xE - x3) > eps || std::fabs(xF - x1) > eps);
++                    const float area = (x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1);
++                    if (on && (useC || useEF) && std::fabs(area) > 1e-3f) {
++                        float px[6], py[6]; int n = 0;
++                        px[n] = x1; py[n++] = y1;
++                        px[n] = x2; py[n++] = y2;
++                        if (useC) { px[n] = xC; py[n++] = y2; }
++                        px[n] = x3; py[n++] = y3;
++                        if (useEF) { px[n] = xE; py[n++] = y3; px[n] = xF; py[n++] = y1; }
++                        interop::float4 vp[6], vc[6]; interop::float2 vt[6];
++                        bool ok = true;
++                        for (int i = 0; i < n && ok; i++) {
++                            // Screen-space barycentrics of the point w.r.t. the original triangle (may extrapolate).
++                            const float b1 = ((px[i] - x1) * (y3 - y1) - (x3 - x1) * (py[i] - y1)) / area;
++                            const float b2 = ((x2 - x1) * (py[i] - y1) - (px[i] - x1) * (y2 - y1)) / area;
++                            const float b[3] = {1.0f - b1 - b2, b1, b2};
++                            float iw = 0.0f, z = 0.0f, t0 = 0.0f, t1 = 0.0f, c[4] = {0, 0, 0, 0};
++                            for (int k = 0; k < 3; k++) {
++                                const interop::float4 &p = posWorkBuffer[k];
++                                const float ik = 1.0f / p.w;
++                                iw += b[k] * ik; z += b[k] * p.z;
++                                t0 += b[k] * texcoordWorkBuffer[k].x * ik; t1 += b[k] * texcoordWorkBuffer[k].y * ik;
++                                for (int j = 0; j < 4; j++) c[j] += b[k] * colorWorkBuffer[k].f32[j] * ik;
++                            }
++                            if (!(iw > 0.0f)) { ok = false; break; }
++                            const float w = 1.0f / iw;
++                            vp[i] = interop::float4(px[i], py[i], z, w);
++                            vt[i] = interop::float2(t0 * w, t1 * w);
++                            vc[i] = interop::float4(c[0] * w, c[1] * w, c[2] * w, c[3] * w);
++                        }
++                        if (ok) {
++                            const int triOut = n - 2;
++                            setMinSize(posWorkBuffer, size_t(triOut) * 3);
++                            setMinSize(colorWorkBuffer, size_t(triOut) * 3);
++                            setMinSize(texcoordWorkBuffer, size_t(triOut) * 3);
++                            for (int t = 0; t < triOut; t++) {
++                                const int idx[3] = {0, t + 1, t + 2};
++                                for (int k = 0; k < 3; k++) {
++                                    posWorkBuffer[t * 3 + k] = vp[idx[k]];
++                                    texcoordWorkBuffer[t * 3 + k] = vt[idx[k]];
++                                    colorWorkBuffer[t * 3 + k] = vc[idx[k]];
++                                }
++                            }
++                            exactTriCount = uint32_t(triOut);
++                        }
++                    }
++                }
++
+                 // TODO do more than 1 tri at a time
                  break;
              }
  
+-            state->rdp->drawTris(1, &posWorkBuffer.data()[0][0], &texcoordWorkBuffer.data()[0][0], &colorWorkBuffer[0][0], tile, level);
 +            // ROGUESQ_LOG_M4_TRI_DUMP: observe the state at the actual RT64
 +            // triangle consumer, using the same hangar gate and row budget as
 +            // the DPC-side restage census.
@@ -1287,9 +1409,10 @@ index 6255872..7b2edfc 100644
 +                }
 +            }
 +
-             state->rdp->drawTris(1, &posWorkBuffer.data()[0][0], &texcoordWorkBuffer.data()[0][0], &colorWorkBuffer[0][0], tile, level);
++            state->rdp->drawTris(exactTriCount, &posWorkBuffer.data()[0][0], &texcoordWorkBuffer.data()[0][0], &colorWorkBuffer[0][0], tile, level);
  
              return trianglesEnd;
+         }
 diff --git a/src/hle/rt64_application.cpp b/src/hle/rt64_application.cpp
 index 785de27..3fc321b 100644
 --- a/src/hle/rt64_application.cpp

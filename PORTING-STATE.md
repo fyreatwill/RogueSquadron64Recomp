@@ -179004,3 +179004,29 @@ retail framebuffer vs port window shots, plus RDP-stream equality.
 Not yet split: H-raster (RT64 decodeTriangles rebuilds vertices from the H edge + (xl,ym) and drops the column) vs
 H-texsample (RT64 fetches a wrong/black texel at S~0 of the wrapped tile). Near-black at 1x leans H-raster (clear colour
 0x0001 is black) but a black texel would look the same. Not run: per-pixel RT64 probe.
+
+## Session 6794 (2026-11-02) — G3 cinematic sky seam FIXED: RT64 rebuilt the RDP minor edge through H(yl), leaving the shared x=318.0 column unsampled under its half-pixel offset; exact-edge polygon emission (ROGUESQ_EXACT_EDGES, default on) takes line shots 40/939 -> 2/902 (both non-seam content)
+Ran (scratch/s6794; tools/g3_seam/togscore.py new):
+1. Offline, port f16500 (seamtris.py): right sky tri #14 has L edge xl=318.000 dxl=0 (ym=34.25..yl=209.5), but RT64
+   decodeTriangles builds v2 = H(yl) = 318.036, so its rebuilt L edge leans to 318.036; left tri #19 H edge = 318.000 exact.
+   RT64 adds halfPixelOffset (rt64_framebuffer_renderer.cpp:3156, +0.5 px), so pixel 318 samples at x=318.0: outside the
+   leaning edge on almost every row, and excluded from the left tri by the top-left rule -> clear colour (black).
+2. In-run texture arm (ROGUESQ_SEAM_TOG=1, RESMULT=1, epoch-phased 2 s arms S+0 / S+16 texels / S+0.5): the line stays at
+   window 636/637 with fraction 0.56 (S+16) and 0.59 x3 (S+0.5), same as unshifted rm1 0.57. Positive control: the S+16 frame
+   differs from rm1 by 21.2 mean vs a ~10 cross-run baseline (sky changed, left-of-seam 36 vs 53). Refutes H-texsample.
+3. Fix (lib/rt64 rt64_gbi_rdp.cpp): when L(yl) or M(ym)/M(yh) miss the rebuilt vertices by >1/256 px on an edge >= 1 scanline
+   tall, emit polygon H(yh) H(yl) L(yl) L(ym) M(ym) M(yh) as a fan (<=4 tris); attributes extrapolated from the three
+   original vertices (z affine, tc/colour perspective-consistent: sum b*a/w / sum b/w). drawTris gets the fan count.
+   ROGUESQ_EXACT_EDGES=0 restores old behaviour; =tog alternates 1 s off/on (odd epoch second = on), logs [exactedges].
+4. Same-run A/B (ee/, EXACT_EDGES=tog, RESMULT=1): off 348.64 line 0.58 (positive control); on 349.70 0.00 (column 318 = 54
+   like neighbours); on 349.17 (0.06 s after switch, frame predates it) still lined. Pair: scratch/s6794/seam_fix_pair.png.
+5. Whole playlist, default build (full/, 700 s, same recipe as s6792 fix/): line shots 40/939 -> 2/902; the two left (475.36
+   col 666, 478.48 col 662) also flag in s6792 fix/ at moving columns (670, 655) with soft dips = picture content. 0 crashes.
+6. Regression check, lvl1 forced route + 120 s hold with EXACT_EDGES=tog (scratch/s6794/flight, 77 phased shots):
+   mission_verified_130s, 0 signals, dark-column lines 0 off / 0 on, mean luma 102.8 / 107.4 (animating). Single metric.
+ORIGIN: writer = RT64 decodeTriangles vertex reconstruction (v2 on the H edge, v3=(xl,ym)); the RDP edge words are
+legitimate (identical to retail's stream, s6793), retail angrylion draws them clean.
+VERDICT: selects H-raster (vertex reconstruction off the true L edge + half-pixel sampling = uncovered column) and refutes
+H-texsample (half-period S shift leaves the line in place). Two lines: offline edge math plus in-run on/off arms, and the
+playlist line count.
+Not checked: hangar/menus with the fix (any RT64 seams there should only improve); fan tri count overhead not measured.

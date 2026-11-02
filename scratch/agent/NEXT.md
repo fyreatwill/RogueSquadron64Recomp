@@ -1,19 +1,20 @@
-# NEXT: G3 cinematic sky seam (port-only RT64 defect), split raster vs texture
+# NEXT: G3 AT THE MOVIES TRI excess on shots 48/64 (port emits ~30% more RDP tris than retail)
 HYPOTHESIS-ID: g3-cinematic-sweep
 
-s6793: the AT THE MOVIES line is a port-only RT64 defect at a shared vertical sky-tri edge (x=318.0 in the shot at port wall
-348-352 s, recipe tools/g3_seam/port_arm.zsh SECS=362 CAP0=340; retail clean, RDP streams identical, persists at native 1x
-with ROGUESQ_RESMULT=1, now a working knob).
+State: s6792 paired all 81 shots; s6794 fixed the sky seam (ROGUESQ_EXACT_EDGES default on). Open flag from s6792 sweep:
+shots 48 and 64 have retail tri median 914 / 772 vs port 1188 / 846 per frame (scratch/s6792/mov/retail.bin vs port.bin,
+tools/g3_cine_sweep.py sweep_vi.txt). Note: RDP dumps are taken before RT64, so the s6794 fan does not change these counts.
 
-Hypotheses at native 1x:
-- H-raster: RT64 decodeTriangles (lib/rt64/src/gbi/rt64_gbi_rdp.cpp ~l.480-530) rebuilds v1/v2 from the H edge and v3=(xl,ym),
-  ignoring xm; somewhere along the shared column neither tri covers the pixel centre -> clear colour (black) shows.
-- H-texsample: column 318 is covered but samples a wrong texel (S~0 of a wrapped 32x32 RGBA32 tile; TMEM decode of texel
-  column 0, or wrap to texel 31).
-Discriminator (ONE build, ONE run, both arms in-run): env ROGUESQ_SEAM_PROBE=1 in RT64 decodeTriangles: for op 0E tris in 640-wide
-images with an edge within 0.01 of an integer x and height >=100, log RDP edge words and the reconstructed vertices x1,x2,x3
-(budget 200/phase); plus ROGUESQ_SEAM_TOG=N that alternates every N frames between normal draw and forcing these tris'
-combiner to shade-only/white (texture off). Line present with texture off -> H-raster (fix vertex reconstruction: use xm
-for the M edge start / exact shared-edge x); line gone -> H-texsample (inspect wrap/TMEM decode). Positive control: the
-detector (tools/g3_seam/seamscan.py) must still fire on the normal-phase frames of the same run.
-Then: TRI shots 48/64. DUR shots stay single-source oracle-side.
+Hypotheses:
+- H-lod: port picks a higher model detail (LOD index 0x80137CE4 / selectMeshLodAndSubmitForRender) in those shots; extra tris
+  are a different mesh of the same object (per-frame tri x/y bbox clusters match, densities differ).
+- H-dup: port submits a gfx task/DL twice (or a chained sub-DL repeats) in some frames; extra tris are exact duplicates of
+  edge words already in the same frame.
+- H-clip: port's LLE clip path splits near-plane tris more (more small tris near screen edge / at w~0), retail fewer.
+- H-timing: frame pairing mismatch (port 30 fps vs retail 11-21 there) makes medians compare different content; counts
+  equal when aligned on the same camera.
+Discriminator (OFFLINE, no build): for shots 48/64 take 20 aligned frame pairs (tools/g3_cine_sweep.py alignment), and per
+pair compute (a) duplicate-edge-word count within the port frame, (b) tri bbox histogram by screen region and size,
+(c) fraction of tris touching the screen/scissor edge. Dup>0 only in port -> H-dup; same regions but smaller/more tris ->
+H-lod; excess concentrated on edges -> H-clip; excess vanishing under re-alignment -> H-timing. Positive control: a frame
+duplicated artificially (concatenate a port frame with itself) must read dup = 100%.
