@@ -179227,5 +179227,8 @@ Controls (scratch/s6800, savedir_ctl.sh, 45 s boots, same binary):
   800c4e14 craft preview); only shift = 3 VIs earlier start and one title rand reordered around the press (wall-clock
   press jitter, the known s6780 press-time dependence). Same menu path as the old clobber route.
 (The --fb-dump in savedir_ctl.sh never fired: width 512 is not on screen at 30 s; the save-file outcome was the control.)
-Rules out: nothing about rendering. Closes the stale lvl3+ item.
+Verdict: selects H-private-save (the core reads and writes --save-dir: blank dir formatted, valid save untouched)
+and refutes H-ignored (core falls back to the user-wide dir: would have left sv_empty empty and changed the user sha).
+Rules out: nothing about rendering. Closes the stale lvl3+ item (H-stale selected: sweep 1-19 already in CURRENT-TRUTH).
+Next discriminator: craft-select RDP multiset match, settled vs pan frames, SELECT LEVEL same-run positive control.
 Next: SELECT YOUR CRAFT screen at native 4:3 vs retail at RDP level (s6785 matched SELECT LEVEL only).
