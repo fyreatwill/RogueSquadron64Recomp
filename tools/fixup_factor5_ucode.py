@@ -244,7 +244,7 @@ if is_main_ucode and ITER_MARKER not in text:
     entry_pattern = re.compile(r"(\n    RSP rsp\{\};\n)")
     if entry_pattern.search(text):
         text = entry_pattern.sub(
-            "\\1    static int rs64_cap_v = 0; if (!rs64_cap_v) { const char *e = getenv(\"ROGUESQ_UCODE_CAP\"); { const char *dd = getenv(\"ROGUESQ_DRAW_DISTANCE\"); const char *as = getenv(\"ROGUESQ_ASPECT\"); int wide = (as && *as && !(as[0]=='4' && as[1]==':' && as[2]=='3' && !as[3])); rs64_cap_v = (e && *e) ? atoi(e) : (((dd && atof(dd) > 1.0) || wide) ? 65536 : 16384); } if (rs64_cap_v != 16384) fprintf(stderr, \"[ucode-cap] ROGUESQ_UCODE_CAP=%d\\\\n\", rs64_cap_v); }  /* s6070 */\n"
+            "\\1    static int rs64_cap_v = 0; if (!rs64_cap_v) { const char *e = getenv(\"ROGUESQ_UCODE_CAP\"); rs64_cap_v = (e && *e) ? atoi(e) : 65536; if (rs64_cap_v != 65536) fprintf(stderr, \"[ucode-cap] ROGUESQ_UCODE_CAP=%d\\\\n\", rs64_cap_v); }  /* s6070; s6762: default 65536 at every setting (16384 dropped HUD/glows in dense retail-settings frames) */\n"
             r"    int rs64_iter = 0;  " + ITER_MARKER + "\n"
             r"    r18 = 0x100;  " + R18_MARKER + "\n",
             text, count=1)

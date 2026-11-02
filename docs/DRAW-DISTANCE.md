@@ -10,7 +10,7 @@ cd build && env ROGUESQ_DRAW_DISTANCE=2 ./RogueSquadron64Recomp
 |---|---|
 | `ROGUESQ_DRAW_DISTANCE=<m>` | Scales the terrain-window radius (and, for m>1, the projection far plane automatically). Clamped to >=0.25. |
 | `ROGUESQ_DD_FAR=<m>` / `ROGUESQ_DD_NEAR=<m>` | Override the far / near plane scale independently of the radius. |
-| `ROGUESQ_UCODE_CAP=<n>` | LLE ucode iteration cap (default 16384 = retail). Retail cap truncates frames once more terrain is submitted; raised automatically by the dd path's recipes. |
+| `ROGUESQ_UCODE_CAP=<n>` | Synthetic LLE ucode iteration guard (hardware has none). Default 65536 at every setting since s6762: 16384 dropped the HUD and engine glows in dense dd1 frames (lvl9) that retail draws. =16384 restores the old cap. |
 | `ROGUESQ_DD_POOLX=<k>` | Terrain stream-pool capacity multiplier (1..2.5 fit the guest heap; 3+ exhausts it). |
 
 ## What is measured (see CURRENT-TRUTH s6070-s6076 for evidence)

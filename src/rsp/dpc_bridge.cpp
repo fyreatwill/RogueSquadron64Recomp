@@ -4853,7 +4853,9 @@ static std::atomic<int> g_rs64_radar_swap{-1000};
 // ROGUESQ_RADAR_GATE_EPOCH=0 restores the swap-only window.
 extern "C" int rs64_g1d_vi_epoch;
 static std::atomic<int> g_rs64_radar_epoch{-1};
+static std::atomic<uint32_t> g_rs64_census_radar{0}; // s6762 census
 extern "C" void rs64_radar_mark(void) {
+    g_rs64_census_radar.fetch_add(1, std::memory_order_relaxed);
     g_rs64_radar_swap.store(g_rs64_swap_n.load(std::memory_order_relaxed), std::memory_order_relaxed);
     g_rs64_radar_epoch.store(__atomic_load_n(&rs64_g1d_vi_epoch, __ATOMIC_RELAXED), std::memory_order_relaxed);
 }
@@ -5280,7 +5282,36 @@ static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
     __atomic_store_n(&rs64_g1d_pillar_crop, crop, __ATOMIC_RELAXED);
 }
 
+// s6762 G3 lvl9 HUD drop: ROGUESQ_G3_CENSUS=<file> writes one line per update_screen (VI) with the sums over its DPC
+// submits: triangles, texrects, texrects with ulx >= 360 (radar/ship-icon side), renderRadarMinimap entries, submits,
+// last colour image. A capture window with no HUD then reads as HUD draws in the RDP stream (H-gfx) or none (H-gate).
+extern "C" volatile uint32_t rs64_vi_n_g;
+static FILE *rs64_census_file() {
+    static FILE *f = [] { const char *e = std::getenv("ROGUESQ_G3_CENSUS"); return (e && *e) ? fopen(e, "w") : (FILE *)nullptr; }();
+    return f;
+}
+static void rs64_g3_census(uint32_t lo, uint32_t hi) {
+    FILE *f = rs64_census_file();
+    if (!f || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
+    static uint32_t cvi = 0, ntr = 0, ntx = 0, nright = 0, nsub = 0, ci = 0;
+    const uint32_t vi = rs64_vi_n_g;
+    if (vi != cvi) {
+        if (nsub) { fprintf(f, "%u %u %u %u %u %u %06X\n", cvi, ntr, ntx, nright, g_rs64_census_radar.exchange(0), nsub, ci); fflush(f); }
+        cvi = vi; ntr = ntx = nright = nsub = 0;
+    }
+    nsub++;
+    auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
+    for (uint32_t a = lo & ~3u, step = 8; a + 8 <= hi; a += step) {
+        const uint32_t w0 = rd(a), w1 = rd(a + 4), op = (w0 >> 24) & 0x3F;
+        step = (op == 0x24 || op == 0x25) ? 16u : (op >= 0x08 && op <= 0x0F) ? 32u + ((op & 4) ? 64u : 0u) + ((op & 2) ? 64u : 0u) + ((op & 1) ? 16u : 0u) : 8u;
+        if (op == 0x24 || op == 0x25) { ntx++; nright += ((w1 >> 12) & 0xFFFu) >= 360u * 4u; }
+        else if (op >= 0x08 && op <= 0x0F) ntr++;
+        else if (op == 0x3F) ci = w1 & 0xFFFFFFu;
+    }
+}
+
 static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
+    rs64_g3_census(lo, hi);
     rs64_g1d_title_clear(lo, hi);
     rs64_g1d_pillar_scan(lo, hi);
     rs64_g1d_pause_dim(lo, hi);

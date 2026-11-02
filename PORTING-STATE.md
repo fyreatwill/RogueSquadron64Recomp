@@ -177885,3 +177885,32 @@ Rules out: a port sim defect on lvl9 within the first 2216 ticks (rand stream + 
 Not ruled out: the HUD/engine-glow drop (single run, single-source; 18 consecutive captures plus 2 retail dumps).
 Next: g3-lvl9-hud-drop: reproduce and discriminate H-gate (the game skips the HUD in the port: unlogged guest flag)
 vs H-gfx (the game submits the HUD DL but the port's RSP/RT64 does not draw it).
+
+## Session 6762 (2026-11-01) — G3: lvl9 HUD/engine-glow drop root-caused to our LLE ucode iteration cap (16384) truncating dense dd1 frames; default raised to 65536 at every setting, HUD + glows now drawn like retail
+
+What ran (scratch/s6762; s6761 recipes, dt pin 800FA730:29:30:3d088889, lvl9.eep):
+- NEW instrument ROGUESQ_G3_CENSUS=<file> (src/rsp/dpc_bridge.cpp rs64_g3_census): one line per update_screen VI with
+  the sums over its DPC submits: triangles, texrects, texrects with ulx >= 360, renderRadarMinimap entries (counted in
+  rs64_radar_mark), submits, colour image. (A first per-submit version wrote 8.5M lines and slowed the port to
+  3.3 VI/tick; the gap still came back at the same ticks, so it follows sim ticks, not wall time.)
+- port2 (default cap 16384, 115 s): gap reproduced at ticks 292-458 (port VI 5160-5480, capture run of 18 HUD-off
+  frames). Per 40 VI: outside the gap ~180 texrects/100 right-side, ~41-43k tris; inside, 0-10 texrects while tris rise
+  to 49-52k, and renderRadarMinimap still runs on 20/20 frames. So the game builds the HUD but its draws never reach the
+  RDP stream (not H-gate, not RT64/present). run.log: `[ucode-cap] fired` up to #192 (logged at 1-4 and every 64th).
+- port3 (ROGUESQ_UCODE_CAP=65536, same build, in-run-equivalent tick window 292-458 = VI 5172-5504): 0 fires, texrects
+  180-691 per 40 VI through the window, tris 54k (the formerly cut tail), 0 HUD-off capture run. Sheet
+  scratch/s6762/cap_ab_sheet.png: cap 16384 frames lack HUD, engine glows and tower lights; cap 65536 frames have all.
+- retail dense dumps (NDUMP=22, 1 s apart, FARM 114): HUD on at t296, 316, 334, 351, 368, 386, all inside the gap.
+  H-retail-sample refuted.
+- Fix: tools/fixup_factor5_ucode.py (and the generated build/factor5_ucode file, same edit) defaults the cap to 65536
+  at every setting; ROGUESQ_UCODE_CAP=16384 restores the old cap. port4 (new default, no env): 0 fires, 0 crash lines,
+  no HUD-off run in the window. docs/DRAW-DISTANCE.md row updated.
+ORIGIN: the writer is our own synthetic loop guard (`++rs64_iter > rs64_cap_v` at L_1090, fixup 2), not game code.
+The truncated tail is legitimate game output: retail hardware has no such cap and draws it. This is removing our
+truncation, not guarding a bad value.
+Two lines: census (HUD built + absent from RDP + cap fires) and the cap A/B captures, plus retail dense dumps.
+Positive control: the census shows ~5 right-side texrects per frame outside the gap in the same run (instrument sees
+HUD texrects), and the s6761 lvl7/lvl8 HUD-off windows stay matched to retail (0 cap fires there).
+Rules out: H-gate (game skips the HUD), H-rt64 (present path), H-retail-sample. Supersedes "16384 = retail behaviour"
+(s6070/s6403). Not checked: the s6761 second gap (ticks 2054-2208); the cap fire count fits it too (single-source).
+Next: resume G3 dt-pinned sim match, mission 10 (eep +0x31=9); re-run g3_hud_presence on lvl9 t2054-2208 in that pass.

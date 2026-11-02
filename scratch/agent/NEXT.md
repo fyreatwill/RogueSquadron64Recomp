@@ -1,25 +1,13 @@
-# NEXT: lvl9 port HUD + engine-glow drop (ticks 292-458), retail draws them
-HYPOTHESIS-ID: g3-lvl9-hud-drop
+# NEXT: G3 dt-pinned sim + render match, mission 10
+HYPOTHESIS-ID: g3-mission10-pinned
 
-s6761 datum (single-source): dt-pinned lvl9, sim identical to retail for 2216 ticks, but port window captures show no
-HUD (radar, ship icon, reticle) and no engine glows for port ticks 292-458 (86.5-92.1 s), while retail fb dumps at
-ticks 331 and 400 draw both. Also port-off ticks 2054-2208 (no retail sample there). Sheet: scratch/s6761/hudgap_sheet.png,
-scratch/s6761/match/worst0_vi7870_n8782.png. Tool: tools/g3_hud_presence.py SDIR (needs snap.txt + match.txt).
-On lvl7/lvl8 the port HUD-off windows coincided with retail HUD-off (scripted), so the tool has a same-method control.
-
-Hypotheses:
-- H-gate: the game itself skips the HUD/glow draw in the port (a guest flag/timer we do not log differs; e.g. a
-  render-pacing or audio-clocked flag such as a voice line / comm message timer).
-- H-gfx: the game builds and submits the HUD DL, but the port's RSP LLE / RT64 / present path does not show it
-  (dropped task, wrong framebuffer presented, overlay pass skipped).
-- H-retail-sample: retail also hides the HUD in a shorter/shifted window and the 2 retail dumps missed it (would need
-  the retail window to exclude both t331 and t400: check with denser retail dumps).
-Discriminator, ONE build/run pair (scratch/s6762):
-1. Reproduce: rerun scratch/s6761/port.sh (PD=port2, SECS=110) and confirm the gap at the same ticks (deterministic?).
-2. In the same port run, count per gfx task the HUD submission: log RDP texrect count (HUD is texrects) and
-   G_SETOTHERMODE/overlay markers per frame via the existing dpc_bridge rect logging, keyed to VI. If HUD texrects are
-   in the RDP stream during the gap -> H-gfx (RT64/present). If absent -> follow the game side: find the HUD draw entry
-   (grep tools/rename maps for hud/radar draw functions) and exec-trace it in both arms over ticks 280-470 (H-gate).
-3. Retail: rerun with dense fb dumps (NDUMP=48, FARM such that dumps fall every ~60 VI in vi 7700-8300) to settle
-   H-retail-sample.
-Then resume G3 sim match missions 10.. (eep +0x31=9, ...).
+s6762 closed g3-lvl9-hud-drop: the LLE ucode iteration cap (16384) truncated dense dd1 frames; default is now 65536.
+Work unit (scratch/s6763), retail + port concurrently, as s6761:
+1. eep: cp scratch/s6761/lvl9.eep -> lvl10.eep and set +0x31=9 (tools/g3_eep_patch.py). lvl10 may need
+   ROGUESQ_FORCE_PLANET_UNLOCK=0xFF on the port (CURRENT-TRUTH run recipes); check the retail level name in a dump.
+2. Copy scratch/s6762/{retail,port}.sh with dir s6763 and the new eep; retail SECS=360, port SECS=330; keep
+   ROGUESQ_G3_CENSUS on the port (cheap now) and grep run.log for `[ucode-cap] fired` (expect 0).
+3. Offline: g3_rand_ticks, g3_frame_snap, g3_song_windows, g3_oracle_match, g3_hud_presence.
+Discriminating outcomes: sim identical to the first split (pacing/audio clock = known mechanism) vs a new sim split
+(name the caller at the first rand mismatch); any port-only HUD-off window -> census says built-but-absent or not built.
+Side check: also rerun the lvl9 port arm (scratch/s6762/port.sh SECS=330) and confirm ticks 2054-2208 now show the HUD.
