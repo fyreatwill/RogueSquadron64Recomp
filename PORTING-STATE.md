@@ -177983,3 +177983,33 @@ Discrimination: selects "sim identical" for mission 11 over the full trace (refu
 match (refutes a port-only render/HUD defect).
 Rules out: a port sim defect on lvl11 within 3410 ticks; a port-only render/HUD drop on lvl11.
 Next: g3-mission12-pinned (eep +0x31=11).
+
+## Session 6765 (2026-11-01) — G3: mission 12 (Escape from Fest) with dt pinned: sim identical to retail for 1006 ticks, split = song-1 end on the audio clock, render matches
+
+What ran (scratch/s6765; s6764 recipes via sed, lvl12.eep = s6764 lvl11.eep +0x31=11, no FORCE_PLANET_UNLOCK needed;
+a port capture shows the "ESCAPE FROM FEST" debrief, so a new level): retail SECS=360 NDUMP=24 DSTEP=10 run concurrently
+with port SECS=330. Port: 849 captures, 0 `[ucode-cap] fired`, 0 crash/abort lines. The retail trace covers 1527 ticks
+and 7 dumps landed.
+Results:
+- g3_rand_ticks.py: retail 13049 calls (1527 ticks) vs port 13903. First mismatch index 3979: R t1007 vs P t1009 with the
+  same caller and value (800f28f4 92e06a1b). Values stay identical up to index 3995; the first value or caller
+  difference is at index 3996 (t1011/t1012), where the call order interleaves after the split.
+- g3_song_windows.py: song 01 retail t842-t1007 (165 ticks, 334 VI, 640 AI buffers) vs port t842-t1009 (167 ticks, 334 VI,
+  637 buffers). The split is the song-1 end on the audio clock (the same pattern as lvl4/7/8/9/10).
+- g3_frame_snap.py: 0 NPC point diffs in 19668 pre-split NPC rows and 0 obj diffs. Snap diffs are only words 3-6/9 and
+  glob diffs only words 20-31 (allowed render pacing; no disallowed word).
+- g3_tick_mem.py (G3_IGN=04,0c,18) 8010c9e0 8010c0e0: the first arm diff is t1007 for both, i.e. the split itself.
+- g3_oracle_match.py: d 5.8/7.3 for two dumps before the first tick (pre-flight), then pre-split t716 d 9.3 (same scene;
+  port bolts in a different animation phase) and t929 d 5.6. Post-split t1160 d 33 / t1415 d 16 (retail flying with
+  HUD while the port is in its death camera): sims diverged, so this is expected.
+- g3_hud_presence.py: HUD off t840-1017 in both arms (retail t928 off). Port HUD-off t1168-1349 and t1496+ are post-split:
+  the window captures show the port's own death (snow close-up), then the hangar game-over debrief from about 117 s. These
+  are game states, not render drops.
+Positive control: the same comparators flagged the t1007 split (rand index 3979, tick_mem t1007) in this run, so the
+identity before the split is not a dead comparator.
+Two lines: (1) rand stream + NPC snapshots + tick_mem are identical through t1006; (2) frame match + HUD presence agree
+before the split.
+Discrimination: selects "sim identical to the audio-clocked split" (refutes a new sim split before t1007); selects render
+match (refutes a port-only render/HUD defect before the split).
+Rules out: a port sim defect on lvl12 before song-1 ends; a port-only render/HUD drop on lvl12 before the split.
+Next: g3-mission13-pinned (eep +0x31=12).
