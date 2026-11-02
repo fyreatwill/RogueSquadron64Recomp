@@ -145,3 +145,26 @@ for p in sorted(base.glob("funcs_*.c")):
             s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + d, 1)
     p.write_text(s)
     print(f"[s6781] menu worker marks in {p.name}: {n}")
+
+# s6784: song-asset-load worker handshake (menuSubtype02Handler, menu overlay), the second consumer of the game worker
+# queue (MEM_W 0x80138920) that pollServiceMessageByte (0x800B3FD8) also drains. Marks at the request send (0x800C3B38,
+# $a2 = heap request), the worker's completion send (0x800C5880, $a2 = msg on the worker stack), the receive call
+# (0x800C3B4C, $a0 = queue) and right after it returns (0x800C3B54, row $v0 = received msg or 0).
+# ROGUESQ_XTRACE_MEM=800C3B38:6:0:8,800C5880:6:0:8,800C3B4C:4:0:1,800C3B54:2:0:8 dumps the words.
+SG_TAG = "/* PATCH: s6784 song worker mark */"
+for p in sorted(base.glob("funcs_*.c")):
+    s = p.read_text()
+    n = 0
+    for pc, ins in ((0x800C3B38, "jal         0x80006F78"), (0x800C5880, "jal         0x80006F78"),
+                    (0x800C3B4C, "jal         0x80006EC4"), (0x800C3B54, "beq         $v0, $zero, L_800C3BA4")):
+        line = f"    // 0x{pc:08X}: {ins}\n"
+        m = mark(pc).replace(MEM_TAG, SG_TAG)
+        if s.count(line) == 1 and m + line not in s:
+            s = s.replace(line, m + line); n += 1
+    if not n:
+        continue
+    for d in (decl, mdecl):
+        if d not in s:
+            s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + d, 1)
+    p.write_text(s)
+    print(f"[s6784] song worker marks in {p.name}: {n}")

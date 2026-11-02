@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6783 (2026-11-01).
+Compact operational handoff, as of Session 6784 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -29,6 +29,12 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   (all retail colours present in the port). Selected-row highlight = identical 60-frame pulse B94100FE<->E0AE09FE. Pixel
   IoU gaps on these screens are the slideshow backdrop + pulse phase (1 Hz retail dumps alias); score menus by RDP, not
   pixels. Pair runner tools/g3_menu_pair.sh: retail offset 7.3 s, >=5 s between presses (retail loads 2-5 s slower).
+- **G3 front-end CLOSED (s6784).** Title START/OPTIONS menu (1171/1193 menu frames exact, residual = fade/pulse phase),
+  OPTIONS top level (240/240) and post-erase SELECT GAME (median 7/870 = emblem tri count + pulse) match retail at the RDP
+  stream, cross-screen controls 0 exact. Menu worker overlap (s6782 residual) is H-disjoint: the song-load worker exists
+  only in screen 10 = passcode (MAESTRO) Concert Hall, which never sends or polls image jobs, and the passcode exit blocks on
+  its own image completion first (tools/menu_worker_reach.py, static + runtime null on 3 routes with a same-run positive
+  control; single-source for screen 10 itself, not driven). ENTER NAME (pick the empty slot after an erase) not yet compared.
 - **CLOSED s6782: stack-payload send class.** tools/audit_service_msg_stack.py (offline, retail ROM, all segments): 8
   stack-formed sendServiceMessage/osSendMesg sites; 1 live (0x800B380C, fixed s6781), 3 doorbells whose receiver never
   dereferences (0x8000582C, 0x800058FC, 0x800C5880), 3 synchronous (0x80004BE4/D0C/F28 block until the stack object
@@ -245,10 +251,8 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **Menu worker overlap check (NEXT: g3-frontend-remaining).** Do the SELECT GAME image worker and the song-asset-load
-   worker (menuSubtype02Handler 0x800C30C8, completion 0x800C5880 received at 0x800C3B4C) ever share queue 0x80138920
-   while both are pending (s6782 residual)? Then close G3 front-end (remaining unchecked: OPTIONS top level by RDP, title
-   START/OPTIONS menu by RDP, ENTER NAME) and take the next ladder rung.
+1. **ENTER NAME RDP compare (NEXT: g3-enter-name), then G3 hangar.** Route scratch/s6784 rdp_name PP + one `a` on the
+   empty slot; then RDP-match the native 4:3 hangar (pixel match s6741) with tools/g3_rdp_frame_match.py.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

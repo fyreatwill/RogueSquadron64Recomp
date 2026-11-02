@@ -178636,3 +178636,46 @@ scratch/s6783/one.sh), tools/g3_rdp_frame_match.py.
 Discrimination: selects H-match for ELITE ROGUES, PASSCODES, GAME SETTINGS, SOUND SETTINGS, CONTROLLER SETTINGS,
 BIOGRAPHIES and ERASE GAME; refutes H-diff-render (pixel gap fully explained by backdrop + pulse phase, RDP streams
 equal) and H-diff-sim (same per-frame pulse values, same item sets).
+
+## Session 6784 (2026-11-01) — menu worker overlap CLOSED (H-disjoint: screen 10 = passcode Concert Hall is the only song-worker screen and never sends/polls image jobs; the passcode exit blocks on its own image completion); title menu, OPTIONS top level and post-erase SELECT GAME match retail at RDP level
+
+HYPOTHESIS-ID: g3-frontend-remaining (closed).
+
+Soak fold: none new since s6782.
+Build: tools/fixup_rand_trace.py s6784 marks (survive regen; wired via fixup_game_funcs_vendored.py) at the song-load
+handshake: 0x800C3B38 request send, 0x800C5880 worker completion send, 0x800C3B4C recv call ($a0 = queue), 0x800C3B54
+after the recv (row $v0). Spec 800C3B38:6:0:8,800C5880:6:0:8,800C3B4C:4:0:1,800C3B54:2:0:8 (port ROGUESQ_XTRACE_MEM,
+retail RS64_XTRACE_MEM + --exec-trace). Pair runner scratch/s6784/pair.sh (oracle + port, same presses).
+Runtime (both arms, positive control = the s6781 image-worker marks 0x800B380C/0x800B3FA0/0x800B4004 firing in the same run):
+- r1 title -> SELECT GAME -> level -> craft -> mission: image marks 4/4/4 port and 4/4/4 retail; song marks 0 in both.
+- snd title -> OPTIONS -> SOUND SETTINGS (+ a/right presses): image 2/2/2 both arms; song marks 0 in both.
+- m1 poke 0x80130B50=0x200 on the title (both arms, debug-write), then START: image 5/5/5 both arms, song 0 (START's own
+  0x20 flag wins the dispatcher test, see below). Note: the normal title value of 0x80130B50 is 0x31 (port [phase] B50=).
+Static (tools/menu_worker_reach.py, NEW: jal call graph of main + menu overlay from each menuOverlayInit screen
+handler, jump table 0x800A75C0; control menuControllerInput reaches 0x800B3F24 + 0x800B3FD8 = PASS):
+- menuSubtype02Handler 0x800C30C8 is screen 10 only (case 10 at 0x800C5CC0). The dispatcher enters it when
+  menuControllerInput returns with 0x80130B50 bit 0x200 and bit 0x20 clear (0x800C5BB4). Bit 0x200 is set at
+  0x800B5360 right after sfx 0x18/0x5F in the passcode accept path = the MAESTRO Concert Hall (the handler loads a 3D
+  scene, plays songs via playSongById, runs the song worker). initSongAssetLoadWorker is reachable from screen 10 only, and
+  the handler shuts both workers down on exit (0x800C3F80/0x800C3F90).
+- From screen 10 the walk reaches neither the image request send 0x800B3F24 nor pollServiceMessageByte 0x800B3FD8, 0 jalr
+  in the overlay functions it reaches, and the menu overlay never forms either address as a pointer (only jal callers:
+  0x800B532C, 0x800B5EDC, 0x800B89D8, 0x800AF888 / polls 0x800B597C, 0x800B5F48, 0x800B88AC, 0x800AF898).
+- The only hand-over into screen 10 is the passcode accept: it requests the backdrop image (0x800B532C, gated on byte
+  0x800CF046 == 0) and then loops on the poll at 0x800B597C until that completion arrives (or the same byte is set, in
+  which case no request was sent) before the exit. So no image job can be in flight when the song worker starts.
+Verdict: H-disjoint. The two consumers of queue 0x80138920 are never live together; the s6782 residual is dead and the
+s6781 FIFO cannot hold a song doorbell. Single-source for screen 10 itself (static + runtime null on 3 routes with a
+same-run positive control); the Concert Hall was not driven because it needs the MAESTRO passcode typed in.
+RDP pass (tools/g3_menu_pair.sh + rdplog, tools/g3_rdp_frame_match.py):
+- OPTIONS top level (PP 17:down,19:a): 240/240 exact, max diff 0; control (title port stream) 0/240, median 103.
+- Title START/OPTIONS menu (PP 17:down): last-240 window 194/240 exact, control 0/240 median 103. Over 1500 frames, the
+  menu dwell (163 items/frame) is 1171/1193 exact; residuals are fade-in alpha steps (A07D00Fx, alpha 0x4F-0x52) and the
+  21 fade-out frames where the selected row's 7 letters carry pulse colour C25B0087 (retail) vs CA720087 (port) = pulse phase.
+  The last-240 tails differ because the idle title falls into the attract demo at a different frame in each arm.
+- ERASE route (PP 17:start,35:down,38:a,44:down,50:a,56:down,62:a): port window captures show ARE YOU SURE -> YES -> ARE
+  YOU REALLY SURE -> YES -> SELECT GAME with the slot erased (---); NO_SAVE_WRITE kept the save, mupen eep restored.
+  Post-erase SELECT GAME: median diff 7 of ~870 items, 22/194 exact, control 0/194 median 817; the diffs are the spinning
+  3D emblem tri count (PRIM EBE1D7FE) and the selected-row pulse colours (B94100FE..E0AD09FE), the s6783 phase classes.
+  ENTER NAME itself is not reached by this route (it opens when the empty slot is picked).
+Rules out: H-overlap (song/image cross-consumption); H-diff on title menu, OPTIONS top level, post-erase SELECT GAME.
