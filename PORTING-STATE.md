@@ -178880,3 +178880,6 @@ Results (scratch/s6788/togab.py, rej.py, census_drops.py):
 - Cost: dd4 game fps 44.6 -> 42.8, flight tri median 1405 -> 1374. The fix draws visible terrain that was being culled before.
   dd3 runs at 46.3 fps.
 Queued: s6789_spansent_lvl5_dd4 and s6789_spansent_lvl10_dd4 (300 s, census + trace). OWNER-OPT-INS no longer warns about the dd4 dip.
+Verdict: this selects H-sentinel (the clamp/sentinel collision is the root cause of the residual dd4 dip) and refutes H-pool,
+H-farclip and H-retail. Next discriminator: the post-fix lvl5/lvl10 soak census, where an in-flight tri>0 drop would mean a
+second mechanism.
