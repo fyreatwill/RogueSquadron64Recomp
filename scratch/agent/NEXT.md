@@ -1,23 +1,18 @@
-# NEXT: G3 dt-pinned sim + render match, mission 17
+# NEXT: G3 bonus mission 17 (Beggar's Canyon race) — tick key + fb arm, then the sim/frame match
 HYPOTHESIS-ID: g3-mission17-pinned
 
-s6769 closed mission 16 (ocean/Calamari towers): sim identical 2038 ticks, split t2039 = song-3 end on the audio clock,
-render d 3.96-13.2 pre-split (vi 15145 torn retail; d 10-13 = capture phase), port HUD-off t1864-2039 = death camera,
-retail inside HUD-off too. Missions 18/19 (+0x31=17/18) remain after this one. Work unit (scratch/s6770):
-1. eep: python3 tools/g3_eep_patch.py scratch/s6769/lvl16.eep scratch/s6770/lvl17.eep --set 0x31=16. Look at one port
-   capture to confirm a new level (s6769 = ocean, sandy islands, grey Calamari towers).
-2. for f in retail port; do sed 's/s6769/s6770/g; s/lvl16/lvl17/g; s/0x31=15/0x31=16/' scratch/s6769/$f.sh > scratch/s6770/$f.sh; done.
-   Run `(env SECS=360 NDUMP=24 DSTEP=10 zsh scratch/s6770/retail.sh > scratch/s6770/retail_run.txt 2>&1 &)` and
-   `env SECS=330 zsh scratch/s6770/port.sh > scratch/s6770/port_run.txt 2>&1` in the foreground. Wait for retail with
-   `pgrep -x rs64_oracle`. If mission start comes late (s6769: first dump t=234 s), fewer dumps land; fine.
-   Grep port/run.log for `[ucode-cap] fired` and crash lines.
-3. Offline (cwd = repo root): g3_rand_ticks, g3_song_windows, g3_frame_snap R P <split tick+6> > snap.txt then
-   python3 scratch/s6769/snap_parse.py snap.txt, g3_tick_mem (G3_IGN=04,0c,18) 8010c9e0 8010c0e0, g3_oracle_match
-   (--w 512 --bases 690000,620000 --h 446 --win 60,1024 --winx 85,1191 --dec shift --worst 6) > match.txt,
-   g3_hud_presence scratch/s6770. Map retail vi -> tick via snap.txt rows; port capture ~ P/60 s. For d>9 pre-split
-   pairs, strip the port captures +-1 s (s6769 strip_t971 pattern) before calling a defect: capture spacing is 0.33 s.
-   Positive control: python3 scratch/s6769/flip_ctl.py <port.rand> /tmp/x 30000 (NOT the s6768 script), then
-   g3_rand_ticks must flag the flipped value.
-4. Any port-only HUD-off window before the split: dense retail arm (scratch/s6763/lvl9_retail_gap2.sh pattern).
-Discriminating outcomes: sim identical (to an audio-clocked split, or none) vs a new sim split (name the caller at the
-first rand mismatch and the first tick_mem diff); render d<=~9 on pre-split dumps vs a port-only render defect.
+s6770: missions 17-19 are bonus missions; save byte +0x39=0x60 unlocks them (tools/g3_mission/run.sh does it for
+LEVEL>=16). Mission 17 is a race. Run scratch/s6770/m17b (PRESS to 36 s, DWARM=30, AP to 21 s, ARM=20) seeded both arms
+but gave ticks=0 (race never calls runInMissionFrame 0x800FA730) and 0 retail fb dumps.
+Work unit:
+1. Offline first (no run): find the race's per-frame entry. The port census / run.log of scratch/s6770/m17b and the
+   generated code (../N64Recomp/RecompiledFuncs) — the rand callers 0x800B0328/03A0/0F1C/0F48/09A8/0DB4 sit in 0x800B0xxx;
+   walk their callers up to the function called once per sim frame in the race (compare how 0x800FA730 was found, s6754).
+   Also read why rs64_oracle --fb-arm-after 103 never armed (grep fb-arm in tools/oracle source).
+2. Make the tick key a parameter of the G3 tools (g3_rand_ticks/frame_snap/tick_mem/song_windows: env G3_TICK=<pc>) and of
+   tools/g3_mission/run.sh (xtrace spec + --exec-trace-also), commit, re-run:
+   env PRESS=6:start,11:start,16:start,21:start,26:start,31:start,36:start DWARM=30 AP=6:start,11:start,16:start,21:start \
+     ARM=20 FARM=<fixed> G3_TICK=<pc> zsh tools/g3_mission/run.sh scratch/s6771 16
+Discriminating outcomes: caller-order split at index 720 lands on one tick in both arms with a different caller set
+(sim divergence: name the caller) vs lands on a pacing boundary (retail frame drop: same tick, different effect count) .
+Then missions 18/19 (LEVEL 17/18) with the same tool.

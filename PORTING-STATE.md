@@ -178140,3 +178140,32 @@ Two lines: (1) rand stream + NPC snapshots + tick_mem identical through t2038; (
 Discrimination: selects "sim identical to an audio-clocked split" (refutes a port sim defect on lvl16 before t2039)
 and render match (refutes a port-only render/HUD defect in that span).
 Next: g3-mission17-pinned (eep +0x31=16); missions 18/19 = +0x31=17/18 close the per-mission G3 sweep.
+
+## Session 6770 (2026-11-01) — G3: missions 17-19 are bonus missions gated by save flag bits; save byte +0x39=0x60 unlocks them on both arms; the per-mission G3 recipe is now a committed tool (tools/g3_mission/)
+
+Pivot-guard iteration (6 observation-only ADVANCED in a row). M5 (closed s4968) and M3 audits are closed and the VI-640
+route wall is no longer in CURRENT-TRUTH, so the pivot's (a)/(b) targets no longer exist. Landed engineering instead: the
+s6753-s6769 per-mission recipe (copy last session's scratch scripts with sed) is now tools/g3_mission/{run.sh,offline.sh,
+snap_parse.py,flip_ctl.py}: `zsh tools/g3_mission/run.sh SDIR LEVEL` patches the save, runs retail (background) + port
+(foreground), then the whole offline chain (rand_ticks, songs, frame_snap+summary, tick_mem, oracle_match, hud_presence,
+1-bit flip positive control, cap/crash grep).
+Run 1 (scratch/s6770, +0x31=16 as NEXT.md planned): NOT mission 17. Port [lvsel] init a3=15 B40=16, i.e. the level
+select clamps the cursor to the highest unlocked mission; captures show the s6769 ocean/Calamari level again. It is a
+second same-level reproduction of s6769: rand (tick, caller, value) identical to index 70376 (t2069), songs 1/2/3 on the
+same ticks t823/1410/1873 in both arms, song-3 end t2038 retail vs t2040 port (same audio-clock split), render pre-split
+pairs d 4.06-6.49, 0 cap fires, 0 crash lines; flip control flagged at t693.
+Root cause of the clamp (static, menu code 0x800C5E14-0x800C5E6C): a3 = 15 raised to 16 by 0x80130B4C&0x00200000 (or
+0x80130B58&0x08000000) and to 17 by 0x80130B4C&0x00400000 (or B58&0x10000000). The save loader (0x8006DBEC-0x8006DC00)
+copies record word +0xC bits 9-22 into 0x80130B4C, and the record starts at save copy +0x2C (rec[5] -> B40 = +0x31), so
+save byte +0x39 = 0x60 sets both bonus bits. Verified two arms, same recipe: without it a3=15 (run 1); with it
+(scratch/s6770/ul) a3=16, unlockMask 0x00080000, B40=16. run.sh adds it automatically for LEVEL>=16.
+Run 2 (scratch/s6770/m17): mission 17 = BEGGAR'S CANYON (race; port debrief "MISSION FAILED ... COMPETITOR BEATEN: ZEV"),
+retail shows desert canyon flight. Recipe broken for this mission: port goes 512 wide at 24 s and stays, so the 55 s seed
+arm (switch-triggered) never fired (no port.rand.txt); the long Start schedule paused the race in both arms.
+Run 3 (scratch/s6770/m17b; PRESS to 36 s, DWARM=30, AP to 21 s, ARM=20): both arms seeded. Rand caller sequence matches
+for 720 calls, then retail inserts a 0x800B09A8/0DB4/0DD4/0DEC group that the port reaches later (values identical over
+all 47492 retail calls, which is expected of a pure LCG and says nothing). ticks=0 in both arms: the race never calls the
+runInMissionFrame xtrace key 0x800FA730, so the split cannot be attributed to a sim tick; retail fb dumps 0 (fb arm never
+fired), so no render pairs. 0 cap fires, 0 crash lines.
+Rules out: "+0x31 alone selects any mission" (true only up to 16). Not yet a sim verdict for mission 17.
+Next: find the race's per-frame function (the 0x800FA730 analogue) and the fb-dump arm for bonus missions, then re-run.
