@@ -87,7 +87,9 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   **FIXED s6738:** plain launch ran non-hangar gfx through RT64 HLE; ROGUESQ_LLE_FORCE/UNGATED/SOLO now default ON.
 - **G1e frame rate (s6696-s6716).** FIXED s6696: per-vector getenv in rs64_vld_note held the game at ~17 fps since
   s6372 (this also invalidated the s6455/s6458 shake readings). -O2 default (s6700). Fast RSP DMA (s6713), inlined
-  vector templates (s6714), gated probes (s6715), opt-in ROGUESQ_RDP_ASYNC=1 (s6705). FPS60 holds 60 fps at dd1
+  vector templates (s6714), gated probes (s6715), opt-in ROGUESQ_RDP_ASYNC=1 (s6705), aligned DMEM fast paths +
+  constexpr element-select table (s6774: -6.5% flight ns/cmd same-run, bit-identical by tools/g1e_dmem_equiv.cpp;
+  ROGUESQ_G1E_DMEM=0 = old byte loops). FPS60 holds 60 fps at dd1
   lvl1/lvl5; dd2 ~48-50, dd3 ~47, dd4 ~44: the serial gfx task (RSP LLE ~55% + RT64 submit) binds (s6716 xctrace).
 - **G1c draw distance CLOSED s6703.** dd4 is the ceiling that adds terrain (lvl1/lvl5); dd8 sane after s6701
   (perspNorm centre-box) and s6702 (spill-arena leak in rs_free). Owner guide docs/DRAW-DISTANCE.md.
@@ -206,9 +208,10 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G1e interpreter lever (NEXT: g1e-ucode-interp).** s6716: factor5_ucode self = 76% of the Gfx thread at dd4
-   FPS60 (dd2 ~48-50 fps, dd4 ~44). Profile the hot ucode blocks/vector ops line-level and land one optimisation with
-   an output-identical control (RDP stream hash) and an fps A/B in one run.
+1. **G1e interpreter lever (NEXT: g1e-ucode-interp).** s6774 landed aligned DMEM fast paths + constexpr select table
+   (~35% of ucode self was per-access scaffolding). Next: clean profile with DMEM on, attribute the remaining
+   r128 byte()/element() accessor time to its inlining op via lldb `image lookup -v` (inline chain), fast-path that op;
+   same equivalence harness + same-run toggle discipline.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

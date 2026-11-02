@@ -178264,3 +178264,45 @@ Rules out: a port sim defect in mission 19. With s6753-s6773 every mission 3-19 
 (1-2 render match s6744-s6748). The per-mission G3 sweep is closed.
 Next: G1e interpreter lever (s6716: factor5_ucode self = 76% of the Gfx thread at dd4 FPS60, the only large term left).
 Not a mitigation (measurement only; no ORIGIN needed).
+
+## Session 6774 (2026-11-01) — G1e ucode profile line-level: byte-wise DMEM vector/scalar access + a static-init guard on every element select were ~35% of ucode self; aligned fast paths + constexpr select table land (-6.5% flight ns/cmd same-run, select 9.5% -> 0.5% of ucode samples), bit-identical by exhaustive harness
+
+Work unit: NEXT.md g1e-ucode-interp (profile the factor5_ucode self time, land the top lever).
+Profile (old binary 18:43, scratch/agent/s6716_bridge.zsh lvl5 FPS60 dd4, xctrace attach at 95 s for 15 s, tools/xctrace_tp.py
+--under factor5_ucode --dump-addrs, lldb image lookup; raw scratch/s6774/{addrs,lldb,addrs_lines}*): Gfx 1715 samples,
+factor5_ucode self 1195. Self by source: rsp_vu_impl.hpp 680, rsp_vu.hpp 204 (r128 byte()/element() accessors), ucode .c 152,
+rsp.hpp 94 (RSP_MEM_W/H byte loops), sse2neon 65. Top lines: rsp_vu_impl.hpp:84 = 127 (+108: 28) = the element-select
+`static const __m128i shuffle[16] = {_mm_set_epi8(...)}` -- under sse2neon _mm_set_epi8 is not constexpr, so the table is a
+function-static with a dynamic-init guard checked on EVERY vector op's element select (9.5% of ucode samples);
+SDV byte loop :355/357 = 124, LDV :201 = 36, byte()/element() accessors 203, scalar W/H byte loops ~60. The ucode .c call
+at :447 (429, inclusive) is the DPC bridge (s6716 H-bridge-essential, unchanged).
+Discrimination: selects H-dispatch(-ish): per-access scaffolding (byte-at-a-time DMEM through xor-3 addressing + the select
+guard) ~35% of ucode self; H-vec math (VMADN/VMADM/VMUDL bodies) is the remainder, each op < 4%; no single H-hotloop block.
+Change (lib/N64ModernRuntime, exported to submodule-patches/N64ModernRuntime.patch):
+- rsp.hpp: rs64_dmem_w/_w_set/_h/_h_set (DMEM keeps each 32-bit word byte-reversed, so an aligned BE word is one native
+  access and an even halfword sits at addr^2); RSP_MEM_W_LOAD/W_STORE/HU_LOAD/H_LOAD/H_STORE take them when aligned (audio
+  dmem-store hooks still run).
+- rsp_vu.hpp: r128::word(n) = BE vector word n as raw u32 [3-n].
+- rsp_vu_impl.hpp: aligned fast paths LDV/SDV (e%4==0, e<=8), LLV/SLV (e%4==0), LSV/SSV (e even), LQV/SQV (e==0, word
+  aligned, 16-(addr&15) bytes); unaligned/odd-e keep the byte loops; hooks/notes unchanged. Element-select table now
+  `alignas(16) static constexpr uint8_t shuffle[16][16]` (same bytes, generated from the old _mm_set_epi8 rows) + _mm_load_si128.
+- src/main/main.cpp: rs64_g1e_dmem default 1; ROGUESQ_G1E_DMEM=0 restores the byte loops; ROGUESQ_G1E_DMEM_TOGGLE=<sec> flips
+  it ([g1e-dmem] lines). tools/g1e_fast_ab.py --key dmem.
+Correctness (line 1): tools/g1e_dmem_equiv.cpp hashes DMEM+vt after every LDV/SDV/LLV/SLV/LSV/SSV/LQV/SQV x e 0-15 x address
+0-0x100F (wrap) x imm -1..1, scalar W/H/HU loads+stores over every address, and all 16 selects over 4096 random vectors.
+Pre-change headers (scratch/s6774/ref) == new headers fast=1 == fast=0, 130/130 hash lines. Positive control: a mutant
+rs64_dmem_h_set mask (0xFFC) diverges from SSV<0> on.
+Run A/B (line 2; scratch/agent/s6774_dmem.zsh = s6716 recipe + ROGUESQ_G1E_DMEM_TOGGLE=10, same binary, interleaved 10 s
+windows, flip-straddling rows dropped). Run 1 (203 s) reached flight only at the end (crawl long), so run 2 HOLD 330 s:
+alive, 0 VI stalls, 0 crashlines, 33 flips. Phase 7 (flight):
+- dmem=0: 70 rows, ucode = 0.149 ms + 215.0 ns/cmd, sum-ratio 222.7 ns/cmd, median 222.6; dense n=35 6.97 ms @31.7k (220 ns/cmd)
+- dmem=1: 64 rows, ucode = 0.162 ms + 200.2 ns/cmd, sum-ratio 209.1 ns/cmd, median 208.8; dense n=29 6.68 ms @32.5k (205 ns/cmd)
+-6.1..-6.9% by every estimator (run 1 all-phase: 196.2 -> 167.9, -14%). Tasks/s ~59-60 in both arms (FPS60 cap). The
+select-table change is in both arms (unconditional): second profile on the new binary (scratch/s6774/tp2*, 20 s at 240 s,
+mixed arms) puts the select line at 27/5105 = 0.5% of ucode samples vs 155/1640 = 9.5% before. Frames: fbd every 600 VIs
+across both arms show menus, level select, crawl, intro cutscene and lvl5 flight with terrain/craft/HUD (scratch/s6774/
+fbd_all.png). Remaining hot accessor: rsp_vu.hpp:75 byte() const 472/5105 in the mixed profile (callers unknown: line
+attribution without inline chain).
+Rules out: H-hotloop (no single ucode block dominates). Single-run for the % figures; correctness is two-line (exhaustive
+harness + live render). Queued: s6774_dmem_lvl1_dd1, s6774_dmem_lvl10_dd4 (default-on, 300 s).
+Not a mitigation (performance; no ORIGIN needed).

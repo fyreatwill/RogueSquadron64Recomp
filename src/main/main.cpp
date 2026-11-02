@@ -4821,8 +4821,27 @@ static void rs64_g1e_fast_tick() {
     t_flip = now; rs64_g1e_fast = !rs64_g1e_fast;
     fprintf(stderr, "[g1e-fast] on=%d t=%.3f\n", rs64_g1e_fast, std::chrono::duration<double>(now - t0).count());
 }
+// s6774 G1e: aligned DMEM fast paths in the RSP scalar/vector loads and stores (librecomp rsp.hpp rs64_dmem_w, rsp_vu_impl.hpp
+// LDV/SDV/LLV/SLV/LSV/SSV/LQV/SQV). Bit-identical to the byte loops (scratch/s6774 equivalence harness); the per-access hooks
+// still run. Default on; ROGUESQ_G1E_DMEM=0 restores the byte loops, ROGUESQ_G1E_DMEM_TOGGLE=<sec> flips it ([g1e-dmem] line).
+extern "C" int rs64_g1e_dmem = [] {
+    const char* e = getenv("ROGUESQ_G1E_DMEM");
+    const int on = (e && *e) ? (*e != '0') : 1;
+    fprintf(stderr, "[g1e-dmem] on=%d\n", on);
+    return on;
+}();
+static void rs64_g1e_dmem_tick() {
+    static const double sec = [] { const char* e = getenv("ROGUESQ_G1E_DMEM_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
+    if (sec <= 0.0) return;
+    static const auto t0 = std::chrono::steady_clock::now(); static auto t_flip = t0;
+    const auto now = std::chrono::steady_clock::now();
+    if (std::chrono::duration<double>(now - t_flip).count() < sec) return;
+    t_flip = now; rs64_g1e_dmem = !rs64_g1e_dmem;
+    fprintf(stderr, "[g1e-dmem] on=%d t=%.3f\n", rs64_g1e_dmem, std::chrono::duration<double>(now - t0).count());
+}
 extern "C" void rs64_store_diag_tick(void) {
     rs64_g1e_fast_tick();
+    rs64_g1e_dmem_tick();
     rs64_g1e_probes_tick();
     static const double sec = [] { const char* e = getenv("ROGUESQ_STORE_DIAG_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
     if (sec <= 0.0) return;
