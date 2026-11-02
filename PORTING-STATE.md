@@ -178597,3 +178597,42 @@ doorbells were ever pending together, one consumer could eat the other's message
 entry (same worker stack pointer every time) until the next id reset. Only matters if both screens' workers coexist.
 Discrimination: selects H-safe for every site except the one s6781 fixed; refutes H-live (no other stack completion is
 read after its sender can reuse the frame). No game run this session (offline audit + soak fold).
+
+## Session 6783 (2026-11-01) — G3 front-end: OPTIONS sub-screens + ERASE GAME match retail at the RDP-stream level (6/7 screens exact or within a phase, cross-screen control 0 matches); new pair runner + RDP frame matcher
+
+HYPOTHESIS-ID: g3-frontend-remaining.
+
+Soak fold: none new since s6782 (latest s6781_menufifo_lvl1_dd1, consumed).
+Menu map (port + retail): title START/OPTIONS (down,a) -> OPTIONS = BIOGRAPHIES, ELITE ROGUES, PASSCODES, GAME SETTINGS,
+SOUND SETTINGS, CONTROLLER SETTINGS, BACK; the cursor resets to BIOGRAPHIES on every return. SELECT GAME down,a ->
+ERASE GAME "ARE YOU SURE?" YES/NO (r2 retail went on to YES -> "ARE YOU REALLY SURE?" -> ENTER NAME; mupen eep restored).
+Dead ends first: r1/r2 used ONE run with a fixed retail = port + offset schedule. Both drifted apart: retail's title
+menu turns interactive ~3 s after its first 1024 VI (port ~1 s), and every retail screen load is 2-5 s slower (image
+worker job latency, s6781), so presses landed in different states (r1 retail took START; r2 retail ignored a B during
+the biography text typing, then paged to the next pilot). Not a defect: timing only. Replaced by one short run per
+target screen with >=5 s between presses (tools/g3_menu_pair.sh, retail offset 7.3 s): all 6 targets reached in both
+arms, 0 crash lines.
+Pixel pass (scratch/s6783/fgscore.py, saturated-text mask IoU, P3->sRGB): port-vs-retail 0.53-0.76 vs same-arm noise
+0.76-1.0 and cross-screen mismatch 0.10-0.58. Gap explained, not a defect: (1) the slideshow backdrop (orange flight
+suits pass the mask; retail's photo differs), (2) the selected-row highlight pulses and 1 Hz retail dumps alias to one
+mid-ramp phase (retail read 192/112 steady; port caps alternate 183/65 and 214/166).
+RDP pass (decisive, colour-space and capture-phase free): retail rdplog (RS64_RDP_BIN, cxd4 LLE) vs port
+RS64_RDP_BIN_PORT, same press scripts. tools/g3_rdp_frame_match.py: per frame (FULL_SYNC) multiset of texrect
+(coords + PRIM) and tri (PRIM), each of the last 120 retail frames matched to the closest port frame; control = the same
+retail frames vs another screen's port frames.
+- Highlight pulse (GAME SETTINGS): identical 60-frame triangle wave B94100FE <-> E0AE09FE in both arms, value for value;
+  only difference retail occasionally E1AE09FE at the peak (1 LSB, single-source; likely sin/float rounding).
+- BIOGRAPHIES exact 120/120 (538 items/frame), ERASE GAME 120/120 (191), GAME SETTINGS 119/120 (236), SOUND SETTINGS
+  118/120 (230), PASSCODES 59/112 exact, median 0, max 5 (spinning 3D helmet tri count), CONTROLLER 54/114 exact, median 1,
+  1 retail-only transition tri over all frames (416 vs 415 distinct items). Controls: 0 exact everywhere, median diff
+  300-1051.
+- ELITE ROGUES 1/120 exact, median 24: geometry-only 108/120 exact; the residual is phase between the BACK pulse and the
+  per-row pilot-initial colour flash (all 67 retail flash colours occur in the port; retail entered the screen later).
+OPTIONS top level: visual only (pixel sheets r2, layout/text identical); not RDP-compared.
+Not done from NEXT item 3 (worker overlap): marks 0x800C3B4C/0x800C5880 are not compiled into fixup_rand_trace.py
+(only 0x800B380C/0x800B3FA0/0x800B4004), so it needs a regen; carried as the next unit.
+Owner sheet: screenshots/s6783_options_subscreens_retail_vs_port.png. Tools: tools/g3_menu_pair.sh (from
+scratch/s6783/one.sh), tools/g3_rdp_frame_match.py.
+Discrimination: selects H-match for ELITE ROGUES, PASSCODES, GAME SETTINGS, SOUND SETTINGS, CONTROLLER SETTINGS,
+BIOGRAPHIES and ERASE GAME; refutes H-diff-render (pixel gap fully explained by backdrop + pulse phase, RDP streams
+equal) and H-diff-sim (same per-frame pulse values, same item sets).
