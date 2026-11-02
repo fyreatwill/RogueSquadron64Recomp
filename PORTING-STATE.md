@@ -179267,3 +179267,36 @@ ORIGIN: no mitigation; tool fix + analysis only.
 VERDICT: selects H-match (settled screens and pan); refutes H-diff-static (static sets equal, residual = +-1 tri) and
 H-diff-motion beyond phase (pan curve within 0.028). g3-craftsel-rdp CLOSED. NEXT: C-button LEVEL/CRAFT DESCRIPTION screens
 (never compared), g3-description-rdp.
+
+## Session 6802 (2026-11-02) — G3: LEVEL DESCRIPTION (C-up on SELECT LEVEL) matches retail at RDP level (static 150=150 rects, tris 1.001); SELECT YOUR CRAFT's "PRESS (C) FOR CRAFT DESCRIPTION" is inert in BOTH arms for all four C buttons; port autopilot gained cup/cdown/cleft/cright
+
+HYPOTHESIS-ID: g3-description-rdp (closed).
+
+Soak fold: none new since s6789_spansent_lvl5_dd4 (consumed s6790).
+- BOOT CHECK: the port autopilot (src/main/main.cpp keybtn) knew no C buttons; an unknown name silently became START. Added
+  cup/cdown/cleft/cright (N64_U/D/L/R_CBUTTONS), same names as rs64_oracle --press. One build.
+- Port probe (scratch/s6802/probe): C-up on SELECT LEVEL opens LEVEL DESCRIPTION, an overlay on the same screen (typed green
+  text replaces the hologram top, title and level name stay). B leaves to the title, not back to SELECT LEVEL.
+- Pair run scratch/s6802/pair (g3_menu_pair.sh, lvl1.eep, rdplog W512, PP 17:start,23:start,34:cup,46:cup,52:start,
+  60:start,92:cup,104:cup; every retail [press] sym != 0). Segments identical in shape in both arms:
+  SELECT LEVEL 153 rects -> LEVEL DESCRIPTION 250 -> (2nd C-up closes it) SELECT LEVEL 153 -> AVAILABLE CRAFT 195 -> craft 77.
+  g3_rdp_segcmp, same run:
+    LDESC        static 150/150 eq, tris q50 1124/1124, ratio 1.001
+    SELLVL ctl   static 53/53 eq, ratio 0.997; SELLVL (after close) 53/53 eq, ratio 0.994; AVAIL ctl 92/92 eq, ratio 1.003
+    cross ctl    LDESC vs SELECT LEVEL: static 150 vs 53, median 2531 (retail-only rects = the description glyphs)
+  Frame-pair exact is 0 for LDESC AND for every same-screen control (rotating hologram phase), so it does not discriminate
+  here; static-set equality does. Glyph rects carry per-glyph x extents of a proportional font, so 97 equal glyph rects
+  rule out a different string unless every glyph width matches (text swap would need same-width glyphs at every position).
+  Port window crop shows "TAKE AN EARLY-MORNING RUN OVER MOS EISLEY WITH WEDGE ANTILLES, BUT KEEP YOUR EYES OPEN FOR ANY
+  SUSPICIOUS ACTIVITY." (single-source for the wording; no retail pixel dump in this run, ND=0).
+- CRAFT DESCRIPTION: C-up at craft select (port 92/104, retail 99.5/111.5) changed nothing in either arm (77-rect segment
+  runs to the end). Port probes: cdown/cleft/cright/cup taps (probe2) and 900 ms holds (probe3) -> no change. Pair run
+  scratch/s6802/pair2 (cdown/cleft/cright at port 74/84/94 = retail 81.5/91.5/101.5, sym 14/13/15): retail's 77-rect segment
+  runs 398-1562 unbroken, port's 1871-3537 unbroken. Positive control for the retail C path: the same oracle C-up opened
+  LEVEL DESCRIPTION in run pair. So the craft-description prompt is inert on this lvl1 save in retail too (why: not
+  investigated; could need an unlock/save state). Port = retail.
+ORIGIN: no mitigation; autopilot input names + analysis only.
+VERDICT: selects H-match for LEVEL DESCRIPTION (static sets equal, tris 1.001, cross-screen ctl separates);
+H-diff-text/H-diff-model refuted at RDP level; CRAFT DESCRIPTION = inert in both arms (retail-faithful). g3-description-rdp
+CLOSED. NEXT: level description text on other levels (multi-level save, retail pixel crop), g3-ldesc-levels.
+

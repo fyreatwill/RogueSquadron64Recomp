@@ -10373,6 +10373,11 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                     if (!strcmp(n, "down"))  return N64_D_JPAD;
                     if (!strcmp(n, "left"))  return N64_L_JPAD;
                     if (!strcmp(n, "right")) return N64_R_JPAD;
+                    // s6802: C buttons, same names as rs64_oracle --press (cup cdown cleft cright).
+                    if (!strcmp(n, "cup"))    return N64_U_CBUTTONS;
+                    if (!strcmp(n, "cdown"))  return N64_D_CBUTTONS;
+                    if (!strcmp(n, "cleft"))  return N64_L_CBUTTONS;
+                    if (!strcmp(n, "cright")) return N64_R_CBUTTONS;
                     // s5435: an unknown name used to become START silently (start pauses flight).
                     fprintf(stderr, "[autopilot] WARNING unknown key '%s' -> START\n", n);
                     return N64_START_BUTTON;

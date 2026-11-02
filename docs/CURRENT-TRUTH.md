@@ -334,13 +334,11 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 C-button description screens (NEXT: g3-description-rdp).** PRESS (C) FOR LEVEL DESCRIPTION (SELECT LEVEL) and
-   FOR CRAFT DESCRIPTION (SELECT YOUR CRAFT) have never been compared to retail. s6801 closed craft select: settled X-wing
-   229/240 and A-wing 225/240 exact, static text sets equal, pan matches (rel L1 0.028 vs ctl 0.064), two lines with s6791.
-   Tools: g3_rdp_segments.py (whole-stream segments by texrect count) + g3_rdp_segcmp.py (score any segment pair, so one
-   run carries its own positive and cross-screen controls). g3_menu_pair.sh now maps right/left to dright/dleft (before
-   s6801 a retail `right` was an unknown key, sym=0). Retail reaches craft select ~20 s after the port. s6800: runners
-   boot retail from a private EEPROM copy (--save-dir).
+1. **G3 level descriptions on other levels (NEXT: g3-ldesc-levels).** s6802: LEVEL DESCRIPTION (C-up on SELECT LEVEL) for
+   lvl1 matches retail (static 150=150 rects, tris 1.001; controls SELECT LEVEL 53=53, AVAILABLE CRAFT 92=92; cross ctl
+   150 vs 53). CRAFT DESCRIPTION prompt inert in BOTH arms for all four C buttons (retail C path positive-controlled same
+   run). Port autopilot now takes cup/cdown/cleft/cright. Remaining hole: other levels' text + one retail pixel crop
+   (equal-width glyph swaps are invisible to the RDP signature). Tools: g3_menu_pair.sh, g3_rdp_segments.py, g3_rdp_segcmp.py.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
