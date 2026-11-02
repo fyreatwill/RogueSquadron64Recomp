@@ -178795,3 +178795,7 @@ either arm).
 Not covered: the remaining cutscenes of the playlist (ran ~90 s of it) and the audio content of each track (G2 closed).
 Next: the AT THE MOVIES playlist as a G3 cinematic sweep (later/ending cutscenes are unreachable any other way without
 winning missions).
+Discrimination: selects H-match for AT THE MOVIES (DIRECTOR-gated in both arms) and for Concert Hall track changes;
+refutes H-diff (port-only AT THE MOVIES failure) and H-race (song-worker request per track change: 0 in both arms).
+Next discriminator: per-cutscene alignment over the whole AT THE MOVIES playlist (H-match vs H-diff vs H-crash/stall in a
+later cutscene), scratch/agent/NEXT.md.
