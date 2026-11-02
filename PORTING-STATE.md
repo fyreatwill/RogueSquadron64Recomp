@@ -178756,3 +178756,7 @@ RDP (rdplog vs RS64_RDP_BIN_PORT):
 Verdict: H-match for SHOWROOM and CONCERT HALL at RDP level (texrect sets identical; 3D gap = RNG ship/pose, retail
 behaviour). Front-end now fully driven except SHOWROOM > AT THE MOVIES and Concert Hall track changes (next unit).
 Rules out: H-diff (missing/extra items) on screen 10; H-overlap of the song and image workers at runtime.
+Discrimination: selects H-match (texrect sets) and H-rng (ship/pose from rand, predicted per arm from the seeds) for
+screen 10; refutes H-diff-render and, at runtime in both arms, H-overlap (closes the s6784 single-source residual). Next
+discriminator: Concert Hall track changes (one song request per change in both arms vs a second request overtaking the
+port's same-tick completion) and AT THE MOVIES (scratch/agent/NEXT.md).
