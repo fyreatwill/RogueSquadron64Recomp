@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6765 (2026-11-01).
+Compact operational handoff, as of Session 6766 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -22,6 +22,10 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   65536 everywhere (=16384 restores). Earlier per-level G3 checks that saw no cap fire are unaffected. s6763: the
   second lvl9 port HUD-off window (t2050-2208) persists with 0 cap fires and retail hides the HUD on 16/16 dumps inside
   it (player death camera): retail behaviour, not a defect.
+- **G3 mission 13 (s6766):** sim identical for the whole 4417-tick retail trace (60110 rand calls, 104266 NPC rows, 0
+  point/obj/tick_mem diffs); songs 1/2 switch on the same ticks in both arms (game events), no split. Render: in-trace
+  dumps d 4.6-5.6 (8.0 once), three torn retail dumps d 15-24. Port HUD-off t4308-4415 = letterboxed in-mission
+  cutscene from the song-3 switch t4305. Control: a 1-bit rand flip is flagged. 0 cap fires, 0 crash lines.
 - **G3 mission 12 (s6765, Escape from Fest, +0x31=11, no unlock flag):** sim identical 1006 ticks (3978 rand calls,
   0 NPC point/obj diffs, 0 tick_mem diffs, only allowed pacing words); split t1007 = song-1 end on the audio clock
   (retail 165 ticks/334 VI/640 buffers, port 167/334/637); after it the same rand values run 2 ticks late. Render:

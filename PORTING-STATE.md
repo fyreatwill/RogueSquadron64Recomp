@@ -178013,3 +178013,33 @@ Discrimination: selects "sim identical to the audio-clocked split" (refutes a ne
 match (refutes a port-only render/HUD defect before the split).
 Rules out: a port sim defect on lvl12 before song-1 ends; a port-only render/HUD drop on lvl12 before the split.
 Next: g3-mission13-pinned (eep +0x31=12).
+
+## Session 6766 (2026-11-01) — G3: mission 13 with dt pinned: sim identical to retail for the whole 4417-tick retail trace (60110 rand calls), no split; render and HUD match
+
+What ran (scratch/s6766; s6765 recipes via sed, lvl13.eep = s6765 lvl12.eep +0x31=12, no unlock flag needed; port
+captures show a new level: green hills, pylons, then a city with towers): retail SECS=360 NDUMP=24 DSTEP=10 concurrently
+with port SECS=330. Port: 852 captures, 0 `[ucode-cap] fired`, 0 crash/abort lines. The retail exec trace hit its 400000
+cap at tick 4417 (retail VI 17415); 24 retail dumps landed.
+Results:
+- g3_rand_ticks.py: retail 60110 calls (4417 ticks) vs port 82236; first mismatch: None over all 60110.
+- g3_song_windows.py: song 01 t4-t1691 and song 02 t1691-t4305 in BOTH arms (same ticks; retail 4391/6084 VI, port
+  3375/5232 VI), so on this level the songs switch on game events, not on the audio clock. No split inside the trace.
+- g3_frame_snap.py (4417 ticks): 104266 NPC rows, 0 point diffs, 0 obj diffs. Snap diffs only words 2-6/9; glob diffs
+  only 7/8/18/20-31 (allowed pacing). "port only" rows: 46 at t4416 (the retail trace ends mid-tick) and 1 at t2287
+  (NPC 803718d0): the retail row at oracle.log:200511 is cut by a `[vi-poll]` splice (the only splice in the log); the
+  same NPC matches on the next tick.
+- g3_tick_mem.py (G3_IGN=04,0c,18) 8010c9e0 8010c0e0: first arm diff None.
+- g3_oracle_match.py: 15 in-trace dumps d 4.56-5.56 (vi 15209 t3458 d 8.0). Outliers vi 9864 (t1206, d 23.9),
+  14009 (t3014, 16.5), 14609 (t3236, 15.4): retail dumps torn mid-raster (sky/fog cleared, terrain half drawn), seen in
+  the pair images. Dumps past t4416 (vi 17604-19958) have no sim trace; vi 19365 d 45 shows retail among towers vs port
+  in the open, which is unverifiable after the trace ends.
+- g3_hud_presence.py: retail HUD on 17/18 in-range dumps (the off one is the torn vi 9864), port 458/471 captures. Port
+  HUD-off t4308-4415 = a letterboxed in-mission cutscene (TIE bombers over the city, scratch/s6766/port_hudoff_sheet.png)
+  that starts at the song-3 switch t4305; retail has the same switch on the same tick and no dump inside it.
+Positive control (same run): a 1-bit flip of one mid-stream port rand value (/tmp copy) makes g3_rand_ticks report the
+first mismatch at index 23378 (t1724), so the full-trace None is not a dead comparator; frame_snap flagged the spliced row.
+Two lines: (1) rand stream + NPC snapshots + tick_mem identical through t4416; (2) frame match + HUD presence agree.
+Discrimination: selects "sim identical, no split" (refutes a port sim defect on lvl13 within 4417 ticks) and render match
+(refutes a port-only render/HUD defect in that span).
+Next: g3-mission14-pinned (eep +0x31=13). The 400000 exec-trace cap now binds before the level ends; raise it only if a
+later level needs a longer window.
