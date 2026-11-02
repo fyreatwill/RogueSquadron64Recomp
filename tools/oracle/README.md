@@ -261,3 +261,12 @@ the `--debug-write` poke on (from boot without one), past `--hit-cap`; `--exec-t
 probe PCs to the same row stream. The port mirrors it with `ROGUESQ_RAND_TRACE=<file>` (rand 0x80003430 call sites via
 tools/fixup_rand_trace.py, plus the advanceNpcOnCurvedPath probes 0x8006BEC8/$a3 and 0x8006C018/$v0); align the two
 with `tools/g3_rand_align.py RETAIL_LOG PORT_TXT` (s6751).
+
+## Saves (`--save-dir`, s6800)
+
+`--save-dir DIR` sets the Core `SaveSRAMPath`, so the game reads and writes
+`DIR/Star Wars - Rogue Squadron (U) (-47CAC4E2.eep` (512 B, 4 Kbit EEPROM).
+Put a copy of the save you want there; never point it at, or copy over, the
+user-wide `~/Library/Application Support/Mupen64Plus/save/` file. An empty
+dir boots a fresh save (the game formats it on boot). The tools/ pair runners
+use `<run>/retail/savedir`.

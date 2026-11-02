@@ -40,14 +40,12 @@ C=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/project
 R=/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64
 RSP=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix/mupen64plus-rsp-cxd4.dylib
 V=/Users/williambuckley/Documents/Tools/g3_angrylion/build/mupen64plus-video-angrylion-plus.dylib
-E="$HOME/Library/Application Support/Mupen64Plus/save/Star Wars - Rogue Squadron (U) (-47CAC4E2.eep"
 D=$S/retail; mkdir -p $D
-cp -p "$E" $D/mupen_eep_backup.eep || exit 3
-trap 'cp -p $D/mupen_eep_backup.eep "$E" && echo eep-restored' EXIT INT TERM
 A=(); for i in $(seq 0 $((${NDUMP:-24}-1))); do A+=(--fb-dump 512:$((${DSTEP:-10}*i)):600000:200000:$D/b$(printf %03d $i).bin); done
-cp $EEP "$E" || exit 3
+# s6800: private Core SaveSRAMPath (--save-dir); the user-wide mupen save is never touched
+mkdir -p $D; SD=$(cd $D && pwd)/savedir; mkdir -p $SD; cp $EEP "$SD/Star Wars - Rogue Squadron (U) (-47CAC4E2.eep" || exit 3
 RSECS=${RSECS:-360}
-env RS64_XTRACE_MEM=$M RS64_XTRACE_POKE=$PIN tools/oracle/build/rs64_oracle --core $C --rom $R --secs $RSECS \
+env RS64_XTRACE_MEM=$M RS64_XTRACE_POKE=$PIN tools/oracle/build/rs64_oracle --save-dir $SD --core $C --rom $R --secs $RSECS \
   --fb-arm-after ${FARM:-103} --vi-poll --vi-trace --rsp $RSP --video $V \
   --press ${PRESS:-6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start,61:start} \
   --hit-cap 2000 --watch-write 0x3FFFF0:0x3FFFF4 --exec-trace 0x80003430:400000:3470 --exec-trace-also 0x8006BEC8 \

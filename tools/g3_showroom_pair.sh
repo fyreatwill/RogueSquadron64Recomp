@@ -27,15 +27,13 @@ C=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/project
 R=/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64
 RSP=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix/mupen64plus-rsp-cxd4.dylib
 V=tools/oracle/rdplog/rdplog.dylib
-E="$HOME/Library/Application Support/Mupen64Plus/save/Star Wars - Rogue Squadron (U) (-47CAC4E2.eep"
 D=$S/retail
-cp -p "$E" $D/mupen_eep_backup.eep || exit 3
-trap 'cp -p $D/mupen_eep_backup.eep "$E" && echo eep-restored' EXIT INT TERM
-cp scratch/s6779/r1/lvl1.eep "$E" || exit 3
+# s6800: private Core SaveSRAMPath (--save-dir); the user-wide mupen save is never touched
+mkdir -p $D; SD=$(cd $D && pwd)/savedir; mkdir -p $SD; cp scratch/s6779/r1/lvl1.eep "$SD/Star Wars - Rogue Squadron (U) (-47CAC4E2.eep" || exit 3
 echo "retail press: 6:start,11:start,16:start,$RP" > $S/press.txt; echo "port AP: 6:start,11:start,13:w1024,$PP" >> $S/press.txt
 RBWE=(RS64_RDP_BIN_WIDTH=${RBW:-1024}); [ "${RBW:-}" = all ] && RBWE=()
 env RS64_XTRACE_MEM=$SPEC RS64_RDP_BIN=$PWD/$S/retail.bin $RBWE RS64_RDP_LOG=/dev/null RS64_RDP_BIN_MAX_MB=${RMAX_MB:-2048} \
-  tools/oracle/build/rs64_oracle --core $C --rom $R --secs $RSECS --vi-poll --vi-trace --rsp $RSP --video $V \
+  tools/oracle/build/rs64_oracle --save-dir $SD --core $C --rom $R --secs $RSECS --vi-poll --vi-trace --rsp $RSP --video $V \
   ${=RANDX:---exec-trace 0x800C3B38} --exec-trace-also 0x800C3B38 --exec-trace-also 0x800C5880 --exec-trace-also 0x800C3B4C --exec-trace-also 0x800C3B54 \
   --exec-trace-also 0x800B380C --exec-trace-also 0x800B3FA0 --exec-trace-also 0x800B4004 \
   --press 6:start,11:start,16:start,$RP > $D/oracle.log 2>&1 &

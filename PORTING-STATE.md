@@ -179200,3 +179200,32 @@ frame distance for lvl3+ against the same-run cross-time control (tools/g3_oracl
 Rules out: a ucode/clip bug or RT64 rasteriser defect as the source of the lvl1 thin lines.
 Next: G3 in-flight retail match beyond lvl1/lvl2 (lvl3+): get the oracle into a later mission (owner EEPROM save in the
 mupen save dir, or a savestate), then tools/g3_oracle_match.py against port caps.
+
+## Session 6800 (2026-11-02) — oracle --save-dir: retail arms boot from a private EEPROM copy instead of clobbering the user-wide mupen save; s6799's "lvl3+ in-flight retail match" NEXT was stale (sweep 1-19 already complete)
+
+HYPOTHESIS-ID: g3-flight-lvl3plus (closed as stale) -> g3-craftsel-rdp.
+Planned unit (NEXT.md s6799): get the oracle into a later mission via the owner EEPROM, then match lvl3+ flight.
+Boring-first check: CURRENT-TRUTH's own G3 section already records the per-mission sim+render sweep 1-19 COMPLETE
+(s6753-s6777, tools/g3_mission/run.sh, which already reaches every mission by patching +0x31 into a signed save). The
+"matched so far: lvl1, lvl2" Next-steps line was a leftover from s6748. No flight rerun needed.
+Real defect found on the way: every retail pair runner (g3_mission/run.sh, g3_menu_pair.sh, g3f_retail_pan.sh,
+g3_showroom_pair.sh, g3_frontend/run.sh, g3_frontend/selgame_rand.sh, g3_seam/retail_seam.zsh) copied its test save
+OVER the user-wide `~/Library/Application Support/Mupen64Plus/save/<goodname>.eep` and restored it from an EXIT trap.
+A SIGKILL of the runner (the loop's 600 s soak cap kills the process group with SIGKILL) skips the trap and leaves the
+user's save replaced; two runners would also race on one file.
+Change: tools/oracle/rs64_oracle.c `--save-dir DIR` -> Core SaveSRAMPath (core main.c get_savepathdefault appends the
+separator; get_eeprom_path -> DIR/<goodname>.eep). All 7 runners now write `<run>/retail/savedir/<goodname>.eep` and pass
+`--save-dir`; the backup/trap/overwrite lines are gone. README section "Saves".
+Controls (scratch/s6800, savedir_ctl.sh, 45 s boots, same binary):
+- empty dir -> the game formatted a fresh 512 B save in that dir (GSYS/GAME headers, progress bytes 0) = the core
+  reads AND writes the chosen dir;
+- owner save (scratch/s6744/port1/owner_save_backup.bin) -> file byte-identical after boot = valid save read, not
+  reformatted (the discriminating pair: blank -> formatted, valid -> untouched);
+- user-wide save sha1 identical before/after all three runs;
+- replay of the s6780 a1 retail arm (same flags, presses 6/11/16/21/31 start) via --save-dir: 1774 vs 1773 rand calls,
+  identical caller multiset (800b4cc8 title 1770/1769, one each of 800b4900, 800b527c SELECT GAME backdrop, 800b59a4,
+  800c4e14 craft preview); only shift = 3 VIs earlier start and one title rand reordered around the press (wall-clock
+  press jitter, the known s6780 press-time dependence). Same menu path as the old clobber route.
+(The --fb-dump in savedir_ctl.sh never fired: width 512 is not on screen at 30 s; the save-file outcome was the control.)
+Rules out: nothing about rendering. Closes the stale lvl3+ item.
+Next: SELECT YOUR CRAFT screen at native 4:3 vs retail at RDP level (s6785 matched SELECT LEVEL only).

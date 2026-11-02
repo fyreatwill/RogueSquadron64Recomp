@@ -14,14 +14,12 @@ C=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/project
 R=/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64
 RSP=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix/mupen64plus-rsp-cxd4.dylib
 V=${VIDEO:-/Users/williambuckley/Documents/Tools/g3_angrylion/build/mupen64plus-video-angrylion-plus.dylib}
-E="$HOME/Library/Application Support/Mupen64Plus/save/Star Wars - Rogue Squadron (U) (-47CAC4E2.eep"
 D=$S/retail; mkdir -p $D
-cp -p "$E" $D/mupen_eep_backup.eep || exit 3
-trap 'cp -p $D/mupen_eep_backup.eep "$E" && echo eep-restored' EXIT INT TERM
 A=(); for i in $(seq 0 ${ND:-50}); do A+=(--fb-dump 1024:$i:600000:200000:$D/t$(printf %03d $i).bin); done
-cp scratch/s6779/r1/lvl1.eep "$E" || exit 3
+# s6800: private Core SaveSRAMPath (--save-dir); the user-wide mupen save is never touched
+mkdir -p $D; SD=$(cd $D && pwd)/savedir; mkdir -p $SD; cp scratch/s6779/r1/lvl1.eep "$SD/Star Wars - Rogue Squadron (U) (-47CAC4E2.eep" || exit 3
 echo "retail press: 6:start,11:start,16:start,$RP" > $S/press.txt; echo "port AP: 6:start,11:start,13:w1024,$PP" >> $S/press.txt
-env ${=RENV:-} tools/oracle/build/rs64_oracle --core $C --rom $R --secs ${RSECS:-66} --vi-poll --vi-trace --rsp $RSP --video $V \
+env ${=RENV:-} tools/oracle/build/rs64_oracle --save-dir $SD --core $C --rom $R --secs ${RSECS:-66} --vi-poll --vi-trace --rsp $RSP --video $V \
   --press 6:start,11:start,16:start,$RP $A > $D/oracle.log 2>&1 &
 RPID=$!
 env SAVE_FROM=scratch/s6779/r1/lvl1.eep SECS=${PSECS:-60} CAP0=12 AP=6:start,11:start,13:w1024,$PP XE="${XE:-}" \

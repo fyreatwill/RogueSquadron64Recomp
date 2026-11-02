@@ -3644,6 +3644,9 @@ static void *vi_poller(void *arg)
 static double g_shot[64];
 static int g_nshot;
 static const char *g_shot_dir;
+/* --save-dir DIR: Core SaveSRAMPath, so the run boots from a chosen EEPROM
+ * image (DIR/<goodname>.eep) instead of the user-wide mupen save dir (s6800). */
+static const char *g_save_dir;
 
 static void *shooter(void *arg)
 {
@@ -3867,6 +3870,7 @@ static void usage(void)
         "  --debug-write VADDR:VALUE[:WIDTH[:ARM_S]]  write one 32-bit word on the first VI at WIDTH (default 320)\n"
         "                             at or after ARM_S seconds\n"
         "  --state-path PATH     savestate path used by ORACLE_STATE_SMOKE/REACH=1\n"
+        "  --save-dir DIR        Core SaveSRAMPath (EEPROM image DIR/<goodname>.eep; default user save dir)\n"
         "  --verbose             pass through core info messages\n"
         "\n"
         "Watch addresses are PHYSICAL and are masked with 0x1FFFFFFF on input,\n"
@@ -4094,6 +4098,7 @@ int main(int argc, char **argv)
             }
         }
         else if (!strcmp(argv[i], "--shot-dir") && i + 1 < argc)   g_shot_dir = argv[++i];
+        else if (!strcmp(argv[i], "--save-dir") && i + 1 < argc)   g_save_dir = argv[++i];
         else if (!strcmp(argv[i], "--shot") && i + 1 < argc) {
             char *spec = argv[++i], *tok, *save = NULL;
             for (tok = strtok_r(spec, ",", &save); tok && g_nshot < 64; tok = strtok_r(NULL, ",", &save))
@@ -4199,6 +4204,8 @@ int main(int argc, char **argv)
             pConfigSetParameter(core_section, "R4300Emulator", M64TYPE_INT, &interp);
             if (g_shot_dir)
                 pConfigSetParameter(core_section, "ScreenshotPath", M64TYPE_STRING, g_shot_dir);
+            if (g_save_dir)
+                pConfigSetParameter(core_section, "SaveSRAMPath", M64TYPE_STRING, g_save_dir);
         } else {
             fprintf(stderr, "[oracle] WARNING: cannot open Core config section; "
                             "debugger will not activate\n");

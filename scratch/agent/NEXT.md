@@ -1,21 +1,15 @@
-# NEXT: G3 in-flight retail match for a mission beyond lvl1/lvl2
-HYPOTHESIS-ID: g3-flight-lvl3plus
+# NEXT: G3 SELECT YOUR CRAFT (hangar craft-select) retail match at RDP level, native 4:3
+HYPOTHESIS-ID: g3-craftsel-rdp
 
-State: s6799 closed g3-flight-thinline (lvl1 thin lines = retail-faithful far-terrain slivers at the horizon; retail
-stream carries them, angrylion draws the port's exact edge words as lines). Retail-vs-port in-flight matches exist for
-lvl1 and lvl2 only (s6744-s6748, tools/g3_oracle_match.py).
+State: s6785 matched ENTER NAME and the native 4:3 hangar SELECT LEVEL at RDP level (tools/g3_menu_pair.sh +
+tools/g3_rdp_frame_match.py / the phase-free compare tool for animated screens). s6791 closed the craft-select camera
+"fish-eye" as retail camera motion (camera words only). The craft-select screen's RDP stream (craft model, hangar
+backdrop, text, cursor) has never been compared. s6800: runners use --save-dir (private EEPROM copy); no user-wide save edit.
 
-Step 1 (boring first): get the retail oracle into a later mission without playing it.
-- The owner save is a 512-byte EEPROM image (scratch/s6744/port1/owner_save_backup.bin; 4 Kbit EEPROM). rs64_oracle
-  starts the core with configdir/datadir (tools/oracle/rs64_oracle.c:3883-3901, 4183); mupen writes saves under the
-  Core section's SaveSRAMPath (read it at :4197). Put the owner save there as `<ROM goodname>.eep` (mupen pads to 2 KB
-  for 16K; 4K EEPROM = 512 B), boot the oracle, and check the SELECT LEVEL screen shows the unlocked missions
-  (fb-dump with angrylion as in scratch/s6744/retail_flight.sh). Positive control: the same boot without the .eep must
-  show only mission 1.
-- Then a press schedule to a mission the owner save has unlocked (lvl3 or later), fb-dumps every 0.5 s in flight.
-Step 2: port arm with the same level via the forced route (ROGUESQ_FORCE_SAVE_MISSION=N ROGUESQ_FORCE_UNLOCK=N
-ROGUESQ_NO_SAVE_WRITE=1, menus.sh pattern), window caps; run tools/g3_oracle_match.py (Display-P3 -> sRGB, --dec shift).
-Outcomes: H-match (port frame distances within the same-run cross-time control) -> lvl N matched; port-only element ->
-name it with tools/g3_sliver_scan.py / g3_rdp_frame_match.py on RDP dumps of both arms.
-If the .eep route fails (core ignores it): use --state save/load (rs64_oracle.c:3670) only if a state can be made;
-otherwise report what blocked it and take the next G3 item.
+Hypotheses: H-match (per-frame texrect/tri multisets within the same-run cross-screen control once the camera settles);
+H-diff-static (a port-only/retail-only texrect or tri group on the settled screen -> name it by PRIM/coords);
+H-diff-motion (differences only during the pan = camera phase, as s6791).
+Discriminator: tools/g3_menu_pair.sh with VIDEO=rdplog RENV/XE RDP bins (see s6785 entry for the exact env), schedule
+from s6785's SELECT LEVEL recipe plus one more Start to reach craft select (retail ~64 s, port ~42 s as s6772), settle
+>=5 s, then one d-pad RIGHT pan and settle again. Score settled frames and pan frames separately; positive control =
+SELECT LEVEL frames from the same run must match (s6785), cross-screen control (SELECT LEVEL vs craft-select) 0 matches.

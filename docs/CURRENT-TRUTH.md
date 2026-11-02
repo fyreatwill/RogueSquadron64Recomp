@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6797 (2026-11-02).
+Compact operational handoff, as of Session 6800 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -334,13 +334,12 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 in-flight retail match for lvl3+ (NEXT: g3-flight-lvl3plus).** Matched so far: lvl1, lvl2 (s6744-s6748). Get the
-   oracle into a later mission (owner EEPROM save in the mupen save dir, or a savestate), then tools/g3_oracle_match.py.
-   s6799 CLOSED the lvl1 thin flight lines as retail-faithful: chains of far-terrain slivers at the horizon (th 0.2-1 px,
-   vertices sane, no wedge); retail stream has the class in 64% of flight frames (38/frame, same combiners) and
-   angrylion draws the port's exact edge words as dotted lines (overlap 0.42 vs shifted ctl 0.00). Opt-in thin cull
-   only on owner request (slivers also fill terrain cell joins). Tools: g3_sliver_scan.py, g3_line_match.py,
-   angrylion_replay/flat_cvg.c.
+1. **G3 craft-select (SELECT YOUR CRAFT) retail match at RDP level (NEXT: g3-craftsel-rdp).** The s6799 NEXT
+   "lvl3+ in-flight match" was stale: the per-mission sim+render sweep 1-19 is COMPLETE (s6753-s6777, tools/g3_mission/).
+   s6800 oracle `--save-dir DIR` (Core SaveSRAMPath): every tools/ pair runner now boots retail from a private copy of the
+   EEPROM in <run>/retail/savedir instead of overwriting and trap-restoring the user-wide mupen save (a SIGKILLed runner
+   used to leave it clobbered). Controls: empty dir -> game formats a fresh save there; owner save -> file untouched;
+   user-wide save sha unchanged; s6780 a1 retail replay via --save-dir = same rand caller path (3-VI press jitter).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
