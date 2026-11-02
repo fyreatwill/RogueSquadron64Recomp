@@ -10235,83 +10235,41 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         if (controller && SDL_GameControllerGetButton(controller, sdl)) btn |= mask;
     };
 
-    // Owner 2026-11-02 PS4 layout, against the game's default LUKE control profile
-    // (ROM table 0x8009DDD0: 4 profiles x 18 actions; B = lasers and R = camera owner-
-    // confirmed, A = secondary is LUKE's paired fire slot, C-Up/C-Down = throttle):
-    //   Cross (SDL A)    → B   primary weapon (lasers)
-    //   Square (SDL X)   → A   secondary weapon
-    //   Triangle (SDL Y) → R   camera angles
-    //   R2               → C-Up   boost
-    //   L2               → C-Down brake
-    //   L1 → L, R1 → Z, Circle → C-Left, right stick → C buttons, d-pad, start.
-    gamepad_button(N64_B_BUTTON,     SDL_CONTROLLER_BUTTON_A);
-    gamepad_button(N64_A_BUTTON,     SDL_CONTROLLER_BUTTON_X);
-    gamepad_button(N64_R_TRIG,       SDL_CONTROLLER_BUTTON_Y);
+    // Rogue Squadron N64 → modern gamepad mapping:
+    //   A (fire)        → face A
+    //   B (bombs)       → face X
+    //   Z (brake)       → left trigger (digital, via axis threshold below)
+    //   R (boost)       → right shoulder
+    //   L (targeting)   → left shoulder
+    //   C-Up (view)     → right stick up (handled via axis) — face Y as fallback
+    //   C-Down          → face B
+    //   C-Left          → right stick left (axis) — d-left as fallback
+    //   C-Right         → right stick right (axis) — d-right as fallback
+    //   D-Pad           → d-pad
+    //   Start           → start
+    gamepad_button(N64_A_BUTTON,     SDL_CONTROLLER_BUTTON_A);
+    gamepad_button(N64_B_BUTTON,     SDL_CONTROLLER_BUTTON_X);
     gamepad_button(N64_START_BUTTON, SDL_CONTROLLER_BUTTON_START);
     gamepad_button(N64_U_JPAD,       SDL_CONTROLLER_BUTTON_DPAD_UP);
     gamepad_button(N64_D_JPAD,       SDL_CONTROLLER_BUTTON_DPAD_DOWN);
     gamepad_button(N64_L_JPAD,       SDL_CONTROLLER_BUTTON_DPAD_LEFT);
     gamepad_button(N64_R_JPAD,       SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
-    gamepad_button(N64_L_TRIG,       SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
-    gamepad_button(N64_Z_TRIG,       SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
-    gamepad_button(N64_L_CBUTTONS,   SDL_CONTROLLER_BUTTON_B);
-    if (controller) {
-        auto axis = [&](SDL_GameControllerAxis a) { return SDL_GameControllerGetAxis(controller, a); };
-        if (axis(SDL_CONTROLLER_AXIS_TRIGGERRIGHT) > 8000) btn |= N64_U_CBUTTONS;  // boost
-        if (axis(SDL_CONTROLLER_AXIS_TRIGGERLEFT)  > 8000) btn |= N64_D_CBUTTONS;  // brake
-        const int16_t rx = axis(SDL_CONTROLLER_AXIS_RIGHTX), ry = axis(SDL_CONTROLLER_AXIS_RIGHTY);
-        if (ry < -16000) btn |= N64_U_CBUTTONS;
-        if (ry >  16000) btn |= N64_D_CBUTTONS;
-        if (rx < -16000) btn |= N64_L_CBUTTONS;
-        if (rx >  16000) btn |= N64_R_CBUTTONS;
+    gamepad_button(N64_L_TRIG,       SDL_CONTROLLER_BUTTON_LEFTSHOULDER);   // targeting computer
+    gamepad_button(N64_R_TRIG,       SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);  // boost/accelerate
+    gamepad_button(N64_U_CBUTTONS,   SDL_CONTROLLER_BUTTON_Y);
+    gamepad_button(N64_D_CBUTTONS,   SDL_CONTROLLER_BUTTON_B);
+    gamepad_button(N64_L_CBUTTONS,   SDL_CONTROLLER_BUTTON_BACK);
+    gamepad_button(N64_R_CBUTTONS,   SDL_CONTROLLER_BUTTON_GUIDE);
+    // Z trigger (brake) from left analog trigger axis
+    if (controller && SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERLEFT) > 16000) {
+        btn |= N64_Z_TRIG;
     }
 
     if (controller) {
         const int16_t ax = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTX);
         const int16_t ay = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTY);
-        // Owner 2026-11-02: stick shaping ported from libultraship ControllerStick::Process
-        // with the owner's Starship (Star Fox) left-stick settings: deadzone 10%,
-        // sensitivity 104%, notch snap 45 deg. Range is the real-N64 +-85 (octagon gate,
-        // diagonals ~69), not the old +-127 (ultramodern maps 1.0 -> 127, so a full tilt
-        // used to read ~1.5x a real stick). ROGUESQ_STICK_DEADZONE / _SENSITIVITY (percent)
-        // and ROGUESQ_STICK_NOTCH (degrees, 0 = off) override; ROGUESQ_STICK_RAW=1 = old.
-        static const bool raw = [] { const char *e = std::getenv("ROGUESQ_STICK_RAW"); return e && *e == '1'; }();
-        auto envnum = [](const char *k, double d) { const char *e = std::getenv(k); return (e && *e) ? std::atof(e) : d; };
-        static const double kMax = 85.0;
-        static const double dead = kMax * envnum("ROGUESQ_STICK_DEADZONE", 10) / 100.0;
-        static const double sens = envnum("ROGUESQ_STICK_SENSITIVITY", 104) / 100.0;
-        static const double notch = envnum("ROGUESQ_STICK_NOTCH", 45) * (2 * M_PI) / 360.0;
-        if (raw) {
-            stick_x = ax / 32767.0f;
-            stick_y = -(ay / 32767.0f); // N64 Y is inverted vs SDL
-        } else {
-            const double sx = std::max(-1.0, ax / 32767.0) * kMax;
-            const double sy = -std::max(-1.0, ay / 32767.0) * kMax; // N64 Y is inverted vs SDL
-            double ux = std::fabs(sx) * sens, uy = std::fabs(sy) * sens;
-            double len = std::sqrt(ux * ux + uy * uy);
-            if (len < dead) len = 0;
-            else if (len > kMax) len = kMax / len;
-            else len = (len - dead) * kMax / (kMax - dead) / len;
-            ux *= len; uy *= len;
-            if (ux != 0.0 && uy != 0.0) { // bound diagonals to the N64 octagon
-                const double slope = uy / ux;
-                double ex = std::copysign(kMax / (std::fabs(slope) + 16.0 / 69.0), ux);
-                const double ey = std::copysign(std::min(std::fabs(ex * slope), kMax / (1.0 / std::fabs(slope) + 16.0 / 69.0)), uy);
-                ex = ey / slope;
-                const double scale = std::sqrt(ex * ex + ey * ey) / kMax;
-                ux *= scale; uy *= scale;
-            }
-            const double dist = std::sqrt(ux * ux + uy * uy) / kMax;
-            if (dist >= 0.9) { // snap near-edge angles to the 8 notches
-                const double oct = 2 * M_PI / 8, ang = std::atan2(uy, ux) + 2 * M_PI;
-                const double near = std::round(ang / oct) * oct;
-                const double off = std::fabs(std::fmod(near - ang + M_PI, 2 * M_PI) - M_PI);
-                const double a = off < notch / 2 ? near : ang;
-                ux = std::cos(a) * dist * kMax; uy = std::sin(a) * dist * kMax;
-            }
-            stick_x = (float)(std::copysign(ux, sx) / 127.0);
-            stick_y = (float)(std::copysign(uy, sy) / 127.0);
-        }
+        stick_x = ax / 32767.0f;
+        stick_y = -(ay / 32767.0f); // N64 Y is inverted vs SDL
     }
 
     // Keyboard fallback. SDL scancodes use physical keys, so these bindings

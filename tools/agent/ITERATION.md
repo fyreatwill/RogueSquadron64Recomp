@@ -212,6 +212,10 @@ When choosing the work unit, this order overrides Next-steps ordering:
      frames whose terrain pixel fraction collapses vs neighbours (phase-gated, same-run control).
      If ASYNC/NODRAIN is the cause, fix it or demote them from OWNER-OPT-INS until fixed. Close
      with a per-arm dropout count over >=120 s of flight.
+     UPDATE owner 2026-11-02 (second run): drops are still frequent with ONLY `ROGUESQ_FPS60=1
+     ROGUESQ_DRAW_DISTANCE=4` (no ASYNC/NODRAIN) -> those two are refuted as the sole cause.
+     Next arms: FPS60 off at dd4, and dd1 with FPS60, to split H-dd (far terrain window / ucode
+     cap / buffer limits at dd4) from H-fps60 (terrain stream or LOD state stepped at 60 Hz).
    - G3d **Turning shake follow-up (owner 2026-10-31): after G1f.** G3c(c) was closed as
      retail judder, but its own data contradicts that reading: s6458 VI stamps arrive in
      bursts (3-4 VIs within 0.1 ms, then ~66 ms gaps) and lvl1 ran ~18 gfx tasks/s, not
