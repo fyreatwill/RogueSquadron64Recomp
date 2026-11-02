@@ -177911,6 +177911,8 @@ truncation, not guarding a bad value.
 Two lines: census (HUD built + absent from RDP + cap fires) and the cap A/B captures, plus retail dense dumps.
 Positive control: the census shows ~5 right-side texrects per frame outside the gap in the same run (instrument sees
 HUD texrects), and the s6761 lvl7/lvl8 HUD-off windows stay matched to retail (0 cap fires there).
-Rules out: H-gate (game skips the HUD), H-rt64 (present path), H-retail-sample. Supersedes "16384 = retail behaviour"
+Discrimination: selects H-gfx (narrowed to H-ucode-cap: our LLE ucode iteration cap drops the DL tail); refutes H-gate
+(game skips the HUD), H-rt64 (present path) and H-retail-sample. Next discriminator: mission 10 sim/render match.
+Rules out: H-gate, H-rt64, H-retail-sample. Supersedes "16384 = retail behaviour"
 (s6070/s6403). Not checked: the s6761 second gap (ticks 2054-2208); the cap fire count fits it too (single-source).
 Next: resume G3 dt-pinned sim match, mission 10 (eep +0x31=9); re-run g3_hud_presence on lvl9 t2054-2208 in that pass.
