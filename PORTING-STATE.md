@@ -178043,3 +178043,33 @@ Discrimination: selects "sim identical, no split" (refutes a port sim defect on 
 (refutes a port-only render/HUD defect in that span).
 Next: g3-mission14-pinned (eep +0x31=13). The 400000 exec-trace cap now binds before the level ends; raise it only if a
 later level needs a longer window.
+
+## Session 6767 (2026-11-01) — G3: mission 14 (lava planet) with dt pinned: sim identical to retail for 2875 ticks, split = song-1 end on the audio clock, render and HUD match
+
+What ran (scratch/s6767; s6766 recipes via sed, lvl14.eep = s6766 lvl13.eep +0x31=13, no unlock flag needed; port
+captures show a new level: dark lava planet, Y-wing, blue planet limb in the sky): retail SECS=360 NDUMP=24 DSTEP=10
+concurrently with port SECS=330. Port: 838 captures, 0 `[ucode-cap] fired`, 0 crash/abort lines. Retail trace: 3933
+ticks (46517 rand calls) before the 400000 exec-trace cap; 24 retail dumps.
+Results:
+- g3_rand_ticks.py: compared 46517; first (tick, caller, value) mismatch at index 32988, t2875: same values, but retail
+  callers switch to 8007132c/800f28f4 while the port stays at 80054174. That tick is the retail song-1 -> 0 handle switch.
+- g3_song_windows.py: song 01 starts t2751 in both arms; retail ends it at t2875 (124 ticks, 334 VI, 639 AI buffers,
+  2.694 VI/tick: retail dropping frames), port at t2918 (167 ticks, 334 VI, 640 buffers). Later songs 02/03 have the same
+  tick lengths in both arms (265, 153 vs 167) offset by the split. So the split is the audio-clocked song end (as lvl10/12).
+- g3_frame_snap.py (2875 ticks): 43243 NPC rows, 0 point diffs, 0 obj diffs, 0 port-only rows; snap diffs only words
+  2-6/9, glob only 7/8/18/20-31 (allowed pacing).
+- g3_tick_mem.py (G3_IGN=04,0c,18) 8010c9e0 8010c0e0: first arm diff t2875 on both blocks (the song handle at the split).
+- g3_oracle_match.py (from the repo root; run from scratch/ it finds 0 retail frames because the [fb-dump] paths are
+  repo-relative): pre-split dumps (vi <= 15869, split at retail vi ~16194) d 1.76-4.18. vi 7480 (t~130) d 3.62 was
+  matched by the free search to a late port frame; the retail dump is torn (lava field drawn, ship/HUD not yet drawn) and
+  the port capture at the same tick (w_0087.41) shows the same horizon and silhouette with the Y-wing and HUD. Dumps
+  vi 16446-18789 (d 4.2-12.2) are post-split, unverifiable.
+- g3_hud_presence.py: retail HUD on 13/15 in-range dumps (off: the torn vi 7480 and t2753), port 280/306. Port HUD-off
+  t2628-2865 (25 caps, scratch/s6767/port_hudoff_sheet.png) = in-mission cutscene: camera follows craft/explosions over
+  the lava, no HUD; the one retail dump inside it (t2753, vi 15869) is HUD-off as well, and song 1 starts at t2751.
+Positive control (same run): flipping bit 0 of port rand index 20000 (t1463) in a /tmp copy makes g3_rand_ticks report
+the first mismatch at index 20000.
+Two lines: (1) rand stream + NPC snapshots + tick_mem identical through t2874; (2) frame match + HUD presence agree.
+Discrimination: selects "sim identical to an audio-clocked split" (refutes a port sim defect on lvl14 before t2875) and
+render match (refutes a port-only render/HUD defect in that span).
+Next: g3-mission15-pinned (eep +0x31=14; CURRENT-TRUTH notes lvl15 may need ROGUESQ_FORCE_PLANET_UNLOCK=0xFF).

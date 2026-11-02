@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6766 (2026-11-01).
+Compact operational handoff, as of Session 6767 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -22,6 +22,11 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   65536 everywhere (=16384 restores). Earlier per-level G3 checks that saw no cap fire are unaffected. s6763: the
   second lvl9 port HUD-off window (t2050-2208) persists with 0 cap fires and retail hides the HUD on 16/16 dumps inside
   it (player death camera): retail behaviour, not a defect.
+- **G3 mission 14 (s6767, lava planet, Y-wing, +0x31=13):** sim identical 2875 ticks (32988 rand calls, 43243 NPC rows,
+  0 point/obj diffs, tick_mem first diff = the split); split t2875 = song-1 end on the audio clock (retail 124 ticks/334
+  VI/639 buffers, port 167/334/640). Render: pre-split dumps d 1.8-4.2; vi 7480 = torn retail dump (no ship/HUD drawn
+  yet). Port HUD-off t2628-2865 = in-mission cutscene; the one retail dump inside (t2753) is HUD-off too. 0 cap fires,
+  0 crash lines. Control: a 1-bit rand flip is flagged.
 - **G3 mission 13 (s6766):** sim identical for the whole 4417-tick retail trace (60110 rand calls, 104266 NPC rows, 0
   point/obj/tick_mem diffs); songs 1/2 switch on the same ticks in both arms (game events), no split. Render: in-trace
   dumps d 4.6-5.6 (8.0 once), three torn retail dumps d 15-24. Port HUD-off t4308-4415 = letterboxed in-mission
@@ -162,7 +167,7 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 sim/frame match, mission 12.. (NEXT: g3-mission12-pinned).** Recipes scratch/s6764/{retail,port}.sh with
+1. **G3 sim/frame match, mission 15.. (NEXT: g3-mission15-pinned).** Recipes scratch/s6767/{retail,port}.sh with
    eep +0x31=N-1 (tools/g3_eep_patch.py); retail DSTEP=10 spreads 24 dumps over ~240 s; dense dumps in a window:
    scratch/s6763/lvl9_retail_gap2.sh (DOFF/DSTEP seconds after the flight-start arm, ~60 VI/s).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
