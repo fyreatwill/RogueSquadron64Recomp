@@ -37819,6 +37819,10 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6719:
             changed = True
             report.append(f"{p.name}: s6719 640 persp x{_n6719}")
+        text, _n6791 = _a6031.apply_s6791_g3fcam(text)
+        if _n6791:
+            changed = True
+            report.append(f"{p.name}: s6791 g3f cam log x{_n6791}")
 
     if p.name == "funcs_33.c":
         import apply_s6721_pausegate as _a6721m

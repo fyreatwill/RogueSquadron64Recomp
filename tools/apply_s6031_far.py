@@ -575,6 +575,21 @@ def apply_s6719_persp640(text):
     a = text.find("RECOMP_FUNC void setupCameraMatrices("); assert a > 0
     return text[:a] + S6719_FN + text[a:], 1
 
+# s6791 G3f: ROGUESQ_G3F_CAM=<file> logs every setupCameraMatrices call just before guPerspective (after the far/aspect/vpw
+# patches, so the args are what the game really passes): wall s, call n, cam ptr, viewport w/h, fovy (a2), aspect (a3), near,
+# far, scale (sp+0x10/14/18) and the 12 floats at cam+0x2C (camera rotation rows + position fed to mat3x3InverseInto). Offline:
+# tools/g3f_cam_scan.py. Unset = no cost beyond one cached getenv.
+S6791_TAG = "/* PATCH: s6791 g3fcam */"
+S6791 = ("    { " + S6791_TAG + " static FILE* f6791; static int i6791 = -1; static unsigned n6791; if (i6791 < 0) { const char* e = getenv(\"ROGUESQ_G3F_CAM\"); i6791 = (e && *e) ? 1 : 0; if (i6791) f6791 = fopen(e, \"w\"); if (!f6791) i6791 = 0; }\n"
+         "      if (i6791) { extern double rs64_elapsed_seconds(void); union { uint32_t u; float f; } a, b, c, d, e, g; int k; a.u = (uint32_t)ctx->r6; b.u = (uint32_t)ctx->r7; c.u = MEM_W(0X10, ctx->r29); d.u = MEM_W(0X14, ctx->r29); e.u = MEM_W(0X18, ctx->r29);\n"
+         "        fprintf(f6791, \"%.4f %u %08x %d %d %.6g %.6g %.6g %.6g %.6g\", rs64_elapsed_seconds(), n6791++, (unsigned)ctx->r17, (int)MEM_W(ctx->r17, 0X10), (int)MEM_W(ctx->r17, 0X14), a.f, b.f, c.f, d.f, e.f);\n"
+         "        for (k = 0; k < 12; k++) { g.u = MEM_W(0X2C + 4 * k, ctx->r17); fprintf(f6791, \" %.6g\", g.f); } fputc('\\n', f6791); if ((n6791 & 63) == 0) fflush(f6791); } }\n")
+def apply_s6791_g3fcam(text):
+    if S6791_TAG in text: return text, 0
+    a = text.find("RECOMP_FUNC void setupCameraMatrices("); assert a > 0
+    i = text.find(OLD, a); assert i > 0
+    return text[:i] + S6791 + text[i:], 1
+
 if __name__ == "__main__":
     p = base / "funcs_4.c"; t = p.read_text(); t2, n = apply4(t)
     t2, m = apply_s6201_pool(t2)
@@ -582,6 +597,7 @@ if __name__ == "__main__":
     t2, sc = apply_s6694_scissor(t2)
     t2, ii = apply_s6718_intro4(t2); sc += ii
     t2, ii = apply_s6719_persp640(t2); sc += ii
+    t2, ii = apply_s6791_g3fcam(t2); sc += ii
     if n or m or q or sc: p.write_text(t2)
     print("funcs_4.c live patched x%d pool=%d poolclass=%d scissor=%d" % (n, m, q, sc))
     p0 = base / "funcs_0.c"; t = p0.read_text(); t2, n = applypfm(t)

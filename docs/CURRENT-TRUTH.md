@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6790 (2026-11-02).
+Compact operational handoff, as of Session 6791 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -314,6 +314,12 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   scene transition (boot, hangar entry, mission load, game over) in every arm.
   Recipe: owner save + ROGUESQ_FORCE_SAVE_MISSION=5 ROGUESQ_FORCE_UNLOCK=5 (index 5 = THE JADE MOON, Chapter II start),
   Start 6..41 s -> crawl at 43-60 s (scratch/s6790/crawl_arms.zsh).
+  **G3f CLOSED s6791 (H-retail): hangar fish-eye = retail SELECT YOUR CRAFT camera move.** Camera 0x800CD670: fovy 45,
+  aspect 1.882 (about 76 deg horizontal) on every call, FPS60 on and off, rotation orthonormal. Each ship scroll slides the camera 13 units sideways
+  in ~0.5 s while its yaw lags ~3 s (overshoot 1-1.6 on rightward moves). Same endpoints and shape in retail (oracle
+  swc1 store trace of cam+0x2C..0x5C, tools/g3f_retail_pan.sh + g3f_retail_cam.py; fovy word not animated). FPS60 only samples
+  the same delta-time curve at 60 Hz. Instrument ROGUESQ_G3F_CAM=<file> (setupCameraMatrices, the only guPerspective site).
+  Offer the owner an opt-in hangar FOV knob if wanted; default stays retail.
 
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.

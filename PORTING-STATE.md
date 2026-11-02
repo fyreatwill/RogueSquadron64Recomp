@@ -178914,3 +178914,36 @@ second mechanism.
   empty queue, in every arm.
 - Tool: tools/g2b_ai_scan.py (per-VI-width segment: buffers, frames/s, empty-queue count, max gap, PCM rms/silent runs/clicks).
 VERDICT: selects H-underrun (fixed-byte drain threshold at the crawl's 32006 Hz), refutes H-fps60; G3e closed.
+
+## Session 6791 (2026-11-02) — G3f hangar fish-eye = retail craft-select camera move (fast sideways slide, yaw lags ~3 s, fixed 45 deg / 1.882 projection); FPS60 does not change it
+Ran: new instrument ROGUESQ_G3F_CAM=<file> (tools/apply_s6031_far.py apply_s6791_g3fcam, wired into
+fixup_game_funcs_vendored.py; logs every setupCameraMatrices call just before guPerspective, the ONLY guPerspective call site
+in the game: wall s, cam ptr, viewport, fovy a2, aspect a3, near/far/scale, camera 3x4 at cam+0x2C). Offline
+tools/g3f_cam_scan.py, tools/g3f_pan_cmp.py. Route (owner save, scratch/s6791): Start 6/11/16/21 -> SELECT LEVEL (Assault on Kile
+II; d-pad right there does nothing), 26 -> AVAILABLE CRAFT (holo, Y-wing only, no scroll), 32 -> SELECT YOUR CRAFT (3D ships,
+camera 0x800CD670), then right 40/46, left 52, stick sr 58 / sl 64. Arms: FPS60 on (fps60b) and off (fps30), same build, 72 s each,
+0 crash lines. Retail: tools/g3f_retail_pan.sh (rs64_oracle + angrylion, owner save copied into mupen's eep and restored,
+RS64_KEEP_POSITIVE_CONTROL=1 or the oracle drops watch 0 after 10000 hits, as the first attempt did), watch-write on
+0x0CD690..0x0CD6CC with store-field-dump-all; tools/g3f_retail_cam.py rebuilds the camera from pre_store_word (the stores are
+swc1, so source_value is not the stored float).
+Positive control: the instrument fires on every press: camera position moves 13-18 units per press in both port arms and in retail;
+the pre-craft-select cameras show fovy changing (boot cam 80165ec8 fovy 45.07..65.06), so a fovy swing would have been visible.
+Results (craft-select cam 800cd670):
+- Projection: fovy 45 and aspect 1.88235 (512x340 viewport x 1.25 VI pixel aspect -> about 76 deg horizontal FOV), near 30,
+  far 24000, scale 1 on EVERY call in both arms; rotation rows orthonormal (max |norm-1| 7.5e-7, |dot| 1.1e-6). Two calls per frame,
+  0.5 ms apart and identical (no stale-camera pass). H-proj REFUTED.
+- Pan shape (s after press, fraction of distance p / of yaw y): ship-to-ship right press: FPS60 p10 0.90 p99 1.30 / y99 4.29;
+  FPS30 p10 1.04 p99 1.57 / y99 4.30; retail (snapshot/30) p10 0.23 p99 0.73 / y99 3.47 (retail time origin = first move, port =
+  press). The camera slides 13 units sideways in ~0.4-0.5 s while its yaw takes ~3 s more to swing onto the new ship, with a
+  1.0-1.6 unit overshoot on the rightward move, in all three. Endpoints identical: 17.9 / 13.2 / 13.2 units, yaw 178.4->97.5->-2.6->97.2.
+  FPS60 only samples the same delta-time curve twice as often. H-fps60 REFUTED.
+- Retail stores to cam+0x20 (fovy argument): 10 in the whole run vs ~1300 to the position words, so retail does no zoom swing either.
+Reading: the "fish-eye" is the strong edge perspective of a wide (~76 deg horizontal) fixed lens while the camera sweeps sideways past
+nearby craft and the view direction lags behind; it fades as the yaw settles, about 3 s after the slide stops, which matches the owner's "gone 1-2 s
+after the camera settles". The port matches retail in camera and projection. Not checked: the retail presented pixels of the pan (the
+camera/projection inputs match; RT64 presentation of this screen matched retail at RDP level s6785). Two lines: port camera log in both
+arms + retail oracle store trace.
+ORIGIN: no mitigation; instrument only. Option for the owner, not built: an opt-in hangar FOV knob (scale fovy at setupCameraMatrices
+for cam 800cd670). Default stays retail.
+VERDICT: selects H-retail; refutes H-fps60 and H-proj (constant projection, orthonormal view, identical trajectories); H-present not
+supported (transient tracks the camera move). G3f CLOSED. NEXT: G3 cinematic sweep (g3-cinematic-sweep).

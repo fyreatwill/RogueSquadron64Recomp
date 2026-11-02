@@ -1,17 +1,13 @@
-# NEXT: G3f hangar fish-eye during the ship-scroll pan
-HYPOTHESIS-ID: g3f-hangar-fisheye-pan
+# NEXT: G3 cinematic sweep via AT THE MOVIES
+HYPOTHESIS-ID: g3-cinematic-sweep
 
-Done s6790: G3e closed (lvl5/lvl10 dd4 clean). G2b fixed: the Chapter II crawl runs the AI at 32006 Hz and the fixed 2048 B
-drain threshold starved SDL every ~96 ms; the threshold now scales with the rate (1023 -> 0 underruns). Owner to listen.
+Done s6791: G3f closed as retail. The craft-select camera slides sideways in ~0.5 s with yaw lagging ~3 s, under a fixed 45 deg /
+1.882 projection, identical in retail and in FPS60 on and off. The owner may want an opt-in hangar FOV knob; build it only if asked.
 
-G3f (ITERATION 3c): owner saw a fish-eye look in the hangar ONLY while the camera pans between ships (FPS60 only, dd1, default
-window), gone 1-2 s after it settles. Hypotheses:
-- H-retail: retail does an FOV/zoom swing during the pan.
-- H-fps60: FPS60 steps the pan's camera/FOV interpolation at the wrong rate or overshoots.
-- H-proj: a per-frame projection value (guPerspective fovy/perspNorm) lags or is reused across the 60 Hz split.
-- H-present: non-uniform presentation scaling during the pan (unlikely: it is transient).
-Discriminator, one build, one run per arm (FPS60 on / off) plus the retail angrylion oracle: phase-gate on the hangar Left/Right
-press, log per frame the hangar camera fovy / projection matrix x/y scale (find the guPerspective call in the hangar camera
-path) and capture window frames through the whole pan. Fish-eye = projection x/y scale (or fovy) swinging during the pan.
-If retail swings identically -> H-retail (offer an opt-in). If only FPS60 swings or overshoots -> fix the interpolation.
-Hangar route: tools/g3_port_capture.sh (Start 6..21 s reaches the 512 hangar at ~24 s); add right/left presses at 26..40 s.
+Work unit (CURRENT-TRUTH Next steps 1): the MAESTRO+DIRECTOR passcode route plays every cutscene back to back. Match each cutscene
+against retail (scratch/s6787/tools/cine.py + align.py), including ending cutscenes that are otherwise unreachable. The port dump needs
+PMAX_MB; retail needs RBW=all.
+Hypotheses per cutscene: H-match (port = retail within control spread), H-render (a fixed per-cutscene pixel/RDP difference),
+H-timing (same frames, different phase/duration). Discriminator: per-cutscene aligned frame distance vs a same-run cross-cutscene
+control; a cutscene above the control floor is a datum to root-cause.
+Owner opt-ins that stay unverified: AT THE MOVIES with FPS60.
