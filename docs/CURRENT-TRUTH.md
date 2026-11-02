@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6787 (2026-11-02).
+Compact operational handoff, as of Session 6790 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -297,7 +297,23 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   dd4 0 and dd3 0 in-flight drops (pre-fix dd4 6, every ~481 VI); dd1 control has no in-flight dips (H-retail refuted for the
   periodic dip). Cost: dd4 game fps 44.6 -> 42.8 (visible terrain now actually drawn). Remaining census "drops" are the mission
   intro cuts (VI ~3560/4057, tri=0, also in dd1). Prior s6788 lvl5/lvl10 dd4 soaks (pre-fix) showed 17/12 drops, many tri=0
-  cut frames; post-fix soaks queued (s6789_spansent_lvl5/10_dd4) - fold them, then G3e closes and G2b starts.
+  cut frames; post-fix soaks s6789_spansent_lvl5/10_dd4 folded s6790.
+  **G3e CLOSED s6790.** Post-fix FPS60 dd4 300 s holds, 0 crash / 0 VI stall: lvl5 in-flight terrain drops (tx>0) 12 -> 0;
+  lvl10 0 -> 0. Remaining census hits in both levels are (i) the tri=164/100 front-end frames (ci 644800/6A2400, same VI
+  pre- and post-fix) and (ii) 3-VI tri=0 triplets at timeline-fixed VIs, present pre-fix, post-fix and in the dd1 lvl1 run
+  (dd-independent cuts, not terrain). dd3/dd4 may be recommended again in OWNER-OPT-INS.
+  **G2b NAMED + FIXED s6790 (choppy Chapter II crawl audio):** the crawl switches the AI rate to 32006 Hz (play uses 22047).
+  The s5672 host-paced AI event fires when the SDL queue drains to <= 2048 BYTES: 23 ms of headroom at 22047 Hz but 16 ms
+  at 32006 Hz against the 1024-frame device period, so the queue ran dry every ~96 ms (~10.7 underruns/s for the whole
+  ~95 s crawl). H-fps60 REFUTED (FPS60 on 1033 / off 1023 empty-queue events over the 32 kHz span); H-underrun SELECTED.
+  Fix (ultramodern events.cpp, exported): threshold scales with the live AI rate above 22047 Hz (32006 Hz -> 2972 B);
+  <=22047 Hz bit-identical; ROGUESQ_AI_DRAIN_FIXED=1 restores the old threshold. Same build, same crawl, FPS60:
+  fix 0 empty-queue events / 96 s, control 1023 / 95 s. Instrument ROGUESQ_AI_TRACE=<file> (per AI buffer: wall s,
+  queue bytes, samples, VI width/origin; PCM to <file>.pcm), analyzer tools/g2b_ai_scan.py. Single-instrument (SDL queue
+  depth); the owner's listen is the second line. Also seen, not chased: ~315 ms AI gaps with an empty queue at every
+  scene transition (boot, hangar entry, mission load, game over) in every arm.
+  Recipe: owner save + ROGUESQ_FORCE_SAVE_MISSION=5 ROGUESQ_FORCE_UNLOCK=5 (index 5 = THE JADE MOON, Chapter II start),
+  Start 6..41 s -> crawl at 43-60 s (scratch/s6790/crawl_arms.zsh).
 
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.

@@ -5,7 +5,7 @@ Everything here is OFF by default; unset = retail behaviour. Run from `build/` w
 ```sh
 cd build && env ROGUESQ_FPS60=1 ./RogueSquadron64Recomp            # steady 60 fps (s6703)
 cd build && env ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=2 ./RogueSquadron64Recomp   # more terrain, ~48-50 fps
-cd build && env ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=3 ./RogueSquadron64Recomp   # far terrain, ~46 fps (s6789: dd3 and dd4 lvl1 0 in-flight terrain dropouts; dd4 ~43 fps; lvl5/lvl10 dd4 confirmation soaks queued)
+cd build && env ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=3 ./RogueSquadron64Recomp   # far terrain, ~46 fps (s6789-s6790: dd3 and dd4 0 in-flight terrain dropouts on lvl1, lvl5, lvl10; dd4 ~43 fps)
 ```
 
 | Goal | Setting | Verified state | Detail |

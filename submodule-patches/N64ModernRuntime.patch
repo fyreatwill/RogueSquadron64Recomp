@@ -4399,20 +4399,22 @@ index 31eb106..0f4381e 100644
  #  ifdef __cplusplus
  #    define NULLPTR (PTR(void))0
 diff --git a/ultramodern/include/ultramodern/ultramodern.hpp b/ultramodern/include/ultramodern/ultramodern.hpp
-index 57db6f6..a282425 100644
+index 57db6f6..a8d37c4 100644
 --- a/ultramodern/include/ultramodern/ultramodern.hpp
 +++ b/ultramodern/include/ultramodern/ultramodern.hpp
-@@ -121,8 +121,15 @@ void set_audio_frequency(uint32_t freq);
+@@ -120,9 +120,17 @@ void init_audio();
+ void set_audio_frequency(uint32_t freq);
  void queue_audio_buffer(RDRAM_ARG PTR(s16) audio_data, uint32_t byte_count);
  uint32_t get_remaining_audio_bytes();
- 
++uint32_t get_audio_frequency(); // s6790
++
 +extern "C" void rs64_audio_join_pcm(const char* kind, uint32_t phase,
 +                                     uint32_t width, uint32_t origin,
 +                                     uint32_t ordinal, uint32_t row,
 +                                     uint32_t n, uint32_t rdram,
 +                                     uint32_t samples, uint32_t bytes,
 +                                     uint32_t fnv, uint32_t nonzero);
-+
+ 
  struct audio_callbacks_t {
 -    using queue_samples_t = void(int16_t*, size_t);
 +    using queue_samples_t = void(int16_t*, size_t, uint32_t);
@@ -4420,7 +4422,7 @@ index 57db6f6..a282425 100644
      using set_frequency_t = void(uint32_t);
      queue_samples_t* queue_samples;
 diff --git a/ultramodern/src/audio.cpp b/ultramodern/src/audio.cpp
-index 3198be0..55a15a5 100644
+index 3198be0..a8f859b 100644
 --- a/ultramodern/src/audio.cpp
 +++ b/ultramodern/src/audio.cpp
 @@ -1,9 +1,17 @@
@@ -4441,7 +4443,16 @@ index 3198be0..55a15a5 100644
  static ultramodern::audio_callbacks_t audio_callbacks;
  
  void ultramodern::set_audio_callbacks(const ultramodern::audio_callbacks_t& callbacks) {
-@@ -31,7 +39,60 @@ void ultramodern::queue_audio_buffer(RDRAM_ARG PTR(int16_t) audio_data_, uint32_
+@@ -22,6 +30,8 @@ void ultramodern::set_audio_frequency(uint32_t freq) {
+     sample_rate = freq;
+ }
+ 
++uint32_t ultramodern::get_audio_frequency() { return sample_rate; } // s6790
++
+ void ultramodern::queue_audio_buffer(RDRAM_ARG PTR(int16_t) audio_data_, uint32_t byte_count) {
+     // Ensure that the byte count is an integer multiple of samples.
+     assert((byte_count & 1) == 0);
+@@ -31,7 +41,60 @@ void ultramodern::queue_audio_buffer(RDRAM_ARG PTR(int16_t) audio_data_, uint32_
  
      // Queue the swapped audio data.
      if (sample_count > 0 && audio_callbacks.queue_samples) {
@@ -4504,7 +4515,7 @@ index 3198be0..55a15a5 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..9df31e9 100644
+index 149e770..b3d7ee2 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -1,5 +1,6 @@
@@ -5687,7 +5698,7 @@ index 149e770..9df31e9 100644
          events_context.sp_task_queue.enqueue(task);
      }
  }
-@@ -632,6 +1537,37 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
+@@ -632,6 +1537,45 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
      events_context.vi.states[1].mode = &dummy_mode;
  
      events_context.vi.thread = std::thread{ vi_thread_func };
@@ -5699,7 +5710,15 @@ index 149e770..9df31e9 100644
 +                if (!ultramodern::is_game_started()) continue;
 +                const auto now = std::chrono::steady_clock::now();
 +                if (now - last < std::chrono::milliseconds(2)) continue;
-+                if (ultramodern::get_remaining_audio_bytes() > s4450_ai_event_drain()) continue;
++                // s6790 G2b: the drain threshold is a time (2048 B = 23.2 ms at the 22047 Hz the game uses in play), so scale it
++                // with the live AI rate. The Chapter crawls switch to 32006 Hz, where a fixed 2048 B left 16 ms against the
++                // 1024-frame host device period and the queue ran dry every ~96 ms (choppy crawl music, FPS60 on or off).
++                // ROGUESQ_AI_DRAIN_FIXED=1 restores the fixed byte threshold.
++                static const bool drain_fixed = std::getenv("ROGUESQ_AI_DRAIN_FIXED") != nullptr;
++                const uint32_t rate = ultramodern::get_audio_frequency();
++                const uint32_t thr = (drain_fixed || rate <= 22047u) ? s4450_ai_event_drain()
++                                   : (uint32_t)((uint64_t)s4450_ai_event_drain() * rate / 22047u) & ~3u;
++                if (ultramodern::get_remaining_audio_bytes() > thr) continue;
 +                std::lock_guard lock{ events_context.message_mutex };
 +                if (events_context.ai.mq != NULLPTR) {
 +                    last = now;

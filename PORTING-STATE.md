@@ -178883,3 +178883,34 @@ Queued: s6789_spansent_lvl5_dd4 and s6789_spansent_lvl10_dd4 (300 s, census + tr
 Verdict: this selects H-sentinel (the clamp/sentinel collision is the root cause of the residual dd4 dip) and refutes H-pool,
 H-farclip and H-retail. Next discriminator: the post-fix lvl5/lvl10 soak census, where an in-flight tri>0 drop would mean a
 second mechanism.
+
+## Session 6790 (2026-11-02) — G3e closed (lvl5/lvl10 dd4 soaks clean); G2b choppy Chapter II crawl audio = fixed-byte AI drain threshold at the crawl's 32006 Hz rate (queue empty every ~96 ms); threshold now scales with the AI rate (1023 -> 0 underruns, same build)
+
+- Folded s6789_spansent_lvl5/lvl10_dd4 (FPS60 dd4, 300 s holds, 0 crash / 0 VI stall): lvl5 in-flight terrain drops (tx>0)
+  12 (s6788 pre-fix) -> 0; lvl10 0 -> 0. Remaining census hits: tri=164/100 front-end frames (ci 644800/6A2400) at the same
+  VI pre- and post-fix, and 3-VI tri=0 triplets at timeline-fixed VIs present pre-fix, post-fix and in the dd1 lvl1 census
+  (dd-independent cuts). G3e CLOSED; OWNER-OPT-INS dd3/dd4 note updated.
+- G2b. Hypotheses: H-fps60 (crawl audio tick frame-counted, FPS60 changes it), H-underrun (host AI queue runs dry during the
+  crawl), H-retail. New instrument ROGUESQ_AI_TRACE=<file> (main.cpp queue_samples: per AI buffer wall s, SDL queue bytes
+  before, samples, VI width/origin; raw PCM to <file>.pcm). Route: owner save + ROGUESQ_FORCE_SAVE_MISSION=5
+  ROGUESQ_FORCE_UNLOCK=5 (THE JADE MOON), NO_SAVE_WRITE, Start 6..41 s -> Chapter II crawl (screenshots: "Chapter II /
+  ROGUE SQUADRON / Kasan Moor ..."), save backed up and cmp-verified unchanged. scratch/s6790/crawl_arms.zsh.
+  First attempt with the plain owner save went to ASSAULT ON KILE II (save byte now 07, not 05 as in s6741): no crawl; that
+  run is the no-crawl reference (scratch/s6790/base_kile).
+- Result: the crawl sets the AI rate to 32006 Hz (play is 22047; [ai-underrun] rate= lines). Over the ~95 s 32 kHz span the
+  SDL queue is empty before an AI buffer 1023 times (FPS60 off) / 1033 (FPS60 on), regularly every 85-97 ms; every other
+  segment has 1-4 per scene. Buffers arrive in bursts of three 768 B buffers reaching ~2502 B, then the 1024-frame device pull
+  drains it. Mechanism: events.cpp posts OS_EVENT_AI when the queue is <= 2048 BYTES (s5672) = 23.2 ms at 22047 Hz but 16 ms
+  at 32006 Hz. H-fps60 REFUTED (same count both arms), H-underrun SELECTED. H-retail not run (retail hardware has a per-buffer
+  AI interrupt with no host queue; the starvation is a host-pacing artifact by construction).
+- ORIGIN: the writer of the silence is SDL's queue padding when our host-paced AI event under-feeds it; the value (2048 B)
+  is a time constant tuned at 22047 Hz and is not legitimate at 32006 Hz. Change (lib/N64ModernRuntime ultramodern, patch
+  exported): ultramodern::get_audio_frequency(); drain threshold = 2048 * rate / 22047 when rate > 22047 (32006 -> 2972 B);
+  <= 22047 Hz unchanged; ROGUESQ_AI_DRAIN_FIXED=1 restores the fixed threshold.
+- Same build, same crawl, FPS60 on: fix 0 empty-queue events in 96 s at 32 kHz (qmax 3506 B), control (AI_DRAIN_FIXED=1)
+  1023 in 95 s; 22 kHz 640 segment fix 0 / ctl 15. Both arms 0 crash lines. Single-instrument (SDL queue depth); owner's
+  listen is the second line.
+- Side datum, not chased: every scene transition (boot, hangar entry, mission load, game over) has one ~315 ms AI gap with an
+  empty queue, in every arm.
+- Tool: tools/g2b_ai_scan.py (per-VI-width segment: buffers, frames/s, empty-queue count, max gap, PCM rms/silent runs/clicks).
+VERDICT: selects H-underrun (fixed-byte drain threshold at the crawl's 32006 Hz), refutes H-fps60; G3e closed.

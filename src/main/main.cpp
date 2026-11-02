@@ -85,6 +85,7 @@ extern "C" void recomp_entrypoint(uint8_t* rdram, recomp_context* ctx);
 extern "C" uint32_t rs64_vi_committed_width();
 extern "C" uint32_t rs64_vi_committed_origin();
 extern "C" uint32_t rs64_phase_ord();
+extern "C" double rs64_elapsed_seconds(void);
 extern "C" void rs64_audio_route_set(const char* arm, uint32_t phase,
                                        uint32_t width, uint32_t origin,
                                        uint32_t ordinal, uint32_t row,
@@ -7824,6 +7825,24 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
                 fprintf(stderr, "[ai-underrun] phase=%u calls=%u zero=%u min=%u max=%u avg=%llu rate=%u wall_ms=%llu prod_fps=%llu\n",
                     ph, calls, zero, minq, maxq, (unsigned long long)(sumq / calls), audio_sample_rate,
                     (unsigned long long)(now - t0), (unsigned long long)(fr * 1000 / (now - t0 + 1)));
+        }
+    }
+    {
+        // s6790 G2b: ROGUESQ_AI_TRACE=<file> writes one row per AI buffer (wall s, SDL queue bytes before, samples, VI
+        // width/origin) and the raw s16 stereo PCM to <file>.pcm, all phases, for an offline gap/underrun scan of the
+        // Chapter II crawl (no per-buffer stderr).
+        static FILE* tr = nullptr; static FILE* tp = nullptr; static int init = 0;
+        if (!init) {
+            init = 1;
+            if (const char* e = getenv("ROGUESQ_AI_TRACE"); e && *e) {
+                tr = fopen(e, "w");
+                tp = fopen((std::string(e) + ".pcm").c_str(), "wb");
+            }
+        }
+        if (tr) {
+            fprintf(tr, "%.4f %u %zu %u %06X\n", rs64_elapsed_seconds(), queued_before, num_samples,
+                    rs64_vi_committed_width(), rs64_vi_committed_origin() & 0x00FFFFFFu);
+            if (tp) fwrite(native_samples.data(), sizeof(int16_t), num_samples, tp);
         }
     }
     rs64_m5_audio_host_row("queue", queued_before, queued_after,
