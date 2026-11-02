@@ -3,9 +3,9 @@
 dt-pinned retail/port pair, and report the first call whose (tick, caller, value) differs. g3_rand_align.py keys calls
 by each arm's own clock (retail VI, port us), which cannot say whether a mismatch is a sim divergence or just a
 different tick; this keys them by sim tick. usage: g3_rand_ticks.py RETAIL_ORACLE_LOG PORT_RAND_TXT [context]"""
-import sys
+import os, sys
 
-RAND, TICK = 0x80003430, 0x800FA730
+RAND, TICK = 0x80003430, int(os.environ.get("G3_TICK", "800FA730"), 16)  # s6771: G3_TICK=<hex pc> picks the tick row (800C6674 = race frame, advanceWrappingPhaseAccumulator)
 SKIP = {0x8006BEC8, 0x8006C018, 0x8006C010, 0x800AF374, 0x800C6674, TICK,
         0x8008EE08, 0x8008EE84}  # s6757: s6755 AI-buffer marker rows (osAiSetNextBuffer jal sites)
 
@@ -43,6 +43,9 @@ def walk(path, retail):
     return out
 
 r, p = walk(sys.argv[1], True), walk(sys.argv[2], False)
+# s6771: G3_MIN_TICK=0 drops calls before the first tick (a one-shot rngSeed poke on tick 0 makes them arm-specific)
+MIN = int(os.environ.get("G3_MIN_TICK", "-1"))
+r, p = [x for x in r if x[0] >= MIN], [x for x in p if x[0] >= MIN]
 ctx = int(sys.argv[3]) if len(sys.argv) > 3 else 8
 n = min(len(r), len(p))
 bad = next((i for i in range(n) if r[i] != p[i]), None)

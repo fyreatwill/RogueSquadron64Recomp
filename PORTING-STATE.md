@@ -178169,3 +178169,38 @@ runInMissionFrame xtrace key 0x800FA730, so the split cannot be attributed to a 
 fired), so no render pairs. 0 cap fires, 0 crash lines.
 Rules out: "+0x31 alone selects any mission" (true only up to 16). Not yet a sim verdict for mission 17.
 Next: find the race's per-frame function (the 0x800FA730 analogue) and the fb-dump arm for bonus missions, then re-run.
+
+## Session 6771 (2026-11-01) — G3 mission 17 (Beggar's Canyon race) sim identical to retail over the whole 458-tick race; s6770's "race never ticks 0x800FA730" was the level select; one-shot xtrace poke lands rngSeed on race tick 0 in both arms
+
+HYPOTHESIS-ID: g3-mission17-pinned (closed: sim identical, render match).
+
+Offline first (s6770 traces): the only timeSnapshotFiller callers are 0x800AF374 cinematicComputeDt, 0x800C6674
+advanceWrappingPhaseAccumulator, 0x800FA730 runInMissionFrame. m17b's 9170 port / 5719 retail 0x800C6674 rows and its
+0x800B0xxx rand callers looked like the race. Run 1 (scratch/s6771/m17, G3_TICK=800C6674, dt pinned there) gave rand
+identical over 47028 calls / 5691 ticks, but a capture contact sheet showed BOTH arms on the LEVEL SELECT for the whole run
+(m17b's presses ended before the pick): 0x800C6674 is the level-select hologram's tick. That run also exposed a dead
+control: flip_ctl.py only flipped caller 80076cf8, which that screen never calls (0 flips). s6770 run 2's retail log
+(full press schedule) shows the race DOES tick 0x800FA730 (5422 rows), but sat in the race's PAUSE menu (presses 56/61
+landed in the race); the port raced and failed by 62 s.
+Port probe (scratch/s6771/probe, AP to 31 s, 75 s): pick at ~32.5 s, race starts by itself ~36 s, the unsteered T-16
+hits the ground ~48 s, MISSION FAILED ~52 s. No press is needed after the pick.
+Seeding: both arms sit at width 512 from the level select on, so the width-switch seed arm cannot hit an equivalent sim
+point. New: optional 5th field `1` = one-shot in RS64_XTRACE_POKE (tools/oracle/rs64_oracle.c) and ROGUESQ_XTRACE_POKE
+(src/main/rt64_render_context.cpp), same spec both arms; `800FA730:0:80003470:1:1` writes rngSeed=1 on the first race tick.
+Run 2 (scratch/s6771/r17): PRESS 6..51 s, AP 6..31 s, POKE=800FA730:29:30:3d088889,800FA730:0:80003470:1:1, RSECS 150,
+PSECS 90, retail dumps every 1 s from 54 s. Seed pin= fired on tick 0 only, both arms.
+- Sim: 458 runInMissionFrame ticks both arms; rand (tick, caller, value) identical for all 3972 port calls (per-tick
+  counts equal on t0-456; t457 holds the post-race debrief calls, port trace ended at 90 s); frame_snap 3664 NPC rows,
+  0 point diffs, 0 obj diffs, 0 disallowed snap/glob words; tick_mem 8010C9E0/8010C0E0 no arm diff; song handle 0 both.
+  Positive control (same files): 1-bit flip of a 80054174 rand value flagged at index 809.
+- Render: in-race pairs d 4.9-9.5 (missions 10-16 range); worst: vi 4271 d 25 = crash wipe at a different phase, vi 4160
+  d 20 and vi 3394 d 16 = fast motion (crash roll, intro camera swing) between port capture samples, vi 3633 d 16 = torn
+  retail dump (no HUD/craft yet, half-drawn ground). Sheet scratch/s6771/r17/r17_worst.png. HUD: retail on 13/16, port
+  34/38; HUD-off t417-453 = the crash in both arms (retail dump t424 off). 0 cap fires, 0 crash lines.
+Tools: G3_TICK (g3_rand_ticks/tick_mem/ai_clock+song_windows, run.sh spec + pin), G3_MIN_TICK (rand compare from tick N),
+G3_SNAP_TICKS (frame_snap tick key; level-select hologram rows otherwise mis-pair every tick), frame_snap drops the
+absolute pad/event/song dumps before reading [0]=snapshot [1]=globals, offline.sh derives retail fb bases from logged
+origin0 & ~0xFFF (race 690000/620000, level select 6AB000/656000, debrief 720000/790000; s6770's "0 retail fb dumps" was
+the hard-coded bases, the dumps existed), flip_ctl picks any compared row and fails loudly when it flips nothing.
+Rules out: "mission 17 has no runInMissionFrame tick" (superseded), a port sim defect in the race.
+Next: g3-mission18-pinned, LEVEL 17 then 18, same recipe.

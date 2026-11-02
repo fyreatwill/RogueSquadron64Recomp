@@ -9,7 +9,7 @@ the arm's VI count at that tick; G3_IGN=<hex offs,...> drops per-tick accumulato
 import os
 import sys
 
-TICK = "800fa730"
+TICK = os.environ.get("G3_TICK", "800FA730").lower()  # s6771: G3_TICK=<hex pc> picks the tick row (800C6674 = race frame, advanceWrappingPhaseAccumulator)
 
 VI = {}
 

@@ -2760,8 +2760,9 @@ static void xtrace_mem(unsigned pc)
 
 /* s6753: RS64_XTRACE_POKE="PC:REG:OFF:VALUE,..." writes VALUE to gpr[REG]+OFF at every matching --exec-trace-also
  * row, before its RS64_XTRACE_MEM dump (row gets " pin=OLD"). Same spec as the port's ROGUESQ_XTRACE_POKE (s6753:
- * 800FA730:29:30:3d088889 pins runInMissionFrame's dt to 1/30 s). */
-static struct { unsigned pc, reg, off, val; } g_xpoke[8];
+ * 800FA730:29:30:3d088889 pins runInMissionFrame's dt to 1/30 s). s6771: optional 5th field 1 = one-shot (first matching
+ * row only), e.g. 800FA730:0:80003470:1:1 seeds rngSeed on the first mission tick in both arms. */
+static struct { unsigned pc, reg, off, val, once, done; } g_xpoke[8];
 static int g_nxpoke = -1;
 static void xtrace_poke(unsigned pc)
 {
@@ -2770,9 +2771,10 @@ static void xtrace_poke(unsigned pc)
         const char *e = getenv("RS64_XTRACE_POKE");
         g_nxpoke = 0;
         while (e && *e && g_nxpoke < 8) {
-            unsigned a, r, o, v;
-            if (sscanf(e, "%x:%u:%x:%x", &a, &r, &o, &v) == 4 && r < 32) {
+            unsigned a, r, o, v, once = 0;
+            if (sscanf(e, "%x:%u:%x:%x:%x", &a, &r, &o, &v, &once) >= 4 && r < 32) {
                 g_xpoke[g_nxpoke].pc = a; g_xpoke[g_nxpoke].reg = r; g_xpoke[g_nxpoke].off = o; g_xpoke[g_nxpoke].val = v;
+                g_xpoke[g_nxpoke].once = once; g_xpoke[g_nxpoke].done = 0;
                 g_nxpoke++;
             }
             e = strchr(e, ',');
@@ -2781,7 +2783,8 @@ static void xtrace_poke(unsigned pc)
     }
     for (i = 0; i < g_nxpoke; i++) {
         unsigned a;
-        if (g_xpoke[i].pc != pc) continue;
+        if (g_xpoke[i].pc != pc || g_xpoke[i].done) continue;
+        g_xpoke[i].done = g_xpoke[i].once;
         a = gpr32(g_xpoke[i].reg) + g_xpoke[i].off;
         printf(" pin=%08x", pDebugMemRead32(debug_rdram_addr(a)));
         pDebugMemWrite32(debug_rdram_addr(a), g_xpoke[i].val);

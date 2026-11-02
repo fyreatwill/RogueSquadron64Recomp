@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6770 (2026-11-01).
+Compact operational handoff, as of Session 6771 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -22,11 +22,14 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   65536 everywhere (=16384 restores). Earlier per-level G3 checks that saw no cap fire are unaffected. s6763: the
   second lvl9 port HUD-off window (t2050-2208) persists with 0 cap fires and retail hides the HUD on 16/16 dumps inside
   it (player death camera): retail behaviour, not a defect.
-- **G3 bonus missions 17-19 (s6770):** +0x31 alone clamps to mission 16 (lvsel a3=15). Save byte +0x39=0x60 sets the
-  bonus bits (record word +0xC -> 0x80130B4C bits 0x00200000/0x00400000), a3 becomes 16, verified both arms.
-  tools/g3_mission/run.sh SDIR LEVEL now runs the whole per-mission recipe and adds the unlock for LEVEL>=16. Mission 17 =
-  Beggar's Canyon race: flight at 512 wide ~24 s port / ~39 s retail, later Start presses pause it, and the race never
-  calls the 0x800FA730 tick key (ticks=0), so no sim verdict yet; rand caller order matches 720 calls then splits.
+- **G3 mission 17 (s6771, Beggar's Canyon race, bonus):** sim identical to retail over the whole race, 458
+  runInMissionFrame ticks (3972 rand calls, 3664 NPC rows, 0 point/obj diffs, event mask/song identical, no disallowed
+  snap/glob word); 1-bit flip control flagged. The race ticks 0x800FA730 like every mission. Recipe: tools/g3_mission/run.sh
+  with PRESS to 51 s / AP to 31 s (no press after the level pick: the race starts by itself, the unsteered T-16 hits the
+  ground ~12 s in, MISSION FAILED), POKE=<dt pin>,800FA730:0:80003470:1:1 (new one-shot 5th field, both arms: rngSeed=1 on
+  race tick 0), G3_MIN_TICK=0 G3_SNAP_TICKS=800FA730 offline. Render: in-race pairs d 4.9-9.5; outliers = crash wipe phase,
+  fast-motion capture phase, one torn retail dump. HUD-off t417-453 = crash in both arms. 0 cap fires, 0 crash lines.
+  Unlock (s6770): +0x31 alone clamps to mission 16; save byte +0x39=0x60 sets the bonus bits (run.sh does it for LEVEL>=16).
 - **G3 mission 16 (s6769, ocean/Calamari towers, +0x31=15):** sim identical 2038 ticks (70442 rand calls, 32319 NPC
   rows, 0 point diffs before t2040, 0 disallowed words); songs 1/2/3 start on the same ticks in both arms (game events;
   retail drops frames to 3.25-3.44 VI/tick there, port 2.00), split t2039 = song-3 end on the audio clock (retail 166
@@ -88,6 +91,11 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 - Closed: M5 audio de-stubbing, M3 idiom audits, M6 endurance (s6442), G2 audio, G5 renaming. G4 crash hunting parked.
 
 ## Superseded conclusions — do not act on these
+- **(s6770 -> s6771)** "mission 17 never calls runInMissionFrame 0x800FA730; flight at 512 wide ~24 s port / ~39 s
+  retail; later Start presses pause the race". The 512-wide screen at those times is the LEVEL SELECT (its hologram ticks
+  0x800C6674 and calls rand from 0x800B0xxx); m17b's presses ended before the pick, so neither arm ever raced. Believable
+  because the level select and the race share VI width 512 and the rand callers looked mission-like.
+
 - **(s6070/s6403 -> s6762)** "ROGUESQ_UCODE_CAP default 16384 = retail behaviour". Hardware has no iteration cap; retail
   draws the HUD in lvl9 frames the 16384 cap truncated. Believable because no dd1 4:3 frame had been seen to fire it
   (s6070 saw 0 fires at dd0.5; the truncation was only ever reported at dd>1/wide, where 65536 was already default).
@@ -184,9 +192,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 sim/frame match, bonus missions 17-19 (NEXT: g3-mission17-pinned).** Tool: tools/g3_mission/run.sh SDIR LEVEL
-   (LEVEL 16-18, unlock automatic). Mission 17 needs its race frame function as the tick key and an fb-dump arm first; retail DSTEP=10 spreads 24 dumps over ~240 s; dense dumps in a window:
-   scratch/s6763/lvl9_retail_gap2.sh (DOFF/DSTEP seconds after the flight-start arm, ~60 VI/s).
+1. **G3 sim/frame match, bonus missions 18-19 (NEXT: g3-mission18-pinned).** Mission 17 done (s6771). Tool:
+   tools/g3_mission/run.sh SDIR LEVEL (LEVEL 17/18, unlock automatic); use the s6771 mission-17 recipe (header of run.sh):
+   presses only up to the level pick, one-shot rngSeed poke on tick 0. Dense retail dumps: DSTEP=1 FARM=<race start>.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

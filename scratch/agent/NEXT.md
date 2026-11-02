@@ -1,18 +1,18 @@
-# NEXT: G3 bonus mission 17 (Beggar's Canyon race) — tick key + fb arm, then the sim/frame match
-HYPOTHESIS-ID: g3-mission17-pinned
+# NEXT: G3 bonus missions 18 and 19 — sim/frame match with the s6771 bonus-mission recipe
+HYPOTHESIS-ID: g3-mission18-pinned
 
-s6770: missions 17-19 are bonus missions; save byte +0x39=0x60 unlocks them (tools/g3_mission/run.sh does it for
-LEVEL>=16). Mission 17 is a race. Run scratch/s6770/m17b (PRESS to 36 s, DWARM=30, AP to 21 s, ARM=20) seeded both arms
-but gave ticks=0 (race never calls runInMissionFrame 0x800FA730) and 0 retail fb dumps.
+s6771 closed mission 17 (race, 458 ticks identical). Missions 18/19 = save +0x31=17/18 (run.sh adds +0x39=0x60).
+Unknowns: when each arm reaches the level select and picks (port ~24 s / ~32 s, retail ~38 s / ~51 s for m17), whether the
+mission needs a press after the pick (m17 did not; normal missions show a briefing), and how long it lasts unsteered.
 Work unit:
-1. Offline first (no run): find the race's per-frame entry. The port census / run.log of scratch/s6770/m17b and the
-   generated code (../N64Recomp/RecompiledFuncs) — the rand callers 0x800B0328/03A0/0F1C/0F48/09A8/0DB4 sit in 0x800B0xxx;
-   walk their callers up to the function called once per sim frame in the race (compare how 0x800FA730 was found, s6754).
-   Also read why rs64_oracle --fb-arm-after 103 never armed (grep fb-arm in tools/oracle source).
-2. Make the tick key a parameter of the G3 tools (g3_rand_ticks/frame_snap/tick_mem/song_windows: env G3_TICK=<pc>) and of
-   tools/g3_mission/run.sh (xtrace spec + --exec-trace-also), commit, re-run:
-   env PRESS=6:start,11:start,16:start,21:start,26:start,31:start,36:start DWARM=30 AP=6:start,11:start,16:start,21:start \
-     ARM=20 FARM=<fixed> G3_TICK=<pc> zsh tools/g3_mission/run.sh scratch/s6771 16
-Discriminating outcomes: caller-order split at index 720 lands on one tick in both arms with a different caller set
-(sim divergence: name the caller) vs lands on a pacing boundary (retail frame drop: same tick, different effect count) .
-Then missions 18/19 (LEVEL 17/18) with the same tool.
+1. Port probe (75-90 s, no retail): env SAVE_FROM=<lvl18.eep from run.sh or tools/g3_eep_patch.py> SECS=90 CAP0=30
+   AP=6:start,...,31:start zsh tools/g3_port_capture.sh scratch/s6772/probe18 ; contact sheet of captures; grep
+   '[lvsel] tick#.*ret=' and load_level_hmp in run.log. Add presses only if the mission waits on a screen.
+2. Paired run: env G3_MIN_TICK=0 PRESS=6:start,...,51:start[,+N if a briefing] AP=6:start,...,31:start[,...] DWARM=30 ARM=20 \
+     POKE=800FA730:29:30:3d088889,800FA730:0:80003470:1:1 RSECS=<race/mission end+> PSECS=.. CAP0=33 NDUMP=40 DSTEP=1 FARM=54 \
+     zsh tools/g3_mission/run.sh scratch/s6772/r18 17 ; then rerun offline with G3_SNAP_TICKS=800FA730.
+   Retail press timing: the level select accepts the pick only after its intro animation (retail pick at 51 s for m17).
+   Never leave a Start press inside the mission (it pauses; s6770 run 2).
+Discriminating outcomes: rand/NPC identical over the whole trace (or until a song-end audio-clock split, as m10-16) with
+the flip control flagged = sim identical; a first mismatch at a tick with a different caller set = sim divergence, name it.
+Then mission 19 (LEVEL 18). After that the per-mission G3 sweep is closed; next rung per ITERATION.md 3c.

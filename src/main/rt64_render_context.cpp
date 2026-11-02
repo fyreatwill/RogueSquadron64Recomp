@@ -56,14 +56,15 @@ extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64
     }
     // s6753: ROGUESQ_XTRACE_POKE="PC:REG:OFF:VALUE,..." writes VALUE at gpr[REG]+OFF before the dump (row gets
     // " pin=OLD"); same spec as rs64_oracle RS64_XTRACE_POKE. 800FA730:29:30:3d088889 pins runInMissionFrame dt.
-    static struct { uint32_t pc, reg, off, val; } poke[8];
+    // s6771: optional 5th field 1 = one-shot (800FA730:0:80003470:1:1 seeds rngSeed on the first mission tick).
+    static struct { uint32_t pc, reg, off, val, once, done; } poke[8];
     static int npoke = -1;
     if (npoke < 0) {
         npoke = 0;
         const char* e = std::getenv("ROGUESQ_XTRACE_POKE");
         while (e && *e && npoke < 8) {
-            unsigned a, r, o, v;
-            if (sscanf(e, "%x:%u:%x:%x", &a, &r, &o, &v) == 4 && r < 32) poke[npoke++] = {a, r, o, v};
+            unsigned a, r, o, v, once = 0;
+            if (sscanf(e, "%x:%u:%x:%x:%x", &a, &r, &o, &v, &once) >= 4 && r < 32) poke[npoke++] = {a, r, o, v, once, 0};
             e = strchr(e, ',');
             if (e) e++;
         }
@@ -72,7 +73,8 @@ extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64
     if (!s_rand_trace_f || n >= 400000) return;
     fprintf(s_rand_trace_f, "%ld %u %08x %08x", n++, rs64_vi_n_g, pc, (uint32_t)gpr[2]);
     for (int i = 0; i < npoke; i++) {
-        if (poke[i].pc != pc) continue;
+        if (poke[i].pc != pc || poke[i].done) continue;
+        poke[i].done = poke[i].once;
         uint32_t a = (uint32_t)gpr[poke[i].reg] + poke[i].off;
         if (a < 0x80000000u || a + 4 > 0x80800000u || (a & 3)) continue;
         uint32_t* w = reinterpret_cast<uint32_t*>(const_cast<uint8_t*>(rdram) + (a - 0x80000000u));

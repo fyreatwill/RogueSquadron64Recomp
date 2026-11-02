@@ -7,9 +7,9 @@ fixed 0x300 bytes (192 stereo frames). Reports, per arm, the song window (handle
 end posts event bit 0x100 via tickSongFadeTimer) in sim ticks, VIs and AI buffers, and the buffers-per-VI rate over the
 whole flight. Port [s4245] rows (ROGUESQ_S4245=1) add buffers per host wall second.
 usage: g3_ai_clock.py RETAIL_ORACLE_LOG PORT_RAND_TXT [PORT_RUN_LOG]"""
-import re, sys
+import os, re, sys
 
-TICK, AI = "800fa730", ("8008ee08", "8008ee84")
+TICK, AI = os.environ.get("G3_TICK", "800FA730").lower(), ("8008ee08", "8008ee84")  # s6771: G3_TICK=<hex pc> picks the tick row (800C6674 = race frame, advanceWrappingPhaseAccumulator)
 
 def rows(path, retail):
     for l in open(path, errors="replace"):

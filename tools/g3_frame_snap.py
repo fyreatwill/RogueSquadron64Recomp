@@ -5,9 +5,13 @@ Rows used: frame ticks TICKS (after timeSnapshotFiller; dumps = snapshot struct 
 0x8006BEC8 (a3 = NPC), gate call 0x8006C010 (dumps = $a0 object, NPC point at sp+0x18, globals) and gate result
 0x8006C018 (v0). Tick k in one arm is paired with tick k in the other; within a tick, gate calls are keyed by NPC.
 usage: g3_frame_snap.py RETAIL_ORACLE_LOG PORT_RAND_TXT [ticks=30]"""
-import struct, sys
+import os, struct, sys
 
 TICKS = {0x800AF374, 0x800C6674, 0x800FA730}  # jal timeSnapshotFiller + 8 (cinematic, phase accumulator, runInMissionFrame)
+# s6771: G3_SNAP_TICKS=800FA730 keys on that row only (a trace armed at the level select also holds its 0x800C6674
+# hologram ticks, a different count per arm, and every later tick then pairs wrongly)
+if os.environ.get("G3_SNAP_TICKS"):
+    TICKS = {int(x, 16) for x in os.environ["G3_SNAP_TICKS"].split(",")}
 ENTRY, GCALL, GRES = 0x8006BEC8, 0x8006C010, 0x8006C018
 
 
@@ -40,6 +44,10 @@ def parse(path, retail):
         if pc in TICKS:
             if ra != pc:  # other overlay's code at the same VA ($ra = jal+8 only for the snapshot return)
                 continue
+            # s6771: drop the absolute pad/event/song dumps so [0]=snapshot, [1]=globals whatever the spec order (a
+            # G3_TICK=800C6674 run puts the pad dump first and every tick read as a disallowed glob diff)
+            dumps = [d for d, m in zip(dumps, [m for m in mem if m.startswith("m=")])
+                     if m[2:10].lower() not in ("8010ff30", "8010c9e0", "8010c0e0")]
             cur = {"vi": int(f[1]), "pc": pc, "dumps": dumps, "gates": {}, "order": []}
             ticks.append(cur)
         elif cur is None:

@@ -4,9 +4,13 @@
 #   1. patches the signed save (tools/g3_eep_patch.py) from BASE_EEP (default scratch/s6769/lvl16.eep)
 #   2. retail arm (rs64_oracle, angrylion, dt pinned) in the background, port arm in the foreground
 #   3. waits for the oracle, then runs tools/g3_mission/offline.sh SDIR
-# Bonus mission 17 (Beggar's Canyon race, s6770): flight starts at 512 wide ~24 s port / ~39 s retail, and later
-#   Start presses pause the race; use PRESS=6:start,...,36:start DWARM=30 AP=6:start,...,21:start ARM=20.
-# env: PRESS/AP (start schedules) DWARM (retail seed arm s, 85) ARM (port seed arm s, 55) RSECS (360) PSECS (330) NDUMP (24) DSTEP (10) FARM (103) POKE (dt pin) EXTRA (port env)
+# Bonus mission 17 (Beggar's Canyon race): the 512-wide screen at ~24 s port / ~39 s retail is the LEVEL SELECT (s6770
+#   misread it as flight); the race itself ticks runInMissionFrame 0x800FA730 like every mission. 0x800C6674
+#   (advanceWrappingPhaseAccumulator) is the level-select hologram's tick; G3_TICK=800C6674 compares that screen (s6771).
+# Mission 17 (s6771): PRESS=6:start,...,51:start AP=6:start,...,31:start (no press after the pick: the race starts by
+#   itself and the unsteered craft crashes ~12 s in), POKE=<dt pin>,800FA730:0:80003470:1:1 (one-shot rngSeed on tick 0),
+#   then G3_MIN_TICK=0 for the offline rand compare.
+# env: G3_TICK (tick/pin pc, 800FA730; must be one of the --exec-trace-also pcs below) PRESS/AP (start schedules) DWARM (retail seed arm s, 85) ARM (port seed arm s, 55) RSECS (360) PSECS (330) NDUMP (24) DSTEP (10) FARM (103) POKE (dt pin) EXTRA (port env)
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 S=$1; L=$2; [ -n "$S" ] && [ -n "$L" ] || { echo "usage: run.sh SDIR LEVEL" >&2; exit 2; }
 mkdir -p $S
@@ -18,8 +22,9 @@ U=(); (( L >= 16 )) && U=(0x39=0x60)
 python3 tools/g3_eep_patch.py ${BASE_EEP:-scratch/s6769/lvl16.eep} $EEP --set 0x31=$L $U || exit 3
 pgrep -x rs64_oracle >/dev/null && { echo "rs64_oracle already running" >&2; exit 4; }
 # same xtrace spec in both arms: rand callers, glob words, NPC table, event mask 8010C9E0, song handle 8010C0E0
-M=800AF374:29:10:10,800AF374:0:8011A880:32,800FA730:29:10:10,800FA730:0:8011A880:32,800FA730:0:8010FF30:2,800C6674:29:10:10,800C6674:0:8011A880:32,8006C010:4:0:16,8006C010:29:18:3,8006C010:0:8011A830:8,800FA730:0:8010C9E0:18,800FA730:0:8010C0E0:1
-PIN=${POKE-800FA730:29:30:3d088889}
+export G3_TICK=${G3_TICK:-800FA730}; T=$G3_TICK
+M=800AF374:29:10:10,800AF374:0:8011A880:32,800FA730:29:10:10,800FA730:0:8011A880:32,$T:0:8010FF30:2,800C6674:29:10:10,800C6674:0:8011A880:32,8006C010:4:0:16,8006C010:29:18:3,8006C010:0:8011A830:8,$T:0:8010C9E0:18,$T:0:8010C0E0:1
+PIN=${POKE-$T:29:30:3d088889}
 # --- retail arm
 C=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
 R=/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64
