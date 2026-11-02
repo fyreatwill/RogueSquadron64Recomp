@@ -177916,3 +177916,45 @@ Discrimination: selects H-gfx (narrowed to H-ucode-cap: our LLE ucode iteration 
 Rules out: H-gate, H-rt64, H-retail-sample. Supersedes "16384 = retail behaviour"
 (s6070/s6403). Not checked: the s6761 second gap (ticks 2054-2208); the cap fire count fits it too (single-source).
 Next: resume G3 dt-pinned sim match, mission 10 (eep +0x31=9); re-run g3_hud_presence on lvl9 t2054-2208 in that pass.
+
+## Session 6763 (2026-11-01) — G3: mission 10 with dt pinned: sim identical to retail for 1410 ticks, split = song-1 end on the audio clock, render matches; lvl9 second HUD gap is retail's death camera; oracle [vi-poll] splice fixed in four G3 tools
+
+What ran (scratch/s6763; s6762 recipes, dt pin 800FA730:29:30:3d088889, lvl10.eep = s6761 lvl9.eep +0x31=9, no
+FORCE_PLANET_UNLOCK needed): retail SECS=360 DSTEP=10 (24 dumps over ~240 s; exec trace hit its 400000-row cap at VI 19289,
+tick 4728), port SECS=330 concurrently: 755 captures, 0 `[ucode-cap] fired`, 0 crash/abort lines. Side runs: lvl9 port
+rerun (scratch/s6763/lvl9, s6762 build/default cap 65536) and a lvl9 retail arm with 24 dumps at 104-121.25 s after the
+flight-start arm (scratch/s6763/lvl9_retail_gap2.sh -> VI 12962-13997).
+Mission 10 results:
+- g3_rand_ticks.py: first mismatch index 16813 = tick 1411 (values identical, caller order differs: retail 8007132c vs
+  port 80054174, the same signature as lvl9 t2217). g3_tick_mem.py (G3_IGN=04,0c,18): first diff tick 1411 for
+  8010c9e0 and 8010c0e0.
+- g3_song_windows.py: song 1 starts t1282 in both arms; retail ends it t1411 (129 ticks, 332 VI, 634 AI buffers,
+  2.574 VI/tick), port t1449 (167 ticks, 334 VI, 640 buffers). Same audio length: song end on the audio clock
+  (s6755/s6760/s6761 mechanism).
+- g3_frame_snap.py (1410 ticks): NPC points and object words identical on every tick for all 24 NPCs. Snap diffs only
+  words 2-6/9; glob diffs only 20-31, plus 7/8 on 5 ticks and 18 on 4 (allowed render pacing).
+- g3_oracle_match.py (--w 512 --bases 690000,620000 --h 446 --win 60,1024 --winx 85,1191 --dec shift): pre-split dumps
+  vi 7246-10246 d 3.1-6.8; vi 6689 (d 15.3) and vi 9047 (d 22.3) are torn retail dumps (angrylion buffer caught
+  mid-raster: stripes, clear colour below; scratch/s6763/match/worst*.png), not port defects. Post-split frames diverge
+  as expected. Colour stays at the known ~1% port gain.
+- g3_hud_presence.py: port HUD off t1270-1401 (14 caps); retail dump t1282 inside it also off (scripted hide around
+  song 1, the lvl8 pattern). No port-only HUD window.
+Tool defect found and fixed: the oracle's stdout spliced `[vi-poll]` inside an xtrace m= token
+("m=8010c0e0:00000000[vi-poll]", tick 167). g3_frame_snap raised; my first fix dropped the row, which shifted the
+retail tick list by one and faked NPC diffs from tick 372 (port tick k == retail tick k-1, 460 ticks). Correct fix:
+cut the token at `[` and keep the row (g3_frame_snap, g3_tick_mem, g3_song_windows, g3_ai_clock). That also removed
+the fake "first diff t167" on 8010c0e0 and the bogus `song l]` window. Lesson: never drop a tick row in a tick join.
+Positive control: g3_rand_ticks.py scratch/s6754/retail2/oracle.log scratch/s6754/port.rand.txt -> mismatch at index
+2153 (reproduced); g3_frame_snap on s6761 still parses 5094 retail ticks.
+lvl9 side check (s6762 "Not checked"): port rerun split at the same t2217 (third reproduction); first gap t292-458 gone
+(HUD on 194/210 captures in range); second gap t2050-2208 persists with 0 cap fires. Census there: tris FALL 22k->11k
+per 40 VI and texrects drop to 0 (the s6762 cap signature was tris rising + texrects vanishing). The dense retail arm
+puts 16 dumps inside it: all HUD-off, and the decoded frames show the X-wing crashing with a smoke trail (player death
+camera, scratch/s6763/lvl9g2/retail_inside_vs_before.png). Retail behaviour, not a defect.
+Two lines: (1) mission 10 sim state identical tick-for-tick (rand stream + NPC/object snapshots) up to an audio-clocked
+split; (2) frame match + HUD presence agree with retail. lvl9 gap 2: retail dumps + census shape.
+Discrimination: selects "sim identical, split = known song-end mechanism" for mission 10 (refutes a new sim split);
+selects H-retail for the lvl9 t2050-2208 HUD-off window (refutes a second gfx truncation).
+Rules out: a port sim defect on lvl10 within 1410 ticks; a port-only HUD/render drop on lvl10; a second ucode-cap-like
+drop on lvl9.
+Next: g3-mission11-pinned (eep +0x31=10).

@@ -24,7 +24,7 @@ def main():
                 ticks.append(vi)
                 i = l.find(" m=8010c0e0:")
                 if i >= 0:
-                    song.append((tick, l[i + 12:].split()[0]))
+                    song.append((tick, l[i + 12:].split()[0].split("[")[0]))  # s6763: cut a spliced [vi-poll]
             elif pc in ac["AI"]:
                 bufs.append((tick, vi))
         ch = [(t, v) for (t, v), (t0, v0) in zip(song[1:], song) if v != v0]

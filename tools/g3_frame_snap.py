@@ -34,7 +34,9 @@ def parse(path, retail):
                 continue
             pc, v0 = int(f[2], 16), int(f[3], 16)
             a3, ra, mem = v0, pc, f[4:]
-        dumps = [[int(x, 16) for x in m.split(":")[1].split(",")] for m in mem if m.startswith("m=")]
+        # s6763: the splice can also land after the last m= word ("m=8010c0e0:00000000[vi-poll]"); cut it off, never
+        # drop the row (a dropped tick row shifts every later tick by one in the join)
+        dumps = [[int(x, 16) for x in m.split("[")[0].split(":")[1].split(",") if x] for m in mem if m.startswith("m=")]
         if pc in TICKS:
             if ra != pc:  # other overlay's code at the same VA ($ra = jal+8 only for the snapshot return)
                 continue

@@ -1,13 +1,17 @@
-# NEXT: G3 dt-pinned sim + render match, mission 10
-HYPOTHESIS-ID: g3-mission10-pinned
+# NEXT: G3 dt-pinned sim + render match, mission 11
+HYPOTHESIS-ID: g3-mission11-pinned
 
-s6762 closed g3-lvl9-hud-drop: the LLE ucode iteration cap (16384) truncated dense dd1 frames; default is now 65536.
-Work unit (scratch/s6763), retail + port concurrently, as s6761:
-1. eep: cp scratch/s6761/lvl9.eep -> lvl10.eep and set +0x31=9 (tools/g3_eep_patch.py). lvl10 may need
-   ROGUESQ_FORCE_PLANET_UNLOCK=0xFF on the port (CURRENT-TRUTH run recipes); check the retail level name in a dump.
-2. Copy scratch/s6762/{retail,port}.sh with dir s6763 and the new eep; retail SECS=360, port SECS=330; keep
-   ROGUESQ_G3_CENSUS on the port (cheap now) and grep run.log for `[ucode-cap] fired` (expect 0).
-3. Offline: g3_rand_ticks, g3_frame_snap, g3_song_windows, g3_oracle_match, g3_hud_presence.
-Discriminating outcomes: sim identical to the first split (pacing/audio clock = known mechanism) vs a new sim split
-(name the caller at the first rand mismatch); any port-only HUD-off window -> census says built-but-absent or not built.
-Side check: also rerun the lvl9 port arm (scratch/s6762/port.sh SECS=330) and confirm ticks 2054-2208 now show the HUD.
+s6763 closed mission 10 (sim identical 1410 ticks, split = song-1 end on the audio clock, render/HUD match) and the
+lvl9 second HUD gap (retail death camera). Work unit (scratch/s6764), retail + port concurrently:
+1. eep: python3 tools/g3_eep_patch.py scratch/s6763/lvl10.eep scratch/s6764/lvl11.eep --set 0x31=10. If the port does not
+   reach a new level (look at one capture), try ROGUESQ_FORCE_PLANET_UNLOCK=0xFF on the port arm only and check retail too.
+2. sed scratch/s6763/{retail,port}.sh s6763->s6764 and lvl10.eep->lvl11.eep. Run
+   `env SECS=360 NDUMP=24 DSTEP=10 zsh scratch/s6764/retail.sh` in the background and `env SECS=330 zsh scratch/s6764/port.sh`
+   in the foreground; then grep run.log for `[ucode-cap] fired` (expect 0) and crash lines.
+3. Offline: g3_rand_ticks, g3_song_windows, g3_frame_snap <split-1>, g3_tick_mem (G3_IGN=04,0c,18) 8010c9e0 8010c0e0,
+   g3_oracle_match (--w 512 --bases 690000,620000 --h 446 --win 60,1024 --winx 85,1191 --dec shift [--worst 6]),
+   g3_hud_presence scratch/s6764. Look at the worst pairs: torn retail dumps (mid-raster stripes) are not defects.
+4. Any port-only HUD-off window: aim a dense retail arm at it (scratch/s6763/lvl9_retail_gap2.sh pattern, DOFF seconds
+   after the flight-start arm at ~60 VI/s) and read the census shape (tris up + texrects 0 = truncation; tris down = scene).
+Discriminating outcomes: sim identical up to an audio-clocked split (known) vs a new sim split (name the caller at the
+first rand mismatch and the first tick_mem diff); render d<=7 on pre-split dumps vs a port-only render defect.

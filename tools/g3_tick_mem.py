@@ -30,7 +30,7 @@ def blocks(path, retail, key):
         vi[tick] = int(f[2] if retail else f[1])
         i = l.find(" m=" + key + ":")
         if i >= 0:
-            out[tick] = l[i + len(key) + 4:].split()[0].split(",")
+            out[tick] = l[i + len(key) + 4:].split()[0].split("[")[0].split(",")  # s6763: cut a spliced [vi-poll]
     return out
 
 def transitions(b):

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6762 (2026-11-01).
+Compact operational handoff, as of Session 6763 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -19,8 +19,15 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   tail, so lvl9 ticks 292-458 lost the HUD, engine glows and tower lights that retail draws (dense retail dumps t296-386
   HUD on). Census (ROGUESQ_G3_CENSUS=<file>, per-VI tris/texrects/radar calls): renderRadarMinimap ran every frame, its
   texrects never reached the RDP stream, cap fired 192+ times; cap 65536 arm: 0 fires, HUD+glows drawn. Default is now
-  65536 everywhere (=16384 restores). Earlier per-level G3 checks that saw no cap fire are unaffected.
-- **G3 sim determinism with dt pinned (s6753-s6761).** Missions 3-9: rand stream, NPC state, event mask and song
+  65536 everywhere (=16384 restores). Earlier per-level G3 checks that saw no cap fire are unaffected. s6763: the
+  second lvl9 port HUD-off window (t2050-2208) persists with 0 cap fires and retail hides the HUD on 16/16 dumps inside
+  it (player death camera): retail behaviour, not a defect.
+- **G3 mission 10 (s6763):** sim identical 1410 ticks (16812 rand calls, 24 NPCs, 0 obj diffs); split t1411 = song-1 end
+  on the audio clock (retail 129 ticks/332 VI/634 buffers, port 167/334/640). Render: pre-split dumps d 3.1-6.8, two
+  torn retail dumps (angrylion mid-raster) d 15/22; HUD-off t1270-1401 in both arms. 0 cap fires, 0 crash lines.
+  Oracle stdout splices `[vi-poll]` inside xtrace tokens: g3_frame_snap/tick_mem/song_windows/ai_clock now cut the
+  token at `[` (dropping the row shifted the tick join by one and faked NPC diffs from t372).
+- **G3 sim determinism with dt pinned (s6753-s6763).** Missions 3-10: rand stream, NPC state, event mask and song
   handle identical to retail (lvl5 20635 rand calls / 1972 ticks). Unpinned desyncs = pacing (retail drops frames,
   2.115 VI/tick; port 2.000). Late splits on lvl4/lvl7/lvl8 = song end on the audio clock (equal AI-buffer counts; lvl8 s6760: retail dropped
   frames to 2.43 VI/tick in the song, so the same 331-VI/634-buffer song spans 136 retail ticks vs 167 port ticks).
@@ -143,9 +150,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 lvl9 HUD drop (NEXT: g3-lvl9-hud-drop).** s6761: port HUD/engine glows off ticks 292-458, retail on. Discriminate
-   H-gate (game skips the HUD draw: unlogged guest flag) vs H-gfx (HUD DL submitted, RSP/RT64 does not draw it). Then
-   G3 sim/frame match missions 10.. (scratch/s6761 retail.sh/port.sh, eep +0x31=N-1).
+1. **G3 sim/frame match, mission 11.. (NEXT: g3-mission11-pinned).** Recipes scratch/s6763/{retail,port}.sh with
+   eep +0x31=N-1 (tools/g3_eep_patch.py); retail DSTEP=10 spreads 24 dumps over ~240 s; dense dumps in a window:
+   scratch/s6763/lvl9_retail_gap2.sh (DOFF/DSTEP seconds after the flight-start arm, ~60 VI/s).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
@@ -160,5 +167,5 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts: [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); per-level images:
   [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
-- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261031-230356 (s6715 arms, consumed).
+- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261031-230356 (s6715 arms, consumed; none new at s6763).
 - Recent chronology: PORTING-STATE sessions 6738-6760; search bounded windows only.
