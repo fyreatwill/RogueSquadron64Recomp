@@ -179327,3 +179327,39 @@ ORIGIN: no mitigation; tool option + analysis only.
 VERDICT: selects H-match for levels 13-16 (two lines: RDP static-set equality with cross-level control, pixel crops of
 two strings); refutes H-diff-text and H-diff-select (port cursor and retail land on the same level per press).
 g3-ldesc-levels CLOSED. NEXT: the post-death screen (lvl9 player-death window, s6763), g3-death-screen.
+
+## Session 6804 (2026-11-02) — G3: lvl9 post-death sequence matches retail frame-for-frame (death camera, fade, respawn HUD, back to flight; port runs on to the GAME OVER debrief) except the death camera's length: retail 33 frames vs port 117, and its end is the lvl9 t2217 split
+
+HYPOTHESIS-ID: g3-death-screen (closed) -> g3-deathcam-end.
+
+Soak fold: none new since s6789_spansent_lvl5_dd4.
+What ran: one pair, scratch/s6804/pair (script promoted to tools/g3_mission/death_pair.sh). lvl9 save scratch/s6761/lvl9.eep,
+dt pin 800FA730:29:30:3d088889 in both arms, s6763 press/AP schedules. Retail: rs64_oracle + rdplog (no width filter,
+2.34 GB, 7870 frames, 345 s = VI 20608, flight tick 4896), s6763 exec-trace set. Port: RS64_RDP_BIN_PORT + _VI=1 (2.02 GB,
+10565 frames), census, rand trace, 269 window captures from 190 s. ROGUESQ_LIVES_CAP unset (default off). 0 crash lines.
+New tool tools/g3_rdp_timeline.py (binned rect/tri/set-id timeline of a long RDP stream) to find screens in minutes of flight.
+Results (g3_rdp_segments --min 10, then g3_rdp_segcmp; retail frame = port frame + 430 before death):
+  segment              retail frames      port frames        score
+  pre-death HUD (ctl)  4861-4954 n=93     4431-4524 n=93     93/93 exact, static 7=7
+  20-rect burst        4982-5007 n=25     4552-4577 n=25     25/25 exact
+  death camera, 0 rect 5157-5190 n=33     4727-4844 n=117    33/33 exact (tris 562), LENGTH DIFFERS
+  7-rect fade          5194-5208 n=14     4848-4862 n=14     static 7=7, tris 1.001
+  9-rect               5210-5221 n=11     4864-4875 n=11
+  10-rect respawn HUD  5221-5364 n=143    4875-5018 n=143    static 8=8 eq, tris 0.980 (post-split pacing)
+  cross ctl            respawn vs pre-death: static 8 vs 7 eq=False; cam vs respawn: 0 vs 8 eq=False
+After death the offset is 346 frames (430 - 84): the port camera holds 84 more frames. Ticks (800FA730 rows, m=80165ed0
+word0 = tick): retail runs a flat 40 VI per 10 ticks over t2130-2210 (the static camera scene) then drops to ~2-2.5
+VI/tick; port is 2 VI/tick throughout, HUD-off VI 8854-9088 = t2133-2250. So retail ends the camera ~t2210 and the port
+at t2250; s6763's lvl9 sim split at t2217 (rand caller retail 8007132c vs port 80054174) falls exactly on it. Neither
+frames (33 vs 117) nor VIs (~320 vs 234) are equal across arms, so the end condition is not a plain rendered-frame
+count or VI timer as measured here (single-source: retail frame<->tick is inferred from segment alignment, the retail
+arm has no per-frame trace row).
+Post-death flow in the port: flight resumes, more deaths, runInMissionFrame stops at t5806 (VI 16200), then the GAME
+OVER debrief (452 rects, w_0342.81.png "RESCUE ON KESSEL / GAME OVER / RANK TRAINEE"), a screen already matched to
+retail in s6772/s6778. Retail had reached only t4896 by 345 s (slower VI/tick), still in flight.
+ORIGIN: no mitigation; new analysis tool + pair script only.
+VERDICT: selects H-match for the post-death screen sequence and content (two lines: RDP frame-exact/static-set scores
+with cross controls, equal segment lengths for every non-camera segment); refutes H-diff-flow (no different screen,
+same respawn HUD, same fade). H-split is half right: the sims do not split before death; the split IS the death
+camera's end, which comes ~40 ticks later in the port.
+Next: g3-deathcam-end - find the death camera's end condition (code that clears the HUD-off state) and trace it in both arms.

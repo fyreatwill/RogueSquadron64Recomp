@@ -1,16 +1,18 @@
-# NEXT: G3 post-death screen vs retail (lvl9)
-HYPOTHESIS-ID: g3-death-screen
+# NEXT: what ends the lvl9 death camera (retail ~t2210, port t2250)
+HYPOTHESIS-ID: g3-deathcam-end
 
-State: every front-end menu, pause, debrief and LEVEL DESCRIPTION (lvl1, 13-16) match retail (s6778-s6803).
-Gap: the screens after the player's death were never compared. s6763: in the lvl9 pinned pair the retail player dies by
-itself (HUD-off death camera t2050-2208, retail 16/16 dumps); port also hid the HUD there. What comes next (respawn /
-lives-left / MISSION FAILED / retry menu) is unscored.
-Hypotheses: H-match (same screen sequence, static rect sets equal); H-diff-flow (port goes to a different screen or
-respawns differently after death); H-split (the sim already split before death, so death timing differs - then align on
-the death camera start, not ticks).
-Discriminator, ONE pair run: tools/g3_mission/run.sh recipe from s6762/s6763 for lvl9 (scratch/s6763/lvl9_port.sh,
-lvl9.eep = scratch/s6761/lvl9.eep), extended so both arms run ~60 s past t2208, with VIDEO=rdplog on retail and
-RS64_RDP_BIN_PORT on the port (plus a few angrylion dumps in a 2nd run for a pixel crop of any text screen).
-Score with g3_rdp_segments.py (texrect-count segments after the death camera) + g3_rdp_segcmp.py; positive control =
-the pre-death flight HUD segment, cross control = death screen vs pause menu. Check ROGUESQ_LIVES_CAP is OFF in the port
-arm (it changes lives handling). Do NOT poke damage/wins (G1(d) parked); rely on retail's natural death.
+State (s6804): post-death screen sequence matches retail frame-for-frame except the HUD-off death camera: retail 33
+frames / t2130-2210 at a flat 4 VI/tick, port 117 frames / t2133-2250 at 2 VI/tick. Its end is the lvl9 sim split
+t2217 (s6763: rand caller retail 8007132c vs port 80054174). Data: scratch/s6804/pair (retail.bin, port.bin, oracle.log,
+port.rand.txt, segcmp.txt); rerun with tools/g3_mission/death_pair.sh OUTDIR.
+Hypotheses: H-audio (camera waits for a death sound/voice/stream to finish: audio clock, the known song-end split class,
+then retail-faithful pacing, close); H-vi (an osGetCount/VI-count timer: port VI 234 vs retail ~320 says no unless the
+start differs); H-frames (counter bumped per rendered frame / gfx task done: retail renders fewer frames per tick in
+the camera, so a frame-counted wait ends LATER in ticks on retail - opposite sign, unless retail skips frames);
+H-sim (tick-counted; would give equal ticks - refuted unless the start tick differs).
+Discriminator, offline first: disassemble around 8007132c and 80054174 (the first callers that differ at t2217) and the
+HUD-hide flag writer for the death camera (find via the port census HUD-off edge + ROGUESQ_DEBUG_WRITE on the flag);
+name the counter the end test reads. Then ONE pair run (death_pair.sh) adding that word to both xtrace specs
+(RS64_XTRACE_MEM / ROGUESQ_XTRACE_MEM at 800FA730) plus the AI/audio-voice state words: whichever word reaches its end
+value on the same tick-relative schedule in both arms names the clock. If H-audio: document as retail-faithful pacing
+(close). If port-only: root-cause.

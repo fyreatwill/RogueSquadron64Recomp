@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6801 (2026-11-02).
+Compact operational handoff, as of Session 6804 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -334,11 +334,13 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 post-death screen (NEXT: g3-death-screen).** Front-end text is closed: LEVEL DESCRIPTION matches retail for
-   levels 1 and 13-16 (s6802/s6803: static sets equal, tris 0.997-1.005, cross-level controls differ, retail pixel crops
-   show identical strings; CRAFT DESCRIPTION inert in both arms). Not yet compared: what follows the player's death
-   (retail lvl9 dies by itself, HUD-off death camera t2050-2208, s6763). Tools: g3_menu_pair.sh (EEP=), g3_mission/run.sh,
-   g3_rdp_segments.py, g3_rdp_segcmp.py.
+1. **G3 lvl9 death-camera length (NEXT: g3-deathcam-end).** s6804 pair (tools/g3_mission/death_pair.sh, rdplog vs
+   RS64_RDP_BIN_PORT, dt pinned): the whole post-death screen sequence matches retail. Pre-death 93/93 frames exact, death
+   camera frames exact (562 tris, 0 rects), then 7-rect fade 14 frames, 9-rect 11, 10-rect respawn HUD 143 (static sets
+   equal), normal HUD; every segment the same length in both arms EXCEPT the HUD-off death camera: retail 33 frames, port
+   117. Retail ticks t2130-2210 at a flat 4 VI/tick, port t2133-2250 at 2 VI/tick: the camera's end is the lvl9 split
+   (s6763 t2217). The port's run ends at the GAME OVER debrief (t5806, already matched s6772/s6778). Open: what ends the
+   camera (audio clock / VI timer / rendered-frame count). Tools: g3_rdp_timeline.py, g3_rdp_segments.py, g3_rdp_segcmp.py.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
