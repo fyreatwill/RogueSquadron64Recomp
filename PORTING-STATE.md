@@ -178240,3 +178240,27 @@ Paired run (scratch/s6772/r18, run.sh LEVEL 17 with the presses above, POKE dt p
 Rules out: "save +0x31 selects any bonus mission" (clamped to 16 by the game), a port sim defect in mission 18 before the
 song-3 split.
 Next: mission 19 (LEVEL 18, two RIGHT presses), same recipe.
+
+## Session 6773 (2026-11-01) — G3 mission 19 (Battle of Hoth, bonus, snowspeeder) sim identical to retail over the whole retail trace (4742 ticks, no song switch, no split); per-mission G3 sweep 1-19 closed
+
+HYPOTHESIS-ID: g3-mission19-pinned (closed: sim identical, render match).
+
+Port probe (scratch/s6773/probe, AP=...,23:w512,25:right,25.7:right,27:start,31:start,42:start, save s6772/lvl19.eep):
+[lvsel] cursor 16 -> 17 (tick 62) -> 18 (tick 83) in state 2, state 3/4, ret=0x12 = BATTLE OF HOTH. Like m18 it stops at
+SELECT YOUR CRAFT (SPEEDER, tow cable); hangar takeoff, then snowspeeder flight from ~53 s; 0 crash lines (sheet.png).
+Paired run (scratch/s6773/r19, run.sh LEVEL 18, PRESS=...,36:start,41:dright,42.5:dright,45:start,50:start,55:start,
+65:start, AP as probe, DWARM 30 ARM 20, POKE dt pin + one-shot rngSeed, RSECS 260 PSECS 230 CAP0 50 NDUMP 40 DSTEP 4
+FARM 80); no separate retail probe was needed: retail reached the same mission (rand callers/values identical from t0).
+- Sim: rand (tick, caller, value) identical for all 6077 retail calls over 4742 ticks (port 6471/5147, longer run).
+  Song handle 8010C0E0 never changes in either arm (as m11), so there is no audio-clock split. frame_snap with
+  G3_SNAP_TICKS=800FA730 (scratch/s6773/r19_off2.txt): 34420 NPC rows to tick 2999 (the tool's 3000-tick window),
+  0 point/obj diffs, no retail-only/port-only rows, 0 disallowed snap/glob words; tick_mem 8010C9E0 no arm diff.
+  run.sh's built-in offline pass (no G3_SNAP_TICKS) paired level-select rows (disallowed t2), as s6771/s6772 warned.
+- Positive control: flip_ctl (s6772 fix, starts at the first tick row) flipped 800ca5dc t42 -> flagged at index 107.
+- Render: best pairs d 4.40-5.69; worst: vi 6649/9475/10648 = torn retail angrylion dumps (mid-raster, sky only or
+  striped), vi 6880 d 19.0 = same scene, camera phase. HUD on 24/26 retail dumps (2 off = torn), 225/225 port captures.
+  0 cap fires, 0 crash lines.
+Rules out: a port sim defect in mission 19. With s6753-s6773 every mission 3-19 now has a pinned sim match to retail
+(1-2 render match s6744-s6748). The per-mission G3 sweep is closed.
+Next: G1e interpreter lever (s6716: factor5_ucode self = 76% of the Gfx thread at dd4 FPS60, the only large term left).
+Not a mitigation (measurement only; no ORIGIN needed).

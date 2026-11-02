@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6771 (2026-11-01).
+Compact operational handoff, as of Session 6773 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -22,6 +22,11 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   65536 everywhere (=16384 restores). Earlier per-level G3 checks that saw no cap fire are unaffected. s6763: the
   second lvl9 port HUD-off window (t2050-2208) persists with 0 cap fires and retail hides the HUD on 16/16 dumps inside
   it (player death camera): retail behaviour, not a defect.
+- **G3 mission 19 (s6773, Battle of Hoth, bonus, snowspeeder):** sim identical over the whole retail trace (6077 rand
+  calls / 4742 ticks; 34420 NPC rows to t2999 with 0 point/obj diffs, 0 disallowed words); song handle never changes,
+  so no split (as m11). Render best d 4.4-5.7, worst = torn retail dumps / camera phase. 0 cap, 0 crash. Reach: two
+  d-pad RIGHT on SELECT LEVEL (port `23:w512,25:right,25.7:right`, retail `41:dright,42.5:dright`) + craft Start.
+  **Per-mission G3 sim sweep 3-19 CLOSED** (1-2 render match s6744-s6748).
 - **G3 mission 18 (s6772, Death Star trench run, bonus, X-wing):** sim identical t0-t1097 (16980 rand calls, 31908 NPC
   rows, 0 point diffs, 0 disallowed words), split t1098 = song-3 end (retail t1098 vs port t1115: audio-clock split as
   m10-16); flip control flagged. Render pre-split d 3.47-6.07, outliers torn retail dumps / phase. 0 cap, 0 crash.
@@ -201,9 +206,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 sim/frame match, bonus mission 19 (NEXT: g3-mission19-pinned).** Missions 17/18 done (s6771/s6772). Tool:
-   tools/g3_mission/run.sh SDIR 18 with the s6772 mission-18 recipe (run.sh header) and TWO right presses; then the
-   per-mission G3 sweep is closed and the next rung per ITERATION.md 3c applies.
+1. **G1e interpreter lever (NEXT: g1e-ucode-interp).** s6716: factor5_ucode self = 76% of the Gfx thread at dd4
+   FPS60 (dd2 ~48-50 fps, dd4 ~44). Profile the hot ucode blocks/vector ops line-level and land one optimisation with
+   an output-identical control (RDP stream hash) and an fps A/B in one run.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
