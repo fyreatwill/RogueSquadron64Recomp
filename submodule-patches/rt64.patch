@@ -214,7 +214,7 @@ index a0d4a6a..f6a56a9 100644
              // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
              //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..7f0f4f7 100644
+index 6255872..9c7fa72 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
 @@ -4,12 +4,107 @@
@@ -1258,7 +1258,7 @@ index 6255872..7f0f4f7 100644
                  }
  
                  if (hasDepth) {
-@@ -580,11 +1519,153 @@ namespace RT64 {
+@@ -580,11 +1519,169 @@ namespace RT64 {
                      posWorkBuffer[workBufferIndex + 2].z = 0.0f;
                  }
  
@@ -1278,15 +1278,27 @@ index 6255872..7f0f4f7 100644
 +                        return (e && *e == '0') ? 0 : 1;
 +                    }();
 +                    bool on = s_mode == 1;
++                    // s6797: under =tog, per-epoch-second cost stats for the arm that just ended: tris reaching this
++                    // block, fans emitted, extra tris drawn, and host us spent in the block (fan build included).
++                    static uint64_t s_tris = 0, s_fans = 0, s_extra = 0; static double s_us = 0;
++                    std::chrono::steady_clock::time_point s_t0;
 +                    if (s_mode == 2) {
++                        s_t0 = std::chrono::steady_clock::now();
 +                        const double now = std::chrono::duration<double>(
 +                            std::chrono::system_clock::now().time_since_epoch()).count();
 +                        on = (uint64_t(now) & 1) != 0;
 +                        static int s_last = -1;
 +                        if (int(on) != s_last) {
++                            if (s_last >= 0) {
++                                fprintf(stderr, "[exactedges-stat] on=%d sec=%llu tris=%llu fans=%llu extra=%llu us=%.0f\n", s_last,
++                                    (unsigned long long)(uint64_t(now) - 1), (unsigned long long)s_tris, (unsigned long long)s_fans,
++                                    (unsigned long long)s_extra, s_us);
++                            }
++                            s_tris = s_fans = s_extra = 0; s_us = 0;
 +                            s_last = int(on);
 +                            fprintf(stderr, "[exactedges] on=%d epoch=%.3f\n", int(on), now);
 +                        }
++                        s_tris++;
 +                    }
 +                    const float mIntercept2 = xm - dxmdy * yFloor;
 +                    const float xC = xl + dxldy * (y2 - y3);
@@ -1338,7 +1350,11 @@ index 6255872..7f0f4f7 100644
 +                                }
 +                            }
 +                            exactTriCount = uint32_t(triOut);
++                            if (s_mode == 2) { s_fans++; s_extra += uint64_t(triOut - 1); }
 +                        }
++                    }
++                    if (s_mode == 2) {
++                        s_us += std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - s_t0).count();
 +                    }
 +                }
 +

@@ -179083,3 +179083,36 @@ EXACT_EDGES on. No code change.
 Dark load frames: 2 kept (on arm), 0 with the line (EDGE_CONTENT=0). Too few to split the load line by arm. The load
 line is the same clear column (s6736), so it is not chased.
 Next: s6794 "not checked": hangar/menus seams and fan overhead under EXACT_EDGES=tog (NEXT.md).
+
+## Session 6797 (2026-11-02) — G3: exact-edge fan is clean on hangar/menus (no seam change, same-run tog) and costs ~0.1 ms/s host + 16% more tris drawn, 0 frame-time change; exact-edge thread CLOSED
+
+HYPOTHESIS-ID: g3-cinematic-sweep (closed this session). Work unit = NEXT.md s6794 "not checked" items.
+Hypotheses: H-clean (no seam change, negligible cost), H-improve (on seconds remove shared-edge seams), H-regress
+(on seconds add slivers/lines or cost >5%).
+
+What ran (one build, one run): rt64 `[exactedges-stat]` instrument added under ROGUESQ_EXACT_EDGES=tog only
+(lib/rt64/src/gbi/rt64_gbi_rdp.cpp, exported to submodule-patches/rt64.patch): per epoch second of each arm, tris reaching
+the exact-edge block, fans emitted, extra tris, host us in the block. Route scratch/s6797/menus.sh = s6731 menus route
+(title -> level-select hangar -> SELECT YOUR CRAFT -> lvl1 flight -> pause -> GAME OVER -> Elite Rogues -> Select Game ->
+hangar again) with timestamped window caps every ~0.6 s (384 caps, 220 kept inside one arm second), env
+`ROGUESQ_LIVES_CAP=1 ROGUESQ_EXACT_EDGES=tog ROGUESQ_G1B=1`, 4:3 default window. 0 crash, mission_verified_130s.
+
+Results:
+- Seams (new tools/g3_seam_intra.py: per frame, 1-2 px columns/rows differing >40 from pixels 3 px either side while those
+  agree within 12, >=40 px long). Positive control: a 2 px line drawn into a flat patch of every kept frame flagged 102/102.
+  off arm 25/112 frames with a flagged line (63 lines), on arm 24/108 (70). The flagged set is the same features in both
+  arms (Elite Rogues backdrop verticals col 233/365/406/434/965, title col 295, pause row 411/412, hangar col 693/696):
+  content, not seams. Arm-exclusive keys seen in >=2 frames: off 1 (col 778 at t<10, one screen), on 0. -> no seam added or
+  removed on any hangar/menu screen.
+- Cross-frame pair diff (tools/g3_edge_tog_pairs.py) is DEAD for this question: its cross-arm "lines" are animation (pulsing
+  START text, spinning pause emblem, viewed scratch/s6797/pairs_view.png), and the 0.6 s cadence gave only 3 same-arm
+  noise pairs. Kept as a tool with that caveat documented in its header.
+- Cost ([exactedges-stat], 130 s per arm): fans on 9.78% of tris; extra tris drawn +15.8% (472579 over 2.99 M); block host
+  time 1232 vs 1133 us/s (+99 us per wall second, 0.054 vs 0.049 us/tri). Frame time: adjacent opposite-arm [g1b] seconds
+  (248 pairs, drift-controlled) sd_wall on-off mean -0.018 ms (median +0.030, sd 0.573, SE ~0.036) on a 4.1 ms task;
+  tasks/s -0.04; VI 60.0 both. Two lines (block timer + paired sd_wall) agree: no measurable frame-time cost. GPU cost of
+  the extra tris is not separately measured (VI 60/s and tasks/s unchanged in both arms).
+Verdict: H-clean selected; H-improve and H-regress refuted for hangar/menus. Exact-edge thread (s6793-s6797) CLOSED;
+ROGUESQ_EXACT_EDGES stays default on.
+Rules out: the fan as a source of menu/hangar seams or of frame-time regressions at 4:3.
+Not covered: wide aspect (ASPECT=16:9/21:9) screens -> NEXT.

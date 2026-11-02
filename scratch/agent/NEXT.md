@@ -1,19 +1,19 @@
-# NEXT: s6794 "not checked" - EXACT_EDGES fan on hangar/menus (seams) + its tri/frame-time overhead (G3 cinematic follow-up)
-HYPOTHESIS-ID: g3-cinematic-sweep
+# NEXT: G3 wide-aspect (21:9) menus/hangar seam + artifact pass
+HYPOTHESIS-ID: g3-wide-menus
 
-State: s6794 exact-edge fan (ROGUESQ_EXACT_EDGES default on, =tog alternates off/on per 1 s epoch, on = odd second, logs
-[exactedges]) fixed the AT THE MOVIES x=318 seam. s6796 showed it leaves the cw-1 right-edge column alone (H-same).
-s6794 never checked the hangar/menus, nor the cost of emitting up to 6-vertex fans instead of 3-vertex tris.
+State: s6797 closed the exact-edge thread at 4:3 (no seam change on any menu/hangar screen, negligible cost). The owner plays
+on 21:9; s6601/s6602 found wide-only hangar framebuffer bands, never re-checked after s6735 (horizontal line), s6736
+(cw-1 column) and s6794 (exact-edge fan).
 
 Hypotheses:
-- H-clean: hangar/menus show no seam change, frame time unchanged (fan cost negligible) -> close the exact-edge thread.
-- H-improve: hangar/menus had shared-edge seams (lit 1 px lines inside flat fills) that vanish in on seconds.
-- H-regress: on seconds add artefacts (slivers/overdraw lines at fan edges) or cost >5% host frame time.
-Discriminator, ONE run: scratch/s6731/menus.sh route (title -> menus -> hangar SELECT YOUR CRAFT/LEVEL), copy it to
-scratch/s6797/ with the s6796 timestamped cap() (times.txt "<n> <t0> <t1>" via zsh $EPOCHREALTIME) and
-"ROGUESQ_EXACT_EDGES=tog". Score: per capture, count interior 1 px columns/rows whose colour differs from both neighbours
-by >40 inside otherwise flat regions, split by arm (tools/g3_edge_tog_split.py's time filter). Frame cost: G1b per-VI
-frame-time instrument split by [exactedges] epochs from run.log.
-Positive control: the AT THE MOVIES seam detector must flag the x=318 line in off seconds (s6793/s6794 recipe) if the
-detector is reused; otherwise inject a synthetic 1 px line into one capture and confirm the scorer counts it.
-Outcomes: on == off and cost <5% -> H-clean, close; fewer lines on -> H-improve; more lines or cost -> H-regress (fix or gate).
+- H-clean: 21:9 seam inventory per screen = the 4:3 inventory (content features only), arms equal -> close G1d render side.
+- H-wide-seam: 21:9 adds lines at the widened-region boundaries (old 4:3 edge x, cw-1 at the wide width) or bands on the
+  hangar (s6602), absent at 4:3.
+- H-fan-wide: on/off arms differ at 21:9 (fan interacts with the wide x scale).
+Discriminator, ONE run: `zsh scratch/s6797/menus.sh tog21 21:9 "ROGUESQ_LIVES_CAP=1 ROGUESQ_EXACT_EDGES=tog ROGUESQ_G1B=1"`
+(copy to scratch/s6798/ and change paths; check the run.log echoes the aspect), then
+`python3 tools/g3_seam_intra.py <dir>` (pos ctl must be ~100%) and compare its per-screen line set with the 4:3 run
+(scratch/s6797/tog: off 25/112, on 24/108 frames with lines; features listed in PORTING-STATE s6797). Lines are content if
+they appear at the same relative positions in 4:3; wide-only lines -> view the frame, name the screen and the draw (RDP
+dump RS64_RDP_BIN_PORT on that screen) before any fix.
+Outcomes: same inventory + equal arms -> H-clean; new wide-only lines -> H-wide-seam (root-cause); arm difference -> H-fan-wide.

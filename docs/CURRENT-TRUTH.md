@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6793 (2026-11-02).
+Compact operational handoff, as of Session 6797 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -334,12 +334,13 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 cinematic sweep follow-ups (NEXT: g3-cinematic-sweep).** s6792 all 81 AT THE MOVIES shots pair with retail;
-   s6794 sky seam fixed (exact-edge fan). s6795 TRI shots 48/64 CLOSED = frame weighting (tools/g3_cine_tri.py).
-   s6796 CLOSED (H-same): the exact-edge fan does not touch source column cw-1. Same-run ROGUESQ_EXACT_EDGES=tog,
-   EDGE_CONTENT=0, lvl1 4:3: sky edge column off 26/44 (59%, pos ctl vs s6736 ~69%) vs on 31/47 (66%), identical
-   right-edge blue profile, 0 new columns; [g1d-reach] still max_tri_x1 = cw-1.00. The EDGE_CONTENT crop stays correct
-   with EXACT_EDGES on. NEXT = s6794 "not checked": hangar/menus seams + fan tri/frame-time overhead under EXACT_EDGES=tog.
+1. **G3 wide-aspect menus/hangar seam pass (NEXT: g3-wide-menus).** Exact-edge thread CLOSED s6797: same-run
+   ROGUESQ_EXACT_EDGES=tog over the 4:3 menus route (title, level-select hangar, SELECT YOUR CRAFT, pause, GAME OVER, Elite
+   Rogues, Select Game): intra-frame seam scorer tools/g3_seam_intra.py (pos ctl 102/102) flags the same content features
+   in both arms (off 25/112 frames, on 24/108, 0 on-only lines); fans 9.8% of tris, +15.8% tris drawn, +99 us/s host,
+   paired [g1b] sd_wall on-off -0.018 ms (SE 0.036) on 4.1 ms. s6795 TRI shots CLOSED = frame weighting; s6796 cw-1 column
+   untouched by the fan. NEXT = the same route + scorer at ROGUESQ_ASPECT=21:9 (owner's monitor), where s6601 wide-only
+   hangar bands were never re-checked after the s6735/s6736/s6794 fixes.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
