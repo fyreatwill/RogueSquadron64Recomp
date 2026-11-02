@@ -178710,3 +178710,49 @@ scratch/s6779/r1/lvl1.eep on both arms, mupen eep and owner save restored by the
   and this RDP stream). The remaining frame-pair differences are animation phase (PRIM flicker, hologram wobble,
   model rotation). Front-end closed except the passcode Concert Hall (screen 10, never driven).
 Rules out: H-diff (missing/extra items) on ENTER NAME and the 4:3 hangar.
+
+## Session 6786 (2026-11-01) — G3: passcode MAESTRO unlocks OPTIONS > SHOWROOM (= screen 10); SHOWROOM and its CONCERT HALL player match retail at RDP level, the song-worker handshake runs with no image job in flight in both arms, and the 3D ship gap is the game's RNG-chosen ship and pose
+
+HYPOTHESIS-ID: g3-concert-hall (closed).
+
+Soak fold: none new since s6782 (latest s6781_menufifo_lvl1_dd1, consumed).
+No game build. Tool changes: tools/oracle/rdplog/rdplog.c RS64_RDP_BIN_MAX_MB (file cap, default 512 MB unchanged; the
+r1 retail stream hit the 512 MB cap, routes this long need ~1 GB). NEW tools/g3_passcode_sched.py (types a passcode on
+the letter wheel), tools/g3_showroom_pair.sh (retail rdplog + exec-trace marks vs port RDP bin + xtrace marks + window
+captures; GAP/DWELL/EXTRA/RANDX knobs), tools/g3_showroom_models.py (ship index per flyby from each arm's rand seeds).
+Route (port window captures p1-p3, then pairs r1-r4): OPTIONS > PASSCODES (down,down,a) shows `--------`, a letter wheel
+`... ! ? & A B C ...` centred on A (right = next letter, a = take it), ENTER CODE and BACK. MAESTRO = 12 right, a, 12 left,
+a, 4 right, a, 14 right, a, 1 right, a, 2 left, a, 3 left, a, then down + a (ENTER CODE): the code clears and OPTIONS gains
+a SHOWROOM row between ELITE ROGUES and PASSCODES. SHOWROOM = screen 10 (the menu item action byte 26 -> case 0x800B533C
+sets 0x80130B50 bit 0x200; s6784 had read it as the passcode accept): starfield + Death Star, ships flying by, items
+CONCERT HALL / AT THE MOVIES / BACK. CONCERT HALL = song player (`<<< ROGUE TITLE >>>` over the same flybys).
+Retail needs GAP=16 s between the passcode b and the SHOWROOM presses (r1 with 6 s: retail OPTIONS image job 4 landed
+~12 s after the port's, the presses fell early, no song marks).
+Song-worker handshake (s6784 marks, positive control = image marks 0x800B380C/3FA0/4004 in the same runs):
+- Both arms: image jobs 1-4 (title, OPTIONS, PASSCODES, OPTIONS return) complete before the SHOWROOM entry, then exactly one
+  song request 0x800C3B38 (msg 0x801F4400, word5/6 = 1/1), one completion 0x800C5880, recv on queue 0x80140000 (MEM 3). No
+  image mark after the song send in either arm; selecting CONCERT HALL sends no second song request in either arm (r4).
+  Runtime H-disjoint confirmed on both arms (s6784 was single-source static + runtime null).
+- Timing difference (same class as s6781, benign here): retail's recv 0x800C3B4C is a per-frame poll that returns 0 for 5
+  frames and the worker completes 9 ticks after the send; the port's worker completes in the send tick and the first poll
+  gets it. With one job per screen there is nothing to overtake. Payload word 0 differs (retail 0x1E60, port 0x182F/0x1873
+  across port runs) and the heap pointers differ (song msg 0x801F9120 vs 0x801F5940, image msg 0x801DDAB8 vs 0x801DBE58):
+  noted, not investigated (single-source).
+RDP (rdplog vs RS64_RDP_BIN_PORT):
+- r2 SHOWROOM menu: g3_rdp_phase texrects 133/frame both, static 80 = 80, animated positions 1595 shared / 0 one-sided;
+  tri mean ratio 0.545 (port 105 vs retail 188). Earlier screens in the same streams (OPTIONS 159/160 rects ~367 tris,
+  PASSCODES 223/220 rects) agree segment for segment, so the gap starts at the ship fly-in.
+- Ship choice is the game's RNG (static, retail ROM): init 0x800C5764 idx = (s16)rand % 18, each flyby 0x800C4458 idx =
+  (idx + 1 + (rand & 1)) % 18, plus 0x80071308 rand & 0x7FF per flyby (pose/path; no time lag aligns it, best 8.8% exact).
+  rand = seed*0xA8351D63, (s>>6)&0x7FFF. The menus call rand every frame (0x800C6674, 0x800B4CC0), so the seed at the
+  SHOWROOM entry depends on how many frames each arm spent in menus.
+- r3 (DWELL 60, retail --exec-trace rand with seed peek): flyby cadence 1023 ticks in both arms; indices computed from each
+  arm's own seeds: retail 4,6,8,10, port 7,9,10,12. Model 10 (both arms) has the same texture-tile hash (1615bd) and
+  texture-image address set on 908/908 aligned frames; control (retail model 10 vs port model 9) 0/908. Per-frame tri
+  counts differ (median |d| 17, max 289 vs 288) = the random pose. The index prediction picking out exactly the segments
+  whose tile sets coincide is the second line of evidence that the ship is RNG-chosen.
+- r4 CONCERT HALL (EXTRA 12:a): 99 texrects/frame both, static set 99 = 99; control (retail CONCERT HALL vs port SHOWROOM
+  menu) static sets differ (99 vs 133, one-sided rects both ways). Tri distributions differ (ships again).
+Verdict: H-match for SHOWROOM and CONCERT HALL at RDP level (texrect sets identical; 3D gap = RNG ship/pose, retail
+behaviour). Front-end now fully driven except SHOWROOM > AT THE MOVIES and Concert Hall track changes (next unit).
+Rules out: H-diff (missing/extra items) on screen 10; H-overlap of the song and image workers at runtime.

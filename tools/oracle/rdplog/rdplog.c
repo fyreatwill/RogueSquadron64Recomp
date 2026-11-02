@@ -92,7 +92,10 @@ EXPORT void CALL ProcessRDPList(void)
     uint32_t mask = xbus ? 0xFFF : 0xFFFFFF;
     if (end > start) {
         const char *bw = getenv("RS64_RDP_BIN_WIDTH");
-        if (binf && binbytes < (1ull << 29) && (!bw || (G.VI_WIDTH_REG && *G.VI_WIDTH_REG == (uint32_t)atoi(bw)))) {
+        /* s6786: RS64_RDP_BIN_MAX_MB raises the 512 MB file cap (long menu routes, e.g. the passcode SHOWROOM). */
+        static unsigned long long binmax = 0;
+        if (!binmax) { const char *mx = getenv("RS64_RDP_BIN_MAX_MB"); binmax = (mx ? strtoull(mx, 0, 0) : 512ull) << 20; }
+        if (binf && binbytes < binmax && (!bw || (G.VI_WIDTH_REG && *G.VI_WIDTH_REG == (uint32_t)atoi(bw)))) {
             uint32_t hdr[5] = { 0x52445043, G.VI_ORIGIN_REG ? *G.VI_ORIGIN_REG & 0xFFFFFF : 0,
                                 G.VI_WIDTH_REG ? *G.VI_WIDTH_REG : 0, end - start, seq++ };
             fwrite(hdr, 4, 5, binf);

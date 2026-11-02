@@ -1,17 +1,20 @@
-# NEXT: passcode Concert Hall (screen 10) RDP compare + song-worker runtime (G3)
-HYPOTHESIS-ID: g3-concert-hall
+# NEXT: SHOWROOM > AT THE MOVIES + Concert Hall track change (G3)
+HYPOTHESIS-ID: g3-showroom-movies
 
-Done s6785: ENTER NAME 235/236 exact; native 4:3 hangar H-match via tools/g3_rdp_phase.py (static 53/53, tris ratio 1.003).
-Last undriven front-end screen: screen 10, the MAESTRO passcode "Concert Hall" (s6784: the only screen that runs the
-song-load worker; its H-disjoint verdict is single-source static + runtime null).
+Done s6786: MAESTRO -> OPTIONS > SHOWROOM (screen 10) and CONCERT HALL match retail at RDP level (texrect sets identical;
+3D tri gap = RNG ship/pose); song worker runtime H-disjoint in both arms.
+Last undriven front-end items: SHOWROOM > AT THE MOVIES (cinematic viewer?) and Concert Hall track changes (>>> = next song,
+which should send a new song request through the song worker each time).
 Unit (no build):
-1. Route: title START/OPTIONS (17:down,19:a) -> OPTIONS -> PASSCODES (map in PORTING-STATE s6783 "Menu map"), then type
-   MAESTRO on the letter wheel (d-pad left/right + a per letter; find the wheel order from the ENTER NAME capture
-   scratch/s6785/name/port/w_0079.94.png, then ENTER). Port first with window captures (tools/g3_port_capture.sh, AP
-   schedule) to confirm the route, then the pair run with OFF tuned so the retail presses land on the same letters.
-2. Arm the s6784 marks on both arms (song 800C3B38/800C5880/800C3B4C/800C3B54 + image 800B380C/800B3FA0/800B4004 as
-   the positive control; spec in the s6784 entry) and RDP-dump both.
-3. Score with tools/g3_rdp_frame_match.py, plus tools/g3_rdp_phase.py (3D scene, expect animation phase).
-Hypotheses: H-match (same static set, tri distribution within a few %) vs H-diff (name the writer); song marks fire in
-both arms with no image job in flight (confirms H-disjoint at runtime) vs an image mark interleaves (reopens s6784).
-If the passcode cannot be typed in by schedule after 2 tries, close the front-end and take the next ladder rung.
+1. AT THE MOVIES: `env GAP=16 DWELL=60 EXTRA="12:down,15:a" zsh tools/g3_showroom_pair.sh scratch/s6787/mov`
+   (check the port window captures for the cursor: SHOWROOM opens on CONCERT HALL). If it opens a movie list, add presses.
+   Score tails with tools/g3_rdp_phase.py retail.bin port.bin; control = scratch/s6786/r4/port.bin (CONCERT HALL).
+   If it plays an FMV/cinematic, the cinematic overlay (segment 0x137580) loads: also check overlay load + no crash.
+2. Concert Hall tracks: `env GAP=16 DWELL=70 EXTRA="12:a,20:right,30:right,40:right,50:left" zsh tools/g3_showroom_pair.sh
+   scratch/s6787/trk` and count 0x800C3B38/0x800C5880/0x800C3B54 rows per arm (expect one request per track change in both)
+   and the track-title texrects per segment (ROGUE TITLE -> next names) in the same order.
+Hypotheses: H-match (same screens, same per-change song request sequence) vs H-diff (name the writer: missing track
+request, different title order, or a second request overtaking a completion = the s6781 race on the song path, since the
+port's worker completes in the send tick and retail ~9 ticks later).
+If AT THE MOVIES cannot be reached by schedule after 2 tries, close the front-end and take the next ladder rung (G1c
+phase 2 draw distance or G1e frame rate, per ITERATION 3c).

@@ -40,8 +40,15 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   because ~1100 tris share one PRIM that flickers per frame and the hologram picture + lower band are wobbling texrect
   grids; new tools/g3_rdp_phase.py (distribution compare): 153 texrects/frame both, static set 53/53 identical (prompt line
   25/25 rects), tri q05..q95 [1093..1136] vs [1094..1138], mean ratio 1.003 over ~800 frames each; hologram grid visible in
-  ~20% of frames in both. Control (retail hangar vs port ENTER NAME) separates on every term. Front-end + hangar CLOSED
-  except the passcode Concert Hall (screen 10, never driven).
+  ~20% of frames in both. Control (retail hangar vs port ENTER NAME) separates on every term.
+- **G3 screen 10 = OPTIONS > SHOWROOM matches retail (s6786).** Passcode MAESTRO (tools/g3_passcode_sched.py) adds the
+  SHOWROOM row; SHOWROOM (ships fly past the Death Star; CONCERT HALL / AT THE MOVIES / BACK) and the CONCERT HALL song
+  player: texrect static sets identical (80/80 + 1595 animated positions, 99/99), controls disjoint. The tri gap is the
+  game's RNG: ship idx = rand%18 then +1/+2 per 1023-tick flyby, pose = rand&0x7FF; menus call rand every frame so the seed
+  differs per arm. Indices from each arm's seeds (tools/g3_showroom_models.py) predict the shared ship (model 10: tile and
+  texture sets equal 908/908, control 0). Song worker runtime H-disjoint in both arms (one request + completion after image
+  job 4, no image mark after). Port song worker completes in the send tick, retail 9 ticks later (benign, one job).
+  Runner tools/g3_showroom_pair.sh (GAP=16 needed). Front-end CLOSED except SHOWROOM > AT THE MOVIES.
 - **CLOSED s6782: stack-payload send class.** tools/audit_service_msg_stack.py (offline, retail ROM, all segments): 8
   stack-formed sendServiceMessage/osSendMesg sites; 1 live (0x800B380C, fixed s6781), 3 doorbells whose receiver never
   dereferences (0x8000582C, 0x800058FC, 0x800C5880), 3 synchronous (0x80004BE4/D0C/F28 block until the stack object
@@ -258,9 +265,8 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 passcode Concert Hall (NEXT: g3-concert-hall).** Only front-end screen never driven (screen 10, the only
-   song-worker screen, s6784 single-source). Type the MAESTRO passcode in OPTIONS > PASSCODES on both arms, RDP-match with
-   tools/g3_rdp_frame_match.py / tools/g3_rdp_phase.py (animated), and confirm the song worker marks fire there.
+1. **G3 SHOWROOM > AT THE MOVIES + Concert Hall track change (NEXT: g3-showroom-movies).** Last undriven front-end
+   items. tools/g3_showroom_pair.sh EXTRA presses; RDP-match with tools/g3_rdp_phase.py; song marks on track change.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
@@ -275,5 +281,5 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts: [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); per-level images:
   [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
-- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261101-202615 (s6775 arms, consumed s6776: clean; none new at s6781). s6781_menufifo_lvl1_dd1 (20261101-220157) consumed s6782: clean.
+- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261101-202615 (s6775 arms, consumed s6776: clean; none new at s6781). s6781_menufifo_lvl1_dd1 (20261101-220157) consumed s6782: clean; none new through s6786.
 - Recent chronology: PORTING-STATE sessions 6738-6760; search bounded windows only.
