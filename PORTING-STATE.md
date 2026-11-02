@@ -178974,3 +178974,6 @@ ORIGIN: the culled tris are written by the F5 ucode for retail's own cloud/sky g
 legitimate; the writer of the deletion was our cull. No mitigation added - a deviation removed.
 VERDICT: H-render selected for shots 44-47 (our cull), fixed; H-match for all other timed shots; H-timing (DUR) unresolved,
 single-source, attributed to the oracle side.
+VERDICT (gate form): selects H-cull (the right-edge notch is our spike cull deleting legit retail tris in 640-wide frames; fix = no
+cull for 321..640-wide images, notch 59 -> 0 same playlist) and refutes H-retail for the notch (retail emits those tris, 26869 in
+its dump). Next discriminator: x=320 centre line, retail angrylion column 318-322 vs the aligned port frame (NEXT.md).
