@@ -234,6 +234,13 @@ When choosing the work unit, this order overrides Next-steps ordering:
      (3) projection: FP_XSCALE/widescreen FOV or our far-plane/perspNorm changes leaking into the
      hangar camera at dd1. Close with presented-frame geometry numbers vs retail; if retail
      itself is wide-FOV, report that and offer an opt-in FOV knob rather than changing default.
+     UPDATE owner detail: it appears ONLY while scrolling between ships (camera moving between
+     craft) and disappears 1-2 s after the camera settles on a ship. So it is a transition
+     effect: capture the whole pan, phase-gated on the scroll press, in retail and port. Extra
+     hypotheses: (4) retail does a deliberate FOV/zoom swing during the pan (then it's retail);
+     (5) FPS60 steps the pan's FOV/camera interpolation at the wrong rate or overshoots (test
+     FPS60 off on the same pan); (6) a per-frame projection value (guPerspective fovy/perspNorm)
+     lags or is reused across the 60 Hz split. Log the hangar camera fovy per frame across the pan.
    - G3d **Turning shake follow-up (owner 2026-10-31): after G1f.** G3c(c) was closed as
      retail judder, but its own data contradicts that reading: s6458 VI stamps arrive in
      bursts (3-4 VIs within 0.1 ms, then ~66 ms gaps) and lvl1 ran ~18 gfx tasks/s, not

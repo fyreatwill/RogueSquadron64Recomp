@@ -275,7 +275,8 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   change controls without an owner request.
   Third run: no dropouts with no draw-distance arg -> dropouts are a draw-distance (dd>1) defect.
   Owner also heard choppy audio on the Chapter II text crawl -> ITERATION G2b (after G3e).
-  Owner also saw a fish-eye-lens look in the hangar view -> ITERATION G3f (after G2b).
+  Owner also saw a fish-eye-lens look in the hangar, only while scrolling between ships (gone
+  1-2 s after the camera settles) -> ITERATION G3f (after G2b).
   **s6788 G3e mechanism named + fixed (lvl1, FPS60, per-VI census + terrain trace, same build):** the s6540 per-swap
   span-bypass cap (120 cells) made dd>1 terrain BISTABLE. The retail span test rejects ~1500 in-window cells in 86% of
   dd4 swaps (pose-dependent); with only 120 rescued, terrain flipped between full dd4 and LESS than retail (lvl1 dd4
