@@ -1,21 +1,19 @@
-# NEXT: G1e — attribute the remaining ucode accessor time to its op (s6774 follow-up)
-HYPOTHESIS-ID: g1e-ucode-interp
+# NEXT: G1e — re-measure real game fps per draw distance on the current binary (s6775 follow-up)
+HYPOTHESIS-ID: g1e-fps-remeasure
 
-s6774 landed aligned DMEM fast paths (LDV/SDV/LLV/SLV/LSV/SSV/LQV/SQV + scalar W/H) and a constexpr element-select table
-(was a static-init guard on every vector op). Flight lvl5 dd4: -6.5% ns/cmd same-run; select 9.5% -> 0.5% of ucode samples.
-A mixed-arm profile still shows rsp_vu.hpp:75 (r128::byte() const) at ~9% of ucode samples, callers unknown.
-Hypotheses (one clean profile splits them):
-- H-lbv: LBV<odd e> (15 sites each for e=3,5,7,9) / SBV byte ops -> one-byte ops already minimal; nothing to gain.
-- H-unaligned: the fast paths miss because the ucode's LDV/LSV addresses are often unaligned or e is odd -> count misses.
-- H-other-ld: LUV/LPV/LHV/LFV/SUV/SPV byte loops (LUV<0> 9 sites) -> fast-path those with a shuffle.
+s6774 (aligned DMEM fast paths, -6.5%) and s6775 (constant DMEM base in the gfx ucode TU, -1.6..-3.4%) cut ucode ns/cmd ~10%
+since s6716 measured FPS60 dd2 ~48-50, dd3 ~47, dd4 ~44 game fps. s6775's op-bucketed profile (tools/g1e_op_bucket.py) says no
+DMEM accessor lever is left: remaining ucode self = VMAD*/VMUD* math ~35% (accumulator ACCL/ACCM/ACCH in memory), generated .c
+body ~28% (MIPS GPRs in stack slots), SDV/SSV fast paths ~14%; rsp_dpc_submit_impl ~11% of ucode inclusive.
+Hypotheses (one run per dd, same recipe, splits them):
+- H-ucode: dd4 still < 60 and ucode_ms per task is the largest term -> next lever is the VU accumulator (keep ACC in locals
+  across a straight-line run of VMAD*), measured with the same toggle discipline.
+- H-bridge: rsp_dpc_submit_impl / RT64 submit dominate the per-task time at dd4 -> work the bridge copy path.
+- H-done: dd2-dd4 now reach ~60 fps (tasks/s) in flight -> G1e is closed for the owner's settings; write the table into
+  CURRENT-TRUTH and take the next ladder rung.
 Work unit:
-1. Run scratch/agent/s6716_bridge.zsh 5 4 prof2 (DMEM default on, no toggle) with HOLD_S=330; at ~240 s run
-   `env PROF_DELAY=0 PROF_TAG=tp3 zsh scratch/s6774/prof.sh` (xctrace 20 s; edit sleep).
-2. tools/xctrace_tp.py tp3.xml --thread Gfx --under factor5_ucode --dump-addrs; lldb `image lookup -v -a` per self address
-   (inline chain names the RSP:: op template that inlined byte()/element()); bucket self samples by op.
-3. Fast-path the top op in lib/N64ModernRuntime/librecomp/include/librecomp/rsp_vu_impl.hpp behind rs64_g1e_dmem, extend
-   tools/g1e_dmem_equiv.cpp to that op (mutant positive control), export.sh + commit, same-run A/B with
-   ROGUESQ_G1E_DMEM_TOGGLE=10 (tools/g1e_fast_ab.py --key dmem --phase 7).
-Discriminating outcome: op-bucketed accessor samples name H-lbv (stop: accessor time is irreducible, move to G1e ladder
-measurement of real game fps at dd2/dd4) vs H-unaligned / H-other-ld (land the fast path).
-Soak fold due: s6774_dmem_lvl1_dd1, s6774_dmem_lvl10_dd4 (qualification of the default-on fast paths).
+1. Fold soaks s6775_dmembase_lvl1_dd1 / s6775_dmembase_lvl10_dd4 (fail on "TLS FALLBACK HIT" or crashlines).
+2. For dd in 1 2 3 4: `env HOLD_S=200 zsh scratch/agent/s6716_bridge.zsh 5 $dd fps$dd` (one at a time; FPS60, no logging).
+   From each run.log phase 7 [g1e-split] rows: tasks/s (game fps), ucode_ms/task, submit/rest ms; [g1b] sd_wall.
+3. Table dd x {fps, ucode ms, ns/cmd, calls/task}; compare with s6716. Pick the hypothesis by the dominant term at dd4.
+Discriminating outcome: fps at dd4 and which per-task term dominates.

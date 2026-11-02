@@ -458,6 +458,7 @@ gpr get_entrypoint_address();
 // RSP microcode dispatch
 // ---------------------------------------------------------------------------
 extern RspExitReason factor5_ucode(uint8_t* rdram, uint32_t ucode_addr);
+extern RspExitReason factor5_ucode_tls(uint8_t* rdram, uint32_t ucode_addr);  // s6775: old TLS DMEM base arm
 extern "C" uint32_t rs64_phase_ord(void);
 extern RspExitReason factor5_ucode_b(uint8_t* rdram, uint32_t ucode_addr);
 extern "C" void rs64_dpc_defer_begin();
@@ -4839,9 +4840,28 @@ static void rs64_g1e_dmem_tick() {
     t_flip = now; rs64_g1e_dmem = !rs64_g1e_dmem;
     fprintf(stderr, "[g1e-dmem] on=%d t=%.3f\n", rs64_g1e_dmem, std::chrono::duration<double>(now - t0).count());
 }
+// s6775 G1e: the gfx ucode TU addresses DMEM through the constant `dmem` array instead of the thread-local g_dmem_cur
+// (rsp.hpp RS64_DMEM_BASE). Default on; ROGUESQ_G1E_DMEMBASE=0 runs factor5_ucode_tls (same ucode, old base),
+// ROGUESQ_G1E_DMEMBASE_TOGGLE=<sec> flips it ([g1e-dmembase] lines). Either arm falls back to the TLS one if g_dmem_cur != dmem.
+static int rs64_g1e_dmembase = [] {
+    const char* e = getenv("ROGUESQ_G1E_DMEMBASE");
+    const int on = (e && *e) ? (*e != '0') : 1;
+    fprintf(stderr, "[g1e-dmembase] on=%d\n", on);
+    return on;
+}();
+static void rs64_g1e_dmembase_tick() {
+    static const double sec = [] { const char* e = getenv("ROGUESQ_G1E_DMEMBASE_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
+    if (sec <= 0.0) return;
+    static const auto t0 = std::chrono::steady_clock::now(); static auto t_flip = t0;
+    const auto now = std::chrono::steady_clock::now();
+    if (std::chrono::duration<double>(now - t_flip).count() < sec) return;
+    t_flip = now; rs64_g1e_dmembase = !rs64_g1e_dmembase;
+    fprintf(stderr, "[g1e-dmembase] on=%d t=%.3f\n", rs64_g1e_dmembase, std::chrono::duration<double>(now - t0).count());
+}
 extern "C" void rs64_store_diag_tick(void) {
     rs64_g1e_fast_tick();
     rs64_g1e_dmem_tick();
+    rs64_g1e_dmembase_tick();
     rs64_g1e_probes_tick();
     static const double sec = [] { const char* e = getenv("ROGUESQ_STORE_DIAG_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
     if (sec <= 0.0) return;
@@ -6664,7 +6684,13 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     }
     const uint64_t aq_sub0 = g_rs64_aq_submit_ns, aq_calls0 = g_rs64_aq_submit_calls, aq_com0 = g_rs64_aq_commit_ns;
     const auto aq_t0 = g_rs64_aq_on > 0 ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
-    RspExitReason r = factor5_ucode(rdram, ucode_addr);
+    RspExitReason r;
+    if (rs64_g1e_dmembase && g_dmem_cur == dmem) r = factor5_ucode(rdram, ucode_addr);
+    else {
+        static bool warned = false;
+        if (rs64_g1e_dmembase && !warned) { warned = true; fprintf(stderr, "[g1e-dmembase] g_dmem_cur != dmem on the gfx thread: TLS arm\n"); }
+        r = factor5_ucode_tls(rdram, ucode_addr);
+    }
     const auto aq_t1 = g_rs64_aq_on > 0 ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
     {
         static const bool enabled = [] {

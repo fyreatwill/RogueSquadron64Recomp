@@ -178306,3 +178306,47 @@ attribution without inline chain).
 Rules out: H-hotloop (no single ucode block dominates). Single-run for the % figures; correctness is two-line (exhaustive
 harness + live render). Queued: s6774_dmem_lvl1_dd1, s6774_dmem_lvl10_dd4 (default-on, 300 s).
 Not a mitigation (performance; no ORIGIN needed).
+
+## Session 6775 (2026-11-01) — G1e: op-bucketed ucode profile shows the remaining load/store cost is the thread-local DMEM base re-fetched after every store, not byte accessors; gfx ucode TU now uses the constant `dmem` base (1039 -> 38 dependent pointer loads, -1.6..-3.4% flight ns/cmd same-run, 7/8 paired windows, bit-identical by harness)
+
+Work unit: NEXT.md g1e-ucode-interp (attribute the remaining accessor time to its inlining op, fast-path the top op).
+Soak fold: s6774_dmem_lvl1_dd1 and s6774_dmem_lvl10_dd4 both alive_at_end=1, vi_stalls30s=0, crashlines=0 (s6774 DMEM fast
+paths qualified default-on).
+Instrument: new tools/g1e_op_bucket.py (one batched lldb `image lookup -a` over every self address from xctrace_tp.py
+--dump-addrs, parses the inline chain, buckets samples by outermost RSP:: op, op<e>, leaf line). Profiles: tp2 (s6774 mixed
+arms, same binary) and a clean tp3 (scratch/agent/s6716_bridge.zsh lvl5 dd4 FPS60, DMEM on, xctrace 20 s at 240 s in flight;
+run alive, 0 crashlines). tp3 Gfx 4130 samples, factor5_ucode self 2827: ucode .c/other 28.5%, VMADN 12.7, SDV 9.6, VMADM 7.3,
+VMADH 7.1, VMUDL 5.6, SSV 4.7, LSV/LDV/LQV ~2 each.
+Findings: (1) NEXT.md's "rsp_vu.hpp:75 = r128::byte() const" was a mislabel: line 75 is `r128::operator=(__m128i)`, the vd
+writeback of VMADN/VMADM/VMADH<8>, i.e. vector-math latency, not an accessor; H-lbv and H-other-ld are refuted (LBV/SBV/LUV
+<1% each). (2) H-unaligned refuted for SDV: with DMEM on, the byte-loop line (rsp_vu_impl.hpp:366) has no samples; SDV's 9.6%
+sits on the fast path. Disassembly of the hot SDV addresses shows why: `ldr x12,[sp,#0x390]; ldr x8,[x12]` before each access.
+g_dmem_cur is `inline thread_local uint8_t*`; every uint8_t store may alias it, so the compiler re-fetches it through a spilled
+TLS address after each DMEM store. The ucode's MIPS GPRs are stack slots too ([sp,#0x290] etc.).
+Change: rsp.hpp gains `RS64_DMEM_BASE` (default g_dmem_cur) used by RSP_MEM_B/BU, rs64_dmem_*, and the static-inline DMA
+helpers. CMake compiles the gfx ucode TU with -DRS64_DMEM_BASE=dmem -DRSP=RS64_RSP_GFX: the gfx ucode only runs on the gfx
+thread where g_dmem_cur == dmem (only M_AUDTASK swaps in dmem_audio, rsp.cpp DmemGuard), and the type rename keeps its
+RSP:: template instantiations (external-linkage inline) from being merged by the linker with the audio TU's (factor5_ucode_b,
+aspMain.cpp), which must keep the per-thread base. All rsp.hpp helpers are static inline (internal linkage). New
+src/rsp/factor5_ucode_tls.cpp compiles the same fixed-up .c a second time as factor5_ucode_tls on the old base (same -O2 +
+inline threshold); main.cpp picks per gfx task: ROGUESQ_G1E_DMEMBASE (default 1), _TOGGLE=<sec> ([g1e-dmembase] lines), and
+falls back to the TLS arm (one warning line) if g_dmem_cur != dmem. Function-local statics in factor5_ucode are only env caches
+and diagnostic counters (checked), and ucode state lives in the shared dmem, so the arms can alternate per task.
+tools/g1e_fast_ab.py --key dmembase. lib/ edit exported (submodule-patches/N64ModernRuntime.patch).
+Correctness: tools/g1e_dmem_equiv.cpp built three ways: default (TLS), -DRS64_DMEM_BASE=dmem -DRSP=RS64_RSP_GFX, and a mutant
+-DRS64_DMEM_BASE=dmem_audio. const(fast 1/0) == tls(fast 1/0) == s6774 pre-change ref, 130/130 lines; mutant diverges at
+LDV<0> (positive control). Live: A/B run alive, 0 crashlines, 0 VI stalls, 0 fallback lines; lvl5 flight frames show terrain,
+craft, HUD (scratch/s6775/fb_19200.png). Thin single-row horizontal lines in some fbd dumps are pre-existing: a row detector
+flags 12/19 dumps here, 9/20 in s6774_ab2 and 9/19 in prof3 (both pre-change binaries).
+Code evidence: objdump of the two arms: dependent 64-bit pointer loads `ldr xN,[xM]` 1039 (tls) -> 38 (const); 64-bit stack
+reloads 1544 -> 1204; adrp 1438 -> 2352 (constant addresses).
+Run A/B (scratch/agent/s6775_dmembase.zsh = s6774 recipe with ROGUESQ_G1E_DMEMBASE_TOGGLE=10, HOLD 330 s, 33 flips,
+log scratch/agent/m6/g1_lvl5s6775_ab/run.log). Phase 7 (flight): slope 196.9 -> 190.2 ns/cmd (-3.4%); dense rows 204.2 ->
+197.8 ns/cmd (-3.1%); sum-ratio 203.8 -> 201.0 (-1.4%); paired 10 s windows (each const window vs its TLS neighbours): 7/8
+faster, mean -1.6%, sd 3.7, se 1.3 (the one loss is a low-call window, 10.8k calls, where fixed per-task cost dominates).
+All phases: slope 189.1 -> 181.3 (-4.1%), dense 200.6 -> 190.1 (-5.2%). tasks/s ~59 both (FPS60 cap).
+Reading: a small real gain (two lines: static code + same-run timing), smaller than the s6774 step; the size is single-run.
+Remaining ucode self is vector math (VMAD*/VMUD* ~35%, accumulator kept in memory) and the generated .c body (~28%,
+MIPS GPRs in stack slots in one 48k-instruction function). No single further accessor lever is left.
+Queued: s6775_dmembase_lvl1_dd1, s6775_dmembase_lvl10_dd4 (default-on qualification, 300 s; fail on TLS-fallback line).
+Not a mitigation (performance; no ORIGIN needed).

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6773 (2026-11-01).
+Compact operational handoff, as of Session 6775 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -89,7 +89,11 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   s6372 (this also invalidated the s6455/s6458 shake readings). -O2 default (s6700). Fast RSP DMA (s6713), inlined
   vector templates (s6714), gated probes (s6715), opt-in ROGUESQ_RDP_ASYNC=1 (s6705), aligned DMEM fast paths +
   constexpr element-select table (s6774: -6.5% flight ns/cmd same-run, bit-identical by tools/g1e_dmem_equiv.cpp;
-  ROGUESQ_G1E_DMEM=0 = old byte loops). FPS60 holds 60 fps at dd1
+  ROGUESQ_G1E_DMEM=0 = old byte loops), gfx ucode TU on the constant `dmem` base instead of the thread-local g_dmem_cur
+  (s6775: rsp.hpp RS64_DMEM_BASE, -DRSP=RS64_RSP_GFX against template merging with the audio TU; 1039 -> 38 dependent pointer
+  loads; -1.6..-3.4% flight ns/cmd same-run, 7/8 paired windows; ROGUESQ_G1E_DMEMBASE=0 = old arm factor5_ucode_tls).
+  Remaining ucode self (s6775 op-bucketed, tools/g1e_op_bucket.py): VMAD*/VMUD* math ~35%, generated .c body ~28%, SDV/SSV
+  fast paths ~14%. FPS60 holds 60 fps at dd1
   lvl1/lvl5; dd2 ~48-50, dd3 ~47, dd4 ~44: the serial gfx task (RSP LLE ~55% + RT64 submit) binds (s6716 xctrace).
 - **G1c draw distance CLOSED s6703.** dd4 is the ceiling that adds terrain (lvl1/lvl5); dd8 sane after s6701
   (perspNorm centre-box) and s6702 (spill-arena leak in rs_free). Owner guide docs/DRAW-DISTANCE.md.
@@ -208,10 +212,11 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G1e interpreter lever (NEXT: g1e-ucode-interp).** s6774 landed aligned DMEM fast paths + constexpr select table
-   (~35% of ucode self was per-access scaffolding). Next: clean profile with DMEM on, attribute the remaining
-   r128 byte()/element() accessor time to its inlining op via lldb `image lookup -v` (inline chain), fast-path that op;
-   same equivalence harness + same-run toggle discipline.
+1. **G1e re-measure (NEXT: g1e-fps-remeasure).** s6774+s6775 cut ucode ns/cmd ~10% since the s6716 fps figures (FPS60
+   dd2 ~48-50, dd4 ~44). Re-measure real game fps per dd (1/2/3/4) on lvl5 with the current binary, and split each frame
+   into RSP ucode / DPC bridge submit / RT64 wait. If dd4 is still below 60, the next lever is the one the split names
+   (vector accumulator kept in registers, the bridge's rsp_dpc_submit_impl ~11% of ucode inclusive, or RT64), not more
+   DMEM accessors (s6775: none left).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
@@ -226,5 +231,5 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts: [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); per-level images:
   [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
-- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261031-230356 (s6715 arms, consumed; none new at s6763).
+- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261101-195040 (s6774 arms, consumed s6775: clean).
 - Recent chronology: PORTING-STATE sessions 6738-6760; search bounded windows only.

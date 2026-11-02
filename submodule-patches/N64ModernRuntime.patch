@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..b326aeb 100644
+index b0d6bef..feaefaa 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,8 @@
@@ -23,7 +23,7 @@ index b0d6bef..b326aeb 100644
  
  #include "rsp_vu.hpp"
  #include "recomp.h"
-@@ -34,17 +36,52 @@ struct RspContext {
+@@ -34,17 +36,60 @@ struct RspContext {
  
  using RspUcodeFunc = RspExitReason(uint8_t* rdram, uint32_t ucode_addr);
  
@@ -31,6 +31,14 @@ index b0d6bef..b326aeb 100644
  extern uint8_t dmem[];
 +extern uint8_t dmem_audio[];
 +inline thread_local uint8_t* g_dmem_cur = dmem;
++// s6775 G1e: base pointer the RSP_MEM_* macros, rs64_dmem_* helpers and vector loads/stores use. Default is the per-thread
++// g_dmem_cur (audio tasks may run on dmem_audio). The gfx ucode TU (factor5_ucode, gfx thread only, g_dmem_cur == dmem)
++// is compiled with -DRS64_DMEM_BASE=dmem -DRSP=RS64_RSP_GFX: a link-time-constant base instead of a TLS pointer that every
++// byte store may alias (so it was re-fetched through a spilled TLS address after each store), and a distinct RSP type so its
++// template instantiations cannot be merged with the audio TU's. See src/rsp/factor5_ucode_tls.cpp for the same-run A/B arm.
++#ifndef RS64_DMEM_BASE
++#define RS64_DMEM_BASE g_dmem_cur
++#endif
 +
  extern uint16_t rspReciprocals[512];
  extern uint16_t rspInverseSquareRoots[512];
@@ -58,27 +66,27 @@ index b0d6bef..b326aeb 100644
  
  #define RSP_MEM_B(offset, addr) \
 -    (*reinterpret_cast<int8_t*>(dmem + (0xFFF & (((offset) + (addr)) ^ 3))))
-+    (*reinterpret_cast<int8_t*>(g_dmem_cur + (0xFFF & (((offset) + (addr)) ^ 3))))
++    (*reinterpret_cast<int8_t*>(RS64_DMEM_BASE + (0xFFF & (((offset) + (addr)) ^ 3))))
  
  #define RSP_MEM_BU(offset, addr) \
 -    (*reinterpret_cast<uint8_t*>(dmem + (0xFFF & (((offset) + (addr)) ^ 3))))
-+    (*reinterpret_cast<uint8_t*>(g_dmem_cur + (0xFFF & (((offset) + (addr)) ^ 3))))
++    (*reinterpret_cast<uint8_t*>(RS64_DMEM_BASE + (0xFFF & (((offset) + (addr)) ^ 3))))
 +
 +// s6774 G1e: aligned DMEM fast paths. DMEM keeps each 32-bit word byte-reversed (RSP_MEM_B xors the address with 3),
 +// so an aligned big-endian word is one native load/store and an even halfword sits at (addr ^ 2). Unaligned accesses
 +// keep the byte loops. ROGUESQ_G1E_DMEM=0 (rs64_g1e_dmem) restores the byte loops for a same-run A/B.
 +extern "C" int rs64_g1e_dmem;
-+static inline uint32_t rs64_dmem_w(uint32_t a) { uint32_t v; memcpy(&v, g_dmem_cur + (a & 0xFFC), 4); return v; }
-+static inline void rs64_dmem_w_set(uint32_t a, uint32_t v) { memcpy(g_dmem_cur + (a & 0xFFC), &v, 4); }
-+static inline uint16_t rs64_dmem_h(uint32_t a) { uint16_t v; memcpy(&v, g_dmem_cur + ((a ^ 2) & 0xFFE), 2); return v; }
-+static inline void rs64_dmem_h_set(uint32_t a, uint16_t v) { memcpy(g_dmem_cur + ((a ^ 2) & 0xFFE), &v, 2); }
++static inline uint32_t rs64_dmem_w(uint32_t a) { uint32_t v; memcpy(&v, RS64_DMEM_BASE + (a & 0xFFC), 4); return v; }
++static inline void rs64_dmem_w_set(uint32_t a, uint32_t v) { memcpy(RS64_DMEM_BASE + (a & 0xFFC), &v, 4); }
++static inline uint16_t rs64_dmem_h(uint32_t a) { uint16_t v; memcpy(&v, RS64_DMEM_BASE + ((a ^ 2) & 0xFFE), 2); return v; }
++static inline void rs64_dmem_h_set(uint32_t a, uint16_t v) { memcpy(RS64_DMEM_BASE + ((a ^ 2) & 0xFFE), &v, 2); }
  
  static inline uint32_t RSP_MEM_W_LOAD(uint32_t offset, uint32_t addr) {
 +    if (rs64_g1e_dmem && !((offset + addr) & 3)) return rs64_dmem_w(offset + addr);
      uint32_t out;
      for (int i = 0; i < 4; i++) {
          reinterpret_cast<uint8_t*>(&out)[i ^ 3] = RSP_MEM_BU(offset + i, addr);
-@@ -53,12 +90,15 @@ static inline uint32_t RSP_MEM_W_LOAD(uint32_t offset, uint32_t addr) {
+@@ -53,12 +98,15 @@ static inline uint32_t RSP_MEM_W_LOAD(uint32_t offset, uint32_t addr) {
  }
  
  static inline void RSP_MEM_W_STORE(uint32_t offset, uint32_t addr, uint32_t val) {
@@ -95,7 +103,7 @@ index b0d6bef..b326aeb 100644
      uint16_t out;
      for (int i = 0; i < 2; i++) {
          reinterpret_cast<uint8_t*>(&out)[(i + 2) ^ 3] = RSP_MEM_BU(offset + i, addr);
-@@ -67,6 +107,7 @@ static inline uint32_t RSP_MEM_HU_LOAD(uint32_t offset, uint32_t addr) {
+@@ -67,6 +115,7 @@ static inline uint32_t RSP_MEM_HU_LOAD(uint32_t offset, uint32_t addr) {
  }
  
  static inline uint32_t RSP_MEM_H_LOAD(uint32_t offset, uint32_t addr) {
@@ -103,7 +111,7 @@ index b0d6bef..b326aeb 100644
      int16_t out;
      for (int i = 0; i < 2; i++) {
          reinterpret_cast<uint8_t*>(&out)[(i + 2) ^ 3] = RSP_MEM_BU(offset + i, addr);
-@@ -75,9 +116,11 @@ static inline uint32_t RSP_MEM_H_LOAD(uint32_t offset, uint32_t addr) {
+@@ -75,9 +124,11 @@ static inline uint32_t RSP_MEM_H_LOAD(uint32_t offset, uint32_t addr) {
  }
  
  static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val) {
@@ -116,7 +124,7 @@ index b0d6bef..b326aeb 100644
  }
  
  #define RSP_ADD32(a, b) \
-@@ -94,36 +137,233 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -94,36 +145,233 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -275,7 +283,7 @@ index b0d6bef..b326aeb 100644
 +            static int s_n = 0;
 +            if (++s_n <= 4000) {
 +                fprintf(stderr, "[dma %d] dmem=0x%03X dram=0x%06X len=0x%X seg153=0x%02X",
-+                        s_n, dmem_addr, dram_addr, rd_len, g_dmem_cur[0x153 ^ 3]);
++                        s_n, dmem_addr, dram_addr, rd_len, RS64_DMEM_BASE[0x153 ^ 3]);
 +                // Content peek for chunk-sized fetches: discriminates
 +                // alternating prolog-DL forms from corruption.
 +                if (rd_len <= 0x200 && dram_addr < 0x800000) {
@@ -303,7 +311,7 @@ index b0d6bef..b326aeb 100644
 +    }
 +    if (rs64_g1e_fast && (dmem_addr & 3u) == 0u) {
 +        const uint32_t n4 = rd_len & ~3u;
-+        memcpy(g_dmem_cur + dmem_addr, rdram + dram_addr, n4);
++        memcpy(RS64_DMEM_BASE + dmem_addr, rdram + dram_addr, n4);
 +        for (uint32_t i = n4; i < rd_len; i++) {
 +            RSP_MEM_B(i, dmem_addr) = MEM_B(0, (int64_t)(int32_t)(dram_addr + i + 0x80000000));
 +        }
@@ -333,7 +341,7 @@ index b0d6bef..b326aeb 100644
 +    if (dram_addr + wr_len > 0x1000000) wr_len = 0x1000000 - dram_addr;
 +    if (rs64_g1e_fast && (dmem_addr & 3u) == 0u) {
 +        const uint32_t n4 = wr_len & ~3u;
-+        memcpy(rdram + dram_addr, g_dmem_cur + dmem_addr, n4);
++        memcpy(rdram + dram_addr, RS64_DMEM_BASE + dmem_addr, n4);
 +        for (uint32_t i = n4; i < wr_len; i++) {
 +            MEM_B(0, (int64_t)(int32_t)(dram_addr + i + 0x80000000)) = RSP_MEM_B(i, dmem_addr);
 +        }

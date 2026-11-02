@@ -302,6 +302,16 @@ if (NOT MSVC AND NOT ROGUESQ_UCODE_INLINE_THRESHOLD STREQUAL "0")
     set_property(SOURCE ${FACTOR5_UCODE_C} APPEND PROPERTY COMPILE_OPTIONS
         -mllvm "-inline-threshold=${ROGUESQ_UCODE_INLINE_THRESHOLD}")
 endif()
+# s6775 G1e: the gfx ucode runs only on the gfx thread, where g_dmem_cur == dmem, so its TU addresses DMEM through the
+# link-time-constant array (rsp.hpp RS64_DMEM_BASE) and a renamed RSP type (no template merging with the audio TU, which
+# must keep the per-thread base). src/rsp/factor5_ucode_tls.cpp is the same ucode on the old base, for a same-run A/B.
+set_property(SOURCE ${FACTOR5_UCODE_C} APPEND PROPERTY COMPILE_DEFINITIONS RS64_DMEM_BASE=dmem RSP=RS64_RSP_GFX)
+set(FACTOR5_UCODE_TLS_CPP ${CMAKE_SOURCE_DIR}/src/rsp/factor5_ucode_tls.cpp)
+set_source_files_properties(${FACTOR5_UCODE_TLS_CPP} PROPERTIES COMPILE_OPTIONS "${RS64_UCODE_FLAGS}" OBJECT_DEPENDS ${FACTOR5_UCODE_C})
+if (NOT MSVC AND NOT ROGUESQ_UCODE_INLINE_THRESHOLD STREQUAL "0")
+    set_property(SOURCE ${FACTOR5_UCODE_TLS_CPP} APPEND PROPERTY COMPILE_OPTIONS
+        -mllvm "-inline-threshold=${ROGUESQ_UCODE_INLINE_THRESHOLD}")
+endif()
 
 add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/main/main.cpp
@@ -310,6 +320,7 @@ add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/main/upstream_compat.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/aspMain.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/dpc_bridge.cpp
+    ${FACTOR5_UCODE_TLS_CPP}
     ${FACTOR5_BOOT_C}
     ${FACTOR5_UCODE_C}
     ${FACTOR5_UCODE_B_C}
