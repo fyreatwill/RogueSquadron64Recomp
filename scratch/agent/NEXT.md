@@ -1,20 +1,21 @@
-# NEXT: G3 classify the persistent thin lines in lvl1 flight
-HYPOTHESIS-ID: g3-flight-thinline
+# NEXT: G3 in-flight retail match for a mission beyond lvl1/lvl2
+HYPOTHESIS-ID: g3-flight-lvl3plus
 
-State: s6798 closed g3-wide-menus (21:9 menus/hangar = content only). Side datum: in lvl1 flight (menus route, after
-continue from pause) thin straight terrain-coloured lines persist ~1.5 s, dotted when thin, thicker as the craft nears.
-Seen at 4:3 (scratch/s6797/tog w275, w286, faint diagonals behind the pause emblem w078-w122) and 21:9
-(scratch/s6798/tog21 w283-w285, scratch/s6798/seq.png). Not wide-only.
+State: s6799 closed g3-flight-thinline (lvl1 thin lines = retail-faithful far-terrain slivers at the horizon; retail
+stream carries them, angrylion draws the port's exact edge words as lines). Retail-vs-port in-flight matches exist for
+lvl1 and lvl2 only (s6744-s6748, tools/g3_oracle_match.py).
 
-Hypotheses:
-- H-object: real thin game geometry (e.g. long cable/beam/bolt trail model) -> present in retail at the same place.
-- H-wedge: a terrain/ object triangle with a vertex near/behind the eye plane, a knife wedge too small to exceed the
-  rs64_spike_scan guard (640 FB px past the viewport) -> its RDP tri has one huge edge slope and near-degenerate height.
-- H-rt64: the RDP tri is sane, RT64 rasterises a sliver hardware would not (exact-edge/fan related -> check tog arms).
-Discriminator, ONE run: menus route (scratch/s6798/menus.sh tag none "ROGUESQ_LIVES_CAP=1 ROGUESQ_LOG_SPIKE=1
-ROGUESQ_SPIKE_CTL=64 RS64_RDP_BIN_PORT=<file>") so every tri past a 64 px guard is logged with its swap number; match
-the swaps of capture frames showing the line to the logged tris (slope/height/texture). Positive control: SPIKE_CTL=64
-must log ordinary near-edge tris. Then render the matching tri set offline. Also check the RDP dump of that swap with
-angrylion (tools used in s6785) for the retail-rasteriser answer.
-Outcomes: line tri is long-thin with sane vertices in the game DL -> H-object (check retail oracle); vertex far
-off-screen with tiny height -> H-wedge (tighten cull or fix clip); tri absent/sane but RT64 draws line -> H-rt64.
+Step 1 (boring first): get the retail oracle into a later mission without playing it.
+- The owner save is a 512-byte EEPROM image (scratch/s6744/port1/owner_save_backup.bin; 4 Kbit EEPROM). rs64_oracle
+  starts the core with configdir/datadir (tools/oracle/rs64_oracle.c:3883-3901, 4183); mupen writes saves under the
+  Core section's SaveSRAMPath (read it at :4197). Put the owner save there as `<ROM goodname>.eep` (mupen pads to 2 KB
+  for 16K; 4K EEPROM = 512 B), boot the oracle, and check the SELECT LEVEL screen shows the unlocked missions
+  (fb-dump with angrylion as in scratch/s6744/retail_flight.sh). Positive control: the same boot without the .eep must
+  show only mission 1.
+- Then a press schedule to a mission the owner save has unlocked (lvl3 or later), fb-dumps every 0.5 s in flight.
+Step 2: port arm with the same level via the forced route (ROGUESQ_FORCE_SAVE_MISSION=N ROGUESQ_FORCE_UNLOCK=N
+ROGUESQ_NO_SAVE_WRITE=1, menus.sh pattern), window caps; run tools/g3_oracle_match.py (Display-P3 -> sRGB, --dec shift).
+Outcomes: H-match (port frame distances within the same-run cross-time control) -> lvl N matched; port-only element ->
+name it with tools/g3_sliver_scan.py / g3_rdp_frame_match.py on RDP dumps of both arms.
+If the .eep route fails (core ignores it): use --state save/load (rs64_oracle.c:3670) only if a state can be made;
+otherwise report what blocked it and take the next G3 item.

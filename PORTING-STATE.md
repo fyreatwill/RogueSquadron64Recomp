@@ -179150,3 +179150,51 @@ Results:
 Verdict: H-clean selected for 21:9 menus/hangar; H-wide-seam and H-fan-wide refuted. g3-wide-menus CLOSED.
 Rules out: wide-only seams or bands on title/hangar/menus/pause/GAME OVER/Elite Rogues at 21:9 after s6735/s6736/s6794.
 Next: classify the persistent lvl1 thin line (RDP dump on those frames; is it in the game's geometry or a wedge?).
+
+## Session 6799 (2026-11-02) — G3: lvl1 persistent thin flight lines = far terrain triangles seen edge-on at the horizon (sub-pixel slivers, all vertices on-screen); retail's RDP stream carries the same class and angrylion draws those exact triangle words as dotted lines, so retail-faithful (not a wedge, not RT64-only)
+
+HYPOTHESIS-ID: g3-flight-thinline (closed this session). Hypotheses: H-object (real thin geometry, retail too), H-wedge
+(near-viewport knife wedge from a vertex near/behind the eye plane), H-rt64 (sane RDP tri, RT64 draws a sliver hardware
+does not).
+
+What ran (one port run + one retail oracle run, sequential):
+- Port: scratch/s6799/menus.sh dump none = s6798 menus route at 4:3 dd1 with `ROGUESQ_LIVES_CAP=1 ROGUESQ_LOG_SPIKE=1
+  ROGUESQ_G1B=1 RS64_RDP_BIN_PORT=scratch/s6799/port.bin RS64_RDP_BIN_PORT_VI=1 RS64_RDP_BIN_PORT_MAX_MB=6000`.
+  0 crash, mission_verified_130s, 290 s, dump 1.36 GB covering VI 13..17414, 382 window caps. Flight colour image is
+  512 wide, scissor 512x448 (tools/rdpbin_scissor.py), not 320x240.
+- Retail: scratch/s6799/retail_rdp.sh = oracle + rdplog plugin, s6744 press schedule, 260 s -> retail.bin 1.84 GB.
+Caps with a visible line: w258, w263_349, w267_354, w272_360 (scratch/s6799/sheet255.png). Capture->VI mapping from the
+process start epoch, cross-checked by the mission-load gap (dump VI 15320-15440 vs black caps w255-256): +-60 VI.
+
+New tools: tools/g3_sliver_scan.py (per-triangle vertices from the edge words, perpendicular thickness, visible length
+clipped to colour image x scissor; flat class = height <=0.5 px; per combiner; port or --retail dumps, retail chunks
+carried across records), tools/g3_line_match.py (line pixels = dark strokes over sky in a capture, mapped onto 512x448,
+every dump triangle in a VI window scored by coverage; +40-row shifted control), tools/angrylion_replay/flat_cvg.c
+(re-issues raw edge words through angrylion-plus: fill mode, the game's terrain mode 18AC00:C8112220 and +AA; ACC=1
+accumulates a set and writes /tmp/flat_acc.pgm).
+
+Results:
+- w272's line (FB ~(364,223)->(510,211), dotted) sits on a chain of thin terrain triangles in the matching swaps
+  (st 16930-16948): texture 4E5230, combiners 127E24:FFFFFFFF and 127FFF:FFFFFE3F, perpendicular thickness 0.18-0.95 px,
+  heights 0.25-2 px (one RDP sub-scanline for the 209.75-210.0 ones), 20-200 px long, stepping from y 221 at x 310 to
+  y 210 at x 556. All vertices on-screen and sane -> H-wedge refuted (no huge edge, nothing near the spike guard).
+- They are the far edge of the terrain footprint seen nearly edge-on at the horizon: port flight has flat (<=0.5 px)
+  tris in 88.9% of 512-wide frames (6.1/frame, yh 209-213 = horizon). Retail stream, same scanner: 64.0% of 512-wide
+  frames, 38.3/frame, same two combiners (103772 / 63199), yh 204-206 = its horizon. -> the game emits this class in
+  retail too (H-object at the stream level).
+- Hardware raster: angrylion on the exact edge words. Single-tri replay (39 flat tris of st16932): 11 light pixels in
+  the game mode (51 px), control 40 normal tris 46842 px. Accumulated thin set (th<1, band x300-512 y195-232): st16934
+  210 px, st16942 212 px, drawn as dotted/dashed rising and horizontal lines (scratch/s6799/hw_thin16942.png,
+  line_vs_hw.png). Per-stamp overlap with w272's line pixels (scratch/s6799/hw_overlap.py, dilated 1 px): best recall
+  0.42-0.46 at st 16942-16984 vs 0.00-0.08 for the same points shifted 12 rows (control). -> hardware draws these tris
+  as lines at the same place; H-rt64 (RT64-only sliver) refuted. RT64's line is somewhat denser (upscaled sampling).
+- Not shown: a retail framebuffer with the line at the same pose. The s6744/s6745 retail angrylion flight dumps
+  (224 frames) gave 0 chains >=30 px, but that detector had no positive control and retail flies a different path, so
+  that null is not evidence either way. The single-stamp hardware render does not reproduce w272's exact slope
+  (capture frame lies between dump stamps and the replay draws thin tris without the occluding terrain).
+Verdict: H-object selected (retail-faithful far-terrain slivers): two sources (retail stream class + hardware rasterizer
+on the port's own words). H-wedge and H-rt64 refuted. g3-flight-thinline CLOSED. No code change to the renderer; an
+opt-in thin-triangle cull is possible but risks opening terrain seams (slivers also fill cell joins) — owner's call.
+Rules out: a ucode/clip bug or RT64 rasteriser defect as the source of the lvl1 thin lines.
+Next: G3 in-flight retail match beyond lvl1/lvl2 (lvl3+): get the oracle into a later mission (owner EEPROM save in the
+mupen save dir, or a savestate), then tools/g3_oracle_match.py against port caps.

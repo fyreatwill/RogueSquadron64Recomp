@@ -334,12 +334,13 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 lvl1 persistent thin flight lines (NEXT: g3-flight-thinline).** s6798 closed the 21:9 menus/hangar seam pass
-   (H-clean: same-run EXACT_EDGES=tog, scorer pos ctl 178/178, same per-frame line set in both arms, every flagged line is
-   a glyph stroke/letter gap by contiguous-run length (tools/g3_seam_runlen.py) and by eye; s6602 wide hangar band absent).
-   Open datum from the same caps: thin straight terrain-coloured lines persisting ~1.5 s in lvl1 flight, thickening as the
-   craft nears, at BOTH 4:3 (s6797 w275/w286) and 21:9 (s6798 w283-w285). Classify: real thin geometry vs a stable knife
-   wedge (rs64_spike_scan guard 640 FB px would miss a near-viewport wedge) vs retail.
+1. **G3 in-flight retail match for lvl3+ (NEXT: g3-flight-lvl3plus).** Matched so far: lvl1, lvl2 (s6744-s6748). Get the
+   oracle into a later mission (owner EEPROM save in the mupen save dir, or a savestate), then tools/g3_oracle_match.py.
+   s6799 CLOSED the lvl1 thin flight lines as retail-faithful: chains of far-terrain slivers at the horizon (th 0.2-1 px,
+   vertices sane, no wedge); retail stream has the class in 64% of flight frames (38/frame, same combiners) and
+   angrylion draws the port's exact edge words as dotted lines (overlap 0.42 vs shifted ctl 0.00). Opt-in thin cull
+   only on owner request (slivers also fill terrain cell joins). Tools: g3_sliver_scan.py, g3_line_match.py,
+   angrylion_replay/flat_cvg.c.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
