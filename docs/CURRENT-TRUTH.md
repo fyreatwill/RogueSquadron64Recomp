@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6781 (2026-11-01).
+Compact operational handoff, as of Session 6782 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -22,6 +22,11 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   65536 everywhere (=16384 restores). Earlier per-level G3 checks that saw no cap fire are unaffected. s6763: the
   second lvl9 port HUD-off window (t2050-2208) persists with 0 cap fires and retail hides the HUD on 16/16 dumps inside
   it (player death camera): retail behaviour, not a defect.
+- **CLOSED s6782: stack-payload send class.** tools/audit_service_msg_stack.py (offline, retail ROM, all segments): 8
+  stack-formed sendServiceMessage/osSendMesg sites; 1 live (0x800B380C, fixed s6781), 3 doorbells whose receiver never
+  dereferences (0x8000582C, 0x800058FC, 0x800C5880), 3 synchronous (0x80004BE4/D0C/F28 block until the stack object
+  returns), 1 dead (shutdownAudioEngine quit byte 0x80091E78: its only caller shutdownMusyXEngine is unreferenced).
+  s6781 FIFO soak lvl1 dd1: 304 s clean.
 - **FIXED s6781: SELECT GAME inset / left emblem panel vanished at random (4 port states EI/E-/-I/--, retail always EI).**
   ORIGIN: the menu image worker tickFormatMessageWorker (0x800B3650) sends each completion as a pointer to a message on its
   own stack (sp+0x10, id +0x14) and loops; the menu polls one message per frame (0x800B3FD8, id byte +0x17) and fades in
@@ -233,12 +238,10 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **Stack-payload service-message audit (NEXT: service-msg-stack-payload-audit).** s6781 class: sendServiceMessage
-   queues a pointer, so a payload on the sender's stack is only valid until the sender reuses that frame. Enumerate every
-   jal 0x80006F78 in main + all overlays, classify (stack vs heap payload; does the sender loop/return before the receiver
-   reads; which fields the receiver reads), and fix each live one with the s6781 pattern or prove it dead. Seed:
-   0x8000582C, 0x800058FC (main), 0x800C5880 (menu). Then the remaining front-end screens vs retail (options, controller
-   settings, records/medals, ERASE GAME).
+1. **Remaining front-end screens vs retail (NEXT: g3-frontend-remaining).** Options, controller settings,
+   records/medals, ERASE GAME, using the s6779-s6781 method (tools/g3_oracle_match.py, oracle --fb-dump, state scorers).
+   While there: check whether the SELECT GAME image worker and the song-asset-load worker (menuSubtype02Handler
+   0x800C30C8) are ever alive together (both drain queue 0x80138920; s6782 residual).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
@@ -253,5 +256,5 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts: [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); per-level images:
   [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
-- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261101-202615 (s6775 arms, consumed s6776: clean; none new at s6781). Queued s6781_menufifo_lvl1_dd1.
+- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261101-202615 (s6775 arms, consumed s6776: clean; none new at s6781). s6781_menufifo_lvl1_dd1 (20261101-220157) consumed s6782: clean.
 - Recent chronology: PORTING-STATE sessions 6738-6760; search bounded windows only.

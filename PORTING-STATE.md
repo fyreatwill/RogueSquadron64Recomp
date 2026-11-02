@@ -178564,3 +178564,36 @@ Census seed (main + menu overlay only): stack-payload sendServiceMessage sites 0
 Discrimination: selects H-create-side (guest never submits the panel) and within it H-race (stack completion overwritten
 before the menu reads it: port completions 1 VI apart, retail ~60 VI; port received 2,4,4 vs retail 2,3,4); refutes
 H-draw/H-rt64 (panel absent from the RDP stream), H-cap (0 fires), H-cull (cull on/off both ways), H-anim.
+
+## Session 6782 (2026-11-01) — stack-payload service-message class audit CLOSED: 8 stack-formed send sites in main + 3 overlays, 1 live (s6781, fixed), 3 doorbells, 1 dead, 3 synchronous; s6781 FIFO soak clean
+
+HYPOTHESIS-ID: service-msg-stack-payload-audit (closed).
+
+Soak fold: s6781_menufifo_lvl1_dd1 rc=0, hold 304 s, 0 VI stalls, 0 crash lines (FIFO fix on, lvl1 dd1).
+Method (offline, retail ROM): disassembled main (ROM 0x1000, vram 0x80000400) and the mission/menu/cinematic overlays
+(0xA5D30/0x10C2D0/0x137580, vram 0x800A5130) with mips64-elf-objdump; enumerated every jal sendServiceMessage
+(0x80006F78) AND raw osSendMesg (0x80033410), traced the message register back to its definition. Control: the ROM holds
+exactly 14 `jal 0x80006F78` words = the 14 sites the disassembly found (10 main, 4 menu, 0 mission/cinematic); 56 osSendMesg.
+sendServiceMessage (read this session): writes msg+2 seq, +4 flags=0, +8 = sender's reply queue, then osSendMesg(dest+464,
+msg, NOBLOCK) (retry if a3&1) - pointer only. 0x8000703C = reply: sets +4|=0x40, sends the same pointer to msg+8.
+Classification (tools/audit_service_msg_stack.py reproduces it; exits nonzero on any new unaudited stack site):
+- LIVE: 0x800B380C tickFormatMessageWorker completion (fixed s6781).
+- Doorbell, payload never dereferenced: 0x8000582C/0x800058FC (self-sends to the worker at 0x801126BC whose tick 0x80005570
+  calls blocking recv 0x80006F24 and discards v0, reading only its ring at 0x801112B0); 0x800C5880 tickSongAssetLoadWorker
+  (0x800C5834) completion to the requester, received only at 0x800C3B4C (menuSubtype02Handler) which tests v0 != 0.
+- Synchronous: 0x80004BE4/0x80004D0C/0x80004F28 send a heap ring message whose +0x10 points to an 0x80FF-tagged object at
+  the sender's sp+16; the sender then loops on blocking recv until that object comes back (server 0x80004540 writes +12
+  and forwards it), so the frame outlives the use. Their async branches (0x80004C3C/0x80004F8C) take a caller buffer
+  (a1 of 0x80004AAC/0x80004E70): of 43 callers the only non-literal one (0x80054F9C/0x80054FBC) passes s3 = 0, so the
+  caller-buffer path never runs in retail code.
+- Dead: osSendMesg 0x80091E78 in shutdownAudioEngine sends a stack quit byte 0xFF to the AI queue 0x80149670 then frees
+  the buffers runAiAudioStreamPlaybackLoop uses (a real use-after-free if it ran: a garbage byte keeps that loop alive).
+  Its only caller shutdownMusyXEngine (0x8008ECA4) has no jal, no lui/addiu formation and no pointer word in the ROM
+  (same search finds the worker entry 0x80005570 formation as control); agrees with ledger s~28672 "no callers at all".
+- Heap payloads (not this class): 0x80004540, 0x800492D8, 0x8006F2B4, 0x800B3FA0, 0x800C3B38.
+Residual (single-source, not demonstrated): the game worker queue (0x80138920) has two menu consumers,
+pollServiceMessageByte 0x800B3FD8 (reads +0x17) and 0x800C3B4C (doorbell). If SELECT GAME image completions and song-load
+doorbells were ever pending together, one consumer could eat the other's message; the s6781 FIFO then keeps a stale front
+entry (same worker stack pointer every time) until the next id reset. Only matters if both screens' workers coexist.
+Discrimination: selects H-safe for every site except the one s6781 fixed; refutes H-live (no other stack completion is
+read after its sender can reuse the frame). No game run this session (offline audit + soak fold).
