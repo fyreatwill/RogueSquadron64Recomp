@@ -179232,3 +179232,38 @@ and refutes H-ignored (core falls back to the user-wide dir: would have left sv_
 Rules out: nothing about rendering. Closes the stale lvl3+ item (H-stale selected: sweep 1-19 already in CURRENT-TRUTH).
 Next discriminator: craft-select RDP multiset match, settled vs pan frames, SELECT LEVEL same-run positive control.
 Next: SELECT YOUR CRAFT screen at native 4:3 vs retail at RDP level (s6785 matched SELECT LEVEL only).
+
+## Session 6801 (2026-11-02) — G3: SELECT YOUR CRAFT matches retail at RDP level, settled (X-wing 229/240, A-wing 225/240 exact) and through the ship-to-ship pan (same dip, rel L1 0.028 vs ctl 0.064/0.226); g3_menu_pair.sh sent retail `right` as an unknown key (sym=0)
+
+HYPOTHESIS-ID: g3-craftsel-rdp (closed).
+
+Soak fold: none new since s6790 (latest s6789_spansent_lvl5_dd4, consumed).
+No game build. Pair runner tools/g3_menu_pair.sh (rdplog retail RS64_RDP_BIN_WIDTH=512, RS64_RDP_BIN_MAX_MB=1500, port
+RS64_RDP_BIN_PORT), scratch/s6779/r1/lvl1.eep via --save-dir. PP 17:start,23:start,40:start,48:start,78:right, PSECS 96,
+RSECS 108 (scratch/s6801/pan2; scratch/s6801/cs = same route with the right press at 64). Port captures: SELECT LEVEL 38 s,
+AVAILABLE CRAFT 46 s, SELECT YOUR CRAFT (X-wing) from ~50 s, A-wing after the right press. Retail reaches craft select ~20 s
+later than the port (~70 s vs ~50 s) -> its right press must land after ~75 s.
+- TOOL BUG FIXED: g3_menu_pair.sh mapped only down/up to the oracle's d-pad names, so a `right` press reached rs64_oracle
+  as an unknown key ([press] sym=0) and retail silently never panned (run cs, and a first pan run). Now right->dright,
+  left->dleft ([press] sym=7, pan happens). Earlier pair runs used only start/down/a, so none are affected.
+- NEW tools/g3_rdp_segments.py (whole-stream frame parse cached as <bin>.frames.pkl, run-length segments by texrect count)
+  and tools/g3_rdp_segcmp.py (frame-pair score + g3_rdp_phase summary on any retail/port segment pair), so one run scores
+  several screens plus their controls. Segments are identical in shape: SELECT LEVEL 153 rects, AVAILABLE CRAFT 195,
+  craft select X-wing 77, A-wing 70, in both arms.
+- Results (pan2, same run): positive control SELECT LEVEL 153/153 rects, static 53=53, tri ratio 1.001 (as s6785).
+  X-wing settled 229/240 exact, median 0, max 1, static 77=77. A-wing settled 225/240 exact, median 0, max 10, static 70=70,
+  tri q05..q95 [364..378] vs [361..379]. AVAILABLE CRAFT (cs) static 92=92, tri ratio 0.995. Cross-screen control A-wing vs
+  X-wing 0/240, median 123; craft vs SELECT LEVEL 0/240, median 1760. Every residual diff in run cs was +-1 tri under one PRIM
+  (E1AF00FF).
+- Camera fly-in to craft select: tri curves identical frame by frame (993/994, 829/829, 582/582...; 44 vs 43 frames >500).
+- Pan, aligned on its sharpest feature (tri-count dip as the camera sweeps past, 2-3 frames after the text switch in both):
+  dip 205 vs 197 tris, aligned 120-frame curve rel L1 0.028 (controls: same port curve shifted +60 frames 0.064, X-wing
+  settled 0.226), 87/120 pan frames exact, dip->settle 78 vs 81 frames. One outlier frame (max 718) = the text-switch frame.
+  Agrees with s6791 (camera trajectories identical, retail store trace) = two lines.
+- Correction: a thumbnail of the port at 63.5 s looked like "PRESS (C) FOR LEVEL DESCRIPTION"; full-res crops show CRAFT at
+  every sample 49-82 s. The RDP signature cannot tell the two apart (same rect geometry, texture not keyed), so a text swap
+  of equal length would be invisible to g3_rdp_frame_match; pixel crops cover it here.
+ORIGIN: no mitigation; tool fix + analysis only.
+VERDICT: selects H-match (settled screens and pan); refutes H-diff-static (static sets equal, residual = +-1 tri) and
+H-diff-motion beyond phase (pan curve within 0.028). g3-craftsel-rdp CLOSED. NEXT: C-button LEVEL/CRAFT DESCRIPTION screens
+(never compared), g3-description-rdp.

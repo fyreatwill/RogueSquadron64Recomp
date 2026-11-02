@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6800 (2026-11-02).
+Compact operational handoff, as of Session 6801 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -334,12 +334,13 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 craft-select (SELECT YOUR CRAFT) retail match at RDP level (NEXT: g3-craftsel-rdp).** The s6799 NEXT
-   "lvl3+ in-flight match" was stale: the per-mission sim+render sweep 1-19 is COMPLETE (s6753-s6777, tools/g3_mission/).
-   s6800 oracle `--save-dir DIR` (Core SaveSRAMPath): every tools/ pair runner now boots retail from a private copy of the
-   EEPROM in <run>/retail/savedir instead of overwriting and trap-restoring the user-wide mupen save (a SIGKILLed runner
-   used to leave it clobbered). Controls: empty dir -> game formats a fresh save there; owner save -> file untouched;
-   user-wide save sha unchanged; s6780 a1 retail replay via --save-dir = same rand caller path (3-VI press jitter).
+1. **G3 C-button description screens (NEXT: g3-description-rdp).** PRESS (C) FOR LEVEL DESCRIPTION (SELECT LEVEL) and
+   FOR CRAFT DESCRIPTION (SELECT YOUR CRAFT) have never been compared to retail. s6801 closed craft select: settled X-wing
+   229/240 and A-wing 225/240 exact, static text sets equal, pan matches (rel L1 0.028 vs ctl 0.064), two lines with s6791.
+   Tools: g3_rdp_segments.py (whole-stream segments by texrect count) + g3_rdp_segcmp.py (score any segment pair, so one
+   run carries its own positive and cross-screen controls). g3_menu_pair.sh now maps right/left to dright/dleft (before
+   s6801 a retail `right` was an unknown key, sym=0). Retail reaches craft select ~20 s after the port. s6800: runners
+   boot retail from a private EEPROM copy (--save-dir).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

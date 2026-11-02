@@ -8,7 +8,7 @@ cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 S=${1:?usage: g3_menu_pair.sh OUTDIR}; mkdir -p $S
 OFF=${OFF:-7.3}
 PP=${PP:?}
-RP=$(python3 -c "import sys;print(','.join('%g:%s'%(float(t)+$OFF,{'down':'ddown','up':'dup'}.get(k,k)) for t,k in (e.split(':') for e in sys.argv[1].split(','))))" $PP)
+RP=$(python3 -c "import sys;print(','.join('%g:%s'%(float(t)+$OFF,{'down':'ddown','up':'dup','right':'dright','left':'dleft'}.get(k,k)) for t,k in (e.split(':') for e in sys.argv[1].split(','))))" $PP)
 pgrep -x rs64_oracle >/dev/null && { echo "rs64_oracle already running" >&2; exit 4; }
 C=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
 R=/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64
