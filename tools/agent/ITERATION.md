@@ -225,6 +225,15 @@ When choosing the work unit, this order overrides Next-steps ordering:
      Discriminate FPS60 on/off on the same crawl (AI underrun/[ai] cadence log, host frame
      times during the crawl), against retail as the control. G2 was closed for in-flight
      dialogue only; crawls were not covered.
+   - G3f **Hangar "fish-eye lens" look (owner playtest 2026-11-02): after G2b.** Owner saw the
+     hangar 3D view look fish-eye distorted (run: FPS60 only, no ASPECT/DD, default window).
+     Boring-first order: (1) is it retail? compare the same hangar frame against the angrylion/
+     retail oracle at native 4:3 (s6785 already matched SELECT LEVEL at RDP level, so check the
+     PRESENTED image, not just RDP input); (2) presentation: non-uniform window scaling or
+     aspect correction from G1f WINDOW_FIT / RT64 (measure presented width:height vs 4:3);
+     (3) projection: FP_XSCALE/widescreen FOV or our far-plane/perspNorm changes leaking into the
+     hangar camera at dd1. Close with presented-frame geometry numbers vs retail; if retail
+     itself is wide-FOV, report that and offer an opt-in FOV knob rather than changing default.
    - G3d **Turning shake follow-up (owner 2026-10-31): after G1f.** G3c(c) was closed as
      retail judder, but its own data contradicts that reading: s6458 VI stamps arrive in
      bursts (3-4 VIs within 0.1 ms, then ~66 ms gaps) and lvl1 ran ~18 gfx tasks/s, not
