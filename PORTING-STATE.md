@@ -178105,3 +178105,38 @@ Two lines: (1) rand stream + NPC snapshots + tick_mem identical through t1377; (
 Discrimination: selects "sim identical to an audio-clocked split" (refutes a port sim defect on lvl15 before t1378)
 and render match (refutes a port-only render/HUD defect in that span).
 Next: g3-mission16-pinned (eep +0x31=15).
+
+## Session 6769 (2026-11-01) — G3: mission 16 with dt pinned: sim identical to retail for 2038 ticks, split = song-3 end on the audio clock, render and HUD match pre-split
+
+What ran (scratch/s6769; s6768 recipes via sed, lvl16.eep = s6768 lvl15.eep +0x31=15, checksums ok, no unlock flag;
+port captures show a new level: open ocean, sandy islands, grey Calamari towers on blue thrust columns, a red-engined
+fighter with a "6" lives HUD): retail SECS=360 NDUMP=24 DSTEP=10 concurrently with port SECS=330. Port: 792 captures,
+0 `[ucode-cap] fired`, 0 crash/abort/segv lines. Retail: 2431 ticks (87322 rand calls); only 13 dumps (first at
+t=234 s, vi 13947: mission start came later on this level).
+Results:
+- g3_song_windows: song 01 t823, song 02 t1410, song 03 t1873 start on the SAME ticks in both arms (game events). Retail
+  drops frames heavily in songs 1-2 (3.250 and 3.438 VI/tick vs port 2.000), so the same ticks span 1908/1592 retail VI
+  vs 1174/926 port. Song 03 (166 retail ticks, 336 VI, 641 AI buffers) vs port (167 ticks, 334 VI, 640 buffers): retail
+  ends it at t2039, port at t2040. That is the split.
+- g3_tick_mem (G3_IGN=04,0c,18) 8010c9e0 8010c0e0: first arm diff t2039 (song handle at the split).
+- g3_frame_snap (2045 ticks), summarised by the new scratch/s6769/snap_parse.py (reproduces s6768: 37807 rows, first obj
+  t1378): 32319 NPC rows, first point diff t2040, first obj diff and first retail-only row t2039, 0 port-only rows,
+  0 disallowed snap/glob words through t2044.
+- g3_rand_ticks: compared 87322; first (tick, caller, value) mismatch index 70442 at t2070 (same value 34d17669, caller
+  8006c0fc vs 80040ae0), 31 ticks after the split, at the next song-handle change. Rand stream identical through t2069.
+- g3_oracle_match (repo root): split = retail vi 20277. Pre-split dumps d 3.96-13.21. vi 15145 (t334) d 30.8 = torn retail
+  dump (mid-raster smear over the clear colour, HUD half drawn). vi 16337 (t789, d 13.2) = same scene, terrain edge
+  one capture-phase step apart. vi 16933 (t971, d 10.4): retail shows a water-spray plume around the craft; the port
+  captures 230.78-231.11 s show the same plume (strip_t971.png), so the 0.33 s capture spacing explains it. Post-split
+  vi 20534/21134 unverifiable (d 10.1/4.6).
+- g3_hud_presence: retail HUD on 9/10 in-range dumps, port 183/201. Port HUD-off t1864-2039 (18 captures) = player death
+  camera (craft wedged against a Calamari structure with debris, strip_hudoff.png) for the song-3 jingle, respawn with
+  HUD at 268 s. The retail dump inside (t1870, vi 19934) is HUD-off too and is the best pair of the run (d 3.96).
+Positive control (same run): s6768's flip_ctl.py at N=20000 flipped an 8006c018 xtrace row (value 0) that
+g3_rand_ticks never compares, so the tool saw no new mismatch: a failed control, not a result. Fixed:
+scratch/s6769/flip_ctl.py flips the first real rand row (caller 80076cf8) after a file line; flipping line 47416
+(ed114d99 -> ed114d98) makes g3_rand_ticks report the first mismatch exactly there (index 17030, t693).
+Two lines: (1) rand stream + NPC snapshots + tick_mem identical through t2038; (2) frame match + HUD presence agree.
+Discrimination: selects "sim identical to an audio-clocked split" (refutes a port sim defect on lvl16 before t2039)
+and render match (refutes a port-only render/HUD defect in that span).
+Next: g3-mission17-pinned (eep +0x31=16); missions 18/19 = +0x31=17/18 close the per-mission G3 sweep.

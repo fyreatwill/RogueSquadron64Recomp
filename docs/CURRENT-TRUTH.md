@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6768 (2026-11-01).
+Compact operational handoff, as of Session 6769 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -22,6 +22,13 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   65536 everywhere (=16384 restores). Earlier per-level G3 checks that saw no cap fire are unaffected. s6763: the
   second lvl9 port HUD-off window (t2050-2208) persists with 0 cap fires and retail hides the HUD on 16/16 dumps inside
   it (player death camera): retail behaviour, not a defect.
+- **G3 mission 16 (s6769, ocean/Calamari towers, +0x31=15):** sim identical 2038 ticks (70442 rand calls, 32319 NPC
+  rows, 0 point diffs before t2040, 0 disallowed words); songs 1/2/3 start on the same ticks in both arms (game events;
+  retail drops frames to 3.25-3.44 VI/tick there, port 2.00), split t2039 = song-3 end on the audio clock (retail 166
+  ticks/336 VI/641 buffers, port 167/334/640). Render: pre-split dumps d 3.96-13.2; vi 15145 = torn retail dump; d 10-13
+  = capture phase (port draws the same spray plume 0.3 s later). Port HUD-off t1864-2039 = player death camera (song 3);
+  retail dump inside is HUD-off and matches at d 3.96. 0 cap fires, 0 crash lines. Control: scratch/s6769/flip_ctl.py
+  (s6768's script can land on an uncompared 8006c018 row) flips one rand value and it is flagged.
 - **G3 mission 15 (s6768, canyon/bunkers, X-wing, +0x31=14, no unlock flag on the save route):** sim identical 1377
   ticks (23845 rand calls, 37807 NPC rows, 0 point/obj diffs, tick_mem first diff = the split); split t1378 = song-1 end
   on the audio clock (retail 153 ticks/334 VI/638 buffers, port 167/334/640). Render: pre-split dumps d 5.0-8.5; vi 7930
@@ -172,7 +179,7 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 sim/frame match, mission 15.. (NEXT: g3-mission15-pinned).** Recipes scratch/s6767/{retail,port}.sh with
+1. **G3 sim/frame match, missions 17-19 (NEXT: g3-mission17-pinned, +0x31=16; last is +0x31=18).** Recipes scratch/s6769/{retail,port}.sh with
    eep +0x31=N-1 (tools/g3_eep_patch.py); retail DSTEP=10 spreads 24 dumps over ~240 s; dense dumps in a window:
    scratch/s6763/lvl9_retail_gap2.sh (DOFF/DSTEP seconds after the flight-start arm, ~60 VI/s).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
