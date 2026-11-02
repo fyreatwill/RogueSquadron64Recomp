@@ -408,7 +408,13 @@ public:
             else if (const char* c = strchr(as, ':')) { double w = atof(as), h = atof(c + 1); if (w > 0 && h > 0) { app->userConfig.aspectRatio = AR::Manual; app->userConfig.aspectTarget = w / h; } }
             fprintf(stderr, "[g1d] ROGUESQ_ASPECT=%s applied\n", as);
         }
-        if (const char* rm = std::getenv("ROGUESQ_RESMULT")) { double m = std::atof(rm); if (m > 0.0) app->userConfig.resolutionMultiplier = m; }
+        // s6793: RT64 reads resolutionMultiplier only in Resolution::Manual; the default WindowIntegerScale ignored it,
+        // so ROGUESQ_RESMULT was a no-op (rm1/rm2 window shots pixel-identical). Unset keeps the window-derived scale.
+        if (const char* rm = std::getenv("ROGUESQ_RESMULT")) {
+            double m = std::atof(rm);
+            if (m > 0.0) { app->userConfig.resolution = RT64::UserConfiguration::Resolution::Manual; app->userConfig.resolutionMultiplier = m; }
+            fprintf(stderr, "[resmult] ROGUESQ_RESMULT=%s -> Manual x%.2f\n", rm, m);
+        }
 
         // PresentEarly ON by default. Our cinematic stays on a single VI fb
         // address; without PresentEarly, RT64's updateScreen only pushes a

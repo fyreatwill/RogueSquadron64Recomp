@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6792 (2026-11-02).
+Compact operational handoff, as of Session 6793 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -44,6 +44,14 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 - **G3 AT THE MOVIES swept (s6792).** 81/81 shots H-match vs retail per shot; the default spike cull deleted retail's
   legit 640-wide cinematic tris (port zeroed 24806, retail emits 26869 past the bound); cull now skips 321..640-wide images,
   notch 59/60 -> 0/797 frames, scanner positive control 20792 flagged / 0 culled. scratch/s6792/notch_fix_sheet.png.
+- **s6793 cinematic sky seam line = port-only RT64 defect, not retail.** The thin dark vertical line in 640-wide AT THE
+  MOVIES shots sits at one screen column per shot (x=318.0 for 290 frames, 322.5, 324.0) = a tall shared edge between
+  adjacent sky tris (each samples its own 32x32 wrapped RGBA32 tile, S~0 on the right tri, S~31 on the left). Retail and
+  port RDP streams carry the same tris/edges/tiles (tools/g3_seam/talledge.py + teana.py: same stationary runs, 290/290
+  frames at x=318). Retail angrylion frames of the same shot (scratch/s6793/retail, 9 dumps) have no dip at any column
+  (best fraction <= 0.14); the same detector fires 0.84 on a 1-px -20 line injected into a retail frame (positive control).
+  Port: line in every arm, and at true native 1x it is near-black (column 318 = 15-20 vs 60-78), so not upscaling.
+  ROGUESQ_RESMULT was a no-op before s6793 (RT64 reads the multiplier only in Resolution::Manual); it now selects Manual.
 - **G3 SHOWROOM fully driven (s6787).** AT THE MOVIES does nothing on a lvl1 save in retail or port (cursor on it, A
   fired, 133 texrects unchanged). Passcode DIRECTOR (pair script PASS2=DIRECTOR) enables it: the cutscenes play back to back
   at VI width 640 (+3.0 s port / +3.4 s retail after the press). Cinematic RDP match: 1184 aligned frames, tri-count median |d| 1,
@@ -329,8 +337,9 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
 1. **G3 cinematic sweep follow-ups (NEXT: g3-cinematic-sweep).** s6792: all 81 AT THE MOVIES shots pair with retail
    (tools/g3_cine_sweep.py, tcost << cross-shot control); the spike cull no longer touches 321..640-wide images (it zeroed
-   retail cloud tris -> right-edge notch). Open: vertical line at x=320 in cinematic frames (check retail), TRI shots 48/64,
-   DUR shots (retail +4 s, single-source, likely oracle).
+   retail cloud tris -> right-edge notch). s6793: the "x=320 line" is a PORT-ONLY RT64 raster/texture defect at shared sky-tri
+   edges (see headline); NEXT = split H-raster (RT64 vertex reconstruction leaves the shared column uncovered) vs
+   H-texsample (wrong texel at S~0 of a wrapped 32x32 RGBA32 tile) at native 1x. Then TRI shots 48/64; DUR stays single-source.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

@@ -178977,3 +178977,30 @@ single-source, attributed to the oracle side.
 VERDICT (gate form): selects H-cull (the right-edge notch is our spike cull deleting legit retail tris in 640-wide frames; fix = no
 cull for 321..640-wide images, notch 59 -> 0 same playlist) and refutes H-retail for the notch (retail emits those tris, 26869 in
 its dump). Next discriminator: x=320 centre line, retail angrylion column 318-322 vs the aligned port frame (NEXT.md).
+
+## Session 6793 (2026-11-02) — G3 cinematic "x=320" line is a port-only RT64 defect at a shared sky-tri edge (retail angrylion frames clean, RDP streams identical, persists at native 1x); ROGUESQ_RESMULT was a no-op, fixed
+Ran (scratch/s6793, scratch/s6792 dumps; tools now in tools/g3_seam/):
+1. Window-shot detector (seamscan.py: column >=12 darker than x+-4 on >=30% of cinematic rows): the line is NOT at x=320 and
+   NOT every shot: 40/939 lit fix/ shots, one fixed column per shot (window 636/637 = game 318, 643, 653), held ~6 s while the
+   camera moves.
+2. RDP stream (g3_seam_scan.py, rectdump.py): 640 frames use one full scissor (0,0)-(640,340); 20357 tris straddle x=320 in 400
+   frames; the only 320 split is the clear (two FILL rects 0..319 / 320..639) in BOTH streams. talledge.py + teana.py (tall
+   near-vertical edges stationary per 0.5-px bin): port and retail have the SAME stationary edges - x=318.0 290/290 frames,
+   x=317.5 229/228, x=322.5 266/249, x=324.0 67/66. seamtris.py/seamtex.py on port f16500 vs retail f4088: identical sky tris
+   (op 0E, 1-cycle, alpha_cvg_sel, no AA/force_bl), exact shared edge 318.000 (left tri H edge / right tri L edge), each tri
+   samples its own 32x32 RGBA32 tile, wrap (cms0 mask5): right tri S~0.1 at its first pixel, left tri S~31 at its last.
+3. Retail ground truth: rs64_oracle + angrylion, s6792 presses, fb dumps every 1 s at 370-420 s emulated (retail swap index
+   ~ rdplog frame, x=318 shot ~382-393 s). rseam.py: no dark column in any dump (best fraction <= 0.14; t014-t022 = the shot,
+   smooth profile around 318). Positive control: a 1-px -20 line injected at x=318 in t018 -> 0.84. Same shot confirmed
+   visually (seam_pair_318.png: retail no line, port line at 318).
+4. Port arms through the 318 shot: first rm1/rm2 were pixel-identical -> boring thing: ROGUESQ_RESMULT only set
+   userConfig.resolutionMultiplier, which RT64 reads only in Resolution::Manual (default WindowIntegerScale). Fixed
+   (src/main/rt64_render_context.cpp: RESMULT now selects Manual, logs [resmult]). Rebuilt; rm1 (Manual x1, log confirmed,
+   sharper image grad 0.91 vs 0.79) still shows the line (5/41 frames, fraction 0.57) and it is near-black: column 318 =
+   14-20 vs 44-78 neighbours; default arm 9/40 (0.47), same columns.
+VERDICT: selects H-rt64 (port-only render defect at the shared sky-tri edge) and refutes H-retail (retail angrylion clean
+with injected-line control), H-stream (RDP input identical) and H-upscale (persists, darker, at native 1x). Two lines:
+retail framebuffer vs port window shots, plus RDP-stream equality.
+Not yet split: H-raster (RT64 decodeTriangles rebuilds vertices from the H edge + (xl,ym) and drops the column) vs
+H-texsample (RT64 fetches a wrong/black texel at S~0 of the wrapped tile). Near-black at 1x leans H-raster (clear colour
+0x0001 is black) but a black texel would look the same. Not run: per-pixel RT64 probe.

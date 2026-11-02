@@ -1,12 +1,19 @@
-# NEXT: G3 cinematic sweep follow-ups
+# NEXT: G3 cinematic sky seam (port-only RT64 defect), split raster vs texture
 HYPOTHESIS-ID: g3-cinematic-sweep
 
-Done s6792: 81/81 AT THE MOVIES shots paired with retail; spike cull fixed for 640-wide images (notch gone).
+s6793: the AT THE MOVIES line is a port-only RT64 defect at a shared vertical sky-tri edge (x=318.0 in the shot at port wall
+348-352 s, recipe tools/g3_seam/port_arm.zsh SECS=362 CAP0=340; retail clean, RDP streams identical, persists at native 1x
+with ROGUESQ_RESMULT=1, now a working knob).
 
-Work unit: the thin vertical line at x=320 (screen centre) visible in the 640-wide cinematic window shots
-(scratch/s6792/notch_fix_sheet.png, both builds). Hypotheses: H-retail (retail angrylion frame shows it too: two 320-wide
-halves/texrect seam in the game), H-rt64 (RT64 seam between two half-screen draws / tile sampling at the 320 split),
-H-rdp (port RDP stream differs at x=319/320). Discriminator: render the same shot from retail's dump (oracle angrylion frame)
-and compare column 318-322 luminance vs neighbours; then port dump at the aligned frame (tools/g3_cine_sweep.py block/shots
-alignment, dumps in scratch/s6792/mov/ and fix/). Second item: TRI shots 48/64 (retail tri median 914/772 vs port 1188/846).
-DUR shots (+4 s retail) stay single-source oracle-side unless a port-side cause appears.
+Hypotheses at native 1x:
+- H-raster: RT64 decodeTriangles (lib/rt64/src/gbi/rt64_gbi_rdp.cpp ~l.480-530) rebuilds v1/v2 from the H edge and v3=(xl,ym),
+  ignoring xm; somewhere along the shared column neither tri covers the pixel centre -> clear colour (black) shows.
+- H-texsample: column 318 is covered but samples a wrong texel (S~0 of a wrapped 32x32 RGBA32 tile; TMEM decode of texel
+  column 0, or wrap to texel 31).
+Discriminator (ONE build, ONE run, both arms in-run): env ROGUESQ_SEAM_PROBE=1 in RT64 decodeTriangles: for op 0E tris in 640-wide
+images with an edge within 0.01 of an integer x and height >=100, log RDP edge words and the reconstructed vertices x1,x2,x3
+(budget 200/phase); plus ROGUESQ_SEAM_TOG=N that alternates every N frames between normal draw and forcing these tris'
+combiner to shade-only/white (texture off). Line present with texture off -> H-raster (fix vertex reconstruction: use xm
+for the M edge start / exact shared-edge x); line gone -> H-texsample (inspect wrap/TMEM decode). Positive control: the
+detector (tools/g3_seam/seamscan.py) must still fire on the normal-phase frames of the same run.
+Then: TRI shots 48/64. DUR shots stay single-source oracle-side.
