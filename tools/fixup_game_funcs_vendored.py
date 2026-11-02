@@ -41968,6 +41968,8 @@ RS64_REPLAY = [
     "apply_s6529_spanbypass.py",
     "apply_s6537_bypasscap.py",
     "apply_s6788_ddtrace.py",
+    "apply_s6789_rejtrace.py",
+    "apply_s6789_spansent.py",
     "apply_s6555_travwalk.py",
     "apply_s6564_reinitx.py",
     "apply_s6058_poolx.py",

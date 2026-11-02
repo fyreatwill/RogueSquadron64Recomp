@@ -178843,3 +178843,40 @@ Rules out: H-asyncnodrain (owner), H-ucode-cap (as dropout cause), H-gate (dd sc
 Discrimination: this run selects H-bypass-cap (bistable span-reject regime, root cause = our s6540 cap) and refutes
 H-asyncnodrain, H-ucode-cap, H-gate and H-window as the dropout cause. Next discriminator: per-call reject reasons
 (far-clip d2 cutoff vs node-pool exhaustion vs a dd1 same-phase control) on the residual dd4 481-VI dip.
+
+## Session 6789 (2026-11-02) — G3e residual dd4 dip = span-table sentinel collision: the frustum-height clamp's -128 equals the 0x80 "untouched" marker; dd>1 now clamps at -127 (lvl1 dd4 in-flight drops 6 -> 0, same-run A/B 4 -> 0)
+
+Folded soaks: s6788_g3e_lvl10_dd4 rc=0 (12 census drops, 9 of them tri=0/tx=0 cut frames at VI 9805-11083, 0 cap fires),
+s6788_g3e_lvl5_dd4 rc=0 (17 drops, 0 cap fires). Both are pre-fix and both are clean of crashes and stalls.
+
+Instrument (one build): tools/apply_s6789_rejtrace.py adds trace sites 5-7 after every streamTerrainGridCellsByDistance call
+(per-call deltas of the s6493 exit counters, bypass flips, min/max d2 of kept nodes). s6789b adds site 8, the 5 pyramid points
+binPolygonIntoTerrainGrid rasterizes, and site 9, each scanConvert normal.y with its path thresholds.
+Runs (lvl1 FPS60, 180 s, census + trace, scratch/s6788/arms.zsh): v5 dd4, r1 dd1 control, v6 dd4 pyramid, then the fix arms.
+- v5 reasons: normal calls kept 1175 / spaneq 61 / flips 733. Dip calls kept 713 / **spaneq 957** / flips 16. r3, pool-cap,
+  z-early, x-skip and no-node were 0 throughout, so H-pool and H-farclip are refuted. The skip at 0x80042D58/64 fires when the
+  cell's bytes in BOTH span tables (0x80130DB0, 0x80131DB0) are 0x80, the value binPolygon clears them to (0x80042A74/78).
+- r1 dd1: no in-flight dips; only the mission-intro transition at VI ~4540, which dd4 shows identically. H-retail is refuted for
+  the periodic dip.
+- v6 pyramid: during the 4-5 frame decay the window is constant and the far corners sweep (y ~ +-86 grid units, about 4x dd1).
+  Two of the six triangles are skipped at |ny| < 0.2 in every call, so the path does not toggle.
+- ROOT (ROM read; mapping control: 0x8003A4D0/D8 read 0.2/-0.2, the same thresholds the runtime logged): the store loops at
+  0x800426A4-D8 and their 0xDB0 twin clamp trunc(height x scale) to the floats at 0x8003A4E8/EC and 0x8003A4F0/F4 = 127.0 /
+  -128.0, then sb. A height saturated low becomes -128 = 0x80 = "untouched", and the streamer skips the cell as off-frustum.
+  This latent retail bug never triggers at dd1 because the pyramid is shallow.
+ORIGIN: the writer is the game's own clamp in scanConvertTriangleToSpanTable (values are legitimate, saturated heights). The
+defect is the clamp's low limit coinciding with the table's clear sentinel, which only becomes reachable once
+ROGUESQ_DRAW_DISTANCE scales the pyramid.
+FIX tools/apply_s6789_spansent.py (in fixup_game_funcs_vendored after s6789_rejtrace): with ROGUESQ_DRAW_DISTANCE>1 the low
+clamp loads -127.0. dd<=1 is untouched; ROGUESQ_SPANSENT_FIX=0 opts out; ROGUESQ_SPANSENT_TOG=N alternates every N calls
+(trace site 10 logs each switch).
+Results (scratch/s6788/togab.py, rej.py, census_drops.py):
+- ftog (dd4, TOG=6000, 6 switches): fix=0 had 1822 calls, 10 kept-dips, 4 census drops, median spaneq 133. fix=1 had 2393 calls,
+  0 kept-dips, 0 census drops, median spaneq 0.
+- fon dd4: 0 in-flight census drops (v6 pre-fix: 6, at VI 6659/7146/7618/8099/...). The only drops left are the intro cuts at
+  VI 3559-4058, tri=0, also present at dd1. The rej.py dips that remain (VI >9500) are empty/tiny-window calls (win 0-80) with
+  no census drop.
+- fon3 dd3: 0 in-flight census drops.
+- Cost: dd4 game fps 44.6 -> 42.8, flight tri median 1405 -> 1374. The fix draws visible terrain that was being culled before.
+  dd3 runs at 46.3 fps.
+Queued: s6789_spansent_lvl5_dd4 and s6789_spansent_lvl10_dd4 (300 s, census + trace). OWNER-OPT-INS no longer warns about the dd4 dip.

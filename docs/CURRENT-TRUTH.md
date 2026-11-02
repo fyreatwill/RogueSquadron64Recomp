@@ -287,6 +287,17 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   run: dd4 6 dips / dd3 0 in flight; game fps lvl1 dd4 45.9, dd3 48.2 (dd1 59.9) - the old dd4 "56-60 fps" was partly
   bought by drawing less than retail. RESIDUAL (NEXT): dd4 dips every ~481 VI (= the autopilot 8 s a/sl/a/sr cycle):
   kept cells decay ~2200 -> ~850 over 4-5 frames, then jump back, window constant. lvl5/lvl10 soaks queued (s6788_g3e_*).
+  **s6789 residual NAMED + FIXED (sentinel collision, two lines):** (1) per-call reject reasons: on dip calls the 0x80042D64
+  "both span bytes == 0x80" skip jumps 61 -> 957 cells/call (pool-cap, z/x skip, no-node all 0); (2) scanConvertTriangleToSpanTable
+  clamps each frustum height to ROM floats [-128.0, 127.0] (0x8003A4E8-F4; ROM read verified against the runtime-logged 0.2/-0.2
+  thresholds at 0x8003A4D0) and stores it with sb, so a saturated-low height IS the 0x80 "untouched" sentinel. dd4 pyramid
+  corners sit at y ~ +-86 grid units (4x dd1), so pose changes push whole swaths past -128. Fix tools/apply_s6789_spansent.py:
+  at dd>1 the low clamp is -127.0 (dd<=1 bit-identical; ROGUESQ_SPANSENT_FIX=0 opts out, ROGUESQ_SPANSENT_TOG=N same-run A/B).
+  Same-run A/B lvl1 FPS60 dd4: fix-off blocks 10 kept-dips / 4 census drops, fix-on 0 / 0 (median spaneq 133 -> 0). Clean arms:
+  dd4 0 and dd3 0 in-flight drops (pre-fix dd4 6, every ~481 VI); dd1 control has no in-flight dips (H-retail refuted for the
+  periodic dip). Cost: dd4 game fps 44.6 -> 42.8 (visible terrain now actually drawn). Remaining census "drops" are the mission
+  intro cuts (VI ~3560/4057, tri=0, also in dd1). Prior s6788 lvl5/lvl10 dd4 soaks (pre-fix) showed 17/12 drops, many tri=0
+  cut frames; post-fix soaks queued (s6789_spansent_lvl5/10_dd4) - fold them, then G3e closes and G2b starts.
 
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
