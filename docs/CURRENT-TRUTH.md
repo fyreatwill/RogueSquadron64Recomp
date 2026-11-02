@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6767 (2026-11-01).
+Compact operational handoff, as of Session 6768 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -22,6 +22,11 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   65536 everywhere (=16384 restores). Earlier per-level G3 checks that saw no cap fire are unaffected. s6763: the
   second lvl9 port HUD-off window (t2050-2208) persists with 0 cap fires and retail hides the HUD on 16/16 dumps inside
   it (player death camera): retail behaviour, not a defect.
+- **G3 mission 15 (s6768, canyon/bunkers, X-wing, +0x31=14, no unlock flag on the save route):** sim identical 1377
+  ticks (23845 rand calls, 37807 NPC rows, 0 point/obj diffs, tick_mem first diff = the split); split t1378 = song-1 end
+  on the audio clock (retail 153 ticks/334 VI/638 buffers, port 167/334/640). Render: pre-split dumps d 5.0-8.5; vi 7930
+  and 9730 = torn retail dumps. Port HUD-off t1082-1379 = overhead in-mission cutscene; both retail dumps inside are
+  HUD-off. 0 cap fires, 0 crash lines. Control: a 1-bit rand flip is flagged.
 - **G3 mission 14 (s6767, lava planet, Y-wing, +0x31=13):** sim identical 2875 ticks (32988 rand calls, 43243 NPC rows,
   0 point/obj diffs, tick_mem first diff = the split); split t2875 = song-1 end on the audio clock (retail 124 ticks/334
   VI/639 buffers, port 167/334/640). Render: pre-split dumps d 1.8-4.2; vi 7480 = torn retail dump (no ship/HUD drawn

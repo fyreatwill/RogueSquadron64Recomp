@@ -178073,3 +178073,35 @@ Two lines: (1) rand stream + NPC snapshots + tick_mem identical through t2874; (
 Discrimination: selects "sim identical to an audio-clocked split" (refutes a port sim defect on lvl14 before t2875) and
 render match (refutes a port-only render/HUD defect in that span).
 Next: g3-mission15-pinned (eep +0x31=14; CURRENT-TRUTH notes lvl15 may need ROGUESQ_FORCE_PLANET_UNLOCK=0xFF).
+
+## Session 6768 (2026-11-01) — G3: mission 15 with dt pinned: sim identical to retail for 1377 ticks, split = song-1 end on the audio clock, render and HUD match pre-split
+
+What ran (scratch/s6768; s6767 recipes via sed, lvl15.eep = s6767 lvl14.eep +0x31=14, checksums ok; NO
+ROGUESQ_FORCE_PLANET_UNLOCK needed on the save route, port captures show a new level: grey cloud sky, dark rocky
+canyon with tan clearings and bunkers, X-wing): retail SECS=360 NDUMP=24 DSTEP=10 concurrently with port SECS=330.
+Port: 793 captures, 0 `[ucode-cap] fired`, 0 crash/abort lines. Retail: 3488 ticks (57387 rand calls) before the
+400000 exec-trace cap; 24 dumps (17 frames matched by g3_oracle_match).
+Results:
+- g3_song_windows: song 01 starts t1225 in both arms; retail ends it at t1378 (153 ticks, 334 VI, 638 AI buffers,
+  2.183 VI/tick), port at t1392 (167 ticks, 334 VI, 640 buffers). Later songs: song 03 167 ticks in both arms; song 02
+  differs in length (retail 1293 vs port 792 ticks), after the split, unverifiable.
+- g3_tick_mem (G3_IGN=04,0c,18) 8010c9e0 8010c0e0: first arm diff t1378 on both blocks (song handle at the split).
+- g3_frame_snap (1384 ticks): 37807 NPC rows, 0 point diffs, first obj diff and first retail-only row both at t1378;
+  0 disallowed snap/glob words through t1384 (only 2-6/9 and 7/8/18/20-31).
+- g3_rand_ticks: compared 57387; first (tick, caller, value) mismatch index 23845 at t1384 (same value, caller
+  800541fc vs 8006c0fc), 6 ticks after the split. Rand stream identical through t1383.
+- g3_oracle_match (repo root): pre-split dumps (retail vi <= 10330; split at retail vi 10486) d 4.97-8.46, except vi
+  7930 (t534) d 30.2 and vi 9730 (t1110) d 36.4. Both are torn retail dumps (angrylion mid-raster): vi 7930 shows
+  flat clear colour below a half-drawn terrain edge and a half-drawn radar; port w_0082.51 at the same tick is a full
+  X-wing/canyon/HUD frame. vi 9730 shows only a few terrain rows from an overhead camera over clear colour; port
+  w_0101.60 at t1110 is the same overhead HUD-off camera. Post-split dumps vi 10926-15713 (d 4.9-56.7): unverifiable.
+- g3_hud_presence: retail HUD on 4/7 in-range dumps (off: torn t534, t1110, t1301), port 108/140. Port HUD-off
+  t1082-1379 (30 caps) = overhead in-mission cutscene camera that ends at the song-1 end; both retail dumps inside it
+  (t1110, t1301) are HUD-off, and t1301 matches the port at d 4.97.
+Positive control (same run): flipping bit 0 of one port rand value (842ddbf9, file line 28676; scratch/s6768/flip_ctl.py
+counts rows differently from the tool) in a /tmp copy makes g3_rand_ticks report the first mismatch exactly there
+(index 5502, t292, 842ddbf9 vs 842ddbf8).
+Two lines: (1) rand stream + NPC snapshots + tick_mem identical through t1377; (2) frame match + HUD presence agree.
+Discrimination: selects "sim identical to an audio-clocked split" (refutes a port sim defect on lvl15 before t1378)
+and render match (refutes a port-only render/HUD defect in that span).
+Next: g3-mission16-pinned (eep +0x31=15).
