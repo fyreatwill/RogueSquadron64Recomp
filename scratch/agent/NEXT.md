@@ -1,14 +1,16 @@
-# NEXT: G3 LEVEL DESCRIPTION text on other levels + one retail pixel crop
-HYPOTHESIS-ID: g3-ldesc-levels
+# NEXT: G3 post-death screen vs retail (lvl9)
+HYPOTHESIS-ID: g3-death-screen
 
-State: s6802 closed lvl1 LEVEL DESCRIPTION at RDP level (static 150=150) and found CRAFT DESCRIPTION inert in both arms.
-Gap: only level 1's text was compared, and the RDP signature cannot see an equal-width glyph swap.
-Hypotheses: H-match (every level's description static set equal); H-diff-text (a level's string differs: static rect sets
-differ, name the rects); H-diff-select (the port's SELECT LEVEL cursor lands on a different level for the same presses).
-Discriminator, ONE pair run: a save with several levels unlocked in BOTH arms (find an existing multi-level .eep under
-scratch/ - grep PORTING-STATE for "lvl5.eep\|unlock.*eep" - or ROGUESQ_FORCE_UNLOCK only works port-side, so it must be an
-EEPROM file both arms load via SAVE_FROM / --save-dir; g3_menu_pair.sh hardcodes scratch/s6779/r1/lvl1.eep -> add an EEP= var).
-PP: 17:start,23:start, then per level: cup, (8 s), cup, right (8 s) ... for 3-4 levels; ND>0 with angrylion VIDEO for a
-second run if a pixel crop is wanted (or VIDEO=rdplog for segments). Score: tools/g3_rdp_segments.py + g3_rdp_segcmp.py per
-description segment; positive control = lvl1 description (s6802 numbers); cross control = description of level k vs k+1
-(must differ in static set).
+State: every front-end menu, pause, debrief and LEVEL DESCRIPTION (lvl1, 13-16) match retail (s6778-s6803).
+Gap: the screens after the player's death were never compared. s6763: in the lvl9 pinned pair the retail player dies by
+itself (HUD-off death camera t2050-2208, retail 16/16 dumps); port also hid the HUD there. What comes next (respawn /
+lives-left / MISSION FAILED / retry menu) is unscored.
+Hypotheses: H-match (same screen sequence, static rect sets equal); H-diff-flow (port goes to a different screen or
+respawns differently after death); H-split (the sim already split before death, so death timing differs - then align on
+the death camera start, not ticks).
+Discriminator, ONE pair run: tools/g3_mission/run.sh recipe from s6762/s6763 for lvl9 (scratch/s6763/lvl9_port.sh,
+lvl9.eep = scratch/s6761/lvl9.eep), extended so both arms run ~60 s past t2208, with VIDEO=rdplog on retail and
+RS64_RDP_BIN_PORT on the port (plus a few angrylion dumps in a 2nd run for a pixel crop of any text screen).
+Score with g3_rdp_segments.py (texrect-count segments after the death camera) + g3_rdp_segcmp.py; positive control =
+the pre-death flight HUD segment, cross control = death screen vs pause menu. Check ROGUESQ_LIVES_CAP is OFF in the port
+arm (it changes lives handling). Do NOT poke damage/wins (G1(d) parked); rely on retail's natural death.

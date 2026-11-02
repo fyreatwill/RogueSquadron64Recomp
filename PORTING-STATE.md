@@ -179300,3 +179300,30 @@ VERDICT: selects H-match for LEVEL DESCRIPTION (static sets equal, tris 1.001, c
 H-diff-text/H-diff-model refuted at RDP level; CRAFT DESCRIPTION = inert in both arms (retail-faithful). g3-description-rdp
 CLOSED. NEXT: level description text on other levels (multi-level save, retail pixel crop), g3-ldesc-levels.
 
+
+## Session 6803 (2026-11-02) — G3: LEVEL DESCRIPTION matches retail on levels 13-16 too (static sets 133/195/240/152 equal, tris 0.997-1.005; cross-level controls all differ) + retail pixel crops show the same strings word for word; g3_menu_pair.sh gains EEP=
+
+HYPOTHESIS-ID: g3-ldesc-levels (closed).
+
+Soak fold: none new since s6789_spansent_lvl5_dd4 (consumed s6790).
+- Tool: tools/g3_menu_pair.sh takes EEP=<save> for both arms (default stays scratch/s6779/r1/lvl1.eep).
+- Pair run scratch/s6803/pair (EEP=scratch/s6772/lvl19.eep, rdplog W512, PP 17:start,23:start,34:cup,42:cup,46:left,
+  54:cup,62:cup,66:left,74:cup,82:cup,86:left,94:cup,102:cup; all retail [press] sym != 0). Port [lvsel] cursor
+  16 -> 15 -> 14 -> 13, one per left. Segment sequence identical in both arms: SELLVL 152 -> LDESC 233 -> 152 | 157 -> 295
+  -> 157 | 158 -> 340 -> 158 | 151 -> 252 -> 151 (retail also shows 58/51-rect transition segments the port's 20-frame
+  segmenter skips). g3_rdp_segcmp (scratch/s6803/pair/segcmp.txt):
+    LD16 static 133=133 ratio 1.005 | LD15 195=195 1.003 | LD14 240=240 1.004 | LD13 152=152 0.997
+    SELLVL controls 52/57/58/51 all eq, ratio 0.998-1.005
+    cross ctl (retail LDk vs port LDk-1): 133 vs 195, 195 vs 240, 240 vs 152, eq=False, median 451-543 (vs 207 same-level)
+  So each level's glyph set is level-specific and the port's equals retail's for the same level.
+- Pixel crop run scratch/s6803/pix (angrylion, ND 56, same EEP, first 7 presses): decoded retail RDRAM (512 wide,
+  base = origin & ~0xFFF, scratch/s6803/pix/dec.py) vs port window. side_ld16.png: "RACE THROUGH BEGGAR'S CANYON IN YOUR
+  T-16 SKYHOPPER! / TEST YOUR SKILL AGAINST ZEV, DACK OR WEDGE." identical. ld15_full.png / side_ld15.png: "THE WORLD
+  DEVASTATORS ARE RAINING DESTRUCTION ON THE PEACEFUL WORLD OF MON CALAMARI. / FLY AS WEDGE ANTILLES, AND BATTLE AGAINST
+  ALL ODDS TO STOP THEIR EVIL [CONQUEST.]" identical as far as the retail crop reaches (retail t046 caught mid-typing:
+  the typewriter effect runs in both). The ◁ ▷ level arrows the port showed but retail t028 lacked blink in retail
+  (present in t024/t027/t031 of 8 consecutive dumps) = phase.
+ORIGIN: no mitigation; tool option + analysis only.
+VERDICT: selects H-match for levels 13-16 (two lines: RDP static-set equality with cross-level control, pixel crops of
+two strings); refutes H-diff-text and H-diff-select (port cursor and retail land on the same level per press).
+g3-ldesc-levels CLOSED. NEXT: the post-death screen (lvl9 player-death window, s6763), g3-death-screen.

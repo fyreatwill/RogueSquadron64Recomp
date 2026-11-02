@@ -334,11 +334,11 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 level descriptions on other levels (NEXT: g3-ldesc-levels).** s6802: LEVEL DESCRIPTION (C-up on SELECT LEVEL) for
-   lvl1 matches retail (static 150=150 rects, tris 1.001; controls SELECT LEVEL 53=53, AVAILABLE CRAFT 92=92; cross ctl
-   150 vs 53). CRAFT DESCRIPTION prompt inert in BOTH arms for all four C buttons (retail C path positive-controlled same
-   run). Port autopilot now takes cup/cdown/cleft/cright. Remaining hole: other levels' text + one retail pixel crop
-   (equal-width glyph swaps are invisible to the RDP signature). Tools: g3_menu_pair.sh, g3_rdp_segments.py, g3_rdp_segcmp.py.
+1. **G3 post-death screen (NEXT: g3-death-screen).** Front-end text is closed: LEVEL DESCRIPTION matches retail for
+   levels 1 and 13-16 (s6802/s6803: static sets equal, tris 0.997-1.005, cross-level controls differ, retail pixel crops
+   show identical strings; CRAFT DESCRIPTION inert in both arms). Not yet compared: what follows the player's death
+   (retail lvl9 dies by itself, HUD-off death camera t2050-2208, s6763). Tools: g3_menu_pair.sh (EEP=), g3_mission/run.sh,
+   g3_rdp_segments.py, g3_rdp_segcmp.py.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
