@@ -3656,6 +3656,15 @@ if is_main_ucode and PROBE_GATE_MARKER not in text and text.count(_main_sig) == 
             _gate.append(f"#define {_fn}(...) (__builtin_expect(rs64_g1e_probes, 0) ? {_fn}(__VA_ARGS__) : (void)0)")
     text = text.replace(_main_sig, "\n".join(_gate) + "\n" + _main_sig, 1)
 
+# s6788 G3e: export the iteration-cap fire count so the per-VI census (ROGUESQ_G3_CENSUS) can attribute a
+# truncated frame to the cap. Idempotent.
+CAPG_MARKER = "/* fixup: s6788 cap-fire global */"
+if is_main_ucode and CAPG_MARKER not in text and "        static int rs64_cap_fires = 0;\n" in text:
+    text = text.replace("        static int rs64_cap_fires = 0;\n",
+                        "        static int rs64_cap_fires = 0;\n        rs64_ucode_cap_fires_g++;  " + CAPG_MARKER + "\n", 1)
+    text = text.replace('extern "C" void rsp_task_log_and_reset(',
+                        'extern "C" volatile uint32_t rs64_ucode_cap_fires_g;  ' + CAPG_MARKER + '\nextern "C" void rsp_task_log_and_reset(', 1)
+
 if text == original:
     sys.exit(0)
 

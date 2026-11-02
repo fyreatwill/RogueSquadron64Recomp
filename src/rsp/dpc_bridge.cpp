@@ -5286,9 +5286,24 @@ static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
 // submits: triangles, texrects, texrects with ulx >= 360 (radar/ship-icon side), renderRadarMinimap entries, submits,
 // last colour image. A capture window with no HUD then reads as HUD draws in the RDP stream (H-gfx) or none (H-gate).
 extern "C" volatile uint32_t rs64_vi_n_g;
+// s6788 G3e: two cumulative columns appended per line: LLE ucode iteration-cap fires (fixup_factor5_ucode.py) and
+// RT64-accepted triangles, so a terrain-dropout VI reads as ucode truncation, a stream without the draws, or RT64 loss.
+extern "C" volatile uint32_t rs64_ucode_cap_fires_g;
+extern "C" { volatile uint32_t rs64_ucode_cap_fires_g = 0; }
+extern std::atomic<uint64_t> g_rs64_rt64_tri_accepted;
 static FILE *rs64_census_file() {
     static FILE *f = [] { const char *e = std::getenv("ROGUESQ_G3_CENSUS"); return (e && *e) ? fopen(e, "w") : (FILE *)nullptr; }();
     return f;
+}
+// s6788 G3e: ROGUESQ_G3E_TRACE=<file>: terrain draw-distance trace from funcs_9.c (tools/apply_s6788_ddtrace.py), one line
+// "vi swap site a b c d" per event; joined offline with the census VI lines.
+static FILE *rs64_g3e_file() {
+    static FILE *f = [] { const char *e = std::getenv("ROGUESQ_G3E_TRACE"); return (e && *e) ? fopen(e, "w") : (FILE *)nullptr; }();
+    return f;
+}
+extern "C" int rs64_g3e_on(void) { return rs64_g3e_file() != nullptr; }
+extern "C" void rs64_g3e_trace(unsigned site, unsigned a, unsigned b, unsigned c, unsigned d) {
+    if (FILE *f = rs64_g3e_file()) fprintf(f, "%u %d %u %u %u %u %u\n", rs64_vi_n_g, g_rs64_swap_n.load(std::memory_order_relaxed), site, a, b, c, d);
 }
 static void rs64_g3_census(uint32_t lo, uint32_t hi) {
     FILE *f = rs64_census_file();
@@ -5296,7 +5311,7 @@ static void rs64_g3_census(uint32_t lo, uint32_t hi) {
     static uint32_t cvi = 0, ntr = 0, ntx = 0, nright = 0, nsub = 0, ci = 0;
     const uint32_t vi = rs64_vi_n_g;
     if (vi != cvi) {
-        if (nsub) { fprintf(f, "%u %u %u %u %u %u %06X\n", cvi, ntr, ntx, nright, g_rs64_census_radar.exchange(0), nsub, ci); fflush(f); }
+        if (nsub) { fprintf(f, "%u %u %u %u %u %u %06X %u %llu\n", cvi, ntr, ntx, nright, g_rs64_census_radar.exchange(0), nsub, ci, rs64_ucode_cap_fires_g, (unsigned long long)g_rs64_rt64_tri_accepted.load(std::memory_order_relaxed)); fflush(f); }
         cvi = vi; ntr = ntx = nright = nsub = 0;
     }
     nsub++;

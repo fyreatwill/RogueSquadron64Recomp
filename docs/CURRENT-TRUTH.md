@@ -153,7 +153,8 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   Remaining ucode self (s6775 op-bucketed, tools/g1e_op_bucket.py): VMAD*/VMUD* math ~35%, generated .c body ~28%, SDV/SSV
   fast paths ~14%. **CLOSED s6776:** lvl5 FPS60 holds ~60 game fps at dd1-dd4 (tasks/s 60.3/60.3/60.3/60.1, dense
   half 60.5/60.5/59.5/59.3; per-task ucode 1.48-2.45 ms, Gfx thread 9-15% busy; [g1b] tasks 59.4-59.5/s, vi 60.0;
-  tools/g1e_dd_table.py). The older "dd2 ~48-50, dd3 ~47, dd4 ~44" (pre-s6713) is superseded.
+  tools/g1e_dd_table.py). The older "dd2 ~48-50, dd3 ~47, dd4 ~44" (pre-s6713) is superseded. s6788: those dd>1 fps were measured with the
+  120-cell bypass cap, which drew less terrain than retail most of the time; re-measure on the s6788 bundle.
 - **G1c draw distance CLOSED s6703.** dd4 is the ceiling that adds terrain (lvl1/lvl5); dd8 sane after s6701
   (perspNorm centre-box) and s6702 (spill-arena leak in rs_free). Owner guide docs/DRAW-DISTANCE.md.
 - **G1d widescreen + G1f window fit CLOSED (s6688-s6735).** Window opens at the chosen aspect, fullscreen toggle,
@@ -274,6 +275,16 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   change controls without an owner request.
   Third run: no dropouts with no draw-distance arg -> dropouts are a draw-distance (dd>1) defect.
   Owner also heard choppy audio on the Chapter II text crawl -> ITERATION G2b (after G3e).
+  **s6788 G3e mechanism named + fixed (lvl1, FPS60, per-VI census + terrain trace, same build):** the s6540 per-swap
+  span-bypass cap (120 cells) made dd>1 terrain BISTABLE. The retail span test rejects ~1500 in-window cells in 86% of
+  dd4 swaps (pose-dependent); with only 120 rescued, terrain flipped between full dd4 and LESS than retail (lvl1 dd4
+  median tris 816 vs dd1 1083; kept-cell count vs tris corr 0.86; 47 in-flight drop edges / 180 s, dd3 90, dd2 0, dd1 0;
+  0 ucode-cap fires on drop frames). Uncapped accept: drops 47 -> 4-6, median 1407-1431, but 431 synthetic ucode-cap
+  fires per run, so the dd>1 bundle now also sets ROGUESQ_UCODE_CAP=1048576 (fires 0). New dd>1 defaults in
+  rs64_g1c_apply_dd_policy: ROGUESQ_BYPASS_MAXCELLS=-1, ROGUESQ_UCODE_CAP=1048576 (explicit env wins). Default-path
+  run: dd4 6 dips / dd3 0 in flight; game fps lvl1 dd4 45.9, dd3 48.2 (dd1 59.9) - the old dd4 "56-60 fps" was partly
+  bought by drawing less than retail. RESIDUAL (NEXT): dd4 dips every ~481 VI (= the autopilot 8 s a/sl/a/sr cycle):
+  kept cells decay ~2200 -> ~850 over 4-5 frames, then jump back, window constant. lvl5/lvl10 soaks queued (s6788_g3e_*).
 
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.

@@ -11447,6 +11447,12 @@ static void rs64_g1c_apply_dd_policy() {
     setenv("ROGUESQ_DLPOOLX_MB", "4", 0);
     setenv("ROGUESQ_DLPOOLX_AT", "3000", 0);
     setenv("ROGUESQ_DD_POOLX", b, 0);
+    // s6788 G3e: the s6540 per-swap span-bypass cap (120 cells) made dd>1 terrain bistable: the retail span test rejects
+    // ~1500 in-window cells in most swaps (pose-dependent), so terrain flipped between full dd and LESS than retail
+    // (lvl1 dd4 median tris 816 vs dd1 1083; 47 in-flight drop edges in 180 s). Unlimited accept: 4 drops, median 1407.
+    // Denser frames then exceed the synthetic LLE ucode iteration guard (431 fires at 65536), so raise it as well.
+    setenv("ROGUESQ_BYPASS_MAXCELLS", "-1", 0);
+    setenv("ROGUESQ_UCODE_CAP", "1048576", 0);
 }
 
 // G1d (s6121): ROGUESQ_ASPECT=<w>:<h> with w/h > 4:3 derives the game-side widescreen

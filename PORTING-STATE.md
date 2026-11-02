@@ -178799,3 +178799,45 @@ Discrimination: selects H-match for AT THE MOVIES (DIRECTOR-gated in both arms) 
 refutes H-diff (port-only AT THE MOVIES failure) and H-race (song-worker request per track change: 0 in both arms).
 Next discriminator: per-cutscene alignment over the whole AT THE MOVIES playlist (H-match vs H-diff vs H-crash/stall in a
 later cutscene), scratch/agent/NEXT.md.
+
+## Session 6788 (2026-11-02) — G3e: dd>1 terrain dropouts are the 120-cell span-bypass cap making terrain bistable; dd>1 bundle now uncaps it and raises the ucode guard (dd3 drops 90 -> 0, dd4 47 -> 6)
+Switched from NEXT.md (g3-cinematic-sweep) to ITERATION G3e (owner: take now, before retail-match sweep work).
+New instrument, one build: ROGUESQ_G3_CENSUS lines gain two cumulative columns (LLE ucode iteration-cap fires via
+fixup_factor5_ucode.py s6788 cap-fire global, RT64-accepted tris); ROGUESQ_G3E_TRACE=<file> (tools/apply_s6788_ddtrace.py,
+registered in fixup_game_funcs_vendored.py, host rs64_g3e_trace in src/rsp/dpc_bridge.cpp): per call site 1 dd gate
+(applied, desc+4, radius), site 2 post-clamp window, site 3 bypass taken/refused per swap, site 4 kept stream nodes.
+Offline: scratch/s6788/census_drops.py (frames = VI lines merged by colour image; DROP = tris < 0.6 x median of 16
+neighbours), join.py, lag.py, regime.py. Arms (lvl1 forced route, FPS60, 180 s, scratch/s6788/arms.zsh, all rc alive,
+0 crash, 0 VI stall):
+| arm | in-flight drops | flight tris median | game fps | bypass-refusal swaps |
+| dd1 | 0 | 1083 | 59.9 | - |
+| dd2 | 0 | 1570 | 57.5 | - |
+| dd3 (cap 120) | 84 | 1106 | 50.6 | 2768/5199 >200 |
+| dd4 (cap 120, two runs) | 47 / 47 | 846 / 816 | 56.6 / 57.9 | 5246/6065 >200 |
+| dd4 BYPASS_MAXCELLS=-1 | 5 | 1407 | 47.5 | - (431 ucode-cap fires) |
+| dd4 new default bundle | 6 | 1431 | 45.9 | - (0 fires, cap 1048576) |
+| dd3 new default bundle | 0 | 1528 | 48.2 | - |
+(drops exclude the 6 shared scene-transition zero-tri frames at VI ~3559/4056 present in every arm.)
+Mechanism: kept stream nodes track RDP tris (corr 0.84-0.86 at lag 0-2). Site 1: dd gate applied on 6861/6861 calls,
+desc+4 constant (H-gate refuted). Site 2: window steady. Site 3: in 86% of dd4 swaps the retail span compare rejects
+~1500-2070 in-window cells and the s6537/s6540 cap rescues only 120; in the rest it rejects ~0 and ~1700 cells are kept.
+The regime flips with pose (period ~481 VI = the autopilot a/sl/a/sr 8 s cycle), so terrain alternates between full dd4
+and LESS than retail (dd4 median below dd1); short runs of either regime (14 low, 13 high <=3 swaps) are the owner's
+single-frame dropouts. Drop frames carry 0 ucode-cap fires (H-ucode-cap refuted as the dropout cause).
+ORIGIN: the writer is our own s6537 per-swap cap (s6540 default 120 at dd>1), a frame-cost optimisation on top of the
+s6529 span bypass; s6543 already found cap120 buys no terrain over cap0. Not a guest defect; the retail span test is
+designed for the retail footprint (s6520-s6528). Second writer: our synthetic ucode loop guard at L_1090 (65536) truncates
+the denser uncapped dd4 frames; hardware has no cap (s6762 class).
+Fix: rs64_g1c_apply_dd_policy (src/main/main.cpp) sets ROGUESQ_BYPASS_MAXCELLS=-1 and ROGUESQ_UCODE_CAP=1048576 for
+dd>1 (setenv overwrite=0, explicit env wins; dd1 untouched). Positive control in the default run: `[ucode-cap]
+ROGUESQ_UCODE_CAP=1048576` printed, site 3 silent (cap<0 path), 0 fires.
+Two lines: owner observation (drops at dd4, none at dd1) and the same-build census/trace arm table above.
+Positive control: the census sees the 6 shared scene-cut zero-tri frames in every arm, and the dd4 arm reproduces the
+drops twice (47/47) while dd1/dd2 show 0.
+Cost: dd4 lvl1 game fps 57.9 -> 45.9; the old ~56-60 fps dd4 figures were partly bought by drawing less than retail.
+OWNER-OPT-INS now recommends dd3 (0 drops) and drops the dd4+ASYNC+NODRAIN line; DRAW-DISTANCE.md row added.
+Residual (not fixed): dd4 still dips 6x/180 s, exactly on the 481-VI cycle: kept decays ~2200 -> ~850 over 4-5 frames,
+then jumps back; window constant, 0 cap fires. Candidates far-clip d2 cutoff vs node pool vs retail.
+Queued: s6788_g3e_lvl5_dd4, s6788_g3e_lvl10_dd4 (300 s, census).
+Rules out: H-asyncnodrain (owner), H-ucode-cap (as dropout cause), H-gate (dd scale gated off), H-window.
+Selects: H-bypass-cap (bistable span-reject regime). Next: name the residual dd4 dip.
