@@ -177958,3 +177958,28 @@ selects H-retail for the lvl9 t2050-2208 HUD-off window (refutes a second gfx tr
 Rules out: a port sim defect on lvl10 within 1410 ticks; a port-only HUD/render drop on lvl10; a second ucode-cap-like
 drop on lvl9.
 Next: g3-mission11-pinned (eep +0x31=10).
+
+## Session 6764 (2026-11-01) — G3: mission 11 (Bespin) with dt pinned: sim identical to retail for the whole 3410-tick trace, no split; render and HUD match
+
+What ran (scratch/s6764; s6763 recipes with lvl11.eep = s6763 lvl10.eep +0x31=10, no FORCE_PLANET_UNLOCK needed, port
+capture shows the Y-wing Bespin cloud level): retail SECS=360 NDUMP=24 DSTEP=10 concurrently with port SECS=330.
+Port: 768 captures, 0 `[ucode-cap] fired`, 0 crash/abort lines. Retail trace covers 3411 ticks; 15 of 24 dumps landed
+(flight starts later on this level, VI 12455).
+Results:
+- g3_rand_ticks.py: 25226 retail calls (3410 ticks) vs port 34508: first mismatch None, the whole retail stream matches.
+- g3_song_windows.py: no song handle change in either arm within the trace, so there is no audio-clocked split.
+- g3_frame_snap.py (3410 ticks): 78 NPCs, 0 point/res/obj diffs. Snap diffs only words 2-6/9; glob diffs 20-31 plus
+  7/8 on 68 ticks and 18 on 3 (allowed render pacing).
+- g3_tick_mem.py (G3_IGN=04,0c,18) 8010c9e0 8010c0e0: first arm diff None for both.
+- g3_oracle_match.py: 13 flight dumps d 4.9-7.1 (2nd best 6.0-12.8, median ~33); vi 12455 black (d 0.18); vi 12965
+  d 9.8 is a torn retail dump (angrylion mid-raster stripes in the lower right, lives icon not yet drawn;
+  scratch/s6764/match/worst0_vi12965_n17897.png), not a port defect.
+- g3_hud_presence.py: retail HUD on 14/14 dumps in range, port 345/345 captures. No HUD-off window in either arm.
+Positive controls (same tools, this session): g3_rand_ticks on s6754 -> mismatch index 2153 and on s6763 -> 16813
+(both reproduced), so the None on s6764 is a real match, not a dead comparator.
+Two lines: (1) rand stream + NPC/object snapshots + tick_mem identical tick for tick; (2) frame match + HUD presence
+agree with retail.
+Discrimination: selects "sim identical" for mission 11 over the full trace (refutes a new sim split); selects render
+match (refutes a port-only render/HUD defect).
+Rules out: a port sim defect on lvl11 within 3410 ticks; a port-only render/HUD drop on lvl11.
+Next: g3-mission12-pinned (eep +0x31=11).

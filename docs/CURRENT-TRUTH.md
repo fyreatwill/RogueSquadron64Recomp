@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6763 (2026-11-01).
+Compact operational handoff, as of Session 6764 (2026-11-01).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -22,6 +22,9 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   65536 everywhere (=16384 restores). Earlier per-level G3 checks that saw no cap fire are unaffected. s6763: the
   second lvl9 port HUD-off window (t2050-2208) persists with 0 cap fires and retail hides the HUD on 16/16 dumps inside
   it (player death camera): retail behaviour, not a defect.
+- **G3 mission 11 (s6764, Bespin, Y-wing):** sim identical for the whole retail trace, 3410 ticks (25226 rand calls,
+  78 NPCs, 0 point/obj diffs, 0 tick_mem diffs, no song switch in either arm, so no split). Render: 15 retail dumps
+  d 4.9-7.1, one torn retail dump (vi 12965, d 9.8); HUD on 14/14 retail dumps and 345/345 port captures. 0 cap fires, 0 crash lines.
 - **G3 mission 10 (s6763):** sim identical 1410 ticks (16812 rand calls, 24 NPCs, 0 obj diffs); split t1411 = song-1 end
   on the audio clock (retail 129 ticks/332 VI/634 buffers, port 167/334/640). Render: pre-split dumps d 3.1-6.8, two
   torn retail dumps (angrylion mid-raster) d 15/22; HUD-off t1270-1401 in both arms. 0 cap fires, 0 crash lines.
@@ -150,7 +153,7 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 sim/frame match, mission 11.. (NEXT: g3-mission11-pinned).** Recipes scratch/s6763/{retail,port}.sh with
+1. **G3 sim/frame match, mission 12.. (NEXT: g3-mission12-pinned).** Recipes scratch/s6764/{retail,port}.sh with
    eep +0x31=N-1 (tools/g3_eep_patch.py); retail DSTEP=10 spreads 24 dumps over ~240 s; dense dumps in a window:
    scratch/s6763/lvl9_retail_gap2.sh (DOFF/DSTEP seconds after the flight-start arm, ~60 VI/s).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
