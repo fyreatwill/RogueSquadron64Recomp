@@ -179059,3 +179059,27 @@ Caveat: the retail low-section slowness itself (oracle frame cost vs real hardwa
 Port renders identical per-frame tri counts, so it is not a port render defect either way.
 Not done: duplicate-edge-word scan on port.bin (7.3 GB). The DTW controls already rule out a 30% duplicated share.
 Next: s6736 right-edge column (source column cw-1 = clear colour) under ROGUESQ_EXACT_EDGES=tog, then the G1d owner close-out.
+
+## Session 6796 (2026-11-02) — G3: the exact-edge fan leaves the right-edge source column cw-1 alone (H-same); the s6736 EDGE_CONTENT crop stays correct with ROGUESQ_EXACT_EDGES on
+
+NEXT.md unit (g3-cinematic-sweep): does the s6794 exact-edge fan change what RT64 draws into source column cw-1 (s6736:
+only the game's fill-mode clear reaches it, every content tri stops at x = cw-1.00 exclusive)?
+Hypotheses: H-same (column still clear colour, crop still right), H-fan-fills (fan now lights cw-1, crop hides content),
+H-fan-new-line (fan leaves a new unsampled column elsewhere).
+Run: scratch/s6796/dense.sh = s6736 dense.sh + per-capture epoch stamps (times.txt, zsh $EPOCHREALTIME before/after
+screencapture), `zsh scratch/s6796/dense.sh tog none "ROGUESQ_EXACT_EDGES=tog ROGUESQ_G1D_EDGE_CONTENT=0"`, lvl1 forced
+route, 4:3. Reached flight (mission_verified_130s), 0 crash lines, 276 [exactedges] transitions. Scorer: new
+tools/g3_edge_tog_split.py = s6736 edge.py split by arm (on = odd epoch second); a capture counts only when start and end
+fall in the same second >=0.15 s past the boundary (154 of 329 kept). It also scans r-30..r-4 for a new lone blue column
+and averages the blue profile of the last 8 content pixels.
+| arm | lit frames | sky edge column | new column | mean B r-0..r-7 |
+| off (even s) | 44 | 26 (59%) | 0 | 62 118 124 91 71 57 51 51 |
+| on (odd s)   | 47 | 31 (66%) | 0 | 70 125 127 91 68 54 47 47 |
+Positive control: the off arm reproduces s6736 ctl/ctlb (134/195, 159/235 = ~69%); the whole run unsplit reads 108/170 (64%).
+Second line: [g1d-reach] RDP reach is unchanged (cw=512 max_tri_x1 511.00 x18 epochs, cw=640 639.00), and the fan's last
+edge is that same L edge at x = cw-1.00, so the GPU sample at cw-0.5 stays outside it. The pixel data agrees.
+Verdict: H-same selected. H-fan-fills and H-fan-new-line are refuted. ROGUESQ_G1D_EDGE_CONTENT=1 (default) stays correct with
+EXACT_EDGES on. No code change.
+Dark load frames: 2 kept (on arm), 0 with the line (EDGE_CONTENT=0). Too few to split the load line by arm. The load
+line is the same clear column (s6736), so it is not chased.
+Next: s6794 "not checked": hangar/menus seams and fan overhead under EXACT_EDGES=tog (NEXT.md).

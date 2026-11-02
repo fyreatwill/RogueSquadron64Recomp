@@ -335,10 +335,11 @@ Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s67
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
 1. **G3 cinematic sweep follow-ups (NEXT: g3-cinematic-sweep).** s6792 all 81 AT THE MOVIES shots pair with retail;
-   s6794 sky seam fixed (exact-edge fan). s6795 TRI shots 48/64 CLOSED = frame weighting (per-content tris match: DTW cost
-   0.004/0.014 vs ctl 0.27/0.10, +30% pos ctl 0.10-0.18; tools/g3_cine_tri.py); retail's slow low-tri prefix makes the
-   time-driven cut drop high-tri tail frames. DUR shots stay single-source (oracle H-load). NEXT = re-check the s6736
-   mission-start right-edge column (source column cw-1 clear colour) under EXACT_EDGES=tog.
+   s6794 sky seam fixed (exact-edge fan). s6795 TRI shots 48/64 CLOSED = frame weighting (tools/g3_cine_tri.py).
+   s6796 CLOSED (H-same): the exact-edge fan does not touch source column cw-1. Same-run ROGUESQ_EXACT_EDGES=tog,
+   EDGE_CONTENT=0, lvl1 4:3: sky edge column off 26/44 (59%, pos ctl vs s6736 ~69%) vs on 31/47 (66%), identical
+   right-edge blue profile, 0 new columns; [g1d-reach] still max_tri_x1 = cw-1.00. The EDGE_CONTENT crop stays correct
+   with EXACT_EDGES on. NEXT = s6794 "not checked": hangar/menus seams + fan tri/frame-time overhead under EXACT_EDGES=tog.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
