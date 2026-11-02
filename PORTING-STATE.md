@@ -178840,4 +178840,6 @@ Residual (not fixed): dd4 still dips 6x/180 s, exactly on the 481-VI cycle: kept
 then jumps back; window constant, 0 cap fires. Candidates far-clip d2 cutoff vs node pool vs retail.
 Queued: s6788_g3e_lvl5_dd4, s6788_g3e_lvl10_dd4 (300 s, census).
 Rules out: H-asyncnodrain (owner), H-ucode-cap (as dropout cause), H-gate (dd scale gated off), H-window.
-Selects: H-bypass-cap (bistable span-reject regime). Next: name the residual dd4 dip.
+Discrimination: this run selects H-bypass-cap (bistable span-reject regime, root cause = our s6540 cap) and refutes
+H-asyncnodrain, H-ucode-cap, H-gate and H-window as the dropout cause. Next discriminator: per-call reject reasons
+(far-clip d2 cutoff vs node-pool exhaustion vs a dd1 same-phase control) on the residual dd4 481-VI dip.
