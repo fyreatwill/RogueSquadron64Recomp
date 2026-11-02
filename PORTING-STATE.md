@@ -179195,6 +179195,8 @@ Results:
 Verdict: H-object selected (retail-faithful far-terrain slivers): two sources (retail stream class + hardware rasterizer
 on the port's own words). H-wedge and H-rt64 refuted. g3-flight-thinline CLOSED. No code change to the renderer; an
 opt-in thin-triangle cull is possible but risks opening terrain seams (slivers also fill cell joins) — owner's call.
+This selects H-object, refutes H-wedge and H-rt64, and closes g3-flight-thinline. Next discriminator: retail-vs-port
+frame distance for lvl3+ against the same-run cross-time control (tools/g3_oracle_match.py).
 Rules out: a ucode/clip bug or RT64 rasteriser defect as the source of the lvl1 thin lines.
 Next: G3 in-flight retail match beyond lvl1/lvl2 (lvl3+): get the oracle into a later mission (owner EEPROM save in the
 mupen save dir, or a savestate), then tools/g3_oracle_match.py against port caps.
