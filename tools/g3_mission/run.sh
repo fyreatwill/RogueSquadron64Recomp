@@ -10,16 +10,24 @@
 # Mission 17 (s6771): PRESS=6:start,...,51:start AP=6:start,...,31:start (no press after the pick: the race starts by
 #   itself and the unsteered craft crashes ~12 s in), POKE=<dt pin>,800FA730:0:80003470:1:1 (one-shot rngSeed on tick 0),
 #   then G3_MIN_TICK=0 for the offline rand compare.
+# Mission 18 (s6772, Death Star trench, X-wing): cursor +1 and a craft-select Start: AP=6:start,11:start,16:start,
+#   21:start,23:w512,25:right,27:start,31:start,42:start  PRESS=6:start,...,36:start,41:dright,44:start,49:start,
+#   54:start,64:start  (retail first race tick ~vi 5153 = 86 s: FARM=88 DSTEP=4), offline G3_SNAP_TICKS=800FA730.
 # env: G3_TICK (tick/pin pc, 800FA730; must be one of the --exec-trace-also pcs below) PRESS/AP (start schedules) DWARM (retail seed arm s, 85) ARM (port seed arm s, 55) RSECS (360) PSECS (330) NDUMP (24) DSTEP (10) FARM (103) POKE (dt pin) EXTRA (port env)
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 S=$1; L=$2; [ -n "$S" ] && [ -n "$L" ] || { echo "usage: run.sh SDIR LEVEL" >&2; exit 2; }
 mkdir -p $S
 EEP=$S/lvl$((L+1)).eep
-# bonus missions 17-19 (LEVEL 16-18): the level select clamps the cursor to a3 = 15 + bonus flags read from
-# 0x80130B4C (bits 0x00200000 -> 16, 0x00400000 -> 17, menu code 0x800C5E14-0x800C5E6C), which the save loader copies
-# from record word +0xC (bits 9-22, 0x8006DBEC-0x8006DC00); the record starts at copy +0x2C, so byte +0x39 = 0x60 (s6770).
+# bonus missions 17-19 (LEVEL 16-18): the level select's highest selectable index a2 = 15 raised by 0x80130B4C bits
+# 0x00100000 -> 16, 0x00200000 -> 17, 0x00400000 -> 18 (menu code 0x800C5DE4-0x800C5E6C; s6772 re-read, s6770 had it
+# one off), which the save loader copies from record word +0xC (0x8006DBEC-0x8006DC00); the record starts at copy +0x2C,
+# so byte +0x39 = 0x60 opens all three (lvsel log: unlockMask 0x00080000 = 1<<(18+1)).
+# s6772: the game clamps the saved current mission (record byte 5 = +0x31) to 16 itself (getAccountDataPtr 0x8006EE7C,
+# copyAccountRecordAndMarkActive 0x8006EEB4), so the level select always opens on cursor 16 (mission 17); missions 18/19
+# need 1/2 d-pad RIGHT presses on the SELECT LEVEL screen (state 2), before the Start that commits the level. Port:
+# AP=...,21:start,23:w512,25:right,27:start,...  retail: PRESS=...,36:start,41:dright,44:start,...
 U=(); (( L >= 16 )) && U=(0x39=0x60)
-python3 tools/g3_eep_patch.py ${BASE_EEP:-scratch/s6769/lvl16.eep} $EEP --set 0x31=$L $U || exit 3
+python3 tools/g3_eep_patch.py ${BASE_EEP:-scratch/s6769/lvl16.eep} $EEP --set 0x31=$(( L > 16 ? 16 : L )) $U || exit 3
 pgrep -x rs64_oracle >/dev/null && { echo "rs64_oracle already running" >&2; exit 4; }
 # same xtrace spec in both arms: rand callers, glob words, NPC table, event mask 8010C9E0, song handle 8010C0E0
 export G3_TICK=${G3_TICK:-800FA730}; T=$G3_TICK

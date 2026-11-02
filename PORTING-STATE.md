@@ -178204,3 +178204,39 @@ origin0 & ~0xFFF (race 690000/620000, level select 6AB000/656000, debrief 720000
 the hard-coded bases, the dumps existed), flip_ctl picks any compared row and fails loudly when it flips nothing.
 Rules out: "mission 17 has no runInMissionFrame tick" (superseded), a port sim defect in the race.
 Next: g3-mission18-pinned, LEVEL 17 then 18, same recipe.
+
+## Session 6772 (2026-11-01) — G3 mission 18 (Death Star trench run) sim identical to retail 1097 ticks up to the song-3 audio-clock split; bonus missions 18/19 are reached by moving the level-select cursor, because the game clamps the saved current mission to 16
+
+HYPOTHESIS-ID: g3-mission18-pinned (closed: sim identical, render match pre-split).
+
+Port probe with +0x31=17 (scratch/s6772/probe18): level select opened on cursor 16 and the pick was mission 17 again
+([lvsel] init a3=16 B40=16 unlockMask 0x00080000). Static cause: the game clamps the account record's current mission
+(byte 5 = save +0x31) to 16 on every access (getAccountDataPtr 0x8006EE7C, copyAccountRecordAndMarkActive 0x8006EEB4:
+`sltiu v0,17 ; li 16 ; sb`), so no save can open the level select past mission 17. Re-read of the menu clamp
+(0x800C5DE4-0x800C5E6C): base 15 raised by 0x80130B4C bits 0x00100000 -> 16, 0x00200000 -> 17, 0x00400000 -> 18 (s6770
+had the mapping one off); unlockMask 0x00080000 = 1<<(18+1) confirms +0x39=0x60 opens all three bonus missions.
+Cursor recipe: the SELECT LEVEL screen (lvsel state 2, with arrows) takes d-pad RIGHT before the Start that commits the
+level (state 3 = AVAILABLE CRAFT). Probes: right at 24 s landed before state 2 (no move), right at 30 s and stick sr/su/sd
+landed in state 3 (no move); with a width gate `23:w512,25:right` the port cursor went 16->17, ret=0x11 = THE DEATH STAR
+TRENCH RUN. Unlike m17 it stops at SELECT YOUR CRAFT (X-wing) and needs one more Start (port 42 s); takeoff cinematic then
+trench flight from ~65 s, 0 crash lines. Retail probe (scratch/s6772/rp, lvsel cursor byte 800CDAC1 xtraced at 800C6674):
+dright at 41.1 s moved 0x10->0x11, Start 44 s -> state 3, 54 s -> state 4 (49 s ignored), 64 s accepted the craft, first
+0x800FA730 tick vi 5153 (~86 s). Side check: oracle --watch-write on bytes 0x130B40/0x130B4C logged 0 writes while a
+whole-RDRAM watch in the same run logged 7.47M: single-source suspicion that byte stores bypass this oracle's write
+watches (s6772/wb/o2.log); not pursued.
+Paired run (scratch/s6772/r18, run.sh LEVEL 17 with the presses above, POKE dt pin + one-shot rngSeed, RSECS 260 PSECS
+230, FARM 88 DSTEP 4): retail 1582 / port 1643 race ticks.
+- Sim: rand (tick, caller, value) identical for 16980 calls t0-t1097; first mismatch t1098 = retail's song-3 end (songs
+  1/2/3 start t268/t467/t948 in both arms; song 3 ends t1098 retail (2.227 VI/tick) vs t1115 port (2.000)): the same
+  audio-clock split as missions 10-16. frame_snap keyed on 800FA730 (G3_SNAP_TICKS): 31908 NPC rows, 0 point diffs, 0
+  disallowed snap/glob words, first obj diff/retail-only row t1098; tick_mem 8010C9E0/8010C0E0 first arm diff t1098.
+  Without G3_SNAP_TICKS the snap compare paired level-select rows (disallowed at t2/t200), as s6771 warned.
+- Positive control: run.sh's flip_ctl at START=30000 flipped a level-select row (first mission tick row is line 30941),
+  never compared -> dead control. Manual flip at line 50941 (80040f50, t289) flagged at index 4084. Fixed flip_ctl.py to
+  start at the first G3_TICK row (re-run flags index 0).
+- Render: pre-split pairs d 3.47-6.07; worst = torn retail dumps (vi 7466 d 17.8, debrief vi 10273), camera phase vi
+  6098, post-split GAME OVER debrief (both arms reach it). 0 cap fires, 0 crash lines. g3_hud_presence.py crashed (empty
+  t0 list) on this run; HUD visible in every flight capture of the sheet.
+Rules out: "save +0x31 selects any bonus mission" (clamped to 16 by the game), a port sim defect in mission 18 before the
+song-3 split.
+Next: mission 19 (LEVEL 18, two RIGHT presses), same recipe.

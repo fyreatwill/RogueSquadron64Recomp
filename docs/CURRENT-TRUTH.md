@@ -22,6 +22,12 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   65536 everywhere (=16384 restores). Earlier per-level G3 checks that saw no cap fire are unaffected. s6763: the
   second lvl9 port HUD-off window (t2050-2208) persists with 0 cap fires and retail hides the HUD on 16/16 dumps inside
   it (player death camera): retail behaviour, not a defect.
+- **G3 mission 18 (s6772, Death Star trench run, bonus, X-wing):** sim identical t0-t1097 (16980 rand calls, 31908 NPC
+  rows, 0 point diffs, 0 disallowed words), split t1098 = song-3 end (retail t1098 vs port t1115: audio-clock split as
+  m10-16); flip control flagged. Render pre-split d 3.47-6.07, outliers torn retail dumps / phase. 0 cap, 0 crash.
+  Reach: the game clamps the saved current mission (+0x31) to 16 (0x8006EE7C/0x8006EEB4), so bonus 18/19 need d-pad
+  RIGHT on the SELECT LEVEL screen (port `23:w512,25:right`, retail `41:dright`) plus a craft-select Start (port 42 s,
+  retail 64 s); recipe in the run.sh header. Offline needs G3_SNAP_TICKS=800FA730.
 - **G3 mission 17 (s6771, Beggar's Canyon race, bonus):** sim identical to retail over the whole race, 458
   runInMissionFrame ticks (3972 rand calls, 3664 NPC rows, 0 point/obj diffs, event mask/song identical, no disallowed
   snap/glob word); 1-bit flip control flagged. The race ticks 0x800FA730 like every mission. Recipe: tools/g3_mission/run.sh
@@ -29,7 +35,7 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   ground ~12 s in, MISSION FAILED), POKE=<dt pin>,800FA730:0:80003470:1:1 (new one-shot 5th field, both arms: rngSeed=1 on
   race tick 0), G3_MIN_TICK=0 G3_SNAP_TICKS=800FA730 offline. Render: in-race pairs d 4.9-9.5; outliers = crash wipe phase,
   fast-motion capture phase, one torn retail dump. HUD-off t417-453 = crash in both arms. 0 cap fires, 0 crash lines.
-  Unlock (s6770): +0x31 alone clamps to mission 16; save byte +0x39=0x60 sets the bonus bits (run.sh does it for LEVEL>=16).
+  Unlock (s6770/s6772): save byte +0x39=0x60 sets bonus bits 0x00100000/200000/400000 (indices 16/17/18; run.sh adds it).
 - **G3 mission 16 (s6769, ocean/Calamari towers, +0x31=15):** sim identical 2038 ticks (70442 rand calls, 32319 NPC
   rows, 0 point diffs before t2040, 0 disallowed words); songs 1/2/3 start on the same ticks in both arms (game events;
   retail drops frames to 3.25-3.44 VI/tick there, port 2.00), split t2039 = song-3 end on the audio clock (retail 166
@@ -91,6 +97,9 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 - Closed: M5 audio de-stubbing, M3 idiom audits, M6 endurance (s6442), G2 audio, G5 renaming. G4 crash hunting parked.
 
 ## Superseded conclusions — do not act on these
+- **(s6770 -> s6772)** "+0x39 bits 0x00200000 -> 16, 0x00400000 -> 17; +0x31=LEVEL selects bonus missions".
+  Bits are 0x00100000/0x00200000/0x00400000 -> 16/17/18, and the game clamps +0x31 to 16 on load, so missions 18/19
+  are reached only by moving the cursor. Believable because +0x31 selected missions 1-16 exactly and m17 = cursor 16.
 - **(s6770 -> s6771)** "mission 17 never calls runInMissionFrame 0x800FA730; flight at 512 wide ~24 s port / ~39 s
   retail; later Start presses pause the race". The 512-wide screen at those times is the LEVEL SELECT (its hologram ticks
   0x800C6674 and calls rand from 0x800B0xxx); m17b's presses ended before the pick, so neither arm ever raced. Believable
@@ -192,9 +201,9 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 sim/frame match, bonus missions 18-19 (NEXT: g3-mission18-pinned).** Mission 17 done (s6771). Tool:
-   tools/g3_mission/run.sh SDIR LEVEL (LEVEL 17/18, unlock automatic); use the s6771 mission-17 recipe (header of run.sh):
-   presses only up to the level pick, one-shot rngSeed poke on tick 0. Dense retail dumps: DSTEP=1 FARM=<race start>.
+1. **G3 sim/frame match, bonus mission 19 (NEXT: g3-mission19-pinned).** Missions 17/18 done (s6771/s6772). Tool:
+   tools/g3_mission/run.sh SDIR 18 with the s6772 mission-18 recipe (run.sh header) and TWO right presses; then the
+   per-mission G3 sweep is closed and the next rung per ITERATION.md 3c applies.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
