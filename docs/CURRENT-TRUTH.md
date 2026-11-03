@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6814 (2026-11-02).
+Compact operational handoff, as of Session 6815 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -370,10 +370,19 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    s6814 the lvl14 HUD-off sequence is the PASSIVE PLAYER'S DEATH (flag 0x100 in 0x8010CA1C set by spawnNpcDestructionDebris
    on the hp-0 tick, 7/7 runs). FPS60 dies later (seeds: 30 Hz 87/81/52 s, FPS60 102/>138/86/96 s) because it takes ~half
    the 50-hp hits per game s (0.107-0.140 vs 0.029-0.069, no overlap); per-hit damage, hp regen (1.945/s) and mission
-   timers are dt-exact. Rand-caller rates (single pair): spawnNpcFormationWithRandomOrientation and NPC destruction paths
-   0.70-0.75x per game s at FPS60. Tool tools/g3_death_time.py. NEXT: g3-fps60-spawn-rate - why NPC formation spawns run
-   ~0.7x per game second at dt 1/60 (spawn timer vs spawns following AI kills). Side datum: a30_s2 froze at boot (fs=39
-   by VI 128, audio alive); soak s6814_bootfreeze_ab queued (preempt point on/off).
+   timers are dt-exact. Tool tools/g3_death_time.py.
+   s6815 (offline, 7 seeded runs, tools/g3_fps60_hit_attrib.py): the s6814 "NPC formation spawns 0.7x" is NOT a spawn
+   timer. spawnNpcFormationWithRandomOrientation is misnamed - a particle-pool allocator (free list 0x80130BD0, 108-byte
+   entries) whose bursts follow explosion events (npcPowerGeneratorHandleDestruction 7-rand cluster) 85-100%; no fixed
+   spawn times. Every player hp hit (33/33) is preceded within 0.1 s by an impact effect (randomlyScaledEffectNpcHandler
+   0x800606F4 onset); impacts near/at the player per game s are NOT lower at FPS60 (0.82-1.47 vs 1.03-1.14) but the share
+   that cost hp halves: 30 Hz 20/187 (10.7%) vs FPS60 22/416 (5.3%). Refutes H-spawn-timer / H-fire-rate; the deficit is
+   hit probability per shot (H-lead: enemy target lead uses a per-tick velocity; H-collision; H-splash). Side datum:
+   npcWingmanBehaviorByMode 0x800D860C and initActorMotionParams 0x800F28F4 fire every 20 TICKS (0.667 s at 30 Hz, 0.333
+   s at FPS60, seed-independent) - a frame-locked cadence. Boot freeze soak s6814_bootfreeze_ab: 10/10 boots clean (5
+   preempt on, 5 off), the a30_s2 freeze did not recur (1 in 11 boots).
+   NEXT: g3-fps60-hit-prob - find the enemy projectile/aim code that produces the impacts and log per shot the aim point
+   vs player position (lead error) and closest approach; FPS60 shots trailing the player = H-lead.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

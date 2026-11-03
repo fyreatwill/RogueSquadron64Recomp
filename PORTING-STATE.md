@@ -179709,3 +179709,34 @@ ORIGIN: no mitigation; measurement only (tools/g3_death_time.py, recipes, soak r
 Next: g3-fps60-spawn-rate - log each spawnNpcFormationWithRandomOrientation call (game time, caller, formation id) and
 each NPC destruction in both arms; spawns at fixed game times = a timer -> find why it slows at dt 1/60; spawns
 following kills = wingman/AI kill rate is the term.
+
+## Session 6815 (2026-11-02) — G3 FPS60 lvl14: the "0.7x formation spawns" is not a spawn timer; enemy impacts on/near the player per game s are equal at FPS60 but the share that cost hp halves (10.7% -> 5.3%, 7 seeded runs) -> hit probability per shot is the term; 20-tick frame-locked cadence found
+
+HYPOTHESIS-ID: g3-fps60-spawn-rate (closed) -> g3-fps60-hit-prob.
+
+Soak fold: s6814_bootfreeze_ab rc=0: 10/10 boots reached fs~1287 (5 preempt point on, 5 off), 0 crash, no freeze. The
+s6814 a30_s2 boot freeze (fs=39) did not recur (1 in 11 boots total); preempt point not implicated (single null, no
+positive control for the freeze itself - passive breadcrumb only).
+Offline only (no build, no run), on the s6814 rand traces (scratch/s6814/{a30,a30_s1,a30_s3,b60,b60_s1,b60_s2,b60_s3}).
+New tool tools/g3_fps60_hit_attrib.py (7-run caller-rate table with overlap flag + impact/hit attribution per run);
+scratch scripts spawns.py/drate.py/times.py/hitsig.py.
+- spawnNpcFormationWithRandomOrientation (0x800409A4) is misnamed: it pops a 108-byte entry from the free list at
+  0x80130BD0 (count 0x80130BC8) = a particle/effect allocator. Its 0x80040AE0 burst follows an explosion event
+  (npcPowerGeneratorHandleDestruction 7-rand cluster 0x8007668C/6B0/6D4) in 85-100% of cases in every run; burst times
+  are not fixed across seeds -> H-spawn-timer REFUTED. Explosion events per game s by window are similar in both arms
+  (10-30 s: 2.05-2.10 vs 1.80-1.90; 60-90 s FPS60 higher, the 30 Hz player is dying/dead).
+- 7-run caller table (16-50 game s): the s6814 single-pair 0.70-0.75x cluster is 0.80x over 7 runs (no overlap) and
+  follows the explosion count. Frame-locked: npcWingmanBehaviorByMode 0x800D860C and initActorMotionParams 0x800F28F4
+  fire every 20 TICKS (0.667 s at 30 Hz, 0.333 s at FPS60), seed-independent; dispatchDatSubtypeByRandomIndex
+  0x8007132C 0.50x deterministic (12 vs 6 calls). Per-tick and dt-exact controls as in s6814 (2.0x / 1.0x).
+- Hit attribution (positive control: 33/33 hp hits >5 hp are preceded within 0.1 s by an impact-effect onset
+  randomlyScaledEffectNpcHandler 0x800606F4, base rate 0.025/tick): impacts per game s while alive 30 Hz 1.03-1.14,
+  FPS60 0.82-1.47 (not lower); impacts that cost hp 30 Hz 8/81, 7/67, 5/39 (20/187 = 10.7%) vs FPS60 8/127, 8/100, 2/88,
+  4/101 (22/416 = 5.3%).
+VERDICT: refutes H-spawn-timer and H-fire-rate (shooters/explosions near the player run at the same game-second rate).
+Selects: FPS60 lands about half as many damaging hits per shot. Candidates for next: H-lead (enemy aim leads the player
+with a per-tick velocity, so at dt 1/60 shots trail the craft), H-collision (projectile vs player test misses at shorter
+steps), H-splash (splash damage gated per tick). Two lines for "fire rate unchanged": explosion-event rate and impact
+rate. "Hit probability halves" is one line (impact->hit ratio, 7 runs) - single-source until the projectile log.
+ORIGIN: no mitigation; analysis only.
+Next: g3-fps60-hit-prob - name the enemy projectile pool/aim routine and log per shot aim point vs player position.
