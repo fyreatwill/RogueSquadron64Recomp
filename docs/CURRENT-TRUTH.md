@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6804 (2026-11-02).
+Compact operational handoff, as of Session 6805 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -334,13 +334,15 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 lvl9 death-camera length (NEXT: g3-deathcam-end).** s6804 pair (tools/g3_mission/death_pair.sh, rdplog vs
-   RS64_RDP_BIN_PORT, dt pinned): the whole post-death screen sequence matches retail. Pre-death 93/93 frames exact, death
-   camera frames exact (562 tris, 0 rects), then 7-rect fade 14 frames, 9-rect 11, 10-rect respawn HUD 143 (static sets
-   equal), normal HUD; every segment the same length in both arms EXCEPT the HUD-off death camera: retail 33 frames, port
-   117. Retail ticks t2130-2210 at a flat 4 VI/tick, port t2133-2250 at 2 VI/tick: the camera's end is the lvl9 split
-   (s6763 t2217). The port's run ends at the GAME OVER debrief (t5806, already matched s6772/s6778). Open: what ends the
-   camera (audio clock / VI timer / rendered-frame count). Tools: g3_rdp_timeline.py, g3_rdp_segments.py, g3_rdp_segcmp.py.
+1. **G3 audio-clocked split audit (NEXT: g3-audio-split-audit).** s6805 CLOSED g3-deathcam-end: the lvl9 death camera
+   starts t2184/2185 and ends on the death-jingle (song handle 0x8010C0E0 = 1) end in BOTH arms (retail t2218, port t2301),
+   then the same fade -> respawn HUD at phase 0 (0x8010CA20) offsets. The jingle is audio-clocked (332 vs 334 VI, 634 vs 640
+   AI buffers); its tick length (83 vs 167) differs only because mupen runs this scene at 4 VI/tick vs the port's 2, so the
+   camera shows 34 vs 117 frames. Retail-faithful. s6804's port VIs were 100 VI early: all_frames drops empty FULL_SYNCs
+   (50 at boot in both streams) while its VI list counted them; use tools/g3_rdp_syncs.py for any frame<->VI/tick join.
+   Tools: g3_frames_per_tick.py (retail needs --exec-trace-also 0x80035500; oracle now allows 16 such PCs), g3_rdp_syncs.py.
+   Open: tabulate every song window across the existing dt-pinned pair logs (s6760-s6804) to confirm audio length parity
+   on every level; a level whose port song is not VI/buffer-equal to retail is an audio-rate defect.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

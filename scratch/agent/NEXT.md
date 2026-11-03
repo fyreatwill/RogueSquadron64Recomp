@@ -1,18 +1,14 @@
-# NEXT: what ends the lvl9 death camera (retail ~t2210, port t2250)
-HYPOTHESIS-ID: g3-deathcam-end
+# NEXT: cross-level audio-clocked split audit (offline)
+HYPOTHESIS-ID: g3-audio-split-audit
 
-State (s6804): post-death screen sequence matches retail frame-for-frame except the HUD-off death camera: retail 33
-frames / t2130-2210 at a flat 4 VI/tick, port 117 frames / t2133-2250 at 2 VI/tick. Its end is the lvl9 sim split
-t2217 (s6763: rand caller retail 8007132c vs port 80054174). Data: scratch/s6804/pair (retail.bin, port.bin, oracle.log,
-port.rand.txt, segcmp.txt); rerun with tools/g3_mission/death_pair.sh OUTDIR.
-Hypotheses: H-audio (camera waits for a death sound/voice/stream to finish: audio clock, the known song-end split class,
-then retail-faithful pacing, close); H-vi (an osGetCount/VI-count timer: port VI 234 vs retail ~320 says no unless the
-start differs); H-frames (counter bumped per rendered frame / gfx task done: retail renders fewer frames per tick in
-the camera, so a frame-counted wait ends LATER in ticks on retail - opposite sign, unless retail skips frames);
-H-sim (tick-counted; would give equal ticks - refuted unless the start tick differs).
-Discriminator, offline first: disassemble around 8007132c and 80054174 (the first callers that differ at t2217) and the
-HUD-hide flag writer for the death camera (find via the port census HUD-off edge + ROGUESQ_DEBUG_WRITE on the flag);
-name the counter the end test reads. Then ONE pair run (death_pair.sh) adding that word to both xtrace specs
-(RS64_XTRACE_MEM / ROGUESQ_XTRACE_MEM at 800FA730) plus the AI/audio-voice state words: whichever word reaches its end
-value on the same tick-relative schedule in both arms names the clock. If H-audio: document as retail-faithful pacing
-(close). If port-only: root-cause.
+State (s6805): every dt-pinned retail/port pair split so far (lvl3,4,7,8,9,10,12,14,15,16 and the lvl9 death camera) lands
+on a song end (handle 0x8010C0E0 -> 0), and song windows were VI/AI-buffer equal where measured (lvl10 332/634 vs 334/640,
+lvl9 death jingle 332/634 vs 334/640). Never tabulated across all levels/songs at once.
+Hypotheses: H-parity (every song window is VI- and buffer-equal within ~1%: the split class is purely mupen's slower game
+rate, close the class); H-rate (some song/level has a port length != retail: an AI rate / sample-rate / tempo defect like
+G2b's 32006 Hz crawl, root-cause it); H-gameend (some song ends on a game event, not audio: equal ticks, unequal VI).
+Discriminator, offline only, no game run: for every scratch/s67xx pair dir holding a retail oracle.log and a port rand.txt
+with the 8010C0E0 block, run tools/g3_song_windows.py RETAIL PORT; build one table (level, song id, retail ticks/VI/bufs,
+port ticks/VI/bufs, VI ratio, buffer ratio). Positive control: lvl10 (scratch/s6763) must reproduce 332/634 vs 334/640.
+Find pairs: `ls scratch/s67*/ | ...; grep -l 'm=8010c0e0' scratch/s67*/**/oracle.log`. Write the table into the session
+entry; land the batch script as tools/g3_song_audit.py. If H-rate: next unit is the AI rate for that song.

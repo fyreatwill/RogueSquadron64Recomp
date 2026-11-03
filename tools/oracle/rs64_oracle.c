@@ -2724,7 +2724,7 @@ static int g_debug_write_done;
 /* s6751: --exec-trace PC[:MAX[:PEEK]] arms an exec watch on PC and prints one compact row per execution
  * (call index, VI, $ra, word at PEEK) from the --debug-write poke on (from boot if none), bypassing --hit-cap.
  * Mirrors the port's ROGUESQ_RAND_TRACE so the two arms' call sequences can be aligned. */
-static unsigned g_xtrace_pc, g_xtrace_peek, g_xtrace_extra[8];
+static unsigned g_xtrace_pc, g_xtrace_peek, g_xtrace_extra[16];
 static int g_xtrace_nextra;
 static long g_xtrace_max = 200000, g_xtrace_n;
 /* s6752: RS64_XTRACE_MEM="PC:REG:OFF:N,..." appends " m=ADDR:w0,w1,..." (N words at gpr[REG]+OFF, REG 0 = absolute)
@@ -3866,7 +3866,7 @@ static void usage(void)
         "  --status-poll         poll the 18 status-table words through the core API\n"
         "  --pif-trace           log pad-1 buttons as the GAME reads them from PIF RAM\n"
         "  --exec-trace PC[:MAX[:PEEK]]  one compact [xtrace] row (index, VI, $ra, word at PEEK, pc, v0, a3) per execution of PC\n"
-        "  --exec-trace-also PC          extra PC traced in the same row stream (needs --exec-trace; repeatable, max 8)\n"
+        "  --exec-trace-also PC          extra PC traced in the same row stream (needs --exec-trace; repeatable, max 16, s6805)\n"
         "  --debug-write VADDR:VALUE[:WIDTH[:ARM_S]]  write one 32-bit word on the first VI at WIDTH (default 320)\n"
         "                             at or after ARM_S seconds\n"
         "  --state-path PATH     savestate path used by ORACLE_STATE_SMOKE/REACH=1\n"
@@ -4126,7 +4126,7 @@ int main(int argc, char **argv)
         }
         else if (!strcmp(argv[i], "--exec-trace-also") && i + 1 < argc) {
             char pcs[16];
-            if (g_xtrace_nextra >= 8 || sscanf(argv[++i], "%x", &g_xtrace_extra[g_xtrace_nextra]) != 1) {
+            if (g_xtrace_nextra >= 16 || sscanf(argv[++i], "%x", &g_xtrace_extra[g_xtrace_nextra]) != 1) {
                 fprintf(stderr, "[oracle] bad --exec-trace-also '%s'\n", argv[i]);
                 return 2;
             }

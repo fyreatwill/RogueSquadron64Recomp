@@ -179363,3 +179363,40 @@ with cross controls, equal segment lengths for every non-camera segment); refute
 same respawn HUD, same fade). H-split is half right: the sims do not split before death; the split IS the death
 camera's end, which comes ~40 ticks later in the port.
 Next: g3-deathcam-end - find the death camera's end condition (code that clears the HUD-off state) and trace it in both arms.
+
+## Session 6805 (2026-11-02) — G3: lvl9 death camera ends on the death-jingle (song 1) end in BOTH arms (retail t2218, port t2301); its tick length differs only because the jingle is audio-clocked (332 vs 334 VI) and mupen runs 4 VI/tick vs the port's 2; s6804's port VIs were 100 VI early (empty-frame index shift)
+
+HYPOTHESIS-ID: g3-deathcam-end (closed) -> g3-audio-split-audit.
+
+Soak fold: none new since s6789_spansent_lvl5_dd4.
+Offline first (s6804 pair data, scratch/s6804/pair): g3_song_windows + g3_tick_mem on the 8010C9E0/8010C0E0 xtrace blocks.
+Song handle 1 (death jingle) starts t2133 in both arms; retail ends it t2216 (83 ticks, 332 VI, 634 AI buffers, 4.0 VI/tick),
+port t2300 (167 ticks, 334 VI, 640 buffers, 2.0 VI/tick). Mission phase word 0x8010CA20 = 1 from t2132 in both; on the
+tick the handle goes 1->0 both arms set 0x100 in 0x8010C9E0 and clear 0x100 in 0x8010CA1C, handle -> ffffffff, and phase
+returns to 0 (respawn) exactly 31-32 ticks later (retail t2248, port t2332). The phase-1 float 0x8010C9EC counts up by dt
+and resets at the song end in both; it is ~1.2 s / 4.0 s at the (s6804-claimed) camera ends, so no fixed threshold.
+Run (one retail-only arm, scratch/s6805/retail_swaps.sh = death_pair.sh retail arm + --exec-trace-also 0x80035500
+osViSwapBuffer, 245 emulated s): oracle cap on --exec-trace-also raised 8 -> 16 (tools/oracle/rs64_oracle.c, rebuilt).
+Positive control: same structure reproduced (song 1 t2133-2217, phase 0 t2249: mupen reproduces to +-1 tick), and swaps
+track ticks 1:1 through the whole window (cum swaps = tick, 1 swap per tick in the camera too; new tool
+tools/g3_frames_per_tick.py prints both arms per tick).
+The decisive defect in s6804's reading: g3_rdp_segments.all_frames drops a FULL_SYNC with no tri/texrect (`if cur:`), while
+s6804's port frame->VI join (scratch/s6804/runs.py fvi) counted every sync. Both streams carry exactly 50 empty syncs, all
+during boot, so every frame index after boot was 50 syncs = 100 port VI = 50 ticks early on the port side. New tool
+tools/g3_rdp_syncs.py lists every sync incl. empty ones (port VI per sync, cached .syncs.pkl):
+  port   camera sync 4777-4894 n=117 VI 8954-9186 = t2185-t2301; fade VI 9196; respawn 10-rect HUD VI 9250 = t2333
+  retail camera sync 5208-5242 n=34 = t2184-t2218 (sync - 3024 = tick, last sync = last tick); fade t2222; HUD t2251
+  song end: retail t2217 (this run), port t2300; phase 0: retail t2249, port t2332
+So the camera starts on the same tick (t2184/2185) and ends on the song end in both arms; fade then respawn HUD at phase 0
+follow with the same tick offsets. The 33 vs 117 frame difference is the jingle's length in ticks (83 vs 167), which is
+the same audio length (332/334 VI, 634/640 buffers) at mupen's 4 VI/tick vs the port's 2 VI/tick in this scene.
+Corrections to s6804: port HUD-off is VI 8954-9186 (not 8854-9088), the camera ends t2301 (not t2250), and retail's camera
+is t2184-2218 (not t2130-2210). "Rendered-frame count" and "VI timer" readings both die: frames differ (34/117), VIs differ
+(retail ~136 / port 232 camera VI), only the song end coincides.
+ORIGIN: no mitigation; oracle option cap + two analysis tools.
+VERDICT: selects H-audio (two lines: song-window VI/buffer equality, and the RDP sync timeline placing the camera end on
+the song-handle 1->0 tick in both arms, with the same fade/respawn offsets after it). Refutes H-vi, H-frames, H-sim.
+Retail-faithful mechanism; the remaining difference is mupen's slower game rate in this scene (15 vs 30 ticks/s), the
+known audio-clocked split class, not a port defect. Lesson: never join a VI list built over all syncs to a frame index
+that drops empty syncs; use g3_rdp_syncs.py.
+Next: g3-audio-split-audit - offline cross-level table of every song window in the existing dt-pinned pair logs.
