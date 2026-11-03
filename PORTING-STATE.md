@@ -179459,4 +179459,6 @@ Two lines: independent retail oracle (no gap) + same-build A/B toggling only the
 ORIGIN: the writer of the gap is the host set_frequency (SDL close/open blocks the guest thread calling
 osAiSetFrequency); not legitimate (retail never stops the AI feed). Root-cause fix, not a guard.
 Residual: 3-5 VI gaps at the title (VI 737, 974) in both port arms, retail max 2 VI (~60 ms; unnamed).
+Verdict: the retail control selects H-port and refutes H-retail; the same-build A/B closes the thread with the root cause
+(host device reopen) fixed. Next discriminator: g3-title-ai-gap (scratch/agent/NEXT.md).
 Rules out: H-retail for the transition gap; the G2b "~315 ms empty queue at every transition" is this same reopen.
