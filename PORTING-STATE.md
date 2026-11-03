@@ -180236,3 +180236,6 @@ ticks of a30 (the 0/1 step phase against the +1 seed), n=2 - fewer NPC ramps hap
 Single run per arm; the a30/off separation is exact, the fix median is single-source-ish (n=2).
 Rules out: any remaining |K|>1 integer per-tick quantum outside this site (40 sites classified by reading).
 G1e FPS60 rate classes now closed: float quanta (s6826-s6830), +-1 tick timers (s6821-s6825), |K|>1 int steps (here).
+Verdict: selects H-quantum-visible for advanceNpcOnCurvedPath +0x1E (off = exactly 2x the a30 rate, fix restores it),
+refutes it for the other 40 sites (H-benign / H-audio by reading). Next discriminator: the queued 400 s fix-arm soak
+(s6831_intstep_fix_lvl14) splits H-fixed (median within one 30 Hz tick of 0.267 s, n>=5) from H-phase-bias (~0.233).
