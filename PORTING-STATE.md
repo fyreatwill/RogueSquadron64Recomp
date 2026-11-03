@@ -180848,3 +180848,34 @@ width idiom). Root cause named and fixed (SPRITE_WRAP). Next discriminator for t
 submit-path ring in NEXT.md (H-shadow vs H-split vs H-late).
 Rules out: crashes/stalls from 21:9 in missions (18 levels, 200 s each, single run each). Does not yet rule out the
 residual HUD-texrect drop (a 16x30 px element missing for ~3 frames at the right edge).
+
+## Session 6851 (2026-11-03) — G1d residual wrapped HUD texrect = s6159 radar-region shift masking 12-bit x after the s6850 clip; ROGUESQ_G1D_SHIFT_SAT saturates (default on), same-build A/B lvl17 WRAP 10 -> 0
+Work unit: NEXT.md g1d-hudrect-walker-miss (H-shadow / H-split / H-late).
+Instrument (one build): ROGUESQ_G1D_SPRITE_DIAG=2 makes rs64_g1d_rect_wrap record every command address it steps on in
+the submit range (with the words it read, pre-rewrite, and its cw); the RT64 bin writer (rt64_render_context.cpp
+submit_rdp_range, same thread right after record_submit) re-walks the range and, for each wrapped rect / ZERO-W fill it
+is about to hand RT64, prints `[g1d-binwalk]` with walk=same|other, the walked words, or MISSED + the previous stepped
+command. Recipe scratch/s6851/abd.sh (s6850 abd.sh + DIAG=2, SAT arm, bin deleted after scan).
+Run 1 (lvl17 21:9, 200 s hold, alive, 0 stalls): control ZERO-W in the forced-overlay window = 12 binwalk lines, all
+walk=same with identical words (positive control: the cross-check sees what the walker sees). All 11 WRAP texrects:
+walk=same, walker stepped on the exact address, MISSED=0, but the walker read x 256 px lower (e.g. a=709570 walked
+24C2221A,00BE01CC = ul.x 760 lr.x 776.5; bin 2402221A,00FE01CC = ul.x 1016 lr.x 8.5). -> H-late selected, H-shadow and
+H-split refuted. The writer between walker and RT64 is rs64_region_scan (called after rs64_g1d_rect_wrap in
+rs64_dpc_record_submit): the s6159 HUD-anchor radar-disc shift, auto-set by ROGUESQ_ASPECT (main.cpp: region
+669,810,20,135, shift 256 at w1024), adds dx*4 to both texrect x fields and masks with 0xFFF, so a rect in the box at
+ul.x >= 768 lands past 1024 and its lr.x wraps (lr < ul -> RT64 drops it).
+ORIGIN: writer = rs64_region_scan's texrect shift (ours, s6158/s6159), value illegitimate (the 12-bit field overflow is
+ours; the game's rect at ul.x 760 is valid).
+Fix: the shift saturates each x field to 0..0xFFF instead of masking (straddling rect clipped at the edge with ul and the
+texture origin unchanged; a rect pushed wholly past the field becomes zero-width). ROGUESQ_G1D_SHIFT_SAT=0 = old.
+Same-build A/B lvl17 21:9 (sequential runs, both alive, 0 stalls, 0 crashlines):
+  SAT=0: ctl ZERO-W 584, out WRAP 10, binwalk WRAP 10, all 10 with bin-minus-walked x delta exactly +1024 quarter-px on
+         both fields (= the 256 px shift);
+  SAT=1: ctl ZERO-W 300, out WRAP 0, binwalk WRAP 0.
+Two lines of evidence: the walker-vs-bin word diff names the shift, and the A/B toggling only the shift's saturation
+removes every residual wrap. Queued soaks s6851_shiftsat_lvl5/lvl9 (residual seen there in s6850; lvl5's control was
+uncontrolled in s6850, so a missing-control fail there is not a regression).
+Open (next): is the shifted element radar HUD (shift right, clip right) or a world sprite caught by the fixed region box
+(the s6695 caveat; then it should not be shifted at all)? It is a 16x30 px rect at ul.x ~760, ul.y ~85, moving a few px
+per frame, present for ~3-6 frames at a time.
+Rules out: walker desync and shadow-restore bytes as the cause of the residual.

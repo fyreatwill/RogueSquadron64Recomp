@@ -30,6 +30,8 @@ static std::atomic<RT64::Application*> g_rt64_app{nullptr};
 // rs64_oracle --exec-trace so the two arms' call sequences can be aligned offline.
 extern "C" volatile int g_rs64_rand_trace;
 extern "C" volatile uint32_t rs64_vi_n_g;
+extern "C" int rs64_g1d_walk_diag; extern "C" uint32_t rs64_g1d_walk_lo, rs64_g1d_walk_hi; // s6851
+extern std::vector<uint32_t> g_rs64_g1d_walk, g_rs64_g1d_walk_cw;
 extern "C" uint32_t rs64_rand_site;
 uint32_t rs64_rand_site = 0; // jal address of the current rand call site (s6751 fixup)
 volatile int g_rs64_rand_trace = 0;
@@ -2067,6 +2069,34 @@ namespace ultramodern {
                     fprintf(stderr, "\n");
                 }
                 fflush(stderr);
+            }
+            if (rs64_g1d_walk_diag == 1 && app->core.RDRAM) {   // s6851: wrapped rect about to reach RT64 vs what the s6850 walker saw
+                static uint32_t s_cw = 0; static int s_hit = 0, s_ctl = 0, s_rng = 0;
+                const uint8_t *r = app->core.RDRAM;
+                auto rw = [&](uint32_t a) { uint32_t v; memcpy(&v, r + a, 4); return v; };
+                for (uint32_t a = lo_phys, n = 8; a + 8 <= hi_phys; a += n) {
+                    const uint32_t w0 = rw(a), w1 = rw(a + 4), op = (w0 >> 24) & 0x3F; n = 8;
+                    if (op >= 0x08 && op <= 0x0F) n = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
+                    else if (op == 0x24 || op == 0x25) n = 16;
+                    else if (op == 0x3F) s_cw = (w0 & 0x3FF) + 1;
+                    if (op != 0x24 && op != 0x25 && op != 0x36) continue;
+                    const uint32_t lrx = (w0 >> 12) & 0xFFF, lry = w0 & 0xFFF, ulx = (w1 >> 12) & 0xFFF, uly = w1 & 0xFFF;
+                    const bool zw = op == 0x36 && ulx == 0 && lrx == 0 && lry > uly, wr = lrx < ulx && lry > uly && ulx < s_cw * 4;
+                    if (!zw && !wr) continue;
+                    if (zw ? s_ctl++ >= 12 : s_hit++ >= 300) continue;
+                    // where did the walker step around a?
+                    const auto &v = g_rs64_g1d_walk; size_t i = 0, prev = SIZE_MAX;
+                    for (; i < v.size(); i += 3) { if (v[i] == a) break; if (v[i] < a) prev = i; }
+                    const bool same = rs64_g1d_walk_lo == lo_phys && rs64_g1d_walk_hi == hi_phys;
+                    if (i < v.size())
+                        fprintf(stderr, "[g1d-binwalk] %s vi=%u lo=%06X hi=%06X a=%06X bin=%08X,%08X cw=%u walk=%s walked=%08X,%08X wcw=%u\n",
+                            zw ? "ZW" : "WRAP", rs64_vi_n_g, lo_phys, hi_phys, a, w0, w1, s_cw, same ? "same" : "other", v[i + 1], v[i + 2], g_rs64_g1d_walk_cw[i / 3]);
+                    else
+                        fprintf(stderr, "[g1d-binwalk] %s vi=%u lo=%06X hi=%06X a=%06X bin=%08X,%08X cw=%u walk=%s(%06X..%06X n=%zu) MISSED prev=%06X:%08X,%08X\n",
+                            zw ? "ZW" : "WRAP", rs64_vi_n_g, lo_phys, hi_phys, a, w0, w1, s_cw, same ? "same" : "other", rs64_g1d_walk_lo, rs64_g1d_walk_hi,
+                            v.size() / 3, prev == SIZE_MAX ? 0u : v[prev], prev == SIZE_MAX ? 0u : v[prev + 1], prev == SIZE_MAX ? 0u : v[prev + 2]);
+                }
+                (void)s_rng;
             }
             {   // s4517: raw RDP byte dump (RS64_RDP_BIN_PORT=path) for retail rdp.bin diff.
                 // s6787: RS64_RDP_BIN_PORT_MAX_MB = file cap (default 600 MB; two-passcode SHOWROOM routes need ~1.5 GB).

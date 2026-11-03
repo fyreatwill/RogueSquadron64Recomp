@@ -267,8 +267,10 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    **s6850 runtime sweep lvl0-18 at 21:9:** all alive, 0 stalls/crashes (control fired 17/18; lvl5 uncontrolled). New
    class: edge-straddling sprites whose lr.x >= 1024 px wraps the 12-bit field and drops (lvl17 189, lvl6 45, lvl11 41...).
    Fixed by ROGUESQ_G1D_SPRITE_WRAP (default on, clip at the image edge when overhang < 384 px; same-build A/B lvl17,
-   rewrites visible in RT64's input bin). **Residual open (NEXT.md g1d-hudrect-walker-miss):** a 3-frame game-DL
-   G_TEXRECT run (0xE4, ul.x ~1012->985, ul.y ~85) stays wrapped and the walker never sees it (DIAG=1 prints nothing).
+   rewrites visible in RT64's input bin). **Residual CLOSED s6851:** those rects were valid when walked (ul.x ~760); the
+   s6159 radar-region shift (rs64_region_scan, runs after the clip) added 256 px and masked the 12-bit x, wrapping lr.x.
+   Shift now saturates (ROGUESQ_G1D_SHIFT_SAT, default on; =0 old); same-build A/B lvl17 WRAP 10 -> 0, controls fired.
+   **Open:** is that rect radar HUD (shift correct) or a world sprite caught by the fixed region box (shift wrong)?
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
@@ -284,5 +286,5 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts: [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); per-level images:
   [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
-- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261103-033219 (s6835_bootfreeze_hunt_d, consumed s6836: clean). None new since.
+- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261103-033219 (s6835_bootfreeze_hunt_d, consumed s6836: clean). None new since (s6851 checked); queued s6851_shiftsat_lvl5/lvl9.
 - Recent chronology: PORTING-STATE sessions 6788-6846; search bounded windows only.

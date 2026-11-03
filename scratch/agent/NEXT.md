@@ -1,26 +1,24 @@
-# NEXT: why does rs64_g1d_rect_wrap never see the residual wrapped game-DL HUD texrects? (s6850 residual)
-HYPOTHESIS-ID: g1d-hudrect-walker-miss
+# NEXT: is the lvl17 radar-region rect HUD or a world sprite wrongly shifted by the s6159 region box?
+HYPOTHESIS-ID: g1d-region-shift-scope
 
-State (s6850): ROGUESQ_G1D_SPRITE_WRAP clamps edge-straddling wrapped texrects (A/B on lvl17; the rewrites show up in
-RT64's input bin). Residual: a 3-frame run of game-DL G_TEXRECT (w0 0xE4.., 16x30 px, ul.x ~1012 -> 999 -> 985,
-ul.y ~85; lvl17 VI ~11444 and ~11923, also lvl5/lvl9) stays wrapped in the bin, merged record lo=0x6F6000 +0x1F330.
-ROGUESQ_G1D_SPRITE_DIAG=1 printed nothing for it (no fix/skip/wrap-at-cw/early-return), so the walker never reads those
-words in wrapped form. The bin also has 8-byte per-range records (lo 0x6F6000, 0x6F6008, ...).
+State (s6851): the s6850 residual wrapped texrect is a game-DL G_TEXRECT/FLIP at ul.x ~760, ul.y ~85, 16x30 px, that
+rs64_region_scan (s6159 HUD anchor, auto with ROGUESQ_ASPECT; region 669..810 x 20..135 at w1024, shift +256) moves to
+ul.x ~1016. Saturation (ROGUESQ_G1D_SHIFT_SAT, default on) now clips it at the edge instead of dropping it. But the
+region box is a fixed screen rectangle (s6695 caveat), so a WORLD sprite passing behind the radar disc also moves +256.
+First fold scratch/agent/SOAK-RESULTS.md lines for s6851_shiftsat_lvl5 / lvl9 (expect out WRAP=0; lvl5 control may
+not fire, as in s6850).
 
-Hypotheses (one instrument, one build, one run discriminates):
-- H-shadow: the word is submitted through the s4273 per-range wrap flush. record_submit walks an 8-byte range holding
-  only w0/w1 of the texrect, or the bump-time shadow bytes, and those differ from the live bytes RT64 later re-reads in
-  the merged record. Expect: the address is in a per-range record before the merged one, with different contents.
-- H-split: the texrect is split across two submit ranges (w0/w1 | w2/w3). The walker sees it in neither range in a
-  wrapped state, or misses it because the range starts mid-command and the walker desyncs.
-- H-late: something writes the texrect words after record_submit (e.g. a second submit of the same lo..hi without a
-  fresh record_submit, such as RT64 re-reading a merged span). Expect: a walker log at the address showing different
-  words than the bin.
-Measurement: add one cheap ring (env ROGUESQ_G1D_SPRITE_DIAG=2) that logs every record_submit (lo, hi, path id: merged /
-per-range-wrap / commit / live) whose range covers any texrect with ul.x >= 960 px on a 1024-wide image, plus the words
-the walker read there. Run lvl17 once (scratch/s6850/abd.sh 17 1, keep port.bin), match by address against the bin
-records holding the wrapped words. Positive control: the 3 known TexrectGen rewrites must show up in the ring.
-Fix by result: H-shadow / H-split -> walk the merged span (or clamp in the shadow too); H-late -> move the clamp to the
-point RT64 reads.
-Budget: 1 iteration. If it doesn't discriminate, close the residual as "3-frame 16x30 px HUD element, owner-visible?" and
-move on to the next ladder rung.
+Hypotheses:
+- H-radar: the rect is radar HUD (a blip, sweep or disc part) drawn inside renderRadarMinimap's DL span -> shifting it is
+  right and the edge clip is right.
+- H-world: it is a world billboard/texrect (smoke, explosion, target bracket) from the 3D pass that happens to sit in the
+  box -> the shift is wrong; it belongs at ul.x 760 and the box gate must exclude it.
+Discriminator (one instrument, one run, lvl17 scratch/s6851/abd.sh with ROGUESQ_G1D_SPRITE_DIAG=2): in rs64_region_scan,
+for every shifted texrect log the last G_SETTIMG address + format/size before it, the tile size, and whether the rect
+lies between the radar's first and last texrect of that swap (rs64 already stamps renderRadarMinimap: g_rs64_radar_swap;
+add an RDP-offset bracket if needed). Also log the shifted TRIs' count per swap as a control (the disc tris are known
+radar content and must be classified H-radar). Compare with a world sprite's texture image (G_SETTIMG of a known
+explosion billboard, e.g. the s6850 TexrectGen sprites at off=733CD0).
+Fix by result: H-world -> restrict the shift to the radar's own DL span (bracket by RDP offset or texture image);
+H-radar -> close, owner sheet of before/after (SAT=0 vs 1) at the right edge.
+Budget: 1 iteration; if not discriminated, close as "clipped at edge, owner judges".
