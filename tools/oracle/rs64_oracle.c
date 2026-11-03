@@ -89,6 +89,7 @@ static m64p_error (*pCoreAttachPlugin)(m64p_plugin_type, m64p_dynlib_handle);
 static m64p_error (*pConfigOpenSection)(const char *, m64p_handle *);
 static m64p_error (*pConfigSetParameter)(m64p_handle, const char *, m64p_type, const void *);
 static m64p_error (*pConfigSaveFile)(void);
+static const char *(*pConfigGetParamString)(m64p_handle, const char *);
 
 /* debugger entry points */
 static m64p_error (*pDebugSetCallbacks)(void (*)(void), void (*)(unsigned int), void (*)(void));
@@ -3647,6 +3648,12 @@ static const char *g_shot_dir;
 /* --save-dir DIR: Core SaveSRAMPath, so the run boots from a chosen EEPROM
  * image (DIR/<goodname>.eep) instead of the user-wide mupen save dir (s6800). */
 static const char *g_save_dir;
+/* s6839: the user's own SaveSRAMPath/ScreenshotPath, restored before the exit
+ * ConfigSaveFile. Without this the per-run overrides were persisted into the
+ * user-wide mupen64plus.cfg, and every later run without --save-dir silently
+ * booted the last --save-dir run's EEPROM (found: s6812's save, B40=0x0D). */
+static m64p_handle g_core_section;
+static char *g_user_save_path, *g_user_shot_path;
 
 static void *shooter(void *arg)
 {
@@ -4171,6 +4178,7 @@ int main(int argc, char **argv)
     SYM(pConfigOpenSection, "ConfigOpenSection");
     SYM(pConfigSetParameter, "ConfigSetParameter");
     SYM(pConfigSaveFile, "ConfigSaveFile");
+    SYM(pConfigGetParamString, "ConfigGetParamString");
     SYM(pDebugSetCallbacks, "DebugSetCallbacks");
     SYM(pDebugSetRunState, "DebugSetRunState");
     SYM(pDebugStep, "DebugStep");
@@ -4200,6 +4208,14 @@ int main(int argc, char **argv)
         m64p_handle core_section;
         int enable = oracle_debugger, interp = oracle_emulator;
         if (pConfigOpenSection("Core", &core_section) == M64ERR_SUCCESS) {
+            const char *v;
+            g_core_section = core_section;
+            v = pConfigGetParamString(core_section, "SaveSRAMPath");
+            g_user_save_path = strdup(v ? v : "");
+            v = pConfigGetParamString(core_section, "ScreenshotPath");
+            g_user_shot_path = strdup(v ? v : "");
+            printf("[oracle] save dir: %s\n", g_save_dir ? g_save_dir
+                   : (g_user_save_path[0] ? g_user_save_path : "(user default)"));
             pConfigSetParameter(core_section, "EnableDebugger", M64TYPE_BOOL, &enable);
             pConfigSetParameter(core_section, "R4300Emulator", M64TYPE_INT, &interp);
             if (g_shot_dir)
@@ -4948,6 +4964,10 @@ int main(int argc, char **argv)
      * rely on is invisible in-memory defaults - i.e. an unverifiable
      * instrument. Look at [Input-SDL-Control1] in
      * ~/.config/mupen64plus/mupen64plus.cfg. */
+    if (g_core_section && g_user_save_path) {
+        pConfigSetParameter(g_core_section, "SaveSRAMPath", M64TYPE_STRING, g_user_save_path);
+        pConfigSetParameter(g_core_section, "ScreenshotPath", M64TYPE_STRING, g_user_shot_path);
+    }
     if (pConfigSaveFile() != M64ERR_SUCCESS)
         fprintf(stderr, "[oracle] ConfigSaveFile failed (pass --configdir to a writable dir "
                         "if you want to inspect the input mapping)\n");

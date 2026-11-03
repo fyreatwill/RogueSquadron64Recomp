@@ -180432,3 +180432,41 @@ VERDICT: H-ok selected, H-split refuted (two lines: per-call guest fovy log + pr
 OWNER-OPT-INS row gains "works with FPS60". hangar-fov-optin thread CLOSED; owner picks the value.
 Discrimination: selects H-ok, refutes H-split.
 Next: G3 render fidelity, third biome in flight vs retail angrylion (s6748 recipe, mission 3 via tools/g3_eep_patch.py).
+
+## Session 6839 (2026-11-03) — oracle leaked --save-dir into the user mupen64plus.cfg (every non --save-dir retail run since s6812 booted s6812's save); fixed + verified; NEXT "mission-3 flight vs retail" was stale (s6777 done)
+HYPOTHESIS-ID: g3-retail-match-lvl3 (closed: stale + harness defect) -> g3-hangar-artifacts.
+Planned unit (NEXT s6838): mission 3 flight vs retail angrylion using the s6748 recipe (copy of scratch/s6748/retail.sh,
+which swaps the test .eep over the user-wide mupen save). lvl3.eep = tools/g3_eep_patch.py scratch/s6748/lvl2.eep --set 0x31=2.
+Ran: retail recon (scratch/s6839/recon, 24 x 512 dumps): 1024 17.4 s, 512 38.5, 640 76.2, flight 114.5 s (vi 6838).
+Port (scratch/s6839/port, SECS=140 CAP0=60): 1024 12.8, 512 24.0, 640 42.6, flight 61.2 s, 0 crash, owner save sha
+unchanged (e406c334...). The two arms flew DIFFERENT missions: retail = Y-wing over dark-red lava (SELECT LEVEL frame
+scratch/s6839/retail_t43.png reads RAID ON SULLUST), port = foggy green canyon (port_menu capture run: SELECT LEVEL
+"THE SEARCH FOR THE NONNAH", A-wing; scratch/s6839/port_menu_sheet.png; [lvsel] cursor=2 unlockMask=0x8, [saveslot]
+rec[5]=0x02). Matcher d was meaningless (port frames bright, retail dark).
+Discriminator (retail watches, scratch/s6839/retail_watch.sh, whole-RDRAM watch 0 = positive control, 10000 hits):
+applySaveSlotToMissionState (pc 0x8006dc2c, the same store the port logs) wrote B40 = 0x0D in retail, and B2F = 0x0D,
+not the 2 in our .eep. -> retail was not reading the swapped file. ~/Library/Application Support/Mupen64Plus/
+mupen64plus.cfg had SaveSRAMPath = scratch/s6812/pair/retail/savedir (that dir's .eep holds 0x0D at +0x31) and
+ScreenshotPath = scratch/agent/s4731_shots.
+ORIGIN: tools/oracle/rs64_oracle.c sets Core SaveSRAMPath (--save-dir, s6800) / ScreenshotPath (--shot-dir, s4731) and
+calls ConfigSaveFile() at exit, which writes the per-run overrides into the user cfg. The last --save-dir run (s6812)
+therefore became the default save of every later oracle run without --save-dir (and of the owner's own mupen).
+Fix: the oracle snapshots the user's SaveSRAMPath/ScreenshotPath (ConfigGetParamString) at startup and restores them
+before ConfigSaveFile; prints `[oracle] save dir: <dir|(user default)>` every run. User cfg reset to "" for both
+(backup scratch/s6839/mupen64plus.cfg.before). README "Saves" note.
+Verification (same rebuilt binary, retail_watch.sh): SD=scratch/s6839/sd_lvl3 -> B40 = 2 (agrees with the port's rec[5]=2
+from the same .eep: the retail/port mission-select path matches); no --save-dir -> B40 = 0 (user save, Mos Eisley);
+cfg SaveSRAMPath/ScreenshotPath stay "" after both runs; user .eep sha cfce298c... unchanged. Three distinct save
+sources -> three distinct B40 values (0x0D leaked, 2, 0) = the instrument discriminates.
+Blast radius: tracked/scratch runner audit -> only tools/oracle/run_m4_retail_pcs.sh, tools/g3_boot_diff/retail_boot.sh
+and this session's copies run without --save-dir; PORTING-STATE s6813-s6838 has no oracle run, so no recorded result
+read the leaked save. All 7 pair runners pass --save-dir (s6800) and were never affected.
+Stale plan: CURRENT-TRUTH already records the per-mission G3 sim+render sweep 1-19 COMPLETE (mission 3 render pinned
+d 3.90-6.36, s6777, tools/g3_mission/run.sh); s6799 had closed the same stale "lvl3+" item once already. The s6838
+NEXT line re-derived it from the s6748 entry. No mission-3 rerun needed.
+Side datum: in this port arm the 640 intro lasted 18.6 s vs retail 38.3 s; the port's AP 50:start fell inside the port's
+intro (port menus reach 640 at 42.6 s vs retail 76.2 s with presses on wall-clock times), so it is input, not a defect.
+Discrimination: selects H-leaked-save (retail B40 0x0D = the s6812 savedir byte; --save-dir lvl3 -> 2), refutes H-port-
+divergence (same .eep -> same B40 = 2 in both arms) and H-route-input.
+Next: g3-hangar-artifacts (CURRENT-TRUTH/PROJECT-OVERVIEW s6601 item): same-phase hangar capture table retail 4:3 vs
+ASPECT 16:9/21:9.

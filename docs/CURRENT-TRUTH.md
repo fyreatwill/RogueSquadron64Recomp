@@ -90,6 +90,10 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   words); split t1776 = song-1 end on the audio clock (retail 167 ticks/637 buffers, port 166/638). Render pre-split
   d 3.90-6.36 vs medians 44-64; vi 9693 = torn retail dump in the song-1 cutscene (HUD off in both arms). 0 cap, 0 crash.
   **Per-mission G3 sim+render sweep 1-19 COMPLETE.**
+- **FIXED s6839: oracle leaked --save-dir/--shot-dir into the user mupen64plus.cfg** (ConfigSaveFile at exit), so any
+  oracle run without --save-dir after s6812 booted s6812's save (retail B40=0x0D vs swapped .eep's 2). Oracle now restores
+  the user values and prints `[oracle] save dir:`; cfg reset. Swapping a save over the user .eep (s6748 retail.sh) is
+  unsafe: use --save-dir (g3_mission/run.sh). Same .eep -> retail and port B40 both 2. Do not re-run mission-3 flight.
 - **G3 mission 19 (s6773, Battle of Hoth, bonus, snowspeeder):** sim identical over the whole retail trace (6077 rand
   calls / 4742 ticks; 34420 NPC rows to t2999 with 0 point/obj diffs, 0 disallowed words); song handle never changes,
   so no split (as m11). Render best d 4.4-5.7, worst = torn retail dumps / camera phase. 0 cap, 0 crash. Reach: two

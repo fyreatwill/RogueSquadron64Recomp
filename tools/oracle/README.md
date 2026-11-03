@@ -270,3 +270,13 @@ Put a copy of the save you want there; never point it at, or copy over, the
 user-wide `~/Library/Application Support/Mupen64Plus/save/` file. An empty
 dir boots a fresh save (the game formats it on boot). The tools/ pair runners
 use `<run>/retail/savedir`.
+
+s6839: the oracle calls `ConfigSaveFile()` at exit, and until s6839 that persisted
+the per-run `SaveSRAMPath` (and `--shot-dir`'s `ScreenshotPath`) into the
+user-wide `mupen64plus.cfg`. Every later run WITHOUT `--save-dir` then silently
+booted the last `--save-dir` run's EEPROM (found: s6812's save, mission selector
+B40=0x0D instead of the swapped save's 2). The oracle now snapshots both values
+at startup and restores them before saving, and prints `[oracle] save dir: ...`
+for every run. Check that line before trusting any save-dependent result.
+Scripts that copy a save over the user-wide `.eep` (the pre-s6800 route, e.g.
+scratch/s6748/retail.sh) are unsafe: use `--save-dir`.
