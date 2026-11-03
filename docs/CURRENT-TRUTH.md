@@ -277,7 +277,11 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    resets); TRI_PAD 32 also catches the one disc tri per frame centred 20-30 px left of the box, which was the grey wedge
    left 256 px from the radar at 21:9 in every flight frame. lvl17 runtime: disc 11840/0 shifted, world 12 shifted vs
    51390 (ZGATE=0); sheet docs/owner_sheet_s6852_regionzgate.png. Residual: one z_cmp-off object drawn after the world
-   pass (lvl17, 171 tris/frame for ~600 swaps) is still shifted, as it always was. 16:9 not yet re-checked.
+   pass (lvl17, 171 tris/frame for ~600 swaps) is still shifted, as it always was. **16:9 verified s6853 (H-ok):**
+   lvl1 16:9 (box 520..630, shift 142, pad 25): disc T43DBF0/T43E3F0 100% shifted in all 8 counter windows, every world
+   texture 0 shifted; SHIFT=0 bin has no in-box texrect reaching the gate; frame docs/owner_frame_s6853_169_lvl1.png shows
+   disc inside the ring, no wedge left behind. Soaks s6852_zgate lvl5/lvl9 21:9: alive, 0 stalls, ring textures shifted,
+   world kept, out WRAP 0. Only open item: the lvl17 post-world z-off object (texture 79F7C0..7A5120): HUD or world?
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
@@ -293,5 +297,5 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts: [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); per-level images:
   [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
-- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261103-095803 (s6851_shiftsat_lvl9, consumed s6852: WRAP 0, control fired; lvl5 rc=1 = control absent only, WRAP 0, alive). Queued s6852_zgate_lvl5/lvl9.
+- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261103-104942 (s6852_zgate_lvl9, consumed s6853: alive, WRAP 0, ring shifted / world kept; lvl5 same, control absent as before). None queued.
 - Recent chronology: PORTING-STATE sessions 6788-6846; search bounded windows only.

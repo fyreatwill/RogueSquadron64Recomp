@@ -180915,3 +180915,27 @@ Residual: the no-pad arm's 3302 shifted world tris came from one z_cmp-off objec
 tris/frame for ~600 swaps on textures 79F7C0..7A5120), always shifted under the old code too. 16:9 not re-checked.
 Queued s6852_zgate_lvl5/lvl9 (21:9 regression holds).
 Rules out: the s6851 residual rect being radar HUD; a mid-frame Z clear as the HUD boundary.
+
+## Session 6853 (2026-11-03) — G1d region Z gate verified at 16:9 (H-ok): lvl1 only the radar disc shifts, world kept, no wedge left behind
+
+Unit (NEXT.md s6852, slug g1d-region-shift-scope): re-check the s6852 ROGUESQ_G1D_REGION_ZGATE + TRI_PAD selection at
+16:9, where the box is narrower (fbw 796: disc region 520..630 x 20..135, shift 142, scaled pad 32*110/141 = 25 px).
+Recipe scratch/s6853/abd.sh (s6852 abd.sh at ROGUESQ_ASPECT=16:9, MISSION_WIDTH=796, no OSMEM override), lvl1, two
+sequential runs from scratch/s6853/both.sh: SHIFT=0 + KEEPBIN (offline bin), SHIFT=142 + FBDV=3000 (runtime + frame).
+
+Results (AB.txt):
+- Both arms: mission_t=31 s, hold 202 s, alive, 0 VI stalls, 0 crash lines, out WRAP 0 / WRAPOFF 0.
+- [region-zgate] counters, 8 windows per arm: disc textures T43DBF0 4800/0 and T43E3F0 844..1116/0 shifted/kept, every
+  other texture (21 world textures incl. T451490 1087..1638 tris) 0 shifted. No R (texrect) entry ever reached the gate.
+  The disc selection firing in full is the instrument's positive control (the s6848 FORCE_OVL wrap control did not fire
+  on lvl1, ZERO-W=0, as on lvl5 before; it controls the wrap scanner, not this question).
+- g1d_regiontex.py (SHIFT=0 bin, --cw 796 --box 520,630,20,135): 5445 flight VIs, 72115 region tris x 462.7..692.5,
+  4099 in-box texrects. In-box texrects are 5B8800-family 56x18 IA rects (791, ul.x 472..502, drawn after the disc) and
+  64x32 tiles at x 462/526 drawn before the disc (z gate keeps them); none appear in the runtime shift counters.
+- Frame VI 6000 at w796 (docs/owner_frame_s6853_169_lvl1.png): disc fully inside the ring, sky at the left-behind
+  position (x ~380) clean, terrain, craft and HUD intact.
+Selects H-ok (16:9 disc wholly shifted, pad does not over-reach); refutes H-pad. H-post (z-off post-world object still
+shifted) does not occur on lvl1 at 16:9: it is lvl17-specific, and is the next unit.
+Soaks folded: s6852_zgate_lvl5 / lvl9 (21:9): alive, 0 stalls, ring textures (T79C0C0/T79C8C0, T7A37B0/T7A3FB0) fully
+shifted, all world textures kept, out WRAP 0; lvl9 control ZERO-W 598 fired, lvl5 control absent as in s6851.
+Two lines of evidence for 16:9: runtime counters + offline bin selection, plus one frame (single frame, single level).

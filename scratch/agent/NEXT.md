@@ -1,17 +1,17 @@
-# NEXT: verify the s6852 region Z gate at 16:9 and name the post-world z-off object
+# NEXT: name the lvl17 post-world z_cmp-off object the region gate still shifts (21:9)
 HYPOTHESIS-ID: g1d-region-shift-scope
 
-State (s6852): rs64_region_scan now shifts only z_cmp-off prims after the frame's first z_cmp-on prim
-(ROGUESQ_G1D_REGION_ZGATE, default on) with a 32 px left pad for tris (ROGUESQ_G1D_REGION_TRI_PAD). lvl17 21:9: disc fully
-shifted, world 61724 kept / 12 shifted, the left-behind grey wedge gone. First fold SOAK-RESULTS for s6852_zgate_lvl5/lvl9.
+State (s6853): ROGUESQ_G1D_REGION_ZGATE verified at 21:9 (lvl17/5/9) and 16:9 (lvl1): only the radar disc is moved.
+One residual (s6852, lvl17 only): a z_cmp-off object drawn after the world pass, textures 79F7C0..7A5120, ~171 tris/frame
+for ~600 swaps, still selected and shifted +256. lvl1 at 16:9 has no such object (all non-disc textures 0 shifted).
 
-Unit: one run of scratch/s6852/abd.sh adapted to ROGUESQ_ASPECT=16:9 (MISSION_WIDTH per main.cpp auto width), lvl1,
-SHIFT=<auto value printed by "[g1d] hud anchor=... shift=" in run.log>, KEEPBIN=1 with SHIFT=0 for the offline arm.
+Unit: one lvl17 21:9 run, scratch/s6852/abd.sh with KEEPBIN=1 SHIFT=0 FBDV=500 (frames for the swaps where those
+textures appear; find them with the [region-zgate] windows of s6852 ab_l17_z1_sh256/zgate.txt), then
+tools/g1d_regiontex.py --ring 792DA0 on the bin + crops of the box region.
 Hypotheses:
-- H-ok: at 16:9 the disc is wholly shifted, no wedge left behind, world kept (pad scales with box width).
-- H-pad: the 16:9 box is narrower, the scaled pad misses (wedge left) or over-reaches (HUD text/bracket moved).
-- H-post: the residual z-off post-world object (lvl17 textures 79F7C0..7A5120, 171 tris/frame) is a world effect visible
-  in the box at 16:9 too -> needs a stronger HUD boundary (e.g. texture-run adjacency to the ring).
-Discriminator: tools/g1d_regiontex.py on the SHIFT=0 16:9 bin with --box from the run's "[g1d] ... disc region=" and
---ring <the 16:9 ring texture: in-box/anchored texrect 112x32>, plus [region-zgate] counters and a 3-frame crop.
-Budget: 1 iteration; then return to G1d close-out (owner judgement) / next ladder rung.
+- H-hud: the object is HUD (targeting/lock overlay, radar blip layer) -> shifting it is correct; close.
+- H-fx: a world effect (explosion/flash/smoke billboard drawn z-off after the world) that crossed the box -> moving it
+  is wrong; key the gate on texture adjacency to the disc (same cmd run as T7965C0) instead.
+Discriminator: does the same texture draw OUTSIDE the box at scattered positions in the same VIs (regiontex out/outVIs,
+med_dist), and does the crop show it shifted away from its world anchor?
+Budget: 1 iteration. Then G1d is fully awaiting owner judgement; next ladder rung G3 (in-flight frame diffs vs retail).
