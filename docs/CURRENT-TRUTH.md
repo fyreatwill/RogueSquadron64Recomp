@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6831 (2026-11-03).
+Compact operational handoff, as of Session 6834 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -493,6 +493,13 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    respawn in tickMissionTransitionAndTeardown (an event; a step of 0 would skip a life loss) -> UNFIX (TICKS FIX now 6);
    800F8708 = 20-consecutive-call state debounce in a dt-aware handler -> kept. Static-only; witness soak queued
    (s6833_lives_fps60_lvl14: lives log via LIVES_CAP=9 + tick trace).
+   s6834 witness folded: lvl14 FPS60 400 s, lives 3 -> 2 -> 1 (two deaths) with 0 executions of 800FB4F8 while the
+   same trace logged 20.0M records / 16820 ticks (hook present in funcs_42.c, binary rebuilt after it) -> normal hp-0
+   deaths decrement lives in requestMissionTransitionMode 0x800FB190; the 0x380000 respawn routine is a different
+   (unexercised) death kind. UNFIX stands (it restores retail code); not chased further.
+   s6834 boot-freeze hunter: tools/boot_freeze_hunt.sh (N retail boots; fs= stalled 12 s -> two `sample` call trees 5 s
+   apart, per-thread guest frames via tools/sample_game_threads.py; boot1 sampled healthy = control; HUNT_SELFTEST=1
+   SIGSTOP = freeze-path control, both pass). Queued s6834_bootfreeze_hunt_a/b (22 boots) for the s6814 1-in-11 freeze.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

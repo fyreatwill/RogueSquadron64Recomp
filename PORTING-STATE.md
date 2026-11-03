@@ -180283,3 +180283,34 @@ s6823 lvl11 FPS60 8 hits. Static read (mips64-elf-objdump on rogue_squadron64/bu
 Both static-only (single-source for the rate claim). Witness queued: scratch/agent/soak_queue/s6833_lives_fps60_lvl14.sh
 (lvl14 FPS60 400 s, LIVES_CAP=9 = pure lives logger, tick trace; reports lives changes and 800FB4F8 rows).
 Rules out: FPS60 bundle regression at dd4 on lvl1/lvl10. Next: fold the lives witness soak; owner judges FPS60 feel.
+
+## Session 6834 (2026-11-03) — lives witness: deaths bypass 800FB4F8 (decrement is in requestMissionTransitionMode); boot-freeze hunter tool with sample call trees, both controls pass, 22-boot hunt queued
+
+HYPOTHESIS-ID: g1e-fps60-tick-unfix-witness (closed) -> boot-freeze-capture.
+
+Soak fold: s6833_lives_fps60_lvl14 (lvl14 FPS60 400 s, rc=0, 0 crash): [livescap] lives 0 -> 3 (mission load) -> 2 -> 1
+(two deaths, origin 0x620400), 800FB4F8 rows 0, 800F8708 rows 0. Instrument control: the tick trace is 320 MB = 20.0M
+records over 16820 mission ticks (top site 8003E9D0 7.49M); the 800FB4F8 hook is in funcs_42.c (0x800FB4F8 lbu +
+rs64_tctr) and build/RogueSquadron64Recomp (02:42:30) postdates funcs_42.c (02:42:21). So H-other-death-path: the lvl14
+hp-0 deaths decrement the lives byte through requestMissionTransitionMode 0x800FB190, not through the respawn routine
+tickMissionTransitionAndTeardown's 0x380000 path (a different death kind, not identified, not chased per NEXT). The
+s6833 UNFIX is unaffected: it restores retail code on a path no run has exercised.
+Next rung: every backlog item waits on the owner (FPS60 feel, G1d/G3c sheets). Took the one side-effect defect still
+open: the s6814 a30_s2 title-boot freeze (RDP frames stop at fs=39, VI origin held 215 s, audio flowing, no crash line;
+1 in 11 boots; s6814_bootfreeze_ab 10/10 clean). ITERATION 3b says catch it in the act instead of waiting on breadcrumbs.
+New tools: tools/boot_freeze_hunt.sh <out> [boots] [secs] [stall] - boots retail + ROGUESQ_LOG_PHASE=1, polls the [vi]
+fs= counter every 2 s; a stall of 12 s (or fs<200 at the end) = FROZEN -> two macOS `sample` call trees 5 s apart
+(blocked vs spinning), log tail, SIGKILL, exit 1. tools/sample_game_threads.py prints the heaviest path per guest
+([Game] MAIN/AUDIOMGR/...) and runtime thread (VI, SP Task, Gfx, Timer, RT64 Present). Guest functions resolve by name in
+the sample (recompiled symbols), so a freeze names the guest wait site directly.
+Controls, this session: (1) healthy boot sampled at 20 s: 12 [Game] threads named, MAIN = mainBootstrapWorker ->
+mainGameLoop -> cinematicLoopBody -> waitForPrevFrameDone -> waitForPostSwapAck -> osRecvMesg (normal per-frame wait);
+(2) validation run 2 boots: fs 1352 / 1287 at 40 s, OK, rc 0; (3) HUNT_SELFTEST=1 SIGSTOPs boot 1 at 18 s: reported
+FROZEN at t=30 (fs=615), both captures written, rc 1. Bug found and fixed during validation: fs= lines are sparse (32 in
+13 MB), so a 400 KB log tail missed them and read fs=0; fsof now greps the whole log.
+Queued scratch/agent/soak_queue/s6834_bootfreeze_hunt_a/b.sh (11 boots x 40 s each, ~87% chance to catch a 1/11 event).
+ORIGIN: no mitigation; instrument only.
+Rules out: nothing new about the freeze yet (instrument landed and controlled; the hunt is queued).
+Next: fold the hunt. FROZEN -> read boot*_freeze_{a,b}.threads.txt: which guest thread waits on which message queue,
+and whether VI/SP/Gfx threads are blocked (H-lost-event: MAIN in osRecvMesg on a queue whose event never comes) or a guest
+thread spins (H-spin: same leaf in a and b with CPU-time frames) or a host deadlock (H-host: a runtime thread in a mutex).

@@ -1,16 +1,15 @@
-# NEXT: fold the s6833 lives witness soak, then the next ladder rung
-HYPOTHESIS-ID: g1e-fps60-tick-unfix-witness
+# NEXT: fold the s6834 boot-freeze hunt
+HYPOTHESIS-ID: boot-freeze-capture
 
-Context: s6833 moved 800FB4F8 (lives decrement in the respawn routine tickMissionTransitionAndTeardown) to UNFIX in
-tools/fixup_fps60_ticks.py, static-only. Queued scratch/agent/soak_queue/s6833_lives_fps60_lvl14.sh (lvl14 FPS60 400 s,
-ROGUESQ_LIVES_CAP=9 logs every lives change, ROGUESQ_TICK_TRACE).
-Step 1: read SOAK-RESULTS tail + scratch/agent/soak_results/s6833_lives_fps60_lvl14_*.log.
-Hypotheses / outcomes:
-- H-respawn-path-hit: fb4f8>0 rows, each followed by a lives change of exactly -1 -> UNFIX runtime-confirmed (2nd line).
-- H-other-death-path: lives changes >0 but fb4f8=0 -> deaths go through requestMissionTransitionMode only; the
-  0x380000 respawn path is a different death kind (find which flag bit sets it: grep stores to 0x80137F3C with
-  0x0008/0x0010/0x0020 << 16) - note it, do not chase further.
-- H-no-death: lives_changes=0 (no [livescap] lines at all, or only the initial value) -> the run never died; the
-  instrument is unproven (no positive control). Do not conclude anything; skip.
-Step 2: all backlog items wait on the owner (FPS60 feel, G1d sheets). Take the next ladder rung that is engineering, not
-the G5 rename sweep (iron rule 14 counts renames as churn): e.g. G3 render fidelity in-flight frame diffs.
+Context: s6814 a30_s2 froze at title boot (fs=39, VI origin held, audio flowing, no crash; 1 in 11 boots). s6834 landed
+tools/boot_freeze_hunt.sh + tools/sample_game_threads.py (controls pass) and queued s6834_bootfreeze_hunt_a/b (22 boots).
+Step 1: SOAK-RESULTS tail; then `cat scratch/s6834/hunt_{a,b}/*freeze*.threads.txt` (if any) and the soak result logs.
+Outcomes:
+- FROZEN captured: compare a vs b. H-lost-event = [Game] MAIN parked in osRecvMesg (name the guest caller: e.g.
+  waitForPostSwapAck/waitForPrevFrameDone) while SP Task / Gfx threads idle in semaphore waits -> the event that should post
+  that queue was dropped; read the runtime path that posts it (ultramodern events.cpp / rsp task completion / VI) and fix.
+  H-spin = a guest thread on CPU in both captures in the same guest function -> name its loop exit condition.
+  H-host = a runtime thread blocked on a mutex/cond held by another -> name the lock pair.
+- 22/22 clean: the freeze rate is below ~1/22; record it, re-queue the two hunts once more (cheap, loop-run), and take the
+  next engineering rung meanwhile (owner items still pending: FPS60 feel, G1d/G3c sheets).
+- EXITED / crash lines: a datum; read boot*_crash.txt.
