@@ -185,6 +185,9 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 - Closed: M5 audio de-stubbing, M3 idiom audits, M6 endurance (s6442), G2 audio, G5 renaming. G4 crash hunting parked.
 
 ## Superseded conclusions — do not act on these
+- s6842/s6843 "the abort wipe is not in the captured gfx RDP stream; the stream is x-invariant across the wipe": believable
+  because the per-class tri/texrect scans and x-bin counts were flat. s6844: tools/rdp_bin_cmds.py output itself lists
+  one black texrect with ul.x sweeping 477.8->0, lr.x 512 (why the earlier reading missed it was not established).
 - s6815 "FPS60 halves the share of enemy impacts that cost hp (hit probability per shot: H-lead/H-collision/H-splash)":
   believable because impacts per game s were equal and every hit followed an impact. s6816: the hp hits are homing missiles,
   not bolts; the deficit is fewer turrets in range after a frame-locked terrain scrape at 15.4 s changes the player's path.
@@ -531,11 +534,14 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    native w*h*bpp = 0x70000, half of 1024x448: the first hangar VI showed flight Z as colour under a 50.0% black top.
    Fix apply_s6841_ivsclear: under ROGUESQ_FB_WIDTH>512 the clear uses wv*h*bpp (=0 restores; ROGUESQ_LOG_IVS_CLEAR=1 logs).
    Same-build A/B: off 1 striped frame, on 0. Sheet docs/owner_sheet_s6841_abort_21x9.png.
-   **s6842-s6843 abort wipe source (open, narrowed).** The 4:3 right-to-left soft black wipe IS in port RDRAM (fb dumps,
-   ~32 px/swap, 9 swaps before DA0) and its ONLY writer is `rt64_writeback` (s6843 store watch ROGUESQ_STORE_WATCH=lo:hi,
-   tools/apply_s6843_store_watch.py; positive control: same run names memset PC 0x800078EC clearing 0x790000). The captured
-   gfx stream is x-invariant across the wipe (paused scene; only the full-screen tri0D pause-dim prim alpha 0x80->0 changes).
-   Open: H-rt64 (RT64 makes the edge from non-command state) vs H-stream-gap (commands RT64 gets that port.bin misses).
+   **s6844 abort wipe FIXED at 21:9 (main sweep); post-wipe black hold still missing (wide-only).** The wipe is a game
+   texrect in the gfx stream (prim 000000FF, cc 119623, soft-edge tex 0x4D3FE0 at 4:3, ul.x 477.8->0 by ~34 px/frame,
+   lr.x = fb width). At 21:9 lr.x = 1024 overflows the 12-bit 10.2 RDP field (0x1000 -> 0): lr<ul, nothing drawn.
+   Fix rs64_g1d_rect_wrap (src/rsp/dpc_bridge.cpp): on a >1023-wide image a texrect/fill with lr.x 0 and ul.x>0 gets
+   lr.x 1023.75 (ROGUESQ_G1D_RECT_WRAP=0 = old). Same build 21:9: on 4 wipe frames, off 0; port 4:3 12. Second line:
+   ROGUESQ_WB_VAL_PROBE=1 + ROGUESQ_SKIP_CC (RT64) put the black in the HUD pair. Sheet docs/owner_sheet_s6844_abort_wipe_21x9.png.
+   Open (NEXT): 4:3/retail hold full black ~0.4 s after the wipe (cc 11FE23 texrect ul 0 lr 512); 21:9 emits it as
+   ul 0 lr 914.5 s=511 (and 982.75/s=375 for the last sweep step) and shows bright flight instead.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

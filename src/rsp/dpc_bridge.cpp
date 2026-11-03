@@ -5134,6 +5134,30 @@ static void rs64_g1d_title_clear(uint32_t lo, uint32_t hi) {
     }
 }
 
+// s6844 G1d: RDP texrect / fill-rect x coordinates are 12-bit 10.2 fields (max 1023.75). The abort-level wipe (a black
+// texrect, prim 000000FF, ul.x sweeping right-to-left, lr.x = the colour-image width) carries lr.x = 1024 at 21:9 and
+// 1024*4 = 0x1000 wraps to 0, so lr < ul and the rect draws nothing (4:3: lr.x 512 fits). Retail never exceeds 640 px,
+// so on a >1023-wide image a rect with lr.x == 0 and ul.x > 0 is always a wrapped full-width right edge: clamp it to
+// 0xFFF (1023.75 covers column 1023). ROGUESQ_G1D_RECT_WRAP=0 = old behaviour.
+static void rs64_g1d_rect_wrap(uint32_t lo, uint32_t hi) {
+    static const bool on = [] { const char *e = std::getenv("ROGUESQ_G1D_RECT_WRAP"); return !(e && *e == '0'); }();
+    if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
+    static uint32_t s_cw = 0; static int s_lines = 0;
+    auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
+    for (uint32_t a = lo & ~3u, step = 8; a + 8 <= hi; a += step) {
+        const uint32_t w0 = rd(a), op = (w0 >> 24) & 0x3F;
+        step = (op == 0x24 || op == 0x25) ? 16u : (op >= 0x08 && op <= 0x0F) ? 32u + ((op & 4) ? 64u : 0u) + ((op & 2) ? 64u : 0u) + ((op & 1) ? 16u : 0u) : 8u;
+        if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; continue; }
+        if ((op != 0x24 && op != 0x25 && op != 0x36) || s_cw <= 1023u) continue;
+        const uint32_t w1 = rd(a + 4), lrx = (w0 >> 12) & 0xFFFu, ulx = (w1 >> 12) & 0xFFFu;
+        if (lrx != 0 || ulx == 0) continue;
+        const uint32_t n0 = w0 | (0xFFFu << 12);
+        memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &n0, 4);
+        if (s_lines++ < 24) fprintf(stderr, "[g1d-rect-wrap] sw=%d op=%02X cw=%u ul.x=%.2f lr.x 0 -> 1023.75 off=%06X\n",
+            g_rs64_swap_n.load(std::memory_order_relaxed), op, s_cw, ulx / 4.0, a);
+    }
+}
+
 // s6722 G1d: the pause dim panel is a camera-facing 3D quad sized for the retail 4:3 frustum (runPauseMenuStateMachine
 // object fp+0xC78), so the s6104-widened projection shows past its sides (dark band x 222..802 of 1024 at 21:9). While
 // the pause byte is live, widen the triangles drawn with its RDP state (shade-only combine, blend C8104240, other-mode
@@ -5332,6 +5356,7 @@ static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
     rs64_g3_census(lo, hi);
     rs64_g1d_title_clear(lo, hi);
     rs64_g1d_pillar_scan(lo, hi);
+    rs64_g1d_rect_wrap(lo, hi);
     rs64_g1d_pause_dim(lo, hi);
     rs64_g1d_rect_scan(lo, hi);
     rs64_spike_scan(lo, hi);

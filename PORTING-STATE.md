@@ -180625,3 +180625,41 @@ Ruled out: CPU / RSP-DMA / PI writer of the wipe (positive control), VI register
 Not yet: which of the 3 per-swap writebacks first carries the black, and from which RT64 framebuffer pair.
 VERDICT: this refutes H-rdram (outside CPU/RSP/DMA writer; store watch with same-run memset positive control) and selects RT64-side production of the wipe (H-rt64 or H-stream-gap). Next discriminator (NEXT.md): per-writeback pixel VALUES at row 224 cols 100/300/480/510 with fb-pair index, to name the writeback and pair that first carries the black.
 ORIGIN: not a mitigation (diagnostic-only instrument).
+
+## Session 6844 (2026-11-03) — abort wipe is a game texrect whose lr.x = 1024 wraps the 12-bit RDP field at 21:9; fixed (rs64_g1d_rect_wrap), same-build A/B 4 vs 0 wipe frames
+HYPOTHESIS-ID: g3-wide-abort-wipe. Route scratch/s6844/port_abort.sh (= s6843, outputs under scratch/s6844). 4 runs, 0 crash.
+- **Instrument (RT64, lib/rt64 rt64_state.cpp, exported):** ROGUESQ_WB_VAL_PROBE=1 logs per wide 16b colour writeback
+  `[wbval]` (pair index, fb, zi, rows, rect, call/tri counts, calls reaching x>=448 with cc/om, pre/post RDRAM values at
+  (224,100/300/400/480/510) and (100,480)), plus `[wbrd]` per pair (colour reload / lastWrite state). Analyser
+  scratch/s6844/wbval.py. RT64 rt64_framebuffer_pair.cpp: ROGUESQ_SKIP_CC=<H>:<L>[,...] drops draw calls by combiner.
+- **p43v (4:3):** per swap 6 pairs: Z-fill lower-right, colour fill lower-right, Z-fill lower-left, the scene (246 calls,
+  output constant across the wipe), full Z fill, then the HUD pair (pause-dim overlay, emblem, radar, texrects). The black
+  first appears in the HUD pair's writeback (col 480 at sf 3723, col 400 at 3725/3726, col 300 at 3728/3729); no colour
+  reload from RDRAM in any pair (reload=0). So the black is drawn, not re-uploaded.
+- **p43skipov (skip pause-dim overlay FFFE7638:FCFFFFFF):** positive control fired (left side no longer dimmed). The
+  wipe did not go away; it inverted (black screen with the scene showing from the right). Overlay is not the source.
+- **The pause emblem classes (793C / 127FFF, CB024000) stay within x 172..363,** so they cannot blacken x=480.
+- **The stream does carry it:** port.bin VI 6713-6741, texrect prim 000000FF cc 119623:FF2FFFFF ti 0x4D3FE0 (soft-edge
+  alpha texture), ul.x 477.8 -> 443.5 -> ... -> 34.0 -> 0, lr.x 512.0, y 0..448; then a cc 11FE23 hold rect ul 0 lr 512
+  (full black, VI 6743/6745). This supersedes s6842/s6843 "no texrect with moving x / stream x-invariant".
+- **21:9 (s6841 p21/p21x port.bin):** the same texrect has ul.x 955.5 -> 136.5 (step 68.25) and **lr.x = 0.0**: the game
+  writes lr.x = colour-image width 1024, and 1024*4 = 0x1000 overflows the 12-bit 10.2 field. lr < ul, so the RDP/RT64 draws
+  nothing. Writer: the game's abort-wipe texrect emitter computes lr from the fb width. The value is legitimate game arithmetic
+  that retail can never overflow (max fb 640). It only breaks because G1d widened the image past 1023.
+- **Fix rs64_g1d_rect_wrap (src/rsp/dpc_bridge.cpp, before rs64_g1d_pause_dim):** on a colour image >1023 wide, a texrect
+  (0x24/0x25) or fill rect (0x36) with lr.x field 0 and ul.x > 0 gets lr.x 0xFFF (1023.75, covers column 1023). Logs
+  `[g1d-rect-wrap]` (first 24). ROGUESQ_G1D_RECT_WRAP=0 = old. On a 4:3 image it is a no-op (cw <= 1023).
+- **Same-build A/B, 21:9, same route (window burst caps, scratch/s6844/winbands.py, flag = right band <12 with left >30):**
+  on: 24 wrap logs (also sw 1069-1075 and 2480: other right-edge rects, ul.x 1014.75-1023.75), **4 wipe frames**
+  (113.17-113.44 s, edge moving right-to-left as at 4:3). Off: 0 wrap logs, **0 wipe frames**. Port 4:3 p43v: 12 wipe
+  frames, then ~0.4 s full black before the hangar. Sheet docs/owner_sheet_s6844_abort_wipe_21x9.png (rows 4:3 / on / off).
+- **Still wrong at 21:9 (both arms):** after the sweep the frame turns bright for ~0.4 s, where 4:3/retail hold black.
+  At 21:9 the last sweep step and the hold rects come out as ul 0, lr 982.75, s=375 and ul 0, lr 914.5/915.5, s=511/509
+  (cc 11FE23 / 119623); at 4:3 they are ul 0/34, lr 512, s 0. Looks like the game's texrect clipper reacting to the
+  overflowed coordinate. Next unit.
+Ruled out: RT64 colour reload / stale target as the wipe source; the pause-dim overlay; the emblem; a stream gap.
+VERDICT: this selects H-stream (the wipe is a game texrect, lr.x = fb width) and refutes H-rt64 (RT64 draws exactly what it
+is given) and H-stream-gap. Root cause of the 21:9 absence: 12-bit RDP x overflow at width 1024; fixed with a same-build
+A/B (4 vs 0 wipe frames). Remaining: 21:9 post-wipe black hold.
+ORIGIN: lr.x = 0 is written by the game's abort-wipe texrect emitter (lr = fb width 1024 -> 0x1000 masked to 12 bits). The
+value is legitimate; only its encoding overflows. The clamp restores the encodable maximum and only triggers on >1023-wide images.
