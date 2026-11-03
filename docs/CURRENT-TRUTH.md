@@ -488,6 +488,11 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    max 0.267) vs a30 0.267, off 0.133 -> H-fixed (within one 60 Hz tick; H-phase-bias refuted). Owner table of every
    FPS60 fix + its =0 switch: docs/FPS60-FIXES.md (linked from OWNER-OPT-INS). **Owner: judge FPS60 feel.** Queued
    s6832_fps60bundle_lvl1/lvl10_dd4 (300 s FPS60+dd4 holds with all fixes; last such holds predate s6817).
+   s6833: bundle holds CLEAN (lvl1/lvl10 FPS60+dd4 300 s, alive, 0 crash, 0 VI stall; 42/55 drawn fps = FPS60 live).
+   Static read of the last two kept timer sites: 800FB4F8 is the LIVES byte 0x80130B10[slot] decremented once per
+   respawn in tickMissionTransitionAndTeardown (an event; a step of 0 would skip a life loss) -> UNFIX (TICKS FIX now 6);
+   800F8708 = 20-consecutive-call state debounce in a dt-aware handler -> kept. Static-only; witness soak queued
+   (s6833_lives_fps60_lvl14: lives log via LIVES_CAP=9 + tick trace).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

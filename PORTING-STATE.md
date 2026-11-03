@@ -180256,3 +180256,30 @@ pre-s6713, superseded by s6776/s6810 ~60) is corrected. Queued s6832_fps60bundle
 all fixes; the binary check aborts with rc 3 if the switches are missing; build has 6 matching strings).
 Rules out: residual timing bias in the int-step fix. Next: fold the bundle soaks; owner judges FPS60 feel; G5 rename
 sweep is the remaining ladder rung.
+
+## Session 6833 (2026-11-03) — FPS60+dd4 bundle holds clean (lvl1/lvl10); 800FB4F8 is the per-respawn LIVES decrement, not a timer -> UNFIX (TICKS FIX 7 -> 6); 800F8708 read as a 20-call state debounce, kept
+Work unit: NEXT.md (fold s6832 bundle soaks; then next rung). Soaks s6832_fps60bundle_lvl1_dd4 / lvl10_dd4 (FPS60 + dd4,
+all FPS60 fixes, 300 s): both alive_at_end=1, crashlines=0, vi_stalls30s=0, rc=0 -> H-clean. Positive control that FPS60
+was live: recipe sets ROGUESQ_FPS60=1 and the [last-drawn] ordinal reached 13069 / 17274 in ~312 s (~42 / ~55 fps; retail
+caps at ~30). Noted in docs/FPS60-FIXES.md.
+Next rung: every backlog item waits on the owner, so took the last open G1e gap: the two TICKS FIX sites that no run had
+exercised (800F8708, 800FB4F8; 4 of the 6 previously exercised static per-tick readings were wrong). Offline first: all
+s68xx tick dumps scanned (tools-free python over scratch/s68*/*.tick.bin): 800FB4F8 0 hits anywhere, 800F8708 only the
+s6823 lvl11 FPS60 8 hits. Static read (mips64-elf-objdump on rogue_squadron64/build/roguesquadron.elf):
+- 800FB4F8: tickMissionTransitionAndTeardown (no direct jal; called through a pointer) tests craft flags 0x80137F3C &
+  0x380000, then decrements byte 0x80130B10[0x8010CA18]; at 0 it stores 3 to +4 (0x80130B14 = game-over mode) and ORs
+  bit0 into 0x8010C9E0, else falls into resetTransientPlayerStateFlags / despawnCraftAnimationSlotNpcs /
+  loadPlayerStartPosition = the RESPAWN routine. 0x80130B10 is the lives byte by two independent lines: the s6726
+  LIVES_CAP lever writes/logs it at runtime, and requestMissionTransitionMode 0x800FB190 decrements the same byte per
+  death (docs/M6-S5759-DEATH-CHAIN.md). So it is a once-per-respawn EVENT decrement (H-event), and the s6821 step (0 on
+  alternate FPS60 mission ticks) could skip a life loss on that path. Change: tools/fixup_fps60_ticks.py FIX -= 800FB4F8,
+  UNFIX += 800FB4F8 (applied: "109 counter sites traced, 6 timers stepped"; funcs_42.c 0x800FB4FC is back to
+  ADD32(ctx->r2, -0X1)); rebuilt. ORIGIN: the wrong step was our own s6821 whitelist; the revert restores retail code.
+- 800F8708: executeActorType4Effect +0x92 counts consecutive calls on which the observed state v1 equals the candidate
+  +0x95 while differing from the committed state +0x94; at 20 it commits (0x800F84C0). First sight sets 1 (0x800F8748),
+  a revert to the committed state clears it (0x800F86F0). The same handler steps its +0x8C timer by its dt argument
+  (a1 -> f26, sub.s at 0x800F8690), so +0x92 is per call = per tick: a 0.667 s debounce. Kept (fix gives ~0.65 s at 60 Hz).
+  The s6823 lvl11 trace (8 executions, loaded value always 1, gaps 2-4 ticks) fits a flickering candidate.
+Both static-only (single-source for the rate claim). Witness queued: scratch/agent/soak_queue/s6833_lives_fps60_lvl14.sh
+(lvl14 FPS60 400 s, LIVES_CAP=9 = pure lives logger, tick trace; reports lives changes and 800FB4F8 rows).
+Rules out: FPS60 bundle regression at dd4 on lvl1/lvl10. Next: fold the lives witness soak; owner judges FPS60 feel.

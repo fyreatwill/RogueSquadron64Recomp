@@ -1,12 +1,16 @@
-# NEXT: fold the s6832 FPS60 bundle holds, then the next ladder rung
-HYPOTHESIS-ID: g1e-fps60-bundle-regression
+# NEXT: fold the s6833 lives witness soak, then the next ladder rung
+HYPOTHESIS-ID: g1e-fps60-tick-unfix-witness
 
-Context: G1e FPS60 rate classes closed (s6817-s6831), fixes tabulated in docs/FPS60-FIXES.md, owner asked to judge
-feel. Queued: scratch/agent/soak_queue/s6832_fps60bundle_lvl1_dd4.sh and _lvl10_dd4.sh (300 s FPS60+dd4, all fixes).
-Step 1: read SOAK-RESULTS tail + scratch/agent/m6/g1_lvl{1,10}s6832_fps60bundle/summary.
-Hypotheses: H-clean (alive_at_end=1, crashlines=0, vi_stalls30s=0 both levels -> bundle qualified, note in
-FPS60-FIXES.md) vs H-regress (a crash/stall -> backtrace it, then bisect by the six =0 switches in ONE run set:
-each switch off alone on the failing level, same recipe) vs H-harness (rc=3: switches missing -> rebuild with the
-regen order make_elf -> N64Recomp -> fixup_game_funcs (runs the fps60 fixups) -> cmake).
-Step 2 if H-clean: no owner reports pending -> take the ladder: G5 renaming sweep is the last rung, but iron rule 14
-says renames read as churn; prefer an engineering item if one appears in CURRENT-TRUTH Next steps (owner reports first).
+Context: s6833 moved 800FB4F8 (lives decrement in the respawn routine tickMissionTransitionAndTeardown) to UNFIX in
+tools/fixup_fps60_ticks.py, static-only. Queued scratch/agent/soak_queue/s6833_lives_fps60_lvl14.sh (lvl14 FPS60 400 s,
+ROGUESQ_LIVES_CAP=9 logs every lives change, ROGUESQ_TICK_TRACE).
+Step 1: read SOAK-RESULTS tail + scratch/agent/soak_results/s6833_lives_fps60_lvl14_*.log.
+Hypotheses / outcomes:
+- H-respawn-path-hit: fb4f8>0 rows, each followed by a lives change of exactly -1 -> UNFIX runtime-confirmed (2nd line).
+- H-other-death-path: lives changes >0 but fb4f8=0 -> deaths go through requestMissionTransitionMode only; the
+  0x380000 respawn path is a different death kind (find which flag bit sets it: grep stores to 0x80137F3C with
+  0x0008/0x0010/0x0020 << 16) - note it, do not chase further.
+- H-no-death: lives_changes=0 (no [livescap] lines at all, or only the initial value) -> the run never died; the
+  instrument is unproven (no positive control). Do not conclude anything; skip.
+Step 2: all backlog items wait on the owner (FPS60 feel, G1d sheets). Take the next ladder rung that is engineering, not
+the G5 rename sweep (iron rule 14 counts renames as churn): e.g. G3 render fidelity in-flight frame diffs.

@@ -28,7 +28,6 @@ FIX = {
     0x800F8708: "executeActorType4Effect +0x92 count-up <20",
     0x80044938: "cutsceneActorNpcHandler +0x108 count-up <5",
     0x800AF5A0: "cinematicStageAdvancer +0x938 count-up <7",
-    0x800FB4F8: "tickMissionTransitionAndTeardown countdown",
 }
 # s6822 lvl13 a30/off/fix: these decrement once per EVENT, not per tick (executions per game s equal at 30 Hz and FPS60:
 # 800DAB64 0.54/0.54, one step per ~1.02 s in both; 800E32CC 0.21/0.25; 800E1E28 three steps 1/30 s apart in both), so
@@ -43,7 +42,14 @@ FIX = {
 # s6825: 8007CD50 (npcTexturedEffectUpdateWithSlotChain +0xA0) runs once per emission EVENT, right after the effect spawn
 # (jal 0x800989D8), every ~3.05 game s per emitter at both rates (lvl17 a30 92 ticks, FPS60 182 ticks); a30 decrements
 # every execution, the FPS60 step dropped about half of them (one emitter held 0x270A for 9 executions). Reverted to 1.
-UNFIX = {0x800DAB64, 0x800E32CC, 0x800E1E28, 0x800C96B8, 0x800806AC, 0x800B5350, 0x800BC778, 0x8007CD50}
+# s6833: 800FB4F8 is not a countdown: 0x80130B10[slot] is the LIVES byte (ROGUESQ_LIVES_CAP writes it; the death path
+# requestMissionTransitionMode 0x800FB190 decrements the same byte, docs/M6-S5759-DEATH-CHAIN.md) and
+# tickMissionTransitionAndTeardown is the RESPAWN routine (despawnCraftAnimationSlotNpcs, loadPlayerStartPosition), run once
+# per respawn behind the craft flag test 0x80137F3C & 0x380000; at 0 it sets game-over mode 3 (+4). A step of 0 on that
+# tick would skip a life loss. Reverted to 1. 800F8708 stays FIX: +0x92 counts CONSECUTIVE calls on which a new state
+# +0x95 differs from the committed state +0x94 and commits it at 20 (a 0.667 s debounce); first sight sets 1, any
+# revert clears it, and the same function steps its +0x8C timer by its dt argument (a1 -> f26), so +0x92 is per call.
+UNFIX = {0x800DAB64, 0x800E32CC, 0x800E1E28, 0x800C96B8, 0x800806AC, 0x800B5350, 0x800BC778, 0x8007CD50, 0x800FB4F8}
 DECL = ("extern void rs64_tctr(uint8_t* rdram, uint32_t pc, uint32_t addr, int32_t v); extern int rs64_tick_step(void); "
         + TAG + "\n")
 DEF = ("extern char* getenv(const char*); "
