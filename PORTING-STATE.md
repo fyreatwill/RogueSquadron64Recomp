@@ -181011,3 +181011,23 @@ Sheet docs/owner_sheet_s6856_region_21x9.png (tools/owner_sheet_s6856.py: full f
 Two lines: runtime counters (non-disc 0 shifted) and the framebuffers (nothing displaced) agree. G1d region work: owner judges.
 Rules out: a visible displaced element the counters missed (e.g. a non-textured prim, which the per-texture counters
 would not name) in these frames. Not covered: FPS60 / dd4 combined with 21:9 under the new gate -> NEXT.md.
+
+## Session 6857 (2026-11-03) — G1d 21:9 owner bundle (ASPECT 21:9 + FPS60 + dd4) under the s6852-s6855 region-gate defaults: H-ok, disc 100% shifted, non-disc 0, 300 s holds clean
+Unit (NEXT.md s6856, slug g1d-region-fps60-bundle): does the region Z gate (ZGATE+CFLIP, TEXRECT=0) still separate the
+radar disc from the world when FPS60 doubles render frames and dd4 densifies them? H-ok / H-latch60 / H-dd4 / H-crash.
+Recipe scratch/s6857/abd.sh (= s6856 abd.sh + ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=4), scratch/s6857/both.sh: lvl9 then
+lvl17, SHIFT=256 FBDV=600 HOLD_S=300, sequential. Totals over every [region-zgate] window (scratch/s6857/tot.py).
+- lvl9: mission_t=31 s, hold 303 s, alive, 0 VI stalls, 0 crash lines. Disc+blips (T7A37B0/T7A3FB0) 56083 shifted / 0 kept;
+  every other texture 0 shifted / 328210 kept. Control ZERO-W 902 (fired), out WRAP 0.
+- lvl17: hold 305 s, alive, 0 stalls, 0 crash lines. Disc T7965C0 20424 / 0; non-disc 0 / 166197. Control 781, out WRAP 0.
+FPS60 live check (no dedicated log line): colour-buffer swaps per VI 11858/11132 = 1.07 (lvl9) and 16349/13786 = 1.19
+(lvl17) vs s6856 30 Hz lvl9 5202/10333 = 0.50; [dd] multiplier 4 logged. RDP records 94-111 M vs 1.2 M at s6856.
+Frames: lvl9 VI 4800/7200/9600/10800 and lvl17 VI 5400/8400/13200/13800 (flight with HUD): disc inside its ring, blips inside,
+no wedge, no displaced strip. Sheet docs/owner_sheet_s6857_region_21x9_fps60_dd4.png.
+Side datum: the autopilot failed lvl17 several times (MISSION FAILED, debrief, back to hangar; godrefills 20). The dumped
+RDRAM debrief/MISSION FAILED frames show noisy side columns at 21:9: these are the s6723/s6724 "debrief pillars" (the game's
+own heap in the unused width), hidden on screen by the RT64 content-gated present crop. Not new, and the RDRAM dump does not
+show what is presented.
+Verdict: selects H-ok; refutes H-latch60 (kept 0 at 60 Hz render), H-dd4 (non-disc shifted 0 under dd4 density) and
+H-crash for lvl9/lvl17. Two lines: runtime counters and framebuffers agree. Not covered: 16:9 bundle (NEXT.md).
+Rules out: FPS60's extra frames or dd4's far terrain breaking the frame-start latch at 21:9.
