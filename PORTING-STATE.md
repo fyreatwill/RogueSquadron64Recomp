@@ -180201,3 +180201,6 @@ VERDICT: front-end list = H-benign for all named rows except updateSplineCraftTr
 verified: speed/scale per game s equal a30). The G1e float/tick rate class is closed; integer |K|>1 steps are the last
 unaudited rate idiom.
 ORIGIN: n/a (rate fix, not a mitigation; writer = updateSplineCraftTransform's per-tick constant increments).
+Discrimination: this selects H-quantum-visible for updateSplineCraftTransform (+0x140 / +0xE8) and H-benign for every other
+s6829 front-end row, and refutes "front-end dR~1 rows are per-tick quanta" as listed (analyzer artifacts). Next
+discriminator = per-game-s rate of the |K|>1 integer step sites (tools/g1e_int_step_audit.py) at a30 vs FPS60.
