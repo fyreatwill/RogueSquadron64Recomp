@@ -180411,3 +180411,24 @@ controls on 800cdc80/800cf090 and the plain arms). OWNER-OPT-INS row extended (w
 stale widescreen notes fixed (title defect B and 21:9 intro bars were fixed s6688-s6735 / s6718).
 Discrimination: selects H-ok, refutes H-clash.
 Next: the same knob under ROGUESQ_FPS60 (the owner's G3f run was FPS60): 60 Hz split of setupCameraMatrices.
+
+## Session 6838 (2026-11-03) — ROGUESQ_HANGAR_FOV under ROGUESQ_FPS60 (the owner's G3f recipe): fovy 38 on every craft-cam call at the 120/s FPS60 rate, no alternate-frame lens flicker (H-ok); hangar-fov thread closed
+No new soak verdicts since s6837 (last SOAK-RESULTS lines = s6835 hunts c/d, folded). CURRENT-TRUTH 54.9 KB, no maintenance.
+Work unit (NEXT.md hangar-fov-optin): H-ok (the setupCameraMatrices patch covers every FPS60 craft-cam call) vs H-split (an
+FPS60 interpolated/duplicated camera path reaches guPerspective unpatched, so alternate frames show 45 -> lens flicker).
+Ran scratch/s6838/arms.sh (same build as s6836/s6837, owner save route, 60 s, ROGUESQ_G3F_CAM in all, sequential, rc=0,
+0 crash lines): p60 (FPS60), p60f38 (FPS60 + HANGAR_FOV=38), both with BURST=40,48 window grabs; p60w21f38 (+ ASPECT=21:9).
+G3F per-cam table (calls, vp, fovy, aspect), s6836 30 Hz retail arm for the rate control:
+- retail 30 Hz: 800cd670 1448x 512x340 f45 1.882, rate 60.2 calls/s
+- p60:          800cd670 3069x 512x340 f45 1.882, rate 120.1/s | 800cdc80 661x f45 | 800cf090 2167x f45
+- p60f38:       800cd670 2953x 512x340 f38 1.882, rate 120.1/s, 0 non-38 calls | 800cdc80 659x f45 | 800cf090 f45
+- p60w21f38:    800cd670 2995x 1024x340 f38 3.765, 0 non-38 | 800cdc80 661x 1024x340 f45 | 800cf090 1024x448 f45 2.857
+"[hangar-fov] first hit cam 800cd670: fovy 45 -> 38" in both knob arms, absent from p60 (negative).
+Second line, presented frames: scratch/s6838/flicker.py scores consecutive burst grabs (153/160 frames, 40-48 s pan window):
+alternation triples (d(i,i+2) < 0.5*min(d(i,i+1),d(i+1,i+2)) while moving) p60 0/151, p60f38 0/158. Positive control in the
+same frames: zooming every other frame by tan22.5/tan19 (the 45->38 ratio) -> 117/151 and 118/158. Sheet
+scratch/s6838/sheet_hangarfov_fps60.png (rows p60, p60f38, p60w21f38): craft larger with the knob, 21:9 fills, SELECT LEVEL same.
+VERDICT: H-ok selected, H-split refuted (two lines: per-call guest fovy log + presented-frame flicker detector with control).
+OWNER-OPT-INS row gains "works with FPS60". hangar-fov-optin thread CLOSED; owner picks the value.
+Discrimination: selects H-ok, refutes H-split.
+Next: G3 render fidelity, third biome in flight vs retail angrylion (s6748 recipe, mission 3 via tools/g3_eep_patch.py).

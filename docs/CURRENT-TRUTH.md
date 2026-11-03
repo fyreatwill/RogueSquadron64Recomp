@@ -511,7 +511,9 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    0x800CDC80 = SELECT LEVEL, excluded, crops at 30). Same build: fovy 30 on 1486/1486 craft-cam calls, other cams 45, camera
    path identical; 38 suggested (30 crops wingtips). OWNER-OPT-INS row; sheet scratch/s6836/sheet_craft_fov.png.
    s6837: knob composes with ASPECT 16:9/21:9 (H-ok): craft cam fovy 38, aspect 2.93/3.76 and vp 796/1024 same as the plain
-   wide arm; SELECT LEVEL and other cams unchanged; frames scratch/s6837/sheet_hangarfov_wide.png. Next: knob under FPS60.
+   wide arm; SELECT LEVEL and other cams unchanged; frames scratch/s6837/sheet_hangarfov_wide.png. s6838: knob under FPS60 (H-ok, H-split refuted): craft cam 2953/2953
+   (and 2995/2995 at 21:9) calls fovy 38 at 120/s (2x the 30 Hz rate), 0 at 45; burst grabs 40-48 s show 0 alternate-frame
+   lens-flicker triples (synthetic 45/38 zoom control 117/151). THREAD CLOSED; owner picks the value.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

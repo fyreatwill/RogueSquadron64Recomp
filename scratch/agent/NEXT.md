@@ -1,14 +1,12 @@
-# NEXT: ROGUESQ_HANGAR_FOV under ROGUESQ_FPS60 (the owner's G3f run recipe)
-HYPOTHESIS-ID: hangar-fov-optin
+# NEXT: G3 render fidelity, mission 3 flight vs retail angrylion (third biome)
+HYPOTHESIS-ID: g3-retail-match-lvl3
 
-Context: s6836 landed the knob (4:3), s6837 verified it with ASPECT 16:9/21:9 (H-ok). The owner's fish-eye report came from an
-FPS60 run; FPS60 splits frames at 60 Hz and s6791 saw the same delta-time pan curve at 60 Hz, but the knob was never run there.
-Hypotheses: H-ok (fovy 38 on every 800cd670 call at ~2x call rate, pan path = FPS60 plain arm) vs H-split (an FPS60 interpolated
-or duplicated camera call path reaches guPerspective without the setupCameraMatrices patch, so alternate frames show 45 ->
-lens flicker).
-Run: copy scratch/s6837/arms.sh to scratch/s6838/arms.sh, arms "ROGUESQ_FPS60=1" and "ROGUESQ_FPS60=1 ROGUESQ_HANGAR_FOV=38"
-(+ optionally one ASPECT=21:9 FPS60 knob arm), ROGUESQ_G3F_CAM in all.
-Discriminator: G3F per-cam table: all 800cd670 calls f38 in the knob arm (any f45 on 800cd670 = H-split), call count ~2x the
-s6836 30 Hz arm; plus a BURST=40,48 window grab to check consecutive frames for lens flicker (ship size alternating).
-H-ok -> add "works with FPS60" to OWNER-OPT-INS and close the thread (owner picks the value). Then the next 3c ladder rung with
-an open item; remaining owner judgements: FPS60 feel, G1d/G3c sheets, hangar FOV value.
+Context: hangar-fov thread closed s6838. G3 flight H-match exists for lvl1 (s6744-s6747) and lvl2 (s6748, Barkhesh). Next
+biome: mission 3. Recipe = s6748: tools/g3_eep_patch.py scratch/s6748/lvl2.eep-source OUT --set 0x31=2 (re-signs both copies),
+retail recon in rs64_oracle (time 1024/512/640/flight transitions), then matched no-input arms (retail 512 dumps over flight,
+port window captures), tools/g3_oracle_match.py --w 512 --dec shift with Display-P3->sRGB (s6740), cross-frame control.
+Hypotheses: H-match (port flight frames within the lvl1/lvl2 d range of retail, cross-frame control far) vs H-diff (a
+biome-specific texture/combiner/fog difference: d outside range, localized region) vs H-route (the save does not select mission
+3 in one arm: check the intro biome first).
+Discriminator: per-frame d distribution port vs retail over the overlapping flight window, against the shifted-frame control.
+H-diff -> crop the region, diff the RDP stream (tools/g3_rdp_frame_match.py) to split game-side vs RT64.
