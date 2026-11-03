@@ -42355,5 +42355,8 @@ _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_
 # s6817 G3 FPS60: collision resolver contact step uses max(dt, 1/30) under ROGUESQ_FPS60 (lvl14 terrain scrape).
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_fps60_scrape.py")), str(base)])
 
+# s6820 G3 FPS60: out-of-range NPC despawn grace (21 ticks, 24 handlers) scaled by tick dt under ROGUESQ_FPS60.
+_sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_fps60_despawn.py")), str(base)])
+
 # s6132 G1d: parameterise the 8 MB pointer-range guards (RS64_RAM_TOP). Must run after every other patch (they emit the literal).
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_ramtop.py")), str(base)])

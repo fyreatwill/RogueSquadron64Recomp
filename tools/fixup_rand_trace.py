@@ -227,3 +227,24 @@ for p in sorted(base.glob("funcs_*.c")):
             s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + d, 1)
     p.write_text(s)
     print(f"[s6816] guided marks in {p.name}: 2")
+
+# s6820: NPC (re)creation rows for the FPS60 20-tick AI cadence (lvl14). The rand sites 0x800D860C (wingman voice-line
+# deadline seed) and 0x800F28F4 (initActorMotionParams) fire together every 20 ticks; both run inside
+# npcInitFromTemplate (0x800D2B5C), which is only reached through a callback that createAndInitObject (0x800EC588)
+# stores. rs64_bt_mark (src/main/rt64_render_context.cpp) logs one row per entry: tag b7000000, entry PC, $a0, host
+# backtrace (recompiled function names = the guest call chain that gates the spawn).
+BTM_TAG = "/* PATCH: s6820 spawn bt mark */"
+btdecl = "extern void rs64_bt_mark(uint32_t pc, uint32_t a0); " + BTM_TAG + "\n"
+for name, pc in (("npcInitFromTemplate", 0x800D2B5C), ("createAndInitObject", 0x800EC588)):
+    fe = f"RECOMP_FUNC void {name}(uint8_t* rdram, recomp_context* ctx) {{\n    uint64_t hi = 0, lo = 0, result = 0;\n    int c1cs = 0;\n"
+    for p in sorted(base.glob("funcs_*.c")):
+        s = p.read_text()
+        if fe not in s or f"rs64_bt_mark(0x{pc:08X}u" in s:
+            continue
+        s = s.replace(fe, fe + f"    if (__builtin_expect(g_rs64_rand_trace, 0)) rs64_bt_mark(0x{pc:08X}u, (uint32_t)ctx->r4); "
+                      + BTM_TAG + "\n", 1)
+        for d in (decl, btdecl):
+            if d not in s:
+                s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + d, 1)
+        p.write_text(s)
+        print(f"[s6820] spawn bt mark {name} in {p.name}")

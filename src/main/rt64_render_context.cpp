@@ -147,6 +147,15 @@ extern "C" void rs64_hp_mark(const uint8_t* rdram, uint32_t pc, const char* fn) 
     for (int b = 1; b < nb; b++) { Dl_info di; fprintf(s_rand_trace_f, "%s%s", b > 1 ? "<" : "", (dladdr(bt[b], &di) && di.dli_sname) ? di.dli_sname : "?"); }
     fputc('\n', s_rand_trace_f); fflush(s_rand_trace_f);
 }
+// s6820: NPC creation rows (tools/fixup_rand_trace.py spawn bt mark): tag b7000000, entry PC, $a0, host backtrace.
+extern "C" void rs64_bt_mark(uint32_t pc, uint32_t a0) {
+    static long n = 0;
+    if (!s_rand_trace_f || n >= 20000) return;
+    fprintf(s_rand_trace_f, "%ld %u b7000000 %08x a0=%08x bt=", n++, rs64_vi_n_g, pc, a0);
+    void* bt[14]; int nb = backtrace(bt, 14);
+    for (int b = 1; b < nb; b++) { Dl_info di; fprintf(s_rand_trace_f, "%s%s", b > 1 ? "<" : "", (dladdr(bt[b], &di) && di.dli_sname) ? di.dli_sname : "?"); }
+    fputc('\n', s_rand_trace_f); fflush(s_rand_trace_f);
+}
 // s6781 G3: SELECT GAME slot panels (inset, left emblem) vanished at random. The menu image worker (0x800B3650) sends
 // each completion as a pointer to a message on its own stack; the menu reads one message per frame (id byte +0x17).
 // Retail jobs take ~60 VI so each completion is read before the next overwrites it; the port's worker finished jobs

@@ -179863,3 +179863,41 @@ ORIGIN: not a mitigation; the writer is updatePlayerCraftPhysics 0x800B29DC (sub
 legitimate per tick at 30 Hz; FPS60 doubles ticks per contact second, so the per-tick quantum is rescaled.
 Next: frame-locked tick cadences in AI (s6815 side datum: npcWingmanBehaviorByMode 0x800D860C and initActorMotionParams
 0x800F28F4 fire every 20 TICKS = 0.333 s at FPS60) - idiom audit of tick-count timers.
+
+## Session 6820 (2026-11-02) — G3 FPS60: the s6815 "20-tick AI cadence" is NPC despawn/re-create churn; the out-of-range despawn grace is a 21-TICK counter in 24 NPC handlers (0.70 s at 30 Hz, 0.35 s at FPS60); scaled by tick dt under FPS60: TIE re-create interval 20 VI -> 41 VI (30 Hz 40), creates/s 7.05 -> 3.51 (30 Hz 2.81)
+
+HYPOTHESIS-ID: g3-fps60-tick-timers.
+
+Soak fold: s6819_scrapedmg_b60fix_s2/s3 both scrape hp 40.0 (4x10 at 15.417/15.6/15.617/15.65) = 30 Hz -> s6819 fix
+CONFIRMED on all 3 seeds. Deaths: s2 65.0 s, s3 none (hit50/s 0.082 / 0.049).
+Offline: the two rand sites are not AI re-plans. 0x800D860C (npcWingmanBehaviorByMode mode 2) seeds a one-shot wingman
+voice-line deadline obj+0x78 = now(0x80130BA4, advanced by dt) + 5.0 + (r%8)*3.5 s (rodata 0x800A78C0/C4): dt-based, only
+re-seeded when the object is re-initialised. 0x800F28F4 is in initActorMotionParams. Both run under npcInitFromTemplate,
+reached only through the createAndInitObject (0x800EC588) callback -> they mark NPC (re)creation.
+Instrument (tools/fixup_rand_trace.py s6820 rows + rs64_bt_mark in rt64_render_context.cpp: tag b7000000, entry PC, $a0,
+host backtrace) at npcInitFromTemplate and createAndInitObject entry; summary tools/g3_spawn_bt.py. lvl14 seed 1, 140 s.
+Chain: createAndInitObject < npc*Update < slotDispatcherIter < spawnNpcOfType < setupNpcUpdateFunctions <
+updateActiveGridCellState (per-frame grid scan, no counter). Same TIE slots are re-created again and again in flights of 3:
+re-create interval 40 VI at 30 Hz (= 20 ticks), 20 VI at FPS60 (= 20 ticks) -> the churn is retail; FPS60 runs it 2x per s.
+Gate (npcTieVariantUpdate 0x800DBC20..4C): range test 0x80047D40(npc); fail -> byte +0xBD += 1, despawn (L_800DBA08) at 21
+(slti 0x15); pass -> reset 0. Idiom-class enumeration (every jal 0x80047D40/0x80047DAC followed by a counter ++ and a 0x15
+compare): 24 sites, all 0x15 (byte/half/word counters; tie, wingman, turret, at-st, at-at, at-pt, shuttle, tank droid,
+probe droid, radar dish, ground transport, train car, water craft, fighter squadron, phased-destruction craft, power
+generator, shield, devastator, debris, debris field, power-up, dat item, ray-shielded destroy, parseDatItemSubtypes1To5).
+The other 3 range-test calls (splineWalkerCraftNpcHandler, updateActiveGridCellState x2) have no counter.
+FIX tools/fixup_fps60_despawn.py (vendored chain after fixup_fps60_scrape): runInMissionFrame captures the tick dt ($f20 at
+0x800FA90C, where 0x80130BA4 advances) into rs64_tick_dt; under ROGUESQ_FPS60 the 24 compares use round(21/(30*dt))
+clamped [21,42] (= 42 at dt 1/60, 21 at a 2-VI tick). ROGUESQ_FPS60_DESPAWN=0 restores; retail untouched (returns 0x15).
+Same build, lvl14 seed 1 (scratch/s6820/arms.sh), all rc=0 crash=0:
+  arm            TIE creates/s  TIE re-create dVI   wingman creates/s  wingman dVI
+  a30 (control)      2.81          40 (x82)            1.15             40
+  b60fix             3.51          41 (x163)           1.08             41
+  b60nodsp           7.05          20 (x314)           2.04             20   (= pre-fix build scratch/s6820/pre, 7.05 / 20)
+Off arm reproduces the defect in the same build (positive control); fix arm's grace = 41 VI = 0.683 s vs 0.667 s retail.
+Residual TIE creates/s 3.51 vs 2.81: different flight path (s6819 residual) -> different cells in range; single seed.
+Side numbers over the 62 game-s window (single seed, not conclusive): hit50/s(t>16) a30 0.087, fix 0.128, off 0.085.
+Seeds 2/3 queued (soak_queue/s6820_despawn_s2/s3: b60fix + b60nodsp).
+VERDICT: selects H-counter (per-NPC integer tick counter vs 21); refutes H-global-frame (no global frame modulo) and
+H-dt-timer for the despawn path (the voice deadline itself IS dt-based). Idiom class "out-of-range despawn grace" CLOSED
+(24/24 guarded).
+ORIGIN: no mitigation; the writer is each handler's own counter ++ (retail code), frame-locked by design at 30 Hz.

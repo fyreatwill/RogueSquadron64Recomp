@@ -1,18 +1,18 @@
-# NEXT: FPS60 frame-locked tick-count timers in NPC AI (20-tick cadence) - idiom audit + fix
+# NEXT: FPS60 frame-locked tick counters - the REST of the class (beyond the s6820 despawn grace)
 HYPOTHESIS-ID: g3-fps60-tick-timers
 
-State (s6819): lvl14 scrape thread closed (step quantum s6817 + damage quantum s6819; scrape hp 40 = 30 Hz).
-First: fold SOAK-RESULTS s6819_scrapedmg_b60fix_s2/s3 (expect scrape hp 40 via tools/g3_scrape_damage.py 60
-scratch/s6819/b60fix_s{2,3}.rand.txt; deaths via tools/g3_death_time.py). If either != 40, reopen.
-Side datum s6815: npcWingmanBehaviorByMode 0x800D860C and initActorMotionParams 0x800F28F4 fire every 20 TICKS
-(0.667 s at 30 Hz, 0.333 s at FPS60, seed-independent) - AI decision cadence doubles at FPS60.
-Hypotheses:
-  H-counter: a per-NPC (or global) integer tick counter (addiu +-1, compare 20/0x14) gates the re-plan -> frame-locked.
-  H-global-frame: gate is (global frame counter % 20) on e.g. 0x8013889C (the tick%3 counter used by bolt hit tests).
-  H-dt-timer: a float timer decremented by dt (then the 20-tick observation is wrong) -> close.
-Step 1 (offline): read the callers of 0x800D860C / 0x800F28F4 in ../N64Recomp/RecompiledFuncs for the gate; then
-  grep-enumerate the idiom class (lbu/lh counter, addiu -1/+1, slti/beq vs constant, store back, in per-tick NPC
-  update functions) - classify each site frame-locked vs dt-based, like tools/g3_dt_quantum_audit.py.
-Step 2: fix the class under ROGUESQ_FPS60 only (count at 30 Hz: advance the counter every other 60 Hz tick or
-  scale the threshold), env off-switch, one build, arms a30 / b60fix / b60off on lvl14 seed 1 (scratch/s6819/arms.sh
-  pattern), discriminator: cadence of 0x800D860C calls per game s equal to 30 Hz in the fix arm.
+State (s6820): out-of-range despawn grace (24 handlers, 21 ticks) fixed under FPS60 (tools/fixup_fps60_despawn.py);
+TIE re-create 41 VI vs 30 Hz 40, off arm 20. Seeds 2/3 queued (soak_queue/s6820_despawn_s2/s3).
+First: fold SOAK-RESULTS s6820_despawn_s2/s3: `python3 tools/g3_spawn_bt.py scratch/s6820/b60fix_s{2,3}.rand.txt
+scratch/s6820/b60nodsp_s{2,3}.rand.txt` -> expect TIE re-create dVI ~41 (fix) vs 20 (off) on both seeds. If not, reopen.
+Step 1 (offline, ONE pass): enumerate every OTHER per-object integer tick counter in the per-tick NPC/projectile/HUD
+update functions: load (lbu/lb/lhu/lh/lw) -> addiu +-1 -> store same field -> compare (slti/sltiu/beq/bne vs constant or
+vs 0) within ~8 instructions, excluding the 24 s6820 sites (tag "s6820 fps60 despawn"). s6820 scan already saw
+npcPowerGeneratorUpdate 0x80077D44/88 (stack, slti 8 = loop index, likely not a timer), tickHudInstanceTargetingAndSpawns
+0x800FD0E8 (slti 2), highScoreBubbleSort (loop). Classify each: loop index (ignore) / per-tick timer (frame-locked) /
+event counter. Script it as tools/g3_tick_counter_audit.py so the table is reproducible.
+Hypotheses for what remains:
+  H-none: the despawn grace was the only gameplay-relevant tick timer -> close the class with the table.
+  H-more: other per-tick timers (fire cooldowns, AI state durations, HUD blink) exist -> fix them with the same
+    rs64_tick_dt scaling (reuse rs64_despawn_ticks-style helper), one build, a30 / b60fix / b60off arms on lvl14 s1.
+Discriminator: the audit table; a fix arm must show the timer's period in game seconds equal to 30 Hz.

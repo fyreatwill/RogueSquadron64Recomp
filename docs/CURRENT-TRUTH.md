@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6819 (2026-11-02).
+Compact operational handoff, as of Session 6820 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -408,7 +408,13 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    (rodata 0x800A5734) is a per-tick quantum. tools/fixup_fps60_scrape.py now scales it by dt*30 under FPS60
    (ROGUESQ_FPS60_SCRAPE_DMG=0 restores). Seed 1 one build: scrape hp a30 40 / fix 40 (4x10) / nodmg 80 (= s6817 exactly,
    death 90.62 both); fix death 93.8 (30 Hz 81.3), hit50/s 0.103 (0.107). Seeds 2/3 queued (s6819_scrapedmg_*).
-   Remaining FPS60 difference is path: the extra heading case at 15.6 s (60 Hz surface sampling), pos@40 s z 94.6 vs 77.2.
+   Remaining FPS60 difference is path: the extra heading case at 15.6 s (60 Hz surface sampling), pos@40 s z 94.6 vs 77.2. s6820 soaks
+   s2/s3: scrape hp 40/40 -> s6819 CONFIRMED all 3 seeds.
+   s6820 FIXED: s6815's "20-tick AI cadence" is NPC despawn/re-create churn. 24 NPC handlers despawn an NPC after its range
+   test (0x80047D40/0x80047DAC) fails for 21 TICKS (per-NPC counter, slti 0x15); the grid scan re-creates it next frame, so
+   edge-of-range NPCs churn every 0.67 s at 30 Hz but 0.33 s at FPS60. tools/fixup_fps60_despawn.py: threshold
+   round(21/(30*dt)) in [21,42] under FPS60, dt captured at 0x800FA90C (ROGUESQ_FPS60_DESPAWN=0 restores). Same build lvl14
+   s1: TIE re-create 40 VI (30 Hz) / 41 (fix) / 20 (off), creates/s 2.81 / 3.51 / 7.05. Class closed (24/24). Seeds 2/3 queued.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
