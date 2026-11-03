@@ -181,6 +181,9 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 - Closed: M5 audio de-stubbing, M3 idiom audits, M6 endurance (s6442), G2 audio, G5 renaming. G4 crash hunting parked.
 
 ## Superseded conclusions — do not act on these
+- s6815 "FPS60 halves the share of enemy impacts that cost hp (hit probability per shot: H-lead/H-collision/H-splash)":
+  believable because impacts per game s were equal and every hit followed an impact. s6816: the hp hits are homing missiles,
+  not bolts; the deficit is fewer turrets in range after a frame-locked terrain scrape at 15.4 s changes the player's path.
 
 - s6813 "the lvl14 in-mission cutscene starts ~20 game-s later at FPS60, mission progresses slower in game time":
   believable because the sequence (HUD off, destruction) looked scripted and only 18 VIs were dropped. s6814: it is the
@@ -381,8 +384,15 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    npcWingmanBehaviorByMode 0x800D860C and initActorMotionParams 0x800F28F4 fire every 20 TICKS (0.667 s at 30 Hz, 0.333
    s at FPS60, seed-independent) - a frame-locked cadence. Boot freeze soak s6814_bootfreeze_ab: 10/10 boots clean (5
    preempt on, 5 off), the a30_s2 freeze did not recur (1 in 11 boots).
-   NEXT: g3-fps60-hit-prob - find the enemy projectile/aim code that produces the impacts and log per shot the aim point
-   vs player position (lead error) and closest approach; FPS60 shots trailing the player = H-lead.
+   s6816 (instrument: tools/fixup_rand_trace.py s6816 rows; g3_bolt_attrib.py, g3_guided_attrib.py; 3+3 seeds, deterministic
+   - deaths reproduce s6814): every hp drop 16 s -> death is a 50-hp HOMING MISSILE (guidedEffectNpcHandler -> playerYwingUpdate
+   msg -> tickCinematicObjectStateMachine 0x800B1468), 30 Hz 0.114-0.167/s vs FPS60 0.043-0.058/s; bolts never hit there. Turrets
+   fire pairs every 3.05 game s (dt-exact) only within ~52 u of the player. The chain starts at a terrain scrape at 15.4 s:
+   updatePlayerCraftPhysics 0x800B29F8 takes 20 hp per CONTACT TICK (0x800FEF10 returns 1, no cooldown): 2 contacts at 30 Hz vs
+   7 at FPS60 in all seeds, different exit velocity (+z 0.2 u/s) -> FPS60 path ~9 u further +z by 40 s -> fewer turrets in
+   range -> fewer missiles. Supersedes s6815's "hit probability per shot" framing.
+   NEXT: g3-fps60-scrape - find the per-tick term in the contact response (0x800FEF10 / integrateCraftVelocityAndCollide
+   0x800AECF8: push-out, damping, reflection) and fix it FPS60-only; requalify on the 15.4 s scrape (2 contacts, same exit vel).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

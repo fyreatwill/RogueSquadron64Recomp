@@ -179740,3 +179740,40 @@ steps), H-splash (splash damage gated per tick). Two lines for "fire rate unchan
 rate. "Hit probability halves" is one line (impact->hit ratio, 7 runs) - single-source until the projectile log.
 ORIGIN: no mitigation; analysis only.
 Next: g3-fps60-hit-prob - name the enemy projectile pool/aim routine and log per shot aim point vs player position.
+
+## Session 6816 (2026-11-02) — G3 FPS60 lvl14: the "fewer hits at FPS60" chain starts at one terrain scrape at 15.4 s: player collision damage is per contact TICK (2 contacts at 30 Hz vs 7 at FPS60, all 3 seeds), the bounce leaves a different path, fewer missile turrets come in range; all alive-window hp drops are 50-hp homing missiles (guidedEffectNpcHandler), not bolts
+Work unit (NEXT g3-fps60-hit-prob, step 1 static + step 2 one instrument): new rand-trace rows in tools/fixup_rand_trace.py
+(s6816 sections; host side src/main/rt64_render_context.cpp rs64_bolt_mark / rs64_guided_mark / rs64_hp_mark):
+(a) enemy bolt rows in the mis-named audioCueDispatcherNpcHandler (per tick within 40 u of the player + every msg-5 send),
+(b) guided-projectile rows in guidedEffectNpcHandler (every missile every tick at its swept hit test + victim),
+(c) player hp writer rows: first statement of the s5798 store hook (needs ROGUESQ_STORE_DIAG=1), PC + fn + host backtrace
+of every hp drop > 5. Recipe scratch/s6816/seeds.sh (= s6814 seeds.sh + STORE_DIAG). Batch 1 (a+c) 3+3 seeded runs, 0 crash;
+batch 2 (a+b+c) a30_s1 + b60_s1 (stopped there). Analysers tools/g3_bolt_attrib.py, tools/g3_guided_attrib.py (new).
+Static reads (single-source, generated-C disassembly): bolt hit test = 3-phase look-ahead (tick%3 on 0x8013889C, segment
+vel*dt*3.5, hit at t<=0.34, re-test flags 0x200/0x400), tick-invariant in geometry; guided missile hit test
+findNpcInScaledBoxRegionExcludingPair = swept segment pos->pos+vel*dt; steerOrientationTowardTarget turn = rate*k*dt.
+Results:
+- Control: seeded runs are deterministic - death times reproduce s6814 exactly (30 Hz 81/86/52 s, FPS60 138/86/96 s); hp
+  rows positive control: guided victim rows on the player 7 = hp drops 7 (a30_s1, b60_s1).
+- Every hp drop from 16 s to death (all 6 runs) is a 50-hp hit written by tickCinematicObjectStateMachine 0x800B1468 under
+  playerYwingUpdate's message handler, SENT by guidedEffectNpcHandler (homing missiles, 5 u/s, lock flag +0x50 = 1, ~12 s
+  max life). 30 Hz 0.114/0.123/0.167 per game s vs FPS60 0.043/0.050/0.058 (no overlap). Bolts never hit the player in that
+  window (closest pass >= 6 u); they only hit later (10 hp). So s6815's "impact -> hit share halves" was the wrong framing.
+- Missile launchers are fixed turrets firing a pair every 3.07 s (30 Hz) / 3.03 s (FPS60) = dt-exact cadence, only while the
+  player is within ~52 u. Launches per game s 16-50 s: 1.88 vs 1.41; the turret at (94.9, 8.1, 48.0) fires from 18.3 s at
+  30 Hz but only from 49-72 s at FPS60.
+- Player path is identical to the float until 15.4 s, then diverges. At 15.4 s the passive player scrapes terrain/object:
+  updatePlayerCraftPhysics (0x800B29F8) subtracts 20 hp on EVERY tick 0x800FEF10 reports contact (no cooldown; shield +0xC8
+  absorbs first). 30 Hz: 2 contacts (15.40, 15.63) exit vel (1.61,-1.57,-0.10); FPS60: 7 contacts in 0.48 s
+  (15.40..15.88) exit vel (1.33,-1.80,+0.20). Identical in all 3 seeds per arm; pos at 40 s 30 Hz (98.4,-14.2,77.2) vs FPS60
+  (95.8,-14.1,86.5) in every seed. The +z drift keeps the FPS60 player away from the z~48 turrets -> fewer missiles -> fewer
+  50-hp hits -> later death. (Before 15.4 s the 50-hp hit at 15.27 s (30 Hz) vs 12.8 s (FPS60) is a missile-path difference
+  from Euler integration at a different dt; the paths are otherwise dt-exact.)
+DISCRIMINATION: refutes H-lead and H-collision (bolt aim/test) and H-splash as the FPS60 hit deficit (no bolt hits in the
+window); refutes a frame-locked turret fire rate (dt-exact 3.05 s pairs). SELECTS H-scrape: frame-locked player collision
+response/damage at the 15.4 s contact changes the passive player's route. Two lines: hp-writer backtraces (sender identity)
++ launcher/trajectory geometry; 3 seeds per arm.
+ORIGIN: no mitigation; diagnostic rows only (off unless ROGUESQ_RAND_TRACE is open; hp rows also need ROGUESQ_STORE_DIAG=1).
+Next: g3-fps60-scrape - read 0x800FEF10 (contact test/response) and integrateCraftVelocityAndCollide 0x800AECF8 for
+per-tick constants (push-out distance, velocity damping/reflection), fix FPS60-only (scale by dt*30), requalify: the 15.4 s
+scrape gives 2 contacts and the 30 Hz exit velocity at FPS60.

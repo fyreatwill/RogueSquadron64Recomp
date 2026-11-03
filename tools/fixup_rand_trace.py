@@ -168,3 +168,62 @@ for p in sorted(base.glob("funcs_*.c")):
             s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + d, 1)
     p.write_text(s)
     print(f"[s6784] song worker marks in {p.name}: {n}")
+
+# s6816: enemy-bolt rows for the FPS60 hit-probability question (lvl14). The bolt update (audioCueDispatcherNpcHandler,
+# mis-named; s5793) runs a 3-phase look-ahead hit test from L_8005CE5C (tick%3, segment vel*dt*3.5, hit if t<=0.34).
+# rs64_bolt_mark (src/main/rt64_render_context.cpp) logs one row per bolt per tick within 40 units of the player
+# (kind 0, tag b0170000) and one row per msg-5 hit send with the victim id (kind 1, tag b0170005). $s1 = bolt node,
+# $s6 = bolt slot (id +0x16, flags +0x14), $a0 = victim id at the send.
+BT_TAG = "/* PATCH: s6816 bolt mark */"
+bdecl = ("extern void rs64_bolt_mark(const uint8_t* rdram, uint32_t node, uint32_t slot, uint32_t victim, int kind); "
+         + BT_TAG + "\n")
+def bmark(kind):
+    return (f"    if (__builtin_expect(g_rs64_rand_trace, 0)) rs64_bolt_mark(rdram, (uint32_t)ctx->r17, (uint32_t)ctx->r22, "
+            f"(uint32_t)(ctx->r4 & 0xFFFF), {kind}); " + BT_TAG + "\n")
+for p in sorted(base.glob("funcs_*.c")):
+    s = p.read_text()
+    a = "L_8005CE5C:\n    // 0x8005CE5C: lw          $v1, -0x7764($v0)\n"
+    b = "    // 0x8005D35C: jal         0x8003E8DC\n"
+    if s.count(a) != 1 or s.count(b) != 1 or BT_TAG in s:
+        continue
+    s = s.replace(a, a.split("\n")[0] + "\n" + bmark(0) + a.split("\n", 1)[1]).replace(b, bmark(1) + b)
+    for d in (decl, bdecl):
+        if d not in s:
+            s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + d, 1)
+    p.write_text(s)
+    print(f"[s6816] bolt marks in {p.name}: 2")
+
+# s6816: player hp word (0x80137E7C = player record 0x80137DB0 + 0xCC) writer rows (rs64_hp_mark,
+# src/main/rt64_render_context.cpp): PC, function and host backtrace of every hp drop > 5. First statement of the
+# s5798 store hook (needs ROGUESQ_STORE_DIAG=1), ahead of the watch blocks that return early for this range.
+HP_TAG = "/* PATCH: s6816 hpwatch */"
+hp_anc = "void rs64_s5798_st(uint8_t* rdram, recomp_context* ctx, uint32_t pc, uint32_t a, int w, const char* fn) {\n"
+hp_add = ("    if (a == 0x80137E7Cu) { extern void rs64_hp_mark(const uint8_t* rdram, uint32_t pc, const char* fn); "
+          "rs64_hp_mark(rdram, pc, fn); } " + HP_TAG + "\n")
+for p in sorted(base.glob("funcs_*.c")):
+    s = p.read_text()
+    if s.count(hp_anc) != 1 or HP_TAG in s:
+        continue
+    p.write_text(s.replace(hp_anc, hp_anc + hp_add, 1))
+    print(f"[s6816] hp watch in {p.name}")
+
+# s6816b: guided-projectile rows (guidedEffectNpcHandler 0x8005F9A4, the source of the 50-hp player hits): one row per
+# missile per tick at the swept hit test (0x80060034 jal findNpcInScaledBoxRegionExcludingPair; $s1 = missile data,
+# $s3 = slot) and one row when the test returns a victim (0x8006003C, $v0). rs64_guided_mark in rt64_render_context.cpp.
+GD_TAG = "/* PATCH: s6816 guided mark */"
+gdecl = ("extern void rs64_guided_mark(const uint8_t* rdram, uint32_t m, uint32_t slot, uint32_t victim, int kind); "
+         + GD_TAG + "\n")
+for p in sorted(base.glob("funcs_*.c")):
+    s = p.read_text()
+    a = "    // 0x80060034: jal         0x8005EA9C\n"
+    b = "    // 0x8006003C: andi        $s0, $v0, 0xFFFF\n"
+    if s.count(a) != 1 or s.count(b) != 1 or GD_TAG in s:
+        continue
+    mk = lambda k, v: (f"    if (__builtin_expect(g_rs64_rand_trace, 0)) rs64_guided_mark(rdram, (uint32_t)ctx->r17, (uint32_t)ctx->r19, "
+                       f"{v}, {k}); " + GD_TAG + "\n")
+    s = s.replace(a, mk(0, "0xFFFFu") + a).replace(b, mk(1, "(uint32_t)(ctx->r2 & 0xFFFF)") + b)
+    for d in (decl, gdecl):
+        if d not in s:
+            s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + d, 1)
+    p.write_text(s)
+    print(f"[s6816] guided marks in {p.name}: 2")

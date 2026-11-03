@@ -1,3 +1,5 @@
+#include <execinfo.h>
+#include <dlfcn.h>
 #include <memory>
 #include <atomic>
 #include <chrono>
@@ -93,6 +95,57 @@ extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64
     }
     fputc('\n', s_rand_trace_f);
     fflush(s_rand_trace_f);
+}
+// s6816 G3: enemy-bolt rows (tools/fixup_rand_trace.py). kind 0 = per-tick bolt state within 40 units of the player
+// position (0x80137DC0), kind 1 = msg-5 hit send (victim id). Row: index, update_screen #, tag, victim, bolt node, slot
+// id, owner, damage, age, life, flags, pos, vel, player pos.
+extern "C" void rs64_bolt_mark(const uint8_t* rdram, uint32_t node, uint32_t slot, uint32_t victim, int kind) {
+    static long n = 0;
+    if (!s_rand_trace_f || n >= 300000) return;
+    auto in = [](uint32_t a) { return a >= 0x80000000u && a + 4 <= 0x80800000u && !(a & 3); };
+    if (!in(node) || !in(node + 0x100) || !in(slot) || !in(slot + 0x18)) return;
+    auto W = [&](uint32_t a) { return *reinterpret_cast<const uint32_t*>(rdram + (a - 0x80000000u)); };
+    auto F = [&](uint32_t a) { uint32_t w = W(a); float f; memcpy(&f, &w, 4); return f; };
+    float p[3], v[3], q[3];
+    for (int i = 0; i < 3; i++) { p[i] = F(node + 0xB4 + 4 * i); v[i] = F(node + 0xD8 + 4 * i); q[i] = F(0x80137DC0u + 4 * i); }
+    float d2 = (p[0] - q[0]) * (p[0] - q[0]) + (p[1] - q[1]) * (p[1] - q[1]) + (p[2] - q[2]) * (p[2] - q[2]);
+    if (kind == 0 && !(d2 < 1600.f)) return;
+    uint32_t sw = W(slot + 0x14), nw = W(node + 0xF8), fw = W(node + 0xFC);
+    fprintf(s_rand_trace_f, "%ld %u %08x %04x bolt=%08x id=%04x fl=%04x own=%04x dmg=%u age=%.4f life=%.4f p=%.3f,%.3f,%.3f "
+            "v=%.3f,%.3f,%.3f pl=%.3f,%.3f,%.3f\n", n++, rs64_vi_n_g, kind ? 0xb0170005u : 0xb0170000u, victim, node,
+            sw & 0xFFFF, sw >> 16, nw >> 16, fw >> 16, F(node + 0xF0), F(node + 0xF4), p[0], p[1], p[2], v[0], v[1], v[2],
+            q[0], q[1], q[2]);
+    fflush(s_rand_trace_f);
+}
+// s6816b: guided-projectile rows (tools/fixup_rand_trace.py). kind 0 = every missile every tick at its swept hit test,
+// kind 1 = the test returned a victim. Row: index, update_screen #, tag b0170010/b0170011, victim, missile data ptr,
+// slot id, target id (+0x4C), lock flag (+0x50), owner (+0x44), damage (+0x48), age (+0x40), pos (+4), vel (+0x28),
+// player pos.
+extern "C" void rs64_guided_mark(const uint8_t* rdram, uint32_t m, uint32_t slot, uint32_t victim, int kind) {
+    static long n = 0;
+    if (!s_rand_trace_f || n >= 300000) return;
+    auto in = [](uint32_t a) { return a >= 0x80000000u && a + 4 <= 0x80800000u && !(a & 3); };
+    if (!in(m) || !in(m + 0x54) || !in(slot) || !in(slot + 0x18)) return;
+    auto W = [&](uint32_t a) { return *reinterpret_cast<const uint32_t*>(rdram + (a - 0x80000000u)); };
+    auto F = [&](uint32_t a) { uint32_t w = W(a); float f; memcpy(&f, &w, 4); return f; };
+    fprintf(s_rand_trace_f, "%ld %u %08x %04x gm=%08x id=%04x tgt=%04x lk=%02x own=%04x dmg=%u age=%.4f p=%.3f,%.3f,%.3f "
+            "v=%.3f,%.3f,%.3f pl=%.3f,%.3f,%.3f\n", n++, rs64_vi_n_g, kind ? 0xb0170011u : 0xb0170010u, victim, m,
+            W(slot + 0x14) & 0xFFFF, W(m + 0x4C) >> 16, W(m + 0x50) >> 24, W(m + 0x44) >> 16, W(m + 0x48) >> 16, F(m + 0x40),
+            F(m + 4), F(m + 8), F(m + 0xC), F(m + 0x28), F(m + 0x2C), F(m + 0x30), F(0x80137DC0u), F(0x80137DC4u), F(0x80137DC8u));
+    fflush(s_rand_trace_f);
+}
+// s6816: player hp writer rows (tools/apply_s5798_recwatch.py hpwatch; needs the store-diag gate, ROGUESQ_STORE_DIAG=1).
+// Every store to 0x80137E7C that lowers the hp float by > 5: row tag b017dd00, writer PC, function, hp before/after,
+// host backtrace (recompiled function names = the guest call chain).
+extern "C" void rs64_hp_mark(const uint8_t* rdram, uint32_t pc, const char* fn) {
+    static float last = 0.f; static long n = 0;
+    uint32_t w = *reinterpret_cast<const uint32_t*>(rdram + 0x137E7Cu); float hp; memcpy(&hp, &w, 4);
+    float prev = last; last = hp;
+    if (!s_rand_trace_f || n >= 20000 || !(prev - hp > 5.f)) return;
+    fprintf(s_rand_trace_f, "%ld %u b017dd00 %08x fn=%s hp=%.2f,%.2f bt=", n++, rs64_vi_n_g, pc, fn ? fn : "?", prev, hp);
+    void* bt[14]; int nb = backtrace(bt, 14);
+    for (int b = 1; b < nb; b++) { Dl_info di; fprintf(s_rand_trace_f, "%s%s", b > 1 ? "<" : "", (dladdr(bt[b], &di) && di.dli_sname) ? di.dli_sname : "?"); }
+    fputc('\n', s_rand_trace_f); fflush(s_rand_trace_f);
 }
 // s6781 G3: SELECT GAME slot panels (inset, left emblem) vanished at random. The menu image worker (0x800B3650) sends
 // each completion as a pointer to a message on its own stack; the menu reads one message per frame (id byte +0x17).
