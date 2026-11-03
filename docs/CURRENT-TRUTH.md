@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6837 (2026-11-03).
+Compact operational handoff, as of Session 6840 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -278,7 +278,8 @@ Mission wins, aim/steer and mission-to-mission progression remain owner playtest
   No mitigation is acceptable without naming the writer and establishing value
   legitimacy; dd>1 fixes live in `tools/apply_s6*.py` and fixup scripts.
 - Wide rendering uses runtime RAM-top handling and a larger reported memory
-  arm; default remains 4:3/retail. Native hangar artifacts remain parked.
+  arm; default remains 4:3/retail. Wide-only hangar band (s6602) CLOSED s6840 (absent at 4:3/16:9/21:9, scorer
+  tools/g3_band_scan.py with controls); native hangar geometry remains parked.
 - The title plume is parked after clean boots. Reopen only on new evidence.
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 streams.
   Ground truth must precede new instrumentation; every null needs a positive
@@ -518,6 +519,15 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    wide arm; SELECT LEVEL and other cams unchanged; frames scratch/s6837/sheet_hangarfov_wide.png. s6838: knob under FPS60 (H-ok, H-split refuted): craft cam 2953/2953
    (and 2995/2995 at 21:9) calls fovy 38 at 120/s (2x the 30 Hz rate), 0 at 45; burst grabs 40-48 s show 0 alternate-frame
    lens-flicker triples (synthetic 45/38 zoom control 117/151). THREAD CLOSED; owner picks the value.
+   **s6840 g3-hangar-artifacts CLOSED (H-clean).** tools/g3_band_scan.py (s6602-class noise band: max-channel colour
+   step >48 at 1-2 px, 16 FB-px tiles >55% rough, largest 4-connected set) on same-route window caps: port 4:3 208 caps,
+   16:9 189 (new run, 0 crash, mission_verified_130s), 21:9 358 (s6798). Controls: injected s6602-width noise band
+   flagged 205/208, 188/189, 358/358; real s6602 RDRAM noise crop 49 tiles. Hangar screens (SELECT LEVEL, AVAILABLE
+   CRAFT, SELECT YOUR CRAFT, bay) score <=14 tiles in every arm; all >=20 frames are the title logo or MISSION FAILED
+   stats text in every arm. Second line: s6798 21:9 visual + s6631 heap-cap fix. Sheet docs/owner_sheet_s6840_hangar_aspect.png.
+   NEW datum (NEXT, g3-abort-transition-frame): s6798 21:9 cap w133 = the frame right after ABORT LEVEL->YES shows
+   terrain in magenta/yellow stripes under a white sky with the top band black; 1 of 3 arms caught it (0.6 s cap
+   cadence, not phase-gated: the misses are not nulls). Retail unknown.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

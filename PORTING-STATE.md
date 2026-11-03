@@ -180470,3 +180470,42 @@ Discrimination: selects H-leaked-save (retail B40 0x0D = the s6812 savedir byte;
 divergence (same .eep -> same B40 = 2 in both arms) and H-route-input.
 Next: g3-hangar-artifacts (CURRENT-TRUTH/PROJECT-OVERVIEW s6601 item): same-phase hangar capture table retail 4:3 vs
 ASPECT 16:9/21:9.
+
+## Session 6840 (2026-11-03) — wide-only hangar band (s6602) absent at 4:3/16:9/21:9 under a new band scorer with positive controls; g3-hangar-artifacts closed; abort-level striped-terrain frame noted
+
+HYPOTHESIS-ID: g3-hangar-artifacts (closed) -> g3-abort-transition-frame. Step 0: CURRENT-TRUTH 55,610 bytes, no
+maintenance. Soak tail: nothing new since s6835 (already folded).
+
+Boring thing first: the NEXT unit (same-phase hangar capture table) was partly overtaken. s6631 fixed the 21:9
+level-select tear (heap 8010FEFC cap); s6798 saw the s6602 band absent at 21:9 by eye (single-source). The s6602
+"band" was measured on RDRAM fb dumps, which CURRENT-TRUTH says lack RT64 3D frames. So the unit became: a band
+scorer with controls, run on same-route window captures at every aspect.
+
+New tool tools/g3_band_scan.py (pure PIL, no numpy on this host): drop the 64-row window title bar and letterbox,
+resample to FB width, flag 16x16 FB-px tiles where >55% of pixels have a max-channel colour step >48 at 1-2 px,
+score = largest 4-connected flagged set. Two false starts, both fixed in this session: (1) luma + 1-px gradient missed
+2-px chroma noise (the injected control came back 0/11); (2) the title bar was inside the content crop, so near-black
+frames collapsed to a 24-row strip (7 inject misses). After the fixes every control fires.
+
+Runs (scratch/s6840/menus.sh = s6798 route, DUR 160 s, one game at a time, SIGKILL):
+- 16:9: [g1d] FB_WIDTH=796, window 1360x764, 0 crash lines, mission_verified_130s, 189 caps.
+- 4:3: window 640x480, 0 crash lines, mission_verified_130s, 208 caps.
+- 21:9: reused s6798 tog21, 358 caps (FB 1024).
+Scores (JSON scratch/s6840/scan_*.json):
+| arm | caps | inject control fired | max hangar-screen tiles | frames >=20 tiles |
+| 4:3 | 208 | 205 | <=14 | title logo (44), MISSION FAILED stats (20-22) |
+| 16:9 | 189 | 188 | <=14 | MISSION FAILED stats (25-29) |
+| 21:9 | 358 | 358 | <=14 | w133 abort frame (115), title logo (23) |
+Real control: crop of the s6602 RDRAM-dump noise (fb_0650 cell) = 49 tiles. Misses are frames with almost no
+content left after the crop. Hangar screens (SELECT LEVEL, AVAILABLE CRAFT, SELECT YOUR CRAFT, bay) are clean in
+all three arms. Owner sheet: docs/owner_sheet_s6840_hangar_aspect.png.
+Verdict: H-clean. The s6602 wide-only band no longer exists in presented frames at any aspect. Two lines of
+evidence: the scorer with controls, and the s6798 visual. H-stride, H-viewport and H-rdp have nothing left to
+explain. Rules out: a residual wide hangar band after s6631. Does not cover: native hangar geometry, which stays
+parked, or the retail 4:3 oracle in this run (4:3 hangar matched retail at RDP level in s6741/s6785).
+
+New datum: s6798 21:9 cap w133, the first frame after PAUSE -> ABORT LEVEL -> YES, shows terrain as magenta/yellow
+stripes under a white sky with the top ~40% black. Magenta-pixel count: 914 there, 0 in every other cap of all three
+arms. With 0.6 s caps that are not phase-gated, the 4:3/16:9 misses are not nulls. Retail is unknown -> NEXT.md.
+
+ORIGIN: no mitigation; measurement and tool only.
