@@ -1,17 +1,21 @@
-# NEXT: G1e FPS60 front-end per-tick sites - classify the dR~1 rows from the s6829 capture
-HYPOTHESIS-ID: g1e-fps60-frontend-quanta
+# NEXT: G1e FPS60 integer constant-step accumulators (|K|>1) - triage the 41-site census
+HYPOTHESIS-ID: g1e-fps60-int-step-quanta
 
-Context: s6829 fixed the hangar tilt. The same capture (scratch/s6829/{a30,fix,off}.tick.bin, owner save, title -> SELECT YOUR
-CRAFT, 62 s) shows the mission tick runs in the front end, and
-`python3 tools/g3_float_quanta_rates.py scratch/s6829/a30.tick.bin scratch/s6829/fix.tick.bin` lists front-end rows with
-dR ~1.0 and exR ~2 (a per-tick quantum running 2x per game second at FPS60): 0x80044938 (+1 per tick), 0x8002E5A4 (+128,
-exR 1.43), 0x80077180 / 0x80077188 (dR 1.00 / 0.75), 0x800B2804 (dR 1.40), 0x80017A4C.
-Step 1 OFFLINE first (no build): name each site's function and field (nm / funcs_*.c), check whether it is already in
-fixup_fps60_ticks.py FIX/UNFIX sets (s6821-s6825), and what reads the field (timer -> visible? animation phase? edge-
-counted input like s6824?). Pass --sites float_sites.tsv if the analyzer needs it for labels.
-Hypotheses per site: H-quantum-visible (a front-end animation / timer runs 2x fast at FPS60: fix with the s6821 step or
-dt*30), H-benign (counter consumed as a count, or already dt-normalised downstream), H-edge (input/edge-driven, like
-s6824: must stay 1 per execution).
-Verify (one build, if any fix): rerun scratch/s6829/arms.sh; fixed rows must read dR 0.5 / per-game-s rate = a30.
-Done = every front-end dR~1 row fixed or classified with numbers; then G1e rate work is closed and the ladder's next rung
-is G3 in-flight frame diffs vs retail on a level not yet matched (s6744-s6748 did lvl1/lvl2).
+Context: s6830 closed the float/tick rate classes (spline-craft death ramp fixed). The one idiom never enumerated is integer
+load/addiu K/store with |K|>1 (s6821's g3_tick_counter_audit.py only takes +-1 followed by a test).
+`python3 tools/g1e_int_step_audit.py` -> 41 sites / 25 functions (scratch/s6830/int_step_audit.txt).
+Step 1 OFFLINE (no build): drop the non-time sites by reading them (heap/pointer strides rs_free/coalesceFreeHeapBlocks +16,
+instantiateNamedMeshInstance +88, JFIF parser, inflateInit2_, sampleRgbBoxFilter, cloneCellBufferWithAlloc, setupMenuData).
+Read the rest: tickTextureAnimSlots 0x80054E70 (-256), advanceNpcOnCurvedPath 0x8006C124 (+32), setupWalkerSpriteTileQuad
+0x8005BC80 (+2), runPauseMenuStateMachine 0x800C3094/3534/3584 (-2), spawnCutsceneObjectsFromList 0x800A7E38 (-65), audio
+(tickAudioChannel, stepActiveSongTracks, advanceSongRegion, updateSongTempoTickRate, tickAllActiveSongs, serviceStreamingVoice:
+audio-clock driven? which thread calls them?). For each: is it reached per mission tick (runInMissionFrame graph) or per
+frame/handler, and what consumes the field (visible animation phase? a count?).
+Hypotheses per site: H-quantum-visible (per tick, visible: fix k=dt*30 on the step, rounded/accumulated for ints),
+H-benign (not per tick, or a stride/count), H-audio (audio-clock driven: rate-independent by construction).
+Step 2 (only if a candidate survives): one build adding the surviving pcs to ROGUESQ_TICK_TRACE (fixup_fps60_float_trace.py
+int rows), arms a30 / FPS60 on the level that exercises it (lvl14 420 s recipe scratch/s6830/lvl14L.sh, or the s6829
+front-end recipe for menu sites); per game s rate must double at FPS60 to count as a defect, and the fix arm must equal a30.
+Done = every site classified with a reason; any fix verified with a same-build FQUANTA=0 control.
+If nothing survives: G1e is closed; the backlog's remaining items are owner-judgement (G1d, G3c sheets). Then take
+G5 renaming only per ITERATION item 4 rules, or a new owner report.

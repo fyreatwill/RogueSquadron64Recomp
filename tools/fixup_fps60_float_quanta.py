@@ -28,6 +28,9 @@ s6829 adds (same switch): hangarVehicleDisplayNpcHandler (0x800C68A0) ship tilt 
 rotation angles with +0x10): per call += stick*c (0x800C6BD0 x, 0x800C6C34 y), clamped, then decayed toward 0 by a
 constant (0x800C6CBC/CD4 +0x8, 0x800C6D0C/D24 +0xC). The handler gets a pointer to its frame dt in a2 (s3; +0x14 -= *s3
 at 0x800C6D40), outside the mission tick, so k here = (*s3)*30, not rs64_tick_dt.
+s6830 adds (same k, same switch): updateSplineCraftTransform (0x800B0A88) speed +0x140 += 2.0 (0x800B0EF4, rodata
+0x800A565C, clamp 180) or -= 2.0 (0x800B0F14, 0x800A5664, clamp -180) per tick, position += speed*dt; scale +0xE8 *=
+1.01 per tick (0x800B0BB0, rodata 0x800A5640) -> pow(1.01, k).
 ROGUESQ_FPS60_FQUANTA=0 restores. Retail (no FPS60) unchanged. Idempotent; run after fixup_fps60_despawn.py.
 Usage: fixup_fps60_float_quanta.py <RecompiledFuncs dir>"""
 import pathlib, sys
@@ -71,6 +74,13 @@ SITES = [  # (comment line, old C, new C)
      "    ctx->f0.fl = ctx->f2.fl - ctx->f0.fl * rs64_fq_kp(rdram, ctx->r19); " + TAG + "\n"),
     ("    // 0x800C6D24: add.s       $f0, $f2, $f0\n", "    ctx->f0.fl = ctx->f2.fl + ctx->f0.fl;\n",
      "    ctx->f0.fl = ctx->f2.fl + ctx->f0.fl * rs64_fq_kp(rdram, ctx->r19); " + TAG + "\n"),
+    # s6830 spline craft: speed ramp and scale growth per tick (k from the mission tick dt; f20 is reloaded on 2 paths)
+    ("    // 0x800B0BB0: mul.s       $f0, $f0, $f2\n", "    ctx->f0.fl = MUL_S(ctx->f0.fl, ctx->f2.fl);\n",
+     "    ctx->f0.fl = MUL_S(ctx->f0.fl, powf(ctx->f2.fl, rs64_fq_k())); " + TAG + "\n"),
+    ("    // 0x800B0EF4: add.s       $f0, $f2, $f0\n", "    ctx->f0.fl = ctx->f2.fl + ctx->f0.fl;\n",
+     "    ctx->f0.fl = ctx->f2.fl + ctx->f0.fl * rs64_fq_k(); " + TAG + "\n"),
+    ("    // 0x800B0F14: sub.s       $f0, $f2, $f0\n", "    ctx->f0.fl = ctx->f2.fl - ctx->f0.fl;\n",
+     "    ctx->f0.fl = ctx->f2.fl - ctx->f0.fl * rs64_fq_k(); " + TAG + "\n"),
 ]
 done = 0
 for p in sorted(base.glob("funcs_*.c")):

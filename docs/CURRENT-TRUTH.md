@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6829 (2026-11-03).
+Compact operational handoff, as of Session 6830 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -470,7 +470,15 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    Fix: the 6 add/decay sites scaled by (*s3)*30 in fixup_fps60_float_quanta.py (same switch). Same build, owner save,
    SELECT YOUR CRAFT, stick right 2 s (scratch/s6829/arms.sh, tilt.py): rise-to-90% / settle a30 0.167/0.600 s, FPS60 off
    0.083/0.300 s, FPS60 fix 0.183/0.633 s; plateau 0.0237 / 0.0237 / 0.0244 rad (half-decay sampling, 0.04 deg). +0xC path
-   (stick y) static-only. NEXT: front-end dR~1 sites from the same capture.
+   (stick y) static-only.
+   **s6830 G1e FPS60 RATE CLASS CLOSED.** s6829 front-end dR~1 rows were mostly analyzer artifacts (no --sites: floats
+   read as ints; zero deltas dropped): 80044938 already FIX (net +30/game-s in a30/fix), npcWakeUpdate 80077180/88 dR 0.50,
+   guMtxCatF 8002E5A4 = 1.5e-5 rounding, 800B2804 heading += +0x14C (the same addend as +0xD0, which reads 0.51), counters
+   0x8011A894 / 0x8013889C = frame-ID stamps (s6256/s6257), 80006FE0/8009C0EC/8009CB00 equal net rate. One real quantum:
+   updateSplineCraftTransform (0x800B0A88, the lvl14 player-death sequence, game t 81-121 s) speed +0x140 +-= 2.0/tick
+   (clamp +-180; position += speed*dt) and scale +0xE8 *= 1.01/tick -> FIXED k=dt*30 / pow in fixup_fps60_float_quanta.py
+   (same switch). Pre-fix: a30 60 u/s^2 (4 runs) vs FPS60 120 (4 runs). Same build lvl14 420 s (tools/g1e_spline_ramp.py):
+   fix 60.0 / 0.299 = a30, FQUANTA=0 120.0 / 0.597; control updateNpcEventTimer 0.50. 240 s runs never reach the death.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

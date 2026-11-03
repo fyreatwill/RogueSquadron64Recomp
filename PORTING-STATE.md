@@ -180166,3 +180166,38 @@ g3_float_quanta_rates.py ranks front-end sites: dR~1 with exR~2 at 0x80044938 (+
 VERDICT: selects H-dt-exists (refutes H-no-dt: static s3 = a2 dt use + runtime dt 1/30 vs 1/60); hangar tilt FIXED and verified
 rate-independent (rise/settle within one tick of a30). Hangar quanta class closed for this handler.
 ORIGIN: n/a (rate fix, not a mitigation; writer = the handler's per-call constant increments).
+
+## Session 6830 (2026-11-03) — G1e FPS60: s6829 front-end dR~1 rows classified (mostly analyzer artifacts); one real quantum, updateSplineCraftTransform speed ramp +-2/tick and scale *1.01/tick, FIXED and verified lvl14 (fix 60.0 = a30, off 120.0)
+Unit: NEXT.md "classify the front-end dR~1 rows of the s6829 capture". Offline first (no build):
+- The s6829 NEXT list came from g3_float_quanta_rates.py run WITHOUT --sites, so float sites were read as ints, and its
+  median skips zero deltas (a FIX step site that is 0 on alternate ticks still reads dR 1). Re-run with
+  --sites scratch/s6826/float_sites.tsv plus a per-field net-rate pass (/tmp script, numbers below):
+  0x80044938 cutsceneActorNpcHandler +0x108: already in FIX; net +29.9 / +30.0 / +29.9 per game s (a30 / fix / FQUANTA=0
+  arms) -> FIXED earlier, artifact. 0x80077180/88 npcWakeUpdate +0x4/+0x34: dR 0.50 as floats -> dt-scaled.
+  0x8002E5A4 guMtxCatF: matrix element, med |d| 1.5e-5 = rounding, not an accumulator. 0x800B2804
+  updatePlayerCraftPhysics heading +0xDC += +0x14C: +0x14C is also the +0xD0 addend (0x800B23A8), which reads dR 0.51;
+  +0xDC's 0.71 mixes 3 writers (also *dt at 0x800B2444, sub at 0x800B2724) -> benign. 0x80017A4C setupCameraMatrices
+  0x8011A894 and 0x800FAD80 runInMissionFrame 0x8013889C are frame counters (frame-ID stamps / per-frame budget gate,
+  s6256/s6257 reader scan) -> benign. 0x80006FE0, 0x8009C0EC, 0x8009CB00: same net rate per game s in all 3 arms.
+- One real quantum found in the float table: updateSplineCraftTransform (0x800B0A88, mission overlay) 0x800B0ED4 speed
+  +0x140 += 2.0 (rodata 0x800A565C, clamp 180) or -= 2.0 (0x800A5664, clamp -180) per tick, then position += speed*f20
+  (f20 = a1 dt); 0x800B0BA8 scale +0xE8 *= 1.01 (0x800A5640) per tick. Rodata read from the ROM (vram-0x80000400+0x1000;
+  2.0 matches the traced step). New tools/g1e_spline_ramp.py: across s6826-s6829 traces, a30 speed 60.0 /game s^2 and
+  scale log-growth 0.299 /game s in 4 runs; FPS60 (these sites unfixed) 120.0 / 0.597 in 4 runs -> 2x, two-source.
+  It runs at game t 81-121 s on lvl14 = the player-death window (s6813 deaths 52-138 s): the death/crash spline sequence.
+Change (one build): tools/fixup_fps60_float_quanta.py +3 sites (0x800B0BB0 pow(1.01, k), 0x800B0EF4 / 0x800B0F14 step*k),
+k = rs64_fq_k() (mission tick dt; not f20, which is reloaded with constants at 0x800B0D3C / 0x800B0E5C). 18 sites total,
+idempotent; applied to ../N64Recomp/RecompiledFuncs, Debug build clean.
+Runs (sequential, rc=0, 0 crash lines): scratch/s6830/arms.sh (s6829 front-end recipe, 62 s x3): spline ran only in the
+FQUANTA=0 arm (2 pairs, 120) -> no verdict for fix. scratch/s6830/lvl14.sh (240 s: fix x2, off): 0 executions in all 3
+(no death within 122 game s; instrument hooks present, other sites logged) -> no verdict. scratch/s6830/lvl14L.sh (420 s):
+fixL speed 60.000 (n=120), scale 0.299 (n=358) = a30; offL (ROGUESQ_FPS60_FQUANTA=0, same build) 120.000 (n=59) / 0.597
+(n=218) = positive control. Rate table vs s6828 a30 lvl14 (scratch/s6830/rates_fixL.txt): spline rows dR 0.50 / lrR 0.50,
+control updateNpcEventTimer 0.50; remaining float rows with dR>=0.8 and exR>=1.6 are noise around zero (tickCutsceneObject
+0x800AF584 and 0x800B2350/23A0, values 1e-19..1e-20 in this window) or s6828-classified 0x8004D7CC.
+Side: tools/g1e_int_step_audit.py (new): integer constant-step accumulators |K|>1 (load/addiu K/store, not covered by the
+s6821 +-1 audit): 41 sites / 25 functions (scratch/s6830/int_step_audit.txt) -> NEXT triages them.
+VERDICT: front-end list = H-benign for all named rows except updateSplineCraftTransform = H-quantum-visible (FIXED,
+verified: speed/scale per game s equal a30). The G1e float/tick rate class is closed; integer |K|>1 steps are the last
+unaudited rate idiom.
+ORIGIN: n/a (rate fix, not a mitigation; writer = updateSplineCraftTransform's per-tick constant increments).
