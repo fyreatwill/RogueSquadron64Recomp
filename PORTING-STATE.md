@@ -180939,3 +180939,34 @@ shifted) does not occur on lvl1 at 16:9: it is lvl17-specific, and is the next u
 Soaks folded: s6852_zgate_lvl5 / lvl9 (21:9): alive, 0 stalls, ring textures (T79C0C0/T79C8C0, T7A37B0/T7A3FB0) fully
 shifted, all world textures kept, out WRAP 0; lvl9 control ZERO-W 598 fired, lvl5 control absent as in s6851.
 Two lines of evidence for 16:9: runtime counters + offline bin selection, plus one frame (single frame, single level).
+
+## Session 6854 (2026-11-03) — G1d lvl17 post-world z-off "object" = the next frame's sky under a stale Z-gate latch (frames without a Z clear); ROGUESQ_G1D_REGION_CFLIP (default on) resets on colour-buffer flip, lvl17 non-disc shifted 12115 -> 8
+Unit (NEXT.md s6853, slug g1d-region-shift-scope): name the s6852 residual (z_cmp-off tris on 79F7C0..7A5120 shifted by
+the region Z gate at lvl17 21:9). Hypotheses H-hud (HUD overlay, shift correct) vs H-fx (world effect, shift wrong).
+Run 1: lvl17 21:9 SHIFT=0 KEEPBIN (scratch/s6854/abd.sh): alive, 0 stalls, control ZERO-W 300 fired. Runtime counters in
+that run again shifted non-disc textures (T7A81E0 187, T7ABAC0 262, T7AC2E0 54 shifted / 0 kept in one window).
+New tool tools/g1d_zoffobj.py replays the rs64_region_scan Z gate on a bin (state in bin order, box + pad, optional
+--disc radar-VI filter, --only, --rule cflip). Positive control: on the s6853 lvl1 16:9 bin it reproduces the s6853
+runtime counters exactly (disc 43DBF0 36248 / 43E3F0 6493 selected, nothing else in disc VIs); on lvl17 its counts match
+the runtime ones exactly (187, 262) -> two lines agree.
+Finding: the shifted textures are the lvl17 SKY (7AC2E0 = s6852's sky texture; 7A81E0/7ABAC0/79F7C0.. are the same
+sky-pass family, 86x85..109x106 tris, drawn at x -8..1046 everywhere). 29421 of 262423 7AC2E0 tris are drawn while the
+latch says "world". Frame-structure dump (VI 6141) + per-VI signature census: many lvl17 frames have NO Z clear (start
+SETZIMG, SETCIMG colour, sky...), so the s6852 latch carried over from the previous frame and the next frame's sky in the
+box was treated as post-world HUD. SETZIMG cannot be the reset (it recurs after the world pass, before the HUD). Selects
+neither H-hud nor H-fx as posed: H-latch (our gate's frame-start detection misses frames without a Z clear).
+Fix (src/rsp/dpc_bridge.cpp rs64_region_scan): a SETCIMG naming a different colour image than the last one (buffer flip)
+also resets the latch; ROGUESQ_G1D_REGION_CFLIP (default on, =0 = s6852 behaviour). Offline replay first: lvl17 disc
+10032 unchanged, sky family 503 -> 0, big z-off sprites 789C80/78CC90/789480 -> 0; lvl1 16:9 disc unchanged.
+Same-build runtime A/B, lvl17 21:9 shift 256 (sequential, scratch/s6854/both.sh), both alive, 0 stalls, 0 crash lines,
+out WRAP 0, controls fired (ZERO-W 585 / 295):
+  CFLIP=0: disc T7965C0 13496 shifted / 0 kept, non-disc 12115 shifted (T7A4900 1197, T7AC2E0 1162, T7A9220 1158 ...);
+  CFLIP=1: disc T7965C0  9880 shifted / 0 kept, non-disc 8 shifted (R78E080 only).
+(Disc totals differ because the runs are not phase-matched; kept = 0 in both.) Frame dumps at FBDV=1500 were not
+phase-matched (CFLIP=1 frames landed on menus), so no owner sheet; counters + offline replay are the evidence.
+ORIGIN: writer = rs64_region_scan (ours, s6852 Z gate); value illegitimate (sky moved 256 px with the radar); cause = our
+frame-start detector assumed every frame starts with a Z clear, which lvl17 frames often do not.
+Remaining: R78E080 (51x30 IA texrect, z_cmp off, 1 per VI, moves smoothly e.g. x 782 -> 650 over 16 VIs, drawn at
+x 408..771 out of the box in 1109 VIs) = a world-anchored target marker; 8-14 rects / 200 s get shifted while it crosses
+the box. Next unit decides whether box texrects need shifting at all.
+Rules out: the s6852 residual being HUD; a SETZIMG-based frame reset.

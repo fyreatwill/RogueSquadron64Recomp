@@ -4954,7 +4954,18 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
         if (op == 0x2F) s_zcmp = (w1 >> 4) & 1;
         else if (op == 0x3D) s_timg = w1 & 0xFFFFFFu;
         else if (op == 0x3E) s_zimg = w1 & 0xFFFFFFu;
-        else if (op == 0x3F && (w1 & 0xFFFFFFu) == s_zimg) s_world = false;  // Z clear = frame start
+        else if (op == 0x3F) {
+            // s6854: many lvl17 frames have no Z clear (SETZIMG, SETCIMG colour, sky...), so the latch carried over from the
+            // previous frame and that frame's sky (7AC2E0/7A81E0/7ABAC0, z_cmp off) in the box was shifted: the s6852 residual.
+            // A SETCIMG naming a different colour image than the last one (buffer flip) also starts a frame.
+            // Offline replay (tools/g1d_zoffobj.py --rule cflip): lvl17 disc 10032 unchanged, sky 503 -> 0; lvl1 16:9 disc
+            // unchanged. ROGUESQ_G1D_REGION_CFLIP=0 = s6852 Z-clear-only reset.
+            static const bool cflip = [] { const char *e = std::getenv("ROGUESQ_G1D_REGION_CFLIP"); return !(e && *e == '0'); }();
+            static uint32_t s_clast = 0xFFFFFFFFu;
+            const uint32_t ci = w1 & 0xFFFFFFu;
+            if (ci == s_zimg) s_world = false;  // Z clear = frame start
+            else { if (cflip && ci != s_clast) s_world = false; s_clast = ci; }
+        }
         if (s_zcmp && ((op >= 0x08 && op <= 0x0F) || op == 0x24 || op == 0x25)) s_world = true;
         if (op == 0x24 || op == 0x25) {
             if (a + 16 > hi) break;

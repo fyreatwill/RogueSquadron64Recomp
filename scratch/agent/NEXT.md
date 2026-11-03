@@ -1,17 +1,18 @@
-# NEXT: name the lvl17 post-world z_cmp-off object the region gate still shifts (21:9)
+# NEXT: close the region-box texrect question (R78E080 moving marker), then G1d awaits owner; then ladder G3
 HYPOTHESIS-ID: g1d-region-shift-scope
 
-State (s6853): ROGUESQ_G1D_REGION_ZGATE verified at 21:9 (lvl17/5/9) and 16:9 (lvl1): only the radar disc is moved.
-One residual (s6852, lvl17 only): a z_cmp-off object drawn after the world pass, textures 79F7C0..7A5120, ~171 tris/frame
-for ~600 swaps, still selected and shifted +256. lvl1 at 16:9 has no such object (all non-disc textures 0 shifted).
+State (s6854): ROGUESQ_G1D_REGION_ZGATE + CFLIP (both default on): lvl17 21:9 only the disc shifts plus R78E080
+(51x30 IA texrect, a world-anchored target marker moving through the box; 8-14 rects per 200 s shifted 256 px = a jump).
 
-Unit: one lvl17 21:9 run, scratch/s6852/abd.sh with KEEPBIN=1 SHIFT=0 FBDV=500 (frames for the swaps where those
-textures appear; find them with the [region-zgate] windows of s6852 ab_l17_z1_sh256/zgate.txt), then
-tools/g1d_regiontex.py --ring 792DA0 on the bin + crops of the box region.
+Unit: does ANY legitimate radar content reach the region gate as a texrect? Evidence so far: lvl1 16:9 none (s6853);
+lvl17 only R78E080 (s6854); lvl5 R793B80 7 and lvl9 R79B070/R79B270 1-13 (s6852 soaks, unexamined).
+- One lvl9 21:9 run, scratch/s6854/abd.sh 9 with KEEPBIN=1 SHIFT=0 (lvl9 control fires), then
+  python3 tools/g1d_zoffobj.py <bin> --disc 7A37B0 --rule cflip  (and --only 79B070,79B270 for the per-VI trace).
 Hypotheses:
-- H-hud: the object is HUD (targeting/lock overlay, radar blip layer) -> shifting it is correct; close.
-- H-fx: a world effect (explosion/flash/smoke billboard drawn z-off after the world) that crossed the box -> moving it
-  is wrong; key the gate on texture adjacency to the disc (same cmd run as T7965C0) instead.
-Discriminator: does the same texture draw OUTSIDE the box at scattered positions in the same VIs (regiontex out/outVIs,
-med_dist), and does the crop show it shifted away from its world anchor?
-Budget: 1 iteration. Then G1d is fully awaiting owner judgement; next ladder rung G3 (in-flight frame diffs vs retail).
+- H-blip: R79B270-class are radar blips (fixed relative to the disc, small, drawn adjacent to disc tris) -> keep texrect
+  shifting but exclude moving markers (e.g. require ul AND lr in the box).
+- H-none: every in-box texrect is world-anchored (moves with the world like R78E080) -> stop shifting texrects in the
+  region scan (env knob, default on), re-run lvl17 A/B counters.
+Discriminator: per-VI centre of R79B270 relative to the disc centre (constant offset/small radius = blip) vs drifting
+across the box and drawn elsewhere (marker).
+Budget: 1 iteration. Then G1d awaits owner judgement; next ladder rung G3 (in-flight frame diffs vs retail).
