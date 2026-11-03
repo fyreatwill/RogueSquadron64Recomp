@@ -181065,3 +181065,7 @@ Verdict: 16:9 bundle H-ok after the fix; H-crash selected pre-fix and root-cause
 widescreen). Two lines for the cause: the 5-arm table (only OSMEM>8 & dd>1 crash) and the logged spill addresses inside the
 12 MB heap; the fix removes the crash in 2/2 levels that crashed 8/8 before. Not yet re-run: the 21:9 bundle on the new
 layout (s6857 passed on the aliased one) -> NEXT.md.
+Discrimination: selects H-spill-alias (spill arena inside the game heap when OSMEM>8 and dd>1); refutes H-fps60 (arm E
+crashes without FPS60), H-widescreen alone (arm D, 16:9+OSMEM12 at dd1, clean) and H-region-gate (the crash is in asset
+load, before any region shift). Engineering change: the dd policy fix in src/main/main.cpp, not instrumentation.
+Next discriminator: the 21:9 bundle on the fixed layout separates H-ok from H-ramtop / H-latent (NEXT.md).
