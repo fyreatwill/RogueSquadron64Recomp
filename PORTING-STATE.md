@@ -180842,5 +180842,9 @@ old binary, built the fix, ran the A/B and wrote the ledger.)
 ORIGIN: the wrapped lr.x is written by the F5 ucode (TexrectGen overlay 0x2C packs lr unclamped,
 docs/F5-OVL2C-TEXRECTGEN.md) and by game-DL texrects, from legitimate sprite positions past a widened (G1d) image
 edge. Only the 12-bit field overflows. The values are valid, so the fix clamps the field and does not suppress anything.
+Discrimination (NEXT.md H-clean vs H-site): this selects H-site and refutes H-clean. Mission-only wrapped rects exist
+at 21:9 (TexrectGen sprites; the static s6849 census missed them because the wrap is in the ucode's lr pack, not in a game
+width idiom). Root cause named and fixed (SPRITE_WRAP). Next discriminator for the residual: the ROGUESQ_G1D_SPRITE_DIAG=2
+submit-path ring in NEXT.md (H-shadow vs H-split vs H-late).
 Rules out: crashes/stalls from 21:9 in missions (18 levels, 200 s each, single run each). Does not yet rule out the
 residual HUD-texrect drop (a 16x30 px element missing for ~3 frames at the right edge).
