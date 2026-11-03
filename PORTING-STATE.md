@@ -179596,3 +179596,35 @@ error) and H-anim (same frame sequence in tick order). Not covered: an NPC vehic
 may draw a different effect), lvl2 impacts (s6748 no positive).
 ORIGIN: no mitigation; measurement tools only (winctl burst, fireball_pair.sh, g3_fireball_score.py).
 Next: g3-npc-explosion - NPC destroyed-vehicle explosion vs retail using the dense burst capture.
+
+## Session 6812 (2026-11-02) — G3: lvl14 in-mission cutscene vehicle destruction matches retail angrylion tick for tick (H-match); new tick-keyed scorer g3_tick_pair_score.py
+
+HYPOTHESIS-ID: g3-npc-explosion (closed: H-match).
+
+Soak fold: none new since s6809_preempt2_lvl1_fps60 (folded s6810).
+What ran (one pair, scratch/s6812): tools/g3_mission/fireball_pair.sh (now takes EEP=) with EEP=scratch/s6767/lvl14.eep
+RSECS=276 FARM=255 NDUMP=192 DSTEP=0.08 (retail VI 15272-16122 = ticks 2585-2848, ~1 dump/tick) and port PSECS=184
+BURST=166,182 (323 burst grabs, ~25 fps in the cutscene). 192 retail dumps, 353 port caps, 0 crash/abort lines.
+New tools/g3_tick_pair_score.py: pairs by SIM TICK, not by brightest frame (g3_fireball_score assumes one flash per window):
+retail vi0 -> tick and port VI -> tick via the s6767 snap.txt map (dt pinned, sim identical to t2874); port wall -> VI by a
+t0 fitted as the median of free-search best matches (d<6). Per pair d to retail dumps within +-1 tick, control = median d
+to all retail dumps, hot-pixel population per frame, retail|port sheet.
+Results:
+- t0 = -5.157 s from 222 fits (p25-p75 -5.18..-4.72). 141 pairs over ticks 2601-2849: median d 1.21 vs median ctl 3.98;
+  135/141 pairs within 1.0 of the best match over all 192 retail dumps.
+- Destruction event t2737-2750 in both arms (scratch/s6812/explosion_sheet.png): a craft with an engine trail flies in,
+  white 4-point star flash -> translucent orange dome with the fire core -> darkening dome -> embers with sparks. Same
+  effect style as the s6811 lvl9 fireball. Hot-pixel counts/colour per tick retail|port: t2737 279 (209,166,96)|249
+  (211,168,96); t2739 8973 (202,173,118)|6169 (202,176,122); t2742 787|763; t2744 528 (230,156,44)|485 (231,156,43);
+  t2748 222 (228,143,19)|185 (228,142,20); t2749 96|77; t2751 0|0.
+- Outliers: t2740 d 24.95 (ctl 32.4) and t2743 d 17.78 (ctl 6.65), t2735 8.67: one retail dump covers two ticks (vi 15832
+  serves t2739 and t2740), so the port's post-flash frame is paired with retail's flash frame. The sheet shows the same
+  element at the next expansion phase, as the s6811 flash transients did.
+Positive controls (same run): the hot class fires 8973 px on the retail flash and 0 on the pre-event cutscene frames in
+both arms; a cross-tick pair (control median) is 3.98 vs 1.21 paired, and 4.5-50 on the flash frames.
+Two lines: (1) tick-keyed pixel pair d vs control; (2) hot-pixel population/colour series per tick. VERDICT: selects H-match
+for the lvl14 cutscene vehicle destruction; refutes H-blend (dome/star colours equal within ~3/255) and H-anim (same
+frame sequence on the same ticks). Single-source: that this is the explosionEffectNpcHandler path (identified visually as a
+non-player craft in the HUD-off cutscene, no exec trace on that handler).
+ORIGIN: no mitigation; measurement tool only (g3_tick_pair_score.py) + EEP param in fireball_pair.sh.
+Next: g3-explosion-fps60 - the same lvl14 pair with the port at ROGUESQ_FPS60=1 (owner's play setting).

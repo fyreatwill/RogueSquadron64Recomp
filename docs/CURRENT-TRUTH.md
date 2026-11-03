@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6811 (2026-11-02).
+Compact operational handoff, as of Session 6812 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -356,7 +356,10 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    s6811 G3 LARGE FIREBALL = H-match: lvl9 unsteered crash (same tick both arms) -> star flash, translucent dome, burst,
    embers identical in tick order (pairs d 2.96 vs ctl 8.0; dome frame 2.96 vs 23.3; hot-pixel colour equal). Retail wall
    duration 2x port = 4 vs 2 VI/tick. Dense port capture now exists: g3_port_capture.sh BURST=t0,t1 (winctl burst, ~16 fps);
-   recipe tools/g3_mission/fireball_pair.sh, scorer tools/g3_fireball_score.py. NEXT: NPC vehicle destruction vs retail.
+   recipe tools/g3_mission/fireball_pair.sh, scorer tools/g3_fireball_score.py.
+   s6812 lvl14 CUTSCENE VEHICLE DESTRUCTION = H-match (t2737-2750, EEP=scratch/s6767/lvl14.eep): tick-keyed pairs (new
+   tools/g3_tick_pair_score.py, pairs by sim tick via snap.txt) median d 1.21 vs ctl 3.98 over 141 pairs; hot-pixel
+   count/colour per tick equal (flash 8973|6169 px, same RGB). NEXT: same pair with the port at ROGUESQ_FPS60=1.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

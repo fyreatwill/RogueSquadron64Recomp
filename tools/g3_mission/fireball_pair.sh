@@ -5,7 +5,7 @@
 # Retail: angrylion pixels, NDUMP x 512-wide fb dumps every DSTEP s from FARM s. Port: window captures CAP0..SECS.
 # Score: tools/g3_oracle_match.py (best-pair d vs median control) + tools/g3_fireball_score.py (flash/fireball population).
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-S=${1:?usage: fireball_pair.sh OUTDIR}; mkdir -p $S; EEP=scratch/s6761/lvl9.eep
+S=${1:?usage: fireball_pair.sh OUTDIR}; mkdir -p $S; EEP=${EEP:-scratch/s6761/lvl9.eep}
 pgrep -x rs64_oracle >/dev/null && { echo "rs64_oracle already running" >&2; exit 4; }
 M=800AF374:29:10:10,800AF374:0:8011A880:32,800FA730:29:10:10,800FA730:0:8011A880:32,800FA730:0:8010FF30:2,800C6674:29:10:10,800C6674:0:8011A880:32,8006C010:4:0:16,8006C010:29:18:3,8006C010:0:8011A830:8,800FA730:0:8010C9E0:18,800FA730:0:8010C0E0:1
 PIN=800FA730:29:30:3d088889
