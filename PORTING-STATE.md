@@ -180879,3 +180879,39 @@ Open (next): is the shifted element radar HUD (shift right, clip right) or a wor
 (the s6695 caveat; then it should not be shifted at all)? It is a 16x30 px rect at ul.x ~760, ul.y ~85, moving a few px
 per frame, present for ~3-6 frames at a time.
 Rules out: walker desync and shadow-restore bytes as the cause of the residual.
+
+## Session 6852 (2026-11-03) — G1d radar-region shift also moved world geometry (H-world); ROGUESQ_G1D_REGION_ZGATE + TRI_PAD (default on) shift only the HUD disc, fixing the left-behind radar wedge at 21:9
+Work unit: NEXT.md g1d-region-shift-scope (H-radar vs H-world for the s6851 rect in the s6159 box).
+Soaks folded: s6851_shiftsat_lvl9 clean (out WRAP 0, control ZERO-W 600 fired); s6851_shiftsat_lvl5 rc=1 only because its
+forced-overlay control did not fire (as in s6850): alive, 0 stalls, out WRAP 0 -> uncontrolled, not a regression.
+Instrument: new tools/g1d_regiontex.py over a port RDP bin recorded with ROGUESQ_SHIFT_REGION=0 (game positions), lvl17
+21:9 200 s hold (scratch/s6852/abd.sh, alive, 0 stalls). Mirrors rs64_region_scan's selection; per texture image counts
+in-box vs out-of-box uses, command distance to the disc/ring, othermode z_compare; --ring 792DA0 gates to VIs drawing the
+anchored radar ring (1268 flight VIs).
+Result: the radar disc = 8876 tris on texture 7965C0 (z_cmp off) 39..85 commands before the ring texrects; everything
+else the box took was world: ~49k tris on world textures (778B30, 77A370 ... z_cmp on, >=221 cmds before the ring),
+7AC2E0 sky tris (z_cmp off, ~4600 cmds before) and 26 particle texrects 737640 (16x20 etc., z_cmp on, drawn before the
+disc, same texture at x 110..998 over 24 VIs) -- the s6851 16x20 rect at ul.x 760 is this class. -> selects H-world.
+Frame structure (bin): Z clear (SETCIMG = z image) -> sky z-off -> world z-on -> HUD z-off (disc, ring). Rule: shift only
+z_cmp-off prims after the frame's first z_cmp-on prim. Offline replay: disc 9680 shifted / 464 kept (the 464 = the 58
+VIs whose ring is also drawn un-anchored at x 634, so ring and disc stay aligned), 737640 + world 0 shifted.
+Failed first cut (documented): latch keyed on a mid-frame Z clear; only flight frame 1 has one, so runtime ZGATE=1 kept
+the disc too (7965C0 0/1694). Fixed to the frame-start latch above.
+Fix (src/rsp/dpc_bridge.cpp rs64_region_scan): ROGUESQ_G1D_REGION_ZGATE (default on; =0 old box-only). With the gate on, the
+tri test reaches ROGUESQ_G1D_REGION_TRI_PAD (default 32 px at a 141 px box, scaled) further left: one disc tri per flight
+frame (1210/1268 VIs) is centred 20-30 px left of the box edge and was left 256 px from the radar = the grey wedge at
+x~687 at 21:9 (in every flight frame of both ZGATE arms without the pad). Only ~5 other HUD-segment tris fall in the strip.
+SPRITE_DIAG=2 now also prints [region-zgate] per-texture shifted/kept every 600 swaps.
+Same-build runs lvl17 21:9, shift 256, all alive, 0 stalls, out WRAP 0, controls fired (sequential, so the frame sheet is
+not phase-matched; the counters are the evidence):
+  ZGATE=0:          disc 10017 shifted, world tris 51390 shifted / 0 kept;
+  ZGATE=1 no pad:   disc 8659 shifted / 0 kept, world 3302 shifted / 45909 kept; wedge visible;
+  ZGATE=1 pad 32:   disc 11840 shifted / 0 kept, world 12 shifted / 61724 kept; wedge gone 4/4 flight frames.
+Two lines: offline bin replay and runtime counters agree on the selection; the framebuffer shows the wedge gone only in
+the pad arm. Owner sheet docs/owner_sheet_s6852_regionzgate.png.
+ORIGIN: writer = rs64_region_scan (ours, s6158/s6159), value illegitimate for world prims (a fixed screen box cannot tell
+HUD from world); the guard now uses the RDP's own z_compare state to tell them apart.
+Residual: the no-pad arm's 3302 shifted world tris came from one z_cmp-off object drawn after the world pass (171
+tris/frame for ~600 swaps on textures 79F7C0..7A5120), always shifted under the old code too. 16:9 not re-checked.
+Queued s6852_zgate_lvl5/lvl9 (21:9 regression holds).
+Rules out: the s6851 residual rect being radar HUD; a mid-frame Z clear as the HUD boundary.

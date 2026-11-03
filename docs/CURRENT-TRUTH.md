@@ -270,7 +270,14 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    rewrites visible in RT64's input bin). **Residual CLOSED s6851:** those rects were valid when walked (ul.x ~760); the
    s6159 radar-region shift (rs64_region_scan, runs after the clip) added 256 px and masked the 12-bit x, wrapping lr.x.
    Shift now saturates (ROGUESQ_G1D_SHIFT_SAT, default on; =0 old); same-build A/B lvl17 WRAP 10 -> 0, controls fired.
-   **Open:** is that rect radar HUD (shift correct) or a world sprite caught by the fixed region box (shift wrong)?
+   **s6852: the region box also shifted world geometry (H-world selected).** lvl17 21:9 SHIFT=0 bin (tools/g1d_regiontex.py):
+   in flight the box held 8876 disc tris (texture 7965C0, z_cmp off, 39..85 cmds before the ring) plus ~49k world tris
+   (z_cmp on) and 737640 particle sprites (the s6851 rect class, also drawn at x 110..998), all moved +256. Fix
+   ROGUESQ_G1D_REGION_ZGATE (default on, =0 old): shift only z_cmp-off prims after the frame's first z_cmp-on prim (Z clear
+   resets); TRI_PAD 32 also catches the one disc tri per frame centred 20-30 px left of the box, which was the grey wedge
+   left 256 px from the radar at 21:9 in every flight frame. lvl17 runtime: disc 11840/0 shifted, world 12 shifted vs
+   51390 (ZGATE=0); sheet docs/owner_sheet_s6852_regionzgate.png. Residual: one z_cmp-off object drawn after the world
+   pass (lvl17, 171 tris/frame for ~600 swaps) is still shifted, as it always was. 16:9 not yet re-checked.
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
@@ -286,5 +293,5 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts: [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); per-level images:
   [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
-- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261103-033219 (s6835_bootfreeze_hunt_d, consumed s6836: clean). None new since (s6851 checked); queued s6851_shiftsat_lvl5/lvl9.
+- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261103-095803 (s6851_shiftsat_lvl9, consumed s6852: WRAP 0, control fired; lvl5 rc=1 = control absent only, WRAP 0, alive). Queued s6852_zgate_lvl5/lvl9.
 - Recent chronology: PORTING-STATE sessions 6788-6846; search bounded windows only.

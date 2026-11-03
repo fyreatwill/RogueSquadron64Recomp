@@ -4927,9 +4927,35 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
     auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
     auto wr = [&](uint32_t a, uint32_t v) { memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &v, 4); };
     auto sx14 = [](uint32_t v) { return (double)(((int32_t)(v << 18)) >> 18) / 4.0; };
+    // s6852: the box is a fixed screen rectangle, so in flight it also caught world geometry: lvl17 21:9 bin (SHIFT 0,
+    // tools/g1d_regiontex.py --ring 792DA0, 1268 flight VIs) had 8876 disc tris (texture 7965C0, 39..85 commands before
+    // the ring) and ~49k world tris + 26 particle sprites (737640, also drawn at x 110..998) in the box, all moved +256.
+    // A flight frame is Z clear (SETCIMG = z image) -> sky (z_cmp off) -> world (z_cmp on) -> HUD (z_cmp off: disc, ring).
+    // Shift only z_cmp-off prims once the frame has drawn a z_cmp-on prim; the Z clear resets it. State persists across
+    // submit ranges (submission order). Offline replay of this rule on that bin: disc 9680 shifted / 464 kept (the 464 =
+    // the 58 VIs whose ring is also drawn un-anchored, so ring and disc stay aligned), 737640 and world tris 0 shifted.
+    // (A first cut keyed on a mid-frame Z clear: only frame 1 of flight has one, disc 0 shifted at runtime.)
+    // ROGUESQ_G1D_REGION_ZGATE=0 = old box-only selection.
+    static const bool zgate = [] { const char *e = std::getenv("ROGUESQ_G1D_REGION_ZGATE"); return !(e && *e == '0'); }();
+    static const bool zdiag = [] { const char *e = std::getenv("ROGUESQ_G1D_SPRITE_DIAG"); return e && *e && *e != '0'; }();
+    static uint32_t s_zimg = 0xFFFFFFFFu, s_timg = 0; static bool s_zcmp = false, s_world = false;
+    static std::map<std::pair<uint32_t, int>, std::array<uint32_t, 2>> s_zstat;  // (timg, tri=1/rect=0) -> {shifted, kept}
+    static int s_zstat_sw = -1;
+    auto zok = [&](bool tri) { const bool ok = !zgate || (s_world && !s_zcmp);
+        if (zdiag && radar && shiftOn) s_zstat[{s_timg, tri ? 1 : 0}][ok ? 0 : 1]++; return ok; };
+    if (zdiag && shiftOn && sw - s_zstat_sw >= 600 && !s_zstat.empty()) {
+        s_zstat_sw = sw; std::string o;
+        for (auto &kv : s_zstat) { char b[64]; snprintf(b, sizeof b, " %s%06X=%u/%u", kv.first.second ? "T" : "R", kv.first.first, kv.second[0], kv.second[1]); o += b; }
+        fprintf(stderr, "[region-zgate] swap=%d zgate=%d shifted/kept:%s\n", sw, (int)zgate, o.c_str()); fflush(stderr); s_zstat.clear();
+    }
     for (uint32_t a = lo & ~3u; a + 8 <= hi;) {
         const uint32_t w0 = rd(a), w1 = rd(a + 4);
         const uint32_t op = (w0 >> 24) & 0x3F;
+        if (op == 0x2F) s_zcmp = (w1 >> 4) & 1;
+        else if (op == 0x3D) s_timg = w1 & 0xFFFFFFu;
+        else if (op == 0x3E) s_zimg = w1 & 0xFFFFFFu;
+        else if (op == 0x3F && (w1 & 0xFFFFFFu) == s_zimg) s_world = false;  // Z clear = frame start
+        if (s_zcmp && ((op >= 0x08 && op <= 0x0F) || op == 0x24 || op == 0x25)) s_world = true;
         if (op == 0x24 || op == 0x25) {
             if (a + 16 > hi) break;
             const double xh = ((w1 >> 12) & 0xFFF) / 4.0, yh = (w1 & 0xFFF) / 4.0;
@@ -4944,7 +4970,7 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
                 static const bool sat = [] { const char *e = std::getenv("ROGUESQ_G1D_SHIFT_SAT"); return !(e && *e == '0'); }();
                 auto sx = [&](uint32_t w) { const int32_t v = (int32_t)((w >> 12) & 0xFFF) + (int32_t)(dxs * 4);
                     const uint32_t n = sat ? (uint32_t)std::clamp(v, 0, 0xFFF) : ((uint32_t)v & 0xFFF); return (w & ~0xFFF000u) | (n << 12); };
-                if (shiftOn && radar) { wr(a, sx(w0)); wr(a + 4, sx(w1)); }
+                if (shiftOn && radar && zok(false)) { wr(a, sx(w0)); wr(a + 4, sx(w1)); }
             }
             a += 16; continue;
         }
@@ -4957,10 +4983,16 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
         const double xs[5] = {xh, xm + dm * (ym - yh), xl, xl + dl * (yl - ym), xh + dh * (yl - yh)};
         double mn = 1e9, mx = -1e9; for (double x : xs) { mn = x < mn ? x : mn; mx = x > mx ? x : mx; }
         const double cx = (mn + mx) / 2, cy = (yh + yl) / 2;
-        if (cx >= R[0] && cx <= R[1] && cy >= R[2] && cy <= R[3] && (mx - mn) <= 130.0 && (yl - yh) <= 130.0) {  // size cap: skip sky/terrain tris
+        // s6852: one disc tri per flight frame (lvl17: 1210/1268 VIs) has its bbox centre 20..30 px left of the box edge and was
+        // left behind 256 px from the radar (the grey wedge at x~687 at 21:9, both s6852 arms). With the Z gate keeping world
+        // geometry out, the tri test reaches ROGUESQ_G1D_REGION_TRI_PAD px further left (default 32 at a 141 px box, scaled);
+        // in the same bin only ~5 other HUD-segment tris fall in the added strip.
+        static const double tpad = [] { const char *e = std::getenv("ROGUESQ_G1D_REGION_TRI_PAD"); return e && *e ? atof(e) : 32.0; }() * (R[1] - R[0]) / 141.0;
+        const double tx0 = zgate ? R[0] - tpad : R[0];
+        if (cx >= tx0 && cx <= R[1] && cy >= R[2] && cy <= R[3] && (mx - mn) <= 130.0 && (yl - yh) <= 130.0) {  // size cap: skip sky/terrain tris
             s_hits++;
             if (s_logged++ < s_cap) { fprintf(stderr, "[region] swap=%d TRI off=%06X op=%02X x=%.1f..%.1f y=%.1f..%.1f range=%06X..%06X\n", sw, a, op, mn, mx, yh, yl, lo, hi); fflush(stderr); }
-            if (shiftOn && radar) { const int32_t d = (int32_t)(dxs * 65536.0); wr(a + 8, rd(a + 8) + d); wr(a + 16, rd(a + 16) + d); wr(a + 24, rd(a + 24) + d); }
+            if (shiftOn && radar && zok(true)) { const int32_t d = (int32_t)(dxs * 65536.0); wr(a + 8, rd(a + 8) + d); wr(a + 16, rd(a + 16) + d); wr(a + 24, rd(a + 24) + d); }
         }
         a += len;
     }
