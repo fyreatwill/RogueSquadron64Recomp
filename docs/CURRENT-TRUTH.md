@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6820 (2026-11-02).
+Compact operational handoff, as of Session 6821 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -414,7 +414,14 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    test (0x80047D40/0x80047DAC) fails for 21 TICKS (per-NPC counter, slti 0x15); the grid scan re-creates it next frame, so
    edge-of-range NPCs churn every 0.67 s at 30 Hz but 0.33 s at FPS60. tools/fixup_fps60_despawn.py: threshold
    round(21/(30*dt)) in [21,42] under FPS60, dt captured at 0x800FA90C (ROGUESQ_FPS60_DESPAWN=0 restores). Same build lvl14
-   s1: TIE re-create 40 VI (30 Hz) / 41 (fix) / 20 (off), creates/s 2.81 / 3.51 / 7.05. Class closed (24/24). Seeds 2/3 queued.
+   s1: TIE re-create 40 VI (30 Hz) / 41 (fix) / 20 (off), creates/s 2.81 / 3.51 / 7.05. Class closed (24/24). s6821: seeds 2/3 CONFIRM (41 vs 20 VI).
+   s6821 FIXED (rest of the tick-timer class): tools/g3_tick_counter_audit.py (154 load/+-1/store/test sites; finds all 24
+   despawn compares = control) -> 15 hand-read mission timers stepped by game time under FPS60 (tools/fixup_fps60_ticks.py,
+   rs64_tick_step = 1/30 s boundaries crossed this tick; ROGUESQ_FPS60_TICKS=0 restores) + ROGUESQ_TICK_TRACE=<file> on all
+   109 sites (tools/g3_tick_timer_durations.py). lvl14 s1 one build: advanceNpcOnCurvedPath countdown 0.233 s a30 / 0.100 off
+   / 0.200 fix; multiEventTemplateNpcHandler lifetime 0.200 / 0.100 / 0.200. The other 13 whitelisted sites (turret +0x88,
+   TIE attachment effect, textured effect, emitter, train car x2, throttle, type-4 effect, TIE orientation, cinematic stage,
+   mission transition) did not run on lvl14: static fix only, runtime-unverified. Next: exercise them on other levels.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

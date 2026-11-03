@@ -179901,3 +179901,40 @@ VERDICT: selects H-counter (per-NPC integer tick counter vs 21); refutes H-globa
 H-dt-timer for the despawn path (the voice deadline itself IS dt-based). Idiom class "out-of-range despawn grace" CLOSED
 (24/24 guarded).
 ORIGIN: no mitigation; the writer is each handler's own counter ++ (retail code), frame-locked by design at 30 Hz.
+
+## Session 6821 (2026-11-02) — G3 FPS60 tick-timer class audit: 109 non-stack counter sites traced, 2 more frame-locked mission timers found live on lvl14 (curved-path countdown, multi-event lifetime: 0.233/0.200 s at 30 Hz, halved at FPS60) and fixed by a game-time tick step (fix 0.200/0.200 s); 13 more whitelisted timers stepped, not exercised on lvl14
+
+Folded SOAK-RESULTS s6820_despawn_s2/s3 (rc=0 both): TIE re-create dVI fix 41 (x168, x150) vs off 20 (x315, x316), creates/s
+3.51/3.51 vs 7.07/7.05 -> s6820 despawn fix CONFIRMED on all 3 seeds (two lines: per-object interval + rate).
+
+Audit (new tools/g3_tick_counter_audit.py, linear per function: load b/h/w -> addiu +-1 -> store same field -> test within
+8 instrs): 154 sites / 117 functions, 21 stack (loop indices), 24 = the s6820 despawn compares (all 24 found = positive control
+of the pattern), 109 others. Hand-read the in-mission ones; whitelisted 15 as timers (countdowns ending an effect/death/state,
+count-ups tested < K): npcTurretUpdate +0x88, npcTieVariantTickAttachmentEffect +0xB8, npcTexturedEffectUpdateWithSlotChain
++0xA0, attachedAudioVisualEmitterNpcHandler +0xB4, multiEventTemplateNpcHandler +0x6, advanceNpcOnCurvedPath +0x1C,
+npcTrainCarUpdate +0xB3, tickTrainCarStateMachine +0xFC, accumulateShipThrottleCharge 0x800CC860 (<7), executeActorType4Effect
++0x92 (<20), cutsceneActorNpcHandler +0x108 (<5), computeTieInterceptorOrientation/playXwingEngineSound +0x15C (<3),
+cinematicStageAdvancer +0x938 (<7), tickMissionTransitionAndTeardown countdown.
+
+Change: tools/fixup_fps60_ticks.py (vendored chain after fixup_fps60_despawn). (1) ROGUESQ_TICK_TRACE=<file>: every one of the
+109 sites logs {pc, field addr, loaded value, tick#} plus one {0, game time, dt, tick#} record per mission tick (hook at
+0x800FA90C); off = one branch. (2) the 15 whitelisted steps become rs64_tick_step(): under ROGUESQ_FPS60 the number of 1/30 s
+game-time boundaries crossed this tick (dt 1/60 -> 0,1,0,1), so they count 30 Hz ticks of game time; retail (no FPS60) and
+ROGUESQ_FPS60_TICKS=0 keep step 1. Semantics: a skipped step leaves the value unchanged, so a <=0/>0 countdown keeps firing
+after expiry exactly as retail does with the value going negative. Analyzer tools/g3_tick_timer_durations.py (per site
+executions per game s, per-field monotone runs, run duration in game s).
+
+Run (scratch/s6821/arms.sh, lvl14 seed 1, one build, arms a30 / b60off (ROGUESQ_FPS60_TICKS=0) / b60fix, all rc=0 crash=0):
+  site                                   a30 med run   b60off   b60fix   (runs a30/off/fix)
+  advanceNpcOnCurvedPath +0x1C (v0 7)      0.233 s     0.100    0.200    497 / 747 / 511
+  multiEventTemplateNpcHandler +0x6 (v0 6) 0.200 s     0.100    0.200     94 / 150 / 131
+  cutsceneActorNpcHandler +0x108           exec 30/gs  60/gs    60/gs    (one run from mission start; <5 gate only at start)
+Off arm reproduces the halving in the same build (positive control); fix restores 30 Hz durations. Not timers (classified
+from the same table): slotDispatcherIter, unregisterAndFreeNpcSlot / reinsertNpcIntoSortedFreeList (slot allocator),
+releaseMeshAsset (refcounts; run lengths follow despawn churn), emitFaceDLCommands / setupCameraMatrices (render
+per-frame), sendServiceMessage (message sequence), JFIF/inflate/dat/sky loaders, seqCmd / sound macro / voice (audio event
+counters, not mission-tick). The other whitelisted sites (turret, TIE attachment effect, textured effect, emitter, train
+car, throttle, type-4 effect, TIE orientation, cinematic stage, mission transition) did not run on lvl14 s1 in 215 s: fixed
+by construction, NOT runtime-verified (single-source: static read). s6820 despawn control in this build: TIE re-create dVI
+a30 40 / off 41 / fix 41 (unchanged). Selects H-more (per-tick timers beyond the despawn grace exist); class narrowed to
+the 13 unexercised whitelisted sites.
