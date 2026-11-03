@@ -1,21 +1,18 @@
-# NEXT: lvl14 FPS60 residual scrape damage - 20 hp per contact TICK, find the re-hit gate
-HYPOTHESIS-ID: g3-fps60-contact-damage
+# NEXT: FPS60 frame-locked tick-count timers in NPC AI (20-tick cadence) - idiom audit + fix
+HYPOTHESIS-ID: g3-fps60-tick-timers
 
-State (s6818): scrape deflection fix confirmed on 3 seeds (contacts 7 -> 4, 30 Hz 2). Residual: scrape hp 30 Hz 40 (2x20),
-FPS60+fix 80 (4x20 at 15.417/15.6/15.617/15.65 s), FPS60 off 140 (7x20). Contacts at 15.6/15.617/15.65 are 1-2 ticks apart.
+State (s6819): lvl14 scrape thread closed (step quantum s6817 + damage quantum s6819; scrape hp 40 = 30 Hz).
+First: fold SOAK-RESULTS s6819_scrapedmg_b60fix_s2/s3 (expect scrape hp 40 via tools/g3_scrape_damage.py 60
+scratch/s6819/b60fix_s{2,3}.rand.txt; deaths via tools/g3_death_time.py). If either != 40, reopen.
+Side datum s6815: npcWingmanBehaviorByMode 0x800D860C and initActorMotionParams 0x800F28F4 fire every 20 TICKS
+(0.667 s at 30 Hz, 0.333 s at FPS60, seed-independent) - AI decision cadence doubles at FPS60.
 Hypotheses:
-  H-tick-cooldown: the 20-hp collision damage writer has a re-hit/invulnerability gate counted in TICKS (frame-locked,
-    half as long in real time at FPS60) -> fix: scale the counter (or gate on dt-accumulated time) under ROGUESQ_FPS60.
-  H-no-gate: damage applies on every contact tick with no gate; FPS60 samples the surface twice as often, so a
-    near-tangent pass produces more contact ticks -> fix candidate: scale the per-tick damage by dt*30 under FPS60
-    (damage per real contact second matches 30 Hz).
-  H-sampling-only: the extra contacts are geometric (sub-tick surface sampling) and damage is already gated by game
-    time -> leave as inherent to 60 Hz, close.
-Step 1 (offline first): s6816 added an hp-writer trace row (see PORTING-STATE s6816, g3_bolt_attrib.py/g3_guided_attrib.py)
-  - grep the s6817 b60fix traces for the writer PC of the 20-hp drops; read that function in
-  ../N64Recomp/RecompiledFuncs for a counter compared before the hp sub (lb/lh/lw field, addiu -1 per tick, or a
-  timer float decremented by dt). Discriminator: integer tick counter -> H-tick-cooldown; dt-float timer or none ->
-  H-no-gate / H-sampling-only.
-Step 2: implement the fix as a fixup script (ROGUESQ_FPS60 only, env off-switch), run seed 1 three arms with
-  env ARMS="a30 b60fix" SEED=1 zsh scratch/s6817/arms.sh (+ new arm), score with tools/g3_scrape_damage.py and
-  tools/g3_death_time.py. Success = FPS60 scrape hp 40 like 30 Hz, retail unchanged.
+  H-counter: a per-NPC (or global) integer tick counter (addiu +-1, compare 20/0x14) gates the re-plan -> frame-locked.
+  H-global-frame: gate is (global frame counter % 20) on e.g. 0x8013889C (the tick%3 counter used by bolt hit tests).
+  H-dt-timer: a float timer decremented by dt (then the 20-tick observation is wrong) -> close.
+Step 1 (offline): read the callers of 0x800D860C / 0x800F28F4 in ../N64Recomp/RecompiledFuncs for the gate; then
+  grep-enumerate the idiom class (lbu/lh counter, addiu -1/+1, slti/beq vs constant, store back, in per-tick NPC
+  update functions) - classify each site frame-locked vs dt-based, like tools/g3_dt_quantum_audit.py.
+Step 2: fix the class under ROGUESQ_FPS60 only (count at 30 Hz: advance the counter every other 60 Hz tick or
+  scale the threshold), env off-switch, one build, arms a30 / b60fix / b60off on lvl14 seed 1 (scratch/s6819/arms.sh
+  pattern), discriminator: cadence of 0x800D860C calls per game s equal to 30 Hz in the fix arm.

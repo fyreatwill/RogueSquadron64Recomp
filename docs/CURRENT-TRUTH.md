@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6815 (2026-11-02).
+Compact operational handoff, as of Session 6819 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -403,7 +403,12 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    Rotate-helper class CLOSED. 0x800FEF10's callers are updatePlayerCraftPhysics AND updateSplineCraftTransform, so the
    fix also restores the 30 Hz quantum for NPC spline craft. RESIDUAL (tools/g3_scrape_damage.py): scrape hp 30 Hz 40
    (2x20) / fix 80 (4x20: 15.417, 15.6, 15.617, 15.65) / off 140 (7x20) - 20 hp per contact TICK, ticks 1-3 apart.
-   NEXT (scratch/agent/NEXT.md): find the contact-damage writer's re-hit gate (tick-counted cooldown = frame-locked).
+   s6819 FIXED (residual): the contact branch 0x800B2918..0x800B29F8 has NO re-hit gate (two flag tests only:
+   0x80130B4C&0x800000, player +0x184&0x78; consecutive FPS60 ticks 15.600/15.617 both charged) -> H-no-gate; the 20 hp
+   (rodata 0x800A5734) is a per-tick quantum. tools/fixup_fps60_scrape.py now scales it by dt*30 under FPS60
+   (ROGUESQ_FPS60_SCRAPE_DMG=0 restores). Seed 1 one build: scrape hp a30 40 / fix 40 (4x10) / nodmg 80 (= s6817 exactly,
+   death 90.62 both); fix death 93.8 (30 Hz 81.3), hit50/s 0.103 (0.107). Seeds 2/3 queued (s6819_scrapedmg_*).
+   Remaining FPS60 difference is path: the extra heading case at 15.6 s (60 Hz surface sampling), pos@40 s z 94.6 vs 77.2.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

@@ -179837,3 +179837,29 @@ Residual (NEW tools/g3_scrape_damage.py, hp lost 15.0-16.5 s): 30 Hz 40 (2x20 at
 contact tick; the three FPS60 contacts 1-2 ticks apart point at a missing/tick-counted re-hit gate. Next:
 HYPOTHESIS-ID g3-fps60-contact-damage (NEXT.md): find the 20-hp writer's gate; tick counter -> frame-locked.
 Rules out: other rotate-helper dt quanta; seed-1 path luck for the s6817 fix.
+
+## Session 6819 (2026-11-02) — G3 FPS60 lvl14 scrape residual: contact damage has NO re-hit gate (20 hp per contact tick, a per-tick quantum); scaled by dt*30 under FPS60: scrape hp 80 -> 40 (= 30 Hz), same-build control reproduces s6817 exactly
+
+Work unit (NEXT g3-fps60-contact-damage). Static (generated C, funcs_30.c updatePlayerCraftPhysics): after
+jal 0x800FEF10 returns 1 (0x800B2918), the branch clears byte 0x801096B9, then has only two gates: the mission
+flag word 0x80130B40+idx*4+0xC & 0x800000, and player record +0x184 & 0x78. No counter is read, decremented or stored.
+Shield +0xC8 absorbs only when it equals f20; otherwise hp (+0xC0) -= rodata 0x800A5734 (20.0) every contact tick.
+Second line: the s6817/s6818 traces charge 20 hp on contacts 1 tick apart (15.600/15.617 at FPS60), so no tick
+cooldown >= 2 ticks exists. Selects H-no-gate; refutes H-tick-cooldown.
+Fix: tools/fixup_fps60_scrape.py second patch (s6819): the 0x5734 subtrahend is multiplied by dt*30 (dt = arg a1
+spilled at sp+0x1DC) when ROGUESQ_FPS60 is set and dt < 1/30; ROGUESQ_FPS60_SCRAPE_DMG=0 (or ROGUESQ_FPS60_SCRAPE=0)
+restores. Retail untouched. Shield path left alone (one-shot, not per tick). Idempotent; built in place.
+Run (one build, scratch/s6819/arms.sh, lvl14 seed 1, dt pinned, 0 crashes):
+| arm      | scrape hp 15-16.5 s (excl. 50-hp missile) | contacts | death  | hit50/s t>16 |
+| a30      | 40 (2x20: 15.433, 15.667)                 | 2        | 81.27  | 0.107        |
+| b60fix   | 40 (4x10: 15.417, 15.6, 15.617, 15.65)    | 4        | 93.83  | 0.103        |
+| b60nodmg | 80 (4x20)                                 | 4        | 90.62  | 0.094        |
+Controls: a30 = s6817 a30_s1 (retail path untouched); b60nodmg = s6817 b60fix_s1 exactly (death 90.62, hits 13,
+dmg 489) -> the toggle is the only difference. Path identical in fix/nodmg (damage does not steer).
+Residual: FPS60 path differs from 30 Hz from the 15.6 s heading case (+20 deg) that 60 Hz surface sampling takes;
+pos@40 s (96.1,-14.0,94.6) vs (98.4,-14.2,77.2). That is geometric sampling, not a quantum.
+Seeds 2/3 queued: soak_queue/s6819_scrapedmg_b60fix_s{2,3}.sh (expect scrape hp 40).
+ORIGIN: not a mitigation; the writer is updatePlayerCraftPhysics 0x800B29DC (sub.s hp, rodata 20.0), the value is
+legitimate per tick at 30 Hz; FPS60 doubles ticks per contact second, so the per-tick quantum is rescaled.
+Next: frame-locked tick cadences in AI (s6815 side datum: npcWingmanBehaviorByMode 0x800D860C and initActorMotionParams
+0x800F28F4 fire every 20 TICKS = 0.333 s at FPS60) - idiom audit of tick-count timers.

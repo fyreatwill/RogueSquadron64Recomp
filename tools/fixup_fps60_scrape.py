@@ -39,3 +39,34 @@ for p in sorted(base.glob("funcs_*.c")):
 if done != 1:
     sys.exit(f"s6817 fps60 scrape: stepObjectOrientationTowardTarget found in {done} files (want 1)")
 print("[s6817] fps60 scrape contact step patched (10 case multiplies)")
+
+# s6819: contact DAMAGE. updatePlayerCraftPhysics (0x800B2918..0x800B29F8) takes rodata 0x800A5734 (20 hp) from +0xC0 on
+# every tick 0x800FEF10 returns 1. The only gates are two flag tests (0x80130B4C & 0x800000, player +0x184 & 0x78); no
+# tick counter, and the s6816/s6817 traces show hits on consecutive FPS60 ticks (15.600/15.617). So the damage is a
+# per-tick quantum: a sustained contact costs 2x per real second at FPS60. Under ROGUESQ_FPS60 the subtrahend is scaled by
+# dt*30 (dt = arg a1 spilled at sp+0x1DC); ROGUESQ_FPS60_SCRAPE_DMG=0 (or ROGUESQ_FPS60_SCRAPE=0) restores. Retail unchanged.
+TAG2 = "/* PATCH: s6819 fps60 scrape dmg */"
+HEAD2 = "RECOMP_FUNC void updatePlayerCraftPhysics(uint8_t* rdram, recomp_context* ctx) {\n"
+HELPER2 = ("extern char* getenv(const char*); static float rs64_scrape_dmg_scale(float dt) { static int on = -1; if (on < 0) { "
+           "const char* f = getenv(\"ROGUESQ_FPS60\"); const char* s = getenv(\"ROGUESQ_FPS60_SCRAPE\"); "
+           "const char* d = getenv(\"ROGUESQ_FPS60_SCRAPE_DMG\"); "
+           "on = f && *f && *f != '0' && !(s && *s == '0') && !(d && *d == '0'); } "
+           "return (on && dt > 0.0f && dt < (1.0f / 30.0f)) ? dt * 30.0f : 1.0f; } " + TAG2 + "\n")
+SITE2 = "    // 0x800B29D4: lwc1        $f0, 0x5734($at)\n    ctx->f0.u32l = MEM_W(ctx->r1, 0X5734);\n"
+NEW2 = SITE2 + ("    { union { uint32_t u; float f; } rs64_dt; rs64_dt.u = MEM_W(ctx->r29, 0X1DC); "
+                "ctx->f0.fl *= rs64_scrape_dmg_scale(rs64_dt.f); } " + TAG2 + "\n")
+done = 0
+for p in sorted(base.glob("funcs_*.c")):
+    s = p.read_text()
+    if HEAD2 not in s:
+        continue
+    if TAG2 not in s:
+        if s.count(SITE2) != 1:
+            sys.exit(f"s6819 fps60 scrape dmg: expected 1 site 0x800B29D4 in {p.name}, found {s.count(SITE2)}")
+        s = s.replace(SITE2, NEW2, 1)
+        s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + HELPER2, 1)
+        p.write_text(s)
+    done += 1
+if done != 1:
+    sys.exit(f"s6819 fps60 scrape dmg: updatePlayerCraftPhysics found in {done} files (want 1)")
+print("[s6819] fps60 scrape contact damage patched (dt*30 under FPS60)")
