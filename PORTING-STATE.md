@@ -180140,3 +180140,29 @@ in 5 arms, lvl2 dR 0.50); selects H-quantum for the two constant-1/30 callers (r
 static rodata) -> FIXED, but the fix itself is unexercised at runtime (0 hits in the fix arms; single-source static). Mission
 float-quanta class CLOSED (253 traced sites all fixed or classified). Open: hangar spin needs a hangar dt (NEXT).
 ORIGIN: n/a (rate fix, not a mitigation; writer = the two callers' constant 1/30 a1).
+
+## Session 6829 (2026-11-03) — G1e FPS60 hangar tilt: handler a2 is a frame dt (1/30 vs 1/60); 6 tilt add/decay sites scaled -> rise/settle match a30
+Unit (NEXT.md, HYPOTHESIS-ID g1e-fps60-hangar-quanta): find the hangar's dt and fix the per-call ship "spin" in
+hangarVehicleDisplayNpcHandler (0x800C68A0).
+Static: +0x8/+0xC/+0x10 are copied to sp+0x10..0x18 and passed to 0x800193E8 as rotation angles -> they are TILT ANGLES,
+not a spin velocity (s6828's "ship-spin velocity" reading was wrong; it was believable because the field is stick-driven and
+clamped like a velocity). Per call: +0x8 += stickX*c (0x800C6BD0), +0xC += stickY*c (0x800C6C34), clamp, then step toward 0 by
+a constant (0x800C6CBC/CD4, 0x800C6D0C/D24). s3 = a2 at entry, never rewritten; 0x800C6D40 does +0x14 -= *s3 and 0x800C6E70
+passes *s3 on -> a2 points at the handler's frame dt (H-dt-exists, line 1).
+Change (one build): tools/fixup_fps60_float_quanta.py: helper split into rs64_fq_kd(dt) / rs64_fq_k() / rs64_fq_kp(rdram, ptr);
+the 6 tilt sites multiply their increment by (*s3)*30 under ROGUESQ_FPS60 (ROGUESQ_FPS60_FQUANTA=0 restores, retail unchanged).
+tools/fixup_fps60_float_trace.py: per-call hangar rows into ROGUESQ_TICK_TRACE (pc 0x800C6D40 +0x8, D44 +0xC, D48 dt, D4C stick x).
+Both fixups idempotent (re-run checked).
+Ran scratch/s6829/arms.sh (owner save, s6791 route to SELECT YOUR CRAFT, stick right 40-42 s, 62 s per arm, rc=0, 0 crash lines):
+a30 / FPS60 fix / FPS60 FQUANTA=0; analyzer scratch/s6829/tilt.py.
+- Positive control: tilt responds to the stick in every arm (|x| peak 0.0237-0.0244, one stick episode each, 94/188/189 calls).
+- dt (line 2): a30 474/474 calls 0.03333; fix 1066/1068 0.01667; off 1088/1090 0.01667. Calls per game s 30 vs 60.
+- Rise-to-90% / settle-to-0 after release (game s): a30 0.167 / 0.600; off 0.083 / 0.300 (2x fast = the defect); fix 0.183 /
+  0.633 (within one 1/30 tick of a30). Plateau a30 0.0237, off 0.0237, fix 0.0244 rad (the decay sample is half a step at 60 Hz;
+  0.0007 rad = 0.04 deg, accepted). +0xC (stick y) path not exercised: static-only.
+Side datum (same capture, offline): the mission tick also runs in the front end (538 tick rows a30), so
+g3_float_quanta_rates.py ranks front-end sites: dR~1 with exR~2 at 0x80044938 (+1/tick, 30 vs 60 per game s), 0x8002E5A4,
+0x80077180/88, 0x800B2804 (1.40), 0x80017A4C -> NEXT classifies them.
+VERDICT: selects H-dt-exists (refutes H-no-dt: static s3 = a2 dt use + runtime dt 1/30 vs 1/60); hangar tilt FIXED and verified
+rate-independent (rise/settle within one tick of a30). Hangar quanta class closed for this handler.
+ORIGIN: n/a (rate fix, not a mitigation; writer = the handler's per-call constant increments).

@@ -64,6 +64,28 @@ for p in sorted(base.glob("funcs_*.c")):
         if DECL not in s:
             s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + DECL, 1)
         p.write_text(s)
+# s6829: hangar tilt trace, one row set per hangarVehicleDisplayNpcHandler call, after the 0x800C6D40 dt load:
+# pc 0x800C6D40 = +0x8 tilt, 0x800C6D44 = +0xC tilt, 0x800C6D48 = the frame dt (*s3), 0x800C6D4C = stick x of the slot.
+htag = "/* PATCH: s6829 hangar tilt trace */"
+hcom = "    // 0x800C6D40: lwc1        $f2, 0x0($s3)\n"
+hn = 0
+for p in sorted(base.glob("funcs_*.c")):
+    s = p.read_text()
+    if hcom not in s:
+        continue
+    hn += 1
+    i = s.index(hcom) + len(hcom); j = s.index("\n", i) + 1
+    if htag in s[j:s.index("\n", j) + 1]:
+        continue
+    s = s[:j] + ("    rs64_tctr(rdram, 0x800C6D40u, (uint32_t)(ctx->r18 + 8), MEM_W(0x8, ctx->r18)); "
+                 "rs64_tctr(rdram, 0x800C6D44u, (uint32_t)(ctx->r18 + 0xC), MEM_W(0xC, ctx->r18)); "
+                 "rs64_tctr(rdram, 0x800C6D48u, (uint32_t)ctx->r19, (int32_t)ctx->f2.u32l); "
+                 "rs64_tctr(rdram, 0x800C6D4Cu, 0u, MEM_W(0, (gpr)(int32_t)0x8010BDD8 + (MEM_W(4, ctx->r18) << 3))); " + htag + "\n") + s[j:]
+    if DECL not in s:
+        s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + DECL, 1)
+    p.write_text(s)
+if hn != 1:
+    sys.exit(f"s6829 hangar tilt trace: hook site found in {hn} files")
 if ncall != len(CALLERS):
     sys.exit(f"s6828 caller trace: {ncall}/{len(CALLERS)} call sites found")
 miss = {pc for _, pc in want} - hooked

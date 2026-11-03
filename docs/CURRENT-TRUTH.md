@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6828 (2026-11-03).
+Compact operational handoff, as of Session 6829 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -463,9 +463,14 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    0x8004D7CC is dt-scaled; its lvl14 dR 1.41-2.59 is direction/path mixing (lvl2 0.50 = control 0x800EFE3C 0.50). The other 2
    callers (releaseEffectObjectNpcSlots 0x8004EF38, ...Variant 0x8004F160) pass a CONSTANT 1/30 (rodata 0x8003A9AC/B0):
    per-tick at FPS60 (off arm lvl14: 3 calls, a1/tick dt 2.000) -> FIXED a1 = 1/30*k in fixup_fps60_float_quanta.py (same
-   switch). That fix is static-only: 0 calls in both fix arms (rare path). Classified, not fixed: hangarVehicleDisplayNpcHandler
-   0x8/0xC = stick-driven ship-spin velocity, += stick*const AND decay per call, clamped -> at FPS60 the hangar ship spins up and
-   settles 2x faster (equilibrium and clamp unchanged). Hangar has no captured dt (rs64_tick_dt is the mission tick's) -> NEXT.
+   switch). That fix is static-only: 0 calls in both fix arms (rare path).
+   **s6829 HANGAR TILT FIXED.** hangarVehicleDisplayNpcHandler +0x8/+0xC are ship TILT ANGLES (fed to 0x800193E8 with +0x10),
+   not a spin velocity as s6828 read it: per call += stick*c, clamp, decay toward 0 by a constant. The handler's a2 (s3)
+   points at its frame dt (+0x14 -= *s3): runtime 1/30 in 474/474 a30 calls, 1/60 in 1066/1068 FPS60 calls (H-dt-exists).
+   Fix: the 6 add/decay sites scaled by (*s3)*30 in fixup_fps60_float_quanta.py (same switch). Same build, owner save,
+   SELECT YOUR CRAFT, stick right 2 s (scratch/s6829/arms.sh, tilt.py): rise-to-90% / settle a30 0.167/0.600 s, FPS60 off
+   0.083/0.300 s, FPS60 fix 0.183/0.633 s; plateau 0.0237 / 0.0237 / 0.0244 rad (half-decay sampling, 0.04 deg). +0xC path
+   (stick y) static-only. NEXT: front-end dR~1 sites from the same capture.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

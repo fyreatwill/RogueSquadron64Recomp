@@ -23,18 +23,23 @@ step dt of 1/30 s (rodata 0x8003A9AC / 0x8003A9B0) as a1, which the callee multi
   releaseEffectObjectNpcSlotsVariant 0x8004F160  mfc1 a1, f20 (f20 = 1/30)  -> a1 = 1/30 * k
 The other three (destroyEffectObjectTypeNpcSlots 0x8004F990/FA54/FB24) pass their caller's f12 dt and are left alone.
 Classified, left alone: timeSnapshotFiller 0x8000BD88 (0x8012A8F4 += 1 is the sample count of a running average whose
-sum is accumulated per call too = benign), hangarVehicleDisplayNpcHandler 0x800C6C9C/CEC (hangar tilt decay, runs
-outside the mission tick where rs64_tick_dt is not captured).
+sum is accumulated per call too = benign).
+s6829 adds (same switch): hangarVehicleDisplayNpcHandler (0x800C68A0) ship tilt angles +0x8 / +0xC (fed to 0x800193E8 as
+rotation angles with +0x10): per call += stick*c (0x800C6BD0 x, 0x800C6C34 y), clamped, then decayed toward 0 by a
+constant (0x800C6CBC/CD4 +0x8, 0x800C6D0C/D24 +0xC). The handler gets a pointer to its frame dt in a2 (s3; +0x14 -= *s3
+at 0x800C6D40), outside the mission tick, so k here = (*s3)*30, not rs64_tick_dt.
 ROGUESQ_FPS60_FQUANTA=0 restores. Retail (no FPS60) unchanged. Idempotent; run after fixup_fps60_despawn.py.
 Usage: fixup_fps60_float_quanta.py <RecompiledFuncs dir>"""
 import pathlib, sys
 
 base = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "../N64Recomp/RecompiledFuncs")
 TAG = "/* PATCH: s6826 fps60 float quanta */"
-HELPER = ("extern char* getenv(const char*); extern float powf(float, float); extern float rs64_tick_dt; static float rs64_fq_k(void) { static int on = -1; "
+HELPER = ("extern char* getenv(const char*); extern float powf(float, float); extern float rs64_tick_dt; static float rs64_fq_kd(float dt) { static int on = -1; "
           "if (on < 0) { const char* f = getenv(\"ROGUESQ_FPS60\"); const char* q = getenv(\"ROGUESQ_FPS60_FQUANTA\"); "
-          "on = f && *f && *f != '0' && !(q && *q == '0'); } float dt = rs64_tick_dt; "
-          "return (on && dt > 0.0f && dt < (1.0f / 30.0f)) ? dt * 30.0f : 1.0f; } " + TAG + "\n")
+          "on = f && *f && *f != '0' && !(q && *q == '0'); } "
+          "return (on && dt > 0.0f && dt < (1.0f / 30.0f)) ? dt * 30.0f : 1.0f; } static float rs64_fq_k(void) { return rs64_fq_kd(rs64_tick_dt); } "
+          "static float rs64_fq_kp(uint8_t* rdram, gpr p) { uint32_t u = MEM_W(0, p); float f; __builtin_memcpy(&f, &u, 4); return rs64_fq_kd(f); } "
+          + TAG + "\n")
 SITES = [  # (comment line, old C, new C)
     ("    // 0x8005F3D4: add.s       $f0, $f0, $f2\n", "    ctx->f0.fl = ctx->f0.fl + ctx->f2.fl;\n",
      "    ctx->f0.fl = ctx->f0.fl + ctx->f2.fl * rs64_fq_k(); " + TAG + "\n"),
@@ -53,7 +58,19 @@ SITES = [  # (comment line, old C, new C)
     ("    // 0x8004EF38: mfc1        $a1, $f20\n", "    ctx->r5 = (int32_t)ctx->f20.u32l;\n",
      "    { float a1 = ctx->f20.fl * rs64_fq_k(); uint32_t u; __builtin_memcpy(&u, &a1, 4); ctx->r5 = (int32_t)u; } " + TAG + "\n"),
     ("    // 0x8004F160: mfc1        $a1, $f20\n", "    ctx->r5 = (int32_t)ctx->f20.u32l;\n",
-     "    { float a1 = ctx->f20.fl * rs64_fq_k(); uint32_t u; __builtin_memcpy(&u, &a1, 4); ctx->r5 = (int32_t)u; } " + TAG + "\n"),
+     "    { float a1 = ctx->f20.fl * rs64_fq_k(); uint32_t u; __builtin_memcpy(&u, &a1, 4); ctx->r5 = (int32_t)u; } " + TAG + "\n"),    # s6829 hangar tilt: k from the handler's own dt pointer (s3 = a2)
+    ("    // 0x800C6BD0: add.s       $f2, $f2, $f0\n", "    ctx->f2.fl = ctx->f2.fl + ctx->f0.fl;\n",
+     "    ctx->f2.fl = ctx->f2.fl + ctx->f0.fl * rs64_fq_kp(rdram, ctx->r19); " + TAG + "\n"),
+    ("    // 0x800C6C34: add.s       $f2, $f2, $f0\n", "    ctx->f2.fl = ctx->f2.fl + ctx->f0.fl;\n",
+     "    ctx->f2.fl = ctx->f2.fl + ctx->f0.fl * rs64_fq_kp(rdram, ctx->r19); " + TAG + "\n"),
+    ("    // 0x800C6CBC: sub.s       $f0, $f4, $f0\n", "    ctx->f0.fl = ctx->f4.fl - ctx->f0.fl;\n",
+     "    ctx->f0.fl = ctx->f4.fl - ctx->f0.fl * rs64_fq_kp(rdram, ctx->r19); " + TAG + "\n"),
+    ("    // 0x800C6CD4: add.s       $f0, $f4, $f0\n", "    ctx->f0.fl = ctx->f4.fl + ctx->f0.fl;\n",
+     "    ctx->f0.fl = ctx->f4.fl + ctx->f0.fl * rs64_fq_kp(rdram, ctx->r19); " + TAG + "\n"),
+    ("    // 0x800C6D0C: sub.s       $f0, $f2, $f0\n", "    ctx->f0.fl = ctx->f2.fl - ctx->f0.fl;\n",
+     "    ctx->f0.fl = ctx->f2.fl - ctx->f0.fl * rs64_fq_kp(rdram, ctx->r19); " + TAG + "\n"),
+    ("    // 0x800C6D24: add.s       $f0, $f2, $f0\n", "    ctx->f0.fl = ctx->f2.fl + ctx->f0.fl;\n",
+     "    ctx->f0.fl = ctx->f2.fl + ctx->f0.fl * rs64_fq_kp(rdram, ctx->r19); " + TAG + "\n"),
 ]
 done = 0
 for p in sorted(base.glob("funcs_*.c")):

@@ -1,16 +1,17 @@
-# NEXT: G1e FPS60 hangar per-tick sites - find the hangar frame dt, scale the hangar ship spin
-HYPOTHESIS-ID: g1e-fps60-hangar-quanta
+# NEXT: G1e FPS60 front-end per-tick sites - classify the dR~1 rows from the s6829 capture
+HYPOTHESIS-ID: g1e-fps60-frontend-quanta
 
-Context: s6828 closed the mission float-quanta class. Left: hangarVehicleDisplayNpcHandler (0x800C68A0) ship-spin velocity
-+0x8 / +0xC: += stick*const (0x800C6BD0, 0x800C6C34) and decay -= const (0x800C6CBC / 0x800C6CD4, 0x800C6D0C ...) per call,
-clamped. At FPS60 the hangar updates 60/s (s6791), so spin-up/settle is 2x faster. The angle integration of +0x8/+0xC (who
-reads them: grep the function and setObject*Rotation callers) may be per-tick too - include it.
-Hypotheses: H-dt-exists (the hangar loop has a dt global, e.g. the one the s6791 camera curve uses - find setupCameraMatrices'
-or the hangar camera's time source, ROGUESQ_G3F_CAM recipe scratch/s6791), H-no-dt (hangar is frame-counted: then derive k
-from the FPS60 lever state 0x80128EAF == 1 -> k = 0.5).
-Step 1 offline: find the hangar dt source (grep the hangar camera 0x800CD670 path for a dt load; compare with 0x80130BA4).
-Step 2: extend tools/fixup_fps60_float_quanta.py (same switch) for the spin add/decay/integration sites; capture the hangar k.
-Verify, one build: hangar route (scratch/s6791 recipe), hold stick right 2 s then release, arms a30 / FPS60 fix / FPS60
-FQUANTA=0; trace +0x8 per call (add the pcs to fixup_fps60_float_trace.py) -> spin vs real time must match a30 in the fix arm.
-Done = hangar spin rate-independent or classified retail-acceptable with numbers; then take the ladder's next rung (G3 in-flight
-frame diffs vs retail or G5).
+Context: s6829 fixed the hangar tilt. The same capture (scratch/s6829/{a30,fix,off}.tick.bin, owner save, title -> SELECT YOUR
+CRAFT, 62 s) shows the mission tick runs in the front end, and
+`python3 tools/g3_float_quanta_rates.py scratch/s6829/a30.tick.bin scratch/s6829/fix.tick.bin` lists front-end rows with
+dR ~1.0 and exR ~2 (a per-tick quantum running 2x per game second at FPS60): 0x80044938 (+1 per tick), 0x8002E5A4 (+128,
+exR 1.43), 0x80077180 / 0x80077188 (dR 1.00 / 0.75), 0x800B2804 (dR 1.40), 0x80017A4C.
+Step 1 OFFLINE first (no build): name each site's function and field (nm / funcs_*.c), check whether it is already in
+fixup_fps60_ticks.py FIX/UNFIX sets (s6821-s6825), and what reads the field (timer -> visible? animation phase? edge-
+counted input like s6824?). Pass --sites float_sites.tsv if the analyzer needs it for labels.
+Hypotheses per site: H-quantum-visible (a front-end animation / timer runs 2x fast at FPS60: fix with the s6821 step or
+dt*30), H-benign (counter consumed as a count, or already dt-normalised downstream), H-edge (input/edge-driven, like
+s6824: must stay 1 per execution).
+Verify (one build, if any fix): rerun scratch/s6829/arms.sh; fixed rows must read dR 0.5 / per-game-s rate = a30.
+Done = every front-end dR~1 row fixed or classified with numbers; then G1e rate work is closed and the ladder's next rung
+is G3 in-flight frame diffs vs retail on a level not yet matched (s6744-s6748 did lvl1/lvl2).
