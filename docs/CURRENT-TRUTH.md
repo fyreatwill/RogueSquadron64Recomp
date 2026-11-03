@@ -484,6 +484,10 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    advanceNpcOnCurvedPath +0x1E speed ramp +0x20/tick (clamp 0xFF) -> step x rs64_tick_step() (tools/fixup_fps60_int_step.py,
    ROGUESQ_FPS60_INTSTEP=0 restores). Same build lvl14 (tools/g1e_int_step_rates.py): ramp a30 0.267 s (n=7), off 0.133
    (n=5), fix 0.233-0.258 (n=2). All three G1e FPS60 rate classes (float, +-1 timers, int steps) are closed.
+   s6832: soak s6831_intstep_fix_lvl14 (400 s, 0 crash) fix arm up n=7 med 0.250 / down n=8 med 0.250 (min 0.250,
+   max 0.267) vs a30 0.267, off 0.133 -> H-fixed (within one 60 Hz tick; H-phase-bias refuted). Owner table of every
+   FPS60 fix + its =0 switch: docs/FPS60-FIXES.md (linked from OWNER-OPT-INS). **Owner: judge FPS60 feel.** Queued
+   s6832_fps60bundle_lvl1/lvl10_dd4 (300 s FPS60+dd4 holds with all fixes; last such holds predate s6817).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
@@ -498,5 +502,5 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts: [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); per-level images:
   [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
-- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261101-202615 (s6775 arms, consumed s6776: clean; none new at s6781). s6781_menufifo_lvl1_dd1 (20261101-220157) consumed s6782: clean; none new through s6786.
+- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261103-021659 (s6831_intstep_fix_lvl14, consumed s6832: clean, ramp H-fixed). s6781_menufifo_lvl1_dd1 (20261101-220157) consumed s6782: clean; none new through s6786.
 - Recent chronology: PORTING-STATE sessions 6738-6760; search bounded windows only.

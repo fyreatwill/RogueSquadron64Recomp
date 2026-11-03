@@ -180239,3 +180239,20 @@ G1e FPS60 rate classes now closed: float quanta (s6826-s6830), +-1 tick timers (
 Verdict: selects H-quantum-visible for advanceNpcOnCurvedPath +0x1E (off = exactly 2x the a30 rate, fix restores it),
 refutes it for the other 40 sites (H-benign / H-audio by reading). Next discriminator: the queued 400 s fix-arm soak
 (s6831_intstep_fix_lvl14) splits H-fixed (median within one 30 Hz tick of 0.267 s, n>=5) from H-phase-bias (~0.233).
+
+## Session 6832 (2026-11-03) — G1e FPS60 close-out: s6831 ramp soak selects H-fixed (fix 0.250 s vs a30 0.267, n=7/8); docs/FPS60-FIXES.md owner table of every FPS60 fix; post-fix FPS60+dd4 holds queued
+
+Ran: no game run (one at a time; the queued soak was the experiment). Folded soak s6831_intstep_fix_lvl14
+(20261103-021659, 400 s, rc=0, 0 crash; scratch/s6831/soak_fix_lvl14.tick.bin via tools/g1e_int_step_rates.py):
+game_s 281.6, 16882 ticks, control rates 8006C124 / 8006C024 both 50.2 per game s, 38 NPCs; advanceNpcOnCurvedPath
++0x1E ramp up n=7 median 0.250 s (min 0.250, max 0.267), down n=8 median 0.250 (0.250-0.267). s6831 same-build arms:
+a30 0.267 (n=7), FPS60 INTSTEP=0 0.133 (n=5). Verdict H-fixed: the fix lands within one 60 Hz tick (0.017 s) of 30 Hz,
+off is half. H-phase-bias (fix consistently a whole 30 Hz step short, ~0.233) refuted by n=15 at 0.250-0.267;
+H-path (too few ramps) refuted (n=15). Two lines: s6831 same-build 3-arm run + this 400 s soak.
+Landed: docs/FPS60-FIXES.md - one table of the lever (events.cpp g1e::apply, 0x80128EAF 2->1) and the six fix switches
+(SCRAPE, SCRAPE_DMG, DESPAWN, TICKS, FQUANTA, INTSTEP): what each restores, the 30 Hz / fix / off numbers, code, sessions,
+plus what was checked and is not a 60 Hz defect. OWNER-OPT-INS.md links it and its stale FPS60 dd2-dd4 fps (~44-50,
+pre-s6713, superseded by s6776/s6810 ~60) is corrected. Queued s6832_fps60bundle_lvl1_dd4 / lvl10_dd4 (300 s holds with
+all fixes; the binary check aborts with rc 3 if the switches are missing; build has 6 matching strings).
+Rules out: residual timing bias in the int-step fix. Next: fold the bundle soaks; owner judges FPS60 feel; G5 rename
+sweep is the remaining ladder rung.

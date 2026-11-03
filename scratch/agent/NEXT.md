@@ -1,17 +1,12 @@
-# NEXT: G1e FPS60 close-out - fold the s6831 ramp soak, then an owner-facing FPS60 summary
-HYPOTHESIS-ID: g1e-fps60-closeout
+# NEXT: fold the s6832 FPS60 bundle holds, then the next ladder rung
+HYPOTHESIS-ID: g1e-fps60-bundle-regression
 
-Context: s6831 closed the last G1e FPS60 rate class (|K|>1 int steps; advanceNpcOnCurvedPath +0x1E ramp fixed,
-lvl14 a30 0.267 s / off 0.133 / fix 0.233-0.258, fix n=2). All of CURRENT-TRUTH's ladder rungs are closed or wait on
-owner judgement (G1d sheet, G3c). Queued soak: scratch/agent/soak_queue/s6831_intstep_fix_lvl14.sh (400 s FPS60 fix arm,
-prints the ramp table).
-Step 1: read SOAK-RESULTS + scratch/agent/soak_results/s6831_intstep_fix_lvl14_*.log. Hypotheses: H-fixed (ramp-up and
-wind-down medians within one 30 Hz tick of 0.267 s, n>=5) vs H-phase-bias (fix median consistently ~0.233, i.e. the
-+1 seed tick plus the 0/1 step phase loses one 30 Hz step -> seed the accumulator, or step on the first tick after a
-seed) vs H-path (too few ramps again: lvl14 NPC path churn; pick another level from the s6822 census).
-Step 2 (engineering, not doc-only): write docs/FPS60-FIXES.md - one table of every FPS60 fix switch
-(FPS60_TICKS, FPS60_DESPAWN, FPS60_SCRAPE_DMG, FPS60_FQUANTA, FPS60_INTSTEP, ...: grep tools/fixup_fps60_*.py and
-src/ for getenv("ROGUESQ_FPS60), what each restores, the verifying session and numbers), and link it from
-docs/OWNER-OPT-INS.md, so the owner can judge FPS60 feel with every fix named. Then ask the owner for the FPS60 feel
-verdict in CURRENT-TRUTH Next steps.
-If H-phase-bias: fix it in tools/fixup_fps60_int_step.py and re-run scratch/s6831/lvl14.sh (fix arm only + a30 control).
+Context: G1e FPS60 rate classes closed (s6817-s6831), fixes tabulated in docs/FPS60-FIXES.md, owner asked to judge
+feel. Queued: scratch/agent/soak_queue/s6832_fps60bundle_lvl1_dd4.sh and _lvl10_dd4.sh (300 s FPS60+dd4, all fixes).
+Step 1: read SOAK-RESULTS tail + scratch/agent/m6/g1_lvl{1,10}s6832_fps60bundle/summary.
+Hypotheses: H-clean (alive_at_end=1, crashlines=0, vi_stalls30s=0 both levels -> bundle qualified, note in
+FPS60-FIXES.md) vs H-regress (a crash/stall -> backtrace it, then bisect by the six =0 switches in ONE run set:
+each switch off alone on the failing level, same recipe) vs H-harness (rc=3: switches missing -> rebuild with the
+regen order make_elf -> N64Recomp -> fixup_game_funcs (runs the fps60 fixups) -> cmake).
+Step 2 if H-clean: no owner reports pending -> take the ladder: G5 renaming sweep is the last rung, but iron rule 14
+says renames read as churn; prefer an engineering item if one appears in CURRENT-TRUTH Next steps (owner reports first).
