@@ -2191,9 +2191,12 @@ extern "C" void rs64_s6845_glyph(uint8_t* rdram, uint32_t site, uint32_t a1, uin
     static int lines = 0; if (lines++ >= 4000) return;
     auto rw = [&](uint32_t va) { uint32_t v; memcpy(&v, rdram + (va & 0x7FFFFCu), 4); return v; };
     auto rf = [&](uint32_t va) { uint32_t v = rw(va); float f; memcpy(&f, &v, 4); return (double)f; };
-    std::fprintf(stderr, "[glyph] vi=%u site=%08X ulx=%d uly=%d lrx=%d lry=%d fp=%d base=%d,%d obj=%08X ox=%.3f oy=%.3f sx=%.4f sy=%.4f arg=%08X ax=%d ay=%d W=%u\n",
+    // s6846: + text length (+0x8 hu), string ptr (+0xC), flags (+0x14) and the first string halfwords, to name the glyph selector.
+    const uint32_t sp = rw(s3 + 0xC); const uint32_t s0w = rw(sp), s1w = rw(sp + 4);
+    std::fprintf(stderr, "[glyph] vi=%u site=%08X ulx=%d uly=%d lrx=%d lry=%d fp=%d base=%d,%d obj=%08X ox=%.3f oy=%.3f sx=%.4f sy=%.4f arg=%08X ax=%d ay=%d W=%u len=%u str=%08X:%08X%08X fl=%08X\n",
                  vi, site, (int)(int16_t)a1, (int)(int16_t)a2, (int)(int16_t)a3, (int)(int32_t)lry, (int)(int32_t)fp, (int)(int16_t)bx, (int)(int16_t)by,
-                 s3, rf(s3 + 0x18), rf(s3 + 0x1C), rf(s3 + 0x24), rf(s3 + 0x28), s1, (int)rw(s1 + 0x18), (int)rw(s1 + 0x1C), rw(0x8011A838u));
+                 s3, rf(s3 + 0x18), rf(s3 + 0x1C), rf(s3 + 0x24), rf(s3 + 0x28), s1, (int)rw(s1 + 0x18), (int)rw(s1 + 0x1C), rw(0x8011A838u),
+                 rw(s3 + 0x8) >> 16, sp, s0w, s1w, rw(s3 + 0x14));
 }
 // s6845b: drawSubtitleText entry: log (text obj, screen struct, struct+0x18 x centre) when the centre changes inside the
 // window, and arm the s6843 store watch on the first struct's +0x18 word so `[swatch]` names its writer.
@@ -2204,7 +2207,14 @@ extern "C" void rs64_s6845_entry(uint8_t* rdram, uint32_t a0, uint32_t a1) {
     uint32_t c; memcpy(&c, rdram + ((a1 + 0x18) & 0x7FFFFCu), 4);
     if ((a1 != last_a1 || c != last_c) && lines++ < 400) std::fprintf(stderr, "[glyph-entry] vi=%u obj=%08X scr=%08X cx=%d\n", vi, a0, a1, (int)c);
     last_a1 = a1; last_c = c;
-    if (!armed) { armed = true; rs64_s6843_lo = (a1 + 0x18) & 0x1FFFFFFFu; rs64_s6843_len = 4; std::fprintf(stderr, "[glyph-entry] watch armed %08X\n", rs64_s6843_lo); }
+    // s6846: ROGUESQ_WIPE_WATCH_OBJ=1 arms the watch on the full-screen (|x scale| > 8) text object itself (+0x00..+0x40) instead,
+    // so `[swatch]` names the wipe updater that writes its x (+0x18) and glyph/string fields.
+    static const bool watch_obj = [] { const char* e = std::getenv("ROGUESQ_WIPE_WATCH_OBJ"); return e && *e == '1'; }();
+    if (watch_obj) {
+        float sc; uint32_t w; memcpy(&w, rdram + ((a0 + 0x24) & 0x7FFFFCu), 4); memcpy(&sc, &w, 4);
+        if (!armed && (sc > 8.0f || sc < -8.0f)) { armed = true; rs64_s6843_lo = a0 & 0x1FFFFFFFu; rs64_s6843_len = 0x40;
+            std::fprintf(stderr, "[glyph-entry] obj watch armed %08X+0x40 vi=%u\n", rs64_s6843_lo, vi); }
+    } else if (!armed) { armed = true; rs64_s6843_lo = (a1 + 0x18) & 0x1FFFFFFFu; rs64_s6843_len = 4; std::fprintf(stderr, "[glyph-entry] watch armed %08X\n", rs64_s6843_lo); }
 }
 extern "C" void rs64_s6845_base(uint8_t* rdram, uint32_t s3, uint32_t s1, uint32_t t2, uint32_t f4, uint32_t f6) {
     const uint32_t vi = rs64_vi_n_g;
@@ -2217,6 +2227,18 @@ extern "C" void rs64_s6845_base(uint8_t* rdram, uint32_t s3, uint32_t s1, uint32
 // s6845 G1d (tools/apply_s6845_hudwipe.py): the s6156 HUD anchor applies only to HUD-sized elements. A text element
 // whose x scale (obj+0x24) exceeds 8 is a full-screen sprite (the abort-level wipe, glyph 0x180, sx 36.6 at 4:3 / 73.1
 // at 21:9; HUD items 1.0-3.2) and keeps the game's centred position. ROGUESQ_G1D_HUD_BIGSCALE=1 = old (anchor everything).
+// s6846 G1d (tools/apply_s6846_wipeeps.py): the abort-wipe updater in initHudStruct picks the flat end glyph when
+// ox <= -W/2 + 1; the end residual is W*0.001, so the 1 px epsilon scales with W above 640 (ceil(W/512)).
+// Argument = the generated v0 = (-W)/2. ROGUESQ_G1D_WIPE_EPS=0 = old (always 1).
+extern "C" int32_t rs64_s6846_wipe_eps(int32_t neg_half_w) {
+    static const bool old = [] { const char* e = std::getenv("ROGUESQ_G1D_WIPE_EPS"); return e && *e == '0'; }();
+    const int32_t w = -2 * neg_half_w;
+    if (old || w <= 640) return 1;
+    const int32_t eps = (w + 511) / 512;
+    static int lines = 0;
+    if (lines++ < 4) std::fprintf(stderr, "[g1d-wipeeps] W=%d eps=%d vi=%u\n", (int)w, (int)eps, rs64_vi_n_g);
+    return eps;
+}
 extern "C" int rs64_s6845_hud_small(uint32_t sx_bits) {
     static const bool old = [] { const char* e = std::getenv("ROGUESQ_G1D_HUD_BIGSCALE"); return e && *e == '1'; }();
     float sx; memcpy(&sx, &sx_bits, 4);

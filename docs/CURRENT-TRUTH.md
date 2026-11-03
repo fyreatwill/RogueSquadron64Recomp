@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6845 (2026-11-03).
+Compact operational handoff, as of Session 6846 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -552,8 +552,11 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    apply_s6845_hudwipe: anchor skips elements with |x scale| > 8 (HUD 1.0-3.2; skip fired 3x per run, wipe only;
    ROGUESQ_G1D_HUD_BIGSCALE=1 = old) + rs64_g1d_rect_wrap now also wraps texrects at ul.x 0. Same build, 21:9 windows:
    off 3 fully bright post-wipe frames (mean 191.5), on 0; 4:3 control unchanged. RDP: on = 4:3 structure (hold ul 0
-   lr 1023.75 S 0). Residual (cosmetic, NEXT): last hold frame uses the soft-edge cc 119623 at ul 1.0 px (4:3: flat
-   cc 11FE23 at ul 0.5), so a ~68 px soft strip shows at the far left for ~0.3 s. Sheet docs/owner_sheet_s6845_abort_hold_21x9.png.
+   lr 1023.75 S 0). Sheet docs/owner_sheet_s6845_abort_hold_21x9.png.
+   **s6846 end strip FIXED, thread CLOSED.** The last-frame soft strip = initHudStruct wipe updater's glyph pick
+   `ox <= -W/2 + 1` (0x800C1A9C; flat 0x17F else soft 0x180): fixed 1 px epsilon vs W*0.001 end residual (1.024 at W 1024).
+   apply_s6846_wipeeps: eps ceil(W/512) above W 640 (=1 retail; ROGUESQ_G1D_WIPE_EPS=0 old). A/B 21:9: 6 vs 0 held strip
+   frames, RDP last frame 11FE23 = 4:3. Sheet docs/owner_sheet_s6846_abort_end_21x9.png.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

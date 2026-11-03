@@ -180704,3 +180704,32 @@ cause of the shifted hold rects. Fixed with a same-build A/B (3 vs 0 bright fram
 ORIGIN: x0 = -750/-1019 is written by OUR s6156 HUD-anchor block in drawSubtitleText (generated 0x800160C0, applied by
 tools/apply_s6155_hudcpos.py), not by the game; the value is not legitimate for a full-screen sprite. The gate restores the
 game's own centred position for elements wider than the HUD; lr 0 at ul 0 is the s6844 12-bit wrap of a legitimate 4096.
+
+## Session 6846 (2026-11-03) — 21:9 abort-wipe end soft strip = initHudStruct wipe updater's fixed 1 px glyph-select epsilon vs a W-scaled residual; apply_s6846_wipeeps, same-build A/B 6 vs 0 held strip frames
+HYPOTHESIS-ID: g3-wide-abort-hold (iteration 2 of 2; CLOSED). Route scratch/s6846/port_abort.sh (= s6845, outputs under scratch/s6846). 4 runs, 0 crash.
+- **Offline first (existing s6845 port.bin, /tmp/wseq.py-style per-VI texrect list):** 4:3 and 21:9 draw the same 13 wipe
+  frames; VI 6745 is flat cc 11FE23 at ul 0 in both; only the LAST frame differs (4:3 11FE23 ul 0.5, 21:9 119623 ul 1.0).
+  The s6845 `[glyph]` lines already showed the selector is the glyph, not the combiner: ox -512.000 -> glyph 0x17F
+  (flat block), ox -510.976 -> glyph 0x180 (soft edge). appendRdpStateDl (0x8000DE70) emits no FC; no CPU immediate for
+  either combine word exists; the FC comes with the glyph (table 0x80038060 holds both).
+- **Instrument (one build):** `[glyph]` now also logs text len/string ptr/flags; ROGUESQ_WIPE_WATCH_OBJ=1 arms the s6843
+  store watch on the |x scale|>8 text object (+0..+0x40). t21/t43 runs: writer of ox (+0x18, pc 0x800C1A80) and string
+  ptr (+0xC, pc 0x800C1ABC) = initHudStruct wipe tail 0x800C19AC..0x800C1B1C, every swap (positive control: 9 keys/swap).
+  String ptr = obj-4 (0x17F) or obj-2 (0x180): 4:3 ends obj-4 at ox -255.488, 21:9 ends obj-2 at -510.976.
+- **Mechanism (static read of that tail):** ox = W/2 - W*f (W = screen +0x10, f = timer +0x24C or 1-t); glyph =
+  `ox <= -W/2 + 1` ? flat : soft (addiu +1 at 0x800C1A9C). The +1 is a fixed 1 px epsilon; the end residual is W*0.001
+  (0.512 at W 512, 0.64 at 640, 1.024 at 1024), so only a >1000-wide screen flips back to the soft glyph. H-thresh SELECTED;
+  H-timing refuted (same frame count/phase in both aspects, deterministic arithmetic); H-anchor2 refuted (W*f is the
+  game's own scaling from the screen struct, not a G1d x patch).
+- **Fix tools/apply_s6846_wipeeps.py** (RS64_REPLAY after s6845_hudwipe): epsilon = rs64_s6846_wipe_eps(v0) in
+  src/main/main.cpp: 1 for W <= 640 (retail and every native width, bit-identical), ceil(W/512) above (2 at 1024).
+  ROGUESQ_G1D_WIPE_EPS=0 = old. `[g1d-wipeeps]` logs first 4 wide uses.
+- **Same-build A/B 21:9 (e21on / e21off):** RDP last frame on 11FE23 ul 1.0 (= 4:3 structure), off 119623 ul 1.0. Window
+  caps (scratch/s6846/strip.py: left 7% >30 with rest <12; positive control flags 7 on s6845 b21on and t21): off 6 held
+  strip frames (left band constant 103), on 0 held (its one flag, 113.60 s, is the moving sweep edge = 4:3's ul 34 frame,
+  followed by solid black). Sheet docs/owner_sheet_s6846_abort_end_21x9.png (aligned on first all-black frame).
+  4:3 not re-run on the fix build: eps is 1 for W <= 640 by construction (static).
+VERDICT: selects H-thresh, refutes H-timing / H-anchor2. g3-wide-abort-hold CLOSED (s6841 stripe, s6844 sweep, s6845 hold,
+s6846 end strip all fixed at 21:9).
+ORIGIN: the soft glyph on the last frame is selected by the GAME's own compare `ox <= -W/2 + 1` (initHudStruct 0x800C1A9C);
+the value is legitimate retail arithmetic that can never cross at W <= 640. It crosses only because G1d widened W to 1024.
