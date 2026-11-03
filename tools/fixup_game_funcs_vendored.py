@@ -42361,6 +42361,9 @@ _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_
 # s6821 G3 FPS60: remaining per-object tick timers stepped by game time under ROGUESQ_FPS60 + ROGUESQ_TICK_TRACE hooks.
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_fps60_ticks.py")), str(base)])
 
+# s6831 G1e FPS60: advanceNpcOnCurvedPath +0x1E speed ramp (+0x20/tick) stepped by game time (ROGUESQ_FPS60_INTSTEP=0 restores).
+_sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_fps60_int_step.py")), str(base)])
+
 # s6826 G3 FPS60: ROGUESQ_TICK_TRACE hooks on per-tick float load-op-store sites (diagnostic, g3_float_quanta_audit.py).
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_fps60_float_trace.py")), str(base)])
 

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6830 (2026-11-03).
+Compact operational handoff, as of Session 6831 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -479,6 +479,11 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    (clamp +-180; position += speed*dt) and scale +0xE8 *= 1.01/tick -> FIXED k=dt*30 / pow in fixup_fps60_float_quanta.py
    (same switch). Pre-fix: a30 60 u/s^2 (4 runs) vs FPS60 120 (4 runs). Same build lvl14 420 s (tools/g1e_spline_ramp.py):
    fix 60.0 / 0.299 = a30, FQUANTA=0 120.0 / 0.597; control updateNpcEventTimer 0.50. 240 s runs never reach the death.
+   **s6831 int |K|>1 step class CLOSED.** tools/g1e_int_step_audit.py 41 sites: 40 not time (heap/DL/pixel strides, JFIF/
+   inflate, RSP text, pause-menu layout cursor, audio offsets, tickTextureAnimSlots carry of a dt accumulator). One fix:
+   advanceNpcOnCurvedPath +0x1E speed ramp +0x20/tick (clamp 0xFF) -> step x rs64_tick_step() (tools/fixup_fps60_int_step.py,
+   ROGUESQ_FPS60_INTSTEP=0 restores). Same build lvl14 (tools/g1e_int_step_rates.py): ramp a30 0.267 s (n=7), off 0.133
+   (n=5), fix 0.233-0.258 (n=2). All three G1e FPS60 rate classes (float, +-1 timers, int steps) are closed.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

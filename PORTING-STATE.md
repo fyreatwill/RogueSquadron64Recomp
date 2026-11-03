@@ -180204,3 +180204,35 @@ ORIGIN: n/a (rate fix, not a mitigation; writer = updateSplineCraftTransform's p
 Discrimination: this selects H-quantum-visible for updateSplineCraftTransform (+0x140 / +0xE8) and H-benign for every other
 s6829 front-end row, and refutes "front-end dR~1 rows are per-tick quanta" as listed (analyzer artifacts). Next
 discriminator = per-game-s rate of the |K|>1 integer step sites (tools/g1e_int_step_audit.py) at a30 vs FPS60.
+
+## Session 6831 (2026-11-03) — G1e FPS60 int |K|>1 census triaged: 40/41 not time; advanceNpcOnCurvedPath +0x1E speed ramp (+0x20/tick) FIXED by game-time step, lvl14 a30 0.267 s / off 0.133 / fix 0.233-0.258
+
+Unit: NEXT.md "triage the 41-site g1e_int_step_audit census". Step 1 offline (scratch/s6831/ctx.py, asm context per pc):
+- Not time (stride/layout/parser): rs_free / coalesceFreeHeapBlocks +16 (heap headers), instantiateNamedMeshInstance +88,
+  sampleRgbBoxFilter2x2 +2 (pixel pointer), JFIF parsers +2/-256, inflateInit2_, cloneCellBufferWithAlloc +256,
+  setupMenuData +18, setupWalkerSpriteTileQuad +2 (DL word pointer *p += 2 at function exit), data_gap_80024A0C +-8
+  (RSP ucode text: jumps to 0x84xxxxxx, DMEM stack), spawnCutsceneObjectsFromList -65 (tolower: 'A' range test, the
+  store is `ori 0x20`, not the step - audit false positive).
+- runPauseMenuStateMachine 0x800C3094/3534/3584 -2: +0x8 is re-armed at 0x800C2AEC on each call, then stepped once
+  per text row -> layout cursor (H-benign).
+- tickTextureAnimSlots -0x100: drains the carry of a float accumulator acc += rate*f12, with f12 = $f20 = tick dt
+  (runInMissionFrame 0x800FACB8 `mov.s $f12,$f20`) -> already dt-continuous (H-benign).
+- Audio (tickAudioChannel +8, stepActiveSongTracks +8, advanceSongRegion +12, updateSongTempoTickRate / tickAllActiveSongs
+  +8, serviceStreamingVoice +0x400): sequence event / stream buffer offsets on the audio clock (H-audio, G2 closed).
+- SURVIVOR advanceNpcOnCurvedPath 0x8006C124: +0x1E is a signed speed magnitude (multiplied by +0x18 at 0x8006C18C);
+  every call adds 0x20, positive clamped to 0xFF (ramp-up), negative zeroed when it crosses 0 (wind-down); the recheck
+  at 0x8006C0E4 seeds 0 -> 1 / negates. Same function as the s6821 +0x1C countdown, which runs per mission tick.
+Change: tools/fixup_fps60_int_step.py (chained after fixup_fps60_ticks.py in fixup_game_funcs_vendored.py): both copies
+of the 0x8006C134 delay-slot step become 0x20 * rs64_tick_step() (game-time boundaries crossed; 1 outside FPS60/outside a
+tick), ROGUESQ_FPS60_INTSTEP=0 restores; ROGUESQ_TICK_TRACE hook on the load. tools/g1e_int_step_rates.py = ramp durations.
+Applied to ../N64Recomp/RecompiledFuncs (idempotent, run twice), Debug build clean (build/build_s6831.log).
+Run, ONE build, lvl14 240 s, three arms (scratch/s6831/lvl14.sh), all rc=0 crash=0:
+  arm  ramp-up (n, median)   wind-down        8006C124 / 8006C024 execs per game s
+  a30  7, 0.267 (all)        8, 0.267 (all)   47.4 / 47.4
+  off  5, 0.133 (all)        6, 0.133 (all)   83.9 / 83.9   (FPS60, INTSTEP=0: defect, rate x2)
+  fix  2, 0.233 (.217-.250)  2, 0.258 (.250-.267) 83.5 / 83.5
+Positive control: a30 = the predicted 8 ticks exactly; off = exactly half (same build). The fix lands within 1-3 FPS60
+ticks of a30 (the 0/1 step phase against the +1 seed), n=2 - fewer NPC ramps happened in that arm (path-dependent).
+Single run per arm; the a30/off separation is exact, the fix median is single-source-ish (n=2).
+Rules out: any remaining |K|>1 integer per-tick quantum outside this site (40 sites classified by reading).
+G1e FPS60 rate classes now closed: float quanta (s6826-s6830), +-1 tick timers (s6821-s6825), |K|>1 int steps (here).
