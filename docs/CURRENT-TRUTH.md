@@ -334,13 +334,12 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
 Owner 2026-10-31: spike cull default ON; G1(d) objectives PARKED; G1f CLOSED s6717; G3d shake closed s6697.
 Spec: ITERATION.md item 3c. No backlog-exhausted block.
 
-1. **G3 transition AI gap (NEXT: g3-transition-ai-gap).** s6806 closed the audio-clocked split audit (H-parity,
-   tools/g3_song_audit.py over 22 dt-pinned pairs): every natural-end cue on lvl3,4,7-10,12,14-16,18 is VI- and
-   AI-buffer-equal to retail within 1%, buffers/VI 1.907-1.919 in both arms everywhere, long songs end on sim events with
-   equal ticks; every G3 split is mupen pacing. Open: the port's ~315 ms transition audio gap is GUEST-side (19 VI with no
-   osAiSetNextBuffer, tools/g3_ai_gaps.py: lvl19 pre-mission, lvl3 t3803, lvl10 t5053). Retail oracle AI rows start only
-   after the --debug-write arm, so no retail control covers a transition. One retail run with the AI rows from boot
-   decides H-retail (retail skips ~19 VI too) vs H-port (port load path starves the audio thread).
+1. **G3 transition AI gap CLOSED s6807 (NAMED + FIXED).** The port's 19-VI guest AI feed gaps at every scene transition
+   (= G2b's ~315 ms empty queue) were src/main/main.cpp set_frequency closing/reopening the CoreAudio device (~150 ms,
+   blocks the guest caller) on each same-rate osAiSetFrequency, twice per audio re-init. Retail oracle traced from boot
+   (tools/g3_ai_gap_pair.sh): max gap 2 VI through boot/title/level select/load/flight, 1.912 buf/VI. Fix: same rate +
+   open device = no-op (ROGUESQ_AI_REOPEN_ALWAYS=1 restores). Same build: gaps 7 -> 0, 1.866 -> 1.912 buf/VI.
+   Residual (NEXT: g3-title-ai-gap): 3-5 VI port gaps at the title (VI ~737 osViSetMode burst, ~974), retail <= 2.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

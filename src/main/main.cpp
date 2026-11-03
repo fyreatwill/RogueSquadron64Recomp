@@ -7703,12 +7703,23 @@ static void set_frequency(uint32_t freq) {
         }
     }
     std::lock_guard<std::recursive_mutex> lock(audio_device_mutex);
+    // s6807: on hardware osAiSetFrequency is a DACRATE register write. Closing and reopening the CoreAudio device
+    // blocks the calling guest thread ~150 ms per call, and the game sets the (unchanged) rate twice at every audio
+    // re-init, so the guest fed no AI buffer for 19 VI at each scene transition (retail oracle: max gap 2 VI). Same rate
+    // with an open device is a no-op now; ROGUESQ_AI_REOPEN_ALWAYS=1 restores the old reopen for A/B.
+    static const bool reopen_always = [] { const char* e = getenv("ROGUESQ_AI_REOPEN_ALWAYS"); return e && e[0] == '1'; }();
+    if (audio_device && freq == audio_sample_rate && !reopen_always) {
+        return;
+    }
+    const auto t0 = std::chrono::steady_clock::now();
     if (audio_device) {
         SDL_CloseAudioDevice(audio_device);
         audio_device = 0;
     }
     audio_sample_rate = freq;
     open_audio_output();
+    fprintf(stderr, "[audio-reopen] rate=%u took %.1f ms\n", freq,
+            std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
 }
 
 extern "C" void rs64_s4245_tick(int kind, uint32_t amount);

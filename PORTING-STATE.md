@@ -179429,3 +179429,34 @@ covers a scene transition. Port: 19-VI gaps (= the ~315 ms empty-queue gaps G2b 
 So the gap is not host SDL padding; whether retail's guest also skips 19 VI there is unmeasured (no retail control yet).
 Rules out: an audio-rate defect behind any G3 split; the split class is closed as mupen pacing.
 Next: g3-transition-ai-gap - retail oracle run with the AI rows armed from boot across a mission load.
+
+## Session 6807 (2026-11-02) — G3 transition AI gap NAMED + FIXED: the port's 19-VI guest AI feed gaps at every scene transition were set_frequency closing/reopening the CoreAudio device (~150 ms) on each same-rate osAiSetFrequency (2 per audio re-init); retail oracle traced from boot has max gap 2 VI; same-rate call is now a no-op, gaps 7 -> 0, buf/VI 1.866 -> 1.912 (= retail)
+
+HYPOTHESIS-ID: g3-transition-ai-gap (closed).
+What ran: new tools/g3_ai_gap_pair.sh scratch/s6807 2 (lvl3 save, run.sh press/autopilot schedules): both arms trace
+osAiSetNextBuffer 0x8008EE08/0x8008EE84 + tick 0x800FA730 FROM BOOT (same rngSeed poke 80003470:1 on the first 320-wide
+VI at 0 s arms the port ROGUESQ_RAND_TRACE and the oracle exec trace, instead of run.sh's mission-time DWARM/ARM arm).
+tools/g3_ai_gaps.py gains G3_GAP_MIN=N (every gap >= N in VI order).
+Result 1 (retail vs port, H-retail REFUTED, H-port SELECTED): retail AI rows from VI 2 to 13186 (220 s, through
+320->640 VI 99, title 1024 VI 1014, level select 512 VI 2280, load 640 VI 4618, flight 512 VI 5951): NO gap >= 3 VI,
+25213 buffers = 1.912 buf/VI. Port (same pre-fix build) from VI 13: seven 19-20 VI gaps at VI 96, 371, 738, 1406, 1976,
+2825, 3960, each immediately before a width change or audio re-init, plus 3-5 VI gaps at 737-760/974/2593/2807/2954.
+Inside a gap the port logs no guest rand row at all.
+Mechanism (log correlation, every 19-20 VI gap): each sits on an audio re-init (thr-create-id, s4572-pub, and TWO
+"[audio-route] output=... rate=22047" lines); 6/7 also carry the waitForMusyXAudioTaskDone spin (s4192 mode 2) +
+s4562 pause, but the boot one (VI 96) has no spin, so the spin is not the common term. The [audio-route] line comes
+from src/main/main.cpp set_frequency, which closed and reopened the SDL/CoreAudio device on EVERY osAiSetFrequency,
+even 22047 -> 22047. On hardware osAiSetFrequency is a DACRATE register write.
+Fix (src/main/main.cpp set_frequency): same rate with an open device returns immediately; a real rate change (boot
+48000 -> 22047, the G2b 32006 crawl and back) still reopens. ROGUESQ_AI_REOPEN_ALWAYS=1 restores the old behaviour.
+New [audio-reopen] rate= took= ms row.
+Result 2 (same build, sequential port arms, lvl3 route boot -> flight, 85 s each): fix: 2 reopens total (48000 35 ms,
+22047 130 ms), gaps >= 3 VI only 5@737, 4@974, 3@1958, 3@2508; 9651 buffers VI 13-5060 = 1.912 buf/VI. Control
+(REOPEN_ALWAYS=1, positive control): 16 [audio-route] opens, each reopen 143-161 ms, the seven 18-20 VI gaps reproduce
+(95, 370, 738, 1406, 1976, 2826, 3961), 1.866 buf/VI. Side datum: the fix arm hit the mission load 640 at 42.6 s vs
+47.6 s and flight at 61.2 vs 66.5 s on the same autopilot schedule (not chased).
+Two lines: independent retail oracle (no gap) + same-build A/B toggling only the reopen.
+ORIGIN: the writer of the gap is the host set_frequency (SDL close/open blocks the guest thread calling
+osAiSetFrequency); not legitimate (retail never stops the AI feed). Root-cause fix, not a guard.
+Residual: 3-5 VI gaps at the title (VI 737, 974) in both port arms, retail max 2 VI (~60 ms; unnamed).
+Rules out: H-retail for the transition gap; the G2b "~315 ms empty queue at every transition" is this same reopen.
