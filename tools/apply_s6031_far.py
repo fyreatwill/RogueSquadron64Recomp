@@ -590,6 +590,31 @@ def apply_s6791_g3fcam(text):
     i = text.find(OLD, a); assert i > 0
     return text[:i] + S6791 + text[i:], 1
 
+# s6836 G3f opt-in: ROGUESQ_HANGAR_FOV=<deg> replaces the fovy (a2) that setupCameraMatrices passes to guPerspective for the
+# SELECT YOUR CRAFT camera only (cam 0x800CD670; retail fovy 45 / aspect 1.882 = ~76 deg horizontal, s6791). The owner's
+# "fish-eye" while scrolling ships is that wide retail lens. The pointer is per-screen stable (s6791 + s6836: SELECT LEVEL is
+# 0x800CDC80 with the same 512x340 viewport, and narrowing it crops the holo table, so the knob does NOT key on the viewport).
+# ROGUESQ_HANGAR_FOV_CAM=<hex>[,<hex>] retargets (e.g. 800CD670,800CDC80 for both). Inserted before the s6791 log so
+# ROGUESQ_G3F_CAM records the value used. Clamped 10..90. Unset = retail (no change).
+S6836_TAG = "/* PATCH: s6836 hangar fov */"
+S6836 = ("    { " + S6836_TAG + " static int i6836 = -1; static float f6836; static uint32_t c6836[2] = { 0x800CD670u, 0u }; static unsigned n6836;\n"
+         "      if (i6836 < 0) { const char* e = getenv(\"ROGUESQ_HANGAR_FOV\"); const char* c = getenv(\"ROGUESQ_HANGAR_FOV_CAM\"); char* q; i6836 = 0;\n"
+         "        if (c && *c) { c6836[0] = (uint32_t)strtoul(c, &q, 16); if (*q == ',') c6836[1] = (uint32_t)strtoul(q + 1, NULL, 16); }\n"
+         "        if (e && *e) { double v = atof(e); if (v > 0.0) { if (v < 10.0) v = 10.0; if (v > 90.0) v = 90.0; f6836 = (float)v; i6836 = 1; fprintf(stderr, \"[hangar-fov] cam %08x %08x fovy -> %g\\n\", (unsigned)c6836[0], (unsigned)c6836[1], v); } } }\n"
+         "      if (i6836 && ((uint32_t)ctx->r17 == c6836[0] || (c6836[1] && (uint32_t)ctx->r17 == c6836[1]))) { union { uint32_t u; float f; } o, n; o.u = (uint32_t)ctx->r6; n.f = f6836; ctx->r6 = (int32_t)n.u;\n"
+         "        if (n6836++ == 0) fprintf(stderr, \"[hangar-fov] first hit cam %08x: fovy %g -> %g\\n\", (unsigned)ctx->r17, o.f, n.f); } }\n")
+def apply_s6836_hangarfov(text):
+    a = text.find("RECOMP_FUNC void setupCameraMatrices("); assert a > 0
+    if S6836_TAG in text:
+        i = text.find("    { " + S6836_TAG, a); j = text.find("\n", text.find("} }\n", text.find("first hit", i)))  # end of old block
+        old = text[i:j + 1]
+        if old == S6836: return text, 0
+        text = text[:i] + text[j + 1:]
+    i = text.find("    { /* PATCH: s6031 far */", a)
+    if i < 0: i = text.find(OLD, a)
+    assert i > 0
+    return text[:i] + S6836 + text[i:], 1
+
 if __name__ == "__main__":
     p = base / "funcs_4.c"; t = p.read_text(); t2, n = apply4(t)
     t2, m = apply_s6201_pool(t2)
@@ -598,6 +623,7 @@ if __name__ == "__main__":
     t2, ii = apply_s6718_intro4(t2); sc += ii
     t2, ii = apply_s6719_persp640(t2); sc += ii
     t2, ii = apply_s6791_g3fcam(t2); sc += ii
+    t2, ii = apply_s6836_hangarfov(t2); sc += ii
     if n or m or q or sc: p.write_text(t2)
     print("funcs_4.c live patched x%d pool=%d poolclass=%d scissor=%d" % (n, m, q, sc))
     p0 = base / "funcs_0.c"; t = p0.read_text(); t2, n = applypfm(t)

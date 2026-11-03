@@ -37823,6 +37823,10 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6791:
             changed = True
             report.append(f"{p.name}: s6791 g3f cam log x{_n6791}")
+        text, _n6836 = _a6031.apply_s6836_hangarfov(text)
+        if _n6836:
+            changed = True
+            report.append(f"{p.name}: s6836 hangar fov x{_n6836}")
 
     if p.name == "funcs_33.c":
         import apply_s6721_pausegate as _a6721m

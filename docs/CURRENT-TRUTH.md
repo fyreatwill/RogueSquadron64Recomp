@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6835 (2026-11-03).
+Compact operational handoff, as of Session 6836 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -506,6 +506,10 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    under mutex 0x80128D10). Audio flowed -> game thread blocked in an OS call. Hypotheses H-lost-mutex / H-lost-vi /
    H-lost-post. New passive [stall-dump] (default on, fires only on a >=600-VI fullsync stall; =0 off, _VI=<n>, _TEST=<vi>)
    prints slot states + the three queues' waiting threads; controls pass. Hunts s6835_bootfreeze_hunt_c/d queued.
+   s6836: hunts c/d 22/22 clean -> freeze 1 in 65 boots; thread PASSIVE ([stall-dump] default on, no more hunts).
+   s6836 G3f owner offer LANDED: ROGUESQ_HANGAR_FOV=<deg> narrows SELECT YOUR CRAFT cam 0x800CD670 only (apply_s6836_hangarfov;
+   0x800CDC80 = SELECT LEVEL, excluded, crops at 30). Same build: fovy 30 on 1486/1486 craft-cam calls, other cams 45, camera
+   path identical; 38 suggested (30 crops wingtips). OWNER-OPT-INS row; sheet scratch/s6836/sheet_craft_fov.png.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

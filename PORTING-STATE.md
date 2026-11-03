@@ -180356,3 +180356,30 @@ is the [stall-dump] queue owners on the next freeze.
 ORIGIN: no mitigation; instrument only.
 Next: fold hunts c/d. FROZEN -> the dump names the parked thread per queue and the stuck slot state; then read the
 runtime path for that queue (ultramodern message queue / VI event delivery) and fix.
+
+## Session 6836 (2026-11-03) — boot-freeze hunts c/d 22/22 clean (1 in 65); opt-in ROGUESQ_HANGAR_FOV narrows the SELECT YOUR CRAFT lens (G3f owner offer), camera path unchanged
+Folded: soaks s6835_bootfreeze_hunt_c/d (tools/boot_freeze_hunt.sh, 11 boots each, control boot1 sample named 12 [Game]
+threads in both): 22/22 boots reached fs ~1287 at 40 s, 0 crash, 0 freeze; no [stall-dump] fired. With s6834 hunts a/b the
+s6814 a30_s2 freeze is now 1 in 65 boots. Per NEXT.md the thread goes passive: [stall-dump] stays default-on and will print
+the slot states + queue waiters if it ever recurs in any run. No further hunts queued.
+Work unit (G3f closed s6791 as H-retail with the instruction "offer the owner an opt-in hangar FOV knob"): new
+ROGUESQ_HANGAR_FOV=<deg> (tools/apply_s6031_far.py apply_s6836_hangarfov, wired into fixup_game_funcs_vendored.py next to
+s6791; funcs_4.c setupCameraMatrices, the only guPerspective site). Replaces fovy a2 for cam 0x800CD670 only, before the
+s6031/s6104/s6112 blocks and the s6791 log; ROGUESQ_HANGAR_FOV_CAM=<hex>[,<hex>] retargets; clamp 10..90; unset = retail.
+Dead end on the way (kept as data): a first viewport-keyed variant (h 340 + aspect > 1.8) also hit 0x800CDC80, which is
+SELECT LEVEL (the holo table), not craft select: at fovy 30 the table and level name crop (scratch/s6836/selectlevel_try/
+sheet_hangar_fov.png). s6791's pointers are per-screen stable (800CD670 craft select 4529/1448/1486 calls, 800CDC80 SELECT
+LEVEL), so the knob keys on the pointer. Route note: the owner save now opens SELECT LEVEL on BEGGAR'S CANYON (no craft
+select; Start/Start launches the mission); one left press -> a level with SELECT YOUR CRAFT (scratch/s6836/arms.sh).
+Ran scratch/s6836/arms.sh (one build, two arms sequential, ROGUESQ_G3F_CAM in both, 60 s, rc=0, 0 crash lines):
+- Positive: fov30 arm cam 800cd670 fovy 30 on 1486/1486 calls (retail arm 45 on 1448/1448), "[hangar-fov] first hit cam
+  800cd670: fovy 45 -> 30".
+- Same-run negative controls: SELECT LEVEL 800cdc80 45 (336 calls), boot/menu/intro cams 800cf090 / 80165f18 / 80165ec8
+  unchanged in the fov30 arm.
+- Sim untouched: cam position at matched times identical in both arms (e.g. t~45.4 x 9.353/9.360, z -15.383/-15.383;
+  t~49.4 11.9018/-17.3904 both), i.e. the pans run the same retail camera path; only the lens changes.
+- Horizontal FOV at aspect 1.882: 45 -> 75.9 deg, 38 -> 65.9, 35 -> 61.4, 30 -> 53.5. Frames (scratch/s6836/
+  sheet_craft_fov.png, top retail, bottom 30): ships framed larger, edge stretch during the pan reduced, but 30 crops the
+  V-wing wingtips -> OWNER-OPT-INS suggests 38.
+VERDICT: knob landed and verified (two lines: guest fovy log + window frames + same-run controls). Default stays retail.
+Not checked: ROGUESQ_ASPECT 16:9/21:9 together with the knob (the owner's screens) -> NEXT.
