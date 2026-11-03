@@ -180803,3 +180803,44 @@ Work unit: NEXT.md g1d-wide-epsilon-audit iteration 2 of 2 (offline, no build/ru
   s6694/s6844/s6846/s6848. Static only (tool + manual read of each chain): single-source by method. Rules out a
   through-memory 21:9 flipper in the HUD/overlay/sprite paths; the runtime check of mission-only paths is NEXT.md
   g1d-21x9-mission-sweep. Table: docs/G1D-WIDTH-CENSUS.md "Through-memory pass (s6849)".
+
+## Session 6850 (2026-11-03) — G1d 21:9 per-level RDP sweep: 0 crash / 0 stall on lvl0-18, edge sprites dropped by a 12-bit lr.x wrap; ROGUESQ_G1D_SPRITE_WRAP clip-at-edge (default on), same-build A/B; residual game-DL HUD texrects never reach the walker
+Work unit: NEXT.md g1d-21x9-mission-sweep. (Picked up mid-flight: the previous invocation launched the sweep and wrote
+the fix + tools/g1d_rectscan.py, then stopped before building or recording; this session finished the sweep on the
+old binary, built the fix, ran the A/B and wrote the ledger.)
+- Sweep (scratch/s6850/lvl.sh, sweep.sh; results scratch/s6850/SWEEP.txt, per-level l<N>/scan.txt): forced level-select
+  route, ROGUESQ_ASPECT=21:9, ~200 s hold, RS64_RDP_BIN_PORT + RS64_RDP_BIN_PORT_VI, scanned by tools/g1d_rectscan.py.
+  Positive control in every run: ROGUESQ_S6848_FORCE_OVL=9000:9600 with ROGUESQ_G1D_OVL_WRAP=0 -> ZERO-W fills inside the
+  window fired on 17/18 levels (289-720). **lvl5 control did NOT fire** (ctl ZERO-W 0; lvl5 still had cw 640 images up to
+  VI 9327), so lvl5's nulls are uncontrolled. All 18 levels: alive at end, 0 VI stalls, 0 crash lines.
+- Findings: (1) out-of-window ZERO-W fills on lvl9 (300), lvl12 (532), lvl16 (1276) are the s6848 emitColorFillRect
+  site occurring naturally (bands 0..54 / 393..448); that apply is default on and was only disabled here for the control.
+  (2) WRAP texrects (lr.x < ul.x, lr.y > ul.y) on 14 levels: lvl17 189, lvl6 45, lvl11 41, lvl2 33, lvl7 23, lvl10 16, others
+  <= 7. Classified offline: all but 2 start on the image and overhang the right edge by < 384 px. These are sprites whose
+  lr.x >= 1024 px overflowed the 12-bit 10.2 field; the RDP draws nothing, so edge-straddling smoke/explosion billboards
+  vanish at 21:9. At 640 wide retail only drops sprites hanging >= 384 px past the edge.
+  (3) WRAPOFF (ul.x >= cw, 768-wide boot cinematic) are off-image either way; OFFIMG harmless.
+- Fix (src/rsp/dpc_bridge.cpp rs64_g1d_rect_wrap, ROGUESQ_G1D_SPRITE_WRAP, default on, =0 old): on a > 640-wide image a
+  once-wrapped texrect that starts on the image and overhangs it by < 384 px gets lr.x clamped to the image edge
+  (min(cw*4, 0xFFF)). Larger overhangs still drop as in retail. The old lr.x == 0 (> 1023 wide) branch is unchanged.
+  Note: "384 px past the edge" is retail's tolerance taken relative to the wide edge; on a centred 21:9 frustum the
+  retail-equivalent limit is ~192 px past it, so some sprites retail would drop (because they hang far off the 4:3 edge)
+  now draw clipped. That removes a pop, it does not add one; owner can say otherwise.
+  Diagnostic: ROGUESQ_G1D_SPRITE_DIAG=1 logs walker early returns, wraps seen at cw <= 640, and skipped on-image wraps.
+- Same-build A/B, lvl17 (scratch/s6850/ab.sh, abd.sh, AB.txt; sequential runs): arm SPRITE_WRAP=0: WRAP 10,
+  sprite-wrap lines 0. Arm =1: three runs, rewrites 2 / 7 / 3, WRAP left in the bin 6 / 3 / 3. Second line of
+  evidence: the bin is dumped inside RT64 submit_rdp_range, after record_submit, so it is what RT64 draws. The rewritten
+  words show up there (VI 7307 0x733CD0 `24FFFBF5 0062C000`: lr.x 0xFFF, ul.x 395.0; VI 10576/10590 the same), and none
+  of the logged rewrites appear among the remaining WRAP rows. Control fired in every arm (ctl ZERO-W 289-300).
+- **Residual, open:** the WRAPs that remain are always the same kind of rect. They come in a short 3-frame run (ul.x ~1012
+  -> 999 -> 985, ul.y ~80-90, 16x30 px, VI 11444-11447 and 11923-11927 on lvl17; the same shape shows up on lvl5 and
+  lvl9). They are game-DL G_TEXRECT passthroughs (w0 top byte 0xE4) after a normal SetTImg/LoadBlock/SetTile sequence in
+  the merged record lo=0x6F6000 (e.g. +0x1F330). With DIAG=1 the walker printed NOTHING for them: no fix, no skip, no
+  wrap-at-cw, no early return. So rs64_g1d_rect_wrap never visits those words with those values, even though the same
+  call chain feeds RT64 and the bin. The bin also holds many 8-byte per-range records (lo 0x6F6000, 0x6F6008, ...: the
+  s4273 wrap-flush path with the s4286 shadow restore) next to the merged ones. Unexplained.
+ORIGIN: the wrapped lr.x is written by the F5 ucode (TexrectGen overlay 0x2C packs lr unclamped,
+docs/F5-OVL2C-TEXRECTGEN.md) and by game-DL texrects, from legitimate sprite positions past a widened (G1d) image
+edge. Only the 12-bit field overflows. The values are valid, so the fix clamps the field and does not suppress anything.
+Rules out: crashes/stalls from 21:9 in missions (18 levels, 200 s each, single run each). Does not yet rule out the
+residual HUD-texrect drop (a 16x30 px element missing for ~3 frames at the right edge).

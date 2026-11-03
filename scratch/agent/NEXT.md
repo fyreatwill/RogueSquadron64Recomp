@@ -1,17 +1,26 @@
-# NEXT: G1d 21:9 per-mission RDP sweep for wrapped / zero-width rects (runtime check of the closed width census)
-HYPOTHESIS-ID: g1d-21x9-mission-sweep
+# NEXT: why does rs64_g1d_rect_wrap never see the residual wrapped game-DL HUD texrects? (s6850 residual)
+HYPOTHESIS-ID: g1d-hudrect-walker-miss
 
-State (s6849): the static width-idiom census is closed (docs/G1D-WIDTH-CENSUS.md, 0 new flippers through memory).
-Static evidence only; the 21:9 runtime has been exercised on boot -> hangar -> lvl1 -> abort (s6841-s6848) and menus.
+State (s6850): ROGUESQ_G1D_SPRITE_WRAP clamps edge-straddling wrapped texrects (A/B on lvl17; the rewrites show up in
+RT64's input bin). Residual: a 3-frame run of game-DL G_TEXRECT (w0 0xE4.., 16x30 px, ul.x ~1012 -> 999 -> 985,
+ul.y ~85; lvl17 VI ~11444 and ~11923, also lvl5/lvl9) stays wrapped in the bin, merged record lo=0x6F6000 +0x1F330.
+ROGUESQ_G1D_SPRITE_DIAG=1 printed nothing for it (no fix/skip/wrap-at-cw/early-return), so the walker never reads those
+words in wrapped form. The bin also has 8-byte per-range records (lo 0x6F6000, 0x6F6008, ...).
 
-Hypotheses: H-clean (no mission at 21:9 emits a fill/texrect with lr.x < ul.x, lr.x field 0 with W-wide intent, or a
-rect_wrap clamp outside the known wipe) vs H-site (some mission-only path, e.g. a cockpit/radar/overlay variant the
-static taint missed because W reaches it through a pointer chain or a different global, does).
-Method (one build, current binary; no code change needed):
-1. Positive control in the same run set: ROGUESQ_S6848_FORCE_OVL=4400:4700 with ROGUESQ_G1D_OVL_WRAP=0 on lvl1 must show
-   ZERO-W fills in tools/g1d_fillscan.py (s6848 recipe scratch/s6848/port_ovl.sh).
-2. For levels 1..19 via the forced level-select route (G1 recipes) at ROGUESQ_ASPECT=21:9, RS64_RDP_BIN_PORT capped
-   (RS64_RDP_BIN_PORT_MAX_MB), ~60 s of flight each; queue as soaks (scratch/agent/soak_queue/) in pairs.
-3. Offline: g1d_fillscan.py + a texrect pass (ul.x > lr.x, lr.x in {0..3} with ul.x 0, or any rect_wrap counter line)
-   per level. Any hit -> name the emitting function (PC from the DL builder), fix with a W<=640 bit-identical apply.
-Expected: 0 hits on all levels with the control firing -> G1d runtime-closed; hits -> fixes.
+Hypotheses (one instrument, one build, one run discriminates):
+- H-shadow: the word is submitted through the s4273 per-range wrap flush. record_submit walks an 8-byte range holding
+  only w0/w1 of the texrect, or the bump-time shadow bytes, and those differ from the live bytes RT64 later re-reads in
+  the merged record. Expect: the address is in a per-range record before the merged one, with different contents.
+- H-split: the texrect is split across two submit ranges (w0/w1 | w2/w3). The walker sees it in neither range in a
+  wrapped state, or misses it because the range starts mid-command and the walker desyncs.
+- H-late: something writes the texrect words after record_submit (e.g. a second submit of the same lo..hi without a
+  fresh record_submit, such as RT64 re-reading a merged span). Expect: a walker log at the address showing different
+  words than the bin.
+Measurement: add one cheap ring (env ROGUESQ_G1D_SPRITE_DIAG=2) that logs every record_submit (lo, hi, path id: merged /
+per-range-wrap / commit / live) whose range covers any texrect with ul.x >= 960 px on a 1024-wide image, plus the words
+the walker read there. Run lvl17 once (scratch/s6850/abd.sh 17 1, keep port.bin), match by address against the bin
+records holding the wrapped words. Positive control: the 3 known TexrectGen rewrites must show up in the ring.
+Fix by result: H-shadow / H-split -> walk the merged span (or clamp in the shadow too); H-late -> move the clamp to the
+point RT64 reads.
+Budget: 1 iteration. If it doesn't discriminate, close the residual as "3-frame 16x30 px HUD element, owner-visible?" and
+move on to the next ladder rung.

@@ -5148,6 +5148,10 @@ static void rs64_g1d_title_clear(uint32_t lo, uint32_t hi) {
 // 0xFFF (1023.75 covers column 1023). ROGUESQ_G1D_RECT_WRAP=0 = old behaviour.
 static void rs64_g1d_rect_wrap(uint32_t lo, uint32_t hi) {
     static const bool on = [] { const char *e = std::getenv("ROGUESQ_G1D_RECT_WRAP"); return !(e && *e == '0'); }();
+    static const bool diag = [] { const char *e = std::getenv("ROGUESQ_G1D_SPRITE_DIAG"); return e && *e == '1'; }();
+    static int s_diag = 0;
+    if (diag && on && (hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) && s_diag++ < 40)
+        fprintf(stderr, "[g1d-sprite-diag] early-return lo=%06X hi=%06X\n", lo, hi);
     if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
     static uint32_t s_cw = 0; static int s_lines = 0;
     auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
@@ -5155,15 +5159,45 @@ static void rs64_g1d_rect_wrap(uint32_t lo, uint32_t hi) {
         const uint32_t w0 = rd(a), op = (w0 >> 24) & 0x3F;
         step = (op == 0x24 || op == 0x25) ? 16u : (op >= 0x08 && op <= 0x0F) ? 32u + ((op & 4) ? 64u : 0u) + ((op & 2) ? 64u : 0u) + ((op & 1) ? 16u : 0u) : 8u;
         if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; continue; }
-        if ((op != 0x24 && op != 0x25 && op != 0x36) || s_cw <= 1023u) continue;
+        if (diag && (op == 0x24 || op == 0x25) && s_cw <= 640u) {
+            const uint32_t w1 = rd(a + 4);
+            if (((w0 >> 12) & 0xFFFu) < ((w1 >> 12) & 0xFFFu) && (w0 & 0xFFFu) > (w1 & 0xFFFu) && s_diag++ < 40)
+                fprintf(stderr, "[g1d-sprite-diag] wrap-at-cw sw=%d cw=%u w0=%08X w1=%08X lo=%06X a=%06X\n",
+                    g_rs64_swap_n.load(std::memory_order_relaxed), s_cw, w0, w1, lo, a);
+        }
+        if ((op != 0x24 && op != 0x25 && op != 0x36) || s_cw <= 640u) continue;
         const uint32_t w1 = rd(a + 4), lrx = (w0 >> 12) & 0xFFFu, ulx = (w1 >> 12) & 0xFFFu;
-        // s6845: a texrect at ul.x 0 wraps too (the abort-wipe hold rect: x0 0, x1 = 4096 after the s6845 hudwipe fix);
-        // ul == lr == 0 draws nothing either way, so only a fill rect still needs ul.x > 0.
-        if (lrx != 0 || (ulx == 0 && op == 0x36) || (w0 & 0xFFFu) <= (w1 & 0xFFFu)) continue;
-        const uint32_t n0 = w0 | (0xFFFu << 12);
+        if ((w0 & 0xFFFu) <= (w1 & 0xFFFu)) continue;
+        if (s_cw > 1023u && lrx == 0) {
+            // s6845: a texrect at ul.x 0 wraps too (the abort-wipe hold rect: x0 0, x1 = 4096 after the s6845 hudwipe fix);
+            // ul == lr == 0 draws nothing either way, so only a fill rect still needs ul.x > 0.
+            if (ulx == 0 && op == 0x36) continue;
+            const uint32_t n0 = w0 | (0xFFFu << 12);
+            memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &n0, 4);
+            if (s_lines++ < 24) fprintf(stderr, "[g1d-rect-wrap] sw=%d op=%02X cw=%u ul.x=%.2f lr.x 0 -> 1023.75 off=%06X\n",
+                g_rs64_swap_n.load(std::memory_order_relaxed), op, s_cw, ulx / 4.0, a);
+            continue;
+        }
+        // s6850: the F5 TexrectGen billboard path (ucode overlay 0x2C, op 0xBD; docs/F5-OVL2C-TEXRECTGEN.md) clamps ul at
+        // 0 but packs lr unclamped, so lr.x >= 1024 px wraps (lr < ul) and the sprite is dropped. Retail (640-wide image)
+        // does the same, but only for sprites hanging >= 384 px past the right edge; on a wide image every sprite that
+        // straddles the edge vanished (s6850 21:9 sweep: lvl2/3/4/5 smoke/explosion billboards). Keep retail's tolerance
+        // relative to the image edge: a once-wrapped rect that starts on the image and overhangs it by < 384 px is
+        // clipped at the edge instead; a larger overhang still drops, as in retail. ROGUESQ_G1D_SPRITE_WRAP=0 = old.
+        static const bool spr = [] { const char *e = std::getenv("ROGUESQ_G1D_SPRITE_WRAP"); return !(e && *e == '0'); }();
+        if (!spr || lrx >= ulx || ulx >= s_cw * 4u || lrx + 4096u >= (s_cw + 384u) * 4u) {
+            if (diag && lrx < ulx && ulx < s_cw * 4u && s_diag++ < 40)
+                fprintf(stderr, "[g1d-sprite-diag] skip sw=%d cw=%u w0=%08X w1=%08X a=%06X\n",
+                    g_rs64_swap_n.load(std::memory_order_relaxed), s_cw, w0, w1, a);
+            continue;
+        }
+        const uint32_t elr = std::min(s_cw * 4u, 0xFFFu);
+        const uint32_t n0 = (w0 & ~(0xFFFu << 12)) | (elr << 12);
         memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &n0, 4);
-        if (s_lines++ < 24) fprintf(stderr, "[g1d-rect-wrap] sw=%d op=%02X cw=%u ul.x=%.2f lr.x 0 -> 1023.75 off=%06X\n",
-            g_rs64_swap_n.load(std::memory_order_relaxed), op, s_cw, ulx / 4.0, a);
+        static int s_spr = 0;
+        if (s_spr++ < 24) fprintf(stderr, "[g1d-sprite-wrap] sw=%d op=%02X cw=%u ul=(%.2f,%.2f) lr.x %.2f(+1024) -> %.2f lr.y=%.2f off=%06X\n",
+            g_rs64_swap_n.load(std::memory_order_relaxed), op, s_cw, ulx / 4.0, (w1 & 0xFFFu) / 4.0, lrx / 4.0, elr / 4.0,
+            (w0 & 0xFFFu) / 4.0, a);
     }
 }
 

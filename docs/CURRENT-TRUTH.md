@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6849 (2026-11-03).
+Compact operational handoff, as of Session 6850 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -263,8 +263,12 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
 2. **g1d-wide-epsilon-audit CLOSED s6849 (static, single-source by method).** s6848 census + s6849 through-memory pass
    (tools/g1d_wcensus.py now also takes `lwc1 W` sources; docs/G1D-WIDTH-CENSUS.md): HUD node x/scale -> drawSubtitleText
    -> int16 -> drawTextGlyphRect (audited), overlay rect W-1 at 0x8011A90E -> clamp -> 10-bit pack 1023 fits, walker
-   sprites -> rect clipper. 0 new flippers; class flippers = s6694, s6844, s6846, s6848. Runtime check next:
-   **g1d-21x9-mission-sweep (NEXT.md)** per-mission 21:9 RDP scan for zero-width / wrapped rects.
+   sprites -> rect clipper. 0 new flippers; class flippers = s6694, s6844, s6846, s6848.
+   **s6850 runtime sweep lvl0-18 at 21:9:** all alive, 0 stalls/crashes (control fired 17/18; lvl5 uncontrolled). New
+   class: edge-straddling sprites whose lr.x >= 1024 px wraps the 12-bit field and drops (lvl17 189, lvl6 45, lvl11 41...).
+   Fixed by ROGUESQ_G1D_SPRITE_WRAP (default on, clip at the image edge when overhang < 384 px; same-build A/B lvl17,
+   rewrites visible in RT64's input bin). **Residual open (NEXT.md g1d-hudrect-walker-miss):** a 3-frame game-DL
+   G_TEXRECT run (0xE4, ul.x ~1012->985, ul.y ~85) stays wrapped and the walker never sees it (DIAG=1 prints nothing).
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
