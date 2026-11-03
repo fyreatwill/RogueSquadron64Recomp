@@ -180663,3 +180663,44 @@ is given) and H-stream-gap. Root cause of the 21:9 absence: 12-bit RDP x overflo
 A/B (4 vs 0 wipe frames). Remaining: 21:9 post-wipe black hold.
 ORIGIN: lr.x = 0 is written by the game's abort-wipe texrect emitter (lr = fb width 1024 -> 0x1000 masked to 12 bits). The
 value is legitimate; only its encoding overflows. The clamp restores the encodable maximum and only triggers on >1023-wide images.
+
+## Session 6845 (2026-11-03) — 21:9 abort post-wipe bright hold = our s6156 HUD anchor shifting the full-screen wipe glyph -256 px; fixed (apply_s6845_hudwipe + rect_wrap at ul.x 0), same-build A/B 3 vs 0 bright frames
+HYPOTHESIS-ID: g3-wide-abort-hold. Route scratch/s6845/port_abort.sh (= s6844 abort route, outputs under scratch/s6845). 12 runs, 0 crash.
+- **Where the rect comes from (offline + 4 diagnostic runs, one build each):** CPU G_TEXRECT emitters in RecompiledFuncs =
+  drawTextGlyphRect 0x80015708 and flushDebugTextOverlay only (grep lui 0xE400 / addiu 0xE4); the ucode TexrectGen overlay
+  (0x2C) is ruled out because the wipe rect has no SetPrimDepth/PrimColor prefix (scratch/s6845/prefix.py: FC + 2F only).
+  RDRAM scans at submit (ROGUESQ_WIPE_SCAN=<vi_lo>:<vi_hi>, src/rsp/dpc_bridge.cpp rs64_wipe_scan; keys: E4xxx700 shape,
+  dsdx word 000D000B, combine word) found only stale RDP-FIFO copies (0x6E4800..0x720xxx) and a static combine table at
+  0x038060; the guest DL itself is read through a DMEM fetch ring (same env, `[wfr]` lines from rs64_e9prov_source_fetch,
+  needs ROGUESQ_G1E_PROBES=1): sub-DL `BA001402, B900031D 00504240, E4F5B700 00000000 2EE00000 000D000B, B8` = a raw E4
+  written by the CPU. (ROGUESQ_WIPE_DLWALK, a host walk of the task DL in main.cpp, derails after ~60 commands: unusable.)
+- **Argument probe (tools/apply_s6845_glyph_probe.py, registered in fixup_game_funcs_vendored after s6843; env
+  ROGUESQ_WIPE_SCAN):** `[glyph]` at both drawTextGlyphRect calls in drawSubtitleText, `[glyph-entry]` at entry (+store
+  watch on screen struct +0x18), `[glyph-base]` at the base-x store 0x800160E4. The wipe = glyph 0x180 of text object
+  0x80334E0C on vp 0x80138D20, ox sweeping +443.7 -> -512 (21:9; 4:3 +221.9 -> -256), x scale 73.14 / 36.57, width
+  fp = 4681 / 2340. Screen centre +0x18 = 512 constant (0 stores in the window). But at VI 6740 f4 = -750.93 where
+  (ox+512)*4 = 273.07: the generated code at 0x800160C0 carries the s6155/s6156 HUD-anchor block, which rewrites
+  f4 = w - A*sc (A=256 at w1024). The gate (!pause_live && hud_flight && vp in the HUD list) opens when the pause byte
+  drops two frames before the wipe ends.
+- **Exact fit:** drawTextGlyphRect clips x0<0 to ul 0 with S = (-x0)>>1 << 5 and clamps lr to W*4, masked 12 bits:
+  x0 -750 -> S 375, lr = -750+4681 = 3931 (982.75); x0 -1023 -> S 511, lr 3658 (914.5); x0 -1019 -> S 509, lr 3662 (915.5).
+  All three observed s6844 words reproduced. S beyond the 16-texel soft-edge texture -> transparent -> bright frame.
+- **Fix:** tools/apply_s6845_hudwipe.py (after s6725 hudflight, in-process and replay lists): the anchor needs
+  rs64_s6845_hud_small(obj+0x24) = |x scale| <= 8 (src/main/main.cpp; HUD items 1.0-3.2; `[g1d-hudwipe]` logs skips,
+  3 per run = the wipe frames only; ROGUESQ_G1D_HUD_BIGSCALE=1 = old). With the anchor gone the hold rect is x0 0, x1 4096
+  -> lr field 0 at ul 0, which rs64_g1d_rect_wrap skipped (ul.x>0 rule); it now wraps texrects at ul.x 0 too (fill rects
+  still need ul.x>0; needs lr.y > ul.y).
+- **Same-build A/B (window bursts, scratch/s6844/winbands.py, 8-band luminance):** 21:9 off (BIGSCALE=1): 3 post-wipe
+  frames mean 191.5 (fully bright, ~0.25 s), RDP as s6844. 21:9 on: wipe sweeps to the left edge, then black; RDP hold
+  E4FFF700 00000000 S 0 (= 4:3 structure). 4:3 control: unchanged (anchor not armed, 0 skips, 0 wraps).
+  Sheet docs/owner_sheet_s6845_abort_hold_21x9.png.
+- **Residual (both arms share it):** the last hold frame at 21:9 is cc 119623 (soft edge) at ul 1.0 px, where 4:3 draws
+  cc 11FE23 (flat black) at ul 0.5 px, so the window shows a ~68 px bright soft strip at the far left for ~0.3 s
+  (113.68-113.93 s). The game picks the combiner per frame; the ×2 wide ox step (1.024 vs 0.5 px) is the lead.
+Ruled out: TexrectGen (0x2C) as the source; the game's clipper as the cause of the shifted x; a change of the screen
+centre struct.
+VERDICT: selects H-other in its "our patch" form (the s6156 HUD anchor, not the game) and refutes H-clip / H-wrap2 as the
+cause of the shifted hold rects. Fixed with a same-build A/B (3 vs 0 bright frames).
+ORIGIN: x0 = -750/-1019 is written by OUR s6156 HUD-anchor block in drawSubtitleText (generated 0x800160C0, applied by
+tools/apply_s6155_hudcpos.py), not by the game; the value is not legitimate for a full-screen sprite. The gate restores the
+game's own centred position for elements wider than the HUD; lr 0 at ul 0 is the s6844 12-bit wrap of a legitimate 4096.

@@ -38072,6 +38072,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6725:
             changed = True
             report.append(f"{p.name}: s6725 hudflight x{_n6725}")
+        import apply_s6845_hudwipe as _a6845
+        text, _n6845 = _a6845.apply(text)
+        if _n6845:
+            changed = True
+            report.append(f"{p.name}: s6845 hudwipe x{_n6845}")
 
     if p.name == "funcs_12.c":
         import apply_s6145_hudx as _a6145
@@ -41911,6 +41916,7 @@ RS64_REPLAY = [
     "apply_s5078_flight_writer_census.py",
     "apply_s5654_vsrc_store_census.py",
     "apply_s6843_store_watch.py",
+    "apply_s6845_glyph_probe.py",
     "apply_s5660_unaligned_store_census.py",
     "apply_s5368_align100_counter.py",
     "apply_s5370_path_census.py",
@@ -42010,6 +42016,7 @@ RS64_REPLAY = [
     "apply_s6695_radarmark.py",
     "apply_s6721_pausegate.py",
     "apply_s6725_hudflight.py",
+    "apply_s6845_hudwipe.py",
     "apply_s5818_destroy_health.py",
     "apply_s5846_mission_end.py",
     "apply_s5847_mask_log.py",

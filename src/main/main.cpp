@@ -2179,6 +2179,52 @@ static void rs64_s6843_note(uint32_t key, uint32_t phys, uint32_t len, const cha
     }
     Agg& a = by[key]; ++a.n; a.bytes += len; if (phys < a.lo) a.lo = phys; if (phys + len > a.hi) a.hi = phys + len; if (api) a.api = api;
 }
+// s6845: drawSubtitleText -> drawTextGlyphRect argument probe (tools/apply_s6845_glyph_probe.py), VI window = ROGUESQ_WIPE_SCAN.
+extern "C" volatile uint32_t rs64_vi_n_g;
+static uint32_t s_s6845_lo = 0, s_s6845_hi = 0;
+extern "C" int rs64_s6845_on = [] { const char* e = std::getenv("ROGUESQ_WIPE_SCAN"); if (!e || !*e) return 0; char* c = nullptr;
+    s_s6845_lo = (uint32_t)strtoul(e, &c, 10); s_s6845_hi = (c && *c == ':') ? (uint32_t)strtoul(c + 1, nullptr, 10) : 0u; return s_s6845_hi > s_s6845_lo ? 1 : 0; }();
+extern "C" void rs64_s6845_glyph(uint8_t* rdram, uint32_t site, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t lry, uint32_t s3, uint32_t s1,
+                                 uint32_t fp, uint32_t bx, uint32_t by) {
+    const uint32_t vi = rs64_vi_n_g;
+    if (vi < s_s6845_lo || vi > s_s6845_hi) return;
+    static int lines = 0; if (lines++ >= 4000) return;
+    auto rw = [&](uint32_t va) { uint32_t v; memcpy(&v, rdram + (va & 0x7FFFFCu), 4); return v; };
+    auto rf = [&](uint32_t va) { uint32_t v = rw(va); float f; memcpy(&f, &v, 4); return (double)f; };
+    std::fprintf(stderr, "[glyph] vi=%u site=%08X ulx=%d uly=%d lrx=%d lry=%d fp=%d base=%d,%d obj=%08X ox=%.3f oy=%.3f sx=%.4f sy=%.4f arg=%08X ax=%d ay=%d W=%u\n",
+                 vi, site, (int)(int16_t)a1, (int)(int16_t)a2, (int)(int16_t)a3, (int)(int32_t)lry, (int)(int32_t)fp, (int)(int16_t)bx, (int)(int16_t)by,
+                 s3, rf(s3 + 0x18), rf(s3 + 0x1C), rf(s3 + 0x24), rf(s3 + 0x28), s1, (int)rw(s1 + 0x18), (int)rw(s1 + 0x1C), rw(0x8011A838u));
+}
+// s6845b: drawSubtitleText entry: log (text obj, screen struct, struct+0x18 x centre) when the centre changes inside the
+// window, and arm the s6843 store watch on the first struct's +0x18 word so `[swatch]` names its writer.
+extern "C" void rs64_s6845_entry(uint8_t* rdram, uint32_t a0, uint32_t a1) {
+    const uint32_t vi = rs64_vi_n_g;
+    if (vi + 40 < s_s6845_lo || vi > s_s6845_hi) return;
+    static uint32_t last_a1 = 0, last_c = 0xFFFFFFFFu; static int lines = 0; static bool armed = false;
+    uint32_t c; memcpy(&c, rdram + ((a1 + 0x18) & 0x7FFFFCu), 4);
+    if ((a1 != last_a1 || c != last_c) && lines++ < 400) std::fprintf(stderr, "[glyph-entry] vi=%u obj=%08X scr=%08X cx=%d\n", vi, a0, a1, (int)c);
+    last_a1 = a1; last_c = c;
+    if (!armed) { armed = true; rs64_s6843_lo = (a1 + 0x18) & 0x1FFFFFFFu; rs64_s6843_len = 4; std::fprintf(stderr, "[glyph-entry] watch armed %08X\n", rs64_s6843_lo); }
+}
+extern "C" void rs64_s6845_base(uint8_t* rdram, uint32_t s3, uint32_t s1, uint32_t t2, uint32_t f4, uint32_t f6) {
+    const uint32_t vi = rs64_vi_n_g;
+    if (vi < s_s6845_lo || vi > s_s6845_hi) return;
+    static int lines = 0; if (lines++ >= 2000) return;
+    auto rw = [&](uint32_t va) { uint32_t v; memcpy(&v, rdram + (va & 0x7FFFFCu), 4); return v; };
+    auto fl = [](uint32_t v) { float f; memcpy(&f, &v, 4); return (double)f; };
+    std::fprintf(stderr, "[glyph-base] vi=%u obj=%08X scr=%08X ox=%.3f cx=%d f4=%.3f f6=%.4f t2=%d\n", vi, s3, s1, fl(rw(s3 + 0x18)), (int)rw(s1 + 0x18), fl(f4), fl(f6), (int)t2);
+}
+// s6845 G1d (tools/apply_s6845_hudwipe.py): the s6156 HUD anchor applies only to HUD-sized elements. A text element
+// whose x scale (obj+0x24) exceeds 8 is a full-screen sprite (the abort-level wipe, glyph 0x180, sx 36.6 at 4:3 / 73.1
+// at 21:9; HUD items 1.0-3.2) and keeps the game's centred position. ROGUESQ_G1D_HUD_BIGSCALE=1 = old (anchor everything).
+extern "C" int rs64_s6845_hud_small(uint32_t sx_bits) {
+    static const bool old = [] { const char* e = std::getenv("ROGUESQ_G1D_HUD_BIGSCALE"); return e && *e == '1'; }();
+    float sx; memcpy(&sx, &sx_bits, 4);
+    if (old || !(sx > 8.0f || sx < -8.0f)) return 1;
+    static int lines = 0;
+    if (lines++ < 8) std::fprintf(stderr, "[g1d-hudwipe] anchor skipped for full-screen element sx=%.3f vi=%u\n", (double)sx, rs64_vi_n_g);
+    return 0;
+}
 extern "C" void rs64_s6843_store(uint32_t pc, uint32_t phys, char width) {
     const char w = (char)(width | 0x20); rs64_s6843_note(pc, phys, w == 'b' ? 1u : w == 'h' ? 2u : w == 'd' ? 8u : 4u, nullptr);
 }
@@ -6644,6 +6690,38 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         fflush(stderr);
     }
     { static int tn2 = 0; if (++tn2 <= 16) rs64_canary("pre-ucode", tn2); }
+    // s6845: ROGUESQ_WIPE_DLWALK=<vi_lo>:<vi_hi> walks the guest gfx DL (F5 command lengths per docs/F5-UCODE-REFERENCE.md,
+    // following 0x06 calls 4 deep) at task start inside the VI window and logs every non-geometry command with its
+    // guest address ([wdl] lines), so the guest command behind an RDP texrect can be named. Diagnostic only.
+    {
+        static uint32_t wlo = 0, whi = 0;
+        static const bool won = [] { const char* e = std::getenv("ROGUESQ_WIPE_DLWALK"); if (!e || !*e) return false;
+            char* c = nullptr; wlo = (uint32_t)strtoul(e, &c, 10); whi = (c && *c == ':') ? (uint32_t)strtoul(c + 1, nullptr, 10) : 0u; return whi > wlo; }();
+        const uint32_t vi = rs64_vi_n_g;
+        if (won && dl_ptr && vi >= wlo && vi <= whi) {
+            static int lines = 0;
+            auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, rdram + (a & 0x7FFFFCu), 4); return v; };
+            uint32_t stk[8]; int sp = 0; uint32_t pc = dl_ptr & 0x7FFFFFu; int n = 0;
+            while (n++ < 20000 && lines < 60000) {
+                const uint32_t w0 = rd(pc), w1 = rd(pc + 4), op = w0 >> 24;
+                uint32_t len = 8;
+                if (op == 0x03 || op == 0xBD) len = 24; else if (op == 0x05) len = 40;
+                else if (op == 0xBF || op == 0xB4) len = (w0 & 2) ? 32 : 16;
+                else if (op == 0xBE || op == 0xB3) len = 16; else if (op == 0xE4 || op == 0xE5) len = 16;
+                if (op != 0xBF && op != 0xB4 && op != 0x05) {
+                    lines++;
+                    fprintf(stderr, "[wdl] vi=%u d=%d pc=%06X op=%02X w=%08X %08X", vi, sp, pc, op, w0, w1);
+                    for (uint32_t o = 8; o < len; o += 4) fprintf(stderr, " %08X", rd(pc + o));
+                    fputc('\n', stderr);
+                }
+                if (op == 0x06 && sp < 4) { stk[sp++] = pc + len; pc = w1 & 0x7FFFFFu; continue; }
+                if (op == 0x07) { pc = w1 & 0x7FFFFFu; continue; }
+                if (op == 0xB8) { if (sp == 0) break; pc = stk[--sp]; continue; }
+                pc += len;
+            }
+            fprintf(stderr, "[wdl] vi=%u end n=%d\n", vi, n);
+        }
+    }
     const uint32_t task_serial = g_rs64_lle_task_n.fetch_add(1, std::memory_order_relaxed) + 1;
     rs64_e9prov_task_begin(task_serial, dl_ptr, rdram, ucode_addr);
     rs64_dpc_defer_begin();

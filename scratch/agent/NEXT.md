@@ -1,22 +1,28 @@
-# NEXT: 21:9 abort post-wipe black hold (frame turns bright ~0.4 s where 4:3/retail hold black)
+# NEXT: 21:9 abort last-hold soft strip (cosmetic residual of s6845)
 HYPOTHESIS-ID: g3-wide-abort-hold
 
-State (s6844): the right-to-left wipe now draws at 21:9 (rs64_g1d_rect_wrap clamps the wrapped lr.x 0 -> 1023.75; same-build
-A/B 4 vs 0 wipe frames). After the sweep, 4:3 draws cc 11FE23:FFFFF7FB texrect ti 0x4D3F90 ul 0 lr 512 s 0 (full black,
-VI 6743/6745) and holds black ~0.4 s before the hangar. At 21:9 (scratch/s6841/p21x/port.bin, tool scratch/s6844/blackrects.py
-<bin> <vi_lo>) the last sweep step is ul 0 lr 982.75 s=375 and the hold rects are ul 0 lr 914.5/915.5 s=511/509, and the window
-shows bright flight (scratch/s6844/p21on burst 113.50-113.85 s).
+State (s6845): the bright ~0.25 s post-wipe hold at 21:9 is FIXED (our s6156 HUD anchor shifted the full-screen wipe
+glyph -256 px; apply_s6845_hudwipe gates it on x scale <= 8; rect_wrap now wraps texrects at ul.x 0). Same-build A/B
+3 vs 0 bright frames. Residual: the LAST hold frame at 21:9 is drawn with the soft-edge combiner cc 119623 at ul 1.0 px
+(RDP E4FFF700 00004000 S 0), where 4:3 draws the flat-black cc 11FE23 at ul 0.5 px. The window shows a ~68 px soft
+bright strip at the far left for ~0.3 s (scratch/s6845/b21on w_0113.68..113.93; sheet docs/owner_sheet_s6845_abort_hold_21x9.png row 3).
 
 Hypotheses:
-- H-clip: the game's texrect helper clips a negative/overflowed ul.x by moving s and lr (it computes in 10-bit or signed
-  12-bit space), so at width 1024 the hold rect's s lands outside the soft-edge texture (alpha 0) -> transparent.
-- H-wrap2: lr = 1024 + k is written and the helper subtracts as signed 12-bit, producing lr 914/982.
-- H-other: the bright frames are a different missing draw (fb not swapped) and the texrects are a side issue.
+- H-thresh: drawSubtitleText / the wipe update picks the flat-black glyph state when the wipe x (ox, or base x in 10.2)
+  is below a retail-sized constant. At 21:9 ox ends at -512 + 1.024 (4:3: -256 + 0.5), so the doubled step lands past it.
+- H-timing: the combiner alternates by frame parity / wipe timer, and the 4:3 run happened to land on 11FE23 (w43 run
+  had 119623 ul 17 then 11FE23 x2; b43 11FE23 x2). Then 4:3 can also show the strip on some runs.
+- H-anchor2: another of our G1d x patches (s6144 FP_XSCALE, s6104 frustum) scales ox for the wipe object, and the
+  1.024 offset is ours.
 
-Discriminator (offline first, then ONE build): find the game function that emits prim 000000FF + cc 119623/11FE23 texrects
-(grep RecompiledFuncs for the 0xE4/0xE5 texrect word builder fed by the abort state; or watch the DL buffer word with
-ROGUESQ_STORE_WATCH on the swap where ul.x jumps to 0). Read its clip math against w=512 vs w=1024. If H-clip/H-wrap2: fix
-it in the game-side G1d patch set (fixup script) or extend rs64_g1d_rect_wrap to rebuild the hold rect (ul 0, lr 1023.75,
-s 0) on >1023-wide images, A/B in one build like s6844 (ROGUESQ_G1D_RECT_WRAP=0 arm). Positive control: band score of the
-burst frames after the wipe (4:3 = all bands 0).
-Budget: 2 iterations. If unresolved, park (cosmetic ~0.4 s) and take the next ladder rung.
+Discriminator (one build, two runs: 21:9 + 4:3, route scratch/s6845/port_abort.sh <tag> "<env> ROGUESQ_WIPE_SCAN=6712:6760"):
+extend the s6845 `[glyph]` probe (tools/apply_s6845_glyph_probe.py + rs64_s6845_glyph in src/main/main.cpp) to also log
+the text object's flag word (obj+0x14, which selects the FA prim-colour path at 0x80016010), obj+0x2C..0x2F (prim
+colour), and the combine word the caller emits for that glyph (find the FC writer in drawSubtitleText: the static
+combine table at 0x038060 holds both FC11FE23 and FC119623 entries). Then read the selector: if it is an ox/x
+threshold -> H-thresh, fix by scaling the constant with the G1d x scale in a fixup (or gate in the wipe updater);
+if it is a timer/parity -> H-timing, check a second 4:3 run and stop if 4:3 shows the strip too (retail behaviour);
+if ox's 1.024 comes from an FP_XSCALE-style patch -> H-anchor2.
+Positive control: the probe must show cc 11FE23 for the 4:3 hold frames (b43 VI 6745/6747).
+Budget: this is iteration 2 of 2 for g3-wide-abort-hold. If unresolved, park (0.3 s, left 7% of the screen) and take
+the next ladder rung.

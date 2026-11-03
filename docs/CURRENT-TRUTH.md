@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6843 (2026-11-03).
+Compact operational handoff, as of Session 6845 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -185,6 +185,10 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 - Closed: M5 audio de-stubbing, M3 idiom audits, M6 endurance (s6442), G2 audio, G5 renaming. G4 crash hunting parked.
 
 ## Superseded conclusions — do not act on these
+- s6844 NEXT "the 21:9 hold rects (ul 0 lr 914.5 s=511) are the game's texrect clipper reacting to the lr.x overflow"
+  (H-clip/H-wrap2): believable because the values sit right after the 12-bit wrap. s6845: the game clipper is fine; our
+  s6156 HUD anchor shifted the full-screen wipe glyph -256 px once the pause byte dropped, and the clip of that x0
+  reproduces the words exactly.
 - s6842/s6843 "the abort wipe is not in the captured gfx RDP stream; the stream is x-invariant across the wipe": believable
   because the per-class tri/texrect scans and x-bin counts were flat. s6844: tools/rdp_bin_cmds.py output itself lists
   one black texrect with ul.x sweeping 477.8->0, lr.x 512 (why the earlier reading missed it was not established).
@@ -540,8 +544,16 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    Fix rs64_g1d_rect_wrap (src/rsp/dpc_bridge.cpp): on a >1023-wide image a texrect/fill with lr.x 0 and ul.x>0 gets
    lr.x 1023.75 (ROGUESQ_G1D_RECT_WRAP=0 = old). Same build 21:9: on 4 wipe frames, off 0; port 4:3 12. Second line:
    ROGUESQ_WB_VAL_PROBE=1 + ROGUESQ_SKIP_CC (RT64) put the black in the HUD pair. Sheet docs/owner_sheet_s6844_abort_wipe_21x9.png.
-   Open (NEXT): 4:3/retail hold full black ~0.4 s after the wipe (cc 11FE23 texrect ul 0 lr 512); 21:9 emits it as
-   ul 0 lr 914.5 s=511 (and 982.75/s=375 for the last sweep step) and shows bright flight instead.
+   **s6845 21:9 post-wipe bright hold FIXED (writer = our s6156 HUD anchor).** The wipe is glyph 0x180 of text obj
+   0x80334E0C (vp 0x80138D20, x scale 36.57 at 4:3 / 73.14 at 21:9) drawn by drawSubtitleText -> drawTextGlyphRect
+   (0x80015708, the only CPU G_TEXRECT emitter); guest DL carries the raw E4 (DMEM fetch ring). When the pause byte
+   drops (~VI 6740) the anchor gate opens mid-wipe and base x = w - A*sc moved it -256 px (273 -> -750, 4 -> -1019);
+   drawTextGlyphRect's clip (ul 0, S = (-x0)>>1, lr = x0 + 4681) reproduces all three bad rects word for word. Fix
+   apply_s6845_hudwipe: anchor skips elements with |x scale| > 8 (HUD 1.0-3.2; skip fired 3x per run, wipe only;
+   ROGUESQ_G1D_HUD_BIGSCALE=1 = old) + rs64_g1d_rect_wrap now also wraps texrects at ul.x 0. Same build, 21:9 windows:
+   off 3 fully bright post-wipe frames (mean 191.5), on 0; 4:3 control unchanged. RDP: on = 4:3 structure (hold ul 0
+   lr 1023.75 S 0). Residual (cosmetic, NEXT): last hold frame uses the soft-edge cc 119623 at ul 1.0 px (4:3: flat
+   cc 11FE23 at ul 0.5), so a ~68 px soft strip shows at the far left for ~0.3 s. Sheet docs/owner_sheet_s6845_abort_hold_21x9.png.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

@@ -2633,7 +2633,14 @@ extern "C" void rs64_dlw_root(uint32_t kind, uint32_t a, uint32_t b) {
     }
 }
 
+// s6845d: guest DL fetch ring for ROGUESQ_WIPE_SCAN (dumped by rs64_wipe_scan at each submit inside the window).
+static uint32_t g_wfr_addr[64], g_wfr_w[64][4]; static uint32_t g_wfr_n = 0; static bool g_wfr_on = false;
 extern "C" void rs64_e9prov_source_fetch(uint32_t guest_addr, uint32_t w0) {
+    if (g_wfr_on && g_dmem_cur) {  // guest_addr is r17 = the DMEM offset of the fetched command: copy 16 bytes from DMEM
+        const uint32_t ga = guest_addr & 0xFFFu, i = g_wfr_n++ & 63u; g_wfr_addr[i] = ga;
+        for (int k = 0; k < 4; ++k) { uint32_t v = 0; for (int q = 0; q < 4; ++q) v = (v << 8) | g_dmem_cur[((ga + 4 * k + q) & 0xFFFu) ^ 3u]; g_wfr_w[i][k] = v; }
+        g_wfr_w[i][0] = w0;
+    }
     if (dlwalk_on()) {
         const uint32_t a = guest_addr & 0x7FFFFFu;
         ++g_dlw.fetches;
@@ -5095,7 +5102,7 @@ static void rs64_g1d_debrief(uint32_t lo, uint32_t hi) {
         if (op == 0x24 || op == 0x25) { ntx++; tx0 = std::min(tx0, ((w1 >> 12) & 0xFFF) / 4.0); tx1 = std::max(tx1, ((w0 >> 12) & 0xFFF) / 4.0); continue; }
         if (op >= 0x08 && op <= 0x0F) { ntr++; continue; }
         if (op == 0x3F || op == 0x36 || op == 0x37 || op == 0x2D) {
-            if (s_lines++ < 400) fprintf(stderr, "[g1d-debrief] sw=%d off=%06X op=%02X w=%08X %08X\n", g_rs64_swap_n.load(std::memory_order_relaxed), a, op, w0, w1);
+            if (s_lines++ < 3000) fprintf(stderr, "[g1d-debrief] sw=%d off=%06X op=%02X w=%08X %08X\n", g_rs64_swap_n.load(std::memory_order_relaxed), a, op, w0, w1);
         }
     }
     if (s_lines < 400) { s_lines++; fprintf(stderr, "[g1d-debrief] sw=%d range=%06X..%06X tris=%u texrects=%u tx=%.1f..%.1f\n", g_rs64_swap_n.load(std::memory_order_relaxed), lo, hi, ntr, ntx, tx0, tx1); }
@@ -5150,12 +5157,64 @@ static void rs64_g1d_rect_wrap(uint32_t lo, uint32_t hi) {
         if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; continue; }
         if ((op != 0x24 && op != 0x25 && op != 0x36) || s_cw <= 1023u) continue;
         const uint32_t w1 = rd(a + 4), lrx = (w0 >> 12) & 0xFFFu, ulx = (w1 >> 12) & 0xFFFu;
-        if (lrx != 0 || ulx == 0) continue;
+        // s6845: a texrect at ul.x 0 wraps too (the abort-wipe hold rect: x0 0, x1 = 4096 after the s6845 hudwipe fix);
+        // ul == lr == 0 draws nothing either way, so only a fill rect still needs ul.x > 0.
+        if (lrx != 0 || (ulx == 0 && op == 0x36) || (w0 & 0xFFFu) <= (w1 & 0xFFFu)) continue;
         const uint32_t n0 = w0 | (0xFFFu << 12);
         memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &n0, 4);
         if (s_lines++ < 24) fprintf(stderr, "[g1d-rect-wrap] sw=%d op=%02X cw=%u ul.x=%.2f lr.x 0 -> 1023.75 off=%06X\n",
             g_rs64_swap_n.load(std::memory_order_relaxed), op, s_cw, ulx / 4.0, a);
     }
+}
+
+// s6845: ROGUESQ_WIPE_SCAN=<vi_lo>:<vi_hi> (decimal VI). On each RDP submit inside the window, scan guest RDRAM
+// 0..8 MB for 8-aligned G_TEXRECT/FLIP words (top byte E4/E5) that sit OUTSIDE the submitted RDP range: the game-side
+// display-list copy of the abort-wipe rect (ul.y 0, lr.y 448). Logs `[wipescan]` per hit (addr, 4 words) plus the total
+// E4/E5 count per scan (positive control: HUD/text glyph rects). The first wipe-shaped hit arms the s6843 store watch
+// on its 16 bytes (rs64_s6843_lo/len; start the run with ROGUESQ_STORE_WATCH=0:1 so store diag is on), so later swaps
+// print the writing PC (`[swatch]`). Diagnostic only.
+extern "C" volatile uint32_t rs64_s6843_lo, rs64_s6843_len;
+extern "C" volatile uint32_t rs64_vi_n_g;
+static void rs64_wipe_scan(uint32_t lo, uint32_t hi) {
+    static uint32_t vlo = 0, vhi = 0;
+    static const bool on = [] { const char *e = std::getenv("ROGUESQ_WIPE_SCAN"); if (!e || !*e) return false;
+        char *c = nullptr; vlo = (uint32_t)strtoul(e, &c, 10); vhi = (c && *c == ':') ? (uint32_t)strtoul(c + 1, nullptr, 10) : 0u; return vhi > vlo; }();
+    if (!on || g_rdram_for_submit == nullptr) return;
+    const uint32_t vi = rs64_vi_n_g;
+    g_wfr_on = vi + 2 >= vlo && vi <= vhi;
+    if (vi < vlo || vi > vhi) return;
+    static int s_lines = 0; static bool s_armed = false;
+    uint32_t n_all = 0, n_in = 0, n_wipe = 0;
+    if (s_lines < 3000) {
+        const uint32_t n = g_wfr_n < 40u ? g_wfr_n : 40u;
+        for (uint32_t j = g_wfr_n - n; j < g_wfr_n; ++j) { const uint32_t i = j & 63u; s_lines++;
+            fprintf(stderr, "[wfr] vi=%u k=%d addr=%06X w=%08X %08X %08X %08X\n", vi, (int)(j - g_wfr_n), g_wfr_addr[i], g_wfr_w[i][0], g_wfr_w[i][1], g_wfr_w[i][2], g_wfr_w[i][3]); }
+    }
+    g_wfr_n = 0;
+    auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + a, 4); return v; };
+    // s6845b: match on the dsdx/dtdy word instead of the opcode (the game-side source may not be an RDP-encoded E4):
+    // ROGUESQ_WIPE_SCAN_W3=<hex> (default 000D000B, the 21:9 wipe; 4:3 = 001B000B). Any 4-aligned hit outside the
+    // submitted range logs the 3 words before it and the word after.
+    static const uint32_t w3k = [] { const char *e = std::getenv("ROGUESQ_WIPE_SCAN_W3"); return e && *e ? (uint32_t)strtoul(e, nullptr, 16) : 0x000D000Bu; }();
+    for (uint32_t a = 0; a + 16 <= 0x800000u; a += 4) {
+        const uint32_t w0 = rd(a);
+        if ((w0 >> 24) == 0xE4 || (w0 >> 24) == 0xE5) { n_all++; n_in += a >= lo && a < hi; }
+        // s6845c: key = the SetCombine pair that precedes the wipe rect (FC119623 FF2FFFFF / FC11FE23 FFFFF7FB), a guest
+        // passthrough command, so its guest-DL copy (outside the RDP FIFO region 0x6E0000-0x760000) shows what follows it.
+        if (w0 != 0xFC119623u && w0 != 0xFC11FE23u) continue;
+        const uint32_t b = a;
+        if (b >= 0x6E0000u && b < 0x760000u) continue;
+        n_wipe++;
+        if (s_lines++ < 3000) {
+            fprintf(stderr, "[wipescan] vi=%u sw=%d addr=%06X", vi, g_rs64_swap_n.load(std::memory_order_relaxed), b);
+            for (uint32_t o = 0; o < 0x60 && b + o + 4 <= 0x800000u; o += 4) fprintf(stderr, " %08X", rd(b + o));
+            fputc('\n', stderr);
+        }
+        (void)w3k;
+        if (!s_armed && !(b >= 0x6E0000u && b < 0x760000u)) { s_armed = true; rs64_s6843_lo = b; rs64_s6843_len = 0x40; fprintf(stderr, "[wipescan] watch armed %06X+0x40\n", b); }
+    }
+    if (s_lines++ < 3000) fprintf(stderr, "[wipescan] vi=%u sw=%d range=%06X-%06X e4_all=%u e4_in=%u wipe_out=%u\n", vi,
+                                 g_rs64_swap_n.load(std::memory_order_relaxed), lo, hi, n_all, n_in, n_wipe);
 }
 
 // s6722 G1d: the pause dim panel is a camera-facing 3D quad sized for the retail 4:3 frustum (runPauseMenuStateMachine
@@ -5356,6 +5415,7 @@ static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
     rs64_g3_census(lo, hi);
     rs64_g1d_title_clear(lo, hi);
     rs64_g1d_pillar_scan(lo, hi);
+    rs64_wipe_scan(lo, hi);
     rs64_g1d_rect_wrap(lo, hi);
     rs64_g1d_pause_dim(lo, hi);
     rs64_g1d_rect_scan(lo, hi);
