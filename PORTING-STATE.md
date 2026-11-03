@@ -179808,3 +179808,7 @@ Reading: the per-pass quantum was the dominant term (contacts 7->4, pitch exit e
   samples the surface at intermediate positions (sweep length vel/60). Heading at 16.5 s is 20 deg off; death 9 s late.
   Single seed; seeds 2/3 queued (soak_queue/s6817_scrape_b60fix_s{2,3}.sh) as the second line.
 Rules out: H-dmg-only (exit angles move with the step), H-push as a position term (the integrator's push-out is dt-correct).
+Verdict: this selects H-quantum (the per-pass deflection step K*dt is the root cause of the extra FPS60 contacts; the
+  fix-on/fix-off arms in one build discriminate it: 4 vs 7 contacts, exit pitch exact vs 9 deg off) and refutes H-dmg-only and
+  H-push (the integrator push-out is dt-correct). Next discriminator: seeds 2/3 with the fix (queued) - contacts and hit50/s
+  must move toward 30 Hz in both, else seed 1 was path luck.
