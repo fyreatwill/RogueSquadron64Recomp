@@ -1078,6 +1078,49 @@ public:
                 }
             }
 
+            {
+                // s6835 boot freeze: s6814 a30_s2 stopped RDP frames right after partitionFramebufferMemory(640,480),
+                // i.e. inside advanceVideoFrame's drain loop (0x80018264: waitOnVideoQueue, scan arbiter states
+                // 0x80128EAA[count 0x80128EAD] for 3/4, repeat). When fullsyncs stall for STALL_VI VIs, dump the
+                // arbiter block, the two queues that loop blocks on (video 0x80128CF0, frame-sync 0x80128D10) and the retrace
+                // thread's VI event queue 0x80114388, twice
+                // (at 1x and 2x STALL_VI) to tell a stuck slot from a moving one. Passive, default on, silent unless
+                // stalled. ROGUESQ_STALL_DUMP=0 off; ROGUESQ_STALL_DUMP_VI=<n> threshold (600); ROGUESQ_STALL_DUMP_TEST=<vi>
+                // forces one dump at that VI (positive control for the dump path).
+                static int s_sd = -1, s_sd_vi = 600, s_sd_test = 0;
+                if (s_sd < 0) {
+                    const char* e = std::getenv("ROGUESQ_STALL_DUMP"); s_sd = !(e && *e == '0');
+                    if ((e = std::getenv("ROGUESQ_STALL_DUMP_VI")) && *e) s_sd_vi = std::max(1, atoi(e));
+                    if ((e = std::getenv("ROGUESQ_STALL_DUMP_TEST")) && *e) s_sd_test = atoi(e);
+                }
+                static uint32_t s_sd_fs = 0; static int s_sd_since = 0, s_sd_n = 0;
+                uint32_t fsnow = rs64_dpc_get_cumulative_fullsyncs();
+                if (fsnow != s_sd_fs) { s_sd_fs = fsnow; s_sd_since = s_n; }
+                int stalled = s_n - s_sd_since;
+                bool test = s_sd_test > 0 && s_n == s_sd_test;
+                if (s_sd && app->core.RDRAM && (test || (s_sd_n < 8 && (stalled == s_sd_vi || stalled == 2 * s_sd_vi)))) {
+                    const uint8_t* R = app->core.RDRAM;
+                    auto b = [R](uint32_t a) { return (unsigned)R[(a & 0x7FFFFF) ^ 3]; };
+                    auto w = [R](uint32_t a) { uint32_t v; memcpy(&v, R + (a & 0x7FFFFC), 4); return (unsigned)v; };
+                    ++s_sd_n;
+                    fprintf(stderr, "[stall-dump] vi=%d stalled_vi=%d fs=%u test=%d t=%.1f origin=0x%06X count=%u states=%u,%u,%u,%u "
+                            "fb=%08X,%08X,%08X,%08X e90=%08X e94=%08X vflag(80037808)=%u\n",
+                            s_n, stalled, fsnow, test ? 1 : 0, rs64_elapsed_seconds(),
+                            ultramodern::renderer::get_vi_regs()->VI_ORIGIN_REG & 0xFFFFFF, b(0x80128EAD),
+                            b(0x80128EAA), b(0x80128EAB), b(0x80128EAC), b(0x80128EAE),
+                            w(0x80128E98), w(0x80128E9C), w(0x80128EA0), w(0x80128EA4), w(0x80128E90), w(0x80128E94),
+                            b(0x80037808));
+                    // OSMesgQueue: mtqueue, fullqueue, validCount, first, msgCount, msg
+                    for (uint32_t q : {0x80128CF0u, 0x80128D10u, 0x80114388u}) // video, frame-sync mutex, retrace thread VI events
+                        fprintf(stderr, "[stall-dump] queue %08X mtq=%08X fullq=%08X valid=%d first=%d count=%d msg=%08X\n", q,
+                                w(q), w(q + 4), (int)w(q + 8), (int)w(q + 12), (int)w(q + 16), w(q + 20));
+                    for (uint32_t a = 0x80128E80u; a < 0x80128EE0u; a += 32)
+                        fprintf(stderr, "[stall-dump] %08X: %08X %08X %08X %08X %08X %08X %08X %08X\n", a, w(a), w(a + 4),
+                                w(a + 8), w(a + 12), w(a + 16), w(a + 20), w(a + 24), w(a + 28));
+                    fflush(stderr);
+                }
+            }
+
             // Watchdog moved to its own thread (rs64_cine_start_watchdog_thread)
             // because the gfx_thread can itself be deadlocked on the same mutex
             // chain that's hanging the game thread.

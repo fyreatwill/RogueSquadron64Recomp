@@ -180314,3 +180314,41 @@ Rules out: nothing new about the freeze yet (instrument landed and controlled; t
 Next: fold the hunt. FROZEN -> read boot*_freeze_{a,b}.threads.txt: which guest thread waits on which message queue,
 and whether VI/SP/Gfx threads are blocked (H-lost-event: MAIN in osRecvMesg on a queue whose event never comes) or a guest
 thread spins (H-spin: same leaf in a and b with CPU-time frames) or a host deadlock (H-host: a runtime thread in a mutex).
+
+## Session 6835 (2026-11-03) — boot freeze localized to advanceVideoFrame's slot drain loop (after the fs~40 640x480 repartition); passive [stall-dump] instrument (both controls pass); hunts c/d queued
+
+HYPOTHESIS-ID: boot-freeze-capture.
+
+Soak fold: s6834_bootfreeze_hunt_a/b rc=0: 22/22 retail boots reached fs~1287 by 40 s, 0 crash, 0 FROZEN (control
+sample named 12 [Game] threads in both). With s6814_bootfreeze_ab 10/10, the a30_s2 freeze is now 1 in 43 boots.
+Boring-first: the hunts did not reproduce the original env (a30_s2 ran g3_port_capture.sh with the lvl14 eep, a rngSeed
+write watch ROGUESQ_DEBUG_WRITE=80003470:1:512:55 and xtrace hooks; xtrace/rand hooks only fire on mission ticks).
+Offline read of scratch/s6814/a30_s2/run.log vs healthy a30_s1/b60_s2 (same build): last guest output is
+`[slot-ret-caller] site=menuOverlayInit` then `[fbw] pfm a2=640 a3=480` (partitionFramebufferMemory from
+runVideoFrameTick 0x800013F0). Healthy runs continue with a gfx [lle task] and `osViSetMode #2 site=swapBufferWithViMode`;
+the frozen run issues no further gfx task, controller read census stops at 64, audio continues (osAiSetNextBuffer to
+16384). Origin at menuOverlayInit: frozen 0x6DD280, healthy 0x6BA280 (opposite buffer phase); frozen VI held on
+0x6BA280 (an old-partition fb) for 215 s. Between pfm and swapBufferWithViMode the only blocking code is
+advanceVideoFrame's drain loop 0x80018264: waitOnVideoQueue (sets 0x80037808, recv 0x80128CF0) -> lock frame-sync
+mutex 0x80128D10 -> scan slot states 0x80128EAA[count 0x80128EAD] for 3/4 -> unlock -> repeat while any 3/4.
+Static read of viRetraceHandlerThread (entry 0x80019868, thread 0x8011CD28 pri 117), per VI: recv VI queue 0x80114388,
+lock 0x80128D10, slot 4 -> 5 (old 5 -> 0), promote a state-3 slot to 4 + osViSwapBuffer when the interval elapsed,
+unlock, post 0x80128CF0 if 0x80037808 set. So a slot can stay 3/4 only if the retrace thread stops cycling:
+H-lost-mutex (0x80128D10 token lost; retrace parked on it), H-lost-vi (retrace parked on 0x80114388, VI events not
+delivered to the guest while update_screen still runs), H-lost-post (retrace cycles, game never woken on 0x80128CF0).
+Audio flowing => the game thread is blocked in an OS call, not spinning (ultramodern is cooperative between OS calls, s6808).
+Also seen (healthy ctl2): the fb array switches 806DD000/806BA000 -> 8066A000/805D4000 at fs=40 / VI 95, exactly where
+the frozen run stopped (fs=39, VI 128).
+New instrument (src/main/rt64_render_context.cpp update_screen, default ON, silent unless stalled): [stall-dump] when RDP
+fullsyncs stall ROGUESQ_STALL_DUMP_VI VIs (600) and again at 2x: slot count/states, fb ptrs, 0x80037808, the three
+OSMesgQueues (mtq = waiting thread, valid count) and raw 0x80128E80-0x80128EDF. ROGUESQ_STALL_DUMP=0 off;
+ROGUESQ_STALL_DUMP_TEST=<vi> forced dump. Controls (scratch/s6835): forced dump at VI 300 decodes count=2,
+states 5/4, fb 8066A000/805D4000, game thread 80163E20 parked on the video queue (ctl.log, ctl3.log); stall path with
+threshold 3 VIs fires 5x in 25 s (ctl2.log). tools/boot_freeze_hunt.sh: HUNT_ENV passthrough (zsh ${=} split verified) and
+the FROZEN line echoes the [stall-dump] rows. Queued s6835_bootfreeze_hunt_c (retail) and _d (+ the a30_s2 rngSeed write
+watch), both with STALL_DUMP_VI=300 so two dumps land before the hunter's 12 s detection.
+Rules out: a game-thread spin without OS calls (audio kept flowing); any blocking site other than the drain loop
+between pfm and swapBufferWithViMode (static, single-source: one frozen log).
+ORIGIN: no mitigation; instrument only.
+Next: fold hunts c/d. FROZEN -> the dump names the parked thread per queue and the stuck slot state; then read the
+runtime path for that queue (ultramodern message queue / VI event delivery) and fix.

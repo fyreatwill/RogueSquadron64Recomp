@@ -7,12 +7,14 @@
 # Positive control: boot 1 is also sampled while healthy, and its summary must name a [Game] thread.
 # Freeze-path control: HUNT_SELFTEST=1 SIGSTOPs boot 1 at 18 s (SIGCONT before sampling) - it must report FROZEN.
 # Usage (repo root): tools/boot_freeze_hunt.sh <outdir> [boots=12] [boot_secs=40] [stall=12]
+# s6835: HUNT_ENV="K=V ..." adds env to every boot; the runtime [stall-dump] (arbiter slot states + video, frame-sync and
+# retrace VI queues with their waiting thread) lands in boot*_freeze.tail.log and is echoed on the FROZEN line.
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 O=${1:?outdir}; N=${2:-12}; BOOT_SECS=${3:-40}; STALL=${4:-12}; mkdir -p $O; bad=0
 fsof() { grep -a -o 'fs=[0-9]*' $1 2>/dev/null | tail -1 | cut -d= -f2; }
 for i in $(seq 1 $N); do
   L=$O/boot$i.log
-  ( cd build && exec env ROGUESQ_NO_PKILL=1 ROGUESQ_LOG_PHASE=1 ./RogueSquadron64Recomp ) > $L 2>&1 &
+  ( cd build && exec env ROGUESQ_NO_PKILL=1 ROGUESQ_LOG_PHASE=1 ${=HUNT_ENV} ./RogueSquadron64Recomp ) > $L 2>&1 &
   P=$!; t=0; last=-1; since=0; st=OK
   while (( t < BOOT_SECS )); do
     sleep 2; t=$(( t + 2 ))
@@ -43,5 +45,6 @@ for i in $(seq 1 $N); do
   vo=$(tail -c 400000 $L | grep -a -o 'origin=0x[0-9A-Fa-f]*' | tail -1)
   [[ $st == FROZEN ]] || { tail -200 $L > $O/boot$i.tail.log; rm -f $L; }
   echo "boot$i fs=$fs t=$t $vo crash=$crash $st"
+  [[ $st == FROZEN ]] && grep -a "\[stall-dump\]" $O/boot${i}_freeze.tail.log | head -8
 done
 exit $bad

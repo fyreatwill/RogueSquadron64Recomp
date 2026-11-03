@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6834 (2026-11-03).
+Compact operational handoff, as of Session 6835 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -500,6 +500,12 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    s6834 boot-freeze hunter: tools/boot_freeze_hunt.sh (N retail boots; fs= stalled 12 s -> two `sample` call trees 5 s
    apart, per-thread guest frames via tools/sample_game_threads.py; boot1 sampled healthy = control; HUNT_SELFTEST=1
    SIGSTOP = freeze-path control, both pass). Queued s6834_bootfreeze_hunt_a/b (22 boots) for the s6814 1-in-11 freeze.
+   s6835: hunts a/b 22/22 clean (freeze now 1 in 43 boots). a30_s2 log: last guest output = partitionFramebufferMemory(640,480)
+   at fs~40 (fb array switches partitions there); the only blocking code before swapBufferWithViMode is advanceVideoFrame's
+   drain loop 0x80018264 (waits until no slot 0x80128EAA is 3/4; the retrace thread 0x8011CD28 moves 4->5 / 3->4 every VI
+   under mutex 0x80128D10). Audio flowed -> game thread blocked in an OS call. Hypotheses H-lost-mutex / H-lost-vi /
+   H-lost-post. New passive [stall-dump] (default on, fires only on a >=600-VI fullsync stall; =0 off, _VI=<n>, _TEST=<vi>)
+   prints slot states + the three queues' waiting threads; controls pass. Hunts s6835_bootfreeze_hunt_c/d queued.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
