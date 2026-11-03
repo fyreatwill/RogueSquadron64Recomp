@@ -180623,4 +180623,5 @@ ABORT LEVEL -> YES), port 4:3, two runs (p43b, p43w), 0 crash.
   rows 0-448, rows 0-447), identical pattern before and during the wipe; it counts changes only, not values.
 Ruled out: CPU / RSP-DMA / PI writer of the wipe (positive control), VI register sweep, x-dependent shade/Z/scissor/texrect.
 Not yet: which of the 3 per-swap writebacks first carries the black, and from which RT64 framebuffer pair.
+VERDICT: this refutes H-rdram (outside CPU/RSP/DMA writer; store watch with same-run memset positive control) and selects RT64-side production of the wipe (H-rt64 or H-stream-gap). Next discriminator (NEXT.md): per-writeback pixel VALUES at row 224 cols 100/300/480/510 with fb-pair index, to name the writeback and pair that first carries the black.
 ORIGIN: not a mitigation (diagnostic-only instrument).
