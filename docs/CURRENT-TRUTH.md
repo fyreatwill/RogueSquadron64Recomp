@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6841 (2026-11-03).
+Compact operational handoff, as of Session 6843 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -531,10 +531,11 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    native w*h*bpp = 0x70000, half of 1024x448: the first hangar VI showed flight Z as colour under a 50.0% black top.
    Fix apply_s6841_ivsclear: under ROGUESQ_FB_WIDTH>512 the clear uses wv*h*bpp (=0 restores; ROGUESQ_LOG_IVS_CLEAR=1 logs).
    Same-build A/B: off 1 striped frame, on 0. Sheet docs/owner_sheet_s6841_abort_21x9.png.
-   **s6842 abort wipe source (open).** The 4:3 right-to-left soft black wipe is NOT in the captured gfx RDP stream
-   (draw classes constant across VI 6731-6745; the 112 64x32 texrects after it are the hangar backdrop, correct at 21:9).
-   RT64 VI ignores hStart/hEnd. Retail oracle: no CPU-visible writer at the 512 flight origins (single-source, no in-phase
-   control). NEXT: port RDRAM fb dumps on mode 0x80128DA0 to split H-rdram (other task/DMA) vs RT64-side.
+   **s6842-s6843 abort wipe source (open, narrowed).** The 4:3 right-to-left soft black wipe IS in port RDRAM (fb dumps,
+   ~32 px/swap, 9 swaps before DA0) and its ONLY writer is `rt64_writeback` (s6843 store watch ROGUESQ_STORE_WATCH=lo:hi,
+   tools/apply_s6843_store_watch.py; positive control: same run names memset PC 0x800078EC clearing 0x790000). The captured
+   gfx stream is x-invariant across the wipe (paused scene; only the full-screen tri0D pause-dim prim alpha 0x80->0 changes).
+   Open: H-rt64 (RT64 makes the edge from non-command state) vs H-stream-gap (commands RT64 gets that port.bin misses).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

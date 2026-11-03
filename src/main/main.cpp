@@ -2140,12 +2140,47 @@ extern "C" void rs64_s5654_vstore(uint32_t pc, uint32_t addr, uint32_t value, ch
 // s5660: unaligned stores (swl/swr/sdl/sdr) were never hooked by the s5654 census; route them through it.
 // Positive control: [ustore-all] counts every call (all addresses) so a zero narrow count is interpretable.
 extern "C" void rs64_g1d_blk_set_ustore_pc(uint32_t pc);
+extern "C" volatile uint32_t rs64_s6843_lo, rs64_s6843_len;
+static void rs64_s6843_note(uint32_t key, uint32_t phys, uint32_t len, const char* api);
 extern "C" void rs64_s5660_ustore(uint32_t pc, uint32_t addr, uint32_t value, char width) {
     rs64_g1d_blk_set_ustore_pc(pc);
+    if (((addr & 0x1FFFFFFFu) - rs64_s6843_lo) < rs64_s6843_len) rs64_s6843_note(pc, addr & 0x1FFFFFFFu, 4u, nullptr); // s6843
     static std::atomic<uint64_t> all{0}, wide{0}, narrow{0};
     uint64_t a = ++all; const uint32_t p = addr & 0x1FFFFFFFu;
     if (p >= 0x1B2C60u && p < 0x29DFB8u) { ++wide; if (p < 0x1B3600u) ++narrow; rs64_s5654_vstore(pc, p, value, width); }
     if ((a & 0x3FFFFu) == 1) std::fprintf(stderr, "[ustore-all] all=%llu wide=%llu narrow=%llu\n", (unsigned long long)a, (unsigned long long)wide.load(), (unsigned long long)narrow.load());
+}
+// s6843: generic RDRAM store watch (tools/apply_s6843_store_watch.py). ROGUESQ_STORE_WATCH=<lo>:<hi> (hex phys) makes every
+// instrumented game store, unaligned store and host write census call in [lo,hi) count per (swap, pc|api); the table of
+// the previous swap prints when the swap number changes ([swatch] lines, first ROGUESQ_STORE_WATCH_LINES=4000, from swap
+// ROGUESQ_STORE_WATCH_FROM_SWAP=<n>).
+extern std::atomic<int> g_rs64_swap_n;
+extern "C" volatile uint32_t rs64_s6843_lo = 0, rs64_s6843_len = 0;
+static const bool s_s6843_init = [] {
+    const char* e = std::getenv("ROGUESQ_STORE_WATCH");
+    if (e && *e) { char* c = nullptr; const uint32_t lo = (uint32_t)strtoul(e, &c, 16);
+        const uint32_t hi = (c && *c == ':') ? (uint32_t)strtoul(c + 1, nullptr, 16) : 0u;
+        if (hi > lo) { rs64_s6843_lo = lo; rs64_s6843_len = hi - lo; std::fprintf(stderr, "[swatch] armed %06X-%06X\n", lo, hi); } }
+    return true; }();
+static void rs64_s6843_note(uint32_t key, uint32_t phys, uint32_t len, const char* api) {
+    struct Agg { uint64_t n = 0, bytes = 0; uint32_t lo = 0xFFFFFFFFu, hi = 0; const char* api = nullptr; };
+    static std::mutex mu; static std::map<uint32_t, Agg> by; static int cur = -1; static int lines = 0;
+    static const int cap = [] { const char* e = std::getenv("ROGUESQ_STORE_WATCH_LINES"); return (e && *e) ? std::atoi(e) : 4000; }();
+    static const int from = [] { const char* e = std::getenv("ROGUESQ_STORE_WATCH_FROM_SWAP"); return (e && *e) ? std::atoi(e) : 0; }();
+    const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
+    if (sw < from) return;
+    std::lock_guard<std::mutex> lk(mu);
+    if (sw != cur) {
+        for (auto& kv : by) if (lines++ < cap)
+            std::fprintf(stderr, "[swatch] swap=%d %s=%08X%s%s n=%llu bytes=%llu lo=%06X hi=%06X\n", cur, kv.second.api ? "api" : "pc", kv.first, kv.second.api ? ":" : "", kv.second.api ? kv.second.api : "",
+                         (unsigned long long)kv.second.n, (unsigned long long)kv.second.bytes, kv.second.lo, kv.second.hi);
+        if (!by.empty() && lines < cap) std::fprintf(stderr, "[swatch] swap=%d keys=%zu\n", cur, by.size());
+        by.clear(); cur = sw;
+    }
+    Agg& a = by[key]; ++a.n; a.bytes += len; if (phys < a.lo) a.lo = phys; if (phys + len > a.hi) a.hi = phys + len; if (api) a.api = api;
+}
+extern "C" void rs64_s6843_store(uint32_t pc, uint32_t phys, char width) {
+    const char w = (char)(width | 0x20); rs64_s6843_note(pc, phys, w == 'b' ? 1u : w == 'h' ? 2u : w == 'd' ? 8u : 4u, nullptr);
 }
 extern "C" void rs64_f5_host_bulk_shadow(uint32_t phys, uint32_t len,
                                            const char* api);
@@ -2155,6 +2190,8 @@ extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
                                             uint32_t phys,
                                             uint32_t len,
                                             const char* api) {
+    if (rs64_s6843_len && len && (phys & 0x00FFFFFFu) < rs64_s6843_lo + rs64_s6843_len && (phys & 0x00FFFFFFu) + len > rs64_s6843_lo)
+        rs64_s6843_note((uint32_t)(uintptr_t)api ^ 0xA0000000u, phys & 0x00FFFFFFu, len, api ? api : "?"); // s6843 host writes
     rs64_f5_host_bulk_shadow(phys, len, api);
     rs64_f5_host_write_after(rdram, phys, len, api);
     if (rs64_vsrc_hi && len) {

@@ -1,22 +1,25 @@
-# NEXT: where do the abort-wipe pixels come from? (21:9 lacks retail's right-to-left black wipe)
+# NEXT: which RT64 writeback first carries the abort wipe, and from what input?
 HYPOTHESIS-ID: g3-wide-abort-wipe
 
-State (s6842): the wipe is NOT in the captured gfx RDP stream (tools/rdp_bin_cmds.py on scratch/s6841/p43/port.bin,
-VI 6731-6745 constant draw classes); RT64's VI ignores hStart/hEnd; retail oracle saw no CPU-visible writes into
-0x690000-0x700000 at the 512-wide flight origins (single-source). Yet retail RDRAM dumps and port 4:3 window grabs show it.
+State (s6843): the 4:3 abort wipe is in port RDRAM and rt64_writeback is its only writer (store watch + memset positive
+control). The decoded gfx stream is x-invariant across the wipe (paused scene; only the full-screen pause-dim overlay prim
+alpha 0x80 -> 0 changes). RT64 does 3 colour writebacks per swap per fb ([wbcol]: rows 200-448 rect 256-512, rows 0-448,
+rows 0-447).
 
 Hypotheses:
-- H-rdram: the pixels are written into RDRAM by something outside the captured gfx stream (a non-gfx RSP task / DMA),
-  and RT64 picks up the RDRAM change.
-- H-capture: port.bin misses a gfx submit (look at [dpc-merge] in the window; s6841 p43 run.log ~line 187100).
-- H-rt64: RDRAM is clean in the port and RT64 synthesises the wipe (unlikely; would not explain retail RDRAM).
+- H-rt64: RT64 creates the edge from state outside the commands (fb-pair re-upload from RDRAM, a stale/partial render target,
+  a resolve/rect logic bug) -> the black first appears in a writeback whose RDP segment has no new draw.
+- H-stream-gap: RT64 executes commands RS64_RDP_BIN_PORT does not record (second submit path, merged [dpc-merge] lists)
+  -> RT64's own per-draw log shows a draw near the right edge that port.bin lacks.
+- H-retail-same: the retail wipe is made the same way by real RDP commands we are mis-decoding -> compare the retail rdplog
+  (tools/g3_rdp_frame_match.py inputs) for the same VIs.
 
-Discriminator, ONE port 4:3 run (scratch/s6841/port_abort.sh p43b "<env>"), env:
-  ROGUESQ_FB_DUMP_DIR=$PWD/scratch/s6843/fb ROGUESQ_FB_DUMP_MODE=80128DA0 ROGUESQ_FB_DUMP_EPOCH_N=40 ROGUESQ_FB_DUMP_VI=1
-  ROGUESQ_VI_EXTENT_PROBE=1
-  plus the same RS64_RDP_BIN_PORT capture. Positive control: an earlier flight-frame dump (mode 0x80128E40, or
-  ROGUESQ_FB_DUMP_EVERY) must show the terrain. Outcomes: wipe present in RDRAM dumps but absent in port.bin -> H-rdram,
-  then log every RSP task (type, ucode, out ptr) between VI 6731 and 6747; wipe absent in RDRAM -> H-rt64; a missed
-  submit in port.bin around [dpc-merge] -> H-capture. Then the same at 21:9 (ROGUESQ_ASPECT=21:9) to see where the
-  native-512 writer lands (likely the stale 0x620000/0x690000 buffers instead of 0x8F5000/0x9D5000).
-Rule 8: this slug has 1 non-discriminating iteration (s6842 narrowed but did not select).
+Discriminator, ONE port 4:3 run (scratch/s6843/port_abort.sh <tag> "<env>"):
+  extend ROGUESQ_WB_COL_PROBE in lib/rt64/src/hle/rt64_state.cpp to log, per writeback of 0x620000/0x690000, the pre/post
+  16-bit VALUES at (row 224, col 100/300/480/510) plus the framebuffer-pair index and the RDP command index range of that
+  pair (then ./submodule-patches/export.sh + commit). Positive control: col 100 must change with the pause-dim fade.
+  Outcome: black at col 480 appears in writeback k of swap 3734 -> dump the commands of that pair from port.bin
+  (tools/rdp_bin_cmds.py); if the pair has no right-edge draw -> H-rt64 (read RT64's fb-pair/re-upload path for that pair);
+  if RT64's own draw log (RT64 per-call rect) shows a draw port.bin lacks -> H-stream-gap.
+Budget: this slug has 2 iterations; s6843 discriminated (H-rdram refuted). If the next one does not select H-rt64 vs
+H-stream-gap, park the thread (cosmetic abort transition, wide-only symptom) and take the next ladder rung.

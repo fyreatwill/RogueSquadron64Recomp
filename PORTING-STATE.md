@@ -180589,3 +180589,38 @@ RDRAM path RT64 re-uploads), H-capture (port.bin misses a submit: [dpc-merge] li
 port 4:3 RDRAM fb dumps keyed on the wipe-end VI mode (ROGUESQ_FB_DUMP_MODE=80128DA0 = osViSetMode #806-808) — if
 RDRAM holds the wipe while port.bin does not, find the producing task; if RDRAM is clean, the wipe is RT64-side.
 No code change this session (new tool tools/rdp_bin_cmds.py; recipe scratch/s6842/retail_watch.sh).
+
+## Session 6843 (2026-11-03) — abort wipe: RDRAM holds it, rt64_writeback is its only writer (H-rdram refuted, positive control); stream unchanged across the wipe
+HYPOTHESIS-ID: g3-wide-abort-wipe. Route scratch/s6843/port_abort.sh (= s6841 port_abort, lvl1 oracle EEPROM -> PAUSE ->
+ABORT LEVEL -> YES), port 4:3, two runs (p43b, p43w), 0 crash.
+- **RDRAM fb dumps** (ROGUESQ_FB_DUMP_MODE=80128E40 MIN_SWAP=3550 EPOCH_N=400 FB_DUMP_VI=1; scratch/s6843/fbscan.py = 8
+  column-band luminance): flight frames are in RDRAM (positive control: scene content, bands 50-95), and the right-to-left
+  soft black wipe IS in RDRAM: band 7 = 0.0 from swap 3734/3735, edge advancing ~32 px per swap (both buffers 620000/690000),
+  9 swaps before osViSetMode #806 (DA0), last flight swap 3742, hangar fb 0x790000/0x720000 from 3748. Left side brightens
+  85 -> 161 over the same swaps. Frame docs/s6843_abort_wipe_rdram_fb3736.png. VI regs unchanged (width 512, origin
+  alternating, h 444) across every wipe swap -> not a VI-register effect.
+- **New instrument: generic RDRAM store watch** (tools/apply_s6843_store_watch.py, registered in fixup_game_funcs_vendored.py
+  after s5654; hook in src/main/main.cpp). ROGUESQ_STORE_WATCH=<lo>:<hi> (hex phys) routes every rs64_m5_writer_parity site
+  (49036 instrumented stores B/H/W/D), the s5660 unaligned stores and every rs64_m5_host_write_census api (rt64_writeback,
+  rsp_dmem_to_rdram, pi dma, zmemcpy ...) into a per-swap (pc|api, n, bytes, lo, hi) table; ROGUESQ_STORE_WATCH_FROM_SWAP=<n>,
+  ROGUESQ_STORE_WATCH_LINES=<cap>. Zero cost when unset beyond one compare per store.
+- **Result (p43w, watch 620000:800000 from swap 3600):** during the wipe swaps the ONLY writer of the flight fb pixel ranges
+  is `rt64_writeback` (6 writes/swap, 2.1 MB; 4 from swap 3743). Game CPU stores in range = small heap/DL words at 0x66FE14,
+  0x7DFED8 and 0x710000-0x710400 only; rsp_dmem_to_rdram writes 0x720000-0x759xxx (DL buffers). POSITIVE CONTROL (same run):
+  the watch catches the memset byte loop PC 0x800078EC clearing 0x790000-0x800000 (458752 B = 512x448x2) at swap 3746 and the
+  hangar backdrop decode (0x8001F250/0x8001F5E4) at 3747. -> H-rdram (CPU / other RSP task / DMA writes the wipe) REFUTED for
+  the port. The black is produced inside RT64's render of the gfx stream and written back.
+- **Stream re-check (s6841 p43 port.bin, new scripts scratch/s6843/{shade_bands,bigtri,rightcls,ovz}.py):** the game is
+  paused under the abort menu, so the stream is the same frame every swap: per-x-bin tri counts identical (101/78/95/../19),
+  no triangle or texrect class appears/moves at x>=300 across VI 6700-6745 except the pause emblem (gone by 6713) and the
+  menu text drop at 6729; per-band vertex shade/alpha flat; scissor (0,0)-(511/512,447/448) constant; colour fills only the
+  y>=200 halves. The one changing draw is the full-screen tri0D pause-dim overlay (shade 0, z const 28917, dz 0, om
+  18ACF0C8104240, prim alpha 0x80 -> 0 from VI 6711 to 6739) = the left-side brightening. Nothing x-dependent.
+- So the inputs RT64 sees are x-invariant while its output gains a moving soft black edge. Remaining: H-rt64 (RT64 derives
+  it from state outside the decoded commands, e.g. a fb-pair / RDRAM re-upload path) vs H-stream-gap (RT64 receives
+  commands that RS64_RDP_BIN_PORT does not record, e.g. a second submit path, or one of the 3 per-swap writebacks reads a
+  different target). [wbcol] (ROGUESQ_WB_COL_PROBE=1) shows 3 colour writebacks per swap per fb (rows 200-448 rect 256-512,
+  rows 0-448, rows 0-447), identical pattern before and during the wipe; it counts changes only, not values.
+Ruled out: CPU / RSP-DMA / PI writer of the wipe (positive control), VI register sweep, x-dependent shade/Z/scissor/texrect.
+Not yet: which of the 3 per-swap writebacks first carries the black, and from which RT64 framebuffer pair.
+ORIGIN: not a mitigation (diagnostic-only instrument).
