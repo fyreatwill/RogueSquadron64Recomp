@@ -180566,7 +180566,7 @@ for retail and wrong only because G1d widens the buffer. The fix widens that one
 ## Session 6842 (2026-11-03) — abort wipe is NOT in the captured gfx RDP stream (H-native-x / H-blend / H-tex refuted offline); retail oracle: no CPU-visible writer into the flight fb during 512-wide phases (single-source)
 
 Work unit: NEXT g3-wide-abort-wipe (21:9 ABORT LEVEL -> YES lacks retail's right-to-left soft black wipe).
-Offline, capture-once (s6841 port.bin streams), new tool scratch/s6842/cmds.py (per-VI non-triangle RDP command dump:
+Offline, capture-once (s6841 port.bin streams), new tool tools/rdp_bin_cmds.py (per-VI non-triangle RDP command dump:
 fill/texrect coords, scissor, prim/env/fog/blend, combine, other modes, ci/zi/ti; optional per-triangle y/x extents):
 - 4:3 p43 VI 6700-6750: the wipe frames (VI 6731-6745: emblem classes gone, flight + HUD only) carry NO new draw. Per
   (combine, othermode) triangle/texrect class counts are constant across the wipe except the emblem (18ACC0/182CC0
@@ -180588,4 +180588,4 @@ Still open: H-rdram (the wipe pixels are produced outside the captured gfx strea
 RDRAM path RT64 re-uploads), H-capture (port.bin misses a submit: [dpc-merge] lines appear in the window). Next unit:
 port 4:3 RDRAM fb dumps keyed on the wipe-end VI mode (ROGUESQ_FB_DUMP_MODE=80128DA0 = osViSetMode #806-808) — if
 RDRAM holds the wipe while port.bin does not, find the producing task; if RDRAM is clean, the wipe is RT64-side.
-No code change this session (diagnostic tools only: scratch/s6842/cmds.py, retail_watch.sh).
+No code change this session (new tool tools/rdp_bin_cmds.py; recipe scratch/s6842/retail_watch.sh).
