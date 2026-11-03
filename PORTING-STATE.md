@@ -180744,3 +180744,41 @@ Step 0 triggered (wc -c 60051 > 60000), so this was a MAINTENANCE iteration; no 
   g1d-wide-epsilon-audit is now item 2); refreshed the "as of" headline, archive pointer, soak-verdict and chronology lines.
 - Superseded section and run recipes left as they were. SOAK-RESULTS: nothing new since s6835_bootfreeze_hunt_d (consumed s6836).
 Rules out nothing (no experiment). Next: g1d-wide-epsilon-audit (NEXT.md unchanged except its header).
+
+## Session 6848 (2026-11-03) — G1d wide-width idiom census: one new flipping site, emitColorFillRect packs (W & 0x3FF) << 14 so the mission-end overlay bands get lr.x 0 at 21:9; apply_s6848_ovlwrap, same-build A/B on two run pairs
+HYPOTHESIS-ID: g1d-wide-epsilon-audit (iteration 1 of 2). Step 0: CURRENT-TRUTH 26,248 B, no maintenance. SOAK-RESULTS: nothing new.
+Hypotheses: H-closed (s6844/s6694/s6846 were the only W-sensitive packs/compares) vs H-more (other retail W arithmetic flips
+at W = 1024). Discriminator: a full static census of screen-width reads followed to their sinks, then a runtime witness
+only for sites that flip.
+- **Census (tools/g1d_wcensus.py, offline, table docs/G1D-WIDTH-CENSUS.md):** sources = all 19 loads of 0x8011A838 plus
+  35 screen-struct `lw p,0(x); lw w,0x10/0x18(p)` loads; linear forward taint 48 insns to compares, branches, andi 0xFFF,
+  small addiu, sll 2, stores. Positive control: it re-finds the s6846 epsilon (0x800C1A9C) and the s6694 scissor packs.
+  Extra sweeps: all 10 `andi 0x3FF; sll 14` packs and all 50 `andi 0xFFF` sites. Result: colour-image (W-1)&0xFFF (fits),
+  projection/fb-size/clipper/HUD-layout reads scale; drawTextGlyphRect lr = min(lr, W*4)&0xFFF (0x800157FC) wraps but is
+  already covered by rs64_g1d_rect_wrap (s6844/s6845); 24 false positives (+0x10 of other structs). **One new flipper:**
+  emitColorFillRect (0x80009B58) packs the width as `(W & 0x3FF) << 14` into G_FILLRECT lr.x at 0x8000A1B0 (top band),
+  0x8000A308 (full fill), 0x8000A5E4 (right band). It is the RDP side of setScreenColorOverlay (0x8000A650: window
+  x0/y0/x1/y1 at 0x8011A880..86, RGB 0x8011A888, enable 0x8011A88C), called only by setupMissionTransitionScreenOverlay,
+  which is step 6 of the mission-end transition table (ROM 0x10BF64: 4 beginMissionEndTransition, 5 endMissionEnd...,
+  6 this, 7 tickMissionTransitionAndTeardown). frameStartReset arms the one-shot byte 0x80027650 that setupCameraMatrices
+  checks before calling it.
+- **Reachability (existing captures):** tools/g1d_fillscan.py on s6841 p21/p43 RDP streams (boot -> hangar -> lvl1 ->
+  abort, 7.5k VI): 0 fills with lr.x == W at either aspect, so the abort path never uses it; it needs a mission end (win),
+  which is owner playtest.
+- **Fix tools/apply_s6848_ovlwrap.py** (RS64_REPLAY after s6846): W -> rs64_s6848_ovl_w(W) = min(W, 1023) (src/main/main.cpp;
+  fill-mode lr is inclusive so 1023 covers the last column; identity for W <= 1023 = retail and 16:9 796, bit-identical).
+  ROGUESQ_G1D_OVL_WRAP=0 = old; `[g1d-ovlwrap]` logs first 4. Diagnostic ROGUESQ_S6848_FORCE_OVL=<vi_lo>:<vi_hi>
+  (rs64_s6848_force_ovl hooked before frameStartReset's enable read 0x8000A7A4) arms the overlay (128,64-896,384, red).
+- **Same-build A/B, 21:9, lvl1 flight, force VI 4400:4700 (scratch/s6848/port_ovl.sh; runs o21on/o21off, w21on/w21off; 4
+  runs, 0 crash):** per colour image ~75 frames: off top (0,0)-(0,64) and bottom (0,384)-(0,448) = ZERO-W, right band
+  1023.75 (already wrapped by s6844 rect_wrap since ul.x > 0), left band 128 (positive control, fires in both arms); on =
+  all four bands to lr.x 1023.00. Second run pair identical (replication). Window caps (88 per arm) do not discriminate:
+  the fills precede the 3D scene, which overdraws them (red right band visible only through terrain gaps) — so the
+  on-screen effect at the real mission-end transition is not observed (single-source at RDP level, replicated).
+Ruled out: H-closed (one more W-sensitive pack existed). drawTextGlyphRect's 0x800157FC wrap is covered downstream, not
+fixed at the writer (noted, not changed).
+VERDICT: selects H-more for exactly one site (emitColorFillRect); every other screen-width read in the census scales or
+is already fixed. Limitation: W values carried through memory past the 48-insn window (HUD layout floats, screen +0x18
+centre) are not followed — iteration 2.
+ORIGIN: lr.x 0 is written by the GAME's emitColorFillRect (0x8000A1B0/0x8000A308/0x8000A5E4) from the legitimate width
+1024 (our G1d widening of 0x8011A838); only the 10-bit integer field encoding overflows. Fix clamps at the writer.

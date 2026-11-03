@@ -260,8 +260,12 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    21:9 mission-abort transition fixed end to end: striped frame (s6841 apply_s6841_ivsclear), wipe lr.x 12-bit wrap (s6844
    rs64_g1d_rect_wrap), bright hold = our s6156 HUD anchor (s6845 apply_s6845_hudwipe), end strip = initHudStruct 1 px
    epsilon (s6846 apply_s6846_wipeeps). Sheets docs/owner_sheet_s684[0-6]_*.png.
-2. **g1d-wide-epsilon-audit (NEXT.md).** s6844-s6846 are one idiom class (retail W arithmetic safe at W<=640, broken at
-   W=1024): enumerate screen-width reads to compares / 12-bit packs, classify, fix flippers. Budget 2 iterations.
+2. **g1d-wide-epsilon-audit (NEXT.md, iteration 2 of 2).** s6848 census (tools/g1d_wcensus.py, docs/G1D-WIDTH-CENSUS.md):
+   one new flipper, emitColorFillRect `(W & 0x3FF) << 14` lr.x (mission-end transition overlay bands, step 6 of the
+   ROM 0x10BF64 table) -> lr.x 0 at 21:9; fixed apply_s6848_ovlwrap (min(W,1023), =0 old), same-build forced-overlay A/B
+   ZERO-W vs 1023 on two run pairs (RDP-level; on-screen effect needs a mission win = owner playtest). Every other direct
+   W read scales or was fixed (s6694/s6844/s6846). Remaining: W values carried through memory (HUD layout floats, screen
+   +0x18 centre) to later compares, then CLOSE.
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

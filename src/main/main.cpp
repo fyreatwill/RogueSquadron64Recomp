@@ -2230,6 +2230,34 @@ extern "C" void rs64_s6845_base(uint8_t* rdram, uint32_t s3, uint32_t s1, uint32
 // s6846 G1d (tools/apply_s6846_wipeeps.py): the abort-wipe updater in initHudStruct picks the flat end glyph when
 // ox <= -W/2 + 1; the end residual is W*0.001, so the 1 px epsilon scales with W above 640 (ceil(W/512)).
 // Argument = the generated v0 = (-W)/2. ROGUESQ_G1D_WIPE_EPS=0 = old (always 1).
+// s6848 G1d: emitColorFillRect packs the screen width as (W & 0x3FF) << 14 into G_FILLRECT lr.x; W 1024 wraps to 0 and
+// the mission-end transition overlay bands vanish at 21:9. Clamp to 1023 (fill-mode lr is inclusive); identity for W <= 1023.
+// ROGUESQ_G1D_OVL_WRAP=0 = old. tools/apply_s6848_ovlwrap.py.
+extern "C" uint64_t rs64_s6848_ovl_w(uint64_t w) {
+    static const bool old = [] { const char* e = std::getenv("ROGUESQ_G1D_OVL_WRAP"); return e && *e == '0'; }();
+    if (old || (uint32_t)w <= 1023u) return w;
+    static int lines = 0;
+    if (lines++ < 4) std::fprintf(stderr, "[g1d-ovlwrap] W=%u -> 1023 vi=%u\n", (unsigned)(uint32_t)w, rs64_vi_n_g);
+    return 1023u;
+}
+// s6848 diagnostic: ROGUESQ_S6848_FORCE_OVL=<vi_lo>:<vi_hi> arms setScreenColorOverlay's state (window x0 128 y0 64 x1 896
+// y1 384, red, mode 0 = every frame) inside the VI window, so emitColorFillRect runs on a route that never ends a mission.
+extern "C" void rs64_s6848_force_ovl(uint8_t* rdram) {
+    static uint32_t lo = 0, hi = 0;
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_S6848_FORCE_OVL"); if (!e || !*e) return false;
+        char* c = nullptr; lo = (uint32_t)std::strtoul(e, &c, 10); hi = (c && *c == ':') ? (uint32_t)std::strtoul(c + 1, nullptr, 10) : 0u; return hi > lo; }();
+    if (!on) return;
+    const uint32_t vi = rs64_vi_n_g;
+    static bool armed = false;
+    auto h = [&](uint32_t a, uint16_t v) { std::memcpy(rdram + (((a - 0x80000000u)) ^ 2u), &v, 2); };
+    auto b = [&](uint32_t a, uint8_t v) { rdram[(a - 0x80000000u) ^ 3u] = v; };
+    if (vi >= lo && vi <= hi) {
+        h(0x8011A880u, 128); h(0x8011A882u, 64); h(0x8011A884u, 896); h(0x8011A886u, 384);
+        b(0x8011A888u, 255); b(0x8011A889u, 0); b(0x8011A88Au, 0); b(0x8011A88Cu, 1); b(0x8011A88Du, 0);
+        if (!armed) { armed = true; std::fprintf(stderr, "[s6848-forceovl] armed vi=%u\n", vi); }
+    } else if (armed) { armed = false; b(0x8011A88Cu, 0); std::fprintf(stderr, "[s6848-forceovl] disarmed vi=%u\n", vi); }
+}
+
 extern "C" int32_t rs64_s6846_wipe_eps(int32_t neg_half_w) {
     static const bool old = [] { const char* e = std::getenv("ROGUESQ_G1D_WIPE_EPS"); return e && *e == '0'; }();
     const int32_t w = -2 * neg_half_w;

@@ -42018,6 +42018,7 @@ RS64_REPLAY = [
     "apply_s6725_hudflight.py",
     "apply_s6845_hudwipe.py",
     "apply_s6846_wipeeps.py",
+    "apply_s6848_ovlwrap.py",
     "apply_s5818_destroy_health.py",
     "apply_s5846_mission_end.py",
     "apply_s5847_mask_log.py",
