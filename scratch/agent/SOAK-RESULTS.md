@@ -1280,3 +1280,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261102-163236 | s6808_preempt_lvl1_fps60 | rc=0 | 313s | scratch/agent/soak_results/s6808_preempt_lvl1_fps60_20261102-163236.log
 20261102-164914 | s6809_preempt2_lvl1_fps60 | rc=0 | 312s | scratch/agent/soak_results/s6809_preempt2_lvl1_fps60_20261102-164914.log
 20261102-181857 | s6814_bootfreeze_ab | rc=0 | 406s | scratch/agent/soak_results/s6814_bootfreeze_ab_20261102-181857.log
+20261102-194828 | s6817_scrape_b60fix_s2 | rc=0 | 219s | scratch/agent/soak_results/s6817_scrape_b60fix_s2_20261102-194828.log
+20261102-195207 | s6817_scrape_b60fix_s3 | rc=0 | 219s | scratch/agent/soak_results/s6817_scrape_b60fix_s3_20261102-195207.log

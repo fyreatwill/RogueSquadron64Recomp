@@ -179812,3 +179812,28 @@ Verdict: this selects H-quantum (the per-pass deflection step K*dt is the root c
   fix-on/fix-off arms in one build discriminate it: 4 vs 7 contacts, exit pitch exact vs 9 deg off) and refutes H-dmg-only and
   H-push (the integrator push-out is dt-correct). Next discriminator: seeds 2/3 with the fix (queued) - contacts and hit50/s
   must move toward 30 Hz in both, else seed 1 was path luck.
+
+## Session 6818 (2026-11-02) — G3 FPS60 lvl14: scrape fix confirmed on seeds 2/3 (contacts 4 on all seeds vs 2 at 30 Hz / 7 unfixed; hit50/s mean 0.041 -> 0.094, 30 Hz 0.116); rotate-helper K*dt idiom audit closes the class (only 0x800FEF10); residual = 20 hp per contact tick (scrape hp 40 / 80 / 140)
+
+What ran: folded queued soaks s6817_scrape_b60fix_s2/s3 (rc=0, traces scratch/s6817/b60fix_s{2,3}.rand.txt), offline
+scoring against s6816 batch1 30 Hz / unfixed-FPS60 seeds, and an offline idiom audit of the generated code.
+
+Seeds (tools/g3_scrape_contacts.py, tools/g3_death_time.py):
+| arm        | contacts s1/s2/s3 | hit50/s(t>16) s1/s2/s3 (mean) | death s1/s2/s3 |
+| 30 Hz      | 2/2/2             | 0.107/0.100/0.140 (0.116)      | 81.3/86.2/51.8 |
+| FPS60 fix  | 4/4/4             | 0.094/0.129/0.059 (0.094)      | 90.6/39.3/84.3 |
+| FPS60 off  | 7/7/7             | 0.057/0.029/0.037 (0.041)      | none/85.6/96.0 |
+Two lines (contact count, downstream hit rate) on all three seeds: the s6817 fix is CONFIRMED as the main term.
+
+Idiom audit (NEW tools/g3_dt_quantum_audit.py --slice): 38 functions / 79 call sites of the rotate helpers 0x8001CC3C /
+0x8001CD6C, backward slice of the angle arg $a1. Positive control: all 7 0x800FEF10 sites flag as rodata K x entry-arg dt.
+Only two other sites multiply an incoming arg: npcDeformingMeshUpdate 0x8007AD90 (field*dt every tick = continuous spin,
+dt-exact) and updateNpcOrientationFromMotion 0x800C8CC4 (angle + f26 offset, not dt). Everything else composes stored
+Euler fields or constants. Class CLOSED: no other per-event K*dt rotation quanta. Side note: 0x800FEF10 is also called by
+updateSplineCraftTransform, so the s6817 fix restores the 30 Hz quantum for NPC spline craft too (consistent; retail untouched).
+
+Residual (NEW tools/g3_scrape_damage.py, hp lost 15.0-16.5 s): 30 Hz 40 (2x20 at 15.433/15.667; plus a 50-hp missile at
+15.3), FPS60+fix 80 (4x20 at 15.417/15.6/15.617/15.65, all seeds), FPS60 off 140 (7x20). Collision damage is 20 hp per
+contact tick; the three FPS60 contacts 1-2 ticks apart point at a missing/tick-counted re-hit gate. Next:
+HYPOTHESIS-ID g3-fps60-contact-damage (NEXT.md): find the 20-hp writer's gate; tick counter -> frame-locked.
+Rules out: other rotate-helper dt quanta; seed-1 path luck for the s6817 fix.

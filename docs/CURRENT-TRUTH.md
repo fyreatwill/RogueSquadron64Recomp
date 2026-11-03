@@ -395,11 +395,15 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    K*dt (120/180 deg/s) - a deflection quantum, halved at FPS60. +0xD8..0xE0 are heading/pitch/roll in DEGREES. Fix
    tools/fixup_fps60_scrape.py: case multiplies use max(dt,1/30) under ROGUESQ_FPS60 (=ROGUESQ_FPS60_SCRAPE=0 restores; retail
    untouched). Seed 1 same build: contacts 30Hz 2 / fix 4 / off 7; exit pitch exact; hit50/s 0.107 / 0.094 / 0.057; death
-   81.3 / 90.6 / none. Residual: an extra +20 deg heading contact at 15.6 s at FPS60 (sub-tick surface sampling). Single
-   seed - seeds 2/3 queued (s6817_scrape_b60fix_s2/s3). Scorer tools/g3_scrape_contacts.py.
-   NEXT: fold seeds 2/3; if they agree, close the scrape thread (residual = sampling, inherent to 60 Hz) and look for other
-   K*dt-quantum sites (same idiom: per-event step scaled by dt) - grep the mission overlay for mul.s by the dt arg feeding
-   rotate/clamp in collision/bounce code.
+   81.3 / 90.6 / none. s6818 seeds 2/3 CONFIRM (two lines, all 3 seeds): contacts 4 every seed (30 Hz 2, off 7);
+   hit50/s(t>16) fix 0.094/0.129/0.059 (mean 0.094) vs 30 Hz 0.107/0.100/0.140 (0.116) vs off 0.057/0.029/0.037 (0.041);
+   death fix 90.6/39.3/84.3 vs 30 Hz 81.3/86.2/51.8. Idiom audit (tools/g3_dt_quantum_audit.py --slice, 38 callers / 79
+   sites of rotate helpers 0x8001CC3C/0x8001CD6C): K*dt quanta ONLY in 0x800FEF10 (7/7 = positive control); the two
+   other dt-arg sites are continuous (npcDeformingMeshUpdate rate*dt spin; updateNpcOrientationFromMotion angle+offset).
+   Rotate-helper class CLOSED. 0x800FEF10's callers are updatePlayerCraftPhysics AND updateSplineCraftTransform, so the
+   fix also restores the 30 Hz quantum for NPC spline craft. RESIDUAL (tools/g3_scrape_damage.py): scrape hp 30 Hz 40
+   (2x20) / fix 80 (4x20: 15.417, 15.6, 15.617, 15.65) / off 140 (7x20) - 20 hp per contact TICK, ticks 1-3 apart.
+   NEXT (scratch/agent/NEXT.md): find the contact-damage writer's re-hit gate (tick-counted cooldown = frame-locked).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
