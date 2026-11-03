@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6824 (2026-11-02).
+Compact operational handoff, as of Session 6825 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -440,6 +440,11 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    s6821 step (0 on alternate FPS60 ticks) swallowed presses: lvl2 FPS60 16 C-down presses, fix arm 0/13 advanced, UNFIX
    arm 13/13 (0,1,2,...) = a30 (tools/g3_press_cycle.py; tick trace now logs held word + config per tick). FIX now 8.
    Left unexercised: 8007CD50, 800FB4F8, 800F8708 (lvl11 FPS60 only).
+   s6825 FIXED + CLASS CLOSED: 8007CD50 (textured effect +0xA0, decrement right after the effect spawn 0x800989D8) runs once
+   per emission EVENT every ~3.05 game s per emitter at both rates (lvl17 400 s: a30 92 ticks apart, decrement every
+   execution; FPS60 182 ticks apart, about half the decrements dropped by the step) -> UNFIX, FIX now 7. Control 8006C024
+   1.9x ex/game-s in the same arms. 800F8708 / 800FB4F8 never ran on lvl14 (LIVES_CAP=1, no death in 240 s), 16, 17 (both
+   rates): kept, static-only single-source. lvl16/17 need ~400 s runs (240 s ended ~27 game s into the intro).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

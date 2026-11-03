@@ -22,7 +22,6 @@ from g3_tick_counter_audit import scan
 base = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "../N64Recomp/RecompiledFuncs")
 TAG = "/* PATCH: s6821 fps60 ticks */"
 FIX = {
-    0x8007CD50: "npcTexturedEffectUpdateWithSlotChain +0xA0 lifetime",
     0x8007030C: "multiEventTemplateNpcHandler +0x6 lifetime",
     0x8006C024: "advanceNpcOnCurvedPath +0x1C countdown",
     0x800B41B8: "accumulateShipThrottleCharge 0x800CC860 count-up <7",
@@ -41,7 +40,10 @@ FIX = {
 # s6824: 800B5350 / 800BC778 (+0x15C) are gated by config +0x1E = C-down (0x0004), which the game's button word
 # 0x80130B88 carries for ONE tick per press (edge), so they run once per press at both rates (lvl2 a30 2/2, FPS60 2/2);
 # the game-time step was 0 on every other FPS60 tick and dropped those presses. Reverted to 1.
-UNFIX = {0x800DAB64, 0x800E32CC, 0x800E1E28, 0x800C96B8, 0x800806AC, 0x800B5350, 0x800BC778}
+# s6825: 8007CD50 (npcTexturedEffectUpdateWithSlotChain +0xA0) runs once per emission EVENT, right after the effect spawn
+# (jal 0x800989D8), every ~3.05 game s per emitter at both rates (lvl17 a30 92 ticks, FPS60 182 ticks); a30 decrements
+# every execution, the FPS60 step dropped about half of them (one emitter held 0x270A for 9 executions). Reverted to 1.
+UNFIX = {0x800DAB64, 0x800E32CC, 0x800E1E28, 0x800C96B8, 0x800806AC, 0x800B5350, 0x800BC778, 0x8007CD50}
 DECL = ("extern void rs64_tctr(uint8_t* rdram, uint32_t pc, uint32_t addr, int32_t v); extern int rs64_tick_step(void); "
         + TAG + "\n")
 DEF = ("extern char* getenv(const char*); "

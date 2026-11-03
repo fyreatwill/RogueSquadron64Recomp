@@ -180024,3 +180024,27 @@ ORIGIN: our own s6821 whitelist; the game's code is per-press and correct at any
 under FPS60 the C-down cycle (3-state view/mode toggle on the X-wing and TIE handlers) could ignore every press.
 Verdict line: for 800B5350 / 800BC778 selects H-event (runtime, same-run 30 Hz + FPS60 control) and refutes H-tick.
 Remaining kept-unexercised FIX sites: 8007CD50, 800FB4F8, 800F8708 (FPS60-only on lvl11). Next: lvl16/17 census.
+
+## Session 6825 (2026-11-02) — G3 FPS60 tick timers: 8007CD50 (textured effect +0xA0) is a per-EMISSION count (~3.05 game s per emitter at both rates); the s6821 step dropped ~half its FPS60 decrements -> UNFIX (verified 37/37), FIX 8 -> 7; integer tick-timer class CLOSED
+Work unit: NEXT.md (last 3 unexercised FIX sites 8007CD50, 800F8708, 800FB4F8), one instrument (ROGUESQ_TICK_TRACE), runs
+sequential, one game at a time.
+Run 1 (scratch/s6825/census.sh, 240 s, AP start presses 6..121 s; all rc=0 crash=0): lvl16/lvl17 FPS60+a30 recorded only
+~27 game s of mission ticks (80044938 cutscene count-up every tick = intro cinematic the whole span) - 240 s is too short
+for these two levels; 8007CD50 ran once per FPS60 arm ~1 game s before the end. lvl14 + ROGUESQ_LIVES_CAP=1 FPS60 (119
+game s) / a30 (45 game s): lives held at 1, no death, so 800FB4F8 (teardown) never ran; 800F8708 ran nowhere.
+Run 2 (scratch/s6825/long17.sh, lvl17 400 s, both rates, rc=0 crash=0; ~187 game s each): 8007CD50 on 3 emitter fields.
+  a30: one execution per field every 92 ticks (3.07 game s), loaded value 0x2710, 0x270F, 0x270E ... = -1 every execution.
+  FPS60 (s6824 FIX build): one per field every 182 ticks (3.03 game s) = same rate per game s -> H-event; ~half the
+  decrements dropped (803681FC held 0x2710 for 5 executions, 803770EC held 0x270A for 9).
+  Positive control same arms: 8006C024 82 vs 43 ex/game-s (1.9x, per-tick site).
+Static (funcs_19.c): the decrement sits right after `jal 0x800989D8` (the effect spawner, same as the s6823 turret burst
+800C96B8); gates are slot-chain byte, count limit, a distance c.lt.s, 0x800F2F10==1. The 3.05 s spacing matches the s6816
+turret pair period, so the gate upstream of this handler is the emission interval, not this function.
+Change: tools/fixup_fps60_ticks.py FIX -= 8007CD50, UNFIX += 8007CD50 (applied: 7 timers stepped, funcs_19 0 step lines;
+rebuilt). ORIGIN: the dropped decrements were our own s6821 whitelist; the revert restores retail code at that site.
+Verify (same recipe, new build, FPS60 lvl17 400 s, rc=0 crash=0): 37/37 executions decrement (e.g. 803681FC 0x2710 ->
+0x2703 over 14 executions), interval 3.03 game s = a30.
+Verdict line: for 8007CD50 selects H-event and refutes the s6823 static H-tick reading (now 4/6 exercised static per-tick
+readings were wrong). 800F8708 / 800FB4F8 stay kept, static-only single-source (never ran on lvl14/16/17 either rate;
+800F8708 ran only once, lvl11 FPS60, s6823). The integer tick-timer class is closed; next class: per-tick float quanta
+(NEXT.md, HYPOTHESIS-ID g3-fps60-float-quanta).
