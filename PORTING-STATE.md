@@ -179498,3 +179498,30 @@ threads would show the same signature (token held by a low-pri id across a gap) 
 Queued: scratch/agent/soak_queue/s6808_preempt_lvl1_fps60.sh (lvl1 FPS60 300 s hold + AI trace).
 Rules out: H-vimode, H-host for the title gaps.
 Verdict: the per-VI run-token stamp + host sample selects H-sched and refutes H-vimode and H-host; the same-build PREEMPT_POINT A/B closes the title gap with the root cause (no preemption between OS calls) fixed. Next discriminator: g3-preempt-audit (scratch/agent/NEXT.md).
+
+## Session 6809 (2026-11-02) — G3 preempt audit: the two residual post-title AI gaps (VI ~1958 hangar entry, ~2507 mission load) are the game thread spinning on anyAudioSlotActive in the audio-drain loops (drainAudioAndFinalizeSpeechBuffer, gracefulMenuShutdown) with no OS call; preempt point added to anyAudioSlotActive -> boot->flight route has 0 post-boot empty-queue events
+HYPOTHESIS-ID: g3-preempt-audit (closed).
+Folded soak: s6808_preempt_lvl1_fps60 rc=0, 303 s hold, 0 VI stalls, 0 crash lines; AI scan qzero 1 in the 512-wide
+28.9-59.4 s segment (pre-this-fix build: the hangar-side gap below).
+Run (lvl3 save, NEXT.md command, 85 s boot -> title -> hangar -> flight; mission origin 0x00690400 reached at 61.2 s in
+every arm). Pre-fix build (s6808 hooks only): arm a (fix on) residual 3-VI gaps @1958 and @2507, w=512, q_resume 0 (real
+underruns), token a0003 (game thread, pri 10); arm c (PREEMPT_POINT=0, positive control) reproduces the title gaps 4@739,
+5@973 plus 4@1956. Arm b = same + host `sample` 15 s/1 ms from t=30 s (scratch/s6809/b.sample.txt), gaps recurred at
+1956/1959/2506. Game thread MAIN stacks in that window: the only OS-call-free compute of gap size is
+gracefulMenuShutdown > anyAudioSlotActive > isAudioSlotActive (54 samples) and
+drainAudioAndFinalizeSpeechBuffer > anyAudioSlotActive (53 samples): the audio-drain spins wait for slots to idle while
+the game thread holds ultramodern's run token, so the audio thread that would reap them (and feed AI) cannot run. The old
+s1974 SPIN_YIELD sites yield only every 100000 iterations, and gracefulMenuShutdown has none.
+Fix: tools/fixup_preempt_point.py adds anyAudioSlotActive (polled every iteration by all 10 drain/spin call sites) to the
+s6808 rs64_preempt_point list (cost when no host message is pending: one size_approx). Applied to RecompiledFuncs, rebuilt.
+A/B same build, sequential, same route: fix arms d/f: gaps >= 3 VI only @351 (w=640 boot screen, q_resume 819-1065 =
+queue not empty, also in the control), empty-queue AI events only at boot (VI 12/13/94). Control e (PREEMPT_POINT=0):
+gaps 5@738, 6@972, 3@1957, 3@3642, empty queue at VI 743/978/1410. 0 crash lines in all 6 runs.
+Two lines: per-VI run-token stamp + AI queue depth (g3_title_gap.py), and an independent host stack sample naming the
+spinning function.
+ORIGIN: the writer is ultramodern's cooperative scheduler (no preemption between OS calls) under a guest busy-wait; the
+spin itself is legitimate retail code (retail preempts it on the AI/VI interrupt; retail oracle s6807 max gap 2 VI).
+Queued: scratch/agent/soak_queue/s6809_preempt2_lvl1_fps60.sh (lvl1 FPS60 300 s hold + AI trace on this build).
+Rules out: H-none (two more gaps existed), H-other (both holders were the low-priority game thread spinning, no host block).
+Verdict: the host sample + run-token stamps select H-class and refute H-none/H-other; same-build PREEMPT_POINT A/B closes the
+boot->flight route at retail parity (max 2 VI after boot except the non-underrun 3-VI boot-screen gap @351).

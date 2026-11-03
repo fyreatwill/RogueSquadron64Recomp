@@ -342,6 +342,10 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    s6808: title residual (4-6 VI @737/973, real underruns) = game thread pri 10 / OSId 7 pri 5 building text glyph meshes
    70-90 ms with no OS call; ultramodern never preempts between OS calls, pri-122 audio starved. FIXED: rs64_preempt_point
    (tools/fixup_preempt_point.py, =0 off) -> max gap 2 VI = retail. Instrument ROGUESQ_VI_WALL + tools/g3_title_gap.py.
+   s6809 audit CLOSED: hangar-entry/mission-load gaps (VI ~1958/~2507) = game thread spinning on anyAudioSlotActive
+   (drainAudioAndFinalizeSpeechBuffer, gracefulMenuShutdown drain loops); preempt point added there -> lvl3 boot->flight
+   0 post-boot empty-queue events (control PREEMPT_POINT=0: 3). Soak s6809_preempt2_lvl1_fps60 queued.
+   NEXT: G3 in-flight frame diffs vs retail on an unmatched level (lvl3).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
