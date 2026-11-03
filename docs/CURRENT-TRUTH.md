@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6821 (2026-11-02).
+Compact operational handoff, as of Session 6822 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -422,6 +422,15 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    / 0.200 fix; multiEventTemplateNpcHandler lifetime 0.200 / 0.100 / 0.200. The other 13 whitelisted sites (turret +0x88,
    TIE attachment effect, textured effect, emitter, train car x2, throttle, type-4 effect, TIE orientation, cinematic stage,
    mission transition) did not run on lvl14: static fix only, runtime-unverified. Next: exercise them on other levels.
+   s6822 per-level census (FPS60, lvl2-19 bar 14, 150 s): exercised 80044938 (cutscene <5 count-up, all flight levels),
+   8007030C (lvl5/8/9/15), 800DAB64 (lvl13/15), 800E1E28 (lvl9/13), 800E32CC (lvl13). lvl13 one build a30/off/fix: 800DAB64,
+   800E32CC, 800E1E28 decrement once per EVENT (ex/gs 0.54/0.54, ~1.02 s per step both rates), so the fix doubled them
+   (0.73 ex/gs, 3.8 s) -> REMOVED from FIX (UNFIX revert; re-run 0.54 ex/gs, 3.05 s = a30, 8006C024 still 0.250 vs off 0.100).
+   80044938 kept (reaches 5 at 0.167 / 0.117 / 0.150 s). rs64_tick_step is 1 outside a mission tick (0x800FADE4 end hook);
+   all observed out-of-tick reads were pre-first-tick with step 1, so that change is defensive (second mission load), untested.
+   Never hit on any level: 7 sites (turret 800C96B8, 8007CD50, 800806AC, 800B5350, 800BC778, 800F8708, 800FB4F8) - their
+   static per-tick reading was wrong for 3/5 exercised sites, so they are SUSPECT. lvl6/11/16/17 never reached flight in
+   150 s (still in the intro cinematic: start presses at 6-50 s did not skip it) - recipe gap.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

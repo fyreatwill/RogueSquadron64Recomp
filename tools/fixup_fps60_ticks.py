@@ -9,6 +9,11 @@ Two parts, one pass:
      effect, a death sequence or a state; count-ups tested < K) step by rs64_tick_step() instead of 1. Under
      ROGUESQ_FPS60 the step is the number of 1/30 s game-time boundaries this tick crossed (dt 1/60 -> 0,1,0,1), so the
      timer runs in 30 Hz ticks of game time; retail (no FPS60) and ROGUESQ_FPS60_TICKS=0 keep step 1.
+     s6822: the step only holds INSIDE a mission tick (from the dt capture to runInMissionFrame's return,
+     0x800FADE4); everywhere else it is 1. The FIX count-ups at 0x800AF5A0 / 0x800B41B8 also run in the pre-mission
+     intro, outside any tick (s6822 trace: tick 0), and used to read the LAST tick's step - 0 on every other FPS60
+     tick, so a later mission load could freeze those `< 7` stage gates. With the trace on, each step read outside a
+     tick logs {1, step it would have used before s6822, 0, tick#}.
 Idempotent. Usage: fixup_fps60_ticks.py <RecompiledFuncs dir>"""
 import pathlib, re, sys
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
@@ -18,13 +23,10 @@ base = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "../N64Recomp/Recompil
 TAG = "/* PATCH: s6821 fps60 ticks */"
 FIX = {
     0x800C96B8: "npcTurretUpdate +0x88 countdown",
-    0x800DAB64: "npcTieVariantTickAttachmentEffect +0xB8 countdown",
     0x8007CD50: "npcTexturedEffectUpdateWithSlotChain +0xA0 lifetime",
     0x800806AC: "attachedAudioVisualEmitterNpcHandler +0xB4 countdown",
     0x8007030C: "multiEventTemplateNpcHandler +0x6 lifetime",
     0x8006C024: "advanceNpcOnCurvedPath +0x1C countdown",
-    0x800E32CC: "npcTrainCarUpdate +0xB3 countdown",
-    0x800E1E28: "tickTrainCarStateMachine +0xFC countdown",
     0x800B41B8: "accumulateShipThrottleCharge 0x800CC860 count-up <7",
     0x800F8708: "executeActorType4Effect +0x92 count-up <20",
     0x80044938: "cutsceneActorNpcHandler +0x108 count-up <5",
@@ -33,26 +35,34 @@ FIX = {
     0x800AF5A0: "cinematicStageAdvancer +0x938 count-up <7",
     0x800FB4F8: "tickMissionTransitionAndTeardown countdown",
 }
+# s6822 lvl13 a30/off/fix: these decrement once per EVENT, not per tick (executions per game s equal at 30 Hz and FPS60:
+# 800DAB64 0.54/0.54, one step per ~1.02 s in both; 800E32CC 0.21/0.25; 800E1E28 three steps 1/30 s apart in both), so
+# stepping them by game time skipped every other event and doubled them (800DAB64 1 s -> 2 s per step). Reverted to 1.
+UNFIX = {0x800DAB64, 0x800E32CC, 0x800E1E28}
 DECL = ("extern void rs64_tctr(uint8_t* rdram, uint32_t pc, uint32_t addr, int32_t v); extern int rs64_tick_step(void); "
         + TAG + "\n")
 DEF = ("extern char* getenv(const char*); "
        "static FILE* rs64_tt_f; static int rs64_tt_on = -1; static uint32_t rs64_tt_tick; static int rs64_tk_on = -1; "
-       "static float rs64_tk_acc; static int rs64_tk_step = 1; "
+       "static float rs64_tk_acc; static int rs64_tk_step = 1; static int rs64_tk_in; "
        "static void rs64_tt_rec(uint32_t a, uint32_t b, uint32_t c) { uint32_t r[4] = {a, b, c, rs64_tt_tick}; fwrite(r, 4, 4, rs64_tt_f); } "
        "void rs64_tctr(uint8_t* rdram, uint32_t pc, uint32_t addr, int32_t v) { (void)rdram; "
        "if (rs64_tt_on < 0) { const char* p = getenv(\"ROGUESQ_TICK_TRACE\"); rs64_tt_f = (p && *p) ? fopen(p, \"wb\") : 0; rs64_tt_on = rs64_tt_f != 0; } "
        "if (rs64_tt_on) rs64_tt_rec(pc, addr, (uint32_t)v); } "
-       "int rs64_tick_step(void) { return rs64_tk_step; } "
+       "int rs64_tick_step(void) { if (rs64_tk_in) return rs64_tk_step; if (rs64_tt_on > 0) rs64_tt_rec(1, (uint32_t)rs64_tk_step, 0); return 1; } "
+       "static void rs64_tick_end(void) { rs64_tk_in = 0; } "
        "static void rs64_tick_begin(float dt, float t) { "
        "if (rs64_tk_on < 0) { const char* f = getenv(\"ROGUESQ_FPS60\"); const char* d = getenv(\"ROGUESQ_FPS60_TICKS\"); "
        "rs64_tk_on = f && *f && *f != '0' && !(d && *d == '0'); } "
        "if (rs64_tk_on && dt > 0.0f && dt < (1.0f / 30.0f)) { rs64_tk_acc += dt * 30.0f; rs64_tk_step = 0; "
        "while (rs64_tk_acc >= 0.999f) { rs64_tk_acc -= 1.0f; rs64_tk_step++; } } else { rs64_tk_acc = 0.0f; rs64_tk_step = 1; } "
-       "rs64_tt_tick++; if (rs64_tt_on < 0) rs64_tctr(0, 0xFFFFFFFFu, 0, 0); "
+       "rs64_tk_in = 1; rs64_tt_tick++; if (rs64_tt_on < 0) rs64_tctr(0, 0xFFFFFFFFu, 0, 0); "
        "if (rs64_tt_on) { union { float f; uint32_t u; } a, b; a.f = t; b.f = dt; rs64_tt_rec(0, a.u, b.u); fflush(rs64_tt_f); } } "
        + TAG + "\n")
 DT_SITE = "    // 0x800FA90C: swc1        $f2, 0xBA4($a0)\n"
 DT_HOOK = "    rs64_tick_begin(ctx->f20.fl, ctx->f2.fl); " + TAG + "\n"
+END_SITE = "    // 0x800FADE4: jr          $ra\n"
+END_HOOK = "    rs64_tick_end(); " + TAG + "\n"
+DEF_OLD = re.compile(r"^extern char\* getenv\(const char\*\); static FILE\* rs64_tt_f;.*\n", re.M)
 REG = {('$zero', 0), ('$at', 1), ('$v0', 2), ('$v1', 3)}
 REG = {n: i for i, n in enumerate("zero at v0 v1 a0 a1 a2 a3 t0 t1 t2 t3 t4 t5 t6 t7 s0 s1 s2 s3 s4 s5 s6 s7 t8 t9 k0 k1 gp sp fp ra".split())}
 
@@ -98,12 +108,25 @@ for p in sorted(base.glob("funcs_*.c")):
                             lines[j + 1] = new.rstrip("\n") + " " + TAG + "\n"; changed = True
                         fixed.add(pc)
                         break
+            elif pc in UNFIX:
+                for j in range(i + 1, min(len(lines), i + 24)):
+                    mj = COMMENT.match(lines[j])
+                    if mj and mj.group(2) in ('addiu', 'addi') and re.search(r', (-?0x1)$', mj.group(3).strip()):
+                        cj = lines[j + 1]
+                        if TAG in cj and "rs64_tick_step()" in cj:
+                            lines[j + 1] = cj.replace("rs64_tick_step()", "0X1").replace(" " + TAG, ""); changed = True
+                        break
         i += 1
     s = "".join(out)
     if DT_SITE in s:
         if DT_HOOK not in s:
             s = s.replace(DT_SITE, DT_HOOK + DT_SITE, 1); changed = True
+        if END_SITE not in s:
+            sys.exit("s6822 fps60 ticks: runInMissionFrame return 0x800FADE4 not in the dt-site file")
+        if END_HOOK not in s:
+            s = s.replace(END_SITE, END_HOOK + END_SITE, 1); changed = True
         if DEF not in s:
+            s = DEF_OLD.sub("", s)  # s6822: replace a pre-s6822 definition line in an already-patched file
             s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + DEF, 1); changed = True
         dt_done += 1
     elif changed and DECL not in s:

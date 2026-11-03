@@ -179941,3 +179941,32 @@ the 13 unexercised whitelisted sites.
 Verdict: selects H-more (frame-locked per-tick timers exist beyond the despawn grace: 2 live on lvl14, off arm halves them,
 fix restores 30 Hz), refutes H-none. Next discriminator: per-site median run duration a30 vs b60off vs b60fix on a level that
 runs the 13 unexercised whitelisted handlers (NEXT.md).
+
+## Session 6822 (2026-11-02) — G3 FPS60 tick timers: per-level census of the 15 s6821 whitelisted sites; 3 of the 5 newly exercised (800DAB64 TIE attachment effect, 800E32CC / 800E1E28 train car) are EVENT-gated, not per tick, and the s6821 game-time step doubled them; reverted (re-run = a30), tick step forced to 1 outside a mission tick
+HYPOTHESIS-ID: g3-fps60-tick-timers
+Census (scratch/s6822/census.sh, b60fix = ROGUESQ_FPS60=1 + ROGUESQ_TICK_TRACE, lvl2-13,15-19 via SAVE_FROM eeps, 150 s
+each, all rc=0 crash=0; tools/g3_tick_site_census.py): 80044938 cutsceneActorNpcHandler on every flight level, 8007030C on
+lvl5/8/9/15, 800DAB64 lvl13/15, 800E1E28 lvl9/13, 800E32CC lvl13; 8006C024/800AF5A0/800B41B8 everywhere. Never hit:
+800C96B8 800806AC 8007CD50 800B5350 800BC778 800F8708 800FB4F8. lvl6/11/16/17 logged 0 mission ticks: still in the
+letterboxed intro cinematic at 150 s (ctl_a30_lvl11 frame w_0149.62 = Bespin intro cinematic; ctl_b60 same) - recipe gap.
+Arms (scratch/s6822/arms.sh, lvl13, one build, a30 / b60off / b60fix, rc=0 crash=0; tools/g3_tick_countdown_span.py =
+gap-tolerant span, a run ends on a value step-up):
+  site       ex/gs a30/off/fix     median span a30/off/fix
+  8006C024   77 / 154 / 152        0.233 / 0.100 / 0.217   (frame-locked, fixed: positive control)
+  800DAB64   0.54 / 0.54 / 0.73    3.10 / 3.05 / 3.83      one step per ~1.02 s at both rates -> event-gated; fix doubles it
+  800E32CC   0.21 / 0.25 / 0.47    0.87 / 0.80 / 1.23      irregular event times, same density at both rates; fix doubles
+  800E1E28   3 steps 1/30 s apart in BOTH a30 and off (0.067 s), fix adds a repeat -> not per tick
+  80044938   count-up passes 5 at 0.167 / 0.117 / 0.150 s -> per tick, fix ~= a30, kept
+Change: tools/fixup_fps60_ticks.py (1) UNFIX = {800DAB64, 800E32CC, 800E1E28}: removed from FIX, and an already-patched
+step line is reverted to the literal 1 (idempotent, applied to ../N64Recomp/RecompiledFuncs, rebuilt; 12 stepped sites).
+(2) rs64_tick_step() returns the game-time step only inside a mission tick (dt capture 0x800FA90C to runInMissionFrame's
+jr ra 0x800FADE4, new rs64_tick_end hook), else 1; out-of-tick reads are traced as {1, old step, 0, tick}. On lvl13 all
+2098 (a30) / 4228 (FPS60) out-of-tick reads were before the first tick with old step 1, so (2) changes nothing observed:
+defensive for a later mission load in the same session, unverified.
+Verify (b60fix_unfix_lvl13, same new build, rc=0 crash=0): 800DAB64 0.54 ex/gs, 58 steps, span 3.05 s (= a30 3.10, 58);
+800E1E28 0.050 s; 800E32CC 0.31 ex/gs; same-run positive control 8006C024 still 0.250 s (off 0.100, a30 0.233).
+ORIGIN: the doubled timers were written by our own s6821 fixup (static read classified event-gated decrements as per-tick);
+the revert restores retail code at those three sites.
+Verdict: the s6821 static per-tick classification was wrong for 3 of the 5 newly exercised sites, so the 7 never-exercised
+whitelisted sites are suspect too. Next: static re-read of the 7 for an event gate around the decrement (drop any gated
+one), and a longer-hold census on lvl6/11/16/17 (start presses after the intro cinematic) to exercise them.
