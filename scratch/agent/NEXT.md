@@ -1,14 +1,17 @@
-# NEXT: cross-level audio-clocked split audit (offline)
-HYPOTHESIS-ID: g3-audio-split-audit
+# NEXT: retail control for the ~19-VI guest AI feed gap at scene transitions
+HYPOTHESIS-ID: g3-transition-ai-gap
 
-State (s6805): every dt-pinned retail/port pair split so far (lvl3,4,7,8,9,10,12,14,15,16 and the lvl9 death camera) lands
-on a song end (handle 0x8010C0E0 -> 0), and song windows were VI/AI-buffer equal where measured (lvl10 332/634 vs 334/640,
-lvl9 death jingle 332/634 vs 334/640). Never tabulated across all levels/songs at once.
-Hypotheses: H-parity (every song window is VI- and buffer-equal within ~1%: the split class is purely mupen's slower game
-rate, close the class); H-rate (some song/level has a port length != retail: an AI rate / sample-rate / tempo defect like
-G2b's 32006 Hz crawl, root-cause it); H-gameend (some song ends on a game event, not audio: equal ticks, unequal VI).
-Discriminator, offline only, no game run: for every scratch/s67xx pair dir holding a retail oracle.log and a port rand.txt
-with the 8010C0E0 block, run tools/g3_song_windows.py RETAIL PORT; build one table (level, song id, retail ticks/VI/bufs,
-port ticks/VI/bufs, VI ratio, buffer ratio). Positive control: lvl10 (scratch/s6763) must reproduce 332/634 vs 334/640.
-Find pairs: `ls scratch/s67*/ | ...; grep -l 'm=8010c0e0' scratch/s67*/**/oracle.log`. Write the table into the session
-entry; land the batch script as tools/g3_song_audit.py. If H-rate: next unit is the AI rate for that song.
+State (s6806): port guest skips osAiSetNextBuffer (0x8008EE08/0x8008EE84) for 19 VI (~317 ms) at transitions
+(lvl19 pre-mission ticks -1 VI 2016/3451; lvl3 t3803; lvl10 t5053; tools/g3_ai_gaps.py). G2b saw the same as ~315 ms
+empty SDL queue at boot, hangar entry, mission load, game over in every arm. Retail oracle logs never cover a
+transition: the exec trace is armed by --debug-write at DWARM=85 s (tools/g3_mission/run.sh), after mission entry.
+Hypotheses: H-retail (retail's guest also stops feeding AI ~19 VI during the load: synchronous load blocks the audio
+thread, then retail-faithful, close); H-port (retail gap is shorter; our PI/DMA/overlay load or thread scheduling
+starves the audio thread, so root-cause it); H-length (retail gap exists but its length differs, a pacing artefact).
+Discriminator: ONE retail oracle run with the AI exec-trace rows live from boot (drop --debug-write so the trace runs
+from boot, or set DWARM small; check README line ~260: "from boot without one"), same save/recipe as an existing port
+pair (lvl19 s6773/r19 has two port gaps pre-mission; or lvl3 s6777), through title -> level select -> mission load.
+Then g3_ai_gaps.py on both arms; report the gap length at each transition in VI. Positive control: the in-mission
+retail rows must show the usual ~1.91 buf/VI (gap <=1 VI), and the port arm (re-run in same iteration, same build)
+must reproduce its 19-VI gaps. If H-port: instrument the audio thread's last osAiSetNextBuffer vs what the game
+thread is doing during the 19 VI (lldb sample or the G1E timeline).

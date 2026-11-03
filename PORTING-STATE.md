@@ -179400,3 +179400,32 @@ Retail-faithful mechanism; the remaining difference is mupen's slower game rate 
 known audio-clocked split class, not a port defect. Lesson: never join a VI list built over all syncs to a frame index
 that drops empty syncs; use g3_rdp_syncs.py.
 Next: g3-audio-split-audit - offline cross-level table of every song window in the existing dt-pinned pair logs.
+
+## Session 6806 (2026-11-02) — G3 audio-clocked split audit CLOSED (H-parity): every natural-end cue on levels 3,4,7,8,9,10,12,14,15,16,18 is VI- and AI-buffer-equal to retail within 1%, AI buffers/VI 1.907-1.919 in both arms on every level; long songs end on sim events (equal ticks); new port-only datum: 19-VI guest AI feed gaps
+
+HYPOTHESIS-ID: g3-audio-split-audit (closed).
+Offline only, no game run. New tools/g3_song_audit.py: finds every scratch/s67*/s68* retail*/oracle.log[.zst] carrying
+the song-handle dump (m=8010c0e0), pairs it with the sibling port*.rand.txt (plus the s6756 retailb+portd fixed-VI lvl4
+arm), runs the g3_song_windows.py logic, and prints per song window: ticks / VI / AI buffers per arm, ratios, VI/tick and
+buffers/VI. 26 retail logs, 22 pairs, 6.6 s. Full table: scratch/agent/s6806_song_audit.txt.
+Positive controls (same run): lvl10 (s6763) song 1 reproduces 332/634 vs 334/640; the pre-fix lvl4 arms (s6756 port,
+portb, i.e. before the s6755 duplicate-VI-edge fix) are flagged by the tool (VI 1.039/1.078, buffers/VI 1.788 vs 1.913),
+so the audit does detect a real rate defect; the fixed arm portd gives 332/635 vs 334/639 (1.006).
+Result:
+- Natural-end cues (the ~640-buffer jingles, handles 1 and 3): lvl3, 4(portd), 7, 8, 9 (x3 pairs), 10, 12, 14, 15, 16
+  (x2), 18: port/retail VI ratio 0.994-1.009, buffer ratio 0.994-1.0095. Ticks differ only via retail mupen's VI/tick
+  (1.99-4.00 vs the port's 2.000). Selects H-parity.
+- Sim-ended songs (lvl5 song 1, lvl13 songs 1-2, lvl16 song 1-2, song 2 on lvl3/7/8/12/14/18): ticks EQUAL in both arms
+  (742, 1687/2614, 587/463, 1310/632/789/130/265/481), VI and buffers scale together with retail's VI/tick. H-gameend
+  is real for these songs but it is the sim, identical in both arms: not a defect.
+- AI rate: buffers per VI 1.907-1.916 retail, 1.907-1.919 port, on every level and every window (nominal 1.916). Refutes
+  H-rate everywhere it was measured (play rate 22047 Hz; the crawl's 32006 Hz was G2b, already fixed).
+- Unequal-tick windows (lvl9 song 2 1100 vs 1874, lvl10 songs 2-3, lvl15 song 2 1293 vs 792) all start after that
+  level's documented song-1 split, where the sims are no longer comparable. lvl11, 17, 19: no song switch in the trace.
+Side datum (new tools/g3_ai_gaps.py, largest VI gaps between consecutive guest osAiSetNextBuffer rows): retail max gap
+1 VI on lvl3/10/11/13/19, but retail rows only start after the --debug-write trace arm (VI 2279-12455), so retail never
+covers a scene transition. Port: 19-VI gaps (= the ~315 ms empty-queue gaps G2b saw at every transition) are GUEST-side
+(no osAiSetNextBuffer call for 19 VI): lvl19 pre-mission (tick -1, VI 2016 and 3451), lvl3 t3803 VI 11616, lvl10 t5053.
+So the gap is not host SDL padding; whether retail's guest also skips 19 VI there is unmeasured (no retail control yet).
+Rules out: an audio-rate defect behind any G3 split; the split class is closed as mupen pacing.
+Next: g3-transition-ai-gap - retail oracle run with the AI rows armed from boot across a mission load.
