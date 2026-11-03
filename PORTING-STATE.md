@@ -180859,7 +180859,7 @@ command. Recipe scratch/s6851/abd.sh (s6850 abd.sh + DIAG=2, SAT arm, bin delete
 Run 1 (lvl17 21:9, 200 s hold, alive, 0 stalls): control ZERO-W in the forced-overlay window = 12 binwalk lines, all
 walk=same with identical words (positive control: the cross-check sees what the walker sees). All 11 WRAP texrects:
 walk=same, walker stepped on the exact address, MISSED=0, but the walker read x 256 px lower (e.g. a=709570 walked
-24C2221A,00BE01CC = ul.x 760 lr.x 776.5; bin 2402221A,00FE01CC = ul.x 1016 lr.x 8.5). -> H-late selected, H-shadow and
+24C2221A,00BE01CC = ul.x 760 lr.x 776.5; bin 2402221A,00FE01CC = ul.x 1016 lr.x 8.5). -> This selects H-late and refutes H-shadow and
 H-split refuted. The writer between walker and RT64 is rs64_region_scan (called after rs64_g1d_rect_wrap in
 rs64_dpc_record_submit): the s6159 HUD-anchor radar-disc shift, auto-set by ROGUESQ_ASPECT (main.cpp: region
 669,810,20,135, shift 256 at w1024), adds dx*4 to both texrect x fields and masks with 0xFFF, so a rect in the box at
