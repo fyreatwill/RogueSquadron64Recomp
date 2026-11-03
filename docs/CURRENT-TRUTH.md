@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6836 (2026-11-03).
+Compact operational handoff, as of Session 6837 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -510,6 +510,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    s6836 G3f owner offer LANDED: ROGUESQ_HANGAR_FOV=<deg> narrows SELECT YOUR CRAFT cam 0x800CD670 only (apply_s6836_hangarfov;
    0x800CDC80 = SELECT LEVEL, excluded, crops at 30). Same build: fovy 30 on 1486/1486 craft-cam calls, other cams 45, camera
    path identical; 38 suggested (30 crops wingtips). OWNER-OPT-INS row; sheet scratch/s6836/sheet_craft_fov.png.
+   s6837: knob composes with ASPECT 16:9/21:9 (H-ok): craft cam fovy 38, aspect 2.93/3.76 and vp 796/1024 same as the plain
+   wide arm; SELECT LEVEL and other cams unchanged; frames scratch/s6837/sheet_hangarfov_wide.png. Next: knob under FPS60.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

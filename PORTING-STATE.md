@@ -180387,3 +180387,27 @@ Discrimination: this selects H-pointer-stable (craft-select camera is 0x800CD670
 both) and refutes H-viewport-key (keying on the 512x340 / aspect 1.882 viewport also captures SELECT LEVEL and crops it);
 and refutes H-sim-coupling (fovy override changes no camera position: identical trajectories at matched times).
 Next discriminator: G3F fovy/aspect/vp of 800cd670 under ROGUESQ_ASPECT=21:9 and 16:9, knob on vs off (H-ok vs H-clash, NEXT.md).
+
+## Session 6837 (2026-11-03) — ROGUESQ_HANGAR_FOV composes with ROGUESQ_ASPECT 16:9 and 21:9 (H-ok): fovy 38 on the craft cam, wide aspect/viewport unchanged, SELECT LEVEL untouched
+No new soak verdicts since s6836 (last SOAK-RESULTS lines = s6835 hunts c/d, already folded). CURRENT-TRUTH 54.6 KB, no maintenance.
+Work unit (NEXT.md hangar-fov-optin): does the s6836 knob compose with the owner's screens? H-ok (fovy replaced, then the
+s6104 aspect x and s6112 vpw patches widen as in the plain wide arm) vs H-clash (aspect/vpw bypass or reorder on the craft cam).
+Ran scratch/s6837/arms.sh (same build as s6836, owner save route, 60 s each, ROGUESQ_G3F_CAM in all, sequential, rc=0, 0 crash
+lines in all four): w21 / w21f38 / w16 / w16f38 (ASPECT implies OSMEM_MB=12; log echoes FB_WIDTH=1024 scales=2.0 at 21:9).
+G3F per-cam table (calls, vp, fovy, aspect):
+- w21:    800cd670 1479x vp 1024x340 f45 asp 3.7647 | 800cdc80 334x 1024x340 f45 3.7647 | 800cf090 2138x 1024x448 f45 2.857
+- w21f38: 800cd670 1472x vp 1024x340 f38 asp 3.7647 | 800cdc80 335x 1024x340 f45 3.7647 | 800cf090 2145x same as w21
+- w16:    800cd670 1475x vp  796x340 f45 asp 2.9265 | 800cdc80 335x  796x340 f45 2.9265 | 800cf090 2141x 796x448 f45 2.221
+- w16f38: 800cd670 1490x vp  796x340 f38 asp 2.9265 | 800cdc80 335x  796x340 f45 2.9265 | 800cf090 2139x same as w16
+(one first call per cam at the unscaled 1.882 aspect before the aspect patch arms, present in every arm alike.)
+"[hangar-fov] first hit cam 800cd670: fovy 45 -> 38" in both knob arms; none in the plain arms (negative). Camera matrix rows
+at t~45.3 identical across all four arms (0.99876 0.00527 -0.0495 ...): pan path unchanged by aspect or knob.
+Horizontal FOV: 16:9 45 -> 38 = 101.0 -> 90.4 deg; 21:9 114.7 -> 104.7 deg (4:3 retail 75.9). Frames
+scratch/s6837/sheet_hangarfov_wide.png (rows w21, w21f38, w16, w16f38; 5 matched-time columns, wall-clock so pan phase differs
+slightly between rows - judged per row, not cross-row diffed): SELECT LEVEL column identical in all rows; f38 frames the
+X-wing larger at both aspects, fills the wide window, HUD text intact, no crop.
+VERDICT: H-ok selected, H-clash refuted (two lines: guest fovy/aspect/vp log per cam + window frames, same-run negative
+controls on 800cdc80/800cf090 and the plain arms). OWNER-OPT-INS row extended (wide numbers; 30-35 may suit 21:9) and two
+stale widescreen notes fixed (title defect B and 21:9 intro bars were fixed s6688-s6735 / s6718).
+Discrimination: selects H-ok, refutes H-clash.
+Next: the same knob under ROGUESQ_FPS60 (the owner's G3f run was FPS60): 60 Hz split of setupCameraMatrices.
