@@ -179938,3 +179938,6 @@ car, throttle, type-4 effect, TIE orientation, cinematic stage, mission transiti
 by construction, NOT runtime-verified (single-source: static read). s6820 despawn control in this build: TIE re-create dVI
 a30 40 / off 41 / fix 41 (unchanged). Selects H-more (per-tick timers beyond the despawn grace exist); class narrowed to
 the 13 unexercised whitelisted sites.
+Verdict: selects H-more (frame-locked per-tick timers exist beyond the despawn grace: 2 live on lvl14, off arm halves them,
+fix restores 30 Hz), refutes H-none. Next discriminator: per-site median run duration a30 vs b60off vs b60fix on a level that
+runs the 13 unexercised whitelisted handlers (NEXT.md).
