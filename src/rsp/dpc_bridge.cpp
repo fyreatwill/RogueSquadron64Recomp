@@ -4941,7 +4941,12 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
     static uint32_t s_zimg = 0xFFFFFFFFu, s_timg = 0; static bool s_zcmp = false, s_world = false;
     static std::map<std::pair<uint32_t, int>, std::array<uint32_t, 2>> s_zstat;  // (timg, tri=1/rect=0) -> {shifted, kept}
     static int s_zstat_sw = -1;
-    auto zok = [&](bool tri) { const bool ok = !zgate || (s_world && !s_zcmp);
+    // s6855: every texrect the gate selected in flight is a world-anchored marker crossing the box, not a radar element:
+    // lvl17 R78E080 (s6854), lvl9 R79B270 drawn outside the box in 3933/3950 VIs at x 412..612, R79B070 3948/3950 (s6855
+    // offline replay, tools/g1d_zoffobj.py); lvl1 16:9 none. Shifting one makes it jump 256 px. The radar disc and its
+    // blips (T7A3FB0) are triangles. ROGUESQ_G1D_REGION_TEXRECT=1 = shift in-box texrects again (s6854 behaviour).
+    static const bool rtex = [] { const char *e = std::getenv("ROGUESQ_G1D_REGION_TEXRECT"); return e && *e == '1'; }();
+    auto zok = [&](bool tri) { const bool ok = (!zgate || (s_world && !s_zcmp)) && (tri || rtex || !zgate);
         if (zdiag && radar && shiftOn) s_zstat[{s_timg, tri ? 1 : 0}][ok ? 0 : 1]++; return ok; };
     if (zdiag && shiftOn && sw - s_zstat_sw >= 600 && !s_zstat.empty()) {
         s_zstat_sw = sw; std::string o;

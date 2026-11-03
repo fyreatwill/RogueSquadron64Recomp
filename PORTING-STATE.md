@@ -180973,3 +180973,24 @@ Verdict: this selects H-latch (root cause: stale frame-start latch) and refutes 
 residual (it is sky, moved only because of the latch). Next discriminator: lvl9 R79B270 per-VI centre relative to the disc
 (fixed offset = blip, H-blip) vs drifting / drawn elsewhere (world marker, H-none) - NEXT.md.
 Rules out: the s6852 residual being HUD; a SETZIMG-based frame reset.
+
+## Session 6855 (2026-11-03) — G1d region box: every in-box texrect is a world-anchored marker (H-none); ROGUESQ_G1D_REGION_TEXRECT (default off) stops shifting texrects, lvl9/lvl17 21:9 non-disc shifted -> 0, disc 100%
+Unit (NEXT.md s6854, slug g1d-region-shift-scope): do any legitimate radar elements reach the region gate as texrects?
+H-blip (radar blips, keep shifting) vs H-none (world markers, stop shifting texrects).
+Offline (tools/g1d_zoffobj.py --disc 7A37B0 on the s6854 lvl9 21:9 SHIFT=0 bin, 3976 radar VIs): R79B270 (51x30) drawn
+in 3950 VIs, OUTSIDE the box in 3933 of them (x 412..612, y 139..212), selected in only 17; R79B070 (102x60) outside in
+3948/3950, selected 2. Same class as lvl17 R78E080 (s6854): world-anchored target markers crossing the box. The radar
+blips are the triangle texture 7A3FB0 (drawn only at the disc, x 670..709). lvl1 16:9 had no in-box texrect (s6853).
+-> selects H-none, refutes H-blip.
+Change (src/rsp/dpc_bridge.cpp rs64_region_scan zok): under the Z gate, texrects are never shifted;
+ROGUESQ_G1D_REGION_TEXRECT=1 restores s6854 behaviour; ZGATE=0 unaffected (old behaviour whole).
+Runtime verification, same build, 21:9 SHIFT=256, sequential (scratch/s6855/both.sh, abd.sh): both alive 203 s hold,
+0 VI stalls, 0 crash lines, out WRAP 0, control ZERO-W fired (598 / 300).
+  lvl9: disc T7A37B0 27096 shifted / 0 kept, blips T7A3FB0 5695 / 0 (positive control in the same run: gate fires);
+        R79B270 0/17, R79B070 0/2, R729940 0/1 (all kept); every other texture 0 shifted.
+  lvl17: disc T7965C0 9688 / 0; R78E080 0/13 kept (s6854: 8 shifted); 11 other R textures 0 shifted.
+ORIGIN: writer = rs64_region_scan (ours); value illegitimate (a world marker jumped 256 px while crossing the box);
+cause = the s6852 gate treated any z-off post-world prim in the box as HUD, and the HUD radar has no texrects.
+Verdict: selects H-none, refutes H-blip. Region-shift scope thread closed: at 21:9 only disc + blip tris move (lvl1 16:9,
+lvl9, lvl17). Not covered: no owner frame sheet this session (counters only).
+Rules out: radar content drawn as texrects in flight on lvl1/9/17.

@@ -1,18 +1,14 @@
-# NEXT: close the region-box texrect question (R78E080 moving marker), then G1d awaits owner; then ladder G3
-HYPOTHESIS-ID: g1d-region-shift-scope
+# NEXT: owner frame sheet for the closed G1d radar-region work at 21:9 (lvl9 + lvl17 flight), then ladder G5
+HYPOTHESIS-ID: g1d-region-owner-sheet
 
-State (s6854): ROGUESQ_G1D_REGION_ZGATE + CFLIP (both default on): lvl17 21:9 only the disc shifts plus R78E080
-(51x30 IA texrect, a world-anchored target marker moving through the box; 8-14 rects per 200 s shifted 256 px = a jump).
+State (s6855): region-shift scope CLOSED. Under ZGATE+CFLIP+TEXRECT=0 (all defaults) only the radar disc and blip tris
+move at 21:9 (lvl9 T7A37B0/T7A3FB0, lvl17 T7965C0); world, sky and world markers (R78E080, R79B270) stay put.
+No owner-viewable frame exists for s6854/s6855 (FBDV=1500 dumps landed on menus in s6854).
 
-Unit: does ANY legitimate radar content reach the region gate as a texrect? Evidence so far: lvl1 16:9 none (s6853);
-lvl17 only R78E080 (s6854); lvl5 R793B80 7 and lvl9 R79B070/R79B270 1-13 (s6852 soaks, unexamined).
-- One lvl9 21:9 run, scratch/s6854/abd.sh 9 with KEEPBIN=1 SHIFT=0 (lvl9 control fires), then
-  python3 tools/g1d_zoffobj.py <bin> --disc 7A37B0 --rule cflip  (and --only 79B070,79B270 for the per-VI trace).
-Hypotheses:
-- H-blip: R79B270-class are radar blips (fixed relative to the disc, small, drawn adjacent to disc tris) -> keep texrect
-  shifting but exclude moving markers (e.g. require ul AND lr in the box).
-- H-none: every in-box texrect is world-anchored (moves with the world like R78E080) -> stop shifting texrects in the
-  region scan (env knob, default on), re-run lvl17 A/B counters.
-Discriminator: per-VI centre of R79B270 relative to the disc centre (constant offset/small radius = blip) vs drifting
-across the box and drawn elsewhere (marker).
-Budget: 1 iteration. Then G1d awaits owner judgement; next ladder rung G3 (in-flight frame diffs vs retail).
+Unit: one in-flight frame per level for the owner. scratch/s6855/abd.sh with SHIFT=256 and FBDV set so dumps land after
+first_objwr (lvl9 ~70 s, lvl17 ~59 s into the run; pick FBDV from the s6855 harness VI counts in scratch/s6855/AB.txt,
+e.g. dump every 600 VIs and take the first frame after mission_t). Build a 2x2 contact sheet (lvl9, lvl17 x
+TEXRECT=0 / TEXRECT=1 if a marker is in the box, otherwise just the two default frames) into docs/owner_sheet_s6856_*.png.
+Expected: disc inside the ring at the right edge, no wedge left behind, no sky/world strip displaced.
+If a frame shows a displaced element, that's a datum: name its texture with tools/g1d_zoffobj.py on a KEEPBIN bin.
+Then: G1d awaits owner; next ladder rung with open work is G5 (renaming sweep) unless CURRENT-TRUTH Next steps adds one.
