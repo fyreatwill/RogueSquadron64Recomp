@@ -21,7 +21,7 @@ COMMON=(${=XENV} ROGUESQ_GODMODE=${GODV:-1} ROGUESQ_AUTOPILOT=$AP ROGUESQ_OVL2C_
 if [ "${ROGUESQ_NO_PKILL:-0}" != 1 ]; then
   pkill -KILL -x RogueSquadron64Recomp >/dev/null 2>&1 || true
 fi
-for att in 1 2 3 4 5; do
+for att in $(seq 1 ${MAXATT:-5}); do
   L=$OUT/run.log
   ( cd $BUILD && exec env "${COMMON[@]}" ./RogueSquadron64Recomp ) > $L 2>&1 &
   p=$!; t0=$SECONDS

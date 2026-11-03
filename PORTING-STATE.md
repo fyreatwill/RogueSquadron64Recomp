@@ -181031,3 +181031,37 @@ show what is presented.
 Verdict: selects H-ok; refutes H-latch60 (kept 0 at 60 Hz render), H-dd4 (non-disc shifted 0 under dd4 density) and
 H-crash for lvl9/lvl17. Two lines: runtime counters and framebuffers agree. Not covered: 16:9 bundle (NEXT.md).
 Rules out: FPS60's extra frames or dd4's far terrain breaking the frame-start latch at 21:9.
+
+## Session 6858 (2026-11-03) — dd>1 malloc spill arena sat inside the game heap whenever OSMEM_MB>8: 16:9+OSMEM12+dd4 crashed 9/9 at mission load (HMT name pointer); spill moves to 0x81000000 + RAMTOP 20, lvl1/lvl9 16:9 bundle then 300 s clean
+Unit (NEXT.md s6857, slug g1d-region-fps60-bundle-169): 16:9 + FPS60 + dd4 under the region-gate defaults. Recipe
+scratch/s6858/abd.sh (= s6857 abd.sh at ASPECT 16:9, MISSION_WIDTH 796, box 520..630, shift 142, OSMEM_MB=12 kept from
+the 21:9 recipe), scratch/s6858/both.sh lvl1 then lvl9, HOLD_S=300 FBDV=600.
+Side-effect crash (pre-fix, binary 11:40): lvl1 5/5 attempts and lvl9 3/3 died at mission load (VI 4864 / 4416, width 640):
+SIGBUS in rs_strncmp+72 <- loadTextureToMemory+1356 <- parseHmtMaterials <- registerHmtTextureInTable <- load_hmt_and_hob
+<- loadLevelAssets. Fault vaddr 0xA7751264 (lvl1) / 0x80000003 (lvl9). loadTextureToMemory (0x8001F954) walks the texture
+LUT (*0x80128F08, 0x24-byte entries, count 0x80128EF0) and strncmps entry+0x14 against s1 = stack arg = rec+0x24 of the
+HMT record (parseHmtMaterials 0x80022AC0); the LUT side was sane (host x9 = 0x80178E94 = x20 entry + 0x14), so the wild
+pointer is the material record's name field. Excerpts in scratch/s6858/prefix/.
+Arm table (scratch/s6858/arms.sh, lvl1, one attempt each, ARMS.txt): A 16:9+FPS60+dd4+OSMEM12 CRASH (same site);
+B 16:9+FPS60+dd4 (8 MB) clean 131 s; C 4:3+FPS60+dd4+OSMEM12 no crash (route gate miss, passed the load VI);
+D 16:9+FPS60+dd1+OSMEM12 clean; E 16:9+dd4+OSMEM12 (no FPS60) CRASH. Crash = OSMEM>8 AND dd>1; FPS60 irrelevant.
+ORIGIN (writer): the s6569/s6702 dd-bundle malloc spill (rs64_s6569_spill, src/main/upstream_compat.cpp) hands out blocks
+from a fixed 0x80800000-0x80C00000 arena unless ROGUESQ_SPILL_HI. With osMemSize 12 MB that range IS game heap, so spill
+blocks and game allocations alias; [spill] req=0x8000 -> 80800000 in arm A, and the s6857 21:9 runs (ASPECT 21:9 sets
+OSMEM 12 itself) logged 12782 spill blocks at 0x808xxxxx too, latent there. The value is not legitimate: a spill block
+overwrote HMT data the game owns. Layout-dependent (4:3 with the same flags happened to survive).
+Fix: rs64_g1c_apply_dd_policy (src/main/main.cpp) sets ROGUESQ_SPILL_HI=1 + ROGUESQ_RAMTOP_MB=20 (explicit env wins) when
+ROGUESQ_OSMEM_MB>8, i.e. the s6587/s6593 layout (spill 0x81000000-0x81400000, guards widened to 20 MB). 8 MB runs unchanged.
+Post-fix (same recipe, binary 13:05): [ddbundle] osmem=12 line fired; spill 752/752 blocks at 0x81xxxxxx, 0 at 0x80.
+- lvl1: mission_t 32 s, hold 302 s, alive, 0 stalls, 0 crash lines. Disc T83DBF0/T83E3F0 (the 43DBF0 textures relocated
+  by the 12 MB layout) 75278 shifted / 0 kept; non-disc 0 / 374649.
+- lvl9: hold 303 s, alive, 0 stalls, 0 crash lines. Disc+blips T8491B0/T8499B0 77041 / 0; non-disc 0 / 564715.
+  ZERO-W wrap control 0 on both (it controls the wrap scanner and did not fire at 16:9 before either, s6853).
+- Swap rate in flight with one awk metric (zgate swap= delta / VI delta): lvl1 0.52, lvl9 0.62, s6857 lvl9 0.51 under the
+  same metric, so the rate matches the 21:9 FPS60 run. s6857's 1.07 figure used a different count; not reconciled.
+- Sheet docs/owner_sheet_s6858_region_16x9_fps60_dd4.png (lvl1/lvl9 VI 6000/9000/12000 + 2x radar crop): disc in ring,
+  terrain, craft, HUD; nothing displaced. tools/owner_sheet_s6856.py gained --w/--cx; m6_god_common.sh gained MAXATT.
+Verdict: 16:9 bundle H-ok after the fix; H-crash selected pre-fix and root-caused (heap/spill aliasing, not FPS60 or
+widescreen). Two lines for the cause: the 5-arm table (only OSMEM>8 & dd>1 crash) and the logged spill addresses inside the
+12 MB heap; the fix removes the crash in 2/2 levels that crashed 8/8 before. Not yet re-run: the 21:9 bundle on the new
+layout (s6857 passed on the aliased one) -> NEXT.md.

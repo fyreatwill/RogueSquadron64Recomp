@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6850 (2026-11-03).
+Compact operational handoff, as of Session 6858 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -291,8 +291,13 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    **s6856 owner sheet** docs/owner_sheet_s6856_region_21x9.png (lvl9 x3 + lvl17 flight, 21:9): disc in ring, no wedge,
    nothing displaced; counters repeat s6855 (non-disc 0 shifted). **s6857 21:9 + FPS60 + dd4 (H-ok):** lvl9/lvl17 300 s
    holds alive, 0 stalls/crash lines; FPS60 live (1.07 swaps/VI vs 0.50 at 30 Hz s6856); disc 56083/20424 shifted, 0 kept;
-   non-disc 0 shifted (328210/166197 kept); out WRAP 0; sheet docs/owner_sheet_s6857_region_21x9_fps60_dd4.png. Untested:
-   the same bundle at 16:9 (NEXT.md).
+   non-disc 0 shifted (328210/166197 kept); out WRAP 0; sheet docs/owner_sheet_s6857_region_21x9_fps60_dd4.png.
+   **s6858 16:9 bundle + spill-arena fix.** With OSMEM_MB>8 the dd>1 malloc spill arena (fixed 0x80800000-0x80C00000)
+   aliased the game heap: 16:9+OSMEM12+dd4 crashed 9/9 at mission load (loadTextureToMemory strncmp on a wild HMT name
+   pointer); arm table: only OSMEM>8 & dd>1 crash, FPS60 irrelevant. The dd policy now sets SPILL_HI + RAMTOP_MB=20 when
+   OSMEM>8 (21:9 sets OSMEM 12 itself, so its bundle was aliased too, latent). Post-fix lvl1/lvl9 16:9+FPS60+dd4+OSMEM12:
+   302/303 s clean, disc 100% shifted, non-disc 0; sheet docs/owner_sheet_s6858_region_16x9_fps60_dd4.png. Next: re-run the
+   21:9 bundle (lvl9/lvl17) on the new layout (NEXT.md).
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

@@ -1,13 +1,15 @@
-# NEXT: 16:9 TV bundle (ASPECT 16:9 + FPS60 + dd4) under the region-gate defaults
-HYPOTHESIS-ID: g1d-region-fps60-bundle-169
+# NEXT: re-verify the 21:9 owner bundle on the s6858 spill layout (SPILL_HI + RAMTOP 20 when OSMEM>8)
+HYPOTHESIS-ID: g1d-spill-layout-219-recheck
 
-Why: s6857 closed the 21:9 bundle (H-ok). The owner's 65" TV runs 16:9, where the box is 520..630, shift 142, pad 25
-(s6853, lvl1 only, 30 Hz dd1). Nobody has run the 16:9 gate with FPS60 + dd4.
-Hypotheses: H-ok (disc 100% shifted, non-disc 0) / H-latch60 (disc kept >0 at 60 Hz) / H-dd4 (non-disc shifted >0) /
-H-crash (side-effect datum, root-cause it).
-Discriminator: copy scratch/s6857/abd.sh to scratch/s6858/abd.sh with ROGUESQ_ASPECT=16:9, MISSION_WIDTH=796, SHIFT from the
-s6853 recipe (grep '^## Session 6853' PORTING-STATE.md for its abd.sh path and box/shift env), frame glob _w796. Run lvl1 and
-lvl9 sequentially, HOLD_S=300, FBDV=600. Totals: python3 scratch/s6857/tot.py <dir>/zgate.txt (add the lvl1 disc textures
-43DBF0/43E3F0 to DISC). Check FPS60 live via swaps/VI (~1.0+ vs 0.5). Sheet: tools/owner_sheet_s6856.py needs a width/box
-argument for 796 (crop box ~x 500..796). Outcomes: all clean -> H-ok, close, add the 16:9 bundle line to OWNER-OPT-INS;
-non-disc shifted >0 -> tools/g1d_zoffobj.py on a KEEPBIN bin; disc kept >0 -> H-latch60.
+Why: s6858 found the dd>1 malloc spill arena (0x80800000-0x80C00000) aliased the 12 MB game heap. 21:9 sets OSMEM_MB=12
+itself, so the s6857 21:9+FPS60+dd4 pass (lvl9/lvl17, 12782 spill blocks at 0x808xxxxx) ran on the aliased layout. The fix
+moves the spill to 0x81000000 and widens RAMTOP to 20 MB; nobody has run 21:9 on it.
+Hypotheses: H-ok (lvl9/lvl17 300 s clean, spill all at 0x81, disc 100% shifted, non-disc 0) / H-ramtop (RAMTOP 20 breaks
+something at 1024 width: RT64 read limit, DL pointer guard -> crash or missing geometry) / H-latent (a crash the aliasing had
+masked or a different heap-pressure failure now that 4 MB of heap is no longer stolen).
+Discriminator: sed s6858 -> s6859 in scratch/s6857/abd.sh and both.sh (keep 21:9, MISSION_WIDTH 1024, SHIFT=256), run
+`zsh scratch/s6859/both.sh`; check `grep -a '\[ddbundle\] osmem' run.log` fired, spill address prefixes
+(`grep -a '^\[spill\] req' run.log | awk '{print substr($4,1,3)}' | sort | uniq -c` -> only 810/811), crash lines, and
+python3 scratch/s6857/tot.py <dir>/zgate.txt (disc textures may relocate; take the top shifted textures and confirm kept 0).
+Sheet: tools/owner_sheet_s6856.py <out> lvl9=<fbd>:=6000,9000,12000 lvl17=... (defaults --w 1024 --cx 760).
+Outcomes: clean -> close, note in OWNER-OPT-INS that both bundles run on the fixed layout; crash -> backtrace, name writer.

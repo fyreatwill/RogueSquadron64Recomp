@@ -11642,6 +11642,15 @@ static void rs64_g1c_apply_dd_policy() {
     if (px > 5) px = 5;
     char b[16];
     std::snprintf(b, sizeof b, "%d", px);
+    // s6858: the spill arena defaults to 0x80800000-0x80C00000, which is game heap once osMemSize > 8 MB (21:9 sets
+    // OSMEM_MB=12 itself). lvl1/lvl9 16:9+OSMEM12+dd4 then crashed 9/9 at mission load (HMT material name pointer
+    // 0xA7751264 / 0x80000003 in loadTextureToMemory's strncmp). Move it above 16 MB (the s6593 SPILL_HI + RAMTOP 20 layout).
+    const char* om = std::getenv("ROGUESQ_OSMEM_MB");
+    if (om && std::atoi(om) > 8) {
+        setenv("ROGUESQ_SPILL_HI", "1", 0);
+        setenv("ROGUESQ_RAMTOP_MB", "20", 0);
+        std::fprintf(stderr, "[ddbundle] osmem=%s MB > 8 -> spill arena 0x81000000, ramtop 20 MB\n", om);
+    }
     setenv("ROGUESQ_RAMTOP_MB", "16", 0);
     setenv("ROGUESQ_MALLOC_SPILL", "1", 0);
     setenv("ROGUESQ_DLPOOLX", "1", 0);
