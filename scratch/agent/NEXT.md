@@ -1,7 +1,7 @@
 # NEXT: where do the abort-wipe pixels come from? (21:9 lacks retail's right-to-left black wipe)
 HYPOTHESIS-ID: g3-wide-abort-wipe
 
-State (s6842): the wipe is NOT in the captured gfx RDP stream (scratch/s6842/cmds.py on scratch/s6841/p43/port.bin,
+State (s6842): the wipe is NOT in the captured gfx RDP stream (tools/rdp_bin_cmds.py on scratch/s6841/p43/port.bin,
 VI 6731-6745 constant draw classes); RT64's VI ignores hStart/hEnd; retail oracle saw no CPU-visible writes into
 0x690000-0x700000 at the 512-wide flight origins (single-source). Yet retail RDRAM dumps and port 4:3 window grabs show it.
 
