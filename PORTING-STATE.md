@@ -180383,7 +180383,7 @@ Ran scratch/s6836/arms.sh (one build, two arms sequential, ROGUESQ_G3F_CAM in bo
   V-wing wingtips -> OWNER-OPT-INS suggests 38.
 VERDICT: knob landed and verified (two lines: guest fovy log + window frames + same-run controls). Default stays retail.
 Not checked: ROGUESQ_ASPECT 16:9/21:9 together with the knob (the owner's screens) -> NEXT.
-Discrimination: SELECTS H-pointer-stable (craft-select camera is 0x800CD670 in s6791 and s6836, SELECT LEVEL 0x800CDC80 in
-both) and REFUTES H-viewport-key (keying on the 512x340 / aspect 1.882 viewport also captures SELECT LEVEL and crops it);
-REFUTES H-sim-coupling (fovy override changes no camera position: identical trajectories at matched times).
+Discrimination: this selects H-pointer-stable (craft-select camera is 0x800CD670 in s6791 and s6836, SELECT LEVEL 0x800CDC80 in
+both) and refutes H-viewport-key (keying on the 512x340 / aspect 1.882 viewport also captures SELECT LEVEL and crops it);
+and refutes H-sim-coupling (fovy override changes no camera position: identical trajectories at matched times).
 Next discriminator: G3F fovy/aspect/vp of 800cd670 under ROGUESQ_ASPECT=21:9 and 16:9, knob on vs off (H-ok vs H-clash, NEXT.md).
