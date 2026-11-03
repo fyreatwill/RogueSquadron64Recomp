@@ -180534,6 +180534,8 @@ logged origin; --inject pastes a magenta block as the positive control). s6798 w
 | port 21:9 p21 | 115 | 0 | 0 | 115 |
 | port 21:9 p21x | 114 | 1 | 1938 (113.32 s) | 114 |
 Port 4:3 sequence = retail (p43_trans.png). H-retail refuted, H-wide selected.
+Verdict: this selects H-wide and refutes H-retail and H-port-tex (root cause = native-width clear, not a texture);
+next discriminator for the wipe thread: the 4:3 vs 21:9 wipe-frame command diff (NEXT.md, g3-wide-abort-wipe).
 
 Mechanism (RDP streams, scratch/s6841/frames.py per FULL_SYNC frame): 4:3 flight draws 620000/690000 with the depth image at
 0x790000 (the 'fill 4' colour image = Z clear); the hangar then double-buffers 0x720000/0x790000 - the game reuses the flight
