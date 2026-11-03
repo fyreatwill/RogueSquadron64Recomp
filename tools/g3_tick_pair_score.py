@@ -9,6 +9,10 @@ flash, so this pairs frames by SIM TICK instead (dt pinned, sim identical across
 Per pair: d = mean abs diff (g3_oracle_match.small/mad) to the retail dump(s) within +-TW ticks, control = median d to
 all retail dumps; plus hot-pixel population (g3_fireball_score.hot) per frame. Writes a retail|port sheet.
 usage: g3_tick_pair_score.py ORACLE_LOG PORT_DIR SNAP_TXT OUT.png [--ticks A,B] [--tw 1] [--fitd 6] [--t0 T]
+                              [--port-rand RAND_TXT --ratio N]
+s6813: --port-rand keys the port side on its OWN tick rows (800fa730 in ROGUESQ_RAND_TRACE: VI per tick) instead of the
+snap.txt port column, and --ratio N maps port tick j to retail tick j/N (game time; ROGUESQ_FPS60=1 with dt pinned to 1/60
+against retail pinned 1/30 -> N=2). Ticks printed are retail-equivalent; the port column adds the raw port tick.
 """
 import bisect, glob, os, re, statistics, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -30,6 +34,11 @@ def main():
     tick_r = lambda v: T[bisect.bisect_right(rv, v) - 1][0] if rv[0] <= v <= rv[-1] else None
     tick_p = lambda v: T[bisect.bisect_right(pv, v) - 1][0] if pv[0] <= v <= pv[-1] else None
     pvi = {t[0]: t[2] for t in T}
+    ratio = int(opt('--ratio', '1'))
+    if '--port-rand' in a:
+        PT = [int(l.split()[1]) for l in open(opt('--port-rand', '')) if l.split()[2:3] == ['800fa730']]
+        tick_p = lambda v: (bisect.bisect_right(PT, v) - 1) // ratio if PT[0] <= v <= PT[-1] else None
+        pvi = {k: PT[k * ratio] for k in range(len(PT) // ratio)}
     R = []
     for m in re.finditer(r'\[fb-dump\].*?start=0x([0-9a-f]+).*?vi0=(\d+) origin0=0x([0-9a-f]+) -> (\S+)', open(log).read()):
         st, vi, org, p = int(m[1], 16), int(m[2]), int(m[3], 16), m[4]

@@ -179628,3 +179628,42 @@ frame sequence on the same ticks). Single-source: that this is the explosionEffe
 non-player craft in the HUD-off cutscene, no exec trace on that handler).
 ORIGIN: no mitigation; measurement tool only (g3_tick_pair_score.py) + EEP param in fireball_pair.sh.
 Next: g3-explosion-fps60 - the same lvl14 pair with the port at ROGUESQ_FPS60=1 (owner's play setting).
+
+## Session 6813 (2026-11-02) — G3: lvl14 cutscene destruction under ROGUESQ_FPS60=1 (dt pinned 1/60) has retail's phase timing in game seconds (H-match, refutes H-anim60); FPS60 cutscene starts ~20 game-s later than at 30 Hz
+
+HYPOTHESIS-ID: g3-explosion-fps60 (closed: H-match).
+
+Soak fold: none new (last SOAK-RESULTS line s6809_preempt2_lvl1_fps60, folded s6810).
+Design: pinning dt to 1/30 at FPS60 (the s6812 PIN) would hide H-anim60 (each 60 Hz tick would advance a 30 Hz step). So
+the port arm pins dt to 1/60 (ROGUESQ_XTRACE_POKE=800FA730:29:30:3c888889), i.e. the owner's FPS60 setting made
+deterministic, and the comparison is in GAME SECONDS: retail tick k = k/30 s, port FPS60 tick = 1/60 s. Retail side reused
+from the s6812 dumps (deterministic oracle, same recipe; capture once, analyze many). Recipe scratch/s6813/port.sh
+(PSECS=195 BURST=158,190): 815 caps, 0 crash/abort, 7120 ticks, snapshot dt word 3c888889 on every tick checked,
+1.002 VI/tick (18 extra VIs in 6 gaps over the run).
+tools/g3_tick_pair_score.py: new --port-rand RAND_TXT --ratio N (port VI -> tick from its own 800fa730 rows; retail tick =
+port tick / N). On this arm its free-search t0 fit fails (p25-p75 1.9..14.1 s, median d 10.1 = ctl 10.4) because dt 1/60
+diverges the sim: the camera/craft in flight no longer matches retail frame for frame. Event located directly instead.
+Results:
+- The cutscene (HUD-off) runs 179.92 -> 190.01 s wall (10.1 s) at FPS60 vs 164.74 -> 175.23 s (10.5 s) in the s6812 30 Hz
+  port arm (same radar-disc HUD probe on both capture sets). Destruction flash 3.57 s after HUD-off (FPS60) vs 3.93 s
+  (30 Hz; both HUD-off edges are sparse-capture limited, ~0.3-0.5 s).
+- Effect timing per game second from star onset (scratch/s6813/fps60_sheet.png, ev2.png): retail flash peak +0.10..0.13,
+  dome +0.20..0.33, darkening to +0.47, hot 0 at +0.50. FPS60: peak +0.17 (6545 hot px), dome +0.22..0.39, darkening
+  +0.44..0.50 (398 -> 71 px), small spark/ember hot counts (22-64 px) until +0.93. Flash peak -> end of dome (hot < ~400):
+  0.27-0.30 s retail, 0.27 s FPS60. A per-render-frame (H-anim60) effect would take ~0.14 s there and end by ~+0.25.
+- Colour per phase retail|FPS60: flash (202,173,118)|(209,180,130); dome (230,156,44)|(232,169,68); darkening
+  (228,143,19)|(234,143,20). The FPS60 craft explodes nearer the camera (diverged sim), so the effect is ~1.5x larger on
+  screen and pixel counts are not comparable; the ember tail to +0.93 is larger sparks crossing the hot threshold (sheet:
+  same ember/spark elements as retail at a larger scale), not a longer effect.
+- Side datum: the cutscene starts ~20 game-s later at FPS60. The flash is port tick ~6705 (VI ~11319 with the s6812 launch t0
+  of -5.157 s) = 111.7 game-s against retail t2737 = 91.2 game-s. Only 18 dropped VIs in the run, so this is not wall
+  slippage: the run before the cutscene progresses slower in game time at dt 1/60. Also seen: ev1 (169.2-170.1 s, HUD on) a
+  missile/flak hit next to the player with a flak trail, absent in the 30 Hz arm at that time.
+Positive controls (same run): the hot class fires 6545 px on the FPS60 flash and 0 on the frames before onset; the
+30 Hz port arm (s6812) shows the same pipeline resolving the 14-tick retail span; the probe sees both HUD edges in both arms.
+Two lines: (1) phase timing in game seconds (hot-pixel series); (2) the visual sheet with the same phase sequence and colours.
+VERDICT: H-match for the destruction effect at FPS60 (dt-scaled); refutes H-anim60 (would halve the effect) and H-blend60 (phase
+colours within ~13/255, the residual being the scale difference). Single-source: the 20 s cutscene delay rests on the
+assumed launch t0 (port VI from wall); the in-cutscene timing does not depend on it.
+ORIGIN: no mitigation; measurement only (scorer options + recipe).
+Next: g3-fps60-timeline - why the lvl14 cutscene comes ~20 game-s later at dt 1/60 (offline from the two port rand traces).

@@ -359,7 +359,12 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    recipe tools/g3_mission/fireball_pair.sh, scorer tools/g3_fireball_score.py.
    s6812 lvl14 CUTSCENE VEHICLE DESTRUCTION = H-match (t2737-2750, EEP=scratch/s6767/lvl14.eep): tick-keyed pairs (new
    tools/g3_tick_pair_score.py, pairs by sim tick via snap.txt) median d 1.21 vs ctl 3.98 over 141 pairs; hot-pixel
-   count/colour per tick equal (flash 8973|6169 px, same RGB). NEXT: same pair with the port at ROGUESQ_FPS60=1.
+   count/colour per tick equal (flash 8973|6169 px, same RGB).
+   s6813 same destruction at ROGUESQ_FPS60=1 with dt pinned 1/60 (owner's setting, deterministic) = H-match in GAME seconds:
+   flash peak -> dome end 0.27 s (retail 0.27-0.30; a per-frame effect would be ~0.14), phase colours within ~13/255
+   (scratch/s6813/fps60_sheet.png). Refutes H-anim60/H-blend60. g3_tick_pair_score.py --port-rand/--ratio keys a port on its
+   own ticks. Side datum (single-source, launch-t0 based): the lvl14 cutscene starts ~20 game-s LATER at dt 1/60 (flash 111.7 vs
+   91.2 game-s; 18 dropped VIs only). NEXT: g3-fps60-timeline - find what progresses slower per game second at dt 1/60.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
