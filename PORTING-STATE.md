@@ -180509,3 +180509,54 @@ stripes under a white sky with the top ~40% black. Magenta-pixel count: 914 ther
 arms. With 0.6 s caps that are not phase-gated, the 4:3/16:9 misses are not nulls. Retail is unknown -> NEXT.md.
 
 ORIGIN: no mitigation; measurement and tool only.
+
+## Session 6841 (2026-11-03) — abort-level striped frame = flight depth buffer shown through a half-cleared wide hangar buffer (initVideoSubsystem clears w=512 x h x bpp); retail and port 4:3 clean; fixed (ROGUESQ_IVS_WIDE_CLEAR, default on under G1d)
+
+HYPOTHESIS-ID: g3-abort-transition-frame (closed this session). Step 0: CURRENT-TRUTH 56,742 bytes, no maintenance.
+Soak tail: nothing new since s6835.
+
+Hypotheses (NEXT.md): H-retail (retail draws it), H-port-tex (stale texture/TLUT on teardown), H-wide (wide layout only).
+
+Runs (one game at a time, screen unlocked, SIGKILL, owner save restored + cmp-verified after every port run):
+- Retail: scratch/s6841/retail_abort.sh (oracle + angrylion, private --save-dir copy of scratch/s6746/oracle.eep, lvl1 flight
+  from 112.6 s, PAUSE 138 / ddown 143 / a 146 / dleft 149 / a 152; 180 fb dumps 0.1 s apart from 146.6 s). First try used
+  "down"/"left", which the oracle has no names for (only ddown/dleft), and a wall-clock kill shorter than emulated time
+  (the oracle runs ~0.55x real time); fixed, rerun. Sequence (scratch/s6841/retail_series.png, retail_trans.png): YES ->
+  emblem spins away -> flight -> soft black wipe from the right -> black ~1.5 s -> hangar slideshow -> MISSION FAILED.
+- Port: scratch/s6841/port_abort.sh (g3_port_capture.sh, same EEPROM, AP pause 95 / down 100 / a 104 / left 108 / a 111,
+  winctl BURST 110-117 s, RS64_RDP_BIN_PORT + _VI=1). Arms: p43 (4:3), p21 (ASPECT=21:9), p21x (21:9 + the s6798 extras
+  LIVES_CAP=1 EXACT_EDGES=tog G1B=1). 0 CRASH lines in all.
+New tool tools/g3_magenta_scan.py (R>200,G<110,B>90 pixels of a 160x90 resample; retail mode decodes each dump at its
+logged origin; --inject pastes a magenta block as the positive control). s6798 w133 rescored 912 (s6840: 914).
+| arm | frames | hits >150 | max | inject fired |
+| retail 4:3 (angrylion) | 180 | 0 | 0 | 180 |
+| port 4:3 p43 | 201 | 0 | 0 | 201 |
+| port 21:9 p21 | 115 | 0 | 0 | 115 |
+| port 21:9 p21x | 114 | 1 | 1938 (113.32 s) | 114 |
+Port 4:3 sequence = retail (p43_trans.png). H-retail refuted, H-wide selected.
+
+Mechanism (RDP streams, scratch/s6841/frames.py per FULL_SYNC frame): 4:3 flight draws 620000/690000 with the depth image at
+0x790000 (the 'fill 4' colour image = Z clear); the hangar then double-buffers 0x720000/0x790000 - the game reuses the flight
+Z memory as a hangar framebuffer in retail too. 21:9: flight 8F5000/9D5000 (1024 wide), Z at 0xB20000 (SetZImage B20000
+on every flight frame), hangar A40000/B20000. Streams are structurally identical at both aspects (same frame count, the first
+hangar frame is texrect-only, the next frame 25 VIs later), so the defect is in what the hangar buffer holds when first shown.
+The striped frame = Z values decoded as RGBA5551 (cleared Z 0xFFFC = the white "sky"), with the top half black:
+591 of 1181 picture rows black = 50.0%.
+Writer (new instrument, ROGUESQ_LOG_IVS_CLEAR=1, same build, both arms): initVideoSubsystem (funcs_5.c, rs_memset at
+0x8001A2E4) clears each new video buffer with len = w*h*bpp from its NATIVE width; at 21:9 it logs
+dst=0x80B20000 len=0x70000 w=512 h=448 (also 0x809D5000 0x70000, 0x80A0B000 0x55000 512x340). A 1024x448 buffer is
+0xE0000, so the clear stops at the half. Retail/4:3 = full clear = the black frames before the hangar.
+Fix (tools/apply_s6031_far.py apply_s6841_ivsclear, wired into fixup_game_funcs_vendored for funcs_5.c; live funcs_5.c
+patched by the script): when ROGUESQ_FB_WIDTH=wv>512 and w==512, h in {448,340} and len == w*h*bpp, len = wv*h*bpp.
+ROGUESQ_IVS_WIDE_CLEAR=0 restores the native length. 4:3/retail untouched (wv=0).
+Same-build A/B, 21:9 + s6798 extras + clear log: c1 (=0) striped frame again (1957 at 113.93 s, 1/114, inject 114/114);
+f1 (default) 0/109 (inject 109/109), clear lengths 0xE0000/0xAA000, flight -> black -> hangar, as retail does. 0 CRASH both.
+Owner sheet docs/owner_sheet_s6841_abort_21x9.png. Two lines: the clear log (writer + lengths) and the pixel A/B with a
+same-build reproducing control; the 50.0% black fraction matches 0x70000/0xE0000 exactly.
+Caveat: the 512x340 widening (0x80A0B000 -> 0xAA000) also covers the 640-mode buffers in that union region; the wide FB
+already overwrites that span when drawn, and f1 showed no damage, but only lvl1 abort was checked.
+Side datum -> NEXT: at 21:9 the right-to-left black wipe before the hangar is missing (the flight picture brightens
+instead; scratch/s6841/f1_yes.png vs p43_trans.png). Offline: compare the wipe frames' commands in p43 vs p21x port.bin.
+
+ORIGIN: the writer is the game's own initVideoSubsystem clear sized from the native 512 width; the value is legitimate
+for retail and wrong only because G1d widens the buffer. The fix widens that one length; not a guard.

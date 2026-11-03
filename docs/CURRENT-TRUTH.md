@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6840 (2026-11-03).
+Compact operational handoff, as of Session 6841 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -525,9 +525,12 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    flagged 205/208, 188/189, 358/358; real s6602 RDRAM noise crop 49 tiles. Hangar screens (SELECT LEVEL, AVAILABLE
    CRAFT, SELECT YOUR CRAFT, bay) score <=14 tiles in every arm; all >=20 frames are the title logo or MISSION FAILED
    stats text in every arm. Second line: s6798 21:9 visual + s6631 heap-cap fix. Sheet docs/owner_sheet_s6840_hangar_aspect.png.
-   NEW datum (NEXT, g3-abort-transition-frame): s6798 21:9 cap w133 = the frame right after ABORT LEVEL->YES shows
-   terrain in magenta/yellow stripes under a white sky with the top band black; 1 of 3 arms caught it (0.6 s cap
-   cadence, not phase-gated: the misses are not nulls). Retail unknown.
+   **s6841 abort striped frame FIXED (wide-only).** Retail angrylion (180 dumps) and port 4:3 show flight -> right-side black
+   wipe -> black -> hangar, 0 magenta frames (inject controls fire). 21:9: the hangar reuses the flight Z memory 0xB20000
+   as a framebuffer (retail does the same at 0x790000), and initVideoSubsystem's rs_memset (0x8001A2E4) clears it with the
+   native w*h*bpp = 0x70000, half of 1024x448: the first hangar VI showed flight Z as colour under a 50.0% black top.
+   Fix apply_s6841_ivsclear: under ROGUESQ_FB_WIDTH>512 the clear uses wv*h*bpp (=0 restores; ROGUESQ_LOG_IVS_CLEAR=1 logs).
+   Same-build A/B: off 1 striped frame, on 0. Sheet docs/owner_sheet_s6841_abort_21x9.png. NEXT: 21:9 lacks the wipe.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

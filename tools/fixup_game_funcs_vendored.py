@@ -37897,6 +37897,12 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s6689 heapslot x{_n6689}")
 
+    if p.name == "funcs_5.c":
+        import apply_s6031_far as _a6841
+        text, _n6841 = _a6841.apply_s6841_ivsclear(text)
+        if _n6841:
+            changed = True
+            report.append(f"{p.name}: s6841 ivsclear x{_n6841}")
     if p.name == "funcs_3.c":
         import apply_s6098_dlpool as _a6098
         text, _n6098 = _a6098.apply3(text)

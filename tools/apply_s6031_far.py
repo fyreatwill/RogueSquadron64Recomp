@@ -615,6 +615,28 @@ def apply_s6836_hangarfov(text):
     assert i > 0
     return text[:i] + S6836 + text[i:], 1
 
+# s6841 G3: initVideoSubsystem (funcs_5.c) clears each new video buffer with rs_memset(buf, 0, w*h*bpp) using the
+# NATIVE width (512). Under G1d (ROGUESQ_FB_WIDTH=wv>512) the buffer is wv wide, so the clear covers only the top
+# 512/wv of it: at 21:9 the hangar buffer 0xB20000 (= the flight depth image) kept the flight Z in its lower half and
+# the first hangar VI showed it as magenta/yellow stripes under a black top half (s6798 w133, s6841 p21x 591/1181 rows).
+# Widen the length to wv*h*bpp. ROGUESQ_IVS_WIDE_CLEAR=0 restores the native length; ROGUESQ_LOG_IVS_CLEAR=1 logs calls.
+S6841_TAG = "/* PATCH: s6841 ivsclear */"
+S6841_OLD = "    ctx->r6 = ADD32(ctx->r16, 0);\n    rs_memset(rdram, ctx);\n"
+S6841 = ('    ctx->r6 = ADD32(ctx->r16, 0);\n'
+         '    { ' + S6841_TAG + ' static int wv = -1, md = 1, lg = 0, nl; if (wv < 0) { const char* e = getenv("ROGUESQ_FB_WIDTH"); wv = (e && *e) ? atoi(e) : 0;\n'
+         '        e = getenv("ROGUESQ_IVS_WIDE_CLEAR"); if (e && *e) md = atoi(e); e = getenv("ROGUESQ_LOG_IVS_CLEAR"); lg = (e && *e && *e != \'0\'); }\n'
+         '      int w = (int16_t)ctx->r19, h = (int16_t)ctx->r20, bpp = ((int16_t)ctx->r22 < 0x18) ? 2 : 4; uint32_t len = U32(ctx->r6), nlen = len;\n'
+         '      if (md && wv > 512 && w == 512 && (h == 448 || h == 340) && len == (uint32_t)(w * h * bpp)) nlen = (uint32_t)(wv * h * bpp);\n'
+         '      if (lg && nl < 64) { fprintf(stderr, "[ivs-clear] n=%d dst=0x%08X len=0x%X -> 0x%X w=%d h=%d bpp=%d wv=%d ra=0x%08X\\n", nl, U32(ctx->r4), len, nlen, w, h, bpp, wv, U32(ctx->r31)); fflush(stderr); nl++; }\n'
+         '      ctx->r6 = (gpr)(int32_t)nlen; }\n'
+         '    rs_memset(rdram, ctx);\n')
+def apply_s6841_ivsclear(text):
+    a = text.find("RECOMP_FUNC void initVideoSubsystem("); assert a > 0
+    b = text.find("RECOMP_FUNC", a + 10)
+    if S6841_TAG in text[a:b]: return text, 0
+    i = text.find(S6841_OLD, a); assert 0 < i < b and "0x8001A2E8" in text[i - 200:i], "s6841 anchor"
+    return text[:i] + S6841 + text[i + len(S6841_OLD):], 1
+
 if __name__ == "__main__":
     p = base / "funcs_4.c"; t = p.read_text(); t2, n = apply4(t)
     t2, m = apply_s6201_pool(t2)
@@ -639,3 +661,6 @@ if __name__ == "__main__":
     p3 = base / "funcs_3.c"; t = p3.read_text(); t2, k = apply_s6201_alloc(t)
     if k: p3.write_text(t2)
     print("funcs_3.c alloc=%d" % k)
+    p5 = base / "funcs_5.c"; t = p5.read_text(); t2, k5 = apply_s6841_ivsclear(t)
+    if k5: p5.write_text(t2)
+    print("funcs_5.c ivsclear=%d" % k5)
