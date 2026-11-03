@@ -181069,3 +181069,29 @@ Discrimination: selects H-spill-alias (spill arena inside the game heap when OSM
 crashes without FPS60), H-widescreen alone (arm D, 16:9+OSMEM12 at dd1, clean) and H-region-gate (the crash is in asset
 load, before any region shift). Engineering change: the dd policy fix in src/main/main.cpp, not instrumentation.
 Next discriminator: the 21:9 bundle on the fixed layout separates H-ok from H-ramtop / H-latent (NEXT.md).
+
+## Session 6859 (2026-11-03) — G1d 21:9 + FPS60 + dd4 re-verified on the s6858 spill layout (SPILL_HI + RAMTOP 20): lvl9/lvl17 300 s clean, spill all at 0x81, disc 100% shifted, non-disc 0 (H-ok)
+Unit (NEXT.md s6858, slug g1d-spill-layout-219-recheck): s6857 passed this bundle on the aliased layout, so re-run it on the
+fixed one. Recipe scratch/s6859/abd.sh + both.sh (s6857 scripts renamed; 21:9, MISSION_WIDTH 1024, SHIFT=256, HOLD_S=300, FBDV=600).
+Binary 13:05 (the s6858 fix). Sequential, one game at a time.
+- lvl9: mission_t 31 s, hold 303 s, alive, 0 stalls, 0 crash lines. [ddbundle] osmem=12 line fired. Spill 752/752 blocks at
+  0x81xxxxxx. Disc+blips 67636 shifted / 0 kept; non-disc 0 / 541232. Control ZERO-W 856, out WRAP 0.
+- lvl17: mission_t 31 s, hold 305 s, alive, 0 stalls, 0 crash lines. [ddbundle] fired. Spill 3008/3008 at 0x81xxxxxx. Disc
+  23184 / 0; non-disc 0 / 175059. Control ZERO-W 780, out WRAP 0.
+- Owner path: rs64_g1d_apply_aspect_policy runs before rs64_g1c_apply_dd_policy in main(), so plain ROGUESQ_ASPECT=21:9
+  with dd>1 gets OSMEM 12 and then the spill move without an explicit OSMEM_MB. Read from the code; the recipe itself passes
+  OSMEM_MB=12 explicitly, so no run here exercised the env-free path.
+- Sheet docs/owner_sheet_s6859_region_21x9_fps60_dd4_spillhi.png: lvl9 VI 6000/9000/12000, lvl17 VI 5400/8400 flight + 13200
+  MISSION FAILED + 2x radar crops: disc in ring, blips in ring, terrain, craft, HUD, nothing displaced.
+Side check, debrief noise: the first sheet used lvl17 VI 6000/9000/12000, which land on debrief pages and the hangar, and showed
+noisy side columns in the RDRAM dump. These are the s6723/s6724 pillars, not a layout regression. Three lines: same signature
+in both layouts at those VIs (x<128 columns, nonblack 0.12 hf 13.4 at s6857, 0.11 hf 15.5 at s6859); [g1d-pillar] crop 0->1 count
+8 in both runs; [g1d-debrief-crop] count 9 in both. No window capture was taken this run, so the presented image is inferred
+from the crop firing, not seen. The autopilot failed lvl17 repeatedly as in s6857 (out of scope, passive flight); the failure
+times moved by ~8 s in the third cycle (222 -> 230 s), which is ordinary run-to-run variation in a blind script, not measured further.
+Limits: 2 levels, one run each. The s6850 lvl0-18 21:9 sweep ran on the aliased layout and the aliasing crash was
+level/layout dependent (asset load), so the other 17 levels are unverified on the new layout.
+Discrimination: selects H-ok; refutes H-ramtop (RAMTOP 20 at width 1024: no crash, no missing geometry on the sheet) and
+H-latent (no new crash or heap failure) for lvl9/lvl17 only.
+Engineering change: none in code; new owner sheet + scratch/s6859 recipe, docs updated.
+Next discriminator: 21:9+dd4 mission-load pass over the other levels on the new layout (NEXT.md).

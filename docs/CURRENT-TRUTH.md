@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6858 (2026-11-03).
+Compact operational handoff, as of Session 6859 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -296,8 +296,11 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    aliased the game heap: 16:9+OSMEM12+dd4 crashed 9/9 at mission load (loadTextureToMemory strncmp on a wild HMT name
    pointer); arm table: only OSMEM>8 & dd>1 crash, FPS60 irrelevant. The dd policy now sets SPILL_HI + RAMTOP_MB=20 when
    OSMEM>8 (21:9 sets OSMEM 12 itself, so its bundle was aliased too, latent). Post-fix lvl1/lvl9 16:9+FPS60+dd4+OSMEM12:
-   302/303 s clean, disc 100% shifted, non-disc 0; sheet docs/owner_sheet_s6858_region_16x9_fps60_dd4.png. Next: re-run the
-   21:9 bundle (lvl9/lvl17) on the new layout (NEXT.md).
+   302/303 s clean, disc 100% shifted, non-disc 0; sheet docs/owner_sheet_s6858_region_16x9_fps60_dd4.png.
+   **s6859 21:9 bundle on the new layout (H-ok, lvl9/lvl17 only):** 303/305 s clean, spill 752/3008 blocks all at 0x81, disc
+   67636/23184 shifted 0 kept, non-disc 0, out WRAP 0; sheet docs/owner_sheet_s6859_region_21x9_fps60_dd4_spillhi.png. RDRAM
+   dump noise on debrief pages = s6723/s6724 pillars (crop fired 8/8 in both layouts; no window capture this run). The s6850
+   lvl0-18 sweep predates the fix: other levels unverified on this layout (NEXT.md).
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
