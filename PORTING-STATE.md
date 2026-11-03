@@ -180994,3 +180994,20 @@ cause = the s6852 gate treated any z-off post-world prim in the box as HUD, and 
 Verdict: selects H-none, refutes H-blip. Region-shift scope thread closed: at 21:9 only disc + blip tris move (lvl1 16:9,
 lvl9, lvl17). Not covered: no owner frame sheet this session (counters only).
 Rules out: radar content drawn as texrects in flight on lvl1/9/17.
+
+## Session 6856 (2026-11-03) — G1d owner frame sheet at 21:9 (lvl9 + lvl17 flight) under the closed region-shift defaults: disc inside the ring, no wedge, world/sky not displaced
+Unit (NEXT.md s6855, slug g1d-region-owner-sheet): owner-viewable in-flight frames for the s6852-s6855 region-shift work
+(ROGUESQ_G1D_REGION_ZGATE=1, CFLIP=1, TEXRECT=0, all defaults). Recipe scratch/s6856/abd.sh (= s6855 abd.sh) via
+scratch/s6856/both.sh: lvl9 then lvl17, ROGUESQ_ASPECT=21:9, SHIFT=256, FBDV=600, HOLD_S=140, sequential (one game at a time).
+Results (scratch/s6856/AB.txt, run.log [region-zgate] totals over every window):
+- Both: mission_t=31 s, alive at end, 0 VI stalls, 0 crash lines; control ctl ZERO-W fired (598 / 290), out WRAP 0.
+- lvl9: disc+blip textures (T7A37B0, T7A3FB0) 15389 shifted / 0 kept; every other texture 0 shifted / 11048 kept.
+- lvl17: disc (T7965C0) 6120 / 0; non-disc 0 shifted / 51229 kept. Same split as s6855, now on a second pair of runs.
+- Frames (fbd fb_<idx>_w1024.ppm): lvl9 idx 4200/4800/5400 flight, lvl17 idx 4200 flight (idx 3600 = HUD-less intro
+  fly-by, idx 4800 = ELITE ROGUES screen after the harness's post-hold exit at 138 s: harness-driven, not a defect).
+  Every flight frame: radar disc fully inside its ring at the right edge, blips inside the disc, no grey wedge left
+  256 px to the left, sky and terrain under the box continuous (no displaced strip).
+Sheet docs/owner_sheet_s6856_region_21x9.png (tools/owner_sheet_s6856.py: full frames + 2x crop of x 760..1024).
+Two lines: runtime counters (non-disc 0 shifted) and the framebuffers (nothing displaced) agree. G1d region work: owner judges.
+Rules out: a visible displaced element the counters missed (e.g. a non-textured prim, which the per-texture counters
+would not name) in these frames. Not covered: FPS60 / dd4 combined with 21:9 under the new gate -> NEXT.md.

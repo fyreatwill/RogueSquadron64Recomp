@@ -288,6 +288,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    world-anchored marker (lvl17 R78E080; lvl9 R79B270 drawn outside the box in 3933/3950 VIs); radar blips are tris
    (7A3FB0). ROGUESQ_G1D_REGION_TEXRECT (default off, =1 old) never shifts texrects under the gate: lvl9/lvl17 21:9
    runtime non-disc shifted 0, disc/blips 100% shifted, 0 stalls. Region-shift scope done; owner judges the look.
+   **s6856 owner sheet** docs/owner_sheet_s6856_region_21x9.png (lvl9 x3 + lvl17 flight, 21:9): disc in ring, no wedge,
+   nothing displaced; counters repeat s6855 (non-disc 0 shifted). Untested: 21:9 + FPS60 + dd4 under the gate (NEXT.md).
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

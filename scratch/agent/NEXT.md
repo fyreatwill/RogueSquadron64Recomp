@@ -1,14 +1,17 @@
-# NEXT: owner frame sheet for the closed G1d radar-region work at 21:9 (lvl9 + lvl17 flight), then ladder G5
-HYPOTHESIS-ID: g1d-region-owner-sheet
+# NEXT: 21:9 owner bundle (ASPECT 21:9 + FPS60 + dd4) under the s6852-s6855 region-gate defaults
+HYPOTHESIS-ID: g1d-region-fps60-bundle
 
-State (s6855): region-shift scope CLOSED. Under ZGATE+CFLIP+TEXRECT=0 (all defaults) only the radar disc and blip tris
-move at 21:9 (lvl9 T7A37B0/T7A3FB0, lvl17 T7965C0); world, sky and world markers (R78E080, R79B270) stay put.
-No owner-viewable frame exists for s6854/s6855 (FBDV=1500 dumps landed on menus in s6854).
-
-Unit: one in-flight frame per level for the owner. scratch/s6855/abd.sh with SHIFT=256 and FBDV set so dumps land after
-first_objwr (lvl9 ~70 s, lvl17 ~59 s into the run; pick FBDV from the s6855 harness VI counts in scratch/s6855/AB.txt,
-e.g. dump every 600 VIs and take the first frame after mission_t). Build a 2x2 contact sheet (lvl9, lvl17 x
-TEXRECT=0 / TEXRECT=1 if a marker is in the box, otherwise just the two default frames) into docs/owner_sheet_s6856_*.png.
-Expected: disc inside the ring at the right edge, no wedge left behind, no sky/world strip displaced.
-If a frame shows a displaced element, that's a datum: name its texture with tools/g1d_zoffobj.py on a KEEPBIN bin.
-Then: G1d awaits owner; next ladder rung with open work is G5 (renaming sweep) unless CURRENT-TRUTH Next steps adds one.
+Why: the owner plays at 21:9; ZGATE/CFLIP latch on "first z_cmp-on prim" / "Z clear" / "colour-buffer flip". FPS60
+adds render frames (60 Hz split) and dd4 changes frame density, so the latch-reset pattern can differ from the dd1/30 Hz
+runs s6852-s6856 measured. Nobody has run the gate under FPS60 or dd4.
+Hypotheses:
+- H-ok: disc/blips 100% shifted, non-disc 0 shifted, same as dd1.
+- H-latch60: FPS60 extra frames have no Z clear/flip before the HUD -> disc kept (disc left at 4:3 position) or sky shifted.
+- H-dd4: dd4 terrain/far prims draw z_cmp-off after the latch -> world shifted in the box.
+- H-crash: the bundle at 21:9 stalls/crashes (side-effect datum, root-cause it).
+Discriminator, one recipe, arms sequential: scratch/s6856/abd.sh with XENV adding ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=4
+(copy to scratch/s6857/abd.sh), SHIFT=256 FBDV=600 HOLD_S=300, lvl9 and lvl17 (and lvl1 if time). Read [region-zgate]
+totals (disc vs non-disc, python one-liner from s6856 entry), summary stalls/crash, and build a sheet with
+tools/owner_sheet_s6856.py (pick flight idx frames; check w1024 only). Outcomes: non-disc shifted >0 -> name texture with
+tools/g1d_zoffobj.py on a KEEPBIN bin and fix the latch; disc kept >0 -> H-latch60; all clean -> H-ok, close and add
+the 21:9 bundle line to docs/OWNER-OPT-INS.md if missing.
