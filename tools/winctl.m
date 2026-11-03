@@ -15,9 +15,16 @@
 //   winctl activate <pid>      -> bring that app forward
 //   winctl key <pid> <keycode> -> post key down/up straight to that process
 //                                 (no focus required)
+//   winctl burst <pid> <outdir> <t0-epoch> <secs> [interval-ms]
+//                              -> s6811: in-process window grabs (CGWindowListCreateImage,
+//                                 looked up by dlsym: the macOS 15+ SDK hides it) written as
+//                                 <outdir>/w_<secs since t0>.png, ~10x the screencapture rate
 //   winctl trusted             -> "yes"/"no" + exit 0/1: may THIS process post
 //                                 synthetic events? (Accessibility permission)
 #import <Cocoa/Cocoa.h>
+#import <ImageIO/ImageIO.h>
+#include <dlfcn.h>
+#include <sys/time.h>
 #import <CoreGraphics/CoreGraphics.h>
 #import <ApplicationServices/ApplicationServices.h>
 
@@ -113,6 +120,38 @@ int main(int argc, const char **argv) {
             printf("%u %d %d %d %d\n", (unsigned)wid,
                    (int)rect.origin.x, (int)rect.origin.y,
                    (int)rect.size.width, (int)rect.size.height);
+            return 0;
+        }
+
+        if (strcmp(cmd, "burst") == 0) {
+            if (argc < 6) {
+                fprintf(stderr, "usage: winctl burst <pid> <outdir> <t0-epoch> <secs> [interval-ms]\n");
+                return 2;
+            }
+            typedef CGImageRef (*grab_fn)(CGRect, CGWindowListOption, CGWindowID, CGWindowImageOption);
+            grab_fn grab = (grab_fn)dlsym(RTLD_DEFAULT, "CGWindowListCreateImage");
+            if (!grab) { fprintf(stderr, "CGWindowListCreateImage unavailable\n"); return 3; }
+            const double t0 = atof(argv[4]), secs = atof(argv[5]);
+            const useconds_t iv = (useconds_t)((argc >= 7 ? atoi(argv[6]) : 0) * 1000);
+            int n = 0;
+            for (;;) {
+                struct timeval tv; gettimeofday(&tv, NULL);
+                const double t = tv.tv_sec + tv.tv_usec * 1e-6 - t0;
+                if (t >= secs) break;
+                CGWindowID wid = 0; CGRect rect = CGRectZero;
+                if (!findWindow(pid, &wid, &rect)) { usleep(200000); continue; }
+                CGImageRef img = grab(CGRectNull, kCGWindowListOptionIncludingWindow, wid,
+                                      kCGWindowImageBoundsIgnoreFraming | kCGWindowImageBestResolution);
+                if (!img) { usleep(50000); continue; }
+                char path[1024];
+                snprintf(path, sizeof path, "%s/w_%07.2f.png", argv[3], t);
+                CFURLRef url = CFURLCreateFromFileSystemRepresentation(NULL, (const UInt8 *)path, strlen(path), false);
+                CGImageDestinationRef d = CGImageDestinationCreateWithURL(url, CFSTR("public.png"), 1, NULL);
+                if (d) { CGImageDestinationAddImage(d, img, NULL); CGImageDestinationFinalize(d); CFRelease(d); n++; }
+                CFRelease(url); CGImageRelease(img);
+                if (iv) usleep(iv);
+            }
+            printf("burst caps=%d\n", n);
             return 0;
         }
 

@@ -1,15 +1,18 @@
-# NEXT: G3 large fireball / destroyed-vehicle explosion vs retail angrylion (uncovered by s6747/s6748)
-HYPOTHESIS-ID: g3-fireball-match
+# NEXT: G3 NPC vehicle destruction explosions vs retail (lvl14 in-mission cutscene)
+HYPOTHESIS-ID: g3-npc-explosion
 
-State (s6810): G3 flight render + sim matched for missions 1-19 (s6744-s6777); menus/pause/debrief matched (s6778);
-impacts matched by population on lvl1 only as small puffs (s6747). NOT covered: a large fireball from a destroyed vehicle
-(s6747 note), and lvl2 impacts (s6748: no positive). G1e dd4 clean fps = 59.3 (s6810, tools/g1e_clean_fps.zsh).
-Hypotheses: H-match (fireball frames within the same-run match band); H-blend (RT64 blend/combiner differs on the
-fireball sprite: colour/alpha mismatch localized to the fireball); H-anim (fireball sprite frame sequence/timing differs).
-Method: need a deterministic kill. lvl1 (Mos Eisley) with the dt pin + rngSeed recipe (tools/g3_mission/run.sh, s6770)
-and the s5841 TELE-style forced-hit lever if one destroys a vehicle in view; else fire arms (B/Z alternating, s6748
-fire recipe) on lvl1 where targets are in front at flight start. Retail arm: oracle with matching press schedule, dumps
-every 0.25 s around the kill. Port: g3_port_capture.sh window captures. Compare: g3_oracle_match.py on the pair, plus
-g3_effect_count.py orange/yellow population inside the fireball bbox.
-Control: same-run median d over non-matching pairs; the orange instrument must count >0 on a retail fireball dump.
-Aim/steer work is OUT OF SCOPE (ITERATION 3c G1): if no kill happens in view without aiming, use the forced-hit lever.
+State (s6811): the large destroyed-craft fireball (lvl9 player crash) is H-match vs retail angrylion in tick order
+(tools/g3_mission/fireball_pair.sh, tools/g3_fireball_score.py; dense port capture = g3_port_capture.sh BURST=t0,t1 via
+`winctl burst`, ~16 fps). NOT covered: an NPC vehicle destruction (explosionEffectNpcHandler / spawnNpcDestructionDebris
+path may draw a different effect from the player-crash fireball).
+Deterministic NPC explosions without aiming: s6767 lvl14 (lava planet, scratch/s6767/lvl14.eep, dt pinned) has an
+in-mission cutscene t2628-2865 (HUD off, camera follows craft/explosions over the lava), sim identical to retail through
+t2874. Ticks -> VI: t2620 retail VI 15379 / port 10196; t2860 retail 16153 / port 10676.
+Hypotheses: H-match (same explosion sprites/sequence); H-blend (colour/alpha differs on the NPC explosion sprite);
+H-anim (frame sequence/timing differs per tick).
+Method: copy fireball_pair.sh with EEP=scratch/s6767/lvl14.eep (check scratch/s6767/port.sh + retail recipe for the
+lvl14 PRESS/AP schedules), retail FARM so 192 dumps x 0.1 s cover VI 15379-16153 (oracle wall ~= VI/60, check the
+vi-poll t= lines of an s6767 log), port BURST over port VI 10196-10676 (~170-178 s wall + boot offset; widen to 12 s).
+Score: g3_fireball_score.py --scale 2 (4 vs 2 VI/tick) with --rvi on the cutscene window; also eyeball sheets.
+Control: hot-pixel class must fire on retail explosion dumps; pair d vs median control; pre-explosion frames.
+Aim/steer work is OUT OF SCOPE (ITERATION 3c G1).

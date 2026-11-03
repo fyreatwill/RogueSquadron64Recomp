@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6808 (2026-11-02).
+Compact operational handoff, as of Session 6811 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -352,7 +352,11 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    (drainAudioAndFinalizeSpeechBuffer, gracefulMenuShutdown drain loops); preempt point added there -> lvl3 boot->flight
    0 post-boot empty-queue events (control PREEMPT_POINT=0: 3). Soak s6809_preempt2_lvl1_fps60 queued.
    s6810: soak s6809_preempt2_lvl1_fps60 clean (303 s, 0 stalls; AI qzero=1 only at boot, 0 after). lvl3 flight was
-   already matched s6777 (every mission 1-19 is). NEXT: G3 large fireball (destroyed vehicle) vs retail, uncovered s6747.
+   already matched s6777 (every mission 1-19 is).
+   s6811 G3 LARGE FIREBALL = H-match: lvl9 unsteered crash (same tick both arms) -> star flash, translucent dome, burst,
+   embers identical in tick order (pairs d 2.96 vs ctl 8.0; dome frame 2.96 vs 23.3; hot-pixel colour equal). Retail wall
+   duration 2x port = 4 vs 2 VI/tick. Dense port capture now exists: g3_port_capture.sh BURST=t0,t1 (winctl burst, ~16 fps);
+   recipe tools/g3_mission/fireball_pair.sh, scorer tools/g3_fireball_score.py. NEXT: NPC vehicle destruction vs retail.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

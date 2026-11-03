@@ -179557,3 +179557,42 @@ HYPOTHESIS-ID: g1e-dd4-fps (closed: H-log selected).
   again quoted from a logging recipe. Not a mitigation (measurement + tool; no ORIGIN needed).
 - CURRENT-TRUTH: G1e bullet carries the re-measure; the 45.9/42.8 figures moved to Superseded.
 - Next: G3 large fireball (destroyed vehicle) vs retail, the effect s6747 left uncovered (lvl2 impacts also uncovered).
+
+## Session 6811 (2026-11-02) — G3: large fireball (lvl9 player crash, destroyed X-wing) matches retail angrylion frame for frame in tick order (H-match); port captures now ~16 fps via new `winctl burst`
+
+HYPOTHESIS-ID: g3-fireball-match (closed: H-match).
+
+Soak fold: none new since s6809_preempt2_lvl1_fps60 (folded s6810).
+Event choice (no aiming needed): lvl9 (scratch/s6761/lvl9.eep, dt pinned) unsteered flight crashes the player's X-wing at
+tick ~2130 in BOTH arms (sim identical to t2217, s6761/s6804). A first look at s6804 port captures showed the crash makes a
+full-screen-scale fireball, i.e. the "destroyed vehicle" large explosion s6747 could not get without a kill.
+What ran (one game at a time):
+1. tools/g3_mission/fireball_pair.sh scratch/s6811/pair (new; death_pair.sh recipe with angrylion video): retail 192 dumps every
+   0.15 s from oracle wall 206 s (VI 12334-14054), port window captures 135-170 s. 0 crash lines. Retail fireball = VI
+   13477-13531 (hot px up to 12153); cut to the crash camera VI 12743, respawn VI ~13891. Port: only ONE capture inside the
+   fireball (screencapture cadence 0.59 s; the zsh-clock loop rewrite in g3_port_capture.sh did not help, screencapture itself
+   is the bottleneck).
+2. New `build/winctl burst <pid> <outdir> <t0> <secs>` (tools/winctl.m; CGWindowListCreateImage via dlsym, PNG via ImageIO,
+   same w_<s>.png naming/geometry/P3 tag as screencapture) and g3_port_capture.sh BURST=<t0>,<t1>. Port-only rerun
+   scratch/s6811/burst (BURST=137,147): 157 grabs in 10 s = 15.7 fps (was 1.7). Port fireball 141.79-142.28 s.
+3. tools/g3_fireball_score.py (new): per frame luma, mean RGB, hot-pixel population (R>=200,G>=120,B<=150,R>=B+70) and its
+   colour; each arm aligned on its own flash frame; port frame -> best retail frame within +-pairwin of scale*t (scale 2 =
+   mupen 4 VI/tick vs port 2 VI/tick, s6805), control = median d over all retail frames; sheet retail|port.
+Results (scratch/s6811/fireball_sheet.png, retail_all.png, port_all.png):
+- Same sequence in both arms: white 4-point star flash -> translucent orange dome with the fire texture inside (star streaks
+  through it) -> fire burst on the ground -> darkening embers with black debris -> crater + smoke. Wall duration retail 0.6 s
+  vs port 0.36 s = the known 2x VI/tick ratio (same tick count).
+- Population/colour: retail hot frames 12153/6896/5718/5994/1510 (hot RGB 209,164,113 -> 240,145,19), port 1442/7231/6619/
+  5609/5741/2958/582 (208,170,122 -> 245,156,22). Mean frame RGB at the peak 126,77,53 vs 126,79,57. Spark tail after the
+  burst in both (retail 28-112, port 16-104 hot px).
+- Pairs (scale 2, window 0.2 s): 13 pairs median d 2.96 vs median control 8.00; dome frame (6619 hot px) d 2.96 vs ctl 23.3;
+  embers d 2.7-3.5. Three flash-transient frames d 11-17 (ctl 14.7-33.4): the sheet shows the same elements at a different
+  expansion phase (star/dome size), retail dumps sample every ~2.25 ticks, port every ~1.8 ticks.
+- Positive controls: hot class fires 12153 px on a retail fireball dump and 0-2 on pre-crash frames (both arms); pre-crash
+  pairs d 2.6 vs ctl 6.6; the earlier max-luma run (step 1) separated pairs d 5.8 vs ctl 24.2 across the respawn cut.
+VERDICT: selects H-match for the large destroyed-craft fireball (two lines: pixel pair d vs control, and hot-pixel
+population/colour series); refutes H-blend (dome translucency, star additive look and colours equal; no localized colour
+error) and H-anim (same frame sequence in tick order). Not covered: an NPC vehicle destruction (explosionEffectNpcHandler path
+may draw a different effect), lvl2 impacts (s6748 no positive).
+ORIGIN: no mitigation; measurement tools only (winctl burst, fireball_pair.sh, g3_fireball_score.py).
+Next: g3-npc-explosion - NPC destroyed-vehicle explosion vs retail using the dense burst capture.
