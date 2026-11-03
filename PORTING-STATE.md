@@ -179462,3 +179462,38 @@ Residual: 3-5 VI gaps at the title (VI 737, 974) in both port arms, retail max 2
 Verdict: the retail control selects H-port and refutes H-retail; the same-build A/B closes the thread with the root cause
 (host device reopen) fixed. Next discriminator: g3-title-ai-gap (scratch/agent/NEXT.md).
 Rules out: H-retail for the transition gap; the G2b "~315 ms empty queue at every transition" is this same reopen.
+
+## Session 6808 (2026-11-02) — G3 title AI gaps NAMED + FIXED: a low-priority guest thread building title text glyph meshes for 70-90 ms with no OS call held ultramodern's cooperative run token while the pri-122 audio thread starved (real SDL underruns at VI ~743/~977); new rs64_preempt_point at the glyph-mesh function entries -> 0 gaps >= 3 VI, 0 post-boot underruns (= retail max 2 VI)
+HYPOTHESIS-ID: g3-title-ai-gap (closed).
+Instrument (one build): ROGUESQ_VI_WALL=<file> (src/main/rt64_render_context.cpp, one row per update_screen: wall s, VI #,
+width, osViSetMode calls + cumulative host us timed in upstream_compat.cpp osViSetMode_recomp, run-token holder =
+last thread resumed in ultramodern threads.cpp resume_thread_tagged, pri<<16|OSId); ROGUESQ_AI_TRACE rows gain a 6th
+column = VI # (tools/g2b_ai_scan.py accepts >= 5 cols); analyzer tools/g3_title_gap.py PREFIX (per gap >= 3 VI: AI wall
+gap, VI wall span, max VI interval, osViSetMode ms, queue bytes on resume, token holders per VI). Plus one host `sample`
+(8 s, 1 ms) across both gaps (scratch/s6808/e.sample.txt).
+Result (lvl3 save, title route, 40 s runs, NEXT.md command): gaps recur at the same VIs in 5/5 title-route runs (a,c,d,e
++ ctl1; runs b and fix2 took the alternate 320-wide route and never reached the title): 4-6 VI @ VI 737-744 (the 640->1024
+title switch) and 5-6 VI @ 971-979. Each is a REAL underrun: queue bytes before the resuming buffer = 0 (aiwall 79-107
+ms vs ~39 ms queued). VIs stay regular through the gap (max VI interval 17-22 ms) -> not a host/present stall; osViSetMode
+inside the gaps 0-1 calls, 0.00-0.18 ms -> H-vimode REFUTED. Token holder for every VI inside the 737 gap = a0003 (OSId 3
+= game thread, pri 10), inside the 973 gap = 50007 (OSId 7, pri 5) -> H-sched SELECTED; H-host refuted by recurrence
+at fixed VIs. Host sample names the work: game thread MAIN in menuOverlayInit > menuControllerInput >
+buildScaledFormatTextElement > rasterizeFormatMessageGlyphs > buildDebrisMeshFromCells (69 ms), OSId 7 =
+tickFormatMessageWorker > buildDebrisMeshFromCells (90 ms) = the gap lengths. (The "Debris" placeholder names are
+the text glyph cell-mesh builders.) The AI feeder is viRetraceHandlerThread > musyxSynthFrame.
+Mechanism: ultramodern delivers host-thread messages (VI retrace, AI drain) only inside a guest OS call
+(dequeue_external_messages) and swaps to a ready higher-priority thread only at check_running_queue, so a low-priority
+thread computing without OS calls cannot be preempted. Retail preempts on the interrupt (retail oracle s6807: max 2 VI).
+Fix: rs64_preempt_point(rdram) (ultramodern mesgqueue.cpp, exported): if a host message is pending and this is a game
+thread, dequeue external messages + check_running_queue (a swap only ever goes to a higher-priority ready thread, as on
+hardware). tools/fixup_preempt_point.py (run from fixup_game_funcs_vendored.py, idempotent) calls it at the entry of
+rasterizeFormatMessageGlyphs, buildDebrisMeshFromCells, rebuildDebrisCellGeometry, emitDebrisCellFaces,
+buildDebrisCellBitfield. ROGUESQ_PREEMPT_POINT=0 disables.
+A/B, same build, sequential: fix1/fix3 (title route) top gaps [2,2,2,2,2], qzero only the boot row (VI 13); ctl1
+(PREEMPT_POINT=0, positive control) gaps 4@740, 5@973, qzero at VI 744/978/1096 = pre-fix. 0 crash lines in all arms.
+Two lines: AI-trace queue depth + run-token stamps per VI, and an independent host stack sample naming the busy function.
+ORIGIN: the writer of the gap is ultramodern's cooperative scheduler (no preemption between OS calls); not legitimate
+(retail preempts). Root-cause class fix, applied at the sites measured; other long OS-call-free stretches on low-priority
+threads would show the same signature (token held by a low-pri id across a gap) in g3_title_gap.py.
+Queued: scratch/agent/soak_queue/s6808_preempt_lvl1_fps60.sh (lvl1 FPS60 300 s hold + AI trace).
+Rules out: H-vimode, H-host for the title gaps.

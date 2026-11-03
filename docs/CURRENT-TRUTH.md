@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6805 (2026-11-02).
+Compact operational handoff, as of Session 6808 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -339,7 +339,9 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    blocks the guest caller) on each same-rate osAiSetFrequency, twice per audio re-init. Retail oracle traced from boot
    (tools/g3_ai_gap_pair.sh): max gap 2 VI through boot/title/level select/load/flight, 1.912 buf/VI. Fix: same rate +
    open device = no-op (ROGUESQ_AI_REOPEN_ALWAYS=1 restores). Same build: gaps 7 -> 0, 1.866 -> 1.912 buf/VI.
-   Residual (NEXT: g3-title-ai-gap): 3-5 VI port gaps at the title (VI ~737 osViSetMode burst, ~974), retail <= 2.
+   s6808: title residual (4-6 VI @737/973, real underruns) = game thread pri 10 / OSId 7 pri 5 building text glyph meshes
+   70-90 ms with no OS call; ultramodern never preempts between OS calls, pri-122 audio starved. FIXED: rs64_preempt_point
+   (tools/fixup_preempt_point.py, =0 off) -> max gap 2 VI = retail. Instrument ROGUESQ_VI_WALL + tools/g3_title_gap.py.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

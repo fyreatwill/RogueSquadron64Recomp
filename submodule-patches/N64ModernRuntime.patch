@@ -5745,7 +5745,7 @@ index 149e770..b3d7ee2 100644
  
  void ultramodern::join_event_threads() {
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..80459c3 100644
+index 9944a02..22a88e1 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
 @@ -1,18 +1,323 @@
@@ -5987,14 +5987,14 @@ index 9944a02..80459c3 100644
 +    int source = -1;
 +    AudioRouteMessage audio;
 +    uint32_t host_task_seq = 0xFFFFFFFFu;
- };
- 
++};
++
 +struct AudioSpDelivery {
 +    PTR(OSMesgQueue) mq;
 +    OSMesg msg;
 +    AudioRouteMessage audio;
-+};
-+
+ };
+ 
 +static std::deque<AudioSpDelivery> g_audio_sp_deliveries;
 +static thread_local OSMesg g_last_received_message = NULLPTR;
 +static AudioRouteMessage g_current_audio_route;
@@ -6481,7 +6481,7 @@ index 9944a02..80459c3 100644
      bool jam = true;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -205,18 +801,80 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -205,18 +801,93 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osRecvMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, s32 flags) {
@@ -6561,9 +6561,22 @@ index 9944a02..80459c3 100644
 +        }
 +    }
 +    return result;
- }
++}
 +
 +void s4261_note_timer(uint32_t mq) { s4260::timer_n++; s4260::timer_last_mq = mq; }
++
++// s6808 G3: cooperative preemption point. Host-thread messages (VI retrace, AI drain events) only reach guest queues when
++// some guest thread makes an OS call, and a ready higher-priority thread only runs at check_running_queue. Retail
++// preempts on the interrupt; here a low-priority thread computing for ~70-90 ms without OS calls (the title text glyph
++// mesh build: OSId 3 pri 10 / OSId 7 pri 5) starved the pri-122 audio thread and the AI queue ran dry (s6808).
++// tools/fixup_preempt_point.py calls this at the entry of the hot glyph-mesh functions; it does nothing unless a
++// host message is pending. ROGUESQ_PREEMPT_POINT=0 disables it.
++extern "C" void rs64_preempt_point(uint8_t* rdram) {
++    static const bool on = [] { const char* e = std::getenv("ROGUESQ_PREEMPT_POINT"); return !(e && e[0] == '0'); }();
++    if (!on || external_messages.size_approx() == 0 || !ultramodern::is_game_thread()) return;
++    dequeue_external_messages(PASS_RDRAM1);
++    ultramodern::check_running_queue(PASS_RDRAM1);
+ }
 diff --git a/ultramodern/src/scheduling.cpp b/ultramodern/src/scheduling.cpp
 index a22f747..9a72ebe 100644
 --- a/ultramodern/src/scheduling.cpp
@@ -6697,7 +6710,7 @@ index a22f747..9a72ebe 100644
              // Swap to the higher priority thread.
              swap_to_thread(PASS_RDRAM next_thread);
 diff --git a/ultramodern/src/threads.cpp b/ultramodern/src/threads.cpp
-index 812c556..1dfdf78 100644
+index 812c556..0c59fa3 100644
 --- a/ultramodern/src/threads.cpp
 +++ b/ultramodern/src/threads.cpp
 @@ -1,7 +1,22 @@
@@ -6794,7 +6807,7 @@ index 812c556..1dfdf78 100644
      thread_context->running.wait();
      // If this thread's context was replaced by another thread or deleted, destroy it again from its own context.
      // This will trigger thread cleanup instead.
-@@ -155,19 +227,263 @@ void wait_for_resumed(RDRAM_ARG UltraThreadContext* thread_context) {
+@@ -155,19 +227,267 @@ void wait_for_resumed(RDRAM_ARG UltraThreadContext* thread_context) {
      }
  }
  
@@ -6895,6 +6908,8 @@ index 812c556..1dfdf78 100644
 +    std::fflush(stderr);
 +}
 +
++// s6808 G3: last guest thread handed the run token (priority << 16 | OSId), sampled per VI by ROGUESQ_VI_WALL.
++extern "C" { volatile int32_t rs64_run_tok_g = -1; }
 +static void resume_thread_tagged(OSThread* t, const char* tag) {
 +    s4581_log_switch(t, tag);
 +    s4586::on_handoff(t);
@@ -6923,6 +6938,7 @@ index 812c556..1dfdf78 100644
 +            std::fflush(stderr);
 +            return;
 +        }
++        rs64_run_tok_g = (int32_t)(((uint32_t)t->priority << 16) | ((uint32_t)t->id & 0xFFFF)); // s6808
 +        t->context->running.signal();
 +        return;
 +    }
@@ -6958,6 +6974,7 @@ index 812c556..1dfdf78 100644
 +        std::fflush(stderr);
 +        return;
 +    }
++    rs64_run_tok_g = (int32_t)(((uint32_t)t->priority << 16) | ((uint32_t)t->id & 0xFFFF)); // s6808
      t->context->running.signal();
  }
  
@@ -7060,7 +7077,7 @@ index 812c556..1dfdf78 100644
  }
  
  void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
-@@ -178,16 +494,42 @@ void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
+@@ -178,16 +498,42 @@ void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
  
  void ultramodern::resume_thread_and_wait(RDRAM_ARG OSThread *t) {
      UltraThreadContext* cur_context = TO_PTR(OSThread, thread_self)->context;
@@ -7104,7 +7121,7 @@ index 812c556..1dfdf78 100644
      // Set the thread name
      ultramodern::set_native_thread_name(ultramodern::threads::get_game_thread_name(self));
      ultramodern::set_native_thread_priority(ultramodern::ThreadPriority::High);
-@@ -239,7 +581,7 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -239,7 +585,7 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
      // Otherwise, immediately start the thread and terminate this one.
      else {
          t->state = OSThreadState::QUEUED;
@@ -7113,7 +7130,7 @@ index 812c556..1dfdf78 100644
          //throw ultramodern::thread_terminated{};
      }
  }
-@@ -259,6 +601,20 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
+@@ -259,6 +605,20 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
      // Pass the context as an argument to the thread function to ensure that it can't get cleared before the thread captures its value.
      UltraThreadContext* context = new UltraThreadContext{};
      t->context = context;
@@ -7134,7 +7151,7 @@ index 812c556..1dfdf78 100644
      context->host_thread = std::thread{_thread_func, PASS_RDRAM t_, entrypoint, arg, t->context};
  
      // Wait until the thread is initialized to indicate that it's ready to be started.
-@@ -286,6 +642,11 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -286,6 +646,11 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
      OSThread* t = TO_PTR(OSThread, t_);
      // Check if the thread is destroying itself (arg is null or thread_self)
      if (t_ == thread_self) {
@@ -7146,7 +7163,7 @@ index 812c556..1dfdf78 100644
          throw ultramodern::thread_terminated{};
      }
      // Otherwise if the thread isn't stopped, remove it from its currrent queue., 
-@@ -294,9 +655,22 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -294,9 +659,22 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
      }
      // Check if the thread has already been destroyed to prevent destroying it again.
      UltraThreadContext* cur_context = t->context;
@@ -7169,7 +7186,7 @@ index 812c556..1dfdf78 100644
          cur_context->running.signal();
      }
  }
-@@ -337,6 +711,20 @@ PTR(OSThread) ultramodern::this_thread() {
+@@ -337,6 +715,20 @@ PTR(OSThread) ultramodern::this_thread() {
      return thread_self;
  }
  
@@ -7190,7 +7207,7 @@ index 812c556..1dfdf78 100644
  static std::thread thread_cleaner_thread;
  static moodycamel::BlockingConcurrentQueue<UltraThreadContext*> deleted_threads{};
  extern std::atomic_bool exited;
-@@ -347,8 +735,18 @@ void thread_cleaner_func() {
+@@ -347,8 +739,18 @@ void thread_cleaner_func() {
          UltraThreadContext* to_delete;
          if (deleted_threads.wait_dequeue_timed(to_delete, 10ms)) {
              debug_printf("[Cleanup] Deleting thread context %p\n", to_delete);
@@ -7209,7 +7226,7 @@ index 812c556..1dfdf78 100644
              delete to_delete;
          }
      }
-@@ -359,6 +757,11 @@ void ultramodern::init_thread_cleanup() {
+@@ -359,6 +761,11 @@ void ultramodern::init_thread_cleanup() {
  }
  
  void ultramodern::cleanup_thread(UltraThreadContext *cur_context) {

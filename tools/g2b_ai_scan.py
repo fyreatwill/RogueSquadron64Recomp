@@ -4,7 +4,7 @@ Segments = runs of the same VI width. Per segment: buffers, wall span, produced 
 non-silent audio) and click count (|d| > 8000 between adjacent samples of one channel)."""
 import sys, array
 def main(path):
-    rows = [r for r in (l.split() for l in open(path)) if len(r) == 5]
+    rows = [r for r in (l.split() for l in open(path)) if len(r) >= 5]
     pcm = array.array('h'); pcm.frombytes(open(path + '.pcm', 'rb').read())
     off = 0; segs = []
     for r in rows:

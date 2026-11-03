@@ -770,7 +770,17 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
 // Total 80 bytes. We dump the first 80 bytes raw + key fields decoded so we
 // can tell which mode is lo-res (width=320, xScale~0x200) vs hi-res
 // (width=640, xScale~0x400).
+// s6808 G3: host time spent in osViSetMode_recomp (count + cumulative us), stamped per VI by ROGUESQ_VI_WALL.
+extern "C" { volatile uint32_t rs64_vimode_n_g = 0; volatile uint64_t rs64_vimode_us_g = 0; }
 extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
+    struct VimodeTimer {
+        std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
+        ~VimodeTimer() {
+            rs64_vimode_us_g += (uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - t0).count();
+            rs64_vimode_n_g++;
+        }
+    } vimode_timer;
     static int s_count = 0;
     int n = ++s_count;
     static int selector_control = -1;

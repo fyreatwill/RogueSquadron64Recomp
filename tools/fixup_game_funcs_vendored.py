@@ -42349,5 +42349,8 @@ _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_
 # s6781 G3: menu image worker completion ids (SELECT GAME inset / left emblem panel lost to a stack-message race).
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_menu_worker.py")), str(base)])
 
+# s6808 G3: cooperative preemption point in the title glyph-mesh builders (title AI feed gaps, audio thread starved).
+_sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_preempt_point.py")), str(base)])
+
 # s6132 G1d: parameterise the 8 MB pointer-range guards (RS64_RAM_TOP). Must run after every other patch (they emit the literal).
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_ramtop.py")), str(base)])

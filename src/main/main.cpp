@@ -86,6 +86,7 @@ extern "C" uint32_t rs64_vi_committed_width();
 extern "C" uint32_t rs64_vi_committed_origin();
 extern "C" uint32_t rs64_phase_ord();
 extern "C" double rs64_elapsed_seconds(void);
+extern "C" volatile uint32_t rs64_vi_n_g; // s6808: ROGUESQ_AI_TRACE 6th column = update_screen # (ROGUESQ_VI_WALL key)
 extern "C" void rs64_audio_route_set(const char* arm, uint32_t phase,
                                        uint32_t width, uint32_t origin,
                                        uint32_t ordinal, uint32_t row,
@@ -7851,8 +7852,8 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
             }
         }
         if (tr) {
-            fprintf(tr, "%.4f %u %zu %u %06X\n", rs64_elapsed_seconds(), queued_before, num_samples,
-                    rs64_vi_committed_width(), rs64_vi_committed_origin() & 0x00FFFFFFu);
+            fprintf(tr, "%.4f %u %zu %u %06X %u\n", rs64_elapsed_seconds(), queued_before, num_samples,
+                    rs64_vi_committed_width(), rs64_vi_committed_origin() & 0x00FFFFFFu, rs64_vi_n_g);
             if (tp) fwrite(native_samples.data(), sizeof(int16_t), num_samples, tp);
         }
     }

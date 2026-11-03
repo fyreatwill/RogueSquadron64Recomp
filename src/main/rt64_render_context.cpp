@@ -228,6 +228,7 @@ extern "C" void rs64_bump_phase_ord(void) {
     g_rs64_phase_ord.fetch_add(1, std::memory_order_relaxed);
 }
 extern "C" { volatile uint32_t rs64_vi_n_g = 0; } // s5816
+extern "C" { extern volatile uint32_t rs64_vimode_n_g; extern volatile uint64_t rs64_vimode_us_g; extern volatile int32_t rs64_run_tok_g; } // s6808 (upstream_compat.cpp, ultramodern threads.cpp)
 extern "C" uint32_t rs64_phase_ord(void) {
     return g_rs64_phase_ord.load(std::memory_order_relaxed);
 }
@@ -1003,6 +1004,17 @@ public:
             ++s_n;
             { rs64_s4899_vi((uint32_t)s_n, ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG); } // s4899
             rs64_vi_n_g = (uint32_t)s_n; // s5816 VI counter for guest-side diagnostics
+            {
+                // s6808 G3: ROGUESQ_VI_WALL=<file>: one row per update_screen (wall s, VI #, VI width, osViSetMode calls,
+                // cumulative host us so far, run-token holder pri<<16|OSId) to put the title AI feed gaps on a wall clock.
+                static FILE* s_vw = [] { const char* e = std::getenv("ROGUESQ_VI_WALL"); return (e && *e) ? fopen(e, "w") : nullptr; }();
+                if (s_vw) {
+                    fprintf(s_vw, "%.4f %d %u %u %llu %x\n", rs64_elapsed_seconds(), s_n,
+                            ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG, rs64_vimode_n_g,
+                            (unsigned long long)rs64_vimode_us_g, (unsigned)rs64_run_tok_g);
+                    fflush(s_vw);
+                }
+            }
 
             // Watchdog moved to its own thread (rs64_cine_start_watchdog_thread)
             // because the gfx_thread can itself be deadlocked on the same mutex
