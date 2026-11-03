@@ -180084,3 +180084,6 @@ Verify (new build, lvl14 FPS60 240 s, rc=0 crash=0 both): accel slope fix 12.0 /
 computeRandomizedOrientationFrame (unfixed) 1.00 both. The speed (+0x58) increment fix rests on the code read only:
 speed sits at its clamp in most samples (0 rising runs), single-source.
 Rules out: H-none. Does not show gameplay effect (homing-missile hit rate) - not measured.
+VERDICT: selects H-some and refutes H-none for the per-tick float class (dR 1.00 at ex x2 on 7 sites, controls 0.50 / 1.00
+in the same runs); the fix lands for the 3 guided-motion increments. Next discriminator: per remaining site, consumer read
+H-cosmetic vs H-gameplay vs H-benign, then the same a30/fix/off rates table on lvl14 + lvl2 (scratch/agent/NEXT.md).
