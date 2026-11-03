@@ -179777,3 +179777,34 @@ ORIGIN: no mitigation; diagnostic rows only (off unless ROGUESQ_RAND_TRACE is op
 Next: g3-fps60-scrape - read 0x800FEF10 (contact test/response) and integrateCraftVelocityAndCollide 0x800AECF8 for
 per-tick constants (push-out distance, velocity damping/reflection), fix FPS60-only (scale by dt*30), requalify: the 15.4 s
 scrape gives 2 contacts and the 30 Hz exit velocity at FPS60.
+
+## Session 6817 (2026-11-02) — G3 FPS60 lvl14 scrape: the collision resolver's per-pass deflection step is K*dt (a quantum, not a force), so FPS60 deflects half per contact tick; fixed (max(dt,1/30) under FPS60): contacts 7 -> 4, exit pitch = 30 Hz exactly, hit50/s 0.057 -> 0.094 (30 Hz 0.107), death none -> 90.6 s (30 Hz 81.3)
+
+Static (generated C, rodata from ../rogue_squadron64/build/roguesquadron.elf mission overlay 0x800A5130):
+- integrateCraftVelocityAndCollide 0x800AECF8 = pos += impulse(+0x198)*dt, impulse-magnitude rumble/sound tiers, impulse
+  cleared. dt-correct; not the term.
+- 0x800FEF10 (misnamed stepObjectOrientationTowardTarget; f24 = a1 = dt) is the craft collision resolver: sweep = vel*dt,
+  up to 5 passes (counter sp+0x48C < 5, 0x800FFA3C). Each pass with a contact takes one jump-table case (0x800FF47C..0x800FF98C):
+  rotate the orientation matrix by K*dt (0x8001CC3C/0x8001CD6C; K = +-120 deg/s heading cases, +-180 deg/s pitch cases,
+  rodata 0x800A9468..0x800A94A8), add K'*dt to the caller's angle accumulators (a2/a3 = sp+0x168/0x16C), clamp +0xD8/+0xDC to
+  0 if pointing into the surface, then re-sweep with vel*dt.
+- Player record 0x80137DB0 words 54-56 (+0xD8/+0xDC/+0xE0) are heading/pitch/roll in DEGREES (not velocity; s6816 called
+  them vel). Trace s6816 seed 1: per contact tick pitch -30 at 30 Hz = 5 passes x 6 deg; FPS60 -15/-15/-15/-9/-6/-9 = 5/5/5/3/2/3
+  passes x 3 deg, plus one heading +10 (5 x 2 deg). So the step per pass is a deflection QUANTUM scaled by dt: at FPS60 the
+  craft deflects half per contact tick, stays at the surface, takes 7 contact ticks (20 hp each, per tick) instead of 2.
+Fix: tools/fixup_fps60_scrape.py (wired into fixup_game_funcs_vendored.py after preempt_point): the ten case multiplies use
+  rs64_scrape_dt(dt) = max(dt, 1/30) when ROGUESQ_FPS60 is set; ROGUESQ_FPS60_SCRAPE=0 restores; sweep multiplies keep dt;
+  retail (no FPS60) untouched. Built in place (build/RogueSquadron64Recomp).
+Run (one build, 3 arms sequential, lvl14 seed 1, dt pinned, scratch/s6817/arms.sh; new scorer tools/g3_scrape_contacts.py,
+  validated first on s6816 traces: 2 vs 7 contacts reproduced):
+  | arm    | contacts 15-16.5 s            | dang per contact             | ang@16.5 s (hdg,pitch)| hit50/s t>16 | death  |
+  | a30    | 2 (15.433, 15.667)            | p-30, p-30                   | -91.77, -44.18        | 0.107        | 81.27  |
+  | b60fix | 4 (15.417,15.6,15.617,15.65)  | p-24, h+20, p-6, p-30        | -71.77, -44.18        | 0.094        | 90.62  |
+  | b60off | 7 (= s6816 b60_s1 exactly)    | p-15x2, h+10, p-15,-9,-6,-9  | -81.77, -53.18        | 0.057        | none   |
+  Controls: a30 identical to s6816 a30_s1 (retail path untouched); b60off identical to s6816 b60_s1 (toggle works, determinism).
+  0 crashes in all 3.
+Reading: the per-pass quantum was the dominant term (contacts 7->4, pitch exit exact, hit rate and death time move most of the way
+  to 30 Hz). Residual: at FPS60 the 15.6 s contact hits a heading case (+20 deg) the 30 Hz run never takes, because the 60 Hz path
+  samples the surface at intermediate positions (sweep length vel/60). Heading at 16.5 s is 20 deg off; death 9 s late.
+  Single seed; seeds 2/3 queued (soak_queue/s6817_scrape_b60fix_s{2,3}.sh) as the second line.
+Rules out: H-dmg-only (exit angles move with the step), H-push as a position term (the integrator's push-out is dt-correct).

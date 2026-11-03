@@ -391,8 +391,15 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    updatePlayerCraftPhysics 0x800B29F8 takes 20 hp per CONTACT TICK (0x800FEF10 returns 1, no cooldown): 2 contacts at 30 Hz vs
    7 at FPS60 in all seeds, different exit velocity (+z 0.2 u/s) -> FPS60 path ~9 u further +z by 40 s -> fewer turrets in
    range -> fewer missiles. Supersedes s6815's "hit probability per shot" framing.
-   NEXT: g3-fps60-scrape - find the per-tick term in the contact response (0x800FEF10 / integrateCraftVelocityAndCollide
-   0x800AECF8: push-out, damping, reflection) and fix it FPS60-only; requalify on the 15.4 s scrape (2 contacts, same exit vel).
+   s6817 FIXED (main term): 0x800FEF10 is the collision resolver (5 passes/tick); each contact pass rotates the craft by
+   K*dt (120/180 deg/s) - a deflection quantum, halved at FPS60. +0xD8..0xE0 are heading/pitch/roll in DEGREES. Fix
+   tools/fixup_fps60_scrape.py: case multiplies use max(dt,1/30) under ROGUESQ_FPS60 (=ROGUESQ_FPS60_SCRAPE=0 restores; retail
+   untouched). Seed 1 same build: contacts 30Hz 2 / fix 4 / off 7; exit pitch exact; hit50/s 0.107 / 0.094 / 0.057; death
+   81.3 / 90.6 / none. Residual: an extra +20 deg heading contact at 15.6 s at FPS60 (sub-tick surface sampling). Single
+   seed - seeds 2/3 queued (s6817_scrape_b60fix_s2/s3). Scorer tools/g3_scrape_contacts.py.
+   NEXT: fold seeds 2/3; if they agree, close the scrape thread (residual = sampling, inherent to 60 Hz) and look for other
+   K*dt-quantum sites (same idiom: per-event step scaled by dt) - grep the mission overlay for mul.s by the dt arg feeding
+   rotate/clamp in collision/bounce code.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
