@@ -179667,3 +179667,45 @@ colours within ~13/255, the residual being the scale difference). Single-source:
 assumed launch t0 (port VI from wall); the in-cutscene timing does not depend on it.
 ORIGIN: no mitigation; measurement only (scorer options + recipe).
 Next: g3-fps60-timeline - why the lvl14 cutscene comes ~20 game-s later at dt 1/60 (offline from the two port rand traces).
+
+## Session 6814 (2026-11-02) — G3: the lvl14 "FPS60 cutscene ~20 s late" is the passive player's DEATH sequence arriving later: flag 0x100 in 0x8010CA1C = player hp 0 (spawnNpcDestructionDebris); FPS60 takes ~half the 50-hp hits per game second (7 seeded runs, no overlap) because NPC formation spawns run ~0.7x per game second; regen and per-hit damage are dt-exact
+
+HYPOTHESIS-ID: g3-fps60-timeline.
+
+Soak fold: none new (last SOAK-RESULTS line s6809_preempt2_lvl1_fps60, folded s6810).
+Offline first (s6812/s6813 rand traces, 800fa730 rows): mission-state words of 0x8010C9E0 (18 w) by game second
+(row ordinal / 30 or / 60). Controls: game-time floats 0x8010C9E4/F8..0x8010CA14 read 1,5,10..100 s identically in both
+arms; frame counter 0x8011A890 and float 0x8011A8F4 advance 2x per game s at FPS60 (per-tick, as expected).
+Event chain, same in both arms with constant game-second gaps: 0x8010CA1C |= 0x100 -> +4.30/4.17 s state 0x8010CA20 0->1,
+mask 0x8010C9E0 = 2, timer float 0x8010C9EC counting dt -> +5.63 s subphase 0x8010C9F0 = 2, flags cleared. The trigger is
+87.37 s (30 Hz) vs 102.40 s (FPS60): a 15.0 game-s delay (the s6813 "~20 s" used the launch-t0 guess).
+Writers of 0x100 into 0x8010CA1C (static): updateMultiNodeAudioListeners 0x800502A4, spawnSceneDebrisAndEffectCluster
+0x800B0344, spawnNpcDestructionDebris 0x800B08D4. The rand trace shows caller 0x800B08D8 on the flag VI in both arms
+(spawnNpcDestructionDebris).
+Runs (scratch/s6814, run.sh + seeds.sh, lvl14 s6767 eep, AP start only, dt pinned 1/30 or 1/60, xtrace adds the player
+object 0x80137DB0 (64 w, hp float +0xCC) and 0x80136DC0): 0 crash.
+- Same-seed pair a30/b60 reproduces s6812/s6813 exactly (trigger 87.37 / 102.40). Both arms are bit-identical (player pos
+  +0x10..0x18, rotation, hp) through t=10 s, diverge by 20 s: the 30 Hz player takes a 50-hp hit at 8.8 s, FPS60 does not.
+- The trigger tick IS the player's hp 0 tick in every run (tools/g3_death_time.py: death == flag0x100 7/7). So the
+  "in-mission cutscene" of s6812/s6813 is the player's own death camera/explosion, not mission scripting.
+- Seed spread (one-shot rngSeed poke 800FA730:0:80003470:<s>:1 on the first mission tick; seed poke verified: 30 Hz
+  death moved 87.37 -> 81.27): death 30 Hz 87.37, 81.27, 51.83; FPS60 102.40, none by 137.8, 85.63, 96.03.
+  50-hp hits per game second after the shared 15.4-15.9 s burst: 30 Hz 0.112, 0.107, 0.140; FPS60 0.069, 0.057,
+  0.029, 0.037 (no overlap). Hit sizes are the same discrete 50/20/10 in both arms; hp regen is 0.0648/tick at 30 Hz and
+  0.0324/tick at FPS60 = 1.945 hp per game second in all 7 runs (dt-exact).
+- rand callers per game second (same-seed pair, 16-50 s): per-tick callers 2.0x (control: 0x80054174 120 -> 240/s,
+  0x8006C010 2.03x), dt-exact callers 1.0x (0x8008EE84 114.82 = 114.82), and a 0.70-0.75x cluster:
+  spawnNpcFormationWithRandomOrientation (0x80040C28..0x80040F50), composeRandomRotationMatrix/scaleVec3ByRandomRange
+  (0x80072068..0x8007231C), npcPowerGeneratorHandleDestruction (0x8007668C..0x800766D4). Single pair (one seed).
+Side datum: run a30_s2 froze at boot: RDP frames stop at fs=39 by VI 128 (VI origin 0x006BA280, 215 s), audio buffers kept
+flowing, no crash line, no rand trace (never reached a mission). Queued soak s6814_bootfreeze_ab (10 boots, preempt
+point on/off alternating) since rs64_preempt_point (s6808/s6809) is new today and that hook is the obvious suspect.
+VERDICT: refutes H-framecount-slow for mission scripting (game-time timers, the event chain gaps and hp regen are
+dt-exact) and H-t0 (the delay is in game ticks). Selects: the lvl14 trigger is the player's death; FPS60 deaths come later
+because the player takes ~half as many 50-hp hits per game second, which coincides with NPC formation spawns at ~0.7x per
+game second. Two lines: (1) seeded death/hit-rate table, 7 runs; (2) rand-caller rate table (single pair). Open: why
+spawns run slower per second at dt 1/60 (spawn timer vs spawns following kills).
+ORIGIN: no mitigation; measurement only (tools/g3_death_time.py, recipes, soak recipe).
+Next: g3-fps60-spawn-rate - log each spawnNpcFormationWithRandomOrientation call (game time, caller, formation id) and
+each NPC destruction in both arms; spawns at fixed game times = a timer -> find why it slows at dt 1/60; spawns
+following kills = wingman/AI kill rate is the term.

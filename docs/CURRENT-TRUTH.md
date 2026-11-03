@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6812 (2026-11-02).
+Compact operational handoff, as of Session 6814 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -182,6 +182,9 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 
 ## Superseded conclusions — do not act on these
 
+- s6813 "the lvl14 in-mission cutscene starts ~20 game-s later at FPS60, mission progresses slower in game time":
+  believable because the sequence (HUD off, destruction) looked scripted and only 18 VIs were dropped. s6814: it is the
+  passive player's death, later at FPS60 because fewer 50-hp hits land per game second; timers are dt-exact.
 - s6788/s6789 "dd4 lvl1 FPS60 runs at 45.9 / 42.8 game fps": believable because the same runs showed the bypass cap had
   been hiding terrain (more terrain = more cost). s6810: those arms carried census + terrain-trace logging; clean dd4 = 59.3.
 - **(s6770 -> s6772)** "+0x39 bits 0x00200000 -> 16, 0x00400000 -> 17; +0x31=LEVEL selects bonus missions".
@@ -363,8 +366,14 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    s6813 same destruction at ROGUESQ_FPS60=1 with dt pinned 1/60 (owner's setting, deterministic) = H-match in GAME seconds:
    flash peak -> dome end 0.27 s (retail 0.27-0.30; a per-frame effect would be ~0.14), phase colours within ~13/255
    (scratch/s6813/fps60_sheet.png). Refutes H-anim60/H-blend60. g3_tick_pair_score.py --port-rand/--ratio keys a port on its
-   own ticks. Side datum (single-source, launch-t0 based): the lvl14 cutscene starts ~20 game-s LATER at dt 1/60 (flash 111.7 vs
-   91.2 game-s; 18 dropped VIs only). NEXT: g3-fps60-timeline - find what progresses slower per game second at dt 1/60.
+   own ticks.
+   s6814 the lvl14 HUD-off sequence is the PASSIVE PLAYER'S DEATH (flag 0x100 in 0x8010CA1C set by spawnNpcDestructionDebris
+   on the hp-0 tick, 7/7 runs). FPS60 dies later (seeds: 30 Hz 87/81/52 s, FPS60 102/>138/86/96 s) because it takes ~half
+   the 50-hp hits per game s (0.107-0.140 vs 0.029-0.069, no overlap); per-hit damage, hp regen (1.945/s) and mission
+   timers are dt-exact. Rand-caller rates (single pair): spawnNpcFormationWithRandomOrientation and NPC destruction paths
+   0.70-0.75x per game s at FPS60. Tool tools/g3_death_time.py. NEXT: g3-fps60-spawn-rate - why NPC formation spawns run
+   ~0.7x per game second at dt 1/60 (spawn timer vs spawns following AI kills). Side datum: a30_s2 froze at boot (fs=39
+   by VI 128, audio alive); soak s6814_bootfreeze_ab queued (preempt point on/off).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
