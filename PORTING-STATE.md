@@ -180109,3 +180109,6 @@ Verify (one build): lvl14 (s6826 recipe, scratch/s6827/verify.sh) FPS60 fix vs F
   lvl2 (scratch/s6827/lvl2.sh, a30 vs FPS60+fix, 26 game s of flight each): the 4 sites 0.49-0.51, controls 0.50/1.00, and no
   other site with dR >= 0.8 and ex x>=1.6 (n>=50). Guided-motion sites did not run on lvl2 (still single-level).
 Rules out: the 4 named s6826 quanta as remaining FPS60 rate defects. Open: hangar decay (needs a hangar dt), 0x8004D7CC dR 2.49.
+Verdict: the same-build fix/off arms (0.50 vs 1.00, controls fixed) select H-quantum + H-cosmetic for the particle-scale and
+effect-wobble sites and refute H-benign for them; timeSnapshotFiller selects H-benign. This is a code fix (behaviour change
+under FPS60), not instrumentation. Next discriminator: operand taint of 0x8004D7CC (H-dt vs H-quantum, NEXT.md).
