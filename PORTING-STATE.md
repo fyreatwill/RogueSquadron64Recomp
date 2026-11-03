@@ -180087,3 +180087,25 @@ Rules out: H-none. Does not show gameplay effect (homing-missile hit rate) - not
 VERDICT: selects H-some and refutes H-none for the per-tick float class (dR 1.00 at ex x2 on 7 sites, controls 0.50 / 1.00
 in the same runs); the fix lands for the 3 guided-motion increments. Next discriminator: per remaining site, consumer read
 H-cosmetic vs H-gameplay vs H-benign, then the same a30/fix/off rates table on lvl14 + lvl2 (scratch/agent/NEXT.md).
+
+## Session 6827 (2026-11-03) — G3 FPS60 float quanta: particle-scale growth and effect-wobble phases were per-tick -> FIXED (pow / dt*30 under FPS60), verified on lvl14 (fix/off same build) and lvl2; timeSnapshotFiller benign
+Work unit: NEXT.md g3-fps60-float-quanta (the 4 remaining dR 1.00 sites from s6826).
+Hypotheses per site: H-cosmetic (frequency/phase only), H-gameplay (feeds motion/timing), H-benign (consumer normalises).
+Static read (rodata via ROM offset vaddr-0x80000400+0x1000, checked against 0x8003B220 = 0.4):
+  minimalRandomNpcHandler 0x80060F1C-F58: +0x40 += dt (age), +0x44 -= 512*dt (alpha, byte at +0x2F, despawn at <=0),
+    +0x34 -= dt (drift), +0x20/+0x24 *= 1.1 (rodata 0x8003B364) per tick. The s6826 "DAMP" tag is wrong: it is GROWTH of a
+    particle (puff) scale, 1.1^30 = 17x per game s at 30 Hz vs 1.1^60 = 304x at FPS60. H-cosmetic (visible: puffs balloon).
+  computeRandomizedOrientationFrame (called from executeActorType1Effect): +0x8C += +0x48*0.25*+0x74 to 1.0 then picks the
+    next random target (+0x80 <- +0x84), +0xA4 += +0x78 likewise. Effect wobble at 2x frequency. H-cosmetic.
+  timeSnapshotFiller 0x8000BD88: 0x8012A8F4 += 1.0 next to sum += x, avg = sum/count -> sample count. H-benign.
+  hangarVehicleDisplayNpcHandler 0x800C6C9C/CEC: +0x8/+0xC step toward 0 by 0.00125 per call (hangar tilt decay). Runs
+    outside the mission tick, where rs64_tick_dt (captured at 0x800FA90C) is not refreshed -> left unfixed.
+Change: tools/fixup_fps60_float_quanta.py now patches several files: 0x80060F38/F40 mul by powf(1.1, k), 0x800F3730/F3914
+add step*k (k = dt*30 under ROGUESQ_FPS60, 1 otherwise -> retail bit-identical: powf(x,1)=x). ROGUESQ_FPS60_FQUANTA=0 restores.
+Helper redefinition guarded (old helper line replaced, idempotent: ran twice, 1 helper per file).
+Verify (one build): lvl14 (s6826 recipe, scratch/s6827/verify.sh) FPS60 fix vs FQUANTA=0 against s6826 a30, rc=0 crash=0:
+  0x80060F2C/F3C lrR 0.50 fix / 1.00 off; 0x800F372C dR 0.50 / 1.00; 0x800F390C 0.50 / 1.00; s6826 guided 0x8005F3C8/F614
+  0.50 / 1.00. Controls both arms: updateNpcEventTimer 0.50, game clock 0x800FA8F0 0.50, int 0x80044938 1.00.
+  lvl2 (scratch/s6827/lvl2.sh, a30 vs FPS60+fix, 26 game s of flight each): the 4 sites 0.49-0.51, controls 0.50/1.00, and no
+  other site with dR >= 0.8 and ex x>=1.6 (n>=50). Guided-motion sites did not run on lvl2 (still single-level).
+Rules out: the 4 named s6826 quanta as remaining FPS60 rate defects. Open: hangar decay (needs a hangar dt), 0x8004D7CC dR 2.49.

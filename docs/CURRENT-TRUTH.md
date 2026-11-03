@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6826 (2026-11-03).
+Compact operational handoff, as of Session 6827 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -451,8 +451,14 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    FIXED: guided-motion accel (steerOrientationTowardTarget +0x5C += 0.4, speed += accel) and drop term
    (levelOrientationToReferenceAxis +0x5C) were per tick: accel slope a30 12 / FPS60 24 per game s -> tools/fixup_fps60_float_quanta.py
    k=dt*30 under FPS60 (ROGUESQ_FPS60_FQUANTA=0 restores): fix 12.0 / off 24.0, same-run controls held. Speed-increment part
-   single-source (speed sits at clamp). Still quantum, unfixed: computeRandomizedOrientationFrame +0x8C/+0xA4 (orientation phase),
-   minimalRandomNpcHandler +0x20/+0x24 per-tick damping, timeSnapshotFiller 0x8012A8F4 += 1, hangarVehicleDisplay -= 0.00125.
+   single-source (speed sits at clamp).
+   s6827 FIXED (same script, same switch): minimalRandomNpcHandler particle scale +0x20/+0x24 *= 1.1 per tick (GROWTH, not
+   damping; alpha +0x44 -= 512*dt) -> pow(1.1, dt*30); computeRandomizedOrientationFrame (executeActorType1Effect wobble)
+   phases +0x8C/+0xA4 -> step*dt*30. One build lvl14 fix/off: dR (lrR for the scale) 0.50 fix / 1.00 off on all 4, controls
+   0.50 (dt) / 1.00 (int) in both; lvl2 a30 vs fix: 0.49-0.51 on all 4, no other site dR>=0.8 with ex x2. Classified benign:
+   timeSnapshotFiller 0x8012A8F4 (sample count of a running average). Left: hangarVehicleDisplay -= 0.00125 (tilt decay,
+   runs outside the mission tick, rs64_tick_dt not captured there), updatePlayerVehicleByControlMode 0x8004D7CC dR 2.49
+   (mixed, path-dependent). Guided-motion fix still single-level (no guided missiles on lvl2).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

@@ -9,13 +9,23 @@ fields read 0.50).
 At FPS60 both accumulations run twice per game second, so the speed ramp (s6816: guided missiles are the lvl14 hp source)
 and the drop velocity grow about 2x/4x faster in game time. Under ROGUESQ_FPS60 the three increments are multiplied by
 k = dt*30 (dt = rs64_tick_dt, the tick's game dt captured at 0x800FA90C by fixup_fps60_despawn.py; k = 1 at dt >= 1/30).
+s6827 adds (same k, same switch):
+  minimalRandomNpcHandler         0x80060F38/F40  particle scale +0x20/+0x24 *= 1.1 (rodata 0x8003B364) per tick while
+                                              alpha +0x44 -= 512*dt -> pow(1.1, k), so a puff's size at a given age is
+                                              rate-independent (FPS60 grew it 1.1^60 per game s instead of 1.1^30)
+  computeRandomizedOrientationFrame 0x800F3730  effect orientation phase +0x8C += +0x48*0.25*+0x74 per tick (to 1.0)
+                                    0x800F3914  effect orientation phase +0xA4 += +0x78 per tick (to 1.0)
+                                              (executeActorType1Effect wobble ran at 2x frequency at FPS60)
+Classified, left alone: timeSnapshotFiller 0x8000BD88 (0x8012A8F4 += 1 is the sample count of a running average whose
+sum is accumulated per call too = benign), hangarVehicleDisplayNpcHandler 0x800C6C9C/CEC (hangar tilt decay, runs
+outside the mission tick where rs64_tick_dt is not captured).
 ROGUESQ_FPS60_FQUANTA=0 restores. Retail (no FPS60) unchanged. Idempotent; run after fixup_fps60_despawn.py.
 Usage: fixup_fps60_float_quanta.py <RecompiledFuncs dir>"""
 import pathlib, sys
 
 base = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "../N64Recomp/RecompiledFuncs")
 TAG = "/* PATCH: s6826 fps60 float quanta */"
-HELPER = ("extern char* getenv(const char*); extern float rs64_tick_dt; static float rs64_fq_k(void) { static int on = -1; "
+HELPER = ("extern char* getenv(const char*); extern float powf(float, float); extern float rs64_tick_dt; static float rs64_fq_k(void) { static int on = -1; "
           "if (on < 0) { const char* f = getenv(\"ROGUESQ_FPS60\"); const char* q = getenv(\"ROGUESQ_FPS60_FQUANTA\"); "
           "on = f && *f && *f != '0' && !(q && *q == '0'); } float dt = rs64_tick_dt; "
           "return (on && dt > 0.0f && dt < (1.0f / 30.0f)) ? dt * 30.0f : 1.0f; } " + TAG + "\n")
@@ -26,13 +36,22 @@ SITES = [  # (comment line, old C, new C)
      "    ctx->f2.fl = ctx->f2.fl + ctx->f0.fl * rs64_fq_k(); " + TAG + "\n"),
     ("    // 0x8005F624: add.s       $f2, $f2, $f0\n", "    ctx->f2.fl = ctx->f2.fl + ctx->f0.fl;\n",
      "    ctx->f2.fl = ctx->f2.fl + ctx->f0.fl * rs64_fq_k(); " + TAG + "\n"),
+    ("    // 0x80060F38: mul.s       $f4, $f4, $f0\n", "    ctx->f4.fl = MUL_S(ctx->f4.fl, ctx->f0.fl);\n",
+     "    ctx->f4.fl = MUL_S(ctx->f4.fl, powf(ctx->f0.fl, rs64_fq_k())); " + TAG + "\n"),
+    ("    // 0x80060F40: mul.s       $f2, $f2, $f0\n", "    ctx->f2.fl = MUL_S(ctx->f2.fl, ctx->f0.fl);\n",
+     "    ctx->f2.fl = MUL_S(ctx->f2.fl, powf(ctx->f0.fl, rs64_fq_k())); " + TAG + "\n"),
+    ("    // 0x800F3730: add.s       $f2, $f2, $f0\n", "    ctx->f2.fl = ctx->f2.fl + ctx->f0.fl;\n",
+     "    ctx->f2.fl = ctx->f2.fl + ctx->f0.fl * rs64_fq_k(); " + TAG + "\n"),
+    ("    // 0x800F3914: add.s       $f2, $f2, $f0\n", "    ctx->f2.fl = ctx->f2.fl + ctx->f0.fl;\n",
+     "    ctx->f2.fl = ctx->f2.fl + ctx->f0.fl * rs64_fq_k(); " + TAG + "\n"),
 ]
 done = 0
 for p in sorted(base.glob("funcs_*.c")):
     s = p.read_text()
-    if SITES[0][0] not in s:
+    here = [t for t in SITES if t[0] in s]
+    if not here:
         continue
-    for com, old, new in SITES:
+    for com, old, new in here:
         if s.count(com) != 1:
             sys.exit(f"s6826 fps60 float quanta: {com.strip()} found {s.count(com)}x in {p.name}")
         i = s.index(com)
@@ -44,9 +63,10 @@ for p in sorted(base.glob("funcs_*.c")):
             sys.exit(f"s6826 fps60 float quanta: unexpected C after {com.strip()} in {p.name}")
         s = s[:i] + seg.replace(old, new) + s[j:]
     if HELPER not in s:
+        s = "".join(l for l in s.splitlines(True) if not ("static float rs64_fq_k" in l and l.endswith(TAG + "\n")))
         s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + HELPER, 1)
     p.write_text(s)
-    done += 1
-if done != 1:
-    sys.exit(f"s6826 fps60 float quanta: site file found {done}x (want 1)")
-print(f"[s6826] fps60 float quanta: {len(SITES)} guided-motion increments scaled by dt*30 under ROGUESQ_FPS60")
+    done += len(here)
+if done != len(SITES):
+    sys.exit(f"s6826 fps60 float quanta: {done}/{len(SITES)} sites found")
+print(f"[s6826] fps60 float quanta: {len(SITES)} per-tick increments scaled by dt*30 (pow for growth) under ROGUESQ_FPS60")
