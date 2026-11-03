@@ -1,18 +1,17 @@
-# NEXT: G1e FPS60 residual - per-tick FLOAT quanta class audit (integer tick-timer class closed s6825)
+# NEXT: G1e FPS60 float quanta - remaining named sites (s6826 fixed the guided-motion accel/drop)
 HYPOTHESIS-ID: g3-fps60-float-quanta
 
-Context: FPS60 (owner's setting) runs the mission sim at dt=1/60. Closed classes: rotate-helper K*dt quanta (s6817),
-despawn grace (s6820), integer tick timers (s6821-s6825, FIX 7, UNFIX 8). The remaining idiom that would make FPS60 differ
-from 30 Hz is a FLOAT field advanced by a constant per tick with no dt multiply (lwc1 field -> add.s/sub.s/mul.s with a
-rodata/literal constant -> swc1 same field, inside a mission-tick handler), e.g. per-tick velocity damping (v *= 0.95) or
-fade/scale ramps.
-Hypotheses: H-none (every per-tick float update in mission handlers is dt-scaled; FPS60 float state matches 30 Hz),
-H-some (a set of constant-step float accumulators exists; each runs 2x per game s at FPS60).
-Step 1 (offline, one tool): extend the tools/g3_tick_counter_audit.py scan shape to float fields: in RecompiledFuncs,
-load-op-store on the same base+offset where the op's other operand does not derive from the handler dt argument or the
-dt global captured at 0x800FA90C. Classify each site: dt-scaled / constant step / multiplicative damping. Positive
-control: the scan must list 0x800FEF10's K*dt sites as dt-scaled and the s6821 advanceNpcOnCurvedPath float path.
-Step 2 (one build): trace hook on the constant-step sites (same ROGUESQ_TICK_TRACE format, new pc tag), lvl1 + lvl14
-FPS60 vs a30 400 s (lvl16/17 need >=400 s). 2x ex/game-s with a value change per execution => H-some for that site.
-Fix candidate: scale the constant by dt*30 under ROGUESQ_FPS60 (pow for damping), env opt-out, same discipline as
-tools/fixup_fps60_scrape.py.
+Context: s6826 traced 253 per-tick float sites (tools/fixup_fps60_float_trace.py, ROGUESQ_TICK_TRACE) and scored them with
+tools/g3_float_quanta_rates.py a30.bin f60.bin --sites <tsv from tools/g3_float_quanta_audit.py --tsv> (dR = f60/a30 median
+per-tick |d|: 0.5 dt-scaled, 1.0 quantum). lvl14 only (lvl2 arms were cut off). Remaining dR 1.00 sites, unfixed:
+  computeRandomizedOrientationFrame 0x800F372C +0x8C += 0x48*K*0x74, 0x800F390C +0xA4 += +0x78 (randomized orientation phase)
+  minimalRandomNpcHandler 0x80060F2C/0x80060F3C +0x20/+0x24 *= const per tick (damping; needs pow(c, dt*30))
+  timeSnapshotFiller 0x8000BD88 global 0x8012A8F4 += 1 (averaging divisor - probably benign, read its consumer first)
+  hangarVehicleDisplayNpcHandler 0x800C6C9C/0x800C6CEC -= 0.00125 per call (hangar ship display; FPS60 hangar)
+  updatePlayerVehicleByControlMode 0x8004D7CC (+0x18) dR 2.49 lrR 0.96 - unclear, path-dependent
+Hypotheses per site: H-cosmetic (frequency/phase only; 2x at FPS60 is visible but harmless), H-gameplay (feeds motion or
+timing), H-benign (consumer normalises it). Step 1 (offline): read each site's consumer, classify. Step 2 (one build):
+extend tools/fixup_fps60_float_quanta.py with the H-cosmetic/H-gameplay sites (k = dt*30 for steps, pow for damping),
+verify with the same lvl14 a30/fix/off recipe (scratch/s6826/verify.sh; run each 240 s arm as its own background
+command or with timeout 1800000 - the 600 s default kills multi-arm scripts) plus lvl2 (scratch/s6748/lvl2.eep) for a
+second level of the whole rates table. Done = every dR 1.00 site fixed or classified benign, on 2 levels.

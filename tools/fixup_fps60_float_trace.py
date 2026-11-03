@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""s6826 G3 FPS60: trace hooks on the per-tick FLOAT load-op-store sites (tools/g3_float_quanta_audit.py) whose other
+operand is not dt-derived (STEP / DAMP / step-* / mul-*), plus the dt-scaled controls (updateNpcEventTimer +0x10,
+the s6817 resolver accumulators). After each site's lwc1 the hook calls the s6821 recorder rs64_tctr(pc, field
+address, raw float bits), so the records land in the same ROGUESQ_TICK_TRACE file as the integer timers, keyed by the
+same per-tick {0, game time, dt, tick#} rows. Off unless ROGUESQ_TICK_TRACE is set. Diagnostic only: no value change.
+Loads sitting in a branch delay slot are hooked on the fall-through copy only. Idempotent; run after fixup_fps60_ticks.py.
+Usage: fixup_fps60_float_trace.py <RecompiledFuncs dir>"""
+import pathlib, re, sys
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+from g3_float_quanta_audit import scan, CONTROLS
+
+base = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "../N64Recomp/RecompiledFuncs")
+TAG = "/* PATCH: s6826 fps60 float trace */"
+DECL = "extern void rs64_tctr(uint8_t* rdram, uint32_t pc, uint32_t addr, int32_t v); " + TAG + "\n"
+rows = scan(str(base))
+want = {(r[0], r[1]) for r in rows if r[6] and (r[5] != 'ok' or (r[0], r[1]) in CONTROLS
+        or (r[0] == 'stepObjectOrientationTowardTarget' and 0x800FF47C <= r[1] < 0x800FF98C))}
+COMMENT = re.compile(r"    // 0x([0-9A-F]{8}): lwc1 ")
+LOAD = re.compile(r"    ctx->f(\d+)\.u32l = MEM_W\(ctx->r(\d+), (-?0X[0-9A-F]+)\);")
+hooked = set()
+for p in sorted(base.glob("funcs_*.c")):
+    lines = p.read_text().splitlines(True)
+    out, fn, changed, i = [], None, False, 0
+    while i < len(lines):
+        l = lines[i]; out.append(l)
+        m0 = re.match(r'RECOMP_FUNC void (\w+)\(', l)
+        if m0: fn = m0.group(1)
+        m = COMMENT.match(l)
+        if m and fn and (fn, int(m.group(1), 16)) in want:
+            pc = int(m.group(1), 16)
+            c = lines[i + 1]; cm = LOAD.match(c)
+            if not cm:
+                sys.exit(f"s6826 float trace: unexpected load line {p.name}:{i + 2}: {c.strip()}")
+            out.append(c); i += 1
+            if not (i + 1 < len(lines) and TAG in lines[i + 1]):
+                out.append(f"    rs64_tctr(rdram, 0x{pc:08X}u, (uint32_t)(ctx->r{cm.group(2)} + {cm.group(3)}), "
+                           f"(int32_t)ctx->f{cm.group(1)}.u32l); {TAG}\n")
+                changed = True
+            hooked.add(pc)
+        i += 1
+    if changed:
+        s = "".join(out)
+        if DECL not in s:
+            s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + DECL, 1)
+        p.write_text(s)
+miss = {pc for _, pc in want} - hooked
+if len(miss) > len(want) // 10:
+    sys.exit(f"s6826 float trace: {len(miss)}/{len(want)} sites not hooked")
+print(f"[s6826] fps60 float trace: {len(hooked)}/{len(want)} float sites hooked ({len(miss)} delay-slot/other misses)")

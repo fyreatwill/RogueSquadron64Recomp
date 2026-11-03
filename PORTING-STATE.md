@@ -180048,3 +180048,39 @@ Verdict line: for 8007CD50 selects H-event and refutes the s6823 static H-tick r
 readings were wrong). 800F8708 / 800FB4F8 stay kept, static-only single-source (never ran on lvl14/16/17 either rate;
 800F8708 ran only once, lvl11 FPS60, s6823). The integer tick-timer class is closed; next class: per-tick float quanta
 (NEXT.md, HYPOTHESIS-ID g3-fps60-float-quanta).
+
+## Session 6826 (2026-11-03) — G3 FPS60 float quanta: audit + runtime rate trace of 253 per-tick float sites; guided-motion accel/drop increments were per-tick (accel slope 24 vs 12 /game s) -> FIXED (dt*30 under FPS60, verified 12.0 = a30); 4 more quantum sites named
+Work unit: NEXT.md g3-fps60-float-quanta (integer tick-timer class closed s6825).
+Hypotheses: H-none (every per-tick float update in mission handlers is dt-scaled) vs H-some (constant-step / damping
+float accumulators exist and run 2x per game s at FPS60).
+Instrument (one build): tools/g3_float_quanta_audit.py (static: lwc1 field -> add/sub/mul.s -> swc1 same field, linear
+taint of the other operand: dt = arg regs/f12/f14/stack spill/game clock 0x80130BA4; 597 sites / 184 funcs, 414 per-tick)
+-> tools/fixup_fps60_float_trace.py hooks the 253 per-tick non-dt sites + dt controls into the s6821 ROGUESQ_TICK_TRACE
+recorder (raw float bits) -> tools/g3_float_quanta_rates.py (per site: ex/game-s, median per-tick |d| over executions
+one tick apart, ratio f60/a30: 0.5 = dt-scaled, 1.0 = per-tick quantum).
+Run: lvl14 (scratch/s6767/lvl14.eep, s6825 AP), 240 s, a30 and FPS60, rc=0 crash=0 (121.9 / 121.6 game s). lvl2 arms
+were cut off by the 600 s background-task limit (no data; save verified restored).
+Controls, same runs: updateNpcEventTimer 0x800EFE3C (+0x10 -= dt) dR 0.50; game clock 0x800FA8F0 0.50; per-tick integer
+counters 0x80017A4C / 0x80044938 / 0x800FAD80 ex x2 with dR 1.00 (quantum positive control).
+Result: H-some, but small. The static "STEP field/const" tag is mostly wrong: ~70 of the 87 rows with data read dR ~0.5
+(fields pre-scaled by dt upstream - explosion/debris/turret/water spray/AT-ST/power-up/guided position etc.). dR 1.00 with
+ex x2 (per-tick quanta):
+  steerOrientationTowardTarget 0x8005F3C8 +0x5C += 0.4 (rodata 0x8003B220) = accel; next instr speed +0x58 += accel,
+    clamp +0x6C, vel = dir*speed, position += vel*dt (guidedEffectNpcHandler +4/8/C dR 0.5). Accel slope per game s
+    (consecutive rising ticks, scratch/s6826/slope.py): a30 12.0 (20 ramps), FPS60 24.0 (24).
+  levelOrientationToReferenceAxis 0x8005F614 +0x5C += const (0x8003B244), added to vel.y (drop term): a30 12.0 (71),
+    FPS60 24.0 (74).
+  computeRandomizedOrientationFrame 0x800F372C +0x8C += 0x48*K*0x74 (0.0525/tick), 0x800F390C +0xA4 += +0x78 (0.022/tick):
+    ex x2.21, dR 1.00 - randomized orientation phase, not fixed this session.
+  minimalRandomNpcHandler 0x80060F2C/0x80060F3C +0x20/+0x24 *= const (DAMP): log-ratio per tick equal (lrR 1.00), ex x1.97.
+  timeSnapshotFiller 0x8000BD88 global 0x8012A8F4 += 1.0 per tick (averaging divisor). hangarVehicleDisplayNpcHandler
+    0x800C6C9C/CEC -= 0.00125 per call (n 72/25, hangar).
+  Unclear (path-dependent player state): updatePlayerVehicleByControlMode 0x8004D7CC dR 2.49 lrR 0.96.
+FIX: tools/fixup_fps60_float_quanta.py (vendored chain after the float trace): under ROGUESQ_FPS60 the three increments
+(0x8005F3D4 accel += 0.4, 0x8005F3E0 speed += accel, 0x8005F624 drop += const) are multiplied by k = dt*30 (rs64_tick_dt;
+k = 1 at dt >= 1/30). ROGUESQ_FPS60_FQUANTA=0 restores. Retail untouched.
+Verify (new build, lvl14 FPS60 240 s, rc=0 crash=0 both): accel slope fix 12.0 / 12.0 (18 / 68 ramps) vs FQUANTA=0 24.0 /
+24.0 (21 / 79); per-tick dR fix 0.50 / 0.50 vs off 1.00 / 1.00. Same-run controls: updateNpcEventTimer 0.50 both,
+computeRandomizedOrientationFrame (unfixed) 1.00 both. The speed (+0x58) increment fix rests on the code read only:
+speed sits at its clamp in most samples (0 rising runs), single-source.
+Rules out: H-none. Does not show gameplay effect (homing-missile hit rate) - not measured.

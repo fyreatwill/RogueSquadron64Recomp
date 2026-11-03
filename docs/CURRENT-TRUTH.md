@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6825 (2026-11-02).
+Compact operational handoff, as of Session 6826 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -445,6 +445,14 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    execution; FPS60 182 ticks apart, about half the decrements dropped by the step) -> UNFIX, FIX now 7. Control 8006C024
    1.9x ex/game-s in the same arms. 800F8708 / 800FB4F8 never ran on lvl14 (LIVES_CAP=1, no death in 240 s), 16, 17 (both
    rates): kept, static-only single-source. lvl16/17 need ~400 s runs (240 s ended ~27 game s into the intro).
+   s6826 FLOAT QUANTA (H-some, small): tools/g3_float_quanta_audit.py (597 lwc1-op-swc1 sites) + fixup_fps60_float_trace.py
+   (253 per-tick non-dt sites into ROGUESQ_TICK_TRACE) + g3_float_quanta_rates.py (median per-tick |d| f60/a30: 0.5 dt-scaled,
+   1.0 quantum; controls updateNpcEventTimer 0.50, int counters 1.00). lvl14: most static STEP rows are dt-scaled upstream (0.5).
+   FIXED: guided-motion accel (steerOrientationTowardTarget +0x5C += 0.4, speed += accel) and drop term
+   (levelOrientationToReferenceAxis +0x5C) were per tick: accel slope a30 12 / FPS60 24 per game s -> tools/fixup_fps60_float_quanta.py
+   k=dt*30 under FPS60 (ROGUESQ_FPS60_FQUANTA=0 restores): fix 12.0 / off 24.0, same-run controls held. Speed-increment part
+   single-source (speed sits at clamp). Still quantum, unfixed: computeRandomizedOrientationFrame +0x8C/+0xA4 (orientation phase),
+   minimalRandomNpcHandler +0x20/+0x24 per-tick damping, timeSnapshotFiller 0x8012A8F4 += 1, hangarVehicleDisplay -= 0.00125.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

@@ -42361,5 +42361,11 @@ _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_
 # s6821 G3 FPS60: remaining per-object tick timers stepped by game time under ROGUESQ_FPS60 + ROGUESQ_TICK_TRACE hooks.
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_fps60_ticks.py")), str(base)])
 
+# s6826 G3 FPS60: ROGUESQ_TICK_TRACE hooks on per-tick float load-op-store sites (diagnostic, g3_float_quanta_audit.py).
+_sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_fps60_float_trace.py")), str(base)])
+
+# s6826 G3 FPS60: guided-motion accel/speed/drop per-tick increments scaled by dt*30 under ROGUESQ_FPS60.
+_sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_fps60_float_quanta.py")), str(base)])
+
 # s6132 G1d: parameterise the 8 MB pointer-range guards (RS64_RAM_TOP). Must run after every other patch (they emit the literal).
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_ramtop.py")), str(base)])
