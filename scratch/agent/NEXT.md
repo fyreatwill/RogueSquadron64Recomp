@@ -1,14 +1,16 @@
-# NEXT: G1e FPS60 float quanta - close the class (2 leftover sites + second level for guided motion)
-HYPOTHESIS-ID: g3-fps60-float-quanta
+# NEXT: G1e FPS60 hangar per-tick sites - find the hangar frame dt, scale the hangar ship spin
+HYPOTHESIS-ID: g1e-fps60-hangar-quanta
 
-Context: s6826 fixed guided-motion accel/drop, s6827 fixed minimalRandomNpcHandler scale growth (pow) and
-computeRandomizedOrientationFrame phases (tools/fixup_fps60_float_quanta.py, verified lvl14 + lvl2). Left:
-  updatePlayerVehicleByControlMode 0x8004D7CC (+0x18) dR 2.49 lrR 0.96 (step-mixed) - player vehicle, could be gameplay.
-  hangarVehicleDisplayNpcHandler 0x800C6C9C/CEC -= 0.00125 per call - hangar, no dt captured outside the mission tick.
-  guided-motion fix is verified on lvl14 only (no guided missiles on lvl2).
-Hypotheses for 0x8004D7CC: H-dt (term is dt-scaled but a path-dependent value dominates |d|), H-quantum (part of the step is per
-tick). Step 1 offline: read 0x8004D760-0x8004D7D0 (operand taint), compare the a30/f60 |d| distributions in
-scratch/s6827/rates_*.txt sources. Step 2: if H-quantum, add it to fixup_fps60_float_quanta.py; for the hangar, find the hangar
-frame dt (or count VIs per hangar tick) and scale. Verify: scratch/s6827/verify.sh (lvl14) + a level with guided missiles
-(grep the s6826 rates for which levels run 0x8005F3C8, or lvl14 only + say so). Run each 240 s arm as a background command.
-Done = every per-tick float site fixed or classified, then close G1e float quanta in CURRENT-TRUTH.
+Context: s6828 closed the mission float-quanta class. Left: hangarVehicleDisplayNpcHandler (0x800C68A0) ship-spin velocity
++0x8 / +0xC: += stick*const (0x800C6BD0, 0x800C6C34) and decay -= const (0x800C6CBC / 0x800C6CD4, 0x800C6D0C ...) per call,
+clamped. At FPS60 the hangar updates 60/s (s6791), so spin-up/settle is 2x faster. The angle integration of +0x8/+0xC (who
+reads them: grep the function and setObject*Rotation callers) may be per-tick too - include it.
+Hypotheses: H-dt-exists (the hangar loop has a dt global, e.g. the one the s6791 camera curve uses - find setupCameraMatrices'
+or the hangar camera's time source, ROGUESQ_G3F_CAM recipe scratch/s6791), H-no-dt (hangar is frame-counted: then derive k
+from the FPS60 lever state 0x80128EAF == 1 -> k = 0.5).
+Step 1 offline: find the hangar dt source (grep the hangar camera 0x800CD670 path for a dt load; compare with 0x80130BA4).
+Step 2: extend tools/fixup_fps60_float_quanta.py (same switch) for the spin add/decay/integration sites; capture the hangar k.
+Verify, one build: hangar route (scratch/s6791 recipe), hold stick right 2 s then release, arms a30 / FPS60 fix / FPS60
+FQUANTA=0; trace +0x8 per call (add the pcs to fixup_fps60_float_trace.py) -> spin vs real time must match a30 in the fix arm.
+Done = hangar spin rate-independent or classified retail-acceptable with numbers; then take the ladder's next rung (G3 in-flight
+frame diffs vs retail or G5).

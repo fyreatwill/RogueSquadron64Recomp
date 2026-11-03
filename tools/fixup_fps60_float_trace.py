@@ -44,6 +44,28 @@ for p in sorted(base.glob("funcs_*.c")):
         if DECL not in s:
             s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + DECL, 1)
         p.write_text(s)
+# s6828: the a1 step dt passed to updatePlayerVehicleByControlMode at each of its 5 call sites (addr = call-site pc),
+# recorded after the mfc1 so it shows the value actually passed (fixup_fps60_float_quanta.py may rewrite it).
+CALLERS = ("8004EF38", "8004F160", "8004F990", "8004FA54", "8004FB24")
+ctag = "/* PATCH: s6828 vehicle-step caller trace */"
+ncall = 0
+for p in sorted(base.glob("funcs_*.c")):
+    s = p.read_text(); ch = False
+    for c in CALLERS:
+        com = f"    // 0x{c}: mfc1        $a1, $f20\n"
+        if com not in s:
+            continue
+        i = s.index(com) + len(com); j = s.index("\n", i) + 1
+        ncall += 1
+        if ctag in s[j:s.index("\n", j) + 1]:
+            continue
+        s = s[:j] + f"    rs64_tctr(rdram, 0x{c}u, 0x{c}u, (int32_t)ctx->r5); {ctag}\n" + s[j:]; ch = True
+    if ch:
+        if DECL not in s:
+            s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + DECL, 1)
+        p.write_text(s)
+if ncall != len(CALLERS):
+    sys.exit(f"s6828 caller trace: {ncall}/{len(CALLERS)} call sites found")
 miss = {pc for _, pc in want} - hooked
 if len(miss) > len(want) // 10:
     sys.exit(f"s6826 float trace: {len(miss)}/{len(want)} sites not hooked")

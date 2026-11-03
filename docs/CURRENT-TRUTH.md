@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6827 (2026-11-03).
+Compact operational handoff, as of Session 6828 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -456,9 +456,16 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    damping; alpha +0x44 -= 512*dt) -> pow(1.1, dt*30); computeRandomizedOrientationFrame (executeActorType1Effect wobble)
    phases +0x8C/+0xA4 -> step*dt*30. One build lvl14 fix/off: dR (lrR for the scale) 0.50 fix / 1.00 off on all 4, controls
    0.50 (dt) / 1.00 (int) in both; lvl2 a30 vs fix: 0.49-0.51 on all 4, no other site dR>=0.8 with ex x2. Classified benign:
-   timeSnapshotFiller 0x8012A8F4 (sample count of a running average). Left: hangarVehicleDisplay -= 0.00125 (tilt decay,
-   runs outside the mission tick, rs64_tick_dt not captured there), updatePlayerVehicleByControlMode 0x8004D7CC dR 2.49
-   (mixed, path-dependent). Guided-motion fix still single-level (no guided missiles on lvl2).
+   timeSnapshotFiller 0x8012A8F4 (sample count of a running average). Guided-motion fix still single-level.
+   **s6828 MISSION FLOAT-QUANTA CLASS CLOSED.** updatePlayerVehicleByControlMode (0x8004D2B0) integrates speed/position with its
+   a1 step dt. Caller trace (ROGUESQ_TICK_TRACE, pc = call site, v = a1) across 5 arms: the 3 destroyEffectObjectTypeNpcSlots
+   callers (0x8004F990/FA54/FB24, ~98% of calls) pass the real tick dt (a1/tick dt 1.000 at a30 and FPS60, lvl14 + lvl2) ->
+   0x8004D7CC is dt-scaled; its lvl14 dR 1.41-2.59 is direction/path mixing (lvl2 0.50 = control 0x800EFE3C 0.50). The other 2
+   callers (releaseEffectObjectNpcSlots 0x8004EF38, ...Variant 0x8004F160) pass a CONSTANT 1/30 (rodata 0x8003A9AC/B0):
+   per-tick at FPS60 (off arm lvl14: 3 calls, a1/tick dt 2.000) -> FIXED a1 = 1/30*k in fixup_fps60_float_quanta.py (same
+   switch). That fix is static-only: 0 calls in both fix arms (rare path). Classified, not fixed: hangarVehicleDisplayNpcHandler
+   0x8/0xC = stick-driven ship-spin velocity, += stick*const AND decay per call, clamped -> at FPS60 the hangar ship spins up and
+   settles 2x faster (equilibrium and clamp unchanged). Hangar has no captured dt (rs64_tick_dt is the mission tick's) -> NEXT.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

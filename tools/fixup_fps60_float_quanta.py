@@ -16,6 +16,12 @@ s6827 adds (same k, same switch):
   computeRandomizedOrientationFrame 0x800F3730  effect orientation phase +0x8C += +0x48*0.25*+0x74 per tick (to 1.0)
                                     0x800F3914  effect orientation phase +0xA4 += +0x78 per tick (to 1.0)
                                               (executeActorType1Effect wobble ran at 2x frequency at FPS60)
+s6828 adds (same k, same switch): two of the five updatePlayerVehicleByControlMode (0x8004D2B0) callers pass a CONSTANT
+step dt of 1/30 s (rodata 0x8003A9AC / 0x8003A9B0) as a1, which the callee multiplies into speed ramp (+0x98 +=
++0x9C*a1) and position (+0x10/14/18 += speed*a1*dir):
+  releaseEffectObjectNpcSlots        0x8004EF38  mfc1 a1, f20 (f20 = 1/30)  -> a1 = 1/30 * k
+  releaseEffectObjectNpcSlotsVariant 0x8004F160  mfc1 a1, f20 (f20 = 1/30)  -> a1 = 1/30 * k
+The other three (destroyEffectObjectTypeNpcSlots 0x8004F990/FA54/FB24) pass their caller's f12 dt and are left alone.
 Classified, left alone: timeSnapshotFiller 0x8000BD88 (0x8012A8F4 += 1 is the sample count of a running average whose
 sum is accumulated per call too = benign), hangarVehicleDisplayNpcHandler 0x800C6C9C/CEC (hangar tilt decay, runs
 outside the mission tick where rs64_tick_dt is not captured).
@@ -44,6 +50,10 @@ SITES = [  # (comment line, old C, new C)
      "    ctx->f2.fl = ctx->f2.fl + ctx->f0.fl * rs64_fq_k(); " + TAG + "\n"),
     ("    // 0x800F3914: add.s       $f2, $f2, $f0\n", "    ctx->f2.fl = ctx->f2.fl + ctx->f0.fl;\n",
      "    ctx->f2.fl = ctx->f2.fl + ctx->f0.fl * rs64_fq_k(); " + TAG + "\n"),
+    ("    // 0x8004EF38: mfc1        $a1, $f20\n", "    ctx->r5 = (int32_t)ctx->f20.u32l;\n",
+     "    { float a1 = ctx->f20.fl * rs64_fq_k(); uint32_t u; __builtin_memcpy(&u, &a1, 4); ctx->r5 = (int32_t)u; } " + TAG + "\n"),
+    ("    // 0x8004F160: mfc1        $a1, $f20\n", "    ctx->r5 = (int32_t)ctx->f20.u32l;\n",
+     "    { float a1 = ctx->f20.fl * rs64_fq_k(); uint32_t u; __builtin_memcpy(&u, &a1, 4); ctx->r5 = (int32_t)u; } " + TAG + "\n"),
 ]
 done = 0
 for p in sorted(base.glob("funcs_*.c")):

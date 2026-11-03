@@ -180112,3 +180112,31 @@ Rules out: the 4 named s6826 quanta as remaining FPS60 rate defects. Open: hanga
 Verdict: the same-build fix/off arms (0.50 vs 1.00, controls fixed) select H-quantum + H-cosmetic for the particle-scale and
 effect-wobble sites and refute H-benign for them; timeSnapshotFiller selects H-benign. This is a code fix (behaviour change
 under FPS60), not instrumentation. Next discriminator: operand taint of 0x8004D7CC (H-dt vs H-quantum, NEXT.md).
+
+## Session 6828 (2026-11-03) — G1e FPS60 float quanta: 0x8004D7CC is dt-scaled (3 hot callers pass tick dt); 2 rare callers passed constant 1/30 -> FIXED; hangar spin classified; mission float-quanta class closed
+Unit (NEXT.md, HYPOTHESIS-ID g3-fps60-float-quanta): classify updatePlayerVehicleByControlMode 0x8004D7CC (+0x18, dR 2.49 lvl14)
+and the hangar decay, then close the class.
+Static: 0x8004D2B0 takes a1 -> f20 = step dt; speed +0x98 moves toward target by at most +0x9C*f20 and position +0x10/14/18 +=
+speed*f20*dir (0x8004D784-D7D4). Five callers: releaseEffectObjectNpcSlots 0x8004EF38 and releaseEffectObjectNpcSlotsVariant
+0x8004F160 load a1 from rodata 0x8003A9AC / 0x8003A9B0 = 1/30 (read from roguesquadron.elf); destroyEffectObjectTypeNpcSlots
+0x8004F990/FA54/FB24 pass their own f12 (from refreshAllSceneNodeInverseTransforms).
+Change (one build): tools/fixup_fps60_float_trace.py records a1 at all 5 call sites (pc = call site) into ROGUESQ_TICK_TRACE
+(diagnostic, after the mfc1 so it shows the value actually passed); tools/fixup_fps60_float_quanta.py scales the two constant
+callers' a1 by k = dt*30 under ROGUESQ_FPS60 (ROGUESQ_FPS60_FQUANTA=0 restores, retail unchanged).
+Ran (scratch/s6828/arms.sh, sequential 240 s arms, rc=0 crash=0 all): a30_lvl14, fix_lvl14, off_lvl14, fix_lvl2, off_lvl2;
+analyzer scratch/s6828/callers.py.
+- Positive control: destroy callers fire in every arm (a30 lvl14 38/game s, FPS60 ~73/game s, lvl2 ~365/game s incl. a burst).
+- destroy callers a1/tick dt median 1.000 in all 5 arms (a1 = 0.03333 at a30, 0.01667 at FPS60) -> H-dt for the hot path.
+- Rates (g3_float_quanta_rates.py --sites): lvl2 a30 vs fix 0x8004D794/D7CC dR 0.50, D7B0 0.55, control updateNpcEventTimer 0.50;
+  lvl14 a30 vs off D794 0.56, D7CC 1.41 (lrR 0.63) - with dt proven passed, the lvl14 D7CC ratio is direction (dir.z) mixing of
+  different flight paths, not a quantum.
+- Constant callers: a30 lvl14 releaseVar 2 calls (a1 = tick dt), off_lvl14 releaseVar 3 calls a1/tick dt 2.000 (= per-tick 1/30
+  at 60 Hz: the defect exists on that path), fix arms 0 calls on lvl14 and lvl2. release (0x8004EF38) 0 calls in all arms.
+Hangar (static): hangarVehicleDisplayNpcHandler 0x800C6BA4-0x800C6CE8: +0x8 += stickX*c (0x800A6924), +0xC += stickY*c
+(0x800A692C), both clamped, then decayed by constants (0x800A693C/40, 0x6944..) toward 0 every call; s6791 shows the hangar
+does run 60 updates/s at FPS60, so the ship spin-up and settle are 2x faster in real time. Visual only; no hangar dt captured.
+VERDICT: selects H-dt for 0x8004D7CC (refutes H-quantum on the hot path: two lines, static operand taint + runtime a1 = tick dt
+in 5 arms, lvl2 dR 0.50); selects H-quantum for the two constant-1/30 callers (runtime a1/tick dt 2.000 in the off arm +
+static rodata) -> FIXED, but the fix itself is unexercised at runtime (0 hits in the fix arms; single-source static). Mission
+float-quanta class CLOSED (253 traced sites all fixed or classified). Open: hangar spin needs a hangar dt (NEXT).
+ORIGIN: n/a (rate fix, not a mitigation; writer = the two callers' constant 1/30 a1).
