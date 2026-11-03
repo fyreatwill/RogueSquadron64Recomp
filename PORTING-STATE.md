@@ -179970,3 +179970,6 @@ the revert restores retail code at those three sites.
 Verdict: the s6821 static per-tick classification was wrong for 3 of the 5 newly exercised sites, so the 7 never-exercised
 whitelisted sites are suspect too. Next: static re-read of the 7 for an event gate around the decrement (drop any gated
 one), and a longer-hold census on lvl6/11/16/17 (start presses after the intro cinematic) to exercise them.
+Verdict line: for 800DAB64 / 800E32CC / 800E1E28 selects H-event (executions per game second equal at 30 Hz and FPS60) and
+refutes H-tick (the s6821 static classification); for 80044938 selects H-tick. Next discriminator: the per-site event
+gate in the static read of the 7 unexercised sites, then ex/gs a30 vs FPS60 on a level that runs them (NEXT.md).
