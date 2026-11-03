@@ -28,8 +28,6 @@ FIX = {
     0x800B41B8: "accumulateShipThrottleCharge 0x800CC860 count-up <7",
     0x800F8708: "executeActorType4Effect +0x92 count-up <20",
     0x80044938: "cutsceneActorNpcHandler +0x108 count-up <5",
-    0x800BC778: "computeTieInterceptorOrientation +0x15C count-up <3",
-    0x800B5350: "playXwingEngineSound +0x15C count-up <3",
     0x800AF5A0: "cinematicStageAdvancer +0x938 count-up <7",
     0x800FB4F8: "tickMissionTransitionAndTeardown countdown",
 }
@@ -40,7 +38,10 @@ FIX = {
 # (attachedAudioVisualEmitterNpcHandler +0xB4) decrement only when a float interval timer (+0x84 / +0xB0, minus the
 # handler's dt argument *a2, re-armed to a random interval) expires - burst counts of the 800DAB64 kind. Reverted to 1.
 # The other five decrement on every call, behind state/button/flag gates only, and keep the step (single-source).
-UNFIX = {0x800DAB64, 0x800E32CC, 0x800E1E28, 0x800C96B8, 0x800806AC}
+# s6824: 800B5350 / 800BC778 (+0x15C) are gated by config +0x1E = C-down (0x0004), which the game's button word
+# 0x80130B88 carries for ONE tick per press (edge), so they run once per press at both rates (lvl2 a30 2/2, FPS60 2/2);
+# the game-time step was 0 on every other FPS60 tick and dropped those presses. Reverted to 1.
+UNFIX = {0x800DAB64, 0x800E32CC, 0x800E1E28, 0x800C96B8, 0x800806AC, 0x800B5350, 0x800BC778}
 DECL = ("extern void rs64_tctr(uint8_t* rdram, uint32_t pc, uint32_t addr, int32_t v); extern int rs64_tick_step(void); "
         + TAG + "\n")
 DEF = ("extern char* getenv(const char*); "
@@ -52,16 +53,21 @@ DEF = ("extern char* getenv(const char*); "
        "if (rs64_tt_on) rs64_tt_rec(pc, addr, (uint32_t)v); } "
        "int rs64_tick_step(void) { if (rs64_tk_in) return rs64_tk_step; if (rs64_tt_on > 0) rs64_tt_rec(1, (uint32_t)rs64_tk_step, 0); return 1; } "
        "static void rs64_tick_end(void) { rs64_tk_in = 0; } "
-       "static void rs64_tick_begin(float dt, float t) { "
+       "static void rs64_tick_begin(uint8_t* rdram, float dt, float t) { "
        "if (rs64_tk_on < 0) { const char* f = getenv(\"ROGUESQ_FPS60\"); const char* d = getenv(\"ROGUESQ_FPS60_TICKS\"); "
        "rs64_tk_on = f && *f && *f != '0' && !(d && *d == '0'); } "
        "if (rs64_tk_on && dt > 0.0f && dt < (1.0f / 30.0f)) { rs64_tk_acc += dt * 30.0f; rs64_tk_step = 0; "
        "while (rs64_tk_acc >= 0.999f) { rs64_tk_acc -= 1.0f; rs64_tk_step++; } } else { rs64_tk_acc = 0.0f; rs64_tk_step = 1; } "
        "rs64_tk_in = 1; rs64_tt_tick++; if (rs64_tt_on < 0) rs64_tctr(0, 0xFFFFFFFFu, 0, 0); "
-       "if (rs64_tt_on) { union { float f; uint32_t u; } a, b; a.f = t; b.f = dt; rs64_tt_rec(0, a.u, b.u); fflush(rs64_tt_f); } } "
+       "if (rs64_tt_on) { union { float f; uint32_t u; } a, b; a.f = t; b.f = dt; rs64_tt_rec(0, a.u, b.u); "
+       "rs64_tt_rec(2, MEM_HU(0, (gpr)(int32_t)0x80130B88), ((uint32_t)MEM_HU(0x1E, (gpr)(int32_t)0x8010BE18) << 16) "
+       "| MEM_HU(0x1A, (gpr)(int32_t)0x8010BE18)); fflush(rs64_tt_f); } } "
        + TAG + "\n")
 DT_SITE = "    // 0x800FA90C: swc1        $f2, 0xBA4($a0)\n"
-DT_HOOK = "    rs64_tick_begin(ctx->f20.fl, ctx->f2.fl); " + TAG + "\n"
+DT_HOOK = "    rs64_tick_begin(rdram, ctx->f20.fl, ctx->f2.fl); " + TAG + "\n"
+# s6824: pre-s6824 hook (no rdram); each tick now also records row pc=2: player-0 held buttons (0x80130B88) and the
+# player-0 config halfwords +0x1E (hi) / +0x1A (lo) of 0x8010BE18, so a button-gated site can be tied to its button.
+DT_HOOK_OLD = "    rs64_tick_begin(ctx->f20.fl, ctx->f2.fl); " + TAG + "\n"
 END_SITE = "    // 0x800FADE4: jr          $ra\n"
 END_HOOK = "    rs64_tick_end(); " + TAG + "\n"
 DEF_OLD = re.compile(r"^extern char\* getenv\(const char\*\); static FILE\* rs64_tt_f;.*\n", re.M)
@@ -121,6 +127,7 @@ for p in sorted(base.glob("funcs_*.c")):
         i += 1
     s = "".join(out)
     if DT_SITE in s:
+        s = s.replace(DT_HOOK_OLD, "")
         if DT_HOOK not in s:
             s = s.replace(DT_SITE, DT_HOOK + DT_SITE, 1); changed = True
         if END_SITE not in s:

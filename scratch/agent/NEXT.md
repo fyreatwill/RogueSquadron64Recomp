@@ -1,15 +1,13 @@
-# NEXT: FPS60 tick timers - exercise the last kept sites (button-held +0x15C, lvl16/17)
+# NEXT: FPS60 tick timers - last 3 kept-but-unexercised sites, then close the class
 HYPOTHESIS-ID: g3-fps60-tick-timers
 
-State (s6823): tools/fixup_fps60_ticks.py steps 10 sites; UNFIX = 800DAB64, 800E32CC, 800E1E28 (s6822 runtime) +
-800C96B8, 800806AC (s6823 static: behind dt interval timers). Kept but never exercised: 8007CD50, 800B5350, 800BC778,
-800FB4F8; 800F8708 ran only in an FPS60 arm (8x at lvl11 t=110 s). scratch/s6823/census.sh (presses 6..121 s, 300 s)
-reaches flight on lvl6/11.
-Hypotheses per site: H-tick (keep step) / H-event (drop) / H-dead.
-Step 1: find which button the player-config +0x1E mask is (table 0x8010BE18 stride 0x24, field +0x1E vs fire +0x1A,
-secondary +0x1D) from the controller-config init; add it to the AP hold (g3_port_capture.sh AP syntax) so 800B5350
-runs on an X-wing level (lvl2). Step 2: census.sh with EEPS=lvl16/lvl17 eeps (scratch/s6769, s6770). Step 3: for each
-site that runs, a30 vs b60fix ex/gs on the same level (tools/g3_tick_countdown_span.py); equal ex/gs => event-gated
-=> UNFIX. Positive control: 8006C024 (frame-locked, ex/gs ~2x at FPS60 off-step).
-If after this the remaining sites still never run, close the class: 10 sites kept, document the unexercised ones as
-static-only, and move to the next G-ladder rung (G3e/G2b/G3f per CURRENT-TRUTH).
+State (s6824): tools/fixup_fps60_ticks.py steps 8 sites. UNFIX = 800DAB64, 800E32CC, 800E1E28, 800C96B8, 800806AC,
+800B5350, 800BC778 (C-down press edge, s6824). Tick trace rows pc=2 now carry the button word 0x80130B88 + config.
+Unexercised: 8007CD50 (npcTexturedEffectUpdateWithSlotChain +0xA0), 800FB4F8 (tickMissionTransitionAndTeardown),
+800F8708 (executeActorType4Effect +0x92, ran 8x on lvl11 FPS60 only).
+Hypotheses per site: H-tick (keep) / H-event (UNFIX) / H-dead.
+Step 1: scratch/s6823/census.sh with EEPS="scratch/s6769/lvl16.eep scratch/s6770/lvl17.eep" (FPS60, 300 s) and the same
+for a30 (drop ROGUESQ_FPS60). tools/g3_tick_site_census.py + g3_tick_timer_durations.py on the dumps.
+Step 2: for any site that runs in both arms, ex/gs a30 vs FPS60: 2x => per tick (keep), equal => event (UNFIX). Positive
+control 8006C024 (2.0x in s6824). 800FB4F8 = mission teardown: let a mission end (lives cap ROGUESQ_LIVES_CAP=1 + death).
+If none runs: close the class (8 kept; list the 3 as static-only single-source) and take the next G-ladder rung.

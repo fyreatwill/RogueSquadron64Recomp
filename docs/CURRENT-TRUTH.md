@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6822 (2026-11-02).
+Compact operational handoff, as of Session 6824 (2026-11-02).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6759 maintenance)").
 
@@ -435,6 +435,11 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    interval timer expires -> UNFIX (FIX now 10). Other 5 per-call behind state/button gates -> kept (single-source).
    Presses to 121 s (scratch/s6823/census.sh) get lvl6/11 into flight; 800F8708 ran 8x on lvl11 FPS60 only (a30 arm took
    another path) - unclassified at runtime. Never hit yet: 8007CD50, 800B5350/800BC778 (need +0x1E button held), 800FB4F8.
+   s6824 FIXED (FPS60 C-down): config +0x1E = 0x0004 = C-DOWN; the game's button word 0x80130B88 carries it for ONE tick
+   per press, so 800B5350 / 800BC778 (+0x15C 0..2 cycle) run once per PRESS (lvl2 a30 2/2, FPS60 2/2) = H-event, and the
+   s6821 step (0 on alternate FPS60 ticks) swallowed presses: lvl2 FPS60 16 C-down presses, fix arm 0/13 advanced, UNFIX
+   arm 13/13 (0,1,2,...) = a30 (tools/g3_press_cycle.py; tick trace now logs held word + config per tick). FIX now 8.
+   Left unexercised: 8007CD50, 800FB4F8, 800F8708 (lvl11 FPS60 only).
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

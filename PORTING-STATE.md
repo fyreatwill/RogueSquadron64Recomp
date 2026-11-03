@@ -180002,3 +180002,25 @@ two new UNFIX sites (their revert is static-only, single-source, but it restores
 Verdict line: for 800C96B8 / 800806AC selects H-event (static: decrement behind a dt-driven interval timer) and refutes the
 s6821 H-tick whitelist; for the other five selects H-tick statically (single-source). Next discriminator: hold the +0x1E
 button (800B5350) and lvl16/17 census with the long press recipe for the rest.
+
+## Session 6824 (2026-11-02) — G3 FPS60 tick timers: the +0x1E button is C-DOWN, an edge (one tick per press); 800B5350 / 800BC778 run once per press, and the s6821 game-time step swallowed FPS60 C-down presses (0/13 advanced) -> UNFIX (13/13, = 30 Hz); FIX 10 -> 8
+Work unit: NEXT.md step 1 (identify the +0x1E button, exercise 800B5350), one instrument, one build, three runs.
+Instrument: tools/fixup_fps60_ticks.py rs64_tick_begin now takes rdram and writes, every mission tick, a row pc=2 =
+(player-0 button word 0x80130B88, config 0x8010BE18 +0x1E << 16 | +0x1A) into ROGUESQ_TICK_TRACE (old hook line replaced
+on re-run). New tools/g3_press_cycle.py: per press tick, did the site run and what did it load.
+Run 1 (scratch/s6824/btn.sh, lvl2 eep s6748, s6822 start schedule then z r l b a cup cdown cleft cright each held 1 s,
+two rounds; arms b60fix (FPS60) and a30; rc=0 crash=0 both): config +0x1E = 0x0004 (C-down), +0x1A = 0x4000 (B) on every
+tick. 800B5350 ran exactly 2x per arm, both on ticks whose word carried 0x4 = the two C-down presses; the word held 0x4 for
+only 2 ticks per 1 s hold in both arms (C buttons / L are edges in that word; B, A, R, CL held ~1 s). So the +0x15C cycle
+is per PRESS, not per tick: executions per press 1 at 30 Hz and at FPS60 -> H-event. 800BC778 is the same idiom (same
+s4/s3 tables, same +0x1E test, computeTieInterceptorOrientation) -> same class by static read (single-source, not run).
+Positive control 8006C024 (frame-locked): 7404 ex FPS60 vs 3654 a30 over 115 game s (2.0x) in the same runs.
+Run 2 (scratch/s6824/cdown.sh, lvl2 FPS60, 16 C-down presses 4.3 s apart, 300 ms hold), fix build vs UNFIX build:
+  fix   : 14 press ticks in flight, site ran 14, loaded +0x15C = 0 every time -> advanced 0/13 (step 0 on the press tick).
+  unfix : 14 press ticks, site ran 14, loaded 0,1,2,0,1,2,... -> advanced 13/13 (= a30 behaviour, run 1).
+(First cdown attempt fed zsh float times that the autopilot read as an empty key -> START presses; re-run with tenths.)
+Change: FIX -= {800B5350, 800BC778}, UNFIX += both (retail +1 restored); fixup reports 8 timers stepped, rebuilt.
+ORIGIN: our own s6821 whitelist; the game's code is per-press and correct at any rate. Owner-visible effect of the bug:
+under FPS60 the C-down cycle (3-state view/mode toggle on the X-wing and TIE handlers) could ignore every press.
+Verdict line: for 800B5350 / 800BC778 selects H-event (runtime, same-run 30 Hz + FPS60 control) and refutes H-tick.
+Remaining kept-unexercised FIX sites: 8007CD50, 800FB4F8, 800F8708 (FPS60-only on lvl11). Next: lvl16/17 census.
