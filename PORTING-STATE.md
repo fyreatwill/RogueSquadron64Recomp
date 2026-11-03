@@ -179497,3 +179497,4 @@ ORIGIN: the writer of the gap is ultramodern's cooperative scheduler (no preempt
 threads would show the same signature (token held by a low-pri id across a gap) in g3_title_gap.py.
 Queued: scratch/agent/soak_queue/s6808_preempt_lvl1_fps60.sh (lvl1 FPS60 300 s hold + AI trace).
 Rules out: H-vimode, H-host for the title gaps.
+Verdict: the per-VI run-token stamp + host sample selects H-sched and refutes H-vimode and H-host; the same-build PREEMPT_POINT A/B closes the title gap with the root cause (no preemption between OS calls) fixed. Next discriminator: g3-preempt-audit (scratch/agent/NEXT.md).
