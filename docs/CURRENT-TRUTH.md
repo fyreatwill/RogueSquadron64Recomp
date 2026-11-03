@@ -530,7 +530,11 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    as a framebuffer (retail does the same at 0x790000), and initVideoSubsystem's rs_memset (0x8001A2E4) clears it with the
    native w*h*bpp = 0x70000, half of 1024x448: the first hangar VI showed flight Z as colour under a 50.0% black top.
    Fix apply_s6841_ivsclear: under ROGUESQ_FB_WIDTH>512 the clear uses wv*h*bpp (=0 restores; ROGUESQ_LOG_IVS_CLEAR=1 logs).
-   Same-build A/B: off 1 striped frame, on 0. Sheet docs/owner_sheet_s6841_abort_21x9.png. NEXT: 21:9 lacks the wipe.
+   Same-build A/B: off 1 striped frame, on 0. Sheet docs/owner_sheet_s6841_abort_21x9.png.
+   **s6842 abort wipe source (open).** The 4:3 right-to-left soft black wipe is NOT in the captured gfx RDP stream
+   (draw classes constant across VI 6731-6745; the 112 64x32 texrects after it are the hangar backdrop, correct at 21:9).
+   RT64 VI ignores hStart/hEnd. Retail oracle: no CPU-visible writer at the 512 flight origins (single-source, no in-phase
+   control). NEXT: port RDRAM fb dumps on mode 0x80128DA0 to split H-rdram (other task/DMA) vs RT64-side.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

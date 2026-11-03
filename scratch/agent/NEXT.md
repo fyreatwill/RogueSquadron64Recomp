@@ -1,25 +1,22 @@
-# NEXT: 21:9 abort -> hangar transition lacks retail's right-to-left black wipe
+# NEXT: where do the abort-wipe pixels come from? (21:9 lacks retail's right-to-left black wipe)
 HYPOTHESIS-ID: g3-wide-abort-wipe
 
-Context: s6841 fixed the striped depth frame (initVideoSubsystem half clear). Same runs show that after ABORT LEVEL -> YES
-retail and port 4:3 draw: emblem spins away -> flight -> a soft black wipe sweeping in from the right -> black -> hangar
-(scratch/s6841/retail_trans.png, p43_trans.png). At 21:9 the emblem spin is right, but the flight picture brightens and
-cuts to black with no wipe (scratch/s6841/f1_yes.png, p21/p21x likewise).
+State (s6842): the wipe is NOT in the captured gfx RDP stream (scratch/s6842/cmds.py on scratch/s6841/p43/port.bin,
+VI 6731-6745 constant draw classes); RT64's VI ignores hStart/hEnd; retail oracle saw no CPU-visible writes into
+0x690000-0x700000 at the 512-wide flight origins (single-source). Yet retail RDRAM dumps and port 4:3 window grabs show it.
 
 Hypotheses:
-- H-native-x: the wipe is a texrect/fill or a quad in native 512 screen coords; at 1024 wide it lands off-screen or is
-  clipped by a native scissor (s6694 scissor patch scope).
-- H-tex: the wipe is a screen-space texture effect (copy of the framebuffer / colour-image-as-texture at 512 wide); at
-  1024 RT64 samples the wrong span, which brightens instead of darkening.
-- H-blend: the wipe uses a fog/prim colour ramp that our wide path or EXACT_EDGES changes (check with plain 21:9 = p21).
+- H-rdram: the pixels are written into RDRAM by something outside the captured gfx stream (a non-gfx RSP task / DMA),
+  and RT64 picks up the RDRAM change.
+- H-capture: port.bin misses a gfx submit (look at [dpc-merge] in the window; s6841 p43 run.log ~line 187100).
+- H-rt64: RDRAM is clean in the port and RT64 synthesises the wipe (unlikely; would not explain retail RDRAM).
 
-Discriminator, OFFLINE first (capture once, analyze many): the RDP streams already exist:
-  scratch/s6841/p43/port.bin (4:3), scratch/s6841/p21x/port.bin and p21/port.bin (21:9), VI-stamped.
-  The wipe frames are the last ~30 flight frames before the first texrect-only hangar frame (p43 frames 1121-1150 in
-  scratch/s6841/p43_frames.txt carry 'fill 5'; p21x 1103-1129 also 'fill 5'). Dump every non-triangle command in
-  those frames (fill/texrect coords, scissor, SetPrimColor/EnvColor/Fog, SetTextureImage address/width, other modes)
-  for both aspects and diff. A wipe whose x edge moves frame to frame is the thing to find; the fill-5 vs fill-4 count
-  change is a lead (the 5th fill appears exactly in the wipe window).
-Outcomes: coords in 0..511 at 21:9 -> H-native-x (widen the wipe's x range in the game code that builds it);
-texture-image = a framebuffer address -> H-tex; colours differ -> H-blend. Then one fix + same-build A/B like s6841.
-Tools: scratch/s6841/frames.py (per-frame summary), tools/g3_magenta_scan.py. Defaults stay retail.
+Discriminator, ONE port 4:3 run (scratch/s6841/port_abort.sh p43b "<env>"), env:
+  ROGUESQ_FB_DUMP_DIR=$PWD/scratch/s6843/fb ROGUESQ_FB_DUMP_MODE=80128DA0 ROGUESQ_FB_DUMP_EPOCH_N=40 ROGUESQ_FB_DUMP_VI=1
+  ROGUESQ_VI_EXTENT_PROBE=1
+  plus the same RS64_RDP_BIN_PORT capture. Positive control: an earlier flight-frame dump (mode 0x80128E40, or
+  ROGUESQ_FB_DUMP_EVERY) must show the terrain. Outcomes: wipe present in RDRAM dumps but absent in port.bin -> H-rdram,
+  then log every RSP task (type, ucode, out ptr) between VI 6731 and 6747; wipe absent in RDRAM -> H-rt64; a missed
+  submit in port.bin around [dpc-merge] -> H-capture. Then the same at 21:9 (ROGUESQ_ASPECT=21:9) to see where the
+  native-512 writer lands (likely the stale 0x620000/0x690000 buffers instead of 0x8F5000/0x9D5000).
+Rule 8: this slug has 1 non-discriminating iteration (s6842 narrowed but did not select).

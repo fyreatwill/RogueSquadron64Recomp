@@ -180562,3 +180562,30 @@ instead; scratch/s6841/f1_yes.png vs p43_trans.png). Offline: compare the wipe f
 
 ORIGIN: the writer is the game's own initVideoSubsystem clear sized from the native 512 width; the value is legitimate
 for retail and wrong only because G1d widens the buffer. The fix widens that one length; not a guard.
+
+## Session 6842 (2026-11-03) — abort wipe is NOT in the captured gfx RDP stream (H-native-x / H-blend / H-tex refuted offline); retail oracle: no CPU-visible writer into the flight fb during 512-wide phases (single-source)
+
+Work unit: NEXT g3-wide-abort-wipe (21:9 ABORT LEVEL -> YES lacks retail's right-to-left soft black wipe).
+Offline, capture-once (s6841 port.bin streams), new tool scratch/s6842/cmds.py (per-VI non-triangle RDP command dump:
+fill/texrect coords, scissor, prim/env/fog/blend, combine, other modes, ci/zi/ti; optional per-triangle y/x extents):
+- 4:3 p43 VI 6700-6750: the wipe frames (VI 6731-6745: emblem classes gone, flight + HUD only) carry NO new draw. Per
+  (combine, othermode) triangle/texrect class counts are constant across the wipe except the emblem (18ACC0/182CC0
+  CB024000 -> 0 at 6733) and the radar fade (8 tris 127E24/FFFFF9FC, prim alpha 0x6E -> 0x08 -> none). Fill rects are
+  only the Z/colour clears (fillc FFFC / CE29). No texrect or triangle reaches the right edge with a moving x.
+  -> H-native-x and H-blend (wipe = RDP quad / colour ramp) refuted for the captured stream.
+- The 112-texrect frames after the last flight frame (4:3 x 0..512, 21:9 x 256..768, ti 0x631B40.. / 0x951B40.., 64x32
+  tiles) are the pre-rendered HANGAR BACKDROP, not a framebuffer copy -> H-tex refuted (and correct at 21:9: pillarboxed).
+- RT64's VI path ignores hStart/hEnd (VI::viewRectangle/cropRectangle are constant full-rect; VideoInterfacePS blacks only
+  outside fbSize()), so a VI hEnd sweep could not draw the soft edge either — yet port 4:3 window grabs DO show it.
+- Retail oracle (new recipe scratch/s6842/retail_watch.sh, same s6841 route, 160 s, write watches 0x620000:0x690000 and
+  0x690000:0x700000, phase histograms at the four 512-wide flight VI origins 0x620400/0x620800/0x690400/0x690800):
+  watch 1 lifetime writer-pc list 50+ PCs (overlay/heap use before flight, overflow 205367), phase histograms EMPTY at all
+  four flight origins. Watch 0 hit its 10000-write auto-removal at VI 89 (boot CPU clear PC 0x800078EC) — that proves the
+  write hook fires, but there is NO in-phase positive control, so "no CPU writer during the wipe" is single-source and
+  only as strong as the hook (mupen's debugger does not see RDP/RSP-DMA writes).
+Ruled out: wipe as an RDP fill/texrect/tri in the gfx stream; wipe as a framebuffer-copy texture; CPU stores (weak).
+Still open: H-rdram (the wipe pixels are produced outside the captured gfx stream — another RSP task / DMA, or an
+RDRAM path RT64 re-uploads), H-capture (port.bin misses a submit: [dpc-merge] lines appear in the window). Next unit:
+port 4:3 RDRAM fb dumps keyed on the wipe-end VI mode (ROGUESQ_FB_DUMP_MODE=80128DA0 = osViSetMode #806-808) — if
+RDRAM holds the wipe while port.bin does not, find the producing task; if RDRAM is clean, the wipe is RT64-side.
+No code change this session (diagnostic tools only: scratch/s6842/cmds.py, retail_watch.sh).
