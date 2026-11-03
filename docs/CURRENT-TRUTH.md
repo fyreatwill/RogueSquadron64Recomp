@@ -164,7 +164,10 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   fast paths ~14%. **CLOSED s6776:** lvl5 FPS60 holds ~60 game fps at dd1-dd4 (tasks/s 60.3/60.3/60.3/60.1, dense
   half 60.5/60.5/59.5/59.3; per-task ucode 1.48-2.45 ms, Gfx thread 9-15% busy; [g1b] tasks 59.4-59.5/s, vi 60.0;
   tools/g1e_dd_table.py). The older "dd2 ~48-50, dd3 ~47, dd4 ~44" (pre-s6713) is superseded. s6788: those dd>1 fps were measured with the
-  120-cell bypass cap, which drew less terrain than retail most of the time; re-measure on the s6788 bundle.
+  120-cell bypass cap, which drew less terrain than retail most of the time. **s6810 re-measure (current bundle, no
+  recipe logging, s6716 recipe lvl1 FPS60):** dd4 59.3 / dd1 59.5 game fps ([g1b] tasks/s), [g1e-split] 60.3/60.6, dd4
+  30.4k calls/task (2.6x s6776) at 5.4 ms ucode, Gfx 33% busy. Same binary + s6788 census/trace logging: dd4 48.8. The
+  s6788/s6789 "dd4 45.9 / 42.8 fps" were logging cost, not draw distance (superseded).
 - **G1c draw distance CLOSED s6703.** dd4 is the ceiling that adds terrain (lvl1/lvl5); dd8 sane after s6701
   (perspNorm centre-box) and s6702 (spill-arena leak in rs_free). Owner guide docs/DRAW-DISTANCE.md.
 - **G1d widescreen + G1f window fit CLOSED (s6688-s6735).** Window opens at the chosen aspect, fullscreen toggle,
@@ -178,6 +181,9 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 - Closed: M5 audio de-stubbing, M3 idiom audits, M6 endurance (s6442), G2 audio, G5 renaming. G4 crash hunting parked.
 
 ## Superseded conclusions — do not act on these
+
+- s6788/s6789 "dd4 lvl1 FPS60 runs at 45.9 / 42.8 game fps": believable because the same runs showed the bypass cap had
+  been hiding terrain (more terrain = more cost). s6810: those arms carried census + terrain-trace logging; clean dd4 = 59.3.
 - **(s6770 -> s6772)** "+0x39 bits 0x00200000 -> 16, 0x00400000 -> 17; +0x31=LEVEL selects bonus missions".
   Bits are 0x00100000/0x00200000/0x00400000 -> 16/17/18, and the game clamps +0x31 to 16 on load, so missions 18/19
   are reached only by moving the cursor. Believable because +0x31 selected missions 1-16 exactly and m17 = cursor 16.
@@ -294,7 +300,7 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   0 ucode-cap fires on drop frames). Uncapped accept: drops 47 -> 4-6, median 1407-1431, but 431 synthetic ucode-cap
   fires per run, so the dd>1 bundle now also sets ROGUESQ_UCODE_CAP=1048576 (fires 0). New dd>1 defaults in
   rs64_g1c_apply_dd_policy: ROGUESQ_BYPASS_MAXCELLS=-1, ROGUESQ_UCODE_CAP=1048576 (explicit env wins). Default-path
-  run: dd4 6 dips / dd3 0 in flight; game fps lvl1 dd4 45.9, dd3 48.2 (dd1 59.9) - the old dd4 "56-60 fps" was partly
+  run: dd4 6 dips / dd3 0 in flight; game fps lvl1 dd4 45.9, dd3 48.2 (dd1 59.9; s6810: logging-on figures, clean dd4 = 59.3) - the old dd4 "56-60 fps" was partly
   bought by drawing less than retail. RESIDUAL (NEXT): dd4 dips every ~481 VI (= the autopilot 8 s a/sl/a/sr cycle):
   kept cells decay ~2200 -> ~850 over 4-5 frames, then jump back, window constant. lvl5/lvl10 soaks queued (s6788_g3e_*).
   **s6789 residual NAMED + FIXED (sentinel collision, two lines):** (1) per-call reject reasons: on dip calls the 0x80042D64
@@ -305,7 +311,7 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   at dd>1 the low clamp is -127.0 (dd<=1 bit-identical; ROGUESQ_SPANSENT_FIX=0 opts out, ROGUESQ_SPANSENT_TOG=N same-run A/B).
   Same-run A/B lvl1 FPS60 dd4: fix-off blocks 10 kept-dips / 4 census drops, fix-on 0 / 0 (median spaneq 133 -> 0). Clean arms:
   dd4 0 and dd3 0 in-flight drops (pre-fix dd4 6, every ~481 VI); dd1 control has no in-flight dips (H-retail refuted for the
-  periodic dip). Cost: dd4 game fps 44.6 -> 42.8 (visible terrain now actually drawn). Remaining census "drops" are the mission
+  periodic dip). Cost (logging-on arms; clean dd4 = 59.3 fps, s6810): dd4 game fps 44.6 -> 42.8 (visible terrain now actually drawn). Remaining census "drops" are the mission
   intro cuts (VI ~3560/4057, tri=0, also in dd1). Prior s6788 lvl5/lvl10 dd4 soaks (pre-fix) showed 17/12 drops, many tri=0
   cut frames; post-fix soaks s6789_spansent_lvl5/10_dd4 folded s6790.
   **G3e CLOSED s6790.** Post-fix FPS60 dd4 300 s holds, 0 crash / 0 VI stall: lvl5 in-flight terrain drops (tx>0) 12 -> 0;
@@ -345,7 +351,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    s6809 audit CLOSED: hangar-entry/mission-load gaps (VI ~1958/~2507) = game thread spinning on anyAudioSlotActive
    (drainAudioAndFinalizeSpeechBuffer, gracefulMenuShutdown drain loops); preempt point added there -> lvl3 boot->flight
    0 post-boot empty-queue events (control PREEMPT_POINT=0: 3). Soak s6809_preempt2_lvl1_fps60 queued.
-   NEXT: G3 in-flight frame diffs vs retail on an unmatched level (lvl3).
+   s6810: soak s6809_preempt2_lvl1_fps60 clean (303 s, 0 stalls; AI qzero=1 only at boot, 0 after). lvl3 flight was
+   already matched s6777 (every mission 1-19 is). NEXT: G3 large fireball (destroyed vehicle) vs retail, uncovered s6747.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

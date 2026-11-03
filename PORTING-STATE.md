@@ -179525,3 +179525,35 @@ Queued: scratch/agent/soak_queue/s6809_preempt2_lvl1_fps60.sh (lvl1 FPS60 300 s 
 Rules out: H-none (two more gaps existed), H-other (both holders were the low-priority game thread spinning, no host block).
 Verdict: the host sample + run-token stamps select H-class and refute H-none/H-other; same-build PREEMPT_POINT A/B closes the
 boot->flight route at retail parity (max 2 VI after boot except the non-underrun 3-VI boot-screen gap @351).
+
+## Session 6810 (2026-11-02) — G1e dd4 re-measure: the s6788/s6789 "dd4 lvl1 FPS60 = 45.9 / 42.8 fps" was census+trace logging cost; clean dd4 holds 59.3 game fps (= dd1 59.5) while drawing 2.6x the s6776 ucode work; logging arm on the same binary 48.8
+
+HYPOTHESIS-ID: g1e-dd4-fps (closed: H-log selected).
+- Soak fold: s6809_preempt2_lvl1_fps60 (312 s, hold 303 s, alive, 0 VI stalls, 0 crashlines). tools/g2b_ai_scan.py on
+  scratch/s6809/soak_lvl1_ai.txt: qzero=1 in the boot w=320 window only, 0 in every later window (title, hangar, load,
+  303 s flight; maxgap 29.7-41.8 ms). Qualifies the s6808/s6809 preempt points over a long hold.
+- NEXT.md's unit (G3 lvl3 flight match vs retail) was already done in s6777 (pinned sim + frames, H-match; all missions
+  1-19 matched s6744-s6777). CURRENT-TRUTH's "matched so far: lvl1, lvl2, lvl9" line was stale. Took instead the one open
+  measurement in CURRENT-TRUTH: s6788/s6789 recorded owner settings (FPS60 + dd4, lvl1) at 45.9 -> 42.8 game fps after
+  the uncapped-bypass and spansent fixes, against s6776's ~60 on lvl5 with the capped bundle.
+- Hypotheses: H-ucode (uncapped dd4 terrain makes the gfx task cost exceed the frame), H-guest (game thread CPU-bound on
+  ~2200 terrain cells), H-log (the s6788/s6789 arms carried ROGUESQ_G3_CENSUS + G3E_TRACE + FB_HASH/TRICOUNT/DRAWN + FB
+  dumps every 120 VI). Discriminator: same binary (build 16:43 = s6809), same level 1, FPS60, dd4 with and without the
+  logging; dd1 clean control.
+- Runs (scratch/s6810/arms.zsh = s6716_bridge recipe, HOLD 150; scratch/s6810/logarm.zsh = s6788 arms + ROGUESQ_G1B=1):
+  | arm | [g1b] tasks/s mean (min) | vi | [g1e-split] fps | ucode ms/task (dense) | calls/task | Gfx busy |
+  | dd4 clean | 59.31 (37) | 59.99 | 60.3 | 5.44 (7.39) | 30393 | 0.33 |
+  | dd1 clean | 59.50 (37) | 60.00 | 60.6 | 2.34 (2.52) | 6697 | 0.14 |
+  | dd4 + s6788 logging | 48.8 (24) | 60.0 | - | - | - | - |
+  All alive 151 s, 0 VI stalls, 0 crashlines. The min-37 second is the same scripted moment in both clean arms (s6776 saw
+  it too). Logging arm wrote 46 MB run.log, logB mean 255 KB/s.
+- Positive control (same binary): the meter reads the slowdown when logging is on (48.8, min 24), and dd4's calls/task
+  30.4k vs dd1 6.7k (and vs 11.8k for dd4 in s6776) confirms the uncapped dd4 terrain is really being drawn in the clean arm.
+- Discrimination: selects H-log; refutes H-ucode (5.4 ms/task, 7.4 ms dense, Gfx 33% busy, well under 16.7 ms) and
+  H-guest (game reaches 59.3 tasks/s at dd4 = dd1) for lvl1. Two lines: [g1b] tasks/s and [g1e-split] per-second tasks.
+  Caveat: lvl1 only, one run per arm, autopilot flight.
+- `sample` profiles taken 60 s into each clean flight: scratch/s6810/sample_dd{4,1}.txt (not analysed; no slowdown to name).
+- New tool tools/g1e_clean_fps.zsh LEVEL "DD..." [HOLD]: the clean owner-settings fps recipe + table, so fps is never
+  again quoted from a logging recipe. Not a mitigation (measurement + tool; no ORIGIN needed).
+- CURRENT-TRUTH: G1e bullet carries the re-measure; the 45.9/42.8 figures moved to Superseded.
+- Next: G3 large fireball (destroyed vehicle) vs retail, the effect s6747 left uncovered (lvl2 impacts also uncovered).

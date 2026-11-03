@@ -1,16 +1,15 @@
-# NEXT: G3 in-flight frame match vs retail angrylion on lvl3 (third biome, not yet matched)
-HYPOTHESIS-ID: g3-lvl3-flight-match
+# NEXT: G3 large fireball / destroyed-vehicle explosion vs retail angrylion (uncovered by s6747/s6748)
+HYPOTHESIS-ID: g3-fireball-match
 
-State (s6809): g3-preempt-audit CLOSED (title + hangar-entry + mission-load AI gaps fixed via rs64_preempt_point).
-Fold the s6809_preempt2_lvl1_fps60 soak verdict first (expect qzero only at boot in scratch/s6809/soak_lvl1_ai.txt via
-tools/g2b_ai_scan.py; a post-boot qzero = another OS-call-free stretch, name it with g3_title_gap.py + `sample`).
-Matched so far (CURRENT-TRUTH G3 bullet): lvl1 flight/HUD/bolts, lvl2 flight/bolts, lvl9 HUD (cap fix), menus.
-Hypotheses: H-match (lvl3 flight frames d within same-run match band, like lvl1/2); H-diff (a lvl3-specific material/
-effect/geometry differs: name it with g3_rdp_frame_match.py on the RDP stream); H-pose (only drift from the unsteered craft).
-Method = s6748 recipe (PORTING-STATE s6748): scratch/s6807/lvl3.eep already selects lvl3 in the port (s6809 route reaches
-flight 0x00690400 at 61.2 s with the AP below). Retail arm: same eep swapped into the oracle save dir (tools/g3_eep_patch.py
-if re-sign needed), recon timings, then 512 dumps flight +2..+41 s. Port arm:
-  env SAVE_FROM=scratch/s6807/lvl3.eep SECS=110 CAP0=63 AP=6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,50:start \
-    zsh tools/g3_port_capture.sh scratch/s6810/port
-  python3 tools/g3_oracle_match.py --w 512 --bases 690000,620000 --h 446 --win 60,1024 --winx 85,1191 --dec shift ...
-Control: same-run median d over non-matching pairs (must be well above matched d). Report d band + any outlier class.
+State (s6810): G3 flight render + sim matched for missions 1-19 (s6744-s6777); menus/pause/debrief matched (s6778);
+impacts matched by population on lvl1 only as small puffs (s6747). NOT covered: a large fireball from a destroyed vehicle
+(s6747 note), and lvl2 impacts (s6748: no positive). G1e dd4 clean fps = 59.3 (s6810, tools/g1e_clean_fps.zsh).
+Hypotheses: H-match (fireball frames within the same-run match band); H-blend (RT64 blend/combiner differs on the
+fireball sprite: colour/alpha mismatch localized to the fireball); H-anim (fireball sprite frame sequence/timing differs).
+Method: need a deterministic kill. lvl1 (Mos Eisley) with the dt pin + rngSeed recipe (tools/g3_mission/run.sh, s6770)
+and the s5841 TELE-style forced-hit lever if one destroys a vehicle in view; else fire arms (B/Z alternating, s6748
+fire recipe) on lvl1 where targets are in front at flight start. Retail arm: oracle with matching press schedule, dumps
+every 0.25 s around the kill. Port: g3_port_capture.sh window captures. Compare: g3_oracle_match.py on the pair, plus
+g3_effect_count.py orange/yellow population inside the fireball bbox.
+Control: same-run median d over non-matching pairs; the orange instrument must count >0 on a retail fireball dump.
+Aim/steer work is OUT OF SCOPE (ITERATION 3c G1): if no kill happens in view without aiming, use the forced-hit lever.
