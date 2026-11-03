@@ -179973,3 +179973,32 @@ one), and a longer-hold census on lvl6/11/16/17 (start presses after the intro c
 Verdict line: for 800DAB64 / 800E32CC / 800E1E28 selects H-event (executions per game second equal at 30 Hz and FPS60) and
 refutes H-tick (the s6821 static classification); for 80044938 selects H-tick. Next discriminator: the per-site event
 gate in the static read of the 7 unexercised sites, then ex/gs a30 vs FPS60 on a level that runs them (NEXT.md).
+
+## Session 6823 (2026-11-02) — G3 FPS60 tick timers: static read of the 7 never-exercised FIX sites; 2 (npcTurretUpdate +0x88, attachedAudioVisualEmitterNpcHandler +0xB4) are burst counts behind a dt float interval timer -> reverted to step 1; lvl6/11 now reach flight with presses to 121 s
+Work unit: NEXT.md step 1 (offline) + step 2 census, one build.
+Static read (generated C around each decrement, ../N64Recomp/RecompiledFuncs; note several VRAMs are overlays, so resolve a
+PC by function name, not `grep -l`):
+  800C96B8 npcTurretUpdate +0x88: reached only when float +0x84 (minus f30 = *s0, the handler dt arg) <= 0 (0x800C9590
+           c.le.d -> else skip to L_800C99BC); +0x84 re-armed to rand()&0x7F scaled (0x800C95E0), spawns an effect
+           (jal 0x800989D8), then +0x88-- -> burst count per interval expiry = H-event (the 800DAB64 kind).
+  800806AC attachedAudioVisualEmitterNpcHandler +0xB4: reached only when +0xB0 -= f22 (= *a2, dt) gives <= 0 (bc1f
+           0x800806A4 -> L_80080870); +0xB0 re-armed at 0x8008079C -> H-event.
+  8007CD50 npcTexturedEffectUpdateWithSlotChain +0xA0: every call past 4 early exits (slot-chain byte, count limit,
+           range bc1t, 0x800F2F10 == 1) - state gates, no interval -> H-tick kept.
+  800B5350 / 800BC778 +0x15C: every call while a held-button bit (table 0x80130B88 +0 & cfg +0x1E) is set; cycles 0..2,
+           zeroes +0x158 -> H-tick kept (button never pressed by our AP recipes, hence never exercised).
+  800F8708 executeActorType4Effect +0x92: debounce, +0x92++ while candidate v1 == +0x95, else +0x95=v1, +0x92=1 -> H-tick.
+  800FB4F8 tickMissionTransitionAndTeardown: every call while 0x80137F3C & 0x380000; no static jal caller (pointer
+           call); outside a mission tick the step is 1 anyway (s6822) -> kept.
+Change: tools/fixup_fps60_ticks.py FIX 12 -> 10, UNFIX += {800C96B8, 800806AC} (applied, 10 rs64_tick_step lines in
+RecompiledFuncs, rebuilt). ORIGIN: the doubled-burst risk was our own s6821 whitelist; revert restores retail code there.
+Run (scratch/s6823/census.sh, FPS60 + ROGUESQ_TICK_TRACE, AP start presses 6..121 s, 300 s; then a30 lvl11 same recipe;
+all rc=0 crash=0): lvl11 6692 ticks / 111.7 game s, lvl6 6354 / 106.0 -> both now reach flight (s6822 recipe gap closed:
+presses past 50 s were the missing piece). Exercised: 80044938, 8006C024, 800AF5A0, 800B41B8 (both), 8007030C (lvl6),
+800F8708 (lvl11 FPS60 only: 8 executions in 0.32 s at t=110.1, loaded value always 1, gaps 2-4 ticks). The a30 lvl11 arm
+(3364 ticks / 112.2 s) never ran 800F8708 (autopilot path differs; 8006C024 ex/gs 0.79 a30 vs 2.63 FPS60), so no ex/gs
+comparison for it: 800F8708 still runtime-unclassified. Still never hit: 8007CD50, 800B5350, 800BC778, 800FB4F8, and the
+two new UNFIX sites (their revert is static-only, single-source, but it restores retail code so it cannot regress retail).
+Verdict line: for 800C96B8 / 800806AC selects H-event (static: decrement behind a dt-driven interval timer) and refutes the
+s6821 H-tick whitelist; for the other five selects H-tick statically (single-source). Next discriminator: hold the +0x1E
+button (800B5350) and lvl16/17 census with the long press recipe for the rest.

@@ -22,9 +22,7 @@ from g3_tick_counter_audit import scan
 base = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "../N64Recomp/RecompiledFuncs")
 TAG = "/* PATCH: s6821 fps60 ticks */"
 FIX = {
-    0x800C96B8: "npcTurretUpdate +0x88 countdown",
     0x8007CD50: "npcTexturedEffectUpdateWithSlotChain +0xA0 lifetime",
-    0x800806AC: "attachedAudioVisualEmitterNpcHandler +0xB4 countdown",
     0x8007030C: "multiEventTemplateNpcHandler +0x6 lifetime",
     0x8006C024: "advanceNpcOnCurvedPath +0x1C countdown",
     0x800B41B8: "accumulateShipThrottleCharge 0x800CC860 count-up <7",
@@ -38,7 +36,11 @@ FIX = {
 # s6822 lvl13 a30/off/fix: these decrement once per EVENT, not per tick (executions per game s equal at 30 Hz and FPS60:
 # 800DAB64 0.54/0.54, one step per ~1.02 s in both; 800E32CC 0.21/0.25; 800E1E28 three steps 1/30 s apart in both), so
 # stepping them by game time skipped every other event and doubled them (800DAB64 1 s -> 2 s per step). Reverted to 1.
-UNFIX = {0x800DAB64, 0x800E32CC, 0x800E1E28}
+# s6823 static read of the 7 sites no census level executed: 800C96B8 (npcTurretUpdate +0x88) and 800806AC
+# (attachedAudioVisualEmitterNpcHandler +0xB4) decrement only when a float interval timer (+0x84 / +0xB0, minus the
+# handler's dt argument *a2, re-armed to a random interval) expires - burst counts of the 800DAB64 kind. Reverted to 1.
+# The other five decrement on every call, behind state/button/flag gates only, and keep the step (single-source).
+UNFIX = {0x800DAB64, 0x800E32CC, 0x800E1E28, 0x800C96B8, 0x800806AC}
 DECL = ("extern void rs64_tctr(uint8_t* rdram, uint32_t pc, uint32_t addr, int32_t v); extern int rs64_tick_step(void); "
         + TAG + "\n")
 DEF = ("extern char* getenv(const char*); "

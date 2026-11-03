@@ -431,6 +431,10 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    Never hit on any level: 7 sites (turret 800C96B8, 8007CD50, 800806AC, 800B5350, 800BC778, 800F8708, 800FB4F8) - their
    static per-tick reading was wrong for 3/5 exercised sites, so they are SUSPECT. lvl6/11/16/17 never reached flight in
    150 s (still in the intro cinematic: start presses at 6-50 s did not skip it) - recipe gap.
+   s6823: static re-read of the 7: 800C96B8 (turret +0x88) and 800806AC (emitter +0xB4) decrement only when a dt float
+   interval timer expires -> UNFIX (FIX now 10). Other 5 per-call behind state/button gates -> kept (single-source).
+   Presses to 121 s (scratch/s6823/census.sh) get lvl6/11 into flight; 800F8708 ran 8x on lvl11 FPS60 only (a30 arm took
+   another path) - unclassified at runtime. Never hit yet: 8007CD50, 800B5350/800BC778 (need +0x1E button held), 800FB4F8.
 2. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
