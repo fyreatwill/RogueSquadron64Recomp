@@ -1,4 +1,4 @@
-# NEXT: (after the Step-0 maintenance compaction CURRENT-TRUTH now triggers, 60051 B) G1d wide-width fixed-epsilon idiom audit
+# NEXT: G1d wide-width fixed-epsilon idiom audit (s6847 maintenance done; CURRENT-TRUTH now 26 KB)
 HYPOTHESIS-ID: g1d-wide-epsilon-audit
 
 Why: s6844 (12-bit lr.x overflow at 1024), s6845 (HUD anchor on a full-screen sprite) and s6846 (initHudStruct

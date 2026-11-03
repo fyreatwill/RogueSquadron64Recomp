@@ -180733,3 +180733,14 @@ VERDICT: selects H-thresh, refutes H-timing / H-anchor2. g3-wide-abort-hold CLOS
 s6846 end strip all fixed at 21:9).
 ORIGIN: the soft glyph on the last frame is selected by the GAME's own compare `ox <= -W/2 + 1` (initHudStruct 0x800C1A9C);
 the value is legitimate retail arithmetic that can never cross at W <= 640. It crosses only because G1d widened W to 1024.
+
+## Session 6847 (2026-11-03) — Step-0 maintenance: CURRENT-TRUTH compacted 60051 -> 26335 B (575 -> 281 lines)
+Step 0 triggered (wc -c 60051 > 60000), so this was a MAINTENANCE iteration; no experiments ran.
+- Moved verbatim to PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6847 maintenance)": the per-mission G3 headline
+  bullets (m3, m10-m19, in-mission menus, dt-pinned determinism; s6753-s6778), the closed owner-playtest detail
+  (G3e/G2b/G3f, s6788-s6791) and the closed Next-steps item 1 (s6807-s6846: transition AI gaps, FPS60 rate classes,
+  boot-freeze hunts, hangar FOV, hangar artifacts, 21:9 abort transition fixes).
+- Replaced them with one summary bullet each in CURRENT-TRUTH; renumbered Next steps into one sequence 1-5 (the
+  g1d-wide-epsilon-audit is now item 2); refreshed the "as of" headline, archive pointer, soak-verdict and chronology lines.
+- Superseded section and run recipes left as they were. SOAK-RESULTS: nothing new since s6835_bootfreeze_hunt_d (consumed s6836).
+Rules out nothing (no experiment). Next: g1d-wide-epsilon-audit (NEXT.md unchanged except its header).
