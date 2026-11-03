@@ -180349,6 +180349,10 @@ the FROZEN line echoes the [stall-dump] rows. Queued s6835_bootfreeze_hunt_c (re
 watch), both with STALL_DUMP_VI=300 so two dumps land before the hunter's 12 s detection.
 Rules out: a game-thread spin without OS calls (audio kept flowing); any blocking site other than the drain loop
 between pfm and swapBufferWithViMode (static, single-source: one frozen log).
+VERDICT: refutes H-spin from the s6834 NEXT (a guest thread spinning without OS calls would starve the pri-122 audio
+thread under the cooperative scheduler; audio kept flowing for 215 s); localizes the wait to the advanceVideoFrame drain
+loop (single-source: one frozen log + static read). The next discriminator between H-lost-mutex / H-lost-vi / H-lost-post
+is the [stall-dump] queue owners on the next freeze.
 ORIGIN: no mitigation; instrument only.
 Next: fold hunts c/d. FROZEN -> the dump names the parked thread per queue and the stuck slot state; then read the
 runtime path for that queue (ultramodern message queue / VI event delivery) and fix.
