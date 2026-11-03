@@ -180969,4 +180969,7 @@ frame-start detector assumed every frame starts with a Z clear, which lvl17 fram
 Remaining: R78E080 (51x30 IA texrect, z_cmp off, 1 per VI, moves smoothly e.g. x 782 -> 650 over 16 VIs, drawn at
 x 408..771 out of the box in 1109 VIs) = a world-anchored target marker; 8-14 rects / 200 s get shifted while it crosses
 the box. Next unit decides whether box texrects need shifting at all.
+Verdict: this selects H-latch (root cause: stale frame-start latch) and refutes H-hud and H-fx for the 79F7C0..7AD320
+residual (it is sky, moved only because of the latch). Next discriminator: lvl9 R79B270 per-VI centre relative to the disc
+(fixed offset = blip, H-blip) vs drifting / drawn elsewhere (world marker, H-none) - NEXT.md.
 Rules out: the s6852 residual being HUD; a SETZIMG-based frame reset.
