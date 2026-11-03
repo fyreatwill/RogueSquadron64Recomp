@@ -180782,3 +180782,24 @@ is already fixed. Limitation: W values carried through memory past the 48-insn w
 centre) are not followed — iteration 2.
 ORIGIN: lr.x 0 is written by the GAME's emitColorFillRect (0x8000A1B0/0x8000A308/0x8000A5E4) from the legitimate width
 1024 (our G1d widening of 0x8011A838); only the 10-bit integer field encoding overflows. Fix clamps at the writer.
+
+## Session 6849 (2026-11-03) — G1d width census through-memory pass: 0 new flippers, width-idiom class closed (static)
+Work unit: NEXT.md g1d-wide-epsilon-audit iteration 2 of 2 (offline, no build/run).
+- tools/g1d_wcensus.py: sources now include `lwc1 fN, 0x10(p)` (screen W loaded into an FPR) and the `lw p,0(x)` partner
+  is looked up to 4 insns back (was 1). Positive control: all s6848 rows re-found (incl. 0x800C1A88 s6846, 0x8001731C /
+  0x800177B4 s6694) plus 0x800FE39C, which I found by hand before the tool change. 13 new source rows.
+- Store destinations followed to their readers:
+  - 0x8000A6D0 stores W-1 as a short at 0x8011A90E (overlay/scissor rect x1, 0x8011A90A..10). Readers: 0x80008ED8
+    clamps fill x1 = min(x1, W-1) and packs `(x1 & 0x3FF) << 14` at 0x80009374: 1023 at W=1024, fits. This corrects
+    the s6848 row "0x80009374 not W": it is W-1 there, and safe. Other reader 0x800177AC = s6694 scissor (fixed).
+  - updatePlayerHudFrame HUD nodes (struct 0x8010CA30 + i*0x278): x = W/2*k - c at node+0x18 and scale = W*k at node+0x24.
+    Consumer found by field-signature scan: drawSubtitleText (node 0x18/0x1C/0x24/0x28/0x2C..0x2F). x -> (x+parent)*k ->
+    trunc -> int16 -> +glyph offset -> drawTextGlyphRect (s6848-audited gate + rs64_g1d_rect_wrap). Scale -> K/scale
+    through the float->uint 2^31 idiom (c.le.s is not an epsilon) -> dsdx; shrinks with W. layoutHudSpriteScreenRect (menu)
+    copies node x/scale with no compare. initHudStruct wipe node +0x60 scale takes the same path.
+  - setupWalkerSpriteTileQuad 0x8005B754: x = W/2 + W/2*ndc, rounded up to 4 -> rect clipper clamp [0, W-1]. Scales.
+  - npcPowerGeneratorHandleDestruction 0x8007644C/0x80076574: false positive (+0x10 is world x).
+- Result: H-mem-closed. No W-derived value reaches a fixed epsilon or an overflowing pack. The class flippers stay
+  s6694/s6844/s6846/s6848. Static only (tool + manual read of each chain): single-source by method. Rules out a
+  through-memory 21:9 flipper in the HUD/overlay/sprite paths; the runtime check of mission-only paths is NEXT.md
+  g1d-21x9-mission-sweep. Table: docs/G1D-WIDTH-CENSUS.md "Through-memory pass (s6849)".

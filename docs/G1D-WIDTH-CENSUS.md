@@ -41,3 +41,26 @@ RDP bins, per colour image, ~75 frames each:
 Both run pairs (o21*, w21*) give identical tables. Window caps do not discriminate in flight: the fills are emitted before
 the 3D scene, which overdraws them (the red right band shows only through terrain gaps). The real mission-end overlay is
 reached only after a mission win (owner playtest), so the on-screen effect of the fix is not yet observed.
+
+## Through-memory pass (s6849) — class CLOSED, 0 new flippers
+Tool change: sources now include `lwc1 fN, 0x10(p)` (W loaded straight into an FPR) and the `lw p,0(x)` partner is
+searched up to 4 insns back (was 1). Positive control: the s6848 table is re-found unchanged (incl. s6846 0x800C1A88,
+s6694 0x8001731C/0x800177B4), plus the manually found 0x800FE39C. 13 new source rows:
+
+| store / reader chain | W=1024 | class |
+|---|---|---|
+| 0x8000A6D0 stores W-1 to 0x8011A90E (overlay/scissor rect x1, shorts 0x8011A90A..10) -> read 0x80008ED8 (x1 = min(x1, W-1), sltu) -> 0x80009374 `(x1 & 0x3FF) << 14` G_FILLRECT lr.x | 1023 fits (s6848 "not W" row corrected: it IS W-1 there, safe) | (c) |
+| 0x8011A90E -> 0x800177AC setupCameraMatrices scissor | - | (b) fixed s6694 |
+| updatePlayerHudFrame HUD nodes (struct 0x8010CA30 + i*0x278; nodes at +0x28/+0x58/+0x88/+0x1A8/+0x1D8): x = W/2*k - c at node+0x18 (0x40/0x70/0xA0/0x1C0/0x1F0, 0xFE180 0x40(a0)), scale = W*k at node+0x24 (0x4C/0x7C/0xAC/0x1CC/0x1FC, 0xFE1DC) | - | - |
+| node x -> drawSubtitleText 0x800160A4: (x + parent x)*k -> trunc -> int16 sp+0x46 -> +glyph offset -> drawTextGlyphRect a1/a3 (0x8001665C, 0x80016A..) | int16 10.2 fits; downstream gate/clamp audited s6848 + rs64_g1d_rect_wrap | (c) |
+| node scale -> drawSubtitleText 0x80016094: K/scale -> float->uint (c.le.s 2^31 idiom, not an epsilon) -> dsdx sp+0x2E; glyph width = w*scale | shrinks / scales | (c) |
+| menu layoutHudSpriteScreenRect 0x800B4700..: copies node x/scale into sprite nodes, no compare | - | (c) |
+| initHudStruct wipe node +0x54 x (audited s6846) and +0x60 scale (0x800C1ACC) -> same drawSubtitleText path | - | (a) fixed s6846 / (c) |
+| setupWalkerSpriteTileQuad 0x8005B754: x = W/2 + W/2*ndc, round up to 4 -> rect clipper clamp [0, W-1] (0x8005BAEC) | scales | (c) |
+| npcPowerGeneratorHandleDestruction 0x8007644C/0x80076574 (+0x10 is world x, distance test) | - | false positive |
+| 0x80059570, 0x80071344, 0x800FD3C8 | - | no sink |
+
+Verdict H-mem-closed: no stored W-derived value reaches a fixed epsilon or an overflowing pack. The G1d width-idiom class
+is closed: flippers found and fixed = s6694 scissor, s6844 wipe lr.x, s6846 wipe epsilon, s6848 overlay fill. Evidence is
+static only (tool + manual read of each chain), two passes over the same code: single-source by method. The runtime check
+is the per-mission 21:9 RDP sweep in NEXT.md.

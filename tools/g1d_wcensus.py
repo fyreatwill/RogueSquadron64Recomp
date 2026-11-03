@@ -22,14 +22,17 @@ lui = {}
 for i, (a, o, r) in enumerate(ins):
     R = regs(r)
     if o == 'lui': lui[R[0]] = (int(R[1], 16) << 16, a); continue
-    if o == 'lw':
+    if o in ('lw', 'lwc1'):
         off, base = memop(R[1])
         if base in lui and abs(a - lui[base][1]) < 0x200 and ((lui[base][0] + off) & 0xFFFFFFFF) == 0x8011A838:
             srcs.append((i, R[0], 'G838'))
-        elif off in (0x10, 0x18) and i > 0:
-            pa, po, pr = ins[i - 1]; P = regs(pr)
-            if po == 'lw' and P[0] == base and memop(P[1])[0] == 0 and P[0] != memop(P[1])[1]:
-                srcs.append((i, R[0], 'S+%X' % off))
+        elif off in (0x10, 0x18) and (o == 'lw' or off == 0x10):
+            # s6849: look back up to 4 insns (was 1) for `lw base, 0(x)`, stop at any other write of base
+            for k in range(i - 1, max(i - 5, -1), -1):
+                pa, po, pr = ins[k]; P = regs(pr)
+                if po == 'lw' and P[0] == base and memop(P[1])[0] == 0 and P[0] != memop(P[1])[1]:
+                    srcs.append((i, R[0], 'S+%X' % off)); break
+                if P and P[0] == base and po not in ('sw', 'sh', 'sb', 'swc1') and not po.startswith('b'): break
     if o in ('jr', 'jal') : lui = {}
 CMP = {'slt', 'sltu', 'slti', 'sltiu', 'c.lt.s', 'c.le.s', 'c.eq.s', 'c.lt.d', 'c.le.d', 'beq', 'bne', 'blez', 'bgtz', 'bltz', 'bgez'}
 out = collections.OrderedDict()
