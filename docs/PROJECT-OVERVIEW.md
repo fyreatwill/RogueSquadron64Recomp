@@ -8595,7 +8595,7 @@ Opt-in knobs layered on `ROGUESQ_DRAW_DISTANCE` (see also `docs/DRAW-DISTANCE.md
 | `ROGUESQ_BYPASS_MAXCELLS=N` | Caps force-accepted span-reject cells per swap (`tools/apply_s6537_bypasscap.py`); 120 is the dd>1 default (s6540) but buys no terrain over 0 (s6543, s6546); `CAP_ALT` = same-run cap rotation. | s6537-s6546 |
 | `ROGUESQ_DD_POOLX=<k>` | Terrain stream-pool multiplier; at dd4 lvl1 px>=2 SIGSEGVs in renderFlatMeshFaceGroup (NULL node), px1 clean. | s6549-s6551 |
 | Instruments | `ROGUESQ_DD_MESHLOG` (chain vs list), `ROGUESQ_DD_SUBLOG` (`apply_s6474_subcount.py`), `ROGUESQ_POOLWATCH` (`apply_s6481_poolwatch.py`), `ROGUESQ_POOLMUL` (pool x4, no gain), `ROGUESQ_FORCE_FOG=FF00FF` (fog positive control), `DLPOOLLOG=1`, `[gridlog]`, `[ddclamp]`, `[g1b]` per-frame cost lines in run.log. | s6414-s6548 |
-| Pose control | `ROGUESQ_POSE_LOCK=1` (no-input hover, attitude) + `ROGUESQ_POSE_PIN_POSITION=1` (position). Dump ordinal is not a phase key: join dumps to `[vi]`/origin (`tools/g1c_fbdump_join.py A B 0x80620000,0x80690000`). | s6399, s6467 |
+| Pose control | `ROGUESQ_POSE_LOCK=1` (no-input hover, attitude) + `ROGUESQ_POSE_FREEZE` (same pose per arm; `ROGUESQ_POSE_PIN_POSITION=1` does not pin, s6872). Dump ordinal is not a phase key: join dumps to `[vi]`/origin (`tools/g1c_fbdump_join.py A B 0x80620000,0x80690000`). | s6399, s6467 |
 | Route levers | lvl10/15 need `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF`; wide soaks need `MISSION_WIDTH=796|1024` and `WIDE_ROUTE=1`; ASPECT implies `OSMEM_MB=12` (21:9 at 8 MB exhausted heap at load_level_hmp). | s6424-s6464 |
 | Soak verdicts | Read summary `alive_at_end`/`crashlines`, not rc (s6529 rc=0 hid a SIGBUS). | s6531 |
 
@@ -10719,3 +10719,15 @@ Superseded conclusions, verbatim:
   passing frame is visibly torn; heapslot on/off both torn). Believable because the s6631 scorer
   (edge columns at x=16/w-17, dy180) flipped from fail to pass with the cap; it never measured the
   floor rows themselves, and nobody looked at the frame.
+
+## Migrated from CURRENT-TRUTH (s6872)
+
+   **FIXED s6860: lvl10 HUD unanchored at wide aspect.** Ring + left icons stayed in the centred 512 px; only the frame sheet showed it. ORIGIN: s6161 reticle
+   exemption (vp 0x80138D20 elem < 0x80300000) caught the heap HUD table, which sits at 0x8028FDxx on lvl10 (0x805623xx lvl1); reticle is static 0x8010CA58/88.
+   Bound now 0x80110000 (tools/apply_s6860_hudelem.py, ROGUESQ_G1D_HUD_ELEMTOP=1 = old). Same build: ring 647 -> 903, icons 313 -> 57, equal to lvl1;
+   sheet docs/owner_sheet_s6860_lvl10_hud_ab.png. Post-fix lvl10 + lvl1 (+ lvl16 route). Counters do not cover HUD placement: score frames (scratch/s6860/ring.py).
+   **FIXED s6861: flight HUD jumped to the centred 512 px while the pause menu opened and closed, all levels at wide aspect.** The s6860 "lvl16 paused window" is the
+   real pause menu (harness START), not a race intro. ORIGIN: our s6721 gate treated pause byte HUD+0x258 as a flag; it is a state (initOrUpdatePauseScreenDim: 1 opening,
+   3 open, 2 closing). Text links only at 3 (0x800C3A88), HUD draws through 1 and 2 (~20-55 swaps each). Gate now state 3 only (ROGUESQ_G1D_PAUSE_GATE_MASK, default 8,
+   14 = old); dim follows any non-zero. Disc in 1/2: backdrop tiles and logo tris are also z-off in the box, so only textures selected in flight shift. Same build mask 14
+   vs 8; lvl16 21:9 + 16:9, lvl1 pause + abort clean. Residual: a pause before any flight frame leaves the disc centred (harness only). docs/owner_sheet_s6861_pause_hud_ab.png.

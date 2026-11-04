@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6871 (2026-11-03).
+Compact operational handoff, as of Session 6872 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -104,6 +104,7 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 
 ## Superseded conclusions — do not act on these
 
+- **"Pinned pose" on dd arms (s6445-s6583, superseded s6872).** POSE_PIN_POSITION never held position: the unit-range filter skips world-unit words (s6582 x ran 15..113), and even written every poll the ship flies on, because +0x4C is a per-tick copy. Believable because attitude did pin and the flag name said position. Cross-run dd figures from those arms (s6470, s6544, s6547) are attitude-only, not same-pose.
 - s6268 "symbol sweep COMPLETE" and s3209/s3210 "0x80106C50 is a real callable" (superseded s6868). s6268 counted the syms toml, not the generated tree, where 30 table renames had never landed. s3209 saw a jal and took it for a caller; that site is decoded data. docs/GENERATED-NAME-CENSUS.md.
 - s6004 "lvl10-15 mission_cycles=0, in flight the whole hold" (superseded s6867): mission_cycles only counts 0x690400->0x6AB400 origin changes, so it read 0 while lvl11 restarted twice and lvl14 once. Use inits= from the summary.
 - **"300 s hold" on FPS60/dd>1 G1 recipes (s6774-s6862, superseded s6865).** Those runs gated on any origin (MISSION_RE='[0-9A-F]+' or a boot-time
@@ -171,9 +172,8 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   settings use DD_UNSAFE (clamp 8). Confirm run.log echoes `multiplier N`.
 - lvl10/15 need `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF`. Wide soaks need
   `MISSION_WIDTH=796|1024` + `WIDE_ROUTE=1`; ASPECT implies `OSMEM_MB=12`.
-- Pose control: `ROGUESQ_POSE_LOCK=1` + `ROGUESQ_POSE_PIN_POSITION=1`; dump
-  ordinal is not a phase key, join dumps to `[vi]`/origin
-  (`tools/g1c_fbdump_join.py`).
+- Pose control: `ROGUESQ_POSE_LOCK=1` (no input) + `ROGUESQ_POSE_FREEZE=<x,...>:<ms>` (needs RAND_TRACE + DEBUG_WRITE arm;
+  `tools/g3_optin_pose_arms.sh`). `ROGUESQ_POSE_PIN_POSITION` does NOT pin (s6872). Dump ordinal is not a phase key.
 - Soak verdicts: `scratch/agent/SOAK-RESULTS.md`; read `alive_at_end` /
   `crashlines`, never rc. A queued repeat soak is not a work unit.
 - Per-frame cost meter: `[g1b]` lines in run.log (sd_wall, tasks/s).
@@ -282,15 +282,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    dump noise on debrief pages = s6723/s6724 pillars (crop fired 8/8 in both layouts; no window capture this run).
    **s6860 load pass lvl0-8, 10-16, 18, env-free owner path:** alive, 0 stalls/crash lines, spill 752 all at 0x81, used 0x9E00/0x400000; control
    (aliased layout) SIGBUS 5/5. 143 s holds, one run each (lvl5 needs 300 s to pass its cinematic).
-   **FIXED s6860: lvl10 HUD unanchored at wide aspect.** Ring + left icons stayed in the centred 512 px; only the frame sheet showed it. ORIGIN: s6161 reticle
-   exemption (vp 0x80138D20 elem < 0x80300000) caught the heap HUD table, which sits at 0x8028FDxx on lvl10 (0x805623xx lvl1); reticle is static 0x8010CA58/88.
-   Bound now 0x80110000 (tools/apply_s6860_hudelem.py, ROGUESQ_G1D_HUD_ELEMTOP=1 = old). Same build: ring 647 -> 903, icons 313 -> 57, equal to lvl1;
-   sheet docs/owner_sheet_s6860_lvl10_hud_ab.png. Post-fix lvl10 + lvl1 (+ lvl16 route). Counters do not cover HUD placement: score frames (scratch/s6860/ring.py).
-   **FIXED s6861: flight HUD jumped to the centred 512 px while the pause menu opened and closed, all levels at wide aspect.** The s6860 "lvl16 paused window" is the
-   real pause menu (harness START), not a race intro. ORIGIN: our s6721 gate treated pause byte HUD+0x258 as a flag; it is a state (initOrUpdatePauseScreenDim: 1 opening,
-   3 open, 2 closing). Text links only at 3 (0x800C3A88), HUD draws through 1 and 2 (~20-55 swaps each). Gate now state 3 only (ROGUESQ_G1D_PAUSE_GATE_MASK, default 8,
-   14 = old); dim follows any non-zero. Disc in 1/2: backdrop tiles and logo tris are also z-off in the box, so only textures selected in flight shift. Same build mask 14
-   vs 8; lvl16 21:9 + 16:9, lvl1 pause + abort clean. Residual: a pause before any flight frame leaves the disc centred (harness only). docs/owner_sheet_s6861_pause_hud_ab.png.
+   **FIXED s6860-s6861:** lvl10 wide HUD anchor (bound 0x80110000) and pause-open HUD jump (ROGUESQ_G1D_PAUSE_GATE_MASK). Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6872)".
    **g1d-heap-address-tests CLOSED s6862 (H-clean on the owner path; static reading is single-source, HUD table also runtime).** Census tools/audit_heap_addr_tests.py, table docs/HEAP-ADDR-AUDIT.md:
    every behaviour-changing pointer guard follows RS64_RAM_TOP or the 16 MB RSP ceiling; fixed heap bounds left are logging or opt-in harness (the 0x80300000..0x80330000 NPC family, (x>>24)==0x80, FS slot),
    and can read as false zeros on other levels or layouts. HUD table lvl1/5/10/14: moves by level, always above the 0x80110000 bound, reticle static. s4563 stale-head skip is DEAD (setter gone from funcs_0.c);
@@ -311,6 +303,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    **data-decoded-tail-audit CLOSED s6869, generated-size-mismatch CLOSED s6870 (H-elf; one run per level).** make_elf.py sizes each function to the next symbol and never reads the syms toml; tools/regen_front.sh now feeds real sizes through N64Recomp `function_sizes` (tools/func_sizes.txt). 17 junk data_gap_ functions gone from regen. `.word` is NOT a code/data boundary: 3339 of 8152 became do_break, the rest run. docs/DECODED-TAIL-CENSUS.md.
    **elf-size-valid-tails CLOSED s6871 (one run per level).** tools/audit_elf_tails.py classifies every tail >= 0x10 by what lands in it; func_sizes.txt now 11 rows. Pristine 823108 lines, cut step 0/0, compare 2684 / 82 / 17 only live / 1 only regen (the 4 new diffs are the 4 sized functions). Regen lvl1 144 s, lvl5 142 s flight clean, dd1 4:3. Live tree NOT regenerated.
    **Silent N64Recomp miscompile, NOT fixed (static, single-source for missions).** A backward branch out of a function lands on that function's own entry and compiles. 16 real ones, in the voice resampler helpers (one-shot sample end). Nothing calls or points into 8009264C..800934A4; retail attract 0 hits with controls. Retail mission arm never reached flight, so no mission null. Reopen on any sign that block runs; design in PORTING-STATE s6871. Any new `branching outside` warning on live code is this bug. docs/DECODED-TAIL-CENSUS.md.
+   **g3-optin-frame-diff, s6872 (lvl1, one run per arm): no near-field change found, H-match for dd4, FPS60 only partly bounded.** ROGUESQ_POSE_FREEZE stops the mission tick at fixed x crossings; frames in a hold are bit-identical (control, 0.0 diff). Scored by tools/g3_optin_diff.py. dd4 vs dd1 at exact pose (k1, k2): ground MAD 0.84, 1.55, the difference is the far band only. dd2 6.1-6.7, fps60+dd4 6.3-10.1, with the craft outline in the diff: presented-frame phase, inside the dd1a-vs-dd1b floor of 7.6-7.8 (k0). Shift control (+2 x) 15-17. FPS60 k2 13.5 is NOT resolved: its pose differs (y -5.7 vs -6.8). No-input flight forks into two paths between k0 and k1 with no setting change (dd1a z 78.4, dd1b z 81.5), so arms are only comparable within a branch. Sheet docs/owner_sheet_s6872_optin_samepose.png.
+   **Resampler side check s6872:** retail mission 1, --watch-pc-range 0x8009264C:0x800934A4 0 hits over 157 s with the tick control 0x800FA734 at 3375 hits. One mission only.
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

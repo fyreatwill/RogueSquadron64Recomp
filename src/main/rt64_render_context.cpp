@@ -46,6 +46,31 @@ extern "C" void rs64_rand_trace(uint32_t ra, uint32_t seed) {
 // "PC:REG:OFF:N,..." appends " m=ADDR:w0,w1,..." (N words at gpr[REG]+OFF; REG 0 = absolute) for every spec whose PC
 // matches. Row: index, update_screen #, pc, $v0, dumps. Called from tools/fixup_rand_trace.py hooks.
 extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64_t* gpr) {
+    // s6872: ROGUESQ_POSE_FREEZE=<x1,x2,...>:<ms> (needs RAND_TRACE) stops the mission tick for ms when the player's x first crosses
+    // each rising x. +0x4C is a per-tick copy, so POSE_PIN_POSITION cannot hold the ship, but no-input flight is deterministic:
+    // this gives the same pose in every arm at any frame rate, held still for a window capture. The pad thread cannot do it.
+    if (pc == 0x800FA730u) {
+        static std::vector<float> fz; static int fz_ms = -1; static size_t fz_k = 0;
+        if (fz_ms < 0) {
+            fz_ms = 0;
+            if (const char* g = std::getenv("ROGUESQ_POSE_FREEZE")) {
+                char* e = const_cast<char*>(g);
+                for (;;) { fz.push_back(strtof(e, &e)); if (*e != ',') break; e++; }
+                fz_ms = (*e == ':') ? atoi(e + 1) : 4000;
+            }
+        }
+        const uint32_t pl = *reinterpret_cast<const uint32_t*>(rdram + 0x137DBCu);
+        if (fz_k < fz.size() && pl >= 0x80001000u && pl < 0x807FFF00u && !(pl & 3)) {
+            float v[3];
+            memcpy(v, rdram + (pl - 0x80000000u) + 0x4C, 12);
+            if (v[0] >= fz[fz_k]) {
+                fprintf(stderr, "[posefreeze] k=%zu vi=%u pos=%.3f,%.3f,%.3f ms=%d\n", fz_k, rs64_vi_n_g, (double)v[0], (double)v[1], (double)v[2], fz_ms);
+                fflush(stderr);
+                fz_k++;
+                std::this_thread::sleep_for(std::chrono::milliseconds(fz_ms));
+            }
+        }
+    }
     static struct { uint32_t pc, reg, off, n; } spec[16];
     static int nspec = -1;
     if (nspec < 0) {

@@ -15,6 +15,7 @@
 #   54:start,64:start  (retail first race tick ~vi 5153 = 86 s: FARM=88 DSTEP=4), offline G3_SNAP_TICKS=800FA730.
 # Mission 17 also needs ARM=20 DWARM=30 CAP0=33 (the defaults 55/85/62 never arm the port rand trace, s6778). Pause menu
 #   (s6778): add PRESS ...,61:start,65:start and AP ...,40:start,44:start (pause, then resume -> race crash -> debrief).
+# ORACLE_EXTRA: extra rs64_oracle words, e.g. --watch-pc-range 0x8009264C:0x800934A4 (s6872).
 # env: G3_TICK (tick/pin pc, 800FA730; must be one of the --exec-trace-also pcs below) PRESS/AP (start schedules) DWARM (retail seed arm s, 85) ARM (port seed arm s, 55) RSECS (360) PSECS (330) NDUMP (24) DSTEP (10) FARM (103) POKE (dt pin) EXTRA (port env)
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 S=$1; L=$2; [ -n "$S" ] && [ -n "$L" ] || { echo "usage: run.sh SDIR LEVEL" >&2; exit 2; }
@@ -51,7 +52,7 @@ env RS64_XTRACE_MEM=$M RS64_XTRACE_POKE=$PIN tools/oracle/build/rs64_oracle --sa
   --hit-cap 2000 --watch-write 0x3FFFF0:0x3FFFF4 --exec-trace 0x80003430:400000:3470 --exec-trace-also 0x8006BEC8 \
   --exec-trace-also 0x8006C018 --exec-trace-also 0x800AF374 --exec-trace-also 0x800FA730 --exec-trace-also 0x800C6674 \
   --exec-trace-also 0x8006C010 --debug-write 80003470:1:512:${DWARM:-85} --exec-trace-also 0x8008EE08 --exec-trace-also 0x8008EE84 \
-  $A > $D/oracle.log 2>&1 &
+  ${=ORACLE_EXTRA:-} $A > $D/oracle.log 2>&1 &
 RP=$!
 # --- port arm (foreground)
 O=$S/port
