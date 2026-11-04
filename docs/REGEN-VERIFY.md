@@ -2,7 +2,7 @@
 
 How to check that a regenerated RecompiledFuncs tree builds the same code as the live tree. Added s6864.
 
-    scratch/agent/s5547_frontchain.sh           # make_elf -> N64Recomp into a scratch dir (edit the paths)
+    tools/regen_front.sh <new dir>              # make_elf -> N64Recomp into a scratch dir, real sizes from tools/func_sizes.txt
     tools/regen_replay.sh <copy of pristine>    # fixer and every step after it; never point it at a patched tree
     tools/regen_verify.sh <that dir> <out dir>  # compile both trees, compare per function
 
@@ -48,6 +48,21 @@ The pristine tree is whatever N64Recomp last wrote to a scratch dir, and those d
 
 `tools/regen_replay.sh` now runs `fixup_cut_decoded_tails.py` (docs/DECODED-TAIL-CENSUS.md). Replay from pristine, then compare:
 2708 same, 75 differ, 0 missing, name set equal to scratch/s6864/cmp2.json. Both trees cut the same 18 functions.
+
+## s6870: 2688 same, 78 differ, 17 only in live, with real function sizes
+
+`tools/regen_front.sh` passes `tools/func_sizes.txt` to N64Recomp. Compare against the live tree: 2688 same, 78 differ, 17
+only in live, 0 only in regen. `regen_front.sh <dir> none` still gives the old input: 0 differing lines against
+scratch_s5547_regen. Full replay of both front ends, source diff: only the 17 functions, the dead labels and the tail comments.
+
+- The 17 are the dropped `data_gap_` functions, listed in docs/DECODED-TAIL-CENSUS.md. The live tree still has them.
+- 75 of the 78 are the s6864 names. New: `handleCraftSelectInput` (-14 adrp, -14 add), `data_gap_800E9B10` (opcodes equal),
+  `rs64_bwatch` (+1 adrp, +1 add, -1 mov). All three sit in funcs_49.c and none has a source change. Compared by opcode counts,
+  not instruction by instruction: clang sets up addresses differently once the file is smaller.
+- `regen_obj_compare.py` matches objects by file name, so a file present on one side only is skipped silently. funcs_50.c
+  is such a file here; it holds no functions.
+
+Runtime, regen binary, one run per level, dd1 4:3 only: see the census doc.
 
 ## What a regen loses
 

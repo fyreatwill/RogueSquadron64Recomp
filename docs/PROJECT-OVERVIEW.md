@@ -10702,3 +10702,20 @@ Verbatim blocks moved out of CURRENT-TRUTH in s6847 (Step-0 compaction). Read wi
   grids; new tools/g3_rdp_phase.py (distribution compare): 153 texrects/frame both, static set 53/53 identical (prompt line
   25/25 rects), tri q05..q95 [1093..1136] vs [1094..1138], mean ratio 1.003 over ~800 frames each; hologram grid visible in
   ~20% of frames in both. Control (retail hangar vs port ENTER NAME) separates on every term.
+
+## Migrated from CURRENT-TRUTH (s6870)
+
+Superseded conclusions, verbatim:
+
+- s6735 "the load-frame right-edge vertical line is a stale presenter column from the full-width hangar present" (believable: it sat outside the horizontal line's extent and survived the follow-mode fix). s6736: it is source column cw-1 holding the game's clear colour, also visible in briefing/flight. The pre-load screen is the briefing fly-over, not the hangar.
+- s6729 "H-rt64-target: identical commands + identical TMEM, RT64's render target drops the draw" (SUPERSEDED s6730).
+  Believable because the dpc_bridge rect2 log showed identical texrects on undrawn/drawn swaps; but that log runs before
+  the s6158 region shift rewrites the stream. RT64's own RDP entry log ([rtrdp]) showed the rects arriving at x 896/960.
+  Lesson: a bridge-side command log is not RT64's input while any RDP-rewrite hook runs after it.
+- s6574/s6576 "dd8 lvl1/5 hold clean" as a usable dd8 (s6701: every dd8 frame from the hangar on drew inside a centre box,
+  perspNorm 1 from the scaled far). Believable because holds were crash-free and fb checks sampled early or terrain-fraction only.
+- s6692/s6693 "21:9 floor tear is lost in RT64 depth handling at w=1024" (s6694: the game's scissor lrx w*4 wraps to 0 in the 12-bit field, so the depth-clear fill is clipped empty before RT64 bookkeeping). Believable because RDP triangle input matched and only RT64 touched the depth rows.
+- s6631 "21:9 level-select tear closed: heap 8010FEFC stops at the depth image" (s6691: the s6631
+  passing frame is visibly torn; heapslot on/off both torn). Believable because the s6631 scorer
+  (edge columns at x=16/w-17, dy180) flipped from fail to pass with the cap; it never measured the
+  floor rows themselves, and nobody looked at the frame.

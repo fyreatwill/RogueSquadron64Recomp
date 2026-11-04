@@ -181271,3 +181271,17 @@ Not done: the planned tail-entry trap arm was not run. A goto-free tail has no e
 Open: why generated bodies ignore the toml size. Not looked at.
 Rules out: tail cutting as a build-time win, and any stray goto into those 18 tails. Next: docs NEXT.md.
 
+
+## Session 6870 (2026-11-03) — generated bodies ran past their size because make_elf sizes to the next symbol; real sizes now reach N64Recomp, cut step finds nothing, 17 junk functions gone
+What ran: NEXT.md's stage trace of the size, offline, then a regen with real sizes.
+Result: H-elf selected. toml 0x54, ELF st_size 0x73B4, generated 21 + 7384 words for audioCompandS16; 0x8 / 0x2098 / 2 + 2084 for lvj_checkComplexObjectives. Control mainGameLoop 0x5BC at all stages. make_elf.py never reads syms/rogue_squadron.syms.toml; only patches.toml does. H-recomp refuted (N64Recomp uses the ELF size). H-toml is close but not the fault: the edited list is simply not the generator's input. Whole ELF: 2519 agree, 111 differ, 0 missing.
+ORIGIN: rogue_squadron64/tools/make_elf.py lines 255-268 give every size-0 function the distance to the next function symbol.
+Change: tools/regen_front.sh (make_elf -> N64Recomp in scratch, adds function_sizes from tools/func_sizes.txt, no sibling repo edited), fixup_cut_decoded_tails.py --sizes, tools/audit_ptr_reach.py. The first table carried static_ names; those have no ELF symbol, so they are filtered out, 6 names left.
+Control: regen_front.sh <dir> none = 0 differing lines against scratch_s5547_regen, ELF byte-identical to the sibling build.
+Effect: pristine 957518 -> 832949 lines. Replay ok; fixer warning and neuter lists identical in both arms; 0 functions moved file. Cut step 0 cut, 2 refused. Source diff of the two full replays: 17 functions, 11 junk labels in audioCompandS16, tail comments, nothing else.
+Compare vs live: 2688 same, 78 differ, 17 only live, 0 only regen. 75 of the 78 are the s6864 names. New: handleCraftSelectInput, data_gap_800E9B10, rs64_bwatch, all funcs_49.c, no source change; opcode counts differ only in adrp/add/mov. That is a count check, not an instruction-by-instruction proof. My first masked disassembly printed nothing (otool -p); it was replaced by the opcode count.
+Dropped functions: data_gap_ bodies whose only sites were jals in the decoded tails, including 80106C50 (s3209). audit_ptr_reach over the ELF, a retail menu image and two s5069 port mission images: controls 8008ED70 and 8003DFA0 fired. My third control 80003460 was wrong (only ever called by jal) and was dropped, not explained away. 16 of 17 no hit; 801096D8 has code hits at 800AE428/800AE4EC, read as table reads because its words are 0x00140014 repeated; the instructions after those sites were not traced.
+Runtime, regen binary (regen funcs, lookup and register_overlays, all else live; nm confirms the 17 absent), dd1 4:3, one run per level: lvl1 142 s, lvl5 143 s flight, inits 1, alive, 0 stalls, 0 crash lines, 0 lookup misses (scratch/agent/m6/g1_lvl{1,5}s6870sized). No same-run control forces a miss; the fatal path was read in get_function. FPS60, dd>1, wide and other levels were not run.
+Not done: live tree not regenerated, still carries the 17. Plain `N64Recomp rogue_squadron.toml` still emits the tails; the cut step handles those.
+Found on the way: regen_obj_compare.py silently skips an object present on one side only (funcs_50.c here, holds no functions).
+Rules out: N64Recomp as the source of the long bodies. Next: docs NEXT.md.

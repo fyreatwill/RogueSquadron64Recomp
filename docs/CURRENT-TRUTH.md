@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6869 (2026-11-03).
+Compact operational handoff, as of Session 6870 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -153,26 +153,14 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   port side was raw Display-P3 screencapture values; after P3->sRGB the hue-dependent part vanishes, leaving a uniform
   2.5% gain in the 512 flight only. Lesson: convert tagged captures before any colour comparison.
 
-- s6735 "the load-frame right-edge vertical line is a stale presenter column from the full-width hangar present" (believable: it sat outside the horizontal line's extent and survived the follow-mode fix). s6736: it is source column cw-1 holding the game's clear colour, also visible in briefing/flight. The pre-load screen is the briefing fly-over, not the hangar.
-- s6729 "H-rt64-target: identical commands + identical TMEM, RT64's render target drops the draw" (SUPERSEDED s6730).
-  Believable because the dpc_bridge rect2 log showed identical texrects on undrawn/drawn swaps; but that log runs before
-  the s6158 region shift rewrites the stream. RT64's own RDP entry log ([rtrdp]) showed the rects arriving at x 896/960.
-  Lesson: a bridge-side command log is not RT64's input while any RDP-rewrite hook runs after it.
 
-- s6574/s6576 "dd8 lvl1/5 hold clean" as a usable dd8 (s6701: every dd8 frame from the hangar on drew inside a centre box,
-  perspNorm 1 from the scaled far). Believable because holds were crash-free and fb checks sampled early or terrain-fraction only.
 - s6458 "G3c(c) turning shake closed as retail 30 Hz judder" and s6455 "camera jerk identical in all arms" (s6696: every run
   since s6372 ran at ~17 game fps with bunched presents from our own per-vector-load getenv). Believable because the jerk
   was arm-independent: the overhead was in every arm, retail included.
 
-- s6692/s6693 "21:9 floor tear is lost in RT64 depth handling at w=1024" (s6694: the game's scissor lrx w*4 wraps to 0 in the 12-bit field, so the depth-clear fill is clipped empty before RT64 bookkeeping). Believable because RDP triangle input matched and only RT64 touched the depth rows.
 
-- s6631 "21:9 level-select tear closed: heap 8010FEFC stops at the depth image" (s6691: the s6631
-  passing frame is visibly torn; heapslot on/off both torn). Believable because the s6631 scorer
-  (edge columns at x=16/w-17, dy180) flipped from fail to pass with the cap; it never measured the
-  floor rows themselves, and nobody looked at the frame.
 
-- Older superseded entries (s6292-s6673) are archived verbatim in PROJECT-OVERVIEW (s6759 maintenance).
+- Older superseded entries: PROJECT-OVERVIEW (s6759 maintenance; s6574-s6735 in "Migrated from CURRENT-TRUTH (s6870)").
 
 
 ## Run recipes and hard config
@@ -321,6 +309,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    Summaries now print inits= and flight_s= (m6_god_common.sh, same-run control flight-control OK); tools/audit_hold_flight.py reads .gz and prints wall_s, tools/audit_hold_segments.py gives continuous stretches. No per-level hold sweep queued: G4 parks repeat holds, and 1/5/10 is the owner's qualification set. FPS60+dd3 and FPS60+dd2 on lvl10 are not held to 300 s (inference from dd4).
    **G5 function names CLOSED s6868.** regen_replay.sh now applies tools/rename_generated_symbols.py; all 139 address-named functions are shape names, compare still 2708/75 with the same names, lvl1 dd1 135 s flight clean (one run). 791 D_ data symbols unnamed.
    **data-decoded-tail-audit CLOSED s6869 (H-dead for 18; one run per level).** tools/fixup_cut_decoded_tails.py (in regen_replay.sh, before the rename) cut 18 of 24 functions, 2 refused, 4 have no tail .word; docs/DECODED-TAIL-CENSUS.md. Compare still 2708/75, same names; audioCompandS16 and lvj_checkComplexObjectives machine code unchanged (clang had dropped those tails). Lines 1146851 -> 1021478, compile time about unchanged. lvl1 139 s, lvl5 140 s flight clean. `.word` is NOT a code/data boundary: 3339 of 8152 became do_break, the rest run. Trap arm not run; no PCM measure (env name wrong).
+   **generated-size-mismatch CLOSED s6870 (H-elf; one run per level).** make_elf.py never reads the syms toml (only patches.toml does) and sizes each function to the next symbol. tools/regen_front.sh now feeds real sizes through N64Recomp `function_sizes` (tools/func_sizes.txt, 6 names). Cut step 0 cut / 2 refused, pristine 957518 -> 832949 lines, 17 junk data_gap_ functions gone. Compare 2688 same / 78 differ / 17 only live; 3 new diffs have no source change. audit_ptr_reach: no call-like pointer to the 17, controls fired. Regen lvl1 142 s, lvl5 143 s flight clean, 0 lookup misses, dd1 4:3 only. Live tree NOT regenerated. docs/DECODED-TAIL-CENSUS.md.
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

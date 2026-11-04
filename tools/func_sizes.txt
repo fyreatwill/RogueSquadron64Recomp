@@ -1,0 +1,6 @@
+data_gap_800186D8 0x14
+__OSGlobalIntMask 0x4
+data_gap_80099FDC 0x30
+audioCompandS16 0x54
+data_gap_800FBE14 0x4
+lvj_checkComplexObjectives 0x8

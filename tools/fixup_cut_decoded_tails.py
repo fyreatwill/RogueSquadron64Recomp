@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""s6869: find and cut data decoded as code after a function's real end. N64Recomp sizes some functions up to the next
-symbol, so audioCompandS16's 0x54-byte body carried 100k lines of decoded table. Mid-function addresses are not in the
+"""s6869: find and cut data decoded as code after a function's real end. make_elf.py sizes every function up to the next
+symbol, so audioCompandS16's 0x54-byte body carried 100k lines of decoded table. s6870: tools/regen_front.sh now fixes that
+at the source, so on its output this step cuts nothing; it stays for a plain N64Recomp run and to write tools/func_sizes.txt. Mid-function addresses are not in the
 lookup table, so a tail can only be entered by goto or fall-through from the body; both are checked before any cut.
 Real end: walk the instruction comments from the entry, following branches (never-taken $zero forms skipped) and every
 goto of a jump-table switch. Crossing check, on the C itself, not the comments: no goto above the cut names a label
@@ -8,7 +9,7 @@ below it, the cut sits at brace depth 1, and the last statement above it cannot 
 do_break exits, so the walk stops at a .word that translated to do_break. Only dead code is removed: every path through
 the function behaves as before, whether or not the body is real code. A function is cut only if its tail holds a .word
 line; a tail of valid-looking words is reported, not touched.
-usage: fixup_cut_decoded_tails.py <RecompiledFuncs dir> [--dry] [--md out.md] [--syms toml]
+usage: fixup_cut_decoded_tails.py <RecompiledFuncs dir> [--dry] [--md out.md] [--syms toml] [--sizes out.txt]
        fixup_cut_decoded_tails.py <RecompiledFuncs dir> --self-test   (reads the tree, writes nothing)"""
 import argparse, glob, os, re, sys
 
@@ -189,11 +190,12 @@ def main():
     ap.add_argument('tree')
     ap.add_argument('--dry', action='store_true')
     ap.add_argument('--md')
+    ap.add_argument('--sizes', help='write "name size" for every cuttable function, for tools/regen_front.sh')
     ap.add_argument('--self-test', action='store_true')
     args = ap.parse_args()
     if args.self_test:
         return self_test(args.tree)
-    table, cuts, cut_lines, refused = [], 0, 0, 0
+    table, cuts, cut_lines, refused, sized = [], 0, 0, 0, []
     for path, lines, rows in scan(args.tree):
         edits = []
         for r in rows:
@@ -212,6 +214,7 @@ def main():
                 lines[r['cut']:ends[r['name']]] = [f"    // s6869: {r['tail']} decoded data words cut from 0x{r['real_end']:08X}\n"]
             open(path, 'w').write(''.join(lines)[:-1])
         cuts += len(edits)
+        sized += edits
         cut_lines += sum(r['lines'] for r in edits)
     out = ['| File | Function | Entry | Real end | Lines | Tail words | .word in tail | do_break stops | Crossing | Fall-through | Hooks in tail |',
            '|---|---|---|---|---|---|---|---|---|---|---|']
@@ -221,6 +224,9 @@ def main():
     text = '\n'.join(out) + '\n'
     if args.md:
         open(args.md, 'w').write(text)
+    if args.sizes:
+        open(args.sizes, 'w').writelines(f"{r['name']} 0x{r['real_end'] - r['entry']:X}\n" for r in sorted(sized, key=lambda r: r['entry'])
+                                      if not r['name'].startswith('static_'))   # no ELF symbol: N64Recomp sizes those itself
     print(f'decoded tails: {cuts} {"cuttable" if args.dry else "cut"}, {refused} refused, {cut_lines} function lines before the cut')
     return 0
 

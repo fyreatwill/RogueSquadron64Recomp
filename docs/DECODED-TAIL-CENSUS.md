@@ -40,10 +40,40 @@ The two refusals have a goto above the cut, from a part of the body the walk did
 
 `__OSGlobalIntMask` is a data object: its first word is `.word` -> `do_break`, so it now holds only that. The symbol has
 size 0x4E10 in the toml. `audioCompandS16` (0x54) and `lvj_checkComplexObjectives` (0x8) have correct toml sizes, and the walk
-agrees with both; why the generated bodies ignore those sizes was not looked at.
+agrees with both.
 
-`data_gap_` bodies stay in the lookup table even when their only direct site was in a cut tail. Dropping them needs proof
-that no pointer reaches them, and the raw ROM scan cannot see inside compressed overlays.
+## Why the bodies ran long (s6870)
+
+The size is lost in `make_elf.py`. It never reads `syms/rogue_squadron.syms.toml`; only `patches.toml` does. Symbols in
+`symbol_files/*.txt` carry no size, so make_elf gives each function the distance to the next function symbol:
+
+| Function | toml | ELF st_size | Generated words |
+|---|---|---|---|
+| `audioCompandS16` | 0x54 | 0x73B4 | 21 + 7384 tail |
+| `lvj_checkComplexObjectives` | 0x8 | 0x2098 | 2 + 2084 tail |
+| `mainGameLoop` (control) | 0x5BC | 0x5BC | agrees |
+
+Across the ELF: 2519 functions agree with the toml, 111 differ, 0 are missing from it. N64Recomp honours what it is given.
+
+`tools/regen_front.sh` feeds real sizes through N64Recomp's own `function_sizes` config, so no sibling repo changes. The table
+is `tools/func_sizes.txt`, 6 functions, written by `fixup_cut_decoded_tails.py --sizes` from a tree before the cut. The other 12
+of the 18 cuts are `static_` functions with no ELF symbol. They were only there because a jal in a decoded tail named them.
+
+Effect: the cut step now reports 0 cut, 2 refused. Pristine output 957518 -> 832949 lines. 11 junk labels leave
+`audioCompandS16`. 17 functions no longer exist: `data_gap_` 80029270, 80045024, 800A2114, 800A2218, 800A23BC, 800A2558, 800A2790,
+800A2924, 800A29BC, 800A2B50, 800A2BE4, 800A2E98, 800A2F28, 800A2FE4, 800A50AC, 80106C50, 801096D8.
+
+Dropping them removes them from the lookup table, so `tools/audit_ptr_reach.py` looked for pointers to them as data words and
+as lui + addiu/ori pairs. It scanned every ELF section, a retail menu RDRAM image and two port mission images. Controls fired
+(`runAiAudioStreamPlaybackLoop` in code, `mainGameLoop` in data). 16 of 17 have no hit. `801096D8` has code hits at 0x800AE428 and
+0x800AE4EC: its words are 0x00140014 repeated, next to the u16 table D_80109710, so those look like table reads, not calls.
+The scan cannot see a pointer built any other way, and the port images date from s5069.
+
+Runtime: a lookup miss is fatal and prints `Failed to find function` (overlays.cpp `get_function`). Regen binary (`nm`: dropped
+symbols absent, present in live), dd1 4:3, one run per level: lvl1 142 s and lvl5 143 s of flight, inits 1, alive, 0 stalls, 0
+crash lines, 0 misses. No same-run control forces a miss. Other levels and menus beyond this route were not run.
+
+The live tree is unchanged and still carries the 17 functions.
 
 ## Table (before the cut)
 
