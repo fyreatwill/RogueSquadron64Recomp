@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6861 (2026-11-03).
+Compact operational handoff, as of Session 6862 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -313,6 +313,10 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    3 open, 2 closing). Text links only at 3 (0x800C3A88), HUD draws through 1 and 2 (~20-55 swaps each). Gate now state 3 only (ROGUESQ_G1D_PAUSE_GATE_MASK, default 8,
    14 = old); dim follows any non-zero. Disc in 1/2: backdrop tiles and logo tris are also z-off in the box, so only textures selected in flight shift. Same build mask 14
    vs 8; lvl16 21:9 + 16:9, lvl1 pause + abort clean. Residual: a pause before any flight frame leaves the disc centred (harness only). docs/owner_sheet_s6861_pause_hud_ab.png.
+   **g1d-heap-address-tests CLOSED s6862 (H-clean on the owner path; static reading is single-source, HUD table also runtime).** Census tools/audit_heap_addr_tests.py, table docs/HEAP-ADDR-AUDIT.md:
+   every behaviour-changing pointer guard follows RS64_RAM_TOP or the 16 MB RSP ceiling; fixed heap bounds left are logging or opt-in harness (the 0x80300000..0x80330000 NPC family, (x>>24)==0x80, FS slot),
+   and can read as false zeros on other levels or layouts. HUD table lvl1/5/10/14: moves by level, always above the 0x80110000 bound, reticle static. s4563 stale-head skip is DEAD (setter gone from funcs_0.c);
+   the hazard is held by s4786 PAUSE=4. 9 replayed apply scripts have no MARK in the live tree (all probes; cause unknown): next unit.
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

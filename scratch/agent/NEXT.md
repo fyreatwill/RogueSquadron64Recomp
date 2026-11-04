@@ -1,9 +1,9 @@
-# NEXT: audit hard-coded heap-address tests in host patches as a class
-HYPOTHESIS-ID: g1d-heap-address-tests
+# NEXT: why are replayed patches missing from the live tree?
+HYPOTHESIS-ID: replay-patch-presence
 
-Why: s6860 lvl10 HUD bug was a fixed address bound (0x80300000) applied to a heap table. s6861 closed the pause-window item. Same idiom may hide in other host patches.
-Unit: grep tools/apply_s*.py, src/main, src/rsp for comparisons of guest pointers against literal 0x80xxxxxx bounds, classify each site: static-data bound (fine), heap-dependent (bug class), or dead.
-Hypotheses: H-clean (no other heap-dependent bound) / H-more (some gate depends on where the heap lands, so it differs per level or per OSMEM/spill layout).
-Discriminator: per site, is the compared address from static data or from rs_malloc? Runtime check for any heap-dependent one: ROGUESQ_HUD_LOG=1 on two more levels, list vp 0x80138D20 elements, confirm nothing projected sits in 0x80110000..0x80300000. Control: lvl1 and lvl10 tables must appear in the same log.
-Outcomes: H-more -> fix by class with a same-build A/B and frame check (scratch/s6860/ring.py misses dim rings: use scratch/s6861/score.py). H-clean -> write the table to the ledger, take the next ladder rung.
+Why: s6862 found 9 replayed apply scripts whose MARK is absent from ../N64Recomp/RecompiledFuncs (s2463, s4221-3, s4300, s4466, s4560, s4602, s4680), and that left the s4563 guard with no setter. The replay exits on failure, so absence should be impossible. 205 replayed scripts have no MARK, so a behaviour patch could be missing unseen.
+Unit: offline only. Replay into a scratch copy of a fresh tree (never the live one) or read the last [s4648-replay] output in scratch/agent/loop.log; find what removes the blocks. Then build a presence check for the no-MARK scripts from each script's inserted text.
+Hypotheses: H-skip (the live tree was built with RS64_SKIP_REPLAY=1 or a partial path) / H-strip (a later step such as the s6715 probe gating removes them on purpose) / H-order (a later patch rewrites the anchor text).
+Discriminator: does a scratch replay contain the 9 MARKs? Yes -> H-skip. No -> find the first step after which each MARK vanishes (H-strip or H-order). Control: s4296 A14 yield MARK must be present in the same check.
+Outcomes: any behaviour patch missing -> restore through the replay and A/B it. All probes -> extend tools/audit_heap_addr_tests.py into a post-regen check, remove the dead s4563 check, take the next ladder rung.
 Owner judges: docs/owner_sheet_s6860_lvl10_hud_ab.png, docs/owner_sheet_s6861_pause_hud_ab.png.
