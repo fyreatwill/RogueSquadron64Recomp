@@ -50,7 +50,10 @@ for att in $(seq 1 ${MAXATT:-5}); do
   for n in $(seq 1 ${WAITN:-30}); do
     sleep 5; kill -0 $p 2>/dev/null || break
     [ $((n%6)) -eq 0 ] && key 6
-    if [ -n "${MISSION_WIDTH:-}" ]; then
+    if [ "${MISSION_INIT:-0}" = 1 ]; then
+      # s6865: gate on the game's own [initMission] line. Origins move with dd/aspect, and intros run to ~187 s on lvl5/10, so an origin gate either never fires or fires at boot and the hold counts cinematics as flight.
+      grep -aq '^\[initMission\]' $L && { mt=$SECONDS; break; }
+    elif [ -n "${MISSION_WIDTH:-}" ]; then
       # s6431: wide-aspect arms move the framebuffer origins (MISSION_RE=ZZZ never matched -> false nomission); gate on sustained flight-width rows instead.
       [ "$(grep -ac "width=${MISSION_WIDTH}\\b" $L)" -gt 300 ] && { mt=$SECONDS; break; }
     elif [ "${MISSION_WIDE_FLIGHT:-0}" = 1 ]; then

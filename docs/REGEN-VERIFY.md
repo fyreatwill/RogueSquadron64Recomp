@@ -33,6 +33,17 @@ The 18, by what differs:
 - `beginFrameDLChunk`, `tickTextureMaterialExpiry`, `binPolygonIntoTerrainGrid`, `scanConvertTriangleToSpanTable`,
   `streamTerrainGridCellsByDistance`: live-only diagnostics, listed next.
 
+## s6865: same 2708 / 75 after removing s4563
+
+The dead s4563 check left the replay list and the live tree. Replay from pristine, then compare: 2708 same, 75 differ, and the 75 are
+the same names as the s6864 baseline. Live funcs_24.c before vs after: `_musyxSynthFrame` differs (the removed block, 184 -> 131
+instructions) and three neighbours report as different with 0 instructions differing once branch targets are masked.
+
+Two replays from the same pristine copy gave 0 differing lines, so the chain is deterministic on one host.
+
+The pristine tree is whatever N64Recomp last wrote to a scratch dir, and those dirs get cleaned. s6865 rebuilt one from /tmp/s6864/ctl
+(minus its control line; 0 lines against scratch_s5547_regen). If neither exists, run the front chain again.
+
 ## What a regen loses
 
 Opt-in or count-only code that exists only in live: the s6500-s6526 funcs_9 chain plus s6518/s6519 (`ROGUESQ_FORFACE_LOG`,

@@ -18,10 +18,12 @@ behaviour-changing bound inside one of those prefixes is not flagged; read new p
 | `& 0x7FFFFF`, `& 0x7FFFFC`, `< 0x800000` physical | ~205 | Diagnostic: dumps, probes, env-gated DL walkers. Would fold >8 MB addresses in a log, not in rendering or audio |
 | `origin == 0x790400 / 0x6AB400 / 0x696100 ...` | ~400 | Log phase gates only; they stay silent when wide layouts move the framebuffer |
 | Static-object bounds (0x80130DB0 span table, 0x80138060.., 0x801107E0, 0x80128EA8) | ~30 | Static data, fine |
-| s4563 `fp == 0x80179380` + `head in 0x80179380..0x8017970C` | 1 | Heap literal, default ON, but DEAD: see below |
+| s4563 `fp == 0x80179380` + `head in 0x80179380..0x8017970C` | 1 | Heap literal, default ON, but DEAD: removed s6865, see below |
 | FS slot 0x76DF60 | 4 | Heap literal, opt-in only (LOG_FS_SLOT, FS_PIPE_INJECT default off) |
 
 ## s4563 stale-head skip is dead
+
+Removed s6865: gone from the live tree and the replay list, ROGUESQ_S4563_SKIP no longer exists.
 
 The check survives in musyxSynthFrame but its setter does not: `g_s4563_blk_freed` is only ever read. The setter sat inside the
 `s4561 order` block in rs_free, anchored on the `s4300 rsfree bt` log line, and neither marker is in the live funcs_0.c. Even

@@ -5,7 +5,7 @@ Scans the live RecompiledFuncs tree plus src/ and the patched runtime for: mid-R
 0x80800000/0x81000000, pointer shape tests (x>>24)==0x80, 8 MB masks, and framebuffer origin compares. Each hit is keyed by
 function + literal and looked up in REVIEWED (docs/HEAP-ADDR-AUDIT.md gives the reasoning). Exit 1 if a hit is unreviewed.
 Also lists replayed apply scripts whose MARK is absent from the live tree: such a patch can leave a guard with no setter
-(s6862: s4563). Usage: tools/audit_heap_addr_tests.py [--all]"""
+(s6862: s4563, removed s6865). Usage: tools/audit_heap_addr_tests.py [--all]"""
 import collections, glob, pathlib, re, sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]

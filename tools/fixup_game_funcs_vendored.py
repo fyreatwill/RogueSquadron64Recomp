@@ -41891,7 +41891,6 @@ RS64_REPLAY = [
     "apply_s4560_nulldump.py",
     "apply_s4561_synth_free_order.py",
     "apply_s4562_synth_pause.py",
-    "apply_s4563_stale_head_skip.py",
     "apply_s4569_nodecopy_watch.py",
     "apply_s4571_counter_ring.py",
     "apply_s4571b_record_bytes.py",

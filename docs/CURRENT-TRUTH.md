@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6864 (2026-11-03).
+Compact operational handoff, as of Session 6865 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -123,6 +123,10 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 
 ## Superseded conclusions — do not act on these
 
+- **"300 s hold" on FPS60/dd>1 G1 recipes (s6774-s6862, superseded s6865).** Those runs gated on any origin (MISSION_RE='[0-9A-F]+' or a boot-time
+  match), so hold counted from t=6..31 s, not flight. Believable because alive/crash/stall all read clean and mission_t looked like a number.
+  Flight actually held (tools/audit_hold_flight.py, from [initMission]): s6788/s6789 lvl5 dd4 231 s, lvl10 dd4 124 s; s6832 lvl1 229 s, lvl10 124 s;
+  s6857 lvl9 261 s, lvl17 275 s; s6850-s6852 lvl5 44 s. s6860 load pass: lvl5 reached no [initMission] (its s6860b rerun 148 s), the other 16 retained logs 52-129 s. Clean, but shorter than stated. All retained G1 logs: 117 runs report hold>=280 s, 65 of them flew <280 s.
 - **s5547 "regen determinism CLOSED: replay reproduces live" (superseded s6863).** True on 2026-10-19, and believable because later patches were applied live and each session saw its script pass; none re-ran from pristine. The fixer stopped on pristine input no later than s5904. Regen restored s6864: docs/REGEN-VERIFY.md.
 - s6161 "vp 0x80138D20 HUD elements are above 0x80300000, so that bound separates them from the reticle": believable because
   the only level checked (lvl1, w796) had the table at 0x8034xxxx. s6860: the table is heap and lands at 0x8028FDxx on lvl10.
@@ -323,7 +327,10 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    strict flags), links, and boots: lvl1 130 s hold regen vs live, 0 stalls, 0 crash lines. Per-function machine code
    (tools/regen_verify.sh, docs/REGEN-VERIFY.md): 2708 same, 75 differ, 0 missing, and all 75 are layout, env-gated hooks or opt-in logging.
    Pristine refreshed: fresh make_elf + N64Recomp = s5547 input, 0 lines. Regen drops only opt-in diagnostics (list in the doc), so it
-   is now safe; the live tree was NOT regenerated. dd4/FPS60 runtime on the regen binary is queued (s6864_regen_fps60_dd4_lvl5).
+   is now safe; the live tree was NOT regenerated. The queued s6864_regen_fps60_dd4_lvl5 rc=1 was the harness, not regen: 5x nomission, 0 crash lines, the 690400 gate never matches at dd4.
+   **s4563-dead-code-removal s6865 (static part done, runtime arms UNREPORTED when the session stopped).** s4563 removed from live funcs_24.c and the replay list, script deleted, live rebuilt. Regen compare still
+   2708 same / 75 differ, same 75 names; funcs_24 before/after: only musyxSynthFrame really differs. Two replays from pristine: 0 lines apart. Old regen binary, corrected gate, lvl5 FPS60+dd4: alive, 0 stalls, 0 crash lines, 132 s of flight (single run).
+   Post-removal arms (regen lvl5 FPS60+dd4 300 s flight, live lvl1 120 s): read scratch/agent/m6/g1_lvl5s6865regen and g1_lvl1s6865live, or rerun scratch/s6865/runs.sh. G1 recipes now gate on [initMission] (MISSION_INIT=1, WAITN=60 in g1_level_coverage_common.zsh).
    Not re-checked: s6285 armed gate still matches live by construction, on the opt-in dd>1 path.
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,

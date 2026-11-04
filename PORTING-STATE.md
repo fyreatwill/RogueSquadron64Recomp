@@ -181205,3 +181205,17 @@ Limits, stated plainly: one run per arm, lvl1, dd1, 4:3; no dd4/FPS60/wide runti
 ORIGIN: not a mitigation. Every defect was in our own replay scripts; no guard added.
 Rules out: H-beh. A regen now loses only opt-in diagnostics, listed in docs/REGEN-VERIFY.md.
 Failed attempts: first compare reported 2384 differing, then 245, then 75: macro clause order, __LINE__ in generated code, and page bits. A chained background call also died on a slow recursive search before it wrote link.sh; rerun by hand.
+
+## Session 6865 (2026-11-03) — s4563 dead check removed, regen compare unchanged at 2708/75; the s6864 regen soak failure was the harness gate, and "300 s holds" counted from boot; runtime arms unreported at stop
+
+Soak fold: s6864_regen_fps60_dd4_lvl5 rc=1 is not a regen fault. 5/5 attempts nomission, 0 crash lines. The default MISSION_RE=690400 never matches at dd4 (origins 0x62BD00/0x696100), and lvl5 reaches [initMission] at t=187 s, past the 150 s wait.
+Rerun of the old regen binary with MISSION_RE='62BD00|696100' (scratch/s6865/regen_dd4.sh): alive, 0 stalls, 0 crash lines, hold=304 s, but the gate fired at t=17 s, so 132 s of flight. Single run, no live arm.
+
+s4563 removal: dropped from the replay list in fixup_game_funcs_vendored.py, tools/apply_s4563_stale_head_skip.py deleted, 5 lines gone from live funcs_24.c (hand edit in ../N64Recomp, matching the list change), live rebuilt, ROGUESQ_S4563_SKIP gone from the binary.
+H-dead on the static evidence. funcs_24 before/after: 72 same, 4 differ; _musyxSynthFrame is the removed block (184 -> 131 instructions; the source change is that block alone), the other 3 have 0 differing instructions with branch targets masked (scratch/s6865/mask.py). That _musyxSynthFrame report is the same-run control for the compare.
+Replay from pristine + tools/regen_verify.sh: 2708 same, 75 differ, 0 missing, name set equal to the s6864 baseline (new none, gone none). A second replay from the same pristine: 0 differing lines. Pristine was rebuilt from /tmp/s6864/ctl minus its control line (1 line vs scratch_s5547_regen = that line); scratch_s6864_regen no longer exists.
+
+Harness finding: m6_god_common counts hold from its mission gate, and loose gates fire at boot. New tools/audit_hold_flight.py measures [initMission] to last autopilot fire. All 618 retained G1 logs with a hold: 117 report >=280 s, 65 of those flew <280 s (52 flew >=280 s). s6788/s6789 lvl5 dd4 231 s, lvl10 dd4 124 s; s6832 lvl1 229 s, lvl10 124 s; s6850-s6852 lvl5 44 s; s6860 lvl5 no [initMission]. Those runs stay clean; only the duration claim changes. The flight figure ends at the last autopilot fire, so it can read a little low.
+Change: MISSION_INIT=1 gate in m6_god_common.sh, default on with WAITN=60 in g1_level_coverage_common.zsh. Its first use is the arm below, so the gate itself is not yet shown to fire. [initMission] appeared once on lvl1, 5 and 10 in the logs checked; attract behaviour not checked.
+
+NOT FINISHED: the two post-removal runtime arms (scratch/s6865/runs.sh: A regen binary lvl5 FPS60+dd4 300 s of flight, B live lvl1 120 s) were still running when the Stop gate ordered a stop after 6 blocked stops. A had not reached [initMission]. No runtime result exists for the removal. The 6 blocks came from ending turns to wait for them. Queued s6865_truehold_lvl10_dd4 (waits for runs.sh).
