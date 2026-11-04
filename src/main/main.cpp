@@ -2181,6 +2181,9 @@ static void rs64_s6843_note(uint32_t key, uint32_t phys, uint32_t len, const cha
 }
 // s6876: mat3x4Multiply entry (tools/apply_s6876_camcaller.py). ROGUESQ_CAM_CALLER=1 prints, for calls whose output is the camera rotation
 // 0x80138458+0x28, the host return address and row 1 of both inputs: every new caller, then every 512th call.
+// s6877: each call that moves row 1 of the camera also prints a [camcall2] row (first ROGUESQ_CAM_CALLER_LINES=30000): swap, row 1 before and
+// the product's row 1 after (the mat3x4Multiply formula, in float), both 3x3 inputs, camera position and the +0xD0/+0xE0 angle words.
+extern std::atomic<int> g_rs64_swap_n;
 extern "C" void rs64_s6876_mm(uint8_t* rdram, uint32_t ra, uint32_t a0, uint32_t a1, uint32_t a2) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_CAM_CALLER"); return e && *e && *e != '0'; }();
     if (!on || (a2 & 0x1FFFFFFFu) != 0x138480u) return;
@@ -2189,10 +2192,22 @@ extern "C" void rs64_s6876_mm(uint8_t* rdram, uint32_t ra, uint32_t a0, uint32_t
     static std::mutex mu; static std::map<uintptr_t, uint64_t> by;
     std::lock_guard<std::mutex> lk(mu);
     const uint64_t n = ++by[hra];
+    auto rf = [&](uint32_t va, uint32_t o) { float f; memcpy(&f, rdram + ((va + o) & 0x7FFFFCu), 4); return f; };
+    static const int cap = [] { const char* e = std::getenv("ROGUESQ_CAM_CALLER_LINES"); return (e && *e) ? std::atoi(e) : 30000; }();
+    static int lines = 0;
+    float A[9], B[9], o[3], w[3];
+    for (int i = 0; i < 9; i++) { A[i] = rf(a0, 4 * i); B[i] = rf(a1, 4 * i); }
+    for (int i = 0; i < 3; i++) { o[i] = A[3] * B[i] + A[4] * B[3 + i] + A[5] * B[6 + i]; w[i] = rf(a2, 12 + 4 * i); }
+    if (lines < cap && (o[0] != w[0] || o[1] != w[1] || o[2] != w[2])) {
+        lines++;
+        std::fprintf(stderr, "[camcall2] sw=%d hra=%llX n=%llu a0=%08X a1=%08X was=%.7f,%.7f,%.7f now=%.7f,%.7f,%.7f A=%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f "
+                     "B=%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f pos=%.4f,%.4f,%.4f d0=%.7f e0=%.7f\n", g_rs64_swap_n.load(), (unsigned long long)hra, (unsigned long long)n, a0, a1,
+                     w[0], w[1], w[2], o[0], o[1], o[2], A[0], A[1], A[2], A[3], A[4], A[5], A[6], A[7], A[8], B[0], B[1], B[2], B[3], B[4], B[5], B[6], B[7], B[8],
+                     rf(0x80138458u, 0x10), rf(0x80138458u, 0x14), rf(0x80138458u, 0x18), rf(0x80138458u, 0xD0), rf(0x80138458u, 0xE0));
+    }
     if (n != 1 && (n & 511u)) return;
-    auto rf = [&](uint32_t va, uint32_t o) { float f; memcpy(&f, rdram + ((va + o) & 0x7FFFFCu), 4); return (double)f; };
     std::fprintf(stderr, "[camcaller] hra=%llX n=%llu a0=%08X a1=%08X a0row1=%.5f,%.5f,%.5f a1row1=%.5f,%.5f,%.5f\n", (unsigned long long)hra, (unsigned long long)n, a0, a1,
-                 rf(a0, 12), rf(a0, 16), rf(a0, 20), rf(a1, 12), rf(a1, 16), rf(a1, 20));
+                 (double)A[3], (double)A[4], (double)A[5], (double)B[3], (double)B[4], (double)B[5]);
 }
 // s6845: drawSubtitleText -> drawTextGlyphRect argument probe (tools/apply_s6845_glyph_probe.py), VI window = ROGUESQ_WIPE_SCAN.
 extern "C" volatile uint32_t rs64_vi_n_g;

@@ -1,12 +1,11 @@
-# NEXT: find where dt enters the camera pitch, starting at buildEffectObjectWorldTransform
-HYPOTHESIS-ID: g3-optin-frame-diff
+# NEXT: retail mission null for the N64Recomp self-branch block 8009264C..800934A4
+HYPOTHESIS-ID: selfbranch-mission-null
 
-Why: s6876 refuted the attitude dead-band and named the in-place writer of 0x80138480 (buildEffectObjectWorldTransform, 8/10 [camcaller] rows). Pitch at dt 1/20, 1/30, 1/60: 0.06233, 0.06316, 0.06055, not monotonic. dt only takes 1/60 multiples (the game rounds it), so do not use 1/45.
-Hypotheses: H-build (the temp matrix a1 0x80165DF8 carries the dt term) / H-quat (updateEffectObjectOrientationQuat's two rare sites set the pitch, then it holds; lvl5 ufix steps once at camlog row 21, which fits) / H-early (set during launch before camlog starts, by another path).
-Measure, one build: print [camcaller] every call for the first ~200 ticks of flight, with the word-5 value before and after each call, per host return. The call that changes word 5 selects. Arms u20, u30, u60: lvl1, PIN=1, FZ=99999, HOLD_S=70, ROGUESQ_G3C_CAMLOG=1 ROGUESQ_CAM_CALLER=1 ROGUESQ_WATCH_LOG=1. Resolve: atos -o build/RogueSquadron64Recomp -l 0x100000000 <hra>. Compare with tools/g3_cam_align.py.
-Budget: 0.15-0.26 deg of pitch. Name it, do not fix it; a fix is the owner's call. If this does not select in one iteration, close the thread as measured and take the next ladder rung.
-Also open: lvl10 cloud clock (VI or wall): only worth a run if an owner report points at clouds.
+Why: g3-optin-frame-diff closed s6877 (pitch = retail asin dead zone, no fix). CURRENT-TRUTH lists the silent miscompile as NOT fixed: 16 backward branches out of a function land on its own entry, in voice resampler helpers. Retail attract gave 0 hits, but the retail mission arm never reached flight, so there is no mission null. The g3_mission oracle route has since reached flight on every mission (s6753-s6778).
+Hypotheses: H-dead (block never runs in flight, stays parked) / H-live (retail executes it during mission voice playback, so the port runs miscompiled code and it needs a real fix, design in PORTING-STATE s6871).
+Measure, one run: retail oracle in lvl1 flight with in-mission dialogue, PC watch on 8009264C..800934A4. Same-run positive control: a PC watch on a voice path function known to run in flight must fire, or a null says nothing. Read tools/oracle/README.md and tools/g3_mission/run.sh first; use --save-dir, never swap the user .eep.
+Outcomes: 0 hits with control firing -> H-dead for that mission, record it, repeat on one more dialogue heavy level at most. Any hit -> H-live, name the caller, fix per s6871.
 If an owner report arrives, it outranks this.
 Ask owner when a human is next on: add tools/regen_front.sh, regen_replay.sh and regen_verify.sh to the CLAUDE.md regen order (owner file, not edited). Decide whether to regenerate the live tree.
 Owner judges: docs/owner_sheet_s6874_dd_edge.png, docs/owner_sheet_s6860_lvl10_hud_ab.png, docs/owner_sheet_s6861_pause_hud_ab.png, docs/owner_sheet_s6872_optin_samepose.png.
-Open, not queued (G4): FPS60+dd3 at 300 s, FPS60+dd2 on lvl10, wide bundles at 300 s continuous. Owner can lift the park for these.
+Open, not queued (G4): FPS60+dd3 at 300 s, FPS60+dd2 on lvl10, wide bundles at 300 s continuous. Owner can lift the park for these. lvl10 cloud clock only on an owner report.
