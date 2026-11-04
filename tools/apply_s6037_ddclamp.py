@@ -1,14 +1,14 @@
 """s6037 G1c: when ROGUESQ_DRAW_DISTANCE != 1, clamp the footprint window (0x80132DB0/B4/B8/BC, written at 0x80042944..0x800429BC
 as min/ceil-max of the footprint polygon) to the terrain dims (u16 0x80136DF8 w, 0x80136DFA h). Retail never needs this because its
 polygon stays inside the terrain; a scaled polygon spills past it (s6036 dd2: x0=3 w=33 on 32x32 -> getGridCellValueAt OOB, 5/5
-SIGBUS). Updates $a3/$a2 (min x/z) too since the polygon is re-based on them. Retail (unset/1) = untouched. Idempotent."""
+SIGBUS; that SIGBUS was the span table, s6049/s6591 bound it, and s6874 stopped clamping to the dims). Updates $a3/$a2 (min x/z) too since the polygon is re-based on them. Retail (unset/1) = untouched. Idempotent."""
 import pathlib
 base = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
 OLD = "    // 0x800429C0: addu        $a1, $zero, $zero\n"
 NEW = r'''    { /* s6590 desc log */ static int dl = -1, dn = 0; if (dl < 0) dl = getenv("ROGUESQ_TBLNULL_LOG") ? 1 : 0;
       if (dl && (dn++ % 300) == 0 && dn < 3000) fprintf(stderr, "[desc6590] call=%d w0=%08X w4=%08X w8=%08X wC=%08X tw=%u th=%u\\n", dn, (uint32_t)MEM_W(0, (int64_t)(int32_t)0x80136DC0), (uint32_t)MEM_W(4, (int64_t)(int32_t)0x80136DC0), (uint32_t)MEM_W(8, (int64_t)(int32_t)0x80136DC0), (uint32_t)MEM_W(0xC, (int64_t)(int32_t)0x80136DC0), (unsigned)MEM_HU(0xDF8, (int64_t)(int32_t)0x80136000), (unsigned)MEM_HU(0xDFA, (int64_t)(int32_t)0x80136000)); }
     { /* PATCH: s6037 ddclamp */ static int on6037 = -1;
-      if (on6037 < 0) { const char* e = getenv("ROGUESQ_DRAW_DISTANCE"); on6037 = (e && *e && atof(e) != 1.0) ? 1 : 0; }
+      if (on6037 < 0) { const char* e = getenv("ROGUESQ_DRAW_DISTANCE"); on6037 = (e && *e && atof(e) != 1.0 && !getenv("ROGUESQ_DD_NOCLAMP")) ? 1 : 0; }
       if (on6037 && MEM_W(4, (int64_t)(int32_t)0x80136DC0) != 0) {
         int64_t h = (int64_t)(int32_t)0x80132000, t = (int64_t)(int32_t)0x80136000;
         int32_t tw = (int32_t)MEM_HU(0xDF8, t), th = (int32_t)MEM_HU(0xDFA, t);
@@ -22,8 +22,14 @@ NEW = r'''    { /* s6590 desc log */ static int dl = -1, dn = 0; if (dl < 0) dl 
             double use = cx; if (ctg > 0) { int b = (int)((cn++ / (unsigned)ctg) & 1u); use = b ? cx : 1.0; if (b != clast) { clast = b; fprintf(stderr, "[capxtog] blk=%d capx=%g\n", b, use); } }
             if (use != 1.0 && cap > 0) cap = (int32_t)(cap * use); }
           /* s6548 log */ static int n6548 = 0; int cx_log6586 = getenv("ROGUESQ_DD_CAPX_TOG") != 0; int32_t px0 = x0, px1 = x1, pz0 = z0, pz1 = z1;
-          if (x0 < 0) x0 = 0; if (x1 > tw) x1 = tw; if (x1 < x0) x1 = x0;
-          if (z0 < 0) z0 = 0; if (z1 > th) z1 = th; if (z1 < z0) z1 = z0;
+          /* s6874 edge: retail's window legally runs past the map; getGridCellValueAt sends those cells to clampGridCellLookup (0x80048948), which repeats the edge cell, so the plain continues to the horizon.
+             Clamping to tw/th deleted that border at any dd != 1 (lvl1 k2: map edge against the sky, tris 1026 -> 509). Keep it; spend the cap and slot64 limits on off-map cells first. ROGUESQ_DD_EDGE=0 = old. */
+          static int edge6874 = -1; if (edge6874 < 0) { const char* e = getenv("ROGUESQ_DD_EDGE"); edge6874 = (e && *e == '0') ? 0 : 1; }
+          if (!edge6874) { if (x0 < 0) x0 = 0; if (x1 > tw) x1 = tw; if (x1 < x0) x1 = x0;
+            if (z0 < 0) z0 = 0; if (z1 > th) z1 = th; if (z1 < z0) z1 = z0; }
+          else { while (cap > 0 && (x1 - x0) * (z1 - z0) > cap && z1 > th && (z1 - z0) > 1) z1--; while (cap > 0 && (x1 - x0) * (z1 - z0) > cap && z0 < 0 && (z1 - z0) > 1) z0++;
+            while (cap > 0 && (x1 - x0) * (z1 - z0) > cap && x1 > tw && (x1 - x0) > 1) x1--; while (cap > 0 && (x1 - x0) * (z1 - z0) > cap && x0 < 0 && (x1 - x0) > 1) x0++;
+            while (x1 - x0 > 64 && x1 > tw) x1--; while (x1 - x0 > 64 && x0 < 0) x0++; while (z1 - z0 > 64 && z1 > th) z1--; while (z1 - z0 > 64 && z0 < 0) z0++; }
           while (cap > 0 && (x1 - x0) * (z1 - z0) > cap && (z1 - z0) > 1) z1--; while (cap > 0 && (x1 - x0) * (z1 - z0) > cap && (x1 - x0) > 1) x1--;
           /* s6591 slot64: the per-cell slot array at 0x80132DC0 is 64 words wide x 64 rows (0x4000, ends exactly at the terrain descriptor 0x80136DC0); stores at 0x80043020 index it by (row<<8)+4*col, so a window with d>64 rows clears the descriptor (s6591 descwatch: val 0 to 80136DC0/C4). Cap the window at 64x64. */
           if (x1 - x0 > 64) x1 = x0 + 64; if (z1 - z0 > 64) z1 = z0 + 64;
@@ -33,7 +39,7 @@ NEW = r'''    { /* s6590 desc log */ static int dl = -1, dn = 0; if (dl < 0) dl 
       } }
 '''
 def apply9(text):
-    if "PATCH: s6037 ddclamp" in text and "s6586b capx" in text and "s6590 desc log" in text and "s6591 slot64" in text or OLD not in text: return text, 0
+    if "PATCH: s6037 ddclamp" in text and "s6586b capx" in text and "s6590 desc log" in text and "s6591 slot64" in text and "ROGUESQ_DD_NOCLAMP" in text and "s6874 edge" in text or OLD not in text: return text, 0
     if "PATCH: s6037 ddclamp" in text:
         i = text.index("    { /* s6590 desc log */") if "s6590 desc log" in text else text.index("    { /* PATCH: s6037 ddclamp */"); j = text.index(OLD, i); text = text[:i] + text[j:]
     assert text.count(OLD) == 1
