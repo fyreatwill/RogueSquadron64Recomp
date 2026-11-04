@@ -181229,7 +181229,7 @@ Block: s6865 wrote NEEDS-HUMAN: gate-defect after 6 blocked stops, asking the ow
 stop_gate.sh and ITERATION.md are unchanged. The durable rule went into CURRENT-TRUTH. The owner can still choose to spell it out in ITERATION.md.
 
 Arms (post-removal binaries; ROGUESQ_S4563_SKIP absent from both):
-A, regen, lvl5 FPS60+dd4, had finished before the stop: scratch/agent/m6/g1_lvl5s6865regen. Gate t=191 s, [initMission] t=187 s, flight 306 s by audit_hold_flight, alive, 0 stalls, 0 crash lines, fbhash distinct 21212/24114. Its longest same-hash run, 1416, sits at frames 3671-5086, before [initMission] at frame 10923; the pre-removal regen run shows 1418, so this is the load screen and not a removal effect.
+A, regen, lvl5 FPS60+dd4, had finished before the stop: scratch/agent/m6/g1_lvl5s6865regen. Gate t=191 s, [initMission] t=187 s, flight 306 s by audit_hold_flight, alive, 0 stalls, 0 crash lines, fbhash distinct 21212/24114. Its longest same-hash run, 1416, sits at frames 3671-5086, before [initMission] at frame 10923; the pre-removal regen run shows 1418, so it is pre-flight and not a removal effect (which screen it is was not checked).
 B, live, lvl1 dd1: first attempt g1_lvl1s6865live has no summary (killed as above, kept as evidence, 0 crash matches). Rerun under a new tag: scratch/agent/m6/g1_lvl1s6865liveb. Gate t=83 s, [initMission] t=78 s, flight 135 s, alive, 0 stalls, 0 crash lines, fbhash distinct 5923/6986.
 fbrun-control and mcycles-control passed in both completed runs, so the harness detectors were live.
 
