@@ -11,7 +11,7 @@ HEAD = "{ /* PATCH: s6049 tablebound */ static int on6049 = -1; static unsigned 
 NEWHEAD = "{ /* PATCH: s6049 tablebound */ /* PATCH: s6880 widebound */ extern int rs64_s6880_wide(void); static int on6049 = -1; static unsigned n6049;\n"
 GATE = re.compile(r'if \(on6049 && \(uint32_t\)\(U32\(ctx->(r\d+)\) - 0x80130DB0u\) >= 0x2000u\) \{ ((?:g_s6493\[\d\]\+\+; )?)if \(n6049\+\+ < 8\) (fprintf\(stderr, "\[spanbound\] skip addr=0x%08X pc=0x([0-9A-F]{8})\\n", \(unsigned\)U32\(ctx->r\d+\)\);) \}')
 LOG = (r'if ((on6049 || rs64_s6880_wide()) && (uint32_t)(U32(ctx->\1) - 0x80130DB0u) >= 0x2000u) { \2if (n6049++ < 8 || !(n6049 & 0xFFFFu)) { \3 '
-       r'const int64_t h6880 = (int64_t)(int32_t)0x80132000; fprintf(stderr, "[spanbound6880] pc=0x\4 n=%u win=%d,%d,%d,%d r4=%d r5=%d r6=%d\n", n6049, (int32_t)MEM_W(0xDB0, h6880), (int32_t)MEM_W(0xDB4, h6880), (int32_t)MEM_W(0xDB8, h6880), (int32_t)MEM_W(0xDBC, h6880), (int32_t)ctx->r4, (int32_t)ctx->r5, (int32_t)ctx->r6); } }')
+       r'const int64_t h6880 = (int64_t)(int32_t)0x80132000; fprintf(stderr, "[spanbound6880] pc=0x\4 n=%u win=%d,%d,%d,%d r4=%d r5=%d r6=%d\\n", n6049, (int32_t)MEM_W(0xDB0, h6880), (int32_t)MEM_W(0xDB4, h6880), (int32_t)MEM_W(0xDB8, h6880), (int32_t)MEM_W(0xDBC, h6880), (int32_t)ctx->r4, (int32_t)ctx->r5, (int32_t)ctx->r6); } }')
 def apply9(text):
     if "PATCH: s6880 widebound" in text: return text, 0
     n = text.count(HEAD)

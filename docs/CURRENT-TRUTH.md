@@ -96,10 +96,11 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   (d) objective response PARKED by owner 2026-10-31 ([G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md)).
 - Closed: M5 audio de-stubbing, M3 idiom audits, M6 endurance (s6442), G2 audio, G5 renaming. G4 crash hunting parked.
 
-- **G1d wide footprint (s6879-s6880, IN PROGRESS).** 16:9 flight lost far terrain to our s6144 widening; ROGUESQ_G1D_FPDEPTH (default on, =0 old) restores it, k=1 untouched. FPDEPTH at 21:9 lvl1 crashed 5/5 in streamTerrainGridCellsByDistance (0x80042D6C, s2=0xFE7E017F); ROGUESQ_G1D_SPANBOUND (s6880) under test. Do not call 21:9 safe until the s6880 entry says so.
+- **FIXED s6879-s6880: wide flight lost far terrain, then 21:9 crashed.** ROGUESQ_G1D_FPDEPTH (default on, =0 old) undoes our s6144 forward-reach loss. That exposed a 21:9 crash: scanConvertTriangleToSpanTable (0x80042820) overran the span tables into the descriptor at dd 1, because the s6049 bound was gated on dd != 1. ROGUESQ_G1D_SPANBOUND (default on, =0 old) covers wide frames; k=1 retail. Same binary: =0 crashes, default holds lvl1 21:9 302 s, lvl5/lvl10 135 s; 4:3 and 16:9 0 px changed vs before the bound. tools/g3_aspect_crop.py is valid at 16:9, NOT 21:9 (bad fit, s6880). 21:9 look is single-source; sheets docs/owner_sheet_s6879_wide_depth.png, docs/owner_sheet_s6880_219_depth.png.
 
 ## Superseded conclusions — do not act on these
 
+- s6880 first reading "n219 k2 worse than o219 at 21:9" (hz_p90 31 vs 7.5, superseded s6880 same session). Believable because the tool had just scored 16:9 well; its 21:9 fit is bad (sx 1.22, sy 1.48) and the frames show the reverse.
 - s6876 "in-place rotation writer = buildEffectObjectWorldTransform" as the pitch lead (superseded s6877). Believable because it made 8 of 10 [camcaller] rows; that was call count, it never changes word 5.
 - s6875 NEXT "add a third dt to test linearity" as written, and the s6876 draft reading "dead-band settles the pitch" (superseded s6876). Believable because 1/45 looked like a third dt and the dead-band is truly per tick; dt is rounded to 1/60 ticks and the knob fires without moving the pitch.
 - s6873 "FPS60 pass count follows tick rate" and "FPS60 k0/k1 not explained by frame age" (superseded s6875). Believable because the dt variants stayed near each limiter's own rate, so dt and rate never crossed, and the frame-age estimate assumed half a tick. Crossed arms: dt decides the path and camera pitch; a whole tick of presentation lag explains the rest.

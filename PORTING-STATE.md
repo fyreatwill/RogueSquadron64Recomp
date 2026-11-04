@@ -181394,3 +181394,22 @@ Result, lvl1 dt pinned, POSE_FREEZE, base t43 (tools/g3_aspect_crop.py, s6880 re
 | f169 (FPDEPTH on) | 0 / 1 / 2 | 11.61 / 12.18 / 18.63 | 16.36 / 15.11 / 0.63 | 21.45 / 21.48 / 80.85 |
 hz_mean stays 40-75 with a smaller p90, so a tail of columns is far off; not read. Sheet docs/owner_sheet_s6879_wide_depth.png (4:3, old 16:9, FPDEPTH 16:9): row 1 hill behind the craft is back. Owner judges.
 Open at the limit: 21:9 crashed, see s6880.
+
+## Session 6880 (2026-11-04) — 21:9 crash named: scanConvertTriangleToSpanTable overran the span tables into the terrain descriptor at dd 1; s6049 bound now covers wide frames, 21:9 lvl1 holds 302 s
+HYPOTHESIS-ID: g3-aspect-samepose. What ran: finished s6879's in-flight arms (run_g), one build, then run_h and run_i from that binary. Numbers: lvl1 dt pinned, POSE_FREEZE, MAXATT=1.
+ORIGIN: writer = scanConvertTriangleToSpanTable, pc 0x80042820. s6880 c219 descwatch: 64 byte stores of 0x7F across 0x80136DC0..DFF, over the load_level_hmp publish of 802EC4A8. Not legitimate: those bytes are span heights landing outside the two 64x64 tables. Why now: FPDEPTH makes the 21:9 footprint deep enough to pass the tables; s6879 wideclamp copied the s6037 window clamp, but the s6049 store bound stayed gated on ROGUESQ_DRAW_DISTANCE != 1. Same class as s6047.
+Before the fix: h219 crashed 5/5 at 0x80042D6C (lhu via s2 = 0xFE7E017F), si_addr 0x37e7e017d. o219 (FPDEPTH=0) held clean, so FPDEPTH exposes it.
+Fix: tools/apply_s6880_widebound.py + rs64_s6880_wide: a frame with rs64_s6879_fpk != 1 takes the s6049 bound at all 9 blocks. ROGUESQ_G1D_SPANBOUND=0 = old. k = 1 stays retail.
+| arm (one binary) | result |
+|---|---|
+| c219 21:9 SPANBOUND=0 + descwatch | crash, same si_addr, caps=4 (control) |
+| n219 21:9 | hold 302 s, flight 306 s, 0 crash, 0 stall, caps=6; skips logged at rows -1, 64, 65, 66 |
+| l5w lvl5 21:9 | flight 135 s, 0 crash; skips rows -4..-1 |
+| l10w lvl10 21:9 | flight 135 s, 0 crash; 0 skip lines |
+| n169 16:9 vs h169 | 0 differing px below the title bar, all k; 0 skip lines |
+| n43 4:3 vs h43 | 0 differing px below the title bar, all k |
+Controls: descwatch fired on the load_level_hmp publish (0x80043E64). Same-pose repeat floor is exactly 0 (t43/h43 and f169/h169 PNGs byte-identical, 40 min apart); adjacent-tick MAD 25.4 / 27.5. t43 vs g43 differed by 7806 px at every k: that is the title bar focus state, box 18,18-722,47, not game pixels.
+Sheet docs/owner_sheet_s6880_219_depth.png (4:3, 21:9 FPDEPTH=0, 21:9 fixed; k0 and k2): hill behind the craft back at k0, k2 horizon smooth like 4:3 where FPDEPTH=0 is ragged. Owner judges.
+Dead end: g3_aspect_crop.py is not valid at 21:9. Its fit gave sx 1.22 / sy 1.48, control separation is weak (27 vs 22), and it scored n219 k2 worse than o219 (hz_p90 31.49 vs 7.53) while the frames show the reverse. No 21:9 same-pose number is claimed; the 21:9 reading is single-source (eyes on one sheet).
+Limits: how row 64-66 overruns reach a descriptor about 320 rows past the table is not measured. Inference: row 64 of the second table lands on the window words at 0x80132DB0 and the walk then runs on bad bounds. Skip lines are capped at 8 per site, so the row lists are first skips, not a census. lvl5/lvl10 are 135 s, not 300 s. hd4 (16:9 + dd4) stayed alive but caps=0, so no same-pose frames; p2/p2s also caps=0, cause not checked. apply_s6880_widebound was applied to the live tree only, never replayed from pristine; a first version broke the build (re.sub turned \n into a real newline), fixed and re-tested.
+Rules out: wideclamp changing 4:3 or 16:9 pixels; FPDEPTH or the bound changing 4:3.
