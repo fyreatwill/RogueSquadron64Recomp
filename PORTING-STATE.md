@@ -181236,3 +181236,17 @@ fbrun-control and mcycles-control passed in both completed runs, so the harness 
 Selects H-dead, refutes H-live and H-gate: [initMission] gating works, firing 4-5 s after the event in both arms and appearing once per run. s4563-dead-code-removal closed.
 Limits: one run per arm. The null says the removal broke nothing on these two routes; that the code cannot run still rests on the s6862/s6865 static reading. s6865_truehold_lvl10_dd4 has not run: the loop runs it after this iteration.
 Rules out: the gate-defect block. No game or gate code changed.
+
+## Session 6867 (2026-11-03) — FPS60+dd4 true 300 s flight on lvl1/5/10 (H-holds); retail 660 s holds were real mission time but most span restarts; mission_cycles was a false zero
+
+Ran s6865_truehold_lvl10_dd4 by hand (the loop had not reached it; recipe moved to soak_queue/done, verdict line added to SOAK-RESULTS). lvl10 FPS60+dd4: gate t=185 s, [initMission] t=183 s, 302 s of flight, alive, 0 stalls, 0 crash lines (was 124 s). lvl1 same recipe, scratch/s6867/lvl1.sh: gate t=84 s, 305 s, alive, 0 stalls, 0 crash lines (was 229 s). With s6866 lvl5 306 s, the qualification set 1/5/10 now has real 300 s flight on 4:3 FPS60+dd4. One run per level. Selects H-holds; no H-late datum.
+Controls: longest same-hash run after [initMission] is under 60 frames on both, while the same runs show 366 and 1127 before it, so the check was live (scratch/s6867/fbrun2.py). [ddbundle] present. Frames/s in flight 40.5 lvl1, 59.9 lvl10, against 30.0 for the lvl1 dd1 non-FPS60 control. The lvl1 40.5 is under recipe logging, which s6788 already attributes the same drop to; not re-measured here.
+
+Departed from NEXT.md on purpose: it said to queue one soak per level below 280 s. ITERATION G4 (owner) says do not queue repeat-hold soaks, and G1c's bar is levels 1, 5, 10. So only those ran, and the rest was done offline.
+
+Offline: tools/audit_hold_flight.py skipped .gz logs, which is every m6hold 660 s run. Fixed. All 19 retail holds: gate 2-11 s after [initMission], so the s6865 gap does not apply to them. 851 retained runs now audited, 257 report hold>=280 s, 193 have >=280 s after the first init (wall_s).
+New datum: inits counts [initMission] lines, and most retail holds restarted. Only lvl3/5/10/12/13/15/18 stayed in one mission. mission_cycles read 0 on lvl0, 1 (r3), 11, 14 despite restarts; it only counts 0x690400->0x6AB400 changes, so the s6004 "lvl10-15 in flight the whole hold" line is wrong and is now superseded. New tools/audit_hold_segments.py gives continuous stretches; final segments are upper bounds because keys stop at ~520 s. Why each mission ended was not checked: mission outcomes are owner playtest.
+Wide bundles are shorter than the owner doc said: 21:9 lvl9 261 s, lvl17 275 s with 5 inits (longest 117 s), 16:9 lvl1 253 s; s6860 load pass 52-129 s, lvl5 148 s, not "about 140 s, level 5 for 300 s". OWNER-OPT-INS corrected.
+
+Change: m6_god_common.sh summary prints inits= and flight_s=, with a synthetic flight-control that exits on failure; it fired in the lvl1 run (flight-control OK, inits=1 flight_s=307). New docs/G1-TRUE-FLIGHT.md. No game code changed.
+Rules out: a late crash, stall or freeze on 4:3 FPS60+dd4 lvl1/5/10 within 300 s of flight, one run each. Not covered: FPS60+dd3 anywhere at 300 s, FPS60+dd2 on lvl10, wide bundles at 300 s continuous.

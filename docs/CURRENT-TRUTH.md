@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6866 (2026-11-03).
+Compact operational handoff, as of Session 6867 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -29,18 +29,13 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   (all retail colours present in the port). Selected-row highlight = identical 60-frame pulse B94100FE<->E0AE09FE. Pixel
   IoU gaps on these screens are the slideshow backdrop + pulse phase (1 Hz retail dumps alias); score menus by RDP, not
   pixels. Pair runner tools/g3_menu_pair.sh: retail offset 7.3 s, >=5 s between presses (retail loads 2-5 s slower).
+- **G3 ENTER NAME, hangar, SHOWROOM, Concert Hall (s6785-s6787): match retail at RDP level.** Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6867)".
 - **G3 front-end CLOSED (s6784).** Title START/OPTIONS menu (1171/1193 menu frames exact, residual = fade/pulse phase),
   OPTIONS top level (240/240) and post-erase SELECT GAME (median 7/870 = emblem tri count + pulse) match retail at the RDP
   stream, cross-screen controls 0 exact. Menu worker overlap (s6782 residual) is H-disjoint: the song-load worker exists
   only in screen 10 = passcode (MAESTRO) Concert Hall, which never sends or polls image jobs, and the passcode exit blocks on
   its own image completion first (tools/menu_worker_reach.py, static + runtime null on 3 routes with a same-run positive
   control; single-source for screen 10 itself, not driven).
-- **G3 ENTER NAME + native 4:3 hangar match retail at RDP level (s6785).** ENTER NAME 235/236 exact (odd frame = retail
-  transition), control 0/236. Hangar (SELECT LEVEL, 512 wide): frame-pair matcher never goes exact (median 209/1260)
-  because ~1100 tris share one PRIM that flickers per frame and the hologram picture + lower band are wobbling texrect
-  grids; new tools/g3_rdp_phase.py (distribution compare): 153 texrects/frame both, static set 53/53 identical (prompt line
-  25/25 rects), tri q05..q95 [1093..1136] vs [1094..1138], mean ratio 1.003 over ~800 frames each; hologram grid visible in
-  ~20% of frames in both. Control (retail hangar vs port ENTER NAME) separates on every term.
 - **G3 AT THE MOVIES swept (s6792).** 81/81 shots H-match vs retail per shot; the default spike cull deleted retail's
   legit 640-wide cinematic tris (port zeroed 24806, retail emits 26869 past the bound); cull now skips 321..640-wide images,
   notch 59/60 -> 0/797 frames, scanner positive control 20792 flagged / 0 culled. scratch/s6792/notch_fix_sheet.png.
@@ -51,20 +46,6 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   M(ym) M(yh) emitted as a fan when an edge misses by >1/256 px (ROGUESQ_EXACT_EDGES, default on, =0 old, =tog A/B). Same-run
   off 0.58 / on 0.00; playlist line shots 40/939 -> 2/902 (content); lvl1 flight 120 s clean, no new lines. Retail RDP streams
   are identical to ours (s6793), so retail-match is unaffected; ROGUESQ_RESMULT selects Manual (s6793).
-- **G3 SHOWROOM fully driven (s6787).** AT THE MOVIES does nothing on a lvl1 save in retail or port (cursor on it, A
-  fired, 133 texrects unchanged). Passcode DIRECTOR (pair script PASS2=DIRECTOR) enables it: the cutscenes play back to back
-  at VI width 640 (+3.0 s port / +3.4 s retail after the press). Cinematic RDP match: 1184 aligned frames, tri-count median |d| 1,
-  521 full-signature exact, wrong-lag control cost 417 vs 23, title cards on the same frames. Concert Hall track changes:
-  same title order in both arms (3 tracks), no song-worker request per change in either arm. Dump caps: RS64_RDP_BIN_PORT_MAX_MB
-  (port), RMAX_MB/PMAX_MB/RBW=all (pair script).
-- **G3 screen 10 = OPTIONS > SHOWROOM matches retail (s6786).** Passcode MAESTRO (tools/g3_passcode_sched.py) adds the
-  SHOWROOM row; SHOWROOM (ships fly past the Death Star; CONCERT HALL / AT THE MOVIES / BACK) and the CONCERT HALL song
-  player: texrect static sets identical (80/80 + 1595 animated positions, 99/99), controls disjoint. The tri gap is the
-  game's RNG: ship idx = rand%18 then +1/+2 per 1023-tick flyby, pose = rand&0x7FF; menus call rand every frame so the seed
-  differs per arm. Indices from each arm's seeds (tools/g3_showroom_models.py) predict the shared ship (model 10: tile and
-  texture sets equal 908/908, control 0). Song worker runtime H-disjoint in both arms (one request + completion after image
-  job 4, no image mark after). Port song worker completes in the send tick, retail 9 ticks later (benign, one job).
-  Runner tools/g3_showroom_pair.sh (GAP=16 needed). Front-end CLOSED except SHOWROOM > AT THE MOVIES.
 - **CLOSED s6782: stack-payload send class.** tools/audit_service_msg_stack.py (offline, retail ROM, all segments): 8
   stack-formed sendServiceMessage/osSendMesg sites; 1 live (0x800B380C, fixed s6781), 3 doorbells whose receiver never
   dereferences (0x8000582C, 0x800058FC, 0x800C5880), 3 synchronous (0x80004BE4/D0C/F28 block until the stack object
@@ -123,6 +104,7 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 
 ## Superseded conclusions — do not act on these
 
+- s6004 "lvl10-15 mission_cycles=0, in flight the whole hold" (superseded s6867): mission_cycles only counts 0x690400->0x6AB400 origin changes, so it read 0 while lvl11 restarted twice and lvl14 once. Use inits= from the summary.
 - **"300 s hold" on FPS60/dd>1 G1 recipes (s6774-s6862, superseded s6865).** Those runs gated on any origin (MISSION_RE='[0-9A-F]+' or a boot-time
   match), so hold counted from t=6..31 s, not flight. Believable because alive/crash/stall all read clean and mission_t looked like a number.
   Flight actually held (tools/audit_hold_flight.py, from [initMission]): s6788/s6789 lvl5 dd4 231 s, lvl10 dd4 124 s; s6832 lvl1 229 s, lvl10 124 s;
@@ -252,7 +234,7 @@ s6678-s6687 per-level counter contracts moved to PROJECT-OVERVIEW (parked by own
   audio (G2b), hangar fish-eye while scrolling ships (G3f). Owner asked for the PS4 remap + stick shaping (6ed036b97)
   reverted: get_n64_input is the pre-6ed036b97 mapping; do not change controls without an owner request.
   **CLOSED s6788-s6791:** G3e dd>1 terrain dropouts = s6540 120-cell span-bypass cap made terrain bistable + a sentinel
-  collision (s6789); dd>1 defaults now BYPASS_MAXCELLS=-1 + UCODE_CAP=1048576; post-fix lvl5/lvl10 FPS60 dd4 300 s, 0 drops.
+  collision (s6789); dd>1 defaults now BYPASS_MAXCELLS=-1 + UCODE_CAP=1048576; post-fix lvl5/lvl10 FPS60 dd4 0 drops over 231/124 s of flight.
   G2b crawl audio = host AI event threshold in bytes, now scaled with AI rate (ultramodern events.cpp). G3f hangar
   fish-eye = retail SELECT YOUR CRAFT camera move (H-retail); opt-in ROGUESQ_HANGAR_FOV landed s6836-s6838. Detail:
   PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6847 maintenance)".
@@ -333,6 +315,9 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    2708 same / 75 differ, same 75 names; funcs_24 before/after: only musyxSynthFrame really differs. Two replays from pristine: 0 lines apart. Post-removal regen lvl5 FPS60+dd4: 306 s of flight, alive, 0 stalls,
    0 crash lines (scratch/agent/m6/g1_lvl5s6865regen). Post-removal live lvl1 dd1: 135 s of flight, same (g1_lvl1s6865liveb). G1 recipes now gate on [initMission] (MISSION_INIT=1, WAITN=60 in g1_level_coverage_common.zsh); the gate fired 4-5 s after it in both arms: H-gate refuted.
    Not re-checked: s6285 armed gate still matches live by construction, on the opt-in dd>1 path.
+   **g1-true-flight-hold CLOSED s6867 (H-holds on 4:3 FPS60+dd4; one run per level).** lvl1 305 s, lvl5 306 s, lvl10 302 s of flight, inits 1, 0 stalls, 0 crash lines, no frozen run after [initMission].
+   Retail 660 s holds audited offline: gates sat 2-11 s after [initMission] on all 19 levels, so the s6865 gap does not apply; but only lvl3/5/10/12/13/15/18 stayed in one mission, the rest restarted (longest continuous lvl6 267, lvl7 299, lvl11 289, all upper bounds). Table: docs/G1-TRUE-FLIGHT.md.
+   Summaries now print inits= and flight_s= (m6_god_common.sh, same-run control flight-control OK); tools/audit_hold_flight.py reads .gz and prints wall_s, tools/audit_hold_segments.py gives continuous stretches. No per-level hold sweep queued: G4 parks repeat holds, and 1/5/10 is the owner's qualification set. FPS60+dd3 and FPS60+dd2 on lvl10 are not held to 300 s (inference from dd4).
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
@@ -348,5 +333,5 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts: [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); per-level images:
   [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
-- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest 20261103-104942 (s6852_zgate_lvl9, consumed s6853). None queued.
+- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest s6865_truehold_lvl10_dd4 (run by hand s6867). None queued.
 - Recent chronology: PORTING-STATE sessions 6788-6846; search bounded windows only.

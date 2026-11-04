@@ -10,6 +10,10 @@ fbrun() { awk '{h=$NF} h==p {r++} h!=p {r=1;p=h} r>m {m=r} !(h in d) {d[h]=1;n++
 mcycles() { grep -a '^\[vi\] update_screen' "$1" | grep -o 'origin=0x[0-9A-Fa-f]*' | uniq | awk '/690400/{m=1} m&&/6AB400/{n++} END{print n+0}'; }
 printf '[vi] update_screen origin=0x006AB400\n[vi] update_screen origin=0x00690400\n[vi] update_screen origin=0x006AB400\n[vi] update_screen origin=0x00690400\n[vi] update_screen origin=0x006AB400\n' > $OUT/mc_ctl.txt
 [ "$(mcycles $OUT/mc_ctl.txt)" = 2 ] && echo 'mcycles-control OK' >> $K || { echo 'mcycles-control FAIL' >> $K; exit 1; }
+# s6867: mcycles is a false zero wherever the origins move (dd>1, wide), and hold counts from the gate, so the summary now states real flight: inits = [initMission] lines (a relaunch adds one), flight_s = run seconds minus the run clock at the first [initMission]. Control: synthetic log must give 2 and 70.
+flightline() { awk -v end="$2" '/^\[autopilot\] fire/{ if (match($0,/t=[0-9.]+/)) t=substr($0,RSTART+2,RLENGTH-2)+0 } /^\[initMission\]/{ n++; if (n==1) i=t } END{ if (n) printf "inits=%d flight_s=%d", n, end-i; else printf "inits=0 flight_s=none" }' "$1"; }
+printf '[autopilot] fire t=30.0\n[initMission] x\n[autopilot] fire t=50.0\n[initMission] y\n' > $OUT/fl_ctl.txt
+[ "$(flightline $OUT/fl_ctl.txt 100)" = "inits=2 flight_s=70" ] && echo 'flight-control OK' >> $K || { echo 'flight-control FAIL' >> $K; exit 1; }
 /usr/sbin/ioreg -n Root -d1 | grep -q '"CGSSessionScreenIsLocked"=Yes' && { echo "SCREEN LOCKED" | tee $OUT/summary; exit 4; }
 # s5416: winctl keys never reach SDL (macOS refuses to activate the game: isfrontmost=NULL, 0 SDL key events). Use the in-process autopilot.
 # s5435: schedule continues past the results screen (LATE s): a/start alternate; the old 62-event list ended at t=254 s, before results.
@@ -78,7 +82,7 @@ for att in $(seq 1 ${MAXATT:-5}); do
   alive=0; kill -0 $p 2>/dev/null && alive=1
   kill -9 $p 2>/dev/null; wait $p 2>/dev/null
   echo "fbhash $(grep -a '^.fbhash' $L | sed 's/.*h=//' | fbrun)" >> $K
-  echo "tag=$TAG att=$att mission_t=$((mt-t0))s hold=$((SECONDS-mt))s alive_at_end=$alive vi_stalls30s=$stalls godrefills=$(grep -ac "^.godmode" $L) mission_cycles=$(mcycles $L) crashlines=$(grep -ac 'CRASH\|SIGSEGV\|abort' $L)" | tee $OUT/summary
+  echo "tag=$TAG att=$att mission_t=$((mt-t0))s hold=$((SECONDS-mt))s $(flightline $L $((SECONDS-t0))) alive_at_end=$alive vi_stalls30s=$stalls godrefills=$(grep -ac "^.godmode" $L) mission_cycles=$(mcycles $L) crashlines=$(grep -ac 'CRASH\|SIGSEGV\|abort' $L)" | tee $OUT/summary
   exit 0
 done
 echo "tag=$TAG allattempts-failed" | tee $OUT/summary; exit 1

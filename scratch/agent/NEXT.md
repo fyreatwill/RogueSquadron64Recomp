@@ -1,10 +1,13 @@
-# NEXT: fold the true lvl10 hold, then re-earn 300 s of flight where the audit found less
-HYPOTHESIS-ID: g1-true-flight-hold
+# NEXT: G5 renaming sweep, next bounded batch (ladder: G1-G4 rungs closed, parked or awaiting owner)
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Why: s6865 showed 65 of 117 retained G1 logs reporting hold>=280 s flew <280 s. Those runs were clean but short. lvl5 dd4 now has 306 s (s6865 arm A); the rest of the owner path (FPS60+dd4) does not.
-First: fold s6865_truehold_lvl10_dd4 from SOAK-RESULTS.md (124 s was the most lvl10 dd4 had flown).
-Then: from scratch/s6865/hold_audit_all.txt list each level whose best FPS60+dd>1 flight is <280 s, and queue one soak per level, copying soak_queue/done/s6865_truehold_lvl10_dd4.sh (HOLD_S=300, MISSION_INIT default, SOAK_TIMEOUT=900). Read them as they land; update G1-FRAMEBUFFER-COVERAGE or CURRENT-TRUTH with true flight seconds.
-Hypotheses: H-holds (each level flies >=280 s clean: the old claim stands, with real numbers) / H-late (a crash, stall or death appears only after the old 124-230 s window: new datum, capture a backtrace and name the writer) / H-end (mission ends or player dies before 300 s: record the true ceiling, not a failure).
-Runs: foreground up to 600 s or queue a soak. Do not end the turn to wait.
+Why: g1-true-flight-hold closed s6867 (docs/G1-TRUE-FLIGHT.md). Next steps offer only owner-judgement items and G4 parks repeat holds, so ITERATION item 3c falls through to G5 / item 4.
+First: run `grep -n '^## Session ' PORTING-STATE.md | tail -15`. If all 15 belong to the sweep, this is a REVISIT (see item 4). s6867 checked: 0 of 15 did.
+Then: count remaining placeholders, pick one bounded batch by evidence, not by address. Use tools/rename/find_callers.py and tools/rename_generated_symbols.py (RENAMES table, checked batch). Each name needs a stated reason in its comment, as the table does. bcmp/bzero must keep the _recomp suffix (s5223 boot crash): check any libc-like name against libSystem interposition.
+Hypotheses: H-name (the function's callers and body fix its role: rename) / H-unclear (evidence supports only a shape name: use *Preamble or data_gap style, or leave it) / H-collision (the name interposes a host symbol: boot fails at once, so boot after the batch).
+Discriminator per batch: regen order make_elf -> N64Recomp -> fixup_game_funcs -> cmake, then tools/regen_verify.sh and one lvl1 dd1 boot with [initMission] reached. A rename must change no machine code: expect the same 2708/75 split.
+Watch the meter: a rename edit alone reads as no engineering change (iron rule 14). If the streak nears 6, land a tool or code change.
+If an owner report arrives, it outranks this.
 Ask owner when a human is next on: add tools/regen_replay.sh + regen_verify.sh to the CLAUDE.md regen order (owner file, not edited).
 Owner judges: docs/owner_sheet_s6860_lvl10_hud_ab.png, docs/owner_sheet_s6861_pause_hud_ab.png.
+Open, not queued (G4): FPS60+dd3 at 300 s, FPS60+dd2 on lvl10, wide bundles at 300 s continuous. Owner can lift the park for these.

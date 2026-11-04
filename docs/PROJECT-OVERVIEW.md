@@ -10679,3 +10679,26 @@ Verbatim blocks moved out of CURRENT-TRUTH in s6847 (Step-0 compaction). Read wi
    `ox <= -W/2 + 1` (0x800C1A9C; flat 0x17F else soft 0x180): fixed 1 px epsilon vs W*0.001 end residual (1.024 at W 1024).
    apply_s6846_wipeeps: eps ceil(W/512) above W 640 (=1 retail; ROGUESQ_G1D_WIPE_EPS=0 old). A/B 21:9: 6 vs 0 held strip
    frames, RDP last frame 11FE23 = 4:3. Sheet docs/owner_sheet_s6846_abort_end_21x9.png.
+
+## Migrated from CURRENT-TRUTH (s6867)
+
+- **G3 SHOWROOM fully driven (s6787).** AT THE MOVIES does nothing on a lvl1 save in retail or port (cursor on it, A
+  fired, 133 texrects unchanged). Passcode DIRECTOR (pair script PASS2=DIRECTOR) enables it: the cutscenes play back to back
+  at VI width 640 (+3.0 s port / +3.4 s retail after the press). Cinematic RDP match: 1184 aligned frames, tri-count median |d| 1,
+  521 full-signature exact, wrong-lag control cost 417 vs 23, title cards on the same frames. Concert Hall track changes:
+  same title order in both arms (3 tracks), no song-worker request per change in either arm. Dump caps: RS64_RDP_BIN_PORT_MAX_MB
+  (port), RMAX_MB/PMAX_MB/RBW=all (pair script).
+- **G3 screen 10 = OPTIONS > SHOWROOM matches retail (s6786).** Passcode MAESTRO (tools/g3_passcode_sched.py) adds the
+  SHOWROOM row; SHOWROOM (ships fly past the Death Star; CONCERT HALL / AT THE MOVIES / BACK) and the CONCERT HALL song
+  player: texrect static sets identical (80/80 + 1595 animated positions, 99/99), controls disjoint. The tri gap is the
+  game's RNG: ship idx = rand%18 then +1/+2 per 1023-tick flyby, pose = rand&0x7FF; menus call rand every frame so the seed
+  differs per arm. Indices from each arm's seeds (tools/g3_showroom_models.py) predict the shared ship (model 10: tile and
+  texture sets equal 908/908, control 0). Song worker runtime H-disjoint in both arms (one request + completion after image
+  job 4, no image mark after). Port song worker completes in the send tick, retail 9 ticks later (benign, one job).
+  Runner tools/g3_showroom_pair.sh (GAP=16 needed). Front-end CLOSED except SHOWROOM > AT THE MOVIES.
+- **G3 ENTER NAME + native 4:3 hangar match retail at RDP level (s6785).** ENTER NAME 235/236 exact (odd frame = retail
+  transition), control 0/236. Hangar (SELECT LEVEL, 512 wide): frame-pair matcher never goes exact (median 209/1260)
+  because ~1100 tris share one PRIM that flickers per frame and the hologram picture + lower band are wobbling texrect
+  grids; new tools/g3_rdp_phase.py (distribution compare): 153 texrects/frame both, static set 53/53 identical (prompt line
+  25/25 rects), tri q05..q95 [1093..1136] vs [1094..1138], mean ratio 1.003 over ~800 frames each; hologram grid visible in
+  ~20% of frames in both. Control (retail hangar vs port ENTER NAME) separates on every term.
