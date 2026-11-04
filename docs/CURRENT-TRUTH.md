@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6870 (2026-11-03).
+Compact operational handoff, as of Session 6871 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -310,6 +310,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    **G5 function names CLOSED s6868.** regen_replay.sh now applies tools/rename_generated_symbols.py; all 139 address-named functions are shape names, compare still 2708/75 with the same names, lvl1 dd1 135 s flight clean (one run). 791 D_ data symbols unnamed.
    **data-decoded-tail-audit CLOSED s6869 (H-dead for 18; one run per level).** tools/fixup_cut_decoded_tails.py (in regen_replay.sh, before the rename) cut 18 of 24 functions, 2 refused, 4 have no tail .word; docs/DECODED-TAIL-CENSUS.md. Compare still 2708/75, same names; audioCompandS16 and lvj_checkComplexObjectives machine code unchanged (clang had dropped those tails). Lines 1146851 -> 1021478, compile time about unchanged. lvl1 139 s, lvl5 140 s flight clean. `.word` is NOT a code/data boundary: 3339 of 8152 became do_break, the rest run. Trap arm not run; no PCM measure (env name wrong).
    **generated-size-mismatch CLOSED s6870 (H-elf; one run per level).** make_elf.py never reads the syms toml (only patches.toml does) and sizes each function to the next symbol. tools/regen_front.sh now feeds real sizes through N64Recomp `function_sizes` (tools/func_sizes.txt, 6 names). Cut step 0 cut / 2 refused, pristine 957518 -> 832949 lines, 17 junk data_gap_ functions gone. Compare 2688 same / 78 differ / 17 only live; 3 new diffs have no source change. audit_ptr_reach: no call-like pointer to the 17, controls fired. Regen lvl1 142 s, lvl5 143 s flight clean, 0 lookup misses, dd1 4:3 only. Live tree NOT regenerated. docs/DECODED-TAIL-CENSUS.md.
+   **elf-size-valid-tails CLOSED s6871 (one run per level).** tools/audit_elf_tails.py classifies every tail >= 0x10 by what lands in it; func_sizes.txt now 11 rows. Pristine 823108 lines, cut step 0/0, compare 2684 / 82 / 17 only live / 1 only regen (the 4 new diffs are the 4 sized functions). Regen lvl1 144 s, lvl5 142 s flight clean, dd1 4:3. Live tree NOT regenerated.
+   **Silent N64Recomp miscompile, NOT fixed (static, single-source for missions).** A backward branch out of a function lands on that function's own entry and compiles. 16 real ones, in the voice resampler helpers (one-shot sample end). Nothing calls or points into 8009264C..800934A4; retail attract 0 hits with controls. Retail mission arm never reached flight, so no mission null. Reopen on any sign that block runs; design in PORTING-STATE s6871. Any new `branching outside` warning on live code is this bug. docs/DECODED-TAIL-CENSUS.md.
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

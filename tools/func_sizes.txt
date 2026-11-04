@@ -1,6 +1,11 @@
+setRngSeed 0x10
 data_gap_800186D8 0x14
+data_gap_80024A0C 0x4
 __OSGlobalIntMask 0x4
+rspbootTextPreamble 0x8
 data_gap_80099FDC 0x30
 audioCompandS16 0x54
+fake_func_800AF6A8 0x8
+data_gap_800CC3D4 0xC
 data_gap_800FBE14 0x4
 lvj_checkComplexObjectives 0x8

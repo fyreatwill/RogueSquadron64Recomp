@@ -58,7 +58,7 @@ def funcs(path):
 def main():
     A = {p.name: p for p in pathlib.Path(sys.argv[1]).rglob("funcs_*.o")}
     B = {p.name: p for p in pathlib.Path(sys.argv[2]).rglob("funcs_*.o")}
-    res = {"same": 0, "diff": {}, "only_a": {}, "only_b": {}}
+    res = {"same": 0, "diff": {}, "only_a": {}, "only_b": {}, "objs_only_a": sorted(set(A) - set(B)), "objs_only_b": sorted(set(B) - set(A))}
     for name in sorted(set(A) & set(B)):
         a, b = funcs(A[name]), funcs(B[name])
         for f in a:
@@ -69,6 +69,8 @@ def main():
             if f not in a: res["only_b"].setdefault(name, []).append(f)
     nd = sum(map(len, res["diff"].values()))
     print(f"files {len(set(A) & set(B))} same {res['same']} diff {nd} only_a {sum(map(len, res['only_a'].values()))} only_b {sum(map(len, res['only_b'].values()))}")
+    if res["objs_only_a"] or res["objs_only_b"]:
+        print(f"objects on one side only: {res['objs_only_a']} / {res['objs_only_b']}")
     for k, v in sorted(res["diff"].items(), key=lambda x: -len(x[1]))[:12]:
         print(f"  {k}: {len(v)} e.g. {[x[0] for x in v[:4]]}")
     if len(sys.argv) > 3:

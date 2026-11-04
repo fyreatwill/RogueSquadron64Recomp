@@ -103,3 +103,51 @@ The live tree is unchanged and still carries the 17 functions.
 | funcs_49.c | data_gap_801096D8 | 801096D8 | 80109710 | 31 | 0 | 0 | 0 | 0 | - | - |
 | funcs_7.c | data_gap_80024A0C | 80024A0C | 80024B40 | 5244 | 1948 | 461 | 0 | 1 | - | rs64_f5_store_shadow_post rs64_m5_writer_parity rs64_probe_submit_gate_store |
 | funcs_8.c | __OSGlobalIntMask | 80039110 | 80039114 | 11375 | 4995 | 2074 | 1 | 0 | - | rs64_f5_store_shadow_post rs64_m5_writer_parity rs64_probe_submit_gate_store rs64_s5660_ustore s5660_a |
+
+## Sizes past the first six (s6871)
+
+`tools/audit_elf_tails.py` walks the ELF bytes rather than the generated C, pairs symbols by section (the overlays share
+vram, and pairing by address alone gave wrong names), and lists what lands in each tail. Controls 80034010, 800371E0,
+80037510 and 8002B600 all hit. Run with `--min 0x10`: 18 rows, the rest of the 111 are smaller padding.
+
+| Function | Tail | Verdict | Action |
+|---|---|---|---|
+| audioCompandS16, lvj_checkComplexObjectives | 0x7360, 0x2090 | H-data | sized in s6870 |
+| data_gap_80099FDC, data_gap_800186D8 | 0xF80, 0x34 | H-data | sized in s6870 |
+| data_gap_80024A0C, data_gap_800CC3D4, fake_func_800AF6A8, rspbootTextPreamble | 0x1FA0, 0x1140, 0x1290, 0xD0 | H-data, entry has 0 references | sized |
+| setRngSeed | 0x10 | H-data: the seed word itself sits at 80003470 | sized |
+| osYieldThread | 0x1BB4 | H-data | none: not generated, the runtime replaces it |
+| __osException | 0x3E4 | H-real: jump table at 8003A140 enters it, toml is short | none: not generated |
+| tickCraftSelectScreen | 0xA9C | H-unnamed: handleCraftSelectInput, reached as a static | none |
+| getTextureAttrBySlot, packMtxRowFloatToFixed | 0x164, 0x20 | H-unnamed: toml names a function, 0 references | none |
+| resampleVoiceConstantSamples, resampleVoiceLutSamplesPacked | 0x84 each | H-unnamed: see below | none, must keep the tail |
+| guMtxL2F, transformObjectColliderCenter | 0x64, 0x10 | pad | none |
+
+The `jr ra` words in the data tails with no stack frames fit embedded RSP code, which keeps no frame. That reading is an
+inference; the tails were not matched to a ucode. Walks from an entry nothing reaches are decoded data and prove nothing.
+
+Effect: pristine 832949 -> 823108 lines. Cut step 0 cut, 0 refused. Compare 2684 same / 82 differ / 17 only live / 1 only
+regen. The 4 new differences are exactly data_gap_80024A0C, data_gap_800AF6A8 (fake_func renamed), data_gap_800CC3D4 and
+rspbootTextPreamble. Only regen: static_5_800CC4E4, which exists because the first data word of data_gap_800CC3D4 decodes as
+a branch. Nothing enters it. Live funcs_50.c holds no functions, so the one-sided object loses nothing.
+
+## Branches out of a function miscompile silently (s6871)
+
+N64Recomp warns "branching outside of the function" (49 warnings in n64recomp.log, 36 after these sizes) and still emits
+the goto. Labels print at the first pc >= their address, so a target below the function's entry lands on the entry and the
+code compiles: the branch restarts the function. A target above it fails the compile, which is why forward cases carry a
+hand-written `__builtin_trap` patch and backward ones were never noticed.
+
+The real instances are 16 branches, 4 in each resampler helper (800927B0, 80092A54, 80092CF0, 80092F94). When a one-shot
+sample ends ($s3 == 0) the helper leaves into the middle of its caller and never returns; the caller zero-fills and runs
+its epilogue. Generated code restarts the helper instead, with $t1 rewound by the end pointer. The other warnings sit in
+data_gap_ and fake_func_ decoded data, and applyVoiceDelayFilter's two are its last word, a toml data_gap.
+
+**This code looks dead, so it is not fixed.** No jal, j, data word or lui pair reaches 8009264C..800934A4 from outside in
+any section. Retail, 45 s boot + attract: 0 exec hits in that range while 80035500 and 80091B64 (audio) fired. Limits: the
+range watch form had no same-run hit of its own, and two retail runs meant to reach a mission never hit tick 800FA730, so
+missions are covered only by the static scan. A computed address would escape that scan.
+
+A working fix was built and removed: the helper records the target and returns, the caller jumps to it after the jal. It
+compiled and held lvl1 142 s, but its counters printed nothing at their 2^20 threshold, so that run says nothing about reach. If
+any evidence of this block running turns up, reapply that design (PORTING-STATE s6871).
