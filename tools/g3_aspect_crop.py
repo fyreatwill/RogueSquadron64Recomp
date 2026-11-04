@@ -6,7 +6,9 @@ then refined), and reports MAD over the overlap with the HUD bands excluded. --c
 it must land far above the base arm, or a low score says nothing. The 4:3 window pillarboxes, so its picture is cropped to the non-black box first.
 Scored region = below the top third, minus the lives corner, so radar and craft icon never count (they move by design).
 MAD is blind to a lost far terrain band (s6879: fx1 restored the horizon and MAD moved 20.66 -> 19.00), so hz_mean/hz_p90 compare the terrain top per column, in 4:3 window pixels. Read hz_p90: craft and cloud gaps swamp hz_mean (k2 w169 16.99 vs fx1 0.63).
-Usage: g3_aspect_crop.py ARMS_DIR BASE WIDE [--ctl ARM] [--bar N]"""
+s6882: --pin takes the fit from window geometry instead: sx = sy = wide height / 4:3 picture height, centred, only ox and oy refined. Use it at 21:9: the free grid's sy starts at
+1.50 and the right 21:9 value is ~1.24, so the free fit cannot reach it (s6880 sx 1.22, sy 1.48). --scan prints MAD over a scale sweep, to check the geometry value is the minimum.
+Usage: g3_aspect_crop.py ARMS_DIR BASE WIDE [--ctl ARM] [--bar N] [--pin] [--scan]"""
 import os, sys
 from PIL import Image, ImageChops, ImageStat
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -15,7 +17,7 @@ THR = 32
 
 def rgb(root, arm, k, bar, crop=False):
     im = to_srgb(Image.open(os.path.join(root, arm, 'f%d_1.png' % k)).convert('RGB'))
-    im = im.crop((0, bar, im.width, im.height))
+    im = im.crop((0, bar + (2 if crop else 0), im.width, im.height))  # s6882: 2 title rows survive --bar 62 and span the width, so without +2 the bbox kept the pillarbox bars
     return im.crop(im.convert('L').point(lambda v: 255 if v > 8 else 0).getbbox()) if crop else im
 
 def lum(root, arm, k, bar, crop=False):
@@ -73,6 +75,17 @@ def fit(a, w):
                     if t < s: s, p = t, q
     return s, p
 
+def pinned(a, w):
+    """s6882: one scale from geometry, centred; offsets refined, never the scale"""
+    k = w.height / a.height; p = [k, (w.width - k * a.width) / 2, k, 0.0]; s = score(a, w, p)
+    for dp in (8, 4, 2, 1, 0.5):
+        for _ in range(8):
+            for i in (1, 3):
+                for sg in (-dp, dp):
+                    q = list(p); q[i] += sg; t = score(a, w, q)
+                    if t < s: s, p = t, q
+    return s, p
+
 def main():
     a = sys.argv[1:]; opt = lambda k, d: a[a.index(k) + 1] if k in a else d
     root, base = a[0], a[1]; wides = a[2].split(','); ctl = opt('--ctl', None); bar = int(opt('--bar', 62))
@@ -81,7 +94,10 @@ def main():
     for wide in wides:
         for k in range(3):
             A, Wd = lum(root, base, k, bar, True), lum(root, wide, k, bar)
-            if k not in P: P[k] = fit(A, Wd)[1]  # one fit per k, from the first wide arm, so arms stay comparable
+            if '--scan' in a:
+                g = A.height and Wd.height / A.height
+                print('scan %s k%d geom %.3f: ' % (wide, k, g) + ' '.join('%.3f=%.2f' % (g * f, score(A, Wd, (g * f, (Wd.width - g * f * A.width) / 2, g * f, (Wd.height - g * f * A.height) / 2))) for f in (0.85, 0.9, 0.95, 0.98, 1, 1.02, 1.05, 1.1, 1.15, 1.2, 1.28)))
+            if k not in P: P[k] = (pinned if '--pin' in a else fit)(A, Wd)[1]  # one fit per k, from the first wide arm, so arms stay comparable
             p = P[k]; m, fr, bb = score(A, Wd, p, True)
             c = score(lum(root, ctl, k, bar, True), Wd, p) if ctl else float('nan')
             hm, hp = horizon(rgb(root, base, k, bar, True), rgb(root, wide, k, bar), p)

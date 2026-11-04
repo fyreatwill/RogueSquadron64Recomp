@@ -49,6 +49,8 @@ extern "C" uint32_t rs64_phase_ord(void);
 extern "C" { double rs64_s6879_fpk = 1.0; } // s6879: footprint x factor of this frame, tools/apply_s6879_fpdepth.py
 // s6880: wide frames get the s6049 span-table store bound, tools/apply_s6880_widebound.py. ROGUESQ_G1D_SPANBOUND=0 = old.
 extern "C" int rs64_s6880_wide(void) { static int on = -1; if (on < 0) { const char* e = getenv("ROGUESQ_G1D_SPANBOUND"); on = !(e && *e == '0'); } return on && rs64_s6879_fpk != 1.0; }
+// s6882: narrow the span fill x loops where the s6049/s6880 bound runs (tools/apply_s6882_spannarrow.py). ROGUESQ_G1D_SPANNARROW=0 = old.
+extern "C" int rs64_s6882_on(void) { static int on = -1; if (on < 0) { const char* e = getenv("ROGUESQ_G1D_SPANNARROW"); const char* d = getenv("ROGUESQ_DRAW_DISTANCE"); on = (e && *e == '0') ? 0 : (d && *d && atof(d) != 1.0) ? 2 : 1; } return on == 2 || (on == 1 && rs64_s6880_wide()); }
 extern "C" { int rs64_g1d_intro_w = 0; int rs64_g1d_vs_intro = 0; int rs64_g1d_title_vi = 0; int rs64_g1d_vi_epoch = 0; uint32_t rs64_last_vi_mode = 0; }  // s6720: title_vi = wide title mode live
 extern "C" volatile int g_rs64_dd_blk; // s6583: dd toggle state, tagged on [fbdump]
 extern "C" void rs64_m5_host_write_census(uint8_t* rdram,

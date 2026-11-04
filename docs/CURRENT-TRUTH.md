@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6881 (2026-11-04).
+Compact operational handoff, as of Session 6882 (2026-11-04).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -96,10 +96,16 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
   (d) objective response PARKED by owner 2026-10-31 ([G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md)).
 - Closed: M5 audio de-stubbing, M3 idiom audits, M6 endurance (s6442), G2 audio, G5 renaming. G4 crash hunting parked.
 
-- **FIXED s6879-s6880: wide flight lost far terrain, then 21:9 crashed.** ROGUESQ_G1D_FPDEPTH (default on, =0 old) undoes our s6144 forward-reach loss. That exposed a 21:9 crash: scanConvertTriangleToSpanTable (0x80042820) overran the span tables into the descriptor at dd 1, because the s6049 bound was gated on dd != 1. ROGUESQ_G1D_SPANBOUND (default on, =0 old) covers wide frames; k=1 retail. Same binary: =0 crashes, default holds lvl1 21:9 302 s, lvl5/lvl10 135 s; 4:3 and 16:9 0 px changed vs before the bound. tools/g3_aspect_crop.py is valid at 16:9, NOT 21:9 (bad fit, s6880). 21:9 look is single-source; sheets docs/owner_sheet_s6879_wide_depth.png, docs/owner_sheet_s6880_219_depth.png.
+- **FIXED s6879-s6880: wide flight lost far terrain, then 21:9 crashed.** ROGUESQ_G1D_FPDEPTH (default on, =0 old) undoes our s6144 forward-reach loss. That exposed a 21:9 crash: scanConvertTriangleToSpanTable (0x80042820) overran the span tables into the descriptor at dd 1, because the s6049 bound was gated on dd != 1. ROGUESQ_G1D_SPANBOUND (default on, =0 old) covers wide frames; k=1 retail. Same binary: =0 crashes, default holds lvl1 21:9 302 s, lvl5/lvl10 135 s; 4:3 and 16:9 0 px changed vs before the bound. 21:9 look is single-source; sheets docs/owner_sheet_s6879_wide_depth.png, docs/owner_sheet_s6880_219_depth.png.
 - **s6881: s6879/s6880 now replay from pristine; wide + dd same-pose frames exist.** Regen stopped on an inline s6879 call that ran before the s6144 text exists; call removed, RS64_REPLAY runs it. Compare 2684/82/17/1 = s6871, s6879/s6880/s6049 text in funcs_9 identical to live. New apply scripts go in RS64_REPLAY only (docs/REGEN-VERIFY.md). No regen binary linked or run. Test-only fix: POSE_LOCK and POSE_FREEZE rejected player pointers above 8 MB, and wide + dd spills the player (0x809A6350), so keys were never zeroed and no freeze fired. 16:9 dd4 vs 4:3 dd4 now at identical pose: mad 11.53/11.54/17.53, ctl 25.95/24.00/66.16. Sheet docs/owner_sheet_s6881_wide_dd4.png.
 
+- **FIXED s6882: wide + dd flight ran at 6-9 game fps at 21:9 dd4 and 11-20 at 16:9 dd4 (non-FPS60 recipe); now 20-31 at both.** ORIGIN: the span fill loops in scanConvertTriangleToSpanTable took x bounds of 0x7F7F, the span fill's own bytes. Inference, row count not logged: edge walkers 0x80041FA4/0x80042118 write the 80-row min/max arrays with no limit, so a deep footprint reads max[i>=80] from 0x80130DB0. Each row then walked ~32k x at three float divides, every store skipped (3.84e9 skips in 130 s). Same pose: frames 0 px changed, 0 skips vs 59777 log lines. ROGUESQ_G1D_SPANNARROW (default on where the s6049/s6880 bound runs, =0 old; retail dd1 4:3 untouched). Replays from pristine. FPS60 + wide + dd4 not measured. The arrays still overrun: narrowing removes the cost, not the overrun.
+- **s6882: 21:9 same-pose scores are valid now (H-fit).** g3_aspect_crop --pin (sx = sy from geometry) plus a crop fix. 21:9 dd4 vs 4:3 dd4: mad 4.74/2.94/2.95, hz_p90 2.42/1.61/0.81, ctl 18.56/15.82/57.88; 16:9 dd4 4.51/2.70/2.95. 21:9 dd1: FPDEPTH on 4.58/2.84/2.45 beats off 6.58/4.18/7.69. Best sx is 1.00% under sy at both widths, unexplained. Sheet docs/owner_sheet_s6882_219_dd4.png.
+
 ## Superseded conclusions — do not act on these
+- s6879-s6881 g3_aspect_crop MAD/hz figures (superseded s6882): the crop kept the 4:3 pillarbox bars, because 2 title rows survive --bar 62 and span the width, so black columns were scored as picture (MAD floor ~13, hz_mean 39-69 "unread"). Believable because arm ordering and control separation still looked right, and they still hold. Re-score with the fixed tool, do not quote the old numbers.
+- s6881 NEXT "recipe logging may explain hd4 tick rate" (superseded s6882): GRIDLOG on/off gave the same VI steps and log size. The cost was the span loop.
+- s6880 "g3_aspect_crop not valid at 21:9" (superseded s6882): the free grid's sy started at 1.50 and 21:9 needs 1.24. --pin fixes it.
 
 - s6880 first reading "n219 k2 worse than o219 at 21:9" (hz_p90 31 vs 7.5, superseded s6880 same session). Believable because the tool had just scored 16:9 well; its 21:9 fit is bad (sx 1.22, sy 1.48) and the frames show the reverse.
 - s6876 "in-place rotation writer = buildEffectObjectWorldTransform" as the pitch lead (superseded s6877). Believable because it made 8 of 10 [camcaller] rows; that was call count, it never changes word 5.

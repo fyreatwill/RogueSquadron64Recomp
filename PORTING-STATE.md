@@ -181434,3 +181434,31 @@ Sheet docs/owner_sheet_s6881_wide_dd4.png: at k0 16:9 dd4 draws terrain in the v
 Limits: p2/p2s not re-run; their cause is inferred from the same bundle ([spill] on, same symptoms). Their old pointer was not logged. Old hd4 pointer also not logged; the value above is the new run's, and heap layout could differ. Not measured at 21:9 + dd. hd4 tick rate looks low (VI 6195 to 8677 per freeze step vs 1750 for d43), not looked at; recipe carries GRIDLOG (log size) and 15 s freezes are counted in both.
 Discrimination: selects H-order (s6879 anchor at the fixer stage), refutes H-drift and H-ok as first posed. For caps=0 selects the 8 MB pointer bound (one binary, same env flips caps 0 -> 6) and refutes the MISSION_WIDTH / DEBUG_WRITE lead.
 
+## Session 6882 (2026-11-04) — 21:9 same-pose scoring valid (H-fit); wide + dd ran at 6-9 fps from a runaway span loop, narrowed with 0 px changed, now 20-31 fps
+HYPOTHESIS-ID: g1d-wide-219-samepose. What ran: lvl1, dt pinned, POSE_FREEZE, HOLD_S=130, scratch/s6882/run_a.sh, run_b.sh (host `sample`), run_c.sh (rebuilt binary).
+ORIGIN: x bound 0x7F7F = 32639 in the span fill loops of scanConvertTriangleToSpanTable (0x800425F8, 0x80042740). 56905 of 58630 [spanbound6880] lines at 0x80042820 carry r6=32639. Writer of those bytes = the span fill itself (0x7F into 0x80130DB0). Not a legitimate bound. Reader path is inference from the asm, row count not logged: 0x80041FA4/0x80042118 write row i of min (0x80130C70) and max (0x80130D10) with no limit, each array is 80 rows, so max[i>=80] reads the span table. Retail reach not measured; 4:3 dd4 reaches it too (1.12e9 skips).
+Scoring: the free grid's sy starts at 1.50, 21:9 needs 1.24, which explains s6880's bad fit. --pin added (one scale from geometry, offsets refined), --scan shows MAD minimum at the geometry scale at all k. Second defect found from the owner sheet: the 4:3 crop never removed the pillarbox (2 title rows survive --bar 62, bbox stayed 1280 wide; now 1106x960). All s6879-s6881 MAD/hz numbers carried black columns. Orderings held after re-scoring.
+| fixed tool, --pin, ctl = s6879 shift | mad k0/k1/k2 | hz_p90 | ctl_mad |
+|---|---|---|---|
+| n219 21:9 dd1 vs t43 | 4.58/2.84/2.45 | 4.84/2.42/0.81 | 13.30/12.13/72.69 |
+| o219 21:9 FPDEPTH=0 vs t43 | 6.58/4.18/7.69 | 30.66/19.36/36.30 | 14.93/13.25/78.10 |
+| h169 16:9 dd1 vs t43 | 4.34/2.61/2.37 | 4.39/2.51/0.63 | 13.33/12.20/72.82 |
+| a219 21:9 dd4 vs d43r | 4.74/2.94/2.95 | 2.42/1.61/0.81 | 18.56/15.82/57.88 |
+| hd4 16:9 dd4 vs d43 | 4.51/2.70/2.95 | 2.51/1.25/0.63 | 18.63/15.90/57.93 |
+Control met: o219 worse than n219 at k2, ctl_mad well above base. Shift arm is dd1 from an older binary, so a pose control only.
+Tick rate: GRIDLOG refuted as cause (h219d4 vs n219d4 VI at freeze 7654/12444 vs 7671/12473, log 73 MB both; hd4 vs nhd4 same). Remaining recipe logging is not excluded as a cost, but the same binary shows the loop alone sets the rate. sample, 10 s in flight: scanConvertTriangleToSpanTable 2154 samples + m5 store hooks ~1500 at 21:9 dd4; 503 at 4:3 dd4; absent from the top list at 21:9 dd1. Ucode only 21-30 ms at 6-9 tasks/s, so the Gfx thread was not the limit.
+Fix: tools/apply_s6882_spannarrow.py + rs64_s6882_on: clamp a0/a2 per row to the x whose store address is inside the 0x2000 window the bound keeps. Iterations are independent, so stored bytes are the same. ROGUESQ_G1D_SPANNARROW=0 = old. On only where the bound runs.
+| arm | tasks/s between freezes | skip lines | freezes | frames |
+|---|---|---|---|---|
+| z219 21:9 dd4 NARROW=0 | 6-9 | 59777 | 2 of 3 | control |
+| a219 21:9 dd4 | 20-31 | 0 | 3 | vs z219 0 px k0, k1 |
+| nhd4 16:9 dd4 (pre-fix binary) | 11-20 | 38k | 3 | control |
+| a169 16:9 dd4 | 20-31 | 0 | 3 | vs nhd4 0 px all k |
+| a43 4:3 dd4 | 20-31 | 0 | 3 | vs d43r (pre-fix) 0 px all k |
+| r219 21:9 dd1 | 30-31 | 0 | 3 | vs s6879 n219 0 px all k |
+Controls: identity check fires (a219 k0 vs k1 3161460 px; a219 vs n219 k0 1722141 px). z219 reproduces pre-fix rate and VI steps in the same binary. All arms 0 crash, 0 stall, 134-136 s flight.
+Regen: fresh regen_front + regen_replay, rc 0, s6880 x9 and s6882 x2 ok, patch text hash equal live vs regen. Objects not compared, no regen binary linked.
+Sheet docs/owner_sheet_s6882_219_dd4.png: at k0 21:9 dd4 fills the valley gap that is sky at 21:9 dd1. Single run per arm; look is single-source. Owner judges.
+Limits: lvl1 only, one run per arm, 135 s flight, recipe logging on, FPS60 not measured. z219 never reached k2, so its k2 identity is covered only through a169/a43. 20 fps stretches line up with ~30 ms ucode (3 VI per frame), and that ucode time is 4-5x s6810's 5.4 ms, unexplained (recipe differs). Edge arrays still overrun; the max-array writes into the span table are unchanged. Best sx is 1.00% under sy at 16:9 and 21:9, unexplained; same at both widths, so it points at the 4:3 picture box rather than the wide path (inference).
+Discrimination: selects H-fit (refutes H-crop, H-depth as posed: 21:9 dd4 scores the same as 16:9 dd4). For tick rate selects the span loop (one binary flips 6-9 -> 20-31 with one env), refutes GRIDLOG logging.
+Rules out: narrowing changing pixels at any tested arm.
