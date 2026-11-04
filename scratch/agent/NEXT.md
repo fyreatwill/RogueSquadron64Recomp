@@ -1,12 +1,11 @@
-# NEXT: G5 renaming sweep, next bounded batch (ladder: G1-G4 rungs closed, parked or awaiting owner)
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+# NEXT: data-decoded function tails: prove them dead, then stop compiling them
+HYPOTHESIS-ID: data-decoded-tail-audit
 
-Why: g1-true-flight-hold closed s6867 (docs/G1-TRUE-FLIGHT.md). Next steps offer only owner-judgement items and G4 parks repeat holds, so ITERATION item 3c falls through to G5 / item 4.
-First: run `grep -n '^## Session ' PORTING-STATE.md | tail -15`. If all 15 belong to the sweep, this is a REVISIT (see item 4). s6867 checked: 0 of 15 did.
-Then: count remaining placeholders, pick one bounded batch by evidence, not by address. Use tools/rename/find_callers.py and tools/rename_generated_symbols.py (RENAMES table, checked batch). Each name needs a stated reason in its comment, as the table does. bcmp/bzero must keep the _recomp suffix (s5223 boot crash): check any libc-like name against libSystem interposition.
-Hypotheses: H-name (the function's callers and body fix its role: rename) / H-unclear (evidence supports only a shape name: use *Preamble or data_gap style, or leave it) / H-collision (the name interposes a host symbol: boot fails at once, so boot after the batch).
-Discriminator per batch: regen order make_elf -> N64Recomp -> fixup_game_funcs -> cmake, then tools/regen_verify.sh and one lvl1 dd1 boot with [initMission] reached. A rename must change no machine code: expect the same 2708/75 split.
-Watch the meter: a rename edit alone reads as no engineering change (iron rule 14). If the streak nears 6, land a tool or code change.
+Why: s6868 closed G5 function names (docs/GENERATED-NAME-CENSUS.md). audioCompandS16 has a 0x54-byte real body but 103780 generated lines (9% of the tree, 3172 .word lines); __OSGlobalIntMask has 11376 lines; 24 functions hold .word lines. s5668's audio fault came from this tail, and any stray goto into it runs data. This is an idiom-class audit (ITERATION item 3 model): enumerate all 24, classify, close the class.
+Hypotheses: H-dead (no label in a tail is reached from the real body, so every tail can be cut after the real end) / H-reached (a real branch or fall-through enters a tail: name it, it may be a real defect or a mis-sized symbol) / H-size (the toml size is wrong and part of the "tail" is real code; the .word position, not the size, marks the end).
+Discriminator: one offline tool over the generated tree: per function, real end (toml size and first .word), then every goto or label crossing that end from below. Same-run control: an injected branch across the end in a scratch copy must be flagged. Then one runtime arm: trap at each tail entry (opt-in env in a scratch build), lvl1 and lvl5 flight and an audio-heavy cinematic, with a control trap on a live function firing.
+If H-dead holds: add the cut to the fixup chain (tools/fixup_*.py plus tools/regen_replay.sh), regen_verify, report compile time and binary size before and after. Expect exactly the cut functions to differ.
+Keep static_* callees of cut tails in mind: the data_gap_ bodies lose their only site and can go in the same step.
 If an owner report arrives, it outranks this.
 Ask owner when a human is next on: add tools/regen_replay.sh + regen_verify.sh to the CLAUDE.md regen order (owner file, not edited).
 Owner judges: docs/owner_sheet_s6860_lvl10_hud_ab.png, docs/owner_sheet_s6861_pause_hud_ab.png.

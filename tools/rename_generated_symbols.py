@@ -21,7 +21,11 @@ RENAMES = {
     "func_800B3824": "buildLevelSelectTextTextures",
     "func_800B3AFC": "buildScaledFormatTextElement",
     "static_5_800AF6AC": "handleCraftSelectInput",
-    "static_4_800E9B10": "initObjectAnimAndDetail",
+    # s6868: not an entry. Its only site is decoded data (fake_func_800B58B4), and the
+    # address is the middle of func_800E9AE0; see the note in mission_overlay.txt.
+    "static_4_800E9B10": "data_gap_800E9B10",
+    # s6868: only site 0x8010A948 sits past the first .word of lvj_checkComplexObjectives.
+    "static_4_80106C50": "data_gap_80106C50",
     "fake_func_800AA6CC": "npcPredictedRangeCheckPreamble",
     "fake_func_800AAADC": "playerSnowSpeederInitPreamble",
     "fake_func_8005C61C": "data_gap_8005C61C",
@@ -38,7 +42,9 @@ RENAMES = {
     "fake_func_800D4EC4": "duplicateSymbolPrefixForNpcInitChildLinkedToParent",
     "fake_func_800DD2C4": "duplicateSymbolPrefixForNpcInitFullModel",
     "fake_func_800DFB8C": "duplicateSymbolPrefixForApplyCraftAnimAndDetailParams",
-    "func_800E9AE0": "func_mission_overlay_800E9AE0",
+    # s6868: no direct caller; body runs setNpcHealth, initActorMotionParams,
+    # initObjectAnimSubstruct, setObjectDetailLevel, like its neighbour at 0x800E9A84.
+    "func_800E9AE0": "initNpcHealthMotionAndDetail",
     "fake_func_800E406C": "data_gap_800E406C",
     "fake_func_800E447C": "data_gap_800E447C",
     "fake_func_800E71C8": "data_gap_800E71C8",

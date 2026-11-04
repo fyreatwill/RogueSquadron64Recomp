@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6867 (2026-11-03).
+Compact operational handoff, as of Session 6868 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -104,6 +104,7 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 
 ## Superseded conclusions — do not act on these
 
+- s6268 "symbol sweep COMPLETE" and s3209/s3210 "0x80106C50 is a real callable" (superseded s6868). s6268 counted the syms toml, not the generated tree, where 30 table renames had never landed. s3209 saw a jal and took it for a caller; that site is decoded data. docs/GENERATED-NAME-CENSUS.md.
 - s6004 "lvl10-15 mission_cycles=0, in flight the whole hold" (superseded s6867): mission_cycles only counts 0x690400->0x6AB400 origin changes, so it read 0 while lvl11 restarted twice and lvl14 once. Use inits= from the summary.
 - **"300 s hold" on FPS60/dd>1 G1 recipes (s6774-s6862, superseded s6865).** Those runs gated on any origin (MISSION_RE='[0-9A-F]+' or a boot-time
   match), so hold counted from t=6..31 s, not flight. Believable because alive/crash/stall all read clean and mission_t looked like a number.
@@ -318,6 +319,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    **g1-true-flight-hold CLOSED s6867 (H-holds on 4:3 FPS60+dd4; one run per level).** lvl1 305 s, lvl5 306 s, lvl10 302 s of flight, inits 1, 0 stalls, 0 crash lines, no frozen run after [initMission].
    Retail 660 s holds audited offline: gates sat 2-11 s after [initMission] on all 19 levels, so the s6865 gap does not apply; but only lvl3/5/10/12/13/15/18 stayed in one mission, the rest restarted (longest continuous lvl6 267, lvl7 299, lvl11 289, all upper bounds). Table: docs/G1-TRUE-FLIGHT.md.
    Summaries now print inits= and flight_s= (m6_god_common.sh, same-run control flight-control OK); tools/audit_hold_flight.py reads .gz and prints wall_s, tools/audit_hold_segments.py gives continuous stretches. No per-level hold sweep queued: G4 parks repeat holds, and 1/5/10 is the owner's qualification set. FPS60+dd3 and FPS60+dd2 on lvl10 are not held to 300 s (inference from dd4).
+   **G5 function names CLOSED s6868.** regen_replay.sh now applies tools/rename_generated_symbols.py; all 139 address-named functions are shape names, compare still 2708/75 with the same names, lvl1 dd1 135 s flight clean (one run). 791 D_ data symbols unnamed. Next: data-decoded tails (audioCompandS16 = 9% of generated lines, real body 0x54).
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

@@ -6,4 +6,6 @@ D=$1; LOG=${2:-/dev/stdout}; [ -d "$D" ] || { echo "usage: $0 <dir> [log]"; exit
 for step in fixup_game_funcs_vendored fixup_movz_movn strip_diag_layers fixup_live_replay weaken_patched_funcs; do
   python3 tools/$step.py "$D" >> "$LOG" 2>&1 || { echo "regen_replay: $step failed (see $LOG)"; exit 1; }
 done
+# s6868: last, so every fixer above still sees the names N64Recomp emitted.
+python3 tools/rename_generated_symbols.py "$D" >> "$LOG" 2>&1 || { echo "regen_replay: rename failed (see $LOG)"; exit 1; }
 echo "regen_replay: ok"
