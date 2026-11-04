@@ -9,13 +9,16 @@ NEW = r'''    { /* s6590 desc log */ static int dl = -1, dn = 0; if (dl < 0) dl 
       if (dl && (dn++ % 300) == 0 && dn < 3000) fprintf(stderr, "[desc6590] call=%d w0=%08X w4=%08X w8=%08X wC=%08X tw=%u th=%u\\n", dn, (uint32_t)MEM_W(0, (int64_t)(int32_t)0x80136DC0), (uint32_t)MEM_W(4, (int64_t)(int32_t)0x80136DC0), (uint32_t)MEM_W(8, (int64_t)(int32_t)0x80136DC0), (uint32_t)MEM_W(0xC, (int64_t)(int32_t)0x80136DC0), (unsigned)MEM_HU(0xDF8, (int64_t)(int32_t)0x80136000), (unsigned)MEM_HU(0xDFA, (int64_t)(int32_t)0x80136000)); }
     { /* PATCH: s6037 ddclamp */ static int on6037 = -1;
       if (on6037 < 0) { const char* e = getenv("ROGUESQ_DRAW_DISTANCE"); on6037 = (e && *e && atof(e) != 1.0 && !getenv("ROGUESQ_DD_NOCLAMP")) ? 1 : 0; }
-      if (on6037 && MEM_W(4, (int64_t)(int32_t)0x80136DC0) != 0) {
+      /* s6879 wideclamp: a widened footprint at dd 1 also passes 64 rows (21:9 lvl1 d=67): the span tables 0x80130DB0/0x80131DB0 overrun into this window (0x80808080) and the slot array into the descriptor, 4/4 crash.
+         Same 64x64 bound, no area cap: retail runs past it (req 975 on cap 600). k = 1 stays retail. */
+      extern double rs64_s6879_fpk; const int wide6879 = !on6037 && rs64_s6879_fpk != 1.0;
+      if ((on6037 || wide6879) && MEM_W(4, (int64_t)(int32_t)0x80136DC0) != 0) {
         int64_t h = (int64_t)(int32_t)0x80132000, t = (int64_t)(int32_t)0x80136000;
         int32_t tw = (int32_t)MEM_HU(0xDF8, t), th = (int32_t)MEM_HU(0xDFA, t);
         int32_t x0 = (int32_t)MEM_W(0xDB0, h), x1 = (int32_t)MEM_W(0xDB4, h), z0 = (int32_t)MEM_W(0xDB8, h), z1 = (int32_t)MEM_W(0xDBC, h);
         /* s6053: at this point DB4/DBC are still EXCLUSIVE MAXIMA (ceil of polygon max); 0x80042A30 later does DB4-=DB0, DBC-=DB8 to make counts.
            s6040 clamped them as counts, so DB4=tw-x0 then lost x0 again at 2A30 -> negative u32-wrapped counts (s6052 w=4294967286). Clamp as maxima. */
-        { int32_t cap = (int32_t)MEM_HU(0xC4C, (int64_t)(int32_t)0x80130000);
+        { int32_t cap = wide6879 ? 0 : (int32_t)MEM_HU(0xC4C, (int64_t)(int32_t)0x80130000);
           /* s6586b capx: host-side multiplier on the clamp cap only (guest 0xC4C untouched); ROGUESQ_DD_CAPX_TOG=N alternates 1x/capx every N calls */
           { static double cx = -1; static int ctg = -1; static unsigned cn = 0; static int clast = -1;
             if (cx < 0) { const char* e = getenv("ROGUESQ_DD_CAPX"); cx = (e && *e) ? atof(e) : 1.0; const char* t2 = getenv("ROGUESQ_DD_CAPX_TOG"); ctg = t2 ? atoi(t2) : 0; }
@@ -39,7 +42,7 @@ NEW = r'''    { /* s6590 desc log */ static int dl = -1, dn = 0; if (dl < 0) dl 
       } }
 '''
 def apply9(text):
-    if "PATCH: s6037 ddclamp" in text and "s6586b capx" in text and "s6590 desc log" in text and "s6591 slot64" in text and "ROGUESQ_DD_NOCLAMP" in text and "s6874 edge" in text or OLD not in text: return text, 0
+    if "PATCH: s6037 ddclamp" in text and "s6586b capx" in text and "s6590 desc log" in text and "s6591 slot64" in text and "ROGUESQ_DD_NOCLAMP" in text and "s6874 edge" in text and "s6879 wideclamp" in text or OLD not in text: return text, 0
     if "PATCH: s6037 ddclamp" in text:
         i = text.index("    { /* s6590 desc log */") if "s6590 desc log" in text else text.index("    { /* PATCH: s6037 ddclamp */"); j = text.index(OLD, i); text = text[:i] + text[j:]
     assert text.count(OLD) == 1

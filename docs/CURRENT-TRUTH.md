@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6878 (2026-11-04).
+Compact operational handoff, as of Session 6880 (2026-11-04).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -95,6 +95,8 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 - **G1:** levels 0..18 have route+300 s holds and framebuffer presence ([G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md));
   (d) objective response PARKED by owner 2026-10-31 ([G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md)).
 - Closed: M5 audio de-stubbing, M3 idiom audits, M6 endurance (s6442), G2 audio, G5 renaming. G4 crash hunting parked.
+
+- **G1d wide footprint (s6879-s6880, IN PROGRESS).** 16:9 flight lost far terrain to our s6144 widening; ROGUESQ_G1D_FPDEPTH (default on, =0 old) restores it, k=1 untouched. FPDEPTH at 21:9 lvl1 crashed 5/5 in streamTerrainGridCellsByDistance (0x80042D6C, s2=0xFE7E017F); ROGUESQ_G1D_SPANBOUND (s6880) under test. Do not call 21:9 safe until the s6880 entry says so.
 
 ## Superseded conclusions — do not act on these
 

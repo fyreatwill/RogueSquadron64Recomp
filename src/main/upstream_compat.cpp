@@ -46,6 +46,9 @@ extern "C" uint32_t g_s6491[4]; // s6491 terrain-grid call/list/chain counters
 extern "C" uint32_t g_s6489[8]; // s6489 cumulative cell-gate exit counters (patched funcs_10.c)
 extern "C" uint32_t rs64_phase_ord(void);
 // s6718 G1d: widened 640x340 mission-intro width (0 = off) and "live video state is the 640x340 intro"; set by fixup patches.
+extern "C" { double rs64_s6879_fpk = 1.0; } // s6879: footprint x factor of this frame, tools/apply_s6879_fpdepth.py
+// s6880: wide frames get the s6049 span-table store bound, tools/apply_s6880_widebound.py. ROGUESQ_G1D_SPANBOUND=0 = old.
+extern "C" int rs64_s6880_wide(void) { static int on = -1; if (on < 0) { const char* e = getenv("ROGUESQ_G1D_SPANBOUND"); on = !(e && *e == '0'); } return on && rs64_s6879_fpk != 1.0; }
 extern "C" { int rs64_g1d_intro_w = 0; int rs64_g1d_vs_intro = 0; int rs64_g1d_title_vi = 0; int rs64_g1d_vi_epoch = 0; uint32_t rs64_last_vi_mode = 0; }  // s6720: title_vi = wide title mode live
 extern "C" volatile int g_rs64_dd_blk; // s6583: dd toggle state, tagged on [fbdump]
 extern "C" void rs64_m5_host_write_census(uint8_t* rdram,

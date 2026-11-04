@@ -38046,6 +38046,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6719f:
             changed = True
             report.append(f"{p.name}: s6719 640 footprint x{_n6719f}")
+        import apply_s6879_fpdepth as _a6879
+        text, _n6879 = _a6879.apply9(text)
+        if _n6879:
+            changed = True
+            report.append(f"{p.name}: s6879 fpdepth x{_n6879}")
         import apply_s6294_edgewriter as _a6294
         text, _n6294 = _a6294.apply9(text)
         if _n6294:
@@ -42032,6 +42037,7 @@ RS64_REPLAY = [
     "apply_s6038_cellprobe.py",
     "apply_s6043_tblwatch.py",
     "apply_s6144_fpx.py",
+    "apply_s6879_fpdepth.py",
     "apply_s6145_hudx.py",
     "apply_s6155_hudcpos.py",
     "apply_s6031_far.py",
@@ -42080,6 +42086,7 @@ RS64_REPLAY = [
     "apply_s6523_spanscale.py",
     "apply_s6588_tblnull.py",
     "apply_s6698_storediag.py",  # s6698: must follow every hook-emitting patch
+    "apply_s6880_widebound.py",  # last: apply_s6493_stream_cum anchors on the s6049 text this rewrites
 ]
 
 

@@ -8,6 +8,8 @@
 #   LOCK=0 is NOT no-input: POSE_LOCK is what zeroes the pad, without it the harness autopilot keys run on the wall clock.
 #   XMEM = extra dump specs.
 #   s6876: LEVEL = mission level (default 1). The poseref is lvl1 only, so other levels need NOREF=1.
+#   s6879: an arm with ROGUESQ_ASPECT takes the wide route (WIDE_ROUTE=1, MISSION_WIDTH = the width main.cpp derives from 448 * w/h), and DEBUG_WRITE arms on
+#   that width: flight is never 512 there, so with :512: POSE_FREEZE and RAND_TRACE silently stay off (caps=0, no rand.txt).
 #   dd1a/dd1b = same settings twice (cross-run noise floor). shift = dd1 frozen SHIFT units of x later (default 2): the positive
 #   control, it must score far above the floor or a null from the opt-in arms says nothing.
 set -u
@@ -26,10 +28,11 @@ for a in $ARMS; do
   pk=; if [ "${PIN:-0}" = 1 ] && [ "${n[1]}" != u ]; then
     case "$e" in *FPS60*) pk="ROGUESQ_XTRACE_POKE=800FA730:29:30:3c888889";; *) pk="ROGUESQ_XTRACE_POKE=800FA730:29:30:3d088889";; esac
   fi
+  wd=(); dw=512; case "$e" in *ROGUESQ_ASPECT=16:9*) dw=796;; *ROGUESQ_ASPECT=21:9*) dw=1024;; esac; (( dw != 512 )) && wd=(WIDE_ROUTE=1 MISSION_WIDTH=$dw)
   rf="ROGUESQ_POSE_REF=$REF"; [ -n "${NOREF:-}" ] && rf=
   T=${TAGP:-s6872}_$n; L=scratch/agent/m6/g1_lvl$LV$T/run.log; C=$O/$n; mkdir -p $C; rm -f $L
-  env ROGUESQ_NO_PKILL=1 MISSION_WIDE_FLIGHT=0 TITLE_OPTIONAL=1 \
-    XENV_EXTRA="$e $pk ROGUESQ_XTRACE_MEM=800FA730:29:30:1,800FA730:0:80137DC0:3,800FA730:0:80137E7C:1${XMEM:+,$XMEM} ROGUESQ_POSE_LOCK=${LOCK:-1} $rf ROGUESQ_POSE_FREEZE=$fz:$MS ROGUESQ_DEBUG_WRITE=80003470:1:512:55 ROGUESQ_RAND_TRACE=$PWD/$C/rand.txt" \
+  env ROGUESQ_NO_PKILL=1 MISSION_WIDE_FLIGHT=0 TITLE_OPTIONAL=1 $wd \
+    XENV_EXTRA="$e $pk ROGUESQ_XTRACE_MEM=800FA730:29:30:1,800FA730:0:80137DC0:3,800FA730:0:80137E7C:1${XMEM:+,$XMEM} ROGUESQ_POSE_LOCK=${LOCK:-1} $rf ROGUESQ_POSE_FREEZE=$fz:$MS ROGUESQ_DEBUG_WRITE=80003470:1:$dw:55 ROGUESQ_RAND_TRACE=$PWD/$C/rand.txt" \
     HOLD_S=${HOLD_S:-110} LEVEL=$LV TAG_SUFFIX=$T zsh scratch/agent/g1_level_coverage_common.zsh > $C/harness.log 2>&1 &
   H=$!; c=0; k=0
   while kill -0 $H 2>/dev/null && (( k < $#FZ )); do

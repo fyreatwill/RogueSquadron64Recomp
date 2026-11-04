@@ -181382,3 +181382,15 @@ Second line: live ../N64Recomp/RecompiledFuncs has 0 direct calls to zeroAudioBu
 Limits: m2's 19 clips are not timed, because l1's adjacent control burned the 20000-row EXEC_LOG_CAP by t=1.3 s; they are counted over a run with 4998 flight ticks, so some could predate flight. deactivateVoice 0 hits in l0b is not a control and is read as nothing, it may just not run on that path. Two missions only; 17 rest on the static scan. A one-shot sample ending is the event that matters, and a helper never entered cannot reach it.
 Rules out: the 16 miscompiled branches running on missions 1 and 2. Does not fix them: N64Recomp still mislabels backward out-of-function branches, and s6871's design stays on file. Dead end avoided: the first caller count hit the backup tree RecompiledFuncs.s2338-before (find picked it), redone on the live tree.
 Next: NEXT.md.
+
+## Session 6879 (2026-11-04) — 16:9 flight lost far terrain to our own s6144 footprint widening; FPDEPTH restores it, same-pose repeat floor is exactly 0; 21:9 crash left open (entry reconstructed by s6880)
+HYPOTHESIS-ID: g3-aspect-samepose. This iteration hit the loop's time limit (rc=124, 12:43) with nothing in the ledger. s6880 wrote this entry from the uncommitted tree and scratch/s6879, so the reasoning below is what the artifacts and code comments say, not a record of the session.
+What landed: tools/apply_s6879_fpdepth.py, tools/g3_aspect_crop.py, s6879 wideclamp in tools/apply_s6037_ddclamp.py, wide route in tools/g3_optin_pose_arms.sh (DEBUG_WRITE must arm on the wide width or POSE_FREEZE silently stays off), POSE_LOCK no longer gated on origin (16:9 swaps 0x58B038 / 0x6xxxxx, so keys leaked on alternate frames).
+ORIGIN: s6144 multiplies the footprint corner x by k at 0x800438C4, then 0x80043930 normalises and rescales to a fixed length, so a wider x cost y and z and the forward reach shrank. Retail's value there is legitimate; the widening was misplaced. FPDEPTH restores the length, so y and z equal the 4:3 corner and only x is k wider. k = 1 skips the block.
+Result, lvl1 dt pinned, POSE_FREEZE, base t43 (tools/g3_aspect_crop.py, s6880 re-scored; ctl = shift arm):
+| arm | k | mad | hz_p90 | ctl_mad |
+|---|---|---|---|---|
+| o169 (FPDEPTH=0) | 0 / 1 / 2 | 12.40 / 12.41 / 20.66 | 30.84 / 25.18 / 16.99 | 22.26 / 21.57 / 82.92 |
+| f169 (FPDEPTH on) | 0 / 1 / 2 | 11.61 / 12.18 / 18.63 | 16.36 / 15.11 / 0.63 | 21.45 / 21.48 / 80.85 |
+hz_mean stays 40-75 with a smaller p90, so a tail of columns is far off; not read. Sheet docs/owner_sheet_s6879_wide_depth.png (4:3, old 16:9, FPDEPTH 16:9): row 1 hill behind the craft is back. Owner judges.
+Open at the limit: 21:9 crashed, see s6880.
