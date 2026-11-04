@@ -1,12 +1,11 @@
-# NEXT: same exact-match check on lvl5 and lvl10, then name the camera pitch writer
+# NEXT: find where dt enters the camera pitch, starting at buildEffectObjectWorldTransform
 HYPOTHESIS-ID: g3-optin-frame-diff
 
-Why: s6875 found an exact test on lvl1. FPS60 with dt pinned 1/30 (arm ufix) must equal 30 Hz frozen one tick later (arm n1), 0.00. Only lvl1 has been checked.
-Hypotheses for lvl5/lvl10: H-match (0.00 again) / H-level (a level draws something tied to the limiter, residual above ~0.1 with camera equal).
-Steps: get x crossings from a [poselock] trace (x must rise) and pick them on straight stretches. g3_optin_pose_arms.sh hardcodes LEVEL=1, so add a LEVEL variable first (REF poseref is lvl1 only; use NOREF=1 elsewhere). One batch per level: ufix, n1, n2 as the adjacent-tick control. FZ for n1 = the tick after ufix's freeze pose. MS stays 15000 (4000 is too short). Relative outdir only.
-Commands: C=ROGUESQ_G3C_CAMLOG=1; P=ROGUESQ_XTRACE_POKE=800FA730:29:30; env PIN=1 HOLD_S=80 FZ="..." TAGP=s6876 zsh tools/g3_optin_pose_arms.sh scratch/s6876/lvl5 ufix=ROGUESQ_FPS60=1+$C+$P:3d088889 ; then tools/g3_optin_diff.py <dir> --base ufix and tools/g3_cam_at_freeze.py.
-Then the pitch: find the writer of 0x80138458 +0x28..+0x48 in flight (a guest write hook or the oracle write watch at physical 0x138458+0x28, whole-RDRAM positive control first). Pitch is 0.06316 at dt 1/30 and 0.06055 at 1/60, craft attitude equal. Add a third dt to test linearity. Do not fix before naming it; 0.15-0.26 deg may not be worth a change, and that is the owner's call.
-Also open: lvl5 dd4 cap 2400 trims on-map rows in 5/179 windows (s6875). Check if any such window is on screen in flight.
+Why: s6876 refuted the attitude dead-band and named the in-place writer of 0x80138480 (buildEffectObjectWorldTransform, 8/10 [camcaller] rows). Pitch at dt 1/20, 1/30, 1/60: 0.06233, 0.06316, 0.06055, not monotonic. dt only takes 1/60 multiples (the game rounds it), so do not use 1/45.
+Hypotheses: H-build (the temp matrix a1 0x80165DF8 carries the dt term) / H-quat (updateEffectObjectOrientationQuat's two rare sites set the pitch, then it holds; lvl5 ufix steps once at camlog row 21, which fits) / H-early (set during launch before camlog starts, by another path).
+Measure, one build: print [camcaller] every call for the first ~200 ticks of flight, with the word-5 value before and after each call, per host return. The call that changes word 5 selects. Arms u20, u30, u60: lvl1, PIN=1, FZ=99999, HOLD_S=70, ROGUESQ_G3C_CAMLOG=1 ROGUESQ_CAM_CALLER=1 ROGUESQ_WATCH_LOG=1. Resolve: atos -o build/RogueSquadron64Recomp -l 0x100000000 <hra>. Compare with tools/g3_cam_align.py.
+Budget: 0.15-0.26 deg of pitch. Name it, do not fix it; a fix is the owner's call. If this does not select in one iteration, close the thread as measured and take the next ladder rung.
+Also open: lvl10 cloud clock (VI or wall): only worth a run if an owner report points at clouds.
 If an owner report arrives, it outranks this.
 Ask owner when a human is next on: add tools/regen_front.sh, regen_replay.sh and regen_verify.sh to the CLAUDE.md regen order (owner file, not edited). Decide whether to regenerate the live tree.
 Owner judges: docs/owner_sheet_s6874_dd_edge.png, docs/owner_sheet_s6860_lvl10_hud_ab.png, docs/owner_sheet_s6861_pause_hud_ab.png, docs/owner_sheet_s6872_optin_samepose.png.

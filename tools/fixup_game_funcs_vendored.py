@@ -41923,6 +41923,7 @@ RS64_REPLAY = [
     "apply_s5078_flight_writer_census.py",
     "apply_s5654_vsrc_store_census.py",
     "apply_s6843_store_watch.py",
+    "apply_s6876_camcaller.py",
     "apply_s6845_glyph_probe.py",
     "apply_s5660_unaligned_store_census.py",
     "apply_s5368_align100_counter.py",
@@ -42444,6 +42445,9 @@ _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_
 
 # s6826 G3 FPS60: guided-motion accel/speed/drop per-tick increments scaled by dt*30 under ROGUESQ_FPS60.
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_fps60_float_quanta.py")), str(base)])
+
+# s6876 G3 FPS60: attitude dead-band scaled by dt*30, opt-in ROGUESQ_FPS60_DEADBAND=1 (test of the dt-dependent pitch).
+_sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_fps60_deadband.py")), str(base)])
 
 # s6132 G1d: parameterise the 8 MB pointer-range guards (RS64_RAM_TOP). Must run after every other patch (they emit the literal).
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_ramtop.py")), str(base)])

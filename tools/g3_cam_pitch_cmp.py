@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """s6875 G3: camera rotation difference at matched camera position, ARM vs BASE ([camlog] rows, ROGUESQ_G3C_CAMLOG=1). For sample rows
 of BASE, takes the ARM row nearest in x,z and prints position gap, y gap, and the signed pitch gap (word 5, rotation row 1 col 2).
-Usage: g3_cam_pitch_cmp.py BASETAG ARMTAG [ARMTAG ...]   (TAG = scratch/agent/m6/g1_lvl1<TAG>/run.log)"""
-import math, re, sys
+Usage: g3_cam_pitch_cmp.py BASETAG ARMTAG [ARMTAG ...]   (TAG = scratch/agent/m6/g1_lvl<LEVEL><TAG>/run.log, env LEVEL default 1)"""
+import math, os, re, sys
 
 def rows(t):
     r = []
-    for ln in open('scratch/agent/m6/g1_lvl1%s/run.log' % t, 'rb'):
+    for ln in open('scratch/agent/m6/g1_lvl%s%s/run.log' % (os.environ.get('LEVEL', '1'), t), 'rb'):
         if ln.startswith(b'[camlog]'):
             m = re.search(rb'ptr=80138458 cam=([^ ]*) tt', ln)
             if m:

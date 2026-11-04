@@ -2,12 +2,12 @@
 """s6875 G3: camera block at each POSE_FREEZE, per arm. Needs ROGUESQ_G3C_CAMLOG=1 in the arm. Prints the last [camlog] row before
 each [posefreeze] (the camera of the frame on screen during the freeze): the 22 floats at *(0x80138D1C)+0x28, pos = words 9..11, and
 pos minus the player pos on the freeze row. Then every word's largest difference against the first arm.
-Usage: g3_cam_at_freeze.py TAG [TAG ...]   (TAG = scratch/agent/m6/g1_lvl1<TAG>/run.log)"""
-import re, sys
+Usage: g3_cam_at_freeze.py TAG [TAG ...]   (TAG = scratch/agent/m6/g1_lvl<LEVEL><TAG>/run.log, env LEVEL default 1)"""
+import os, re, sys
 
 def load(tag):
     last, out = None, []
-    for ln in open('scratch/agent/m6/g1_lvl1%s/run.log' % tag, 'rb'):
+    for ln in open('scratch/agent/m6/g1_lvl%s%s/run.log' % (os.environ.get('LEVEL', '1'), tag), 'rb'):
         if ln.startswith(b'[camlog]'):
             m = re.search(rb'n=(\d+) ptr=(\w+) cam=([^ ]*) tt', ln)
             if m:

@@ -2179,6 +2179,21 @@ static void rs64_s6843_note(uint32_t key, uint32_t phys, uint32_t len, const cha
     }
     Agg& a = by[key]; ++a.n; a.bytes += len; if (phys < a.lo) a.lo = phys; if (phys + len > a.hi) a.hi = phys + len; if (api) a.api = api;
 }
+// s6876: mat3x4Multiply entry (tools/apply_s6876_camcaller.py). ROGUESQ_CAM_CALLER=1 prints, for calls whose output is the camera rotation
+// 0x80138458+0x28, the host return address and row 1 of both inputs: every new caller, then every 512th call.
+extern "C" void rs64_s6876_mm(uint8_t* rdram, uint32_t ra, uint32_t a0, uint32_t a1, uint32_t a2) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_CAM_CALLER"); return e && *e && *e != '0'; }();
+    if (!on || (a2 & 0x1FFFFFFFu) != 0x138480u) return;
+    // ctx->r31 reads 0 here (recompiled jal does not set it), so key on the host return into the caller; resolve offline: atos -o <exe> -l 0x100000000 <hra>.
+    const uintptr_t hra = (uintptr_t)__builtin_return_address(1) - (uintptr_t)_dyld_get_image_vmaddr_slide(0);
+    static std::mutex mu; static std::map<uintptr_t, uint64_t> by;
+    std::lock_guard<std::mutex> lk(mu);
+    const uint64_t n = ++by[hra];
+    if (n != 1 && (n & 511u)) return;
+    auto rf = [&](uint32_t va, uint32_t o) { float f; memcpy(&f, rdram + ((va + o) & 0x7FFFFCu), 4); return (double)f; };
+    std::fprintf(stderr, "[camcaller] hra=%llX n=%llu a0=%08X a1=%08X a0row1=%.5f,%.5f,%.5f a1row1=%.5f,%.5f,%.5f\n", (unsigned long long)hra, (unsigned long long)n, a0, a1,
+                 rf(a0, 12), rf(a0, 16), rf(a0, 20), rf(a1, 12), rf(a1, 16), rf(a1, 20));
+}
 // s6845: drawSubtitleText -> drawTextGlyphRect argument probe (tools/apply_s6845_glyph_probe.py), VI window = ROGUESQ_WIPE_SCAN.
 extern "C" volatile uint32_t rs64_vi_n_g;
 static uint32_t s_s6845_lo = 0, s_s6845_hi = 0;
