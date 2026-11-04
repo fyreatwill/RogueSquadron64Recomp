@@ -1,10 +1,10 @@
-# NEXT: retail mission null for the N64Recomp self-branch block 8009264C..800934A4
-HYPOTHESIS-ID: selfbranch-mission-null
+# NEXT: same-pose retail-settings check of ROGUESQ_ASPECT 16:9 in flight, lvl1
+HYPOTHESIS-ID: g3-aspect-samepose
 
-Why: g3-optin-frame-diff closed s6877 (pitch = retail asin dead zone, no fix). CURRENT-TRUTH lists the silent miscompile as NOT fixed: 16 backward branches out of a function land on its own entry, in voice resampler helpers. Retail attract gave 0 hits, but the retail mission arm never reached flight, so there is no mission null. The g3_mission oracle route has since reached flight on every mission (s6753-s6778).
-Hypotheses: H-dead (block never runs in flight, stays parked) / H-live (retail executes it during mission voice playback, so the port runs miscompiled code and it needs a real fix, design in PORTING-STATE s6871).
-Measure, one run: retail oracle in lvl1 flight with in-mission dialogue, PC watch on 8009264C..800934A4. Same-run positive control: a PC watch on a voice path function known to run in flight must fire, or a null says nothing. Read tools/oracle/README.md and tools/g3_mission/run.sh first; use --save-dir, never swap the user .eep.
-Outcomes: 0 hits with control firing -> H-dead for that mission, record it, repeat on one more dialogue heavy level at most. Any hit -> H-live, name the caller, fix per s6871.
+Why: selfbranch-mission-null closed s6878 (H-dead on missions 1, 2). s6872-s6877 compared dd and FPS60 against dd1 with same-pose arms; check tools/g3_optin_pose_arms.sh first, and if ASPECT arms were already scored, take the next ladder rung instead. Aspect work closed on menus and owner sheets, not on a same-pose near-field number.
+Hypotheses: H-same (centre 4:3 crop of 16:9 matches the 4:3 frame after the x scale, only the sides are new) / H-diff (near geometry, culling or HUD differs inside the crop, naming a real wide-mode defect) / H-scale (crop differs only by resampling, floor set by a dd1-vs-dd1 repeat).
+Measure, one build, all arms in one iteration: lvl1 dt pinned, POSE_FREEZE, arms 4:3, 4:3 repeat (floor), 16:9. Score centre crop MAD per k. Positive control: adjacent-tick MAD in the same run must exceed the floor, or a null says nothing.
+Outcomes: within floor -> H-same, record it. Above floor with resampling-like spread -> H-scale. Localised difference -> H-diff, name the draw and fix it.
 If an owner report arrives, it outranks this.
 Ask owner when a human is next on: add tools/regen_front.sh, regen_replay.sh and regen_verify.sh to the CLAUDE.md regen order (owner file, not edited). Decide whether to regenerate the live tree.
 Owner judges: docs/owner_sheet_s6874_dd_edge.png, docs/owner_sheet_s6860_lvl10_hud_ab.png, docs/owner_sheet_s6861_pause_hud_ab.png, docs/owner_sheet_s6872_optin_samepose.png.

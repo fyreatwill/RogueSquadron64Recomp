@@ -181364,3 +181364,21 @@ Failed: my first reading said the in-place site could not change word 4 because 
 ORIGIN: no mitigation added. Writer of the pitch is the retail correction above, value legitimate.
 DISCRIMINATION: selects H-quat, refutes H-build, and refutes H-early for the holds measured (the holds are set in flight at swaps 3042-3112 and later). Root cause of the dt-dependent pitch is the retail asin clamp dead zone. No fix: changing it departs from retail, and FPS60's offset is within the band retail itself allows.
 Rules out: a dt term in the camera pitch formula at the site read; buildEffectObjectWorldTransform as a pitch source. Thread g3-optin-frame-diff closes as measured for lvl1, per NEXT.md.
+
+## Session 6878 (2026-11-04) — retail flight never enters the resampler block on missions 1 and 2 while speech plays: H-dead, thread closed, miscompile stays unfixed
+HYPOTHESIS-ID: selfbranch-mission-null. What ran: NEXT.md's retail oracle null, tools/g3_mission/run.sh with new RETAIL_ONLY=1 (retail arm only, no port arm, no offline step). Three 420 s runs, angrylion, dt pinned: scratch/s6878/l0 (m1), l1 (m2), l0b (m1 repeat with a quiet control).
+Correction: NEXT.md and CURRENT-TRUTH said no retail mission null existed. s6872 had one (m1, 0 hits, tick control 3375), but its control was the tick, not voice or the range watch form, so it did not answer whether the block runs during speech.
+Result, hits per run (l0 / l1 / l0b):
+| range | m1 | m2 | m1 repeat |
+|---|---|---|---|
+| 8009264C..800934A4 target | 0 | 0 | 0 |
+| 800934D0..80093D10 decodeAdpcmSampleBlock | 0 | 0 | 0 |
+| 80066EE4 playSpeechClip | 4 | 19 | 4 |
+| 8009B048 allocAndConfigureNewVoice | 6 | 21 | 6 |
+| 800923E4..8009264C adjacent, same form | 12603422 | 11106167 | not armed |
+| 800924F0 deactivateVoice | not armed | not armed | 0 |
+Controls: --watch-pc-range now has same-run positive hits, the first time for this form. Flight: first tick VI 12155/12159 (m1, ~203 s), VI 6562 (m2, ~109 s); ticks 4782 in l0b, 4998 in l1. l0b timed speech at 184.7 (before flight), 204.4, 241.6, 257.1 s, each followed by allocAndConfigureNewVoice within 0.8 s; two more allocs at 43.2 and 60.0 s. m1 is therefore 3 clips in flight with the block silent.
+Second line: live ../N64Recomp/RecompiledFuncs has 0 direct calls to zeroAudioBufferWords, decodeAdpcmSampleBlock, expandBytesToPcm16ViaTable, copyVoiceSamplesS16, copyVoiceSamplesLut, resampleVoiceLutSamples; relocateSndPointer 2 is the counted positive. Agrees with s6871's scan; that is the same static fact, not new reach evidence.
+Limits: m2's 19 clips are not timed, because l1's adjacent control burned the 20000-row EXEC_LOG_CAP by t=1.3 s; they are counted over a run with 4998 flight ticks, so some could predate flight. deactivateVoice 0 hits in l0b is not a control and is read as nothing, it may just not run on that path. Two missions only; 17 rest on the static scan. A one-shot sample ending is the event that matters, and a helper never entered cannot reach it.
+Rules out: the 16 miscompiled branches running on missions 1 and 2. Does not fix them: N64Recomp still mislabels backward out-of-function branches, and s6871's design stays on file. Dead end avoided: the first caller count hit the backup tree RecompiledFuncs.s2338-before (find picked it), redone on the live tree.
+Next: NEXT.md.

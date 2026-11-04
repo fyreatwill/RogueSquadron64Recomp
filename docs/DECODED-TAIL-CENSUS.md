@@ -144,9 +144,10 @@ its epilogue. Generated code restarts the helper instead, with $t1 rewound by th
 data_gap_ and fake_func_ decoded data, and applyVoiceDelayFilter's two are its last word, a toml data_gap.
 
 **This code looks dead, so it is not fixed.** No jal, j, data word or lui pair reaches 8009264C..800934A4 from outside in
-any section. Retail, 45 s boot + attract: 0 exec hits in that range while 80035500 and 80091B64 (audio) fired. Limits: the
-range watch form had no same-run hit of its own, and two retail runs meant to reach a mission never hit tick 800FA730, so
-missions are covered only by the static scan. A computed address would escape that scan.
+any section. Retail, 45 s boot + attract: 0 exec hits in that range while 80035500 and 80091B64 (audio) fired. s6878: retail
+missions 1 and 2 in flight, 420 s each: 0 hits, with range-form controls firing in the same runs (playSpeechClip 4 / 19,
+allocAndConfigureNewVoice 6 / 21). Limit: the other 17 missions have only the static scan, and a computed address would
+escape it.
 
 A working fix was built and removed: the helper records the target and returns, the caller jumps to it after the jal. It
 compiled and held lvl1 142 s, but its counters printed nothing at their 2^20 threshold, so that run says nothing about reach. If

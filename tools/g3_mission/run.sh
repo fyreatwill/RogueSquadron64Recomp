@@ -16,6 +16,7 @@
 # Mission 17 also needs ARM=20 DWARM=30 CAP0=33 (the defaults 55/85/62 never arm the port rand trace, s6778). Pause menu
 #   (s6778): add PRESS ...,61:start,65:start and AP ...,40:start,44:start (pause, then resume -> race crash -> debrief).
 # ORACLE_EXTRA: extra rs64_oracle words, e.g. --watch-pc-range 0x8009264C:0x800934A4 (s6872).
+# RETAIL_ONLY=1: retail arm only, no port arm, no offline compare (s6878).
 # env: G3_TICK (tick/pin pc, 800FA730; must be one of the --exec-trace-also pcs below) PRESS/AP (start schedules) DWARM (retail seed arm s, 85) ARM (port seed arm s, 55) RSECS (360) PSECS (330) NDUMP (24) DSTEP (10) FARM (103) POKE (dt pin) EXTRA (port env)
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 S=$1; L=$2; [ -n "$S" ] && [ -n "$L" ] || { echo "usage: run.sh SDIR LEVEL" >&2; exit 2; }
@@ -54,6 +55,7 @@ env RS64_XTRACE_MEM=$M RS64_XTRACE_POKE=$PIN tools/oracle/build/rs64_oracle --sa
   --exec-trace-also 0x8006C010 --debug-write 80003470:1:512:${DWARM:-85} --exec-trace-also 0x8008EE08 --exec-trace-also 0x8008EE84 \
   ${=ORACLE_EXTRA:-} $A > $D/oracle.log 2>&1 &
 RP=$!
+if [ -n "${RETAIL_ONLY:-}" ]; then wait $RP; echo "retail hits: $(grep -c '^\[hit\]' $D/oracle.log)"; exit 0; fi
 # --- port arm (foreground)
 O=$S/port
 env SAVE_FROM=$EEP SECS=${PSECS:-330} CAP0=${CAP0:-62} AP=${AP:-6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,50:start} \
