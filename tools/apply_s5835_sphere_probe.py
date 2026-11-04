@@ -150,7 +150,8 @@ def apply(text, name=None):
     }
 '''
         text = text.replace(k, k + post, 1); n += 1
-    if "PATCH: s5904" not in text and "PATCH: s5856" in text and "static void rs5834_pre(" in text:
+    # s6863: upgrade of an old tree only; a pristine pass already gets the new form from the s5856 block above.
+    if "PATCH: s5904" not in text and "PATCH: s5856" in text and "static void rs5834_pre(" in text and "rs5856_sinobj = 0;" not in text:
         a = "    rs5856_cin = 0; rs5856_proj = (uint32_t)ctx->r17;\n"
         assert text.count(a) == 1
         text = text.replace(a, "    rs5856_cin = 0; rs5856_sinobj = 0; rs5907_hitobj = 0; rs5856_proj = (uint32_t)ctx->r17;\n", 1)
@@ -159,7 +160,7 @@ def apply(text, name=None):
         b = "        if (hit) { static unsigned ph; if (ph++ < 15) fprintf(stderr, \"[s5856] RET id=%x proj=%08x cin=%u\\n\""
         assert text.count(b) == 1
         text = text.replace(b, "        if (hit) { static unsigned p4; rs5904_tally(rdram, rs5856_sinobj, 1); if (!rs5907_hitobj) rs5907_nohit++; else { rs5904_tally(rdram, rs5907_hitobj, 4); if (rs5907_hitobj == rs5856_sinobj) rs5907_agree++; else rs5907_dis++; } if (p4++ < 40) { uint32_t so = rs5856_sinobj; fprintf(stderr, \"[s5904] RET id=%x sinobj=%08x w0=%08x w4=%08x\\n\", id, so, ((so >> 24) == 0x80) ? (unsigned)MEM_W(S32((int32_t)so), 0) : 0u, ((so >> 24) == 0x80) ? (unsigned)MEM_W(S32((int32_t)so), 4) : 0u); } if ((p4 & 7) == 0) rs5904_dump(); }\n" + b, 1); n += 1
-    if "PATCH: s5904 tally" not in text and "PATCH: s5835 helpers" in text and "rs5901_sample(pp, dl, sd2, cc" in text:
+    if "PATCH: s5904 tally" not in text and "PATCH: s5835 helpers" in text and "rs5901_sample(pp, dl, sd2, cc" in text and "rs5856_sinobj = rs5839_obj" not in text:
         k = "extern unsigned rs5834_who; extern unsigned rs5856_cin;\n"
         assert text.count(k) == 1
         hh = H[H.index("uint32_t rs5856_sinobj;"):H.index("static unsigned rs5835_sin[2]")]

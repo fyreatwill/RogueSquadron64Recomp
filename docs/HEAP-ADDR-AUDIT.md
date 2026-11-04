@@ -31,7 +31,9 @@ teardown to audio re-init by hook position, so it does not depend on the heap ad
 ## Replayed patches missing from the live tree
 
 `tools/audit_heap_addr_tests.py` lists 9 replayed scripts whose MARK is absent (s2463, s4221-3, s4300, s4466, s4560, s4602, s4680).
-All 9 are probes or logging (each script's docstring read; s4680 and s2463 are store/callback watches); why they are absent after a replay that fails on error was not established.
+s6863 answered why: they are removed on purpose after the fixer. Staged replay, with the s4296 A14 marker present at every stage as control:
+`strip_diag_layers.py` removes 7, `fixup_live_replay.py` removes s2463 and s4221. The list is expected, not a defect. The s4563 setter goes the same way.
+`tools/audit_replay_survival.py` covers the scripts without a MARK.
 
 ## Runtime check (21:9 + FPS60 + dd4, spill at 0x81000000, ROGUESQ_HUD_LOG=1, same binary)
 

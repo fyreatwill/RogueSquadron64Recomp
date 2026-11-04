@@ -181163,3 +181163,24 @@ Also: 9 replayed apply scripts have no MARK in the live tree (s2463, s4221-3, s4
 Limits: the static classification is single-source and by reading; the tool's review list is by function prefix, so new bounds inside rs64_s*/rs5*/rs6* are not flagged.
 Verdict: selects H-clean, refutes H-more for the owner path. Rules out heap placement as a hidden cause of per-level or per-layout behaviour in host patches, within those limits.
 
+
+## Session 6863 (2026-11-03) — 9 absent MARKs are removed on purpose; the real finding is that regen from pristine had stopped working: chain runs again, but 8 files do not compile yet
+What ran: offline replay of pristine N64Recomp output (N64Recomp/scratch_s5547_regen, dated s5547, not regenerated this session) into scratch trees, with a new per-script trace (RS64_REPLAY_TRACE in rs64_replay_apply_scripts) and tools/audit_replay_survival.py. Live tree hash checked unchanged across every replay run; the only live edit is the funcs_10.c fix below, made by hand.
+Answer to NEXT: H-strip. Staged counts with the s4296 A14 marker as control (present at all stages): s4222, s4223, s4300, s4466, s4560, s4602, s4680 vanish at strip_diag_layers; s2463, s4221 vanish at fixup_live_replay. H-skip and H-order are refuted for these 9. They are diagnostics removed by design (s5535-s5546).
+Main result: the fixer no longer ran on pristine input. s5547's "regen determinism CLOSED" stopped being true no later than s5904, because scripts were tested against the live tree only. Fixed, in order hit:
+- apply_s5835: upgrade branches ran on text that already had the new form (gated).
+- s2338 and s4323 head anchors: the HUDBIT entry hook lands first on a pristine pass (anchors tolerate it).
+- s5754 ran after s5773, which anchors on its text (block moved).
+- `apply_s5887_npc_spawn_class` import named a file that never existed (renamed to the real script).
+- **apply_s6031_far apply4 did one stage per call, so a pristine pass would have lost the s6112 VPW camera block that widescreen depends on** (now loops).
+- Replay list: 3 dir-arg scripts got no argv; s5798 group, s6334/s6336, s4864/s4867/s4988/s4991 reordered ahead of their dependents; s6287 moved after s5798.
+- s5100 post-condition had 13 unseen hits in live. 5 are index shape (gpr first argument, audit now skips them); 8 are the two real variables below.
+- 31 live patches were never wired. 17 now wired; 14 (s6500-s6526 funcs_9 chain) stay unwired, their anchors need later live text. Docstrings and env names read as observation only for most; 5 of the 14 did not match my keyword check and were not read individually.
+- apply_s6098: per-site s6285 grows no longer take the armed gate, to match live. This treats live as the reference, not as proven correct. It is on the dd>1 path (main.cpp bundle sets DLPOOLX).
+- fixup_live_replay guard2 strings now use RS64_RAM_TOP. New tools/regen_replay.sh holds the whole chain; the steps after the fixer existed only in scratch scripts, and weaken_patched_funcs was in none of them.
+Live defect fixed: s6315 edge-fade logging used uint32_t `pb` and `w0` as MEM_W bases, which by macro arithmetic gives rdram+0x100137DC0, past the 4 GiB reservation. Opt-in only (ROGUESQ_EDGE_FADE, _LOG). Fixed in apply_s6311 and live funcs_10.c, rebuilt. lvl1 with _LOG: alive, 130 s hold, 0 stalls, 0 crash lines, plausible in-flight values (pl=51.27,94.23, slot=8033E470). Old-binary arm NOT run, so the fault itself is by reading only.
+ORIGIN: not a mitigation. The bad base was written by our own s6315 patch.
+Results: tools/regen_replay.sh exits 0, failures=0, s5097/s5099/s5100 post-conditions pass, survival controls ok (s4296 survives, s4222 vol lost). Diff vs live 1,960 lines over 51 files (start of the final fix round 6,015).
+NOT done, stated plainly: regen output does NOT compile. -fsyntax-only with the real flags fails 8 of 52 files (funcs_0 g1d_* decls from s6201 carve, 9, 13, 16, 24, 25, 26, 42); a deliberately broken control file failed too, though it is a copy of funcs_0, which has real errors, so that control is weak. An earlier "errors: 0" from this check was xargs aborting and was discarded. No link, no boot. Residual not fully classified: s6287 230 lines (ROGUESQ_PPLOG opt-in) still missing, 137 blank/brace, 72 untagged live-only, plus the funcs_9 chain.
+Rules out: H-skip for the 9 MARKs. Does not rule out a default-path behaviour difference in the residual. Do not regenerate the live tree until the next unit closes.
+Failed attempts: first wiring of all 31 gave 14 cascading failures from s6500; those were withdrawn rather than chased (closed thread, observation only).

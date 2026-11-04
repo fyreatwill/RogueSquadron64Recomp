@@ -37597,6 +37597,15 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5771 guest-pc census x{_n5771}")
 
+    # s6863: before s5773, whose bit1 anchor contains the s5754 store log.
+    if p.name.startswith("funcs_") and "PATCH: s5754 mask store log" not in text:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+        import apply_s5754_mask_stores as _a5754
+        text, _n5754 = _a5754.apply(text)
+        if _n5754:
+            changed = True
+            report.append(f"{p.name}: s5754 mask store log x{_n5754}")
+
     if p.name in ("funcs_30.c", "funcs_42.c") and "PATCH: s5773 bit1 lives" not in text:
         sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
         import apply_s5773_bit1_lives as _a5773
@@ -37660,14 +37669,6 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n5776:
             changed = True
             report.append(f"{p.name}: s5776 orient geom x{_n5776}")
-
-    if p.name.startswith("funcs_") and "PATCH: s5754 mask store log" not in text:
-        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-        import apply_s5754_mask_stores as _a5754
-        text, _n5754 = _a5754.apply(text)
-        if _n5754:
-            changed = True
-            report.append(f"{p.name}: s5754 mask store log x{_n5754}")
 
     if p.name == "funcs_30.c" and "PATCH: s5757 bit1 ctx log" not in text:
         sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -38291,7 +38292,7 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             report.append(f"{p.name}: s5876 timer log")
 
     if p.name == "funcs_36.c":
-        import apply_s5887_npc_spawn_class as _a5812
+        import apply_s5887_spawn_nonclass1 as _a5812
         text, _n5812 = _a5812.apply(text)
         if _n5812:
             changed = True
@@ -38651,11 +38652,12 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             "updateVoiceChannelParamsLarge": 0x8009D740,
         }
         for _fv_name, _fv_site in _fv_callers.items():
-            _fv_anchor = (
-                f"RECOMP_FUNC void {_fv_name}(uint8_t* rdram, recomp_context* ctx) {{\n"
-                "    uint64_t hi = 0, lo = 0, result = 0;\n"
-                "    int c1cs = 0;\n"
-            )
+            _fv_anchor = re.search(  # s6863: the HUDBIT entry hook lands first on a pristine pass
+                rf"RECOMP_FUNC void {_fv_name}\(uint8_t\* rdram, recomp_context\* ctx\) \{{\n"
+                r"(?:    \{ static int s_e = -1;[^\n]*\n)?"
+                r"    uint64_t hi = 0, lo = 0, result = 0;\n"
+                r"    int c1cs = 0;\n", text)
+            _fv_anchor = _fv_anchor.group(0) if _fv_anchor else "\0"
             _fv_repl = _fv_anchor + (
                 f"    rs64_filter_voice_caller_probe(\"{_fv_name}\", 0x{_fv_site:08X}u, "
                 "U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), U32(ctx->r7)); "
@@ -40631,6 +40633,7 @@ static void rs64_s5228_store(uint32_t pc, uint32_t addr, uint32_t val) {
         if entry_marker not in text:
             entry_re = re.compile(
                 rf"(RECOMP_FUNC void {parent_name}\(uint8_t\* rdram, recomp_context\* ctx\) \{{\n"
+                r"(?:    \{ static int s_e = -1;[^\n]*\n)?"  # s6863: the HUDBIT entry hook lands first on a pristine pass
                 r"    uint64_t hi = 0, lo = 0, result = 0;\n"
                 r"    int c1cs = 0;\n)"
             )
@@ -41967,7 +41970,7 @@ RS64_REPLAY = [
     "apply_s5858_handler_hist.py",
     "apply_s5809_ctr1_log.py",
     "apply_s5811_ctr1_bt.py",
-    "apply_s5887_npc_spawn_class.py",
+    "apply_s5887_spawn_nonclass1.py",
     "apply_s5893_msg5ids.py",
     "apply_s5812_npc_spawn_class.py",
     "apply_s5829_teardown_gate.py",
@@ -41976,6 +41979,20 @@ RS64_REPLAY = [
     "apply_s5886_m5post.py",
     "apply_s5910_postra.py",
     "apply_s5912_shadow.py",
+    "apply_s4864_datasize_trace.py",
+    "apply_s4867_bound_trace.py",
+    "apply_s4988_s4540_boundary.py",
+    "apply_s4991_per_origin_bad_budget.py",
+    # s6863: before their dependents (s6146/s6564/s6591/s6593 anchor on s5798 and s6336 text).
+    "apply_s5798_recwatch.py",
+    "apply_s6287_ppcount.py",  # s6863: anchors on the S5798 store form
+    "apply_s5866_plwatch.py",
+    "apply_s5867_callers.py",
+    "apply_s5867b_msg.py",
+    "apply_s5868_flagwatch.py",
+    "apply_s5877_fusewatch.py",
+    "apply_s6334_vtx_writer_value.py",
+    "apply_s6336_f5_poststore.py",
     "apply_s6657_objective_response.py",
     "apply_s5817_bit3_setters.py",
     "apply_s6027_cellmul.py",
@@ -42009,7 +42026,6 @@ RS64_REPLAY = [
     "apply_s6595_hudptrread.py",
     "apply_s6088_bucketlog.py",
     "apply_s6098_dlpool.py",
-    "apply_s6287_ppcount.py",
     "apply_s6038_cellprobe.py",
     "apply_s6043_tblwatch.py",
     "apply_s6144_fpx.py",
@@ -42046,18 +42062,25 @@ RS64_REPLAY = [
     "apply_s4690_external_entry_probe.py",
     "apply_s4694_a14_boundary.py",
     "apply_s4784_gap_order.py",
-    "apply_s4864_datasize_trace.py",
-    "apply_s4867_bound_trace.py",
-    "apply_s4988_s4540_boundary.py",
-    "apply_s4991_per_origin_bad_budget.py",
-    "apply_s5798_recwatch.py",
-    "apply_s5866_plwatch.py",
-    "apply_s5867_callers.py",
-    "apply_s5867b_msg.py",
-    "apply_s5868_flagwatch.py",
-    "apply_s5877_fusewatch.py",
-    "apply_s6334_vtx_writer_value.py",
-    "apply_s6336_f5_poststore.py",
+    # s6863: live-tree patches that were never wired into the replay (found by tools/audit_replay_survival.py).
+    # The s6500-s6526 funcs_9 chain stays unwired: env-gated observation only, its anchors need the live tree's later text.
+    "apply_s5908_callers.py",
+    "apply_s6331_f5_store_shadow.py",
+    "apply_s6489_cellcum.py",
+    "apply_s6491_gridcum.py",
+    "apply_s6492_forface_cum.py",
+    "apply_s6492b_forface_entry.py",
+    "apply_s6493_stream_cum.py",
+    "apply_s6493b_empty_dump.py",
+    "apply_s6496_bin_inputs.py",
+    "apply_s6499_store_census.py",
+    "apply_s6499b_complete.py",
+    "apply_s6503_single_snapshot.py",
+    "apply_s6518_ret_summary.py",
+    "apply_s6519_window_bounds.py",
+    "apply_s6521_spanw.py",
+    "apply_s6523_spanscale.py",
+    "apply_s6588_tblnull.py",
     "apply_s6698_storediag.py",  # s6698: must follow every hook-emitting patch
 ]
 
@@ -42065,7 +42088,8 @@ RS64_REPLAY = [
 # Replay failures that are known not to affect RecompiledFuncs: the script's
 # RecompiledFuncs edit runs (and completes) before the failing src/ step.
 RS64_REPLAY_DIRARG = {"apply_s4913_marks.py", "apply_s5368_align100_counter.py", "apply_s5370_path_census.py",
-                      "apply_s5379_census_ctl.py", "apply_s4982_reader_acquire.py"}  # s5533: scripts taking <RecompiledFuncs dir>
+                      "apply_s5379_census_ctl.py", "apply_s4982_reader_acquire.py", "apply_s5771_guest_pc_census.py",
+                      "apply_s6331_f5_store_shadow.py", "apply_s6334_vtx_writer_value.py", "apply_s6336_f5_poststore.py"}  # s5533: scripts taking <RecompiledFuncs dir>
 
 RS64_REPLAY_TOLERATE = {
     "apply_s4230_listwatch.py": "retargets RecompiledFuncs first; its later src/main/upstream_compat.cpp row-cap assert targets the throwaway copy",
@@ -42272,6 +42296,31 @@ def _s4648_s4601(tree):
 RS64_BACKPORTS = {"s4648:s4597": _s4648_s4597, "s4648:s4601": _s4648_s4601}
 
 
+def _rs64_replay_trace(tree):
+    """s6863: with RS64_REPLAY_TRACE=<file>, append one JSON line per replayed step: the lines it added and removed per file.
+    The returned callable closes the previous step and opens `name` (None ends the trace). No-op without the env var."""
+    out = os.environ.get("RS64_REPLAY_TRACE")
+    if not out:
+        return lambda name: None
+    import collections as _c, json as _j
+    read = lambda: {f.name: f.read_text(errors="surrogateescape") for f in pathlib.Path(tree).iterdir() if f.is_file()}
+    state = {"prev": read(), "name": None}
+
+    def step(name):
+        cur = read()
+        if state["name"]:
+            rec = {"step": state["name"], "files": {}}
+            for fn, text in cur.items():
+                old = state["prev"].get(fn, "")
+                if text != old:
+                    a, b = _c.Counter(old.split("\n")), _c.Counter(text.split("\n"))
+                    rec["files"][fn] = {"add": list((b - a).elements()), "del": list((a - b).elements())}
+            with open(out, "a", errors="surrogateescape") as h:
+                h.write(_j.dumps(rec) + "\n")
+        state.update(prev=cur, name=name)
+    return step
+
+
 def rs64_replay_apply_scripts(tree, names=RS64_REPLAY):
     """Run each tools/ script as a subprocess from a throwaway sandbox copy of the
     RS64 tree (tools/ with every live-path literal rewritten, src/main, librecomp,
@@ -42297,7 +42346,9 @@ def rs64_replay_apply_scripts(tree, names=RS64_REPLAY):
             if (rs64_root / rel).is_dir():
                 _rs64_shutil.copytree(rs64_root / rel, sb / rel, symlinks=True)
         env = {k: v for k, v in os.environ.items() if not k.startswith("RS64_")}
+        _trace = _rs64_replay_trace(tree)  # s6863: per-script added lines (tools/audit_replay_survival.py)
         for name in names:
+            _trace(name)
             if name in RS64_BACKPORTS:
                 try:
                     results.append((name, "ok", "; ".join(RS64_BACKPORTS[name](tree))))
@@ -42312,6 +42363,7 @@ def rs64_replay_apply_scripts(tree, names=RS64_REPLAY):
             if r.returncode and name in RS64_REPLAY_TOLERATE:
                 status = f"ok (tolerated: {RS64_REPLAY_TOLERATE[name]})"
             results.append((name, status, r.stdout.strip().replace("\n", " | ")[:200]))
+        _trace(None)
     finally:
         _rs64_shutil.rmtree(sandbox, ignore_errors=True)
     return results

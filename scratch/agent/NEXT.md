@@ -1,9 +1,10 @@
-# NEXT: why are replayed patches missing from the live tree?
+# NEXT: make the regen tree compile, classify the residual, then link and boot it
 HYPOTHESIS-ID: replay-patch-presence
 
-Why: s6862 found 9 replayed apply scripts whose MARK is absent from ../N64Recomp/RecompiledFuncs (s2463, s4221-3, s4300, s4466, s4560, s4602, s4680), and that left the s4563 guard with no setter. The replay exits on failure, so absence should be impossible. 205 replayed scripts have no MARK, so a behaviour patch could be missing unseen.
-Unit: offline only. Replay into a scratch copy of a fresh tree (never the live one) or read the last [s4648-replay] output in scratch/agent/loop.log; find what removes the blocks. Then build a presence check for the no-MARK scripts from each script's inserted text.
-Hypotheses: H-skip (the live tree was built with RS64_SKIP_REPLAY=1 or a partial path) / H-strip (a later step such as the s6715 probe gating removes them on purpose) / H-order (a later patch rewrites the anchor text).
-Discriminator: does a scratch replay contain the 9 MARKs? Yes -> H-skip. No -> find the first step after which each MARK vanishes (H-strip or H-order). Control: s4296 A14 yield MARK must be present in the same check.
-Outcomes: any behaviour patch missing -> restore through the replay and A/B it. All probes -> extend tools/audit_heap_addr_tests.py into a post-regen check, remove the dead s4563 check, take the next ladder rung.
+Why: s6863 got tools/regen_replay.sh to exit 0 from pristine, but 8 of 52 files fail -fsyntax-only and 1,960 lines differ from live. Until this closes, a regen is unsafe and hard rule "fixups survive regen" is unproven.
+Unit: offline first. zsh scratch/s6863/replay.sh (replay + diff, live hash check), zsh scratch/s6863/syntax.sh (compile check), python3 scratch/s6863/resid.py (residual by tag). Refresh the pristine input once: scratch/agent/s5547_frontchain.sh with fresh paths, since scratch_s5547_regen dates from s5547.
+Fix order: funcs_0 g1d_* decls (s6201 carve, default dd path, behaviour) first; funcs_16 brace error; funcs_13 rs5907_hitobj; funcs_24 time.h; funcs_25/26 expected expression; funcs_42 backtrace_symbols_fd conflict (execinfo.h, stripped include); funcs_9 refs into the unwired s6500+ chain.
+Hypotheses: H-diag (the whole residual is env-gated diagnostics, regen binary behaves as live) / H-beh (a default-path line differs).
+Discriminator: after it compiles, strip diagnostics-only lines from both trees and compare -O2 asm per file as s5547 did (perturbation control must flag). Any asm difference on a default path -> H-beh, decide per line against retail, do not assume live is right (s6285 armed gate was matched to live on that assumption; re-check it). Then a separate build dir needs RECOMP_FUNCS_DIR overridable in CMakeLists (it is a plain set()), lvl1 boot + 120 s hold vs live.
+Outcomes: H-diag -> close, add regen_replay.sh + compile check to the docs and CLAUDE regen order (owner file: ask first), remove the dead s4563 check. H-beh -> fix per line and A/B.
 Owner judges: docs/owner_sheet_s6860_lvl10_hud_ab.png, docs/owner_sheet_s6861_pause_hud_ab.png.

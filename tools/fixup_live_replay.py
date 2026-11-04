@@ -41,17 +41,17 @@ sub("memw_order", "funcs_0.c",
 
 # funcs_4: alloc_tail_guard2 force-log switch
 sub("guard2_force", "funcs_4.c",
-    "        if (r3_lo < 0x80000000u || r3_lo >= 0x80800000u) {\n"
+    "        if (r3_lo < 0x80000000u || r3_lo >= RS64_RAM_TOP) {\n"  # s6863: fixup_ramtop has already run here
     "            if (s_alloc_tail_guard2_enabled) {",
     "        static int s_alloc_tail_guard2_force = -1;\n"
     "        if (s_alloc_tail_guard2_force < 0) { const char* e = getenv(\"ROGUESQ_FORCE_ALLOC_TAIL_GUARD2\"); "
     "s_alloc_tail_guard2_force = (e && e[0] && e[0] != '0') ? 1 : 0; }\n"
-    "        if (r3_lo < 0x80000000u || r3_lo >= 0x80800000u || s_alloc_tail_guard2_force) {\n"
+    "        if (r3_lo < 0x80000000u || r3_lo >= RS64_RAM_TOP || s_alloc_tail_guard2_force) {\n"
     "            if (s_alloc_tail_guard2_enabled) {")
 sub("guard2_goto", "funcs_4.c",
     "s_alloc_tail_guard2_n++;\n            }\n            goto L_80013EFC;\n",
     "s_alloc_tail_guard2_n++;\n            }\n"
-    "            if (r3_lo < 0x80000000u || r3_lo >= 0x80800000u) goto L_80013EFC;  // force = log only\n")
+    "            if (r3_lo < 0x80000000u || r3_lo >= RS64_RAM_TOP) goto L_80013EFC;  // force = log only\n")
 
 # funcs_5: waitForPostSwapAck entry diagnostic
 hdr = ("    rs64_s4913_mark(rdram, \"waitForPostSwapAck\"); // PATCH: s4913 ordering mark\n"

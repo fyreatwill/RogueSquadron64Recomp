@@ -19,7 +19,7 @@ ANCH4 = "    g_rs64_last_guest_pc = 0x8000B030u;\n    ctx->r4 = MEM_W(ctx->r4, 0
 def _apply4(text):
     """s6285: begin pops the cache at 0x8000B030 with no empty test; a dd3 frame drains it mid-function (a0=0 -> sw 4(a0) SIGBUS at 0x8000B080)."""
     if "PATCH: s6285 b030" in text or text.count(ANCH4) != 1 or "PATCH: s6099 dlpoolx" not in text: return text, 0
-    g = GROW.replace("s6099 dlpoolx", "s6285 b030").replace("rs64_s6099_en()", "rs64_s6285_en()")
+    g = GROW.replace("s6099 dlpoolx", "s6285 b030").replace("rs64_s6099_en()", "rs64_s6285_en()").replace(" && rs64_s6286_armed_q()", "")  # s6863: s6288 gated only the begin hook
     return text.replace(ANCH4, ANCH4 + g, 1), 1
 import re as _re
 _LD = _re.compile(r"(?P<lui>    ctx->r(?P<k>\d+) = S32\(0X8011 << 16\);\n(?:[^\n]*\n){0,3}?)(?P<ld>    ctx->r(?P=k) = MEM_W\(ctx->r(?P=k), 0X63B0\);\n)")
@@ -46,7 +46,7 @@ def _apply_topup(text):
         k = m.group("k"); tail = text[m.end():m.end()+400]
         if "PATCH: s6285 topup" in tail or "PATCH: s6099 dlpoolx" in tail or "PATCH: s6285 b030" in tail: return m.group(0)
         g = GROW.replace("ctx->r4", "ctx->r" + k).replace("s6099 dlpoolx", "s6285 topup")
-        g = g.replace("rs64_s6099_en()", "rs64_s6285_en()")
+        g = g.replace("rs64_s6099_en()", "rs64_s6285_en()").replace(" && rs64_s6286_armed_q()", "")  # s6863: as above
         return m.group(0) + g
     text2, n = _LD.subn(rep, text)
     n = text2.count("PATCH: s6285 topup") - text.count("PATCH: s6285 topup")

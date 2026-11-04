@@ -40,7 +40,7 @@ if __name__ == "__main__":
         anc = '    if p.name == "funcs_27.c" and "PATCH: s5523 cineBody entry log" not in text:\n'
         assert f.count(anc) == 1
         f = f.replace(anc, blk + anc, 1)
-        lst = '    "apply_s5887_npc_spawn_class.py",\n'
+        lst = '    "apply_s5887_spawn_nonclass1.py",\n'
         assert f.count(lst) == 1
         f = f.replace(lst, lst + '    "apply_s5893_msg5ids.py",\n', 1)
         fp.write_text(f); print("fixup patched")

@@ -77,7 +77,7 @@ def apply10c(text):
         '      if (en6315 < 0) { const char* e = getenv("ROGUESQ_EDGE_FADE"); en6315 = 0; lg6315 = (getenv("ROGUESQ_EDGE_FADE_LOG") != NULL);\n'
         '        const char* g = getenv("ROGUESQ_EDGE_GRIDSCALE"); if (g && *g) gs6315 = atof(g);\n'
         '        if (e && *e) { double a = 0, b = 1, r = 200, gg = 215, bb = 235; int c = sscanf(e, "%lf,%lf,%lf,%lf,%lf", &a, &b, &r, &gg, &bb); if (c >= 2) { st6315 = a; en_6315 = b; if (c >= 5) { hz6315[0] = r; hz6315[1] = gg; hz6315[2] = bb; } en6315 = 1; } } }\n'
-        '      if (en6315 || lg6315) { uint32_t pb = 0x80137DBCu; uint32_t pxi = (uint32_t)MEM_W(0X4, pb), pzi = (uint32_t)MEM_W(0XC, pb), gx = (uint32_t)MEM_W(0X0, ctx->r5), gz = (uint32_t)MEM_W(0X8, ctx->r5);\n'
+        '      if (en6315 || lg6315) { gpr pb = (gpr)(int32_t)0x80137DBCu; uint32_t pxi = (uint32_t)MEM_W(0X4, pb), pzi = (uint32_t)MEM_W(0XC, pb), gx = (uint32_t)MEM_W(0X0, ctx->r5), gz = (uint32_t)MEM_W(0X8, ctx->r5);\n'
         '        float pxf, pzf, gxf, gzf; memcpy(&pxf, &pxi, 4); memcpy(&pzf, &pzi, 4); memcpy(&gxf, &gx, 4); memcpy(&gzf, &gz, 4);\n'
         '        double dx = gxf - pxf * gs6315, dz = gzf - pzf * gs6315, d = sqrt(dx * dx + dz * dz);\n'
         '        double f = 0.0; if (en6315) { f = (d - st6315) / (en_6315 - st6315); if (f < 0) f = 0; if (f > 1) f = 1; f = f * f * (3.0 - 2.0 * f); }\n'
@@ -89,7 +89,7 @@ def apply10c(text):
 
 
 EF4_LINE = (
-        '        if (lg6315 && ((n6315 < 40u) || (n6315 % 4001u) == 0u)) { uint32_t w0 = (uint32_t)MEM_W(0X0, pb), s3 = (uint32_t)ctx->r19; fprintf(stderr, "[edgefade4] slot=%08X %08X %08X %08X %08X obj=", (unsigned)w0, (unsigned)MEM_W(0X4, pb), (unsigned)MEM_W(0X8, pb), (unsigned)MEM_W(0XC, pb), (unsigned)MEM_W(0X10, pb)); if (w0 >= 0x80000000u && w0 < 0x80800000u) for (int q = 0; q < 12; q++) { uint32_t u = (uint32_t)MEM_W(q * 4, w0); float fv; memcpy(&fv, &u, 4); fprintf(stderr, "%g ", fv); } fprintf(stderr, " s3=%08X cell=%d,%d\\n", (unsigned)s3, (s3 >= 0x80000000u && s3 < 0x80800000u) ? (int)(int16_t)MEM_H(0X18, s3) : -1, (s3 >= 0x80000000u && s3 < 0x80800000u) ? (int)(int16_t)MEM_H(0X1A, s3) : -1); }\n'
+        '        if (lg6315 && ((n6315 < 40u) || (n6315 % 4001u) == 0u)) { uint32_t w0 = (uint32_t)MEM_W(0X0, pb), s3 = (uint32_t)ctx->r19; fprintf(stderr, "[edgefade4] slot=%08X %08X %08X %08X %08X obj=", (unsigned)w0, (unsigned)MEM_W(0X4, pb), (unsigned)MEM_W(0X8, pb), (unsigned)MEM_W(0XC, pb), (unsigned)MEM_W(0X10, pb)); if (w0 >= 0x80000000u && w0 < 0x80800000u) for (int q = 0; q < 12; q++) { uint32_t u = (uint32_t)MEM_W(q * 4, (gpr)(int32_t)w0); float fv; memcpy(&fv, &u, 4); fprintf(stderr, "%g ", fv); } fprintf(stderr, " s3=%08X cell=%d,%d\\n", (unsigned)s3, (s3 >= 0x80000000u && s3 < 0x80800000u) ? (int)(int16_t)MEM_H(0X18, s3) : -1, (s3 >= 0x80000000u && s3 < 0x80800000u) ? (int)(int16_t)MEM_H(0X1A, s3) : -1); }\n'
 )
 
 

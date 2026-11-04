@@ -23,10 +23,10 @@ if __name__ == "__main__":
     print("live funcs_36 patched x%d" % n)
     fp = pathlib.Path(__file__).parent / "fixup_game_funcs_vendored.py"
     f = fp.read_text()
-    if "apply_s5887_npc_spawn_class" in f: print("fixup already")
+    if "apply_s5887_spawn_nonclass1" in f: print("fixup already")
     else:
         blk = ('    if p.name == "funcs_36.c":\n'
-               '        import apply_s5887_npc_spawn_class as _a5812\n'
+               '        import apply_s5887_spawn_nonclass1 as _a5812\n'
                '        text, _n5812 = _a5812.apply(text)\n'
                '        if _n5812:\n'
                '            changed = True\n'
@@ -36,5 +36,5 @@ if __name__ == "__main__":
         f = f.replace(anc, blk + anc, 1)
         lst = '    "apply_s5811_ctr1_bt.py",\n'
         assert f.count(lst) == 1
-        f = f.replace(lst, lst + '    "apply_s5887_npc_spawn_class.py",\n', 1)
+        f = f.replace(lst, lst + '    "apply_s5887_spawn_nonclass1.py",\n', 1)
         fp.write_text(f); print("fixup patched")

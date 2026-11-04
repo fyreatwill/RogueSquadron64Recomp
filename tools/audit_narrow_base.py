@@ -7,7 +7,7 @@ Usage: audit_narrow_base.py <RecompiledFuncs dir | --selftest>"""
 import pathlib, re, sys
 
 NARROW = r'(?:unsigned(?:\s+int)?|int|uint(?:8|16|32)_t|int(?:8|16|32)_t|u32|s32|size_t)'
-USE = re.compile(r'\bMEM_[A-Z]+\(\s*[^,()]+,\s*([A-Za-z_]\w*)\s*\)')
+USE = re.compile(r'\bMEM_[A-Z]+\(\s*([^,()]+),\s*([A-Za-z_]\w*)\s*\)')
 # s_vagn_i: non-negative 0..0x1f for-loop index added to a gpr offset (funcs_24 s4204 dump); reviewed s5100.
 ALLOW = {"s_vagn_i"}
 
@@ -17,8 +17,9 @@ def scan_text(t):
     hits = []
     for i, l in enumerate(L):
         for m in USE.finditer(l):
-            v = m.group(1)
-            if v == "ctx" or v in ALLOW:
+            v = m.group(2)
+            # s6863: a gpr first argument carries the address; X is then a small index in the 64-bit sum (s4204 shape).
+            if v == "ctx" or v in ALLOW or m.group(1).strip().startswith("ctx->r"):
                 continue
             dec = re.compile(r'\b(?:const\s+)?(' + NARROW + r'|gpr)\s+(?:[^;()]*,\s*)?\*?' + v + r'\b\s*(=|;|,|\[|\)|:)')
             for j in range(i, max(-1, i - 400), -1):

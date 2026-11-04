@@ -55,6 +55,10 @@ old6227 = '(uint32_t)(int32_t)(og6112[f][0] * kv); MEM_W(0X18, ctx->r17) = (uint
 new6227 = '(uint32_t)(int32_t)(og6112[f][0] * kv * (og6112[f][0] == 640 ? 0.8 : 1.0)); MEM_W(0X18, ctx->r17) = (uint32_t)(int32_t)(og6112[f][1] * kv * (og6112[f][0] == 640 ? 0.8 : 1.0));'
 def apply4(text):
     text, n = _apply4_old(text)
+    while n:  # s6863: one stage per call, so a pristine pass stopped before the s6112 VPW block
+        text, m = _apply4_old(text)
+        if not m: break
+        n += m
     if old6227 in text:
         text = text.replace(old6227, new6227); n += 1
     # s6428 G1d: log each camera on first sight (nl6112<12 budget hid the later cams).
