@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6865 (2026-11-03).
+Compact operational handoff, as of Session 6866 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -220,6 +220,7 @@ and [objective contracts, evidence and limits](G1-OBJECTIVE-RESPONSE.md).
 Mission wins, aim/steer and mission-to-mission progression remain owner playtest.
 
 ## Durable constraints
+- Runs longer than a turn: never end the turn to wait, the Stop gate counts it, and a background run can die with the session (s6865 arm B got SDL_QUIT 5 s before the iteration ended). Run in the foreground (Bash timeout up to 600 s) or queue a soak (s6866).
 
 - Retail defaults remain unchanged. Opt-ins include draw distance, aspect,
   FPS60, spike culling, and audio control. Do not make an opt-in default from
@@ -328,9 +329,9 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    (tools/regen_verify.sh, docs/REGEN-VERIFY.md): 2708 same, 75 differ, 0 missing, and all 75 are layout, env-gated hooks or opt-in logging.
    Pristine refreshed: fresh make_elf + N64Recomp = s5547 input, 0 lines. Regen drops only opt-in diagnostics (list in the doc), so it
    is now safe; the live tree was NOT regenerated. The queued s6864_regen_fps60_dd4_lvl5 rc=1 was the harness, not regen: 5x nomission, 0 crash lines, the 690400 gate never matches at dd4.
-   **s4563-dead-code-removal s6865 (static part done, runtime arms UNREPORTED when the session stopped).** s4563 removed from live funcs_24.c and the replay list, script deleted, live rebuilt. Regen compare still
-   2708 same / 75 differ, same 75 names; funcs_24 before/after: only musyxSynthFrame really differs. Two replays from pristine: 0 lines apart. Old regen binary, corrected gate, lvl5 FPS60+dd4: alive, 0 stalls, 0 crash lines, 132 s of flight (single run).
-   Post-removal arms (regen lvl5 FPS60+dd4 300 s flight, live lvl1 120 s): read scratch/agent/m6/g1_lvl5s6865regen and g1_lvl1s6865live, or rerun scratch/s6865/runs.sh. G1 recipes now gate on [initMission] (MISSION_INIT=1, WAITN=60 in g1_level_coverage_common.zsh).
+   **s4563-dead-code-removal CLOSED s6866 (H-dead; one run per arm).** s4563 removed from live funcs_24.c and the replay list, script deleted, live rebuilt. Regen compare still
+   2708 same / 75 differ, same 75 names; funcs_24 before/after: only musyxSynthFrame really differs. Two replays from pristine: 0 lines apart. Post-removal regen lvl5 FPS60+dd4: 306 s of flight, alive, 0 stalls,
+   0 crash lines (scratch/agent/m6/g1_lvl5s6865regen). Post-removal live lvl1 dd1: 135 s of flight, same (g1_lvl1s6865liveb). G1 recipes now gate on [initMission] (MISSION_INIT=1, WAITN=60 in g1_level_coverage_common.zsh); the gate fired 4-5 s after it in both arms: H-gate refuted.
    Not re-checked: s6285 armed gate still matches live by construction, on the opt-in dd>1 path.
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,

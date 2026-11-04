@@ -181219,3 +181219,20 @@ Harness finding: m6_god_common counts hold from its mission gate, and loose gate
 Change: MISSION_INIT=1 gate in m6_god_common.sh, default on with WAITN=60 in g1_level_coverage_common.zsh. Its first use is the arm below, so the gate itself is not yet shown to fire. [initMission] appeared once on lvl1, 5 and 10 in the logs checked; attract behaviour not checked.
 
 NOT FINISHED: the two post-removal runtime arms (scratch/s6865/runs.sh: A regen binary lvl5 FPS60+dd4 300 s of flight, B live lvl1 120 s) were still running when the Stop gate ordered a stop after 6 blocked stops. A had not reached [initMission]. No runtime result exists for the removal. The 6 blocks came from ending turns to wait for them. Queued s6865_truehold_lvl10_dd4 (waits for runs.sh).
+
+## Session 6866 (2026-11-03) — unblock: the s6865 gate-defect block is refuted; s4563 removal closed H-dead with both post-removal arms clean
+
+Block: s6865 wrote NEEDS-HUMAN: gate-defect after 6 blocked stops, asking the owner whether the gate should skip counting a stop while a run is alive, and saying ITERATION.md does not say. Route 1, refuted. No owner decision was needed to continue, and the claim was wrong on three counts:
+1. ITERATION.md does say. Its BLOCKED section lists "waiting on an in-flight or queued soak" as never a block, and the "Soak queue" section is the route for long runs.
+2. A foreground run needs no wait. Bash takes a 600 s timeout, and only a bare foreground sleep is blocked. Arm B reran here in one foreground call, 3 min 35 s, without ending the turn. That is the observation that proves the gate change unnecessary. Arm A took about 8 min, which also fits.
+3. Waiting across turn ends does not reliably work anyway: arm B logged "[main] SDL_QUIT received" at 19:20:39 and the loop recorded the iteration finished at 19:20:44. Cause is inferred from that timing only, not established.
+stop_gate.sh and ITERATION.md are unchanged. The durable rule went into CURRENT-TRUTH. The owner can still choose to spell it out in ITERATION.md.
+
+Arms (post-removal binaries; ROGUESQ_S4563_SKIP absent from both):
+A, regen, lvl5 FPS60+dd4, had finished before the stop: scratch/agent/m6/g1_lvl5s6865regen. Gate t=191 s, [initMission] t=187 s, flight 306 s by audit_hold_flight, alive, 0 stalls, 0 crash lines, fbhash distinct 21212/24114. Its longest same-hash run, 1416, sits at frames 3671-5086, before [initMission] at frame 10923; the pre-removal regen run shows 1418, so this is the load screen and not a removal effect.
+B, live, lvl1 dd1: first attempt g1_lvl1s6865live has no summary (killed as above, kept as evidence, 0 crash matches). Rerun under a new tag: scratch/agent/m6/g1_lvl1s6865liveb. Gate t=83 s, [initMission] t=78 s, flight 135 s, alive, 0 stalls, 0 crash lines, fbhash distinct 5923/6986.
+fbrun-control and mcycles-control passed in both completed runs, so the harness detectors were live.
+
+Selects H-dead, refutes H-live and H-gate: [initMission] gating works, firing 4-5 s after the event in both arms and appearing once per run. s4563-dead-code-removal closed.
+Limits: one run per arm. The null says the removal broke nothing on these two routes; that the code cannot run still rests on the s6862/s6865 static reading. s6865_truehold_lvl10_dd4 has not run: the loop runs it after this iteration.
+Rules out: the gate-defect block. No game or gate code changed.
