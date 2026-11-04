@@ -28,6 +28,8 @@ end, 0 crash lines, 0 VI stalls; ~42 / ~55 drawn frames per s over the run (abov
 ## What was checked and is NOT a 60 Hz problem
 - Mission clocks, craft path per real second and audio (audio ticks per VI, VI stays 60/s): s6256-s6258.
 - The lvl14 cutscene starting later at FPS60 (s6813-s6814): that was the passive player dying later, not a slow script.
+- The frame limiter itself (s6875, lvl1): FPS60 with dt pinned to 1/30 draws frames identical to 30 Hz, one tick apart. This says nothing about the fixes above, which do nothing at that dt.
+- Open, small: camera pitch depends on dt, about 0.15-0.26 deg lower at 1/60 than at 1/30 on lvl1 (s6875). Craft attitude is equal. Writer not found, not fixed.
 - The "fewer hits land at FPS60" reading (s6815-s6816): a path difference after the terrain scrape, fixed by the scrape row.
 - Census of 41 integer |step|>1 sites (s6831): 40 are memory strides, decoders, layout cursors or audio offsets.
 - Shake while turning (G3c/G3d): retail judder plus the old ~17 fps bug fixed in s6696, not FPS60.

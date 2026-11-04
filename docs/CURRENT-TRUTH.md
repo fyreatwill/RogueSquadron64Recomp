@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6874 (2026-11-04).
+Compact operational handoff, as of Session 6875 (2026-11-04).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -39,13 +39,7 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 - **G3 AT THE MOVIES swept (s6792).** 81/81 shots H-match vs retail per shot; the default spike cull deleted retail's
   legit 640-wide cinematic tris (port zeroed 24806, retail emits 26869 past the bound); cull now skips 321..640-wide images,
   notch 59/60 -> 0/797 frames, scanner positive control 20792 flagged / 0 culled. scratch/s6792/notch_fix_sheet.png.
-- **s6794 cinematic sky seam line FIXED (port-only RT64 raster defect).** RT64 decodeTriangles rebuilt each RDP tri as
-  (H(yh), H(yl), (xl,ym)), so the minor L/M edges leaned off their real position by rounding (sky: L x=318.000 vs rebuilt
-  318.036); with RT64's +0.5 px halfPixelOffset pixel 318 samples at x=318.0 and fell outside both shared-edge tris -> clear
-  colour. A half-period texture shift left the line in place (refutes wrong texel). Fix: exact polygon H(yh) H(yl) L(yl) L(ym)
-  M(ym) M(yh) emitted as a fan when an edge misses by >1/256 px (ROGUESQ_EXACT_EDGES, default on, =0 old, =tog A/B). Same-run
-  off 0.58 / on 0.00; playlist line shots 40/939 -> 2/902 (content); lvl1 flight 120 s clean, no new lines. Retail RDP streams
-  are identical to ours (s6793), so retail-match is unaffected; ROGUESQ_RESMULT selects Manual (s6793).
+- **s6794 cinematic sky seam line FIXED** (RT64 rebuilt tri edges; ROGUESQ_EXACT_EDGES default on, =0 old). Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6875)".
 - **CLOSED s6782: stack-payload send class.** tools/audit_service_msg_stack.py (offline, retail ROM, all segments): 8
   stack-formed sendServiceMessage/osSendMesg sites; 1 live (0x800B380C, fixed s6781), 3 doorbells whose receiver never
   dereferences (0x8000582C, 0x800058FC, 0x800C5880), 3 synchronous (0x80004BE4/D0C/F28 block until the stack object
@@ -104,6 +98,7 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 
 ## Superseded conclusions — do not act on these
 
+- s6873 "FPS60 pass count follows tick rate" and "FPS60 k0/k1 not explained by frame age" (superseded s6875). Believable because the dt variants stayed near each limiter's own rate, so dt and rate never crossed, and the frame-age estimate assumed half a tick. Crossed arms: dt decides the path and camera pitch; a whole tick of presentation lag explains the rest.
 - **"Pinned pose" on dd arms (s6445-s6583, superseded s6872).** POSE_PIN_POSITION never held position: the unit-range filter skips world-unit words (s6582 x ran 15..113), and even written every poll the ship flies on, because +0x4C is a per-tick copy. Believable because attitude did pin and the flag name said position. Cross-run dd figures from those arms (s6470, s6544, s6547) are attitude-only, not same-pose.
 - s6268 "symbol sweep COMPLETE" and s3209/s3210 "0x80106C50 is a real callable" (superseded s6868). s6268 counted the syms toml, not the generated tree, where 30 table renames had never landed. s3209 saw a jal and took it for a caller; that site is decoded data. docs/GENERATED-NAME-CENSUS.md.
 - s6004 "lvl10-15 mission_cycles=0, in flight the whole hold" (superseded s6867): mission_cycles only counts 0x690400->0x6AB400 origin changes, so it read 0 while lvl11 restarted twice and lvl14 once. Use inits= from the summary.
@@ -304,7 +299,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    **elf-size-valid-tails CLOSED s6871 (one run per level).** tools/audit_elf_tails.py classifies every tail >= 0x10 by what lands in it; func_sizes.txt now 11 rows. Pristine 823108 lines, cut step 0/0, compare 2684 / 82 / 17 only live / 1 only regen (the 4 new diffs are the 4 sized functions). Regen lvl1 144 s, lvl5 142 s flight clean, dd1 4:3. Live tree NOT regenerated.
    **Silent N64Recomp miscompile, NOT fixed (static, single-source for missions).** A backward branch out of a function lands on that function's own entry and compiles. 16 real ones, in the voice resampler helpers (one-shot sample end). Nothing calls or points into 8009264C..800934A4; retail attract 0 hits with controls. Retail mission arm never reached flight, so no mission null. Reopen on any sign that block runs; design in PORTING-STATE s6871. Any new `branching outside` warning on live code is this bug. docs/DECODED-TAIL-CENSUS.md.
    **g3-optin-frame-diff s6872:** dd4 near field matches dd1 on lvl1 at k0/k1 (one run per arm). Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6874)".
-   **s6873-s6874 (lvl1):** pinned dt (g3_optin_pose_arms.sh PIN=1) makes no-input flight bit-identical, floor 0.00 per k; the s6872 fork was dt jitter. FPS60 k2 = contact path split (inferred); FPS60 k0/k1 residual open, camera not dumped.
+   **s6873 (lvl1):** pinned dt (g3_optin_pose_arms.sh PIN=1) makes no-input flight bit-identical, floor 0.00 per k; the s6872 fork was dt jitter.
+   **FPS60 render CLOSED on lvl1 s6875 (H-near refuted, one level).** FPS60 with dt pinned 1/30 equals 30 Hz frozen one tick later: MAD 0.00/0.00/0.03 at k0-k2, adjacent ticks 5.7-7.7 same run, camera block equal. So the limiter changes nothing drawn; the 30 Hz window just lags its last built frame by one more tick at a freeze. Real rate difference: camera pitch follows dt (tools/g3_cam_pitch_cmp.py), 0.0632 at 1/30, 0.0606 at 1/60 (0.15-0.26 deg), craft attitude equal, so about 2-4 px at 1280x1024. Writer not found. The k2 contact split follows dt too (ufix y -6.799).
    **FIXED s6874: any ROGUESQ_DRAW_DISTANCE != 1 deleted retail's off-map terrain border.** Retail's footprint window runs past the map (z[32,67) on 64 rows, x[-23,3)); getGridCellValueAt sends those cells to clampGridCellLookup (0x80048948), which repeats the edge cell. The s6037 clamp to tw/th cut them, so the map edge stood against the sky. ROGUESQ_DD_EDGE (default on, =0 old) keeps them; cap and 64x64 limits spend off-map cells first. Same build, k2 whole-frame MAD vs dd1: old 7.43, fixed 0.03. dd4 lvl1 only 135 s so far; lvl5/lvl10 FPS60+dd4 holds queued. Sheet docs/owner_sheet_s6874_dd_edge.png.
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,

@@ -10735,3 +10735,13 @@ Superseded conclusions, verbatim:
 ## Migrated from CURRENT-TRUTH (s6874)
 
 **g3-optin-frame-diff, s6872 (lvl1, one run per arm): no near-field change found, H-match for dd4, FPS60 only partly bounded.** ROGUESQ_POSE_FREEZE stops the mission tick at fixed x crossings; frames in a hold are bit-identical (control, 0.0 diff). Scored by tools/g3_optin_diff.py. dd4 vs dd1 at exact pose (k1, k2): ground MAD 0.84, 1.55, the difference is the far band only. dd2 6.1-6.7, fps60+dd4 6.3-10.1, with the craft outline in the diff: presented-frame phase, inside the dd1a-vs-dd1b floor of 7.6-7.8 (k0). Shift control (+2 x) 15-17. FPS60 k2 13.5 is NOT resolved: its pose differs (y -5.7 vs -6.8). No-input flight forks into two paths between k0 and k1 with no setting change (dd1a z 78.4, dd1b z 81.5), so arms are only comparable within a branch. Sheet docs/owner_sheet_s6872_optin_samepose.png.
+
+## Migrated from CURRENT-TRUTH (s6875)
+
+- **s6794 cinematic sky seam line FIXED (port-only RT64 raster defect).** RT64 decodeTriangles rebuilt each RDP tri as
+  (H(yh), H(yl), (xl,ym)), so the minor L/M edges leaned off their real position by rounding (sky: L x=318.000 vs rebuilt
+  318.036); with RT64's +0.5 px halfPixelOffset pixel 318 samples at x=318.0 and fell outside both shared-edge tris -> clear
+  colour. A half-period texture shift left the line in place (refutes wrong texel). Fix: exact polygon H(yh) H(yl) L(yl) L(ym)
+  M(ym) M(yh) emitted as a fan when an edge misses by >1/256 px (ROGUESQ_EXACT_EDGES, default on, =0 old, =tog A/B). Same-run
+  off 0.58 / on 0.00; playlist line shots 40/939 -> 2/902 (content); lvl1 flight 120 s clean, no new lines. Retail RDP streams
+  are identical to ours (s6793), so retail-match is unaffected; ROGUESQ_RESMULT selects Manual (s6793).
