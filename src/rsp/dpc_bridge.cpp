@@ -4876,11 +4876,23 @@ static bool rs64_radar_recent(int sw) {
 }
 // s6721: initHudStruct's pause-menu byte (HUD+0x258, 0x800C1998), stamped every frame (tools/apply_s6721_pausegate.py).
 // The s6156 HUD anchor skips while it is set, so pause-menu text stays centred like retail.
+// s6861: the byte is a state, not a flag (initOrUpdatePauseScreenDim: 1 opening, 3 open, 2 closing, timer HUD+0x25C). The menu text is
+// linked into the draw list only at 3 (0x800C3A88) while the flight HUD keeps drawing through 1 and 2, so gating on !=0
+// dropped the HUD to its centred position for the open and close animations. ROGUESQ_G1D_PAUSE_GATE_MASK = bit per state
+// that holds the anchor off (default 8 = state 3; 14 = s6721 any non-zero). The dim overlay still follows any non-zero.
 static std::atomic<int> g_rs64_g1d_paused{0};
-extern "C" void rs64_g1d_pause_mark(int v) { g_rs64_g1d_paused.store(v != 0, std::memory_order_relaxed); }
-extern "C" int rs64_g1d_pause_live(void) {
+extern "C" void rs64_g1d_pause_mark(int v) {
+    static const bool lg = [] { const char *e = std::getenv("ROGUESQ_G1D_PAUSE_LOG"); return e && *e && *e != '0'; }();
+    if (lg && v != g_rs64_g1d_paused.load(std::memory_order_relaxed)) { fprintf(stderr, "[pause-state] swap=%d v=%d\n", g_rs64_swap_n.load(std::memory_order_relaxed), v); fflush(stderr); }
+    g_rs64_g1d_paused.store(v, std::memory_order_relaxed);
+}
+static int rs64_g1d_pause_any(void) {
     static const bool old = [] { const char *e = std::getenv("ROGUESQ_G1D_PAUSE_ANCHOR"); return e && *e == '1'; }();
-    return !old && g_rs64_g1d_paused.load(std::memory_order_relaxed);
+    return !old && g_rs64_g1d_paused.load(std::memory_order_relaxed) != 0;
+}
+extern "C" int rs64_g1d_pause_live(void) {
+    static const int mask = [] { const char *e = std::getenv("ROGUESQ_G1D_PAUSE_GATE_MASK"); return e && *e ? atoi(e) : 8; }();
+    return rs64_g1d_pause_any() && ((mask >> (g_rs64_g1d_paused.load(std::memory_order_relaxed) & 7)) & 1);
 }
 // s6725: the s6156 HUD anchor is calibrated for the flight HUD, but the hangar level select draws its title, preview and
 // level name through the same emitter list (vp 0x800CDC80), so at 21:9 they moved -256 px and the name clipped at x=0.
@@ -4921,7 +4933,12 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
     bool paused = rs64_g1d_pause_live() != 0;
     if (paused) s_paused_sw = sw;
     else if (sw - s_paused_sw <= holdoff) paused = true;
-    const bool radar = anywhere || (rs64_radar_recent(sw) && !paused);
+    // s6861: the swap the pause byte goes to 1 fails the VI-epoch half of rs64_radar_recent for one swap, though the anchor built
+    // that frame's ring at the edge and the disc is drawn: a one-frame disc left at the centre. Swap distance alone suffices here.
+    static int s_any_sw = -1000;
+    if (rs64_g1d_pause_any()) s_any_sw = sw;
+    const bool trans = sw - s_any_sw <= holdoff;
+    const bool radar = anywhere || ((rs64_radar_recent(sw) || (trans && sw - g_rs64_radar_swap.load(std::memory_order_relaxed) <= 8)) && !paused);
     static int s_radar_prev = -1;
     if (shiftOn && (int)radar != s_radar_prev) { fprintf(stderr, "[region-gate] swap=%d radar=%d paused=%d shift=%s\n", sw, (int)radar, (int)paused, radar ? "on" : "off"); fflush(stderr); s_radar_prev = (int)radar; }
     auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
@@ -4946,7 +4963,15 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
     // offline replay, tools/g1d_zoffobj.py); lvl1 16:9 none. Shifting one makes it jump 256 px. The radar disc and its
     // blips (T7A3FB0) are triangles. ROGUESQ_G1D_REGION_TEXRECT=1 = shift in-box texrects again (s6854 behaviour).
     static const bool rtex = [] { const char *e = std::getenv("ROGUESQ_G1D_REGION_TEXRECT"); return e && *e == '1'; }();
-    auto zok = [&](bool tri) { const bool ok = (!zgate || (s_world && !s_zcmp)) && (tri || rtex || !zgate);
+    // s6861: while the pause menu opens and closes the frame is a frozen backdrop of small z_cmp-off tiles, then the HUD, then the
+    // logo (z_cmp on, with z_cmp-off tris of its own), so the latch misses the disc and it stayed centred under the anchored ring,
+    // and dropping the latch moved backdrop tiles and tore the logo arm (first cut, scratch/s6861/fix_sheet.png). There, shift only
+    // z_cmp-off tris whose texture the gate selected in flight: the disc and blips.
+    static uint32_t s_disc_tex[16]; static int s_disc_n = 0;
+    auto disc_tex = [&]() { for (uint32_t t : s_disc_tex) if (t == s_timg) return true; return false; };
+    auto zok = [&](bool tri) { const bool sel = !s_zcmp && (trans ? disc_tex() : s_world);
+        if (tri && sel && !trans && !disc_tex()) s_disc_tex[s_disc_n++ & 15] = s_timg;
+        const bool ok = (!zgate || sel) && (tri || rtex || !zgate);
         if (zdiag && radar && shiftOn) s_zstat[{s_timg, tri ? 1 : 0}][ok ? 0 : 1]++; return ok; };
     if (zdiag && shiftOn && sw - s_zstat_sw >= 600 && !s_zstat.empty()) {
         s_zstat_sw = sw; std::string o;
@@ -5326,7 +5351,7 @@ static void rs64_g1d_pause_dim(uint32_t lo, uint32_t hi) {
     static const double k = [] { const char *a = std::getenv("ROGUESQ_ASPECT_SCALE"), *m = std::getenv("ROGUESQ_G1D_PAUSE_DIM");
         const char *kk = std::getenv("ROGUESQ_G1D_PAUSE_DIM_K");  // test override of the widening factor
         const double v = (kk && *kk) ? atof(kk) : (a && *a) ? atof(a) : 1.0; return (m && *m == '0') ? 1.0 : v; }();
-    if (k == 1.0 || k <= 0.0 || !rs64_g1d_pause_live() || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
+    if (k == 1.0 || k <= 0.0 || !rs64_g1d_pause_any() || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
     static uint32_t s_om0, s_om1, s_cc0, s_cc1, s_cw = 640; static int s_lines = 0;
     auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
     auto wr = [&](uint32_t a, uint32_t v) { memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &v, 4); };

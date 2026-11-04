@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6860 (2026-11-03).
+Compact operational handoff, as of Session 6861 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -308,8 +308,11 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    exemption (vp 0x80138D20 elem < 0x80300000) caught the heap HUD table, which sits at 0x8028FDxx on lvl10 (0x805623xx lvl1); reticle is static 0x8010CA58/88.
    Bound now 0x80110000 (tools/apply_s6860_hudelem.py, ROGUESQ_G1D_HUD_ELEMTOP=1 = old). Same build: ring 647 -> 903, icons 313 -> 57, equal to lvl1;
    sheet docs/owner_sheet_s6860_lvl10_hud_ab.png. Post-fix lvl10 + lvl1 (+ lvl16 route). Counters do not cover HUD placement: score frames (scratch/s6860/ring.py).
-   **Open:** lvl16 gate off with paused=1 for swaps ~2556-3000 (all 3 runs); a dump at the edge showed the whole HUD centred, disc in ring. Separate from the bound;
-   whether the HUD shows centred through that window is unsampled (NEXT.md).
+   **FIXED s6861: flight HUD jumped to the centred 512 px while the pause menu opened and closed, all levels at wide aspect.** The s6860 "lvl16 paused window" is the
+   real pause menu (harness START), not a race intro. ORIGIN: our s6721 gate treated pause byte HUD+0x258 as a flag; it is a state (initOrUpdatePauseScreenDim: 1 opening,
+   3 open, 2 closing). Text links only at 3 (0x800C3A88), HUD draws through 1 and 2 (~20-55 swaps each). Gate now state 3 only (ROGUESQ_G1D_PAUSE_GATE_MASK, default 8,
+   14 = old); dim follows any non-zero. Disc in 1/2: backdrop tiles and logo tris are also z-off in the box, so only textures selected in flight shift. Same build mask 14
+   vs 8; lvl16 21:9 + 16:9, lvl1 pause + abort clean. Residual: a pause before any flight frame leaves the disc centred (harness only). docs/owner_sheet_s6861_pause_hud_ab.png.
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
