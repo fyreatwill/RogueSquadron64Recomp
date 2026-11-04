@@ -44,6 +44,11 @@ Two replays from the same pristine copy gave 0 differing lines, so the chain is 
 The pristine tree is whatever N64Recomp last wrote to a scratch dir, and those dirs get cleaned. s6865 rebuilt one from /tmp/s6864/ctl
 (minus its control line; 0 lines against scratch_s5547_regen). If neither exists, run the front chain again.
 
+## s6869: same 2708 / 75 after cutting decoded tails
+
+`tools/regen_replay.sh` now runs `fixup_cut_decoded_tails.py` (docs/DECODED-TAIL-CENSUS.md). Replay from pristine, then compare:
+2708 same, 75 differ, 0 missing, name set equal to scratch/s6864/cmp2.json. Both trees cut the same 18 functions.
+
 ## What a regen loses
 
 Opt-in or count-only code that exists only in live: the s6500-s6526 funcs_9 chain plus s6518/s6519 (`ROGUESQ_FORFACE_LOG`,

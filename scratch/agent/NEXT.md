@@ -1,11 +1,11 @@
-# NEXT: data-decoded function tails: prove them dead, then stop compiling them
-HYPOTHESIS-ID: data-decoded-tail-audit
+# NEXT: why generated function bodies run past the toml size
+HYPOTHESIS-ID: generated-size-mismatch
 
-Why: s6868 closed G5 function names (docs/GENERATED-NAME-CENSUS.md). audioCompandS16 has a 0x54-byte real body but 103780 generated lines (9% of the tree, 3172 .word lines); __OSGlobalIntMask has 11376 lines; 24 functions hold .word lines. s5668's audio fault came from this tail, and any stray goto into it runs data. This is an idiom-class audit (ITERATION item 3 model): enumerate all 24, classify, close the class.
-Hypotheses: H-dead (no label in a tail is reached from the real body, so every tail can be cut after the real end) / H-reached (a real branch or fall-through enters a tail: name it, it may be a real defect or a mis-sized symbol) / H-size (the toml size is wrong and part of the "tail" is real code; the .word position, not the size, marks the end).
-Discriminator: one offline tool over the generated tree: per function, real end (toml size and first .word), then every goto or label crossing that end from below. Same-run control: an injected branch across the end in a scratch copy must be flagged. Then one runtime arm: trap at each tail entry (opt-in env in a scratch build), lvl1 and lvl5 flight and an audio-heavy cinematic, with a control trap on a live function firing.
-If H-dead holds: add the cut to the fixup chain (tools/fixup_*.py plus tools/regen_replay.sh), regen_verify, report compile time and binary size before and after. Expect exactly the cut functions to differ.
-Keep static_* callees of cut tails in mind: the data_gap_ bodies lose their only site and can go in the same step.
+Why: s6869 cut 18 decoded tails after the fact. audioCompandS16 has size 0x54 in syms/rogue_squadron.syms.toml, yet N64Recomp emitted 7384 more words, so the size never reached the generator. Fixing that at the source would remove the junk branch labels behind the s5668 lagging-label bug as well.
+Hypotheses: H-elf (make_elf.py writes a symbol size that differs from the toml, or extends to the next symbol) / H-recomp (N64Recomp ignores the ELF size for these and runs to the next symbol) / H-toml (the recompiler reads a different symbol list from the one edited).
+Discriminator: offline only. For audioCompandS16, lvj_checkComplexObjectives and __OSGlobalIntMask, print the size in the toml, in the make_elf ELF (readelf or nm -S) and in the N64Recomp output range. The stage where 0x54 stops being 0x54 selects the hypothesis. Same-run control: a function whose body matches its size must agree at all three stages.
+If it is a one-line source fix: regen into a scratch dir, tools/regen_replay.sh, tools/regen_verify.sh. Expect 2708/75 or better, and the fixup_label_realign and cut steps to find less work. Do not change the live tree unless the compare holds.
+Bounded: one session. If the fix touches N64Recomp itself and the compare moves, record it and take the next ladder rung (G3 in-flight frame diffs).
 If an owner report arrives, it outranks this.
 Ask owner when a human is next on: add tools/regen_replay.sh + regen_verify.sh to the CLAUDE.md regen order (owner file, not edited).
 Owner judges: docs/owner_sheet_s6860_lvl10_hud_ab.png, docs/owner_sheet_s6861_pause_hud_ab.png.

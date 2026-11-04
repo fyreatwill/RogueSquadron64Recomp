@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6868 (2026-11-03).
+Compact operational handoff, as of Session 6869 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -319,7 +319,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    **g1-true-flight-hold CLOSED s6867 (H-holds on 4:3 FPS60+dd4; one run per level).** lvl1 305 s, lvl5 306 s, lvl10 302 s of flight, inits 1, 0 stalls, 0 crash lines, no frozen run after [initMission].
    Retail 660 s holds audited offline: gates sat 2-11 s after [initMission] on all 19 levels, so the s6865 gap does not apply; but only lvl3/5/10/12/13/15/18 stayed in one mission, the rest restarted (longest continuous lvl6 267, lvl7 299, lvl11 289, all upper bounds). Table: docs/G1-TRUE-FLIGHT.md.
    Summaries now print inits= and flight_s= (m6_god_common.sh, same-run control flight-control OK); tools/audit_hold_flight.py reads .gz and prints wall_s, tools/audit_hold_segments.py gives continuous stretches. No per-level hold sweep queued: G4 parks repeat holds, and 1/5/10 is the owner's qualification set. FPS60+dd3 and FPS60+dd2 on lvl10 are not held to 300 s (inference from dd4).
-   **G5 function names CLOSED s6868.** regen_replay.sh now applies tools/rename_generated_symbols.py; all 139 address-named functions are shape names, compare still 2708/75 with the same names, lvl1 dd1 135 s flight clean (one run). 791 D_ data symbols unnamed. Next: data-decoded tails (audioCompandS16 = 9% of generated lines, real body 0x54).
+   **G5 function names CLOSED s6868.** regen_replay.sh now applies tools/rename_generated_symbols.py; all 139 address-named functions are shape names, compare still 2708/75 with the same names, lvl1 dd1 135 s flight clean (one run). 791 D_ data symbols unnamed.
+   **data-decoded-tail-audit CLOSED s6869 (H-dead for 18; one run per level).** tools/fixup_cut_decoded_tails.py (in regen_replay.sh, before the rename) cut 18 of 24 functions, 2 refused, 4 have no tail .word; docs/DECODED-TAIL-CENSUS.md. Compare still 2708/75, same names; audioCompandS16 and lvj_checkComplexObjectives machine code unchanged (clang had dropped those tails). Lines 1146851 -> 1021478, compile time about unchanged. lvl1 139 s, lvl5 140 s flight clean. `.word` is NOT a code/data boundary: 3339 of 8152 became do_break, the rest run. Trap arm not run; no PCM measure (env name wrong).
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
