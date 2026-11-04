@@ -10731,3 +10731,7 @@ Superseded conclusions, verbatim:
    3 open, 2 closing). Text links only at 3 (0x800C3A88), HUD draws through 1 and 2 (~20-55 swaps each). Gate now state 3 only (ROGUESQ_G1D_PAUSE_GATE_MASK, default 8,
    14 = old); dim follows any non-zero. Disc in 1/2: backdrop tiles and logo tris are also z-off in the box, so only textures selected in flight shift. Same build mask 14
    vs 8; lvl16 21:9 + 16:9, lvl1 pause + abort clean. Residual: a pause before any flight frame leaves the disc centred (harness only). docs/owner_sheet_s6861_pause_hud_ab.png.
+
+## Migrated from CURRENT-TRUTH (s6874)
+
+**g3-optin-frame-diff, s6872 (lvl1, one run per arm): no near-field change found, H-match for dd4, FPS60 only partly bounded.** ROGUESQ_POSE_FREEZE stops the mission tick at fixed x crossings; frames in a hold are bit-identical (control, 0.0 diff). Scored by tools/g3_optin_diff.py. dd4 vs dd1 at exact pose (k1, k2): ground MAD 0.84, 1.55, the difference is the far band only. dd2 6.1-6.7, fps60+dd4 6.3-10.1, with the craft outline in the diff: presented-frame phase, inside the dd1a-vs-dd1b floor of 7.6-7.8 (k0). Shift control (+2 x) 15-17. FPS60 k2 13.5 is NOT resolved: its pose differs (y -5.7 vs -6.8). No-input flight forks into two paths between k0 and k1 with no setting change (dd1a z 78.4, dd1b z 81.5), so arms are only comparable within a branch. Sheet docs/owner_sheet_s6872_optin_samepose.png.

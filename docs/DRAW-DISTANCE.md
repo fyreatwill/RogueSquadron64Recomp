@@ -31,6 +31,10 @@ cd build && env ROGUESQ_DRAW_DISTANCE=2 ./RogueSquadron64Recomp
 - Cost on -O2 with STORE_DIAG=0: lvl5 dd4 ~30 game fps (retail rate), dd6/dd8 the same. FPS60 at dd4 reaches ~45, not 60.
 - Suggested owner setting: `ROGUESQ_DRAW_DISTANCE=4`. Default stays retail until the owner chooses.
 
+## Map edge (s6874)
+
+Any multiplier other than 1 used to cut the plain that retail draws past the map edge, leaving the edge against the sky. `ROGUESQ_DD_EDGE` (default on) keeps it; `=0` restores the old clamp. Retail (no multiplier) is unaffected.
+
 ## Not established
 - How it looks (pop-in, haze) - needs the owner's eyes.
 - Per-step frame time against the G1b baseline (only single-source tri/RSP-time figures).
