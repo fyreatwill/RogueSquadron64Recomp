@@ -301,8 +301,15 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    302/303 s clean, disc 100% shifted, non-disc 0; sheet docs/owner_sheet_s6858_region_16x9_fps60_dd4.png.
    **s6859 21:9 bundle on the new layout (H-ok, lvl9/lvl17 only):** 303/305 s clean, spill 752/3008 blocks all at 0x81, disc
    67636/23184 shifted 0 kept, non-disc 0, out WRAP 0; sheet docs/owner_sheet_s6859_region_21x9_fps60_dd4_spillhi.png. RDRAM
-   dump noise on debrief pages = s6723/s6724 pillars (crop fired 8/8 in both layouts; no window capture this run). The s6850
-   lvl0-18 sweep predates the fix: other levels unverified on this layout (NEXT.md).
+   dump noise on debrief pages = s6723/s6724 pillars (crop fired 8/8 in both layouts; no window capture this run).
+   **s6860 load pass lvl0-8, 10-16, 18, env-free owner path:** alive, 0 stalls/crash lines, spill 752 all at 0x81, used 0x9E00/0x400000; control
+   (aliased layout) SIGBUS 5/5. 143 s holds, one run each (lvl5 needs 300 s to pass its cinematic).
+   **FIXED s6860: lvl10 HUD unanchored at wide aspect.** Ring + left icons stayed in the centred 512 px; only the frame sheet showed it. ORIGIN: s6161 reticle
+   exemption (vp 0x80138D20 elem < 0x80300000) caught the heap HUD table, which sits at 0x8028FDxx on lvl10 (0x805623xx lvl1); reticle is static 0x8010CA58/88.
+   Bound now 0x80110000 (tools/apply_s6860_hudelem.py, ROGUESQ_G1D_HUD_ELEMTOP=1 = old). Same build: ring 647 -> 903, icons 313 -> 57, equal to lvl1;
+   sheet docs/owner_sheet_s6860_lvl10_hud_ab.png. Post-fix lvl10 + lvl1 (+ lvl16 route). Counters do not cover HUD placement: score frames (scratch/s6860/ring.py).
+   **Open:** lvl16 gate off with paused=1 for swaps ~2556-3000 (all 3 runs); a dump at the edge showed the whole HUD centred, disc in ring. Separate from the bound;
+   whether the HUD shows centred through that window is unsampled (NEXT.md).
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
