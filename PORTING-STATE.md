@@ -181111,8 +181111,13 @@ HYPOTHESIS-ID: g1d-spill-layout-level-sweep. Recipe scratch/s6860/lvl.sh (env-fr
   the SWEEP.txt format mismatch and killed within a minute. lvl15/16/18 dirs moved to *_prior, lvl15/16/18/0 re-run; the lvl0 result
   above is the re-run. Lesson: check a session's scratch dir before reusing its name.
 - **New defect, found only on the frame sheet (scratch/s6860/sheet_all.png):** lvl10 at 21:9 has the ring and left icons in the centred
-  512 px (+256) with the disc alone at the right edge, in every flight dump of three runs (s6850 too, see below). No counter saw it: region-gate
-  counters only cover the disc. Other 16 levels: HUD at the edges in the sampled frame (lvl16 sampled on a debrief page only).
+  512 px (+256) with the disc alone at the right edge, in every flight dump of the sweep run and s6860b, reproduced by the old arm below. Age not established: g1_lvl10s6850 has no
+  dumps. No counter saw it: region-gate counters only cover the disc. ring.py over the other levels: ring 901..990, icon 52..65 on every HUD frame of
+  lvl0-8, 11-15, 18 and s6859 lvl9/17, except false matches on no-HUD frames (lvl15 w768 VI 4500/6000, lvl9 VI 7200) and lvl16, next bullet.
+- **lvl16 is a separate, open question, not this bug.** Sweep dump VI 3000: ring 648..731, icon 308, disc INSIDE the ring (on lvl10 the disc separates), so
+  anchor and region shift were both off. [region-gate] in all three lvl16 runs: gate off with paused=1 from swap ~2556 to ~3000, back on at 3001 (sweep) vs
+  2999 (fix, old), so that dump fell one or two swaps either side of the edge. The lvl16 fix/old arms both read 904..987 at VI 3000 and say nothing about the fix.
+  mission hmp d4 there is 0x804FF35C. Open: whether the HUD is visible, centred, inside the paused window; no dump sampled it (NEXT.md).
 - ORIGIN: writer = our s6161 reticle exemption in tools/apply_s6155_hudcpos.py: vp 0x80138D20 elements below 0x80300000 skip the s6156 anchor.
   The value is legitimate: ROGUESQ_HUD_LOG same binary, HUD table 0x805623BC.. on lvl1, 0x8028FD3C..FE8C on lvl10 (heap; lvl10 loads low,
   mission d4 0x80241334 vs ~0x804FF000 elsewhere). Reticle 0x8010CA58/88 on both, static data. s6721 had already noted this table is heap.
@@ -181125,4 +181130,6 @@ HYPOTHESIS-ID: g1d-spill-layout-level-sweep. Recipe scratch/s6860/lvl.sh (env-fr
 Limits: one run per level, 143 s holds, not 300 s; post-fix runs cover lvl10 and lvl1 only; other levels were not re-run on the fix binary, and elements
 between 0x80110000 and 0x80300000 on vp 0x80138D20 were only listed on lvl1/lvl10. Sampled frames are RDRAM dumps, not window captures.
 Rules out: spill-layout load failures on lvl0-18 at 21:9. Engineering change: tools/apply_s6860_hudelem.py, main.cpp, fixup registration.
-Next: audit hard-coded heap-address tests in our host patches as a class (this is the second time a heap address was treated as stable).
+Correction to the first commit of this session (1d742b072), which said "s6850 too" and "three runs" with no s6850 dumps behind it and took lvl10 as the only
+HUD exception on a sheet that showed lvl16 on a debrief page. Text above is the corrected reading.
+Next: dense dumps across the lvl16 paused window; then audit hard-coded heap-address tests in our host patches as a class.
