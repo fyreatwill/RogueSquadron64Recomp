@@ -22,7 +22,7 @@ def apply10(t):
     first = t.index("RECOMP_FUNC void ")
     return t[:first] + HELP + t[first:], 1
 OLD = '        for (int i = 0; i < 8; i++) g_s6476[i] = 0; }\n'
-NEW = ('''        { extern uint32_t g_s6477_n[3],g_s6477_min[3],g_s6477_max[3],g_s6477_v[3][12],g_s6477_vn[3],g_s6477_t[3],g_s6477_l[3]; /* ''' + TAG + ''' */
+NEW = ('''        { extern uint32_t g_s6477_n[3],g_s6477_min[3],g_s6477_max[3],g_s6477_v[3][12],g_s6477_vn[3],g_s6477_t[3],g_s6477_l[3],g_s6477_pmin[3],g_s6477_pmax[3]; /* ''' + TAG + ''' */
           const char* nm[3]={"BB18link=FFFF","BB34type!=1","pass"};
           for (int k=0;k<3;k++){ fprintf(stderr,"[gatelog] %s n=%u idx[min=%u max=%u] last link=%u type=%u cellptr[min=%08x max=%08x] vals:",nm[k],g_s6477_n[k],g_s6477_min[k],g_s6477_max[k],g_s6477_l[k],g_s6477_t[k],g_s6477_pmin[k],g_s6477_pmax[k]);
             for(uint32_t i=0;i<g_s6477_vn[k];i++) fprintf(stderr," %u",g_s6477_v[k][i]); fprintf(stderr,"\\n");

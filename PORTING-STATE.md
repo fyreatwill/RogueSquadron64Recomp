@@ -181184,3 +181184,24 @@ Results: tools/regen_replay.sh exits 0, failures=0, s5097/s5099/s5100 post-condi
 NOT done, stated plainly: regen output does NOT compile. -fsyntax-only with the real flags fails 8 of 52 files (funcs_0 g1d_* decls from s6201 carve, 9, 13, 16, 24, 25, 26, 42); a deliberately broken control file failed too, though it is a copy of funcs_0, which has real errors, so that control is weak. An earlier "errors: 0" from this check was xargs aborting and was discarded. No link, no boot. Residual not fully classified: s6287 230 lines (ROGUESQ_PPLOG opt-in) still missing, 137 blank/brace, 72 untagged live-only, plus the funcs_9 chain.
 Rules out: H-skip for the 9 MARKs. Does not rule out a default-path behaviour difference in the residual. Do not regenerate the live tree until the next unit closes.
 Failed attempts: first wiring of all 31 gave 14 cascading failures from s6500; those were withdrawn rather than chased (closed thread, observation only).
+
+## Session 6864 (2026-11-03) — regen from pristine compiles, links and boots; per-function machine code compare selects H-diag, replay-patch-presence closed
+What ran: offline replay fixes, a new per-function object compare, then one lvl1 boot per arm. The live tree and build/ were not changed; the live tree was not regenerated.
+Compile: 8 failing files -> 0. Control is now real: the broken copy is the only failure, on its own bad line (s6863's control was weak).
+- apply_s4681 sliced the condition with its opening paren and repaired it with a file-wide replace of "&& ((", which ate s6481's text in funcs_25/26. Slice fixed, replace removed.
+- apply_s5793: one unescaped newline inside a C string.
+- apply_s5835: rs5907 externs missing from the funcs_13 line.
+- apply_s6477: pmin/pmax missing from the extern line.
+- apply_s6031_far s6201 carve: anchor went stale once s6718 sat in between; now anchors on the generated comment. Default path text.
+- fixup_live_replay funcs_24 include anchor; strip_diag_layers removed execinfo.h everywhere, now only where nothing uses backtrace.
+- s6518/s6519 unwired: they use locals of the unwired s6500 chain.
+- apply_s6287 returned on its own tag after the fixer pass, losing 230 store hooks; now per-line idempotent.
+- Replay order: s6146/s6146b after s5877, s6521 before s6591 (the watch macro was missing a term and had its clauses in another order).
+Residual: live-only 697 -> 272 lines, scratch-only 352 -> 66. Pristine refresh: scratch/s6864/front.sh, ELF identical, 0 lines vs scratch_s5547_regen.
+Discriminator: tools/regen_obj_compare.py + tools/regen_verify.sh (-mno-outline, __LINE__=0, both trees). The line-count residual could not see moved lines; this can. Perturbation control: one constant in funcs_1.c -> exactly _pollDmaSlotStep, 1 of 2783. Self-compare 0.
+Result: 2708 same, 75 differ, 0 missing. 14 no source change, 0 instructions differ with branch targets masked. 1 stack layout from an inlined tally. 13 funcs_16 helpers, OBJECTIVE_RESPONSE or hit census. 29 diagnostic-only, audited by line after noticing my filter regex was broad: all gated logs or tallies. 18 read by hand: gated hook order, RS64_RAM_TOP vs literal in opt-in code, live-only diagnostics. Table in docs/REGEN-VERIFY.md. Selects H-diag, refutes H-beh for dd1 and for the code on every path, since the compare is not path-specific.
+Boot (regen objects + live everything else, scratch/s6864/rb, run through BUILD=): regen mission t=85, 130 s verified, stalls 0, crash lines 0, fbhash distinct 5927/6985. Live t=84, same, 5917/6972. Link clean, no undefined symbols.
+Limits, stated plainly: one run per arm, lvl1, dd1, 4:3; no dd4/FPS60/wide runtime on the regen binary (soak queued). That the regen binary was the one running rests on the harness BUILD variable; the two binaries hash differently but no log line tells them apart. Hand classification of the 18 is one reader. s6336 post note lands before the store at four 0X4620 sites in regen: store-diag only, not fixed. s6285 armed gate still only matches live. CLAUDE.md regen order not edited (owner file) and still omits regen_replay.sh.
+ORIGIN: not a mitigation. Every defect was in our own replay scripts; no guard added.
+Rules out: H-beh. A regen now loses only opt-in diagnostics, listed in docs/REGEN-VERIFY.md.
+Failed attempts: first compare reported 2384 differing, then 245, then 75: macro clause order, __LINE__ in generated code, and page bits. A chained background call also died on a slow recursive search before it wrote link.sh; rerun by hand.

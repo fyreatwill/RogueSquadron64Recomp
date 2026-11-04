@@ -1,10 +1,11 @@
-# NEXT: make the regen tree compile, classify the residual, then link and boot it
-HYPOTHESIS-ID: replay-patch-presence
+# NEXT: remove the dead s4563 check through the now-working regen path, then fold the regen dd4 soak
+HYPOTHESIS-ID: s4563-dead-code-removal
 
-Why: s6863 got tools/regen_replay.sh to exit 0 from pristine, but 8 of 52 files fail -fsyntax-only and 1,960 lines differ from live. Until this closes, a regen is unsafe and hard rule "fixups survive regen" is unproven.
-Unit: offline first. zsh scratch/s6863/replay.sh (replay + diff, live hash check), zsh scratch/s6863/syntax.sh (compile check), python3 scratch/s6863/resid.py (residual by tag). Refresh the pristine input once: scratch/agent/s5547_frontchain.sh with fresh paths, since scratch_s5547_regen dates from s5547.
-Fix order: funcs_0 g1d_* decls (s6201 carve, default dd path, behaviour) first; funcs_16 brace error; funcs_13 rs5907_hitobj; funcs_24 time.h; funcs_25/26 expected expression; funcs_42 backtrace_symbols_fd conflict (execinfo.h, stripped include); funcs_9 refs into the unwired s6500+ chain.
-Hypotheses: H-diag (the whole residual is env-gated diagnostics, regen binary behaves as live) / H-beh (a default-path line differs).
-Discriminator: after it compiles, strip diagnostics-only lines from both trees and compare -O2 asm per file as s5547 did (perturbation control must flag). Any asm difference on a default path -> H-beh, decide per line against retail, do not assume live is right (s6285 armed gate was matched to live on that assumption; re-check it). Then a separate build dir needs RECOMP_FUNCS_DIR overridable in CMakeLists (it is a plain set()), lvl1 boot + 120 s hold vs live.
-Outcomes: H-diag -> close, add regen_replay.sh + compile check to the docs and CLAUDE regen order (owner file: ask first), remove the dead s4563 check. H-beh -> fix per line and A/B.
+Why: s6862 found the s4563 stale-head skip dead (covered by s4786 PAUSE=4); s6863 deferred removal until regen worked. It closed s6864.
+First: read SOAK-RESULTS for s6864_regen_fps60_dd4_lvl5. Fail on regen but not on live = a real difference the compare missed: reopen replay-patch-presence and stop.
+Unit: drop apply_s4563_stale_head_skip.py from the replay list and remove its text from live funcs (default off, env-gated). Rebuild live. tools/regen_replay.sh + tools/regen_verify.sh must then show no new differing function (baseline 75, docs/REGEN-VERIFY.md).
+Hypotheses: H-dead (s4563 never fires: removal changes no default-path function) / H-live (some default path reads g_s4563_blk_freed).
+Discriminator: per-function compare before vs after removal; only functions holding s4563 text may differ, and only by the gated block. lvl1 120 s hold after.
+Outcomes: H-dead -> commit. H-live -> keep it and record the reader.
+Ask owner when a human is next on: add tools/regen_replay.sh + regen_verify.sh to the CLAUDE.md regen order (owner file, not edited).
 Owner judges: docs/owner_sheet_s6860_lvl10_hud_ab.png, docs/owner_sheet_s6861_pause_hud_ab.png.

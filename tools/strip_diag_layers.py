@@ -25,7 +25,7 @@ BLOCK_START = re.compile(
 ONE_LINE = re.compile(
     r"^\s*rs64_(s4714_rec|s4223_stk|filter_voice_\w+)\(|"
     r"^extern void rs64_(s4714_rec|s4223_stk|filter_voice_\w+|m5_status_table_store)\(|"
-    r"^#include <execinfo\.h>$|^static unsigned long g_a14_call|^\s*\+\+g_a14_reads;|"
+    r"^static unsigned long g_a14_call|^\s*\+\+g_a14_reads;|"
     r"^\s*/\* PATCH: s4329 direct D740 witness \*/$")
 STR = re.compile(r'"(\\.|[^"\\])*"')
 
@@ -49,6 +49,9 @@ def strip(text):
                 j += 1; d += _bal(lines[j], op, cl)
             n += j - i + 1; i = j + 1; continue
         out.append(ln); i += 1
+    if "backtrace" not in "\n".join(l for l in out if "execinfo" not in l):  # s6864: later patches use it, s4300's block did not survive
+        kept = [l for l in out if l != "#include <execinfo.h>"]
+        n += len(out) - len(kept); out = kept
     return "\n".join(out), n
 
 def main():

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6863 (2026-11-03).
+Compact operational handoff, as of Session 6864 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -123,7 +123,7 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 
 ## Superseded conclusions — do not act on these
 
-- **s5547 "regen determinism CLOSED: replay reproduces live" (superseded s6863).** True on 2026-10-19, and believable because later patches were applied live and each session saw its script pass; none re-ran from pristine. The fixer stopped on pristine input no later than s5904. See Next steps, replay-patch-presence.
+- **s5547 "regen determinism CLOSED: replay reproduces live" (superseded s6863).** True on 2026-10-19, and believable because later patches were applied live and each session saw its script pass; none re-ran from pristine. The fixer stopped on pristine input no later than s5904. Regen restored s6864: docs/REGEN-VERIFY.md.
 - s6161 "vp 0x80138D20 HUD elements are above 0x80300000, so that bound separates them from the reticle": believable because
   the only level checked (lvl1, w796) had the table at 0x8034xxxx. s6860: the table is heap and lands at 0x8028FDxx on lvl10.
 - s6844 NEXT "the 21:9 hold rects (ul 0 lr 914.5 s=511) are the game's texrect clipper reacting to the lr.x overflow"
@@ -319,9 +319,12 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    every behaviour-changing pointer guard follows RS64_RAM_TOP or the 16 MB RSP ceiling; fixed heap bounds left are logging or opt-in harness (the 0x80300000..0x80330000 NPC family, (x>>24)==0x80, FS slot),
    and can read as false zeros on other levels or layouts. HUD table lvl1/5/10/14: moves by level, always above the 0x80110000 bound, reticle static. s4563 stale-head skip is DEAD (setter gone from funcs_0.c);
    the hazard is held by s4786 PAUSE=4. The 9 absent MARKs are strip_diag_layers (7) + fixup_live_replay (2), by design (s6863).
-   **replay-patch-presence OPEN s6863: regen from pristine runs again but does NOT compile yet.** The fixer had stopped on pristine input (first assert s5835, dated s5904; s5547's proof no longer held) and 31 live patches were unwired.
-   Now tools/regen_replay.sh (fixer, movz, strip, live_replay, weaken) exits 0, replay failures=0, audit_replay_survival controls ok. **Not proven:** 8 files fail to compile (funcs_0, 9, 13, 16, 24, 25, 26, 42); 1,960 diff lines vs live, not fully classified; no link or boot.
-   Do not regenerate the live tree until this closes. 14 funcs_9 scripts (s6500-s6526) stay unwired, so a regen would drop them.
+   **replay-patch-presence CLOSED s6864 (H-diag; lvl1 dd1 boot, single run per arm).** Regen from pristine compiles (51/51, control file fails as it should;
+   strict flags), links, and boots: lvl1 130 s hold regen vs live, 0 stalls, 0 crash lines. Per-function machine code
+   (tools/regen_verify.sh, docs/REGEN-VERIFY.md): 2708 same, 75 differ, 0 missing, and all 75 are layout, env-gated hooks or opt-in logging.
+   Pristine refreshed: fresh make_elf + N64Recomp = s5547 input, 0 lines. Regen drops only opt-in diagnostics (list in the doc), so it
+   is now safe; the live tree was NOT regenerated. dd4/FPS60 runtime on the regen binary is queued (s6864_regen_fps60_dd4_lvl5).
+   Not re-checked: s6285 armed gate still matches live by construction, on the opt-in dd>1 path.
 3. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh
    <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path,
    horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).

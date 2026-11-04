@@ -136,7 +136,7 @@ def apply(text, name=None):
     if "PATCH: s5856" not in text and "static void rs5834_post(" in text:
         k = "static void rs5834_pre(uint8_t* rdram, recomp_context* ctx) {\n"
         assert text.count(k) == 1
-        text = text.replace(k, "extern uint32_t rs5841_cand; unsigned rs5856_cin; uint32_t rs5856_proj; unsigned rs5897_dist2(uint32_t); uint32_t rs5856_sinobj; void rs5904_tally(uint8_t*, uint32_t, int); void rs5904_dump(void); /* PATCH: s5856 */\n" + k + "    rs5856_cin = 0; rs5856_sinobj = 0; rs5907_hitobj = 0; rs5856_proj = (uint32_t)ctx->r17;\n", 1)
+        text = text.replace(k, "extern uint32_t rs5841_cand; unsigned rs5856_cin; uint32_t rs5856_proj; unsigned rs5897_dist2(uint32_t); /* PATCH: s5856 */\nextern uint32_t rs5907_hitobj; extern unsigned rs5907_agree, rs5907_nohit, rs5907_dis; uint32_t rs5856_sinobj; void rs5904_tally(uint8_t*, uint32_t, int); void rs5904_dump(void); /* PATCH: s5856 */\n" + k + "    rs5856_cin = 0; rs5856_sinobj = 0; rs5907_hitobj = 0; rs5856_proj = (uint32_t)ctx->r17;\n", 1)
         k = "static void rs5834_post(uint8_t* rdram, uint32_t hit) {\n    if (!rs5834_en) return;\n"
         assert text.count(k) == 1
         post = r'''    { /* PATCH: s5856 per-id: calls, ret!=0, clamped-in, clamped-in&&ret==0 */

@@ -78,7 +78,7 @@ def patch_file(path: Path) -> int:
             r"\s*if \([^\n]*(?:_lo_|r\d+_lo)[^\n]*\) \{\n$", line
         ):
             indent = line[: len(line) - len(line.lstrip())]
-            condition = line.strip()[3:-3]
+            condition = line.strip()[4:-3]  # s6864: no leading paren, so no file-wide "&& ((" repair
             reg = re.search(r"(r\d+)_lo(?:_|\b)", condition)
             value = f"U32(ctx->{reg.group(1)})" if reg else "0u"
             if family == "voice-list":
@@ -89,7 +89,6 @@ def patch_file(path: Path) -> int:
             patched += 1
             family = None
     text = ''.join(out)
-    text = text.replace("&& ((", "&& (")
     if path.name == "funcs_25.c" and "rs64_s4681_a10_writer(U32(ctx->r2)" not in text:
         needle = "    MEM_W(0X29C0, ctx->r1) = ctx->r2;\n"
         if needle not in text:

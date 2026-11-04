@@ -41991,6 +41991,8 @@ RS64_REPLAY = [
     "apply_s5867b_msg.py",
     "apply_s5868_flagwatch.py",
     "apply_s5877_fusewatch.py",
+    "apply_s6146_hudwatch.py",  # s6864: both widen the macro by its tail, before s6593 extends it
+    "apply_s6146b_hudpc.py",
     "apply_s6334_vtx_writer_value.py",
     "apply_s6336_f5_poststore.py",
     "apply_s6657_objective_response.py",
@@ -42021,6 +42023,7 @@ RS64_REPLAY = [
     "apply_s6086_bigarena.py",
     "apply_s6569_spill.py",
     "apply_s6570_svcnull.py",
+    "apply_s6521_spanw.py",  # s6864: s6591 goes in front of it in the macro
     "apply_s6591_descwatch.py",
     "apply_s6593_hudptrwatch.py",
     "apply_s6595_hudptrread.py",
@@ -42031,8 +42034,6 @@ RS64_REPLAY = [
     "apply_s6144_fpx.py",
     "apply_s6145_hudx.py",
     "apply_s6155_hudcpos.py",
-    "apply_s6146_hudwatch.py",
-    "apply_s6146b_hudpc.py",
     "apply_s6031_far.py",
     "apply_s6695_radarmark.py",
     "apply_s6721_pausegate.py",
@@ -42063,7 +42064,7 @@ RS64_REPLAY = [
     "apply_s4694_a14_boundary.py",
     "apply_s4784_gap_order.py",
     # s6863: live-tree patches that were never wired into the replay (found by tools/audit_replay_survival.py).
-    # The s6500-s6526 funcs_9 chain stays unwired: env-gated observation only, its anchors need the live tree's later text.
+    # The s6500-s6526 funcs_9 chain stays unwired: env-gated observation only, its anchors need the live tree's later text (s6864: s6518/s6519 too, they use its locals).
     "apply_s5908_callers.py",
     "apply_s6331_f5_store_shadow.py",
     "apply_s6489_cellcum.py",
@@ -42076,9 +42077,6 @@ RS64_REPLAY = [
     "apply_s6499_store_census.py",
     "apply_s6499b_complete.py",
     "apply_s6503_single_snapshot.py",
-    "apply_s6518_ret_summary.py",
-    "apply_s6519_window_bounds.py",
-    "apply_s6521_spanw.py",
     "apply_s6523_spanscale.py",
     "apply_s6588_tblnull.py",
     "apply_s6698_storediag.py",  # s6698: must follow every hook-emitting patch

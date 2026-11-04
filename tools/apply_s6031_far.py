@@ -178,8 +178,7 @@ def apply_s6201_carve(text):
         return text, 0
     body = text[a:b]
     body = body.replace(
-        "      if (wv > 0 && ow == 512 && (oh == 448 || oh == 340)) ctx->r6 = (gpr)wv; }\n    // 0x80000DD4: addu        $t5, $a0, $zero\n",
-        "      if (wv > 0 && ow == 512 && (oh == 448 || oh == 340)) ctx->r6 = (gpr)wv; }\n"
+        "    // 0x80000DD4: addu        $t5, $a0, $zero\n",  # s6864: s6718 sits between the s6115 block and this comment
         "    uint32_t g1d_top = 0, g1d_a3 = 0, g1d_t0 = 0, g1d_t1 = 0, g1d_t2 = 0, g1d_t3 = 0, g1d_t4 = 0, g1d_ptr = 0, g1d_pc = 0;\n"
         "    int g1d_outw = (int)ctx->r6; /* PATCH: s6201 carve */\n"
         "    // 0x80000DD4: addu        $t5, $a0, $zero\n",

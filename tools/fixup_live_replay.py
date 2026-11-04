@@ -318,9 +318,9 @@ if "rs64_filter_voice_call_probe" not in t27:
 # funcs_24 (s5545): include block + blank-line placement
 p24 = d / "funcs_24.c"
 t24 = p24.read_text()
-_i = "/* PATCH: s4899 */\n\n\n/* PATCH: s4874 caller helper */"
+_i = "\n\n\n/* PATCH: s4874 caller helper */"  # s6864: s6698 storediag can sit between s4899 and this
 if _i in t24:
-    t24 = t24.replace(_i, "/* PATCH: s4899 */\n\n#include <stdio.h>\n#include <stdlib.h>\n#include <time.h>\n/* PATCH: s4874 caller helper */")
+    t24 = t24.replace(_i, "\n\n#include <stdio.h>\n#include <stdlib.h>\n#include <time.h>\n/* PATCH: s4874 caller helper */")
 for _m in ("/* PATCH: s4867 bound helper */", "/* PATCH: s5223 entry-contract join */"):
     t24 = re.sub(r"(?<=\n)(?<!\n\n)" + re.escape(_m), "\n" + _m, t24, count=1)
 t24 = re.sub(r"\n\n(extern void rs64_s2031_m5_gate_event\()", r"\n\1", t24, count=1)

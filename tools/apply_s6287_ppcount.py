@@ -9,18 +9,17 @@ _ST = re.compile(r"(RS64_S5798_ST\((0x[0-9A-Fa-f]+u), 0X63B0, ctx->r\d+, 4\);) \
 _LD = re.compile(r"^    ctx->r(\d+) = MEM_W\(ctx->r\1, 0X63B0\);$")
 _PC = re.compile(r"^    // (0x[0-9A-Fa-f]{8}):")
 def apply(text):
-    if TAG in text: return text, 0
-    out, n, pc = [], 0, None
+    out, n, pc = [], 0, None  # s6864: per-line idempotent; the fixer pass runs before the S5798 store form exists
     for ln in text.split("\n"):
         m = _PC.match(ln)
         if m: pc = m.group(1)
         if _ST.search(ln):
             ln = _ST.sub(lambda m: m.group(1) + " rs64_s6287(1, %s); }" % m.group(2), ln); n += 1
-        elif _LD.match(ln) and pc:
+        elif _LD.match(ln) and pc and not (out and TAG in out[-1]):
             out.append("    rs64_s6287(0, %su); /* %s */" % (pc, TAG)); n += 1
         out.append(ln)
     text = "\n".join(out)
-    if n:
+    if n and EXT not in text:
         j = text.find("RECOMP_FUNC"); text = text[:j] + EXT + text[j:]
     return text, n
 if __name__ == "__main__":
