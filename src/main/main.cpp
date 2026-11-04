@@ -2275,6 +2275,12 @@ extern "C" int rs64_s6845_hud_small(uint32_t sx_bits) {
     if (lines++ < 8) std::fprintf(stderr, "[g1d-hudwipe] anchor skipped for full-screen element sx=%.3f vi=%u\n", (double)sx, rs64_vi_n_g);
     return 0;
 }
+// s6860: anchor exemption bound for vp 0x80138D20. The reticle is static data (0x8010CA58/88); the HUD table is heap and
+// sits at 0x8028FDxx on lvl10, under the old 0x80300000 bound. ROGUESQ_G1D_HUD_ELEMTOP=1 = old.
+extern "C" uint32_t rs64_s6860_hud_elem_top(void) {
+    static const bool old = [] { const char* e = std::getenv("ROGUESQ_G1D_HUD_ELEMTOP"); return e && *e == '1'; }();
+    return old ? 0x80300000u : 0x80110000u;
+}
 extern "C" void rs64_s6843_store(uint32_t pc, uint32_t phys, char width) {
     const char w = (char)(width | 0x20); rs64_s6843_note(pc, phys, w == 'b' ? 1u : w == 'h' ? 2u : w == 'd' ? 8u : 4u, nullptr);
 }

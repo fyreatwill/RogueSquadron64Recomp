@@ -181095,3 +181095,34 @@ Discrimination: selects H-ok; refutes H-ramtop (RAMTOP 20 at width 1024: no cras
 H-latent (no new crash or heap failure) for lvl9/lvl17 only.
 Engineering change: none in code; new owner sheet + scratch/s6859 recipe, docs updated.
 Next discriminator: 21:9+dd4 mission-load pass over the other levels on the new layout (NEXT.md).
+
+## Session 6860 (2026-11-03) — 21:9+FPS60+dd4 load pass lvl0-18 clean on the s6858 spill layout (owner path, control crashed 5/5); the sheet exposed a lvl10 HUD fault: s6161 reticle bound 0x80300000 caught the heap HUD table, fixed, same-build A/B
+HYPOTHESIS-ID: g1d-spill-layout-level-sweep. Recipe scratch/s6860/lvl.sh (env-free owner path: no OSMEM_MB, no SHIFT_REGION; HOLD_S 140).
+- **Positive control:** lvl1 16:9 + OSMEM 12 + SPILL_HI=0 + RAMTOP 16 (the aliased layout): 5/5 died_in_verify, all SIGBUS
+  si_addr=0x3a7751264 (the s6858 0xA7751264 name-pointer signature), spill 80xxxxxx.
+- **Sweep (17 levels, one run each, 142-143 s holds):** alive, 0 stalls, 0 crash lines, `[ddbundle] osmem` fired 1/1 every run with no
+  OSMEM in the env, spill 752 blocks all at 0x81, used 0x9E00 of 0x400000, 0 arena full. Selects H-ok; refutes H-load and H-heap for
+  load + first flight. Flight evidence is the mission load_level_hmp + objwr (tools: scratch/s6860/flight.py), since spill stats are
+  pre-load. lvl5 is the exception: its opening cinematic outlasts 140 s (no mission hmp, objwr 0), so its evidence is the 300 s run
+  s6860b (hmp 804FE8F4, objwr 142, 306 s clean). Not a fault.
+- **Run history, including my error.** An earlier uncommitted attempt at this session ran the sweep 13:56-15:53 and stopped at lvl15 (game got
+  SDL_QUIT at 15:55:31; cause not established, no crash in that log). The next attempt did not look in scratch/s6860 first and started a
+  fresh sweep whose `rm -rf` deleted the earlier lvl0 run dir (summary survives in h_0s6860.out and SWEEP.txt). Caught at lvl0 from
+  the SWEEP.txt format mismatch and killed within a minute. lvl15/16/18 dirs moved to *_prior, lvl15/16/18/0 re-run; the lvl0 result
+  above is the re-run. Lesson: check a session's scratch dir before reusing its name.
+- **New defect, found only on the frame sheet (scratch/s6860/sheet_all.png):** lvl10 at 21:9 has the ring and left icons in the centred
+  512 px (+256) with the disc alone at the right edge, in every flight dump of three runs (s6850 too, see below). No counter saw it: region-gate
+  counters only cover the disc. Other 16 levels: HUD at the edges in the sampled frame (lvl16 sampled on a debrief page only).
+- ORIGIN: writer = our s6161 reticle exemption in tools/apply_s6155_hudcpos.py: vp 0x80138D20 elements below 0x80300000 skip the s6156 anchor.
+  The value is legitimate: ROGUESQ_HUD_LOG same binary, HUD table 0x805623BC.. on lvl1, 0x8028FD3C..FE8C on lvl10 (heap; lvl10 loads low,
+  mission d4 0x80241334 vs ~0x804FF000 elsewhere). Reticle 0x8010CA58/88 on both, static data. s6721 had already noted this table is heap.
+- **Fix:** tools/apply_s6860_hudelem.py (after s6845, in-process and replay lists) + rs64_s6860_hud_elem_top() in main.cpp: bound 0x80110000.
+  ROGUESQ_G1D_HUD_ELEMTOP=1 = old. Applied live, funcs_4.c + main.cpp rebuilt, no regen.
+- **Same-build A/B (scratch/s6860/ring.py, saturated-red ring and green icon x, 3 flight dumps per arm):** lvl10 21:9 old: ring 647..733, icon 313.
+  fix: ring 903..988, icon 57 (delta 256). lvl1 21:9 fix: ring 903..987, icon 57, so lvl10 now equals lvl1. lvl10 16:9 fix: ring 675..759, icon 57
+  (no 16:9 old arm run). All four alive, 0 stalls, 0 crash lines. Sheet docs/owner_sheet_s6860_lvl10_hud_ab.png: reticle over the craft in all arms,
+  disc in ring in the fix arms.
+Limits: one run per level, 143 s holds, not 300 s; post-fix runs cover lvl10 and lvl1 only; other levels were not re-run on the fix binary, and elements
+between 0x80110000 and 0x80300000 on vp 0x80138D20 were only listed on lvl1/lvl10. Sampled frames are RDRAM dumps, not window captures.
+Rules out: spill-layout load failures on lvl0-18 at 21:9. Engineering change: tools/apply_s6860_hudelem.py, main.cpp, fixup registration.
+Next: audit hard-coded heap-address tests in our host patches as a class (this is the second time a heap address was treated as stable).

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6859 (2026-11-03).
+Compact operational handoff, as of Session 6860 (2026-11-03).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -122,6 +122,8 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 - Closed: M5 audio de-stubbing, M3 idiom audits, M6 endurance (s6442), G2 audio, G5 renaming. G4 crash hunting parked.
 
 ## Superseded conclusions — do not act on these
+- s6161 "vp 0x80138D20 HUD elements are above 0x80300000, so that bound separates them from the reticle": believable because
+  the only level checked (lvl1, w796) had the table at 0x8034xxxx. s6860: the table is heap and lands at 0x8028FDxx on lvl10.
 - s6844 NEXT "the 21:9 hold rects (ul 0 lr 914.5 s=511) are the game's texrect clipper reacting to the lr.x overflow"
   (H-clip/H-wrap2): believable because the values sit right after the 12-bit wrap. s6845: the game clipper is fine; our
   s6156 HUD anchor shifted the full-screen wipe glyph -256 px once the pause byte dropped, and the clip of that x0
