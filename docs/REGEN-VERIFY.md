@@ -64,6 +64,21 @@ scratch_s5547_regen. Full replay of both front ends, source diff: only the 17 fu
 
 Runtime, regen binary, one run per level, dd1 4:3 only: see the census doc.
 
+## s6881: s6879 and s6880 survive a replay from pristine, after one order fix
+
+First replay stopped in the fixer. s6879 was called twice: from the inline fixer block and from RS64_REPLAY. The inline call ran before
+any s6144 text exists on pristine, because `apply_s6144_fpx` anchors on a line that a later step adds and skips silently when it is absent.
+`apply_s6879_fpdepth` asserts on its anchors, so the fixer died. The live tree never showed this: there the script sees its own marker and returns.
+Fix: the inline call is gone; RS64_REPLAY runs it right after s6144. Assert kept.
+
+Rule for new apply scripts: add them to RS64_REPLAY only, in order. An inline fixer call runs before the replayed steps. An asserting script
+stops the fixer there, and a tolerant one does nothing on pristine and reports nothing.
+
+Result: 2684 same, 82 differ, 17 only in live, 1 only in regen, equal to s6871. Against s6870's name set the new diffs are exactly the 4 functions s6871 sized
+(`rspbootTextPreamble`, `data_gap_800AF6A8`, `data_gap_800CC3D4`, `data_gap_80024A0C`), and only-in-regen is `static_5_800CC4E4`. No H-drift.
+Control: `grep -h s6879`, `s6880` and `s6049` over funcs_9.c hash equal in live and regen (4, 18, 9 lines) and are absent from pristine;
+`_rs64_s6880_wide` and `_rs64_s6879_fpk` are undefined symbols in both funcs_9 objects. No regen binary was linked or run this session.
+
 ## What a regen loses
 
 Opt-in or count-only code that exists only in live: the s6500-s6526 funcs_9 chain plus s6518/s6519 (`ROGUESQ_FORFACE_LOG`,

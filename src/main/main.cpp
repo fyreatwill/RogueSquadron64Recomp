@@ -11218,9 +11218,9 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
         static bool s_pl_live = false;  // wide (ASPECT) flight uses a different VI origin than 0x690400, so latch on a live ship pos instead
         if (s_pl && rd) {
-            const uint32_t p = rs64_rdram_u32(rd, 0x137DB8u + 4) & 0xFFFFFFu;
+            const uint32_t p = rs64_rdram_u32(rd, 0x137DB8u + 4) & 0x1FFFFFFFu;
             float v[3] = {0, 0, 0};
-            const bool pv = p >= 0x1000u && p < 0x7FFF00u;
+            const bool pv = p >= 0x1000u && p < rs64_ram_top - 0x80000100u; // s6881: spill puts the player above 8 MB in wide + dd, which left the lock off
             if (pv) for (int i = 0; i < 3; i++) { uint32_t u = rs64_rdram_u32(rd, p + 0x4C + 4 * i); memcpy(&v[i], &u, 4); }
             if (pv && (v[0] != 0.0f || v[1] != 0.0f || v[2] != 0.0f)) s_pl_live = true;
             // s6879: no origin gate. 16:9 flight swaps 0x58B038 / 0x6xxxxx, so a >= 0x600000 test let harness keys through on every other frame.

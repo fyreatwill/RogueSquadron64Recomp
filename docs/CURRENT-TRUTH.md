@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6880 (2026-11-04).
+Compact operational handoff, as of Session 6881 (2026-11-04).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -97,6 +97,7 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 - Closed: M5 audio de-stubbing, M3 idiom audits, M6 endurance (s6442), G2 audio, G5 renaming. G4 crash hunting parked.
 
 - **FIXED s6879-s6880: wide flight lost far terrain, then 21:9 crashed.** ROGUESQ_G1D_FPDEPTH (default on, =0 old) undoes our s6144 forward-reach loss. That exposed a 21:9 crash: scanConvertTriangleToSpanTable (0x80042820) overran the span tables into the descriptor at dd 1, because the s6049 bound was gated on dd != 1. ROGUESQ_G1D_SPANBOUND (default on, =0 old) covers wide frames; k=1 retail. Same binary: =0 crashes, default holds lvl1 21:9 302 s, lvl5/lvl10 135 s; 4:3 and 16:9 0 px changed vs before the bound. tools/g3_aspect_crop.py is valid at 16:9, NOT 21:9 (bad fit, s6880). 21:9 look is single-source; sheets docs/owner_sheet_s6879_wide_depth.png, docs/owner_sheet_s6880_219_depth.png.
+- **s6881: s6879/s6880 now replay from pristine; wide + dd same-pose frames exist.** Regen stopped on an inline s6879 call that ran before the s6144 text exists; call removed, RS64_REPLAY runs it. Compare 2684/82/17/1 = s6871, s6879/s6880/s6049 text in funcs_9 identical to live. New apply scripts go in RS64_REPLAY only (docs/REGEN-VERIFY.md). No regen binary linked or run. Test-only fix: POSE_LOCK and POSE_FREEZE rejected player pointers above 8 MB, and wide + dd spills the player (0x809A6350), so keys were never zeroed and no freeze fired. 16:9 dd4 vs 4:3 dd4 now at identical pose: mad 11.53/11.54/17.53, ctl 25.95/24.00/66.16. Sheet docs/owner_sheet_s6881_wide_dd4.png.
 
 ## Superseded conclusions — do not act on these
 

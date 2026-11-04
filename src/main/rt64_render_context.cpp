@@ -35,6 +35,7 @@ extern std::vector<uint32_t> g_rs64_g1d_walk, g_rs64_g1d_walk_cw;
 extern "C" uint32_t rs64_rand_site;
 uint32_t rs64_rand_site = 0; // jal address of the current rand call site (s6751 fixup)
 volatile int g_rs64_rand_trace = 0;
+extern "C" uint32_t rs64_ram_top; // s6132
 static FILE* s_rand_trace_f = nullptr;
 extern "C" void rs64_rand_trace(uint32_t ra, uint32_t seed) {
     static long n = 0;
@@ -60,7 +61,7 @@ extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64
             }
         }
         const uint32_t pl = *reinterpret_cast<const uint32_t*>(rdram + 0x137DBCu);
-        if (fz_k < fz.size() && pl >= 0x80001000u && pl < 0x807FFF00u && !(pl & 3)) {
+        if (fz_k < fz.size() && pl >= 0x80001000u && pl < rs64_ram_top - 0x100u && !(pl & 3)) { // s6881: spill puts the player above 8 MB in wide + dd
             float v[3];
             memcpy(v, rdram + (pl - 0x80000000u) + 0x4C, 12);
             if (v[0] >= fz[fz_k]) {
@@ -105,7 +106,7 @@ extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64
         if (poke[i].pc != pc || poke[i].done) continue;
         poke[i].done = poke[i].once;
         uint32_t a = (uint32_t)gpr[poke[i].reg] + poke[i].off;
-        if (a < 0x80000000u || a + 4 > 0x80800000u || (a & 3)) continue;
+        if (a < 0x80000000u || a + 4 > rs64_ram_top || (a & 3)) continue;
         uint32_t* w = reinterpret_cast<uint32_t*>(const_cast<uint8_t*>(rdram) + (a - 0x80000000u));
         fprintf(s_rand_trace_f, " pin=%08x", *w);
         *w = poke[i].val;
@@ -116,7 +117,7 @@ extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64
         fprintf(s_rand_trace_f, " m=%08x:", a);
         for (uint32_t k = 0; k < spec[i].n; k++) {
             uint32_t w = a + 4 * k, v = 0;
-            if (w >= 0x80000000u && w + 4 <= 0x80800000u && !(w & 3)) v = *reinterpret_cast<const uint32_t*>(rdram + (w - 0x80000000u));
+            if (w >= 0x80000000u && w + 4 <= rs64_ram_top && !(w & 3)) v = *reinterpret_cast<const uint32_t*>(rdram + (w - 0x80000000u));
             fprintf(s_rand_trace_f, k ? ",%08x" : "%08x", v);
         }
     }
@@ -129,7 +130,7 @@ extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64
 extern "C" void rs64_bolt_mark(const uint8_t* rdram, uint32_t node, uint32_t slot, uint32_t victim, int kind) {
     static long n = 0;
     if (!s_rand_trace_f || n >= 300000) return;
-    auto in = [](uint32_t a) { return a >= 0x80000000u && a + 4 <= 0x80800000u && !(a & 3); };
+    auto in = [](uint32_t a) { return a >= 0x80000000u && a + 4 <= rs64_ram_top && !(a & 3); };
     if (!in(node) || !in(node + 0x100) || !in(slot) || !in(slot + 0x18)) return;
     auto W = [&](uint32_t a) { return *reinterpret_cast<const uint32_t*>(rdram + (a - 0x80000000u)); };
     auto F = [&](uint32_t a) { uint32_t w = W(a); float f; memcpy(&f, &w, 4); return f; };
@@ -151,7 +152,7 @@ extern "C" void rs64_bolt_mark(const uint8_t* rdram, uint32_t node, uint32_t slo
 extern "C" void rs64_guided_mark(const uint8_t* rdram, uint32_t m, uint32_t slot, uint32_t victim, int kind) {
     static long n = 0;
     if (!s_rand_trace_f || n >= 300000) return;
-    auto in = [](uint32_t a) { return a >= 0x80000000u && a + 4 <= 0x80800000u && !(a & 3); };
+    auto in = [](uint32_t a) { return a >= 0x80000000u && a + 4 <= rs64_ram_top && !(a & 3); };
     if (!in(m) || !in(m + 0x54) || !in(slot) || !in(slot + 0x18)) return;
     auto W = [&](uint32_t a) { return *reinterpret_cast<const uint32_t*>(rdram + (a - 0x80000000u)); };
     auto F = [&](uint32_t a) { uint32_t w = W(a); float f; memcpy(&f, &w, 4); return f; };
