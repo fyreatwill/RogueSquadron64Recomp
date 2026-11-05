@@ -181545,3 +181545,26 @@ Not shown: frame identity is by buffer and time, not pixels. 16:9 not run, exclu
 Soaks folded: s6884_job_lvl10 flight 250 s, tasks 60/60/61, clean. s6884_job_lvl1_43 flight 132 s, 58/60/60, clean. Neither has an off arm on that level. s6884_job_lvl5 still queued; it will now run the fixed binary.
 
 New open datum: present-to-screen latency p50 56.5-56.9 ms at 60 fps vs 25.9-35.5 at 30, with acq p99 ~16 ms, so the present thread is held by nextDrawable. w43d4 alone read p50 36.7, p99 56.8, so it may be bistable. Single-source, one run. Next unit.
+
+## Session 6886 (2026-11-04) — present latency: a 2-present in-flight gate cuts 4:3 present-to-screen 72 -> 45-48 ms at 60/s on screen; 1 halves the rate; 2 drawables is worse than the gate
+
+Planned: why is present-to-screen 57 ms at 60 fps (NEXT g1e-present-latency). Soak folded first: s6884_job_lvl5, on the s6885 binary, flight 141 s, tasks min/p10/p50/p90 51/59/60/61, 0 s below 50, alive, 0 crash lines. No off arm on that level.
+
+The s6885 figure understated it. The Q stamp is taken after the present call, so a wait in nextDrawable was left out. tools/g1e_present_latency.py adds tp_ms: the same fx_43 ring reads 71.3 ms, not 56.9. All figures below are that measure, last 60 s of flight unless stated, and exclude workload time before the present thread takes the frame. Display scan-out after presentedTime is not in it either.
+
+Offline, s6885 rings: latency sits on discrete levels. Most arms held one level for the whole 60 s window; w43d4 and fx_d4_on moved between levels, and over whole runs every arm did. tools/g1e_present_step.py: some down-steps come with a long acq or a hitch, others and the up-steps show no event in these fields. Trigger not found, not chased.
+
+New opt-ins, one binary per batch, plume_metal.cpp: ROGUESQ_DRAWABLES=2|3 (CAMetalLayer maximumDrawableCount, readback printed) and ROGUESQ_PRESENT_INFLIGHT=<n> (before nextDrawable, wait until at most n presents are unreported by CoreAnimation's presented handler, 50 ms cap). Defaults unchanged.
+
+Batch 1, lvl1, latency p50/p99, on-screen/s:
+- 4:3 dd1: default 72.2/72.9, 59.8. Drawables 2: 52.8/55.8, 59.9. Inflight 2: 48.1/48.7, 59.9. Inflight 1: 63.3/64.4, 30.0.
+- 21:9 dd4: default 57.4/72.3, 59.7. Drawables 2: 49.3/55.5, 59.7. Inflight 2: 45.3/48.6, 59.6. Inflight 1: 60.8/63.8, 30.0.
+- 16:9 dd1 (default, the arm s6885 left open): 71.9/72.9, 59.8, BACK 0.00/s, 1.00 Q per workload. So 16:9 has no order bug, now by measurement.
+- Control, FPS60 off + drawables 2: 28.5/31.9, 30.0 on screen.
+Game rate from [g1b] tasks, last 40 s: 4:3 min/p10/p50 60/60/60 in default, drawables 2, inflight 2. 21:9 58/59/60, 58/59/60, 58/60/60. Queued new frames/s equal across arms. Inflight 1 is rejected: every other frame is lost.
+
+H-depth selected: the queue depth sets the latency. H-bistable also holds at 21:9 dd4, where the default moves between levels: repeat default read 42.4/54.4 against 57.4/72.3. So at 21:9 dd4 the gate reliably cuts the ceiling (p99 48.4-48.6, 3 runs), not the median (44.9-45.3 vs 42.4-57.4). At 4:3 it cuts both: 48.1/48.7 and, in the hide arm's 50 s after the hide, 45.5/48.2, against default 72.2 and 72.1. That is 2 gated runs. H-sched not tested.
+
+Two gate bugs found by a hide test (window hidden 10 s by osascript in flight), neither shipped. First version counted handlers, so one lost handler would leave it short for good; review caught that. The timeout resync I added for it was itself wrong: it over-credited, and b_g2h sat at 72.1 after the hide, identical to control, with the gate silently open. Replaced by the highest reported id, which needs no resync. Final build, c_g2h: while hidden presents ran 32/s (8 logged timeouts by power-of-two sampling, so at least 128 fired, CA reporting at=0), and after the window came back latency returned to 45.4/48.2, on-screen 60.0. The default arm b_d3h kept presenting at 60/s when hidden. The 32/s is not only presents: with the gate the game's own [g1b] tasks fell to 32-33/s for those seconds and returned to 60 after, so hiding the window slows the game with the gate on. Control b_d3h held 60 tasks/s through its hide, so the gate causes this. Same cause is expected whenever CoreAnimation stops reporting promptly; a fix would skip the wait once the handler reports at=0. Batch 1 ran the count build with no timeout logging, and bw_g2 the resync build with 0 timeouts, so the id build is confirmed only by c_g2h and cw_g2 (45.3/48.4, 0 timeouts). 4:3 unhidden has not been run on the final build except c_g2h's pre-hide flight.
+
+Not shown: true input-to-photon, which needs a camera or a witness at the input. No owner feel test. Resize, fullscreen toggle and moving between displays not exercised with the gate on; one swap chain is created at startup, and currentPresentId is per swap chain. Runs of 100 s flight, lvl1 only, no 300 s hold. Default stays off; the owner chooses.

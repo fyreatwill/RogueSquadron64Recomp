@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6885 (2026-11-04).
+Compact operational handoff, as of Session 6886 (2026-11-04).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -107,7 +107,10 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 - **s6885: present witness.** ROGUESQ_PRESENT_RING=<file> logs every present, every workload's draw targets, and CoreAnimation's presentedTime (not our runtime). tools/g1e_present_ring.py (rates), tools/g1e_present_order.py (order). Control: 30 fps arm 30.0 on screen, 100% in order. CA dropped 0.00-0.06/s in every arm, and on-screen rate is 59.8-60.0 at FPS60, so frames do reach the screen. Open: present-to-screen latency 57 ms at 60 fps vs 26-36 at 30, see NEXT. s6884 SCREEN_JOB soaks: lvl10 21:9 tasks 60/60/61, 4:3 lvl1 58/60/60, both clean (no off arm on those levels); lvl5 still queued.
 - **s6882: 21:9 same-pose scores are valid now (H-fit).** g3_aspect_crop --pin (sx = sy from geometry) plus a crop fix. 21:9 dd4 vs 4:3 dd4: mad 4.74/2.94/2.95, hz_p90 2.42/1.61/0.81, ctl 18.56/15.82/57.88; 16:9 dd4 4.51/2.70/2.95. 21:9 dd1: FPDEPTH on 4.58/2.84/2.45 beats off 6.58/4.18/7.69. Best sx is 1.00% under sy at both widths, unexplained. Sheet docs/owner_sheet_s6882_219_dd4.png.
 
+- **s6886: opt-in ROGUESQ_PRESENT_INFLIGHT=2 cuts display queue latency (default off).** Latency is queue depth on discrete levels. Measured from the present thread taking the frame to CoreAnimation presentedTime (tools/g1e_present_latency.py), lvl1 p50/p99: 4:3 dd1 72.2/72.9 -> 48.1/48.7 (repeat 45.5/48.2), 60/s on screen, game rate unchanged. 21:9 dd4 default moves between levels (57.4/72.3, repeat 42.4/54.4), gate p99 48.4-48.6 in 3 runs, so there it cuts the ceiling, not reliably the median. ROGUESQ_DRAWABLES=2 is weaker (52.8/55.8). INFLIGHT=1 halves the screen rate to 30/s: never use. Known cost: while the window is hidden the gate slows the game itself to 32 tasks/s (default holds 60), recovering to 60 and 45 ms on return. 16:9 has no order bug (BACK 0.00/s). Not shown: input-to-photon, owner feel, resize/fullscreen with the gate on, 300 s holds.
+
 ## Superseded conclusions — do not act on these
+- s6885 "present-to-screen 57 ms at 60 fps" (superseded s6886): real figure ~72 ms at 4:3. Believable because it came from CoreAnimation; the start stamp was after the present call, so the nextDrawable wait was left out.
 - s6884 "distinct drawn fbs at present p50 46-58, displayed rate not shown better" and NEXT H-line/H-skip/H-gpu as framed (superseded s6885): [present-1024] is a change log and only fires at width >= 1024, so it never had a 4:3 baseline. Believable because it was the only present-side number. Real: on-screen is 60/s, but at 21:9 it was the wrong frames, from a present order bug at every dd, not GPU load (dd1 was worse than dd4).
 - s6883 NEXT "H-log: recipe logging may hold wf at 30" and "30 -> 60 bundles logging" (superseded s6884): log text is free at both rates. Believable because ROGUESQ_LOG_* arms were the slow ones; the env name turned FAST off and PROBES on, the text was innocent.
 - s6883 "FPS60 + 21:9 dd4 p10/p50 47/60, 14 s below 50" as a stable figure (superseded s6884): repeats gave 49/59 (8 s), 46/59 (11 s), 50/60 (4 s). Believable as one run; the below-50 count swings 3x between runs.
@@ -333,7 +336,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
 5. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first. NEVER send hull damage
    on level 8 (counter3==1 fails the mission).
 
-**Active s6884:** does 60 game fps reach the screen? scratch/agent/NEXT.md. SCREEN_JOB soaks queued; default stays off until the owner chooses.
+**Active s6886:** present latency gate awaits the owner's feel test; resize/fullscreen check next, scratch/agent/NEXT.md. SCREEN_JOB and PRESENT_INFLIGHT defaults stay off until the owner chooses.
 
 ## Evidence index
 

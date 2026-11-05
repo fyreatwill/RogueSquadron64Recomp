@@ -1,12 +1,15 @@
 diff --git a/plume_metal.cpp b/plume_metal.cpp
-index a5f30a3..b7fd502 100644
+index a5f30a3..1201895 100644
 --- a/plume_metal.cpp
 +++ b/plume_metal.cpp
-@@ -9,17 +9,86 @@
+@@ -9,17 +9,89 @@
  #define CA_PRIVATE_IMPLEMENTATION
  #define MTL_PRIVATE_IMPLEMENTATION
  
 +#include <mach/mach_time.h>
++#include <objc/message.h>
++#include <objc/runtime.h>
++#include <condition_variable>
 +#include <atomic>
 +#include <cstdio>
 +#include <cstdlib>
@@ -89,7 +92,7 @@ index a5f30a3..b7fd502 100644
      // MARK: - Constants
  
      static constexpr size_t MAX_DRAWABLES = 3;
-@@ -1117,6 +1186,15 @@ namespace plume {
+@@ -1117,6 +1189,15 @@ namespace plume {
  
          this->mtl = device->mtl->newBuffer(desc.size, mapResourceOption(desc.heapType));
  
@@ -105,7 +108,7 @@ index a5f30a3..b7fd502 100644
          if (desc.flags & RenderBufferFlag::DEVICE_ADDRESSABLE) {
              // If the buffer may be used by device address, we need to make sure it will be resident.
              std::lock_guard lock(device->gpuAddressableResourcesMutex);
-@@ -1130,6 +1208,9 @@ namespace plume {
+@@ -1130,6 +1211,9 @@ namespace plume {
      }
  
      MetalBuffer::~MetalBuffer() {
@@ -115,7 +118,7 @@ index a5f30a3..b7fd502 100644
          if (desc.flags & RenderBufferFlag::DEVICE_ADDRESSABLE) {
              std::lock_guard lock(device->gpuAddressableResourcesMutex);
              if (device->gpuAddressableResidencySet != nullptr) {
-@@ -1234,11 +1315,19 @@ namespace plume {
+@@ -1234,11 +1318,19 @@ namespace plume {
  
          this->mtl = device->mtl->newTexture(descriptor);
  
@@ -135,7 +138,7 @@ index a5f30a3..b7fd502 100644
          mtl->release();
      }
  
-@@ -1575,6 +1664,23 @@ namespace plume {
+@@ -1575,6 +1667,23 @@ namespace plume {
          state.renderPipelineState = device->mtl->newRenderPipelineState(descriptor, &error);
          state.primitiveType = mapPrimitiveType(desc.primitiveTopology);
          state.stencilReference = desc.stencilEnabled ? desc.stencilReference : 0;
@@ -159,7 +162,7 @@ index a5f30a3..b7fd502 100644
  
          if (desc.dynamicDepthBiasEnabled) {
              state.dynamicDepthBiasEnabled = true;
-@@ -1618,6 +1724,13 @@ namespace plume {
+@@ -1618,6 +1727,13 @@ namespace plume {
          return RenderPipelineProgram();
      }
  
@@ -173,7 +176,7 @@ index a5f30a3..b7fd502 100644
      // MetalDescriptorSet
  
      MetalDescriptorSet::MetalDescriptorSet(MetalDevice *device, const RenderDescriptorSetDesc &desc) {
-@@ -1667,6 +1780,11 @@ namespace plume {
+@@ -1667,6 +1783,11 @@ namespace plume {
              .offset = 0,
          };
  
@@ -185,7 +188,7 @@ index a5f30a3..b7fd502 100644
          if (!device->useArgumentBuffersTier2) {
              argumentBuffer.argumentEncoder->setArgumentBuffer(argumentBuffer.mtl, argumentBuffer.offset);
          }
-@@ -1676,6 +1794,11 @@ namespace plume {
+@@ -1676,6 +1797,11 @@ namespace plume {
      }
  
      MetalDescriptorSet::~MetalDescriptorSet() {
@@ -197,7 +200,22 @@ index a5f30a3..b7fd502 100644
          if (residencySet != nullptr) {
              residencySet->endResidency();
              residencySet->release();
-@@ -1932,6 +2055,32 @@ namespace plume {
+@@ -1904,6 +2030,14 @@ namespace plume {
+         this->layer = static_cast<CA::MetalLayer*>(desc.renderWindow.view);
+         layer->setDevice(commandQueue->device->mtl);
+         layer->setPixelFormat(mapPixelFormat(desc.format));
++        // s6886 G1e: ROGUESQ_DRAWABLES=2|3 sets CAMetalLayer.maximumDrawableCount (default 3 = untouched). metal-cpp has no wrapper.
++        if (const char *rs64Dc = getenv("ROGUESQ_DRAWABLES")) {
++            const unsigned long n = strtoul(rs64Dc, nullptr, 10);
++            if (n == 2 || n == 3) {
++                reinterpret_cast<void (*)(void *, SEL, unsigned long)>(objc_msgSend)(layer, sel_registerName("setMaximumDrawableCount:"), n);
++            }
++            fprintf(stderr, "[s6886] maximumDrawableCount=%lu\n", reinterpret_cast<unsigned long (*)(void *, SEL)>(objc_msgSend)(layer, sel_registerName("maximumDrawableCount")));
++        }
+ 
+         this->commandQueue = commandQueue;
+         this->desc = desc;
+@@ -1932,6 +2066,42 @@ namespace plume {
      MetalSwapChain::~MetalSwapChain() {
      }
  
@@ -227,25 +245,41 @@ index a5f30a3..b7fd502 100644
 +    }
 +    std::atomic<uint64_t> g_rs64_pring_last_id{0};
 +
++    // s6886 G1e: ROGUESQ_PRESENT_INFLIGHT=<n> (0 = off): before taking a drawable, wait until at most n presents have not yet been
++    // reported by CoreAnimation's presented handler, 50 ms cap. Bounds the display queue from the producer side.
++    static uint64_t rs64InflightMax() {
++        static const uint64_t n = []() -> uint64_t { const char *p = getenv("ROGUESQ_PRESENT_INFLIGHT"); return p ? strtoull(p, nullptr, 10) : 0; }();
++        return n;
++    }
++    static std::mutex g_rs64InflightMutex;
++    static std::condition_variable g_rs64InflightCv;
++    static uint64_t g_rs64PresentedHigh = 0;
++
      bool MetalSwapChain::present(const uint32_t textureIndex, RenderCommandSemaphore **waitSemaphores, const uint32_t waitSemaphoreCount) {
          assert(layer != nullptr && "Cannot present without a valid layer.");
          NS::AutoreleasePool *releasePool = NS::AutoreleasePool::alloc()->init();
-@@ -1954,6 +2103,14 @@ namespace plume {
+@@ -1954,6 +2124,20 @@ namespace plume {
          // According to Apple, presenting via scheduled handler is more performant than using the presentDrawable method.
          // We grab the underlying drawable because we might've acquired a new one by now and the old one would have been released.
          CA::MetalDrawable *drawableMtl = drawable.mtl->retain();
 +        g_rs64_pring_last_id.store(presentId, std::memory_order_relaxed);
-+        if (rs64_pring_on()) {
++        if (rs64_pring_on() || rs64InflightMax() != 0) {
 +            drawableMtl->addPresentedHandler([presentId](MTL::Drawable *d) {
-+                char row[96];
-+                snprintf(row, sizeof(row), "P %.6f mtl=%llu at=%.6f\n", rs64_pring_now(), (unsigned long long)presentId, d->presentedTime());
-+                rs64_pring_write(row);
++                if (rs64_pring_on()) {
++                    char row[96];
++                    snprintf(row, sizeof(row), "P %.6f mtl=%llu at=%.6f\n", rs64_pring_now(), (unsigned long long)presentId, d->presentedTime());
++                    rs64_pring_write(row);
++                }
++                if (rs64InflightMax() != 0) {
++                    { std::lock_guard<std::mutex> lock(g_rs64InflightMutex); g_rs64PresentedHigh = std::max(g_rs64PresentedHigh, presentId); }
++                    g_rs64InflightCv.notify_all();
++                }
 +            });
 +        }
          presentBuffer->addScheduledHandler([drawableMtl](MTL::CommandBuffer* cmdBuffer) {
              drawableMtl->present();
          });
-@@ -1987,6 +2144,8 @@ namespace plume {
+@@ -1987,6 +2171,8 @@ namespace plume {
          }
      }
  
@@ -254,7 +288,7 @@ index a5f30a3..b7fd502 100644
      bool MetalSwapChain::resize() {
          getWindowSize(width, height);
  
-@@ -1996,6 +2155,10 @@ namespace plume {
+@@ -1996,6 +2182,10 @@ namespace plume {
  
          const CGSize drawableSize = CGSizeMake(width, height);
          if (const CGSize current = layer->drawableSize(); !CGSizeEqualToSize(current, drawableSize)) {
@@ -265,7 +299,24 @@ index a5f30a3..b7fd502 100644
              layer->setDrawableSize(drawableSize);
  
              for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
-@@ -2118,6 +2281,14 @@ namespace plume {
+@@ -2050,6 +2240,16 @@ namespace plume {
+         acquireBuffer->encodeSignalEvent(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue);
+         acquireBuffer->commit();
+ 
++        if (const uint64_t rs64Max = rs64InflightMax()) {
++            std::unique_lock<std::mutex> lock(g_rs64InflightMutex);
++            // By highest id reported, not a count: a handler that never fires is healed by the next one, so a timeout needs no resync (s6886: a
++            // resynced count over-credited and left the gate open for the rest of the run).
++            if (!g_rs64InflightCv.wait_for(lock, std::chrono::milliseconds(50), [this, rs64Max] { return currentPresentId <= g_rs64PresentedHigh + rs64Max - 1; })) {
++                static int rs64Timeouts = 0;
++                if ((++rs64Timeouts & (rs64Timeouts - 1)) == 0) fprintf(stderr, "[s6886] inflight gate timeout #%d id=%llu presented=%llu\n", rs64Timeouts, (unsigned long long)currentPresentId, (unsigned long long)g_rs64PresentedHigh);
++            }
++        }
++
+         CA::MetalDrawable *nextDrawable = layer->nextDrawable();
+         if (nextDrawable == nullptr) {
+             fprintf(stderr, "No more drawables available for rendering.\n");
+@@ -2118,6 +2318,14 @@ namespace plume {
          for (uint32_t i = 0; i < desc.colorAttachmentsCount; i++) {
              const MetalTextureView *colorAttachmentView = desc.colorAttachmentViews && desc.colorAttachmentViews[i] ? static_cast<const MetalTextureView *>(desc.colorAttachmentViews[i]) : nullptr;
              const MetalTexture *colorAttachment = colorAttachmentView ? colorAttachmentView->parentTexture : static_cast<const MetalTexture *>(desc.colorAttachments[i]);
@@ -280,7 +331,7 @@ index a5f30a3..b7fd502 100644
              assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
  
              MetalAttachment attachment;
-@@ -3008,6 +3179,17 @@ namespace plume {
+@@ -3008,6 +3216,17 @@ namespace plume {
                  dstOrigin
              );
              activeBlitEncoder->popDebugGroup();
