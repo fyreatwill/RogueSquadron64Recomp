@@ -39,3 +39,8 @@ Any multiplier other than 1 used to cut the plain that retail draws past the map
 - How it looks (pop-in, haze) - needs the owner's eyes.
 - Per-step frame time against the G1b baseline (only single-source tri/RSP-time figures).
 - Level 10 terrain-fraction scoring (space/sky saturates the heuristic).
+
+## Far terrain and camera heading (s6901)
+
+Above dd1 the terrain window is at most 64x64 cells. Before s6901 it stayed anchored at its low end and the area cap trimmed z before x reached 64, so on some headings forward reach fell from 63 cells to 37 and about half the terrain vanished, and passing a diagonal cut it for ~0.2 s. The window is now placed from the camera heading and moves smoothly as you turn. `ROGUESQ_DD_FWDWIN=0` restores the old placement, `=tog` alternates each second, `ROGUESQ_DD_FWDWIN_K=<cells>` sets the forward bias (default 26). dd1 is untouched. The square window is a limit that remains: what it can hold still differs a little between axis and diagonal views.
+

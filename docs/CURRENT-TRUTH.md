@@ -1,11 +1,12 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6900 (2026-11-05).
+Compact operational handoff, as of Session 6901 (2026-11-05).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6900 maintenance)").
 
 ## Headline
 
+- **s6901 G5b: first in-flight measure that follows the owner's dd1/dd2/dd4 order: far terrain halves with camera heading. FIXED pending owner flight and a rate check.** Far ring dips dd1 1, dd2 ~298, dd4 ~1045; dd4 reach 63 cells on some headings, ~37 on others, and passing a diagonal n 3511 -> 1791 -> 3509 in 0.35 s. ORIGIN: our window clamp: area cap trims z while x is still ~210 wide, and the window stays anchored low. tools/apply_s6901_fwdwin.py places it by heading, ROGUESQ_DD_FWDWIN default on at dd>1, =0 old, =tog, _K=26. Same run LEVEL=4: dd4 16:9 quads p50 2202 vs 3451, dips under .8 7 vs 0, near 277 vs 275; dd4 21:9 1851 vs 3467, 8 vs 0; dd2 1852 vs 1962. Ring 7 dips rose (47 to 107): square window at diagonals. Pixels: docs/owner_sheet_s6901_fwdwin_219_same_run.png shows the old hard ground edge against the sky gone at the same heading (pairs chosen by quad gap); counted pixel scores are soft, ground share up in most sectors, two other tests null without a control. Open: capture rate 41.6 -> 37.6/s armed, game rate unmeasured; FWDWIN not run in the Gerrard scene (soak queued); LEVEL=4 only. Part of the low reach is the real map edge near the eye. s6899 slide also verified: dd3 288 vs 10, 21:9 dd4 317 vs 5, dd2 no collapse either way, 21:9 dd1 slides fire with no near effect.
 - **FIXED s6898: Gerrard V cutscene black block.** It is the letterbox overlay right band: setupMissionTransitionScreenOverlay passes boot width 512 as the window right edge, fill runs 512..W on widened frames. tools/apply_s6898_letterbox.py, ROGUESQ_G1D_LETTERBOX=0 old, =tog. Same build 16:9 dd1 black peak 0.009 vs 0.106. FP_XSCALE, FPDEPTH, SPANBOUND refuted. docs/owner_sheet_s6898_letterbox_fix.png.
 - **FIXED s6899: dd4 lost water and ground in the Gerrard V cutscene; NOT shown to be the owner's in-flight drop.** ORIGIN: our s6037/s6874/s6591 window clamp in binPolygonIntoTerrainGrid trims a footprint over 64 cells with no regard to the eye, so it stays anchored low (eye cell 78,79, dd4 window 0..63). tools/apply_s6899_eyewin.py slides the window, width unchanged, inside the pre-clamp bounds, to hold eye +-26 cells. ROGUESQ_DD_EYEWIN default on, =0 old, =tog. Same run lvl4 dd4 16:9, 246 scene swaps: near quads p50 287 vs 8, collapsed 2 vs 103; frame detail 1.10 vs 0.61. Default run 0 of 246 collapsed. Flight, same run: near p50 276 vs 278, quads p50 2327 vs 2347, so no far cost and no in-flight effect. 16:9 dd1: 0 slides. Not run: 21:9 scene, dd2/dd3 scene. Pale flat patches by the rock at dd4 remain, unexplained. docs/owner_sheet_s6899_eyewin_same_run.png, docs/owner_sheet_s6899_dd1_dd4_scene.png.
 - **G5b s6896-s6897: dd3/dd4 near-plane sheets FIXED, owner must confirm drops.** Cause: TriGen s16 base + step wraps at 32768 of reach ahead of the eye (base 32256, step 512). Bases are eye-relative (s6897, tools/g5b_tg_camrel.py). ROGUESQ_G5B_TG_FIX default on at dd>1, off at dd1 (=0, =1, =tog). Same run: lvl4 dd4 0 vs 112, lvl1 dd4 0 vs 45, lvl4 dd4 0 vs 225; default dd3 and dd4 0 sheets (s6895: 43-687). Inference, untested: s16 caps reach at ~1.8x dd1, next limit for G1c phase 2. Witness ROGUESQ_G5B_TG, tools/g5b_tg_join.py.
@@ -32,6 +33,7 @@ Detail for everything in this section: PROJECT-OVERVIEW "Migrated from CURRENT-T
 - **Present thread, PAUSED until G5 closes (s6884-s6891).** All default off: ROGUESQ_RDP_SCREEN_JOB=1 (needs ASYNC+NODRAIN; removes game-rate dips, displayed rate unjudged), PRESENT_INFLIGHT=2 (=1 halves the rate, never use), PRESENT_DRAIN=<ms> (keep out of OWNER-OPT-INS). Ungated latency is a backlog that slips raise and 17 ms stalls lower, at ~72 ms on the s6889 ring; 39 ms on the built-in; 12 ms on 144 Hz at 4:3, where 60 fps lands unevenly (2 and 3 vsync mix plus compensating 1v/4v pairs). What enters the 72 ms state is open. 21:9 flight on 144 Hz has no data.
 
 ## Superseded conclusions — do not act on these
+- s6899 NEXT and s6894-s6899 framing of G5b as near-terrain collapse or single-frame transients (narrowed s6901): near stays whole in flight in every arm while far rings halve. Believable because near quads were the one thing that collapsed in the cutscene, and the drop detectors read frame transients, so a far loss in flat haze scored nothing.
 - s6788-s6791 "G3e dd>1 terrain dropouts CLOSED, 0 drops over 231/124 s of flight" (superseded by the owner playtest 2026-11-04, reopened as G5b): dd2 and dd4 still drop for the owner. Believable because the s6789 cap and sentinel fix was real and the detector read 0; the detector missed what the owner sees.
 - s6896 "terrain bases are fixed map coordinates" and "the map's last + edge quad" (superseded s6897: base centre r ~0 with position, ~0.97 with view terms; believable because quads keep their words across swaps). s6894-s6896 "post-MISSION FAILED scene" and s6895 "sheets painted over black steps" (superseded s6897: in-mission cutscene; block stands with sheets gone).
 - s6889 "DRAIN=40 beats the gate's median at 4:3 on a 60 Hz display" and s6889/s6890 "the backlog looks 60 Hz specific" (superseded s6891): believable because the off arm read 72 ms on a 60 Hz grid. A 60 Hz grid alone does not give that: built-in off reads 39 ms with nothing to drain.
@@ -94,7 +96,7 @@ Playable levels are 0..18 (`NUM_LEVELS=0x13`); 19/20 are sentinels. Route/hold c
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order 2026-11-04: G5a-G5f ahead of everything below.
 
 1. **G5a mission crash: fixed s6893, waiting on owner re-flight.** Closes only when Gerrard V (LEVEL=4) holds past half way, repeated. Open: is block 8074A380 live when copyNativeToRAM writes it.
-2. **G5b terrain drops: ACTIVE, see NEXT.md (slug g5b-terrain-drops).** The in-flight drop is still not reproduced. Retest s6898 + s6899 at dd2, dd3 and 21:9 in the Gerrard V scene. Do not call it closed.
+2. **G5b terrain drops: ACTIVE, see NEXT.md (slug g5b-terrain-drops).** s6901 fixed a heading-driven far-terrain loss that follows the owner's dd order; that it is the owner's drop is inference. Next: game-rate cost of FWDWIN, levels 1/5/10, soak s6901_fwdwin_scene. Closes on the owner's flight.
 3. **G5c freezes: not started.** Side datum s6894: no gap over 250 ms in 2-5 min holds (max 100 ms); it needs a long owner-recipe run.
 4. **G5d Factor 5 logo missing frames: not started.** Arm table in ITERATION.md.
 5. **G5e fog on extended terrain: not started.** After G5b's cause, where fixable.
@@ -111,5 +113,5 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order 2026-11-04: 
 - s6759 maintenance archive (verbatim headline s6689-s6758, superseded s6292-s6673): PROJECT-OVERVIEW.
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts: [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
-- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest s6893_census_4, folded s6895. None queued.
-- Recent chronology: PORTING-STATE sessions 6847-6900; search bounded windows only.
+- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest s6893_census_4, folded s6895. Queued: s6901_fwdwin_scene (verdict scratch/s6901/soak_s4.txt).
+- Recent chronology: PORTING-STATE sessions 6847-6901; search bounded windows only.

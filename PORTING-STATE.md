@@ -182022,3 +182022,36 @@ Step 0 triggered (wc -c 60059 > 60000), so this was a MAINTENANCE iteration; no 
 - SOAK-RESULTS: nothing new; every line in the tail is already folded (checked s6883_l10z/d, s6884_job_lvl5, s6874_edge_dd4_lvl5/10, s6893_census_1-4). Top level of soak_queue is empty; hold/ and running/ hold old leftovers from s5688-s6112, left alone.
 Rules out nothing (no experiment). Summaries were written from the migrated text and not re-derived; where a summary and the archive differ, the archive wins. ITERATION.md still cites "Next steps #2" and "Durable boundaries" for the revisit rule; those labels were already stale and that owner file was not edited.
 Next: g5b-terrain-drops (NEXT.md unit unchanged apart from the G5 order line).
+
+## Session 6901 (2026-11-05) — G5b: in-flight far terrain halves with camera heading at dd>1, our window clamp again; placed by heading, same run dd4 p50 quads 2202 -> 3451, dips under 0.8 7 -> 0, near unchanged
+
+Unit from NEXT: retest s6898+s6899 at dd2, dd3, 21:9 in the Gerrard V scene. Done first. While those arms ran, offline work on the same traces found a measure that follows the owner's dose-response, which every earlier detector missed because they watched near quads or frame transients.
+
+Retest, EYEWIN=tog, LEVEL=4, FPS60, binary 11:35, scored with tog.py:
+- dd2 16:9 (a2): 310 scene swaps, slid near p50 286 collapsed 0, not slid 261 collapsed 0. So dd2 has no near collapse either way.
+- dd3 16:9 (a3): 287 scene swaps, slid 288 collapsed 1, not slid 10 collapsed 80.
+- dd4 21:9 (w4): 486 scene swaps, slid 317 collapsed 4, not slid 5 collapsed 122. Fix now verified at 21:9. The scene filter fired twice, t 54-57 and 218-224.
+- dd1 21:9 (w1): reached the scene, 602 swaps, 0 collapsed. Slides do fire: 836, 834 outside the scene. By parity near p50 198 vs 198, quads 504 vs 531, so no near effect (H-dd1wide outcome: they fire and change little). Left as is.
+H-all selected, H-wide not needed: radius 26 works at 21:9. 0 CRASH lines in all four.
+
+New measure (scratch/s6901/dip.py, head.py): per-swap total quads and the hq rings vs neighbours, in flight, scene excluded. n dips under 0.8: e1 (dd1) 1, a2 (dd2) 6, d4 (dd4) 249, g4 (dd4) 205. Ring dips (ring = max(|a|,|b|)/4096, under half of neighbours): dd1 1, dd2 ~298, dd4 ~1045. Same order as the owner: dd1 clean, dd2 fewer, dd4 more. The rings lost are the far ones; rings 0-2 stay whole.
+By heading, d4: 0-30, 150-210, 330-360 reach 63 cells, n ~3300; 210-330 reach ~37, n ~1530. dd1 is flat by heading (n 396-486, reach 28-34). Passing a diagonal, t 173.0: n 3511 -> 1791 -> 3509 in 10 swaps (~0.35 s), reach 63 -> 37 -> 63, rings 5 and 6 go to 0.
+
+ORIGIN: our own s6037/s6874/s6591 window clamp in binPolygonIntoTerrainGrid, two faults, read from funcs_9.c and the site 13 pre-clamp bounds (head2.py). Part of the low reach is legitimate: the eye sits near a low corner, so real map ends ~34 cells away on -z, and what is past it is retail's repeated border. The values are legitimate footprints; our clamp trims them. (1) Order: the area-cap loops run while the other axis is still at pre-clamp width (~210), so z is over-trimmed before x reaches 64: headings 240-300 end 64x40, area 2368. (2) Anchor: past 64 the high end is trimmed, so the window stays low, and a side ray swinging behind the eye drags it off the forward side.
+
+Fix: tools/apply_s6901_fwdwin.py, in RS64_REPLAY after s6899. Place from pre-clamp bounds: forward = bounds centre minus eye (dot with true camera forward p5 0.99, n 11656), width min(bounds,64), centre = eye + 26*forward, kept inside the bounds; cap spent on the axis facing the view least. Replaces the s6899 slide when armed. dd>1 and DD_EDGE on only. ROGUESQ_DD_FWDWIN=0 old, =tog odd mach seconds; ROGUESQ_DD_FWDWIN_K. Trace site 15. Offline replay on d4 first (sim.py): forward reach p10 26-44 -> 64-67 on all headings, dd1-sized frustum cover p10 0.85-0.97 -> 1.00.
+
+Results, same run =tog, parity split, LEVEL=4 (positive control: site 15 on 3906 of 4037 odd swaps in f4, 271 of 4722 even, the even ones being joins at the flip):
+| arm | quads p50 off/on | p10 at hdg 240 | reach p10 at 240 | n dips <.8 | rings 5,6 dips | ring 7 dips | near p50 | near<50 |
+|---|---|---|---|---|---|---|---|---|
+| f4 dd4 16:9 | 2202/3451 | 1445/2981 | 34/63 | 7/0 | 84,68 / 0,0 | 47/107 | 277/275 | 0/0 |
+| fw dd4 21:9 | 1851/3467 | 1232/3175 | 31/54 | 8/0 | 44,46 / 0,0 | 41/80 | 302/305 | 0/0 |
+| f2 dd2 16:9 | 1852/1962 | 1471/1931 | 35/40 | 0/0 | 52,7 / 4,0 | 0/1 | 278/278 | 0/0 |
+Ring 7 dips ROSE: the outermost ring empties near diagonals because a square window's per-axis reach is shorter there. Total quads do not dip. Eye outside window rose 4->15, 3->35, 5->120 with near unchanged; not explained.
+
+Pixel line is WEAK, say so. Ground share (luma<96 in the band, fwd_smooth.py) rises armed in 5 of 6 heading sectors at dd4 16:9 (e.g. 0.223->0.248), 4 of 6 at 21:9, 5 of 6 at dd2 where sector 0 fell 0.326->0.185. Sectors mix poses, so this is soft. Two other pixel tests were NULL and have no positive control: gradient band (2.79 vs 2.77; far ground is flat haze), diff across flips (3.84/4.24 vs control 3.99; split by quad jump 16.3 vs 17.8, motion dominates). Visual, the strongest pixel line: docs/owner_sheet_s6901_fwdwin_219_same_run.png, same heading 0.3 s apart, 3 pairs picked by quad gap: old window ends the ground in a hard straight edge against the sky, the fix carries it outward as a pale plain; docs/owner_sheet_s6901_fwdwin_same_run.png (16:9) shows the same, less starkly. Pairs were chosen for a large quad gap, so they show the effect exists, not how often. No pinned-pose frame pair exists.
+
+Cost, open: no-trace arm r4 dd4 =tog, capture 41.6/s off, 37.6/s on (mean, 62 s each), and traced f4 swaps 4722 vs 4037. Capture rate is not a game-rate measure and the [g1b] meter was absent from this recipe, but both point the same way. Quads now sit at the top of what the old window drew on its best headings, all the time. Must be measured.
+
+NOT shown: that this is what the owner calls a drop (dose-response match and visual only, owner must fly); FWDWIN in the Gerrard scene (f4, fw, f2 never reached it, sim only; queued soak s6901_fwdwin_scene); levels other than 4; dd1 after this build (the gate is on6037, so unchanged by construction, not run); dd3 with the fix. Holds are 280-320 s scripted, 0 CRASH, not a flown mission. Tile pool clamp hits under the higher cell count were not counted.
+Rules out: near-terrain loss as the in-flight mechanism (near intact in every arm while far halves), H-wide.
