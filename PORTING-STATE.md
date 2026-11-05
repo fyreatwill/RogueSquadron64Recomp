@@ -181853,3 +181853,43 @@ Census s6893_census_3-4 folded: all 19 levels arena_full=0, most used 0x2A99E0 o
 Not done: dd1 cause of the extra small transients; black step dd1 control; KILLSHEET positive control (superseded by the replay, which shows what sheets look like); 8074A380 check. The default paths (no tog) were not run as arms: dd1 takes the old arithmetic unchanged by construction, dd>1 is the tog on branch. No 300 s stability hold was scored, sum_ files of these arms are empty; captures ran their full length. Owner has not confirmed that any of this is the drops. G5b stays open.
 
 Conclusion: this selects RT64's W<=0 clip path as the root cause of the flat-sky frames, and the same-run arms t4 and v4 support the fix. It selects H-hw-paints for the sheets: the stream is wrong at dd3 and dd4 before any renderer. It refutes far-plane scale as their cause. It does not resolve why those tris are emitted. Next discriminator: ROGUESQ_DD_EDGE=0 at dd4 with camera position logged per sheet swap, where 0 sheets selects the off-map border cells.
+
+
+## Session 6896 (2026-11-05) — G5b: dd3/dd4 near-plane sheets are the map's last edge quad wrapping s16 in TriGen; fixed at dd>1, same-run 0 vs 112 and 0 vs 45
+
+Unit from NEXT.md: why dd3 and dd4 emit near-plane sheets. Owner recipe (FPS60, 16:9, no logging env), autopilot flight, 120 s + 180 s, sheets >=100k px, one game at a time. Arms in scratch/s6896 (first batch in a1/).
+
+ORIGIN: the writer is the game's own terrain stream, and the value is legitimate. TriGen takes a s16 vertex base and step (params 8 and 9) and the ucode adds them in 16-bit lanes (reference/gliden64/F5Rogue.cpp, TriGen02_BuildVtxData). Terrain bases are fixed map coordinates, not camera-relative: the same quad keeps the same words across swaps, and the observed range is -32768 to 32256, so the map appears to fill the s16 range. The last quad on the + edge has base 32256, step 512, far edge 32768, which wraps to -32768: one side of the quad lands a whole map away, a sheet through the near plane. At dd1 the far cutoff never reaches it on these flights (bases within +-18432). dd>1 meshes it from far away, which is why the onset followed draw distance.
+
+New instrument ROGUESQ_G5B_TG=<file> (src/rsp/dpc_bridge.cpp, tools/fixup_factor5_ucode.py, tools/g5b_tg_join.py): per swap TriGen count, base ranges, commands past s16, commands past half range (same-run control for the arithmetic), window, camera. W lines hold raw words of wrapping commands.
+
+Failed first run: the probe skipped mode 2, which is ~95% of TriGen commands, so it saw only near terrain. Caught in the first rows, killed, fixed, rerun; that run is not used.
+
+Before the fix, LEVEL=4:
+
+| arm | setting | swaps past s16 | control past half range | sheets | sheet swaps with a wrap | sheet swaps without |
+|---|---|---|---|---|---|---|
+| a4 | dd4 | 1930 | 5818 | 405 | 253 | 0 |
+| e0 | dd4, DD_EDGE=0 | 1402 | 5899 | 389 | 256 | 0 |
+| a2 | dd2 | 49 | 7119 | 0 | 0 | 0 |
+
+Every sampled wrapping command in a4 was mode 2, step 512, base exactly 32256 on one or both axes (11235 W lines, at most 6 per swap, so a sample). e0 refutes H-edge: without the off-map border the sheets are unchanged. Wrap without a sheet is common (1677 swaps in a4, 49 at dd2); presumably the quad is out of view, not measured.
+
+Fix: rs64_g5b_tg_edge rewrites the base in DMEM to 32767 - step for mode 2 quads that would wrap, so the quad moves 1 unit and keeps its size. ROGUESQ_G5B_TG_FIX default on at dd>1, off at dd1; =0 old, =1 on, =tog on in odd seconds. The dd1 path is not entered. W lines still count wraps with the fix on, because the probe runs first.
+
+Fix arms, tools/g5b_tg_tog.py, 120 ms band around toggles set aside:
+
+| arm | level | dd | setting | sheets fix-on seconds | sheets fix-off seconds | in band | swaps past s16 |
+|---|---|---|---|---|---|---|---|
+| t4 | 4 | 4 | tog | 0 | 112 | 16 | 2140 |
+| t1 | 1 | 4 | tog | 0 | 45 | 0 | 1025 |
+| f4 | 4 | 4 | default | 0 total | | | 1908 |
+| d1 | 4 | 1 | default | 0 total | | | 0, control 4415 |
+
+f4 is the first dd4 arm with 0 sheets; s6895's dd4 arms read 43-687. Off seconds in t4 and t1 are the same-run positive control that the census still sees sheets. Capture rate with logging: f4 40.5/s, t4 40.8/s, against s6895 dd4 38.3-39.5/s, so no slowdown; d1 59.6/s. Runs: 0 crash lines in t1, f4, d1 run logs, >250 ms gaps 0. These are ~300 s runs, one per arm, and sum_ files are empty as in s6895, so stall checking rests on the capture gaps.
+
+Frames: docs/owner_sheet_s6896_edge_fix_on_off.png, t4, four largest off-second sheets above their on-second neighbours 0.8-1.1 s later. No bands or damage in the on row at sheet size, but the off row is not dramatic either, since the s6895 span rule already drops many sheets, and the views differ. Four frame pairs do not show the terrain looks right, only that nothing is obviously wrong. A dark stepped patch in off frame sw9776 is absent from its on neighbour; different view, not evidence. t1 had no sheet inside the capture picks, so no t1 sheet.
+
+Not done: dd3 was not run on the fix (dd2 and dd4 were; dd2 has wraps, the fix ran but with no sheets to remove). Black steps not rechecked: s6895 saw sheets painted over that region, so this may clear them, untested. Whether the s6895 span rule is still needed is untested. Quads past the + edge (base wraps whole, drawn at the far - side) remain: they are not counted by wa/wb and are not fixed. Whether retail wraps with a camera close to the + edge is unknown; retail bases should wrap the same way if it gets there. 8074A380 and the dd1 small transients still open.
+
+Conclusion: this selects H-wrap as the cause of the sheets, by a same-run A/B on two levels plus a default-path zero, and refutes H-edge, which is two lines of evidence for the sheets. It does not show the sheets are the owner's drops; G5b stays open until the owner flies it. Next discriminator: black steps in the post-MISSION FAILED scene with the fix =tog, where steps gone in on seconds tie them to this wrap.

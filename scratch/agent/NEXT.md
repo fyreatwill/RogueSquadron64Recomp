@@ -1,16 +1,16 @@
-# OWNER OVERRIDE 2026-11-04: do ITERATION.md G5a-G5f first. G5a is fixed pending owner re-flight (s6893). G5b is in progress. The paused unit is at the bottom.
+# OWNER OVERRIDE 2026-11-04: do ITERATION.md G5a-G5f first. G5a is fixed pending owner re-flight (s6893). G5b sheets fixed s6896, owner confirmation pending. The paused unit is at the bottom.
 
-# NEXT: G5b, why dd3/dd4 emit near-plane sheets, starting from where the craft is when they appear
+# NEXT: G5b, do black steps go with the s6896 edge fix, then what is left at dd3 and past the map edge
 HYPOTHESIS-ID: g5b-terrain-drops
-State: read PORTING-STATE s6895 first. Flat-sky wedges are fixed at dd>1. Sheets are bad stream data: fixing the renderer cannot restore the terrain they replace. Arm template scratch/s6895/arm.zsh <lvl> <dd> <name> "<env>" <delay> <dur>; census python3 scratch/s6895/shcount.py sh_<name>.txt. Only a ZERO count means anything, same recipe swings 82 to 540. Same-run clamp arms: ROGUESQ_W_CLAMP=tog, scored by scratch/s6895/tog.py, lowtog.py. Look at frames (onoff.py): transient counts cannot see persistent bands.
+State: read PORTING-STATE s6896 first. Sheets = last + edge quad wrapping s16 in TriGen, fixed at dd>1 (ROGUESQ_G5B_TG_FIX, =tog for same-run). Arm template scratch/s6896/arm.zsh <lvl> <dd> <name> "<env>" <delay> <dur>; score tools/g5b_tg_join.py tg sh, tools/g5b_tg_tog.py sh; frames scratch/s6896/onoff.py. Captures are ~1.9 GB each: delete when scored.
 Unit, one iteration:
-1. Sheets cluster by flight position (t4: 259 of 343 in swaps 8000-8999, c64 the same place). Arm ROGUESQ_DD_EDGE=0 at dd4 LEVEL=4 (s6874 off-map border cells). H-edge: 0 sheets. Log camera position per sheet swap and compare with the map bounds in the same run.
-2. If not edge: far-plane scale is refuted (lf1), onset is between dd2 and dd3 (d3 73). Try dd2.5. H-depth is weakened, not dead: c64 had no control that the radius shrank. Log the DEB4 value the game reads and a tri census so the knob is proven, then step it down until sheets reach 0. org6418 is captured once and the game rewrites DEB4 per frame from altitude, so read it live.
-3. Then trace one sheet tri to its TriGen command and vertices: H-wrap (camera depth past 32767 in the ucode) vs H-clip (near clip of a cell the wider window admits).
-4. G5f: ask whether W_CLAMP took the spikes. Small transients fell 3-11x at dd2/dd4, and a thin line vanished in one frame pair, but no measure yet ties transients to spikes. Score spike-shaped lines on frames, then an owner sheet. dd1 is off: find what its extra small transients are (306 vs 157) before turning it on.
-5. Black steps still need a dd1 control: reach the post-MISSION FAILED scene at dd1.
-Census done, no cap needed; levels 10 and 15 used only 0x9E00, check they reached the same state. Still open from s6893: is block 8074A380 live when copyNativeToRAM writes it.
-Ask owner when a human is next on: fly dd2 and dd4 at the owner recipe. Are terrain drops gone or fewer at dd2? Are spikes fewer? Look at docs/owner_sheet_s6895_wedge_vs_hardware.png: are the flat frames what you called a drop, or is it ground vanishing? docs/owner_sheet_s6895_final_rule_on_off.png and docs/owner_sheet_s6895_steps_vs_hardware.png: have you seen black steps, and at dd1 too? A short screen recording of a drop would settle it. Also re-fly Gerrard V past half way at dd2 and dd4, more than once: does it crash?
+1. Black steps: reach the post-MISSION FAILED scene at dd4 with TG_FIX=tog. H-sheet: steps gone in on seconds. H-other: steps in both, then look for a second cause. Same scene at dd1 is the control s6895 still owes.
+2. dd3 arm on the fix: expect 0 sheets. dd3 has never run with it.
+3. Quads past the + edge: base wraps whole, so they draw at the far - side of the map. Count them in the witness (window cells >= 64, or bases in the - half with the camera near the + edge) and look for stray terrain there. If real, drop them at dd>1 or spend the DD_EDGE budget on the - side only.
+4. Is the s6895 span rule still needed? ROGUESQ_W_SHEET_PX off at dd4 with TG_FIX on, look at frames for bands: long mixed-sign tris may have been these quads.
+5. G5f: with sheets gone, score spike-shaped lines on frames, then an owner sheet. dd1 W_CLAMP stays off: its extra small transients (306 vs 157) are unexplained.
+Still open from s6893: is block 8074A380 live when copyNativeToRAM writes it. Levels 10 and 15 census used only 0x9E00.
+Ask owner when a human is next on: fly dd2 and dd4 at the owner recipe. Are terrain drops gone or fewer? Spikes fewer? Look at docs/owner_sheet_s6896_edge_fix_on_off.png and docs/owner_sheet_s6895_wedge_vs_hardware.png: are those what you called a drop? docs/owner_sheet_s6895_steps_vs_hardware.png: have you seen black steps, and at dd1 too? A short screen recording of a drop would settle it. Also re-fly Gerrard V past half way at dd2 and dd4, more than once: does it crash?
 
 # PAUSED until G5 closes
 # NEXT: 21:9 flight on 144 Hz at a free XG49V corner, or what enters the 72 ms state if still built-in alone
