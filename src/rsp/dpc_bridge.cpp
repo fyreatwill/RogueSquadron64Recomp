@@ -3420,6 +3420,24 @@ extern "C" bool rs64_dpc_take_synthetic_consumer(uint64_t *serial) {
 // <px> beyond the viewport as a positive control (ordinary tris must fire).
 std::atomic<int> g_rs64_swap_n{0};
 extern "C" int rs64_swap_n(void) { return g_rs64_swap_n.load(std::memory_order_relaxed); } // s6528 C accessor
+// s6895 G5b: ROGUESQ_G5B_FRAME=<file> records what the RDP was given, for offline replay through angrylion
+// (tools/angrylion_replay/frame_replay.c). Records, u32 tag first: 'SWAP' mach(u64) swap; 'RAM ' 16 MB RDRAM, at the first range
+// of every ROGUESQ_G5B_FRAME_EVERY-th swap (default 10); 'RNG ' lo len bytes (after the spike cull, so what RT64 gets).
+// ROGUESQ_G5B_FRAME_FROM=<swap> starts it; ROGUESQ_G5B_FRAME_MAX_MB caps it (default 24000).
+static void rs64_g5b_frame(uint32_t lo, uint32_t hi) {
+    static FILE *f = [] { const char *e = std::getenv("ROGUESQ_G5B_FRAME"); FILE *o = (e && *e) ? fopen(e, "wb") : (FILE *)nullptr; if (o) setvbuf(o, nullptr, _IOFBF, 1 << 24); return o; }();
+    if (!f || g_rdram_for_submit == nullptr || hi <= lo || hi > kSubmitRamEnd) return;
+    static const int from = [] { const char *e = std::getenv("ROGUESQ_G5B_FRAME_FROM"); return e && *e ? atoi(e) : 0; }();
+    static const int every = [] { const char *e = std::getenv("ROGUESQ_G5B_FRAME_EVERY"); return e && *e ? atoi(e) : 10; }();
+    static const uint64_t cap = [] { const char *e = std::getenv("ROGUESQ_G5B_FRAME_MAX_MB"); return (uint64_t)(e && *e ? atoll(e) : 24000) << 20; }();
+    static uint64_t total = 0; static int last = -1, lastram = -1000000;
+    const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
+    if (sw < from || total >= cap) return;
+    auto put = [&](const void *p, size_t n) { fwrite(p, 1, n, f); total += n; };
+    if (sw != last) { last = sw; const uint32_t m = 0x50415753u, q = (uint32_t)sw; const uint64_t t = mach_absolute_time(); put(&m, 4); put(&t, 8); put(&q, 4); fflush(f); }
+    if (sw - lastram >= every) { lastram = sw; const uint32_t m = 0x204D4152u; put(&m, 4); put(g_rdram_for_submit, kSubmitRamEnd); }
+    const uint32_t m = 0x20474E52u, n = hi - lo; put(&m, 4); put(&lo, 4); put(&n, 4); put(g_rdram_for_submit + lo, n);
+}
 static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     static const bool on = [] { const char *e = std::getenv("ROGUESQ_LOG_SPIKE"); return e && *e && *e != '0'; }();
     // 2026-10-31 owner: cull is DEFAULT ON (ROGUESQ_CULL_SPIKE=0 restores retail wedges). It used to run only
@@ -5596,6 +5614,7 @@ static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
     rs64_g1d_pause_dim(lo, hi);
     rs64_g1d_rect_scan(lo, hi);
     rs64_spike_scan(lo, hi);
+    rs64_g5b_frame(lo, hi);
     rs64_region_scan(lo, hi);
     rs64_floor_scan(lo, hi);
     g_last_submit_lo.store(lo, std::memory_order_release);

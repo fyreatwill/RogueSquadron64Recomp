@@ -181803,3 +181803,31 @@ Owner save untouched: build/saves file mtime is 01:09, before every arm of this 
 Conclusion: this session refutes H-sky-object, H-transparent and H-inverted-span as explanations of invisible sheets, and refutes the s6893 pool fix as a sufficient cure, since events persist with it on LEVEL=4. It does not select a cause. The next discriminator is an angrylion replay of quiet swap 8893 against event swap 8736: H-hw-paints versus H-hw-hides (NEXT.md).
 
 ORIGIN: not named. KILLSHEET is a diagnostic toggle, off by default, not a fix. No writer or cause is claimed for flat sky or black steps.
+
+## Session 6895 (2026-11-05) — G5b: flat-sky frames are RT64 wedges from W<=0 vertices, fixed at dd>1; dd4 near-plane sheets are bad stream data the RDP paints too
+
+Includes the work of the iteration that timed out at 06:18 (rc=124, nothing committed); its arms are in scratch/s6895 and folded here. Owner recipe (FPS60, 16:9, no logging env), autopilot flight, tools as s6894.
+
+ORIGIN: RT64 rebuilds each RDP tri as three vertices and extrapolates the RDP's W plane to them (rt64_gbi_rdp.cpp). The RDP only evaluates W on rows it draws, so a rebuilt vertex can have W<=0. RT64 then emits clip w = 65536000/W, and the GPU projects that vertex to infinity away from the tri: a screen-wide flat wedge that no RDP ever paints. The value is legitimate RDP data; RT64's use of it as a clip w is the defect.
+
+Same stream through angrylion (tools/angrylion_replay/frame_replay.c, capture ROGUESQ_G5B_FRAME, src/rsp/dpc_bridge.cpp): the flat frames do not exist on the RDP (docs/owner_sheet_s6895_wedge_vs_hardware.png). Offline model tools/g5b_negw_model.cpp predicts wedges per swap from the stream alone: f1 5 of 5 strong presented events, w0b 6 of 9, no strong event unexplained in either. That answers NEXT.md item 1: H-hw-paints for the sheets, see below; the flat frames are neither arm, they are an RT64-only wedge.
+
+New ROGUESQ_W_CLAMP (lib/rt64 patch): default on at dd>1, off at dd1; =0 old, =1 on, =tog on in odd seconds (same-run A/B). Same-run arms, tog, 120 s after boot then 240 s capture, 120 ms band around each toggle excluded. These arms ran the first rule (clamp all mixed-sign tris, drop only over 20000 px area):
+
+| arm | level | dd | strong T>=.08 on/off | T>=.04 on/off | small T .006-.04 on/off | sheets >=100k |
+|---|---|---|---|---|---|---|
+| t4 | 4 | 4 | 0 / 4 | 0 / 8 | 155 / 473 | 398 |
+| t1 | 1 | 4 | 0 / 0 (2 in band) | 0 / 0 (2 in band) | 36 / 414 | 47 |
+| t2 | 4 | 2 | 0 / 0 | 0 / 6 | 106 / 561 | 0 |
+| t0 | 1 | 1 | 0 / 0 | 0 / 0 | 29 / 17 (T>=.003: 306 / 157) | 0 |
+
+All predicted wedges in t4 fell in off seconds (4 of 4 with an event), so t4 alone does not show a predicted wedge suppressed; w1 (clamp on throughout) does: 5 predicted, 0 strong events.
+
+Negative results that changed the fix:
+- The first rule regressed dd4: clamp-on frames show long dark bands across the sky (t4 sw8442, sw9455; w1 sw8126, sw8333). They persist across frames, so the transient counts above cannot see them, and those counts alone would have passed it. Found only by looking at frames (scratch/s6895/onoff.png).
+- dd1 went the wrong way: more small transients with the clamp on, in 8 of 8 30 s bins. Top frames show nothing visibly wrong, cause unknown, one run. No benefit shown at dd1 and the owner calls dd1 clean, so dd1 stays on the old path.
+- The timed-out iteration's "all negative" branch and its removal (w1 to w2) changed nothing: nall is 0 in every capture. No all-negative tri exists. c_lost is mixed-sign tris whose footprint the GPU drops. Its comment that all-negative tris made the ribbons was wrong.
+
+Mixed-sign tris are two populations (f1, dd4, 26265 tris): 22391 touch the guard band, span >= 150 px, median 633, all but one C8112220 terrain; 3874 do not, span <= 162 px, hw area median 0. Span over 200 px splits them with 0 misclassified. Rule now: at dd>1 clamp the small ones, drop the long ones (ROGUESQ_W_SHEET_PX=<span>, default 200 at dd>1).
+
+Sheets: H-hw-paints. angrylion paints the near-plane sheets as big fans and bands over sky and terrain (docs/owner_sheet_s6895_sheets_on_hardware.png, docs/owner_sheet_s6895_steps_vs_hardware.png). In the post-failure scene it paints them exactly over the region the port shows as black steps. So at dd4 the stream is wrong before any renderer; dropping them hides bands but cannot restore the terrain they replace, and black steps remain with clamp on and off. Census across all SHEET arms: dd1 0 (s1, i1, d1, t0), dd2 0 (i2, t2), dd4 43-687. Same recipe swings 82 to 540 between flights, so only a zero means anything.
