@@ -181968,4 +181968,24 @@ Seen, not followed: fill rects 400..795 from y 94-96, colours FFFC and A359, abo
 Not explained: the block's top edge follows the horizon rather than y 54, so something drawn after the fill covers part of it. Draw order not traced.
 No retail frame of this scene exists, so "retail has no block" still rests on the port at 4:3.
 
-dd4 (f4, fix on): black peak 0.008, block gone there too. A separate defect is now plain: the scene's water and most terrain are missing at dd4, flat tan in their place, with a torn terrain piece near the towers (docs/owner_sheet_s6898_dd1_dd4_scene.png, same scene phase as dd1). s6897 saw this as a lost foreground. The default-on dd>1 rules are the first suspects, since big near water tris are what the span rule drops. Arms queued: scratch/s6898/all4.zsh (W_SHEET_PX=0, W_CLAMP=0, G5B_TG_FIX=0, dd2).
+dd4 (f4, fix on): black peak 0.008, block gone there too. A separate defect is now plain: the scene's water and most terrain are missing at dd4, flat tan in their place, with a torn terrain piece near the towers (docs/owner_sheet_s6898_dd1_dd4_scene.png, same scene phase as dd1). s6897 saw this as a lost foreground. 
+
+Other arms: a1 (4:3, build with the fix) scene twice, black 0.297 is the known pillar artefact; frames not viewed. w1 (21:9): the window was 21:9 and the scanner found no scene in 297 s (contact sheet at 12 s steps shows flight only, so a miss by the 6 s scene is possible), so the fix is NOT verified at 21:9.
+
+Why dd4 loses the water, LEVEL=4, same scene phase:
+
+| arm | setting | water and ground in scene |
+|---|---|---|
+| f4 | default | lost |
+| p4 | W_SHEET_PX=0 | lost |
+| c4 | W_CLAMP=0 | lost |
+| q16 | G5B_TG_REACH=16000t | lost in both parities |
+
+H-span and H-wclamp REFUTED. TG_FIX=0 not run: s6897 b4 tog already showed on and off seconds alike, so it was dropped for time; q24 (24000t) stopped for the same reason.
+New in dpc_bridge.cpp: ROGUESQ_G5B_TG_REACH=<r>[t] zeroes the step of mode 2 quads past r (test lever, off by default); ROGUESQ_G5B_TG S lines gain hq=, mode 2 quads by max(|a|,|b|)/4096.
+H-far (far quads wrapped or painted over the near ground) REFUTED at r=16000: frames at 202.41 and 202.91 (on) lose the far pieces near the towers that 201.91 and 203.41 (off) show, which is the lever's positive control, and the foreground stays flat tan in both. Single run, 12 frames viewed.
+Witness result, q16: in the scene the near bins go empty. Quads per swap under 8192: outside the scene 212-351, at scene +0 9-14, +2 to +5 0-11. Whole run: 7626 swaps with m2 >= 300, 363 with near under 10, and all 363 sit in the two scene windows (66.2-73.7 s, 198.8-204.8 s). So this does not happen in flight in that run, and it is not a candidate for the owner's in-flight drops.
+Mode 0 near grids per swap also drop in the scene: dd1 25-45, dd4 1-29 at +0 to +5 (tg_f1, tg_f4).
+
+Control h1 (dd1, same build, hq on): 9816 swaps with m2 >= 300, 0 with near under 10, scene included (159.8-165.7 s; maxn 611). So the empty near bins belong to dd4, not to the scene's camera. Selects H-near: at dd4 in this scene the game does not submit terrain near the eye, while it submits up to about 4000 quads at the far end (bin 7 about 1300 per swap). What drops them is not found. Candidates for next: a terrain budget with far-first traversal (maxn 3989-4032 is close to 4096, but n varies 2700-3000 in the scene, so a plain count cap is unproven), the s6893 tile pool clamp, wrapped window indices with win 0,64,0,64.
+h2 (dd2, same recipe) was still running at commit; score it with scratch/s6898/nearcol.py h2.

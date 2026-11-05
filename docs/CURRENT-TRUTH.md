@@ -1,12 +1,13 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6897 (2026-11-05).
+Compact operational handoff, as of Session 6898 (2026-11-05).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
 ## Headline
 
 - **FIXED s6898: Gerrard V cutscene black block.** It is the letterbox overlay right band: setupMissionTransitionScreenOverlay passes boot width 512 as the window right edge, fill runs 512..W on widened frames. tools/apply_s6898_letterbox.py, ROGUESQ_G1D_LETTERBOX=0 old, =tog. Same build 16:9 dd1 black peak 0.009 vs 0.106. FP_XSCALE, FPDEPTH, SPANBOUND refuted. docs/owner_sheet_s6898_letterbox_fix.png.
+- **G5b s6898 OPEN: dd4 loses water and ground in the Gerrard V cutscene because near terrain is not submitted.** Mode 2 quads under 8192 from the eye: dd4 scene 0-14 per swap, dd4 flight 212-351; dd1 0 collapsed swaps of 9816, scene included. All 363 collapsed dd4 swaps are in the scene, so it is not the owner's in-flight drop in that run. W_SHEET_PX, W_CLAMP and far overdraw (TG_REACH=16000t) refuted. Cause not found. Fix unverified at 21:9: scene not reached.
 - **G5b s6897: Gerrard V cutscene black block follows ROGUESQ_ASPECT.** Block in both 16:9 FPS60 states at dd1, absent in both 4:3 (retail side single-source: oracle never reached the scene). dd>1 only steps its edge and loses the water foreground, unexplained. Not the sheets: it stands in fix-on seconds. Scene is an in-mission cutscene, not post-failure. docs/owner_sheet_s6897_black_block_by_arm.png, tools/g5b_letterbox.cpp (black share invalid at 4:3: pillars).
 - **G5b s6896-s6897: dd3/dd4 near-plane sheets FIXED, owner must confirm drops.** Cause: TriGen s16 base + step wraps at 32768 of reach ahead of the eye (base 32256, step 512). Bases are eye-relative (s6897, tools/g5b_tg_camrel.py). ROGUESQ_G5B_TG_FIX default on at dd>1, off at dd1 (=0, =1, =tog). Same run: lvl4 dd4 0 vs 112, lvl1 dd4 0 vs 45, lvl4 dd4 0 vs 225; default dd3 and dd4 0 sheets (s6895: 43-687). Inference, untested: s16 caps reach at ~1.8x dd1, next limit for G1c phase 2. Witness ROGUESQ_G5B_TG, tools/g5b_tg_join.py.
 - **G5b s6895: flat-sky frames are RT64 W<=0 wedges, FIXED at dd>1.** ROGUESQ_W_CLAMP default on at dd>1, off at dd1 (=0, =1, =tog); mixed-sign tris over 200 px span dropped at dd>1 (ROGUESQ_W_SHEET_PX). Small transients fell 3-11x at dd2/dd4; not shown to be the owner's spikes. docs/owner_sheet_s6895_wedge_vs_hardware.png.
