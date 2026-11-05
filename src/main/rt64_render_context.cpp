@@ -36,6 +36,7 @@ extern "C" uint32_t rs64_rand_site;
 uint32_t rs64_rand_site = 0; // jal address of the current rand call site (s6751 fixup)
 volatile int g_rs64_rand_trace = 0;
 extern "C" uint32_t rs64_ram_top; // s6132
+extern "C" void rs64_s6883_freeze(unsigned); // s6883: span tables at each POSE_FREEZE
 static FILE* s_rand_trace_f = nullptr;
 extern "C" void rs64_rand_trace(uint32_t ra, uint32_t seed) {
     static long n = 0;
@@ -66,6 +67,7 @@ extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64
             memcpy(v, rdram + (pl - 0x80000000u) + 0x4C, 12);
             if (v[0] >= fz[fz_k]) {
                 fprintf(stderr, "[posefreeze] k=%zu vi=%u pos=%.3f,%.3f,%.3f ms=%d\n", fz_k, rs64_vi_n_g, (double)v[0], (double)v[1], (double)v[2], fz_ms);
+                rs64_s6883_freeze((unsigned)fz_k);
                 fflush(stderr);
                 fz_k++;
                 std::this_thread::sleep_for(std::chrono::milliseconds(fz_ms));

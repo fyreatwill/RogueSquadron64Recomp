@@ -42083,6 +42083,7 @@ RS64_REPLAY = [
     "apply_s6698_storediag.py",  # s6698: must follow every hook-emitting patch
     "apply_s6880_widebound.py",  # last: apply_s6493_stream_cum anchors on the s6049 text this rewrites
     "apply_s6882_spannarrow.py",  # s6882: span fill x loops; no s6049 text touched
+    "apply_s6883_spancell.py",  # s6883: anchors on the s6882 text
 ]
 
 

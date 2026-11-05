@@ -51,6 +51,89 @@ extern "C" { double rs64_s6879_fpk = 1.0; } // s6879: footprint x factor of this
 extern "C" int rs64_s6880_wide(void) { static int on = -1; if (on < 0) { const char* e = getenv("ROGUESQ_G1D_SPANBOUND"); on = !(e && *e == '0'); } return on && rs64_s6879_fpk != 1.0; }
 // s6882: narrow the span fill x loops where the s6049/s6880 bound runs (tools/apply_s6882_spannarrow.py). ROGUESQ_G1D_SPANNARROW=0 = old.
 extern "C" int rs64_s6882_on(void) { static int on = -1; if (on < 0) { const char* e = getenv("ROGUESQ_G1D_SPANNARROW"); const char* d = getenv("ROGUESQ_DRAW_DISTANCE"); on = (e && *e == '0') ? 0 : (d && *d && atof(d) != 1.0) ? 2 : 1; } return on == 2 || (on == 1 && rs64_s6880_wide()); }
+// s6883: span scan edge rows past 80 and span cells outside 64x64 (tools/apply_s6883_spancell.py). ROGUESQ_G1D_SPANCELL (default 3 where the s6882 gate runs, =0 old) bits 1 = rows >= 80 in host arrays, 2 = 64x64 cell bound,
+// 4 = control, blank rows 20..23. ROGUESQ_G1D_SPANLOG=1 logs [spancell]; ROGUESQ_G1D_SPANDUMP=<prefix> writes both tables at each POSE_FREEZE.
+namespace {
+constexpr uint32_t S6883_N = 4096;
+int16_t s6883_e[2][S6883_N];
+struct { uint64_t calls, rows, r80, r80diff, r80vis, yneg, y64, xneg, x64, wrong, spill, bad7f80, bad7flt; int maxi, ymin, ymax, xmin, xmax; } s6883;
+uint32_t s6883_hw, s6883_ne, s6883_win[4];
+uint8_t s6883_snap[0x2000];
+int s6883_mode(void) { static int m = -1; if (m < 0) { const char* e = getenv("ROGUESQ_G1D_SPANCELL"); m = e ? atoi(e) : 3; } return m; }
+int s6883_log(void) { static int m = -1; if (m < 0) { const char* e = getenv("ROGUESQ_G1D_SPANLOG"); m = (e && *e == '1') ? 1 : 0; } return m; }
+void s6883_print(const char* tag) {
+    auto& s = s6883;
+    fprintf(stderr, "[%s] calls=%llu rows=%llu r80=%llu r80diff=%llu r80vis=%llu yneg=%llu y64=%llu xneg=%llu x64=%llu wrong=%llu spill=%llu bad7f80=%llu bad7flt=%llu maxi=%d y=%d..%d x=%d..%d win=%d,%d,%d,%d ne=%u hw=%08X\n", tag,
+        (unsigned long long)s.calls, (unsigned long long)s.rows, (unsigned long long)s.r80, (unsigned long long)s.r80diff, (unsigned long long)s.r80vis, (unsigned long long)s.yneg, (unsigned long long)s.y64,
+        (unsigned long long)s.xneg, (unsigned long long)s.x64, (unsigned long long)s.wrong, (unsigned long long)s.spill, (unsigned long long)s.bad7f80, (unsigned long long)s.bad7flt,
+        s.maxi, s.ymin, s.ymax, s.xmin, s.xmax, (int)s6883_win[0], (int)s6883_win[1], (int)s6883_win[2], (int)s6883_win[3], s6883_ne, s6883_hw);
+    s.maxi = 0; s.ymin = s.xmin = 1 << 30; s.ymax = s.xmax = -(1 << 30);
+}
+}
+extern "C" int rs64_s6883_edge(int w, uint32_t addr, int32_t v) {
+    if (!rs64_s6882_on()) return 0;
+    const uint32_t i = (addr - (w ? 0x80130D10u : 0x80130C70u)) >> 1;
+    if (i < 80 || i >= S6883_N) return 0;
+    s6883_e[w][i] = (int16_t)v;
+    return s6883_mode() & 1;
+}
+extern "C" int rs64_s6883_edgerd(int w, uint32_t addr, int32_t* v) {
+    if (!(s6883_mode() & 1) || !rs64_s6882_on()) return 0;
+    const uint32_t i = (addr - (w ? 0x80130D10u : 0x80130C70u)) >> 1;
+    if (i < 80 || i >= S6883_N) return 0;
+    *v = s6883_e[w][i];
+    return 1;
+}
+extern "C" void rs64_s6883_row(uint32_t a3, int32_t y, int32_t t4, int64_t* x0, int64_t* x1) {
+    const uint32_t i = (a3 - 0x80130C70u) >> 1; const int m = s6883_mode(), lg = s6883_log(); const bool deep = i >= 80 && i < S6883_N;
+    const int64_t g0 = *x0, g1 = *x1, t0 = deep ? s6883_e[0][i] : g0, t1 = deep ? s6883_e[1][i] : g1;
+    if ((m & 1) && deep) { *x0 = t0; *x1 = t1; }
+    if (m & 2) {
+        if (y < 0 || y > 63) *x1 = *x0 - 1;
+        else { if (*x0 < 0) *x0 = 0; if (*x1 > 63) *x1 = 63; }
+    }
+    if (!lg) return;
+    auto& s = s6883; s.rows++;
+    if ((int)i > s.maxi) s.maxi = (int)i;
+    if (y < s.ymin) s.ymin = y;
+    if (y > s.ymax) s.ymax = y;
+    if (t1 >= t0) { if (t0 < s.xmin) s.xmin = (int)t0; if (t1 > s.xmax) s.xmax = (int)t1; }
+    if (g1 == 0x7F7F) { if (deep) s.bad7f80++; else s.bad7flt++; }
+    if (deep) { s.r80++; if (g0 != t0 || g1 != t1) s.r80diff++; if (y >= 0 && y < 64 && t1 >= 0 && t0 <= 63 && t1 >= t0) s.r80vis++; }
+    if (y < 0) s.yneg++;
+    if (y > 63) s.y64++;
+    if (t0 < 0) s.xneg++;
+    if (t1 > 63) s.x64++;
+    // stores the byte bound lets through, and how many of them are not this row's own 64 cells
+    const int64_t rel = (int64_t)t4 + ((int64_t)y << 6) - (int64_t)(int32_t)0x80130DB0;
+    int64_t lo = *x0 < -rel ? -rel : *x0, hi = *x1 > 0x1FFF - rel ? 0x1FFF - rel : *x1, n = hi >= lo ? hi - lo + 1 : 0, good = 0;
+    if (y >= 0 && y < 64) { const int64_t l = *x0 < 0 ? 0 : *x0, h = *x1 > 63 ? 63 : *x1; good = h >= l ? h - l + 1 : 0; }
+    s.wrong += (uint64_t)(n - good);
+    if ((y < 0 || y > 63) && n) s.spill++;
+}
+extern "C" void rs64_s6883_tables(uint8_t* rdram) {
+    if (!rs64_s6882_on()) return;
+    if (s6883_mode() & 4) for (int r = 20; r < 24; r++) { memset(rdram + 0x130DB0u + r * 64, 0x80, 64); memset(rdram + 0x131DB0u + r * 64, 0x80, 64); }
+    if (!s6883_log()) return;
+    for (int k = 0; k < 4; k++) s6883_win[k] = *reinterpret_cast<const uint32_t*>(rdram + 0x132DB0u + 4 * k);
+    for (uint32_t k = 0; k < 0x2000; k++) s6883_snap[k] = rdram[(0x130DB0u + k) ^ 3];
+    const int w = (int)s6883_win[1] > 64 ? 64 : (int)s6883_win[1], h = (int)s6883_win[3] > 64 ? 64 : (int)s6883_win[3];
+    uint32_t hw = 2166136261u, ne = 0;
+    for (int r = 0; r < h; r++) for (int c = 0; c < w; c++) {
+        const uint8_t a = s6883_snap[r * 64 + c], b = s6883_snap[0x1000 + r * 64 + c];
+        hw = (hw ^ a) * 16777619u; hw = (hw ^ b) * 16777619u; ne += !(a == 0x80 && b == 0x80);
+    }
+    s6883_hw = hw; s6883_ne = ne;
+    if (!(++s6883.calls & 127)) s6883_print("spancell");
+}
+extern "C" void rs64_s6883_freeze(unsigned k) {
+    if (!s6883_log()) return;
+    char tag[32]; snprintf(tag, sizeof tag, "spancell-freeze k=%u", k); s6883_print(tag);
+    if (const char* p = getenv("ROGUESQ_G1D_SPANDUMP")) {
+        char fn[512]; snprintf(fn, sizeof fn, "%s.k%u.bin", p, k);
+        if (FILE* f = fopen(fn, "wb")) { fwrite(s6883_snap, 1, sizeof s6883_snap, f); fclose(f); }
+    }
+}
 extern "C" { int rs64_g1d_intro_w = 0; int rs64_g1d_vs_intro = 0; int rs64_g1d_title_vi = 0; int rs64_g1d_vi_epoch = 0; uint32_t rs64_last_vi_mode = 0; }  // s6720: title_vi = wide title mode live
 extern "C" volatile int g_rs64_dd_blk; // s6583: dd toggle state, tagged on [fbdump]
 extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
