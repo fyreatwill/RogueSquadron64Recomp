@@ -181611,7 +181611,7 @@ Arms (lvl1 4:3 dd1 FPS60 ASYNC+NODRAIN, no gate unless noted):
 
 Slips by level, 4:3 arms this session, 1 s medians either side: under ceiling up 43 down 4 same 8 of 55; at ceiling up 0 down 10 same 91 of 101. Gated s6887 ring_g: 46 slips, 40 no change, on an older binary.
 
-Verdict: H-size refuted. H-phase as written refuted (large stalls do not lower it); kept as backlog: up by slip, capped ~72, down by a gap with no burst. H-direct: survives only as "fullscreen has no slips", single run, compositor path not observed. Rules out a window setting as a replacement for the gate.
+Verdict: this selects a backlog model at 4:3: up by slip, capped ~72, down by a gap with no burst. It refutes H-size, and refutes H-phase as written (large stalls do not lower the level). H-direct survives only as "fullscreen has no slips", single run, compositor path not observed. Rules out a window setting as a replacement for the gate. Next discriminator: a one-present drain against the gate (NEXT).
 
-Not established: what causes a slip (close-spaced presents near only 2 of 12 up-steps, s6887/s6885/s6886 rings). The 2-4 ms burst size vs dose is 8 samples per dose at most. Nothing measured for input-to-photon. Default unchanged, game behaviour unchanged with levers unset.
+Not established: what causes a slip (close-spaced presents near only 2 of 12 up-steps, s6887/s6885/s6886 rings). Burst size vs dose rests on 4 stalls per dose in arm s. Nothing measured for input-to-photon. Default unchanged, game behaviour unchanged with levers unset.
 
