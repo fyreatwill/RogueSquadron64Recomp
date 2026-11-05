@@ -42086,6 +42086,7 @@ RS64_REPLAY = [
     "apply_s6883_spancell.py",  # s6883: anchors on the s6882 text
     "apply_s6892_walker_guard.py",  # s6892: G5a mesh pointer guard
     "apply_s6893_tilepool.py",  # s6893: G5a root cause, tile variant pool overrun at dd>1
+    "apply_s6898_letterbox.py",  # s6898: G5b letterbox overlay right edge on wide frames
 ]
 
 

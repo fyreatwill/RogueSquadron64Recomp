@@ -15,6 +15,9 @@
 #include <map>
 #include <string>
 #include <chrono>
+#ifdef __APPLE__
+#include <mach/mach_time.h>
+#endif
 #include <pthread.h>
 #if !defined(_WIN32)
 #include <dlfcn.h>
@@ -46,6 +49,14 @@ extern "C" uint32_t g_s6491[4]; // s6491 terrain-grid call/list/chain counters
 extern "C" uint32_t g_s6489[8]; // s6489 cumulative cell-gate exit counters (patched funcs_10.c)
 extern "C" uint32_t rs64_phase_ord(void);
 // s6718 G1d: widened 640x340 mission-intro width (0 = off) and "live video state is the 640x340 intro"; set by fixup patches.
+// s6898: letterbox overlay right edge follows the widened frame, tools/apply_s6898_letterbox.py. ROGUESQ_G1D_LETTERBOX=0 = old, =tog = odd mach seconds fixed.
+extern "C" uint32_t rs64_s6898_ovl_x1(uint32_t x1, uint32_t w) {
+    static int mode = -1, fbw = 0;
+    if (mode < 0) { const char* e = getenv("ROGUESQ_G1D_LETTERBOX"); mode = (e && *e == '0') ? 0 : (e && *e == 't') ? 2 : 1; const char* b = getenv("ROGUESQ_FB_WIDTH"); fbw = b ? atoi(b) : 0; }
+    if (!mode || fbw <= 512 || (int)w != fbw || x1 >= w) return x1;
+    if (mode == 2 && !((mach_absolute_time() / 24000000ull) & 1)) return x1;
+    return w;
+}
 extern "C" { double rs64_s6879_fpk = 1.0; } // s6879: footprint x factor of this frame, tools/apply_s6879_fpdepth.py
 // s6880: wide frames get the s6049 span-table store bound, tools/apply_s6880_widebound.py. ROGUESQ_G1D_SPANBOUND=0 = old.
 extern "C" int rs64_s6880_wide(void) { static int on = -1; if (on < 0) { const char* e = getenv("ROGUESQ_G1D_SPANBOUND"); on = !(e && *e == '0'); } return on && rs64_s6879_fpk != 1.0; }

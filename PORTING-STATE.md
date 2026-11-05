@@ -181938,3 +181938,31 @@ Side datum, r1 and a1: at 4:3 in this harness's wide window, tan or scenery stri
 Not done: why 16:9 loses those cells. FP_XSCALE (s6144 fixed a left void through the same footprint), G1D_FPDEPTH and G1D_SPANBOUND are the candidates; no arm run. Whether this block is what the owner calls a drop is open; it lasts seconds in one cutscene, and the owner reported drops in flight. G5f not started. No game code changed this session.
 
 Conclusion: black block selected to ROGUESQ_ASPECT by a four-arm 2x2 plus dd1 and dd4 frames; retail side single-source. s6896's mechanism wording overturned by two lines of evidence. G5b stays open: the owner has not flown the sheet fix.
+
+## Session 6898 (2026-11-05) — G5b: black block in the Gerrard V cutscene is the letterbox overlay's right band, fixed at 16:9; same build 0.009 vs 0.106
+
+Unit from NEXT.md: which G1d lever owns the block. LEVEL=4 dd1 16:9 FPS60, arms in scratch/s6898. The iteration that ran them hit the runner limit (rc=124) with its work uncommitted and the chain still running; the next iteration scored and committed it.
+
+| arm | setting | block in scene |
+|---|---|---|
+| c1 | control | yes |
+| x1 | FP_XSCALE=1.0 | yes, and the water edge goes stepped |
+| x2 | FP_XSCALE=2.667 | yes |
+| d0 | G1D_FPDEPTH=0 | yes |
+| s0 | G1D_SPANBOUND=0 | yes, no crash at 16:9 |
+
+Frames: docs/owner_sheet_s6898_block_arms.png. H-xscale, H-depth and H-span REFUTED: the block does not move with any of them.
+
+ORIGIN: setupMissionTransitionScreenOverlay (0x800FB2F8) gives setScreenColorOverlay a window whose right edge is getBootConfigField12 (0x8006B3D0, boot config width at 0x80037572, 512, never widened). emitColorFillRect fills outside the window, so the right band runs from 512 to the real frame width 0x8011A838: RDP FILL 512..796, y 54..393, colour 0001 at 16:9 (r1.bin, tools/g5b_rdp_edge.py). At retail W = 512 and the band is empty. The value is legitimate for retail; only our widening makes it wrong.
+Fix: tools/apply_s6898_letterbox.py, in RS64_REPLAY, this one call site only: a3 = W on a widened frame (W equal to ROGUESQ_FB_WIDTH, over 512). The other 21 getter callers are untouched. ROGUESQ_G1D_LETTERBOX=0 = old, =tog = odd mach seconds fixed.
+
+Same build, same scene phase:
+
+| arm | scene runs | black peak | frames over 3% |
+|---|---|---|---|
+| f1 fix on | 1 | 0.009 | 0 of 302 |
+| o1 LETTERBOX=0 | 2 | 0.106 | 336 and 337 |
+
+Frames: docs/owner_sheet_s6898_letterbox_fix.png. RDP scan of f1.bin finds no rect ending at 796 under this scene's scissor problem; the block is gone in the frames. Two arms of one build, not a same-run toggle: =tog was built but not run.
+Not explained: the block's top edge follows the horizon rather than y 54, so something drawn after the fill covers part of it. Draw order not traced.
+No retail frame of this scene exists, so "retail has no block" still rests on the port at 4:3.
