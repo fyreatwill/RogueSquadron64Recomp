@@ -181646,3 +181646,39 @@ ORIGIN: no corruption or wild value here. The backlog is the s6888 model; the dr
 Default unchanged, behaviour unchanged with the env unset. Not measured: input-to-photon, owner feel, DRAIN through hide, resize or fullscreen.
 
 Discrimination summary: this refutes H-floor as written at limit 40 (35 ms, under the gate's 46) and selects H-drain over it for 4:3 on a 60 Hz display, one run. It refutes H-cost as a general rule: flight drops omit a frame, and only drops at a level that cannot fall repeat one. Next discriminator: same-grid repeat, DRAIN=44 x2 against DRAIN=28 and INFLIGHT=2 x2 (H-repeat / H-luck / H-floor / H-limit, gate never-shown H-gate-cost / H-host); on a 144 Hz grid, off vs gate with an interval histogram (H-60only / H-judder). See NEXT.
+
+
+## Session 6890 (2026-11-04) — 144 Hz 4:3 has no present backlog and 60 fps spaces unevenly; 6 of 11 arms lost to a covered window, so no new 21:9 result
+HYPOTHESIS-ID g1e-present-drain. Unit from NEXT, 144 Hz branch (displays read 144 Hz at start and in every snapshot; ring grids agree). No owner report.
+
+Landed: tools/g1e_present_cadence.py --hist [--last S] (interval histogram in vsyncs, residual from a 60/s line per 1 s, INVALID line for rings with no on-screen presents); tools/g1e_window_cover.swift (read-only cover witness, window owner names only, moves nothing). Runners scratch/s6890/arms.zsh, arms2.zsh. Same binary as s6889, lvl1, FPS60 ASYNC+NODRAIN, 240 s. All 11 arms 0 crash, 0 VI stall, flight 168-174 s.
+
+Arm validity:
+| arm | setting | on-screen | use |
+| off | 4:3 dd1 | 0 of 14651 | INVALID, cover not sampled |
+| g2 | gate | all but 1 | valid |
+| st | 4:3 + stalls | all but 3 | valid, positive control |
+| off2 | 4:3 dd1 | all but 1 | valid |
+| g2b | gate | off screen from ~150 s (5537 at=0) | partial: 1661 rows in the last 120 s of the ring |
+| woff, wg2 | 21:9 dd4 | 0 | INVALID, cover not sampled |
+| woff2, wg2b, off3, g2c | reruns | 0 | INVALID, witness 100% covered, 24/24 samples found (1 further sample each found=0, at the first tick before the window opened or at exit, not placed) |
+
+Results, 4:3, 144 Hz grid, last 120 s, one run each unless shown:
+| arm | lat p50/p99 ms | on-screen/s | 1v/2v/3v/4v % | residual p50/p99 ms | p-p per s |
+| off2 | 11.8/21.1 | 60.00 | 6.7/51.7/36.6/4.9 | 2.22/8.88 | 14.4 |
+| st | 12.1/21.3 | 59.66 | 7.7/51.1/35.3/5.7 | 2.54/39.26 | 16.0 |
+| g2 | 13.2/19.9 | 60.00 | 1.7/58.4/38.5/1.3 | 2.15/8.13 | 13.7 |
+| g2b (partial) | 11.0/30.6 | 59.77 | 7.5/50.6/36.5/5.0 | 2.33/25.89 | 15.4 |
+
+Verdict: H-60only supported at 4:3 only: latency 11.8-12.1 ms, no ~72 ms level. Control: 200 ms stalls 3/3 raised latency to 24-39 ms, 0.3 s after stall start the bin is 12-14; 17 and 50 ms stalls show no clear step. H-judder supported as a spacing fact: presents mix 13.9 and 20.8 ms. Visibility not measured. Scorer controls: s6889 ring_off (60 Hz) 99.8% 1v, residual p50 0.00; ring_woff (144) mix.
+Not explained: 1v+4v share of 12% against 0 for an exact pattern, and p-p 14-16 ms against the ~7 ms quantisation alone allows. Reads as presents landing a vsync off near a boundary; not tested.
+Gate: no latency gain at 144 Hz (13.2 against 11.8, one clean ring each). g2's low 1v/4v share looked like a gate benefit, g2b did not repeat it, so it is not claimed. g2 never shown 0.00/s here; this does not settle s6889's 1.53/s, which was on the 60 Hz grid.
+
+Failed: 21:9. No new data, H-60only and H-judder rest on the s6889 woff ring alone there (59.15/s, 2v 56.7, 3v 38.6, residual p99 28.83). 60 Hz branch not run: no 60 Hz grid, so DRAIN=40 still has NO repeat.
+
+Cover witness. First build read Dock:100 on every window (a full-screen transparent Dock overlay); self-test caught it, cover now counts layer 0 only. Controls after fix: frontmost app 0%, Chrome behind it 100%, absent app found=0. All 4 sampled arms 100% covered and at=0 throughout. Limit: no arm has witness plus on-screen reports, so the link is 4/4 with no same-set contrast; off, woff, wg2 unsampled and their cause is inferred only. off2 and st had on-screen reports with Guitar Pro frontmost, so frontmost alone does not predict it. Stopped after 4: the owner is using the desktop, and raising the window over their work was not done.
+g1e_present_order.py prints distinct shown 60/s on all-at=0 rings: it counts queue rows, not display. Tool left as is, noted in CURRENT-TRUTH.
+
+ORIGIN: no corruption or wild value here. Default unchanged, game code unchanged.
+
+Discrimination summary: selects H-60only and H-judder at 4:3 on 144 Hz over a persisting backlog; refutes g2's lower off-pattern share as a gate effect. Next discriminator: same arms at 21:9 with cover < 100% in the witness, and the 60 Hz drain repeat if the grid returns.
