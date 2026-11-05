@@ -1,5 +1,17 @@
+# OWNER OVERRIDE 2026-11-04: do ITERATION.md G5a-G5f first. G5a is fixed pending owner re-flight (s6893), so continue at G5b. The paused unit is at the bottom.
+
+# NEXT: G5b, build an instrument that catches the terrain drops the owner sees, and re-measure now the tile pool overrun is fixed
+HYPOTHESIS-ID: g5b-terrain-drops
+Why: owner at 16:9: dd4 significant drops, dd2 fewer, dd1 clean. The old "0 drops" detector misses them. s6893 removed an overrun that only happens at dd>1 and corrupts the block after the pool, so it may be involved, untested: do not assume it.
+First fold scratch/s6893/census.txt (SOAK-RESULTS s6893_census_1-4). If any level shows arena_full>0 or spill used near 0x400000, cap K for that level before anything else. Only levels 0-18 at dd4 16:9.
+Quick check of the s6893 loose end, same build: log whether block 8074A380 is live when RT64 copyNativeToRAM writes it (spill map does not cover the main heap; read the heap header, or log rs_free of s2). H-stale: freed then reused as an offscreen colour image, harmless. H-live: a second corruption route, fix it. The rs64_s6892 guard fires for real only if the walker reads it.
+Instrument: per presented frame at the owner recipe (FPS60, dd4, 16:9, no logging env), terrain pixel fraction from presented frames, not RDRAM (port RDRAM dumps lack RT64 3D frames). Positive control: frames the owner would call a drop, from a screen recording or presented frames at this recipe, not a test build. Arms in one iteration: ROGUESQ_TILEPOOL=0 vs default, dd1 vs dd2 vs dd4. Outcomes: drops gone with the pool fix = G5b closes with G5a; drops unchanged = H-tilepool refuted, then measure whether drops sit inside the dd1 radius or only in extended cells (that decides G5e).
+The natural count varies by run (59, 84, 94, 97 on one route): unexplained; note it if the instrument touches it.
+Ask owner when a human is next on: re-fly Gerrard V past half way at dd2 and dd4, FPS60 16:9, more than once; does it crash, and are the drops any different?
+
+# PAUSED until G5 closes
 # NEXT: 21:9 flight on 144 Hz at a free XG49V corner, or what enters the 72 ms state if still built-in alone
-HYPOTHESIS-ID: g1e-present-drain
+Old slug: g1e-present-drain
 Why: s6891: reports need the XG49V or built-in (both UG27 give none, even uncovered) and only a partly visible window. Externals left at ~22:15, so 21:9 flight on 144 Hz has no data. Built-in off reads 39 ms, acq 0.03; s6889's 72 ms ring had acq 14.93.
 FIRST, no game run: build tools/g1e_display_state.swift and tools/g1e_display_free.swift (xcrun swiftc -O, DEVELOPER_DIR set; binaries also in scratch/s6891). Runner template with 45 s report gate and display census: scratch/s6891/arms60.zsh (kills m6_god_common.sh before the game, or it relaunches). Set P to a free corner: the window only needs part of itself uncovered. Never use a UG27.
 If the XG49V is online: arms 21:9 dd4 no SCREEN_JOB off, gate, stall (ST string in scratch/s6891/arms.zsh), 240 s, then 4:3 off. H-60only (10-12 ms, no level) / H-wide-level (a level holds at 21:9). Score: bash scratch/s6891/score.sh pattern, g1e_present_latency.py --last 120 --hz 144. Control: 200 ms stalls lift to 24-39 ms and return.

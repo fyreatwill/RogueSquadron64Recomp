@@ -10664,9 +10664,10 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         static const unsigned from = std::getenv("ROGUESQ_PLPOS_POKE_FROM") ? (unsigned)atoi(std::getenv("ROGUESQ_PLPOS_POKE_FROM")) : 3000u;
         static unsigned m = 0;
         volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
-        if (pk && *pk && rd && ((uint32_t)rs64_vi_committed_origin() & 0xFFFFFFu) == 0x690400u) {
+        static const bool any_origin = std::getenv("ROGUESQ_PLPOS_POKE_ANY") != nullptr;  // s6893: dd>1 and wide move the origin and put the player in the spill arena
+        if (pk && *pk && rd && (any_origin || ((uint32_t)rs64_vi_committed_origin() & 0xFFFFFFu) == 0x690400u)) {
             const uint32_t p = rs64_rdram_u32(rd, 0x137DB8u + 4) & 0xFFFFFFu;
-            if (p >= 0x1000u && p < 0x7FFF00u && ++m >= from) {
+            if (p >= 0x1000u && p < (any_origin ? 0xFFFF00u : 0x7FFF00u) && ++m >= from) {
                 float wp[64][3]; unsigned nw = 0; const char* c = pk;
                 while (nw < 64 && sscanf(c, "%f,%f,%f", &wp[nw][0], &wp[nw][1], &wp[nw][2]) == 3) { nw++; c = strchr(c, ';'); if (!c) break; c++; }
                 if (nw) {

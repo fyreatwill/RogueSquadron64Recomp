@@ -181725,3 +181725,28 @@ Offline: acq_ms ungated p50 14.93 on s6889 off (72 ms state) vs 0.03 on o1, off2
 
 This refutes "a 60 Hz grid means a 72 ms backlog" and "at=0 means covered". Does not show: anything about 21:9 flight on 144 Hz, or what enters the 72 ms state.
 
+
+## Session 6893 (2026-11-05) — G5a writer named: tile variant pool overrun at dd>1, fixed and matched-pair tested; owner re-flight still needed
+HYPOTHESIS-ID: g5a-walker-junk. Two loop iterations: the first hit the 3600 s cap (rc=124) with this work uncommitted and left its arm chain running; the second killed the chain, audited it and finished. s6892 (commit 2e3d822fd) has no ledger entry of its own: it added the walker guard, tools/apply_s6892_walker_guard.py.
+
+ORIGIN: selectGridCellTileVariant (0x80046030) writes 25 bytes to pool[phase] + 25*count with no bound. The count (0x80137168) resets per frame in updateGridLayerScroll. initGridLayerFromLevelData sizes each pool from the map's flagged cells (LEVEL=4: 90 entries, req 0x8CA). A dd>1 window can pass that, and the block after pool[1] was the sky object, so its +0x18 mesh pointer took tile bytes. The value is not legitimate; retail's window stays inside the pool as far as measured (dd1 not measured here).
+Fix, tools/apply_s6893_tilepool.py, default on, ROGUESQ_TILEPOOL=0 old: pools scale by K = ceil(dd)^2, x2 above 640 wide (ROGUESQ_TILEPOOL_K overrides), and the writer's slot index is clamped to the pool. K=1 at dd1 4:3, so the retail size is kept. Only the writer's own increment and retail's high-water word 0x8009DEC0 read the count; both stay unclamped and the clamp makes extra cells share the last slot.
+
+Arms, LEVEL=4, FPS60, 16:9, hardware write watch on object +0x18 (scratch/s6893/g5awatch.py, wp_<arm>.log; 400-hit log cap):
+| Arm | dd | Pool | Forced add | Peak count | Writer hits | Watch control | End |
+|---|---|---|---|---|---|---|---|
+| tour | 2 | old build | 0 | 94 (RDRAM count and hw 0x5E) | 4 on 8082EBB0+0x18 | fired | SIGABRT, Unhandled jump target 0x3002 in ucode |
+| ctlA | 2 | TILEPOOL=0 | 90 | not logged | 4 on 802C5000+0x18 | none | EXC_BAD_ACCESS, slotDispatcherIter |
+| ctlC | 2 | K=1, clamp only | 90 | 136, cap 90 | 0 of 2 total | 2 planted | alive, 132 s hold |
+| ctlB | 2 | K=8 | 90 | 137, cap 720 | 0 of 4 total | 2 planted | alive, 132 s hold |
+| d4live | 4 | K=32 | 0 | 97, cap 2880 | 0 of 342 total | none planted; RT64 hits show it live | alive, 174 s hold |
+| d4on | 4 | K=32 | 0 | 59 | 0 logged, cap reached | 2 planted | alive, 272 s hold |
+| d4off | 4 | TILEPOOL=0 | 0 | not logged | 0 logged, cap reached | 2 planted | alive, 235 s hold |
+| fix, corner | 2 | K=8 | 0 | under 90, 84 | 0 | planted | alive, 428/466 s |
+
+What this shows: ctlA vs ctlC is the matched pair: same heap layout, same object address 802C5000 watched, forced overflow; without the bound the object is overwritten and the game crashes, with it 0 writes. d4live is the natural case: count passes 90 with no lever and nothing lands. Two lines (RDRAM read-back and hardware watch) name the writer on the natural tour.
+Corrections to the first iteration's reading: fix and corner are NOT evidence for the fix, since they never reached 90, and K moves the heap so a clean run alone could be layout luck. d4on vs d4off does not discriminate: d4on peaked at 59, the object sits at 8074Axxx in the main heap at dd4 (not after the pool), and both watches hit the log cap. Natural peak varies a lot between runs of one route (59, 84, 94, 97): unexplained.
+Not shown: that this is the owner's crash. Same object, same word, same kind of junk bytes, but 0x26282B2B itself was not reproduced naturally (the tour gave 0x2F303030, the lever 0x34343434) and that value in logs is the guard's planted test. Only the owner's mission flown past half way can close G5a. One crash per unfixed arm, n=1 each. Bigger pools were checked on LEVEL=4 only: spill used 0x2391F0 of 0x400000 at dd4, 0 arena full; a level with many more flagged cells could use far more, so scratch/s6893/census.zsh is queued as s6893_census_1-4.
+New, open: at dd4 16:9 RT64 copyNativeToRAM writes pixels on the watched word at 8074A380/8074AC60 (171 memmove + 171 swap hits in d4live, no plant, so the plant did not cause it). The real guard never fired (no rs64_s6892.log in d4live, only the planted line in d4on and d4off), so nothing read that word afterwards, which suggests a dead block reused as an offscreen colour image and a stale watch. Inference, single-source: block liveness not checked. No VI origin at 240 rows covers the address, so the image, if that is what it is, is not a displayed frame. If the block is live this is a second corruption route.
+Regen: fresh regen_front + regen_replay rc 0, s6892 and s6893 patch text hash equal live vs regen (fb474042c0f57515). Objects not compared, no regen binary linked. Regen dir deleted.
+Owner save md5 unchanged across all arms (00293f3e...).

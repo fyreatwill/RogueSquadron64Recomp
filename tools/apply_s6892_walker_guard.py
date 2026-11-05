@@ -24,6 +24,16 @@ LATE = LATE_A + ("    ctx->r17 = (gpr)(int32_t)rs64_s6892_check(rdram, U32(ctx->
 FREE_A = "    // 0x8005C340: lw          $a0, 0x18($s2)\n    ctx->r4 = MEM_W(ctx->r18, 0X18);\n"
 FREE = FREE_A + "    ctx->r4 = (gpr)(int32_t)rs64_s6892_check(rdram, U32(ctx->r18), U32(ctx->r4), 0x8005C340u); /* %s */\n" % TAG
 
+# s6893: hand the guest malloc ra to the spill event ring (dumped when the guard fires).
+T2 = "PATCH: s6893 spill ra"
+M_A = "uint32_t _sp = rs64_s6569_spill(_rq);"
+M_B = "extern uint32_t rs64_s6893_ra; rs64_s6893_ra = _ra; /* %s */ uint32_t _sp = rs64_s6569_spill(_rq);" % T2
+f0 = D / "funcs_0.c"
+t0 = f0.read_text(errors="surrogateescape")
+if T2 not in t0:
+    assert t0.count(M_A) == 1, M_A
+    f0.write_text(t0.replace(M_A, M_B, 1), errors="surrogateescape"); print("applied", T2)
+
 for p in sorted(D.glob("funcs_*.c")):
     t = p.read_text(errors="surrogateescape")
     if HEAD not in t: continue

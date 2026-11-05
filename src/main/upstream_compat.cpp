@@ -2913,6 +2913,12 @@ static uint32_t s_s6569_bump = 0;
 static std::mutex s_s6702_mu;
 static std::map<uint32_t, uint32_t> s_s6702_free, s_s6702_live;  /* s6702: spill free list / live blocks, addr -> rounded size */
 static uint32_t s_s6702_live_bytes = 0; static unsigned long s_s6702_reused = 0, s_s6702_freed = 0;
+/* s6893 G5a: every spill event in a ring with the guest malloc ra, dumped when the s6892 guard fires, so the block that
+   overran or stayed in use after a free can be read back. rs64_s6893_ra is set by the rs_malloc hook. */
+struct S6893Ev { uint32_t op, req, p, ra; };
+static S6893Ev s6893_ring[1u << 16]; static uint32_t s6893_n = 0;
+extern "C" { uint32_t rs64_s6893_ra = 0; }
+static inline void s6893_ev(uint32_t op, uint32_t req, uint32_t p) { s6893_ring[s6893_n++ & 0xFFFFu] = { op, req, p, rs64_s6893_ra }; }
 static uint32_t rs64_s6587_spill_base() { static const uint32_t b = [] { const char* e = std::getenv("ROGUESQ_SPILL_HI"); return (e && e[0] && e[0] != '0') ? 0x81000000u : 0x80800000u; }(); return b; }  /* s6587: spill arena above the RSP-visible 16 MB so the DL pool can take 8 MB */
 extern "C" uint32_t rs64_s6569_spill(uint32_t req) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_MALLOC_SPILL"); return e && e[0] && e[0] != '0'; }();
@@ -2924,13 +2930,13 @@ extern "C" uint32_t rs64_s6569_spill(uint32_t req) {
         if (it->second < sz) continue;
         uint32_t p = it->first, rest = it->second - sz;
         s_s6702_free.erase(it); if (rest) s_s6702_free[p + sz] = rest;
-        s_s6702_live[p] = sz; s_s6702_live_bytes += sz; ++s_s6702_reused;
+        s_s6702_live[p] = sz; s_s6702_live_bytes += sz; ++s_s6702_reused; s6893_ev(1, req, p);
         if ((s_s6702_reused & 255u) == 1) std::fprintf(stderr, "[spill] reuse#%lu req=0x%X -> %08X live=0x%X bump=0x%X freeblk=%zu\n", s_s6702_reused, req, p, s_s6702_live_bytes, s_s6569_bump, s_s6702_free.size());
         return p;
     }
     if (s_s6569_bump + sz > 0x400000u) { std::fprintf(stderr, "[spill] req=0x%X arena full live=0x%X freeblk=%zu\n", req, s_s6702_live_bytes, s_s6702_free.size()); return 0; }
     uint32_t p = rs64_s6587_spill_base() + s_s6569_bump; s_s6569_bump += sz;
-    s_s6702_live[p] = sz; s_s6702_live_bytes += sz;
+    s_s6702_live[p] = sz; s_s6702_live_bytes += sz; s6893_ev(0, req, p);
     std::fprintf(stderr, "[spill] req=0x%X -> %08X (used 0x%X live 0x%X)\n", req, p, s_s6569_bump, s_s6702_live_bytes);
     return p;
 }
@@ -2961,13 +2967,48 @@ extern "C" int rs64_s6569_isspill(uint32_t p) {
     std::lock_guard<std::mutex> lk(s_s6702_mu);
     auto lv = s_s6702_live.find(p);
     if (lv == s_s6702_live.end()) { static int nb = 0; if (nb++ < 20) std::fprintf(stderr, "[spill] free of unknown/double-freed %08X ignored\n", p); return 1; }
-    uint32_t sz = lv->second; s_s6702_live.erase(lv); s_s6702_live_bytes -= sz; ++s_s6702_freed;
+    uint32_t sz = lv->second; s_s6702_live.erase(lv); s_s6702_live_bytes -= sz; ++s_s6702_freed; s6893_ev(2, sz, p);
     auto it = s_s6702_free.emplace(p, sz).first;  /* coalesce with neighbours */
     if (it != s_s6702_free.begin()) { auto pv = std::prev(it); if (pv->first + pv->second == it->first) { pv->second += it->second; s_s6702_free.erase(it); it = pv; } }
     auto nx = std::next(it); if (nx != s_s6702_free.end() && it->first + it->second == nx->first) { it->second += nx->second; s_s6702_free.erase(nx); }
     if (it->first + it->second == b + s_s6569_bump) { s_s6569_bump = it->first - b; s_s6702_free.erase(it); }  /* top block returns to the bump */
     if ((s_s6702_freed & 255u) == 1) std::fprintf(stderr, "[spill] free#%lu %08X sz=0x%X live=0x%X bump=0x%X freeblk=%zu\n", s_s6702_freed, p, sz, s_s6702_live_bytes, s_s6569_bump, s_s6702_free.size());
     return 1;
+}
+/* s6893: full evidence on the first guard fire: RDRAM to 20 MB, spill event ring, live map. Runs once, from build/. */
+/* s6893 G5a root cause: see tools/apply_s6893_tilepool.py. K = ceil(dd)^2, x2 for wide; ROGUESQ_TILEPOOL_K overrides, ROGUESQ_TILEPOOL=0 = old. */
+static uint32_t s6893_base = 0, s6893_cap = 0, s6893_max = 0; static unsigned s6893_lines = 0;
+static bool s6893_pool_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_TILEPOOL"); return !(e && *e == '0'); }(); return on; }
+extern "C" uint32_t rs64_s6893_tilepool_size(uint32_t req) {
+    if (!s6893_pool_on()) return req;
+    static const uint32_t k = [] {
+        if (const char* e = std::getenv("ROGUESQ_TILEPOOL_K")) { int v = std::atoi(e); if (v >= 1) return (uint32_t)v; }
+        const char* d = std::getenv("ROGUESQ_DRAW_DISTANCE"); double dd = (d && *d) ? std::atof(d) : 1.0; uint32_t px = dd > 1.0 ? (uint32_t)std::ceil(dd) : 1u;
+        const char* w = std::getenv("ROGUESQ_FB_WIDTH");
+        return px * px * ((w && std::atoi(w) > 640) ? 2u : 1u); }();
+    s6893_base = req / 25u; s6893_cap = s6893_base * k; s6893_max = 0;
+    std::fprintf(stderr, "[s6893] tile pool entries %u -> %u (k=%u)\n", s6893_base, s6893_cap, k);
+    return req * k;
+}
+extern "C" uint32_t rs64_s6893_tileslot(uint32_t count) {
+    static const uint32_t add = [] { const char* e = std::getenv("ROGUESQ_TILEPOOL_TESTADD"); return e ? (uint32_t)std::atoi(e) : 0u; }();  /* test lever: forces the overflow on demand */
+    count += add;
+    if (!s6893_cap) return count;
+    if (count > s6893_max) { s6893_max = count; if (count >= s6893_base / 2u && s6893_lines++ < 200) std::fprintf(stderr, "[s6893] tile count %u of retail %u (cap %u)\n", count + 1, s6893_base, s6893_cap); }
+    return count < s6893_cap ? count : s6893_cap - 1;
+}
+extern "C" void rs64_s6893_dump(const uint8_t* rdram) {
+    static bool done = false; if (done) return; done = true;
+    if (const char* e = std::getenv("ROGUESQ_S6892_DUMP")) if (*e == '0') return;
+    if (FILE* f = fopen("rs64_s6893_rdram.bin", "wb")) { fwrite(rdram, 1, 0x1400000u, f); fclose(f); }
+    std::lock_guard<std::mutex> lk(s_s6702_mu);
+    if (FILE* f = fopen("rs64_s6893_spill.txt", "w")) {
+        uint32_t n = s6893_n, c = n < 65536u ? n : 65536u;
+        for (uint32_t i = n - c; i != n; ++i) { const S6893Ev& e = s6893_ring[i & 0xFFFFu]; fprintf(f, "ev %u op=%u req=%X p=%08X ra=%08X\n", i, e.op, e.req, e.p, e.ra); }
+        for (auto& kv : s_s6702_live) fprintf(f, "live %08X %X\n", kv.first, kv.second);
+        for (auto& kv : s_s6702_free) fprintf(f, "free %08X %X\n", kv.first, kv.second);
+        fclose(f);
+    }
 }
 extern "C" void rs64_s5041_malloc(uint32_t ptr) {
     if (!s5041_on() || ptr == 0) return;
@@ -7058,12 +7099,13 @@ extern "C" void rs64_s4916_sb(uint8_t* rdram, uint32_t pc, uint32_t addr, uint32
 // s6892 G5a: cinematicSplineWalkerNpcHandler mesh pointer guard (tools/apply_s6892_walker_guard.py). Records the pointer
 // op 1 stored at s2+0x18, and repairs it if a later read finds junk. Not the root cause: this names when it happened.
 // ROGUESQ_S6892=0 off. ROGUESQ_S6892_TEST=<n> plants junk on the n-th tick read, as the positive control.
+extern "C" void rs64_s6893_dump(const uint8_t* rdram);
 namespace {
 struct S6892Rec { uint32_t s2, mesh; };
 S6892Rec s6892_rec[16];
 unsigned s6892_next = 0, s6892_logged = 0;
 unsigned long s6892_reads = 0;
-bool s6892_valid(uint32_t v) { return (v & 3) == 0 && v >= 0x80000400u && v < 0x80C00000u; }
+bool s6892_valid(uint32_t v) { return (v & 3) == 0 && v >= 0x80000400u && v < 0x81400000u; } // s6893: covers the 0x81000000 spill arena of the wide bundles
 uint32_t* s6892_word(uint8_t* rdram, uint32_t a) { return reinterpret_cast<uint32_t*>(rdram + (a - 0x80000000u)); }
 bool s6892_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S6892"); return !(e && *e == '0'); }(); return on; }
 void s6892_log(uint8_t* rdram, uint32_t s2, uint32_t bad, uint32_t good, uint32_t pc) {
@@ -7093,6 +7135,7 @@ extern "C" uint32_t rs64_s6892_check(uint8_t* rdram, uint32_t s2, uint32_t v, ui
     uint32_t good = 0;
     for (const S6892Rec& r : s6892_rec) if (r.s2 == s2) good = r.mesh;
     s6892_log(rdram, s2, v, good, pc);
+    if (s6892_reads != test) rs64_s6893_dump(rdram); // the planted control must not use up the one real dump
     if (s6892_valid(s2)) *s6892_word(rdram, s2 + 0x18) = good;
     return good;
 }
