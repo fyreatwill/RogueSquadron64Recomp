@@ -182093,3 +182093,27 @@ Visibility, the positive control for the claim that this is what the owner sees.
 
 NOT shown: that the owner's freezes are this and only this (the mechanism, size and catch-up match; the owner must fly). Stalls continuing to double past ~5 min: inference, the =0 arms stopped at 5 min. Why ASYNC+NODRAIN shows none (ba, bb, bw 0 stalls, sd max <=17, worker max_job 0.19 ms): inferred from ~20x fewer submits giving fewer keys; RSS not logged there, and max_job_ms may not cover fullSync. Frozen-image count on the FIXED binary: soak s6902_g5c_fixed_visible queued. What releases ~270 MB at t~285: not explained. Sibling statics in rt64_gbi_f3dfactor5.cpp and rt64_rdp.cpp not audited.
 Verdict: H-cost selected for FWDWIN. For G5c the same-binary pair names the writer of the stalls and the fix removes them; closure waits on the soak and the owner's flight.
+
+## Session 6903 (2026-11-05) — G5d: the Factor 5 logo lost picture, not frames; our dd levers ran in the boot cinematic, now level-gated; same run logo left share 0.1252 vs 0.0008
+
+Soak s6902_g5c_fixed_visible read first: 0 [g1b] tasks >=100 ms; frozen runs +4.02 s 497 ms, +6.72 s 499 ms, +136.67 s 319 ms. Capture start is not logged. With an offset of 148 s, inferred from the first two, they sit on the t=152 and t=155 mission restart and the t=286 scene change (tasks 30 -> 60, sd_wall 29 -> 2 ms). Over 250 ms, but at scene changes, so no freeze outranks G5d. Offset is inference.
+
+Instrument: scratch/s6903/boot.zsh, plain boot, ScreenCaptureKit from boot, no keys. tools/g5d_distinct.py, g5d_sheet.py, g5d_logo_score.py. Sequence: attribution, N64 logo, canyon, LucasArts logo, trench, FACTOR letters ~32 s, explosion ~37 s, logo with bolt ~40-43 s, title 45 s.
+
+Frame count, the hypothesis as written: refuted. Distinct frames t=30-43: retail settings 357, per second 30; FPS60 705, 60/s; owner recipe 645, 56/s; 16:9 357; WIDE_EARLY=0 358; dd4 357; 7-20/s around 41-42 s in every arm including retail, the logo hold.
+The sheets show the real loss, picture, at dd>1:
+| arm | letters at the end | LucasArts logo |
+|---|---|---|
+| retail settings, FPS60, 16:9, 16:9 WIDE_EARLY=0 | full | full |
+| owner recipe, CULL_SPIKE=0 on it, dd4 alone at 4:3, dd2 | left part gone | cut (dd2 nearly all) |
+So H-present, H-fps60, H-spike refuted; H-regress not needed. That this is the owner's "missing most of its frames" is inference. Bundle env without DRAW_DISTANCE (c4): clean, so pools, RAMTOP, spill are out.
+
+[ddclamp]: tw=th=32 in the cinematic; dd1.0005 pre x[2,31) z[3,26) cap 400 (retail runs past the cap), trimmed to z[13,26). dd4 pre x[-41,73) z[-28,58), cap 1600, FWDWIN post x[-8,17) z[-6,58): off-map cells kept, on-map dropped. EDGE=0 with EYEWIN=0 FWDWIN=0 gives x[0,32) z[0,32) and a full LucasArts logo, letters still cut. Retail window (radius off, CAPX=16, EYEWIN=0, FWDWIN=0, f1) has the same bounds as retail and letters still cut, so two causes. On f1, one more lever: SPAN_BYPASS=0 full, DD_FAR=1 full, SPANSENT_FIX=0 full, NOFARCLIP cut, TILEPOOL=0 cut. Why any one of three restores it is unexplained. Inference, untested: extra terrain cells cover the letters and depth decides it.
+ORIGIN: not a corrupt value. Our dd levers, built for mission flight, ran in level 0x13 (cinematicLoopBody a0=0x13, [cineBody] t=5; cinematicLoopBody stores gCurrentLevel 0x80130B70 at 0x800A5E54).
+Fix tools/apply_s6903_cinegate.py + rs64_dd_scene_update in upstream_compat.cpp: g_rs64_dd_scene refreshed at the s6036 hook, 1 for levels 0..18. Off means radius, far clip and LOD multiplier 1, no dd clamp, no FWDWIN, no bypass, no sentinel fix, no far scale. Wide window bound s6879 still applies. Not gated: on6049 span bounds (present in clean arms g1 g3 g4), W_CLAMP, TG_FIX, pools. dd1 unchanged. ROGUESQ_DD_CINE_GATE=0 old, =tog 4 s blocks.
+
+Same binary, FPS60 16:9. Same run =tog (h4), blocks by mach time: gate on t 38.5-40.5 left bright p50 0.1252 n 122; gate off t 40.5-44 0.0008 n 169. The blocks are different moments of the logo, so read it with the separate arms: h3 =0 best left 0.0441 at 43.5 s (title onset, cut logo), h1 dd4 0.1245, h2 dd2 0.0982, h5 dd1 0.0983, r0 retail 0.0901 (4:3 frame). h1 is above h5 because its window caught more explosion. Sheets: h1, h2 match h5 by eye at 22 and 40 s, h3 cut: docs/owner_sheet_s6903_logo.png. Not pixel-matched. 0 crash in h1-h5.
+Missions keep dd: [ddscene] h1 level=19 on=0 then level=0 on=1 (attract); arm v3 LEVEL=4 dd4 level=4 on=1, 100 s hold, 0 crash, tasks t=70-123 mean 34.1 vs fx 36.4, lg 34.6, cross-run on an animating scene so only "no large change". dd>1 quads in a mission not rescored; the gate is 1 there and the code path is the same.
+NOT shown: the owner's report is this; retail logo frame count from angrylion (not run; 30/s rests on s6738-s6778 cadence); FULLSCREEN arm; the cinematic replay after attract (level expected 0x13, unverified); level 0x14 scenes. tw/th per mission level not surveyed: a small map would hit the same clamp cut in flight.
+Verdict: G5d cause found and fixed pending the owner's boot. H-frames refuted, H-dd selected.
+

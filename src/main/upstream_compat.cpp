@@ -61,6 +61,16 @@ extern "C" { double rs64_s6879_fpk = 1.0; } // s6879: footprint x factor of this
 // s6880: wide frames get the s6049 span-table store bound, tools/apply_s6880_widebound.py. ROGUESQ_G1D_SPANBOUND=0 = old.
 extern "C" int rs64_s6880_wide(void) { static int on = -1; if (on < 0) { const char* e = getenv("ROGUESQ_G1D_SPANBOUND"); on = !(e && *e == '0'); } return on && rs64_s6879_fpk != 1.0; }
 // s6882: narrow the span fill x loops where the s6049/s6880 bound runs (tools/apply_s6882_spannarrow.py). ROGUESQ_G1D_SPANNARROW=0 = old.
+// s6903 G5d: dd levers apply to levels 0..18 only; 0x13/0x14 are sentinels (boot cinematic is 0x13). ROGUESQ_DD_CINE_GATE=0 old, =tog gate on in odd 4 s blocks.
+extern "C" volatile int g_rs64_dd_scene = 1;
+extern "C" int rs64_dd_scene_update(int level) {
+    static int mode = -1, last = -1, last_level = -1000;
+    if (mode < 0) { const char* e = getenv("ROGUESQ_DD_CINE_GATE"); mode = !(e && *e) ? 1 : (e[0] == 't' ? 2 : (e[0] != '0')); }
+    int gate = mode == 1 || (mode == 2 && ((mach_absolute_time() / 96000000u) & 1u));
+    int on = !(gate && (level < 0 || level > 18));
+    if (on != last || level != last_level) { fprintf(stderr, "[ddscene] level=%d gate=%d on=%d\n", level, gate, on); last = on; last_level = level; }
+    return on;
+}
 extern "C" int rs64_s6882_on(void) { static int on = -1; if (on < 0) { const char* e = getenv("ROGUESQ_G1D_SPANNARROW"); const char* d = getenv("ROGUESQ_DRAW_DISTANCE"); on = (e && *e == '0') ? 0 : (d && *d && atof(d) != 1.0) ? 2 : 1; } return on == 2 || (on == 1 && rs64_s6880_wide()); }
 // s6883: span scan edge rows past 80 and span cells outside 64x64 (tools/apply_s6883_spancell.py). ROGUESQ_G1D_SPANCELL (default 3 where the s6882 gate runs, =0 old) bits 1 = rows >= 80 in host arrays, 2 = 64x64 cell bound,
 // 4 = control, blank rows 20..23. ROGUESQ_G1D_SPANLOG=1 logs [spancell]; ROGUESQ_G1D_SPANDUMP=<prefix> writes both tables at each POSE_FREEZE.

@@ -42090,6 +42090,7 @@ RS64_REPLAY = [
     "apply_s6899_eyewin.py",  # s6899: G5b dd>1 window clamp keeps the eye cells
     "apply_s6901_fwdwin.py",  # s6901: G5b dd>1 window placed by heading, not anchored low
     "apply_s6902_fwdtog.py",  # s6902: FWDWIN=tog half period + flip line, instrument only
+    "apply_s6903_cinegate.py",  # s6903: G5d dd levers follow the level, sentinel levels run the retail terrain path
 ]
 
 
