@@ -214,8 +214,8 @@ When choosing the work unit, this order overrides Next-steps ordering:
      the caller does a0 = *(s2+0x18) + 0x28, a1..a3 = *(s2+4). Crash values: a0 = 0x26282B53,
      so *(s2+0x18) = 0x26282B2B (junk, not a guest pointer), a1 = 0x41900000 = 18.0f (sane).
      Last guest PC 0x80022160. **Mission: Liberation of Gerrard V, about half way through, both
-     crashes (owner 2026-11-05).** Likely lvl5 if lvl1 is Mos Eisley, unconfirmed: verify the level
-     index first. A 300 s idle hold does not count, because the mission must be flown past its
+     crashes (owner 2026-11-05).** This is LEVEL=4 (0-based: owner save current-mission byte = 4, and owner saw LEVEL=5 play Jade
+     Moon), so earlier lvl5 holds were a different mission. A 300 s idle hold does not count, because the mission must be flown past its
      half-way scripted event to reach the actor; drive objectives or force that event. Hypotheses: H-overrun
      (dd/wide span or terrain writes land in the actor object, see s6880/s6883), H-spill (dd>1
      spill arena, s6858), H-fps60 (actor state ticks twice, object freed or reused),
