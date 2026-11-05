@@ -181592,3 +181592,26 @@ This selects H-safe: rate and level hold across the events and timeouts do not p
 New, single run: ungated latency fell to the gated level at the fullscreen toggle, stayed there after returning to a window, and went back to ~66 after minimize. So the gate's 4:3 gain is 0 in fullscreen in that run, and some window state sets the queue level. Not chased here; it is the next unit, since a free fix would beat an opt-in.
 
 Not shown: move between displays (one display on this Mac), window covered by another window, repeats of any arm, input-to-photon, owner feel. Default stays off.
+
+## Session 6888 (2026-11-04) — ungated present level is a backlog: slips raise it, small stalls lower it, resize does nothing
+HYPOTHESIS-ID g1e-present-level. Unit from NEXT: what window state sets the present queue level. No owner report.
+
+Levers, all off unless set: ROGUESQ_PRESENT_TEST_STALL="t:ms,.." (sleeps the present thread, S ring row), ROGUESQ_WIN_TEST_RESIZE_S="t:w:h,.." (SDL_SetWindowSize), ROGUESQ_FS_TEST_TOGGLE_LIST_S="t,.." (F11 list). Z ring row in MetalSwapChain::resize witnesses the size the swap chain took. Tools: g1e_present_level.py, g1e_present_slips.py, g1e_present_stall_course.py. Runs scratch/s6888/arms.zsh; all arms 0 crash, 0 VI stall. One binary for s, n, f, r, m, w; r2 has the Z row added.
+
+Offline first (s6885-s6887 rings): level climbs in +16 ms steps to ~72, drops at the ~100 ms gap near t=80 in most runs with no window event. Arm d really has three levels, 49/65/72.
+
+Arms (lvl1 4:3 dd1 FPS60 ASYNC+NODRAIN, no gate unless noted):
+- n, no events: 49 -> 65 -> 72 by t=72, then 72 for 172 s, including a natural 102 ms gap.
+- s, 20 stalls, delta in ms, level 1-3 s after vs 2 s before: 17: -23 -24 -25 -8; 34: -23 -18 -8 -9; 50: -7 -1 -8 -8; 100: 0 +8 0 0; 200: 0 -8 0 0. My prediction (bigger stall drains more) was backwards. Time course: after a stall presents run 2-4 ms apart at 27/42/58 ms, +15 each, and big stalls reach 72 inside 100 ms. Rows at t=236: W rows stop for the stall, then release 1-3 ms apart, each present is the newest when taken, so skipPresent does not merge them. One 34 ms stall from 65 reached 32 ms.
+- f, F11 x6: entry 68 -> 47, 71 -> 46, 72 -> 48. Exit 63, 59, 54, then back up. Slips: 0 in 39 s fullscreen, 12 in 104 s windowed (0.115/s, ~4.5 expected, p ~0.01), one run. Arm d stayed 48 through its exit, so exit is not fixed.
+- r, SDL resize x6: 72 throughout, but [metal-resize-entry] 0, so not a result alone. That log is behind a layer-size compare SDL has already satisfied (it also missed f's first entry).
+- r2, Z row added: 6 of 6 sizes reached the swap chain. Level unmoved at 120, 135 (ceiling) and 160, 175, 200, 215 (52 after a 17 ms stall, positive control for "level can move": -16, -21). H-size refuted.
+- m, minimize x3: 72 -> 66, 72, 48 (the last with a 1014 ms present gap).
+- w, 21:9 dd4 SCREEN_JOB, same stalls: no dose response (17: -35 -2 +19; 200: +26 +14), slips 70 at ~0.3/s, under-ceiling up 35 down 11 same 20. Does not follow the 4:3 model.
+
+Slips by level, 4:3 arms this session, 1 s medians either side: under ceiling up 43 down 4 same 8 of 55; at ceiling up 0 down 10 same 91 of 101. Gated s6887 ring_g: 46 slips, 40 no change, on an older binary.
+
+Verdict: H-size refuted. H-phase as written refuted (large stalls do not lower it); kept as backlog: up by slip, capped ~72, down by a gap with no burst. H-direct: survives only as "fullscreen has no slips", single run, compositor path not observed. Rules out a window setting as a replacement for the gate.
+
+Not established: what causes a slip (close-spaced presents near only 2 of 12 up-steps, s6887/s6885/s6886 rings). The 2-4 ms burst size vs dose is 8 samples per dose at most. Nothing measured for input-to-photon. Default unchanged, game behaviour unchanged with levers unset.
+

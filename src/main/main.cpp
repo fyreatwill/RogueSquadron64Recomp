@@ -11372,8 +11372,45 @@ static void rs64_g1f_test_toggle_tick() {
     next++;
 }
 
+// s6888 test levers, same reason as above: ROGUESQ_WIN_TEST_RESIZE_S="t:w:h,.." calls SDL_SetWindowSize t seconds after the window opens (AX set size in s6887 never reached the
+// drawable); ROGUESQ_FS_TEST_TOGGLE_LIST_S="t,t,.." pushes F11 at each t, for more than the two toggles above.
+static void rs64_g1f_test_list_tick() {
+    static const char* er = std::getenv("ROGUESQ_WIN_TEST_RESIZE_S");
+    static const char* ef = std::getenv("ROGUESQ_FS_TEST_TOGGLE_LIST_S");
+    if ((!er && !ef) || !g_rs64_window) return;
+    static Uint64 t0 = 0;
+    if (!t0) t0 = SDL_GetPerformanceCounter();
+    const double t = (double)(SDL_GetPerformanceCounter() - t0) / SDL_GetPerformanceFrequency();
+    while (er && *er && t >= std::atof(er)) {
+        int w = 0, h = 0;
+        if (std::sscanf(er, "%*f:%d:%d", &w, &h) == 2 && w > 0 && h > 0) {
+            SDL_SetWindowSize(g_rs64_window, w, h);
+            int dw = 0, dh = 0;
+#if defined(__APPLE__)
+            SDL_Metal_GetDrawableSize(g_rs64_window, &dw, &dh);
+#endif
+            fprintf(stderr, "[g1f] test resize t=%.1f %dx%d drawable %dx%d\n", t, w, h, dw, dh);
+        }
+        const char* c = std::strchr(er, ',');
+        er = c ? c + 1 : nullptr;
+    }
+    while (ef && *ef && t >= std::atof(ef)) {
+        SDL_Event ev{};
+        ev.type = SDL_KEYDOWN;
+        ev.key.windowID = SDL_GetWindowID(g_rs64_window);
+        ev.key.state = SDL_PRESSED;
+        ev.key.keysym.sym = SDLK_F11;
+        ev.key.keysym.scancode = SDL_SCANCODE_F11;
+        SDL_PushEvent(&ev);
+        fprintf(stderr, "[g1f] test F11 list t=%.1f\n", t);
+        const char* c = std::strchr(ef, ',');
+        ef = c ? c + 1 : nullptr;
+    }
+}
+
 static void rs64_g1f_apply_fs_toggle() {
     rs64_g1f_test_toggle_tick();
+    rs64_g1f_test_list_tick();
     if (!g_rs64_window || !g_rs64_fs_toggle.exchange(false)) return;
     const bool fs = (SDL_GetWindowFlags(g_rs64_window) & SDL_WINDOW_FULLSCREEN) != 0;
     SDL_SetWindowFullscreen(g_rs64_window, fs ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
