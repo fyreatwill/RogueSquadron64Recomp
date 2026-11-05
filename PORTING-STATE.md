@@ -182010,3 +182010,15 @@ Results. Scene = eye within 6 of 157.35,159.2 and m2 >= 300.
 - h2 from s6898 (dd2, older binary): 7334 swaps with m2 >= 300, 0 collapsed. Whether it reached the scene was not checked, so where collapse starts is still unknown.
 
 Open: pale flat patches with stepped edges by the rock at dd4 fix on (scene +3.1 s, docs/owner_sheet_s6899_dd1_dd4_scene.png). dd1's frame at the same offset is a different camera phase, so that sheet is not a same-pose comparison, and no retail frame of this scene exists. Not run: scene at 21:9, dd2, dd3.
+
+## Session 6900 (2026-11-05) — Step-0 maintenance: CURRENT-TRUTH compacted 60059 -> 21626 B (376 -> 115 lines)
+Step 0 triggered (wc -c 60059 > 60000), so this was a MAINTENANCE iteration; no experiments ran, no game run, no build.
+- Moved verbatim to PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 maintenance)" by scratch/s6900/compact.py (line ranges guarded by sentinel asserts; 261 lines, a post-write check found 0 missing from the archive): closed headline bullets s6696-s6862, wide/dd and present-thread bullets s6879-s6891, superseded entries s6004-s6882, the owner 2026-11-02 block and closed Next-steps items 1-2 (s6788-s6878).
+- Replaced them with a "Closed work, summarised" section and a one-line-each list of the older superseded claims. Superseded entries s6883-s6897 stay in full. Measurement rules that sat inside closed bullets moved to Run recipes (timing env, present-ring validity, frame comparison, oracle mission reach, dt pin) and Durable constraints (apply scripts go in RS64_REPLAY only, controls mapping).
+- Corrections found while compacting, none from a new measurement:
+  - Next steps still said G3e was CLOSED and listed no G5 item at all. Added the s6788-s6791 "0 drops" claim to Superseded (owner playtest 2026-11-04 reopened it as G5b) and rebuilt the backlog as one sequence 1-10, G5a-G5f first.
+  - Ledger grep shows G5c has one side datum (s6894), G5d and G5e have no work, G5f has a lead only (s6895). NEXT.md said "Then G5f", which skipped them against the owner's stated order; corrected to G5c, G5d, G5e, G5f.
+  - Headline "s6893_census_1-4 queued" was stale: all four folded in s6894-s6895. Evidence index soak line and chronology line refreshed.
+- SOAK-RESULTS: nothing new; every line in the tail is already folded (checked s6883_l10z/d, s6884_job_lvl5, s6874_edge_dd4_lvl5/10, s6893_census_1-4). Top level of soak_queue is empty; hold/ and running/ hold old leftovers from s5688-s6112, left alone.
+Rules out nothing (no experiment). Summaries were written from the migrated text and not re-derived; where a summary and the archive differ, the archive wins. ITERATION.md still cites "Next steps #2" and "Durable boundaries" for the revisit rule; those labels were already stale and that owner file was not edited.
+Next: g5b-terrain-drops (NEXT.md unit unchanged apart from the G5 order line).
