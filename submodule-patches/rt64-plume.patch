@@ -1,5 +1,5 @@
 diff --git a/plume_metal.cpp b/plume_metal.cpp
-index a5f30a3..1201895 100644
+index a5f30a3..3753419 100644
 --- a/plume_metal.cpp
 +++ b/plume_metal.cpp
 @@ -9,17 +9,89 @@
@@ -215,7 +215,7 @@ index a5f30a3..1201895 100644
  
          this->commandQueue = commandQueue;
          this->desc = desc;
-@@ -1932,6 +2066,42 @@ namespace plume {
+@@ -1932,6 +2066,52 @@ namespace plume {
      MetalSwapChain::~MetalSwapChain() {
      }
  
@@ -254,11 +254,21 @@ index a5f30a3..1201895 100644
 +    static std::mutex g_rs64InflightMutex;
 +    static std::condition_variable g_rs64InflightCv;
 +    static uint64_t g_rs64PresentedHigh = 0;
++    // s6887: open = the wait is skipped. While the window is not on screen CoreAnimation reports each present only when a later one replaces its
++    // drawable (presentedTime 0, ~3 presents late), so the gate would time out every present and pace the game at 16/s. Opened by a 0 report or a
++    // timeout, closed by the first report of a present that reached the screen.
++    static bool g_rs64InflightOpen = false;
++    static void rs64InflightSetOpen(bool open, const char *why) {
++        if (g_rs64InflightOpen == open) return;
++        g_rs64InflightOpen = open;
++        static int changes = 0;
++        if ((++changes & (changes - 1)) == 0) fprintf(stderr, "[s6887] inflight gate %s (%s) change #%d high=%llu\n", open ? "open" : "closed", why, changes, (unsigned long long)g_rs64PresentedHigh);
++    }
 +
      bool MetalSwapChain::present(const uint32_t textureIndex, RenderCommandSemaphore **waitSemaphores, const uint32_t waitSemaphoreCount) {
          assert(layer != nullptr && "Cannot present without a valid layer.");
          NS::AutoreleasePool *releasePool = NS::AutoreleasePool::alloc()->init();
-@@ -1954,6 +2124,20 @@ namespace plume {
+@@ -1954,6 +2134,25 @@ namespace plume {
          // According to Apple, presenting via scheduled handler is more performant than using the presentDrawable method.
          // We grab the underlying drawable because we might've acquired a new one by now and the old one would have been released.
          CA::MetalDrawable *drawableMtl = drawable.mtl->retain();
@@ -271,7 +281,12 @@ index a5f30a3..1201895 100644
 +                    rs64_pring_write(row);
 +                }
 +                if (rs64InflightMax() != 0) {
-+                    { std::lock_guard<std::mutex> lock(g_rs64InflightMutex); g_rs64PresentedHigh = std::max(g_rs64PresentedHigh, presentId); }
++                    {
++                        std::lock_guard<std::mutex> lock(g_rs64InflightMutex);
++                        g_rs64PresentedHigh = std::max(g_rs64PresentedHigh, presentId);
++                        const bool offScreen = d->presentedTime() == 0.0;
++                        rs64InflightSetOpen(offScreen, offScreen ? "off screen" : "on screen");
++                    }
 +                    g_rs64InflightCv.notify_all();
 +                }
 +            });
@@ -279,7 +294,7 @@ index a5f30a3..1201895 100644
          presentBuffer->addScheduledHandler([drawableMtl](MTL::CommandBuffer* cmdBuffer) {
              drawableMtl->present();
          });
-@@ -1987,6 +2171,8 @@ namespace plume {
+@@ -1987,6 +2186,8 @@ namespace plume {
          }
      }
  
@@ -288,7 +303,7 @@ index a5f30a3..1201895 100644
      bool MetalSwapChain::resize() {
          getWindowSize(width, height);
  
-@@ -1996,6 +2182,10 @@ namespace plume {
+@@ -1996,6 +2197,10 @@ namespace plume {
  
          const CGSize drawableSize = CGSizeMake(width, height);
          if (const CGSize current = layer->drawableSize(); !CGSizeEqualToSize(current, drawableSize)) {
@@ -299,7 +314,7 @@ index a5f30a3..1201895 100644
              layer->setDrawableSize(drawableSize);
  
              for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
-@@ -2050,6 +2240,16 @@ namespace plume {
+@@ -2050,6 +2255,17 @@ namespace plume {
          acquireBuffer->encodeSignalEvent(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue);
          acquireBuffer->commit();
  
@@ -307,7 +322,8 @@ index a5f30a3..1201895 100644
 +            std::unique_lock<std::mutex> lock(g_rs64InflightMutex);
 +            // By highest id reported, not a count: a handler that never fires is healed by the next one, so a timeout needs no resync (s6886: a
 +            // resynced count over-credited and left the gate open for the rest of the run).
-+            if (!g_rs64InflightCv.wait_for(lock, std::chrono::milliseconds(50), [this, rs64Max] { return currentPresentId <= g_rs64PresentedHigh + rs64Max - 1; })) {
++            if (!g_rs64InflightCv.wait_for(lock, std::chrono::milliseconds(50), [this, rs64Max] { return g_rs64InflightOpen || currentPresentId <= g_rs64PresentedHigh + rs64Max - 1; })) {
++                rs64InflightSetOpen(true, "timeout");
 +                static int rs64Timeouts = 0;
 +                if ((++rs64Timeouts & (rs64Timeouts - 1)) == 0) fprintf(stderr, "[s6886] inflight gate timeout #%d id=%llu presented=%llu\n", rs64Timeouts, (unsigned long long)currentPresentId, (unsigned long long)g_rs64PresentedHigh);
 +            }
@@ -316,7 +332,7 @@ index a5f30a3..1201895 100644
          CA::MetalDrawable *nextDrawable = layer->nextDrawable();
          if (nextDrawable == nullptr) {
              fprintf(stderr, "No more drawables available for rendering.\n");
-@@ -2118,6 +2318,14 @@ namespace plume {
+@@ -2118,6 +2334,14 @@ namespace plume {
          for (uint32_t i = 0; i < desc.colorAttachmentsCount; i++) {
              const MetalTextureView *colorAttachmentView = desc.colorAttachmentViews && desc.colorAttachmentViews[i] ? static_cast<const MetalTextureView *>(desc.colorAttachmentViews[i]) : nullptr;
              const MetalTexture *colorAttachment = colorAttachmentView ? colorAttachmentView->parentTexture : static_cast<const MetalTexture *>(desc.colorAttachments[i]);
@@ -331,7 +347,7 @@ index a5f30a3..1201895 100644
              assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
  
              MetalAttachment attachment;
-@@ -3008,6 +3216,17 @@ namespace plume {
+@@ -3008,6 +3232,17 @@ namespace plume {
                  dstOrigin
              );
              activeBlitEncoder->popDebugGroup();

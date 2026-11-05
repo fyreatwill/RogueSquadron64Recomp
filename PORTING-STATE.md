@@ -181568,3 +181568,27 @@ This selects H-depth: the queue depth sets the latency, since capping it moved l
 Two gate bugs found by a hide test (window hidden 10 s by osascript in flight), neither shipped. First version counted handlers, so one lost handler would leave it short for good; review caught that. The timeout resync I added for it was itself wrong: it over-credited, and b_g2h sat at 72.1 after the hide, identical to control, with the gate silently open. Replaced by the highest reported id, which needs no resync. Final build, c_g2h: while hidden presents ran 32/s (8 logged timeouts by power-of-two sampling, so at least 128 fired, CA reporting at=0), and after the window came back latency returned to 45.4/48.2, on-screen 60.0. The default arm b_d3h kept presenting at 60/s when hidden. The 32/s is not only presents: with the gate the game's own [g1b] tasks fell to 32-33/s for those seconds and returned to 60 after, so hiding the window slows the game with the gate on. Control b_d3h held 60 tasks/s through its hide, so the gate causes this. Same cause is expected whenever CoreAnimation stops reporting promptly; a fix would skip the wait once the handler reports at=0. Batch 1 ran the count build with no timeout logging, and bw_g2 the resync build with 0 timeouts, so the id build is confirmed only by c_g2h and cw_g2 (45.3/48.4, 0 timeouts). 4:3 unhidden has not been run on the final build except c_g2h's pre-hide flight.
 
 Not shown: true input-to-photon, which needs a camera or a witness at the input. No owner feel test. Resize, fullscreen toggle and moving between displays not exercised with the gate on; one swap chain is created at startup, and currentPresentId is per swap chain. Runs of 100 s flight, lvl1 only, no 300 s hold. Default stays off; the owner chooses.
+
+## Session 6887 (2026-11-04) — PRESENT_INFLIGHT=2 fixed off screen and qualified through hide, resize, fullscreen and minimize; 312 s flight holds 48 ms
+
+Planned: is ROGUESQ_PRESENT_INFLIGHT=2 safe through resize and fullscreen (NEXT g1e-present-latency), with the hidden-window slowdown fixed first.
+
+ORIGIN: the slowdown was our own s6886 gate. s6886 rings, offline: while hidden, the default arm's reports arrive ~50 ms after the present with presentedTime 0, i.e. only when later presents replace the drawable. Under the gate that delay was 186 ms and presents ran 16/s, each wait running out its 50 ms cap. The value is legitimate; the gate's assumption that a report means a free queue slot holds only on screen.
+
+Fix, plume_metal.cpp: the gate opens on a report with presentedTime 0 or on a timeout, and closes on the first report of a present that reached the screen. Transitions log as [s6887], power-of-two limited. The timeout path has no measured trigger of its own in these runs beyond the one timeout at hide onset; it covers a handler that does not fire.
+
+Runs, one binary, lvl1 FPS60, one run each. Events inside flight: hide 125-135 s, resize to 1000x750 at 150 and back at 160, fullscreen on/off via ROGUESQ_FS_TEST_TOGGLE_S=172,187, minimize 205-215. Arms: g gate 4:3 dd1 (HOLD 380, 312 s of flight), d no gate 4:3 dd1, w gate 21:9 dd4 + SCREEN_JOB. All alive, 0 VI stalls, 0 crash lines. Controls fired: at0 reports 480-539 in hide and minimize, [metal-resize-entry] and [g1f] resized on the events, [s6887] open/closed lines, same tool reads 16.5 presents/s on the old s6886 ring.
+
+Scored by tools/g1e_present_events.py (new), latency p50/p99 ms:
+- Hidden: g, d, w all 60 presents/s, tasks 60/60/60 (min/p10/p50). Old gate 16.5.
+- g: pre 45.8/49.0, after hide 48.0/48.6, resized 48.0/48.7, restored 48.0/48.5, fullscreen 47.4/48.3, after fullscreen 48.0/52.2, after minimize 47.9/48.6, last 105 s 48.0/48.6 at 59.8/s.
+- d: pre 68.1/72.8, after hide 66.0/68.3, resized 65.7/67.9, restored 65.9/69.4, fullscreen 47.4/48.3, after fullscreen 48.9/52.3, after minimize 66.3/72.6.
+- w: p99 48.1-48.5 in every on-screen phase, p50 37.9-45.5.
+- Timeouts: g 1, w 1, d none possible. Max on-screen gap outside the toggles and the t~81 dip that all arms share: 67 ms or less in w and d, 50 in g.
+- Tasks dip on a toggle: g 31, 42 at 187-188; d 36, 49 at 172-173; w none. Not gate-specific.
+
+This selects H-safe: rate and level hold across the events and timeouts do not persist. It refutes H-stall (1 timeout per run, 60 presents/s) and H-open (gated 48 vs ungated 66 after every event). Second line of evidence: [g1b] game tasks agree with CoreAnimation's reports.
+
+New, single run: ungated latency fell to the gated level at the fullscreen toggle, stayed there after returning to a window, and went back to ~66 after minimize. So the gate's 4:3 gain is 0 in fullscreen in that run, and some window state sets the queue level. Not chased here; it is the next unit, since a free fix would beat an opt-in.
+
+Not shown: move between displays (one display on this Mac), window covered by another window, repeats of any arm, input-to-photon, owner feel. Default stays off.
