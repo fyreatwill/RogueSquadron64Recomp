@@ -181575,7 +181575,7 @@ Planned: is ROGUESQ_PRESENT_INFLIGHT=2 safe through resize and fullscreen (NEXT 
 
 ORIGIN: the slowdown was our own s6886 gate. s6886 rings, offline: while hidden, the default arm's reports arrive ~50 ms after the present with presentedTime 0, i.e. only when later presents replace the drawable. Under the gate that delay was 186 ms and presents ran 16/s, each wait running out its 50 ms cap. The value is legitimate; the gate's assumption that a report means a free queue slot holds only on screen.
 
-Fix, plume_metal.cpp: the gate opens on a report with presentedTime 0 or on a timeout, and closes on the first report of a present that reached the screen. Transitions log as [s6887], power-of-two limited. The timeout path has no measured trigger of its own in these runs beyond the one timeout at hide onset; it covers a handler that does not fire.
+Fix, plume_metal.cpp: the gate opens on a report with presentedTime 0 or on a timeout, and closes on the first report of a present that reached the screen. Transitions log as [s6887], power-of-two limited. Each gated run logged one timeout: g near hide onset (id 7131), w near the fullscreen toggle (id 10228, about t=170 s by id; position inferred from id and log order, not stamped). The timeout path also covers a handler that does not fire, which these runs did not exercise.
 
 Runs, one binary, lvl1 FPS60, one run each. Events inside flight: hide 125-135 s, resize to 1000x750 at 150 and back at 160, fullscreen on/off via ROGUESQ_FS_TEST_TOGGLE_S=172,187, minimize 205-215. Arms: g gate 4:3 dd1 (HOLD 380, 312 s of flight), d no gate 4:3 dd1, w gate 21:9 dd4 + SCREEN_JOB. All alive, 0 VI stalls, 0 crash lines. Controls fired: at0 reports 480-539 in hide and minimize, [metal-resize-entry] and [g1f] resized on the events, [s6887] open/closed lines, same tool reads 16.5 presents/s on the old s6886 ring.
 
@@ -181584,7 +181584,7 @@ Scored by tools/g1e_present_events.py (new), latency p50/p99 ms:
 - g: pre 45.8/49.0, after hide 48.0/48.6, resized 48.0/48.7, restored 48.0/48.5, fullscreen 47.4/48.3, after fullscreen 48.0/52.2, after minimize 47.9/48.6, last 105 s 48.0/48.6 at 59.8/s.
 - d: pre 68.1/72.8, after hide 66.0/68.3, resized 65.7/67.9, restored 65.9/69.4, fullscreen 47.4/48.3, after fullscreen 48.9/52.3, after minimize 66.3/72.6.
 - w: p99 48.1-48.5 in every on-screen phase, p50 37.9-45.5.
-- Timeouts: g 1, w 1, d none possible. Max on-screen gap outside the toggles and the t~81 dip that all arms share: 67 ms or less in w and d, 50 in g.
+- Timeouts: g 1, w 1, d none possible. Max on-screen gap after the t~81 dip that all arms share: g 50 ms, w 67, d 83, so the gate adds no gaps here.
 - Tasks dip on a toggle: g 31, 42 at 187-188; d 36, 49 at 172-173; w none. Not gate-specific.
 
 This selects H-safe: rate and level hold across the events and timeouts do not persist. It refutes H-stall (1 timeout per run, 60 presents/s) and H-open (gated 48 vs ungated 66 after every event). Second line of evidence: [g1b] game tasks agree with CoreAnimation's reports.
