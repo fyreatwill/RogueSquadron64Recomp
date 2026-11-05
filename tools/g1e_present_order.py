@@ -16,6 +16,8 @@ for fn in a.files:
         elif l[:2]=='W ' and len(p)>=4:
             W.append((float(p[1]),int(p[2][3:]),p[3][4:].split(',')))
     if not W: print(fn,'no W rows'); continue
+    on=sum(l.startswith('P ') and ' at=0.000000' not in l for l in open(fn,errors='replace'))
+    if on<100: print(fn.split('/')[-1],'WARNING: %d on-screen reports. "distinct shown/s" below is NOT display evidence for this ring (s6890/s6891: covered window, or a display that gives no reports).'%on)
     t1=Q[-1]['t']; t0=t1-a.last
     scan={q['fb'] for q in Q if q['skip']=='0' and q['fb']!='000000' and q['t']>=t0}
     by=collections.defaultdict(list)  # fb -> [(t,wl)]

@@ -181684,3 +181684,44 @@ ORIGIN: no corruption or wild value here. Default unchanged, game code unchanged
 Discrimination summary: selects H-60only and H-judder at 4:3 on 144 Hz over a persisting backlog; refutes g2's lower off-pattern share as a gate effect. Next discriminator: same arms at 21:9 with cover < 100% in the witness, and the 60 Hz drain repeat if the grid returns.
 
 Correction to this entry and to commit 86d175206: its message says 6 of 11 arms; the count is 7 (off, woff, wg2, woff2, wg2b, off3, g2c), with g2b partial on top. Covered is shown only for the 4 sampled arms.
+
+## Session 6891 (2026-11-04) — on-screen reports depend on the display; externals left mid set; built-in has no backlog, so drain and gate do nothing there
+
+Planned: 21:9 on 144 Hz with a visible window. Not obtained in flight. The 60 Hz branch of NEXT ran instead.
+
+Landed: ROGUESQ_WINDOW_POS=x,y (src/main/main.cpp, test lever, unset = centered; the [g1f] window line now prints the position), tools/g1e_display_free.swift, tools/g1e_display_state.swift, tools/g1e_present_offgrid.py, a no-reports warning in g1e_present_order.py.
+
+Boot matrix (scratch/s6891/mx.zsh, 35 s title boot, one run per cell, witness tools/g1e_window_cover.swift). The first arm of the set, woff on a UG27, had cover 0% and no reports, which is what started this.
+| cell | display | aspect | cover | on-screen rows | at=0 rows |
+| a | UG27 id12 | 4:3 | 0% | 0 | 1134 |
+| c | UG27 id12 | 21:9, resized 1360 | 0% | 0 | 1134 |
+| f | UG27 id13 | 4:3 | 0% | 0 | 1134 |
+| g | UG27 id13 | 21:9 | 0% | 0 | 1134 |
+| b | built-in | 4:3 | 0% | 1131 | 1 |
+| d | built-in | 21:9, resized 680 | 0% | 1128 | 5 |
+| e | XG49V centred | 4:3 | 100% (Chrome) | 0 | 1132 |
+| h | XG49V at 0,50 | 21:9 | 67% | 1133 | 1 |
+| i | XG49V at 0,50 | 4:3 | 0% | 1132 | 1 |
+This supplies the contrast s6890 lacked (e against i, same display). It also narrows s6890: at=0 does not imply covered. Why the UG27 give no reports is unknown. CG calls both active and not asleep; the panels may still be off. Ask the owner. The game window opened behind the owner's windows in e, so it does not take the front.
+
+Harness faults, mine: the 45 s gate killed the game but m6_god_common.sh retried and relaunched it, so I stopped the set by hand; arms60.zsh kills the script first. A first scoring pass failed on zsh word splitting and was rerun under bash. The background task failures in the log are those manual kills.
+
+Display change: woff on the XG49V at 0,50 ran on the 144 Hz grid, then its window went to 1512 wide, cover owners changed, 65 at=0 rows fell in one 30 s bucket, the grid went to 16.7 ms, and tools/g1e_display_state printed one display. Three lines agree that the externals left at about 22:15. Cause not known (undock is a guess). The 144 Hz part of that ring is boot and route, no flight, so it is no 21:9 result.
+
+60 Hz branch, built-in alone, one binary, lvl1 FPS60, 240 s holds, display census every 15 s (no change), last 120 s, all alive_at_end=1, vi_stalls30s=0. cover 0% in every sample of these rows except woff.
+| arm | setting | lat p50/p99 | level | on-screen/s | drops in window | acq p50 |
+| o1 | 4:3 dd1 off | 39.1/41.2 | 2:100 | 60.00 | 0 | 0.03 |
+| d44a | DRAIN=44 | 38.2/39.9 | 2:100 | 60.00 | 0 (17 whole run) | |
+| d44b | DRAIN=44 | 40.2/42.8 | 2:78 3:22 | 60.00 | 0 (6 whole run) | 0.03 |
+| d28 | DRAIN=28 | 37.1/38.9 | 2:100 | 59.01 | 119, 119 repeats (248 whole run) | |
+| g2a | INFLIGHT=2 | 48.1/48.6 | 3:100 | 60.00 | 0 | 15.02 |
+| g2b | INFLIGHT=2 | 39.5/41.8 | 2:98 | 60.00 | 0 | 6.47 |
+| woff | 21:9 dd4 off, no JOB | 38.8/48.0 | 2:60 3:39 | 58.72 | 0 | |
+| wg | 21:9 dd4 gate, no JOB | 37.7/47.8 | 2:76 3:23 | 54.62 | 0 | 4.41 |
+Whole-run drops (--all prints them above each file's row): d44a 17, none lowered the level; d44b 6, 3 lowered it >=10 ms, all before the scored window; d28 248, 1 lowered it.
+H-repeat (about 35) and H-luck (about 46) both fail: the off arm is already at 39, so there is nothing for the drain to do. s6889's DRAIN=40 figure is unrepeated, not refuted on its own display, whichever that was. DRAIN=28 sits under the floor and buys 2 ms for a repeated frame every second. The gate is equal or worse here. wg vs woff rate (54.6 vs 58.7) is one run each with different cover: not a finding. No same-run stall control ran on this set, so the latency instrument is supported here only by its level-3 readings in g2a and woff.
+
+Offline: acq_ms ungated p50 14.93 on s6889 off (72 ms state) vs 0.03 on o1, off2 and s6889 d40. 1v/4v on 144 Hz: compensating pairs, table in CURRENT-TRUTH; H-boundary selected over H-producer, two lines (adjacency, Q deviation). Rings are gitignored and live in scratch/s6891 on this disk only.
+
+Rules out: "a 60 Hz grid means a 72 ms backlog"; "at=0 means covered". Does not show: anything about 21:9 flight on 144 Hz, or what enters the 72 ms state.
+

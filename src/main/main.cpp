@@ -11469,9 +11469,16 @@ namespace recomp {
 }
 
 ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::gfx_data_t) {
+    // s6891 test lever: ROGUESQ_WINDOW_POS=x,y opens the window at global top-left coords (negative allowed), so a measurement can sit on a display nothing covers:
+    // CoreAnimation gives no presentedTime for a fully covered window (s6890). Unset = centered, as before.
+    int rs64_win_x = SDL_WINDOWPOS_CENTERED, rs64_win_y = SDL_WINDOWPOS_CENTERED;
+    if (const char* wp = std::getenv("ROGUESQ_WINDOW_POS")) {
+        int x, y;
+        if (sscanf(wp, "%d,%d", &x, &y) == 2) { rs64_win_x = x; rs64_win_y = y; }
+    }
     SDL_Window* sdl_window = SDL_CreateWindow(
         "Star Wars: Rogue Squadron 64 Recompiled",
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+        rs64_win_x, rs64_win_y,
         rs64_g1f_win_w, rs64_g1f_win_h,
         SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN | (rs64_g1f_optin ? SDL_WINDOW_ALLOW_HIGHDPI : 0) |
             (rs64_g1f_fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0)
@@ -11481,7 +11488,8 @@ ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::
         exit(EXIT_FAILURE);
     }
     g_rs64_window = sdl_window;
-    fprintf(stderr, "[g1f] window %dx%d fullscreen=%d\n", rs64_g1f_win_w, rs64_g1f_win_h, (int)rs64_g1f_fullscreen);
+    { int px = 0, py = 0; SDL_GetWindowPosition(sdl_window, &px, &py);
+      fprintf(stderr, "[g1f] window %dx%d fullscreen=%d at %d,%d\n", rs64_g1f_win_w, rs64_g1f_win_h, (int)rs64_g1f_fullscreen, px, py); }
 #if defined(_WIN32)
     SDL_SysWMinfo wm{};
     SDL_VERSION(&wm.version);
