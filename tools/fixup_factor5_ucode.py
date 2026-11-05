@@ -3160,6 +3160,38 @@ if is_main_ucode and F5_VTX_MARKER not in text:
         print(f"fixup_factor5_ucode: F5 VTX ANCHOR FAILED (decl={n_decl}, call={n_call}).", file=sys.stderr)
         sys.exit(1)
 
+# s6896 G5b: ROGUESQ_G5B_TG=<file>. TriGen's vertex base and grid step are s16 and the ucode adds them in 16-bit lanes
+# (F5Rogue.cpp TriGen00_BuildVtxData), so a cell past +-32767 wraps. Witness the bases at the common fetch boundary.
+G5B_TG_MARKER = "/* fixup: s6896 G5b TriGen base witness */"
+if is_main_ucode and G5B_TG_MARKER not in text:
+    text, n_decl = re.subn(
+        r"(extern \"C\" void rs64_f5_vtx_probe[^\n]*\n)",
+        lambda m: m.group(1) + 'extern "C" int rs64_g5b_tg_on; extern "C" void rs64_g5b_trigen(uint32_t pc, uint32_t w0, uint32_t w1, uint32_t p8, uint32_t p9);  ' + G5B_TG_MARKER + "\n",
+        text, count=1)
+    text, n_call = re.subn(
+        r"(    if \(\(r19 >> 24\) == 0x04\) rs64_f5_vtx_probe\(r17, r19, r20, rdram\);[^\n]*\n)",
+        lambda m: m.group(1) + "    if (__builtin_expect(rs64_g5b_tg_on, 0) && (r19 >> 24) == 0x05) rs64_g5b_trigen(r17, r19, r20, RSP_MEM_W_LOAD(0X20, r17), RSP_MEM_W_LOAD(0X24, r17));  " + G5B_TG_MARKER + "\n",
+        text, count=1)
+    if (n_decl, n_call) != (1, 1):
+        print(f"fixup_factor5_ucode: G5B TG ANCHOR FAILED (decl={n_decl}, call={n_call}).", file=sys.stderr)
+        sys.exit(1)
+
+# s6896 G5b fix: the map fills the s16 range, so the last quad on its + edge has base 32256, step 512, far edge 32768; the ucode's 16-bit add wraps that to
+# -32768: one vertex row lands a whole map away, which is the near-plane sheet. Pull the base back in DMEM so the edge is 32767.
+G5B_FIX_MARKER = "/* fixup: s6896 G5b TriGen s16 edge */"
+if is_main_ucode and G5B_FIX_MARKER not in text:
+    text, n_decl = re.subn(
+        r"(extern \"C\" int rs64_g5b_tg_on;[^\n]*\n)",
+        lambda m: m.group(1) + 'extern "C" int rs64_g5b_tg_fix; extern "C" int rs64_g5b_tg_edge(uint32_t w0, uint32_t *p8, uint32_t *p9);  ' + G5B_FIX_MARKER + "\n",
+        text, count=1)
+    text, n_call = re.subn(
+        r"(    if \(__builtin_expect\(rs64_g5b_tg_on, 0\)[^\n]*\n)",
+        lambda m: m.group(1) + "    if (__builtin_expect(rs64_g5b_tg_fix, 0) && (r19 >> 24) == 0x05) { uint32_t p8_6896 = RSP_MEM_W_LOAD(0X20, r17), p9_6896 = RSP_MEM_W_LOAD(0X24, r17); if (rs64_g5b_tg_edge(r19, &p8_6896, &p9_6896)) { RSP_MEM_W_STORE(0X20, r17, p8_6896); RSP_MEM_W_STORE(0X24, r17, p9_6896); } }  " + G5B_FIX_MARKER + "\n",
+        text, count=1)
+    if (n_decl, n_call) != (1, 1):
+        print(f"fixup_factor5_ucode: G5B FIX ANCHOR FAILED (decl={n_decl}, call={n_call}).", file=sys.stderr)
+        sys.exit(1)
+
 # ---------------------------------------------------------------------------
 # Fixup 18: record L_11B0's actual indirect continuation (s726).
 # ---------------------------------------------------------------------------

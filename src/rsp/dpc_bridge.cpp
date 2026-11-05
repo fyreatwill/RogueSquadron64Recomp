@@ -3420,6 +3420,63 @@ extern "C" bool rs64_dpc_take_synthetic_consumer(uint64_t *serial) {
 // <px> beyond the viewport as a positive control (ordinary tris must fire).
 std::atomic<int> g_rs64_swap_n{0};
 extern "C" int rs64_swap_n(void) { return g_rs64_swap_n.load(std::memory_order_relaxed); } // s6528 C accessor
+// s6896 G5b: ROGUESQ_G5B_TG=<file>. Per swap: TriGen count, s16 lane bases, how many commands run past s16 (wa/wb) and past
+// half range (ha/hb, same-run positive control for the wrap arithmetic), then the terrain window, DEB4 and the camera block.
+// W lines: raw words of the first wrapping commands of a swap. Called on the gfx thread from the ucode fetch boundary.
+static FILE *g5b_tg_open() { const char *e = std::getenv("ROGUESQ_G5B_TG"); return (e && *e) ? fopen(e, "w") : (FILE *)nullptr; }
+static FILE *g_g5b_tg = g5b_tg_open();
+extern "C" { int rs64_g5b_tg_on = g_g5b_tg != nullptr; }
+// s6896 G5b: ROGUESQ_G5B_TG_FIX: default on at dd>1, off at dd1 (retail path untouched); =0 off, =1 on, =tog on in odd seconds of
+// the mach clock so sheets can be binned by parity in one run. Mode 2 quads only, the only commands seen to wrap.
+static int g5b_tg_fix_init() {
+    const char *e = std::getenv("ROGUESQ_G5B_TG_FIX");
+    if (e && *e) return *e == 't' ? 2 : *e != '0';
+    const char *d = std::getenv("ROGUESQ_DRAW_DISTANCE");
+    return (d && *d && atof(d) > 1.0) ? 1 : 0;
+}
+extern "C" { int rs64_g5b_tg_fix = g5b_tg_fix_init(); }
+extern "C" int rs64_g5b_tg_edge(uint32_t w0, uint32_t *p8, uint32_t *p9) {
+    if (((w0 >> 8) & 0xFF) != 2) return 0;
+    if (rs64_g5b_tg_fix == 2) {
+        static const double tick = [] { mach_timebase_info_data_t b; mach_timebase_info(&b); return (double)b.numer / b.denom / 1e9; }();
+        if (!((uint64_t)(mach_absolute_time() * tick) & 1)) return 0;
+    }
+    const int v0 = (int)(*p9 & 0xFFFF), a = (int16_t)(*p8 >> 16), b = (int16_t)(*p9 >> 16);
+    int hit = 0;
+    if (a + v0 > 32767) { *p8 = (*p8 & 0xFFFFu) | ((uint32_t)(uint16_t)(32767 - v0) << 16); hit = 1; }
+    if (b + v0 > 32767) { *p9 = (*p9 & 0xFFFFu) | ((uint32_t)(uint16_t)(32767 - v0) << 16); hit = 1; }
+    return hit;
+}
+extern "C" void rs64_g5b_trigen(uint32_t pc, uint32_t w0, uint32_t w1, uint32_t p8, uint32_t p9) {
+    static int s_sw = -1, s_wl = 0;
+    static struct { uint32_t n, m2, wa, wb, ha, hb; int mina, maxa, minb, maxb, v0min, v0max; } s = {};
+    const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
+    if (sw != s_sw) {
+        if (s_sw >= 0 && s.n && g_rdram_for_submit) {
+            auto rd = [](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & 0xFFFFFCu), 4); return v; };
+            auto fl = [&](uint32_t a) { uint32_t v = rd(a); float f; memcpy(&f, &v, 4); return f; };
+            fprintf(g_g5b_tg, "S %d %llu n=%u m2=%u wa=%u wb=%u ha=%u hb=%u a=%d,%d b=%d,%d v0=%d,%d win=%d,%d,%d,%d deb4=%g tt=", s_sw, (unsigned long long)mach_absolute_time(), s.n, s.m2, s.wa, s.wb, s.ha, s.hb,
+                    s.mina, s.maxa, s.minb, s.maxb, s.v0min, s.v0max, (int)rd(0x132DB0), (int)rd(0x132DB4), (int)rd(0x132DB8), (int)rd(0x132DBC), fl(0x09DEB4));
+            for (uint32_t q = 0x10; q < 0x50; q += 4) fprintf(g_g5b_tg, "%g,", fl(0x136DC0 + q));
+            const uint32_t cp = rd(0x138D1C);
+            fprintf(g_g5b_tg, " cam=");
+            if (cp >= 0x80000000u && cp < 0x80800000u) for (uint32_t q = 0; q < 22; q++) fprintf(g_g5b_tg, "%g,", fl(cp + 0x28 + q * 4));
+            fputc('\n', g_g5b_tg); fflush(g_g5b_tg);
+        }
+        s_sw = sw; s_wl = 0; s = {}; s.mina = s.minb = s.v0min = 1 << 30; s.maxa = s.maxb = s.v0max = -(1 << 30);
+    }
+    s.n++;
+    const uint32_t mode = (w0 >> 8) & 0xFF, sub = w0 & 0xFF;
+    s.m2 += mode == 2;
+    if (mode != 0 && mode != 2) return;
+    // Mode 2 is one quad, base to base + step (TriGen02_BuildVtxData); mode 0 is a 5x5 or 3x3 grid of the same step.
+    const int a = (int16_t)(p8 >> 16), b = (int16_t)(p9 >> 16), v0 = (int)(p9 & 0xFFFF), span = (mode == 2 ? 1 : sub == 0 ? 4 : 2) * v0;
+    if (a < s.mina) s.mina = a; if (a > s.maxa) s.maxa = a; if (b < s.minb) s.minb = b; if (b > s.maxb) s.maxb = b;
+    if (v0 < s.v0min) s.v0min = v0; if (v0 > s.v0max) s.v0max = v0;
+    const bool wa = a + span > 32767, wb = b + span > 32767;
+    s.wa += wa; s.wb += wb; s.ha += a + span > 16383; s.hb += b + span > 16383;
+    if ((wa || wb) && s_wl < 6) { s_wl++; fprintf(g_g5b_tg, "W %d pc=%X w0=%08X w1=%08X p8=%08X p9=%08X a=%d b=%d v0=%d\n", sw, pc, w0, w1, p8, p9, a, b, v0); }
+}
 // s6895 G5b: ROGUESQ_G5B_FRAME=<file> records what the RDP was given, for offline replay through angrylion
 // (tools/angrylion_replay/frame_replay.c). Records, u32 tag first: 'SWAP' mach(u64) swap; 'RAM ' 16 MB RDRAM, at the first range
 // of every ROGUESQ_G5B_FRAME_EVERY-th swap (default 10); 'RNG ' lo len bytes (after the spike cull, so what RT64 gets).
