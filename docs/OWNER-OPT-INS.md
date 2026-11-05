@@ -4,8 +4,8 @@ Everything here is OFF by default; unset = retail behaviour. Run from `build/` w
 
 ```sh
 cd build && env ROGUESQ_FPS60=1 ./RogueSquadron64Recomp            # steady 60 fps (s6703)
-cd build && env ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=2 ./RogueSquadron64Recomp   # more terrain, ~60 fps (s6776/s6810)
-cd build && env ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=3 ./RogueSquadron64Recomp   # far terrain, ~60 fps (s6776/s6810). The s6789-s6790 "0 dropouts" did not match the owner playtest; see the note below
+cd build && env ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=2 ./RogueSquadron64Recomp   # more terrain, ~60 fps at 4:3 (s6776/s6810); at 16:9 see the s6902 note below
+cd build && env ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=3 ./RogueSquadron64Recomp   # far terrain, ~60 fps at 4:3 (s6776/s6810). The s6789-s6790 "0 dropouts" did not match the owner playtest; see the note below
 ```
 
 | Goal | Setting | Verified state | Detail |
@@ -22,6 +22,10 @@ cd build && env ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=3 ./RogueSquadron64Recomp 
 | Spike lines in flight | **ON by default** since 2026-10-31; `ROGUESQ_CULL_SPIKE=0` shows them (retail) | Culls the ucode clip-plane wedge triangles (s6085; retail draws them too, s6454). Only 320-wide flight and >640 widescreen frames; 4:3 hi-res cinematics are never culled (s6792). | CURRENT-TRUTH "G3b/G3c" |
 | Less "fish-eye" on SELECT YOUR CRAFT | `ROGUESQ_HANGAR_FOV=38` (degrees, vertical; retail 45, clamp 10-90) | Narrows the lens of the craft-select camera only (cam 0x800CD670); SELECT LEVEL, missions and cutscenes untouched. Retail 45 = ~76 deg horizontal; 38 = ~66, 35 = ~61, 30 = ~54 (30 crops the V-wing wingtips). Camera path identical to retail. `ROGUESQ_HANGAR_FOV_CAM=800CD670,800CDC80` also narrows SELECT LEVEL (crops the holo table). Before/after: scratch/s6836/sheet_craft_fov.png. **Works with widescreen** (s6837: 16:9 and 21:9 keep the wide aspect and viewport, only the lens narrows; horizontal FOV at 16:9 45 -> 38 = ~101 -> ~90 deg, at 21:9 ~115 -> ~105 deg, so on the ultrawide 30-35 may suit better). Wide sheet: scratch/s6837/sheet_hangarfov_wide.png. **Works with FPS60** (s6838: fovy 38 on every craft-cam call at the 120/s FPS60 rate, no alternate-frame lens flicker; FPS60 sheet scratch/s6838/sheet_hangarfov_fps60.png) | s6836, s6837, s6838 |
 | Frame-time instrument | `ROGUESQ_G1B=1` | Per-VI timing log. | s6017 |
+
+Freezes (s6902): the freezes of a second or more that then caught up like buffering should be gone, at every draw distance, with nothing to set. Our own debug bookkeeping grew on every triangle and never shrank, so the game stopped to reorganise it, each pause about twice as long as the last, and memory climbed about 4.7 MB/s (1.7 GB after 5 minutes). Same build, dd4: 4 pauses up to 1.4 s before, none over 46 ms after, and a 9 minute run across 4 mission starts had none. `ROGUESQ_SHADE_ORD_RESET=0` restores the old behaviour. Tell us if you still see a freeze in flight.
+
+Speed at 16:9 (s6902, Liberation of Gerrard V, FPS60, test logging): the "~60 fps" figures above are 4:3. Game frames per second measured: dd1 59, dd2 42-46, dd4 about 35-42. With `ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=1` added, dd4 runs about 53-58. The s6901 far terrain fix costs about 5-7 frames/s at dd4 without those two settings and about 3-5 with them, because it draws more terrain on every heading (`ROGUESQ_DD_FWDWIN=0` trades that terrain back). dd3 at 16:9 was not measured.
 
 Draw distance above 1 (s6896): large terrain sheets at dd4 are fixed by a change that is on by default above dd1 (`ROGUESQ_G5B_TG_FIX=0` restores the old path). dd3 and dd4 now both show none. Whether this cures the drops you see needs your flight.
 

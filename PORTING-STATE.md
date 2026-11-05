@@ -182055,3 +182055,41 @@ Cost, open: no-trace arm r4 dd4 =tog, capture 41.6/s off, 37.6/s on (mean, 62 s 
 
 NOT shown: that this is what the owner calls a drop (dose-response match and visual only, owner must fly); FWDWIN in the Gerrard scene (f4, fw, f2 never reached it, sim only; queued soak s6901_fwdwin_scene); levels other than 4; dd1 after this build (the gate is on6037, so unchanged by construction, not run); dd3 with the fix. Holds are 280-320 s scripted, 0 CRASH, not a flown mission. Tile pool clamp hits under the higher cell count were not counted.
 Verdict: the retest selects H-all over H-wide. The same-run arms refute near-terrain loss as the in-flight mechanism (near intact in every arm while far halves). The clamp order and low anchor are the root cause of the heading-driven far loss; whether that loss is the owner's drop is still open, and the owner's flight is what would discriminate.
+
+## Session 6902 (2026-11-05) — G5c: seconds-long freezes were our own never-cleared diagnostic map rehashing on the gfx path, fixed; same binary 4 stalls up to 1412 ms vs 0, RSS 4.69 vs 0.82 MB/s; G5b FWDWIN cost is real, -5 to -8 tasks/s at dd4
+
+Two sessions' work: the previous iteration hit the 3600 s runner limit (rc=124) with nothing committed, leaving tools/apply_s6902_fwdtog.py, tools/g5b_fwdtog_rate.py and scratch/s6902/chain3.zsh running. This iteration let the chain finish, scored its arms and committed them.
+
+Unit from NEXT: game-rate cost of FWDWIN. Instrument: ROGUESQ_DD_FWDWIN_TOGS=6 gives 6 s blocks with a [fwdtog] flip line; g5b_fwdtog_rate.py drops seconds holding a flip and pairs adjacent blocks. s6901's [g1b] was absent because arm_nt.zsh never set ROGUESQ_G1B=1; arm_m.zsh does, with no capture tool. Control: ROGUESQ_G1E_FAST_TOGGLE=6 (mc) reads +3.54 SE 1.41, so the meter resolves a known rate change in-run.
+
+Paired on-off tasks/s (mean, SE), owner recipe FPS60, LEVEL=4 16:9 unless stated:
+| arm | off mean | on mean | paired |
+|---|---|---|---|
+| m4 dd4 | 38.5 | 35.1 | -5.94 (1.55) |
+| fx dd4, leak fix | 42.0 | 36.9 | -6.95 (1.25) |
+| ct dd4, =0 | 39.2 | 33.9 | -5.01 (1.52) |
+| m21 dd4 21:9 | 43.3 | 30.7 | -10.07 (1.68) |
+| m1 lvl1 dd4 | 37.9 | 29.7 | -7.57 (1.04) |
+| m5 lvl5 dd4 | 45.2 | 36.3 | -7.86 (1.13) |
+| b2 dd2 | 46.4 | 42.4 | -2.78 (1.63) |
+| ba dd4 ASYNC+NODRAIN | 57.2 | 54.2 | -3.24 (0.79) |
+| bb repeat | 58.0 | 53.2 | -4.55 (0.65) |
+| bw 21:9 ASYNC+NODRAIN | 57.0 | 52.3 | -4.64 (0.65) |
+b1 dd1 59.3. H-free refuted, H-cost selected. The old window is faster partly because it draws less on bad headings, so this is the price of the terrain, not waste. Default kept; the owner chooses. New to the ledger: dd4 at 16:9 without ASYNC+NODRAIN is 35-42, not the ~59 of s6810, which was 4:3; OWNER-OPT-INS corrected. H-level: traced =tog lvl1 (l1) n p50 by heading rises to ~3500, dips <.8 11 -> 0; lvl5 (l5) 40 -> 0; ring 7 dips remain (lvl1 31 -> 79, lvl5 62 -> 56). So not level-specific. LEVEL=10: l10 and l10b (240 s delay) both ~59.9/s with ~145 swaps, flight not reached: no result, cause not looked at. Soak s6901_fwdwin_scene folded: FWDWIN on in the Gerrard scene, 427 swaps, near p50 286, 0 collapsed.
+
+G5c, found in the same logs. [g1b] sd_wall max showed single tasks of 176-1815 ms in every arm without ASYNC+NODRAIN, at near-identical times, each about twice the last, sd_cpu ~= sd_wall (busy, not waiting). Elapsed from mission start ~20, 45, 90, 190 s: linear insertion into a container whose capacity doubles. dd1 had the same shape, later and smaller (t=115 182 ms, t=197 649 ms).
+ORIGIN: rs64_shade_ordinal in lib/rt64/src/gbi/rt64_gbi_rdp.cpp, added 2026-08-13 (c02df20ae, joining F5 and RT64 shade ordinals). A static unordered_map keyed (task, dl), incremented for every triangle in every build, never erased. The task id changes each frame, so old entries are dead on arrival; the values are legitimate, only their retention is the bug. Its only consumers are logs and rs64_floor_mesh diagnostics. Named by `sample` on a live metered run (arm sm, 2 ms, t=62-287): 1261 samples in __do_rehash under decodeTriangles x 2.57 ms/sample = 3.2 s, against 3.3 s of logged stalls (251+440+929+1707); plus 2349 samples of ordinary insert, 2.7% of gfx samples. First suspect cachedKeyMap (findMaterialsInCache) refuted: 37 samples. shIdx in rsp_dpc_submit_impl (1396 samples, 1.6%) is a per-call local rebuilt each submit: a cost, not a leak, left alone.
+
+Fix: clear the map when the task id changes; ordinals inside a task unchanged. Default on, ROGUESQ_SHADE_ORD_RESET=0 old. lib/ edit exported to submodule-patches/rt64.patch.
+Same binary, dd4 LEVEL=4 16:9, FWDWIN=tog in both:
+| arm | stalls >=100 ms | sum | max task | secs VI<55 | RSS slope t>=90 | peak RSS | tasks/s mean |
+|---|---|---|---|---|---|---|---|
+| fx fix | 0 | 0 | 46 ms | 0 | 0.82 MB/s | 609 MB | 38.9 |
+| ct =0 | 4 | 2782 ms | 1412 ms | 3 | 4.69 MB/s | 1682 MB | 36.1 |
+dd1: f1 fixed 0 stalls, max 19 ms, 1.02 MB/s; b1 older binary 2 stalls, 831 ms. +2.8 tasks/s is one pair of runs, not toggled in-run: soft. 0 CRASH in all.
+Long hold, fixed binary, owner recipe dd4, arm lg: 504 s across 4 mission starts, 0 stalls, max task 45 ms, 0 seconds under 55 VI, 0 CRASH. RSS peaked 599 MB at t=270, fell to 333 MB by t=285, ended 326 MB at t=556. That fall is not at a mission start (175, 327), and what released it was not looked at. So the 0.8-1.0 MB/s of the 5 min arms is not unbounded growth over 9 min. No =0 arm ran this long.
+
+Visibility, the positive control for the claim that this is what the owner sees. Arm vc, =0, meter and capture together. Meter: t=148 1183 ms, t=252 2002 ms. New tools/g5c_frozen_runs.py (byte-identical frames): at +102.91 s the image is frozen 1021 + 996 ms, then 132/603/333 ms runs of choppy recovery to +106 s; capture began inside the t=148 stall, whose tail shows at +0.10. Same run g5b_drops: gaps >250 ms 0, max 94 ms. So a ~2 s frozen image with catch-up, matching "freezes, then catches up like buffering", and the capture gap figure is blind to it: presents kept arriving. s6894's "no gap over 250 ms" is superseded. Runs of 320-465 ms at +45-59 s sit in the mission-restart transition (t~194-207, then [initMission]): load-side, excluded by G5c's terms, not examined further.
+
+NOT shown: that the owner's freezes are this and only this (the mechanism, size and catch-up match; the owner must fly). Stalls continuing to double past ~5 min: inference, the =0 arms stopped at 5 min. Why ASYNC+NODRAIN shows none (ba, bb, bw 0 stalls, sd max <=17, worker max_job 0.19 ms): inferred from ~20x fewer submits giving fewer keys; RSS not logged there, and max_job_ms may not cover fullSync. Frozen-image count on the FIXED binary: soak s6902_g5c_fixed_visible queued. What releases ~270 MB at t~285: not explained. Sibling statics in rt64_gbi_f3dfactor5.cpp and rt64_rdp.cpp not audited.
+Verdict: H-cost selected for FWDWIN. For G5c the same-binary pair names the writer of the stalls and the fix removes them; closure waits on the soak and the owner's flight.
