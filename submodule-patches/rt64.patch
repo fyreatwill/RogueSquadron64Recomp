@@ -3419,7 +3419,7 @@ index dccaa87..bbdc5cf 100644
                  dl++;
              }
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index f17db9b..8d30fa7 100644
+index f17db9b..2ac865a 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
 @@ -4,20 +4,86 @@
@@ -3439,7 +3439,7 @@ index f17db9b..8d30fa7 100644
  
 +// s6885 G1e: present row log, see plume_metal.cpp. Stamps below belong to the present thread only.
 +#if defined(__APPLE__)
-+namespace plume { bool rs64_pring_on(); double rs64_pring_now(); void rs64_pring_write(const char *row); extern std::atomic<uint64_t> g_rs64_pring_last_id; }
++namespace plume { bool rs64_pring_on(); double rs64_pring_now(); void rs64_pring_write(const char *row); bool rs64_present_drain_check(double now); extern std::atomic<uint64_t> g_rs64_pring_last_id; }
 +#define RS64_PRING_ON() plume::rs64_pring_on()
 +#define RS64_PRING_NOW() plume::rs64_pring_now()
 +#else
@@ -3901,7 +3901,7 @@ index f17db9b..8d30fa7 100644
              {
                  std::unique_lock<std::mutex> cursorLock(cursorMutex);
                  cursorCondition.wait(cursorLock, [&]() {
-@@ -700,7 +1042,9 @@ namespace RT64 {
+@@ -700,12 +1042,20 @@ namespace RT64 {
                  skipPresent = skipPresent || ext.swapChain->isEmpty();
  
                  Present &present = presents[processCursor];
@@ -3911,7 +3911,18 @@ index f17db9b..8d30fa7 100644
  
                  if (!presentThreadRunning) {
                      continue;
-@@ -714,6 +1058,20 @@ namespace RT64 {
+                 }
+ 
++#if defined(__APPLE__)
++                // s6889 G1e: ROGUESQ_PRESENT_DRAIN, see plume_metal.cpp. Called on every pass: it also stamps the latency start for present().
++                if (plume::rs64_present_drain_check(rs64Row1)) {
++                    skipPresent = true;
++                }
++#endif
+                 if (skipPresent) {
+                     skipInterpolation();
+                     notifyPresentId(present);
+@@ -714,6 +1064,20 @@ namespace RT64 {
                      threadPresent(present, swapChainValid);
                  }
  

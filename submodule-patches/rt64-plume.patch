@@ -1,5 +1,5 @@
 diff --git a/plume_metal.cpp b/plume_metal.cpp
-index a5f30a3..5bf7d57 100644
+index a5f30a3..9343a09 100644
 --- a/plume_metal.cpp
 +++ b/plume_metal.cpp
 @@ -9,17 +9,89 @@
@@ -215,7 +215,7 @@ index a5f30a3..5bf7d57 100644
  
          this->commandQueue = commandQueue;
          this->desc = desc;
-@@ -1932,6 +2066,52 @@ namespace plume {
+@@ -1932,6 +2066,93 @@ namespace plume {
      MetalSwapChain::~MetalSwapChain() {
      }
  
@@ -265,16 +265,61 @@ index a5f30a3..5bf7d57 100644
 +        if ((++changes & (changes - 1)) == 0) fprintf(stderr, "[s6887] inflight gate %s (%s) change #%d high=%llu\n", open ? "open" : "closed", why, changes, (unsigned long long)g_rs64PresentedHigh);
 +    }
 +
++    // s6889 G1e: ROGUESQ_PRESENT_DRAIN=<ms> (0 = off): when the median of the last 31 present-to-screen latencies exceeds ms, the present thread drops
++    // one present, then waits >= 1 s and 31 fresh reports. s6888: the level is a backlog that one missing present lowers. Latency starts where
++    // tools/g1e_present_latency.py starts it (present thread has the finished workload), so a nextDrawable wait counts. Off-screen reports (0) are not
++    // samples, so a hidden window never drains. Each drop writes a D row to the present ring.
++    static constexpr int RS64_DRAIN_WINDOW = 31;
++    static double rs64DrainMs() {
++        static const double ms = []() -> double { const char *p = getenv("ROGUESQ_PRESENT_DRAIN"); return p ? strtod(p, nullptr) : 0.0; }();
++        return ms;
++    }
++    static std::mutex g_rs64DrainMutex;
++    static double g_rs64DrainSamples[RS64_DRAIN_WINDOW];
++    static int g_rs64DrainCount = 0;
++    static double g_rs64DrainNext = 0.0;
++    static double g_rs64DrainBegin = 0.0; // Present thread only: written by rs64_present_drain_check, read in present().
++    static void rs64DrainNote(double ms) {
++        std::lock_guard<std::mutex> lock(g_rs64DrainMutex);
++        g_rs64DrainSamples[g_rs64DrainCount % RS64_DRAIN_WINDOW] = ms;
++        g_rs64DrainCount++;
++    }
++    bool rs64_present_drain_check(double now) {
++        g_rs64DrainBegin = now;
++        const double limit = rs64DrainMs();
++        if (limit <= 0.0) return false;
++        double median = 0.0;
++        {
++            std::lock_guard<std::mutex> lock(g_rs64DrainMutex);
++            if (g_rs64DrainCount < RS64_DRAIN_WINDOW || now < g_rs64DrainNext) return false;
++            double v[RS64_DRAIN_WINDOW];
++            std::copy(g_rs64DrainSamples, g_rs64DrainSamples + RS64_DRAIN_WINDOW, v);
++            std::nth_element(v, v + RS64_DRAIN_WINDOW / 2, v + RS64_DRAIN_WINDOW);
++            median = v[RS64_DRAIN_WINDOW / 2];
++            if (median <= limit) return false;
++            g_rs64DrainCount = 0;
++            g_rs64DrainNext = now + 1.0;
++        }
++        char row[64];
++        snprintf(row, sizeof(row), "D %.6f med=%.3f\n", now, median);
++        rs64_pring_write(row);
++        return true;
++    }
++
      bool MetalSwapChain::present(const uint32_t textureIndex, RenderCommandSemaphore **waitSemaphores, const uint32_t waitSemaphoreCount) {
          assert(layer != nullptr && "Cannot present without a valid layer.");
          NS::AutoreleasePool *releasePool = NS::AutoreleasePool::alloc()->init();
-@@ -1954,6 +2134,25 @@ namespace plume {
+@@ -1954,6 +2175,29 @@ namespace plume {
          // According to Apple, presenting via scheduled handler is more performant than using the presentDrawable method.
          // We grab the underlying drawable because we might've acquired a new one by now and the old one would have been released.
          CA::MetalDrawable *drawableMtl = drawable.mtl->retain();
 +        g_rs64_pring_last_id.store(presentId, std::memory_order_relaxed);
-+        if (rs64_pring_on() || rs64InflightMax() != 0) {
-+            drawableMtl->addPresentedHandler([presentId](MTL::Drawable *d) {
++        if (rs64_pring_on() || rs64InflightMax() != 0 || rs64DrainMs() > 0.0) {
++            const double drainBegin = g_rs64DrainBegin;
++            drawableMtl->addPresentedHandler([presentId, drainBegin](MTL::Drawable *d) {
++                if (rs64DrainMs() > 0.0 && d->presentedTime() != 0.0) {
++                    rs64DrainNote((d->presentedTime() - drainBegin) * 1e3);
++                }
 +                if (rs64_pring_on()) {
 +                    char row[96];
 +                    snprintf(row, sizeof(row), "P %.6f mtl=%llu at=%.6f\n", rs64_pring_now(), (unsigned long long)presentId, d->presentedTime());
@@ -294,7 +339,7 @@ index a5f30a3..5bf7d57 100644
          presentBuffer->addScheduledHandler([drawableMtl](MTL::CommandBuffer* cmdBuffer) {
              drawableMtl->present();
          });
-@@ -1987,6 +2186,8 @@ namespace plume {
+@@ -1987,6 +2231,8 @@ namespace plume {
          }
      }
  
@@ -303,7 +348,7 @@ index a5f30a3..5bf7d57 100644
      bool MetalSwapChain::resize() {
          getWindowSize(width, height);
  
-@@ -1995,7 +2196,17 @@ namespace plume {
+@@ -1995,7 +2241,17 @@ namespace plume {
          }
  
          const CGSize drawableSize = CGSizeMake(width, height);
@@ -321,7 +366,7 @@ index a5f30a3..5bf7d57 100644
              layer->setDrawableSize(drawableSize);
  
              for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
-@@ -2050,6 +2261,17 @@ namespace plume {
+@@ -2050,6 +2306,17 @@ namespace plume {
          acquireBuffer->encodeSignalEvent(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue);
          acquireBuffer->commit();
  
@@ -339,7 +384,7 @@ index a5f30a3..5bf7d57 100644
          CA::MetalDrawable *nextDrawable = layer->nextDrawable();
          if (nextDrawable == nullptr) {
              fprintf(stderr, "No more drawables available for rendering.\n");
-@@ -2118,6 +2340,14 @@ namespace plume {
+@@ -2118,6 +2385,14 @@ namespace plume {
          for (uint32_t i = 0; i < desc.colorAttachmentsCount; i++) {
              const MetalTextureView *colorAttachmentView = desc.colorAttachmentViews && desc.colorAttachmentViews[i] ? static_cast<const MetalTextureView *>(desc.colorAttachmentViews[i]) : nullptr;
              const MetalTexture *colorAttachment = colorAttachmentView ? colorAttachmentView->parentTexture : static_cast<const MetalTexture *>(desc.colorAttachments[i]);
@@ -354,7 +399,7 @@ index a5f30a3..5bf7d57 100644
              assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
  
              MetalAttachment attachment;
-@@ -3008,6 +3238,17 @@ namespace plume {
+@@ -3008,6 +3283,17 @@ namespace plume {
                  dstOrigin
              );
              activeBlitEncoder->popDebugGroup();

@@ -181615,3 +181615,32 @@ Verdict: this selects a backlog model at 4:3: up by slip, capped ~72, down by a 
 
 Not established: what causes a slip (close-spaced presents near only 2 of 12 up-steps, s6887/s6885/s6886 rings). Burst size vs dose rests on 4 stalls per dose in arm s. Nothing measured for input-to-photon. Default unchanged, game behaviour unchanged with levers unset.
 
+
+## Session 6889 (2026-11-04) — one-present drain beats the gate's median at 4:3 60 Hz (35 vs 46 ms, one run); displays changed to 144 Hz mid-set, so 21:9 gave no drain result
+HYPOTHESIS-ID g1e-present-drain. Unit from NEXT: can dropping one present beat PRESENT_INFLIGHT=2. No owner report.
+
+Landed: opt-in ROGUESQ_PRESENT_DRAIN=<ms> (plume_metal.cpp rs64_present_drain_check, called from the present loop; default off). Median of the last 31 on-screen latencies above ms drops one present, then needs >= 1 s and 31 fresh reports. at=0 reports are not samples, so a hidden window never drains. D ring row per drop. Tools: g1e_present_drain.py, g1e_present_cadence.py. Runs scratch/s6889/arms.zsh, lvl1, FPS60 ASYNC+NODRAIN, 240 s, one binary; all arms 0 crash, 0 VI stall, flight 168-170 s.
+
+Clean arms, 4:3 dd1, on the 60 Hz grid for the whole run (last 120 s; one run each):
+| arm | lat p50/p99 ms | on-screen/s | slips/s | drops/s | never shown/s |
+| off | 72.2/72.9 | 59.87 | 0.150 | 0 | 0.14 |
+| INFLIGHT=2 | 45.8/48.5 | 59.85 | 0.167 | 0 | 1.53 |
+| DRAIN=40 | 35.3/52.4 | 59.89 | 0.142 | 0.12 | 0.12 |
+| DRAIN=56 | 52.5/70.3 | 59.87 | 0.192 | 0.14 | 0.19 |
+
+Verdict: H-drain supported, single run: median 10 ms under the gate, level sits at ~34-36. The gate keeps the better p99, because a slip holds the level at ~51 for ~0.3 s until the median trips. H-floor as written (returns to 48 at best) refuted at limit 40; the true floor is not known, d28 was not run. H-cost: on-screen rate and never-shown match off, so a drop in flight costs about what an ungated ceiling already loses. Trace of a drop: latency 51 -> 34 at the next present, on-screen spacing stays 16.7 ms, so the frame is omitted, not repeated.
+
+Defect in DRAIN=40: 49 drops whole run, 31 lowered the level (1 repeat), 18 did not and all 18 repeated a frame. Drops run ~1/s from t=10 to 28 s with med 40.2, so early boot sits just over the limit and each drop is a visible repeat with no gain. The 18 were not individually placed past the first 12 (t=3-21). Levels are ~34/51/68, so a limit near 44 should avoid this; not run.
+
+Display change, the main caveat. tools/g1e_present_cadence.py: arms off, g2, d40, d56 are 99-100% on the 60 Hz grid. g2d40 moved to the 144 Hz grid ~30 s in, went off screen twice, and came back to 60 Hz for its last minute. Every later arm (woff, wg2, wd40, wd56, d40b) is on the 144 Hz grid. At 21:09 system_profiler showed a 3840x1080 144 Hz main display, two 1920x1080 144 Hz, and the built-in; REAPER frontmost. Earlier notes say one display. Who or what changed it is not known; the WindowServer log query returned nothing.
+- g2d40 INVALID: its 44/s on screen and 1.7 slips/s are the display change, not gate + drain. Nothing is known about the combination.
+- 21:9 dd4: NO DRAIN RESULT. Ungated latency is 10-11 ms there, so 0 drops in wd40 and wd56; the positive control did not fire. wg2 and wd40 also have long at=0 spans (window off screen: 4806 and 3107 reports).
+- New datum, single-source, one display: on the 144 Hz grid ungated latency is p50 10-11 ms against 42-72 on the 60 Hz grid, median on-screen interval 13.9 ms at ~59/s. 60 does not divide 144, so spacing should mix 13.9 and 20.8 ms; distribution not tabulated. The backlog looks specific to a 60 Hz display.
+- d40b: wanted as the repeat, ran on 144 Hz with the window off screen late; unusable. d28 cancelled (cannot fire at 10 ms; avoids another window on a desktop in use). So DRAIN=40 has NO repeat.
+
+Open, not explained: INFLIGHT=2 never shown 1.53/s here (1.13 over last 180 s, 2.23 over last 30 s, fb!=vi 3.1/s) against 0.03-0.20 in s6886 g2 rings. One run, rising through it, on the 60 Hz grid. Not claimed as a gate cost; a host event near the display change is equally open.
+
+Scorer error, caught this session: first g1e_present_drain.py read every drop as 36->36, using a 1 s before-window, and its repeat check counted 0. Recomputing the controller's median from the ring gave the same 51 as the D rows, and per-present trace showed 51 -> 34. Window now 0.2 s before, 0.1-0.4 s after; repeat = gap > 25 ms within 200 ms.
+
+ORIGIN: no corruption or wild value here. The backlog is the s6888 model; the drop is an opt-in latency control.
+Default unchanged, behaviour unchanged with the env unset. Not measured: input-to-photon, owner feel, DRAIN through hide, resize or fullscreen.
