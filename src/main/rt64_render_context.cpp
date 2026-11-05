@@ -221,7 +221,10 @@ extern "C" uint64_t rs64_menu_worker_recv(uint32_t msg, uint32_t v0) {
 extern "C" int rs64_rdp_async_on;
 int rs64_rdp_async_on = [] { const char *e = std::getenv("ROGUESQ_RDP_ASYNC"); return (e && *e && *e != '0') ? 1 : 0; }();
 namespace RT64 { extern volatile int g_s4280_n; } // rt64_rdp.cpp s4280 cimg events
-namespace ultramodern { void rs64_rdpq_drain(); void rs64_rdpq_task_enter(); void rs64_rdpq_task_exit(); }
+namespace ultramodern { void rs64_rdpq_drain(); void rs64_rdpq_task_enter(); void rs64_rdpq_task_exit(); void rs64_scr_note(double drain_ms, double pre_ms, double up_ms); bool rs64_rdpq_screen_ready(); void rs64_rdpq_screen_job(); }
+// s6884 G1e: update_screen split for [g1e-aq]: Gfx-thread wait in the drain, the diagnostics between, app->updateScreen.
+static double rs64_scr_t0 = 0, rs64_scr_t1 = 0; // Gfx thread only
+static inline double rs64_scr_now() { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 extern "C" uint32_t rs64_phase_ord(void);
 
 // Host-side observations only; no rendering decision depends on them.
@@ -1080,7 +1083,11 @@ public:
     }
 
     void update_screen() override {
-        ultramodern::rs64_rdpq_drain(); // s6705: no-op unless ROGUESQ_RDP_ASYNC queued ranges outside a task
+        rs64_scr_t0 = rs64_scr_now();
+        // s6884: ROGUESQ_RDP_SCREEN_JOB=1 queues updateScreen FIFO on the RDP worker instead of waiting for the task's tail here.
+        const bool screen_job = ultramodern::rs64_rdpq_screen_ready();
+        if (!screen_job) ultramodern::rs64_rdpq_drain(); // s6705: no-op unless ROGUESQ_RDP_ASYNC queued ranges outside a task
+        rs64_scr_t1 = rs64_scr_now();
         if (app) {
             ultramodern::renderer::ViRegs* boundary_vi =
                 ultramodern::renderer::get_vi_regs();
@@ -1420,7 +1427,9 @@ public:
                 }
                 fflush(stderr);
             }
-            app->updateScreen();
+            const double t2 = rs64_scr_now();
+            if (screen_job) ultramodern::rs64_rdpq_screen_job(); else app->updateScreen();
+            ultramodern::rs64_scr_note(rs64_scr_t1 - rs64_scr_t0, t2 - rs64_scr_t1, rs64_scr_now() - t2);
         }
     }
 
@@ -1485,7 +1494,7 @@ namespace ultramodern {
     // is FIFO; send_dl (RAII guard) and update_screen drain the queue, so dp_complete and present still follow every
     // range of the task. Submits outside send_dl run synchronously. ROGUESQ_RDP_ASYNC_TOGGLE=<s> (events.cpp) flips it.
     namespace rdpq {
-        struct Job { uint32_t lo = 0, hi = 0; std::vector<uint8_t> w; };
+        struct Job { uint32_t lo = 0, hi = 0; std::vector<uint8_t> w; bool screen = false; };
         static std::mutex m;
         static std::condition_variable cv_job, cv_idle;
         static std::deque<Job> q;
@@ -1523,7 +1532,13 @@ namespace ultramodern {
         // as=2 drained vs as=3 not drained). Latched per task at entry.
         static const int nodrain_env = [] { const char *e = std::getenv("ROGUESQ_RDP_NODRAIN"); return e ? atoi(e) : 0; }();
         static bool task_nodrain = false;
+        static const bool screen_job_env = [] { const char *e = std::getenv("ROGUESQ_RDP_SCREEN_JOB"); return e && *e && *e != '0'; }();
+        static std::atomic<int> screen_pend{0}; // at 2 queued the next VI takes the drain path, so the worker cannot run away
+        static double scr_drain = 0, scr_pre = 0, scr_up = 0, scr_upmax = 0; static uint64_t scr_n = 0; // Gfx thread only
         static void aq_print(int sec) {
+            if (scr_n) std::fprintf(stderr, "[g1e-scr] t=%d n=%llu drain=%.2f pre=%.3f up=%.2f up_max=%.2f\n", sec, (unsigned long long)scr_n,
+                                    scr_drain / scr_n, scr_pre / scr_n, scr_up / scr_n, scr_upmax);
+            scr_drain = scr_pre = scr_up = scr_upmax = 0; scr_n = 0;
             for (int a = 0; a < 4; ++a) {
                 AqAcc &x = aq[a]; if (!x.n) continue; const double n = (double)x.n;
                 std::fprintf(stderr, "[g1e-aq] t=%d as=%d n=%llu total=%.2f rsp=%.2f drain=%.2f wk=%.2f wk_tail=%.2f copy=%.3f sync_rt64=%.2f "
@@ -1545,7 +1560,12 @@ namespace ultramodern {
                 }
                 RT64::Application *app = g_rt64_app.load();
                 const aclk::time_point jt0 = aq_on ? aclk::now() : aclk::time_point{};
-                if (app && !s_rdp_disabled.load(std::memory_order_relaxed))
+                if (j.screen) { // s6884: the events the drain would have cleared belong to this thread now
+                    RT64::g_s4280_n = 0;
+                    if (app) app->updateScreen();
+                    screen_pend.fetch_sub(1);
+                }
+                else if (app && !s_rdp_disabled.load(std::memory_order_relaxed))
                     app->processDisplayLists(j.w.data() - j.lo, j.lo, j.hi, /*isHLE*/ false);
                 if (aq_on) {
                     const uint64_t ns = (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(aclk::now() - jt0).count();
@@ -1588,6 +1608,21 @@ namespace ultramodern {
             if (aq_on) { t_copy += aq_ms(ct0, aclk::now()); ++t_calls; }
             return true;
         }
+    }
+    bool rs64_rdpq_screen_ready() {
+        using namespace rdpq;
+        return screen_job_env && rs64_rdp_async_on && in_task == 0 && task_nodrain && task_async && screen_pend.load() < 2;
+    }
+    void rs64_rdpq_screen_job() {
+        using namespace rdpq;
+        flush_pend(); task_async = false; screen_pend.fetch_add(1);
+        Job j; j.screen = true;
+        std::lock_guard<std::mutex> lk(m);
+        q.push_back(std::move(j)); ++n_jobs; cv_job.notify_one();
+    }
+    void rs64_scr_note(double drain_ms, double pre_ms, double up_ms) {
+        using namespace rdpq; if (!aq_on) return;
+        scr_drain += drain_ms; scr_pre += pre_ms; scr_up += up_ms; if (up_ms > scr_upmax) scr_upmax = up_ms; ++scr_n;
     }
     void rs64_rdpq_drain() {
         rdpq::drain();

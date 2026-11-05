@@ -181491,3 +181491,33 @@ Regen: fresh regen_front + regen_replay rc 0, s6883 x14, s6880 x9, s6882 x2; pat
 Limits: q arms are cross-run, unpinned, one run each, so q219 vs q219z is single-source; the 30 -> 60 change bundles logging, ASYNC, NODRAIN, FAST and PROBES, not split. Flight in q arms rests on harness flight_s=79-81 and phase rows: the 100 s capture ran after the game exited (screencapture: no file), because the harness counted mission from t=6 s. ns/cmd 224 still above s6810's 178, unexplained. lvl10 pair caps=0: x starts 189 and falls, FZ 189.7+ crosses only ~153 s in, so no lvl10 frames; soaks s6883_l10z/l10d queued with HOLD_S=215. Non-empty means table byte != 0x80 in both halves; which cells are correct is not independently known, so "saturated" is a statement about bounds, not an oracle. Look is single-source, owner judges. 300 s holds not run (G4 park). Small open item, best sx 1.00% under sy, not touched.
 Discrimination: selects H-corrupt at table level and for frame cost; H-harmless refuted for cost and table state, visually near neutral (tie vs dd1). Refutes H-other: rows >= 80 exist. Bit 2 is the active term, bit 1 alone changes nothing visible or timed. Refutes STORE_DIAG as ucode cost.
 Rules out: s6882's "20 fps stretches are ucode 3 VI per frame" as inherent to the scene; they are the out-of-bounds cells.
+
+## Session 6884 (2026-11-04) — FPS60 21:9 dd4 cost split: logging text is free, 30 fps = sync RT64 plus FAST/PROBES off; new opt-in ROGUESQ_RDP_SCREEN_JOB removes the game-rate dips
+HYPOTHESIS-ID: g1d-wide-fps60-cost. Folded s6883_l10z/l10d (caps 6 each): lvl10 21:9 dd4 SPANCELL 0 vs default 0 px changed at k0-k2 (control: k0 vs k1 differs), sim identical over 5144 ticks, wrong 9126 -> 0, tasks p50 30/31, ucode 1.9/2.0, 0 crash. So lvl10 gets the bound with no visible or timed change.
+What ran: lvl1 FPS60 21:9 dd4, dt pinned 1/60, POSE_LOCK, freezes at x 42.33/74.04/106.28 (scratch/s6884/run_a.sh, run_b.sh). L = recipe logging, F = FAST=1+PROBES=0 vs FAST=0+PROBES=1 set explicitly, A = ASYNC+NODRAIN. tools/g1e_arm_rate.py: k0 -> k2 is the same 1612 ticks in every arm, so ticks / net wall is a same-work rate. New harness knob LOG_ENV in g1_level_coverage_common.zsh.
+| arm | L F A | tick fps | tasks min/p10/p50/p90 | s<50 | ucode p50 |
+|---|---|---|---|---|---|
+| r100 (recipe) | 1 0 0 | 29.6 | 19/30/30/31 | 54 | 19.4 |
+| r000 | 0 0 0 | 29.6 | 18/30/31/31 | 54 | 19.3 |
+| r010 | 0 1 0 | 30.0 | 14/30/31/32 | 53 | 15.5 |
+| r001 | 0 0 1 | 44.1 | 24/41/44/49 | 33 | 12.9 |
+| r011 | 0 1 1 | 59.7 | 24/59/60/61 | 1 | 9.4 |
+| r011b (repeat) | 0 1 1 | 58.9 | 9/55/60/61 | 2 | 9.3 |
+| r111 | 1 1 1 | 59.7 | 47/59/60/61 | 1 | 9.7 |
+Log text: no measured cost at 30 (r100 = r000) or at 60 (r111 = r011). What the recipe costs is indirect: any ROGUESQ_LOG_* env turns FAST off and PROBES on. Without A the Gfx thread waits for RT64 inline (r010 sd_wall p50 21.6 ms > 16.7), so 30 fps whatever F does; A alone 44; A and F together 60. H-both, but the two terms are ASYNC and FAST/PROBES, not logging and ASYNC. FAST and PROBES not split from each other (rfast/rprob cut for time; r110/r101 also not run, r110 killed at start, its log is partial). Frames: r100, r000, r010, r001, r011, r011b, r111, pj all 0 px at k0-k2 vs each other (control k0 vs k1 fires), so these knobs do not change the picture at these poses. Sim: r000 vs r011 identical over 3396 ticks; r100 vs r000 first differs at tick 1425 in the 'rand' field on a b017dd00 row, an unfiltered non-rand trace row by reading (same pos, hp, same k2 tick 2459, 0 px), not chased.
+Control: q219r (s6883 bridge repeat, keyed, unpinned) 46/49/59/61, 8 s below 50 vs s6883 41/47/60/61, 14 s. Close, and the below-50 count moves a lot run to run.
+Dense seconds: s6883 q219 tasks fall as sd_wall + us_wall nears 16.7 ms (sum 2-6 ms: 59.9 tasks; 14-16: 47.5; 16-18: 43.0), both serial on the Gfx thread, game thread blocked ~860 ms/s. New [g1e-scr] split of update_screen (js0): drain p50/p90 0.92/3.84 ms, app->updateScreen 0.10/0.28, diagnostics 0.001. So us_wall is the wait for the previous task's RT64 tail that NODRAIN moved here, not present work.
+ORIGIN: update_screen's rs64_rdpq_drain (s6705), reached with the tail s6708 stopped waiting for in send_dl. Legitimate wait, wrong thread: FIFO order on the worker already gives the order it protects.
+Fix: ROGUESQ_RDP_SCREEN_JOB=1 (default off, needs ASYNC+NODRAIN): update_screen queues updateScreen as a worker job. Falls back to the drain when no async task is pending or 2 screen jobs are queued. The s4280 event reset moves to the worker job. src/main only, no regen or lib change.
+| arm (keyed, last 70 s, scratch/s6884/run_c.sh, run_d.sh) | tasks min/p10/p50/p90 | s<50 | distinct drawn at present p10/p50/p90, total |
+|---|---|---|---|
+| js0 off | 41/46/59/61 | 11 | 37/46/60, 3384 |
+| js1 on | 58/60/60/61 | 0 | 39/54/60, 3661 |
+| js1b on | 59/60/60/61 | 0 | 34/58/60, 3623 |
+| js0b off | 44/50/60/61 | 4 | 41/55/60, 3695 |
+Pinned pj vs r011: 0 px at k0-k2, sim identical over 6461 ticks, 59.9 vs 59.7 tick fps, 0 crash in all four keyed arms. Game rate gain repeats in both orders (2 pairs, cross-run, 150 s holds).
+Limit, the important one: the displayed side did not clearly improve. [present-1024] prints when the drawn fb changes at a present, and that count per second sits below the task rate in all arms, on or off, with totals overlapping (3384/3695 off, 3661/3623 on). Reading: game frames at 60 are not all reaching the screen. Single-source, this line was not built as a present counter. So do not tell the owner the picture is now a steady 60.
+Not measured: SCREEN_JOB on other levels and 4:3 (soaks s6884_job_lvl5, lvl10, lvl1_43 queued), any hold over 150 s, feel, whether the VI read on the worker ever lands a VI late (decodeVI now runs up to one tail later; pj shows no pixel change at frozen poses, which cannot see that).
+Small item: the 4:3 picture box is 1106 px wide (x 85..1190, two frames), +0.82% over 1097, so it accounts for most of the 1.00% sx gap. Single-source, not closed, not fixed.
+Discrimination: H-log refuted for text; H-async selected with FAST/PROBES as second term; dense dips selected the update_screen drain. Rules out recipe figures understating because of log volume (the s6883 lead).
+

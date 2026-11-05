@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6883 (2026-11-04).
+Compact operational handoff, as of Session 6884 (2026-11-04).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
@@ -101,10 +101,13 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of w
 
 - **FIXED s6882: wide + dd flight ran at 6-9 game fps at 21:9 dd4 and 11-20 at 16:9 dd4 (non-FPS60 recipe); now 20-31 at both.** ORIGIN: the span fill loops in scanConvertTriangleToSpanTable took x bounds of 0x7F7F, the span fill's own bytes. Inference, row count not logged: edge walkers 0x80041FA4/0x80042118 write the 80-row min/max arrays with no limit, so a deep footprint reads max[i>=80] from 0x80130DB0. Each row then walked ~32k x at three float divides, every store skipped (3.84e9 skips in 130 s). Same pose: frames 0 px changed, 0 skips vs 59777 log lines. ROGUESQ_G1D_SPANNARROW (default on where the s6049/s6880 bound runs, =0 old; retail dd1 4:3 untouched). Replays from pristine. Overrun itself: see s6883.
 - **FIXED s6883: span scan overrun at dd > 1 or wide; 21:9 dd4 now 30 fps not 20-22 (recipe, non-FPS60).** ORIGIN: edge walkers of scanConvertTriangleToSpanTable fill the 80-row min/max arrays unbounded (row 264 at 21:9 dd4, 136 at 4:3 dd4, 65 at 21:9 dd1), and y/x outside 0..63 passed the s6049/s6880 byte bound into the wrong row or table (9e8 stores, all 4096 cells non-empty). ROGUESQ_G1D_SPANCELL default 3 where the s6882 gate runs (=0 old; bit 1 edge rows to host arrays, 0 px and no rate change alone; bit 2 cell bound, the active term; 4 control). Same binary, repeat 0 px: lvl1 21:9 tasks p50 21 -> 30, lvl5 21 -> 30, ucode 25.7 -> 18.9; lvl10 unchanged. Pixels: <= 3.2% change, a tie vs dd1 (13.84 vs 13.68). Sim identical per tick on every pair (tickdiv, controls fire), retail 4:3 dd1 0 px. Replays from pristine. lvl10 frames pending soaks s6883_l10z/d. Sheet docs/owner_sheet_s6883_spancell.png.
-- **s6883: FPS60 + 21:9 dd4 reaches p50 60 game fps on the s6716 no-logging bundle (ASYNC+NODRAIN+FAST+PROBES=0).** Last 70 s: p10/p50 47/60, 14 s below 50; SPANCELL=0 42/47, 37 s; 4:3 51/60. Single run each, unpinned, single-source. The 30 tasks/s on the recipe is not from STORE_DIAG (434 vs 436 ns/cmd); logging vs ASYNC not split.
+- **s6884: FPS60 21:9 dd4 cost split (lvl1, pinned, same 1612 ticks, all arms 0 px).** Logging text has no measured cost (r100 = r000 at 29.6 fps; r111 = r011 at 59.7). 30 fps = RT64 inline on the Gfx thread (sd_wall 21.6 ms) plus FAST off/PROBES on, which any ROGUESQ_LOG_* env sets: F alone 30.0, A (ASYNC+NODRAIN) alone 44.1, both 59.7, repeat 58.9. Measurement recipes understate rate through FAST/PROBES, not log volume; set ROGUESQ_G1E_FAST=1 ROGUESQ_G1E_PROBES=0 when timing.
+- **s6884: opt-in ROGUESQ_RDP_SCREEN_JOB=1 removes game-rate dips (default off, needs ASYNC+NODRAIN).** ORIGIN: update_screen's drain waits on the Gfx thread for the tail NODRAIN deferred (drain p90 3.84 ms, updateScreen 0.28), and ucode + drain nearing 16.7 ms is what dropped tasks to 41-47/s. The job runs updateScreen FIFO on the RDP worker. Keyed lvl1 21:9 dd4, 2 pairs: tasks min/p10 41/46, 44/50 -> 58/60, 59/60; s below 50 11, 4 -> 0, 0. Pinned 0 px, sim identical 6461 ticks. **Displayed rate NOT shown better:** distinct drawn fbs at present p50 46, 55 off vs 54, 58 on, totals overlap, all below tasks/s (single-source, [present-1024] is a change log, not a counter). Other levels and 4:3 pending soaks s6884_job_*.
 - **s6882: 21:9 same-pose scores are valid now (H-fit).** g3_aspect_crop --pin (sx = sy from geometry) plus a crop fix. 21:9 dd4 vs 4:3 dd4: mad 4.74/2.94/2.95, hz_p90 2.42/1.61/0.81, ctl 18.56/15.82/57.88; 16:9 dd4 4.51/2.70/2.95. 21:9 dd1: FPDEPTH on 4.58/2.84/2.45 beats off 6.58/4.18/7.69. Best sx is 1.00% under sy at both widths, unexplained. Sheet docs/owner_sheet_s6882_219_dd4.png.
 
 ## Superseded conclusions — do not act on these
+- s6883 NEXT "H-log: recipe logging may hold wf at 30" and "30 -> 60 bundles logging" (superseded s6884): log text is free at both rates. Believable because ROGUESQ_LOG_* arms were the slow ones; the env name turned FAST off and PROBES on, the text was innocent.
+- s6883 "FPS60 + 21:9 dd4 p10/p50 47/60, 14 s below 50" as a stable figure (superseded s6884): repeats gave 49/59 (8 s), 46/59 (11 s), 50/60 (4 s). Believable as one run; the below-50 count swings 3x between runs.
 - s6879-s6881 g3_aspect_crop MAD/hz figures (superseded s6882): the crop kept the 4:3 pillarbox bars, because 2 title rows survive --bar 62 and span the width, so black columns were scored as picture (MAD floor ~13, hz_mean 39-69 "unread"). Believable because arm ordering and control separation still looked right, and they still hold. Re-score with the fixed tool, do not quote the old numbers.
 - s6881 NEXT "recipe logging may explain hd4 tick rate" (superseded s6882): GRIDLOG on/off gave the same VI steps and log size. The cost was the span loop.
 - s6880 "g3_aspect_crop not valid at 21:9" (superseded s6882): the free grid's sy started at 1.50 and 21:9 needs 1.24. --pin fixes it.
@@ -326,6 +329,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block.
    (single-source). Reopen on an owner report or a side-effect failure, not repeat holds.
 5. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first. NEVER send hull damage
    on level 8 (counter3==1 fails the mission).
+
+**Active s6884:** does 60 game fps reach the screen? scratch/agent/NEXT.md. SCREEN_JOB soaks queued; default stays off until the owner chooses.
 
 ## Evidence index
 
