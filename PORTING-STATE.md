@@ -181963,6 +181963,9 @@ Same build, same scene phase:
 | f1 fix on | 1 | 0.009 | 0 of 302 |
 | o1 LETTERBOX=0 | 2 | 0.106 | 336 and 337 |
 
-Frames: docs/owner_sheet_s6898_letterbox_fix.png. RDP scan of f1.bin finds no rect ending at 796 under this scene's scissor problem; the block is gone in the frames. Two arms of one build, not a same-run toggle: =tog was built but not run.
+Frames: docs/owner_sheet_s6898_letterbox_fix.png. Second line, RDP stream, scene VIs only (tools/g5b_rdp_edge.py --x 795): r1 (build before the fix) has FILL 512..796 y 54..393 colour 0001 354 times, f1 has it 0 times; the top and bottom bars are the positive control, 354 in r1 and 355 in f1. A first scan at --x 796 was void: the tool requires image width > X, and the width is 796, so it could not fire. Two runs, not a same-run toggle: =tog was built but not run. r1 is a different build from f1; o1 is the same build as f1 but has no RDP dump.
+Seen, not followed: fill rects 400..795 from y 94-96, colours FFFC and A359, about 1 s into the scene, the same in r1 and f1, so not the block.
 Not explained: the block's top edge follows the horizon rather than y 54, so something drawn after the fill covers part of it. Draw order not traced.
 No retail frame of this scene exists, so "retail has no block" still rests on the port at 4:3.
+
+dd4 (f4, fix on): black peak 0.008, block gone there too. A separate defect is now plain: the scene's water and most terrain are missing at dd4, flat tan in their place, with a torn terrain piece near the towers (docs/owner_sheet_s6898_dd1_dd4_scene.png, same scene phase as dd1). s6897 saw this as a lost foreground. The default-on dd>1 rules are the first suspects, since big near water tris are what the span rule drops. Arms queued: scratch/s6898/all4.zsh (W_SHEET_PX=0, W_CLAMP=0, G5B_TG_FIX=0, dd2).
