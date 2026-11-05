@@ -181798,6 +181798,8 @@ Tile pool (NEXT.md question): events persist with the s6893 pool fix on LEVEL=4 
 Census s6893_census_1-2: levels 0-9 arena_full=0, spill used at most 0x2A99E0 of 0x400000, no cap needed. census_3-4 (levels 10-18) still queued.
 G5c side datum: no gap over 250 ms in any arm (max 100 ms), but these are 2-5 min holds, not the long run G5c needs. dd4 presents ~41 fps with ~1000 gaps over 34 ms per 190 s; dd1 ~60 fps with 11-23.
 Not done: the 8074A380 live or stale check from NEXT.md. Tools known weak: g5b_cover_map and g5b_point_stack hull test misses tris.
-Owner save untouched: ROGUESQ_NO_SAVE_WRITE from the arm environment, no save file written by these runs (not hashed this session).
+Owner save untouched: build/saves file mtime is 01:09, before every arm of this session (not hashed).
+
+Conclusion: this session refutes H-sky-object, H-transparent and H-inverted-span as explanations of invisible sheets, and refutes the s6893 pool fix as a sufficient cure, since events persist with it on LEVEL=4. It does not select a cause. The next discriminator is an angrylion replay of quiet swap 8893 against event swap 8736: H-hw-paints versus H-hw-hides (NEXT.md).
 
 ORIGIN: not named. KILLSHEET is a diagnostic toggle, off by default, not a fix. No writer or cause is claimed for flat sky or black steps.
