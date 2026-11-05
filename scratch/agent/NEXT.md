@@ -1,13 +1,17 @@
-# OWNER OVERRIDE 2026-11-04: do ITERATION.md G5a-G5f first. G5a is fixed pending owner re-flight (s6893), so continue at G5b. The paused unit is at the bottom.
+# OWNER OVERRIDE 2026-11-04: do ITERATION.md G5a-G5f first. G5a is fixed pending owner re-flight (s6893). G5b is in progress. The paused unit is at the bottom.
 
-# NEXT: G5b, build an instrument that catches the terrain drops the owner sees, and re-measure now the tile pool overrun is fixed
+# NEXT: G5b, find out why some frames show flat sky at dd4, starting from whether hardware paints the near-plane sheets
 HYPOTHESIS-ID: g5b-terrain-drops
-Why: owner at 16:9: dd4 significant drops, dd2 fewer, dd1 clean. The old "0 drops" detector misses them. s6893 removed an overrun that only happens at dd>1 and corrupts the block after the pool, so it may be involved, untested: do not assume it.
-First fold scratch/s6893/census.txt (SOAK-RESULTS s6893_census_1-4). If any level shows arena_full>0 or spill used near 0x400000, cap K for that level before anything else. Only levels 0-18 at dd4 16:9.
-Quick check of the s6893 loose end, same build: log whether block 8074A380 is live when RT64 copyNativeToRAM writes it (spill map does not cover the main heap; read the heap header, or log rs_free of s2). H-stale: freed then reused as an offscreen colour image, harmless. H-live: a second corruption route, fix it. The rs64_s6892 guard fires for real only if the walker reads it.
-Instrument: per presented frame at the owner recipe (FPS60, dd4, 16:9, no logging env), terrain pixel fraction from presented frames, not RDRAM (port RDRAM dumps lack RT64 3D frames). Positive control: frames the owner would call a drop, from a screen recording or presented frames at this recipe, not a test build. Arms in one iteration: ROGUESQ_TILEPOOL=0 vs default, dd1 vs dd2 vs dd4. Outcomes: drops gone with the pool fix = G5b closes with G5a; drops unchanged = H-tilepool refuted, then measure whether drops sit inside the dd1 radius or only in extended cells (that decides G5e).
-The natural count varies by run (59, 84, 94, 97 on one route): unexplained; note it if the instrument touches it.
-Ask owner when a human is next on: re-fly Gerrard V past half way at dd2 and dd4, FPS60 16:9, more than once; does it crash, and are the drops any different?
+State: read PORTING-STATE s6894 first; several explanations are already refuted there. Arm template scratch/s6894/arm.zsh <lvl> <dd> <name> "<env>" <delay> <dur>; it uses SHEET only, add ROGUESQ_G5B_TRIS=$R/tris_$N.bin when a join is needed (about 1.2 GB per arm). Binaries scratch/s6894/g5b_capture, g5b_drops, g5b_tri_scan, g5b_black. Data kept: tris_l4c.bin + l4c.raw, tris_s4.bin + sh_s4.txt + s4.raw, tris_s1.bin.
+Unit, one iteration:
+1. Offline first: replay a QUIET swap (s4 swap 8893, 333k sheet, clouds on screen) and event swap (l4c 8736) through tools/angrylion_replay (see tools/g3c_spike_rdp_model.py and PORTING-STATE s6454 for how). H-hw-paints: angrylion paints the sheet, so RT64 is hiding it on quiet frames and showing it on event frames: then diff RT64 per-draw state. H-hw-hides: angrylion hides it too, so a state we did not decode hides it: find which. The dump lacks full RDP state before the first sheet; capture it if replay needs it.
+2. Give KILLSHEET a positive control: KILLSHEET=1 with a sheet forced visible, or show a pixel change on a killed frame. Until then k1/k4 are not a null.
+3. Flat sky in flight needs EXACT_EDGES binned with enough events: e4 had one strong flight event and it hit the edge band. Exclude the post-failure scene (detect by scissor ED0000D8 in sh_*.txt).
+4. Black steps need a dd1 control: reach the post-MISSION FAILED scene at dd1. The dd4 flights failed at ~160-310 s after launch, the dd1 flight had not by ~311 s. Hold longer, or find what triggers failure. Compare the retail oracle if the scene can be reached there.
+5. Run LEVEL=4 ROGUESQ_TILEPOOL=0 at dd4 if a pool answer is still wanted. Also still open from s6893: is block 8074A380 live when copyNativeToRAM writes it.
+Fold s6893_census_3 and _4 when they run (levels 10-18); cap K if arena_full>0 or spill near 0x400000.
+Event counts swing 0 to 8 between same-recipe arms, so compare within a run or pool several arms.
+Ask owner when a human is next on: look at docs/owner_sheet_s6894_flat_sky_lvl1.png and docs/owner_sheet_s6894_flat_sky_and_black_steps.png (each row is before, odd frame, after). Are the flat sky frames what you call a terrain drop, or do you see something else, such as ground vanishing? Have you seen the black steps after failing a mission, at dd1 too? A short screen recording of a drop would settle it. Also re-fly Gerrard V past half way at dd2 and dd4, FPS60 16:9, more than once: does it crash, and are the drops any different?
 
 # PAUSED until G5 closes
 # NEXT: 21:9 flight on 144 Hz at a free XG49V corner, or what enters the 72 ms state if still built-in alone

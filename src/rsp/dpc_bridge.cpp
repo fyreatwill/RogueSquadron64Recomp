@@ -1,3 +1,4 @@
+#include <mach/mach_time.h>
 #include <map>
 #include <set>
 #include <array>
@@ -3424,6 +3425,21 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     // 2026-10-31 owner: cull is DEFAULT ON (ROGUESQ_CULL_SPIKE=0 restores retail wedges). It used to run only
     // under ROGUESQ_LOG_SPIKE=1, so the documented CULL_SPIKE=1 opt-in alone was a no-op.
     static const bool cull = [] { const char *e = std::getenv("ROGUESQ_CULL_SPIKE"); return !(e && *e == '0'); }();
+    // s6894 G5b: ROGUESQ_G5B_BIGTRI=<file>, one line per swap: mach time (same clock as g5b_capture displayTime), the
+    // largest triangle by hull area, its raw edge vertices and image width. Joins presented frames to the RDP stream.
+    static FILE *s_big = [] { const char *e = std::getenv("ROGUESQ_G5B_BIGTRI"); return (e && *e) ? fopen(e, "w") : (FILE *)nullptr; }();
+    // s6894: ROGUESQ_G5B_TRIS=<file>, every triangle: u32 0xF5F5F5F5, u64 mach, u32 swap at each swap; then per tri
+    // u8 op, u8 pad, u16 cw, u32 timg, u32 z, 10 x s16 (x,y of the 5 edge vertices, 1/4 px, saturated).
+    static FILE *s_tf = [] { const char *e = std::getenv("ROGUESQ_G5B_TRIS"); FILE *f = (e && *e) ? fopen(e, "wb") : (FILE *)nullptr; if (f) setvbuf(f, nullptr, _IOFBF, 1 << 22); return f; }();
+    static uint32_t s_timg = 0;
+    // s6894: ROGUESQ_G5B_SHEET=<file>, one line per triangle over 40000 px area: swap, mach, last w0/w1 of each RDP state
+    // command, FNV of 2 KB at the texture image, then the raw triangle words. Splits visible from invisible sheets.
+    static FILE *s_sh = [] { const char *e = std::getenv("ROGUESQ_G5B_SHEET"); return (e && *e) ? fopen(e, "w") : (FILE *)nullptr; }();
+    static uint32_t s_st[64][2] = {};
+    // s6894: ROGUESQ_G5B_KILLSHEET=1 zeroes near-plane terrain sheets (op 0F, terrain blender, hull > 100000 px); =tog does
+    // so on odd seconds of the mach clock only, so presented events can be binned by parity within one run.
+    static const int killsheet = [] { const char *e = std::getenv("ROGUESQ_G5B_KILLSHEET"); return !(e && *e) ? 0 : (*e == 't' ? 2 : 1); }();
+    static struct { double area, v[5][2]; uint32_t off, op, cw, n, big, w0, w1; int swap; } s_bt = {};
     if (!(on || cull) || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
     static const double guard = [] { const char *e = std::getenv("ROGUESQ_SPIKE_CTL"); return e && *e ? atof(e) : 640.0; }();
     static uint64_t s_tris = 0, s_bad = 0, s_logged = 0, s_culled = 0;
@@ -3433,14 +3449,23 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     if (sw != s_swap) {
         if (on && s_swap_bad) { fprintf(stderr, "[spike-swap] swap=%d tris=%u bad=%u total_tris=%llu total_bad=%llu culled=%llu\n", s_swap, s_swap_tris, s_swap_bad, (unsigned long long)s_tris, (unsigned long long)s_bad, (unsigned long long)s_culled); fflush(stderr); }
         s_swap = sw; s_swap_tris = 0; s_swap_bad = 0;
+        if (s_big && s_bt.n) {
+            fprintf(s_big, "%llu %d n=%u big=%u cw=%u op=%02X off=%06X area=%.0f w0=%08X w1=%08X", (unsigned long long)mach_absolute_time(), s_bt.swap, s_bt.n, s_bt.big, s_bt.cw, s_bt.op, s_bt.off, s_bt.area, s_bt.w0, s_bt.w1);
+            for (auto &q : s_bt.v) fprintf(s_big, " %.1f,%.1f", q[0], q[1]);
+            fputc('\n', s_big); fflush(s_big);
+        }
+        s_bt = {}; s_bt.swap = sw;
+        if (s_tf) { const uint32_t m = 0xF5F5F5F5u; const uint64_t t = mach_absolute_time(); const uint32_t q = (uint32_t)sw; fwrite(&m, 4, 1, s_tf); fwrite(&t, 8, 1, s_tf); fwrite(&q, 4, 1, s_tf); }
     }
     auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
     auto sx14 = [](uint32_t v) { return (double)(((int32_t)(v << 18)) >> 18) / 4.0; };
     for (uint32_t a = lo & ~3u; a + 8 <= hi;) {
         const uint32_t w0 = rd(a), w1 = rd(a + 4);
         const uint32_t op = (w0 >> 24) & 0x3F;
+        if ((s_sh || killsheet) && op >= 0x20) { s_st[op][0] = w0; s_st[op][1] = w1; }
         if (op == 0x24 || op == 0x25) { a += 16; continue; }
         if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; a += 8; continue; }
+        if (op == 0x3D) s_timg = w1;
         if (op < 0x08 || op > 0x0F) { a += 8; continue; }
         const uint32_t len = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
         if (a + 32 > hi) break;
@@ -3449,6 +3474,32 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         const double xl = fx(8), dl = fx(12), xh = fx(16), dh = fx(20), xm = fx(24), dm = fx(28);
         const double v[5][2] = {{xh, yh}, {xm + dm * (ym - yh), ym}, {xl, ym}, {xl + dl * (yl - ym), yl}, {xh + dh * (yl - yh), yl}};
         bool bad = !(yh <= ym && ym <= yl);
+        if (s_tf) {
+            struct { uint8_t op, pad; uint16_t cw; uint32_t timg, z; int16_t c[10]; } r = {(uint8_t)op, 0, (uint16_t)s_cw, s_timg, (op & 1) && a + len <= hi ? rd(a + len - 16) : 0u, {}};
+            for (int i = 0; i < 5; i++) for (int k = 0; k < 2; k++) r.c[i * 2 + k] = (int16_t)std::max(-32768.0, std::min(32767.0, v[i][k] * 4.0));
+            fwrite(&r, sizeof r, 1, s_tf);
+        }
+        if (s_sh) {
+            double ar = 0; for (int i = 0; i < 5; i++) { const int j = (i + 1) % 5; ar += v[i][0] * v[j][1] - v[j][0] * v[i][1]; }
+            if (fabs(ar) / 2 > 40000.0 && a + len <= hi) {
+                uint32_t h = 2166136261u; for (uint32_t o = 0; o < 2048; o += 4) { h = (h ^ rd((s_timg + o) & 0x00FFFFFCu)) * 16777619u; }
+                fprintf(s_sh, "%d %llu op=%02X area=%.0f h=%08X", sw, (unsigned long long)mach_absolute_time(), op, fabs(ar) / 2, h);
+                static const uint8_t ids[] = {0x2D, 0x2F, 0x32, 0x33, 0x34, 0x35, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F};
+                for (uint8_t q : ids) fprintf(s_sh, " %02X:%08X,%08X", q, s_st[q][0], s_st[q][1]);
+                fputs(" T", s_sh); for (uint32_t o = 0; o < len; o += 4) fprintf(s_sh, " %08X", rd(a + o));
+                fputc('\n', s_sh); fflush(s_sh);
+            }
+        }
+        if (killsheet && op == 0x0F && s_st[0x2F][1] == 0xC8112220u && a + len <= hi && rd(a + len - 16) < 0x00200000u
+            && (killsheet == 1 || ((mach_absolute_time() / 24000000ull) & 1))) {
+            double ar = 0; for (int i = 0; i < 5; i++) { const int j = (i + 1) % 5; ar += v[i][0] * v[j][1] - v[j][0] * v[i][1]; }
+            if (fabs(ar) / 2 > 100000.0) { uint32_t n0 = w0 & ~0x3FFFu, n1 = 0; memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &n0, 4); memcpy(g_rdram_for_submit + ((a + 4) & kSubmitRamMask), &n1, 4); }
+        }
+        if (s_big) {
+            double ar = 0; for (int i = 0; i < 5; i++) { const int j = (i + 1) % 5; ar += v[i][0] * v[j][1] - v[j][0] * v[i][1]; }
+            ar = fabs(ar) / 2; s_bt.n++; if (ar > 5000.0) s_bt.big++;
+            if (ar > s_bt.area) { s_bt.area = ar; memcpy(s_bt.v, v, sizeof v); s_bt.off = a; s_bt.op = op; s_bt.cw = s_cw; s_bt.w0 = w0; s_bt.w1 = w1; }
+        }
         // s6695: the right bound assumed a 320-wide viewport, so at 21:9 (colour image 1024 wide) every
         // ordinary triangle reaching x>960 was zeroed (level-select right-edge wall hole). Images wider
         // than 640 (widescreen only) get the guard measured from their own right edge; <=640 is unchanged.

@@ -181750,3 +181750,54 @@ Not shown: that this is the owner's crash. Same object, same word, same kind of 
 New, open: at dd4 16:9 RT64 copyNativeToRAM writes pixels on the watched word at 8074A380/8074AC60 (171 memmove + 171 swap hits in d4live, no plant, so the plant did not cause it). The real guard never fired (no rs64_s6892.log in d4live, only the planted line in d4on and d4off), so nothing read that word afterwards, which suggests a dead block reused as an offscreen colour image and a stale watch. Inference, single-source: block liveness not checked. No VI origin at 240 rows covers the address, so the image, if that is what it is, is not a displayed frame. If the block is live this is a second corruption route.
 Regen: fresh regen_front + regen_replay rc 0, s6892 and s6893 patch text hash equal live vs regen (fb474042c0f57515). Objects not compared, no regen binary linked. Regen dir deleted.
 Owner save md5 unchanged across all arms (00293f3e...).
+
+## Session 6894 (2026-11-05) — G5b: presented-frame capture catches flat-sky frames and black stepped terrain at dd4; cause not found, three explanations refuted
+
+Includes the work of the iteration that timed out at 04:10 (rc=124, nothing committed); its arms were in scratch/s6894 and are folded here. Owner recipe (FPS60, 16:9, no logging env) unless stated, autopilot flight.
+
+New instrument, not our runtime: tools/g5b_capture.swift records the game window through ScreenCaptureKit at 384x216 with display time; tools/g5b_drops.cpp flags pictures that differ from both neighbours while those agree (runs of 1-3 frames, share T of 8x8 blocks). Stream side in src/rsp/dpc_bridge.cpp, all opt-in: ROGUESQ_G5B_TRIS (every tri), ROGUESQ_G5B_BIGTRI, ROGUESQ_G5B_SHEET (raw tri + RDP state for tris over 40000 px hull), ROGUESQ_G5B_KILLSHEET=1|tog. Default behaviour unchanged.
+
+| arm | level | dd | other | presented fps | events T>=0.04 |
+|---|---|---|---|---|---|
+| d1a | 1 | 1 | | 59.6 | 1 (T 0.049) |
+| d2a | 1 | 2 | | 45.6 | 0 |
+| d4a | 1 | 4 | | 42.4 | 8 |
+| d4tp0 | 1 | 4 | TILEPOOL=0 | 42.0 | 0 |
+| d4nocull | 1 | 4 | CULL_SPIKE=0 | 42.7 | 7 |
+| d4_43 | 1 | 4 | 4:3 | 37.6 | 5 |
+| k1 | 1 | 4 | KILLSHEET=tog, 240 s | 42.4 | 2 |
+| s1 | 4 | 1 | | 59.8 | 0 |
+| l4d4, l4b, l4c | 4 | 4 | | 39-42 | 3, 3, 3 |
+| s4 | 4 | 4 | | 41.1 | 7 |
+| k4 | 4 | 4 | KILLSHEET=tog, 240 s | 41.2 | 13 |
+| e4 | 4 | 4 | EXACT_EDGES=tog, 240 s | 40.9 | 13 |
+| i1, i2, i4 | 4 | 1, 2, 4 | first 110 s | 56, 47, 46 | 0, 0, 0 |
+
+180 s capture unless stated. Counts swing 0 to 8 between same-recipe arms on level 1, so single arm differences mean little, and d4tp0's 0 is not a tile pool result: the census shows level 1 never reaches that pool.
+
+What the frames show (docs/owner_sheet_s6894_flat_sky_lvl1.png, docs/owner_sheet_s6894_flat_sky_and_black_steps.png):
+(1) Flat sky: for 1-2 frames in flight most of the sky is replaced by one flat colour (fog blue, tan, brown, sometimes a dark band). Seen at dd4 on levels 1 and 4. Terrain stays. dd1 arms show no such frame in 6 min total; dd2 none in 3 min.
+(2) Black steps: after MISSION FAILED, a letterboxed scene has large black stair-stepped regions where terrain is missing, for its whole length, and flickers between sky and flat sky frame to frame. All such events in k4/e4/s4 cluster here. NO dd1 CONTROL: the dd1 flights never failed, and the mission opening has no such scene (i1/i2/i4 go goals screen to flight). Not shown to be dd-specific or non-retail.
+Neither is confirmed as what the owner calls a drop. The owner said terrain missing; (1) leaves terrain intact.
+
+Near-plane terrain sheets: op 0F tris in terrain mode (othermode C8112220) over 100000 px hull, z near 0, corners on the guard band (-199..995, -112..560): LEVEL=4 687 in 411 swaps at dd4 (s4), 0 at dd1 (s1). The dump fired at dd1 (14887 lines of other classes), so the zero is real. Different flights, same level and duration, so single-run per arm. Whether these sheets matter is open:
+- Most are invisible: long runs of up to 40 consecutive swaps carry them while presented frames show normal clouds (l4c swaps 8430, 9060, 9120; s4 swap 8893 with a 333k sheet).
+- Two flat-sky events have no tri over 40000 px within the window (l4c event 356, k4 t=39.1), and tops of l4c event 356 show none over 38k.
+- Event 3135 (l4c) does have two 215k+ sheets at -5 ms, but sheets sit in ~2% of swaps, so one or two matches are weak.
+
+Refuted or withdrawn this session, each believable at the time:
+- "The sheet is not in the RDP stream": an off-by-one swap in join.py. Event 3135's is there.
+- Sheets are the sky object: the sky is op 0E with no Z, 8043xxxx textures, drawn first.
+- Shade alpha 0 makes them transparent: blender 0xC811 uses shade alpha as FOG amount, and the second cycle is the normal AA pass.
+- Inverted RDP span draws nothing: span walk gives ~200k drawn pixels on the big sheets.
+- 845 black frames at dd4 vs 0 at dd1: nearly all were the Mission Failed screen and fades, which dd1 never reached. Invalid.
+- Killing sheets stops the events: k4 has 3 in kill seconds vs 10 live, including T 0.18 and 0.19, and those two sit in the post-failure scene. k1 has 1 kill, 0 live, 1 edge. NO POSITIVE CONTROL: no measurement shows the kill changed any frame, so this is not a clean null. Toggle parity is at scan time, event parity at display time, 120 ms edge band excluded.
+- EXACT_EDGES needed: e4 has 8 events in off seconds, 4 on, 1 edge, T up to 0.13 off. That rules it out for the post-failure class only. The one strong in-flight event (t=135.0, T 0.18) fell on the edge band, so for flat sky in flight it is untested.
+
+Tile pool (NEXT.md question): events persist with the s6893 pool fix on LEVEL=4 (l4d4, l4b, l4c, s4), so that fix did not end them. A LEVEL=4 TILEPOOL=0 arm was not run, so its effect on the rate is unknown.
+Census s6893_census_1-2: levels 0-9 arena_full=0, spill used at most 0x2A99E0 of 0x400000, no cap needed. census_3-4 (levels 10-18) still queued.
+G5c side datum: no gap over 250 ms in any arm (max 100 ms), but these are 2-5 min holds, not the long run G5c needs. dd4 presents ~41 fps with ~1000 gaps over 34 ms per 190 s; dd1 ~60 fps with 11-23.
+Not done: the 8074A380 live or stale check from NEXT.md. Tools known weak: g5b_cover_map and g5b_point_stack hull test misses tris.
+Owner save untouched: ROGUESQ_NO_SAVE_WRITE from the arm environment, no save file written by these runs (not hashed this session).
+
+ORIGIN: not named. KILLSHEET is a diagnostic toggle, off by default, not a fix. No writer or cause is claimed for flat sky or black steps.

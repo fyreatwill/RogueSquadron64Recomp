@@ -1,11 +1,12 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6893 (2026-11-05).
+Compact operational handoff, as of Session 6894 (2026-11-05).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6847 maintenance)").
 
 ## Headline
 
+- **OPEN s6894 G5b: a detector now sees defects, cause unknown, owner must say if they are the drops.** tools/g5b_capture.swift + g5b_drops.cpp score presented frames. (1) Flat sky: 1-2 frames with most sky one flat colour, in flight at dd4 levels 1 and 4, 0-8 per 180 s, none in 6 min dd1 or 3 min dd2. (2) Black stair-stepped terrain holes in the letterboxed scene after MISSION FAILED; no dd1 control exists, so not shown to be dd-specific. Near-plane terrain sheets (op 0F, C8112220, >100k px) are 687 at dd4 vs 0 at dd1 on LEVEL=4 (single run each) but mostly invisible, and two flat-sky events have no tri over 40k nearby, so they are not shown to be the cause. Events persist with the s6893 pool fix. Refuted: sky object, transparency, inverted span. EXACT_EDGES ruled out for class (2) only; KILLSHEET toggle lacks a positive control. Sheets: docs/owner_sheet_s6894_*.png. Table: PORTING-STATE s6894.
 - **FIXED s6893, awaiting owner re-flight: G5a writer named.** selectGridCellTileVariant (0x80046030) overran its tile variant pool at dd>1 (LEVEL=4 pool 90 entries, natural counts 94 and 97) into the next heap block, the sky object. tools/apply_s6893_tilepool.py scales the pools and clamps the slot; ROGUESQ_TILEPOOL=0 = old. Matched pair, same layout, forced overflow: unbounded = object overwritten + crash; clamp only = count 136, 0 writes. dd4 natural count 97: 0 writes. That this is the owner's crash is inference: G5a stays open until Gerrard V is flown past half way, repeated. Pool size checked on LEVEL=4 only (s6893_census_1-4 queued). Open: RT64 copyNativeToRAM writes the old object address at dd4 16:9; guard never fired, probably a dead block, unverified. PORTING-STATE s6893 has the arm table.
 - **Owner playtest 2026-11-04 (16:9, FPS60): G3e's "0 drops" does not match what the owner sees.** dd4 drops better but significant, dd2 fewer, dd1 clean; also seconds-long freezes, Factor 5 logo missing frames, spikes still visible, and a repeatable mission crash (junk pointer 0x26282B2B at actor+0x18, see ITERATION G5a). Fog on extended terrain requested. Save guard: runner.sh exports ROGUESQ_NO_SAVE_WRITE=1 and snapshots build/saves to ~/Documents/RS64-save-backups/auto.
 
