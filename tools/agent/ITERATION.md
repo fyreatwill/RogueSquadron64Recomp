@@ -219,7 +219,11 @@ When choosing the work unit, this order overrides Next-steps ordering:
      half-way scripted event to reach the actor; drive objectives or force that event. Hypotheses: H-overrun
      (dd/wide span or terrain writes land in the actor object, see s6880/s6883), H-spill (dd>1
      spill arena, s6858), H-fps60 (actor state ticks twice, object freed or reused),
-     H-uninit (retail bug exposed). Discriminate with a write watch on s2+0x18 naming the
+     H-uninit (retail bug exposed). s6892 guard (tools/apply_s6892_walker_guard.py, default on) repairs the pointer
+     and logs to build/rs64_s6892.log; positive control fired in a pre-mission scene only. In
+     mission at dd2 the object sits in the spill arena (req 0xF14 -> 0x8082C870, LEVEL=4), which
+     dd1 never uses, so H-spill leads. A 431 s idle LEVEL=4 hold did NOT reproduce it (0 fires).
+     Discriminate with a write watch on s2+0x18 naming the
      writer. Close only on the owner's mission holding past the crash point, repeated.
      G5b **Terrain drops are NOT fixed: G3e is reopened.** Owner at 16:9 dd4: better but still
      significant; dd2 fewer but not gone; dd1 was clean. So the "0 in-flight drops" detector

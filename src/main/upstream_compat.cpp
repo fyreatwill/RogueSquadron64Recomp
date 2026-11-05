@@ -7054,3 +7054,45 @@ extern "C" void rs64_s4916_sb(uint8_t* rdram, uint32_t pc, uint32_t addr, uint32
     const char* t; { std::lock_guard<std::mutex> g(mu); t = tags.insert(b).first->c_str(); }
     rs64_s4913_mark(rdram, t);
 }
+
+// s6892 G5a: cinematicSplineWalkerNpcHandler mesh pointer guard (tools/apply_s6892_walker_guard.py). Records the pointer
+// op 1 stored at s2+0x18, and repairs it if a later read finds junk. Not the root cause: this names when it happened.
+// ROGUESQ_S6892=0 off. ROGUESQ_S6892_TEST=<n> plants junk on the n-th tick read, as the positive control.
+namespace {
+struct S6892Rec { uint32_t s2, mesh; };
+S6892Rec s6892_rec[16];
+unsigned s6892_next = 0, s6892_logged = 0;
+unsigned long s6892_reads = 0;
+bool s6892_valid(uint32_t v) { return (v & 3) == 0 && v >= 0x80000400u && v < 0x80C00000u; }
+uint32_t* s6892_word(uint8_t* rdram, uint32_t a) { return reinterpret_cast<uint32_t*>(rdram + (a - 0x80000000u)); }
+bool s6892_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S6892"); return !(e && *e == '0'); }(); return on; }
+void s6892_log(uint8_t* rdram, uint32_t s2, uint32_t bad, uint32_t good, uint32_t pc) {
+    if (s6892_logged >= 32) return;
+    ++s6892_logged;
+    char line[1024];
+    int n = snprintf(line, sizeof line, "[s6892] pc=%08X s2=%08X bad=%08X repair=%08X reads=%lu level=%u dump:", pc, s2, bad, good,
+                     s6892_reads, (unsigned)rdram[(0x80130B40u ^ 3) - 0x80000000u]);
+    if (s6892_valid(s2))
+        for (uint32_t o = 0; o < 0x60 && n < 960; o += 4) n += snprintf(line + n, sizeof line - n, " %08X", *s6892_word(rdram, s2 + o));
+    fprintf(stderr, "%s\n", line);
+    if (FILE* f = fopen("rs64_s6892.log", "a")) { fprintf(f, "%s\n", line); fclose(f); }
+}
+}
+extern "C" void rs64_s6892_note(uint32_t s2, uint32_t mesh) {
+    if (!s6892_on()) return;
+    for (S6892Rec& r : s6892_rec) if (r.s2 == s2) { r.mesh = mesh; fprintf(stderr, "[s6892] note s2=%08X mesh=%08X\n", s2, mesh); return; }
+    s6892_rec[s6892_next++ & 15] = { s2, mesh };
+    fprintf(stderr, "[s6892] note s2=%08X mesh=%08X\n", s2, mesh);
+}
+extern "C" uint32_t rs64_s6892_check(uint8_t* rdram, uint32_t s2, uint32_t v, uint32_t pc) {
+    if (!s6892_on()) return v;
+    ++s6892_reads;
+    static const unsigned long test = [] { const char* e = std::getenv("ROGUESQ_S6892_TEST"); return e ? strtoul(e, nullptr, 0) : 0ul; }();
+    if (test && s6892_reads == test) { v = 0x26282B2Bu; *s6892_word(rdram, s2 + 0x18) = v; }
+    if (v == 0 || s6892_valid(v)) return v;
+    uint32_t good = 0;
+    for (const S6892Rec& r : s6892_rec) if (r.s2 == s2) good = r.mesh;
+    s6892_log(rdram, s2, v, good, pc);
+    if (s6892_valid(s2)) *s6892_word(rdram, s2 + 0x18) = good;
+    return good;
+}
