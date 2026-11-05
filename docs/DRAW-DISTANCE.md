@@ -29,7 +29,7 @@ cd build && env ROGUESQ_DRAW_DISTANCE=2 ./RogueSquadron64Recomp
   and the scene shrinks into a centre box; `ROGUESQ_DD_PNORM_CAP=0` = old) and a free list for the 4 MB spill arena at 0x80800000
   (s6702; it used to leak every block and lvl1 dd8 crashed at ~219 s; `ROGUESQ_SPILL_LEAK=1` = old).
 - Cost on -O2 with STORE_DIAG=0: lvl5 dd4 ~30 game fps (retail rate), dd6/dd8 the same. FPS60 at dd4 reaches ~45, not 60.
-- Suggested owner setting: `ROGUESQ_DRAW_DISTANCE=4`. Default stays retail until the owner chooses.
+- Suggested owner setting: `ROGUESQ_DRAW_DISTANCE=2` until the dd3/dd4 sheets are fixed (s6895: dd2 had none in any test, dd3 and dd4 did). Default stays retail until the owner chooses.
 
 ## Map edge (s6874)
 

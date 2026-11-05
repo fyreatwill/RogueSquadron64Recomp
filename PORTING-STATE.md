@@ -181831,3 +181831,23 @@ Negative results that changed the fix:
 Mixed-sign tris are two populations (f1, dd4, 26265 tris): 22391 touch the guard band, span >= 150 px, median 633, all but one C8112220 terrain; 3874 do not, span <= 162 px, hw area median 0. Span over 200 px splits them with 0 misclassified. Rule now: at dd>1 clamp the small ones, drop the long ones (ROGUESQ_W_SHEET_PX=<span>, default 200 at dd>1).
 
 Sheets: H-hw-paints. angrylion paints the near-plane sheets as big fans and bands over sky and terrain (docs/owner_sheet_s6895_sheets_on_hardware.png, docs/owner_sheet_s6895_steps_vs_hardware.png). In the post-failure scene it paints them exactly over the region the port shows as black steps. So at dd4 the stream is wrong before any renderer; dropping them hides bands but cannot restore the terrain they replace, and black steps remain with clamp on and off. Census across all SHEET arms: dd1 0 (s1, i1, d1, t0), dd2 0 (i2, t2), dd4 43-687. Same recipe swings 82 to 540 between flights, so only a zero means anything.
+
+Final rule, same-run arm v4 (level 4, dd4, W_CLAMP=tog, 180 s capture): strong events on 0 / off 5 (1 in band); T>=.04 on 0 / off 16 (1 in band); small T .006-.04 on 111 / off 334; 360 sheets. Predicted wedges: 3 of 3 in off seconds gave a strong event, 1 in an on second gave none. Frames (docs/owner_sheet_s6895_final_rule_on_off.png): the on row has no bands, including sw8309, the highest c_lost swap. Only 3 frames per state were examined, so bands are not excluded over the whole run. Black steps are unchanged in both states, as expected. dd2 was not re-run on the final rule; its arm t2 ran the first rule.
+
+Why dd4 emits sheets, all LEVEL=4, 120 s + 120 s unless stated, sheets >=100k px:
+
+| arm | setting | sheets | reading |
+|---|---|---|---|
+| i2, t2 | dd2 | 0, 0 | clean in both |
+| d3 | dd3 | 73 | onset is between dd2 and dd3 |
+| c64 | dd4, DD_FARCLIP_MUL=0.64 | 184 | a ~31000 unit depth limit is not supported; no control proved the radius shrank |
+| lf1 | dd4, DD_FAR=1 | 160 | far-plane scale is not needed: refuted. Knob visibly live, 49.5 vs ~40 fps |
+
+H-wrap (camera depth past s16 32767), raised this session from far 9728 x 4 = 38912: weakened, not refuted. dd3 has sheets though its reach should sit under the limit, but the cell-to-render scale of 640 is inferred, and the chain radius is uncertain: DEB4 is rewritten by the game every frame from altitude (computeGridLayerScrollOffset) while org6418 keeps only the first value. c80 was stopped as uninformative once c64 came back non-zero.
+Lead, not tested: sheets cluster by flight position (t4 259 of 343 in swaps 8000-8999, c64 the same stretch), which points at a place on the map, possibly the off-map border cells of s6874. ROGUESQ_DD_EDGE=0 is the next arm.
+
+G5f lead, single measure: small transients fell 3x at dd4 level 4, 11x at dd4 level 1, 5x at dd2, and one transient pair shows a thin line across the sky gone next frame. Mixed-sign wedges exist only in RT64, which would explain why CULL_SPIKE on RDP coordinates misses them. Not shown that these transients are what the owner calls spikes.
+
+Census s6893_census_3-4 folded: all 19 levels arena_full=0, most used 0x2A99E0 of 0x400000, no cap needed. Levels 10 and 15 used only 0x9E00, so they may not have reached the same state.
+
+Not done: dd1 cause of the extra small transients; black step dd1 control; KILLSHEET positive control (superseded by the replay, which shows what sheets look like); 8074A380 check. The default paths (no tog) were not run as arms: dd1 takes the old arithmetic unchanged by construction, dd>1 is the tog on branch. No 300 s stability hold was scored, sum_ files of these arms are empty; captures ran their full length. Owner has not confirmed that any of this is the drops. G5b stays open.
