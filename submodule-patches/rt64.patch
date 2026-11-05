@@ -3419,10 +3419,10 @@ index dccaa87..bbdc5cf 100644
                  dl++;
              }
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index f17db9b..7555e40 100644
+index f17db9b..b6ac608 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
-@@ -4,11 +4,13 @@
+@@ -4,20 +4,55 @@
  
  #include "rt64_present_queue.h"
  
@@ -3436,7 +3436,19 @@ index f17db9b..7555e40 100644
  #include "rhi/rt64_render_hooks.h"
  
  #include "rt64_workload_queue.h"
-@@ -16,8 +18,29 @@
+ 
++// s6885 G1e: present row log, see plume_metal.cpp. Stamps below belong to the present thread only.
++#if defined(__APPLE__)
++namespace plume { bool rs64_pring_on(); double rs64_pring_now(); void rs64_pring_write(const char *row); extern std::atomic<uint64_t> g_rs64_pring_last_id; }
++#define RS64_PRING_ON() plume::rs64_pring_on()
++#define RS64_PRING_NOW() plume::rs64_pring_now()
++#else
++#define RS64_PRING_ON() false
++#define RS64_PRING_NOW() 0.0
++#endif
++static double rs64PrAcq = 0.0, rs64PrGpu = 0.0;
++static uint32_t rs64PrFb = 0;
++
  namespace RT64 {
      // PresentQueue
  
@@ -3466,7 +3478,7 @@ index f17db9b..7555e40 100644
      }
  
      PresentQueue::~PresentQueue() {
-@@ -107,6 +130,21 @@ namespace RT64 {
+@@ -107,6 +142,21 @@ namespace RT64 {
          // Frame-advance for pipeline counters.
          g_pipe_frame_idx.fetch_add(1, std::memory_order_relaxed);
  
@@ -3488,7 +3500,7 @@ index f17db9b..7555e40 100644
          FramebufferManager &fbManager = ext.sharedResources->framebufferManager;
          RenderTargetManager &targetManager = ext.sharedResources->renderTargetManager;
          const bool usingMSAA = (targetManager.multisampling.sampleCount > 1);
-@@ -160,9 +198,49 @@ namespace RT64 {
+@@ -160,9 +210,49 @@ namespace RT64 {
          const bool pqVisibleGate = present.screenVI.visible() ||
                                     (s_pq_force && present.screenVI.fbAddress() != 0 && present.screenVI.fbSiz() != 0);
          if (pqVisibleGate) {
@@ -3539,7 +3551,7 @@ index f17db9b..7555e40 100644
              }
  
              // VI_FOLLOW_DRAW (2026-05-13, ported from reverted commit e718774).
-@@ -183,9 +261,18 @@ namespace RT64 {
+@@ -183,9 +273,18 @@ namespace RT64 {
              //                                of VI/recent-set (diagnostic).
              //   ROGUESQ_VI_FOLLOW_DRAW=N modes:
              //     0       — disabled. Original VI lookup only.
@@ -3559,7 +3571,7 @@ index f17db9b..7555e40 100644
              if (!viewRDRAM) {
                  static const uint32_t s_force_fb = []() {
                      const char *e = std::getenv("ROGUESQ_VI_FORCE_FB");
-@@ -194,15 +281,27 @@ namespace RT64 {
+@@ -194,15 +293,27 @@ namespace RT64 {
                  }();
                  static const int s_follow_mode = []() {
                      const char *e = std::getenv("ROGUESQ_VI_FOLLOW_DRAW");
@@ -3589,7 +3601,7 @@ index f17db9b..7555e40 100644
                      if (forceFb != nullptr) {
                          viFb = forceFb;
                          overrideUsed = true;
-@@ -216,7 +315,139 @@ namespace RT64 {
+@@ -216,7 +327,139 @@ namespace RT64 {
                          }
                      }
                  }
@@ -3730,7 +3742,7 @@ index f17db9b..7555e40 100644
                      !ext.sharedResources->colorImageAddressVector.empty())
                  {
                      const auto &vec = ext.sharedResources->colorImageAddressVector;
-@@ -308,6 +539,47 @@ namespace RT64 {
+@@ -308,6 +551,48 @@ namespace RT64 {
                  }
              }
              
@@ -3775,10 +3787,11 @@ index f17db9b..7555e40 100644
 +                }
 +            }
 +
++            rs64PrFb = (presentFb != nullptr) ? presentFb->addressStart : 0;
              if ((presentFb != nullptr) && (viFb != nullptr)) {
                  for (uint32_t colorAddress : ext.sharedResources->colorImageAddressVector) {
                      Framebuffer *colorFb = fbManager.find(colorAddress);
-@@ -353,11 +625,12 @@ namespace RT64 {
+@@ -353,11 +638,12 @@ namespace RT64 {
                  if (s_pq_log) {
                      static int s_n2 = 0;
                      int n = ++s_n2;
@@ -3794,7 +3807,7 @@ index f17db9b..7555e40 100644
                          std::fflush(stderr);
                      }
                  }
-@@ -394,6 +667,25 @@ namespace RT64 {
+@@ -394,6 +680,25 @@ namespace RT64 {
                  lockedWorkloadMutex = true;
                  ext.sharedResources->workloadMutex.lock();
  
@@ -3820,7 +3833,7 @@ index f17db9b..7555e40 100644
                  RenderTargetKey colorTargetKey(fbAddress, scratchFb.width, scratchFb.siz, Framebuffer::Type::Color);
                  colorTarget = &targetManager.get(colorTargetKey, true);
                  colorTarget->resize(ext.presentGraphicsWorker, scratchFb.width, scratchFb.height);
-@@ -418,6 +710,7 @@ namespace RT64 {
+@@ -418,6 +723,7 @@ namespace RT64 {
                  if (!present.paused && (viHistory.top().vi != present.screenVI)) {
                      viHistory.pushVI(present.screenVI, fbSize.x);
                  }
@@ -3828,6 +3841,58 @@ index f17db9b..7555e40 100644
              }
          }
  
+@@ -465,7 +771,9 @@ namespace RT64 {
+             uint32_t swapChainIndex = 0;
+             const bool presentFrame = (i < framesToPresent) && swapChainValid;
+             if (presentFrame) {
++                const double rs64Acq0 = RS64_PRING_NOW();
+                 swapChainValid = ext.swapChain->acquireTexture(acquiredSemaphore.get(), &swapChainIndex);
++                rs64PrAcq += RS64_PRING_NOW() - rs64Acq0;
+             }
+ 
+             if (presentFrame && swapChainValid) {
+@@ -545,8 +853,10 @@ namespace RT64 {
+                     const RenderCommandList *commandList = ext.presentGraphicsWorker->commandList.get();
+                     RenderCommandSemaphore *waitSemaphore = acquiredSemaphore.get();
+                     RenderCommandSemaphore *signalSemaphore = drawSemaphores[swapChainIndex].get();
++                    const double rs64Gpu0 = RS64_PRING_NOW();
+                     ext.presentGraphicsWorker->commandQueue->executeCommandLists(&commandList, 1, &waitSemaphore, 1, &signalSemaphore, 1, ext.presentGraphicsWorker->commandFence.get());
+                     ext.presentGraphicsWorker->wait();
++                    rs64PrGpu += RS64_PRING_NOW() - rs64Gpu0;
+                 }
+             }
+ 
+@@ -700,7 +1010,9 @@ namespace RT64 {
+                 skipPresent = skipPresent || ext.swapChain->isEmpty();
+ 
+                 Present &present = presents[processCursor];
++                const double rs64Row0 = RS64_PRING_NOW();
+                 ext.workloadQueue->waitForWorkloadId(present.workloadId);
++                const double rs64Row1 = RS64_PRING_NOW();
+ 
+                 if (!presentThreadRunning) {
+                     continue;
+@@ -714,6 +1026,20 @@ namespace RT64 {
+                     threadPresent(present, swapChainValid);
+                 }
+ 
++                if (RS64_PRING_ON()) {
++#if defined(__APPLE__)
++                    char row[192];
++                    const double rs64Row2 = RS64_PRING_NOW();
++                    std::snprintf(row, sizeof(row), "Q %.6f id=%llu wl=%llu skip=%d vi=%06X fb=%06X gen=%u wl_ms=%.3f tp_ms=%.3f acq_ms=%.3f gpu_ms=%.3f mtl=%llu\n",
++                        rs64Row2, (unsigned long long)present.presentId, (unsigned long long)present.workloadId, skipPresent ? 1 : 0,
++                        present.screenVI.fbAddress() & 0xFFFFFF, skipPresent ? 0 : rs64PrFb, g_rs64_last_drawn_gen.load(std::memory_order_relaxed),
++                        (rs64Row1 - rs64Row0) * 1e3, (rs64Row2 - rs64Row1) * 1e3, rs64PrAcq * 1e3, rs64PrGpu * 1e3,
++                        (unsigned long long)plume::g_rs64_pring_last_id.load(std::memory_order_relaxed));
++                    plume::rs64_pring_write(row);
++#endif
++                }
++                rs64PrAcq = rs64PrGpu = 0.0;
++
+                 if (!present.paused) {
+                     if (!present.fbOperations.empty()) {
+                         const std::scoped_lock lock(screenFbChangePoolMutex);
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
 index d1a9f4e..99a2307 100644
 --- a/src/hle/rt64_rdp.cpp
@@ -6256,7 +6321,7 @@ index e3d289c..5da989d 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..9ad0322 100644
+index 10f98af..bc944fe 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -8178,7 +8243,7 @@ index 10f98af..9ad0322 100644
                          viPresented = true;
                      }
                      else if (s_rs64_log_pe) {
-@@ -1873,7 +3382,27 @@ namespace RT64 {
+@@ -1873,7 +3382,29 @@ namespace RT64 {
          clearExtended();
      }
      
@@ -8203,10 +8268,12 @@ index 10f98af..9ad0322 100644
 +
      void State::updateScreen(const VI &newVI, bool fromEarlyPresent) {
 +        S4267Seg _usSeg(31); // s4907: phase 30 = updateScreen entry up to the screen profiler start
++        static int s_rs64ViSinceEarly = 1 << 20; // s6885: VIs since the last early present, see needStaticPresent
++        if (fromEarlyPresent) { s_rs64ViSinceEarly = 0; } else if (s_rs64ViSinceEarly < (1 << 20)) { s_rs64ViSinceEarly++; }
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
              if (ext.userConfig->developerMode) {
-@@ -1899,6 +3428,132 @@ namespace RT64 {
+@@ -1899,6 +3430,132 @@ namespace RT64 {
              }
          }
          
@@ -8339,7 +8406,7 @@ index 10f98af..9ad0322 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1915,6 +3570,22 @@ namespace RT64 {
+@@ -1915,6 +3572,22 @@ namespace RT64 {
              viDifferent = (newVI != lastScreenVI);
              lastScreenVI = newVI;
  
@@ -8362,7 +8429,7 @@ index 10f98af..9ad0322 100644
              // Diagnostic (ROGUESQ_LOG_PRESENT_EARLY=1) — track why viHistory stays empty.
              // We reuse the same env flag the present-early matcher uses.
              static const bool s_us_log_pe = [](){
-@@ -1959,12 +3630,25 @@ namespace RT64 {
+@@ -1959,12 +3632,30 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -8378,8 +8445,13 @@ index 10f98af..9ad0322 100644
 +            // alive whenever the last-drawn colour image is the 512-wide
 +            // 0x790000 compositor target (or any time VI is static).
 +            const uint32_t fallthroughDrawn = g_rs64_last_drawn_fb.load(std::memory_order_relaxed);
++            // s6885: the width term is for the retail 1024-wide phase, which has no early presents. 21:9 flight has VI width 1024 too, and there
++            // it pushed a stale-origin present behind every early present: the present thread kept whichever came last, so frames ran out of order
++            // and some were never shown. Only count width once early presents have stopped. ROGUESQ_WIDE_EARLY=0 = old.
++            static const bool s_wideEarly = [](){ const char *v = std::getenv("ROGUESQ_WIDE_EARLY"); return !v || (v[0] && v[0] != '0'); }();
++            const bool wideStatic = (screenFbSize.x >= 1024u) && (!s_wideEarly || (s_rs64ViSinceEarly > 8));
 +            const bool needStaticPresent = (fallthroughDrawn == 0x790000u) ||
-+                                           (screenFbSize.x >= 1024u) ||
++                                           wideStatic ||
 +                                           (lastScreenFactorCounter > 2);
 +            if (presentEarly && !needStaticPresent) {
                  return;
@@ -8390,7 +8462,7 @@ index 10f98af..9ad0322 100644
          screenCpuProfiler.start();
          bool fbChangesMade = false;
          bool screenChangesMade = false;
-@@ -1972,7 +3656,11 @@ namespace RT64 {
+@@ -1972,7 +3663,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -8403,7 +8475,7 @@ index 10f98af..9ad0322 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -1989,6 +3677,7 @@ namespace RT64 {
+@@ -1989,6 +3684,7 @@ namespace RT64 {
                      uint64_t currentHash = XXH3_64bits(fbRAM, screenFb->RAMBytes);
                      if (currentHash != screenFb->RAMHash) {
                          {
@@ -8411,7 +8483,7 @@ index 10f98af..9ad0322 100644
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
                              const std::scoped_lock lock(ext.presentQueue->screenFbChangePoolMutex);
-@@ -2018,9 +3707,110 @@ namespace RT64 {
+@@ -2018,9 +3714,110 @@ namespace RT64 {
              // Store the RAM required by the VI so the render thread can display it if necessary.
              if (screenFbSiz >= G_IM_SIZ_16b) {
                  uint32_t screenFbBytes = uint32_t(screenFbSize.x * screenFbSize.y) << (screenFbSiz - 1);
@@ -8525,7 +8597,7 @@ index 10f98af..9ad0322 100644
                  screenChangesMade = (newScreenHash != lastScreenHash);
                  lastScreenHash = newScreenHash;
              }
-@@ -2033,26 +3823,51 @@ namespace RT64 {
+@@ -2033,26 +3830,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -8595,7 +8667,7 @@ index 10f98af..9ad0322 100644
              }
          }
  
-@@ -2060,6 +3875,7 @@ namespace RT64 {
+@@ -2060,6 +3882,7 @@ namespace RT64 {
          if (fromEarlyPresent || viDifferent || fbChangesMade || screenChangesMade || forceAdvance) {
              // Push a new renderer event to the timeline for presenting this VI.
              present.screenVI = newVI;
@@ -8603,7 +8675,7 @@ index 10f98af..9ad0322 100644
              advancePresent(present, false);
              ext.presentQueue->advanceToNextPresent();
  
-@@ -2910,4 +4726,4 @@ namespace RT64 {
+@@ -2910,4 +4733,4 @@ namespace RT64 {
              break;
          }
      }
@@ -8646,10 +8718,16 @@ index b4c85f5..880611b 100644
              adjustVector(fbPairs, fbPairCount);
              addedPair = true;
 diff --git a/src/hle/rt64_workload_queue.cpp b/src/hle/rt64_workload_queue.cpp
-index 5a331aa..066f1c5 100644
+index 5a331aa..80cbe38 100644
 --- a/src/hle/rt64_workload_queue.cpp
 +++ b/src/hle/rt64_workload_queue.cpp
-@@ -10,6 +10,74 @@
+@@ -7,9 +7,80 @@
+ #include "common/rt64_thread.h"
+ 
+ #include "rt64_present_queue.h"
++#if defined(__APPLE__)
++namespace plume { bool rs64_pring_on(); double rs64_pring_now(); void rs64_pring_write(const char *row); }
++#endif
  
  #define ENABLE_HIGH_RESOLUTION_RENDERER 1
  
@@ -8724,7 +8802,7 @@ index 5a331aa..066f1c5 100644
  namespace RT64 {
      // WorkloadQueue
  
-@@ -425,6 +493,16 @@ namespace RT64 {
+@@ -425,6 +496,16 @@ namespace RT64 {
                      nativeColorWidth = colorImg.width;
                      nativeColorHeight = fbPair.drawColorRect.bottom(true);
  
@@ -8741,7 +8819,7 @@ index 5a331aa..066f1c5 100644
                      // When the target is much bigger than the reference height, we reduce the resolution scaling (but clamped to 1.0).
                      const uint32_t heightThreshold = (workload.viFbSize[1] > 0) ? ((workload.viFbSize[1] * 3) / 2) : 360;
                      uint32_t downsampleMultiplier = workloadConfig.downsampleMultiplier;
-@@ -585,6 +663,7 @@ namespace RT64 {
+@@ -585,6 +666,7 @@ namespace RT64 {
                  renderFramebufferManager->destroyAllWithRenderTarget(renderTarget);
              }
  
@@ -8749,7 +8827,7 @@ index 5a331aa..066f1c5 100644
              uint32_t gameCallCursor = 0;
              const uint32_t gameCallCountMax = (debuggerRenderer.globalDrawCallIndex >= 0) ? (debuggerRenderer.globalDrawCallIndex + 1) : workload.gameCallCount;
              thread_local std::vector<BufferUploader *> bufferUploaders;
-@@ -639,6 +718,38 @@ namespace RT64 {
+@@ -639,6 +721,38 @@ namespace RT64 {
                      drawParams.postBlendNoise = workloadConfig.postBlendNoise;
                      drawParams.postBlendNoiseNegative = workloadConfig.postBlendNoiseNegative;
                      drawParams.maxGameCall = std::min(gameCallCountMax - gameCallCursor, fbPair.gameCallCount);
@@ -8788,7 +8866,7 @@ index 5a331aa..066f1c5 100644
                      framebufferRenderer->addFramebuffer(drawParams);
                  }
                  
-@@ -717,6 +828,53 @@ namespace RT64 {
+@@ -717,6 +831,53 @@ namespace RT64 {
                      const auto &depthImg = fbPair.depthImage;
                      bool colorFormatUpdated = false;
                      if (colorFb != nullptr) {
@@ -8842,7 +8920,7 @@ index 5a331aa..066f1c5 100644
                          if (colorImg.formatChanged) {
                              colorFb->discardLastWrite();
                          }
-@@ -736,6 +894,30 @@ namespace RT64 {
+@@ -736,6 +897,30 @@ namespace RT64 {
                              colorFb->readHeight = 0;
                          }
  
@@ -8873,7 +8951,7 @@ index 5a331aa..066f1c5 100644
                          if (colorFb->height > colorFb->readHeight) {
                              uint32_t readRowCount = colorFb->height - colorFb->readHeight;
                              FramebufferChange *colorFbChange = colorFb->readChangeFromStorage(ext.workloadGraphicsWorker, workload.fbStorage, scratchFbChangePool,
-@@ -764,6 +946,7 @@ namespace RT64 {
+@@ -764,6 +949,7 @@ namespace RT64 {
                              RenderTarget &otherDepthTarget = targetManager.get(otherDepthTargetKey);
                              if (!otherDepthTarget.isEmpty()) {
                                  const FixedRect &r = depthFb->lastWriteRect;
@@ -8881,7 +8959,7 @@ index 5a331aa..066f1c5 100644
                                  depthTarget->copyFromTarget(ext.workloadGraphicsWorker, &otherDepthTarget, r.left(false), r.top(false), r.width(false, true), r.height(false, true), ext.shaderLibrary);
                                  depthFb->discardLastWrite();
                                  depthFormatUpdated = true;
-@@ -781,6 +964,10 @@ namespace RT64 {
+@@ -781,6 +967,10 @@ namespace RT64 {
                                  G_IM_FMT_DEPTH, f, depthFb->readHeight, readRowCount, ext.shaderLibrary);
  
                              if (depthFbChange != nullptr) {
@@ -8892,7 +8970,7 @@ index 5a331aa..066f1c5 100644
                                  depthTarget->copyFromChanges(ext.workloadGraphicsWorker, *depthFbChange, depthFb->width, readRowCount, depthFb->readHeight, ext.shaderLibrary);
                                  depthFbChanged = true;
                              }
-@@ -789,6 +976,7 @@ namespace RT64 {
+@@ -789,6 +979,7 @@ namespace RT64 {
                          }
                      }
                      
@@ -8900,6 +8978,25 @@ index 5a331aa..066f1c5 100644
                      framebufferRenderer->recordFramebuffer(ext.workloadGraphicsWorker, framebufferIndex++);
  
                      // Transition the render targets in case the present queue will show them so it doesn't have to perform transitions.
+@@ -1125,6 +1316,18 @@ namespace RT64 {
+ 
+                     // After one frame is rendered, we indicate the workload has been processed so the present thread can start presenting frames as soon as it can.
+                     if (frame == 0) {
++#if defined(__APPLE__)
++                        // s6885 G1e: which buffers this workload really drew, for the shown-frame order (tools/g1e_present_order.py).
++                        if (plume::rs64_pring_on()) {
++                            char row[160];
++                            int n = std::snprintf(row, sizeof(row), "W %.6f wl=%llu fbs=", plume::rs64_pring_now(), (unsigned long long)workload.workloadId);
++                            for (uint32_t f = 0; (f < workload.fbPairCount) && (n < 140); f++) {
++                                n += std::snprintf(row + n, sizeof(row) - n, "%s%06X", f ? "," : "", workload.fbPairs[f].colorImage.address & 0xFFFFFF);
++                            }
++                            std::snprintf(row + n, sizeof(row) - n, "\n");
++                            plume::rs64_pring_write(row);
++                        }
++#endif
+                         threadAdvanceWorkloadId(workload.workloadId);
+                     }
+ 
 diff --git a/src/render/rt64_descriptor_sets.h b/src/render/rt64_descriptor_sets.h
 index 69a82ac..6e82095 100644
 --- a/src/render/rt64_descriptor_sets.h

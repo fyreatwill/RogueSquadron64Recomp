@@ -34,3 +34,5 @@ Combos: FPS60 + DRAW_DISTANCE=2 held 300 s clean on levels 1 and 5 (s6262, alive
 TV (16:9): `cd build && env ROGUESQ_ASPECT=16:9 ROGUESQ_FULLSCREEN=1 ./RogueSquadron64Recomp`. Ultrawide: same with `ROGUESQ_ASPECT=21:9`. Any screen: `ROGUESQ_ASPECT=auto ROGUESQ_FULLSCREEN=1`.
 
 Rules of thumb: combine settings freely only after checking the table. Kill the game with SIGKILL.
+
+Ultrawide frame order (s6885): at 21:9 the game was showing frames slightly out of order and skipping some, which can look like judder. Fixed, on by default; nothing to set. `ROGUESQ_WIDE_EARLY=0` restores the old behaviour so you can compare the feel.

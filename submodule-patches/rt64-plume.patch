@@ -1,8 +1,18 @@
 diff --git a/plume_metal.cpp b/plume_metal.cpp
-index a5f30a3..a22d35e 100644
+index a5f30a3..b7fd502 100644
 --- a/plume_metal.cpp
 +++ b/plume_metal.cpp
-@@ -14,12 +14,76 @@
+@@ -9,17 +9,86 @@
+ #define CA_PRIVATE_IMPLEMENTATION
+ #define MTL_PRIVATE_IMPLEMENTATION
+ 
++#include <mach/mach_time.h>
++#include <atomic>
++#include <cstdio>
++#include <cstdlib>
++#include <mutex>
+ #include <Foundation/Foundation.hpp>
+ #include <Metal/Metal.hpp>
  #include <QuartzCore/QuartzCore.hpp>
  #include <CoreFoundation/CoreFoundation.h>
  
@@ -79,7 +89,7 @@ index a5f30a3..a22d35e 100644
      // MARK: - Constants
  
      static constexpr size_t MAX_DRAWABLES = 3;
-@@ -1117,6 +1181,15 @@ namespace plume {
+@@ -1117,6 +1186,15 @@ namespace plume {
  
          this->mtl = device->mtl->newBuffer(desc.size, mapResourceOption(desc.heapType));
  
@@ -95,7 +105,7 @@ index a5f30a3..a22d35e 100644
          if (desc.flags & RenderBufferFlag::DEVICE_ADDRESSABLE) {
              // If the buffer may be used by device address, we need to make sure it will be resident.
              std::lock_guard lock(device->gpuAddressableResourcesMutex);
-@@ -1130,6 +1203,9 @@ namespace plume {
+@@ -1130,6 +1208,9 @@ namespace plume {
      }
  
      MetalBuffer::~MetalBuffer() {
@@ -105,7 +115,7 @@ index a5f30a3..a22d35e 100644
          if (desc.flags & RenderBufferFlag::DEVICE_ADDRESSABLE) {
              std::lock_guard lock(device->gpuAddressableResourcesMutex);
              if (device->gpuAddressableResidencySet != nullptr) {
-@@ -1234,11 +1310,19 @@ namespace plume {
+@@ -1234,11 +1315,19 @@ namespace plume {
  
          this->mtl = device->mtl->newTexture(descriptor);
  
@@ -125,7 +135,7 @@ index a5f30a3..a22d35e 100644
          mtl->release();
      }
  
-@@ -1575,6 +1659,23 @@ namespace plume {
+@@ -1575,6 +1664,23 @@ namespace plume {
          state.renderPipelineState = device->mtl->newRenderPipelineState(descriptor, &error);
          state.primitiveType = mapPrimitiveType(desc.primitiveTopology);
          state.stencilReference = desc.stencilEnabled ? desc.stencilReference : 0;
@@ -149,7 +159,7 @@ index a5f30a3..a22d35e 100644
  
          if (desc.dynamicDepthBiasEnabled) {
              state.dynamicDepthBiasEnabled = true;
-@@ -1618,6 +1719,13 @@ namespace plume {
+@@ -1618,6 +1724,13 @@ namespace plume {
          return RenderPipelineProgram();
      }
  
@@ -163,7 +173,7 @@ index a5f30a3..a22d35e 100644
      // MetalDescriptorSet
  
      MetalDescriptorSet::MetalDescriptorSet(MetalDevice *device, const RenderDescriptorSetDesc &desc) {
-@@ -1667,6 +1775,11 @@ namespace plume {
+@@ -1667,6 +1780,11 @@ namespace plume {
              .offset = 0,
          };
  
@@ -175,7 +185,7 @@ index a5f30a3..a22d35e 100644
          if (!device->useArgumentBuffersTier2) {
              argumentBuffer.argumentEncoder->setArgumentBuffer(argumentBuffer.mtl, argumentBuffer.offset);
          }
-@@ -1676,6 +1789,11 @@ namespace plume {
+@@ -1676,6 +1794,11 @@ namespace plume {
      }
  
      MetalDescriptorSet::~MetalDescriptorSet() {
@@ -187,7 +197,55 @@ index a5f30a3..a22d35e 100644
          if (residencySet != nullptr) {
              residencySet->endResidency();
              residencySet->release();
-@@ -1987,6 +2105,8 @@ namespace plume {
+@@ -1932,6 +2055,32 @@ namespace plume {
+     MetalSwapChain::~MetalSwapChain() {
+     }
+ 
++    // s6885 G1e: ROGUESQ_PRESENT_RING=<file>: row log of every present. CoreAnimation reports when a drawable reached the
++    // screen (presentedTime, 0 = dropped), the only witness here that is not our own runtime. A file, not a ring dumped at
++    // exit, because runs end in SIGKILL. ~120 rows/s, flushed every 64 rows. Clock = mach_absolute_time, as presentedTime.
++    static FILE *rs64PringFile() {
++        static FILE *f = []() -> FILE * {
++            const char *p = getenv("ROGUESQ_PRESENT_RING");
++            return (p && *p) ? fopen(p, "w") : nullptr;
++        }();
++        return f;
++    }
++    bool rs64_pring_on() { return rs64PringFile() != nullptr; }
++    double rs64_pring_now() {
++        static const double scale = []() { mach_timebase_info_data_t tb; mach_timebase_info(&tb); return double(tb.numer) / double(tb.denom) * 1e-9; }();
++        return double(mach_absolute_time()) * scale;
++    }
++    void rs64_pring_write(const char *row) {
++        static std::mutex m;
++        static int n = 0;
++        std::lock_guard<std::mutex> lock(m);
++        FILE *f = rs64PringFile();
++        if (f == nullptr) return;
++        fputs(row, f);
++        if ((++n & 63) == 0) fflush(f);
++    }
++    std::atomic<uint64_t> g_rs64_pring_last_id{0};
++
+     bool MetalSwapChain::present(const uint32_t textureIndex, RenderCommandSemaphore **waitSemaphores, const uint32_t waitSemaphoreCount) {
+         assert(layer != nullptr && "Cannot present without a valid layer.");
+         NS::AutoreleasePool *releasePool = NS::AutoreleasePool::alloc()->init();
+@@ -1954,6 +2103,14 @@ namespace plume {
+         // According to Apple, presenting via scheduled handler is more performant than using the presentDrawable method.
+         // We grab the underlying drawable because we might've acquired a new one by now and the old one would have been released.
+         CA::MetalDrawable *drawableMtl = drawable.mtl->retain();
++        g_rs64_pring_last_id.store(presentId, std::memory_order_relaxed);
++        if (rs64_pring_on()) {
++            drawableMtl->addPresentedHandler([presentId](MTL::Drawable *d) {
++                char row[96];
++                snprintf(row, sizeof(row), "P %.6f mtl=%llu at=%.6f\n", rs64_pring_now(), (unsigned long long)presentId, d->presentedTime());
++                rs64_pring_write(row);
++            });
++        }
+         presentBuffer->addScheduledHandler([drawableMtl](MTL::CommandBuffer* cmdBuffer) {
+             drawableMtl->present();
+         });
+@@ -1987,6 +2144,8 @@ namespace plume {
          }
      }
  
@@ -196,7 +254,7 @@ index a5f30a3..a22d35e 100644
      bool MetalSwapChain::resize() {
          getWindowSize(width, height);
  
-@@ -1996,6 +2116,10 @@ namespace plume {
+@@ -1996,6 +2155,10 @@ namespace plume {
  
          const CGSize drawableSize = CGSizeMake(width, height);
          if (const CGSize current = layer->drawableSize(); !CGSizeEqualToSize(current, drawableSize)) {
@@ -207,7 +265,7 @@ index a5f30a3..a22d35e 100644
              layer->setDrawableSize(drawableSize);
  
              for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
-@@ -2118,6 +2242,14 @@ namespace plume {
+@@ -2118,6 +2281,14 @@ namespace plume {
          for (uint32_t i = 0; i < desc.colorAttachmentsCount; i++) {
              const MetalTextureView *colorAttachmentView = desc.colorAttachmentViews && desc.colorAttachmentViews[i] ? static_cast<const MetalTextureView *>(desc.colorAttachmentViews[i]) : nullptr;
              const MetalTexture *colorAttachment = colorAttachmentView ? colorAttachmentView->parentTexture : static_cast<const MetalTexture *>(desc.colorAttachments[i]);
@@ -222,7 +280,7 @@ index a5f30a3..a22d35e 100644
              assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
  
              MetalAttachment attachment;
-@@ -3008,6 +3140,17 @@ namespace plume {
+@@ -3008,6 +3179,17 @@ namespace plume {
                  dstOrigin
              );
              activeBlitEncoder->popDebugGroup();

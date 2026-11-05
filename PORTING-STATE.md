@@ -181521,3 +181521,27 @@ Not measured: SCREEN_JOB on other levels and 4:3 (soaks s6884_job_lvl5, lvl10, l
 Small item: the 4:3 picture box is 1106 px wide (x 85..1190, two frames), +0.82% over 1097, so it accounts for most of the 1.00% sx gap. Single-source, not closed, not fixed.
 Discrimination: refutes H-log for text; selects H-async with FAST/PROBES as second term; selects the update_screen drain for the dense dips. Next discriminator: per-present stamps split H-line, H-skip, H-gpu (NEXT.md). Rules out recipe figures understating because of log volume (the s6883 lead).
 
+
+## Session 6885 (2026-11-04) — 21:9 frame order fixed: the 1024-width static-present rule pushed stale presents in flight; CoreAnimation witness shows 60/s on screen
+
+Planned: count real presents (NEXT g1e-present-rate). New instrument ROGUESQ_PRESENT_RING=<file> (plume_metal.cpp, rt64_present_queue.cpp, rt64_workload_queue.cpp): Q row per queued present, W row per workload with its real draw targets, P row from the drawable's presented handler. A row file, not a ring dumped at exit, because runs end in SIGKILL. All arms lvl1, keyed, no recipe logging, 70 s of flight, sequential.
+
+Positive control: FPS60 off 4:3 dd1, 30.0 queued, 30.0 on screen, 100% in order.
+
+Batch 1 (no W rows): on-screen 59.8-59.9 in all 60 fps arms, CA dropped 0.00. 21:9 arms queued 2 presents per workload (115-120/s), 4:3 queued 60. First scorer read was wrong twice: it crashed on the SIGKILL-truncated row, and it judged "new" against the previous queued row, which miscounts when the skipped copy comes first. Fixed before use. The first order model (buffer of a workload = vi of its first row) was an assumption, so W rows replaced it; the batch 1 model figures are not quoted.
+
+Batch 2 (W rows, SCREEN_JOB on), fwd/held/miss/BACK per s: 21:9 dd4 47.5/4.34/6.17/2.00, 4:3 dd4 59.9/0/0/0, 21:9 dd1 29.8/0.80/15.26/14.16, 4:3 dd1 60.0/0/0/0. Width selects it, dd does not. Rows show it directly: id 16617 shows wl 9743, id 16618 shows buffer 9D5000 last drawn by wl 9742, wl 9744 both presents skipped.
+
+ORIGIN: rt64_state.cpp needStaticPresent, `screenFbSize.x >= 1024u`, session 21, written for the retail 1024-wide phase that has no earlyPresentCandidate. 21:9 flight VI width is 1024 (`[phase] vi_width=1024`), 4:3 is 512, 16:9 768. So the early-return never fired and each VI pushed a stale-origin present behind the early one. Present thread keeps only the last queued entry (skipPresent = writeCursor != threadCursor), so which of the two ran depended on phase. This is not a guard: the rule was over-broad, and it now holds only once early presents have stopped.
+
+Fix: ROGUESQ_WIDE_EARLY default on (=0 old), width counts after 8 VIs with no early present. Batch 3, one binary, off -> on:
+- dd1 FPS60: queued 120 -> 60, BACK 17.19 -> 0, never shown 8.10 -> 0.16, distinct shown 51.9 -> 59.9.
+- dd4 FPS60: 119.8 -> 59.9, BACK 4.79 -> 0, never shown 8.69 -> 1.11, distinct 51.1 -> 58.8.
+- non-FPS60 dd1: 90 -> 30 queued, on-screen 60 -> 30 (each frame was shown twice), held 29.99 -> 0.01, 30 frames/s both.
+Tasks p50 60 at dd4 on and off, 0 crashes in all 6. Whole-run gaps incl. title and menus: 0 over 250 ms in every arm, max 133 ms. 4:3 regression arm fx_43: 0 BACK, 2 gaps over 100 ms, max 117 vs pre-fix w43d1 2 and 108.
+
+Not shown: frame identity is by buffer and time, not pixels. 16:9 not run, excluded by the width test only. No window capture taken; the look and any change in feel are the owner's to judge. Whether this explains any earlier shake report is not established. H-gpu is not the driver (dd1 worse than dd4), though the RESMULT=1 arm was batch 1 only.
+
+Soaks folded: s6884_job_lvl10 flight 250 s, tasks 60/60/61, clean. s6884_job_lvl1_43 flight 132 s, 58/60/60, clean. Neither has an off arm on that level. s6884_job_lvl5 still queued; it will now run the fixed binary.
+
+New open datum: present-to-screen latency p50 56.5-56.9 ms at 60 fps vs 25.9-35.5 at 30, with acq p99 ~16 ms, so the present thread is held by nextDrawable. w43d4 alone read p50 36.7, p99 56.8, so it may be bistable. Single-source, one run. Next unit.
