@@ -181893,3 +181893,48 @@ Frames: docs/owner_sheet_s6896_edge_fix_on_off.png, t4, four largest off-second 
 Not done: dd3 was not run on the fix (dd2 and dd4 were; dd2 has wraps, the fix ran but with no sheets to remove). Black steps not rechecked: s6895 saw sheets painted over that region, so this may clear them, untested. Whether the s6895 span rule is still needed is untested. Quads past the + edge (base wraps whole, drawn at the far - side) remain: they are not counted by wa/wb and are not fixed. Whether retail wraps with a camera close to the + edge is unknown; retail bases should wrap the same way if it gets there. 8074A380 and the dd1 small transients still open.
 
 Conclusion: this selects H-wrap as the cause of the sheets, by a same-run A/B on two levels plus a default-path zero, and refutes H-edge, which is two lines of evidence for the sheets. It does not show the sheets are the owner's drops; G5b stays open until the owner flies it. Next discriminator: black steps in the post-MISSION FAILED scene with the fix =tog, where steps gone in on seconds tie them to this wrap.
+
+## Session 6897 (2026-11-05) — G5b: black block in the Gerrard V cutscene follows ROGUESQ_ASPECT, not dd, FPS60 or the sheets; TriGen bases are eye-relative, s6896's map-edge reading refuted
+
+Unit from NEXT.md: do black steps go with the s6896 fix, dd3 on the fix, quads past the + edge, is the span rule still needed. LEVEL=4, autopilot, one game at a time, arms in scratch/s6897.
+
+Scene correction: "post-MISSION FAILED scene" (s6894-s6896) was wrong. It is a ~6 s letterboxed scripted cutscene (X-wing, then TIEs over a tower) inside the mission: flight runs ~100 s between the failure screens and the scene in b1 and e4, and HUD flight resumes after it. Whether it needs a prior failure is not known (a1 has it twice, not checked). Its trigger is not known: 100-105 s after a restart in b1 and e4, but t4 restarted at 69 s and had no scene by 191 s. New tools/g5b_letterbox.cpp finds it without sampling; positive control e4, s4, k4 (the three arms where s6894 saw it), and t4 has none, so t4 could not answer step 1 offline.
+
+| arm | aspect | dd | FPS60 | black block in the scene | stepped edge |
+|---|---|---|---|---|---|
+| b4 | 16:9 | 4 | on, TG_FIX=tog | yes, on and off seconds | yes |
+| b3 | 16:9 | 3 | on | yes (black share peak 0.176) | not viewed |
+| b1 | 16:9 | 1 | on | yes | no |
+| s1 | 16:9 | 1 | off | yes | no |
+| a1 | 4:3 | 1 | on | no | |
+| r1 | 4:3 | 1 | off | no | |
+
+Frames: docs/owner_sheet_s6897_black_block_by_arm.png, same scene phases. Selects ROGUESQ_ASPECT: block present in both 16:9 FPS60 states and absent in both 4:3 ones. This is the dd1 control s6895 owed.
+
+Step 1: H-sheet REFUTED for black steps. b4 sheets 0 in on seconds, 225 off, 73 in band, yet the block stands in both: same scene phase 258.03 off and 259.21 on look the same. The black>3% counts (on 79/106, off 102/102) differ only because the camera looks up at sky during on seconds in that run. So s6895's "sheets painted exactly over black steps" was coincidence of place, not cause.
+dd>1 still changes the scene in two ways: the block's edge goes stepped, and the dark water foreground seen at dd1 becomes flat tan. Neither is explained.
+
+Failed or weak measurements:
+- black>3% is invalid at 4:3: pillars count as black (r1 and a1 peak 0.297). Only frames answer there.
+- Retail oracle (scratch/s6897/ret, RETAIL_ONLY, 420 s, 48 dumps from 200 s, every 4 s): unsteered craft flew to the debrief at about 336 s, no dump shows the scene. Not reached, so this says nothing. No retail frame of this scene exists; "retail has no block" rests on r1, a port arm at retail settings: single-source.
+- Step 4 (is the span rule still needed): w4 (dd4, W_SHEET_PX=0) 0 sheets, no bands in 24 samples at 8 s, but it flew another route, never reached the scene, and has no same-run control. Inconclusive, rule stays. Its capture rate of 54.7/s against 40-42/s in other dd4 arms is unexplained: route or the rule, not split.
+
+Step 2: dd3 on the fix, b3: 0 sheets, 1670 swaps past s16. Closes the gap. Run-log crash lines 0 in all seven arms, gaps over 250 ms 0; b3 and w4 are 120 s + 180 s, the others 120 s + 280-300 s.
+
+Step 3 changed the model. REFUTED: s6896's "Terrain bases are fixed map coordinates, not camera-relative" and "the map's last + edge quad". tools/g5b_tg_camrel.py correlates each swap's base centre with the camera block:
+
+| arm | swaps | r with position (3 terms, both axes) | r with view matrix |
+|---|---|---|---|
+| b1 dd1 | 22165 | abs <= 0.10 | a +0.98/-0.95, b +0.93/+0.97 |
+| b4 dd4 | 11811 | abs <= 0.27 | a +0.89/-0.86, b +0.77/+0.78 |
+
+The view terms are the regression's positive control. The footprint is around the eye, so 32256 + 512 wrapping is reach ahead of the camera, not a map edge. Second line: at dd1 |base| never passes 18432 for cameras across x 27-127, z 32-159. Why s6896 read it as map coordinates: quads keep their words across swaps; presumably grid snapped, not measured. Same-run fix results stand; only the explanation changes. CURRENT-TRUTH and NEXT corrected. The s16 fix still clamps the far quad correctly.
+Reach per swap (max |base| bucket, swaps with n >= 200): dd1 all under 20480; dd2 mostly 20480-32767; dd4 2307 of 13800 at exactly 32768. Inference, not tested: reach is capped by s16 at 32768, about 1.8x dd1, so dd3/dd4 cannot reach further ahead than that, and past it quads wrap whole to the opposite side of the eye. That would be the next binding limit for G1c phase 2. Whole-wrapped quads are still not counted: the witness has only min and max.
+
+Dropped lead: large flat tan areas under the craft at dd4 (scratch/s6897/b4_edge.png) looked like lost terrain, but dd1 has the same ground (b1 contact sheet, t>=272). One look, no same-pose pair.
+
+Side datum, r1 and a1: at 4:3 in this harness's wide window, tan or scenery strips show beside the picture on some spans (r1 t 0-35, 48-50, 152-155). Both FPS60 states, so not FPS60. Owner's 4:3 window was not tested; not chased.
+
+Not done: why 16:9 loses those cells. FP_XSCALE (s6144 fixed a left void through the same footprint), G1D_FPDEPTH and G1D_SPANBOUND are the candidates; no arm run. Whether this block is what the owner calls a drop is open; it lasts seconds in one cutscene, and the owner reported drops in flight. G5f not started. No game code changed this session.
+
+Conclusion: black block selected to ROGUESQ_ASPECT by a four-arm 2x2 plus dd1 and dd4 frames; retail side single-source. s6896's mechanism wording overturned by two lines of evidence. G5b stays open: the owner has not flown the sheet fix.

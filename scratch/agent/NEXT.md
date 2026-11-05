@@ -1,16 +1,19 @@
 # OWNER OVERRIDE 2026-11-04: do ITERATION.md G5a-G5f first. G5a is fixed pending owner re-flight (s6893). G5b sheets fixed s6896, owner confirmation pending. The paused unit is at the bottom.
 
-# NEXT: G5b, do black steps go with the s6896 edge fix, then what is left at dd3 and past the map edge
+# NEXT: G5b, why 16:9 loses terrain cells in the Gerrard V cutscene, then G5f
 HYPOTHESIS-ID: g5b-terrain-drops
-State: read PORTING-STATE s6896 first. Sheets = last + edge quad wrapping s16 in TriGen, fixed at dd>1 (ROGUESQ_G5B_TG_FIX, =tog for same-run). Arm template scratch/s6896/arm.zsh <lvl> <dd> <name> "<env>" <delay> <dur>; score tools/g5b_tg_join.py tg sh, tools/g5b_tg_tog.py sh; frames scratch/s6896/onoff.py. Captures are ~1.9 GB each: delete when scored.
-Unit, one iteration:
-1. Black steps: reach the post-MISSION FAILED scene at dd4 with TG_FIX=tog. H-sheet: steps gone in on seconds. H-other: steps in both, then look for a second cause. Same scene at dd1 is the control s6895 still owes.
-2. dd3 arm on the fix: expect 0 sheets. dd3 has never run with it.
-3. Quads past the + edge: base wraps whole, so they draw at the far - side of the map. Count them in the witness (window cells >= 64, or bases in the - half with the camera near the + edge) and look for stray terrain there. If real, drop them at dd>1 or spend the DD_EDGE budget on the - side only.
-4. Is the s6895 span rule still needed? ROGUESQ_W_SHEET_PX off at dd4 with TG_FIX on, look at frames for bands: long mixed-sign tris may have been these quads.
-5. G5f: with sheets gone, score spike-shaped lines on frames, then an owner sheet. dd1 W_CLAMP stays off: its extra small transients (306 vs 157) are unexplained.
+State: read PORTING-STATE s6897 first. Black block follows ROGUESQ_ASPECT (docs/owner_sheet_s6897_black_block_by_arm.png). Bases are eye-relative, not map coordinates. Arm template scratch/s6897/arm.zsh <lvl> <dd> <name> "<env>" <delay> <dur>, chain as in scratch/s6897/all.zsh. Scan: scratch/s6897/g5b_letterbox (source tools/g5b_letterbox.cpp); frames: scratch/s6897/par.py <raw> <png> t0 t1 step, contact.py. Scene falls 150-375 s after launch and not always: use 120 + 280 s, and rerun an arm that misses it. Raw files were deleted; captures are ~3 GB, delete when scored.
+Unit, one iteration, LEVEL=4 dd1 16:9, all arms in one chain, scene frames compared at the same phase:
+1. ROGUESQ_FP_XSCALE at 1.0, and at twice the 16:9 default. H-xscale: block moves or shrinks with k.
+2. ROGUESQ_G1D_FPDEPTH=0. H-depth: block changes.
+3. ROGUESQ_G1D_SPANBOUND=0. H-span: block goes. It crashed at 21:9 (s6880), so expect a possible crash at 16:9; that is a result too.
+If none moves it, H-other: dump the footprint window and span rows in the scene, and check the sky or backdrop object at wide. The fix goes in the game-side patch; name the writer (rule 11).
+Then: dd>1 in that scene loses the water foreground and steps the block edge. Same arms at dd4 once the block is fixed.
+Then G5f: score spike-shaped lines on frames, owner sheet. dd1 W_CLAMP stays off: its extra small transients (306 vs 157) are unexplained.
+Open, not this unit: is reach capped at 32768 by s16 (count whole-wrapped quads: the witness has only min and max, so add a histogram of base against view direction); span rule need (same-run ROGUESQ_W_SHEET_PX toggle does not exist; w4 was inconclusive); w4 capture rate 54.7/s vs 40-42/s; 4:3 side strips in a wide window (r1, a1).
 Still open from s6893: is block 8074A380 live when copyNativeToRAM writes it. Levels 10 and 15 census used only 0x9E00.
-Ask owner when a human is next on: fly dd2 and dd4 at the owner recipe. Are terrain drops gone or fewer? Spikes fewer? Look at docs/owner_sheet_s6896_edge_fix_on_off.png and docs/owner_sheet_s6895_wedge_vs_hardware.png: are those what you called a drop? docs/owner_sheet_s6895_steps_vs_hardware.png: have you seen black steps, and at dd1 too? A short screen recording of a drop would settle it. Also re-fly Gerrard V past half way at dd2 and dd4, more than once: does it crash?
+Retail frame of the scene: unsteered oracle does not reach it (debrief ~336 s). Needs a trigger first; its trigger is unknown.
+Ask owner when a human is next on: fly dd2 and dd4 at the owner recipe. Are terrain drops gone or fewer? Spikes fewer? Look at docs/owner_sheet_s6897_black_block_by_arm.png: is that black block something you have seen, and is it what you meant by a drop? docs/owner_sheet_s6896_edge_fix_on_off.png and docs/owner_sheet_s6895_wedge_vs_hardware.png: are those drops? A short screen recording of a drop would settle it. Also re-fly Gerrard V past half way at dd2 and dd4, more than once: does it crash?
 
 # PAUSED until G5 closes
 # NEXT: 21:9 flight on 144 Hz at a free XG49V corner, or what enters the 72 ms state if still built-in alone
