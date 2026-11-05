@@ -181721,7 +181721,7 @@ Display change: woff on the XG49V at 0,50 ran on the 144 Hz grid, then its windo
 Whole-run drops (--all prints them above each file's row): d44a 17, none lowered the level; d44b 6, 3 lowered it >=10 ms, all before the scored window; d28 248, 1 lowered it.
 H-repeat (about 35) and H-luck (about 46) both fail: the off arm is already at 39, so there is nothing for the drain to do. s6889's DRAIN=40 figure is unrepeated, not refuted on its own display, whichever that was. DRAIN=28 sits under the floor and buys 2 ms for a repeated frame every second. The gate is equal or worse here. wg vs woff rate (54.6 vs 58.7) is one run each with different cover: not a finding. No same-run stall control ran on this set, so the latency instrument is supported here only by its level-3 readings in g2a and woff.
 
-Offline: acq_ms ungated p50 14.93 on s6889 off (72 ms state) vs 0.03 on o1, off2 and s6889 d40. 1v/4v on 144 Hz: compensating pairs, table in CURRENT-TRUTH; H-boundary selected over H-producer, two lines (adjacency, Q deviation). Rings are gitignored and live in scratch/s6891 on this disk only.
+Offline: acq_ms ungated p50 14.93 on s6889 off (72 ms state) vs 0.03 on o1, off2 and s6889 d40. 1v/4v on 144 Hz: compensating pairs, table in CURRENT-TRUTH; this selects H-boundary over H-producer, two lines (adjacency, Q deviation). Rings are gitignored and live in scratch/s6891 on this disk only.
 
-Rules out: "a 60 Hz grid means a 72 ms backlog"; "at=0 means covered". Does not show: anything about 21:9 flight on 144 Hz, or what enters the 72 ms state.
+This refutes "a 60 Hz grid means a 72 ms backlog" and "at=0 means covered". Does not show: anything about 21:9 flight on 144 Hz, or what enters the 72 ms state.
 
