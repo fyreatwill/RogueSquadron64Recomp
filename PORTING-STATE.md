@@ -181644,3 +181644,5 @@ Scorer error, caught this session: first g1e_present_drain.py read every drop as
 
 ORIGIN: no corruption or wild value here. The backlog is the s6888 model; the drop is an opt-in latency control.
 Default unchanged, behaviour unchanged with the env unset. Not measured: input-to-photon, owner feel, DRAIN through hide, resize or fullscreen.
+
+Discrimination summary: this refutes H-floor as written at limit 40 (35 ms, under the gate's 46) and selects H-drain over it for 4:3 on a 60 Hz display, one run. It refutes H-cost as a general rule: flight drops omit a frame, and only drops at a level that cannot fall repeat one. Next discriminator: same-grid repeat, DRAIN=44 x2 against DRAIN=28 and INFLIGHT=2 x2 (H-repeat / H-luck / H-floor / H-limit, gate never-shown H-gate-cost / H-host); on a 144 Hz grid, off vs gate with an interval histogram (H-60only / H-judder). See NEXT.
