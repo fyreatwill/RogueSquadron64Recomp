@@ -3437,6 +3437,14 @@ static int g5b_tg_fix_init() {
 extern "C" { int rs64_g5b_tg_fix = g5b_tg_fix_init(); }
 extern "C" int rs64_g5b_tg_edge(uint32_t w0, uint32_t *p8, uint32_t *p9) {
     if (((w0 >> 8) & 0xFF) != 2) return 0;
+    // s6898 G5b lever: ROGUESQ_G5B_TG_REACH=<r> zeroes the step of mode 2 quads with a base past r, =<r>t in odd mach seconds only. Test lever, off by default.
+    static const int reach = [] { const char *e = std::getenv("ROGUESQ_G5B_TG_REACH"); return e && *e ? atoi(e) : 0; }();
+    static const bool reach_tog = [] { const char *e = std::getenv("ROGUESQ_G5B_TG_REACH"); return e && *e && e[strlen(e) - 1] == 't'; }();
+    if (reach) {
+        const int ra = abs((int)(int16_t)(*p8 >> 16)), rb = abs((int)(int16_t)(*p9 >> 16));
+        static const double rtick = [] { mach_timebase_info_data_t b; mach_timebase_info(&b); return (double)b.numer / b.denom / 1e9; }();
+        if ((ra > reach || rb > reach) && (!reach_tog || ((uint64_t)(mach_absolute_time() * rtick) & 1))) { *p9 &= 0xFFFF0000u; return 1; }
+    }
     if (rs64_g5b_tg_fix == 2) {
         static const double tick = [] { mach_timebase_info_data_t b; mach_timebase_info(&b); return (double)b.numer / b.denom / 1e9; }();
         if (!((uint64_t)(mach_absolute_time() * tick) & 1)) return 0;
@@ -3449,7 +3457,7 @@ extern "C" int rs64_g5b_tg_edge(uint32_t w0, uint32_t *p8, uint32_t *p9) {
 }
 extern "C" void rs64_g5b_trigen(uint32_t pc, uint32_t w0, uint32_t w1, uint32_t p8, uint32_t p9) {
     static int s_sw = -1, s_wl = 0;
-    static struct { uint32_t n, m2, wa, wb, ha, hb; int mina, maxa, minb, maxb, v0min, v0max; } s = {};
+    static struct { uint32_t n, m2, wa, wb, ha, hb; int mina, maxa, minb, maxb, v0min, v0max; uint32_t hq[8]; } s = {};
     const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
     if (sw != s_sw) {
         if (s_sw >= 0 && s.n && g_rdram_for_submit) {
@@ -3461,6 +3469,7 @@ extern "C" void rs64_g5b_trigen(uint32_t pc, uint32_t w0, uint32_t w1, uint32_t 
             const uint32_t cp = rd(0x138D1C);
             fprintf(g_g5b_tg, " cam=");
             if (cp >= 0x80000000u && cp < 0x80800000u) for (uint32_t q = 0; q < 22; q++) fprintf(g_g5b_tg, "%g,", fl(cp + 0x28 + q * 4));
+            fprintf(g_g5b_tg, " hq="); for (int q = 0; q < 8; q++) fprintf(g_g5b_tg, "%u,", s.hq[q]); // s6898: mode 2 quads by max(|a|,|b|) / 4096
             fputc('\n', g_g5b_tg); fflush(g_g5b_tg);
         }
         s_sw = sw; s_wl = 0; s = {}; s.mina = s.minb = s.v0min = 1 << 30; s.maxa = s.maxb = s.v0max = -(1 << 30);
@@ -3473,6 +3482,7 @@ extern "C" void rs64_g5b_trigen(uint32_t pc, uint32_t w0, uint32_t w1, uint32_t 
     const int a = (int16_t)(p8 >> 16), b = (int16_t)(p9 >> 16), v0 = (int)(p9 & 0xFFFF), span = (mode == 2 ? 1 : sub == 0 ? 4 : 2) * v0;
     if (a < s.mina) s.mina = a; if (a > s.maxa) s.maxa = a; if (b < s.minb) s.minb = b; if (b > s.maxb) s.maxb = b;
     if (v0 < s.v0min) s.v0min = v0; if (v0 > s.v0max) s.v0max = v0;
+    if (mode == 2) { const int r = std::max(abs(a), abs(b)) >> 12; s.hq[r > 7 ? 7 : r]++; }
     const bool wa = a + span > 32767, wb = b + span > 32767;
     s.wa += wa; s.wb += wb; s.ha += a + span > 16383; s.hb += b + span > 16383;
     if ((wa || wb) && s_wl < 6) { s_wl++; fprintf(g_g5b_tg, "W %d pc=%X w0=%08X w1=%08X p8=%08X p9=%08X a=%d b=%d v0=%d\n", sw, pc, w0, w1, p8, p9, a, b, v0); }
