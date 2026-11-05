@@ -1,6 +1,6 @@
 # NEXT: 21:9 on 144 Hz with a visible window, or the 60 Hz drain repeat if the grid returns
 HYPOTHESIS-ID: g1e-present-drain
-Why: s6890: 4:3 on 144 Hz has no backlog (11.8 ms) and mixes 13.9/20.8 ms. 6 of 11 arms had no on-screen reports; 4/4 sampled were 100% covered by the owner's apps. 21:9 got no new data.
+Why: s6890: 4:3 on 144 Hz has no backlog (11.8 ms) and mixes 13.9/20.8 ms. 7 of 11 arms had no on-screen reports (g2b partial too); 4/4 sampled were 100% covered by the owner's apps. 21:9 got no new data.
 FIRST, before any run: system_profiler SPDisplaysDataType for the grid, then build the witness: DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swiftc -O tools/g1e_window_cover.swift -o scratch/s6891/wcover. Run it every 10 s during each arm (scratch/s6890/arms2.zsh). After 30 s of an arm, if the ring has only at=0 rows, SIGKILL the arm and stop the set: more arms repeat the null. Never raise, move or cover the owner's windows, never change display settings. If the desktop is in use, do the offline item below instead.
 Needed contrast: one arm with witness cover < 100% and on-screen reports. Without it covered -> at=0 stays 4/4 with no contrast.
 If 144 Hz: arms 21:9 dd4 SCREEN_JOB off, gate, 240 s. Hypotheses H-60only (10-12 ms, no level) / H-wide-level (a level holds at 21:9). Score: tools/g1e_present_cadence.py --hist, g1e_present_latency.py --last 120 --hz 144. Control: ROGUESQ_PRESENT_TEST_STALL 200 ms rises to 24-39 ms and returns.

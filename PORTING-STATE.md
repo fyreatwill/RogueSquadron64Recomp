@@ -181648,7 +181648,7 @@ Default unchanged, behaviour unchanged with the env unset. Not measured: input-t
 Discrimination summary: this refutes H-floor as written at limit 40 (35 ms, under the gate's 46) and selects H-drain over it for 4:3 on a 60 Hz display, one run. It refutes H-cost as a general rule: flight drops omit a frame, and only drops at a level that cannot fall repeat one. Next discriminator: same-grid repeat, DRAIN=44 x2 against DRAIN=28 and INFLIGHT=2 x2 (H-repeat / H-luck / H-floor / H-limit, gate never-shown H-gate-cost / H-host); on a 144 Hz grid, off vs gate with an interval histogram (H-60only / H-judder). See NEXT.
 
 
-## Session 6890 (2026-11-04) — 144 Hz 4:3 has no present backlog and 60 fps spaces unevenly; 6 of 11 arms lost to a covered window, so no new 21:9 result
+## Session 6890 (2026-11-04) — 144 Hz 4:3 has no present backlog and 60 fps spaces unevenly; 7 of 11 arms had no on-screen reports, so no new 21:9 result
 HYPOTHESIS-ID g1e-present-drain. Unit from NEXT, 144 Hz branch (displays read 144 Hz at start and in every snapshot; ring grids agree). No owner report.
 
 Landed: tools/g1e_present_cadence.py --hist [--last S] (interval histogram in vsyncs, residual from a 60/s line per 1 s, INVALID line for rings with no on-screen presents); tools/g1e_window_cover.swift (read-only cover witness, window owner names only, moves nothing). Runners scratch/s6890/arms.zsh, arms2.zsh. Same binary as s6889, lvl1, FPS60 ASYNC+NODRAIN, 240 s. All 11 arms 0 crash, 0 VI stall, flight 168-174 s.
@@ -181661,7 +181661,7 @@ Arm validity:
 | off2 | 4:3 dd1 | all but 1 | valid |
 | g2b | gate | off screen from ~150 s (5537 at=0) | partial: 1661 rows in the last 120 s of the ring |
 | woff, wg2 | 21:9 dd4 | 0 | INVALID, cover not sampled |
-| woff2, wg2b, off3, g2c | reruns | 0 | INVALID, witness 100% covered, 24/24 samples found (1 further sample each found=0, at the first tick before the window opened or at exit, not placed) |
+| woff2, wg2b, off3, g2c | reruns | 0 | INVALID, witness 100% covered, 24/24 samples found (the 1 further sample per arm, found=0, is the first tick, before the window opens) |
 
 Results, 4:3, 144 Hz grid, last 120 s, one run each unless shown:
 | arm | lat p50/p99 ms | on-screen/s | 1v/2v/3v/4v % | residual p50/p99 ms | p-p per s |
@@ -181682,3 +181682,5 @@ g1e_present_order.py prints distinct shown 60/s on all-at=0 rings: it counts que
 ORIGIN: no corruption or wild value here. Default unchanged, game code unchanged.
 
 Discrimination summary: selects H-60only and H-judder at 4:3 on 144 Hz over a persisting backlog; refutes g2's lower off-pattern share as a gate effect. Next discriminator: same arms at 21:9 with cover < 100% in the witness, and the 60 Hz drain repeat if the grid returns.
+
+Correction to this entry and to commit 86d175206: its message says 6 of 11 arms; the count is 7 (off, woff, wg2, woff2, wg2b, off3, g2c), with g2b partial on top. Covered is shown only for the 4 sampled arms.
