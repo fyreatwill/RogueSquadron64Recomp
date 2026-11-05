@@ -181989,3 +181989,24 @@ Mode 0 near grids per swap also drop in the scene: dd1 25-45, dd4 1-29 at +0 to 
 
 Control h1 (dd1, same build, hq on): 9816 swaps with m2 >= 300, 0 with near under 10, scene included (159.8-165.7 s; maxn 611). So the empty near bins belong to dd4, not to the scene's camera. This selects H-near: at dd4 in this scene the game does not submit terrain near the eye, while it submits up to about 4000 quads at the far end (bin 7 about 1300 per swap). What drops them is not found. Candidates for next: a terrain budget with far-first traversal (maxn 3989-4032 is close to 4096, but n varies 2700-3000 in the scene, so a plain count cap is unproven), the s6893 tile pool clamp, wrapped window indices with win 0,64,0,64.
 h2 (dd2, same recipe) was still running at commit; score it with scratch/s6898/nearcol.py h2.
+
+## Session 6899 (2026-11-05) — G5b: dd4 cutscene ground loss is our window clamp ignoring the eye, fixed; same run near quads 287 vs 8, flight unchanged so the owner's in-flight drop stays open
+
+The first s6899 iteration hit the runner timeout (rc=124) with the arms finished and unscored and the fix uncommitted. This entry scores them; no game was run in the second iteration. Binary: build/RogueSquadron64Recomp 11:35, arms d4, g4, e1 (LEVEL=4, FPS60, 16:9, owner recipe, 400 s). Earlier arms c4, e4, t1, t4, v1_e4 came from earlier builds and are not used.
+
+ORIGIN: our own s6037/s6874/s6591 window clamp in binPolygonIntoTerrainGrid (funcs_9.c). A footprint wider than 64 cells is trimmed off-map cells first, then from the high end, with no reference to the eye, so the window stays anchored low. In the scene the eye sits at cell 78,79 (polygon point 0 = cam/2, median ratio 0.500) and the dd4 window is x,z 0..63, so the near cells are outside it. dd1's window there is x[51,101) z[79,103). This selects a fourth reading: H-window as NEXT framed it (index wrap) is refuted, and H-budget and H-pool were not needed. The cells are never binned because our clamp cut them. The value is not corrupt: it is a legitimate footprint that our clamp trimmed on the wrong side.
+
+Fix: tools/apply_s6899_eyewin.py, in RS64_REPLAY. After all trims, slide the window minimally, width unchanged, inside the pre-clamp bounds, so it holds eye +-26 cells, about what dd1 draws. A +-2 slide left a hard water edge (scratch/s6899/sheet_scene.png). ROGUESQ_DD_EYEWIN default on, =0 old, =tog odd mach seconds. The bound means it cannot slide unless the clamp trimmed, and a width at or under 64 stays inside the s6591 slot64 limit.
+
+Results. Scene = eye within 6 of 157.35,159.2 and m2 >= 300.
+- Same run, g4 =tog, 246 scene swaps (scratch/s6899/tog.py): slid 123, near p50 287, collapsed 2; not slid 123, near p50 8, collapsed 103. The 2 are at parity boundaries by the k/k-1 join, not checked one by one.
+- Second line, frames (par_fr.py, same run, lower-half detail): off 0.61 (98 frames), on 1.10 (93 frames); black 0.036 vs 0.038, so the loss is ground, not black. docs/owner_sheet_s6899_eyewin_same_run.png shows the water back in all 3 pairs.
+- Default d4: 246 scene swaps, 0 collapsed, near p5/50/95 281/286/332. Positive control for the instrument: the not-slid half of g4 in the same run.
+- Flight, g4 by parity, scene excluded, m2 >= 300 (par_all.py): off 5859 swaps, on 5759; near p50 278 vs 276; total quads p50 2347 vs 2327; near under 50: 2 vs 0, both at t 186.1-186.2, the scene's tail. So there is no measured far-terrain cost, and also NO in-flight effect. Eye outside the window off 154, on 7, but those sit in the pre-mission intro and the scene: 2 in flight. This closes the cutscene loss only. It says nothing for the owner's in-flight drops, and s6898 already showed the scene was not that drop in that run.
+- 16:9 dd1 e1: 19410 traced swaps, 0 slides, 0 collapsed. 4:3 dd1 does not enter this branch. 21:9 dd1 does (wide6879), and was NOT measured.
+- 0 CRASH lines in d4, g4, e1 run logs. Holds are 400 s scripted, not a flown mission.
+- Capture rate d4 39.7/s, g4 41.1/s, same as the s6898 range, so no sign of a rate cost. Not a timing measurement.
+- Transients: g4 7, all even seconds, but they fall in 3 clusters at the scene and d4 (always on) has 8, so they do not separate the arms.
+- h2 from s6898 (dd2, older binary): 7334 swaps with m2 >= 300, 0 collapsed. Whether it reached the scene was not checked, so where collapse starts is still unknown.
+
+Open: pale flat patches with stepped edges by the rock at dd4 fix on (scene +3.1 s, docs/owner_sheet_s6899_dd1_dd4_scene.png). dd1's frame at the same offset is a different camera phase, so that sheet is not a same-pose comparison, and no retail frame of this scene exists. Not run: scene at 21:9, dd2, dd3.
