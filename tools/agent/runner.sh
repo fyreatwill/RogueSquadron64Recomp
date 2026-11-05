@@ -33,6 +33,18 @@ RUNNER="${RUNNER:-claude}"
 # ad-hoc `claude -p "reply ok"` in this repo was forced through the exit contract and
 # committed/edited loop state). Inherited by every runner's child process.
 export RS64_LOOP=1
+# Owner save guard (2026-11-04): the owner plays from build/saves (profile "ASS"). No loop
+# game run may persist to it, and every session first snapshots it if it changed. A test
+# that really needs a writable save must use its own copy, never build/saves.
+export ROGUESQ_NO_SAVE_WRITE=1
+save_bk="$HOME/Documents/RS64-save-backups/auto"
+if [ -f build/saves/rs64.n64.us.1.0.bin ]; then
+  mkdir -p "$save_bk"
+  latest="$(ls -t "$save_bk"/*.bin 2>/dev/null | head -1)"
+  if [ -z "$latest" ] || ! cmp -s "$latest" build/saves/rs64.n64.us.1.0.bin; then
+    cp -p build/saves/rs64.n64.us.1.0.bin "$save_bk/$(date +%Y%m%d-%H%M%S).bin"
+  fi
+fi
 # Lean claude sessions (2026-10-31, measured from /tmp with haiku "reply ok"): the owner's
 # user-level plugins (~8.5k tok), Fable Mode output style (~3.6k) and MCP servers (~2k)
 # were loaded into every turn of every iteration (~14k of a ~44k base; ~700k cache reads

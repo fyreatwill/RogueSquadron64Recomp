@@ -204,7 +204,48 @@ When choosing the work unit, this order overrides Next-steps ordering:
      4:3, 16:9 and 21:9 window sizes and a fullscreen capture on the built-in display;
      update docs/OWNER-OPT-INS.md with the one-line command for each screen. Defaults stay
      4:3 retail unless the owner says otherwise.
-   - G3e **Terrain drops out for single frames (owner playtest 2026-11-02): take NOW, before
+   - G5 **Owner playtest 2026-11-04: take NOW, in this order, ahead of NEXT.md and all G1e
+     present/latency work.** Owner recipe for every arm unless stated: `ROGUESQ_FPS60=1
+     ROGUESQ_DRAW_DISTANCE=4 (or 2) ROGUESQ_ASPECT=16:9 ROGUESQ_FULLSCREEN=1`, no RDP_ASYNC or
+     NODRAIN, no logging env, normal boot with the owner's real save read-only.
+     G5a **Mission crash, twice on one mission (dd2, FPS60, 16:9).** SIGBUS, write fault, in
+     initVec4TripletFromArgs+52, called from cinematicSplineWalkerNpcHandler+10956 via
+     cutsceneActorNpcHandler, slotDispatcherIter, runInMissionFrame. Read from the binary:
+     the caller does a0 = *(s2+0x18) + 0x28, a1..a3 = *(s2+4). Crash values: a0 = 0x26282B53,
+     so *(s2+0x18) = 0x26282B2B (junk, not a guest pointer), a1 = 0x41900000 = 18.0f (sane).
+     Last guest PC 0x80022160. Mission not recorded: the owner will name it; until then sweep
+     levels at this recipe, holding through in-mission cutscene actors. Hypotheses: H-overrun
+     (dd/wide span or terrain writes land in the actor object, see s6880/s6883), H-spill (dd>1
+     spill arena, s6858), H-fps60 (actor state ticks twice, object freed or reused),
+     H-uninit (retail bug exposed). Discriminate with a write watch on s2+0x18 naming the
+     writer. Close only on the owner's mission holding past the crash point, repeated.
+     G5b **Terrain drops are NOT fixed: G3e is reopened.** Owner at 16:9 dd4: better but still
+     significant; dd2 fewer but not gone; dd1 was clean. So the "0 in-flight drops" detector
+     misses what the owner sees. First make an instrument that catches it (positive control:
+     frames the owner would call a drop, from a screen recording or presented frames at this
+     recipe, not from a test build), then find the cause. Measure where drops sit: inside the
+     retail dd1 radius, or only in extended cells. That answer decides whether G5e can help.
+     G5c **Freezes of a few seconds, then catches up like buffering.** Occasional, in flight.
+     Log per-frame wall time in a long owner-recipe run and name what stalls. Candidates:
+     shader or pipeline compile, present queue backlog, audio queue, save or file writes,
+     the game thread catching up after a stall. Fixed when a long run has no gap over 250 ms
+     outside loads, including the catch-up burst.
+     G5d **Factor 5 logo in the startup animation is missing most of its frames.** Arm table:
+     retail settings, FPS60 alone, 16:9 alone, ROGUESQ_WIDE_EARLY=0 (s6885 changed present
+     logic for the >=1024-wide phase, and whether the logo uses it is unverified),
+     ROGUESQ_CULL_SPIKE=0, and git bisect if none explain it. Compare the frame count with
+     angrylion. Check the LucasArts logo and other startup cinematics for the same loss.
+     G5e **Owner request: fog on the extended draw distance.** Fade or haze the extended
+     terrain so its unreliable far pieces melt away rather than pop. Opt-in or tied to dd>1,
+     dd1 stays retail. Use G3c(a)'s leads: scale the game's fog start and end with dd, or fade
+     the outermost cell ring. Note PORTING-STATE "Fog contributes nothing" was an early scene.
+     Fix G5b's cause first where it is fixable; fog is not a substitute for it. Owner sheet
+     with before and after at dd2 and dd4 on 3 levels.
+     G5f **Knife spikes still annoy the owner on stable frames.** G3c closed them as retail;
+     the owner wants them gone anyway, so retail matching is not the bar here. CULL_SPIKE is
+     already on and they still show at the owner recipe, so find which wedges escape it.
+     Close on spike count at this recipe with no new missing geometry, plus an owner sheet.
+   - G3e (REOPENED as G5b, 2026-11-04) **Terrain drops out for single frames (owner playtest 2026-11-02): take NOW, before
      any further retail-match sweep work.** Owner: "Landscape/terrain missing frames
      intermittently, but consistently." Owner's run was `ROGUESQ_FPS60=1
      ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=1` (no ASPECT). Boring-first
@@ -386,6 +427,11 @@ CURRENT-TRUTH "Next steps" (or NEXT.md if present). Before building anything:
    -- land an M5 de-stub (docs/M5-AUDIO-PLAN.md) or an M3 guard-class audit that
    commits a guard, or go BLOCKED with a specific question. Do not fall back on
    the rename sweep to stay fed; it will trip the pivot at 6 and block at 12.
+
+**Owner save rule (2026-11-04).** build/saves holds the owner's real save (profile "ASS"). Never
+delete, swap or overwrite it, and never clear ROGUESQ_NO_SAVE_WRITE, which runner.sh exports.
+A test needing another save copies the game to its own working folder. tools/g3_port_capture.sh
+SAVE_FROM swaps the file in place: do not use it until it stops doing that.
 
 ## Ground truth that is not our runtime
 - `tools/oracle/README.md` - runs the RETAIL ROM under mupen64plus with memory

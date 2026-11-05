@@ -6,6 +6,8 @@ Compact operational handoff, as of Session 6891 (2026-11-04).
 
 ## Headline
 
+- **Owner playtest 2026-11-04 (16:9, FPS60): G3e's "0 drops" does not match what the owner sees.** dd4 drops better but significant, dd2 fewer, dd1 clean; also seconds-long freezes, Factor 5 logo missing frames, spikes still visible, and a repeatable mission crash (junk pointer 0x26282B2B at actor+0x18, see ITERATION G5a). Fog on extended terrain requested. Save guard: runner.sh exports ROGUESQ_NO_SAVE_WRITE=1 and snapshots build/saves to ~/Documents/RS64-save-backups/auto.
+
 Verbatim s6689-s6758 headline bullets and the s6380-s6673 superseded entries were migrated in s6759 to
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6759 maintenance)". Summary of what they established:
 
