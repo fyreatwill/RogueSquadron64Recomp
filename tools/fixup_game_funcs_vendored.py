@@ -42096,6 +42096,7 @@ RS64_REPLAY = [
     "apply_s6907_aim.py",  # s6907: G5g hangar scroll aims the view by angle
     "apply_s6908_poolmin.py",  # s6908: G5h cutscene terrain pool floor at dd>1
     "apply_s6909_dlreclaim.py",  # s6909: DL chunk arena restarts at the game pool rebuild
+    "apply_s6911_varclamp.py",  # s6911: G5h tile variant map index clamped to the map at dd>1
 ]
 
 

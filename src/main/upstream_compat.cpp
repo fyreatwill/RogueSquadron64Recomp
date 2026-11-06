@@ -3068,6 +3068,22 @@ extern "C" uint32_t rs64_s6893_tileslot(uint32_t count) {
     if (count > s6893_max) { s6893_max = count; if (count >= s6893_base / 2u && s6893_lines++ < 200) std::fprintf(stderr, "[s6893] tile count %u of retail %u (cap %u)\n", count + 1, s6893_base, s6893_cap); }
     return count < s6893_cap ? count : s6893_cap - 1;
 }
+/* s6911 G5h: see tools/apply_s6911_varclamp.py. idx = x + z * w as the game computed it; clamps x,z to the map at dd>1. ROGUESQ_DD_VARCLAMP=0 old, =tog odd seconds. */
+extern "C" int32_t rs64_s6911_mapidx(int32_t idx, int32_t x, int32_t z, uint32_t w, uint32_t h) {
+    extern volatile int g_rs64_dd_scene;
+    static const int mode = [] { const char* e = std::getenv("ROGUESQ_DD_VARCLAMP"); const char* d = std::getenv("ROGUESQ_DRAW_DISTANCE");
+        if (!(d && std::atof(d) > 1.0)) return 0; return !(e && *e) ? 1 : *e == '0' ? 0 : *e == 't' ? 2 : 1; }();
+    static const int lg = [] { const char* e = std::getenv("ROGUESQ_DD_VARCLAMP_LOG"); return e && *e != '0'; }();
+    if (x >= 0 && z >= 0 && x < (int32_t)w && z < (int32_t)h) return idx;
+    static uint64_t seen = 0, fixed = 0; seen++;
+    const bool on = mode == 2 ? ((mach_absolute_time() / 24000000ull) & 1) != 0 : mode != 0;
+    const bool act = on && g_rs64_dd_scene && w && h;
+    if (act) fixed++;
+    if (lg && (seen <= 40 || (seen & 0xFFFF) == 0)) std::fprintf(stderr, "[s6911] off-map variant x=%d z=%d map %ux%u raw idx %d on=%d seen %llu fixed %llu\n", x, z, w, h, idx, act ? 1 : 0, (unsigned long long)seen, (unsigned long long)fixed);
+    if (!act) return idx;
+    const int32_t cx = x < 0 ? 0 : x >= (int32_t)w ? (int32_t)w - 1 : x, cz = z < 0 ? 0 : z >= (int32_t)h ? (int32_t)h - 1 : z;
+    return cx + cz * (int32_t)w;
+}
 extern "C" void rs64_s6893_dump(const uint8_t* rdram) {
     static bool done = false; if (done) return; done = true;
     if (const char* e = std::getenv("ROGUESQ_S6892_DUMP")) if (*e == '0') return;

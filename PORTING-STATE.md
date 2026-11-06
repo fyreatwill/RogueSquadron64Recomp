@@ -182321,3 +182321,31 @@ New datum, not diagnosed: dd4 floating dark triangles on the horizon, LEVEL=4 sc
 NOT done: the s6909 city shot (buildings differing old vs floor 0.6 s apart): needs a 760 s movie run; the POOLMIN toggle is 1 s so the frames are in opposite states, but whether any building changed is unmeasured. dd3, 21:9 not run. Raw captures deleted; sheets and traces kept.
 
 Discrimination: for the in-mission scene this refutes both H-covered and H-other as framed: the floor is inactive there and the ground is present anyway. For the lvl5 tint it refutes "s6904 fog causes the pale rim"; it selects extended terrain as the rim's source.
+
+## Session 6911 (2026-11-06) — G5h: dd4 floating horizon triangles are off-map coast cells reading past the level map in selectGridCellTileVariant; map index clamped at dd>1, same run bad quads 13.8 and 5.4 per swap vs 0, triangles gone in the same shot
+
+HYPOTHESIS-ID: g5h-cutscene-bg. s6905_k30_h1d4 and h4d4 soak verdicts folded: rc=0, 0 CRASH lines in both logs. CURRENT-TRUTH under the Step 0 trigger, no maintenance. 7 runs (a4 b4 c4 d4 e4 f2 g1), all LEVEL=4 16:9 FPS60, 0 CRASH lines in all 7, owner save hash unchanged (37b93f3c6536, 3927d691e2ad). Harness scratch/s6911/arm.zsh.
+
+ORIGIN: the junk heights are written by selectGridCellTileVariant (0x80046030), the game's own code, and the value is NOT legitimate for the cell. It indexes the level map with the cell's raw x,z (lh 0x18/0x1A, stride 0x80136DF8) while the cell's flags came from the clamped edge cell (clampGridCellLookup). A dd>1 window runs far past the map: LEVEL=4 map 94x94, window rows up to 143. So a flagged border cell reads past the map array, takes a junk tile index, and copies 25 junk height bytes into its pool slot. Witness, c4 log: `[s6911] off-map variant x=45 z=109 map 94x94 raw idx 10291`, z 102..109 in the first lines, x 45 every time. Why only that column: not measured; x=45 at the last map row is presumably the one flagged coast cell (the other cells in those rows take the preset tile pointer), which fits 1 bad column of 49 rows.
+
+How it was found. a4 (s6909 binary + G5B_TRIS, W_CLAMP=tog, DD_FOG=tog): triangles reproduced, t 199.5-201. Same shapes with W_CLAMP on and off, so not the s6895 clamp or sheet drop. Rendering the triangle stream for swap 15042 puts them in the main terrain group (timg 8087E1F0): single terrain triangles spaced through the stream at far-ring depth, not an object mesh. That selects H-terrain and refutes H-mesh and H-lod as framed.
+b4 (new ROGUESQ_G5B_TGCMD, DD_FOG=0): with fog off the triangles are stronger and water coloured (seen, crop only), so fog does not create them, it fades them. Adjacent quads should share corner heights. In swap 11790: 3429 quads, 98 edge mismatches, all in columns a=-34/-33, rows b 15..63 region of the list printed; neighbours clean.
+My first reading, "heights over 0x8000 are the junk", was wrong as a test: negative heights are ordinary terrain, about 400 quads per swap in both parities. Only the edge mismatch count discriminates. Also cen.py's world column is off by a few cells (its origin drifts); the witness log is the reliable coordinate.
+
+Fix: tools/apply_s6911_varclamp.py (in RS64_REPLAY after s6909) + rs64_s6911_mapidx, clamps x,z to the map. ROGUESQ_DD_VARCLAMP default on at dd>1 on levels 0..18, =0 old, =tog odd mach seconds, ROGUESQ_DD_VARCLAMP_LOG=1 witness.
+
+Same run, =tog, edge mismatched quads per swap (par.py, every 5th swap, 0.15 s dropped at each second edge):
+| arm | old: swaps, mean, p90, max | clamp on: swaps, mean, p90, max |
+|---|---|---|
+| c4 dd4 | 811, 13.8, 47, 99 | 826, 0.0, 0, 0 |
+| d4 dd4 | 864, 5.4, 27, 66 | 838, 0.0, 0, 0 |
+The old parity is the positive control: the instrument fires in the same run.
+Pixels, e4 (=tog, scene t 186.3-192.3, the only pass of the three =tog runs to reach it): triangles present at t 186.51, 186.73, and at 186.94, which is a boundary frame carrying the old state; gone at 187.17 and 187.38 in the same shot, shore line still there. Dark slabs on the shore line go too. docs/owner_sheet_s6911_floating_triangles.png. One direction only: the shot leaves the horizon before the clamp turns off again. The quad table covers both directions.
+
+Default path. f2 (dd2, default, 250 s): log on=1, fixed = seen, 0 mismatched quads in 1471 sampled swaps. No old arm at dd2 in that run, so this is not a before/after and says nothing about the s6910 dd2 smudge. g1 (dd1, 200 s): log on=0, fixed 0. dd1 also reaches this path: x=94 z=65 raw idx 6204, which wraps into the next map row. So retail code does this at dd1 too and stays as it is.
+
+Audit, static only, nothing run: the same raw x + z*stride read is at 0x80046274 (buildGridCellLabel), 0x80048768, 0x80048DE4 (processGridCellByDistance), 0x80049844 (emitGridCellTileStrip) and 0x80049FE8 (Diagonal); the Adjacent variant has the same shape by count, not read. Whether they see raw off-map x,z is not established: processGridCellByDistance's cells come out with clean heights, so it may use clamped values. The strips feed normals, so this may be the ribbed dark border of docs/owner_sheet_s6905_window.png; unmeasured, next unit.
+
+NOT done: dd3, 21:9, levels other than 4, a rate check (the hook only runs on flagged cells, cost assumed small, not measured), a 300 s soak on the final binary. That these triangles are what the owner calls missing background is still a guess. s6909 city shot not done. Bulk captures deleted; sheets, traces and scripts kept in scratch/s6911 (gitignored).
+
+Discrimination: selects H-terrain over H-mesh and H-lod, and names a cause NEXT had not listed: junk heights from an off-map map read, not window, fog or LOD. Refutes W_CLAMP and fog as the source.

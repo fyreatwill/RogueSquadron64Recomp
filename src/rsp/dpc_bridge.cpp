@@ -3475,6 +3475,14 @@ extern "C" void rs64_g5b_trigen(uint32_t pc, uint32_t w0, uint32_t w1, uint32_t 
         s_sw = sw; s_wl = 0; s = {}; s.mina = s.minb = s.v0min = 1 << 30; s.maxa = s.maxb = s.v0max = -(1 << 30);
     }
     s.n++;
+    // s6911 G5h: ROGUESQ_G5B_TGCMD=<file>, every TriGen command as fetched: u32 swap, then the 10 words at the DMEM cursor. params[1..2] are the
+    // quad's corner heights, [8..9] the bases and step (F5Rogue.cpp TriGen02_BuildVtxData). Joins the ROGUESQ_G5B_TRIS stream to world quads.
+    static FILE *s_tc = [] { const char *e = std::getenv("ROGUESQ_G5B_TGCMD"); FILE *f = (e && *e) ? fopen(e, "wb") : (FILE *)nullptr; if (f) setvbuf(f, nullptr, _IOFBF, 1 << 22); return f; }();
+    if (s_tc && g_dmem_cur) {
+        uint32_t r[11]; r[0] = (uint32_t)sw;
+        for (int q = 0; q < 10; q++) memcpy(&r[q + 1], g_dmem_cur + ((pc + q * 4) & 0xFFCu), 4);
+        fwrite(r, sizeof r, 1, s_tc);
+    }
     const uint32_t mode = (w0 >> 8) & 0xFF, sub = w0 & 0xFF;
     s.m2 += mode == 2;
     if (mode != 0 && mode != 2) return;
