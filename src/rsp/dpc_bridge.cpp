@@ -3542,6 +3542,18 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     // straight edge. =tog on odd seconds of the mach clock (24 MHz), the same-run control. Default off, retail unaffected.
     static const int melt = [] { const char *e = std::getenv("ROGUESQ_DD_MELT"); return !(e && *e && *e != '0') ? 0 : (*e == 't' ? 2 : 1); }();
     static uint64_t s_melt_n = 0;
+    // s6917 G5h: ROGUESQ_DD_SKYZ=1 puts the sky back at the far limit at dd>1. The sky draws with blender 00552224 (z from SET_PRIM_DEPTH, update, no compare). Its depth is
+    // 32703 at dd1 and 32620-32627 at dd4, because the far scale moves it in, while far ships and beam tops sit at 32500-32767. They then fail the compare over bare sky
+    // and survive only over terrain, which rewrites z without compare: beams end flat at the sea edge and their ships go. The sky must keep writing z: the game's z clear
+    // fill usually starts part way down the screen, and above that the sky's z write is the clear. So the depth is rewritten, not the update bit. =tog on odd seconds of the
+    // mach clock (24 MHz). Default off, dd1 never touched. Needs the scan live, like MELT.
+    static const int skyz = [] { const char *e = std::getenv("ROGUESQ_DD_SKYZ"), *d = std::getenv("ROGUESQ_DRAW_DISTANCE"); if (!(e && *e && *e != '0') || !(d && atof(d) > 1.0)) return 0; return *e == 't' ? 2 : 1; }();
+    // The RSP kicks tiny submits, so SET_PRIM_DEPTH has often gone to the RDP before the sky's mode word shows what it was for: looking back from the mode reached 8% of sky
+    // groups. So a depth is rewritten when it arrives, if it matches one of the last 8 depths that were followed by the sky mode; those are stable from frame to frame.
+    static uint64_t s_skyz_n = 0, s_skyz_miss = 0;
+    static uint32_t s_skyz_ring[8] = {}, s_skyz_w = 0, s_skyz_pd = 0;  // sky depths learned; last depth seen, as the game wrote it
+    static bool s_skyz_done = true;  // the last SET_PRIM_DEPTH seen is already handled, so later sky modes under it need nothing
+    uint32_t skyz_pd = 0xFFFFFFFFu;  // its address when it is in this range and so still patchable
     static struct { double area, v[5][2]; uint32_t off, op, cw, n, big, w0, w1; int swap; } s_bt = {};
     if (!(on || cull) || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
     static const double guard = [] { const char *e = std::getenv("ROGUESQ_SPIKE_CTL"); return e && *e ? atof(e) : 640.0; }();
@@ -3569,6 +3581,22 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         if (melt && op == 0x2F && (w1 >> 16) == 0xC811u && (melt == 1 || ((mach_absolute_time() / 24000000ull) & 1))) {
             const uint32_t n1 = 0x12000000u | (w1 & 0xFFFFu) | 0x4040u; memcpy(g_rdram_for_submit + ((a + 4) & kSubmitRamMask), &n1, 4);
             if ((++s_melt_n & (s_melt_n - 1)) == 0) fprintf(stderr, "[dd-melt] n=%llu swap=%d %08X -> %08X\n", (unsigned long long)s_melt_n, sw, w1, n1);
+        }
+        if (skyz) {
+            const bool live = skyz == 1 || ((mach_absolute_time() / 24000000ull) & 1);
+            auto put = [&](uint32_t at) {
+                const uint32_t o1 = rd(at + 4), n1 = 0x7FFF0000u | (o1 & 0xFFFFu); memcpy(g_rdram_for_submit + ((at + 4) & kSubmitRamMask), &n1, 4);
+                if ((++s_skyz_n & (s_skyz_n - 1)) == 0) fprintf(stderr, "[dd-skyz] n=%llu miss=%llu swap=%d %08X -> %08X\n", (unsigned long long)s_skyz_n, (unsigned long long)s_skyz_miss, sw, o1, n1);
+            };
+            if (op == 0x2E) {
+                skyz_pd = a; s_skyz_pd = w1 >> 16; s_skyz_done = false;
+                if (live) for (uint32_t v : s_skyz_ring) if (v && v == s_skyz_pd) { put(a); s_skyz_done = true; break; }
+            } else if (op == 0x2F && w1 == 0x00552224u && !s_skyz_done) {
+                s_skyz_done = true;
+                bool known = false; for (uint32_t v : s_skyz_ring) known |= v == s_skyz_pd;
+                if (!known) s_skyz_ring[s_skyz_w++ & 7] = s_skyz_pd;
+                if (live) { if (skyz_pd != 0xFFFFFFFFu) put(skyz_pd); else s_skyz_miss++; }
+            }
         }
         if (op == 0x24 || op == 0x25) { a += 16; continue; }
         if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; a += 8; continue; }

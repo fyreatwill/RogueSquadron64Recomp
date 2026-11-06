@@ -1,12 +1,13 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6916 (2026-11-06).
+Compact operational handoff, as of Session 6917 (2026-11-06).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6900 maintenance)").
 
 ## Headline
 
 - **FIXED s6911, awaiting owner look: G5h dd4 floating horizon triangles.** ORIGIN: selectGridCellTileVariant (0x80046030) indexes the map with a cell's raw x,z, so a flagged off-map coast cell reads past the map and gets junk heights (LEVEL=4 map 94x94, window to row 143, witness x=45 z=102..109). tools/apply_s6911_varclamp.py clamps it. ROGUESQ_DD_VARCLAMP default on at dd>1, =0 old, =tog, _LOG=1; dd1 untouched and it reaches this path too (x=94 z=65). Same run, mismatched quads per swap old vs on: 13.8 vs 0 (max 99 vs 0), 5.4 vs 0 (max 66 vs 0). Same run old vs on also dd2 0.9 vs 0, dd3 6.3 vs 0, 21:9 dd4 6.1 vs 0 (s6912). Pixels: gone in the same shot, shore kept, docs/owner_sheet_s6911_floating_triangles.png. Only LEVEL=4 reached it (lvl1 0 hits); rate not run, soak s6912_final_h4d4 clean.
+- **DONE s6917, opt-in, awaiting owner look: G5h shot 78 flat beams and lost far ships, ROGUESQ_DD_SKYZ=1.** ORIGIN: our far scale pulls the sky to z 32620-32627 (retail and dd1 32703), in front of far objects, which fail the compare over bare sky. The lever rewrites sky depth to the far limit on arrival, because the sky's z write is the z clear above the horizon and must stay. Same run dd4 on vs off: full beams and ships vs flat stubs, docs/owner_sheet_s6917_sky_depth.png; rewrites 131072, miss 12. Flight lvl1 and lvl4 60 s clean. dd2 soak queued; default off.
 - **DONE s6916, opt-in, awaiting owner look: G5h sea slab, ROGUESQ_DD_MELT=1.** Slab is AT THE MOVIES shot 79, ours, dd>1 only. ORIGIN: our far scale (s6073) lets terrain through where retail clips it; dd2 and dd4 end it in flat fog colour. Far terrain now fades into the sky behind it (RDP blender C811 rewritten in rs64_spike_scan, needs CULL_SPIKE on). Same run, horizon step off vs melt: dd4 39.2 vs 3.9, dd2 63.9 vs 4.4. Dropping the far scale is NOT the fix: DD_FAR=1 removes the slab (non-sky 0.07) but ROGUESQ_DD_FAR_TOG=1 over 72 shots shows 13 step at ratio >=2, and the viewed ones lose hills, islands and canyon walls; it also leaves dark flecks. docs/owner_sheet_s6916_melt.png, docs/owner_sheet_s6916_far_needed.png. Default off until the owner chooses; flight only 60 s lvl4, rate and ASYNC untested.
 - **s6913 G5h: city shot closed, no building change on the POOLMIN toggle.** docs/owner_sheet_s6913_city_toggle.png. s6911 census: only level 4 hits the off-map read.
 - **s6912 G5h: other raw map reads CLOSED H-clean.** Ribbed border is the edge cell repeated, single-source, docs/owner_sheet_s6912_ribbed_border.png.
@@ -46,6 +47,7 @@ Detail for everything in this section: PROJECT-OVERVIEW "Migrated from CURRENT-T
 - **Present thread, PAUSED until G5 closes (s6884-s6891).** All default off: ROGUESQ_RDP_SCREEN_JOB=1 (needs ASYNC+NODRAIN; removes game-rate dips, displayed rate unjudged), PRESENT_INFLIGHT=2 (=1 halves the rate, never use), PRESENT_DRAIN=<ms> (keep out of OWNER-OPT-INS). Ungated latency is a backlog that slips raise and 17 ms stalls lower, at ~72 ms on the s6889 ring; 39 ms on the built-in; 12 ms on 144 Hz at 4:3, where 60 fps lands unevenly (2 and 3 vsync mix plus compensating 1v/4v pairs). What enters the 72 ms state is open. 21:9 flight on 144 Hz has no data.
 
 ## Superseded conclusions — do not act on these
+- s6917 NEXT "H-far-beam / H-ship: past-far objects or a retail distance cull" (superseded s6917): objects are submitted, the sky's moved depth hides them. Believable because FAR_TOG removes them too, by changing what is admitted.
 - s6915 NEXT "fix goal: shot 79 looks like dd1, try the far lever" (superseded s6916): DD_FAR=1 does clear the slab but the far scale also holds the background the owner asked for. Believable because the one-shot arm matched dd1 share exactly.
 - s6914 "sea edge pose is run time ~906-913, pitch 0.34-0.36, ~21 deg down" and NEXT "dd4 runs ~1 s later" (superseded s6915): that is shot 76, a sea-level shot whose camera tips up. The slab is shot 79, ~942-948; dd4 trails by ~1 s there, 2.7 s in the s6914 soaks. Believable because the cam rows did tip and the sheet's order read water then city. s6913 "the sea ends in a straight edge" read as a horizon: it is a slab only dd>1 draws.
 - s6913 "sea edge shot at run time ~885-890" (superseded s6914): capture delay counts from window found, so raw t=0 was ~20 s later than CAP0 and the shot sits at ~906-913 (inferred). Believable because CAP0 reads as run time.
@@ -62,9 +64,6 @@ Detail for everything in this section: PROJECT-OVERVIEW "Migrated from CURRENT-T
 - s6901 NEXT H-free "game rate holds ~59 at dd4" and s6810 "lvl1 dd4 59.3" applied to 16:9 (superseded s6902): that was 4:3; dd4 16:9 without ASYNC+NODRAIN is 35-42. Believable because OWNER-OPT-INS quoted ~60 with no aspect.
 - s6899 NEXT and s6894-s6899 framing of G5b as near-terrain collapse or single-frame transients (narrowed s6901): near stays whole in flight in every arm while far rings halve. Believable because near quads were the one thing that collapsed in the cutscene, and the drop detectors read frame transients, so a far loss in flat haze scored nothing.
 - s6788-s6791 "G3e dd>1 terrain dropouts CLOSED, 0 drops over 231/124 s of flight" (superseded by the owner playtest 2026-11-04, reopened as G5b): dd2 and dd4 still drop for the owner. Believable because the s6789 cap and sentinel fix was real and the detector read 0; the detector missed what the owner sees.
-- s6889 "DRAIN=40 beats the gate's median at 4:3 on a 60 Hz display" and s6889/s6890 "the backlog looks 60 Hz specific" (superseded s6891): believable because the off arm read 72 ms on a 60 Hz grid. A 60 Hz grid alone does not give that: built-in off reads 39 ms with nothing to drain.
-- s6887 "one display here" (superseded s6889): the host now has four displays, three at 144 Hz. All s6885-s6888 latency figures are 60 Hz grid figures; do not apply them to 144 Hz.
-- **Older, one line each (full text in the s6900 archive):**
   - s6879-s6881 g3_aspect_crop MAD/hz figures scored pillarbox bars; re-score, do not quote (s6882).
   - "Pinned pose" on dd arms s6445-s6583 is attitude-only; POSE_PIN_POSITION never held position (s6872).
   - "300 s hold" on FPS60/dd>1 G1 recipes s6774-s6862 counted from boot, 65 of 117 runs flew <280 s (s6865). Use inits= and flight_s=; mission_cycles misses restarts (s6867).
@@ -118,7 +117,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order 2026-11-04: 
 5. **G5e fog: done s6904, waiting on owner look.** Soaks s6904_fog_h1d4, h4d2 and s6905_k30_h1d4, h4d4 clean. Window on 64x64 maps closed s6905, H-border. clampGridCellLookup 92 vs 16 samples on vs off still unchecked, single-source.
 6. **G5f knife lines: fixed s6906, closes on the owner's flight.** Open: dd1 transients 306 vs 157 (s6895) unexplained, lines under 60 px unmeasured.
 6b. **G5g hangar stretch: done s6907, closes on the owner's look.** Owner decides on flight and cutscene lens (report sheet).
-6c. **G5h cutscene background: intros fixed s6908, playlist checked s6909, closes on the owner's look.** s6899 scene and H-tint done s6910, floating triangles fixed s6911. Raw map reads closed s6912, city shot closed s6913. Sea slab: DD_MELT opt-in s6916, owner chooses the default.
+6c. **G5h cutscene background: intros fixed s6908, playlist checked s6909, closes on the owner's look.** s6899 scene and H-tint done s6910, floating triangles fixed s6911. Raw map reads closed s6912, city shot closed s6913. Sea slab: DD_MELT opt-in s6916, flat beams: DD_SKYZ opt-in s6917, owner chooses both defaults. Far band split vs retail still differs at dd1 (s6917).
 7. **G1e present, PAUSED until G5 closes.** 21:9 flight on 144 Hz, or what enters the 72 ms state; recipe at the bottom of NEXT.md. SCREEN_JOB and PRESENT_INFLIGHT defaults stay off until the owner chooses.
 8. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path, horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
 9. **Owner judgement / parked.** FPS60 feel; G3c sheets; owner sheets listed in NEXT.md; native hangar geometry and rare dd4/dd8 gfx SIGBUS parked (single-source). Reopen on an owner report or a side-effect failure, not repeat holds.
@@ -126,6 +125,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order 2026-11-04: 
 
 ## Evidence index
 
+- s6917 trim (3 superseded lines): PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6917)".
 - s6915 trim (3 headline bullets s6895-s6899, 1 superseded line): PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6915)".
 - s6912 trim (6 superseded lines s6455-s6884) and s6914 trim (4 present-thread lines s6885-s6890): PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6912)", "(s6914)".
 - s6900 maintenance archive (closed headline bullets s6696-s6891, superseded s6004-s6882, closed next steps s6788-s6878): PROJECT-OVERVIEW.
