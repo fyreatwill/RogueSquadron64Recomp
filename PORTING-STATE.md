@@ -182149,3 +182149,5 @@ Small-map check (NEXT): H-small selected on 3 levels surveyed, others unknown. l
 Replay: apply script on de-patched funcs_4.c and funcs_9.c gives files identical to the live tree, second run reports already applied. No full regen.
 
 Holds: u5d2 318 s at lvl5 dd2 =tog, 0 SIGSEGV/SIGBUS. All other arms 0. Soaks queued for the default: s6904_fog_h1d4, s6904_fog_h4d2 (300 s). docs/owner_sheet_s6904_fog.png, left off, right on, adjacent blocks, rows lvl1 dd2, lvl1 dd4, lvl4 dd2, lvl4 dd4, lvl5 dd2, lvl5 dd4. Poses differ between columns, most in rows 1 and 5, so it is for judging the look only. Whether the fade looks right is the owner's call.
+
+Verdict: this selects H-fog over H-ring for G5e, refutes a lvl5 dd2 rate cost from the pull, and selects H-small on levels 1 and 5. Next discriminator: H-visible vs H-border on the 64x64 map window.
