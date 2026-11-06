@@ -182407,3 +182407,5 @@ s6911 census. Added a [s6911map] line per map change under ROGUESQ_DD_VARCLAMP_L
 New datum, unmeasured: in the water shot at dd4 the sea ends in a straight edge with sky past it in BOTH toggle states (top rows of the sheet); the old cap only moves the edge. The dd1 run that would have compared it was stopped by me at about 08:08 to fit the census under the runner cap, on the reasoning that the city answer did not need it. So whether dd1 hides this edge is unknown. Next unit.
 
 Raw captures deleted. NOT done: dd1 of the water shot, rate check of s6911.
+
+Result line for s6913: the same-run toggle edge measure selects H-city-none over H-city-floor and closes the city item, with the water scene as the positive control. The census refutes a second playlist level for s6911. Next discriminator: dd1 vs dd2 vs dd4 on the sea edge shot, H-edge-retail vs H-edge-dd.
