@@ -11038,3 +11038,10 @@ are as of the session that wrote them. All soaks named here were folded by s6895
 - s6749-s6754 port VI counts ran ~1.4% high before the s6755 deadline fix; relative tick comparisons stand.
 - s6739-s6740 colour readings came from raw Display-P3 values and a bad decoder (s6740, s6744).
 - s6455/s6458 shake readings ran at ~17 fps from our getenv (s6696).
+
+## Migrated from CURRENT-TRUTH (s6914)
+
+- s6890 reading of at=0 as "the window was covered" (narrowed s6891): true on the XG49V, but both UG27 give at=0 uncovered. 100% cover still gives at=0 on the XG49V.
+- s6887 lead "a window state, not only queue depth, sets the level" and NEXT H-size/H-phase as framed (superseded s6888): believable because the level followed the fullscreen toggle and minimize in the one run. Resize does nothing; large stalls do not drain, the catch-up burst refills. Only fullscreen's missing slips are a real window effect.
+- s6886 "hidden window slows the game with the gate on; a known cost" (superseded s6887): it was a gate defect, not a cost of the idea. Believable because the game recovered on return and hiding is rare; the wait trusted a handler that off screen fires only on replacement.
+- s6885 "present-to-screen 57 ms at 60 fps" (superseded s6886): real figure ~72 ms at 4:3. Believable because it came from CoreAnimation; the start stamp was after the present call, so the nextDrawable wait was left out.

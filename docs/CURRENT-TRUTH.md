@@ -65,11 +65,7 @@ Detail for everything in this section: PROJECT-OVERVIEW "Migrated from CURRENT-T
 - s6788-s6791 "G3e dd>1 terrain dropouts CLOSED, 0 drops over 231/124 s of flight" (superseded by the owner playtest 2026-11-04, reopened as G5b): dd2 and dd4 still drop for the owner. Believable because the s6789 cap and sentinel fix was real and the detector read 0; the detector missed what the owner sees.
 - s6896 "terrain bases are fixed map coordinates" and "the map's last + edge quad" (superseded s6897: base centre r ~0 with position, ~0.97 with view terms; believable because quads keep their words across swaps). s6894-s6896 "post-MISSION FAILED scene" and s6895 "sheets painted over black steps" (superseded s6897: in-mission cutscene; block stands with sheets gone).
 - s6889 "DRAIN=40 beats the gate's median at 4:3 on a 60 Hz display" and s6889/s6890 "the backlog looks 60 Hz specific" (superseded s6891): believable because the off arm read 72 ms on a 60 Hz grid. A 60 Hz grid alone does not give that: built-in off reads 39 ms with nothing to drain.
-- s6890 reading of at=0 as "the window was covered" (narrowed s6891): true on the XG49V, but both UG27 give at=0 uncovered. 100% cover still gives at=0 on the XG49V.
 - s6887 "one display here" (superseded s6889): the host now has four displays, three at 144 Hz. All s6885-s6888 latency figures are 60 Hz grid figures; do not apply them to 144 Hz.
-- s6887 lead "a window state, not only queue depth, sets the level" and NEXT H-size/H-phase as framed (superseded s6888): believable because the level followed the fullscreen toggle and minimize in the one run. Resize does nothing; large stalls do not drain, the catch-up burst refills. Only fullscreen's missing slips are a real window effect.
-- s6886 "hidden window slows the game with the gate on; a known cost" (superseded s6887): it was a gate defect, not a cost of the idea. Believable because the game recovered on return and hiding is rare; the wait trusted a handler that off screen fires only on replacement.
-- s6885 "present-to-screen 57 ms at 60 fps" (superseded s6886): real figure ~72 ms at 4:3. Believable because it came from CoreAnimation; the start stamp was after the present call, so the nextDrawable wait was left out.
 - **Older, one line each (full text in the s6900 archive):**
   - s6879-s6881 g3_aspect_crop MAD/hz figures scored pillarbox bars; re-score, do not quote (s6882).
   - "Pinned pose" on dd arms s6445-s6583 is attitude-only; POSE_PIN_POSITION never held position (s6872).
@@ -131,7 +127,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order 2026-11-04: 
 
 ## Evidence index
 
-- s6912 trim (6 superseded lines s6455-s6884): PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6912)".
+- s6912 trim (6 superseded lines s6455-s6884) and s6914 trim (4 present-thread lines s6885-s6890): PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6912)", "(s6914)".
 - s6900 maintenance archive (closed headline bullets s6696-s6891, superseded s6004-s6882, closed next steps s6788-s6878): PROJECT-OVERVIEW.
 - s6847 maintenance archive (per-mission G3 bullets, closed s6788-s6846 next steps): PROJECT-OVERVIEW.
 - s6759 maintenance archive (verbatim headline s6689-s6758, superseded s6292-s6673): PROJECT-OVERVIEW.
