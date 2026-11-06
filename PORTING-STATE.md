@@ -182426,3 +182426,29 @@ Scene timing: dd4 trails dd1 by ~1 s in cam rows across 875-899, so pair by pose
 Queued: scratch/agent/soak_queue/s6914_seaedge_d1.sh, _d4.sh, 932 s each, cap 1000 s, stills 898-928 s and a capture process started fresh at 898 s, so the stills stand even if the capture does not.
 
 NOT done: the dd1 vs dd4 comparison, dd2, the lever arm, any G5h fix. Time went on 2 runs with no frames before the cause showed, then the third ended 5 s short of the pose.
+
+
+## Session 6915 (2026-11-06) — G5h: the s6913 sea slab is ours and dd>1 only, it sits in shot 79 not where s6914 said; ordinary sea horizons are retail; lever soaks queued
+
+HYPOTHESIS-ID: g5h-cutscene-bg. No maintenance (35615 bytes). Folded s6914_seaedge_d1, _d4: 0 CRASH, captures 2521 and 2269 frames, so the s6914 poll fix works. 2 more runs this session (scratch/s6915, a1 dd1, a4 dd4, 16:9 FPS60, to 954 s): 0 CRASH, 2196 and 2097 frames.
+
+Result: selects H-edge-dd for the slab and H-edge-retail for ordinary sea horizons. Two separate things had been called "the sea edge".
+
+Slab. The s6914 pose was wrong by three shots. The soaks' frames at pitch 0.34-0.36 are shot 76, a sea-level shot; I first measured that and read it as the answer, then compared with the s6913 sheet and it did not match. Shots 77 and 78 did not match either. The sheet's frames are shot 79 (cam cut 942.05 dd1, 943.03 dd4). Same pose, mismatch 0.0000 on the 3x3 cam rows: dd1 sky and one rock, dd4 a slab of sea and islands with straight edges and clouds past them.
+| shot 79 s in | 0.5 | 1 | 2 | 3 | 4 | 4.5 | 5 | 5.5 | 6 |
+|---|---|---|---|---|---|---|---|---|---|
+| dd1 non-sky share | .029 | .043 | .063 | .065 | .034 | .018 | .021 | .011 | .004 |
+| dd4 non-sky share | .484 | .518 | .552 | .550 | .428 | .301 | .146 | .011 | .003 |
+Control, same runs: frames converge at +5.5 s once the view leaves it, MAD 8.5, 4.1 by 6.5 s, against 54-56 at 1-3 s. dd1 being retail here rests on one line, single-source: s6792 retail tri median 237 vs port 240 for shot 79 (corr 0.915). That is a count match, not a retail picture, and it is at 4:3. Why retail draws no sea here is not known: the camera is high and banked, and terrain radius 0x8009DEAC depends on a camera field (+0x50), thresholds 0x80130C5C/C60, per-scene scalar 0x80136FBC from setupCutsceneLevel. That is a read of the code, nothing measured.
+ORIGIN: no mitigation added. The slab is our dd>1 terrain reaching a scene retail leaves empty. Which lever is not known.
+
+Horizons. New tools/g3_rdp_top_envelope.py: lowest y per 32 px column of the main textured surface, retail.bin vs port.bin, frames paired by envelope, no pixels needed. Shot 78, 9 samples: diff 0.0-1.0, control (port frame half a shot away) 99-223. An earlier scratch pass on 9 samples had one pair at 10.7 in a single bin, not seen in the tool's samples and not explained. Shot 76: 0.0 at 3 poses, 0.25, 0.5 at 2 more. Retail's sea top in shot 76 is flat, 226-229.75. Window pixels, shot 76: no sky under the sea top at dd1 or dd4 at 15 poses; dd1 edge 1 row and straight, dd4 about 5 rows higher and 4-5 rows soft. Port dump is the s6792 build at 4:3.
+
+New data, not chased.
+Beams: at dd4 extra flat-topped blue beams stand on the shot 78 horizon (+10, +14 s), absent at dd1. Their ships are not drawn. Cause unknown.
+Far band: same top edge, but the terrain split between the two combiners differs from retail. Shot 76 band (127fff:fffffe3f) median 274 tris to y 244 vs retail 142 to y 234.5. Per shot B/A ratio differs both ways: port higher in 69, 73, 76, 78, lower in 61, 62, 63; 59, 60, 68, 77 match. Retail frame rate does not explain it (61-63 are 30 fps, 68 is 9.3 fps and matches). The scalar behind the cutoff is per scene, not load driven. Old build, so soak s6915_z_band_dump dumps the current one at retail settings.
+
+Queued: s6915_a_slab_far (DD_FAR=1), s6915_b_slab_fog (DD_FOG=tog), s6915_z_band_dump. Owner sheet docs/owner_sheet_s6915_sea_slab.png. CURRENT-TRUTH trimmed to the cap, 4 lines to PROJECT-OVERVIEW. Deleted scratch/s6914 q1.raw, q4.raw; a1.raw and a4.raw kept for the next unit. Owner save hash unchanged (37b93f3c6536, 3927d691e2ad).
+NOT done: any slab fix, which lever, dd2 and dd3 of the slab, other levels' cutscenes, 21:9, the beams, the far band on the current build. dd4 sheet labels pair by shot time; the pose check covered 8 of those times.
+
+Result line for s6915: pose-matched dd1 vs dd4 selects H-edge-dd for the shot 79 slab and refutes s6914's pose; the retail RDP envelope selects H-edge-retail for ordinary sea horizons. Next discriminator: which dd lever puts the slab there.
