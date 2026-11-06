@@ -3509,7 +3509,9 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     static const bool on = [] { const char *e = std::getenv("ROGUESQ_LOG_SPIKE"); return e && *e && *e != '0'; }();
     // 2026-10-31 owner: cull is DEFAULT ON (ROGUESQ_CULL_SPIKE=0 restores retail wedges). It used to run only
     // under ROGUESQ_LOG_SPIKE=1, so the documented CULL_SPIKE=1 opt-in alone was a no-op.
+    // s6906 G5f: =tog culls in odd seconds of the mach clock only (24 MHz, as W_CLAMP=tog), the same-run control for the escape census.
     static const bool cull = [] { const char *e = std::getenv("ROGUESQ_CULL_SPIKE"); return !(e && *e == '0'); }();
+    static const bool cull_tog = [] { const char *e = std::getenv("ROGUESQ_CULL_SPIKE"); return e && *e == 't'; }();
     // s6894 G5b: ROGUESQ_G5B_BIGTRI=<file>, one line per swap: mach time (same clock as g5b_capture displayTime), the
     // largest triangle by hull area, its raw edge vertices and image width. Joins presented frames to the RDP stream.
     static FILE *s_big = [] { const char *e = std::getenv("ROGUESQ_G5B_BIGTRI"); return (e && *e) ? fopen(e, "w") : (FILE *)nullptr; }();
@@ -3599,7 +3601,7 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         // s6792: 4:3 hi-res images (321..640 wide: cinematics, AT THE MOVIES) are never culled. Their legit cloud/sky
         // tris overrun even a width-scaled bound (retail dump: 26869 tris past the 320 bound, 4424 past a 640x480 one),
         // and zeroing them left a black notch at the right edge. The wedges (s6083) were 320-wide flight frames.
-        if (bad && cull && (s_cw <= 320u || s_cw > 640u)) {
+        if (bad && cull && (s_cw <= 320u || s_cw > 640u) && (!cull_tog || ((mach_absolute_time() / 24000000ull) & 1))) {
             // s6084: zero the triangle height (yl=ym=yh=0) so the rasteriser emits no scanlines; length is unchanged.
             uint32_t n0 = w0 & ~0x3FFFu, n1 = 0; memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &n0, 4); memcpy(g_rdram_for_submit + ((a + 4) & kSubmitRamMask), &n1, 4);
             s_culled++;

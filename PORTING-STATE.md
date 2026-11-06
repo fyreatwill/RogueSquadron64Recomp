@@ -182186,3 +182186,31 @@ Not done from NEXT: tw/th survey of all 19 levels. Dropped because the slide los
 Holds: all eight arms 0 SIGSEGV/SIGBUS over ~190 s of capture. Soaks queued for the default: s6905_k30_h1d4, s6905_k30_h4d4 (300 s). docs/owner_sheet_s6905_window.png: left K=26 at that block's lowest quad swap, right K=30 next block, lvl1 rows 1-3, lvl5 rows 4-6. Frames are about 6 s apart with different poses and frame times are approximate, so it shows the look only, not the difference.
 
 Verdict: this selects H-border over H-visible on levels 1 and 5, refutes the slide with a same-run control, and lands K=30 at dd>1. Next: G5f spikes.
+
+## Session 6906 (2026-11-06) — G5f: the knife lines are RT64 W<=0 wedges the RDP cull can never see, H-class; W_CLAMP default on at every dd, same run dd1 lines of 200 px and over 29 -> 1, dd4 17 -> 3, the 3 viewed clean
+
+Soaks first: s6905_k30_h1d4 and s6905_k30_h4d4 rc=0, 434 s and 433 s. Those logs hold only the capture summary, so they say nothing about frozen images (s6902).
+
+Question from NEXT: H-thresh / H-class / H-real. H-class selected. The previous iteration left only a ROGUESQ_CULL_SPIKE=tog edit in dpc_bridge.cpp and no tools; this session wrote them and ran everything.
+
+Tools: tools/g5f_lines.cpp (transient straight line detector on presented frames, in-memory injection control), tools/g5f_thin.cpp (thin triangle census and cull bound recompute from ROGUESQ_G5B_TRIS), tools/g5f_join.py, tools/g5f_flip_diff.cpp. Capture 960x540, min line run 60-70 px, T=40. Picture at 16:9 is 796x448, not 240 high: the first thin census used 240 and was rerun at 448.
+
+Line 1, the cull does nothing in flight. a1, lvl1 dd4 16:9 FPS60, CULL_SPIKE=tog, 156.8 s capture: 0 triangles outside the cull bound in the capture window (68 in the whole stream, all before it). So on/off of the cull had no power, and it gave 9 lines, 5 of them viewed and all cloud or terrain edges. That arm is a null with only a synthetic control (injection 183/242); it says lvl1 quiet flight has no lines, nothing more.
+
+Line 2, W_CLAMP is the lever. Same-run ROGUESQ_W_CLAMP=tog on LEVEL=4 (Gerrard V), CULL_SPIKE on, 16:9 FPS60. This is the natural positive control the cull could not give: lines shooting in from the screen edge appear by eye in clamp-off frames. Events after frame 2000:
+| arm | run >= 100 off, on | >= 150 off, on | >= 200 off, on | injection |
+|---|---|---|---|---|
+| b4 dd4 | 36, 12 | 27, 4 | 17, 3 | 269/302 |
+| d1 dd1 (SHEET_PX=200) | 47, 6 | 38, 4 | 29, 1 | 312/342 |
+| f1 dd1 4:3 from boot (all frames, lines not events, on excludes first 10% of block) | 27, 18 | 8, 2 | 7, 0 | 264/288 |
+Frames are labelled by capture time, which lags the render. d1 lines >= 100: 3 of 6 on-block lines sit at block phase 0.007-0.042, and the two of those viewed show a line, so they are off frames mislabelled; past the first 10% of the block it is 76 off, 3 on. b4 on-block lines >= 100 do not bunch at the block start (22 of 24 lie in phase 0.2-0.9), and the 11 distinct frames viewed show no knife line: fog and terrain edges (the first 9 on events of 90+ px, plus the two of the three longest not among them). docs/owner_sheet_s6906_knife_clamp_on_off.png: top row clamp on, the three longest on-block detections; bottom row clamp off.
+
+ORIGIN: RT64 rebuilds vertices from RDP edges and extrapolates the W plane to them, so a vertex can have W <= 0 on rows the RDP never draws, and as GPU clip w that throws the triangle out to a screen-crossing wedge (s6895). The writer is our renderer path, not guest data. The RDP stream is sane: the triangle sits inside the cull bound, which is why CULL_SPIKE never touches these. Most lines joined no thin RDP triangle (b4 199 of 240, d1 not joined), which fits a polygon that is only long in RT64; that join is single-source.
+
+Why the owner still saw them: G5f was reported 2026-11-04, W_CLAMP landed 2026-11-05 at dd>1 only. So at dd>1 the owner has not yet flown the clamp; at dd1 it stayed off and d1 shows those lines are the thickest of all.
+
+Missing geometry check. Flip diff d1: off->on MAD p50 1.83, on->off 3.19, mid 2.58. f1: 1.36, 2.36, 1.31. Removing real picture would raise both directions; only on->off rises, and that is the direction lines come back. A half-black picture in one sampled clamp-on frame, 801 frames long, on-share 0.50: the game's own wipe to the MISSION FAILED results screen, not the clamp. Six random clamp-on d1 frames and six f1 frames over boot, N64 logo, title, SELECT GAME look right. The f1 black count is void: 4:3 side bars count as black in every frame.
+
+Landed: W_CLAMP default on and W_SHEET_PX default 200 at every dd (lib/rt64 rt64_gbi_rdp.cpp, =0 old, patches exported); ROGUESQ_CULL_SPIKE=tog kept. Default check e1, dd1 16:9 LEVEL=4, no W env, cross-run so confirmation only: lines >= 200 0, >= 150 3, six longest viewed, no knife line (docs/owner_sheet_s6906_dd1_default_after.png).
+
+Not settled. s6895's dd1 small transients 306 vs 157 remain unexplained; the detector here stops at 60 px, so lines under that are unmeasured. Clamped tris of 200 px span or less stay drawn. dd1 tested on LEVEL=4 only in the air; dd2 not run this session (same path as dd4). Only LEVEL=4 shows the lines; lvl1 quiet flight has none to remove. No retail comparison. That these are the lines the owner means is inference until the owner flies it.

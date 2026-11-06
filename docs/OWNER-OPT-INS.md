@@ -39,6 +39,8 @@ Draw distance above 1 (s6899): the water and ground that vanished in the Liberat
 
 Fixed (s6898): the black block on the right in a Liberation of Gerrard V cutscene (X-wing, then TIEs over a tower) at 16:9 is gone at draw distances 1 and 4. `ROGUESQ_G1D_LETTERBOX=0` brings it back. Known issue: at draw distance 4 that cutscene still loses the dark water and most of the ground (docs/owner_sheet_s6898_dd1_dd4_scene.png).
 
+Knife lines (s6906): long thin lines shooting in from the screen edge are removed by a change now on by default at every draw distance, including 1 (`ROGUESQ_W_CLAMP=0` restores them).
+
 Draw distance above 1 (s6895): single flat-sky frames at dd2 and dd4 are fixed by a change that is on by default there (`ROGUESQ_W_CLAMP=0` restores the old path). dd3 and dd4 still have a separate fault: large wrong terrain sheets in some places, which show as black stepped gaps in the scene after a failed mission. dd2 had none in any test.
 
 Wide + far terrain (s6882): `ROGUESQ_ASPECT=21:9 ROGUESQ_DRAW_DISTANCE=4` ran at 6-9 game fps before this fix and now runs 20-31 (lvl1, 135 s of flight, test logging on, no FPS60). FPS60 with wide + dd4 has not been measured since the fix.

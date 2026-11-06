@@ -214,7 +214,7 @@ index a0d4a6a..f6a56a9 100644
              // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
              //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..052d22b 100644
+index 6255872..3a8fc6b 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
 @@ -4,12 +4,114 @@
@@ -1052,7 +1052,7 @@ index 6255872..052d22b 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -520,13 +1275,67 @@ namespace RT64 {
+@@ -520,13 +1275,66 @@ namespace RT64 {
                      hlslpp::float2 v2_texcoord = baseTexcoord.xy + texcoordDe.xy * dy_2;
                      hlslpp::float2 v3_opposite_texcoord = baseTexcoord.xy + texcoordDe.xy * dy_3;
                      hlslpp::float2 v3_texcoord = v3_opposite_texcoord + texcoordDx.xy * dx_3;
@@ -1090,17 +1090,16 @@ index 6255872..052d22b 100644
 -                        texcoordWorkBuffer[workBufferIndex + 0] = (v1_texcoord / w1) * 1024.0f;
 -                        texcoordWorkBuffer[workBufferIndex + 1] = (v2_texcoord / w2) * 1024.0f;
 -                        texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord / w3) * 1024.0f;
-+                        // s6895 G5b ROGUESQ_W_CLAMP (default on at draw distance > 1, off at dd1 where the owner sees no drops and the same-run
-+                        // arm showed no gain; =0 old, =1 on, =tog on in odd seconds of mach_absolute_time at 24 MHz, the same-run A/B).
++                        // s6895 G5b ROGUESQ_W_CLAMP, default on at every draw distance since s6906 (G5f: these wedges are the owner's knife lines,
++                        // dd1 included); =0 old, =1 on, =tog on in odd seconds of mach_absolute_time at 24 MHz, the same-run A/B.
 +                        // W here is the RDP's plane extrapolated to the rebuilt vertices, and the RDP only evaluates it on rows it draws, so a
 +                        // vertex can have W <= 0. As GPU clip w that projects to infinity away from that vertex: a screen-wide flat wedge the RDP
 +                        // never paints (the flat-sky frames). Two populations of mixed-sign tris, split exactly at 200 px of screen span in a dd4
 +                        // capture: small ones (<= 162 px): clamp to a small positive W, which keeps the RDP footprint. Long terrain tris on the
-+                        // guard band (>= 150 px, median 633): at dd>1 only, the stream itself is wrong there, the RDP paints them as fans and bands
++                        // guard band (>= 150 px, median 633): the stream itself is wrong there, the RDP paints them as fans and bands
 +                        // (docs/owner_sheet_s6895_steps_vs_hardware.png) and clamping alone showed dark bands across the sky, so drop them.
 +                        // ROGUESQ_W_SHEET_PX=<span px> sets that limit, 0 keeps them.
-+                        static const bool s_ddWide = []{ const char *d = std::getenv("ROGUESQ_DRAW_DISTANCE"); return d && *d && std::atof(d) > 1.0; }();
-+                        static const int s_wClampMode = []{ const char *e = std::getenv("ROGUESQ_W_CLAMP"); return !(e && *e) ? (s_ddWide ? 1 : 0) : *e == '0' ? 0 : *e == 't' ? 2 : 1; }();
++                        static const int s_wClampMode = []{ const char *e = std::getenv("ROGUESQ_W_CLAMP"); return !(e && *e) ? 1 : *e == '0' ? 0 : *e == 't' ? 2 : 1; }();  // s6906 G5f: default on at every dd, knife lines are these wedges (=0 old)
 +                        const bool s_wClamp = s_wClampMode == 2 ? (((mach_absolute_time() / 24000000ull) & 1) != 0) : s_wClampMode != 0;
 +                        float cw1 = w1, cw2 = w2, cw3 = w3, tw1 = w1, tw2 = w2, tw3 = w3;
 +                        if (s_wClamp && (w1 <= 0.0f || w2 <= 0.0f || w3 <= 0.0f)) {
@@ -1109,7 +1108,7 @@ index 6255872..052d22b 100644
 +                            if (wMax > 0.0f) {
 +                                const float wFloor = wMax * (1.0f / 1024.0f);
 +                                cw1 = tw1 = std::max(w1, wFloor); cw2 = tw2 = std::max(w2, wFloor); cw3 = tw3 = std::max(w3, wFloor);
-+                                static const float s_sheetPx = []{ const char *e = std::getenv("ROGUESQ_W_SHEET_PX"); return e && *e ? float(std::atof(e)) : (s_ddWide ? 200.0f : 0.0f); }();
++                                static const float s_sheetPx = []{ const char *e = std::getenv("ROGUESQ_W_SHEET_PX"); return e && *e ? float(std::atof(e)) : 200.0f; }();
 +                                const float spanPx = std::max(std::max({x1, x2, x3}) - std::min({x1, x2, x3}), std::max({y1, y2, y3}) - std::min({y1, y2, y3}));
 +                                if (s_sheetPx > 0.0f && spanPx > s_sheetPx) {
 +                                    posWorkBuffer[workBufferIndex + 1].x = posWorkBuffer[workBufferIndex + 2].x = x1;
@@ -1126,7 +1125,7 @@ index 6255872..052d22b 100644
                      }
                      else {
                          posWorkBuffer[workBufferIndex + 0].w = 1.0f;
-@@ -537,7 +1346,155 @@ namespace RT64 {
+@@ -537,7 +1345,155 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
@@ -1282,7 +1281,7 @@ index 6255872..052d22b 100644
                  }
                  // No texture coefficients
                  else {
-@@ -547,6 +1504,22 @@ namespace RT64 {
+@@ -547,6 +1503,22 @@ namespace RT64 {
                      texcoordWorkBuffer[workBufferIndex + 0] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 1] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 2] = interop::float2(0.0f, 0.0f);
@@ -1305,7 +1304,7 @@ index 6255872..052d22b 100644
                  }
  
                  if (hasDepth) {
-@@ -580,11 +1553,170 @@ namespace RT64 {
+@@ -580,11 +1552,170 @@ namespace RT64 {
                      posWorkBuffer[workBufferIndex + 2].z = 0.0f;
                  }
  
