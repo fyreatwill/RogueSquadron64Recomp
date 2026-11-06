@@ -3521,6 +3521,9 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     // command, FNV of 2 KB at the texture image, then the raw triangle words. Splits visible from invisible sheets.
     static FILE *s_sh = [] { const char *e = std::getenv("ROGUESQ_G5B_SHEET"); return (e && *e) ? fopen(e, "w") : (FILE *)nullptr; }();
     static uint32_t s_st[64][2] = {};
+    // s6904 G5e: ROGUESQ_G5E_FOG=<file>. On every 120th swap, one line per shaded Z triangle: swap, blender word, fog colour,
+    // top vertex z (s15.16), shade alpha int (s16, unclamped) and dA/dy, dz/dy. Pairs z and fog at the same point.
+    static FILE *s_fg = [] { const char *e = std::getenv("ROGUESQ_G5E_FOG"); return (e && *e) ? fopen(e, "w") : (FILE *)nullptr; }();
     // s6894: ROGUESQ_G5B_KILLSHEET=1 zeroes near-plane terrain sheets (op 0F, terrain blender, hull > 100000 px); =tog does
     // so on odd seconds of the mach clock only, so presented events can be binned by parity within one run.
     static const int killsheet = [] { const char *e = std::getenv("ROGUESQ_G5B_KILLSHEET"); return !(e && *e) ? 0 : (*e == 't' ? 2 : 1); }();
@@ -3547,7 +3550,7 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     for (uint32_t a = lo & ~3u; a + 8 <= hi;) {
         const uint32_t w0 = rd(a), w1 = rd(a + 4);
         const uint32_t op = (w0 >> 24) & 0x3F;
-        if ((s_sh || killsheet) && op >= 0x20) { s_st[op][0] = w0; s_st[op][1] = w1; }
+        if ((s_sh || killsheet || s_fg) && op >= 0x20) { s_st[op][0] = w0; s_st[op][1] = w1; }
         if (op == 0x24 || op == 0x25) { a += 16; continue; }
         if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; a += 8; continue; }
         if (op == 0x3D) s_timg = w1;
@@ -3564,6 +3567,8 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
             for (int i = 0; i < 5; i++) for (int k = 0; k < 2; k++) r.c[i * 2 + k] = (int16_t)std::max(-32768.0, std::min(32767.0, v[i][k] * 4.0));
             fwrite(&r, sizeof r, 1, s_tf);
         }
+        if (s_fg && (op & 5) == 5 && (sw % 120) == 0 && a + len <= hi)
+            fprintf(s_fg, "%d %08X %08X %08X %d %d %08X %d\n", sw, s_st[0x2F][1], s_st[0x38][1], rd(a + len - 16), (int)(int16_t)rd(a + 36), (int)(int16_t)rd(a + 32 + 40 + 4), rd(a + len - 4), (int)((mach_absolute_time() / 96000000ull) & 1));
         if (s_sh) {
             double ar = 0; for (int i = 0; i < 5; i++) { const int j = (i + 1) % 5; ar += v[i][0] * v[j][1] - v[j][0] * v[i][1]; }
             if (fabs(ar) / 2 > 40000.0 && a + len <= hi) {

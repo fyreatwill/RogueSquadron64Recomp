@@ -182117,3 +182117,35 @@ Missions keep dd: [ddscene] h1 level=19 on=0 then level=0 on=1 (attract); arm v3
 NOT shown: the owner's report is this; retail logo frame count from angrylion (not run; 30/s rests on s6738-s6778 cadence); FULLSCREEN arm; the cinematic replay after attract (level expected 0x13, unverified); level 0x14 scenes. tw/th per mission level not surveyed: a small map would hit the same clamp cut in flight.
 Verdict: this selects H-dd and refutes H-frames, H-present, H-fps60 and H-spike. Root cause named and fixed, pending the owner's boot. Next discriminator: tw/th per level (NEXT.md), then G5e.
 
+
+## Session 6904 (2026-11-05) — G5e: extended terrain flipped from no fog to solid fog at the cutoff; fog ramp scaled with dd, default on at dd>1; seam alpha 255 -> 0 on levels 1 and 4, 300 s same-run rate +0.4 +/- 0.8 frames/s
+
+Iteration 12 ran this unit and hit the runner timeout (rc=124) at ~16:45 with nothing in the ledger. This iteration recovered its arms from the working tree, scratch/s6904 and its transcript, then finished it. Arms d1 to n5d2 below are that iteration's; q, r, u, v arms are this one's.
+
+Ground truth first, instead of the ROGUESQ_FORCE_FOG retest NEXT asked for: ROGUESQ_G5E_FOG=<file> (dpc_bridge.cpp) writes blender, fog colour, z and shade alpha per Z triangle on every 120th swap, so fog is read directly from the RDP stream. Terrain carries a depth ramp in shade alpha; PORTING-STATE "Fog contributes nothing" (line 1862) does not apply in flight. FORCE_FOG was not run.
+
+ORIGIN: not a game defect and not a mitigation. Our s6418 far-cutoff scale moves the switch from the 0055 blender to the C811 fog blender out by dd, while the level's fog distances (setupCameraMatrices 0x80017098.., inputs 0x8011A878/87C, ROGUESQ_G5E_FOGP=1 logs them) never followed dd. So at dd>1 terrain past retail's ramp drew unfogged, then flipped to solid fog colour at the cutoff. Measured as alpha just past the seam, off arms: lvl1 dd2 255, dd3 255, dd4 255; lvl4 dd2 255, dd4 255; lvl5 dd2 0, dd4 255.
+
+Fix (tools/apply_s6904_fog.py in RS64_REPLAY, rs64_s6904_fog and rs64_s6904_clipmul in upstream_compat.cpp), default on at dd>1, level-gated by s6903: ramp start x max(1, 0.375 dd), end x 0.8 dd, and the s6418 cutoff pulled in to the ramp start, at most to a total of (dd/2)^2. ROGUESQ_DD_FOG=<ks>,<ke> sets the ramp, =0 old, =tog 4 s blocks. H-fog selected: the game's own fog reaches the far cells, no ring fade needed. H-ring not built.
+
+Same-run =tog, shipped default (seam.py; a@seam = alpha just past the seam, mid = C811 median):
+| arm | seam off -> on | mid off -> on | terrain tris/swap off, on |
+|---|---|---|---|
+| lvl1 dd2 q1d2 | 255 -> 0 | 255 -> 150 | 1996, 2183 |
+| lvl4 dd2 q4d2 | 255 -> 0 | 255 -> 141 | 2444, 2207 |
+| lvl5 dd2 u5d2 300 s | 0 -> 0 | 255 -> 108 | 3257, 3059 |
+| lvl1 dd3 v1d3 | 255 -> 0 | 255 -> 160 | 3235, 3727 |
+| lvl1 dd4 l1d4 | 255 -> 0 | 255 -> 103 | 4625, 3746 |
+| lvl4 dd4 l4d4 | 255 -> 0 | 255 -> 102 | 4796, 4510 |
+| lvl5 dd4 l5d4 | 255 -> 0 | 255 -> 52 | 4636, 5055 |
+The off column is the same-run control: the instrument reads 255 there and the ramp value in on blocks. Sampled swaps per parity are 12-24 except u5d2 (60), so tris/swap are rough. dd1 on the final binary (v1d1, FOGP): 3390 fog updates, on=1 never, mul 1.000 throughout, 60.06 frames/s.
+
+Cost. l/m/q arms looked like a lvl5 dd2 penalty: 55 -> 38, 51 -> 43, 57 -> 38 frames/s, and ramp alone (n5d2, FARCLIP_MUL=1) 47.4 vs 47.9. I read that as the pull, assumed lvl5's fog starts past its seam, and wrote a per-level rule to skip the pull there. FOGP refuted the assumption: s ~34 on levels 1, 4 and 5, so the rule gives 0.43 at dd2 and 0.25 at dd3 and dd4 on all three, and q5d2 still read 57 vs 38. Then r5d2 read the opposite sign, on 197 vs off 167 frames per block, sustained after sampling ended. u5d2, 300 s, 77 paired blocks: on minus off +0.4 frames/s, SE 0.8, 51 of 77 positive. Sequence: off faster by ~60 per block for the first 56 s, level for ~110 s, on faster by ~35 late. So the sign follows the phase of flight and short arms saw one phase: no mean cost at lvl5 dd2, and the -16% is withdrawn. Levels 1 and 4 at dd2 and dd4 and lvl5 dd4: block means within about 2 frames/s, 3-6 blocks a side, so a small cost there is not excluded. The rule stays because it pulls less at dd2 (0.43 vs 0.25) with the seam still 0.
+
+Open: sample in on vs off blocks of r5d2 (3 rounds each, one run, single-source) put clampGridCellLookup at 92 vs 16 samples per round and factor5_ucode 304 vs 251. No rate cost follows from it; it may be what the phase effect is. 26 in the rule comes from seam depth on lvl1 and lvl4 only. Levels other than 1, 4, 5 not run. lvl10 not attempted (s6903: unreached under arm.zsh).
+
+Small-map check (NEXT): H-small selected on 3 levels surveyed, others unknown. lvl1 and lvl5 are 64x64, tw*th 4096 <= cap 8192; lvl4 94x94 is not. lvl1 dd4 last window pre x[-100,47) z[-75,94), post x[-22,42) z[10,74); lvl5 dd4 pre z[-40,153), post z[-5,59). Both keep off-map cells while dropping on-map ones, in flight. Not fixed, next unit.
+
+Replay: apply script on de-patched funcs_4.c and funcs_9.c gives files identical to the live tree, second run reports already applied. No full regen.
+
+Holds: u5d2 318 s at lvl5 dd2 =tog, 0 SIGSEGV/SIGBUS. All other arms 0. Soaks queued for the default: s6904_fog_h1d4, s6904_fog_h4d2 (300 s). docs/owner_sheet_s6904_fog.png, left off, right on, adjacent blocks, rows lvl1 dd2, lvl1 dd4, lvl4 dd2, lvl4 dd4, lvl5 dd2, lvl5 dd4. Poses differ between columns, most in rows 1 and 5, so it is for judging the look only. Whether the fade looks right is the owner's call.

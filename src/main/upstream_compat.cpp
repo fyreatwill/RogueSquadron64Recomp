@@ -63,6 +63,49 @@ extern "C" int rs64_s6880_wide(void) { static int on = -1; if (on < 0) { const c
 // s6882: narrow the span fill x loops where the s6049/s6880 bound runs (tools/apply_s6882_spannarrow.py). ROGUESQ_G1D_SPANNARROW=0 = old.
 // s6903 G5d: dd levers apply to levels 0..18 only; 0x13/0x14 are sentinels (boot cinematic is 0x13). ROGUESQ_DD_CINE_GATE=0 old, =tog gate on in odd 4 s blocks.
 extern "C" volatile int g_rs64_dd_scene = 1;
+// s6904 G5e: fog words hook at 0x8001726C, f4 = fm, f0 = fo. See tools/apply_s6904_fog.py. The level's fog distances do not follow dd, but the
+// switch to the fog blender does, so past retail's ramp extended terrain drew unfogged, then flipped to solid fog colour. Default at dd>1: ramp
+// start x max(1, 0.375 dd), end x 0.8 dd, and the s6418 cutoff pulled in to the ramp start, at most to (dd/2)^2, so the ramp runs on fogged cells. ROGUESQ_DD_FOG=<ks>,<ke> sets the ramp,
+// =0 old, =tog 4 s blocks of the default. ROGUESQ_DD_FARCLIP_MUL still overrides the cutoff. dd1 and sentinel scenes untouched.
+static double s6904_ks = 0, s6904_ke = 0, s6904_dd = 1.0, s6904_s = 0; static int s6904_tog = 0, s6904_lg = -1;
+static void s6904_init() {
+    const char *e = std::getenv("ROGUESQ_G5E_FOGP"), *f = std::getenv("ROGUESQ_DD_FOG"), *d = std::getenv("ROGUESQ_DRAW_DISTANCE");
+    const double dd = d && *d ? atof(d) : 1.0;
+    s6904_dd = dd;
+    if (dd > 1.0) { s6904_ks = 0.375 * dd < 1.0 ? 1.0 : 0.375 * dd; s6904_ke = 0.8 * dd; } // never hazier than retail
+    if (f && *f == 't') s6904_tog = 1;
+    else if (f && *f) { double a = 0, b = 0; if (sscanf(f, "%lf,%lf", &a, &b) == 2 && a > 0 && b > 0) { s6904_ks = a; s6904_ke = b; } else s6904_ks = s6904_ke = 0; }
+    s6904_lg = e && *e && *e != '0';
+}
+static int s6904_on() { if (s6904_lg < 0) s6904_init(); return s6904_ks > 0 && (!s6904_tog || ((mach_absolute_time() / 96000000ull) & 1)); }
+// The cutoff only needs to sit inside the ramp start. Seam distance (fog units) ~ 24 x cutoff factor on lvl1/lvl4; 26 leaves a margin. Clamped between
+// a total of (dd/2)^2 and no pull. Levels 1/4/5 all have s ~34, so this is 0.43 at dd2, 0.25 at dd3 and dd4 there.
+extern "C" float rs64_s6904_clipmul(float v) {
+    if (v > 0.0f) return v;
+    if (!s6904_on()) return 1.0f;
+    const double r = s6904_s * s6904_ks / (26.0 * s6904_dd), m = r * r;
+    return s6904_s <= 0 ? 0.25f : (float)(m < 0.25 ? 0.25 : m > 1.0 ? 1.0 : m);
+}
+extern "C" void rs64_s6904_fog(uint8_t *rdram, recomp_context *ctx) {
+    const int want = s6904_on(); const double ks = s6904_ks, ke = s6904_ke; const int lg = s6904_lg;
+    auto rf = [&](uint32_t a) { uint32_t v = (uint32_t)MEM_W(0, (int64_t)(int32_t)a); float f; memcpy(&f, &v, 4); return f; };
+    const float s = rf(0x8011A878u), e = rf(0x8011A87Cu), D = rf(0x8011A8CCu), A = rf(0x8011A7D4u), B = rf(0x801163C0u);
+    s6904_s = s <= D ? D : s;
+    extern volatile int g_rs64_dd_scene;
+    const int on = want && g_rs64_dd_scene;
+    if (on) {
+        auto zf = [&](double dist) { const double z = (double)A + (double)B / dist; return z < -1.0 ? 0.0 : (z + 1.0) / 2.0; };
+        double f6 = zf((double)(s <= D ? D : s) * 256.0 * ks), f4 = zf((double)(e <= D ? D : e) * 256.0 * ke);
+        if (f4 <= f6) f6 = f4 - 0.0001;
+        ctx->f4.fl = (float)(0.5 / (f4 - f6) * 65536.0); ctx->f0.fl = (float)((0.5 - f6) / (f4 - f6) * 65536.0);
+    }
+    if (lg) {
+        static unsigned n = 0; static float last[5];
+        const float c[5] = { s, e, D, A, B };
+        if (memcmp(c, last, sizeof c) && n < 4000) { memcpy(last, c, sizeof c); n++; fprintf(stderr, "[fogp] n=%u s=%g e=%g D=%g A=%.9g B=%.9g on=%d fm=%.1f fo=%.1f mul=%.3f\n", n, s, e, D, A, B, on, ctx->f4.fl, ctx->f0.fl, rs64_s6904_clipmul(0.0f)); }
+    }
+}
+
 extern "C" int rs64_dd_scene_update(int level) {
     static int mode = -1, last = -1, last_level = -1000;
     if (mode < 0) { const char* e = getenv("ROGUESQ_DD_CINE_GATE"); mode = !(e && *e) ? 1 : (e[0] == 't' ? 2 : (e[0] != '0')); }

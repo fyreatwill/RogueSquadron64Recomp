@@ -31,6 +31,8 @@ Draw distance above 1 (s6896): large terrain sheets at dd4 are fixed by a change
 
 Draw distance above 1 (s6901): distant terrain no longer halves depending on which way you face, and no longer cuts out for a moment as you turn through a diagonal. On by default above dd1 (`ROGUESQ_DD_FWDWIN=0` restores the old path). This is the best candidate yet for the terrain drops you see, but only your flight can confirm that. It draws more terrain, so tell me if dd4 feels slower. Measured on Liberation of Gerrard V only.
 
+Draw distance above 1 (s6904): extended terrain now fades into the haze instead of drawing clear and then turning solid fog colour at a line. On by default above dd1, off at dd1. `ROGUESQ_DD_FOG=0` restores the old look. `ROGUESQ_DD_FOG=<start>,<end>` sets how far the fade starts and ends, as multiples of the level's own fog distances (defaults at dd4: 1.5,3.2). No frame rate cost measured at level 5 dd2 over 300 s.
+
 Draw distance above 1 (s6899): the water and ground that vanished in the Liberation of Gerrard V cutscene at dd4 are back, by a change that is on by default (`ROGUESQ_DD_EYEWIN=0` restores the old path). It did not measurably change flight, so it is not yet known to help the in-flight terrain drops. Measured at 16:9 only.
 
 Fixed (s6898): the black block on the right in a Liberation of Gerrard V cutscene (X-wing, then TIEs over a tower) at 16:9 is gone at draw distances 1 and 4. `ROGUESQ_G1D_LETTERBOX=0` brings it back. Known issue: at draw distance 4 that cutscene still loses the dark water and most of the ground (docs/owner_sheet_s6898_dd1_dd4_scene.png).

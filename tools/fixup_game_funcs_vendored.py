@@ -42091,6 +42091,7 @@ RS64_REPLAY = [
     "apply_s6901_fwdwin.py",  # s6901: G5b dd>1 window placed by heading, not anchored low
     "apply_s6902_fwdtog.py",  # s6902: FWDWIN=tog half period + flip line, instrument only
     "apply_s6903_cinegate.py",  # s6903: G5d dd levers follow the level, sentinel levels run the retail terrain path
+    "apply_s6904_fog.py",  # s6904: G5e fog words hook
 ]
 
 
