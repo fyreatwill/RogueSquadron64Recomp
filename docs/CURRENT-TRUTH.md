@@ -1,11 +1,12 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6906 (2026-11-06).
+Compact operational handoff, as of Session 6907 (2026-11-06).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6900 maintenance)").
 
 ## Headline
 
+- **DONE s6907, awaiting owner look: G5g hangar stretch.** Not a lagging yaw: the view turns ~90 deg in 0.6 s, then the next craft sits at the lens edge ~2 s, 7-10 units from the eye. ORIGIN: retail's authored path; owner-requested change. tools/apply_s6907_aim.py turns only the view direction (stack, 0x800AD284) to the destination craft, 0x800CC404[cursor 0x800CD6E8], in 1.6 s and back onto raw in the last 0.9 s; eye path and settled frames are retail. ROGUESQ_G5G_AIM default on, =0 retail, =tog; _TURN, _REL; G5G_LENS=<fovy> opt-in, unjudged. Same run, final binary, craft off axis at ~1.2 s 0-1 vs 43-67 deg at 4:3, 16:9, 21:9; edge zone 21:9 0.22-0.25 vs 0.67-0.83 s, 4:3 0.07-0.08 vs 0.22-0.28 s; settled angle identical. Mid-scroll presses retarget: first build snapped 69 deg, fixed, max step 2.8 deg. docs/owner_sheet_s6907_hangar_aim.png. Open: H-lens (bay edges still stretch at 21:9), craft box aspect not measured (stretch computed from angle), roll unmeasured. Report only: edge stretch 21:9 flight 2.02, cutscene 1.75, hangar 1.85, 4:3 hangar 1.27, single-source, docs/owner_sheet_s6907_lens_elsewhere.png.
 - **FIXED s6906, awaiting owner flight: G5f knife lines.** H-class: they are RT64 W<=0 wedges, inside the RDP cull bound, so CULL_SPIKE never saw them (0 out-of-bound tris in 157 s of lvl1 dd4 flight). Same-run W_CLAMP=tog LEVEL=4, events of 200 px and over, off vs on: dd4 17 vs 3, dd1 29 vs 1, the on ones viewed clean or flip-lag labels; 4:3 from boot 7 vs 0. Owner reported on 11-04, the clamp landed 11-05 and only at dd>1. ROGUESQ_W_CLAMP and W_SHEET_PX=200 now default at every dd (=0 old). No missing picture at flips; lines under 60 px unmeasured, s6895 dd1 transients still unexplained. docs/owner_sheet_s6906_knife_clamp_on_off.png, tools/g5f_lines.cpp.
 - **s6905 G5b small maps: moving the dd>1 window onto the map REFUTED, forward offset K 26 -> 30 landed.** Same-run slide: lvl1 dd4 quads -244 +/- 37, p10 3103 -> 2032, dips 3 -> 249; lvl5 -205 +/- 24, 2 -> 239. Off-map cells stay (H-border). K=30 default at dd>1 (ROGUESQ_DD_FWDWIN_K=26 old): n p10 lvl1 3101 -> 3427, lvl5 3108 -> 3415, lvl4 3086 -> 3204, 21:9 3278 -> 3517, dd2 flat with dips 18 -> 0; reversal control 3403 vs 3171; paired rate differences -0.07 to -1.16 swaps/s, each within 1.5 SE, all the same sign, so a small cost is not excluded. Not run at dd3. Owner confirmation pending.
 - **DONE s6904, awaiting owner look: G5e fog on extended terrain.** ORIGIN: our s6418 cutoff moved the switch to the fog blender out by dd but the level fog distances never followed, so dd>1 terrain went from no fog to solid fog at the cutoff. Ramp now scales with dd and the cutoff is pulled in to its start: seam alpha 255 -> 0 on lvl1 dd2/dd3/dd4 and lvl4 dd2/dd4, lvl5 dd4 too. Default on at dd>1, dd1 never active (3390 updates). tools/apply_s6904_fog.py, ROGUESQ_DD_FOG=0 old, =tog, =<ks>,<ke>. lvl5 dd2 300 s same run +0.4 +/- 0.8 frames/s. docs/owner_sheet_s6904_fog.png. Levels other than 1, 4, 5 not run; 300 s soaks at lvl1 dd4 and lvl4 dd2 queued.
@@ -40,6 +41,7 @@ Detail for everything in this section: PROJECT-OVERVIEW "Migrated from CURRENT-T
 - **Present thread, PAUSED until G5 closes (s6884-s6891).** All default off: ROGUESQ_RDP_SCREEN_JOB=1 (needs ASYNC+NODRAIN; removes game-rate dips, displayed rate unjudged), PRESENT_INFLIGHT=2 (=1 halves the rate, never use), PRESENT_DRAIN=<ms> (keep out of OWNER-OPT-INS). Ungated latency is a backlog that slips raise and 17 ms stalls lower, at ~72 ms on the s6889 ring; 39 ms on the built-in; 12 ms on 144 Hz at 4:3, where 60 fps lands unevenly (2 and 3 vsync mix plus compensating 1v/4v pairs). What enters the 72 ms state is open. 21:9 flight on 144 Hz has no data.
 
 ## Superseded conclusions — do not act on these
+- s6791 G3f "camera slides 13 units in ~0.5 s while yaw lags ~3 s" and ITERATION G5g's wording of it (superseded s6907): those floats are the view translation, not position. World eye moves smoothly over ~3.8 s and yaw leads. Believable because the column sits where a position would, and retail shows the same curve. tools/g3f_pan_cmp.py reads the same column.
 - s6895 "dd1 stays off: no benefit shown, owner calls dd1 clean" (superseded s6906): dd1 has the thickest knife lines, 29 vs 1 same run. Believable because the s6895 arm counted small transients on a quiet scene and the owner's "clean" was about terrain drops. Also G3c "CULL_SPIKE on" read as covering these: the cull only sees the RDP stream.
 - s6904 NEXT "the 64-wide window keeps off-map cells and drops on-map ones" read as a fault to fix (superseded s6905): true of the bounds, but the dropped cells are thin side strips and the kept ones lie along the view; sliding cost 6% of quads and 80x the dips. Believable because the logged x and z ranges look plainly wasteful.
 - s6904 mid-session "the cutoff pull costs lvl5 dd2 16%" (superseded same session): 300 s same run reads +0.4 +/- 0.8 frames/s and the sign follows the phase of flight. Believable because three =tog arms agreed, each 30-40 s in the same early phase. Same-run toggles still need a whole flight on this level: use >=300 s for any rate claim.
@@ -107,14 +109,15 @@ Playable levels are 0..18 (`NUM_LEVELS=0x13`); 19/20 are sentinels. Route/hold c
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order 2026-11-04: G5a-G5f ahead of everything below.
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order 2026-11-04: G5a-G5h ahead of everything below.
 
 1. **G5a mission crash: fixed s6893, waiting on owner re-flight.** Closes only when Gerrard V (LEVEL=4) holds past half way, repeated. Open: is block 8074A380 live when copyNativeToRAM writes it.
 2. **G5b terrain drops: waiting on owner flight.** s6901 fixed a heading-driven far-terrain loss that follows the owner's dd order; that it is the owner's drop is inference. Cost measured s6902. Open: LEVEL=10 unreached. Closes on the owner's flight.
 3. **G5c freezes: fixed s6902, soak clean (s6903).** Closes on the owner's flight.
 4. **G5d Factor 5 logo: fixed s6903, waiting on owner boot at dd2/dd4.** Small map clamp cut confirmed in flight on lvl1 and lvl5 (s6904), see item 5.
 5. **G5e fog: done s6904, waiting on owner look.** Soaks s6904_fog_h1d4, h4d2 clean. Window on 64x64 maps closed s6905, H-border; K=30 soaks s6905_k30_h1d4, h4d4 queued. clampGridCellLookup 92 vs 16 samples on vs off still unchecked, single-source.
-6. **G5f knife lines: fixed s6906, closes on the owner's flight.** Next unit G5g (fish-eye), then G5h. Open: dd1 transients 306 vs 157 (s6895) unexplained, lines under 60 px unmeasured.
+6. **G5f knife lines: fixed s6906, closes on the owner's flight.** Open: dd1 transients 306 vs 157 (s6895) unexplained, lines under 60 px unmeasured.
+6b. **G5g hangar stretch: done s6907, closes on the owner's look.** Owner decides on flight and cutscene lens (report sheet). Next unit G5h, cutscene background.
 7. **G1e present, PAUSED until G5 closes.** 21:9 flight on 144 Hz, or what enters the 72 ms state; recipe at the bottom of NEXT.md. SCREEN_JOB and PRESENT_INFLIGHT defaults stay off until the owner chooses.
 8. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path, horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
 9. **Owner judgement / parked.** FPS60 feel; G3c sheets; owner sheets listed in NEXT.md; native hangar geometry and rare dd4/dd8 gfx SIGBUS parked (single-source). Reopen on an owner report or a side-effect failure, not repeat holds.
@@ -128,4 +131,4 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order 2026-11-04: 
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts: [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest s6893_census_4, folded s6895. s6901_fwdwin_scene folded s6902. s6902_g5c_fixed_visible folded s6903.
-- Recent chronology: PORTING-STATE sessions 6847-6903; search bounded windows only.
+- Recent chronology: PORTING-STATE sessions 6847-6907; search bounded windows only.

@@ -182214,3 +182214,30 @@ Missing geometry check. Flip diff d1: off->on MAD p50 1.83, on->off 3.19, mid 2.
 Landed: W_CLAMP default on and W_SHEET_PX default 200 at every dd (lib/rt64 rt64_gbi_rdp.cpp, =0 old, patches exported); ROGUESQ_CULL_SPIKE=tog kept. Default check e1, dd1 16:9 LEVEL=4, no W env, cross-run so confirmation only: lines >= 200 0, >= 150 3, six longest viewed, no knife line (docs/owner_sheet_s6906_dd1_default_after.png).
 
 Not settled. s6895's dd1 small transients 306 vs 157 remain unexplained; the detector here stops at 60 px, so lines under that are unmeasured. Clamped tris of 200 px span or less stay drawn. dd1 tested on LEVEL=4 only in the air; dd2 not run this session (same path as dd4). Only LEVEL=4 shows the lines; lvl1 quiet flight has none to remove. No retail comparison. That these are the lines the owner means is inference until the owner flies it.
+
+## Session 6907 (2026-11-06) — G5g: the hangar stretch is the next craft held at the lens edge for ~2 s, not a lagging yaw; view now aims at the destination craft, default on, same-run craft 1 deg off axis at 1.2 s vs 43-67 deg
+
+HYPOTHESIS-ID: g5g-fisheye. No new soak verdicts. CURRENT-TRUTH 31.7 KB, no maintenance.
+
+G3f's description is wrong, and that matters. "Camera slides 13 units sideways in 0.5 s while yaw lags ~3 s" read floats 9-11 of the ROGUESQ_G3F_CAM row as position. cam+0x2C is the inverse written by mat3x3InverseInto (retail store PCs 0x8001C7FC-980, from the s6791 trace), so that column is the view translation. World eye = -R^T t is smooth, ~3.8 s, and matches guest eye 0x800CD810 (-23.65,28.43,-3.01 settled). Yaw LEADS: the view turns ~90 deg in the first 0.6 s. tools/g3f_pan_cmp.py has the same misreading; its timing numbers are not position.
+
+Camera facts, from funcs_28.c and a live word diff of 0x800CC000-0x800CE000 and 0x80130000-0x80132000 across a press: eye 0x800CD810, look point 0x800CD800, raw direction built at sp+0x28 by 0x800AD284 in updateHangarBayScene, then turned into angles. State byte 0x800CC3E4: 3 idle, 2 scroll, 3.83 s at FPS60, 3.93 s at 30 Hz. Cursor byte 0x800CD6E8 changes at the press and again on any press mid scroll (the game retargets). Destination = byte 0x800CC404[cursor], craft position list 0x800CDA5C + i*0x278 + 0xC. 0x800CD6E4 (bay index) only commits at pan end. Two dead hooks on the way, both caught by the log not appearing or by reading it: site 0x800ACA9C never runs for a scroll (the scroll uses 0x800AC67C, onto authored splines), and 0x800CD6E4 cannot name the destination at the press.
+
+Measure (retail path): the next craft comes on screen ~1.6 s into the scroll at 40 deg off axis and 10 units away, then needs ~2 s to reach centre while the eye closes to 6.7 units. That fits the owner's "goes 1-2 s after it settles". Eye to craft settled is only 5.3-6.7 units.
+
+Fix, tools/apply_s6907_aim.py (RS64_REPLAY after apply_s6904_fog): at 0x800AD284 turn the raw direction on the stack from its value at the press to eye->destination craft over ROGUESQ_G5G_TURN=1.6 s, then back onto raw over the last ROGUESQ_G5G_REL=0.9 s. Writes only that stack direction, so no game camera state changes and the authored eye path is retail. Default on, =0 retail, =tog flips every 2 scrolls. ORIGIN: retail's authored path, not a defect of ours; this is an owner-requested change from retail. G5G_LENS=<fovy> is an opt-in that eases fovy mid scroll (34 reached in the 21:9 arm, frames not judged).
+
+Same run, final binary, =tog, FPS60, 2 scrolls per arm, destination X-wing then V-wing:
+| aspect | off axis at ~1.2 s, on / off | edge zone s (stretch >= 1.15), on / off | peak turn deg/s, on / off | final off axis on = off |
+|---|---|---|---|---|
+| 4:3 | 0-1 / 43-67 | 0.07, 0.08 / 0.28, 0.22 | 138, 125 / 179, 100 | 4.0, 2.3 |
+| 16:9 | 0-1 / 43-67 | 0.13, 0.15 / 0.51, 0.42 | 131, 123 / 175, 107 | 4.0, 2.3 |
+| 21:9 | 0-1 / 43-67 | 0.22, 0.25 / 0.83, 0.67 | 130, 124 / 188, 105 | 4.0, 2.3 |
+Off scroll 4 in each arm logged only 3.37 s, the off scroll 3 is the whole-pan comparison. Off-arm curve matches the raw measure, so the toggle control holds. 30 Hz (FPS60=0): same shape, edge 0.06 vs 0.30, 0.23. Second line, presented frames: docs/owner_sheet_s6907_hangar_aim.png, rows aligned on detected motion, because the capture clock to log clock offset differs per run; craft centred from about +1.2 s with the fix, retail holds it stretched off the right edge past +2 s.
+
+Bug found by the stress arm and fixed: presses at +0.8 and +1.6 s retarget mid scroll, and the first build snapped 69 deg in one frame (4145 deg/s). Now restarts the turn from the current view, and fades 0.4 s onto raw if the pan ends first. Same recipe after: peak 127 deg/s, max frame step 2.8 deg, 0 crash. Final binary t21 arm launched from craft select and flew to t=125 s, 0 crash. tools/regen_replay.sh not run for the new script: applied to the live tree only. Owner save sha 37b93f3c6536 before and after every arm.
+
+Elsewhere, report only, nothing changed: docs/owner_sheet_s6907_lens_elsewhere.png. Edge stretch 1/cos(half hfov): hangar and SELECT LEVEL 4:3 1.27, 16:9 1.44, 21:9 1.85; 21:9 flight (cam 80138D20, fovy 65, aspect 2.76) 2.02; 21:9 cutscene (80165EC8, fovy 65, aspect 2.26) 1.75. So at 21:9 flight stretches more at the edges than the hangar. Single source for flight and cutscene: one run, numbers from the logged projection.
+
+Discrimination: selects H-aim for the craft stretch, refutes the G3f lagging-yaw story. H-lens is NOT settled: the bay itself still stretches at the frame edges at 21:9, and no craft box aspect was measured, the stretch figure is computed from the off-axis angle. Roll during the turn not measured or changed; word 0x800CD6EC ramps negative from the press, role unknown. Two ships only in this route (cursor 0, 2, plus 3 under retarget). Closes on the owner's look.
+
