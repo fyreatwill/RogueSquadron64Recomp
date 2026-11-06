@@ -182409,3 +182409,20 @@ New datum, unmeasured: in the water shot at dd4 the sea ends in a straight edge 
 Raw captures deleted. NOT done: dd1 of the water shot, rate check of s6911.
 
 Result line for s6913: the same-run toggle edge measure selects H-city-none over H-city-floor and closes the city item, with the water scene as the positive control. The census refutes a second playlist level for s6911. Next discriminator: dd1 vs dd2 vs dd4 on the sea edge shot, H-edge-retail vs H-edge-dd.
+
+## Session 6914 (2026-11-06) — G5h: sea edge discriminator NOT reached, 3 of 3 captures empty and the shot is later than NEXT said; g5b_capture polls and retries, dd1 and dd4 soaks queued at the right pose
+
+HYPOTHESIS-ID: g5h-cutscene-bg. No maintenance (35688 bytes). No new soak verdicts. 3 playlist runs to 905 s (d1 dd1, d4 dd4, e1 dd1), 0 CRASH lines in all 3, owner save hash unchanged (37b93f3c6536, 3927d691e2ad). Harness scratch/s6914.
+
+Result: H-edge-retail vs H-edge-dd is NOT selected. The planned measure did not run: no dd4 frame and no dd1 frame at the s6913 pose exist from this session.
+
+Capture. g5b_capture wrote 0 frames in d1, d4 and e1, plus a second instance beside d4 (d4b). d1 and d4: "start failed, the stream is nil". d4b and e1, with a retry build: "not on screen", 88 and 95 failed tries over 25 s, and the census of all windows printed no line for the game. Yet in e1 a separate probe polling every 2 s saw 7 game windows, id 19790 on screen, at the same moments. So the game window was there and the process that had idled ~880 s did not see it. Why is unexplained. Lock state not the cause (session not reported locked, built-in display active and awake). Not tested: whether polling or a fresh process cures it. tools/g5b_capture.swift now retries the start, restarts after a mid-capture stop into the same file (the s6913 -3815 stop), prints a census, and polls through the delay. None of this has yet produced a frame in a run.
+
+Stills. scratch/s6914/probe.swift takes `screencapture -l` of the on-screen game window: 238 stills in 22 s at 2720x1592, in a run where the stream capture got 0. First attempt shot the wrong window (first listed, 500 wide, off screen), fixed to the on-screen one, restarted mid run.
+
+Pose. dd1 stills at run time ~889-901 (scratch/s6914/e1_sheet.png, e1_sheet2.png): the water scene is near sea level with a flat sea horizon, islands left and right. Those are not the s6913 frames, which look down on the sea with rocks below. cam rows are identical in both runs here (eye row 1.4012 0.172) and the camera only tips down from run time ~900, reaching 0.36/0.93 (~21 deg) by 912, the city cut at ~914. g5b_capture's delay counts from window found, not launch, so s6913 raw t=0 was about 20 s after CAP0, which also places city t=8.9 at ~914. So the s6913 water frames sit at ~906-913. That is inferred from cam rows and the cut, one line of evidence. All 3 runs ended at 905, so dd1 at that pose was missed. The flat horizon at dd1 says nothing about the edge: the camera had not tipped yet.
+Scene timing: dd4 trails dd1 by ~1 s in cam rows across 875-899, so pair by pose, not clock. far at this scene 9728 dd1, 38912 dd4.
+
+Queued: scratch/agent/soak_queue/s6914_seaedge_d1.sh, _d4.sh, 932 s each, cap 1000 s, stills 898-928 s and a capture process started fresh at 898 s, so the stills stand even if the capture does not.
+
+NOT done: the dd1 vs dd4 comparison, dd2, the lever arm, any G5h fix. Time went on 2 runs with no frames before the cause showed, then the third ended 5 s short of the pose.
