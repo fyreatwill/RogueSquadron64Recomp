@@ -182510,3 +182510,5 @@ ORIGIN: not named. No fix landed, the logger is diagnostic, off unless set.
 NOT done: split-node probe, shots 59-66 and 77-78 at matched pose (the row pairing needs shot starts, not durations), any look at pixels. tools/g5h_band_pose.py needs scratch/s6918 logs unzstd'd first. retail.bin (8.5 GB) deleted; rrep.pkl keeps its per-frame counts for the last 37 shots.
 
 Result line for s6918: pairing, cutoff inputs and camera are all retail at matched pose, but shots 69, 73, 76 still split near/far differently and repeatably, which puts the cause in the cell list, not named yet.
+
+Summary of s6918: the same-pose table refutes H-slip, H-select and H-input for the camera, and the next probe at 0x800434F4 is set up to discriminate H-order, H-dist and H-emit.
