@@ -251,6 +251,16 @@ When choosing the work unit, this order overrides Next-steps ordering:
      the owner wants them gone anyway, so retail matching is not the bar here. CULL_SPIKE is
      already on and they still show at the owner recipe, so find which wedges escape it.
      Close on spike count at this recipe with no new missing geometry, plus an owner sheet.
+     G5g **Owner request 2026-11-05: get rid of the fish-eye lens effect, after G5f.** Owner
+     thinks it was tuned for the TVs of the time. Retail matching is not the bar, and "G3f closed
+     as retail" does not close this. G3f found the hangar look comes from the craft-select camera:
+     sideways slide, yaw lagging ~3 s, fixed 45 degree projection; it shows while scrolling ships
+     and settles after a second or two. ROGUESQ_HANGAR_FOV=38 only narrows the lens and is
+     opt-in. Fix the look itself, for example keep the camera aimed at the craft during the slide
+     or correct the lens, and make it the default, with =0 restoring retail. Judge at 4:3, 16:9
+     and 21:9 with FPS60 on, on frames taken mid-scroll. Then check whether the owner's recipe
+     shows the same stretching elsewhere (flight edges, cutscenes, level select) and report it
+     with an owner sheet before changing those views. Close on the owner's look.
    - G3e (REOPENED as G5b, 2026-11-04) **Terrain drops out for single frames (owner playtest 2026-11-02): take NOW, before
      any further retail-match sweep work.** Owner: "Landscape/terrain missing frames
      intermittently, but consistently." Owner's run was `ROGUESQ_FPS60=1
