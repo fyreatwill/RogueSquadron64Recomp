@@ -3079,7 +3079,9 @@ extern "C" int32_t rs64_s6911_mapidx(int32_t idx, int32_t x, int32_t z, uint32_t
     const bool on = mode == 2 ? ((mach_absolute_time() / 24000000ull) & 1) != 0 : mode != 0;
     const bool act = on && g_rs64_dd_scene && w && h;
     if (act) fixed++;
-    if (lg && (seen <= 40 || (seen & 0xFFFF) == 0)) std::fprintf(stderr, "[s6911] off-map variant x=%d z=%d map %ux%u raw idx %d on=%d seen %llu fixed %llu\n", x, z, w, h, idx, act ? 1 : 0, (unsigned long long)seen, (unsigned long long)fixed);
+    static uint32_t lw = 0, lh = 0; /* one line per map change: the 40 line budget hid every level after the first (s6913) */
+    if (lg && (w != lw || h != lh)) { lw = w; lh = h; std::fprintf(stderr, "[s6911map] map %ux%u first off-map x=%d z=%d seen %llu\n", w, h, x, z, (unsigned long long)seen); }
+    if (lg && (seen <= 40 || (seen & 0xFFF) == 0)) std::fprintf(stderr, "[s6911] off-map variant x=%d z=%d map %ux%u raw idx %d on=%d seen %llu fixed %llu\n", x, z, w, h, idx, act ? 1 : 0, (unsigned long long)seen, (unsigned long long)fixed);
     if (!act) return idx;
     const int32_t cx = x < 0 ? 0 : x >= (int32_t)w ? (int32_t)w - 1 : x, cz = z < 0 ? 0 : z >= (int32_t)h ? (int32_t)h - 1 : z;
     return cx + cz * (int32_t)w;

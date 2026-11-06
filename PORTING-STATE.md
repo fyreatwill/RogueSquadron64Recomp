@@ -182386,3 +182386,24 @@ s6911 clamp, same run =tog, bad quads per swap, old vs on (par.py every 5th swap
 So s6911's dd2 0 now has its control. Level 1 gives no second-level check: 0 [s6911] lines there.
 
 NOT done: another level that reaches the variant read, rate check, s6909 city shot. 300 s soak on the final binary queued as s6912_final_h4d4. Bulk captures deleted.
+
+## Session 6913 (2026-11-06) — G5h: s6909 city shot closed H-city-none, buildings do not change on the POOLMIN toggle while the water scene just before it steps 10 vs 1; s6911 clamp census over the playlist: only level 4 reaches the off-map variant read; soak s6912_final_h4d4 clean
+
+HYPOTHESIS-ID: g5h-cutscene-bg. CURRENT-TRUTH under the Step 0 trigger, no maintenance. 2 full playlist runs plus 1 dd1 run stopped by me, 0 CRASH lines, owner save hash unchanged (37b93f3c6536, 3927d691e2ad). Harness scratch/s6913 (mov.zsh, late.py, edge.py, bnd.py).
+
+Soak s6912_final_h4d4: rc=0, run.log read directly, 0 CRASH, 0 arena full, 300 s flight at level 4 dd4 on the s6912 binary. No [s6911] lines, the log flag was not set in that recipe, so it says nothing about clamp hits.
+
+City shot. NEXT.md said 760 s, but t=743 in the s6909 sheet is seconds from capture start, which began at 180 s, so the late shots sit near run time 890-900 s. a4 ran 970 s with POOLMIN_TOG, capture from 885 s at 768x432: 1917 frames, 26.8 s of timestamps. The capture stopped there although 85 s were asked for; not explained, the shots needed were inside it.
+Measure: frame-to-frame mean difference, picture area only, at each toggle second edge. Same run, same capture.
+| scene | frames | step at toggle edge | other frames |
+|---|---|---|---|
+| water, t 0.2-3.2 (control) | 268 | 9.41, 10.42, 10.28 at 0.04-0.07 s after the edge | mean 0.65, max 3.48 |
+| dome city, t 8.9-13.8 | 372 | 1.29, 0.85, 1.43, 0.87 (largest step within 8 frames of the edge) | steps 3 frames before the edge 1.26, 0.85, 1.46, 0.0 |
+Difference images at all 4 city edges show only motion outlines on domes, towers and craft. The largest steps in that window (8.90 at 0.49 s, 8.81 at 0.88 s) are off the edge: craft pass and the fade. Selects H-city-none: no building changes with the pool floor in this shot. docs/owner_sheet_s6913_city_toggle.png.
+Limit: the s6909 note only says "buildings differing old vs floor 0.6 s apart", with no time. That this dome city is that shot is inferred, it is the only city in the late window. The difference 0.6 s apart is consistent with camera motion. Far buildings on other playlist shots were not tested.
+
+s6911 census. Added a [s6911map] line per map change under ROGUESQ_DD_VARCLAMP_LOG=1 and a tick every 4096 hits, because the 40 line budget hid everything after the first scene (src/main/upstream_compat.cpp, log only, no behaviour change). c4 dd4 16:9, 970 s, no toggle: levels 0-9, 11-15 and 19 each visited once. All 44 [s6911] lines and the only [s6911map] line fall in level 4, 94x94, 16384+ hits. Control: level 4 itself fires in the same run. Other levels 0 hits in their playlist scenes. So no second level exists in this route, and s6911 stays checked on level 4 only. Limits: same size maps would not print a new map line, but the ticks are attributed by [ddscene] and none fall elsewhere (under 4096 hits on another level could still hide after line 40). Scenes only, missions are not covered; lvl1 flight 0 hits (s6912), levels 10, 16-18 not visited. c4 capture failed to start at 960 s, not needed.
+
+New datum, unmeasured: in the water shot at dd4 the sea ends in a straight edge with sky past it in BOTH toggle states (top rows of the sheet); the old cap only moves the edge. The dd1 run that would have compared it was stopped by me at about 08:08 to fit the census under the runner cap, on the reasoning that the city answer did not need it. So whether dd1 hides this edge is unknown. Next unit.
+
+Raw captures deleted. NOT done: dd1 of the water shot, rate check of s6911.
