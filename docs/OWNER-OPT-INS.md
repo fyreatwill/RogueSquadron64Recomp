@@ -27,6 +27,8 @@ Freezes (s6902): the freezes of a second or more that then caught up like buffer
 
 Speed at 16:9 (s6902, Liberation of Gerrard V, FPS60, test logging): the "~60 fps" figures above are 4:3. Game frames per second measured: dd1 59, dd2 42-46, dd4 about 35-42. With `ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=1` added, dd4 runs about 53-58. The s6901 far terrain fix costs about 5-7 frames/s at dd4 without those two settings and about 3-5 with them, because it draws more terrain on every heading (`ROGUESQ_DD_FWDWIN=0` trades that terrain back). dd3 at 16:9 was not measured.
 
+Draw distance above 1 (2026-11-05): the game now gets 12 MB of memory instead of 8 MB, because the final mission ran out and crashed at the start. `ROGUESQ_OSMEM_MB=8` restores the old size.
+
 Draw distance above 1 (s6896): large terrain sheets at dd4 are fixed by a change that is on by default above dd1 (`ROGUESQ_G5B_TG_FIX=0` restores the old path). dd3 and dd4 now both show none. Whether this cures the drops you see needs your flight.
 
 Draw distance above 1 (s6901): distant terrain no longer halves depending on which way you face, and no longer cuts out for a moment as you turn through a diagonal. On by default above dd1 (`ROGUESQ_DD_FWDWIN=0` restores the old path). This is the best candidate yet for the terrain drops you see, but only your flight can confirm that. It draws more terrain, so tell me if dd4 feels slower. Measured on Liberation of Gerrard V only.

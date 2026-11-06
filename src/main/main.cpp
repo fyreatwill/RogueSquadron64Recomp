@@ -11733,6 +11733,10 @@ static void rs64_g1c_apply_dd_policy() {
     // s6858: the spill arena defaults to 0x80800000-0x80C00000, which is game heap once osMemSize > 8 MB (21:9 sets
     // OSMEM_MB=12 itself). lvl1/lvl9 16:9+OSMEM12+dd4 then crashed 9/9 at mission load (HMT material name pointer
     // 0xA7751264 / 0x80000003 in loadTextureToMemory's strncmp). Move it above 16 MB (the s6593 SPILL_HI + RAMTOP 20 layout).
+    // Owner crash 2026-11-05: the final mission (LEVEL=15) at dd>1 16:9 needs more than 8 MB heap + the 4 MB spill arena at
+    // mission load (0xB7FC0 x3, 0x170000, 0x30000): "[spill] arena full", rs_malloc NULL, then a NULL store in whichever
+    // caller came next. Same reqs fit with the 21:9 layout, so all dd>1 use it. ROGUESQ_OSMEM_MB=8 = old layout.
+    setenv("ROGUESQ_OSMEM_MB", "12", 0);
     const char* om = std::getenv("ROGUESQ_OSMEM_MB");
     if (om && std::atoi(om) > 8) {
         setenv("ROGUESQ_SPILL_HI", "1", 0);
