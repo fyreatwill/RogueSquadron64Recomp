@@ -182294,3 +182294,30 @@ Limits: playlist scenes are not proven to be the mission outros, that is inferre
 
 Tool note: scratch/s6908/win.py joins at vi = t*60, wrong on long runs (about 57/s here, misjoined rows); scratch/s6909/join.py is better, about 0.5 s. Tools: scratch/s6909 mov.zsh, shotcmp.py, sheet3.py, sheet4.py, count.py. Raw captures deleted for disk (64 GB free), fs.pkl and t3.pkl kept.
 
+
+## Session 6910 (2026-11-06) — G5h: in-mission Gerrard V scene keeps its ground at dd2 and dd4 and the pool floor never touches it (mission cap unchanged); H-tint: fog is not the pale rim, it darkens it; new datum: floating dark triangles on the dd4 horizon
+
+HYPOTHESIS-ID: g5h-cutscene-bg. No new soak verdicts. CURRENT-TRUTH under cap, no maintenance. No code changed; all arms on the s6909 binary, LEVEL=4 and 5, 16:9 FPS60, owner save hash unchanged (37b93f3c6536, 3927d691e2ad), 0 CRASH lines in all 7 runs. Harness scratch/s6910/arm.zsh (s6908 arm plus G5B_TG).
+
+In-mission scene, ROGUESQ_DD_POOLMIN_TOG=1 at dd2 (m2) and dd4 (m4). Neither H-covered nor H-other as NEXT framed them: a third outcome. The floor does not act on this scene. Run logs: `[poolx] cap 2048 -> 8192 (old 8192)` at dd4, `cap 2048 -> 4096 (old 4096)` at dd2, so the mission cap is the same with and without the floor; only the cutscene levels change (`cap 600 -> 4096 (old 2400)`, `(old 1200)`).
+Same run, kept cells by parity, mid-second swaps (par_n.py):
+| run stretch | dd4 floor / old | dd2 floor / old |
+|---|---|---|
+| intro, positive control (t 45-60) | 3259 / 2122 | 1851 / 805 |
+| flight buckets after it | within about 3% of each other, except t 150 (3528/3748) | within about 15%, sign mixed, n 46-208 per side |
+| scene | 3496 / 3650 (n 60/62) | 1904 / 1817 (n 178/171) |
+Scene differences have mixed sign and the two parities sample different poses; the log line is the stronger evidence. Near quads in the scene p50 286 at dd2 and dd4, 0 collapsed.
+
+dd1 reference: scene reach is not fixed. m1 did not reach it (closest L1 distance 39, 281 s of flight), n1 reached it before capture began, o1 (capture from 150 s) got it at t 112-118. Pixels: scn.py, same pose by thumbnail MAD. Lower-half detail minus dd1 p50 +0.15 dd2, +0.34 dd4; the -1.3 minima are shot-boundary rows with MAD 14-39, not real matches. docs/owner_sheet_s6910_scene_same_pose.png, 6 rows viewed: water and ground are whole at dd2 and dd4, and both show far buildings and hills dd1 does not. Cross-run, phase-gated by pose only, MAD 0.0-0.1 on sky frames, 1.3-6 where the extra terrain sits. Black share up to +0.017 at dd4, viewed as the extra dark buildings, not measured as such. Closes the s6899 scene for G5h pending the owner's look.
+
+H-tint, lvl5 intro scene, arms t5 (dd4 DD_FOG=tog), f0 (dd4 DD_FOG=0), l1 (dd1).
+My first two passes were wrong and are not used: =tog is 4 s blocks (mach/96000000), not the 1 s parity of POOLMIN_TOG, and edge.py's jump across block edges is swamped by camera motion (jump 3.8-37.9 vs 2.7-22.7 either side), a null without a control.
+Control that works (fogd.py): each t5 frame against its nearest-pose f0 frame. The scripted scene is repeatable enough that off blocks are near identical: changed px (>=12) p50 0.0008, MAD 0.05, n 19. On blocks: 0.0184, MAD 0.46, n 18. So the toggle acts here and the instrument sees it. Two off rows at t 30.8-31.2 read 0.05-0.09, a pose mismatch at a shot change.
+Direction, changed px only: fog on is 14-19 luma darker at t 19-28 and 17 brighter at t 33-37. Viewed (docs/owner_sheet_s6910_lvl5_fog_tint.png): early the far ridge sinks toward the sky with fog on; later fog on shows extra dark far hills where fog off shows sky. Why the cutoff pull adds hills there is not measured.
+Reading: the pale rim is extended terrain that dd1 does not draw, and it is palest with fog OFF. So s6904 fog does not cause it; it reduces it. The "greyer pad" did not reproduce: at matched pose the |diff| x4 panels in scratch/s6910/ts1.png are black on the pad (viewed, pad region not measured numerically; s6908's sheet was fixed offset, not same pose). Whole lower half vs dd1 is sat +3.7..+3.9, lum +0.9..+1.3 with fog on or off, so that offset is not fog; it sits in the extra terrain per the diff panels. Also seen, unmeasured: a light streak beside the vehicle on far ground at dd4, both fog states, and a stepped slab at the left edge.
+
+New datum, not diagnosed: dd4 floating dark triangles on the horizon, LEVEL=4 scene, t 31.4-32.6 at least, stable over more than a second, about 8 separate shapes hanging above the shore line, docs/owner_sheet_s6910_dd4_shards.png. dd2 shows only a faint smudge in the same place, dd1 nothing. Single arm, single run. Could be what the owner calls missing background; that is a guess. Next unit.
+
+NOT done: the s6909 city shot (buildings differing old vs floor 0.6 s apart): needs a 760 s movie run; the POOLMIN toggle is 1 s so the frames are in opposite states, but whether any building changed is unmeasured. dd3, 21:9 not run. Raw captures deleted; sheets and traces kept.
+
+Discrimination: for the in-mission scene this refutes both H-covered and H-other as framed: the floor is inactive there and the ground is present anyway. For the lvl5 tint it refutes "s6904 fog causes the pale rim"; it selects extended terrain as the rim's source.
