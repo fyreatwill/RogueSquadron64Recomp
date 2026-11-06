@@ -10492,6 +10492,9 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
     gamepad_button(N64_D_CBUTTONS,   SDL_CONTROLLER_BUTTON_B);
     gamepad_button(N64_L_CBUTTONS,   SDL_CONTROLLER_BUTTON_BACK);
     gamepad_button(N64_R_CBUTTONS,   SDL_CONTROLLER_BUTTON_GUIDE);
+    // Owner request 2026-11-05: C-Right (keyboard L: V-wing boost, X-wing wing close) had no usable pad button, its only
+    // binding is the PS/Guide button. Added on L3 so the thumb stays on the stick.
+    gamepad_button(N64_R_CBUTTONS,   SDL_CONTROLLER_BUTTON_LEFTSTICK);
     // Z trigger (brake) from left analog trigger axis
     if (controller && SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERLEFT) > 16000) {
         btn |= N64_Z_TRIG;
