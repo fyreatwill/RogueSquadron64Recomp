@@ -5,7 +5,7 @@ over-trimmed before x ever reaches 64: LEVEL=4 dd4 headings 240-300 window 64x40
 stays anchored low, and a heading whose side ray swings behind the eye on an axis pulls the window back off the forward side: passing a
 diagonal, quads 3500 -> 1790 and forward reach 63 -> 37 cells within 0.2 s, then back. dd1 never enters this path; reach is heading-flat.
 Fix: place the window from the pre-clamp bounds. Forward = bounds centre minus eye (dot with the true camera forward 0.99+, s6901 sim.py).
-Per axis: width min(bounds, 64); centre = eye + K * forward (K = 26 cells, ROGUESQ_DD_FWDWIN_K); kept inside the bounds. It moves continuously
+Per axis: width min(bounds, 64); centre = eye + K * forward (K = 30 cells since s6905, was 26; ROGUESQ_DD_FWDWIN_K); kept inside the bounds. It moves continuously
 with heading. The area cap is still honoured, spent on the axis that faces the view least. Replaces the s6899 slide when armed: the sim holds
 a dd1-sized frustum at cover 1.00 on every heading. dd>1 only; ROGUESQ_DD_FWDWIN=0 old, =tog odd mach seconds.
 Trace: site 15 = x0 x1 z0 z1 of the placed window.
@@ -17,7 +17,7 @@ f = D / "funcs_9.c"
 t = f.read_text(errors="surrogateescape")
 if TAG in t: print("already applied"); sys.exit(0)
 A = "            if (on6899 == 1 || (on6899 == 2 && ((mach_absolute_time() / 24000000u) & 1u))) {\n"
-N = r'''            /* PATCH: s6901 fwdwin */ static int on6901 = -1; static float k6901 = 26.0f; int fw6901 = 0;
+N = r'''            /* PATCH: s6901 fwdwin */ static int on6901 = -1; static float k6901 = 30.0f; int fw6901 = 0;
             if (on6901 < 0) { const char* e = getenv("ROGUESQ_DD_FWDWIN"); on6901 = !(e && *e) ? 1 : (e[0] == 't' ? 2 : (e[0] != '0')); e = getenv("ROGUESQ_DD_FWDWIN_K"); if (e && *e) k6901 = (float)atof(e); }
             if (on6037 && edge6874 && px1 > px0 && pz1 > pz0 && (on6901 == 1 || (on6901 == 2 && ((mach_absolute_time() / 24000000u) & 1u)))) {
               float dx = 0.5f * (float)(px0 + px1) - qx.f, dz = 0.5f * (float)(pz0 + pz1) - qz.f; const float n = sqrtf(dx * dx + dz * dz);

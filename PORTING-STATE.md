@@ -182151,3 +182151,38 @@ Replay: apply script on de-patched funcs_4.c and funcs_9.c gives files identical
 Holds: u5d2 318 s at lvl5 dd2 =tog, 0 SIGSEGV/SIGBUS. All other arms 0. Soaks queued for the default: s6904_fog_h1d4, s6904_fog_h4d2 (300 s). docs/owner_sheet_s6904_fog.png, left off, right on, adjacent blocks, rows lvl1 dd2, lvl1 dd4, lvl4 dd2, lvl4 dd4, lvl5 dd2, lvl5 dd4. Poses differ between columns, most in rows 1 and 5, so it is for judging the look only. Whether the fade looks right is the owner's call.
 
 Verdict: this selects H-fog over H-ring for G5e, refutes a lvl5 dd2 rate cost from the pull, and selects H-small on levels 1 and 5. Next discriminator: H-visible vs H-border on the 64x64 map window.
+
+## Session 6905 (2026-11-05) — G5b small maps: spending the window on on-map cells refuted, same run -6% quads and 80x the dips; forward offset 26 -> 30 cells default at dd>1, low tail +10% on lvl1 and lvl5, no measured rate cost
+
+Soaks first: s6904_fog_h1d4 and s6904_fog_h4d2 rc=0, 316 s and 319 s of capture, 0 SIGSEGV/SIGBUS, 0 gaps over 250 ms. Those logs hold only the capture summary, so that gap figure says nothing about frozen images (s6902).
+
+Question from NEXT: H-visible (on-map cells appear) vs H-border (off-map cells are real ground, keep them). H-border selected, by two lines.
+
+Line 1, offline (scratch/s6905/win.py, sim.py, on existing [ddclamp] and s6901 g3e traces). Slidable cells per axis at dd4: lvl1 8.2, lvl5 12.1, 48-60% of windows. Replay against a wedge of samples (half angle 52, single model, not the game's polygon): plain slide raises on-map samples kept 0.956 -> 0.990 but cuts dd1-sized near cover 0.996 -> 0.886, min 0.19, and takes 136 off-map samples per 14 on-map gained. Brute force over all placements holding near cover: on-map at best 390 -> 399 of 408 on lvl1, so at most ~2% is there to win. Same bound showed better placements exist than K=26, which led to the K sweep.
+
+Line 2, same-run =tog, 6 s blocks, lvl1 and lvl5 dd4 16:9 FPS60, slide near-guarded so it stops at a dd1-sized wedge (tools/apply_s6905_mapwin.py, ROGUESQ_DD_MAPWIN=tog, _SLIDE=1). Control: slide fired on 94-96% of on-block swaps, 0 of off-block.
+| arm | n p10 off -> on | n p50 off -> on | paired on-off quads | dips off, on (n under 0.8 of neighbours) | rings 4,5 p50 off -> on |
+|---|---|---|---|---|---|
+| s1 lvl1 slide | 3103 -> 2032 | 3498 -> 3394 | -244 +/- 37, 4/43 positive | 3, 249 | 678,672 -> 561,512 |
+| s5 lvl5 slide | 3110 -> 2438 | 3527 -> 3415 | -205 +/- 24, 1/41 positive | 2, 239 | 654,579 -> 524,512 |
+So moving the window onto the map brings back the far-ring dips s6901 removed. Not landed; the lever stays, default off. The window keeps off-map cells for good reason. ORIGIN for the logged "off-map kept, on-map dropped": not a defect; the dropped on-map cells are thin strips at the wedge's side tips, the kept off-map ones lie along the view.
+
+Forward offset. sim K sweep: 30 best or level on on-map kept, near flat to 30, falls from 34 and collapses by 38. Same-run K=30 (on) vs 26 (off), dd4 unless stated:
+| arm | n p10 off -> on | paired quads | swaps/s paired on-off | dips off, on |
+|---|---|---|---|---|
+| k1 lvl1 | 3101 -> 3427 | +46 +/- 12 | -0.31 +/- 0.21 | 0, 0 |
+| k5 lvl5 | 3108 -> 3415 | +25 +/- 20 | -0.29 +/- 0.41 | 0, 0 |
+| k4 lvl4 (94x94) | 3086 -> 3204 | +142 +/- 21 | -1.16 +/- 0.85 | 4, 3 |
+| kw lvl1 21:9 | 3278 -> 3517 | +87 +/- 26 | -0.07 +/- 0.27 | 0, 1 |
+| k2 lvl1 dd2 | 1636 -> 1601 | +10 +/- 25 | -0.01 +/- 0.38 | 18, 0 |
+Near rings 0-3 p50 within 1%. Near p1 fell on k5 900 -> 829, k4 863 -> 830, k2 753 -> 683, flat on k1. The slide arm s5 reads the same 900 -> 833 with a different lever, so on lvl5 that tail looks like which blocks hold one flight event rather than K; inference, and k2's is unexplained. Swaps/s here are with trace logging on and the capture running, so 27-36 is not the owner's rate; only the paired difference means anything, and lvl5's arm is 190 s, under the 300 s rule. No rate claim beyond "not seen".
+
+Landed: ROGUESQ_DD_FWDWIN_K default 30 at dd>1 (=26 old), tools/apply_s6901_fwdwin.py and live funcs_9.c. Reversal control on the new binary, c1 lvl1 dd4 MAPWIN_K=26 in on blocks: default blocks p10 3403, K=26 blocks 3171, the same sign and size as k1. dd1 never enters this path.
+
+Replay: apply_s6905_mapwin.py in RS64_REPLAY after s6902; on de-patched funcs_9.c gives the live file exactly, second run reports already applied. No full regen.
+
+Not done from NEXT: tw/th survey of all 19 levels. Dropped because the slide lost on 64x64 maps, the case with the most to gain, so no map size changes the decision; only 1, 4, 5 known. clampGridCellLookup's 92 vs 16 samples not checked. K=30 not run at dd3. lvl10 not attempted. That any of this is what the owner sees as drops remains inference.
+
+Holds: all eight arms 0 SIGSEGV/SIGBUS over ~190 s of capture. Soaks queued for the default: s6905_k30_h1d4, s6905_k30_h4d4 (300 s). docs/owner_sheet_s6905_window.png: left K=26 at that block's lowest quad swap, right K=30 next block, lvl1 rows 1-3, lvl5 rows 4-6. Frames are about 6 s apart with different poses and frame times are approximate, so it shows the look only, not the difference.
+
+Verdict: this selects H-border over H-visible on levels 1 and 5, refutes the slide with a same-run control, and lands K=30 at dd>1. Next: G5f spikes.
