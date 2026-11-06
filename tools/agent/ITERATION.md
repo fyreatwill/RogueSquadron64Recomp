@@ -261,6 +261,13 @@ When choosing the work unit, this order overrides Next-steps ordering:
      and 21:9 with FPS60 on, on frames taken mid-scroll. Then check whether the owner's recipe
      shows the same stretching elsewhere (flight edges, cutscenes, level select) and report it
      with an owner sheet before changing those views. Close on the owner's look.
+     G5h **Owner request 2026-11-05: cutscenes are missing the most background, after G5g.** Owner
+     playtest: of everything still dropping, cutscenes lose the most. Flight checks do not cover
+     this; s6899 fixed one Gerrard V cutscene only. Go through the mission intro and outro
+     cutscenes at dd2 and dd4, 16:9, against dd1 of the same frames, and count missing ground, water
+     and background per cutscene. Find why (cutscene camera position and heading vs the terrain
+     window is the first suspect). Fix what is ours, and give the owner a sheet of before and after
+     frames. Closes on the owner's look.
    - G3e (REOPENED as G5b, 2026-11-04) **Terrain drops out for single frames (owner playtest 2026-11-02): take NOW, before
      any further retail-match sweep work.** Owner: "Landscape/terrain missing frames
      intermittently, but consistently." Owner's run was `ROGUESQ_FPS60=1
