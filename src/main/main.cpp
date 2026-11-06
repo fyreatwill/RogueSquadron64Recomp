@@ -10496,9 +10496,10 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
     if (controller && SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERLEFT) > 16000) {
         btn |= N64_Z_TRIG;
     }
-    // Owner request 2026-11-05: secondary weapon (N64 A) also on the right analog trigger (R2); face A keeps it too.
+    // Owner request 2026-11-05: secondary weapon also on the right analog trigger (R2). Owner confirmed it fires from
+    // PS5 Share/Create = SDL BACK = N64 C-Left, not N64 A (R2 -> A did nothing for it).
     if (controller && SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERRIGHT) > 16000) {
-        btn |= N64_A_BUTTON;
+        btn |= N64_L_CBUTTONS;
     }
 
     if (controller) {
