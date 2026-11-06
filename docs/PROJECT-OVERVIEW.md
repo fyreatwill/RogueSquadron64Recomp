@@ -11029,3 +11029,12 @@ are as of the session that wrote them. All soaks named here were folded by s6895
 
 - s6888 NEXT H-cost "each skip is a visible repeat" as a general rule (superseded s6889): in flight a drop omits a frame and spacing stays 16.7 ms; it repeats only when the level cannot go lower. Believable because a skip looks like a missing present to the display.
 - s6887 NEXT "[metal-resize-entry] fired only on fullscreen", read as resizes not reaching the drawable (superseded s6888): the log sits behind a layer-size compare that SDL's Metal view has already satisfied, and it also missed the first fullscreen entry. Use the Z ring row. s6887's AX resizes have no Z witness, so that part of its "holds through resize" stays unwitnessed.
+
+## Migrated from CURRENT-TRUTH (s6912)
+
+- s6884 "distinct drawn fbs at present p50 46-58, displayed rate not shown better" and NEXT H-line/H-skip/H-gpu as framed (superseded s6885): [present-1024] is a change log and only fires at width >= 1024, so it never had a 4:3 baseline. Believable because it was the only present-side number. Real: on-screen is 60/s, but at 21:9 it was the wrong frames, from a present order bug at every dd, not GPU load (dd1 was worse than dd4).
+- s6883 NEXT "H-log: recipe logging may hold wf at 30" and "30 -> 60 bundles logging" (superseded s6884): log text is free at both rates. Believable because ROGUESQ_LOG_* arms were the slow ones; the env name turned FAST off and PROBES on, the text was innocent.
+- s6883 "FPS60 + 21:9 dd4 p10/p50 47/60, 14 s below 50" as a stable figure (superseded s6884): repeats gave 49/59 (8 s), 46/59 (11 s), 50/60 (4 s). Believable as one run; the below-50 count swings 3x between runs.
+- s6749-s6754 port VI counts ran ~1.4% high before the s6755 deadline fix; relative tick comparisons stand.
+- s6739-s6740 colour readings came from raw Display-P3 values and a bad decoder (s6740, s6744).
+- s6455/s6458 shake readings ran at ~17 fps from our getenv (s6696).

@@ -182349,3 +182349,40 @@ Audit, static only, nothing run: the same raw x + z*stride read is at 0x80046274
 NOT done: dd3, 21:9, levels other than 4, a rate check (the hook only runs on flagged cells, cost assumed small, not measured), a 300 s soak on the final binary. That these triangles are what the owner calls missing background is still a guess. s6909 city shot not done. Bulk captures deleted; sheets, traces and scripts kept in scratch/s6911 (gitignored).
 
 Discrimination: selects H-terrain over H-mesh and H-lod, and names a cause NEXT had not listed: junk heights from an off-map map read, not window, fog or LOD. Refutes W_CLAMP and fog as the source.
+
+## Session 6912 (2026-11-06) — G5h: off-map raw map reads closed H-clean, clones are redirected to their on-map parent before label and strips, 0 off-map in about 1M hook calls with edge controls firing; ribbed border is not a junk read; s6911 clamp same run confirmed at dd2, dd3 and 21:9
+
+HYPOTHESIS-ID: g5h-cutscene-bg. CURRENT-TRUTH under the Step 0 trigger, no maintenance. 7 runs (a1 b1 c4 d1 e4 f4 g4), 0 CRASH lines in all 7, owner save hash unchanged (37b93f3c6536, 3927d691e2ad). Harness scratch/s6912/arm.zsh.
+
+Static read. Off-map border cells are clones: clampGridCellLookup (0x80048AF0) stores the raw x,z in a fresh cell and sets flag 0x20, with +8 holding the on-map parent. Per site:
+| site | what it does | off-map x,z? |
+|---|---|---|
+| 0x80048768 (write to second map, +8) | only on flag 0x20 clear cells | no: those were made by the in-bounds path |
+| 0x80048DE4 processGridCellByDistance | flag 0x20 branch reads the PARENT's x,z | no |
+| 0x80046274 buildGridCellLabel | caller 0x8004B970: clone with 0x40 set returns early in label, clone with 0x40 clear goes to the parent path | no |
+| 0x80049844, 0x80049BEC, 0x80049FE8 strips | same caller, strips get s0 = parent at 0x8004B9F0 and 0x8004CC88 | no |
+Correction to my own mid-session reading: from the strip bodies alone I said label and strips see raw clone x,z. They would if called on a clone; the caller does not do that. Only selectGridCellTileVariant takes the clone itself. Second dispatcher 0x80045FC0 passes a scratch cell and another struct, not the level map, and was left out of the witness by address.
+
+Witness, tools/apply_s6912_mapclamp.py + rs64_s6912_mapidx, built, measured, then REMOVED (git never carried it): per-site all/off-map/past/diff counts, plus ROGUESQ_DD_MAPCLAMP_TESTK=2 counting cells within 2 of the map edge as the control. a1 and b1 (lvl1) logged nothing: first build only printed on an off-map hit, then at 2^18 calls, so those two are no result. Fixed tick at 2^10.
+| arm | s1 label | s2 strip | s3 adj | s4 diag | s5 write | s6 parent | off-map total |
+|---|---|---|---|---|---|---|---|
+| c4 lvl4 dd4 all | 198169 | 189270 | 15328 | 8811 | 189150 | 237928 | 0 |
+| d1 lvl1 dd4 all | 0 | 64491 | 8492 | 5637 | 60793 | 199531 | 0 |
+| d1 edge control | 0 | 7305 | 3523 | 3520 | 6927 | 199531 | |
+| e4 lvl4 dd2 all | 171967 | 215430 | 17070 | 9630 | 211014 | 132649 | 0 |
+| e4 edge control | 2340 | 12286 | 5803 | 5803 | 12441 | 132649 | |
+Figures are the last tick of each run. Control reading: s6 is 100% edge cells, as the parent of a clone must be, so the hook reads real coordinates and clones were being processed in bulk. Same run, c4 and e4, s6911 fired at the variant site with off-map cells (40-line log budget hit), so off-map cells existed while the six sites saw none. d1 had 0 [s6911] lines: level 1 does not reach the variant read in that run. s1 all 0 on level 1 is unexplained, not needed for this result. c4 with MAPCLAMP=tog: 0 bad quads in both parities, as expected with nothing to clamp.
+
+Result: H-clean, selects it over H-normals and H-repeat as framed. The clamp had nothing to clamp, so it was removed rather than landed (rule 11): 6 hook lines out of funcs_10.c, function out of upstream_compat.cpp, tool and registry line gone; grep s6912 clean. Nothing from this session is in the game.
+
+Ribbed border: present in d1 (t 56, 87, 98, docs/owner_sheet_s6912_ribbed_border.png) with 0 off-map reads at those sites and 0 s6911 hits, so it is not a junk read. What it is: clones take the parent's tile (0x80048F18 reads the map at the parent index), which makes the edge cell repeat outward. Static and by eye only, single-source; no height measurement. No toggle ran that could change it. Owner question added.
+
+s6911 clamp, same run =tog, bad quads per swap, old vs on (par.py every 5th swap):
+| arm | old: swaps, mean, p90, max | on: swaps, mean, p90, max |
+|---|---|---|
+| e4 lvl4 dd2 16:9 | 1074, 0.9, 0, 41 | 1072, 0.0, 0, 0 |
+| f4 lvl4 dd3 16:9 | 814, 6.3, 27, 82 | 836, 0.0, 0, 0 |
+| g4 lvl4 dd4 21:9 | 712, 6.1, 23, 99 | 724, 0.0, 0, 0 |
+So s6911's dd2 0 now has its control. Level 1 gives no second-level check: 0 [s6911] lines there.
+
+NOT done: another level that reaches the variant read, rate check, s6909 city shot. 300 s soak on the final binary queued as s6912_final_h4d4. Bulk captures deleted.

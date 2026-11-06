@@ -1,12 +1,13 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6911 (2026-11-06).
+Compact operational handoff, as of Session 6912 (2026-11-06).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6900 maintenance)").
 
 ## Headline
 
-- **FIXED s6911, awaiting owner look: G5h dd4 floating horizon triangles.** ORIGIN: selectGridCellTileVariant (0x80046030) indexes the map with a cell's raw x,z, so a flagged off-map coast cell reads past the map and gets junk heights (LEVEL=4 map 94x94, window to row 143, witness x=45 z=102..109). tools/apply_s6911_varclamp.py clamps it. ROGUESQ_DD_VARCLAMP default on at dd>1, =0 old, =tog, _LOG=1; dd1 untouched and it reaches this path too (x=94 z=65). Same run, mismatched quads per swap old vs on: 13.8 vs 0 (max 99 vs 0), 5.4 vs 0 (max 66 vs 0). Pixels: gone in the same shot, shore kept, docs/owner_sheet_s6911_floating_triangles.png. dd2 default 0 mismatched but no old arm; dd3, 21:9, other levels, rate and a 300 s soak not run. Same raw read sits in 5 other sites, static only, see Next steps 6c.
+- **FIXED s6911, awaiting owner look: G5h dd4 floating horizon triangles.** ORIGIN: selectGridCellTileVariant (0x80046030) indexes the map with a cell's raw x,z, so a flagged off-map coast cell reads past the map and gets junk heights (LEVEL=4 map 94x94, window to row 143, witness x=45 z=102..109). tools/apply_s6911_varclamp.py clamps it. ROGUESQ_DD_VARCLAMP default on at dd>1, =0 old, =tog, _LOG=1; dd1 untouched and it reaches this path too (x=94 z=65). Same run, mismatched quads per swap old vs on: 13.8 vs 0 (max 99 vs 0), 5.4 vs 0 (max 66 vs 0). Same run old vs on also dd2 0.9 vs 0, dd3 6.3 vs 0, 21:9 dd4 6.1 vs 0 (s6912). Pixels: gone in the same shot, shore kept, docs/owner_sheet_s6911_floating_triangles.png. Only LEVEL=4 reached it (lvl1 0 hits); rate not run, 300 s soak queued s6912_final_h4d4.
+- **s6912 G5h: other raw map reads CLOSED H-clean, nothing landed.** buildGridCellMesh sends clone cells (flag 0x20) to their on-map parent before label and strips; the map write and 0x80048DE4 also see on-map cells only. Witness 0 off-map in about 1M calls over lvl1 and lvl4, edge controls firing, s6911 firing same run on lvl4. Clamp built, then removed. Ribbed border is not a junk read: it shows with 0 hits; repeated edge cell is static plus eye, single-source, docs/owner_sheet_s6912_ribbed_border.png.
 - **s6910 G5h: in-mission Gerrard V scene keeps its ground at dd2/dd4; pool floor inactive there (mission cap unchanged, same-run intro control 3259 vs 2122).** Same pose vs dd1: both show extra far buildings, docs/owner_sheet_s6910_scene_same_pose.png. H-tint: the lvl5 pale rim is extended terrain, palest with fog OFF, so s6904 fog is not its cause; greyer pad not reproduced at same pose.
 - **FIXED s6909, side effect: dd>1 crash after ~10 min of scene loads.** ORIGIN: ours. The DL chunk arena (4 MB, s6099) never reset, about 1000 chunks per dd4 scene. It now restarts at the game's pool rebuild (tools/apply_s6909_dlreclaim.py, default on, ROGUESQ_DLPOOLX_RECLAIM=0 old). Same binary =0: 124 grows, exhausted, crash at 9.5 min; on: 221-244 grows, 0 crash. Exposure about 15-18 dd4 scene loads (inferred).
 - **s6909 G5h: AT THE MOVIES checked at dd1/dd2/dd4, floor holds.** 6 scenes viewed: floor frames match dd1, old cap loses ground same run; whole playlist old cap worse in 22/63 shots dd2, 13/61 dd4, floor vs dd1 median -0.005, -0.028. docs/owner_sheet_s6909_movies_ground.png. That these scenes are the outros is inferred; s6899 in-mission scene and H-tint not done. Toggle arms: use frames mid-second, boundary frames carry the old state.
@@ -46,8 +47,9 @@ Detail for everything in this section: PROJECT-OVERVIEW "Migrated from CURRENT-T
 - **Present thread, PAUSED until G5 closes (s6884-s6891).** All default off: ROGUESQ_RDP_SCREEN_JOB=1 (needs ASYNC+NODRAIN; removes game-rate dips, displayed rate unjudged), PRESENT_INFLIGHT=2 (=1 halves the rate, never use), PRESENT_DRAIN=<ms> (keep out of OWNER-OPT-INS). Ungated latency is a backlog that slips raise and 17 ms stalls lower, at ~72 ms on the s6889 ring; 39 ms on the built-in; 12 ms on 144 Hz at 4:3, where 60 fps lands unevenly (2 and 3 vsync mix plus compensating 1v/4v pairs). What enters the 72 ms state is open. 21:9 flight on 144 Hz has no data.
 
 ## Superseded conclusions — do not act on these
+- s6911 "same raw read in 5 other sites may be the ribbed border" (superseded s6912): the strip bodies have the same shape, but the caller hands them the parent. Believable because each body read alone looks raw.
 - s6910 "floating dark triangles" as a far mesh or LOD, and NEXT H-mesh/H-lod (superseded s6911): they are single terrain quads with junk heights. Believable because they look like broken building pieces, and they sat beside real far buildings.
-- s6908 "at dd4 the landing pad looks greyer" and s6909 NEXT "H-tint may be s6904 fog scaling" (superseded s6910): pad unchanged at matched pose, and the pale rim is palest with fog off. Believable because that sheet paired frames by fixed offset, not pose. Note ROGUESQ_DD_FOG=tog is 4 s blocks, POOLMIN_TOG and EYEWIN tog are 1 s.
+- s6908 "at dd4 the landing pad looks greyer" and s6909 NEXT "H-tint may be s6904 fog scaling" (superseded s6910): pad unchanged at matched pose, and the pale rim is palest with fog off. Believable because that sheet paired frames by fixed offset, not pose.
 - s6791 G3f "camera slides 13 units in ~0.5 s while yaw lags ~3 s" and ITERATION G5g's wording of it (superseded s6907): those floats are the view translation, not position. World eye moves smoothly over ~3.8 s and yaw leads. Believable because the column sits where a position would, and retail shows the same curve. tools/g3f_pan_cmp.py reads the same column.
 - s6895 "dd1 stays off: no benefit shown, owner calls dd1 clean" (superseded s6906): dd1 has the thickest knife lines, 29 vs 1 same run. Believable because the s6895 arm counted small transients on a quiet scene and the owner's "clean" was about terrain drops. Also G3c "CULL_SPIKE on" read as covering these: the cull only sees the RDP stream.
 - s6904 NEXT "the 64-wide window keeps off-map cells and drops on-map ones" read as a fault to fix (superseded s6905): true of the bounds, but the dropped cells are thin side strips and the kept ones lie along the view; sliding cost 6% of quads and 80x the dips. Believable because the logged x and z ranges look plainly wasteful.
@@ -65,9 +67,6 @@ Detail for everything in this section: PROJECT-OVERVIEW "Migrated from CURRENT-T
 - s6887 lead "a window state, not only queue depth, sets the level" and NEXT H-size/H-phase as framed (superseded s6888): believable because the level followed the fullscreen toggle and minimize in the one run. Resize does nothing; large stalls do not drain, the catch-up burst refills. Only fullscreen's missing slips are a real window effect.
 - s6886 "hidden window slows the game with the gate on; a known cost" (superseded s6887): it was a gate defect, not a cost of the idea. Believable because the game recovered on return and hiding is rare; the wait trusted a handler that off screen fires only on replacement.
 - s6885 "present-to-screen 57 ms at 60 fps" (superseded s6886): real figure ~72 ms at 4:3. Believable because it came from CoreAnimation; the start stamp was after the present call, so the nextDrawable wait was left out.
-- s6884 "distinct drawn fbs at present p50 46-58, displayed rate not shown better" and NEXT H-line/H-skip/H-gpu as framed (superseded s6885): [present-1024] is a change log and only fires at width >= 1024, so it never had a 4:3 baseline. Believable because it was the only present-side number. Real: on-screen is 60/s, but at 21:9 it was the wrong frames, from a present order bug at every dd, not GPU load (dd1 was worse than dd4).
-- s6883 NEXT "H-log: recipe logging may hold wf at 30" and "30 -> 60 bundles logging" (superseded s6884): log text is free at both rates. Believable because ROGUESQ_LOG_* arms were the slow ones; the env name turned FAST off and PROBES on, the text was innocent.
-- s6883 "FPS60 + 21:9 dd4 p10/p50 47/60, 14 s below 50" as a stable figure (superseded s6884): repeats gave 49/59 (8 s), 46/59 (11 s), 50/60 (4 s). Believable as one run; the below-50 count swings 3x between runs.
 - **Older, one line each (full text in the s6900 archive):**
   - s6879-s6881 g3_aspect_crop MAD/hz figures scored pillarbox bars; re-score, do not quote (s6882).
   - "Pinned pose" on dd arms s6445-s6583 is attitude-only; POSE_PIN_POSITION never held position (s6872).
@@ -78,9 +77,6 @@ Detail for everything in this section: PROJECT-OVERVIEW "Migrated from CURRENT-T
   - s6813 lvl14 late cutscene and s6815 "FPS60 halves hit share": the passive player's death and homing missiles; timers are dt-exact (s6814, s6816).
   - s6770 mission 17 and +0x39 bit claims: bits 0x00100000/0x00200000/0x00400000 -> 16/17/18, +0x31 clamps to 16 (s6771-s6772).
   - s6070/s6403 "UCODE_CAP 16384 = retail": hardware has no cap (s6762).
-  - s6749-s6754 port VI counts ran ~1.4% high before the s6755 deadline fix; relative tick comparisons stand.
-  - s6739-s6740 colour readings came from raw Display-P3 values and a bad decoder (s6740, s6744).
-  - s6455/s6458 shake readings ran at ~17 fps from our getenv (s6696).
 - Older superseded entries: PROJECT-OVERVIEW (s6759 maintenance; s6574-s6735 in "Migrated from CURRENT-TRUTH (s6870)").
 
 ## Run recipes and hard config
@@ -124,7 +120,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order 2026-11-04: 
 5. **G5e fog: done s6904, waiting on owner look.** Soaks s6904_fog_h1d4, h4d2 and s6905_k30_h1d4, h4d4 clean. Window on 64x64 maps closed s6905, H-border. clampGridCellLookup 92 vs 16 samples on vs off still unchecked, single-source.
 6. **G5f knife lines: fixed s6906, closes on the owner's flight.** Open: dd1 transients 306 vs 157 (s6895) unexplained, lines under 60 px unmeasured.
 6b. **G5g hangar stretch: done s6907, closes on the owner's look.** Owner decides on flight and cutscene lens (report sheet).
-6c. **G5h cutscene background: intros fixed s6908, playlist checked s6909, closes on the owner's look.** s6899 scene and H-tint done s6910, floating triangles fixed s6911. Left: same raw map read at 0x80046274, 0x80048768, 0x80048DE4, 0x80049844, 0x80049FE8 (does it reach off-map cells, is it the ribbed border), s6909 city shot.
+6c. **G5h cutscene background: intros fixed s6908, playlist checked s6909, closes on the owner's look.** s6899 scene and H-tint done s6910, floating triangles fixed s6911. Raw map reads closed s6912. Left: s6909 city shot.
 7. **G1e present, PAUSED until G5 closes.** 21:9 flight on 144 Hz, or what enters the 72 ms state; recipe at the bottom of NEXT.md. SCREEN_JOB and PRESENT_INFLIGHT defaults stay off until the owner chooses.
 8. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path, horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
 9. **Owner judgement / parked.** FPS60 feel; G3c sheets; owner sheets listed in NEXT.md; native hangar geometry and rare dd4/dd8 gfx SIGBUS parked (single-source). Reopen on an owner report or a side-effect failure, not repeat holds.
@@ -132,10 +128,11 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order 2026-11-04: 
 
 ## Evidence index
 
+- s6912 trim (6 superseded lines s6455-s6884): PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6912)".
 - s6900 maintenance archive (closed headline bullets s6696-s6891, superseded s6004-s6882, closed next steps s6788-s6878): PROJECT-OVERVIEW.
 - s6847 maintenance archive (per-mission G3 bullets, closed s6788-s6846 next steps): PROJECT-OVERVIEW.
 - s6759 maintenance archive (verbatim headline s6689-s6758, superseded s6292-s6673): PROJECT-OVERVIEW.
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts: [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest s6893_census_4, folded s6895. s6901_fwdwin_scene folded s6902. s6902_g5c_fixed_visible folded s6903. s6905_k30 folded s6911.
-- Recent chronology: PORTING-STATE sessions 6847-6911; search bounded windows only.
+- Recent chronology: PORTING-STATE sessions 6847-6912; search bounded windows only.
