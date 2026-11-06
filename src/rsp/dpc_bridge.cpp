@@ -3537,6 +3537,11 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     // s6894: ROGUESQ_G5B_KILLSHEET=1 zeroes near-plane terrain sheets (op 0F, terrain blender, hull > 100000 px); =tog does
     // so on odd seconds of the mach clock only, so presented events can be binned by parity within one run.
     static const int killsheet = [] { const char *e = std::getenv("ROGUESQ_G5B_KILLSHEET"); return !(e && *e) ? 0 : (*e == 't' ? 2 : 1); }();
+    // s6916 G5h: ROGUESQ_DD_MELT=1 turns the terrain fog blender (C811: fog colour x shade alpha + pixel x (1 - alpha)) into memory x shade
+    // alpha + pixel x (1 - alpha), in cycle 2 with FORCE_BL + IM_RD (1200: in cycle 1 RT64's last-cycle passthrough resets the alpha to 1), so far terrain fades into the sky already drawn rather than to a flat colour that ends in a
+    // straight edge. =tog on odd seconds of the mach clock (24 MHz), the same-run control. Default off, retail unaffected.
+    static const int melt = [] { const char *e = std::getenv("ROGUESQ_DD_MELT"); return !(e && *e && *e != '0') ? 0 : (*e == 't' ? 2 : 1); }();
+    static uint64_t s_melt_n = 0;
     static struct { double area, v[5][2]; uint32_t off, op, cw, n, big, w0, w1; int swap; } s_bt = {};
     if (!(on || cull) || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
     static const double guard = [] { const char *e = std::getenv("ROGUESQ_SPIKE_CTL"); return e && *e ? atof(e) : 640.0; }();
@@ -3561,6 +3566,10 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         const uint32_t w0 = rd(a), w1 = rd(a + 4);
         const uint32_t op = (w0 >> 24) & 0x3F;
         if ((s_sh || killsheet || s_fg) && op >= 0x20) { s_st[op][0] = w0; s_st[op][1] = w1; }
+        if (melt && op == 0x2F && (w1 >> 16) == 0xC811u && (melt == 1 || ((mach_absolute_time() / 24000000ull) & 1))) {
+            const uint32_t n1 = 0x12000000u | (w1 & 0xFFFFu) | 0x4040u; memcpy(g_rdram_for_submit + ((a + 4) & kSubmitRamMask), &n1, 4);
+            if ((++s_melt_n & (s_melt_n - 1)) == 0) fprintf(stderr, "[dd-melt] n=%llu swap=%d %08X -> %08X\n", (unsigned long long)s_melt_n, sw, w1, n1);
+        }
         if (op == 0x24 || op == 0x25) { a += 16; continue; }
         if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; a += 8; continue; }
         if (op == 0x3D) s_timg = w1;
