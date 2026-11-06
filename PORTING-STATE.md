@@ -182269,3 +182269,28 @@ Mid-session errors, no effect on results: two wait loops matched their own comma
 
 Discrimination: selects H-budget for the intro ground loss at dd2 and dd4. H-window refuted for this loss. Closes on the owner's look.
 
+## Session 6909 (2026-11-06) — G5h: AT THE MOVIES runs end to end, floor-on cutscene ground matches dd1 on the checked scenes, old cap loses it same run; side-effect crash fixed: DL chunk arena never reset, dead after ~10 min of scene loads at dd>1
+
+HYPOTHESIS-ID: g5h-cutscene-bg. No new soak verdicts. Continues an iteration killed at the 3600 s runner cap (rc=124) with s6909 uncommitted; its a4, b4, d2 runs are folded here, c1, e4, r0 were run now.
+
+Route: 13:w1024 never matched at 16:9. 13:w1592 enters the playlist (scratch/s6909/mov.zsh, private folder scratch/s6908/wd, owner save not touched). Playlist ends at about run time 970 s, then attract.
+
+ORIGIN: ours. rs64_s6099_alloc (s6099/s6284, 4 MB at dd>1) is a bump arena that never resets. At dd4 a scene holds up to 1280 chunks (usually about 1000, 8 of 124 blocks), at dd2 up to 896. buildAndRegisterDefaultMaterial (0x80017B88) relinks its fixed pool, stores a new head at 0x80018094 and zeroes the bucket tables after it (read from the binary), so arena chunks are unreachable from then on. Writer of the crash value: alloc returned 0 and the caller stored through a NULL base.
+Fix: tools/apply_s6909_dlreclaim.py (RS64_REPLAY, applied to the live tree, regen_replay not run) + rs64_s6909_rebuild in src/main/upstream_compat.cpp restarts the arena at that store. ROGUESQ_DLPOOLX_RECLAIM=0 old. Default on at dd>1 (the arena exists only there).
+
+| arm, 16:9 FPS60, same binary unless noted | grows | rebuilds | result |
+|---|---|---|---|
+| a4 dd4, build before the fix | 124 | not logged | exhausted, SIGBUS si_addr 0x380000004, renderFlatMeshFaceGroup under cinematicLoopBody |
+| r0 dd4 RECLAIM=0 | 124 | 23, all kept | exhausted, si_addr 0x380000000, allocateDisplayListBuffer, about 9.5 min in |
+| b4 dd4 | 244 | 50 | 0 crash, 1300 s, capture empty |
+| e4 dd4 | 221 | 39 | 0 crash, stopped at about 1020 s |
+| d2 dd2 | 68 | 51 | 0 crash, 1300 s |
+
+Two crash sites, same exhausted state: the fault is the arena, not a site. Owner exposure: about 15-18 scene loads at dd4 in one sitting, which is inferred from cutscene scene sizes; mission scene sizes were not measured separately.
+
+G5h, ROGUESQ_DD_POOLMIN_TOG=1 at dd2 (d2) and dd4 (e4), dd1 baseline c1. Mid-second frames only, sheet docs/owner_sheet_s6909_movies_ground.png: 6 scenes, every floor column matches dd1 ground and some show more far hills; old cap columns lose ground, water or rock wall at dd2 and dd4 in the same run (positive control). Whole playlist, flat share of the lower half: old cap worse by >0.10 in 22 of 63 shots at dd2, 13 of 61 at dd4. Floor vs dd1 on aligned shots: median -0.005 dd2 (55 shots), -0.028 dd4 (54 shots). 8 shot rows read over +0.10; all have mismatched shot lengths or start times, all 8 were viewed and none is lost ground.
+H-covered selected for the playlist. H-other REFUTED, and it was my own artefact this session: pairs at t=552.0, 608.0, 686.0 looked like the floor failing, because the toggle reaches the picture with lag and those frames sit at the start of an even second. Use frames at 0.45-0.95 of the second (scratch/s6909/sheet4.py).
+Limits: playlist scenes are not proven to be the mission outros, that is inferred from their content. The s6899 in-mission LEVEL=4 scene was NOT re-scored. H-tint NOT tested. Shot alignment by duration + thumbnail is imperfect: 56 (dd2) and 55 (dd4) of 62 rows. dd1 c1 has no toggle, so dd1 frames are cross-run, matched by shot and offset to about 0.6 s, and only ground presence is compared.
+
+Tool note: scratch/s6908/win.py joins at vi = t*60, wrong on long runs (about 57/s here, misjoined rows); scratch/s6909/join.py is better, about 0.5 s. Tools: scratch/s6909 mov.zsh, shotcmp.py, sheet3.py, sheet4.py, count.py. Raw captures deleted for disk (64 GB free), fs.pkl and t3.pkl kept.
+

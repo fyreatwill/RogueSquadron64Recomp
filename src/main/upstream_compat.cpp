@@ -2913,9 +2913,16 @@ extern "C" int rs64_s6286_pre(void) {  /* s6286: 0 until the AT-th beginFrameDLC
     static const int pre = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_PRE"); return e ? std::atoi(e) : 0; }();
     static const int at = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_AT"); return e ? std::atoi(e) : 3000; }();
     static int calls = 0; if (++calls < at) return 0; s_s6286_armed = 1; return pre > 0 ? pre : -1; }
+static uint32_t s_s6909_bump = 0;  /* s6909: arena high water, reset when the game rebuilds its chunk pool (tools/apply_s6909_dlreclaim.py) */
+extern "C" void rs64_s6909_rebuild(void) {
+    static const bool off = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_RECLAIM"); return e && e[0] == '0'; }();
+    if (!rs64_s6099_en()) return;
+    std::fprintf(stderr, "[dlpoolx] rebuild: arena held %u chunks%s pc=%08X\n", s_s6909_bump / 0x108u, off ? " (kept)" : "", (uint32_t)g_rs64_last_guest_pc);
+    if (!off) { s_s6909_bump = 0; s_s6558_blocks.clear(); }
+}
 extern "C" uint32_t rs64_s6099_alloc(uint32_t ra) {  /* s6099/s6284: 128 DL chunks (0x108 B) from a bump arena ending at 0x81000000 (ROGUESQ_DLPOOLX_MB, default 1, max 4); 0 when exhausted */
     static const uint32_t cap = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_MB"); int m = e ? std::atoi(e) : 1; if (m < 1) m = 1; if (m > 8) m = 8; return (uint32_t)m << 20; }();  /* s6587: >4 needs ROGUESQ_SPILL_HI=1 (frees 0x80800000..0x81000000) */
-    static uint32_t bump = 0; const uint32_t bytes = 128u * 0x108u;
+    uint32_t& bump = s_s6909_bump; const uint32_t bytes = 128u * 0x108u;
     if (bump + bytes > cap) { static int w = 0; if (!w++) std::fprintf(stderr, "[dlpoolx] arena exhausted (cap %u MB)\n", cap >> 20); return 0; }
     uint32_t p = (0x81000000u - cap) + bump; bump += bytes; s_s6558_blocks.push_back(p);
     std::fprintf(stderr, "[dlpoolx] +128 chunks at %08X (total %u) ra=%08X pc=%08X\n", p, bump / 0x108u, ra, (uint32_t)g_rs64_last_guest_pc);

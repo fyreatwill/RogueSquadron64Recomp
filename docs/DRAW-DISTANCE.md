@@ -14,6 +14,7 @@ cd build && env ROGUESQ_DRAW_DISTANCE=2 ./RogueSquadron64Recomp
 | `ROGUESQ_BYPASS_MAXCELLS=<n>` | Span-reject bypass cells per frame. dd>1 default -1 (unlimited) since s6788: the old 120 cap made terrain flicker between full and less-than-retail (the owner's terrain dropouts). The dd>1 bundle also sets `ROGUESQ_UCODE_CAP=1048576`. |
 | `ROGUESQ_DD_POOLX=<k>` | Terrain stream-pool capacity multiplier (1..2.5 fit the guest heap; 3+ exhausts it). |
 | `ROGUESQ_DD_POOLMIN=<n>` | Floor on the terrain pool at dd>1 on levels 0..18, default 4096 (the 64x64 window). Cutscene levels author 400-700, which cut their ground (s6908). `=0` old; `ROGUESQ_DD_POOLMIN_TOG=1` puts the old cap back on odd seconds for a same-run comparison. |
+| `ROGUESQ_DLPOOLX_RECLAIM=0` | Default on at dd>1: the display-list chunk arena restarts when the game rebuilds its chunk pool, so scene loads no longer add up to the 4 MB limit and a crash (s6909). `=0` old (never reset). |
 
 ## What is measured (see CURRENT-TRUTH s6070-s6076 for evidence)
 - The limit lives in three places: terrain-window radius, the far clip plane, and the ucode iteration cap. All three have to move.
