@@ -182191,7 +182191,7 @@ Verdict: this selects H-border over H-visible on levels 1 and 5, refutes the sli
 
 Soaks first: s6905_k30_h1d4 and s6905_k30_h4d4 rc=0, 434 s and 433 s. Those logs hold only the capture summary, so they say nothing about frozen images (s6902).
 
-Question from NEXT: H-thresh / H-class / H-real. H-class selected. The previous iteration left only a ROGUESQ_CULL_SPIKE=tog edit in dpc_bridge.cpp and no tools; this session wrote them and ran everything.
+Question from NEXT: H-thresh / H-class / H-real. This selects H-class. It refutes H-thresh (no cull bound tuning can reach these: they sit inside it, and most join no thin RDP triangle) and H-real (real beams would not vanish with an RT64 W clamp). The previous iteration left only a ROGUESQ_CULL_SPIKE=tog edit in dpc_bridge.cpp and no tools; this session wrote them and ran everything.
 
 Tools: tools/g5f_lines.cpp (transient straight line detector on presented frames, in-memory injection control), tools/g5f_thin.cpp (thin triangle census and cull bound recompute from ROGUESQ_G5B_TRIS), tools/g5f_join.py, tools/g5f_flip_diff.cpp. Capture 960x540, min line run 60-70 px, T=40. Picture at 16:9 is 796x448, not 240 high: the first thin census used 240 and was rerun at 448.
 
