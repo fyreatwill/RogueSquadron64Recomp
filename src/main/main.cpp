@@ -10496,6 +10496,10 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
     if (controller && SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERLEFT) > 16000) {
         btn |= N64_Z_TRIG;
     }
+    // Owner request 2026-11-05: secondary weapon (N64 A) also on the right analog trigger (R2); face A keeps it too.
+    if (controller && SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERRIGHT) > 16000) {
+        btn |= N64_A_BUTTON;
+    }
 
     if (controller) {
         const int16_t ax = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTX);
