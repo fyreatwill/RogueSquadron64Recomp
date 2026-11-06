@@ -182484,3 +182484,29 @@ ORIGIN: ours. Our far scale (s6073) moves the sky's computed depth nearer than o
 NOT done: default (owner), dd2 (soak s6917_skyz_d2 queued), dd3, 21:9, other cutscenes, off-arm rate, ring cost with sky depths that change every frame, MELT together with SKYZ. SKYZ needs the scan live, like MELT. Ships beyond the sky in retail (max object z 32727 vs sky 32703) now always pass at dd>1.
 
 Result line for s6917: same-run SKYZ=tog brings back the shot 78 ships and beam tops at dd4, retail and dd1 sky 32703 vs dd4 32627 names the cause, opt-in pending the owner's look.
+
+## Session 6918 (2026-11-06) — G5h far band: shot pairing, cutoff inputs and camera all match retail at the same pose, yet the near/far combiner split still differs, stable in two retail runs
+
+HYPOTHESIS-ID: g5h-far-band. No maintenance (35.0 KB).
+
+Folded s6917_skyz_d2: dd2, 1890 frames, 0 crash. Sky score on 1.2, off 0.65 against neighbour seconds; scratch/s6917/d2_ov.png viewed: on seconds full beams and far ships, off seconds flat stubs, same as dd4. d2.raw deleted. Dark sawtooth at the bottom of shot 79 still shows at dd2, on both parities.
+
+What the two combiners are (decoded from the words, new): A 127E24:FFFFFFFF is TEX0 x SHADE, 1 cycle. B 127FFF:FFFFFE3F is the same in cycle 1, cycle 2 passes through, so B is the 2-cycle fog form. Near terrain is A, far terrain is B, and the game's switch is cutoff^2 at 0x8009DEB4, read in buildGridCellMeshForFace at 0x800434D8. Read of the code plus s6904; the mapping of chain to combiner was not traced.
+Cutoff (read of 0x800455C8 computeGridLayerScrollOffset, its name is wrong): radius DEAC ramps between 0x80130C54 and C58 on eye y (cam +0x50) with thresholds C5C, C60; DEB4 = (0x80136FBC x K)^2 x radius^2. 0x80136FBC is set per level in setupCutsceneLevel. Tier table DE94..A0 is fixed.
+
+Ran, same presses: retail oracle AT THE MOVIES 1227 s (scratch/s6918/oracle.zsh, xtrace at 0x800456D8 and 0x800455DC) and port at retail settings 953 s (new ROGUESQ_G5H_BAND=<file>, row per swap: A and B tri counts, the same guest words, 32 camera words). 0 crash. First oracle launch was thrown away: the primary --exec-trace PC prints no m= words, only --exec-trace-also rows do. Primary is now 0x800448D0.
+
+Result, H-slip REFUTED: shot indices were right. S ends at 79 only because the dump stopped at 945 s; durations line up index for index, and the 64-74 stretch differs only where retail's rate falls.
+Result, H-select REFUTED: tools/g5h_band_pose.py, 75 retail vs 73 port pose segments: at matched eye position, scene scalar, radius and cutoff^2 agree in every segment with a match, 13 of 13 samples in most. Positive control in the same table: the values move 57-229 and 0.3 vs 0.9 scalar between scenes, and both arms follow. 3 segments had no pose match within 0.05. One median row (t=925, radius 20.86 vs 23.60, shot 65) is a median over a moving ramp; spot rows at 930, 935, 940 read equal, 16.000, 22.403, 24.000.
+Result, H-input REFUTED for the camera: all 32 camera words at 5 spot poses (shots 65, 76-77 region) agree to 4 decimals, orientation included.
+Split, same pose (scratch/s6918/tab.py, shots 67-76 pair cleanly, its 59-66 and 77 rows are mispaired and mean nothing): B/A retail vs port: 69 0.55 vs 1.88, 73 0.46 vs 0.78, 76 0.43 vs 0.78, all at cutoff^2 228.6. Same cutoff 228.6 matches on 67 (0.32/0.41), 68 (0.33/0.35), 70 (0.17/0.20). A+B stays equal to within 1-2%, so the same cells are drawn and only the near/far label moves.
+Repeat: new retail dump vs s6792: shot 76 0.45 vs 0.44, 73 0.46, 69 0.55, 65 3.44 vs 3.46. Port s6918 vs s6915: 76 0.78 vs 0.79. Neither side is noisy, this is a stable difference. Retail frame counts also repeat (400 vs 399), so the oracle's slow shots are not random either.
+Rate: 69, 73, 76 are slow shots on the oracle, but 67, 68, 70 are slow and match, and 61-63 run 30 fps both sides and differ the other way (s6917 table). Rate alone does not fit. Single-source reading of existing tables, not an arm.
+
+What is left: the split is not decided by the threshold or the camera, so it sits in the cell list. buildGridCellMeshForFace takes the first node in list order under the cutoff as the chain start, so order or node d2 can move it. New hypotheses: H-order (list order differs, and it may carry history), H-dist (node d2 at +8 differs), H-emit (the cut is the same and the RDP label differs, combiner state inherited by tris). Not measured.
+Whether the owner can see this is unknown: no pixel comparison was made here, and dd1 retail frames at this level were not viewed.
+
+ORIGIN: not named. No fix landed, the logger is diagnostic, off unless set.
+NOT done: split-node probe, shots 59-66 and 77-78 at matched pose (the row pairing needs shot starts, not durations), any look at pixels. tools/g5h_band_pose.py needs scratch/s6918 logs unzstd'd first. retail.bin (8.5 GB) deleted; rrep.pkl keeps its per-frame counts for the last 37 shots.
+
+Result line for s6918: pairing, cutoff inputs and camera are all retail at matched pose, but shots 69, 73, 76 still split near/far differently and repeatably, which puts the cause in the cell list, not named yet.

@@ -3561,6 +3561,19 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     static uint32_t s_cw = 320;  // s6695: width of the last SET_COLOR_IMAGE seen in a submitted range
     static int s_swap = -1; static uint32_t s_swap_tris = 0, s_swap_bad = 0;
     const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
+    // s6918 G5h: ROGUESQ_G5H_BAND=<file>, one row per swap: swap, mach, tris under the near terrain combiner (127E24, 1 cycle) and the far one (127FFF, 2 cycle fog),
+    // then the far cutoff inputs as guest words: 0x8009DEAC radius, DEB0, DEB4 cutoff^2, 0x80136FBC scene scalar, 0x80130C54..60, and 32 words of the camera at *0x80138D1C.
+    // Same words as the retail oracle spec in scratch/s6918/oracle.zsh. Diagnostic, off unless set.
+    static FILE *s_bd = [] { const char *e = std::getenv("ROGUESQ_G5H_BAND"); return (e && *e) ? fopen(e, "w") : (FILE *)nullptr; }();
+    static uint32_t s_bc0 = 0, s_bc1 = 0, s_bA = 0, s_bB = 0;
+    if (s_bd && sw != s_swap) {
+        const auto gw = [](uint32_t ph) { return *reinterpret_cast<const uint32_t *>(g_rdram_for_submit + ph); };
+        fprintf(s_bd, "%d %llu %u %u", s_swap, (unsigned long long)mach_absolute_time(), s_bA, s_bB);
+        for (uint32_t ph : {0x9DEACu, 0x9DEB0u, 0x9DEB4u, 0x136FBCu, 0x130C54u, 0x130C58u, 0x130C5Cu, 0x130C60u}) fprintf(s_bd, " %08X", gw(ph));
+        const uint32_t cam = gw(0x138D1Cu); fprintf(s_bd, " %08X", cam);
+        if ((cam & 0xFF800003u) == 0x80000000u) for (uint32_t i = 0; i < 32; i++) fprintf(s_bd, " %08X", gw((cam & 0x7FFFFFu) + 4 * i));
+        fputc('\n', s_bd); fflush(s_bd); s_bA = s_bB = 0;
+    }
     if (sw != s_swap) {
         if (on && s_swap_bad) { fprintf(stderr, "[spike-swap] swap=%d tris=%u bad=%u total_tris=%llu total_bad=%llu culled=%llu\n", s_swap, s_swap_tris, s_swap_bad, (unsigned long long)s_tris, (unsigned long long)s_bad, (unsigned long long)s_culled); fflush(stderr); }
         s_swap = sw; s_swap_tris = 0; s_swap_bad = 0;
@@ -3601,7 +3614,9 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         if (op == 0x24 || op == 0x25) { a += 16; continue; }
         if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; a += 8; continue; }
         if (op == 0x3D) s_timg = w1;
+        if (op == 0x3C) { s_bc0 = w0; s_bc1 = w1; }
         if (op < 0x08 || op > 0x0F) { a += 8; continue; }
+        if (s_bd) { s_bA += s_bc0 == 0xFC127E24u && s_bc1 == 0xFFFFFFFFu; s_bB += s_bc0 == 0xFC127FFFu && s_bc1 == 0xFFFFFE3Fu; }
         const uint32_t len = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
         if (a + 32 > hi) break;
         const double yl = sx14(w0 & 0x3FFF), ym = sx14((w1 >> 16) & 0x3FFF), yh = sx14(w1 & 0x3FFF);

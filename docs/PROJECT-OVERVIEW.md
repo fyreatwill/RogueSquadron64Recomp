@@ -11060,3 +11060,8 @@ Three headline bullets (s6895, s6898, s6899) and one superseded line (s6896), ve
 - s6889 "DRAIN=40 beats the gate's median at 4:3 on a 60 Hz display" and s6889/s6890 "the backlog looks 60 Hz specific" (superseded s6891): believable because the off arm read 72 ms on a 60 Hz grid. A 60 Hz grid alone does not give that: built-in off reads 39 ms with nothing to drain.
 - s6887 "one display here" (superseded s6889): the host now has four displays, three at 144 Hz. All s6885-s6888 latency figures are 60 Hz grid figures; do not apply them to 144 Hz.
 - **Older, one line each (full text in the s6900 archive):**
+
+## Migrated from CURRENT-TRUTH (s6918)
+
+- **s6913 G5h: city shot closed, no building change on the POOLMIN toggle.** docs/owner_sheet_s6913_city_toggle.png. s6911 census: only level 4 hits the off-map read.
+- **s6912 G5h: other raw map reads CLOSED H-clean.** Ribbed border is the edge cell repeated, single-source, docs/owner_sheet_s6912_ribbed_border.png.
