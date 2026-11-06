@@ -182297,7 +182297,7 @@ Tool note: scratch/s6908/win.py joins at vi = t*60, wrong on long runs (about 57
 
 ## Session 6910 (2026-11-06) — G5h: in-mission Gerrard V scene keeps its ground at dd2 and dd4 and the pool floor never touches it (mission cap unchanged); H-tint: fog is not the pale rim, it darkens it; new datum: floating dark triangles on the dd4 horizon
 
-HYPOTHESIS-ID: g5h-cutscene-bg. No new soak verdicts. CURRENT-TRUTH under cap, no maintenance. No code changed; all arms on the s6909 binary, LEVEL=4 and 5, 16:9 FPS60, owner save hash unchanged (37b93f3c6536, 3927d691e2ad), 0 CRASH lines in all 7 runs. Harness scratch/s6910/arm.zsh (s6908 arm plus G5B_TG).
+HYPOTHESIS-ID: g5h-cutscene-bg. No new soak verdicts. CURRENT-TRUTH under cap, no maintenance. No code changed; all arms on the s6909 binary, LEVEL=4 and 5, 16:9 FPS60, owner save hash unchanged (37b93f3c6536, 3927d691e2ad), 0 CRASH lines in all 8 runs (m4 m2 m1 n1 o1 t5 l1 f0). Harness scratch/s6910/arm.zsh (s6908 arm plus G5B_TG).
 
 In-mission scene, ROGUESQ_DD_POOLMIN_TOG=1 at dd2 (m2) and dd4 (m4). Neither H-covered nor H-other as NEXT framed them: a third outcome. The floor does not act on this scene. Run logs: `[poolx] cap 2048 -> 8192 (old 8192)` at dd4, `cap 2048 -> 4096 (old 4096)` at dd2, so the mission cap is the same with and without the floor; only the cutscene levels change (`cap 600 -> 4096 (old 2400)`, `(old 1200)`).
 Same run, kept cells by parity, mid-second swaps (par_n.py):
