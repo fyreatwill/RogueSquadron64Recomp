@@ -1,11 +1,12 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6907 (2026-11-06).
+Compact operational handoff, as of Session 6908 (2026-11-06).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6900 maintenance)").
 
 ## Headline
 
+- **FIXED s6908, awaiting owner look: G5h cutscene ground ending in sky at dd2/dd4; outros NOT reached.** ORIGIN: ours. setupCutsceneLevel passes a per-level pool of 400-700 (table 0x800B090C; missions 2048) and the dd clamp reads pool x POOLX as an area cap: dd4 window 37x64, dd2 far worse. ROGUESQ_DD_POOLMIN=4096 at dd>1, levels 0..18 (tools/apply_s6908_poolmin.py, =0 old, _TOG=1 same run). Same run kept cells 2.3-3.3x; lvl4 dd2 ground stddev square wave 17 vs 35 on the toggle. lvl5 and lvl15 dd4 0 crash, 0 arena full; dd1 untouched. Scene capture arrivals 5-11% lower, single-source, not game rate. docs/owner_sheet_s6908_cutscene_ground.png. The route was skipping intros: scratch/s6908/cov.zsh EARLY_N=13.
 - **DONE s6907, awaiting owner look: G5g hangar stretch.** Not a lagging yaw: the view turns ~90 deg in 0.6 s, then the next craft sits at the lens edge ~2 s, 7-10 units from the eye. ORIGIN: retail's authored path; owner-requested change. tools/apply_s6907_aim.py turns only the view direction (stack, 0x800AD284) to the destination craft, 0x800CC404[cursor 0x800CD6E8], in 1.6 s and back onto raw in the last 0.9 s; eye path and settled frames are retail. ROGUESQ_G5G_AIM default on, =0 retail, =tog; _TURN, _REL; G5G_LENS=<fovy> opt-in, unjudged. Same run, final binary, craft off axis at ~1.2 s 0-1 vs 43-67 deg at 4:3, 16:9, 21:9; edge zone 21:9 0.22-0.25 vs 0.67-0.83 s, 4:3 0.07-0.08 vs 0.22-0.28 s; settled angle identical. Mid-scroll presses retarget: first build snapped 69 deg, fixed, max step 2.8 deg. docs/owner_sheet_s6907_hangar_aim.png. Open: H-lens (bay edges still stretch at 21:9), craft box aspect not measured (stretch computed from angle), roll unmeasured. Report only: edge stretch 21:9 flight 2.02, cutscene 1.75, hangar 1.85, 4:3 hangar 1.27, single-source, docs/owner_sheet_s6907_lens_elsewhere.png.
 - **FIXED s6906, awaiting owner flight: G5f knife lines.** H-class: they are RT64 W<=0 wedges, inside the RDP cull bound, so CULL_SPIKE never saw them (0 out-of-bound tris in 157 s of lvl1 dd4 flight). Same-run W_CLAMP=tog LEVEL=4, events of 200 px and over, off vs on: dd4 17 vs 3, dd1 29 vs 1, the on ones viewed clean or flip-lag labels; 4:3 from boot 7 vs 0. Owner reported on 11-04, the clamp landed 11-05 and only at dd>1. ROGUESQ_W_CLAMP and W_SHEET_PX=200 now default at every dd (=0 old). No missing picture at flips; lines under 60 px unmeasured, s6895 dd1 transients still unexplained. docs/owner_sheet_s6906_knife_clamp_on_off.png, tools/g5f_lines.cpp.
 - **s6905 G5b small maps: moving the dd>1 window onto the map REFUTED, forward offset K 26 -> 30 landed.** Same-run slide: lvl1 dd4 quads -244 +/- 37, p10 3103 -> 2032, dips 3 -> 249; lvl5 -205 +/- 24, 2 -> 239. Off-map cells stay (H-border). K=30 default at dd>1 (ROGUESQ_DD_FWDWIN_K=26 old): n p10 lvl1 3101 -> 3427, lvl5 3108 -> 3415, lvl4 3086 -> 3204, 21:9 3278 -> 3517, dd2 flat with dips 18 -> 0; reversal control 3403 vs 3171; paired rate differences -0.07 to -1.16 swaps/s, each within 1.5 SE, all the same sign, so a small cost is not excluded. Not run at dd3. Owner confirmation pending.
@@ -80,7 +81,7 @@ Detail for everything in this section: PROJECT-OVERVIEW "Migrated from CURRENT-T
 ## Run recipes and hard config
 
 - Run from `build/` with the ROM beside it; SIGKILL to stop; one game run at a time.
-- Current pinned dd4 lvl1 run: `zsh scratch/agent/s6549_run.sh <dd> <poolx>`. G5 arm template: `scratch/s6899/arm.zsh` (see NEXT.md).
+- Current pinned dd4 lvl1 run: `zsh scratch/agent/s6549_run.sh <dd> <poolx>`. G5 arm template: `scratch/s6899/arm.zsh`; scenes: `scratch/s6908/arm.zsh` with EARLY_N=13 and FL_START past the scene (lvl5 needs >190).
 - dd4 was enabled without `ROGUESQ_DD_UNSAFE` in s6582; higher exploratory settings use DD_UNSAFE (clamp 8). Confirm run.log echoes `multiplier N`.
 - lvl10/15 need `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF`. Wide soaks need `MISSION_WIDTH=796|1024` + `WIDE_ROUTE=1`; ASPECT implies `OSMEM_MB=12`.
 - Pose control: `ROGUESQ_POSE_LOCK=1` (no input) + `ROGUESQ_POSE_FREEZE=<x,...>:<ms>` (needs RAND_TRACE + DEBUG_WRITE arm; `tools/g3_optin_pose_arms.sh`, PIN=1 pins dt). Dump ordinal is not a phase key.
@@ -117,7 +118,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order 2026-11-04: 
 4. **G5d Factor 5 logo: fixed s6903, waiting on owner boot at dd2/dd4.** Small map clamp cut confirmed in flight on lvl1 and lvl5 (s6904), see item 5.
 5. **G5e fog: done s6904, waiting on owner look.** Soaks s6904_fog_h1d4, h4d2 clean. Window on 64x64 maps closed s6905, H-border; K=30 soaks s6905_k30_h1d4, h4d4 queued. clampGridCellLookup 92 vs 16 samples on vs off still unchecked, single-source.
 6. **G5f knife lines: fixed s6906, closes on the owner's flight.** Open: dd1 transients 306 vs 157 (s6895) unexplained, lines under 60 px unmeasured.
-6b. **G5g hangar stretch: done s6907, closes on the owner's look.** Owner decides on flight and cutscene lens (report sheet). Next unit G5h, cutscene background.
+6b. **G5g hangar stretch: done s6907, closes on the owner's look.** Owner decides on flight and cutscene lens (report sheet).
+6c. **G5h cutscene background: intros fixed s6908, closes on the owner's look.** Next: outros and in-mission scenes, via AT THE MOVIES from the private folder scratch/s6908/wd (route stuck in attract, probably 13:w1024 at 16:9). Unmeasured: dd4 pad tint and ridge rim on lvl5, 21:9, dd3.
 7. **G1e present, PAUSED until G5 closes.** 21:9 flight on 144 Hz, or what enters the 72 ms state; recipe at the bottom of NEXT.md. SCREEN_JOB and PRESENT_INFLIGHT defaults stay off until the owner chooses.
 8. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path, horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
 9. **Owner judgement / parked.** FPS60 feel; G3c sheets; owner sheets listed in NEXT.md; native hangar geometry and rare dd4/dd8 gfx SIGBUS parked (single-source). Reopen on an owner report or a side-effect failure, not repeat holds.
@@ -131,4 +133,4 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order 2026-11-04: 
 - [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts: [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); per-level images: [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest s6893_census_4, folded s6895. s6901_fwdwin_scene folded s6902. s6902_g5c_fixed_visible folded s6903.
-- Recent chronology: PORTING-STATE sessions 6847-6907; search bounded windows only.
+- Recent chronology: PORTING-STATE sessions 6847-6908; search bounded windows only.

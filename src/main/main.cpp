@@ -11752,6 +11752,8 @@ static void rs64_g1c_apply_dd_policy() {
     setenv("ROGUESQ_DLPOOLX_MB", "4", 0);
     setenv("ROGUESQ_DLPOOLX_AT", "3000", 0);
     setenv("ROGUESQ_DD_POOLX", b, 0);
+    // s6908 G5h: cutscene levels author a pool of 400-600 (table 0x800B090C), and our window clamp reads it as an area cap; 4096 = the 64x64 slot limit. =0 old.
+    setenv("ROGUESQ_DD_POOLMIN", "4096", 0);
     // s6788 G3e: the s6540 per-swap span-bypass cap (120 cells) made dd>1 terrain bistable: the retail span test rejects
     // ~1500 in-window cells in most swaps (pose-dependent), so terrain flipped between full dd and LESS than retail
     // (lvl1 dd4 median tris 816 vs dd1 1083; 47 in-flight drop edges in 180 s). Unlimited accept: 4 drops, median 1407.

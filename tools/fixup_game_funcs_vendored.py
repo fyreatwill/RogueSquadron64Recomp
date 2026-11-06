@@ -42094,6 +42094,7 @@ RS64_REPLAY = [
     "apply_s6903_cinegate.py",  # s6903: G5d dd levers follow the level, sentinel levels run the retail terrain path
     "apply_s6904_fog.py",  # s6904: G5e fog words hook
     "apply_s6907_aim.py",  # s6907: G5g hangar scroll aims the view by angle
+    "apply_s6908_poolmin.py",  # s6908: G5h cutscene terrain pool floor at dd>1
 ]
 
 

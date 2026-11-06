@@ -182241,3 +182241,31 @@ Elsewhere, report only, nothing changed: docs/owner_sheet_s6907_lens_elsewhere.p
 
 Discrimination: selects H-aim for the craft stretch, refutes the G3f lagging-yaw story. H-lens is NOT settled: the bay itself still stretches at the frame edges at 21:9, and no craft box aspect was measured, the stretch figure is computed from the off-axis angle. Roll during the turn not measured or changed; word 0x800CD6EC ramps negative from the press, role unknown. Two ships only in this route (cursor 0, 2, plus 3 under retarget). Closes on the owner's look.
 
+## Session 6908 (2026-11-06) — G5h: cutscene ground ends in sky because cutscene levels author a 400-700 terrain pool and our dd clamp reads it as an area cap; pool floor 4096 default at dd>1, same run dd2 stddev 17 vs 35 square wave; outros not reached
+
+HYPOTHESIS-ID: g5h-cutscene-bg. No new soak verdicts (s6905_k30_h1d4 and h4d4 rc=0 were already in SOAK-RESULTS; not re-read for alive_at_end this session). CURRENT-TRUTH about 34 KB, no maintenance.
+
+Harness: the route's own presses were cutting the intro. Start at t=66 ended the LEVEL=4 intro after 8 s; unskipped it runs 16.7 s (59.4-76.1). scratch/s6908/cov.zsh = coverage script with EARLY_N (13 keeps the launch press, drops later ones) and FL_START past the scene. lvl5 needs FL_START past ~190: it has a crawl (59.5-155.5), then the scene 155.9-188.5; FL_START=135 skipped it at 140. Scene detector: ROGUESQ_G3F_CAM cam 80165EC8 between craft select and flight cam 80138D20.
+
+ORIGIN: ours. setupCutsceneLevel (0x800A6CE4) calls loadLevelAssets (0x800453C8) with a per-level pool from the u16 table at 0x800B090C, read from the ROM: 650,600,600,600,600,600,560,700,500,500,600,550,540,575,600,600,600,600,600, and 400 at index 19 (sentinel). initMission passes 2048. 0x80130C4C = that times POOLX, and the s6037 clamp uses it as an area cap. dd4 scene cap 2400 -> window 37x64 where flight is 64x64; dd2 cap 1200 is far worse. The straight cut is the window edge: LEVEL=4 t~66.5 eye cell 69.9,42.4, window x35..72, view heading 327. Retail is legitimate: 600 fits a retail radius (window 52x27 here). This selects H-budget. H-window not needed for this loss: the window follows the scene camera correctly (bounds direction tracks heading in win.py). H-gate not tested. The pool is 184 B a node, so 4096 = 753 KB vs 441 KB at dd4.
+
+Fix: tools/apply_s6908_poolmin.py (RS64_REPLAY after s6907, applied to the live tree, regen_replay not run). ROGUESQ_DD_POOLMIN floor, 4096 set by the dd bundle, levels 0..18 only; =0 old. ROGUESQ_DD_POOLMIN_TOG=1 restores the old cap in the clamp only, on odd mach seconds. docs/DRAW-DISTANCE.md row added.
+
+Results, same run, 16:9 FPS60, intro only:
+| arm | swaps at old cap, kept cells | swaps over old cap, kept cells |
+|---|---|---|
+| lvl1 dd4 | 966, 1321 | 468, 3016 |
+| lvl4 dd4 | 821, 1219 | 342, 3161 |
+| lvl1 dd2 | 975, 542 | 2865, 1533 |
+| lvl4 dd2 | 827, 525 | 2690, 1737 |
+These rows include the non-scene swaps under cap 8000 and split on window size, not on parity, so the counts are not a clean half each; the kept ratio is the reading.
+Second line, pixels: lvl4 dd2 lower-right stddev is a square wave on the toggle, about 19 -> 38 -> 17 -> 32 across t 5.9-8.1, flipping 0.06-0.1 s after each second edge; that lag is the instrument control, and at t 8.75 the old cap stops mattering as the camera moves on. docs/owner_sheet_s6908_cutscene_ground.png: lvl1 dd4 floating island and cliff into sky, lvl4 dd4 cut, dd2 most of the ground gone, all whole in the adjacent second. Whole-scene lower-half detail p50 full vs old: lvl1 dd4 4.46/3.90, lvl1 dd2 4.47/3.81, lvl4 dd2 3.07/2.79, lvl4 dd4 2.76/2.82, so that coarse metric does not separate lvl4 dd4; the loss there is a few seconds of the scene.
+
+Default on: LEVEL=15 dd4 (the heap-tight mission) 0 crash, 0 arena full, intro played 155.9-209, flew to t=294; LEVEL=5 dd4 0 crash, 0 arena full. Pool logged 600 -> 4096, sentinel 400 stays 1600 after the level gate. dd1: 0 [poolx] lines, untouched. lvl5 dd1 vs dd4 fixed at same offsets: ground whole (docs/owner_sheet_s6908_lvl5_dd1_dd4.png). Seen there, unmeasured: at dd4 the landing pad looks greyer and a pale rim runs along the far ridge. Boot-to-flight holds of 3-5 min, not 300 s of flight.
+Cost: capture arrivals in the scene, full vs old, lvl1 dd4 72.0 vs 81.0/s, lvl4 dd4 73.3 vs 77.2/s, n=6-9 seconds each. That is arrival rate, not game rate, and single-source, but it points to a 5-11% cost in scenes. Max gap 35 ms.
+
+NOT done: outros. No outro scene was reached. The fix reaches them only if they go through setupCutsceneLevel, which is inferred, and in-mission scenes (the s6899 one) were not re-scored. Only 3 levels' intros plus lvl15 viewed; 21:9 not run; dd3 not run. AT THE MOVIES smoke at dd4 from a private folder (scratch/s6908/wd, own save copy, so SAVE_FROM is not needed): boots and runs 330 s, 0 CRASH, pools 650 and 700 -> 4096 in attract demos, but it stayed in the attract loop. Likely the schedule's 13:w1024 gate, which cannot fire at 16:9; not confirmed.
+Mid-session errors, no effect on results: two wait loops matched their own command line and stalled, and one shasum from another folder read as a changed save; rechecked from the repo root, cf2222819e5c all session, .bin 37b93f3c6536. Owner save untouched.
+
+Discrimination: selects H-budget for the intro ground loss at dd2 and dd4. H-window refuted for this loss. Closes on the owner's look.
+
