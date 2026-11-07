@@ -30,7 +30,8 @@ static int wordCheck() {
     return bad != 0 || fast == 0 || slow == 0;
 }
 using namespace RT64;
-static uint64_t H(const uint8_t *m, const LoadTile &t, uint16_t w, uint16_t h, uint32_t tl, uint32_t v, int loop) { rs64TmemHashByteLoop = loop; return TMEMHasher::hash(m, t, w, h, tl, v); }
+// s6942: loop 0 = NEON CI4 + table, 1 = s6935 per-byte loop, 2 = s6935 table without NEON. MUTANT=1 drops nibble 15 from the NEON mask (must fail).
+static uint64_t H(const uint8_t *m, const LoadTile &t, uint16_t w, uint16_t h, uint32_t tl, uint32_t v, int loop) { rs64TmemHashByteLoop = loop == 1; rs64TmemHashNeonCI4 = loop == 0; return TMEMHasher::hash(m, t, w, h, tl, v); }
 int main() {
     if (wordCheck()) return 2;
     static uint8_t T[4096 + 8]; uint64_t n = 0, bad = 0, ctl_used = 0, ctl_used_bad = 0, ctl_unused = 0, ctl_unused_bad = 0, tl = 0;
@@ -39,7 +40,7 @@ int main() {
         if ((it & 63) == 0) for (auto &b : T) b = rand();
         LoadTile t{}; t.siz = rand() & 3; t.fmt = rand() % 5; t.line = 1 + rand() % 40; t.tmem = rand() & 511; t.palette = rand() & 15;
         const uint16_t w = 1 + rand() % 128, h = 1 + rand() % 64; const uint32_t tlut = rand() & 3 ? (rand() & 3) : 0, v = 2 + rand() % 4;
-        n++; tl += tlut != 0; if (H(T, t, w, h, tlut, v, 0) != H(T, t, w, h, tlut, v, 1)) bad++;
+        n++; tl += tlut != 0; { const uint64_t h0 = H(T, t, w, h, tlut, v, 0); if (h0 != H(T, t, w, h, tlut, v, 1) || h0 != H(T, t, w, h, tlut, v, 2)) bad++; }
     }
     // Palette controls: CI8, indices limited to 0..15, block path, tile at TMEM 0. Palette entry i is 8 bytes at 2048 + i * 8.
     for (int it = 0; it < 20000; it++) {
@@ -51,6 +52,23 @@ int main() {
             T[2048 + 200 * 8 + 2] ^= 0x55; ctl_unused++; if (H(T, t, w, h, 2, 5, loop) != a) ctl_unused_bad++; T[2048 + 200 * 8 + 2] ^= 0x55;
         }
     }
+    // s6942 CI4 palette controls in NEON mode (loop 0): texels use nibbles 0..14 only; palette 3 entry e is 8 bytes at 2048 + 3*128 + e*8.
+    // Changing entry 15 must not move the hash; changing the entry of a used nibble must. Also a tile with one 15 nibble in the scalar tail.
+    uint64_t c4u = 0, c4ub = 0, c4n = 0, c4nb = 0, c4t = 0, c4tb = 0;
+    for (int it = 0; it < 20000; it++) {
+        for (int i = 0; i < 4096; i++) { uint8_t a = rand() % 15, b = rand() % 15; T[i] = i < 2048 ? uint8_t(a | (b << 4)) : rand(); }
+        LoadTile t{}; t.siz = G_IM_SIZ_4b; t.fmt = G_IM_FMT_CI; t.line = 2 + rand() % 6; t.tmem = 0; t.palette = 3; const uint16_t w = 2 + rand() % 60, h = 1 + rand() % 40;
+        const uint32_t pal = 2048 + 3 * 128; const uint64_t a = H(T, t, w, h, 2, 5, 0);
+        T[pal + 15 * 8 + 1] ^= 0x5A; c4n++; if (H(T, t, w, h, 2, 5, 0) != a) c4nb++; T[pal + 15 * 8 + 1] ^= 0x5A;
+        const int e = T[0] & 15; T[pal + e * 8 + 1] ^= 0x5A; c4u++; if (H(T, t, w, h, 2, 5, 0) == a) c4ub++; T[pal + e * 8 + 1] ^= 0x5A;
+        T[0] = (T[0] & 0xF0) | 15; const uint64_t b2 = H(T, t, w, h, 2, 5, 0);
+        T[pal + 15 * 8 + 1] ^= 0x5A; c4t++; if (H(T, t, w, h, 2, 5, 0) == b2) c4tb++; T[pal + 15 * 8 + 1] ^= 0x5A;
+    }
+    printf("ci4 ctl unused=%llu moved=%llu used=%llu missed=%llu nib15=%llu missed=%llu\n", (unsigned long long)c4n, (unsigned long long)c4nb, (unsigned long long)c4u, (unsigned long long)c4ub, (unsigned long long)c4t, (unsigned long long)c4tb);
+    if (c4nb || c4ub || c4tb) return 3;
+    { LoadTile t{}; t.siz = G_IM_SIZ_4b; t.fmt = G_IM_FMT_CI; t.line = 4; const uint16_t w = 64, h = 64; uint64_t sink = 0; double ns[3];
+      for (int loop = 0; loop < 3; loop++) { auto a = std::chrono::steady_clock::now(); for (int i = 0; i < 300000; i++) { T[i & 2047]++; sink += H(T, t, w, h, 2, 5, loop); } ns[loop] = std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - a).count() / 300000; }
+      printf("ci4 64x64 bench: neon %.0f ns loop %.0f ns table %.0f ns sink=%llu\n", ns[0], ns[1], ns[2], (unsigned long long)(sink & 1)); }
     LoadTile t{}; t.siz = G_IM_SIZ_8b; t.fmt = G_IM_FMT_CI; t.line = 8; const uint16_t w = 64, h = 32; uint64_t sink = 0; double ns[2];
     for (int loop = 0; loop < 2; loop++) { auto a = std::chrono::steady_clock::now(); for (int i = 0; i < 300000; i++) { T[i & 2047]++; sink += H(T, t, w, h, 2, 5, loop); } ns[loop] = std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - a).count() / 300000; }
     printf("n=%llu tlut=%llu bad=%llu used_ctl=%llu missed=%llu unused_ctl=%llu moved=%llu table %.0f ns loop %.0f ns sink=%llu\n", (unsigned long long)n, (unsigned long long)tl, (unsigned long long)bad, (unsigned long long)ctl_used, (unsigned long long)ctl_used_bad, (unsigned long long)ctl_unused, (unsigned long long)ctl_unused_bad, ns[0], ns[1], (unsigned long long)(sink & 1));
