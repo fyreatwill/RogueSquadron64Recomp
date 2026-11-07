@@ -43,3 +43,18 @@ extern "C" void CAT(rs64_eq_run_, TAG)(const uint16_t* in, int op, int e, uint16
         out[n] = r.vpu.r[vd].u16(n); out[8 + n] = r.vpu.acch.u16(n); out[16 + n] = r.vpu.accm.u16(n); out[24 + n] = r.vpu.accl.u16(n);
     }
 }
+// s6941: BENCH=1 timing loop, 64 dependent ops per call on the resident state (accumulators chain), e = 8
+extern "C" uint16_t CAT(rs64_eq_bench_, TAG)(int op, long iters) {
+    static RSP r; auto& v = r.vpu.r;
+    for (int n = 0; n < 8; n++) { v[1].u16(n) = 0x1234 + n * 77; v[2].u16(n) = 0xF00D - n * 33; }
+    for (long i = 0; i < iters; i++) for (int k = 0; k < 64; k++) {
+        switch (op) {
+        case 0: r.VMUDN<8>(v[3], v[1], v[2]); r.VMADN<8>(v[1], v[3], v[2]); break;
+        case 1: r.VMADH<8>(v[3], v[1], v[2]); r.VMADH<8>(v[1], v[3], v[2]); break;
+        case 2: r.VMADM<8>(v[3], v[1], v[2]); r.VMADM<8>(v[1], v[3], v[2]); break;
+        case 3: r.VMADN<8>(v[3], v[1], v[2]); r.VMADN<8>(v[1], v[3], v[2]); break;
+        }
+        asm volatile("" ::: "memory");
+    }
+    return v[1].u16(0) ^ r.vpu.accl.u16(3);
+}

@@ -1,5 +1,8 @@
 # s6939: leaf PC histogram from `xctrace export` of a Time Profiler run (see tools/g1e_ucode_blocks.py for the recipe).
 # leaf-PC histogram from an xctrace time-profile export; prints "count addr name" for every leaf
+# s6941: THREAD=<substring> keeps only samples of matching threads (e.g. THREAD='Gfx Thread'); per-thread totals go to stderr.
+import os
+TH = os.environ.get('THREAD')
 import sys, xml.etree.ElementTree as ET, collections
 ids = {}
 def res(e):
@@ -19,6 +22,7 @@ for ev, e in ET.iterparse(sys.argv[1], events=('end',)):
             if c2.tag == 'backtrace': bt = c2
             if c2.tag == 'thread': th = c2.get('fmt')
         if bt is None: continue
+        if TH and (th is None or TH not in th): continue
         fr = [res(f) for f in bt if res(f).tag == 'frame']
         if not fr: continue
         a = fr[0].get('addr'); cnt[a] += 1; nm[a] = fr[0].get('name') or '?'; thr[th] += 1

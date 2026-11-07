@@ -5064,11 +5064,12 @@ static void rs64_g1e_lean_tick() {
             (unsigned long long)rs64_g1e_lean_tasks[1].exchange(0));
 }
 // s6941 G1e: NEON multiply-op arm (src/rsp/factor5_ucode_nmac.cpp), taken instead of the lean arm when the lean arm would
-// run. ROGUESQ_G1E_NMAC=0/1 (default 0 until measured), ROGUESQ_G1E_NMAC_TOGGLE=<sec> flips it; [g1e-nmac] line per flip
+// run. Default on since s6941 (bit-exact, same-run -0.20 ms/task in flight); ROGUESQ_G1E_NMAC=0 runs the lean arm,
+// ROGUESQ_G1E_NMAC_TOGGLE=<sec> flips it; [g1e-nmac] line per flip
 // with the task count each arm ran since the last flip (positive control).
 static int rs64_g1e_nmac = [] {
     const char* e = getenv("ROGUESQ_G1E_NMAC");
-    const int on = (e && *e) ? (*e != '0') : 0;
+    const int on = (e && *e) ? (*e != '0') : 1;
     fprintf(stderr, "[g1e-nmac] on=%d\n", on);
     return on;
 }();

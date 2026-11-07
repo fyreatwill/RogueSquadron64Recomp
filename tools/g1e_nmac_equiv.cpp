@@ -9,7 +9,20 @@ int rs64_g1e_dmem = 1, rs64_rsp_hooks_on = 0;
 static uint64_t s = 0x9E3779B97F4A7C15ull;
 static uint16_t rnd() { s ^= s << 13; s ^= s >> 7; s ^= s << 17; static const uint16_t ed[] = {0, 1, 2, 0x7FFF, 0x8000, 0x8001, 0xFFFF, 0xFFFE};
     return (s >> 60) < 4 ? ed[(s >> 40) & 7] : (uint16_t)(s >> 20); }
+#include <chrono>
+extern "C" uint16_t rs64_eq_bench_old(int, long);
+extern "C" uint16_t rs64_eq_bench_new(int, long);
 int main(int argc, char** argv) {
+    if (getenv("BENCH")) {  // s6941: ns per op pair, old vs new, best of 5
+        const char* bn[4] = {"VMUDN+VMADN", "VMADH x2", "VMADM x2", "VMADN x2"};
+        for (int op = 0; op < 4; op++) { double best[2] = {1e9, 1e9};
+            for (int rep = 0; rep < 5; rep++) for (int a = 0; a < 2; a++) {
+                auto t0 = std::chrono::steady_clock::now(); volatile uint16_t z = a ? rs64_eq_bench_new(op, 200000) : rs64_eq_bench_old(op, 200000); (void)z;
+                double ns = std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - t0).count() / (200000.0 * 64);
+                if (ns < best[a]) best[a] = ns; }
+            printf("%-12s old %.2f ns  new %.2f ns  (%.0f%%)\n", bn[op], best[0], best[1], 100 * best[1] / best[0]); }
+        return 0;
+    }
     long N = argc > 1 ? atol(argv[1]) : 200000; long bad[9] = {0}, total = 0;
     const char* nm[9] = {"VMUDN", "VMUDM", "VMUDH", "VMADL", "VMADN", "VMADM", "VMADH", "VMADN vd=vs", "VMADH vd=vt"};
     uint16_t in[40], a[32], b[32];
