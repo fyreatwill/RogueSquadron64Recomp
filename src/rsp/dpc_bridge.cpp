@@ -6211,7 +6211,39 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
             static Rs64WalkStat s_ws; static const uint64_t s_ws_ctl = rs64_walk_stat_selftest();
             static const bool s_prewrap0 = [] { const char *e = std::getenv("ROGUESQ_G1D_PREWRAP_RECORD"); return e && *e == '1'; }();
             const bool walk_on = !s_prewrap0 && (s_walk_env == 2 ? ((time(nullptr) / 10) & 1) != 0 : s_walk_env != 0);
+            // s6945 G1e: ROGUESQ_G1E_COAL default on, =0 old, =tog 10 s blocks. Adjacent ranges of one merged run whose shadows are also
+            // adjacent get ONE shadow->rdram memcpy + ONE "wrap" blk_dma, and adjacent undo entries merge (one live memcpy + one "unwrap"
+            // at the flush), instead of one each per bump (~1M ranges/s at dd4 16:9). The pending restore is committed before anything
+            // reads the run's bytes (record_submit at the flush) and before a non-adjacent range is snapshotted, so RT64 and the undo see
+            // the same bytes as before. Only active on the default path (walk+merge on, no prewrap/rstat/walk-stat, which read per range).
+            // ROGUESQ_G1E_COAL_CHECK=1: per run, compares the bytes record_submit is handed with the per-range expectation (shadow bytes
+            // for restored ranges, live for the rest) and, after the undo, the restored ranges with their pre-restore bytes; run 1
+            // corrupts its expectation as the positive control (control must be 1, bad 0).
+            static const int s_coal_env = [] { const char *e = std::getenv("ROGUESQ_G1E_COAL"); return !e ? 1 : (*e == 't' ? 2 : (*e != '0')); }();
+            static const bool s_coal_chk = [] { const char *e = std::getenv("ROGUESQ_G1E_COAL_CHECK"); return e && *e && *e != '0'; }();
+            static const bool s_prewrap = s_prewrap0;
+            static const bool s_restore = []{ const char *e = std::getenv("ROGUESQ_WRAP_RESTORE"); return !(e && *e == '0'); }(); /* s4287: default on */
+            static const int s_rstat_env = [] { const char *e = std::getenv("ROGUESQ_G1E_RSTAT"); return !e ? 0 : (*e == 't' ? 2 : (*e != '0')); }();
+            const bool rstat = s_rstat_env == 2 ? (bool)((time(nullptr) / 10) & 1) : (bool)s_rstat_env;
+            const bool coal = (s_coal_env == 2 ? ((time(nullptr) / 10) & 1) != 0 : s_coal_env != 0) && walk_on && wm_on && !s_prewrap && !rstat && !s_wstat;
+            uint32_t pr_lo = 0, pr_hi = 0; size_t pr_off = 0;
+            static thread_local std::vector<uint8_t> cc_exp, cc_pre; struct CcSp { uint32_t lo, hi; size_t off; };
+            static thread_local std::vector<CcSp> cc_sp; static unsigned long cc_runs = 0, cc_bad = 0, cc_ubad = 0, cc_ctl = 0, cc_merged = 0, cc_ranges = 0;
+            auto commit_pr = [&] {
+                if (pr_hi > pr_lo) {
+                    memcpy(g_rdram_for_submit + pr_lo, &g_s4272_shadow[pr_off], pr_hi - pr_lo);
+                    rs64_g1d_blk_dma("wrap", 0, pr_lo, pr_hi - pr_lo, 0);
+                }
+                pr_lo = pr_hi = 0;
+            };
             auto wm_flush = [&] {
+                commit_pr();
+                const bool cc_on = s_coal_chk && coal && wm_hi > wm_lo && g_rdram_for_submit;
+                if (cc_on) {
+                    if (++cc_runs == 1 && !cc_exp.empty()) cc_exp[0] ^= 0xFF;
+                    const bool d = cc_exp.size() != wm_hi - wm_lo || memcmp(cc_exp.data(), g_rdram_for_submit + wm_lo, cc_exp.size()) != 0;
+                    if (d) { if (cc_runs == 1) ++cc_ctl; else ++cc_bad; }
+                }
                 if (wm_hi > wm_lo && walk_on && wm_on) {
                     rs64_dpc_record_submit(wm_lo, wm_hi);
                     if (s_wm_chk && g_rdram_for_submit) wm_chk.assign(g_rdram_for_submit + wm_lo, g_rdram_for_submit + wm_hi);
@@ -6230,6 +6262,12 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                     memcpy(g_rdram_for_submit + u.lo, wm_live.data() + u.off, u.hi - u.lo);
                     if (u.hi > u.lo) rs64_g1d_blk_dma("unwrap", 0, u.lo, u.hi - u.lo, 0);
                 }
+                if (cc_on) {
+                    for (const CcSp &c : cc_sp) if (memcmp(g_rdram_for_submit + c.lo, cc_pre.data() + c.off, c.hi - c.lo) != 0) ++cc_ubad;
+                    if (cc_runs <= 4 || (cc_runs & 0x3FFF) == 0)
+                        fprintf(stderr, "[s6945-coal] runs=%lu ranges=%lu merged=%lu bad=%lu undo_bad=%lu control(must be 1)=%lu\n", cc_runs, cc_ranges, cc_merged, cc_bad, cc_ubad, cc_ctl);
+                }
+                cc_exp.clear(); cc_pre.clear(); cc_sp.clear();
                 wm_undo.clear(); wm_live.clear(); wm_chk.clear(); wm_lo = wm_hi = 0;
             };
             for (const auto &r : g_deferred_ranges) {
@@ -6240,9 +6278,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                 // s6723: record_submit (which also rewrites RDP words: s6720 title clear, s6722 pause dim) now runs after the
                 // s4286 shadow restore below, so its edits land in the bytes RT64 is fed; before, the restore overwrote them on
                 // any wrap-flushed range (pause dim band back in s6723 b219 / s6722 fixb219). ROGUESQ_G1D_PREWRAP_RECORD=1 = old.
-                static const bool s_prewrap = [] { const char *e = std::getenv("ROGUESQ_G1D_PREWRAP_RECORD"); return e && *e == '1'; }();
                 if (s_prewrap) rs64_dpc_record_submit(r.first, r.second);
-                static const bool s_restore = []{ const char *e = std::getenv("ROGUESQ_WRAP_RESTORE"); return !(e && *e == '0'); }(); /* s4287: default on */
                 const S4272Sh *shp = nullptr;
                 if (s_restore && g_rdram_for_submit) {
                     const uint64_t k = ((uint64_t)r.first << 32) | r.second;
@@ -6259,9 +6295,23 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                 static unsigned long rn = 0, rMiss = 0, rWordsRestored = 0, rPostDiff = 0, rCtl = 0;
                 // s6943 G1e: the two per-word compare loops below only feed the [s4286-restore] counters (~2% of Gfx-thread samples at dd4 16:9, s6943 xctrace).
                 // ROGUESQ_G1E_RSTAT=1 keeps them (old behaviour), =tog 10 s blocks, default off: wordsRestored/postDiff then read 0. The restore itself is unchanged.
-                static const int s_rstat_env = [] { const char *e = std::getenv("ROGUESQ_G1E_RSTAT"); return !e ? 0 : (*e == 't' ? 2 : (*e != '0')); }();
-                const bool rstat = s_rstat_env == 2 ? (bool)((time(nullptr) / 10) & 1) : (bool)s_rstat_env;
-                if (shp) {   // s4286: feed RT64 the bump-time bytes, then put live back
+                if (shp && coal) {
+                    const bool ext = pr_hi > pr_lo && pr_hi == r.first && pr_off + (pr_hi - pr_lo) == shp->off;
+                    if (!ext) commit_pr();   // an earlier pending range may overlap r: restore it before r's live snapshot
+                    const uint32_t len = r.second - r.first;
+                    if (s_coal_chk) {
+                        cc_sp.push_back({r.first, r.second, cc_pre.size()});
+                        cc_pre.insert(cc_pre.end(), g_rdram_for_submit + r.first, g_rdram_for_submit + r.second);
+                        cc_exp.insert(cc_exp.end(), g_s4272_shadow.begin() + shp->off, g_s4272_shadow.begin() + shp->off + len);
+                        ++cc_ranges; cc_merged += ext;
+                    }
+                    if (!wm_undo.empty() && wm_undo.back().hi == r.first && wm_undo.back().off + (wm_undo.back().hi - wm_undo.back().lo) == wm_live.size())
+                        wm_undo.back().hi = r.second;
+                    else wm_undo.push_back({r.first, r.second, wm_live.size()});
+                    wm_live.insert(wm_live.end(), g_rdram_for_submit + r.first, g_rdram_for_submit + r.second);
+                    if (ext) pr_hi = r.second; else { pr_lo = r.first; pr_hi = r.second; pr_off = shp->off; }
+                    rCtl += 1;
+                } else if (shp) {   // s4286: feed RT64 the bump-time bytes, then put live back
                     wm_undo.push_back({r.first, r.second, wm_live.size()});
                     wm_live.insert(wm_live.end(), g_rdram_for_submit + r.first, g_rdram_for_submit + r.second);
                     if (rstat) for (uint32_t x = r.first; x < r.second; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[shp->off + (x - r.first)], 4); memcpy(&now, g_rdram_for_submit + x, 4); if (was != now) rWordsRestored++; }
@@ -6271,6 +6321,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                     if (rstat) for (uint32_t x = r.first; x < r.second; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[shp->off + (x - r.first)], 4); memcpy(&now, g_rdram_for_submit + x, 4); if (was != now) rPostDiff++; }
                     rCtl += 1;
                 } else if (s_restore) rMiss++;
+                if (!shp && coal && s_coal_chk && g_rdram_for_submit) { commit_pr(); cc_exp.insert(cc_exp.end(), g_rdram_for_submit + r.first, g_rdram_for_submit + r.second); ++cc_ranges; }
                 if (s_wstat && g_rdram_for_submit) {
                     rs64_walk_stat_range(s_ws, g_rdram_for_submit, r.first, r.second);
                     if ((s_ws.ranges & 0xFFFFFu) == 1) fprintf(stderr, "[s6936-walk] ranges=%llu mid=%llu tri_heads=%llu bytes=%llu walk=%d selftest_mid(must be 3)=%llu\n", (unsigned long long)s_ws.ranges, (unsigned long long)s_ws.mid, (unsigned long long)s_ws.tri_heads, (unsigned long long)s_ws.bytes, (int)walk_on, (unsigned long long)s_ws_ctl);
