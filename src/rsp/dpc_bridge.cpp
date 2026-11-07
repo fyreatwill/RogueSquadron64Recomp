@@ -3616,6 +3616,24 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
                 if (live) { if (skyz_pd != 0xFFFFFFFFu) put(skyz_pd); else s_skyz_miss++; }
             }
         }
+        // s6946 G5h: ROGUESQ_DD_SKYZ_AUD=<file> (needs DD_SKYZ live) asks whether a sky depth SKYZ rewrites is ever consumed by a mode other than the sky (H-leak).
+        // At every draw (tri, texrect, fill rect) whose other modes take z from prim depth and compare or update z, it bins the depth then current: ring = one SKYZ
+        // matches (rewritten on live seconds), other = any other depth. Per swap: sky_ring, oth_ring (the leak), sky_other, oth_other (control: 0xC8104A54 and kin draw
+        // with prim z, so the instrument must see non-sky prim z draws), on the odd-second parity. Leaking blender words are kept. Diagnostic, off unless set.
+        static FILE *s_za = [] { const char *e = std::getenv("ROGUESQ_DD_SKYZ_AUD"); return (e && *e) ? fopen(e, "w") : (FILE *)nullptr; }();
+        if (s_za && skyz) {
+            static uint32_t z_om0 = 0, z_om1 = 0, z_pdk = 0, z_sw = 0xFFFFFFFFu, z_c[4] = {}, z_leak[16] = {}, z_nl = 0;
+            if (z_sw != (uint32_t)sw) {
+                if (z_c[0] | z_c[1] | z_c[2] | z_c[3]) fprintf(s_za, "%u %llu %u %u %u %u %u\n", z_sw, (unsigned long long)mach_absolute_time(), (unsigned)((mach_absolute_time() / 24000000ull) & 1), z_c[0], z_c[1], z_c[2], z_c[3]);
+                fflush(s_za); z_sw = (uint32_t)sw; z_c[0] = z_c[1] = z_c[2] = z_c[3] = 0;
+            }
+            if (op == 0x2E) { z_pdk = 2; for (uint32_t v : s_skyz_ring) if (v && v == (w1 >> 16)) { z_pdk = 1; break; } }
+            else if (op == 0x2F) { z_om0 = w0; z_om1 = w1; }
+            else if (((op >= 0x08 && op <= 0x0F) || op == 0x24 || op == 0x25 || op == 0x36) && z_pdk && (z_om1 & 4u) && (z_om1 & 0x30u) && ((z_om0 >> 20) & 3u) < 2u) {
+                const bool sky = z_om1 == 0x00552224u; z_c[(sky ? 0 : 1) + (z_pdk == 1 ? 0 : 2)]++;
+                if (!sky && z_pdk == 1) { bool k = false; for (uint32_t i = 0; i < z_nl; i++) k |= z_leak[i] == z_om1; if (!k && z_nl < 16) { z_leak[z_nl++] = z_om1; fprintf(s_za, "# leak om %08X %08X swap=%d\n", z_om0, z_om1, sw); } }
+            }
+        }
         if (op == 0x24 || op == 0x25) { a += 16; continue; }
         if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; a += 8; continue; }
         if (op == 0x3D) s_timg = w1;
