@@ -182913,3 +182913,16 @@ Run wt (scratch/s6936/w.zsh, windowed FPS60 dd4 16:9 sync, lvl index 1 keyed fli
 Result: selects H-call: about 1.06 ms per task, more than the 0.9 ms the profile attributed to the walkers (the profile split by line, not counting call overhead). Rules out H-split: 0 mid-command starts in 354M ranges with a working control, so the ucode bumps DPC_END per whole command and the merge is equivalent on the command level. Single run for the rate (same-run toggle, so not cross-run noise). Behaviour change: the opt-in DD_SKYZ (default off) can now patch a SET_PRIM_DEPTH sent in an earlier range of the same run; before, it counted those as s_skyz_miss.
 Queued: scratch/agent/soak_queue/s6936_locked_walk.sh, locked 60 Hz fullscreen sync dd4 16:9 defaults, the owner figure to compare with s6935's 47.3.
 Not closed: locked on-glass figure; factor5_ucode self 4.5 ms; fence wait in fullSync; the other record_submit call sites (commit path is already merged; the direct path at the end of rsp_dpc_submit_impl is per submit).
+
+## Session 6937 (2026-11-07) — G1e: the fullSync fence wait guards this task's own RDRAM readbacks every call (H-same), 1.0-1.1 ms per task in flight; s6936 locked soak void (human active), requeued
+
+Soak folded: s6936_locked_walk rc=2, 0 s: human active (HIDIdleTime 7.5 s at session start). Requeued as scratch/agent/soak_queue/s6936_locked_walk_r2.sh.
+Code read: in State::fullSync renderAndSynchronize, framebufferGraphicsWorker->execute() is immediately followed by wait() on the same RenderWorker fence (Metal: dispatch_semaphore signalled by that command buffer's completed handler). So the wait is always on work queued in the same call. The question left was whether that work carries data the CPU needs right after: the copyRenderTargetToNative readbacks consumed by the copyNativeToRAM writeback loop.
+Instrument: ROGUESQ_G1E_FENCE_STAT=1 (lib/rt64/src/hle/rt64_state.cpp, off by default). It counts per call the readbacks queued (g1eNativeCopies), readbacks recorded then skipped (skipReadback sites), and wait ms. Per-second [g1e-fence] line.
+Run fs (scratch/s6937/w.zsh, windowed FPS60 dd4 16:9 sync, lvl index 1 keyed flight, defaults + FENCE_STAT), 235 s, alive, 0 crash:
+- t0-95 (boot, menus): 59.9 calls/s, none=9, 3.52 copies/call, skipped 0, wait 0.81 ms/call.
+- t95-140 flight: 59.7 calls/s, none=0, 5.00 copies/call, skipped 0, wait 1.00 ms/call, max 1.80.
+- t140-235 flight: 59.9 calls/s, none=0, 5.00 copies/call, skipped 0, wait 1.11 ms/call, max 1.83. sd_wall about 13.3 ms.
+Positive control, same run: the none counter fired 9 times at boot, so the instrument can see a readback-free call.
+Result: selects H-same. Every flight wait guards 5 readbacks that the writeback loop then copies into RDRAM. Rules out H-stale (no wait without data, no recorded-then-skipped readback), so a ROGUESQ_G1E_FENCE skip/defer toggle would be unsafe and was not built. The 1.1 ms (about 8% of the task) goes only with overlap (ROGUESQ_RDP_ASYNC) or with not reading back at all.
+Not closed: whether those 5 writebacks per task are ever read (by the game CPU, or as a texture or VI source) before being overwritten (next unit, H-wb-dead); factor5_ucode self 4.5 ms; locked on-glass figure after WALK.
