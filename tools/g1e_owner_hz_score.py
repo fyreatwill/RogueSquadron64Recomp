@@ -6,7 +6,7 @@ Control: a ring whose Q and P rows join gives on>0; a ring without reports print
 import re, sys, argparse, os, statistics as st
 ap=argparse.ArgumentParser(); ap.add_argument('files',nargs='+'); ap.add_argument('--last',type=float,default=120); a=ap.parse_args()
 pc=lambda v,p: sorted(v)[int(p*(len(v)-1))] if v else 0
-print('arm | Q/s | gen/s | on | lat p50/p99 | 1s med min..max | acq p50 | acq>5 %')
+print('arm | Q/s | gen/s | on | lat p50/p99 | 1s med min..max | acq p50 | acq>5 % | glass')
 for f in a.files:
     Q={}; P=[]
     for l in open(f,errors='replace'):
@@ -23,5 +23,6 @@ for f in a.files:
     for v,s in lat: sec.setdefault(s,[]).append(v)
     med=[st.median(v) for v in sec.values()]
     acq=[q[1] for q in qs]
-    print('%s | %.1f | %.1f | %d | %.1f/%.1f | %.1f..%.1f | %.2f | %.1f'%(os.path.basename(f)[5:-4],len(qs)/a.last,len({q[2] for q in qs})/a.last,len(lat),
-      pc([v for v,_ in lat],.5),pc([v for v,_ in lat],.99),min(med or [0]),max(med or [0]),pc(acq,.5),100*sum(x>5 for x in acq)/max(1,len(acq))))
+    share=len(lat)/max(1,len(qs)); gl='%.0f%%'%(100*share)+('' if share>=.95 else ' VOID, presents left the screen')  # s6935: arm lq read 55.7 Q/s with on=0
+    print('%s | %.1f | %.1f | %d | %.1f/%.1f | %.1f..%.1f | %.2f | %.1f | %s'%(os.path.basename(f)[5:-4],len(qs)/a.last,len({q[2] for q in qs})/a.last,len(lat),
+      pc([v for v,_ in lat],.5),pc([v for v,_ in lat],.99),min(med or [0]),max(med or [0]),pc(acq,.5),100*sum(x>5 for x in acq)/max(1,len(acq)),gl))

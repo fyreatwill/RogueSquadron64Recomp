@@ -31,6 +31,7 @@ static std::vector<std::pair<uint32_t, uint32_t>> g_deferred_ranges;
 static std::vector<uint8_t> g_s4272_shadow;
 struct S4272Sh { uint32_t lo, hi; size_t off; };
 extern "C" { int g_rs64_trim = 1; }  // s6934: ROGUESQ_G1E_TRIM state, set per wrap flush
+extern "C" { int g_rs64_tmem_fast = 1; }  // s6935: ROGUESQ_G1E_TMEM state, TLUT scan table and word copy in RT64, set per wrap flush
 static std::vector<S4272Sh> g_s4272_sh;
 
 #include "librecomp/rsp.hpp"
@@ -6148,6 +6149,8 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
             // samples at dd4); a reused open-addressed table keeps the same first-match result. The trim also drops the per-triangle combiner strings in RT64.
             static const int s_trim_env = [] { const char *e = std::getenv("ROGUESQ_G1E_TRIM"); return !e ? 1 : (*e == 't' ? 2 : (*e != '0')); }();
             g_rs64_trim = s_trim_env == 2 ? (int)((time(nullptr) / 10) & 1) : s_trim_env;
+            static const int s_tmem_env = [] { const char *e = std::getenv("ROGUESQ_G1E_TMEM"); return !e ? 1 : (*e == 't' ? 2 : (*e != '0')); }();
+            g_rs64_tmem_fast = s_tmem_env == 2 ? (int)((time(nullptr) / 10) & 1) : s_tmem_env;
             std::unordered_map<uint64_t, const S4272Sh *> shIdx;
             static std::vector<uint64_t> shK; static std::vector<const S4272Sh *> shV; size_t shMask = 0;
             auto shSlot = [&](uint64_t k) { size_t i = (size_t)((k * 0x9E3779B97F4A7C15ull) >> 20) & shMask; while (shV[i] && shK[i] != k) i = (i + 1) & shMask; return i; };

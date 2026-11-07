@@ -1337,3 +1337,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261106-235759 | s6929_shape_owner | rc=0 | 243s | scratch/agent/soak_results/s6929_shape_owner_20261106-235759.log
 20261107-120615 | s6933_prof | rc=2 | 0s | scratch/agent/soak_results/s6933_prof_20261107-120615.log
 20261107-120615 | s6933_wmcheck_ao | rc=1 | 0s | scratch/agent/soak_results/s6933_wmcheck_ao_20261107-120615.log
+20261107-124408 | s6934_locked_ao | rc=0 | 247s | scratch/agent/soak_results/s6934_locked_ao_20261107-124408.log
+20261107-124815 | s6934_pose_arms | rc=0 | 283s | scratch/agent/soak_results/s6934_pose_arms_20261107-124815.log

@@ -65,6 +65,12 @@ if (ROGUESQ_RT64_OPT AND NOT MSVC)
     # regenerates every shader and needs the Metal toolchain.
     target_compile_options(rt64 PRIVATE -O2)
 endif()
+# s6935: plume (RT64's Metal wrapper) is a separate target, so ROGUESQ_RT64_OPT missed it and it stayed -O0: every encoded
+# draw state check ran as unoptimised std::vector and __wrap_iter calls on the RT64 threads. Same reasoning as above.
+option(ROGUESQ_PLUME_OPT "Compile plume (RT64 Metal wrapper) with -O2 under the Debug config" ON)
+if (ROGUESQ_PLUME_OPT AND NOT MSVC)
+    target_compile_options(plume PRIVATE -O2)
+endif()
 
 # ---- N64ModernRuntime (ultramodern + librecomp) ----
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime ${CMAKE_BINARY_DIR}/N64ModernRuntime)
