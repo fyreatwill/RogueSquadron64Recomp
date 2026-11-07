@@ -6028,6 +6028,30 @@ namespace {
     }
 }
 
+// s6936 G1e: ROGUESQ_G1E_WALK_STAT=1 counts, on the wrap flush, the deferred ranges that begin inside an RDP command (the walkers in
+// record_submit decode a range from its first word, so a range that starts mid-command is read as body words). A command cursor
+// follows contiguous ranges; a gap resets it. Self-test at first use: one 32-byte triangle bumped as 4 x 8 bytes must give mid=3.
+static uint32_t rs64_cmd_len(const uint8_t *ram, uint32_t a) {
+    uint32_t w0; memcpy(&w0, ram + (a & kSubmitRamMask), 4); const uint32_t op = (w0 >> 24) & 0x3F;
+    if (op == 0x24 || op == 0x25) return 16u;
+    if (op >= 0x08 && op <= 0x0F) return 32u + ((op & 4) ? 64u : 0u) + ((op & 2) ? 64u : 0u) + ((op & 1) ? 16u : 0u);
+    return 8u;
+}
+struct Rs64WalkStat { uint32_t cur = 0, end = 0; uint64_t ranges = 0, mid = 0, bytes = 0, tri_heads = 0; };
+static void rs64_walk_stat_range(Rs64WalkStat &st, const uint8_t *ram, uint32_t lo, uint32_t hi) {
+    if (lo != st.end) st.cur = lo;
+    st.ranges++; st.bytes += hi - lo;
+    if (st.cur > lo) st.mid++;
+    while (st.cur < hi) { uint32_t w0; memcpy(&w0, ram + (st.cur & kSubmitRamMask), 4); const uint32_t op = (w0 >> 24) & 0x3F; if (op >= 0x08 && op <= 0x0F) st.tri_heads++; st.cur += rs64_cmd_len(ram, st.cur); }
+    st.end = hi;
+}
+static uint64_t rs64_walk_stat_selftest() {
+    uint8_t buf[64] = {}; const uint32_t tri = 0x08000000u, nop = 0x27000000u;
+    memcpy(buf, &tri, 4); memcpy(buf + 32, &nop, 4);
+    Rs64WalkStat t; for (uint32_t a = 0; a < 40; a += 8) rs64_walk_stat_range(t, buf, a, a + 8);
+    return t.mid;  // must be 3
+}
+
 // The ucode bumps DPC_END one 8-byte command at a time, so a task's deferred list is mostly runs of contiguous ranges;
 // submit each run as one range (byte-for-byte identical content and order, far fewer RT64 entries). Used by the
 // task-end commit and by the s6707 streamed flush.
@@ -6177,7 +6201,21 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
             static thread_local std::vector<uint8_t> wm_live, wm_chk;
             static unsigned long wm_runs = 0, wm_ranges = 0, wm_bad = 0, wm_ctl = 0;
             uint32_t wm_lo = 0, wm_hi = 0;
+            // s6936 G1e: ROGUESQ_G1E_WALK default on, =0 old, =tog 10 s blocks. With the merge on, record_submit runs once per contiguous
+            // run at its flush instead of once per bump (~47k calls per task at dd4 16:9): its walkers then read whole commands, as on
+            // the task-end commit path (submit_deferred_merged), where a per-bump call read triangle body words as commands. Each range
+            // is restored from its shadow before the run's record, and the undo snapshot was taken before that, so RT64 gets the same
+            // restored-then-edited bytes. ROGUESQ_G1D_PREWRAP_RECORD=1 keeps the old per-range order.
+            static const int s_walk_env = [] { const char *e = std::getenv("ROGUESQ_G1E_WALK"); return !e ? 1 : (*e == 't' ? 2 : (*e != '0')); }();
+            static const bool s_wstat = [] { const char *e = std::getenv("ROGUESQ_G1E_WALK_STAT"); return e && *e && *e != '0'; }();
+            static Rs64WalkStat s_ws; static const uint64_t s_ws_ctl = rs64_walk_stat_selftest();
+            static const bool s_prewrap0 = [] { const char *e = std::getenv("ROGUESQ_G1D_PREWRAP_RECORD"); return e && *e == '1'; }();
+            const bool walk_on = !s_prewrap0 && (s_walk_env == 2 ? ((time(nullptr) / 10) & 1) != 0 : s_walk_env != 0);
             auto wm_flush = [&] {
+                if (wm_hi > wm_lo && walk_on && wm_on) {
+                    rs64_dpc_record_submit(wm_lo, wm_hi);
+                    if (s_wm_chk && g_rdram_for_submit) wm_chk.assign(g_rdram_for_submit + wm_lo, g_rdram_for_submit + wm_hi);
+                }
                 if (wm_hi > wm_lo) {
                     if (s_wm_chk && g_rdram_for_submit) {
                         if (++wm_runs == 1 && !wm_chk.empty()) wm_chk[0] ^= 0xFF;
@@ -6229,10 +6267,14 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                     for (uint32_t x = r.first; x < r.second; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[shp->off + (x - r.first)], 4); memcpy(&now, g_rdram_for_submit + x, 4); if (was != now) rPostDiff++; }
                     rCtl += 1;
                 } else if (s_restore) rMiss++;
-                if (!s_prewrap) rs64_dpc_record_submit(r.first, r.second);
+                if (s_wstat && g_rdram_for_submit) {
+                    rs64_walk_stat_range(s_ws, g_rdram_for_submit, r.first, r.second);
+                    if ((s_ws.ranges & 0xFFFFFu) == 1) fprintf(stderr, "[s6936-walk] ranges=%llu mid=%llu tri_heads=%llu bytes=%llu walk=%d selftest_mid(must be 3)=%llu\n", (unsigned long long)s_ws.ranges, (unsigned long long)s_ws.mid, (unsigned long long)s_ws.tri_heads, (unsigned long long)s_ws.bytes, (int)walk_on, (unsigned long long)s_ws_ctl);
+                }
+                if (!s_prewrap && !(walk_on && wm_on)) rs64_dpc_record_submit(r.first, r.second);
                 if (wm_hi <= wm_lo) wm_lo = r.first;
                 wm_hi = r.second; ++wm_ranges;
-                if (s_wm_chk && g_rdram_for_submit) wm_chk.insert(wm_chk.end(), g_rdram_for_submit + r.first, g_rdram_for_submit + r.second);
+                if (s_wm_chk && g_rdram_for_submit && !(walk_on && wm_on)) wm_chk.insert(wm_chk.end(), g_rdram_for_submit + r.first, g_rdram_for_submit + r.second);
                 if (!wm_on) wm_flush();
                 if (s_restore && (++rn <= 8 || (rn & (rs64_s6932_quiet() ? 0xFFFFFul : 1023ul)) == 0)) /* s6932: ~1M ranges/s at dd4 16:9 */
                     fprintf(stderr, "[s4286-restore] n=%lu restoredRanges=%lu noShadow=%lu wordsRestored=%lu postDiff(must be 0)=%lu\n", rn, rCtl, rMiss, rWordsRestored, rPostDiff);
