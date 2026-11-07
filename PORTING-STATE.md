@@ -182591,3 +182591,21 @@ Queued: s6921_rate_skyz_l1, s6921_rate_melt_l1 (paired 1 s rate, 300 s hold). Th
 NOT done: wedge cause, rate, other MELT levels, 21:9, dd2 and dd3 combo. Owner sheet: docs/owner_sheet_s6921_melt_skyz.png.
 
 Result line for s6921: MELT and SKYZ compose on shots 78-79 (sky 1.66 vs 0.63, step 39.3 vs 3.8), MELT alone wedges a lava shot and needs a fix before any default, FPS60 or 16:9 owns a transition noise block.
+
+## Session 6922 (2026-11-06) — G5h: the lava "wedge" is a polygon bubble around the base with no terrain under it; the z-compare object gate is refuted and reverted; 16:9 alone owns the noise block
+
+HYPOTHESIS-ID: g5h-melt-wedge. No maintenance (36.6 KB).
+
+Soaks folded. s6921_flash_wide (16:9 only, no FPS60): noise block at t=16.8, frames 1081-1094, spread 30.2, same size as f1, m1, m2, so 16:9 alone is enough. s6921_flash_fps60 is VOID for this question: its 45 s capture holds the N64, LucasArts and Factor 5 logos and never reaches the cut, its 5 "block runs" are logo frames (scratch/s6922/flash_look.png). FPS60 alone is not measured. Block frames viewed (scratch/s6922/block_seq.png): same pattern frame to frame in a fixed box 238 px wide of 384, reads like non-image memory shown as a picture, unproven. s6921_rate_skyz_l1 and s6921_rate_melt_l1 are still in the queue, not run.
+
+New: RS64_RDP_BIN_PORT_WIN=<from_s>:<to_s> (dump only that window of a long run), tools/g5h_rdp_groups.py (census / frame / cover / pix / alpha over a port dump).
+
+Ran, dd4 16:9 FPS60, AT THE MOVIES, 0 crash in each: w1 MELT=tog SKYZ=1 dump 806-830 s; o1 MELT=1 MELT_OBJ=tog SKYZ=1 to 950 s; w2 MELT=1 SKYZ=1 dump 820-826 s.
+
+Result 1, the defect is misdescribed in s6921. It is not a wedge: it is a many-sided polygon bubble around the hovering base, white, blue, green, purple, which grows and moves with the camera (scratch/s6922/wedge_seq.png, w2_seq.png).
+
+Result 2, H-stale and the sky story are refuted for this shot. No sky mode in the bubble frames (w1 census sky 0, 3 buffers A12600 A7CA00 and z B95C00). The frame is cleared in two halves to 10431043, dark, about the fog colour 10080800.
+
+Result 3, H-translucent-object refuted. Gate tried: leave C811 words with z compare (objects) alone, ROGUESQ_DD_MELT_OBJ=tog. The lever fired (object left alone n=1048576) and the bubble shows on both parities (scratch/s6922/o1_seq.png). Gate reverted in the next commit, it fixes nothing. Shot 79 on o1, MELT on: row step 3.8-4.1 at frames 1620-1830, so the MELT result itself still stands.
+
+Result 4, pixel query, w2 frame 112-113 (vi 49250): at (320,200), inside the bubble, NO terrain triangle covers the pixel; only objects do, first 12006270 tex 80938370 shade 256,244,214 alpha 0, then 12006270 tex 80884A70 and 80885270, then 00504A50. Outside, (320,100) has one terrain tri alpha 144, (60,240) one terrain tri alpha 0. So bright object triangles sit in a gap of the terrain.
