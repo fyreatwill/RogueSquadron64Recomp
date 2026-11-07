@@ -11776,11 +11776,15 @@ static void rs64_g1d_apply_aspect_policy() {
     rs64_g1f_optin = as || rs64_g1f_fullscreen;
     if (!rs64_g1f_optin) return;
     SDL_InitSubSystem(SDL_INIT_VIDEO);  // refcounted; create_gfx's SDL_Init keeps it
+    // s6929 G1d: under ROGUESQ_VI_SHAPE a 1024-column picture is 1280x458, so the widest window is 2.795, not 1024/448.
+    const char* vsh = std::getenv("ROGUESQ_VI_SHAPE");
+    const bool vshape = vsh && *vsh && *vsh != '0';
+    const double amax = vshape ? 1024.0 * 1.25 / 458.0 : 1024.0 / 448.0;
     if (as && !std::strcmp(as, "auto")) {
         SDL_DisplayMode dm{};
         double r = 4.0 / 3.0;
         if (SDL_GetDesktopDisplayMode(0, &dm) == 0 && dm.h > 0) r = (double)dm.w / dm.h;
-        r = std::clamp(r, 4.0 / 3.0, 1024.0 / 448.0);
+        r = std::clamp(r, 4.0 / 3.0, amax);
         char rb[32];
         std::snprintf(rb, sizeof rb, "%.4f:1", r);
         setenv("ROGUESQ_ASPECT", rb, 1);
@@ -11789,7 +11793,7 @@ static void rs64_g1d_apply_aspect_policy() {
     }
     const char* c = as ? std::strchr(as, ':') : nullptr;
     double wr = c ? std::atof(as) : 0.0, hr = c ? std::atof(c + 1) : 0.0;
-    rs64_g1f_fit_window(wr > 0.0 && hr > 0.0 ? std::clamp(wr / hr, 4.0 / 3.0, 1024.0 / 448.0) : 4.0 / 3.0);
+    rs64_g1f_fit_window(wr > 0.0 && hr > 0.0 ? std::clamp(wr / hr, 4.0 / 3.0, amax) : 4.0 / 3.0);
     if (!c && !rs64_g1f_fullscreen) { rs64_g1f_win_w = 640; rs64_g1f_win_h = 480; }
     // ROGUESQ_WINDOW_FIT=0: pre-G1f window (640x480, no high-DPI, no fullscreen, no RT64 aspect rewrite).
     const char* wf = std::getenv("ROGUESQ_WINDOW_FIT");
@@ -11801,9 +11805,10 @@ static void rs64_g1d_apply_aspect_policy() {
     int fbw = (int)(448.0 * w / h + 0.5);
     // s6928 G1d: ROGUESQ_VI_SHAPE=1 shows a column 1.25 dots wide on 458 half-lines (the retail flight raster), so the
     // window needs fewer columns: 16:9 652, 21:9 856. The 340-row lever (s6927) answers the square-column present, so off.
-    const char* vsh = std::getenv("ROGUESQ_VI_SHAPE");
-    if (vsh && *vsh && *vsh != '0') {
+    if (vshape) {
         fbw = (((int)(458.0 / 1.25 * w / h + 0.5)) + 2) & ~3;
+        if (fbw <= 512) return;  // s6929: the 512 picture is already 1.397, narrower windows just letterbox it
+        if (fbw == 640) fbw = 644;  // s6929: at 640 the presenter cannot tell flight (par 1.25) from a 640 mode (par 1)
         setenv("ROGUESQ_G1D_340PERSP", "0", 0);
     }
     char b[32];

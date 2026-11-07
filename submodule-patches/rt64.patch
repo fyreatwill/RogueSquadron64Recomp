@@ -11574,7 +11574,7 @@ index 0848f3e..22c84a9 100644
  
          TextureUpload newUpload;
 diff --git a/src/render/rt64_vi_renderer.cpp b/src/render/rt64_vi_renderer.cpp
-index b4ff4e9..fbe9b49 100644
+index b4ff4e9..b29e247 100644
 --- a/src/render/rt64_vi_renderer.cpp
 +++ b/src/render/rt64_vi_renderer.cpp
 @@ -4,9 +4,20 @@
@@ -11660,7 +11660,7 @@ index b4ff4e9..fbe9b49 100644
  
          p.commandList->setPipeline(shader->pipeline.get());
          p.commandList->setGraphicsPipelineLayout(shader->pipelineLayout.get());
-@@ -100,8 +156,29 @@ namespace RT64 {
+@@ -100,8 +156,31 @@ namespace RT64 {
          // on the screen. To work around that, the viewport the buffer will be drawn in will be expanded so only
          // the region of interest is rendered. A scissor will cut it off correctly according to the coordinates
          // specified by the VI.
@@ -11677,7 +11677,9 @@ index b4ff4e9..fbe9b49 100644
 +            const int dots = int(vi.hRegion.hEnd) - int(vi.hRegion.hStart), lines = int(vi.vRegion.vEnd) - int(vi.vRegion.vStart);
 +            const uint32_t cols = uint32_t(sdSize.x), xs = vi.xTransform.xScale;
 +            if ((dots > 0) && (lines > 0) && (cols > 0) && (xs > 0)) {
-+                const float par = ((s_fbw > 512u) && (cols == s_fbw)) ? 1.25f : (1024.0f / float(xs));
++                // s6929: a 640-family mode widened past 640 (mission intro, xScale above 0x400 only there) keeps its one-dot column.
++                const bool wide640 = (s_fbw > 512u) && (cols != s_fbw) && (cols > 640u) && (xs > 0x400u);
++                const float par = ((s_fbw > 512u) && (cols == s_fbw)) ? 1.25f : wide640 ? 1.0f : (1024.0f / float(xs));
 +                const hlslpp::float2 shaped = { float(cols) * par, float(lines) };
 +                static uint32_t s_lastCols = 0, s_lastLines = 0;
 +                if ((s_lastCols != cols) || (s_lastLines != uint32_t(lines))) {
