@@ -33,4 +33,3 @@ Owner judges: docs/owner_sheet_s6883_spancell.png, docs/owner_sheet_s6882_219_dd
 Open from s6884: decodeVI now runs on the worker up to one tail after the VI. FAST vs PROBES not split. Best sx gap: 4:3 box 1106 px is +0.82%, not closed.
 Open, not queued (G4): FPS60+dd3 at 300 s, FPS60+dd2 on lvl10, wide bundles at 300 s continuous, 21:9 lvl5/lvl10 at 300 s. lvl10 cloud clock only on an owner report.
 Ask owner: try ROGUESQ_VI_SHAPE=1 (docs/owner_sheet_s6928_vi_shape.png) and choose the default; wide shows fewer extra columns with it.
-Ask owner: try ROGUESQ_VI_SHAPE=1 (docs/owner_sheet_s6928_vi_shape.png) and choose the default; wide shows fewer extra columns with it.
