@@ -182685,13 +182685,13 @@ ORIGIN: ours. The s6113/s6115 lists widen 512x448 and 512x340 only, so 512x300 k
 
 Fix: tools/apply_s6926_showroom.py (RS64_REPLAY, after s6919) adds h 300 to partitionFramebufferMemory, the video state update and the s6841 clear. rs64_g1d_title_clear assumed 448 rows, which would have zeroed 148 rows past each 300-row buffer, so it now takes the pfm height. ROGUESQ_G1D_SHOWROOM default on, =0 old. No centring code was needed: the game centres on the state width as it does for the title.
 
-Arms, same binary unless stated, AT THE MOVIES route, no FPS60, no dd, 0 crash in all 7:
+Arms, same binary unless stated, AT THE MOVIES route, no FPS60, no dd, 0 crash in all 8:
 off16 (=0, 16:9): ci 512 at 0x7B5000/0x69BE00, scissor 0..512, fill 0..639, the cut. This is the same-binary control.
 w16 (16:9): ci 796 at 0x78B640/0x672440, scissor 142..654, tex 142..654, fill 0..795. Viewed whole and centred, strips gone, into the movies clean. Title clear 477600 bytes per buffer = 796x300x2.
 c21 (21:9): ci 1024 at 0xB6A000/0xA1F000, scissor 256..768, fill 0..1023. SHOWROOM viewed, CONCERT HALL (ROGUE TITLE, track arrows, craft) viewed.
 bk21 (21:9): BACK out of SHOWROOM lands on the title, pfm 512x448, clean.
 n43 (4:3, new binary): ci 512, scissor 0..512, fill 0..511 as in q43, wv=0 so no lever path runs.
-Void, route flake, not lever evidence: w21 stayed in PASSCODES, c16 and bk16 never reached pfm 512x300. In all three the route left its path before SHOWROOM, so the lever had nothing to act on. 3 of 7 runs: this route is unreliable at wide aspect, cause unread. There is therefore no 16:9 CONCERT HALL or 16:9 BACK run; those two are 21:9 only.
+Void, route flake, not lever evidence: w21 stayed in PASSCODES, c16 and bk16 never reached pfm 512x300. In all three the route left its path before SHOWROOM, so the lever had nothing to act on. 3 of 7 wide runs: this route is unreliable at wide aspect, cause unread. There is therefore no 16:9 CONCERT HALL or 16:9 BACK run; those two are 21:9 only.
 docs/owner_sheet_s6926_showroom_wide.png.
 
 Not run: owner recipe (FPS60, dd>1, where OSMEM 12 moves the buffers); queued as s6926_showroom_owner. Other 512x300 users: only SHOWROOM and its children seen, from a census of pfm lines in scratch/s69*/run*.log (512x300 33 runs); routes that never reach a screen say nothing about it.
