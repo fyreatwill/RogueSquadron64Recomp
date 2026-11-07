@@ -6257,14 +6257,18 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                     }
                 }
                 static unsigned long rn = 0, rMiss = 0, rWordsRestored = 0, rPostDiff = 0, rCtl = 0;
+                // s6943 G1e: the two per-word compare loops below only feed the [s4286-restore] counters (~2% of Gfx-thread samples at dd4 16:9, s6943 xctrace).
+                // ROGUESQ_G1E_RSTAT=1 keeps them (old behaviour), =tog 10 s blocks, default off: wordsRestored/postDiff then read 0. The restore itself is unchanged.
+                static const int s_rstat_env = [] { const char *e = std::getenv("ROGUESQ_G1E_RSTAT"); return !e ? 0 : (*e == 't' ? 2 : (*e != '0')); }();
+                const bool rstat = s_rstat_env == 2 ? (bool)((time(nullptr) / 10) & 1) : (bool)s_rstat_env;
                 if (shp) {   // s4286: feed RT64 the bump-time bytes, then put live back
                     wm_undo.push_back({r.first, r.second, wm_live.size()});
                     wm_live.insert(wm_live.end(), g_rdram_for_submit + r.first, g_rdram_for_submit + r.second);
-                    for (uint32_t x = r.first; x < r.second; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[shp->off + (x - r.first)], 4); memcpy(&now, g_rdram_for_submit + x, 4); if (was != now) rWordsRestored++; }
+                    if (rstat) for (uint32_t x = r.first; x < r.second; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[shp->off + (x - r.first)], 4); memcpy(&now, g_rdram_for_submit + x, 4); if (was != now) rWordsRestored++; }
                     memcpy(g_rdram_for_submit + r.first, &g_s4272_shadow[shp->off], r.second - r.first);
                     if (r.second > r.first)
                         rs64_g1d_blk_dma("wrap", 0, r.first, r.second - r.first, 0);
-                    for (uint32_t x = r.first; x < r.second; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[shp->off + (x - r.first)], 4); memcpy(&now, g_rdram_for_submit + x, 4); if (was != now) rPostDiff++; }
+                    if (rstat) for (uint32_t x = r.first; x < r.second; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[shp->off + (x - r.first)], 4); memcpy(&now, g_rdram_for_submit + x, 4); if (was != now) rPostDiff++; }
                     rCtl += 1;
                 } else if (s_restore) rMiss++;
                 if (s_wstat && g_rdram_for_submit) {
