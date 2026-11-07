@@ -182674,3 +182674,28 @@ Side finding, not fixed. SHOWROOM at wide aspect is cut and sits left: its pictu
 Not run: MELT on flight levels at these settings, SKYZ on other cutscenes, dd3 at 21:9. Defaults unchanged.
 
 Result line for s6925: selects H-clean for MELT at dd3 16:9 and dd4 21:9 (row step 70.3 vs 4.6, 33.0 vs 5.5, no rate cost), closes 21:9 cut noise, leaves SKYZ lvl5 unproven, next discriminator is the 4:3 SHOWROOM reference.
+
+## Session 6926 (2026-11-06) — G5h: SHOWROOM cut at wide aspect fixed, the 512x300 state joins the widen lists; 4:3 reference selects H-wide-vi; pillared 512 screens are ~14% narrow at wide aspect
+
+HYPOTHESIS-ID: g5h-showroom-wide. No maintenance (37.6 KB).
+
+Soak folded: s6925_showroom_43 (4:3, 0 crash). Viewed: whole Death Star, no hatched strips, centred text. Selects H-wide-vi. H-game-wide refuted: at 4:3 the stream is ci 512, scissor 0..512, fill 0..511, and nothing in the game widens part of this screen by itself.
+
+ORIGIN: ours. The s6113/s6115 lists widen 512x448 and 512x340 only, so 512x300 kept a 512 colour image, while s6720 title-vi keys on VI width 1024 and xScale <= 0x333, not on the state, and widened the VI to 2*fbw. The VI read 796 or 1024 columns of a 512 image. The fill to 639 in the old arm is the same mismatch class, not separately traced; with the fix it is 0..fbw-1.
+
+Fix: tools/apply_s6926_showroom.py (RS64_REPLAY, after s6919) adds h 300 to partitionFramebufferMemory, the video state update and the s6841 clear. rs64_g1d_title_clear assumed 448 rows, which would have zeroed 148 rows past each 300-row buffer, so it now takes the pfm height. ROGUESQ_G1D_SHOWROOM default on, =0 old. No centring code was needed: the game centres on the state width as it does for the title.
+
+Arms, same binary unless stated, AT THE MOVIES route, no FPS60, no dd, 0 crash in all 7:
+off16 (=0, 16:9): ci 512 at 0x7B5000/0x69BE00, scissor 0..512, fill 0..639, the cut. This is the same-binary control.
+w16 (16:9): ci 796 at 0x78B640/0x672440, scissor 142..654, tex 142..654, fill 0..795. Viewed whole and centred, strips gone, into the movies clean. Title clear 477600 bytes per buffer = 796x300x2.
+c21 (21:9): ci 1024 at 0xB6A000/0xA1F000, scissor 256..768, fill 0..1023. SHOWROOM viewed, CONCERT HALL (ROGUE TITLE, track arrows, craft) viewed.
+bk21 (21:9): BACK out of SHOWROOM lands on the title, pfm 512x448, clean.
+n43 (4:3, new binary): ci 512, scissor 0..512, fill 0..511 as in q43, wv=0 so no lever path runs.
+Void, route flake, not lever evidence: w21 stayed in PASSCODES, c16 and bk16 never reached pfm 512x300. In all three the route left its path before SHOWROOM, so the lever had nothing to act on. 3 of 7 runs: this route is unreliable at wide aspect, cause unread. There is therefore no 16:9 CONCERT HALL or 16:9 BACK run; those two are 21:9 only.
+docs/owner_sheet_s6926_showroom_wide.png.
+
+Not run: owner recipe (FPS60, dd>1, where OSMEM 12 moves the buffers); queued as s6926_showroom_owner. Other 512x300 users: only SHOWROOM and its children seen, from a census of pfm lines in scratch/s69*/run*.log (512x300 33 runs); routes that never reach a screen say nothing about it.
+
+Side finding, not fixed: pillared 512 screens are narrow at wide aspect. 512 columns get 512/fbw of the window, 0.643 at 16:9 against 0.75 for a true 4:3 picture, so about 14% narrow; at 21:9 0.50 against 0.58 on the 1360x594 window. Calculated, and seen on the sheets (SHOWROOM text 60 px wide at 16:9, 70 at 4:3, by eye). scratch/s6926/disc.py tried to measure the Death Star and failed: its threshold catches only the lit side, ratios 0.70 / 0.47 / 0.49 are not usable. Applies to title, OPTIONS, PASSCODES since s6720, not new here.
+
+Result line for s6926: selects H-wide-vi, fixes the SHOWROOM cut with a same-binary =0 control at 16:9, leaves the owner recipe to a queued soak, names menu narrowness as the next unit.

@@ -42099,6 +42099,7 @@ RS64_REPLAY = [
     "apply_s6911_varclamp.py",  # s6911: G5h tile variant map index clamped to the map at dd>1
     "apply_s6916_fartog.py",  # s6916: G5h ROGUESQ_DD_FAR_TOG same-run far scale toggle
     "apply_s6919_cutlive.py",  # s6919: G5h game's far cutoff no longer overwritten at dd1
+    "apply_s6926_showroom.py",  # s6926: G5h 512x300 state joins the wide lists, SHOWROOM no longer cut at wide aspect
 ]
 
 

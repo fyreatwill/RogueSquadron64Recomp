@@ -225,6 +225,8 @@ extern "C" void rs64_s6883_freeze(unsigned k) {
         if (FILE* f = fopen(fn, "wb")) { fwrite(s6883_snap, 1, sizeof s6883_snap, f); fclose(f); }
     }
 }
+// s6926 G5h: 512x300 (SHOWROOM family) joins the wide lists; tools/apply_s6926_showroom.py. ROGUESQ_G1D_SHOWROOM=0 = old.
+extern "C" { int rs64_g1d_pfm_h = 0; int rs64_s6926_on(void) { static const int on = [] { const char* e = std::getenv("ROGUESQ_G1D_SHOWROOM"); return !(e && *e == '0'); }(); return on; } }
 extern "C" { int rs64_g1d_intro_w = 0; int rs64_g1d_vs_intro = 0; int rs64_g1d_title_vi = 0; int rs64_g1d_vi_epoch = 0; uint32_t rs64_last_vi_mode = 0; }  // s6720: title_vi = wide title mode live
 extern "C" volatile int g_rs64_dd_blk; // s6583: dd toggle state, tagged on [fbdump]
 extern "C" void rs64_m5_host_write_census(uint8_t* rdram,

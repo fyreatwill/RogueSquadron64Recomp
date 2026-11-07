@@ -5375,6 +5375,7 @@ static void rs64_g1d_rect_scan(uint32_t lo, uint32_t hi) {
 // covers only the centre 512 columns of its fbw-wide colour image; the pillar columns are never drawn and showed stale
 // heap bytes (white / noise / smeared strips). Zero each new >512-wide colour image once, before RT64 sees the task.
 extern "C" int rs64_g1d_title_vi;
+extern "C" int rs64_g1d_pfm_h; extern "C" int rs64_s6926_on(void);
 // s6723 G1d debrief (title_vi == 2, ROGUESQ_LOG_G1D_RECT=1): log per colour image the scissor/cimg/fill commands and
 // texrect x extent. s6723 showed no fill rects at all: ~510 backdrop texrects x 256..768 + ~212 tris, scissor full width.
 static void rs64_g1d_debrief(uint32_t lo, uint32_t hi) {
@@ -5418,7 +5419,7 @@ static void rs64_g1d_title_clear(uint32_t lo, uint32_t hi) {
             continue;
         }
         if (op != 0x3F) continue;
-        const uint32_t cw = (w0 & 0x3FFu) + 1u, ci = rd(a + 4) & 0xFFFFFFu, bytes = cw * 448u * 2u;
+        const uint32_t cw = (w0 & 0x3FFu) + 1u, ci = rd(a + 4) & 0xFFFFFFu, bytes = cw * (rs64_g1d_pfm_h == 300 && rs64_s6926_on() ? 300u : 448u) * 2u;  // s6926: 512x300 buffers sit closer together
         s_cw = ((w0 >> 19) & 3u) == 2u ? cw : 0u;
         if (cw <= 512u || ((w0 >> 19) & 3u) != 2u || (ci & 0x3Fu) || ci + bytes > kSubmitRamEnd) continue;  // 16-bit, aligned, wide only
         bool seen = false; for (int i = 0; i < s_n; i++) seen |= (s_done[i] == ci);
