@@ -5411,7 +5411,9 @@ static void rs64_g1d_title_clear(uint32_t lo, uint32_t hi) {
         step = (op == 0x24 || op == 0x25) ? 16u : (op >= 0x08 && op <= 0x0F) ? 32u + ((op & 4) ? 64u : 0u) + ((op & 2) ? 64u : 0u) + ((op & 1) ? 16u : 0u) : 8u;
         if (op == 0x2D && s_cw > 512u) {
             const uint32_t w1 = rd(a + 4), ulx = (w0 >> 12) & 0xFFFu, lrx = (w1 >> 12) & 0xFFFu;
-            if (ulx == 0 && lrx + 8u >= s_cw * 4u) {
+            // s6929: 2 px tolerance missed the game's full scissor at fbw 652 (lrx 649), leaving the menu slide trail in the pillars. ROGUESQ_G1D_SCISSOR_TOL=8 = old.
+            static const uint32_t tol = [] { const char* e = std::getenv("ROGUESQ_G1D_SCISSOR_TOL"); return e ? (uint32_t)std::atoi(e) : 32u; }();
+            if (ulx == 0 && lrx + tol >= s_cw * 4u) {
                 const uint32_t x0 = (s_cw - 512u) / 2u * 4u, x1 = (s_cw + 512u) / 2u * 4u;
                 const uint32_t n0 = (w0 & ~(0xFFFu << 12)) | (x0 << 12), n1 = (w1 & ~(0xFFFu << 12)) | (x1 << 12);
                 memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &n0, 4); memcpy(g_rdram_for_submit + ((a + 4) & kSubmitRamMask), &n1, 4);
