@@ -11,8 +11,6 @@
 enum { G_IM_SIZ_4b, G_IM_SIZ_8b, G_IM_SIZ_16b, G_IM_SIZ_32b, G_IM_FMT_RGBA = 0, G_IM_FMT_CI = 2 };
 #include "common/rt64_load_types.h"
 #include "common/rt64_tmem_hasher.h"
-#include <cstring>
-#include "hle/rs64_tmem_word.h"
 extern "C" { int g_rs64_tmem_fast = 1; }
 // Reference: the byte loop in loadWord (lib/rt64/src/hle/rt64_rdp.cpp), non-RGBA32 non-TLUT case.
 static void refWord(uint8_t *TMEM, uint32_t t, uint32_t x, const uint8_t *RDRAM, uint32_t a, uint32_t m) { for (uint32_t i = 0; i < 8; i++) TMEM[(t + i) ^ x] = RDRAM[((a + i) & m) ^ 3]; }

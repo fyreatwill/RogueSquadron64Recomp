@@ -32,6 +32,8 @@ Freezes (s6902): the freezes of a second or more that then caught up like buffer
 
 Speed at 16:9 (s6932, level index 1, FPS60, no test logging): dd1 60, dd2 about 59-60, dd4 about 32; dd4 with `ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=1` 60, one 300 s run. Wide aspect also no longer writes about 1 MB of log per second; `ROGUESQ_WIDE_LOGQUIET=0` restores it.
 
+Speed at 16:9 dd4 without ASYNC, updated s6935 (level index 1 and Liberation of Gerrard V, FPS60, fullscreen on a 60 Hz display, no test logging): about 46-47 frames/s, up from about 32, with no setting to change. `ROGUESQ_RDP_ASYNC=1` alone gives about 57 but adds latency (p50 35 ms, worst 76 ms, against 26 and 37 without it).
+
 Speed at 16:9 (s6902, Liberation of Gerrard V, FPS60, test logging): the "~60 fps" figures above are 4:3. Game frames per second measured: dd1 59, dd2 42-46, dd4 about 35-42. With `ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=1` added, dd4 runs about 53-58. The s6901 far terrain fix costs about 5-7 frames/s at dd4 without those two settings and about 3-5 with them, because it draws more terrain on every heading (`ROGUESQ_DD_FWDWIN=0` trades that terrain back). dd3 at 16:9 was not measured.
 
 Draw distance above 1 (2026-11-05): the game now gets 12 MB of memory instead of 8 MB, because the final mission ran out and crashed at the start. `ROGUESQ_OSMEM_MB=8` restores the old size.
