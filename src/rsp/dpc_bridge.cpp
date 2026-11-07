@@ -3541,7 +3541,10 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     // alpha + pixel x (1 - alpha), in cycle 2 with FORCE_BL + IM_RD (1200: in cycle 1 RT64's last-cycle passthrough resets the alpha to 1), so far terrain fades into the sky already drawn rather than to a flat colour that ends in a
     // straight edge. =tog on odd seconds of the mach clock (24 MHz), the same-run control. Default off, retail unaffected.
     static const int melt = [] { const char *e = std::getenv("ROGUESQ_DD_MELT"); return !(e && *e && *e != '0') ? 0 : (*e == 't' ? 2 : 1); }();
-    static uint64_t s_melt_n = 0;
+    static uint64_t s_melt_n = 0, s_melt_skip = 0;
+    // s6922 G5h: MELT touches terrain only. Terrain draws without z compare (6260); objects under the same C811 word compare (6270) and depend on its second cycle, pixel x combiner alpha +
+    // memory, to stay translucent. MELT replaced that cycle, so a see-through dome near the lava base became a solid bright bubble. ROGUESQ_DD_MELT_OBJ=1 restores the old reach, =tog on odd seconds.
+    static const int melt_obj = [] { const char *e = std::getenv("ROGUESQ_DD_MELT_OBJ"); return !(e && *e && *e != '0') ? 0 : (*e == 't' ? 2 : 1); }();
     // s6917 G5h: ROGUESQ_DD_SKYZ=1 puts the sky back at the far limit at dd>1. The sky draws with blender 00552224 (z from SET_PRIM_DEPTH, update, no compare). Its depth is
     // 32703 at dd1 and 32620-32627 at dd4, because the far scale moves it in, while far ships and beam tops sit at 32500-32767. They then fail the compare over bare sky
     // and survive only over terrain, which rewrites z without compare: beams end flat at the sea edge and their ships go. The sky must keep writing z: the game's z clear
@@ -3592,7 +3595,10 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         const uint32_t w0 = rd(a), w1 = rd(a + 4);
         const uint32_t op = (w0 >> 24) & 0x3F;
         if ((s_sh || killsheet || s_fg) && op >= 0x20) { s_st[op][0] = w0; s_st[op][1] = w1; }
-        if (melt && op == 0x2F && (w1 >> 16) == 0xC811u && (melt == 1 || ((mach_absolute_time() / 24000000ull) & 1))) {
+        const bool melt_mode = melt && op == 0x2F && (w1 >> 16) == 0xC811u;
+        const bool melt_keep = melt_mode && (w1 & 0x10u) && !(melt_obj == 1 || (melt_obj == 2 && ((mach_absolute_time() / 24000000ull) & 1)));
+        if (melt_keep && (++s_melt_skip & (s_melt_skip - 1)) == 0) fprintf(stderr, "[dd-melt] object left alone n=%llu swap=%d %08X\n", (unsigned long long)s_melt_skip, sw, w1);
+        if (melt_mode && !melt_keep && (melt == 1 || ((mach_absolute_time() / 24000000ull) & 1))) {
             const uint32_t n1 = 0x12000000u | (w1 & 0xFFFFu) | 0x4040u; memcpy(g_rdram_for_submit + ((a + 4) & kSubmitRamMask), &n1, 4);
             if ((++s_melt_n & (s_melt_n - 1)) == 0) fprintf(stderr, "[dd-melt] n=%llu swap=%d %08X -> %08X\n", (unsigned long long)s_melt_n, sw, w1, n1);
         }
