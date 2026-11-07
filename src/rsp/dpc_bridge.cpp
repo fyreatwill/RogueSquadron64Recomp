@@ -3630,8 +3630,12 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
             for (int i = 0; i < 5; i++) for (int k = 0; k < 2; k++) r.c[i * 2 + k] = (int16_t)std::max(-32768.0, std::min(32767.0, v[i][k] * 4.0));
             fwrite(&r, sizeof r, 1, s_tf);
         }
-        if (s_fg && (op & 5) == 5 && (sw % 120) == 0 && a + len <= hi)
-            fprintf(s_fg, "%d %08X %08X %08X %d %d %08X %d\n", sw, s_st[0x2F][1], s_st[0x38][1], rd(a + len - 16), (int)(int16_t)rd(a + 36), (int)(int16_t)rd(a + 32 + 40 + 4), rd(a + len - 4), (int)((mach_absolute_time() / 96000000ull) & 1));
+        // s6920: ROGUESQ_G5E_FOG_EVERY=<n> sample period (default 120). Extra columns: odd second of the mach clock (the 1 s =tog arms), cutoff the chain read (g_rs64_s6919[1], needs ROGUESQ_G5H_BAND).
+        static const int fg_every = [] { const char *e = std::getenv("ROGUESQ_G5E_FOG_EVERY"); return e && atoi(e) > 0 ? atoi(e) : 120; }();
+        if (s_fg && (op & 5) == 5 && (sw % fg_every) == 0 && a + len <= hi) {
+            extern uint32_t g_rs64_s6919[12]; const uint64_t mt = mach_absolute_time();
+            fprintf(s_fg, "%d %08X %08X %08X %d %d %08X %d %d %08X\n", sw, s_st[0x2F][1], s_st[0x38][1], rd(a + len - 16), (int)(int16_t)rd(a + 36), (int)(int16_t)rd(a + 32 + 40 + 4), rd(a + len - 4), (int)((mt / 96000000ull) & 1), (int)((mt / 24000000ull) & 1), g_rs64_s6919[1]);
+        }
         if (s_sh) {
             double ar = 0; for (int i = 0; i < 5; i++) { const int j = (i + 1) % 5; ar += v[i][0] * v[j][1] - v[j][0] * v[i][1]; }
             if (fabs(ar) / 2 > 40000.0 && a + len <= hi) {
