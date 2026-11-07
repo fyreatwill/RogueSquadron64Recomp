@@ -33,6 +33,7 @@ static std::vector<S4272Sh> g_s4272_sh;
 
 #include "librecomp/rsp.hpp"
 #include "ultramodern/events.hpp"
+extern "C" int rs64_s6932_quiet(void);
 
 // Direct RT64 entry — the upstream librecomp doesn't expose
 // `ultramodern::submit_rdp_range` (that was a fork addition). Bypass the
@@ -6174,7 +6175,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                     if (r.second > r.first)
                         rs64_g1d_blk_dma("unwrap", 0, r.first, r.second - r.first, 0);
                 }
-                if (s_restore && (++rn <= 8 || (rn & 1023) == 0))
+                if (s_restore && (++rn <= 8 || (rn & (rs64_s6932_quiet() ? 0xFFFFFul : 1023ul)) == 0)) /* s6932: ~1M ranges/s at dd4 16:9 */
                     fprintf(stderr, "[s4286-restore] n=%lu restoredRanges=%lu noShadow=%lu wordsRestored=%lu postDiff(must be 0)=%lu\n", rn, rCtl, rMiss, rWordsRestored, rPostDiff);
             }
             g_deferred_ranges.clear(); g_s4272_sh.clear(); g_s4272_shadow.clear();

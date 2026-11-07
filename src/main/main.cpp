@@ -4974,6 +4974,14 @@ extern "C" int rs64_g1e_probes = [] {
     fprintf(stderr, "[g1e-probes] on=0 reason=no-probe-env\n");
     return 0;
 }();
+// s6932 G1e: probes that throttle on width < 640 ran unthrottled for the whole game at wide aspect (tools/apply_s6932_widequiet.py).
+// Default: quiet unless probes are on. ROGUESQ_WIDE_LOGQUIET=0 old, =1 always quiet, =tog 10 s blocks on the present ring's clock, odd block quiet.
+extern "C" int rs64_s6932_quiet(void) {
+    static const int mode = [] { const char* e = getenv("ROGUESQ_WIDE_LOGQUIET"); if (!e || !*e) return 3; if (!strcmp(e, "tog")) return 2; return *e != '0' ? 1 : 0; }();
+    if (mode == 3) return !rs64_g1e_probes;
+    if (mode < 2) return mode;
+    struct timespec ts; clock_gettime(CLOCK_UPTIME_RAW, &ts); return (int)((ts.tv_sec / 10) & 1);
+}
 static void rs64_g1e_probes_tick() {
     static const double sec = [] { const char* e = getenv("ROGUESQ_G1E_PROBES_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
     if (sec <= 0.0) return;
