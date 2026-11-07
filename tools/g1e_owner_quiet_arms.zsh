@@ -3,7 +3,7 @@
 # keys, godmode, NO_SAVE_WRITE and the present ring are added. Locked 60 Hz. Stops if a human touches the machine.
 # usage: env ARMS="4:q4: 2:q2:" HOLD=300 zsh tools/g1e_owner_quiet_arms.zsh ; spec = dd:arm:extra env, several joined with +
 cd "$(git rev-parse --show-toplevel)" || exit 1
-R=$PWD/scratch/s6932; DHZ=$PWD/scratch/s6931/dhz; HOLD=${HOLD:-300}
+R=${R:-$PWD/scratch/s6932}; DHZ=$PWD/scratch/s6931/dhz; HOLD=${HOLD:-300}
 EARLY=""; e=10
 for i in $(seq 1 20); do if (( i % 2 == 0 || e > 74 )); then k=z; else k=start; fi; EARLY="$EARLY$e:$k,"; e=$((e+4)); done
 FL=""; t=95

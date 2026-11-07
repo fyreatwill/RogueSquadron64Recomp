@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <atomic>
 #include <mutex>
 #include <unordered_map>
@@ -6145,8 +6146,39 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
             std::unordered_map<uint64_t, const S4272Sh *> shIdx;
             shIdx.reserve(g_s4272_sh.size());
             for (const S4272Sh &e : g_s4272_sh) shIdx.emplace(((uint64_t)e.lo << 32) | e.hi, &e);
+            // s6933 G1e: a big task laps the ~12 kB ring ~120 times, and this flush fed RT64 one bump at a time (47k calls per
+            // task at lvl1 16:9 dd4, 19.5 ms per task sync) where the commit path merges. Every per-range step below keeps its
+            // order and inputs; only submit_rdp_range is held to the end of a contiguous run, with the live bytes put back after
+            // it. ROGUESQ_WRAP_MERGE default on, =0 old, =tog 10 s blocks. ROGUESQ_WRAP_MERGE_CHECK=1 compares the bytes each
+            // range left after its record step with what the run hands RT64; run 1 corrupts its copy as the positive control.
+            static const int s_wm_env = [] { const char *e = std::getenv("ROGUESQ_WRAP_MERGE"); return !e ? 1 : (*e == 't' ? 2 : (*e != '0')); }();
+            static const bool s_wm_chk = [] { const char *e = std::getenv("ROGUESQ_WRAP_MERGE_CHECK"); return e && *e && *e != '0'; }();
+            const bool wm_on = s_wm_env == 2 ? ((time(nullptr) / 10) & 1) != 0 : s_wm_env != 0;
+            struct WmUndo { uint32_t lo, hi; size_t off; };
+            static thread_local std::vector<WmUndo> wm_undo;
+            static thread_local std::vector<uint8_t> wm_live, wm_chk;
+            static unsigned long wm_runs = 0, wm_ranges = 0, wm_bad = 0, wm_ctl = 0;
+            uint32_t wm_lo = 0, wm_hi = 0;
+            auto wm_flush = [&] {
+                if (wm_hi > wm_lo) {
+                    if (s_wm_chk && g_rdram_for_submit) {
+                        if (++wm_runs == 1 && !wm_chk.empty()) wm_chk[0] ^= 0xFF;
+                        const bool diff = wm_chk.size() != wm_hi - wm_lo || memcmp(wm_chk.data(), g_rdram_for_submit + wm_lo, wm_chk.size()) != 0;
+                        if (diff) { if (wm_runs == 1) ++wm_ctl; else ++wm_bad; }
+                        if (wm_runs <= 4 || (wm_runs & 0xFFFF) == 0)
+                            fprintf(stderr, "[s6933-wm] runs=%lu ranges=%lu bad=%lu control=%lu\n", wm_runs, wm_ranges, wm_bad, wm_ctl);
+                    }
+                    ultramodern::submit_rdp_range(wm_lo, wm_hi);
+                }
+                for (const WmUndo &u : wm_undo) {
+                    memcpy(g_rdram_for_submit + u.lo, wm_live.data() + u.off, u.hi - u.lo);
+                    if (u.hi > u.lo) rs64_g1d_blk_dma("unwrap", 0, u.lo, u.hi - u.lo, 0);
+                }
+                wm_undo.clear(); wm_live.clear(); wm_chk.clear(); wm_lo = wm_hi = 0;
+            };
             for (const auto &r : g_deferred_ranges) {
                 if (should_drop_wrap_rdp(r.first, r.second)) continue;
+                if (wm_hi > wm_lo && wm_hi != r.first) wm_flush();
                 b += r.second - r.first;
                 rs64_e9prov_mark_submitted(r.first, r.second);
                 // s6723: record_submit (which also rewrites RDP words: s6720 title clear, s6722 pause dim) now runs after the
@@ -6158,9 +6190,9 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                 const S4272Sh *shp = nullptr;
                 if (s_restore && g_rdram_for_submit) { auto it = shIdx.find(((uint64_t)r.first << 32) | r.second); if (it != shIdx.end()) shp = it->second; }
                 static unsigned long rn = 0, rMiss = 0, rWordsRestored = 0, rPostDiff = 0, rCtl = 0;
-                static thread_local std::vector<uint8_t> liveSave; /* s4287: reuse, no per-range alloc */
                 if (shp) {   // s4286: feed RT64 the bump-time bytes, then put live back
-                    liveSave.assign(g_rdram_for_submit + r.first, g_rdram_for_submit + r.second);
+                    wm_undo.push_back({r.first, r.second, wm_live.size()});
+                    wm_live.insert(wm_live.end(), g_rdram_for_submit + r.first, g_rdram_for_submit + r.second);
                     for (uint32_t x = r.first; x < r.second; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[shp->off + (x - r.first)], 4); memcpy(&now, g_rdram_for_submit + x, 4); if (was != now) rWordsRestored++; }
                     memcpy(g_rdram_for_submit + r.first, &g_s4272_shadow[shp->off], r.second - r.first);
                     if (r.second > r.first)
@@ -6169,15 +6201,14 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                     rCtl += 1;
                 } else if (s_restore) rMiss++;
                 if (!s_prewrap) rs64_dpc_record_submit(r.first, r.second);
-                ultramodern::submit_rdp_range(r.first, r.second);
-                if (shp) {
-                    memcpy(g_rdram_for_submit + r.first, liveSave.data(), r.second - r.first);
-                    if (r.second > r.first)
-                        rs64_g1d_blk_dma("unwrap", 0, r.first, r.second - r.first, 0);
-                }
+                if (wm_hi <= wm_lo) wm_lo = r.first;
+                wm_hi = r.second; ++wm_ranges;
+                if (s_wm_chk && g_rdram_for_submit) wm_chk.insert(wm_chk.end(), g_rdram_for_submit + r.first, g_rdram_for_submit + r.second);
+                if (!wm_on) wm_flush();
                 if (s_restore && (++rn <= 8 || (rn & (rs64_s6932_quiet() ? 0xFFFFFul : 1023ul)) == 0)) /* s6932: ~1M ranges/s at dd4 16:9 */
                     fprintf(stderr, "[s4286-restore] n=%lu restoredRanges=%lu noShadow=%lu wordsRestored=%lu postDiff(must be 0)=%lu\n", rn, rCtl, rMiss, rWordsRestored, rPostDiff);
             }
+            wm_flush();
             g_deferred_ranges.clear(); g_s4272_sh.clear(); g_s4272_shadow.clear();
             uint64_t k = ++s_wf_n; s_wf_bytes += b;
             if (k <= 8 || (k & 63) == 0)
