@@ -4,6 +4,8 @@ A frame starts at each SET_COLOR_IMAGE of the main buffer (width >= MINW). Per f
   g5h_rdp_groups.py BIN census           one line per frame: vi, colour image, sky seen before first terrain fog mode, fog/melt tris, fill clears
   g5h_rdp_groups.py BIN frame N          group list of frame N
   g5h_rdp_groups.py BIN cover N X Y W H  per frame N, the groups that touch the box X Y W H (frame pixels), with pixels touched
+  g5h_rdp_groups.py BIN pix N X Y        per frame N, every triangle covering pixel X Y in draw order: index, mode, texture, shade RGBA there
+  g5h_rdp_groups.py BIN alpha N          per frame N, per mode: tris, and the share of tris by shade alpha at the top vertex
 Words sit in the dump as native little-endian u32."""
 import struct, sys
 SKY, FOG, MELT = 0x00552224, 0xC811, 0x1200
@@ -42,8 +44,21 @@ def tri_rows(b, a):
         p, q = (x_h, x_o) if not lft else (x_o, x_h)
         p, q = min(p, q), max(p, q)
         yield y, p, q
+def shade_at(b, a, x, y):
+    """shade r,g,b,a at pixel x y for a shaded triangle"""
+    w0, w1 = struct.unpack_from('<II', b, a); yh = s14(w1) / 4
+    xh, dh = [fx(v) / 65536 for v in struct.unpack_from('<2I', b, a + 16)]
+    o = a + 32; W = struct.unpack_from('<16I', b, o); out = []
+    for i in range(4):
+        def c(wi, wf):
+            sh = 16 if i % 2 == 0 else 0; k = i // 2
+            hi = (W[wi + k] >> sh) & 0xFFFF; lo = (W[wf + k] >> sh) & 0xFFFF
+            return ((hi ^ 0x8000) - 0x8000) + lo / 65536
+        v, dx, de = c(0, 4), c(2, 6), c(8, 12)
+        out.append(v + (y - yh) * de + (x - (xh + dh * (y - yh))) * dx)
+    return out
 def frames(p, minw):
-    cur = None; om = 0; cc = 0; fill = 0; ci = (0, 0)
+    cur = None; om = 0; cc = 0; fill = 0; ci = (0, 0); timg = 0
     for vi, op, w0, w1, b, a in cmds(p):
         if op == 0x3F:
             ci = (w1 & 0xFFFFFF, (w0 & 0xFFF) + 1)
@@ -56,13 +71,14 @@ def frames(p, minw):
         if op == 0x2F: om = w1; hi = w0; cur.setdefault('hi', hi); continue
         if op == 0x3C: cc = (w0 & 0xFFFFFF, w1); continue
         if op == 0x37: fill = w1; continue
+        if op == 0x3D: timg = w1; continue
         if 8 <= op <= 15 or op in (0x24, 0x25, 0x36):
             g = cur['g']
             if not g or g[-1][0] != 'd' or g[-1][1] != om or g[-1][2] != cc: g.append(['d', om, cc, 0, 0, 1e9, -1e9, 1e9, -1e9, []])
             q = g[-1]; cur['n'] += 1
             if 8 <= op <= 15:
                 q[3] += 1; rows = list(tri_rows(b, a))
-                q[9].append(rows)
+                q[9].append(rows); cur.setdefault('t', []).append((om, cc, timg, op, bytes(b[a:a + LEN(op)]), rows))
                 for y, x0, x1 in rows: q[5] = min(q[5], y); q[6] = max(q[6], y); q[7] = min(q[7], x0); q[8] = max(q[8], x1)
             else:
                 q[4] += 1
@@ -89,6 +105,21 @@ def main():
         N = int(sys.argv[3])
         for i, f in enumerate(frames(p, minw)):
             if i != N: continue
+            if cmd == 'pix':
+                X, Y = int(sys.argv[4]), int(sys.argv[5])
+                for k, (o, c, ti, op, tb, rows) in enumerate(f.get('t', [])):
+                    for y, a, b2 in rows:
+                        if y == Y and a <= X < b2:
+                            sh = ['%.0f' % v for v in shade_at(tb, 0, X + .5, Y + .5)] if op & 4 else '-'
+                            print(k, 'op %02X om %08X cc %08X tex %08X shade' % (op, o, c[1] if c else 0, ti), sh)
+                break
+            if cmd == 'alpha':
+                import collections
+                d = collections.defaultdict(collections.Counter)
+                for o, c, ti, op, tb, rows in f.get('t', []):
+                    if op & 4 and rows: d[o, c[1] if c else 0][min(int(shade_at(tb, 0, rows[0][1], rows[0][0] + .5)[3]) // 64, 4)] += 1
+                for k, v in d.items(): print('%08X %08X' % k, dict(sorted(v.items())))
+                break
             box = [int(v) for v in sys.argv[4:8]] if cmd == 'cover' else None
             print('frame', i, 'vi', f['vi'], 'ci %06X w%d' % f['ci'])
             for g in f['g']:
