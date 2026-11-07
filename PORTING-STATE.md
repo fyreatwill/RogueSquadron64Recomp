@@ -182651,3 +182651,5 @@ Fix: lib/rt64/src/hle/rt64_state.cpp, after the present.storage copy. First buil
 Check: SHOWROOM returns in on and off arms. Craft differed on vs off, but a, b, c, h (all lever off) differ among themselves, so it is random per run, and the "TIE" in s6921-s6923 was one such craft. Sheet docs/owner_sheet_s6924_cut_noise.png.
 
 Not run: 21:9 (soak s6924_flash_219 queued, route width w2048 is a guess), FPS60 alone (4:3, gate does not apply), angrylion or hardware at this cut, other cuts that enter a phase over VI width 1024. The phase-entry blank was not viewed.
+
+Result line for s6924: this selects H-wide-fb and refutes H-wide-early; H-retail-dashes fits but stays unproven. The fix is a code change, default on, with a same-binary off arm. Next discriminator for this thread: soak s6924_flash_219 at 21:9.
