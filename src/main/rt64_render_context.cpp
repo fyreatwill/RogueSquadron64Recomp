@@ -1,3 +1,4 @@
+#include <mach/mach_time.h>  // s6922: dump window clock
 #include <execinfo.h>
 #include <dlfcn.h>
 #include <memory>
@@ -2166,7 +2167,11 @@ namespace ultramodern {
                 static FILE *s_bin = nullptr; static int s_bin_init = 0; static uint64_t s_bin_total = 0, s_bin_cap = 600ull << 20;
                 if (!s_bin_init) { s_bin_init = 1; const char *e = std::getenv("RS64_RDP_BIN_PORT"); if (e && *e) s_bin = fopen(e, "wb");
                     const char *m = std::getenv("RS64_RDP_BIN_PORT_MAX_MB"); if (m && *m) s_bin_cap = (uint64_t)strtoull(m, nullptr, 10) << 20; }
-                if (s_bin && app->core.RDRAM && s_bin_total < s_bin_cap) {
+                // s6922: RS64_RDP_BIN_PORT_WIN=<from_s>:<to_s>, seconds since the first submit, so one late shot can be dumped from a long run.
+                static double s_bin_from = -1, s_bin_to = 0; static uint64_t s_bin_t0 = 0;
+                if (s_bin_from < 0) { s_bin_from = 0; s_bin_t0 = mach_absolute_time(); const char *e = std::getenv("RS64_RDP_BIN_PORT_WIN"); if (e && *e) sscanf(e, "%lf:%lf", &s_bin_from, &s_bin_to); }
+                const double s_bin_now = (double)(mach_absolute_time() - s_bin_t0) / 24e6;
+                if (s_bin && app->core.RDRAM && s_bin_total < s_bin_cap && s_bin_now >= s_bin_from && (s_bin_to <= 0 || s_bin_now < s_bin_to)) {
                     // s6792: RS64_RDP_BIN_PORT_VI=1 stamps the VI counter instead of the phase ordinal (per-shot cinematic
                     // durations in VIs, tools/g3_cine_sweep.py).
                     static int s_bin_vi = -1; if (s_bin_vi < 0) { const char *v = std::getenv("RS64_RDP_BIN_PORT_VI"); s_bin_vi = (v && *v && *v != '0') ? 1 : 0; }
