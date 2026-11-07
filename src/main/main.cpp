@@ -15,6 +15,7 @@
 #include <thread>
 #include <chrono>
 #include <atomic>
+#include <tuple>
 #include <functional>
 
 #include "ultramodern/ultra64.h"
@@ -9985,6 +9986,179 @@ static bool fl_zero_try_handle_fault(siginfo_t* info, void* ucontext_raw) {
 static bool fl_zero_try_handle_fault(void*, void*) { return false; }
 #endif
 
+// s6938 G1e H-wb-dead instrument (ROGUESQ_G1E_WBW=1, off by default). After each RT64 colour/depth
+// writeback into RDRAM, the written pages are made PROT_NONE. The first touch of each page faults here:
+// we record phys, host pc/lr offset (resolve with atos) and read/write (ESR WnR), unprotect, retry.
+// At the next writeback over the same range the range is scored live (read in between) or dead
+// (overwritten unread, all interior pages still armed) or unk. Control: ROGUESQ_G1E_WBW_CTL=1 reads
+// one byte of an armed range once a second from the reporter (tagged ctl), so the trap path must fire.
+#ifndef _WIN32
+namespace {
+constexpr uint32_t kWbwPage = 16384, kWbwPages = 0x1000000u / kWbwPage, kWbwMax = 32, kWbwRing = 8192;
+struct WbwRange { std::atomic<uint32_t> start{0}, end{0}; uint32_t kind = 0, width = 0, rows = 0; bool active = false;
+    std::atomic<uint32_t> reads{0}, writes{0}, ctlReads{0}; };
+struct WbwEv { uint32_t phys, idx, wr, ctl; uint64_t pc, lr; };
+struct WbwKey { uint32_t kind, addr, width; bool operator<(const WbwKey& o) const { return std::tie(kind, addr, width) < std::tie(o.kind, o.addr, o.width); } };
+struct WbwStat { uint64_t wb = 0, live = 0, dead = 0, unk = 0, readsN = 0, ctl = 0, wrOnly = 0; };
+std::atomic<uint8_t*> g_wbw_rd{nullptr};
+std::atomic<uint8_t> g_wbw_armed[kWbwPages];
+std::atomic<uint8_t> g_wbw_ever[kWbwPages];
+WbwRange g_wbw_r[kWbwMax];
+WbwEv g_wbw_ring[kWbwRing];
+std::atomic<uint32_t> g_wbw_head{0};
+std::atomic<uint64_t> g_wbw_edge{0}, g_wbw_drop{0};
+uint32_t g_wbw_tail = 0;
+volatile __thread int t_wbw_ctl = 0;
+volatile __thread int t_wbw_self = 0; // RT64 own hash reads: counted, page re-armed after
+__thread uint32_t t_wbw_rearm[1024]; __thread uint32_t t_wbw_rearmN = 0;
+std::atomic<uint64_t> g_wbw_selfN{0};
+std::map<WbwKey, WbwStat> g_wbw_stat;
+std::map<std::tuple<uint32_t, uint64_t, uint64_t, uint32_t>, uint64_t> g_wbw_pcs; // kind, pc, lr, wr
+uint64_t g_wbw_slide = 0;
+int wbw_on() { static const int v = [] { const char* e = std::getenv("ROGUESQ_G1E_WBW"); return (e && *e && *e != '0') ? 1 : 0; }(); return v; }
+}
+
+static bool wbw_try_handle_fault(siginfo_t* info, void* ucontext_raw) {
+    if (!wbw_on() || !info) return false;
+    uint8_t* rd = g_wbw_rd.load(std::memory_order_acquire);
+    uintptr_t fa = (uintptr_t)info->si_addr;
+    if (!rd || fa < (uintptr_t)rd || fa >= (uintptr_t)rd + 0x1000000u) return false;
+    uint32_t phys = (uint32_t)(fa - (uintptr_t)rd), pg = phys / kWbwPage;
+    if (!g_wbw_ever[pg].load(std::memory_order_acquire)) return false;
+    mprotect(rd + (size_t)pg * kWbwPage, kWbwPage, PROT_READ | PROT_WRITE);
+    if (t_wbw_self) { g_wbw_selfN.fetch_add(1); if (t_wbw_rearmN < 1024) t_wbw_rearm[t_wbw_rearmN++] = pg; return true; }
+    if (!g_wbw_armed[pg].exchange(0)) return true; // concurrent second fault, page already released
+    ucontext_t* uc = (ucontext_t*)ucontext_raw;
+    uint64_t pc = 0, lr = 0; uint32_t wr = 0;
+    if (uc && uc->uc_mcontext) { pc = uc->uc_mcontext->__ss.__pc; lr = uc->uc_mcontext->__ss.__lr; wr = (uc->uc_mcontext->__es.__esr >> 6) & 1u; }
+    uint32_t idx = kWbwMax;
+    for (uint32_t i = 0; i < kWbwMax; i++) {
+        uint32_t s = g_wbw_r[i].start.load(std::memory_order_acquire), e = g_wbw_r[i].end.load(std::memory_order_acquire);
+        if (e > s && phys >= s && phys < e) { idx = i; break; }
+    }
+    if (idx == kWbwMax) g_wbw_edge.fetch_add(1);
+    else if (t_wbw_ctl) g_wbw_r[idx].ctlReads.fetch_add(1);
+    else if (wr) g_wbw_r[idx].writes.fetch_add(1);
+    else g_wbw_r[idx].reads.fetch_add(1);
+    uint32_t h = g_wbw_head.fetch_add(1);
+    if (h - g_wbw_tail < kWbwRing) g_wbw_ring[h % kWbwRing] = WbwEv{ phys, idx, wr, (uint32_t)t_wbw_ctl, pc, lr };
+    else g_wbw_drop.fetch_add(1);
+    return true;
+}
+
+static void wbw_close_range(uint32_t i) {
+    WbwRange& r = g_wbw_r[i];
+    if (!r.active) return;
+    uint32_t s = r.start.load(), e = r.end.load();
+    uint32_t p0 = (s + kWbwPage - 1) / kWbwPage, p1 = e / kWbwPage; // interior pages
+    bool intact = true;
+    for (uint32_t p = p0; p < p1; p++) if (!g_wbw_armed[p].load()) { intact = false; break; }
+    WbwStat& st = g_wbw_stat[WbwKey{ r.kind, s, r.width }];
+    uint32_t rd = r.reads.load(), ctl = r.ctlReads.load();
+    st.readsN += rd; st.ctl += ctl;
+    if (rd > 0) st.live++;
+    else if (intact && p1 > p0 && ctl == 0) st.dead++;
+    else if (r.writes.load() > 0 && ctl == 0) st.wrOnly++;
+    else st.unk++;
+    r.active = false; r.start.store(0); r.end.store(0);
+}
+
+static void wbw_report(uint8_t* rd) {
+    static auto t0 = std::chrono::steady_clock::now();
+    static auto last = t0;
+    auto now = std::chrono::steady_clock::now();
+    if (now - last < std::chrono::seconds(1)) return;
+    last = now;
+    static const bool s_ctl = [] { const char* e = std::getenv("ROGUESQ_G1E_WBW_CTL"); return e && *e && *e != '0'; }();
+    if (s_ctl) { // positive control: touch the middle of the first active colour range
+        for (uint32_t i = 0; i < kWbwMax; i++) if (g_wbw_r[i].active) {
+            uint32_t m = (g_wbw_r[i].start.load() + g_wbw_r[i].end.load()) / 2;
+            t_wbw_ctl = 1; volatile uint8_t v = rd[m]; (void)v; t_wbw_ctl = 0; break;
+        }
+    }
+    uint32_t h = g_wbw_head.load();
+    if (h - g_wbw_tail > kWbwRing) g_wbw_tail = h - kWbwRing;
+    for (; g_wbw_tail != h; g_wbw_tail++) {
+        const WbwEv& ev = g_wbw_ring[g_wbw_tail % kWbwRing];
+        uint32_t kind = ev.idx < kWbwMax ? g_wbw_r[ev.idx].kind : 9u;
+        if (ev.ctl) kind = 8u;
+        g_wbw_pcs[{ kind, ev.pc - g_wbw_slide, ev.lr - g_wbw_slide, ev.wr }]++;
+    }
+    double t = std::chrono::duration<double>(now - t0).count();
+    for (auto& kv : g_wbw_stat) {
+        const WbwStat& s = kv.second;
+        std::fprintf(stderr, "[wbw] t=%.0f %s addr=%06X w=%u wb=%llu live=%llu dead=%llu unk=%llu wronly=%llu reads=%llu ctl=%llu\n", t,
+            kv.first.kind ? "Z" : "C", kv.first.addr, kv.first.width, (unsigned long long)s.wb, (unsigned long long)s.live, (unsigned long long)s.dead,
+            (unsigned long long)s.unk, (unsigned long long)s.wrOnly, (unsigned long long)s.readsN, (unsigned long long)s.ctl);
+    }
+    std::fprintf(stderr, "[wbw] t=%.0f edge=%llu drop=%llu self=%llu\n", t, (unsigned long long)g_wbw_edge.load(), (unsigned long long)g_wbw_drop.load(), (unsigned long long)g_wbw_selfN.load());
+    g_wbw_stat.clear();
+    static int n = 0;
+    if (++n % 10 == 0) {
+        for (auto& kv : g_wbw_pcs) std::fprintf(stderr, "[wbw-pc] t=%.0f kind=%u pc=0x%llx lr=0x%llx wr=%u n=%llu\n", t, std::get<0>(kv.first),
+            (unsigned long long)std::get<1>(kv.first), (unsigned long long)std::get<2>(kv.first), std::get<3>(kv.first), (unsigned long long)kv.second);
+        g_wbw_pcs.clear();
+    }
+    std::fflush(stderr);
+}
+
+// RT64 self-check reads (hashTracking, checkRDRAM storeRAM/checkRAM): on=1 tags faults as self,
+// on=0 re-protects the pages those reads released so a later game reader still faults.
+extern "C" void rs64_wbw_self(int on) {
+    if (!wbw_on()) return;
+    if (on) { t_wbw_rearmN = 0; t_wbw_self = 1; return; }
+    t_wbw_self = 0;
+    uint8_t* rd = g_wbw_rd.load();
+    for (uint32_t i = 0; i < t_wbw_rearmN && rd; i++) {
+        uint32_t pg = t_wbw_rearm[i];
+        if (g_wbw_armed[pg].load()) mprotect(rd + (size_t)pg * kWbwPage, kWbwPage, PROT_NONE);
+    }
+    t_wbw_rearmN = 0;
+}
+
+// Called on the RT64 thread immediately before copyNativeToRAM of [phys, phys+bytes).
+extern "C" void rs64_wbw_pre(uint8_t* rd, uint32_t phys, uint32_t bytes) {
+    if (!wbw_on() || !rd || bytes == 0 || (uint64_t)phys + bytes > 0x1000000u) return;
+    if (!g_wbw_rd.load()) {
+        for (uint32_t i = 0; i < _dyld_image_count(); i++) if (_dyld_get_image_header(i)->filetype == MH_EXECUTE) { g_wbw_slide = (uint64_t)_dyld_get_image_vmaddr_slide(i); break; }
+        std::fprintf(stderr, "[wbw] armed slide=0x%llx (atos: pc - slide is the unslid address)\n", (unsigned long long)g_wbw_slide);
+        g_wbw_rd.store(rd);
+    }
+    wbw_report(rd);
+    uint32_t e = phys + bytes;
+    for (uint32_t i = 0; i < kWbwMax; i++) {
+        uint32_t s0 = g_wbw_r[i].start.load(), e0 = g_wbw_r[i].end.load();
+        if (g_wbw_r[i].active && s0 < e && phys < e0) wbw_close_range(i);
+    }
+    for (uint32_t p = phys / kWbwPage; p <= (e - 1) / kWbwPage; p++) {
+        if (g_wbw_armed[p].exchange(0)) mprotect(rd + (size_t)p * kWbwPage, kWbwPage, PROT_READ | PROT_WRITE);
+    }
+}
+
+// Called right after copyNativeToRAM: arm the range.
+extern "C" void rs64_wbw_post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) {
+    if (!wbw_on() || !rd || bytes == 0 || (uint64_t)phys + bytes > 0x1000000u) return;
+    uint32_t slot = kWbwMax;
+    for (uint32_t i = 0; i < kWbwMax; i++) if (!g_wbw_r[i].active) { slot = i; break; }
+    if (slot == kWbwMax) { wbw_close_range(0); slot = 0; }
+    WbwRange& r = g_wbw_r[slot];
+    r.kind = kind; r.width = width; r.rows = rows; r.reads.store(0); r.writes.store(0); r.ctlReads.store(0);
+    r.start.store(phys); r.end.store(phys + bytes); r.active = true;
+    g_wbw_stat[WbwKey{ kind, phys, width }].wb++;
+    uint32_t e = phys + bytes;
+    for (uint32_t p = phys / kWbwPage; p <= (e - 1) / kWbwPage; p++) {
+        g_wbw_ever[p].store(1);
+        g_wbw_armed[p].store(1, std::memory_order_release);
+        mprotect(rd + (size_t)p * kWbwPage, kWbwPage, PROT_NONE);
+    }
+}
+#else
+extern "C" void rs64_wbw_pre(uint8_t*, uint32_t, uint32_t) {}
+extern "C" void rs64_wbw_self(int) {}
+extern "C" void rs64_wbw_post(uint8_t*, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t) {}
+static bool wbw_try_handle_fault(void*, void*) { return false; }
+#endif
+
 // ROGUESQ_LOG_FL_ZERO_WATCH: macOS soft-watch on the fail136c freelist
 // zero-node (default KSEG0 0x801F3CC0 → phys 0x1F3CC0). Polls 16-byte
 // header every 250us; logs mutations + 5s heartbeat (positive control).
@@ -12066,6 +12240,11 @@ int main(int argc, char* argv[]) {
         sa.sa_flags = SA_SIGINFO;
         sigemptyset(&sa.sa_mask);
         sa.sa_sigaction = [](int sig, siginfo_t* info, void* ucontext_raw) {
+            if (sig == SIGSEGV || sig == SIGBUS) {
+                if (wbw_try_handle_fault(info, ucontext_raw)) {
+                    return;
+                }
+            }
             if (sig == SIGSEGV || sig == SIGBUS) {
                 if (m5_host_fault_try_handle(info, ucontext_raw)) {
                     return;

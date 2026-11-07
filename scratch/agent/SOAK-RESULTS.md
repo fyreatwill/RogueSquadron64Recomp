@@ -1340,3 +1340,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261107-124408 | s6934_locked_ao | rc=0 | 247s | scratch/agent/soak_results/s6934_locked_ao_20261107-124408.log
 20261107-124815 | s6934_pose_arms | rc=0 | 283s | scratch/agent/soak_results/s6934_pose_arms_20261107-124815.log
 20261107-134358 | s6936_locked_walk | rc=2 | 0s | scratch/agent/soak_results/s6936_locked_walk_20261107-134358.log
+20261107-135105 | s6936_locked_walk_r2 | rc=2 | 0s | scratch/agent/soak_results/s6936_locked_walk_r2_20261107-135105.log
