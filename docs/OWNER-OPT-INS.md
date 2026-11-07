@@ -28,6 +28,8 @@ cd build && env ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=3 ./RogueSquadron64Recomp 
 
 Freezes (s6902): the freezes of a second or more that then caught up like buffering should be gone, at every draw distance, with nothing to set. Our own debug bookkeeping grew on every triangle and never shrank, so the game stopped to reorganise it, each pause about twice as long as the last, and memory climbed about 4.7 MB/s (1.7 GB after 5 minutes). Same build, dd4: 4 pauses up to 1.4 s before, none over 46 ms after, and a 9 minute run across 4 mission starts had none. `ROGUESQ_SHADE_ORD_RESET=0` restores the old behaviour. Tell us if you still see a freeze in flight.
 
+Speed at 16:9 (s6932, level index 1, FPS60, no test logging): dd1 60, dd2 about 59-60, dd4 about 32; dd4 with `ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=1` 60, one 300 s run. Wide aspect also no longer writes about 1 MB of log per second; `ROGUESQ_WIDE_LOGQUIET=0` restores it.
+
 Speed at 16:9 (s6902, Liberation of Gerrard V, FPS60, test logging): the "~60 fps" figures above are 4:3. Game frames per second measured: dd1 59, dd2 42-46, dd4 about 35-42. With `ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=1` added, dd4 runs about 53-58. The s6901 far terrain fix costs about 5-7 frames/s at dd4 without those two settings and about 3-5 with them, because it draws more terrain on every heading (`ROGUESQ_DD_FWDWIN=0` trades that terrain back). dd3 at 16:9 was not measured.
 
 Draw distance above 1 (2026-11-05): the game now gets 12 MB of memory instead of 8 MB, because the final mission ran out and crashed at the start. `ROGUESQ_OSMEM_MB=8` restores the old size.

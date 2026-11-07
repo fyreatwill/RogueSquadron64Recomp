@@ -182828,3 +182828,36 @@ Failed, mine: first scoring pass lost its latency table to zsh not word-splittin
 
 Does not show: anything about 21:9 on 144 Hz, input-to-photon latency, or how a real TV behaves.
 
+
+## Session 6932 (2026-11-07) — G1e: the owner's dd4 recipe builds no 60 Hz backlog, dd1 and dd2 can reach one level (47 ms), gate and drain buy nothing there; wide aspect logged 1.5M lines per 300 s with no logging env, fixed
+HYPOTHESIS-ID: g1e-present-drain, closed here. This entry finishes an interrupted iteration: the first pass ran overnight, left wip commits e143c7cee..715c5b310 and raw rings in scratch/s6932, and no ledger entry. The restart scored those rings and ran 4 more arms. No owner report. Built-in alone (XG49V absent), locked to 60 Hz by scratch/s6931/dhz, read 120 Hz again after the arms.
+
+Landed: tools/apply_s6932_widequiet.py plus rs64_s6932_quiet (src/main/main.cpp) and a throttle in src/rsp/dpc_bridge.cpp; arm tools tools/g1e_owner_bridge.zsh, g1e_owner_hz_arms.zsh, g1e_owner_quiet_arms.zsh, g1e_owner_tty_arm.zsh; scorers g1e_owner_hz_score.py, g1e_level_entry.py, g1e_logquiet_blocks.py, g1e_rate_drain.py.
+
+ORIGIN (logging): ours. Ten generated scheduler/submit probes (s3290-s3311) throttle on `width < 640u`, written when width >= 640 meant the anomalous cinematic state. Wide aspect keeps committed VI width >= 640 all game, so every event printed and flushed on the game and scheduler threads. Default now quiet unless probes are on; ROGUESQ_WIDE_LOGQUIET=0 old, =1 always, =tog 10 s blocks.
+
+Arms, lvl index 1, 16:9, FPS60, FULLSCREEN, locked 60 Hz, last 120 s. All on-screen rows present, so the latency columns are real readings. No crash lines in x1, x1b, x2, xa.
+| arm | setting | Q/s | lat p50/p99 | 1 s median range | acq>5 % |
+| d4o, d4r | dd4 recipe logging | 32.3, 32.5 | 21.7/32.9, 29.8/37.8 | 19-29, 21-37 | 0, 0.8 |
+| q4, q4b | dd4 no recipe logging, old wide log | 31.9, 32.2 | 23.4/28.2, 28.8/34.8 | 20-26, 22-34 | 0, 0.1 |
+| tt4 | dd4 stderr on a real Terminal tty, =tog | 35.2 | 27.6/34.9 | 24-32 | 0 |
+| d4g, d4d | dd4 INFLIGHT=2, DRAIN=40 | 33.3, 33.2 | 26.6/34.3, 28.3/35.3 | 23-32, 25-33 | 0, 0 |
+| d2o, d2r | dd2 recipe logging | 58.1, 59.2 | 33.2/39.8, 24.5/29.7 | 21-38, 23-27 | 5, 0 |
+| q2 | dd2 no recipe logging, old wide log | 59.5 | 36.2/46.6 | 32-47 | 20.6 |
+| d2g, d2d | dd2 INFLIGHT=2, DRAIN=40 | 56.7, 56.4 | 33.5/46.7, 33.3/41.9 | 20-47, 20-39 | 17.3, 10.9 |
+| x2 | dd2 default quiet | 59.9 | 24.3/46.8 | 20-47 | 29.7 |
+| x1, x1b | dd1 default quiet, same settings | 60.0, 60.0 | 46.8/48.0, 27.6/30.7 | 47-47, 27-29 | 100, 0 |
+| xa | dd4 ASYNC+NODRAIN, default quiet | 60.0 | 32.4/37.5 | 30-36 | 0.5 |
+q2b is left out: its ring stops at 146 s with no done line, so its last 120 s include the route.
+
+Verdict. dd4 owner recipe: no backlog, 6 runs at 32-35 fps, 21-30 ms p50. Stall arm d4st: doses fired (max gap 216 ms vs 110 off), 2 s medians stayed 25-31 ms, so no sticky level at this rate; that is the positive control for "no level here". Gate and drain add nothing at dd4 or dd2, one run each. dd1 and dd2 run close enough to 60 that a level can appear, but the deepest seen at this recipe is ~47 ms, one level, not s6931's 81 ms.
+
+H-rate, as NEXT worded it, is only half right. Every deep ring in s6931 and x1 ran at 59.9-60.0, and nothing at 32 fps went above 37 ms. But 60.0 is not sufficient: x1 and x1b are identical and read 46.8 vs 27.6, and xa at 60.0 reads 32.4. My own prediction before the arms, that dd4 ASYNC+NODRAIN would land in the 50s, was wrong too: it held 60.0. The spare-vsync drain picture also fails: tools/g1e_rate_drain.py over 7 dd2 rings shows no slope in any rate bin (>=-0.5: -0.02 +/- 0.09 ms/s, -3..-8: -0.32 +/- 0.27), and q2 held 32-47 ms at 59.5/s, where a drain of one vsync per spare would clear it in seconds. So a level is sticky at 56-60 fps too, and what picks the level in a given run is still not named. All s6931 rings had ASYNC+NODRAIN at 4:3; the 64-81 ms levels were not seen here, and that difference is not explained (wide vs 4:3 vs ASYNC not split).
+
+Log lever. Same-run =tog, quiet minus loud, presents/s: tg4 +0.73 +/- 0.43, tg2 +0.49 +/- 0.31, tt4 +1.43 +/- 0.80, combined +0.65 +/- 0.24, gaps unchanged. Small, about 1-2%. Default path first run here: 300 s dd2 1.84M lines 280 MB -> 233k lines 44 MB, dd4 1.54M 223 MB -> 250k 46 MB (xa, ASYNC on, so not a pure pair). x2's 59.9/s against q2's 59.5 is cross-run, not credited. Remainder is the normal 4:3-rate probes.
+
+Rate figures: lvl1 16:9 dd4 sync is 32 fps with a tight 32.4 ms gap, dd2 ~59-60, dd4 ASYNC+NODRAIN 60.0. s6902's OWNER-OPT-INS figures were Gerrard V with test logging; different level, both kept and labelled.
+
+Failed, mine: g1e_owner_quiet_arms.zsh split specs on spaces, so two extra env vars could not be passed; now joined with +. First look at the slope table read as H-rate support before the s6931 control rings were run through it.
+
+Does not show: anything on a real TV, input-to-photon latency, 21:9, levels other than index 1, or whether fixed 60 Hz at 4:3 without ASYNC reaches 81 ms.

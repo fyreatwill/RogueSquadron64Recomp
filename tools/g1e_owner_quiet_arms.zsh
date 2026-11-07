@@ -1,7 +1,7 @@
 #!/bin/zsh
 # s6932: owner recipe with NO recipe logging, launched directly (m6_god_common.sh arms LOG_PHASE and session probes, ~0.7 MB/s, s6932). Only the route
 # keys, godmode, NO_SAVE_WRITE and the present ring are added. Locked 60 Hz. Stops if a human touches the machine.
-# usage: env ARMS="4:q4: 2:q2:" HOLD=300 zsh tools/g1e_owner_quiet_arms.zsh ; spec = dd:arm:extra env
+# usage: env ARMS="4:q4: 2:q2:" HOLD=300 zsh tools/g1e_owner_quiet_arms.zsh ; spec = dd:arm:extra env, several joined with +
 cd "$(git rev-parse --show-toplevel)" || exit 1
 R=$PWD/scratch/s6932; DHZ=$PWD/scratch/s6931/dhz; HOLD=${HOLD:-300}
 EARLY=""; e=10
@@ -11,7 +11,7 @@ for i in $(seq 1 100); do for k in a sl a sr; do FL="$FL$t:$k,"; t=$((t+2)); don
 AP="${EARLY}${FL%,}"
 idle(){ ioreg -c IOHIDSystem | awk '/HIDIdleTime/{printf "%d\n",$NF/1e9; exit}'; }
 for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do
-  a=("${(@s/:/)spec}"); x=${spec#*:*:}; dd=$a[1]; arm=$a[2]; i=$(idle)
+  a=("${(@s/:/)spec}"); x=${spec#*:*:}; x=${x//+/ }; dd=$a[1]; arm=$a[2]; i=$(idle)
   echo "$(date +%T) $arm start idle=$i" >> $R/arms.log
   (( i < 120 )) && { echo "$(date +%T) human active, stopping" >> $R/arms.log; echo human > $R/quiet.done; exit 2; }
   $DHZ 60 $((HOLD+30)) > $R/hz_$arm.txt 2>&1 & hp=$!; /bin/sleep 3

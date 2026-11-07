@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""s6933: does the present backlog follow the game rate? Locked-display rings only. Splits each ring (after --skip s of route) into --win s windows, and per window takes
+"""s6932: does the present backlog follow the game rate? Locked-display rings only. Splits each ring (after --skip s of route) into --win s windows, and per window takes
 presents/s, median 1-frame latency at its start and end, so slope = ms of latency gained per s. Prints slope by rate bin. H-rate: a window with present rate at the display rate
 has no spare vsync, slope >= 0; below it slope < 0 until the floor. --hz sets the display rate. A ring without on-screen rows prints nothing: it is not low latency.
 Latency basis as g1e_present_latency.py: P at minus Q time plus tp_ms. usage: g1e_rate_drain.py [--hz 60] [--win 5] [--skip 100] ring..."""
