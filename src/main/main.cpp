@@ -11799,6 +11799,13 @@ static void rs64_g1d_apply_aspect_policy() {
     double w = std::atof(as), h = std::atof(c + 1);
     if (!(w > 0.0 && h > 0.0) || w / h <= 4.0 / 3.0 + 1e-3) return;
     int fbw = (int)(448.0 * w / h + 0.5);
+    // s6928 G1d: ROGUESQ_VI_SHAPE=1 shows a column 1.25 dots wide on 458 half-lines (the retail flight raster), so the
+    // window needs fewer columns: 16:9 652, 21:9 856. The 340-row lever (s6927) answers the square-column present, so off.
+    const char* vsh = std::getenv("ROGUESQ_VI_SHAPE");
+    if (vsh && *vsh && *vsh != '0') {
+        fbw = (((int)(458.0 / 1.25 * w / h + 0.5)) + 2) & ~3;
+        setenv("ROGUESQ_G1D_340PERSP", "0", 0);
+    }
     char b[32];
     if (fbw > 1024) {
         fbw = 1024;  // s6142: 1024 renders, 1032/1045 do not (stripe garbage, guest stall); cap source unnamed
@@ -11824,6 +11831,9 @@ static void rs64_g1d_apply_aspect_policy() {
         // extra width (fbw-512) to keep the retail inset; A+RA overshoots 796 by 50 px.
         std::snprintf(hb, sizeof hb, "%.1f,%.1f", A, ex);
         std::snprintf(rg, sizeof rg, "%.0f,%.0f,20,135", fbw - 276.0 * k, fbw - 166.0 * k);
+        // s6928: at VI_SHAPE widths the formula above misses the disc at 652 (fit from 796 and 1024 only, cone left behind).
+        // The ring sits at retail x 435 plus the centring shift A; 380..490 around it reads 522..632 at 796, the calibrated 520..630.
+        if (vsh && *vsh && *vsh != '0') std::snprintf(rg, sizeof rg, "%.0f,%.0f,20,135", A + 380.0, A + 490.0);
         // Disc tris are selected pre-shift. The shift that kept the wedge inside the
         // ring was (second - A); with second = ex that is A. RA leaves the wedge behind.
         std::snprintf(sh, sizeof sh, "%.0f", A);

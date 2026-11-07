@@ -3306,6 +3306,7 @@ static void dbg_update(unsigned int pc)
 
 static int g_vi_trace;
 static int g_vi_poll;
+static int g_vi_regs; /* --vi-regs: one line per change of the VI geometry registers (s6928) */
 static int g_status_poll;
 static int g_pif_trace;
 static unsigned g_last_pad0 = 0xFFFFFFFFu;
@@ -3620,6 +3621,23 @@ static void *vi_poller(void *arg)
                 }
             }
         }
+        if (g_vi_regs) {
+            /* s6928: H_VIDEO, V_VIDEO, X_SCALE, Y_SCALE, STATUS. V_VIDEO and Y_SCALE alternate
+             * per field in some modes, so the key is the set seen, printed on any new tuple. */
+            static unsigned seen[64][6]; static int nseen;
+            unsigned r[6]; int k, hit = 0;
+            r[0] = width; r[1] = pDebugMemRead32(0xA4400024u); r[2] = pDebugMemRead32(0xA4400028u);
+            r[3] = pDebugMemRead32(0xA4400030u); r[4] = pDebugMemRead32(0xA4400034u);
+            r[5] = pDebugMemRead32(0xA4400000u);
+            for (k = 0; k < nseen; k++) if (!memcmp(seen[k], r, sizeof r)) { hit = 1; break; }
+            if (!hit && nseen < 64) {
+                memcpy(seen[nseen++], r, sizeof r);
+                printf("[vi-regs] t=%6.1fs width=%u h=%u..%u (%u dots) v=%u..%u (%u half-lines) xs=0x%x ys=0x%x status=0x%x origin=0x%08x\n",
+                       t, r[0], r[1] >> 16, r[1] & 0xFFFFu, (r[1] & 0xFFFFu) - (r[1] >> 16),
+                       r[2] >> 16, r[2] & 0xFFFFu, (r[2] & 0xFFFFu) - (r[2] >> 16), r[3], r[4], r[5], origin);
+                fflush(stdout);
+            }
+        }
         if (g_nfbd) fb_dump_poll(t, width);
         if ((t - last_raw_log) >= 1.0) {
             printf("[vi-poll-raw] t=%6.1fs width=%u origin=0x%08x\n", t, width, origin);
@@ -3870,6 +3888,7 @@ static void usage(void)
         "  --oracle-emulator N   set Core/R4300Emulator (default 0, pure interpreter)\n"
         "  --vi-trace            log VI width/origin changes - the headless phase signal\n"
         "  --vi-poll             poll VI width/origin through the core API outside callbacks\n"
+        "  --vi-regs             --vi-poll plus one line per new H/V video, X/Y scale, status tuple\n"
         "  --status-poll         poll the 18 status-table words through the core API\n"
         "  --pif-trace           log pad-1 buttons as the GAME reads them from PIF RAM\n"
         "  --exec-trace PC[:MAX[:PEEK]]  one compact [xtrace] row (index, VI, $ra, word at PEEK, pc, v0, a3) per execution of PC\n"
@@ -4113,6 +4132,7 @@ int main(int argc, char **argv)
         }
         else if (!strcmp(argv[i], "--vi-trace"))                   g_vi_trace = 1;
         else if (!strcmp(argv[i], "--vi-poll"))                    g_vi_poll = 1;
+        else if (!strcmp(argv[i], "--vi-regs"))                    g_vi_poll = g_vi_regs = 1;
         else if (!strcmp(argv[i], "--fb-dump") && i + 1 < argc && g_nfbd < MAX_FB_DUMPS) {
             unsigned w, st, ln; double dl; char pth[512];
             if (sscanf(argv[++i], "%u:%lf:%x:%x:%511s", &w, &dl, &st, &ln, pth) != 5) { fprintf(stderr, "bad --fb-dump\n"); return 1; }

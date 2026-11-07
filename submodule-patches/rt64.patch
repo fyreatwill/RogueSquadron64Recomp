@@ -11574,7 +11574,7 @@ index 0848f3e..22c84a9 100644
  
          TextureUpload newUpload;
 diff --git a/src/render/rt64_vi_renderer.cpp b/src/render/rt64_vi_renderer.cpp
-index b4ff4e9..c6cd9c0 100644
+index b4ff4e9..fbe9b49 100644
 --- a/src/render/rt64_vi_renderer.cpp
 +++ b/src/render/rt64_vi_renderer.cpp
 @@ -4,9 +4,20 @@
@@ -11644,6 +11644,54 @@ index b4ff4e9..c6cd9c0 100644
          p.commandList->setViewports(viewport);
          p.commandList->setScissors(scissor);
  
+@@ -77,6 +124,15 @@ namespace RT64 {
+         pushConstants.videoResolution = computeHDSize(hlslpp::float2(p.vi->fbSize()), p.resolutionScale, p.downsamplingScale);
+         pushConstants.textureResolution = { float(p.textureWidth), float(p.textureHeight) };
+         pushConstants.gamma = p.vi->gamma();
++        static const bool s_viShapeLog = std::getenv("ROGUESQ_VI_SHAPE_LOG") != nullptr;
++        if (s_viShapeLog) {
++            static float s_lw = 0, s_lh = 0, s_tw = 0, s_th = 0;
++            if ((s_lw != viewport.width) || (s_lh != viewport.height) || (s_tw != float(p.textureWidth)) || (s_th != float(p.textureHeight))) {
++                s_lw = viewport.width; s_lh = viewport.height; s_tw = float(p.textureWidth); s_th = float(p.textureHeight);
++                std::fprintf(stderr, "[g1d-vishape-vp] fb %ux%u vp %.1f,%.1f %.1fx%.1f tex %.0fx%.0f rs %.3f,%.3f ds %u videoRes %.1fx%.1f sc %d..%d,%d..%d\n", (unsigned)fbSize.x, (unsigned)fbSize.y,
++                    viewport.x, viewport.y, viewport.width, viewport.height, s_tw, s_th, float(p.resolutionScale.x), float(p.resolutionScale.y), p.downsamplingScale, float(pushConstants.videoResolution.x), float(pushConstants.videoResolution.y), scissor.left, scissor.right, scissor.top, scissor.bottom);
++            }
++        }
+ 
+         p.commandList->setPipeline(shader->pipeline.get());
+         p.commandList->setGraphicsPipelineLayout(shader->pipelineLayout.get());
+@@ -100,8 +156,29 @@ namespace RT64 {
+         // on the screen. To work around that, the viewport the buffer will be drawn in will be expanded so only
+         // the region of interest is rendered. A scissor will cut it off correctly according to the coordinates
+         // specified by the VI.
+-        const hlslpp::float2 sdSize = removeBlackBorders ? hlslpp::float2(vi.fbSize()) : hlslpp::float2(320.0f, 240.0f);
+-        const hlslpp::float2 hdSize = computeHDSize(sdSize, resolutionScale, downsamplingScale);
++        hlslpp::float2 sdSize = removeBlackBorders ? hlslpp::float2(vi.fbSize()) : hlslpp::float2(320.0f, 240.0f);
++        // RS64 s6928 G1d: ROGUESQ_VI_SHAPE=1 (opt-in, default off = the old fbSize box). The VI scans out on a fixed raster:
++        // retail 512-column modes run xScale 0x333 over all 640 dots (oracle --vi-regs), so a column is 1.25 dots wide and
++        // the picture box is dots x half-lines, not columns x rows. Widened modes keep the same column width: ROGUESQ_FB_WIDTH
++        // columns are 512-family, so they get x1.25 rather than the 1024/xScale that widening rewrote.
++        static const bool s_viShape = [](){ const char *v = std::getenv("ROGUESQ_VI_SHAPE"); return v && v[0] && v[0] != '0'; }();
++        static const uint32_t s_fbw = [](){ const char *v = std::getenv("ROGUESQ_FB_WIDTH"); return v ? uint32_t(std::atoi(v)) : 0u; }();
++        if (s_viShape && removeBlackBorders) {
++            const int dots = int(vi.hRegion.hEnd) - int(vi.hRegion.hStart), lines = int(vi.vRegion.vEnd) - int(vi.vRegion.vStart);
++            const uint32_t cols = uint32_t(sdSize.x), xs = vi.xTransform.xScale;
++            if ((dots > 0) && (lines > 0) && (cols > 0) && (xs > 0)) {
++                const float par = ((s_fbw > 512u) && (cols == s_fbw)) ? 1.25f : (1024.0f / float(xs));
++                const hlslpp::float2 shaped = { float(cols) * par, float(lines) };
++                static uint32_t s_lastCols = 0, s_lastLines = 0;
++                if ((s_lastCols != cols) || (s_lastLines != uint32_t(lines))) {
++                    s_lastCols = cols; s_lastLines = uint32_t(lines);
++                    std::fprintf(stderr, "[g1d-vishape] cols %u xs 0x%X dots %d lines %d par %.4f box %.1fx%.1f\n", cols, xs, dots, lines, par, float(shaped.x), float(shaped.y));
++                }
++                sdSize = shaped;
++            }
++        }
++        // s6928: resolutionScale is per target and can be anisotropic; the shaped box already is the display shape.
++        const hlslpp::float2 hdSize = (s_viShape && removeBlackBorders) ? sdSize : computeHDSize(sdSize, resolutionScale, downsamplingScale);
+         const hlslpp::float2 windowSize = { float(swapChain->getWidth()), float(swapChain->getHeight()) };
+ 
+         // Query the VI for the current rendering area.
 diff --git a/src/shaders/RasterPS.hlsl b/src/shaders/RasterPS.hlsl
 index f5beee9..f6d692a 100644
 --- a/src/shaders/RasterPS.hlsl
