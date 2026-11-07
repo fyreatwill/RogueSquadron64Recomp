@@ -182785,7 +182785,7 @@ HYPOTHESIS-ID: g1d-vi-shape-coverage. No maintenance (40 KB).
 
 Soak folded: s6929_shape_owner (FPS60, dd4): own21 crash=0, ownauto crash=0; 784x334 at 21:9 logged; hangar and flight viewed, no strips.
 
-Arms, FPS60 dd4, 92 s, built-in display only, 0 crash in all 17: fsauto, fsoff, fs21, fs16, w43, w43off, n1, n0, n1off, x43, x16, x21, y16, y16c, yauto, y21, y16o. Selected H-fs; H-clean refuted for fullscreen auto. VI_SHAPE at 4:3 windowed is clean by a run now, not only by reading: 640 modes unchanged, flight letterboxed about 20 px, no strip.
+Arms, FPS60 dd4, 92 s (first six) or 84 s, built-in display only, 0 crash in all 17: fsauto, fsoff, fs21, fs16, w43, w43off, n1, n0, n1off, x43, x16, x21, y16, y16c, yauto, y21, y16o. Selected H-fs; H-clean refuted for fullscreen auto. VI_SHAPE at 4:3 windowed is clean by a run now, not only by reading: 640 modes unchanged, flight letterboxed about 20 px, no strip.
 
 Fault 1, side bars in fullscreen auto, with and without VI_SHAPE. ORIGIN: ours. s6688 auto took SDL_GetDesktopDisplayMode (3024x1964, 1.5397), but the desktop fullscreen window is 3024x1898 (1.593), stopping below the notch band. Picture L51 R57 black. src/main/rs64_display_mac.mm returns safeAreaInsets.top / height of NSScreen screens[0], 0.0326 here; main.cpp divides the aspect by 1 - that, fullscreen only. ROGUESQ_G1F_NOTCH=0 old. Same binary: n0 fbw 564 L52 R56; n1 fbw 584 L0. Without VI_SHAPE fbw 713, L1. Windowed auto unchanged by reading. A display with no notch reads inset 0 by the API contract, not run: no external is attached. Only display 0 is read, as before.
 
