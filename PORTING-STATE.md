@@ -182717,7 +182717,7 @@ Fix: tools/apply_s6927_340persp.py, factor fbw/687.2 when the camera viewport is
 Same binary, static holo table disc w/h against 4:3 (3.456): 16:9 on 0.962, =0 0.697; 21:9 on 1.007, =0 0.748.
 Settled V-wing w/h against 4:3 (5.614): 16:9 on 1.004, old 0.742. The old figure is from the previous binary (f16, no lever), not a same-binary arm. 21:9 on 0.947 with a narrower crop box to avoid the crate; its old-side figure is unusable because the box caught the crate (1.222), so this row is weak and the disc is the 21:9 evidence.
 Pans at 16:9 and 21:9 viewed, frames only. Arm timing differs by about 1 s, so pan frames are not same-pose pairs. A black wedge at the ceiling in one 21:9 on frame is probably open space past the hangar edge (starfield in the off arm at a different pose): inferred, not same-pose checked.
-Flight unchanged: log shows x1.5547 and x2 back on the 448-row state. All 11 arms on the two binaries 0 crash. docs/owner_sheet_s6927_hangar_shape.png.
+Flight unchanged: log shows x1.5547 and x2 back on the 448-row state. All 17 arms on the two binaries 0 crash. docs/owner_sheet_s6927_hangar_shape.png.
 
 Result 3, flight already matches 4:3 at wide. Pause emblem w/h: 4:3 0.892, 16:9 0.887, 21:9 0.884. Radar ring 0.810, 0.810, 0.811. ROGUESQ_ASPECT_SCALE=1.159 applied globally would have broken this (emblem 1.185), which is why the fix is per state.
 
