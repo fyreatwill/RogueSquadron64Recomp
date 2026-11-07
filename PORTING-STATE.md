@@ -182699,3 +182699,29 @@ Not run: owner recipe (FPS60, dd>1, where OSMEM 12 moves the buffers); queued as
 Side finding, not fixed: pillared 512 screens are narrow at wide aspect. 512 columns get 512/fbw of the window, 0.643 at 16:9 against 0.75 for a true 4:3 picture, so about 14% narrow; at 21:9 0.50 against 0.58 on the 1360x594 window. Calculated, and seen on the sheets (SHOWROOM text 60 px wide at 16:9, 70 at 4:3, by eye). scratch/s6926/disc.py tried to measure the Death Star and failed: its threshold catches only the lit side, ratios 0.70 / 0.47 / 0.49 are not usable. Applies to title, OPTIONS, PASSCODES since s6720, not new here.
 
 Result line for s6926: selects H-wide-vi, fixes the SHOWROOM cut with a same-binary =0 control at 16:9, leaves the owner recipe to a queued soak, names menu narrowness as the next unit.
+
+## Session 6927 (2026-11-06) — G1d: "14% narrow" pillared screens refuted by measurement; the real wide-aspect shape error is the 340-row hangar 3D, fixed; flight matches 4:3; true display shape is an open owner question
+
+HYPOTHESIS-ID: g1d-menu-pillar-aspect. No maintenance (37 KB).
+
+Soak folded: s6926_showroom_owner (FPS60, dd4, 16:9): pfm 512x300 count 1, ci 796 at 0xB8B640/0xA72440, scissor 142..654, 0 crash. s6926's owner-recipe gap is closed. own16.raw deleted.
+
+Result 1, s6926 side finding superseded. Title art w/h, content area only (62 px title bar cropped): 4:3 1.144, 16:9 1.140, 21:9 1.137. Art width in the window 0.860 / 0.641 / 0.497. The picture has the same shape at all three. The s6926 calculation was right about 0.64 but wrong about its reference: it took 0.75 as the 4:3 share, and at 4:3 the picture is itself pillared at 0.86 of the window. Selects neither H-some nor H-intended: H-all-pillar is refuted for the title, no pillar lever built. OPTIONS, PASSCODES and SHOWROOM not measured, they share the 448-row or 300-row states; SHOWROOM's 300 rows not checked at all (see Not done).
+
+Why the shape holds: RT64 with black borders removed sizes the picture from fbSize, so a 512x448 state shows as 1.14 at 4:3 and 796x448 fills 16:9 at the same pixel shape. fbw = 448*w/h is square-pixel maths against that.
+
+Result 2, new defect. 512x340 states (cams 0x800CDC80 SELECT LEVEL, 0x800CD670 SELECT YOUR CRAFT) are letterboxed at 4:3 (picture box 1.534) but fill the window at wide. Rows grow, columns do not, so 3D is narrow while 2D text keeps its shape.
+ORIGIN: ours. s6104 multiplies the guPerspective aspect by fbw/512 in every widened state.
+Fix: tools/apply_s6927_340persp.py, factor fbw/687.2 when the camera viewport is 340 rows in a state wider than 640: 16:9 x1.158, 21:9 x1.490. ROGUESQ_G1D_340PERSP default on, =0 old, [g1d-340p] logs each change. Reached only at wide aspect (k6104 is 0 at 4:3; v43 has 0 log lines). The constant is fitted to the measured 1.534 box, not derived from VI registers.
+
+Same binary, static holo table disc w/h against 4:3 (3.456): 16:9 on 0.962, =0 0.697; 21:9 on 1.007, =0 0.748.
+Settled V-wing w/h against 4:3 (5.614): 16:9 on 1.004, old 0.742. The old figure is from the previous binary (f16, no lever), not a same-binary arm. 21:9 on 0.947 with a narrower crop box to avoid the crate; its old-side figure is unusable because the box caught the crate (1.222), so this row is weak and the disc is the 21:9 evidence.
+Pans at 16:9 and 21:9 viewed, frames only. Arm timing differs by about 1 s, so pan frames are not same-pose pairs. A black wedge at the ceiling in one 21:9 on frame is probably open space past the hangar edge (starfield in the off arm at a different pose): inferred, not same-pose checked.
+Flight unchanged: log shows x1.5547 and x2 back on the 448-row state. All 11 arms on the two binaries 0 crash. docs/owner_sheet_s6927_hangar_shape.png.
+
+Result 3, flight already matches 4:3 at wide. Pause emblem w/h: 4:3 0.892, 16:9 0.887, 21:9 0.884. Radar ring 0.810, 0.810, 0.811. ROGUESQ_ASPECT_SCALE=1.159 applied globally would have broken this (emblem 1.185), which is why the fix is per state.
+
+Open, not fixed: is the whole picture about 20% narrow against a TV, at every aspect, 4:3 included? Three lines, none of them a real TV: VI xScale 0x333 puts 512 columns on 640 dots, so a pixel is 1.25 wide; the game itself passes guPerspective aspect 1.882 = 640/340 in the hangar (s6791); radar ring 0.81 x 1.25 = 1.01 is round at that shape (emblem 1.11, its true shape unknown). It would also explain the 4:3 flight side bars s6717 left unchecked. The oracle PNGs in docs are raw framebuffers, so they cannot settle it. Trial arm 16:9 ASPECT_SCALE=1.2438, 21:9 1.6: emblem 1.106, 1.102, but the radar's cone leaves its ring (white and orange shape beside the ring, also seen at k=1.159), and 2D stays narrow. So the env var is not a usable lever. docs/owner_sheet_s6927_true_shape.png.
+
+Not done: owner recipe (queued s6927_hangar_owner); SHOWROOM 300-row shape at 4:3 vs wide; other 340-row screens not listed here; whether s6907 aim or G5G_LENS want retuning at the new lens; FPS60 not run on this fix.
+Discrimination: refutes H-all-pillar for the title; selects a 340-row-only shape error; refutes any global ASPECT_SCALE change as the fix.
