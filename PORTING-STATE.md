@@ -182756,3 +182756,25 @@ Cost for the owner to weigh: on, wide view shows fewer extra columns (652, 856 a
 Not done: owner recipe with VI_SHAPE (queued s6928_shape_owner); SHOWROOM 300-row, crawl and cutscenes at wide with VI_SHAPE, viewed only in part; ROGUESQ_ASPECT=auto with VI_SHAPE not run; HUD anchors at 652 and 856 judged by eye only; s6907 aim and G5G_LENS at the new shape; 4:3 default untouched.
 Discrimination: selects H-par for every mode observed; refutes H-fit and H-mixed; selects a presenter box fault over any game-side projection fault.
 
+
+## Session 6929 (2026-11-06) — G1d: VI_SHAPE coverage finds three faults of ours, all fixed: 21:9 intro bars, noise strip below 640 columns, menu trail strips at 16:9
+
+HYPOTHESIS-ID: g1d-vi-shape-coverage. No maintenance (38 KB).
+
+Soak folded: s6928_shape_owner (FPS60, dd4): own16 crash=0, own21 crash=0, boxes 815x458 and 1070x458 as required.
+
+Selected H-state and an anchor-class fault; H-clean refuted. Crawl (640x294) and the title are clean: box matches retail dots x half-lines, and the crawl is the same on and off.
+
+Fault 1, 21:9 mission intro side bars back under VI_SHAPE. ORIGIN: ours. s6718 intro_w = fbw*3/4 assumed fbw 1024; at 856 it gave 648, xs 0x40C, box 640.5x334 in a 2.33 window. tools/apply_s6929_introshape.py: intro_w = fbw*1.25*334/458, 784 at 21:9; 16:9 stays unwidened. rt64_vi_renderer: a 640-family mode widened past 640 keeps par 1 (1024/xs would squeeze it back). ROGUESQ_G1D_INTROSHAPE=0 old. Same binary 21:9: =0 box 648x334 with bars, on 784x334 fills (sheet row 1). Also covers the movies at 21:9 (s21 t=220, 224 fill).
+
+Fault 2, ASPECT=auto on a 1.54 display (fbw 564): only 512 columns drawn, RAM noise strip at the right, radar disc wrong. ORIGIN: ours. s6719 keyed the 640-family rule on width <= 640, true only while widened 512 states sat above 640; VI_SHAPE reaches below that. Same script, second half: gate is w <= 512 or w == 640, three sites (persp, viewport x2, footprint). Inert at fbw > 640 and at 4:3. ROGUESQ_G1D_W640=0 old. Same binary: strip on =0, gone on. Emblem w/h at t=80: =0 1.188 (bbox caught the strip), on 1.078, retail 1.063-1.074. So main.cpp keeps fbw off 640 (644), the one width where flight and a 640 mode look alike to the presenter; below fbw 512 it does not widen.
+
+Fault 3, hatched strips in both pillars on OPTIONS and SHOWROOM at 16:9 (fbw 652) only. ORIGIN: ours. Our title clear clamps a full width scissor to the centre 512 with 2 px tolerance; the game's full scissor at 652 reads lrx 649 (RDP dump d16.bin), so the clamp missed and the menu slide trail stayed. dpc_bridge: tolerance 8 px, ROGUESQ_G1D_SCISSOR_TOL=8 old. Same binary t8 strips, t16 none (sheet rows 3, 4). Why the game's lrx is 649 and not 651 is unexplained. The 796 and 1024 dumps show only the clamped value, so their raw lrx is unknown.
+
+Also: window clamp under VI_SHAPE raised to 1280/458 = 2.795, so 21:9 opens 1360x582 (2.337) against a 2.336 box: the s6928 thin letterbox is gone, and a 3440x1440 auto gets its real aspect. Not tested on such a display.
+
+0 crash in all arms: i1, i0, a1, a2, a0, s16, s21, t16, t8, d16, off16. off16 (VI_SHAPE off) still FB_WIDTH=796 with no intro widen. 4:3 not rerun: the gates are inert there by reading, not by a run.
+docs/owner_sheet_s6929_vi_shape_coverage.png. Soak queued s6929_shape_owner (FPS60 dd4, 21:9 and auto).
+
+Not done: HUD anchors at 564 by eye only; FULLSCREEN with VI_SHAPE; a real 16:10 or ultrawide display; s6907 aim at the new shape; a dark ring round the craft at t16 t=216, read as the game's wipe into the movie, not checked against retail.
+Discrimination: refutes H-clean; selects H-state for the intro and H-anchor class for the 640 gate and scissor tolerance. All three are width assumptions that VI_SHAPE's new widths broke, none are shape errors in the presenter.

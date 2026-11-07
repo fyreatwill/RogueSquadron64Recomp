@@ -1333,3 +1333,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261106-212911 | s6925_showroom_43 | rc=0 | 216s | scratch/agent/soak_results/s6925_showroom_43_20261106-212911.log
 20261106-220922 | s6926_showroom_owner | rc=0 | 227s | scratch/agent/soak_results/s6926_showroom_owner_20261106-220922.log
 20261106-224428 | s6927_hangar_owner | rc=0 | 122s | scratch/agent/soak_results/s6927_hangar_owner_20261106-224428.log
+20261106-231849 | s6928_shape_owner | rc=0 | 243s | scratch/agent/soak_results/s6928_shape_owner_20261106-231849.log
