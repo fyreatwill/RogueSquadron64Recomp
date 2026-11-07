@@ -38,7 +38,7 @@ Far terrain melt (s6916), opt-in: add `ROGUESQ_DD_MELT=1` at dd2 or above and fa
 
 Far ships and beams in the sky (s6917), opt-in: add `ROGUESQ_DD_SKYZ=1` at dd2 or above. Extended draw distance pulled the sky nearer than the far ships, so they vanished and their beams ended flat at the sea edge. This puts the sky back behind them. Before and after: docs/owner_sheet_s6917_sky_depth.png.
 
-Far cutoff follows the scene at dd2 or above (s6919), opt-in, not yet judged: add `ROGUESQ_DD_CUT_LIVE=1`. More terrain gets the near look, at a possible small cost in rate; the fog edge has not been checked with it. At dd1 the game's own cutoff is now always used; `ROGUESQ_CUT_LIVE=0` restores the old fixed value.
+Far cutoff follows the scene at dd2 or above (s6919), opt-in, not yet judged: add `ROGUESQ_DD_CUT_LIVE=1`. More terrain gets the near look, at a possible small cost in rate; the fog edge was checked in s6920: no change in most frames, a faint fog step in about one frame in eight on levels 1 and 4. At dd1 the game's own cutoff is now always used; `ROGUESQ_CUT_LIVE=0` restores the old fixed value.
 
 Draw distance above 1 (s6904): extended terrain now fades into the haze instead of drawing clear and then turning solid fog colour at a line. On by default above dd1, off at dd1. `ROGUESQ_DD_FOG=0` restores the old look. `ROGUESQ_DD_FOG=<start>,<end>` sets how far the fade starts and ends, as multiples of the level's own fog distances (defaults at dd4: 1.5,3.2). No frame rate cost measured at level 5 dd2 over 300 s.
 

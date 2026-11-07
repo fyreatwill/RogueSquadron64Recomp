@@ -182540,3 +182540,28 @@ dd4, lvl4 FPS60 16:9, ROGUESQ_DD_CUT_LIVE=tog, 0 crash, one flight: chain read 5
 Deleted scratch/s6919/tog.raw (4.2 GB) after the sheets. retail.bin not kept.
 NOT done: 16:9 or dd>1 pixels of the dd1 fix, lvl4 default run, shots 59, 61, 65, 77-78 pairing, DD_CUT_LIVE fog seam, 300 s rate, retail flight read.
 
+
+## Session 6920 (2026-11-06) — G5h: ROGUESQ_DD_CUT_LIVE at dd>1: seam median stays 0 with a live-only tail on lvl1 and lvl4, no rate cost, stays opt-in; re-paired table shows live cutoff matches retail on all 19 shots
+
+HYPOTHESIS-ID: g5h-dd-cut-live, closed pending the owner. No maintenance (36 KB). Soak file had nothing new.
+
+Instrument: ROGUESQ_G5E_FOG rows gained the 1 s mach parity and the cutoff the chain read (needs ROGUESQ_G5H_BAND), ROGUESQ_G5E_FOG_EVERY sets the sample period (default 120, used 30). The old parity column is 4 s and could not bin a 1 s =tog. Tools: tools/g5e_seam_by_parity.py (s6904 seam.py by 1 s parity), tools/g5h_toggle_span.cpp.
+
+Arms: ROGUESQ_DD_CUT_LIVE=tog, FPS60 16:9, 300 s hold each, one game at a time, 0 SIGSEGV/SIGBUS, same run latched vs live. Positive control for the lever: the read cutoff steps on the toggle in all three.
+| arm | read cut latched -> live | a@seam p50 | p90 | swaps a>16 latched, live | A latched, live | live - latched swaps/s, paired |
+|---|---|---|---|---|---|---|
+| lvl1 dd2 | ~240 -> ~380 | 0, 0 | 0, 20 | 0/234, 25/235 | 633, 835 | +1.23 +/- 0.42 |
+| lvl4 dd4 | 523 -> 914 | 0, 0 | 0, 32 | 3/150, 20/143 | 955, 1328 | -0.82 +/- 0.48 |
+| lvl5 dd4 | 268 -> 914 | 0, 0 | 0, 0 | 3/187, 5/183 | 711, 1853 | -0.41 +/- 0.60 |
+Verdict: neither H-seam nor H-clean whole. The s6904 seam (255) does not return, but live is not clean: on lvl1 and lvl4 about one sampled swap in eight reads a@seam above 16. Peak 71 on lvl1, 243 once on lvl4 (swap 3570, cut 579), most 20-60. On lvl4 the tail sits in repeating stretches of the flight while the cut climbs 555 -> 914; the 3 latched hits fall in the same stretches. The lvl5 hits are one low-tri scene (swaps 4080-4320, 120-690 C811 tris) in both states, not caused by the lever. Cause of the tail is inferred, not measured: rs64_s6904_clipmul was fitted on the latched base, so a live base can sit past the ramp start.
+
+Rate: no cost at 300 s; the three signs disagree and the largest is +1.23. This meets the s6904 >=300 s rule, single run each.
+
+Pixels: a null with a limited floor, and the in-game control did NOT pass. tools/g5h_toggle_span.cpp compares a 16-frame gap across each toggle against the same gap inside one state, band rows h/6 to h/2. Quietest quarter of toggles, across > within: lvl1 25/47, lvl4 12/47, lvl5 32/47, so no step found. In-game control ROGUESQ_DD_MELT=tog on lvl5 dd4 (90 s): 10/23, it did not fire, so MELT in that black-sky scene is no control; whether the scorer would see a real game-side change stays unshown. Offline control instead: adding V grey levels to the band on odd seconds gives lvl5 V=1 46/47, lvl4 V=2 37/47, lvl1 V=4 36/47. So this only bounds a uniform band step at about 1, 2 and 4 grey levels; a local change such as a thin fog line can sit under that. docs/owner_sheet_s6920_cut_live.png: rows lvl1 dd2, lvl4 dd4 x2, lvl5 dd4 x2, left latched, right live, 16 frames apart, quiet toggles. Looks alike by eye at those five poses, none of which is a known tail swap (swaps were not mapped to capture frames).
+
+H-route: read: the latch differs by route and level (lvl4 523, lvl5 268, both dd4), and live moves terrain from far to near look (lvl5 A 711 -> 1853). Whether that shows is the owner's call. Stays opt-in, default unchanged.
+
+Far band table re-paired (scratch/s6920/tab2.py, align.py; no new run): tab.py's duration match paired early segments to shots 59 and 61. Ordered by start, 61+62 and 77+78 each run as one segment, split by shot length. B/A retail / live / old: 59 0.31/0.31/0.25; 60 0.08/0.07/0.10; 61 0.18/0.17/0.09; 62 0.34/0.34/0.22; 63 0.28/0.28/0.18; 64 1.16/1.12/1.48; 65 2.87/2.99/29.88; 66 0.62/0.57/0.54; 77 0.16/0.15/0.14; 78 0.24/0.24/0.38; 67-76 as s6919. Live cut equals retail in every row. s6919's "59 and 61 not matched" was the pairing. Row counts are small on 60 (3) and 74 (2); the 61/62 and 77/78 splits assume the boundary by length.
+
+Deleted the four .raw captures after scoring (about 9 GB).
+NOT done: mapping tail swaps to frames, a pixel control that fires from a game lever, fixing the tail (would need a live form of the cutoff pull), levels other than 1, 4, 5, dd3, cutscenes with live.
