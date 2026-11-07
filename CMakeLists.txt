@@ -315,6 +315,7 @@ endif()
 
 add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/main/main.cpp
+    $<$<PLATFORM_ID:Darwin>:${CMAKE_SOURCE_DIR}/src/main/rs64_display_mac.mm>
     ${CMAKE_SOURCE_DIR}/src/main/rt64_render_context.cpp
     ${CMAKE_SOURCE_DIR}/src/main/register_overlays.cpp
     ${CMAKE_SOURCE_DIR}/src/main/upstream_compat.cpp

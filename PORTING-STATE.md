@@ -182778,3 +182778,18 @@ docs/owner_sheet_s6929_vi_shape_coverage.png. Soak queued s6929_shape_owner (FPS
 
 Not done: HUD anchors at 564 by eye only; FULLSCREEN with VI_SHAPE; a real 16:10 or ultrawide display; s6907 aim at the new shape; a dark ring round the craft at t16 t=216, read as the game's wipe into the movie, not checked against retail.
 Discrimination: refutes H-clean; selects H-state for the intro and H-anchor class for the 640 gate and scissor tolerance. All three are width assumptions that VI_SHAPE's new widths broke, none are shape errors in the presenter.
+
+## Session 6930 (2026-11-07) — G1d/G1f: VI_SHAPE fullscreen and 4:3 coverage finds two edge faults of ours, both fixed: auto ignored the notch band, VPW_SCALE rounding cost 2 columns at 652 and 584
+
+HYPOTHESIS-ID: g1d-vi-shape-coverage. No maintenance (40 KB).
+
+Soak folded: s6929_shape_owner (FPS60, dd4): own21 crash=0, ownauto crash=0; 784x334 at 21:9 logged; hangar and flight viewed, no strips.
+
+Arms, FPS60 dd4, 92 s, built-in display only, 0 crash in all 17: fsauto, fsoff, fs21, fs16, w43, w43off, n1, n0, n1off, x43, x16, x21, y16, y16c, yauto, y21, y16o. Selected H-fs; H-clean refuted for fullscreen auto. VI_SHAPE at 4:3 windowed is clean by a run now, not only by reading: 640 modes unchanged, flight letterboxed about 20 px, no strip.
+
+Fault 1, side bars in fullscreen auto, with and without VI_SHAPE. ORIGIN: ours. s6688 auto took SDL_GetDesktopDisplayMode (3024x1964, 1.5397), but the desktop fullscreen window is 3024x1898 (1.593), stopping below the notch band. Picture L51 R57 black. src/main/rs64_display_mac.mm returns safeAreaInsets.top / height of NSScreen screens[0], 0.0326 here; main.cpp divides the aspect by 1 - that, fullscreen only. ROGUESQ_G1F_NOTCH=0 old. Same binary: n0 fbw 564 L52 R56; n1 fbw 584 L0. Without VI_SHAPE fbw 713, L1. Windowed auto unchanged by reading. A display with no notch reads inset 0 by the API contract, not run: no external is attached. Only display 0 is read, as before.
+
+Fault 2, black strip at the right edge at 16:9 under VI_SHAPE, 15 of 3024 px. ORIGIN: ours, and it answers s6929's "why lrx 649 and not 651". main.cpp printed fbw/512 with %.4f, so 652 became 1.2734. Fit over six widths from RDP dumps, camera scissor lrx = ((int)(512*scale) & ~1) - 1: 512 -> 511, 564 -> 563, 584 -> 581, 652 -> 649, 713 -> 711, 856 -> 855. All six match; the even step is inferred from that fit, not read in code. Scale now %.9f, exact for n/512. Same binary, y16 vs y16c (ROGUESQ_VPW_SCALE=1.2734 ROGUESQ_ASPECT_SCALE=1.2734): lrx 2604 vs 2596, black R5 vs R15. yauto 584: lrx 2332, R7. y21 and y16o scissors unchanged. One column stays black at every width: retail's own lrx 511 at 512. Note y16c kept the [g1d] log's exact figure, the env wins at setenv.
+
+Not done: an external or notch-free display; moving between displays; F11 into fullscreen after a windowed boot (width fixed at boot, so bars remain); odd fbw 713 loses 1 more column, not fixed; s6929 SCISSOR_TOL default 32 may no longer be needed at 652, left alone.
+docs/owner_sheet_s6930_fullscreen_edges.png. Discrimination: refutes H-clean, selects H-fs. VI_SHAPE coverage closed pending the owner's default choice.

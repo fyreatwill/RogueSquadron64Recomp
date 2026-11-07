@@ -11340,6 +11340,9 @@ static SDL_Window* g_rs64_window = nullptr;
 static std::atomic<bool> g_rs64_fs_toggle{false};
 static int rs64_g1f_win_w = 640, rs64_g1f_win_h = 480;
 static bool rs64_g1f_fullscreen = false;
+#ifdef __APPLE__
+extern "C" double rs64_display_top_inset_frac(void);
+#endif
 static bool rs64_g1f_optin = false;  // ASPECT or FULLSCREEN set: high-DPI drawable; unset = retail window
 
 // Size a window of aspect r to ~90% of the usable desktop of display 0.
@@ -11784,6 +11787,16 @@ static void rs64_g1d_apply_aspect_policy() {
         SDL_DisplayMode dm{};
         double r = 4.0 / 3.0;
         if (SDL_GetDesktopDisplayMode(0, &dm) == 0 && dm.h > 0) r = (double)dm.w / dm.h;
+#ifdef __APPLE__
+        // s6930: desktop fullscreen stops below the notch band (3024x1898 of 3024x1964), so the whole-panel aspect left
+        // side bars. Windowed auto keeps the panel aspect. ROGUESQ_G1F_NOTCH=0 = old.
+        const char* nt = std::getenv("ROGUESQ_G1F_NOTCH");
+        if (dm.h > 0 && rs64_g1f_fullscreen && !(nt && *nt == '0')) {
+            const double top = rs64_display_top_inset_frac();
+            if (top > 0.0 && top < 0.5) r /= 1.0 - top;
+            std::fprintf(stderr, "[g1f] notch band %.4f of display height\n", top);
+        }
+#endif
         r = std::clamp(r, 4.0 / 3.0, amax);
         char rb[32];
         std::snprintf(rb, sizeof rb, "%.4f:1", r);
@@ -11820,7 +11833,9 @@ static void rs64_g1d_apply_aspect_policy() {
     std::snprintf(b, sizeof b, "%d", fbw);
     setenv("ROGUESQ_FB_WIDTH", b, 0);
     if (fbw > 796) setenv("ROGUESQ_OSMEM_MB", "12", 0);  // s6425: 21:9 (w1024) framebuffers exhaust the 8 MB heap -> level-1 load_level_hmp NULL-dst crash (s6424 a219 3/3); 16:9 fits in 8 MB
-    std::snprintf(b, sizeof b, "%.4f", fbw / 512.0);
+    // s6930: exact, n/512 needs 9 places. %.4f read 652 as 1.2734: viewport 651.98, truncated, evened by the game, so
+    // scissor lrx 649 and 3 black columns at the right at 652 and 584. Passing ROGUESQ_VPW_SCALE=1.2734 shows the old.
+    std::snprintf(b, sizeof b, "%.9f", fbw / 512.0);
     setenv("ROGUESQ_VPW_SCALE", b, 0);
     setenv("ROGUESQ_ASPECT_SCALE", b, 0);
     std::fprintf(stderr, "[g1d] ROGUESQ_ASPECT=%s -> FB_WIDTH=%d scales=%s\n", as, fbw, b);
