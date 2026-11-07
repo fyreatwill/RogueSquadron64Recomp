@@ -182609,3 +182609,27 @@ Result 2, H-stale and the sky story are refuted for this shot. No sky mode in th
 Result 3, H-translucent-object refuted. Gate tried: leave C811 words with z compare (objects) alone, ROGUESQ_DD_MELT_OBJ=tog. The lever fired (object left alone n=1048576) and the bubble shows on both parities (scratch/s6922/o1_seq.png). Gate reverted in the next commit, it fixes nothing. Shot 79 on o1, MELT on: row step 3.8-4.1 at frames 1620-1830, so the MELT result itself still stands.
 
 Result 4, pixel query, w2 frame 112-113 (vi 49250): at (320,200), inside the bubble, NO terrain triangle covers the pixel; only objects do, first 12006270 tex 80938370 shade 256,244,214 alpha 0, then 12006270 tex 80884A70 and 80885270, then 00504A50. Outside, (320,100) has one terrain tri alpha 144, (60,240) one terrain tri alpha 0. So bright object triangles sit in a gap of the terrain.
+
+## Session 6923 (2026-11-06) — G5h: the lava "wedge" is not MELT's: it is a translucent shield mesh the game draws, seen at retail settings and with MELT off; s6921 Result 2 superseded
+
+HYPOTHESIS-ID: g5h-melt-wedge, closed. No maintenance (36.6 KB). The previous try of this iteration hit the 1 h limit (rc=124) with run n0 unfinished and an unclosed s6922 entry; no game was left alive.
+
+Ran, AT THE MOVIES, 0 crash in each: n0 dd4 16:9 FPS60 with MELT and SKYZ off, capture 800-830 s; r0 retail settings (dd1, no FPS60, 4:3, no opt-ins), capture 790-840 s. Offline: w1 and w2 from s6922.
+New: tools/g5h_zmap.py (replays a dump's z triangles in draw order against a software z buffer, maps a mode group), tools/g5h_bubble_score.py (bright fraction and sheet of a capture).
+
+Result 1, the object is named. Mapped alone, group 00504A50 of frames 109-113 (w2) has the bubble's many-sided outline, matching the capture around that time by eye (scratch/s6923/z113.png, w2_near.png). 238-280 triangles, combiner FFFFFF FFFE793C = shade colour and shade alpha in both cycles, untextured, blender in x A + mem x (1-A), z compare, no z update. Per-vertex shade alpha moves over time (per-frame mean 19-50, max 100-199 in the 6 frames sampled), which is the drifting colour. It draws after terrain and passes z on all 172414 of its pixels in the software replay, so terrain never hid it. Reads as a shield around the base; that name is my reading, not a game symbol.
+
+Result 2, MELT does not own it. Three arms, same score (share of pixels with min rgb > 35, 19.5-30 s of the capture):
+- w1 MELT=tog, within one run, 23 stream edges seen in the census, frames away from the edges: on seconds mean 0.332 p90 0.525, off seconds mean 0.333 p90 0.535 (n 81 each). Off seconds show the bubble (scratch/s6923/w1_par.png).
+- n0 MELT and SKYZ off the whole run: p50 0.270 p90 0.560 max 0.721, bubble viewed in the sheet.
+- r0 retail settings: bubble viewed at capture t 28-44 s, same base and same colours (score over the full 50 s is not comparable, the capture holds other shots).
+Positive control for the score: it reads p90 > 0.5 on frames with the bubble and the same score separates shots inside r0 (p50 0.134). Parity control: the stream edges prove the toggle acted in the scored run.
+
+Why s6921 was believable: the toggle ratio 1.63 at t=636.81 landed on a sweep of this animated object, and the frame it compared was dark by chance. Iron rule 2 again: an edge ratio on an animating object is not a toggle effect; a parity mean over many toggles is.
+
+Corrections to s6922. Result 2 "no sky mode in the bubble frames" is wrong: census_w1 has sky in 589 of 814 VIs, a small strip y 0-21; that also makes the H-stale reasoning moot. Result 3 stands but tested the wrong thing: 00504A50 was never a C811 word, so no MELT gate could touch it. Result 4 was read correctly and misread as a gap: the last triangle at that pixel is the shield.
+ORIGIN: game content under every setting tried, no writer of ours involved. NOT checked: retail oracle or hardware at this shot, so "retail shows it" means our port at retail settings, single-source for hardware. The mesh comes from the game's own display list, and the F5 path renders it the same at all three settings.
+
+So MELT has no known defect left from this shot. Not a statement that MELT is ready: rate soak still queued, other levels, 21:9, dd3 unmeasured; default stays off, owner chooses. No code change to the game this session. Owner sheet: docs/owner_sheet_s6923_lava_shield.png.
+
+Result line for s6923: the lava bubble is the game's own translucent shaded mesh, present with MELT off and at retail settings (parity 0.332 vs 0.333), so the MELT blocker from s6921 is withdrawn.
