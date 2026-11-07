@@ -42098,6 +42098,7 @@ RS64_REPLAY = [
     "apply_s6909_dlreclaim.py",  # s6909: DL chunk arena restarts at the game pool rebuild
     "apply_s6911_varclamp.py",  # s6911: G5h tile variant map index clamped to the map at dd>1
     "apply_s6916_fartog.py",  # s6916: G5h ROGUESQ_DD_FAR_TOG same-run far scale toggle
+    "apply_s6919_cutlive.py",  # s6919: G5h game's far cutoff no longer overwritten at dd1
 ]
 
 

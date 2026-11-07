@@ -3572,6 +3572,7 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         for (uint32_t ph : {0x9DEACu, 0x9DEB0u, 0x9DEB4u, 0x136FBCu, 0x130C54u, 0x130C58u, 0x130C5Cu, 0x130C60u}) fprintf(s_bd, " %08X", gw(ph));
         const uint32_t cam = gw(0x138D1Cu); fprintf(s_bd, " %08X", cam);
         if ((cam & 0xFF800003u) == 0x80000000u) for (uint32_t i = 0; i < 32; i++) fprintf(s_bd, " %08X", gw((cam & 0x7FFFFFu) + 4 * i));
+        { extern uint32_t g_rs64_s6919[12]; for (int i = 0; i < 12; i++) fprintf(s_bd, " %08X", g_rs64_s6919[i]); }  // s6919: what the chain read at 0x800434F4, tools/apply_s6919_cutlive.py
         fputc('\n', s_bd); fflush(s_bd); s_bA = s_bB = 0;
     }
     if (sw != s_swap) {

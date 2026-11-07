@@ -182512,3 +182512,29 @@ NOT done: split-node probe, shots 59-66 and 77-78 at matched pose (the row pairi
 Result line for s6918: pairing, cutoff inputs and camera are all retail at matched pose, but shots 69, 73, 76 still split near/far differently and repeatably, which puts the cause in the cell list, not named yet.
 
 Summary of s6918: the same-pose table refutes H-slip, H-select and H-input for the camera, and the next probe at 0x800434F4 is set up to discriminate H-order, H-dist and H-emit.
+
+## Session 6919 (2026-11-06) — G5h far band: our s6418 block overwrote the game's per-scene far cutoff at dd1; leaving it alone matches retail's near/far split on shots 67-76
+
+HYPOTHESIS-ID: g5h-far-band, closed. No maintenance (35 KB). This session finished an iteration that timed out at the 1 hour limit (rc=124, runner killed at ~16:38 with all of s6919's code and arms uncommitted); the code, the retail run and the =tog run below are from that attempt, scored here.
+
+ORIGIN: ours, s6418. The far clip block ran at every dd. It latched 0x8009DEB4 once (static org6418) and wrote that value back every frame, after computeGridLayerScrollOffset wrote the scene's value and before buildGridCellMeshForFace read it. So the game's per-scene cutoff never reached the near/far cut. The latched value depends on the route: 114.7 in AT THE MOVIES, 143.3 lvl1, 130.8 lvl4. The value is legitimate game data, the overwrite was the defect.
+
+Why s6918 missed it: its rows sampled DEB4 at 0x800456D8, just after the game's write, so they read the game's value, not what the chain used. Sampled at the read, 0x800434F4 (retail spec scratch/s6919/oracle.zsh, port g_rs64_s6919 words on ROGUESQ_G5H_BAND rows, tools/g5h_cut_read.py), retail and port live agree and old stays at 114.7. s6918's "H-select REFUTED" and "cutoff inputs match" are superseded.
+
+Fix: tools/apply_s6919_cutlive.py (RS64_REPLAY, after s6904 fog; idempotent re-run says already applied). ROGUESQ_CUT_LIVE default on, =0 old, =tog odd seconds: leaves the game's value alone wherever the dd scale is not active. dd>1 behaviour in flight unchanged by default. ROGUESQ_DD_CUT_LIVE=1|tog (default off): at dd>1 scale the game's value rather than the latch.
+
+Result, same run, port =tog, AT THE MOVIES at retail settings, 0 crash, B/A at matched pose, retail vs live vs old (scratch/s6919/tab.py):
+67 0.27 / 0.28 / 0.46; 68 0.32 / 0.32 / 0.39; 69 0.56 / 0.56 / 2.33; 70 0.17 / 0.17 / 0.19; 72 1.89 / 1.90 / 1.63; 73 0.54 / 0.54 / 0.71; 74 0.26 / 0.26 / 0.18; 75 0.44 / 0.41 / 0.39; 76 0.43 / 0.41 / 0.75.
+Control in the same table: shot 68 had cutoff 228.61 in both states, because the row sat where the game had just written, and live and old nearly agree there. Shot 63 is 0 on all sides.
+Second line of evidence: the read cutoff itself, retail vs port live, equal in every pose bucket from t=880 to 1144 with a live row (scene values 77.8 to 228.6), one small gap at ramps (115.3 vs 114.6, 199.3 vs 198.3); old 114.7 throughout except that same shot 68 row.
+Not matched: shots 59 (0.29 / 0.81 / 1.26) and 61 (0.19 / 1.62 / 5.62), though the cut read agrees there (209.96, 289.34). s6918 called 59-66 and 77 mispaired in this table, and live moved toward retail, but pairing was not fixed, so these two are unexplained, not explained. Shot 65 has no live rows.
+
+Default build, lvl1 dd1 FPS60 16:9, no toggle, 220 s hold, 0 crash, 11108 terrain rows: read vs game gap p50 0, p99 0.11%, 1 row over 5% (30.6%, not looked at). Same check on old seconds of the =tog flight: p50 35%, 5222 of 5512 over 5%. Tail A 609, B 565. =tog flights dd1: lvl1 old A 461 B 755 vs live A 588 B 633; lvl4 old 339/828 vs live 458/615. So the fault also applied to mission flight, not only cutscenes. No retail flight read was taken. That means the earlier lvl1 retail flight match did not see this, or the two compared something else: not resolved. 344 of 2815 lvl4 odd-second rows read 130.8: inferred stale value after the toggle until the game next writes; the default arm has no such rows on lvl1, lvl4 default not run.
+
+Can it be seen: barely, in the frames checked. docs/owner_sheet_s6919_cut_live.png, same run: shot 76 at same pose (d 0.009), B/A 0.75 vs 0.41, whole frame mean difference 0.28 and 0.14 of 255. Two big-ship frames score 6.0 and 9.4 but that is moving ships, their ground looks alike. An earlier edge frame shows a difference on a hill's texture, but across a moving camera, so it does not count. dd1 pixels against retail were not compared (s6919 retail.bin was not kept). This is a correctness fix, not one the owner should expect to notice.
+
+dd4, lvl4 FPS60 16:9, ROGUESQ_DD_CUT_LIVE=tog, 0 crash, one flight: chain read 523 latched vs 914.5 live (also 469.7 in the live seconds), A 941.5 vs 1505, B 4612 vs 4397, A+B 5637 vs 5875.5, swaps/s 37.94 vs 36.66, not a paired SE and not a 300 s rate result. Stays opt-in: fog seam and pixels at dd>1 not looked at, and s6904 tuned the seam on the latched base. The latched base also means dd>1 cutoff depends on which scene ran first; unmeasured whether that shows.
+
+Deleted scratch/s6919/tog.raw (4.2 GB) after the sheets. retail.bin not kept.
+NOT done: 16:9 or dd>1 pixels of the dd1 fix, lvl4 default run, shots 59, 61, 65, 77-78 pairing, DD_CUT_LIVE fog seam, 300 s rate, retail flight read.
+

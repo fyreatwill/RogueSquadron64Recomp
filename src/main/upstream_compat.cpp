@@ -86,6 +86,33 @@ extern "C" float rs64_s6904_clipmul(float v) {
     const double r = s6904_s * s6904_ks / (26.0 * s6904_dd), m = r * r;
     return s6904_s <= 0 ? 0.25f : (float)(m < 0.25 ? 0.25 : m > 1.0 ? 1.0 : m);
 }
+// s6919 G5h: tools/apply_s6919_cutlive.py. ROGUESQ_CUT_LIVE (default on, =0 old, =tog odd seconds) leaves the game's far cutoff 0x8009DEB4 alone where the dd scale is off.
+// ROGUESQ_DD_CUT_LIVE=1|tog (default off): where it is on, scale the game's value, not the one latched at boot. Writes are remembered so a frame without a game write cannot compound.
+static int s6919_mode(const char *n, int def) { const char *e = getenv(n); return !(e && *e) ? def : e[0] == 't' ? 2 : e[0] != '0'; }
+static inline int s6919_live(int m) { return m == 1 || (m == 2 && ((mach_absolute_time() / 24000000ull) & 1)); }
+extern "C" { uint32_t g_rs64_s6919[12]; }
+static uint32_t s6919_lastw = 0, s6919_lastb = 0, s6919_org = 0;
+extern "C" int rs64_s6919_keep(int dda) {
+    static int m = -1; if (m < 0) m = s6919_mode("ROGUESQ_CUT_LIVE", 1);
+    const int live = s6919_live(m); g_rs64_s6919[11] = (uint32_t)live;
+    return live && !dda;
+}
+extern "C" uint32_t rs64_s6919_base(uint32_t org, uint32_t cur, int dda) {
+    static int m = -1; if (m < 0) m = s6919_mode("ROGUESQ_DD_CUT_LIVE", 0);
+    if (!s6919_org) s6919_org = org;
+    if (!dda || !s6919_live(m)) return s6919_org;
+    if (cur != s6919_lastw) s6919_lastb = cur;
+    return s6919_lastb ? s6919_lastb : s6919_org;
+}
+extern "C" void rs64_s6919_wrote(uint32_t v) { s6919_lastw = v; }
+extern "C" void rs64_s6919_cut(uint8_t *rdram, uint32_t node) {
+    static int on = -1; if (on < 0) { const char *e = getenv("ROGUESQ_G5H_BAND"); on = e && *e; }
+    if (!on) return;
+    const auto w = [&](uint32_t a) { return (uint32_t)MEM_W(0, (int64_t)(int32_t)a); };
+    g_rs64_s6919[0] = w(node + 8); g_rs64_s6919[1] = w(0x8009DEB4u); g_rs64_s6919[2] = w(node + 0xC); g_rs64_s6919[3] = w(node + 0x10);
+    for (uint32_t i = 0; i < 3; i++) g_rs64_s6919[4 + i] = w(0x80130C10u + 4 * i);
+    for (uint32_t i = 0; i < 4; i++) g_rs64_s6919[7 + i] = w(0x80132DB0u + 4 * i);
+}
 extern "C" void rs64_s6904_fog(uint8_t *rdram, recomp_context *ctx) {
     const int want = s6904_on(); const double ks = s6904_ks, ke = s6904_ke; const int lg = s6904_lg;
     auto rf = [&](uint32_t a) { uint32_t v = (uint32_t)MEM_W(0, (int64_t)(int32_t)a); float f; memcpy(&f, &v, 4); return f; };
