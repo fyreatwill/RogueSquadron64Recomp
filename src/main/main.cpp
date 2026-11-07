@@ -464,6 +464,7 @@ gpr get_entrypoint_address();
 extern RspExitReason factor5_ucode(uint8_t* rdram, uint32_t ucode_addr);
 extern RspExitReason factor5_ucode_tls(uint8_t* rdram, uint32_t ucode_addr);  // s6775: old TLS DMEM base arm
 extern RspExitReason factor5_ucode_lean(uint8_t* rdram, uint32_t ucode_addr);  // s6940: hook/probe gates compiled out
+extern RspExitReason factor5_ucode_nmac(uint8_t* rdram, uint32_t ucode_addr);  // s6941: lean + native NEON multiply ops
 extern "C" uint32_t rs64_phase_ord(void);
 extern RspExitReason factor5_ucode_b(uint8_t* rdram, uint32_t ucode_addr);
 extern "C" void rs64_dpc_defer_begin();
@@ -5062,11 +5063,33 @@ static void rs64_g1e_lean_tick() {
             std::chrono::duration<double>(now - t0).count(), (unsigned long long)rs64_g1e_lean_tasks[0].exchange(0),
             (unsigned long long)rs64_g1e_lean_tasks[1].exchange(0));
 }
+// s6941 G1e: NEON multiply-op arm (src/rsp/factor5_ucode_nmac.cpp), taken instead of the lean arm when the lean arm would
+// run. ROGUESQ_G1E_NMAC=0/1 (default 0 until measured), ROGUESQ_G1E_NMAC_TOGGLE=<sec> flips it; [g1e-nmac] line per flip
+// with the task count each arm ran since the last flip (positive control).
+static int rs64_g1e_nmac = [] {
+    const char* e = getenv("ROGUESQ_G1E_NMAC");
+    const int on = (e && *e) ? (*e != '0') : 0;
+    fprintf(stderr, "[g1e-nmac] on=%d\n", on);
+    return on;
+}();
+static std::atomic<uint64_t> rs64_g1e_nmac_tasks[2];
+static void rs64_g1e_nmac_tick() {
+    static const double sec = [] { const char* e = getenv("ROGUESQ_G1E_NMAC_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
+    if (sec <= 0.0) return;
+    static const auto t0 = std::chrono::steady_clock::now(); static auto t_flip = t0;
+    const auto now = std::chrono::steady_clock::now();
+    if (std::chrono::duration<double>(now - t_flip).count() < sec) return;
+    t_flip = now; rs64_g1e_nmac = !rs64_g1e_nmac;
+    fprintf(stderr, "[g1e-nmac] on=%d t=%.3f ran_lean=%llu ran_nmac=%llu\n", rs64_g1e_nmac,
+            std::chrono::duration<double>(now - t0).count(), (unsigned long long)rs64_g1e_nmac_tasks[0].exchange(0),
+            (unsigned long long)rs64_g1e_nmac_tasks[1].exchange(0));
+}
 extern "C" void rs64_store_diag_tick(void) {
     rs64_g1e_fast_tick();
     rs64_g1e_dmem_tick();
     rs64_g1e_dmembase_tick();
     rs64_g1e_lean_tick();
+    rs64_g1e_nmac_tick();
     rs64_g1e_probes_tick();
     static const double sec = [] { const char* e = getenv("ROGUESQ_STORE_DIAG_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
     if (sec <= 0.0) return;
@@ -6925,7 +6948,9 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     if (rs64_g1e_dmembase && g_dmem_cur == dmem) {
         const int lean = rs64_g1e_lean && !rs64_rsp_hooks_on && !rs64_g1e_probes;
         rs64_g1e_lean_tasks[lean].fetch_add(1, std::memory_order_relaxed);
-        r = lean ? factor5_ucode_lean(rdram, ucode_addr) : factor5_ucode(rdram, ucode_addr);
+        const int nmac = lean && rs64_g1e_nmac;
+        if (lean) rs64_g1e_nmac_tasks[nmac].fetch_add(1, std::memory_order_relaxed);
+        r = nmac ? factor5_ucode_nmac(rdram, ucode_addr) : lean ? factor5_ucode_lean(rdram, ucode_addr) : factor5_ucode(rdram, ucode_addr);
     }
     else {
         static bool warned = false;

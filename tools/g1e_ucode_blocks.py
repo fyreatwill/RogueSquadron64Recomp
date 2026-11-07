@@ -20,7 +20,8 @@ fn = collections.Counter()
 for c, a, n in rows: fn[n.split('(')[0]] += c
 print('all leaf samples', tot)
 for n, c in fn.most_common(20): print(f'{c:7d} {100*c/tot:5.1f}% {n[:80]}')
-uc = [(c, a) for c, a, n in rows if n.startswith('factor5_ucode(') or 'RS64_RSP_GFX::' in n or n.startswith('_mm_')]
+# s6941: the lean arm (factor5_ucode_lean, type RS64_RSP_LEAN) counts as ucode too
+uc = [(c, a) for c, a, n in rows if n.startswith(('factor5_ucode(', 'factor5_ucode_lean(')) or 'RS64_RSP_GFX::' in n or 'RS64_RSP_LEAN::' in n or n.startswith('_mm_')]
 ut = sum(c for c, a in uc)
 print(f'\nfactor5_ucode leaf {ut} ({100*ut/tot:.1f}%), {len(uc)} distinct PCs')
 addrs = [hex(a - base + 0x100000000) for c, a in uc]

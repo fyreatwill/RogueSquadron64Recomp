@@ -381,10 +381,10 @@ index 2fbbd8a..f8d040b 100644
  
          auto u8(u32 index) -> uint8_t& { return ((uint8_t*)&u128)[15 - index]; }
 diff --git a/librecomp/include/librecomp/rsp_vu_impl.hpp b/librecomp/include/librecomp/rsp_vu_impl.hpp
-index dbf46b2..18a1548 100644
+index dbf46b2..fa76436 100644
 --- a/librecomp/include/librecomp/rsp_vu_impl.hpp
 +++ b/librecomp/include/librecomp/rsp_vu_impl.hpp
-@@ -20,12 +20,34 @@
+@@ -20,18 +20,67 @@
  // ----------------------------------------------------------------------
  
  #include <cstdint>
@@ -419,7 +419,40 @@ index dbf46b2..18a1548 100644
  #define VCOH vpu.vcoh
  #define VCOL vpu.vcol
  #define VCCH vpu.vcch
-@@ -62,31 +84,30 @@ auto RSP::r128::operator()(u32 index) const -> r128 {
+ #define VCCL vpu.vccl
+ #define VCE  vpu.vce
+ 
++// s6941 G1e: native AArch64 NEON bodies for the multiply ops (VMUDN/VMUDM/VMUDH, VMADL/VMADN/VMADM/VMADH), selected per
++// TU by RS64_RSP_NEON_MAC=1 (src/rsp/factor5_ucode_nmac.cpp only; default 0 keeps the SSE-via-sse2neon bodies). Same
++// arithmetic as the SSE bodies: a 16-bit carry is `sum < addend` (one compare instead of adds_epu16 + two cmpeq), the
++// VMADN/VMADL clamp is `ACCH == ACCM>>15` (equivalent to the SSE shi&smd pair) and cval = ACCH >= 0. Bit-exact against the
++// SSE bodies on random inputs for every e: tools/g1e_nmac_equiv.zsh.
++#ifndef RS64_RSP_NEON_MAC
++#define RS64_RSP_NEON_MAC 0
++#endif
++#if RS64_RSP_NEON_MAC
++#define RS64_NU(x) vreinterpretq_u16_m128i((x).v128)
++#define RS64_NS(x) vreinterpretq_s16_m128i((x).v128)
++#define RS64_NSETU(r, v) ((r).v128 = vreinterpretq_m128i_u16(v))
++#define RS64_NSETS(r, v) ((r).v128 = vreinterpretq_m128i_s16(v))
++// unsigned a x signed b: low and high halves of the 32-bit product
++#define RS64_NMUL_US(A, B, LO, HI) do { uint16x8_t a_ = (A); int16x8_t b_ = (B); uint16x8_t bu_ = vreinterpretq_u16_s16(b_); \
++    uint32x4_t p0_ = vmull_u16(vget_low_u16(a_), vget_low_u16(bu_)), p1_ = vmull_high_u16(a_, bu_); \
++    LO = vmulq_u16(a_, bu_); \
++    HI = vsubq_u16(vuzp2q_u16(vreinterpretq_u16_u32(p0_), vreinterpretq_u16_u32(p1_)), \
++                   vandq_u16(a_, vreinterpretq_u16_s16(vshrq_n_s16(b_, 15)))); } while (0)
++// 16:9 pack of ACCH:ACCM with signed saturation
++#define RS64_NPACK(VD) RS64_NSETS(VD, vqmovn_high_s32(vqmovn_s32(vreinterpretq_s32_u16(vzip1q_u16(RS64_NU(ACCM), RS64_NU(ACCH)))), \
++                                                      vreinterpretq_s32_u16(vzip2q_u16(RS64_NU(ACCM), RS64_NU(ACCH)))))
++// VMADN/VMADL clamp: ACCL if ACCH:ACCM fits in s16, else 0 (negative) / 0xFFFF
++#define RS64_NCLAMPU(VD) RS64_NSETU(VD, vbslq_u16(vceqq_s16(RS64_NS(ACCH), vshrq_n_s16(RS64_NS(ACCM), 15)), RS64_NU(ACCL), \
++                                                  vcgezq_s16(RS64_NS(ACCH))))
++#endif
++
+ #define DIVIN  vpu.divin
+ #define DIVOUT vpu.divout
+ #define DIVDP  vpu.divdp
+@@ -62,31 +111,30 @@ auto RSP::r128::operator()(u32 index) const -> r128 {
  
      if constexpr (Accuracy::RSP::SIMD) {
  #if ARCHITECTURE_SUPPORTS_SSE4_1
@@ -472,7 +505,7 @@ index dbf46b2..18a1548 100644
          return ret;
  #endif
      }
-@@ -168,12 +189,17 @@ auto RSP::CTC2(cr32& rt, u8 rd) -> void {
+@@ -168,12 +216,17 @@ auto RSP::CTC2(cr32& rt, u8 rd) -> void {
  template<u8 e>
  auto RSP::LBV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm;
@@ -490,7 +523,7 @@ index dbf46b2..18a1548 100644
      auto start = e;
      auto end = std::min(start + 8, 16);
      for (u32 offset = start; offset < end; offset++) {
-@@ -184,14 +210,15 @@ auto RSP::LDV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -184,14 +237,15 @@ auto RSP::LDV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LFV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 16;
@@ -508,7 +541,7 @@ index dbf46b2..18a1548 100644
      }
      for (u32 offset = start; offset < end; offset++) {
          vt.byte(offset) = tmp.byte(offset);
-@@ -201,16 +228,19 @@ auto RSP::LFV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -201,16 +255,19 @@ auto RSP::LFV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LHV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 16;
@@ -529,7 +562,7 @@ index dbf46b2..18a1548 100644
      auto start = e;
      auto end = std::min(start + 4, 16);
      for (u32 offset = start; offset < end; offset++) {
-@@ -221,6 +251,7 @@ auto RSP::LLV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -221,6 +278,7 @@ auto RSP::LLV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LPV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 8;
@@ -537,7 +570,7 @@ index dbf46b2..18a1548 100644
      auto index = (address & 7) - e;
      address &= ~7;
      for (u32 offset = 0; offset < 8; offset++) {
-@@ -231,6 +262,11 @@ auto RSP::LPV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -231,6 +289,11 @@ auto RSP::LPV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LQV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 16;
@@ -549,7 +582,7 @@ index dbf46b2..18a1548 100644
      auto start = e;
      auto end = std::min((u32)(16 + e - (address & 15)), (u32)16);
      for (u32 offset = start; offset < end; offset++) {
-@@ -241,6 +277,7 @@ auto RSP::LQV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -241,6 +304,7 @@ auto RSP::LQV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LRV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 16;
@@ -557,7 +590,7 @@ index dbf46b2..18a1548 100644
      auto index = e;
      auto start = 16 - ((address & 15) - index);
      address &= ~15;
-@@ -252,6 +289,8 @@ auto RSP::LRV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -252,6 +316,8 @@ auto RSP::LRV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LSV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 2;
@@ -566,7 +599,7 @@ index dbf46b2..18a1548 100644
      auto start = e;
      auto end = std::min(start + 2, 16);
      for (u32 offset = start; offset < end; offset++) {
-@@ -278,16 +317,18 @@ auto RSP::LTV(u8 vt, cr32& rs, s8 imm) -> void {
+@@ -278,16 +344,18 @@ auto RSP::LTV(u8 vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LUV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 8;
@@ -586,7 +619,7 @@ index dbf46b2..18a1548 100644
      auto start = 16 - e;
      auto end = e + 16;
      for (u32 offset = start; offset < end; offset++) {
-@@ -313,6 +354,7 @@ template<u8 e>
+@@ -313,6 +381,7 @@ template<u8 e>
  auto RSP::SBV(cr128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm;
      RSP_MEM_B(0, address) = vt.byte(e);
@@ -594,7 +627,7 @@ index dbf46b2..18a1548 100644
  }
  
  template<u8 e>
-@@ -320,9 +362,21 @@ auto RSP::SDV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -320,9 +389,21 @@ auto RSP::SDV(cr128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 8;
      auto start = e;
      auto end = start + 8;
@@ -616,7 +649,7 @@ index dbf46b2..18a1548 100644
  }
  
  template<u8 e>
-@@ -380,6 +434,7 @@ auto RSP::SFV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -380,6 +461,7 @@ auto RSP::SFV(cr128& vt, cr32& rs, s8 imm) -> void {
          RSP_MEM_B(0, address + (base + 12 & 15)) = 0;
          break;
      }
@@ -624,7 +657,7 @@ index dbf46b2..18a1548 100644
  }
  
  template<u8 e>
-@@ -392,6 +447,7 @@ auto RSP::SHV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -392,6 +474,7 @@ auto RSP::SHV(cr128& vt, cr32& rs, s8 imm) -> void {
          auto value = vt.byte(byte + 0 & 15) << 1 | vt.byte(byte + 1 & 15) >> 7;
          RSP_MEM_B(0, address + (index + offset * 2 & 15)) = value;
      }
@@ -632,7 +665,7 @@ index dbf46b2..18a1548 100644
  }
  
  template<u8 e>
-@@ -399,9 +455,11 @@ auto RSP::SLV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -399,9 +482,11 @@ auto RSP::SLV(cr128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 4;
      auto start = e;
      auto end = start + 4;
@@ -644,7 +677,7 @@ index dbf46b2..18a1548 100644
  }
  
  template<u8 e>
-@@ -416,6 +474,7 @@ auto RSP::SPV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -416,6 +501,7 @@ auto RSP::SPV(cr128& vt, cr32& rs, s8 imm) -> void {
              RSP_MEM_B(0, address++) = vt.element(offset & 7) >> 7;
          }
      }
@@ -652,7 +685,7 @@ index dbf46b2..18a1548 100644
  }
  
  template<u8 e>
-@@ -423,9 +482,14 @@ auto RSP::SQV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -423,9 +509,14 @@ auto RSP::SQV(cr128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 16;
      auto start = e;
      auto end = start + (16 - (address & 15));
@@ -667,7 +700,7 @@ index dbf46b2..18a1548 100644
  }
  
  template<u8 e>
-@@ -438,6 +502,7 @@ auto RSP::SRV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -438,6 +529,7 @@ auto RSP::SRV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset + base & 15);
      }
@@ -675,7 +708,7 @@ index dbf46b2..18a1548 100644
  }
  
  template<u8 e>
-@@ -445,9 +510,11 @@ auto RSP::SSV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -445,9 +537,11 @@ auto RSP::SSV(cr128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 2;
      auto start = e;
      auto end = start + 2;
@@ -687,7 +720,7 @@ index dbf46b2..18a1548 100644
  }
  
  template<u8 e>
-@@ -462,6 +529,7 @@ auto RSP::STV(u8 vt, cr32& rs, s8 imm) -> void {
+@@ -462,6 +556,7 @@ auto RSP::STV(u8 vt, cr32& rs, s8 imm) -> void {
          RSP_MEM_B(0, address + (base++ & 15)) = vpu.r[offset].byte(element++ & 15);
          RSP_MEM_B(0, address + (base++ & 15)) = vpu.r[offset].byte(element++ & 15);
      }
@@ -695,7 +728,7 @@ index dbf46b2..18a1548 100644
  }
  
  template<u8 e>
-@@ -476,6 +544,7 @@ auto RSP::SUV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -476,6 +571,7 @@ auto RSP::SUV(cr128& vt, cr32& rs, s8 imm) -> void {
              RSP_MEM_B(0, address++) = vt.byte((offset & 7) << 1);
          }
      }
@@ -703,7 +736,7 @@ index dbf46b2..18a1548 100644
  }
  
  template<u8 e>
-@@ -488,6 +557,7 @@ auto RSP::SWV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -488,6 +584,7 @@ auto RSP::SWV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address + (base++ & 15)) = vt.byte(offset & 15);
      }
@@ -711,7 +744,7 @@ index dbf46b2..18a1548 100644
  }
  
  template<u8 e>
-@@ -844,6 +914,7 @@ auto RSP::VLT(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -844,6 +941,7 @@ auto RSP::VLT(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<bool U, u8 e>
  auto RSP::VMACF(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -719,7 +752,7 @@ index dbf46b2..18a1548 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -911,6 +982,7 @@ auto RSP::VMACQ(r128& vd) -> void {
+@@ -911,6 +1009,7 @@ auto RSP::VMACQ(r128& vd) -> void {
  
  template<u8 e>
  auto RSP::VMADH(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -727,7 +760,25 @@ index dbf46b2..18a1548 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -941,6 +1013,7 @@ auto RSP::VMADH(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -922,7 +1021,16 @@ auto RSP::VMADH(r128& vd, cr128& vs, cr128& vt) -> void {
+     }
+ 
+     if constexpr (Accuracy::RSP::SIMD) {
+-#if ARCHITECTURE_SUPPORTS_SSE4_1
++#if RS64_RSP_NEON_MAC
++        r128 vte = vt(e);
++        int16x8_t a = RS64_NS(vs), b = RS64_NS(vte);
++        uint16x8_t lo = vreinterpretq_u16_s16(vmulq_s16(a, b));
++        uint16x8_t hi = vuzp2q_u16(vreinterpretq_u16_s32(vmull_s16(vget_low_s16(a), vget_low_s16(b))),
++                                   vreinterpretq_u16_s32(vmull_high_s16(a, b)));
++        uint16x8_t m = vaddq_u16(RS64_NU(ACCM), lo); hi = vsubq_u16(hi, vcltq_u16(m, lo));
++        RS64_NSETU(ACCM, m); RS64_NSETU(ACCH, vaddq_u16(RS64_NU(ACCH), hi));
++        RS64_NPACK(vd);
++#elif ARCHITECTURE_SUPPORTS_SSE4_1
+         r128 vte = vt(e), lo, hi, omask;
+         lo = _mm_mullo_epi16(vs, vte);
+         hi = _mm_mulhi_epi16(vs, vte);
+@@ -941,6 +1049,7 @@ auto RSP::VMADH(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMADL(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -735,7 +786,25 @@ index dbf46b2..18a1548 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -976,6 +1049,7 @@ auto RSP::VMADL(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -950,7 +1059,16 @@ auto RSP::VMADL(r128& vd, cr128& vs, cr128& vt) -> void {
+     }
+ 
+     if constexpr (Accuracy::RSP::SIMD) {
+-#if ARCHITECTURE_SUPPORTS_SSE4_1
++#if RS64_RSP_NEON_MAC
++        r128 vte = vt(e);
++        uint16x8_t a = RS64_NU(vs), b = RS64_NU(vte);
++        uint16x8_t hi = vuzp2q_u16(vreinterpretq_u16_u32(vmull_u16(vget_low_u16(a), vget_low_u16(b))),
++                                   vreinterpretq_u16_u32(vmull_high_u16(a, b)));
++        uint16x8_t l = vaddq_u16(RS64_NU(ACCL), hi), c1 = vcltq_u16(l, hi);
++        uint16x8_t m = vsubq_u16(RS64_NU(ACCM), c1), c2 = vandq_u16(c1, vceqzq_u16(m));
++        RS64_NSETU(ACCL, l); RS64_NSETU(ACCM, m); RS64_NSETU(ACCH, vsubq_u16(RS64_NU(ACCH), c2));
++        RS64_NCLAMPU(vd);
++#elif ARCHITECTURE_SUPPORTS_SSE4_1
+         r128 vte = vt(e), hi, omask, nhi, nmd, shi, smd, cmask, cval;
+         hi = _mm_mulhi_epu16(vs, vte);
+         omask = _mm_adds_epu16(ACCL, hi);
+@@ -976,6 +1094,7 @@ auto RSP::VMADL(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMADM(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -743,7 +812,25 @@ index dbf46b2..18a1548 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1013,6 +1087,7 @@ auto RSP::VMADM(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -985,7 +1104,16 @@ auto RSP::VMADM(r128& vd, cr128& vs, cr128& vt) -> void {
+     }
+ 
+     if constexpr (Accuracy::RSP::SIMD) {
+-#if ARCHITECTURE_SUPPORTS_SSE4_1
++#if RS64_RSP_NEON_MAC
++        r128 vte = vt(e);
++        uint16x8_t lo, hi;
++        RS64_NMUL_US(RS64_NU(vte), RS64_NS(vs), lo, hi);
++        uint16x8_t l = vaddq_u16(RS64_NU(ACCL), lo); hi = vsubq_u16(hi, vcltq_u16(l, lo));
++        uint16x8_t m = vaddq_u16(RS64_NU(ACCM), hi), c2 = vcltq_u16(m, hi);
++        RS64_NSETU(ACCL, l); RS64_NSETU(ACCM, m);
++        RS64_NSETU(ACCH, vsubq_u16(vaddq_u16(RS64_NU(ACCH), vreinterpretq_u16_s16(vshrq_n_s16(vreinterpretq_s16_u16(hi), 15))), c2));
++        RS64_NPACK(vd);
++#elif ARCHITECTURE_SUPPORTS_SSE4_1
+         r128 vte = vt(e), lo, hi, sign, vta, omask;
+         lo = _mm_mullo_epi16(vs, vte);
+         hi = _mm_mulhi_epu16(vs, vte);
+@@ -1013,6 +1141,7 @@ auto RSP::VMADM(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMADN(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -751,7 +838,25 @@ index dbf46b2..18a1548 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1083,6 +1158,7 @@ auto RSP::VMRG(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1022,7 +1151,16 @@ auto RSP::VMADN(r128& vd, cr128& vs, cr128& vt) -> void {
+     }
+ 
+     if constexpr (Accuracy::RSP::SIMD) {
+-#if ARCHITECTURE_SUPPORTS_SSE4_1
++#if RS64_RSP_NEON_MAC
++        r128 vte = vt(e);
++        uint16x8_t lo, hi;
++        RS64_NMUL_US(RS64_NU(vs), RS64_NS(vte), lo, hi);
++        uint16x8_t l = vaddq_u16(RS64_NU(ACCL), lo); hi = vsubq_u16(hi, vcltq_u16(l, lo));
++        uint16x8_t m = vaddq_u16(RS64_NU(ACCM), hi), c2 = vcltq_u16(m, hi);
++        RS64_NSETU(ACCL, l); RS64_NSETU(ACCM, m);
++        RS64_NSETU(ACCH, vsubq_u16(vaddq_u16(RS64_NU(ACCH), vreinterpretq_u16_s16(vshrq_n_s16(vreinterpretq_s16_u16(hi), 15))), c2));
++        RS64_NCLAMPU(vd);
++#elif ARCHITECTURE_SUPPORTS_SSE4_1
+         r128 vte = vt(e), lo, hi, sign, vsa, omask, nhi, nmd, shi, smd, cmask, cval;
+         lo = _mm_mullo_epi16(vs, vte);
+         hi = _mm_mulhi_epu16(vs, vte);
+@@ -1083,6 +1221,7 @@ auto RSP::VMRG(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMUDH(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -759,7 +864,23 @@ index dbf46b2..18a1548 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1106,6 +1182,7 @@ auto RSP::VMUDH(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1092,7 +1231,14 @@ auto RSP::VMUDH(r128& vd, cr128& vs, cr128& vt) -> void {
+     }
+ 
+     if constexpr (Accuracy::RSP::SIMD) {
+-#if ARCHITECTURE_SUPPORTS_SSE4_1
++#if RS64_RSP_NEON_MAC
++        r128 vte = vt(e);
++        int16x8_t a = RS64_NS(vs), b = RS64_NS(vte);
++        int32x4_t p0 = vmull_s16(vget_low_s16(a), vget_low_s16(b)), p1 = vmull_high_s16(a, b);
++        ACCL = zero; RS64_NSETS(ACCM, vmulq_s16(a, b));
++        RS64_NSETU(ACCH, vuzp2q_u16(vreinterpretq_u16_s32(p0), vreinterpretq_u16_s32(p1)));
++        RS64_NSETS(vd, vqmovn_high_s32(vqmovn_s32(p0), p1));
++#elif ARCHITECTURE_SUPPORTS_SSE4_1
+         r128 vte = vt(e), lo, hi;
+         ACCL = zero;
+         ACCM = _mm_mullo_epi16(vs, vte);
+@@ -1106,6 +1252,7 @@ auto RSP::VMUDH(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMUDL(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -767,7 +888,7 @@ index dbf46b2..18a1548 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1126,6 +1203,7 @@ auto RSP::VMUDL(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1126,6 +1273,7 @@ auto RSP::VMUDL(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMUDM(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -775,7 +896,22 @@ index dbf46b2..18a1548 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1150,6 +1228,7 @@ auto RSP::VMUDM(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1135,7 +1283,13 @@ auto RSP::VMUDM(r128& vd, cr128& vs, cr128& vt) -> void {
+     }
+ 
+     if constexpr (Accuracy::RSP::SIMD) {
+-#if ARCHITECTURE_SUPPORTS_SSE4_1
++#if RS64_RSP_NEON_MAC
++        r128 vte = vt(e);
++        uint16x8_t lo, hi;
++        RS64_NMUL_US(RS64_NU(vte), RS64_NS(vs), lo, hi);
++        RS64_NSETU(ACCL, lo); RS64_NSETU(ACCM, hi); RS64_NSETS(ACCH, vshrq_n_s16(vreinterpretq_s16_u16(hi), 15));
++        vd = ACCM;
++#elif ARCHITECTURE_SUPPORTS_SSE4_1
+         r128 vte = vt(e), sign, vta;
+         ACCL = _mm_mullo_epi16(vs, vte);
+         ACCM = _mm_mulhi_epu16(vs, vte);
+@@ -1150,6 +1304,7 @@ auto RSP::VMUDM(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMUDN(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -783,7 +919,22 @@ index dbf46b2..18a1548 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1174,6 +1253,7 @@ auto RSP::VMUDN(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1159,7 +1314,13 @@ auto RSP::VMUDN(r128& vd, cr128& vs, cr128& vt) -> void {
+     }
+ 
+     if constexpr (Accuracy::RSP::SIMD) {
+-#if ARCHITECTURE_SUPPORTS_SSE4_1
++#if RS64_RSP_NEON_MAC
++        r128 vte = vt(e);
++        uint16x8_t lo, hi;
++        RS64_NMUL_US(RS64_NU(vs), RS64_NS(vte), lo, hi);
++        RS64_NSETU(ACCL, lo); RS64_NSETU(ACCM, hi); RS64_NSETS(ACCH, vshrq_n_s16(vreinterpretq_s16_u16(hi), 15));
++        vd = ACCL;
++#elif ARCHITECTURE_SUPPORTS_SSE4_1
+         r128 vte = vt(e), sign, vsa;
+         ACCL = _mm_mullo_epi16(vs, vte);
+         ACCM = _mm_mulhi_epu16(vs, vte);
+@@ -1174,6 +1335,7 @@ auto RSP::VMUDN(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<bool U, u8 e>
  auto RSP::VMULF(r128& vd, cr128& vs, cr128& vt) -> void {
