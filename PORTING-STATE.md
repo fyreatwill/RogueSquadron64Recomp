@@ -182653,3 +182653,24 @@ Check: SHOWROOM returns in on and off arms. Craft differed on vs off, but a, b, 
 Not run: 21:9 (soak s6924_flash_219 queued, route width w2048 is a guess), FPS60 alone (4:3, gate does not apply), angrylion or hardware at this cut, other cuts that enter a phase over VI width 1024. The phase-entry blank was not viewed.
 
 Result line for s6924: this selects H-wide-fb and refutes H-wide-early; H-retail-dashes fits but stays unproven. The fix is a code change, default on, with a same-binary off arm. Next discriminator for this thread: soak s6924_flash_219 at 21:9.
+
+## Session 6925 (2026-11-06) — G5h: 21:9 cut noise closed with a lever-off arm; MELT clean at dd3 and 21:9 dd4 with shot 79 as same-run control; SKYZ lvl5 null has no proven sensitivity; SHOWROOM draws 512 wide under a widened VI
+
+HYPOTHESIS-ID: g5h-melt-skyz-coverage. No maintenance (36.8 KB).
+
+Soak folded: s6924_flash_219 (21:9, WIDE_UNDRAWN default on): 0 crash, 19 blanks (15 at cut origin 0xA6A800, 4 at phase entry 0xB20800). The route width w2048 was right, the run reached the cut. Its 2 block runs are not noise: t=15.0 is the OPTIONS wipe, t=18.5 the TIE scene coming in (scratch/s6925/q219sheet.png viewed).
+Control run this session, same binary, WIDE_UNDRAWN=0: block t=16.83 frames 1414-1437 spread 24.6, 0 blanks, viewed: the noise block. So the s6924 fix covers 21:9. Separate runs, not same-run.
+
+Arms, build of 20:31, 0 crash in all, FPS60. Movie arms ran the whole playlist to 950 s, 384x216 capture 180-918 s, 768x432 of 922-946 s.
+m3 dd3 16:9 MELT=tog: shot 79 row step off 70.3 (n 25), melt 4.6 (n 26). Rank 599 toggles p99 1.74 vs mid-second control 1.52, max 2.98 vs 1.91. Top 6 viewed: shield mesh motion (636, 651, closed s6923), fades. Paired rate +0.45 +/- 0.41 swaps/s.
+w4 dd4 21:9 MELT=tog: shot 79 row step off 33.0 (n 23), melt 5.5 (n 22). Rank 625 toggles p99 1.52 vs 1.49, max 3.12 vs 2.47. Top 6 viewed: cuts out of black, an explosion, a fade, and t=53.2 where far dunes differ, which fits MELT's purpose but is one row, not scored by parity. Paired rate +0.06 +/- 0.36.
+So H-clean holds for MELT at both settings as far as the top rows go, and the off value is the same-run positive control. Rows below the top 6 not viewed; a subtle defect would not rank. Lever counts n>=67M in both.
+Two things the numbers hide, docs/owner_sheet_s6925_melt_dd3_219.png: with MELT on the far sea reads as sky and cloud rather than water, at both settings, and at 21:9 dd4 a faint outline of the slab remains at its upper sides. Whether that beats the slab is the owner's call.
+
+s5 lvl5 (Jade Moon) dd4 16:9 SKYZ=tog + DD_FOG=tog, 300 s flight, 21792 frames: skyz n>=32768 miss 1. Rank 267 toggles p99 1.71 vs 1.26, max 2.39 vs 1.63, but the top 6 viewed are a menu fade and the planet moving as the craft turns. DD_FOG was added as the positive control and did NOT prove one: late edges in one 4 s phase have median 1.11 against 0.93-1.00, too weak to credit, and the top rows in that phase are camera motion. Why the phase moves by 1 s between t~112 and t~137 is unexplained. So no SKYZ effect was seen on lvl5, and this instrument's sensitivity there is unproven: this is not a clean result. Rate -0.14 +/- 0.62, with fog toggling as well.
+
+Side finding, not fixed. SHOWROOM at wide aspect is cut and sits left: its picture ends at 0.50 of the window at 21:9 and ~0.63 at 16:9, the Death Star sliced by a vertical line, and hatched strips sit at the left edge (also visible on docs/owner_sheet_s6924_cut_noise.png). New tools/g5h_rdp_extents.py on the q219off dump: to the cut, ci 1024 wide with scissor 256..768; after it, ci width 512 at 0xBB5000 and 0xA6A000, scissor 0..512 x 0..300, fill 0..639. [osViSetMode #11] mode 0x80128C90 is at width 2048 xScale 0x666, after `pfm a2=512 a3=300`. ORIGIN (candidate): our wide VI values applied to a screen whose colour image the game kept at 512, so 512 of 1024 columns are drawn; 512/796 = 0.64 fits 16:9. The s6721 menu sweep covered OPTIONS and PASSCODES, not this screen. 4:3 not captured yet: soak s6925_showroom_43 queued. Whether the strips and off-centre text are retail is unknown until then.
+
+Not run: MELT on flight levels at these settings, SKYZ on other cutscenes, dd3 at 21:9. Defaults unchanged.
+
+Result line for s6925: selects H-clean for MELT at dd3 16:9 and dd4 21:9 (row step 70.3 vs 4.6, 33.0 vs 5.5, no rate cost), closes 21:9 cut noise, leaves SKYZ lvl5 unproven, next discriminator is the 4:3 SHOWROOM reference.
