@@ -182567,3 +182567,27 @@ Deleted the four .raw captures after scoring (about 9 GB).
 NOT done: mapping tail swaps to frames, a pixel control that fires from a game lever, fixing the tail (would need a live form of the cutoff pull), levels other than 1, 4, 5, dd3, cutscenes with live.
 
 Verdict: this refutes H-clean (live seam alpha is not 0 on lvl1 and lvl4: 25/235 and 20/143 swaps above 16, against 0/234 and 3/150) and selects a weak form of H-seam: a tail, not the s6904 255 step. H-route is not decided, it needs the owner's eye. Next discriminator for the tail, if the owner wants live: a live form of the cutoff pull, ramp start taken from the fog distances rather than a multiplier fitted on the latched base, =tog on lvl1 dd2 and lvl4 dd4; tail gone selects the inferred cause, tail kept refutes it.
+
+## Session 6921 (2026-11-06) — G5h: DD_MELT and DD_SKYZ work together on shots 78-79, but MELT alone puts a bright wedge on a lava shot at 816 s; a noise block on the menu-to-movie cut needs FPS60 or 16:9
+
+HYPOTHESIS-ID: g5h-optin-combo. No maintenance (36.1 KB). No new soak results to fold.
+
+Ran, dd4 16:9 FPS60, private save folder, 0 crash in every arm: Gerrard V intro (LEVEL=4, EARLY_N=13 FL_START=135, capture 55-80 s) ga MELT=1 SKYZ=tog 70.9/s, gb MELT=tog SKYZ=1 72.8/s; AT THE MOVIES to 950 s m1 MELT=1 SKYZ=tog, m2 MELT=tog SKYZ=1, each with a 384x216 capture of 180-918 s and a 768x432 capture of 922-946 s. Levers fired: m1 skyz n>=131072 miss=8, m2 skyz n>=262144 miss=17, melt n>=67M; ga/gb skyz n>=4096, melt n>=2M.
+
+New tools: tools/g5h_toggle_rank.cpp (per toggle, change across the edge against change inside each state; same statistic at mid-second is the same-run control; drops picture cuts. The first version let one cut through at ratio 5.37, so it now checks every one-frame step in the gap), tools/g5h_toggle_sheet.py, tools/g5h_black_block.py.
+
+Result 1, H-compose holds on the target shots, H-clash refuted there.
+SKYZ with MELT on, shot 78: top toggle ratio 2.04 against mid-second control max 1.15, sky score on 1.66, off 0.63 (s6917 without MELT 1.42, 0.64). scratch/s6921/m1_ov.png viewed: ships and full beams on the on seconds.
+MELT with SKYZ on, shot 79: row step off 39.3 (n 29), melt 3.8 (n 24), window +0.5 to +2.6 s because the capture ended; s6916 without SKYZ 39.2, 3.9. Off at 39 is the positive control.
+
+Result 2, H-scene selected for MELT: a NEW DEFECT, MELT's own. Lava shot, capture t 635.8-638.5, about 816 s into the playlist: with MELT on a bright wedge, white to blue to green to purple, covers the upper right where the frame is dark with it off. m2 shows it follow the toggle (ratio 1.63 at t=636.81, 1.43 at 635.81). m1 has MELT on throughout and shows it on both SKYZ parities (scratch/s6921/seq636.png), so SKYZ is not needed for it. Cause not named. Colour drift within seconds leans to stale or other content behind the terrain, not proven. Far terrain there is dark in retail's fog form, and MELT swaps that for whatever is in memory. So MELT must not become a default as it stands.
+
+Result 3, SKYZ elsewhere: no harm found, little effect. Whole playlist m1, 589 toggles: ratio p99 1.48 against control 1.31. Top 8 viewed: 5 are fades, one is the scene next to shot 78 at t=733.8 (beam restored, same fleet), one ship motion, one flash below. Rows below the top 8 not viewed, and a subtle change would not rank. m2, 585 toggles: p99 1.61 against 1.31, max 3.25 against 1.65; top 6 viewed: fades, explosion motion, the wedge. Fades rank high and are not lever effects.
+Gerrard V intro: no step found, ga max 1.09 against control 1.10, gb 1.16 against 1.19. The tool's positive control fired on shot 78 in a different run, not this one, so this null only says no change this size. Levers fired in the run. scratch/s6921/ga_ov.png viewed with both on: normal.
+
+Result 4, side finding, not from these levers: a noise block for about 0.2 s (14 captured frames) in the black gap between the OPTIONS menu and the TIE scene, about 202 s in, plus dashes near the top. Same place in m1, m2 and f1 (dd1, FPS60, 16:9, no MELT or SKYZ; box spread 30.8, 30.5, 30.7), so dd, MELT and SKYZ are not the cause. f0, retail settings: at the same point only faint dashes (picture spread 0.6-0.9, frames 1437-1454), no block. Single run each. FPS60 and 16:9 not split: soaks s6921_flash_fps60 and s6921_flash_wide queued. Retail oracle frame not checked.
+
+Queued: s6921_rate_skyz_l1, s6921_rate_melt_l1 (paired 1 s rate, 300 s hold). The SKYZ off-arm rate is therefore NOT measured yet.
+NOT done: wedge cause, rate, other MELT levels, 21:9, dd2 and dd3 combo. Owner sheet: docs/owner_sheet_s6921_melt_skyz.png.
+
+Result line for s6921: MELT and SKYZ compose on shots 78-79 (sky 1.66 vs 0.63, step 39.3 vs 3.8), MELT alone wedges a lava shot and needs a fix before any default, FPS60 or 16:9 owns a transition noise block.

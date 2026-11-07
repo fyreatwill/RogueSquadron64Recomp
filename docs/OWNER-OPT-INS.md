@@ -34,7 +34,7 @@ Draw distance above 1 (s6896): large terrain sheets at dd4 are fixed by a change
 
 Draw distance above 1 (s6901): distant terrain no longer halves depending on which way you face, and no longer cuts out for a moment as you turn through a diagonal. On by default above dd1 (`ROGUESQ_DD_FWDWIN=0` restores the old path). This is the best candidate yet for the terrain drops you see, but only your flight can confirm that. It draws more terrain, so tell me if dd4 feels slower. Measured on Liberation of Gerrard V only.
 
-Far terrain melt (s6916), opt-in: add `ROGUESQ_DD_MELT=1` at dd2 or above and far terrain fades into the sky behind it instead of a flat fog colour, which removes the hard edge in the AT THE MOVIES sea shot. Before and after: docs/owner_sheet_s6916_melt.png. Not yet tried with ASYNC+NODRAIN (soak queued).
+Far terrain melt (s6916), opt-in: add `ROGUESQ_DD_MELT=1` at dd2 or above and far terrain fades into the sky behind it instead of a flat fog colour, which removes the hard edge in the AT THE MOVIES sea shot. Before and after: docs/owner_sheet_s6916_melt.png. Runs with ASYNC+NODRAIN (s6916). Known defect (s6921): a bright wedge in the upper right of a lava cutscene shot, row 3 of docs/owner_sheet_s6921_melt_skyz.png; not fixed. Works with `ROGUESQ_DD_SKYZ=1`.
 
 Far ships and beams in the sky (s6917), opt-in: add `ROGUESQ_DD_SKYZ=1` at dd2 or above. Extended draw distance pulled the sky nearer than the far ships, so they vanished and their beams ended flat at the sea edge. This puts the sky back behind them. Before and after: docs/owner_sheet_s6917_sky_depth.png.
 
