@@ -182633,3 +182633,21 @@ ORIGIN: game content under every setting tried, no writer of ours involved. NOT 
 So MELT has no known defect left from this shot. Not a statement that MELT is ready: rate soak still queued, other levels, 21:9, dd3 unmeasured; default stays off, owner chooses. No code change to the game this session. Owner sheet: docs/owner_sheet_s6923_lava_shield.png.
 
 Result line for s6923: the lava bubble is the game's own translucent shaded mesh, present with MELT off and at retail settings (parity 0.332 vs 0.333), so the MELT blocker from s6921 is withdrawn.
+
+## Session 6924 (2026-11-06) — G5h: the 16:9 cut noise is live game data at a VI origin not drawn yet; ROGUESQ_WIDE_UNDRAWN blanks the present copy, same binary block gone
+
+HYPOTHESIS-ID: g5h-wide-noise-block. No maintenance (37 KB). Trimmed 3 headline bullets to PROJECT-OVERVIEW.
+
+Soaks folded: s6921_rate_melt_l1 0.34 +/- 0.26, s6921_rate_skyz_l1 0.26 +/- 0.22 swaps/s paired, lvl1 301 s, no cost shown. Earlier s6921 flash soaks were folded s6922.
+
+ORIGIN: the game sets the VI to its second buffer before drawing there, at every setting: retail settings origin 0x790400 -> 0x6B5400 at si n=12077, first draw ci 6B5000 at vi 12104; 16:9 origin 0x752438 -> 0x69C438 at n=12079, first draw ci 69BE00 at vi 12107. RT64 finds no framebuffer and shows RDRAM. The value is legitimate: it is game data, not a stray write. Its writer was not named; only that the region is live and differs in place between layouts. Mitigation is on the present copy only.
+
+Arms, scratch/s6924/flash.zsh (RDP dump 197:207, 18 RDRAM snapshots across the cut), AT THE MOVIES route, 0 crash in all:
+a 16:9: block t=16.83 spread 31.2. b 16:9 WIDE_EARLY=0: block t=16.77 spread 31.3, so H-wide-early refuted. c retail settings: no block. Census: RDP draws nothing to the new buffer until the vis above, so the block is not a draw; H-wide-fb selected.
+RAM: nonzero by 32 KB block in snapshot s11, 16:9 data from ~0x6E4000, retail settings from ~0x700000. Line model: 16:9 stride 3184 puts data at line ~94 and block top measures ~line 90-97; retail stride 2048 puts it at ~150, ~148 lines visible. Inferred, single-source, and the 2-line margin is thin. The first model sheet's slope did not match the capture, likely because it drew 796 of 1592 pixels per line; that explanation was not tested. H-retail-dashes: faint top dashes fit the same source (first lines of the buffer), not proven.
+
+Fix: lib/rt64/src/hle/rt64_state.cpp, after the present.storage copy. First build gated on screenFbSize.x > 1024: 0 fires, arms f and o void (that field reads 796 in this phase). Gated on newVI.width: f 16:9 alone, no block, 1 log line (log then sampled 1 in 16). Exact count build, owner recipe dd4 FPS60 16:9: g on, no block, 12 blanks (11 origin 0xA9C438, 1 origin 0xB52438 at phase entry); h =0 same binary, block t=16.82 spread 30.9, 0 blanks. Positive control: h. The 0.2 s becomes black. dd4 addresses sit 0x400000 higher (12 MB layout).
+
+Check: SHOWROOM returns in on and off arms. Craft differed on vs off, but a, b, c, h (all lever off) differ among themselves, so it is random per run, and the "TIE" in s6921-s6923 was one such craft. Sheet docs/owner_sheet_s6924_cut_noise.png.
+
+Not run: 21:9 (soak s6924_flash_219 queued, route width w2048 is a guess), FPS60 alone (4:3, gate does not apply), angrylion or hardware at this cut, other cuts that enter a phase over VI width 1024. The phase-entry blank was not viewed.

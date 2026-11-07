@@ -6418,7 +6418,7 @@ index e3d289c..5da989d 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..bc944fe 100644
+index 10f98af..31531d2 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -8580,7 +8580,7 @@ index 10f98af..bc944fe 100644
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
                              const std::scoped_lock lock(ext.presentQueue->screenFbChangePoolMutex);
-@@ -2018,9 +3714,110 @@ namespace RT64 {
+@@ -2018,9 +3714,132 @@ namespace RT64 {
              // Store the RAM required by the VI so the render thread can display it if necessary.
              if (screenFbSiz >= G_IM_SIZ_16b) {
                  uint32_t screenFbBytes = uint32_t(screenFbSize.x * screenFbSize.y) << (screenFbSiz - 1);
@@ -8625,6 +8625,28 @@ index 10f98af..bc944fe 100644
 +                band_source_register(rs64_phase_ord ? rs64_phase_ord() : 0u, screenFbAddress,
 +                    screenFbSize.x, screenFbSize.y, screenFbSiz);
 +                { S4267T _c(33); memcpy(present.storage.data(), &RDRAM[screenFbAddress], screenFbBytes); }
++                // s6924: at a scene cut the game points the VI at its second buffer ~27 VIs before the first draw there. At VI width > 1024 (16:9 and wider)
++                // our buffer sits lower, so the visible lines cover live game data, shown as noise. Retail settings hide it by ~2 lines. Blank only this copy,
++                // never RDRAM, while no draw in this wide phase has reached the origin. ROGUESQ_WIDE_UNDRAWN=0 = old.
++                {
++                    static const bool s_undrawnOn = [](){ const char *v = std::getenv("ROGUESQ_WIDE_UNDRAWN"); return !v || (v[0] && v[0] != '0'); }();
++                    static uint32_t s_seen[16]; static uint32_t s_seenN = 0; static uint32_t s_blanked = 0;
++                    if (newVI.width <= 1024u) { s_seenN = 0; } // VI width, not screenFbSize.x: the interlaced phase reads 796 there
++                    else if (s_undrawnOn) {
++                        const uint32_t drawn = g_rs64_last_drawn_fb.load(std::memory_order_relaxed) & 0x00FFFFFFu;
++                        bool known = false;
++                        for (uint32_t i = 0; i < s_seenN; ++i) { known = known || (s_seen[i] == drawn); }
++                        if (!known && drawn != 0u && s_seenN < 16u) { s_seen[s_seenN++] = drawn; }
++                        const uint32_t tol = (uint32_t(screenFbSize.x) << (screenFbSiz - 1)) * 2u;
++                        const uint32_t addr = screenFbAddress & 0x00FFFFFFu;
++                        bool reached = (s_seenN == 0u);
++                        for (uint32_t i = 0; i < s_seenN; ++i) { const uint32_t d = (addr > s_seen[i]) ? (addr - s_seen[i]) : (s_seen[i] - addr); reached = reached || (d <= tol); }
++                        if (!reached && (screenFb == nullptr)) {
++                            memset(present.storage.data(), 0, screenFbBytes);
++                            if (s_blanked++ < 256u) { fprintf(stderr, "[wide-undrawn] blanked=%u origin=0x%06X fb=0x%06X w=%d drawn=0x%06X seen=%u\n", s_blanked, newVI.origin & 0x00FFFFFFu, addr, int(screenFbSize.x), drawn, s_seenN); }
++                        }
++                    }
++                }
 +                {
 +                    static const bool s_source_fp = [] {
 +                        const char *v = std::getenv("ROGUESQ_LOG_FB_SOURCE_FP");
@@ -8694,7 +8716,7 @@ index 10f98af..bc944fe 100644
                  screenChangesMade = (newScreenHash != lastScreenHash);
                  lastScreenHash = newScreenHash;
              }
-@@ -2033,26 +3830,51 @@ namespace RT64 {
+@@ -2033,26 +3852,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -8764,7 +8786,7 @@ index 10f98af..bc944fe 100644
              }
          }
  
-@@ -2060,6 +3882,7 @@ namespace RT64 {
+@@ -2060,6 +3904,7 @@ namespace RT64 {
          if (fromEarlyPresent || viDifferent || fbChangesMade || screenChangesMade || forceAdvance) {
              // Push a new renderer event to the timeline for presenting this VI.
              present.screenVI = newVI;
@@ -8772,7 +8794,7 @@ index 10f98af..bc944fe 100644
              advancePresent(present, false);
              ext.presentQueue->advanceToNextPresent();
  
-@@ -2910,4 +4733,4 @@ namespace RT64 {
+@@ -2910,4 +4755,4 @@ namespace RT64 {
              break;
          }
      }
