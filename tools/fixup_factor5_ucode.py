@@ -3688,6 +3688,17 @@ if is_main_ucode and PROBE_GATE_MARKER not in text and text.count(_main_sig) == 
             _gate.append(f"#define {_fn}(...) (__builtin_expect(rs64_g1e_probes, 0) ? {_fn}(__VA_ARGS__) : (void)0)")
     text = text.replace(_main_sig, "\n".join(_gate) + "\n" + _main_sig, 1)
 
+# s6940 G1e: the probe gate reads RS64_G1E_PROBES_ON, which defaults to the runtime flag. src/rsp/factor5_ucode_lean.cpp
+# compiles this same file with RS64_G1E_PROBES_ON=0 (and librecomp's RS64_RSP_HOOKS_GATE=0), so the cold probe/hook paths
+# vanish and clang keeps the RSP vector registers in registers (47.8k -> 21.0k insns, q ld/st per NEON op 0.55 -> 0.26).
+# main.cpp runs that arm only while both runtime gates are 0, so it executes exactly what this TU would. Idempotent.
+PROBE_ON_MARKER = "/* fixup: s6940 probe gate macro */"
+if is_main_ucode and PROBE_ON_MARKER not in text and 'extern "C" int rs64_g1e_probes;' in text:
+    text = text.replace("__builtin_expect(rs64_g1e_probes, 0)", "__builtin_expect(RS64_G1E_PROBES_ON, 0)")
+    text = text.replace('extern "C" int rs64_g1e_probes;',
+                        'extern "C" int rs64_g1e_probes;\n#ifndef RS64_G1E_PROBES_ON  ' + PROBE_ON_MARKER +
+                        '\n#define RS64_G1E_PROBES_ON rs64_g1e_probes\n#endif', 1)
+
 # s6788 G3e: export the iteration-cap fire count so the per-VI census (ROGUESQ_G3_CENSUS) can attribute a
 # truncated frame to the cap. Idempotent.
 CAPG_MARKER = "/* fixup: s6788 cap-fire global */"

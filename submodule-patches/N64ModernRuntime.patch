@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..feaefaa 100644
+index b0d6bef..7fa821c 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,8 @@
@@ -23,7 +23,7 @@ index b0d6bef..feaefaa 100644
  
  #include "rsp_vu.hpp"
  #include "recomp.h"
-@@ -34,17 +36,60 @@ struct RspContext {
+@@ -34,17 +36,63 @@ struct RspContext {
  
  using RspUcodeFunc = RspExitReason(uint8_t* rdram, uint32_t ucode_addr);
  
@@ -48,6 +48,9 @@ index b0d6bef..feaefaa 100644
 +// s6704 G1e: one plain global read inline gates every per-load/store RSP diagnostic hook (main.cpp sets it from the
 +// hooks' own env vars, or ROGUESQ_RSP_HOOKS=1). Off, the gfx LLE no longer pays an out-of-line call per DMEM access.
 +extern "C" int rs64_rsp_hooks_on;
++#ifndef RS64_RSP_HOOKS_GATE  // s6940 G1e: src/rsp/factor5_ucode_lean.cpp sets 0 (main.cpp runs it only while the flag is 0)
++#define RS64_RSP_HOOKS_GATE rs64_rsp_hooks_on
++#endif
 +// s6713 G1e: fast RSP DMA. On, dma_rdram_to_dmem / dma_dmem_to_rdram copy whole swizzled words (both memories store each
 +// 32-bit word byte-reversed, so equal alignment mod 4 copies verbatim) and skip the per-DMA diagnostic hooks. main.cpp sets it
 +// on iff no diagnostic env is armed; ROGUESQ_G1E_FAST=0/1 overrides, ROGUESQ_G1E_FAST_TOGGLE=<sec> flips it (same-run A/B).
@@ -86,7 +89,7 @@ index b0d6bef..feaefaa 100644
      uint32_t out;
      for (int i = 0; i < 4; i++) {
          reinterpret_cast<uint8_t*>(&out)[i ^ 3] = RSP_MEM_BU(offset + i, addr);
-@@ -53,12 +98,15 @@ static inline uint32_t RSP_MEM_W_LOAD(uint32_t offset, uint32_t addr) {
+@@ -53,12 +101,15 @@ static inline uint32_t RSP_MEM_W_LOAD(uint32_t offset, uint32_t addr) {
  }
  
  static inline void RSP_MEM_W_STORE(uint32_t offset, uint32_t addr, uint32_t val) {
@@ -95,7 +98,7 @@ index b0d6bef..feaefaa 100644
 +    else for (int i = 0; i < 4; i++) {
          RSP_MEM_BU(offset + i, addr) = reinterpret_cast<uint8_t*>(&val)[i ^ 3];
      }
-+    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_store((offset + addr) & 0xFFFu, 4u, val, 0u);
++    if (RS64_RSP_HOOKS_GATE) rs64_m5_audio_dmem_store((offset + addr) & 0xFFFu, 4u, val, 0u);
  }
  
  static inline uint32_t RSP_MEM_HU_LOAD(uint32_t offset, uint32_t addr) {
@@ -103,7 +106,7 @@ index b0d6bef..feaefaa 100644
      uint16_t out;
      for (int i = 0; i < 2; i++) {
          reinterpret_cast<uint8_t*>(&out)[(i + 2) ^ 3] = RSP_MEM_BU(offset + i, addr);
-@@ -67,6 +115,7 @@ static inline uint32_t RSP_MEM_HU_LOAD(uint32_t offset, uint32_t addr) {
+@@ -67,6 +118,7 @@ static inline uint32_t RSP_MEM_HU_LOAD(uint32_t offset, uint32_t addr) {
  }
  
  static inline uint32_t RSP_MEM_H_LOAD(uint32_t offset, uint32_t addr) {
@@ -111,7 +114,7 @@ index b0d6bef..feaefaa 100644
      int16_t out;
      for (int i = 0; i < 2; i++) {
          reinterpret_cast<uint8_t*>(&out)[(i + 2) ^ 3] = RSP_MEM_BU(offset + i, addr);
-@@ -75,9 +124,11 @@ static inline uint32_t RSP_MEM_H_LOAD(uint32_t offset, uint32_t addr) {
+@@ -75,9 +127,11 @@ static inline uint32_t RSP_MEM_H_LOAD(uint32_t offset, uint32_t addr) {
  }
  
  static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val) {
@@ -120,11 +123,11 @@ index b0d6bef..feaefaa 100644
 +    else for (int i = 0; i < 2; i++) {
          RSP_MEM_BU(offset + i, addr) = reinterpret_cast<uint8_t*>(&val)[(i + 2) ^ 3];
      }
-+    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_store((offset + addr) & 0xFFFu, 2u, val, 0u);
++    if (RS64_RSP_HOOKS_GATE) rs64_m5_audio_dmem_store((offset + addr) & 0xFFFu, 2u, val, 0u);
  }
  
  #define RSP_ADD32(a, b) \
-@@ -94,36 +145,233 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -94,36 +148,233 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -378,10 +381,10 @@ index 2fbbd8a..f8d040b 100644
  
          auto u8(u32 index) -> uint8_t& { return ((uint8_t*)&u128)[15 - index]; }
 diff --git a/librecomp/include/librecomp/rsp_vu_impl.hpp b/librecomp/include/librecomp/rsp_vu_impl.hpp
-index dbf46b2..82b0790 100644
+index dbf46b2..18a1548 100644
 --- a/librecomp/include/librecomp/rsp_vu_impl.hpp
 +++ b/librecomp/include/librecomp/rsp_vu_impl.hpp
-@@ -20,12 +20,31 @@
+@@ -20,12 +20,34 @@
  // ----------------------------------------------------------------------
  
  #include <cstdint>
@@ -396,6 +399,9 @@ index dbf46b2..82b0790 100644
 +
 +// s6376: ring of the last multiply/accumulate ops (lane 1, PRE-op state) lives in main.cpp.
 +extern "C" int rs64_rsp_hooks_on; // s6704: inline master gate, see rsp.hpp
++#ifndef RS64_RSP_HOOKS_GATE  // s6940 G1e: src/rsp/factor5_ucode_lean.cpp sets 0 (main.cpp runs it only while the flag is 0)
++#define RS64_RSP_HOOKS_GATE rs64_rsp_hooks_on
++#endif
 +extern "C" int rs64_vu_ring_enabled(void);
 +extern "C" void rs64_vld_note(uint32_t reg, uint32_t addr, const char* kind);
 +extern "C" void rs64_vu_ring_vte(uint32_t reg, const uint16_t* lanes);
@@ -403,7 +409,7 @@ index dbf46b2..82b0790 100644
 +extern "C" void rs64_vu_ring_capture_prev(const uint16_t* lanes);
 +extern "C" void rs64_vu_ring_push(uint32_t op, uint32_t vd, uint32_t e, const uint16_t* all);
 +// s6380: `all` = vs[8] vte[8] ACCH[8] ACCM[8] ACCL[8] prevVd[8] (PRE-op state; prevVd = result of the previous ring op's vd).
-+#define RS64_VU_RING(OP, VD, VS, VT, E) do { if (rs64_rsp_hooks_on && rs64_vu_ring_enabled()) { \
++#define RS64_VU_RING(OP, VD, VS, VT, E) do { if (RS64_RSP_HOOKS_GATE && rs64_vu_ring_enabled()) { \
 +    cr128 vte_r = (VT)(E); \
 +    { uint16_t vl_[8]; for (int i_ = 0; i_ < 8; i_++) vl_[i_] = (uint16_t)(VT).element(i_); rs64_vu_ring_vte((uint32_t)(&(VT) - &vpu.r[0]), vl_); } \
 +    uint16_t all_[48]; uint32_t pv_ = rs64_vu_ring_prev_vd() & 31; \
@@ -413,7 +419,7 @@ index dbf46b2..82b0790 100644
  #define VCOH vpu.vcoh
  #define VCOL vpu.vcol
  #define VCCH vpu.vcch
-@@ -62,31 +81,30 @@ auto RSP::r128::operator()(u32 index) const -> r128 {
+@@ -62,31 +84,30 @@ auto RSP::r128::operator()(u32 index) const -> r128 {
  
      if constexpr (Accuracy::RSP::SIMD) {
  #if ARCHITECTURE_SUPPORTS_SSE4_1
@@ -466,29 +472,29 @@ index dbf46b2..82b0790 100644
          return ret;
  #endif
      }
-@@ -168,12 +186,17 @@ auto RSP::CTC2(cr32& rt, u8 rd) -> void {
+@@ -168,12 +189,17 @@ auto RSP::CTC2(cr32& rt, u8 rd) -> void {
  template<u8 e>
  auto RSP::LBV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm;
-+    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LBV");
++    if (RS64_RSP_HOOKS_GATE) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LBV");
      vt.byte(e) = RSP_MEM_B(0, address);
  }
  
  template<u8 e>
  auto RSP::LDV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 8;
-+    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LDV");
++    if (RS64_RSP_HOOKS_GATE) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LDV");
 +    if constexpr ((e & 3) == 0 && e <= 8) if (rs64_g1e_dmem && !(address & 3)) { // s6774 G1e: aligned fast path
 +        vt.word(e / 4) = rs64_dmem_w(address); vt.word(e / 4 + 1) = rs64_dmem_w(address + 4); return;
 +    }
      auto start = e;
      auto end = std::min(start + 8, 16);
      for (u32 offset = start; offset < end; offset++) {
-@@ -184,14 +207,15 @@ auto RSP::LDV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -184,14 +210,15 @@ auto RSP::LDV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LFV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 16;
-+    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LFV");
++    if (RS64_RSP_HOOKS_GATE) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LFV");
      auto index = (address & 7) - e;
      address &= ~7;
      auto start = e;
@@ -502,11 +508,11 @@ index dbf46b2..82b0790 100644
      }
      for (u32 offset = start; offset < end; offset++) {
          vt.byte(offset) = tmp.byte(offset);
-@@ -201,16 +225,19 @@ auto RSP::LFV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -201,16 +228,19 @@ auto RSP::LFV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LHV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 16;
-+    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LHV");
++    if (RS64_RSP_HOOKS_GATE) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LHV");
      auto index = (address & 7) - e;
      address &= ~7;
      for (u32 offset = 0; offset < 8; offset++) {
@@ -518,24 +524,24 @@ index dbf46b2..82b0790 100644
  template<u8 e>
  auto RSP::LLV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 4;
-+    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LLV");
++    if (RS64_RSP_HOOKS_GATE) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LLV");
 +    if constexpr ((e & 3) == 0) if (rs64_g1e_dmem && !(address & 3)) { vt.word(e / 4) = rs64_dmem_w(address); return; }
      auto start = e;
      auto end = std::min(start + 4, 16);
      for (u32 offset = start; offset < end; offset++) {
-@@ -221,6 +248,7 @@ auto RSP::LLV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -221,6 +251,7 @@ auto RSP::LLV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LPV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 8;
-+    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LPV");
++    if (RS64_RSP_HOOKS_GATE) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LPV");
      auto index = (address & 7) - e;
      address &= ~7;
      for (u32 offset = 0; offset < 8; offset++) {
-@@ -231,6 +259,11 @@ auto RSP::LPV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -231,6 +262,11 @@ auto RSP::LPV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LQV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 16;
-+    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LQV");
++    if (RS64_RSP_HOOKS_GATE) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LQV");
 +    if constexpr (e == 0) if (rs64_g1e_dmem && !(address & 3)) {
 +        for (u32 n = 0, cnt = (16 - (address & 15)) / 4; n < cnt; n++) vt.word(n) = rs64_dmem_w(address + n * 4);
 +        return;
@@ -543,28 +549,28 @@ index dbf46b2..82b0790 100644
      auto start = e;
      auto end = std::min((u32)(16 + e - (address & 15)), (u32)16);
      for (u32 offset = start; offset < end; offset++) {
-@@ -241,6 +274,7 @@ auto RSP::LQV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -241,6 +277,7 @@ auto RSP::LQV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LRV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 16;
-+    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LRV");
++    if (RS64_RSP_HOOKS_GATE) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LRV");
      auto index = e;
      auto start = 16 - ((address & 15) - index);
      address &= ~15;
-@@ -252,6 +286,8 @@ auto RSP::LRV(r128& vt, cr32& rs, s8 imm) -> void {
+@@ -252,6 +289,8 @@ auto RSP::LRV(r128& vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LSV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 2;
-+    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LSV");
++    if (RS64_RSP_HOOKS_GATE) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LSV");
 +    if constexpr ((e & 1) == 0) if (rs64_g1e_dmem && !(address & 1)) { vt.element(e / 2) = rs64_dmem_h(address); return; }
      auto start = e;
      auto end = std::min(start + 2, 16);
      for (u32 offset = start; offset < end; offset++) {
-@@ -278,16 +314,18 @@ auto RSP::LTV(u8 vt, cr32& rs, s8 imm) -> void {
+@@ -278,16 +317,18 @@ auto RSP::LTV(u8 vt, cr32& rs, s8 imm) -> void {
  template<u8 e>
  auto RSP::LUV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 8;
-+    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LUV");
++    if (RS64_RSP_HOOKS_GATE) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LUV");
      auto index = (address & 7) - e;
      address &= ~7;
      for (u32 offset = 0; offset < 8; offset++) {
@@ -576,19 +582,19 @@ index dbf46b2..82b0790 100644
  template<u8 e>
  auto RSP::LWV(r128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 16;
-+    if (rs64_rsp_hooks_on) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LWV");
++    if (RS64_RSP_HOOKS_GATE) rs64_vld_note((uint32_t)(&vt - &vpu.r[0]), address, "LWV");
      auto start = 16 - e;
      auto end = e + 16;
      for (u32 offset = start; offset < end; offset++) {
-@@ -313,6 +351,7 @@ template<u8 e>
+@@ -313,6 +354,7 @@ template<u8 e>
  auto RSP::SBV(cr128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm;
      RSP_MEM_B(0, address) = vt.byte(e);
-+    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(address, 1, 0x53425600u);
++    if (RS64_RSP_HOOKS_GATE) rs64_m5_audio_dmem_vector_store(address, 1, 0x53425600u);
  }
  
  template<u8 e>
-@@ -320,9 +359,21 @@ auto RSP::SDV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -320,9 +362,21 @@ auto RSP::SDV(cr128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 8;
      auto start = e;
      auto end = start + 8;
@@ -598,7 +604,7 @@ index dbf46b2..82b0790 100644
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset & 15);
      }
-+    if (rs64_rsp_hooks_on && rs64_sdv_snap_enabled()) { // s6696: was unconditional (gfx hot path)
++    if (RS64_RSP_HOOKS_GATE && rs64_sdv_snap_enabled()) { // s6696: was unconditional (gfx hot path)
 +        uint32_t sdv_lanes[96];
 +        for (u32 i = 0; i < 8; i++) sdv_lanes[i] = (uint16_t)vt.element(i);
 +        static const u32 snap[8] = {0, 1, 2, 3, 4, 5, 6, 29};
@@ -606,27 +612,27 @@ index dbf46b2..82b0790 100644
 +        for (u32 i = 0; i < 8; i++) { sdv_lanes[72 + i] = ACCH.u16(i); sdv_lanes[80 + i] = ACCM.u16(i); sdv_lanes[88 + i] = ACCL.u16(i); }
 +        rs64_spike_sdv_note((uint32_t)(&vt - &vpu.r[0]), e, sdv_lanes);
 +    }
-+    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(rs + imm * 8, 8, 0x53445600u);
++    if (RS64_RSP_HOOKS_GATE) rs64_m5_audio_dmem_vector_store(rs + imm * 8, 8, 0x53445600u);
  }
  
  template<u8 e>
-@@ -380,6 +431,7 @@ auto RSP::SFV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -380,6 +434,7 @@ auto RSP::SFV(cr128& vt, cr32& rs, s8 imm) -> void {
          RSP_MEM_B(0, address + (base + 12 & 15)) = 0;
          break;
      }
-+    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(address, 16, 0x53465600u);
++    if (RS64_RSP_HOOKS_GATE) rs64_m5_audio_dmem_vector_store(address, 16, 0x53465600u);
  }
  
  template<u8 e>
-@@ -392,6 +444,7 @@ auto RSP::SHV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -392,6 +447,7 @@ auto RSP::SHV(cr128& vt, cr32& rs, s8 imm) -> void {
          auto value = vt.byte(byte + 0 & 15) << 1 | vt.byte(byte + 1 & 15) >> 7;
          RSP_MEM_B(0, address + (index + offset * 2 & 15)) = value;
      }
-+    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(address, 16, 0x53485600u);
++    if (RS64_RSP_HOOKS_GATE) rs64_m5_audio_dmem_vector_store(address, 16, 0x53485600u);
  }
  
  template<u8 e>
-@@ -399,9 +452,11 @@ auto RSP::SLV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -399,9 +455,11 @@ auto RSP::SLV(cr128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 4;
      auto start = e;
      auto end = start + 4;
@@ -634,19 +640,19 @@ index dbf46b2..82b0790 100644
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset & 15);
      }
-+    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(rs + imm * 4, 4, 0x534C5600u);
++    if (RS64_RSP_HOOKS_GATE) rs64_m5_audio_dmem_vector_store(rs + imm * 4, 4, 0x534C5600u);
  }
  
  template<u8 e>
-@@ -416,6 +471,7 @@ auto RSP::SPV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -416,6 +474,7 @@ auto RSP::SPV(cr128& vt, cr32& rs, s8 imm) -> void {
              RSP_MEM_B(0, address++) = vt.element(offset & 7) >> 7;
          }
      }
-+    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(rs + imm * 8, 8, 0x53505600u);
++    if (RS64_RSP_HOOKS_GATE) rs64_m5_audio_dmem_vector_store(rs + imm * 8, 8, 0x53505600u);
  }
  
  template<u8 e>
-@@ -423,9 +479,14 @@ auto RSP::SQV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -423,9 +482,14 @@ auto RSP::SQV(cr128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 16;
      auto start = e;
      auto end = start + (16 - (address & 15));
@@ -657,19 +663,19 @@ index dbf46b2..82b0790 100644
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset & 15);
      }
-+    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(address, end - start, 0x53515600u);
++    if (RS64_RSP_HOOKS_GATE) rs64_m5_audio_dmem_vector_store(address, end - start, 0x53515600u);
  }
  
  template<u8 e>
-@@ -438,6 +499,7 @@ auto RSP::SRV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -438,6 +502,7 @@ auto RSP::SRV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset + base & 15);
      }
-+    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(address, end - start, 0x53525600u);
++    if (RS64_RSP_HOOKS_GATE) rs64_m5_audio_dmem_vector_store(address, end - start, 0x53525600u);
  }
  
  template<u8 e>
-@@ -445,9 +507,11 @@ auto RSP::SSV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -445,9 +510,11 @@ auto RSP::SSV(cr128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm * 2;
      auto start = e;
      auto end = start + 2;
@@ -677,35 +683,35 @@ index dbf46b2..82b0790 100644
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address++) = vt.byte(offset & 15);
      }
-+    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(rs + imm * 2, 2, 0x53535600u);
++    if (RS64_RSP_HOOKS_GATE) rs64_m5_audio_dmem_vector_store(rs + imm * 2, 2, 0x53535600u);
  }
  
  template<u8 e>
-@@ -462,6 +526,7 @@ auto RSP::STV(u8 vt, cr32& rs, s8 imm) -> void {
+@@ -462,6 +529,7 @@ auto RSP::STV(u8 vt, cr32& rs, s8 imm) -> void {
          RSP_MEM_B(0, address + (base++ & 15)) = vpu.r[offset].byte(element++ & 15);
          RSP_MEM_B(0, address + (base++ & 15)) = vpu.r[offset].byte(element++ & 15);
      }
-+    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(address, 16, 0x53545600u);
++    if (RS64_RSP_HOOKS_GATE) rs64_m5_audio_dmem_vector_store(address, 16, 0x53545600u);
  }
  
  template<u8 e>
-@@ -476,6 +541,7 @@ auto RSP::SUV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -476,6 +544,7 @@ auto RSP::SUV(cr128& vt, cr32& rs, s8 imm) -> void {
              RSP_MEM_B(0, address++) = vt.byte((offset & 7) << 1);
          }
      }
-+    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(rs + imm * 8, 8, 0x53555600u);
++    if (RS64_RSP_HOOKS_GATE) rs64_m5_audio_dmem_vector_store(rs + imm * 8, 8, 0x53555600u);
  }
  
  template<u8 e>
-@@ -488,6 +554,7 @@ auto RSP::SWV(cr128& vt, cr32& rs, s8 imm) -> void {
+@@ -488,6 +557,7 @@ auto RSP::SWV(cr128& vt, cr32& rs, s8 imm) -> void {
      for (u32 offset = start; offset < end; offset++) {
          RSP_MEM_B(0, address + (base++ & 15)) = vt.byte(offset & 15);
      }
-+    if (rs64_rsp_hooks_on) rs64_m5_audio_dmem_vector_store(address, 16, 0x53575600u);
++    if (RS64_RSP_HOOKS_GATE) rs64_m5_audio_dmem_vector_store(address, 16, 0x53575600u);
  }
  
  template<u8 e>
-@@ -844,6 +911,7 @@ auto RSP::VLT(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -844,6 +914,7 @@ auto RSP::VLT(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<bool U, u8 e>
  auto RSP::VMACF(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -713,7 +719,7 @@ index dbf46b2..82b0790 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -911,6 +979,7 @@ auto RSP::VMACQ(r128& vd) -> void {
+@@ -911,6 +982,7 @@ auto RSP::VMACQ(r128& vd) -> void {
  
  template<u8 e>
  auto RSP::VMADH(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -721,7 +727,7 @@ index dbf46b2..82b0790 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -941,6 +1010,7 @@ auto RSP::VMADH(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -941,6 +1013,7 @@ auto RSP::VMADH(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMADL(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -729,7 +735,7 @@ index dbf46b2..82b0790 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -976,6 +1046,7 @@ auto RSP::VMADL(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -976,6 +1049,7 @@ auto RSP::VMADL(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMADM(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -737,7 +743,7 @@ index dbf46b2..82b0790 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1013,6 +1084,7 @@ auto RSP::VMADM(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1013,6 +1087,7 @@ auto RSP::VMADM(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMADN(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -745,7 +751,7 @@ index dbf46b2..82b0790 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1083,6 +1155,7 @@ auto RSP::VMRG(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1083,6 +1158,7 @@ auto RSP::VMRG(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMUDH(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -753,7 +759,7 @@ index dbf46b2..82b0790 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1106,6 +1179,7 @@ auto RSP::VMUDH(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1106,6 +1182,7 @@ auto RSP::VMUDH(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMUDL(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -761,7 +767,7 @@ index dbf46b2..82b0790 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1126,6 +1200,7 @@ auto RSP::VMUDL(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1126,6 +1203,7 @@ auto RSP::VMUDL(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMUDM(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -769,7 +775,7 @@ index dbf46b2..82b0790 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1150,6 +1225,7 @@ auto RSP::VMUDM(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1150,6 +1228,7 @@ auto RSP::VMUDM(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<u8 e>
  auto RSP::VMUDN(r128& vd, cr128& vs, cr128& vt) -> void {
@@ -777,7 +783,7 @@ index dbf46b2..82b0790 100644
      if constexpr (Accuracy::RSP::SISD) {
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
-@@ -1174,6 +1250,7 @@ auto RSP::VMUDN(r128& vd, cr128& vs, cr128& vt) -> void {
+@@ -1174,6 +1253,7 @@ auto RSP::VMUDN(r128& vd, cr128& vs, cr128& vt) -> void {
  
  template<bool U, u8 e>
  auto RSP::VMULF(r128& vd, cr128& vs, cr128& vt) -> void {

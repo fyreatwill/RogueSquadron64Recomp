@@ -463,6 +463,7 @@ gpr get_entrypoint_address();
 // ---------------------------------------------------------------------------
 extern RspExitReason factor5_ucode(uint8_t* rdram, uint32_t ucode_addr);
 extern RspExitReason factor5_ucode_tls(uint8_t* rdram, uint32_t ucode_addr);  // s6775: old TLS DMEM base arm
+extern RspExitReason factor5_ucode_lean(uint8_t* rdram, uint32_t ucode_addr);  // s6940: hook/probe gates compiled out
 extern "C" uint32_t rs64_phase_ord(void);
 extern RspExitReason factor5_ucode_b(uint8_t* rdram, uint32_t ucode_addr);
 extern "C" void rs64_dpc_defer_begin();
@@ -5039,10 +5040,33 @@ static void rs64_g1e_dmembase_tick() {
     t_flip = now; rs64_g1e_dmembase = !rs64_g1e_dmembase;
     fprintf(stderr, "[g1e-dmembase] on=%d t=%.3f\n", rs64_g1e_dmembase, std::chrono::duration<double>(now - t0).count());
 }
+// s6940 G1e: lean gfx ucode arm (src/rsp/factor5_ucode_lean.cpp: hook and probe gates compiled to 0, so the RSP vector
+// registers stay in host registers). Runs only while rs64_rsp_hooks_on == 0 and rs64_g1e_probes == 0, where it executes
+// the same code as the main TU. Default on; ROGUESQ_G1E_LEAN=0 old, ROGUESQ_G1E_LEAN_TOGGLE=<sec> flips it
+// ([g1e-lean] line per flip with the task count each arm ran since the last flip: the positive control).
+static int rs64_g1e_lean = [] {
+    const char* e = getenv("ROGUESQ_G1E_LEAN");
+    const int on = (e && *e) ? (*e != '0') : 1;
+    fprintf(stderr, "[g1e-lean] on=%d\n", on);
+    return on;
+}();
+static std::atomic<uint64_t> rs64_g1e_lean_tasks[2];  // bumped on the gfx thread, read at the flip
+static void rs64_g1e_lean_tick() {
+    static const double sec = [] { const char* e = getenv("ROGUESQ_G1E_LEAN_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
+    if (sec <= 0.0) return;
+    static const auto t0 = std::chrono::steady_clock::now(); static auto t_flip = t0;
+    const auto now = std::chrono::steady_clock::now();
+    if (std::chrono::duration<double>(now - t_flip).count() < sec) return;
+    t_flip = now; rs64_g1e_lean = !rs64_g1e_lean;
+    fprintf(stderr, "[g1e-lean] on=%d t=%.3f ran_main=%llu ran_lean=%llu\n", rs64_g1e_lean,
+            std::chrono::duration<double>(now - t0).count(), (unsigned long long)rs64_g1e_lean_tasks[0].exchange(0),
+            (unsigned long long)rs64_g1e_lean_tasks[1].exchange(0));
+}
 extern "C" void rs64_store_diag_tick(void) {
     rs64_g1e_fast_tick();
     rs64_g1e_dmem_tick();
     rs64_g1e_dmembase_tick();
+    rs64_g1e_lean_tick();
     rs64_g1e_probes_tick();
     static const double sec = [] { const char* e = getenv("ROGUESQ_STORE_DIAG_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
     if (sec <= 0.0) return;
@@ -6898,7 +6922,11 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     const uint64_t aq_sub0 = g_rs64_aq_submit_ns, aq_calls0 = g_rs64_aq_submit_calls, aq_com0 = g_rs64_aq_commit_ns;
     const auto aq_t0 = g_rs64_aq_on > 0 ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
     RspExitReason r;
-    if (rs64_g1e_dmembase && g_dmem_cur == dmem) r = factor5_ucode(rdram, ucode_addr);
+    if (rs64_g1e_dmembase && g_dmem_cur == dmem) {
+        const int lean = rs64_g1e_lean && !rs64_rsp_hooks_on && !rs64_g1e_probes;
+        rs64_g1e_lean_tasks[lean].fetch_add(1, std::memory_order_relaxed);
+        r = lean ? factor5_ucode_lean(rdram, ucode_addr) : factor5_ucode(rdram, ucode_addr);
+    }
     else {
         static bool warned = false;
         if (rs64_g1e_dmembase && !warned) { warned = true; fprintf(stderr, "[g1e-dmembase] g_dmem_cur != dmem on the gfx thread: TLS arm\n"); }

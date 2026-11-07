@@ -313,6 +313,14 @@ endif()
 # must keep the per-thread base). src/rsp/factor5_ucode_tls.cpp is the same ucode on the old base, for a same-run A/B.
 set_property(SOURCE ${FACTOR5_UCODE_C} APPEND PROPERTY COMPILE_DEFINITIONS RS64_DMEM_BASE=dmem RSP=RS64_RSP_GFX)
 set(FACTOR5_UCODE_TLS_CPP ${CMAKE_SOURCE_DIR}/src/rsp/factor5_ucode_tls.cpp)
+# s6940 G1e: lean arm, the gfx ucode with the hook/probe gates compiled to 0 (src/rsp/factor5_ucode_lean.cpp).
+set(FACTOR5_UCODE_LEAN_CPP ${CMAKE_SOURCE_DIR}/src/rsp/factor5_ucode_lean.cpp)
+set_source_files_properties(${FACTOR5_UCODE_LEAN_CPP} PROPERTIES COMPILE_OPTIONS "${RS64_UCODE_FLAGS}" OBJECT_DEPENDS ${FACTOR5_UCODE_C})
+set_property(SOURCE ${FACTOR5_UCODE_LEAN_CPP} APPEND PROPERTY COMPILE_DEFINITIONS RS64_DMEM_BASE=dmem RSP=RS64_RSP_LEAN)
+if (NOT MSVC AND NOT ROGUESQ_UCODE_INLINE_THRESHOLD STREQUAL "0")
+    set_property(SOURCE ${FACTOR5_UCODE_LEAN_CPP} APPEND PROPERTY COMPILE_OPTIONS
+        -mllvm "-inline-threshold=${ROGUESQ_UCODE_INLINE_THRESHOLD}")
+endif()
 set_source_files_properties(${FACTOR5_UCODE_TLS_CPP} PROPERTIES COMPILE_OPTIONS "${RS64_UCODE_FLAGS}" OBJECT_DEPENDS ${FACTOR5_UCODE_C})
 if (NOT MSVC AND NOT ROGUESQ_UCODE_INLINE_THRESHOLD STREQUAL "0")
     set_property(SOURCE ${FACTOR5_UCODE_TLS_CPP} APPEND PROPERTY COMPILE_OPTIONS
@@ -328,6 +336,7 @@ add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/rsp/aspMain.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/dpc_bridge.cpp
     ${FACTOR5_UCODE_TLS_CPP}
+    ${FACTOR5_UCODE_LEAN_CPP}
     ${FACTOR5_BOOT_C}
     ${FACTOR5_UCODE_C}
     ${FACTOR5_UCODE_B_C}
