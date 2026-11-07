@@ -182565,3 +182565,5 @@ Far band table re-paired (scratch/s6920/tab2.py, align.py; no new run): tab.py's
 
 Deleted the four .raw captures after scoring (about 9 GB).
 NOT done: mapping tail swaps to frames, a pixel control that fires from a game lever, fixing the tail (would need a live form of the cutoff pull), levels other than 1, 4, 5, dd3, cutscenes with live.
+
+Verdict: this refutes H-clean (live seam alpha is not 0 on lvl1 and lvl4: 25/235 and 20/143 swaps above 16, against 0/234 and 3/150) and selects a weak form of H-seam: a tail, not the s6904 255 step. H-route is not decided, it needs the owner's eye. Next discriminator for the tail, if the owner wants live: a live form of the cutoff pull, ramp start taken from the fog distances rather than a multiplier fitted on the latched base, =tog on lvl1 dd2 and lvl4 dd4; tail gone selects the inferred cause, tail kept refutes it.
