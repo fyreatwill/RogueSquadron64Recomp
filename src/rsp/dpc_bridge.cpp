@@ -6146,8 +6146,8 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
             std::unordered_map<uint64_t, const S4272Sh *> shIdx;
             shIdx.reserve(g_s4272_sh.size());
             for (const S4272Sh &e : g_s4272_sh) shIdx.emplace(((uint64_t)e.lo << 32) | e.hi, &e);
-            // s6933 G1e: a big task laps the ~12 kB ring ~120 times, and this flush fed RT64 one bump at a time (47k calls per
-            // task at lvl1 16:9 dd4, 19.5 ms per task sync) where the commit path merges. Every per-range step below keeps its
+            // s6933 G1e: a big task laps the ring ~6 times, and this flush fed RT64 one bump at a time (47k calls per task at
+            // lvl1 16:9 dd4, 6 merged; 19.3 -> 17.3 ms per task sync, same run) where the commit path merges. Every per-range step below keeps its
             // order and inputs; only submit_rdp_range is held to the end of a contiguous run, with the live bytes put back after
             // it. ROGUESQ_WRAP_MERGE default on, =0 old, =tog 10 s blocks. ROGUESQ_WRAP_MERGE_CHECK=1 compares the bytes each
             // range left after its record step with what the run hands RT64; run 1 corrupts its copy as the positive control.
@@ -6165,7 +6165,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                         if (++wm_runs == 1 && !wm_chk.empty()) wm_chk[0] ^= 0xFF;
                         const bool diff = wm_chk.size() != wm_hi - wm_lo || memcmp(wm_chk.data(), g_rdram_for_submit + wm_lo, wm_chk.size()) != 0;
                         if (diff) { if (wm_runs == 1) ++wm_ctl; else ++wm_bad; }
-                        if (wm_runs <= 4 || (wm_runs & 0xFFFF) == 0)
+                        if (wm_runs <= 4 || (wm_runs & 0x3FF) == 0)
                             fprintf(stderr, "[s6933-wm] runs=%lu ranges=%lu bad=%lu control=%lu\n", wm_runs, wm_ranges, wm_bad, wm_ctl);
                     }
                     ultramodern::submit_rdp_range(wm_lo, wm_hi);
