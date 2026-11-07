@@ -183001,3 +183001,18 @@ Run rt (same route, RSTAT=tog), 240 s, alive, 0 crash, tools/g1e_tog_rate.py t>=
 New datum: [s4286-restore] n = 372M ranges in ~240 s = ~1.5M wrap-restore ranges/s, ~26k per task, averaging a few bytes each: per-range overhead (lookup, undo push, vector inserts, record_submit walks) rather than bytes is what is left in the submit path.
 Rules out: the game thread as the dd4 rate binder; the restore diag loops as a lever.
 Next: dd4 tail frames (p10 56, sd_wall max 21 ms): split slow tasks into ucode/submit/fence vs the median in one run; if host stalls, close the rate thread at cap.
+
+## Session 6944 (2026-11-07) — G1e: the dd4 tail is denser frames, CPU-bound on the Gfx thread (send_dl cpu +1.1-1.6 ms/task, submit calls +16-23%); host-stall and GPU-wait shares flat, refuted
+HYPOTHESIS-ID: g1e-dd4-sync-rate. No owner report. No new soak results since s6942_locked_tscan (folded s6943).
+Hypotheses: H-scene (slow tasks are dense frames, ucode grows) / H-fence (GPU wait grows) / H-stall (host preemption: wall >> cpu) / H-range (submit-range count grows).
+Capture once, analyze many: no new run. New tool tools/g1e_tail_split.py reads [g1b] (send_dl wall/cpu per task, per second), [g1e-split] (AQ=2 per-task ucode wall, which includes the in-ucode rsp_dpc_submit calls; submit calls per task) and [g1b-gt] (guest thread cpu/blocked ms), groups flight seconds (t>=100) into slow (<=57 tasks) vs full (60).
+scratch/s6943/log_def.txt (defaults) / log_rt.txt (RSTAT=tog, null lever), 24 slow seconds each vs 83 / 58 full:
+- send_dl wall +1.20 / +1.68 ms per task, cpu +1.09 / +1.61, wall-cpu gap +0.11 / +0.07 (p50 1.33, p95 1.49 / 1.43).
+- ucode (incl. submits) +0.74 / +1.01; RT64 remainder (sd_cpu - ucode) +0.35 / +0.60.
+- submit calls per task 46.1k -> 53.4k (+16%) / 44.5k -> 54.9k (+23%).
+- game thread (slot 8) cpu 210 -> 154 / 210 -> 171 ms/s, blocked 790 -> 842 / 789 -> 827: it waits on the Gfx task in slow seconds.
+- r(tasks, sd_cpu) -0.20 / -0.64; r(tasks, calls) -0.13 / -0.58.
+Positive control for the stall term: weak, labelled: the gap is live (per-second max 2.05, per-task max-wall minus max-cpu 6-10 ms in the same runs) but no deliberate stall was injected in these runs (s6891's PRESENT_TEST_STALL is the injectable one).
+=> H-stall and H-fence refuted (the wait share does not grow). H-scene and H-range both selected and confounded: denser frames make more submit calls, about half the growth sits in ucode+submit, the rest in RT64's remainder. Two runs agree; per-second grain only (per-task split not taken; the g1b fields are per-second means and maxima).
+Rules out: host preemption as the dd4 tail cause; closing the rate thread as "host-bound at cap".
+Next: per-call submit cost lever in the deferred-range loop (coalesce contiguous ranges with contiguous shadows, ROGUESQ_G1E_COAL, =tog, WRAP_MERGE_CHECK equivalence); if null, close the slug at cap.
