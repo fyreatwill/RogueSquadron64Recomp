@@ -16,6 +16,8 @@ set -u
 cd "$(git rev-parse --show-toplevel)" || exit 2
 O=${1:?outdir}; shift; mkdir -p $O
 /usr/sbin/ioreg -n Root -d1 | grep -q '"CGSSessionScreenIsLocked"=Yes' && { echo LOCKED; exit 4; }
+# s6934: same gate as g1e_owner_quiet_arms.zsh; these arms take the window route and key focus, so a human at the machine stops them (rc 2, nothing launched).
+i=$(ioreg -c IOHIDSystem | awk '/HIDIdleTime/{printf "%d\n",$NF/1e9; exit}'); (( i < ${IDLE_MIN:-120} )) && { echo "human active idle=$i"; exit 2; }
 LV=${LEVEL:-1}
 REF=$PWD/scratch/agent/m6/s6468p_dd8_sheet/poseref.bin; [ -s $REF ] || [ -n "${NOREF:-}" ] || exit 3
 FZ=(${=FZ:-42.33 74.04 106.28}); MS=${MS:-15000}

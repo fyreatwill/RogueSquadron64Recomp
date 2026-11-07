@@ -84,6 +84,7 @@ void rs64_register_overlays();
 extern "C" void recomp_entrypoint(uint8_t* rdram, recomp_context* ctx);
 extern "C" uint32_t rs64_vi_committed_width();
 extern "C" uint32_t rs64_vi_committed_origin();
+extern "C" int rs64_g1d_pause_live(void);
 extern "C" uint32_t rs64_phase_ord();
 extern "C" double rs64_elapsed_seconds(void);
 extern "C" volatile uint32_t rs64_vi_n_g; // s6808: ROGUESQ_AI_TRACE 6th column = update_screen # (ROGUESQ_VI_WALL key)
@@ -11241,7 +11242,8 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
             if (pv) for (int i = 0; i < 3; i++) { uint32_t u = rs64_rdram_u32(rd, p + 0x4C + 4 * i); memcpy(&v[i], &u, 4); }
             if (pv && (v[0] != 0.0f || v[1] != 0.0f || v[2] != 0.0f)) s_pl_live = true;
             // s6879: no origin gate. 16:9 flight swaps 0x58B038 / 0x6xxxxx, so a >= 0x600000 test let harness keys through on every other frame.
-            if (s_pl_live) { stick_x = 0.0f; stick_y = 0.0f; btn = 0; }
+            // s6934: not while the game's pause menu is live. The route's Start can land in flight, and with the pad zeroed nothing could close the menu (s6933 arms, caps=0).
+            if (s_pl_live && !rs64_g1d_pause_live()) { stick_x = 0.0f; stick_y = 0.0f; btn = 0; }
             // s6412: ROGUESQ_POSE_REF=<file> pins attitude across arms. First arm to lock writes the player object's
             // 0x100 bytes there; later arms overwrite every unit-range float word (attitude/matrix candidates, |f| in
             // [1e-6,1.0001]; pos 0x4C..0x57 excluded) of their object with the reference each poll.

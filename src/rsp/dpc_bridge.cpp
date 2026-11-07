@@ -30,6 +30,7 @@ static std::vector<std::pair<uint32_t, uint32_t>> g_deferred_ranges;
 // s4272: bump-time shadow of every deferred range (compared to RDRAM at commit time).
 static std::vector<uint8_t> g_s4272_shadow;
 struct S4272Sh { uint32_t lo, hi; size_t off; };
+extern "C" { int g_rs64_trim = 1; }  // s6934: ROGUESQ_G1E_TRIM state, set per wrap flush
 static std::vector<S4272Sh> g_s4272_sh;
 
 #include "librecomp/rsp.hpp"
@@ -6143,9 +6144,23 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
         {
             uint32_t b = 0;
             /* s6016: was a linear scan of g_s4272_sh per deferred range (O(n^2), ~80% of Gfx-thread samples in s6015); first-match semantics kept via emplace */
+            // s6934 G1e: ROGUESQ_G1E_TRIM default on, =0 old, =tog 10 s blocks. The map cost a node allocation per range on every flush (481 of 15203 Gfx
+            // samples at dd4); a reused open-addressed table keeps the same first-match result. The trim also drops the per-triangle combiner strings in RT64.
+            static const int s_trim_env = [] { const char *e = std::getenv("ROGUESQ_G1E_TRIM"); return !e ? 1 : (*e == 't' ? 2 : (*e != '0')); }();
+            g_rs64_trim = s_trim_env == 2 ? (int)((time(nullptr) / 10) & 1) : s_trim_env;
             std::unordered_map<uint64_t, const S4272Sh *> shIdx;
-            shIdx.reserve(g_s4272_sh.size());
-            for (const S4272Sh &e : g_s4272_sh) shIdx.emplace(((uint64_t)e.lo << 32) | e.hi, &e);
+            static std::vector<uint64_t> shK; static std::vector<const S4272Sh *> shV; size_t shMask = 0;
+            auto shSlot = [&](uint64_t k) { size_t i = (size_t)((k * 0x9E3779B97F4A7C15ull) >> 20) & shMask; while (shV[i] && shK[i] != k) i = (i + 1) & shMask; return i; };
+            if (g_rs64_trim) {
+                size_t cap = 16; while (cap < g_s4272_sh.size() * 2) cap <<= 1;
+                shMask = cap - 1; shK.resize(cap); shV.assign(cap, nullptr);
+                for (const S4272Sh &e : g_s4272_sh) { const uint64_t k = ((uint64_t)e.lo << 32) | e.hi; const size_t i = shSlot(k); if (!shV[i]) { shK[i] = k; shV[i] = &e; } }
+            }
+            static const bool s_tbl_chk = [] { const char *e = std::getenv("ROGUESQ_WRAP_MERGE_CHECK"); return e && *e && *e != '0'; }();
+            if (!g_rs64_trim || s_tbl_chk) {
+                shIdx.reserve(g_s4272_sh.size());
+                for (const S4272Sh &e : g_s4272_sh) shIdx.emplace(((uint64_t)e.lo << 32) | e.hi, &e);
+            }
             // s6933 G1e: a big task laps the ring ~6 times, and this flush fed RT64 one bump at a time (47k calls per task at
             // lvl1 16:9 dd4, 6 merged; 19.3 -> 17.3 ms per task sync, same run) where the commit path merges. Every per-range step below keeps its
             // order and inputs; only submit_rdp_range is held to the end of a contiguous run, with the live bytes put back after
@@ -6188,7 +6203,18 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                 if (s_prewrap) rs64_dpc_record_submit(r.first, r.second);
                 static const bool s_restore = []{ const char *e = std::getenv("ROGUESQ_WRAP_RESTORE"); return !(e && *e == '0'); }(); /* s4287: default on */
                 const S4272Sh *shp = nullptr;
-                if (s_restore && g_rdram_for_submit) { auto it = shIdx.find(((uint64_t)r.first << 32) | r.second); if (it != shIdx.end()) shp = it->second; }
+                if (s_restore && g_rdram_for_submit) {
+                    const uint64_t k = ((uint64_t)r.first << 32) | r.second;
+                    if (g_rs64_trim) shp = shV[shSlot(k)];
+                    else { auto it = shIdx.find(k); if (it != shIdx.end()) shp = it->second; }
+                    if (s_tbl_chk && g_rs64_trim) {  // table vs map on every lookup. Control: the first hit is also compared against a wrong key, which must differ.
+                        static uint64_t tn = 0, tbad = 0, thit = 0; static int tctl = 0;
+                        auto it = shIdx.find(k); const S4272Sh *ref = it != shIdx.end() ? it->second : nullptr;
+                        tn++; if (ref != shp) tbad++; if (ref) thit++;
+                        if (ref && !tctl && shV[shSlot(k ^ 0xFFFFFFFFull)] != ref) tctl = 1;
+                        if ((tn & 0xFFFFFu) == 1) fprintf(stderr, "[s6934-tbl] n=%llu hit=%llu bad=%llu control=%d\n", (unsigned long long)tn, (unsigned long long)thit, (unsigned long long)tbad, tctl);
+                    }
+                }
                 static unsigned long rn = 0, rMiss = 0, rWordsRestored = 0, rPostDiff = 0, rCtl = 0;
                 if (shp) {   // s4286: feed RT64 the bump-time bytes, then put live back
                     wm_undo.push_back({r.first, r.second, wm_live.size()});
