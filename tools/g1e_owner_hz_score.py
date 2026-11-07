@@ -11,7 +11,7 @@ for f in a.files:
     Q={}; P=[]
     for l in open(f,errors='replace'):
         p=l.split()
-        if len(p)<3: continue
+        if len(p)<3 or not l.endswith('\n') or (p[0]=='Q' and len(p)<13): continue
         kv=dict(x.split('=',1) for x in p[2:] if '=' in x)
         if p[0]=='Q': Q.setdefault(int(kv['mtl']),(float(p[1]),float(kv.get('acq_ms',0)),kv.get('gen'),float(kv.get('tp_ms',0)))) if kv.get('skip')=='0' else None
         elif p[0]=='P' and float(kv.get('at',0))>0: P.append((int(kv['mtl']),float(kv['at'])))
