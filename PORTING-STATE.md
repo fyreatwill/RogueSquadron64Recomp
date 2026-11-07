@@ -182793,3 +182793,38 @@ Fault 2, black strip at the right edge at 16:9 under VI_SHAPE, 15 of 3024 px. OR
 
 Not done: an external or notch-free display; moving between displays; F11 into fullscreen after a windowed boot (width fixed at boot, so bars remain); odd fbw 713 loses 1 more column, not fixed; s6929 SCISSOR_TOL default 32 may no longer be needed at 652, left alone.
 docs/owner_sheet_s6930_fullscreen_edges.png. Discrimination: refutes H-clean, selects H-fs. VI_SHAPE coverage closed pending the owner's default choice.
+
+
+## Session 6931 (2026-11-07) — G1e: the 72 ms present state is a backlog a true 60 Hz display cannot drain; 120 Hz clears it in under a second, window position does not select it
+HYPOTHESIS-ID: g1e-present-drain. Unit from NEXT, built-in alone branch (only the built-in attached; XG49V absent, so 21:9 on 144 Hz still has no data). No owner report.
+
+Landed: tools/g1e_display_hz.swift (lists modes, or holds one refresh rate with kCGConfigureForAppOnly, which reverts when the process exits or is killed) and tools/g1e_hz_arms.zsh (the arm runner; needs scratch/s6891 wcover and dstate, built from tools/g1e_window_cover.swift and tools/g1e_display_state.swift). No game code changed, no default changed.
+
+New lever: the built-in reads 120 Hz (ProMotion) with a 60 Hz mode available, so a fixed 60 Hz scanout could be tested without an external panel. The mode was changed for the arms only and read 120 Hz after every set. The game was raised to the front by System Events on all arms except the offset ones; the owner had been idle over 11 hours and no owner window was moved.
+
+Arms, one binary, lvl1 4:3 dd1 FPS60 ASYNC+NODRAIN, 240 s, last 120 s, all alive_at_end=1, vi_stalls30s=0, crashlines=0, ~14,850 on-screen rows each, cover 0% in all 24 samples of every arm.
+| arm | mode | setting | lat p50/p99 | 1 s median range | acq p50 | acq>5 ms share |
+| a120 | 120 | off, centred | 21.6/25.4 | 18-24 | 0.03 | 0% |
+| a120st | 120 | stall lever | 19.5/22.8 | 19-20 | 0.03 | 0.08% |
+| a60 | 60 | off, centred | 41.5/44.9 | 25-43 | 0.02 | 0% |
+| r60c | 60 | off, centred, repeat | 80.7/81.0 | 64-81 | 15.15 | 99.9% |
+| a60mc | 60 | off, POS=800,500 | 79.5/80.7 | 53-80 | 14.39 | 94.7% |
+| r60p | 60 | off, POS=800,500, repeat | 63.0/80.6 | 45-79 | 11.64 | 52.7% |
+| a60st | 60 | stall lever | 64.1/81.0 | 31-81 | 14.87 | 54.1% |
+| a60g | 60 | INFLIGHT=2 | 48.1/48.6 | 48-48 | 15.07 | 99.8% (the gate waits by design, not a backlog reading) |
+| a60d | 60 | DRAIN=40 | 29.8/47.7 | 29-47 | 0.03 | 0% (27 drops, 0.23/s, 7 of 27 repeat within 150 ms) |
+
+Stall control, same-run, positive on both modes. 200 ms at 120 Hz: 19 -> 36-47 -> 19 within about 0.5 s, every dose recovered. Same dose at 60 Hz: 48 -> 64 and it stayed at 64, acq 0 -> 15 on the 4th present after the stall. 50 ms doses with 2 skips at 60 Hz stepped the level DOWN one vsync each (64 -> 48 -> 32) and it stayed there. So at 60 Hz every level is sticky and moves only by whole vsyncs; at 120 Hz nothing sticks.
+
+Verdict: H-fixed60 selected. Two lines: 4 of 4 no-lever 60 Hz runs sit on sticky levels and 3 of 4 reach acq ~15 by themselves, against 0 of 2 at 120 Hz; and the stall course above. H-slip as a cause on its own is refuted: the same slip at 120 Hz recovers, so a slip only raises the level where the display has no spare vsync. It remains the trigger at 60 Hz (single-source for no-lever entries: the entering event was not named per case). H-window: placement refuted, centred r60c is the worst run and offset a60mc matches it; the a60 vs a60mc gap that looked like placement was run-to-run. H-external refuted: no external panel is needed. Mechanism wording (spare vsyncs drain the queue) is an inference fitted to these rings, not read from CoreAnimation.
+
+Not tested: cover. The arm named mc was meant to be mostly covered and the witness says 0%, so it tested position only. The game did not open behind the owner's windows this session, unlike s6891 cell e; not explained. Levels here are 64 and 80 ms, not s6889's 72: same acq signature, different level, not explained. a120 21.6 ms against s6891's built-in 39 ms is also unexplained: s6891 recorded no mode and the binary differs by 40 sessions, so s6891's built-in figure says nothing about mode.
+
+Gate and drain at true 60 Hz, one run each: INFLIGHT=2 is flat at 48 ms against 41-81 off. DRAIN=40 gives 29.8 p50 with p99 47.7, and is the first repeat of s6889's DRAIN=40 (35.3/52.4 there), direction repeated on a different panel. It repeats a frame on about 1 drop in 4. Neither changed by default; owner chooses.
+
+Why it matters: the owner's 65" TV is likely a fixed 60 Hz display, the case with the worst latency, up to ~81 ms from present to screen against ~20 at 120 Hz. TV refresh is not measured. These arms are 4:3 dd1 at a full 60 game fps; the owner's 16:9 dd4 recipe runs 35-42 fps and may not build a backlog at all. Not run.
+
+Failed, mine: first scoring pass lost its latency table to zsh not word-splitting a string; rerun with an array. The monitor expired mid-set; arms were unaffected.
+
+Does not show: anything about 21:9 on 144 Hz, input-to-photon latency, or how a real TV behaves.
+

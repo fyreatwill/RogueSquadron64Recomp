@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6930 (2026-11-07).
+Compact operational handoff, as of Session 6931 (2026-11-07).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6900 maintenance)").
 
@@ -49,7 +49,7 @@ Detail for everything in this section: PROJECT-OVERVIEW "Migrated from CURRENT-T
 - **N64Recomp self-branch miscompile: NOT fixed, H-dead on missions 1-2 (s6878).** 16 backward branches out of a function, in voice resampler helpers; 0 hits in 420 s with range controls firing. The other 17 missions rest on the static scan. Any new `branching outside` warning on live code needs the same check.
 - **G1 holds (s6865-s6867).** Recipes gate on [initMission]; true flight lvl1/5/10 FPS60+dd4 305/306/302 s (docs/G1-TRUE-FLIGHT.md). FPS60+dd3 and FPS60+dd2 on lvl10 not held to 300 s.
 - **FPS60 render, lvl1 (s6873-s6877).** Pinned dt is bit-identical, so the limiter changes nothing drawn. runInMissionFrame rounds dt to 1/60 ticks; camera pitch differs per dt because of asin's dead zone in updateEffectObjectOrientationQuat (retail behaviour, no fix). lvl5/lvl10 exact match not reproduced; lvl10 gap is cloud phase, clock unmeasured.
-- **Present thread, PAUSED until G5 closes (s6884-s6891).** All default off: ROGUESQ_RDP_SCREEN_JOB=1 (needs ASYNC+NODRAIN; removes game-rate dips, displayed rate unjudged), PRESENT_INFLIGHT=2 (=1 halves the rate, never use), PRESENT_DRAIN=<ms> (keep out of OWNER-OPT-INS). Ungated latency is a backlog that slips raise and 17 ms stalls lower, at ~72 ms on the s6889 ring; 39 ms on the built-in; 12 ms on 144 Hz at 4:3, where 60 fps lands unevenly (2 and 3 vsync mix plus compensating 1v/4v pairs). What enters the 72 ms state is open. 21:9 flight on 144 Hz has no data.
+- **Present thread, PAUSED until G5 closes (s6884-s6891).** All default off: ROGUESQ_RDP_SCREEN_JOB=1 (needs ASYNC+NODRAIN; removes game-rate dips, displayed rate unjudged), PRESENT_INFLIGHT=2 (=1 halves the rate, never use), PRESENT_DRAIN=<ms> (keep out of OWNER-OPT-INS). Ungated latency is a backlog that only a true fixed 60 Hz display keeps (s6931, built-in locked to 60 by tools/g1e_display_hz.swift, lvl1 4:3 dd1): levels are sticky in whole vsyncs, 41-81 ms, acq ~15 at the top, reached without any lever in 3 of 4 runs; a 200 ms stall raises it and it stays, 50 ms stalls with skips lower it. At 120 Hz the same stall recovers in ~0.5 s and latency holds ~20 ms; 12 ms on 144 Hz at 4:3, where 60 fps lands unevenly (2 and 3 vsync mix plus compensating 1v/4v pairs). Window position does not select it; cover untested. At true 60 Hz INFLIGHT=2 is flat 48 ms, DRAIN=40 29.8/47.7 with 0.23 drops/s, one run each. The owner's 16:9 dd4 recipe at 35-42 fps is unmeasured here. 21:9 flight on 144 Hz has no data.
 
 ## Superseded conclusions — do not act on these
 - **"Port 4:3 presentation has retail shape" (assumed through s6927; s6717 left the side bars unchecked).** Believable because every G3 match compared framebuffers or RDP, which do match. Retail VI spans 640 dots for 512 columns (s6928): the presented box was 20% narrow.
@@ -80,6 +80,8 @@ Detail for everything in this section: PROJECT-OVERVIEW "Migrated from CURRENT-T
   - s6070/s6403 "UCODE_CAP 16384 = retail": hardware has no cap (s6762).
 - Older superseded entries: PROJECT-OVERVIEW (s6759 maintenance; s6574-s6735 in "Migrated from CURRENT-TRUTH (s6870)").
 
+- s6891 "built-in has no backlog, so drain and gate do nothing there" as a property of the panel (superseded s6931): locked to 60 Hz the same panel reaches 81 ms, and DRAIN=40 and INFLIGHT=2 both act. Believable because the panel normally runs 120 Hz while a 60 fps ring still shows a 16.7 ms grid, and s6891 recorded no mode.
+
 ## Run recipes and hard config
 
 - Run from `build/` with the ROM beside it; SIGKILL to stop; one game run at a time.
@@ -89,7 +91,7 @@ Detail for everything in this section: PROJECT-OVERVIEW "Migrated from CURRENT-T
 - Pose control: `ROGUESQ_POSE_LOCK=1` (no input) + `ROGUESQ_POSE_FREEZE=<x,...>:<ms>` (needs RAND_TRACE + DEBUG_WRITE arm; `tools/g3_optin_pose_arms.sh`, PIN=1 pins dt). Dump ordinal is not a phase key.
 - Pin dt: oracle RS64_XTRACE_POKE / port `ROGUESQ_XTRACE_POKE=800FA730:29:30:3d088889` (needs RAND_TRACE).
 - Timing: any ROGUESQ_LOG_* env turns FAST off and PROBES on, so set `ROGUESQ_G1E_FAST=1 ROGUESQ_G1E_PROBES=0`. Log text itself has no measured cost (s6884). Per-frame meter: `[g1b]` lines in run.log (sd_wall, tasks/s).
-- Present rings (ROGUESQ_PRESENT_RING=<file>): check tools/g1e_present_cadence.py first, latency figures are per display. A ring with at=0 throughout is NOT a measurement. A UG27 never gives reports. The game opens behind the owner's windows and needs part of itself visible: ROGUESQ_WINDOW_POS=x,y, tools/g1e_display_free.swift. Read acq_ms on ungated rings only.
+- Present rings (ROGUESQ_PRESENT_RING=<file>): check tools/g1e_present_cadence.py first, latency figures are per display. A ring with at=0 throughout is NOT a measurement. A UG27 never gives reports. The game can open behind the owner's windows (s6891; it did not in s6931) and needs part of itself visible: ROGUESQ_WINDOW_POS=x,y, tools/g1e_display_free.swift. Read acq_ms on ungated rings only.
 - Freeze measures: scratch/s6902/arm_m.zsh is the metered arm, no capture; stalls = [g1b] sd_wall max, image freezes = tools/g5c_frozen_runs.py on a g5b_capture .raw. g5b_drops gap figures cannot see a freeze (s6902). `sample <pid> <s> <ms>` on a live run costs no build.
 - AT THE MOVIES shots by run time, dd1 16:9: 76 sea level 887-912, 77 fleet 912-924, 78 sea to city 924-942, 79 banked 942-952 (s6915). Pair arms by cam rows, dd4 trails 1-3 s. Pixel-free retail check: tools/g3_rdp_top_envelope.py.
 - g5b_capture delay runs from window found, not launch: for a run-time target start it fresh with delay 0 (s6914). Frame comparison: window captures are Display-P3, convert to sRGB; `--dec shift` (v<<3); port RDRAM fb dumps lack RT64 3D frames, so use window captures. Score menus by RDP (tools/g3_rdp_frame_match.py, pair runner tools/g3_menu_pair.sh, retail offset 7.3 s), not pixels. Title decode: --w 512 --h 448 --bases 790000 --win 64,1024 --winx 85,1191.
@@ -124,7 +126,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order 2026-11-04: 
 6b. **G5g hangar stretch: done s6907, closes on the owner's look.** Owner decides on flight and cutscene lens (report sheet).
 6d. **G1d true shape: ROGUESQ_VI_SHAPE s6928, coverage s6929, opt-in, owner chooses.** Open: soak s6929_shape_owner, FULLSCREEN, real 16:10 and ultrawide displays.
 6c. **G5h cutscene background: intros fixed s6908, playlist checked s6909, closes on the owner's look.** s6899 scene and H-tint done s6910, floating triangles fixed s6911. Raw map reads closed s6912, city shot closed s6913. Sea slab: DD_MELT opt-in s6916 (lava shot wedge s6921 was the game's own mesh, closed s6923), flat beams: DD_SKYZ opt-in s6917, owner chooses both defaults. Rate soaks s6921_rate_melt_l1 and _skyz_l1, lvl1 301 s: paired 0.34 +/- 0.26 and 0.26 +/- 0.22 swaps/s, no cost shown, folded s6924. Cut noise fixed s6924. Far band fixed s6919, all 19 shots match retail s6920; DD_CUT_LIVE stays opt-in (s6920: small live-only seam tail, no rate cost), owner chooses.
-7. **G1e present, PAUSED until G5 closes.** 21:9 flight on 144 Hz, or what enters the 72 ms state; recipe at the bottom of NEXT.md. SCREEN_JOB and PRESENT_INFLIGHT defaults stay off until the owner chooses.
+7. **G1e present, PAUSED until G5 closes.** The 72 ms state is closed as a fixed 60 Hz backlog (s6931). Next: the owner recipe on locked 60 Hz, then 21:9 flight on 144 Hz if the XG49V returns; recipe in NEXT.md. SCREEN_JOB and PRESENT_INFLIGHT defaults stay off until the owner chooses.
 8. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png; recipe scratch/s6731/menus.sh <tag> <aspect|none> "ROGUESQ_LIVES_CAP=1 <env>"). Mission-start dark frame with edge lines = RT64/present path, horizontal line fixed s6735, vertical line = source column cw-1 clear colour (s6736).
 9. **Owner judgement / parked.** FPS60 feel; G3c sheets; owner sheets listed in NEXT.md; native hangar geometry and rare dd4/dd8 gfx SIGBUS parked (single-source). Reopen on an owner report or a side-effect failure, not repeat holds.
 10. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first. NEVER send hull damage on level 8 (counter3==1 fails the mission).
