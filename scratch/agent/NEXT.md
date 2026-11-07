@@ -33,3 +33,4 @@ Ask owner when a human is next on: are the two UG27 panels powered on and how ar
 Owner judges: docs/owner_sheet_s6883_spancell.png, docs/owner_sheet_s6882_219_dd4.png, docs/owner_sheet_s6881_wide_dd4.png, docs/owner_sheet_s6880_219_depth.png, docs/owner_sheet_s6879_wide_depth.png, docs/owner_sheet_s6874_dd_edge.png, docs/owner_sheet_s6860_lvl10_hud_ab.png, docs/owner_sheet_s6861_pause_hud_ab.png, docs/owner_sheet_s6872_optin_samepose.png.
 Open from s6884: decodeVI now runs on the worker up to one tail after the VI. FAST vs PROBES not split. Best sx gap: 4:3 box 1106 px is +0.82%, not closed.
 Open, not queued (G4): FPS60+dd3 at 300 s, FPS60+dd2 on lvl10, wide bundles at 300 s continuous, 21:9 lvl5/lvl10 at 300 s. lvl10 cloud clock only on an owner report.
+Ask owner: try ROGUESQ_VI_SHAPE=1 (docs/owner_sheet_s6928_vi_shape.png) and choose the default; wide shows fewer extra columns with it.

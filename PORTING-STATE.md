@@ -182725,3 +182725,34 @@ Open, not fixed: is the whole picture about 20% narrow against a TV, at every as
 
 Not done: owner recipe (queued s6927_hangar_owner); SHOWROOM 300-row shape at 4:3 vs wide; other 340-row screens not listed here; whether s6907 aim or G5G_LENS want retuning at the new lens; FPS60 not run on this fix.
 Discrimination: refutes H-all-pillar for the title; selects a 340-row-only shape error; refutes any global ASPECT_SCALE change as the fix.
+
+## Session 6928 (2026-11-06) — G1d: the port's picture is 20% narrow against hardware at every aspect, proved from retail VI registers and VI-true frames; opt-in ROGUESQ_VI_SHAPE fixes shape at 4:3, 16:9 and 21:9
+
+HYPOTHESIS-ID: g1d-true-picture-shape. No maintenance (38 KB).
+
+Soak folded: s6927_hangar_owner (FPS60, dd4): own16 crash=0, own21 crash=0, [g1d-340p] x1.15832 and x1.4901 present. s6927's owner-recipe gap is closed.
+
+Result 1, H-par selected, H-fit and H-mixed refuted. The modes are built at runtime, so the ROM table shows only the libultra defaults. New oracle flag --vi-regs (one line per new H/V video, X/Y scale, status tuple), retail ROM, angrylion, lvl1 eep, 150 s, scratch/s6928/ret.zsh. Every visible mode reads h=108..748, 640 dots:
+width 1024 xs 0x333 v 53..495 (title, 442 half-lines); width 512 xs 0x333 v 105..439 (hangar, 334); width 640 xs 0x400 v 127..421 (crawl, 294) and v 107..441 (intro, 334); width 512 xs 0x333 ys 0x7b9 v 43..501 (flight, 458).
+So 512 columns are stretched over the full raster, a column is 1.25 dots, and retail has no 4:3 side bars. Port H_START comes from the same game mode table.
+Second line, angrylion 640x480 VI-true frames: picture x 8..633 in all shots (VI edge columns), y 71..405 hangar, 9..467 flight. Pause emblem w/h 1.063, 1.071, 1.074 against port 0.895. s6927 Open is answered; its three lines were right. Its emblem "true shape unknown" is now known.
+
+Why the port was narrow: RT64 removeBlackBorders sizes the picture box from fbSize (columns x rows) and ignores dots. Display only; G3 retail matches compared framebuffers and RDP, which were and are right.
+
+Fix, opt-in, default off: ROGUESQ_VI_SHAPE=1.
+- rt64_vi_renderer.cpp: box = cols x par by VI half-lines, par 1024/xScale, or 1.25 when cols == ROGUESQ_FB_WIDTH (widening rewrites xScale). hdSize = that box, as resolutionScale can be anisotropic. [g1d-vishape] logs each change; ROGUESQ_VI_SHAPE_LOG=1 adds viewport and texture.
+- main.cpp: fbw = 458/1.25 x aspect, rounded to 4: 652 at 16:9, 856 at 21:9. Every scale derives from fbw, so 3D, 2D and radar move together, which ASPECT_SCALE could not do. ROGUESQ_G1D_340PERSP defaults off here: 340 rows letterbox as on a TV. Disc region A+380..A+490 (reads 522..632 at 796, calibrated 520..630); the old fit gave 450..560 at 652 and left the cone beside the ring, seen in the first w1 arm.
+- rt64_render_context.cpp: no Manual aspect under VI_SHAPE. First wide arm: RT64 pillared the content inside the target, 652x444 came out 0.826 of the window both ways (rs 2.423,2.000 in the vp log). Failed arm kept as the reason.
+
+Same binary, lvl1, frames t=67.5 and 80. Emblem by one measure (red bbox, both axes, scratch/s6928/m3.py):
+off 4:3 0.895, on 4:3 1.085, off 16:9 0.884, on 16:9 1.078, on 21:9 1.078; retail 1.063-1.074.
+Radar ring 0.810, 1.019, 0.810, 0.978, 0.993. Not same pose as retail: the emblem animates and retail ran a different level. Port on sits 0.4-2% above the retail range.
+Picture: 4:3 flight fills the width, 916 rows of 962 by eye on the sheet (the bbox figure 941 is caught by a line at the top). 16:9 flight fills the window. 21:9 box 2.336 in a window clamped to 2.286, thin letterbox.
+0 crash in all arms. Menu route 16:9 300 s (scratch/s6731/menus.sh s6928w): flight, pause, debrief, select level, craft, intro frames correct by eye, 0 crash; debrief keeps its centre 512 pillars.
+docs/owner_sheet_s6928_vi_shape.png: columns retail, 4:3 off, 4:3 on, 16:9 off, 16:9 on, 21:9 on.
+
+Cost for the owner to weigh: on, wide view shows fewer extra columns (652, 856 against 796, 1024), since the same world is drawn 25% wider. 340-row hangar screens no longer fill a wide window.
+
+Not done: owner recipe with VI_SHAPE (queued s6928_shape_owner); SHOWROOM 300-row, crawl and cutscenes at wide with VI_SHAPE, viewed only in part; ROGUESQ_ASPECT=auto with VI_SHAPE not run; HUD anchors at 652 and 856 judged by eye only; s6907 aim and G5G_LENS at the new shape; 4:3 default untouched.
+Discrimination: selects H-par for every mode observed; refutes H-fit and H-mixed; selects a presenter box fault over any game-side projection fault.
+
