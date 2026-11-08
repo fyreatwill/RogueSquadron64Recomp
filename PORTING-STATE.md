@@ -183439,3 +183439,6 @@ Verdict: selects H-hash (top leaf, fix lands -0.117 ms/task commit); refutes H-s
 - Shows: the LEVEL=4 dense-second tail is the clamp walk, and the index removes it in the same run. Rules out H-traffic/H-encode for the tail (sd_wall
   falls in slow seconds). Not yet shown: exactness on other scenes (queued scratch/agent/soak_queue/s6963_cellchk.sh: lvl1 21:9 and LEVEL=10 CHECK=2);
   the 21:9 present level (acq>5 ms) is a separate term; CURRENT-TRUTH item 5's s6905 "clampGridCellLookup 92 vs 16 samples" is this same walk.
+- Verdict: this selects H-guest (root cause: the clampGridCellLookup chain walk on the game thread) and refutes H-traffic and H-encode for the dense
+  tail (send_dl wall and cpu fall in slow seconds); H-burst is moot. Next discriminator: soak s6963_cellchk (CHECK=2 on lvl1 21:9 and LEVEL=10) decides
+  whether mode 2's trusted misses stay exact off LEVEL=4 (0 bad = keep the default, any bad = mode 1 or off).
