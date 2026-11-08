@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6998 (2026-11-08).
+Compact operational handoff, as of Session 6999 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -14,7 +14,8 @@ after re-entry because the cursor starts on another craft) were handed back mid 
 is now keyed on the raw view reaching the craft (ROGUESQ_G5G_RELMODE=time = old). Same-build A/B <=4.5 vs 22.8/31.1 deg.
 Stale statics / re-entry RAM refuted (re-entry identical to first entry on equal scrolls). Sheet docs/owner_sheet_s6995_g5i_reentry.png.
 s6997: holds at the owner's FULLSCREEN dd2 and dd4 (all scrolls <=4.5 deg; same-build RELMODE=time control 22.8/31.1);
-sheet docs/owner_sheet_s6997_g5i_fullscreen.png.
+sheet docs/owner_sheet_s6997_g5i_fullscreen.png. s6999: holds at 21:9 dd2 and after an abort from level 14 (all <=4.5 deg,
+incl. 6.9 s scrolls; RELMODE=time control 22.8/31.1 at 21:9); sheet docs/owner_sheet_s6999_g5i_219.png. Nothing left to run.
 
 Open or awaiting the owner (each one line; detail in the s6994 archive under the session):
 - **s6992 FIXED, default on: L15 21:9 dd4 crash.** ORIGIN ours: the game's pointer test
@@ -137,14 +138,14 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit item 1 (G5i at 21:9 and a second mission's abort).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit item 3 (G5b measure on a second level).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
-   double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997. Not run: 21:9, other missions' abort (next unit).
+   double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
 2. **G5a mission crash: fixed s6893, awaiting owner re-flight** of Gerrard V (LEVEL=4) past half
    way, repeated. s6998 closed the copyNativeToRAM question: every writeback lands in the image's own
    heap block or above the heap (0 stale / foreign / header hits, dd4 16:9 and dd1 4:3, ROGUESQ_G5A_WBLIVE=1).
-3. **G5b terrain drops: awaiting owner flight** (s6901 far-loss fix; LEVEL=10 unreached).
+3. **G5b terrain drops: awaiting owner flight** (s6901 far-loss fix measured on LEVEL=4 only; next unit: same measure on LEVEL=10, NEXT.md).
 4. **G5c freezes: fixed s6902, soak clean; closes on owner flight.**
 5. **G5d Factor 5 logo: fixed s6903; owner boot at dd2/dd4.**
 6. **G5e fog: done s6904; owner look.**

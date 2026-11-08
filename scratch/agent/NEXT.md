@@ -1,13 +1,12 @@
-# NEXT: G5i at 21:9 (owner's ultrawide) and an abort from a second mission
-HYPOTHESIS-ID: g5i-hangar-reentry
-Context: s6995 fixed the hangar re-entry fish-eye (release keyed on the raw view reaching the craft); s6997 held at fullscreen
-16:9 dd2/dd4. Not covered: 21:9 (owner plays a 21:9 ultrawide) and aborting from a mission other than the route's default.
+# NEXT: G5b far-terrain drop measure on a second level (LEVEL=10)
+HYPOTHESIS-ID: g5b-level-coverage
+Context: G5i is fully verified (s6995/s6997/s6999) and closes on the owner's look; G5a/c/d/e await the owner. G5b's s6901
+far-loss fix (EYEWIN=tog dose-response: quads p10 by heading, ring 5-7 dips, near<50) was measured only on LEVEL=4 (Gerrard V).
+Read the s6901 entry (grep '^## Session 6901 ' PORTING-STATE.md) for the exact recipe and scorer (tog.py / fwd_smooth.py).
 Hypotheses:
-- H-holds: 21:9 and the other mission's re-entry give every scroll <=~5 deg post-turn off-axis, like 16:9.
-- H-wide: 21:9 width changes the hangar camera path (G1D_340PERSP / showroom width) so the raw view never "reaches" the craft
-  within the fix's tolerance -> aim never releases or releases late (look for stuck aim / off-axis > 10 deg).
-- H-mission: the re-entry cursor/craft list differs after another mission's abort (different start craft) -> longer pan.
-Discriminator, one binary, 3 runs back to back: scratch/s6995/arm.zsh with route_long.txt, ROGUESQ_ASPECT=21:9 (+ MISSION_WIDTH
-/ WIDE_ROUTE per CURRENT-TRUTH recipes), FPS60, dd2: arm new, arm ROGUESQ_G5G_RELMODE=time (positive control, must show >20 deg
-on scroll 8/9), and arm new with the abort taken from a different mission (edit the route copy). Score tools/g5i_pan_metric.py;
-owner sheet of the re-entry scrolls at 21:9.
+- H-general: the fix holds on LEVEL=10 at dd4 16:9 (armed quads p10 / ring dips like LEVEL=4).
+- H-level: LEVEL=10's terrain layout/heading mix still loses far rings armed (dips persist) -> a level-specific cause remains.
+- H-dd-only: drops on LEVEL=10 appear at dd4 but not dd2 (dose-response) even with the fix.
+Discriminator, one binary, same-run =tog toggle (parity split is the positive control: site 15 must fire on the odd swaps):
+LEVEL=10 needs ROGUESQ_FORCE_PLANET_UNLOCK=0xFF; check `cur`/[ddscene] level=10 actually flew (FORCE_UNLOCK clamps to level 1, s6991).
+Arms: dd4 16:9, dd2 16:9. Report the s6901 table columns per arm plus a dd1 vs dd4 sheet.

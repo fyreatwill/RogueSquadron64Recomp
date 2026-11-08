@@ -184276,3 +184276,23 @@ address; with the s6892 guard never firing there (nothing read the word as an ob
 not a live object. Not shown: sub-allocations inside one big block (the walker sees rs_malloc blocks only; the in-mission
 image block also holds the pool from 0x80AE6E00, which the copy stops short of), other levels, 21:9, the s6893 layout itself.
 G5a still closes only on the owner's Gerrard V re-flight.
+
+## Session 6999 (2026-11-08) — G5i fix holds at 21:9 and after an abort from a second mission (L14): every re-entry scroll <=4.5 deg; same-build old-clock control 22.8/31.1 deg at 21:9
+HYPOTHESIS-ID: g5i-hangar-reentry. No build: current binary (14:54, s6998). Route scratch/s6995/route_long.txt via
+scratch/s6999/arm.zsh (copy of the s6995 arm writing to scratch/s6999), SECS=295, FPS60 + ROGUESQ_ASPECT=21:9 +
+DRAW_DISTANCE=2 (run.log: [dd] multiplier 2, [g1f] window 1360x594, [g1d-drop] aspect 1024:448 fbw=1024), owner save
+read-only (no SAVE_FROM), screen unlocked (no CGSSessionScreenIsLocked key). 3 runs back to back, 0 crash, 0 #bail lines.
+Mission flown read from run.log [ddscene]/[lvsel]: route_long flies level 15 (cursor 16 -> one left); scratch/s6999/route_m14.txt
+(25:left,26:left) flies level 14 and the post-abort SELECT LEVEL inits on cursor 14.
+tools/g5i_pan_metric.py post-turn off-axis max:
+| arm | env | scrolls | result |
+| w21n | 21:9 new | 1-4 first entry, 5-12 re-entry after L15 abort | all <=4.5; long s8 (5.62 s) 4.0, double s9 (6.73 s) 4.5; identical to 16:9 fs2 |
+| w21t | 21:9 + G5G_RELMODE=time (positive control) | same | s8 22.8, s9 31.1, rest <=4.3: instrument sees the failure at 21:9 |
+| w21m | 21:9 new, abort from L14 | 8 re-entry scrolls (first-entry pans not logged: the extra press shifted the early hangar timing) | all <=4.5, incl. two 6.9 s scrolls (longer than any on the L15 route), different start craft / destination order (3,1,4,5,4,3,1,1) |
+Owner sheet docs/owner_sheet_s6999_g5i_219.png (rows 21:9 new s8/s9, old clock s8/s9, new after L14 abort s3/s7, 0.8 s columns
+from 1.6 s post-press): old-clock row shows the Y-wing sliding to the left edge late in s8; new rows stay on the craft.
+VERDICT: selects H-holds; refutes H-wide (21:9 hangar width/showroom path does not stop the raw view reaching the craft) and
+H-mission (another mission's abort changes the start craft and gives longer pans, still <=4.5 deg). Two lines: the pan metric
+and the frames agree. G5i closes on the owner's look only; nothing left to run for it.
+ORIGIN: no mitigation; measurement only.
+Next: G5b far-terrain drop measure on a level other than 4 (NEXT.md).
