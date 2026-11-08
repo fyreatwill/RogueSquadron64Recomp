@@ -23,30 +23,36 @@ static inline float s6907_ease(float q) { if (q < 0.0f) q = 0.0f; if (q > 1.0f) 
 /* dp = guest address of the raw view direction (target - eye) on the stack, just built by updateHangarBayScene */
 static void rs64_s6907_aim(uint8_t* rdram, recomp_context* ctx, uint32_t dp) {
   extern double rs64_elapsed_seconds(void);
-  static int md = -1, on = 1, ps, act, fade, li = -1; static float tt = 1.6f, tr = 0.9f, dur = 3.85f, ds[3], lo[3]; static unsigned sc; static FILE* lf; static double t0, te;
+  static int md = -1, on = 1, ps, act, fade, li = -1; static float tt = 1.6f, tr = 0.9f, dur = 3.85f, ds[3], lo[3]; static unsigned sc; static FILE* lf; static double t0, te; static int rtm; static float rd1 = 12.0f, rm; /* s6995 */
   if (md < 0) { const char* e = getenv("ROGUESQ_G5G_AIM"); md = 1; if (e && *e) md = !strcmp(e, "tog") ? 2 : atoi(e) != 0;
     e = getenv("ROGUESQ_G5G_TURN"); if (e && *e && atof(e) > 0.05) tt = (float)atof(e);
     e = getenv("ROGUESQ_G5G_REL"); if (e && *e && atof(e) > 0.05) tr = (float)atof(e);
+    e = getenv("ROGUESQ_G5G_RELMODE"); rtm = e && !strcmp(e, "time"); e = getenv("ROGUESQ_G5G_RELDEG"); if (e && *e && atof(e) > 3.5) rd1 = (float)atof(e); /* s6995 */
     e = getenv("ROGUESQ_G5G_CAM"); if (e && *e) lf = fopen(e, "w"); fprintf(stderr, "[g5g] aim mode %d turn %g rel %g\n", md, tt, tr); }
   double now = rs64_elapsed_seconds(); int st = (int)MEM_BU(0, (int64_t)(int32_t)0x800CC3E4u), i; float raw[3], rl, E[3], B[3], g[3], o[3], gl = 0, s = 0, r = 0;
   for (i = 0; i < 3; i++) { raw[i] = s6907_g(rdram, dp + 4 * i); E[i] = s6907_g(rdram, 0x800CD810u + 4 * i); }
   rl = sqrtf(raw[0]*raw[0] + raw[1]*raw[1] + raw[2]*raw[2]); if (rl < 1e-4f) { ps = st; return; }
   for (i = 0; i < 3; i++) { raw[i] /= rl; o[i] = raw[i]; }
-  if (st == 2 && ps != 2) { sc++; if (md == 2) on = ((sc - 1) >> 1) & 1 ? 0 : 1; t0 = now; li = -1; act = 0; fade = 0; for (i = 0; i < 3; i++) ds[i] = raw[i]; }
+  if (st == 2 && ps != 2) { sc++; if (md == 2) on = ((sc - 1) >> 1) & 1 ? 0 : 1; t0 = now; li = -1; act = 0; fade = 0; rm = 0.0f; for (i = 0; i < 3; i++) ds[i] = raw[i]; }
   if (st != 2 && ps == 2 && act) { te = now; fade = 1; }
   ps = st;
   uint32_t list = (uint32_t)MEM_W(0, (int64_t)(int32_t)0x800CDA5Cu); unsigned cur = (unsigned)MEM_BU(0, (int64_t)(int32_t)0x800CD6E8u), idx = (unsigned)MEM_BU(0, (int64_t)(int32_t)(0x800CC404u + cur));
+  if (lf && st == 2 && (list < 0x80000000u || list >= RS64_RAM_TOP || cur > 8u || idx > 47u)) fprintf(lf, "#bail %.4f %u st %d list %08X cur %u idx %u top %08X\n", now, sc, st, list, cur, idx, (unsigned)RS64_RAM_TOP); /* s6995 */
   if (st != 2 || list < 0x80000000u || list >= RS64_RAM_TOP || cur > 8u || idx > 47u) { g_rs64_s6907_w = 0.0f; /* pan ended before the release finished (retarget): fade onto raw */
     if (fade) { float q = (float)((now - te) / 0.4); if (q >= 1.0f) fade = 0; else { s6907_slerp(lo, raw, s6907_ease(q), o); for (i = 0; i < 3; i++) { union { uint32_t u; float f; } v; v.f = o[i] * rl; MEM_W(0, (int64_t)(int32_t)(dp + 4 * i)) = (int32_t)v.u; } } }
     return; }
-  if (li >= 0 && (int)idx != li && act) { t0 = now; for (i = 0; i < 3; i++) ds[i] = lo[i]; } /* press mid pan: the game retargets, restart the turn from the current view */
+  if (li >= 0 && (int)idx != li && act) { t0 = now; rm = 0.0f; for (i = 0; i < 3; i++) ds[i] = lo[i]; } /* press mid pan: the game retargets, restart the turn from the current view */
   li = (int)idx;
   for (i = 0; i < 3; i++) { B[i] = s6907_g(rdram, list + idx * 0x278u + 0xCu + 4 * i); g[i] = B[i] - E[i]; gl += g[i] * g[i]; }
   gl = sqrtf(gl); float tau = (float)(now - t0);
-  if (gl > 1e-3f) { for (i = 0; i < 3; i++) g[i] /= gl; s = s6907_ease(tau / tt); r = s6907_ease((tau - (dur - tr)) / tr); }
+  if (gl > 1e-3f) { for (i = 0; i < 3; i++) g[i] /= gl; s = s6907_ease(tau / tt);
+    /* s6995 G5i: hand back to the raw view once it is itself within rd1 deg of the craft (fully at 3 deg), monotone per scroll. The old fixed 3.85 s
+       clock released mid pan on longer scrolls (multi-craft moves, chained presses: 4.8-6.7 s), dropping the craft back to the lens edge. RELMODE=time = s6907. */
+    if (rtm) r = s6907_ease((tau - (dur - tr)) / tr); else { float dg = raw[0]*g[0] + raw[1]*g[1] + raw[2]*g[2], an; if (dg > 1.0f) dg = 1.0f; if (dg < -1.0f) dg = -1.0f;
+      an = acosf(dg) * 57.29578f; r = s6907_ease((rd1 - an) / (rd1 - 3.0f)); if (r < rm) r = rm; rm = r; } }
   g_rs64_s6907_w = sinf(3.14159265f * s6907_ease(tau / dur)); g_rs64_s6907_t = now;
   if (on && md && gl > 1e-3f) { float a[3]; s6907_slerp(ds, g, s, a); s6907_slerp(a, raw, r, o); for (i = 0; i < 3; i++) { union { uint32_t u; float f; } v; v.f = o[i] * rl; MEM_W(0, (int64_t)(int32_t)(dp + 4 * i)) = (int32_t)v.u; lo[i] = o[i]; } act = 1; } else act = 0;
-  if (lf) { static unsigned n; fprintf(lf, "%.4f %u %d %u %.3f %.3f %.3f %.3f %.3f %.3f %.4f %.4f %.4f %.4f %.4f %.4f %.3f\n", now, sc, on && md, idx, E[0], E[1], E[2], B[0], B[1], B[2], raw[0], raw[1], raw[2], o[0], o[1], o[2], gl); if ((++n & 31) == 0) fflush(lf); }
+  if (lf) { static unsigned n; fprintf(lf, "%.4f %u %d %u %.3f %.3f %.3f %.3f %.3f %.3f %.4f %.4f %.4f %.4f %.4f %.4f %.3f %u %08X %d %d %.3f\n", now, sc, on && md, idx, E[0], E[1], E[2], B[0], B[1], B[2], raw[0], raw[1], raw[2], o[0], o[1], o[2], gl, cur, list, act, fade, tau); if ((++n & 31) == 0) fflush(lf); }
 }
 '''
 A = "RECOMP_FUNC void "

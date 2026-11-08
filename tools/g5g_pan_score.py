@@ -2,7 +2,7 @@
 """s6907 G5g: per scroll, from a ROGUESQ_G5G_CAM log: destination craft off-axis angle over the pan, on/off. usage: g5g_pan_score.py LOG [aspect=1.882] [fovy=45]
 Reports peak yaw rate, seconds the craft is on screen in the outer lens (edge zone: stretch 1/cos(off) >= 1.15) and on-screen time."""
 import sys, math
-R=[list(map(float,l.split())) for l in open(sys.argv[1])]
+R=[list(map(float,l.split()[:17])) for l in open(sys.argv[1]) if not l.startswith("#")]  # s6995: extra fields (cur list act fade tau), #bail lines
 asp=float(sys.argv[2]) if len(sys.argv)>2 else 1.882; fov=float(sys.argv[3]) if len(sys.argv)>3 else 45
 half=math.degrees(math.atan(math.tan(math.radians(fov/2))*asp))
 S={}

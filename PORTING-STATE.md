@@ -184179,3 +184179,32 @@ Step 0 fired (CURRENT-TRUTH 60733 B > 60000). No experiments.
   (no-engineering streak) now also accept a net byte shrink >= 15000 B; ITERATION.md text updated.
   Both scripts pass `bash -n`.
 - NEXT.md switched to G5i (slug g5i-hangar-reentry); G1e dense-level unit deferred to backlog item 11.
+
+## Session 6995 (2026-11-08) — G5i: hangar re-entry fish-eye = s6907 aim's fixed 3.85 s release clock, which handed back to the retail view mid pan on longer scrolls; release now keyed on the raw view reaching the craft, same-build A/B 22.8/31.1 deg vs <=4.5 deg
+HYPOTHESIS-ID: g5i-hangar-reentry. Owner recipe minus fullscreen (FPS60, dd4, 16:9), owner save read-only, no SAVE_FROM.
+Route (scratch/s6995/arm.zsh, scratch/s6995/route_long.txt): title -> SELECT YOUR CRAFT, 4 scrolls V-wing<->X-wing ->
+A -> Battle of Calamari flight (~86 s) -> idle to 180 s -> PAUSE/ABORT LEVEL/YES -> MISSION FAILED medal -> A ->
+SELECT LEVEL -> START START -> SELECT YOUR CRAFT again -> 8 scrolls (single rights through all craft, a double left,
+a double right). Discovery runs d1-d4 found the route (abort lands on SELECT LEVEL at ~122 s, not craft select).
+6 runs, 0 crash, 0 aim bail lines.
+**Results.**
+- r1 (short flight, re-entry repeats first-entry scrolls V-wing<->X-wing): re-entry off-axis curves IDENTICAL to first
+  entry (137 118 73 26 0 ..), frames identical (scratch/s6995/r1_cmp.png). H-static (stale statics) and H-ram (state byte
+  / cursor / table / list meaning something else) REFUTED: craft list moves 801B85C0 -> 8020A890 after the mission but
+  the aim reads it correctly, and every scroll-start reset (t0, li, act, fade, ds) runs.
+- L1 (old binary, long route): the re-entry scrolls that cross more distance or chain a press last 4.8-6.7 s (first entry
+  only ever did 3.83 s adjacent scrolls). s6907 releases onto the raw view on a fixed clock (dur 3.85 - rel 0.9 = 2.95 s),
+  so on those scrolls the camera is handed back mid pan and the craft swings out to the lens edge: post-turn off-axis
+  max 22.7 deg (scroll 8, 5.6 s) and 31.1 deg (scroll 9, double press, 6.7 s). Re-entry starts on a different craft, which
+  makes such scrolls likely; that is why the owner met it after the abort. ORIGIN: our s6907 patch's timing assumption, not
+  game state.
+- Fix (tools/apply_s6907_aim.py + live funcs_28.c): release weight r = ease((RELDEG - angle(raw, craft)) / (RELDEG - 3)),
+  RELDEG 12 (ROGUESQ_G5G_RELDEG), monotone per scroll, reset at scroll start and on mid-pan retarget. The st!=2 0.4 s fade
+  still covers a pan that ends before raw converges. ROGUESQ_G5G_RELMODE=time = s6907 clock. Log gains cur, list, act, fade,
+  tau and a #bail line when the aim bails on bad RAM. tools/g5i_pan_metric.py = post-turn (tau >= 1.6 s) off-axis per scroll.
+- Same-build A/B, same route: Anew all 12 scrolls post-turn max <= 4.5 deg (scroll 8 4.0, scroll 9 4.5); Atime (RELMODE=time)
+  reproduces L1 exactly (22.8, 31.1). Short scrolls: new max 4.5 vs old 2.3-4.3 (the hand-back now completes at the
+  retail settle angle instead of on a clock; settled frames unchanged).
+- Owner sheet docs/owner_sheet_s6995_g5i_reentry.png (re-entry scrolls 8 and 9, old vs new, 0.8 s columns).
+VERDICT: selects H-pan-length (new); refutes H-static, H-ram on this route. H-retail-worse not run (AIM=0 arm) — the
+failure is our release timing, retail never aims. Not covered: fullscreen, dd2, other missions; closes on the owner's look.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6994 (2026-11-08, maintenance).
+Compact operational handoff, as of Session 6995 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,9 +8,11 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
-**Owner priority now: G5i** (ITERATION.md 3c): the s6907 G5g hangar fix holds on first entry to
-SELECT YOUR CRAFT, but after aborting a mission and returning, the fish-eye returns, worse than
-retail. Unreproduced, uninvestigated as of s6994. See Next steps 1.
+**G5i fixed s6995, awaiting the owner's look:** the hangar fish-eye after an abort was our s6907 aim
+releasing onto the retail view on a fixed 3.85 s clock; scrolls over more distance or chained presses (4.8-6.7 s, likely
+after re-entry because the cursor starts on another craft) were handed back mid pan (craft 23-31 deg off axis). Release
+is now keyed on the raw view reaching the craft (ROGUESQ_G5G_RELMODE=time = old). Same-build A/B <=4.5 vs 22.8/31.1 deg.
+Stale statics / re-entry RAM refuted (re-entry identical to first entry on equal scrolls). Sheet docs/owner_sheet_s6995_g5i_reentry.png.
 
 Open or awaiting the owner (each one line; detail in the s6994 archive under the session):
 - **s6992 FIXED, default on: L15 21:9 dd4 crash.** ORIGIN ours: the game's pointer test
@@ -132,15 +134,10 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i first, then the rest.
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit item 11.
 
-1. **G5i (OWNER PRIORITY 2026-11-08): hangar fish-eye returns after an aborted mission.**
-   Reproduce in ONE run: hangar first entry scrolls -> start mission -> abort -> hangar -> scrolls,
-   ROGUESQ_G5G_CAM logging, score both entries with tools/g5g_pan_score.py. Suspects: stale
-   function statics in rs64_s6907_aim (tools/apply_s6907_aim.py: ps, act, fade, li, sc, t0, te, ds,
-   lo) surviving hangar re-init; or 0x800CC3E4 / 0x800CD6E8 / 0x800CC404 / 0x800CDA5C meaning
-   something else on re-entry. Close: same-run first-entry and re-entry off-axis numbers match,
-   owner sheet of re-entry scroll frames, owner's look.
+1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
+   double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Not yet run: fullscreen, dd2.
 2. **G5a mission crash: fixed s6893, awaiting owner re-flight** of Gerrard V (LEVEL=4) past half
    way, repeated. Open: is block 8074A380 live when copyNativeToRAM writes it.
 3. **G5b terrain drops: awaiting owner flight** (s6901 far-loss fix; LEVEL=10 unreached).
