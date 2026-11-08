@@ -183847,3 +183847,29 @@ Rules out: H-async-enough as stated (pre-registered: gaps ~0 without QoS; measur
 Open: why send_dl CPU is inflated on late frames (H-slowcore E-core/clock vs H-ucode-work vs H-cache), NEXT.md designs one build.
 Docs: CURRENT-TRUTH headline (old s6976 headline compacted), OWNER-OPT-INS GFX_QOS row now recommends it at 21:9 too. Default
 unchanged (owner's call).
+
+## Session 6982 (2026-11-08) — G1e: late-frame send_dl CPU inflation is cross-cluster migration of the Gfx thread (cold cache), not a slow core or more ucode work; GFX_QOS=1 removes it under load
+
+Work unit (NEXT.md g1e-late-cpu-inflation): split H-slowcore / H-ucode-work / H-cache with one instrument, one build.
+Instrument: ROGUESQ_G1E_GRING R rows gain it= (ucode L_1090 dispatch passes in that send_dl; new fixup 2a in
+tools/fixup_factor5_ucode.py increments rs64_g1e_ucode_iters), rb= (RDP bytes; dpc_bridge.cpp adds to rs64_g1e_rdp_bytes), c0/c1
+(pthread_cpu_number_np at send_dl start/end) and cs= (CPU histogram, every 256th ucode pass). Scorer tools/g1e_late_work.py
+(work fit sdc ~ kiter + RDP bytes on normal presents, residual per dominant cluster, per-late verdict, SUMMARY line).
+CPU map control (scratch/s6982/cpunum.c, same host): 4 BACKGROUND-QoS spinners ran only on CPUs 0-4 and 10-14, never 5-9, with
+15 USER_INTERACTIVE spinners on all 15 -> 5-9 = perflevel0 (hw.perflevel0.logicalcpu=5), 0-4 and 10-14 = perflevel1 (M5 Pro).
+Runs (21:9 dd4 FPS60 VI_LOCK target 10, async stderr, census, 330 s; data scratch/s6982q/, 0 crash in all 4):
+- N0 QoS off, quiet: 0 lates. Gfx thread 99.6% of cs samples on 10-14. Fit R^2 0.982 (0.057 ms/kiter, 0.27 ms/100 kB, +0.71).
+  11 tasks that migrated mid-task: residual +1.62 ms p50 vs -0.01 at home.
+- Q1 QoS on, quiet: 1 late (VI-ack class, normal CPU). Still home 10-14: GFX_QOS does not move it onto perflevel0. R^2 0.987.
+- B0 QoS off + host load (scratch/s6982/burst 14 1500 3500 from 120 s): 161 lates (~40/min, positive control for the late class).
+  Normal tasks by dominant cluster: home 10-14 0.129 ms/kiter, resid -0.30; 0-4 0.163, +1.46; 5-9 (perflevel0) 0.159, +1.41;
+  mixed +0.79. Lates 94% off-home vs 22% of normals; late kiter p50 63.5 vs normal 61.7. Gaps >3 ms 186-214/min.
+- B1 QoS on + same load: off-home 0.000 (3 mixed tasks of 13889), resid 0; gaps >3 ms 49-60/min; 106 lates (19-31/min).
+Selected: H-cache in its migration form (H-migrate): extra CPU comes from leaving the home cluster's warm L2, shown by two lines:
+(1) off-home costs +1.4 ms even on the faster perflevel0 cores, with equal work; (2) GFX_QOS=1 keeps the thread home under the same
+load and the residual disappears. Rules out H-slowcore (perflevel0 off-home is no faster than home) and H-ucode-work (late work =
+normal). The inflation (~1.4 ms) is the smaller late term; the preemption gap (2-10 ms) is the larger, and QoS cuts it 3.5x.
+Open: B1's remaining lates (18 H-sched, 14 H-rsp-host): guest game thread has no QoS (NEXT.md g1e-late-guest-qos).
+Caveat: the load arm is synthetic (14 default-QoS spinners); the owner's load (browser, DAW) is not measured.
+Docs: CURRENT-TRUTH headline (s6964/s6965 bullets migrated to PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6982)"), G1e item 7,
+OWNER-OPT-INS GFX_QOS row gets the load evidence. Default unchanged (owner's call).

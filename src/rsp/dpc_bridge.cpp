@@ -191,6 +191,7 @@ static std::atomic<uint32_t> g_last_fullsync_addr{0xFFFFFFFFu};
 // rsp_task_log_and_reset() at the synthetic-halt site so we get a per-task
 // chunk-size distribution.
 static std::atomic<uint32_t> g_task_rdp_bytes{0};
+extern "C" std::atomic<uint64_t> rs64_g1e_rdp_bytes; // s6982, defined in ultramodern events.cpp
 static std::atomic<uint32_t> g_task_rdp_cmds{0};
 static std::atomic<uint32_t> g_task_rdp_fullsyncs{0};
 // Per-task RDP opcode histogram (low 6 bits of first byte = op). Bridge and
@@ -6521,6 +6522,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
     }
 
     g_task_rdp_bytes.fetch_add(submit_hi - submit_lo, std::memory_order_relaxed);
+    rs64_g1e_rdp_bytes.fetch_add(submit_hi - submit_lo, std::memory_order_relaxed); // s6982 G1e R-row rb= (ultramodern events.cpp)
     g_task_rdp_cmds.fetch_add(1, std::memory_order_relaxed);
     {
         int64_t mips_first = (int64_t)(int32_t)(submit_lo + 0x80000000);

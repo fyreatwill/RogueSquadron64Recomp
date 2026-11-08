@@ -4672,7 +4672,7 @@ index 3198be0..a8f859b 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..d544bd7 100644
+index 149e770..218d4bc 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -1,25 +1,471 @@
@@ -5518,7 +5518,7 @@ index 149e770..d544bd7 100644
                  // Send a message to the VI queue, and do not set it to be requeued if the queue was full for the same reason as the VI message above.
                  ultramodern::enqueue_external_message_src(events_context.ai.mq, events_context.ai.msg, false, ultramodern::EventMessageSource::Ai);
              }
-@@ -249,15 +929,420 @@ void vi_thread_func() {
+@@ -249,15 +929,435 @@ void vi_thread_func() {
      }
  }
  
@@ -5666,9 +5666,24 @@ index 149e770..d544bd7 100644
 +    }
 +    std::snprintf(buf + n, sizeof(buf) - n, "\n"); put(buf);
 +}
-+static void r_row(double sd, double sdc, double t_start) {
-+    char buf[128]; const double e = last_enq.load();
-+    std::snprintf(buf, sizeof(buf), "R %.6f sd=%.3f sdc=%.3f qw=%.3f\n", now_s(), sd, sdc, e > 0 ? (t_start - e) * 1e3 : -1.0); put(buf);
++// s6982: + it=<ucode L_1090 passes in this send_dl> rb=<RDP bytes submitted> c0/c1=<host CPU number at send_dl start/end>
++// cs=<cpu>:<n>,... = per-CPU histogram of every 256th ucode pass (pthread_cpu_number_np; P/E map from a same-host QoS control,
++// scratch/s6982/cpunum.c: BACKGROUND QoS never runs on perflevel0). All counters touched only by the Gfx thread.
++static int cpu_now() { size_t c = 0; return pthread_cpu_number_np(&c) == 0 ? (int)c : -1; }
++static uint32_t cs_hist[64];
++struct Snap { uint64_t it, rb; int c0; Snap(); };
++static void r_row(double sd, double sdc, double t_start, const Snap &s);
++}
++extern "C" { uint64_t rs64_g1e_ucode_iters = 0; std::atomic<uint64_t> rs64_g1e_rdp_bytes{0};
++    void rs64_g1e_cpu_sample() { const int c = g1eg::cpu_now(); if (c >= 0 && c < 64) g1eg::cs_hist[c]++; } }
++namespace g1eg {
++Snap::Snap() : it(rs64_g1e_ucode_iters), rb(rs64_g1e_rdp_bytes.load(std::memory_order_relaxed)), c0(cpu_now()) { std::memset(cs_hist, 0, sizeof(cs_hist)); }
++static void r_row(double sd, double sdc, double t_start, const Snap &s) {
++    char buf[512]; const double e = last_enq.load();
++    int n = std::snprintf(buf, sizeof(buf), "R %.6f sd=%.3f sdc=%.3f qw=%.3f it=%llu rb=%llu c0=%d c1=%d cs=", now_s(), sd, sdc, e > 0 ? (t_start - e) * 1e3 : -1.0,
++        (unsigned long long)(rs64_g1e_ucode_iters - s.it), (unsigned long long)(rs64_g1e_rdp_bytes.load(std::memory_order_relaxed) - s.rb), s.c0, cpu_now());
++    for (int i = 0; i < 64 && n < (int)sizeof(buf) - 16; i++) if (cs_hist[i]) n += std::snprintf(buf + n, sizeof(buf) - n, "%d:%u,", i, cs_hist[i]);
++    std::snprintf(buf + n, sizeof(buf) - n, "\n"); put(buf);
 +}
 +}
 +
@@ -5939,7 +5954,7 @@ index 149e770..d544bd7 100644
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
-@@ -277,17 +1362,51 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
+@@ -277,17 +1377,51 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
              return;
          }
  
@@ -5993,7 +6008,7 @@ index 149e770..d544bd7 100644
  
          (void)task_type;
      }
-@@ -325,6 +1444,34 @@ void ultramodern::trigger_config_action() {
+@@ -325,6 +1459,34 @@ void ultramodern::trigger_config_action() {
  std::atomic<ultramodern::renderer::SetupResult> renderer_setup_result = ultramodern::renderer::SetupResult::Success;
  std::atomic<ultramodern::renderer::GraphicsApi> renderer_chosen_api = ultramodern::renderer::GraphicsApi::Auto;
  
@@ -6028,7 +6043,7 @@ index 149e770..d544bd7 100644
  void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_ready, ultramodern::renderer::WindowHandle window_handle) {
      bool enabled_instant_present = false;
      using namespace std::chrono_literals;
-@@ -354,11 +1501,17 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -354,11 +1516,17 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
      thread_ready->signal();
  
      while (!exited) {
@@ -6046,7 +6061,7 @@ index 149e770..d544bd7 100644
                  // Turn on instant present if the game has been started and it hasn't been turned on yet.
                  if (ultramodern::is_game_started() && !enabled_instant_present) {
                      renderer_context->enable_instant_present();
-@@ -368,11 +1521,22 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -368,11 +1536,22 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  // start another graphics task until the RDP is also complete. Games usually preserve the RSP inputs until the RDP
                  // is finished as well, so sending this early shouldn't be an issue in most cases.
                  // If this causes issues then the logic can be replaced with responding to yield requests.
@@ -6070,14 +6085,14 @@ index 149e770..d544bd7 100644
  
                  [[maybe_unused]] auto renderer_start = std::chrono::high_resolution_clock::now();
                  // RogueSquadron64Recomp: send_dl RE-ENABLED. RT64 has a
-@@ -383,18 +1547,43 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -383,18 +1562,43 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  // bypasses the registered GBI and submits raw RDP that
                  // confuses RT64 state. See project_factor5_lle_breakthrough.md
                  // for context but supersede with HLE path.
 -                renderer_context->send_dl(&task_action->task);
-+                g1b::Span g1b_sp; const double g1eg_t0 = g1eg::f ? g1eg::now_s() : 0.0;
++                g1b::Span g1b_sp; const double g1eg_t0 = g1eg::f ? g1eg::now_s() : 0.0; const g1eg::Snap g1eg_sn;
 +                renderer_context->send_dl(&task_action->task); g1e::tasks++;
-+                if (g1eg::f) g1eg::r_row(g1b_sp.w(), g1b_sp.c(), g1eg_t0); // s6967
++                if (g1eg::f) g1eg::r_row(g1b_sp.w(), g1b_sp.c(), g1eg_t0, g1eg_sn); // s6967, s6982 work/cpu fields
 +                if (rs64_tl_on) rs64_tl(8, displaylist); // s6711 send_dl returned
 +                if (g1b::on && rs64_g1e_tring_on) rs64_g1e_tring_push(g1b::wall_ms(), g1b_sp.w(), g1b_sp.c()); // s6954 per-task ring (main.cpp)
 +                if (g1b::on) { double w = g1b_sp.w(), c = g1b_sp.c(); g1b::tasks++; g1b::sd_w += w; g1b::sd_c += c; if (w > g1b::sd_wmax) g1b::sd_wmax = w; if (c > g1b::sd_cmax) g1b::sd_cmax = c; g1b::tick(); }
@@ -6115,7 +6130,7 @@ index 149e770..d544bd7 100644
                  display_refresh_rate = renderer_context->get_display_framerate();
                  resolution_scale = renderer_context->get_resolution_scale();
              }
-@@ -456,6 +1645,7 @@ static const OSViMode dummy_mode = []() {
+@@ -456,6 +1660,7 @@ static const OSViMode dummy_mode = []() {
  void set_dummy_vi(bool odd) {
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = &dummy_mode;
@@ -6123,7 +6138,7 @@ index 149e770..d544bd7 100644
      // Set up a dummy framebuffer.
      next_state->framebuffer = 0x80700000;
      if (odd) {
-@@ -463,8 +1653,17 @@ void set_dummy_vi(bool odd) {
+@@ -463,8 +1668,17 @@ void set_dummy_vi(bool odd) {
      }
  }
  
@@ -6141,7 +6156,7 @@ index 149e770..d544bd7 100644
      events_context.vi.get_next_state()->framebuffer = frameBufPtr;
  }
  
-@@ -473,6 +1672,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
+@@ -473,6 +1687,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
      OSViMode* mode = TO_PTR(OSViMode, mode_);
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = mode;
@@ -6149,7 +6164,7 @@ index 149e770..d544bd7 100644
      next_state->control = next_state->mode->comRegs.ctrl;
  }
  
-@@ -567,16 +1767,24 @@ extern "C" PTR(void) osViGetCurrentFramebuffer() {
+@@ -567,16 +1782,24 @@ extern "C" PTR(void) osViGetCurrentFramebuffer() {
  }
  
  void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
@@ -6174,7 +6189,7 @@ index 149e770..d544bd7 100644
          events_context.sp_task_queue.enqueue(task);
      }
  }
-@@ -632,6 +1840,45 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
+@@ -632,6 +1855,45 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
      events_context.vi.states[1].mode = &dummy_mode;
  
      events_context.vi.thread = std::thread{ vi_thread_func };

@@ -310,6 +310,21 @@ if is_main_ucode and self_restart_applied and (ENTRY_LABEL + ":") not in text:
         text = l1090_pattern.sub(lambda m: replacement, text, count=1)
 
 # ---------------------------------------------------------------------------
+# Fixup 2a (s6982): G1e per-task work + CPU sampling. Counts every L_1090 dispatch-loop pass into
+# rs64_g1e_ucode_iters (ultramodern events.cpp) and every 256th pass samples the host CPU number
+# (pthread_cpu_number_np) into a per-CPU histogram; the ROGUESQ_G1E_GRING R row prints both deltas.
+G1E_MARKER = "/* fixup: s6982 g1e iters */"
+if is_main_ucode and G1E_MARKER not in text:
+    decl_pattern = re.compile(r"(\nRspExitReason factor5_ucode(?:_b)?\()")
+    if decl_pattern.search(text):
+        text = decl_pattern.sub(
+            r'\nextern "C" uint64_t rs64_g1e_ucode_iters; extern "C" void rs64_g1e_cpu_sample();  ' + G1E_MARKER + r"\1",
+            text, count=1)
+    text = re.sub(r"(\nL_1090:\n)",
+                  lambda m: m.group(1) + "    if (((++rs64_g1e_ucode_iters) & 255) == 0) rs64_g1e_cpu_sample();  " + G1E_MARKER + "\n",
+                  text, count=1)
+
+# ---------------------------------------------------------------------------
 # Fixup 2b: wire up rsp_task_log_and_reset() at the iter-cap synthetic-halt
 # ---------------------------------------------------------------------------
 # rsp_task_log_and_reset() (src/rsp/dpc_bridge.cpp) reads/resets the per-task
