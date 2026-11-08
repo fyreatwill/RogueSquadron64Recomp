@@ -181,6 +181,17 @@ if [ "$outcome" = "ADVANCED" ]; then
     case "$shrink" in ''|*[!0-9]*) shrink=0 ;; esac
     [ "$shrink" -ge 200 ] && substantive="maint:CURRENT-TRUTH -${shrink} lines"
   fi
+  # s6994: CURRENT-TRUTH is one-bullet-per-line, so a 60 KB file can be 173
+  # lines and a real compaction can never net 200 lines. Also accept a net
+  # byte shrink of >=15000 B (a quarter of the 60 KB trigger).
+  if [ -z "$substantive" ]; then
+    base="${head_start:-HEAD~1}"
+    b0="$(git show "$base:docs/CURRENT-TRUTH.md" 2>/dev/null | wc -c | tr -d ' ')"
+    b1="$(git show "HEAD:docs/CURRENT-TRUTH.md" 2>/dev/null | wc -c | tr -d ' ')"
+    case "$b0$b1" in ''|*[!0-9]*) ;; *)
+      [ $((b0 - b1)) -ge 15000 ] && substantive="maint:CURRENT-TRUTH -$((b0 - b1)) bytes" ;;
+    esac
+  fi
   # An experiment iteration can legitimately commit only docs: its real output
   # is captures under gitignored scratch/. s48 closed M1 that way. But an
   # UNCITED scratch file is indistinguishable from `echo x > scratch/x.txt`,

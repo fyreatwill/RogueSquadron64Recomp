@@ -184163,3 +184163,19 @@ Discrimination summary: the 16:9 sweep selects H-level-cost for L7/L16/L17 and r
 lowest at 21:9 and 16:9); it closes the G1e 16:9 per-level measurement. The live dump refutes H-lost-mutex and H-lost-vi
 (mutex and VI queue both free, no waiter). Next discriminator (boot freeze): the self-sample host stack of the [Game] thread
 on the next freeze names the blocking call; next discriminator (G1e residual): L16 frame misses vs sd_wall / guest cpu / dd1.
+
+## Session 6994 (2026-11-08) — Step-0 maintenance: CURRENT-TRUTH compacted 60733 -> 13372 B; stop gate learns a byte criterion
+
+Step 0 fired (CURRENT-TRUTH 60733 B > 60000). No experiments.
+- The whole s6993 CURRENT-TRUTH (headline bullets s6893-s6993 with every number, superseded list, the
+  item-7 G1e chronology s6962-s6989, evidence index) is archived verbatim in PROJECT-OVERVIEW
+  "Migrated from CURRENT-TRUTH (s6994 maintenance)" (its ## headings demoted to ###).
+- New CURRENT-TRUTH: headline re-led with the owner's G5i priority, one line per open/awaiting-owner
+  item, recent superseded entries only, recipes kept, ONE monotonic backlog 1-14 (G5i first, old
+  "0."/"6b/6c/6d" sub-numbers gone), new durable constraint from s6992 (any new arena must pass the
+  game's `(p & 0xFF000000) == 0x80000000` tests or rely on ROGUESQ_PTRMASK).
+- Gate defect found and fixed: the file is one bullet per line, so at 173 lines a compaction could never
+  net the required 200 lines (this one nets 1 line for -47 KB). tools/agent/stop_gate.sh and loop.sh
+  (no-engineering streak) now also accept a net byte shrink >= 15000 B; ITERATION.md text updated.
+  Both scripts pass `bash -n`.
+- NEXT.md switched to G5i (slug g5i-hangar-reentry); G1e dense-level unit deferred to backlog item 11.

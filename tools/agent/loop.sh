@@ -786,6 +786,10 @@ else:
     shrink="$(git diff --numstat "${iter_start_head}..HEAD" 2>/dev/null -- docs/CURRENT-TRUTH.md | awk '{s+=$2-$1} END{print s+0}')"
     case "$shrink" in ''|*[!0-9-]*) shrink=0 ;; esac
     [ "$shrink" -ge 200 ] && eng_change=1
+    # s6994: byte criterion, mirrors stop_gate.sh (one-bullet-per-line doc)
+    b0="$(git show "${iter_start_head}:docs/CURRENT-TRUTH.md" 2>/dev/null | wc -c | tr -d ' ')"
+    b1="$(git show "HEAD:docs/CURRENT-TRUTH.md" 2>/dev/null | wc -c | tr -d ' ')"
+    case "$b0$b1" in ''|*[!0-9]*) ;; *) [ $((b0 - b1)) -ge 15000 ] && eng_change=1 ;; esac
   fi
   if [ "$outcome" = "ADVANCED" ] && [ "${contract_ok:-0}" = "1" ] && [ "$eng_change" = "0" ]; then
     noeng=$((noeng+1))

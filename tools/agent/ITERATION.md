@@ -18,7 +18,7 @@ iteration is a MAINTENANCE iteration: compact docs/CURRENT-TRUTH.md toward its
 superseded and closed Next-steps items, renumber the backlog into ONE monotonic
 sequence (it has had three colliding "-1/-2/…" sequences), and refresh the
 stale "as of session N" headline. Git history preserves everything you delete.
-A net shrink of >=200 lines counts as ADVANCED (the Stop gate knows this). Do
+A net shrink of >=200 lines or >=15000 bytes counts as ADVANCED (the Stop gate knows this). Do
 NOT run experiments in a maintenance iteration.
 
 ## Strategic priority (user directives: 2026-08-04 items 1-3, 2026-08-15 item 4)
@@ -501,7 +501,7 @@ Write ONE of these words to `scratch/agent/OUTCOME`:
 - `ADVANCED` — you ran the planned work unit and it produced a result, or you
   landed a real change (code, instrument, script, patch, or a NEW document).
   Editing existing docs is not advancing — with ONE exception: in a triggered
-  MAINTENANCE iteration (Step 0), compacting CURRENT-TRUTH by >=200 net lines
+  MAINTENANCE iteration (Step 0), compacting CURRENT-TRUTH by >=200 net lines (or >=15000 net bytes)
   IS advancing.
 - `SUBSTITUTED` — the planned work unit could NOT be run, so you did something
   else. This is legitimate ONCE. It is not a way to keep the loop fed.

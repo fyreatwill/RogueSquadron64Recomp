@@ -1,14 +1,21 @@
-# OWNER OVERRIDE 2026-11-04: do ITERATION.md G5 in order. G5a-G5h all fixed or done, owner confirmation pending.
-# NOTE: CURRENT-TRUTH is 60.4 KB -> Step 0 makes the next iteration MAINTENANCE. Do that first; this unit follows it.
-
-# NEXT: G1e residual - why dense levels 16 (56.3 shown/s) / 7 (57.2) / 17 (58.5) miss game frames at 16:9 dd4
-HYPOTHESIS-ID: g1e-dense-level-cost
-Data: scratch/s6993s/log_L16.txt, ring_L16.txt (owner recipe, 240 s), same for L7/L17; 60-fps levels (L10, L15) as controls.
-Hypotheses:
-- H-rsp: gfx RSP task host-ms (sd_wall) exceeds the 16.7 ms budget on missed frames (sd90 is only 8.6 on L16, so check the per-frame tail at the misses).
-- H-guest: the game thread's own sim/CPU time per frame (recompiled code) overruns on dense scenes; RSP is idle-waiting.
-- H-dd: the miss comes from dd4's extra terrain (dd1 same level should hold 60): one arm L16 dd1 vs dd4.
-Unit: OFFLINE first: join ring_L16 misses with [g1b] per-second sd_wall/us_wall/guest-cpu in log_L16 (python pass) and compare
-with L10. If inconclusive, run one 2-arm A/B (L16 dd4 vs dd1, same harness: scratch/s6993/drive169.sh pattern, HOLD=240).
-Expected: misses co-vary with sd_wall -> H-rsp; with guest cpu and not sd_wall -> H-guest; vanish at dd1 -> H-dd.
-Passive: boot freeze self-sample is armed (ROGUESQ_STALL_SAMPLE_DIR); on any [stall-dump] run tools/sample_game_threads.py on the file.
+# NEXT: G5i (OWNER PRIORITY 2026-11-08) - hangar fish-eye returns after an aborted mission
+HYPOTHESIS-ID: g5i-hangar-reentry
+Owner: G5g fix (s6907, ROGUESQ_G5G_AIM default on) looks good on first SELECT YOUR CRAFT entry; after
+start mission -> abort -> back to hangar, the fish-eye is back and worse than retail.
+Hypotheses (one run discriminates all):
+- H-static: rs64_s6907_aim function statics (ps, act, fade, li, sc, t0, te, ds, lo; tools/apply_s6907_aim.py)
+  carry stale scroll state across the hangar re-init -> re-entry log shows act/fade/t0 already set at
+  entry, or t0/te from the old epoch (turn never runs or runs to the wrong time base).
+- H-ram: 0x800CC3E4 state byte / 0x800CD6E8 cursor / 0x800CC404 craft table / 0x800CDA5C list mean
+  something else after re-entry -> the aim target (destination craft position) differs from the
+  craft actually drawn; off-axis stays high with aim "active".
+- H-retail-worse: re-entry uses a different retail camera path (e.g. different eye path after abort),
+  so the aim is applied to a path it was not tuned for -> G5G_AIM=0 same re-entry also shows a
+  bigger off-axis than first entry.
+Unit: ONE run, scratch/s6907/arm.zsh pattern, ROGUESQ_G5G_CAM=<file> plus a log line at every aim
+(re)init dumping all statics and the 4 RAM words. Route: hangar, 3 scrolls, start mission (key drive),
+pause+abort, hangar, 3 scrolls. Score each entry with tools/g5g_pan_score.py. Then the fix (reset the
+statics on hangar entry, keyed on the state byte transition) and a same-binary =tog/before-after arm.
+Close: re-entry off-axis numbers match first entry, owner sheet of re-entry mid-scroll frames.
+Check screen unlocked (CGSSessionScreenIsLocked) before key-driven runs.
+Deferred (was NEXT before s6994): G1e dense levels 7/16/17, slug g1e-dense-level-cost, CURRENT-TRUTH item 11.
