@@ -261,6 +261,17 @@ When choosing the work unit, this order overrides Next-steps ordering:
      and 21:9 with FPS60 on, on frames taken mid-scroll. Then check whether the owner's recipe
      shows the same stretching elsewhere (flight edges, cutscenes, level select) and report it
      with an owner sheet before changing those views. Close on the owner's look.
+     G5i **OWNER PRIORITY 2026-11-08, do this BEFORE anything else (ahead of the L15 21:9 crash, which the
+     owner does not hit at 16:9): the G5g hangar fix fails after an aborted mission.** Owner playtest: the
+     fish-eye was gone and looked good on first entry to SELECT YOUR CRAFT, but after aborting a mission and
+     going back to the hangar to reload it, the fish-eye came back and was worse than retail. Reproduce
+     it: hangar, start a mission, abort, back to the hangar, scroll ships, with ROGUESQ_G5G_CAM logging,
+     against the first-entry scrolls in the same run. First suspects: rs64_s6907_aim's function statics
+     (ps, act, fade, li, sc, t0, te, ds, lo) carrying stale scroll state over the hangar re-init; or the
+     state byte 0x800CC3E4, cursor 0x800CD6E8, table 0x800CC404 or list 0x800CDA5C meaning something
+     else after the re-entry, so the view aims at the wrong craft. Fix it so every hangar entry behaves
+     like the first one. Same-run proof: first entry and re-entry off-axis numbers match, with an owner
+     sheet of re-entry scroll frames. Closes on the owner's look.
      G5h **Owner request 2026-11-05: cutscenes are missing the most background, after G5g.** Owner
      playtest: of everything still dropping, cutscenes lose the most. Flight checks do not cover
      this; s6899 fixed one Gerrard V cutscene only. Go through the mission intro and outro
