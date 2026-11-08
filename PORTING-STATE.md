@@ -183513,3 +183513,34 @@ Verdict: selects H-hash (top leaf, fix lands -0.117 ms/task commit); refutes H-s
   3-4 ms evades ACQ=8 entirely, so the ACQ_MS=5 threshold is not a complete level detector. Root cause is upstream: game frames that run
   4-6 ms over budget. HITCH stays opt-in, not recommended. Next discriminator: which game-thread phase makes the 20-23 ms frames (G1B task
   timing at the miss timestamps vs normal frames), scratch/agent/NEXT.md. scratch/s6966/.
+
+## Session 6967 (2026-11-07) — G1e: the "over-budget game frames" are late VI edges; the VI thread's priority was a macOS no-op and timer leeway woke it 0-5.4 ms late; Mach real-time VI policy (ROGUESQ_VI_RT, default on) removes it same run
+- Instrument (lib/N64ModernRuntime events.cpp + mesgqueue.cpp, patches exported): ROGUESQ_G1E_GRING=<file>, mach-clock rows that join the
+  present ring: G at every gfx osSpTaskStart (submitter slot, per guest slot cumulative CPU and blocked-in-osRecvMesg ms, us= steady
+  stamp), R after every send_dl (wall, gfx-thread CPU, queue wait). New g_g1b_blk_cum_us. Tools g1e_gring.py, g1e_tl_present.py (joins
+  the s6711 TL timeline to the present ring through the us= stamps), g1e_vi_rt_ab.py (per-block VI lateness vs ideal deadline + present
+  misses/lat/acq). Controls: TL-to-ring clock offset 0.000 s, spread <0.01 ms over 13.6k rows (steady_clock = mach); 7722/7725 W rows land
+  in a kick->send_dl window.
+- Runs (lvl1 21:9 dd4 FPS60 locked 60 Hz, tools/g1e_owner_quiet_arms.zsh, human idle >4.8 h, 7 runs, 0 crash):
+  g1/t1/t2 (ACQ=8, no VI change): the kicking thread (slot 5, the game's scheduler) uses 0.2 ms CPU per frame and is blocked the rest; the
+  game thread (slot 8) runs ~2 ms/frame; send_dl (RSP) 8-10 ms; long submit intervals (>=20 ms, 6.6/s) carry their excess entirely as
+  blocked time (rest = wall-cpu-blk 0.05 ms, no preemption, no CPU growth) -> H-sim, H-preempt, H-rsp, H-submit all refuted. Every kick sits
+  0.12 ms after a VI edge (late and normal alike); the frame behind a late present follows a kick gap of 21.9 ms then 11.4 ms. VI edge
+  intervals: only 24-38% in 16-17 ms, spread 11-22, >=19 ms at 10-13/s; lateness vs the ideal deadline 0-5.4 ms (p90 3.9-5.1, 27-43% >2 ms).
+- Cause (ORIGIN: ours): ultramodern::set_native_thread_priority is an empty stub on macOS, so the "Critical" VI thread is a default-QoS
+  thread; its sleep_until(next - 2 ms) wakes up to ~7.4 ms after target under timer leeway, past the s6456 2 ms spin. The game is
+  VI-locked (kicks at VI+0.12 ms), so a late VI edge is a late frame.
+- Fix: ROGUESQ_VI_RT (events.cpp vi_thread_func): Mach THREAD_TIME_CONSTRAINT_POLICY (period 16.67, computation 2.5, constraint 5 ms) and
+  a 0.5 ms spin (ROGUESQ_VI_RT_SPIN_US); =2 QoS USER_INTERACTIVE only; ROGUESQ_VI_RT_AT=<s> one-way flip. DEFAULT ON; =0 restores the old
+  thread. Same run, flip at 150 s in flight: a1 (RT) VI p90 3.88 -> 0.00 ms, >2 ms 22% -> 0%, >=19 ms intervals 8.65/s -> 0; a2 (QoS
+  only) 5.09 -> 1.51, 43% -> 0%, 13.1/s -> 0 (QoS still ~1 ms late, past the 0.5 ms spin; RT kept). r1/r2 (20 s toggle): the first
+  20 s before any RT p90 4.1-4.9 (= t2 all run), 0.0 in every window after t=20, INCLUDING the THREAD_STANDARD_POLICY off blocks -> the
+  revert is sticky, so the toggle's off blocks are not an arm (documented; use _AT). Spin cost 2 -> 0.5 ms per VI.
+- Present side (not closed): late presents 0.07-0.25/s in no-RT runs vs 0-0.1/s with RT (cross-run only; the same-run before windows had
+  0-0.02/s, too few to compare). The level still forms with RT: r2 (no drain) at level 54-84% acq>5, lat 38.5, its 7 onsets with EVEN
+  cadence (dqmax 16.73 ms = baseline), and a2's level (lat 45.7) survived the flip. So hitch onsets are gone, and an even-cadence path
+  remains: H-vsync-phase (our VI clock and the display's vsync are two free 60 Hz clocks; the phase drifts until a present misses its
+  latch and the queue sits one drawable deeper). r1 with ACQ=8 + RT: no level, lat 35 ms (the known 21:9 non-level base).
+- Verdict: selects H-vi-timer for the over-budget frames (two lines: TL VI-edge lateness with kicks locked to edges, and the same-run RT
+  flip removing it in 3 runs); refutes H-sim/H-rsp/H-preempt/H-submit. Next: phase-lock the VI timer to the display vsync. Soaks
+  s6967_virt_169_v1/v2 queued (owner 16:9 recipe, _AT=150 before/after). scratch/s6967/.
