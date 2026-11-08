@@ -183337,3 +183337,31 @@ would take it to about -0.35. Modest: commit is ~3.4 ms/task, so this is a step,
 Ruled out: a provenance key without source content (wrong textures), and "key costs as much as the hash".
 Next: build the S-keyed cache (skip TMEMHasher::hash on a hit), =tog same-run timing, =v verify. NEXT.md.
 Verdict line: s6959 selects H-prov with H-src (cache must key the source), refutes H-prov-cost.
+
+## Session 6960 (2026-11-07) — G1e: provenance-keyed upload hash cache (ROGUESQ_G1E_PROVCACHE) is exact (0 wrong in 10.9M hits) but does not pay: commit +0.075 ms/task in 22 same-run pairs; per-load tagging (104 ns x 261k loads/s) costs more than the hashing it saves; H-load selected, H-win refuted, stays off
+
+What ran: new opt-in ROGUESQ_G1E_PROVCACHE (default 0; =1 on, =tog 10 s blocks, =v verify), built from the s6959 census arm S.
+- Load side (lib/rt64 rt64_rdp.cpp rs64PcLoad/rs64PcLatch): only tagS per TMEM word = mix(descriptor key, XXH3 of the source rows), the
+  s6959 written-byte masks reused (scratch loads only on a mask miss, 0.39%). The arm (g_rs64_g1e_pcache, set per wrap flush in
+  src/rsp/dpc_bridge.cpp) is latched on the Gfx thread at each load; a 0 -> on transition gives every word a fresh, never-seen tag, so
+  =tog off blocks pay nothing and nothing tagged before them can hit. A source span that would wrap 16 MB gets a unique tag. Every 64th
+  load times the extra work (key, source hash, mask lookup, tag stores; not the real load).
+- Hash side (rt64_rdp_tmem.cpp rs64PcHash, from rs64MemoHash): key = rs64ProvKey over tagS, 4096 direct-mapped {key, hash}; arm 1 returns
+  the cached hash on a hit and skips TMEMHasher::hash; arm 3 always hashes, counts wrong hits, and a params-only mutant table must be
+  wrong (positive control). Per-second [g1e-pcache]; tools/g1e_pcache_sum.py (new). TRING gains a 16th column (pcache);
+  tools/g1e_batch_arms.py --arm pcache.
+Runs (tools/g1e_xt_flight.zsh, windowed sync FPS60 dd4 16:9, lvl index 1 keyed flight, scratch/s6960/; both alive=1 crash=0):
+- v 240 "ROGUESQ_G1E_PROVCACHE=v": flight (97 s): 112.8k calls/s, hit 99.97%, vbad 0 / 10,940,695 checked hits; mutant wrong on
+  10,264,711 / 10,943,482 (93.8%) -> the verify arm discriminates. maskmiss 0.36%, wrap 0. keyns 66.9, hashns 242.2, loadns 106.3.
+- t 360 "ROGUESQ_G1E_AQ=3 ROGUESQ_G1E_PROVCACHE=tog ROGUESQ_G1E_TRING=...": 13,477 flight tasks (off 6,878, on 6,599), 22 block pairs:
+  d_com +0.075 +/- 0.134 ms/task (4/22 lower), d_w +0.050 +/- 0.300 (10/22), d_sub +0.016, d_ucx -0.040, d_rt -0.010. Medians com
+  3.119 -> 3.196. Calls (48.2k vs 48.5k) and bytes per task equal between arms (same scene load). On-arm [g1e-pcache]: hit 99.96%,
+  hashing saved 25.5 ms/s vs cost key 7.1 + load-side 27.1 ms/s (104 ns x 261k loads/s).
+What it shows: two independent lines agree (same-run paired timing and the sampled budget): the cache is exact but net-negative.
+The design pays per LOAD (2.3 loads per hash call, TMEM thrash per s6958) to save per HASH, and the per-load source XXH3 + key + tag
+stores (~104 ns) exceed 2.3 x the per-hash saving after the key (~(242-67)/2.3 = 76 ns). H-load selected, H-win refuted; H-cachemiss
+not separable (net already negative). Even a load side at half the cost would give ~-0.08 ms/task: not worth more iterations.
+ROGUESQ_G1E_PROVCACHE stays default 0 (opt-in diagnostic). Single scene (lvl index 1).
+Ruled out: skipping the upload hash via a load-provenance key as a commit-term lever at this load:hash ratio.
+Next: rank the remaining commit leaves at current defaults (xctrace on the same flight, the s6956 method) and take the top one. NEXT.md.
+Verdict line: s6960 selects H-load, refutes H-win; provenance cache closed (exact, net +0.075 ms/task), default off.

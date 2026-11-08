@@ -3,6 +3,7 @@
 usage: g1e_batch_arms.py RING [--t0 100] [--arm batch|cdiag]
 s6956: 14-column rows add the cdiag arm (ROGUESQ_G1E_CDIAG); --arm cdiag splits by it.
 s6957: 15-column rows add the lbfast arm (ROGUESQ_G1E_LBFAST); --arm lbfast.
+s6960: 16-column rows add the pcache arm (ROGUESQ_G1E_PROVCACHE); --arm pcache.
 Rows: t sd_wall sd_cpu ucode submit(x16 sampled) commit calls bytes n_ucode phase spin batch ranges.
 Flight = most common phase after t0, n_ucode==1, spin 0. Arms by the batch column. Adjacent 10 s blocks (by t) give paired deltas.
 Positive control: ranges per task must drop in batch=1 tasks while calls per task stay comparable."""
@@ -12,9 +13,9 @@ R = []
 for l in open(a.ring):
     if l.startswith('#'): continue
     f = l.split()
-    if len(f) not in (13, 14, 15): continue
-    t, w, c, uc, sub, com = map(float, f[:6]); calls, by, n, ph, sp, bt, rg = map(int, f[6:13]); cd = int(f[13]) if len(f) >= 14 else -1; lb = int(f[14]) if len(f) == 15 else -1
-    b = cd if a.arm == 'cdiag' else (lb if a.arm == 'lbfast' else bt)
+    if len(f) not in (13, 14, 15, 16): continue
+    t, w, c, uc, sub, com = map(float, f[:6]); calls, by, n, ph, sp, bt, rg = map(int, f[6:13]); cd = int(f[13]) if len(f) >= 14 else -1; lb = int(f[14]) if len(f) >= 15 else -1; pc = int(f[15]) if len(f) == 16 else -1
+    b = cd if a.arm == 'cdiag' else (lb if a.arm == 'lbfast' else (pc if a.arm == 'pcache' else bt))
     R.append(dict(t=t, w=w, c=c, uc=uc, sub=sub, com=com, calls=calls, by=by, n=n, ph=ph, sp=sp, b=b, rg=rg, ucx=uc - sub, rt=c - uc - com))
 ph = {}
 for r in R:
