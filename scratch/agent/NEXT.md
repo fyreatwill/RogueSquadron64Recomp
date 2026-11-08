@@ -1,11 +1,15 @@
 # OWNER OVERRIDE 2026-11-04: do ITERATION.md G5 in order. G5a-G5h all fixed or done, owner confirmation pending (see owner questions in the older NEXT below / CURRENT-TRUTH).
 
-# NEXT: why the s6946 b4 audit saw no sky draws, then validate ROGUESQ_DD_SKYZ_SEL=1 and look at the leaking draws' pixels
-HYPOTHESIS-ID: g5h-skyz-leak
-s6946: shot 78 control proven (a4, docs/owner_sheet_s6946_skyz_control.png). Stream audit a4: non-sky modes C8104A54/C4104A54/C8110235 consume SKYZ ring depths (~4.7k draws per parity, t~300-540 s of the movie run). b4 (SEL rule, 600 s) audit: sky_ring 0, sky_other 281, yet [dd-skyz] rewrites ran normally -> unexplained.
-Unit, ONE run carrying both arms: AT THE MOVIES 950 s (scratch/s6946/beam.zsh a5 4 "ROGUESQ_DD_SKYZ=tog ROGUESQ_DD_SKYZ_SEL=1 ROGUESQ_DD_SKYZ_AUD=$PWD/scratch/s6946/aud_a5.txt"), first check offline why b4 lacked sky rows: diff the leaking om words (b4 lists 00552234 and 00504A54, i.e. z compare / prim-z variants of the sky and beam modes) - maybe the sky's mode word in that run carried z compare, or the ring learned a beam depth. H-route (b4 played different scenes) / H-instr (audit or SEL lookahead fault) / H-mode (sky drawn as 00552234 sometimes).
-Discriminator: in a5, sky_rw must be > 0 on on-seconds and roughly equal sky_ring(on) minus range-end misses; oth_rw ~0 while oth_ring (would-leak) stays > 0 (same-run control). Shot 78 pixel pair must still show ships on on-seconds (capture 922-946 s).
-Then pixels of the leaks: add a second capture window at the t of the first leak line (swap ~17.7k, t ~300 s) in the a4 recipe with SEL off, and look whether C8104A54 draws vanish on on-seconds.
+# NEXT: which sky draws the SEL rule misses (~2% more than the value rule), and fix it without re-opening the leak
+HYPOTHESIS-ID: g5h-skyz-sel-miss
+s6947: SEL validated (live value oth_rw 2421/2490 and 1675/1675, SEL 0/1726 and 0/1155) and made the rule inside opt-in DD_SKYZ (=0 value rule, =tog A/B). Cost: live sky_rw/sky_ring ~96% under SEL vs ~98% value.
+Unit, offline first then ONE run: add to ROGUESQ_DD_SKYZ_AUD a count of sky draws under a ring depth that was NOT rewritten, split by why: (a) skyish() returned false at range end (mode then current), (b) the depth arrived off-live, (c) skyish saw a non-sky 0x2F first and the sky mode came later in the range. Log the first 16 (om word, swap) of (a)/(c). Run scratch/s6947/leak_nocap.zsh a8 4 "ROGUESQ_DD_SKYZ=tog ROGUESQ_DD_SKYZ_SEL=tog ROGUESQ_DD_SKYZ_AUD=..." (368 s).
+H-rangeend (sky mode arrives in the next range: fix by remembering a pending ring depth and rewriting at the sky mode, s6936 WALK lets a later range patch it) / H-interleave (a non-sky mode word sits between depth and sky mode with no draw: fix by skipping mode words with no draw before them) / H-edge (parity edge inside a swap row: then the 2% is accounting, not a miss).
+Discriminator: which bin holds the ~2%. Control: value-rule live seconds must show ~0 in (a)/(c).
+Then shot 78 at a5 recipe for pixels if the fix changes counts.
+Scripts: scratch/s6947/beam.zsh <tag> <dd> "<env>" (950 s, captures 300-324 and 922-946), leak.zsh (368 s, capture 338-362 = leak burst), leak_nocap.zsh (no capture, kill leftover `sleep 100000`), leaksheet.py RAW AUD OUT (4 s cycle sheets). Old: scratch/s6946/beam.zsh, short.zsh, sheet.py.
+Defaults: SKYZ opt-in, owner decides.
+Rules learned (s6947 adds): an audit `else` sharing a branch with an update silently drops a field; place capture windows by the audit clock offset (capture t0 - audit t0 = +291.4 s at script 300 s).
 Scripts: scratch/s6946/beam.zsh <tag> <dd> "<env>" (950 s), short.zsh (600 s, no capture: kill leftover `sleep 100000` after), sheet.py RAW OUT t1,t2,... (on/off pairs).
 Defaults: SKYZ opt-in, SEL opt-in (=1), owner decides.
 Rules learned (s6946 adds): a stream audit row that lacks the consumer it is meant to bin (sky_ring 0 while rewrites run) is a missing control, not a zero.

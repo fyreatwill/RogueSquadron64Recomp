@@ -3600,6 +3600,11 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
             const uint32_t n1 = 0x12000000u | (w1 & 0xFFFFu) | 0x4040u; memcpy(g_rdram_for_submit + ((a + 4) & kSubmitRamMask), &n1, 4);
             if ((++s_melt_n & (s_melt_n - 1)) == 0) fprintf(stderr, "[dd-melt] n=%llu swap=%d %08X -> %08X\n", (unsigned long long)s_melt_n, sw, w1, n1);
         }
+        // s6947: ROGUESQ_DD_SKYZ_SEL=tog alternates the rule on a 2 s period, so with DD_SKYZ=tog the 4 s cycle is off, value rule, off, SEL rule (one-run A/B).
+        // s6947: SEL is now the default rule inside DD_SKYZ (=0 restores the s6917 value rule): two runs, live seconds, value rule rewrote 2421/2490 and 1675/1675
+        // non-sky prim-z draws, SEL 0/1726 and 0/1155, sky rewrites 324k/338k and 68.8k/71.9k; shot 78 beams and far ships stay on SEL seconds (owner_sheet_s6947).
+        static const int skyz_sel = [] { const char *e = std::getenv("ROGUESQ_DD_SKYZ_SEL"); return !(e && *e) ? 1 : *e == '0' ? 0 : *e == 't' ? 2 : 1; }();
+        const bool sel_now = skyz_sel == 1 || (skyz_sel == 2 && ((mach_absolute_time() / 48000000ull) & 1));
         if (skyz) {
             const bool live = skyz == 1 || ((mach_absolute_time() / 24000000ull) & 1);
             auto put = [&](uint32_t at) {
@@ -3609,8 +3614,7 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
             // s6946: a sky depth value is shared by other prim-z modes (C8104A54, C4104A54: 3.2k draws per movie run on live seconds, ROGUESQ_DD_SKYZ_AUD), so a
             // ring match alone also pushed those to the far limit. Now the consumer decides: look ahead in this range for the first mode word or draw after the depth;
             // rewrite only if the sky mode comes first, or a draw comes under the sky mode. If the range ends first, rewrite unless the mode now set takes prim z and is
-            // not the sky. Opt-in ROGUESQ_DD_SKYZ_SEL=1 (unvalidated: its s6946 run saw almost no sky-mode draws, unexplained); default keeps the s6917 value-only rule.
-            static const bool skyz_sel = [] { const char *e = std::getenv("ROGUESQ_DD_SKYZ_SEL"); return e && *e == '1'; }();
+            // not the sky. s6946 opt-in; validated and made default s6947 (the s6946 b4 null was an audit fault).
             static uint32_t s_skyz_om1 = 0;
             auto skyish = [&](uint32_t at) {
                 for (uint32_t b = at + 8; b + 8 <= hi;) {
@@ -3625,7 +3629,7 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
             if (op == 0x2F) s_skyz_om1 = w1;
             if (op == 0x2E) {
                 skyz_pd = a; s_skyz_pd = w1 >> 16; s_skyz_done = false;
-                if (live) for (uint32_t v : s_skyz_ring) if (v && v == s_skyz_pd) { if (!skyz_sel || skyish(a)) put(a); s_skyz_done = true; break; }
+                if (live) for (uint32_t v : s_skyz_ring) if (v && v == s_skyz_pd) { if (!sel_now || skyish(a)) put(a); s_skyz_done = true; break; }
             } else if (op == 0x2F && w1 == 0x00552224u && !s_skyz_done) {
                 s_skyz_done = true;
                 bool known = false; for (uint32_t v : s_skyz_ring) known |= v == s_skyz_pd;
@@ -3641,12 +3645,13 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         if (s_za && skyz) {
             static uint32_t z_om0 = 0, z_om1 = 0, z_pdk = 0, z_sw = 0xFFFFFFFFu, z_c[6] = {}, z_leak[16] = {}, z_nl = 0; static bool z_rw = false;
             if (z_sw != (uint32_t)sw) {
-                if (z_c[0] | z_c[1] | z_c[2] | z_c[3]) fprintf(s_za, "%u %llu %u %u %u %u %u %u %u\n", z_sw, (unsigned long long)mach_absolute_time(), (unsigned)((mach_absolute_time() / 24000000ull) & 1), z_c[0], z_c[1], z_c[2], z_c[3], z_c[4], z_c[5]);
+                if (z_c[0] | z_c[1] | z_c[2] | z_c[3]) fprintf(s_za, "%u %llu %u %u %u %u %u %u %u %u\n", z_sw, (unsigned long long)mach_absolute_time(), (unsigned)((mach_absolute_time() / 24000000ull) & 1), z_c[0], z_c[1], z_c[2], z_c[3], z_c[4], z_c[5], (unsigned)sel_now);
                 fflush(s_za); z_sw = (uint32_t)sw; for (auto &c : z_c) c = 0;
             }
             if (op == 0x2E) { z_pdk = 2; for (uint32_t v : s_skyz_ring) if (v && v == (w1 >> 16)) { z_pdk = 1; break; } }
+            // s6947 fix: the s6946 b4 build put the mode update in an else branch, so a mode word after a depth in the same range was never recorded (sky_ring 0).
+            if (op == 0x2F) { z_om0 = w0; z_om1 = w1; }
             if ((op == 0x2E || op == 0x2F) && skyz_pd != 0xFFFFFFFFu) z_rw = (rd(skyz_pd + 4) >> 16) == 0x7FFFu && z_pdk == 1;
-            else if (op == 0x2F) { z_om0 = w0; z_om1 = w1; }
             else if (((op >= 0x08 && op <= 0x0F) || op == 0x24 || op == 0x25 || op == 0x36) && z_pdk && (z_om1 & 4u) && (z_om1 & 0x30u) && ((z_om0 >> 20) & 3u) < 2u) {
                 const bool sky = z_om1 == 0x00552224u; z_c[(sky ? 0 : 1) + (z_pdk == 1 ? 0 : 2)]++; if (z_rw) z_c[sky ? 4 : 5]++;
                 if (!sky && z_pdk == 1) { bool k = false; for (uint32_t i = 0; i < z_nl; i++) k |= z_leak[i] == z_om1; if (!k && z_nl < 16) { z_leak[z_nl++] = z_om1; fprintf(s_za, "# leak om %08X %08X swap=%d\n", z_om0, z_om1, sw); } }
