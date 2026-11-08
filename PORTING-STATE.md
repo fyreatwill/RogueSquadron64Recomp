@@ -183657,3 +183657,24 @@ Folded soaks s6972_169_V10 / s6972_169_V13 (scratch/s6972q; owner recipe 16:9 dd
 - V13: W p50 13.0 ENGAGED, lat p50/p90 21.0/37.6, lvl% 5.2, slow% 31.6, miss 0.091/s, 15 drops; bins 140 and 155 median 35-36 (69%/54% slow), most others 18-48% slow at median 20-21.
 Pre-registered outcomes (s6972 NEXT): H-edge-miss selected (slow% 31.6 > 2, drops 15 > V10+3). H-later-wins refuted: the p50 gain (2.3 ms, model 3.0) is real but the frame lands 3.7 ms before the next vsync, inside the game-frame jitter, so it misses the edge and the drawable queue goes one deep. Target 6 (s6972) costs 4 ms; target 10 is the only tested value that is both fast and steady. Single run per arm; the V10 arm reproduces s6972 V10 (23.3, 0 drops), which is the same-cycle control.
 Rules out: lock targets above 10 as a latency lever at 16:9; no 21:9 V13 arm needed. OWNER-OPT-INS row updated. G1e item 7 returns to paused (owner tries the recipe).
+
+## Session 6974 (2026-11-08) — G1e: residual VI-lock drain drops are real one-vsync levels from a late game frame + catch-up pair (H-hitch); ACQ8 drain is correct, no false fires
+
+Offline only, no build (new tools/g1e_drop_context.py: per D row, the acq>5 run before it, latency before/at/after, max Q gap and wl/gpu
+in the 12 rows before the run). Rings: s6970q V/N, s6971q V10/V6, s6972q V10/V13 (all 16:9 dd4 FPS60 lvl1, from 95 s).
+- Every drop is a REAL level: 25/25 (V 4, s6972 V10 2, V13 15, N 5; s6971 V10/V6 0). Under the lock the latency sits at 22-24 ms,
+  jumps to 38-41 ms at the start of the acq>5 run, and returns to 23-25 ms within 30 presents after the drop. -> H-drain (ACQ8
+  false-firing on a single slow acquire) REFUTED: the 8-run never started at base latency.
+- Every lock-run drop (V, V10) is preceded by a late Q (dQ 21.6-29 ms) followed by a catch-up Q (dQ ~10 ms): two frames land in one
+  vsync slot and the drawable queue deepens by one = the s6966 onset signature, still present with VI_RT on. -> H-hitch SELECTED.
+- wl/gpu max 3.4 ms before every drop -> H-gpu REFUTED.
+- s6972 V10's "2 drops in one bin" is one level that the first drop did not fully clear (lat after 37.3) and a second drop 1.06 s later did.
+- Would an immediate pair trigger (drop on late+catch-up) be better? Pair count vs pair->level (lat>32 for 3 rows): V 3/3, s6971 V10 0/3,
+  V6 0/3, s6972 V10 1/3, V13 2/2, N 1/1 -> 7/17 overall; a pair trigger would drop ~10 frames for nothing. ACQ8 stays (it only fires on
+  real levels). No plume_metal change.
+- Residual rate under lock: 0-4 drops per 165 s, i.e. one visible dropped frame per ~40-80 s, each from an upstream late game frame
+  (5-12 ms over budget). Two lines: drop context (latency jump) + late/catch-up Q pair; single offline pass over existing rings.
+- Upstream cause still unnamed: s6970-s6972 soaks lacked ROGUESQ_G1E_GRING, so the TL timeline cannot be joined to the presents.
+  Queued s6974_169_V10g_r1/r2 (V10 lock + TL + GRING) to run g1e_tl_present.py on the late kicks: game running (H-sim) vs rsp/rdp
+  (H-rsp) vs game blocked on mq (H-sched).
+Rules out: ACQ hysteresis change; pair-trigger drain.
