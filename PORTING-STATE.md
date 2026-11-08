@@ -183875,3 +183875,28 @@ Open: B1's remaining lates (18 H-sched, 14 H-rsp-host): guest game thread has no
 Caveat: the load arm is synthetic (14 default-QoS spinners); the owner's load (browser, DAW) is not measured.
 Docs: CURRENT-TRUTH headline (s6964/s6965 bullets migrated to PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6982)"), G1e item 7,
 OWNER-OPT-INS GFX_QOS row gets the load evidence. Default unchanged (owner's call).
+
+## Session 6983 (2026-11-08) — G1e: ROGUESQ_GUEST_QOS=1 removes the H-sched (guest kick late) class under host load, but total lates fall only ~12%; the residual is margin exhaustion
+
+Work unit (NEXT.md g1e-late-guest-qos): split H-guest / H-gfx-resid / H-present for the lates left under GFX_QOS=1 on a loaded host.
+Change (lib/N64ModernRuntime ultramodern threads.cpp, exported to submodule-patches): ROGUESQ_GUEST_QOS=1 calls
+pthread_set_qos_class_self_np(USER_INTERACTIVE) in set_main_thread() and in every osCreateThread host thread (_thread_func); stderr
+"[guest-qos] ok=1" per thread (21 per run = positive control for the switch; 0 in the off arms). Default off.
+Runs: scratch/s6983/drive.sh, ABBA B1, B2, B2b, B1b, all 21:9 dd4 FPS60 VI_LOCK=1 target 10, GFX_QOS=1, census, 330 s, s6982 burst
+(14 spinners 1500/3500 ms) started at ~120 s; scorer scratch/s6983/score.sh (g1e_late_leg verdict counts, g1e_late_work SUMMARY,
+g1e_gfx_qos_ab split at 125 s = quiet 95-125 s control vs loaded). Data scratch/s6983q/. 0 crash in all 4. Host also had rclone backup running.
+| arm | guest QoS | lates | H-sched (incl. combos) | H-rsp-host (incl.) | none>p99 | gaps>3 ms/min loaded | late30-40/min loaded |
+| B1  | off | 105 | 15 | 15 | 73 | 53.8 | 29.4 |
+| B1b | off | 113 | 18 | 22 | 75 | 57.1 | 32.5 |
+| B2  | on  |  96 |  4 | 10 | 74 | 28.4 | 26.9 |
+| B2b | on  |  95 |  3 |  7 | 78 | 16.8 | 26.8 |
+(B1 replicates s6982 B1: 106 lates, 18 H-sched.) Off-home Gfx fraction ~0 in all arms (GFX_QOS keeps it home, as s6982).
+Selected: H-guest for the kick-late class (both replicate pairs: H-sched 15-18 -> 3-4); guest QoS also halves Gfx gaps>3 ms (guest
+and Gfx threads no longer both fall to default-QoS competition with the spinners). Not selected as the bulk: total lates only -12%.
+The dominant residual is 'none>p99' (73-78 per arm, unchanged by guest QoS): no leg over its normal p99, but in B2 late vs normal p50
+rsp leg 10.43 vs 9.59 ms, game run 3.84 vs 2.12 ms, wq 4.37 vs 0.47 -> several sub-p99 stretches adding up past the vsync with
+target 10 (H-margin), or the present/acquire side (H-present) - this run does not split those two.
+Discrimination line: selects H-guest for the H-sched class and refutes it as the main residual; H-gfx-resid shrinks (H-rsp-host 15-22 -> 7-10)
+but is not dominant either.
+Caveat: synthetic load only; owner's load (browser, DAW) not measured. Defaults unchanged (owner's call); OWNER-OPT-INS row added.
+Docs: CURRENT-TRUTH s6983 bullet (s6976 bullet pruned, superseded by s6978/s6981), OWNER-OPT-INS GUEST_QOS row, NEXT.md g1e-late-margin.
