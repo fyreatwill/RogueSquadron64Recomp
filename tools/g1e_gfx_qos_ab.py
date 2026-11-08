@@ -8,6 +8,8 @@ import sys, re
 a = sys.argv[1:]; t_from = 95.0; guard = 5.0
 if '--from' in a: i = a.index('--from'); t_from = float(a[i + 1]); del a[i:i + 2]
 if '--guard' in a: i = a.index('--guard'); guard = float(a[i + 1]); del a[i:i + 2]
+# s6981: a sham split has no real switch to settle, so its guard hole only hides events (s6980 Nr1 lost its one late at 180.1 s)
+guard_set = '--guard' in sys.argv[1:]
 # s6976: --split-at S = sham mark S s after the first row, for NO-QoS control runs (time-in-mission confound check)
 sham = None
 if '--split-at' in a: i = a.index('--split-at'); sham = float(a[i + 1]); del a[i:i + 2]
@@ -30,6 +32,7 @@ for l in open(rf, errors='replace'):
         except ValueError: pass
 P.sort(); t0 = min(R[0][0], P[0])
 if sham is not None: tq = t0 + sham
+if sham is not None and not guard_set: guard = 0.0
 pc = lambda v, q: sorted(v)[int(q * (len(v) - 1))] if v else float('nan')
 print(f'qos mark at {tq - t0:.1f} s since first row; windows [{t_from:.0f}, {tq - t0:.0f}) vs [{tq - t0 + guard:.0f}, end)')
 print('window  |  dur s | n R  | gap p50  p99 | gap>3/min | sd p50  p99 | cpu p50 | late30-40/min | >40/min')

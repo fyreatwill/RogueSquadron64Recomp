@@ -183825,3 +183825,25 @@ Tool fix: tools/g1e_thread_census.py crashed formatting busy-per-CPU when a tick
 g1e_stderr_async_ab.py; prints '-' now.
 Queued: s6980_219_async_noqos_r1/r2 (same recipe, GFX_QOS off = owner default) to decide whether QoS adds anything with async on.
 Docs: CURRENT-TRUTH headline + G1e item; OWNER-OPT-INS async row gets the whole-run number.
+
+## Session 6981 (2026-11-08) — G1e: with async stderr on, GFX_QOS=1 still removes a residual Gfx-thread preemption term at 21:9 (gaps >3 ms 0 vs 0.7-8.6/min; lates 1 vs 4 in ~7.8 min, count unresolved)
+
+Work unit (NEXT.md g1e-async-qos-residual): fold s6980_219_async_noqos_r1/r2 (21:9 dd4 FPS60 VI_LOCK=1 target 10, STDERR_ASYNC on,
+GFX_QOS OFF, census, 330 s; both rc=0, alive at end, 0 crash). Data scratch/s6980q/. Compared with s6979q (same recipe, GFX_QOS=1).
+Tool fix first: tools/g1e_gfx_qos_ab.py applied its 5 s post-switch guard to sham splits too, which hid Nr1's only late (180.1 s,
+inside [178.8, 183.8)). With --split-at and no explicit --guard the guard is now 0. Both data sets re-scored with it.
+Results (windows from 95 s, before/after the 178.8 s sham split):
+- Gfx send_dl wall-cpu gaps >3 ms per min: QoS off 0.72 / 4.38 (Nr1), 8.59 / 7.16 (Nr2); QoS on (s6979 Ar1/Ar2) 0 in all four.
+  Census (g1e_stderr_async_ab.py) Nr2: 0 UNINTERRUPTIBLE samples in 14080 send_dl windows but 30 gaps >3 ms (max 5.4): runnable, not
+  run = preempted, no longer the s6979 stderr write() block.
+- late30-40 presents: QoS off 1 + 3 = 4 (and 1 >40, Nr2) in 7.84 min = 0.51/min; QoS on 1 in 7.84 min = 0.13/min. As a count, 4 of
+  5 events in one arm is p~0.19: unresolved on its own. The gap line separates all 4 half-windows.
+- g1e_late_leg per late: Nr1 180.11 H-rsp-host (wall-cpu 2.63); Nr2 134.63 H-rsp-work, 176.92 and 258.43 H-rsp-host (3.74, 3.59).
+  All 4 lates also have send_dl thread CPU 10.5-11.8 ms vs normal p99 9.5-9.6, and the census tick window shows 4-10 of 15 CPUs
+  >80% busy (normal windows p50 0). So the residual late is wall-cpu gap PLUS inflated CPU time while the host is busy.
+Selected: H-qos-needed (weak form): with stderr off the Gfx thread, QoS still removes a preemption term (two lines: gaps in 4/4 vs
+0/4 half-windows, and 3/4 residual lates are H-rsp-host). Lates without QoS are ~half the pre-async rate (0.51 vs 1.04/min).
+Rules out: H-async-enough as stated (pre-registered: gaps ~0 without QoS; measured up to 8.6/min).
+Open: why send_dl CPU is inflated on late frames (H-slowcore E-core/clock vs H-ucode-work vs H-cache), NEXT.md designs one build.
+Docs: CURRENT-TRUTH headline (old s6976 headline compacted), OWNER-OPT-INS GFX_QOS row now recommends it at 21:9 too. Default
+unchanged (owner's call).
