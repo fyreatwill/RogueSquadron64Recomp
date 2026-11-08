@@ -1,16 +1,13 @@
-# NEXT: G5i owner-recipe arm - hangar re-entry pans at FULLSCREEN and dd2 (s6995 fix not yet run there)
-HYPOTHESIS-ID: g5i-hangar-reentry
-Context: s6995 keyed the s6907 aim release on the raw view reaching the craft; A/B ran windowed dd4 16:9 only. The owner
-plays ROGUESQ_FULLSCREEN=1 with dd2 or dd4. CURRENT-TRUTH item 1 lists "not yet run: fullscreen, dd2".
+# NEXT: G5a open question - is block 8074A380 live when RT64 copyNativeToRAM writes it (dd4 16:9)?
+HYPOTHESIS-ID: g5a-copynative-live
+Context: G5i closed on data s6997 (awaits owner look). Backlog items 2-8 await owner flights; item 2 carries one open
+engineering question (PORTING-STATE ~181750): at dd4 16:9 RT64 copyNativeToRAM writes framebuffer pixels onto the watched
+word 8074A380/8074AC60 (171 memmove + 171 swap hits, run d4live). If that guest block is a live heap object at the time
+(not a framebuffer the game owns), the write is a corruption source of the G5a walker-pointer family.
 Hypotheses:
-- H-holds: re-entry long/double-press scrolls stay <=5 deg off axis at fullscreen dd2 and dd4, same as first entry.
-- H-size: fullscreen (other window size / RESMULT / present cadence) changes the pan timing so the release fires early again.
-- H-dd: dd2 heap/arena layout moves something the aim reads (state 0x800CC3E4, cursor 0x800CD6E8) on re-entry.
-Unit, one build (current), arms back to back (one game at a time, check screen unlocked first):
-  env AP2="$(cat scratch/s6995/route_long.txt)" zsh scratch/s6995/arm.zsh fs4 "ROGUESQ_FULLSCREEN=1"
-  env AP2="$(cat scratch/s6995/route_long.txt)" zsh scratch/s6995/arm.zsh fs2 "ROGUESQ_FULLSCREEN=1 ROGUESQ_DRAW_DISTANCE=2"
-  control: same with ROGUESQ_G5G_RELMODE=time (old clock) must show the 20-30 deg off-axis re-entry frames (positive control).
-  score: python3 tools/g5i_pan_metric.py scratch/s6995/<arm>.g5g.txt  (first entry vs re-entry max off-axis deg)
-Check arm.zsh's DRAW_DISTANCE=4 is overridden by the later env (it is inserted after; confirm run.log echoes multiplier 2).
-Discriminating outcome: fixed arms <=5 deg on both entries with the time-mode control >20 deg -> H-holds, update owner sheet;
-any fixed arm >10 deg on re-entry -> H-size or H-dd by which arm fails.
+- H-fb: 8074A380 lies inside a colour image the game itself set (SetColorImage range covers it) -> legitimate copy, close.
+- H-stale: RT64 copies to a stale/previous colour-image address the game has since freed and reused (heap block live) -> ours, fix.
+- H-span: copy width/height at dd>1 or wide overruns the real colour image end into the next block -> ours, clamp.
+Discriminator, one build/one run: log every copyNativeToRAM (dst addr, w, h, bytes) alongside the last game SetColorImage
+addr/width and the rs_malloc block owning dst (heap walk at copy time). Positive control: the current fb copy (dst = live
+colour image) must log as H-fb. Read grep -n "8074A380\|copyNativeToRAM" PORTING-STATE.md | tail first for the d4live recipe.

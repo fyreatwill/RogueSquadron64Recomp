@@ -184232,3 +184232,18 @@ levels through the backdrop menu (mission fail/restart?) is single-source and in
 Changed: tools/g1e_level_fps.py now prints tr (menu/thread-create/pause events in window), fl_s, fl_shown, fl_miss.
 ORIGIN: no mitigation; analysis + scorer change only.
 Next: G5i owner-recipe arm (fullscreen, dd2) of the s6995 re-entry route, see NEXT.md.
+
+## Session 6997 (2026-11-08) — G5i fix holds at the owner's fullscreen dd2 and dd4: re-entry long/double scrolls <=4.5 deg, same-build old-clock control 22.8/31.1 deg
+HYPOTHESIS-ID: g5i-hangar-reentry. No build: current binary (s6995 fix). Route scratch/s6995/route_long.txt via
+scratch/s6995/arm.zsh, SECS=295, owner recipe FPS60 + 16:9 + ROGUESQ_FULLSCREEN=1 ([g1f] window 1360x764 fullscreen=1),
+owner save read-only. Screen unlocked (ioreg check). 3 runs back to back, 0 crash.
+Arms and tools/g5i_pan_metric.py post-turn off-axis max (scrolls 1-4 first entry, 5-12 re-entry after abort):
+- fs4 (dd4, run.log multiplier 4): every scroll <=4.5 deg; long re-entry scroll 8 (5.62 s) 4.0, double press 9 (6.73 s) 4.5.
+- fs2 (dd2, multiplier 2 confirmed, so the arm's later env overrides DRAW_DISTANCE=4): identical to fs4, all <=4.5.
+- fs2t positive control (dd2 + ROGUESQ_G5G_RELMODE=time, s6907 clock): scroll 8 22.8, scroll 9 31.1 deg, the rest <=4.3,
+  i.e. the instrument sees the failure in this same build/recipe.
+Owner sheet docs/owner_sheet_s6997_g5i_fullscreen.png (re-entry scrolls 8 and 9, rows fs2 new / fs2t old / fs4 new):
+old-clock row shows the Y-wing and A-wing sliding off centre late in the pan; new rows stay on the craft.
+VERDICT: selects H-holds; refutes H-size (fullscreen window/present path) and H-dd (dd2 layout) as ways to re-break the fix
+on this route. Numbers are identical to windowed dd4 s6995 Anew (pan is sim-driven, not window-driven). G5i now closes on
+the owner's look only. Not covered: other missions' abort, 21:9.
