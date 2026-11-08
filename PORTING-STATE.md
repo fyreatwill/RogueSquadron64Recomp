@@ -183486,3 +183486,30 @@ Verdict: selects H-hash (top leaf, fix lands -0.117 ms/task commit); refutes H-s
   H-latency-needed (the NEXT.md outcome "level reforms under acq -> latency is the needed signal" did not happen). Not yet decided: acq vs 34 cost
   with a level present. Next discriminator: s6965_acq_vs34_r1/r2 per-block drops/s and lat p50 by trigger kind, then the pre-run present-interval
   join (H-hitch / H-vsync-phase / H-burst) for what re-forms the level, in scratch/agent/NEXT.md.
+
+## Session 6966 (2026-11-07) — G1e: 21:9 level onsets follow a one-vsync-late present (27/33 vs 1-3% chance), the late frame being a game frame 4-6 ms over budget; onset trigger ROGUESQ_PRESENT_DRAIN_HITCH (opt-in) fires but does not clear a shallow level (acq p50 3-4 ms) that also evades ACQ=8
+- Soaks folded: s6965_acq_vs34_r1/r2 (lvl1 21:9 dd4 FPS60, ACQ=8 even blocks vs ALT=34 odd, 0 crash both): no level in either block kind after 100 s
+  (acq>5 <=1%) -> head-to-head with a level present NULL (outcome B). Side datum, 2 runs: at a non-level base ALT=34 false-drains with the
+  base (r1 base 31 ms: 3 ALT drops vs 1 ACQ after 100 s; r2 base 33 ms: 44 ALT vs 4 ACQ, lat p50 33.4 vs 33.1, no gain), ACQ does not.
+- Offline (new tools/g1e_level_onset.py: onsets = first present of a run >=5 acq>5 ms after 5 clean; controls = short blips <=3, baseline),
+  6 rings (s6964 d1/d2, s6965 a1/a2, s6965q r1/r2): 39 onsets, 33 with a presented interval >=30 ms (one or more vsyncs missed) in the 4
+  presents before; excluding 6 that follow an ALT latency drop by 0.1-0.3 s, 27/33. Chance of a miss in a random 4-present window 0.9-2.8%
+  (misses 0.14-0.42/s). 6 onsets have even 16.7 ms cadence and acq creeping 2-5 ms (a2 182-185 s cluster, r1 33.7, r2 65.0, d2 59.2).
+  Two onsets per run at fixed times (~28.4 s, ~43.7 s) follow a 250-320 ms game workload gap (scripted load); the rest have normal W gaps.
+- The late present itself (new tools/g1e_late_present.py, a2/d2/r1, 23/85/36 single-vsync misses): its Q arrives 21.6-22.2 ms (p50) after the previous one vs 16.7
+  normal, W (workload submit) gap 19-22 ms, while wl 3.2, tp 0.4, acq 0.0, gpu 0.4 ms are clean -> the game produced that frame 4-6 ms over the
+  16.7 ms budget; the present path did not stall. Then a short catch-up frame queues one drawable deeper and 60 in / 60 out never drains it.
+- Change (lib/rt64 plume_metal.cpp, patches exported): ROGUESQ_PRESENT_DRAIN_HITCH=<M> (needs ACQ>0): presented handler marks a late present
+  (presentedTime step >=25 ms); for 0.3 s after it the drain fires at M consecutive acq>ACQ_MS presents instead of N, 0.25 s refractory, D row
+  "hitch=". With TOGGLE it acts only in on blocks while plain ACQ runs in every block (same-run A/B acq+hitch vs acq alone).
+- Run (tools/g1e_owner_quiet_arms.zsh, lvl1 21:9 dd4 FPS60 fullscreen, ACQ=8 HITCH=2 TOGGLE=20, HOLD 230, human idle >4.5 h, 2 runs, 0 crash):
+  h1: no level after 60 s (acq>5 0%, lat 26-27 both kinds), 5 hitch + 4 acq drops -> null for the fix.
+  h2: a SHALLOW level formed after 100 s: acq p50 3.1-4.2 ms (below the 5 ms threshold), lat p50 36-37. ACQ alone (off blocks) did NOT clear
+  it: 3/4 blocks at level, lat p50 median 36.9, 2-5 drops each. ACQ+HITCH (on blocks): acq>5 16-20%, lat 23.8 in one block (25 drops) but
+  36.0/35.8 in the other two (5, 18 drops); median 35.8. 49 hitch drops total (positive control: the trigger fires).
+- Verdict: selects H-hitch for onset (two lines: onset-vs-chance window rate on 6 rings, and the late present's own stage times) and refutes
+  H-burst (the catch-up is a consequence; no burst without a preceding miss in 27/33) and H-vsync-phase as the main path (6/39). The HITCH
+  drain as a fix: REFUTED at M=2, ACQ_MS=5 (cost up to ~1 drop/s, clears 1/3 blocks). New fact, single-run: a shallow level with acq p50
+  3-4 ms evades ACQ=8 entirely, so the ACQ_MS=5 threshold is not a complete level detector. Root cause is upstream: game frames that run
+  4-6 ms over budget. HITCH stays opt-in, not recommended. Next discriminator: which game-thread phase makes the 20-23 ms frames (G1B task
+  timing at the miss timestamps vs normal frames), scratch/agent/NEXT.md. scratch/s6966/.

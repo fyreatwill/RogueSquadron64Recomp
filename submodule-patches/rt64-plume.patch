@@ -1,5 +1,5 @@
 diff --git a/plume_metal.cpp b/plume_metal.cpp
-index a5f30a3..5ccb341 100644
+index a5f30a3..21938b6 100644
 --- a/plume_metal.cpp
 +++ b/plume_metal.cpp
 @@ -9,17 +9,89 @@
@@ -215,7 +215,7 @@ index a5f30a3..5ccb341 100644
  
          this->commandQueue = commandQueue;
          this->desc = desc;
-@@ -1932,6 +2066,152 @@ namespace plume {
+@@ -1932,6 +2066,182 @@ namespace plume {
      MetalSwapChain::~MetalSwapChain() {
      }
  
@@ -327,6 +327,26 @@ index a5f30a3..5ccb341 100644
 +    static bool rs64DrainAny() { return rs64DrainMs() > 0.0 || rs64DrainAltMs() > 0.0 || rs64DrainAcqN() > 0; }
 +    static int g_rs64AcqRun = 0;      // Present thread only.
 +    static double g_rs64AcqNext = 0.0; // Present thread only.
++    // s6966 G1e: ROGUESQ_PRESENT_DRAIN_HITCH=<M> (0 = off; needs ACQ>0): onset trigger. s6966 offline (tools/g1e_level_onset.py, 6 rings):
++    // 27/33 level onsets follow, within 4 presents, a present shown one vsync late (P->P >= 25 ms), vs a 1-3% chance rate; the late present's
++    // own stages are clean (acq 0, gpu 0.4 ms) and its workload came ~21 ms after the previous one, i.e. a game frame 4-6 ms over budget,
++    // then a catch-up frame queues one drawable deeper and 60-in/60-out never drains it. So after a late present the acq trigger fires at M
++    // consecutive acq>ACQ_MS presents instead of N, for 0.3 s, with its own 0.25 s refractory. With TOGGLE it acts only in on blocks while
++    // the plain ACQ=N trigger runs in every block, so one run A/Bs acq+hitch vs acq alone. D rows: "D <now> hitch=<run>".
++    static int rs64DrainHitchM() {
++        static const int m = []() -> int { const char *p = getenv("ROGUESQ_PRESENT_DRAIN_HITCH"); return p ? atoi(p) : 0; }();
++        return m;
++    }
++    static std::atomic<double> g_rs64LateAt{0.0};   // pring clock time of the last late present (presented handler thread).
++    static double g_rs64LastShown = 0.0;            // presentedTime of the previous shown present (presented handler thread).
++    static double g_rs64HitchNext = 0.0;            // Present thread only.
++    static void rs64HitchNotePresented(double presentedTime) {
++        if (rs64DrainHitchM() <= 0 || presentedTime == 0.0) return;
++        if (g_rs64LastShown != 0.0 && presentedTime - g_rs64LastShown >= 0.025) {
++            g_rs64LateAt.store(rs64_pring_now(), std::memory_order_relaxed);
++        }
++        g_rs64LastShown = presentedTime;
++    }
 +    void rs64_present_drain_acq(double acqMs) {
 +        if (rs64DrainAcqN() <= 0) return;
 +        g_rs64AcqRun = (acqMs > rs64DrainAcqMs()) ? g_rs64AcqRun + 1 : 0;
@@ -336,7 +356,17 @@ index a5f30a3..5ccb341 100644
 +        if (!rs64DrainAny()) return false;
 +        const bool on = rs64DrainToggleOn(now);
 +        const int acqN = rs64DrainAcqN();
-+        if (on && acqN > 0) {
++        const int hitchM = rs64DrainHitchM();
++        if (on && acqN > 0 && hitchM > 0 && g_rs64AcqRun >= hitchM && now >= g_rs64HitchNext &&
++            now - g_rs64LateAt.load(std::memory_order_relaxed) < 0.3) {
++            char row[64];
++            snprintf(row, sizeof(row), "D %.6f hitch=%d\n", now, g_rs64AcqRun);
++            rs64_pring_write(row);
++            g_rs64AcqRun = 0;
++            g_rs64HitchNext = now + 0.25;
++            return true;
++        }
++        if (acqN > 0 && (on || (hitchM > 0 && rs64DrainToggleS() > 0.0))) {
 +            if (g_rs64AcqRun < acqN || now < g_rs64AcqNext) return false;
 +            char row[64];
 +            snprintf(row, sizeof(row), "D %.6f acq=%d\n", now, g_rs64AcqRun);
@@ -368,7 +398,7 @@ index a5f30a3..5ccb341 100644
      bool MetalSwapChain::present(const uint32_t textureIndex, RenderCommandSemaphore **waitSemaphores, const uint32_t waitSemaphoreCount) {
          assert(layer != nullptr && "Cannot present without a valid layer.");
          NS::AutoreleasePool *releasePool = NS::AutoreleasePool::alloc()->init();
-@@ -1954,6 +2234,29 @@ namespace plume {
+@@ -1954,6 +2264,30 @@ namespace plume {
          // According to Apple, presenting via scheduled handler is more performant than using the presentDrawable method.
          // We grab the underlying drawable because we might've acquired a new one by now and the old one would have been released.
          CA::MetalDrawable *drawableMtl = drawable.mtl->retain();
@@ -379,6 +409,7 @@ index a5f30a3..5ccb341 100644
 +                if (rs64DrainAny() && d->presentedTime() != 0.0) {
 +                    rs64DrainNote((d->presentedTime() - drainBegin) * 1e3);
 +                }
++                rs64HitchNotePresented(d->presentedTime());
 +                if (rs64_pring_on()) {
 +                    char row[96];
 +                    snprintf(row, sizeof(row), "P %.6f mtl=%llu at=%.6f\n", rs64_pring_now(), (unsigned long long)presentId, d->presentedTime());
@@ -398,7 +429,7 @@ index a5f30a3..5ccb341 100644
          presentBuffer->addScheduledHandler([drawableMtl](MTL::CommandBuffer* cmdBuffer) {
              drawableMtl->present();
          });
-@@ -1987,6 +2290,8 @@ namespace plume {
+@@ -1987,6 +2321,8 @@ namespace plume {
          }
      }
  
@@ -407,7 +438,7 @@ index a5f30a3..5ccb341 100644
      bool MetalSwapChain::resize() {
          getWindowSize(width, height);
  
-@@ -1995,7 +2300,17 @@ namespace plume {
+@@ -1995,7 +2331,17 @@ namespace plume {
          }
  
          const CGSize drawableSize = CGSizeMake(width, height);
@@ -425,7 +456,7 @@ index a5f30a3..5ccb341 100644
              layer->setDrawableSize(drawableSize);
  
              for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
-@@ -2050,6 +2365,17 @@ namespace plume {
+@@ -2050,6 +2396,17 @@ namespace plume {
          acquireBuffer->encodeSignalEvent(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue);
          acquireBuffer->commit();
  
@@ -443,7 +474,7 @@ index a5f30a3..5ccb341 100644
          CA::MetalDrawable *nextDrawable = layer->nextDrawable();
          if (nextDrawable == nullptr) {
              fprintf(stderr, "No more drawables available for rendering.\n");
-@@ -2118,6 +2444,14 @@ namespace plume {
+@@ -2118,6 +2475,14 @@ namespace plume {
          for (uint32_t i = 0; i < desc.colorAttachmentsCount; i++) {
              const MetalTextureView *colorAttachmentView = desc.colorAttachmentViews && desc.colorAttachmentViews[i] ? static_cast<const MetalTextureView *>(desc.colorAttachmentViews[i]) : nullptr;
              const MetalTexture *colorAttachment = colorAttachmentView ? colorAttachmentView->parentTexture : static_cast<const MetalTexture *>(desc.colorAttachments[i]);
@@ -458,7 +489,7 @@ index a5f30a3..5ccb341 100644
              assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
  
              MetalAttachment attachment;
-@@ -3008,6 +3342,17 @@ namespace plume {
+@@ -3008,6 +3373,17 @@ namespace plume {
                  dstOrigin
              );
              activeBlitEncoder->popDebugGroup();
