@@ -3713,7 +3713,7 @@ index dccaa87..bbdc5cf 100644
                  dl++;
              }
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index f17db9b..2ac865a 100644
+index f17db9b..0edc00e 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
 @@ -4,20 +4,86 @@
@@ -3733,7 +3733,7 @@ index f17db9b..2ac865a 100644
  
 +// s6885 G1e: present row log, see plume_metal.cpp. Stamps below belong to the present thread only.
 +#if defined(__APPLE__)
-+namespace plume { bool rs64_pring_on(); double rs64_pring_now(); void rs64_pring_write(const char *row); bool rs64_present_drain_check(double now); extern std::atomic<uint64_t> g_rs64_pring_last_id; }
++namespace plume { bool rs64_pring_on(); double rs64_pring_now(); void rs64_pring_write(const char *row); bool rs64_present_drain_check(double now); void rs64_present_drain_acq(double acqMs); extern std::atomic<uint64_t> g_rs64_pring_last_id; }
 +#define RS64_PRING_ON() plume::rs64_pring_on()
 +#define RS64_PRING_NOW() plume::rs64_pring_now()
 +#else
@@ -4216,7 +4216,7 @@ index f17db9b..2ac865a 100644
                  if (skipPresent) {
                      skipInterpolation();
                      notifyPresentId(present);
-@@ -714,6 +1064,20 @@ namespace RT64 {
+@@ -714,6 +1064,23 @@ namespace RT64 {
                      threadPresent(present, swapChainValid);
                  }
  
@@ -4232,6 +4232,9 @@ index f17db9b..2ac865a 100644
 +                    plume::rs64_pring_write(row);
 +#endif
 +                }
++#if defined(__APPLE__)
++                if (!skipPresent) plume::rs64_present_drain_acq(rs64PrAcq * 1e3); // s6965 acq-signature drain trigger
++#endif
 +                rs64PrAcq = rs64PrGpu = 0.0;
 +
                  if (!present.paused) {

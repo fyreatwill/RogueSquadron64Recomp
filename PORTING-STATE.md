@@ -183465,3 +183465,20 @@ Verdict: selects H-hash (top leaf, fix lands -0.117 ms/task commit); refutes H-s
 - Verdict: selects H-drawable/H-pace (sticky drawable queue) and refutes H-gpu for the 21:9 present level. Next discriminator: an acq-signature
   drain trigger (drain only after N consecutive presents with acq>5 ms) vs DRAIN=34 same run at 21:9: if it clears the level with ~0 drops at the 35 ms
   base it replaces the latency trigger; if the level reforms, latency is the needed signal.
+
+## Session 6965 (2026-11-07) — G1e: acq-signature present drain trigger ROGUESQ_PRESENT_DRAIN_ACQ=8 clears the 21:9 drawable-queue level same run (lat p50 24.1 vs 38.6, level 0/3 on vs 3/3 off blocks) at ~0.14 drops/s, 0 drops at a 35 ms non-level base
+- Change (lib/rt64, patches exported): plume_metal.cpp rs64_present_drain_acq(acq_ms) counts consecutive shown presents with acquireTexture wait
+  > ROGUESQ_PRESENT_DRAIN_ACQ_MS (default 5); rt64_present_queue.cpp calls it after each non-skipped present with rs64PrAcq. rs64_present_drain_check:
+  with ROGUESQ_PRESENT_DRAIN_ACQ=N>0, on blocks drop one present after N consecutive, 1 s refractory, D row "D t acq=run"; odd TOGGLE blocks use ALT
+  (latency) or off. ALT now works without DRAIN set (old code returned early on DRAIN=0). Latency samples are collected whenever any drain knob is set.
+- N choice, offline on s6964 rings (t>=100, per 20 s block): non-level blocks max run of acq>5 = 3-5; level blocks 58, 239, 1152 -> N=8.
+- Run (tools/g1e_owner_quiet_arms.zsh, lvl1 21:9 dd4 FPS60 fullscreen locked 60 Hz, G1B+G1E_AQ=2, HOLD 230, human idle >4 h, 0 crash both):
+  a2 ACQ=8 vs off (positive control arm): off blocks 5/7/9 at level (acq>5 68/60/51%, lat p50 39.3/39.1/38.1); on blocks 6/8/10 lat p50 24.0/25.1/24.1,
+  acq>5 16-23% (fragmented runs, max 8-10), 4-5 drops each; 17 acq drops total. The level here re-forms constantly (off-block runs max 18-41, not
+  the sticky 1152 of s6964 d2).
+  a1 ACQ=8 vs ALT=34: level only before 40 s (blk1 ALT dropped 12, blk0 acq 2); blk2 (acq on) = s6964 over-drain shape (lat p50 35.6, acq p50 2.55,
+  acq>5 0%) with 0 drops; after 60 s base 25-27 ms, no level, 0 drops either trigger. Head-to-head with a level present: NOT obtained (null for
+  that comparison; a2's off blocks are the same-run control that the level can form).
+- Verdict: acq signature is a sufficient drain trigger at 21:9 (clears the level same run; no false drains at the 35 ms non-level base, 1 block,
+  single-run). Whether it beats 34 with a level present: soaks s6965_acq_vs34_r1/r2 queued. OWNER-OPT-INS: ACQ=8 suggested at 21:9 instead of 34;
+  default stays off (owner decides). Open: why the level re-forms ~every 5-7 s under ACQ (a2), which drain cannot fix.
