@@ -183080,3 +183080,38 @@ Arms (scratch/s6932/ring_e4*.txt, out_e4*.txt): locked 60 Hz built-in via scratc
 | e4dst | DRAIN=40 + stall course | 58.3 | 26.9/45.8 | 23.5-44.4 | 4.1 | 9 |
 Reading: H-level-now selected: dd4 at 60 fps sits on the one-vsync level (~47 ms, acq ~15 ms waits) about half the time with no lever, as s6931 found for dd1. DRAIN removes it: two pairs agree (p50 -4.8 and -10.7 ms, acq>5 54->0.4 and 48->4). Cost: drops are 2/240 s plain and 9 with stall doses (the doses create levels it then drains); the Q/s gaps (0.3, 0.7) exceed what the drops explain (<0.04/s), so they are run-to-run, single run each. Cross-run comparison (latency level is run-dependent): the pair agreement is the second line, not a same-run toggle. Default unchanged (present levers stay owner's choice); OWNER-OPT-INS gains the DRAIN=40 line for 60 Hz screens.
 Rules out: "DRAIN buys nothing at dd4" (s6932) as a standing conclusion; it held only while dd4 ran at 32 fps.
+
+## Session 6950 (2026-11-07) — G1e: same-run DRAIN toggle confirms ROGUESQ_PRESENT_DRAIN=40 lowers the 60 Hz present level within one run (~3 ms p50, 4/4 adjacent pairs) but only partly, because the level median sits under the 40 ms trigger
+
+Unit: NEXT.md g1e-present-drain (H-drain-real vs H-run-luck for the s6949 cross-run DRAIN gap).
+Change: lib/rt64 plume_metal.cpp rs64_present_drain_check gains ROGUESQ_PRESENT_DRAIN_TOGGLE=<sec> (drain acts only in even blocks counted
+from the first present pass; T row "T <t> on= blk=" at each flip) and ROGUESQ_PRESENT_DRAIN_ALT=<ms> (odd blocks use this limit instead of
+off). Default behaviour unchanged (both unset). submodule-patches exported. tools/g1e_owner_hz_arms.zsh: "," separates several env vars in
+one arm spec (replaced before +ST, whose value has commas; my first launch replaced after and was killed at 3 s before it flew).
+tools/g1e_drain_blocks.py: per-block table from the ring.
+Run: env ARMS="60:4:t20:ROGUESQ_PRESENT_DRAIN=40,ROGUESQ_PRESENT_DRAIN_TOGGLE=20+ST" zsh tools/g1e_owner_hz_arms.zsh. Owner recipe (FPS60,
+dd4, 16:9, FULLSCREEN, lvl index 1), locked 60 Hz built-in only, owner idle 4085 s, screen unlocked. alive_at_end=1, 0 crash, 0 VI stall,
+100% on glass every block. Ring kept at scratch/s6950/ring_t20.txt (gitignored).
+
+blk on | t (s from first present) | Q/s | lat p50/p99 | acq p50 | acq>5% | drops | stall doses
+  1 0 |  20- 40 | 43.8 | 33.4/47.6 | 0.08 | 44.3 | 0 | (boot)
+  3 0 |  60- 80 | 59.4 | 24.7/32.0 | 0.01 |  0.0 | 0 |
+  4 1 |  80-100 | 59.9 | 22.9/25.6 | 0.01 |  0.0 | 0 |
+  5 0 | 100-120 | 60.0 | 35.7/41.6 | 2.59 | 33.3 | 0 | 110
+  6 1 | 120-140 | 59.8 | 23.3/42.1 | 0.02 | 15.9 | 2 | 124,138
+  7 0 | 140-160 | 59.8 | 38.1/42.6 | 5.04 | 50.4 | 0 | 152
+  8 1 | 160-180 | 59.3 | 35.0/41.5 | 1.90 | 30.4 | 1 | 166,180
+  9 0 | 180-200 | 58.3 | 38.3/46.9 | 5.26 | 52.8 | 0 | 194
+ 10 1 | 200-220 | 57.7 | 33.8/46.4 | 0.72 | 23.9 | 3 | 208
+ 11 0 | 220-240 | 57.2 | 36.3/46.6 | 3.26 | 41.1 | 0 | 222
+ 12 1 | 240-247 | 59.4 | 34.4/41.6 | 1.20 | 24.5 | 1 |
+Blocks from 95 s: on n=4 lat p50 median 34.1 (23.3..35.0), acq>5% median 24.2, 1/4 at the level (>30%); off n=4 median 37.2 (35.7..38.3),
+acq>5% 45.8, 4/4 at the level.
+Controls: D (drop) rows appear only in on blocks (toggle works); the off block with no stall dose before it (blk 3) reads clean, and every
+off block after a dose shows the level (acq p50 2.6-5.3 ms), so the run tested what it meant to test.
+Verdict: H-drain-real selected (on lower than the adjacent off block in 4/4 post-dose pairs, single run); H-run-luck refuted as the sole cause,
+but the s6949 cross-run gap (33.5 vs 38.3) overstated the effect: within a run it is ~3 ms p50 and on blocks still carry the level 16-30% of
+presents. Mechanism read from the numbers: the formed level's latency median is 36-38 ms, under the 40 ms trigger, so DRAIN fires only on
+peaks (1-3 drops per 20 s) and the level re-forms. Next: same-run limit A/B, DRAIN=40 vs ALT=34 (a trigger below the level median).
+Rules out: "DRAIN=40 removes the level" (s6949 headline wording); it lowers it.
+Defaults unchanged; DRAIN stays opt-in, owner chooses.

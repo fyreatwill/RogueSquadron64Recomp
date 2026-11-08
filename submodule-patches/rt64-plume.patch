@@ -1,5 +1,5 @@
 diff --git a/plume_metal.cpp b/plume_metal.cpp
-index a5f30a3..9343a09 100644
+index a5f30a3..45ac005 100644
 --- a/plume_metal.cpp
 +++ b/plume_metal.cpp
 @@ -9,17 +9,89 @@
@@ -215,7 +215,7 @@ index a5f30a3..9343a09 100644
  
          this->commandQueue = commandQueue;
          this->desc = desc;
-@@ -1932,6 +2066,93 @@ namespace plume {
+@@ -1932,6 +2066,119 @@ namespace plume {
      MetalSwapChain::~MetalSwapChain() {
      }
  
@@ -284,9 +284,35 @@ index a5f30a3..9343a09 100644
 +        g_rs64DrainSamples[g_rs64DrainCount % RS64_DRAIN_WINDOW] = ms;
 +        g_rs64DrainCount++;
 +    }
++    // s6950: ROGUESQ_PRESENT_DRAIN_TOGGLE=<sec>: the drain acts only in even <sec> blocks (counted from the first present), so one run carries
++    // both arms. Samples keep being collected in off blocks. Each flip writes "T <now> on=<0|1> blk=<k>" to the present ring.
++    static double rs64DrainToggleS() {
++        static const double s = []() -> double { const char *p = getenv("ROGUESQ_PRESENT_DRAIN_TOGGLE"); return p ? strtod(p, nullptr) : 0.0; }();
++        return s;
++    }
++    static bool rs64DrainToggleOn(double now) {
++        const double s = rs64DrainToggleS();
++        if (s <= 0.0) return true;
++        static double t0 = 0.0;
++        static long last = -1;
++        if (t0 == 0.0) t0 = now;
++        const long k = long((now - t0) / s);
++        const bool on = (k & 1) == 0;
++        if (k != last) {
++            last = k;
++            char row[64];
++            snprintf(row, sizeof(row), "T %.6f on=%d blk=%ld\n", now, on ? 1 : 0, k);
++            rs64_pring_write(row);
++        }
++        return on;
++    }
 +    bool rs64_present_drain_check(double now) {
 +        g_rs64DrainBegin = now;
-+        const double limit = rs64DrainMs();
++        const double limit0 = rs64DrainMs();
++        if (limit0 <= 0.0) return false;
++        // ROGUESQ_PRESENT_DRAIN_ALT=<ms>: odd toggle blocks use this limit instead of off (0 = off), for a same-run threshold A/B.
++        static const double alt = []() -> double { const char *p = getenv("ROGUESQ_PRESENT_DRAIN_ALT"); return p ? strtod(p, nullptr) : 0.0; }();
++        const double limit = rs64DrainToggleOn(now) ? limit0 : alt;
 +        if (limit <= 0.0) return false;
 +        double median = 0.0;
 +        {
@@ -309,7 +335,7 @@ index a5f30a3..9343a09 100644
      bool MetalSwapChain::present(const uint32_t textureIndex, RenderCommandSemaphore **waitSemaphores, const uint32_t waitSemaphoreCount) {
          assert(layer != nullptr && "Cannot present without a valid layer.");
          NS::AutoreleasePool *releasePool = NS::AutoreleasePool::alloc()->init();
-@@ -1954,6 +2175,29 @@ namespace plume {
+@@ -1954,6 +2201,29 @@ namespace plume {
          // According to Apple, presenting via scheduled handler is more performant than using the presentDrawable method.
          // We grab the underlying drawable because we might've acquired a new one by now and the old one would have been released.
          CA::MetalDrawable *drawableMtl = drawable.mtl->retain();
@@ -339,7 +365,7 @@ index a5f30a3..9343a09 100644
          presentBuffer->addScheduledHandler([drawableMtl](MTL::CommandBuffer* cmdBuffer) {
              drawableMtl->present();
          });
-@@ -1987,6 +2231,8 @@ namespace plume {
+@@ -1987,6 +2257,8 @@ namespace plume {
          }
      }
  
@@ -348,7 +374,7 @@ index a5f30a3..9343a09 100644
      bool MetalSwapChain::resize() {
          getWindowSize(width, height);
  
-@@ -1995,7 +2241,17 @@ namespace plume {
+@@ -1995,7 +2267,17 @@ namespace plume {
          }
  
          const CGSize drawableSize = CGSizeMake(width, height);
@@ -366,7 +392,7 @@ index a5f30a3..9343a09 100644
              layer->setDrawableSize(drawableSize);
  
              for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
-@@ -2050,6 +2306,17 @@ namespace plume {
+@@ -2050,6 +2332,17 @@ namespace plume {
          acquireBuffer->encodeSignalEvent(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue);
          acquireBuffer->commit();
  
@@ -384,7 +410,7 @@ index a5f30a3..9343a09 100644
          CA::MetalDrawable *nextDrawable = layer->nextDrawable();
          if (nextDrawable == nullptr) {
              fprintf(stderr, "No more drawables available for rendering.\n");
-@@ -2118,6 +2385,14 @@ namespace plume {
+@@ -2118,6 +2411,14 @@ namespace plume {
          for (uint32_t i = 0; i < desc.colorAttachmentsCount; i++) {
              const MetalTextureView *colorAttachmentView = desc.colorAttachmentViews && desc.colorAttachmentViews[i] ? static_cast<const MetalTextureView *>(desc.colorAttachmentViews[i]) : nullptr;
              const MetalTexture *colorAttachment = colorAttachmentView ? colorAttachmentView->parentTexture : static_cast<const MetalTexture *>(desc.colorAttachments[i]);
@@ -399,7 +425,7 @@ index a5f30a3..9343a09 100644
              assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
  
              MetalAttachment attachment;
-@@ -3008,6 +3283,17 @@ namespace plume {
+@@ -3008,6 +3309,17 @@ namespace plume {
                  dstOrigin
              );
              activeBlitEncoder->popDebugGroup();
