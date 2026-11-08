@@ -7257,3 +7257,110 @@ extern "C" uint32_t rs64_s6892_check(uint8_t* rdram, uint32_t s2, uint32_t v, ui
     if (s6892_valid(s2)) *s6892_word(rdram, s2 + 0x18) = good;
     return good;
 }
+
+/* s6963 G1e: clampGridCellLookup (0x80048948) chain-walk index. See tools/apply_s6963_cellidx.py.
+   The burst seconds of the dd4 tail are this walk: an off-map cell clamps to an edge template and the function walks that
+   template's instance chain (records at *(0x80137A5C), stride 0xB8, prev +4, next +6, owner +8, x +0x18, z +0x1A, own index +0x16)
+   for the first record with this x,z. At dd>1 the window runs far past the map, so edge chains hold thousands of records.
+   ROGUESQ_G1E_CELLIDX: 0 = retail walk, 1 = validated hits from the index (misses still walk), 2 (default at dd>1; dd1 default 0) = complete per-template index
+   (one native snapshot walk per template, kept by the creation hook; misses trusted), tog = 2 and 0 in 8 s blocks.
+   ROGUESQ_G1E_CELLIDX_CHECK=1: always run the retail walk and compare it with the mode-2 answer; =2 also flips every 997th answer
+   (positive control: bad must count). Log line [g1e-cell] per second when ROGUESQ_G1B=1 or CHECK is set. */
+#include <unordered_map>
+#include <unordered_set>
+extern "C" { uint64_t rs64_s6963_it = 0; }
+namespace {
+struct S6963 {
+    int mode = 2, check = 0, lg = 0, blk = 8; bool tog = false;
+    std::unordered_map<uint64_t, uint16_t> idx; std::unordered_set<uint32_t> complete; uint32_t base = 0;
+    uint64_t calls = 0, wfound = 0, wmiss = 0, ihit = 0, imiss = 0, ival = 0, snaps = 0, snapit = 0, cn = 0, cbad = 0, cpred = 0, it0 = 0, tbad = 0, tcn = 0;
+    uint64_t lastsec = 0, lastblk = ~0ull, tflip = 0, tflipbad = 0; int on = 0, fromhit = 0, flipped = 0; uint32_t pred = 0xFFFFu, maxchain = 0; unsigned badlines = 0;
+    S6963() {
+        const char* e = std::getenv("ROGUESQ_G1E_CELLIDX");
+        { const char* d = std::getenv("ROGUESQ_DRAW_DISTANCE"); if (!(d && std::atof(d) > 1.0)) mode = 0; }  /* default on at dd>1 only; dd1 stays the retail walk unless set */
+        if (e && *e) { if (*e == 't') { tog = true; mode = 2; } else mode = std::atoi(e); }
+        if (const char* c = std::getenv("ROGUESQ_G1E_CELLIDX_CHECK")) check = std::atoi(c);
+        if (const char* b = std::getenv("ROGUESQ_G1E_CELLIDX_BLK")) { int v = std::atoi(b); if (v > 0) blk = v; }
+        const char* g = std::getenv("ROGUESQ_G1B"); lg = (g && *g && *g != '0') || check;
+        idx.reserve(1 << 16);
+        std::fprintf(stderr, "[g1e-cell] cfg mode=%d tog=%d check=%d blk=%d\n", mode, tog ? 1 : 0, check, blk);
+    }
+};
+S6963& s6963() { static S6963 s; return s; }
+inline uint16_t s6963_hu(const uint8_t* rd, uint32_t a) { return *(const uint16_t*)(rd + ((a ^ 2u) - 0x80000000u)); }
+inline int16_t s6963_h(const uint8_t* rd, uint32_t a) { return (int16_t)s6963_hu(rd, a); }
+inline uint32_t s6963_w(const uint8_t* rd, uint32_t a) { return *(const uint32_t*)(rd + (a - 0x80000000u)); }
+inline bool s6963_ok(uint32_t a) { return a >= 0x80000000u && a < 0x9FFFFF00u; }
+inline uint64_t s6963_key(uint32_t s0, int32_t x, int32_t z) { return ((uint64_t)s0 << 32) | ((uint64_t)(uint16_t)x << 16) | (uint16_t)z; }
+void s6963_tick(S6963& S) {
+    const uint64_t now = mach_absolute_time() / 24000000ull;
+    if (S.tog) { const uint64_t b = now / (uint64_t)S.blk; if (b != S.lastblk) { S.lastblk = b; S.on = (int)(b & 1); S.complete.clear(); } }
+    else S.on = S.mode;
+    if (now != S.lastsec) {
+        if (S.lg && S.lastsec) std::fprintf(stderr, "[g1e-cell] s=%llu on=%d calls=%llu it=%llu wfound=%llu wmiss=%llu ihit=%llu imiss=%llu ival=%llu snaps=%llu snapit=%llu maxchain=%u chk=%llu bad=%llu tot_chk=%llu tot_bad=%llu flip=%llu flipbad=%llu idx=%zu\n",
+            (unsigned long long)now, S.tog ? S.on : S.mode, (unsigned long long)S.calls, (unsigned long long)(rs64_s6963_it - S.it0), (unsigned long long)S.wfound, (unsigned long long)S.wmiss,
+            (unsigned long long)S.ihit, (unsigned long long)S.imiss, (unsigned long long)S.ival, (unsigned long long)S.snaps, (unsigned long long)S.snapit, S.maxchain,
+            (unsigned long long)S.cn, (unsigned long long)S.cbad, (unsigned long long)S.tcn, (unsigned long long)S.tbad, (unsigned long long)S.tflip, (unsigned long long)S.tflipbad, S.idx.size());
+        S.lastsec = now; S.calls = S.wfound = S.wmiss = S.ihit = S.imiss = S.ival = S.snaps = S.snapit = S.cn = S.cbad = 0; S.maxchain = 0; S.it0 = rs64_s6963_it;
+    }
+}
+/* answer for (s0,x,z) from the index: record index or 0xFFFF. Snapshots the template chain on first use. */
+uint32_t s6963_answer(S6963& S, const uint8_t* rd, uint32_t s0, int32_t x, int32_t z, uint32_t base, uint32_t head) {
+    if (base != S.base) { S.base = base; S.idx.clear(); S.complete.clear(); }
+    if (!S.complete.count(s0)) {
+        uint32_t r = head, n = 0; static std::unordered_set<uint64_t> seen; seen.clear();
+        while (r != 0xFFFFu && n < 200000u) {
+            const uint32_t a = base + r * 0xB8u; if (!s6963_ok(a)) break;
+            const uint64_t k = s6963_key(s0, s6963_h(rd, a + 0x18), s6963_h(rd, a + 0x1A));
+            if (seen.insert(k).second) S.idx[k] = (uint16_t)r;  /* first record in walk order wins, replacing any stale entry */
+            r = s6963_hu(rd, a + 6); n++;
+        }
+        S.complete.insert(s0); S.snaps++; S.snapit += n; if (n > S.maxchain) S.maxchain = n;
+    }
+    auto f = S.idx.find(s6963_key(s0, x, z));
+    if (f == S.idx.end()) return 0xFFFFu;
+    const uint32_t r = f->second, a = base + r * 0xB8u, own = s6963_hu(rd, s0 + 0x16);
+    bool v = s6963_ok(a) && s6963_h(rd, a + 0x18) == (int16_t)x && s6963_h(rd, a + 0x1A) == (int16_t)z && s6963_hu(rd, a + 8) == own;
+    if (v) { const uint32_t p = s6963_hu(rd, a + 4); const uint32_t pn = p == own ? s6963_hu(rd, s0 + 6) : (s6963_ok(base + p * 0xB8u) ? s6963_hu(rd, base + p * 0xB8u + 6) : 0xFFFFu); v = pn == r; }
+    if (!v) { S.idx.erase(f); S.ival++; return 0xFFFFu; }
+    return r;
+}
+}
+extern "C" int rs64_s6963_pre(uint8_t* rdram, recomp_context* ctx) {
+    S6963& S = s6963(); s6963_tick(S); S.calls++; S.fromhit = 0;
+    const int m = S.tog ? (S.on ? 2 : 0) : S.mode;
+    if (!m && !S.check) return 0;
+    const uint32_t base = s6963_w(rdram, 0x80137A5Cu), s0 = (uint32_t)ctx->r16, head = (uint32_t)ctx->r4 & 0xFFFFu;
+    const int32_t x = (int32_t)ctx->r20, z = (int32_t)ctx->r19;
+    if (S.check) { uint32_t p = s6963_answer(S, rdram, s0, x, z, base, head); S.flipped = 0; if (S.check == 2 && (++S.cpred % 997u) == 0) { p = p == 0xFFFFu ? head : 0xFFFFu; S.flipped = 1; S.tflip++; } S.pred = p; return 0; }
+    if (m == 1 && !S.complete.count(s0)) S.complete.insert(s0);  /* mode 1 never snapshots: hits learned from walks and creations only */
+    const uint32_t r = s6963_answer(S, rdram, s0, x, z, base, head);
+    if (r != 0xFFFFu) {  /* register state of the walk's found exit */
+        ctx->r4 = r; ctx->r5 = (gpr)(int32_t)(base + r * 0xB8u); ctx->r2 = 0xFFFF; ctx->r3 = (gpr)(int32_t)(r * 0xB8u); ctx->r6 = (gpr)(int32_t)base; ctx->r7 = 0xFFFF;
+        S.ihit++; S.fromhit = 1; return 1;
+    }
+    if (m == 2) { ctx->r4 = 0xFFFF; ctx->r2 = 0xFFFF; ctx->r6 = (gpr)(int32_t)base; ctx->r7 = 0xFFFF; S.imiss++; S.fromhit = 1; return 1; }  /* walk's miss exit; a1/v1 dead past 0x80048AC4 */
+    return 0;
+}
+extern "C" void rs64_s6963_post(uint8_t* rdram, recomp_context* ctx) {
+    S6963& S = s6963();
+    if (S.fromhit) { S.fromhit = 0; return; }
+    const uint32_t r = (uint32_t)ctx->r4 & 0xFFFFFFFFu; const bool found = r != 0xFFFFu;
+    if (found) S.wfound++; else S.wmiss++;
+    const uint32_t s0 = (uint32_t)ctx->r16; const int32_t x = (int32_t)ctx->r20, z = (int32_t)ctx->r19;
+    if (found) S.idx[s6963_key(s0, x, z)] = (uint16_t)r;
+    if (S.check) {
+        S.cn++; S.tcn++;
+        if ((found ? r : 0xFFFFu) != S.pred) {
+            if (S.flipped) { S.tflipbad++; return; }
+            S.cbad++; S.tbad++; S.complete.erase(s0);
+            if (S.badlines++ < 20) std::fprintf(stderr, "[g1e-cell] BAD s0=%08X x=%d z=%d walk=%04X idx=%04X\n", s0, x, z, found ? r : 0xFFFFu, S.pred);
+        }
+    }
+    (void)rdram;
+}
+extern "C" void rs64_s6963_create(uint8_t* rdram, recomp_context* ctx) {  /* after 0x80048B4C: a1 = new record, now head of s0's chain */
+    S6963& S = s6963(); const uint32_t a = (uint32_t)ctx->r5;
+    if (!s6963_ok(a)) return;
+    S.idx[s6963_key((uint32_t)ctx->r16, (int32_t)ctx->r20, (int32_t)ctx->r19)] = s6963_hu(rdram, a + 0x16);
+}

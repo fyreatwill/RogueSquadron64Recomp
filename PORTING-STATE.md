@@ -183412,3 +183412,30 @@ Verdict: selects H-hash (top leaf, fix lands -0.117 ms/task commit); refutes H-s
 - Maintenance: CURRENT-TRUTH headline G1e entries s6935-s6961 (20 lines) migrated to PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6962)",
   replaced by one line; Next-steps item 7 rewritten. CURRENT-TRUTH 59.6 KB -> ~46 KB.
 - Next: offline split of the dense tail (NEXT.md, slug g1e-dd4-dense-tail); G5 rows still wait on the owner.
+
+## Session 6963 (2026-11-07) — G1e: dd4 dense-second tail is the game thread, not the gfx path: clampGridCellLookup's instance-chain walk (~50M iterations/s); host index ROGUESQ_G1E_CELLIDX (default on at dd>1) exact (23.4M compares, 0 bad, control 23494/23494) and LEVEL=4 dd4 tog A/B on 60.00 tasks/s, 0 slow seconds vs off 58.94, 9 slow
+
+- Offline first (NEXT s6962). s6962 logs carry the AQ=2 present ring, not the task ring, so no H-burst split from them; instead tools/g1e_tail_split.py
+  on log_l4/log_w21/log_l10 (last 120 s): slow seconds (<=57 tasks) have CHEAPER send_dl (sw 8.34 vs 8.91 ms, sd_cpu 7.05 vs 7.81) and game thread 8
+  cpu 569 vs 218 ms/s (r with tasks -0.61 l4, -0.64 w21). l10: 0 slow seconds. Present-ring lat p99 32.7/46.4/47.1 ms (all < 50).
+  So H-traffic, H-encode (gfx side) are not the tail; the tail is guest CPU (H-guest, a hypothesis NEXT.md did not list).
+- Periodicity: the slow seconds sit at the same game t on l4 and w21 (198/199, 206/207, 214/215, 222/223) = the autopilot's 8 s a/sl/a/sr cycle
+  (tools/g1e_owner_quiet_arms.zsh FL). Thread-8 cpu bursts every 8 s on all three levels (l10 too, peaks ~430 ms/s, below the drop level; l4 up to 569).
+- Named the code: new tools/g1e_burst_leaves.py splits an xctrace export per second of the busiest [Game] thread (MAIN) into burst vs quiet seconds.
+  On scratch/s6961/xt_x.xml (lvl1): burst minus quiet +231 ms/s in clampGridCellLookup (0x80048948), caller getGridCellValueAt, caller 2
+  streamTerrainGridCellsByDistance; next term +5 ms/s. Leaf samples sit in one ~0x50-byte host span = the chain walk 0x80048A7C..0x80048AB4.
+- ORIGIN: retail code. An off-map cell clamps to an edge template, and the function walks that template's instance chain (records *(0x80137A5C), stride
+  0xB8, prev +4, next +6, owner +8, own index +0x16, x/z +0x18/+0x1A) for the first record with the cell's x,z, creating one on a miss. Our dd>1 window
+  runs far past the map, so edge chains are long: measured 25-56M walk iterations/s over ~160k calls/s (mean ~350 records per call), 99% hits.
+- Change: tools/apply_s6963_cellidx.py (replay list after s6942) hooks the walk entry, the loop head (iteration counter), the exit and the creation
+  link (0x80048B4C); src/main/upstream_compat.cpp rs64_s6963_*: per-template host index, one native snapshot walk per template (first record in walk order
+  wins), kept by the creation hook; a hit is validated (x, z, owner == template, prev's next == this record) and reproduces the walk's exit registers;
+  a miss on a snapshotted template is trusted (mode 2). ROGUESQ_G1E_CELLIDX: default 2 at dd>1, 0 at dd1; =0 retail walk, =1 hits only, =tog 2/0 in
+  ROGUESQ_G1E_CELLIDX_BLK s blocks (default 8). ROGUESQ_G1E_CELLIDX_CHECK=1 runs the walk always and compares; =2 also flips every 997th answer.
+- Runs (tools/g1e_owner_quiet_arms.zsh, LEVEL=4 dd4 16:9 FPS60 fullscreen locked 60 Hz, HOLD=240, G1B=1 AQ=2, idle 3.7 h, scratch/s6963):
+  c4 CHECK=2: tot_chk 23,424,310, real mismatches 0, flips 23,494 all caught (positive control fires), 0 crash.
+  t4 CELLIDX=tog BLK=16 (new tools/g1e_cellidx_ab.py, block-edge seconds dropped, t>=120): on 44 s 60.00 tasks/s mean, min 60, 0 slow, game cpu
+  114 mean / 143 max ms/s, walk 0 it/s; off 52 s 58.94, min 47, 9 slow, cpu 323 / 705, walk 56.4M it/s. 0 crash.
+- Shows: the LEVEL=4 dense-second tail is the clamp walk, and the index removes it in the same run. Rules out H-traffic/H-encode for the tail (sd_wall
+  falls in slow seconds). Not yet shown: exactness on other scenes (queued scratch/agent/soak_queue/s6963_cellchk.sh: lvl1 21:9 and LEVEL=10 CHECK=2);
+  the 21:9 present level (acq>5 ms) is a separate term; CURRENT-TRUTH item 5's s6905 "clampGridCellLookup 92 vs 16 samples" is this same walk.
