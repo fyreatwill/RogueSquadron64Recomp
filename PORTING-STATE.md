@@ -184247,3 +184247,32 @@ old-clock row shows the Y-wing and A-wing sliding off centre late in the pan; ne
 VERDICT: selects H-holds; refutes H-size (fullscreen window/present path) and H-dd (dd2 layout) as ways to re-break the fix
 on this route. Numbers are identical to windowed dd4 s6995 Anew (pan is sim-driven, not window-driven). G5i now closes on
 the owner's look only. Not covered: other missions' abort, 21:9.
+
+## Session 6998 (2026-11-08) — G5a open question closed: RT64 copyNativeToRAM writebacks land only in the colour image's own heap block or the non-heap top-of-RAM framebuffers; 0 stale, 0 foreign-live, 0 header hits at dd4 16:9 and dd1 4:3 (positive control passes)
+HYPOTHESIS-ID: g5a-copynative-live. Question from s6893: at dd4 16:9 RT64 copyNativeToRAM wrote pixels on the watched word
+8074A380/8074AC60. Is the guest block under it live (H-stale: image address freed and reused; H-span: copy runs past the
+image into the next block) or the game's own colour image (H-fb)?
+Instrument (new, opt-in, default off): ROGUESQ_G5A_WBLIVE=1, src/main/upstream_compat.cpp rs64_g5a_wblive, called from the
+existing rs64_g1d_blk_dma("rt64wb") hook inside Framebuffer::copyNativeToRAM (no lib/ edit). Each writeback walks the
+rs_malloc arenas (heads 0x8010FEFC/FF00/FF18; header hw+0 1 free / 2 alloc / 8 terminator, +4 size, next = h+0x10+size,
+read from rs_malloc 0x80001BB4-0x80001C50) and classifies the written range against the block holding the image address F:
+own / stale (F's block free) / nonheap / foreign (another allocated block overlapped); hdr = any block header inside the range.
+[g5a-wbl-d] logs each distinct (F, lo, hi, class, block) once (cap 600); foreign/hdr lines uncapped to 300.
+Positive control, same run, every arm: [g5a-wbl-ctl] on synthetic ranges in the live heap: range inside allocated block A
+-> own, A into the next allocated block B -> foreign, inside a free block -> stale. All three as wanted.
+Arms, one binary, LEVEL=4 (Gerrard V) forced route, FPS60, owner save read-only (md5 f8b29b66... unchanged), screen unlocked:
+| arm | dd | aspect | flight_s | alive | writebacks | own | nonheap | stale | foreign | hdr |
+| d4w | 4 | 16:9 | 177 | 1 | >=32768 | 12922 | 19846 | 0 | 0 | 0 |
+| d4w2 | 4 | 16:9 | 177 | 1 | >=32768 | 12923 | 19845 | 0 | 0 | 0 |
+| d1c | 1 | 4:3 | 178 | 1 | >=32768 | 13327 | 19441 | 0 | 0 | 0 |
+(counts at the n=32768 line; foreign/stale lines would print unconditionally and none did over the whole run.)
+Census (d4w2, reached ph7 mission at n=14084): in-mission images 0x8098AA00 and 0x80A38C00 (0xAE200 = 796x448x2 each) sit in
+allocated block 0x8079B9F0 sz 0x384600 and end exactly at 0x80AE6E00 (the s6204 pool base, no overrun); 0x80B51E00/
+0x80B6A000/0x80B95C00 ranges end at 0x80C00000 (OSMEM 12 MB top, outside the heap). dd1 4:3 the same shape (0x8062B800/
+0x80656000 own, 0x8076A000-0x80800000 nonheap). No writeback range covered 0x8074A380 or 0x8074AC60 in either layout.
+VERDICT: selects H-fb, refutes H-stale and H-span at rs_malloc-block granularity on this route in the current build.
+The s6893 d4live hits were in that build's layout (TILEPOOL K=32, different heap), where an image evidently sat over that
+address; with the s6892 guard never firing there (nothing read the word as an object), both lines say the watch was stale,
+not a live object. Not shown: sub-allocations inside one big block (the walker sees rs_malloc blocks only; the in-mission
+image block also holds the pool from 0x80AE6E00, which the copy stops short of), other levels, 21:9, the s6893 layout itself.
+G5a still closes only on the owner's Gerrard V re-flight.

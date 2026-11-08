@@ -1,13 +1,13 @@
-# NEXT: G5a open question - is block 8074A380 live when RT64 copyNativeToRAM writes it (dd4 16:9)?
-HYPOTHESIS-ID: g5a-copynative-live
-Context: G5i closed on data s6997 (awaits owner look). Backlog items 2-8 await owner flights; item 2 carries one open
-engineering question (PORTING-STATE ~181750): at dd4 16:9 RT64 copyNativeToRAM writes framebuffer pixels onto the watched
-word 8074A380/8074AC60 (171 memmove + 171 swap hits, run d4live). If that guest block is a live heap object at the time
-(not a framebuffer the game owns), the write is a corruption source of the G5a walker-pointer family.
+# NEXT: G5i at 21:9 (owner's ultrawide) and an abort from a second mission
+HYPOTHESIS-ID: g5i-hangar-reentry
+Context: s6995 fixed the hangar re-entry fish-eye (release keyed on the raw view reaching the craft); s6997 held at fullscreen
+16:9 dd2/dd4. Not covered: 21:9 (owner plays a 21:9 ultrawide) and aborting from a mission other than the route's default.
 Hypotheses:
-- H-fb: 8074A380 lies inside a colour image the game itself set (SetColorImage range covers it) -> legitimate copy, close.
-- H-stale: RT64 copies to a stale/previous colour-image address the game has since freed and reused (heap block live) -> ours, fix.
-- H-span: copy width/height at dd>1 or wide overruns the real colour image end into the next block -> ours, clamp.
-Discriminator, one build/one run: log every copyNativeToRAM (dst addr, w, h, bytes) alongside the last game SetColorImage
-addr/width and the rs_malloc block owning dst (heap walk at copy time). Positive control: the current fb copy (dst = live
-colour image) must log as H-fb. Read grep -n "8074A380\|copyNativeToRAM" PORTING-STATE.md | tail first for the d4live recipe.
+- H-holds: 21:9 and the other mission's re-entry give every scroll <=~5 deg post-turn off-axis, like 16:9.
+- H-wide: 21:9 width changes the hangar camera path (G1D_340PERSP / showroom width) so the raw view never "reaches" the craft
+  within the fix's tolerance -> aim never releases or releases late (look for stuck aim / off-axis > 10 deg).
+- H-mission: the re-entry cursor/craft list differs after another mission's abort (different start craft) -> longer pan.
+Discriminator, one binary, 3 runs back to back: scratch/s6995/arm.zsh with route_long.txt, ROGUESQ_ASPECT=21:9 (+ MISSION_WIDTH
+/ WIDE_ROUTE per CURRENT-TRUTH recipes), FPS60, dd2: arm new, arm ROGUESQ_G5G_RELMODE=time (positive control, must show >20 deg
+on scroll 8/9), and arm new with the abort taken from a different mission (edit the route copy). Score tools/g5i_pan_metric.py;
+owner sheet of the re-entry scrolls at 21:9.

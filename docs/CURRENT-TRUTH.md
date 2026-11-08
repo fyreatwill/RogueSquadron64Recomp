@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6997 (2026-11-08).
+Compact operational handoff, as of Session 6998 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -137,12 +137,13 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit item 2 (G5a 8074A380 live/stale check).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit item 1 (G5i at 21:9 and a second mission's abort).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
-   double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997. Not run: 21:9, other missions' abort.
+   double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997. Not run: 21:9, other missions' abort (next unit).
 2. **G5a mission crash: fixed s6893, awaiting owner re-flight** of Gerrard V (LEVEL=4) past half
-   way, repeated. Open: is block 8074A380 live when copyNativeToRAM writes it.
+   way, repeated. s6998 closed the copyNativeToRAM question: every writeback lands in the image's own
+   heap block or above the heap (0 stale / foreign / header hits, dd4 16:9 and dd1 4:3, ROGUESQ_G5A_WBLIVE=1).
 3. **G5b terrain drops: awaiting owner flight** (s6901 far-loss fix; LEVEL=10 unreached).
 4. **G5c freezes: fixed s6902, soak clean; closes on owner flight.**
 5. **G5d Factor 5 logo: fixed s6903; owner boot at dd2/dd4.**

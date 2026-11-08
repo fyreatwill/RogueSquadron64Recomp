@@ -13,6 +13,7 @@
 #include <mutex>
 #include <set>
 #include <map>
+#include <vector>
 #include <string>
 #include <chrono>
 #ifdef __APPLE__
@@ -2401,6 +2402,7 @@ extern "C" void rs64_s4307_note_writer(uint32_t ordinal, uint32_t pc,
                                          uint32_t addr, uint32_t requested,
                                          uint32_t post);
 #include <map>
+#include <vector>
 #include <mutex>
 static std::atomic<uint32_t> g_s4572_t0{0}, g_s4572_t1{0}, g_s4572_cap{0}, g_s4572_cnt{0};
 extern "C" void rs64_s4572_publish(uint32_t t0, uint32_t t1, uint32_t cap, uint32_t cnt) {
@@ -2778,6 +2780,7 @@ extern "C" void rs64_s5041_free(uint32_t ptr, uint32_t ra) {
     if ((nfree & (nfree - 1)) == 0) std::fprintf(stderr, "[s5041-free-census] total nfree=%lu ndouble=%lu live_freed=%zu\n", nfree, ndouble, s_s5041_freed.size());
 }
 #include <map>
+#include <vector>
 static std::map<uint32_t, uint32_t> s_s6063_live; static uint64_t s_s6063_bytes = 0, s_s6063_peak = 0;
 static bool s6063_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_HEAPLOG"); return e && e[0] && e[0] != '0'; }(); return on; }
 static void s6127_walk(uint32_t req, bool ok = false);
@@ -3579,8 +3582,116 @@ extern "C" void rs64_g1d_tb2(const char* tag) {
     std::fflush(stderr);
 }
 
+// s6998 G5a: is the guest heap block under an RT64 copyNativeToRAM writeback
+// live? ROGUESQ_G5A_WBLIVE=1. Walks the three rs_malloc arena heads
+// (0x8010FEFC / FF00 / FF18; header hw+0: 1 free, 2 allocated, 8 terminator;
+// +2 tag; +4 size; next = h + 0x10 + size, from rs_malloc 0x80001BB4-0x80001C50)
+// and classifies each written range against the block holding the colour image
+// address F the writeback belongs to:
+//   own      F's block allocated, every other overlapped block free/none
+//   stale    F's block is free (image address returned to the heap)
+//   nonheap  F is in no heap block, and no allocated block is overlapped
+//   foreign  an allocated block other than F's is overlapped (live corruption)
+// hdr counts ranges that cover any block header. Reads only; racy vs the guest.
+namespace {
+struct G5aBlk { uint32_t h, fl, tag, sz; };
+static uint32_t g5a_rd(volatile uint8_t* r, uint32_t va) {
+    return *(volatile uint32_t*)(r + (va & 0x00FFFFFCu));
+}
+static int g5a_walk(volatile uint8_t* r, std::vector<G5aBlk>& out) {
+    out.clear();
+    static const uint32_t heads[3] = {0x8010FEFCu, 0x8010FF00u, 0x8010FF18u};
+    uint32_t seen[3] = {0, 0, 0}; int narena = 0;
+    for (int i = 0; i < 3; ++i) {
+        uint32_t a = g5a_rd(r, heads[i]);
+        if (a < 0x80000000u || a >= 0x81000000u) continue;
+        bool dup = false; for (int j = 0; j < narena; ++j) if (seen[j] == a) dup = true;
+        if (dup) continue; seen[narena++] = a;
+        for (int g = 0; g < 200000; ++g) {
+            uint32_t w0 = g5a_rd(r, a), sz = g5a_rd(r, a + 4u), fl = w0 >> 16;
+            if (fl & 8u) break;
+            if ((fl & 3u) == 0u || sz > 0x1000000u) break;
+            out.push_back({a, fl, w0 & 0xFFFFu, sz});
+            uint32_t nx = a + 0x10u + sz;
+            if (nx <= a || nx >= 0x81000000u) break;
+            a = nx;
+        }
+    }
+    return narena;
+}
+// returns class 0 own,1 stale,2 nonheap,3 foreign; fills fb/foreign block info
+static int g5a_classify(const std::vector<G5aBlk>& b, uint32_t F, uint32_t lo, uint32_t hi,
+                        const G5aBlk** fbb, const G5aBlk** fgn, int* hdr) {
+    *fbb = nullptr; *fgn = nullptr; *hdr = 0;
+    for (const auto& k : b) if (k.h <= F && F < k.h + 0x10u + k.sz) { *fbb = &k; break; }
+    for (const auto& k : b) {
+        uint32_t s = k.h, e = k.h + 0x10u + k.sz;
+        if (e <= lo || s >= hi) continue;
+        if (s >= lo && s < hi) ++*hdr;
+        if (&k != *fbb && (k.fl & 2u) && !*fgn) *fgn = &k;
+    }
+    if (*fgn) return 3;
+    if (!*fbb) return 2;
+    return ((*fbb)->fl & 2u) ? 0 : 1;
+}
+static void rs64_g5a_wblive(uint32_t src, uint32_t dest, uint32_t len) {
+    static int en = -1;
+    if (en < 0) { const char* e = std::getenv("ROGUESQ_G5A_WBLIVE"); en = (e && *e && *e != '0') ? 1 : 0; }
+    if (!en) return;
+    volatile uint8_t* r = g_recomp_rdram_for_wp_raw;
+    if (!r || len < 4u) return;
+    static std::mutex mu; std::lock_guard<std::mutex> lk(mu);
+    static std::vector<G5aBlk> b; static uint64_t ncls[4], nhdr, ncall; static int nlog[4], nxl;
+    static bool ctl = false;
+    static const char* nm[4] = {"own", "stale", "nonheap", "foreign"};
+    const int narena = g5a_walk(r, b);
+    uint32_t nfree = 0, nalloc = 0; for (auto& k : b) { if (k.fl & 2u) ++nalloc; else ++nfree; }
+    if (!ctl && nalloc >= 2u) {
+        // positive control: synthetic ranges whose answers are known
+        ctl = true; const G5aBlk *A = nullptr, *B = nullptr, *Fr = nullptr;
+        for (size_t i = 0; i + 1 < b.size(); ++i)
+            if ((b[i].fl & 2u) && (b[i + 1].fl & 2u)) { A = &b[i]; B = &b[i + 1]; break; }
+        for (auto& k : b) if (!(k.fl & 2u)) { Fr = &k; break; }
+        const G5aBlk *x, *y; int h; int c1 = -1, c2 = -1, c3 = -1;
+        if (A) { c1 = g5a_classify(b, A->h + 0x10u, A->h + 0x10u, A->h + 0x10u + A->sz, &x, &y, &h);
+                 c2 = g5a_classify(b, A->h + 0x10u, A->h + 0x10u, B->h + 0x20u, &x, &y, &h); }
+        if (Fr) c3 = g5a_classify(b, Fr->h + 0x10u, Fr->h + 0x10u, Fr->h + 0x10u + 4u, &x, &y, &h);
+        std::fprintf(stderr, "[g5a-wbl-ctl] narena=%d nblk=%zu alloc=%u free=%u own_in_A=%s(want own) A_into_B=%s(want foreign) in_free=%s(want stale or foreign)\n",
+                     narena, b.size(), nalloc, nfree, c1 < 0 ? "na" : nm[c1], c2 < 0 ? "na" : nm[c2], c3 < 0 ? "na" : nm[c3]);
+    }
+    const uint32_t F = (src & 0x00FFFFFFu) | 0x80000000u;
+    const uint32_t lo = (dest & 0x00FFFFFFu) | 0x80000000u, hi = lo + len;
+    const G5aBlk *fb, *fg; int hdr;
+    const int c = g5a_classify(b, F, lo, hi, &fb, &fg, &hdr);
+    ++ncall; ++ncls[c]; if (hdr) ++nhdr;
+    const uint32_t ph = rs64_phase_ord();
+    bool lg = false;
+    if (c == 3 || hdr) { if (nxl < 300) { ++nxl; lg = true; } }
+    else if (nlog[c] < 6) { ++nlog[c]; lg = true; }
+    if ((ncall & (ncall - 1)) == 0) lg = true;
+    {   // distinct-range census: every new (F, lo, hi, class, block) once, cap 600
+        static std::set<std::string> seen; static int nd;
+        char key[96]; std::snprintf(key, sizeof key, "%08X:%08X:%08X:%d:%08X:%08X", F, lo, hi, c, fb ? fb->h : 0u, fg ? fg->h : 0u);
+        if (nd < 600 && seen.insert(key).second) { ++nd;
+            std::fprintf(stderr, "[g5a-wbl-d] n=%llu ph=%u cls=%s F=0x%08X lo=0x%08X hi=0x%08X fbblk=0x%08X fl=%X sz=0x%X fgn=0x%08X off=0x%X\n",
+                (unsigned long long)ncall, ph, nm[c], F, lo, hi, fb ? fb->h : 0u, fb ? fb->fl : 0u, fb ? fb->sz : 0u, fg ? fg->h : 0u,
+                fb ? F - fb->h : 0u); }
+    }
+    if (lg) {
+        std::fprintf(stderr, "[g5a-wbl] n=%llu ph=%u cls=%s F=0x%08X lo=0x%08X hi=0x%08X len=0x%X hdr=%d fbblk=0x%08X fl=%X tag=%04X sz=0x%X fgn=0x%08X fl=%X tag=%04X sz=0x%X nblk=%zu tot own=%llu stale=%llu nonheap=%llu foreign=%llu hdrhit=%llu\n",
+            (unsigned long long)ncall, ph, nm[c], F, lo, hi, len, hdr,
+            fb ? fb->h : 0u, fb ? fb->fl : 0u, fb ? fb->tag : 0u, fb ? fb->sz : 0u,
+            fg ? fg->h : 0u, fg ? fg->fl : 0u, fg ? fg->tag : 0u, fg ? fg->sz : 0u, b.size(),
+            (unsigned long long)ncls[0], (unsigned long long)ncls[1], (unsigned long long)ncls[2],
+            (unsigned long long)ncls[3], (unsigned long long)nhdr);
+        std::fflush(stderr);
+    }
+}
+}  // namespace
+
 extern "C" void rs64_g1d_blk_dma(const char* kind, uint32_t src, uint32_t dest,
                                  uint32_t len, uint32_t pc) {
+    if (kind != nullptr && std::strcmp(kind, "rt64wb") == 0) rs64_g5a_wblive(src, dest, len);
     // s6206: count copyNativeToRAM spans that overlap the early images
     // [0xA6A000, 0xB00000). Independent of the command-node block log.
     if (kind != nullptr && len >= 4u && std::strcmp(kind, "rt64wb") == 0) {
