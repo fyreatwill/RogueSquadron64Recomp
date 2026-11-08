@@ -1,16 +1,19 @@
 # OWNER OVERRIDE 2026-11-04: do ITERATION.md G5 in order. G5a-G5h all fixed or done, owner confirmation pending.
 # NOTE: CURRENT-TRUTH is ~59 KB; if Step 0 prints >60000 do the maintenance iteration first.
 
-# NEXT: G1e — the 'none>p99' late presents (73-78 per 5.5 min loaded arm, unchanged by GUEST_QOS): H-margin vs H-present. OFFLINE first.
-HYPOTHESIS-ID: g1e-late-margin
-State (s6983): GUEST_QOS=1 removes the H-sched lates (15-18 -> 3-4) but those were small; the bulk has no leg over its normal p99.
-Late vs normal p50 (B2): rsp 10.43 vs 9.59, run 3.84 vs 2.12, wq 4.37 vs 0.47, kw 3.96 vs 13.02.
+# NEXT: G1e — late present command buffer (s6984): queue wait vs slow GPU execution. ONE build, ONE ABBA run.
+HYPOTHESIS-ID: g1e-late-present
+State (s6984, offline over 6 loaded arms): residual lates encode Q on time (VI->Q-end not larger, AUC 0.2-0.6); the present
+pass's executeCommandLists+fence wait (Q gpu_ms) is 1.5-1.9 vs 0.36 ms (AUC 0.90-0.97) and Q->on-glass 30 vs 23 ms.
 Hypotheses:
-- H-margin: target 10 + rsp ~9.6 leaves <1 ms slack; any sum of sub-p99 stretches (rsp +0.8, wq +4) crosses the vsync. Predicts the
-  late probability rises smoothly with (ph + rsp + wq) and a fitted threshold near the slack separates late/normal (AUC > 0.9).
-- H-present: the RT64 present/acquire side is late (drawable acquire, VI-ack block) with the gfx task on time. Predicts
-  (ph+rsp+wq) of lates within the normal distribution and the delay sits after send_dl return (ring acq/present fields).
-Discriminator (offline, existing captures scratch/s6983q + s6982q, no build): add to tools/g1e_late_leg.py a --sum mode printing per
-present s = ph+rsp+wq (and +run), AUC late vs normal, best threshold, and for lates below that threshold the ring present-side legs.
-Outcome: AUC > 0.9 with threshold near 16.7 - target -> H-margin: then test ROGUESQ_VI_LOCK_TARGET_MS=8/9 under the same burst
-(scratch/s6983/drive.sh with the target edited, ABBA vs 10). AUC ~0.5 -> H-present: instrument acquire/present wall per present.
+- H-gpuq: the present cmd buffer waits in the GPU queue behind the game workload or another process (WindowServer). Predicts
+  GPUStartTime - commit large on lates, GPUEnd-GPUStart normal.
+- H-gpuclk: the GPU executes slowly (clock/power budget shared with the CPU burst). Predicts GPUEnd-GPUStart inflated on lates,
+  start delay normal; should also inflate the game workload's own cmd buffers.
+- H-cpu-wait: the fence wait thread itself is descheduled (present thread default QoS). Predicts both GPU stamps normal, CPU
+  wall of wait() inflated; fixed by present-thread QoS.
+Instrument (lib/rt64 rt64_present_queue.cpp + plume metal; export.sh + commit): on the present cmd buffer read GPUStartTime/
+GPUEndTime (CFTimeInterval, mach-based) and log them in the Q row as gs_ms (start - commit) and ge_ms (end - start); also the
+present thread's QoS class. Arms: scratch/s6983/drive.sh (burst at ~120 s, GFX_QOS=1 GUEST_QOS=1), ABBA with
+ROGUESQ_PRESENT_QOS (new, USER_INTERACTIVE on the present thread) off/on. Score with g1e_late_leg.py --sum (add gs/ge keys).
+Positive control: gs+ge <= gpu_ms on every row; the burst gives ~25 lates/min.

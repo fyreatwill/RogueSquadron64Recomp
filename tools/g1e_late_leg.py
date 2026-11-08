@@ -13,6 +13,8 @@ import sys, struct, bisect, collections, statistics as st
 args = sys.argv[1:]; t_from = 60.0
 if '--from' in args: i = args.index('--from'); t_from = float(args[i + 1]); del args[i:i + 2]
 winf = None  # s6979: --windows F writes 'late|norm <send_dl end mach s> <sd wall ms> <sdc cpu ms>' per present for g1e_thread_census.py
+sumf = '--sum' in args  # s6984: per-present budget sums + AUC late vs normal (H-margin vs H-present)
+if sumf: args.remove('--sum')
 if '--windows' in args: i = args.index('--windows'); winf = args[i + 1]; del args[i:i + 2]
 tlf, gf, rf = args
 pc = lambda v, p: sorted(v)[int(p * (len(v) - 1))] if v else float('nan')
@@ -31,13 +33,13 @@ G = collections.Counter(e[3] for e in ev if e[1] == 15).most_common(1)[0][0]
 vis = [e[0] for e in ev if e[1] == 1]
 kicks = [i for i, e in enumerate(ev) if e[1] == 5 and e[2] == 1]; kt = [ev[i][0] for i in kicks]
 sdret = [e[0] for e in ev if e[1] == 8]
-Q = {}; P = []; W = []
+Q = {}; QK = {}; P = []; W = []
 for l in open(rf, errors='replace'):
     p = l.split()
     if len(p) < 3 or not l.endswith('\n'): continue
     kv = dict(x.split('=', 1) for x in p[2:] if '=' in x)
     try:
-        if p[0] == 'Q' and kv.get('skip') == '0' and 'acq_ms' in kv: Q[int(kv['mtl'])] = float(p[1])
+        if p[0] == 'Q' and kv.get('skip') == '0' and 'acq_ms' in kv: Q[int(kv['mtl'])] = float(p[1]); QK[int(kv['mtl'])] = kv
         elif p[0] == 'P' and float(kv.get('at', 0)) > 0: P.append((float(kv['at']), int(kv['mtl'])))
         elif p[0] == 'W': W.append(float(p[1]))
     except (KeyError, ValueError): pass
@@ -84,6 +86,8 @@ for j in range(1, len(P)):
     k = bisect.bisect_right(kt, W[i - 1]) - 1
     if k < 1: continue
     c = chain(k); c['prev'] = chain(k - 1); c['wq'] = (Q[m] - W[i - 1]) * 1e3; c['kw'] = (W[i - 1] - kt[k]) * 1e3; c['t'] = P[j][0] - t0; r = rrow(W[i - 1]); c['sd'], c['sdc'], c['qw'], c['rw'] = (r[1], r[2], r[3], (r[0] - W[i - 1]) * 1e3) if r else (float('nan'),) * 4; c['pre'] = c['sd'] - c['sdc']; c['rt'] = r[0] if r else float('nan')
+    c['pres'] = (P[j][0] - Q[m]) * 1e3; c['acq'] = float(QK[m].get('acq_ms', 'nan')); c['tp'] = float(QK[m].get('tp_ms', 'nan')); c['gpu'] = float(QK[m].get('gpu_ms', 'nan'))
+    c['s3'] = c['ph'] + c['rsp'] + c['wq']; c['viq'] = c['ph'] + c['kw'] + c['wq']; c['s4'] = c['s3'] + c['run']; c['vip'] = c['viq'] + c['pres']
     if 30 <= d < 40: rows['late'].append(c)
     elif 15 < d < 18.5: rows['norm'].append(c)
 L, N = rows['late'], rows['norm']
@@ -110,3 +114,24 @@ for r in L:
     if r['ph'] > nph: v.append('H-sched')
     if r['rsp'] > nrsp: v.append('H-rsp-host' if r['pre'] > npre else ('H-rsp-work' if r['sdc'] > ncpu else 'H-rsp-?'))
     print('  %7.2f | %5.2f | %5.2f | %6.2f | %6.2f | %6.2f | %5.2f | %s' % (r['t'], r['ph'], r['rsp'], r['sd'], r['sdc'], r['pre'], r['blk'].get(0x80128CF0, 0), '+'.join(v) or 'none>p99'))
+
+if sumf:
+    def auc(a, b):  # P(late value > normal value), ties half
+        a = [x for x in a if x == x]; b = sorted(x for x in b if x == x)
+        if not a or not b: return float('nan')
+        tot = 0.0
+        for x in a: tot += bisect.bisect_left(b, x) + 0.5 * (bisect.bisect_right(b, x) - bisect.bisect_left(b, x))
+        return tot / (len(a) * len(b))
+    def best(a, b):  # threshold maximising balanced accuracy (late = value > thr)
+        a = [x for x in a if x == x]; b = [x for x in b if x == x]; bt, ba = float('nan'), 0
+        for t in sorted(set(a + b)):
+            acc = 0.5 * (sum(x > t for x in a) / len(a) + sum(x <= t for x in b) / len(b))
+            if acc > ba: ba, bt = acc, t
+        return bt, ba
+    print('SUM  key   AUC   thr    balacc | late p10/p50/p90 | norm p10/p50/p90')
+    for k in ('s3', 's4', 'viq', 'pres', 'vip', 'acq', 'tp', 'gpu', 'ph', 'rsp', 'wq', 'kw', 'run'):
+        a = [r[k] for r in L]; b = [r[k] for r in N]; t, ba = best(a, b)
+        print('SUM  %-5s %.3f %6.2f %.3f | %6.2f %6.2f %6.2f | %6.2f %6.2f %6.2f' % (k, auc(a, b), t, ba, *(pc(a, x) for x in (.1, .5, .9)), *(pc(b, x) for x in (.1, .5, .9))))
+    t, _ = best([r['viq'] for r in L], [r['viq'] for r in N])
+    lo = [r for r in L if r['viq'] <= t]
+    print(f'SUM  lates with VI->Q <= thr {t:.2f}: {len(lo)}/{len(L)}; their pres p50 {pc([r["pres"] for r in lo], .5):.2f} acq p50 {pc([r["acq"] for r in lo], .5):.2f} tp p50 {pc([r["tp"] for r in lo], .5):.2f} (normal pres p50/p99 {pc([r["pres"] for r in N], .5):.2f}/{pc([r["pres"] for r in N], .99):.2f})')

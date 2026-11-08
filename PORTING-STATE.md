@@ -183900,3 +183900,29 @@ Discrimination line: selects H-guest for the H-sched class and refutes it as the
 but is not dominant either.
 Caveat: synthetic load only; owner's load (browser, DAW) not measured. Defaults unchanged (owner's call); OWNER-OPT-INS row added.
 Docs: CURRENT-TRUTH s6983 bullet (s6976 bullet pruned, superseded by s6978/s6981), OWNER-OPT-INS GUEST_QOS row, NEXT.md g1e-late-margin.
+
+## Session 6984 (2026-11-08) — G1e: the 'none>p99' residual late presents are present-side (late present command-buffer completion), not budget-margin exhaustion
+
+Work unit (NEXT.md g1e-late-margin): split H-margin (sub-p99 legs summing past the vsync) vs H-present for the 73-78 'none>p99' lates
+per loaded arm. Offline only, no build, no run: existing captures scratch/s6983q (B1, B1b, B2, B2b) and scratch/s6982q (B0, B1).
+Change: tools/g1e_late_leg.py --sum: per present s3=ph+rsp+wq, s4=s3+run, viq=VI edge->Q-end (ph+kw+wq), pres=Q-end->on-glass
+(P.at), vip=viq+pres, and the Q row's tp_ms (threadPresent CPU), acq_ms (drawable acquire), gpu_ms (present-pass
+executeCommandLists + fence wait, rt64_present_queue.cpp:888-891); per key AUC(late>normal), best balanced-accuracy threshold,
+and the present legs of lates whose viq is under its threshold.
+Positive controls (same files): clock offset spread 0.004-0.124 ms (<1 ms), W rows inside a kick->send_dl window 13976/13978 etc.
+| arm | lates | AUC viq | AUC s3 | AUC pres | AUC gpu | gpu p50 late/norm ms | pres p50 late/norm ms |
+| 6983 B1  | 105 | 0.60 | 0.86 | 0.82 | 0.96 | 1.74/0.36 | 30.5/23.2 |
+| 6983 B1b | 113 | 0.53 | 0.86 | 0.81 | 0.96 | 1.43/0.36 | 30.1/23.3 |
+| 6983 B2  |  96 | 0.29 | 0.82 | 0.81 | 0.94 | 1.51/0.40 | 30.0/23.1 |
+| 6983 B2b |  95 | 0.29 | 0.81 | 0.84 | 0.97 | 1.94/0.36 | 30.6/23.5 |
+| 6982 B0  | 161 | 0.21 | 0.84 | 0.80 | 0.90 | 1.60/0.40 | 30.8/23.3 |
+| 6982 B1  | 106 | 0.51 | 0.87 | 0.82 | 0.95 | 1.53/0.35 | 30.2/23.2 |
+Reading: s3 separates (AUC ~0.85) but the end-to-end VI->Q-end time, which is what H-margin needs to cross the deadline, does not:
+late presents finish their Q at or BEFORE the normal time (B2/B2b/B0 AUC < 0.3, late viq p50 7-8 ms vs 13-14). The extra ~7 ms
+(one vsync) appears after Q, and the present pass's submit+fence wait is 4-5x inflated on lates (best single separator in all 6
+arms). Selected: H-present (two lines: viq refutes margin; gpu_ms/pres locate the delay after Q; replicated over 6 arms, 2 sessions'
+captures). Refuted: H-margin as the bulk. Not yet split: whether the present command buffer waits in the GPU queue (behind the
+game workload / WindowServer) or executes slowly (GPU clock/power under the CPU burst); gpu_ms is CPU wall, not GPU time.
+Caveat: the s3 sum separates partly because kw/wq pair a late Q with an earlier W (kw p50 3-4 ms on lates) - a join artefact
+of the busy path, not a deadline crossing; viq is the clean end-to-end figure.
+Docs: CURRENT-TRUTH s6984 bullet (s6982 bullet condensed), NEXT.md g1e-late-present.
