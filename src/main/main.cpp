@@ -6534,7 +6534,7 @@ struct Hold { explicit Hold(int tag) { acquired(tag); } ~Hold() { released(); } 
 extern "C" uint32_t rs64_task_rdp_bytes_total();
 extern "C" uint32_t g_rs64_aq_spin_ns;
 struct Rs64TrAcc { uint64_t n = 0, uc = 0, sub = 0, com = 0, calls = 0, bytes = 0, ranges = 0; };
-extern "C" int g_rs64_g1e_batch, g_rs64_g1e_cdiag; extern "C" uint64_t g_rs64_g1e_ranges;  // s6955: batch arm + deferred range entries
+extern "C" int g_rs64_g1e_batch, g_rs64_g1e_cdiag, g_rs64_g1e_lbfast; extern "C" uint64_t g_rs64_g1e_ranges;  // s6955: batch arm + deferred range entries
 static Rs64TrAcc g_rs64_tr;
 static FILE *g_rs64_tr_f = nullptr;
 extern "C" int rs64_g1e_tring_on = [] {
@@ -6543,16 +6543,16 @@ extern "C" int rs64_g1e_tring_on = [] {
     g_rs64_tr_f = std::fopen(e, "w");
     if (!g_rs64_tr_f) return 0;
     std::setvbuf(g_rs64_tr_f, nullptr, _IOFBF, 1 << 16);
-    std::fprintf(g_rs64_tr_f, "# t_ms sd_wall sd_cpu ucode_ms submit_ms commit_ms calls rdp_bytes n_ucode phase spin batch ranges cdiag\n");
+    std::fprintf(g_rs64_tr_f, "# t_ms sd_wall sd_cpu ucode_ms submit_ms commit_ms calls rdp_bytes n_ucode phase spin batch ranges cdiag lbfast\n");
     return 1;
 }();
 extern "C" uint32_t rs64_phase_ord();
 extern "C" void rs64_g1e_tring_push(double t_ms, double w, double c) {
     if (!g_rs64_tr_f) return;
     const Rs64TrAcc a = g_rs64_tr; g_rs64_tr = Rs64TrAcc{};
-    std::fprintf(g_rs64_tr_f, "%.3f %.3f %.3f %.3f %.3f %.3f %llu %llu %llu %u %u %d %llu %d\n", t_ms, w, c, a.uc / 1e6, a.sub / 1e6, a.com / 1e6,
+    std::fprintf(g_rs64_tr_f, "%.3f %.3f %.3f %.3f %.3f %.3f %llu %llu %llu %u %u %d %llu %d %d\n", t_ms, w, c, a.uc / 1e6, a.sub / 1e6, a.com / 1e6,
                  (unsigned long long)a.calls, (unsigned long long)a.bytes, (unsigned long long)a.n, rs64_phase_ord(), g_rs64_aq_spin_ns,
-                 g_rs64_g1e_batch, (unsigned long long)a.ranges, g_rs64_g1e_cdiag);
+                 g_rs64_g1e_batch, (unsigned long long)a.ranges, g_rs64_g1e_cdiag, g_rs64_g1e_lbfast);
     static double last_flush = 0; if (t_ms - last_flush > 1000.0) { std::fflush(g_rs64_tr_f); last_flush = t_ms; }
 }
 

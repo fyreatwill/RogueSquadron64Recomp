@@ -183248,3 +183248,26 @@ Run 2 (H-rt64 follow-up, same iteration): env OUT=scratch/s6956 XT=1 zsh tools/g
 Rules out: bridge-side diagnostics as a commit cost (H-diag); GPU encode as the main commit term (AGX ~7%).
 Next: vectorised fast path in loadToTMEMCommon for BLOCK loads (whole 8-byte words between dxt swaps copied with memcpy + one xor pass, byte-equivalent to the per-word loop), with an equivalence check arm (ROGUESQ_G1E_LBFAST=check compares against the old loop on every load, control = a corrupted copy), timing by =tog. Then the TMEM hash (is it re-hashing unchanged TMEM; s6942's memo keys on g_rs64_tmem_gen, which every load bumps).
 Verdict: refutes H-diag; selects H-rt64 (texture load + TMEM hash inside fullSync).
+
+## Session 6957 (2026-11-07) — G1e: LoadBlock run-copy fast path in RT64 (ROGUESQ_G1E_LBFAST, default on): byte-equivalent (offline 399,800 random loads bad=0; in-game 20.5M block loads bad=0 control=1 fall=0), commit -0.225 ms/task (20/22 same-run pairs), wall -0.26 ms; H-copy partly selected (predicted -0.5..-0.8)
+
+What ran. s6956 put 23.5% of the commit-side Gfx samples in the per-word loop of loadToTMEMCommon<RGBA32=false,BLOCK=true>
+(lib/rt64/src/hle/rt64_rdp.cpp). New rs64LoadBlockRuns: words between two dxt swaps share the xor mask and land on consecutive
+8-byte TMEM words, so each run (n = ceil((0x800 - counter)/dxt), dxt==0 = one run) is a tight loop of 64-bit moves (x=0: rot32(bswap64),
+x=4: bswap64), tmemMask wrap per word, swaps applied after the run. Falls back to the old loop unless the source is 4-aligned, does not
+wrap 16 MB, and tmemStart/tmemStride are 8-aligned; same 2048-word cap. Arm ROGUESQ_G1E_LBFAST: default 1, =0 old, =tog 10 s blocks,
+=check (fast path into a scratch TMEM copy beside the old loop on every block load, memcmp; check #1 against a corrupted copy is the
+positive control). Set per wrap flush in src/rsp/dpc_bridge.cpp; TRING gains a 15th column (lbfast); tools/g1e_batch_arms.py --arm lbfast.
+Offline second line: tools/g1e_lbfast_equiv.cpp (copy of the function vs the original byte loop, random addresses/strides/dxt/word counts).
+
+Results (dd4 16:9 FPS60 windowed keyed flight, tools/g1e_xt_flight.zsh, scratch/s6957/).
+- Equivalence: offline ok=399800 bad=0 fall=200 (fall = loads that would wrap 16 MB) control=1;
+  in game (run c, 240 s) chk=20,500,480 bad=0 control=1 fall=0. alive=1 crash=0.
+- Timing (run t, 360 s, tog, 13,495 flight tasks, 22 block pairs): d_com -0.225 +/- 0.133 ms/task (20/22 lower), d_w -0.257 +/- 0.353
+  (20/22), d_sub +0.025 (9/22), d_rt -0.013 (13/22). Medians com 3.359 -> 3.146, wall 9.357 -> 9.150. Bytes and calls per task equal
+  between arms (positive control on the comparison: same scene load).
+Reading. The copy loop is real cost but only ~0.22 of the ~3.4 ms commit, less than the 23.5% leaf share implied (-0.8 ms): part of that
+leaf time was memory traffic (H-mem partly), which a tighter loop cannot remove. Not refuted: TMEM hashing (~30%) and uploadTexture (32%).
+s6942 showed the gen-keyed hash memo never hits (every upload follows a load). Next: measure whether loads are REPEATS (same descriptor and
+byte-identical source as an earlier load), which would let load+hash be skipped together.
+Rules out: the per-word dxt/xor bookkeeping as the dominant commit term.

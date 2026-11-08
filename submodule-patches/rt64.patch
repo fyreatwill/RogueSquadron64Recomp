@@ -4128,7 +4128,7 @@ index f17db9b..2ac865a 100644
                      if (!present.fbOperations.empty()) {
                          const std::scoped_lock lock(screenFbChangePoolMutex);
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index d1a9f4e..c105537 100644
+index d1a9f4e..75b5c6f 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -4,10 +4,60 @@
@@ -4619,7 +4619,7 @@ index d1a9f4e..c105537 100644
      }
  
      void RDP::clearTileReplacementHash(uint8_t tile) {
-@@ -379,22 +782,31 @@ namespace RT64 {
+@@ -379,24 +782,64 @@ namespace RT64 {
              offsetMask = 0x7;
          }
  
@@ -4657,15 +4657,60 @@ index d1a9f4e..c105537 100644
              for (uint32_t i = 0; i < 8; i++) {
 -                TMEM[(tmemAddress + i) ^ tmemXorMask] = RDRAM[(textureAddress + (i & offsetMask)) ^ 3];
 +                TMEM[(tmemAddress + i) ^ tmemXorMask] = RDRAM[((textureAddress + (i & offsetMask)) & rdramMask) ^ 3];
++            }
++        }
++    }
++
++    // s6957 G1e: ROGUESQ_G1E_LBFAST (src/rsp/dpc_bridge.cpp sets it per wrap flush: 1 fast, 0 old loop, =tog 10 s blocks, 3 = check).
++    // LoadBlock (BLOCK, !RGBA32, !TLUT) in runs: words between two dxt swaps share the xor mask and land on consecutive 8-byte TMEM
++    // words, so each run is a plain loop of 64-bit moves (x=0: both 32-bit halves byte-swapped; x=4: whole word byte-swapped).
++    // Run length n = ceil((0x800 - counter) / dxt). Returns false (caller runs the old loop) unless the source is 4-aligned, does not
++    // wrap the 16 MB RDRAM mask, and tmemStart/tmemStride are 8-aligned. Same 2048-word cap as the old loop.
++    extern "C" int g_rs64_g1e_lbfast;
++    extern "C" { uint64_t g_rs64_lbf_fast = 0, g_rs64_lbf_fall = 0, g_rs64_lbf_chk = 0, g_rs64_lbf_bad = 0; int g_rs64_lbf_ctl = 0; }
++    static inline bool rs64LoadBlockRuns(uint8_t *TMEM, const uint8_t *RDRAM, uint32_t textureStart, uint32_t tmemStart, uint32_t tmemStride,
++        uint32_t wordCount, uint32_t dxt)
++    {
++        const uint32_t tmemMask = RDP_TMEM_MASK8;
++        if (wordCount > 2048) wordCount = 2048;
++        const uint32_t a0 = textureStart & 0xFFFFFFu;
++        if ((a0 & 3u) || (tmemStart & 7u) || (tmemStride & 7u) || (uint64_t)a0 + 8ull * wordCount > 0x1000000ull) return false;
++        const uint8_t *src = RDRAM + a0;
++        uint32_t tA = tmemStart & tmemMask, x = 0, counter = 0;
++        while (wordCount > 0) {
++            uint32_t n = wordCount;
++            if (dxt) { const uint32_t need = (0x800u - counter + dxt - 1u) / dxt; if (need < n) n = need; }
++            if (x) {
++                for (uint32_t j = 0; j < n; j++) { uint64_t v; memcpy(&v, src, 8); v = __builtin_bswap64(v); memcpy(TMEM + tA, &v, 8); src += 8; tA = (tA + 8u) & tmemMask; }
++            } else {
++                for (uint32_t j = 0; j < n; j++) { uint64_t v; memcpy(&v, src, 8); v = __builtin_bswap64(v); v = (v >> 32) | (v << 32); memcpy(TMEM + tA, &v, 8); src += 8; tA = (tA + 8u) & tmemMask; }
              }
++            wordCount -= n;
++            counter += n * dxt;
++            while (counter >= 0x800u) { tA = (tA + tmemStride) & tmemMask; counter -= 0x800u; x ^= 4u; }
          }
++        return true;
      }
-@@ -404,7 +816,16 @@ namespace RT64 {
+ 
+     template<bool RGBA32 = false, bool BLOCK = false, bool TLUT = false>
+@@ -404,7 +847,28 @@ namespace RT64 {
          uint32_t tmemStride, uint32_t wordsPerRow, uint32_t rowCount, uint32_t dxtIncrement = 0)
      {
          assert((!BLOCK || (rowCount == 1)) && "Load block must behave as if it only loads one row of data.");
 -        
 +        g_rs64_tmem_gen++;  // s6942: TMEM is about to change, invalidates the hash memo
++        uint8_t rs64ChkCopy[RDP_TMEM_BYTES]; bool rs64Chk = false;
++        if constexpr (BLOCK && !RGBA32 && !TLUT) {
++            if (g_rs64_g1e_lbfast == 1) {
++                if (rs64LoadBlockRuns(TMEM, RDRAM, textureStart, tmemStart, tmemStride, wordsPerRow, dxtIncrement)) { g_rs64_lbf_fast++; return; }
++                g_rs64_lbf_fall++;
++            }
++            else if (g_rs64_g1e_lbfast == 3) {
++                memcpy(rs64ChkCopy, TMEM, RDP_TMEM_BYTES);
++                rs64Chk = rs64LoadBlockRuns(rs64ChkCopy, RDRAM, textureStart, tmemStart, tmemStride, wordsPerRow, dxtIncrement);
++                if (!rs64Chk) g_rs64_lbf_fall++;
++            }
++        }
 +
 +        // Garbage-command guard: uls/lrs/ult/lrt are unsigned bit-fields, so inverted
 +        // coordinates underflow the caller's "lr - ul + 1" math to ~4G and this loop
@@ -4678,7 +4723,7 @@ index d1a9f4e..c105537 100644
          const uint32_t DXTSwap = 0x800;
          uint32_t textureAddress, tmemAddress, wordCount, tmemMask, tmemAdvance;
          if constexpr (RGBA32) {
-@@ -452,7 +873,7 @@ namespace RT64 {
+@@ -452,7 +916,7 @@ namespace RT64 {
          if ((tmemStride > 0) && ((wordsPerRow * tmemAdvance) <= tmemStride)) {
              int32_t rowsToSkip = rowCount - (tmemMask + tmemStride) / tmemStride;
              if (rowsToSkip > 0) {
@@ -4687,10 +4732,23 @@ index d1a9f4e..c105537 100644
                  textureAddressRow += textureStride * rowsToSkip;
                  tmemXorMask = (rowsToSkip & 0x1) << 2;
                  rowCount -= rowsToSkip;
-@@ -474,6 +895,32 @@ namespace RT64 {
+@@ -472,6 +936,43 @@ namespace RT64 {
+             loadRowStep();
+             rowCount--;
          }
-     }
- 
++
++        if constexpr (BLOCK && !RGBA32 && !TLUT) {
++            if (rs64Chk) {
++                // Check #1 compares against a deliberately corrupted copy: the positive control (must report a mismatch).
++                if (g_rs64_lbf_chk == 0) { rs64ChkCopy[(tmemStart & RDP_TMEM_MASK8) ^ 1] ^= 0x5A; g_rs64_lbf_ctl = memcmp(rs64ChkCopy, TMEM, RDP_TMEM_BYTES) != 0; }
++                else if (memcmp(rs64ChkCopy, TMEM, RDP_TMEM_BYTES) != 0) {
++                    if (g_rs64_lbf_bad++ < 8) fprintf(stderr, "[s6957-lbfast] MISMATCH start=0x%X tmem=0x%X stride=%u words=%u dxt=%u\n", textureStart, tmemStart, tmemStride, wordsPerRow, dxtIncrement);
++                }
++                if ((++g_rs64_lbf_chk & 0xFFF) == 0) fprintf(stderr, "[s6957-lbfast] chk=%llu bad=%llu control=%d fall=%llu\n", (unsigned long long)g_rs64_lbf_chk, (unsigned long long)g_rs64_lbf_bad, g_rs64_lbf_ctl, (unsigned long long)g_rs64_lbf_fall);
++            }
++        }
++    }
++
 +    // PATCH (s6235): ROGUESQ_LOG_LOADS=<dir> logs every non-deferred LoadBlock/LoadTile (src addr, tmem dest, words, dxt, FNV of
 +    // RDRAM source vs FNV of the TMEM bytes just written) and dumps src+tmem for the first 800 loads >=1 KB.
 +    extern "C" int rs64_g1d_vi_epoch;  // s6729 (src/main/upstream_compat.cpp)
@@ -4715,12 +4773,10 @@ index d1a9f4e..c105537 100644
 +            snprintf(path, sizeof(path), "%s/ld_%04d_a%06X_t%03X_b%u_tmem.bin", s_dir, d, srcAddr & 0xFFFFFF, tmemStart, bytes);
 +            if (FILE *f = fopen(path, "wb")) { fwrite(TMEM8 + tmemStart, 1, tb, f); fclose(f); }
 +        }
-+    }
-+
+     }
+ 
      void RDP::loadTileOperation(const LoadTile &loadTile, const LoadTexture &loadTexture, bool deferred) {
-         const uint32_t bytesOffset = (loadTile.uls >> 2) << loadTexture.siz >> 1;
-         const uint32_t bytesPerRow = loadTexture.width << loadTexture.siz >> 1;
-@@ -510,6 +957,7 @@ namespace RT64 {
+@@ -510,6 +1011,7 @@ namespace RT64 {
              else {
                  loadToTMEMCommon<false>(TMEM8, RDRAM, textureStart, bytesPerRow, tmemStart, tmemStride, wordsPerRow, rowCount);
              }
@@ -4728,7 +4784,7 @@ index d1a9f4e..c105537 100644
          }
      }
  
-@@ -540,12 +988,208 @@ namespace RT64 {
+@@ -540,12 +1042,208 @@ namespace RT64 {
              // Load into TMEM.
              uint8_t *TMEM8 = reinterpret_cast<uint8_t *>(TMEM);
              const uint8_t *RDRAM = state->RDRAM;
@@ -4937,7 +4993,7 @@ index d1a9f4e..c105537 100644
          }
      }
  
-@@ -722,6 +1366,117 @@ namespace RT64 {
+@@ -722,6 +1420,117 @@ namespace RT64 {
  #ifdef LOG_LOAD_METHODS
          RT64_LOG_PRINTF("RDP::loadBlock(tile %u, uls %u, ult %u, lrs %u, dxt %u)", tile, uls, ult, lrs, dxt);
  #endif
@@ -5055,7 +5111,7 @@ index d1a9f4e..c105537 100644
          assert(tile < RDP_TILES);
          auto &t = tiles[tile];
          t.uls = uls;
-@@ -775,12 +1530,82 @@ namespace RT64 {
+@@ -775,12 +1584,82 @@ namespace RT64 {
          workload.drawData.loadOperations.emplace_back(operation);
  
          state->updateDrawStatusAttribute(DrawAttribute::Texture);
@@ -5138,7 +5194,7 @@ index d1a9f4e..c105537 100644
          assert(tile < RDP_TILES);
          auto &t = tiles[tile];
          t.uls = uls;
-@@ -818,6 +1643,20 @@ namespace RT64 {
+@@ -818,6 +1697,20 @@ namespace RT64 {
              }
          }
  
@@ -5159,7 +5215,7 @@ index d1a9f4e..c105537 100644
          // Perform the first step of the deferred operation.
          loadTLUTOperation(t, texture, true);
  
-@@ -912,6 +1751,18 @@ namespace RT64 {
+@@ -912,6 +1805,18 @@ namespace RT64 {
      }
  
      void RDP::setFogColor(uint32_t color) {
@@ -5178,7 +5234,7 @@ index d1a9f4e..c105537 100644
          hlslpp::float4 &fogColor = fogColorStack[fogColorStackSize - 1];
          fogColor.x = ((color >> 24) & 0xFF) / 255.0f;
          fogColor.y = ((color >> 16) & 0xFF) / 255.0f;
-@@ -935,6 +1786,23 @@ namespace RT64 {
+@@ -935,6 +1840,23 @@ namespace RT64 {
      }
  
      void RDP::setFillColor(uint32_t color) {
@@ -5202,7 +5258,7 @@ index d1a9f4e..c105537 100644
          fillColorStack[fillColorStackSize - 1] = color;
          state->updateDrawStatusAttribute(DrawAttribute::FillColor);
      }
-@@ -1034,6 +1902,7 @@ namespace RT64 {
+@@ -1034,6 +1956,7 @@ namespace RT64 {
      }
  
      void RDP::fillRect(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry, const ExtendedAlignment &extAlignment) {
@@ -5210,7 +5266,7 @@ index d1a9f4e..c105537 100644
  #   ifdef LOG_FILLRECT_METHODS
          RT64_LOG_PRINTF("RDP::fillRect(ulx %d, uly %d, lrx %d, lry %d)", ulx, uly, lrx, lry);
  #   endif
-@@ -1049,6 +1918,59 @@ namespace RT64 {
+@@ -1049,6 +1972,59 @@ namespace RT64 {
              lry |= 3;
          }
  
@@ -5270,7 +5326,7 @@ index d1a9f4e..c105537 100644
          drawRect(ulx, uly, lrx, lry, 0, 0, 0, 0, false, extAlignment);
      }
  
-@@ -1084,6 +2006,7 @@ namespace RT64 {
+@@ -1084,6 +2060,7 @@ namespace RT64 {
      }
      
      void RDP::drawTris(uint32_t triCount, const float *pos, const float *tc, const float *col, uint8_t tile, uint8_t levels) {
@@ -5278,7 +5334,7 @@ index d1a9f4e..c105537 100644
          // Levels is expected to be above 0 elsewhere.
          levels += 1;
  
-@@ -1131,6 +2054,944 @@ namespace RT64 {
+@@ -1131,6 +2108,944 @@ namespace RT64 {
          triTcFloats.insert(triTcFloats.end(), tc, tc + triCount * TcFloatsPerTri);
          triColorFloats.insert(triColorFloats.end(), col, col + triCount * ColFloatsPerTri);
          drawCall.triangleCount += triCount;
@@ -6223,7 +6279,7 @@ index d1a9f4e..c105537 100644
  
          const FixedRect &scissorRect = state->rdp->scissorRectStack[scissorStackSize - 1];
          if (!scissorRect.isNull()) {
-@@ -1191,9 +3052,38 @@ namespace RT64 {
+@@ -1191,9 +3106,38 @@ namespace RT64 {
          }
  
          const FixedRect drawRect(movedFromOrigin(ulx, extAlignment.leftOrigin), uly, movedFromOrigin(lrx, extAlignment.rightOrigin), lry);
@@ -6262,7 +6318,7 @@ index d1a9f4e..c105537 100644
  
          // Check if framebuffer pair must be changed.
          checkFramebufferPair();
-@@ -1285,6 +3175,7 @@ namespace RT64 {
+@@ -1285,6 +3229,7 @@ namespace RT64 {
          triTcFloats.emplace_back(flip ? u2 : u1);
          triTcFloats.emplace_back(flip ? v1 : v2);
          drawCall.triangleCount += 2;
@@ -6270,7 +6326,7 @@ index d1a9f4e..c105537 100644
  
          // Update the tracked texcoords for the used tiles. Use scissor intersection to figure out 
          // what the bounds of the real sampling will be if necessary.
-@@ -1315,10 +3206,101 @@ namespace RT64 {
+@@ -1315,10 +3260,101 @@ namespace RT64 {
      }
      
      void RDP::drawTexRect(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry, uint8_t tile, int16_t uls, int16_t ult, int16_t dsdx, int16_t dtdy, bool flip, const ExtendedAlignment &extAlignment) {

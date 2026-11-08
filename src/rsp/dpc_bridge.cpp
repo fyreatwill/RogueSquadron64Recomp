@@ -48,6 +48,9 @@ extern "C" { int g_rs64_g1e_batch = 0; uint64_t g_rs64_g1e_ranges = 0; }
 // s6956 G1e: ROGUESQ_G1E_CDIAG (default 0 = skip the commit-side s4272 latewrite compare and the s4280/s4284 attribution block,
 // stderr-only diagnostics; =1 old; =tog 10 s blocks, latched per task at defer_begin).
 extern "C" { int g_rs64_g1e_cdiag = 0; }
+// s6957 G1e: ROGUESQ_G1E_LBFAST (default 1 = run-copy LoadBlock in RT64 loadToTMEMCommon, =0 old per-word loop, =tog 10 s blocks,
+// =check runs both and compares TMEM on every block load, check #1 vs a corrupted copy = positive control). Set per wrap flush.
+extern "C" { int g_rs64_g1e_lbfast = 1; }
 static bool g_bc_on = false;
 static std::vector<std::pair<uint32_t, uint32_t>> g_bc_ranges;
 static std::vector<S4272Sh> g_bc_sh;
@@ -6305,6 +6308,8 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
             g_rs64_trim = s_trim_env == 2 ? (int)((time(nullptr) / 10) & 1) : s_trim_env;
             static const int s_tmem_env = [] { const char *e = std::getenv("ROGUESQ_G1E_TMEM"); return !e ? 1 : (*e == 't' ? 2 : (*e != '0')); }();
             g_rs64_tmem_fast = s_tmem_env == 2 ? (int)((time(nullptr) / 10) & 1) : s_tmem_env;
+            static const int s_lbf_env = [] { const char *e = std::getenv("ROGUESQ_G1E_LBFAST"); return !e ? 1 : (*e == 't' ? 2 : (*e == 'c' ? 3 : (*e != '0'))); }();
+            g_rs64_g1e_lbfast = s_lbf_env == 2 ? (int)((time(nullptr) / 10) & 1) : s_lbf_env;
             std::unordered_map<uint64_t, const S4272Sh *> shIdx;
             static std::vector<uint64_t> shK; static std::vector<const S4272Sh *> shV; size_t shMask = 0;
             auto shSlot = [&](uint64_t k) { size_t i = (size_t)((k * 0x9E3779B97F4A7C15ull) >> 20) & shMask; while (shV[i] && shK[i] != k) i = (i + 1) & shMask; return i; };
