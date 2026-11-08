@@ -1,15 +1,15 @@
 # OWNER OVERRIDE 2026-11-04: do ITERATION.md G5 in order. G5a-G5h all fixed or done, owner confirmation pending (owner questions: CURRENT-TRUTH, and git show c4755af1e:scratch/agent/NEXT.md).
 
-# NEXT: fold soak s6963_cellchk, then the 21:9 present level
-HYPOTHESIS-ID: g1e-dd4-dense-tail
-s6963 fixed the LEVEL=4 dense-second tail: clampGridCellLookup chain walk indexed (ROGUESQ_G1E_CELLIDX default on at dd>1; tog A/B 60.00 vs 58.94
-tasks/s, 0 vs 9 slow seconds; CHECK=2 23.4M compares 0 bad, control 23494/23494).
-1. Read SOAK-RESULTS for s6963_cellchk (lvl1 21:9 and LEVEL=10, CHECK=2). rc=0 = exact on both: close slug g1e-dd4-dense-tail.
-   rc=1 with a real mismatch: read the "[g1e-cell] BAD" lines in scratch/s6963ck/log_*.txt (s0, x, z, walk vs idx). A stale miss means some other code
-   links records into a template chain; find the writer of +0x6 for that s0 (grep RecompiledFuncs for stride 0xB8 users of *(0x80137A5C)) and either
-   hook it or default to mode 1 (hits only, misses walk). Until fixed set the default to 0 in src/main/upstream_compat.cpp (S6963 ctor).
-   rc=2 = human active: requeue from done/.
-2. Then, if G5 is still waiting on the owner: the lvl1 21:9 present level (acq>5 ms 45.6%, lat p50 37.7). Hypotheses: H-drawable (nextDrawable wait
-   with 3 drawables at 2389-wide), H-gpu (GPU frame > 16.7 ms at 21:9 dd4), H-pace (present timing vs vsync phase). Discriminator: per-present
-   acq_ms vs gpu_ms in ring_w21 (tools/g1e_owner_hz_score.py + one python pass): acq high with gpu < 12 ms = H-drawable/H-pace; gpu > 16 = H-gpu.
+# NEXT: acq-signature present drain trigger (21:9 over-drain)
+HYPOTHESIS-ID: g1e-present-drain-acq
+s6964: the 21:9 present level is the sticky drawable-queue level (acq_ms ~10-13 per present, frame GPU wait <=3.5 ms). ROGUESQ_PRESENT_DRAIN=34
+clears it (3/3 same run) but in run d2 the base latency sat at ~35 ms (acq p50 1-2 ms, not the level) and the 34 trigger skipped ~1 frame/s for no gain.
+1. Add ROGUESQ_PRESENT_DRAIN_ACQ=<N> in lib/rt64/src/contrib/plume/plume_metal.cpp rs64_present_drain_check (s6889/s6950 code near line 2121): drain one
+   present only after N consecutive presents whose acquire wait > 5 ms (needs the previous present's acq: rt64_present_queue.cpp rs64PrAcq, pass it in
+   or keep a static in plume). Keep the latency trigger as-is; ALT block logic so DRAIN_TOGGLE can A/B acq-trigger vs latency-34 in one run.
+   Then ./submodule-patches/export.sh + commit (lib/ rule).
+2. Run: env R=$PWD/scratch/s6965 HOLD=230 ARMS="4:a1:ROGUESQ_G1B=1+ROGUESQ_G1E_AQ=2+ROGUESQ_ASPECT=21:9+<acq vs 34 toggle env> 4:a2:<same>"
+   zsh tools/g1e_owner_quiet_arms.zsh; score with tools/g1e_drain_blocks.py --from 100 and tools/g1e_present_split.py.
+   Outcomes: acq blocks clear the level with ~0 D rows in a 35 ms-base run -> acq trigger replaces 34 in OWNER-OPT-INS; level reforms under acq ->
+   latency is the needed signal, keep 34 and note the 21:9 cost; no level forms in either run -> null, rerun (needs a level block in off/other arm).
 Owner reports override all of this. Defaults: DRAIN, SKYZ, SCREEN_JOB, INFLIGHT, PROVCACHE stay opt-in, owner decides.

@@ -183442,3 +183442,26 @@ Verdict: selects H-hash (top leaf, fix lands -0.117 ms/task commit); refutes H-s
 - Verdict: this selects H-guest (root cause: the clampGridCellLookup chain walk on the game thread) and refutes H-traffic and H-encode for the dense
   tail (send_dl wall and cpu fall in slow seconds); H-burst is moot. Next discriminator: soak s6963_cellchk (CHECK=2 on lvl1 21:9 and LEVEL=10) decides
   whether mode 2's trusted misses stay exact off LEVEL=4 (0 bad = keep the default, any bad = mode 1 or off).
+
+## Session 6964 (2026-11-07) — G1e: s6963_cellchk exact on lvl1 21:9 and LEVEL=10 (slug g1e-dense-tail closed); 21:9 present level is the drawable-queue level (frame GPU wait p90 <=3.5 ms, H-gpu refuted); same-run DRAIN=34 toggle clears it at 21:9 3/3 but over-drains ~1 frame/s at a ~35 ms base
+- Folded soak s6963_cellchk (rc=0, 475 s): arm w lvl1 21:9 dd4 tot_chk 22,262,698 bad 0 flip 22329 = flipbad; arm x LEVEL=10 16:9 dd4 22,544,473 / 0 /
+  22612 = 22612; 0 crash. With s6963's LEVEL=4 run that is 3 scenes exact with the positive control firing in each. ROGUESQ_G1E_CELLIDX default stays 2 at dd>1.
+- Offline (no build): new tools/g1e_present_split.py splits each present-ring Q row into wl_ms (waitForWorkloadId = the frame's GPU work), acq_ms
+  (acquireTexture = nextDrawable wait), gpu_ms (composite pass + wait), tp_ms. Read from rt64_present_queue.cpp:805/890/1071 (gpu_ms is the composite only;
+  H-gpu would show in wl_ms). Six rings, last 100 s: wl p90 2.9-3.5 ms, 0% >16 ms on every arm (s6961lk ll, s6962 w21/l4/l10, s6963ck w/x); composite
+  0.31-0.40 ms. acq is bimodal (~0 or ~10-13 ms); presents with acq>5 have latency p50 40-46.5 ms vs 24.6-35.6 with acq<=5. Share acq>5: w21 45.6%, ck w
+  36.2%, l10 22.8%, ll 11.8%, l4 0, x 0. l10 is one contiguous 1369-present run (sticky level); 21:9 flickers (mean run 4-10 presents).
+  Verdict: H-gpu refuted; the 21:9 level is the same drawable-queue (H-drawable/H-pace) level as s6949-s6953 at 16:9, formed more often at 21:9.
+- Run (tools/g1e_owner_quiet_arms.zsh, lvl1 21:9 dd4 FPS60 fullscreen locked 60 Hz, HOLD=230, G1B=1 AQ=2, ROGUESQ_PRESENT_DRAIN=34
+  ROGUESQ_PRESENT_DRAIN_TOGGLE=20, two runs d1 d2, idle 4 h, scratch/s6964), tools/g1e_drain_blocks.py:
+  d1: off block 3 at level (acq>5 64.3%, lat 43.0) -> on block 4 27.8 ms, 0%; then flat 26-27 ms both states; 27 D rows (17 in block 2, 9 boot).
+  d2: off blocks 1 (58.3%, 45.4) and 7 (96.1%, 46.0) at level -> next on blocks 25.4 and 34.9 ms; on blocks never >10.5%; but base sits ~35 ms
+  (acq p50 1-2 ms) in both states and on blocks drop 17-20 frames each (82 D rows total), on 34.8 vs off 35.1 ms median: ~1 skip/s for nothing.
+  0 crash both. Positive control for the instrument: off blocks at level fire acq>5 >58% in the same run.
+- Shows: DRAIN=34 is a valid clear of the 21:9 level (3/3 same-run), two-source with s6951's 16:9 result. New: a ~35 ms intermediate base below the
+  level that a 34 ms latency trigger keeps hitting (H-overdrain at 21:9, as 28 did at 16:9 in s6953). Rules out H-gpu for 21:9. Not shown: why d2's
+  base is 35 vs d1's 26 (phase of present vs vsync is the lead).
+- Docs: CURRENT-TRUTH headline + item 7, OWNER-OPT-INS DRAIN note (21:9 cost). Defaults unchanged.
+- Verdict: selects H-drawable/H-pace (sticky drawable queue) and refutes H-gpu for the 21:9 present level. Next discriminator: an acq-signature
+  drain trigger (drain only after N consecutive presents with acq>5 ms) vs DRAIN=34 same run at 21:9: if it clears the level with ~0 drops at the 35 ms
+  base it replaces the latency trigger; if the level reforms, latency is the needed signal.
