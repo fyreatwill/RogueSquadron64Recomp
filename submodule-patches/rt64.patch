@@ -50,7 +50,7 @@ index 804835f..df326f8 100644
          accumulation += Timer::deltaMicroseconds(startedTimestamp, Timer::current()) / 1000.0;
          startedTimestamp = {};
 diff --git a/src/common/rt64_tmem_hasher.h b/src/common/rt64_tmem_hasher.h
-index 9a332ab..e0f3b4f 100644
+index 9a332ab..0ddb7ef 100644
 --- a/src/common/rt64_tmem_hasher.h
 +++ b/src/common/rt64_tmem_hasher.h
 @@ -4,6 +4,27 @@
@@ -81,7 +81,7 @@ index 9a332ab..e0f3b4f 100644
  // Referenced from zstd.
  
  static unsigned bitScanForward64(uint64_t val) {
-@@ -32,6 +53,17 @@ static unsigned bitScanForward64(uint64_t val) {
+@@ -32,6 +53,24 @@ static unsigned bitScanForward64(uint64_t val) {
  #endif
  }
  
@@ -91,6 +91,13 @@ index 9a332ab..e0f3b4f 100644
 +// s6942 G1e: when nonzero (default, ROGUESQ_G1E_TSCAN, =0 s6935 table, =tog 10 s blocks), the version 5 CI4 index scan builds its 16-bit
 +// nibble-presence mask with NEON table lookups, 16 texel bytes per step, instead of one byte-table store per byte. Same bitset, same hash.
 +inline int rs64TmemHashNeonCI4 = 1;
++// s6961 G1e: ROGUESQ_G1E_HGATHER. 1 = every byte the hash covers (texel rows, palette entries, trailing params) is appended to one stack
++// buffer, the TLUT scan runs once over the texel span, and the digest is one XXH3_64bits call: same value as the streaming reset/update/
++// digest chain (XXH3 streaming == one-shot over the concatenation; the TLUT bitset is an OR). Overflow past 8 KB falls back to streaming.
++// 0 = old per-segment streaming path. Counters below are bumped only when rs64TmemHashGatherStat is set.
++inline int rs64TmemHashGather = 1;
++inline int rs64TmemHashGatherStat = 0;
++inline uint64_t rs64HgCalls = 0, rs64HgSegs = 0, rs64HgBytes = 0, rs64HgOver = 0;
 +
 +#if defined(__aarch64__)
 +#include <arm_neon.h>
@@ -99,10 +106,20 @@ index 9a332ab..e0f3b4f 100644
  namespace RT64 {
      struct TMEMHasher {
          static const uint32_t CurrentHashVersion = 5;
-@@ -66,11 +98,53 @@ namespace RT64 {
+@@ -50,7 +89,6 @@ namespace RT64 {
+             const uint32_t TMEMMask8 = 4095;
+             const uint32_t TMEMMask16 = 2047;
+             XXH3_state_t xxh3;
+-            XXH3_64bits_reset(&xxh3);
+             const bool RGBA32 = (loadTile.siz == G_IM_SIZ_32b) && (loadTile.fmt == G_IM_FMT_RGBA);
+             const bool usesTLUT = tlut > 0;
+             bool halfTMEM = RGBA32;
+@@ -66,11 +104,59 @@ namespace RT64 {
              const uint32_t tmemMask = halfTMEM ? TMEMMask16 : TMEMMask8;
              const uint32_t tmemAddress = (loadTile.tmem << 3) & tmemMask;
              uint64_t tlutBitset[4] = {};
+-            auto hashUpdate = [&](const uint8_t *tmemBytes, uint32_t byteCount) {
+-                XXH3_64bits_update(&xxh3, tmemBytes, byteCount);
 +            const bool tlutScan = (version >= 5) && usesTLUT;
 +            const bool tlutTable = tlutScan && !rs64TmemHashByteLoop;
 +            alignas(8) uint8_t tlutSeen[256];
@@ -113,8 +130,14 @@ index 9a332ab..e0f3b4f 100644
 +            const bool ci4Neon = false;
 +#endif
 +            if (tlutTable && !ci4Neon) memset(tlutSeen, 0, sizeof(tlutSeen));
-             auto hashUpdate = [&](const uint8_t *tmemBytes, uint32_t byteCount) {
-                 XXH3_64bits_update(&xxh3, tmemBytes, byteCount);
++            // s6961: gather state. gStream flips to true (and xxh3 is reset) only when the buffer would overflow.
++            const bool gather = rs64TmemHashGather != 0;
++            const bool gStat = rs64TmemHashGatherStat != 0;
++            alignas(16) uint8_t gBuf[8192];
++            uint32_t gN = 0, gScanned = 0;
++            bool gStream = !gather;
++            if (gStream) XXH3_64bits_reset(&xxh3);
++            auto scanBytes = [&](const uint8_t *tmemBytes, uint32_t byteCount) {
  
                  // Version 5 parses every byte individually if TLUT is enabled to determine the TLUT bytes that can be hashed.
 -                if ((version >= 5) && usesTLUT) {
@@ -154,10 +177,40 @@ index 9a332ab..e0f3b4f 100644
                      if (loadTile.siz == G_IM_SIZ_4b) {
                          for (uint32_t i = 0; i < byteCount; i++) {
                              tlutBitset[0] |= (1ULL << (tmemBytes[i] & 0xFU));
-@@ -141,6 +215,28 @@ namespace RT64 {
+@@ -84,6 +170,27 @@ namespace RT64 {
+                     }
+                 }
+             };
++            auto gFlush = [&]() {
++                if (!gStream) { XXH3_64bits_reset(&xxh3); gStream = true; }
++                if (gN) XXH3_64bits_update(&xxh3, gBuf, gN);
++                gN = 0; gScanned = 0;
++                if (gStat) rs64HgOver++;
++            };
++            // Texel bytes: hashed and scanned. Old path streams and scans each segment; gather path defers both.
++            auto hashUpdate = [&](const uint8_t *tmemBytes, uint32_t byteCount) {
++                if (gStat) { rs64HgSegs++; rs64HgBytes += byteCount; }
++                if (!gather) { XXH3_64bits_update(&xxh3, tmemBytes, byteCount); scanBytes(tmemBytes, byteCount); return; }
++                if (gN + byteCount > sizeof(gBuf)) { scanBytes(gBuf + gScanned, gN - gScanned); gFlush(); }
++                if (byteCount > sizeof(gBuf)) { scanBytes(tmemBytes, byteCount); XXH3_64bits_update(&xxh3, tmemBytes, byteCount); return; }
++                memcpy(gBuf + gN, tmemBytes, byteCount); gN += byteCount;
++            };
++            // Non-texel bytes (palette, params): hashed only.
++            auto hashRaw = [&](const void *bytes, uint32_t byteCount) {
++                if (!gather) { XXH3_64bits_update(&xxh3, bytes, byteCount); return; }
++                if (gN + byteCount > sizeof(gBuf)) gFlush();
++                if (byteCount > sizeof(gBuf)) { XXH3_64bits_update(&xxh3, bytes, byteCount); return; }
++                memcpy(gBuf + gN, bytes, byteCount); gN += byteCount; gScanned = gN;
++            };
+ 
+             auto hashTMEM = [&](uint32_t tmemBaseAddress, uint32_t tmemOrAddress, uint32_t byteCount, bool oddRow) {
+                 assert((tmemBaseAddress < tmemSize) && "Base address must be masked within the bounds of the TMEM size.");
+@@ -141,6 +248,30 @@ namespace RT64 {
                  }
              }
  
++            if (gather) { scanBytes(gBuf + gScanned, gN - gScanned); gScanned = gN; }
++            if (gStat) rs64HgCalls++;
 +#if defined(__aarch64__)
 +            if (ci4Neon) tlutBitset[0] |= ci4Mask;
 +#endif
@@ -183,6 +236,63 @@ index 9a332ab..e0f3b4f 100644
              // If TLUT is active, we also hash the corresponding palette bytes.
              if (usesTLUT) {
                  const bool CI4 = (loadTile.siz == G_IM_SIZ_4b);
+@@ -151,7 +282,7 @@ namespace RT64 {
+                 if (version >= 5) {
+                     // Fast path for a full bitset for CI4.
+                     if (CI4 && (tlutBitset[0] == UINT16_MAX)) {
+-                        XXH3_64bits_update(&xxh3, &TMEM[paletteAddress], 0x80);
++                        hashRaw(&TMEM[paletteAddress], 0x80);
+                     }
+                     else {
+                         const uint32_t bitsetCount = CI4 ? 1 : 4;
+@@ -160,14 +291,14 @@ namespace RT64 {
+                         for (uint32_t i = 0; i < bitsetCount; i++) {
+                             // Fast path for a full bitset.
+                             if (tlutBitset[i] == UINT64_MAX) {
+-                                XXH3_64bits_update(&xxh3, &TMEM[paletteAddress + i * 0x200], 0x200);
++                                hashRaw(&TMEM[paletteAddress + i * 0x200], 0x200);
+                             }
+                             else {
+                                 // Must check every bit individually.
+                                 while (tlutBitset[i] > 0) {
+                                     bitsetIndex = bitScanForward64(tlutBitset[i]);
+                                     paletteIndex = (i * 0x40) + bitsetIndex;
+-                                    XXH3_64bits_update(&xxh3, &TMEM[paletteAddress + paletteIndex * 8], 8);
++                                    hashRaw(&TMEM[paletteAddress + paletteIndex * 8], 8);
+                                     tlutBitset[i] &= ~(1ULL << bitsetIndex);
+                                 }
+                             }
+@@ -176,7 +307,7 @@ namespace RT64 {
+                 }
+                 else {
+                     const int32_t bytesToHash = CI4 ? 0x80 : 0x800;
+-                    XXH3_64bits_update(&xxh3, &TMEM[paletteAddress], bytesToHash);
++                    hashRaw(&TMEM[paletteAddress], bytesToHash);
+                 }
+             }
+             
+@@ -187,13 +318,15 @@ namespace RT64 {
+             static_assert(sizeof(loadTile.line) == 2, "Hash must use 16-bit line.");
+             static_assert(sizeof(loadTile.siz) == 1, "Hash must use 8-bit siz.");
+             static_assert(sizeof(loadTile.fmt) == 1, "Hash must use 8-bit fmt.");
+-            XXH3_64bits_update(&xxh3, &width, sizeof(width));
+-            XXH3_64bits_update(&xxh3, &height, sizeof(height));
+-            XXH3_64bits_update(&xxh3, &tlut, sizeof(tlut));
+-            XXH3_64bits_update(&xxh3, &loadTile.line, sizeof(loadTile.line));
+-            XXH3_64bits_update(&xxh3, &loadTile.siz, sizeof(loadTile.siz));
+-            XXH3_64bits_update(&xxh3, &loadTile.fmt, sizeof(loadTile.fmt));
++            hashRaw(&width, sizeof(width));
++            hashRaw(&height, sizeof(height));
++            hashRaw(&tlut, sizeof(tlut));
++            hashRaw(&loadTile.line, sizeof(loadTile.line));
++            hashRaw(&loadTile.siz, sizeof(loadTile.siz));
++            hashRaw(&loadTile.fmt, sizeof(loadTile.fmt));
+ 
++            if (!gStream) return XXH3_64bits(gBuf, gN);
++            if (gN) XXH3_64bits_update(&xxh3, gBuf, gN);
+             return XXH3_64bits_digest(&xxh3);
+         }
+ 
 diff --git a/src/contrib/hlslpp b/src/contrib/hlslpp
 --- a/src/contrib/hlslpp
 +++ b/src/contrib/hlslpp
@@ -6631,7 +6741,7 @@ index d1a9f4e..132376c 100644
          // with the GPU-side stage 2.5 counter, this shows how many texrects
          // enter the pipeline vs how many reach the for-loop.
 diff --git a/src/hle/rt64_rdp_tmem.cpp b/src/hle/rt64_rdp_tmem.cpp
-index 6051f4e..6bd2a38 100644
+index 6051f4e..c568d2e 100644
 --- a/src/hle/rt64_rdp_tmem.cpp
 +++ b/src/hle/rt64_rdp_tmem.cpp
 @@ -6,6 +6,9 @@
@@ -6644,7 +6754,7 @@ index 6051f4e..6bd2a38 100644
  
  #include "xxHash/xxh3.h"
  
-@@ -13,6 +16,190 @@
+@@ -13,6 +16,216 @@
  
  #include "rt64_state.h"
  
@@ -6779,6 +6889,26 @@ index 6051f4e..6bd2a38 100644
 +    }
 +    return h;
 +}
++extern "C" int g_rs64_g1e_hgather;
++namespace { struct RS64HgStat { uint64_t chk, bad, mchk, msame; time_t t; } rs64HGS; }
++static void rs64HgReport(const uint8_t *TMEM, const RT64::LoadTile &loadTile, uint16_t width, uint16_t height, uint32_t tlut, uint64_t h, bool check) {
++    if (check) {
++        rs64TmemHashGather = 0; rs64TmemHashGatherStat = 0;
++        const uint64_t s = RT64::TMEMHasher::hash(TMEM, loadTile, width, height, tlut, RT64::TMEMHasher::CurrentHashVersion);
++        rs64HGS.chk++; rs64HGS.bad += (s != h);
++        if ((rs64HGS.chk & 15) == 0) { rs64HGS.mchk++; rs64HGS.msame += (RT64::TMEMHasher::hash(TMEM, loadTile, uint16_t(width + 1), height, tlut, RT64::TMEMHasher::CurrentHashVersion) == h); }
++        rs64TmemHashGather = 1; rs64TmemHashGatherStat = 1;
++    }
++    if ((rs64HgCalls & 255) == 0) {
++        const time_t now = time(nullptr);
++        if (now != rs64HGS.t) {
++            fprintf(stderr, "[g1e-hgather] t=%ld calls=%llu segs=%llu bytes=%llu over=%llu chk=%llu bad=%llu mchk=%llu msame=%llu\n", (long)now,
++                (unsigned long long)rs64HgCalls, (unsigned long long)rs64HgSegs, (unsigned long long)rs64HgBytes, (unsigned long long)rs64HgOver,
++                (unsigned long long)rs64HGS.chk, (unsigned long long)rs64HGS.bad, (unsigned long long)rs64HGS.mchk, (unsigned long long)rs64HGS.msame);
++            rs64HGS = {}; rs64HGS.t = now; rs64HgCalls = rs64HgSegs = rs64HgBytes = rs64HgOver = 0;
++        }
++    }
++}
 +static uint64_t rs64MemoHash(const uint8_t *TMEM, const RT64::LoadTile &loadTile, uint16_t width, uint16_t height, uint32_t tlut) {
 +    static const int s_mode = [] { const char *e = std::getenv("ROGUESQ_G1E_TMEMMEMO"); return !e ? 0 : (*e == 't' ? 2 : (*e == 'v' ? 3 : (*e != '0'))); }();
 +    static const int s_tscan = [] { const char *e = std::getenv("ROGUESQ_G1E_TSCAN"); return !e ? 1 : (*e == 't' ? 2 : (*e != '0')); }();
@@ -6800,8 +6930,14 @@ index 6051f4e..6bd2a38 100644
 +        static uint64_t s_provN = 0;
 +        const bool samp = s_prov && ((++s_provN & 63) == 0);
 +        const uint64_t ht0 = samp ? mach_absolute_time() : 0;
++        // s6961 G1e: ROGUESQ_G1E_HGATHER arm (latched per wrap flush in src/rsp/dpc_bridge.cpp): 0 streaming, 1 gather, 3 check (gather
++        // hash used; streaming recomputed and compared every call; mutant control: streaming with width+1 must differ), 4 stat (gather + counts).
++        const int hg = g_rs64_g1e_hgather;
++        rs64TmemHashGather = (hg != 0);
++        rs64TmemHashGatherStat = (hg >= 3);
 +        if (g_rs64_pc_arm && !s_prov) h = rs64PcHash(TMEM, loadTile, width, height, tlut, a, b);
 +        else h = RT64::TMEMHasher::hash(TMEM, loadTile, width, height, tlut, RT64::TMEMHasher::CurrentHashVersion);
++        if (hg >= 3) rs64HgReport(TMEM, loadTile, width, height, tlut, h, hg == 3);
 +        if (s_prov) rs64ProvCensus(TMEM, loadTile, width, height, tlut, a, b, h, samp ? mach_absolute_time() - ht0 : 0, samp);
 +        if (mode == 3) {
 +            if (hit) { rs64MS.vchk++; rs64MS.vbad += (e.hash != h); }
@@ -6835,7 +6971,7 @@ index 6051f4e..6bd2a38 100644
  namespace RT64 {
      // TextureManager
  
-@@ -50,10 +237,47 @@ namespace RT64 {
+@@ -50,10 +263,47 @@ namespace RT64 {
      }
  
      uint64_t TextureManager::uploadTexture(State *state, const LoadTile &loadTile, TextureCache *textureCache, uint64_t creationFrame, uint16_t width, uint16_t height, uint32_t tlut) {
@@ -6884,7 +7020,7 @@ index 6051f4e..6bd2a38 100644
              textureCache->queueGPUUploadTMEM(hash, creationFrame, TMEM, RDP_TMEM_BYTES, width, height, tlut, loadTile, true);
          }
  
-@@ -85,7 +309,7 @@ namespace RT64 {
+@@ -85,7 +335,7 @@ namespace RT64 {
          }
  
          // Dump the RDRAM last loaded into the TMEM address pointed to by the tile. Required for generating hashes used by Rice.

@@ -183365,3 +183365,35 @@ ROGUESQ_G1E_PROVCACHE stays default 0 (opt-in diagnostic). Single scene (lvl ind
 Ruled out: skipping the upload hash via a load-provenance key as a commit-term lever at this load:hash ratio.
 Next: rank the remaining commit leaves at current defaults (xctrace on the same flight, the s6956 method) and take the top one. NEXT.md.
 Verdict line: s6960 selects H-load, refutes H-win; provenance cache closed (exact, net +0.075 ms/task), default off.
+
+## Session 6961 (2026-11-07) — G1e: commit leaves ranked at current defaults (TMEM hash 26.1% > loads ~21% > setup <3%, H-hash selected); gather-buffer one-shot TMEM hash (ROGUESQ_G1E_HGATHER, default on): exact (offline 400k bad=0, in-game 12.5M bad=0), commit -0.117 ms/task (19/22 same-run pairs)
+HYPOTHESIS-ID: g1e-dd4-commit-leaves. No owner report, no new soak results (last folded s6948). Built-in display only; XG49V unit not runnable.
+Run x (ranking): env OUT=scratch/s6961 XT=1 zsh tools/g1e_xt_flight.zsh x 240 "" (current defaults, windowed sync FPS60 dd4 16:9, lvl index 1 keyed flight). alive=1 crash=0.
+xctrace 30 s; ANCHOR=rs64_dpc_defer_end tools/g1e_xt_under.py: Gfx Thread 14,995 samples, 3,525 (23.5%) under the commit (s6956: 26.9%, before LBFAST).
+- Inclusive: fullSync 89.5%, fullSyncFramebufferPairTiles 51.0%, uploadTexture 28.7%, TMEMHasher::hash 26.1% (lambda 19.2%, XXH3 update 12.9%,
+  hashLong 3.7%), loadBlockOperation 17.8% (rs64LoadBlockRuns 15.3%), recordFramebuffer/submitRasterScene 13%, AGX encode ~7-8%, memmove 6.4%,
+  copyNativeToRAM 4.5%, loadTLUTOperation 3.5%, rs64_dpc_record_submit 3.1%.
+- Leaves: rs64LoadBlockRuns 15.3%, hash lambda (CI4 NEON scan) 10.6%, XXH3 update 10.5%, memmove 6.4%, hashLong 3.7%, loadTLUT 3.5%, hash body 2.8%;
+  unordered_map/hashSet node work 1.3%, useTexture/TextureMap ~2% inclusive.
+=> H-hash selected (26.1% inclusive), H-load second (LoadBlockRuns + loadBlock + TLUT ~21%, most of it memory traffic per s6957), H-setup refuted (<3%).
+Change (lib/rt64 rt64_tmem_hasher.h, rt64_rdp_tmem.cpp; src/rsp/dpc_bridge.cpp; src/main/main.cpp): rs64TmemHashGather. Every byte the hash covers
+(texel spans, palette entries, the 6 trailing param fields) is appended to an 8 KB stack buffer, the TLUT index scan runs once over the texel span,
+and the digest is one XXH3_64bits call instead of reset + N streaming updates + digest. Same value by construction (XXH3 streaming == one-shot over
+the concatenation; the TLUT bitset is an OR); overflow past 8 KB flushes into the streaming state. ROGUESQ_G1E_HGATHER default 1, =0 old, =tog 10 s
+blocks, =c check (gather hash used, streaming recomputed every call and compared; mutant control streaming with width+1 every 16th check must
+differ), =s stat. Latched per wrap flush like LBFAST. [g1e-hgather] per second. TRING gains a 17th column; tools/g1e_batch_arms.py --arm hgather.
+Offline second line: tools/g1e_hgather_equiv.cpp includes the real header: 400,000 random (TMEM, siz/fmt/line/tmem/palette, w up to 1024, h up to 256,
+tlut 0-3, NEON scan on/off, byte loop on 1/8): bad=0, 67,701 took the overflow path, byte-flip control changed the hash 25,000/25,000, width+1 mutant
+equal 0 times.
+Run c (in-game check, 210 s): alive=1 crash=0. chk=12,532,224 bad=0; mutant mchk=783,264 msame=0. Census: segs/hash 1.013, 2,047 bytes/hash, over=0.
+So the texel span is almost always ONE segment: the gain cannot come from texel call overhead; it comes from the palette and param tails (CI4 palette
+entries hashed 8 bytes per streaming update when the bitset is partial, plus 6 tiny param updates and the reset/digest).
+Run t (timing, 360 s, AQ=3 TRING, HGATHER=tog): alive=1 crash=0, flight tasks 13,484 (off 6,881, on 6,603). Medians off vs on: com 3.215 -> 3.093,
+wall 9.431 -> 9.287. 22 adjacent block pairs (on - off): d_com -0.117 +/- 0.122 ms/task (19/22 lower), d_w -0.191 +/- 0.355 (17/22), d_sub +0.040
+(10/22), d_rt +0.018 (10/22), d_ucx -0.113 (16/22: scene noise, the ucode does not touch the hash). Calls and bytes per task within 0.7% between arms.
+Reading: a real but small commit term (single timing run; equivalence has two independent lines). Default on (=0 restores the old path).
+Rules out: per-draw-call setup / hash containers as a commit term worth a change; texel-segment call overhead (1.01 segments per hash).
+Soak queued: scratch/agent/soak_queue/s6961_locked_hgather.sh (locked 60 Hz owner figure at current defaults; s6942 defaults read 58.8 fps).
+Next: what is left in the commit is texel memory traffic (LoadBlockRuns 15%, hash scan + XXH3 over ~2 KB per upload) and RT64 draw recording/AGX
+encode (~20%). Fold the locked soak; if it reads >= 59.5 fps, close the dd4 sync rate thread (cap reached) and move G1e to the owner's open items.
+Verdict: selects H-hash (top leaf, fix lands -0.117 ms/task commit); refutes H-setup; H-load stays second (memory-bound per s6957).

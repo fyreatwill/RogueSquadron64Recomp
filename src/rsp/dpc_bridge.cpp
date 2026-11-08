@@ -51,6 +51,8 @@ extern "C" { int g_rs64_g1e_cdiag = 0; }
 // s6957 G1e: ROGUESQ_G1E_LBFAST (default 1 = run-copy LoadBlock in RT64 loadToTMEMCommon, =0 old per-word loop, =tog 10 s blocks,
 // =check runs both and compares TMEM on every block load, check #1 vs a corrupted copy = positive control). Set per wrap flush.
 extern "C" { int g_rs64_g1e_lbfast = 1; }
+// s6961 G1e: ROGUESQ_G1E_HGATHER (default 1 gather-buffer TMEM hash in RT64 TMEMHasher, =0 streaming, =tog 10 s blocks, =c check, =s stat).
+extern "C" { int g_rs64_g1e_hgather = 1; }
 // s6960 G1e: ROGUESQ_G1E_PROVCACHE (default 0; =1 provenance-keyed upload hash cache in RT64, =tog 10 s blocks, =v verify: always hashes,
 // counts wrong cache hits, params-only mutant table must be wrong). Set per wrap flush; RT64 latches it at the next TMEM load.
 extern "C" { int g_rs64_g1e_pcache = 0; }
@@ -6315,6 +6317,8 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
             g_rs64_g1e_lbfast = s_lbf_env == 2 ? (int)((time(nullptr) / 10) & 1) : s_lbf_env;
             static const int s_pc_env = [] { const char *e = std::getenv("ROGUESQ_G1E_PROVCACHE"); return !e ? 0 : (*e == 't' ? 2 : (*e == 'v' ? 3 : (*e != '0'))); }();
             g_rs64_g1e_pcache = s_pc_env == 2 ? (int)((time(nullptr) / 10) & 1) : s_pc_env;
+            static const int s_hg_env = [] { const char *e = std::getenv("ROGUESQ_G1E_HGATHER"); return !e ? 1 : (*e == 't' ? 2 : (*e == 'c' ? 3 : (*e == 's' ? 4 : (*e != '0')))); }();
+            g_rs64_g1e_hgather = s_hg_env == 2 ? (int)((time(nullptr) / 10) & 1) : s_hg_env;
             std::unordered_map<uint64_t, const S4272Sh *> shIdx;
             static std::vector<uint64_t> shK; static std::vector<const S4272Sh *> shV; size_t shMask = 0;
             auto shSlot = [&](uint64_t k) { size_t i = (size_t)((k * 0x9E3779B97F4A7C15ull) >> 20) & shMask; while (shV[i] && shK[i] != k) i = (i + 1) & shMask; return i; };
