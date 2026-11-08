@@ -42025,6 +42025,7 @@ RS64_REPLAY = [
     "apply_s6570_svcnull.py",
     "apply_s6521_spanw.py",  # s6864: s6591 goes in front of it in the macro
     "apply_s6591_descwatch.py",
+    "apply_s6992_matwatch.py",  # s6992: material-pool write watch (after s6591, same macro anchor)
     "apply_s6593_hudptrwatch.py",
     "apply_s6595_hudptrread.py",
     "apply_s6088_bucketlog.py",
