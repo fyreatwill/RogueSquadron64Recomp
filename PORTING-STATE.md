@@ -183115,3 +183115,4 @@ presents. Mechanism read from the numbers: the formed level's latency median is 
 peaks (1-3 drops per 20 s) and the level re-forms. Next: same-run limit A/B, DRAIN=40 vs ALT=34 (a trigger below the level median).
 Rules out: "DRAIN=40 removes the level" (s6949 headline wording); it lowers it.
 Defaults unchanged; DRAIN stays opt-in, owner chooses.
+Verdict line: selects H-drain-real, refutes H-run-luck (as sole cause of the s6949 gap). Next discriminator: same-run DRAIN=40 vs ALT=34 block A/B (H-threshold vs H-reform vs H-overdrain), NEXT.md.
