@@ -184208,3 +184208,27 @@ a double right). Discovery runs d1-d4 found the route (abort lands on SELECT LEV
 - Owner sheet docs/owner_sheet_s6995_g5i_reentry.png (re-entry scrolls 8 and 9, old vs new, 0.8 s columns).
 VERDICT: selects H-pan-length (new); refutes H-static, H-ram on this route. H-retail-worse not run (AIM=0 arm) — the
 failure is our release timing, retail never aims. Not covered: fullscreen, dd2, other missions; closes on the owner's look.
+
+## Session 6996 (2026-11-08) — G1e dense-level residual (L7/L16/L17 56-58.5 fps) is non-flight time: in-flight seconds run 59.7-60.0; scorer gains flight-gated columns
+HYPOTHESIS-ID: g1e-dense-level-cost (closed). Offline only, no build, no game run: re-analysed scratch/s6993s (s6993 16:9 dd4
+FPS60 VI_LOCK QOS_ALL per-level logs + present rings).
+Ran: per-second join of [g1b] tasks/sd_wall, [g1b-gt] guest-thread cpu/blk, log events and ring Q/P (ring-to-log offset fitted
+by matching gens/s to tasks/s, best off=+1 s on L7/L16/L17).
+Showed:
+- Every [g1b] second with tasks<59 (L16 15, L17 13, L7 6; L10/L1 0) sits within 1 s of a guest thread-create /
+  runMenuRandomBackdropScreen / audio "pause set" event (15/15, 13/13, 6/6). Those levels cycle through menu/restart screens
+  during the autopilot hold: runMenuRandomBackdropScreen 16-17x on L7/L16/L17 vs 0 on L10/L1; initMission 6 (L16), 4 (L17).
+  In those seconds sd_wall drops to ~1 ms (non-3D) and the game thread (slot 8.3) uses 20-95 ms cpu/s, so not H-guest.
+- The remaining misses (P->P>=25 ms) outside +-2 s of the events: all 58 miss frames on L16 and 58 on L7 have wl_ms=0 (a present
+  without a new workload) and fall in seconds with sd max 1.7-2.3 ms vs 6.8-6.9 on normal frames, so they are also non-flight
+  screens (load/menu), not dense flight. Present stage fields (tp/acq/gpu/gs/ge) match normal frames.
+- In-flight seconds only (sd_wall>=3 ms, tasks>=0.9 x median): L16 59.7 shown/s 0.00 miss/s (72 s), L17 59.9/0.00 (47 s),
+  L7 59.9/0.01 (100 s), L10 59.8, L1 60.0, L0 59.9, L6 59.8, L9 59.9, L4r 60.0. Positive control same set: C30 (FPS60=0) reads
+  30.0 shown/s with 29.99 miss/s, so the gated metric does see missed frames.
+VERDICT: H-level-cost (s6993) SUPERSEDED; H-rsp, H-guest and H-dd are not needed: dense levels hold 60 in flight. The s6993
+shortfall was the share of the scored window spent on menu/restart screens (two lines: event-marker exclusion and the
+sd-gated flight-second score agree; the wl=0 signature of every leftover miss is a third). Why the autopilot route cycles those
+levels through the backdrop menu (mission fail/restart?) is single-source and in the owner's playtest scope (objectives parked).
+Changed: tools/g1e_level_fps.py now prints tr (menu/thread-create/pause events in window), fl_s, fl_shown, fl_miss.
+ORIGIN: no mitigation; analysis + scorer change only.
+Next: G5i owner-recipe arm (fullscreen, dd2) of the s6995 re-entry route, see NEXT.md.

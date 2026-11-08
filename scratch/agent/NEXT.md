@@ -1,11 +1,16 @@
-# NEXT: G1e residual - dense levels 7/16/17 at 56-58.5 game fps (16:9 dd4)
-HYPOTHESIS-ID: g1e-dense-level-cost
-(G5i fixed s6995, awaits the owner's look; if the owner reports the hangar fish-eye again, reopen with slug g5i-hangar-reentry,
-route scratch/s6995/arm.zsh + scratch/s6995/route_long.txt, metric tools/g5i_pan_metric.py, and add a fullscreen/dd2 arm.)
+# NEXT: G5i owner-recipe arm - hangar re-entry pans at FULLSCREEN and dd2 (s6995 fix not yet run there)
+HYPOTHESIS-ID: g5i-hangar-reentry
+Context: s6995 keyed the s6907 aim release on the raw view reaching the craft; A/B ran windowed dd4 16:9 only. The owner
+plays ROGUESQ_FULLSCREEN=1 with dd2 or dd4. CURRENT-TRUTH item 1 lists "not yet run: fullscreen, dd2".
 Hypotheses:
-- H-rsp: gfx RSP task host-ms per frame scales with scene density on L16 -> misses co-vary with [g1b] RSP ms.
-- H-guest: guest CPU (game thread) per frame exceeds the 16.7 ms budget on dense levels -> misses co-vary with guest cpu.
-- H-dd: extended terrain at dd4 is the extra term -> L16 dd1 holds 60.0 where dd4 is 56.3.
-Unit: offline join first (scratch/s6993s ring_L16 misses vs [g1b] sd_wall / guest cpu vs L10 control, no build), then one
-build with L16 dd4 vs dd1 arms run back to back (tools/g1e_owner_quiet_arms.zsh, check `cur` = the flown level).
-Discriminating outcome: which per-frame term exceeds budget on the miss frames and is absent on L10/dd1.
+- H-holds: re-entry long/double-press scrolls stay <=5 deg off axis at fullscreen dd2 and dd4, same as first entry.
+- H-size: fullscreen (other window size / RESMULT / present cadence) changes the pan timing so the release fires early again.
+- H-dd: dd2 heap/arena layout moves something the aim reads (state 0x800CC3E4, cursor 0x800CD6E8) on re-entry.
+Unit, one build (current), arms back to back (one game at a time, check screen unlocked first):
+  env AP2="$(cat scratch/s6995/route_long.txt)" zsh scratch/s6995/arm.zsh fs4 "ROGUESQ_FULLSCREEN=1"
+  env AP2="$(cat scratch/s6995/route_long.txt)" zsh scratch/s6995/arm.zsh fs2 "ROGUESQ_FULLSCREEN=1 ROGUESQ_DRAW_DISTANCE=2"
+  control: same with ROGUESQ_G5G_RELMODE=time (old clock) must show the 20-30 deg off-axis re-entry frames (positive control).
+  score: python3 tools/g5i_pan_metric.py scratch/s6995/<arm>.g5g.txt  (first entry vs re-entry max off-axis deg)
+Check arm.zsh's DRAW_DISTANCE=4 is overridden by the later env (it is inserted after; confirm run.log echoes multiplier 2).
+Discriminating outcome: fixed arms <=5 deg on both entries with the time-mode control >20 deg -> H-holds, update owner sheet;
+any fixed arm >10 deg on re-entry -> H-size or H-dd by which arm fails.

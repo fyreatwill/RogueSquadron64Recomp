@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6995 (2026-11-08).
+Compact operational handoff, as of Session 6996 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -19,9 +19,9 @@ Open or awaiting the owner (each one line; detail in the s6994 archive under the
   `(p & 0xFF000000) == 0x80000000` (7 sites) rejected the 0x81000000 spill arena, a TLUT pointer
   became slot id 0x1058 and overwrote the material pool. tools/apply_s6993_ptrmask.py,
   ROGUESQ_PTRMASK=0 = retail mask. Same-binary control crash / fixed 200 s at 21:9 and 16:9.
-- **G1e game fps per level (dd4 FPS60 VI_LOCK QOS_ALL, deep flight, flown level checked):**
-  16:9 (s6993) 16/19 levels 59.5-60.0, L7 57.2, L16 56.3, L17 58.5; 21:9 (s6991) 12 levels 60.0,
-  rest 58.2-59.6, L15 60.0 after PTRMASK. Residual: dense levels 7/16/17.
+- **G1e game fps per level (dd4 FPS60 VI_LOCK QOS_ALL, flown level checked): 60 in flight on all levels.**
+  s6996: in-flight seconds (tools/g1e_level_fps.py fl_shown) L16 59.7, L17/L7 59.9, rest 59.8-60.0; C30 control 30.0.
+  The s6993 L7/L16/L17 56.3-58.5 was menu/restart screen time inside the window (backdrop menu 16x, wl=0 presents).
 - **G1e latency/present chain s6962-s6989, all closed:** defaults on ROGUESQ_VI_RT (s6967, VI
   thread time-constraint policy), STDERR_ASYNC (s6979), G1E_CELLIDX at dd>1 (s6963); opt-ins
   VI_LOCK=1 (implies PRESENT_DRAIN_ACQ=8, target 10), QOS_ALL=1 (= GFX/GUEST/PRESENT/WL/UPLOAD
@@ -66,6 +66,7 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 maintenance)" and "
 
 ## Superseded conclusions — do not act on these
 Recent only; older entries: PROJECT-OVERVIEW "(s6994 maintenance)", "(s6900 maintenance)", "(s6870)", "(s6759 maintenance)".
+- s6993 "H-level-cost: dense levels 7/16/17 run 56-58.5 fps" (s6996): whole-window shown/s counted menu/restart screens; in flight they hold 59.7-60.
 - s6990 "60.0 fps on all 19 levels at 16:9" and s6962 "LEVEL=4 58.5, LEVEL=10 60.0" (s6991):
   FORCE_UNLOCK=1 clamps the cursor to level 1, every arm flew level 1. Check `cur` / cursorMask.
 - s6991 "21:9 selects a 2000-slot texture table" (s6992): read after the corruption; it is 2048.
@@ -134,7 +135,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit item 11.
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit item 1 (owner-recipe G5i arm).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Not yet run: fullscreen, dd2.
@@ -150,9 +151,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 9. **G5h cutscene background: closes on the owner's look.** Intros s6908, playlist s6909, scene
    s6910, floating triangles s6911, far band s6919; DD_MELT, DD_SKYZ, DD_CUT_LIVE opt-in, owner chooses.
 10. **L15 21:9: owner re-flight after s6992 PTRMASK.**
-11. **G1e residual: dense levels 7/16/17 at 56-58.5 game fps (16:9 dd4).** NEXT.md before s6994
-    had the unit (HYPOTHESIS-ID g1e-dense-level-cost): offline join of scratch/s6993s ring_L16
-    misses with [g1b] sd_wall/guest cpu vs L10; then L16 dd4 vs dd1 A/B. H-rsp / H-guest / H-dd.
+11. **G1e residual: CLOSED s6996** (in flight 59.7-60 on all levels; the shortfall was non-flight time).
+    Use fl_shown/fl_miss, not shown/s, for per-level fps. Open, owner scope: why L7/L16/L17 autopilot holds cycle the backdrop menu.
 12. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png).
 13. **Owner judgement / parked:** FPS60 feel, G3c sheets, QoS default, native hangar geometry,
     rare dd4/dd8 gfx SIGBUS (single-source). Reopen on an owner report or side-effect failure.
