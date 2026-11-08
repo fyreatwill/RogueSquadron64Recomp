@@ -183064,3 +183064,4 @@ Verdicts: H-interleave selected (585/585 of SEL's extra misses); H-rangeend refu
 Change: SEL2 is the default rule inside DD_SKYZ (=0 gives s6947 SEL). DD_SKYZ stays opt-in, owner decides. Pixel effect of the 1.8% not measured (SEL vs SEL2 shot 78 not re-captured: SEL already showed full beams).
 Rules learned: a consumer test that stops at the first mode word treats a mode that never reads z as the consumer; decide at the first draw whose mode reads prim z.
 Result line for s6948: SEL miss = non-consuming mode word between depth and sky mode; SEL2 fix matches the value rule's coverage with no leak (single run, confirm soak queued).
+Verdict line: run b1 selects H-interleave (585/585 of SEL's extra misses decided by 0F0A4004) and refutes H-rangeend (selEnd 0); SEL2 is the root cause fix. Next discriminator: the s6948_skyz_sel2_confirm soak (SEL2 miss% within 0.3 of value, SEL bins 0, leak 0 with oth_ring > 0).
