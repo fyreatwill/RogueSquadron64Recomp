@@ -3609,8 +3609,8 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
             // s6946: a sky depth value is shared by other prim-z modes (C8104A54, C4104A54: 3.2k draws per movie run on live seconds, ROGUESQ_DD_SKYZ_AUD), so a
             // ring match alone also pushed those to the far limit. Now the consumer decides: look ahead in this range for the first mode word or draw after the depth;
             // rewrite only if the sky mode comes first, or a draw comes under the sky mode. If the range ends first, rewrite unless the mode now set takes prim z and is
-            // not the sky. ROGUESQ_DD_SKYZ_SEL=0 restores the s6917 value-only rule.
-            static const bool skyz_sel = [] { const char *e = std::getenv("ROGUESQ_DD_SKYZ_SEL"); return !(e && *e == '0'); }();
+            // not the sky. Opt-in ROGUESQ_DD_SKYZ_SEL=1 (unvalidated: its s6946 run saw almost no sky-mode draws, unexplained); default keeps the s6917 value-only rule.
+            static const bool skyz_sel = [] { const char *e = std::getenv("ROGUESQ_DD_SKYZ_SEL"); return e && *e == '1'; }();
             static uint32_t s_skyz_om1 = 0;
             auto skyish = [&](uint32_t at) {
                 for (uint32_t b = at + 8; b + 8 <= hi;) {
