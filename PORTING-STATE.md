@@ -183721,3 +183721,24 @@ Two lines of evidence (same-run flip x3, cross-run sham control x2) -> H-rsp-hos
 owner row to docs/OWNER-OPT-INS.md asking whether to turn it on. Queued s6976_219_gfxqos1_r1/r2 (same recipe at 21:9).
 Rules out: s6975's Q1 result as host noise; the after-window being clean by mission timing alone.
 Discrimination: selects H-rsp-host fix (QoS1) over H-noise; mode 2 stays refuted.
+
+## Session 6977 (2026-11-08) — G1e: GFX_QOS=1 at 21:9 folded with a same-recipe no-QoS control: late presents 1.3/min -> 0.6/min (3 events, p~0.12, unresolved); QoS-from-start replicas queued
+
+Folded soaks s6976_219_gfxqos1_r1/r2 (21:9 dd4 FPS60 lvl1, VI_LOCK target 10, QoS1 flipped at 180 s, 330 s hold, 0 crash both).
+QoS flip verified in the logs ([g1b] qos=0x15 for 180 s, then 0x21 for 150 s, both runs). Both pre-flip windows had 0 late presents
+(no positive control in-run), so ran the control this session (one game at a time): scratch/s6977/ctl_r1/r2.sh = same recipe minus
+GFX_QOS, scored with g1e_gfx_qos_ab.py --split-at 178.8 (sham split). Results in scratch/s6977w.
+  run (21:9)    | gap>3/min before -> after | late30-40/min before -> after | >40 | lock drops
+  W1r1 QoS flip |  2.86 -> 5.34             | 0.00 -> 0.82                  | 0   | 1
+  W1r2 QoS flip |  1.43 -> 4.52             | 0.00 -> 0.41                  | 0   | 0
+  N1r1 no QoS   |  7.16 -> 7.45             | 0.72 -> 0.83                  | 1   | 4 (one entry at 120 s)
+  N1r2 no QoS   |  2.15 -> 7.40             | 1.43 -> 2.06                  | 0   | 0
+Pooled: no-QoS 10 late in 7.6 min = 1.3/min (same as the 16:9 no-QoS ~1.2/min); QoS after-windows 3 in 4.9 min = 0.6/min (expect 6.4
+at the no-QoS rate, Poisson P(<=3) ~0.12): a halving at most, not significant. gap>3 under QoS at 21:9 is 4.5-5.3/min, not the 16:9
+2.0-2.5 floor. g1e_late_leg.py on all 21:9 late presents: QoS 3/3 still H-rsp-host (send_dl wall-cpu 2.5-6.7 ms over p99 1.9, i.e.
+descheduled even at USER_INTERACTIVE); no-QoS 8/11 H-rsp-host or H-sched+H-rsp-host, 3 none>p99. The three QoS lates sit at 290-296 s
+in both runs; [g1b] per-second sd/cpu/load/logB shows nothing at that time (cpu ~8.3 ms steady), so treated as coincidence (n=3).
+Reading: at 21:9 the gfx task costs ~8.3 ms CPU vs ~7.9 at 16:9 and gaps are more frequent; QoS1 does not fully protect the thread.
+16:9 result (s6976) stands; the 21:9 benefit is unresolved. Queued s6977_219_qos0_r1/r2 (QoS on from start, ~8 min pooled exposure).
+Rules out: the 21:9 flip-run before-windows being a valid control (0 events, too short); no-QoS 21:9 being already clean (1.3/min).
+Discrimination: none yet at 21:9 (power too low); selects nothing new.
