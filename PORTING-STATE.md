@@ -183869,6 +183869,8 @@ Selected: H-cache in its migration form (H-migrate): extra CPU comes from leavin
 (1) off-home costs +1.4 ms even on the faster perflevel0 cores, with equal work; (2) GFX_QOS=1 keeps the thread home under the same
 load and the residual disappears. Rules out H-slowcore (perflevel0 off-home is no faster than home) and H-ucode-work (late work =
 normal). The inflation (~1.4 ms) is the smaller late term; the preemption gap (2-10 ms) is the larger, and QoS cuts it 3.5x.
+Discrimination line: this selects H-migrate (H-cache form) and refutes H-slowcore and H-ucode-work. Next discriminator: under the
+same load, B1 vs B1+ROGUESQ_GUEST_QOS=1; whether the H-sched lates fall splits H-guest from H-gfx-resid.
 Open: B1's remaining lates (18 H-sched, 14 H-rsp-host): guest game thread has no QoS (NEXT.md g1e-late-guest-qos).
 Caveat: the load arm is synthetic (14 default-QoS spinners); the owner's load (browser, DAW) is not measured.
 Docs: CURRENT-TRUTH headline (s6964/s6965 bullets migrated to PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6982)"), G1e item 7,
