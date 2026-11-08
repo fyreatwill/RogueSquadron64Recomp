@@ -91,7 +91,7 @@ for k in ('norm', 'late'):
 print('per late window: t_end | sd | sdc | samples | gfx ran/rn/wait | other cores | top others (ms) | CPUs busy>80%% of %d (tick win ms) | busy per CPU' % ncpu)
 for te, sd, sdc, r in W['late']:
     top = ', '.join(f'{names.get(i, "?")}:{d / 1e6:.1f}' for i, d in r['top'])
-    print(f'  {te:.3f} | {sd:5.2f} | {sdc:5.2f} | {r["n"]:3d} | {r["ran"]:.2f}/{r["rn"]:.2f}/{r["wt"]:.2f} | {r["oth"]:.2f} | {top} | {sum(x > .8 for x in r["b"])} ({r["tw"]:.0f}) | ' + ''.join('%d' % min(9, int(x * 10)) for x in r['b']))
+    print(f'  {te:.3f} | {sd:5.2f} | {sdc:5.2f} | {r["n"]:3d} | {r["ran"]:.2f}/{r["rn"]:.2f}/{r["wt"]:.2f} | {r["oth"]:.2f} | {top} | {sum(x > .8 for x in r["b"])} ({r["tw"]:.0f}) | ' + ''.join(('%d' % min(9, int(x * 10))) if x == x else '-' for x in r['b']))
     print(f'     strip {r["strip"]}  gfx curpri {r["pri"]}')
     print('     while gfx not running: ' + ', '.join(f'{names.get(i, "?")}:{d / 1e6:.2f}' for i, d in r['offc']))
 import random

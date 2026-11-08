@@ -183802,3 +183802,26 @@ Discrimination: selects H-block (Gfx thread blocked in its own stderr write(), 8
 control); refutes H-intra and H-extern (no CPU saturation at late instants, 3 runs) and H-ecore/page-in (0 page-ins, the wall-cpu
 gap is UNINTERRUPTIBLE syscall time, not slow running). Next discriminator: s6979_219_async_r1/r2 late/min vs 1.04, then H-wake vs
 H-cluster for the residual "runnable but no CPU" samples (NEXT.md).
+
+## Session 6980 (2026-11-08) — G1e: async stderr also removes the 21:9 late presents (whole-run replicas 1 in 7.66 min = 0.13/min vs 1.04/min direct stderr); GFX_QOS-off replicas queued
+
+Work unit (NEXT.md g1e-gfx-residual-runnable step 1): fold s6979_219_async_r1/r2 (21:9 dd4 FPS60 VI_LOCK=1 target 10, GFX_QOS=1,
+ROGUESQ_STDERR_ASYNC default on for the whole run, thread census, hold 330 s; both rc=0, crash=0). Data scratch/s6979q/.
+Pre-registered (s6979): pooled late30-40 <~0.3/min -> async fixed the 21:9 lates; ~1/min -> residual lates are another kind.
+Results (scored with g1e_gfx_qos_ab.py --split-at 178.8, the s6978 scorer, windows from 95 s, both halves summed):
+- late30-40 presents: r1 1 (151.5 s), r2 0 -> 1 in 7.66 min = 0.13/min. s6978 same recipe with direct stderr: 8 in 7.66 min (1.04/min);
+  Poisson P(X<=1 | 8) ~0.003. ">40" 0 in both runs.
+- Gfx send_dl wall-cpu gaps >3 ms: 0/min in all four half-windows (s6978 Q0: 1.4-4.3/min). Gap p99 1.71-1.92 ms (normal floor).
+- Census (g1e_stderr_async_ab.py, whole run "after"): U (UNINTERRUPTIBLE) samples in send_dl windows 0 in r2 (14107 windows) and r1
+  (14084), max wall-cpu 2.03 / 2.69 ms.
+- The one late (r1 151.51 s) is g1e_late_leg verdict "none>p99": wall-cpu 1.34 ms (normal), VI-ack queue block 7.37 ms; census strip
+  RrRRrRRRw, 5 of 15 CPUs >80% busy in that 10 ms tick window. This is the second (smaller) class seen in s6978 Q0r1 and controls,
+  not H-rsp-host.
+Selected: the s6979 H-block explanation covers the 21:9 H-rsp-host lates; async stderr removes them (two lines: late count and gap
+count, two runs). Caveat: the baseline is cross-run; the same-run control is s6979 T4 (gaps 4.3 -> 0/min at the switch).
+Rules out: residual "runnable but no CPU" samples as a late-present cause at 21:9 (normal windows carry 0.20 rn fraction too, and
+no late remains with a wall-cpu excess).
+Tool fix: tools/g1e_thread_census.py crashed formatting busy-per-CPU when a tick bin was NaN (empty), which killed the soak's inline
+g1e_stderr_async_ab.py; prints '-' now.
+Queued: s6980_219_async_noqos_r1/r2 (same recipe, GFX_QOS off = owner default) to decide whether QoS adds anything with async on.
+Docs: CURRENT-TRUTH headline + G1e item; OWNER-OPT-INS async row gets the whole-run number.
