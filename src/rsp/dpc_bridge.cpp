@@ -3606,9 +3606,26 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
                 const uint32_t o1 = rd(at + 4), n1 = 0x7FFF0000u | (o1 & 0xFFFFu); memcpy(g_rdram_for_submit + ((at + 4) & kSubmitRamMask), &n1, 4);
                 if ((++s_skyz_n & (s_skyz_n - 1)) == 0) fprintf(stderr, "[dd-skyz] n=%llu miss=%llu swap=%d %08X -> %08X\n", (unsigned long long)s_skyz_n, (unsigned long long)s_skyz_miss, sw, o1, n1);
             };
+            // s6946: a sky depth value is shared by other prim-z modes (C8104A54, C4104A54: 3.2k draws per movie run on live seconds, ROGUESQ_DD_SKYZ_AUD), so a
+            // ring match alone also pushed those to the far limit. Now the consumer decides: look ahead in this range for the first mode word or draw after the depth;
+            // rewrite only if the sky mode comes first, or a draw comes under the sky mode. If the range ends first, rewrite unless the mode now set takes prim z and is
+            // not the sky. ROGUESQ_DD_SKYZ_SEL=0 restores the s6917 value-only rule.
+            static const bool skyz_sel = [] { const char *e = std::getenv("ROGUESQ_DD_SKYZ_SEL"); return !(e && *e == '0'); }();
+            static uint32_t s_skyz_om1 = 0;
+            auto skyish = [&](uint32_t at) {
+                for (uint32_t b = at + 8; b + 8 <= hi;) {
+                    const uint32_t o2 = (rd(b) >> 24) & 0x3F;
+                    if (o2 == 0x2F) return rd(b + 4) == 0x00552224u;
+                    if ((o2 >= 0x08 && o2 <= 0x0F) || o2 == 0x24 || o2 == 0x25 || o2 == 0x36) return s_skyz_om1 == 0x00552224u;
+                    if (o2 == 0x2E) return true;  // replaced before any use
+                    b += (o2 >= 0x08 && o2 <= 0x0F) ? 32 + ((o2 & 4) ? 64 : 0) + ((o2 & 2) ? 64 : 0) + ((o2 & 1) ? 16 : 0) : (o2 == 0x24 || o2 == 0x25) ? 16 : 8;
+                }
+                return !(s_skyz_om1 & 4u) || s_skyz_om1 == 0x00552224u;
+            };
+            if (op == 0x2F) s_skyz_om1 = w1;
             if (op == 0x2E) {
                 skyz_pd = a; s_skyz_pd = w1 >> 16; s_skyz_done = false;
-                if (live) for (uint32_t v : s_skyz_ring) if (v && v == s_skyz_pd) { put(a); s_skyz_done = true; break; }
+                if (live) for (uint32_t v : s_skyz_ring) if (v && v == s_skyz_pd) { if (!skyz_sel || skyish(a)) put(a); s_skyz_done = true; break; }
             } else if (op == 0x2F && w1 == 0x00552224u && !s_skyz_done) {
                 s_skyz_done = true;
                 bool known = false; for (uint32_t v : s_skyz_ring) known |= v == s_skyz_pd;
@@ -3622,15 +3639,16 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         // with prim z, so the instrument must see non-sky prim z draws), on the odd-second parity. Leaking blender words are kept. Diagnostic, off unless set.
         static FILE *s_za = [] { const char *e = std::getenv("ROGUESQ_DD_SKYZ_AUD"); return (e && *e) ? fopen(e, "w") : (FILE *)nullptr; }();
         if (s_za && skyz) {
-            static uint32_t z_om0 = 0, z_om1 = 0, z_pdk = 0, z_sw = 0xFFFFFFFFu, z_c[4] = {}, z_leak[16] = {}, z_nl = 0;
+            static uint32_t z_om0 = 0, z_om1 = 0, z_pdk = 0, z_sw = 0xFFFFFFFFu, z_c[6] = {}, z_leak[16] = {}, z_nl = 0; static bool z_rw = false;
             if (z_sw != (uint32_t)sw) {
-                if (z_c[0] | z_c[1] | z_c[2] | z_c[3]) fprintf(s_za, "%u %llu %u %u %u %u %u\n", z_sw, (unsigned long long)mach_absolute_time(), (unsigned)((mach_absolute_time() / 24000000ull) & 1), z_c[0], z_c[1], z_c[2], z_c[3]);
-                fflush(s_za); z_sw = (uint32_t)sw; z_c[0] = z_c[1] = z_c[2] = z_c[3] = 0;
+                if (z_c[0] | z_c[1] | z_c[2] | z_c[3]) fprintf(s_za, "%u %llu %u %u %u %u %u %u %u\n", z_sw, (unsigned long long)mach_absolute_time(), (unsigned)((mach_absolute_time() / 24000000ull) & 1), z_c[0], z_c[1], z_c[2], z_c[3], z_c[4], z_c[5]);
+                fflush(s_za); z_sw = (uint32_t)sw; for (auto &c : z_c) c = 0;
             }
             if (op == 0x2E) { z_pdk = 2; for (uint32_t v : s_skyz_ring) if (v && v == (w1 >> 16)) { z_pdk = 1; break; } }
+            if ((op == 0x2E || op == 0x2F) && skyz_pd != 0xFFFFFFFFu) z_rw = (rd(skyz_pd + 4) >> 16) == 0x7FFFu && z_pdk == 1;
             else if (op == 0x2F) { z_om0 = w0; z_om1 = w1; }
             else if (((op >= 0x08 && op <= 0x0F) || op == 0x24 || op == 0x25 || op == 0x36) && z_pdk && (z_om1 & 4u) && (z_om1 & 0x30u) && ((z_om0 >> 20) & 3u) < 2u) {
-                const bool sky = z_om1 == 0x00552224u; z_c[(sky ? 0 : 1) + (z_pdk == 1 ? 0 : 2)]++;
+                const bool sky = z_om1 == 0x00552224u; z_c[(sky ? 0 : 1) + (z_pdk == 1 ? 0 : 2)]++; if (z_rw) z_c[sky ? 4 : 5]++;
                 if (!sky && z_pdk == 1) { bool k = false; for (uint32_t i = 0; i < z_nl; i++) k |= z_leak[i] == z_om1; if (!k && z_nl < 16) { z_leak[z_nl++] = z_om1; fprintf(s_za, "# leak om %08X %08X swap=%d\n", z_om0, z_om1, sw); } }
             }
         }
