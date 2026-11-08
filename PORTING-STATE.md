@@ -183798,3 +183798,7 @@ Results.
   so the late-present effect is not yet measured: whole-run replicas s6979_219_async_r1/r2 queued (pre-registered vs 1.04/min).
 Rules out: CPU saturation (in-process or external) as the cause of the 21:9 H-rsp-host lates; page-in/memory compression stalls.
 Owner note: OWNER-OPT-INS gets a "launch with 2>/dev/null or to a file" tip (Terminal scrollback held 26 GB).
+Discrimination: selects H-block (Gfx thread blocked in its own stderr write(), 8/11 late windows, stack + same-run fix A/B with sham
+control); refutes H-intra and H-extern (no CPU saturation at late instants, 3 runs) and H-ecore/page-in (0 page-ins, the wall-cpu
+gap is UNINTERRUPTIBLE syscall time, not slow running). Next discriminator: s6979_219_async_r1/r2 late/min vs 1.04, then H-wake vs
+H-cluster for the residual "runnable but no CPU" samples (NEXT.md).
