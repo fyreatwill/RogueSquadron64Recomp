@@ -183303,3 +183303,37 @@ descriptor+content is a near-perfect proxy for bytes. First a feasibility census
 and the provenance key's cost against the CI4 hash (221 ns per 2 KB).
 Code: lib/rt64 (export.sh refreshed submodule-patches/rt64.patch). Default behaviour unchanged (env unset = no census).
 Verdict line: s6958 selects H-partial and refutes H-repeat and H-fresh; the next discriminator is the provenance-key census (NEXT.md, ROGUESQ_G1E_PROV=stat).
+
+## Session 6959 (2026-11-07) — G1e: provenance-keyed upload hash census: 99.79% hit without the source hash but 802 wrong hashes in 105 s; with the source hash 99.97% hit, 0 wrong; key 60 ns vs hash 257 ns; H-prov selected, H-src live, H-prov-cost refuted
+
+What ran: new opt-in diagnostic ROGUESQ_G1E_PROV=stat in lib/rt64 (submodule-patches/rt64.patch refreshed).
+- Load side (rt64_rdp.cpp rs64ProvLoad, wraps loadToTMEMCommon): each of the 512 TMEM 8-byte words carries a tag. tagA = the load's
+  descriptor key K (kind, RGBA32, src addr, src stride, tmem start/stride, words, rows, dxt). tagS = mix(K, XXH3 of the source rows) (exact).
+  A word the load fully writes takes the tag; a partly written word chains mix(old, K) (0 such updates in this game). Which bytes a K writes
+  comes from running the load on two scratch TMEMs filled 0x00 and 0xFF (written bytes agree in both), cached per K (4096 direct-mapped).
+  Also counts srcchg = same K, different source hash than last time.
+- Hash side (rt64_rdp_tmem.cpp rs64ProvCensus, after every TMEMHasher::hash in uploadTexture): key = tile params (tmem, line, siz, fmt,
+  palette, width, height, tlut) + run-length walk of word tags over a SUPERSET of the bytes the hasher reads (texel span with wrap, the RGBA32
+  upper half, the CI4 16-word palette or the whole CI8 upper half). Four arms, each a 4096 direct-mapped {key, real hash} table, every hit
+  checked against the real hash: A = tagA, S = tagS, M1 = params only (mutant, the positive control), M2 = tagA without the TLUT span.
+  Every 64th call times arm A's key and the real hash (mach ticks).
+Run: env OUT=scratch/s6959 zsh tools/g1e_xt_flight.zsh r 240 "ROGUESQ_G1E_PROV=stat ROGUESQ_G1E_LOADREP=0" (windowed sync, FPS60 dd4 16:9,
+lvl index 1 keyed flight). alive=1, 0 crash, tasks 60/s, sd_wall 9.70 ms with the census on. Summary: tools/g1e_prov_sum.py (new).
+
+Results, flight t>=100 s (105 s, 113k hash calls/s, 96.4% CI4; loads 264k/s):
+- arm A: hit 99.79%, bad 802 (0.007% of hits, 7.6/s).  arm S: hit 99.97%, bad 0.
+- M1 (params only): bad on 93.7% of hits -> the verify arm discriminates.  M2 (no TLUT span): bad 802, same as A (palettes co-vary with
+  index data here, so the palette tags add no safety in this scene; keep them anyway, they are a superset).
+- key 60.5 ns vs real hash 257.4 ns per call (ratio 0.23); 2.0 runs and 273 words walked per call.
+- srcchg 0.003% of loads (~8/s), the source of arm A's wrong hashes: a few textures are rewritten by the CPU under the same descriptor.
+- maskmiss 0.37% of loads, partial-word updates 0.
+- Boot (t<90 s) agrees: A 99.12% hit / 365 bad, S 99.50% / 0 bad, ratio 0.24.
+What it shows: the provenance key is a near-perfect proxy for the hashed TMEM bytes AND cheap (H-prov selected, H-prov-cost refuted), but
+only with the source content in it: without it, ~8 wrong hashes per second would show wrong textures (H-src live). Same-run positive control
+(M1) and an exact reference arm (S). Single run.
+Budget: hashing is ~113k x 257 ns = 29 ms per wall second (~0.48 ms/task). An S-keyed cache saves that minus the key (~7 ms/s) and a per-load
+source XXH3 (~1.1 KB per load, ~10 ms/s at 264k loads/s): expect about -0.2 ms/task; RDRAM dirty-page tracking instead of the source hash
+would take it to about -0.35. Modest: commit is ~3.4 ms/task, so this is a step, not the whole commit term.
+Ruled out: a provenance key without source content (wrong textures), and "key costs as much as the hash".
+Next: build the S-keyed cache (skip TMEMHasher::hash on a hit), =tog same-run timing, =v verify. NEXT.md.
+Verdict line: s6959 selects H-prov with H-src (cache must key the source), refutes H-prov-cost.

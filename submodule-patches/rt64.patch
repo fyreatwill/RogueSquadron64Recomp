@@ -4128,10 +4128,10 @@ index f17db9b..2ac865a 100644
                      if (!present.fbOperations.empty()) {
                          const std::scoped_lock lock(screenFbChangePoolMutex);
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index d1a9f4e..ef443d4 100644
+index d1a9f4e..a969743 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
-@@ -4,10 +4,60 @@
+@@ -4,10 +4,61 @@
  
  #include "rt64_rdp.h"
  
@@ -4155,6 +4155,7 @@ index d1a9f4e..ef443d4 100644
 +extern "C" __attribute__((weak)) uint32_t rs64_phase_ord(void);
 +// s6942 G1e: bumped on every TMEM write (loadToTMEMCommon, RDP ctor); keys the uploadTexture hash memo in rt64_rdp_tmem.cpp.
 +extern "C" { uint64_t g_rs64_tmem_gen = 1; }
++extern "C" uint64_t g_rs64_prov_tagA[512], g_rs64_prov_tagS[512];  // s6959 provenance census tags (defined below)
 +extern "C" void rs64_floor_note(int, int, uint32_t, uint32_t, float, float, float, float, float, float, float, float, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, float, float, float, float, float, float, float, float, int, int, uint32_t, uint32_t, uint32_t, uint32_t);
 +extern "C" void rs64_floor_rect(float, float, float, float, float, float, float, float, uint32_t, uint32_t, uint32_t, int);
 +
@@ -4192,7 +4193,7 @@ index d1a9f4e..ef443d4 100644
  
  #include "../include/rt64_extended_gbi.h"
  
-@@ -28,7 +78,80 @@
+@@ -28,7 +79,80 @@
  //#   define LOG_LOAD_METHODS
  #endif
  
@@ -4273,7 +4274,7 @@ index d1a9f4e..ef443d4 100644
      // RDP
      static uint8_t getCommandLength(uint32_t commandId) {
          if (commandId == (G_TEXRECT & 0x3F) || commandId == (G_TEXRECTFLIP & 0x3F)) {
-@@ -62,8 +185,88 @@ namespace RT64 {
+@@ -62,8 +186,89 @@ namespace RT64 {
          }
      }
  
@@ -4359,10 +4360,11 @@ index d1a9f4e..ef443d4 100644
      RDP::RDP(State *state) : state(state) {
          memset(TMEM, 0, sizeof(TMEM));
 +        g_rs64_tmem_gen++;
++        memset(g_rs64_prov_tagA, 0, sizeof(g_rs64_prov_tagA)); memset(g_rs64_prov_tagS, 0, sizeof(g_rs64_prov_tagS));
          crashed = false;
          crashReason = CrashReason::None;
  
-@@ -136,6 +339,30 @@ namespace RT64 {
+@@ -136,6 +341,30 @@ namespace RT64 {
      void RDP::checkFramebufferOverlap(uint32_t tmemStart, uint32_t tmemWords, uint32_t tmemMask, uint32_t addressStart, uint32_t addressEnd, uint32_t tileWidth, uint32_t tileHeight, bool RGBA32, bool makeTileCopy) {
          auto &fbManager = state->framebufferManager;
          Framebuffer *fb = fbManager.findMostRecentContaining(addressStart, addressEnd);
@@ -4393,7 +4395,7 @@ index d1a9f4e..ef443d4 100644
          if (fb != nullptr) {
              const bool gpuCopiesEnabled = state->ext.emulatorConfig->framebuffer.copyWithGPU;
              if (!gpuCopiesEnabled) {
-@@ -250,6 +477,9 @@ namespace RT64 {
+@@ -250,6 +479,9 @@ namespace RT64 {
          }
      }
  
@@ -4403,7 +4405,7 @@ index d1a9f4e..ef443d4 100644
      void RDP::setColorImage(uint8_t fmt, uint8_t siz, uint16_t width, uint32_t address) {
          // Make sure the new color image is actually different. Some games will set the color image
          // multiple times despite setting the exact same parameters.
-@@ -264,14 +494,77 @@ namespace RT64 {
+@@ -264,14 +496,77 @@ namespace RT64 {
              colorImage.width = width;
              colorImage.address = newAddress;
              colorImage.changed = true;
@@ -4481,7 +4483,7 @@ index d1a9f4e..ef443d4 100644
          const uint32_t newAddress = maskAddress(address);
          if (depthImage.address != newAddress) {
              depthImage.address = newAddress;
-@@ -293,6 +586,67 @@ namespace RT64 {
+@@ -293,6 +588,67 @@ namespace RT64 {
  #   ifdef LOG_TEXTURE_IMAGE_METHODS
          RT64_LOG_PRINTF("RDP::setTextureImage(fmt %u, siz %u, width %u, address 0x%08X)", fmt, siz, width, address);
  #   endif
@@ -4549,7 +4551,7 @@ index d1a9f4e..ef443d4 100644
      }
  
      void RDP::setCombine(uint64_t combine) {
-@@ -324,6 +678,46 @@ namespace RT64 {
+@@ -324,6 +680,46 @@ namespace RT64 {
  #ifdef LOG_TILE_METHODS
          RT64_LOG_PRINTF("RDP::setTile(tile %u, fmt %u, siz %u, line %u, tmem %u, palette %u, cmt %u, cms %u, maskt %u, masks %u, shiftt %u, shifts %u)", tile, fmt, siz, line, tmem, palette, cmt, cms, maskt, masks, shiftt, shifts);
  #endif
@@ -4596,7 +4598,7 @@ index d1a9f4e..ef443d4 100644
  
          assert(tile < RDP_TILES);
  
-@@ -340,6 +734,11 @@ namespace RT64 {
+@@ -340,6 +736,11 @@ namespace RT64 {
          t.shifts = shifts;
          t.shiftt = shiftt;
          state->updateDrawStatusAttribute(DrawAttribute::Texture);
@@ -4608,7 +4610,7 @@ index d1a9f4e..ef443d4 100644
      }
  
      void RDP::setTileSize(uint8_t tile, uint16_t uls, uint16_t ult, uint16_t lrs, uint16_t lrt) {
-@@ -354,6 +753,10 @@ namespace RT64 {
+@@ -354,6 +755,10 @@ namespace RT64 {
          t.lrs = lrs;
          t.lrt = lrt;
          state->updateDrawStatusAttribute(DrawAttribute::Texture);
@@ -4619,7 +4621,7 @@ index d1a9f4e..ef443d4 100644
      }
  
      void RDP::clearTileReplacementHash(uint8_t tile) {
-@@ -379,32 +782,158 @@ namespace RT64 {
+@@ -379,32 +784,221 @@ namespace RT64 {
              offsetMask = 0x7;
          }
  
@@ -4699,6 +4701,7 @@ index d1a9f4e..ef443d4 100644
 +    // (ROGUESQ_G1E_TMEMMEMO=v) counts the hash calls a skip would save and verifies them (vbad must stay 0). Positive control: load #1000 is
 +    // issued twice; the second issue must count desc, cont and noop (0xB; prior compares against the TMEM state before the FIRST issue, so it fires only when that was a noop). s6958 read 0xB.
 +    extern "C" { int g_rs64_lrep_inner = 0; }
++    #define RDP_TMEM_WORDS_RS64 (RDP_TMEM_BYTES / 8)
 +    struct RS64LrepEnt { uint64_t key, src, tb; };
 +    static RS64LrepEnt rs64Lrep[4096];
 +    struct RS64LrepStat { uint64_t loads, k[3], desc, cont, prior, noop, noopk[3], contNoop, priorNoop, srcB; time_t t; } rs64LS;
@@ -4755,6 +4758,66 @@ index d1a9f4e..ef443d4 100644
 +        }
 +    }
 +
++    // s6959 G1e: ROGUESQ_G1E_PROV=stat provenance census (default off). Every TMEM 8-byte word carries a tag naming the load that wrote it:
++    // tagA = descriptor key K (kind, RGBA32, src addr, strides, tmem start, words, rows, dxt; K fixes which bytes land where, the source is
++    // assumed static), tagS = K mixed with the source-bytes hash (exact). Words a load fully writes take the tag; partly written words chain
++    // mix(old, K). The written-byte masks per K come from running the load on two scratch TMEMs (0x00 / 0xFF fill: written bytes agree) and are
++    // cached per K. rt64_rdp_tmem.cpp keys each upload hash by the tags of the hashed span and verifies every hit against the real hash.
++    extern "C" { int g_rs64_prov_inner = 0; uint64_t g_rs64_prov_tagA[RDP_TMEM_WORDS_RS64], g_rs64_prov_tagS[RDP_TMEM_WORDS_RS64];
++        uint64_t g_rs64_prov_loads = 0, g_rs64_prov_srcchg = 0, g_rs64_prov_maskmiss = 0, g_rs64_prov_partial = 0; }
++    struct RS64ProvMask { uint64_t key, full[8], part[8]; };
++    static RS64ProvMask rs64ProvMasks[4096];
++    struct RS64ProvSrc { uint64_t key, src; };
++    static RS64ProvSrc rs64ProvSrc[4096];
++    static inline uint64_t rs64ProvMix(uint64_t a, uint64_t b) { uint64_t x = (a ^ (b * 0x9E3779B97F4A7C15ull)) * 0xBF58476D1CE4E5B9ull; return x ^ (x >> 31); }
++    template<bool RGBA32, bool BLOCK, bool TLUT>
++    static void rs64ProvLoad(uint8_t *TMEM, const uint8_t *RDRAM, uint32_t textureStart, uint32_t textureStride, uint32_t tmemStart,
++        uint32_t tmemStride, uint32_t wordsPerRow, uint32_t rowCount, uint32_t dxtIncrement)
++    {
++        const int kind = BLOCK ? 1 : (TLUT ? 2 : 0);
++        const uint32_t w = wordsPerRow > 2048 ? 2048 : wordsPerRow, r = rowCount > 2048 ? 2048 : rowCount;
++        uint64_t key = XXH3_64bits_withSeed(&textureStart, 4, uint64_t(kind) | (uint64_t(RGBA32) << 2));
++        const uint32_t d[6] = { textureStride, tmemStart, tmemStride, w, r, dxtIncrement };
++        key = XXH3_64bits_withSeed(d, sizeof(d), key) | 1ull;  // never 0 (0 = the RDP ctor's zero TMEM)
++        uint64_t sh = 0x51ED;
++        const uint32_t a0 = textureStart & 0xFFFFFFu, rowB = (TLUT ? 2u : 8u) * w;
++        for (uint32_t y = 0; y < r; y++) {
++            const uint64_t a = uint64_t(a0) + uint64_t(y) * textureStride;
++            if (a + rowB > 0x1000000ull) break;
++            sh = XXH3_64bits_withSeed(RDRAM + a, rowB, sh);
++        }
++        RS64ProvSrc &ps = rs64ProvSrc[(key * 0x9E3779B97F4A7C15ull) >> 52];
++        if (ps.key == key && ps.src != sh) g_rs64_prov_srcchg++;
++        ps = { key, sh };
++        RS64ProvMask &m = rs64ProvMasks[(key * 0xC2B2AE3D27D4EB4Full) >> 52];
++        g_rs64_prov_inner = 1;
++        if (m.key != key) {
++            static uint8_t sA[RDP_TMEM_BYTES], sB[RDP_TMEM_BYTES];
++            memset(sA, 0x00, sizeof(sA)); memset(sB, 0xFF, sizeof(sB));
++            loadToTMEMCommon<RGBA32, BLOCK, TLUT>(sA, RDRAM, textureStart, textureStride, tmemStart, tmemStride, wordsPerRow, rowCount, dxtIncrement);
++            loadToTMEMCommon<RGBA32, BLOCK, TLUT>(sB, RDRAM, textureStart, textureStride, tmemStart, tmemStride, wordsPerRow, rowCount, dxtIncrement);
++            m.key = key;
++            for (int i = 0; i < 8; i++) { m.full[i] = 0; m.part[i] = 0; }
++            for (uint32_t wd = 0; wd < RDP_TMEM_WORDS_RS64; wd++) {
++                int n = 0;
++                for (int b = 0; b < 8; b++) n += (sA[wd * 8 + b] == sB[wd * 8 + b]);
++                if (n == 8) m.full[wd >> 6] |= 1ull << (wd & 63);
++                else if (n) m.part[wd >> 6] |= 1ull << (wd & 63);
++            }
++            g_rs64_prov_maskmiss++;
++        }
++        loadToTMEMCommon<RGBA32, BLOCK, TLUT>(TMEM, RDRAM, textureStart, textureStride, tmemStart, tmemStride, wordsPerRow, rowCount, dxtIncrement);
++        g_rs64_prov_inner = 0;
++        const uint64_t ks = rs64ProvMix(key, sh) | 1ull;
++        for (int i = 0; i < 8; i++) {
++            uint64_t f = m.full[i], pm = m.part[i];
++            while (f) { const int b = __builtin_ctzll(f); f &= f - 1; g_rs64_prov_tagA[i * 64 + b] = key; g_rs64_prov_tagS[i * 64 + b] = ks; }
++            while (pm) { const int b = __builtin_ctzll(pm); pm &= pm - 1; const int wd = i * 64 + b;
++                g_rs64_prov_tagA[wd] = rs64ProvMix(g_rs64_prov_tagA[wd], key); g_rs64_prov_tagS[wd] = rs64ProvMix(g_rs64_prov_tagS[wd], ks); g_rs64_prov_partial++; }
++        }
++        g_rs64_prov_loads++;
++    }
++
 +    template<bool RGBA32, bool BLOCK, bool TLUT>
      __forceinline void loadToTMEMCommon(uint8_t *TMEM, const uint8_t *RDRAM, uint32_t textureStart, uint32_t textureStride, uint32_t tmemStart,
 -        uint32_t tmemStride, uint32_t wordsPerRow, uint32_t rowCount, uint32_t dxtIncrement = 0)
@@ -4763,6 +4826,8 @@ index d1a9f4e..ef443d4 100644
          assert((!BLOCK || (rowCount == 1)) && "Load block must behave as if it only loads one row of data.");
 -        
 +        static const bool s_lrep = [] { const char *e = std::getenv("ROGUESQ_G1E_LOADREP"); return e && *e && *e != '0'; }();
++        static const bool s_prov = [] { const char *e = std::getenv("ROGUESQ_G1E_PROV"); return e && *e && *e != '0'; }();
++        if (s_prov && !g_rs64_prov_inner && !g_rs64_lrep_inner) { rs64ProvLoad<RGBA32, BLOCK, TLUT>(TMEM, RDRAM, textureStart, textureStride, tmemStart, tmemStride, wordsPerRow, rowCount, dxtIncrement); return; }
 +        if (s_lrep && !g_rs64_lrep_inner) { rs64LoadRepCensus<RGBA32, BLOCK, TLUT>(TMEM, RDRAM, textureStart, textureStride, tmemStart, tmemStride, wordsPerRow, rowCount, dxtIncrement); return; }
 +        g_rs64_tmem_gen++;  // s6942: TMEM is about to change, invalidates the hash memo
 +        uint8_t rs64ChkCopy[RDP_TMEM_BYTES]; bool rs64Chk = false;
@@ -4789,7 +4854,7 @@ index d1a9f4e..ef443d4 100644
          const uint32_t DXTSwap = 0x800;
          uint32_t textureAddress, tmemAddress, wordCount, tmemMask, tmemAdvance;
          if constexpr (RGBA32) {
-@@ -452,7 +981,7 @@ namespace RT64 {
+@@ -452,7 +1046,7 @@ namespace RT64 {
          if ((tmemStride > 0) && ((wordsPerRow * tmemAdvance) <= tmemStride)) {
              int32_t rowsToSkip = rowCount - (tmemMask + tmemStride) / tmemStride;
              if (rowsToSkip > 0) {
@@ -4798,7 +4863,7 @@ index d1a9f4e..ef443d4 100644
                  textureAddressRow += textureStride * rowsToSkip;
                  tmemXorMask = (rowsToSkip & 0x1) << 2;
                  rowCount -= rowsToSkip;
-@@ -472,6 +1001,43 @@ namespace RT64 {
+@@ -472,6 +1066,43 @@ namespace RT64 {
              loadRowStep();
              rowCount--;
          }
@@ -4842,7 +4907,7 @@ index d1a9f4e..ef443d4 100644
      }
  
      void RDP::loadTileOperation(const LoadTile &loadTile, const LoadTexture &loadTexture, bool deferred) {
-@@ -510,6 +1076,7 @@ namespace RT64 {
+@@ -510,6 +1141,7 @@ namespace RT64 {
              else {
                  loadToTMEMCommon<false>(TMEM8, RDRAM, textureStart, bytesPerRow, tmemStart, tmemStride, wordsPerRow, rowCount);
              }
@@ -4850,7 +4915,7 @@ index d1a9f4e..ef443d4 100644
          }
      }
  
-@@ -540,12 +1107,208 @@ namespace RT64 {
+@@ -540,12 +1172,208 @@ namespace RT64 {
              // Load into TMEM.
              uint8_t *TMEM8 = reinterpret_cast<uint8_t *>(TMEM);
              const uint8_t *RDRAM = state->RDRAM;
@@ -5059,7 +5124,7 @@ index d1a9f4e..ef443d4 100644
          }
      }
  
-@@ -722,6 +1485,117 @@ namespace RT64 {
+@@ -722,6 +1550,117 @@ namespace RT64 {
  #ifdef LOG_LOAD_METHODS
          RT64_LOG_PRINTF("RDP::loadBlock(tile %u, uls %u, ult %u, lrs %u, dxt %u)", tile, uls, ult, lrs, dxt);
  #endif
@@ -5177,7 +5242,7 @@ index d1a9f4e..ef443d4 100644
          assert(tile < RDP_TILES);
          auto &t = tiles[tile];
          t.uls = uls;
-@@ -775,12 +1649,82 @@ namespace RT64 {
+@@ -775,12 +1714,82 @@ namespace RT64 {
          workload.drawData.loadOperations.emplace_back(operation);
  
          state->updateDrawStatusAttribute(DrawAttribute::Texture);
@@ -5260,7 +5325,7 @@ index d1a9f4e..ef443d4 100644
          assert(tile < RDP_TILES);
          auto &t = tiles[tile];
          t.uls = uls;
-@@ -818,6 +1762,20 @@ namespace RT64 {
+@@ -818,6 +1827,20 @@ namespace RT64 {
              }
          }
  
@@ -5281,7 +5346,7 @@ index d1a9f4e..ef443d4 100644
          // Perform the first step of the deferred operation.
          loadTLUTOperation(t, texture, true);
  
-@@ -912,6 +1870,18 @@ namespace RT64 {
+@@ -912,6 +1935,18 @@ namespace RT64 {
      }
  
      void RDP::setFogColor(uint32_t color) {
@@ -5300,7 +5365,7 @@ index d1a9f4e..ef443d4 100644
          hlslpp::float4 &fogColor = fogColorStack[fogColorStackSize - 1];
          fogColor.x = ((color >> 24) & 0xFF) / 255.0f;
          fogColor.y = ((color >> 16) & 0xFF) / 255.0f;
-@@ -935,6 +1905,23 @@ namespace RT64 {
+@@ -935,6 +1970,23 @@ namespace RT64 {
      }
  
      void RDP::setFillColor(uint32_t color) {
@@ -5324,7 +5389,7 @@ index d1a9f4e..ef443d4 100644
          fillColorStack[fillColorStackSize - 1] = color;
          state->updateDrawStatusAttribute(DrawAttribute::FillColor);
      }
-@@ -1034,6 +2021,7 @@ namespace RT64 {
+@@ -1034,6 +2086,7 @@ namespace RT64 {
      }
  
      void RDP::fillRect(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry, const ExtendedAlignment &extAlignment) {
@@ -5332,7 +5397,7 @@ index d1a9f4e..ef443d4 100644
  #   ifdef LOG_FILLRECT_METHODS
          RT64_LOG_PRINTF("RDP::fillRect(ulx %d, uly %d, lrx %d, lry %d)", ulx, uly, lrx, lry);
  #   endif
-@@ -1049,6 +2037,59 @@ namespace RT64 {
+@@ -1049,6 +2102,59 @@ namespace RT64 {
              lry |= 3;
          }
  
@@ -5392,7 +5457,7 @@ index d1a9f4e..ef443d4 100644
          drawRect(ulx, uly, lrx, lry, 0, 0, 0, 0, false, extAlignment);
      }
  
-@@ -1084,6 +2125,7 @@ namespace RT64 {
+@@ -1084,6 +2190,7 @@ namespace RT64 {
      }
      
      void RDP::drawTris(uint32_t triCount, const float *pos, const float *tc, const float *col, uint8_t tile, uint8_t levels) {
@@ -5400,7 +5465,7 @@ index d1a9f4e..ef443d4 100644
          // Levels is expected to be above 0 elsewhere.
          levels += 1;
  
-@@ -1131,6 +2173,944 @@ namespace RT64 {
+@@ -1131,6 +2238,944 @@ namespace RT64 {
          triTcFloats.insert(triTcFloats.end(), tc, tc + triCount * TcFloatsPerTri);
          triColorFloats.insert(triColorFloats.end(), col, col + triCount * ColFloatsPerTri);
          drawCall.triangleCount += triCount;
@@ -6345,7 +6410,7 @@ index d1a9f4e..ef443d4 100644
  
          const FixedRect &scissorRect = state->rdp->scissorRectStack[scissorStackSize - 1];
          if (!scissorRect.isNull()) {
-@@ -1191,9 +3171,38 @@ namespace RT64 {
+@@ -1191,9 +3236,38 @@ namespace RT64 {
          }
  
          const FixedRect drawRect(movedFromOrigin(ulx, extAlignment.leftOrigin), uly, movedFromOrigin(lrx, extAlignment.rightOrigin), lry);
@@ -6384,7 +6449,7 @@ index d1a9f4e..ef443d4 100644
  
          // Check if framebuffer pair must be changed.
          checkFramebufferPair();
-@@ -1285,6 +3294,7 @@ namespace RT64 {
+@@ -1285,6 +3359,7 @@ namespace RT64 {
          triTcFloats.emplace_back(flip ? u2 : u1);
          triTcFloats.emplace_back(flip ? v1 : v2);
          drawCall.triangleCount += 2;
@@ -6392,7 +6457,7 @@ index d1a9f4e..ef443d4 100644
  
          // Update the tracked texcoords for the used tiles. Use scissor intersection to figure out 
          // what the bounds of the real sampling will be if necessary.
-@@ -1315,10 +3325,101 @@ namespace RT64 {
+@@ -1315,10 +3390,101 @@ namespace RT64 {
      }
      
      void RDP::drawTexRect(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry, uint8_t tile, int16_t uls, int16_t ult, int16_t dsdx, int16_t dtdy, bool flip, const ExtendedAlignment &extAlignment) {
@@ -6495,7 +6560,7 @@ index d1a9f4e..ef443d4 100644
          // with the GPU-side stage 2.5 counter, this shows how many texrects
          // enter the pipeline vs how many reach the for-loop.
 diff --git a/src/hle/rt64_rdp_tmem.cpp b/src/hle/rt64_rdp_tmem.cpp
-index 6051f4e..6f06e43 100644
+index 6051f4e..d2e935e 100644
 --- a/src/hle/rt64_rdp_tmem.cpp
 +++ b/src/hle/rt64_rdp_tmem.cpp
 @@ -6,6 +6,9 @@
@@ -6508,7 +6573,7 @@ index 6051f4e..6f06e43 100644
  
  #include "xxHash/xxh3.h"
  
-@@ -13,6 +16,63 @@
+@@ -13,6 +16,139 @@
  
  #include "rt64_state.h"
  
@@ -6521,6 +6586,77 @@ index 6051f4e..6f06e43 100644
 +    struct RS64MemoEntry { uint64_t gen, a, b, hash; };
 +    RS64MemoEntry rs64Memo[256], rs64MemoMut[256];
 +    struct RS64MemoStat { uint64_t calls, hits, bytes, vchk, vbad, mchk, mbad, ci4n, ci4b, ci8n, ci8b; time_t t; } rs64MS;
++}
++// s6959 G1e: ROGUESQ_G1E_PROV=stat provenance-key census (tags maintained in rt64_rdp.cpp rs64ProvLoad). Per hash call the key is the tile
++// params plus a run-length walk of the word tags over a SUPERSET of the bytes TMEMHasher reads (texel span with wrap, the RGBA32 upper half,
++// the TLUT span). Arms, each a direct-mapped 4096 table {key, hash}, every hit checked against the real hash: A = tagA (no source hash),
++// S = tagS (exact), M1 = params only (mutant: must mismatch, the verify arm's positive control), M2 = tagA without the TLUT span (mutant).
++// Every 64th call times arm A's key and the real hash (mach ticks summed). Per-second [g1e-prov].
++#include <mach/mach_time.h>
++extern "C" uint64_t g_rs64_prov_tagA[512], g_rs64_prov_tagS[512], g_rs64_prov_loads, g_rs64_prov_srcchg, g_rs64_prov_maskmiss, g_rs64_prov_partial;
++namespace {
++    struct RS64ProvEnt { uint64_t key, hash; };
++    RS64ProvEnt rs64ProvT[4][4096];
++    struct RS64ProvStat { uint64_t calls, ci4, hit[4], bad[4], ci4hit, runs, words, tsamp, tkey, thash; time_t t; } rs64PS;
++    inline uint64_t rs64PMix(uint64_t a, uint64_t b) { uint64_t x = (a ^ (b * 0x9E3779B97F4A7C15ull)) * 0xBF58476D1CE4E5B9ull; return x ^ (x >> 31); }
++    struct RS64Span { uint32_t w0, n; };  // word start, word count (wraps within the half/whole TMEM region given by base/size)
++    // Run-length key over tags; returns the mixed key, adds runs/words to the stat.
++    inline uint64_t rs64ProvSpanKey(const uint64_t *tag, uint64_t h, uint32_t base, uint32_t size, uint32_t w0, uint32_t n, uint32_t salt, uint64_t &runs) {
++        uint64_t prev = ~0ull;
++        for (uint32_t i = 0; i < n; i++) {
++            const uint64_t t = tag[base + ((w0 + i) % size)];
++            if (t != prev) { h = rs64PMix(h, t ^ (uint64_t(i + salt) << 48)); prev = t; runs++; }
++        }
++        return rs64PMix(h, uint64_t(n) | (uint64_t(salt) << 32));
++    }
++    inline uint64_t rs64ProvKey(const uint64_t *tag, uint64_t a, uint64_t b, const RT64::LoadTile &lt, uint16_t width, uint16_t height, uint32_t tlut, bool withTlut, uint64_t &runs, uint64_t &words) {
++        const bool RGBA32 = (lt.siz == G_IM_SIZ_32b) && (lt.fmt == G_IM_FMT_RGBA);
++        const bool half = RGBA32 || tlut > 0;
++        const uint32_t sizeW = half ? 256u : 512u;
++        const uint32_t dbpr = std::max(uint32_t(width) << (RGBA32 ? G_IM_SIZ_16b : lt.siz) >> 1U, 1U);
++        uint32_t total = (uint32_t(lt.line) << 3) * (height > 0 ? height - 1 : 0) + dbpr;
++        const uint32_t start = (uint32_t(lt.tmem) << 3) & (half ? 2047u : 4095u);
++        const uint32_t w0 = start >> 3;
++        uint32_t n = ((start + total + 7) >> 3) - w0;
++        if (n > sizeW) n = sizeW;
++        uint64_t h = rs64PMix(a, b);
++        h = rs64ProvSpanKey(tag, h, 0, sizeW, w0, n, 0, runs); words += n;
++        if (RGBA32) { h = rs64ProvSpanKey(tag, h, 256, 256, w0, n, 1, runs); words += n; }
++        if (tlut && withTlut) {
++            if (lt.siz == G_IM_SIZ_4b) { h = rs64ProvSpanKey(tag, h, 256, 256, uint32_t(lt.palette) << 4, 16, 2, runs); words += 16; }
++            else { h = rs64ProvSpanKey(tag, h, 256, 256, 0, 256, 2, runs); words += 256; }
++        }
++        return h;
++    }
++}
++static void rs64ProvCensus(const uint8_t *TMEM, const RT64::LoadTile &loadTile, uint16_t width, uint16_t height, uint32_t tlut, uint64_t a, uint64_t b, uint64_t realHash, uint64_t hashTicks, bool sampled) {
++    uint64_t runs = 0, words = 0, rd = 0, wd = 0;
++    uint64_t t0 = sampled ? mach_absolute_time() : 0;
++    const uint64_t kA = rs64ProvKey(g_rs64_prov_tagA, a, b, loadTile, width, height, tlut, true, runs, words);
++    if (sampled) { rs64PS.tkey += mach_absolute_time() - t0; rs64PS.thash += hashTicks; rs64PS.tsamp++; }
++    const uint64_t k[4] = { kA, rs64ProvKey(g_rs64_prov_tagS, a, b, loadTile, width, height, tlut, true, rd, wd), rs64PMix(a, b) | 1ull,
++        rs64ProvKey(g_rs64_prov_tagA, a, b, loadTile, width, height, tlut, false, rd, wd) };
++    const bool ci4 = tlut && loadTile.siz == 0;
++    rs64PS.calls++; rs64PS.ci4 += ci4; rs64PS.runs += runs; rs64PS.words += words;
++    for (int i = 0; i < 4; i++) {
++        RS64ProvEnt &e = rs64ProvT[i][(k[i] * 0x9E3779B97F4A7C15ull) >> 52];
++        if (e.key == k[i]) { rs64PS.hit[i]++; rs64PS.bad[i] += (e.hash != realHash); if (i == 0) rs64PS.ci4hit += ci4; }
++        e = { k[i], realHash };
++    }
++    if ((rs64PS.calls & 255) == 0) {
++        const time_t now = time(nullptr);
++        if (now != rs64PS.t) {
++            mach_timebase_info_data_t tb; mach_timebase_info(&tb);
++            const double ns = rs64PS.tsamp ? double(tb.numer) / tb.denom / rs64PS.tsamp : 0.0;
++            fprintf(stderr, "[g1e-prov] t=%ld calls=%llu ci4=%llu hitA=%llu badA=%llu hitS=%llu badS=%llu hitM1=%llu badM1=%llu hitM2=%llu badM2=%llu ci4hitA=%llu runs=%llu words=%llu tsamp=%llu keyns=%.1f hashns=%.1f loads=%llu srcchg=%llu maskmiss=%llu partial=%llu\n",
++                (long)now, (unsigned long long)rs64PS.calls, (unsigned long long)rs64PS.ci4, (unsigned long long)rs64PS.hit[0], (unsigned long long)rs64PS.bad[0],
++                (unsigned long long)rs64PS.hit[1], (unsigned long long)rs64PS.bad[1], (unsigned long long)rs64PS.hit[2], (unsigned long long)rs64PS.bad[2],
++                (unsigned long long)rs64PS.hit[3], (unsigned long long)rs64PS.bad[3], (unsigned long long)rs64PS.ci4hit, (unsigned long long)rs64PS.runs,
++                (unsigned long long)rs64PS.words, (unsigned long long)rs64PS.tsamp, rs64PS.tkey * ns, rs64PS.thash * ns,
++                (unsigned long long)g_rs64_prov_loads, (unsigned long long)g_rs64_prov_srcchg, (unsigned long long)g_rs64_prov_maskmiss, (unsigned long long)g_rs64_prov_partial);
++            rs64PS = {}; rs64PS.t = now; g_rs64_prov_loads = g_rs64_prov_srcchg = g_rs64_prov_maskmiss = g_rs64_prov_partial = 0;
++        }
++    }
 +}
 +static uint64_t rs64MemoHash(const uint8_t *TMEM, const RT64::LoadTile &loadTile, uint16_t width, uint16_t height, uint32_t tlut) {
 +    static const int s_mode = [] { const char *e = std::getenv("ROGUESQ_G1E_TMEMMEMO"); return !e ? 0 : (*e == 't' ? 2 : (*e == 'v' ? 3 : (*e != '0'))); }();
@@ -6539,7 +6675,12 @@ index 6051f4e..6f06e43 100644
 +        h = e.hash;
 +    }
 +    else {
++        static const bool s_prov = [] { const char *e = std::getenv("ROGUESQ_G1E_PROV"); return e && *e && *e != '0'; }();
++        static uint64_t s_provN = 0;
++        const bool samp = s_prov && ((++s_provN & 63) == 0);
++        const uint64_t ht0 = samp ? mach_absolute_time() : 0;
 +        h = RT64::TMEMHasher::hash(TMEM, loadTile, width, height, tlut, RT64::TMEMHasher::CurrentHashVersion);
++        if (s_prov) rs64ProvCensus(TMEM, loadTile, width, height, tlut, a, b, h, samp ? mach_absolute_time() - ht0 : 0, samp);
 +        if (mode == 3) {
 +            if (hit) { rs64MS.vchk++; rs64MS.vbad += (e.hash != h); }
 +            RS64MemoEntry &m = rs64MemoMut[slot];
@@ -6572,7 +6713,7 @@ index 6051f4e..6f06e43 100644
  namespace RT64 {
      // TextureManager
  
-@@ -50,10 +110,47 @@ namespace RT64 {
+@@ -50,10 +186,47 @@ namespace RT64 {
      }
  
      uint64_t TextureManager::uploadTexture(State *state, const LoadTile &loadTile, TextureCache *textureCache, uint64_t creationFrame, uint16_t width, uint16_t height, uint32_t tlut) {
@@ -6621,7 +6762,7 @@ index 6051f4e..6f06e43 100644
              textureCache->queueGPUUploadTMEM(hash, creationFrame, TMEM, RDP_TMEM_BYTES, width, height, tlut, loadTile, true);
          }
  
-@@ -85,7 +182,7 @@ namespace RT64 {
+@@ -85,7 +258,7 @@ namespace RT64 {
          }
  
          // Dump the RDRAM last loaded into the TMEM address pointed to by the tile. Required for generating hashes used by Rice.
