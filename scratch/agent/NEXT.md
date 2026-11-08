@@ -1,12 +1,13 @@
 # OWNER OVERRIDE 2026-11-04: do ITERATION.md G5 in order. G5a-G5h all fixed or done, owner confirmation pending.
 
-# NEXT: G1e — fold 21:9 QoS-from-start soaks s6977_219_qos0_r1/r2 (results scratch/s6977q; tail prints g1e_gfx_qos_ab --split-at
-# 178.8 + lock score). Control already measured: scratch/s6977w N1r1/r2 no-QoS 21:9 = 10 late30-40 in 7.6 min (1.3/min).
-HYPOTHESIS-ID: g1e-gfx-thread-qos
-Count late30-40 events from 95 s in both Q0 runs (rate*window from both windows), pool (~7.6 min).
-Outcomes: pooled QoS <= ~3 events (<0.4/min, Poisson p<0.01 vs 1.3/min) -> QoS helps at 21:9 too; update OWNER-OPT-INS row.
-Pooled ~6-10 -> no 21:9 benefit: row says 16:9 only; then run g1e_late_leg.py on the Q0 lates: if still H-rsp-host (wall-cpu gap)
-the thread is preempted despite USER_INTERACTIVE -> next lever is fewer competing threads (check what else runs on P cores at those
-instants; RT64 present/worker threads at default QoS) rather than more QoS.
-Either way this closes the QoS thread; owner decides the default. Defaults: DRAIN, DRAIN_ACQ, DRAIN_HITCH, SKYZ, SCREEN_JOB,
-INFLIGHT, PROVCACHE, VI_LOCK, GFX_QOS stay opt-in. VI_RT default on. Owner reports override all of this.
+# NEXT: G1e — name what preempts the USER_INTERACTIVE Gfx thread at 21:9 late presents (s6978: QoS no help at 21:9, lates still H-rsp-host).
+HYPOTHESIS-ID: g1e-gfx-preemptor
+Hypotheses: H-intra (our own process: RT64 render/present/texture/shader threads or the game/audio threads saturate the 5 P-cores at that instant),
+H-extern (another process: WindowServer/compositor at 21:9 fullscreen, agent/browser), H-ecore (the thread is migrated to an E-core, not preempted).
+Instrument (ONE build): sampler thread at 1 kHz (USER_INTERACTIVE) reading thread_info(THREAD_BASIC_INFO) for every task thread
+(task_threads) -> per-thread cpu_usage + run_state + name into a ring; plus host_processor_info per-CPU ticks (P vs E cluster load) per ms.
+Dump binary at exit (env ROGUESQ_G1E_THREADS=<path>), join to g1e_late_leg.py late instants via mach time.
+Discriminating outcome at each H-rsp-host late (wall-cpu gap): sum of our runnable threads >= P-core count -> H-intra (fix: lower QoS of RT64
+background threads / pin worker counts); our threads idle but P cluster busy -> H-extern (owner-host issue, document); gfx thread running but
+CPU rate low with E cluster busy -> H-ecore. Positive control: the sampler must show the gfx thread running during normal send_dl intervals.
+Recipe: s6977 Q0 (21:9 dd4 FPS60 VI_LOCK=1 GFX_QOS=1) 2 runs via soak queue. Defaults unchanged; owner decides GFX_QOS default (16:9).

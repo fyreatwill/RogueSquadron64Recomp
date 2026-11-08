@@ -55,7 +55,7 @@ print(f'W rows within 50 ms before a send_dl return: {inwin}/{tot}')
 def chain(k):
     i, j = kicks[k], kicks[k + 1] if k + 1 < len(kicks) else len(ev) - 1
     def nxt(a, code, lim):
-        for x in range(a + 1, lim):
+        for x in range(a + 1, min(lim, len(ev))):
             if ev[x][1] == code: return x
         return None
     ts = nxt(i, 6, j + 400); rx = nxt(ts, 7, j + 400) if ts else None; sd = nxt(ts, 8, j + 400) if ts else None

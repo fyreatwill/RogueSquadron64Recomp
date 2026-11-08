@@ -183742,3 +183742,19 @@ Reading: at 21:9 the gfx task costs ~8.3 ms CPU vs ~7.9 at 16:9 and gaps are mor
 16:9 result (s6976) stands; the 21:9 benefit is unresolved. Queued s6977_219_qos0_r1/r2 (QoS on from start, ~8 min pooled exposure).
 Rules out: the 21:9 flip-run before-windows being a valid control (0 events, too short); no-QoS 21:9 being already clean (1.3/min).
 Discrimination: none yet at 21:9 (power too low); selects nothing new.
+
+## Session 6978 (2026-11-08) — G1e: GFX_QOS=1 has no benefit at 21:9 (QoS from start 1.04 late/min vs 1.3 control, 2+2 runs); lates still H-rsp-host; OWNER-OPT-INS row narrowed to 16:9
+Folded queued soaks s6977_219_qos0_r1/r2 (21:9 dd4 FPS60 VI_LOCK=1 target 10, GFX_QOS=1 from start, sham split 178.8 s, hold 330 s, crash=0 both).
+- late30-40 events from 95 s: r1 1+3, r2 1+3 -> 8 in 7.66 min = 1.04/min. Same-recipe no-QoS control s6977w N1r1/r2 (re-scored this session with
+  g1e_gfx_qos_ab.py --split-at 178.8): 3 (+1 >40) and 7 -> 10 in 7.6 min = 1.3/min. Pre-registered outcome "pooled ~6-10 -> no 21:9 benefit" selected.
+  The s6977 after-window "0.6/min" (3 events) was small-number noise.
+- Gaps>3 ms on the gfx thread: Q0 1.4-4.3/min vs N1 2.2-7.4/min (QoS reduces preemption, does not remove it at 21:9).
+- g1e_late_leg.py per late present: Q0r2 4/4 H-sched+H-rsp-host (wall-cpu 5.8-9.2 ms vs normal p99 1.7) - the gfx thread is descheduled mid task
+  even at QOS_CLASS_USER_INTERACTIVE. Q0r1: 1/4 rsp-host, 3/4 "none>p99" with the game blocked on the VI-ack queue 0x80128CF0 ~16 ms (a second, smaller
+  class also present in controls: N1r1 111.6/312.5 s, N1r2 120.5 s).
+- Tool fix: g1e_late_leg.py nxt() indexed past the end of the TL event list when the last kick sat within 400 events of the end (IndexError on Q0r2);
+  bounded the range.
+Rules out: QoS as a 21:9 fix; "QoS-from-start differs from mid-run flip" is not needed to explain anything. Positive control: the same instrument
+selected H-rsp-host in s6975 and the same scorer reproduces the s6977w control count (10).
+Docs: CURRENT-TRUTH headline + G1e item; OWNER-OPT-INS GFX_QOS row = 16:9 only. Default stays off (owner decides).
+Next: per-thread CPU census at late instants to name the preemptor (in-process RT64 render/present/shader threads vs external processes).
