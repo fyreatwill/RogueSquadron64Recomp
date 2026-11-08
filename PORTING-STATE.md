@@ -183580,3 +183580,26 @@ Verdict: selects H-hash (top leaf, fix lands -0.117 ms/task commit); refutes H-s
 - ORIGIN: not a corruption fix; the submit-to-vsync phase was never chosen (VI grid starts at boot time, RSP cost sets the rest).
 - Verdict: refutes H-vsync-phase-drift; selects H-submit-phase (latency regime is set by where W lands in the display interval).
   Soaks s6968_vilock_169_l1/l2 queued (owner 16:9, LOCK_AT=150). scratch/s6968/.
+
+## Session 6969 (2026-11-07) — G1e: ROGUESQ_VI_LOCK alone does not prevent the 21:9 level (it pauses at level and never engages after a load-formed one); LOCK+ACQ8 is the winning arm (lat p50 23.4, 0% at level), so VI_LOCK=1 now implies DRAIN_ACQ=8
+- Soaks folded: s6968_vilock_169_l1/l2 (owner 16:9 dd4 FPS60, LOCK_AT=150, no drain, 0 crash). Mixed: l1 had no level before
+  (lat 27.7) and ENTERED one at 150.8 s, the instant the lock engaged (tools/g1e_vi_display_phase.py onset; dP 33.3 = one late present
+  during the slew), after-block lat 40.2, acq>5 90%; l2 sat at level before (lat 46.4, 100%) and the after block was 49.7% (lat 37.9).
+  So at 16:9 the lock without a drain neither prevents nor reliably clears a level. Offline (scratch/s6969/wq.py): at level Q pins
+  ~0.5 ms after the vsync and W->Q = the acquire wait (7 ms); W at the target says nothing once the queue is a frame deep.
+- New tool tools/g1e_lock_arms_score.py: one row per arm (W/Q phase p50, % presents at level acq>5, lat p50/p90, misses/s, drain drops,
+  level entries with hysteresis minrun 30, ENGAGED control). Positive control: it recovers the independently found s6968 onsets
+  (d1 67 s, d2 123 s, l1 151 s/204 s) from the rings alone. Caveat: its ENGAGED test is weak at level (W can sit near 10 while pinned).
+- Run (lvl1 21:9 dd4 FPS60, RT default, all from boot, HOLD 260, tools/g1e_owner_quiet_arms.zsh, human idle 6.3 h, scratch/s6969, 0 crash),
+  2x2 sequential, from 95 s:
+    n0 neither      lvl 56.5%  lat 39.2/46.2  drops 0  entries 132(30s) 206(50s) (+28 s load)
+    L1 LOCK         lvl 99.4%  lat 46.0/46.2  drops 0  level from the 28 s load persisted; [vi-lock] acq_ema 10-14 all run -> never servoed
+    LA LOCK+ACQ8    lvl  0.3%  lat 23.4/24.8  drops 2  W p50 10.0 ENGAGED
+    A8 ACQ8         lvl  0.0%  lat 29.7/31.0  drops 0  W p50 3.7 (free)
+  One run per arm (single-source per arm), but it agrees with s6968 k1-k3 (LOCK+ACQ8, lat 23.3-23.4 3/3).
+- Change (lib/rt64 plume_metal.cpp rs64DrainAcqN, patch exported): when ROGUESQ_PRESENT_DRAIN_ACQ is unset and ROGUESQ_VI_LOCK=1, the
+  ACQ trigger defaults to 8; =0 keeps the lock alone. Default-off unchanged (no env -> no drain, no lock).
+- Verify run, same recipe: V1 (LOCK=1 only) lvl 0.0%, lat 23.4/24.7, 4 drops from 20 s (the implied drain fired = positive control),
+  ENGAGED; V0 (LOCK=1 + DRAIN_ACQ=0) lvl 98.1%, lat 41.2/43.1, 0 drops = reproduces L1. 0 crash.
+- ORIGIN: not a corruption fix; the lock gate (pause at acq EMA > 5 ms) is by design, so a level needs a drain to exit.
+- Verdict: refutes H-lock-prevents; selects LOCK+drain as a single knob. 16:9 split queued: soaks s6969_169_V / s6969_169_N.
