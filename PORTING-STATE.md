@@ -183678,3 +183678,23 @@ in the 12 rows before the run). Rings: s6970q V/N, s6971q V10/V6, s6972q V10/V13
   Queued s6974_169_V10g_r1/r2 (V10 lock + TL + GRING) to run g1e_tl_present.py on the late kicks: game running (H-sim) vs rsp/rdp
   (H-rsp) vs game blocked on mq (H-sched).
 Rules out: ACQ hysteresis change; pair-trigger drain.
+
+## Session 6975 (2026-11-08) — G1e: residual lock late presents are the Gfx/RSP thread being descheduled mid task (H-rsp-host); opt-in ROGUESQ_GFX_QOS=1 cut late presents 2.15 -> 0/min same run (single-source)
+
+Folded soaks s6974_169_V10g_r1/r2 (V10 lock, TL+GRING, 0 crash): drops 1 and 2 over 95-259 s; 2 + 5 single-vsync-late presents.
+New tools/g1e_late_leg.py (fork of g1e_tl_present.py) joins each late present to the gfx thread's R row (send_dl wall vs thread CPU).
+Positive control: on normal presents the TL rsp leg and R send_dl wall agree (p50 9.13 = 9.13 r1, 8.97 = 8.97 r2). First join attempt
+took the NEXT send_dl (W follows its send_dl by ~2.2 ms); fixed to the previous R row.
+Result: 6/7 late presents have send_dl wall - CPU 3.7-12.1 ms vs normal p99 1.7, CPU itself normal (5.9-9.9 ms) -> the thread
+was descheduled mid gfx task (H-rsp-host); H-rsp-work (more ucode work) refuted (CPU not long); H-sim refuted (game run ms normal,
+2.0-2.4); H-sched (kick >0.25 ms after VI) appears in 3/7, always with something else except one r1 case. ORIGIN: host scheduler, ours —
+the Gfx thread runs at ThreadPriority::Normal, and set_native_thread_priority is a no-op on macOS (same class as the s6967 VI thread).
+Change: ROGUESQ_GFX_QOS (lib/N64ModernRuntime events.cpp, opt-in, default 0): 1 = QoS USER_INTERACTIVE, 2 = Mach time-constraint
+(computation ROGUESQ_GFX_QOS_COMP_MS=12); ROGUESQ_GFX_QOS_AT=<s> one flip (stderr "[gfx-qos] t= mode= ok="). Tool
+tools/g1e_gfx_qos_ab.py scores the same-run before/after (gap>3 ms rate, late presents per min). Patches exported.
+Run scratch/s6975q (16:9 dd4 FPS60 lvl1, VI_LOCK target 10, flip at 180 s, 330 s hold, 0 crash both):
+  Q1 (mode 1): gap>3 12.17 -> 2.48 /min, late30-40 2.15 -> 0.00 /min (145 s after window), drops 0 over 95-329 s, lat 23.3/24.5.
+  Q2 (mode 2): gap>3 2.86 -> 2.88, late 2.15 -> 0.41, >40 0 -> 0.41, 4 drops (2 after the flip). Time-constraint does NOT help.
+Scale of the noise (fake mark at 180 s on the s6974 rings, no change applied): gap>3 0.8-3.2/min, late 0-2.4/min per window, so
+one Q1 after-window of 0 is suggestive (expected ~5 under null) but single-source. Replicas queued: s6975_169_gfxqos1_r1/r2.
+Rules out: RSP workload spikes and game-CPU bursts as the late-frame cause; time-constraint policy as the fix.
