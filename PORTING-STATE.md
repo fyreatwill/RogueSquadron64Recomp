@@ -183639,3 +183639,13 @@ Verdict: selects H-hash (top leaf, fix lands -0.117 ms/task commit); refutes H-s
 - Change: scorer gains --bins S (per-bin median lat / slow% / drain drops inline), replacing the s6970 ad-hoc offline pass.
 - Queued per the H-V-unstable branch: s6971_169_V10 (default target, third replica, same-cycle control) and s6971_169_V6
   (ROGUESQ_VI_LOCK_TARGET_MS=6) into scratch/s6971q. Decides whether an earlier target removes the isolated drops at 16:9.
+
+## Session 6972 (2026-11-07) — G1e: VI-lock target 6 vs 10 at 16:9: 0 drops each, target 6 adds exactly 4 ms latency (lat = const + 16.7 - W); target 10 kept, V13 vs V10 queued
+
+Folded soaks s6971_169_V10 / s6971_169_V6 (scratch/s6971q; owner recipe 16:9 dd4 FPS60 lvl1 from boot, VI_RT default, LOCK implies ACQ8; both rc 0, crash=0). `tools/g1e_lock_arms_score.py --from 95 --bins 15`:
+- V10: W p50 10.0 ENGAGED, lat p50/p90 23.3/24.2, slow% 0.0, miss 0, 0 drops; every 15 s bin median 23, 0 slow.
+- V6: W p50 6.0 ENGAGED, lat 27.3/28.5, slow% 0.6 (bins 0-2), miss 0, 0 drops.
+Pre-registered outcomes (s6971 NEXT): H-noise selected (drops 0 vs 0; the s6971 r2 V arm's 4 drops do not reproduce in V10, so they are drain noise). H-target-matters refuted. H-V6-worse not met on its slow% > 2 criterion, but V6 is worse on latency.
+The NEXT prediction that an earlier target lowers latency had the sign wrong: W is when the frame reaches the renderer after vsync, so arriving earlier waits longer for the next edge. Measured delta 27.3 - 23.3 = 4.0 ms = the 4 ms target shift, matching lat = const + (16.67 - W) (two lines: measurement + period arithmetic). Target 10 stays the default; OWNER-OPT-INS row notes it.
+Rules out: target 6 as a fix for isolated drops; the s6971 drop count as a lock property.
+Queued: s6972_169_V10 / s6972_169_V13 (scratch/s6972q). Model predicts V13 ~20.3 ms; pre-registered: V13 lat <= 21, slow% <= 1, drops <= V10+2 -> offer the owner 13; slow% > 2 or drops > V10+3 or not ENGAGED -> frames miss the edge, keep 10.
