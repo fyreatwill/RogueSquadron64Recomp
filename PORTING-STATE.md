@@ -183198,3 +183198,21 @@ Positive control PASSED: off blocks 7 and 9 at level (acq>5% 34.1, 47.2). The 28
 - Cross-run note: 28 (this run) vs 34 (s6951) is two runs, each with its own same-run off control.
 Rules out: lowering the DRAIN recommendation below 34. OWNER-OPT-INS now says so. Slug g1e-present-drain closed; defaults unchanged.
 Next: G1e item 7 per-task tail (NEXT.md), owner reports first.
+
+## Session 6954 (2026-11-07) — G1e: per-task ring splits the dd4 tail: task time scales with rsp_dpc_submit call count (~200 ns/call, flat per call), not RDP bytes; slow tasks are +19% calls for +2.7% bytes; H-submit (per-call) selected, H-ucode and H-rt64 refuted
+HYPOTHESIS-ID: g1e-dd4-task-tail. No owner report; no new soak results since s6948 (folded). Only the built-in display attached (XG49V unit not runnable).
+Hypotheses: H-ucode (slow tasks = more LLE interpreter work) / H-submit (per-call rsp_dpc_submit + task-end commit dominate, scale with call count) / H-rt64 (RT64 send_dl remainder grows).
+Instrument (one build): ROGUESQ_G1E_AQ=3 (src/rsp/dpc_bridge.cpp) times every 16th rsp_dpc_submit call (x16 estimate; AQ=1's two clock reads per call cost more than the term) and the task-end commit (defer_end); ROGUESQ_G1E_TRING=<file> (src/main/main.cpp) writes one row per send_dl: wall, cpu (events.cpp hook rs64_g1e_tring_push after send_dl, lib/N64ModernRuntime, patch exported), ucode wall, submit, commit, calls, RDP bytes, phase, spin. tools/g1e_task_ring.py analyses.
+Run: env OUT=scratch/s6954 zsh tools/g1e_xt_flight.zsh tr 360 "ROGUESQ_G1E_AQ=3 ROGUESQ_G1E_AQ_SPIN_NS=20 ROGUESQ_G1E_TRING=..." (windowed sync FPS60 dd4 16:9, lvl index 1 keyed flight), 360 s, alive, 0 crash. 19,189 task rows, flight (phase 7, t>=100 s) 13,334: 6,781 no-spin, 6,553 spin.
+Control A: per-second ring mean sd_wall 8.502 vs [g1b] 8.504 over 316 matched seconds (ratio 0.9997, worst second 0.7%): the ring sees every task.
+Control B (same run): SPIN_NS=20 on every submit call in alternate 10 s windows: sampled submit term +0.99 ms vs ~0.95 expected (calls x spin), sd_wall +0.77: the sampled submit estimate tracks a known injected cost.
+Split, no-spin flight tasks (wall ms; ucx = ucode - submit; com = commit; rest = wall - ucode - commit):
+- slow 10%: wall 11.44 = ucx 3.65 + submit 3.96 + commit 3.81 + rest 0.02; calls 58.4k, bytes 1.49 MB.
+- mid 40-60%: wall 10.03 = 3.26 + 3.45 + 3.32 + 0.01; calls 48.9k, bytes 1.46 MB.
+- fast 10%: wall 7.95 = 2.95 + 2.49 + 2.49 + 0.01; calls 31.7k, bytes 1.33 MB.
+- slow - mid delta 1.40 ms: ucx +0.39 (28%), submit +0.51 (37%), commit +0.50 (35%); per-call cost flat (ucx 62/67, submit 68/70, commit 65/68 ns per call); calls +19%, bytes +2.7%, bytes per call 25.6 vs 29.7.
+- OLS sd_wall = 101 ns/call + 2.4 ns/byte, R2 0.878; r(sd_wall, calls) 0.915, r(sd_wall, commit) 0.906, r(sd_wall, bytes) 0.465.
+- The RT64 remainder outside ucode+commit is ~0.015 ms: RT64's own work runs inside the commit (defer_end), not after it.
+=> H-submit selected in the per-call form: every term (interpreter, submit, commit) is a constant ~65 ns per DPC_END bump, so the tail is "more, smaller submits" (each ~3-4 RDP commands), not more RDP data or a costlier RT64 path. H-ucode refuted as a separate cause (its growth is per-call, not per-byte), H-rt64 refuted (remainder ~0). Single run, two controls; per-task grain.
+Rules out: RDP data volume and RT64 draw-call build as the dd4 tail term.
+Next: cut the call count: batch contiguous DPC_END bumps in rsp_dpc_submit into one range before submit_impl (flush on non-contiguous start, wrap, or task end), with a ROGUESQ_G1E_BATCH=tog same-run arm and an equivalence check on the RDP command stream (same bytes in the same order to RT64).

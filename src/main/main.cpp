@@ -6529,6 +6529,31 @@ static void released() {
 struct Hold { explicit Hold(int tag) { acquired(tag); } ~Hold() { released(); } };
 }
 
+// s6954 G1e per-task ring (ROGUESQ_G1E_TRING=<file>, needs ROGUESQ_G1E_AQ=3 and ROGUESQ_G1B=1): one text row per send_dl:
+// "t_ms sd_wall sd_cpu ucode_ms submit_ms commit_ms calls rdp_bytes n_ucode phase spin". Rows are line-buffered into the file.
+extern "C" uint32_t rs64_task_rdp_bytes_total();
+extern "C" uint32_t g_rs64_aq_spin_ns;
+struct Rs64TrAcc { uint64_t n = 0, uc = 0, sub = 0, com = 0, calls = 0, bytes = 0; };
+static Rs64TrAcc g_rs64_tr;
+static FILE *g_rs64_tr_f = nullptr;
+extern "C" int rs64_g1e_tring_on = [] {
+    const char *e = std::getenv("ROGUESQ_G1E_TRING");
+    if (!e || !*e) return 0;
+    g_rs64_tr_f = std::fopen(e, "w");
+    if (!g_rs64_tr_f) return 0;
+    std::setvbuf(g_rs64_tr_f, nullptr, _IOFBF, 1 << 16);
+    std::fprintf(g_rs64_tr_f, "# t_ms sd_wall sd_cpu ucode_ms submit_ms commit_ms calls rdp_bytes n_ucode phase spin\n");
+    return 1;
+}();
+extern "C" uint32_t rs64_phase_ord();
+extern "C" void rs64_g1e_tring_push(double t_ms, double w, double c) {
+    if (!g_rs64_tr_f) return;
+    const Rs64TrAcc a = g_rs64_tr; g_rs64_tr = Rs64TrAcc{};
+    std::fprintf(g_rs64_tr_f, "%.3f %.3f %.3f %.3f %.3f %.3f %llu %llu %llu %u %u\n", t_ms, w, c, a.uc / 1e6, a.sub / 1e6, a.com / 1e6,
+                 (unsigned long long)a.calls, (unsigned long long)a.bytes, (unsigned long long)a.n, rs64_phase_ord(), g_rs64_aq_spin_ns);
+    static double last_flush = 0; if (t_ms - last_flush > 1000.0) { std::fflush(g_rs64_tr_f); last_flush = t_ms; }
+}
+
 extern "C" void rs64_dmem_lock()   { g_lle_task_mutex.lock(); s4249::acquired(0); }
 extern "C" void rs64_dmem_unlock() { s4249::released(); g_lle_task_mutex.unlock(); }
 
@@ -6941,9 +6966,10 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         const char *e = std::getenv("ROGUESQ_G1E_AQ");
         const char *sp = std::getenv("ROGUESQ_G1E_AQ_SPIN_NS");
         s_aq_spin_cfg = sp ? (uint32_t)std::strtoul(sp, nullptr, 0) : 0u;
-        g_rs64_aq_on = (e && *e && *e != '0') ? (*e == '2' ? 2 : 1) : 0;  // s6715: 2 = per-task ucode timing only (no per-submit clock)
+        g_rs64_aq_on = (e && *e && *e != '0') ? (*e == '2' ? 2 : *e == '3' ? 3 : 1) : 0;  // s6954: 3 = sampled submit timing  // s6715: 2 = per-task ucode timing only (no per-submit clock)
     }
     const uint64_t aq_sub0 = g_rs64_aq_submit_ns, aq_calls0 = g_rs64_aq_submit_calls, aq_com0 = g_rs64_aq_commit_ns;
+    const uint32_t tr_bytes0 = rs64_task_rdp_bytes_total();
     const auto aq_t0 = g_rs64_aq_on > 0 ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
     RspExitReason r;
     if (rs64_g1e_dmembase && g_dmem_cur == dmem) {
@@ -7058,6 +7084,10 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         const uint64_t sub_ns = g_rs64_aq_submit_ns - aq_sub0;
         acc.n++; acc.ucode += ucode_ns; acc.sub += sub_ns; acc.calls += g_rs64_aq_submit_calls - aq_calls0;
         acc.com += g_rs64_aq_commit_ns - aq_com0;
+        if (rs64_g1e_tring_on) {  // s6954: per-task terms, joined to send_dl wall/cpu by rs64_g1e_tring_push (events.cpp)
+            g_rs64_tr.n++; g_rs64_tr.uc += ucode_ns; g_rs64_tr.sub += sub_ns; g_rs64_tr.com += g_rs64_aq_commit_ns - aq_com0;
+            g_rs64_tr.calls += g_rs64_aq_submit_calls - aq_calls0; g_rs64_tr.bytes += rs64_task_rdp_bytes_total() - tr_bytes0;
+        }
         if (ucode_ns > 10000000ull) { acc.slow_n++; acc.slow_ucode += ucode_ns; acc.slow_sub += sub_ns; }
         if (ucode_ns > acc.max) acc.max = ucode_ns;
         const auto now = std::chrono::steady_clock::now();

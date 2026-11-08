@@ -7984,7 +7984,20 @@ static inline uint64_t rs64_aq_now() { return clock_gettime_nsec_np(CLOCK_UPTIME
 extern "C" __attribute__((noinline)) void rs64_g1e_aq_spin(uint64_t until) {
     while (rs64_aq_now() < until) {}
 }
+// s6954 G1e: ROGUESQ_G1E_AQ=3 times every 16th submit call (x16 estimate) so the per-task ring (ROGUESQ_G1E_TRING) gets a
+// submit term without AQ=1's two clock reads per call; the spin control applies to every call.
+extern "C" uint32_t rs64_task_rdp_bytes_total() { return g_task_rdp_bytes.load(std::memory_order_relaxed); }
 void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
+    if (g_rs64_aq_on == 3) {
+        const uint64_t c = ++g_rs64_aq_submit_calls;
+        if ((c & 15u) == 0 || g_rs64_aq_spin_ns) {
+            const uint64_t t0 = rs64_aq_now();
+            rsp_dpc_submit_impl(rdram, start, end);
+            if (g_rs64_aq_spin_ns) rs64_g1e_aq_spin(t0 + g_rs64_aq_spin_ns);
+            if ((c & 15u) == 0) g_rs64_aq_submit_ns += (rs64_aq_now() - t0) * 16u;
+        } else rsp_dpc_submit_impl(rdram, start, end);
+        return;
+    }
     if (g_rs64_aq_on != 1) {  // s6715: AQ=2 counts calls without the per-call clock pair (which cost more than the bridge)
         if (g_rs64_aq_on == 2) ++g_rs64_aq_submit_calls;
         rsp_dpc_submit_impl(rdram, start, end); return;
@@ -7996,7 +8009,7 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     ++g_rs64_aq_submit_calls;
 }
 extern "C" void rs64_dpc_defer_end(int commit) {
-    if (g_rs64_aq_on != 1) { rs64_dpc_defer_end_impl(commit); return; }
+    if (g_rs64_aq_on != 1 && g_rs64_aq_on != 3) { rs64_dpc_defer_end_impl(commit); return; }
     const uint64_t t0 = rs64_aq_now();
     rs64_dpc_defer_end_impl(commit);
     g_rs64_aq_commit_ns += rs64_aq_now() - t0;

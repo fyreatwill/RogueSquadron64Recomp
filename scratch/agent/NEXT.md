@@ -1,13 +1,18 @@
 # OWNER OVERRIDE 2026-11-04: do ITERATION.md G5 in order. G5a-G5h all fixed or done, owner confirmation pending (owner questions: CURRENT-TRUTH, and git show c4755af1e:scratch/agent/NEXT.md).
 
-# NEXT: G1e dd4 16:9 sync per-task tail split (the s6944 "per-task split not taken")
-HYPOTHESIS-ID: g1e-dd4-task-tail
-g1e-present-drain CLOSED s6953 (34 stays; 28 overdrains). Remaining G1e item 7 cost: slow seconds (p10 ~56 tasks/s) are denser
-frames on the Gfx thread (+1.1-1.6 ms/task, s6944, per-second grain only).
-Hypotheses: H-ucode (slow tasks are ucode-heavy: more vertices/tris -> factor5_ucode time) vs H-submit (rsp_dpc_submit/record per
-call dominates: call count +16-23%) vs H-rt64 (RT64 remainder: draw-call build / TMEM loads) — discriminator: ONE per-task ring
-(task ms, ucode ms, submit ms+calls, rt64 ms, tri count) over a windowed dd4 16:9 flight; regress task ms on each term over the
-slowest 10% vs median tasks. Positive control: the per-task sum must match sd_wall within 5%.
-Check first what tools/g1e_tail_split.py and the existing [g1e] per-second lines already carry (boring first) before adding fields.
+# NEXT: G1e batch contiguous DPC_END bumps (cut the submit call count that s6954 showed drives the dd4 tail)
+HYPOTHESIS-ID: g1e-dd4-submit-batch
+s6954 (scratch/s6954/split.txt): sd_wall ~ 101 ns/call + 2.4 ns/byte (R2 0.88); interpreter, rsp_dpc_submit and the task-end commit
+each cost ~65 ns per DPC_END bump, flat per call; slow tasks = +19% calls, +2.7% bytes (~26-30 bytes, 3-4 RDP commands per call).
+Unit: in src/rsp/dpc_bridge.cpp rsp_dpc_submit, when start == the pending range's end (and no wrap/shadow/prewrap/skyz/spike state
+needs per-bump handling: read submit_impl first and list every per-call side effect), extend the pending range instead of calling
+submit_impl; flush on non-contiguous start, DPC wrap, task end (before defer_end) and any reader of DPC_CURRENT. ROGUESQ_G1E_BATCH
+default off until qualified, =tog flips every 10 s at [g1b] boundaries.
+Hypotheses: H-percall (fewer calls -> submit+commit fall ~in proportion: expect -1.5 to -3 ms/task) vs H-percmd (cost is per RDP
+command inside submit_impl/commit walkers, batching moves it, not removes it: sub+com flat) vs H-semantic (some bump needs its own
+call: equivalence fails). Discriminator: same-run tog with ROGUESQ_G1E_TRING (AQ=3): sub+com per task and calls per task by arm.
+Equivalence: hash of the byte stream handed to RT64 per task, on vs off, over a boot+flight (BATCH_CHECK=1 runs both paths? or
+compare RDP command count + bytes per task by arm and frame captures). Positive control: calls per task must drop in on blocks.
+Run: env OUT=scratch/s6955 zsh tools/g1e_xt_flight.zsh b 360 "ROGUESQ_G1E_AQ=3 ROGUESQ_G1E_BATCH=tog ROGUESQ_G1E_TRING=$PWD/scratch/s6955/tring.txt"
 If the XG49V (21:9, 144 Hz) is attached, its unit (git show c4755af1e:scratch/agent/NEXT.md) comes first. Owner reports override all of this.
 Defaults: DRAIN, SKYZ, SCREEN_JOB, INFLIGHT stay opt-in, owner decides.
