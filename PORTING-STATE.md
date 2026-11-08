@@ -183397,3 +183397,18 @@ Soak queued: scratch/agent/soak_queue/s6961_locked_hgather.sh (locked 60 Hz owne
 Next: what is left in the commit is texel memory traffic (LoadBlockRuns 15%, hash scan + XXH3 over ~2 KB per upload) and RT64 draw recording/AGX
 encode (~20%). Fold the locked soak; if it reads >= 59.5 fps, close the dd4 sync rate thread (cap reached) and move G1e to the owner's open items.
 Verdict: selects H-hash (top leaf, fix lands -0.117 ms/task commit); refutes H-setup; H-load stays second (memory-bound per s6957).
+
+## Session 6962 (2026-11-07) — G1e: dd4 sync rate at the 60 cap at current defaults on 4 arms (lvl1 16:9 60.0, lvl1 21:9 58.4, LEVEL=4 58.5, LEVEL=10 60.0 fps locked), 0 crash; slug g1e-dd4-commit-leaves closed; CURRENT-TRUTH G1e headline compacted
+
+- Folded soak s6961_locked_hgather (locked 60 Hz fullscreen, FPS60 dd4 16:9 lvl index 1, current defaults incl. HGATHER): 60.0 fps, tasks p10/50/90
+  60/60/60, sd_wall p50 8.7 ms, lat 34.2/47.4, acq>5 ms 11.8%, 100% on glass, crash=0. Previous: s6942 defaults 58.8, s6945 59.9.
+- Ran 3 more arms, same tool (tools/g1e_owner_quiet_arms.zsh, HOLD=240, G1B=1 AQ=2, idle 3.4 h, no human input), last 100 s:
+  w21 lvl1 21:9 (aspect=1024:448): 58.4 fps, p10/50/90 52/60/60, sd_wall 9.1, lat 37.7/46.4, acq>5 45.6% (present level formed), crash 0.
+  l4 LEVEL=4 16:9: 58.5, 53/60/60, sd_wall 8.9, lat 28.9/32.6, acq>5 0%, crash 0 (s6935 on this level: 45.7).
+  l10 LEVEL=10 16:9: 60.0, 60/60/60, sd_wall 9.0, lat 27.9/47.0, acq>5 22.8%, crash 0.
+  Control that the level override took: [saveslot] call#1 force=1/4/10 in each log. Single run per arm.
+- Shows: the s6935-s6961 per-task work holds across aspect and level; the owner dd4 figure is within 2.7% of the cap everywhere measured.
+  Rules out: a level-specific or 21:9-specific collapse of the sync rate. Not ruled out: a dense-second tail (p10 52-53) on lvl1 21:9 and LEVEL=4.
+- Maintenance: CURRENT-TRUTH headline G1e entries s6935-s6961 (20 lines) migrated to PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6962)",
+  replaced by one line; Next-steps item 7 rewritten. CURRENT-TRUTH 59.6 KB -> ~46 KB.
+- Next: offline split of the dense tail (NEXT.md, slug g1e-dd4-dense-tail); G5 rows still wait on the owner.
