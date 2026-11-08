@@ -184132,3 +184132,30 @@ HYPOTHESIS-ID: l15-219-tlut-oob (closed).
 - **Arms, one build, L15 dd4 FPS60 VI_LOCK QOS_ALL MATWATCH, 200 s hold, cursorMask 0x8000 all (scratch/s6993/arms.sh, data scratch/s6993q):** 21:9 PTRMASK=0 (control): [s6993] v=81000298..810020A8 then v=81001058 x10 "slot id", [tlutw] oob=1 x12, tlut_cnt 2000 after corruption, `[CRASH] signal 10` (reproduces s6991). 21:9 fixed: alive at 200 s, oob 0, 0 crash, [s6993] same pointers "pointer (fixed)", tlut ids 70 of 2048. 16:9 fixed: alive 200 s, oob 0, 6 [s6993] lines — so 16:9 dd>1 also passed spill pointers as slot ids before (silent wrong palette slots, no crash). Two lines of evidence: static code path + same-binary control/fix pair with the exact predicted value 0x81001058.
 - ORIGIN: ours (spill arena above 0x80FFFFFF, s6587) meeting a retail pointer test; writer = loadTextureToMemory 0x8001FD10 storing the misclassified pointer. Single-run per arm; replica holds queued not needed for closure but the owner's 21:9 L15 flight closes it.
 - Next: the real 16:9 per-level G1e sweep (s6990 flew lvl1 only).
+
+## Session 6993 (2026-11-08) — G1e 16:9 per-level game fps: 16/19 levels 59.5-60, dense L7/L16/L17 56.3-58.5, 0 crash; L15 21:9 60.0 after PTRMASK; first live boot-freeze [stall-dump] + stall self-sample (control passes)
+
+HYPOTHESIS-ID: g1e-game-fps
+Resumed the timed-out s6993 iteration (drive stopped mid-L12). Harness tools/g1e_owner_quiet_arms.zsh via
+scratch/s6993/drive169.sh, quiet host (idle >1000 s every arm), dd4 FPS60 VI_LOCK=1 TARGET 10 QOS_ALL G1B, 16:9, HOLD 240,
+scored by tools/g1e_level_fps.py from t=95, `cur` == requested level on every scored arm.
+Result (shown/s): L0 59.7, L1-3 60.0, L4r 59.6, L5 60.0, L6 59.5, L7 57.2 (miss/s 1.11), L8 60.0, L9 59.9, L10-15 60.0,
+L16 56.3 (miss/s 1.23, rep 1.8%), L17 58.5, L18 60.0; C30 (FPS60=0, L1) 30.0 control; L15w (21:9 L15, crashed 6/6 in s6991)
+60.0 alive 240 s -> the s6992 PTRMASK fix holds through a full hold. 0 crashes in 22 arms.
+VERDICT: H-60w holds for 16/19 levels; H-level-cost selected for 7/16/17 (the same dense levels sit lowest at 21:9 too, s6991:
+16/17 58.2/58.4, 7 59.3), so the residual is scene cost, not aspect (two lines: both aspects rank the same levels lowest).
+H-ptrmask-side: no crash or mismatch across all 19 levels at 16:9 (single run each).
+Side datum, boot freeze (s6814 class, 1 in ~65): arm L4 froze at the first fade, t~5, fs stuck at 273, VI kept running. First
+live [stall-dump]: states 5,4 count 2; retrace thread 0x8011CD28 blocked on a FULL send to video queue 0x80128CF0 (valid 1,
+no receiver); vflag 0x80037808 = 0; mutex 0x80128D10 valid 1 no waiter; VI queue 0x80114388 valid 1 no waiter; game-thread
+cpu ~0. So the game thread is NOT in waitOnVideoQueue (which sets vflag and receives CF0): it waits in some other OS call,
+while the retrace thread is parked by a second post into a queue nobody drains. Refutes H-lost-mutex and H-lost-vi as
+stated in s6835 (both queues free); H-lost-post is refined: a post was made with vflag set, then the game left the wait
+path. The repeat L4r was clean.
+Instrument (built this session, src/main/rt64_render_context.cpp): the first [stall-dump] now spawns a detached
+`/usr/bin/sample <pid> 3` into ROGUESQ_STALL_SAMPLE_DIR (ROGUESQ_STALL_SAMPLE=0 off). Positive control scratch/s6993c:
+ROGUESQ_STALL_DUMP_TEST=300 -> sample file written, rc=0, tools/sample_game_threads.py names main, Gfx, SP Task, RT64 Present,
+VI, Timer and the [Game] threads. The next freeze names the game thread's host stack (recompiled func of the blocking call).
+ORIGIN: no mitigation; instrument only.
+Next: G1e residual on dense levels (L16 first: game-side sim/RSP cost vs host), see NEXT.md. CURRENT-TRUTH is now >60 KB:
+the next iteration is a Step-0 maintenance iteration.

@@ -1,14 +1,14 @@
 # OWNER OVERRIDE 2026-11-04: do ITERATION.md G5 in order. G5a-G5h all fixed or done, owner confirmation pending.
+# NOTE: CURRENT-TRUTH is 60.4 KB -> Step 0 makes the next iteration MAINTENANCE. Do that first; this unit follows it.
 
-# NEXT: real 16:9 per-level G1e game-fps sweep (s6990 flew level 1 every time), now with the s6992 PTRMASK fix in the binary
-HYPOTHESIS-ID: g1e-game-fps
-State: L15 21:9 crash fixed s6992 (tools/apply_s6993_ptrmask.py, ROGUESQ_PTRMASK default on). 21:9 per-level done s6991 (58.2-60, L15 not measured
-because it crashed). Missing: 16:9 per level, and the L15 21:9 fps number.
+# NEXT: G1e residual - why dense levels 16 (56.3 shown/s) / 7 (57.2) / 17 (58.5) miss game frames at 16:9 dd4
+HYPOTHESIS-ID: g1e-dense-level-cost
+Data: scratch/s6993s/log_L16.txt, ring_L16.txt (owner recipe, 240 s), same for L7/L17; 60-fps levels (L10, L15) as controls.
 Hypotheses:
-- H-60w: every level holds ~60 shown/s at 16:9 (21:9 did on 18/19) -> G1e lever (1) closes for both owner aspects.
-- H-level-cost: some levels (0/4/6/7/16/17 were 58-59.6 at 21:9) drop more at 16:9 or less; dense-scene cost, not aspect.
-- H-ptrmask-side: the s6992 mask change shifts palettes or memory on other levels (16:9 fed 6 spill pointers before the fix): look for any crash/oob.
-Unit: copy scratch/s6991/drive.sh to scratch/s6993/drive169.sh with R=scratch/s6993s, ASPECT=16:9, level list 0..18 plus C30, HOLD=240; also run
-L15 at 21:9 once (arm L15w). Score with tools/g1e_level_fps.py (check `cur` == level on every arm). Keep ROGUESQ_MATWATCH off (store diag slows).
-Expected: shown/s per level; any level < 58 gets its sd_wall p50/p90 compared with its 21:9 row.
-Host: harness exits 2 on human input (idle < 120 s); check `ioreg -c IOHIDSystem` idle first; if busy, queue arms as soaks.
+- H-rsp: gfx RSP task host-ms (sd_wall) exceeds the 16.7 ms budget on missed frames (sd90 is only 8.6 on L16, so check the per-frame tail at the misses).
+- H-guest: the game thread's own sim/CPU time per frame (recompiled code) overruns on dense scenes; RSP is idle-waiting.
+- H-dd: the miss comes from dd4's extra terrain (dd1 same level should hold 60): one arm L16 dd1 vs dd4.
+Unit: OFFLINE first: join ring_L16 misses with [g1b] per-second sd_wall/us_wall/guest-cpu in log_L16 (python pass) and compare
+with L10. If inconclusive, run one 2-arm A/B (L16 dd4 vs dd1, same harness: scratch/s6993/drive169.sh pattern, HOLD=240).
+Expected: misses co-vary with sd_wall -> H-rsp; with guest cpu and not sd_wall -> H-guest; vanish at dd1 -> H-dd.
+Passive: boot freeze self-sample is armed (ROGUESQ_STALL_SAMPLE_DIR); on any [stall-dump] run tools/sample_game_threads.py on the file.

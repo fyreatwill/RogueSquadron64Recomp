@@ -14,6 +14,8 @@
 #include <thread>
 #include <pthread.h>
 #include <pthread/qos.h>
+#include <unistd.h>  // s6993 getpid (stall self-sample)
+#include <string>
 
 #define HLSL_CPU
 #include "hle/rt64_application.h"
@@ -1159,6 +1161,23 @@ public:
                     for (uint32_t a = 0x80128E80u; a < 0x80128EE0u; a += 32)
                         fprintf(stderr, "[stall-dump] %08X: %08X %08X %08X %08X %08X %08X %08X %08X\n", a, w(a), w(a + 4),
                                 w(a + 8), w(a + 12), w(a + 16), w(a + 20), w(a + 24), w(a + 28));
+                    // s6993: the first live capture (s6993s L4, 16:9 boot fade) showed the retrace thread blocked on a FULL
+                    // send to 0x80128CF0 while no thread waits on any of the three queues and vflag=0, so the game thread
+                    // sits in some other wait. Self-sample once per stall (first dump only) so the next recurrence names
+                    // every thread's host stack: `sample <pid> 3` into ROGUESQ_STALL_SAMPLE_DIR (default cwd), detached so
+                    // the VI thread is not held. ROGUESQ_STALL_SAMPLE=0 disables. Summarise with tools/sample_game_threads.py.
+                    static bool s_sd_sampled = false;
+                    static const bool s_sd_sample_on = [] { const char* e = std::getenv("ROGUESQ_STALL_SAMPLE"); return !(e && *e == '0'); }();
+                    if (s_sd_sample_on && !s_sd_sampled) {
+                        s_sd_sampled = true;
+                        const char* dir = std::getenv("ROGUESQ_STALL_SAMPLE_DIR");
+                        char cmd[1200];
+                        std::snprintf(cmd, sizeof(cmd), "/usr/bin/sample %d 3 -file '%s/rs64_stall_%d_vi%d.sample.txt' >/dev/null 2>&1",
+                                      (int)getpid(), (dir && *dir) ? dir : ".", (int)getpid(), s_n);
+                        fprintf(stderr, "[stall-dump] self-sample: %s\n", cmd);
+                        std::thread([c = std::string(cmd)] { int rc = std::system(c.c_str());
+                            fprintf(stderr, "[stall-dump] self-sample done rc=%d\n", rc); fflush(stderr); }).detach();
+                    }
                     fflush(stderr);
                 }
             }
