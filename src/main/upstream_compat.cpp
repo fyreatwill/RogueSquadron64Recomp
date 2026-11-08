@@ -7364,3 +7364,15 @@ extern "C" void rs64_s6963_create(uint8_t* rdram, recomp_context* ctx) {  /* aft
     if (!s6963_ok(a)) return;
     S.idx[s6963_key((uint32_t)ctx->r16, (int32_t)ctx->r20, (int32_t)ctx->r19)] = s6963_hu(rdram, a + 0x16);
 }
+/* s6993: mask for the game's "(p & 0xFF000000) == 0x80000000 means pointer" test (7 sites, tools/apply_s6993_ptrmask.py).
+   0xF0000000 by default so dd>1 spill blocks at 0x81000000+ count as pointers; ROGUESQ_PTRMASK=0 restores retail 0xFF000000.
+   Logs the first 16 calls where the two masks disagree (the positive control: L15 21:9 dd4 ltex_cache TLUT pointer). */
+extern "C" uint32_t rs64_s6993_mask(uint32_t pc, uint32_t v) {
+    static const bool wide = [] { const char* e = std::getenv("ROGUESQ_PTRMASK"); return !(e && e[0] == '0'); }();
+    if ((v & 0xFF000000u) != 0x80000000u && (v & 0xF0000000u) == 0x80000000u) {
+        static std::atomic<int> n{0};
+        int k = n.fetch_add(1);
+        if (k < 16) std::fprintf(stderr, "[s6993] pc=%08X v=%08X verdict %s (n=%d)\n", pc, v, wide ? "pointer (fixed)" : "slot id (retail mask)", k + 1);
+    }
+    return wide ? 0xF0000000u : 0xFF000000u;
+}
