@@ -20,7 +20,7 @@ run(){ local hz=$1 dd=$2 arm=$3 ex=$4 hp="" i=$(idle)
 }
 DEF="60:4:d4o: 60:2:d2o: 60:4:d4g:ROGUESQ_PRESENT_INFLIGHT=2 60:4:d4d:ROGUESQ_PRESENT_DRAIN=40 60:4:d4st:ST 60:2:d2g:ROGUESQ_PRESENT_INFLIGHT=2 60:2:d2d:ROGUESQ_PRESENT_DRAIN=40 60:4:d4r: 60:2:d2r:"
 for spec in ${=${ARMS:-$DEF}}; do
-  a=("${(@s/:/)spec}"); x=${spec#*:*:*:}; [[ $x == ST ]] && x=$ST
+  a=("${(@s/:/)spec}"); x=${spec#*:*:*:}; [[ $x == ST ]] && x=$ST; [[ $x == *+ST ]] && x="${x%+ST} $ST"
   run $a[1] $a[2] $a[3] "$x"
 done
 echo done > $R/arms.done

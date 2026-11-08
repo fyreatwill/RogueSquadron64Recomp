@@ -183065,3 +183065,18 @@ Change: SEL2 is the default rule inside DD_SKYZ (=0 gives s6947 SEL). DD_SKYZ st
 Rules learned: a consumer test that stops at the first mode word treats a mode that never reads z as the consumer; decide at the first draw whose mode reads prim z.
 Result line for s6948: SEL miss = non-consuming mode word between depth and sky mode; SEL2 fix matches the value rule's coverage with no leak (single run, confirm soak queued).
 Verdict line: run b1 selects H-interleave (585/585 of SEL's extra misses decided by 0F0A4004) and refutes H-rangeend (selEnd 0); SEL2 is the root cause fix. Next discriminator: the s6948_skyz_sel2_confirm soak (SEL2 miss% within 0.3 of value, SEL bins 0, leak 0 with oth_ring > 0).
+
+## Session 6949 (2026-11-07) — G1e: at 60 fps the owner dd4 16:9 recipe now forms the sticky 60 Hz present level (~47 ms half the time); ROGUESQ_PRESENT_DRAIN=40 holds 27-33 ms p50 with 2-9 drops in 240 s; SKYZ SEL2 confirmed two-source
+HYPOTHESIS-ID: g1e-present-drain (reopened from s6932: its "dd4 forms no level" held at 32 fps; s6945 put dd4 at 59.9 fps and its soak read latency 43.5/80).
+
+Soak folded: s6948_skyz_sel2_confirm (separate run, AT THE MOVIES dd4 16:9 FPS60, SEL=tog/SEL2=tog, scratch/s6948/aud_c1.txt via tools/g5h_skyz_audit.py + per-rule split): live unrewritten sky draws SEL2 1.85%, value 1.88%, SEL 4.37%; SEL2 selMode/selDrawPz/selEnd 0 (all 718 misses offlive); SEL2 oth_ring 1009, oth_rw 0; value rule oth_rw 1004 same run (leak control fires); crash 0. With s6948 this is two-source: SEL2 confirmed, slug g5h-skyz-sel-miss closed. SKYZ stays opt-in.
+
+Unit: the paused 21:9/144 Hz unit could not run (system_profiler: only Color LCD attached). Took the built-in 60 Hz branch instead. Landed: tools/g1e_owner_hz_arms.zsh accepts `<env>+ST` (env plus the stall course). No game code or default changed.
+Arms (scratch/s6932/ring_e4*.txt, out_e4*.txt): locked 60 Hz built-in via scratch/s6931/dhz, owner recipe lvl index 1, FPS60 dd4 16:9 FULLSCREEN, no ASYNC/NODRAIN, no recipe logging, HOLD 240 s, owner idle 52-65 min, 100% glass, alive_at_end=1, 0 crash, 0 VI stall in all four. Score: tools/g1e_owner_hz_score.py --last 120.
+| arm | setting | Q/s | lat p50/p99 | 1 s median range | acq>5 % | drops |
+| e4o | default | 60.0 | 38.3/46.7 | 24.1-46.7 | 54.4 | 0 |
+| e4d | DRAIN=40 | 59.7 | 33.5/37.5 | 30.7-35.8 | 0.4 | 2 |
+| e4ost | stall course | 59.0 | 37.6/46.8 | 21.4-46.7 | 48.2 | 0 |
+| e4dst | DRAIN=40 + stall course | 58.3 | 26.9/45.8 | 23.5-44.4 | 4.1 | 9 |
+Reading: H-level-now selected: dd4 at 60 fps sits on the one-vsync level (~47 ms, acq ~15 ms waits) about half the time with no lever, as s6931 found for dd1. DRAIN removes it: two pairs agree (p50 -4.8 and -10.7 ms, acq>5 54->0.4 and 48->4). Cost: drops are 2/240 s plain and 9 with stall doses (the doses create levels it then drains); the Q/s gaps (0.3, 0.7) exceed what the drops explain (<0.04/s), so they are run-to-run, single run each. Cross-run comparison (latency level is run-dependent): the pair agreement is the second line, not a same-run toggle. Default unchanged (present levers stay owner's choice); OWNER-OPT-INS gains the DRAIN=40 line for 60 Hz screens.
+Rules out: "DRAIN buys nothing at dd4" (s6932) as a standing conclusion; it held only while dd4 ran at 32 fps.
