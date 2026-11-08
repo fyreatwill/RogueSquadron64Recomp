@@ -183544,3 +183544,39 @@ Verdict: selects H-hash (top leaf, fix lands -0.117 ms/task commit); refutes H-s
 - Verdict: selects H-vi-timer for the over-budget frames (two lines: TL VI-edge lateness with kicks locked to edges, and the same-run RT
   flip removing it in 3 runs); refutes H-sim/H-rsp/H-preempt/H-submit. Next: phase-lock the VI timer to the display vsync. Soaks
   s6967_virt_169_v1/v2 queued (owner 16:9 recipe, _AT=150 before/after). scratch/s6967/.
+
+## Session 6968 (2026-11-07) — G1e: VI-display drift (2-8 ppm) refuted as the level trigger; the workload-submit phase vs vsync sets the present regime; opt-in ROGUESQ_VI_LOCK=1 servos it and cuts 21:9 latency p50 ~31 -> 23.4 ms same run 3/3
+- Soaks folded: s6967_virt_169_v1/v2 (owner 16:9 dd4 FPS60, VI_RT_AT=150): VI lateness p90 4.31/4.05 -> 0.00 ms, >=19 ms intervals
+  10.6/10.1 per s -> 0, misses/s 0.02/0.00 -> 0.01/0.01 (16:9 rarely misses; no present-side gain to see), lat p50 unchanged 30.2/35.5. 0 crash.
+- Offline, tools/g1e_vi_display_phase.py on scratch/s6967 r1/r2/a1/a2/t1/t2 (P 'at' fitted as a vsync grid, residual p99 <= 0.01 ms =
+  control): display 60.0004 Hz; RT VI grid vs display drift +6..+8 ppm (+2 for the AT runs), i.e. ~1 ms per 2 min. r2's 5 thr-5 onsets
+  sit at VI phases 15.44..16.37, i.e. spread along the ramp, not at one phase; with --minrun 30 --thr 1.5 r2 has ONE real entry, at
+  59.1 s = the 59.0 s RT policy toggle (Q gap 34 ms); a1/a2 entries at 28.5 s (load, before RT). So s6967's "level forms with RT via
+  even-cadence onsets" is superseded: those were acq re-crossings of 5 ms inside a level that formed at the toggle. H-vsync-phase in
+  its drift form REFUTED; H-compositor/H-gpu-late not seen (dp 16.7, gpu 0.4 at onsets).
+- Run d1/d2 (lvl1 21:9 dd4 FPS60, RT default from boot, no drain, TL+GRING, tools/g1e_owner_quiet_arms.zsh, human idle 5.6 h, 0 crash):
+  level formed in both. d1 at 66-67 s after a 107 ms then 51 ms Q gap (scene load). d2 at 122.9 s in flight with no game hitch
+  (g1e_tl_present.py: the late present's kick gap 16.62, rsp 7.7, normal): for ~0.3 s before, W landed ~1 ms BEFORE a vsync and Q just
+  after it, acq crept 0.6 -> 2.2 ms, then one present latched a vsync late (dP 33.3, lat 50) and the level (acq 13.7, lat 47) stayed.
+- Regime map, W phase (ms after vsync) per 20 s bin on 9 rings: W mid-interval 4-11 -> acq 0, lat 22-30 (t2, r1 20-60 s); W straddling
+  the vsync (p50 13-15, p10 ~0.7, p90 ~16.3) -> acq 1.5-3, lat 34-36 = the known "21:9 35 ms non-level base" (r1, a1, d2 80-100 s);
+  level -> W pinned 3-4 ms by back-pressure, acq 9-14, lat 42-47. W = VI + kick 0.12 + RSP 7-14 ms, so the scene's RSP cost, not clock
+  drift, walks W across the vsync (r1 W 5.6 -> 14 between 40 and 80 s with the VI phase moving 0.2 ms).
+- Change (lib/N64ModernRuntime events.cpp, lib/rt64 workload/present queues + plume_metal.cpp; patches exported): opt-in ROGUESQ_VI_LOCK=1.
+  rt64 reports each W (mach s), each presentedTime and each shown acquire wait through weak extern "C" hooks; the VI thread keeps a
+  wrapped EMA (1/16) of W phase - ROGUESQ_VI_LOCK_TARGET_MS (10) and shifts its deadline grid by off_ms, gain 0.05 per VI, capped
+  ROGUESQ_VI_LOCK_SLEW_US (50 us) per VI, deadband 0.3 ms, paused while acq EMA > 5 ms (at level W is pinned and says nothing). VI count
+  taken on the shifted grid, so the offset is unbounded and no VI is skipped or repeated. ROGUESQ_VI_LOCK_AT=<s> one-way engage.
+  stderr [vi-lock] 1/s. Default off: nothing changes without the env (weak hooks return early).
+- Run k1/k2/k3 (same recipe + ROGUESQ_PRESENT_DRAIN_ACQ=8 + VI_LOCK=1 _AT=130, HOLD 260, 0 crash), tools/g1e_vi_lock_ab.py, before
+  95-130 s vs after 140-260 s:
+    k1 W p50 2.82 -> 9.96, lat p50 30.5 -> 23.4, misses/s 0 -> 0.008, VI rate 59.995 -> 60.000
+    k2 W p50 1.37 (p90 15.7, straddle) -> 10.01, lat 32.2 -> 23.3, misses/s 0.057 -> 0.008
+    k3 W p50 3.66 -> 9.92, lat 29.7 -> 23.4, misses/s 0 -> 0.033
+  Control: after-block W p50 within 0.1 ms of target in 3/3 (ENGAGED); [vi-lock] err within +-0.9 ms after ~5 s, off_ms settles 6-8.6.
+  VI dt p1/p99 16.62/16.72 (the slew), mean rate 60.000. Two lines for the latency gain: same-run flip 3/3, and the offline regime map
+  (W 4-11 -> lat 22-30) from 9 independent rings. Caveats: before-blocks only 35 s and no level in them, so whether the lock prevents
+  level entries is untested; ACQ=8 was armed in both blocks (0-1 drops each).
+- ORIGIN: not a corruption fix; the submit-to-vsync phase was never chosen (VI grid starts at boot time, RSP cost sets the rest).
+- Verdict: refutes H-vsync-phase-drift; selects H-submit-phase (latency regime is set by where W lands in the display interval).
+  Soaks s6968_vilock_169_l1/l2 queued (owner 16:9, LOCK_AT=150). scratch/s6968/.
