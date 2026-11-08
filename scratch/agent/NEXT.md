@@ -1,12 +1,13 @@
-# NEXT: G5b far-terrain drop measure on a second level (LEVEL=10)
-HYPOTHESIS-ID: g5b-level-coverage
-Context: G5i is fully verified (s6995/s6997/s6999) and closes on the owner's look; G5a/c/d/e await the owner. G5b's s6901
-far-loss fix (EYEWIN=tog dose-response: quads p10 by heading, ring 5-7 dips, near<50) was measured only on LEVEL=4 (Gerrard V).
-Read the s6901 entry (grep '^## Session 6901 ' PORTING-STATE.md) for the exact recipe and scorer (tog.py / fwd_smooth.py).
+# NEXT: G5b outer ring 7 near diagonals — offline, from existing traces (no new run needed first)
+HYPOTHESIS-ID: g5b-ring7-diagonal
+Context: s7000 showed the s6901 FWDWIN fix removes heading-driven far loss on L7 (dips 36 -> 0, ring 5/6 0/3) as on L4/L1/L5.
+One leftover from s6901: ring 7 dips ROSE armed on L4 (47 -> 107) and L1 (31 -> 79), flat on L7 (72 -> 77) and L5 (62 -> 56).
+s6901 guessed "a square window's per-axis reach is shorter at diagonals". Traces: scratch/s6901/{tg,g3e}_{f4,fw,f2,l1,l5}.txt,
+scratch/s7000/{tg,g3e}_d4.txt. Score with tools/g5b_fwdwin_seamless.py <dir> <arm> (drops the flip seam).
 Hypotheses:
-- H-general: the fix holds on LEVEL=10 at dd4 16:9 (armed quads p10 / ring dips like LEVEL=4).
-- H-level: LEVEL=10's terrain layout/heading mix still loses far rings armed (dips persist) -> a level-specific cause remains.
-- H-dd-only: drops on LEVEL=10 appear at dd4 but not dd2 (dose-response) even with the fix.
-Discriminator, one binary, same-run =tog toggle (parity split is the positive control: site 15 must fire on the odd swaps):
-LEVEL=10 needs ROGUESQ_FORCE_PLANET_UNLOCK=0xFF; check `cur`/[ddscene] level=10 actually flew (FORCE_UNLOCK clamps to level 1, s6991).
-Arms: dd4 16:9, dd2 16:9. Report the s6901 table columns per arm plus a dd1 vs dd4 sheet.
+- H-diag: armed ring-7 dips cluster at headings 45/135/225/315 +-15 (square window corner geometry); off dips do not.
+- H-edge: ring-7 dips track the window touching the map/bounds edge (win x or z at the clamp limit), any heading.
+- H-noise: ring 7 holds few quads (ref median near the 60 threshold), so dips are threshold noise; dips vanish at threshold 120.
+Discriminator, one offline script over all six arms: per ring-7 dip, heading, window w/h and position vs pre-clamp bounds
+(site 13), ring-7 ref median. If H-diag: fix is a centre offset along the diagonal (or a 64x64 rotated placement) in
+tools/apply_s6901_fwdwin.py, then one same-run =tog arm on L4 dd4 to confirm. If H-noise: close the item in CURRENT-TRUTH.

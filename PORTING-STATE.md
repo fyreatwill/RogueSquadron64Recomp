@@ -184296,3 +184296,35 @@ H-mission (another mission's abort changes the start craft and gives longer pans
 and the frames agree. G5i closes on the owner's look only; nothing left to run for it.
 ORIGIN: no mitigation; measurement only.
 Next: G5b far-terrain drop measure on a level other than 4 (NEXT.md).
+
+## Session 7000 (2026-11-08) — G5b far-loss fix holds on a second terrain level (L7) at dd4: armed dips 36 -> 0, ring 5/6 dips 61/77 -> 0/3, worst heading p10 1474 -> 3131; LEVEL=10 has no terrain grid in flight (gas-giant cloud level), so it cannot test G5b
+
+Unit from NEXT: the s6901 FWDWIN measure on LEVEL=10. Route: tools/g1e_owner_quiet_arms.zsh (the s6996 route that flies the
+requested level; s6902's arm.zsh route never reached L10 flight) + extras FORCE_SAVE_MISSION, DD_FWDWIN=tog, G5B_TG, G3E_TRACE,
+G1B; owner recipe FPS60 16:9 FULLSCREEN, HOLD 300, quiet host (idle >6000 s). Chain scratch/s7000/chain.zsh (LV=level).
+
+LEVEL=10 (cursorMask 0x400, correct level): the TriGen trace stops after 20 s (328 swaps, all m2<300, all in the intro) and the
+G3E window-clamp sites stop at the same swap, while [g1b] runs 60 tasks/s for the whole hold. Frames (scratch/s7000/l10/d4_peek.png)
+show flight through cloud layers with no ground: L10 is a gas-giant cloud level that draws no terrain grid in flight. So H-general /
+H-level / H-dd-only are untestable there; this is also why s6902's l10/l10b gave "flight not reached" with ~145 swaps. Arm stopped,
+switched to LEVEL=7 (dense ground/canyon level, cursorMask 0x80 verified in all three arms).
+
+First pass on L7 dd4 (naive mach-second parity split, scratch/s7000/par_dip.py) read armed dips<.8 108 vs off 43, which looked like
+H-level. Checked before believing it: every armed dip sat at t=x.4 s, once every 2 s, i.e. the first swap of each armed block (the
+flip seam; its tg line still carries the old window). Dropping the first 2 swaps of every block and classing the window by site 15
+(tools/g5b_fwdwin_seamless.py, new):
+| arm | swaps off/armed | n p50 off/armed | worst-hdg n p10 off/armed | reach p10 | dips<.8 | ring 5,6 dips | ring 7 dips | near p50 | near<50 |
+|---|---|---|---|---|---|---|---|---|---|
+| L7 dd4 16:9 | 5797/5766 | 2841/3631 | 1474 (hdg 120)/3131 (hdg 30) | 42/53 | 36/0 | 61,77 / 0,3 | 72/77 | 287/304 | 0/0 |
+| L7 dd2 16:9 | 5345/5387 | 1830/1908 | 1267/1111 | 39/38 | 9/5 | 20,5 / 25,10 | 0/1 | 312/295 | 2/0 |
+| L7 dd1 16:9 (gate off) | 1928/- | 466 | 321 | 22 | 17 | 0,0 | 0 | 218 | 0 |
+Positive control (same run, dd4): site 15 fired on 5868 of 5976 odd-second swaps and 100 of 5998 even (the even ones are flip joins).
+Armed by heading, dd4: n p10 3126-3514 in every 30-degree sector (off 1474-3359), so the heading-driven far loss is gone on L7 too.
+Dose-response of ring 5-7 dips off: dd1 0, dd2 25, dd4 210, the owner's order again. dd2 has little loss to fix, and the fix
+neither helps nor hurts there inside noise (ring 5 20 -> 25). Ring 7 does not rise on L7 (72 -> 77), unlike L4 (47 -> 107).
+Game rate, [g1b] tasks/s t>=150: dd4 59.3, dd2 59.1, dd1 59.3 (FULLSCREEN, no ASYNC). This window mixes armed and off seconds, so
+it is not a FWDWIN cost measure (s6902 has that). 0 CRASH lines in all arms; alive at the end of every 300 s hold.
+Pixel line is WEAK: docs/owner_sheet_s7000_fwdwin_l7_same_run.png, 2 same-run off/armed pairs 1 s apart at matched heading. The
+camera moves a lot in 1 s and canyon walls hide most far ground, so the sheet shows the scene, not the effect. No pinned-pose pair.
+H-general selected on L7 (single level beyond L4, L1 and L5 from s6902). Not shown: that these dips are the owner's drops (owner
+flight still decides), dd3 with the fix, L7 at 21:9.
