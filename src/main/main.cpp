@@ -12134,8 +12134,70 @@ static void rs64_g1d_apply_aspect_policy() {
     }
 }
 
+
+// s6979 G1e: async stderr (ROGUESQ_STDERR_ASYNC, DEFAULT ON, =0 old direct writes). ORIGIN ours: the build writes ~190 KB/s of
+// diagnostic stderr by default (62 MB per 330 s soak); stderr is unbuffered, so every fprintf is a write() syscall on the calling
+// thread. The s6979 thread census (ROGUESQ_G1E_THREADS) caught the Gfx thread in UNINTERRUPTIBLE write() from
+// rsp_dpc_submit_impl / RT64 State::updateScreen / FramebufferRenderer::submitRasterScene for 2-5 ms inside late 21:9 send_dl
+// windows (normal windows ~0). Here fd 2 becomes a pipe: a USER_INTERACTIVE reader moves it into memory, a UTILITY writer does the
+// blocking writes to the original fd. ROGUESQ_STDERR_ASYNC_AT=<s> switches on at <s> s (same-run A/B); marker
+// "[stderr-async] on t=<mach s>". rs64_stderr_async_restore() (crash/abort/exit) drains up to 300 ms and puts the original fd back.
+#if !defined(_WIN32)
+#include <sys/ioctl.h>
+#include <mach/mach_time.h>
+#include <pthread/qos.h>
+namespace s6979se {
+static int orig = -1, rd = -1; static std::atomic<int> on{0}; static std::atomic<size_t> queued{0}; static std::atomic<uint64_t> dropped{0};
+static std::mutex m; static std::condition_variable cv; static std::deque<std::string> q;
+static void reader() {
+    pthread_setname_np("stderr-rd"); pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
+    std::vector<char> b(1 << 16);
+    for (;;) {
+        const ssize_t n = read(rd, b.data(), b.size()); if (n <= 0) { if (n < 0 && errno == EINTR) continue; return; }
+        if (queued.load() > (256u << 20)) { dropped += (uint64_t)n; continue; }
+        { std::lock_guard<std::mutex> l(m); q.emplace_back(b.data(), (size_t)n); queued += (size_t)n; } cv.notify_one();
+    }
+}
+static void writer() {
+    pthread_setname_np("stderr-wr"); pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+    for (;;) {
+        std::string s_; { std::unique_lock<std::mutex> l(m); cv.wait(l, [] { return !q.empty(); }); s_ = std::move(q.front()); q.pop_front(); }
+        size_t o = 0; while (o < s_.size()) { const ssize_t w = write(orig, s_.data() + o, s_.size() - o); if (w < 0) { if (errno == EINTR) continue; break; } o += (size_t)w; }
+        queued -= s_.size();
+    }
+}
+static void switch_on() {
+    int p[2]; if (pipe(p) != 0) return;
+    rd = p[0]; std::thread(reader).detach(); std::thread(writer).detach();
+    fflush(stderr); dup2(p[1], STDERR_FILENO); close(p[1]); on = 1;
+    mach_timebase_info_data_t tb; mach_timebase_info(&tb);
+    fprintf(stderr, "[stderr-async] on t=%.6f\n", (double)mach_absolute_time() * tb.numer / tb.denom / 1e9);
+}
+static void init() {
+    const char *e = std::getenv("ROGUESQ_STDERR_ASYNC"); if (e && *e && std::atoi(e) == 0) return;
+    orig = dup(STDERR_FILENO); if (orig < 0) return;
+    const char *a = std::getenv("ROGUESQ_STDERR_ASYNC_AT"); const int at = (a && *a) ? std::atoi(a) : 0;
+    if (at > 0) std::thread([at] { std::this_thread::sleep_for(std::chrono::seconds(at)); switch_on(); }).detach();
+    else switch_on();
+    // positive control for the crash path through the pipe: ROGUESQ_TEST_CRASH_AT=<s> writes to a null pointer at <s> s
+    const char *c = std::getenv("ROGUESQ_TEST_CRASH_AT"); const int ct = (c && *c) ? std::atoi(c) : 0;
+    if (ct > 0) std::thread([ct] { std::this_thread::sleep_for(std::chrono::seconds(ct)); fprintf(stderr, "[stderr-async] test crash now\n"); *(volatile int *)nullptr = 1; }).detach();
+}
+}
+extern "C" void rs64_stderr_async_restore() { // async-signal tolerant: atomics, ioctl, usleep, dup2 only
+    using namespace s6979se;
+    if (!on.exchange(0)) return;
+    for (int i = 0; i < 300; i++) { int n = 0; ioctl(rd, FIONREAD, &n); if (n == 0 && queued.load() == 0) break; usleep(1000); }
+    dup2(orig, STDERR_FILENO);
+}
+#else
+extern "C" void rs64_stderr_async_restore() {}
+#endif
 int main(int argc, char* argv[]) {
     (void)argc; (void)argv;
+#if !defined(_WIN32)
+    s6979se::init(); std::atexit([] { rs64_stderr_async_restore(); }); std::at_quick_exit([] { rs64_stderr_async_restore(); });
+#endif
     rs64_g1d_apply_aspect_policy();
     rs64_g1c_apply_dd_policy();
 
@@ -12259,6 +12321,7 @@ int main(int argc, char* argv[]) {
 #ifdef _WIN32
     SetUnhandledExceptionFilter(crash_handler);
     signal(SIGABRT, [](int){
+        rs64_stderr_async_restore();
         fprintf(stderr, "[ABORT] caught SIGABRT, dumping stack:\n");
         void* frames[32];
         USHORT count = RtlCaptureStackBackTrace(0, 32, frames, nullptr);
@@ -12353,6 +12416,7 @@ int main(int argc, char* argv[]) {
                     return;
                 }
             }
+            rs64_stderr_async_restore(); // s6979: crash text goes straight to the original fd
             fprintf(stderr, "[CRASH] caught signal %d (%s), dumping stack:\n",
                 sig, strsignal(sig));
             // s194: dump siginfo + the ARM64 register file at fault time --

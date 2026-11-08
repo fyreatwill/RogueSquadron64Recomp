@@ -183758,3 +183758,43 @@ Rules out: QoS as a 21:9 fix; "QoS-from-start differs from mid-run flip" is not 
 selected H-rsp-host in s6975 and the same scorer reproduces the s6977w control count (10).
 Docs: CURRENT-TRUTH headline + G1e item; OWNER-OPT-INS GFX_QOS row = 16:9 only. Default stays off (owner decides).
 Next: per-thread CPU census at late instants to name the preemptor (in-process RT64 render/present/shader threads vs external processes).
+
+## Session 6979 (2026-11-08) — G1e: the 21:9 Gfx-thread "preemptions" are its own blocking stderr write()s; async stderr lands default on (same-run 12.9 -> 0 write-blocks/min, gaps >3 ms 4.3 -> 0/min)
+
+Work unit (NEXT.md g1e-gfx-preemptor): name what preempts the USER_INTERACTIVE Gfx thread at 21:9 late presents.
+Hypotheses: H-intra (our threads saturate the P cores), H-extern (other processes), H-ecore (migration), plus H-block added
+this session (the thread is not preempted at all but blocked).
+
+Instrument (lib/N64ModernRuntime events.cpp namespace g1et, ROGUESQ_G1E_THREADS=<file>, opt-in): a USER_INTERACTIVE 1 kHz
+sampler (task_threads + THREAD_EXTENDED_INFO: cumulative CPU ns, run_state, curpri, name), per-CPU host ticks every 10 ms, task
+TASK_EVENTS_INFO faults/pageins every 10 ms, and whenever the Gfx thread is WAITING or UNINTERRUPTIBLE: suspend, read
+PC/LR/FP chain + ARM exception state (ESR/FAR), resume (no allocation while suspended), dladdr names. Cost ~5-8% of one core.
+Positive control: the Gfx thread shows "ran" in 0.78-0.80 of 1 ms samples in normal send_dl windows (cpu ~8.2 of ~9.7 ms), and
+its WAITING stacks resolve (19384 samples in RT64 State::fullSync semaphore wait = the GPU sync, as expected).
+Tools: tools/g1e_thread_census.py (census + per-window strips), g1e_late_leg.py --windows, tools/g1e_stderr_async_ab.py.
+Runs (21:9 dd4 FPS60 VI_LOCK=1 GFX_QOS=1, s6977 Q0 recipe, scratch/s6979/, all 0 crash, each 330 s): T1, T2, T3 (census), T4 (fix A/B).
+
+Results.
+- CPUs are NOT saturated at late instants: per-CPU busy over the 20-30 ms tick window <=0.5 on 14-15 of 15 CPUs; our other threads
+  0.33-0.52 cores. H-intra and H-extern (CPU saturation) refuted, two runs (T1 5 lates, T2 3 lates).
+- In 6/8 late windows (T1+T2) and 2/3 (T3) the Gfx thread spends 2-5 consecutive 1 ms samples in TH_STATE_UNINTERRUPTIBLE mid
+  send_dl; normal windows ~0.00 per window. Stacks (T3, every U sample in any send_dl window: 9 late + 54 normal): ALL in
+  __write_nocancel (ESR 0x56000080 = SVC, no page-ins: 0 in every late window, 2.5/s run-wide) from fprintf(stderr) in
+  rsp_dpc_submit_impl (factor5_ucode_nmac), RT64::State::updateScreen and FramebufferRenderer::submitRasterScene.
+  The remaining late wall-cpu is "runnable but no CPU" samples (0.2-0.5 of the window); one late per run had no U at all
+  (T1 660530: rRrRrrr, T2 661020 = H-rsp-work).
+- ORIGIN ours: the default build writes ~190 KB/s of diagnostic stderr (log_T3 62 MB/330 s; [s5855] 18.8 MB, [s5901], [si-thr],
+  [vi-mode-table], [dpc-fwd], [present-1024], ...) and stderr is unbuffered, so each line is a write() syscall on the calling
+  thread; writes to the log file block for ms (host 33 GB into swap, Terminal.app holding 26 GB compressed - very likely game
+  stderr scrollback from Terminal-launched runs).
+- FIX (src/main/main.cpp s6979se, ROGUESQ_STDERR_ASYNC DEFAULT ON, =0 old): fd 2 -> pipe; USER_INTERACTIVE reader into memory
+  (cap 256 MB, then counted drops), UTILITY writer to the original fd. ROGUESQ_STDERR_ASYNC_AT=<s> = same-run switch;
+  rs64_stderr_async_restore() (crash handler, SIGABRT handler, atexit, at_quick_exit) drains <=300 ms and restores fd 2.
+  Crash positive control ROGUESQ_TEST_CRASH_AT=12: 5009 pre-crash lines drained, then the full [CRASH] dump in the log.
+- Same-run A/B T4 (ASYNC_AT=180, tools/g1e_stderr_async_ab.py, windows from 95 s): before 18 U samples (12.9/min, all write()),
+  wall-cpu >3 ms 6 (4.3/min), max 6.59 ms; after (2.51 min) 0 U, 0 gaps >3 ms (expected ~10 at the before rate), max 2.54 ms,
+  p999 2.72 -> 1.96. Sham control T3 (no switch, split at 257 s): U 18.9 vs 12.3/min, gaps >3 ms 4.3 vs 3.3/min - both halves
+  stay non-zero, so the T4 drop is the switch, not time. T4 itself had 0 late presents in both halves (late rate is 0-5 per run),
+  so the late-present effect is not yet measured: whole-run replicas s6979_219_async_r1/r2 queued (pre-registered vs 1.04/min).
+Rules out: CPU saturation (in-process or external) as the cause of the 21:9 H-rsp-host lates; page-in/memory compression stalls.
+Owner note: OWNER-OPT-INS gets a "launch with 2>/dev/null or to a file" tip (Terminal scrollback held 26 GB).

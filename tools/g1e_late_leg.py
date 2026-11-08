@@ -12,6 +12,8 @@ usage: g1e_tl_present.py tl.bin.<pid> gring.txt ring.txt [--from S]"""
 import sys, struct, bisect, collections, statistics as st
 args = sys.argv[1:]; t_from = 60.0
 if '--from' in args: i = args.index('--from'); t_from = float(args[i + 1]); del args[i:i + 2]
+winf = None  # s6979: --windows F writes 'late|norm <send_dl end mach s> <sd wall ms> <sdc cpu ms>' per present for g1e_thread_census.py
+if '--windows' in args: i = args.index('--windows'); winf = args[i + 1]; del args[i:i + 2]
 tlf, gf, rf = args
 pc = lambda v, p: sorted(v)[int(p * (len(v) - 1))] if v else float('nan')
 off = []
@@ -81,10 +83,15 @@ for j in range(1, len(P)):
     if i < 1: continue
     k = bisect.bisect_right(kt, W[i - 1]) - 1
     if k < 1: continue
-    c = chain(k); c['prev'] = chain(k - 1); c['wq'] = (Q[m] - W[i - 1]) * 1e3; c['kw'] = (W[i - 1] - kt[k]) * 1e3; c['t'] = P[j][0] - t0; r = rrow(W[i - 1]); c['sd'], c['sdc'], c['qw'], c['rw'] = (r[1], r[2], r[3], (r[0] - W[i - 1]) * 1e3) if r else (float('nan'),) * 4; c['pre'] = c['sd'] - c['sdc']
+    c = chain(k); c['prev'] = chain(k - 1); c['wq'] = (Q[m] - W[i - 1]) * 1e3; c['kw'] = (W[i - 1] - kt[k]) * 1e3; c['t'] = P[j][0] - t0; r = rrow(W[i - 1]); c['sd'], c['sdc'], c['qw'], c['rw'] = (r[1], r[2], r[3], (r[0] - W[i - 1]) * 1e3) if r else (float('nan'),) * 4; c['pre'] = c['sd'] - c['sdc']; c['rt'] = r[0] if r else float('nan')
     if 30 <= d < 40: rows['late'].append(c)
     elif 15 < d < 18.5: rows['norm'].append(c)
 L, N = rows['late'], rows['norm']
+if winf:
+    with open(winf, 'w') as wf:
+        for nm, R_ in (('late', L), ('norm', N)):
+            for r in R_:
+                if r['rt'] == r['rt']: wf.write(f"{nm} {r['rt']:.6f} {r['sd']:.3f} {r['sdc']:.3f}\n")
 print(f'game slot {G}; late presents {len(L)}, normal {len(N)}')
 print('  field           late p10/p50/p90          | normal p10/p50/p90')
 for k in ('gap', 'ph', 'nvi', 'run', 'q', 'rsp', 'rdp', 'kw', 'wq', 'sd', 'sdc', 'pre', 'qw', 'rw'):

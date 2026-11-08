@@ -4672,17 +4672,23 @@ index 3198be0..a8f859b 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..7c6ad9b 100644
+index 149e770..d544bd7 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
-@@ -1,5 +1,6 @@
+@@ -1,25 +1,471 @@
  #include <thread>
++#include <vector>
  #include <atomic>
 +#include <algorithm>
  #include <chrono>
  #include <cinttypes>
  #include <variant>
-@@ -8,18 +9,458 @@
+ #include <unordered_map>
++#include <unordered_set>
++#if defined(__APPLE__)
++#include <dlfcn.h>
++#endif
+ #include <utility>
  #include <mutex>
  #include <queue>
  #include <cstring>
@@ -5141,7 +5147,7 @@ index 149e770..7c6ad9b 100644
  void ultramodern::events::set_callbacks(const ultramodern::events::callbacks_t& callbacks) {
      events_callbacks = callbacks;
  }
-@@ -30,6 +471,7 @@ struct SpTaskAction {
+@@ -30,6 +476,7 @@ struct SpTaskAction {
  
  struct ScreenUpdateAction {
      ultramodern::renderer::ViRegs regs;
@@ -5149,7 +5155,7 @@ index 149e770..7c6ad9b 100644
  };
  
  struct UpdateConfigAction {
-@@ -39,6 +481,7 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
+@@ -39,6 +486,7 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
  
  struct ViState {
      const OSViMode* mode;
@@ -5157,7 +5163,7 @@ index 149e770..7c6ad9b 100644
      PTR(void) framebuffer;
      PTR(OSMesg) mq;
      OSMesg msg;
-@@ -65,11 +508,15 @@ static struct {
+@@ -65,11 +513,15 @@ static struct {
          ViState* get_cur_state() {
              return &states[cur_state];
          }
@@ -5175,7 +5181,7 @@ index 149e770..7c6ad9b 100644
              PTR(void) framebuffer = osVirtualToPhysical(next_state->framebuffer);
              PTR(void) origin = framebuffer + field_regs->origin;
  
-@@ -85,11 +532,27 @@ static struct {
+@@ -85,11 +537,27 @@ static struct {
                  origin = framebuffer;
              }
  
@@ -5203,7 +5209,7 @@ index 149e770..7c6ad9b 100644
              regs.VI_TIMING_REG = common_regs->burst;
              regs.VI_V_SYNC_REG = common_regs->vSync;
              regs.VI_H_SYNC_REG = common_regs->hSync;
-@@ -101,7 +564,21 @@ static struct {
+@@ -101,7 +569,21 @@ static struct {
              regs.VI_X_SCALE_REG = common_regs->xScale; // TODO implement osViSetXScale
              regs.VI_Y_SCALE_REG = yScale; // TODO implement osViSetYScale
              regs.VI_STATUS_REG = next_state->control;
@@ -5226,7 +5232,7 @@ index 149e770..7c6ad9b 100644
              // Swap VI states.
              cur_state ^= 1;
              *get_next_state() = *get_cur_state();
-@@ -140,6 +617,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
+@@ -140,6 +622,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
  extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_, OSMesg msg) {
      std::lock_guard lock{ events_context.message_mutex };
  
@@ -5235,7 +5241,7 @@ index 149e770..7c6ad9b 100644
      switch (event_id) {
          case OS_EVENT_SP:
              events_context.sp.msg = msg;
-@@ -161,13 +640,33 @@ extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_,
+@@ -161,13 +645,33 @@ extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_,
  
  extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 retrace_count) {
      std::lock_guard lock{ events_context.message_mutex };
@@ -5269,7 +5275,7 @@ index 149e770..7c6ad9b 100644
  
  
  extern std::atomic_bool exited;
-@@ -175,8 +674,107 @@ extern moodycamel::LightweightSemaphore graphics_shutdown_ready;
+@@ -175,8 +679,107 @@ extern moodycamel::LightweightSemaphore graphics_shutdown_ready;
  
  void set_dummy_vi(bool odd);
  
@@ -5377,7 +5383,7 @@ index 149e770..7c6ad9b 100644
      // This thread should be prioritized over every other thread in the application, as it's what allows
      // the game to generate new audio and gfx lists.
      ultramodern::set_native_thread_priority(ultramodern::ThreadPriority::Critical);
-@@ -186,7 +784,30 @@ void vi_thread_func() {
+@@ -186,7 +789,30 @@ void vi_thread_func() {
  
      while (!exited) {
          // Determine the next VI time (more accurate than adding 16ms each VI interrupt)
@@ -5409,7 +5415,7 @@ index 149e770..7c6ad9b 100644
          //if (next > std::chrono::high_resolution_clock::now()) {
          //    printf("Sleeping for %" PRIu64 " us to get from %" PRIu64 " us to %" PRIu64 " us \n",
          //        (next - std::chrono::high_resolution_clock::now()) / 1us,
-@@ -200,28 +821,71 @@ void vi_thread_func() {
+@@ -200,28 +826,71 @@ void vi_thread_func() {
              // printf("Skipping the next VI wait\n");
              next = std::chrono::high_resolution_clock::now();
          }
@@ -5486,7 +5492,7 @@ index 149e770..7c6ad9b 100644
  
          // If the game has started, handle sending VI and AI events.
          if (ultramodern::is_game_started()) {
-@@ -231,13 +895,24 @@ void vi_thread_func() {
+@@ -231,13 +900,24 @@ void vi_thread_func() {
              ViState* cur_state = events_context.vi.get_cur_state();
              if (remaining_retraces == 0) {
                  if (cur_state->mq != NULLPTR) {
@@ -5512,7 +5518,7 @@ index 149e770..7c6ad9b 100644
                  // Send a message to the VI queue, and do not set it to be requeued if the queue was full for the same reason as the VI message above.
                  ultramodern::enqueue_external_message_src(events_context.ai.mq, events_context.ai.msg, false, ultramodern::EventMessageSource::Ai);
              }
-@@ -249,15 +924,302 @@ void vi_thread_func() {
+@@ -249,15 +929,420 @@ void vi_thread_func() {
      }
  }
  
@@ -5666,6 +5672,124 @@ index 149e770..7c6ad9b 100644
 +}
 +}
 +
++// s6979 G1e whole-process thread census (ROGUESQ_G1E_THREADS=<file>, opt-in). A USER_INTERACTIVE sampler thread every
++// ROGUESQ_G1E_THREADS_US (1000) us: task_threads + THREAD_EXTENDED_INFO per thread (cumulative user+sys ns, run_state, curpri, name),
++// and every 10th sample host_processor_info per-CPU ticks. Binary, little-endian, clock = mach s (GRING/present-ring clock):
++//  type 1 sample: u8 1,u8 0,u16 n,u32 0,f64 t, then n x {u16 idx,u8 run_state,u8 curpri,u32 cpu_ns_delta} (only threads that
++//    gained CPU, are TH_STATE_RUNNING (runnable incl. preempted) or changed state; others carry their last state forward)
++//  type 2 name:   u8 2,u8 0,u16 idx,u32 port,f64 t,char name[64]       type 3 ticks: u8 3,u8 ncpu,u16 0,u32 0,f64 t, ncpu x u32[4]
++//  s6979b: type 4 Gfx-thread stack when WAITING: u8 4,u8 depth,u16 idx,u32 0,f64 t, depth x u64 (pc, lr, fp-chain return addrs);
++//  (also when UNINTERRUPTIBLE) followed by type 7: u8 7,u8 run_state,u16 0,u32 esr,f64 t,u64 far; type 8 every 10th sample:
++//  u8 8,..,f64 t,i32 faults,i32 pageins,i32 cow_faults,u32 0 (TASK_EVENTS_INFO);
++//  type 5 u8 5 ..,u64 main image base at +8; type 6 symbol: u8 6,..,u32 off@4,u64 addr@8,char name[80]@16
++// Offline: tools/g1e_thread_census.py joins it to g1e_late_leg.py late-present send_dl windows (H-intra / H-extern / H-ecore / H-block).
++#if defined(__APPLE__)
++namespace g1et {
++static void run(FILE *f, int us) {
++    ultramodern::set_native_thread_name("g1e-thr-sampler");
++    pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
++    mach_timebase_info_data_t tb; mach_timebase_info(&tb);
++    const uint64_t step = (uint64_t)us * 1000ull * tb.denom / tb.numer;
++    struct St { uint16_t idx; uint64_t ns; int state; };
++    std::unordered_map<uint32_t, St> known; uint16_t nidx = 0; std::vector<uint8_t> buf, nb; buf.reserve(8192);
++    uint32_t gport = 0; uint16_t gidx = 0; uintptr_t slo = 0, shi = 0; std::unordered_set<uint64_t> symd; // s6979b Gfx-thread backtrace when WAITING
++    { Dl_info di; if (dladdr((const void *)&run, &di)) { uint8_t r5[16] = {5}; const uint64_t b = (uint64_t)di.dli_fbase; std::memcpy(r5 + 8, &b, 8);
++        std::fwrite(r5, 1, 16, f); } } // type 5: main image load address (atos -l)
++    uint64_t next = mach_absolute_time(); unsigned k = 0;
++    for (;;) {
++        next += step; mach_wait_until(next);
++        const double t = g1eg::now_s(); buf.clear(); nb.clear();
++        auto put = [&](const void *p, size_t n) { const uint8_t *b = (const uint8_t *)p; buf.insert(buf.end(), b, b + n); };
++        thread_act_array_t th; mach_msg_type_number_t nth = 0;
++        if (task_threads(mach_task_self(), &th, &nth) != KERN_SUCCESS) continue;
++        uint8_t hdr[16] = {1}; std::memcpy(hdr + 8, &t, 8); put(hdr, 16); uint16_t nrec = 0;
++        for (mach_msg_type_number_t i = 0; i < nth; i++) {
++            thread_extended_info_data_t xi; mach_msg_type_number_t cnt = THREAD_EXTENDED_INFO_COUNT;
++            const uint32_t port = th[i];
++            if (thread_info(th[i], THREAD_EXTENDED_INFO, (thread_info_t)&xi, &cnt) == KERN_SUCCESS) {
++                const uint64_t ns = xi.pth_user_time + xi.pth_system_time;
++                auto it = known.find(port);
++                if (it == known.end() && nidx < 65535) {
++                    it = known.emplace(port, St{nidx, ns, -1}).first;
++                    uint8_t nr[80] = {2}; std::memcpy(nr + 2, &nidx, 2); std::memcpy(nr + 4, &port, 4); std::memcpy(nr + 8, &t, 8);
++                    std::strncpy((char *)nr + 16, xi.pth_name, 63); nb.insert(nb.end(), nr, nr + 80); nidx++; // names before the sample
++                }
++                if (it != known.end()) {
++                    St &s = it->second; const uint64_t d = ns > s.ns ? ns - s.ns : 0;
++                    if (d > 0 || xi.pth_run_state == TH_STATE_RUNNING || xi.pth_run_state != s.state) {
++                        uint8_t r[8]; std::memcpy(r, &s.idx, 2); r[2] = (uint8_t)xi.pth_run_state; r[3] = (uint8_t)xi.pth_curpri;
++                        const uint32_t d32 = (uint32_t)std::min<uint64_t>(d, 0xFFFFFFFFull); std::memcpy(r + 4, &d32, 4); put(r, 8); nrec++;
++                    }
++                    if (!gport && std::strcmp(xi.pth_name, "Gfx Thread") == 0) {
++                        gport = port; gidx = s.idx; pthread_t pt = pthread_from_mach_thread_np(port);
++                        if (pt) { shi = (uintptr_t)pthread_get_stackaddr_np(pt); slo = shi - pthread_get_stacksize_np(pt); }
++                    }
++                    if (port == gport && slo && (xi.pth_run_state == TH_STATE_WAITING || xi.pth_run_state == TH_STATE_UNINTERRUPTIBLE)) {
++                        // suspended window: no allocation, no locks (the Gfx thread may hold malloc's)
++                        uint64_t fr[24]; int nd = 0; arm_exception_state64_t es{}; bool esok = false;
++                        if (thread_suspend(th[i]) == KERN_SUCCESS) {
++                            arm_thread_state64_t ts; mach_msg_type_number_t sc = ARM_THREAD_STATE64_COUNT;
++                            if (thread_get_state(th[i], ARM_THREAD_STATE64, (thread_state_t)&ts, &sc) == KERN_SUCCESS) {
++                                const uint64_t M = (1ull << 47) - 1;
++                                fr[nd++] = (uint64_t)arm_thread_state64_get_pc(ts) & M; fr[nd++] = (uint64_t)arm_thread_state64_get_lr(ts) & M;
++                                uintptr_t fp = (uintptr_t)arm_thread_state64_get_fp(ts) & M;
++                                while (nd < 24 && fp >= slo && fp + 16 <= shi && (fp & 7) == 0) {
++                                    const uintptr_t *q = (const uintptr_t *)fp; const uintptr_t nx = q[0] & M, ra = q[1] & M;
++                                    if (!ra) break; fr[nd++] = ra; if (nx <= fp) break; fp = nx;
++                                }
++                            }
++                            { mach_msg_type_number_t ec = ARM_EXCEPTION_STATE64_COUNT; esok = thread_get_state(th[i], ARM_EXCEPTION_STATE64, (thread_state_t)&es, &ec) == KERN_SUCCESS; }
++                            thread_resume(th[i]);
++                        }
++                        if (nd) {
++                            uint8_t r4[16] = {4, (uint8_t)nd}; std::memcpy(r4 + 2, &gidx, 2); std::memcpy(r4 + 8, &t, 8); nb.insert(nb.end(), r4, r4 + 16);
++                            nb.insert(nb.end(), (uint8_t *)fr, (uint8_t *)(fr + nd));
++                            { uint8_t r7[24] = {7, (uint8_t)xi.pth_run_state}; const uint32_t esr = esok ? es.__esr : 0; const uint64_t far = esok ? es.__far : 0; // type 7: state + last exception
++                              std::memcpy(r7 + 4, &esr, 4); std::memcpy(r7 + 8, &t, 8); std::memcpy(r7 + 16, &far, 8); nb.insert(nb.end(), r7, r7 + 24); }
++                            for (int z = 0; z < nd; z++) if (symd.insert(fr[z]).second) { // type 6: first sight of an address -> dladdr symbol
++                                Dl_info di; uint8_t r6[96] = {6}; std::memcpy(r6 + 8, &fr[z], 8);
++                                if (dladdr((const void *)fr[z], &di)) { const uint64_t off = fr[z] - (uint64_t)di.dli_saddr; std::memcpy(r6 + 4, &off, 4);
++                                    std::snprintf((char *)r6 + 16, 80, "%s", di.dli_sname ? di.dli_sname : (di.dli_fname ? di.dli_fname : "?")); }
++                                nb.insert(nb.end(), r6, r6 + 96);
++                            }
++                        }
++                    }
++                    s.ns = ns; s.state = xi.pth_run_state;
++                }
++            }
++            mach_port_deallocate(mach_task_self(), th[i]);
++        }
++        vm_deallocate(mach_task_self(), (vm_address_t)th, nth * sizeof(thread_act_t));
++        std::memcpy(buf.data() + 2, &nrec, 2);
++        if ((k++ % 10) == 0) {
++            task_events_info_data_t te; mach_msg_type_number_t tc = TASK_EVENTS_INFO_COUNT; // type 8: task faults/pageins (s6979c)
++            if (task_info(mach_task_self(), TASK_EVENTS_INFO, (task_info_t)&te, &tc) == KERN_SUCCESS) {
++                uint8_t r8[32] = {8}; std::memcpy(r8 + 8, &t, 8); std::memcpy(r8 + 16, &te.faults, 4); std::memcpy(r8 + 20, &te.pageins, 4);
++                std::memcpy(r8 + 24, &te.cow_faults, 4); put(r8, 32);
++            }
++            natural_t ncpu = 0; processor_info_array_t pi; mach_msg_type_number_t pc = 0;
++            if (host_processor_info(mach_host_self(), PROCESSOR_CPU_LOAD_INFO, &ncpu, &pi, &pc) == KERN_SUCCESS) {
++                uint8_t h3[16] = {3, (uint8_t)std::min<natural_t>(ncpu, 255)}; std::memcpy(h3 + 8, &t, 8); put(h3, 16);
++                for (natural_t c = 0; c < ncpu && c < 255; c++) put(&pi[c * CPU_STATE_MAX], 16);
++                vm_deallocate(mach_task_self(), (vm_address_t)pi, pc * sizeof(integer_t));
++            }
++        }
++        if (!nb.empty()) std::fwrite(nb.data(), 1, nb.size(), f);
++        std::fwrite(buf.data(), 1, buf.size(), f);
++        if ((k & 255) == 0) std::fflush(f);
++    }
++}
++static const bool started = [] {
++    const char *e = std::getenv("ROGUESQ_G1E_THREADS"); if (!e || !*e) return false;
++    FILE *f = std::fopen(e, "wb"); if (!f) return false;
++    const char *u = std::getenv("ROGUESQ_G1E_THREADS_US"); const int us = (u && *u) ? std::max(100, std::atoi(u)) : 1000;
++    std::thread(run, f, us).detach();
++    std::fprintf(stderr, "[g1e-threads] sampler on, %d us, file %s\n", us, e);
++    return true;
++}();
++}
++#endif
++
 +// s6018 G1c draw-distance levers (default OFF = retail). ROGUESQ_DD_RADIUS=<m> scales the terrain-window radius constant
 +// read at 0x80043A2C (float @0x8003A538); ROGUESQ_DD_LOD=<m> scales the 5 default mesh-LOD distance thresholds read by
 +// selectMeshLodAndSubmitForRender (floats @0x8009ECB0). ROGUESQ_DD_DUMP=1 logs the constants (incl. neighbours) once.
@@ -5815,7 +5939,7 @@ index 149e770..7c6ad9b 100644
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
-@@ -277,17 +1239,51 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
+@@ -277,17 +1362,51 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
              return;
          }
  
@@ -5869,7 +5993,7 @@ index 149e770..7c6ad9b 100644
  
          (void)task_type;
      }
-@@ -325,6 +1321,34 @@ void ultramodern::trigger_config_action() {
+@@ -325,6 +1444,34 @@ void ultramodern::trigger_config_action() {
  std::atomic<ultramodern::renderer::SetupResult> renderer_setup_result = ultramodern::renderer::SetupResult::Success;
  std::atomic<ultramodern::renderer::GraphicsApi> renderer_chosen_api = ultramodern::renderer::GraphicsApi::Auto;
  
@@ -5904,7 +6028,7 @@ index 149e770..7c6ad9b 100644
  void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_ready, ultramodern::renderer::WindowHandle window_handle) {
      bool enabled_instant_present = false;
      using namespace std::chrono_literals;
-@@ -354,11 +1378,17 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -354,11 +1501,17 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
      thread_ready->signal();
  
      while (!exited) {
@@ -5922,7 +6046,7 @@ index 149e770..7c6ad9b 100644
                  // Turn on instant present if the game has been started and it hasn't been turned on yet.
                  if (ultramodern::is_game_started() && !enabled_instant_present) {
                      renderer_context->enable_instant_present();
-@@ -368,11 +1398,22 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -368,11 +1521,22 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  // start another graphics task until the RDP is also complete. Games usually preserve the RSP inputs until the RDP
                  // is finished as well, so sending this early shouldn't be an issue in most cases.
                  // If this causes issues then the logic can be replaced with responding to yield requests.
@@ -5946,7 +6070,7 @@ index 149e770..7c6ad9b 100644
  
                  [[maybe_unused]] auto renderer_start = std::chrono::high_resolution_clock::now();
                  // RogueSquadron64Recomp: send_dl RE-ENABLED. RT64 has a
-@@ -383,18 +1424,43 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -383,18 +1547,43 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  // bypasses the registered GBI and submits raw RDP that
                  // confuses RT64 state. See project_factor5_lle_breakthrough.md
                  // for context but supersede with HLE path.
@@ -5991,7 +6115,7 @@ index 149e770..7c6ad9b 100644
                  display_refresh_rate = renderer_context->get_display_framerate();
                  resolution_scale = renderer_context->get_resolution_scale();
              }
-@@ -456,6 +1522,7 @@ static const OSViMode dummy_mode = []() {
+@@ -456,6 +1645,7 @@ static const OSViMode dummy_mode = []() {
  void set_dummy_vi(bool odd) {
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = &dummy_mode;
@@ -5999,7 +6123,7 @@ index 149e770..7c6ad9b 100644
      // Set up a dummy framebuffer.
      next_state->framebuffer = 0x80700000;
      if (odd) {
-@@ -463,8 +1530,17 @@ void set_dummy_vi(bool odd) {
+@@ -463,8 +1653,17 @@ void set_dummy_vi(bool odd) {
      }
  }
  
@@ -6017,7 +6141,7 @@ index 149e770..7c6ad9b 100644
      events_context.vi.get_next_state()->framebuffer = frameBufPtr;
  }
  
-@@ -473,6 +1549,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
+@@ -473,6 +1672,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
      OSViMode* mode = TO_PTR(OSViMode, mode_);
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = mode;
@@ -6025,7 +6149,7 @@ index 149e770..7c6ad9b 100644
      next_state->control = next_state->mode->comRegs.ctrl;
  }
  
-@@ -567,16 +1644,24 @@ extern "C" PTR(void) osViGetCurrentFramebuffer() {
+@@ -567,16 +1767,24 @@ extern "C" PTR(void) osViGetCurrentFramebuffer() {
  }
  
  void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
@@ -6050,7 +6174,7 @@ index 149e770..7c6ad9b 100644
          events_context.sp_task_queue.enqueue(task);
      }
  }
-@@ -632,6 +1717,45 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
+@@ -632,6 +1840,45 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
      events_context.vi.states[1].mode = &dummy_mode;
  
      events_context.vi.thread = std::thread{ vi_thread_func };
