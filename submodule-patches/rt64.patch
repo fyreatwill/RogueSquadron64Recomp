@@ -3713,10 +3713,10 @@ index dccaa87..bbdc5cf 100644
                  dl++;
              }
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index f17db9b..7a9a4fb 100644
+index f17db9b..55fa862 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
-@@ -4,20 +4,87 @@
+@@ -4,20 +4,91 @@
  
  #include "rt64_present_queue.h"
  
@@ -3733,7 +3733,11 @@ index f17db9b..7a9a4fb 100644
  
 +// s6885 G1e: present row log, see plume_metal.cpp. Stamps below belong to the present thread only.
 +#if defined(__APPLE__)
-+namespace plume { bool rs64_pring_on(); double rs64_pring_now(); void rs64_pring_write(const char *row); bool rs64_present_drain_check(double now); void rs64_present_drain_acq(double acqMs); extern std::atomic<uint64_t> g_rs64_pring_last_id; }
++namespace plume { bool rs64_pring_on(); double rs64_pring_now(); void rs64_pring_write(const char *row); bool rs64_present_drain_check(double now); void rs64_present_drain_acq(double acqMs); extern std::atomic<uint64_t> g_rs64_pring_last_id; void rs64_present_stamp_arm(); void rs64_present_stamp_read(double *c, double *ws, double *we, double *gs, double *ge, double *ogeMs, double *ogsMs, uint64_t *on); }
++#if defined(__APPLE__)
++#include <pthread.h>
++#include <sys/qos.h>
++#endif
 +extern "C" __attribute__((weak)) int rs64_vi_lock_on(void); extern "C" __attribute__((weak)) void rs64_vi_lock_note_acq(double ms); // s6968
 +#define RS64_PRING_ON() plume::rs64_pring_on()
 +#define RS64_PRING_NOW() plume::rs64_pring_now()
@@ -3741,7 +3745,7 @@ index f17db9b..7a9a4fb 100644
 +#define RS64_PRING_ON() false
 +#define RS64_PRING_NOW() 0.0
 +#endif
-+static double rs64PrAcq = 0.0, rs64PrGpu = 0.0;
++static double rs64PrAcq = 0.0, rs64PrGpu = 0.0, rs64PrWait = 0.0; // s6985: rs64PrWait = CPU wall stamp when the fence wait returned
 +static uint32_t rs64PrFb = 0;
 +
 +// s6888 G1e test lever: ROGUESQ_PRESENT_TEST_STALL="t:ms,t:ms,.." sleeps the present thread ms milliseconds at t seconds after its first pass, with no window event. Presents
@@ -3804,7 +3808,7 @@ index f17db9b..7a9a4fb 100644
      }
  
      PresentQueue::~PresentQueue() {
-@@ -107,6 +174,21 @@ namespace RT64 {
+@@ -107,6 +178,21 @@ namespace RT64 {
          // Frame-advance for pipeline counters.
          g_pipe_frame_idx.fetch_add(1, std::memory_order_relaxed);
  
@@ -3826,7 +3830,7 @@ index f17db9b..7a9a4fb 100644
          FramebufferManager &fbManager = ext.sharedResources->framebufferManager;
          RenderTargetManager &targetManager = ext.sharedResources->renderTargetManager;
          const bool usingMSAA = (targetManager.multisampling.sampleCount > 1);
-@@ -160,9 +242,49 @@ namespace RT64 {
+@@ -160,9 +246,49 @@ namespace RT64 {
          const bool pqVisibleGate = present.screenVI.visible() ||
                                     (s_pq_force && present.screenVI.fbAddress() != 0 && present.screenVI.fbSiz() != 0);
          if (pqVisibleGate) {
@@ -3877,7 +3881,7 @@ index f17db9b..7a9a4fb 100644
              }
  
              // VI_FOLLOW_DRAW (2026-05-13, ported from reverted commit e718774).
-@@ -183,9 +305,18 @@ namespace RT64 {
+@@ -183,9 +309,18 @@ namespace RT64 {
              //                                of VI/recent-set (diagnostic).
              //   ROGUESQ_VI_FOLLOW_DRAW=N modes:
              //     0       — disabled. Original VI lookup only.
@@ -3897,7 +3901,7 @@ index f17db9b..7a9a4fb 100644
              if (!viewRDRAM) {
                  static const uint32_t s_force_fb = []() {
                      const char *e = std::getenv("ROGUESQ_VI_FORCE_FB");
-@@ -194,15 +325,27 @@ namespace RT64 {
+@@ -194,15 +329,27 @@ namespace RT64 {
                  }();
                  static const int s_follow_mode = []() {
                      const char *e = std::getenv("ROGUESQ_VI_FOLLOW_DRAW");
@@ -3927,7 +3931,7 @@ index f17db9b..7a9a4fb 100644
                      if (forceFb != nullptr) {
                          viFb = forceFb;
                          overrideUsed = true;
-@@ -216,7 +359,139 @@ namespace RT64 {
+@@ -216,7 +363,139 @@ namespace RT64 {
                          }
                      }
                  }
@@ -4068,7 +4072,7 @@ index f17db9b..7a9a4fb 100644
                      !ext.sharedResources->colorImageAddressVector.empty())
                  {
                      const auto &vec = ext.sharedResources->colorImageAddressVector;
-@@ -308,6 +583,48 @@ namespace RT64 {
+@@ -308,6 +587,48 @@ namespace RT64 {
                  }
              }
              
@@ -4117,7 +4121,7 @@ index f17db9b..7a9a4fb 100644
              if ((presentFb != nullptr) && (viFb != nullptr)) {
                  for (uint32_t colorAddress : ext.sharedResources->colorImageAddressVector) {
                      Framebuffer *colorFb = fbManager.find(colorAddress);
-@@ -353,11 +670,12 @@ namespace RT64 {
+@@ -353,11 +674,12 @@ namespace RT64 {
                  if (s_pq_log) {
                      static int s_n2 = 0;
                      int n = ++s_n2;
@@ -4133,7 +4137,7 @@ index f17db9b..7a9a4fb 100644
                          std::fflush(stderr);
                      }
                  }
-@@ -394,6 +712,25 @@ namespace RT64 {
+@@ -394,6 +716,25 @@ namespace RT64 {
                  lockedWorkloadMutex = true;
                  ext.sharedResources->workloadMutex.lock();
  
@@ -4159,7 +4163,7 @@ index f17db9b..7a9a4fb 100644
                  RenderTargetKey colorTargetKey(fbAddress, scratchFb.width, scratchFb.siz, Framebuffer::Type::Color);
                  colorTarget = &targetManager.get(colorTargetKey, true);
                  colorTarget->resize(ext.presentGraphicsWorker, scratchFb.width, scratchFb.height);
-@@ -418,6 +755,7 @@ namespace RT64 {
+@@ -418,6 +759,7 @@ namespace RT64 {
                  if (!present.paused && (viHistory.top().vi != present.screenVI)) {
                      viHistory.pushVI(present.screenVI, fbSize.x);
                  }
@@ -4167,7 +4171,7 @@ index f17db9b..7a9a4fb 100644
              }
          }
  
-@@ -465,7 +803,9 @@ namespace RT64 {
+@@ -465,7 +807,9 @@ namespace RT64 {
              uint32_t swapChainIndex = 0;
              const bool presentFrame = (i < framesToPresent) && swapChainValid;
              if (presentFrame) {
@@ -4177,18 +4181,33 @@ index f17db9b..7a9a4fb 100644
              }
  
              if (presentFrame && swapChainValid) {
-@@ -545,8 +885,10 @@ namespace RT64 {
+@@ -545,8 +889,14 @@ namespace RT64 {
                      const RenderCommandList *commandList = ext.presentGraphicsWorker->commandList.get();
                      RenderCommandSemaphore *waitSemaphore = acquiredSemaphore.get();
                      RenderCommandSemaphore *signalSemaphore = drawSemaphores[swapChainIndex].get();
 +                    const double rs64Gpu0 = RS64_PRING_NOW();
++#if defined(__APPLE__)
++                    plume::rs64_present_stamp_arm(); // s6985 G1e: GPU start/end of this pass
++#endif
                      ext.presentGraphicsWorker->commandQueue->executeCommandLists(&commandList, 1, &waitSemaphore, 1, &signalSemaphore, 1, ext.presentGraphicsWorker->commandFence.get());
                      ext.presentGraphicsWorker->wait();
-+                    rs64PrGpu += RS64_PRING_NOW() - rs64Gpu0;
++                    rs64PrWait = RS64_PRING_NOW();
++                    rs64PrGpu += rs64PrWait - rs64Gpu0;
                  }
              }
  
-@@ -646,6 +988,7 @@ namespace RT64 {
+@@ -628,6 +978,10 @@ namespace RT64 {
+ 
+     void PresentQueue::threadLoop() {
+         Thread::setCurrentThreadName("RT64 Present");
++#if defined(__APPLE__)
++        // s6985 G1e: ROGUESQ_PRESENT_QOS=1 runs the present thread at USER_INTERACTIVE (H-cpu-wait arm). Default off = retail RT64.
++        { const char *e = std::getenv("ROGUESQ_PRESENT_QOS"); if (e && *e == '1') { const int r = pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0); std::fprintf(stderr, "[s6985] present thread QoS USER_INTERACTIVE rc=%d\n", r); } }
++#endif
+ 
+         // Create the semaphore the acquire method will use.
+         acquiredSemaphore = ext.device->createCommandSemaphore();
+@@ -646,6 +1000,7 @@ namespace RT64 {
          const bool displayTiming = ext.device->getCapabilities().displayTiming;
          bool swapChainValid = !ext.swapChain->needsResize();
          while (presentThreadRunning) {
@@ -4196,7 +4215,7 @@ index f17db9b..7a9a4fb 100644
              {
                  std::unique_lock<std::mutex> cursorLock(cursorMutex);
                  cursorCondition.wait(cursorLock, [&]() {
-@@ -700,12 +1043,20 @@ namespace RT64 {
+@@ -700,12 +1055,20 @@ namespace RT64 {
                  skipPresent = skipPresent || ext.swapChain->isEmpty();
  
                  Present &present = presents[processCursor];
@@ -4217,19 +4236,29 @@ index f17db9b..7a9a4fb 100644
                  if (skipPresent) {
                      skipInterpolation();
                      notifyPresentId(present);
-@@ -714,6 +1065,24 @@ namespace RT64 {
+@@ -714,6 +1077,34 @@ namespace RT64 {
                      threadPresent(present, swapChainValid);
                  }
  
 +                if (RS64_PRING_ON()) {
 +#if defined(__APPLE__)
-+                    char row[192];
++                    char row[448];
 +                    const double rs64Row2 = RS64_PRING_NOW();
-+                    std::snprintf(row, sizeof(row), "Q %.6f id=%llu wl=%llu skip=%d vi=%06X fb=%06X gen=%u wl_ms=%.3f tp_ms=%.3f acq_ms=%.3f gpu_ms=%.3f mtl=%llu\n",
++                    // s6985 G1e: ws = wait-buffer GPU start - commit (queue delay), wx = wait-buffer GPU span (acquire semaphore),
++                    // gs = main GPU start - wait end, ge = main GPU span, hw = fence-wait return - main GPU end (CPU wake), all ms
++                    // (-1 = not stamped); oge/ogs = max exec / start delay of other fenced buffers since the last row, on = count; qos.
++                    double sc, sws, swe, sgs, sge, oge, ogs; uint64_t on;
++                    plume::rs64_present_stamp_read(&sc, &sws, &swe, &sgs, &sge, &oge, &ogs, &on);
++                    const bool st = !skipPresent && sc > 0.0 && sws > 0.0 && sge > 0.0;
++                    char ext6985[200];
++                    std::snprintf(ext6985, sizeof(ext6985), " ws=%.3f wx=%.3f gs=%.3f ge=%.3f hw=%.3f oge=%.3f ogs=%.3f on=%llu qos=%d",
++                        st ? (sws - sc) * 1e3 : -1.0, st ? (swe - sws) * 1e3 : -1.0, st ? (sgs - swe) * 1e3 : -1.0, st ? (sge - sgs) * 1e3 : -1.0,
++                        st ? (rs64PrWait - sge) * 1e3 : -1.0, oge, ogs, (unsigned long long)on, (int)qos_class_self());
++                    std::snprintf(row, sizeof(row), "Q %.6f id=%llu wl=%llu skip=%d vi=%06X fb=%06X gen=%u wl_ms=%.3f tp_ms=%.3f acq_ms=%.3f gpu_ms=%.3f mtl=%llu%s\n",
 +                        rs64Row2, (unsigned long long)present.presentId, (unsigned long long)present.workloadId, skipPresent ? 1 : 0,
 +                        present.screenVI.fbAddress() & 0xFFFFFF, skipPresent ? 0 : rs64PrFb, g_rs64_last_drawn_gen.load(std::memory_order_relaxed),
 +                        (rs64Row1 - rs64Row0) * 1e3, (rs64Row2 - rs64Row1) * 1e3, rs64PrAcq * 1e3, rs64PrGpu * 1e3,
-+                        (unsigned long long)plume::g_rs64_pring_last_id.load(std::memory_order_relaxed));
++                        (unsigned long long)plume::g_rs64_pring_last_id.load(std::memory_order_relaxed), ext6985);
 +                    plume::rs64_pring_write(row);
 +#endif
 +                }

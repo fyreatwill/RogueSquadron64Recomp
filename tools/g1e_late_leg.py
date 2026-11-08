@@ -87,6 +87,8 @@ for j in range(1, len(P)):
     if k < 1: continue
     c = chain(k); c['prev'] = chain(k - 1); c['wq'] = (Q[m] - W[i - 1]) * 1e3; c['kw'] = (W[i - 1] - kt[k]) * 1e3; c['t'] = P[j][0] - t0; r = rrow(W[i - 1]); c['sd'], c['sdc'], c['qw'], c['rw'] = (r[1], r[2], r[3], (r[0] - W[i - 1]) * 1e3) if r else (float('nan'),) * 4; c['pre'] = c['sd'] - c['sdc']; c['rt'] = r[0] if r else float('nan')
     c['pres'] = (P[j][0] - Q[m]) * 1e3; c['acq'] = float(QK[m].get('acq_ms', 'nan')); c['tp'] = float(QK[m].get('tp_ms', 'nan')); c['gpu'] = float(QK[m].get('gpu_ms', 'nan'))
+    for k in ('ws', 'wx', 'gs', 'ge', 'hw', 'oge', 'ogs'):  # s6985 present GPU stamps (-1 = not stamped -> nan)
+        v = float(QK[m].get(k, 'nan')); c[k] = v if v >= 0 else float('nan')
     c['s3'] = c['ph'] + c['rsp'] + c['wq']; c['viq'] = c['ph'] + c['kw'] + c['wq']; c['s4'] = c['s3'] + c['run']; c['vip'] = c['viq'] + c['pres']
     if 30 <= d < 40: rows['late'].append(c)
     elif 15 < d < 18.5: rows['norm'].append(c)
@@ -129,8 +131,9 @@ if sumf:
             if acc > ba: ba, bt = acc, t
         return bt, ba
     print('SUM  key   AUC   thr    balacc | late p10/p50/p90 | norm p10/p50/p90')
-    for k in ('s3', 's4', 'viq', 'pres', 'vip', 'acq', 'tp', 'gpu', 'ph', 'rsp', 'wq', 'kw', 'run'):
-        a = [r[k] for r in L]; b = [r[k] for r in N]; t, ba = best(a, b)
+    for k in ('s3', 's4', 'viq', 'pres', 'vip', 'acq', 'tp', 'gpu', 'ws', 'wx', 'gs', 'ge', 'hw', 'oge', 'ogs', 'ph', 'rsp', 'wq', 'kw', 'run'):
+        a = [r[k] for r in L if r[k] == r[k]]; b = [r[k] for r in N if r[k] == r[k]]; t, ba = best(a, b)
+        if not a or not b: print('SUM  %-5s n/a (late %d norm %d stamped)' % (k, len(a), len(b))); continue
         print('SUM  %-5s %.3f %6.2f %.3f | %6.2f %6.2f %6.2f | %6.2f %6.2f %6.2f' % (k, auc(a, b), t, ba, *(pc(a, x) for x in (.1, .5, .9)), *(pc(b, x) for x in (.1, .5, .9))))
     t, _ = best([r['viq'] for r in L], [r['viq'] for r in N])
     lo = [r for r in L if r['viq'] <= t]

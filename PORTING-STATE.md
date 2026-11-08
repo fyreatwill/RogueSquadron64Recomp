@@ -183926,3 +183926,42 @@ game workload / WindowServer) or executes slowly (GPU clock/power under the CPU 
 Caveat: the s3 sum separates partly because kw/wq pair a late Q with an earlier W (kw p50 3-4 ms on lates) - a join artefact
 of the busy path, not a deadline crossing; viq is the clean end-to-end figure.
 Docs: CURRENT-TRUTH s6984 bullet (s6982 bullet condensed), NEXT.md g1e-late-present.
+
+## Session 6985 (2026-11-08) — G1e: late present fence wait = present thread waking late (H-cpu-wait); ROGUESQ_PRESENT_QOS=1 opt-in cuts lates ~1/3
+
+Work unit (NEXT.md s6984, slug g1e-late-present): split the late present pass's executeCommandLists+fence wait (gpu_ms
+1.5-1.9 vs 0.36 ms on lates, s6984) into GPU queue wait (H-gpuq), slow GPU execution (H-gpuclk) and CPU wake (H-cpu-wait).
+
+Instrument (lib/rt64, exported to submodule-patches/rt64*.patch): plume_metal.cpp executeCommandLists, when the present
+thread arms it (rs64_present_stamp_arm, only while ROGUESQ_PRESENT_RING is on), retains the wait-semaphore buffer and adds a
+completed handler (registered before the fence signal) storing both buffers' GPUStartTime/GPUEndTime (host mach seconds,
+same base as rs64_pring_now). Every other fenced buffer folds max(GPUEnd-GPUStart) and max(GPUStart-commit) into atomics read
+and cleared per Q row. Q row gains ws (wait buf start - commit), wx (wait buf span = acquire semaphore), gs (main start - wait
+end), ge (main span), hw (fence-wait return - main GPU end), oge/ogs/on (other buffers), qos (qos_class_self). New opt-in
+ROGUESQ_PRESENT_QOS=1 sets the RT64 Present thread USER_INTERACTIVE (log "[s6985] present thread QoS ... rc=0").
+tools/g1e_late_leg.py --sum scores the new keys (nan-safe).
+
+Positive control: on normal rows ws+wx+gs+ge+hw = 0.015+0+0.123+0.093+0.066 = 0.297 vs gpu_ms 0.298 (the five legs account
+for the whole wait); qos=21 on every P0 row, 33 on every P1 row; [s6985] rc=0 logged once in P1.
+
+Run: scratch/s6985/drive.sh, ABBA P0 P1 P1b P0b, s6982 burst (14 spinners) from ~123 s, 330 s hold, 21:9 dd4 FPS60
+VI_LOCK=1 target 10 GFX_QOS=1 GUEST_QOS=1 in all arms; P1* add PRESENT_QOS=1. Score scratch/s6985/score.sh, from 95 s.
+0 crash in all 4.
+
+| arm | QoS | lates30-40 | hw late p50/p90 | hw norm | ge late/norm | gs late/norm | gpu late p50 | pres late/norm |
+|-----|-----|-----------:|-----------------|---------|--------------|--------------|--------------|----------------|
+| P0  | 21  | 92 | 0.92 / 3.81 | 0.06 | 0.19/0.19 | 0.27/0.11 | 1.55 | 30.0/23.6 |
+| P1  | 33  | 50 | 0.06 / 0.06 | 0.06 | 0.19/0.18 | 0.41/0.11 | 0.68 | 31.7/23.2 |
+| P1b | 33  | 75 | 0.06 / 0.06 | 0.06 | 0.19/0.18 | 0.40/0.11 | 0.67 | 31.7/23.2 |
+| P0b | 21  | 99 | 1.48 / 4.90 | 0.06 | 0.19/0.19 | 0.19/0.11 | 2.02 | 30.2/23.4 |
+
+AUC (late > normal) of hw: 0.93/0.94 without QoS, 0.37-0.40 with it. wx = 0 everywhere (acquire never waits).
+Selects H-cpu-wait for the s6984 gpu_ms signature (two lines: the hw leg itself, and the QoS arm removing it in both
+replicas). Refutes H-gpuclk (GPU execution identical late vs normal; other buffers' oge 2.7 vs 2.5 ms, no slowdown).
+H-gpuq minor: gs 0.2-0.4 vs 0.11 ms and ogs 0.42 vs 0.14 ms on lates = the present buffer starts ~0.3 ms later because the GPU
+is busy with the game workload, too small to matter. ORIGIN ours: the RT64 present thread runs at default QoS (21), so under
+load the dispatch_semaphore wake after the fence is delayed up to ~5 ms. Lates fall 92/99 -> 50/75 (-34%, ABBA, the pair
+order rules out drift). Residual lates (both QoS arms): gpu_ms only 0.68 but Q->on-glass 31.7 vs 23.2 ms; the delay is
+after the present command buffer commits: drawable->present() runs in the buffer's addScheduledHandler on a Metal dispatch
+thread (another default-QoS CPU hop), or the compositor latch. OWNER-OPT-INS row added; default unchanged (owner's call).
+CURRENT-TRUTH: closed s6969-s6973 lock-target bullets condensed to one line (60.1 -> 57.3 KB).
