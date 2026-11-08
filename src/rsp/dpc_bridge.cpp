@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <mach/mach_time.h>
 #include <map>
 #include <set>
@@ -33,6 +34,53 @@ struct S4272Sh { uint32_t lo, hi; size_t off; };
 extern "C" { int g_rs64_trim = 1; }  // s6934: ROGUESQ_G1E_TRIM state, set per wrap flush
 extern "C" { int g_rs64_tmem_fast = 1; }  // s6935: ROGUESQ_G1E_TMEM state, TLUT scan table and word copy in RT64, set per wrap flush
 static std::vector<S4272Sh> g_s4272_sh;
+
+// s6955 G1e: ROGUESQ_G1E_BATCH (default on after the s6955 check run, =0 old per-bump entries, =tog 10 s blocks, latched per task at defer_begin).
+// The ucode bumps DPC_END once per RDP command (~50k bumps per dd4 task), and each bump became its own deferred range + shadow
+// entry, which the wrap flush (per-range key lookup, undo, restore) and the commit then walk one by one. With the batch on, a
+// bump contiguous with the last deferred range EXTENDS it (and its shadow entry, in lockstep, bytes appended at bump time as
+// before, capped at ROGUESQ_S4272_CAP) instead of pushing. Every consumer merges contiguous ranges anyway (commit, wrap merge,
+// coal) and the shadow bytes are identical, so RT64 gets the same bytes. Per-bump inspection in submit_impl is untouched.
+// ROGUESQ_G1E_BATCH_CHECK=1 keeps the unmerged per-bump lists beside the batched ones and, at every flush/commit, compares
+// merged run lists, concatenated shadow coverage and bytes, and counts duplicate shadow keys (where first-match lookup could
+// diverge); check #1 compares against a corrupted copy as the positive control (control must be 1, bad 0).
+extern "C" { int g_rs64_g1e_batch = 0; uint64_t g_rs64_g1e_ranges = 0; }
+static bool g_bc_on = false;
+static std::vector<std::pair<uint32_t, uint32_t>> g_bc_ranges;
+static std::vector<S4272Sh> g_bc_sh;
+static std::vector<uint8_t> g_bc_shadow;
+static void rs64_g1e_bc_check(const char *where) {
+    if (!g_bc_on) return;
+    static unsigned long n = 0, bad = 0, ctl = 0, dup = 0, refr = 0, batr = 0;
+    ++n;
+    auto merged = [](const std::vector<std::pair<uint32_t, uint32_t>> &v) {
+        std::vector<std::pair<uint32_t, uint32_t>> o;
+        for (const auto &r : v) { if (!o.empty() && o.back().second == r.first) o.back().second = r.second; else o.push_back(r); }
+        return o;
+    };
+    auto cover = [](const std::vector<S4272Sh> &v) {
+        std::vector<std::pair<uint32_t, uint32_t>> o;
+        for (const S4272Sh &e : v) { if (!o.empty() && o.back().second == e.lo) o.back().second = e.hi; else o.push_back({e.lo, e.hi}); }
+        return o;
+    };
+    refr += g_bc_ranges.size(); batr += g_deferred_ranges.size();
+    std::vector<uint8_t> ref_sh = g_bc_shadow;
+    const bool control = n == 1 && !ref_sh.empty();
+    if (control) ref_sh[0] ^= 0xFF;
+    const bool d = merged(g_bc_ranges) != merged(g_deferred_ranges) || cover(g_bc_sh) != cover(g_s4272_sh) || ref_sh != g_s4272_shadow;
+    if (d) { if (control) ++ctl; else ++bad; }
+    else if (n == 1 && !control) { /* nothing to corrupt yet: retry the control next check */ n = 0; }
+    {   // duplicate (lo,hi) shadow keys in the per-bump list: the wrap restore's first-match lookup is the one place grouping could matter
+        std::vector<uint64_t> k; k.reserve(g_bc_sh.size());
+        for (const S4272Sh &e : g_bc_sh) k.push_back(((uint64_t)e.lo << 32) | e.hi);
+        std::sort(k.begin(), k.end());
+        for (size_t i = 1; i < k.size(); ++i) if (k[i] == k[i - 1]) ++dup;
+    }
+    if (n <= 4 || (n & 0x3FF) == 0)
+        fprintf(stderr, "[s6955-bc] n=%lu where=%s bad=%lu control(must be 1)=%lu dupkeys=%lu ref_ranges=%lu batch_ranges=%lu\n",
+                n, where, bad, ctl, dup, refr, batr);
+}
+static void rs64_g1e_bc_clear() { g_bc_ranges.clear(); g_bc_sh.clear(); g_bc_shadow.clear(); }
 
 #include "librecomp/rsp.hpp"
 #include "ultramodern/events.hpp"
@@ -6349,6 +6397,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                 cc_exp.clear(); cc_pre.clear(); cc_sp.clear();
                 wm_undo.clear(); wm_live.clear(); wm_chk.clear(); wm_lo = wm_hi = 0;
             };
+            rs64_g1e_bc_check("wrap");
             for (const auto &r : g_deferred_ranges) {
                 if (should_drop_wrap_rdp(r.first, r.second)) continue;
                 if (wm_hi > wm_lo && wm_hi != r.first) wm_flush();
@@ -6414,7 +6463,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                     fprintf(stderr, "[s4286-restore] n=%lu restoredRanges=%lu noShadow=%lu wordsRestored=%lu postDiff(must be 0)=%lu\n", rn, rCtl, rMiss, rWordsRestored, rPostDiff);
             }
             wm_flush();
-            g_deferred_ranges.clear(); g_s4272_sh.clear(); g_s4272_shadow.clear();
+            g_deferred_ranges.clear(); g_s4272_sh.clear(); g_s4272_shadow.clear(); rs64_g1e_bc_clear();
             uint64_t k = ++s_wf_n; s_wf_bytes += b;
             if (k <= 8 || (k & 63) == 0)
                 fprintf(stderr, "[s4273-wrap] flush=1 n=%llu bytes=%u totbytes=%llu\n", (unsigned long long)k, b, (unsigned long long)s_wf_bytes.load());
@@ -6915,7 +6964,8 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
             // Keep last_fullsync_addr on the sticky slot so subsequent
             // filters still match; do not point it at the scratch.
             if (g_defer_active) {
-                g_deferred_ranges.emplace_back(kSynthFsPhys, kSynthFsPhys + 8);
+                g_deferred_ranges.emplace_back(kSynthFsPhys, kSynthFsPhys + 8); ++g_rs64_g1e_ranges;
+                if (g_bc_on) g_bc_ranges.emplace_back(kSynthFsPhys, kSynthFsPhys + 8);
             } else {
                 ultramodern::submit_rdp_range(kSynthFsPhys, kSynthFsPhys + 8);
             }
@@ -7552,13 +7602,35 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
     // on UnhandledJumpTarget, so garbage streams (trig data executed as DL)
     // never reach RT64's deferred state. Gfx-thread only, no locking needed.
     if (g_defer_active) {
-        g_deferred_ranges.emplace_back(submit_lo, submit_hi);
         {
             static const bool sh = []{ const char *e = std::getenv("ROGUESQ_S4272"); return !(e && *e == '0'); }(); /* s4549: default on (=0 disables) */
             static const uint32_t cap = []{ const char *e = std::getenv("ROGUESQ_S4272_CAP"); return e ? (uint32_t)strtoul(e, nullptr, 0) : 0x2000u; }(); /* s4286, s4287: default 0x2000 */
-            if (sh && submit_hi - submit_lo <= cap) {
-                g_s4272_sh.push_back({submit_lo, submit_hi, g_s4272_shadow.size()});
-                g_s4272_shadow.insert(g_s4272_shadow.end(), rdram + submit_lo, rdram + submit_hi);
+            bool ext = false;   // s6955: ROGUESQ_G1E_BATCH, extend the contiguous last range (+ its shadow entry in lockstep)
+            if (g_rs64_g1e_batch && !g_deferred_ranges.empty() && g_deferred_ranges.back().second == submit_lo) {
+                auto &bk = g_deferred_ranges.back();
+                if (!sh) { bk.second = submit_hi; ext = true; }
+                else if (!g_s4272_sh.empty()) {
+                    S4272Sh &se = g_s4272_sh.back();
+                    if (se.lo == bk.first && se.hi == bk.second && se.off + (se.hi - se.lo) == g_s4272_shadow.size() && submit_hi - se.lo <= cap) {
+                        se.hi = submit_hi; bk.second = submit_hi;
+                        g_s4272_shadow.insert(g_s4272_shadow.end(), rdram + submit_lo, rdram + submit_hi);
+                        ext = true;
+                    }
+                }
+            }
+            if (!ext) {
+                g_deferred_ranges.emplace_back(submit_lo, submit_hi); ++g_rs64_g1e_ranges;
+                if (sh && submit_hi - submit_lo <= cap) {
+                    g_s4272_sh.push_back({submit_lo, submit_hi, g_s4272_shadow.size()});
+                    g_s4272_shadow.insert(g_s4272_shadow.end(), rdram + submit_lo, rdram + submit_hi);
+                }
+            }
+            if (g_bc_on) {   // per-bump reference lists (old behaviour)
+                g_bc_ranges.emplace_back(submit_lo, submit_hi);
+                if (sh && submit_hi - submit_lo <= cap) {
+                    g_bc_sh.push_back({submit_lo, submit_hi, g_bc_shadow.size()});
+                    g_bc_shadow.insert(g_bc_shadow.end(), rdram + submit_lo, rdram + submit_hi);
+                }
             }
         }
         // s6707 G1e: in a streaming async task, hand the pending ranges to the RT64 worker every stream_bytes so it runs
@@ -7568,8 +7640,9 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
             g_defer_stream_pending += submit_hi - submit_lo;
             if (g_defer_stream_pending >= sb) {
                 uint32_t bytes = 0; size_t calls = 0;
+                rs64_g1e_bc_check("stream");
                 submit_deferred_merged(bytes, calls);
-                g_deferred_ranges.clear(); g_s4272_sh.clear(); g_s4272_shadow.clear();
+                g_deferred_ranges.clear(); g_s4272_sh.clear(); g_s4272_shadow.clear(); rs64_g1e_bc_clear();
                 g_defer_stream_pending = 0; ++g_defer_stream_flushes;
                 g_defer_stream_task_flushes++;
                 g_defer_stream_bytes += bytes;
@@ -7589,6 +7662,12 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
 
 extern "C" void rs64_dpc_defer_begin() {
     g_defer_active = true;
+    {   // s6955: ROGUESQ_G1E_BATCH arm, latched per task
+        static const int s_batch_env = [] { const char *e = std::getenv("ROGUESQ_G1E_BATCH"); return !e ? 1 : (*e == 't' ? 2 : (*e != '0')); }();
+        static const bool s_bc = [] { const char *e = std::getenv("ROGUESQ_G1E_BATCH_CHECK"); return e && *e && *e != '0'; }();
+        g_rs64_g1e_batch = s_batch_env == 2 ? (int)((time(nullptr) / 10) & 1) : s_batch_env;
+        g_bc_on = s_bc; rs64_g1e_bc_clear();
+    }
     g_defer_stream_pending = 0; g_defer_stream_task_flushes = 0;
     g_deferred_ranges.clear();
     g_s4272_sh.clear(); g_s4272_shadow.clear();
@@ -7602,6 +7681,7 @@ extern "C" void rs64_dpc_defer_begin() {
 
 static void rs64_dpc_defer_end_impl(int commit) {
     g_defer_active = false;
+    if (commit) rs64_g1e_bc_check("commit");
     if (commit && !g_s4272_sh.empty() && g_rdram_for_submit) {
         static unsigned long cmpWords = 0, diffWords = 0, tasks = 0, tasksDiff = 0; static int shown = 0;
         unsigned long d = 0;
@@ -7744,7 +7824,7 @@ static void rs64_dpc_defer_end_impl(int commit) {
                     (unsigned long long)g_defer_stream_flushes, (unsigned long long)g_defer_stream_bytes, g_defer_stream_task_flushes);
     }
     s_c4284_laps = 0; s_c4284_maxseen = 0;
-    g_deferred_ranges.clear();
+    g_deferred_ranges.clear(); rs64_g1e_bc_clear();
 }
 
 // s68: external noinline host stub for ImemOverrun site attribution. Called

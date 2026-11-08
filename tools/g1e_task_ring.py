@@ -14,8 +14,8 @@ R = []
 for l in open(a.ring):
     if l.startswith('#'): continue
     f = l.split()
-    if len(f) != 11: continue
-    t, w, c, uc, sub, com = map(float, f[:6]); calls, by, n, ph, sp = map(int, f[6:])
+    if len(f) < 11: continue
+    t, w, c, uc, sub, com = map(float, f[:6]); calls, by, n, ph, sp = map(int, f[6:11])
     R.append(dict(t=t, w=w, c=c, uc=uc, sub=sub, com=com, calls=calls, by=by, n=n, ph=ph, sp=sp,
                   ucx=uc - sub, rt=c - uc - com, gap=w - c))
 g1b = {}

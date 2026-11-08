@@ -6533,7 +6533,8 @@ struct Hold { explicit Hold(int tag) { acquired(tag); } ~Hold() { released(); } 
 // "t_ms sd_wall sd_cpu ucode_ms submit_ms commit_ms calls rdp_bytes n_ucode phase spin". Rows are line-buffered into the file.
 extern "C" uint32_t rs64_task_rdp_bytes_total();
 extern "C" uint32_t g_rs64_aq_spin_ns;
-struct Rs64TrAcc { uint64_t n = 0, uc = 0, sub = 0, com = 0, calls = 0, bytes = 0; };
+struct Rs64TrAcc { uint64_t n = 0, uc = 0, sub = 0, com = 0, calls = 0, bytes = 0, ranges = 0; };
+extern "C" int g_rs64_g1e_batch; extern "C" uint64_t g_rs64_g1e_ranges;  // s6955: batch arm + deferred range entries
 static Rs64TrAcc g_rs64_tr;
 static FILE *g_rs64_tr_f = nullptr;
 extern "C" int rs64_g1e_tring_on = [] {
@@ -6542,15 +6543,16 @@ extern "C" int rs64_g1e_tring_on = [] {
     g_rs64_tr_f = std::fopen(e, "w");
     if (!g_rs64_tr_f) return 0;
     std::setvbuf(g_rs64_tr_f, nullptr, _IOFBF, 1 << 16);
-    std::fprintf(g_rs64_tr_f, "# t_ms sd_wall sd_cpu ucode_ms submit_ms commit_ms calls rdp_bytes n_ucode phase spin\n");
+    std::fprintf(g_rs64_tr_f, "# t_ms sd_wall sd_cpu ucode_ms submit_ms commit_ms calls rdp_bytes n_ucode phase spin batch ranges\n");
     return 1;
 }();
 extern "C" uint32_t rs64_phase_ord();
 extern "C" void rs64_g1e_tring_push(double t_ms, double w, double c) {
     if (!g_rs64_tr_f) return;
     const Rs64TrAcc a = g_rs64_tr; g_rs64_tr = Rs64TrAcc{};
-    std::fprintf(g_rs64_tr_f, "%.3f %.3f %.3f %.3f %.3f %.3f %llu %llu %llu %u %u\n", t_ms, w, c, a.uc / 1e6, a.sub / 1e6, a.com / 1e6,
-                 (unsigned long long)a.calls, (unsigned long long)a.bytes, (unsigned long long)a.n, rs64_phase_ord(), g_rs64_aq_spin_ns);
+    std::fprintf(g_rs64_tr_f, "%.3f %.3f %.3f %.3f %.3f %.3f %llu %llu %llu %u %u %d %llu\n", t_ms, w, c, a.uc / 1e6, a.sub / 1e6, a.com / 1e6,
+                 (unsigned long long)a.calls, (unsigned long long)a.bytes, (unsigned long long)a.n, rs64_phase_ord(), g_rs64_aq_spin_ns,
+                 g_rs64_g1e_batch, (unsigned long long)a.ranges);
     static double last_flush = 0; if (t_ms - last_flush > 1000.0) { std::fflush(g_rs64_tr_f); last_flush = t_ms; }
 }
 
@@ -6969,7 +6971,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         g_rs64_aq_on = (e && *e && *e != '0') ? (*e == '2' ? 2 : *e == '3' ? 3 : 1) : 0;  // s6954: 3 = sampled submit timing  // s6715: 2 = per-task ucode timing only (no per-submit clock)
     }
     const uint64_t aq_sub0 = g_rs64_aq_submit_ns, aq_calls0 = g_rs64_aq_submit_calls, aq_com0 = g_rs64_aq_commit_ns;
-    const uint32_t tr_bytes0 = rs64_task_rdp_bytes_total();
+    const uint32_t tr_bytes0 = rs64_task_rdp_bytes_total(); const uint64_t tr_rng0 = g_rs64_g1e_ranges;
     const auto aq_t0 = g_rs64_aq_on > 0 ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
     RspExitReason r;
     if (rs64_g1e_dmembase && g_dmem_cur == dmem) {
@@ -7086,7 +7088,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         acc.com += g_rs64_aq_commit_ns - aq_com0;
         if (rs64_g1e_tring_on) {  // s6954: per-task terms, joined to send_dl wall/cpu by rs64_g1e_tring_push (events.cpp)
             g_rs64_tr.n++; g_rs64_tr.uc += ucode_ns; g_rs64_tr.sub += sub_ns; g_rs64_tr.com += g_rs64_aq_commit_ns - aq_com0;
-            g_rs64_tr.calls += g_rs64_aq_submit_calls - aq_calls0; g_rs64_tr.bytes += rs64_task_rdp_bytes_total() - tr_bytes0;
+            g_rs64_tr.calls += g_rs64_aq_submit_calls - aq_calls0; g_rs64_tr.bytes += rs64_task_rdp_bytes_total() - tr_bytes0; g_rs64_tr.ranges += g_rs64_g1e_ranges - tr_rng0;
         }
         if (ucode_ns > 10000000ull) { acc.slow_n++; acc.slow_ucode += ucode_ns; acc.slow_sub += sub_ns; }
         if (ucode_ns > acc.max) acc.max = ucode_ns;
