@@ -5,11 +5,12 @@ level (acq > --lvl ms), lat p50/p90 (P - Q + tp), misses/s (shown P->P >= 25 ms)
 enter after --minrun consecutive presents with acq > --lvl, leave after --minrun below) and the time at level per entry.
 Control: a locked arm must show W p50 within 1.5 ms of --target (else LOCK did not engage); an unlocked arm says 'free'.
 usage: g1e_lock_arms_score.py name=ring.txt [name=ring.txt ...] [--from 95] [--lvl 5] [--minrun 30] [--target 10] [--slow 30] [--locked n1,n2]
-slow% = presents with latency > --slow ms: catches shallow levels (16:9 s6970: ACQ8-alone 36 ms episodes at acq<5 that lvl% misses)."""
+slow% = presents with latency > --slow ms: catches shallow levels (16:9 s6970: ACQ8-alone 36 ms episodes at acq<5 that lvl% misses).
+--bins S (s6971): after each row, per-S-second bins "t:median lat/slow%[dN]" (dN = drain drops in the bin) so episodes show inline."""
 import argparse, statistics as st
 ap = argparse.ArgumentParser(); ap.add_argument('rings', nargs='+')
 for k, v in (('from', 95.0), ('lvl', 5.0), ('target', 10.0), ('slow', 30.0)): ap.add_argument('--' + k, dest=k.replace('from', 'frm'), type=float, default=v)
-ap.add_argument('--minrun', type=int, default=30); ap.add_argument('--locked', default=''); a = ap.parse_args()
+ap.add_argument('--minrun', type=int, default=30); ap.add_argument('--bins', type=float, default=0); ap.add_argument('--locked', default=''); a = ap.parse_args()
 pc = lambda v, p: sorted(v)[int(p * (len(v) - 1))] if v else float('nan')
 locked = set(x for x in a.locked.split(',') if x)
 print(f"{'arm':6} | {'span s':>9} | {'W p50':>5} {'Q p50':>5} | {'lvl%':>5} | {'lat p50/p90':>11} | slow% | miss/s | drops | entries (t s, dur s)")
@@ -51,3 +52,10 @@ for spec in a.rings:
     lv = 100 * sum(hi) / len(hi) if hi else float('nan'); dr = sum(1 for t in D if a.frm <= t <= end)
     es = ' '.join(f"{t:.0f}({d:.0f})" for t, d in ent) or '-'
     print(f"{name:6} | {a.frm:4.0f}-{end:4.0f} | {wp:5.1f} {pc([ph(x[0]) for x in q], .5):5.1f} | {lv:5.1f} | {pc(lat, .5):5.1f} {pc(lat, .9):5.1f} | {100 * sum(x > a.slow for x in lat) / max(1, len(lat)):5.1f} | {miss / (end - a.frm):6.3f} | {dr:5d} | {len(ent)}: {es}  [{ctl}]")
+    if a.bins > 0:
+        out = []; b = a.frm
+        while b < end:
+            lb = [l for x, l in zip(q, lat) if b <= x[0] < b + a.bins]; nd = sum(1 for t in D if b <= t < b + a.bins)
+            if lb: out.append(f"{b:.0f}:{st.median(lb):.0f}/{100 * sum(l > a.slow for l in lb) / len(lb):.0f}" + (f"d{nd}" if nd else ''))
+            b += a.bins
+        print('       bins ' + ' '.join(out))

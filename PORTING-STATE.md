@@ -183620,3 +183620,22 @@ Verdict: selects H-hash (top leaf, fix lands -0.117 ms/task commit); refutes H-s
   exactly: V's p50 is 3 ms HIGHER than N's, but its p90 is 12 ms lower and it never slips; for feel, steadiness wins.
   OWNER-OPT-INS lock row now recommends VI_LOCK=1 at 16:9 and 21:9 (replaces DRAIN/DRAIN_ACQ). Defaults unchanged.
 - Replica pair queued: s6970_169_N_r2 / s6970_169_V_r2 (scratch/s6970q).
+
+## Session 6971 (2026-11-07) — G1e: 16:9 replica agrees: the VI lock stays flat at 23.3 ms (slow% 0.4) while ACQ8 alone slips again (slow% 7.9, milder than r1); lock recommendation stands; TARGET_MS 6-vs-10 pair queued
+- Soaks folded: s6970_169_N_r2 (ROGUESQ_PRESENT_DRAIN_ACQ=8 alone) and s6970_169_V_r2 (ROGUESQ_VI_LOCK=1, implied ACQ8); owner recipe
+  16:9 dd4 FPS60 lvl1, VI_RT default, from boot, HOLD 260, scratch/s6970q, both rc 0, 0 CRASH/caught-signal lines in either log.
+- tools/g1e_lock_arms_score.py --from 95 --locked V --bins 15:
+    N  W p50 12.7  lvl% 1.7  lat 20.8/23.2  slow% 7.9  miss 0.030/s  drops 5  free
+       bins 95:22/23d2 110:21/0 125:21/9d1 140:21/0 155:22/32 170:21/15d1 185..245: 20/0 except 215:20/8d1
+    V  W p50 10.0  lvl% 0.3  lat 23.3/24.5  slow% 0.4  miss 0.030/s  drops 4  ENGAGED
+       bins every 15 s bin median 23, slow% 0-1; drops isolated (125,140,200,245 s)
+  r1 (s6969q) re-scored with the same --bins: N had two full 36 ms episodes (110 s 84%, 215 s 77%), V 23/0 in every bin, 0 drops.
+- Verdict vs the pre-registered outcomes: H-replicates on steadiness (V flat 2/2; N slips 2/2, slow% 26 -> 7.9), but V's 4 drops
+  trip the pre-written H-V-unstable drop test (>3). The drops are single drain skips, about the same count as N (5), so the lock
+  is not worse on drops; it is steadier on latency. OWNER-OPT-INS keeps VI_LOCK=1 at both aspects, text updated with the repeat.
+  Two runs per arm at 16:9 now (two-source for the steadiness claim); drop counts single-run noisy (0 vs 4).
+- Positive controls: lock ENGAGED (W p50 at the 10 ms target) in V; N ran its drain (5 D records) and its slow bins show in the
+  same instrument that shows V flat.
+- Change: scorer gains --bins S (per-bin median lat / slow% / drain drops inline), replacing the s6970 ad-hoc offline pass.
+- Queued per the H-V-unstable branch: s6971_169_V10 (default target, third replica, same-cycle control) and s6971_169_V6
+  (ROGUESQ_VI_LOCK_TARGET_MS=6) into scratch/s6971q. Decides whether an earlier target removes the isolated drops at 16:9.
