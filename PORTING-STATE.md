@@ -183967,3 +183967,40 @@ thread (another default-QoS CPU hop), or the compositor latch. OWNER-OPT-INS row
 CURRENT-TRUTH: closed s6969-s6973 lock-target bullets condensed to one line (60.1 -> 57.3 KB).
 Verdict: this selects H-cpu-wait and refutes H-gpuclk (H-gpuq minor, ~0.3 ms). Next discriminator: scheduled-handler entry
 time vs presentBuffer commit on residual lates, with an encoded presentDrawable arm (H-hop vs H-latch, NEXT.md).
+
+## Session 6986 (2026-11-08) — G1e: residual late presents miss the vsync latch by commit phase (not the scheduled-handler hop, not the present buffer's GPU tail); ROGUESQ_PRESENT_ENCODED=1 no help
+
+Work unit (NEXT.md s6985, slug g1e-late-present-hop): with PRESENT_QOS=1 the residual lates have Q on time and gpu_ms 0.68 but
+Q->on-glass 31.7 vs 23.2 ms. Split: H-hop (the addScheduledHandler drawable->present() runs late on a Metal dispatch thread),
+H-latch (present() on time, compositor latches late), H-gpu-tail (present buffer completes after the latch).
+
+Instrument (lib/rt64 plume_metal.cpp MetalSwapChain::present, exported to submodule-patches/rt64-plume.patch): while
+ROGUESQ_PRESENT_RING is on, a per-present stamp writes an S row from the completed handler: c = present-buffer commit (host s,
+presentedTime base), sc = scheduled-handler entry - c, sp = present() return - c, pgs/pge = present buffer GPUStart/GPUEnd - c
+(ms), shq = handler thread QoS, enc. New opt-in ROGUESQ_PRESENT_ENCODED=1 encodes presentBuffer->presentDrawable() instead
+of present() in the handler. tools/g1e_late_leg.py parses S rows (keys qc sc sp pgs pge cg, cg = on-glass - commit). New
+tools/g1e_commit_phase.py: commit phase vs the on-glass vsync grid (P at), late vs normal, and vsyncs commit->glass.
+
+Positive control: S row on every present (E0 ~19.6k), sc/sp/pgs/pge > 0, shq=33 (handler inherits USER_INTERACTIVE), enc=1
+only in E1 arms, sp absent there (as designed).
+
+Run: scratch/s6986/drive.sh, ABBA E0 E1 E1b E0b, s6982 burst from 123 s, 330 s hold, 21:9 dd4 FPS60 VI_LOCK=1 target 10,
+GFX_QOS+GUEST_QOS+PRESENT_QOS all arms, E1* add PRESENT_ENCODED=1. Score scratch/s6986/score.sh (from 95 s). 0 crash.
+
+| arm | enc | lates30-40 | sc late/norm | sp late/norm | pge late/norm | cg late/norm p50 | late commit phase 0-4 ms | norm commit phase 6-12 ms |
+|-----|-----|-----------:|--------------|--------------|---------------|------------------|-------------------------:|--------------------------:|
+| E0  | 0 | 64 | 0.02/0.02 | 0.03/0.03 | 0.01/0.01 | 32.0/23.3 | 51/64 | 12137/13898 |
+| E1  | 1 | 56 | 0.03/0.03 | n/a       | 0.01/0.01 | 30.7/23.2 | 36/56 | 12762/13981 |
+| E1b | 1 | 56 | 0.03/0.03 | n/a       | 0.01/0.01 | 31.5/23.3 | 40/56 | 12343/13924 |
+| E0b | 0 | 56 | 0.02/0.02 | 0.02/0.03 | 0.01/0.01 | 31.5/23.2 | 40/56 | 12672/13971 |
+
+AUC late>normal: sc 0.42-0.47, sp 0.40-0.42, pge 0.47-0.54 (no separation); cg 0.86-0.88 (the whole excess). Lates take 2
+vsyncs commit->glass (47-58 of 56-64) vs mostly 1 for normals. Verdict: refutes H-hop (present() is called 0.02-0.03 ms after
+commit on lates and normals alike, and encoding it changes nothing: 56/56 vs 64/56) and H-gpu-tail (present buffer GPU done
+0.01 ms after commit). H-latch as "the compositor latches late" is also not it: the lates are COMMITTED at a different phase,
+0-4 ms after the last on-glass vsync, where normal frames commit 6-12 ms after it, so the latch deadline already passed and the
+frame waits one extra vsync. Two lines (cg excess = exactly one vsync; commit phase histogram) in all 4 arms. Since s6984
+showed VI->Q is not longer on lates, the commit phase slip must come from the guest VI phase drifting against the display
+vsync (VI_LOCK target 10 ms holds the average, not every frame) - inference, not yet measured. PRESENT_ENCODED stays opt-in
+and useless; no default changed. No ORIGIN line needed (instrument + opt-in, no mitigation).
+Next: VI timestamp phase vs on-glass vsync on late vs normal frames (H-vi-slip) vs commit-side jitter with VI on phase.

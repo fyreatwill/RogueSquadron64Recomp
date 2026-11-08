@@ -33,7 +33,7 @@ G = collections.Counter(e[3] for e in ev if e[1] == 15).most_common(1)[0][0]
 vis = [e[0] for e in ev if e[1] == 1]
 kicks = [i for i, e in enumerate(ev) if e[1] == 5 and e[2] == 1]; kt = [ev[i][0] for i in kicks]
 sdret = [e[0] for e in ev if e[1] == 8]
-Q = {}; QK = {}; P = []; W = []
+Q = {}; QK = {}; SK = {}; P = []; W = []
 for l in open(rf, errors='replace'):
     p = l.split()
     if len(p) < 3 or not l.endswith('\n'): continue
@@ -42,6 +42,7 @@ for l in open(rf, errors='replace'):
         if p[0] == 'Q' and kv.get('skip') == '0' and 'acq_ms' in kv: Q[int(kv['mtl'])] = float(p[1]); QK[int(kv['mtl'])] = kv
         elif p[0] == 'P' and float(kv.get('at', 0)) > 0: P.append((float(kv['at']), int(kv['mtl'])))
         elif p[0] == 'W': W.append(float(p[1]))
+        elif p[0] == 'S' and 'sc' in kv: SK[int(kv['mtl'])] = kv  # s6986 present-buffer scheduled-handler stamps
     except (KeyError, ValueError): pass
 P.sort(); W.sort()
 RR = sorted((float(l.split()[1]), float(l.split()[2][3:]), float(l.split()[3][4:]), float(l.split()[4][3:])) for l in open(gf, errors='replace') if l.startswith('R ') and ' sdc=' in l and l.endswith('\n'))
@@ -89,6 +90,10 @@ for j in range(1, len(P)):
     c['pres'] = (P[j][0] - Q[m]) * 1e3; c['acq'] = float(QK[m].get('acq_ms', 'nan')); c['tp'] = float(QK[m].get('tp_ms', 'nan')); c['gpu'] = float(QK[m].get('gpu_ms', 'nan'))
     for k in ('ws', 'wx', 'gs', 'ge', 'hw', 'oge', 'ogs'):  # s6985 present GPU stamps (-1 = not stamped -> nan)
         v = float(QK[m].get(k, 'nan')); c[k] = v if v >= 0 else float('nan')
+    sk = SK.get(m, {})  # s6986: sc/sp/pgs/pge ms after present-buffer commit (-1 = absent -> nan); cg = on-glass - commit
+    for k in ('sc', 'sp', 'pgs', 'pge'):
+        v = float(sk.get(k, 'nan')); c[k] = v if v >= 0 else float('nan')
+    c['cg'] = (P[j][0] - float(sk['c'])) * 1e3 if 'c' in sk else float('nan'); c['qc'] = (float(sk['c']) - Q[m]) * 1e3 if 'c' in sk else float('nan')
     c['s3'] = c['ph'] + c['rsp'] + c['wq']; c['viq'] = c['ph'] + c['kw'] + c['wq']; c['s4'] = c['s3'] + c['run']; c['vip'] = c['viq'] + c['pres']
     if 30 <= d < 40: rows['late'].append(c)
     elif 15 < d < 18.5: rows['norm'].append(c)
@@ -131,7 +136,7 @@ if sumf:
             if acc > ba: ba, bt = acc, t
         return bt, ba
     print('SUM  key   AUC   thr    balacc | late p10/p50/p90 | norm p10/p50/p90')
-    for k in ('s3', 's4', 'viq', 'pres', 'vip', 'acq', 'tp', 'gpu', 'ws', 'wx', 'gs', 'ge', 'hw', 'oge', 'ogs', 'ph', 'rsp', 'wq', 'kw', 'run'):
+    for k in ('s3', 's4', 'viq', 'pres', 'vip', 'acq', 'tp', 'gpu', 'ws', 'wx', 'gs', 'ge', 'hw', 'oge', 'ogs', 'qc', 'sc', 'sp', 'pgs', 'pge', 'cg', 'ph', 'rsp', 'wq', 'kw', 'run'):
         a = [r[k] for r in L if r[k] == r[k]]; b = [r[k] for r in N if r[k] == r[k]]; t, ba = best(a, b)
         if not a or not b: print('SUM  %-5s n/a (late %d norm %d stamped)' % (k, len(a), len(b))); continue
         print('SUM  %-5s %.3f %6.2f %.3f | %6.2f %6.2f %6.2f | %6.2f %6.2f %6.2f' % (k, auc(a, b), t, ba, *(pc(a, x) for x in (.1, .5, .9)), *(pc(b, x) for x in (.1, .5, .9))))

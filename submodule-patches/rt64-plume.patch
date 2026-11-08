@@ -1,12 +1,13 @@
 diff --git a/plume_metal.cpp b/plume_metal.cpp
-index a5f30a3..9515d1b 100644
+index a5f30a3..4f5719b 100644
 --- a/plume_metal.cpp
 +++ b/plume_metal.cpp
-@@ -9,17 +9,90 @@
+@@ -9,17 +9,91 @@
  #define CA_PRIVATE_IMPLEMENTATION
  #define MTL_PRIVATE_IMPLEMENTATION
  
 +#include <mach/mach_time.h>
++#include <pthread/qos.h>
 +#include <objc/message.h>
 +#include <objc/runtime.h>
 +#include <condition_variable>
@@ -93,7 +94,7 @@ index a5f30a3..9515d1b 100644
      // MARK: - Constants
  
      static constexpr size_t MAX_DRAWABLES = 3;
-@@ -1117,6 +1190,15 @@ namespace plume {
+@@ -1117,6 +1191,15 @@ namespace plume {
  
          this->mtl = device->mtl->newBuffer(desc.size, mapResourceOption(desc.heapType));
  
@@ -109,7 +110,7 @@ index a5f30a3..9515d1b 100644
          if (desc.flags & RenderBufferFlag::DEVICE_ADDRESSABLE) {
              // If the buffer may be used by device address, we need to make sure it will be resident.
              std::lock_guard lock(device->gpuAddressableResourcesMutex);
-@@ -1130,6 +1212,9 @@ namespace plume {
+@@ -1130,6 +1213,9 @@ namespace plume {
      }
  
      MetalBuffer::~MetalBuffer() {
@@ -119,7 +120,7 @@ index a5f30a3..9515d1b 100644
          if (desc.flags & RenderBufferFlag::DEVICE_ADDRESSABLE) {
              std::lock_guard lock(device->gpuAddressableResourcesMutex);
              if (device->gpuAddressableResidencySet != nullptr) {
-@@ -1234,11 +1319,19 @@ namespace plume {
+@@ -1234,11 +1320,19 @@ namespace plume {
  
          this->mtl = device->mtl->newTexture(descriptor);
  
@@ -139,7 +140,7 @@ index a5f30a3..9515d1b 100644
          mtl->release();
      }
  
-@@ -1575,6 +1668,23 @@ namespace plume {
+@@ -1575,6 +1669,23 @@ namespace plume {
          state.renderPipelineState = device->mtl->newRenderPipelineState(descriptor, &error);
          state.primitiveType = mapPrimitiveType(desc.primitiveTopology);
          state.stencilReference = desc.stencilEnabled ? desc.stencilReference : 0;
@@ -163,7 +164,7 @@ index a5f30a3..9515d1b 100644
  
          if (desc.dynamicDepthBiasEnabled) {
              state.dynamicDepthBiasEnabled = true;
-@@ -1618,6 +1728,13 @@ namespace plume {
+@@ -1618,6 +1729,13 @@ namespace plume {
          return RenderPipelineProgram();
      }
  
@@ -177,7 +178,7 @@ index a5f30a3..9515d1b 100644
      // MetalDescriptorSet
  
      MetalDescriptorSet::MetalDescriptorSet(MetalDevice *device, const RenderDescriptorSetDesc &desc) {
-@@ -1667,6 +1784,11 @@ namespace plume {
+@@ -1667,6 +1785,11 @@ namespace plume {
              .offset = 0,
          };
  
@@ -189,7 +190,7 @@ index a5f30a3..9515d1b 100644
          if (!device->useArgumentBuffersTier2) {
              argumentBuffer.argumentEncoder->setArgumentBuffer(argumentBuffer.mtl, argumentBuffer.offset);
          }
-@@ -1676,6 +1798,11 @@ namespace plume {
+@@ -1676,6 +1799,11 @@ namespace plume {
      }
  
      MetalDescriptorSet::~MetalDescriptorSet() {
@@ -201,7 +202,7 @@ index a5f30a3..9515d1b 100644
          if (residencySet != nullptr) {
              residencySet->endResidency();
              residencySet->release();
-@@ -1904,6 +2031,14 @@ namespace plume {
+@@ -1904,6 +2032,14 @@ namespace plume {
          this->layer = static_cast<CA::MetalLayer*>(desc.renderWindow.view);
          layer->setDevice(commandQueue->device->mtl);
          layer->setPixelFormat(mapPixelFormat(desc.format));
@@ -216,7 +217,7 @@ index a5f30a3..9515d1b 100644
  
          this->commandQueue = commandQueue;
          this->desc = desc;
-@@ -1932,6 +2067,204 @@ namespace plume {
+@@ -1932,6 +2068,204 @@ namespace plume {
      MetalSwapChain::~MetalSwapChain() {
      }
  
@@ -421,10 +422,12 @@ index a5f30a3..9515d1b 100644
      bool MetalSwapChain::present(const uint32_t textureIndex, RenderCommandSemaphore **waitSemaphores, const uint32_t waitSemaphoreCount) {
          assert(layer != nullptr && "Cannot present without a valid layer.");
          NS::AutoreleasePool *releasePool = NS::AutoreleasePool::alloc()->init();
-@@ -1954,6 +2287,31 @@ namespace plume {
+@@ -1954,11 +2288,56 @@ namespace plume {
          // According to Apple, presenting via scheduled handler is more performant than using the presentDrawable method.
          // We grab the underlying drawable because we might've acquired a new one by now and the old one would have been released.
          CA::MetalDrawable *drawableMtl = drawable.mtl->retain();
+-        presentBuffer->addScheduledHandler([drawableMtl](MTL::CommandBuffer* cmdBuffer) {
+-            drawableMtl->present();
 +        g_rs64_pring_last_id.store(presentId, std::memory_order_relaxed);
 +        if (rs64_pring_on() || rs64InflightMax() != 0 || rs64DrainAny() || (rs64_vi_lock_on && rs64_vi_lock_on())) {
 +            const double drainBegin = g_rs64DrainBegin;
@@ -450,10 +453,44 @@ index a5f30a3..9515d1b 100644
 +                }
 +            });
 +        }
-         presentBuffer->addScheduledHandler([drawableMtl](MTL::CommandBuffer* cmdBuffer) {
-             drawableMtl->present();
++        // s6986 G1e: ROGUESQ_PRESENT_ENCODED=1 encodes the present into the buffer (presentDrawable) instead of calling present() from the
++        // scheduled handler on a Metal dispatch thread (H-hop). While ROGUESQ_PRESENT_RING is on, the completed handler writes an S row:
++        // sc = scheduled-handler entry - commit, sp = present() return - commit, pgs/pge = present buffer GPUStart/GPUEnd - commit (ms),
++        // c = commit (host s, same base as presentedTime), shq = QoS of the scheduled-handler thread.
++        static const bool rs64Encoded = []() { const char *e = getenv("ROGUESQ_PRESENT_ENCODED"); return e && *e == '1'; }();
++        struct Rs64SStamp { double c = 0, sh = -1, sp = -1; int q = -1; };
++        Rs64SStamp *rs64S = rs64_pring_on() ? new Rs64SStamp() : nullptr;
++        if (rs64Encoded) presentBuffer->presentDrawable(drawableMtl);
++        presentBuffer->addScheduledHandler([drawableMtl, rs64S](MTL::CommandBuffer* cmdBuffer) {
++            if (rs64S) { rs64S->sh = rs64_pring_now(); rs64S->q = int(qos_class_self()); }
++            if (!rs64Encoded) {
++                drawableMtl->present();
++                if (rs64S) rs64S->sp = rs64_pring_now();
++            }
          });
-@@ -1987,6 +2345,8 @@ namespace plume {
+ 
+-        presentBuffer->addCompletedHandler([drawableMtl, presentId, this](MTL::CommandBuffer* cmdBuffer) {
++        presentBuffer->addCompletedHandler([drawableMtl, presentId, this, rs64S](MTL::CommandBuffer* cmdBuffer) {
++            if (rs64S) {
++                const double c = rs64S->c, gs = cmdBuffer->GPUStartTime(), ge = cmdBuffer->GPUEndTime();
++                char row[192];
++                snprintf(row, sizeof(row), "S %.6f mtl=%llu c=%.6f sc=%.3f sp=%.3f pgs=%.3f pge=%.3f shq=%d enc=%d\n", rs64_pring_now(), (unsigned long long)presentId, c,
++                    rs64S->sh > 0 ? (rs64S->sh - c) * 1e3 : -1.0, rs64S->sp > 0 ? (rs64S->sp - c) * 1e3 : -1.0, gs > 0 ? (gs - c) * 1e3 : -1.0, ge > 0 ? (ge - c) * 1e3 : -1.0, rs64S->q, rs64Encoded ? 1 : 0);
++                rs64_pring_write(row);
++                delete rs64S;
++            }
+             currentAvailableDrawableIndex = (currentAvailableDrawableIndex + 1) % MAX_DRAWABLES;
+             drawableMtl->release();
+ 
+@@ -1969,6 +2348,7 @@ namespace plume {
+             lastPresentedIdCondVar.notify_all();
+         });
+ 
++        if (rs64S) rs64S->c = rs64_pring_now();
+         presentBuffer->commit();
+ 
+         releasePool->release();
+@@ -1987,6 +2367,8 @@ namespace plume {
          }
      }
  
@@ -462,7 +499,7 @@ index a5f30a3..9515d1b 100644
      bool MetalSwapChain::resize() {
          getWindowSize(width, height);
  
-@@ -1995,7 +2355,17 @@ namespace plume {
+@@ -1995,7 +2377,17 @@ namespace plume {
          }
  
          const CGSize drawableSize = CGSizeMake(width, height);
@@ -480,7 +517,7 @@ index a5f30a3..9515d1b 100644
              layer->setDrawableSize(drawableSize);
  
              for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
-@@ -2050,6 +2420,17 @@ namespace plume {
+@@ -2050,6 +2442,17 @@ namespace plume {
          acquireBuffer->encodeSignalEvent(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue);
          acquireBuffer->commit();
  
@@ -498,7 +535,7 @@ index a5f30a3..9515d1b 100644
          CA::MetalDrawable *nextDrawable = layer->nextDrawable();
          if (nextDrawable == nullptr) {
              fprintf(stderr, "No more drawables available for rendering.\n");
-@@ -2118,6 +2499,14 @@ namespace plume {
+@@ -2118,6 +2521,14 @@ namespace plume {
          for (uint32_t i = 0; i < desc.colorAttachmentsCount; i++) {
              const MetalTextureView *colorAttachmentView = desc.colorAttachmentViews && desc.colorAttachmentViews[i] ? static_cast<const MetalTextureView *>(desc.colorAttachmentViews[i]) : nullptr;
              const MetalTexture *colorAttachment = colorAttachmentView ? colorAttachmentView->parentTexture : static_cast<const MetalTexture *>(desc.colorAttachments[i]);
@@ -513,7 +550,7 @@ index a5f30a3..9515d1b 100644
              assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
  
              MetalAttachment attachment;
-@@ -3008,6 +3397,17 @@ namespace plume {
+@@ -3008,6 +3419,17 @@ namespace plume {
                  dstOrigin
              );
              activeBlitEncoder->popDebugGroup();
@@ -531,7 +568,7 @@ index a5f30a3..9515d1b 100644
          } else {
              assert(dstTexture != nullptr);
              assert(srcTexture != nullptr);
-@@ -3695,6 +4095,13 @@ namespace plume {
+@@ -3695,6 +4117,13 @@ namespace plume {
              cmdBuffer->encodeWait(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue++);
          }
  
@@ -545,7 +582,7 @@ index a5f30a3..9515d1b 100644
          cmdBuffer->commit();
  
          // Commit all command lists except the last one
-@@ -3712,6 +4119,25 @@ namespace plume {
+@@ -3712,6 +4141,25 @@ namespace plume {
          const MetalCommandList *interfaceCommandList = static_cast<const MetalCommandList *>(commandLists[commandListCount - 1]);
          interfaceCommandList->mtl->enqueue();
  
