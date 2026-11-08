@@ -183649,3 +183649,11 @@ Pre-registered outcomes (s6971 NEXT): H-noise selected (drops 0 vs 0; the s6971 
 The NEXT prediction that an earlier target lowers latency had the sign wrong: W is when the frame reaches the renderer after vsync, so arriving earlier waits longer for the next edge. Measured delta 27.3 - 23.3 = 4.0 ms = the 4 ms target shift, matching lat = const + (16.67 - W) (two lines: measurement + period arithmetic). Target 10 stays the default; OWNER-OPT-INS row notes it.
 Rules out: target 6 as a fix for isolated drops; the s6971 drop count as a lock property.
 Queued: s6972_169_V10 / s6972_169_V13 (scratch/s6972q). Model predicts V13 ~20.3 ms; pre-registered: V13 lat <= 21, slow% <= 1, drops <= V10+2 -> offer the owner 13; slow% > 2 or drops > V10+3 or not ENGAGED -> frames miss the edge, keep 10.
+
+## Session 6973 (2026-11-08) — G1e: VI-lock target 13 vs 10 at 16:9: 13 cuts p50 latency 2.3 ms but slips into 36 ms episodes (slow% 31.6, 15 drops vs 0.7 / 2); target 10 final, target thread closed
+
+Folded soaks s6972_169_V10 / s6972_169_V13 (scratch/s6972q; owner recipe 16:9 dd4 FPS60 lvl1 from boot, VI_RT default, LOCK implies ACQ8; both rc 0, crash 0). `tools/g1e_lock_arms_score.py --from 95 --bins 15`:
+- V10: W p50 10.0 ENGAGED, lat p50/p90 23.3/24.3, slow% 0.7, miss 0.018/s, 2 drops (both in the 200 s bin); every bin median 23-24.
+- V13: W p50 13.0 ENGAGED, lat p50/p90 21.0/37.6, lvl% 5.2, slow% 31.6, miss 0.091/s, 15 drops; bins 140 and 155 median 35-36 (69%/54% slow), most others 18-48% slow at median 20-21.
+Pre-registered outcomes (s6972 NEXT): H-edge-miss selected (slow% 31.6 > 2, drops 15 > V10+3). H-later-wins refuted: the p50 gain (2.3 ms, model 3.0) is real but the frame lands 3.7 ms before the next vsync, inside the game-frame jitter, so it misses the edge and the drawable queue goes one deep. Target 6 (s6972) costs 4 ms; target 10 is the only tested value that is both fast and steady. Single run per arm; the V10 arm reproduces s6972 V10 (23.3, 0 drops), which is the same-cycle control.
+Rules out: lock targets above 10 as a latency lever at 16:9; no 21:9 V13 arm needed. OWNER-OPT-INS row updated. G1e item 7 returns to paused (owner tries the recipe).
