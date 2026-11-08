@@ -183273,3 +183273,32 @@ byte-identical source as an earlier load), which would let load+hash be skipped 
 Rules out: the per-word dxt/xor bookkeeping as the dominant commit term.
 Verdict: selects H-copy as a minor commit term (-0.225 ms, 20/22) and selects H-mem for the rest of the copy-loop leaf share; refutes
 the per-word loop as the dominant commit cost. Next discriminator: the repeat-load census (H-repeat vs H-fresh vs H-partial, NEXT.md).
+
+## Session 6958 (2026-11-07) — G1e: repeat-load census in RT64 TMEM loads: 99.8% descriptor+content repeats, only 6.5% noops; H-partial selected, skip-identical-loads lever refuted
+
+What ran: new opt-in diagnostic ROGUESQ_G1E_LOADREP=stat in lib/rt64 rt64_rdp.cpp (rs64LoadRepCensus wraps every loadToTMEMCommon). Per load
+it records a descriptor key (kind, RGBA32, src, stride, tmem start/stride, words, rows, dxt), an XXH3 of the source bytes, an XXH3 of the 4 KB
+TMEM before the load, and whether the load changed TMEM at all (noop = memcmp of the whole 4 KB before/after). A direct-mapped 4096-entry table
+keyed by descriptor gives desc (descriptor seen), cont (also same source hash) and prior (also same TMEM-before). A noop load restores
+g_rs64_tmem_gen, so the s6942 memo (ROGUESQ_G1E_TMEMMEMO=v, _STAT=1) counts the hash calls a skip would save and verifies them.
+Run: env OUT=scratch/s6958 zsh tools/g1e_xt_flight.zsh r 240 "ROGUESQ_G1E_LOADREP=stat ROGUESQ_G1E_TMEMMEMO=v ROGUESQ_G1E_TMEMMEMO_STAT=1"
+(windowed sync, FPS60 dd4 16:9, lvl index 1 keyed flight). alive=1, 0 crash, tasks 60/s, sd_wall ~9.5 ms with the census on.
+
+Results (per-second [g1e-lrep], flight = t>=100 s, 105 s):
+- 271k loads/s (~4.5k per task), 1,120 source bytes per load; 51.1% LoadBlock, 48.9% LoadTLUT, 0 LoadTile.
+- desc 99.8%, cont 99.8%: almost every load repeats an earlier descriptor, and the source bytes never changed. Texture sources are static.
+- noop 6.5% (TLUT 6.3 points, block 0.2): the rest rewrite TMEM. prior 36.5%. 
+- Boot (t<90 s) is similar: desc/cont 99.4%, noop 3.9%.
+- Memo with noop loads keeping the generation: flight 12.17M hash calls, 41.2k hits (0.34%), vbad 0. Mutant memo (no gen key) mutbad 11.4M of
+  12.16M checks: the verify arm discriminates.
+- Positive control: load #1000 issued twice read bits 0xB = desc, cont and noop fired. My NEXT.md said 0xF; that was wrong, because prior compares
+  against the TMEM state before the FIRST issue, which differs unless that issue was itself a noop. Message and comment corrected.
+
+What it shows: the 4 KB TMEM is refilled with the same textures between draws (thrash). The loads repeat but TMEM before them differs.
+H-partial selected; H-repeat (skip identical loads, expect com -1 ms) refuted: at most 6.5% of loads and 0.34% of hashes could be skipped.
+H-fresh refuted too (sources do not stream). Single run with a same-run control and a verify arm.
+Ruled out: a load-level skip, and the generation memo as a lever.
+Next: key the upload hash by load provenance, i.e. which (descriptor, offset) pairs filled the hashed TMEM span plus the tile params, since
+descriptor+content is a near-perfect proxy for bytes. First a feasibility census: per hash call, provenance-key hit rate, mismatches (must be 0)
+and the provenance key's cost against the CI4 hash (221 ns per 2 KB).
+Code: lib/rt64 (export.sh refreshed submodule-patches/rt64.patch). Default behaviour unchanged (env unset = no census).
