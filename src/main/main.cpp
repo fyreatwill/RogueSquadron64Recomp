@@ -12198,6 +12198,13 @@ int main(int argc, char* argv[]) {
 #if !defined(_WIN32)
     s6979se::init(); std::atexit([] { rs64_stderr_async_restore(); }); std::at_quick_exit([] { rs64_stderr_async_restore(); });
 #endif
+    // s6989 G1e: ROGUESQ_QOS_ALL=1 = one owner knob for the five QoS opt-ins (s6975-s6988). Each stays individually
+    // overridable (=0 wins; setenv overwrite=0). GFX_QOS is read by a file-scope static in events.cpp before main, so that
+    // reader checks QOS_ALL itself; the other four are read lazily on their threads, after this.
+    { const char* e = std::getenv("ROGUESQ_QOS_ALL"); if (e && *e == '1') {
+        for (const char* n : {"ROGUESQ_GFX_QOS", "ROGUESQ_GUEST_QOS", "ROGUESQ_PRESENT_QOS", "ROGUESQ_WL_QOS", "ROGUESQ_UPLOAD_QOS"}) setenv(n, "1", 0);
+        std::fprintf(stderr, "[s6989] QOS_ALL gfx=%s guest=%s present=%s wl=%s upload=%s\n", std::getenv("ROGUESQ_GFX_QOS"), std::getenv("ROGUESQ_GUEST_QOS"),
+            std::getenv("ROGUESQ_PRESENT_QOS"), std::getenv("ROGUESQ_WL_QOS"), std::getenv("ROGUESQ_UPLOAD_QOS")); } }
     rs64_g1d_apply_aspect_policy();
     rs64_g1c_apply_dd_policy();
 

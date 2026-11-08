@@ -4672,7 +4672,7 @@ index 3198be0..a8f859b 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..218d4bc 100644
+index 149e770..6c67431 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -1,25 +1,471 @@
@@ -6018,7 +6018,7 @@ index 149e770..218d4bc 100644
 +// (period 16.7, computation ROGUESQ_GFX_QOS_COMP_MS (12), constraint 16.7, preemptible). ROGUESQ_GFX_QOS_AT=<s> applies it at <s>
 +// since start (same-run before/after); stderr "[gfx-qos] t=<mach s> mode=<m> ok=<0/1>".
 +#if defined(__APPLE__)
-+static const int s6975_gfx_qos = [] { const char* e = std::getenv("ROGUESQ_GFX_QOS"); return (e && *e) ? std::atoi(e) : 0; }();
++static const int s6975_gfx_qos = [] { const char* e = std::getenv("ROGUESQ_GFX_QOS"); if (e && *e) return std::atoi(e); const char* a = std::getenv("ROGUESQ_QOS_ALL"); return (a && *a == '1') ? 1 : 0; }();  // s6989 QOS_ALL
 +static const int s6975_gfx_qos_at = [] { const char* e = std::getenv("ROGUESQ_GFX_QOS_AT"); return (e && *e) ? std::atoi(e) : 0; }();
 +static const double s6975_gfx_comp = [] { const char* e = std::getenv("ROGUESQ_GFX_QOS_COMP_MS"); return (e && *e) ? std::atof(e) : 12.0; }();
 +static bool s6975_done = false;

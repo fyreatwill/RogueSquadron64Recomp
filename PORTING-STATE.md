@@ -184063,3 +184063,25 @@ still runnable-not-running at GFX_QOS under the 14-spinner burst; small numbers.
 Owner decides the default (OWNER-OPT-INS row added). Cumulative under this burst: s6985 P0 92-99 lates -> now 4-14.
 Verdict (s6988): refutes H-preempt and H-work for the workload thread's residual render time; selects H-upload-preempt
 (RT64 upload threads at default QoS); residual = Gfx thread preemption at USER_INTERACTIVE under synthetic 14-spinner load.
+
+## Session 6989 (2026-11-08) — G1e: ROGUESQ_QOS_ALL=1 bundles the five QoS opt-ins; quiet host lates ~0 both ways (harmless), burst control 178 -> 6
+
+HYPOTHESIS-ID: g1e-qos-bundle. Change: src/main/main.cpp setenv(overwrite=0)s GFX/GUEST/PRESENT/WL/UPLOAD_QOS=1 when
+ROGUESQ_QOS_ALL=1 (stderr "[s6989] QOS_ALL ..."); lib/N64ModernRuntime events.cpp's file-scope GFX_QOS static (evaluated before
+main) falls back to QOS_ALL itself (patch exported). Each knob =0 still wins.
+Run (scratch/s6989/drive.sh, score scratch/s6989/score.sh, data scratch/s6989q): tools/g1e_owner_quiet_arms.zsh, dd4 FPS60
+VI_LOCK=1 TARGET 10, 330 s arms, Mac idle (HID idle 46000+ s), all G1B/AQ/TL/GRING/THREADS instruments every arm.
+| arm | aspect | QOS_ALL | host | lates / frames | Gfx sd wall p50 | crash |
+| A0 | 16:9 | off | quiet | 0 / 14022 | 7.69 | 0 |
+| A1 | 16:9 | on  | quiet | 0 / 14082 | 7.81 | 0 |
+| A1b| 16:9 | on  | quiet | 0 / 14082 | 7.82 | 0 |
+| A0b| 16:9 | off | quiet | 1 / 14080 | 7.69 | 0 |
+| W0 | 21:9 | off | quiet | 2 / 14081 | 8.27 | 0 |
+| W1 | 21:9 | on  | quiet | 0 / 14079 | 8.23 | 0 |
+| P0 | 21:9 | off | burst t>=123 s | 178 / 13638 | - | 0 |
+| P1 | 21:9 | on  | burst t>=123 s | 6 / 14074 | - | 0 |
+QoS-on arms log 17 QoS lines (all five stages, rc=0); off arms 0. Positive control P0 vs P1 passes in the same session.
+Selects H-quiet-null: on a quiet host the bundle changes ~nothing (3 vs 0 lates over 3 arms each, not significant), costs nothing
+measurable (send_dl wall equal); refutes H-harm (no crash, no extra lates, audio-wait/spin lines same shape; AI underrun not
+directly counted in this recipe -> single-source on audio). Under load it is the s6984-s6988 chain's full gain (~30x fewer lates).
+OWNER-OPT-INS gets one row ROGUESQ_QOS_ALL=1; default is the owner's call. No ORIGIN needed (no mitigation machinery; QoS opt-in).
