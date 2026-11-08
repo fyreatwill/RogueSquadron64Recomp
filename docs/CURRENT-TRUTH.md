@@ -1,11 +1,12 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 6950 (2026-11-07).
+Compact operational handoff, as of Session 6952 (2026-11-07).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md` (latest archive: "Migrated from CURRENT-TRUTH (s6900 maintenance)").
 
 ## Headline
 
+- **s6952 G1e: same-run DRAIN 34 vs ALT=28 (locked 60 Hz built-in, owner dd4 16:9): no present level formed in either arm (blocks at level 0/0), so clear speed is untestable; 28 drops 1 frame per no-dose 20 s block like 34 (H-floor refuted, single run). 34 stays the OWNER-OPT-INS value.** Medians 34: p50 23.6, acq>5% 10.4; 28: 23.4, 12.8; dosed drops 31/3 blocks vs 35/4. scratch/s6952/.
 - **s6951 G1e: ROGUESQ_PRESENT_DRAIN=34 clears the formed 60 Hz present level where 40 only lowers it (H-threshold).** Same run, 20 s toggle 34 vs off, owner dd4 16:9 FPS60 FULLSCREEN, locked 60 Hz built-in, lvl index 1, stall course: off blocks after 200 ms doses sit at the level (p50 38.6/39.4, acq>5 ms 55/65%, the positive control); the 34 blocks right after them read p50 23.0/23.1, acq>5 ms 8.9/0.3%, 6/1 drops. s6950 (40 vs off, own same-run control) had 40 blocks after the level at 33.8/34.4, 24%. No-dose 34 blocks 0-1 drops in two runs (H-overdrain refuted). Cost: 34 drops in 246 s, 19 of them at boot (12 in 12 s at med ~34.5 there, the level re-forms each second until it clears). A 40-vs-34 same-run arm (s6951 run a34) is a null: no level formed after 95 s in either. 34-vs-40 is two runs, each with a same-run off control. Rings scratch/s6951/.
 - s6950: same-run toggle made DRAIN=40 single-run real but ~3 ms (34.1 vs 37.2 p50), because the level median (36-38) sits under 40. ROGUESQ_PRESENT_DRAIN_TOGGLE/_ALT, tools/g1e_drain_blocks.py.
 - **s6949 G1e: the owner dd4 16:9 recipe, now at 60 fps, forms the sticky 60 Hz present level (~47 ms, acq>5 ms 54%) about half the time; ROGUESQ_PRESENT_DRAIN=40 holds p50 33.5/p99 37.5 (default 38.3/46.7), 2 drops in 240 s.** Locked 60 Hz built-in, lvl index 1, FULLSCREEN, no ASYNC; stall-course pair agrees (26.9 vs 37.6 p50). Cross-run, one run per arm. s6932 "DRAIN buys nothing at dd4" held at 32 fps only. Default off, added to OWNER-OPT-INS; owner chooses. SKYZ SEL2 two-source (s6948 soak), slug closed.

@@ -183146,3 +183146,30 @@ after the run settles but true early in the run (12 drops in 12 s); H-overdrain 
 Caveat: 34 vs 40 is across two runs (s6950, s6951 o34), each with its own same-run off control; the same-run 40 vs 34 arm was a null.
 OWNER-OPT-INS: DRAIN line now recommends 34 first. Defaults unchanged (owner decides). Rings and outs: scratch/s6951/ (gitignored).
 Verdict line: selects H-threshold, refutes H-overdrain and H-reform (post-settle). Next: overdrain floor, same-run 34 vs ALT=28 (NEXT.md).
+
+## Session 6952 (2026-11-07) — G1e: same-run DRAIN 34 vs ALT=28 on the locked 60 Hz built-in, no present level formed in either arm; 28 costs nothing on clean blocks (H-floor refuted), clear speed untestable (H-faster open), 34 stays the recommendation
+
+What ran: `env ARMS="60:4:f28:ROGUESQ_PRESENT_DRAIN=34,ROGUESQ_PRESENT_DRAIN_TOGGLE=20,ROGUESQ_PRESENT_DRAIN_ALT=28+ST" zsh tools/g1e_owner_hz_arms.zsh`
+(owner dd4 16:9 FPS60 FULLSCREEN, lvl index 1, only the built-in attached, locked 60 Hz, screen unlocked, HID idle 5188 s at start,
+REAPER/Activity Monitor running in the background). 242 s hold, flight 183 s, crashlines 0, vi_stalls 0, glass 100% every block.
+Toggle semantics read from plume_metal.cpp:2160: even blocks (on=1) use DRAIN=34, odd blocks (on=0) use ALT=28.
+Ring + block table: scratch/s6952/ (ring_f28.txt, blocks_f28.txt).
+
+| blk | arm | t | lat p50/p99 | acq>5% | drops | stall doses |
+|---|---|---|---|---|---|---|
+| 0 | 34 | 0-20 | 30.6/48.7 | 3.8 | 3 | boot |
+| 1 | 28 | 20-40 | 31.6/36.4 | 0.0 | 12 | boot |
+| 3 | 28 | 60-80 | 25.8/32.8 | 0.0 | 1 | none |
+| 4 | 34 | 80-100 | 23.3/38.5 | 1.1 | 1 | none |
+| 5,7,9,11 | 28 | 100-240 | 23.1-23.9 p50 | 5.5/12.1/13.5/13.6 | 5/8/11/11 | 17,17(+50),50(+200),200 |
+| 6,8,10 | 34 | 120-220 | 23.1-24.4 p50 | 8.4/19.5/12.5 | 6/12/13 | 17x2, 50x2, 200 |
+
+Result: blocks at level (acq>5% > 30) = 0 in both arms, so no level formed in this run (the s6951 a34 caveat came true: with a
+limit armed in every block the level never forms). Medians: 34 lat p50 23.6, acq>5% 10.4; 28 lat p50 23.4, acq>5% 12.8.
+- H-floor (28 drops frames on clean blocks) REFUTED, single run: the no-dose 28 block (3) had 1 drop, same as the no-dose 34 block (4).
+  Dosed blocks: 28 35 drops in 4 blocks, 34 31 in 3; per-block ~indistinguishable.
+- H-faster vs H-same: UNTESTABLE here (no formed level to clear; no positive control for clearing in this run). Not rerun: a second
+  run of the same both-armed design would hit the same null (NEXT.md allowed one rerun only for a design that could form a level).
+- Boot block at 28 had 12 drops vs 3 at 34, one sample each, both in the boot phase where s6951 also saw ~12 at 34: not a 28 cost.
+Rules out: 28 being too low for clean play. Does not show 28 clears faster. Recommendation unchanged: OWNER-OPT-INS keeps 34.
+Next: 28 vs off same run (the s6951 o34 design, which formed the level in off blocks) so 28's clearing has its own control.
