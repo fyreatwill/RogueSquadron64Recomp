@@ -184031,3 +184031,6 @@ two replicate pairs, -66% lates). Residual lates with WL_QOS on: render still 5-
 CPU contention on the Gfx side or real work, open. No mitigation (opt-in QoS like s6975/s6983/s6985), no ORIGIN line needed.
 Next: thread census (thr_W*.bin) on the residual W1/W1b lates: is the workload/Gfx thread runnable-not-running (preempted)
 or running long (work)?
+Verdict (s6987): refutes H-vi-slip, H-vsync-jitter and H-pidwait; selects H-wl-qos (workload thread render + wake at QoS 21) for
+the residual late class. Next discriminator: per-late run vs runnable time of the workload/Gfx threads with WL_QOS on (H-preempt
+vs H-work), from the already-captured thr_W1*.bin.
