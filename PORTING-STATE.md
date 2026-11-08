@@ -184159,3 +184159,7 @@ VI, Timer and the [Game] threads. The next freeze names the game thread's host s
 ORIGIN: no mitigation; instrument only.
 Next: G1e residual on dense levels (L16 first: game-side sim/RSP cost vs host), see NEXT.md. CURRENT-TRUTH is now >60 KB:
 the next iteration is a Step-0 maintenance iteration.
+Discrimination summary: the 16:9 sweep selects H-level-cost for L7/L16/L17 and refutes H-aspect as their cause (same levels
+lowest at 21:9 and 16:9); it closes the G1e 16:9 per-level measurement. The live dump refutes H-lost-mutex and H-lost-vi
+(mutex and VI queue both free, no waiter). Next discriminator (boot freeze): the self-sample host stack of the [Game] thread
+on the next freeze names the blocking call; next discriminator (G1e residual): L16 frame misses vs sd_wall / guest cpu / dd1.
