@@ -7,8 +7,19 @@ rows = []; leaks = []
 for l in open(sys.argv[1]):
     if l.startswith('#'): leaks.append(l.strip()); continue
     p = l.split()
+    if len(p) == 21: rows.append([int(x) for x in p]); continue
     if len(p) in (7, 9, 10): rows.append([int(x) for x in p[:9]] + [0, 0] * (len(p) == 7) + [int(p[9]) if len(p) == 10 else -1])
 if not rows: sys.exit('no rows')
+WHY = ['put', 'late', 'selMode', 'selDrawNoPz', 'selDrawPz', 'selEnd', 'offlive', 'noring', 'lateMiss']
+if len(rows[0]) == 21:  # s6948: rows carry SEL2 state, un-rewritten sky draws by reason (cols 11-19) and rewritten non-sky draws (col 20)
+    T3 = {}
+    for r in rows:
+        k = (r[2], 'val' if not r[9] else 'sel2' if r[10] else 'sel'); t = T3.setdefault(k, [0] * 13); t[12] += 1
+        t[0] += r[3]; t[1] += r[7]; t[2] += r[8]
+        for i in range(9): t[3 + i] += r[11 + i]
+    print('s6948 parity rule swaps sky_ring sky_rw oth_rw | unrewritten sky draws by reason:', *WHY)
+    for k in sorted(T3): t = T3[k]; print('on ' if k[0] else 'off', k[1], t[12], t[0], t[1], t[2], '|', *t[3:12], f' miss%={100 * (1 - t[1] / t[0]) if t[0] else 0:.2f}')
+    rows = [r[:10] for r in rows]
 t0 = rows[0][1]; tot = {0: [0] * 6, 1: [0] * 6}; B = {}
 for r in rows:
     for i in range(6): tot[r[2]][i] += r[3 + i]
