@@ -9997,6 +9997,38 @@ index 5a331aa..eafcfdb 100644
                          threadAdvanceWorkloadId(workload.workloadId);
                      }
  
+diff --git a/src/render/rt64_buffer_uploader.cpp b/src/render/rt64_buffer_uploader.cpp
+index de997a0..901a25b 100644
+--- a/src/render/rt64_buffer_uploader.cpp
++++ b/src/render/rt64_buffer_uploader.cpp
+@@ -2,6 +2,12 @@
+ // RT64
+ //
+ 
++#if defined(__APPLE__)
++#include <pthread.h>
++#include <pthread/qos.h>
++#include <cstdlib>
++#include <cstdio>
++#endif
+ #include <algorithm>
+ #include <cstring>
+ 
+@@ -42,6 +48,14 @@ namespace RT64 {
+     void BufferUploader::threadLoop() {
+         Thread::setCurrentThreadName("RT64 Buffer");
+ 
++        // s6988 G1e: ROGUESQ_UPLOAD_QOS=1 runs the RT64 upload threads (Buffer uploaders, Texture upload) at USER_INTERACTIVE.
++        // The Gfx thread's fullSync waits on them (waitForUploaders / waitForGPUUploads); at default QoS they sit runnable-not-
++        // running under host load (s6988 census). Default off = retail RT64.
++#if defined(__APPLE__)
++        { static const bool on = [] { const char *e = std::getenv("ROGUESQ_UPLOAD_QOS"); return e && *e == '1'; }();
++          if (on) { const int r = pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0); std::fprintf(stderr, "[s6988] %s thread QoS USER_INTERACTIVE rc=%d\n", "RT64 Buffer", r); } }
++#endif
++
+         running = true;
+ 
+         while (running) {
 diff --git a/src/render/rt64_descriptor_sets.h b/src/render/rt64_descriptor_sets.h
 index 69a82ac..6e82095 100644
 --- a/src/render/rt64_descriptor_sets.h
@@ -12348,19 +12380,25 @@ index 82d8a36..4630ae4 100644
  };
 \ No newline at end of file
 diff --git a/src/render/rt64_texture_cache.cpp b/src/render/rt64_texture_cache.cpp
-index 0848f3e..22c84a9 100644
+index 0848f3e..616bbb1 100644
 --- a/src/render/rt64_texture_cache.cpp
 +++ b/src/render/rt64_texture_cache.cpp
-@@ -4,6 +4,8 @@
+@@ -4,6 +4,14 @@
  
  #define STB_IMAGE_IMPLEMENTATION
  
++#if defined(__APPLE__)
++#include <pthread.h>
++#include <pthread/qos.h>
++#include <cstdlib>
++#include <cstdio>
++#endif
 +#include <cstdlib>
 +
  #include "ddspp/ddspp.h"
  #include "stb/stb_image.h"
  #include "xxHash/xxh3.h"
-@@ -217,6 +219,29 @@ namespace RT64 {
+@@ -217,6 +225,29 @@ namespace RT64 {
      void TextureMap::add(uint64_t hash, uint64_t creationFrame, Texture *texture) {
          assert(hashMap.find(hash) == hashMap.end());
  
@@ -12390,7 +12428,22 @@ index 0848f3e..22c84a9 100644
          // Check for free spaces on the LIFO queue first.
          uint32_t textureIndex;
          if (!freeSpaces.empty()) {
-@@ -1259,6 +1284,63 @@ namespace RT64 {
+@@ -968,6 +999,14 @@ namespace RT64 {
+     void TextureCache::uploadThreadLoop() {
+         Thread::setCurrentThreadName("RT64 Texture");
+ 
++        // s6988 G1e: ROGUESQ_UPLOAD_QOS=1 runs the RT64 upload threads (Buffer uploaders, Texture upload) at USER_INTERACTIVE.
++        // The Gfx thread's fullSync waits on them (waitForUploaders / waitForGPUUploads); at default QoS they sit runnable-not-
++        // running under host load (s6988 census). Default off = retail RT64.
++#if defined(__APPLE__)
++        { static const bool on = [] { const char *e = std::getenv("ROGUESQ_UPLOAD_QOS"); return e && *e == '1'; }();
++          if (on) { const int r = pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0); std::fprintf(stderr, "[s6988] %s thread QoS USER_INTERACTIVE rc=%d\n", "RT64 Texture", r); } }
++#endif
++
+         uploadThreadRunning = true;
+ 
+         std::vector<TextureUpload> queueCopy;
+@@ -1259,6 +1298,63 @@ namespace RT64 {
      }
  
      void TextureCache::queueGPUUploadTMEM(uint64_t hash, uint64_t creationFrame, const uint8_t *bytes, int bytesCount, int width, int height, uint32_t tlut, const LoadTile &loadTile, bool decodeTMEM) {

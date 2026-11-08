@@ -3,9 +3,11 @@
 produced it relative to the on-glass display vsync grid (P row at), the VI->commit time, and the vsync-grid residual
 around the present (H-vi-slip vs H-vsync-jitter vs H-pre-Q). Chain: P(mtl) -> Q(mtl) -> last W before Q -> last kick
 (tl code 5 arg 1) before W -> last VI (tl code 1) before the kick. Clocks: tl steady us + G-row offset (as g1e_late_leg).
-usage: g1e_vi_phase.py tl.bin.<pid> gring.txt ring.txt [--from S]"""
+usage: g1e_vi_phase.py tl.bin.<pid> gring.txt ring.txt [--from S] [--windows OUT]
+--windows OUT (s6988): 'late|norm R_end sd_ms W rend_ms pick_ms ksd_ms rw_ms t' per corrected-chain present (mach s clock)"""
 import sys, struct, bisect, collections, statistics as st
-args = sys.argv[1:]; t_from = 95.0
+args = sys.argv[1:]; t_from = 95.0; winf = None
+if '--windows' in args: i = args.index('--windows'); winf = open(args[i + 1], 'w'); del args[i:i + 2]  # s6988: per-present windows for g1e_wl_census.py
 if '--from' in args: i = args.index('--from'); t_from = float(args[i + 1]); del args[i:i + 2]
 tlf, gf, rf = args
 pc = lambda v, p: sorted(v)[int(p * (len(v) - 1))] if v else float('nan')
@@ -93,6 +95,7 @@ for j in range(2, len(P) - 2):
         f_ = {x: float(wk[x]) for x in ('wk', 'lk', 'pid', 'rs')}
         rows2[key][-1].update(pick=rows2[key][-1]['rw'] - f_['wk'], mtx=f_['wk'] - f_['lk'], pidw=f_['lk'] - f_['pid'],
                               setup=f_['pid'] - f_['rs'], rend=f_['rs'], wqos=float(wk.get('qos', 'nan')))
+        if winf: winf.write(f"{key} {rt:.6f} {sd:.3f} {W[w]:.6f} {f_['rs']:.3f} {rows2[key][-1]['pick']:.3f} {(rt - kt[k]) * 1e3:.3f} {(W[w] - rt) * 1e3:.3f} {P[j][0] - t0:.3f}\n")
 L2, N2 = rows2['late'], rows2['norm']; N2s = N2[::max(1, len(N2) // 3000)]
 print(f'corrected chain: late {len(L2)} normal {len(N2)}')
 ws_ = [x for x in L2 + N2 if 'pick' in x]  # positive control: the split must sum back to rw

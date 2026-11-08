@@ -1,15 +1,16 @@
 # OWNER OVERRIDE 2026-11-04: do ITERATION.md G5 in order. G5a-G5h all fixed or done, owner confirmation pending.
 
-# NEXT: G1e — what makes the residual late frames slow once ROGUESQ_WL_QOS=1 is on (s6987).
-HYPOTHESIS-ID: g1e-wl-residual
-State (s6987): lates = RT64 workload thread threadRenderFrame long (8 vs 3 ms) + wake 1.5 ms at QoS 21; WL_QOS=1 cuts lates
-58/53 -> 24/14 ABBA and removes the wake. Residual lates (W1/W1b, 38 total): render 5-6 ms vs 3, send_dl (ksd) 13-16 ms vs 9.5.
+# NEXT: G1e — do the QoS opt-ins (GFX/GUEST/PRESENT/WL/UPLOAD) help on a QUIET host at the owner recipe? (s6988)
+HYPOTHESIS-ID: g1e-qos-bundle
+State (s6988): under the synthetic 14-spinner burst, all five QoS opt-ins together bring lates from ~160/5.5 min (s6982 no QoS)
+to 4-14; UPLOAD_QOS=1 alone cut 21/21 -> 14/4 ABBA. Residual = Gfx thread runnable-not-running even at USER_INTERACTIVE.
+None of this has been measured on a quiet host (the owner's normal play), and the owner has to flip five knobs.
 Hypotheses:
-- H-preempt: workload / Gfx thread runnable but not running (burst still steals P-cores even at QoS 33).
-- H-work: thread running the whole time -> real extra work (dense frame, pipeline creation, big upload).
-- H-shared: both threads slow in the same frames -> they contend with each other or with the burst for one cluster.
-Measure OFFLINE first, no build: scratch/s6987q/thr_W1*.bin (ROGUESQ_G1E_THREADS sampler, 1 ms) with tools/g1e_thread_census.py
-(feed it windows from tools/g1e_late_leg.py --windows style, or add a --windows option to tools/g1e_vi_phase.py writing the
-corrected-chain R->W and kick->R windows). Per late: run vs runnable ms of the workload and Gfx threads, CPU id cluster.
-Positive control: on W0/W0b lates (QoS 21) the workload thread must show runnable-not-running time (the wake gap WL_QOS removed).
-If H-work: correlate rend with tri count / pipeline creation in the same frames. Owner decides WL_QOS default (OWNER-OPT-INS row).
+- H-quiet-null: on a quiet host lates are already ~0 both ways -> bundle is harmless insurance; offer as one knob.
+- H-quiet-gain: quiet-host lates (background WindowServer/Chrome) also drop -> recommend default-on to the owner.
+- H-harm: USER_INTERACTIVE on ~17 threads starves audio/VI/present (more lates, AI underruns) -> keep opt-in, split.
+Unit: one build adds ROGUESQ_QOS_ALL=1 (sets GFX/GUEST/PRESENT/WL/UPLOAD_QOS defaults to 1 unless individually set =0);
+ABBA quiet host (NO burst), scratch/s6988/drive.sh minus the burst line, owner recipe 16:9 and 21:9 dd4 FPS60 VI_LOCK,
+arms A0 (all off) / A1 (QOS_ALL) / A1b / A0b; score lates + [ai] underruns + crash with scratch/s6988/score.sh.
+Positive control: the same QOS_ALL arm under the burst for 60 s must show lates << no-QoS (re-use s6982 burst).
+Then a one-line OWNER-OPT-INS row "ROGUESQ_QOS_ALL=1"; default stays the owner's call.

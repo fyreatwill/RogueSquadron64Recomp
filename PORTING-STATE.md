@@ -184034,3 +184034,32 @@ or running long (work)?
 Verdict (s6987): refutes H-vi-slip, H-vsync-jitter and H-pidwait; selects H-wl-qos (workload thread render + wake at QoS 21) for
 the residual late class. Next discriminator: per-late run vs runnable time of the workload/Gfx threads with WL_QOS on (H-preempt
 vs H-work), from the already-captured thr_W1*.bin.
+
+## Session 6988 (2026-11-08) — G1e: residual WL_QOS lates = Gfx fullSync waiting on preempted RT64 upload threads; ROGUESQ_UPLOAD_QOS=1 opt-in cuts lates 21/21 -> 14/4 ABBA
+Planned unit (NEXT g1e-wl-residual): offline census of the s6987q thread samples on the residual WL_QOS=1 lates (H-preempt vs
+H-work vs H-shared). New tools/g1e_wl_census.py (thr bin + per-present windows); tools/g1e_vi_phase.py gains --windows OUT
+(corrected-chain R, sd, W, rend, pick, ksd, rw per present). Positive control (s6987q W0/W0b, WL_QOS=0): late pick windows
+(wake gap) read runnable-not-running 0.92/0.95 of non-running time, rn p50 1.40/1.75 ms; late render rn 3.0/3.5 ms vs 0 normal.
+With WL_QOS=1 (W1/W1b): late render is the workload thread WAITING (wait p50 5.2/3.8 vs 2.1 ms normal, cpu 0.34 ms, rn ~0) ->
+H-preempt refuted for the workload thread, H-work refuted (cpu ~equal). Gfx send_dl on lates waits 3.0/5.9 ms (normal 0) and
+its WAITING stacks (existing g1e_thread_census.py) are RT64::FramebufferRenderer::waitForUploaders/BufferUploader::wait +
+TextureCache::waitForGPUUploads inside State::fullSync: 82/119 and 69/91 late samples (normal ~7%). The upload threads
+("RT64 Buffer" x11-12, "RT64 Texture") in those windows: Buffer rn p50 7.9/9.7 ms summed, rn>0.5 ms on 88%/100% of lates
+(normal 21%/20%), cpu tiny; Texture rn>0.5 ms 46%/43% (normal 6%) -> the uploaders are preempted at default QoS under load
+(H-upload-preempt selected offline; H-shared: both threads wait on the same uploaders).
+Change, one build (lib/rt64 rt64_buffer_uploader.cpp + rt64_texture_cache.cpp, patches exported): opt-in ROGUESQ_UPLOAD_QOS=1
+sets the Buffer uploader and Texture upload threads USER_INTERACTIVE (default off = retail RT64; logs "[s6988] ... rc=0").
+ABBA under the s6982 burst, scratch/s6988/drive.sh (21:9 dd4 FPS60 VI_LOCK + GFX/GUEST/PRESENT/WL_QOS all arms, 330 s),
+scored by scratch/s6988/score.sh; positive control: 13 QoS lines rc=0 in U1/U1b, 0 in U0/U0b; 0 crash all arms:
+| arm | UPLOAD_QOS | lates | ksd late/norm p50 | rend late p50 | Buffer rn>0.5ms on lates | late Gfx upload-wait stacks |
+| U0  | 0 | 21 | 14.02/9.63 | 5.91 | 0.86 | 83/116 |
+| U1  | 1 | 14 |  9.47/9.52 | 3.22 | 0.14 |  2/19  |
+| U1b | 1 |  4 | 10.35/9.54 | 3.43 | 0.00 |  1/7   |
+| U0b | 0 | 21 | 14.88/9.70 | 5.27 | 0.95 | 93/130 |
+U0 replicates s6987 W1/W1b (21 vs 24/14), so the arms are comparable. Verdict: H-upload-preempt confirmed by two lines
+(census + same-build A/B, two replicate pairs): lates -48% (42 -> 18), send_dl late inflation gone (ksd late = normal in U1),
+upload-wait stacks gone. Residual U1 lates: Gfx-sd class preempt=10/14 (Gfx rn 2.6 ms vs 1.4 normal) -> the Gfx thread itself
+still runnable-not-running at GFX_QOS under the 14-spinner burst; small numbers. No mitigation (opt-in QoS like s6975-s6987).
+Owner decides the default (OWNER-OPT-INS row added). Cumulative under this burst: s6985 P0 92-99 lates -> now 4-14.
+Verdict (s6988): refutes H-preempt and H-work for the workload thread's residual render time; selects H-upload-preempt
+(RT64 upload threads at default QoS); residual = Gfx thread preemption at USER_INTERACTIVE under synthetic 14-spinner load.
