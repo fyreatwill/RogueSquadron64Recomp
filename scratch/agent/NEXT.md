@@ -1,17 +1,20 @@
 # OWNER OVERRIDE 2026-11-04: do ITERATION.md G5 in order. G5a-G5h all fixed or done, owner confirmation pending (owner questions: CURRENT-TRUTH, and git show c4755af1e:scratch/agent/NEXT.md).
 
-# NEXT: G1e commit term: gate the default-on commit-side diagnostics, measure com by arm
-HYPOTHESIS-ID: g1e-dd4-commit-diag
-s6955 landed ROGUESQ_G1E_BATCH (default on): ranges per task 47.7k -> 184, wall -0.47 ms, but the commit term (~3.3 ms/task, where RT64
-processDisplayLists runs) stayed flat, so its per-call scaling is per RDP command. Before profiling RT64, check the boring thing first:
-rs64_dpc_defer_end_impl (src/rsp/dpc_bridge.cpp) runs, on EVERY commit, the s4272 latewrite per-word compare over the whole shadow
-(~365k words per dd4 task), plus the s4280 SetColorImage attribution loops (linear scan of g_s4272_sh per event; with batching that's
-only ~184 entries) and s4284 tallies. All of them are diagnostics: their output is stderr counters only.
-Unit: ROGUESQ_G1E_CDIAG (default 0 = skip the latewrite compare loop and the s4280/s4284 block; =1 old; =tog 10 s blocks, latched at
-defer_end). Hypotheses: H-diag (the latewrite loop is a measurable share of com: expect -0.2 to -0.6 ms/task) vs H-rt64 (com is RT64's
-per-command work: flat). Discriminator: same-run tog, com and sd_wall per task by arm (tools/g1e_batch_arms.py, add a column for the
-arm or reuse the batch column with ROGUESQ_G1E_BATCH fixed on). Positive control: the [s4272-latetot] line must stop advancing in off
-blocks and advance in on blocks (cmpWords). If H-rt64: xctrace a 30 s windowed flight (XT=1) and rank RT64 functions under the commit.
-Run: env OUT=scratch/s6956 zsh tools/g1e_xt_flight.zsh d 360 "ROGUESQ_G1E_AQ=3 ROGUESQ_G1E_CDIAG=tog ROGUESQ_G1E_TRING=$PWD/scratch/s6956/tring.txt"
+# NEXT: G1e commit term: fast path for RT64 LoadBlock TMEM copy (lib/rt64), with an equivalence arm
+HYPOTHESIS-ID: g1e-dd4-rt64-texload
+s6956: the commit (~3.4 ms/task at dd4) is RT64 fullSync texture work. Under the commit (scratch/s6956/xt_x.xml, tools/g1e_xt_under.py):
+loadBlockOperation 23.5% leaf (inlined loadToTMEMCommon<RGBA32=false,BLOCK=true> per-8-byte-word loop with dxt counter and xor swizzle,
+lib/rt64/src/hle/rt64_rdp.cpp:815), TMEM hashing ~30% inclusive (XXH3 update 18.8%, hash lambda 24.2%), uploadTexture 32%.
+Unit: ROGUESQ_G1E_LBFAST (default after qualification; =0 old loop; =tog 10 s blocks; =check runs both into a scratch TMEM copy on every
+block load and counts mismatches, check #1 against a deliberately corrupted copy = positive control). Fast path: for BLOCK, non-RGBA32,
+compute each run of words between dxt swaps (dxtIncrement known per load: run length = ceil((0x800 - counter)/dxt)), copy the run with
+memcpy into TMEM (handling the tmemMask wrap by splitting), and apply the tmemXorMask (0 or 4) as one 32-bit-swap pass when set. dxt==0
+means one run of all words. Keep the 2048 word cap.
+Hypotheses: H-copy (the per-word loop is the cost: expect com -0.5 to -0.8 ms/task, leaf share collapses) vs H-mem (time is cache misses
+reading RDRAM: fast path saves little). Equivalence must be bad=0 control=1 before timing counts.
+Run (two runs, same build): env OUT=scratch/s6957 zsh tools/g1e_xt_flight.zsh c 240 "ROGUESQ_G1E_LBFAST=check" then
+env OUT=scratch/s6957 zsh tools/g1e_xt_flight.zsh t 360 "ROGUESQ_G1E_AQ=3 ROGUESQ_G1E_LBFAST=tog ROGUESQ_G1E_TRING=$PWD/scratch/s6957/tring.txt"
+(add an lbfast TRING column or reuse cdiag's slot; tools/g1e_batch_arms.py --arm).
+lib/ edit => ./submodule-patches/export.sh + commit same session. Then the TMEM hash: s6942's memo keys on g_rs64_tmem_gen which every load bumps, so check how often a hash re-runs on byte-identical TMEM.
 If the XG49V (21:9, 144 Hz) is attached, its unit (git show c4755af1e:scratch/agent/NEXT.md) comes first. Owner reports override all of this.
 Defaults: DRAIN, SKYZ, SCREEN_JOB, INFLIGHT stay opt-in, owner decides.

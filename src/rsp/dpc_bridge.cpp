@@ -45,6 +45,9 @@ static std::vector<S4272Sh> g_s4272_sh;
 // merged run lists, concatenated shadow coverage and bytes, and counts duplicate shadow keys (where first-match lookup could
 // diverge); check #1 compares against a corrupted copy as the positive control (control must be 1, bad 0).
 extern "C" { int g_rs64_g1e_batch = 0; uint64_t g_rs64_g1e_ranges = 0; }
+// s6956 G1e: ROGUESQ_G1E_CDIAG (default 0 = skip the commit-side s4272 latewrite compare and the s4280/s4284 attribution block,
+// stderr-only diagnostics; =1 old; =tog 10 s blocks, latched per task at defer_begin).
+extern "C" { int g_rs64_g1e_cdiag = 0; }
 static bool g_bc_on = false;
 static std::vector<std::pair<uint32_t, uint32_t>> g_bc_ranges;
 static std::vector<S4272Sh> g_bc_sh;
@@ -7667,6 +7670,8 @@ extern "C" void rs64_dpc_defer_begin() {
         static const bool s_bc = [] { const char *e = std::getenv("ROGUESQ_G1E_BATCH_CHECK"); return e && *e && *e != '0'; }();
         g_rs64_g1e_batch = s_batch_env == 2 ? (int)((time(nullptr) / 10) & 1) : s_batch_env;
         g_bc_on = s_bc; rs64_g1e_bc_clear();
+        static const int s_cdiag_env = [] { const char *e = std::getenv("ROGUESQ_G1E_CDIAG"); return !e ? 0 : (*e == 't' ? 2 : (*e != '0')); }();
+        g_rs64_g1e_cdiag = s_cdiag_env == 2 ? (int)((time(nullptr) / 10) & 1) : s_cdiag_env;
     }
     g_defer_stream_pending = 0; g_defer_stream_task_flushes = 0;
     g_deferred_ranges.clear();
@@ -7682,7 +7687,11 @@ extern "C" void rs64_dpc_defer_begin() {
 static void rs64_dpc_defer_end_impl(int commit) {
     g_defer_active = false;
     if (commit) rs64_g1e_bc_check("commit");
-    if (commit && !g_s4272_sh.empty() && g_rdram_for_submit) {
+    if (commit) {   // s6956: per-arm task tally (positive control: cmpWords must advance only with on-tasks)
+        static unsigned long onT = 0, offT = 0; (g_rs64_g1e_cdiag ? onT : offT)++;
+        if (((onT + offT) & 0x3FF) == 0) fprintf(stderr, "[s6956-cdiag] onTasks=%lu offTasks=%lu\n", onT, offT);
+    }
+    if (commit && g_rs64_g1e_cdiag && !g_s4272_sh.empty() && g_rdram_for_submit) {
         static unsigned long cmpWords = 0, diffWords = 0, tasks = 0, tasksDiff = 0; static int shown = 0;
         unsigned long d = 0;
         for (const S4272Sh &e : g_s4272_sh) {
@@ -7735,7 +7744,8 @@ static void rs64_dpc_defer_end_impl(int commit) {
             }
         }
 
-        if (!rs64_rdpq_task_async()) {   // s4280: attribute each SetColorImage RT64 saw during this commit to its bump-time shadow range (s6705: not for async-consumed tasks).
+        if (!g_rs64_g1e_cdiag) RT64::g_s4280_n = 0;
+        else if (!rs64_rdpq_task_async()) {   // s4280: attribute each SetColorImage RT64 saw during this commit to its bump-time shadow range (s6705: not for async-consumed tasks).
             int n = RT64::g_s4280_n; static unsigned long nOdd = 0, nSane = 0, oddNoShadow = 0, oddDiff = 0, sane_diff = 0; static int shownO = 0, shownS = 0;
             for (int i = 0; i < n && i < 256; i++) {
                 const RT64::S4280Ev &ev = RT64::g_s4280_ev[i];
