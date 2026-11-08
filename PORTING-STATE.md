@@ -183603,3 +183603,20 @@ Verdict: selects H-hash (top leaf, fix lands -0.117 ms/task commit); refutes H-s
   ENGAGED; V0 (LOCK=1 + DRAIN_ACQ=0) lvl 98.1%, lat 41.2/43.1, 0 drops = reproduces L1. 0 crash.
 - ORIGIN: not a corruption fix; the lock gate (pause at acq EMA > 5 ms) is by design, so a level needs a drain to exit.
 - Verdict: refutes H-lock-prevents; selects LOCK+drain as a single knob. 16:9 split queued: soaks s6969_169_V / s6969_169_N.
+
+## Session 6970 (2026-11-07) — G1e: at 16:9 the VI lock (+implied ACQ8) holds 23.3 ms flat with 0 drops, while ACQ8 alone is bimodal 20/36 ms (slow% 26, 8 drops); OWNER-OPT-INS recommends ROGUESQ_VI_LOCK=1 at both aspects
+- Soaks folded: s6969_169_N (ROGUESQ_PRESENT_DRAIN_ACQ=8 alone) and s6969_169_V (ROGUESQ_VI_LOCK=1, implied ACQ=8); owner recipe 16:9
+  dd4 FPS60 lvl1, VI_RT default, from boot, HOLD 260, human idle 6.8 h, scratch/s6969q, both rc 0, 0 crash/caught-signal lines.
+- tools/g1e_lock_arms_score.py --from 95 --locked V,N:
+    N  W p50 13.5  lvl% 1.1  lat 20.2/36.5  slow% 26.2  miss 0.055/s  drops 8  NOT-ENGAGED (free, as expected)
+    V  W p50 10.0  lvl% 0.0  lat 23.3/24.6  slow% 0.0   miss 0       drops 0  ENGAGED
+- Offline 15 s bins (median lat / % > 30 ms): N runs 19-21 ms but has two 36 ms episodes (105-120 s 84%, 210-225 s 100%) plus
+  partial ones (165 s 32%); its 8 drain drops (123..251 s) are the exits. V is 23 ms / 0% in every bin. The episodes are a
+  shallow level (acq <= 5 ms) that lvl% cannot see, the same shallow-level class s6966 found evading ACQ=8 at 21:9.
+- Change: scorer gains slow% (--slow 30, presents with latency > 30 ms) so shallow levels show in the table.
+- Positive controls: the drain fired in N (8 D records) and the lock engaged in V (W p50 at the 10 ms target), so both arms ran
+  their mechanism; N's episodes are visible in the same instrument that shows V flat.
+- Verdict: single-source per arm at 16:9 (one run each), agrees with 21:9 s6969 + s6968 k1-k3. Neither pre-written outcome fit
+  exactly: V's p50 is 3 ms HIGHER than N's, but its p90 is 12 ms lower and it never slips; for feel, steadiness wins.
+  OWNER-OPT-INS lock row now recommends VI_LOCK=1 at 16:9 and 21:9 (replaces DRAIN/DRAIN_ACQ). Defaults unchanged.
+- Replica pair queued: s6970_169_N_r2 / s6970_169_V_r2 (scratch/s6970q).
