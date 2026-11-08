@@ -184004,3 +184004,30 @@ showed VI->Q is not longer on lates, the commit phase slip must come from the gu
 vsync (VI_LOCK target 10 ms holds the average, not every frame) - inference, not yet measured. PRESENT_ENCODED stays opt-in
 and useless; no default changed. No ORIGIN line needed (instrument + opt-in, no mitigation).
 Next: VI timestamp phase vs on-glass vsync on late vs normal frames (H-vi-slip) vs commit-side jitter with VI on phase.
+
+## Session 6987 (2026-11-08) — G1e: residual lates are the RT64 workload thread rendering late (not VI phase slip); s6984/s6986 chain misattributed; ROGUESQ_WL_QOS=1 opt-in cuts lates 58/53 -> 24/14 ABBA
+Planned unit (NEXT g1e-vi-phase-slip): offline, the phase of the guest VI that produced each late vs normal present against
+the on-glass vsync grid. New tools/g1e_vi_phase.py (tl VI code 1 + kick code 5 + ring P/Q/S/W + gring R rows).
+Offline on s6986q (4 arms): VI phase late p50 13.6-13.7 ms vs normal 13.9-14.2 ms after vsync (AUC 0.39-0.44), VI period
+16.667 = vsync period, vsync grid jitter 0.00 ms around lates -> **H-vi-slip and H-vsync-jitter refuted** (4/4 arms).
+The same table showed kick->commit 4.6-5.8 ms on lates vs 12.8-12.9 normal, i.e. SHORTER than send_dl itself: the s6984/
+s6986 chain (Q -> last W -> last kick before W) picks the NEXT frame's kick on lates because W lands after it. Corrected
+chain (W -> the send_dl return R before it -> that R's kick): lates have R->W 9.5-10.1 ms vs 3.0-3.1 normal (AUC 0.95-0.99),
+workload thread idle before (previous W 12 ms before R), VI->commit 21 vs 13 ms. So s6984 "VI->Q not later on lates" and the
+s6986 "commit phase" framing were artifacts of that misattribution (superseded in CURRENT-TRUTH).
+Instrument + arm, one build (lib/rt64 rt64_workload_queue.cpp, patches exported): W row gains wk/lk/pid/rs (ms before W of
+cursor wake, threadMutex held, presentId wait done, render start) + qos; ROGUESQ_WL_QOS=1 sets the "RT64 Workload" thread
+USER_INTERACTIVE (default off = retail RT64). Positive control: pick+mtx+pidw+setup+rend = rw to 0.0000 ms over ~14k presents
+per arm. ABBA under the s6982 burst (scratch/s6987/drive.sh, 21:9 dd4 FPS60 VI_LOCK + GFX/GUEST/PRESENT_QOS all arms, 330 s,
+0 crash, scored by scratch/s6987/score.sh):
+| arm | WL_QOS | lates | rend late/norm p50 | pick late p50 | ksd late/norm p50 |
+| W0  | 0 | 58 | 8.13/3.04 | 1.29 | 10.13/9.46 |
+| W1  | 1 | 24 | 6.42/3.04 | -0.07 | 13.36/9.54 |
+| W1b | 1 | 14 | 5.17/3.10 | -0.07 | 15.69/9.73 |
+| W0b | 0 | 53 | 8.52/3.13 | 1.63 | 10.39/9.52 |
+mutex and presentId waits are 0 on all presents (H-pidwait refuted). Verdict: the late class is the workload thread's
+threadRenderFrame running 2-3x long plus a 1.3-1.6 ms wake delay, under host load at default QoS 21 (H-wl-qos selected:
+two replicate pairs, -66% lates). Residual lates with WL_QOS on: render still 5-6 ms and send_dl (ksd) 13-16 ms -> remaining
+CPU contention on the Gfx side or real work, open. No mitigation (opt-in QoS like s6975/s6983/s6985), no ORIGIN line needed.
+Next: thread census (thr_W*.bin) on the residual W1/W1b lates: is the workload/Gfx thread runnable-not-running (preempted)
+or running long (work)?
