@@ -184085,3 +184085,23 @@ Selects H-quiet-null: on a quiet host the bundle changes ~nothing (3 vs 0 lates 
 measurable (send_dl wall equal); refutes H-harm (no crash, no extra lates, audio-wait/spin lines same shape; AI underrun not
 directly counted in this recipe -> single-source on audio). Under load it is the s6984-s6988 chain's full gain (~30x fewer lates).
 OWNER-OPT-INS gets one row ROGUESQ_QOS_ALL=1; default is the owner's call. No ORIGIN needed (no mitigation machinery; QoS opt-in).
+
+## Session 6990 (2026-11-08) — G1e lever (1): real game frame rate per level at the owner recipe is 60.0 fps on all 19 levels (dd4 16:9 FPS60 VI_LOCK QOS_ALL), FPS60-off control 30.0; no repeated frames on glass
+
+HYPOTHESIS-ID: g1e-game-fps. New tool tools/g1e_level_fps.py: per arm, [g1b] gfx tasks/s (game frames) over t>=95, and from the
+present ring the queued presents/s, distinct framebuffer generations (gen=) per s, distinct gens that reached glass (P at>0,
+joined on mtl), the share of presents repeating the previous gen (H-dup), and on-glass gaps >= 25 ms per s.
+Run: scratch/s6990/drive.sh -> tools/g1e_owner_quiet_arms.zsh, dd4 16:9 FULLSCREEN FPS60 ROGUESQ_VI_LOCK=1 TARGET 10 QOS_ALL=1 G1B=1,
+ROGUESQ_FORCE_SAVE_MISSION=<lvl>, HOLD 150 s per arm, quiet host (HID idle 49000+ s, no human input), data scratch/s6990q, table
+scratch/s6990q/table.txt. Scorer validated first on s6989q A0/A1 (60/60/60, rep 0).
+| arm | lvl | tasks mean/p10/min | gen/s | shown/s | rep% | miss/s | crash |
+| C30 (FPS60=0) | 1 | 30.0/30/30 | 30.0 | 30.0 | 0 | 30 (= every 33 ms gap, expected) | 0 |
+| L0-L18 (all 18 other arms, lvl 0-18 except 4/10 below) | each | 60.0/60/59-60 | 60.0 | 59.9-60.0 | 0 | 0-0.02 | 0 |
+Levels 4 and 10 not re-run: s6962 measured them at this recipe (58.5 and 60.0). lvl1 re-run here reads 60.0 (s6962 60.0).
+Control: [saveslot] force=<lvl> in every log; [initMission] call#1 at t~67 in every arm; FPS60=0 reads exactly 30 on the same build.
+Shows: H-60 selected. Every level produces a new game frame every VI at the owner recipe, and every one reaches the display
+(shown/s = gen/s); H-dense-drop and H-dup refuted for this window.
+Limits: the window is t=95-150 s, ~28-83 s after initMission, so it may include a level's intro cutscene; flight was not
+checked per arm. One 54 s window per level, one run each. rep% had no positive case in the run (no arm repeats a frame), so a
+zero there is single-source. 21:9 was not swept (s6962 lvl1 21:9 had p10 52).
+Rules out: a level-specific frame rate collapse at the owner 16:9 recipe on the current defaults.

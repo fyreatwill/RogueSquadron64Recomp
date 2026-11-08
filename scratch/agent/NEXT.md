@@ -1,13 +1,12 @@
 # OWNER OVERRIDE 2026-11-04: do ITERATION.md G5 in order. G5a-G5h all fixed or done, owner confirmation pending.
 
-# NEXT: G1e lever (1) — real game frame rate per level at the owner recipe (s6989 closed the QoS bundle)
+# NEXT: G1e per-level game fps at 21:9 in deep flight (s6990 closed 16:9: 60.0 on all 19 levels)
 HYPOTHESIS-ID: g1e-game-fps
-State: QoS work closed s6989 (ROGUESQ_QOS_ALL=1 opt-in, owner decides default). G1e asks for the real game frame rate
-(distinct framebuffers per second) per level, with FPS60 on and off, at the owner recipe (16:9 dd4 VI_LOCK QOS_ALL).
-Hypotheses:
-- H-60: FPS60 already gives ~60 distinct game frames/s on every level -> G1e frame-rate goal met; report per level table.
-- H-dense-drop: dense levels (lvl5 / lvl10 / cutscenes) fall to 30-45 distinct/s -> name the binding cost (guest CPU, send_dl, RT64).
-- H-dup: presents are 60/s but some are repeats of the same game frame (VI vs game frame mismatch) -> pacing bug.
-Unit: one build (none needed if the present ring already stamps the game-frame id; check ROGUESQ_PRESENT_RING fields first),
-levels 1, 5, 10 x FPS60 on/off, 120 s each through tools/g1e_owner_quiet_arms.zsh with ROGUESQ_FORCE_SAVE_MISSION=<lvl>;
-count distinct game frame ids per real second from ring_*.txt. Positive control: FPS60 off must read ~30/s.
+Why: the owner plays on a 21:9 ultrawide; s6962 lvl1 21:9 had p10 52 and a present level; s6990's 16:9 window (t 95-150) may
+include intro cutscenes. Hypotheses:
+- H-60w: all levels hold ~60 tasks/s and shown/s at 21:9 deep in flight -> G1e frame rate closed for both owner screens.
+- H-wide-drop: some levels drop below ~55 at 21:9 (wider terrain footprint) -> name them, split cost with [g1b] sd_wall / g1e_sync_rate.py.
+- H-dup: shown/s < gen/s or rep% > 0 -> present pacing bug.
+Unit: edit scratch/s6990/drive.sh into scratch/s6991/drive.sh: R=scratch/s6991q, add ROGUESQ_ASPECT=21:9 to X, HOLD=240, keep C30.
+Score: python3 tools/g1e_level_fps.py scratch/s6991q C30 L0 ... L18 --from 150 (flight keys from t=95, initMission t~67).
+Positive control: C30 must read 30.0. Check the host is idle (HID idle > 120 s) first; the harness exits 2 on human input.
