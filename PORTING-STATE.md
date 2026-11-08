@@ -183302,3 +183302,4 @@ Next: key the upload hash by load provenance, i.e. which (descriptor, offset) pa
 descriptor+content is a near-perfect proxy for bytes. First a feasibility census: per hash call, provenance-key hit rate, mismatches (must be 0)
 and the provenance key's cost against the CI4 hash (221 ns per 2 KB).
 Code: lib/rt64 (export.sh refreshed submodule-patches/rt64.patch). Default behaviour unchanged (env unset = no census).
+Verdict line: s6958 selects H-partial and refutes H-repeat and H-fresh; the next discriminator is the provenance-key census (NEXT.md, ROGUESQ_G1E_PROV=stat).
