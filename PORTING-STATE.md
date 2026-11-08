@@ -183698,3 +183698,5 @@ Run scratch/s6975q (16:9 dd4 FPS60 lvl1, VI_LOCK target 10, flip at 180 s, 330 s
 Scale of the noise (fake mark at 180 s on the s6974 rings, no change applied): gap>3 0.8-3.2/min, late 0-2.4/min per window, so
 one Q1 after-window of 0 is suggestive (expected ~5 under null) but single-source. Replicas queued: s6975_169_gfxqos1_r1/r2.
 Rules out: RSP workload spikes and game-CPU bursts as the late-frame cause; time-constraint policy as the fix.
+Discrimination: selects H-rsp-host (6/7 late presents, two instruments agree on the leg), refutes H-rsp-work and H-sim, refutes the
+time-constraint policy as a fix (Q2). Next discriminator: replicas s6975_169_gfxqos1_r1/r2 (after-window late presents ~0 vs before).
