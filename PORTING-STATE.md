@@ -183173,3 +183173,28 @@ limit armed in every block the level never forms). Medians: 34 lat p50 23.6, acq
 - Boot block at 28 had 12 drops vs 3 at 34, one sample each, both in the boot phase where s6951 also saw ~12 at 34: not a 28 cost.
 Rules out: 28 being too low for clean play. Does not show 28 clears faster. Recommendation unchanged: OWNER-OPT-INS keeps 34.
 Next: 28 vs off same run (the s6951 o34 design, which formed the level in off blocks) so 28's clearing has its own control.
+
+## Session 6953 (2026-11-07) — G1e: DRAIN=28 vs off same run on the locked 60 Hz built-in: 28 cannot clear the formed present level and skips 1 frame/s (H-overdrain selected for 28, H-faster refuted); slug g1e-present-drain closed with 34
+
+What ran: `env ARMS="60:4:o28:ROGUESQ_PRESENT_DRAIN=28,ROGUESQ_PRESENT_DRAIN_TOGGLE=20+ST" zsh tools/g1e_owner_hz_arms.zsh`
+(the s6951 o34 design with 28: owner dd4 16:9 FPS60 FULLSCREEN, lvl index 1, only the built-in attached, locked 60 Hz, screen
+unlocked, HID idle 5568 s at start). 242 s hold, flight 182 s, crashlines 0, vi_stalls 0, glass 100% every block.
+Analysis: `python3 tools/g1e_drain_blocks.py scratch/s6953/ring_o28.txt --from 95 --stall <s6951 course>`; table scratch/s6953/blocks_o28.txt.
+
+| blk | arm | t | lat p50/p99 | acq>5% | drops | doses |
+|---|---|---|---|---|---|---|
+| 2 | 28 | 40-60 | 30.0/37.8 | 0.9 | 20 | none |
+| 3 | off | 60-80 | 25.1/41.0 | 20.5 | 0 | none |
+| 4 | 28 | 80-100 | 33.7/39.7 | 15.8 | 17 | none |
+| 5,7,9,11 | off | 100-240 | 36.1-37.8 | 22.7/34.1/47.2/18.8 | 0 | 17,50,200,200 |
+| 6,8,10 | 28 | 120-220 | 35.6-36.7 | 19.3/14.3/10.3 | 20 each | 17x2,50x2,200 |
+
+Positive control PASSED: off blocks 7 and 9 at level (acq>5% 34.1, 47.2). The 28 blocks right after them (8, 10) read p50
+35.8/35.6 with 20 drops each; s6951's 34 blocks after a formed level read 23.0/23.1 with 6/1 drops.
+- H-faster (28 clears faster than 34) REFUTED: 28 never cleared (on-block p50 median 35.7 vs off 37.2, ~1.5 ms).
+- H-overdrain SELECTED for 28: exactly 20 drops per 20 s block from 40 s on, i.e. the drain fires at its 1/s cadence every second
+  and the pile refills; it never returns to the ~23 ms clean figure. This is consistent with s6952 (28 was fine only in blocks
+  that 34 had already cleared). Mechanism (why the post-drop latency rebounds above 28) not traced; not needed for the decision.
+- Cross-run note: 28 (this run) vs 34 (s6951) is two runs, each with its own same-run off control.
+Rules out: lowering the DRAIN recommendation below 34. OWNER-OPT-INS now says so. Slug g1e-present-drain closed; defaults unchanged.
+Next: G1e item 7 per-task tail (NEXT.md), owner reports first.
