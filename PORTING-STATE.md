@@ -183482,3 +183482,7 @@ Verdict: selects H-hash (top leaf, fix lands -0.117 ms/task commit); refutes H-s
 - Verdict: acq signature is a sufficient drain trigger at 21:9 (clears the level same run; no false drains at the 35 ms non-level base, 1 block,
   single-run). Whether it beats 34 with a level present: soaks s6965_acq_vs34_r1/r2 queued. OWNER-OPT-INS: ACQ=8 suggested at 21:9 instead of 34;
   default stays off (owner decides). Open: why the level re-forms ~every 5-7 s under ACQ (a2), which drain cannot fix.
+- Discrimination: selects H-acq (the acquire-wait signature alone detects and clears the 21:9 level: a2 same run 0/3 vs 3/3 blocks) and refutes
+  H-latency-needed (the NEXT.md outcome "level reforms under acq -> latency is the needed signal" did not happen). Not yet decided: acq vs 34 cost
+  with a level present. Next discriminator: s6965_acq_vs34_r1/r2 per-block drops/s and lat p50 by trigger kind, then the pre-run present-interval
+  join (H-hitch / H-vsync-phase / H-burst) for what re-forms the level, in scratch/agent/NEXT.md.
