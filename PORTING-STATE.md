@@ -183271,3 +183271,5 @@ leaf time was memory traffic (H-mem partly), which a tighter loop cannot remove.
 s6942 showed the gen-keyed hash memo never hits (every upload follows a load). Next: measure whether loads are REPEATS (same descriptor and
 byte-identical source as an earlier load), which would let load+hash be skipped together.
 Rules out: the per-word dxt/xor bookkeeping as the dominant commit term.
+Verdict: selects H-copy as a minor commit term (-0.225 ms, 20/22) and selects H-mem for the rest of the copy-loop leaf share; refutes
+the per-word loop as the dominant commit cost. Next discriminator: the repeat-load census (H-repeat vs H-fresh vs H-partial, NEXT.md).
