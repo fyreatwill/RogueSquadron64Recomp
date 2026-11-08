@@ -183700,3 +183700,24 @@ one Q1 after-window of 0 is suggestive (expected ~5 under null) but single-sourc
 Rules out: RSP workload spikes and game-CPU bursts as the late-frame cause; time-constraint policy as the fix.
 Discrimination: selects H-rsp-host (6/7 late presents, two instruments agree on the leg), refutes H-rsp-work and H-sim, refutes the
 time-constraint policy as a fix (Q2). Next discriminator: replicas s6975_169_gfxqos1_r1/r2 (after-window late presents ~0 vs before).
+
+## Session 6976 (2026-11-08) — G1e: ROGUESQ_GFX_QOS=1 replicated (2 replicas + sham-split control): late presents ~1.2/min -> 1 in 7.3 min; opt-in row for owner, 21:9 replicas queued
+
+Folded soaks s6975_169_gfxqos1_r1/r2 (16:9 dd4 FPS60 lvl1, VI_LOCK target 10, QoS1 flipped at 180 s, 330 s hold, 0 crash both).
+Tool change: tools/g1e_gfx_qos_ab.py --split-at S puts a sham mark S s after the first row, so no-QoS rings score with the same
+windows (time-in-mission confound control). Applied to s6974q V10r1/r2 (no QoS) at 178.8 s.
+  run          | gap>3/min before -> after | late30-40/min before -> after | >40 after
+  Q1 (s6975)   | 12.17 -> 2.48             | 2.15 -> 0.00                  | 0
+  G1r1         |  3.58 -> 2.06             | 0.00 -> 0.00                  | 0
+  G1r2         |  9.31 -> 2.06             | 0.72 -> 0.00                  | 0.41 (1 event)
+  sham V10r1   |  2.86 -> 0.79             | 1.43 -> 0.00                  | 0
+  sham V10r2   |  2.15 -> 3.17             | 1.43 -> 2.38                  | 0
+  Q2 mode2     |  2.86 -> 2.88             | 2.15 -> 0.41                  | 0.41
+Reading: QoS1 after-windows pooled 7.3 min hold 1 late present; no-QoS/pre-flip windows run ~1.2/min (expect ~9, Poisson p~0.001).
+The sham split shows no systematic time trend (one down, one up), so the after-window is not inherently clean. gap>3 under QoS1
+settles at 2.0-2.5/min = the quiet-host floor; QoS1 removes the excess descheduling bursts (Q1, G1r2 befores 9-12/min), not the floor.
+Lock score: G1r1 0 drops, G1r2 3 drops (1 entry at 219 s, after the flip) - QoS does not remove every drop.
+Two lines of evidence (same-run flip x3, cross-run sham control x2) -> H-rsp-host fix replicated at 16:9. Default stays off: added an
+owner row to docs/OWNER-OPT-INS.md asking whether to turn it on. Queued s6976_219_gfxqos1_r1/r2 (same recipe at 21:9).
+Rules out: s6975's Q1 result as host noise; the after-window being clean by mission timing alone.
+Discrimination: selects H-rsp-host fix (QoS1) over H-noise; mode 2 stays refuted.

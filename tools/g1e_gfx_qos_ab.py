@@ -3,15 +3,19 @@
 Per window: gfx send_dl wall - thread-CPU gap (R rows of ROGUESQ_G1E_GRING; s6975 showed late lock presents carry 4-12 ms of it vs
 normal p99 1.7) as p50/p99 and rate of gaps > 3 ms per minute; send_dl wall p50/p99 and CPU p50; single-vsync-late presents
 (P->P 30-40 ms, ring) and longer (>40) per minute. Positive control: the BEFORE window must show gaps > 3 ms (> 0) or a null after is
-not a result.  usage: g1e_gfx_qos_ab.py gring.txt ring.txt log.txt [--from 95] [--guard 5]"""
+not a result.  usage: g1e_gfx_qos_ab.py gring.txt ring.txt log.txt [--from 95] [--guard 5] [--split-at S]"""
 import sys, re
 a = sys.argv[1:]; t_from = 95.0; guard = 5.0
 if '--from' in a: i = a.index('--from'); t_from = float(a[i + 1]); del a[i:i + 2]
 if '--guard' in a: i = a.index('--guard'); guard = float(a[i + 1]); del a[i:i + 2]
+# s6976: --split-at S = sham mark S s after the first row, for NO-QoS control runs (time-in-mission confound check)
+sham = None
+if '--split-at' in a: i = a.index('--split-at'); sham = float(a[i + 1]); del a[i:i + 2]
 gf, rf, lf = a
-mk = [float(m.group(1)) for m in re.finditer(r'\[gfx-qos\] t=([0-9.]+) mode=\d+ ok=1', open(lf, errors='replace').read())]
-if not mk: sys.exit('no ok=1 [gfx-qos] mark in log')
-tq = mk[0]
+if sham is None:
+    mk = [float(m.group(1)) for m in re.finditer(r'\[gfx-qos\] t=([0-9.]+) mode=\d+ ok=1', open(lf, errors='replace').read())]
+    if not mk: sys.exit('no ok=1 [gfx-qos] mark in log')
+    tq = mk[0]
 R = []
 for l in open(gf, errors='replace'):
     if l.startswith('R ') and ' sdc=' in l and l.endswith('\n'):
@@ -25,6 +29,7 @@ for l in open(rf, errors='replace'):
             if float(kv.get('at', 0)) > 0: P.append(float(kv['at']))
         except ValueError: pass
 P.sort(); t0 = min(R[0][0], P[0])
+if sham is not None: tq = t0 + sham
 pc = lambda v, q: sorted(v)[int(q * (len(v) - 1))] if v else float('nan')
 print(f'qos mark at {tq - t0:.1f} s since first row; windows [{t_from:.0f}, {tq - t0:.0f}) vs [{tq - t0 + guard:.0f}, end)')
 print('window  |  dur s | n R  | gap p50  p99 | gap>3/min | sd p50  p99 | cpu p50 | late30-40/min | >40/min')

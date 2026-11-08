@@ -1,13 +1,12 @@
 # OWNER OVERRIDE 2026-11-04: do ITERATION.md G5 in order. G5a-G5h all fixed or done, owner confirmation pending.
 
-# NEXT: G1e — replicate ROGUESQ_GFX_QOS=1 (s6975 single-source).
+# NEXT: G1e — fold 21:9 GFX_QOS=1 replicas (s6976_219_gfxqos1_r1/r2, results in scratch/s6976w; tail prints
+# g1e_gfx_qos_ab.py + lock score). 16:9 replicated s6976 (late ~1.2/min -> 1 in 7.3 min, sham control flat).
 HYPOTHESIS-ID: g1e-gfx-thread-qos
-s6975: residual VI-lock late presents are the Gfx thread descheduled mid gfx task (wall-CPU 4-12 ms, CPU normal). GFX_QOS=1 (QoS UI)
-flipped at 180 s: late presents 2.15 -> 0/min, gaps>3 12.2 -> 2.5/min; mode 2 (time-constraint) no help.
-Fold soaks s6975_169_gfxqos1_r1/r2 (scratch/s6975r; tail prints g1e_gfx_qos_ab.py + lock score). If not run, run one by hand.
-Outcomes: both after-windows late ~0 and gap>3 below before -> H-rsp-host fix replicated: make GFX_QOS=1 default-on? NO — owner decides;
-add it to docs/OWNER-OPT-INS.md next to VI_LOCK and ask. Either before-window lacks gaps>3 -> no positive control, rerun.
-After == before in both -> s6975 was host noise; next lever: pin RSP work off E-cores is not possible on macOS, so try QoS on the
-present thread too, or close as owner-tolerable (~1 drop/100 s).
+Outcomes: 21:9 after-windows late ~0 -> QoS1 holds on both owner screens; update OWNER-OPT-INS row ("21:9 check queued" -> result).
+21:9 after == before -> aspect-specific (21:9 late presents were drawable-queue level, s6962-ish): note it in the row.
+Either before-window with no gap>3 and no late -> no positive control for that run; use the sham split on a no-QoS 21:9 ring.
+Then: remaining drops under QoS1 (G1r2 had 1 entry at 219 s): join with g1e_late_leg.py to see if they are still descheduling
+(gap>3) or a different leg (present/drawable). If different leg -> try QoS on the present thread (same env pattern).
 Defaults: DRAIN, DRAIN_ACQ, DRAIN_HITCH, SKYZ, SCREEN_JOB, INFLIGHT, PROVCACHE, VI_LOCK, GFX_QOS stay opt-in. VI_RT default on.
 Owner reports override all of this.
