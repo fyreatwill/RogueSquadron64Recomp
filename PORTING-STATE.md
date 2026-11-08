@@ -183116,3 +183116,33 @@ peaks (1-3 drops per 20 s) and the level re-forms. Next: same-run limit A/B, DRA
 Rules out: "DRAIN=40 removes the level" (s6949 headline wording); it lowers it.
 Defaults unchanged; DRAIN stays opt-in, owner chooses.
 Verdict line: selects H-drain-real, refutes H-run-luck (as sole cause of the s6949 gap). Next discriminator: same-run DRAIN=40 vs ALT=34 block A/B (H-threshold vs H-reform vs H-overdrain), NEXT.md.
+
+## Session 6951 (2026-11-07) — G1e: ROGUESQ_PRESENT_DRAIN=34 clears the formed 60 Hz present level (p50 23 vs off 39 ms) where 40 only lowered it; H-threshold selected, H-overdrain refuted, the 40-vs-34 same-run arm was a null (no level formed)
+
+Unit: NEXT.md g1e-present-drain (H-threshold vs H-reform vs H-overdrain). Owner recipe (FPS60, dd4, 16:9, FULLSCREEN, lvl index 1),
+locked 60 Hz built-in only, owner idle 4487/4804 s, screen unlocked. No code change; both arms reuse the s6950 build.
+Run a34: env ARMS="60:4:a34:ROGUESQ_PRESENT_DRAIN=40,ROGUESQ_PRESENT_DRAIN_TOGGLE=20,ROGUESQ_PRESENT_DRAIN_ALT=34+ST" zsh tools/g1e_owner_hz_arms.zsh
+(even blocks 40, odd 34). alive_at_end=1, 0 crash, 0 VI stall. Stall doses fired (9 S rows, slept 17.4-204.8 ms). CONTROL FAILED: after 95 s no
+block reached the level (acq>5% 0-6.3, p50 24.8-26.4 in both limits), so it is a null on 40 vs 34. Usable parts: no-dose 34 blocks (3, 5) had
+0 drops; blk 1 (34, early run) had 12 D rows 1 s apart at med 34.0-35.2: early in the run the level re-forms each second for ~12 s, then clears.
+Run o34 (same session, to get a same-run positive control): ARMS="60:4:o34:ROGUESQ_PRESENT_DRAIN=34,ROGUESQ_PRESENT_DRAIN_TOGGLE=20+ST" (even
+blocks 34, odd off). alive_at_end=1, vi_stalls30s=0.
+
+blk on | t | lat p50/p99 | acq>5% | drops | doses
+  4 1 |  80-100 | 24.6/39.5 |  1.3 | 1 |
+  5 0 | 100-120 | 23.7/27.6 |  0.0 | 0 | 110
+  6 1 | 120-140 | 23.9/27.7 |  0.0 | 0 | 124,138
+  7 0 | 140-160 | 23.9/28.3 |  0.0 | 0 | 152
+  8 1 | 160-180 | 23.7/42.0 | 11.7 | 7 | 166,180
+  9 0 | 180-200 | 38.6/46.6 | 55.2 | 0 | 194
+ 10 1 | 200-220 | 23.0/46.3 |  8.9 | 6 | 208
+ 11 0 | 220-240 | 39.4/46.5 | 65.1 | 0 | 222
+ 12 1 | 240-246 | 23.1/33.5 |  0.3 | 1 |
+Control: off blocks 9 and 11 after 200 ms doses sit at the level (positive control passed). The 34 blocks that inherit the level (10, 12) clear
+it to p50 23.0/23.1. s6950 equivalent at 40 (blk 10/12 inheriting from off): 33.8/34.4, acq>5% 23.9/24.5, 3/1 drops.
+Drops: 34 D rows in 246 s, 19 in blocks 0-2 (before 60 s), 15 after; 17/50 ms doses did not form a level in this run's off blocks (5, 7).
+Verdict: H-threshold selected (34 clears the inherited level within the block, acq>5% < 10, p50 <= 30, few drops per block); H-reform refuted
+after the run settles but true early in the run (12 drops in 12 s); H-overdrain refuted (no-dose 34 blocks 0-1 drops, two runs).
+Caveat: 34 vs 40 is across two runs (s6950, s6951 o34), each with its own same-run off control; the same-run 40 vs 34 arm was a null.
+OWNER-OPT-INS: DRAIN line now recommends 34 first. Defaults unchanged (owner decides). Rings and outs: scratch/s6951/ (gitignored).
+Verdict line: selects H-threshold, refutes H-overdrain and H-reform (post-settle). Next: overdrain floor, same-run 34 vs ALT=28 (NEXT.md).
