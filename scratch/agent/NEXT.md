@@ -1,13 +1,14 @@
-# NEXT: G5b outer ring 7 near diagonals — offline, from existing traces (no new run needed first)
-HYPOTHESIS-ID: g5b-ring7-diagonal
-Context: s7000 showed the s6901 FWDWIN fix removes heading-driven far loss on L7 (dips 36 -> 0, ring 5/6 0/3) as on L4/L1/L5.
-One leftover from s6901: ring 7 dips ROSE armed on L4 (47 -> 107) and L1 (31 -> 79), flat on L7 (72 -> 77) and L5 (62 -> 56).
-s6901 guessed "a square window's per-axis reach is shorter at diagonals". Traces: scratch/s6901/{tg,g3e}_{f4,fw,f2,l1,l5}.txt,
-scratch/s7000/{tg,g3e}_d4.txt. Score with tools/g5b_fwdwin_seamless.py <dir> <arm> (drops the flip seam).
+# NEXT: G5f leftover — knife lines shorter than 60 px, and s6895's dd1 small transients (306 vs 157)
+HYPOTHESIS-ID: g5f-short-lines
+Context: s6906 made W_CLAMP + W_SHEET_PX=200 default on at every dd; detector tools/g5f_lines.cpp stops at runs >= 60 px, and
+clamped triangles spanning <= 200 px stay drawn. s6895's dd1 small transients (306 vs 157) were never explained.
+Owner bar (G5f): spike count at the owner recipe with no new missing geometry. Short wedges may be what the owner still sees.
 Hypotheses:
-- H-diag: armed ring-7 dips cluster at headings 45/135/225/315 +-15 (square window corner geometry); off dips do not.
-- H-edge: ring-7 dips track the window touching the map/bounds edge (win x or z at the clamp limit), any heading.
-- H-noise: ring 7 holds few quads (ref median near the 60 threshold), so dips are threshold noise; dips vanish at threshold 120.
-Discriminator, one offline script over all six arms: per ring-7 dip, heading, window w/h and position vs pre-clamp bounds
-(site 13), ring-7 ref median. If H-diag: fix is a centre offset along the diagonal (or a 64x64 rotated placement) in
-tools/apply_s6901_fwdwin.py, then one same-run =tog arm on L4 dd4 to confirm. If H-noise: close the item in CURRENT-TRUTH.
+- H-sheet: short lines are W<=0 wedges under the 200 px W_SHEET_PX cut (clamped but kept). Lowering W_SHEET_PX removes them.
+- H-real: they are real thin geometry (cloud/terrain edges, bolts), unchanged by any W lever.
+- H-other: an RDP-side path (thin triangles inside the cull bound) that W levers do not touch.
+Discriminator, ONE build, ONE run: LEVEL=4 dd4 16:9 FPS60 (owner recipe), same-run toggle of W_SHEET_PX 200 vs 40
+(add =tog in lib/rt64 rt64_gbi_rdp.cpp like W_CLAMP=tog if absent; export patches), capture with g5f_lines at min run 20 px
+plus in-memory injection control (must fire >= 85%). Bucket line events 20-39 / 40-59 / 60-99 by block. H-sheet: on-block
+(40) drops 20-59 px lines vs 200; H-real: equal; then view 6 frames each. Flip-diff MAD both directions for missing geometry.
+Commands: scratch/s6906 arm scripts (copy to scratch/s7002), tools/g5f_lines.cpp, tools/g5f_flip_diff.cpp.

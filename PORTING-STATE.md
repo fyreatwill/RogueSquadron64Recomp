@@ -184328,3 +184328,26 @@ Pixel line is WEAK: docs/owner_sheet_s7000_fwdwin_l7_same_run.png, 2 same-run of
 camera moves a lot in 1 s and canyon walls hide most far ground, so the sheet shows the scene, not the effect. No pinned-pose pair.
 H-general selected on L7 (single level beyond L4, L1 and L5 from s6902). Not shown: that these dips are the owner's drops (owner
 flight still decides), dd3 with the fix, L7 at 21:9.
+
+## Session 7001 (2026-11-08) — G5b ring-7 "diagonal" dips are the opposite: armed outer-ring dips sit on axis headings (0 of ~5300 near-diagonal swaps), where the 64-cell window's forward edge hovers on the ring-7 boundary; extra terrain, not a loss; item closed
+
+HYPOTHESIS-ID: g5b-ring7-diagonal. Offline only, no game run (traces scratch/s6901/{tg,g3e}_{f4,fw,f2,l1,l5}, scratch/s7000/*_d4). No new soak verdicts. CURRENT-TRUTH 14.7 KB, no maintenance.
+
+Question from NEXT: s6901 saw ring-7 dips rise armed (f4 47->107, l1 31->79) and guessed square-window diagonals (H-diag) vs H-edge (window on the pre-clamp bound) vs H-noise (thin ring near threshold).
+New tool tools/g5b_ring7_discrim.py (seamless parity split as g5b_fwdwin_seamless.py; per dip: distance of heading to the nearest diagonal dg, window w/h, window edge on site-13 bound, ring ref; baseline = all swaps of that parity; thresholds 60 and 120). scratch/s7001/band.py: per heading class, forward reach and ring 6/7 counts dip vs non-dip.
+
+| arm | armed dips dg<15 / 15-30 / 30-45 (of swaps) | off dips same bins | armed edge>0 dip vs all | armed ring7 p50 vs off |
+|---|---|---|---|---|
+| f4 L4 dd4 16:9 | 0/1070, 29/1273, 204/1407 | 10/1270, 20/1542, 59/1624 | 0.42 vs 0.83 | 512 vs 0 |
+| fw L4 dd4 21:9 | 1/949, 73/951, 110/1145 | 9, 29, 30 | 0.33 vs 0.65 | 296 vs 0 |
+| l1 L1 dd4 | 0/1014, 29/830, 249/1261 | 11, 7, 43 | 0.29 vs 0.83 | 512 vs 0 |
+| l5 L5 dd4 | 1/634, 3/1222, 120/1681 | 5, 21, 80 | 0.46 vs 0.69 | 512 vs 0 |
+| d4 L7 dd4 | 3/1610, 5/1804, 63/1689 | 10, 18, 43 | 0.17 vs 0.70 | 445 vs 0 |
+| f2 L4 dd2 | 2 dips total (ring 7 barely reached, ref>=60 on 1% of swaps) | 2 | - | 0 vs 0 |
+
+Positive control: the off arm's dips fire in the dg<15 bin on every dd4 arm (9-11), so the detector is not blind at diagonals; the armed zero there is a measurement.
+H-diag REFUTED (inverted): armed dips sit on axis headings, none on diagonals. H-edge refuted: dips touch the pre-clamp bound LESS often than the average swap (0.17-0.46 vs 0.65-0.83). H-noise partly: threshold 120 keeps most dips (211 of 233 f4), so it is not count noise, it is geometry.
+Mechanism (band.py): ring = Chebyshev distance / 8 cells, ring 7 = 56-63 cells. Along an axis the FWDWIN window (64 wide, centre eye+26) ends at ~58 cells, so the forward edge sits on the ring-7 boundary: axis non-dip swaps have reach p50 52-61 and ring7 p50 0-285, dip swaps reach 51-55 and ring7 0, ring 6 still 353-662. Near a diagonal the corner reaches 63 and ring 7 is full (512). So a dip is the edge stepping one cell row across 56 as the eye crosses cell boundaries: the normal stepping of a window edge, at a radius the off arm (ring7 p50 0) and dd1 (reach 28-34) never draw at all. Total-quad dips < 0.8 stay 0 armed in every arm.
+ORIGIN: no defect; the armed rise counts flicker of extra terrain the old clamp did not draw. Not a mitigation, nothing landed in the game.
+Rules out: diagonal corner geometry and map-edge clamping as the cause of the s6901 ring-7 rise. Does NOT show how this band looks on screen; it is beyond the dd1 radius and inside the dd fog range (G5e), so the owner's dd4 flight judges it like the rest of G5b.
+Next: G5f leftover, knife lines under 60 px / s6895 dd1 small transients (NEXT.md).

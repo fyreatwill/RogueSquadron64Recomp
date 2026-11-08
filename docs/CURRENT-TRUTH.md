@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7000 (2026-11-08).
+Compact operational handoff, as of Session 7001 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -18,6 +18,8 @@ sheet docs/owner_sheet_s6997_g5i_fullscreen.png. s6999: holds at 21:9 dd2 and af
 incl. 6.9 s scrolls; RELMODE=time control 22.8/31.1 at 21:9); sheet docs/owner_sheet_s6999_g5i_219.png. Nothing left to run.
 **s7000 G5b:** FWDWIN far-loss fix also holds on L7 at dd4 (armed dips 36 -> 0, ring 5/6 dips 61/77 -> 0/3, near unchanged,
 site-15 control 5868/5976 odd vs 100/5998 even); L10 has no terrain in flight. Next steps 3.
+**s7001 G5b ring 7 closed:** the armed outer-ring dips sit on AXIS headings (0 near diagonals, 5 arms), the 64-cell window edge
+stepping across the ring-7 boundary (56 cells); extra terrain the old clamp never drew, not a loss (tools/g5b_ring7_discrim.py).
 
 Open or awaiting the owner (each one line; detail in the s6994 archive under the session):
 - **s6992 FIXED, default on: L15 21:9 dd4 crash.** ORIGIN ours: the game's pointer test
@@ -71,6 +73,7 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 maintenance)" and "
 
 ## Superseded conclusions — do not act on these
 Recent only; older entries: PROJECT-OVERVIEW "(s6994 maintenance)", "(s6900 maintenance)", "(s6870)", "(s6759 maintenance)".
+- s6901 "ring 7 empties near diagonals" (s7001): dips are on axis headings, edge stepping at 56 cells; the guess was never measured.
 - s6993 "H-level-cost: dense levels 7/16/17 run 56-58.5 fps" (s6996): whole-window shown/s counted menu/restart screens; in flight they hold 59.7-60.
 - s6990 "60.0 fps on all 19 levels at 16:9" and s6962 "LEVEL=4 58.5, LEVEL=10 60.0" (s6991):
   FORCE_UNLOCK=1 clamps the cursor to level 1, every arm flew level 1. Check `cur` / cursorMask.
@@ -140,7 +143,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: G5b ring-7 offline check (NEXT.md).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: G5f lines under 60 px (NEXT.md).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
@@ -149,7 +152,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    heap block or above the heap (0 stale / foreign / header hits, dd4 16:9 and dd1 4:3, ROGUESQ_G5A_WBLIVE=1).
 3. **G5b terrain drops: awaiting owner flight.** s6901 far-loss fix (FWDWIN) holds on L4, L1, L5 (s6902) and L7 (s7000, dd4: dips 36 -> 0,
    ring 5/6 dips 61/77 -> 0/3, worst heading p10 1474 -> 3131; score with tools/g5b_fwdwin_seamless.py, which drops the flip seam).
-   LEVEL=10 has no terrain grid in flight (cloud level): never use it for terrain measures. Open: outer ring 7 empties near diagonals (L4).
+   LEVEL=10 has no terrain grid in flight (cloud level): never use it for terrain measures. Ring-7 dips closed s7001 (axis-heading edge stepping, not diagonals, not a loss).
 4. **G5c freezes: fixed s6902, soak clean; closes on owner flight.**
 5. **G5d Factor 5 logo: fixed s6903; owner boot at dd2/dd4.**
 6. **G5e fog: done s6904; owner look.**
