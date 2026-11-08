@@ -183965,3 +183965,5 @@ order rules out drift). Residual lates (both QoS arms): gpu_ms only 0.68 but Q->
 after the present command buffer commits: drawable->present() runs in the buffer's addScheduledHandler on a Metal dispatch
 thread (another default-QoS CPU hop), or the compositor latch. OWNER-OPT-INS row added; default unchanged (owner's call).
 CURRENT-TRUTH: closed s6969-s6973 lock-target bullets condensed to one line (60.1 -> 57.3 KB).
+Verdict: this selects H-cpu-wait and refutes H-gpuclk (H-gpuq minor, ~0.3 ms). Next discriminator: scheduled-handler entry
+time vs presentBuffer commit on residual lates, with an encoded presentDrawable arm (H-hop vs H-latch, NEXT.md).
