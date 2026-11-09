@@ -214,7 +214,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); s7026 DPC submit = RT64 per-byte + ~21 ns/bump bridge, wait flat; active unit: NEXT.md (bump fast path).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); s7026 DPC submit = RT64 per-byte + ~21 ns/bump bridge, wait flat; s7027 per-bump checks only ~3.6 of ~24 ns (H-checks refuted); active unit: NEXT.md (push/atomics split).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
@@ -268,6 +268,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    s7025: create-hook double index update fixed. s7026 (two runs, spin control passes): post-fix dd6 cap 10240 = 53-54 fps vs 59 at 8192, +1.3 ms/task;
    DPC share = RT64 handoff per byte (~3 ns/B flat; only 7-8 handoffs/task, nothing to batch) + bridge ~21 ns per DPC_END bump (85k bumps/task = ~1.9 ms
    fixed, all caps); lock wait flat ~1.4 ms/task (RT64 fbwait, single-source name), not per-cell. Next: bump fast path in rsp_dpc_submit_impl (NEXT.md).
+   s7027: bump fast path (ROGUESQ_G1E_BUMPFAST, opt-in, exact: 408M checked, bad 0, ctl 4) skips all per-bump checks on 54% of bumps but cuts
+   bridge self only 8% (24.4 -> 22.4 ns/bump): H-checks refuted; the cost is the push/counters/atomics (or AQ=3 timing offset). Next: split those (NEXT.md).
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).

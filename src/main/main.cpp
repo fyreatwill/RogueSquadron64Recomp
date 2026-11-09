@@ -6537,6 +6537,7 @@ extern "C" uint32_t g_rs64_aq_spin_ns;
 struct Rs64TrAcc { uint64_t n = 0, uc = 0, sub = 0, com = 0, calls = 0, bytes = 0, ranges = 0;
     uint64_t rt_n = 0, rt_ns = 0, rt_by = 0, rec_n = 0, rec_ns = 0, smp_n = 0, smp_w = 0, smp_c = 0; int cap0 = -1, capx = 0; };
 // s7026 G1c: per-task RT64 handoff / record_submit totals (dpc_bridge.cpp, ROGUESQ_S7026_SUB=1) and the s7012 cap at task start/end.
+extern "C" uint64_t g_rs64_bf_tasks_on, g_rs64_bf_tasks_off, g_rs64_bf_fast, g_rs64_bf_slow;  // s7027
 extern "C" int g_rs64_s7026, g_rs64_s7026_spin_win; extern "C" int rs64_s7012_cap(void);
 extern "C" uint64_t g_rs64_s7026_rt_n, g_rs64_s7026_rt_ns, g_rs64_s7026_rt_by, g_rs64_s7026_rec_n, g_rs64_s7026_rec_ns,
                     g_rs64_s7026_smp_n, g_rs64_s7026_smp_w, g_rs64_s7026_smp_c;
@@ -6549,7 +6550,7 @@ extern "C" int rs64_g1e_tring_on = [] {
     g_rs64_tr_f = std::fopen(e, "w");
     if (!g_rs64_tr_f) return 0;
     std::setvbuf(g_rs64_tr_f, nullptr, _IOFBF, 1 << 16);
-    std::fprintf(g_rs64_tr_f, "# t_ms sd_wall sd_cpu ucode_ms submit_ms commit_ms calls rdp_bytes n_ucode phase spin batch ranges cdiag lbfast pcache hgather | s7026: cap0 cap_end capmix rt_n rt_us rt_bytes rec_n rec_us smp_n smp_wall_us smp_cpu_us spin_win\n");
+    std::fprintf(g_rs64_tr_f, "# t_ms sd_wall sd_cpu ucode_ms submit_ms commit_ms calls rdp_bytes n_ucode phase spin batch ranges cdiag lbfast pcache hgather | s7026: cap0 cap_end capmix rt_n rt_us rt_bytes rec_n rec_us smp_n smp_wall_us smp_cpu_us spin_win bf_on bf_off bf_fast bf_slow\n");
     return 1;
 }();
 extern "C" uint32_t rs64_phase_ord();
@@ -6561,9 +6562,14 @@ extern "C" void rs64_g1e_tring_push(double t_ms, double w, double c) {
                  g_rs64_g1e_batch, (unsigned long long)a.ranges, g_rs64_g1e_cdiag, g_rs64_g1e_lbfast, g_rs64_g1e_pcache, g_rs64_g1e_hgather);
     if (!g_rs64_s7026) std::fputc('\n', g_rs64_tr_f);
     else {  // s7026: extend the row
-        std::fprintf(g_rs64_tr_f, " %d %d %d %llu %.3f %llu %llu %.3f %llu %.3f %.3f %d\n", a.cap0, rs64_s7012_cap(), a.capx,
+        std::fprintf(g_rs64_tr_f, " %d %d %d %llu %.3f %llu %llu %.3f %llu %.3f %.3f %d", a.cap0, rs64_s7012_cap(), a.capx,
                      (unsigned long long)a.rt_n, a.rt_ns / 1e3, (unsigned long long)a.rt_by, (unsigned long long)a.rec_n, a.rec_ns / 1e3,
-                     (unsigned long long)a.smp_n, a.smp_w / 1e3, a.smp_c / 1e3, g_rs64_s7026_spin_win); }
+                     (unsigned long long)a.smp_n, a.smp_w / 1e3, a.smp_c / 1e3, g_rs64_s7026_spin_win);
+        // s7027: bump fast-path deltas per row (tasks on / off, fast bumps, slow bumps)
+        static uint64_t p[4] = {}; const uint64_t q[4] = {g_rs64_bf_tasks_on, g_rs64_bf_tasks_off, g_rs64_bf_fast, g_rs64_bf_slow};
+        std::fprintf(g_rs64_tr_f, " %llu %llu %llu %llu\n", (unsigned long long)(q[0] - p[0]), (unsigned long long)(q[1] - p[1]),
+                     (unsigned long long)(q[2] - p[2]), (unsigned long long)(q[3] - p[3]));
+        for (int i = 0; i < 4; ++i) p[i] = q[i]; }
     static double last_flush = 0; if (t_ms - last_flush > 1000.0) { std::fflush(g_rs64_tr_f); last_flush = t_ms; }
 }
 

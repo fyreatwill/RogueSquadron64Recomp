@@ -185011,3 +185011,31 @@ Rules out: batching RT64 handoffs (already ~7/task), a lock/queue wait growing w
 Verdict: selects H-perbyte for the RT64 handoff (~3 ns/B flat, two runs) and a per-bump bridge cost (~21 ns/bump, H-percall in its per-bump form, not
 per RT64 call); refutes H-sync as the per-cell term (wait flat 23-26%, named fixed ~1.4 ms fbwait). Next (NEXT.md): a bump fast path in
 rsp_dpc_submit_impl (the deferred push sits at line ~7709 behind ~1400 lines and 27 env statics of per-bump checks), same-run tog arm.
+
+## Session 7027 (2026-11-09) — G1c bump fast path: skipping every per-bump check on 54% of DPC_END bumps cuts bridge self only 8% (24.4 -> 22.4 ns/bump); the checks are ~3.6 of ~24 ns, so H-push/H-cache is selected, not H-checks; exact (408M checked, bad 0, ctl 4)
+
+HYPOTHESIS-ID: g1c-bump-fastpath. Owner items 1-14 in CURRENT-TRUTH: nothing runnable (all await the owner's look/flight).
+
+Change (src/rsp/dpc_bridge.cpp, main.cpp ring): `ROGUESQ_G1E_BUMPFAST=1|tog` (default off; tog = odd xor8 seconds, latched per task in
+rs64_dpc_defer_begin, [s7010-clk] anchor). After the per-bump byte/cmd counters, a deferred bump whose first op touches none of the
+state blocks (shadow ops 0x22/23/2F/35/38/39/3A/3B, 0x29 fullsync, 0x3C combiner, 0x3D-0x3F image, 0x24/25 texrect, 0x27 when
+KEEP_PIPE=0, 16-byte bumps under the cine combiner) with no diagnostic env set (LOG_ALL/DPC/RDP_FULLSYNC/FS_SLOT/E9_PROVENANCE/SEQ,
+FS_PIPE_INJECT, SUPPRESS_OOB_CIMG, PRIM_ALPHA_FF, PRIM_FF) and after the first 40000 bumps (early-dump indices) does its op counts and
+jumps to the defer push. `ROGUESQ_G1E_BUMPFAST_CHECK=1` sends eligible bumps down the slow path under a guard that snapshots 23 tracked
+globals + the 8 command bytes and counts any change or an early return (bad); the first 4 0x29 bumps are classed eligible on purpose
+(positive control ctl). [s7027-bf] line every 10 s; ring row gains bf_on bf_off bf_fast bf_slow. Analysis tools/s7027_bumpfast_split.py.
+
+Runs (scratch/s7027/run.zsh, L1 dd6 21:9 WIDEWIN=1 cap 10240, FPS60, CULL=1, AQ=3 + S7026_SUB, one game at a time):
+- A, BUMPFAST=tog + S7026_SPIN_NS=300000 (odd 10 s windows), 325 s hold, 0 crash, 0 VI stall. 12017 flight rows, 0 mixed.
+  Timing control passes: rt/handoff 758.6 -> 1048.2 us (off) and 765.1 -> 1050.9 us (on) in spin windows (+~290 vs 300 spin).
+  Arm control passes: fast/bump 0.000 off, 0.541 on.
+  spin-off rows: bumps/task 86.9k / 87.8k; bridge self 2.119 -> 1.970 ms/task, 24.38 -> 22.43 ns/bump (-8.0%); sd_wall 13.83 -> 13.82;
+  fps 50.9 -> 52.0 (single run). Per fast bump the saving is (24.38-22.43)/0.541 = 3.6 ns, so ~85% of a bump's cost remains on the
+  fast path: the push (range extend + 8-byte shadow insert), the ~7 atomic RMWs before it (s_fwd_bytes/s_fwd_submits seq_cst,
+  g_task_rdp_bytes, rs64_g1e_rdp_bytes, g_task_rdp_cmds, g_cumulative_op_count), call overhead, and any AQ=3 timing offset.
+  Slow-path bumps (on arm) are mostly the shadow ops: 0x2F 31%, 0x35 30%, 0x3D 20%, 0x3C 10% of slow.
+- C, BUMPFAST=1 CHECK=1, 151 s hold, 0 crash: chk=408.5M eligible bumps, bad=0, ctl=4 (all 4 planted 0x29 bumps caught). Exact.
+Verdict: H-checks REFUTED (cut 8% < 20%); H-push/H-cache selected, split between them still open. Not worth a default flip on its own
+(~0.15 ms/task); stays opt-in. Caveat: AQ=3 times 1/16 calls x16, so a fixed per-timed-call clock cost is scaled into ns/bump; the spin
+control validates increments, not that offset. Next (NEXT.md): one build splitting the remaining ~22 ns: null-timed baseline, counter
+atomics folded into per-task plain accumulators, and push without the shadow insert (CHECK-style exactness), same-run 3-way tog.

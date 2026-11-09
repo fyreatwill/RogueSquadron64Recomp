@@ -6305,7 +6305,59 @@ static void submit_deferred_merged(uint32_t &bytes, size_t &calls) {
     }
 }
 
+// s7027 bump fast path state (see rsp_dpc_submit_impl).
+extern "C" { int g_rs64_bf_task_on = 0; uint64_t g_rs64_bf_fast = 0, g_rs64_bf_slow = 0, g_rs64_bf_tasks_on = 0, g_rs64_bf_tasks_off = 0;
+             uint64_t g_rs64_bf_chk_n = 0, g_rs64_bf_chk_bad = 0, g_rs64_bf_chk_ctl = 0; }
+static uint32_t g_bf_seen = 0, g_bf_ctl_armed = 0; static uint64_t g_bf_slow_op[64] = {};
+static const int g_bf_mode = [] { const char *e = std::getenv("ROGUESQ_G1E_BUMPFAST"); return !e ? 0 : (*e == 't' ? 2 : (*e != '0')); }();
+static const bool g_bf_check = [] { const char *e = std::getenv("ROGUESQ_G1E_BUMPFAST_CHECK"); return e && *e && *e != '0'; }();
+static bool rs64_bf_env(const char *n) { const char *e = std::getenv(n); return e && *e && *e != '0'; }
+// Every env that arms a per-bump diagnostic or rdram-mutating block between the counters and the defer push.
+static const bool g_bf_diag = [] {
+    static const char *const k[] = {"ROGUESQ_LOG_ALL", "ROGUESQ_LOG_DPC", "ROGUESQ_LOG_RDP_FULLSYNC", "ROGUESQ_LOG_FS_SLOT",
+        "ROGUESQ_LOG_E9_PROVENANCE", "ROGUESQ_LOG_SEQ", "ROGUESQ_FS_PIPE_INJECT", "ROGUESQ_SUPPRESS_OOB_CIMG", "ROGUESQ_PRIM_ALPHA_FF",
+        "ROGUESQ_PRIM_FF"};
+    for (const char *n : k) if (rs64_bf_env(n)) return true;
+    return false; }();
+static const bool g_bf_keep_pipe = [] { const char *e = std::getenv("ROGUESQ_DPC_KEEP_PIPE"); return !(e && *e == '0'); }();
+static inline bool rs64_bf_op_ok(uint8_t op, uint32_t sz) {
+    if (op == 0x3F || op == 0x29) return false;                       // CIMG checks / FULL_SYNC state (any size)
+    if (sz == 16 && g_in_cine_combiner) return false;                 // 16-byte texrect log
+    if (sz != 8) return true;
+    switch (op) {
+    case 0x22: case 0x23: case 0x24: case 0x25: case 0x2F: case 0x35: case 0x38: case 0x39: case 0x3A: case 0x3B:
+    case 0x3C: case 0x3D: case 0x3E: return false;                    // shadows, combiner, texrect, image tracking
+    case 0x27: return g_bf_keep_pipe;                                 // KEEP_PIPE=0 drops PIPE_SYNC
+    default: return true;
+    }
+}
+struct Rs64BfGuard {
+    bool on = false, ctl = false, hit = false; uint32_t lo = 0; uint8_t *rd = nullptr; uint32_t v[24] = {}; uint8_t b[8] = {};
+    void snap(uint32_t *o) const {
+        int i = 0;
+        o[i++] = g_last_othermode_l; o[i++] = g_last_othermode_h; o[i++] = g_last_settimg_w0; o[i++] = g_last_settimg_w1;
+        o[i++] = g_last_setcimg_w0; o[i++] = g_last_setcimg_w1; o[i++] = g_last_settile_w0; o[i++] = g_last_settile_w1;
+        o[i++] = g_last_fogcolor; o[i++] = g_last_primcolor; o[i++] = g_last_envcolor; o[i++] = g_last_blendcolor;
+        o[i++] = g_in_pak_combiner; o[i++] = g_in_cine_combiner; o[i++] = g_task_rdp_fullsyncs.load(std::memory_order_relaxed);
+        o[i++] = g_cumulative_fullsyncs.load(std::memory_order_relaxed); o[i++] = g_last_fullsync_addr.load(std::memory_order_relaxed);
+        o[i++] = g_rsp_full_sync_seen.load(std::memory_order_relaxed); o[i++] = g_task_combine_total;
+        o[i++] = g_cine_last_settimg_addr; o[i++] = g_cine_last_cimg_addr; o[i++] = (uint32_t)g_deferred_ranges.size();
+        o[i++] = (uint32_t)g_s4272_shadow.size(); o[i++] = 0;
+    }
+    void arm(uint8_t *r, uint32_t l, bool c) { on = true; ctl = c; hit = false; rd = r; lo = l; snap(v); for (int i = 0; i < 8; ++i) b[i] = r[(l + i) ^ 3]; }
+    void reached() {
+        if (!on) return;
+        on = false; uint32_t now[24]; snap(now); bool same = true;
+        for (int i = 0; i < 24; ++i) if (now[i] != v[i]) same = false;
+        for (int i = 0; i < 8; ++i) if (rd[(lo + i) ^ 3] != b[i]) same = false;
+        if (ctl) { if (!same) ++g_rs64_bf_chk_ctl; } else { ++g_rs64_bf_chk_n; if (!same) ++g_rs64_bf_chk_bad; }
+    }
+    void returned_early() { if (!on) return; on = false; if (ctl) ++g_rs64_bf_chk_ctl; else { ++g_rs64_bf_chk_n; ++g_rs64_bf_chk_bad; } }
+};
+static Rs64BfGuard g_bf_guard;
+struct Rs64BfScope { ~Rs64BfScope() { g_bf_guard.returned_early(); } };
 static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
+    Rs64BfScope bf_scope_;
     if (end <= start) {
         return;
     }
@@ -6610,6 +6662,29 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
     g_task_rdp_bytes.fetch_add(submit_hi - submit_lo, std::memory_order_relaxed);
     rs64_g1e_rdp_bytes.fetch_add(submit_hi - submit_lo, std::memory_order_relaxed); // s6982 G1e R-row rb= (ultramodern events.cpp)
     g_task_rdp_cmds.fetch_add(1, std::memory_order_relaxed);
+    // s7027 G1c (g1c-bump-fastpath): ROGUESQ_G1E_BUMPFAST=1|tog (tog = odd xor8 seconds, latched per task in rs64_dpc_defer_begin).
+    // A deferred bump whose first op touches none of the state-tracking blocks below (shadows, 0x29 fullsync, 0x3C combiner,
+    // 0x3D-0x3F image, 0x24/0x25 texrect, 0x27 drop when KEEP_PIPE=0) with every diagnostic env off goes straight to the defer push.
+    // ROGUESQ_G1E_BUMPFAST_CHECK=1: eligible bumps take the slow path instead and a guard verifies it changed no tracked state and
+    // reached the push (bad must be 0); the first 4 0x29 bumps are deliberately classed eligible (positive control: ctl must be 4).
+    ++g_bf_seen;
+    if (g_defer_active && g_rs64_bf_task_on && g_bf_seen > 40000u) {
+        const uint32_t sz = submit_hi - submit_lo;
+        const uint8_t fb0 = (uint8_t)MEM_B(0, (int64_t)(int32_t)(submit_lo + 0x80000000));
+        const uint8_t fop = fb0 & 0x3F;
+        bool elig = rs64_bf_op_ok(fop, sz);
+        bool ctl = false;
+        if (g_bf_check && !elig && fop == 0x29 && sz == 8 && g_bf_ctl_armed < 4) { elig = true; ctl = true; ++g_bf_ctl_armed; }
+        if (elig) {
+            g_task_op_count[fop]++;
+            g_cumulative_op_count[fop].fetch_add(1, std::memory_order_relaxed);
+            if (!g_bf_check) { ++g_rs64_bf_fast; goto rs64_bf_push; }
+            // check mode: undo the counts (the slow path below repeats them) and arm the guard
+            g_task_op_count[fop]--;
+            g_cumulative_op_count[fop].fetch_sub(1, std::memory_order_relaxed);
+            g_bf_guard.arm(rdram, submit_lo, ctl);
+        } else { ++g_rs64_bf_slow; ++g_bf_slow_op[fop]; }
+    }
     {
         int64_t mips_first = (int64_t)(int32_t)(submit_lo + 0x80000000);
         uint8_t b0_first = (uint8_t)MEM_B(0, mips_first);
@@ -7702,6 +7777,8 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
         }
     }
 
+rs64_bf_push:
+    g_bf_guard.reached();
     // Defer layer: while a task is running, hold ranges instead of feeding
     // RT64 live. The runner commits them on clean ucode exit and drops them
     // on UnhandledJumpTarget, so garbage streams (trig data executed as DL)
@@ -7767,6 +7844,21 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
 
 extern "C" void rs64_dpc_defer_begin() {
     g_defer_active = true;
+    if (g_bf_mode && !g_bf_diag) {   // s7027: latch the bump fast-path arm per task; [s7027-bf] summary every 10 s
+        const uint64_t mt = mach_absolute_time(); static bool anc = false; static uint64_t last = 0;
+        if (g_bf_mode == 2 && !anc) { anc = true; rs64_tog_anchor(mt); }
+        g_rs64_bf_task_on = g_bf_mode == 1 ? 1 : rs64_tog_odd(mt);
+        (g_rs64_bf_task_on ? g_rs64_bf_tasks_on : g_rs64_bf_tasks_off)++;
+        if (mt - last > 240000000ull) { last = mt;
+            int top[6] = {0}; for (int k = 0; k < 6; ++k) { int bi = -1; for (int o = 0; o < 64; ++o) { bool used = false; for (int j = 0; j < k; ++j) used |= top[j] == o;
+                if (!used && (bi < 0 || g_bf_slow_op[o] > g_bf_slow_op[bi])) bi = o; } top[k] = bi; }
+            fprintf(stderr, "[s7027-bf] mode=%d check=%d tasksOn=%llu tasksOff=%llu fast=%llu slowElig=%llu chk=%llu bad=%llu ctl=%llu slowTop=",
+                    g_bf_mode, (int)g_bf_check, (unsigned long long)g_rs64_bf_tasks_on, (unsigned long long)g_rs64_bf_tasks_off,
+                    (unsigned long long)g_rs64_bf_fast, (unsigned long long)g_rs64_bf_slow, (unsigned long long)g_rs64_bf_chk_n,
+                    (unsigned long long)g_rs64_bf_chk_bad, (unsigned long long)g_rs64_bf_chk_ctl);
+            for (int k = 0; k < 6; ++k) fprintf(stderr, "%02X:%llu,", top[k], (unsigned long long)g_bf_slow_op[top[k]]);
+            fputc('\n', stderr); }
+    } else g_rs64_bf_task_on = 0;
     {   // s6955: ROGUESQ_G1E_BATCH arm, latched per task
         static const int s_batch_env = [] { const char *e = std::getenv("ROGUESQ_G1E_BATCH"); return !e ? 1 : (*e == 't' ? 2 : (*e != '0')); }();
         static const bool s_bc = [] { const char *e = std::getenv("ROGUESQ_G1E_BATCH_CHECK"); return e && *e && *e != '0'; }();
