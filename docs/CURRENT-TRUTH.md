@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7014 (2026-11-08).
+Compact operational handoff, as of Session 7015 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,9 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7015 WIDEWIN owner-path cost on other levels/aspect (same-run tog, FAST=1 PROBES=0, dd4 MELT CULL=1, 0 crashes, 0 VI stalls, 320 s holds):**
+L15 21:9 fps 60.0/60.0 (rsp +1.95), L4 16:9 59.7/59.6 (rsp +2.34), L1 21:9 60.0/58.1, P(>=2VI) 0.00/0.03 (rsp 9.27->13.48, +4.21: the densest arm);
+0.5 s-shifted controls collapse (|rsp| <= 0.5). WIDEWIN is offered in OWNER-OPT-INS; default stays the owner's call. Next: trim the gfx-thread host glue (NEXT.md).
 **s7014 WIDEWIN costs no fps on the owner's path; s7010-s7013's VI cliff was the harness.** m6_god_common.sh sets ROGUESQ_LOG_PHASE,
 which turns G1E_FAST off and G1E_PROBES on (main ucode TU, slow DMA). Same-run tog3 caps 4096/6144/8192 with FAST=1 PROBES=0
 (21:9 dd4 L4, MELT, CULL=1): fps 58.9/59.9/60.0, P(>=2VI) 0.00, rsp 8.8/10.4/11.1 ms (vs 13.6/15.6/16.9, 57/37.5/35 fps probes-on);
@@ -166,7 +169,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: owner-path fps of WIDEWIN at 16:9 and on L1/L15 so it can be offered to the owner as free (NEXT.md; s7014: WIDEWIN costs no fps at 21:9 dd4 L4 on the owner path).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: cut gfx-thread host glue (rs64_dpc_record_submit stream scans, s7014 7%) measured on L1 21:9 dd4 WIDEWIN, the one arm that misses VIs (NEXT.md).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
@@ -210,7 +213,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    1000 cells). H-room refuted: WIDEWIN is an owner trade (wider 21:9 sides for ~35-45 fps) and stays opt-in. Both at once needs a cheaper gfx RSP task
    (13 ms at the retail window is the binding term). Next: profile the gfx RSP thread at 21:9 dd4 to name the hot ucode path (NEXT.md).
    **s7014 SUPERSEDES the s7009-s7013 cost lines above** (harness probe path): owner path 59-60 fps at caps 4096-8192, rsp 8.8-11.9 ms,
-   two runs. WIDEWIN is free at 21:9 dd4 L4; still opt-in until the owner says. Next: same check at 16:9 and L1/L15, then offer it.
+   two runs. WIDEWIN is free at 21:9 dd4 L4; still opt-in until the owner says. s7015: L15 21:9 and L4 16:9 free, L1 21:9 58.1 fps (P 0.03);
+   offered in OWNER-OPT-INS, owner look. Headroom lever next: rs64_dpc_record_submit's ~12 full-stream scans (7% of the gfx thread, s7014).
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).

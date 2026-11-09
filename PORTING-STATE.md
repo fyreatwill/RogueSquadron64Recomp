@@ -184685,3 +184685,21 @@ rc=0, crash=0, hold 303 s, flight_s 309, 0 VI stalls (WIDEWIN holds L1/L4/L15 no
 - Change: scratch/agent/m6_god_common.sh OWNER_TIMING=1 appends ROGUESQ_G1E_FAST=1 ROGUESQ_G1E_PROBES=0 (default off, existing recipes unchanged);
   scratch/s7014/arm.zsh sets it by default. OWNER-OPT-INS WIDEWIN cost line corrected. Caveat: every harness timing number since s6713 without
   FAST=1 PROBES=0 is suspect (s7009 captured-fps 59.6->50.7 included).
+
+## Session 7015 (2026-11-08) — G5e WIDEWIN owner-path cost on L1/L15 and at 16:9: free on L15 21:9 (60.0/60.0 fps) and L4 16:9 (59.7/59.6), small on L1 21:9 (60.0 -> 58.1, P(>=2VI) 0.00 -> 0.03, rsp +4.21 ms); 0 crashes; offered to the owner
+HYPOTHESIS-ID: dd-wide-window. G5i fixed s6995-s6999 (owner look, nothing to run). CURRENT-TRUTH 23.6 KB, no maintenance. No new soak verdicts.
+- Unit (NEXT s7014): same-run WIDEWIN=tog on the owner path (OWNER_TIMING=1 -> run.log `[g1e-fast] on=1`, `[g1e-probes] on=0` in all 3 arms), dd4,
+  MELT, CULL=1, FPS60, 320 s holds, no capture. scratch/s7015/arm.zsh (s7014 copy, watchdog DL+DU+260 so summaries are written) + all.zsh.
+  Hypotheses: H-free-everywhere / H-level (denser L1 or L15 crosses the VI) / H-aspect (16:9 differs).
+- Results (tools/g5e_cost_by_parity.py <tl> <anchor> --skip-s 130; anchor = [s7010-clk] line from run.log):
+  L1 21:9: off/on fps 60.0/58.1, rsp 9.27/13.48 (p90 10.69/15.85), run 1.97/3.03, P(>=2VI) 0.00/0.03; shifted control rsp -0.31.
+  L15 21:9: fps 60.0/60.0, rsp 7.86/9.81 (+1.95), P 0.00/0.00; shifted -0.11.
+  L4 16:9: fps 59.7/59.6, rsp 8.26/10.60 (+2.34), P 0.00/0.00; shifted -0.50.
+  Summaries: all alive_at_end=1, vi_stalls30s=0, crashlines=0, flight_s 322-326. Positive control: rsp on > off in every arm (+1.95..+4.21) and
+  collapses under the 0.5 s shift.
+- Verdict: H-aspect refuted (16:9 as free as 21:9 L4); H-level partly selected: L1 at 21:9 is the densest arm (rsp 13.5 ms on) and drops ~3% of
+  frames to 2 VIs; L15 is free. Together with s7014 (L4 21:9 two runs) WIDEWIN costs little or nothing on the owner path; OWNER-OPT-INS cost line
+  updated with per-level numbers. Default stays opt-in (owner's call).
+- Harness fix: arm.zsh's anchor line aborted under zsh nomatch when no fail_att*.log exists (anchors extracted by hand this run); now uses (N).
+Next: headroom for the dense case — gate/fuse rs64_dpc_record_submit's ~12 full-stream scans (s7014: 7% of the gfx thread) behind their log flags,
+measured same-run on L1 21:9 dd4 WIDEWIN=1 (NEXT.md).
