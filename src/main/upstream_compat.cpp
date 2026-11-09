@@ -154,6 +154,19 @@ extern "C" int rs64_s7009_arm(void) {
         if (on != last) { last = on; } return on; }
     return m;
 }
+// s7011 G5e lodmul (tools/apply_s7011_lodmul.py): LOD tier thresholds 0x8009DE94..A0 x ROGUESQ_DD_LODMUL in flight at dd>1;
+// ROGUESQ_DD_LODMUL_TOG=1 = odd mach seconds only (same parity + [s7010-clk] anchor as WIDEWIN=tog).
+extern "C" int rs64_s7011_en(void) { static int en = -1; if (en < 0) { const char* e = getenv("ROGUESQ_DD_LODMUL"); en = (e && *e && atof(e) > 0.0) ? 1 : 0; } return en; }
+extern "C" float rs64_s7011_lodmul(void) {
+    static float m = -1.0f; static int tg = -1;
+    if (m < 0.0f) { const char* e = getenv("ROGUESQ_DD_LODMUL"); m = (e && *e) ? (float)atof(e) : 1.0f; if (m <= 0.0f) m = 1.0f;
+        const char* g = getenv("ROGUESQ_DD_LODMUL_TOG"); tg = (g && *g && *g != '0') ? 1 : 0; fprintf(stderr, "[s7011] lodmul=%g tog=%d\n", m, tg); }
+    if (!tg) return m;
+    const uint64_t mt = mach_absolute_time(); static int anc = 0;
+    if (!anc) { anc = 1; const long long su = (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        fprintf(stderr, "[s7010-clk] steady_us=%lld mach=%llu\n", su, (unsigned long long)mt); }
+    return ((mt / 24000000u) & 1u) ? m : 1.0f;
+}
 extern "C" int rs64_s7009_n(void) {
     static int n = -1; if (n < 0) { const char* e = getenv("ROGUESQ_DD_WIDEWIN_N"); n = (e && *e) ? atoi(e) : 128; if (n < 64) n = 64; if (n > 128) n = 128; }
     return n;

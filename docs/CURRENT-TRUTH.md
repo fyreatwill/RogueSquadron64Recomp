@@ -157,7 +157,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: cut the WIDEWIN RSP cost by culling out-of-frustum cells before submit (NEXT.md, s7010 named the cost: RSP).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: WIDEWIN cost/edge trade by pool area cap, 3-phase same-run (NEXT.md; s7011 refuted the frustum cull and the LOD tiers as cost levers).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
@@ -182,7 +182,15 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    exhausted (site 18 = 0); 0 crashes. COST: captured fps 59.6->50.7 (N128) and 61.9->49.4 (N96, window 96x85): cost follows cell count (area 8192 vs 4096),
    not shape. Owner sheet docs/owner_sheet_s7009_widewin_219.png. Holds L1/L15 300 s clean (crash=0, wide on), L4 still queued. **s7010 cost = H-rsp** (G1E_TL same-run tog split, tools/g5e_cost_by_parity.py,
    0.5 s-shifted control collapses to T -0.16): per frame guest run 1.83->2.56 ms (+0.74), gfx task start->RSP exit 13.26->16.90 (+3.64, p90
-   16.3->23.2), so P(frame >= 2 VI) 0.07->0.61 and fps 56->37; single run. Next: cull cells outside the side frustum wedge before submit (NEXT.md).
+   16.3->23.2), so P(frame >= 2 VI) 0.07->0.61 and fps 56->37; single run.
+   **s7011: two cost levers refuted.** (i) Frustum cull: code-read, the stream (0x80042D50..DA8) already skips every cell whose span from the game's 3D
+   view pyramid (eye 0x80130C10 + 4 far corners, 0x800439C0..A14, x-extent widened by FP_XSCALE) is empty or misses the cell's height range, so the
+   extra wide-window cells are inside the view; agrees with s7008 geometry (side rays leave the 64 box at 18-22 cells). A 2D wedge cull would remove
+   nothing. (ii) LOD tiers 0x8009DE94..A0 = 256/49/30.25/16 dist^2 in node units, i.e. they only grade the ring within 4-16 nodes of the eye; new opt-in
+   ROGUESQ_DD_LODMUL=<f> (_TOG=1, tools/apply_s7011_lodmul.py) at 0.25 and 4: rsp on-off +1.03 / +1.09 ms vs null arm (mul 1) +0.08 and 0.5 s-shifted
+   controls +0.45/-1.40/+0.74, so no effect above the ~1 ms parity noise in either direction. Confound found: arm scripts' default
+   ROGUESQ_CULL_SPIKE=tog shares the 1 s parity; the null arm shows it does not bias rsp (s7010's +3.6 stands), use CULL=1 in future tog arms.
+   Remaining cost lever = fewer on-screen cells (pool area cap between 4096 and 8192) -> owner trade (NEXT.md).
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).

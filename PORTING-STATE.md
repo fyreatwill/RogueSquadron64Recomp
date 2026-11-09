@@ -184589,3 +184589,27 @@ HYPOTHESIS-ID: dd-wide-window. G5i checked first: fixed s6995-s6999, waiting on 
 - Fix direction: fewer triangles into the ucode. Most of the 128x64 window is outside the 21:9 frustum near the eye (s7008: footprint 140-290 cells,
   box pinned to the near edge), so cull cells whose box lies outside the horizontal frustum wedge before submit (NEXT.md).
 - TL raw (43 MB) deleted after scoring.
+
+## Session 7011 (2026-11-08) — G5e WIDEWIN cost: frustum cull is already done by the game (stream skips cells outside its 3D view pyramid), and the LOD tiers are not a lever (LODMUL 0.25 / 4: rsp +1.03 / +1.09 vs null +0.08, inside the ~1 ms parity noise); CULL_SPIKE=tog confound checked, s7010 stands
+HYPOTHESIS-ID: dd-wide-window. G5i checked first: fixed s6995-s6999, waiting on the owner's look, nothing to run. CURRENT-TRUTH 19.7 KB, no maintenance.
+- Soak folded: s7009_widewin_L4 300 s hold at WIDEWIN=1 passes (crash=0, vi_stalls30s=0, wide17=11087). All three WIDEWIN holds (L1, L4, L15) clean.
+- Code-read (funcs_9.c asm comments), H-offscreen refuted before building: streamTerrainGridCellsByDistance reads per-cell span min/max
+  (0x80042D50/60) and skips a cell when both are -0x80 (empty) or when the span misses the cell's height range (0x80042D88..DA8, stores 0x7F). The spans
+  come from binPolygonIntoTerrainGrid scan-converting the view pyramid (eye 0x80130C10 + 4 far corners built at 0x800439C0..A14 via 0x800193E8, x extent
+  0x800438C4 scaled by FP_XSCALE s6144). So the game already culls cells to its own 3D frustum; the extra wide cells are inside the view. Second line:
+  s7008 g5e_window_geom (21:9 side rays leave the 64 box through a side face at 18-22 cells, 98% of calls). NEXT.md's 2D wedge cull would cull ~0.
+- Next lever tried, cheaper triangles per cell: buildGridCellMeshForFace 0x800431D0..0x80043328 counts table entries above the node dist^2 (index 0..3)
+  and maps it to mesh level a2 = 2 (d2 >= 49) / 1 / 0 (d2 < 16), with morph factors in the boundary tiers. New opt-in ROGUESQ_DD_LODMUL=<f>
+  (tools/apply_s7011_lodmul.py in RS64_REPLAY after s7009, runtime rs64_s7011_lodmul/_en in src/main/upstream_compat.cpp): tiers x f in flight at dd>1,
+  _TOG=1 = odd mach seconds with the [s7010-clk] anchor. Logged tiers = 256 49 30.25 16 (only the ring within 4-16 nodes of the eye; every node past 7
+  is already at the far level). ORIGIN: not a mitigation, a deliberate scale of a fixed retail LOD table.
+- Runs (scratch/s7011/arm.zsh 4 4, 21:9 dd4 L4, WIDEWIN=1 MELT=1 G1B G1E_TL, NOCAP, 0 crashes in all three, mission verified 130 s each), split by
+  tools/g5e_cost_by_parity.py (skip 130 s): t1 LODMUL=0.25: rsp 16.43 -> 17.46 (+1.03), shift500 +0.45. t4 LODMUL=4: rsp 16.24 -> 17.33 (+1.09),
+  shift500 -1.40. n0 LODMUL=1 (null): rsp 14.82 -> 14.89 (+0.08), shift500 +0.74; T +1.15 (shift500 +1.69). Numbers in scratch/s7011/results.txt.
+- Reading: the same +1 ms in both directions and shifted controls swinging -1.4..+0.7 put LODMUL at or below the parity noise floor; H-lod-tier refuted
+  as a cost lever (one run per direction + null arm). The positive control for the split is s7010 (+3.64 rsp, shift control collapsed to +0.32).
+- Confound found and checked: arm.zsh defaults ROGUESQ_CULL_SPIKE=tog, which uses the same (mach/24e6)&1 parity (dpc_bridge.cpp:3812), so every "on"
+  second also had the spike cull on. The null arm shows rsp +0.08 under it, so it does not explain s7010's +3.64; T picks up ~1 ms that the shifted
+  control also shows (noise). Future tog arms should pass CULL=1.
+- Left: the cost is on-screen side-band cells, so the lever is how many: pool area cap between 4096 (old) and 8192 (s7009). Next: 3-phase same-run cap
+  toggle with captures, edge and cost per phase, owner picks the trade (NEXT.md). Raws (TL rings, 284 MB run logs) deleted.
