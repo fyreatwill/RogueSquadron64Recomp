@@ -185077,3 +185077,22 @@ Verdict line (s7028): the same-run tog3 split plus the AQ_NULL column selects H-
 H-shadow/remainder (10.7 of 15.7 net ns, 68%), and refutes H-atomics as the main term (3.3 ns, 21% < 40%). Next discriminator (NEXT.md):
 a [s7028-bad2] thread-id/path log splits H-thread vs H-path for the bad2 mismatch, and a same-run shadow-reserve / no-shadow tog3 splits
 H-shadow vs H-call inside the remainder.
+
+## Session 7029 (2026-11-09) — G1c bridge split closed: BUMPFAST=2 bad2 was a checker short-circuit (now exact, bad2 0/13499); S4272 shadow is not the 10.7 ns remainder (H-call)
+What ran: one build (src/rsp/dpc_bridge.cpp, src/main/main.cpp), two runs, L1 dd6 21:9 WIDEWIN cap 10240, owner path, scratch/s7029/run.zsh.
+Step 1, exactness. Read of rs64_bf2_flush before building: `same = ref_bytes.exchange(0) == task+plant && ref_cmds.exchange(0) == ... `
+short-circuits when the planted +1 makes the first test fail (flushes 1-4), so ref_cmds/ref_ops were never reset on those flushes and flush 5
+compared the sum of 5 tasks' cmds with 1 -> exactly one bad, matching s7028's bad2=1 of 11702. Neither H-thread nor H-path: H-checker.
+Fix: all exchanges evaluated unconditionally; added [s7029-bad2] detail line and a thread-mismatch counter (g_rs64_bf2_thr_mm, CHECK only).
+Run C (BUMPFAST=2 CHECK=1, 181 s hold): bad2 0 of 13499 flushes, ctl2 4/4 (positive control), s7027 state guard 475M checked bad 0 ctl 4;
+no [s7029-bad2] line. 0 crashes, 0 VI stalls.
+Step 2, shadow split. New ROGUESQ_G1E_BUMPFAST_SH=tog3 (mach second %3 per task: 0 as is, 1 reserve deferred-range/shadow vectors from prior
+peaks x2, 2 no S4272 shadow: diagnostic only); ring gains cols 36-38 (per-row task counts per shadow arm). tools/s7029_shadow_split.py.
+Run S (BUMPFAST=2 + SH=tog3 + AQ_NULL, SPIN 300 us, 322 s hold, 1692 flight rows, 0 mixed, every row plain-counter): net ns/bump (spin 0)
+as-is 9.66 (360 rows), reserve 14.68 (315), no-shadow 13.65 (420); fps 60.0 all; spin rows rt/handoff 1366-1775 us (timing control live).
+as-is reproduces s7028's plain-arm remainder (10.7). Removing the shadow or pre-reserving does not make bumps cheaper; both read ~4-5 ns
+SLOWER, which is the per-arm noise of this split, so the shadow's cost is below that noise (< 40% of 10.7). Verdict: H-call (call overhead +
+range push), single-source. Restore control in the same run: [s4286-restore] postDiff 0.
+Rules out: S4272 shadow copy / vector growth as the bridge remainder; the s7028 bad2 as a real accounting bug. Bridge trimming closed (whole
+bridge < 0.3 ms/task left). BUMPFAST and BUMPFAST=2 stay opt-in (exact; ~3-5 ns/bump gain, not worth a default flip).
+Next: NEXT.md g1c-fogged-cell-cull (do fully fogged cells beyond dd4 pay the dd6 cost for no image).

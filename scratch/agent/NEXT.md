@@ -1,18 +1,13 @@
-# NEXT: G1c phase 2 — name the BUMPFAST=2 bad2 mismatch, then split the 10.7 ns push/shadow/call remainder
-HYPOTHESIS-ID: g1c-bump-push-split
-Context (s7028): net bridge cost per DPC_END bump at dd6 is 15.7 ns once the 9.0 ns AQ=3 offset (ROGUESQ_G1E_AQ_NULL=1) is taken out.
-That splits as checks 1.7, counter atomics 3.3, and push/shadow/call 10.7. BUMPFAST=2 (plain per-task counters) gave CHECK bad2=1 of 11702 flushes, so it is not exact.
+# NEXT: G1c phase 2 — do fully fogged far cells cost frame time for nothing? (fogged-cell cull at dd>4)
+HYPOTHESIS-ID: g1c-fogged-cell-cull
+Context: s7020/s7021 put the dd>4 limit on per-cell cost (+2048 cells = gfx +1.72 ms/frame, game +0.91). s7007 found the 21:9 dd4 far slab
+fully fogged (fog colour (152,107,98)). s7028/s7029 closed bridge micro-trimming (H-call). Cells drawn entirely at fog colour add cost and no image.
 G5i/owner items: nothing to run (CURRENT-TRUTH items 1-14); check that first.
-Step 1, exactness (must come first, same unit). In rs64_bf2_flush on a bad2, log one [s7028-bad2] line with: the pending vs reference
-bytes/cmds/fwd/g1e, pthread_self vs the gfx thread id latched in rs64_dpc_defer_begin, and g_defer_active. Also record, in
-rsp_dpc_submit_impl, a thread-id mismatch counter for bf2 bumps (a bump from another thread while task_on==2).
-Hypotheses: H-thread (a second thread calls rsp_dpc_submit_impl or a flush reader: the fix is to key bf2 on the gfx thread id);
-H-path (an early return between the s_fwd add and the task add other than oob, so fwd != task: the fix is to undo at that return).
-The log line tells them apart: a thread mismatch means H-thread, fwd_bytes != task_bytes on the gfx thread means H-path.
-Step 2, remainder split, same build: ROGUESQ_G1E_BUMPFAST_SH=tog3 on top of BUMPFAST=2, with arms (a) as is, (b) g_s4272_shadow.reserve()
-at defer_begin from the last task's size, (c) no shadow insert when the range is extended in place. Arm (c) is a diagnostic only, because
-S4272 is a correctness shadow: check what reads it before (c) runs. Analysis: extend tools/s7028_bump_push_split.py to read the arm per row.
-Discriminator: if (b) or (c) cut net ns/bump by >=40% of 10.7, H-shadow; otherwise the remainder is call overhead plus the range push (H-call).
-Then the next lever is RT64's ~3 ns/B parse (lib, out of this unit) or ucode self. The whole bridge is ~1.4 ms of a ~13.8 ms task,
-so after this unit stop micro-trimming the bridge unless it pays >=0.3 ms/task.
-Recipe: scratch/s7028/run.zsh (arm.zsh copy), L1 dd6 21:9 WIDEWIN cap 10240, AQ=3 AQ_NULL S7026_SUB SPIN_NS=300000, 290 s; then a 150 s CHECK run.
+Hypotheses: H-fogwaste (a large share of the cells beyond the dd4 radius render at >=99% fog: culling them recovers most of the dd6 cost with no
+visible change), H-visible (outer cells still carry non-fog pixels: culling them pops terrain, so the lever is the fog distance, not the cull),
+H-gamecost (the cost sits in the game-side stream walk regardless of draw: cull at submit saves rsp only).
+Discriminator, one build: per frame, for each cell ring beyond the dd4 radius, the fraction of its RDP pixels at fog colour (reuse the G5b
+TRIS dump + framebuffer, scratch/s6894 tools), and a same-run tog3 arm ROGUESQ_DD_FOGCULL=0/1 (skip processGridCellByDistance submit for cells
+whose near edge is past the fog end distance) measuring rsp/run ms/frame (tools/g5e_cost_by_parity.py split xor8) plus terrain-fraction and an
+owner contact sheet of the same camera dd6 cull off vs on. Positive control: FOGCULL with the fog end forced to dd1 radius must visibly cut terrain.
+Recipe: copy scratch/s7029/arm.zsh, L1 dd6 21:9 WIDEWIN cap 10240, OWNER_TIMING=1, 290 s.

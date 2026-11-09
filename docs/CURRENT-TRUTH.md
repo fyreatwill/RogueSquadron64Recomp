@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7028 (2026-11-09).
+Compact operational handoff, as of Session 7029 (2026-11-09).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,12 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7029 bridge trimming CLOSED (H-call; L1 dd6 21:9 WIDEWIN cap 10240, 0 crashes x2):** the s7028 BUMPFAST=2 bad2=1 was the CHECKER: its
+`ref.exchange(0) == x && ...` short-circuited on the 4 planted flushes, so ref_cmds was never reset and flush 5 always miscompared. Fixed;
+BUMPFAST=2 CHECK now exact (bad2 0 of 13499, ctl2 4/4, state guard 475M bad 0). Shadow split, same run (new ROGUESQ_G1E_BUMPFAST_SH=tog3,
+tools/s7029_shadow_split.py): net ns/bump as-is 9.66, reserve 14.68, no-shadow 13.65 -> neither the S4272 shadow copy nor vector growth carries
+the remainder (both arms read slower: per-arm noise ~5 ns/bump); the rest is call overhead + range push. Single-source. Bridge micro-trimming
+stops here (whole bridge <0.3 ms/task left to win); BUMPFAST/BUMPFAST=2 stay opt-in. Next: NEXT.md (fogged-cell cull at dd>4).
 **s7028 bump cost split (BUMPFAST=tog3 same-run 3-way + new AQ_NULL offset column, tools/s7028_bump_push_split.py, L1 dd6 21:9 WIDEWIN cap 10240, 0 crashes):**
 H-offset: 9.0 of the 24.7 ns/bump "bridge self" is the AQ=3 clock pair (flat across arms). Real cost is 15.7 ns/bump (~1.37 ms/task): checks 1.7 (11%),
 counter atomics 3.3 (21%, below the 40% H-atomics bar), push/shadow/call 10.7 (68%, the largest term). New opt-in BUMPFAST=2 (plain per-task counters)
@@ -218,7 +224,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); s7026 DPC submit = RT64 per-byte + ~21 ns/bump bridge, wait flat; s7027 per-bump checks only ~3.6 of ~24 ns (H-checks refuted); active unit: NEXT.md (push/atomics split).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); s7026 DPC submit = RT64 per-byte + ~21 ns/bump bridge, wait flat; s7027 per-bump checks only ~3.6 of ~24 ns (H-checks refuted); s7028/s7029 bridge split closed (H-call, shadow refuted); active unit: NEXT.md (fogged-cell cull).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.

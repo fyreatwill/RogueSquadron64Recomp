@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <pthread.h>
 #include <mach/mach_time.h>
 #include <chrono>
 extern "C" int rs64_tog_odd(uint64_t mt); extern "C" void rs64_tog_anchor(uint64_t mt);  // s7017 upstream_compat.cpp
@@ -6317,6 +6318,14 @@ static const int g_bf_mode = [] { const char *e = std::getenv("ROGUESQ_G1E_BUMPF
 // rs64_task_rdp_bytes_total and rs64_dpc_defer_end (every gfx-thread reader). CHECK=1 also does the atomic adds into reference atomics
 // and compares them with the pending sums at each flush (bad2 must be 0); the first 4 flushes compare a planted +1 (ctl2 must be 4).
 extern "C" { uint64_t g_rs64_bf_tasks_on2 = 0, g_rs64_bf_chk2_n = 0, g_rs64_bf_chk2_bad = 0, g_rs64_bf_chk2_ctl = 0; }
+// s7029: H-thread control (CHECK=1 only): bf2 bumps from a thread other than the one that ran rs64_dpc_defer_begin.
+extern "C" { uint64_t g_rs64_bf2_thr_mm = 0; } static pthread_t g_bf2_thr;
+// s7029 G1c (g1c-bump-push-split): ROGUESQ_G1E_BUMPFAST_SH=tog3 latches a shadow arm per task (mach second % 3, as BUMPFAST tog3):
+// 0 as is, 1 reserve the deferred-range/shadow vectors from the previous task's peak sizes at defer_begin, 2 no S4272 shadow for this
+// task (DIAGNOSTIC ONLY: the commit-time restore then finds no shadow and skips; use with BUMPFAST=2, never in owner play).
+extern "C" { int g_rs64_bfsh_arm = 0; uint64_t g_rs64_bfsh_tasks[3] = {0, 0, 0}; }
+static const bool g_bfsh_mode = [] { const char *e = std::getenv("ROGUESQ_G1E_BUMPFAST_SH"); return e && *e && *e != '0'; }();
+static size_t g_bfsh_pk_sh = 0, g_bfsh_pk_shadow = 0, g_bfsh_pk_ranges = 0;
 static uint64_t g_bf2_fwd_bytes = 0, g_bf2_fwd_subs = 0, g_bf2_g1e_bytes = 0; static uint32_t g_bf2_task_bytes = 0, g_bf2_task_cmds = 0;
 static uint32_t g_bf2_ops[64] = {}; static bool g_bf2_dirty = false;
 static std::atomic<uint64_t> g_bf2_ref_bytes{0}, g_bf2_ref_cmds{0}, g_bf2_ref_ops{0};
@@ -6328,9 +6337,16 @@ static void rs64_bf2_flush() {
     g_bf2_dirty = false;
     if (g_bf_check_flag()) {
         static uint64_t n = 0; const uint64_t plant = (n++ < 4) ? 1 : 0; uint64_t ops = 0; for (int i = 0; i < 64; ++i) ops += g_bf2_ops[i];
-        const bool same = g_bf2_ref_bytes.exchange(0) == g_bf2_task_bytes + plant && g_bf2_ref_cmds.exchange(0) == g_bf2_task_cmds &&
-                          g_bf2_ref_ops.exchange(0) == ops && g_bf2_fwd_bytes == g_bf2_task_bytes && g_bf2_fwd_subs == g_bf2_task_cmds &&
-                          g_bf2_g1e_bytes == g_bf2_task_bytes;
+        // s7029: read every reference unconditionally. The s7028 `a.exchange(0) == x && b.exchange(0) == y` short-circuited on the
+        // planted flushes 1-4, so ref_cmds/ref_ops were never reset there and flush 5 always miscompared (the s7028 bad2=1).
+        const uint64_t rb = g_bf2_ref_bytes.exchange(0), rc = g_bf2_ref_cmds.exchange(0), ro = g_bf2_ref_ops.exchange(0);
+        const bool same = rb == g_bf2_task_bytes + plant && rc == g_bf2_task_cmds && ro == ops && g_bf2_fwd_bytes == g_bf2_task_bytes &&
+                          g_bf2_fwd_subs == g_bf2_task_cmds && g_bf2_g1e_bytes == g_bf2_task_bytes;
+        if (!same && !plant && g_rs64_bf_chk2_bad < 8)
+            fprintf(stderr, "[s7029-bad2] ref b/c/o=%llu/%llu/%llu task b/c=%u/%u ops=%llu fwd b/s=%llu/%llu g1e=%llu thrMismatch=%llu\n",
+                    (unsigned long long)rb, (unsigned long long)rc, (unsigned long long)ro, g_bf2_task_bytes, g_bf2_task_cmds,
+                    (unsigned long long)ops, (unsigned long long)g_bf2_fwd_bytes, (unsigned long long)g_bf2_fwd_subs,
+                    (unsigned long long)g_bf2_g1e_bytes, (unsigned long long)g_rs64_bf2_thr_mm);
         if (plant) { if (!same) ++g_rs64_bf_chk2_ctl; } else { ++g_rs64_bf_chk2_n; if (!same) ++g_rs64_bf_chk2_bad; }
     }
     s_fwd_bytes.fetch_add(g_bf2_fwd_bytes, std::memory_order_relaxed); s_fwd_submits.fetch_add(g_bf2_fwd_subs, std::memory_order_relaxed);
@@ -6694,7 +6710,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
 
     if (bf2) {
         g_bf2_task_bytes += submit_hi - submit_lo; g_bf2_g1e_bytes += submit_hi - submit_lo; ++g_bf2_task_cmds;
-        if (g_bf_check) { g_bf2_ref_bytes.fetch_add(submit_hi - submit_lo); g_bf2_ref_cmds.fetch_add(1); }
+        if (g_bf_check) { g_bf2_ref_bytes.fetch_add(submit_hi - submit_lo); g_bf2_ref_cmds.fetch_add(1); if (!pthread_equal(pthread_self(), g_bf2_thr)) ++g_rs64_bf2_thr_mm; }
     } else {
     g_task_rdp_bytes.fetch_add(submit_hi - submit_lo, std::memory_order_relaxed);
     rs64_g1e_rdp_bytes.fetch_add(submit_hi - submit_lo, std::memory_order_relaxed); // s6982 G1e R-row rb= (ultramodern events.cpp)
@@ -7826,7 +7842,8 @@ rs64_bf_push:
     // never reach RT64's deferred state. Gfx-thread only, no locking needed.
     if (g_defer_active) {
         {
-            static const bool sh = []{ const char *e = std::getenv("ROGUESQ_S4272"); return !(e && *e == '0'); }(); /* s4549: default on (=0 disables) */
+            static const bool sh_env = []{ const char *e = std::getenv("ROGUESQ_S4272"); return !(e && *e == '0'); }(); /* s4549: default on (=0 disables) */
+            const bool sh = sh_env && g_rs64_bfsh_arm != 2;   // s7029 shadow arm 2 (diagnostic)
             static const uint32_t cap = []{ const char *e = std::getenv("ROGUESQ_S4272_CAP"); return e ? (uint32_t)strtoul(e, nullptr, 0) : 0x2000u; }(); /* s4286, s4287: default 0x2000 */
             bool ext = false;   // s6955: ROGUESQ_G1E_BATCH, extend the contiguous last range (+ its shadow entry in lockstep)
             if (g_rs64_g1e_batch && !g_deferred_ranges.empty() && g_deferred_ranges.back().second == submit_lo) {
@@ -7903,6 +7920,13 @@ extern "C" void rs64_dpc_defer_begin() {
             for (int k = 0; k < 6; ++k) fprintf(stderr, "%02X:%llu,", top[k], (unsigned long long)g_bf_slow_op[top[k]]);
             fputc('\n', stderr); }
     } else g_rs64_bf_task_on = 0;
+    if (g_bf_check) g_bf2_thr = pthread_self();   // s7029
+    if (g_bfsh_mode) {   // s7029 shadow arm, latched per task; arm 1 reserves from the previous task's peaks
+        g_bfsh_pk_sh = std::max(g_bfsh_pk_sh, g_s4272_sh.size()); g_bfsh_pk_shadow = std::max(g_bfsh_pk_shadow, g_s4272_shadow.size());
+        g_bfsh_pk_ranges = std::max(g_bfsh_pk_ranges, g_deferred_ranges.size());
+        g_rs64_bfsh_arm = (int)((mach_absolute_time() / 24000000u) % 3u); ++g_rs64_bfsh_tasks[g_rs64_bfsh_arm];
+        if (g_rs64_bfsh_arm == 1) { g_s4272_sh.reserve(g_bfsh_pk_sh * 2); g_s4272_shadow.reserve(g_bfsh_pk_shadow * 2); g_deferred_ranges.reserve(g_bfsh_pk_ranges * 2); }
+    } else g_rs64_bfsh_arm = 0;
     {   // s6955: ROGUESQ_G1E_BATCH arm, latched per task
         static const int s_batch_env = [] { const char *e = std::getenv("ROGUESQ_G1E_BATCH"); return !e ? 1 : (*e == 't' ? 2 : (*e != '0')); }();
         static const bool s_bc = [] { const char *e = std::getenv("ROGUESQ_G1E_BATCH_CHECK"); return e && *e && *e != '0'; }();

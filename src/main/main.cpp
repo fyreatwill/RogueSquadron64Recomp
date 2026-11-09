@@ -6539,6 +6539,7 @@ struct Rs64TrAcc { uint64_t nul = 0; uint64_t n = 0, uc = 0, sub = 0, com = 0, c
 // s7026 G1c: per-task RT64 handoff / record_submit totals (dpc_bridge.cpp, ROGUESQ_S7026_SUB=1) and the s7012 cap at task start/end.
 extern "C" uint64_t g_rs64_bf_tasks_on, g_rs64_bf_tasks_off, g_rs64_bf_fast, g_rs64_bf_slow;  // s7027
 extern "C" uint64_t g_rs64_bf_tasks_on2, g_rs64_aq_null_ns;  // s7028
+extern "C" uint64_t g_rs64_bfsh_tasks[3];  // s7029
 extern "C" int g_rs64_s7026, g_rs64_s7026_spin_win; extern "C" int rs64_s7012_cap(void);
 extern "C" uint64_t g_rs64_s7026_rt_n, g_rs64_s7026_rt_ns, g_rs64_s7026_rt_by, g_rs64_s7026_rec_n, g_rs64_s7026_rec_ns,
                     g_rs64_s7026_smp_n, g_rs64_s7026_smp_w, g_rs64_s7026_smp_c;
@@ -6568,8 +6569,11 @@ extern "C" void rs64_g1e_tring_push(double t_ms, double w, double c) {
                      (unsigned long long)a.smp_n, a.smp_w / 1e3, a.smp_c / 1e3, g_rs64_s7026_spin_win);
         // s7027: bump fast-path deltas per row (tasks on / off, fast bumps, slow bumps)
         static uint64_t p[5] = {}; const uint64_t q[5] = {g_rs64_bf_tasks_on, g_rs64_bf_tasks_off, g_rs64_bf_fast, g_rs64_bf_slow, g_rs64_bf_tasks_on2};
-        std::fprintf(g_rs64_tr_f, " %llu %llu %llu %llu %llu %.4f\n", (unsigned long long)(q[0] - p[0]), (unsigned long long)(q[1] - p[1]),
+        std::fprintf(g_rs64_tr_f, " %llu %llu %llu %llu %llu %.4f", (unsigned long long)(q[0] - p[0]), (unsigned long long)(q[1] - p[1]),
                      (unsigned long long)(q[2] - p[2]), (unsigned long long)(q[3] - p[3]), (unsigned long long)(q[4] - p[4]), a.nul / 1e6);
+        static uint64_t ps[3] = {}; std::fprintf(g_rs64_tr_f, " %llu %llu %llu\n", (unsigned long long)(g_rs64_bfsh_tasks[0] - ps[0]),   // s7029 shadow arm
+                     (unsigned long long)(g_rs64_bfsh_tasks[1] - ps[1]), (unsigned long long)(g_rs64_bfsh_tasks[2] - ps[2]));
+        for (int i = 0; i < 3; ++i) ps[i] = g_rs64_bfsh_tasks[i];
         for (int i = 0; i < 5; ++i) p[i] = q[i]; }
     static double last_flush = 0; if (t_ms - last_flush > 1000.0) { std::fflush(g_rs64_tr_f); last_flush = t_ms; }
 }
