@@ -184613,3 +184613,5 @@ HYPOTHESIS-ID: dd-wide-window. G5i checked first: fixed s6995-s6999, waiting on 
   control also shows (noise). Future tog arms should pass CULL=1.
 - Left: the cost is on-screen side-band cells, so the lever is how many: pool area cap between 4096 (old) and 8192 (s7009). Next: 3-phase same-run cap
   toggle with captures, edge and cost per phase, owner picks the trade (NEXT.md). Raws (TL rings, 284 MB run logs) deleted.
+- Verdict: this refutes H-offscreen (two lines: stream code-read + s7008 ray geometry) and refutes H-lod-tier as a cost lever (two directions + null
+  arm, one run each). It closes the wedge-cull plan; the next discriminator is the 3-phase area-cap toggle (H-linear / H-knee / H-flat-cost).
