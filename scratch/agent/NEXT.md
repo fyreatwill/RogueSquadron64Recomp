@@ -1,16 +1,14 @@
-# NEXT: far-terrain slab edge at 21:9 dd4 (G3c(a) / G5e residual)
-HYPOTHESIS-ID: dd-far-edge-219
-Context: s7006 crops (scratch/s7006/c1.png, c2.png) at 21:9 dd4 L4, owner recipe with DD_FOG on by default, show the far terrain as a flat haze-coloured
-slab with a hard straight edge against the sky. G5e (s6904) measured seam alpha at 16:9 only. The owner asked for distant terrain to melt into the haze.
+# NEXT: terrain-window side edge at 21:9 dd4 (G5e residual after s7007)
+HYPOTHESIS-ID: dd-side-edge-219
+Context: s7007 showed the far fog-colour slab is removed by opt-in DD_MELT. Left over (single-source): an UNFOGGED straight edge with a corner at the
+screen side (m1 frames 494/554, x~150, terrain ~(100,70,58) against sky ~(195,143,108)), see docs/owner_sheet_s7007_melt_219.png row pair 3.
 Hypotheses:
-- H-retail: dd1 shows the same hard horizon slab (retail look). Then it is not ours, and an opt-in fade is the only lever.
-- H-colour: the dd4 ramp runs to full fog, but the fog colour differs from the sky gradient behind it, so a fully fogged slab still has a silhouette.
-  Fix: fade alpha to 0 (or blend toward the sky) over the outer ring, not toward the fog colour.
-- H-ramp: the s6904 ramp ends before the window edge at 21:9 (wider frustum exposes side cells past the ramp end), so the edge cells draw un-faded.
-  Fix: scale the ramp end with the aspect width as well as dd.
-Discriminator (one build, same run): add ROGUESQ_DD_FOG=tog to src/main/upstream_compat.cpp (alternate on/off per 24 MHz second, like W_CLAMP=tog), and log
-per frame the fog colour and the cutoff/ramp distances once. Run `env CULL=1 ASP=21:9 CW=1260 CH=540 zsh scratch/s7006/arm.zsh 4 4 f1 "ROGUESQ_DD_FOG=tog" 120 60`,
-plus a dd1 arm (`... 4 1 r1 "" 120 60`) for H-retail. Score: for frames at VI phase 0.2-0.9, find the terrain/sky silhouette per column in the top half and
-take the colour step across it (sky pixel 3 px above vs terrain 3 px below), median per arm; also sample the slab colour vs the fog colour from the log.
-Outcomes: dd1 step similar to dd4 -> H-retail; slab colour == fog colour and step large -> H-colour; edge cells at screen sides un-fogged (step larger at
-the left/right thirds than the centre) -> H-ramp. Then fix and give the owner a before/after sheet at 21:9 and 16:9. Delete raws (disk 22 GB free).
+- H-window: the FWDWIN box (tools/apply_s6901_fwdwin.py: per axis width min(bounds,64), centre eye + K*forward, K=30) does not cover the 21:9 frustum
+  sides; its side/corner is what shows. Fix: widen the lateral extent with the aspect (or shift K less at wide aspects), watch the pool/heap caps.
+- H-bounds: the level's own terrain bounds end there (real map edge). Then nothing to fix but fog/melt by lateral distance.
+- H-cutoff: the radial far cutoff (s6418 x s6904 clipmul 0.25 at dd4) clips side cells. Then the edge would be curved, not a box corner.
+Discriminator (one run, no build): `env CULL=1 ASP=21:9 CW=1260 CH=540 zsh scratch/s7007/arm.zsh 4 4 w1 "ROGUESQ_DD_FWDWIN=tog ROGUESQ_DD_MELT=1" 120 60`
+(FWDWIN toggles on odd mach seconds). Score with tools/g5e_edge_score.py raw 4 2600 50 24e6 per third (side thirds are the test). Outcomes: side-third hard80
+changes with FWDWIN parity and the corner moves -> H-window; the edge sits still in world space across both parities -> H-bounds; curved edge -> H-cutoff.
+Also log the window: if apply_s6901 has no log, add one (eye cell, box x0..x1/z0..z1, heading) under an env flag in the fixup and rebuild once.
+Then fix and give the owner a before/after sheet at 21:9 and 16:9. Delete raws (disk ~22 GB free; each raw ~8 GB, keep only one at a time).

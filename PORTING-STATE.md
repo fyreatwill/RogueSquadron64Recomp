@@ -184504,3 +184504,30 @@ Owner sheet: docs/owner_sheet_s7006_g5f_219.png (6 clamp-off knife lines f-1/f/f
 Rules out: H-wide (knife tris passing the clamp at 21:9). H-holes not testable in this capture (0 drops inside it).
 G5f closes on the owner's look at 16:9 and 21:9, dd1/dd2/dd4. Side observation for next: at 21:9 dd4 the far-terrain edge is a hard straight slab silhouette
 against the sky even with DD_FOG default on (crops c1/c2 in scratch/s7006): G3c(a)/G5e residual, measured next (NEXT.md).
+
+## Session 7007 (2026-11-08) — G5e at 21:9 dd4 L4: the hard far slab is fully fogged terrain whose fog colour (152,107,98) does not match the sky band (~205,152,110), not un-fogged cells; DD_FOG barely moves it, retail dd1 has no slab, ROGUESQ_DD_MELT=tog brings the step to the dd1 floor in the same run; a second edge, the unfogged side/corner of the terrain window, is left by both
+
+HYPOTHESIS-ID: dd-far-edge-219. No new soak verdicts (latest still s6980). CURRENT-TRUTH 17.7 KB, no maintenance. G5i already fixed (s6995-s6999), so NEXT.md's unit ran.
+No build: DD_FOG=tog (4 s blocks) and DD_MELT=tog (1 s blocks) already existed. Runs (scratch/s7007/arm.zsh = s7006 copy, owner recipe FPS60 21:9, CULL=1,
+capture 1260x540, delay 120 s, 60 s): f1 dd4 `ROGUESQ_DD_FOG=tog ROGUESQ_G5E_FOGP=1` (3787 frames), r1 dd1 (4139), m1 dd4 `ROGUESQ_DD_MELT=tog` (3735).
+0 CRASH/SIGSEGV/SIGBUS lines in any run.log. All three end in MISSION FAILED around frame 2500-2700 (autopilot), so the scorer stops there.
+Scorer, new tools/g5e_edge_score.py (positive control: the fog-off parity of f1 and melt-off parity of m1 fire, hard80 26-40%, against the dd1 floor of 11-27%).
+
+| arm, parity | left third: med / hard80% | centre | right |
+|---|---|---|---|
+| r1 dd1 (both parities alike) | 66 / 15 (68 / 20) | 69 / 27 (67 / 24) | 74 / 15 (67 / 11) |
+| f1 dd4 fog ramp off / on (TH 50, med only) | 86 -> 68 | 84 -> 71 | 87 -> 103 |
+| m1 dd4 melt off / on | 85 / 36 -> 68 / 20 | 74 / 40 -> 67 / 26 | 100 / 26 -> 82 / 20 |
+
+Pixel columns (f1): the slab is a flat (152,107,98) with the sky just above at about (205,152,110); with the fog ramp on the slab top reads 135,94,85. So the
+edge is fully fogged terrain whose fog colour differs from the sky's horizon band. Selects H-colour. H-retail refuted: dd1 frames (scratch/s7007/r1pairs.png)
+show the sky down to the horizon behind near hills, no slab. H-ramp not supported: fog-on sides are not consistently worse than the centre (left 68 < centre 71,
+right 103 includes the radar column band). f1 [fogp]: s 34.1-34.2, e 37.9-38.0, on=1, mul 0.250 (the dd4 cutoff clamp).
+MELT (s6916) is the fitting lever, and it already reaches the dd1 floor here. Residual, single-source (pixels + view): in m1 frames 494 (off) and 554 (on), x=150
+shows UNFOGGED terrain texture (~100,70,58, noisy) meeting the sky (~195,143,108) in a straight edge with a corner. That is not fog-colour, so neither the fog
+ramp nor MELT touches it. Reading: the side/corner of the dd>1 terrain window (FWDWIN 64-cell box, s6901), which the wider 21:9 frustum shows; those cells
+are near in depth, so unfogged. Not yet measured against the window bounds.
+Owner sheet docs/owner_sheet_s7007_melt_219.png: rows (off, on) pairs 1 s apart: 1664/1604 (far slab dissolves), 1052/1112, 494/554 (left corner slab stays
+in both). Raws deleted. Owner save untouched (runner exports NO_SAVE_WRITE).
+ORIGIN: ours. The far scale (s6073) admits terrain to where the level's fog colour, not the sky, ends it. No code change; MELT stays opt-in (owner chooses).
+Next: the terrain window side edge at 21:9 (NEXT.md).

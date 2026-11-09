@@ -157,7 +157,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: far-terrain slab edge at 21:9 dd4 (NEXT.md, G3c(a)/G5e residual).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: terrain-window side edge at 21:9 dd4 (NEXT.md, G5e residual after s7007).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
@@ -169,7 +169,9 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    LEVEL=10 has no terrain grid in flight (cloud level): never use it for terrain measures. Ring-7 dips closed s7001 (axis-heading edge stepping, not diagonals, not a loss).
 4. **G5c freezes: fixed s6902, soak clean; closes on owner flight.**
 5. **G5d Factor 5 logo: fixed s6903; owner boot at dd2/dd4.**
-6. **G5e fog: done s6904; owner look.** s7006 saw a hard straight far-terrain slab edge against the sky at 21:9 dd4 with DD_FOG on: measure next (NEXT.md).
+6. **G5e fog: done s6904; owner look.** 21:9 dd4 far slab (s7007): fully fogged terrain, fog colour (152,107,98) vs sky band (~205,152,110); DD_FOG barely moves it,
+   dd1 has none, opt-in DD_MELT takes it to the dd1 floor same run (hard80 40->26% centre; tools/g5e_edge_score.py; sheet docs/owner_sheet_s7007_melt_219.png).
+   Residual: unfogged straight side/corner edge, read as the FWDWIN terrain window side at 21:9 (single-source): measure next (NEXT.md).
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).
