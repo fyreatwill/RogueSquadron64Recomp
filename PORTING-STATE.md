@@ -184785,3 +184785,29 @@ the gfx task's remaining cost is ucode self (41%) and RT64 RDP decode (16%) per 
 already 59.3-59.9 fps, so no further headroom work is needed at dd4.
 Next (NEXT.md, slug g1c-dd-headroom): G1c phase 2, the next binding limit above dd4 on the owner path (dd6/dd8 21:9 WIDEWIN).
 Note: tl rings (240 MB, gitignored) deleted after analysis; numbers above are the record.
+
+## Session 7019 (2026-11-08) — G1c dd>4 headroom on the owner path: dd6 55.8 fps / dd8 53.3 fps vs dd4 59.5 (L1 21:9 WIDEWIN), 0 crashes; above dd5 the terrain cell pool is clamped at px5 = 10240 cells, so dd8 places the same 128x80 window as dd6 and adds cost without cells
+HYPOTHESIS-ID: g1c-dd-headroom. No build (s7018 binary). G5i checked first: fixed s6995-s6999, waiting on the owner's look.
+What ran. scratch/s7019/all.zsh (arm.zsh copied from s7018), three sequential separate-run arms (DRAW_DISTANCE is boot-time), L1 21:9
+FPS60 CULL=1 OWNER_TIMING (FAST=1 PROBES=0), DD_UNSAFE=1 MELT=1 WIDEWIN=1, GLUE_TOG=3 (anchor only, nothing toggled), G1E_TL ring +
+G3E_TRACE, 320 s holds, framebuffer capture at 290-320 s only (1260x540). Each arm: att=1 alive_at_end=1 vi_stalls30s=0 crashlines=0.
+First attempt aborted: a 200 s capture is 24 GB (2 MB/frame) and filled the disk (1.2 GB free) mid dd6; raw deleted, partial dd6
+discarded, all three arms re-run with the 30 s window and the raw scored then deleted inside the script. That dd4 run also had no
+[s7010-clk] anchor (needs a TOG env), hence GLUE_TOG=3.
+Results (tools/g5e_cost_by_parity.py --skip-s 130, both halves are the same arm; one half shown):
+| arm | fps | T ms | run | rsp mean/p90 | P(>=2VI) | window (trace 17, top) | cap | pool out (site 18) | fogpx% | crash |
+| dd4 | 59.5 | 16.81 | 3.13 | 12.59/15.28 | 0.01 | 64x128 / 128x64 | 8192 | 0 | 9.4 | 0 |
+| dd6 | 55.8 | 17.91 | 3.78 | 13.93/16.23 | 0.07 | 80x128 / 128x80 | 10240 | 0 | 4.3 | 0 |
+| dd8 | 53.3 | 18.76 | 3.99 | 14.04/16.82 | 0.13 | 80x128 / 128x80 | 10240 | 0 | 6.2 | 0 |
+dd4 reproduces s7018 (59.3-59.9, rsp 12.6). The cap: src/main/main.cpp rs64_g1c_apply_dd_policy sets POOLX = ceil(dd) clamped to 5
+(base 2048 cells), so every dd >= 5 gets 10240 cells; WIDEWIN spends them as 128 on the forward axis x 80 on the side. Site 18 = 0
+in all arms: the pool is never exhausted. So two lines agree that dd8 draws no more terrain cells than dd6 (window trace identical,
+same cap from code), yet costs 2.5 fps more (run +0.21, rsp +0.11, T +0.85): something else scales with the dd multiplier itself
+(s6036 grid radius / auto-far / object distance) - unnamed. fogpx% (new tools/g1c_dd_arm_sheet.py: sky-coloured pixel share in the
+top half) and g5e_edge_score are cross-run and the autopilot camera differs (banks along cliffs in dd6/dd8 frames): not readable as
+terrain reach; sheet docs/owner_sheet_s7019_dd468_219.png is for the record only, not an owner comparison.
+Verdict: selects H-pool for dd>=6 (cells capped at px5; dd8 = dd6 terrain), partly H-rsp-cliff (dd6/dd8 drop below 60 fps,
+P(>=2VI) 0.07/0.13, but not below 50), refutes H-heap/crash (0 crashes, single 320 s run each) and H-free (dd6 costs ~4 fps).
+dd4 stays the top owner setting that holds 60 fps at 21:9 WIDEWIN. Single run per arm (cross-run, whole-run means).
+Next (NEXT.md): split dd6's extra cost into cells vs the dd multiplier: dd6 with ROGUESQ_DD_WIDEWIN_CAP=8192,10240 WIDEWIN=tog3-style
+same-run cap cycling (s7012 tool) vs dd4.

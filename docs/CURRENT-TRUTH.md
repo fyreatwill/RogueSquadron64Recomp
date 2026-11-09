@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7018 (2026-11-08).
+Compact operational handoff, as of Session 7019 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,10 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7019 G1c dd>4 headroom (L1 21:9 WIDEWIN owner path, separate runs, 0 crashes x3):** dd4 59.5 fps (rsp 12.6), dd6 55.8 (rsp 13.9, P(>=2VI) 0.07),
+dd8 53.3 (rsp 14.0, P 0.13). Above dd5 the cell pool is clamped (main.cpp rs64_g1c_apply_dd_policy POOLX<=5 = 10240 cells): dd6 and dd8 place the same
+128x80 window (trace 17), pool never exhausted (site 18 = 0), so dd8 adds ~2.5 fps of cost and no terrain cells (cost source unnamed: dd-multiplier-scaled).
+dd4 stays the top 60 fps owner setting. Next: same-run cap split at dd6 (NEXT.md).
 **s7018 gfx-host-glue closed:** on the xor8 split the live record_submit walks (pillar+fused rect_wrap+tail) cost rsp 0.45 ms/frame
 (G2 GLUE_TOG=1; walk timer 0.23 ms/frame), the s7016 fusion saves 0.26 ms (F2; timer 0.15), A/A null +0.08 (N3, reproduces N2), all in rsp, rdp/dpc 0;
 L1 21:9 dd4 WIDEWIN owner path 59.3-59.9 fps, 0 crashes x3. Glue is 2-4% of a ~12.6 ms gfx task: trimming is done. Next: G1c dd>4 headroom (NEXT.md).
@@ -182,7 +186,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); active unit: G1c phase 2 dd6/dd8 21:9 WIDEWIN owner-path headroom (NEXT.md).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); active unit: dd6 cost split cells vs multiplier (NEXT.md).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
@@ -228,6 +232,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    **s7014 SUPERSEDES the s7009-s7013 cost lines above** (harness probe path): owner path 59-60 fps at caps 4096-8192, rsp 8.8-11.9 ms,
    two runs. WIDEWIN is free at 21:9 dd4 L4; still opt-in until the owner says. s7015: L15 21:9 and L4 16:9 free, L1 21:9 58.1 fps (P 0.03);
    offered in OWNER-OPT-INS, owner look. Glue walks measured s7018: 0.2-0.45 ms/frame, closed.
+   s7019 dd>4 at 21:9 WIDEWIN L1: dd6 55.8 / dd8 53.3 fps vs dd4 59.5; POOLX clamp 5 means dd>=5 = 10240 cells, dd8 = dd6 window.
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).
