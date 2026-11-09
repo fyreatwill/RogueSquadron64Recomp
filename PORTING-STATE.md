@@ -184568,7 +184568,7 @@ HYPOTHESIS-ID: dd-wide-window. G5i checked first: fixed s6995-s6999, waiting on 
   Captured fps by parity off 59.6 / on 50.7. 0 crashes. Owner sheet docs/owner_sheet_s7009_widewin_219.png (new tools/g5e_widewin_sheet.py): terrain
   renders whole in wide frames, no holes.
 - Run n96 (same, WIDEWIN_N=96): windows 96x85 / 85x96 (area refills to the 8192 cap); hard80% 21.2->12.7, 25.2->25.1, 17.7->5.8; fps off 61.9 / on 49.4; 0 crashes.
-- Selected: H-fix for the sides (two runs, same-run parity both times), H-cost present (two runs). Ruled out: H-budget (pool). Cost follows kept-cell
+- This selects H-fix for the sides (two runs, same-run parity both times) and H-cost (two runs), and refutes H-budget (pool never ran out). Cost follows kept-cell
   area, not window shape (N96 = N128 cost). Remaining hard80 in the centre third (22-25%) is the dd1-floor range (11-27%), not this edge.
 - Holds L4/L1/L15 300 s at WIDEWIN=1 queued as soaks scratch/agent/soak_queue/s7009_widewin_L*.sh. OWNER-OPT-INS gains an experimental line.
 - Raws deleted. Next: name the cost (guest build vs RSP vs RDP) with the G1B instrument in one tog run, then cull or cap (NEXT.md).
