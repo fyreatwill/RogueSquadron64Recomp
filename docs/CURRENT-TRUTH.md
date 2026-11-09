@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7040 (2026-11-09).
+Compact operational handoff, as of Session 7041 (2026-11-09).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,10 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7041 dd6 auto bundle holds on L2, L3, L6, L7 at 16:9 (H-clean; no game build; new tools/dd6_bundle_level_sweep.zsh).** FPS60 dd6 MELT WIDEWIN cap 10240, ~505 s flight per level,
+same-run tog3 R=-1,2,2 K=0,0.6,0.6: 4/4 alive_at_end=1, vi_stalls30s=0, crashlines=0. fps off -> bundle (A/A p1/p2): L2 58.7 -> 59.8/59.9 (rsp -2.45), L3 58.6 -> 60.0/60.0 (rsp -3.33),
+L6 59.3 -> 59.2/59.1 (rsp 6.2 -> 5.7, not rsp-bound: neutral), L7 59.5 -> 59.6/59.7 (rsp -1.98). Cull fires on every level (ocull/f ph1 2542-3285, ph0 0). Health + cost only (no image check on these levels:
+the bundle's image neutrality rests on L1/L4 poses + cutscenes). Remaining unrun at dd6 bundle: L0, L8, L9, L11-L18 (L10 health only).
 **s7040 dd6 auto bundle is clean at 16:9 too (H-clean; no build).** Frozen poses 16:9 FPS60 dd6 MELT WIDEWIN cap 10240, arms dd6off/dd6b/dd6b2/dd4, 8 runs + 1 hold, 0 crashes/stalls:
 dd6b vs dd6off L1 <=0.19, L4 <=0.28 (max 0.6% px, horizon sliver by eye), A/A 0.00 at all 15 poses, dd4 control 3.5-8.8. Same-run cost L1 (505 s hold, tog3): 58.6 -> 59.9/59.8 fps,
 rsp -3.15/-3.01 ms (A/A 0.14), cull fires (ocull/f 0/2671/2692). No aspect gate needed. Sheets docs/owner_sheet_s7040_dd6_169_l1.jpg / _l4.jpg; 16:9 line in OWNER-OPT-INS.
@@ -277,7 +281,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); s7026 DPC submit = RT64 per-byte + ~21 ns/bump bridge, wait flat; s7027 per-bump checks only ~3.6 of ~24 ns (H-checks refuted); s7028/s7029 bridge split closed (H-call, shadow refuted); s7030 fogged-cell cull: H-fogwaste refuted, 0.5 x fog-end depth cull = rsp -4.9 ms invisible on L1 (H-offmap lead); s7031 off-map census: 82%/62% of dd6 cells off-map, R=2 cull rsp -9.75/-3.71 ms (L1/L4), image unqualified; s7032 frozen poses: R=2/R=8 VISIBLE once the eye climbs above the off-map plateau (H-plateau); s7033 height gate image-neutral but saves 0 ms (H-costgone, eye above edge tops almost always); s7034 off-map past 0.6 x fog end: ~invisible at 7 poses, rsp -3.04 ms -> 60 fps on L1 (H-fogdepth); s7035 L4 repeat: <=0.10 at 8 poses, rsp -1.52 ms (H-general, opt-in offered); s7036 holds clean (opt-in qualified); s7037 cull bundled into DD knob for dd>=6+WIDEWIN, 12288 cells buy nothing visible at +0.6 ms; s7038-s7040 bundle qualified (21:9 poses, cutscenes, 16:9); active unit: NEXT.md.
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); s7026 DPC submit = RT64 per-byte + ~21 ns/bump bridge, wait flat; s7027 per-bump checks only ~3.6 of ~24 ns (H-checks refuted); s7028/s7029 bridge split closed (H-call, shadow refuted); s7030 fogged-cell cull: H-fogwaste refuted, 0.5 x fog-end depth cull = rsp -4.9 ms invisible on L1 (H-offmap lead); s7031 off-map census: 82%/62% of dd6 cells off-map, R=2 cull rsp -9.75/-3.71 ms (L1/L4), image unqualified; s7032 frozen poses: R=2/R=8 VISIBLE once the eye climbs above the off-map plateau (H-plateau); s7033 height gate image-neutral but saves 0 ms (H-costgone, eye above edge tops almost always); s7034 off-map past 0.6 x fog end: ~invisible at 7 poses, rsp -3.04 ms -> 60 fps on L1 (H-fogdepth); s7035 L4 repeat: <=0.10 at 8 poses, rsp -1.52 ms (H-general, opt-in offered); s7036 holds clean (opt-in qualified); s7037 cull bundled into DD knob for dd>=6+WIDEWIN, 12288 cells buy nothing visible at +0.6 ms; s7038-s7040 bundle qualified (21:9 poses, cutscenes, 16:9); s7041 bundle holds L2/L3/L6/L7 16:9 clean; active unit: NEXT.md (L0, L8, L9, L11, L12).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.

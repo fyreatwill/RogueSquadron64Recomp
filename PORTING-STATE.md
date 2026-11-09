@@ -185357,3 +185357,24 @@ Two lines (image + cost/counters), one run per arm. Owner sheets docs/owner_shee
 16:9 one-line command added to OWNER-OPT-INS. Note the hold reused tag g1_lvl1s7031H1 (arm.zsh tags by level+name), overwriting the s7036 L1 m6 log; s7036 numbers
 are already in its entry.
 Next: G1c dd thread has nothing left to run; take the next unclosed item (NEXT.md).
+
+## Session 7041 (2026-11-09) — dd6 auto bundle per-level sweep at 16:9: L2, L3, L6, L7 each hold ~505 s clean, cull fires on all four, fps 59.1-60.0 (H-clean); new tools/dd6_bundle_level_sweep.zsh
+
+Work unit (NEXT.md dd6-bundle-level-sweep): the owner's "Farthest view" line (dd6 + WIDEWIN + MELT, auto off-map fog-depth cull) was qualified on L1/L4/L5 and the
+cutscene playlist only. No game build. Screen unlocked, HID idle 9660 s before launch.
+What ran (one game at a time, scratch/s7041/all.zsh -> scratch/s7040-style hold): 16:9 FPS60 dd6 UNSAFE MELT WIDEWIN cap 10240, CW 640x360 no capture,
+same-run tog3 OFFMAPCULL R=-1,2,2 K=0,0.6,0.6 H=off (phase 0 = cull off control, phases 1/2 = bundle values, A/A), 170+330 s hold, cost from G1E_TL.
+Health (summary): L2 flight_s 505 inits 1; L3 509 inits 1; L6 509 inits 7; L7 508 inits 3; all alive_at_end=1, vi_stalls30s=0, crashlines=0, CRASH/SIGSEGV/SIGBUS grep 0.
+(inits = [initMission] count: autopilot mission restarts, not crashes; godrefills 0-21.)
+Cost (tools/g5e_cost_by_parity.py --phases 3 --skip-s 130 --split xor8, 22.5-22.9k frames each), fps p0 -> p1/p2, rsp delta p1/p2, P(>=2VI) p0:
+- L2 (96x96) 58.7 -> 59.8/59.9, rsp 12.14 -> 9.68 (-2.45/-2.45), P 0.02 -> 0.00
+- L3 (78x78) 58.6 -> 60.0/60.0, rsp 12.64 -> 9.31 (-3.33/-3.34), P 0.02 -> 0.00
+- L6 (64x64) 59.3 -> 59.2/59.1, rsp 6.19 -> 5.76 (-0.43/-0.46), P 0.00 throughout: not rsp-bound, the cull is cost-neutral there
+- L7 (93x96) 59.5 -> 59.6/59.7, rsp 9.31 -> 7.33 (-1.98/-1.96), P 0.00
+A/A p1 vs p2 within 0.04 ms rsp on every level. Positive control for the cull wiring: [s7031] ocull/f ph0 0 vs ph1/ph2 2542/2520 (L2), 3285/3236 (L3), 3283/3332 (L6),
+2915/2867 (L7). [s7037] auto line 0 as expected (explicit OFFMAPCULL env wins, same values).
+Verdict H-clean on these four levels: no crash, stall or fps drop from the bundle. Rules out H-fail and H-nocull for L2/L3/L6/L7. Evidence is health + cost only
+(two lines: hold health and same-run counters/cost); image neutrality on these levels is not re-measured (rests on L1/L4 poses and the cutscene ranker).
+New tool: tools/dd6_bundle_level_sweep.zsh (sweep + scoring in one, LEVELS/ASP/TAG, ANALYZE_ONLY=1 re-scores; reproduced this report as scratch/s7041/sweep_report.txt).
+OWNER-OPT-INS "Farthest view" line extended with the level list.
+Next: same sweep on L0, L8, L9, L11, L12 (NEXT.md), then L13-L18.
