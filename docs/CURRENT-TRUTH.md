@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7003 (2026-11-08).
+Compact operational handoff, as of Session 7005 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -27,6 +27,9 @@ control 87%); viewed clamp-off long lines are knife lines. s6895's 306-vs-157 be
 **s7004 G5f dd2 L7:** two same-run W_CLAMP=tog captures (flight frames only; the autopilot crashes ~75 s in, later frames are menus): 100+ px lines
 22 -> 9 and 8 -> 3 off -> on; short-line counts follow scene content (run 1 on lower, run 2 on higher = HUD reticle in odd seconds), not the clamp.
 New ROGUESQ_W_SHEET_DROPLOG=<path> (rt64): 23 in-flight drops matched to frames, 0 visible holes. L7 clamp-off long lines are mostly bolts (knife lines rare here).
+**s7005 G5f owner sheet (dd4 L4 16:9):** docs/owner_sheet_s7005_g5f.png (tools/g5f_owner_sheet.py). 100+ px lines off -> on 145 -> 26 (T40), 252 -> 34 (T20, catches the
+faint dotted lines); 0 of 24 viewed clamp-on candidates are knife lines; solid and dotted knife lines seen only in clamp-off seconds. Toggle-edge frames
+(VI phase < 0.05) were rendered in the previous second: never count them for W_CLAMP=tog arms.
 
 Open or awaiting the owner (each one line; detail in the s6994 archive under the session):
 - **s6992 FIXED, default on: L15 21:9 dd4 crash.** ORIGIN ours: the game's pointer test
@@ -152,7 +155,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: G5f owner sheet (NEXT.md).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: G5f 21:9 check (NEXT.md).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
@@ -165,7 +168,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 4. **G5c freezes: fixed s6902, soak clean; closes on owner flight.**
 5. **G5d Factor 5 logo: fixed s6903; owner boot at dd2/dd4.**
 6. **G5e fog: done s6904; owner look.**
-7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Remaining: owner sheet (NEXT.md), then owner flight.
+7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). Remaining: 21:9 dd4 check (NEXT.md), then owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).
 9. **G5h cutscene background: closes on the owner's look.** Intros s6908, playlist s6909, scene

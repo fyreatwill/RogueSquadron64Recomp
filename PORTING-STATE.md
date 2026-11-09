@@ -184440,3 +184440,35 @@ H-escape not seen (no clamp-on knife line viewed). Caveat: at L7 the clamp-off l
 and the long-line reduction is partly scene. Crop centring on huge tris can miss a hole off-centre; the full-frame strips cover that at 4x downscale.
 Raws deleted (disk 14 GB free before deletion).
 Next: G5f owner sheet (knife lines off vs on, same run, dd4 L4), the last item before G5f waits on the owner (NEXT.md).
+
+## Session 7005 (2026-11-08) — G5f owner sheet at dd4 L4: clamp-off frames carry the solid and dotted knife lines, clamp-on mid-second frames carry none (0 of 24 viewed long-line candidates); 100+ px lines 145 -> 26 (T40) and 252 -> 34 (T20); the 4 apparent "escapes" were toggle-edge frames rendered in the off second
+
+HYPOTHESIS-ID: g5f-owner-sheet. No new soak verdicts (latest s6980). CURRENT-TRUTH 16.6 KB, no maintenance. Screen unlocked. Owner save sha 687d9f7745c7 before and after.
+
+Question (NEXT): produce the owner sheet for G5f (clamp off vs on, same run, owner recipe) and check for H-escape (knife lines in clamp-on frames).
+Run: scratch/s7005/arm.zsh (s7004 copy), `env CULL=1 zsh scratch/s7005/arm.zsh 4 4 s1 "ROGUESQ_W_CLAMP=tog ROGUESQ_W_SHEET_DROPLOG=..." 120 90`.
+`[ddscene] level=4 gate=1 on=1`, `ROGUESQ_DRAW_DISTANCE multiplier 4`, 16:9, FPS60. 5901 frames at 960x540; flight up to frame ~5520
+(thumbnail strip; 3600-3800 is an in-mission cutscene; 5560+ is MISSION FAILED). Droplog: 6 drops (all one vertex W 2800-9300, two W -8e4..-1.6e6).
+Detector scratch/s6906/g5f_lines: T=40 control 109/118 (92%); T=20 control 87/118 (74%), and it catches the faint dotted lines the T=40 pass misses
+(f1340, f4582, f2330 all detected at T=20, positive control for that class).
+
+| px (VI phase 0.05-0.95, frames < 5520) | T40 off / on | T20 off / on |
+|---|---|---|
+| 20-39 | 619 / 341 | 588 / 236 |
+| 40-59 | 151 / 110 | 172 / 127 |
+| 60-99 | 87 / 49 | 146 / 52 |
+| 100+ | 145 / 26 | 252 / 34 |
+
+Viewed: the 6 longest clamp-off events (393-579 px) are classic one-frame dark knife lines from the screen edge; several clamp-off frames also carry a
+fainter dotted or dashed line (f1325, f2313, f2908, f1340, f4582, f2330: all in EVEN seconds = clamp off). Clamp-on single-frame 100+ candidates,
+T40 (17) and T20 (18), 24 distinct frames, all viewed: terrain or horizon edge motion, laser bolts, HUD radar, building edges; 0 knife lines.
+Boring thing found: four T40 "clamp-on" knife lines (f1353, f1851, f2825, f3325) all sit at VI phase 0.003, with the same line in the frame before at
+phase 0.99 (clamp off). The capture tick is ~1 frame after the render, so toggle-edge frames belong to the previous second. Not escapes.
+A first sheet draft also mislabelled on-frames (it guessed clamp state from the nearest frame with a detected line); tools/g5f_owner_sheet.py
+now takes each frame's state from its own capture tick and only uses clamp-on triples at phase 0.2-0.9; the table excludes phase < 0.05 / > 0.95.
+
+Result: H-escape not seen at dd4 L4 (two lines: 0 of 24 viewed clamp-on candidates are knife lines, and the long-line count falls 5-7x at both thresholds).
+The dotted lines are clamp-off too (all six seen were in off seconds). Owner sheet: docs/owner_sheet_s7005_g5f.png (6 off knife lines f-1/f/f+1 beside the
+nearest mid-second clamp-on triple, same crop, plus the T40 table). New tool: tools/g5f_owner_sheet.py. Raw deleted.
+Rules out: H-escape at dd4 L4 16:9. Does not cover 21:9 (owner's ultrawide), never measured for G5f.
+G5f now closes on the owner's look at dd1/dd2/dd4 16:9. Next: same check at 21:9 dd4 (NEXT.md).
