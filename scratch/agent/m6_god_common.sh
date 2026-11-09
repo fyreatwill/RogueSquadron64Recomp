@@ -21,6 +21,10 @@ AP=""; t=10; for i in $(seq 1 300); do if (( t > ${STOP:-90} )); then break; eli
 # s5678: must precede COMMON=(...) - the array expands $AP at definition (s5677 arms ran with an empty schedule: no "[autopilot] armed" line).
 [ -n "${AP_OVERRIDE:-}" ] && AP=$AP_OVERRIDE
 COMMON=(${=XENV} ROGUESQ_GODMODE=${GODV:-1} ROGUESQ_AUTOPILOT=$AP ROGUESQ_OVL2C_DROP=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_AUDIO_UCODE=1 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=240 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 ROGUESQ_FB_HASH=${FBH_V:-1} ROGUESQ_LOG_RDP_TRICOUNT=${TRI_V:-1} ROGUESQ_LOG_RT64_DRAWN=${DRAWN_V:-1} ROGUESQ_FB_DUMP_DIR=$OUT/fbd ROGUESQ_FB_DUMP_EVERY=${FBD_EVERY:-500})
+# s7014: ROGUESQ_LOG_PHASE above (needed for phase gating) turns G1E_FAST off and G1E_PROBES on, so every cost/fps arm
+# run through this harness timed the diagnostic ucode path, not the owner's (s7010-s7013 rsp 13-17 ms vs 8.8-11.1 ms owner path,
+# and a "VI cliff" that does not exist for the owner). OWNER_TIMING=1 restores the owner's gfx path; use it for any timing arm.
+[ "${OWNER_TIMING:-0}" = 1 ] && COMMON+=(ROGUESQ_G1E_FAST=1 ROGUESQ_G1E_PROBES=0)
 # s5676: AP_OVERRIDE replaces the generated key schedule (s5675 set ROGUESQ_AUTOPILOT in XENV, but COMMON re-sets it from $AP after XENV, and STOP=0 made $AP empty -> no keys -> nohangar x8).
 if [ "${ROGUESQ_NO_PKILL:-0}" != 1 ]; then
   pkill -KILL -x RogueSquadron64Recomp >/dev/null 2>&1 || true

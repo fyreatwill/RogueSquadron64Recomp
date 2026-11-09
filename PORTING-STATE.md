@@ -184653,3 +184653,35 @@ HYPOTHESIS-ID: dd-wide-window. G5i checked first: fixed s6995-s6999, owner look,
   (13 ms at the retail-size window is the binding term), not fewer cells. Next: host profile of the gfx RSP task at 21:9 dd4 (sample the RSP thread,
   WIDEWIN off vs on in one run) to name the hot ucode path (NEXT.md).
 - Verdict: selects H-no-room, refutes H-room and H-edge-late (fps fails before any edge question arises).
+
+## Session 7014 (2026-11-08) — G5e WIDEWIN costs no fps on the owner's gfx path: s7010-s7013's VI cliff was the harness's LOG_PHASE probe path; caps 4096/6144/8192 run 58.9/59.9/60.0 fps (rsp 8.8/10.4/11.1 ms); gfx-thread block profile names DPC_END submit (34%) and ucode self (41%)
+HYPOTHESIS-ID: dd-wide-window. G5i: fixed s6995-s6999, owner look, nothing to run. CURRENT-TRUTH 22.1 KB, no maintenance. Soak fold: s7009_widewin_L4
+rc=0, crash=0, hold 303 s, flight_s 309, 0 VI stalls (WIDEWIN holds L1/L4/L15 now all clean).
+- Planned unit (NEXT): `sample` the gfx thread at 21:9 dd4 cap 8192 to name the hot ucode block. Run p1 (scratch/s7014/arm.zsh 4 4 p1, WIDEWIN=1 cap 8192,
+  MELT, CULL=1, = s7013 env). Two findings. (1) The profiled function was `factor5_ucode`, the main TU, not the nmac arm: run.log shows
+  `[g1e-fast] on=0 reason=ROGUESQ_LOG_PHASE` / `[g1e-probes] on=1 reason=ROGUESQ_LOG_PHASE`. scratch/agent/m6_god_common.sh always sets
+  ROGUESQ_LOG_PHASE=1, so every timing arm since s7010 measured the diagnostic path (CURRENT-TRUTH already said to set FAST=1 PROBES=0; the
+  s7010-s7013 arm scripts did not). (2) `sample` merges all offsets of one function into one line, so it cannot split a one-function ucode by block.
+- New tools: tools/xctrace_ucode_blocks.py (xctrace Time Profiler XML -> per-sample innermost factor5_ucode* frame -> line via the arm's OWN .o
+  line table (the main binary has no debug map, atos gives func+offset only) -> enclosing L_xxxx RSP label; self vs incl + callees) and
+  tools/xctrace_fn_lines.py (per-source-line self samples of any host function, inlined helpers by their own file:line). Handles xctrace's
+  backtrace/tagged-backtrace ref= reuse (first version counted 142 of 595 samples).
+- Run k3 (owner path: + ROGUESQ_G1E_FAST=1 ROGUESQ_G1E_PROBES=0, WIDEWIN=tog3 caps 4096,6144,8192, G1E_TL; xctrace 15 s at 140 s):
+  `[g1e-fast] on=1`, `[g1e-probes] on=0`, nmac arm ran (6808/6808 ucode samples). 0 crashes. g5e_cost_by_parity --phases 3 --skip-s 165 (past the
+  xctrace window): p0 4096 n2596 fps 58.9 rsp 8.79 (p90 10.51) P(>=2VI) 0.00; p1 6144 n2610 fps 59.9 rsp 10.43 (12.86) 0.00; p2 8192 n2642 fps 60.0
+  rsp 11.05 (14.23) 0.00. Positive control: rsp monotone in cap (+1.64/+2.26 ms, cf. s7012 +2.02/+3.32 on the slow path); 0.5 s-shifted split smears
+  (p1-p0 -0.31, p2-p0 +0.99). s7012 same caps, probe path: 57.3/37.5/34.9 fps, rsp 13.62/15.64/16.94.
+- Run k4 (independent second line: WIDEWIN=1 cap 8192 fixed, owner path, 270 s): arbitrary-parity split off/on fps 59.3/57.7, rsp 11.44/11.90
+  (p90 15.0/15.5), P(>=2VI) 0.01/0.04 (null split, both halves are 8192: +0.46 ms is the noise). 0 crash lines; wide origins 0x008F5800/0x009D5800
+  dominate (in mission at 21:9). Summaries not written in p1/k3/k4: the arm watchdog (DL+DU+25) fires before the harness's mission-wait+hold ends.
+- Gfx thread profile (k3, 8624 samples of 15 s, all caps mixed): ucode self 41.3%; L_1198 (`mtc0 DPC_END`) incl 33.8% -> rsp_dpc_submit_impl:
+  ultramodern::submit_rdp_range -> RT64 RDP interpret 16.3% (decodeTriangles 2.6, processRDPLists 1.9, TMEM hash/XXH3 ~3), bridge self 8.2%,
+  rs64_dpc_record_submit 6.9% (about 12 separate full-stream walks: rect_wrap 5602-5613, pillar 5778-5785, spike 3654-3660/3759, region 5332...);
+  L_1F98 8.7% (e9prov ovl-route probes still compiled into the nmac arm, 2.1%); the rest of the ucode self time is spread over blocks
+  0x1AFC/0x1298/0x1C3C/0x12B8/0x1D38/0x1930 at 2-4% each, so there is no single hot vector block.
+- Verdict: refutes s7012/s7013's H-no-room / "WIDEWIN is an owner fps trade" (it was the probe path) and so the premise of the planned optimisation;
+  selects H-free: on the owner path WIDEWIN cap 8192 fits under one VI at 21:9 dd4 L4 (two runs). Of NEXT's cost hypotheses, H-glue + RT64 inline
+  (~34%) and ucode self (~41%, spread, no H-vtx/H-clip hotspot) remain the levers if headroom is ever needed; fusing the ~12 scans is the cheap one.
+- Change: scratch/agent/m6_god_common.sh OWNER_TIMING=1 appends ROGUESQ_G1E_FAST=1 ROGUESQ_G1E_PROBES=0 (default off, existing recipes unchanged);
+  scratch/s7014/arm.zsh sets it by default. OWNER-OPT-INS WIDEWIN cost line corrected. Caveat: every harness timing number since s6713 without
+  FAST=1 PROBES=0 is suspect (s7009 captured-fps 59.6->50.7 included).

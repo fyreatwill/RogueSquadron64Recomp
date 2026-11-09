@@ -1,16 +1,12 @@
-# NEXT: name the hot path of the gfx RSP task at 21:9 dd4 (G5e WIDEWIN cost, s7013)
+# NEXT: owner-path fps of WIDEWIN at 16:9 and on L1/L15, then offer it to the owner (G5e, s7014)
 HYPOTHESIS-ID: dd-wide-window
-Context: s7013 refuted H-room: caps 4096/5120/5632 give fps 54.2/45.7/43.3, rsp 13.06/14.13/14.41 ms (~0.9 ms per 1000 cells). The gfx RSP task
-(~13 ms/frame at the retail-size window) is the binding term; WIDEWIN can only be free if that task gets cheaper per cell.
-Hypotheses (where the gfx task host time goes):
- H-vtx: vertex transform/lighting ucode loop dominates (cost ~ vertex count) -> optimise the recompiled vector ops in that block.
- H-clip: near/far clip + tri setup path dominates (cost ~ triangles crossing planes) -> look at the clip block / VRCP path.
- H-dma: DMA/DL fetch + dispatch overhead (rsp_dma, per-command dispatch) dominates -> batch DMA / cheaper dispatch.
- H-glue: host glue (dpc_bridge, spike cull, W clamp, RDP FIFO handoff) dominates -> cheaper bridge.
-Discriminator (one run): env NOCAP=1 ASP=21:9 CULL=1 zsh scratch/s7013/arm.zsh 4 4 p1 "ROGUESQ_DD_MELT=1 ROGUESQ_DD_WIDEWIN=1 ROGUESQ_DD_WIDEWIN_CAP=8192"
- and, once in flight (>=140 s after launch), `sample RogueSquadron64Recomp 20 -file scratch/s7013/sample_p1.txt`, then
- python3 tools/sample_game_threads.py scratch/s7013/sample_p1.txt 12 and a per-function self-time tally of the SP Task / Gfx thread
- (top 20 leaf symbols, factor5_ucode block addresses). Positive control: the SP Task thread must show >= ~75% busy samples in flight (13/16.7 ms).
- Same run second sample with WIDEWIN off is not possible (no runtime toggle except tog), so use WIDEWIN=tog and take two 20 s samples, or accept
- one sample: the question is the shape, not the delta. Each outcome names the block to optimise; then build the optimisation and measure rsp ms.
-Delete run.log after grepping.
+Context: s7014 showed WIDEWIN cap 8192 costs no fps at 21:9 dd4 L4 on the owner path (58.5-60 fps, two runs); the s7010-s7013 cliff was the harness
+probe path (LOG_PHASE). Before telling the owner it is free, check the other aspect and two more levels with the same instrument.
+Hypotheses: H-free-everywhere (all arms P(>=2VI) <= 0.05), H-level (a denser level, L1 or L15, crosses the VI at 8192), H-aspect (16:9 differs).
+Discriminator: one tog run per arm (OWNER_TIMING defaults to 1 in scratch/s7014/arm.zsh; check run.log shows [g1e-fast] on=1 / [g1e-probes] on=0):
+ env NOCAP=1 ASP=21:9 CULL=1 zsh scratch/s7014/arm.zsh 1 4 L1 "ROGUESQ_G1E_TL=$PWD/scratch/s7015/tl_L1.bin ROGUESQ_DD_MELT=1 ROGUESQ_DD_WIDEWIN=tog" 120 200
+ then L15 (needs ROGUESQ_FORCE_PLANET_UNLOCK=0xFF) and L4 at ASP=16:9. (Copy arm.zsh to scratch/s7015 first and fix its paths.) Raise the watchdog or
+ DU so the harness summary gets written. Split: python3 tools/g5e_cost_by_parity.py <tl>.<pid> <anchor> --skip-s 130 (grep the [s7010-clk] line
+ out of run.log before deleting it). Positive control: rsp on > off by ~2 ms (s7014 +2.26 at 8192 vs 4096).
+Outcome: all clean -> report to the owner via OWNER-OPT-INS (recommend WIDEWIN with dd>=2 at wide aspects; default stays the owner's call). A failing
+arm -> name the level/aspect and measure rsp vs run to say which term crosses the VI.

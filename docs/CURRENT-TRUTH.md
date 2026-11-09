@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7013 (2026-11-08).
+Compact operational handoff, as of Session 7014 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,12 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7014 WIDEWIN costs no fps on the owner's path; s7010-s7013's VI cliff was the harness.** m6_god_common.sh sets ROGUESQ_LOG_PHASE,
+which turns G1E_FAST off and G1E_PROBES on (main ucode TU, slow DMA). Same-run tog3 caps 4096/6144/8192 with FAST=1 PROBES=0
+(21:9 dd4 L4, MELT, CULL=1): fps 58.9/59.9/60.0, P(>=2VI) 0.00, rsp 8.8/10.4/11.1 ms (vs 13.6/15.6/16.9, 57/37.5/35 fps probes-on);
+second run WIDEWIN=1 cap 8192 fixed: ~58.5 fps, P 0.01-0.04, rsp 11.4-11.9, 0 crashes. New harness switch OWNER_TIMING=1 (use for every
+timing arm). Gfx-thread profile at 21:9 dd4 (xctrace + new tools/xctrace_ucode_blocks.py / xctrace_fn_lines.py): ucode self 41%,
+DPC_END at L_1198 -> rsp_dpc_submit_impl 34% (RT64 RDP decode 16%, our bridge self 8% + rs64_dpc_record_submit ~12 full-stream scans 7%).
 **G5i fixed s6995, awaiting the owner's look:** the hangar fish-eye after an abort was our s6907 aim
 releasing onto the retail view on a fixed 3.85 s clock; scrolls over more distance or chained presses (4.8-6.7 s, likely
 after re-entry because the cursor starts on another craft) were handed back mid pan (craft 23-31 deg off axis). Release
@@ -85,6 +91,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 maintenance)" and "
 
 ## Superseded conclusions — do not act on these
 Recent only; older entries: PROJECT-OVERVIEW "(s6994 maintenance)", "(s6900 maintenance)", "(s6870)", "(s6759 maintenance)".
+- s7009-s7013 "WIDEWIN costs ~10-25 fps / VI cliff at 6144 / owner fps trade" (s7014): every arm ran the harness's LOG_PHASE
+  probe path (main ucode TU, FAST off). Believable because the toggle split was same-run and self-consistent; the absolute level
+  was the debug path's. Owner path: 59-60 fps at 8192. Any harness timing number since s6713 without G1E_FAST=1 PROBES=0 is suspect.
 - s6895 "clamp on raises small transients at dd1, 306 vs 157" (s7003): old area-drop rule; under the current rule on is half of off.
 - s6901 "ring 7 empties near diagonals" (s7001): dips are on axis headings, edge stepping at 56 cells; the guess was never measured.
 - s6993 "H-level-cost: dense levels 7/16/17 run 56-58.5 fps" (s6996): whole-window shown/s counted menu/restart screens; in flight they hold 59.7-60.
@@ -157,7 +166,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: host profile of the gfx RSP task at 21:9 dd4 to make the per-cell cost cheaper (NEXT.md; s7013: no WIDEWIN cap keeps 60 fps, so WIDEWIN is an owner fps trade).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: owner-path fps of WIDEWIN at 16:9 and on L1/L15 so it can be offered to the owner as free (NEXT.md; s7014: WIDEWIN costs no fps at 21:9 dd4 L4 on the owner path).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
@@ -200,6 +209,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    **s7013: no room below the cliff.** Same-run caps 4096/5120/5632: fps 54.2/45.7/43.3, P(>=2VI) 0.11/0.31/0.38, rsp 13.06/14.13/14.41 (~0.9 ms per
    1000 cells). H-room refuted: WIDEWIN is an owner trade (wider 21:9 sides for ~35-45 fps) and stays opt-in. Both at once needs a cheaper gfx RSP task
    (13 ms at the retail window is the binding term). Next: profile the gfx RSP thread at 21:9 dd4 to name the hot ucode path (NEXT.md).
+   **s7014 SUPERSEDES the s7009-s7013 cost lines above** (harness probe path): owner path 59-60 fps at caps 4096-8192, rsp 8.8-11.9 ms,
+   two runs. WIDEWIN is free at 21:9 dd4 L4; still opt-in until the owner says. Next: same check at 16:9 and L1/L15, then offer it.
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).
