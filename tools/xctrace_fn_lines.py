@@ -39,7 +39,7 @@ def syms(path):
     out = {}
     for l in subprocess.run(["nm", "-C", path], capture_output=True, text=True).stdout.split("\n"):
         p = l.split(None, 2)
-        if len(p) == 3 and p[1] in "Tt": out.setdefault(p[2], int(p[0], 16))
+        if len(p) == 3 and p[1] in "Tt": out.setdefault(p[2][1:] if p[2].startswith("_") else p[2], int(p[0], 16))  # C symbols carry a leading _ (s7022)
     return out
 sb, so = syms(binary), syms(obj)
 key = next(k for k in so if k.startswith(fname))

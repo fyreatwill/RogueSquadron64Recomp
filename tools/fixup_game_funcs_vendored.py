@@ -42110,6 +42110,7 @@ RS64_REPLAY = [
     "apply_s7009_widewin.py",  # s7009: G5e dd>1 terrain window up to 128 cells per axis, tables at 0x83000000, opt-in ROGUESQ_DD_WIDEWIN
     "apply_s7011_lodmul.py",  # s7011: G5e coarser terrain LOD tiers at dd>1, opt-in ROGUESQ_DD_LODMUL (=f), _TOG=1 same-run parity
     "apply_s7012_widewin_cap.py",  # s7012: G5e host area cap for the s7009 wide window, ROGUESQ_DD_WIDEWIN_CAP=a[,b,c], WIDEWIN=tog3 cycles
+    "apply_s7022_streamtime.py",  # s7022: G1c per-call timing of streamTerrainGridCellsByDistance, ROGUESQ_S7022_ST=1
 ]
 
 

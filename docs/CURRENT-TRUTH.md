@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7021 (2026-11-08).
+Compact operational handoff, as of Session 7022 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,10 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7022 stream walk is linear (ROGUESQ_S7022_ST=1 per-call timer, tools/apply_s7022_streamtime.py, same-run tog3 8192/10240, L1 dd6 21:9 WIDEWIN, 0 crashes):**
+streamTerrainGridCellsByDistance runs once per frame, setup 0.5 us, loop 1.38 ms at 8192 cells / 1.69 ms at 10240 (inclusive of its two callees),
+171 ns/cell flat at both caps: H-superlinear refuted, every window cell is walked every frame. xctrace put 62% of the function's samples on
+0.5 us of setup code: per-line xctrace splits inside big recompiled functions are attribution artifacts, do not act on them. Next: NEXT.md.
 **s7021 G1c per-cell cost named (per-frame xctrace split of the s7020 dd6 cap toggle, tools/xctrace_phase_split.py, 50 paired triples, 0 crashes):**
 +2048 cells = gfx thread +1.72 +-0.22 ms/frame (= TL rsp +1.72; A/A +0.05): ucode self +0.70 spread over L_1F98/pre/L_1090/L_162C/L_16B8/L_1298/L_1740,
 DPC submit +0.68 (bridge self 0.24, RT64 submit_rdp_range 0.23, record_submit 0.16); game thread +0.91 (= TL run +0.93): streamTerrainGridCellsByDistance
@@ -195,7 +199,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); active unit: phase-split profile of the per-cell cost (NEXT.md).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; active unit: split per-cell cost self vs callees (NEXT.md).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
@@ -245,6 +249,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    s7020: same-run cap split at dd6: 8192 cells = dd4 cost, +2048 cells = rsp +1.7 / run +0.7 ms (52 fps); dd8's extra was cross-run. Headroom needs a cheaper per-cell path.
    s7021: per-frame split names it (gfx +1.72 = ucode self 0.70 over 7 blocks + submit 0.68 + 0.26; game +0.91, streamTerrainGridCellsByDistance
    +0.31 largest); e9prov route counters gated (rsp -0.14 same run). Next: streamTerrainGridCellsByDistance per-frame walk (NEXT.md).
+   s7022: that walk is linear, 171 ns/cell inclusive, 1 call/frame, 1.38 ms at 8192 cells. Next: split ns/cell into self vs callees + skip fraction (NEXT.md).
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).

@@ -201,6 +201,27 @@ extern "C" int rs64_s7012_cap(void) {
     if (!anc) { anc = 1; rs64_tog_anchor(mt); }  /* tog3 cycles on sec %% 3, not on the s7017 split */
     return v[(int)((mt / 24000000u) % 3u) % n];
 }
+// s7022 G1c (tools/apply_s7022_streamtime.py): per-call timing of streamTerrainGridCellsByDistance, ROGUESQ_S7022_ST=1.
+// Buckets by the s7012 cap value (tog3 phase); prints one [s7022-st] line per bucket per 256 calls. Ticks are mach (24 MHz here).
+extern "C" { int g_rs64_s7022 = [] { const char* e = getenv("ROGUESQ_S7022_ST"); return (e && *e && *e != '0') ? 1 : 0; }(); }
+extern "C" void rs64_s7022_st(unsigned long long t0, unsigned long long t1, unsigned long long t2, unsigned it, unsigned rw) {
+    struct B { int cap; unsigned n; unsigned long long su, lo, it, rw, w0, w1; };
+    static B b[4]; static int nb = 0; static double tb = 0;
+    if (tb == 0) { mach_timebase_info_data_t i; mach_timebase_info(&i); tb = (double)i.numer / i.denom; }
+    const int cap = rs64_s7012_cap(); int k = 0;
+    while (k < nb && b[k].cap != cap) k++;
+    if (k == nb) { if (nb == 4) return; b[nb++] = B{cap, 0, 0, 0, 0, 0, 0, 0}; }
+    B& x = b[k]; if (!t1) t1 = t2;
+    if (!x.n) x.w0 = t0;
+    x.n++; x.su += t1 - t0; x.lo += t2 - t1; x.it += it; x.rw += rw; x.w1 = t2;
+    if (x.n == 256) {
+        const double n = x.n;
+        fprintf(stderr, "[s7022-st] cap=%d calls=%u span_s=%.2f setup_us=%.2f loop_us=%.2f tot_us=%.2f cells=%.1f rows=%.1f ns_per_cell=%.2f\n",
+                x.cap, x.n, (x.w1 - x.w0) * tb * 1e-9, x.su * tb * 1e-3 / n, x.lo * tb * 1e-3 / n, (x.su + x.lo) * tb * 1e-3 / n,
+                x.it / n, x.rw / n, x.it ? x.lo * tb / x.it : 0.0);
+        x.n = 0; x.su = x.lo = x.it = x.rw = 0;
+    }
+}
 extern "C" int rs64_s7009_n(void) {
     static int n = -1; if (n < 0) { const char* e = getenv("ROGUESQ_DD_WIDEWIN_N"); n = (e && *e) ? atoi(e) : 128; if (n < 64) n = 64; if (n > 128) n = 128; }
     return n;

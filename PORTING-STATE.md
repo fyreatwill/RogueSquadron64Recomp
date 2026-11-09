@@ -184876,3 +184876,26 @@ HYPOTHESIS-ID: g1c-dd-headroom. G5i: fixed s6995-s6999, owner look, nothing to r
   cost; refutes H-single-block (no ucode block grows more than 0.15 ms/frame of the 1.72) and H-glue as a significant per-cell term (record_submit 0.16).
   Next discriminator: iterations per frame of streamTerrainGridCellsByDistance at 8192 vs 10240 cells (ratio ~1.25 -> H-fullwalk, >=1.5 -> H-superlinear).
 Note: tl rings and .trace bundles (gitignored) deleted after analysis; exported XML kept in scratch/s7021.
+
+## Session 7022 (2026-11-08) — G1c streamTerrainGridCellsByDistance is linear in cells (~171 ns/cell inclusive at both caps, H-superlinear refuted); its per-call cost is 1.38 ms at 8192 cells / 1.69 ms at 10240, ~1 call per frame, and the s7021 xctrace per-line split of this function is an attribution artifact
+
+What ran: (1) offline, tools/xctrace_fn_lines.py on the s7021 C7 trace (scratch/s7021/tp2.xml, '[Game] MAIN'). Tool fix: nm keeps the
+leading '_' on C symbols, so the name lookup failed for every recompiled function (StopIteration); syms() now strips it. Result:
+streamTerrainGridCellsByDistance = 6794 of 31005 MAIN samples (21.9%), but 4196 of them (62%) sit on four PCs (+0x8f0, +0xa9c, +0xab4,
++0x8f4 into the function; binary disassembly == object disassembly) in straight-line once-per-call setup code (a guest-stack ldrsw/cmp and
+constant-address materialisation before the row loop). (2) Instrument tools/apply_s7022_streamtime.py (in the vendored fixup replay list) +
+rs64_s7022_st in src/main/upstream_compat.cpp, ROGUESQ_S7022_ST=1: per call, mach time entry -> L_80042CD4 (setup) and -> return (loop,
+inclusive of getGridCellValueAt/processGridCellByDistance), outer rows (L_80042CF8) and inner cells (L_80042D3C), bucketed by the s7012 cap
+value; one [s7022-st] line per bucket per 256 calls; tools/s7022_streamtime_sum.py summarises the last K lines per cap. (3) One run
+scratch/s7022/run.zsh: L1 dd6 21:9 WIDEWIN=tog3 caps 8192,10240,10240 (s7020 recipe), owner path, 320 s hold, 0 crashes, 0 VI stalls.
+
+Result (last 6 buckets per cap, flight tail): cap 8192: setup 0.5 us, loop 1378 us, cells 8043, rows 78.6, 171 ns/cell; cap 10240: setup
+0.5 us, loop 1692 us, cells 9904, rows 89.4, 171 ns/cell. Calls/s per bucket 17.1 (1/3 of wall time) and 30.3 (2/3) = ~51 and ~45 per
+second of phase = one call per frame. Positive control in the same run: cells per call follow the cap (8192 vs 10240 exactly in steady
+buckets) and loop time follows cells (ratio 1.23 for 1.23x cells).
+What it shows: H-superlinear refuted (ns/cell flat); the walk visits every window cell every frame (cells = cap), i.e. H-fullwalk's O(cells)
+holds, cost linear. +2048 cells = +0.31 ms inclusive per frame here, agreeing with s7021's +0.31 for the same term. The function is ~1.4 ms
+of the ~3.1 ms guest run per frame at 8192 cells (inclusive). Setup is 0.5 us, so xctrace's 62% on setup PCs is skid/attribution, not cost:
+per-line xctrace splits inside large recompiled functions are NOT trustworthy (single-source caveat for s7014-style line splits elsewhere).
+Rules out: superlinear sort/insertion in the stream; per-call setup cost. Open: how the 171 ns/cell splits between the loop's own checks and
+the getGridCellValueAt/processGridCellByDistance calls, and how many cells take the span-equal skip (g_s6493[4]) vs the call path.
