@@ -42115,6 +42115,7 @@ RS64_REPLAY = [
     "apply_s7024_gvbranch.py",  # s7024: G1c per-branch time inside getGridCellValueAt (same switch)
     "apply_s7025_clampsplit.py",  # s7025: G1c clampGridCellLookup time split (create path, index pre segments; same switch)
     "apply_s7030_fogcull.py",  # s7030: G1c fogged-cell cull at dd>1, ROGUESQ_DD_FOGCULL=<k>|tog3 (+ depth/fog-end histogram)
+    "apply_s7031_offmap.py",  # s7031: G1c off-map cell census + ROGUESQ_DD_OFFMAPCULL=<R>|tog3 ring cull (needs s7030)
 ]
 
 

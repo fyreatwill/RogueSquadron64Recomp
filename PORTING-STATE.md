@@ -185127,3 +185127,31 @@ Rules out: fully fogged cells as the dd6 cost (H-fogwaste); H-gamecost as the ma
 Next: NEXT.md g1c-offmap-cells: classify every streamed cell on-map vs off-map (clamp branch) and by depth in one build; same-run arms off-map cull beyond
 the first R rings outside the map edge vs none, on L1 and an open level (L4), with the image positive control.
 Verdict: refutes H-fogwaste and H-gamecost; H-visible open (not visible on L1 at k=0.5); selects new H-offmap lead.
+
+## Session 7031 (2026-11-09) — G1c off-map cells: 82% (L1, 64x64 map) and 62% (L4, 94x94) of the streamed dd6 cells are off the map, mostly 17+ rings outside its edge; culling off-map cells beyond 2 rings saves rsp 9.75 ms (L1, 49.6 -> 60 fps) and 3.71 ms (L4, 55.4 -> 60 fps); image not yet qualified
+HYPOTHESIS-ID: g1c-offmap-cells. G5i/owner items checked first: nothing to run. CURRENT-TRUTH 34.6 KB, no maintenance. No new soak verdicts.
+Built (one build): tools/apply_s7031_offmap.py (funcs_9.c, rewrites the s7030 hook at L_80042DC4 to call rs64_s7031_cell(d, x, z) with the cell's grid
+x = s4 + win[0x80132DB0], z = fp + win[0x80132DB8], the same a0/a1 later passed to getGridCellValueAt at 0x80042E14/E1C; registered in RS64_REPLAY after s7030)
++ rs64_s7031_cell (src/main/upstream_compat.cpp): the clamp-branch test of getGridCellValueAt (x<0 || x>=dims[+0x38] || z<0 || z>=dims[+0x3A], dims
+0x80136DC0), ring = max(dx,dz) outside the edge. Per phase: off-map cells per depth bin, ring histograms (all off-map, and 0.5-1.0 fog-end band), [s7031]
+lines next to [s7030]. New opt-in ROGUESQ_DD_OFFMAPCULL=<R>|tog3 (_R=a,b,c, R<0 off) sends off-map cells with ring > R to the same span-reject edge as
+s7030; it combines with FOGCULL=tog3 on the same phase clock. Default OFF (env unset = hook not armed). Tools: tools/s7031_offmap_census.py (band/ring summary),
+tools/s7031_dark_sheet.py (per-phase most-dark-grey frames; turned out not discriminating, it also picks shadowed hills).
+Runs (scratch/s7031, dd6 21:9 WIDEWIN cap 10240 MELT, OWNER_TIMING, CULL=1, tog3 phases (k=0,R=off) / (k=0,R=2) / (k=0.3 image control), 0 crashes, 0 VI stalls,
+alive_at_end=1 both):
+- L1A (LEVEL=1, map 64x64): 7390 cells/f, off-map 82% (0-0.5 fe 61% early / band 0.5-1.0 95%, >=1.0 100%); off-map ring median 17+ (<=2: 3%, <=8: 15%).
+  R=2 culls 5919 cells/f. Cost (g5e_cost_by_parity --phases 3 --skip-s 130): p0 49.6 fps rsp 15.21 run 3.90; R=2 60.0 fps rsp 5.46 (-9.75) run -1.38;
+  k=0.3 60.0 fps rsp -10.18. rsp 5.46 is below the dd4 baseline (~12.6): most of the dd6 gfx cost on L1 is off-map cells.
+- L4A (LEVEL=4, map 94x94): 7532 cells/f, off-map 62% (0-0.5 fe 39%, band 0.5-1.0 82%); ring median 17+ (<=2: 5%). R=2 culls 4265 cells/f:
+  p0 55.4 fps rsp 12.27; R=2 60.0 fps rsp 8.56 (-3.71) run -0.93; k=0.3 59.8 fps rsp -7.41. Off-map cells cost less per cell here (~0.9 vs ~1.6 us rsp on L1).
+- Image: NOT QUALIFIED. s7030_fogcull_image.py A/A floor (P0 even vs odd cycles) 8.68 (L1) / 10.31 (L4) is ABOVE the k=0.3 positive control (6.10 / 3.50)
+  in both runs: the autopilot banks hard, adjacent seconds differ more than any arm does. By eye (docs/owner_sheet_s7031_offmap_l1.jpg, _l4.jpg, adjacent-second
+  triples, single-source): on L1 the dark map-edge wall face stays whole at R=2, sky above it, as in off; on L4 land runs to the haze in R=2 frames. Caveat:
+  the autopilot stays below the L1 wall top, so a view of the off-map plateau from above (where R=2 would end it 2 cells out) was never sampled.
+Reading: H-offmap selected on census + cost, two levels (off-map share of the 0.5-1.0 fe band 95% / 82% >= 70% bar; saving 9.75 / 3.71 ms >= 3 ms bar).
+H-occlude refuted as the main term (off-map share is large). H-open not tested yet (no qualified image). The image half of the outcome map is open.
+ORIGIN: n/a (opt-in experiment lever, default off; no mitigation).
+Rules out: on-map occluded terrain as the bulk of the dd6 window cost; a small off-map share.
+Next: NEXT.md g1c-offmap-cells: qualify the image with a frozen camera (ROGUESQ_POSE_FREEZE, s6872) so phase frames share a pose; R in {0,2} plus k=0.3 control,
+L1 (incl. a high-altitude pose looking over the wall) and L4.
+Verdict: selects H-offmap (census + cost, 2 levels), refutes H-occlude; image qualification open (instrument failed its control in both runs).

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7030 (2026-11-09).
+Compact operational handoff, as of Session 7031 (2026-11-09).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,11 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7031 off-map cells (tools/apply_s7031_offmap.py, opt-in ROGUESQ_DD_OFFMAPCULL=<R>|tog3, default off; dd6 21:9 WIDEWIN cap 10240, L1 + L4, 0 crashes): H-offmap selected
+on census + cost.** 82% (L1, map 64x64) / 62% (L4, 94x94) of streamed cells are off the map (clamp branch), 95% / 82% of the 0.5-1.0 fog-end band, mostly 17+ rings
+outside the edge. Culling off-map cells beyond 2 rings: L1 rsp 15.21 -> 5.46 ms (49.6 -> 60 fps), L4 12.27 -> 8.56 (55.4 -> 60). Image NOT qualified: the mean-image
+A/A floor exceeded the k=0.3 control in both runs (autopilot banking); by eye the L1 wall face stays (sheets docs/owner_sheet_s7031_offmap_l1.jpg / _l4.jpg). Next:
+frozen-pose image check (NEXT.md). Not a default candidate until then.
 **s7030 fogged-cell cull (ROGUESQ_DD_FOGCULL=<k>|tog3, opt-in default off, tools/apply_s7030_fogcull.py; L1 dd6 21:9 WIDEWIN cap 10240, 3 runs, 0 crashes):**
 H-fogwaste refuted: only 2.1% of the ~7040 streamed cells/frame lie past the fog end (fe ~86 grid, frustum far 108); culling them (k=1) saves 0 ms.
 But a forward-depth cull at 0.5 x fog end removes 51% of cells: rsp -4.9 ms/frame, 48.6-53.8 -> 59.7-60 fps (two runs; 1/3-period shifted control smears),
@@ -226,7 +231,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); s7026 DPC submit = RT64 per-byte + ~21 ns/bump bridge, wait flat; s7027 per-bump checks only ~3.6 of ~24 ns (H-checks refuted); s7028/s7029 bridge split closed (H-call, shadow refuted); s7030 fogged-cell cull: H-fogwaste refuted, 0.5 x fog-end depth cull = rsp -4.9 ms invisible on L1 (H-offmap lead); active unit: NEXT.md (off-map cells).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); s7026 DPC submit = RT64 per-byte + ~21 ns/bump bridge, wait flat; s7027 per-bump checks only ~3.6 of ~24 ns (H-checks refuted); s7028/s7029 bridge split closed (H-call, shadow refuted); s7030 fogged-cell cull: H-fogwaste refuted, 0.5 x fog-end depth cull = rsp -4.9 ms invisible on L1 (H-offmap lead); s7031 off-map census: 82%/62% of dd6 cells off-map, R=2 cull rsp -9.75/-3.71 ms (L1/L4), image unqualified; active unit: NEXT.md (frozen-pose image check).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.

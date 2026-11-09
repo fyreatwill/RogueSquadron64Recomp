@@ -140,9 +140,13 @@ extern "C" void rs64_s6904_fog(uint8_t *rdram, recomp_context *ctx) {
 // near-edge forward depth is past k x fog end; =tog3 cycles k over ROGUESQ_DD_FOGCULL_K=a,b,c (default 0,1,0.5) on (mach/24e6)%3 s.
 // Every phase keeps a histogram of cell depth / fog end (20 bins of 0.1, last = >=1.9) over cells reaching the call path.
 extern "C" void rs64_tog_anchor(uint64_t mt);
-extern "C" { int g_rs64_s7030 = [] { const char* e = getenv("ROGUESQ_DD_FOGCULL"); return (e && *e && *e != '0') ? 1 : 0; }();
+extern "C" { int g_rs64_s7030 = [] { const char* e = getenv("ROGUESQ_DD_FOGCULL"), *o = getenv("ROGUESQ_DD_OFFMAPCULL");
+                 return ((e && *e && *e != '0') || (o && *o)) ? 1 : 0; }(); /* s7031: OFFMAPCULL also arms the hook */
              float g_rs64_s7030_f[2] = {0.0f, 1.0f}; float g_rs64_s7030_fe = 0.0f; }
 static float s7030_k[3] = {0.0f, 1.0f, 0.5f}; static int s7030_tog3 = 0, s7030_ph = 0; static float s7030_thr = 0.0f, s7030_fe = 0.0f;
+// s7031 off-map census (tools/apply_s7031_offmap.py): per phase, off-map cells per depth bin, ring distance outside the map edge (all
+// off-map cells and those in the 0.5-1.0 fog-end band), and ROGUESQ_DD_OFFMAPCULL=<R>|tog3 (_R=a,b,c; R<0 off) culls rings > R.
+static int s7031_R[3] = {-1, -1, -1}, s7031_w = 0, s7031_hgt = 0; static uint64_t s7031_off[3][20], s7031_ring[3][18], s7031_rband[3][18], s7031_cull[3];
 static uint64_t s7030_h[3][20], s7030_cull[3], s7030_frames[3], s7030_t0 = 0, s7030_last = 0; static double s7030_F[3], s7030_FE[3];
 extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
     static int init = 0;
@@ -150,12 +154,19 @@ extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
         if (e && e[0] == 't') { s7030_tog3 = 1; const char* k = getenv("ROGUESQ_DD_FOGCULL_K"); float a, b, c;
             if (k && sscanf(k, "%f,%f,%f", &a, &b, &c) == 3) { s7030_k[0] = a; s7030_k[1] = b; s7030_k[2] = c; } }
         else { s7030_k[0] = s7030_k[1] = s7030_k[2] = e ? (float)atof(e) : 0.0f; }
+        if (const char* o = getenv("ROGUESQ_DD_OFFMAPCULL")) {
+            if (o[0] == 't') { s7030_tog3 = 1; const char* r = getenv("ROGUESQ_DD_OFFMAPCULL_R"); int a, b, c;
+                if (r && sscanf(r, "%d,%d,%d", &a, &b, &c) == 3) { s7031_R[0] = a; s7031_R[1] = b; s7031_R[2] = c; } else { s7031_R[1] = 2; s7031_R[2] = 8; }
+                if (!(e && e[0] == 't')) s7030_k[0] = s7030_k[1] = s7030_k[2] = e ? (float)atof(e) : 0.0f; }
+            else s7031_R[0] = s7031_R[1] = s7031_R[2] = atoi(o); }
+        fprintf(stderr, "[s7031] offmapcull R=%d,%d,%d tog3=%d\n", s7031_R[0], s7031_R[1], s7031_R[2], s7030_tog3);
         fprintf(stderr, "[s7030] fogcull tog3=%d k=%g,%g,%g a0=0x%08X\n", s7030_tog3, s7030_k[0], s7030_k[1], s7030_k[2], a0); }
     auto rf = [&](uint32_t a) { uint32_t v = (uint32_t)MEM_W(0, (int64_t)(int32_t)a); float f; memcpy(&f, &v, 4); return f; };
     const float ex = rf(a0), ez = rf(a0 + 8); float fx = 0, fz = 0;
     for (uint32_t i = 0; i < 4; i++) { fx += rf(0x80130C1Cu + 12 * i) - ex; fz += rf(0x80130C1Cu + 12 * i + 8) - ez; }
     const float n = sqrtf(fx * fx + fz * fz); if (n > 1e-6f) { fx /= n; fz /= n; } else { fx = 0; fz = 1; }
     g_rs64_s7030_f[0] = fx; g_rs64_s7030_f[1] = fz;
+    s7031_w = (int)(uint16_t)(MEM_W(0, (int64_t)(int32_t)0x80136DF8) >> 16); s7031_hgt = (int)(uint16_t)MEM_W(0, (int64_t)(int32_t)0x80136DF8); /* dims +0x38/+0x3A (BE halves) */
     const uint64_t mt = mach_absolute_time(); s7030_ph = s7030_tog3 ? (int)((mt / 24000000u) % 3u) : 0;
     s7030_fe = g_rs64_s7030_fe; s7030_thr = s7030_k[s7030_ph] > 0 && s7030_fe > 0 ? s7030_k[s7030_ph] * s7030_fe : 0.0f;
     float F = 0; for (uint32_t i = 0; i < 4; i++) F += (rf(0x80130C1Cu + 12 * i) - ex) * fx + (rf(0x80130C1Cu + 12 * i + 8) - ez) * fz;
@@ -165,7 +176,22 @@ extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
         for (int p = 0; p < 3; p++) { const double fr = s7030_frames[p] ? (double)s7030_frames[p] : 1.0; uint64_t tot = 0; for (int b = 0; b < 20; b++) tot += s7030_h[p][b];
             char buf[400]; int o = 0; for (int b = 0; b < 20; b++) o += snprintf(buf + o, sizeof buf - o, "%s%.1f", b ? "," : "", s7030_h[p][b] / fr);
             fprintf(stderr, "[s7030] t=%.0f ph=%d k=%g frames=%llu cells/f=%.1f cull/f=%.1f F=%.1f fe=%.1f hist/f=%s\n", (mt - s7030_t0) / 24e6, p, s7030_k[p],
-                    (unsigned long long)s7030_frames[p], tot / fr, s7030_cull[p] / fr, s7030_F[p] / fr, s7030_FE[p] / fr, buf); } }
+                    (unsigned long long)s7030_frames[p], tot / fr, s7030_cull[p] / fr, s7030_F[p] / fr, s7030_FE[p] / fr, buf);
+            o = 0; for (int b = 0; b < 20; b++) o += snprintf(buf + o, sizeof buf - o, "%s%.1f", b ? "," : "", s7031_off[p][b] / fr);
+            char rb[300], rb2[300]; int o1 = 0, o2 = 0; for (int b = 0; b < 18; b++) { o1 += snprintf(rb + o1, sizeof rb - o1, "%s%.1f", b ? "," : "", s7031_ring[p][b] / fr);
+                o2 += snprintf(rb2 + o2, sizeof rb2 - o2, "%s%.1f", b ? "," : "", s7031_rband[p][b] / fr); }
+            fprintf(stderr, "[s7031] t=%.0f ph=%d R=%d dims=%dx%d win=%d,%d ocull/f=%.1f off/f=%s ring/f=%s rband/f=%s\n", (mt - s7030_t0) / 24e6, p, s7031_R[p], s7031_w, s7031_hgt,
+                    (int32_t)MEM_W(0, (int64_t)(int32_t)0x80132DB0), (int32_t)MEM_W(0, (int64_t)(int32_t)0x80132DB8), s7031_cull[p] / fr, buf, rb, rb2); } }
+}
+extern "C" int rs64_s7030_cell(float d);
+extern "C" int rs64_s7031_cell(float d, int32_t x, int32_t z) {
+    const float dn = d - 0.71f; const int p = s7030_ph;
+    const int b = s7030_fe > 0 ? (int)(dn / s7030_fe * 10.0f) : 0; const int bc = b < 0 ? 0 : b > 19 ? 19 : b;
+    const int off = x < 0 || x >= s7031_w || z < 0 || z >= s7031_hgt;
+    if (off) { const int dx = x < 0 ? -x : x >= s7031_w ? x - s7031_w + 1 : 0, dz = z < 0 ? -z : z >= s7031_hgt ? z - s7031_hgt + 1 : 0;
+        const int r = dx > dz ? dx : dz; const int rc = r > 17 ? 17 : r; s7031_off[p][bc]++; s7031_ring[p][rc]++; if (bc >= 5 && bc < 10) s7031_rband[p][rc]++;
+        if (s7031_R[p] >= 0 && r > s7031_R[p]) { s7030_h[p][bc]++; s7031_cull[p]++; return 1; } }
+    return rs64_s7030_cell(d);
 }
 extern "C" int rs64_s7030_cell(float d) {
     d -= 0.71f; /* near edge of a unit cell */
