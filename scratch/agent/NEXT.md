@@ -1,18 +1,15 @@
-# NEXT: G5f dd1 — why the W clamp raises small transients at dd1 (s6895: 306 vs 157, 8 of 8 bins)
-HYPOTHESIS-ID: g5f-dd1-transients
-Context: s7002 showed at dd4 L4 that lines under 60 px are real moving geometry and that dropping mixed-sign 40-200 px tris
-adds sliver holes; W_SHEET_PX=200 stays. s6895 (old clamp rule, before the 200 px sheet rule) saw MORE small transients with
-the clamp on at dd1 (T>=.003 306 vs 157) and never explained them. W_CLAMP is now default on at dd1 (s6906).
+# NEXT: G5f at dd2 on a second level (L7) — does the default W clamp still remove knife lines without new holes?
+HYPOTHESIS-ID: g5f-dd2-l7
+Context: s7002 (dd4 L4) and s7003 (dd1 L4) showed the clamp removes knife lines and its kept slivers are real. Every G5f
+measure so far is LEVEL=4. dd2 is an owner recipe ("dd2 fewer but not gone") and L7 is a dense terrain level (s7000).
 Hypotheses:
-- H-sliver: clamped small tris (<20 px span, the bulk: ~3.5k per block) render with a slightly different footprint or
-  texture than unclamped, flickering frame to frame -> tiny transients. Clamp on shows more 20-39 px lines than off.
-- H-gone: the s6895 excess belonged to the first rule (drop over 20000 px area) and is absent under the current rule:
-  on == off at the 20 px detector.
-- H-real: transients are real motion; any on/off difference is phase noise (windows split both ways).
-Discriminator, ONE run: LEVEL=4 dd1 16:9 FPS60, `ROGUESQ_W_CLAMP=tog ROGUESQ_W_SHEET_STATS=1`, capture 90 s only
-(`zsh scratch/s7002/arm.zsh 4 1 c1 "ROGUESQ_W_CLAMP=tog ROGUESQ_W_SHEET_STATS=1" 120 90`; disk ~20 GB, 9 GB/min, no TRIS).
-Score: scratch/s6906/g5f_lines c1.raw lines_c1.txt 40 20 50 (control >= 85%), python3 tools/g5f_short_buckets.py
-lines_c1.txt; block 1 = clamp on. View 6 on-block and 6 off-block short lines (scratch/s6906/crop.py, phase 0.2-0.9),
-flip diff (scratch/s6906/g5f_flip_diff). Delete the raw after scoring.
-Outcomes: on > off in >= 8/10 windows and viewed on lines are slivers -> H-sliver (then try clamp only for span >= 20);
-on ~= off -> H-gone, close the dd1 question; split windows -> H-real.
+- H-holds: clamp on has fewer 60+ px lines than off in >= 4/5 windows, and on-block lines viewed are real geometry.
+- H-level: L7 terrain gives mixed-sign tris > 200 px the drop rule removes visibly (clamp-on block shows sliver holes /
+  more 20-39 px lines than off, and [wsheet] dropped >> s7003's 3).
+- H-escape: clamp-on 100+ lines viewed are still knife lines (wedges the clamp misses: non-perspective or all-W<=0 path).
+Discriminator, ONE run: `env CULL=1 zsh scratch/s7003/arm.zsh 7 2 d1 "ROGUESQ_W_CLAMP=tog ROGUESQ_W_SHEET_STATS=1" 120 90`
+(edit the copy into scratch/s7004 first; check run.log `[ddscene] level=7` and `multiplier 2`; disk ~21 GB, 90 s = 9.5 GB).
+Score: scratch/s6906/g5f_lines d1.raw lines_d1.txt 40 20 50 (control >= 85%), python3 tools/g5f_short_buckets.py lines_d1.txt;
+view 6 per block per bucket (scratch/s6906/crop.py, phase 0.2-0.9, pick script in PORTING-STATE s7003). Delete the raw.
+Outcomes: H-holds -> G5f closed at all measured recipes, owner sheet; H-level -> measure dropped-tri spans on L7, consider
+raising W_SHEET_PX per dd; H-escape -> log those tris (W signs, texturePerspective) with a G5F_ESCAPE dump in the same build.

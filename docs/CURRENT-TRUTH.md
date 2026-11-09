@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7002 (2026-11-08).
+Compact operational handoff, as of Session 7003 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -22,6 +22,8 @@ site-15 control 5868/5976 odd vs 100/5998 even); L10 has no terrain in flight. N
 stepping across the ring-7 boundary (56 cells); extra terrain the old clamp never drew, not a loss (tools/g5b_ring7_discrim.py).
 **s7002 G5f short lines:** W_SHEET_PX 200 -> 40 same run (ROGUESQ_W_SHEET_ALT) ADDS lines under 60 px (20-39 px 605 -> 1096, 9/10 windows,
 ~= the 627 extra drops): kept clamped 40-200 px tris are real slivers; 200 stays. 18 viewed 20 px+ lines at dd4 L4 are all real motion (tools/g5f_short_buckets.py).
+**s7003 G5f dd1 closed:** same-run W_CLAMP=tog at dd1 L4: clamp ON has fewer short lines (20-39 px 649 off -> 305 on, 100+ 47 -> 7, on below off in 5/5 windows,
+control 87%); viewed clamp-off long lines are knife lines. s6895's 306-vs-157 belonged to the old area rule. Default on at dd1 stands.
 
 Open or awaiting the owner (each one line; detail in the s6994 archive under the session):
 - **s6992 FIXED, default on: L15 21:9 dd4 crash.** ORIGIN ours: the game's pointer test
@@ -75,6 +77,7 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 maintenance)" and "
 
 ## Superseded conclusions — do not act on these
 Recent only; older entries: PROJECT-OVERVIEW "(s6994 maintenance)", "(s6900 maintenance)", "(s6870)", "(s6759 maintenance)".
+- s6895 "clamp on raises small transients at dd1, 306 vs 157" (s7003): old area-drop rule; under the current rule on is half of off.
 - s6901 "ring 7 empties near diagonals" (s7001): dips are on axis headings, edge stepping at 56 cells; the guess was never measured.
 - s6993 "H-level-cost: dense levels 7/16/17 run 56-58.5 fps" (s6996): whole-window shown/s counted menu/restart screens; in flight they hold 59.7-60.
 - s6990 "60.0 fps on all 19 levels at 16:9" and s6962 "LEVEL=4 58.5, LEVEL=10 60.0" (s6991):
@@ -146,7 +149,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: G5f dd1 small transients (NEXT.md).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: G5f dd2 on L7 (NEXT.md).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
@@ -159,7 +162,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 4. **G5c freezes: fixed s6902, soak clean; closes on owner flight.**
 5. **G5d Factor 5 logo: fixed s6903; owner boot at dd2/dd4.**
 6. **G5e fog: done s6904; owner look.**
-7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). Open: dd1 small transients clamp on vs off (s6895, 306 vs 157).
+7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). Open: dd2 / a second level (NEXT.md).
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).
 9. **G5h cutscene background: closes on the owner's look.** Intros s6908, playlist s6909, scene

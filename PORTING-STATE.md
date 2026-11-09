@@ -184377,3 +184377,27 @@ Result: this refutes H-sheet and selects H-real for the sample, and closes the <
 
 Disk: 20 GB free after deleting the raw. A 960x540 capture costs ~1.55 MB/frame at ~95 frames/s (~9 GB/min); keep captures under 90 s or capture smaller. arm.zsh now writes the G5B_TRIS dump (2.7 GB) only with TRIS=1. Owner save sha 687d9f7745c7 before and after.
 Next discriminator: dd1 same-run W_CLAMP=tog at the 20 px detector (NEXT.md, H-sliver / H-gone / H-real).
+
+## Session 7003 (2026-11-08) — G5f dd1: the W clamp now halves small transients instead of raising them (20-39 px 649 off -> 305 on, lower in 5 of 5 windows); the s6895 excess belonged to the old area rule; clamp-off long lines at dd1 are knife lines, so the default-on clamp is right at dd1
+
+HYPOTHESIS-ID: g5f-dd1-transients. No new soak verdicts (latest s6980, folded s6981). CURRENT-TRUTH 15.7 KB, no maintenance.
+
+Question (NEXT): s6895 (old first rule, drop over 20000 px area) saw more small transients with the clamp on at dd1 (306 vs 157). Under the current rule (clamp small mixed-sign tris, drop span > 200 px), is that still so? H-sliver: clamped small tris flicker, on > off. H-gone: the excess belonged to the old rule, on <= off. H-real: phase noise, windows split.
+
+Run c1: LEVEL=4 (Gerrard V, `[ddscene] level=4`, multiplier 1), dd1, 16:9, FPS60, `ROGUESQ_W_CLAMP=tog ROGUESQ_W_SHEET_STATS=1`, CULL_SPIKE=1 fixed (s7002's arm toggled CULL too; fixed here so only the clamp changes). scratch/s7003/arm.zsh (copy of s7002's), 960x540 capture 120-210 s, 6100 frames, 9.5 GB raw, deleted after scoring. Detector scratch/s6906/g5f_lines T=40, min run 20 px, injection every 50th frame: 105/121 recovered (87%), control passes. Block 1 = odd 24 MHz seconds = clamp on (rt64_gbi_rdp.cpp s_wClampMode 2).
+
+| run px | lines off (b0) / on (b1) | events off / on |
+|---|---|---|
+| 20-39 | 649 / 305 | 162 / 92 |
+| 40-59 | 158 / 86 | 72 / 43 |
+| 60-99 | 102 / 43 | 42 / 15 |
+| 100+ | 47 / 7 | 37 / 5 |
+
+Short (< 60) per 1000-frame window off/on: 201/95 184/80 189/98 211/114 22/4, on above off in 0 of 5 (0 of 7 counting from frame 0). [wsheet] at the end (clamp-on block only, by design): mixed-sign tris lt20 381, 20-40 1702, 40-60 311, 60-100 237, 100-200 51, >=200 3, dropped 3. At dd1 the drop rule removes 3 tris in 90 s, so nearly the whole effect is the clamp itself.
+
+Second line, frames viewed (phase 0.2-0.9 only): six clamp-off 100+ px lines: five are thin dark one-frame lines across the sky, over clouds, the horizon and the HUD radar (knife lines, absent in the frames before and after), one is laser bolts. Six clamp-on 20-59 px lines: a missile trail, laser bolts (twice), a building edge, cloud, a pillarbox edge, all real. Six clamp-off 20-59 px lines: cloud and building motion, nothing visible. Crops scratch/s7003/long_b0.png, short_b1.png, short_b0.png.
+
+Result: selects H-gone, and goes further: under the current rule the clamp REMOVES transients at dd1 (about half of the 20-59 px lines and 85% of the 100+ ones are clamp-off wedges). The s6895 306-vs-157 belonged to the first (area-drop) rule, which s6906 replaced. Two lines: window counts in one direction with the control passing, and viewed frames that show knife lines only with the clamp off. Rules out H-sliver (on is never above off) and H-real (0 of 5 windows split). Single level (L4), single run. The dd1 question in G5f is closed; W_CLAMP default on at dd1 stands. Nothing changed in code.
+
+Owner save sha 687d9f7745c7 before and after. Disk 21 GB free after deleting the raw.
+Next: G5f at dd2 on a second level (L7), same-run clamp toggle, the one recipe G5f has not covered (NEXT.md).
