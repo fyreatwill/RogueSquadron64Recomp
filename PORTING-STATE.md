@@ -185042,3 +185042,34 @@ atomics folded into per-task plain accumulators, and push without the shadow ins
 Verdict line (s7027): the same-run BUMPFAST=tog split refutes H-checks (per-bump checks = ~3.6 of ~24 ns; cut 8% < 20% threshold) and
 selects the push/counter side (H-push/H-cache) as the bulk of the bridge's per-bump cost. Next discriminator (NEXT.md, g1c-bump-push-split):
 one build, 3-way same-run tog off / fast / fast+plain counters plus an AQ null-timed column, which splits H-atomics vs H-shadow vs H-offset.
+
+## Session 7028 (2026-11-09) — G1c bump push split: 9.0 of the 24.7 "ns/bump" is the AQ=3 timing offset (H-offset); real bridge cost 15.7 ns = checks 1.7 (11%) + counter atomics 3.3 (21%) + push/shadow/call 10.7 (68%); plain-counter arm not yet exact (bad2 1/11702)
+
+HYPOTHESIS-ID: g1c-bump-push-split. Owner items 1-14 in CURRENT-TRUTH: nothing runnable (all await the owner's look/flight).
+
+Change (src/rsp/dpc_bridge.cpp, src/main/main.cpp ring; all opt-in, defaults unchanged):
+- `ROGUESQ_G1E_BUMPFAST=2`: fast path plus plain gfx-thread per-task accumulators in place of the per-bump atomics (s_fwd pair, now
+  file scope; g_task_rdp_bytes, rs64_g1e_rdp_bytes, g_task_rdp_cmds, fast-path g_cumulative_op_count). They are flushed by rs64_bf2_flush
+  at rsp_task_log_and_reset, rs64_task_rdp_bytes_total and rs64_dpc_defer_end (the gfx-thread readers). The oob drop undoes its s_fwd add.
+  `=tog3` sets each task's arm from mach second % 3 (off / fast / fast+plain). Period 3 is coprime with the harness's 8 s press cycle.
+- `BUMPFAST_CHECK=1` with arm 2: reference atomics compared with the pending sums at each flush (chk2/bad2); the first 4 flushes plant +1
+  (ctl2 must be 4). [s7027-bf] line gains tasksOn2 chk2 bad2 ctl2.
+- `ROGUESQ_G1E_AQ_NULL=1`: each AQ=3 sampled call also times an empty noinline call with the same clock pair (x16), as ring column aq_null_ms.
+  Ring gains `bf_on2 aq_null_ms` (35 columns). Analysis: tools/s7028_bump_push_split.py.
+
+Runs (scratch/s7028/run.zsh, L1 dd6 21:9 WIDEWIN=1 cap 10240, FPS60, CULL=1, AQ=3 + S7026_SUB, one game at a time):
+- A, BUMPFAST=tog3 + AQ_NULL + S7026_SPIN_NS=300000, 325 s flight, 0 crash, 0 VI stall. 13889 flight rows, 0 mixed; tasks 5990/5967/6031.
+  Arm control passes: fast/bump 0.000 off, 0.543 fast, 0.543 plain. Timing control passes: rt/handoff 740 -> 1033 / 738 -> 1043 / 744 -> 1035 us.
+  spin-off rows, ns/bump self / null / net: off 24.73 / 8.99 / 15.74, fast 23.15 / 9.13 / 14.02, plain 19.71 / 9.01 / 10.70.
+  The null is flat across arms (8.99-9.13), so it is a fixed offset of the method. fps 52.3 / 52.5 / 52.8, sd_wall 13.84 / 13.87 / 13.95
+  (fps and wall differences are within noise, single run).
+- C, BUMPFAST=2 CHECK=1, 155 s flight, 0 crash: state guard chk=395.0M bad=0 ctl=4 (fast-path state exact, as s7027). Counter check
+  chk2=11702 **bad2=1** ctl2=4: one task flush whose pending sums did not match the reference atomics. Not named. Candidates: a
+  rsp_dpc_submit_impl / flush caller on a second thread (the plain counters assume gfx-thread only), or an early-return path between
+  the s_fwd add and the task-bytes add other than the oob drop. So arm 2 is NOT exact yet and must not be offered.
+Verdict (single run plus same-run controls): H-offset SELECTED. 9.0 ns/bump of the s7026/s7027 "bridge self" is the AQ=3 clock pair x16,
+so the real bridge cost at dd6 is ~15.7 ns x 87k bumps = ~1.37 ms/task (not 2.1). H-atomics PARTIAL: 3.3 ns = 21% < the 40% bar.
+H-shadow / remainder SELECTED as the largest term: 10.7 ns = 68% is the push (range extend + 8-byte g_s4272_shadow insert) plus call overhead.
+Ceiling of fast+plain over off: ~0.44 ms/task, no fps change visible. Earlier per-bump ns numbers (s7026 "~21 ns", s7027 "24.4 -> 22.4")
+include this offset: their differences stand, their absolutes do not.
+Next (NEXT.md): name the bad2 mismatch (thread id + path, on the same build) and split the 10.7 ns remainder (shadow insert vs range push vs call).

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7025 (2026-11-08).
+Compact operational handoff, as of Session 7028 (2026-11-09).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,10 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7028 bump cost split (BUMPFAST=tog3 same-run 3-way + new AQ_NULL offset column, tools/s7028_bump_push_split.py, L1 dd6 21:9 WIDEWIN cap 10240, 0 crashes):**
+H-offset: 9.0 of the 24.7 ns/bump "bridge self" is the AQ=3 clock pair (flat across arms). Real cost is 15.7 ns/bump (~1.37 ms/task): checks 1.7 (11%),
+counter atomics 3.3 (21%, below the 40% H-atomics bar), push/shadow/call 10.7 (68%, the largest term). New opt-in BUMPFAST=2 (plain per-task counters)
+is NOT exact yet: CHECK bad2=1 of 11702 task flushes (ctl2 4/4, state guard 395M bad 0). s7026/s7027 per-bump absolutes include the offset; their deltas stand.
 **s7025 clamp drift named and fixed (tools/apply_s7025_clampsplit.py, same switch ROGUESQ_S7022_ST=1, L1 dd6 21:9 WIDEWIN cap 10240, 4 runs, 0 crashes):**
 the ~40 -> 130 ns climb per clampGridCellLookup call was the create path (~40-80 creates/frame, 88 ns -> 6.5 us each), and inside it neither game
 call (processGridCellByDistance 22 ns, nested alloc gv 45 ns, both flat) but our own host hook rs64_s6963_create, which also updated the unbounded

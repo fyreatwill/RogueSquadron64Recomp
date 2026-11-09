@@ -6309,8 +6309,38 @@ static void submit_deferred_merged(uint32_t &bytes, size_t &calls) {
 extern "C" { int g_rs64_bf_task_on = 0; uint64_t g_rs64_bf_fast = 0, g_rs64_bf_slow = 0, g_rs64_bf_tasks_on = 0, g_rs64_bf_tasks_off = 0;
              uint64_t g_rs64_bf_chk_n = 0, g_rs64_bf_chk_bad = 0, g_rs64_bf_chk_ctl = 0; }
 static uint32_t g_bf_seen = 0, g_bf_ctl_armed = 0; static uint64_t g_bf_slow_op[64] = {};
-static const int g_bf_mode = [] { const char *e = std::getenv("ROGUESQ_G1E_BUMPFAST"); return !e ? 0 : (*e == 't' ? 2 : (*e != '0')); }();
+// s7028: modes 0 off, 1 fast, 2 tog (xor8 off/fast), 3 = env "2" fast + plain per-task counters, 4 = env "tog3" (mach second % 3 -> off/fast/fast+plain).
+static const int g_bf_mode = [] { const char *e = std::getenv("ROGUESQ_G1E_BUMPFAST"); if (!e || !*e || *e == '0') return 0;
+    if (!strcmp(e, "tog3")) return 4; if (*e == 't') return 2; if (*e == '2') return 3; return 1; }();
+// s7028 G1c (g1c-bump-push-split): arm 2 (task_on == 2) keeps the per-bump counters (s_fwd pair, g_task_rdp_bytes, rs64_g1e_rdp_bytes,
+// g_task_rdp_cmds, fast-path g_cumulative_op_count) in plain gfx-thread accumulators, flushed into the atomics at rsp_task_log_and_reset,
+// rs64_task_rdp_bytes_total and rs64_dpc_defer_end (every gfx-thread reader). CHECK=1 also does the atomic adds into reference atomics
+// and compares them with the pending sums at each flush (bad2 must be 0); the first 4 flushes compare a planted +1 (ctl2 must be 4).
+extern "C" { uint64_t g_rs64_bf_tasks_on2 = 0, g_rs64_bf_chk2_n = 0, g_rs64_bf_chk2_bad = 0, g_rs64_bf_chk2_ctl = 0; }
+static uint64_t g_bf2_fwd_bytes = 0, g_bf2_fwd_subs = 0, g_bf2_g1e_bytes = 0; static uint32_t g_bf2_task_bytes = 0, g_bf2_task_cmds = 0;
+static uint32_t g_bf2_ops[64] = {}; static bool g_bf2_dirty = false;
+static std::atomic<uint64_t> g_bf2_ref_bytes{0}, g_bf2_ref_cmds{0}, g_bf2_ref_ops{0};
+static std::atomic<uint64_t> s_fwd_bytes{0};    // s7028: hoisted from rsp_dpc_submit_impl (the [dpc-fwd] pair)
+static std::atomic<uint64_t> s_fwd_submits{0};
+static bool g_bf_check_flag();
+static void rs64_bf2_flush() {
+    if (!g_bf2_dirty) return;
+    g_bf2_dirty = false;
+    if (g_bf_check_flag()) {
+        static uint64_t n = 0; const uint64_t plant = (n++ < 4) ? 1 : 0; uint64_t ops = 0; for (int i = 0; i < 64; ++i) ops += g_bf2_ops[i];
+        const bool same = g_bf2_ref_bytes.exchange(0) == g_bf2_task_bytes + plant && g_bf2_ref_cmds.exchange(0) == g_bf2_task_cmds &&
+                          g_bf2_ref_ops.exchange(0) == ops && g_bf2_fwd_bytes == g_bf2_task_bytes && g_bf2_fwd_subs == g_bf2_task_cmds &&
+                          g_bf2_g1e_bytes == g_bf2_task_bytes;
+        if (plant) { if (!same) ++g_rs64_bf_chk2_ctl; } else { ++g_rs64_bf_chk2_n; if (!same) ++g_rs64_bf_chk2_bad; }
+    }
+    s_fwd_bytes.fetch_add(g_bf2_fwd_bytes, std::memory_order_relaxed); s_fwd_submits.fetch_add(g_bf2_fwd_subs, std::memory_order_relaxed);
+    g_task_rdp_bytes.fetch_add(g_bf2_task_bytes, std::memory_order_relaxed); rs64_g1e_rdp_bytes.fetch_add(g_bf2_g1e_bytes, std::memory_order_relaxed);
+    g_task_rdp_cmds.fetch_add(g_bf2_task_cmds, std::memory_order_relaxed);
+    for (int i = 0; i < 64; ++i) if (g_bf2_ops[i]) { g_cumulative_op_count[i].fetch_add(g_bf2_ops[i], std::memory_order_relaxed); g_bf2_ops[i] = 0; }
+    g_bf2_fwd_bytes = g_bf2_fwd_subs = g_bf2_g1e_bytes = 0; g_bf2_task_bytes = g_bf2_task_cmds = 0;
+}
 static const bool g_bf_check = [] { const char *e = std::getenv("ROGUESQ_G1E_BUMPFAST_CHECK"); return e && *e && *e != '0'; }();
+static bool g_bf_check_flag() { return g_bf_check; }
 static bool rs64_bf_env(const char *n) { const char *e = std::getenv(n); return e && *e && *e != '0'; }
 // Every env that arms a per-bump diagnostic or rdram-mutating block between the counters and the defer push.
 static const bool g_bf_diag = [] {
@@ -6635,11 +6665,12 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
     // Updating here records the last 8-byte DPC_END bump, which is NOT the
     // range processRDPLists sees after merge/defer (s662 false correlation).
 
+    const bool bf2 = g_rs64_bf_task_on == 2 && g_defer_active;  // s7028 arm 2: plain per-task counters
     {
-        static std::atomic<uint64_t> s_fwd_bytes{0};
-        static std::atomic<uint64_t> s_fwd_submits{0};
-        const uint64_t bytes = s_fwd_bytes.fetch_add(submit_hi - submit_lo) + (submit_hi - submit_lo);
-        const uint64_t submits = s_fwd_submits.fetch_add(1) + 1;
+        uint64_t bytes, submits;
+        if (bf2) { g_bf2_dirty = true; g_bf2_fwd_bytes += submit_hi - submit_lo; ++g_bf2_fwd_subs;
+                   bytes = s_fwd_bytes.load(std::memory_order_relaxed) + g_bf2_fwd_bytes; submits = s_fwd_submits.load(std::memory_order_relaxed) + g_bf2_fwd_subs; }
+        else { bytes = s_fwd_bytes.fetch_add(submit_hi - submit_lo) + (submit_hi - submit_lo); submits = s_fwd_submits.fetch_add(1) + 1; }
         if ((submits % 16384) == 0) {
             fprintf(stderr, "[dpc-fwd] submits=%llu bytes=%llu (%.1f MB)\n",
                     (unsigned long long)submits, (unsigned long long)bytes, bytes / 1048576.0);
@@ -6656,12 +6687,19 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
             fprintf(stderr, "[dpc-oob-range #%d] dropping submit range 0x%08X..0x%08X\n",
                     s_n, submit_lo, submit_hi);
         }
+        if (bf2) { g_bf2_fwd_bytes -= submit_hi - submit_lo; --g_bf2_fwd_subs;   // s7028: keep the s_fwd sums equal to the atomic path's
+                   s_fwd_bytes.fetch_add(submit_hi - submit_lo); s_fwd_submits.fetch_add(1); }
         return;
     }
 
+    if (bf2) {
+        g_bf2_task_bytes += submit_hi - submit_lo; g_bf2_g1e_bytes += submit_hi - submit_lo; ++g_bf2_task_cmds;
+        if (g_bf_check) { g_bf2_ref_bytes.fetch_add(submit_hi - submit_lo); g_bf2_ref_cmds.fetch_add(1); }
+    } else {
     g_task_rdp_bytes.fetch_add(submit_hi - submit_lo, std::memory_order_relaxed);
     rs64_g1e_rdp_bytes.fetch_add(submit_hi - submit_lo, std::memory_order_relaxed); // s6982 G1e R-row rb= (ultramodern events.cpp)
     g_task_rdp_cmds.fetch_add(1, std::memory_order_relaxed);
+    }
     // s7027 G1c (g1c-bump-fastpath): ROGUESQ_G1E_BUMPFAST=1|tog (tog = odd xor8 seconds, latched per task in rs64_dpc_defer_begin).
     // A deferred bump whose first op touches none of the state-tracking blocks below (shadows, 0x29 fullsync, 0x3C combiner,
     // 0x3D-0x3F image, 0x24/0x25 texrect, 0x27 drop when KEEP_PIPE=0) with every diagnostic env off goes straight to the defer push.
@@ -6675,6 +6713,9 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
         bool elig = rs64_bf_op_ok(fop, sz);
         bool ctl = false;
         if (g_bf_check && !elig && fop == 0x29 && sz == 8 && g_bf_ctl_armed < 4) { elig = true; ctl = true; ++g_bf_ctl_armed; }
+        if (bf2 && elig && !g_bf_check) {   // s7028 arm 2: fast path with a plain op count
+            g_task_op_count[fop]++; ++g_bf2_ops[fop]; ++g_rs64_bf_fast; goto rs64_bf_push;
+        }
         if (elig) {
             g_task_op_count[fop]++;
             g_cumulative_op_count[fop].fetch_add(1, std::memory_order_relaxed);
@@ -7846,16 +7887,19 @@ extern "C" void rs64_dpc_defer_begin() {
     g_defer_active = true;
     if (g_bf_mode && !g_bf_diag) {   // s7027: latch the bump fast-path arm per task; [s7027-bf] summary every 10 s
         const uint64_t mt = mach_absolute_time(); static bool anc = false; static uint64_t last = 0;
-        if (g_bf_mode == 2 && !anc) { anc = true; rs64_tog_anchor(mt); }
-        g_rs64_bf_task_on = g_bf_mode == 1 ? 1 : rs64_tog_odd(mt);
-        (g_rs64_bf_task_on ? g_rs64_bf_tasks_on : g_rs64_bf_tasks_off)++;
+        if ((g_bf_mode == 2 || g_bf_mode == 4) && !anc) { anc = true; rs64_tog_anchor(mt); }
+        // s7028: tog3 = mach second % 3 (period 3 is coprime with the harness's 8 s press cycle, so each arm samples it evenly)
+        g_rs64_bf_task_on = g_bf_mode == 1 ? 1 : g_bf_mode == 3 ? 2 : g_bf_mode == 4 ? (int)((mt / 24000000u) % 3u) : rs64_tog_odd(mt);
+        (g_rs64_bf_task_on == 2 ? g_rs64_bf_tasks_on2 : g_rs64_bf_task_on ? g_rs64_bf_tasks_on : g_rs64_bf_tasks_off)++;
         if (mt - last > 240000000ull) { last = mt;
             int top[6] = {0}; for (int k = 0; k < 6; ++k) { int bi = -1; for (int o = 0; o < 64; ++o) { bool used = false; for (int j = 0; j < k; ++j) used |= top[j] == o;
                 if (!used && (bi < 0 || g_bf_slow_op[o] > g_bf_slow_op[bi])) bi = o; } top[k] = bi; }
-            fprintf(stderr, "[s7027-bf] mode=%d check=%d tasksOn=%llu tasksOff=%llu fast=%llu slowElig=%llu chk=%llu bad=%llu ctl=%llu slowTop=",
+            fprintf(stderr, "[s7027-bf] mode=%d check=%d tasksOn=%llu tasksOff=%llu fast=%llu slowElig=%llu chk=%llu bad=%llu ctl=%llu ",
                     g_bf_mode, (int)g_bf_check, (unsigned long long)g_rs64_bf_tasks_on, (unsigned long long)g_rs64_bf_tasks_off,
                     (unsigned long long)g_rs64_bf_fast, (unsigned long long)g_rs64_bf_slow, (unsigned long long)g_rs64_bf_chk_n,
                     (unsigned long long)g_rs64_bf_chk_bad, (unsigned long long)g_rs64_bf_chk_ctl);
+            fprintf(stderr, "tasksOn2=%llu chk2=%llu bad2=%llu ctl2=%llu slowTop=", (unsigned long long)g_rs64_bf_tasks_on2,
+                    (unsigned long long)g_rs64_bf_chk2_n, (unsigned long long)g_rs64_bf_chk2_bad, (unsigned long long)g_rs64_bf_chk2_ctl);
             for (int k = 0; k < 6; ++k) fprintf(stderr, "%02X:%llu,", top[k], (unsigned long long)g_bf_slow_op[top[k]]);
             fputc('\n', stderr); }
     } else g_rs64_bf_task_on = 0;
@@ -8051,6 +8095,7 @@ extern "C" __attribute__((noinline)) void rs64_note_imem_overrun(const char* sit
 // distribution without flooding the SDL message pump.
 extern "C" void rsp_task_log_and_reset(uint32_t iters, uint32_t data_size, uint32_t r17,
                                         uint32_t cmd_w0, uint32_t cmd_w1) {
+    rs64_bf2_flush();  // s7028
     uint32_t bytes = g_task_rdp_bytes.exchange(0, std::memory_order_acq_rel);
     uint32_t cmds  = g_task_rdp_cmds.exchange(0, std::memory_order_acq_rel);
     uint32_t fs    = g_task_rdp_fullsyncs.exchange(0, std::memory_order_acq_rel);
@@ -8270,7 +8315,12 @@ extern "C" __attribute__((noinline)) void rs64_g1e_aq_spin(uint64_t until) {
 }
 // s6954 G1e: ROGUESQ_G1E_AQ=3 times every 16th submit call (x16 estimate) so the per-task ring (ROGUESQ_G1E_TRING) gets a
 // submit term without AQ=1's two clock reads per call; the spin control applies to every call.
-extern "C" uint32_t rs64_task_rdp_bytes_total() { return g_task_rdp_bytes.load(std::memory_order_relaxed); }
+extern "C" uint32_t rs64_task_rdp_bytes_total() { rs64_bf2_flush(); return g_task_rdp_bytes.load(std::memory_order_relaxed); }
+// s7028 G1c: ROGUESQ_G1E_AQ_NULL=1 times an empty noinline call with the same clock pair on every AQ=3 sampled call (x16, like the
+// submit term) so the ring can subtract the per-timed-call offset from submit_ms.
+extern "C" { uint64_t g_rs64_aq_null_ns = 0; }
+static const bool g_aq_null = [] { const char *e = std::getenv("ROGUESQ_G1E_AQ_NULL"); return e && *e && *e != '0'; }();
+extern "C" __attribute__((noinline)) void rs64_g1e_aq_null_fn(uint8_t *, uint32_t, uint32_t) { __asm__ volatile("" ::: "memory"); }
 void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     if (g_rs64_aq_on == 3) {
         const uint64_t c = ++g_rs64_aq_submit_calls;
@@ -8279,6 +8329,8 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
             rsp_dpc_submit_impl(rdram, start, end);
             if (g_rs64_aq_spin_ns) rs64_g1e_aq_spin(t0 + g_rs64_aq_spin_ns);
             if ((c & 15u) == 0) g_rs64_aq_submit_ns += (rs64_aq_now() - t0) * 16u;
+            if ((c & 15u) == 0 && g_aq_null) { const uint64_t t1 = rs64_aq_now(); rs64_g1e_aq_null_fn(rdram, start, end);
+                                               g_rs64_aq_null_ns += (rs64_aq_now() - t1) * 16u; }
         } else rsp_dpc_submit_impl(rdram, start, end);
         return;
     }
@@ -8293,6 +8345,7 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     ++g_rs64_aq_submit_calls;
 }
 extern "C" void rs64_dpc_defer_end(int commit) {
+    rs64_bf2_flush();  // s7028
     if (g_rs64_aq_on != 1 && g_rs64_aq_on != 3) { rs64_dpc_defer_end_impl(commit); return; }
     const uint64_t t0 = rs64_aq_now();
     rs64_dpc_defer_end_impl(commit);
