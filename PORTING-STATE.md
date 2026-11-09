@@ -185308,3 +185308,29 @@ docs/owner_sheet_s7038_dd_closeout_l1.jpg and _l4.jpg (columns dd1 | dd4 | dd6 |
 docs/OWNER-OPT-INS.md. Rules out H-visible and H-nogain. G1c phase 2 closes on the owner's look; default stays retail.
 Not covered: cutscene cameras with the auto bundle (the cull keys on off-map cells past 0.6 x fog end; cutscene cameras look across off-map
 terrain, s6908-s6911) -> NEXT.md.
+
+## Session 7039 (2026-11-09) — G1c dd6 auto bundle checked in cutscenes: invisible across the AT THE MOVIES playlist (same-run tog3, ungated R=0 control fires); new 3-phase toggle ranker
+
+Work unit (NEXT.md dd6-bundle-cutscene-check): does the s7037 auto bundle (dd>=6 + WIDEWIN arms the fog-depth off-map cull R=2 K=0.6 H=off) remove cutscene
+background? Cutscene cameras look across off-map terrain, which flight poses (s7038) never covered.
+Design change vs NEXT.md (rule 2): instead of 4 cross-run arms on an animating playlist, ONE run with the cull cycling per mach second:
+ROGUESQ_DD_OFFMAPCULL=tog3 _R=-1,2,0 _K=0,0.6,0 _H=off, so ph0 = off, ph1 = exactly the bundle, ph2 = ungated R=0 (positive control, a superset of ph1).
+Recipe scratch/s7039/mov.zsh: AT THE MOVIES route (s6792 press list, w2048 gate for 21:9), private folder scratch/s6908/wd (owner save untouched), 21:9 FPS60
+dd6 DD_UNSAFE MELT WIDEWIN cap 10240 CULL_SPIKE, 960 s, window capture 180-950 s at 384x164. Explicit OFFMAPCULL overrides the auto arm (no [s7037] line; [s7031]
+R=-1,2,0 tog3=1, [s7034] K=0,0.6,0 confirmed).
+Result: 0 crashes, 58169 frames (idle 53). Cull counters ([s7031] ocull/f per phase, 71 windows each): ph0 0.0, ph1 897 (70/71 nonzero), ph2 1612. So the cull
+does act in cutscenes.
+Image: new tools/g5h_toggle_rank3.cpp (s6921 g5h_toggle_rank generalised to 3 phases, edges classed by from->to phase; across/within ratio, cuts dropped).
+  edge 2->0 n 213 p90 1.11 p99 1.93 max 2.17; edge 0->1 (off->bundle) n 219 p90 1.05 p99 1.65 max 1.99; edge 1->2 (bundle->R0) n 203 p90 1.07 p99 2.48 max 4.15;
+  mid-second control n 639 p90 1.07 p99 1.36 max 3.49.
+Positive control: top 1->2 edges t=549.4/552.4 (ratio 4.15/3.55) are the green-field X-wing shot: R=0 removes the ground band, viewed (sheet rows 5-6).
+Top 4 off->bundle edges viewed (sheet rows 1-4): t=257.4 and 116.4 are full-frame fades to black (stars gone too, which a terrain cull cannot do); frame luminance
+starts falling in ph0 (257.15 s: 18->13; 116.05-116.24 s: 35->27->15) and the next shot arrives still inside ph1, so scene fades. t=434.4 (capital ship passing
+overhead, lum 78->50 in ph1, back to 73-80 in ph2) and t=125.4 (haze darkening) change in ph1 but not in ph2, which culls a superset: camera/scene, not cull.
+Verdict: H-clean. The bundle is invisible in cutscenes at the owner's max recipe; the instrument sees ground loss when it happens (R=0 control).
+Limits: single run, single image method plus counters (two lines but one run); 21:9 only; ranking catches large per-edge changes, a sliver like s7038's horizon
+line would sit inside the control spread.
+Owner sheet docs/owner_sheet_s7039_dd6_cutscenes.jpg; OWNER-OPT-INS s7038 line extended. Also fixed OWNER-OPT-INS's stale MELT "known defect (s6921)", which
+s6923 already showed is the game's own shield mesh (present with MELT off and at retail).
+Rules out: H-cut (no shot loses ground with the bundle), H-unphased (the tog3 same-run design needs no phase lock across runs).
+Next: the same bundle at 16:9 (owner's TV): frozen poses + same-run cost (NEXT.md, dd6-bundle-169-check).

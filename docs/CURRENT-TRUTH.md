@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7038 (2026-11-09).
+Compact operational handoff, as of Session 7039 (2026-11-09).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,12 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7039 dd6 auto bundle is clean in cutscenes too (H-clean; no game build).** AT THE MOVIES playlist, 21:9 FPS60 dd6 UNSAFE MELT WIDEWIN cap 10240, one run of 960 s,
+0 crashes, same-run ROGUESQ_DD_OFFMAPCULL=tog3 R=-1,2,0 K=0,0.6,0 H=off (ph0 off, ph1 = bundle, ph2 = ungated R=0 control). Cull counters: ocull/f 0 / 897 / 1612 (fires in
+cutscenes). New tools/g5h_toggle_rank3.cpp (58k frames, 384x164): edges off->bundle ratio p90 1.05 p99 1.65, mid-second control p90 1.07 p99 1.36; positive control
+bundle->R0 max 4.15 (green-field shot t=549-555: ground removed, viewed). Top 4 off->bundle edges viewed: 2 fades to black that start in ph0 (lum 18->13, 35->15),
+a capital-ship pass and a haze change that recover in ph2 (which culls a superset), so not the cull. Sheet docs/owner_sheet_s7039_dd6_cutscenes.jpg. Single run (one line of
+image evidence plus the counters). OWNER-OPT-INS updated; also corrected its stale s6921 MELT "known defect" (s6923 showed it is the game's shield mesh).
 **s7038 G1c phase 2 closed on the owner's look (H-done; no build).** Frozen poses, 21:9 FPS60, arms dd6off / dd6b (bundle auto) / dd6b2 / dd4 (cap 8192) / dd1, 10 runs, 0 crashes, 0 VI stalls.
 Bundle invisible: dd6b vs dd6off <=0.18 (L1, 7 poses) and <=0.23 (L4, 8 poses), max 0.5% of pixels, a fog-line horizon sliver by eye; A/A dd6b vs dd6b2 0.00 at every pose; [s7037] fired in dd6b/dd6b2 only.
 Positive control: dd6 vs dd4 same path 4-8 mean dLum (L1 5.8-7.8, L4 4.1-8.0), dd6 vs dd1 6-21 (L4 dd1 took a slightly different path, y -4.45 vs -4.34). Owner sheets
@@ -327,7 +333,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    s7028/s7029: bridge closed (H-call). s7030: ROGUESQ_DD_FOGCULL (opt-in): 2% of cells past fog end (0 ms); 0.5 x fog end culls 51%, rsp -4.9 ms, invisible on L1
    (cells behind the off-map horizon wall?). Next: classify on-map/off-map cells and cull off-map rings, L1 + L4 (NEXT.md).
    s7031-s7036: off-map cull past 0.6 x fog end qualified (see headline). s7037: folded into the DD knob for dd>=6+WIDEWIN; 12288 cells (POOLX_MAX=6) cost
-   +0.6 ms rsp with no edge-score gain at dd8: dd6+bundle is the max useful step. s7038: close-out sheet done, bundle invisible (<=0.23 vs A/A 0.00), dd6 > dd4 > dd1; CLOSED on the owner's look.
+   +0.6 ms rsp with no edge-score gain at dd8: dd6+bundle is the max useful step. s7038: close-out sheet done, bundle invisible (<=0.23 vs A/A 0.00), dd6 > dd4 > dd1; CLOSED on the owner's look. s7039: bundle invisible in the cutscene playlist (tog3 rank, R0 control fires). Next: same check at 16:9 (owner's TV).
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).
