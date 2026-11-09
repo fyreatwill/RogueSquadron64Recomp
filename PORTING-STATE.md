@@ -184924,3 +184924,6 @@ HYPOTHESIS-ID: g1c-dd-headroom
   behind the s6963 cellidx host index for its clampGridCellLookup chain walk (G1E_CELLIDX=2 at dd>1).
 - Rules out: superlinear (s7022), skip-path dominance, reject path (0 cells at dd6 L1). Next: which branch of getGridCellValueAt costs the
   96-120 ns (direct 0x8000-flag table hit vs 0x80136DC0 table + 0x80137A5C node path vs clampGridCellLookup fallback) — NEXT.md.
+Verdict: this run refutes H-skipmix (75-78% of cells take the call path) and refutes a pure H-callee or pure H-self reading (neither
+exceeds 60%); it selects getGridCellValueAt as the largest single term (41-48%). Next discriminator: per-branch time inside
+getGridCellValueAt, one build (NEXT.md: H-walk / H-clamp / H-flat).
