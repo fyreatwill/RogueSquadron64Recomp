@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7032 (2026-11-09).
+Compact operational handoff, as of Session 7033 (2026-11-09).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,13 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7033 off-map height gate: image-neutral but costs nothing (H-costgone; L1 21:9 dd6 WIDEWIN cap 10240 MELT FPS60, 5 runs, 0 crashes).** New default-on
+ROGUESQ_DD_OFFMAPCULL_H=<margin> (=off fixed R, =tog gate in tog3 phase 1 only) culls an off-map cell past R only while the eye is below its clamped edge cell's
+top, read from the game's own record bytes (rec+3/+4, units y*C/H as in scanConvertTriangleToSpanTable; up self-calibrated from the eye cell, y down-negative).
+Frozen poses: R=2+gate = offA to 0.00 at all 7 poses; R=2 ungated reproduces s7032 exactly (0.20..39.0), k03 control 0.5-4.0 (sheet docs/owner_sheet_s7033_heightgate.jpg).
+Same-run cost (tog3 R=-1 / 2+gate / 2): rsp 14.19 / 14.20 / 6.23 ms, fps 53.3 / 55.2 / 59.8; the gate leaves 42 of 5444 culled cells/frame: the eye is above the
+edge tops on nearly the whole flight. So s7032's "poses 0-4 are below the plateau top" is wrong (by-eye reading): the cull is invisible there for another reason
+(fog / on-map occlusion). Height lever closed. Next: off-map AND past k x fog end (NEXT.md).
 **s7032 off-map cull is VISIBLE at frozen poses (H-plateau; L1 21:9 dd6, separate deterministic same-pose runs, tools/s7032_pose_cull_score.py, 9 runs 0 crashes):**
 A/A 0.01, FOGCULL=0.3 control 0.5-4.0. Below the plateau top, R=2 trims only a wall-top sliver (0.13-0.51). Once the craft climbs above the off-map plateau near the edge,
 R=2 leaves a sky void (39.0) and R=8 a wedge (15.5) (docs/owner_sheet_s7032_offmap_pose.jpg). The eye stays on the map (new eye-cell latch, tools/apply_s7032_eyegate.py;
@@ -159,6 +166,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 maintenance)" and "
   true-60 Hz latency levels are sticky in whole vsyncs.
 
 ## Superseded conclusions — do not act on these
+- s7032 "at poses 0-4 the craft flies below the plateau top, the wall face occludes it". Believable: by eye the dark wall stays in view and R=2
+  only trims its top sliver there. s7033 read the clamped edge cells' heights in the game's own units: the eye is above them on ~99% of culled cells,
+  so height occlusion does not explain the invisibility at poses 0-4.
 Recent only; older entries: PROJECT-OVERVIEW "(s6994 maintenance)", "(s6900 maintenance)", "(s6870)", "(s6759 maintenance)".
 - s7009-s7013 "WIDEWIN costs ~10-25 fps / VI cliff at 6144 / owner fps trade" (s7014): every arm ran the harness's LOG_PHASE
   probe path (main ucode TU, FAST off). Believable because the toggle split was same-run and self-consistent; the absolute level
@@ -235,7 +245,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); s7026 DPC submit = RT64 per-byte + ~21 ns/bump bridge, wait flat; s7027 per-bump checks only ~3.6 of ~24 ns (H-checks refuted); s7028/s7029 bridge split closed (H-call, shadow refuted); s7030 fogged-cell cull: H-fogwaste refuted, 0.5 x fog-end depth cull = rsp -4.9 ms invisible on L1 (H-offmap lead); s7031 off-map census: 82%/62% of dd6 cells off-map, R=2 cull rsp -9.75/-3.71 ms (L1/L4), image unqualified; s7032 frozen poses: R=2/R=8 VISIBLE once the eye climbs above the off-map plateau (H-plateau); active unit: NEXT.md (height-occlusion gate).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); s7026 DPC submit = RT64 per-byte + ~21 ns/bump bridge, wait flat; s7027 per-bump checks only ~3.6 of ~24 ns (H-checks refuted); s7028/s7029 bridge split closed (H-call, shadow refuted); s7030 fogged-cell cull: H-fogwaste refuted, 0.5 x fog-end depth cull = rsp -4.9 ms invisible on L1 (H-offmap lead); s7031 off-map census: 82%/62% of dd6 cells off-map, R=2 cull rsp -9.75/-3.71 ms (L1/L4), image unqualified; s7032 frozen poses: R=2/R=8 VISIBLE once the eye climbs above the off-map plateau (H-plateau); s7033 height gate image-neutral but saves 0 ms (H-costgone, eye above edge tops almost always); active unit: NEXT.md (off-map cull past k x fog end).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.

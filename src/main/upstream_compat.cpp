@@ -161,6 +161,29 @@ static void rs64_s7032_frame() {
         s7032_eyering = dx > dz ? dx : dz; }
     for (int s = 0; s < 2; s++) for (int c = 0; c < 2; c++) { s7032_mn[s][c] = 1e9f; s7032_mx[s][c] = -1e9f; }
 }
+// s7033 height gate: a cell's byte height range is rec[3..4] of record (hm[z*w+x] & 0x1FFF) * 30 at *(0x80136DC4), hm at *(0x80136DC0)
+// (stream 0x80042D6C..DA8); the view span bytes are trunc(y * C / H), C = *(0x8003A4F8), H = *(0x80136DD0) (binPolygonIntoTerrainGrid
+// 0x800428A8). "Up" is calibrated per frame from the eye's own (on-map, clamped) cell: the eye is above its ground. An off-map cell past
+// the ring R is culled only while the eye is below its clamped edge cell's top by > margin. ROGUESQ_DD_OFFMAPCULL_H=<margin> (default 1),
+// =off restores fixed R; =tog applies the gate in tog3 phase 1 only (same-run cost split R=-1 / 2h / 2).
+static uint8_t* s7033_rd = nullptr; static int s7033_on = -1, s7033_up = 0; static float s7033_m = 1.0f, s7033_eb = 0.0f, s7033_sc = 0.0f;
+static int s7033_emin = 0, s7033_emax = 0; static uint64_t s7033_keep[3], s7033_pass[3], s7033_upc[2];
+static void rs64_s7033_hr(int32_t x, int32_t z, int* mn, int* mx) {
+    uint8_t* rdram = s7033_rd; if (!rdram || s7031_w <= 0 || s7031_hgt <= 0) { *mn = -128; *mx = 127; return; }
+    x = x < 0 ? 0 : x >= s7031_w ? s7031_w - 1 : x; z = z < 0 ? 0 : z >= s7031_hgt ? s7031_hgt - 1 : z;
+    const uint32_t hm = (uint32_t)MEM_W(0, (int64_t)(int32_t)0x80136DC0), rt = (uint32_t)MEM_W(0, (int64_t)(int32_t)0x80136DC4);
+    const uint32_t i = (uint32_t)MEM_HU(0, (int64_t)(int32_t)(hm + 2u * (uint32_t)(z * s7031_w + x))) & 0x1FFFu;
+    *mn = (int)(int8_t)MEM_B(3, (int64_t)(int32_t)(rt + 30u * i)); *mx = (int)(int8_t)MEM_B(4, (int64_t)(int32_t)(rt + 30u * i));
+}
+static void rs64_s7033_frame(uint8_t* rdram, uint32_t a0) {
+    if (s7033_on < 0) { const char* h = getenv("ROGUESQ_DD_OFFMAPCULL_H"); s7033_on = (h && h[0] == 'o') ? 0 : (h && h[0] == 't') ? 2 : 1; if (h && h[0] != 'o' && h[0] != 't' && *h) s7033_m = (float)atof(h); /* =tog: gate in tog3 phase 1 only */
+        fprintf(stderr, "[s7033] heightgate=%d margin=%g\n", s7033_on, s7033_m); }
+    s7033_rd = rdram;
+    auto rf = [&](uint32_t a) { uint32_t v = (uint32_t)MEM_W(0, (int64_t)(int32_t)a); float f; memcpy(&f, &v, 4); return f; };
+    const float H = rf(0x80136DD0u); s7033_sc = H != 0.0f ? rf(0x8003A4F8u) / H : 0.0f; s7033_eb = rf(a0 + 4) * s7033_sc;
+    rs64_s7033_hr(s7032_eyex, s7032_eyez, &s7033_emin, &s7033_emax);
+    s7033_up = s7033_eb >= 0.5f * (s7033_emin + s7033_emax) ? 1 : -1; s7033_upc[s7033_up > 0]++;
+}
 extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
     static int init = 0;
     if (!init) { init = 1; const char* e = getenv("ROGUESQ_DD_FOGCULL");
@@ -183,7 +206,7 @@ extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
     const uint64_t mt = mach_absolute_time(); s7030_ph = s7030_tog3 ? (int)((mt / 24000000u) % 3u) : 0;
     s7030_fe = g_rs64_s7030_fe; s7030_thr = s7030_k[s7030_ph] > 0 && s7030_fe > 0 ? s7030_k[s7030_ph] * s7030_fe : 0.0f;
     float F = 0; for (uint32_t i = 0; i < 4; i++) F += (rf(0x80130C1Cu + 12 * i) - ex) * fx + (rf(0x80130C1Cu + 12 * i + 8) - ez) * fz;
-    rs64_s7032_frame();
+    rs64_s7032_frame(); rs64_s7033_frame(rdram, a0);
     s7030_frames[s7030_ph]++; s7030_F[s7030_ph] += F * 0.25f; s7030_FE[s7030_ph] += s7030_fe;
     if (!s7030_t0) { s7030_t0 = s7030_last = mt; if (s7030_tog3) rs64_tog_anchor(mt); } /* anchor for g5e_cost_by_parity --phases 3 */
     if (mt - s7030_last > 240000000ull) { s7030_last = mt;
@@ -194,6 +217,8 @@ extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
             o = 0; for (int b = 0; b < 20; b++) o += snprintf(buf + o, sizeof buf - o, "%s%.1f", b ? "," : "", s7031_off[p][b] / fr);
             char rb[300], rb2[300]; int o1 = 0, o2 = 0; for (int b = 0; b < 18; b++) { o1 += snprintf(rb + o1, sizeof rb - o1, "%s%.1f", b ? "," : "", s7031_ring[p][b] / fr);
                 o2 += snprintf(rb2 + o2, sizeof rb2 - o2, "%s%.1f", b ? "," : "", s7031_rband[p][b] / fr); }
+            fprintf(stderr, "[s7033] t=%.0f ph=%d eb=%.2f sc=%.4f eyecell=%d..%d up=%d upc=%llu/%llu keep/f=%.1f pass/f=%.1f\n", (mt - s7030_t0) / 24e6, p, s7033_eb, s7033_sc,
+                    s7033_emin, s7033_emax, s7033_up, (unsigned long long)s7033_upc[1], (unsigned long long)s7033_upc[0], s7033_keep[p] / fr, s7033_pass[p] / fr);
             fprintf(stderr, "[s7032] t=%.0f ph=%d eye=%d,%d ring=%d eyeoff_cells/f=%.1f spread_bad=%llu\n", (mt - s7030_t0) / 24e6, p, s7032_eyex, s7032_eyez, s7032_eyering, s7032_eyeoff[p] / fr, (unsigned long long)s7032_spread_bad);
             fprintf(stderr, "[s7031] t=%.0f ph=%d R=%d dims=%dx%d win=%d,%d ocull/f=%.1f off/f=%s ring/f=%s rband/f=%s\n", (mt - s7030_t0) / 24e6, p, s7031_R[p], s7031_w, s7031_hgt,
                     (int32_t)MEM_W(0, (int64_t)(int32_t)0x80132DB0), (int32_t)MEM_W(0, (int64_t)(int32_t)0x80132DB8), s7031_cull[p] / fr, buf, rb, rb2); } }
@@ -201,6 +226,12 @@ extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
 extern "C" int rs64_s7030_cell(float d);
 extern "C" int rs64_s7031_cell(float d, int32_t x, int32_t z);
 extern "C" int rs64_s7032_cell(float ox, float oz, float d, int32_t x, int32_t z) {
+    { const int R = s7031_R[s7030_ph];
+      if ((s7033_on == 1 || (s7033_on == 2 && s7030_ph == 1)) && R >= 0 && (x < 0 || x >= s7031_w || z < 0 || z >= s7031_hgt)) {
+        const int dx = x < 0 ? -x : x >= s7031_w ? x - s7031_w + 1 : 0, dz = z < 0 ? -z : z >= s7031_hgt ? z - s7031_hgt + 1 : 0;
+        if ((dx > dz ? dx : dz) > R) { int mn, mx; rs64_s7033_hr(x, z, &mn, &mx); const int top = s7033_up > 0 ? mx : mn;
+            if (((float)top - s7033_eb) * (float)s7033_up > s7033_m) s7033_pass[s7030_ph]++; /* eye below the top: cull stands */
+            else { s7033_keep[s7030_ph]++; s7031_R[s7030_ph] = -1; const int r = rs64_s7031_cell(d, x, z); s7031_R[s7030_ph] = R; return r; } } } }
     const float e0x = (float)x - ox, e0z = (float)z - oz, e1x = (float)x + ox, e1z = (float)z + oz;
     if (e0x < s7032_mn[0][0]) s7032_mn[0][0] = e0x; if (e0x > s7032_mx[0][0]) s7032_mx[0][0] = e0x; if (e0z < s7032_mn[0][1]) s7032_mn[0][1] = e0z; if (e0z > s7032_mx[0][1]) s7032_mx[0][1] = e0z;
     if (e1x < s7032_mn[1][0]) s7032_mn[1][0] = e1x; if (e1x > s7032_mx[1][0]) s7032_mx[1][0] = e1x; if (e1z < s7032_mn[1][1]) s7032_mn[1][1] = e1z; if (e1z > s7032_mx[1][1]) s7032_mx[1][1] = e1z;

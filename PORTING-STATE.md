@@ -185181,3 +185181,27 @@ ORIGIN: n/a; opt-in experiment lever, default off. The FOGCULL fix corrects our 
 Rules out: OFFMAPCULL=<R> (any fixed R tested, 2 and 8) as an image-neutral default or owner opt-in; the eye-off-map explanation of the void.
 Verdict: selects H-plateau (frozen pose, A/A floor 0.01, positive control 0.5-4.0, same-pose sheet), refutes H-invisible for fixed R. L4 not run (L1 already refutes it).
 Next: NEXT.md: height-occlusion gate (cull off-map cells only while the eye is below the clamped edge height), same frozen-pose arms + cost.
+
+## Session 7033 (2026-11-09) — G1c off-map height gate: image-neutral at all frozen poses but it disarms the cull (42 of 5444 cells/frame still culled, rsp +0.01 ms vs -7.96 ungated, same run): H-costgone, height lever closed
+HYPOTHESIS-ID: g1c-offmap-cells.
+Units, from the binary: the stream's span test (streamTerrainGridCellsByDistance 0x80042D6C..DA8) processes a cell iff span_max(0x80130DB0) >= rec[3] and
+span_min(0x80131DB0) <= rec[4], rec = *(0x80136DC4) + (hm[z*w+x] & 0x1FFF) * 30, hm = *(0x80136DC0) (row clamped at 0x80042C28..C80, so off-map cells reuse the
+edge cell's record = the "plateau"). Span bytes = trunc(plane-solved y * f22) in scanConvertTriangleToSpanTable (0x80042614..0x80042694), f22 = C/H from
+binPolygonIntoTerrainGrid 0x800428A8 (C = *(0x8003A4F8), H = *(0x80136DD0)); measured sc = 40.0. So cell byte heights and eye y * 40 share units.
+Change (src/main/upstream_compat.cpp, host only, no regen): rs64_s7033_frame (called from rs64_s7030_begin) latches eye byte height and "up" from the eye's own
+clamped cell (eye above its ground); rs64_s7032_cell then culls an off-map cell past R only if (top - eye)*up > margin, top = the clamped edge cell's highest byte.
+ROGUESQ_DD_OFFMAPCULL_H=<margin> (default 1, gate on whenever OFFMAPCULL is set), =off fixed R (s7031), =tog gate in tog3 phase 1 only. Per-phase keep/pass counters in [s7033].
+Calibration check: up = -1 on every frame (upc 0/16811): y is down-negative, eye bytes -35 .. -155, eye-cell ranges e.g. 63..86 or -56..-56 (eye always above).
+Run 1, frozen poses (scratch/s7033/run_L1h.zsh, tools/g3_optin_pose_arms.sh, L1 21:9 dd6 FPS60 DD_UNSAFE MELT WIDEWIN cap 10240 CULL_SPIKE=1 FAST=1 PROBES=0, PIN=1,
+7 freezes; arms offA, r2h = OFFMAPCULL=2 + gate, r2 = OFFMAPCULL=2 _H=off, k03 = FOGCULL=0.3). Mean |dLum| vs offA, poses 0..6 (tools/s7032_pose_cull_score.py):
+ intra 0.00; k03 3.04 1.48 0.54 0.94 0.50 3.64 3.97 (control responds); r2 0.20 0.13 0.16 0.30 0.51 10.60 39.00 (= s7032 to 2 decimals: deterministic,
+ the positive control for the void); r2h 0.00 at all 7 poses. Sheet docs/owner_sheet_s7033_heightgate.jpg (offA | r2h | r2 | diffs). 0 crashes x4.
+Run 2, cost, same run (scratch/s7033/run_cost.zsh, tog3 R=-1,2,2 with _H=tog, L1 owner path, 289 s flight, 0 crashes, 0 VI stalls; g5e_cost_by_parity --phases 3):
+ p0 (no cull) fps 53.3 rsp 14.19; p1 (R=2 + gate) 55.2 / 14.20 (rsp +0.01); p2 (R=2 ungated) 59.8 / 6.23 (rsp -7.96, reproduces s7031's -9.75 in direction).
+ Culled cells/frame: p1 42.1 vs p2 5443.7 (gate kept 5514/frame). Run 1 run-average kept 830-5100 vs passed 130-680 per frame.
+Reading: the eye is above the clamped edge tops on nearly every frame of flight, so a height-occlusion gate keeps ~99% of the cells: image-neutral by
+disarming itself. It also overturns s7032's by-eye reading that poses 0-4 sit below the plateau top: they do not (eye above), yet R=2 is near-invisible
+there, so whatever hides the far plateau at low poses is not height occlusion (candidates: fog, on-map terrain occluding it, the frustum's lower bound).
+ORIGIN: n/a; opt-in experiment lever (OFFMAPCULL itself stays default off). No mitigation.
+Rules out: the height gate (H-height as a cost lever) and H-fullview (the gate cut nothing visible). Selects H-costgone.
+Next: NEXT.md: off-map cells culled only past k x fog end (combine s7030 depth with s7031 off-map class), frozen poses + same-run cost.
