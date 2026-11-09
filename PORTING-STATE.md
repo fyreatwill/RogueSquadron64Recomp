@@ -184899,3 +184899,6 @@ of the ~3.1 ms guest run per frame at 8192 cells (inclusive). Setup is 0.5 us, s
 per-line xctrace splits inside large recompiled functions are NOT trustworthy (single-source caveat for s7014-style line splits elsewhere).
 Rules out: superlinear sort/insertion in the stream; per-call setup cost. Open: how the 171 ns/cell splits between the loop's own checks and
 the getGridCellValueAt/processGridCellByDistance calls, and how many cells take the span-equal skip (g_s6493[4]) vs the call path.
+Verdict: this run refutes H-superlinear (ns/cell flat 171 at both caps) and selects H-fullwalk's linear O(cells) walk over H-retail-work-only
+reading of the s7021 profile; it also refutes the xctrace per-line attribution for this function (setup 0.5 us vs 62% of samples). Next
+discriminator: callee vs self time per cell plus the skip-path fraction, one build (NEXT.md: H-callee / H-self / H-skipmix).
