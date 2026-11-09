@@ -185039,3 +185039,6 @@ Verdict: H-checks REFUTED (cut 8% < 20%); H-push/H-cache selected, split between
 (~0.15 ms/task); stays opt-in. Caveat: AQ=3 times 1/16 calls x16, so a fixed per-timed-call clock cost is scaled into ns/bump; the spin
 control validates increments, not that offset. Next (NEXT.md): one build splitting the remaining ~22 ns: null-timed baseline, counter
 atomics folded into per-task plain accumulators, and push without the shadow insert (CHECK-style exactness), same-run 3-way tog.
+Verdict line (s7027): the same-run BUMPFAST=tog split refutes H-checks (per-bump checks = ~3.6 of ~24 ns; cut 8% < 20% threshold) and
+selects the push/counter side (H-push/H-cache) as the bulk of the bridge's per-bump cost. Next discriminator (NEXT.md, g1c-bump-push-split):
+one build, 3-way same-run tog off / fast / fast+plain counters plus an AQ null-timed column, which splits H-atomics vs H-shadow vs H-offset.
