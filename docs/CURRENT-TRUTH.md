@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7008 (2026-11-08).
+Compact operational handoff, as of Session 7013 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -157,7 +157,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: WIDEWIN caps below 6144 vs the VI cliff, 3-phase same-run (NEXT.md; s7012: edge gain saturates by cap 6144 but fps already drops 57->37 there).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: host profile of the gfx RSP task at 21:9 dd4 to make the per-cell cost cheaper (NEXT.md; s7013: no WIDEWIN cap keeps 60 fps, so WIDEWIN is an owner fps trade).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
@@ -197,6 +197,9 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    18.2 / 13.5 / 14.4: all the side-edge gain arrives by 6144 (edge knee), the fps cost is nearly all-or-nothing (cliff). Sheet
    docs/owner_sheet_s7012_widewin_cap.png (rows 2-3 flight; row 1 caught a debrief). Next: caps below 6144 (4608/5120/5632) to find the largest
    cap that stays under the VI cliff and how much side-edge gain it keeps (NEXT.md).
+   **s7013: no room below the cliff.** Same-run caps 4096/5120/5632: fps 54.2/45.7/43.3, P(>=2VI) 0.11/0.31/0.38, rsp 13.06/14.13/14.41 (~0.9 ms per
+   1000 cells). H-room refuted: WIDEWIN is an owner trade (wider 21:9 sides for ~35-45 fps) and stays opt-in. Both at once needs a cheaper gfx RSP task
+   (13 ms at the retail window is the binding term). Next: profile the gfx RSP thread at 21:9 dd4 to name the hot ucode path (NEXT.md).
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).

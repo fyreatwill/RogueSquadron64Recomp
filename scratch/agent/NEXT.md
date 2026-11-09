@@ -1,17 +1,16 @@
-# NEXT: WIDEWIN caps below 6144 vs the VI cliff, one same-run 3-phase toggle (G5e side edge, s7012)
+# NEXT: name the hot path of the gfx RSP task at 21:9 dd4 (G5e WIDEWIN cost, s7013)
 HYPOTHESIS-ID: dd-wide-window
-Context: s7012 (21:9 dd4 L4, CULL=1, ROGUESQ_DD_WIDEWIN=tog3 ROGUESQ_DD_WIDEWIN_CAP=4096,6144,8192): rsp 13.62/15.64/16.94 ms, fps 57.3/37.5/34.9,
-P(>=2VI) 0.04/0.60/0.72; side-third hard80 left 22.5/17.2/17.6, right 18.2/13.5/14.4. Edge gain saturates by 6144; the fps cost is a cliff at the
-16.7 ms VI budget (rsp + guest run ~15.6 ms at 4096). So the question is whether a cap between 4096 and 6144 stays under the cliff and keeps the gain.
-Hypotheses:
- H-room: some cap c in 4608..5632 keeps fps >= ~55 (P(2VI) <= 0.1) and keeps >= half of the 6144 side-edge gain -> make c the WIDEWIN default cap.
- H-no-room: P(2VI) rises steeply at the first extra cells (4608 already >= 0.3) -> WIDEWIN is a frame-rate trade; report to the owner (60 fps window
-   needs cheaper RSP, e.g. the s6975 gfx QoS / async path, not fewer cells).
- H-edge-late: fps holds at 5120-5632 but edge gain only appears above 5632 -> same owner trade.
-Runs (one at a time, scratch/s7012/arm.zsh; tools take --phases 3 / 6th arg 3):
- (1) env NOCAP=1 ASP=21:9 CULL=1 zsh scratch/s7012/arm.zsh 4 4 k2 "ROGUESQ_DD_MELT=1 ROGUESQ_DD_WIDEWIN=tog3 ROGUESQ_DD_WIDEWIN_CAP=4096,5120,5632
-     ROGUESQ_G1B=1 ROGUESQ_G1E_TL=$PWD/scratch/s7012/tl_k2.bin" -> python3 tools/g5e_cost_by_parity.py scratch/s7012/tl_k2.bin.<pid>
-     scratch/agent/m6/g1_lvl4s7012k2/run.log --phases 3 (positive control: s7012 p0 rsp ~13.6 must repeat; p2 vs p0 must be > 0).
- (2) env CW=1260 CH=540 ASP=21:9 CULL=1 zsh scratch/s7012/arm.zsh 4 4 c2 "<same env minus G1B/TL>" -> python3 tools/g5e_edge_score.py
-     scratch/s7012/c2.raw 6 1000000000 50 24e6 3. The raw is ~19 GB: check df first (needs >= 22 GB free), score, make the sheet, delete the raw at once.
-Delete run.log files after grepping the [s7012]/[s7010-clk] lines (~300 MB each).
+Context: s7013 refuted H-room: caps 4096/5120/5632 give fps 54.2/45.7/43.3, rsp 13.06/14.13/14.41 ms (~0.9 ms per 1000 cells). The gfx RSP task
+(~13 ms/frame at the retail-size window) is the binding term; WIDEWIN can only be free if that task gets cheaper per cell.
+Hypotheses (where the gfx task host time goes):
+ H-vtx: vertex transform/lighting ucode loop dominates (cost ~ vertex count) -> optimise the recompiled vector ops in that block.
+ H-clip: near/far clip + tri setup path dominates (cost ~ triangles crossing planes) -> look at the clip block / VRCP path.
+ H-dma: DMA/DL fetch + dispatch overhead (rsp_dma, per-command dispatch) dominates -> batch DMA / cheaper dispatch.
+ H-glue: host glue (dpc_bridge, spike cull, W clamp, RDP FIFO handoff) dominates -> cheaper bridge.
+Discriminator (one run): env NOCAP=1 ASP=21:9 CULL=1 zsh scratch/s7013/arm.zsh 4 4 p1 "ROGUESQ_DD_MELT=1 ROGUESQ_DD_WIDEWIN=1 ROGUESQ_DD_WIDEWIN_CAP=8192"
+ and, once in flight (>=140 s after launch), `sample RogueSquadron64Recomp 20 -file scratch/s7013/sample_p1.txt`, then
+ python3 tools/sample_game_threads.py scratch/s7013/sample_p1.txt 12 and a per-function self-time tally of the SP Task / Gfx thread
+ (top 20 leaf symbols, factor5_ucode block addresses). Positive control: the SP Task thread must show >= ~75% busy samples in flight (13/16.7 ms).
+ Same run second sample with WIDEWIN off is not possible (no runtime toggle except tog), so use WIDEWIN=tog and take two 20 s samples, or accept
+ one sample: the question is the shape, not the delta. Each outcome names the block to optimise; then build the optimisation and measure rsp ms.
+Delete run.log after grepping.

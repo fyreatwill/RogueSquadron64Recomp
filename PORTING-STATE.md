@@ -184636,3 +184636,20 @@ HYPOTHESIS-ID: dd-wide-window. G5i checked first: fixed s6995-s6999, waiting on 
   WIDEWIN is a frame-rate trade for the owner (NEXT.md). Raws and run logs deleted; anchors kept in scratch/s7012/anchor_*.txt.
 - Verdict: this selects H-knee for edge gain and H-flat-cost for fps (cap 6144 already costs 57 -> 37.5 fps), and refutes H-linear in frame-rate terms;
   the next discriminator is the cap 5120/5632 sweep.
+
+## Session 7013 (2026-11-08) — G5e WIDEWIN caps below the cliff: no room; cap 5120 already costs 54.2 -> 45.7 fps (P(>=2VI) 0.11 -> 0.31), 5632 43.3 fps (0.38); rsp +1.07 / +1.35 ms; WIDEWIN is a frame-rate trade for the owner
+HYPOTHESIS-ID: dd-wide-window. G5i checked first: fixed s6995-s6999, owner look, nothing to run. CURRENT-TRUTH 21.7 KB, no maintenance. No new soak verdicts (latest s7009_widewin_L4, folded).
+- No build (current binary carries s7012 WIDEWIN_CAP). Run k2 (cost, NOCAP, scratch/s7013/arm.zsh 4 4 k2 = s7012 arm, 21:9 dd4 L4, FPS60, MELT=1, CULL=1,
+  WIDEWIN=tog3 caps 4096,5120,5632, G1B + G1E_TL): 0 crashes, mission verified 130 s.
+- Split (g5e_cost_by_parity.py --phases 3, skip 130 s, guard 60 ms, 7900 frames): p0 4096 n3013 fps 54.2 rsp 13.06 (p90 16.55) run 1.84 P(2VI) 0.11;
+  p1 5120 n2524 fps 45.7 rsp 14.13 (18.80) run 2.04 P 0.31; p2 5632 n2363 fps 43.3 rsp 14.41 (19.76) run 2.23 P 0.38.
+  Positive control: p0 rsp 13.06 repeats s7012's 13.62 within the ~1 ms parity noise, and p2 > p1 > p0 monotone (5632-4096 rsp +1.35, ~0.9 ms per 1000
+  cells, consistent with s7012's 6144 +2.02 / 8192 +3.32). The shifted-phase control was not run: the run log was deleted before it (tl bin kept).
+- Reading: H-room refuted (the threshold set in NEXT was P(2VI) <= 0.1 with half the gain; 5120 is 0.31 / 45.7 fps). H-no-room selected: at 21:9 dd4 the
+  4096 baseline already sits at ~15 ms of rsp + guest run, so every extra ~500 cells puts ~10% more frames on 2 VIs; there is no cap that keeps 60 fps
+  and widens the side. Edge capture (c2) skipped: with fps already gone at 5120 the side-edge gain cannot change the verdict, and the 19 GB raw needed
+  22 GB of the 24 GB free. Single run (the cliff shape agrees with s7012, a second independent line for the fps-vs-area curve).
+- Consequence: WIDEWIN stays opt-in as an owner trade (wider 21:9 side terrain for ~35-45 fps). Getting both needs a cheaper gfx RSP task per cell
+  (13 ms at the retail-size window is the binding term), not fewer cells. Next: host profile of the gfx RSP task at 21:9 dd4 (sample the RSP thread,
+  WIDEWIN off vs on in one run) to name the hot ucode path (NEXT.md).
+- Verdict: selects H-no-room, refutes H-room and H-edge-late (fps fails before any edge question arises).
