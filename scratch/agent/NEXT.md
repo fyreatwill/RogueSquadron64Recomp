@@ -1,12 +1,12 @@
-# NEXT: G1c dd6 cost split — cells vs the dd multiplier (same run)
+# NEXT: G1c per-cell cost — phase-split profile at dd6 tog3 (name the blocks that grow with cells)
 HYPOTHESIS-ID: g1c-dd-headroom
-Context (s7019, L1 21:9 WIDEWIN owner path, separate runs): dd4 59.5 fps rsp 12.6 run 3.13; dd6 55.8 rsp 13.9 run 3.78; dd8 53.3 rsp 14.0
-run 3.99. POOLX is clamped to 5 (src/main/main.cpp rs64_g1c_apply_dd_policy) so dd>=5 = 10240 cells, window 128x80; dd8 = dd6 cells but
-costs more. G5i: fixed, owner look only — check CURRENT-TRUTH item 1 first anyway.
-Hypotheses: H-cells (the extra cost is the 8192->10240 cells: at dd6 with cap 8192 the cost returns to dd4's), H-mult (cost scales with the dd
-multiplier itself — grid radius/auto-far/object draw distance/LOD — and stays at cap 8192), H-both.
-Discriminator, ONE run: dd6 with ROGUESQ_DD_WIDEWIN=tog3-style cap cycling (ROGUESQ_DD_WIDEWIN_CAP=8192,10240,10240 per s7012, check the env
-form in tools/apply_s7012_widewin_cap.py / rs64_s7012_cap), analysed with tools/g5e_cost_by_parity.py --phases 3. rsp/run delta 10240-8192
-~= dd6-dd4 (1.3 ms rsp, 0.65 run) => H-cells; ~0 => H-mult (then name which multiplier term with the dd8 run's extra run time).
-Recipe: copy scratch/s7019/all.zsh (one arm, NOCAP=1 — captures are 2 MB/frame and filled the disk in s7019; never capture >30 s), dd6, 320 s.
-Drop GLUE_TOG=3 if tog3 prints the anchor itself. Positive control: the 0.33-period-shifted split must smear the delta.
+Context (s7020, same run, L1 21:9 WIDEWIN owner path dd6): cap 8192 = dd4 cost (59.2 fps, rsp 12.42, run 3.10); cap 10240 rsp +1.7, run +0.7
+(52 fps). The dd multiplier costs ~0; the binding limit above dd4 is per-cell cost. G5i: fixed, owner look only — check CURRENT-TRUTH item 1 first.
+Hypotheses for where the +1.7 ms rsp lives: H-ucode-xform (F5 ucode vertex transform/clip blocks scale with cell vertices), H-rdp-decode (RT64
+RDP interpret/triangle decode inside the DPC_END submit, L_1198 incl), H-glue (bridge walks, closed at 0.2-0.45 ms total so expect small);
+for the +0.7 ms run: H-stream (guest streamTerrainGridCellsByDistance / buildGridCellMeshForFace per cell).
+Discriminator, ONE run: scratch/s7020/run.zsh recipe (dd6 tog3 CAP=8192,10240,10240) + xctrace Time Profiler 30 s at ~150 s (see s7014 k3
+recipe in PORTING-STATE, grep "Run k3"). Split samples by cap phase using the sample timestamps + the [s7010-clk] anchor (extend
+tools/xctrace_ucode_blocks.py with --anchor/--phases 3 if it lacks it), then per block / host function: self samples per second in p0 vs p1+p2.
+The blocks whose delta sums to ~1.7 ms/frame name the path; positive control: total gfx-thread busy delta must match g5e_cost_by_parity rsp
+delta on the same run (skip the xctrace window for the TL split, or report both). Then cut the biggest term (one change, same-run tog A/B).

@@ -184811,3 +184811,31 @@ P(>=2VI) 0.07/0.13, but not below 50), refutes H-heap/crash (0 crashes, single 3
 dd4 stays the top owner setting that holds 60 fps at 21:9 WIDEWIN. Single run per arm (cross-run, whole-run means).
 Next (NEXT.md): split dd6's extra cost into cells vs the dd multiplier: dd6 with ROGUESQ_DD_WIDEWIN_CAP=8192,10240 WIDEWIN=tog3-style
 same-run cap cycling (s7012 tool) vs dd4.
+
+## Session 7020 (2026-11-08) — G1c dd6 same-run cell-cap split selects H-cells: dd6 capped at 8192 cells = dd4 cost (59.2 fps, rsp 12.42), the extra 2048 cells cost rsp +1.7 ms / run +0.7 ms (52 fps); the dd multiplier itself costs ~0
+HYPOTHESIS-ID: g1c-dd-headroom. No build (s7018 binary). G5i checked first: fixed s6995-s6999, owner look only.
+What ran. scratch/s7020/run.zsh (arm.zsh from s7019, NOCAP=1, no framebuffer capture), one run: L1 21:9 FPS60 CULL=1 OWNER_TIMING
+(`[g1e-fast] on=1`, `[g1e-probes] on=0`), DRAW_DISTANCE=6, DD_UNSAFE=1 MELT=1, ROGUESQ_DD_WIDEWIN=tog3 ROGUESQ_DD_WIDEWIN_CAP=8192,10240,10240
+(phase (mach/24e6)%3: p0 = 8192, p1/p2 = 10240, so p1 vs p2 is a same-run A/A null), G1E_TL ring + G3E_TRACE, 320 s hold.
+att=1 alive_at_end=1 vi_stalls30s=0 crashlines=0. Anchor `[s7012] widewin cap n=3 8192,10240,10240 tog3=1`.
+Results (tools/g5e_cost_by_parity.py --phases 3 --skip-s 130):
+| phase | cap | n | fps | T | run | rsp mean/p90 | P(>=2VI) |
+| p0 | 8192 | 4462 | 59.2 | 16.88 | 3.10 | 12.42/15.56 | 0.01 |
+| p1 | 10240 | 3909 | 52.1 | 19.21 | 3.85 | 14.16/17.23 | 0.15 |
+| p2 | 10240 | 3931 | 52.6 | 18.99 | 3.76 | 14.02/17.03 | 0.14 |
+Cells -> cost: p1-p0 rsp +1.73, run +0.74, T +2.32; p2-p0 rsp +1.60, run +0.66. A/A null p2-p1 rsp -0.14, run -0.09.
+Controls: --shift-ms 1000 relabels the phases exactly (p1-p0 = -1.60, p2-p0 = +0.14: the cap phase moves with the shift, so the
+mapping is right); --shift-ms 500 smears (p1-p0 +0.02, p2-p0 +0.90: half-way). Trace site 17 (second line, independent of the clock
+split): windows 80x128/128x80 cap 10240 = 11020 placements, 64x128/128x64 cap 8192 = 6144 (~1:1.8, expected 2:1 minus phase-edge
+frames), 64x64 cap4096 618 (pre-flight/cutscene POOLMIN); site 18 = 0, pool never exhausted.
+Verdict: selects H-cells. dd6 at 8192 cells reproduces s7019's dd4 (59.5 fps, rsp 12.59, run 3.13; cross-run, but same level/recipe),
+so the dd multiplier terms (auto-far, grid radius, fog, tile pool K) cost ~0 at fixed cells: H-mult refuted for dd6 (single run).
+The binding limit above dd4 on the 21:9 owner path is per-cell cost: ~0.85 ms rsp + 0.35 ms guest run per 1000 cells, and the
+60 fps budget is spent at 8192 cells (p0 P(>=2VI) 0.01). s7019's dd8-vs-dd6 2.5 fps was cross-run with different autopilot
+camera paths; not reproduced and not attributable (dd8 places the same 10240 cells). The 10240 phases here (52 fps) are lower
+than s7019's dd6 whole-run mean (55.8): different flight path, and that run had cutscene/menu seconds at cap 4096 inside the window.
+Rules out: H-mult as the dd6 cost source, any further gain from raising POOLX past 5 without a cheaper per-cell path.
+Next (NEXT.md): name the per-cell hot path. xctrace the gfx + game threads on the same tog3 run and split samples by cap phase,
+so the blocks whose self time grows 8192 -> 10240 are named (ucode blocks via tools/xctrace_ucode_blocks.py, RT64 decode, guest
+terrain stream/mesh build), then cut the biggest one.
+Note: tl ring (gitignored) deleted after analysis.
