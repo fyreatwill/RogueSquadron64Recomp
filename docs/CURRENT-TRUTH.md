@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7023 (2026-11-08).
+Compact operational handoff, as of Session 7024 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,12 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7024 getGridCellValueAt split (tools/apply_s7024_gvbranch.py, ROGUESQ_S7022_ST=1, L1 dd6 21:9 WIDEWIN, 4 runs, 0 crashes): H-clamp.** The off-map
+clampGridCellLookup branch is 97-98% of gv time (4500-6300 calls/frame, 113-155 ns); direct table hits 10 ns; node walk ~0. New default at dd>1
+ROGUESQ_G1E_CELLIDX=3: the s6963 index as a bounded flat table (record -> key reverse array; =2 old std index, tog3 = same-run A/B). Same speed
+as std (113.7 vs 112.9 ns, same run), exact (CHECK 42.1M compares 0 bad, flip control 42253/42253). The std index never drops re-used records'
+keys (7.5k -> 338k in 3 min); the flat one peaks at 10.2k. Per-call cost climbs ~40 -> 130 ns over a hold in both modes, so it is not the container.
+Next: what that drift is (NEXT.md).
 **s7023 stream loop split (tools/apply_s7023_calleetime.py, same switch ROGUESQ_S7022_ST=1, same recipe, 0 crashes; path counts sum exactly to cells):**
 callees 55-60% / self 40-45%: getGridCellValueAt 96-120 ns/call = 41-48% of the loop (largest term), processGridCellByDistance 31 ns/call 12-14%,
 call-path inline 74-81 ns/cell, skip cells 33-38 ns. 75-78% of cells take the call path (H-skipmix refuted), 0 rejects. Ceiling of a fix here ~0.7 ms/frame. Next: NEXT.md.
@@ -84,7 +90,7 @@ Open or awaiting the owner (each one line; detail in the s6994 archive under the
   s6996: in-flight seconds (tools/g1e_level_fps.py fl_shown) L16 59.7, L17/L7 59.9, rest 59.8-60.0; C30 control 30.0.
   The s6993 L7/L16/L17 56.3-58.5 was menu/restart screen time inside the window (backdrop menu 16x, wl=0 presents).
 - **G1e latency/present chain s6962-s6989, all closed:** defaults on ROGUESQ_VI_RT (s6967, VI
-  thread time-constraint policy), STDERR_ASYNC (s6979), G1E_CELLIDX at dd>1 (s6963); opt-ins
+  thread time-constraint policy), STDERR_ASYNC (s6979), G1E_CELLIDX at dd>1 (s6963; mode 3 bounded flat since s7024); opt-ins
   VI_LOCK=1 (implies PRESENT_DRAIN_ACQ=8, target 10), QOS_ALL=1 (= GFX/GUEST/PRESENT/WL/UPLOAD
   QoS; quiet host neutral, burst lates 178 -> 6, s6989). Owner decides QoS default.
 - **Boot freeze (1 in ~65, passive):** s6993 first live [stall-dump]: retrace thread 8011CD28

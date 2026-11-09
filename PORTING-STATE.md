@@ -184927,3 +184927,29 @@ HYPOTHESIS-ID: g1c-dd-headroom
 Verdict: this run refutes H-skipmix (75-78% of cells take the call path) and refutes a pure H-callee or pure H-self reading (neither
 exceeds 60%); it selects getGridCellValueAt as the largest single term (41-48%). Next discriminator: per-branch time inside
 getGridCellValueAt, one build (NEXT.md: H-walk / H-clamp / H-flat).
+
+## Session 7024 (2026-11-08) — G1c: getGridCellValueAt's cost is the off-map clampGridCellLookup branch (97-98%); a flat index ties the std one, but the std index grew without bound — mode 3 (bounded flat) is the new dd>1 default
+HYPOTHESIS-ID: g1c-dd-headroom
+- Change 1 (measurement): tools/apply_s7024_gvbranch.py (fixup replay list after s7023, same switch ROGUESQ_S7022_ST=1) tags every
+  getGridCellValueAt exit with its branch (1 clamp -> clampGridCellLookup, 2 direct 0x8000-flag table hit, 4/6 node path return 0,
+  7/9 node slot paths) and accumulates count, mach time and node-walk iterations into g_s7024; rs64_s7023_cs flushes it as [s7024-gv]
+  per bucket. Bucket key is now cap*10 + active cellidx mode. tools/s7024_gvbranch_sum.py summarises.
+- Run 1 (scratch/s7024/run.zsh = s7023 recipe, L1 dd6 21:9 WIDEWIN tog3 caps 8192/10240, owner path, 320 s, 0 crashes, 0 VI stalls):
+  b1 clamp 4526/6263 calls per stream call at 155/123 ns = 97.5/97.8% of gv time; b2 direct 1604/1384 at 10 ns (2%); node paths
+  <0.5%, walk ~1 iteration. Control: branch counts sum to the stream's gv_n (7748 vs 7763). H-clamp SELECTED; H-walk and H-flat refuted.
+- Change 2 (default on at dd>1): ROGUESQ_G1E_CELLIDX=3, the s6963 mode-2 index in a flat open-addressing table (S7024Flat, linear
+  probe, backward-shift erase) with a record -> key reverse array, so a re-used record drops its old key; =2 keeps the std containers,
+  =tog3 alternates 3 and 2 in 8 s blocks. s6963_tick now does one tick compare per call (per-second work only at the boundary).
+- Run 2 (first mode 3, no reverse array; tog3 same run, cap 10240): mode 3 188 ns vs mode 2 127 ns per b1 call: WORSE. CHECK arm
+  (CELLIDX=3 CHECK=2) 38.8M compares 0 bad, flip control 38902/38902, but idx grew 7.5k -> 338k keys in ~3 min: neither index ever
+  dropped keys of re-used records (ival 1-4k per 15 s shows records change outside the create hook), so the tables grew and missed cache.
+- Run 3 (reverse array): tog3 same run mode 3 113.7 ns vs mode 2 112.9 ns per b1 call (gv 861 vs 833 us, stream cp 1819 vs 1798 us per
+  call): a tie. CHECK arm 42.1M compares 0 bad, flip 42253/42253 caught, idx max 10225. 0 crashes, 0 VI stalls in all 4 runs.
+- Both modes' per-call cost climbs in step over the hold (~40 -> ~130 ns, interleaved 8 s blocks), so it is not the container. Best
+  guess, not measured (single-source): memory latency on the game's own records (validation reads record, prev and s0 fields spread
+  over a 65536 x 0xB8 pool that fills during flight), which the caller also touches on a hit.
+- Why keep mode 3 as the default: it is exact (2 CHECK arms), the same speed, and its memory is bounded; the std index grows by ~100k
+  keys/min at dd6. That growth is a possible source of rehash hitches, but this was not measured.
+Verdict: this run selects H-clamp (clampGridCellLookup = 97-98% of getGridCellValueAt) and refutes H-walk / H-flat; it refutes
+H-container (a bounded flat table ties std, 113.7 vs 112.9 ns). Next discriminator: split the clamp call's ~113 ns into host index
+work vs record reads, against flight time (NEXT.md).

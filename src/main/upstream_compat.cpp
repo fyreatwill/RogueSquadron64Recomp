@@ -226,17 +226,25 @@ extern "C" void rs64_s7022_st(unsigned long long t0, unsigned long long t1, unsi
 // processGridCellByDistance ticks + calls, v[4..5] call-path region ticks + entries, v[6..9] per-call deltas of g_s6493 [3] poolcap,
 // [4] spaneq skip, [5] span reject, [6] call path. ovh_ns = one back-to-back mach_absolute_time pair (calibrated once): every timed
 // span carries ~1 ovh; the summariser subtracts it. One [s7023-cs] line per cap bucket per 256 calls.
+extern "C" int rs64_s6963_active(); // s7024 bucket key
+extern "C" { unsigned long long g_s7024[3][10]; } // s7024 (tools/apply_s7024_gvbranch.py): [n, mach ticks, walk iters][branch]
 extern "C" void rs64_s7023_cs(const unsigned long long* v) {
     struct B { int cap; unsigned n; unsigned long long a[10]; };
     static B b[4]; static int nb = 0; static double tb = 0, ovh = 0;
     if (tb == 0) { mach_timebase_info_data_t i; mach_timebase_info(&i); tb = (double)i.numer / i.denom;
         unsigned long long s = 0; for (int k = 0; k < 100000; k++) { unsigned long long a = mach_absolute_time(); s += mach_absolute_time() - a; }
         ovh = s * tb / 100000.0; }
-    const int cap = rs64_s7012_cap(); int k = 0;
+    const int cap = rs64_s7012_cap() * 10 + rs64_s6963_active(); int k = 0;  /* s7024: cap*10 + cellidx mode */
     while (k < nb && b[k].cap != cap) k++;
     if (k == nb) { if (nb == 4) return; b[nb] = B{}; b[nb].cap = cap; nb++; }
     B& x = b[k]; x.n++; for (int j = 0; j < 10; j++) x.a[j] += v[j];
+    static unsigned long long s[4][3][10]; // s7024: per-branch getGridCellValueAt totals, flushed into this cap bucket
+    for (int r = 0; r < 3; r++) for (int j = 0; j < 10; j++) { s[k][r][j] += g_s7024[r][j]; g_s7024[r][j] = 0; }
     if (x.n == 256) {
+        { const double n = x.n; char buf[512]; int o = snprintf(buf, sizeof buf, "[s7024-gv] cap=%d calls=%u", x.cap, x.n);
+          for (int j = 1; j < 10; j++) if (s[k][0][j]) o += snprintf(buf + o, sizeof buf - o, " b%d=%.1f/%.1fns/w%.2f", j, s[k][0][j] / n,
+              s[k][1][j] * tb / s[k][0][j], (double)s[k][2][j] / s[k][0][j]);
+          fprintf(stderr, "%s\n", buf); for (int r = 0; r < 3; r++) for (int j = 0; j < 10; j++) s[k][r][j] = 0; }
         const double n = x.n;
         fprintf(stderr, "[s7023-cs] cap=%d calls=%u ovh_ns=%.2f gv_us=%.2f gv_n=%.1f pg_us=%.2f pg_n=%.1f cp_us=%.2f cp_n=%.1f poolcap=%.1f spaneq=%.1f rej=%.1f callp=%.1f\n",
                 x.cap, x.n, ovh, x.a[0] * tb * 1e-3 / n, x.a[1] / n, x.a[2] * tb * 1e-3 / n, x.a[3] / n, x.a[4] * tb * 1e-3 / n, x.a[5] / n,
@@ -7479,28 +7487,66 @@ extern "C" uint32_t rs64_s6892_check(uint8_t* rdram, uint32_t s2, uint32_t v, ui
    The burst seconds of the dd4 tail are this walk: an off-map cell clamps to an edge template and the function walks that
    template's instance chain (records at *(0x80137A5C), stride 0xB8, prev +4, next +6, owner +8, x +0x18, z +0x1A, own index +0x16)
    for the first record with this x,z. At dd>1 the window runs far past the map, so edge chains hold thousands of records.
-   ROGUESQ_G1E_CELLIDX: 0 = retail walk, 1 = validated hits from the index (misses still walk), 2 (default at dd>1; dd1 default 0) = complete per-template index
+   ROGUESQ_G1E_CELLIDX: 0 = retail walk, 1 = validated hits from the index (misses still walk), 2 = complete per-template index (std containers), 3 (s7024, default at dd>1; dd1 default 0) = mode 2 in a flat table, tog3 = 3 and 2 in 8 s blocks
    (one native snapshot walk per template, kept by the creation hook; misses trusted), tog = 2 and 0 in 8 s blocks.
    ROGUESQ_G1E_CELLIDX_CHECK=1: always run the retail walk and compare it with the mode-2 answer; =2 also flips every 997th answer
    (positive control: bad must count). Log line [g1e-cell] per second when ROGUESQ_G1B=1 or CHECK is set. */
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 extern "C" { uint64_t rs64_s6963_it = 0; }
 namespace {
+/* s7024: mode 3 (default at dd>1) = the mode-2 index in a flat open-addressing table (linear probe, backward-shift erase) instead of
+   std::unordered_map/set. s7024 measured clampGridCellLookup at 97-98% of getGridCellValueAt (123-155 ns/call, ~4500-6300 calls/frame
+   at dd6). Key 0 is the empty slot (map keys carry s0 >= 0x80000000 in the high word; set keys are s0 itself). */
+struct S7024Flat {
+    std::vector<uint64_t> k; std::vector<uint16_t> v; size_t n = 0, mask = 0; int shift = 64;
+    S7024Flat() { rehash(1 << 16); }
+    void rehash(size_t cap) { std::vector<uint64_t> ok; std::vector<uint16_t> ov; ok.swap(k); ov.swap(v);
+        k.assign(cap, 0); v.assign(cap, 0); mask = cap - 1; shift = 64 - __builtin_ctzll(cap); n = 0;
+        for (size_t i = 0; i < ok.size(); i++) if (ok[i]) set(ok[i], ov[i]); }
+    size_t h(uint64_t key) const { return (size_t)((key * 0x9E3779B97F4A7C15ull) >> shift); }
+    bool get(uint64_t key, uint16_t& out) const { for (size_t i = h(key);; i = (i + 1) & mask) { const uint64_t q = k[i];
+        if (q == key) { out = v[i]; return true; } if (!q) return false; } }
+    void set(uint64_t key, uint16_t val) { if ((n + 1) * 2 > k.size()) rehash(k.size() * 2);
+        for (size_t i = h(key);; i = (i + 1) & mask) { if (k[i] == key) { v[i] = val; return; } if (!k[i]) { k[i] = key; v[i] = val; n++; return; } } }
+    void erase(uint64_t key) { size_t i = h(key); for (;; i = (i + 1) & mask) { if (!k[i]) return; if (k[i] == key) break; }
+        k[i] = 0; n--; for (size_t j = (i + 1) & mask; k[j]; j = (j + 1) & mask) {  /* backward shift */
+            const size_t d = h(k[j]); if (((j - d) & mask) >= ((j - i) & mask)) { k[i] = k[j]; v[i] = v[j]; k[j] = 0; i = j; } } }
+    void clear() { if (n) { std::fill(k.begin(), k.end(), 0); n = 0; } }
+    size_t size() const { return n; }
+};
+struct S6963U { std::unordered_map<uint64_t, uint16_t> m; std::unordered_set<uint32_t> c; S6963U() { m.reserve(1 << 16); }
+    bool get(uint64_t q, uint16_t& o) const { auto f = m.find(q); if (f == m.end()) return false; o = f->second; return true; }
+    void set(uint64_t q, uint16_t r) { m[q] = r; } void erase(uint64_t q) { m.erase(q); } size_t size() const { return m.size(); }
+    bool done(uint32_t s0) const { return c.count(s0) != 0; } void mark(uint32_t s0) { c.insert(s0); } void unmark(uint32_t s0) { c.erase(s0); }
+    void clear() { m.clear(); c.clear(); } void clearc() { c.clear(); } };
+/* s7024 flat index with a record -> key reverse array: a record sits in one chain at one x,z, so it owns at most one key. A record
+   re-used for another cell drops its old key instead of leaving it stale (the std index grew 7.5k -> 338k keys in 3 min at dd6,
+   s7024 CHECK arm), so the table stays <= 65536 keys in 2^17 slots and never rehashes. */
+struct S6963F { S7024Flat m, c; std::vector<uint64_t> rev; S6963F() { m.rehash(1 << 17); rev.assign(1 << 16, 0); }
+    bool get(uint64_t q, uint16_t& o) const { return m.get(q, o); }
+    void set(uint64_t q, uint16_t r) { uint16_t o;
+        if (rev[r] && rev[r] != q && m.get(rev[r], o) && o == r) m.erase(rev[r]);
+        if (m.get(q, o) && o != r && rev[o] == q) rev[o] = 0;
+        m.set(q, r); rev[r] = q; }
+    void erase(uint64_t q) { uint16_t o; if (m.get(q, o) && rev[o] == q) rev[o] = 0; m.erase(q); } size_t size() const { return m.size(); }
+    bool done(uint32_t s0) const { uint16_t d; return c.get(s0, d); } void mark(uint32_t s0) { c.set(s0, 1); } void unmark(uint32_t s0) { c.erase(s0); }
+    void clear() { m.clear(); c.clear(); std::fill(rev.begin(), rev.end(), 0); } void clearc() { c.clear(); } };
 struct S6963 {
-    int mode = 2, check = 0, lg = 0, blk = 8; bool tog = false;
-    std::unordered_map<uint64_t, uint16_t> idx; std::unordered_set<uint32_t> complete; uint32_t base = 0;
+    int mode = 3, check = 0, lg = 0, blk = 8, tog = 0;  /* tog: 1 = modes 2/0 (CELLIDX=tog), 3 = modes 3/2 (CELLIDX=tog3, s7024 A/B) */
+    S6963U u; S6963F f; uint32_t base = 0; uint64_t nextt = 0;
     uint64_t calls = 0, wfound = 0, wmiss = 0, ihit = 0, imiss = 0, ival = 0, snaps = 0, snapit = 0, cn = 0, cbad = 0, cpred = 0, it0 = 0, tbad = 0, tcn = 0;
-    uint64_t lastsec = 0, lastblk = ~0ull, tflip = 0, tflipbad = 0; int on = 0, fromhit = 0, flipped = 0; uint32_t pred = 0xFFFFu, maxchain = 0; unsigned badlines = 0;
+    uint64_t lastsec = 0, lastblk = ~0ull, tflip = 0, tflipbad = 0; int on = 0, act = 0, fromhit = 0, flipped = 0, curf = 0; uint32_t pred = 0xFFFFu, maxchain = 0; unsigned badlines = 0;
     S6963() {
         const char* e = std::getenv("ROGUESQ_G1E_CELLIDX");
         { const char* d = std::getenv("ROGUESQ_DRAW_DISTANCE"); if (!(d && std::atof(d) > 1.0)) mode = 0; }  /* default on at dd>1 only; dd1 stays the retail walk unless set */
-        if (e && *e) { if (*e == 't') { tog = true; mode = 2; } else mode = std::atoi(e); }
+        if (e && *e) { if (!std::strcmp(e, "tog3")) { tog = 3; mode = 3; } else if (*e == 't') { tog = 1; mode = 2; } else mode = std::atoi(e); }
         if (const char* c = std::getenv("ROGUESQ_G1E_CELLIDX_CHECK")) check = std::atoi(c);
         if (const char* b = std::getenv("ROGUESQ_G1E_CELLIDX_BLK")) { int v = std::atoi(b); if (v > 0) blk = v; }
         const char* g = std::getenv("ROGUESQ_G1B"); lg = (g && *g && *g != '0') || check;
-        idx.reserve(1 << 16);
-        std::fprintf(stderr, "[g1e-cell] cfg mode=%d tog=%d check=%d blk=%d\n", mode, tog ? 1 : 0, check, blk);
+        act = tog ? 0 : mode;
+        std::fprintf(stderr, "[g1e-cell] cfg mode=%d tog=%d check=%d blk=%d\n", mode, tog, check, blk);
     }
 };
 S6963& s6963() { static S6963 s; return s; }
@@ -7509,55 +7555,61 @@ inline int16_t s6963_h(const uint8_t* rd, uint32_t a) { return (int16_t)s6963_hu
 inline uint32_t s6963_w(const uint8_t* rd, uint32_t a) { return *(const uint32_t*)(rd + (a - 0x80000000u)); }
 inline bool s6963_ok(uint32_t a) { return a >= 0x80000000u && a < 0x9FFFFF00u; }
 inline uint64_t s6963_key(uint32_t s0, int32_t x, int32_t z) { return ((uint64_t)s0 << 32) | ((uint64_t)(uint16_t)x << 16) | (uint16_t)z; }
-void s6963_tick(S6963& S) {
-    const uint64_t now = mach_absolute_time() / 24000000ull;
-    if (S.tog) { const uint64_t b = now / (uint64_t)S.blk; if (b != S.lastblk) { S.lastblk = b; S.on = (int)(b & 1); S.complete.clear(); } }
-    else S.on = S.mode;
+inline void s6963_tick(S6963& S) {  /* s7024: one tick compare per call; mode/tog/log work runs only at second boundaries */
+    const uint64_t t = mach_absolute_time(); if (t < S.nextt) return;
+    const uint64_t now = t / 24000000ull; S.nextt = (now + 1) * 24000000ull;
+    if (S.tog) { const uint64_t b = now / (uint64_t)S.blk; if (b != S.lastblk) { S.lastblk = b; S.on = (int)(b & 1); S.u.clearc(); S.f.clearc(); } }
+    S.act = S.tog == 3 ? (S.on ? 3 : 2) : S.tog == 1 ? (S.on ? 2 : 0) : S.mode;
     if (now != S.lastsec) {
         if (S.lg && S.lastsec) std::fprintf(stderr, "[g1e-cell] s=%llu on=%d calls=%llu it=%llu wfound=%llu wmiss=%llu ihit=%llu imiss=%llu ival=%llu snaps=%llu snapit=%llu maxchain=%u chk=%llu bad=%llu tot_chk=%llu tot_bad=%llu flip=%llu flipbad=%llu idx=%zu\n",
-            (unsigned long long)now, S.tog ? S.on : S.mode, (unsigned long long)S.calls, (unsigned long long)(rs64_s6963_it - S.it0), (unsigned long long)S.wfound, (unsigned long long)S.wmiss,
+            (unsigned long long)now, S.act, (unsigned long long)S.calls, (unsigned long long)(rs64_s6963_it - S.it0), (unsigned long long)S.wfound, (unsigned long long)S.wmiss,
             (unsigned long long)S.ihit, (unsigned long long)S.imiss, (unsigned long long)S.ival, (unsigned long long)S.snaps, (unsigned long long)S.snapit, S.maxchain,
-            (unsigned long long)S.cn, (unsigned long long)S.cbad, (unsigned long long)S.tcn, (unsigned long long)S.tbad, (unsigned long long)S.tflip, (unsigned long long)S.tflipbad, S.idx.size());
+            (unsigned long long)S.cn, (unsigned long long)S.cbad, (unsigned long long)S.tcn, (unsigned long long)S.tbad, (unsigned long long)S.tflip, (unsigned long long)S.tflipbad, S.act == 3 ? S.f.size() : S.u.size());
         S.lastsec = now; S.calls = S.wfound = S.wmiss = S.ihit = S.imiss = S.ival = S.snaps = S.snapit = S.cn = S.cbad = 0; S.maxchain = 0; S.it0 = rs64_s6963_it;
     }
 }
 /* answer for (s0,x,z) from the index: record index or 0xFFFF. Snapshots the template chain on first use. */
-uint32_t s6963_answer(S6963& S, const uint8_t* rd, uint32_t s0, int32_t x, int32_t z, uint32_t base, uint32_t head) {
-    if (base != S.base) { S.base = base; S.idx.clear(); S.complete.clear(); }
-    if (!S.complete.count(s0)) {
+template <class I> uint32_t s6963_answer(S6963& S, I& I_, const uint8_t* rd, uint32_t s0, int32_t x, int32_t z, uint32_t base, uint32_t head) {
+    if (base != S.base) { S.base = base; S.u.clear(); S.f.clear(); }
+    if (!I_.done(s0)) {
         uint32_t r = head, n = 0; static std::unordered_set<uint64_t> seen; seen.clear();
         while (r != 0xFFFFu && n < 200000u) {
             const uint32_t a = base + r * 0xB8u; if (!s6963_ok(a)) break;
             const uint64_t k = s6963_key(s0, s6963_h(rd, a + 0x18), s6963_h(rd, a + 0x1A));
-            if (seen.insert(k).second) S.idx[k] = (uint16_t)r;  /* first record in walk order wins, replacing any stale entry */
+            if (seen.insert(k).second) I_.set(k, (uint16_t)r);  /* first record in walk order wins, replacing any stale entry */
             r = s6963_hu(rd, a + 6); n++;
         }
-        S.complete.insert(s0); S.snaps++; S.snapit += n; if (n > S.maxchain) S.maxchain = n;
+        I_.mark(s0); S.snaps++; S.snapit += n; if (n > S.maxchain) S.maxchain = n;
     }
-    auto f = S.idx.find(s6963_key(s0, x, z));
-    if (f == S.idx.end()) return 0xFFFFu;
-    const uint32_t r = f->second, a = base + r * 0xB8u, own = s6963_hu(rd, s0 + 0x16);
+    const uint64_t key = s6963_key(s0, x, z); uint16_t r16;
+    if (!I_.get(key, r16)) return 0xFFFFu;
+    const uint32_t r = r16, a = base + r * 0xB8u, own = s6963_hu(rd, s0 + 0x16);
     bool v = s6963_ok(a) && s6963_h(rd, a + 0x18) == (int16_t)x && s6963_h(rd, a + 0x1A) == (int16_t)z && s6963_hu(rd, a + 8) == own;
     if (v) { const uint32_t p = s6963_hu(rd, a + 4); const uint32_t pn = p == own ? s6963_hu(rd, s0 + 6) : (s6963_ok(base + p * 0xB8u) ? s6963_hu(rd, base + p * 0xB8u + 6) : 0xFFFFu); v = pn == r; }
-    if (!v) { S.idx.erase(f); S.ival++; return 0xFFFFu; }
+    if (!v) { I_.erase(key); S.ival++; return 0xFFFFu; }
     return r;
 }
-}
-extern "C" int rs64_s6963_pre(uint8_t* rdram, recomp_context* ctx) {
-    S6963& S = s6963(); s6963_tick(S); S.calls++; S.fromhit = 0;
-    const int m = S.tog ? (S.on ? 2 : 0) : S.mode;
-    if (!m && !S.check) return 0;
+template <class I> int s6963_pre_t(S6963& S, I& I_, uint8_t* rdram, recomp_context* ctx, int m) {
     const uint32_t base = s6963_w(rdram, 0x80137A5Cu), s0 = (uint32_t)ctx->r16, head = (uint32_t)ctx->r4 & 0xFFFFu;
     const int32_t x = (int32_t)ctx->r20, z = (int32_t)ctx->r19;
-    if (S.check) { uint32_t p = s6963_answer(S, rdram, s0, x, z, base, head); S.flipped = 0; if (S.check == 2 && (++S.cpred % 997u) == 0) { p = p == 0xFFFFu ? head : 0xFFFFu; S.flipped = 1; S.tflip++; } S.pred = p; return 0; }
-    if (m == 1 && !S.complete.count(s0)) S.complete.insert(s0);  /* mode 1 never snapshots: hits learned from walks and creations only */
-    const uint32_t r = s6963_answer(S, rdram, s0, x, z, base, head);
+    if (S.check) { uint32_t p = s6963_answer(S, I_, rdram, s0, x, z, base, head); S.flipped = 0; if (S.check == 2 && (++S.cpred % 997u) == 0) { p = p == 0xFFFFu ? head : 0xFFFFu; S.flipped = 1; S.tflip++; } S.pred = p; return 0; }
+    if (m == 1 && !I_.done(s0)) I_.mark(s0);  /* mode 1 never snapshots: hits learned from walks and creations only */
+    const uint32_t r = s6963_answer(S, I_, rdram, s0, x, z, base, head);
     if (r != 0xFFFFu) {  /* register state of the walk's found exit */
         ctx->r4 = r; ctx->r5 = (gpr)(int32_t)(base + r * 0xB8u); ctx->r2 = 0xFFFF; ctx->r3 = (gpr)(int32_t)(r * 0xB8u); ctx->r6 = (gpr)(int32_t)base; ctx->r7 = 0xFFFF;
         S.ihit++; S.fromhit = 1; return 1;
     }
-    if (m == 2) { ctx->r4 = 0xFFFF; ctx->r2 = 0xFFFF; ctx->r6 = (gpr)(int32_t)base; ctx->r7 = 0xFFFF; S.imiss++; S.fromhit = 1; return 1; }  /* walk's miss exit; a1/v1 dead past 0x80048AC4 */
+    if (m >= 2) { ctx->r4 = 0xFFFF; ctx->r2 = 0xFFFF; ctx->r6 = (gpr)(int32_t)base; ctx->r7 = 0xFFFF; S.imiss++; S.fromhit = 1; return 1; }  /* walk's miss exit; a1/v1 dead past 0x80048AC4 */
     return 0;
+}
+}
+extern "C" int rs64_s6963_active() { return s6963().act; }
+extern "C" int rs64_s6963_pre(uint8_t* rdram, recomp_context* ctx) {
+    S6963& S = s6963(); s6963_tick(S); S.calls++; S.fromhit = 0;
+    const int m = S.act;
+    if (!m && !S.check) return 0;
+    S.curf = m == 3;
+    return S.curf ? s6963_pre_t(S, S.f, rdram, ctx, m) : s6963_pre_t(S, S.u, rdram, ctx, m);
 }
 extern "C" void rs64_s6963_post(uint8_t* rdram, recomp_context* ctx) {
     S6963& S = s6963();
@@ -7565,12 +7617,12 @@ extern "C" void rs64_s6963_post(uint8_t* rdram, recomp_context* ctx) {
     const uint32_t r = (uint32_t)ctx->r4 & 0xFFFFFFFFu; const bool found = r != 0xFFFFu;
     if (found) S.wfound++; else S.wmiss++;
     const uint32_t s0 = (uint32_t)ctx->r16; const int32_t x = (int32_t)ctx->r20, z = (int32_t)ctx->r19;
-    if (found) S.idx[s6963_key(s0, x, z)] = (uint16_t)r;
+    if (found) { if (S.curf) S.f.set(s6963_key(s0, x, z), (uint16_t)r); else S.u.set(s6963_key(s0, x, z), (uint16_t)r); }
     if (S.check) {
         S.cn++; S.tcn++;
         if ((found ? r : 0xFFFFu) != S.pred) {
             if (S.flipped) { S.tflipbad++; return; }
-            S.cbad++; S.tbad++; S.complete.erase(s0);
+            S.cbad++; S.tbad++; if (S.curf) S.f.unmark(s0); else S.u.unmark(s0);
             if (S.badlines++ < 20) std::fprintf(stderr, "[g1e-cell] BAD s0=%08X x=%d z=%d walk=%04X idx=%04X\n", s0, x, z, found ? r : 0xFFFFu, S.pred);
         }
     }
@@ -7579,7 +7631,8 @@ extern "C" void rs64_s6963_post(uint8_t* rdram, recomp_context* ctx) {
 extern "C" void rs64_s6963_create(uint8_t* rdram, recomp_context* ctx) {  /* after 0x80048B4C: a1 = new record, now head of s0's chain */
     S6963& S = s6963(); const uint32_t a = (uint32_t)ctx->r5;
     if (!s6963_ok(a)) return;
-    S.idx[s6963_key((uint32_t)ctx->r16, (int32_t)ctx->r20, (int32_t)ctx->r19)] = s6963_hu(rdram, a + 0x16);
+    const uint64_t k = s6963_key((uint32_t)ctx->r16, (int32_t)ctx->r20, (int32_t)ctx->r19); const uint16_t r = s6963_hu(rdram, a + 0x16);
+    S.u.set(k, r); S.f.set(k, r);  /* both kept current; the inactive one is re-snapshotted at the next tog block anyway */
 }
 /* s6993: mask for the game's "(p & 0xFF000000) == 0x80000000 means pointer" test (7 sites, tools/apply_s6993_ptrmask.py).
    0xF0000000 by default so dd>1 spill blocks at 0x81000000+ count as pointers; ROGUESQ_PTRMASK=0 restores retail 0xFF000000.
