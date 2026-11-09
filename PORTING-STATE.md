@@ -184351,3 +184351,28 @@ Mechanism (band.py): ring = Chebyshev distance / 8 cells, ring 7 = 56-63 cells. 
 ORIGIN: no defect; the armed rise counts flicker of extra terrain the old clamp did not draw. Not a mitigation, nothing landed in the game.
 Rules out: diagonal corner geometry and map-edge clamping as the cause of the s6901 ring-7 rise. Does NOT show how this band looks on screen; it is beyond the dd1 radius and inside the dd fog range (G5e), so the owner's dd4 flight judges it like the rest of G5b.
 Next: G5f leftover, knife lines under 60 px / s6895 dd1 small transients (NEXT.md).
+
+## Session 7002 (2026-11-08) — G5f short lines: lowering W_SHEET_PX 200 -> 40 does not remove lines under 60 px, it adds them (20-39 px 605 -> 1096, 9 of 10 windows); the kept clamped 40-200 px tris are real slivers, default 200 stays
+
+HYPOTHESIS-ID: g5f-short-lines. No new soak verdicts (latest s6980, folded s6981). CURRENT-TRUTH 15 KB, no maintenance.
+
+Question (NEXT): are the short knife lines (< 60 px, below the s6906 detector) W<=0 wedges kept under the 200 px W_SHEET_PX cut (H-sheet), real thin geometry (H-real), or an RDP path the W levers miss (H-other)?
+
+Instrument, lib/rt64 rt64_gbi_rdp.cpp (patch exported): ROGUESQ_W_SHEET_ALT=<px> uses that limit in odd 24 MHz seconds (same clock as W_CLAMP=tog), and ROGUESQ_W_SHEET_STATS=1 prints cumulative per-block counts of mixed-sign tris by screen span every 10 s ([wsheet]). Both opt-in, default unchanged.
+
+Run a4: LEVEL=4 (Gerrard V), dd4, 16:9, FPS60, W_CLAMP default on, W_SHEET_ALT=40, CULL_SPIKE=tog, arm scratch/s7002/arm.zsh, 960x540 capture from 120 s. The disk filled at 125 s of capture (18.4 GB raw, 11844 frames), so the capture is 125 s not 180; the game kept running. Detector tools/g5f_lines at T=40, min run 20 px, injection every 50th frame: 219/236 recovered (93%), control passes. Scored with the new tools/g5f_short_buckets.py, frames >= 2000:
+
+| run px | lines blk0 (200) / blk1 (40) | events blk0 / blk1 |
+|---|---|---|
+| 20-39 | 605 / 1096 | 259 / 353 |
+| 40-59 | 190 / 262 | 120 / 130 |
+| 60-99 | 110 / 92 | 68 / 60 |
+| 100+ | 58 / 21 | 40 / 14 |
+
+Short lines (< 60) are higher in the 40 px block in 9 of 10 1000-frame windows, so no single scene carries it. [wsheet] at the end: mixed-sign tris by span per block, blk0 lt20 3669, 20-40 2866, 40-60 408, 60-100 229, 100-200 48, >=200 6 (dropped 6); blk1 the same shape, dropped 627. The excess short lines in blk1 (~560 over frames >= 2000) are the same order as the 627 extra drops: each dropped mixed-sign tri leaves a one-frame sliver hole the detector reads as a short line. So these tris are real picture and the clamp draws them right.
+
+Second line, frames viewed (block phase 0.2-0.9 only, to avoid the capture-lag mislabel): six random blk1 lines of 20-39 px are building edges and cloud motion; six blk0 lines of 100+ px are an X-wing wing tip and cannon, a laser bolt, the horizon and a HUD radar edge, all real moving geometry, no knife. Six blk0 20-39 px lines likewise (crops scratch/s7002/short_b1.png, long_b0.png, short_b0.png). Flip diff (lag 0.06 s): 200->40 MAD p50 4.62 p90 9.54, 40->200 4.88 / 14.37, mid 5.24 / 11.84; the higher 40->200 p90 fits picture coming back when the slivers return. One black run started in blk1 (5548, 33 frames): viewed, the game's own fade from a cutscene into flight.
+
+Result: H-sheet refuted, in the opposite direction: the 40 px limit removes real slivers and adds transients. What the 20 px detector finds at the owner recipe with the default 200 is real moving geometry in every frame viewed (H-real for the sample; 18 frames, one run, LEVEL=4 dd4 only). The 100+ fall in blk1 (58 -> 21) is not explained; the six blk0 100+ lines viewed were all real geometry. W_SHEET_PX stays 200; nothing changed in defaults. Not covered: dd1 (s6895's 306 vs 157 small transients, clamp on vs off, still unexplained), dd2, other levels.
+
+Disk: 20 GB free after deleting the raw. A 960x540 capture costs ~1.55 MB/frame at ~95 frames/s (~9 GB/min); keep captures under 90 s or capture smaller. arm.zsh now writes the G5B_TRIS dump (2.7 GB) only with TRIS=1. Owner save sha 687d9f7745c7 before and after.

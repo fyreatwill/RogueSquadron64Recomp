@@ -458,7 +458,7 @@ index a0d4a6a..f6a56a9 100644
              // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
              //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..6629049 100644
+index 6255872..6d2b298 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
 @@ -4,12 +4,115 @@
@@ -1297,7 +1297,7 @@ index 6255872..6629049 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -520,13 +1276,66 @@ namespace RT64 {
+@@ -520,13 +1276,81 @@ namespace RT64 {
                      hlslpp::float2 v2_texcoord = baseTexcoord.xy + texcoordDe.xy * dy_2;
                      hlslpp::float2 v3_opposite_texcoord = baseTexcoord.xy + texcoordDe.xy * dy_3;
                      hlslpp::float2 v3_texcoord = v3_opposite_texcoord + texcoordDx.xy * dx_3;
@@ -1355,7 +1355,22 @@ index 6255872..6629049 100644
 +                                cw1 = tw1 = std::max(w1, wFloor); cw2 = tw2 = std::max(w2, wFloor); cw3 = tw3 = std::max(w3, wFloor);
 +                                static const float s_sheetPx = []{ const char *e = std::getenv("ROGUESQ_W_SHEET_PX"); return e && *e ? float(std::atof(e)) : 200.0f; }();
 +                                const float spanPx = std::max(std::max({x1, x2, x3}) - std::min({x1, x2, x3}), std::max({y1, y2, y3}) - std::min({y1, y2, y3}));
-+                                if (s_sheetPx > 0.0f && spanPx > s_sheetPx) {
++                                // s7002 G5f: ROGUESQ_W_SHEET_ALT=<px> uses that limit in odd 24 MHz seconds (same clock as W_CLAMP=tog), the same-run A/B;
++                                // ROGUESQ_W_SHEET_STATS=1 prints per-block counts of mixed-sign tris by span every 10 s.
++                                static const float s_sheetAlt = []{ const char *e = std::getenv("ROGUESQ_W_SHEET_ALT"); return e && *e ? float(std::atof(e)) : -1.0f; }();
++                                static const bool s_sheetStats = []{ const char *e = std::getenv("ROGUESQ_W_SHEET_STATS"); return e && *e == '1'; }();
++                                const uint64_t sheetSec = mach_absolute_time() / 24000000ull;
++                                const int sheetBlk = int(sheetSec & 1);
++                                const float sheetLim = (s_sheetAlt >= 0.0f && sheetBlk) ? s_sheetAlt : s_sheetPx;
++                                if (s_sheetStats) {
++                                    static uint64_t st[2][7] = {}; static uint64_t lastPrint = 0;
++                                    const int bk = spanPx < 20 ? 0 : spanPx < 40 ? 1 : spanPx < 60 ? 2 : spanPx < 100 ? 3 : spanPx < 200 ? 4 : 5;
++                                    st[sheetBlk][bk]++; if (sheetLim > 0.0f && spanPx > sheetLim) st[sheetBlk][6]++;
++                                    if (sheetSec >= lastPrint + 10) { lastPrint = sheetSec;
++                                        for (int b = 0; b < 2; b++) fprintf(stderr, "[wsheet] sec=%llu blk=%d lt20=%llu 20_40=%llu 40_60=%llu 60_100=%llu 100_200=%llu ge200=%llu dropped=%llu\n",
++                                            (unsigned long long)sheetSec, b, (unsigned long long)st[b][0], (unsigned long long)st[b][1], (unsigned long long)st[b][2], (unsigned long long)st[b][3], (unsigned long long)st[b][4], (unsigned long long)st[b][5], (unsigned long long)st[b][6]); }
++                                }
++                                if (sheetLim > 0.0f && spanPx > sheetLim) {
 +                                    posWorkBuffer[workBufferIndex + 1].x = posWorkBuffer[workBufferIndex + 2].x = x1;
 +                                    posWorkBuffer[workBufferIndex + 1].y = posWorkBuffer[workBufferIndex + 2].y = y1;
 +                                }
@@ -1370,7 +1385,7 @@ index 6255872..6629049 100644
                      }
                      else {
                          posWorkBuffer[workBufferIndex + 0].w = 1.0f;
-@@ -537,7 +1346,157 @@ namespace RT64 {
+@@ -537,7 +1361,157 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
@@ -1528,7 +1543,7 @@ index 6255872..6629049 100644
                  }
                  // No texture coefficients
                  else {
-@@ -547,6 +1506,22 @@ namespace RT64 {
+@@ -547,6 +1521,22 @@ namespace RT64 {
                      texcoordWorkBuffer[workBufferIndex + 0] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 1] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 2] = interop::float2(0.0f, 0.0f);
@@ -1551,7 +1566,7 @@ index 6255872..6629049 100644
                  }
  
                  if (hasDepth) {
-@@ -580,11 +1555,170 @@ namespace RT64 {
+@@ -580,11 +1570,170 @@ namespace RT64 {
                      posWorkBuffer[workBufferIndex + 2].z = 0.0f;
                  }
  
