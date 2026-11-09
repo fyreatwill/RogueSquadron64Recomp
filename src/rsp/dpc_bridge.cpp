@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <mach/mach_time.h>
+#include <chrono>
 #include <map>
 #include <set>
 #include <array>
@@ -5587,63 +5588,79 @@ static void rs64_g1d_title_clear(uint32_t lo, uint32_t hi) {
 extern "C" { int rs64_g1d_walk_diag = -1; uint32_t rs64_g1d_walk_lo = 0, rs64_g1d_walk_hi = 0; }
 std::vector<uint32_t> g_rs64_g1d_walk;   // triples: addr, w0, w1 (+ cw packed in the high bits of nothing: see walk_cw)
 std::vector<uint32_t> g_rs64_g1d_walk_cw;
+// s7016 gfx-host-glue: the rect-wrap fix as a per-command step so rs64_g1d_pillar_scan can run it inside its own walk
+// (one pass over the ~2 MB/frame dd4 stream instead of two). Order per command is unchanged: pillar reads the command,
+// then this may rewrite that command's own w0; no command reads another's fields, so fused == two passes.
+// ROGUESQ_GLUE_FUSE=0 = two passes; =chk fused then the old pass again, which must find nothing left to patch.
+static uint32_t s_rw_cw = 0; static bool g_rw_fused = false, g_rw_walked = false; static int s_rw_lines = 0, s_rw_diag = 0; static uint64_t g_rw_patches = 0;
+static inline void rs64_rw_cmd(uint32_t lo, uint32_t a, uint32_t w0, uint32_t op, bool diag) {
+    auto rd = [&](uint32_t x) { uint32_t v; memcpy(&v, g_rdram_for_submit + (x & kSubmitRamMask), 4); return v; };
+    uint32_t &s_cw = s_rw_cw; int &s_lines = s_rw_lines; int &s_diag = s_rw_diag;
+    if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; return; }
+    if (diag && (op == 0x24 || op == 0x25) && s_cw <= 640u) {
+        const uint32_t w1 = rd(a + 4);
+        if (((w0 >> 12) & 0xFFFu) < ((w1 >> 12) & 0xFFFu) && (w0 & 0xFFFu) > (w1 & 0xFFFu) && s_diag++ < 40)
+            fprintf(stderr, "[g1d-sprite-diag] wrap-at-cw sw=%d cw=%u w0=%08X w1=%08X lo=%06X a=%06X\n",
+                g_rs64_swap_n.load(std::memory_order_relaxed), s_cw, w0, w1, lo, a);
+    }
+    if ((op != 0x24 && op != 0x25 && op != 0x36) || s_cw <= 640u) return;
+    const uint32_t w1 = rd(a + 4), lrx = (w0 >> 12) & 0xFFFu, ulx = (w1 >> 12) & 0xFFFu;
+    if ((w0 & 0xFFFu) <= (w1 & 0xFFFu)) return;
+    if (s_cw > 1023u && lrx == 0) {
+        // s6845: a texrect at ul.x 0 wraps too (the abort-wipe hold rect: x0 0, x1 = 4096 after the s6845 hudwipe fix);
+        // ul == lr == 0 draws nothing either way, so only a fill rect still needs ul.x > 0.
+        if (ulx == 0 && op == 0x36) return;
+        const uint32_t n0 = w0 | (0xFFFu << 12);
+        memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &n0, 4); g_rw_patches++;
+        if (s_lines++ < 24) fprintf(stderr, "[g1d-rect-wrap] sw=%d op=%02X cw=%u ul.x=%.2f lr.x 0 -> 1023.75 off=%06X\n",
+            g_rs64_swap_n.load(std::memory_order_relaxed), op, s_cw, ulx / 4.0, a);
+        return;
+    }
+    // s6850: the F5 TexrectGen billboard path (ucode overlay 0x2C, op 0xBD; docs/F5-OVL2C-TEXRECTGEN.md) clamps ul at
+    // 0 but packs lr unclamped, so lr.x >= 1024 px wraps (lr < ul) and the sprite is dropped. Retail (640-wide image)
+    // does the same, but only for sprites hanging >= 384 px past the right edge; on a wide image every sprite that
+    // straddles the edge vanished (s6850 21:9 sweep: lvl2/3/4/5 smoke/explosion billboards). Keep retail's tolerance
+    // relative to the image edge: a once-wrapped rect that starts on the image and overhangs it by < 384 px is
+    // clipped at the edge instead; a larger overhang still drops, as in retail. ROGUESQ_G1D_SPRITE_WRAP=0 = old.
+    static const bool spr = [] { const char *e = std::getenv("ROGUESQ_G1D_SPRITE_WRAP"); return !(e && *e == '0'); }();
+    if (!spr || lrx >= ulx || ulx >= s_cw * 4u || lrx + 4096u >= (s_cw + 384u) * 4u) {
+        if (diag && lrx < ulx && ulx < s_cw * 4u && s_diag++ < 40)
+            fprintf(stderr, "[g1d-sprite-diag] skip sw=%d cw=%u w0=%08X w1=%08X a=%06X\n",
+                g_rs64_swap_n.load(std::memory_order_relaxed), s_cw, w0, w1, a);
+        return;
+    }
+    const uint32_t elr = std::min(s_cw * 4u, 0xFFFu);
+    const uint32_t n0 = (w0 & ~(0xFFFu << 12)) | (elr << 12);
+    memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &n0, 4); g_rw_patches++;
+    static int s_spr = 0;
+    if (s_spr++ < 24) fprintf(stderr, "[g1d-sprite-wrap] sw=%d op=%02X cw=%u ul=(%.2f,%.2f) lr.x %.2f(+1024) -> %.2f lr.y=%.2f off=%06X\n",
+        g_rs64_swap_n.load(std::memory_order_relaxed), op, s_cw, ulx / 4.0, (w1 & 0xFFFu) / 4.0, lrx / 4.0, elr / 4.0,
+        (w0 & 0xFFFu) / 4.0, a);
+}
 static void rs64_g1d_rect_wrap(uint32_t lo, uint32_t hi) {
     static const bool on = [] { const char *e = std::getenv("ROGUESQ_G1D_RECT_WRAP"); return !(e && *e == '0'); }();
     static const bool diag = [] { const char *e = std::getenv("ROGUESQ_G1D_SPRITE_DIAG"); return e && (*e == '1' || *e == '2'); }();
     static const bool diag2 = [] { const char *e = std::getenv("ROGUESQ_G1D_SPRITE_DIAG"); rs64_g1d_walk_diag = (e && *e == '2'); return rs64_g1d_walk_diag == 1; }();
     if (diag2) { g_rs64_g1d_walk.clear(); g_rs64_g1d_walk_cw.clear(); rs64_g1d_walk_lo = rs64_g1d_walk_hi = 0; }
-    static int s_diag = 0;
-    if (diag && on && (hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) && s_diag++ < 40)
+    if (diag && on && (hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) && s_rw_diag++ < 40)
         fprintf(stderr, "[g1d-sprite-diag] early-return lo=%06X hi=%06X\n", lo, hi);
     if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
-    static uint32_t s_cw = 0; static int s_lines = 0;
     auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
     if (diag2) { rs64_g1d_walk_lo = lo; rs64_g1d_walk_hi = hi; }
     for (uint32_t a = lo & ~3u, step = 8; a + 8 <= hi; a += step) {
         const uint32_t w0 = rd(a), op = (w0 >> 24) & 0x3F;
-        if (diag2) { g_rs64_g1d_walk.push_back(a); g_rs64_g1d_walk.push_back(w0); g_rs64_g1d_walk.push_back(rd(a + 4)); g_rs64_g1d_walk_cw.push_back(s_cw); }
+        if (diag2) { g_rs64_g1d_walk.push_back(a); g_rs64_g1d_walk.push_back(w0); g_rs64_g1d_walk.push_back(rd(a + 4)); g_rs64_g1d_walk_cw.push_back(s_rw_cw); }
         step = (op == 0x24 || op == 0x25) ? 16u : (op >= 0x08 && op <= 0x0F) ? 32u + ((op & 4) ? 64u : 0u) + ((op & 2) ? 64u : 0u) + ((op & 1) ? 16u : 0u) : 8u;
-        if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; continue; }
-        if (diag && (op == 0x24 || op == 0x25) && s_cw <= 640u) {
-            const uint32_t w1 = rd(a + 4);
-            if (((w0 >> 12) & 0xFFFu) < ((w1 >> 12) & 0xFFFu) && (w0 & 0xFFFu) > (w1 & 0xFFFu) && s_diag++ < 40)
-                fprintf(stderr, "[g1d-sprite-diag] wrap-at-cw sw=%d cw=%u w0=%08X w1=%08X lo=%06X a=%06X\n",
-                    g_rs64_swap_n.load(std::memory_order_relaxed), s_cw, w0, w1, lo, a);
-        }
-        if ((op != 0x24 && op != 0x25 && op != 0x36) || s_cw <= 640u) continue;
-        const uint32_t w1 = rd(a + 4), lrx = (w0 >> 12) & 0xFFFu, ulx = (w1 >> 12) & 0xFFFu;
-        if ((w0 & 0xFFFu) <= (w1 & 0xFFFu)) continue;
-        if (s_cw > 1023u && lrx == 0) {
-            // s6845: a texrect at ul.x 0 wraps too (the abort-wipe hold rect: x0 0, x1 = 4096 after the s6845 hudwipe fix);
-            // ul == lr == 0 draws nothing either way, so only a fill rect still needs ul.x > 0.
-            if (ulx == 0 && op == 0x36) continue;
-            const uint32_t n0 = w0 | (0xFFFu << 12);
-            memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &n0, 4);
-            if (s_lines++ < 24) fprintf(stderr, "[g1d-rect-wrap] sw=%d op=%02X cw=%u ul.x=%.2f lr.x 0 -> 1023.75 off=%06X\n",
-                g_rs64_swap_n.load(std::memory_order_relaxed), op, s_cw, ulx / 4.0, a);
-            continue;
-        }
-        // s6850: the F5 TexrectGen billboard path (ucode overlay 0x2C, op 0xBD; docs/F5-OVL2C-TEXRECTGEN.md) clamps ul at
-        // 0 but packs lr unclamped, so lr.x >= 1024 px wraps (lr < ul) and the sprite is dropped. Retail (640-wide image)
-        // does the same, but only for sprites hanging >= 384 px past the right edge; on a wide image every sprite that
-        // straddles the edge vanished (s6850 21:9 sweep: lvl2/3/4/5 smoke/explosion billboards). Keep retail's tolerance
-        // relative to the image edge: a once-wrapped rect that starts on the image and overhangs it by < 384 px is
-        // clipped at the edge instead; a larger overhang still drops, as in retail. ROGUESQ_G1D_SPRITE_WRAP=0 = old.
-        static const bool spr = [] { const char *e = std::getenv("ROGUESQ_G1D_SPRITE_WRAP"); return !(e && *e == '0'); }();
-        if (!spr || lrx >= ulx || ulx >= s_cw * 4u || lrx + 4096u >= (s_cw + 384u) * 4u) {
-            if (diag && lrx < ulx && ulx < s_cw * 4u && s_diag++ < 40)
-                fprintf(stderr, "[g1d-sprite-diag] skip sw=%d cw=%u w0=%08X w1=%08X a=%06X\n",
-                    g_rs64_swap_n.load(std::memory_order_relaxed), s_cw, w0, w1, a);
-            continue;
-        }
-        const uint32_t elr = std::min(s_cw * 4u, 0xFFFu);
-        const uint32_t n0 = (w0 & ~(0xFFFu << 12)) | (elr << 12);
-        memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &n0, 4);
-        static int s_spr = 0;
-        if (s_spr++ < 24) fprintf(stderr, "[g1d-sprite-wrap] sw=%d op=%02X cw=%u ul=(%.2f,%.2f) lr.x %.2f(+1024) -> %.2f lr.y=%.2f off=%06X\n",
-            g_rs64_swap_n.load(std::memory_order_relaxed), op, s_cw, ulx / 4.0, (w1 & 0xFFFu) / 4.0, lrx / 4.0, elr / 4.0,
-            (w0 & 0xFFFu) / 4.0, a);
+        rs64_rw_cmd(lo, a, w0, op, diag);
     }
+}
+// s7016: 1 = pillar_scan runs the rect-wrap step in its walk (needs no sprite diag); 0 = separate pass; 2 = chk
+static int rs64_glue_fuse() {
+    static const int v = [] { const char *e = std::getenv("ROGUESQ_GLUE_FUSE"); const char *d = std::getenv("ROGUESQ_G1D_SPRITE_DIAG");
+        const char *r = std::getenv("ROGUESQ_G1D_RECT_WRAP");
+        int f = (e && *e == '0') ? 0 : (e && *e == 'c') ? 2 : 1; if (d && *d && *d != '0') f = 0; if (r && *r == '0') f = 0;
+        fprintf(stderr, "[s7016] glue_fuse=%d\n", f); return f; }();
+    return v;
 }
 
 // s6845: ROGUESQ_WIPE_SCAN=<vi_lo>:<vi_hi> (decimal VI). On each RDP submit inside the window, scan guest RDRAM
@@ -5774,10 +5791,12 @@ static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
         s_epoch = ep; s_draws = 0; s_out = 0; s_edraws = 0; s_ecw = 0; s_esx = 0; s_erx = 0.0;
         if (!edge_content) __atomic_store_n(&rs64_g1d_edge_cols, 0, __ATOMIC_RELAXED);
     }
+    g_rw_walked = g_rw_fused;
     auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
     for (uint32_t a = lo & ~3u, step = 8; a + 8 <= hi; a += step) {
         const uint32_t w0 = rd(a), w1 = rd(a + 4), op = (w0 >> 24) & 0x3F;
         step = (op == 0x24 || op == 0x25) ? 16u : (op >= 0x08 && op <= 0x0F) ? 32u + ((op & 4) ? 64u : 0u) + ((op & 2) ? 64u : 0u) + ((op & 1) ? 16u : 0u) : 8u;
+        if (g_rw_fused) rs64_rw_cmd(lo, a, w0, op, false);  // s7016 fused rect-wrap step
         if (op == 0x3F) { s_cw = ((w0 >> 19) & 3u) == 2u ? (w0 & 0x3FFu) + 1u : 0u; continue; }
         if (op == 0x2D) { s_sx0 = (w0 >> 12) & 0xFFFu; s_sx1 = (w1 >> 12) & 0xFFFu; s_sy0 = w0 & 0xFFFu; s_sy1 = w1 & 0xFFFu; continue; }
         if (op == 0x2F) { s_cyc = (w0 >> 20) & 3u; continue; }
@@ -5890,18 +5909,57 @@ static void rs64_g3_census(uint32_t lo, uint32_t hi) {
     }
 }
 
+// s7016 gfx-host-glue: ROGUESQ_GLUE_TIME=1 times each stream walk below (mach ticks, summary to stderr every 10 s as
+// [s7016-glue]); ROGUESQ_GLUE_TOG=1 skips every walk except the default-on spike cull on odd mach 24e6-tick seconds
+// (same parity + [s7010-clk] anchor as WIDEWIN=tog) for a same-run rsp split (measurement only: rect_wrap/pillar fixes off then).
 static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
-    rs64_g3_census(lo, hi);
-    rs64_g1d_title_clear(lo, hi);
-    rs64_g1d_pillar_scan(lo, hi);
-    rs64_wipe_scan(lo, hi);
-    rs64_g1d_rect_wrap(lo, hi);
-    rs64_g1d_pause_dim(lo, hi);
-    rs64_g1d_rect_scan(lo, hi);
+    static const bool gtime = [] { const char *e = std::getenv("ROGUESQ_GLUE_TIME"); return e && *e && *e != '0'; }();
+    static const int gtog = [] { const char *e = std::getenv("ROGUESQ_GLUE_TOG"); return (e && *e == '2') ? 2 : (e && *e == '3') ? 3 : (e && *e && *e != '0') ? 1 : 0; }();  // 3 = A/A null: anchor + parity only
+    bool skip = false, odd = false;
+    if (gtog) {
+        const uint64_t mt = mach_absolute_time(); static bool anc = false;
+        if (!anc) { anc = true; const long long su = (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+            fprintf(stderr, "[s7010-clk] steady_us=%lld mach=%llu\n", su, (unsigned long long)mt); }
+        odd = ((mt / 24000000u) & 1u) != 0; skip = gtog == 1 && odd;  // GLUE_TOG=2: odd seconds = unfused two-pass walk
+    }
+    static uint64_t s_acc[2][6] = {}, s_n[2] = {}, s_bytes = 0, s_last = 0;  // walks: census..wipe, pillar, rect_wrap, pause+rscan, spike, g5b..floor
+    uint64_t t[7]; const bool tm = gtime;
+    if (tm) t[0] = mach_absolute_time();
+    if (!skip) { rs64_g3_census(lo, hi); rs64_g1d_title_clear(lo, hi); rs64_wipe_scan(lo, hi); }
+    if (tm) t[1] = mach_absolute_time();
+    const int fuse = (gtog == 2 && odd) ? 0 : rs64_glue_fuse();
+    g_rw_fused = fuse != 0; g_rw_walked = false;
+    if (!skip) rs64_g1d_pillar_scan(lo, hi);
+    g_rw_fused = false;
+    if (tm) t[2] = mach_absolute_time();
+    if (!skip && (!g_rw_walked || fuse == 2)) {
+        static uint64_t s_chk_left = 0, s_chk_runs = 0;
+        const uint64_t before = g_rw_patches;
+        rs64_g1d_rect_wrap(lo, hi);
+        if (fuse == 2 && g_rw_walked) { s_chk_runs++; s_chk_left += g_rw_patches - before; g_rw_patches = before;
+            if ((s_chk_runs & 4095u) == 0) fprintf(stderr, "[s7016-chk] runs=%llu fused_patches=%llu left_after_fused=%llu\n",
+                (unsigned long long)s_chk_runs, (unsigned long long)g_rw_patches, (unsigned long long)s_chk_left); }
+    }
+    if (tm) t[3] = mach_absolute_time();
+    if (!skip) { rs64_g1d_pause_dim(lo, hi); rs64_g1d_rect_scan(lo, hi); }
+    if (tm) t[4] = mach_absolute_time();
     rs64_spike_scan(lo, hi);
-    rs64_g5b_frame(lo, hi);
-    rs64_region_scan(lo, hi);
-    rs64_floor_scan(lo, hi);
+    if (tm) t[5] = mach_absolute_time();
+    if (!skip) { rs64_g5b_frame(lo, hi); rs64_region_scan(lo, hi); rs64_floor_scan(lo, hi); }
+    if (tm) {
+        t[6] = mach_absolute_time();
+        for (int i = 0; i < 6; i++) s_acc[odd][i] += t[i + 1] - t[i];
+        s_n[odd ? 1 : 0]++; if (hi > lo) s_bytes += hi - lo;
+        if (s_last == 0) s_last = t[6];
+        if (t[6] - s_last >= 240000000u) {  // 10 s at 24 MHz
+            const double us = 1.0 / 24.0, sec = (t[6] - s_last) / 24e6;
+            for (int q = 0; q < 2; q++)
+            fprintf(stderr, "[s7016-glue] par=%d sec=%.1f submits=%llu odd=%llu kB=%.0f us_per_s: misc=%.0f pillar=%.0f rect_wrap=%.0f pause_rscan=%.0f spike=%.0f tail=%.0f\n",
+                    q, sec, (unsigned long long)(s_n[0] + s_n[1]), (unsigned long long)s_n[1], s_bytes / 1024.0,
+                    s_acc[q][0] * us / sec, s_acc[q][1] * us / sec, s_acc[q][2] * us / sec, s_acc[q][3] * us / sec, s_acc[q][4] * us / sec, s_acc[q][5] * us / sec);
+            for (auto &r : s_acc) for (auto &x : r) x = 0; s_n[0] = s_n[1] = 0; s_bytes = 0; s_last = t[6];
+        }
+    }
     g_last_submit_lo.store(lo, std::memory_order_release);
     g_last_submit_hi.store(hi, std::memory_order_release);
     const uint32_t before = g_task_bridge_e9.load(std::memory_order_acquire);

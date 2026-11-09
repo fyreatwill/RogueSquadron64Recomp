@@ -184703,3 +184703,30 @@ HYPOTHESIS-ID: dd-wide-window. G5i fixed s6995-s6999 (owner look, nothing to run
 - Harness fix: arm.zsh's anchor line aborted under zsh nomatch when no fail_att*.log exists (anchors extracted by hand this run); now uses (N).
 Next: headroom for the dense case — gate/fuse rs64_dpc_record_submit's ~12 full-stream scans (s7014: 7% of the gfx thread) behind their log flags,
 measured same-run on L1 21:9 dd4 WIDEWIN=1 (NEXT.md).
+
+## Session 7016 (2026-11-08) — gfx-host-glue: rs64_dpc_record_submit has only 3 live stream walks in flight, not 12; rect-wrap now fused into the pillar walk (default on, output-identical, walk CPU 30.8 -> 16.6 ms per active second); A/A null shows the s7010 mach-parity split carries a ~0.6 ms rsp odd-second bias
+- Code read (step 1): of the 12 calls in rs64_dpc_record_submit (src/rsp/dpc_bridge.cpp), 9 early-out on cached env flags in the owner recipe
+  (census, wipe, rect_scan, g5b_frame, region, floor, e9 counters off; title_clear and pause_dim only in their phases). Live in flight:
+  rs64_g1d_pillar_scan (G1D_DEBRIEF/EDGE default on), rs64_g1d_rect_wrap (sprite/rect wrap fix, default on), rs64_spike_scan (CULL_SPIKE, default on).
+  The dd4 21:9 stream really is ~2 MB/frame (1.1 GB per 10 s of submit ranges, ~480 submits/s, no overlap), so each walk is a memory-bound pass.
+- New instruments (default off): ROGUESQ_GLUE_TIME=1 (mach-tick timer per walk bucket, [s7016-glue] every 10 s, split by mach-second parity);
+  ROGUESQ_GLUE_TOG=1 (odd seconds skip every walk but the spike cull), =2 (odd seconds unfused), =3 (A/A null: anchor + parity only).
+- Run G1 (L1 21:9 dd4 MELT WIDEWIN=1 CULL=1, OWNER_TIMING, 320 s, 0 crashes, 0 VI stalls), GLUE_TOG=1: timer, active seconds: pillar ~0.29,
+  rect_wrap ~0.26, spike ~0.20 (always on), "tail" (3 early-outs) ~0.12 ms/frame (unexplained; attribution noise, inlining or preemption).
+  Parity split: skip seconds rsp -0.70 ms, fps 58.7 -> 60.0, P(>=2VI) 0.02 -> 0.00. Shift 1000 ms inverts it exactly, but 500 ms gives +0.81, not 0.
+- Change: rect-wrap's per-command body moved to rs64_rw_cmd and called inside pillar_scan's loop (same stepping, same bounds; pillar reads each
+  command before wrap may rewrite that command's own w0, and no command reads another's fields, so fused == two passes). ROGUESQ_GLUE_FUSE=0 = old
+  two passes, =chk = fused then the old pass again (counts what it would still patch). Falls back to two passes under SPRITE_DIAG or RECT_WRAP=0.
+- Run C1 (same recipe, GLUE_FUSE=chk, 240 s): fused path made 119 patches (positive control), the old pass afterwards found 0 left over 118784 runs.
+  Run F1 (GLUE_TOG=2, GLUE_TIME, 320 s, clean): timer, per active second, pillar+rect_wrap 16.6 ms fused vs 30.8 ms unfused (-0.24 ms/frame at 60 fps).
+  Parity split: unfused (odd) seconds rsp -0.55 ms CHEAPER than fused. That contradicts the timer.
+- Run N1 (A/A null, GLUE_TOG=3, nothing toggled, 320 s, clean): odd seconds rsp -0.63 ms, fps 59.4/60.0, P 0.01/0.00; shift 250 -0.06, shift 500 +0.49.
+  So the s7010 g5e_cost_by_parity.py split has a phase-locked odd-second rsp bias of ~0.6 ms with a ~2 s period. It is the same size as this unit's
+  effects. Likely cause (unverified): a game workload every 120 VIs, phase-locked to mach time because VI is host-timed. Null-corrected deltas:
+  run G1 skip -0.07 ms rsp, F1 fused vs unfused -0.08 ms. Frame-level saving is within the bias, so it is unresolved. The timer saving is single-source.
+- What it rules out: H-glue as the fix for L1's 58 fps. The removable walks are worth <= ~0.6 ms of gfx-thread CPU, and the frame-level gain is not
+  measurable with a parity split this biased. s7010-s7015 WIDEWIN deltas used the same split with "on" = odd seconds, so they are biased by ~0.6 ms
+  rsp in WIDEWIN's favour (the L1 +4.21 ms cost is if anything understated; the direction of every s7014/s7015 conclusion stands).
+- ORIGIN: not a mitigation (a refactor with no behaviour change, verified equivalent by the chk arm).
+Next: make the parity split unbiased (hashed per-second assignment, so no fixed period lines up with it), validate it with an A/A null
+(|delta| < 0.15 ms) and a positive control (GLUE_TOG=1), then re-measure L1 21:9 WIDEWIN cost.

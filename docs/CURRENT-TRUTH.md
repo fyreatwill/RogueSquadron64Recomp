@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7015 (2026-11-08).
+Compact operational handoff, as of Session 7016 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,11 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7016 gfx-host-glue:** only 3 of rs64_dpc_record_submit's 12 walks are live in flight (pillar, rect_wrap, spike cull); the dd4 21:9 stream is
+~2 MB/frame. Rect-wrap is now fused into the pillar walk (default on, ROGUESQ_GLUE_FUSE=0 old; chk arm: 119 fused patches, 0 left for the old pass):
+walk CPU 30.8 -> 16.6 ms per active second (single-source, GLUE_TIME timer). **The s7010 mach-parity split is biased:** A/A null (GLUE_TOG=3,
+nothing toggled) gives odd seconds rsp -0.63 ms (shift 250 -> -0.06, 500 -> +0.49: a ~2 s phase-locked load). Every tog delta under ~1 ms
+from g5e_cost_by_parity.py is unreadable until the split is fixed; s7014/s7015 WIDEWIN costs are understated by ~0.6 ms rsp (direction stands).
 **s7015 WIDEWIN owner-path cost on other levels/aspect (same-run tog, FAST=1 PROBES=0, dd4 MELT CULL=1, 0 crashes, 0 VI stalls, 320 s holds):**
 L15 21:9 fps 60.0/60.0 (rsp +1.95), L4 16:9 59.7/59.6 (rsp +2.34), L1 21:9 60.0/58.1, P(>=2VI) 0.00/0.03 (rsp 9.27->13.48, +4.21: the densest arm);
 0.5 s-shifted controls collapse (|rsp| <= 0.5). WIDEWIN is offered in OWNER-OPT-INS; default stays the owner's call. Next: trim the gfx-thread host glue (NEXT.md).
@@ -169,7 +174,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: cut gfx-thread host glue (rs64_dpc_record_submit stream scans, s7014 7%) measured on L1 21:9 dd4 WIDEWIN, the one arm that misses VIs (NEXT.md).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: de-bias the tog parity split (hashed per-second arms, A/A null + positive control), then re-measure L1 21:9 WIDEWIN (NEXT.md). s7016 glue trim landed (fused rect-wrap).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
