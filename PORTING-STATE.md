@@ -184978,3 +184978,6 @@ Run D (s7025D, CELLIDX=3 CHECK=2, new default, 186 s flight, 0 crashes): 44,974,
 Rules out: H-host (rest and entry flat at 13 / 9 ns), H-mem as the drift (get/val rise once at pool fill and then stay flat; ~25 ns residual,
 left), processGridCellByDistance or the game's allocator as the cost, service messages.
 Two lines: the run-B split (cost in the tail holding only the hook) and the run-C same-run toggle. Thread closed per NEXT.md; next: G1c gfx per-cell cost.
+Verdict: this selects H-miss in its create-cost form (root cause: rs64_s6963_create's unused std-index update) and refutes H-host and H-mem as the
+drift; the fix closes g1c-dd-headroom. Next discriminator (NEXT.md, g1c-gfx-percell): per-frame DPC submit count / bytes / ticks / lock wait by cap
+phase, which splits H-percall vs H-perbyte vs H-sync.
