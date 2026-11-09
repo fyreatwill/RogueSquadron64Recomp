@@ -184572,3 +184572,20 @@ HYPOTHESIS-ID: dd-wide-window. G5i checked first: fixed s6995-s6999, waiting on 
   area, not window shape (N96 = N128 cost). Remaining hard80 in the centre third (22-25%) is the dd1-floor range (11-27%), not this edge.
 - Holds L4/L1/L15 300 s at WIDEWIN=1 queued as soaks scratch/agent/soak_queue/s7009_widewin_L*.sh. OWNER-OPT-INS gains an experimental line.
 - Raws deleted. Next: name the cost (guest build vs RSP vs RDP) with the G1B instrument in one tog run, then cull or cap (NEXT.md).
+
+## Session 7010 (2026-11-08) — G5e WIDEWIN frame cost is the RSP gfx task, not the guest: same-run tog at 21:9 dd4 L4, ucode task 13.3 -> 16.9 ms/frame (+3.6, p90 16.3 -> 23.2) vs guest run +0.7 ms; frames missing a VI 7% -> 61%
+HYPOTHESIS-ID: dd-wide-window. G5i checked first: fixed s6995-s6999, waiting on the owner's look, nothing to run.
+- Soaks folded: s7009_widewin_L1 and _L15 300 s holds at WIDEWIN=1 pass (crash=0, vi_stalls30s=0, wide17 9145 / 14465 = wide window used). _L4 still queued.
+- Instrument: the existing s6711 G1E_TL ring (steady_clock us) plus a new one-shot anchor `[s7010-clk] steady_us= mach=` printed by rs64_s7009_arm on
+  its first tog call (src/main/upstream_compat.cpp), so ring marks map onto the tog parity (mach/24e6 & 1). New tools/g5e_cost_by_parity.py: per game
+  frame (swap to swap) T, run (game thread unblocked), rsp (gfx task start -> RSP exit), rdp/dpc, VIs crossed; drops frames within 60 ms of a flip.
+- Run t1 (scratch/s7010/arm.zsh 4 4 t1, NOCAP=1 ASP=21:9, MELT=1 WIDEWIN=tog G1B=1 G1E_TL, 293 s, 0 crashes), skip 130 s, 6509 frames:
+  off n=3946 fps 56.2 T 17.78 run 1.83 rsp 13.26 (p90 16.29) P(>=2VI) 0.07; on n=2563 fps 37.2 T 26.90 run 2.56 rsp 16.90 (p90 23.23) P2 0.61.
+  Control: the same split with parity shifted 0.5 s gives T -0.16 / rsp +0.32 (both arms mixed), so the mapping is right and the delta is the toggle.
+- Reading: H-rsp selected (single run; agrees with s7009's two captured-fps runs on the size of the drop and with s6711's ~14 ms per-task VI budget):
+  the extra cells cost ~3.6 ms of LLE ucode per task, which pushes the task over the ~14 ms budget, and a missed VI doubles T. H-guest refuted as the
+  main term (+0.74 ms of 9.1). H-rdp unmeasured: marks 8/9 (send_dl return, dp_complete) are absent in this config, so rdp/dpc read 0. The ucode
+  segment already includes the RDP command generation (s6711: 17 us/kB of RDP output).
+- Fix direction: fewer triangles into the ucode. Most of the 128x64 window is outside the 21:9 frustum near the eye (s7008: footprint 140-290 cells,
+  box pinned to the near edge), so cull cells whose box lies outside the horizontal frustum wedge before submit (NEXT.md).
+- TL raw (43 MB) deleted after scoring.

@@ -147,7 +147,11 @@ extern "C" int rs64_dd_scene_update(int level) {
 extern "C" { int g_rs64_ww = 0; }
 extern "C" int rs64_s7009_arm(void) {
     static int m = -1; if (m < 0) { const char* e = getenv("ROGUESQ_DD_WIDEWIN"); m = !(e && *e) ? 0 : (e[0] == 't' ? 2 : (e[0] != '0')); }
-    if (m == 2) { static int last = -1; const int on = (int)((mach_absolute_time() / 24000000u) & 1u); if (on != last) { last = on; } return on; }
+    if (m == 2) { static int last = -1; const uint64_t mt = mach_absolute_time(); const int on = (int)((mt / 24000000u) & 1u);
+        if (last < 0) { /* s7010: clock anchor so steady_clock-stamped rings (G1E_TL) can be split by tog parity */
+            const long long su = (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+            fprintf(stderr, "[s7010-clk] steady_us=%lld mach=%llu\n", su, (unsigned long long)mt); }
+        if (on != last) { last = on; } return on; }
     return m;
 }
 extern "C" int rs64_s7009_n(void) {

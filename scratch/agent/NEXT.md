@@ -1,17 +1,15 @@
-# NEXT: name the WIDEWIN frame cost (G5e side edge, s7009)
+# NEXT: cut the WIDEWIN RSP cost by culling out-of-frustum cells (G5e side edge, s7010)
 HYPOTHESIS-ID: dd-wide-window
-Context: s7009 landed ROGUESQ_DD_WIDEWIN (tools/apply_s7009_widewin.py, opt-in). Same-run tog at 21:9 dd4 L4 cuts side-third hard edges
-(N128 18.4->14.6 / 16.1->8.3; N96 21.2->12.7 / 17.7->5.8) with 0 crashes, but captured fps falls ~60 -> ~50 in wide seconds. N96 (96x85) costs the
-same as N128 (128x64): cost follows the kept-cell area (8192 vs 4096), not the shape. Owner bar (G1c): no frame-time regression beyond baseline.
-First fold the queued holds: SOAK-RESULTS lines s7009_widewin_L4/L1/L15 (pass = crash=0 and wide17>0). A crash there outranks this unit.
-Hypotheses for the cost (one build already has every lever; add only a cost instrument if G1B lacks it):
- H-guest: streamTerrainGridCellsByDistance + buildGridCellMeshForFace host time on the game thread doubles (cells x2).
- H-rsp: LLE F5 ucode host ms per gfx task doubles (tris x2); check ROGUESQ_UCODE_CAP fires too (cap reached = lost terrain AND cost).
- H-rdp: RT64 GPU/present wait grows.
-Discriminator, ONE run: scratch/s7009/arm.zsh 4 4 c1 "ROGUESQ_DD_MELT=1 ROGUESQ_DD_WIDEWIN=tog ROGUESQ_G1B=1 ROGUESQ_G3E_TRACE=..." 120 60 (check what
-ROGUESQ_G1B logs first: grep G1B src/main/*.cpp src/rsp/*.cpp); split per-frame gfx-task host ms, guest frame ms and present wait by tog parity
-(mach second parity, 24e6 ticks). The term that rises ~20% in on seconds names the cost. Cheap arm in the same unit if H-guest: time the two guest
-functions with mach_absolute_time in a fixup (trace site 19 per call).
-Fix candidates by outcome: H-rsp -> cull cells whose box is outside the side FOV wedge before submit (the window box is wider than the frustum near
-the eye); H-guest -> same cull earlier, in stream; any -> cap the area at the cost budget (pool cap via ROGUESQ_DD_WIDEWIN_AREA) and re-score.
-Then owner sheet at 16:9 too (same arm with ASP=16:9 CW=960) and ask the owner to judge. Delete raws after scoring (disk ~21 GB).
+Context: s7010 named the WIDEWIN cost: the gfx task (LLE F5 ucode) grows 13.3 -> 16.9 ms/frame (p90 16.3 -> 23.2) on wide seconds, crossing the ~14 ms
+VI budget (P(>=2VI) 0.07 -> 0.61, fps 56 -> 37); guest run only +0.7 ms. Fold SOAK-RESULTS s7009_widewin_L4 first (pass = crash=0, wide17>0).
+Hypotheses for the cull lever:
+ H-offscreen: most of the extra 4096 cells are outside the horizontal frustum (s7008: footprint 140-290 cells wide but the box is pinned to the near
+   footprint edge); culling them before mesh build/submit removes most of the +3.6 ms while keeping the side-edge gain.
+ H-onscreen: the extra cells that cost are on screen (far side band), so a cull saves little and only an area cap (fewer far cells) trades edge for cost.
+Discriminator, ONE build: in buildGridCellMeshForFace (or the stream loop) skip cells whose 2D box is outside the frustum wedge from site 13's bounds/eye
+(site 11), behind ROGUESQ_DD_WIDEWIN_CULL=1|tog, counting culled vs kept per call (trace site 19). Run scratch/s7010/arm.zsh 4 4 c1 with
+WIDEWIN=1 WIDEWIN_CULL=tog G1B=1 G1E_TL (NOCAP=1), score tools/g5e_cost_by_parity.py. Positive control: culled count > 0 and a CULL=all arm (cull
+everything outside the 64 core) must show no side-edge gain. Then a capture run (CW=1260) for g5e_edge_score per third: cull-on must keep the
+side hard80 gain of s7009 (16->8%) with no new holes. Outcomes: rsp on-off delta drops to <1 ms with edge kept -> H-offscreen, ship; delta stays ~3 ms
+-> H-onscreen, try ROGUESQ_DD_WIDEWIN_N=96 + area cap and report the edge/cost trade to the owner.
+Run from build/ via the arm script; delete raws after scoring (disk ~20 GB free).

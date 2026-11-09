@@ -157,7 +157,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: split the WIDEWIN frame cost (guest terrain build vs RSP vs RDP; NEXT.md, s7009).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: cut the WIDEWIN RSP cost by culling out-of-frustum cells before submit (NEXT.md, s7010 named the cost: RSP).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
@@ -180,7 +180,9 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    s6049/s6882/s6883 bounds follow g_rs64_ww), window up to N=128 per axis, pool cap spent on forward axis first. Same-run tog, two runs, 21:9 dd4 L4:
    side-third hard80 N128 18.4->14.6 / 16.1->8.3, N96 21.2->12.7 / 17.7->5.8, centre flat; trace 128x64 or 64x128 on 89% of on calls, pool 8192 never
    exhausted (site 18 = 0); 0 crashes. COST: captured fps 59.6->50.7 (N128) and 61.9->49.4 (N96, window 96x85): cost follows cell count (area 8192 vs 4096),
-   not shape. Owner sheet docs/owner_sheet_s7009_widewin_219.png. Holds L4/L1/L15 queued (soak_queue s7009_widewin_L*). Next: name the cost (NEXT.md).
+   not shape. Owner sheet docs/owner_sheet_s7009_widewin_219.png. Holds L1/L15 300 s clean (crash=0, wide on), L4 still queued. **s7010 cost = H-rsp** (G1E_TL same-run tog split, tools/g5e_cost_by_parity.py,
+   0.5 s-shifted control collapses to T -0.16): per frame guest run 1.83->2.56 ms (+0.74), gfx task start->RSP exit 13.26->16.90 (+3.64, p90
+   16.3->23.2), so P(frame >= 2 VI) 0.07->0.61 and fps 56->37; single run. Next: cull cells outside the side frustum wedge before submit (NEXT.md).
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).
