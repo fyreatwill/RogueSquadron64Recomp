@@ -1,13 +1,10 @@
-# NEXT: G1c phase 2 close-out — owner contact sheet dd1 / dd4 / dd6-bundle at frozen poses, L1 + L4
-HYPOTHESIS-ID: g1c-dd-closeout
-Context: s7037 folded the fog-depth off-map cull into ROGUESQ_DRAW_DISTANCE (dd>=6 + DD_WIDEWIN auto-arms OFFMAPCULL=2 K=0.6 H=off; [s7037] log line).
-12288 cells (ROGUESQ_DD_POOLX_MAX=6) cost +0.6 ms rsp with no edge-score gain at dd8, so dd6 + bundle is the max useful step. Spec (ITERATION 3c G1c phase 2):
-"framebuffer contact sheet the owner can eyeball, same camera, dd1 vs dd-max".
-Unit: copy scratch/s7035/run_L4.zsh pose section (tools/g3_optin_pose_arms.sh) to scratch/s7038/, arms on the same frozen poses:
- dd1 (ROGUESQ_DRAW_DISTANCE=1, no DD env), dd4 (21:9 WIDEWIN cap 8192), dd6b (dd6 WIDEWIN cap 10240, NO OFFMAPCULL env -> bundle), dd6off (same + ROGUESQ_DD_OFFMAPCULL=-1),
- plus an A/A repeat of dd6b. L1 (NOREF off, deterministic) then L4 (NOREF: check [posefreeze] pos and score same-path only).
-Score: python3 tools/s7032_pose_cull_score.py <dir> --base dd6off --aa dd6b2 --sheet docs/owner_sheet_s7038_dd_closeout_l1.jpg (dd6b vs dd6off must sit at A/A: bundle invisible;
- dd1 vs dd6 must differ: positive control = more far terrain). Also grep run logs for [s7037] (bundle armed in dd6b, absent in dd6off/dd4/dd1).
-Hypotheses: H-done (dd6b = dd6off at A/A, dd6 shows clearly more terrain than dd4/dd1) -> close G1c phase 2, offer the owner the one-line command; H-visible (dd6b differs
- from dd6off above A/A on some pose) -> bundle must stay opt-in, revert the auto default; H-nogain (dd6 ~ dd4 by eye) -> recommend dd4 to the owner.
-Then: G1c phase 2 closes on the owner's look; next ladder rung per ITERATION 3c.
+# NEXT: does the s7037 dd6 auto bundle (off-map fog-depth cull) cut cutscene backgrounds? (G5h-style check of the owner's max recipe)
+HYPOTHESIS-ID: dd6-bundle-cutscene-check
+Context: s7038 closed G1c phase 2 on flight poses (bundle <=0.23 vs A/A 0.00, sheets docs/owner_sheet_s7038_dd_closeout_l*.jpg). The auto bundle is ON
+whenever dd>=6 + WIDEWIN, including cutscenes, which were never checked with it. Cutscene cameras sit off the flight path and look across off-map
+terrain (s6908-s6911: cutscene levels author tiny pools; floor 4096). Risk: the cull removes ground the cutscene camera sees (sky voids like s7032 R=2).
+Unit: reuse the s6908/s6909 cutscene route (scratch/s6908/arm.zsh; AT THE MOVIES playlist s6909) with arms, one game at a time, same frames:
+ dd6off (21:9 dd6 MELT WIDEWIN cap 10240 + ROGUESQ_DD_OFFMAPCULL=-1), dd6b (no OFFMAPCULL env), dd6b2 (A/A), FOGCULL=0.3 positive control.
+Score per cutscene frame pair with the s7032 scorer logic (or g3 oracle frame matcher if frames are not phase-locked: phase-gate on VI, rule 2).
+Hypotheses: H-clean (dd6b = dd6off at A/A on every cutscene; control fires) -> note in OWNER-OPT-INS; H-cut (some shot loses ground) -> gate the
+bundle to flight only (mission state) or raise K for cutscene cameras, re-run same frames; H-unphased (frames not comparable) -> fix phase gate first.

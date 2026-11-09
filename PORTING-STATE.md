@@ -185289,3 +185289,22 @@ top setting; dd8 is not worth it (cross-run vs s7036). OWNER-OPT-INS updated (dd
 Discrimination: refutes H-room and H-cliff, selects H-limit (visible reach is bound by fog/horizon, not the cell count). Next discriminator: same-pose dd6b vs dd6off
 score vs A/A (H-done vs H-visible for the new auto default).
 Next (NEXT.md, g1c-dd-closeout): owner contact sheet dd1/dd4/dd6-bundle/dd6-uncut at frozen poses on L1 + L4, confirm the bundle is invisible same-pose.
+
+## Session 7038 (2026-11-09) — G1c phase 2 close-out: dd6 bundle invisible at 15 frozen poses (<=0.23 vs A/A 0.00), dd6 draws clearly more than dd4 and dd1; owner sheets L1 + L4, closes on the owner's look
+
+What ran: scratch/s7038/run.zsh (tools/g3_optin_pose_arms.sh, PIN=1, HOLD_S=200, 5 s freezes), 21:9 FPS60 CULL_SPIKE=1, arms
+dd6off (dd6 MELT WIDEWIN cap 10240 + ROGUESQ_DD_OFFMAPCULL=-1), dd6b (same, no OFFMAPCULL env -> s7037 auto bundle), dd6b2 (A/A of dd6b),
+dd4 (WIDEWIN cap 8192), dd1. L1 with poseref (FZ 26..122, 7 freezes) then L4 NOREF (FZ 36..150, 8 freezes). 10 runs, every one
+alive_at_end=1, vi_stalls30s=0, crashlines=0. [s7037] bundle line: 1 in dd6b and dd6b2, 0 in dd6off/dd4/dd1 (positive control for the arm wiring).
+L4 path check: dd6off/dd6b/dd6b2/dd4 share one path ([posefreeze] y identical to 3 dp); dd1 took the other NOREF path (y -4.449 vs -4.343 at k=1).
+Scores (tools/s7032_pose_cull_score.py, mean |dLum| / frac >24):
+- Bundle vs off: L1 0.01-0.04 at k0-4, 0.18/0.17 (0.3%) at the k5/k6 climb poses; L4 0.01-0.23, max 0.5% at k2. A/A dd6b vs dd6b2 0.00/0.000 at
+  every pose on both levels (deterministic). By eye (autocontrast diff, L4 k2) the whole difference is one thin sliver along the fog-line horizon,
+  same as s7034/s7035.
+- Positive control: dd4 vs dd6 same path L1 5.8-7.8, L4 4.1-8.0; dd1 vs dd6 L1 7.3-15.0, L4 6.2-21.3 (L4 part path diff). By eye at L1 k5 the dd6
+  ground runs higher up the frame toward the horizon than dd4 and dd1.
+Verdict H-done: the auto bundle is invisible apart from the known horizon sliver, and dd6 is the farthest view. Owner sheets
+docs/owner_sheet_s7038_dd_closeout_l1.jpg and _l4.jpg (columns dd1 | dd4 | dd6 | |dd4-dd1| | |dd6-dd1|); one-line command added to
+docs/OWNER-OPT-INS.md. Rules out H-visible and H-nogain. G1c phase 2 closes on the owner's look; default stays retail.
+Not covered: cutscene cameras with the auto bundle (the cull keys on off-map cells past 0.6 x fog end; cutscene cameras look across off-map
+terrain, s6908-s6911) -> NEXT.md.

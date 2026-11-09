@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7037 (2026-11-09).
+Compact operational handoff, as of Session 7038 (2026-11-09).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,10 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7038 G1c phase 2 closed on the owner's look (H-done; no build).** Frozen poses, 21:9 FPS60, arms dd6off / dd6b (bundle auto) / dd6b2 / dd4 (cap 8192) / dd1, 10 runs, 0 crashes, 0 VI stalls.
+Bundle invisible: dd6b vs dd6off <=0.18 (L1, 7 poses) and <=0.23 (L4, 8 poses), max 0.5% of pixels, a fog-line horizon sliver by eye; A/A dd6b vs dd6b2 0.00 at every pose; [s7037] fired in dd6b/dd6b2 only.
+Positive control: dd6 vs dd4 same path 4-8 mean dLum (L1 5.8-7.8, L4 4.1-8.0), dd6 vs dd1 6-21 (L4 dd1 took a slightly different path, y -4.45 vs -4.34). Owner sheets
+docs/owner_sheet_s7038_dd_closeout_l1.jpg / _l4.jpg (dd1 | dd4 | dd6 | diffs); one-line command in OWNER-OPT-INS. Default stays retail until the owner chooses.
 **s7037 dd bundle: dd>=6 + WIDEWIN now arms the fog-depth off-map cull itself (R=2 K=0.6 H=off; explicit ROGUESQ_DD_OFFMAPCULL* wins, =-1 off); new opt-in
 ROGUESQ_DD_POOLX_MAX=6..8 lifts the px5 cell clamp.** L1 21:9 dd8 WIDEWIN=tog3 cap 10240/12288/12288 + POOLX_MAX=6, 289 s flight, 0 crashes/stalls, positive control
 [s7037] line + [s7031] R=2,2,2 K=0.6 fired. Same run: 12288 costs run +0.44 / rsp +0.57..0.65 ms (57.2 -> 56.8/56.2 fps, P(>=2VI) 0.05 -> 0.06/0.07; A/A p1-p2 0.08 ms),
@@ -323,7 +327,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    s7028/s7029: bridge closed (H-call). s7030: ROGUESQ_DD_FOGCULL (opt-in): 2% of cells past fog end (0 ms); 0.5 x fog end culls 51%, rsp -4.9 ms, invisible on L1
    (cells behind the off-map horizon wall?). Next: classify on-map/off-map cells and cull off-map rings, L1 + L4 (NEXT.md).
    s7031-s7036: off-map cull past 0.6 x fog end qualified (see headline). s7037: folded into the DD knob for dd>=6+WIDEWIN; 12288 cells (POOLX_MAX=6) cost
-   +0.6 ms rsp with no edge-score gain at dd8: dd6+bundle is the max useful step. Next: owner close-out sheet dd1/dd4/dd6 at frozen poses (NEXT.md).
+   +0.6 ms rsp with no edge-score gain at dd8: dd6+bundle is the max useful step. s7038: close-out sheet done, bundle invisible (<=0.23 vs A/A 0.00), dd6 > dd4 > dd1; CLOSED on the owner's look.
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).
