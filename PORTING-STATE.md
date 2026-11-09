@@ -184764,3 +184764,24 @@ Verdict: this selects H-periodic (an autopilot-driven 8 s load cycle, not a 120-
 effects are recovered exactly) and H-thread (not needed: the bias sits at the autopilot harmonics and cancels under xor8). It closes the
 tog-parity-bias thread. Next discriminator (NEXT.md, slug gfx-host-glue): GLUE_TOG=1/2 on the xor8 split; a walk delta >= 1 ms selects
 H-glue-big, < 0.3 ms selects H-glue-small.
+
+## Session 7018 (2026-11-08) — gfx-host-glue closed: on the de-biased xor8 split the live record_submit walks cost 0.23-0.45 ms/frame of a ~12.6 ms gfx RSP task (3%), the s7016 fusion saves +0.26 ms; A/A null +0.08 reproduces
+
+What ran. scratch/s7018/all.zsh (copy of s7017 arm.zsh), one build (20:06 binary = s7017 HEAD), three sequential arms, L1 21:9 dd4
+FPS60 MELT WIDEWIN=1 CULL=1 GLUE_TIME=1 OWNER_TIMING (FAST=1 PROBES=0), 320 s holds, split=xor8 in every anchor, 0 crashes, 0 VI
+stalls, alive_at_end=1 x3. Split with tools/g5e_cost_by_parity.py --skip-s 130 (on = odd xor8 seconds), shifts 0/500/3000 ms.
+- G2 GLUE_TOG=1 (odd seconds skip every walk except the spike cull): rsp 13.05 -> 12.60 (-0.45), T -0.07, run -0.02, fps 59.3/59.6;
+  shift 500 -0.10, shift 3000 +0.06. GLUE_TIME on even seconds: pillar(+fused rect_wrap) 9.6 + tail 4.1 = 13.7 ms per s (~0.23
+  ms/frame at 60), spike cull 6.5 ms/s both arms (stays on).
+- F2 GLUE_TOG=2 (odd seconds = old unfused two-pass walk): rsp +0.26, run -0.16, T -0.13; shift 500 -0.06, 3000 -0.09. Timer:
+  unfused rect_wrap pass 8.9 ms/s (~0.15 ms/frame) on odd seconds, 0 on fused seconds.
+- N3 GLUE_TOG=3 (A/A null): rsp +0.08 (shift 500 -0.07, 3000 -0.07): reproduces s7017 N2 +0.08, so the split stays unbiased.
+Two lines agree in size (tog split delta and in-process walk timer): the walks are 0.2-0.45 ms/frame, 2-4% of the gfx task; the
+s7016 fusion saving is real (+0.26 ms split, 0.15 ms timer). The cost lands inside the rsp interval, rdp/dpc 0.00 in every arm.
+Verdict: this selects H-glue-small (walk cost well under the 1 ms H-glue-big bar; the 0.45 split delta sits just above the 0.3
+line but the timer says 0.23, and the remaining walk work is the pillar fix + spike cull, both output-changing defaults) and
+refutes H-placement (cost is in rsp, not dpc/rdp). It closes the gfx-host-glue thread: further glue trimming buys < 0.5 ms;
+the gfx task's remaining cost is ucode self (41%) and RT64 RDP decode (16%) per s7014. The owner path at 21:9 dd4 WIDEWIN is
+already 59.3-59.9 fps, so no further headroom work is needed at dd4.
+Next (NEXT.md, slug g1c-dd-headroom): G1c phase 2, the next binding limit above dd4 on the owner path (dd6/dd8 21:9 WIDEWIN).
+Note: tl rings (240 MB, gitignored) deleted after analysis; numbers above are the record.
