@@ -144,14 +144,23 @@ extern "C" int rs64_dd_scene_update(int level) {
 }
 // s7009 G5e widewin (tools/apply_s7009_widewin.py): the dd>1 terrain window may grow to N cells per axis, with the span/slot tables
 // moved to 0x83000000 at a 128 stride. g_rs64_ww is latched per binPolygonIntoTerrainGrid call. ROGUESQ_DD_WIDEWIN=1|tog, _N=64..128.
+// s7017: same-run tog arm of a mach second. The s7010 plain parity (sec & 1) is biased by the harness autopilot's 2 s press cycle
+// (a, sl, a, sr: an 8 s cycle; A/A null odd-even rsp -0.55..-0.70 ms in 3/3 runs). xor8 = (sec ^ sec>>3) & 1 still alternates every
+// second but flips the pattern every 8 s, so any 8 s-periodic load cancels exactly over 16 s (same A/A runs offline: |delta| <= 0.11 ms
+// at every shift). ROGUESQ_TOG_SPLIT=parity restores the old split. rs64_tog_anchor prints the one [s7010-clk] line, carrying split=.
+extern "C" int rs64_tog_xor8(void) { static int m = -1; if (m < 0) { const char* e = getenv("ROGUESQ_TOG_SPLIT"); m = (e && *e == 'p') ? 0 : 1; } return m; }
+extern "C" int rs64_tog_odd(uint64_t mt) { const uint64_t s = mt / 24000000u; return (int)((rs64_tog_xor8() ? (s ^ (s >> 3)) : s) & 1u); }
+extern "C" void rs64_tog_anchor(uint64_t mt) {
+    static std::atomic<int> once{0}; if (once.exchange(1)) return;
+    const long long su = (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    fprintf(stderr, "[s7010-clk] steady_us=%lld mach=%llu split=%s\n", su, (unsigned long long)mt, rs64_tog_xor8() ? "xor8" : "parity");
+}
 extern "C" { int g_rs64_ww = 0; }
 extern "C" int rs64_s7009_arm(void) {
     static int m = -1; if (m < 0) { const char* e = getenv("ROGUESQ_DD_WIDEWIN"); m = !(e && *e) ? 0 : (e[0] == 't' ? (e[3] == '3' ? 3 : 2) : (e[0] != '0')); }
     if (m == 3) return 1; /* s7012 tog3: window always wide, rs64_s7012_cap cycles the area cap */
-    if (m == 2) { static int last = -1; const uint64_t mt = mach_absolute_time(); const int on = (int)((mt / 24000000u) & 1u);
-        if (last < 0) { /* s7010: clock anchor so steady_clock-stamped rings (G1E_TL) can be split by tog parity */
-            const long long su = (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-            fprintf(stderr, "[s7010-clk] steady_us=%lld mach=%llu\n", su, (unsigned long long)mt); }
+    if (m == 2) { static int last = -1; const uint64_t mt = mach_absolute_time(); const int on = rs64_tog_odd(mt);
+        if (last < 0) rs64_tog_anchor(mt); /* s7010: clock anchor so steady_clock-stamped rings (G1E_TL) can be split by tog arm */
         if (on != last) { last = on; } return on; }
     return m;
 }
@@ -164,9 +173,8 @@ extern "C" float rs64_s7011_lodmul(void) {
         const char* g = getenv("ROGUESQ_DD_LODMUL_TOG"); tg = (g && *g && *g != '0') ? 1 : 0; fprintf(stderr, "[s7011] lodmul=%g tog=%d\n", m, tg); }
     if (!tg) return m;
     const uint64_t mt = mach_absolute_time(); static int anc = 0;
-    if (!anc) { anc = 1; const long long su = (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-        fprintf(stderr, "[s7010-clk] steady_us=%lld mach=%llu\n", su, (unsigned long long)mt); }
-    return ((mt / 24000000u) & 1u) ? m : 1.0f;
+    if (!anc) { anc = 1; rs64_tog_anchor(mt); }
+    return rs64_tog_odd(mt) ? m : 1.0f;
 }
 // s7012 G5e (tools/apply_s7012_widewin_cap.py): ROGUESQ_DD_WIDEWIN_CAP=a[,b,c] caps the wide window's cell area; with
 // ROGUESQ_DD_WIDEWIN=tog3 the cap cycles a/b/c on (mach/24e6) % 3 seconds. 0 = no host cap.
@@ -179,8 +187,7 @@ extern "C" int rs64_s7012_cap(void) {
     if (n == 0) return 0;
     if (!tog3) return v[0];
     const uint64_t mt = mach_absolute_time(); static int anc = 0;
-    if (!anc) { anc = 1; const long long su = (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-        fprintf(stderr, "[s7010-clk] steady_us=%lld mach=%llu\n", su, (unsigned long long)mt); }
+    if (!anc) { anc = 1; rs64_tog_anchor(mt); }  /* tog3 cycles on sec %% 3, not on the s7017 split */
     return v[(int)((mt / 24000000u) % 3u) % n];
 }
 extern "C" int rs64_s7009_n(void) {

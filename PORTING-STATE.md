@@ -184730,3 +184730,33 @@ measured same-run on L1 21:9 dd4 WIDEWIN=1 (NEXT.md).
 - ORIGIN: not a mitigation (a refactor with no behaviour change, verified equivalent by the chk arm).
 Next: make the parity split unbiased (hashed per-second assignment, so no fixed period lines up with it), validate it with an A/A null
 (|delta| < 0.15 ms) and a positive control (GLUE_TOG=1), then re-measure L1 21:9 WIDEWIN cost.
+
+## Session 7017 (2026-11-08) — tog-parity-bias: the s7010 odd-second split is biased by the harness autopilot's 2 s press cycle; new xor8 split (rs64_tog_odd) passes A/A null (rsp +0.08 ms vs parity +0.73 same frames) and positive control (WIDEWIN=tog L1 21:9 dd4 rsp +3.50, fps 60.0/59.6)
+
+What ran. Step 1 offline on the s7016 A/A rings (N1 GLUE_TOG=3, G1, F1), new tools/g5e_parity_spectrum.py + scratch/s7017/fold.py:
+per-1 s rsp buckets are strongly autocorrelated (lag1 +0.79..+0.82, slow decay: scene drift), and the detrended rsp has a
+4 s Fourier component of 0.37-0.87 ms in all 8 rings checked (s7014 k3/k4, s7015 L1/L15/L4w169, s7016 F1/G1/N1) plus a 2 s
+component 0.23-0.65 ms in the non-toggling runs. Folding on game frame count (mod 60/120) gives nothing (<=0.4). Source named:
+the flight autopilot schedule in g1_level_coverage_common.zsh presses a, sl, a, sr every 2 s (1.8 s hold, SDL_GetTicks clock):
+an 8 s cycle with fire every 4 s, i.e. a load at harmonics of 0.125 Hz. A plain 1 s parity split (a 0.5 Hz square wave) projects
+onto the 0.5 Hz harmonic -> the A/A bias. Its phase is set by the SDL clock origin, so it agrees within one batch (s7016 3/3) and
+differs across batches (s7014 k3 vs k4): that is why it looked "phase-locked". H-tool (anchor mapping) refuted: the injected-effect
+control below recovers effects, and the bias follows the autopilot harmonics. H-thread not needed.
+Fix: split = (sec ^ sec>>3) & 1 ("xor8"): alternates every second, inverts every 8 s, so any 8 s-periodic load cancels exactly
+over 16 s. Offline on N1/G1/F1, shifts 0/500/1000/3000/5000/8000 ms: xor8 |rsp delta| <= 0.11 everywhere; parity +-0.55..0.81;
+splitmix hash 0.2-0.66 (unbiased in expectation but ~6x noisier with this autocorrelation, so rejected). Estimator control:
+--inject-ms 0.5 / 1.0 on N1 xor8 -> +0.42 / +0.92 (null -0.08).
+Step 2 code: src/main/upstream_compat.cpp rs64_tog_odd(mt) / rs64_tog_xor8() / rs64_tog_anchor(mt) (one [s7010-clk] line, now
+with split=xor8|parity); used at WIDEWIN=tog, DD_LODMUL_TOG, GLUE_TOG (dpc_bridge record_submit), CULL_SPIKE=tog. tog3 stays sec%3.
+ROGUESQ_TOG_SPLIT=parity restores the old split. tools/g5e_cost_by_parity.py reads split= from the anchor (absent = parity), adds
+--split parity|xor8|hash and --inject-ms. Other older tog sites (MELT, SKYZ, LETTERBOX, CUT_LIVE ...) still use plain parity: they
+are look toggles, not cost splits.
+Same-build runs (scratch/s7017/all.zsh, L1 21:9 dd4 MELT CULL=1 OWNER_TIMING, 320 s holds, 0 crashes, 0 VI stalls):
+N2 A/A (WIDEWIN=1 GLUE_TOG=3): xor8 rsp +0.08 (shift 500 +0.06, 3000 +0.08); the same frames under parity +0.73 / -0.32 / -0.73.
+P2 positive control WIDEWIN=tog: off/on fps 60.0/59.6, rsp 8.95 -> 12.45 (+3.50), run +1.13, P(>=2VI) 0.00/0.00; shift 500 +0.20;
+shift 3000 -0.83 = xor8's own lag-3 correlation (-0.25) x 3.50 -> -0.88 expected; parity-misread +0.18 (orthogonal, as designed).
+So s7015's L1 21:9 "+4.21 ms, 60.0 -> 58.1 fps" overstated it: same level/aspect now +3.50 ms and -0.4 fps (single run each).
+Rules out: H-tool, a game-side 120-VI workload. Remaining caveat: the split only cancels loads periodic in 8 s; another schedule
+period (e.g. the EARLY 4 s list, which ends before skip 130 s) would need checking with the A/A null again.
+Next: resume G5e / gfx host-glue cost work with the de-biased split (re-measure s7016 GLUE_TOG=1/2 walk deltas), NEXT.md.
+Note: s7017 tl rings (gitignored) were deleted after analysis; numbers above are the record.

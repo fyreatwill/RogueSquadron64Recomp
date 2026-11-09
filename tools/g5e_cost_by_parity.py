@@ -16,13 +16,19 @@ import struct, sys, argparse, re, bisect, statistics as st
 ap = argparse.ArgumentParser(); ap.add_argument('tl'); ap.add_argument('log')
 ap.add_argument('--skip-s', type=float, default=130.0); ap.add_argument('--guard-ms', type=float, default=60.0); ap.add_argument('--shift-ms', type=float, default=0.0)
 ap.add_argument('--phases', type=int, default=2, help='s7012: 3 = WIDEWIN=tog3, phase=(mach/24e6)%%3 -> cap a/b/c')
+ap.add_argument('--split', choices=('parity', 'xor8', 'hash'), default=None,
+                help='s7017: arm of a mach second s. parity = s&1 (s7010, biased by the autopilot 2 s press cycle); xor8 = (s ^ s>>3)&1 '
+                     '(rs64_tog_odd: cancels any 8 s-periodic load exactly over 16 s); hash = splitmix32(s)&1 (unbiased, ~6x noisier)')
+ap.add_argument('--inject-ms', type=float, default=0.0, help='s7017 estimator control: add this to rsp of on-arm frames')
 a = ap.parse_args()
 m = None
 for ln in open(a.log, errors='replace'):
-    mm = re.search(r'\[s7010-clk\] steady_us=(-?\d+) mach=(\d+)', ln)
-    if mm: m = (int(mm.group(1)), int(mm.group(2))); break
+    mm = re.search(r'\[s7010-clk\] steady_us=(-?\d+) mach=(\d+)(?: split=(\w+))?', ln)
+    if mm: m = (int(mm.group(1)), int(mm.group(2))); split_log = mm.group(3) or 'parity'; break
 if not m: sys.exit('no [s7010-clk] anchor in log')
 S, M = m
+if a.split is None: a.split = split_log  # s7017: the anchor names the split the run toggled on (absent = s7010 parity)
+print(f'split={a.split} (anchor: {split_log})')
 M += int(a.shift_ms * 24000)
 raw = open(a.tl, 'rb').read(); n = len(raw) // 24
 ev = sorted((r[0], r[1], r[2], r[4]) for r in (struct.unpack_from('<qIIii', raw, i * 24) for i in range(n)) if r[0] != 0)
@@ -30,7 +36,14 @@ t0 = ev[0][0]; ev = [e for e in ev if e[0] - t0 >= a.skip_s * 1e6]
 import collections
 G = collections.Counter(e[3] for e in ev if e[1] == 15).most_common(1)[0][0]
 vis = [e[0] for e in ev if e[1] == 1]
-def par(t): return int(((M + (t - S) * 24) // 24000000) % a.phases)
+def h32(x):
+    x = (x + 0x9E3779B9) & 0xFFFFFFFF; x ^= x >> 16; x = (x * 0x85EBCA6B) & 0xFFFFFFFF
+    x ^= x >> 13; x = (x * 0xC2B2AE35) & 0xFFFFFFFF; x ^= x >> 16; return x
+def par(t):
+    sec = int((M + (t - S) * 24) // 24000000)
+    if a.phases == 2 and a.split == 'xor8': return (sec ^ (sec >> 3)) & 1
+    if a.phases == 2 and a.split == 'hash': return h32(sec & 0xFFFFFFFF) & 1
+    return sec % a.phases
 def flip_dist_ms(t):
     x = (M + (t - S) * 24) % 24000000; return min(x, 24000000 - x) / 24000.0
 sw = [i for i, e in enumerate(ev) if e[1] == 15 and e[3] == G]
@@ -51,6 +64,7 @@ for k in range(len(sw) - 1):
     pa, pb = par(ta), par(tb)
     if pa != pb or flip_dist_ms(ta) < a.guard_ms or flip_dist_ms(tb) < a.guard_ms: continue
     nvi = bisect.bisect_right(vis, tb) - bisect.bisect_right(vis, ta)
+    if pa == 1: rsp += a.inject_ms
     fr.append(dict(p=pa, T=(tb - ta) / 1e3, run=(tb - ta) / 1e3 - blk, rsp=rsp, rdp=rdp, dpc=dpc, nvi=nvi))
 def pct(v, q): v = sorted(v); return v[min(len(v) - 1, int(q * len(v)))]
 print(f'marks={n} game slot={G} frames kept={len(fr)} (guard {a.guard_ms} ms, skip {a.skip_s} s)')

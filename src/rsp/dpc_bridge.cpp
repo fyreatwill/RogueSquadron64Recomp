@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <mach/mach_time.h>
 #include <chrono>
+extern "C" int rs64_tog_odd(uint64_t mt); extern "C" void rs64_tog_anchor(uint64_t mt);  // s7017 upstream_compat.cpp
 #include <map>
 #include <set>
 #include <array>
@@ -3810,7 +3811,7 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         // s6792: 4:3 hi-res images (321..640 wide: cinematics, AT THE MOVIES) are never culled. Their legit cloud/sky
         // tris overrun even a width-scaled bound (retail dump: 26869 tris past the 320 bound, 4424 past a 640x480 one),
         // and zeroing them left a black notch at the right edge. The wedges (s6083) were 320-wide flight frames.
-        if (bad && cull && (s_cw <= 320u || s_cw > 640u) && (!cull_tog || ((mach_absolute_time() / 24000000ull) & 1))) {
+        if (bad && cull && (s_cw <= 320u || s_cw > 640u) && (!cull_tog || rs64_tog_odd(mach_absolute_time()))) {
             // s6084: zero the triangle height (yl=ym=yh=0) so the rasteriser emits no scanlines; length is unchanged.
             uint32_t n0 = w0 & ~0x3FFFu, n1 = 0; memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &n0, 4); memcpy(g_rdram_for_submit + ((a + 4) & kSubmitRamMask), &n1, 4);
             s_culled++;
@@ -5918,9 +5919,8 @@ static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
     bool skip = false, odd = false;
     if (gtog) {
         const uint64_t mt = mach_absolute_time(); static bool anc = false;
-        if (!anc) { anc = true; const long long su = (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-            fprintf(stderr, "[s7010-clk] steady_us=%lld mach=%llu\n", su, (unsigned long long)mt); }
-        odd = ((mt / 24000000u) & 1u) != 0; skip = gtog == 1 && odd;  // GLUE_TOG=2: odd seconds = unfused two-pass walk
+        if (!anc) { anc = true; rs64_tog_anchor(mt); }
+        odd = rs64_tog_odd(mt) != 0; skip = gtog == 1 && odd;  // GLUE_TOG=2: odd seconds = unfused two-pass walk
     }
     static uint64_t s_acc[2][6] = {}, s_n[2] = {}, s_bytes = 0, s_last = 0;  // walks: census..wipe, pillar, rect_wrap, pause+rscan, spike, g5b..floor
     uint64_t t[7]; const bool tm = gtime;

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7016 (2026-11-08).
+Compact operational handoff, as of Session 7017 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,11 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7017 tog split de-biased:** the s7010 odd-second bias is the harness autopilot's 2 s press cycle (a, sl, a, sr = 8 s cycle; 4 s rsp
+component 0.4-0.9 ms in 8/8 rings), not the tool or the game. New split xor8 = (sec ^ sec>>3)&1 (rs64_tog_odd, default; ROGUESQ_TOG_SPLIT=parity
+old) cancels any 8 s-periodic load. Same build: A/A null rsp +0.08 ms (parity on the same frames +0.73); positive control WIDEWIN=tog L1 21:9 dd4
+rsp +3.50 ms, fps 60.0/59.6 (s7015 parity said +4.21, 58.1), 0 crashes. g5e_cost_by_parity.py reads split= from the anchor. Older parity deltas
+under ~1 ms remain unreadable; re-measure with the new split.
 **s7016 gfx-host-glue:** only 3 of rs64_dpc_record_submit's 12 walks are live in flight (pillar, rect_wrap, spike cull); the dd4 21:9 stream is
 ~2 MB/frame. Rect-wrap is now fused into the pillar walk (default on, ROGUESQ_GLUE_FUSE=0 old; chk arm: 119 fused patches, 0 left for the old pass):
 walk CPU 30.8 -> 16.6 ms per active second (single-source, GLUE_TIME timer). **The s7010 mach-parity split is biased:** A/A null (GLUE_TOG=3,
@@ -174,7 +179,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: de-bias the tog parity split (hashed per-second arms, A/A null + positive control), then re-measure L1 21:9 WIDEWIN (NEXT.md). s7016 glue trim landed (fused rect-wrap).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); active unit: re-measure the s7016 gfx-glue walk costs (GLUE_TOG=1/2) with it (NEXT.md). s7016 glue trim landed (fused rect-wrap).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
