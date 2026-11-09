@@ -6534,7 +6534,12 @@ struct Hold { explicit Hold(int tag) { acquired(tag); } ~Hold() { released(); } 
 // "t_ms sd_wall sd_cpu ucode_ms submit_ms commit_ms calls rdp_bytes n_ucode phase spin". Rows are line-buffered into the file.
 extern "C" uint32_t rs64_task_rdp_bytes_total();
 extern "C" uint32_t g_rs64_aq_spin_ns;
-struct Rs64TrAcc { uint64_t n = 0, uc = 0, sub = 0, com = 0, calls = 0, bytes = 0, ranges = 0; };
+struct Rs64TrAcc { uint64_t n = 0, uc = 0, sub = 0, com = 0, calls = 0, bytes = 0, ranges = 0;
+    uint64_t rt_n = 0, rt_ns = 0, rt_by = 0, rec_n = 0, rec_ns = 0, smp_n = 0, smp_w = 0, smp_c = 0; int cap0 = -1, capx = 0; };
+// s7026 G1c: per-task RT64 handoff / record_submit totals (dpc_bridge.cpp, ROGUESQ_S7026_SUB=1) and the s7012 cap at task start/end.
+extern "C" int g_rs64_s7026, g_rs64_s7026_spin_win; extern "C" int rs64_s7012_cap(void);
+extern "C" uint64_t g_rs64_s7026_rt_n, g_rs64_s7026_rt_ns, g_rs64_s7026_rt_by, g_rs64_s7026_rec_n, g_rs64_s7026_rec_ns,
+                    g_rs64_s7026_smp_n, g_rs64_s7026_smp_w, g_rs64_s7026_smp_c;
 extern "C" int g_rs64_g1e_batch, g_rs64_g1e_cdiag, g_rs64_g1e_lbfast, g_rs64_g1e_pcache, g_rs64_g1e_hgather; extern "C" uint64_t g_rs64_g1e_ranges;  // s6955: batch arm + deferred range entries
 static Rs64TrAcc g_rs64_tr;
 static FILE *g_rs64_tr_f = nullptr;
@@ -6544,16 +6549,21 @@ extern "C" int rs64_g1e_tring_on = [] {
     g_rs64_tr_f = std::fopen(e, "w");
     if (!g_rs64_tr_f) return 0;
     std::setvbuf(g_rs64_tr_f, nullptr, _IOFBF, 1 << 16);
-    std::fprintf(g_rs64_tr_f, "# t_ms sd_wall sd_cpu ucode_ms submit_ms commit_ms calls rdp_bytes n_ucode phase spin batch ranges cdiag lbfast pcache hgather\n");
+    std::fprintf(g_rs64_tr_f, "# t_ms sd_wall sd_cpu ucode_ms submit_ms commit_ms calls rdp_bytes n_ucode phase spin batch ranges cdiag lbfast pcache hgather | s7026: cap0 cap_end capmix rt_n rt_us rt_bytes rec_n rec_us smp_n smp_wall_us smp_cpu_us spin_win\n");
     return 1;
 }();
 extern "C" uint32_t rs64_phase_ord();
 extern "C" void rs64_g1e_tring_push(double t_ms, double w, double c) {
     if (!g_rs64_tr_f) return;
     const Rs64TrAcc a = g_rs64_tr; g_rs64_tr = Rs64TrAcc{};
-    std::fprintf(g_rs64_tr_f, "%.3f %.3f %.3f %.3f %.3f %.3f %llu %llu %llu %u %u %d %llu %d %d %d %d\n", t_ms, w, c, a.uc / 1e6, a.sub / 1e6, a.com / 1e6,
+    std::fprintf(g_rs64_tr_f, "%.3f %.3f %.3f %.3f %.3f %.3f %llu %llu %llu %u %u %d %llu %d %d %d %d", t_ms, w, c, a.uc / 1e6, a.sub / 1e6, a.com / 1e6,
                  (unsigned long long)a.calls, (unsigned long long)a.bytes, (unsigned long long)a.n, rs64_phase_ord(), g_rs64_aq_spin_ns,
                  g_rs64_g1e_batch, (unsigned long long)a.ranges, g_rs64_g1e_cdiag, g_rs64_g1e_lbfast, g_rs64_g1e_pcache, g_rs64_g1e_hgather);
+    if (!g_rs64_s7026) std::fputc('\n', g_rs64_tr_f);
+    else {  // s7026: extend the row
+        std::fprintf(g_rs64_tr_f, " %d %d %d %llu %.3f %llu %llu %.3f %llu %.3f %.3f %d\n", a.cap0, rs64_s7012_cap(), a.capx,
+                     (unsigned long long)a.rt_n, a.rt_ns / 1e3, (unsigned long long)a.rt_by, (unsigned long long)a.rec_n, a.rec_ns / 1e3,
+                     (unsigned long long)a.smp_n, a.smp_w / 1e3, a.smp_c / 1e3, g_rs64_s7026_spin_win); }
     static double last_flush = 0; if (t_ms - last_flush > 1000.0) { std::fflush(g_rs64_tr_f); last_flush = t_ms; }
 }
 
@@ -6974,6 +6984,9 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     }
     const uint64_t aq_sub0 = g_rs64_aq_submit_ns, aq_calls0 = g_rs64_aq_submit_calls, aq_com0 = g_rs64_aq_commit_ns;
     const uint32_t tr_bytes0 = rs64_task_rdp_bytes_total(); const uint64_t tr_rng0 = g_rs64_g1e_ranges;
+    const uint64_t s26[8] = {g_rs64_s7026_rt_n, g_rs64_s7026_rt_ns, g_rs64_s7026_rt_by, g_rs64_s7026_rec_n, g_rs64_s7026_rec_ns,
+                             g_rs64_s7026_smp_n, g_rs64_s7026_smp_w, g_rs64_s7026_smp_c};  // s7026
+    const int s26cap = g_rs64_s7026 ? rs64_s7012_cap() : 0;
     const auto aq_t0 = g_rs64_aq_on > 0 ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
     RspExitReason r;
     if (rs64_g1e_dmembase && g_dmem_cur == dmem) {
@@ -7091,6 +7104,12 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         if (rs64_g1e_tring_on) {  // s6954: per-task terms, joined to send_dl wall/cpu by rs64_g1e_tring_push (events.cpp)
             g_rs64_tr.n++; g_rs64_tr.uc += ucode_ns; g_rs64_tr.sub += sub_ns; g_rs64_tr.com += g_rs64_aq_commit_ns - aq_com0;
             g_rs64_tr.calls += g_rs64_aq_submit_calls - aq_calls0; g_rs64_tr.bytes += rs64_task_rdp_bytes_total() - tr_bytes0; g_rs64_tr.ranges += g_rs64_g1e_ranges - tr_rng0;
+            if (g_rs64_s7026) { Rs64TrAcc &q = g_rs64_tr;
+                q.rt_n += g_rs64_s7026_rt_n - s26[0]; q.rt_ns += g_rs64_s7026_rt_ns - s26[1]; q.rt_by += g_rs64_s7026_rt_by - s26[2];
+                q.rec_n += g_rs64_s7026_rec_n - s26[3]; q.rec_ns += g_rs64_s7026_rec_ns - s26[4]; q.smp_n += g_rs64_s7026_smp_n - s26[5];
+                q.smp_w += g_rs64_s7026_smp_w - s26[6]; q.smp_c += g_rs64_s7026_smp_c - s26[7];
+                if (q.cap0 < 0) q.cap0 = s26cap; else if (q.cap0 != s26cap) q.capx = 1;
+                if (rs64_s7012_cap() != s26cap) q.capx = 1; }
         }
         if (ucode_ns > 10000000ull) { acc.slow_n++; acc.slow_ucode += ucode_ns; acc.slow_sub += sub_ns; }
         if (ucode_ns > acc.max) acc.max = ucode_ns;

@@ -5913,7 +5913,35 @@ static void rs64_g3_census(uint32_t lo, uint32_t hi) {
 // s7016 gfx-host-glue: ROGUESQ_GLUE_TIME=1 times each stream walk below (mach ticks, summary to stderr every 10 s as
 // [s7016-glue]); ROGUESQ_GLUE_TOG=1 skips every walk except the default-on spike cull on odd mach 24e6-tick seconds
 // (same parity + [s7010-clk] anchor as WIDEWIN=tog) for a same-run rsp split (measurement only: rect_wrap/pillar fixes off then).
-static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
+#include <time.h>
+// s7026 G1c (g1c-gfx-percell): ROGUESQ_S7026_SUB=1 times every RT64 handoff (ultramodern::submit_rdp_range) and every
+// rs64_dpc_record_submit call (CLOCK_UPTIME_RAW pair each), counts both and their bytes, and samples 1/16 RT64 calls with a
+// thread-CPU pair (wall vs on-CPU inside RT64 = lock/queue wait, H-sync). main.cpp adds the totals to the ROGUESQ_G1E_TRING row.
+// ROGUESQ_S7026_SPIN_NS=<ns>: positive control, spins that long after every RT64 handoff in (uptime/10 s) odd windows (flag column).
+extern "C" { int g_rs64_s7026 = [] { const char *e = std::getenv("ROGUESQ_S7026_SUB"); return (e && *e && *e != '0') ? 1 : 0; }();
+uint64_t g_rs64_s7026_rt_n = 0, g_rs64_s7026_rt_ns = 0, g_rs64_s7026_rt_by = 0, g_rs64_s7026_rec_n = 0, g_rs64_s7026_rec_ns = 0,
+         g_rs64_s7026_smp_n = 0, g_rs64_s7026_smp_w = 0, g_rs64_s7026_smp_c = 0; int g_rs64_s7026_spin_win = 0; }
+static void rs64_dpc_record_submit_impl(uint32_t lo, uint32_t hi);
+static inline void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
+    if (!g_rs64_s7026) { rs64_dpc_record_submit_impl(lo, hi); return; }
+    const uint64_t t0 = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+    rs64_dpc_record_submit_impl(lo, hi);
+    g_rs64_s7026_rec_ns += clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - t0; ++g_rs64_s7026_rec_n;
+}
+static inline void rs64_rt_submit(uint32_t lo, uint32_t hi) {
+    if (!g_rs64_s7026) { ultramodern::submit_rdp_range(lo, hi); return; }
+    static const uint64_t spin = [] { const char *e = std::getenv("ROGUESQ_S7026_SPIN_NS"); return e ? (uint64_t)std::strtoull(e, nullptr, 0) : 0ull; }();
+    const bool smp = (g_rs64_s7026_rt_n & 15u) == 0;
+    const uint64_t c0 = smp ? clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) : 0;
+    const uint64_t t0 = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+    ultramodern::submit_rdp_range(lo, hi);
+    uint64_t t1 = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+    if (smp) { const uint64_t c1 = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID); g_rs64_s7026_smp_w += t1 - t0; g_rs64_s7026_smp_c += c1 - c0; ++g_rs64_s7026_smp_n; }
+    if (spin) { g_rs64_s7026_spin_win = (int)((t0 / 10000000000ull) & 1u);
+        if (g_rs64_s7026_spin_win) { const uint64_t until = t1 + spin; while ((t1 = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)) < until) {} } }
+    g_rs64_s7026_rt_ns += t1 - t0; ++g_rs64_s7026_rt_n; if (hi > lo) g_rs64_s7026_rt_by += hi - lo;
+}
+static void rs64_dpc_record_submit_impl(uint32_t lo, uint32_t hi) {
     static const bool gtime = [] { const char *e = std::getenv("ROGUESQ_GLUE_TIME"); return e && *e && *e != '0'; }();
     static const int gtog = [] { const char *e = std::getenv("ROGUESQ_GLUE_TOG"); return (e && *e == '2') ? 2 : (e && *e == '3') ? 3 : (e && *e && *e != '0') ? 1 : 0; }();  // 3 = A/A null: anchor + parity only
     bool skip = false, odd = false;
@@ -6268,7 +6296,7 @@ static void submit_deferred_merged(uint32_t &bytes, size_t &calls) {
             bytes += hi - lo;
             calls++;
             rs64_dpc_record_submit(lo, hi);
-            ultramodern::submit_rdp_range(lo, hi);
+            rs64_rt_submit(lo, hi);
         }
         if (i < g_deferred_ranges.size()) {
             lo = g_deferred_ranges[i].first;
@@ -6459,7 +6487,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                         if (wm_runs <= 4 || (wm_runs & 0x3FF) == 0)
                             fprintf(stderr, "[s6933-wm] runs=%lu ranges=%lu bad=%lu control=%lu\n", wm_runs, wm_ranges, wm_bad, wm_ctl);
                     }
-                    ultramodern::submit_rdp_range(wm_lo, wm_hi);
+                    rs64_rt_submit(wm_lo, wm_hi);
                 }
                 for (const WmUndo &u : wm_undo) {
                     memcpy(g_rdram_for_submit + u.lo, wm_live.data() + u.off, u.hi - u.lo);
@@ -7044,7 +7072,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                 g_deferred_ranges.emplace_back(kSynthFsPhys, kSynthFsPhys + 8); ++g_rs64_g1e_ranges;
                 if (g_bc_on) g_bc_ranges.emplace_back(kSynthFsPhys, kSynthFsPhys + 8);
             } else {
-                ultramodern::submit_rdp_range(kSynthFsPhys, kSynthFsPhys + 8);
+                rs64_rt_submit(kSynthFsPhys, kSynthFsPhys + 8);
             }
             static std::atomic<uint64_t> s_inject_n{0};
             uint64_t in = ++s_inject_n;
@@ -7734,7 +7762,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
 
     rs64_e9prov_mark_submitted(submit_lo, submit_hi);
     rs64_dpc_record_submit(submit_lo, submit_hi);
-    ultramodern::submit_rdp_range(submit_lo, submit_hi);
+    rs64_rt_submit(submit_lo, submit_hi);
 }
 
 extern "C" void rs64_dpc_defer_begin() {
@@ -7814,7 +7842,7 @@ static void rs64_dpc_defer_end_impl(int commit) {
                 calls++;
                 rs64_e9prov_mark_submitted(r.first, r.second);
                 rs64_dpc_record_submit(r.first, r.second);
-                ultramodern::submit_rdp_range(r.first, r.second);
+                rs64_rt_submit(r.first, r.second);
             }
         }
 
@@ -8129,7 +8157,7 @@ extern "C" void rsp_force_fullsync() {
                 g_last_submit_hi.load(std::memory_order_acquire), addr, addr + 8);
         fflush(stderr);
     }
-    ultramodern::submit_rdp_range(addr, addr + 8);
+    rs64_rt_submit(addr, addr + 8);
 }
 
 // s6712 G1e: split the gfx task's RSP segment into bridge (per-DPC_END submit, task-end commit) vs the rest

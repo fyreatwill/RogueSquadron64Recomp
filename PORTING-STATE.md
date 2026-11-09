@@ -184981,3 +184981,33 @@ Two lines: the run-B split (cost in the tail holding only the hook) and the run-
 Verdict: this selects H-miss in its create-cost form (root cause: rs64_s6963_create's unused std-index update) and refutes H-host and H-mem as the
 drift; the fix closes g1c-dd-headroom. Next discriminator (NEXT.md, g1c-gfx-percell): per-frame DPC submit count / bytes / ticks / lock wait by cap
 phase, which splits H-percall vs H-perbyte vs H-sync.
+
+## Session 7026 (2026-11-08) — G1c gfx per-cell: the DPC submit share is per-byte in RT64 (~3 ns/B, only 7-8 handoffs per task) plus a per-bump bridge cost (~21 ns per DPC_END bump); lock/queue wait is a flat 1.4 ms/task (RT64 fbwait), not per-cell
+
+HYPOTHESIS-ID: g1c-gfx-percell. G5i/owner items: nothing to run (CURRENT-TRUTH items 1-14). CURRENT-TRUTH 31.5 KB, no maintenance. No new soak verdicts.
+Instrument, one build (src only, no regen): src/rsp/dpc_bridge.cpp ROGUESQ_S7026_SUB=1 wraps every ultramodern::submit_rdp_range call (6 sites ->
+rs64_rt_submit) and rs64_dpc_record_submit with a CLOCK_UPTIME_RAW pair, counts both and the handed bytes, samples 1/16 RT64 handoffs with a
+thread-CPU pair (wall vs on-CPU = lock/queue wait). ROGUESQ_S7026_SPIN_NS=<ns> spins after every handoff in odd 10 s uptime windows (positive
+control). src/main/main.cpp appends 12 columns to the ROGUESQ_G1E_TRING row (cap at task start/end + mixed flag, rt_n, rt_us, rt_bytes, rec_n,
+rec_us, sampled wall/cpu, spin flag). Analysis tools/s7026_submit_split.py (pure python; per cap and spin window, cap delta, per-task OLS).
+Recipe scratch/s7026/run.zsh / run2.zsh: L1 dd6 21:9 WIDEWIN=tog3 CAP=8192,10240,10240, MELT, UNSAFE, CULL=1, FPS60, owner path, G1B=1 AQ=3.
+Run A (spin 1 us, 325 s flight, 0 crashes, 0 VI stalls) and run B (spin 300 us + ROGUESQ_S4267=1, 325 s flight, 0 crashes). No-spin rows, A / B:
+- Step 1 re-baseline after s7025: fps 59.0 / 59.0 at 8192 vs 54.4 / 53.0 at 10240; per task sd_wall +1.32 / +1.37 ms, on-CPU +1.29 / +1.32, gap +0.03 / +0.05.
+- Split of the cap delta: ucode interp (uc - sub) +0.58 / +0.38; dpc (sub + com) +0.74 / +0.99 = RT64 handoff +0.43 / +0.43, record_submit
+  +0.09 / +0.10, bridge self +0.22 / +0.46.
+- RT64 handoffs per task 7.4 -> 7.8 / 7.7 -> 8.0 (the merge paths already batch: ~730 us per handoff), so H-percall at RT64 is refuted (no calls to
+  batch). ns per handed byte flat: 3.00 -> 3.05 / 2.90 -> 2.98; per-task OLS rt = 2.3-2.6 ns/B, R2 0.85-0.86 -> H-perbyte selected for RT64.
+- Bridge self per DPC_END bump: OLS 21.1 / 23.6 ns, within-cap 20.4/22.6 and 22.8/21.7 (stable): a per-bump fixed cost. Bumps per task
+  71k -> 85k / 69k -> 84k (+20%) but bytes only +112 / +95 KB (+5-6%): the extra cells add ~7-8 B per extra bump, i.e. mostly 8-byte RDP commands,
+  not triangles. Total bridge self at 85k bumps ~1.8-2.0 ms/task (all caps) -- the largest fixed term in the submit path.
+- H-sync refuted as the per-cell term: sampled wait share 25.3 -> 25.8% / 22.9 -> 23.0%, gap flat. The wait is real but fixed: ~1.4 ms/task;
+  S4267 (run B, single-source naming) puts it in fbwait (RT64 phase 2, fb uploaders + gfx worker wait) 1.43 ms/task, inside fullSync 3.76 ms
+  (fsRender 3.48, fsRenderSync 2.17) of the 5.7 ms procDL per task.
+- Control (run B): rt per handoff +330 / +305 us at spin 300 us; sd_wall +2.68 / +3.23 ms vs predicted rt_n x spin +2.28 / +2.49. Accounting:
+  rt_bytes == bridge rdp_bytes on every row (two independent counters). Run A's 1 us spin was too small to see (7 handoffs/task) -- that is why B ran.
+- Caveat: the "A/A" column (even vs odd t_ms seconds inside the 10240 rows) is not a null: it mixes p1 (just after 8192, pool filling) and p2;
+  per-unit coefficients (ns/B, ns/bump), stable within each cap and across both runs, carry the verdict, not the absolute deltas.
+Rules out: batching RT64 handoffs (already ~7/task), a lock/queue wait growing with cells, record_submit as a significant per-cell term (0.09).
+Verdict: selects H-perbyte for the RT64 handoff (~3 ns/B flat, two runs) and a per-bump bridge cost (~21 ns/bump, H-percall in its per-bump form, not
+per RT64 call); refutes H-sync as the per-cell term (wait flat 23-26%, named fixed ~1.4 ms fbwait). Next (NEXT.md): a bump fast path in
+rsp_dpc_submit_impl (the deferred push sits at line ~7709 behind ~1400 lines and 27 env statics of per-bump checks), same-run tog arm.
