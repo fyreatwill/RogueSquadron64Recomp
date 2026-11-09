@@ -185286,4 +185286,6 @@ hard80% 7.4/11.5 | 8.0/11.1 | 9.4/9.8. p0 vs p1/p2 sits inside the p1-p2 A/A spr
 Verdict: H-room refuted (dd8 is below 59 fps even at 10240 with the cull; extra cells cost and show nothing), H-cliff not reached (P(>=2VI) <= 0.07), H-limit
 partly: the window grows (cost) but not visibly, so the binding limit for what the owner sees is fog/horizon, not cells. dd6 + bundle (s7036: 59.5 fps L1) stays the
 top setting; dd8 is not worth it (cross-run vs s7036). OWNER-OPT-INS updated (dd6+WIDEWIN needs no OFFMAPCULL env now; use 6, not 8). Raw capture deleted (4.4 GB).
+Discrimination: refutes H-room and H-cliff, selects H-limit (visible reach is bound by fog/horizon, not the cell count). Next discriminator: same-pose dd6b vs dd6off
+score vs A/A (H-done vs H-visible for the new auto default).
 Next (NEXT.md, g1c-dd-closeout): owner contact sheet dd1/dd4/dd6-bundle/dd6-uncut at frozen poses on L1 + L4, confirm the bundle is invisible same-pose.
