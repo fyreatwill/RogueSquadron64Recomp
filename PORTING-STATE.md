@@ -184953,3 +184953,28 @@ HYPOTHESIS-ID: g1c-dd-headroom
 Verdict: this run selects H-clamp (clampGridCellLookup = 97-98% of getGridCellValueAt) and refutes H-walk / H-flat; it refutes
 H-container (a bounded flat table ties std, 113.7 vs 112.9 ns). Next discriminator: split the clamp call's ~113 ns into host index
 work vs record reads, against flight time (NEXT.md).
+
+## Session 7025 (2026-11-08) — G1c: the clampGridCellLookup per-call drift was our own create hook double-updating the unbounded std index; now updates only the active index (create 6.5 us -> 218 ns, exact)
+
+HYPOTHESIS-ID: g1c-dd-headroom (closed this session).
+Instrument, one build: tools/apply_s7025_clampsplit.py (funcs_10.c, same switch ROGUESQ_S7022_ST=1; added to fixup_game_funcs_vendored.py) times
+clampGridCellLookup entry->exit, its create path (L_80048AC4 -> exit) split at after_0/after_1 (processGridCellByDistance / nested alloc
+getGridCellValueAt / link tail), counts processGridCellByDistance calls inside creates and its sendServiceMessage calls; rs64_s6963_pre now times
+tick/dispatch, snapshot, index get and validate, with hit/miss/ival and record-index spread (r_mean/r_max/r_step). Lines [s7025-cl], [s7025-cr];
+summariser tools/s7025_clamp_sum.py. Recipe scratch/s7025/arm.zsh (copy of s7024's), L1 dd6 21:9 WIDEWIN cap 10240, CELLIDX=3, 290 s hold.
+Run A (s7025A, 325 s flight, 0 crashes): clamp per call 68 -> 100 -> 130-170 ns. Budget late: pre 80 (ent 9, get 33, val 18, rest done()+timers),
+create share 49 (cr_n ~60/frame at cr_ns 93 -> 6000 ns, rising all hold), rest 13 flat. r_max pins at 10239 (pool full) about 40 s into flight; get
+20 -> 33 and val 6 -> 18 ns step up there, then flat. So the drift = create cost per create (H-miss in form, but not the miss RATE: cr_n is flat).
+Run B (s7025B, the create split): processGridCellByDistance 22 ns, nested alloc gv 45 ns, both flat, 1.00 pg call per create, 0 sendServiceMessage
+calls inside creates; create total 88 -> 6500 ns again. The µs sit in the link tail, which is 6 guest loads/stores plus our rs64_s6963_create hook.
+That hook did S.u.set + S.f.set for every create: the std index (u) is never used in mode 3 and grows without bound (7.5k -> 338k keys, s7024).
+ORIGIN: the writer of the cost is our own s6963 host hook (rs64_s6963_create in src/main/upstream_compat.cpp), not game code; the values were
+legitimate, just maintained in an index nobody read.
+Fix (default): update only the index in use (u when act != 3, f when act == 3 or CHECK; both under tog/tog3). ROGUESQ_G1E_CREATE_BOTH=1 restores
+the double update, =tog alternates it in 8 s blocks (bucket key +1e6).
+Run C (s7025C, CREATE_BOTH=tog, same run, 0 crashes): active-only create 218 ns flat over the hold (207..252), both 1051 -> 4896 ns rising;
+clamp per call 92.2 vs 121.7 ns at the same 6430/6280 calls per stream call: ~0.2 ms/frame now, growing with hold length under the old code.
+Run D (s7025D, CELLIDX=3 CHECK=2, new default, 186 s flight, 0 crashes): 44,974,694 compares 0 bad, flip control 45110/45110, 0 BAD lines.
+Rules out: H-host (rest and entry flat at 13 / 9 ns), H-mem as the drift (get/val rise once at pool fill and then stay flat; ~25 ns residual,
+left), processGridCellByDistance or the game's allocator as the cost, service messages.
+Two lines: the run-B split (cost in the tail holding only the hook) and the run-C same-run toggle. Thread closed per NEXT.md; next: G1c gfx per-cell cost.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7024 (2026-11-08).
+Compact operational handoff, as of Session 7025 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,12 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7025 clamp drift named and fixed (tools/apply_s7025_clampsplit.py, same switch ROGUESQ_S7022_ST=1, L1 dd6 21:9 WIDEWIN cap 10240, 4 runs, 0 crashes):**
+the ~40 -> 130 ns climb per clampGridCellLookup call was the create path (~40-80 creates/frame, 88 ns -> 6.5 us each), and inside it neither game
+call (processGridCellByDistance 22 ns, nested alloc gv 45 ns, both flat) but our own host hook rs64_s6963_create, which also updated the unbounded
+std index while mode 3 was active. Fix, default: update only the index in use (ROGUESQ_G1E_CREATE_BOTH=1 old, =tog 8 s A/B). Same run: create 218 ns
+flat vs 1.0 -> 4.9 us, clamp call 92 vs 122 ns (~0.2-0.3 ms/frame at dd6). Exact: CHECK=2 45.0M compares 0 bad, flip 45110/45110. Residual: index
+get+validate rise ~25 ns once the 10240-record pool fills (record reads spread, r_step ~3400): minor, left. Thread closed; next NEXT.md.
 **s7024 getGridCellValueAt split (tools/apply_s7024_gvbranch.py, ROGUESQ_S7022_ST=1, L1 dd6 21:9 WIDEWIN, 4 runs, 0 crashes): H-clamp.** The off-map
 clampGridCellLookup branch is 97-98% of gv time (4500-6300 calls/frame, 113-155 ns); direct table hits 10 ns; node walk ~0. New default at dd>1
 ROGUESQ_G1E_CELLIDX=3: the s6963 index as a bounded flat table (record -> key reverse array; =2 old std index, tog3 = same-run A/B). Same speed
@@ -208,7 +214,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; active unit: split per-cell cost self vs callees (NEXT.md).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); active unit: NEXT.md (gfx per-cell cost).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.

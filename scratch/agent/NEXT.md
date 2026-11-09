@@ -1,20 +1,14 @@
-# NEXT: G1c — what makes clampGridCellLookup's per-call cost climb ~40 -> ~130 ns over a dd6 hold
-HYPOTHESIS-ID: g1c-dd-headroom
-Context (s7024): getGridCellValueAt time = 97-98% the off-map clamp branch (b1, ~6500 calls/frame at dd6 cap 10240). Bounded flat
-index (CELLIDX=3, now default at dd>1) ties the std index (113.7 vs 112.9 ns, same run, tog3), so the container is not the cost.
-Both modes climb in step over the hold (per-line b1 ns in scratch/agent/m6/g1_lvl1s7024AB2/run.log: 2:45 3:35 ... 2:150 3:150).
-G5i: fixed, owner look only. Check CURRENT-TRUTH item 1 first.
-Hypotheses:
- H-mem: cache/DRAM misses on the game's record reads (validate: record +0x18/+0x1A/+8/+4, prev +6, s0 +0x16/+6). The 65536 x 0xB8
-   pool (12 MB) fills during flight, so hits spread out. Predicts: the time sits in the validate reads, it tracks the pool high-water
-   record index, and a same-run prefetch of the next cell's record (or no-validate CHECK-style arm, timing only) cuts it.
- H-host: host call overhead (pre/post out-of-line calls, tick, done()). Predicts a flat ~40 ns with no drift; refuted if the drift is
-   in the validate segment.
- H-miss: the miss path (imiss -> L_80048AC4 create: processGridCellByDistance + nested gv + record link) grows with flight. Predicts
-   the drift follows imiss/ihit per frame, not per-hit time.
-Discriminator, ONE build, ONE run (scratch/s7024/run3.zsh AB arm recipe, CELLIDX=3 fixed, S7022_ST=1): inside rs64_s6963_pre time
- (a) entry -> before validate, (b) validate reads, (c) everything else of b1 (b1 total minus pre), per [s7024-gv] line; plus ihit/imiss
- per stream call and the max record index seen (r). Outcome: (b) carries the drift -> H-mem (then try a prefetch arm with a same-run
- tog); (c) carries it with imiss rising -> H-miss; flat everywhere -> H-host.
-Ceiling: b1 ~0.75 ms/frame at dd6. dd4 (the owner's setting) is ~60 fps already, so stop this thread once the drift is named
- and anything that fixes it has been tried in one same-run arm. Then go back to the ladder (G1c phase 2 / owner items).
+# NEXT: G1c phase 2 — cut the gfx-side per-cell cost (the binding term above dd4)
+HYPOTHESIS-ID: g1c-gfx-percell
+Context: s7020/s7021 at L1 dd6 21:9 WIDEWIN: +2048 cells = gfx thread +1.72 ms/frame (ucode self 0.70 over L_1F98/pre/L_1090/L_162C/L_16B8/L_1298/L_1740;
+DPC submit 0.68 = bridge self 0.24 + RT64 submit_rdp_range 0.23 + record_submit 0.16) and game +0.91. s7022-s7025 closed the game-side stream walk
+(clamp drift = our create hook, fixed s7025). G5i/owner items: nothing to run (CURRENT-TRUTH items 1-14), check them first.
+Step 1 (boring first, same build): dd6 cap 10240 fps with the s7025 fix vs cap 8192 same run (tog3 caps, scratch/s7024/run3.zsh S6-style arm, G1E_TL timer)
+ to re-baseline the cells-cost line after s7025.
+Hypotheses for the DPC submit share (0.68 ms per 2048 cells):
+ H-percall: per-submit fixed cost (bridge + submit_rdp_range called once per small RDP range): predicts submit count scales with cells and ns/submit is flat;
+   fix = batch adjacent ranges into one submit.
+ H-perbyte: cost scales with RDP command bytes: predicts ns/byte flat, submit count irrelevant; fix lives in RT64 parsing, not batching.
+ H-sync: submits wait on a lock/queue (RDP_ASYNC off path): predicts wait time inside submit, rising with cells.
+Discriminator, ONE build, ONE run: per frame submit count, bytes, ticks in bridge/RT64 submit/lock wait, bucketed by cap phase (tog3 8192/10240).
+Outcome: ns/submit flat with count rising -> H-percall (try a same-run batching tog arm); ns/byte flat -> H-perbyte; wait share -> H-sync.

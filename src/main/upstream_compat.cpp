@@ -226,18 +226,24 @@ extern "C" void rs64_s7022_st(unsigned long long t0, unsigned long long t1, unsi
 // processGridCellByDistance ticks + calls, v[4..5] call-path region ticks + entries, v[6..9] per-call deltas of g_s6493 [3] poolcap,
 // [4] spaneq skip, [5] span reject, [6] call path. ovh_ns = one back-to-back mach_absolute_time pair (calibrated once): every timed
 // span carries ~1 ovh; the summariser subtracts it. One [s7023-cs] line per cap bucket per 256 calls.
-extern "C" int rs64_s6963_active(); // s7024 bucket key
-extern "C" { unsigned long long g_s7024[3][10]; } // s7024 (tools/apply_s7024_gvbranch.py): [n, mach ticks, walk iters][branch]
+extern "C" int rs64_s6963_active(); extern "C" int rs64_s7025_both(); // s7024/s7025 bucket key
+extern "C" { unsigned long long g_s7024[3][10]; }
+/* s7025 (tools/apply_s7025_clampsplit.py): clampGridCellLookup split. [0,1] calls/ticks, [2,3] create path n/ticks, [4] retries,
+   [5] pre calls, [6] pre ticks, [7] entry->answer ticks, [8] snapshot ticks, [9] snapshots, [10] snapshot records, [11] get ticks,
+   [12] validate ticks, [13] hits, [14] misses, [15] ival, [16] sum r, [17] max r, [18] sum |r - r_prev|, [19] hits r >= 32768. */
+/* [20] create pg ticks, [21] create gv-alloc ticks, [22] pg calls inside creates, [23] sendServiceMessage n, [24] its ticks, [25] sends inside creates */
+extern "C" { unsigned long long g_s7025[32]; int g_s7025_in = 0; } // s7024 (tools/apply_s7024_gvbranch.py): [n, mach ticks, walk iters][branch]
 extern "C" void rs64_s7023_cs(const unsigned long long* v) {
     struct B { int cap; unsigned n; unsigned long long a[10]; };
     static B b[4]; static int nb = 0; static double tb = 0, ovh = 0;
     if (tb == 0) { mach_timebase_info_data_t i; mach_timebase_info(&i); tb = (double)i.numer / i.denom;
         unsigned long long s = 0; for (int k = 0; k < 100000; k++) { unsigned long long a = mach_absolute_time(); s += mach_absolute_time() - a; }
         ovh = s * tb / 100000.0; }
-    const int cap = rs64_s7012_cap() * 10 + rs64_s6963_active(); int k = 0;  /* s7024: cap*10 + cellidx mode */
+    const int cap = rs64_s7012_cap() * 10 + rs64_s6963_active() + 1000000 * rs64_s7025_both(); int k = 0;  /* s7024: cap*10 + cellidx mode; s7025: +1e6 when CREATE_BOTH */
     while (k < nb && b[k].cap != cap) k++;
     if (k == nb) { if (nb == 4) return; b[nb] = B{}; b[nb].cap = cap; nb++; }
     B& x = b[k]; x.n++; for (int j = 0; j < 10; j++) x.a[j] += v[j];
+    static unsigned long long s25[4][32]; for (int j = 0; j < 32; j++) { if (j == 17) { if (g_s7025[j] > s25[k][j]) s25[k][j] = g_s7025[j]; } else s25[k][j] += g_s7025[j]; g_s7025[j] = 0; }
     static unsigned long long s[4][3][10]; // s7024: per-branch getGridCellValueAt totals, flushed into this cap bucket
     for (int r = 0; r < 3; r++) for (int j = 0; j < 10; j++) { s[k][r][j] += g_s7024[r][j]; g_s7024[r][j] = 0; }
     if (x.n == 256) {
@@ -245,6 +251,14 @@ extern "C" void rs64_s7023_cs(const unsigned long long* v) {
           for (int j = 1; j < 10; j++) if (s[k][0][j]) o += snprintf(buf + o, sizeof buf - o, " b%d=%.1f/%.1fns/w%.2f", j, s[k][0][j] / n,
               s[k][1][j] * tb / s[k][0][j], (double)s[k][2][j] / s[k][0][j]);
           fprintf(stderr, "%s\n", buf); for (int r = 0; r < 3; r++) for (int j = 0; j < 10; j++) s[k][r][j] = 0; }
+        { const unsigned long long* q = s25[k]; const double n = x.n; auto ns = [&](int a, int b) { return q[b] ? q[a] * tb / q[b] : 0.0; };
+          fprintf(stderr, "[s7025-cl] cap=%d calls=%u cl_n=%.1f cl_ns=%.1f cr_n=%.1f cr_ns=%.1f retry=%.1f pre_n=%.1f pre_ns=%.1f ent_ns=%.1f snap_n=%.2f snap_us=%.2f snap_rec=%.1f get_ns=%.1f val_ns=%.1f hit=%.1f miss=%.1f ival=%.2f r_mean=%.0f r_max=%llu r_step=%.0f r_hi=%.3f\n",
+                  x.cap, x.n, q[0] / n, ns(1, 0), q[2] / n, ns(3, 2), q[4] / n, q[5] / n, ns(6, 5), ns(7, 5), q[9] / n, q[9] ? q[8] * tb * 1e-3 / q[9] : 0.0,
+                  q[9] ? (double)q[10] / q[9] : 0.0, ns(11, 5), ns(12, 13), q[13] / n, q[14] / n, q[15] / n, q[13] ? (double)q[16] / q[13] : 0.0, q[17],
+                  q[13] ? (double)q[18] / q[13] : 0.0, q[13] ? (double)q[19] / q[13] : 0.0);
+          fprintf(stderr, "[s7025-cr] cap=%d calls=%u cr_n=%.1f cr_pg_ns=%.1f cr_gv_ns=%.1f cr_pgcalls=%.2f send_n=%.1f send_ns=%.1f send_in_cr=%.2f\n", x.cap, x.n,
+                  q[2] / n, ns(20, 2), ns(21, 2), q[2] ? (double)q[22] / q[2] : 0.0, q[23] / n, ns(24, 23), q[2] ? (double)q[25] / q[2] : 0.0);
+          for (int j = 0; j < 32; j++) s25[k][j] = 0; }
         const double n = x.n;
         fprintf(stderr, "[s7023-cs] cap=%d calls=%u ovh_ns=%.2f gv_us=%.2f gv_n=%.1f pg_us=%.2f pg_n=%.1f cp_us=%.2f cp_n=%.1f poolcap=%.1f spaneq=%.1f rej=%.1f callp=%.1f\n",
                 x.cap, x.n, ovh, x.a[0] * tb * 1e-3 / n, x.a[1] / n, x.a[2] * tb * 1e-3 / n, x.a[3] / n, x.a[4] * tb * 1e-3 / n, x.a[5] / n,
@@ -7571,6 +7585,7 @@ inline void s6963_tick(S6963& S) {  /* s7024: one tick compare per call; mode/to
 /* answer for (s0,x,z) from the index: record index or 0xFFFF. Snapshots the template chain on first use. */
 template <class I> uint32_t s6963_answer(S6963& S, I& I_, const uint8_t* rd, uint32_t s0, int32_t x, int32_t z, uint32_t base, uint32_t head) {
     if (base != S.base) { S.base = base; S.u.clear(); S.f.clear(); }
+    const bool T = g_rs64_s7022; const uint64_t ta = T ? mach_absolute_time() : 0;  /* s7025 */
     if (!I_.done(s0)) {
         uint32_t r = head, n = 0; static std::unordered_set<uint64_t> seen; seen.clear();
         while (r != 0xFFFFu && n < 200000u) {
@@ -7580,12 +7595,17 @@ template <class I> uint32_t s6963_answer(S6963& S, I& I_, const uint8_t* rd, uin
             r = s6963_hu(rd, a + 6); n++;
         }
         I_.mark(s0); S.snaps++; S.snapit += n; if (n > S.maxchain) S.maxchain = n;
+        if (T) { g_s7025[8] += mach_absolute_time() - ta; g_s7025[9]++; g_s7025[10] += n; }
     }
+    const uint64_t tg = T ? mach_absolute_time() : 0;
     const uint64_t key = s6963_key(s0, x, z); uint16_t r16;
-    if (!I_.get(key, r16)) return 0xFFFFu;
+    const bool got = I_.get(key, r16); const uint64_t tv = T ? mach_absolute_time() : 0; if (T) g_s7025[11] += tv - tg;
+    if (!got) { if (T) g_s7025[14]++; return 0xFFFFu; }
     const uint32_t r = r16, a = base + r * 0xB8u, own = s6963_hu(rd, s0 + 0x16);
     bool v = s6963_ok(a) && s6963_h(rd, a + 0x18) == (int16_t)x && s6963_h(rd, a + 0x1A) == (int16_t)z && s6963_hu(rd, a + 8) == own;
     if (v) { const uint32_t p = s6963_hu(rd, a + 4); const uint32_t pn = p == own ? s6963_hu(rd, s0 + 6) : (s6963_ok(base + p * 0xB8u) ? s6963_hu(rd, base + p * 0xB8u + 6) : 0xFFFFu); v = pn == r; }
+    if (T) { static uint32_t rp = 0; g_s7025[12] += mach_absolute_time() - tv; g_s7025[13]++; g_s7025[16] += r; if (r > g_s7025[17]) g_s7025[17] = r;
+        g_s7025[18] += r > rp ? r - rp : rp - r; rp = r; g_s7025[19] += r >= 32768u; if (!v) g_s7025[15]++; }
     if (!v) { I_.erase(key); S.ival++; return 0xFFFFu; }
     return r;
 }
@@ -7604,12 +7624,17 @@ template <class I> int s6963_pre_t(S6963& S, I& I_, uint8_t* rdram, recomp_conte
 }
 }
 extern "C" int rs64_s6963_active() { return s6963().act; }
+extern "C" int rs64_s7025_both();
 extern "C" int rs64_s6963_pre(uint8_t* rdram, recomp_context* ctx) {
+    const uint64_t t0 = g_rs64_s7022 ? mach_absolute_time() : 0;  /* s7025 */
     S6963& S = s6963(); s6963_tick(S); S.calls++; S.fromhit = 0;
     const int m = S.act;
     if (!m && !S.check) return 0;
     S.curf = m == 3;
-    return S.curf ? s6963_pre_t(S, S.f, rdram, ctx, m) : s6963_pre_t(S, S.u, rdram, ctx, m);
+    if (t0) g_s7025[7] += mach_absolute_time() - t0;
+    const int rv = S.curf ? s6963_pre_t(S, S.f, rdram, ctx, m) : s6963_pre_t(S, S.u, rdram, ctx, m);
+    if (t0) { g_s7025[5]++; g_s7025[6] += mach_absolute_time() - t0; }
+    return rv;
 }
 extern "C" void rs64_s6963_post(uint8_t* rdram, recomp_context* ctx) {
     S6963& S = s6963();
@@ -7632,7 +7657,17 @@ extern "C" void rs64_s6963_create(uint8_t* rdram, recomp_context* ctx) {  /* aft
     S6963& S = s6963(); const uint32_t a = (uint32_t)ctx->r5;
     if (!s6963_ok(a)) return;
     const uint64_t k = s6963_key((uint32_t)ctx->r16, (int32_t)ctx->r20, (int32_t)ctx->r19); const uint16_t r = s6963_hu(rdram, a + 0x16);
-    S.u.set(k, r); S.f.set(k, r);  /* both kept current; the inactive one is re-snapshotted at the next tog block anyway */
+    /* s7025: update only the index in use. Updating both cost 88 ns -> 6.5 us per create over a dd6 hold (the std map is unbounded,
+       338k keys in 3 min, s7024), ~50 ns per clamp call. Under tog/tog3 both stay current (the inactive one is re-snapshotted each
+       block anyway). ROGUESQ_G1E_CREATE_BOTH=1 restores the old double update, =tog alternates it in 8 s blocks (same-run A/B). */
+    const int both = rs64_s7025_both();
+    if (both || S.tog || S.act != 3) S.u.set(k, r);
+    if (both || S.tog || S.act == 3 || S.check) S.f.set(k, r);
+}
+extern "C" int rs64_s7025_both() {
+    static int m = [] { const char* e = std::getenv("ROGUESQ_G1E_CREATE_BOTH"); return !e || !*e ? 0 : *e == 't' ? 2 : std::atoi(e) ? 1 : 0; }();
+    if (m != 2) return m;
+    return (int)((mach_absolute_time() / 24000000ull / 8ull) & 1ull);
 }
 /* s6993: mask for the game's "(p & 0xFF000000) == 0x80000000 means pointer" test (7 sites, tools/apply_s6993_ptrmask.py).
    0xF0000000 by default so dd>1 spill blocks at 0x81000000+ count as pointers; ROGUESQ_PTRMASK=0 restores retail 0xFF000000.

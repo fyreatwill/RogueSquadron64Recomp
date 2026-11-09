@@ -42113,6 +42113,7 @@ RS64_REPLAY = [
     "apply_s7022_streamtime.py",  # s7022: G1c per-call timing of streamTerrainGridCellsByDistance, ROGUESQ_S7022_ST=1
     "apply_s7023_calleetime.py",  # s7023: G1c callee/self split of the same loop (same switch)
     "apply_s7024_gvbranch.py",  # s7024: G1c per-branch time inside getGridCellValueAt (same switch)
+    "apply_s7025_clampsplit.py",  # s7025: G1c clampGridCellLookup time split (create path, index pre segments; same switch)
 ]
 
 
