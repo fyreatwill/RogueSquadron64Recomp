@@ -185203,5 +185203,5 @@ Reading: the eye is above the clamped edge tops on nearly every frame of flight,
 disarming itself. It also overturns s7032's by-eye reading that poses 0-4 sit below the plateau top: they do not (eye above), yet R=2 is near-invisible
 there, so whatever hides the far plateau at low poses is not height occlusion (candidates: fog, on-map terrain occluding it, the frustum's lower bound).
 ORIGIN: n/a; opt-in experiment lever (OFFMAPCULL itself stays default off). No mitigation.
-Rules out: the height gate (H-height as a cost lever) and H-fullview (the gate cut nothing visible). Selects H-costgone.
+Verdict: this selects H-costgone and refutes H-height as a cost lever and H-fullview (the gate cut nothing visible).
 Next: NEXT.md: off-map cells culled only past k x fog end (combine s7030 depth with s7031 off-map class), frozen poses + same-run cost.
