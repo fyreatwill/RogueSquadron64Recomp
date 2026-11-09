@@ -146,6 +146,9 @@ extern "C" { int g_rs64_s7030 = [] { const char* e = getenv("ROGUESQ_DD_FOGCULL"
 static float s7030_k[3] = {0.0f, 1.0f, 0.5f}; static int s7030_tog3 = 0, s7030_ph = 0; static float s7030_thr = 0.0f, s7030_fe = 0.0f;
 // s7031 off-map census (tools/apply_s7031_offmap.py): per phase, off-map cells per depth bin, ring distance outside the map edge (all
 // off-map cells and those in the 0.5-1.0 fog-end band), and ROGUESQ_DD_OFFMAPCULL=<R>|tog3 (_R=a,b,c; R<0 off) culls rings > R.
+// s7034 fog-depth condition: ROGUESQ_DD_OFFMAPCULL_K=<k>|a,b,c (tog3 per phase; default 0 = none): an off-map cell past R is culled only if
+// its near-edge depth d-0.71 > k * fog end. s7034_kc = culled per depth bin, s7034_kk = past R but kept by K.
+static float s7034_k[3] = {0.0f, 0.0f, 0.0f}; static uint64_t s7034_kc[3][20], s7034_kk[3];
 static int s7031_R[3] = {-1, -1, -1}, s7031_w = 0, s7031_hgt = 0; static uint64_t s7031_off[3][20], s7031_ring[3][18], s7031_rband[3][18], s7031_cull[3];
 static uint64_t s7030_h[3][20], s7030_cull[3], s7030_frames[3], s7030_t0 = 0, s7030_last = 0; static double s7030_F[3], s7030_FE[3];
 // s7032 eye gate (tools/apply_s7032_eyegate.py): the s7031 ring cull leaves a sky void once the eye is over the off-map plateau
@@ -195,6 +198,9 @@ extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
                 if (r && sscanf(r, "%d,%d,%d", &a, &b, &c) == 3) { s7031_R[0] = a; s7031_R[1] = b; s7031_R[2] = c; } else { s7031_R[1] = 2; s7031_R[2] = 8; }
                 if (!(e && e[0] == 't')) s7030_k[0] = s7030_k[1] = s7030_k[2] = e ? (float)atof(e) : 0.0f; }
             else s7031_R[0] = s7031_R[1] = s7031_R[2] = atoi(o); }
+        if (const char* k = getenv("ROGUESQ_DD_OFFMAPCULL_K")) { float a, b, c;
+            if (sscanf(k, "%f,%f,%f", &a, &b, &c) == 3) { s7034_k[0] = a; s7034_k[1] = b; s7034_k[2] = c; } else s7034_k[0] = s7034_k[1] = s7034_k[2] = (float)atof(k); }
+        fprintf(stderr, "[s7034] offmapcull K=%g,%g,%g\n", s7034_k[0], s7034_k[1], s7034_k[2]);
         fprintf(stderr, "[s7031] offmapcull R=%d,%d,%d tog3=%d\n", s7031_R[0], s7031_R[1], s7031_R[2], s7030_tog3);
         fprintf(stderr, "[s7030] fogcull tog3=%d k=%g,%g,%g a0=0x%08X\n", s7030_tog3, s7030_k[0], s7030_k[1], s7030_k[2], a0); }
     auto rf = [&](uint32_t a) { uint32_t v = (uint32_t)MEM_W(0, (int64_t)(int32_t)a); float f; memcpy(&f, &v, 4); return f; };
@@ -219,6 +225,8 @@ extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
                 o2 += snprintf(rb2 + o2, sizeof rb2 - o2, "%s%.1f", b ? "," : "", s7031_rband[p][b] / fr); }
             fprintf(stderr, "[s7033] t=%.0f ph=%d eb=%.2f sc=%.4f eyecell=%d..%d up=%d upc=%llu/%llu keep/f=%.1f pass/f=%.1f\n", (mt - s7030_t0) / 24e6, p, s7033_eb, s7033_sc,
                     s7033_emin, s7033_emax, s7033_up, (unsigned long long)s7033_upc[1], (unsigned long long)s7033_upc[0], s7033_keep[p] / fr, s7033_pass[p] / fr);
+            { char kb[300]; int ok = 0; for (int b = 0; b < 20; b++) ok += snprintf(kb + ok, sizeof kb - ok, "%s%.1f", b ? "," : "", s7034_kc[p][b] / fr);
+              fprintf(stderr, "[s7034] t=%.0f ph=%d K=%g kept/f=%.1f chist/f=%s\n", (mt - s7030_t0) / 24e6, p, s7034_k[p], s7034_kk[p] / fr, kb); }
             fprintf(stderr, "[s7032] t=%.0f ph=%d eye=%d,%d ring=%d eyeoff_cells/f=%.1f spread_bad=%llu\n", (mt - s7030_t0) / 24e6, p, s7032_eyex, s7032_eyez, s7032_eyering, s7032_eyeoff[p] / fr, (unsigned long long)s7032_spread_bad);
             fprintf(stderr, "[s7031] t=%.0f ph=%d R=%d dims=%dx%d win=%d,%d ocull/f=%.1f off/f=%s ring/f=%s rband/f=%s\n", (mt - s7030_t0) / 24e6, p, s7031_R[p], s7031_w, s7031_hgt,
                     (int32_t)MEM_W(0, (int64_t)(int32_t)0x80132DB0), (int32_t)MEM_W(0, (int64_t)(int32_t)0x80132DB8), s7031_cull[p] / fr, buf, rb, rb2); } }
@@ -244,7 +252,9 @@ extern "C" int rs64_s7031_cell(float d, int32_t x, int32_t z) {
     const int off = x < 0 || x >= s7031_w || z < 0 || z >= s7031_hgt;
     if (off) { const int dx = x < 0 ? -x : x >= s7031_w ? x - s7031_w + 1 : 0, dz = z < 0 ? -z : z >= s7031_hgt ? z - s7031_hgt + 1 : 0;
         const int r = dx > dz ? dx : dz; const int rc = r > 17 ? 17 : r; s7031_off[p][bc]++; s7031_ring[p][rc]++; if (bc >= 5 && bc < 10) s7031_rband[p][rc]++;
-        if (s7031_R[p] >= 0 && r > s7031_R[p]) { s7030_h[p][bc]++; s7031_cull[p]++; return 1; } }
+        if (s7031_R[p] >= 0 && r > s7031_R[p]) {
+            if (s7034_k[p] > 0 && !(s7030_fe > 0 && dn > s7034_k[p] * s7030_fe)) s7034_kk[p]++; /* s7034: too near, keep */
+            else { s7030_h[p][bc]++; s7031_cull[p]++; s7034_kc[p][bc]++; return 1; } } }
     return rs64_s7030_cell(d);
 }
 extern "C" int rs64_s7030_cell(float d) {

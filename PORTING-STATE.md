@@ -185205,3 +185205,23 @@ there, so whatever hides the far plateau at low poses is not height occlusion (c
 ORIGIN: n/a; opt-in experiment lever (OFFMAPCULL itself stays default off). No mitigation.
 Verdict: this selects H-costgone and refutes H-height as a cost lever and H-fullview (the gate cut nothing visible).
 Next: NEXT.md: off-map cells culled only past k x fog end (combine s7030 depth with s7031 off-map class), frozen poses + same-run cost.
+
+## Session 7034 (2026-11-09) — G1c off-map cull past 0.6 x fog end: near-invisible at all 7 frozen poses (void poses 0.17-0.18 vs ungated 10.6/39.0, control 3.6-4.0) and rsp -3.04 ms same run (54.8 -> 60.0 fps): H-fogdepth selected on L1
+HYPOTHESIS-ID: g1c-offmap-fogdepth.
+Change (src/main/upstream_compat.cpp, host only, no regen): ROGUESQ_DD_OFFMAPCULL_K=<k>|a,b,c (per tog3 phase; default 0 = s7031 behaviour). In rs64_s7031_cell an
+off-map cell past ring R is culled only if its near-edge depth d-0.71 > k * fog end (s7030_fe, per frame). New [s7034] line per phase: kept/f (past R, kept by K)
+and chist/f (culled cells per 0.1-fog-end depth bin). Instrument check: K=0.6 arm logs K=0.6, culls 2399/f, keeps 2698/f; ungated r2 culls 5098/f, kept 0.
+Run 1, frozen poses (scratch/s7034/run_L1k.zsh; tools/g3_optin_pose_arms.sh; L1 21:9 dd6 FPS60 DD_UNSAFE MELT WIDEWIN cap 10240 CULL_SPIKE=1 FAST=1 PROBES=0,
+PIN=1, 7 freezes; all OFFMAPCULL arms with _H=off). Mean |dLum| vs offA, poses 0..6 (tools/s7032_pose_cull_score.py):
+ intra 0.00; k03 (FOGCULL 0.3 control) 3.05 1.48 0.54 0.95 0.52 3.65 3.98; r2 (void control) 0.20 0.13 0.16 0.30 0.51 10.60 39.00 (= s7032/s7033 exactly);
+ r2k06 0.01 0.01 0.01 0.03 0.04 0.18 0.17; r2k08 0.01 0.00 0.00 0.01 0.02 0.03 0.05. Sheet docs/owner_sheet_s7034_fogdepth.jpg (offA | r2k06 | r2k08 | r2 | k03 | diffs):
+ by eye r2k06 = offA at poses 5/6; its autocontrast diff is a thin sliver on the horizon line only. 0 crashes x5.
+Run 2, cost, same run (scratch/s7034/run_cost.zsh, tog3 R=-1,2,2 K=0,0.6,0.8, _H=off, L1 owner path, 289 s flight, 0 crashes, 0 VI stalls; g5e_cost_by_parity --phases 3 --skip-s 130):
+ p0 (off) 54.8 fps rsp 14.49 P(>=2VI) 0.10; p1 (K=0.6, culls 2612/f) 60.0 / 11.45 (rsp -3.04, run -0.45) / 0.00; p2 (K=0.8, culls 998/f) 59.0 / 13.93 (rsp -0.56) / 0.02.
+ 1/3-period shifted split smears (-1.85/-1.20) as it must.
+Reading: the off-map cells between 0.6 and ~1.2 fog ends are fully fogged; dropping them costs at most a horizon-line sliver (0.18, ~1/20 of the k03 control)
+and buys the 3 ms that takes L1 21:9 dd6 WIDEWIN cap 10240 back to 60 fps. K=0.8 is cleaner (<=0.05) but keeps most of the cost. Not at the strict A/A floor
+(0.00), so single level, single-source image call: L4 (open map, 62% off-map) must repeat before OWNER-OPT-INS.
+ORIGIN: n/a; opt-in experiment lever, default off. No mitigation.
+Verdict: this selects H-fogdepth on L1 (K=0.6 image ~neutral, win 3.04 ms >= 3) and refutes H-skyfog and H-nearwin there.
+Next: NEXT.md: L4 repeat of the frozen-pose arms (offA, r2k06, r2k07, r2, k03) + same-run cost; then offer OFFMAPCULL=2 K=0.6 as an opt-in.

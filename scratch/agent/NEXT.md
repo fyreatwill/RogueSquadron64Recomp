@@ -1,19 +1,15 @@
-# NEXT: G1c — cull off-map cells only past k x fog end (s7033: the height gate is image-neutral but saves 0 ms)
+# NEXT: G1c — L4 repeat of the off-map fog-depth cull (s7034: K=0.6 near-invisible + rsp -3.04 ms -> 60 fps on L1)
 HYPOTHESIS-ID: g1c-offmap-fogdepth
-Context: L1 21:9 dd6 WIDEWIN cap 10240 MELT FPS60. Ungated OFFMAPCULL=2 saves rsp ~8-10 ms (-> 60 fps) but voids the sky at frozen poses 5/6 (|d| 10.6/39.0).
-s7033's height gate (ROGUESQ_DD_OFFMAPCULL_H, default on) keeps 99% of the cells (eye above the edge tops) -> rsp +0.01. s7030: FOGCULL k=0.5 (all cells,
-on or off map) rsp -4.9 and looked invisible on L1 in a mean image; k03 = FOGCULL 0.3 at the frozen poses 0.5-4.0 (visible).
+Context: s7034 ROGUESQ_DD_OFFMAPCULL_K (src/main/upstream_compat.cpp rs64_s7031_cell). L1 21:9 dd6 WIDEWIN cap 10240 MELT FPS60, _H=off:
+frozen poses K=0.6 0.01-0.18 (void poses 0.18/0.17 vs ungated 10.6/39.0, control 3.6-4.0), cost rsp -3.04 (54.8 -> 60 fps). K=0.8 clean but -0.56 only.
+L4 is the open level (94x94 map, 62% off-map cells, s7031 R=2 rsp -3.71 only).
 G5i/owner items: nothing to run (CURRENT-TRUTH items 1-14).
 Hypotheses:
- H-fogdepth: off-map cells far enough into the fog are fully fogged (fog colour), so culling off-map cells only when depth > k*fe (k ~0.6-0.8) is
-   image-neutral at all 7 poses (incl. 5/6) and keeps >= 3 ms of the rsp win (most off-map cells are 17+ rings out, s7031).
- H-skyfog: the void at poses 5/6 differs from the fogged plateau colour even at k*fe ~0.9 (MELT fog colour != sky band, s7007), so any depth cut
-   shows -> only a fill (draw something cheap in the hole) could work; report the trade to the owner.
- H-nearwin: the visible plateau cells at poses 5/6 sit at depth < 0.5 fe, so a k cut that keeps them also keeps most cells (cost win < 2 ms).
-Work, ONE build: in rs64_s7031_cell add ROGUESQ_DD_OFFMAPCULL_K=<k> (default 0 = no depth condition): off-map cell past R is culled only if
- d - 0.71 > k * fe (s7030_fe already per frame). Also log, per phase, the off-map culled cells per depth bin (s7031_off hist exists).
-Arms (scratch/s7033/run_L1h.zsh as template, frozen poses, separate same-pose runs): offA, r2k06 (R=2 K=0.6), r2k08 (R=2 K=0.8), r2 (_H=off K=0, void control),
- k03 (control). All with ROGUESQ_DD_OFFMAPCULL_H=off. Score tools/s7032_pose_cull_score.py --show r2k06,r2k08,r2. Then cost: scratch/s7033/run_cost.zsh with
- a K tog (or two runs RR=-1,2,2 K=k on phase 1): rsp per phase.
-Outcome map: a K at the A/A floor at all 7 poses with rsp win >= 3 ms -> H-fogdepth: add to OWNER-OPT-INS as an opt-in, repeat on L4.
- Every K that keeps >= 3 ms shows a void at 5/6 -> H-skyfog. Image clean only at a K whose win < 2 ms -> H-nearwin: close the off-map cull, report.
+ H-general: on L4 K=0.6 is also <= ~0.2 at every frozen pose with rsp win >= 1.5 ms (L4 has less off-map waste) -> offer as owner opt-in (OWNER-OPT-INS.md).
+ H-L1only: L4 shows a visible void/wedge at K=0.6 (> ~1.0, control-scale) -> L4's far terrain is less fogged (fe vs map size); try K=0.7/0.8 or per-level K.
+ H-nowin: L4 image clean but win < 1 ms -> opt-in helps only L1-like levels; still offer, state the per-level win.
+Work (no build needed):
+ 1. Frozen poses: LVTAG=L4k + level 4 in scratch/s7034/run_L1k.zsh (check how g3_optin_pose_arms.sh takes LV; s7031 used LV=4; FZ poses must be re-picked for L4
+    from an offA pass, or use the s7031 L4 pose list if one exists). Arms offA, r2k06, r2k07 (K=0.7), r2 (void control), k03. Score s7032_pose_cull_score.py --sheet.
+ 2. Cost: zsh scratch/s7034/run_cost.zsh K68L4 4 0,0.6,0.7 ; g5e_cost_by_parity --phases 3 --skip-s 130 on tl_K68L4.bin.* + scratch/agent/m6/g1_lvl4s7031K68L4/run.log.
+Outcome map: H-general -> add the opt-in line to docs/OWNER-OPT-INS.md (default stays off), close the G1c dd6 headroom thread. H-L1only -> pick the K that is clean on both.

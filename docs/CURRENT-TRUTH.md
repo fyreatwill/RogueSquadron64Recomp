@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7033 (2026-11-09).
+Compact operational handoff, as of Session 7034 (2026-11-09).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,11 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7034 off-map cull past k x fog end: H-fogdepth on L1 (21:9 dd6 WIDEWIN cap 10240 MELT FPS60, 6 runs, 0 crashes).** New ROGUESQ_DD_OFFMAPCULL_K=<k>|a,b,c
+(default 0): an off-map cell past R is culled only if its depth > k x fog end. Frozen poses, _H=off: K=0.6 0.01-0.04 at poses 0-4 and 0.18/0.17 at the void poses 5/6
+(ungated R=2 10.6/39.0, FOGCULL 0.3 control 3.6/4.0; by eye = offA, diff a horizon sliver); K=0.8 <=0.05. Same-run cost: K=0.6 rsp -3.04 ms, 54.8 -> 60.0 fps,
+P(>=2VI) 0.10 -> 0.00; K=0.8 only -0.56. Sheet docs/owner_sheet_s7034_fogdepth.jpg. Single level: L4 repeat next (NEXT.md), then owner opt-in
+`ROGUESQ_DD_OFFMAPCULL=2 ROGUESQ_DD_OFFMAPCULL_H=off ROGUESQ_DD_OFFMAPCULL_K=0.6`.
 **s7033 off-map height gate: image-neutral but costs nothing (H-costgone; L1 21:9 dd6 WIDEWIN cap 10240 MELT FPS60, 5 runs, 0 crashes).** New default-on
 ROGUESQ_DD_OFFMAPCULL_H=<margin> (=off fixed R, =tog gate in tog3 phase 1 only) culls an off-map cell past R only while the eye is below its clamped edge cell's
 top, read from the game's own record bytes (rec+3/+4, units y*C/H as in scanConvertTriangleToSpanTable; up self-calibrated from the eye cell, y down-negative).
@@ -245,7 +250,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); s7026 DPC submit = RT64 per-byte + ~21 ns/bump bridge, wait flat; s7027 per-bump checks only ~3.6 of ~24 ns (H-checks refuted); s7028/s7029 bridge split closed (H-call, shadow refuted); s7030 fogged-cell cull: H-fogwaste refuted, 0.5 x fog-end depth cull = rsp -4.9 ms invisible on L1 (H-offmap lead); s7031 off-map census: 82%/62% of dd6 cells off-map, R=2 cull rsp -9.75/-3.71 ms (L1/L4), image unqualified; s7032 frozen poses: R=2/R=8 VISIBLE once the eye climbs above the off-map plateau (H-plateau); s7033 height gate image-neutral but saves 0 ms (H-costgone, eye above edge tops almost always); active unit: NEXT.md (off-map cull past k x fog end).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); s7026 DPC submit = RT64 per-byte + ~21 ns/bump bridge, wait flat; s7027 per-bump checks only ~3.6 of ~24 ns (H-checks refuted); s7028/s7029 bridge split closed (H-call, shadow refuted); s7030 fogged-cell cull: H-fogwaste refuted, 0.5 x fog-end depth cull = rsp -4.9 ms invisible on L1 (H-offmap lead); s7031 off-map census: 82%/62% of dd6 cells off-map, R=2 cull rsp -9.75/-3.71 ms (L1/L4), image unqualified; s7032 frozen poses: R=2/R=8 VISIBLE once the eye climbs above the off-map plateau (H-plateau); s7033 height gate image-neutral but saves 0 ms (H-costgone, eye above edge tops almost always); s7034 off-map past 0.6 x fog end: ~invisible at 7 poses, rsp -3.04 ms -> 60 fps on L1 (H-fogdepth); active unit: NEXT.md (L4 repeat).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
