@@ -1,17 +1,17 @@
-# NEXT: WIDEWIN edge/cost trade by pool area cap, one same-run 3-phase toggle (G5e side edge, s7011)
+# NEXT: WIDEWIN caps below 6144 vs the VI cliff, one same-run 3-phase toggle (G5e side edge, s7012)
 HYPOTHESIS-ID: dd-wide-window
-Context: s7010 put the WIDEWIN cost in the gfx ucode (+3.6 ms/task at cap 8192 = 128x64). s7011: the game already frustum-culls cells (a wedge cull
-removes nothing) and the LOD tiers do not move cost (LODMUL 0.25/4 inside the ~1 ms parity noise). The cost is the on-screen side-band cells, so the
-only lever left is how many: the area cap the s7009 window placement spends (src: apply_s7009_widewin.py, `cap` loop; site 17 logs ww,w,d,cap).
+Context: s7012 (21:9 dd4 L4, CULL=1, ROGUESQ_DD_WIDEWIN=tog3 ROGUESQ_DD_WIDEWIN_CAP=4096,6144,8192): rsp 13.62/15.64/16.94 ms, fps 57.3/37.5/34.9,
+P(>=2VI) 0.04/0.60/0.72; side-third hard80 left 22.5/17.2/17.6, right 18.2/13.5/14.4. Edge gain saturates by 6144; the fps cost is a cliff at the
+16.7 ms VI budget (rsp + guest run ~15.6 ms at 4096). So the question is whether a cap between 4096 and 6144 stays under the cliff and keeps the gain.
 Hypotheses:
- H-linear: rsp cost and side-edge gain both scale with area, so a middle cap (6144 = 96x64) gives about half of each; owner picks a point.
- H-knee: most of the side-edge gain comes from the first extra columns (the side face is 18-22 cells deep), so cap 6144 keeps most of the hard80 gain
-   at about half the cost -> make 6144 the WIDEWIN default.
- H-flat-cost: cost does not drop until the cap is near 4096 (for example a per-task fixed cost from crossing 64 cols) -> report that WIDEWIN is all-or-nothing.
-Build ONE change: ROGUESQ_DD_WIDEWIN_CAP=<a,b,c> (default unset = 8192), and with WIDEWIN=tog3 the cap cycles a/b/c on (mach/24e6) % 3 seconds; print a
-[s7010-clk] anchor; extend tools/g5e_cost_by_parity.py with --phases 3 (phase = (mach/24e6) % 3). Use CULL=1 (CULL_SPIKE=tog shares the parity).
-Runs (one at a time): (1) NOCAP=1 ASP=21:9 zsh scratch/s7011/arm.zsh 4 4 k1 "ROGUESQ_DD_MELT=1 ROGUESQ_DD_WIDEWIN=tog3 ROGUESQ_DD_WIDEWIN_CAP=4096,6144,8192
- ROGUESQ_G1B=1 ROGUESQ_G1E_TL=$PWD/scratch/s7012/tl_k1.bin" with CULL=1 -> rsp per phase; positive control: phase 8192 vs 4096 must reproduce ~+3.6 ms.
- (2) CW=1260 CH=540 capture run of the same env -> tools/g5e_edge_score.py per third and phase (needs the same 3-phase key), sheet for the owner.
-Outcomes: rsp(6144)-rsp(4096) ~ half of 8192's and edge gain ~ half -> H-linear; edge gain at 6144 >= 75% of 8192's with <= 60% of cost -> H-knee;
-rsp(6144) ~ rsp(8192) -> H-flat-cost. Delete raws after scoring (disk ~19 GB free).
+ H-room: some cap c in 4608..5632 keeps fps >= ~55 (P(2VI) <= 0.1) and keeps >= half of the 6144 side-edge gain -> make c the WIDEWIN default cap.
+ H-no-room: P(2VI) rises steeply at the first extra cells (4608 already >= 0.3) -> WIDEWIN is a frame-rate trade; report to the owner (60 fps window
+   needs cheaper RSP, e.g. the s6975 gfx QoS / async path, not fewer cells).
+ H-edge-late: fps holds at 5120-5632 but edge gain only appears above 5632 -> same owner trade.
+Runs (one at a time, scratch/s7012/arm.zsh; tools take --phases 3 / 6th arg 3):
+ (1) env NOCAP=1 ASP=21:9 CULL=1 zsh scratch/s7012/arm.zsh 4 4 k2 "ROGUESQ_DD_MELT=1 ROGUESQ_DD_WIDEWIN=tog3 ROGUESQ_DD_WIDEWIN_CAP=4096,5120,5632
+     ROGUESQ_G1B=1 ROGUESQ_G1E_TL=$PWD/scratch/s7012/tl_k2.bin" -> python3 tools/g5e_cost_by_parity.py scratch/s7012/tl_k2.bin.<pid>
+     scratch/agent/m6/g1_lvl4s7012k2/run.log --phases 3 (positive control: s7012 p0 rsp ~13.6 must repeat; p2 vs p0 must be > 0).
+ (2) env CW=1260 CH=540 ASP=21:9 CULL=1 zsh scratch/s7012/arm.zsh 4 4 c2 "<same env minus G1B/TL>" -> python3 tools/g5e_edge_score.py
+     scratch/s7012/c2.raw 6 1000000000 50 24e6 3. The raw is ~19 GB: check df first (needs >= 22 GB free), score, make the sheet, delete the raw at once.
+Delete run.log files after grepping the [s7012]/[s7010-clk] lines (~300 MB each).

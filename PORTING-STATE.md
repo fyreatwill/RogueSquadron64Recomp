@@ -184615,3 +184615,24 @@ HYPOTHESIS-ID: dd-wide-window. G5i checked first: fixed s6995-s6999, waiting on 
   toggle with captures, edge and cost per phase, owner picks the trade (NEXT.md). Raws (TL rings, 284 MB run logs) deleted.
 - Verdict: this refutes H-offscreen (two lines: stream code-read + s7008 ray geometry) and refutes H-lod-tier as a cost lever (two directions + null
   arm, one run each). It closes the wedge-cull plan; the next discriminator is the 3-phase area-cap toggle (H-linear / H-knee / H-flat-cost).
+
+## Session 7012 (2026-11-08) — G5e WIDEWIN area cap 3-phase same-run: side-edge gain is all there by cap 6144 (hard80 L/R 22.5/18.2 -> 17.2/13.5, 8192 17.6/14.4), but fps falls off the VI cliff already at 6144 (57.3 -> 37.5, 8192 34.9) while rsp grows near-linearly (13.62 / 15.64 / 16.94 ms)
+HYPOTHESIS-ID: dd-wide-window. G5i checked first: fixed s6995-s6999, waiting on the owner's look, nothing to run. CURRENT-TRUTH 20.8 KB, no maintenance. No new soak verdicts (latest s7009_widewin_L4, folded s7011).
+- Built: ROGUESQ_DD_WIDEWIN_CAP=a[,b,c] (tools/apply_s7012_widewin_cap.py, in RS64_REPLAY after s7011; runtime rs64_s7012_cap in
+  src/main/upstream_compat.cpp): host-side min on the dd>1 wide window's local cell budget (guest 0x80130C4C untouched). ROGUESQ_DD_WIDEWIN=tog3 keeps the
+  window wide and cycles a/b/c on (mach/24e6) % 3, with the [s7010-clk] anchor. tools/g5e_cost_by_parity.py gained --phases N, tools/g5e_edge_score.py
+  a 6th arg (phases). ORIGIN: not a mitigation, a measurement knob.
+- Run k1 (cost, NOCAP, scratch/s7012/arm.zsh 4 4, 21:9 dd4 L4, MELT=1, CULL=1, caps 4096,6144,8192, G1E_TL): 0 crashes, mission verified 130 s.
+  Split (skip 130 s, guard 60 ms): p0 4096 n3176 fps 57.3 rsp 13.62 run 2.00 P(2VI) 0.04; p1 6144 n2033 fps 37.5 rsp 15.64 run 2.29 P 0.60;
+  p2 8192 n1906 fps 34.9 rsp 16.94 run 2.63 P 0.72. Positive control: 8192-4096 rsp +3.32 reproduces s7010 (+3.64). Shifted by 1/3 and 2/3 period the
+  phase means smear (p2-p0 rsp +2.15 / +0.35), as a correct phase mapping must.
+- Run c1 (capture 1260x540, same env minus TL): 0 crashes, 9339 frames. Edge (g5e_edge_score.py step 6, TH 50, phases 3), hard80% left/centre/right:
+  4096 22.5/26.6/18.2, 6144 17.2/25.6/13.5, 8192 17.6/27.9/14.4. Sheet docs/owner_sheet_s7012_widewin_cap.png (rows 2-3 in flight; row 1 caught the
+  debrief and black frames, the raw was deleted before a re-pick for disk: 5.3 GB free with it).
+- Reading: cost in rsp ms is about linear in area (6144 = 50% of the extra cells, 61% of the rsp cost), but the frame rate is a cliff: rsp + guest run at
+  4096 is ~15.6 ms, just under the 16.7 ms VI, so even 6144 pushes 60% of frames to 2 VIs. The side-edge gain saturates by 6144. So H-knee holds for the
+  edge and H-flat-cost holds for fps; H-linear is refuted in fps terms. One run per measure (edge and cost from separate runs, same env).
+- Next: caps between 4096 and 6144 (5120, 5632) vs the cliff: if one keeps P(2VI) low and part of the edge gain it becomes the WIDEWIN cap; if not,
+  WIDEWIN is a frame-rate trade for the owner (NEXT.md). Raws and run logs deleted; anchors kept in scratch/s7012/anchor_*.txt.
+- Verdict: this selects H-knee for edge gain and H-flat-cost for fps (cap 6144 already costs 57 -> 37.5 fps), and refutes H-linear in frame-rate terms;
+  the next discriminator is the cap 5120/5632 sweep.

@@ -157,7 +157,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: WIDEWIN cost/edge trade by pool area cap, 3-phase same-run (NEXT.md; s7011 refuted the frustum cull and the LOD tiers as cost levers).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: WIDEWIN caps below 6144 vs the VI cliff, 3-phase same-run (NEXT.md; s7012: edge gain saturates by cap 6144 but fps already drops 57->37 there).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
@@ -190,7 +190,13 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    ROGUESQ_DD_LODMUL=<f> (_TOG=1, tools/apply_s7011_lodmul.py) at 0.25 and 4: rsp on-off +1.03 / +1.09 ms vs null arm (mul 1) +0.08 and 0.5 s-shifted
    controls +0.45/-1.40/+0.74, so no effect above the ~1 ms parity noise in either direction. Confound found: arm scripts' default
    ROGUESQ_CULL_SPIKE=tog shares the 1 s parity; the null arm shows it does not bias rsp (s7010's +3.6 stands), use CULL=1 in future tog arms.
-   Remaining cost lever = fewer on-screen cells (pool area cap between 4096 and 8192) -> owner trade (NEXT.md).
+   **s7012 area cap (ROGUESQ_DD_WIDEWIN_CAP=a[,b,c], WIDEWIN=tog3 cycles them per mach second, tools/apply_s7012_widewin_cap.py):** one same-run
+   3-phase run each, 21:9 dd4 L4 CULL=1. Cost (g5e_cost_by_parity.py --phases 3): rsp 13.62 / 15.64 / 16.94 ms at 4096 / 6144 / 8192 (8192-4096 +3.32
+   reproduces s7010's +3.64; 1/3-period shifted splits smear as they must), but fps 57.3 / 37.5 / 34.9 and P(>=2VI) 0.04 / 0.60 / 0.72: the VI cliff
+   (rsp + guest run past ~16.7 ms) is crossed already at 6144. Edge (g5e_edge_score.py phases=3): side-third hard80 left 22.5 / 17.2 / 17.6, right
+   18.2 / 13.5 / 14.4: all the side-edge gain arrives by 6144 (edge knee), the fps cost is nearly all-or-nothing (cliff). Sheet
+   docs/owner_sheet_s7012_widewin_cap.png (rows 2-3 flight; row 1 caught a debrief). Next: caps below 6144 (4608/5120/5632) to find the largest
+   cap that stays under the VI cliff and how much side-edge gain it keeps (NEXT.md).
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).

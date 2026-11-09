@@ -42109,6 +42109,7 @@ RS64_REPLAY = [
     "apply_s6993_ptrmask.py",  # s6993: game pointer test (p & 0xFF000000)==0x80000000 widened to 0xF0000000 (spill arena 0x81000000)
     "apply_s7009_widewin.py",  # s7009: G5e dd>1 terrain window up to 128 cells per axis, tables at 0x83000000, opt-in ROGUESQ_DD_WIDEWIN
     "apply_s7011_lodmul.py",  # s7011: G5e coarser terrain LOD tiers at dd>1, opt-in ROGUESQ_DD_LODMUL (=f), _TOG=1 same-run parity
+    "apply_s7012_widewin_cap.py",  # s7012: G5e host area cap for the s7009 wide window, ROGUESQ_DD_WIDEWIN_CAP=a[,b,c], WIDEWIN=tog3 cycles
 ]
 
 

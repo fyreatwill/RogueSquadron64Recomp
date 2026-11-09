@@ -146,7 +146,8 @@ extern "C" int rs64_dd_scene_update(int level) {
 // moved to 0x83000000 at a 128 stride. g_rs64_ww is latched per binPolygonIntoTerrainGrid call. ROGUESQ_DD_WIDEWIN=1|tog, _N=64..128.
 extern "C" { int g_rs64_ww = 0; }
 extern "C" int rs64_s7009_arm(void) {
-    static int m = -1; if (m < 0) { const char* e = getenv("ROGUESQ_DD_WIDEWIN"); m = !(e && *e) ? 0 : (e[0] == 't' ? 2 : (e[0] != '0')); }
+    static int m = -1; if (m < 0) { const char* e = getenv("ROGUESQ_DD_WIDEWIN"); m = !(e && *e) ? 0 : (e[0] == 't' ? (e[3] == '3' ? 3 : 2) : (e[0] != '0')); }
+    if (m == 3) return 1; /* s7012 tog3: window always wide, rs64_s7012_cap cycles the area cap */
     if (m == 2) { static int last = -1; const uint64_t mt = mach_absolute_time(); const int on = (int)((mt / 24000000u) & 1u);
         if (last < 0) { /* s7010: clock anchor so steady_clock-stamped rings (G1E_TL) can be split by tog parity */
             const long long su = (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -166,6 +167,21 @@ extern "C" float rs64_s7011_lodmul(void) {
     if (!anc) { anc = 1; const long long su = (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
         fprintf(stderr, "[s7010-clk] steady_us=%lld mach=%llu\n", su, (unsigned long long)mt); }
     return ((mt / 24000000u) & 1u) ? m : 1.0f;
+}
+// s7012 G5e (tools/apply_s7012_widewin_cap.py): ROGUESQ_DD_WIDEWIN_CAP=a[,b,c] caps the wide window's cell area; with
+// ROGUESQ_DD_WIDEWIN=tog3 the cap cycles a/b/c on (mach/24e6) % 3 seconds. 0 = no host cap.
+extern "C" int rs64_s7012_cap(void) {
+    static int n = -1; static int v[3] = {0, 0, 0}; static int tog3 = 0;
+    if (n < 0) { n = 0; const char* e = getenv("ROGUESQ_DD_WIDEWIN_CAP");
+        while (e && *e && n < 3) { v[n++] = atoi(e); const char* c = strchr(e, ','); e = c ? c + 1 : nullptr; }
+        const char* w = getenv("ROGUESQ_DD_WIDEWIN"); tog3 = (w && w[0] == 't' && w[1] && w[2] && w[3] == '3');
+        fprintf(stderr, "[s7012] widewin cap n=%d %d,%d,%d tog3=%d\n", n, v[0], v[1], v[2], tog3); }
+    if (n == 0) return 0;
+    if (!tog3) return v[0];
+    const uint64_t mt = mach_absolute_time(); static int anc = 0;
+    if (!anc) { anc = 1; const long long su = (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        fprintf(stderr, "[s7010-clk] steady_us=%lld mach=%llu\n", su, (unsigned long long)mt); }
+    return v[(int)((mt / 24000000u) % 3u) % n];
 }
 extern "C" int rs64_s7009_n(void) {
     static int n = -1; if (n < 0) { const char* e = getenv("ROGUESQ_DD_WIDEWIN_N"); n = (e && *e) ? atoi(e) : 128; if (n < 64) n = 64; if (n > 128) n = 128; }

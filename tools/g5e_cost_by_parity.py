@@ -15,6 +15,7 @@ Usage: g5e_cost_by_parity.py <tl.bin.pid> <log-with-anchor> [--skip-s 130] [--gu
 import struct, sys, argparse, re, bisect, statistics as st
 ap = argparse.ArgumentParser(); ap.add_argument('tl'); ap.add_argument('log')
 ap.add_argument('--skip-s', type=float, default=130.0); ap.add_argument('--guard-ms', type=float, default=60.0); ap.add_argument('--shift-ms', type=float, default=0.0)
+ap.add_argument('--phases', type=int, default=2, help='s7012: 3 = WIDEWIN=tog3, phase=(mach/24e6)%%3 -> cap a/b/c')
 a = ap.parse_args()
 m = None
 for ln in open(a.log, errors='replace'):
@@ -29,7 +30,7 @@ t0 = ev[0][0]; ev = [e for e in ev if e[0] - t0 >= a.skip_s * 1e6]
 import collections
 G = collections.Counter(e[3] for e in ev if e[1] == 15).most_common(1)[0][0]
 vis = [e[0] for e in ev if e[1] == 1]
-def par(t): return int(((M + (t - S) * 24) // 24000000) & 1)
+def par(t): return int(((M + (t - S) * 24) // 24000000) % a.phases)
 def flip_dist_ms(t):
     x = (M + (t - S) * 24) % 24000000; return min(x, 24000000 - x) / 24000.0
 sw = [i for i, e in enumerate(ev) if e[1] == 15 and e[3] == G]
@@ -55,7 +56,7 @@ def pct(v, q): v = sorted(v); return v[min(len(v) - 1, int(q * len(v)))]
 print(f'marks={n} game slot={G} frames kept={len(fr)} (guard {a.guard_ms} ms, skip {a.skip_s} s)')
 print(' arm  n     fps    T_mean  run_mean run_p90  rsp_mean rsp_p90  rdp_mean dpc_mean  P(>=2VI)')
 res = {}
-for p, nm in ((0, 'off'), (1, 'on')):
+for p, nm in (((0, 'off'), (1, 'on')) if a.phases == 2 else tuple((i, 'p%d' % i) for i in range(a.phases))):
     r = [f for f in fr if f['p'] == p]
     if not r: continue
     res[nm] = {k: st.mean(f[k] for f in r) for k in ('T', 'run', 'rsp', 'rdp', 'dpc')}
@@ -64,3 +65,6 @@ for p, nm in ((0, 'off'), (1, 'on')):
           f'{sum(f["nvi"] >= 2 for f in r) / len(r):8.2f}')
 if 'on' in res and 'off' in res:
     print(' delta on-off (ms/frame): ' + ', '.join(f'{k} {res["on"][k] - res["off"][k]:+.2f}' for k in ('T', 'run', 'rsp', 'rdp', 'dpc')))
+if a.phases > 2 and 'p0' in res:
+    for i in range(1, a.phases):
+        if 'p%d' % i in res: print(' delta p%d-p0 (ms/frame): ' % i + ', '.join(f'{k} {res["p%d" % i][k] - res["p0"][k]:+.2f}' for k in ('T', 'run', 'rsp', 'rdp', 'dpc')))
