@@ -185246,3 +185246,21 @@ ORIGIN: n/a; opt-in lever, default off. No mitigation.
 Verdict: selects H-general (and H-nowin's "per-level win" caveat: 3.04 vs 1.52 ms); refutes H-L1only. Opt-in line added to docs/OWNER-OPT-INS.md (default off).
 Durable: NOREF frozen-pose arms need a same-path base + A/A (CURRENT-TRUTH headline).
 Next: NEXT.md: 300 s holds on L1/L4/L5 of dd6 + K=0.6 (same-run K=0 phase) to qualify the opt-in.
+
+## Session 7036 (2026-11-09) — G1c 300 s holds of the dd6 fog-depth off-map cull (K=0.6) on L1, L4, L5: ~505 s flight each, 0 crashes, 0 VI stalls, same-run rsp -2.82 / -1.27 / -1.34 ms: H-clean, opt-in qualified
+HYPOTHESIS-ID: g1c-offmap-fogdepth. No build (s7034 binary). Screen unlocked (no CGSSessionScreenIsLocked key).
+Runs (scratch/s7036/run_hold.zsh <name> <lvl>, via all.zsh, one at a time): scratch/s7031/arm.zsh NOCAP=1, 21:9 dd6 FPS60 CULL_SPIKE=1 DD_UNSAFE MELT WIDEWIN cap 10240
+ G1B, FOGCULL K=0 x3, OFFMAPCULL=tog3 R=-1,2,2 K=0,0.6,0.6 _H=off, delay 170 + hold 330. So each run has a same-run K=0 phase (p0) and two K=0.6 phases (p1, p2 = A/A).
+Summaries (scratch/s7031/sum_H{1,4,5}.txt; crash counts crash_H*.txt all 0):
+ L1 flight 507 s, vi_stalls30s=0, crashlines=0; L4 509 s, 0, 0 (godrefills 4); L5 504 s, 0, 0 (godrefills 9). alive_at_end=1 on all.
+Cost (tools/g5e_cost_by_parity.py --phases 3 --skip-s 130, xor8 split, ~22-23k frames per run):
+ L1 p0 54.0 fps rsp 13.99 P(>=2VI) 0.11 | p1 59.5 / 11.16 / 0.01 | p2 59.1 / 11.32 / 0.01 -> rsp -2.82 / -2.67, run -0.47 / -0.37.
+ L4 p0 57.2 / 12.14 / 0.05 | p1 59.2 / 10.87 / 0.01 | p2 59.3 / 10.74 / 0.01 -> rsp -1.27 / -1.40.
+ L5 p0 60.0 / 10.70 / 0.00 | p1 60.0 / 9.36 / 0.00 | p2 60.0 / 9.36 / 0.00 -> rsp -1.34 / -1.34 (L5 is already under the VI cliff; the saving is headroom).
+ Positive control: the cull visibly fires in every run (rsp drop in p1 and p2 only, the K=0 phase is the control); p1 vs p2 (identical settings) agree within 0.15 ms.
+ Stale file scratch/s7036/tl_H1.bin.33392 (04:05, older and unrelated pid) has no game marks; ignored.
+Reading: the K=0.6 cull ran for ~335 s of flight per level on three levels without a crash or stall, and the s7034/s7035 per-level wins reproduce on a second run
+ (L1 -2.82 vs -3.04, L4 -1.27 vs -1.52). Two lines of evidence (s7034/s7035 frozen-pose image scores + these holds) support offering it.
+ORIGIN: n/a; opt-in lever, default off. No mitigation.
+Verdict: selects H-clean; refutes H-crash; H-L5cost refuted too (L5 win 1.34 ms, as headroom). OWNER-OPT-INS line drops "experimental".
+Next: NEXT.md: make ROGUESQ_DRAW_DISTANCE>=6 with DD_WIDEWIN arm OFFMAPCULL=2 K=0.6 H=off by itself (one knob, env overrides), then test POOLX 6 (12288 cells) under the cull.

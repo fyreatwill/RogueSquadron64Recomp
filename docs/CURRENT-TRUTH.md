@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7034 (2026-11-09).
+Compact operational handoff, as of Session 7036 (2026-11-09).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,10 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7036 300 s holds qualify the fog-depth off-map cull opt-in (H-clean; no build).** scratch/s7036/run_hold.zsh, 21:9 dd6 WIDEWIN cap 10240 MELT FPS60 CULL_SPIKE=1,
+same-run tog3 R=-1,2,2 K=0,0.6,0.6 (cull on 2/3 of each run), ~505 s flight per level, 0 crashes, 0 VI stalls (g5e_cost_by_parity --phases 3 --skip-s 130):
+L1 54.0 -> 59.5/59.1 fps, rsp -2.82/-2.67 (s7034 -3.04); L4 57.2 -> 59.2/59.3, rsp -1.27/-1.40 (s7035 -1.52); L5 60.0 -> 60.0, rsp -1.34 (headroom). The two K=0.6
+phases agree to 0.15 ms (A/A). OWNER-OPT-INS line no longer experimental. Next: fold it into the DD knob, then spend the headroom (NEXT.md).
 **s7035 L4 repeat: H-general, fog-depth off-map cull is an owner opt-in (21:9 dd6 WIDEWIN cap 10240 MELT FPS60, 8 runs, 0 crashes).** Frozen poses (8, NOREF):
 vs the pose-matched base offB, K=0.6 <=0.10 and K=0.7 <=0.01 at every pose, ungated R=2 0.12-7.51, A/A r2k99 0.00 (FOGCULL 0.3 control 0.6-7.3 on the other path).
 Same-run cost: K=0.6 rsp -1.52 ms (55.5 -> 58.5 fps, P(>=2VI) 0.08 -> 0.02), K=0.7 -0.66. Sheet docs/owner_sheet_s7035_fogdepth_l4.jpg; opt-in line in OWNER-OPT-INS.
