@@ -184760,3 +184760,7 @@ Rules out: H-tool, a game-side 120-VI workload. Remaining caveat: the split only
 period (e.g. the EARLY 4 s list, which ends before skip 130 s) would need checking with the A/A null again.
 Next: resume G5e / gfx host-glue cost work with the de-biased split (re-measure s7016 GLUE_TOG=1/2 walk deltas), NEXT.md.
 Note: s7017 tl rings (gitignored) were deleted after analysis; numbers above are the record.
+Verdict: this selects H-periodic (an autopilot-driven 8 s load cycle, not a 120-VI game workload) and refutes H-tool (anchor mapping: injected
+effects are recovered exactly) and H-thread (not needed: the bias sits at the autopilot harmonics and cancels under xor8). It closes the
+tog-parity-bias thread. Next discriminator (NEXT.md, slug gfx-host-glue): GLUE_TOG=1/2 on the xor8 split; a walk delta >= 1 ms selects
+H-glue-big, < 0.3 ms selects H-glue-small.
