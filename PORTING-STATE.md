@@ -185073,3 +185073,7 @@ H-shadow / remainder SELECTED as the largest term: 10.7 ns = 68% is the push (ra
 Ceiling of fast+plain over off: ~0.44 ms/task, no fps change visible. Earlier per-bump ns numbers (s7026 "~21 ns", s7027 "24.4 -> 22.4")
 include this offset: their differences stand, their absolutes do not.
 Next (NEXT.md): name the bad2 mismatch (thread id + path, on the same build) and split the 10.7 ns remainder (shadow insert vs range push vs call).
+Verdict line (s7028): the same-run tog3 split plus the AQ_NULL column selects H-offset (9.0 ns/bump is the timing method) and selects
+H-shadow/remainder (10.7 of 15.7 net ns, 68%), and refutes H-atomics as the main term (3.3 ns, 21% < 40%). Next discriminator (NEXT.md):
+a [s7028-bad2] thread-id/path log splits H-thread vs H-path for the bad2 mismatch, and a same-run shadow-reserve / no-shadow tog3 splits
+H-shadow vs H-call inside the remainder.
