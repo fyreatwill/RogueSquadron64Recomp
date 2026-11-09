@@ -184872,4 +184872,7 @@ HYPOTHESIS-ID: g1c-dd-headroom. G5i: fixed s6995-s6999, owner look, nothing to r
   0 vs +0.066. Saving ~0.14 ms rsp (TL, about 2x the s7017 A/A noise: small) to ~0.29 ms (xctrace leaves); ~1 fps at 51 fps. Default = gated.
 - Rules out: a single dominant ucode block or RT64 decode term behind the per-cell cost; the s7014 "L_1F98 e9prov probes" overhead (now gated).
   Next (NEXT.md): streamTerrainGridCellsByDistance, the largest single per-cell term (+0.31 ms/frame game thread): read what it walks per frame.
+- Verdict: selects H-stream (game thread +0.91 = TL run +0.93, one named function streamTerrainGridCellsByDistance = 34% of it) and a spread gfx
+  cost; refutes H-single-block (no ucode block grows more than 0.15 ms/frame of the 1.72) and H-glue as a significant per-cell term (record_submit 0.16).
+  Next discriminator: iterations per frame of streamTerrainGridCellsByDistance at 8192 vs 10240 cells (ratio ~1.25 -> H-fullwalk, >=1.5 -> H-superlinear).
 Note: tl rings and .trace bundles (gitignored) deleted after analysis; exported XML kept in scratch/s7021.
