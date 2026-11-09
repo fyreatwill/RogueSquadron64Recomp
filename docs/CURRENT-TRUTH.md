@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7006 (2026-11-08).
+Compact operational handoff, as of Session 7008 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -157,7 +157,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: terrain-window side edge at 21:9 dd4 (NEXT.md, G5e residual after s7007).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; active unit: widen the dd>1 terrain window past 64 columns (NEXT.md, G5e side edge, s7008).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
@@ -171,7 +171,11 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 5. **G5d Factor 5 logo: fixed s6903; owner boot at dd2/dd4.**
 6. **G5e fog: done s6904; owner look.** 21:9 dd4 far slab (s7007): fully fogged terrain, fog colour (152,107,98) vs sky band (~205,152,110); DD_FOG barely moves it,
    dd1 has none, opt-in DD_MELT takes it to the dd1 floor same run (hard80 40->26% centre; tools/g5e_edge_score.py; sheet docs/owner_sheet_s7007_melt_219.png).
-   Residual: unfogged straight side/corner edge, read as the FWDWIN terrain window side at 21:9 (single-source): measure next (NEXT.md).
+   Residual side/corner edge = the 64x64 terrain window's SIDE (s7008, two lines: same-run FWDWIN=tog changes side-third hard80 23->18 / 27->12; trace
+   site 13 shows the frustum footprint 140-290 cells wide vs the 64-cell box). K is not a lever: the box is pinned to the near footprint edge, so
+   K 0..30 moves the centre exit only 64->68 cells while 21:9 side rays leave through a side face at 18-22 cells on 98% of calls (tools/g5e_window_geom.py;
+   MAPWIN_K=8 tog run: no consistent change). Fix = widen the window past 64 columns (slot array 0x80132DC0 row<<8 stride, span tables
+   0x80130DB0/0x80131DB0; 9 base sites in binPolygonIntoTerrainGrid/streamTerrainGridCellsByDistance/buildGridCellMeshForFace): NEXT.md.
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).

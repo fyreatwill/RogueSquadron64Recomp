@@ -184531,3 +184531,22 @@ Owner sheet docs/owner_sheet_s7007_melt_219.png: rows (off, on) pairs 1 s apart:
 in both). Raws deleted. Owner save untouched (runner exports NO_SAVE_WRITE).
 ORIGIN: ours. The far scale (s6073) admits terrain to where the level's fog colour, not the sky, ends it. No code change; MELT stays opt-in (owner chooses).
 Next: the terrain window side edge at 21:9 (NEXT.md).
+
+## Session 7008 (2026-11-08) — G5e 21:9 dd4 side edge = the 64x64 terrain window's side; K (forward offset) is not a lever because the box is pinned to the near footprint edge; the fix is a window wider than 64 columns
+HYPOTHESIS-ID: dd-side-edge-219. Recipe scratch/s7008/arm.zsh (s7007 arm, owner recipe FPS60 21:9 dd4 L4, CULL=1, MELT=1), 1260x540 captures, ROGUESQ_G3E_TRACE on.
+- Run w1 (ROGUESQ_DD_FWDWIN=tog, 1 s): tools/g5e_edge_score.py PER=24e6, hard80% off -> on per third: left 23.2 -> 17.9, centre 30.7 -> 23.1, right 27.4 -> 12.0.
+  The edge follows window placement, so it is not the map's own bounds (H-bounds out). Trace (3880 calls): site 13 pre-clamp footprint 140-290 cells
+  wide on every call (bw<=64 0 times), placed box always 64x64 (w64=d64=3880); box sits on a bounds edge in x only 383/3880 times, so the side is the box.
+- Run k1 (FWDWIN on, ROGUESQ_DD_MAPWIN=tog with MAPWIN_K=8, 6 s period; site 16 on=0/1 3745/4658 = toggle fired): K=30 -> 8 per third 17.7->22.6,
+  23.9->25.2, 17.7->14.8: no consistent change. Mission failed ~47 s into the capture (autopilot), so the run is short.
+- Why K does nothing: new tools/g5e_window_geom.py re-places the box from the logged eye + bounds for any K and casts the centre and +-half-FOV rays
+  (tan 1.21 at 16:9, 1.57 at 21:9, from the s6837 hangar FOV numbers, flight FOV not measured = assumption). The box is clamped into the
+  footprint, which starts at the eye, so for K = 0/8/16/30 the centre ray leaves at 63.6/63.9/64.0/68.3 cells; 21:9 side rays leave through a
+  SIDE face at 18.2/20.5/22.4/22.0 cells deep on 97.9% of calls (16:9: 21.8-29.6, 97.8%). No K shows less side; H-cutoff (curved radial edge) not seen.
+- Selected: H-window (two lines: same-run parity image change + trace geometry). Ruled out: H-bounds, K retuning. A lateral fade is not available
+  either: shade alpha is the ucode's depth fog, and MELT keys on it, so a side face at 20 cells depth is barely fogged.
+- Fix scope (code-read): the 64 limit lives in the slot array 0x80132DC0 (64 words x 64 rows, stores at 0x80043020 index (row<<8)+4*col, ends at the
+  descriptor 0x80136DC0, s6591) and the span tables 0x80130DB0/0x80131DB0 (s6879). Base-address sites: binPolygonIntoTerrainGrid 0x800425D4,
+  0x8004271C, 0x80042A48, 0x80042A50; streamTerrainGridCellsByDistance 0x80042CF0, 0x80042D20, 0x80042D48; buildGridCellMeshForFace 0x80043530,
+  0x80043688 (+ funcs_18 0x8007667C reads -0x2DC0 off another base, check). Next: relocate these to a CPU-only region with a 128-col stride.
+- Raws deleted (disk 22 GB). No code change to the game; new tool only.

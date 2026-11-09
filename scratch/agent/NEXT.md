@@ -1,14 +1,17 @@
-# NEXT: terrain-window side edge at 21:9 dd4 (G5e residual after s7007)
-HYPOTHESIS-ID: dd-side-edge-219
-Context: s7007 showed the far fog-colour slab is removed by opt-in DD_MELT. Left over (single-source): an UNFOGGED straight edge with a corner at the
-screen side (m1 frames 494/554, x~150, terrain ~(100,70,58) against sky ~(195,143,108)), see docs/owner_sheet_s7007_melt_219.png row pair 3.
-Hypotheses:
-- H-window: the FWDWIN box (tools/apply_s6901_fwdwin.py: per axis width min(bounds,64), centre eye + K*forward, K=30) does not cover the 21:9 frustum
-  sides; its side/corner is what shows. Fix: widen the lateral extent with the aspect (or shift K less at wide aspects), watch the pool/heap caps.
-- H-bounds: the level's own terrain bounds end there (real map edge). Then nothing to fix but fog/melt by lateral distance.
-- H-cutoff: the radial far cutoff (s6418 x s6904 clipmul 0.25 at dd4) clips side cells. Then the edge would be curved, not a box corner.
-Discriminator (one run, no build): `env CULL=1 ASP=21:9 CW=1260 CH=540 zsh scratch/s7007/arm.zsh 4 4 w1 "ROGUESQ_DD_FWDWIN=tog ROGUESQ_DD_MELT=1" 120 60`
-(FWDWIN toggles on odd mach seconds). Score with tools/g5e_edge_score.py raw 4 2600 50 24e6 per third (side thirds are the test). Outcomes: side-third hard80
-changes with FWDWIN parity and the corner moves -> H-window; the edge sits still in world space across both parities -> H-bounds; curved edge -> H-cutoff.
-Also log the window: if apply_s6901 has no log, add one (eye cell, box x0..x1/z0..z1, heading) under an env flag in the fixup and rebuild once.
-Then fix and give the owner a before/after sheet at 21:9 and 16:9. Delete raws (disk ~22 GB free; each raw ~8 GB, keep only one at a time).
+# NEXT: widen the dd>1 terrain window past 64 columns (G5e side edge, s7008)
+HYPOTHESIS-ID: dd-wide-window
+Context: s7008 showed the 21:9 (and 16:9) side/corner edge at dd4 is the 64x64 terrain window's side face, 18-22 cells deep, on ~98% of calls;
+K retuning cannot help (tools/g5e_window_geom.py). The only lever is more columns across the view.
+Step 1 (offline, this unit's first half): read binPolygonIntoTerrainGrid, streamTerrainGridCellsByDistance, buildGridCellMeshForFace in
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_9.c (base sites 0x800425D4 0x8004271C 0x80042A48 0x80042A50 0x80042CF0
+0x80042D20 0x80042D48 0x80043530 0x80043688; slot store 0x80043020 (row<<8)+4*col) and funcs_18.c 0x8007667C. Write down for each table: element
+size, index formula (row = z or x?), which axis is the 64 limit, and who reads it. Decide whether the window axis to widen is fixed (z rows vs x cols)
+or must follow the heading (then widen both to 128 and keep the area cap).
+Step 2: apply_s7009_widewin.py (registered in RS64_REPLAY list in tools/fixup_game_funcs_vendored.py after apply_s6901): when dd>1 and
+ROGUESQ_DD_WIDEWIN=1|tog, redirect the tables to a CPU-only buffer (host static or the spill arena >=0x80800000; these are not read by the RSP)
+with stride 128, change the index shifts, and let apply_s6901 place w,d up to 128 (cap still honoured). Live tree patched in place + cmake build.
+Hypotheses for the test: H-fix (side edge gone, side-third hard80 drops toward dd1 floor, no crash) / H-budget (pool/cap 2048 or tier cap 600 limits
+the kept cells, so the wider box fills only partially: [gridlog] kept==cap) / H-cost (VI or frame time drops, G1b instrument).
+Test: env CULL=1 ASP=21:9 CW=1260 CH=540 zsh scratch/s7008/arm.zsh 4 4 x1 "ROGUESQ_DD_MELT=1 ROGUESQ_DD_WIDEWIN=tog ROGUESQ_G3E_TRACE=$PWD/scratch/s7008/trace_x1.txt" 120 60
+score g5e_edge_score.py raw 4 2600 50 24e6 per third + g5e_window_geom.py (adapt to 128); positive control = trace shows w>64 in on seconds.
+Then 300 s hold L4/L1/L15 at 21:9 dd4 for crashes; owner sheet 16:9 + 21:9. Delete raws after scoring (disk ~22 GB).
