@@ -185225,3 +185225,24 @@ and buys the 3 ms that takes L1 21:9 dd6 WIDEWIN cap 10240 back to 60 fps. K=0.8
 ORIGIN: n/a; opt-in experiment lever, default off. No mitigation.
 Verdict: this selects H-fogdepth on L1 (K=0.6 image ~neutral, win 3.04 ms >= 3) and refutes H-skyfog and H-nearwin there.
 Next: NEXT.md: L4 repeat of the frozen-pose arms (offA, r2k06, r2k07, r2, k03) + same-run cost; then offer OFFMAPCULL=2 K=0.6 as an opt-in.
+
+## Session 7035 (2026-11-09) — G1c L4 repeat of the fog-depth off-map cull: K=0.6 <=0.10 at 8 pose-matched frozen poses (uncut cull up to 7.51, A/A 0.00) and rsp -1.52 ms same run (55.5 -> 58.5 fps): H-general, offered as owner opt-in
+HYPOTHESIS-ID: g1c-offmap-fogdepth. No build (s7034 binary).
+Run 0, scout (scratch/s7035/scout.zsh, L4 NOREF PIN=1 FZ=99999, 156 s flight, 0 crashes): player x (RAND_TRACE 80137DC0) rises 31 -> 158 by ~110 s -> FZ "36 46 56 66 80 100 125 150".
+Run 1, frozen poses (scratch/s7035/run_L4.zsh; L4 21:9 dd6 FPS60 DD_UNSAFE MELT WIDEWIN cap 10240 CULL_SPIKE=1 FAST=1 PROBES=0, NOREF PIN=1, 8 freezes, 5 arms
+ offA r2k06 r2k07 r2 k03, all 8 freezes x 16 caps each, 0 crashes, 0 VI stalls). First scoring vs offA gave 20-37 for r2, r2k06 AND r2k07 alike (control k03 0.6-7.3).
+ FAILED READING, caught: [posefreeze] y showed the three cull arms on a different flight path from offA/k03 from freeze 1 (y -3.594 vs -4.343, freeze 2 -7.656 vs -11.856),
+ identical across K. Host cull code only reads guest RAM, and k03 also culls through the same hook, so a sim effect was implausible.
+Run 2 (scratch/s7035/run_L4b.zsh): offB (no cull, A/A of offA) and r2k99 (OFFMAPCULL=2 armed, K=99, culls 0/f): BOTH took the "cull" path. So under NOREF the run picks
+ one of two discrete paths run-to-run (L1 with POSE_REF: all 4 s7034 arms identical path); the first scores were a path diff, not a cull.
+Pose-matched scoring (base offB, A/A r2k99, all on path B; tools/s7032_pose_cull_score.py --show): intra 0.00; r2k99 0.00 x8; r2 (uncut cull control) 0.12 0.40 1.66 7.51 0.49 1.61 3.41 6.31;
+ r2k06 0.07 0.04 0.10 0.10 0.03 0.04 0.06 0.09; r2k07 <=0.01. k03 vs offA (path A): 0.61 0.78 6.05 7.34 5.58 4.44 4.20 4.45. Sheet docs/owner_sheet_s7035_fogdepth_l4.jpg
+ (offB | r2k06 | r2k07 | r2 | diffs): by eye r2 cuts a pink wedge of ground at every pose; r2k06 diff is a horizon-line sliver only.
+Run 3, cost same run (scratch/s7034/run_cost.zsh K67L4 4 0,0.6,0.7; 286 s flight, 0 crashes, 0 VI stalls; g5e_cost_by_parity --phases 3 --skip-s 130):
+ p0 off 55.5 fps rsp 12.43 P(>=2VI) 0.08; p1 K=0.6 (culls 2448/f, keeps 1807/f) 58.5 / 10.91 (rsp -1.52, run -0.31) / 0.02; p2 K=0.7 (1740/f) 58.2 / 11.77 (-0.66) / 0.03.
+Reading: L4 matches L1: off-map cells past 0.6 fog ends are fully fogged; cutting them is invisible to <=0.10 (1/50 of the uncut control) and buys 1.5 ms (half of L1's 3.0,
+ consistent with L4's smaller off-map share 62% vs 82%). Two levels, two instruments (frozen-pose image + same-run cost) agree.
+ORIGIN: n/a; opt-in lever, default off. No mitigation.
+Verdict: selects H-general (and H-nowin's "per-level win" caveat: 3.04 vs 1.52 ms); refutes H-L1only. Opt-in line added to docs/OWNER-OPT-INS.md (default off).
+Durable: NOREF frozen-pose arms need a same-path base + A/A (CURRENT-TRUTH headline).
+Next: NEXT.md: 300 s holds on L1/L4/L5 of dd6 + K=0.6 (same-run K=0 phase) to qualify the opt-in.

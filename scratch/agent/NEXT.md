@@ -1,15 +1,14 @@
-# NEXT: G1c — L4 repeat of the off-map fog-depth cull (s7034: K=0.6 near-invisible + rsp -3.04 ms -> 60 fps on L1)
+# NEXT: G1c — 300 s holds of the dd6 + fog-depth off-map cull recipe on L1, L4, L5 (qualify the s7035 opt-in)
 HYPOTHESIS-ID: g1c-offmap-fogdepth
-Context: s7034 ROGUESQ_DD_OFFMAPCULL_K (src/main/upstream_compat.cpp rs64_s7031_cell). L1 21:9 dd6 WIDEWIN cap 10240 MELT FPS60, _H=off:
-frozen poses K=0.6 0.01-0.18 (void poses 0.18/0.17 vs ungated 10.6/39.0, control 3.6-4.0), cost rsp -3.04 (54.8 -> 60 fps). K=0.8 clean but -0.56 only.
-L4 is the open level (94x94 map, 62% off-map cells, s7031 R=2 rsp -3.71 only).
-G5i/owner items: nothing to run (CURRENT-TRUTH items 1-14).
+Context: s7034 (L1) + s7035 (L4) selected H-general: ROGUESQ_DD_OFFMAPCULL=2 _H=off _K=0.6 is ~invisible at 15 frozen poses (<=0.18 vs
+uncut-cull controls up to 39) and saves rsp 3.04 ms (L1, 54.8->60 fps) / 1.52 ms (L4, 55.5->58.5). Opt-in line is in docs/OWNER-OPT-INS.md
+but says "not yet held 300 s on a third level". G1c phase-2 done-criterion: 300 s holds, 0 crashes, no frame-time regression.
+G5i/owner items: nothing to run (CURRENT-TRUTH Next steps 1-14).
 Hypotheses:
- H-general: on L4 K=0.6 is also <= ~0.2 at every frozen pose with rsp win >= 1.5 ms (L4 has less off-map waste) -> offer as owner opt-in (OWNER-OPT-INS.md).
- H-L1only: L4 shows a visible void/wedge at K=0.6 (> ~1.0, control-scale) -> L4's far terrain is less fogged (fe vs map size); try K=0.7/0.8 or per-level K.
- H-nowin: L4 image clean but win < 1 ms -> opt-in helps only L1-like levels; still offer, state the per-level win.
-Work (no build needed):
- 1. Frozen poses: LVTAG=L4k + level 4 in scratch/s7034/run_L1k.zsh (check how g3_optin_pose_arms.sh takes LV; s7031 used LV=4; FZ poses must be re-picked for L4
-    from an offA pass, or use the s7031 L4 pose list if one exists). Arms offA, r2k06, r2k07 (K=0.7), r2 (void control), k03. Score s7032_pose_cull_score.py --sheet.
- 2. Cost: zsh scratch/s7034/run_cost.zsh K68L4 4 0,0.6,0.7 ; g5e_cost_by_parity --phases 3 --skip-s 130 on tl_K68L4.bin.* + scratch/agent/m6/g1_lvl4s7031K68L4/run.log.
-Outcome map: H-general -> add the opt-in line to docs/OWNER-OPT-INS.md (default stays off), close the G1c dd6 headroom thread. H-L1only -> pick the K that is clean on both.
+ H-clean: L1/L4/L5 each hold >=300 s with K=0.6, 0 crash, 0 VI stall, fps >= the K=0 same-run phase -> OWNER-OPT-INS line loses "experimental", close the dd6 headroom thread.
+ H-crash: a crash/stall appears only with the cull (culling list entries the game later dereferences) -> backtrace, name the reader, fix.
+ H-L5cost: L5 (not yet measured) shows win < 0.5 ms -> state per-level wins; still offered.
+Work (no build needed): per level LV in 1 4 5, one run of scratch/s7034/run_cost.zsh with a longer flight (copy to scratch/s7036/run_hold.zsh and pass
+ dur 330 instead of 110 to arm.zsh; tog3 R=-1,2,2 K=0,0.6,0.6 gives same-run K=0 vs K=0.6 cost AND >=300 s exposure to the cull).
+ Score: python3 tools/g5e_cost_by_parity.py --phases 3 --skip-s 130 <tl> scratch/agent/m6/g1_lvl<LV>s7031<N>/run.log ; crashes from scratch/s7031/crash_<N>.txt.
+Pose-scoring trap (s7035): under NOREF runs split into two discrete paths; base and A/A must be on the same path as the arm.
