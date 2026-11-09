@@ -184724,7 +184724,7 @@ measured same-run on L1 21:9 dd4 WIDEWIN=1 (NEXT.md).
   So the s7010 g5e_cost_by_parity.py split has a phase-locked odd-second rsp bias of ~0.6 ms with a ~2 s period. It is the same size as this unit's
   effects. Likely cause (unverified): a game workload every 120 VIs, phase-locked to mach time because VI is host-timed. Null-corrected deltas:
   run G1 skip -0.07 ms rsp, F1 fused vs unfused -0.08 ms. Frame-level saving is within the bias, so it is unresolved. The timer saving is single-source.
-- What it rules out: H-glue as the fix for L1's 58 fps. The removable walks are worth <= ~0.6 ms of gfx-thread CPU, and the frame-level gain is not
+- Verdict: this refutes H-glue as the fix for L1's 58 fps and selects H-noise (the parity split's own bias hides sub-ms effects); the A/A null closes the question of whether the 0.5 s-shift control can be trusted (it cannot when a ~2 s phase-locked load exists). Next discriminator: rsp autocorrelation of the N1 ring (2 s peak -> H-periodic vs H-tool), then a hashed-parity A/A null. What it rules out: H-glue as the fix for L1's 58 fps. The removable walks are worth <= ~0.6 ms of gfx-thread CPU, and the frame-level gain is not
   measurable with a parity split this biased. s7010-s7015 WIDEWIN deltas used the same split with "on" = odd seconds, so they are biased by ~0.6 ms
   rsp in WIDEWIN's favour (the L1 +4.21 ms cost is if anything understated; the direction of every s7014/s7015 conclusion stands).
 - ORIGIN: not a mitigation (a refactor with no behaviour change, verified equivalent by the chk arm).
