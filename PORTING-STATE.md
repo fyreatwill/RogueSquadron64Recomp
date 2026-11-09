@@ -184472,3 +184472,35 @@ The dotted lines are clamp-off too (all six seen were in off seconds). Owner she
 nearest mid-second clamp-on triple, same crop, plus the T40 table). New tool: tools/g5f_owner_sheet.py. Raw deleted.
 Rules out: H-escape at dd4 L4 16:9. Does not cover 21:9 (owner's ultrawide), never measured for G5f.
 G5f now closes on the owner's look at dd1/dd2/dd4 16:9. Next: same check at 21:9 dd4 (NEXT.md).
+
+## Session 7006 (2026-11-08) — G5f at 21:9 dd4 L4: the W clamp still removes the knife lines (0 of 29 viewed clamp-on long-line events are knife lines; the 6 longest clamp-off events are all knife lines); 100+ px lines 170 -> 57 (T40), 243 -> 59 (T20); the smaller ratio than at 16:9 comes from the far-terrain edge moving across the wider view
+
+HYPOTHESIS-ID: g5f-219. No new soak verdicts (latest still s6980). CURRENT-TRUTH 17.2 KB, no maintenance. Owner save sha 687d9f7745c7 before and after.
+G5i (owner priority) was already fixed s6995/s6997/s6999 with nothing left to run, so NEXT.md's G5f 21:9 unit ran.
+
+Run: scratch/s7006/arm.zsh (s7005 copy with CW/CH capture size), `env CULL=1 ASP=21:9 CW=1260 CH=540 zsh scratch/s7006/arm.zsh 4 4 s1
+"ROGUESQ_W_CLAMP=tog ROGUESQ_W_SHEET_DROPLOG=..." 120 90`. Log: `[g1d] ROGUESQ_ASPECT=21:9 -> FB_WIDTH=1024`, `[dd] multiplier 4`, `[ddscene] level=4 gate=1 on=1`.
+Window 1360x626 (2.17:1); the 1260x540 capture squashes it ~7% vertically (fine for line counting). 5511 frames, flight up to ~5040 (3300-3500 in-mission
+cutscene, 5100+ hangar / MISSION FAILED). The picture fills the 21:9 frame (thumbnail strip).
+Detector scratch/s6906/g5f_lines, injection every 50th frame: T=40 100/110 (91%), T=20 84/110 (76%). Both controls pass.
+
+| px (VI phase 0.05-0.95, frames < 5040) | T40 off / on | T20 off / on |
+|---|---|---|
+| 20-39 | 550 / 353 | 482 / 258 |
+| 40-59 | 144 / 88 | 201 / 90 |
+| 60-99 | 99 / 53 | 135 / 42 |
+| 100+ | 170 / 57 | 243 / 59 |
+
+Clamp-on 100+ candidates: 61 distinct frames, most in runs of 4-12 consecutive frames (280-286, 795-800, 1302-1308, 3744-3755), which already rules out
+one-frame knife lines. One frame per event (29 events) was cropped f-1/f/f+1 and viewed: the dd4 far-terrain edge (a flat haze-coloured slab with a straight
+edge against the sky) moving, hill silhouettes, buildings appearing, laser bolts, the cutscene. 0 knife lines. Clamp-off: the 6 longest (339-513 px) are all
+one-frame dark knife lines from the screen edge (f1151, f3435, f3548, f3800, f4081, f4245), and f4081/f4245 have a dotted line in f+1 (the s7005 dotted
+class). So at 21:9 the detector catches the class, and only clamp-off seconds show it.
+Why the ratio is smaller than at 16:9 (3-4x vs 5-7x): the remaining clamp-on long lines are the far-terrain edge, and the wider view puts more of that edge
+on screen. It is real geometry moving, not an escape.
+DROPLOG: 6 drops (one vertex with W -1.4e5..-7.5e5, as at 16:9). 5 fall before the capture window and 1 after it, so no frame in the capture has a dropped
+tri. At 21:9 the hole check is therefore vacuous (s7004 covered it at 16:9 L7: 23 of 23, 0 holes).
+Owner sheet: docs/owner_sheet_s7006_g5f_219.png (6 clamp-off knife lines f-1/f/f+1 beside the nearest mid-second clamp-on triple, plus the T40 table). Raw deleted.
+Rules out: H-wide (knife tris passing the clamp at 21:9). H-holes not testable in this capture (0 drops inside it).
+G5f closes on the owner's look at 16:9 and 21:9, dd1/dd2/dd4. Side observation for next: at 21:9 dd4 the far-terrain edge is a hard straight slab silhouette
+against the sky even with DD_FOG default on (crops c1/c2 in scratch/s7006): G3c(a)/G5e residual, measured next (NEXT.md).
