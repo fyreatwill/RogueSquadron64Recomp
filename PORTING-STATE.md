@@ -185334,3 +185334,26 @@ Owner sheet docs/owner_sheet_s7039_dd6_cutscenes.jpg; OWNER-OPT-INS s7038 line e
 s6923 already showed is the game's own shield mesh (present with MELT off and at retail).
 Rules out: H-cut (no shot loses ground with the bundle), H-unphased (the tog3 same-run design needs no phase lock across runs).
 Next: the same bundle at 16:9 (owner's TV): frozen poses + same-run cost (NEXT.md, dd6-bundle-169-check).
+
+## Session 7040 (2026-11-09) — G1c dd6 auto bundle at 16:9 (owner's TV): invisible at 15 frozen poses (<=0.28 vs A/A 0.00), same-run cost 58.6 -> 59.9 fps on L1 (rsp -3.15 ms): H-clean
+
+Work unit (NEXT.md dd6-bundle-169-check): s7034-s7039 qualified the dd>=6+WIDEWIN auto bundle (off-map fog-depth cull R=2 K=0.6 H=off) at 21:9 only;
+the bundle arms regardless of aspect, and the owner also plays on a 16:9 TV. No game build.
+What ran (one game at a time, scratch/s7040/all.zsh): (1) scratch/s7040/run.zsh = s7038 recipe with ROGUESQ_ASPECT=16:9, arms dd6off (OFFMAPCULL=-1), dd6b (auto),
+dd6b2 (A/A), dd4 (cap 8192); L1 with poseref (7 freezes) then L4 NOREF (8 freezes). (2) scratch/s7040/run_hold.zsh = s7036 hold at 16:9 (CW 640x360) on L1,
+same-run tog3 R=-1,2,2 K=0,0.6,0.6, 505 s hold.
+Health: 9 runs, every one alive_at_end=1, vi_stalls30s=0, crashlines=0. [s7037] bundle line 1 in dd6b/dd6b2, 0 in dd6off/dd4 (arm wiring control).
+L4 path check: all 4 arms on one path ([posefreeze] k=1 pos 46.005,-4.343,90.001 in every arm).
+Image (tools/s7032_pose_cull_score.py, base dd6off, mean |dLum| / frac>24):
+- dd6b vs dd6off: L1 0.01-0.03 at k0-4, 0.19/0.16 at k5/k6 climb poses (21:9 s7038: 0.01-0.04, 0.18/0.17); L4 0.01-0.28, max 0.6% of pixels at k2 (21:9: <=0.23).
+- A/A dd6b vs dd6b2 0.00/0.000 at all 15 poses.
+- Positive control dd4 vs dd6off: L1 5.96-8.33, L4 3.46-8.77 (frac 0.045-0.143).
+- By eye, L4 k2 (worst pose): the autocontrast diff is one thin sliver along the fog-line horizon, as at 21:9.
+Cost (tools/g5e_cost_by_parity.py --phases 3 --skip-s 130, xor8, 22.9k frames): p0 off 58.6 fps, rsp 13.49 ms, P(>=2VI) 0.02; p1 bundle 59.9, rsp 10.34, P 0.00;
+p2 bundle 59.8, rsp 10.48, P 0.00. Delta rsp -3.15 / -3.01 (A/A p1-p2 0.14), run -0.51/-0.45. Cull counter [s7031] ocull/f per phase 0.0 / 2671 / 2692 (51 windows each).
+Verdict H-clean: the bundle is invisible at 16:9 at the same level as at 21:9 and saves 3 ms rsp, lifting L1 dd6 16:9 to 60 fps. Rules out H-cut (no pose loses ground,
+no aspect gate needed) and H-moot (16:9 dd6 off is 58.6 fps with 2% double-VI frames, so the cull still buys the last fps; less than 21:9's 54 -> 59.5).
+Two lines (image + cost/counters), one run per arm. Owner sheets docs/owner_sheet_s7040_dd6_169_l1.jpg / _l4.jpg (cols dd6off | dd6b | dd4 | |dd6b-off| | |dd4-off|);
+16:9 one-line command added to OWNER-OPT-INS. Note the hold reused tag g1_lvl1s7031H1 (arm.zsh tags by level+name), overwriting the s7036 L1 m6 log; s7036 numbers
+are already in its entry.
+Next: G1c dd thread has nothing left to run; take the next unclosed item (NEXT.md).

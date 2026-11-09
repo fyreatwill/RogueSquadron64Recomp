@@ -1,11 +1,10 @@
-# NEXT: does the dd6 bundle hold at 16:9 (the owner's 65" TV), where WIDEWIN matters less? frozen poses + same-run cost
-HYPOTHESIS-ID: dd6-bundle-169-check
-Context: s7034-s7039 qualified the dd>=6+WIDEWIN auto bundle (off-map fog-depth cull R=2 K=0.6 H=off) at 21:9 only (flight poses L1/L4, 300 s holds L1/L4/L5,
-cutscene playlist). The owner also plays on a 16:9 TV; the bundle arms whenever WIDEWIN is set, regardless of aspect. Unmeasured at 16:9: image (does the narrower
-frustum see different off-map cells?) and cost (is dd6 at 16:9 already 60 fps without the cull?).
-Unit, one game at a time:
- 1. Frozen poses: copy scratch/s7038/run.zsh to scratch/s7040/run.zsh with ROGUESQ_ASPECT=16:9; arms dd6off (OFFMAPCULL=-1), dd6b (auto), dd6b2 (A/A), dd4 (cap 8192);
-    L1 then L4 (L4 is NOREF: score against a same-path base, check [posefreeze] pos).
- 2. Cost: s7036-style same-run hold (scratch/s7036/run_hold.zsh, tog3 R=-1,2,2 K=0,0.6,0.6) at 16:9 on L1, g5e_cost_by_parity --phases 3 --skip-s 130.
-Outcomes: H-clean (dd6b vs dd6off <= A/A + 0.3 at every pose, cull fires) -> OWNER-OPT-INS 16:9 line with fps; H-cut (a pose loses ground) -> gate the bundle by
-aspect; H-moot (16:9 dd6off already ~60 fps, cull saves nothing) -> note it, the bundle stays harmless.
+# NEXT: owner max recipe (dd6 bundle) per-level sweep: does every level reach flight and hold at 16:9 and 21:9?
+HYPOTHESIS-ID: dd6-bundle-level-sweep
+Context: s7036-s7040 qualified the dd6 + WIDEWIN + MELT auto bundle (OWNER-OPT-INS "Farthest view" line) on L1, L4, L5 (holds) and the cutscene playlist,
+at 21:9 and (s7040) 16:9 on L1/L4. The owner will fly every mission with that one line; levels 0, 2, 3, 6-9, 11-18 have never run at dd6 + WIDEWIN + bundle.
+This is qualification of a new opt-in recipe, not a G4 repeat-hold crash hunt.
+Unit, one game at a time: scratch/s7040/run_hold.zsh-style hold (16:9, tog3 R=-1,2,2 K=0,0.6,0.6 so the cost split comes free) on 4-5 unrun levels per iteration,
+starting with L2, L3, L6, L7 (L10 cloud level has no terrain grid: health only). Per level: alive_at_end, vi_stalls30s, crashlines, fl fps per phase
+(g5e_cost_by_parity --phases 3 --skip-s 130), [s7031] ocull/f per phase. Note arm.zsh tags m6 dirs by level+name (g1_lvl<L>s7031<name>): use unique names.
+Outcomes: H-clean (all hold, bundle phase >= off phase fps) -> extend OWNER-OPT-INS level list; H-fail (crash/stall/fps drop on a level) -> root-cause that level
+(backtrace, writer), it is a datum; H-nocull (ocull 0 on a level) -> note it, bundle harmless there.
