@@ -185098,3 +185098,32 @@ bridge < 0.3 ms/task left). BUMPFAST and BUMPFAST=2 stay opt-in (exact; ~3-5 ns/
 Next: NEXT.md g1c-fogged-cell-cull (do fully fogged cells beyond dd4 pay the dd6 cost for no image).
 Verdict: selects H-checker for the s7028 bad2 (refutes H-thread and H-path) and selects H-call for the 10.7 ns remainder (refutes H-shadow).
 Next discriminator: per-ring fog-pixel fraction of the cells beyond the dd4 radius plus a same-run ROGUESQ_DD_FOGCULL tog3 cost arm (H-fogwaste vs H-visible vs H-gamecost).
+
+## Session 7030 (2026-11-09) — G1c fogged-cell cull: only 2% of dd6 cells lie past the fog end (H-fogwaste refuted); a depth cull at 0.5x fog end removes 51% of cells, rsp -4.9 ms/frame (48.6-53.8 -> 59.7-60 fps) with no visible change on L1, because those cells sit behind the horizon "wall"
+HYPOTHESIS-ID: g1c-fogged-cell-cull. G5i/owner items checked first: nothing to run. CURRENT-TRUTH 33.9 KB, no maintenance. No new soak verdicts.
+Built (one build): tools/apply_s7030_fogcull.py (funcs_9.c streamTerrainGridCellsByDistance, registered in RS64_REPLAY after s7025) + rs64_s7030_begin /
+rs64_s7030_cell (src/main/upstream_compat.cpp). At entry: eye = a0 (logged a0=0x80130C10) and the 4 frustum far corners 0x80130C1C.. give the horizontal
+forward unit vector. At the call path (L_80042DC4, before getGridCellValueAt) a cell whose near-edge forward depth (f20*fx + f22*fz - 0.71) > k x fog end
+takes the game's own span-reject edge (L_80042DB0). Fog end = rs64_s6904_fog's scaled end (max(e,D) x ke) / 2 (grid units). ROGUESQ_DD_FOGCULL=<k>|tog3
+(ROGUESQ_DD_FOGCULL_K=a,b,c, phase (mach/24e6)%3, [s7010-clk] anchor); every phase keeps a depth/fog-end histogram ([s7030] lines every 10 s).
+Default OFF (env unset = one global test per call). Tools: tools/s7030_fogcull_image.py (per-phase mean-image |d| + silhouette), tools/s7030_fogcull_sheet.py.
+Runs (scratch/s7030, L1 dd6 21:9 WIDEWIN cap 10240 MELT, owner path OWNER_TIMING, CULL=1, 0 crashes, 0 VI stalls, alive_at_end=1 in all three):
+- F (k=0/1/0.5, 640x274 capture 110 s): in flight 7040 cells/f reach the call path; depth histogram (bins of 0.1 fe; fe 86 grid, frustum far F 108):
+  195,480,767,1030,1080,977,846,696,510,292 | >=1.0: 116,28,8.6,0.2. So only ~151 cells/f (2.1%) are past the fog end: k=1 culls 152-156/f.
+- G (same K, no capture, G1E_TL): p0 53.8 fps rsp 13.80 run 3.35; k=1 p1 53.9 / rsp +0.15 / run +0.15 (nothing); k=0.5 p2 60.0 fps, rsp -4.88, run -0.69,
+  P(>=2VI) 0.11 -> 0.00 (3742 cells/f culled, 51%). Control: 333 ms shift smears p2 to -1.59 (expected ~1/3 mix).
+- H (k=0/0.5/0.3, capture): p0 48.6 fps rsp 14.16; k=0.5 59.7 fps rsp -4.96 run -0.59; k=0.3 60.0 fps rsp -9.25 run -1.18 (5983 cells/f culled).
+  Image (s7030_fogcull_image.py): mean |P-P0| k=1 1.80 (run F), k=0.5 2.43 (F) / 3.10 (H), k=0.3 8.18 (H, worst rows 19.4): the instrument
+  sees the k=0.3 positive control (2.6-4.5x the k=0.5 reading). The silhouette column metric moved for no arm (insensitive, do not use).
+  Sheets (6 adjacent-second triples): k=0.5 frames look like k=0: the dark textured horizon "wall" stays whole; k=0.3 breaks the wall into steps with sky
+  gaps. docs/owner_sheet_s7030_fogcull.jpg (run H: k=0 | k=0.5 | k=0.3).
+Reading: H-fogwaste refuted (the window rarely reaches the fog end: 2% of cells, 0 ms). H-visible not shown on L1: cells at 0.5-1.0 fog end cost ~5 ms rsp
+(the whole dd4 -> dd6 cost and more) yet are hidden behind the horizon wall. That wall looks like clamped OFF-MAP cells: s7024 found 97-98% of
+getGridCellValueAt time in the off-map clampGridCellLookup branch (4500-6300 calls/frame of ~7000 cells). New lead H-offmap: most of the dd6 window
+cost on L1 is off-map clamp cells drawn as a plateau/wall, and cells behind its face are drawn and never seen. Single level, single-source (image read
+by eye + one metric); k=0.5 is NOT safe as a default: on an open level the same depth band may be visible terrain.
+ORIGIN: n/a (opt-in experiment lever, default off; no mitigation).
+Rules out: fully fogged cells as the dd6 cost (H-fogwaste); H-gamecost as the main term (run saves only 0.6-1.2 ms vs rsp 4.9-9.3: the cost is ucode).
+Next: NEXT.md g1c-offmap-cells: classify every streamed cell on-map vs off-map (clamp branch) and by depth in one build; same-run arms off-map cull beyond
+the first R rings outside the map edge vs none, on L1 and an open level (L4), with the image positive control.
+Verdict: refutes H-fogwaste and H-gamecost; H-visible open (not visible on L1 at k=0.5); selects new H-offmap lead.

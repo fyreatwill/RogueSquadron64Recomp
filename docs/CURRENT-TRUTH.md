@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7029 (2026-11-09).
+Compact operational handoff, as of Session 7030 (2026-11-09).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,12 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7030 fogged-cell cull (ROGUESQ_DD_FOGCULL=<k>|tog3, opt-in default off, tools/apply_s7030_fogcull.py; L1 dd6 21:9 WIDEWIN cap 10240, 3 runs, 0 crashes):**
+H-fogwaste refuted: only 2.1% of the ~7040 streamed cells/frame lie past the fog end (fe ~86 grid, frustum far 108); culling them (k=1) saves 0 ms.
+But a forward-depth cull at 0.5 x fog end removes 51% of cells: rsp -4.9 ms/frame, 48.6-53.8 -> 59.7-60 fps (two runs; 1/3-period shifted control smears),
+and on L1 the image does not change (mean-image |d| 2.4-3.1 vs k=0.3 positive control 8.2; sheet docs/owner_sheet_s7030_fogcull.jpg): those cells sit
+behind the dark horizon "wall", which looks like clamped off-map cells (s7024: 97-98% of getGridCellValueAt time is the off-map clamp branch).
+New lead H-offmap (single level, single-source). k=0.5 is NOT a default candidate until an open level is checked. Next: NEXT.md (off-map cells).
 **s7029 bridge trimming CLOSED (H-call; L1 dd6 21:9 WIDEWIN cap 10240, 0 crashes x2):** the s7028 BUMPFAST=2 bad2=1 was the CHECKER: its
 `ref.exchange(0) == x && ...` short-circuited on the 4 planted flushes, so ref_cmds was never reset and flush 5 always miscompared. Fixed;
 BUMPFAST=2 CHECK now exact (bad2 0 of 13499, ctl2 4/4, state guard 475M bad 0). Shadow split, same run (new ROGUESQ_G1E_BUMPFAST_SH=tog3,
@@ -58,11 +64,7 @@ component 0.4-0.9 ms in 8/8 rings), not the tool or the game. New split xor8 = (
 old) cancels any 8 s-periodic load. Same build: A/A null rsp +0.08 ms (parity on the same frames +0.73); positive control WIDEWIN=tog L1 21:9 dd4
 rsp +3.50 ms, fps 60.0/59.6 (s7015 parity said +4.21, 58.1), 0 crashes. g5e_cost_by_parity.py reads split= from the anchor. Older parity deltas
 under ~1 ms remain unreadable; re-measure with the new split.
-**s7016 gfx-host-glue:** only 3 of rs64_dpc_record_submit's 12 walks are live in flight (pillar, rect_wrap, spike cull); the dd4 21:9 stream is
-~2 MB/frame. Rect-wrap is now fused into the pillar walk (default on, ROGUESQ_GLUE_FUSE=0 old; chk arm: 119 fused patches, 0 left for the old pass):
-walk CPU 30.8 -> 16.6 ms per active second (single-source, GLUE_TIME timer). **The s7010 mach-parity split is biased:** A/A null (GLUE_TOG=3,
-nothing toggled) gives odd seconds rsp -0.63 ms (shift 250 -> -0.06, 500 -> +0.49: a ~2 s phase-locked load). Every tog delta under ~1 ms
-from g5e_cost_by_parity.py is unreadable until the split is fixed; s7014/s7015 WIDEWIN costs are understated by ~0.6 ms rsp (direction stands).
+**s7016** (rect-wrap fused into the pillar walk, default; parity split bias found -> fixed s7017): PORTING-STATE s7016.
 **s7015 WIDEWIN owner-path cost on other levels/aspect (same-run tog, FAST=1 PROBES=0, dd4 MELT CULL=1, 0 crashes, 0 VI stalls, 320 s holds):**
 L15 21:9 fps 60.0/60.0 (rsp +1.95), L4 16:9 59.7/59.6 (rsp +2.34), L1 21:9 60.0/58.1, P(>=2VI) 0.00/0.03 (rsp 9.27->13.48, +4.21: the densest arm);
 0.5 s-shifted controls collapse (|rsp| <= 0.5). WIDEWIN is offered in OWNER-OPT-INS; default stays the owner's call. Next: trim the gfx-thread host glue (NEXT.md).
@@ -224,7 +226,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); s7026 DPC submit = RT64 per-byte + ~21 ns/bump bridge, wait flat; s7027 per-bump checks only ~3.6 of ~24 ns (H-checks refuted); s7028/s7029 bridge split closed (H-call, shadow refuted); active unit: NEXT.md (fogged-cell cull).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); s7026 DPC submit = RT64 per-byte + ~21 ns/bump bridge, wait flat; s7027 per-bump checks only ~3.6 of ~24 ns (H-checks refuted); s7028/s7029 bridge split closed (H-call, shadow refuted); s7030 fogged-cell cull: H-fogwaste refuted, 0.5 x fog-end depth cull = rsp -4.9 ms invisible on L1 (H-offmap lead); active unit: NEXT.md (off-map cells).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
@@ -280,6 +282,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    fixed, all caps); lock wait flat ~1.4 ms/task (RT64 fbwait, single-source name), not per-cell. Next: bump fast path in rsp_dpc_submit_impl (NEXT.md).
    s7027: bump fast path (ROGUESQ_G1E_BUMPFAST, opt-in, exact: 408M checked, bad 0, ctl 4) skips all per-bump checks on 54% of bumps but cuts
    bridge self only 8% (24.4 -> 22.4 ns/bump): H-checks refuted; the cost is the push/counters/atomics (or AQ=3 timing offset). Next: split those (NEXT.md).
+   s7028/s7029: bridge closed (H-call). s7030: ROGUESQ_DD_FOGCULL (opt-in): 2% of cells past fog end (0 ms); 0.5 x fog end culls 51%, rsp -4.9 ms, invisible on L1
+   (cells behind the off-map horizon wall?). Next: classify on-map/off-map cells and cull off-map rings, L1 + L4 (NEXT.md).
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).

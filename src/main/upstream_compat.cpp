@@ -6,6 +6,7 @@
 // All taken verbatim from MikeSemicolonD/N64ModernRuntime fork additions.
 // Lifted into our repo so we don't have to maintain a librecomp fork.
 
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -121,6 +122,7 @@ extern "C" void rs64_s6904_fog(uint8_t *rdram, recomp_context *ctx) {
     s6904_s = s <= D ? D : s;
     extern volatile int g_rs64_dd_scene;
     const int on = want && g_rs64_dd_scene;
+    { extern float g_rs64_s7030_fe; g_rs64_s7030_fe = (float)((e <= D ? D : e) * (on ? ke : 1.0) * 0.5); } /* s7030: fog end, grid units (cell = 2 world) */
     if (on) {
         auto zf = [&](double dist) { const double z = (double)A + (double)B / dist; return z < -1.0 ? 0.0 : (z + 1.0) / 2.0; };
         double f6 = zf((double)(s <= D ? D : s) * 256.0 * ks), f4 = zf((double)(e <= D ? D : e) * 256.0 * ke);
@@ -134,6 +136,43 @@ extern "C" void rs64_s6904_fog(uint8_t *rdram, recomp_context *ctx) {
     }
 }
 
+// s7030 G1c fogged-cell cull (tools/apply_s7030_fogcull.py). ROGUESQ_DD_FOGCULL=<k> culls, in the terrain stream, cells whose
+// near-edge forward depth is past k x fog end; =tog3 cycles k over ROGUESQ_DD_FOGCULL_K=a,b,c (default 0,1,0.5) on (mach/24e6)%3 s.
+// Every phase keeps a histogram of cell depth / fog end (20 bins of 0.1, last = >=1.9) over cells reaching the call path.
+extern "C" void rs64_tog_anchor(uint64_t mt);
+extern "C" { int g_rs64_s7030 = [] { const char* e = getenv("ROGUESQ_DD_FOGCULL"); return (e && *e && *e != '0') ? 1 : 0; }();
+             float g_rs64_s7030_f[2] = {0.0f, 1.0f}; float g_rs64_s7030_fe = 0.0f; }
+static float s7030_k[3] = {0.0f, 1.0f, 0.5f}; static int s7030_tog3 = 0, s7030_ph = 0; static float s7030_thr = 0.0f, s7030_fe = 0.0f;
+static uint64_t s7030_h[3][20], s7030_cull[3], s7030_frames[3], s7030_t0 = 0, s7030_last = 0; static double s7030_F[3], s7030_FE[3];
+extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
+    static int init = 0;
+    if (!init) { init = 1; const char* e = getenv("ROGUESQ_DD_FOGCULL");
+        if (e && e[0] == 't') { s7030_tog3 = 1; const char* k = getenv("ROGUESQ_DD_FOGCULL_K"); float a, b, c;
+            if (k && sscanf(k, "%f,%f,%f", &a, &b, &c) == 3) { s7030_k[0] = a; s7030_k[1] = b; s7030_k[2] = c; } }
+        else { s7030_k[0] = s7030_k[1] = s7030_k[2] = e ? (float)atof(e) : 0.0f; }
+        fprintf(stderr, "[s7030] fogcull tog3=%d k=%g,%g,%g a0=0x%08X\n", s7030_tog3, s7030_k[0], s7030_k[1], s7030_k[2], a0); }
+    auto rf = [&](uint32_t a) { uint32_t v = (uint32_t)MEM_W(0, (int64_t)(int32_t)a); float f; memcpy(&f, &v, 4); return f; };
+    const float ex = rf(a0), ez = rf(a0 + 8); float fx = 0, fz = 0;
+    for (uint32_t i = 0; i < 4; i++) { fx += rf(0x80130C1Cu + 12 * i) - ex; fz += rf(0x80130C1Cu + 12 * i + 8) - ez; }
+    const float n = sqrtf(fx * fx + fz * fz); if (n > 1e-6f) { fx /= n; fz /= n; } else { fx = 0; fz = 1; }
+    g_rs64_s7030_f[0] = fx; g_rs64_s7030_f[1] = fz;
+    const uint64_t mt = mach_absolute_time(); s7030_ph = s7030_tog3 ? (int)((mt / 24000000u) % 3u) : 0;
+    s7030_fe = g_rs64_s7030_fe; s7030_thr = s7030_k[s7030_ph] > 0 && s7030_fe > 0 ? s7030_k[s7030_ph] * s7030_fe : 0.0f;
+    float F = 0; for (uint32_t i = 0; i < 4; i++) F += (rf(0x80130C1Cu + 12 * i) - ex) * fx + (rf(0x80130C1Cu + 12 * i + 8) - ez) * fz;
+    s7030_frames[s7030_ph]++; s7030_F[s7030_ph] += F * 0.25f; s7030_FE[s7030_ph] += s7030_fe;
+    if (!s7030_t0) { s7030_t0 = s7030_last = mt; if (s7030_tog3) rs64_tog_anchor(mt); } /* anchor for g5e_cost_by_parity --phases 3 */
+    if (mt - s7030_last > 240000000ull) { s7030_last = mt;
+        for (int p = 0; p < 3; p++) { const double fr = s7030_frames[p] ? (double)s7030_frames[p] : 1.0; uint64_t tot = 0; for (int b = 0; b < 20; b++) tot += s7030_h[p][b];
+            char buf[400]; int o = 0; for (int b = 0; b < 20; b++) o += snprintf(buf + o, sizeof buf - o, "%s%.1f", b ? "," : "", s7030_h[p][b] / fr);
+            fprintf(stderr, "[s7030] t=%.0f ph=%d k=%g frames=%llu cells/f=%.1f cull/f=%.1f F=%.1f fe=%.1f hist/f=%s\n", (mt - s7030_t0) / 24e6, p, s7030_k[p],
+                    (unsigned long long)s7030_frames[p], tot / fr, s7030_cull[p] / fr, s7030_F[p] / fr, s7030_FE[p] / fr, buf); } }
+}
+extern "C" int rs64_s7030_cell(float d) {
+    d -= 0.71f; /* near edge of a unit cell */
+    if (s7030_fe > 0) { int b = (int)(d / s7030_fe * 10.0f); b = b < 0 ? 0 : b > 19 ? 19 : b; s7030_h[s7030_ph][b]++; }
+    if (s7030_thr > 0 && d > s7030_thr) { s7030_cull[s7030_ph]++; return 1; }
+    return 0;
+}
 extern "C" int rs64_dd_scene_update(int level) {
     static int mode = -1, last = -1, last_level = -1000;
     if (mode < 0) { const char* e = getenv("ROGUESQ_DD_CINE_GATE"); mode = !(e && *e) ? 1 : (e[0] == 't' ? 2 : (e[0] != '0')); }
