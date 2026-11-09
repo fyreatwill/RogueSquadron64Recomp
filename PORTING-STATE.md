@@ -184550,3 +184550,25 @@ HYPOTHESIS-ID: dd-side-edge-219. Recipe scratch/s7008/arm.zsh (s7007 arm, owner 
   0x8004271C, 0x80042A48, 0x80042A50; streamTerrainGridCellsByDistance 0x80042CF0, 0x80042D20, 0x80042D48; buildGridCellMeshForFace 0x80043530,
   0x80043688 (+ funcs_18 0x8007667C reads -0x2DC0 off another base, check). Next: relocate these to a CPU-only region with a 128-col stride.
 - Raws deleted (disk 22 GB). No code change to the game; new tool only.
+
+## Session 7009 (2026-11-08) — G5e: ROGUESQ_DD_WIDEWIN lets the dd>1 terrain window grow to 128 cells per axis (tables relocated to 0x83000000, 128 stride); same-run 21:9 dd4 side hard edges drop (right 16->8%, 18->6%), centre flat, 0 crashes, but ~17% frame-rate cost that follows cell count
+HYPOTHESIS-ID: dd-wide-window. G5i checked first: fixed s6995-s6999, waiting on the owner's look, nothing to run.
+- Code-read (asm in RecompiledFuncs comments): span tables min 0x80130DB0 / max 0x80131DB0 are [64 rows z][64 cols x] bytes, index (row<<6)+col
+  (scanConvertTriangleToSpanTable 0x80042610/0x80042758, binPolygon clear 0x80042A64, stream 0x80042D3C); the window header 0x80132DB0 holds x0,w,z0,d
+  (binPolygon 0x80042A30 turns maxima into counts); slot array 0x80132DC0 [64][64] words, (row<<8)+4*col (stream 0x80042D2C + 4/col, slot store
+  0x80043020; buildGridCellMeshForFace neighbour reads 0x80043564/5A8/5DC/620/6A8/70C). Edge arrays 0x80130C70/0x80130D10 are 80 halfwords (rows >= 80
+  already spill to host via s6883). Axes are world x/z, not heading, so the side face needs both axes wide. No other function addresses these tables
+  (funcs_18 0x8007667C's -0x2DC0 is a different base). Order in buildVisibleTerrainGridAroundCamera: binPolygon -> stream -> meshBuild (0x80043A84/90/A4).
+- Built tools/apply_s7009_widewin.py (RS64_REPLAY, after s6993) + src/main/upstream_compat.cpp (g_rs64_ww, rs64_s7009_arm/_n, s6883 bound 63->127):
+  g_rs64_ww latched per binPolygon call; 9 base sites -> 0x83000000/0x83004000/0x83008000, 11 shifts +1, s6049/s6880 bound and s6882 narrowing use the
+  wide base/size; s6901 window placement up to N per axis, cap spent on forward axis to 64 first, then side. Trace 17 (ww,w,d,cap), 18 (pool ran out).
+  ORIGIN: the 64 limit is the game's own table layout (not a corruption); the new tables live above the 8 MB the game is told about, CPU-only.
+- Run x1 (scratch/s7009/arm.zsh 4 4, 21:9 1260x540, MELT=1, WIDEWIN=tog, N=128): trace on-calls 128x64 1642, 64x128 707, 64x64 294 (= small footprint);
+  cap 8192 in flight, site 18 = 0 (pool never exhausted: H-budget out). g5e_edge_score hard80% off->on per third: 18.4->14.6, 22.7->22.5, 16.1->8.3.
+  Captured fps by parity off 59.6 / on 50.7. 0 crashes. Owner sheet docs/owner_sheet_s7009_widewin_219.png (new tools/g5e_widewin_sheet.py): terrain
+  renders whole in wide frames, no holes.
+- Run n96 (same, WIDEWIN_N=96): windows 96x85 / 85x96 (area refills to the 8192 cap); hard80% 21.2->12.7, 25.2->25.1, 17.7->5.8; fps off 61.9 / on 49.4; 0 crashes.
+- Selected: H-fix for the sides (two runs, same-run parity both times), H-cost present (two runs). Ruled out: H-budget (pool). Cost follows kept-cell
+  area, not window shape (N96 = N128 cost). Remaining hard80 in the centre third (22-25%) is the dd1-floor range (11-27%), not this edge.
+- Holds L4/L1/L15 300 s at WIDEWIN=1 queued as soaks scratch/agent/soak_queue/s7009_widewin_L*.sh. OWNER-OPT-INS gains an experimental line.
+- Raws deleted. Next: name the cost (guest build vs RSP vs RDP) with the G1B instrument in one tog run, then cull or cap (NEXT.md).

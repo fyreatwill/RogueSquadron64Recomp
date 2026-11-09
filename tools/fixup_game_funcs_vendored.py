@@ -42107,6 +42107,7 @@ RS64_REPLAY = [
     "apply_s6942_envcache.py",  # s6942: G1e slot-dispatcher trace env lookups cached (game-thread getenv per slot call)
     "apply_s6963_cellidx.py",  # s6963: G1e clampGridCellLookup chain walk answered from a host index
     "apply_s6993_ptrmask.py",  # s6993: game pointer test (p & 0xFF000000)==0x80000000 widened to 0xF0000000 (spill arena 0x81000000)
+    "apply_s7009_widewin.py",  # s7009: G5e dd>1 terrain window up to 128 cells per axis, tables at 0x83000000, opt-in ROGUESQ_DD_WIDEWIN
 ]
 
 

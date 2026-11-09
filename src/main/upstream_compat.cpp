@@ -142,6 +142,18 @@ extern "C" int rs64_dd_scene_update(int level) {
     if (on != last || level != last_level) { fprintf(stderr, "[ddscene] level=%d gate=%d on=%d\n", level, gate, on); last = on; last_level = level; }
     return on;
 }
+// s7009 G5e widewin (tools/apply_s7009_widewin.py): the dd>1 terrain window may grow to N cells per axis, with the span/slot tables
+// moved to 0x83000000 at a 128 stride. g_rs64_ww is latched per binPolygonIntoTerrainGrid call. ROGUESQ_DD_WIDEWIN=1|tog, _N=64..128.
+extern "C" { int g_rs64_ww = 0; }
+extern "C" int rs64_s7009_arm(void) {
+    static int m = -1; if (m < 0) { const char* e = getenv("ROGUESQ_DD_WIDEWIN"); m = !(e && *e) ? 0 : (e[0] == 't' ? 2 : (e[0] != '0')); }
+    if (m == 2) { static int last = -1; const int on = (int)((mach_absolute_time() / 24000000u) & 1u); if (on != last) { last = on; } return on; }
+    return m;
+}
+extern "C" int rs64_s7009_n(void) {
+    static int n = -1; if (n < 0) { const char* e = getenv("ROGUESQ_DD_WIDEWIN_N"); n = (e && *e) ? atoi(e) : 128; if (n < 64) n = 64; if (n > 128) n = 128; }
+    return n;
+}
 extern "C" int rs64_s6882_on(void) { static int on = -1; if (on < 0) { const char* e = getenv("ROGUESQ_G1D_SPANNARROW"); const char* d = getenv("ROGUESQ_DRAW_DISTANCE"); on = (e && *e == '0') ? 0 : (d && *d && atof(d) != 1.0) ? 2 : 1; } return on == 2 || (on == 1 && rs64_s6880_wide()); }
 // s6883: span scan edge rows past 80 and span cells outside 64x64 (tools/apply_s6883_spancell.py). ROGUESQ_G1D_SPANCELL (default 3 where the s6882 gate runs, =0 old) bits 1 = rows >= 80 in host arrays, 2 = 64x64 cell bound,
 // 4 = control, blank rows 20..23. ROGUESQ_G1D_SPANLOG=1 logs [spancell]; ROGUESQ_G1D_SPANDUMP=<prefix> writes both tables at each POSE_FREEZE.
@@ -180,9 +192,9 @@ extern "C" void rs64_s6883_row(uint32_t a3, int32_t y, int32_t t4, int64_t* x0, 
     const uint32_t i = (a3 - 0x80130C70u) >> 1; const int m = s6883_mode(), lg = s6883_log(); const bool deep = i >= 80 && i < S6883_N;
     const int64_t g0 = *x0, g1 = *x1, t0 = deep ? s6883_e[0][i] : g0, t1 = deep ? s6883_e[1][i] : g1;
     if ((m & 1) && deep) { *x0 = t0; *x1 = t1; }
-    if (m & 2) {
-        if (y < 0 || y > 63) *x1 = *x0 - 1;
-        else { if (*x0 < 0) *x0 = 0; if (*x1 > 63) *x1 = 63; }
+    if (m & 2) { const int L7009 = g_rs64_ww ? 127 : 63; /* s7009 widewin: 128-stride tables */
+        if (y < 0 || y > L7009) *x1 = *x0 - 1;
+        else { if (*x0 < 0) *x0 = 0; if (*x1 > L7009) *x1 = L7009; }
     }
     if (!lg) return;
     auto& s = s6883; s.rows++;
