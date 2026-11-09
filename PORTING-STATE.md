@@ -184401,3 +184401,42 @@ Result: selects H-gone, and goes further: under the current rule the clamp REMOV
 
 Owner save sha 687d9f7745c7 before and after. Disk 21 GB free after deleting the raw.
 Next: G5f at dd2 on a second level (L7), same-run clamp toggle, the one recipe G5f has not covered (NEXT.md).
+
+## Session 7004 (2026-11-08) — G5f dd2 L7: the W clamp still cuts long lines (100+ px 22 -> 9 and 8 -> 3, two runs) and its dropped tris leave no visible holes (23 of 23 in-flight drops matched to frames by a new ROGUESQ_W_SHEET_DROPLOG); short-line counts at L7 follow scene content, not the clamp
+
+HYPOTHESIS-ID: g5f-dd2-l7. No new soak verdicts (latest s6980). CURRENT-TRUTH 16.6 KB, no maintenance. Screen unlocked (ioreg). Owner save sha 687d9f7745c7 before and after.
+
+Question (NEXT): at dd2 on a second level (L7, dense canyon terrain), does the default W clamp still remove knife lines without new holes?
+H-holds (fewer long lines, kept lines real), H-level (L7 mixed-sign tris > 200 px get dropped and leave holes), H-escape (clamp-on long lines are still knife lines).
+
+Runs (scratch/s7004/arm.zsh = s7003's copy): LEVEL=7 (`[ddscene] level=7 on=1`), `ROGUESQ_DRAW_DISTANCE multiplier 2`, 16:9, FPS60, CULL_SPIKE=1,
+`ROGUESQ_W_CLAMP=tog ROGUESQ_W_SHEET_STATS=1`, 960x540 capture 120-210 s. Detector scratch/s6906/g5f_lines T=40 min 20, injection every 50th frame:
+d1 115/118 (97%), d2 111/113 (98%); control passes both runs.
+Boring thing found first: the autopilot crashes into the canyon about 75 s into the capture (GAME OVER at frame ~4000 in d1, ~3700 in d2) and the rest
+is SELECT LEVEL / hangar holo beams. The first tally (all frames) was dominated by hangar holo lines (window 4: 350/329). All numbers below are flight frames only
+(d1 < 3750, d2 < 3600, from a 250-frame thumbnail strip), skip 0.
+
+| run px | d1 lines off / on (events) | d2 lines off / on (events) |
+|---|---|---|
+| 20-39 | 370 / 290 (106 / 89) | 261 / 384 (79 / 113) |
+| 40-59 | 43 / 49 (29 / 19) | 38 / 14 (13 / 10) |
+| 60-99 | 33 / 58 (17 / 14) | 56 / 17 (12 / 10) |
+| 100+ | 22 / 9 (13 / 4) | 8 / 3 (5 / 3) |
+
+Viewed (phase 0.2-0.9): d1 clamp-off 100+ lines: missile trails and laser bolts, one red bolt; no knife line in 6. d1 clamp-on 100+: engine glow (1663-1666, one
+event; it also carries the 60-99 on excess, 35 lines in frames 1657-1680), and one sky-coloured wedge through the ground at frames 3655-3656 (top right, 2 frames).
+d2 clamp-on 20-39: 7 of 8 are the green targeting reticle moving over terrain, 1 a one-frame sky sliver at a terrain edge. So the short-line split flips between
+runs with the scene (where the reticle sits in odd seconds), not with the clamp.
+
+Discriminator for H-level: new rt64 env ROGUESQ_W_SHEET_DROPLOG=<path> (lib/rt64 rt64_gbi_rdp.cpp, one line per dropped tri: 24 MHz tick, three screen
+vertices, three W; exported to submodule-patches/rt64.patch). d2 logged 57 drops (23 in flight, rest pre-capture and hangar); typical shape: one vertex
+W 5000-8000, two vertices W -1e5..-2.7e6 (tri reaching behind the eye) or one vertex at y=-4096. Each in-flight drop matched to its capture frame (first frame
+tick >= drop tick) and cropped at its clipped bbox x0.9375 in f-1/f/f+1 (scratch/s7004/dropA.png, dropB.png) and in full-frame strips (ev1.png, ev2.png):
+0 of 23 show a hole or missing terrain. [wsheet] d1 dropped 67 (cumulative), bunched in the last 20 s before the canyon crash (close terrain).
+
+Result: selects H-holds at dd2 L7 with two caveats. Two lines: long lines fewer with the clamp on in both runs, and 0 of 23 matched drops leave a visible hole.
+Rules out H-level (drops do not open holes; the d1 3655 wedge is single-source, unmatched as no droplog existed then; it may be terrain pop near the crash).
+H-escape not seen (no clamp-on knife line viewed). Caveat: at L7 the clamp-off long lines viewed were bolts, so knife lines are rare on this level
+and the long-line reduction is partly scene. Crop centring on huge tris can miss a hole off-centre; the full-frame strips cover that at 4x downscale.
+Raws deleted (disk 14 GB free before deletion).
+Next: G5f owner sheet (knife lines off vs on, same run, dd4 L4), the last item before G5f waits on the owner (NEXT.md).

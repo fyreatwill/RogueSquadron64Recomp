@@ -1,15 +1,11 @@
-# NEXT: G5f at dd2 on a second level (L7) — does the default W clamp still remove knife lines without new holes?
-HYPOTHESIS-ID: g5f-dd2-l7
-Context: s7002 (dd4 L4) and s7003 (dd1 L4) showed the clamp removes knife lines and its kept slivers are real. Every G5f
-measure so far is LEVEL=4. dd2 is an owner recipe ("dd2 fewer but not gone") and L7 is a dense terrain level (s7000).
-Hypotheses:
-- H-holds: clamp on has fewer 60+ px lines than off in >= 4/5 windows, and on-block lines viewed are real geometry.
-- H-level: L7 terrain gives mixed-sign tris > 200 px the drop rule removes visibly (clamp-on block shows sliver holes /
-  more 20-39 px lines than off, and [wsheet] dropped >> s7003's 3).
-- H-escape: clamp-on 100+ lines viewed are still knife lines (wedges the clamp misses: non-perspective or all-W<=0 path).
-Discriminator, ONE run: `env CULL=1 zsh scratch/s7003/arm.zsh 7 2 d1 "ROGUESQ_W_CLAMP=tog ROGUESQ_W_SHEET_STATS=1" 120 90`
-(edit the copy into scratch/s7004 first; check run.log `[ddscene] level=7` and `multiplier 2`; disk ~21 GB, 90 s = 9.5 GB).
-Score: scratch/s6906/g5f_lines d1.raw lines_d1.txt 40 20 50 (control >= 85%), python3 tools/g5f_short_buckets.py lines_d1.txt;
-view 6 per block per bucket (scratch/s6906/crop.py, phase 0.2-0.9, pick script in PORTING-STATE s7003). Delete the raw.
-Outcomes: H-holds -> G5f closed at all measured recipes, owner sheet; H-level -> measure dropped-tri spans on L7, consider
-raising W_SHEET_PX per dd; H-escape -> log those tris (W signs, texturePerspective) with a G5F_ESCAPE dump in the same build.
+# NEXT: G5f owner sheet — knife lines with the clamp off vs on, same run, dd4 and dd2
+HYPOTHESIS-ID: g5f-owner-sheet
+Context: G5f measurements are done (s7002 dd4 L4, s7003 dd1 L4, s7004 dd2 L7: clamp-on has fewer long lines in every run, drops leave
+no holes per ROGUESQ_W_SHEET_DROPLOG). The item closes on "spike count + owner sheet". No owner sheet exists yet.
+Unit: one capture at LEVEL=4 dd4 16:9 FPS60 (`env CULL=1 zsh scratch/s7004/arm.zsh 4 4 s1 "ROGUESQ_W_CLAMP=tog" 120 90`, copy arm.zsh to
+scratch/s7005 first; check `[ddscene] level=4`, multiplier 4). Score with scratch/s6906/g5f_lines s1.raw lines_s1.txt 40 20 50 (control >= 85%),
+keep frames < the first non-flight frame (make a thumbnail strip first: L7 autopilot crashed ~75 s in, s7004).
+Sheet: 6 clamp-off 100+ px knife lines (each f-1/f/f+1 crop) beside 6 clamp-on frames from adjacent odd seconds at a similar view
+(scratch/s6906/crop.py; scratch/s7004/strip.py for full frames), plus the per-bucket table, saved to docs/owner_sheet_s7005_g5f.png.
+Outcomes: sheet shows knife lines only in off frames -> G5f awaits the owner's look; if an on frame shows a knife line -> H-escape, log that
+tri (W signs, texturePerspective) with a G5F_ESCAPE dump in the same build. Delete the raw.

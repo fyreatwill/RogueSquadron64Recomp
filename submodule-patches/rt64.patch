@@ -458,7 +458,7 @@ index a0d4a6a..f6a56a9 100644
              // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
              //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..6d2b298 100644
+index 6255872..05d6a19 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
 @@ -4,12 +4,115 @@
@@ -1297,7 +1297,7 @@ index 6255872..6d2b298 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -520,13 +1276,81 @@ namespace RT64 {
+@@ -520,13 +1276,86 @@ namespace RT64 {
                      hlslpp::float2 v2_texcoord = baseTexcoord.xy + texcoordDe.xy * dy_2;
                      hlslpp::float2 v3_opposite_texcoord = baseTexcoord.xy + texcoordDe.xy * dy_3;
                      hlslpp::float2 v3_texcoord = v3_opposite_texcoord + texcoordDx.xy * dx_3;
@@ -1371,6 +1371,11 @@ index 6255872..6d2b298 100644
 +                                            (unsigned long long)sheetSec, b, (unsigned long long)st[b][0], (unsigned long long)st[b][1], (unsigned long long)st[b][2], (unsigned long long)st[b][3], (unsigned long long)st[b][4], (unsigned long long)st[b][5], (unsigned long long)st[b][6]); }
 +                                }
 +                                if (sheetLim > 0.0f && spanPx > sheetLim) {
++                                    // s7004 G5f: ROGUESQ_W_SHEET_DROPLOG=<path> appends one line per dropped tri (24 MHz tick, the three
++                                    // screen vertices as given, the three W) so a capture frame can be matched to the drop it carries.
++                                    static FILE *s_dropLog = []{ const char *e = std::getenv("ROGUESQ_W_SHEET_DROPLOG"); return e && *e ? std::fopen(e, "w") : nullptr; }();
++                                    if (s_dropLog) { std::fprintf(s_dropLog, "%llu %.1f %.1f %.1f %.1f %.1f %.1f %.5g %.5g %.5g\n", (unsigned long long)mach_absolute_time(),
++                                        x1, y1, x2, y2, x3, y3, w1, w2, w3); std::fflush(s_dropLog); }
 +                                    posWorkBuffer[workBufferIndex + 1].x = posWorkBuffer[workBufferIndex + 2].x = x1;
 +                                    posWorkBuffer[workBufferIndex + 1].y = posWorkBuffer[workBufferIndex + 2].y = y1;
 +                                }
@@ -1385,7 +1390,7 @@ index 6255872..6d2b298 100644
                      }
                      else {
                          posWorkBuffer[workBufferIndex + 0].w = 1.0f;
-@@ -537,7 +1361,157 @@ namespace RT64 {
+@@ -537,7 +1366,157 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
@@ -1543,7 +1548,7 @@ index 6255872..6d2b298 100644
                  }
                  // No texture coefficients
                  else {
-@@ -547,6 +1521,22 @@ namespace RT64 {
+@@ -547,6 +1526,22 @@ namespace RT64 {
                      texcoordWorkBuffer[workBufferIndex + 0] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 1] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 2] = interop::float2(0.0f, 0.0f);
@@ -1566,7 +1571,7 @@ index 6255872..6d2b298 100644
                  }
  
                  if (hasDepth) {
-@@ -580,11 +1570,170 @@ namespace RT64 {
+@@ -580,11 +1575,170 @@ namespace RT64 {
                      posWorkBuffer[workBufferIndex + 2].z = 0.0f;
                  }
  
