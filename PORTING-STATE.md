@@ -185155,3 +185155,29 @@ Rules out: on-map occluded terrain as the bulk of the dd6 window cost; a small o
 Next: NEXT.md g1c-offmap-cells: qualify the image with a frozen camera (ROGUESQ_POSE_FREEZE, s6872) so phase frames share a pose; R in {0,2} plus k=0.3 control,
 L1 (incl. a high-altitude pose looking over the wall) and L4.
 Verdict: selects H-offmap (census + cost, 2 levels), refutes H-occlude; image qualification open (instrument failed its control in both runs).
+
+## Session 7032 (2026-11-09) — G1c off-map cull image qualified at frozen poses: OFFMAPCULL is VISIBLE (H-plateau). Once the craft climbs above the off-map plateau near the map edge, R=2 leaves a sky void (|d| 39 vs A/A 0.01, control 4.0) and R=8 a smaller wedge (15.5); also found a plain FOGCULL=<k> that never armed, now fixed
+HYPOTHESIS-ID: g1c-offmap-cells.
+Boring check first: POSE_FREEZE sleeps the game thread inside rs64_xtrace_mark (rt64_render_context.cpp:54-80), so no new frame and no tog3 phase change
+can happen inside a freeze. So this used separate deterministic same-pose runs (tools/g3_optin_pose_arms.sh, PIN=1 dt 1/60, POSE_LOCK, no input), L1 21:9 dd6
+FPS60 DD_UNSAFE MELT WIDEWIN cap 10240 CULL_SPIKE=1 FAST=1 PROBES=0, 7 freezes at x = 26/42/58/74/90/106/122, 2 window captures each
+(scratch/s7032/run_L1.zsh, run_L1g.zsh; new scorer tools/s7032_pose_cull_score.py). Every arm froze at identical positions (pos printed to 3 decimals), 0 crashes in 9 runs.
+Run 1 (old binary): offA, r2 (OFFMAPCULL=2), k03 (FOGCULL=0.3), offB. Mean |dLum| vs offA per pose 0..6:
+ intra-freeze 0.00 everywhere; offB (A/A) 0.00-0.02; r2 0.21 0.14 0.16 0.30 0.51 10.60 39.01; k03 = A/A (0.00-0.02).
+ k03 was a no-op: g_rs64_s7030 armed the hook only when ROGUESQ_DD_FOGCULL did not start with '0', and "0.3" does (no [s7030] init line in the k03 log).
+ s7030 only ever used tog3, which is why it went unnoticed. FIXED (src/main/upstream_compat.cpp): armed when e[0]=='t' or atof(e) > 0.
+Run 2 (new binary): new tools/apply_s7032_eyegate.py (registered in fixup_game_funcs_vendored after s7031) passes the cell's eye-relative grid offsets
+(f20, f22) to rs64_s7032_cell, which latches the eye cell per frame (sign picked by spread; spread_bad 0 over the run, eye = player pos / 2, as expected for
+2-world-unit cells) and, by default, skips the ring cull while the eye is off the map (ROGUESQ_DD_OFFMAPCULL_EYE=0 = ungated). Arms offA, r2, r2u (EYE=0), k03, r8:
+ k03 0.52-3.98 (control now responds); r2 = r2u to 2 decimals at every pose: the eye never left the map (ring 0 at all poses; x cell 52/60 of 64 at poses 5/6),
+ so the gate never fired; r8 0.07 0.06 0.09 0.19 0.31 6.18 15.52; offA new vs old binary 0.00-0.02 (cross-binary A/A).
+Image (docs/owner_sheet_s7032_offmap_pose.jpg, poses 3/5/6, offA | r2 | r8 | diffs): at poses 0-4 the craft flies below the plateau top, and both culls trim
+only a thin sliver along the dark wall's top edge. At poses 5-6 the craft has climbed (y -5.7/-6.9) above the plateau near the +x edge, looking outward: offA
+shows the flat dark plateau to the horizon, while R=2 cuts it a few cells out (pale-blue void across the lower screen) and R=8 leaves a wedge.
+Reading: the off-map plateau (edge heights clamped outward) is hidden only while the eye is below its height. The wall face then occludes its top. Above it,
+the top surface is visible to the horizon, at any R. The eye-on-map gate is the wrong discriminator (harmless, kept: it is a correct per-frame eye-cell
+latch the next gate needs). The right gate is per cell: cull only while eye height < the clamped edge height of that cell (minus a margin).
+ORIGIN: n/a; opt-in experiment lever, default off. The FOGCULL fix corrects our own arming test. No mitigation.
+Rules out: OFFMAPCULL=<R> (any fixed R tested, 2 and 8) as an image-neutral default or owner opt-in; the eye-off-map explanation of the void.
+Verdict: selects H-plateau (frozen pose, A/A floor 0.01, positive control 0.5-4.0, same-pose sheet), refutes H-invisible for fixed R. L4 not run (L1 already refutes it).
+Next: NEXT.md: height-occlusion gate (cull off-map cells only while the eye is below the clamped edge height), same frozen-pose arms + cost.

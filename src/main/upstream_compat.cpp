@@ -141,13 +141,26 @@ extern "C" void rs64_s6904_fog(uint8_t *rdram, recomp_context *ctx) {
 // Every phase keeps a histogram of cell depth / fog end (20 bins of 0.1, last = >=1.9) over cells reaching the call path.
 extern "C" void rs64_tog_anchor(uint64_t mt);
 extern "C" { int g_rs64_s7030 = [] { const char* e = getenv("ROGUESQ_DD_FOGCULL"), *o = getenv("ROGUESQ_DD_OFFMAPCULL");
-                 return ((e && *e && *e != '0') || (o && *o)) ? 1 : 0; }(); /* s7031: OFFMAPCULL also arms the hook */
+                 return ((e && *e && (*e == 't' || atof(e) > 0.0)) || (o && *o)) ? 1 : 0; }(); /* s7031: OFFMAPCULL also arms the hook; s7032: "0.3" armed nothing (old test *e != '0') */
              float g_rs64_s7030_f[2] = {0.0f, 1.0f}; float g_rs64_s7030_fe = 0.0f; }
 static float s7030_k[3] = {0.0f, 1.0f, 0.5f}; static int s7030_tog3 = 0, s7030_ph = 0; static float s7030_thr = 0.0f, s7030_fe = 0.0f;
 // s7031 off-map census (tools/apply_s7031_offmap.py): per phase, off-map cells per depth bin, ring distance outside the map edge (all
 // off-map cells and those in the 0.5-1.0 fog-end band), and ROGUESQ_DD_OFFMAPCULL=<R>|tog3 (_R=a,b,c; R<0 off) culls rings > R.
 static int s7031_R[3] = {-1, -1, -1}, s7031_w = 0, s7031_hgt = 0; static uint64_t s7031_off[3][20], s7031_ring[3][18], s7031_rband[3][18], s7031_cull[3];
 static uint64_t s7030_h[3][20], s7030_cull[3], s7030_frames[3], s7030_t0 = 0, s7030_last = 0; static double s7030_F[3], s7030_FE[3];
+// s7032 eye gate (tools/apply_s7032_eyegate.py): the s7031 ring cull leaves a sky void once the eye is over the off-map plateau
+// (frozen-pose arms). The eye cell is x - sgn*off, with the sign whose estimate is consistent across a frame's cells (spread of the
+// other is the window width); latched per frame, used next frame. ROGUESQ_DD_OFFMAPCULL_EYE=0 = s7031 ungated.
+static int s7032_gate = -1, s7032_eyex = 0, s7032_eyez = 0, s7032_eyering = 0; static float s7032_mn[2][2], s7032_mx[2][2]; static uint64_t s7032_eyeoff[3], s7032_spread_bad = 0;
+static void rs64_s7032_frame() {
+    if (s7032_gate < 0) { const char* g = getenv("ROGUESQ_DD_OFFMAPCULL_EYE"); s7032_gate = !(g && g[0] == '0'); fprintf(stderr, "[s7032] eyegate=%d\n", s7032_gate); }
+    const float sp0 = (s7032_mx[0][0] - s7032_mn[0][0]) + (s7032_mx[0][1] - s7032_mn[0][1]), sp1 = (s7032_mx[1][0] - s7032_mn[1][0]) + (s7032_mx[1][1] - s7032_mn[1][1]);
+    if (s7032_mx[0][0] >= s7032_mn[0][0]) { const int s = sp0 <= sp1 ? 0 : 1; if ((s ? sp1 : sp0) > 4.0f) s7032_spread_bad++;
+        s7032_eyex = (int)floorf(0.5f * (s7032_mn[s][0] + s7032_mx[s][0])); s7032_eyez = (int)floorf(0.5f * (s7032_mn[s][1] + s7032_mx[s][1]));
+        const int dx = s7032_eyex < 0 ? -s7032_eyex : s7032_eyex >= s7031_w ? s7032_eyex - s7031_w + 1 : 0, dz = s7032_eyez < 0 ? -s7032_eyez : s7032_eyez >= s7031_hgt ? s7032_eyez - s7031_hgt + 1 : 0;
+        s7032_eyering = dx > dz ? dx : dz; }
+    for (int s = 0; s < 2; s++) for (int c = 0; c < 2; c++) { s7032_mn[s][c] = 1e9f; s7032_mx[s][c] = -1e9f; }
+}
 extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
     static int init = 0;
     if (!init) { init = 1; const char* e = getenv("ROGUESQ_DD_FOGCULL");
@@ -170,6 +183,7 @@ extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
     const uint64_t mt = mach_absolute_time(); s7030_ph = s7030_tog3 ? (int)((mt / 24000000u) % 3u) : 0;
     s7030_fe = g_rs64_s7030_fe; s7030_thr = s7030_k[s7030_ph] > 0 && s7030_fe > 0 ? s7030_k[s7030_ph] * s7030_fe : 0.0f;
     float F = 0; for (uint32_t i = 0; i < 4; i++) F += (rf(0x80130C1Cu + 12 * i) - ex) * fx + (rf(0x80130C1Cu + 12 * i + 8) - ez) * fz;
+    rs64_s7032_frame();
     s7030_frames[s7030_ph]++; s7030_F[s7030_ph] += F * 0.25f; s7030_FE[s7030_ph] += s7030_fe;
     if (!s7030_t0) { s7030_t0 = s7030_last = mt; if (s7030_tog3) rs64_tog_anchor(mt); } /* anchor for g5e_cost_by_parity --phases 3 */
     if (mt - s7030_last > 240000000ull) { s7030_last = mt;
@@ -180,10 +194,19 @@ extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
             o = 0; for (int b = 0; b < 20; b++) o += snprintf(buf + o, sizeof buf - o, "%s%.1f", b ? "," : "", s7031_off[p][b] / fr);
             char rb[300], rb2[300]; int o1 = 0, o2 = 0; for (int b = 0; b < 18; b++) { o1 += snprintf(rb + o1, sizeof rb - o1, "%s%.1f", b ? "," : "", s7031_ring[p][b] / fr);
                 o2 += snprintf(rb2 + o2, sizeof rb2 - o2, "%s%.1f", b ? "," : "", s7031_rband[p][b] / fr); }
+            fprintf(stderr, "[s7032] t=%.0f ph=%d eye=%d,%d ring=%d eyeoff_cells/f=%.1f spread_bad=%llu\n", (mt - s7030_t0) / 24e6, p, s7032_eyex, s7032_eyez, s7032_eyering, s7032_eyeoff[p] / fr, (unsigned long long)s7032_spread_bad);
             fprintf(stderr, "[s7031] t=%.0f ph=%d R=%d dims=%dx%d win=%d,%d ocull/f=%.1f off/f=%s ring/f=%s rband/f=%s\n", (mt - s7030_t0) / 24e6, p, s7031_R[p], s7031_w, s7031_hgt,
                     (int32_t)MEM_W(0, (int64_t)(int32_t)0x80132DB0), (int32_t)MEM_W(0, (int64_t)(int32_t)0x80132DB8), s7031_cull[p] / fr, buf, rb, rb2); } }
 }
 extern "C" int rs64_s7030_cell(float d);
+extern "C" int rs64_s7031_cell(float d, int32_t x, int32_t z);
+extern "C" int rs64_s7032_cell(float ox, float oz, float d, int32_t x, int32_t z) {
+    const float e0x = (float)x - ox, e0z = (float)z - oz, e1x = (float)x + ox, e1z = (float)z + oz;
+    if (e0x < s7032_mn[0][0]) s7032_mn[0][0] = e0x; if (e0x > s7032_mx[0][0]) s7032_mx[0][0] = e0x; if (e0z < s7032_mn[0][1]) s7032_mn[0][1] = e0z; if (e0z > s7032_mx[0][1]) s7032_mx[0][1] = e0z;
+    if (e1x < s7032_mn[1][0]) s7032_mn[1][0] = e1x; if (e1x > s7032_mx[1][0]) s7032_mx[1][0] = e1x; if (e1z < s7032_mn[1][1]) s7032_mn[1][1] = e1z; if (e1z > s7032_mx[1][1]) s7032_mx[1][1] = e1z;
+    if (s7032_gate > 0 && s7032_eyering > 0) { s7032_eyeoff[s7030_ph]++; const int R = s7031_R[s7030_ph]; s7031_R[s7030_ph] = -1; const int r = rs64_s7031_cell(d, x, z); s7031_R[s7030_ph] = R; return r; }
+    return rs64_s7031_cell(d, x, z);
+}
 extern "C" int rs64_s7031_cell(float d, int32_t x, int32_t z) {
     const float dn = d - 0.71f; const int p = s7030_ph;
     const int b = s7030_fe > 0 ? (int)(dn / s7030_fe * 10.0f) : 0; const int bc = b < 0 ? 0 : b > 19 ? 19 : b;

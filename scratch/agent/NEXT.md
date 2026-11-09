@@ -1,21 +1,23 @@
-# NEXT: G1c — qualify the off-map cull image with a frozen pose (s7031 census + cost selected H-offmap; image unqualified)
+# NEXT: G1c — height-occlusion gate for the off-map cull (s7032: fixed-R cull is visible once the eye climbs above the plateau)
 HYPOTHESIS-ID: g1c-offmap-cells
-Context (s7031): ROGUESQ_DD_OFFMAPCULL=2 (cull off-map cells > 2 rings outside the map edge) removes 5919 (L1) / 4265 (L4) of ~7400 cells/f,
-rsp -9.75 / -3.71 ms (-> 60 fps). Census: 82% / 62% of dd6 cells off-map, mostly 17+ rings out. The image check FAILED its control in both runs:
-s7030_fogcull_image.py A/A floor 8.7 / 10.3 > k=0.3 control 6.1 / 3.5 (autopilot banking; adjacent seconds differ more than the arms).
+Context (s7032, frozen poses, L1 21:9 dd6 WIDEWIN cap 10240 MELT FPS60): A/A 0.01, FOGCULL=0.3 control 0.5-4.0. OFFMAPCULL=2: 0.13-0.51 below the plateau top
+(a wall-top sliver), 10.6/39.0 at poses 5/6 where the craft (y -5.7/-6.9, eye cell x 52/60 of 64, still on the map) looks out over the flat off-map plateau.
+R=8: 6.2/15.5. Sheet docs/owner_sheet_s7032_offmap_pose.jpg. The eye-on-map gate (apply_s7032_eyegate.py) never fired. The cull saves rsp 9.75 ms on L1 (s7031).
 G5i/owner items: nothing to run (CURRENT-TRUTH items 1-14); check first.
 Hypotheses:
- H-invisible: off-map cells beyond R rings are never seen (behind the edge wall face / under the MELT sea slab) -> R=2 frames equal R=off at the
-   same pose (|d| at the A/A floor), k=0.3 control visibly differs.
- H-plateau: seen from above the wall top (L1) or across the sea (L4), the off-map plateau / sea floor IS visible -> R=2 ends it 2 cells out
-   (sky gap or hard edge); then R must grow (R=8, or a depth-gated R) or the cull stays opt-in.
- H-retail-edge: what R=off draws out there is itself the clamp artefact (endless edge plateau); the owner may prefer the cut. Owner's call.
-Discriminator, ONE build (no code change expected beyond the harness): freeze the pose so every phase renders the same camera.
- ROGUESQ_POSE_FREEZE=<x1,x2,...>:<ms> (s6872, src/main/rt64_render_context.cpp:54, needs ROGUESQ_RAND_TRACE; recipe tools/g3_optin_pose_arms.sh).
- FIRST check the boring thing: does streamTerrainGridCellsByDistance keep running (cells/f > 0 in [s7030] lines) while the tick is frozen? If not,
- the freeze cannot carry a tog3 A/B: instead run 3 separate deterministic same-pose runs (no-input flight is deterministic) R=off / R=2 / k=0.3.
- Freeze windows >= 4 s each (spans all 3 phases at 1 s/phase), 4-6 poses per level incl. one at altitude looking over the L1 wall.
- Score per pose: per-phase mean |P_i - P_0| over frames inside the freeze, A/A = P0 frames of different cycles inside the same freeze (floor should be ~0).
-Arms: L1 and L4, dd6 21:9 WIDEWIN cap 10240 MELT OWNER_TIMING, FOGCULL=tog3 K=0,0,0.3 + OFFMAPCULL=tog3 R=-1,2,-1 (copy scratch/s7031/run_A.zsh).
-Outcome map: R=2 |d| near the A/A floor and k=0.3 well above it on every pose -> H-invisible: offer OFFMAPCULL=2 in docs/OWNER-OPT-INS.md
-(default stays the owner's call). Any pose with R=2 visibly cutting terrain -> H-plateau: repeat with R=8 in the same freeze run.
+ H-height: the off-map plateau = edge-cell heights clamped outward; its top is invisible while eye_y is below the clamped edge height (the wall face occludes it).
+   A per-cell gate (cull off-map ring > R only if eye height < clamped edge height - margin) is image-neutral at all 7 poses AND keeps most of the cost win
+   (most of a flight is below the plateau top).
+ H-fullview: the plateau top is visible from on-map terrain below its height too (e.g. the plateau slopes or the edge cells vary), so the gate still cuts
+   something at poses 0-4 -> no cheap image-neutral cull; report the cost/look trade to the owner instead.
+ H-costgone: the gate keeps the image but disarms the cull on most frames (the eye is often above the edge heights), so the cost win collapses.
+Work, ONE build:
+ 1. Find the units: the eye y = rf(a0+4) (a0 = 0x80130C10 in rs64_s7030_begin; world, y DOWN-negative? pos y -2.5 at low flight, -6.9 after climbing, so more
+    negative = higher). Cell height: what getGridCellValueAt returns for the clamped edge cell (funcs_9.c, clamp branch, s7024); check its height field
+    vs world y on one on-map cell under the craft (log both for the eye's own cell: eye y minus ground ~ altitude).
+ 2. In rs64_s7032_cell: for an off-map cell, clamp (x,z) to the edge cell, read its height (cache per edge cell per frame), cull only if R test passes AND the
+    eye is below that height by > margin (ROGUESQ_DD_OFFMAPCULL_H=<margin>; default gate on; =off restores fixed R). Count gated-off cells per phase.
+ 3. Arms (scratch/s7032/run_L1g.zsh as template, separate same-pose runs): offA, r2h (R=2 + height gate), r2 (fixed, positive control: void at poses 5/6),
+    k03 (control). Score with tools/s7032_pose_cull_score.py; then one OWNER_TIMING tog3 run R=-1,2h,2 for cost (scratch/s7031/run_A.zsh).
+Outcome map: r2h at the A/A floor at all poses (incl. 5/6), r2 still voids, and r2h keeps >= half the rsp win -> H-height: offer it in OWNER-OPT-INS,
+ then repeat on L4. r2h still cuts at poses 0-4 -> H-fullview. Image clean but rsp win < 2 ms -> H-costgone (close the lever, report to the owner).
