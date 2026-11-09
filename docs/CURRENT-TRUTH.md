@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7036 (2026-11-09).
+Compact operational handoff, as of Session 7037 (2026-11-09).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,11 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7037 dd bundle: dd>=6 + WIDEWIN now arms the fog-depth off-map cull itself (R=2 K=0.6 H=off; explicit ROGUESQ_DD_OFFMAPCULL* wins, =-1 off); new opt-in
+ROGUESQ_DD_POOLX_MAX=6..8 lifts the px5 cell clamp.** L1 21:9 dd8 WIDEWIN=tog3 cap 10240/12288/12288 + POOLX_MAX=6, 289 s flight, 0 crashes/stalls, positive control
+[s7037] line + [s7031] R=2,2,2 K=0.6 fired. Same run: 12288 costs run +0.44 / rsp +0.57..0.65 ms (57.2 -> 56.8/56.2 fps, P(>=2VI) 0.05 -> 0.06/0.07; A/A p1-p2 0.08 ms),
+so the window does grow (cost-only evidence: single-source, no window trace), but g5e_edge_score shows no gain beyond the p1/p2 A/A spread (hard80% centre 11.5 vs 11.1/9.8).
+Selects neither H-room (dd8 is <59 fps even at 10240) nor H-cliff: more cells buy nothing visible. dd6 + bundle stays the top setting; next: owner close-out sheet.
 **s7036 300 s holds qualify the fog-depth off-map cull opt-in (H-clean; no build).** scratch/s7036/run_hold.zsh, 21:9 dd6 WIDEWIN cap 10240 MELT FPS60 CULL_SPIKE=1,
 same-run tog3 R=-1,2,2 K=0,0.6,0.6 (cull on 2/3 of each run), ~505 s flight per level, 0 crashes, 0 VI stalls (g5e_cost_by_parity --phases 3 --skip-s 130):
 L1 54.0 -> 59.5/59.1 fps, rsp -2.82/-2.67 (s7034 -3.04); L4 57.2 -> 59.2/59.3, rsp -1.27/-1.40 (s7035 -1.52); L5 60.0 -> 60.0, rsp -1.34 (headroom). The two K=0.6
@@ -259,7 +264,7 @@ level 8 (counter3==1 fails the mission).
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); s7026 DPC submit = RT64 per-byte + ~21 ns/bump bridge, wait flat; s7027 per-bump checks only ~3.6 of ~24 ns (H-checks refuted); s7028/s7029 bridge split closed (H-call, shadow refuted); s7030 fogged-cell cull: H-fogwaste refuted, 0.5 x fog-end depth cull = rsp -4.9 ms invisible on L1 (H-offmap lead); s7031 off-map census: 82%/62% of dd6 cells off-map, R=2 cull rsp -9.75/-3.71 ms (L1/L4), image unqualified; s7032 frozen poses: R=2/R=8 VISIBLE once the eye climbs above the off-map plateau (H-plateau); s7033 height gate image-neutral but saves 0 ms (H-costgone, eye above edge tops almost always); s7034 off-map past 0.6 x fog end: ~invisible at 7 poses, rsp -3.04 ms -> 60 fps on L1 (H-fogdepth); s7035 L4 repeat: <=0.10 at 8 poses, rsp -1.52 ms (H-general, opt-in offered); active unit: NEXT.md (300 s holds L1/L4/L5 of the dd6+cull recipe).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed, owner look), then the rest; tog split de-biased s7017 (xor8); gfx-glue closed s7018 (walks 0.2-0.45 ms/frame); dd6/dd8 measured s7019 (55.8/53.3 fps, cells capped px5); s7020 dd6 cost = cells (H-cells, multiplier ~0); s7022 stream walk linear 171 ns/cell; s7025 clamp drift = our create hook double-updating the std index, fixed (create 6.5 us -> 218 ns); s7026 DPC submit = RT64 per-byte + ~21 ns/bump bridge, wait flat; s7027 per-bump checks only ~3.6 of ~24 ns (H-checks refuted); s7028/s7029 bridge split closed (H-call, shadow refuted); s7030 fogged-cell cull: H-fogwaste refuted, 0.5 x fog-end depth cull = rsp -4.9 ms invisible on L1 (H-offmap lead); s7031 off-map census: 82%/62% of dd6 cells off-map, R=2 cull rsp -9.75/-3.71 ms (L1/L4), image unqualified; s7032 frozen poses: R=2/R=8 VISIBLE once the eye climbs above the off-map plateau (H-plateau); s7033 height gate image-neutral but saves 0 ms (H-costgone, eye above edge tops almost always); s7034 off-map past 0.6 x fog end: ~invisible at 7 poses, rsp -3.04 ms -> 60 fps on L1 (H-fogdepth); s7035 L4 repeat: <=0.10 at 8 poses, rsp -1.52 ms (H-general, opt-in offered); s7036 holds clean (opt-in qualified); s7037 cull bundled into DD knob for dd>=6+WIDEWIN, 12288 cells buy nothing visible at +0.6 ms; active unit: NEXT.md (owner close-out sheet).
 
 1. **G5i: fixed s6995, closes on the owner's look** (abort -> hangar -> scroll across several craft or
    double-press). Route scratch/s6995/arm.zsh + route_long.txt; metric tools/g5i_pan_metric.py. Fullscreen dd2/dd4 verified s6997; 21:9 and L14 abort verified s6999. Nothing left to run.
@@ -317,6 +322,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    bridge self only 8% (24.4 -> 22.4 ns/bump): H-checks refuted; the cost is the push/counters/atomics (or AQ=3 timing offset). Next: split those (NEXT.md).
    s7028/s7029: bridge closed (H-call). s7030: ROGUESQ_DD_FOGCULL (opt-in): 2% of cells past fog end (0 ms); 0.5 x fog end culls 51%, rsp -4.9 ms, invisible on L1
    (cells behind the off-map horizon wall?). Next: classify on-map/off-map cells and cull off-map rings, L1 + L4 (NEXT.md).
+   s7031-s7036: off-map cull past 0.6 x fog end qualified (see headline). s7037: folded into the DD knob for dd>=6+WIDEWIN; 12288 cells (POOLX_MAX=6) cost
+   +0.6 ms rsp with no edge-score gain at dd8: dd6+bundle is the max useful step. Next: owner close-out sheet dd1/dd4/dd6 at frozen poses (NEXT.md).
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).

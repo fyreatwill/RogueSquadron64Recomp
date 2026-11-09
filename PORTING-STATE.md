@@ -185264,3 +185264,26 @@ Reading: the K=0.6 cull ran for ~335 s of flight per level on three levels witho
 ORIGIN: n/a; opt-in lever, default off. No mitigation.
 Verdict: selects H-clean; refutes H-crash; H-L5cost refuted too (L5 win 1.34 ms, as headroom). OWNER-OPT-INS line drops "experimental".
 Next: NEXT.md: make ROGUESQ_DRAW_DISTANCE>=6 with DD_WIDEWIN arm OFFMAPCULL=2 K=0.6 H=off by itself (one knob, env overrides), then test POOLX 6 (12288 cells) under the cull.
+
+## Session 7037 (2026-11-09) — G1c dd bundle: dd>=6 + WIDEWIN now arms the fog-depth off-map cull from the DD knob; 12288 cells (new opt-in POOLX_MAX=6) cost rsp +0.6 ms at dd8 with no edge-score gain: dd6 + bundle is the max useful step
+HYPOTHESIS-ID: g1c-dd-bundle. G5i checked first: fixed s6995-s6999, owner look only. CURRENT-TRUTH 40.1 KB, no maintenance. No new soak verdicts (latest s7009_widewin_L4, folded).
+Code (src/main/main.cpp rs64_g1c_apply_dd_policy): (1) ROGUESQ_DD_POOLX_MAX=<1..8> (default 5 = the s7019 clamp) caps POOLX = ceil(dd); (2) when dd>=6 and
+ROGUESQ_DD_WIDEWIN is set non-'0' and ROGUESQ_DD_OFFMAPCULL is unset, it sets OFFMAPCULL=2, _K=0.6, _H=off (explicit _K/_H win; OFFMAPCULL=-1 = off) and logs
+"[s7037] dd bundle offmapcull=2 k=0.6 h=off (auto)". Boring-thing catch: g_rs64_s7030 (upstream_compat.cpp), the generated-code arm for the cull hook, is
+latched by a static initializer before main, so setenv alone would have armed nothing; the policy now sets g_rs64_s7030 = 1 itself. dd<=5 and dd1 untouched.
+What ran: scratch/s7037/run.zsh P1, L1 21:9 dd8 FPS60 CULL_SPIKE=1 MELT UNSAFE, WIDEWIN=tog3 cap 10240/12288/12288, POOLX_MAX=6, no OFFMAPCULL env, capture
+640x274 170+110 s. Positive control: [s7037] line, [poolx] cap 2048 -> 12288, [s7034] K=0.6,0.6,0.6, [s7031] R=2,2,2 tog3=0, ocull/f ~1450-1640 in flight.
+Run: att=1 flight 289 s, alive_at_end=1, vi_stalls30s=0, crashlines=0.
+Cost (g5e_cost_by_parity --phases 3 --skip-s 130):
+| phase | cap | fps | T | run | rsp mean/p90 | P(>=2VI) |
+| p0 | 10240 | 57.2 | 17.49 | 3.58 | 13.98/15.81 | 0.05 |
+| p1 | 12288 | 56.8 | 17.62 | 4.02 | 14.55/16.05 | 0.06 |
+| p2 | 12288 | 56.2 | 17.79 | 4.03 | 14.63/16.22 | 0.07 |
+A/A p1-p2: rsp 0.08, run 0.01 ms, so the +0.57/+0.65 rsp and +0.44 run are real: the window does take the extra cells (cost-only evidence, single-source:
+no G3E window trace armed this run, and the s7030 cells/f reporter is not split by the cap phase).
+Image (g5e_edge_score phases=3 period 24e6, left/centre third; right third masked by the scorer at 640 wide in all phases): edge% 15.5/18.9 | 15.6/16.5 | 16.9/16.7,
+hard80% 7.4/11.5 | 8.0/11.1 | 9.4/9.8. p0 vs p1/p2 sits inside the p1-p2 A/A spread: no measurable gain in far terrain from 12288.
+Verdict: H-room refuted (dd8 is below 59 fps even at 10240 with the cull; extra cells cost and show nothing), H-cliff not reached (P(>=2VI) <= 0.07), H-limit
+partly: the window grows (cost) but not visibly, so the binding limit for what the owner sees is fog/horizon, not cells. dd6 + bundle (s7036: 59.5 fps L1) stays the
+top setting; dd8 is not worth it (cross-run vs s7036). OWNER-OPT-INS updated (dd6+WIDEWIN needs no OFFMAPCULL env now; use 6, not 8). Raw capture deleted (4.4 GB).
+Next (NEXT.md, g1c-dd-closeout): owner contact sheet dd1/dd4/dd6-bundle/dd6-uncut at frozen poses on L1 + L4, confirm the bundle is invisible same-pose.

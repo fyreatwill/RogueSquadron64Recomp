@@ -1,15 +1,13 @@
-# NEXT: G1c phase 2 — fold the fog-depth off-map cull into the DD knob, then spend the headroom on a bigger cell pool
-HYPOTHESIS-ID: g1c-dd-bundle
-Context: s7036 qualified ROGUESQ_DD_OFFMAPCULL=2 _H=off _K=0.6 at 21:9 dd6 WIDEWIN cap 10240 (L1/L4/L5 ~505 s flight, 0 crashes, rsp -2.8/-1.3/-1.3 ms).
-G1c spec: "Bundle the winning combination behind the single ROGUESQ_DRAW_DISTANCE knob". Cells are clamped at POOLX<=5 (10240) in
-src/main/main.cpp rs64_g1c_apply_dd_policy (line ~12034), so dd6 and dd8 draw the same window (s7019).
-Step 1 (code): in rs64_g1c_apply_dd_policy, when dd>=6 and DD_WIDEWIN is on and ROGUESQ_DD_OFFMAPCULL is unset, default it to 2 / K 0.6 / H off
- (log one line "[s7037] dd bundle offmapcull=2 k=0.6 (auto)"); any explicit env wins. dd<=5 unchanged, default dd1 unchanged (retail).
- Check how OFFMAPCULL reads its env (grep ROGUESQ_DD_OFFMAPCULL src/) so the default is applied before that read.
-Step 2 (experiment, same build): allow POOLX 6 (12288 cells) behind ROGUESQ_DD_POOLX_MAX=6 (opt-in), and run L1 dd8 21:9 WIDEWIN with the bundle,
- tog3 cap 10240/12288/12288 (ROGUESQ_DD_WIDEWIN_CAP=10240,12288,12288 WIDEWIN=tog3) via a copy of scratch/s7036/run_hold.zsh.
-Hypotheses:
- H-room: 12288 cells with the cull stays >= 59 fps on L1 (rsp <= ~12 ms) and shows more terrain (side-third edge score, g5e_edge_score.py phases=3) -> next step up.
- H-cliff: 12288 crosses the VI cliff again (P(>=2VI) > 0.1) -> dd6 + bundle is the max; close phase 2 with an owner sheet.
- H-limit: the window does not grow at 12288 (trace 17 dims unchanged, 128-col cap) -> the next limit is the 128 stride; document it.
-Score: python3 tools/g5e_cost_by_parity.py --phases 3 --skip-s 130 <tl> <run.log>; crashes from scratch/s7031/crash_<N>.txt; needs NOCAP unset for edge scoring (capture ~5 GB per 110 s at 640x274: keep the hold at 110 s).
+# NEXT: G1c phase 2 close-out — owner contact sheet dd1 / dd4 / dd6-bundle at frozen poses, L1 + L4
+HYPOTHESIS-ID: g1c-dd-closeout
+Context: s7037 folded the fog-depth off-map cull into ROGUESQ_DRAW_DISTANCE (dd>=6 + DD_WIDEWIN auto-arms OFFMAPCULL=2 K=0.6 H=off; [s7037] log line).
+12288 cells (ROGUESQ_DD_POOLX_MAX=6) cost +0.6 ms rsp with no edge-score gain at dd8, so dd6 + bundle is the max useful step. Spec (ITERATION 3c G1c phase 2):
+"framebuffer contact sheet the owner can eyeball, same camera, dd1 vs dd-max".
+Unit: copy scratch/s7035/run_L4.zsh pose section (tools/g3_optin_pose_arms.sh) to scratch/s7038/, arms on the same frozen poses:
+ dd1 (ROGUESQ_DRAW_DISTANCE=1, no DD env), dd4 (21:9 WIDEWIN cap 8192), dd6b (dd6 WIDEWIN cap 10240, NO OFFMAPCULL env -> bundle), dd6off (same + ROGUESQ_DD_OFFMAPCULL=-1),
+ plus an A/A repeat of dd6b. L1 (NOREF off, deterministic) then L4 (NOREF: check [posefreeze] pos and score same-path only).
+Score: python3 tools/s7032_pose_cull_score.py <dir> --base dd6off --aa dd6b2 --sheet docs/owner_sheet_s7038_dd_closeout_l1.jpg (dd6b vs dd6off must sit at A/A: bundle invisible;
+ dd1 vs dd6 must differ: positive control = more far terrain). Also grep run logs for [s7037] (bundle armed in dd6b, absent in dd6off/dd4/dd1).
+Hypotheses: H-done (dd6b = dd6off at A/A, dd6 shows clearly more terrain than dd4/dd1) -> close G1c phase 2, offer the owner the one-line command; H-visible (dd6b differs
+ from dd6off above A/A on some pose) -> bundle must stay opt-in, revert the auto default; H-nogain (dd6 ~ dd4 by eye) -> recommend dd4 to the owner.
+Then: G1c phase 2 closes on the owner's look; next ladder rung per ITERATION 3c.

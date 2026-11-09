@@ -12031,13 +12031,25 @@ static void rs64_m5_apply_drain_tick_policy() {
 // G1c (s6578): ROGUESQ_DRAW_DISTANCE=<dd> with dd > 1 bundles the validated pool/heap recipe
 // (s6567 RAMTOP guards, s6569 malloc spill, s6099 DL-chunk arena, s6058 terrain pool x ceil(dd)); px2-px5 hold
 // clean with it (s6567, s6574) and px>=2 faults without it (s6549-s6551). Explicit env values win; dd<=1 untouched.
+extern "C" int g_rs64_s7030;  /* s7037: upstream_compat.cpp fog/off-map cull arm */
 static void rs64_g1c_apply_dd_policy() {
     const char* e = std::getenv("ROGUESQ_DRAW_DISTANCE");
     double dd = (e && *e) ? std::atof(e) : 1.0;
     if (!(dd > 1.0 + 1e-3)) return;
     int px = (int)std::ceil(dd);
     std::fprintf(stderr, "[ddbundle] dd=%.2f px=%d (ramtop16 spill dlpoolx4MB)\n", dd, px);
-    if (px > 5) px = 5;
+    // s7037: px > 5 (10240 cells) is opt-in via ROGUESQ_DD_POOLX_MAX=<6..8> (default 5, the s7019 clamp).
+    { const char* pm = std::getenv("ROGUESQ_DD_POOLX_MAX"); int mx = (pm && *pm) ? std::atoi(pm) : 5; if (mx < 1) mx = 1; if (mx > 8) mx = 8;
+      if (px > mx) px = mx; }
+    // s7037 G1c bundle: s7034-s7036 qualified the fog-depth off-map cull (R=2, K=0.6, height gate off) at 21:9 dd6 WIDEWIN
+    // (L1/L4/L5 ~505 s, 0 crashes, rsp -1.3..-2.8 ms, image <=0.18 at frozen poses). Default it on for dd>=6 with WIDEWIN on;
+    // any explicit ROGUESQ_DD_OFFMAPCULL* wins (=-1 = off). g_rs64_s7030 latches at static init, before this runs, so arm it here.
+    { const char* ww = std::getenv("ROGUESQ_DD_WIDEWIN");
+      if (dd >= 6.0 - 1e-3 && ww && *ww && ww[0] != '0' && !std::getenv("ROGUESQ_DD_OFFMAPCULL")) {
+          setenv("ROGUESQ_DD_OFFMAPCULL", "2", 1); setenv("ROGUESQ_DD_OFFMAPCULL_K", "0.6", 0); setenv("ROGUESQ_DD_OFFMAPCULL_H", "off", 0);
+          g_rs64_s7030 = 1;
+          std::fprintf(stderr, "[s7037] dd bundle offmapcull=2 k=%s h=%s (auto)\n", std::getenv("ROGUESQ_DD_OFFMAPCULL_K"), std::getenv("ROGUESQ_DD_OFFMAPCULL_H"));
+      } }
     char b[16];
     std::snprintf(b, sizeof b, "%d", px);
     // s6858: the spill arena defaults to 0x80800000-0x80C00000, which is game heap once osMemSize > 8 MB (21:9 sets
