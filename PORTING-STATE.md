@@ -184839,3 +184839,37 @@ Next (NEXT.md): name the per-cell hot path. xctrace the gfx + game threads on th
 so the blocks whose self time grows 8192 -> 10240 are named (ucode blocks via tools/xctrace_ucode_blocks.py, RT64 decode, guest
 terrain stream/mesh build), then cut the biggest one.
 Note: tl ring (gitignored) deleted after analysis.
+
+## Session 7021 (2026-11-08) — G1c per-cell cost named by a per-frame xctrace split of the dd6 cap toggle: +2048 cells = gfx thread +1.72 ms/frame (ucode self +0.70 spread over 7 blocks, DPC submit +0.68, rest +0.26) and game thread +0.91 (streamTerrainGridCellsByDistance +0.31 the largest); e9prov route counters gated out of the owner ucode (rsp -0.14, T -0.42 ms/frame same run)
+HYPOTHESIS-ID: g1c-dd-headroom. G5i: fixed s6995-s6999, owner look, nothing to run. CURRENT-TRUTH 27.3 KB, no maintenance. No new soak verdicts (latest s7009_widewin_L4, folded).
+- Unit (NEXT s7020): profile the s7020 recipe (dd6 L1 21:9 WIDEWIN=tog3 CAP=8192,10240,10240, owner path FAST=1 PROBES=0, MELT, CULL=1, FPS60) with
+  xctrace and split samples by cap phase. Hypotheses: H-ucode-xform / H-rdp-decode / H-glue (gfx +1.7 ms rsp), H-stream (game +0.7 ms run).
+- New tool tools/xctrace_phase_split.py. Clock: (wall, mach) pair just before `xctrace record --attach` (scratch/s7021/clk.py) + trace TOC start-date
+  gives a prior; refined by cross-correlating gfx-thread in-ucode samples with the G1E_TL task intervals at 1 ms (offset +4 ms in all 3 runs, peak
+  0.88 vs 0.85 best >8 ms away, 0.78-0.80 at +500 ms). Per-second xctrace counts track TL rsp per second (e.g. 514/597, 812/907 ms) = alignment check.
+  Two analysis bugs found and fixed in the same session: (1) partial edge seconds were counted as whole seconds (v1 rates diluted); (2) a PER-SECOND split
+  is ~0 by construction: the gfx thread is not saturated, so extra cells raise per-frame cost and cut fps in the same ratio (TL: rsp 13.11 ms x 59.9 fps
+  = 14.81 x 52.7 = 785 ms/s). v2 reports per game frame (TL swaps per second), paired over consecutive p0/p1/p2 triples (scene drift cancels), with SE
+  and an A/A column (p2 - p1, both cap 10240). g5e_cost_by_parity.py gained --until-s (match an xctrace window).
+- Run 1 (C6, 30 s trace at +152 s): 9 triples, too noisy (ucode +31 +-26 ms/s). Run 2 (C7, 150 s trace at +142 s, 50 triples, 0 crashes, flight 325 s,
+  0 VI stalls): TL in the trace window p0 59.9 fps rsp 13.11 run 3.21; p1/p2 52.7/52.1 rsp +1.70/+1.74, run +0.95/+0.93.
+  Gfx thread per frame: on-CPU +1.723 +-0.223 ms (A/A +0.053 +-0.177) = TL rsp +1.72 (positive control). Ucode incl +1.47, ucode self +0.70 +-0.10:
+  L_1F98 +0.148, pre +0.082, L_1090 +0.070, L_162C +0.069, L_16B8 +0.054, L_1298 +0.053, L_1740 +0.039 (+20-55% per frame); L_1C3C, L_1AFC, L_1D38,
+  L_12B8, L_1828 do not grow (per-frame fixed). Under rsp_dpc_submit_impl +0.68: bridge self +0.235, RT64 submit_rdp_range +0.226, rs64_dpc_record_submit
+  +0.164. Leaves: rs64_e9prov_ovl_route +0.063 (11.7 ms/s base), rs64_spike_scan +0.060, RT64 rs64LoadBlockRuns +0.085, processRDPLists +0.066.
+  Game thread ([Game] MAIN) per frame +0.906 +-0.061 (A/A +0.021) = TL run +0.93 (positive control): streamTerrainGridCellsByDistance +0.308 (base 0.64
+  ms/frame, +48%), renderFlatMeshFaceGroup +0.148, processGridCellByDistance +0.080, buildGridCellMesh(+ForFace) +0.094, emitMaterialTexturedDL +0.044.
+- Verdict: no single hot path. H-ucode-xform partly (ucode self 41% of the gfx delta, spread over 7 blocks), H-rdp-decode partly (RT64 ~0.23 + bridge 0.40),
+  H-glue small, H-stream selected for the game side with one named function (streamTerrainGridCellsByDistance = a third of the run delta).
+- Change (cut the one pure-overhead term): tools/fixup_factor5_ucode.py s7021 block gates rs64_e9prov_ovl_route, _l1298_12a0_res, _1364_jump,
+  _ovl24_jal17f0, _clip_1e48_ra at the call site on (RS64_G1E_PROBES_ON || rs64_e9prov_force). These counted unconditionally on every overlay route
+  even in the nmac owner arm; their counters feed only diagnostic prints (checked every reader: j1364/last_ovl/route counters appear only in fprintf
+  and the [1364-pred] log). ROGUESQ_LOG_E9_PROVENANCE is a ROGUESQ_LOG_* env, so it turns rs64_g1e_probes on and the main TU still counts.
+  ROGUESQ_E9PROV_FORCE=1|tog (src/main/upstream_compat.cpp, updated per gfx task in main.cpp) restores them, tog = odd xor8 seconds with the anchor.
+- Run 3 (E6, same-run A/B, dd6 L1 21:9 WIDEWIN=1 cap 10240 fixed, E9PROV_FORCE=tog, 0 crashes, flight 325 s): TL --skip-s 130: gated 51.0 fps
+  T 19.62 rsp 14.24 P(>=2VI) 0.17; forced 49.9 fps T 20.04 rsp 14.39 P 0.20; delta T +0.42 rsp +0.14 run +0.01; 0.5 s-shifted control T +0.14
+  rsp -0.01. Positive control (30 s xctrace, 13 pairs): leaf rs64_e9prov_ovl_route 0.000 ms/frame in gated seconds vs +0.220 forced, _1364_jump
+  0 vs +0.066. Saving ~0.14 ms rsp (TL, about 2x the s7017 A/A noise: small) to ~0.29 ms (xctrace leaves); ~1 fps at 51 fps. Default = gated.
+- Rules out: a single dominant ucode block or RT64 decode term behind the per-cell cost; the s7014 "L_1F98 e9prov probes" overhead (now gated).
+  Next (NEXT.md): streamTerrainGridCellsByDistance, the largest single per-cell term (+0.31 ms/frame game thread): read what it walks per frame.
+Note: tl rings and .trace bundles (gitignored) deleted after analysis; exported XML kept in scratch/s7021.

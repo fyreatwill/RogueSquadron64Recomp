@@ -3714,6 +3714,22 @@ if is_main_ucode and PROBE_ON_MARKER not in text and 'extern "C" int rs64_g1e_pr
                         'extern "C" int rs64_g1e_probes;\n#ifndef RS64_G1E_PROBES_ON  ' + PROBE_ON_MARKER +
                         '\n#define RS64_G1E_PROBES_ON rs64_g1e_probes\n#endif', 1)
 
+# s7021 G1c: the e9 provenance route counters (rs64_e9prov_ovl_route & co.) ran on EVERY overlay route even in the owner-path
+# nmac arm (no early return: they count unconditionally, then return unless ROGUESQ_LOG_E9_PROVENANCE). xctrace split by
+# WIDEWIN cap (s7021 run 2): ovl_route leaf 11.7 ms/s, +0.06 ms/frame per +2048 cells; their counters feed only diagnostic
+# prints. Gate them like the s6715 probes: on when RS64_G1E_PROBES_ON (any ROGUESQ_LOG_* env, incl. LOG_E9_PROVENANCE) or
+# rs64_e9prov_force (ROGUESQ_E9PROV_FORCE=1 always, =tog odd xor8 seconds: same-run A/B; src/main/upstream_compat.cpp).
+# In the nmac/lean arms RS64_G1E_PROBES_ON is 0, so only the force flag is left. Idempotent.
+E9GATE_MARKER = "/* fixup: s7021 e9prov gate */"
+E9GATE_FNS = ("rs64_e9prov_ovl_route", "rs64_e9prov_l1298_12a0_res", "rs64_e9prov_1364_jump",
+              "rs64_e9prov_ovl24_jal17f0", "rs64_e9prov_clip_1e48_ra")
+if is_main_ucode and E9GATE_MARKER not in text and PROBE_ON_MARKER in text and text.count(_main_sig) == 1:
+    _g = [E9GATE_MARKER, 'extern "C" int rs64_e9prov_force;']
+    for _fn in E9GATE_FNS:
+        if re.search(r"\b" + _fn + r"\(", text.split(_main_sig, 1)[1]):
+            _g.append(f"#define {_fn}(...) (__builtin_expect(RS64_G1E_PROBES_ON || rs64_e9prov_force, 0) ? {_fn}(__VA_ARGS__) : (void)0)")
+    text = text.replace(_main_sig, "\n".join(_g) + "\n" + _main_sig, 1)
+
 # s6788 G3e: export the iteration-cap fire count so the per-VI census (ROGUESQ_G3_CENSUS) can attribute a
 # truncated frame to the cap. Idempotent.
 CAPG_MARKER = "/* fixup: s6788 cap-fire global */"

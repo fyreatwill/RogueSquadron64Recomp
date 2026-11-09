@@ -15,6 +15,7 @@ Usage: g5e_cost_by_parity.py <tl.bin.pid> <log-with-anchor> [--skip-s 130] [--gu
 import struct, sys, argparse, re, bisect, statistics as st
 ap = argparse.ArgumentParser(); ap.add_argument('tl'); ap.add_argument('log')
 ap.add_argument('--skip-s', type=float, default=130.0); ap.add_argument('--guard-ms', type=float, default=60.0); ap.add_argument('--shift-ms', type=float, default=0.0)
+ap.add_argument('--until-s', type=float, default=1e9, help='s7021: drop marks later than this many s after the ring start (match an xctrace window)')
 ap.add_argument('--phases', type=int, default=2, help='s7012: 3 = WIDEWIN=tog3, phase=(mach/24e6)%%3 -> cap a/b/c')
 ap.add_argument('--split', choices=('parity', 'xor8', 'hash'), default=None,
                 help='s7017: arm of a mach second s. parity = s&1 (s7010, biased by the autopilot 2 s press cycle); xor8 = (s ^ s>>3)&1 '
@@ -32,7 +33,7 @@ print(f'split={a.split} (anchor: {split_log})')
 M += int(a.shift_ms * 24000)
 raw = open(a.tl, 'rb').read(); n = len(raw) // 24
 ev = sorted((r[0], r[1], r[2], r[4]) for r in (struct.unpack_from('<qIIii', raw, i * 24) for i in range(n)) if r[0] != 0)
-t0 = ev[0][0]; ev = [e for e in ev if e[0] - t0 >= a.skip_s * 1e6]
+t0 = ev[0][0]; ev = [e for e in ev if a.skip_s * 1e6 <= e[0] - t0 < a.until_s * 1e6]
 import collections
 G = collections.Counter(e[3] for e in ev if e[1] == 15).most_common(1)[0][0]
 vis = [e[0] for e in ev if e[1] == 1]

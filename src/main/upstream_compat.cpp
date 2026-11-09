@@ -155,6 +155,17 @@ extern "C" void rs64_tog_anchor(uint64_t mt) {
     const long long su = (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     fprintf(stderr, "[s7010-clk] steady_us=%lld mach=%llu split=%s\n", su, (unsigned long long)mt, rs64_tog_xor8() ? "xor8" : "parity");
 }
+// s7021 G1c: force the gated e9prov route counters back on in the owner-path ucode arms (tools/fixup_factor5_ucode.py s7021 block).
+// ROGUESQ_E9PROV_FORCE=1 always, =tog odd xor8 seconds (same [s7010-clk] anchor), default 0. Updated once per gfx task (main.cpp).
+extern "C" { int rs64_e9prov_force = 0; }
+extern "C" void rs64_e9prov_force_update(void) {
+    static int m = -1;
+    if (m < 0) { const char* e = getenv("ROGUESQ_E9PROV_FORCE"); m = !(e && *e) ? 0 : (e[0] == 't' ? 2 : (e[0] != '0'));
+        fprintf(stderr, "[s7021] e9prov_force mode=%d\n", m); }
+    if (m == 2) { const uint64_t mt = mach_absolute_time(); static int anc = 0; if (!anc) { anc = 1; rs64_tog_anchor(mt); }
+        rs64_e9prov_force = rs64_tog_odd(mt); }
+    else rs64_e9prov_force = m;
+}
 extern "C" { int g_rs64_ww = 0; }
 extern "C" int rs64_s7009_arm(void) {
     static int m = -1; if (m < 0) { const char* e = getenv("ROGUESQ_DD_WIDEWIN"); m = !(e && *e) ? 0 : (e[0] == 't' ? (e[3] == '3' ? 3 : 2) : (e[0] != '0')); }

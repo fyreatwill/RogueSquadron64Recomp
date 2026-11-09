@@ -1,12 +1,15 @@
-# NEXT: G1c per-cell cost — phase-split profile at dd6 tog3 (name the blocks that grow with cells)
+# NEXT: G1c per-cell cost — streamTerrainGridCellsByDistance, the largest single per-cell term
 HYPOTHESIS-ID: g1c-dd-headroom
-Context (s7020, same run, L1 21:9 WIDEWIN owner path dd6): cap 8192 = dd4 cost (59.2 fps, rsp 12.42, run 3.10); cap 10240 rsp +1.7, run +0.7
-(52 fps). The dd multiplier costs ~0; the binding limit above dd4 is per-cell cost. G5i: fixed, owner look only — check CURRENT-TRUTH item 1 first.
-Hypotheses for where the +1.7 ms rsp lives: H-ucode-xform (F5 ucode vertex transform/clip blocks scale with cell vertices), H-rdp-decode (RT64
-RDP interpret/triangle decode inside the DPC_END submit, L_1198 incl), H-glue (bridge walks, closed at 0.2-0.45 ms total so expect small);
-for the +0.7 ms run: H-stream (guest streamTerrainGridCellsByDistance / buildGridCellMeshForFace per cell).
-Discriminator, ONE run: scratch/s7020/run.zsh recipe (dd6 tog3 CAP=8192,10240,10240) + xctrace Time Profiler 30 s at ~150 s (see s7014 k3
-recipe in PORTING-STATE, grep "Run k3"). Split samples by cap phase using the sample timestamps + the [s7010-clk] anchor (extend
-tools/xctrace_ucode_blocks.py with --anchor/--phases 3 if it lacks it), then per block / host function: self samples per second in p0 vs p1+p2.
-The blocks whose delta sums to ~1.7 ms/frame name the path; positive control: total gfx-thread busy delta must match g5e_cost_by_parity rsp
-delta on the same run (skip the xctrace window for the TL split, or report both). Then cut the biggest term (one change, same-run tog A/B).
+Context (s7021, per-frame xctrace split of the dd6 tog3 cap toggle 8192 -> 10240 cells, L1 21:9 WIDEWIN owner path): gfx thread +1.72 ms/frame
+(spread: ucode self 0.70 over 7 blocks, DPC submit 0.68), game thread +0.91 ms/frame of which streamTerrainGridCellsByDistance +0.31 (base 0.64
+ms/frame, +48% for +25% cells), renderFlatMeshFaceGroup +0.15, processGridCellByDistance +0.08. e9prov counters already gated (s7021).
+G5i: fixed, owner look only — check CURRENT-TRUTH item 1 first.
+Source: /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_9.c (RECOMP_FUNC void streamTerrainGridCellsByDistance);
+existing patches on it: tools/apply_s6493_stream_cum.py (exit/skip counters [streamcum]), tools/apply_s6883_spancell.py.
+Hypotheses: H-fullwalk (it scans every window cell each frame to rank by distance, O(cells) even when nothing changes -> cache the ranked
+list or skip unchanged cells), H-superlinear (+48% for +25% cells: a sort/insertion that is O(n log n) or O(n^2) in queued cells),
+H-retail-work (each cell's stream/mesh work is genuine and must be done: only host-side speedups like -O3 / inlining help).
+Discriminator, ONE run, offline-first: (1) read the function (disassembly via the s7014 xctrace_fn_lines.py line split on the C7 trace in
+scratch/s7021/tp2.xml, thread '[Game] MAIN', obj = the funcs_9 .o) to find which loop lines carry the +0.31; (2) if a loop is per-cell
+per frame with no change detection, count calls / iterations per frame at caps 8192 vs 10240 with one counter set (tog3, same run).
+Iterations ratio ~1.25 -> H-fullwalk (linear); ~1.5+ -> H-superlinear. Then one change with a same-run tog A/B (xor8 split, shift control).

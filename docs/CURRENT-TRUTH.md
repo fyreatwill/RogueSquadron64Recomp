@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7020 (2026-11-08).
+Compact operational handoff, as of Session 7021 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,12 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7021 G1c per-cell cost named (per-frame xctrace split of the s7020 dd6 cap toggle, tools/xctrace_phase_split.py, 50 paired triples, 0 crashes):**
++2048 cells = gfx thread +1.72 +-0.22 ms/frame (= TL rsp +1.72; A/A +0.05): ucode self +0.70 spread over L_1F98/pre/L_1090/L_162C/L_16B8/L_1298/L_1740,
+DPC submit +0.68 (bridge self 0.24, RT64 submit_rdp_range 0.23, record_submit 0.16); game thread +0.91 (= TL run +0.93): streamTerrainGridCellsByDistance
++0.31 (largest single term), renderFlatMeshFaceGroup +0.15. A per-SECOND split reads ~0 by construction (cells cut fps in the same ratio): split per frame.
+Change, default on: the e9prov route counters (ovl_route & 4 more) are gated out of the owner ucode (ROGUESQ_E9PROV_FORCE=1|tog restores); same-run
+tog A/B at dd6 cap 10240: rsp -0.14, T -0.42 ms/frame (51.0 vs 49.9 fps; shift control rsp -0.01), ovl_route samples 0 vs +0.22 ms/frame. Next: NEXT.md.
 **s7020 G1c dd6 cell-cap split (same run, tog3 caps 8192/10240/10240, L1 21:9 WIDEWIN owner path, 0 crashes): H-cells.** cap 8192 59.2 fps rsp 12.42 run 3.10
 (= dd4), cap 10240 52.1/52.6 fps, rsp +1.73/+1.60, run +0.74/+0.66; A/A null p2-p1 rsp -0.14; 1 s shift relabels, 0.5 s smears. The dd multiplier
 itself costs ~0 at fixed cells. Binding limit above dd4 = per-cell cost (~0.85 ms rsp + 0.35 ms run per 1000 cells). Next: profile split by cap phase (NEXT.md).
@@ -237,6 +243,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    offered in OWNER-OPT-INS, owner look. Glue walks measured s7018: 0.2-0.45 ms/frame, closed.
    s7019 dd>4 at 21:9 WIDEWIN L1: dd6 55.8 / dd8 53.3 fps vs dd4 59.5; POOLX clamp 5 means dd>=5 = 10240 cells, dd8 = dd6 window.
    s7020: same-run cap split at dd6: 8192 cells = dd4 cost, +2048 cells = rsp +1.7 / run +0.7 ms (52 fps); dd8's extra was cross-run. Headroom needs a cheaper per-cell path.
+   s7021: per-frame split names it (gfx +1.72 = ucode self 0.70 over 7 blocks + submit 0.68 + 0.26; game +0.91, streamTerrainGridCellsByDistance
+   +0.31 largest); e9prov route counters gated (rsp -0.14 same run). Next: streamTerrainGridCellsByDistance per-frame walk (NEXT.md).
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).
