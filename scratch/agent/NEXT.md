@@ -1,19 +1,16 @@
-# NEXT: G1c per-cell cost — split streamTerrainGridCellsByDistance's 171 ns/cell into loop self vs callees, and count the skip path
+# NEXT: G1c per-cell cost — which branch of getGridCellValueAt (0x80048508) costs its 96-120 ns/call at dd6
 HYPOTHESIS-ID: g1c-dd-headroom
-Context (s7022, ROGUESQ_S7022_ST=1, same-run tog3 8192/10240, L1 dd6 21:9 WIDEWIN owner path): the walk is linear, once per frame,
-1.38 ms at 8192 cells / 1.69 ms at 10240, 171 ns/cell inclusive; setup 0.5 us. Do NOT use xctrace per-line splits inside this function
-(62% of samples land on 0.5 us of setup code: attribution artifact).
+Context (s7023, ROGUESQ_S7022_ST=1 + tools/apply_s7023_calleetime.py, L1 dd6 21:9 WIDEWIN tog3 8192/10240, owner path):
+loop 1.52/1.83 ms; getGridCellValueAt 41-48% (96-120 ns/call, ~6000-7800 calls/frame), processGridCellByDistance 12-14%, self 40-45%
+(call-path inline 74-81 ns/cell). 75-78% of cells take the call path; skipmix refuted. Ceiling of any fix here ~0.7 ms/frame.
 G5i: fixed, owner look only — check CURRENT-TRUTH item 1 first.
-Hypotheses:
- H-callee: most of the 171 ns is inside getGridCellValueAt / processGridCellByDistance (called per passing cell) -> optimise or host-index them
-   (s6963 cellidx precedent: answer a chain walk from a host index).
- H-self: the loop's own per-cell code (recomp ctx traffic + the s6513/s6526/s6515/s6588/s6038 diagnostic hooks + g_s6493 increments) is most
-   of it -> strip/gate the diagnostic hooks to one predictable branch, measure.
- H-skipmix: cells mostly take the span-equal skip (g_s6493[4]) and are cheap; a minority pass and are expensive -> change detection could skip
-   passing cells whose span did not change since last frame.
-Discriminator, ONE build, ONE run (same recipe scratch/s7022/run.zsh): extend tools/apply_s7022_streamtime.py so rs64_s7022_st also gets
-(a) mach time spent inside the two callee calls (accumulate around each call site in the loop), (b) per-call counts of skip-path cells,
-call-path cells, and range-reject cells. Report per cap: self ns/cell, callee ns/call, fraction per path. Outcome: callee share >60% ->
-H-callee; self >60% -> H-self (then a same-run tog that bypasses the diag hooks: ROGUESQ_S7022_NODIAG=tog); pass fraction small but
-callee cost dominant -> H-skipmix. Then one change with a same-run tog A/B (xor8 split).
-Summarise with: python3 tools/s7022_streamtime_sum.py scratch/agent/m6/g1_lvl1s7022S6/run.log 6 (rename tag per run).
+getGridCellValueAt branches (read from funcs): (B1) out of range -> jal 0x80048948 (clampGridCellLookup? behind s6963 cellidx);
+(B2) table 0x80136DC0+8 entry has 0x8000 flag and a2!=0 -> direct table 0x80136FCC lookup (cheap); (B3) else 0x80136DC0 table + node list
+via 0x80137A5C (+0x22A) walk.
+Hypotheses: H-walk (B3 node walk dominates: host-index it like s6963); H-clamp (B1 fallback dominates even with cellidx); H-flat
+(cost is spread, ~100 ns = recomp ctx traffic of a ~60-instruction function: then inline/host-reimplement the whole function with a
+same-run tog exactness check, the s6963 CHECK pattern).
+Discriminator, ONE build, ONE run (scratch/s7023/run.zsh recipe, rename to s7024): patch getGridCellValueAt with per-branch counts and
+mach time per branch (enter -> return), print [s7024-gv] per cap bucket. Outcome: one branch >60% of gv time -> H-walk or H-clamp;
+else H-flat. Then build the fix with a ROGUESQ_*=tog same-run A/B and a CHECK arm (retail answer vs new answer, 0 mismatches + flipped
+positive control) in the same iteration.

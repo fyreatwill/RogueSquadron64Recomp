@@ -222,6 +222,28 @@ extern "C" void rs64_s7022_st(unsigned long long t0, unsigned long long t1, unsi
         x.n = 0; x.su = x.lo = x.it = x.rw = 0;
     }
 }
+// s7023 G1c (tools/apply_s7023_calleetime.py): callee/self split of the same loop, same switch. v[0..3] = getGridCellValueAt /
+// processGridCellByDistance ticks + calls, v[4..5] call-path region ticks + entries, v[6..9] per-call deltas of g_s6493 [3] poolcap,
+// [4] spaneq skip, [5] span reject, [6] call path. ovh_ns = one back-to-back mach_absolute_time pair (calibrated once): every timed
+// span carries ~1 ovh; the summariser subtracts it. One [s7023-cs] line per cap bucket per 256 calls.
+extern "C" void rs64_s7023_cs(const unsigned long long* v) {
+    struct B { int cap; unsigned n; unsigned long long a[10]; };
+    static B b[4]; static int nb = 0; static double tb = 0, ovh = 0;
+    if (tb == 0) { mach_timebase_info_data_t i; mach_timebase_info(&i); tb = (double)i.numer / i.denom;
+        unsigned long long s = 0; for (int k = 0; k < 100000; k++) { unsigned long long a = mach_absolute_time(); s += mach_absolute_time() - a; }
+        ovh = s * tb / 100000.0; }
+    const int cap = rs64_s7012_cap(); int k = 0;
+    while (k < nb && b[k].cap != cap) k++;
+    if (k == nb) { if (nb == 4) return; b[nb] = B{}; b[nb].cap = cap; nb++; }
+    B& x = b[k]; x.n++; for (int j = 0; j < 10; j++) x.a[j] += v[j];
+    if (x.n == 256) {
+        const double n = x.n;
+        fprintf(stderr, "[s7023-cs] cap=%d calls=%u ovh_ns=%.2f gv_us=%.2f gv_n=%.1f pg_us=%.2f pg_n=%.1f cp_us=%.2f cp_n=%.1f poolcap=%.1f spaneq=%.1f rej=%.1f callp=%.1f\n",
+                x.cap, x.n, ovh, x.a[0] * tb * 1e-3 / n, x.a[1] / n, x.a[2] * tb * 1e-3 / n, x.a[3] / n, x.a[4] * tb * 1e-3 / n, x.a[5] / n,
+                x.a[6] / n, x.a[7] / n, x.a[8] / n, x.a[9] / n);
+        x.n = 0; for (int j = 0; j < 10; j++) x.a[j] = 0;
+    }
+}
 extern "C" int rs64_s7009_n(void) {
     static int n = -1; if (n < 0) { const char* e = getenv("ROGUESQ_DD_WIDEWIN_N"); n = (e && *e) ? atoi(e) : 128; if (n < 64) n = 64; if (n > 128) n = 128; }
     return n;

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7022 (2026-11-08).
+Compact operational handoff, as of Session 7023 (2026-11-08).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,6 +8,9 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7023 stream loop split (tools/apply_s7023_calleetime.py, same switch ROGUESQ_S7022_ST=1, same recipe, 0 crashes; path counts sum exactly to cells):**
+callees 55-60% / self 40-45%: getGridCellValueAt 96-120 ns/call = 41-48% of the loop (largest term), processGridCellByDistance 31 ns/call 12-14%,
+call-path inline 74-81 ns/cell, skip cells 33-38 ns. 75-78% of cells take the call path (H-skipmix refuted), 0 rejects. Ceiling of a fix here ~0.7 ms/frame. Next: NEXT.md.
 **s7022 stream walk is linear (ROGUESQ_S7022_ST=1 per-call timer, tools/apply_s7022_streamtime.py, same-run tog3 8192/10240, L1 dd6 21:9 WIDEWIN, 0 crashes):**
 streamTerrainGridCellsByDistance runs once per frame, setup 0.5 us, loop 1.38 ms at 8192 cells / 1.69 ms at 10240 (inclusive of its two callees),
 171 ns/cell flat at both caps: H-superlinear refuted, every window cell is walked every frame. xctrace put 62% of the function's samples on

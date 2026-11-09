@@ -42111,6 +42111,7 @@ RS64_REPLAY = [
     "apply_s7011_lodmul.py",  # s7011: G5e coarser terrain LOD tiers at dd>1, opt-in ROGUESQ_DD_LODMUL (=f), _TOG=1 same-run parity
     "apply_s7012_widewin_cap.py",  # s7012: G5e host area cap for the s7009 wide window, ROGUESQ_DD_WIDEWIN_CAP=a[,b,c], WIDEWIN=tog3 cycles
     "apply_s7022_streamtime.py",  # s7022: G1c per-call timing of streamTerrainGridCellsByDistance, ROGUESQ_S7022_ST=1
+    "apply_s7023_calleetime.py",  # s7023: G1c callee/self split of the same loop (same switch)
 ]
 
 

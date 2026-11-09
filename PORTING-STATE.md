@@ -184902,3 +184902,25 @@ the getGridCellValueAt/processGridCellByDistance calls, and how many cells take 
 Verdict: this run refutes H-superlinear (ns/cell flat 171 at both caps) and selects H-fullwalk's linear O(cells) walk over H-retail-work-only
 reading of the s7021 profile; it also refutes the xctrace per-line attribution for this function (setup 0.5 us vs 62% of samples). Next
 discriminator: callee vs self time per cell plus the skip-path fraction, one build (NEXT.md: H-callee / H-self / H-skipmix).
+
+## Session 7023 (2026-11-08) — G1c: streamTerrainGridCellsByDistance's per-cell cost is mixed (callees 55-60%, self 40-45%); getGridCellValueAt is the largest single term (96-120 ns/call, 41-48% of the loop); no skipmix
+HYPOTHESIS-ID: g1c-dd-headroom
+- Change (measurement only): tools/apply_s7023_calleetime.py (fixup replay list after s7022, same switch ROGUESQ_S7022_ST=1) times
+  getGridCellValueAt and processGridCellByDistance (mach pairs + call counts), the inclusive call-path region (L_80042DC4 -> next cell),
+  and per-call deltas of the s6493 path counters (spaneq skip [4], span reject [5], call path [6], poolcap [3]). rs64_s7023_cs
+  (src/main/upstream_compat.cpp) prints [s7023-cs] per cap bucket per 256 calls with a calibrated mach-pair overhead (5.2 ns);
+  tools/s7023_calleetime_sum.py joins it with [s7022-st] and subtracts the overhead.
+- Run: scratch/s7023/run.zsh (= s7022 recipe: L1 dd6 21:9 WIDEWIN=tog3 caps 8192/10240/10240, owner path FAST=1 PROBES=0), 320 s hold,
+  0 crashes, 0 VI stalls. Controls: path counts sum exactly to the walked cells in both buckets (1992+0+6048 = 8040; 2131+0+7777 = 9908);
+  call-path region entries = gv calls = pg calls. Instrument overhead visible: inclusive 171 -> 183-189 ns/cell (~3 extra pairs per call-path cell).
+- Result (last 6 lines per cap):
+  cap 8192: loop 1520 us, gv 726 us (48%, 120 ns/call), pg 189 us (12%, 31 ns/call), self 606 us (40%): call-path inline 74 ns/cell,
+  skip cells 33 ns/cell. Paths: spaneq skip 25%, reject 0%, call 75%.
+  cap 10240: loop 1826 us, gv 744 us (41%, 96 ns/call), pg 252 us (14%, 32 ns/call), self 831 us (45%): call-path inline 81 ns/cell,
+  skip 38 ns/cell. Paths: skip 22%, reject 0%, call 78%.
+- Verdict: neither H-callee (>60%) nor H-self (>60%) is selected outright; H-skipmix refuted (75-78% of cells take the call path, so
+  change detection on passing cells would have to touch most cells anyway). getGridCellValueAt is the largest single term. Whole
+  function is ~1.5-1.8 ms of a 16.7 ms frame, so the ceiling on any fix here is ~0.7 ms/frame (gv) or ~0.5 ms (self). It already sits
+  behind the s6963 cellidx host index for its clampGridCellLookup chain walk (G1E_CELLIDX=2 at dd>1).
+- Rules out: superlinear (s7022), skip-path dominance, reject path (0 cells at dd6 L1). Next: which branch of getGridCellValueAt costs the
+  96-120 ns (direct 0x8000-flag table hit vs 0x80136DC0 table + 0x80137A5C node path vs clampGridCellLookup fallback) — NEXT.md.
