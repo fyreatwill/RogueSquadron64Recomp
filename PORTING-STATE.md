@@ -185096,3 +185096,5 @@ range push), single-source. Restore control in the same run: [s4286-restore] pos
 Rules out: S4272 shadow copy / vector growth as the bridge remainder; the s7028 bad2 as a real accounting bug. Bridge trimming closed (whole
 bridge < 0.3 ms/task left). BUMPFAST and BUMPFAST=2 stay opt-in (exact; ~3-5 ns/bump gain, not worth a default flip).
 Next: NEXT.md g1c-fogged-cell-cull (do fully fogged cells beyond dd4 pay the dd6 cost for no image).
+Verdict: selects H-checker for the s7028 bad2 (refutes H-thread and H-path) and selects H-call for the 10.7 ns remainder (refutes H-shadow).
+Next discriminator: per-ring fog-pixel fraction of the cells beyond the dd4 radius plus a same-run ROGUESQ_DD_FOGCULL tog3 cost arm (H-fogwaste vs H-visible vs H-gamecost).
