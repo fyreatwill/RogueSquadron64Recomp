@@ -187165,5 +187165,7 @@ Run (scratch/s7099/arm.zsh 6 4 s7104a, L6 dd4 16:9 FPS60, G1E_LIMIT=1 600-VI win
   0x8009DE94..), face/vertex emission, or the F5 ucode near-plane clip of near polygons.
 - Caveat: ±3 cells covers the walls the camera hugs (s7098 frames) only if a cell is about 2 world units. The wall cell itself is not named,
   so a culled wall cell further out is not excluded.
+Discrimination: this run refutes H-behind, H-lod (no-mesh) and the pool cap as the near-wall drop, does not raise H-frustum, and selects H-none
+(the builder keeps the wall cell). The next discriminator is emitted tris per near cell vs RDP tris on the same frame (H-emit-skip / H-lodswap / H-clip / H-elsewhere).
 Next: per near cell, log what the mesh stage emits (faces, vertices, tris to the DL) together with the RDP tri count for the same frame.
 Episode vs flight then shows whether the wall polygons are emitted and clipped, or never emitted (NEXT.md, slug fps60-wall-mesh-emit).
