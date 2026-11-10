@@ -185685,3 +185685,22 @@ Unit (NEXT.md s7055, HYPOTHESIS-ID dd6-219-l12-levelK): H-levelK / H-noread / H-
 - Verdict line: the same-run tog selects H-levelK (K=0.5 on L12 only: +0.6/+0.5 fps, rsp -1.2/-1.3 ms, L4 logged k=0.6) and refutes H-noread
   (gCurrentLevel 0x80130B70 reads 12 / 4 in mission). The change is behavioural (auto KLEVEL default in the dd6 bundle), not diagnostic-only.
   Next discriminator: L13 21:9 same-run K 0.5/0.6/0.5 (H-l13-gain vs H-l13-free vs H-l13-visible, NEXT.md).
+
+## Session 7057 (2026-11-10) — L13 joins the 21:9 level-scoped K: auto KLEVEL now 12:0.5,13:0.5; L13 same run 58.5 -> 59.4/59.4 fps, rsp -1.24/-1.31 ms, frozen poses 0 px changed vs a K=0.3 control that fires, 0 crash
+
+Unit (NEXT.md s7056, HYPOTHESIS-ID dd6-219-levelK-l13): H-l13-gain / H-l13-free / H-l13-visible.
+- Boring checks: no other game instance, load ~4. CURRENT-TRUTH 56 KB (< 60 KB, no maintenance).
+- Hold (scratch/s7057/run_hold.zsh L13t 13 tog: 21:9 dd6 FPS60 MELT, explicit tog3 bundle K=0.6 + KLEVEL=13:0.5 TOG -> phases 0.5/0.6/0.5):
+  509 s flight, alive, vi_stalls30s 0, crash grep 0. Log: level=19 at boot, level=13 k=0.5,0.6,0.5 at mission load.
+  g5e_cost_by_parity --phases 3 --skip-s 130 --split xor8, 22.7k frames: p0 (K0.5) 59.4 fps rsp 11.83 / p1 (K0.6) 58.5 rsp 13.06 /
+  p2 (K0.5) 59.4 rsp 11.75; P(>=2VI) 0.01/0.03/0.01; A/A p2-p0 0.0 fps, rsp -0.07. K0.5 vs 0.6: +0.9/+0.9 fps, rsp -1.24/-1.31 (same size as L12).
+  Positive control for the lever: [s7034] kept/f t=564 2812/3532/2821 (K0.5 culls ~710 more cells/f).
+- Frozen poses (scratch/s7057/run.zsh 13: arms k06 base / k05 / k03, 21:9 dd6 NOREF, 3/3 0 crash, [s7037] k=0.6/0.5/0.3, same posefreeze
+  positions; run reached k0-k3 as in s7051). tools/s7032_pose_cull_score.py --base k06: k05 0.01/0.02/0.02/0.00, k03 0.07/0.18/0.29/0.00.
+  Pixels with luma diff > 8 vs k06: k05 0/0/0 at k0-k2; k03 3/9/64 (horizon rows 640-746) -> the K=0.3 control fires where s7051's KEDGE=0 control
+  could not (L13 has no edge band). H-l13-visible refuted at these poses (single-source: one run, 3 informative poses, dark level).
+- Change: src/main/main.cpp s7037 bundle: auto KLEVEL "12:0.5" -> "12:0.5,13:0.5" (21:9 / FB_WIDTH > 796, no explicit K). Built; auto-path run
+  L13a: `[s7037] ... klevel=12:0.5,13:0.5 (auto)`, `[s7056] level=13 k=0.5,0.5,0.5`, 326 s flight, 0 crash, 0 VI stall. 16:9 unchanged.
+  No ORIGIN needed (performance tuning of an opt-in cull). OWNER-OPT-INS line added.
+- Verdict line: the same-run tog selects H-l13-gain (+0.9 fps, rsp -1.3 ms) and refutes H-l13-free (K0.6 sat at 58.5) and H-l13-visible
+  (0 px vs a firing K0.3 control). Rules out: L13 needing a separate KEDGE-style exception. Next: 21:9 survey of L2/L3 (16:9 cull gainers, s7041).
