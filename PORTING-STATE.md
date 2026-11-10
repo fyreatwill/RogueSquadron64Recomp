@@ -185748,3 +185748,23 @@ HYPOTHESIS-ID: dd6-219-levelK-survey. CURRENT-TRUTH 56.7 KB (<60 KB, no maintena
   hitches the same at these transitions (oracle cannot drive missions).
 - Rules out: a level K need on L0/L6/L7/L11; dd6 as the source of the L6/L7 gaps.
 - Remaining survey: s7058_219auto_L8, L9, L14, L16, L17, L18 stay queued; score with --gaps 150 and use the "excluding these gaps" fps.
+
+## Session 7060 (2026-11-10) — 21:9 dd6 survey L8/L9/L14/L16: L9 dips in a dense burst; K=0.5 does not help, the dd6 window's extra cells cause it (same-run cap toggle); L16 is transition stalls; new survey table tool
+HYPOTHESIS-ID: dd6-219-levelK-survey. CURRENT-TRUTH 57.7 KB at start (<60 KB, no maintenance). New soak verdicts: s7058_219auto_L14 rc=0, s7058_219auto_L16 rc=0 (folded here). L8 and L9 run by hand (moved to soak_queue/done/). L17/L18 still queued.
+- Unit (NEXT s7059): score the rest of the survey. Hypotheses: H-laggard (a level under 59.5 fps excluding gaps with RSP-bound frames, so a level K candidate) vs H-alldone.
+- New tools/s7060_survey_table.py: runs g5e_cost_by_parity.py --phases 1 on every scratch/s7058 ring, prints one row per level (whole fps, fps excluding >150 ms gaps, gaps per 100 s, rsp mean/p90, P(>=2VI), arm fields, logged k, count of >25 ms frames and their mean rsp) plus a verdict. Control: it reproduces s7059 (L0 59.61, L6 59.80, L7 59.92, L11 59.93 excl.).
+  It adds a slow-frame rsp test because L9 has mean rsp 10.5 (under the old 12.5 bar) but its >=2-VI frames average 16.9 ms rsp.
+- Survey (21:9 dd6 bundle auto, k 0.6, about 360 s hold, all alive, 0 crash, 0 VI stall): L8 59.80 whole / 59.98 excl, OK. L14 59.90 / 59.92, OK. L16 58.30 / 59.48
+  (59.68 excluding >40 ms): 25 paired 200-310 ms + ~60 ms gaps, rsp 0 inside, inits 8, on an 88 s cycle. This is the s7059 transition-stall class (the
+  autopilot cycles the backdrop menu on L16, CURRENT-TRUTH item 11). Slow-frame rsp 11.4, not K. L9 58.50 / 58.45: no transition gaps, 469 slow frames at
+  rsp 16.9 (17-22 ms), most of them in a 270-330 s burst (55.4 fps over 295-335 s), godrefills 20 (heavy combat).
+- Arm 1, same-run K toggle on L9 (scratch/s7060/run_hold.zsh, KLEVEL=9:0.5 TOG, 505 s, klog shows level=9 k=0.5,0.6,0.5): whole run 59.1/59.2/59.1 fps,
+  rsp 9.72/10.35/9.65 (K0.5 is -0.6 ms against a 0.4 ms shifted A/A). In the burst (535-580 s in this run) 52.1/53.0/49.9 fps, P 0.15/0.13/0.18, and the
+  shifted split moves just as much. K is refuted for L9.
+- Arm 2, same-run cell-cap toggle on L9 (scratch/s7060/run_cap.zsh, WIDEWIN tog3 CAP=4096,10240,4096, k 0.6, 505 s, 0 crash): positive control, rsp +2.15 /
+  run +1.12 ms at 10240 vs 4096, A/A p2-p0 -0.15. Whole run 59.9/59.6/59.7. Burst window 270-370 s: 60.0 / 58.7 / 60.0 fps, P(>=2VI) 0.00/0.02/0.00,
+  rsp p90 10.98/15.96/10.77. The 333 ms shifted split keeps the 10240 phase low (58.6). 500-545 s: 58.9/59.0/60.0 (too few frames to read).
+- Verdict: H-laggard on L9, but the lever is the dd6 window's cell count in L9's densest stretch (H-dd-window), not K. Single run, and this run's burst was
+  milder than the s7058 one (bursts vary with combat). L16, L6 and L7 stay transition stalls. L8, L14 (with s7058/s7059: L0-L7, L11-L13) need nothing.
+- Rules out: KLEVEL for L9 or L16.
+- Next: same-run cap 8192/10240/8192 on L9 (s7020: 8192 = dd4 cost; s7012: the side-edge gain arrives by 6144). If 8192 holds 60 in the burst, add a level-scoped cap (auto, like KLEVEL) and pose-qualify the edge. Fold L17/L18 when the loop runs them.
