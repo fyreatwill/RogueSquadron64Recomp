@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cstdarg>
 #include <thread>
 #include <mutex>
 #include <set>
@@ -7852,4 +7853,61 @@ extern "C" uint32_t rs64_s6993_mask(uint32_t pc, uint32_t v) {
         if (k < 16) std::fprintf(stderr, "[s6993] pc=%08X v=%08X verdict %s (n=%d)\n", pc, v, wide ? "pointer (fixed)" : "slot id (retail mask)", k + 1);
     }
     return wide ? 0xF0000000u : 0xFF000000u;
+}
+// s7064 transition-stall audio wait (tools/apply_s7064_slotwait.py), ROGUESQ_S7064=<out path>. Episode = consecutive
+// anyAudioSlotActive polls returning busy (v0==0) until one returns idle. Records B (begin: caller ra, active mask, slot count,
+// base), S (slot snapshot, 34 guest words), M (mask change), F (synth frame inside an episode, snapshots of the episode's slots,
+// first 96 frames), E (end: polls, synth frames, deacts), X (episode abandoned: >150 ms with no poll), D (deactivateVoice idx ra).
+// G lines (total synth frames, run span: control rate) and fflush at each episode end; streamed (SIGKILL-safe). Measurement only.
+extern "C" { int g_rs64_s7064 = [] { const char* e = getenv("ROGUESQ_S7064"); return (e && *e && *e != '0') ? 1 : 0; }(); }
+namespace {
+struct S7064 {
+    std::mutex mu; FILE* fo = nullptr; size_t nev = 0; bool in = false; uint64_t t0 = 0, last = 0, first = 0; unsigned polls = 0,
+    synth_at = 0, deact_at = 0, frames = 0; uint64_t mask = 0, emask = 0; unsigned long long synth = 0, deact = 0; double tb = 0;
+    double ms(uint64_t t) { return (t - first) * tb * 1e-6; }
+    void put(const char* fmt, ...) __attribute__((format(printf, 2, 3))) {
+        if (nev > 400000 || !fo) return; nev++; va_list a; va_start(a, fmt); vfprintf(fo, fmt, a); va_end(a); fputc('\n', fo); }
+    void flush() { if (fo) { fprintf(fo, "G synth=%llu deact=%llu span_ms=%.3f events=%zu\n", synth, deact, ms(mach_absolute_time()), nev); fflush(fo); } }
+    static uint32_t w(const uint8_t* r, uint32_t va) { return rs64_rdram_u32(r, va - 0x80000000u); }
+    static unsigned nslots(const uint8_t* r) { unsigned n = rs64_rdram_u8(r, 0x80141AD0u - 0x80000000u); return n > 64 ? 64 : n; }
+    static uint32_t base(const uint8_t* r) { return w(r, 0x801496F8u); }
+    static bool okb(uint32_t b) { return b >= 0x80000000u && b < 0x80800000u - 64 * 136; }
+    uint64_t scan(const uint8_t* r) { uint32_t b = base(r); if (!okb(b)) return 0; uint64_t m = 0; unsigned n = nslots(r);
+        for (unsigned i = 0; i < n; i++) if (rs64_rdram_u8(r, b + i * 136 - 0x80000000u)) m |= 1ull << i; return m; }
+    void snap(const uint8_t* r, char k, uint64_t m) { uint32_t b = base(r); if (!okb(b)) return;
+        for (unsigned i = 0; i < 64; i++) if (m >> i & 1) { std::string s; char h[12];
+            for (unsigned j = 0; j < 34; j++) { snprintf(h, sizeof h, " %08X", w(r, b + i * 136 + j * 4)); s += h; }
+            put("%c %.3f %u%s", k, ms(mach_absolute_time()), i, s.c_str()); } }
+};
+S7064& s7064() { static S7064* s = [] { auto* x = new S7064; mach_timebase_info_data_t i; mach_timebase_info(&i);
+    x->tb = (double)i.numer / i.denom; x->first = mach_absolute_time(); x->fo = fopen(getenv("ROGUESQ_S7064"), "w"); return x; }(); return *s; }
+}
+extern "C" void rs64_s7064_poll(uint8_t* rdram, unsigned v0, unsigned ra) {
+    S7064& s = s7064(); std::lock_guard<std::mutex> g(s.mu); const uint64_t t = mach_absolute_time();
+    if (s.in && (t - s.last) * s.tb > 150e6) {
+        s.put("X %.3f last=%.3f polls=%u synth=%llu", s.ms(t), s.ms(s.last), s.polls, s.synth - s.synth_at); s.in = false; s.flush(); }
+    if (v0 == 0) {
+        const uint64_t m = s.scan(rdram);
+        if (!s.in) { s.in = true; s.t0 = t; s.polls = 0; s.frames = 0; s.synth_at = (unsigned)s.synth; s.deact_at = (unsigned)s.deact;
+            s.mask = s.emask = m;
+            s.put("B %.3f ra=%08X mask=%016llX n=%u base=%08X gate=%02X", s.ms(t), ra, (unsigned long long)m, S7064::nslots(rdram),
+                  S7064::base(rdram), rs64_rdram_u8(rdram, 0x800A0F50u - 0x80000000u));
+            s.snap(rdram, 'S', m); }
+        else if (m != s.mask) { s.put("M %.3f mask=%016llX polls=%u", s.ms(t), (unsigned long long)m, s.polls); s.mask = m; s.emask |= m; }
+        s.polls++;
+    } else if (s.in) {
+        s.put("E %.3f dur=%.3f polls=%u synth=%llu deact=%llu ra=%08X", s.ms(t), (t - s.t0) * s.tb * 1e-6, s.polls,
+              s.synth - s.synth_at, s.deact - s.deact_at, ra);
+        s.in = false; s.flush();
+    }
+    s.last = t;
+}
+extern "C" void rs64_s7064_deact(uint8_t* rdram, unsigned idx, unsigned ra) {
+    S7064& s = s7064(); std::lock_guard<std::mutex> g(s.mu); s.deact++;
+    s.put("D %.3f idx=%u ra=%08X in=%d", s.ms(mach_absolute_time()), idx, ra, (int)s.in); (void)rdram;
+}
+extern "C" void rs64_s7064_synth(uint8_t* rdram) {
+    S7064& s = s7064(); std::lock_guard<std::mutex> g(s.mu); s.synth++;
+    if (s.in && s.frames < 96) { s.frames++; const uint64_t m = s.scan(rdram);
+        s.put("F %.3f k=%u mask=%016llX", s.ms(mach_absolute_time()), s.frames, (unsigned long long)m); s.snap(rdram, 'S', s.emask); }
 }

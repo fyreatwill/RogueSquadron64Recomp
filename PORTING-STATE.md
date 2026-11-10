@@ -185826,3 +185826,31 @@ s7006-s7045 migrated verbatim to PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (
 OWNER-OPT-INS: one line, 21:9 farthest-view checked on all 19 levels.
 Next (NEXT.md): the 200-320 ms scene-transition stalls (anyAudioSlotActive polling, single-source xctrace s7059):
 H-retail vs H-cadence vs H-preempt-residual, one ring instrument per stall.
+
+## Session 7064 (2026-11-10) — transition stalls: the audio-slot drain wait is only 25-66 ms (2-4 synth frames at 60/s) of each 200-335 ms gap; H-cadence and H-preempt-residual refuted; the game thread's 133-150 ms OS-silent stretch (8-9 VI) is the bulk
+HYPOTHESIS-ID: transition-stall-audio-wait. CURRENT-TRUTH 37.1 KB (no maintenance). No new soak verdicts.
+- Unit (NEXT s7063): are the 200-320 ms scene-transition stalls (s7059, single-source xctrace: 209/298 game-thread samples in
+  isAudioSlotActive/anyAudioSlotActive polling) a retail audio wait (H-retail), a coarse reap cadence on our side (H-cadence), or
+  the audio thread starved because the s6809 preempt point is missed (H-preempt-residual)?
+- New instrument (measurement only): tools/apply_s7064_slotwait.py (in the vendored fixup list) hooks the anyAudioSlotActive return,
+  deactivateVoice and musyxSynthFrame_s4562_impl entry; host ring rs64_s7064_* in src/main/upstream_compat.cpp, ROGUESQ_S7064=<path>,
+  streamed text with fflush per episode (the first run's atexit dump was lost to SIGKILL; fixed and rerun). Episode = busy polls
+  until one returns idle; logs the active slot mask (slot array *(0x801496F8), stride 0x88, count byte 0x80141AD0), mask changes,
+  synth frames and deactivates inside, plus 136-byte slot snapshots per synth frame. Analyzer tools/s7064_slotwait_sum.py.
+- Run: L6 dd1 4:3 FPS60 (s7059 recipe, scratch/s7064/run.zsh L6b), 362 s hold, alive, 0 crash, 0 VI stalls, mission_cycles=2.
+  TL ring: 15 gaps >150 ms (201-335 ms, rsp 0), fps excl. 59.83 (= s7059's 59.85).
+- Result: 17 slot-wait episodes in the whole run, 25-66 ms each (median ~33). 13 of them sit inside 13 of the 15 TL gaps
+  (constant clock-origin offset 0.13-0.29 s, less than the gap lengths); 2 gaps (269.2, 389.2 s) have no audio wait at all.
+  Inside every episode the synth ran 2-4 frames at 55-81/s (whole-run synth rate 59.9/s = control), and all active slots
+  (1-19 of 16-20) cleared together within one synth frame, with 0 deactivateVoice calls (a batch stop processed by the synth),
+  then the next poll returned idle. Other guest threads keep their 17 ms cadence through every gap (TL per-slot silence: VI/audio
+  slots 5/9 max 17 ms), while the game thread (slot 8) makes no OS mesg call for 133-150 ms per gap, quantized at 8/9 VIs.
+- Verdict: H-cadence refuted (slots clear on the next 2-4 synth frames, not a coarse host cadence); H-preempt-residual refuted (synth
+  frames run inside every episode, other threads keep cadence). H-retail fits the audio part: a stop-all ramp of 2-4 audio frames
+  (retail parity itself single-source: no retail run of these transitions, the oracle cannot drive missions). The s7059 xctrace
+  reading "stalls are mostly audio polling" is refuted as the main term: the audio wait is ~14% of gap time (540 ms of 3.82 s).
+  Two lines: slot ring + TL gap ring, same run.
+- Rules out: the audio drain as the cause of the 200-335 ms transition stalls; our audio reap cadence and the preempt point.
+- Caveat: caller ra reads 0 (recompiled code does not maintain $ra for direct calls), so per-caller attribution is still the s7059 xctrace.
+- Next (NEXT.md): what the game thread does in its 133-150 ms OS-silent stretch (VI-quantized: H-vispin a poll on a VI-updated
+  counter, vs H-compute text glyph/menu build that happens to last ~8 VI).

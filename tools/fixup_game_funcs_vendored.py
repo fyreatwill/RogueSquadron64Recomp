@@ -42117,6 +42117,7 @@ RS64_REPLAY = [
     "apply_s7030_fogcull.py",  # s7030: G1c fogged-cell cull at dd>1, ROGUESQ_DD_FOGCULL=<k>|tog3 (+ depth/fog-end histogram)
     "apply_s7031_offmap.py",  # s7031: G1c off-map cell census + ROGUESQ_DD_OFFMAPCULL=<R>|tog3 ring cull (needs s7030)
     "apply_s7032_eyegate.py",  # s7032: off-map cull gated on the eye cell being over the map (ROGUESQ_DD_OFFMAPCULL_EYE=0 ungated)
+    "apply_s7064_slotwait.py",  # s7064: transition-stall audio-slot drain wait ring, ROGUESQ_S7064=<path> (measurement only)
 ]
 
 

@@ -1,26 +1,19 @@
-# NEXT: scene-transition stalls (200-320 ms) — retail audio wait or our slot-drain cadence?
-HYPOTHESIS-ID: transition-stall-audio-wait
-Context: 21:9 dd6 survey closed s7063 (19 levels ~60 fps). The remaining in-run gaps are 200-320 ms stalls at scene
-transitions on L6/L7/L16/L17 (also dd1 4:3, s7059). One xctrace (single-source) put 209/298 game-thread samples in
-isAudioSlotActive/anyAudioSlotActive polling under menuOverlayInit / endMissionCleanup / cinematicLoopBody.
-s6809 already fixed one variant (preempt point in anyAudioSlotActive so the audio thread can reap). G5c bar excludes
-loads, so this is a fidelity/feel question, not a G5c failure.
+# NEXT: what fills the game thread's 133-150 ms OS-silent stretch inside each scene-transition stall?
+HYPOTHESIS-ID: transition-stall-silent-stretch
+Context (s7064): L6 dd1 4:3 FPS60 transition gaps 201-335 ms (15 per 362 s run). The audio-slot drain wait inside is only
+25-66 ms (2-4 synth frames, ROGUESQ_S7064 ring); other guest threads keep 17 ms cadence; the game thread (TL slot 8) makes no
+OS mesg call for 133-150 ms per gap, quantized at 8 or 9 VIs. Recipe: scratch/s7064/run.zsh <name> 6 (ROGUESQ_S7064 + G1E_TL).
 Hypotheses:
- H-retail: the slots are genuinely busy (a sound still playing out); retail waits the same time. Fingerprint: slot
-   stays active for ~= the remaining sample count / 32 kHz of the voice it carries; reap happens on the first audio
-   frame after the voice ends.
- H-cadence: the voice ended long before, but our audio thread reaps/clears the slot only on a coarse host cadence
-   (AI buffer drain, host callback size) or is starved while the game spins. Fingerprint: slot-end-of-data timestamp
-   to slot-idle timestamp >> one audio frame (~5 ms at 60 Hz task rate).
- H-preempt-residual: the s6809 preempt point is not reached on this path (a different spin site / isAudioSlotActive
-   called directly), so the audio thread is blocked behind the run token. Fingerprint: zero audio-task runs during the
-   stall window.
-Discriminator, ONE build, ONE run (L6 dd1 4:3 FPS60, scratch/s7059/run_dd1.zsh recipe, ~15 stalls per run):
- per stall (game thread inside anyAudioSlotActive > 50 ms): which slot ids are active, per slot the voice's
- end-of-data time (sample cursor hits end), the time the slot goes idle, and audio-task count / AI pushes inside the
- window. Ring buffer dumped at exit, no per-frame stderr. Positive control: a forced long voice (or the title music
- slot) must show active-until-end with end->idle < 10 ms.
-Outcome map: end->idle small and active time = real remaining audio -> H-retail (close as retail, owner note);
- end->idle large -> H-cadence (fix the reap cadence); no audio tasks in window -> H-preempt-residual (extend
- tools/fixup_preempt_point.py to the missing site).
-Hard rules: diagnostics in generated code go through tools/fixup_*.py; one game run at a time; SIGKILL.
+ H-vispin: the game busy-polls a VI-updated variable (frame counter / fade timer written by the retrace thread) for N frames
+   outside OS calls -> retail-identical timed wait (feel only). Fingerprint: stretch length = integer VIs exactly; one hot loop PC.
+ H-compute: text glyph / menu / mission-end build (rasterizeFormatMessageGlyphs, buildDebrisMeshFromCells, menuOverlayInit)
+   that happens to take ~140 ms host time -> ours to speed up (host cost, retail would be faster/slower?).
+ H-tokenwait: the game host thread is blocked on the ultramodern run token / a host lock (not a guest OS call), e.g. RT64
+   or a host-side load -> ours.
+Discriminator, ONE run: host `sample <pid> 1 1` triggered by a watcher at each slot-wait episode start (tail sw_*.txt for 'B '),
+or an ultramodern-side per-gap guest PC census of the game thread; split samples in the stretch into on-CPU compute (which
+function), spin (one loop), and blocked (psynch/mutex). Positive control: a known compute burst (title glyph build, s6808)
+must show as rasterizeFormatMessageGlyphs.
+Outcome map: one VI-polling loop -> H-vispin (close as retail feel, owner note); named heavy compute -> H-compute (profile/fix);
+blocked in a host lock -> H-tokenwait (fix the holder).
+Hard rules: diagnostics in generated code go through tools/fixup_*.py / apply scripts; one game run at a time; SIGKILL.
