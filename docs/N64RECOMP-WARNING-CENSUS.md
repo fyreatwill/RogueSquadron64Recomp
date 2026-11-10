@@ -43,3 +43,27 @@ classifier finds overlay starts for 188/191 class-2 lines.
 
 Not covered (no warning is printed for them): 81 `jr $reg` sites lowered to LOOKUP_FUNC tail calls and 177 jump-table
 switches in the generated tree. That is the next silent-lowering census.
+
+## s7083: the unwarned lowerings — `jr/jalr $reg` and jump tables (CLOSED, no miscompile)
+
+tools/s7083_lowering_census.py over the same pristine front-end pass (scratch/s7082/regen) and the retail ROM:
+
+| Class | Count | Verdict |
+|---|---|---|
+| `LOOKUP_FUNC(ctx->rN)` from `jalr` | 80 | indirect calls through function pointers (runtime lookup; a non-function target exits loudly in get_function) |
+| `LOOKUP_FUNC(ctx->rN)` from `jr $non-ra` | 1 | convertMat3x4ToN64Mtx 0x80018E58 `jr $t9`, $t9 = $ra saved at entry (hand-asm return). Already patched to a host return by fixup_game_funcs_vendored.py (s2605); tools/check_jr_t9_host_return.py passes on the live tree |
+| jump tables, all words match | 176 | table base recovered independently (lui/addiu chain into the addu before the jr), bound = nearest sltiu, words read from the ROM through the owning section's rom/ram map: count == bound, word[i] == case i label, every word inside the function |
+| jump table, strength-reduced index | 1 | initHudStruct 0x800C14C4: index $s1 = 4*$s3 (loop-carried, seeded 0x20 / 8, both stepped together), bound on $s3 < 9; table 0x800A6560 matches 9/9 |
+
+No missed jump table (the 81 "jr $reg" sites in NEXT.md were 80 jalr + 1 jr). Negative control, same pass: base+4 makes
+177/177 tables MISMATCH.
+
+Check (d), the dropped table load: N64Recomp lowers the `lw $r, 0(...)` feeding the jr to an ADD32 (address, not the
+loaded code word), so $r is wrong at every case label. Safe only if no case path reads $r before writing it. DFS over
+fall-through, taken and likely paths from all 1273 case targets (delay slots honoured, calls clobber caller-saved,
+budget 600 insns): 0 reads; 754 write, 326 call, 193 exit. Controls: start at the jr itself -> READ 177/177; injected
+control (first write on the path turned into `sw $r`) -> READ 692/692 (the other 62 writes sit in delay slots, not
+injected). Before the delay-slot and call rules were added the scan reported 142 then 31 reads; every one inspected was
+a `jal` return value or a delay-slot `lui` write, i.e. scanner defects, not code.
+
+Verdict: N64Recomp's silent control-flow lowerings are correct for this ROM except the one jr-$t9 return, already fixed.

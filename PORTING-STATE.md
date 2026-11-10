@@ -186368,3 +186368,26 @@ Result:
 Rules out: any further live miscompile inside N64Recomp's warning set. Not covered because N64Recomp does not warn: 81
 `jr $reg` sites lowered to LOOKUP_FUNC tail calls and 177 jump-table switches; next unit.
 No game run (offline only, no code path changed); no ORIGIN line needed (no mitigation).
+
+## Session 7083 (2026-11-10) — N64Recomp silent control-flow lowerings closed: 80 jalr + 1 fixed jr $t9, 177/177 jump tables match the ROM, dropped table lw never read before write
+
+What ran (offline, no build, no game run): new tools/s7083_lowering_census.py over the pristine s7082 front-end pass
+(scratch/s7082/regen) and the retail ROM; output scratch/s7082/lowering_census.txt; write-up appended to
+docs/N64RECOMP-WARNING-CENSUS.md.
+
+Result:
+- The 81 `LOOKUP_FUNC(ctx->rN)` sites NEXT.md called "jr $non-ra tail calls" are 80 `jalr` indirect calls and 1 `jr`:
+  convertMat3x4ToN64Mtx 0x80018E58 `jr $t9` with $t9 = $ra copied at entry. Already patched to a host return by
+  fixup_game_funcs_vendored.py (s2605); tools/check_jr_t9_host_return.py passes on the live tree. No missed jump table.
+- 177 jump tables: base recovered independently from the lui/addiu chain, bound from the nearest sltiu, words read from the
+  ROM via the owning section's rom/ram map. 176 match exactly (count == bound, word[i] == case i label, all in-function);
+  1 (initHudStruct 0x800C14C4) uses a strength-reduced index ($s1 = 4*$s3, bound on $s3) and matches 9/9 at 0x800A6560.
+  Negative control same pass: base+4 -> 177/177 MISMATCH.
+- Dropped table load: N64Recomp lowers the `lw` feeding the jr to an address ADD32, so the jump register is wrong at
+  every case label. DFS from all 1273 case targets (taken/fall-through/likely paths, delay slots, calls clobber
+  caller-saved, 600-insn budget): 0 read-before-write (754 write, 326 call, 193 exit). Controls: start at the jr -> READ
+  177/177; injected read at the first write -> READ 692/692. Earlier scanner versions reported 142 then 31 reads; each
+  inspected one was a jal return value or a delay-slot write the scanner missed (scanner defects, fixed).
+
+Rules out: a miscompile in N64Recomp's jalr/jr/jump-table lowering for this ROM. Next: FPU-lowering census (NEXT.md).
+No ORIGIN line needed (no mitigation, no runtime change).
