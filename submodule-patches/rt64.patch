@@ -2661,10 +2661,10 @@ index c944393..d717ac1 100644
          auto &proj = projections[projectionCount - 1];
          proj.addGameCall(gameCall);
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..bbdc5cf 100644
+index dccaa87..d0029ba 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
-@@ -5,12 +5,539 @@
+@@ -5,12 +5,559 @@
  #include "rt64_interpreter.h"
  
  #include <cassert>
@@ -2912,6 +2912,26 @@ index dccaa87..bbdc5cf 100644
 +            return e && *e && *e != '0';
 +        }();
 +        return enabled;
++    }
++
++    // s7068: per-RDP-command call-site gates. rs64LogE9BoundaryCommand (11 args) and the weak
++    // rs64_e9prov_authoritative_span both early-return unless their log env is set, but the calls
++    // themselves ran for every command. ROGUESQ_DIAG_GATE=0 restores the ungated calls.
++    static bool rs64DiagGate() {
++        static const bool on = [] { const char *e = std::getenv("ROGUESQ_DIAG_GATE"); return !(e && *e == '0'); }();
++        return on;
++    }
++    static bool rs64LogE9ProvCall() {
++        static const bool on = [] {
++            const char *e = std::getenv("ROGUESQ_LOG_E9_PROVENANCE");
++            return !rs64DiagGate() || (e && *e && *e != '0');
++        }();
++        return on;
++    }
++    static bool rs64LogE9Boundary();
++    static bool rs64LogE9BoundaryCall() {
++        static const bool on = !rs64DiagGate() || rs64LogE9Boundary();
++        return on;
 +    }
 +
 +    static bool rs64LogE9Boundary() {
@@ -3204,7 +3224,7 @@ index dccaa87..bbdc5cf 100644
      // Interpreter
  
      Interpreter::Interpreter() {
-@@ -69,6 +596,25 @@ namespace RT64 {
+@@ -69,6 +616,25 @@ namespace RT64 {
          GBIFunction func;
          uint32_t cmdLength;
          size_t pendingCommandRemainingBytes = state->rdp->pendingCommandRemainingBytes;
@@ -3230,7 +3250,7 @@ index dccaa87..bbdc5cf 100644
  
          if (dlStart >= dlEnd) {
              state->dlCpuProfiler.end();
-@@ -89,8 +635,47 @@ namespace RT64 {
+@@ -89,8 +655,47 @@ namespace RT64 {
                  DisplayList *pendingCommand = (DisplayList *)state->rdp->pendingCommandBuffer.data();
                  opCode = (pendingCommand->w0 >> 24) & opCodeMask;
                  func = rdpGBI->map[opCode];
@@ -3243,12 +3263,12 @@ index dccaa87..bbdc5cf 100644
 +                        s_rs64_pending_submit_serial, s_rs64_pending_submit_lo,
 +                        s_rs64_pending_submit_hi, s_rs64_pending_task);
 +                }
-+                rs64LogE9BoundaryCommand("pending", s_rs64_pending_start_address,
++                if (rs64LogE9BoundaryCall()) rs64LogE9BoundaryCommand("pending", s_rs64_pending_start_address,
 +                    pendingLength, 1, 1, pendingCommand->w0, pendingCommand->w1,
 +                    s_rs64_pending_submit_serial, s_rs64_pending_submit_lo,
 +                    s_rs64_pending_submit_hi, s_rs64_pending_task);
 +
-+                if (rs64_e9prov_authoritative_span &&
++                if (rs64_e9prov_authoritative_span && rs64LogE9ProvCall() &&
 +                    s_rs64_pending_start_address != 0xFFFFFFFFu) {
 +                    rs64_e9prov_authoritative_span(s_rs64_pending_start_address,
 +                        s_rs64_pending_start_address + pendingLength * sizeof(DisplayList),
@@ -3278,7 +3298,7 @@ index dccaa87..bbdc5cf 100644
                      func(state, &pendingCommand);
                  }
                  else {
-@@ -99,6 +684,11 @@ namespace RT64 {
+@@ -99,6 +704,11 @@ namespace RT64 {
  
                  state->rdp->pendingCommandCurrentBytes = 0;
                  state->rdp->pendingCommandRemainingBytes = 0;
@@ -3290,7 +3310,7 @@ index dccaa87..bbdc5cf 100644
              }
              // Not all of the bytes were copied, so adjust RDP state accordingly and exit.
              else {
-@@ -112,9 +702,61 @@ namespace RT64 {
+@@ -112,9 +722,61 @@ namespace RT64 {
          // Create a dummy pointer and pass that, since displaylist pointer incrementing is handled differently in LLE.
          DisplayList *dummy;
          while ((dl != nullptr) && ((dlEnd == nullptr) || (dl < dlEnd))) {
@@ -3353,7 +3373,7 @@ index dccaa87..bbdc5cf 100644
                  dummy = dl;
                  extendedFunction(state, &dl);
                  cmdLength = 1;
-@@ -122,6 +764,45 @@ namespace RT64 {
+@@ -122,6 +784,45 @@ namespace RT64 {
              else {
                  func = rdpGBI->map[opCode];
                  cmdLength = state->rdp->commandWordLengths[opCode];
@@ -3362,7 +3382,7 @@ index dccaa87..bbdc5cf 100644
 +                    re.pre = dl; re.w0 = dl->w0; re.w1 = dl->w1; re.post = dl + cmdLength;
 +                    g_s4271_start = dlStart; g_s4271_end = dlEnd;
 +                }
-+                if (rs64_e9prov_authoritative_span) {
++                if (rs64_e9prov_authoritative_span && rs64LogE9ProvCall()) {
 +                    rs64_e9prov_authoritative_span(commandAddress,
 +                        commandAddress + cmdLength * sizeof(DisplayList), rawOpCode, 0);
 +                }
@@ -3377,7 +3397,7 @@ index dccaa87..bbdc5cf 100644
 +                        0, dl + cmdLength <= dlEnd ? 1u : 0u, dl->w0, dl->w1,
 +                        submit_serial, submit_lo, submit_hi, submit_task);
 +                }
-+                rs64LogE9BoundaryCommand("start", commandAddress, cmdLength,
++                if (rs64LogE9BoundaryCall()) rs64LogE9BoundaryCommand("start", commandAddress, cmdLength,
 +                    0, dl + cmdLength <= dlEnd ? 1u : 0u, dl->w0, dl->w1,
 +                    submit_serial, submit_lo, submit_hi, submit_task);
 +
@@ -3399,7 +3419,7 @@ index dccaa87..bbdc5cf 100644
  
  #       ifdef DUMP_DISPLAY_LISTS
                  RT64_LOG_PRINTF("0x%08X 0x%08X", dl->w0, dl->w1);
-@@ -129,6 +810,14 @@ namespace RT64 {
+@@ -129,6 +830,14 @@ namespace RT64 {
  
                  // Check if this command is unfinished and store the partial contents if so.
                  if (dl + cmdLength > dlEnd) {
@@ -3414,7 +3434,7 @@ index dccaa87..bbdc5cf 100644
                      uint32_t toCopy = (uint32_t)((uintptr_t)dlEnd - (uintptr_t)dl);
                      memcpy(state->rdp->pendingCommandBuffer.data(), dl, toCopy);
                      state->rdp->pendingCommandCurrentBytes = toCopy;
-@@ -136,13 +825,215 @@ namespace RT64 {
+@@ -136,13 +845,215 @@ namespace RT64 {
                      break;
                  }
  
@@ -3632,7 +3652,7 @@ index dccaa87..bbdc5cf 100644
              }
  
              if (dl != nullptr) {
-@@ -153,6 +1044,79 @@ namespace RT64 {
+@@ -153,6 +1064,79 @@ namespace RT64 {
          state->dlCpuProfiler.end();
      }
  
@@ -3712,7 +3732,7 @@ index dccaa87..bbdc5cf 100644
      void Interpreter::processDisplayLists(uint32_t dlStartAdddress, DisplayList *dlStart) {
          assert(hleGBI != nullptr);
  
-@@ -169,8 +1133,11 @@ namespace RT64 {
+@@ -169,8 +1153,11 @@ namespace RT64 {
          DisplayList *dl = dlStart;
          uint8_t opCode;
          GBIFunction func;
@@ -3724,7 +3744,7 @@ index dccaa87..bbdc5cf 100644
  
              if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
                  extendedFunction(state, &dl);
-@@ -190,6 +1157,7 @@ namespace RT64 {
+@@ -190,6 +1177,7 @@ namespace RT64 {
                  }
              }
  

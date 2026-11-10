@@ -1,13 +1,12 @@
-# NEXT: gate the ungated diagnostic helpers on the Gfx Thread and audio game thread
+# NEXT: (optional, low value) generated call-site gate for the synth-read / lowfield store hooks
 HYPOTHESIS-ID: host-selftime-audit
-Context (s7067): tools/s7067_selftime.py over scratch/s7067/{on,off} (and s7066) shows diag = 6.4% of Gfx Thread on-CPU self
-(rs64_dpc_record_submit_impl 329, rs64LogE9BoundaryCommand 157 [lib/rt64/src/hle/rt64_interpreter.cpp:289], rs64_e9prov_task_begin /
-rs64_e9prov_authoritative_span 198 [src/rsp/dpc_bridge.cpp:2193/3282]) and ~10% of [Game] 0 (rs64_m5_lowfield_store 172,
-rs64_s4307_synth_read 127). rs64_spike_scan is the default-on CULL_SPIKE: functional, leave it.
-Hypotheses:
- H-ungated: each helper does real work (ring writes, string building) with no env flag set -> gate it behind a cached static,
-   default off, keep the env to turn it on.
- H-needed: some feed a default-on feature (like spike_scan feeds CULL_SPIKE) -> leave, document.
-Discriminator: read each helper's entry; then one same-build run with the sampler (scratch/s7067/both.zsh pattern, knob =0 arm
-restoring old behaviour), diag self samples per helper on vs off, plus the s7066 getenv control still at 0.
-Low value (~0.5% of a core). If an owner report arrives, it takes priority. lib/rt64 edits need submodule-patches/export.sh + commit.
+Context (s7068): ROGUESQ_DIAG_GATE gates landed; residual [Game] 0 diag = rs64_s4307_synth_read 70 + rs64_m5_lowfield_store 42
+samples per ~268 s flight (function entry from generated code, ~0.1% of a core). Everything owner-facing is awaiting owner
+flights (CURRENT-TRUTH Next steps 1-12). AN OWNER REPORT PREEMPTS THIS.
+Hypotheses: H-callsite (an inline `if (g_rs64_diag_hooks)` before each generated call removes the residual) vs H-floor (the
+residual is sampler attribution of the surrounding guest code; gating changes nothing).
+Work: emit the guard in tools/apply_s4307_synth_read_join.py / apply_s4340_m5_lowfield_writer.py (and the s4982/s4986/s4542/s4805
+needle strings that match those lines; fixup_live_replay.py moves lowfield lines by regex) -> full regen order make_elf ->
+N64Recomp -> fixup_game_funcs -> cmake. Measure with scratch/s7068/both.zsh (on vs ROGUESQ_DIAG_GATE=0).
+If the needle chain makes this risky (many patches key on the exact line text), CLOSE the audit instead and take the next
+ladder rung in ITERATION.md 3c.

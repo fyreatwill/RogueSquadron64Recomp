@@ -185949,3 +185949,33 @@ HYPOTHESIS-ID: host-selftime-audit. No regen needed (src/ only).
   and drew 0 samples).
 - Next: the remaining diag class on Gfx Thread (dpc_record_submit_impl, rs64LogE9BoundaryCommand, e9prov) and [Game] 0
   rs64_m5_lowfield_store / s4307_synth_read: check whether each does work with no env flag set, gate it behind a cached static.
+
+## Session 7068 (2026-11-10) — diag helper call-site gates: e9 boundary/provenance per-RDP-command calls and the per-task ucode-image FNV now skipped unless their logs are on; Gfx diag self 1066 -> 665 samples, [Game] 0 450 -> 285, same build (ROGUESQ_DIAG_GATE=0 = old path), 0 crash
+
+HYPOTHESIS-ID: host-selftime-audit. Work unit from NEXT.md (s7067 follow-up).
+Read first: every named helper was ALREADY env-gated inside (H-ungated refuted as stated); the cost was the calls themselves:
+- `RT64::rs64LogE9BoundaryCommand` (11 args) and the weak `rs64_e9prov_authoritative_span` are called for every RDP command in
+  `processRDPLists` (lib/rt64/src/hle/rt64_interpreter.cpp), each returning on a cached env bool. Now gated at the call site
+  (`rs64LogE9BoundaryCall()`, `rs64LogE9ProvCall()`).
+- `rs64_e9prov_task_begin` (src/rsp/dpc_bridge.cpp) hashed the 4 KB ucode image (FNV, 4096 dependent multiplies) every gfx task;
+  `m4_image` is only read by the M4 norm rows, so the hash now runs only with ROGUESQ_LOG_M4_NORM or ROGUESQ_LOG_E9_PROVENANCE.
+- `rs64_m5_lowfield_store` (main.cpp, ~8 separate env gates per store) and `rs64_s4307_synth_read` (upstream_compat.cpp, 3 gates
+  per load) now have one cached any-gate early return.
+- H-needed: `rs64_dpc_record_submit_impl` and `rs64_spike_scan` are functional (CULL_SPIKE default on, G1d rect/pause/title
+  glue, s7018 measured 0.2-0.45 ms/frame): left alone.
+All behind `ROGUESQ_DIAG_GATE=0` (restores every old path). lib/rt64 edit exported (submodule-patches/rt64.patch).
+Run: scratch/s7068/both.zsh (s7067 recipe, L6 dd1 4:3 FPS60, host sampler tools/s7065_sample_loop.zsh, 213/214 dumps), same build,
+arm on (default) then off (DIAG_GATE=0). Both: flight 268 s, alive, 0 crash lines, 0 VI stalls. tools/s7067_selftime.py:
+| thread / symbol | on | off (control) |
+| Gfx diag total | 665 (4.7% of 14165 self) | 1066 (6.3% of 17040) |
+| rs64LogE9BoundaryCommand | 0 | 115 |
+| rs64_e9prov_authoritative_span | 0 | 74 |
+| rs64_e9prov_task_begin | 3 | 55 |
+| dpc_record_submit_impl / spike_scan (functional) | 191 / 172 | 230 / 210 |
+| [Game] 0 diag total | 285 (7.9% of 3629) | 450 (11.0% of 4094) |
+| rs64_s4307_synth_read | 70 | 127 |
+| rs64_m5_lowfield_store | 42 | 127 |
+Positive control: the off arm shows every gated symbol back at s7067 levels (s7067: 96/83 on Gfx, 127/172 on [Game] 0).
+Residual synth_read/lowfield samples are the call from generated code itself (function entry + one guard load); removing them
+needs a call-site gate in the fixup scripts. Total saving ~0.3% of a core; no fps claim (cross-run, and the game sits at 60).
+Rules out: H-ungated as "helpers do real work with no env" (only the FNV hash did); confirms H-call (call overhead) for the rest.

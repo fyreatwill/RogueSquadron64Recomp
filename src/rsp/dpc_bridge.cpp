@@ -2203,7 +2203,10 @@ extern "C" void rs64_e9prov_task_begin(uint32_t task, uint32_t root_dl,
     g_e9prov.root_dl = root_dl & 0x007FFFFFu;
     uint32_t image = 2166136261u;
     const uint32_t image_base = ucode_addr & 0x007FFFF8u;
-    if (rdram && image_base < 0x007FF000u) {
+    // s7068: the 4 KB ucode-image FNV is read only by the M4 norm rows (ROGUESQ_LOG_M4_NORM) and e9prov logs;
+    // skip it per gfx task when neither is on. ROGUESQ_DIAG_GATE=0 restores the always-hash path.
+    static const bool s7068_gate = [] { const char *e = std::getenv("ROGUESQ_DIAG_GATE"); return !(e && *e == '0'); }();
+    if (rdram && image_base < 0x007FF000u && (!s7068_gate || rs64_m4_norm_enabled() || log_e9_provenance())) {
         for (uint32_t i = 0; i < 0x1000u; ++i) {
             image ^= rdram[(image_base + i) ^ 3u];
             image *= 16777619u;
