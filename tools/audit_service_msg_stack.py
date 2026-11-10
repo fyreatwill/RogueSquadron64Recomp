@@ -3,7 +3,7 @@
 
 sendServiceMessage (0x80006F78) and osSendMesg (0x80033410) queue a POINTER, never a copy, so a message built on the
 sender's stack is only safe if the receiver never reads it (doorbell) or the sender blocks until the receiver is done
-(synchronous reply). s6781 found one that is neither (tickFormatMessageWorker 0x800B380C).
+(synchronous reply). s6781 found one that is neither (tickBackdropLoaderWorker 0x800B380C).
 
 Disassembles main + every overlay of the retail ROM (rogue_squadron64/roguesquadron.yaml layout) with mips64-elf-objdump,
 lists each send call, the instruction that last formed the message register before it, and the s6782 verdict.

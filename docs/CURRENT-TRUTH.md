@@ -265,7 +265,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 14. **Owner judgement / parked:** FPS60 feel, G3c sheets, QoS default, native hangar geometry,
     rare dd4/dd8 gfx SIGBUS (single-source). Reopen on an owner report or side-effect failure.
 15. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first.
-16. **Misnomer rename (optional, owner reports preempt):** s7072 renamed the "Debris" family to JPEG decoder names. Next: check whether the format-message worker/rasterizer names are misnomers for a JPEG image loader (NEXT.md).
+16. **Misnomer rename (optional, owner reports preempt):** s7072 Debris family -> JPEG decoder; s7073 "format-message" worker family -> async backdrop JPEG loader (enqueueBackdropLoad, tickBackdropLoaderWorker, decodeBackdropTilesToTextures, ...). Next: allocTextRenderTarget 0x800B32F4 and neighbours 0x800B2630-0x800B4400 (NEXT.md).
 
 ## Evidence index
 

@@ -3326,11 +3326,11 @@ def apply_s1994_drain_post():
          "    // 0x800B2504: jal         0x800B3F00\n"
          "    // 0x800B2508: nop\n"
          "\n"
-         "    shutdownFormatMessageWorker(rdram, ctx);\n",
+         "    shutdownBackdropLoaderWorker(rdram, ctx);\n",
          "    // 0x800B2504: jal         0x800B3F00\n"
          "    // 0x800B2508: nop\n"
          "\n"
-         + wrap("shutdown", "        shutdownFormatMessageWorker(rdram, ctx);\n")),
+         + wrap("shutdown", "        shutdownBackdropLoaderWorker(rdram, ctx);\n")),
         ("finalize",
          "    // 0x800B250C: jal         0x800678E4\n"
          "    // 0x800B2510: nop\n"

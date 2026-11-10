@@ -203,7 +203,7 @@ extern "C" void rs64_menu_worker_sent(const uint8_t* rdram, const uint64_t* gpr)
     const uint32_t msg = (uint32_t)gpr[29] + 0x10;               // worker stack message, request id word at +0x14
     const uint32_t id = *reinterpret_cast<const uint32_t*>(rdram + (msg + 0x14 - 0x80000000u));  // full request counter
     std::lock_guard<std::mutex> lk(s_menu_fifo_mu);
-    // Request ids come from a counter that initFormatMessageWorker resets to 1 (0x800B3EC8) and only grows: an id not
+    // Request ids come from a counter that initBackdropLoaderWorker resets to 1 (0x800B3EC8) and only grows: an id not
     // above the last recorded one means a new worker instance, so drop completions a torn-down menu never read.
     if (!s_menu_fifo.empty() && id <= s_menu_fifo.back().second) s_menu_fifo.clear();
     if (s_menu_fifo.size() >= 64) s_menu_fifo.pop_front();

@@ -186093,3 +186093,33 @@ decodeJpegHuffmanSymbol show in 3 of 113 samples, under rasterizeFormatMessageGl
 the hooked, renamed functions run. The route reached flight (runInMissionFrame in 54 samples) with 0 CRASH/SIGSEGV/SIGBUS lines.
 Remaining old-name hits in the samples are unrelated real names (updateDestructionDebrisNpc, byteAnimatedDebrisNpcHandler).
 Rules out: the s7071 "glyph mesh" reading. Open: the format-message callers drive a JPEG decoder, so their names are suspect.
+
+## Session 7073 (2026-11-10) — menu "format-message" worker family renamed: it is the async backdrop JPEG loader (sprintf "backdrop/%s" -> loadJfifAsset, "%03ld" tiles -> decodeJpegScanToImage -> registerHmtTextureInTable); 9 renames, preempt-fixup control 6/9 unchanged, L6 boot to flight clean
+
+NEXT.md unit (HYPOTHESIS-ID generated-symbol-misnomer-fixes). H-jpeg-loader vs H-text, discriminator = the strings the
+family formats, read from ../rogue_squadron64/build/roguesquadron.elf (.ovl.menu, file off 0x10b410 = va 0x800A5130):
+0x800A5C20 "backdrop/%s", 0x800A5C2C "P____", 0x800A5C34 "Q_____", 0x800A5C40 "%03ld", 0x800A5C50 "alpha".
+Call order per body (bounded RECOMP_FUNC to next RECOMP_FUNC, funcs_30.c):
+- buildFormatMessageGlyphBuffer 0x800B2630: sprintf(buf, "backdrop/%s", name) -> loadJfifAsset; rs_malloc image buffers;
+  P____/Q_____ + buildPrefixedAssetName -> second loadJfifAsset (the alpha companion; +0x3C/+0x70 freed only when flags 0x6).
+- rasterizeFormatMessageGlyphs 0x800B3D14: sprintf("%03ld") tile names -> decodeJpegScanToImage x2 -> registerHmtTextureInTable,
+  findMatchingTextureRecursive. tickFormatMessageWorker 0x800B3650: recvServiceMessage -> the same open + tile decode -> free.
+- enqueueFormatMessage callers: tickCraftSelectScreen, menuControllerInput, setMaterialTextureByName, handleCraftSelectInput;
+  shutdown callers include runMenuRandomBackdropScreen / runMenuShipSelectScreen. processAndDisposeFormatMessage has no direct
+  caller. H-jpeg-loader selected (single body read + strings; the s7072 JPEG decoder identification is the second line).
+Renames (scratch/s7073/renames.tsv): enqueueFormatMessage->enqueueBackdropLoad, tickFormatMessageWorker->tickBackdropLoaderWorker,
+initFormatMessageWorker->initBackdropLoaderWorker, shutdownFormatMessageWorker->shutdownBackdropLoaderWorker,
+buildFormatMessageGlyphBuffer->openBackdropJpegAssets, processAndDisposeFormatMessage->loadBackdropImmediate,
+rasterizeFormatMessageGlyphs->decodeBackdropTilesToTextures, disposeFormatMsgQueueMember->freeBackdropLoadRequest,
+shutdownMenuMessagingAndSpeech->shutdownMenuBackdropLoaderAndSpeech. None of the new names existed before. Applied with word
+boundaries to the live tree (funcs_29/30/31/33/49.c, funcs.h, recomp_overlays.inl), ../rogue_squadron64/symbol_files
+menu_overlay.txt (+ comments rewritten) and mission_overlay.txt (uncommitted there, as in s7072; this entry is the record),
+syms/rogue_squadron.syms.toml, tools/fixup_game_funcs_vendored.py (the "shutdown" needle AND replacement, so the regen match
+is unchanged), fixup_preempt_point.py, rename_generated_symbols.py, menu_worker_reach.py, audit_service_msg_stack.py,
+src/main/rt64_render_context.cpp (comment). tools/g5e_stall_split.py matches old OR new name (old sample logs keep parsing).
+Control: per-file occurrence counts identical before/after (16/7/2/1/9/9/5 ...); fixup_preempt_point.py "hooks present in 6
+functions", 9 tags, before and after. Rebuild clean (build/build_s7073.log). Run scratch/s7073/run (s7031 arm L6 dd1 4:3,
+NOCAP, 1 s host samples): tickBackdropLoaderWorker in 36/129 samples, decodeBackdropTilesToTextures 3, decodeJpegScanToImage 4
+(positive control: the renamed, hooked functions run), runInMissionFrame 67 (flight reached), 0 CRASH/SIGSEGV/SIGBUS lines.
+Rules out: H-text (no glyph/format-text path; "format" was the %03ld tile-name sprintf). Next: allocTextRenderTarget 0x800B32F4
+sits inside this block and is likely a backdrop texture target, not text.

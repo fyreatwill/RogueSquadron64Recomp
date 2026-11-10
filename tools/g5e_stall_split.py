@@ -31,7 +31,7 @@ print(f'offset={off:.2f}s samples-in-stalls={best[0]} (shift+1s: {score(off+1)},
 def cat(fl):
     s=' '.join(fl)
     if 'AudioSlotActive' in s or 'waitForAnyAudioSlot' in s: return 'audio-slot-poll'
-    if 'rasterizeFormatMessageGlyphs' in s or 'buildDebrisMesh' in s: return 'text-glyph-build'
+    if 'rasterizeFormatMessageGlyphs' in s or 'decodeBackdropTilesToTextures' in s or 'buildDebrisMesh' in s: return 'text-glyph-build'
     if 'semaphore' in fl[0] or 'wait' in fl[0]: return 'wait'
     return 'other'
 tot=collections.Counter(); roots=collections.Counter()

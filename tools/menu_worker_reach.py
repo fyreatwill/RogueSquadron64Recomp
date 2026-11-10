@@ -18,7 +18,7 @@ from audit_service_msg_stack import SEGMENTS, disasm
 
 ROM = sys.argv[1] if len(sys.argv) > 1 else "/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64"
 TARGETS = {0x800B3F24: "image request send", 0x800B3FD8: "image completion poll",
-           0x800B3650: "image worker body", 0x800B3EB8: "initFormatMessageWorker",
+           0x800B3650: "image worker body", 0x800B3EB8: "initBackdropLoaderWorker",
            0x800C57CC: "initSongAssetLoadWorker", 0x800C5834: "song worker body", 0x80006EC4: "tryRecvServiceMessage", 0x80006F78: "sendServiceMessage"}
 SCREENS = [  # jump table 0x800A75C0 cases (menuOverlayInit 0x800C5A7C), handler called from each case
     (0, 0x800C6854, "runHangarMenuFromOverlay"), (1, 0x800C5D9C, "case1"), (2, 0x800B47D0, "menuControllerInput"),
