@@ -185662,3 +185662,23 @@ Unit (NEXT.md s7054, HYPOTHESIS-ID dd6-219-cap12288-l12): H-free-L12 / H-cliff-L
   12288 is a small cost on L12, not a cliff. The bigger fact: L12 21:9 with the dd6 bundle is at 54-55 fps (P 0.09-0.11) in both runs, matching
   s7048 (~56) and the low half of s7049 (56.3/59.0): the binding limit there is not the cap.
 - Change: OWNER-OPT-INS 12288 line extended with the L12 numbers. Default stays 10240 (owner-gated). No code change.
+
+## Session 7056 (2026-11-10) — level-scoped off-map cull K: dd6 21:9 bundle now uses K=0.5 on L12 only (ROGUESQ_DD_OFFMAPCULL_KLEVEL, gCurrentLevel 0x80130B70); L12 same run 59.0 -> 59.6/59.5 fps, rsp -1.21/-1.33 ms, L4 keeps K=0.6, 0 crash
+
+Unit (NEXT.md s7055, HYPOTHESIS-ID dd6-219-l12-levelK): H-levelK / H-noread / H-other-levels.
+- Boring checks: no other game instance, screen unlocked (ioreg), load ~3.5. Level source: docs/game-architecture.md `0x80130B70 gCurrentLevel`
+  (word; ucode-side audits index it `<<2`, case 10 = cloud level). Read as MEM_W per terrain-stream frame -> H-noread refuted.
+- Code: src/main/upstream_compat.cpp rs64_s7030_begin: `ROGUESQ_DD_OFFMAPCULL_KLEVEL=<lvl>:<k>[,...]` overrides s7034_k per frame for that
+  level (base K restored elsewhere), `_KLEVEL_TOG=1` makes tog3 phase 1 ignore it (same-run on/off/on); logs `[s7056] level=%u k=a,b,c` on change.
+  src/main/main.cpp s7037 bundle: if FB_WIDTH > 796 and no explicit _K, setenv KLEVEL=12:0.5 (overwrite 0); `[s7037]` line prints klevel.
+  Replaces s7050's aspect-wide K=0.5 that s7051 reverted. 16:9 unchanged (no KLEVEL).
+- Run L12t (21:9 dd6 FPS60 MELT, explicit tog3 bundle K=0.6 + KLEVEL=12:0.5 TOG -> phases 0.5/0.6/0.5): 508 s flight, alive, vi_stalls30s 0,
+  crash grep 0. Log: level=19 at boot (menus), level=12 k=0.5,0.6,0.5 at mission load. g5e_cost_by_parity --phases 3 --skip-s 130 --split xor8,
+  22.7k frames: p0 (K0.5) 59.6 fps rsp 12.33 / p1 (K0.6) 59.0 rsp 13.54 / p2 (K0.5) 59.5 rsp 12.21; P(>=2VI) 0.01/0.02/0.01; A/A p2-p0 0.1 fps,
+  rsp -0.11. K0.5 vs 0.6: +0.6/+0.5 fps, rsp -1.21/-1.33 (replicates s7050 -1.27/-1.29). Positive control: ocull/f 2838/2917 vs 2393 (+445/+524).
+  Note this run's K0.6 is 59.0 fps, not s7055's 55: cross-run spread again ~4 fps on L12 21:9.
+- Run L4a (auto bundle path, no explicit OFFMAPCULL*): `[s7037] ... klevel=12:0.5 (auto)`, `[s7056] level=4 k=0.6,0.6,0.6`; 249 s flight, 0 crash.
+- Run L12a (auto): `[s7056] level=12 k=0.5,0.5,0.5`, all 78 periodic `[s7034]` lines K=0.5; 248 s flight, 0 crash.
+- Verdict: H-levelK selected (gain kept on L12, L4 unchanged by construction and log). Image on L12 at K0.5 rests on s7050 frozen poses (0.00 vs
+  ctl 0.60); not re-posed this session. H-other-levels untested beyond L1/L4/L12: the rule only touches L12.
+- Rules out: needing a per-frame level byte hunt (the documented global works, two runs show 19 -> 12 / 19 -> 4 transitions matching LEVEL).

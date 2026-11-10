@@ -148,7 +148,7 @@ static float s7030_k[3] = {0.0f, 1.0f, 0.5f}; static int s7030_tog3 = 0, s7030_p
 // off-map cells and those in the 0.5-1.0 fog-end band), and ROGUESQ_DD_OFFMAPCULL=<R>|tog3 (_R=a,b,c; R<0 off) culls rings > R.
 // s7034 fog-depth condition: ROGUESQ_DD_OFFMAPCULL_K=<k>|a,b,c (tog3 per phase; default 0 = none): an off-map cell past R is culled only if
 // its near-edge depth d-0.71 > k * fog end. s7034_kc = culled per depth bin, s7034_kk = past R but kept by K.
-static float s7034_k[3] = {0.0f, 0.0f, 0.0f}; static uint64_t s7034_kc[3][20], s7034_kk[3];
+static float s7034_k[3] = {0.0f, 0.0f, 0.0f}; static float s7056_base[3] = {0.0f, 0.0f, 0.0f}, s7056_kl[32] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}; static int s7056_tog = 0; static uint32_t s7056_last = 0xFFFFFFFFu; static uint64_t s7034_kc[3][20], s7034_kk[3];
 // s7046 eye-to-edge K gate: ROGUESQ_DD_OFFMAPCULL_KEDGE=<k2>[,N[,phasemask]] (default N=8, mask 7): an off-map cell past R whose clamped
 // edge lies on a map side the eye (s7032 latched eye cell) is within N cells of uses K=k2 instead of K. s7046_kc = cells that took k2,
 // s7046_ed = per-frame histogram of the eye's min distance to any map side (0..31, 31 = >=31).
@@ -207,6 +207,13 @@ extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
         if (const char* k = getenv("ROGUESQ_DD_OFFMAPCULL_K")) { float a, b, c;
             if (sscanf(k, "%f,%f,%f", &a, &b, &c) == 3) { s7034_k[0] = a; s7034_k[1] = b; s7034_k[2] = c; } else s7034_k[0] = s7034_k[1] = s7034_k[2] = (float)atof(k); }
         fprintf(stderr, "[s7034] offmapcull K=%g,%g,%g\n", s7034_k[0], s7034_k[1], s7034_k[2]);
+        /* s7056 level-scoped K: ROGUESQ_DD_OFFMAPCULL_KLEVEL=<lvl>:<k>[,<lvl>:<k>...] overrides K on those levels (gCurrentLevel word
+           0x80130B70, docs/game-architecture.md). _KLEVEL_TOG=1 (needs tog3): phase 1 ignores it (same-run on/off/on). */
+        for (int i = 0; i < 3; i++) s7056_base[i] = s7034_k[i];
+        if (const char* kl = getenv("ROGUESQ_DD_OFFMAPCULL_KLEVEL")) { const char* q = kl;
+            while (q && *q) { int l = -1; float k = -1; if (sscanf(q, "%d:%f", &l, &k) == 2 && l >= 0 && l < 32) s7056_kl[l] = k; q = strchr(q, ','); if (q) q++; } }
+        { const char* t = getenv("ROGUESQ_DD_OFFMAPCULL_KLEVEL_TOG"); s7056_tog = t && t[0] == '1'; }
+        fprintf(stderr, "[s7056] klevel=%s tog=%d\n", getenv("ROGUESQ_DD_OFFMAPCULL_KLEVEL") ? getenv("ROGUESQ_DD_OFFMAPCULL_KLEVEL") : "(none)", s7056_tog);
         if (const char* ke = getenv("ROGUESQ_DD_OFFMAPCULL_KEDGE")) {
             if (strchr(ke, ';')) { const char* q = ke; for (int i = 0; i < 3 && q; i++) { float a = -1; int n = 8; const int c = sscanf(q, "%f,%d", &a, &n);
                     if (c >= 1 && a > 0) { s7046_k2[i] = a; s7046_n[i] = c >= 2 ? n : 8; } q = strchr(q, ';'); if (q) q++; } s7046_mask = 7; }
@@ -220,6 +227,9 @@ extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
     for (uint32_t i = 0; i < 4; i++) { fx += rf(0x80130C1Cu + 12 * i) - ex; fz += rf(0x80130C1Cu + 12 * i + 8) - ez; }
     const float n = sqrtf(fx * fx + fz * fz); if (n > 1e-6f) { fx /= n; fz /= n; } else { fx = 0; fz = 1; }
     g_rs64_s7030_f[0] = fx; g_rs64_s7030_f[1] = fz;
+    { const uint32_t lv = (uint32_t)MEM_W(0, (int64_t)(int32_t)0x80130B70); /* s7056: gCurrentLevel */
+      for (int i = 0; i < 3; i++) s7034_k[i] = (lv < 32 && s7056_kl[lv] > 0 && !(s7056_tog && i == 1)) ? s7056_kl[lv] : s7056_base[i];
+      if (lv != s7056_last) { s7056_last = lv; fprintf(stderr, "[s7056] level=%u k=%g,%g,%g\n", lv, s7034_k[0], s7034_k[1], s7034_k[2]); } }
     s7031_w = (int)(uint16_t)(MEM_W(0, (int64_t)(int32_t)0x80136DF8) >> 16); s7031_hgt = (int)(uint16_t)MEM_W(0, (int64_t)(int32_t)0x80136DF8); /* dims +0x38/+0x3A (BE halves) */
     const uint64_t mt = mach_absolute_time(); s7030_ph = s7030_tog3 ? (int)((mt / 24000000u) % 3u) : 0;
     s7030_fe = g_rs64_s7030_fe; s7030_thr = s7030_k[s7030_ph] > 0 && s7030_fe > 0 ? s7030_k[s7030_ph] * s7030_fe : 0.0f;

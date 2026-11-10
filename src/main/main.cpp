@@ -12049,12 +12049,15 @@ static void rs64_g1c_apply_dd_policy() {
           setenv("ROGUESQ_DD_OFFMAPCULL", "2", 1);
           // s7050 made 21:9 default to K=0.5 (L12 +0.9/+0.7 fps); s7051 reverted it: on L4 21:9 K=0.5 shaves the far horizon
           // band (0.23-0.33 mean dLum vs K=0.6, 0.7% px, visible by eye; KEDGE does not cover it). K=0.5 stays an explicit opt-in.
+          // s7056: level-scoped instead: wider than 16:9 (FB_WIDTH > 796) and no explicit K -> K=0.5 on L12 only (s7050 gain), L4 keeps 0.6.
+          { const char* fw = std::getenv("ROGUESQ_FB_WIDTH");
+            if (fw && std::atoi(fw) > 796 && !std::getenv("ROGUESQ_DD_OFFMAPCULL_K")) setenv("ROGUESQ_DD_OFFMAPCULL_KLEVEL", "12:0.5", 0); }
           setenv("ROGUESQ_DD_OFFMAPCULL_K", "0.6", 0); setenv("ROGUESQ_DD_OFFMAPCULL_H", "off", 0);
           // s7047: eye-to-edge K gate (s7046) folded in: off-map cells on a map side within 12 cells of the eye use K=0.8, which hides
           // L12's hard horizon cut (frozen poses 0.07 vs 0.81, 2 runs) for ~0.3 ms rsp (L12 59.6/59.9 vs 59.8 fps same run). =0 disables.
           setenv("ROGUESQ_DD_OFFMAPCULL_KEDGE", "0.8,12", 0);
           g_rs64_s7030 = 1;
-          std::fprintf(stderr, "[s7037] dd bundle offmapcull=2 k=%s h=%s kedge=%s (auto)\n", std::getenv("ROGUESQ_DD_OFFMAPCULL_K"), std::getenv("ROGUESQ_DD_OFFMAPCULL_H"), std::getenv("ROGUESQ_DD_OFFMAPCULL_KEDGE"));
+          std::fprintf(stderr, "[s7037] dd bundle offmapcull=2 k=%s h=%s kedge=%s klevel=%s (auto)\n", std::getenv("ROGUESQ_DD_OFFMAPCULL_K"), std::getenv("ROGUESQ_DD_OFFMAPCULL_H"), std::getenv("ROGUESQ_DD_OFFMAPCULL_KEDGE"), std::getenv("ROGUESQ_DD_OFFMAPCULL_KLEVEL") ? std::getenv("ROGUESQ_DD_OFFMAPCULL_KLEVEL") : "-");
       } }
     char b[16];
     std::snprintf(b, sizeof b, "%d", px);
