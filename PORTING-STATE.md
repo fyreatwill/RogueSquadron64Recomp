@@ -186897,3 +186897,31 @@ Discrimination: this selects H-fwd-exact and refutes H-fwd-drop, H-fwd-dup and H
 same-run mutant control). The pre-edit compare refutes a late ring writer for the dd4 content changes. Next discriminator:
 a per-walker before/after diff inside rs64_dpc_record_submit (NEXT.md, bridge-edit-census) discriminates H-edit-intended
 from H-edit-stray and H-edit-retail.
+
+## Session 7097 (2026-11-10) — DPC bridge edit-walker census CLOSED: every byte changed inside rs64_dpc_record_submit belongs to its walker's documented edit (H-edit-intended); 0 unattributed, controls 22/22
+
+Instrument: new src/rsp/s7097_edit_census.cpp (ROGUESQ_S7097_EDIT=1|ctl), hooked by RS64_W7(id, call) around each of the
+11 walker calls in rs64_dpc_record_submit_impl (census, title_clear, wipe, pillar, rect_wrap, pause_dim, rect_scan, spike,
+g5b_frame, region, floor) plus begin/end hooks. Per call it snapshots [lo-64, hi+64); before each walker it compares the live
+bytes with the running snapshot (difference = a write by no walker, BETWEEN), after it files the difference under that walker;
+at impl exit it compares again (TAIL, includes the guard band). Each changed byte is filed under its enclosing command (decoded
+at true boundaries from the entry bytes with the RDP length table), the command's op and the 32-bit word index inside it.
+Control (=ctl, 1 call in 4096): flips one in-range byte before walker 3 and restores it after the check (must show as BETWEEN),
+and flips one guard byte before the exit compare (must show as TAIL). Default build unchanged (all hooks behind rs64_s7097_on).
+Runs (scratch/s7097/run.zsh, L6 FPS60 owner-style route, 0 crash, 0 VI stall):
+- dd4 16:9: 71,286 calls, 15.27 GB; ctl 17/17 BETWEEN + 17/17 TAIL; unattributed BETWEEN 0, TAIL 0, guard (outside) 0, header op changes 0.
+  title_clear 39,740 B in 9,935 cmds: op 2D words 0/1 only (scissor XH/XL clamp ED000000 -> ED238000, i.e. the documented centre-512 clamp).
+  pause_dim 16,184 B in 952 cmds: op 0D (shade+z tri) words 2-7 only = edge XL/XH/XM and slopes, the s6722 documented widening.
+  spike 1,427 B in 248 cmds: ops 0D/0E/0F words 0/1 only = YL bits cleared + YM/YH zeroed, the documented degenerate-triangle cull.
+  region 357,517 B in 114,797 cmds: op 0F words 2/4/6 only = XL/XH/XM integer x shift (+0x8E), the s6156/s6725 HUD anchor at 16:9.
+  Total 414,868 B per 300 s, agreeing with s7096's ~399 k B content diff at the handoff (two lines). census/wipe/pillar/rect_wrap/
+  rect_scan/g5b_frame/floor: 0 bytes.
+- dd1 4:3: 24,573 calls, 3.08 GB; ctl 5/5 + 5/5; every walker 0 bytes, unattributed 0 (agrees with s7096 dd1 content 0).
+Every call resynced its command decoder at lo (record_submit ranges never continue the previous call), and every changed byte
+landed at the documented word offset of a correctly typed command; a misaligned decode would scatter those offsets.
+ORIGIN: no mitigation added; the only writers of forwarded RDP bytes after the ucode are the four named walkers above, each
+writing the value its documented feature intends (scissor clamp, pause widen, spike cull, HUD anchor).
+Discrimination: selects H-edit-intended, refutes H-edit-stray (0 payload writes outside the edge/coord words, 0 header changes,
+0 guard writes). H-edit-retail: in plain flight only spike (owner-requested default on) and region (16:9 HUD anchor, ASPECT
+opt-in) edit, neither touches terrain geometry beyond the culled wedges, so the bridge is not a G5b terrain-drop source.
+The bridge layer (DPC registers s7095, forwarding s7096, edits s7097) is closed. Rerun after any walker edit.

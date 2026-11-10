@@ -5958,7 +5958,12 @@ static inline void rs64_rt_submit(uint32_t lo, uint32_t hi, int site) {
         if (g_rs64_s7026_spin_win) { const uint64_t until = t1 + spin; while ((t1 = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)) < until) {} } }
     g_rs64_s7026_rt_ns += t1 - t0; ++g_rs64_s7026_rt_n; if (hi > lo) g_rs64_s7026_rt_by += hi - lo;
 }
+// s7097 (src/rsp/s7097_edit_census.cpp): per-walker byte-diff census, ROGUESQ_S7097_EDIT=1|ctl.
+extern "C" int rs64_s7097_on; extern "C" void rs64_s7097_begin(uint32_t, uint32_t, uint8_t *);
+extern "C" void rs64_s7097_pre(int); extern "C" void rs64_s7097_post(int); extern "C" void rs64_s7097_end();
+#define RS64_W7(id, call) do { if (rs64_s7097_on) rs64_s7097_pre(id); call; if (rs64_s7097_on) rs64_s7097_post(id); } while (0)
 static void rs64_dpc_record_submit_impl(uint32_t lo, uint32_t hi) {
+    if (rs64_s7097_on) rs64_s7097_begin(lo, hi, g_rdram_for_submit);
     static const bool gtime = [] { const char *e = std::getenv("ROGUESQ_GLUE_TIME"); return e && *e && *e != '0'; }();
     static const int gtog = [] { const char *e = std::getenv("ROGUESQ_GLUE_TOG"); return (e && *e == '2') ? 2 : (e && *e == '3') ? 3 : (e && *e && *e != '0') ? 1 : 0; }();  // 3 = A/A null: anchor + parity only
     bool skip = false, odd = false;
@@ -5970,27 +5975,27 @@ static void rs64_dpc_record_submit_impl(uint32_t lo, uint32_t hi) {
     static uint64_t s_acc[2][6] = {}, s_n[2] = {}, s_bytes = 0, s_last = 0;  // walks: census..wipe, pillar, rect_wrap, pause+rscan, spike, g5b..floor
     uint64_t t[7]; const bool tm = gtime;
     if (tm) t[0] = mach_absolute_time();
-    if (!skip) { rs64_g3_census(lo, hi); rs64_g1d_title_clear(lo, hi); rs64_wipe_scan(lo, hi); }
+    if (!skip) { RS64_W7(0, rs64_g3_census(lo, hi)); RS64_W7(1, rs64_g1d_title_clear(lo, hi)); RS64_W7(2, rs64_wipe_scan(lo, hi)); }
     if (tm) t[1] = mach_absolute_time();
     const int fuse = (gtog == 2 && odd) ? 0 : rs64_glue_fuse();
     g_rw_fused = fuse != 0; g_rw_walked = false;
-    if (!skip) rs64_g1d_pillar_scan(lo, hi);
+    if (!skip) RS64_W7(3, rs64_g1d_pillar_scan(lo, hi));
     g_rw_fused = false;
     if (tm) t[2] = mach_absolute_time();
     if (!skip && (!g_rw_walked || fuse == 2)) {
         static uint64_t s_chk_left = 0, s_chk_runs = 0;
         const uint64_t before = g_rw_patches;
-        rs64_g1d_rect_wrap(lo, hi);
+        RS64_W7(4, rs64_g1d_rect_wrap(lo, hi));
         if (fuse == 2 && g_rw_walked) { s_chk_runs++; s_chk_left += g_rw_patches - before; g_rw_patches = before;
             if ((s_chk_runs & 4095u) == 0) fprintf(stderr, "[s7016-chk] runs=%llu fused_patches=%llu left_after_fused=%llu\n",
                 (unsigned long long)s_chk_runs, (unsigned long long)g_rw_patches, (unsigned long long)s_chk_left); }
     }
     if (tm) t[3] = mach_absolute_time();
-    if (!skip) { rs64_g1d_pause_dim(lo, hi); rs64_g1d_rect_scan(lo, hi); }
+    if (!skip) { RS64_W7(5, rs64_g1d_pause_dim(lo, hi)); RS64_W7(6, rs64_g1d_rect_scan(lo, hi)); }
     if (tm) t[4] = mach_absolute_time();
-    rs64_spike_scan(lo, hi);
+    RS64_W7(7, rs64_spike_scan(lo, hi));
     if (tm) t[5] = mach_absolute_time();
-    if (!skip) { rs64_g5b_frame(lo, hi); rs64_region_scan(lo, hi); rs64_floor_scan(lo, hi); }
+    if (!skip) { RS64_W7(8, rs64_g5b_frame(lo, hi)); RS64_W7(9, rs64_region_scan(lo, hi)); RS64_W7(10, rs64_floor_scan(lo, hi)); }
     if (tm) {
         t[6] = mach_absolute_time();
         for (int i = 0; i < 6; i++) s_acc[odd][i] += t[i + 1] - t[i];
@@ -6074,6 +6079,7 @@ static void rs64_dpc_record_submit_impl(uint32_t lo, uint32_t hi) {
                 (unsigned long long)serial, g_e9prov.task, lo, hi, after - before);
         fflush(stderr);
     }
+    if (rs64_s7097_on) rs64_s7097_end();
 }
 
 // ROGUESQ_DROP_WRAP_RDP (s664, default OFF): drop RDP submits whose

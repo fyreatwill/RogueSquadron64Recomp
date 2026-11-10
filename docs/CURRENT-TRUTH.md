@@ -1,12 +1,16 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7096 (2026-11-10).
+Compact operational handoff, as of Session 7097 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7097 DPC bridge edit-walker census CLOSED: every byte changed inside rs64_dpc_record_submit is a documented walker edit (H-edit-intended, two lines).** src/rsp/s7097_edit_census.cpp (ROGUESQ_S7097_EDIT=1|ctl) diffs RAM before/after each of the 11 walkers with a 64 B guard band and true-boundary command decode. L6 dd4 16:9 (15.3 GB): title_clear = op 2D words 0/1 (scissor clamp), pause_dim = 0D edge words 2-7 (pause widen), spike = tri words 0/1 (cull, 248 tris), region = 0F x words 2/4/6 (16:9 HUD anchor, 357 k B); total 415 k B vs s7096's ~399 k B at the handoff; 0 unattributed, 0 guard writes, 0 header op changes; ctl 17/17 + 17/17. dd1 4:3: 0 walker bytes (ctl 5/5). Bridge layer (s7095-s7097) closed; not a G5b drop source.
+- In plain words: the only changes the port makes to the drawing commands on their way to the renderer are its four deliberate fixes, each doing exactly what it is meant to.
+- Next: RT64 vs angrylion on the same forwarded dd4 stream (NEXT.md, slug rt64-vs-angrylion-stream).
 
 **s7096 DPC bridge forwarding coverage CLOSED: RT64 receives exactly the hardware-consumed RDP byte stream (H-fwd-exact, two lines).** src/rsp/s7096_fwd_cover.cpp (ROGUESQ_S7096_FWD=1|ctl; hooks in RSP_DPC_START/END, rs64_rt_submit site ids, every deliberate drop path, rs64_dpc_record_submit pre-compare). L6 flight, 3 runs: dd1 4:3 2.82 GB, dd4 16:9 15.07 / 16.60 GB, HW == FWD with 0 missing / dup / out-of-order / foreign, 0 drop paths fired; self-test 8/8, ctl mutant flagged 64/64 tasks. Content: dd1 0; dd4 ~18 B/task differ at the handoff, but 0 differ just before record_submit (pre_bytes == fwd), so every change is one of our own edit walkers (0x2D = g1d title_clear scissor clamp; bulk = triangle words, attribution single-source). No late writer, so the bridge is not a G5b terrain-drop source.
 - In plain words: every drawing command the graphics microcode produces reaches the renderer exactly once and in order. The only bytes that change on the way are our own deliberate fixes.
@@ -56,8 +60,6 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 **s7066 hot-getenv class CLOSED: one cached getenv for the whole image (src/main/rs64_env_cache.cpp, default on, `ROGUESQ_ENV_CACHE=0` = libSystem path).** Census (tools/s7066_getenv_census.py): 2265 generated getenv sites (110 per-call) + 1031 host sites (529 per-call by heuristic) + lib/ ultramodern/RT64, too many to patch singly, so the executable now defines getenv/setenv/unsetenv/putenv: ROGUESQ_* names are served from a lock-free per-name table (no environ lock), any setenv through the image invalidates it, other names pass through; dylibs (SDL) keep libSystem's. Two runs, s7065 recipe L6 dd1 4:3 FPS60, host-sampled (tools/s7066_getenv_samples.py): on = 0 libSystem getenv samples (99 cheap cached lookups) vs off (positive control) 776 (MAIN 456), s7065 baseline 583; both 365 s flight, 0 crash, 0 VI stall, fps 58.9 / 59.0 (cross-run; the cost was ~0.25% of MAIN, so no fps gain is claimed). Policy setenv values still seen ([s7037] lines / auto bundle unaffected: setenv invalidates).
 
 **s7065 transition stalls CLOSED as retail feel (H-vispin, audio-time form).** Host blocked-stack samples (tools/s7065_sample_loop.zsh + tools/s7065_sample_yields.py, no build; L6 dd1 4:3 FPS60, 366 s, 0 crash): in all 7 sampled gaps the game thread's OS-silent stretch is `runVideoFrameTick -> musyxNoopStub -> waitForMusyXAudioTaskDone` yielding 113-138 ms (normal seconds: 99% osRecvMesg waits). Code: its countdown 0x8014998A = 16 mix chunks of 192 samples = 3072 samples at 22047 Hz = 139 ms = 8.37 VI, matching s7064's 8/9-VI quantization. Gap = 139 ms fixed wait + 25-66 ms slot drain + occasional ~70 ms shutdownMusyXVoices. H-compute, H-tokenwait refuted. Retail timing inferred from code (oracle cannot reach these scenes).
-
-**s7064 transition stalls: the audio-slot drain wait is NOT the bulk (H-cadence, H-preempt-residual refuted).** New ring ROGUESQ_S7064 (tools/apply_s7064_slotwait.py, analyzer tools/s7064_slotwait_sum.py), L6 dd1 4:3 FPS60, 362 s, 0 crash: 17 drain waits of 25-66 ms, each = 2-4 synth frames at 55-81/s (run 59.9/s) after which all slots clear together (batch stop, 0 deactivateVoice); 13 of 15 TL gaps (201-335 ms) contain one, 2 contain none; audio wait = ~14% of gap time. Other threads keep 17 ms cadence; the game thread is OS-silent 133-150 ms per gap (8/9 VI quantized). Retail parity of the 2-4 frame ramp single-source. Supersedes s7059's "mostly anyAudioSlotActive polling" as the main term. Next: what fills the OS-silent stretch.
 
 **s7063 21:9 dd6 auto survey CLOSED: all 19 levels hold ~60 fps in flight with 0 crashes (H-ok).** Last two holds on the s7062 build (queued soaks s7062_219auto_L10/_L15, 363-364 s flight each, alive, 0 crash lines, 0 VI stalls): L10 60.00 fps, L15 59.99 excl. gaps, P(>=2VI) 0.00, no RSP-bound slow frames (tools/s7060_survey_table.py --suf g). Per level, fps excl. gaps (s7058-s7062 rings): L0 59.61, L2 59.58, L3 59.60, L6 59.80, L7 59.92, L8 59.98, L9 60.00 (with auto 9:8192, s7062), L10 60.00, L11 59.93, L14 59.92, L15 59.99, L16 59.48 (transition stalls = loads, 59.68 excl. >40 ms), L17 59.70, L18 60.00; L1-L5/L12/L13 measured s7050-s7058 (L12/L13 need auto K=0.5). Older headline bullets s7006-s7045 moved to PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7063)".
 
@@ -307,7 +309,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 22. **RSP VU fast paths + divide: CLOSED s7092** (tools/s7092_vu_mem_test, 0/8.59 G; rerun after any rsp_vu*.hpp / rsp.hpp DMEM edit).
 23. **RSPRecomp scalar lowering: CLOSED s7093** (tools/s7093_su_census.py --controls; sltiu $zero/neg-imm template fixed in RSPRecomp; rerun after any RSPRecomp change).
 24. **RSP runtime DMA + cop0: CLOSED s7094** (audio ucode_data off-by-one fixed; tools/s7094_dma_test + tools/s7094_dma_census.py, rerun after any rsp.hpp/rsp.cpp DMA edit).
-25. **DPC registers CLOSED s7095; bridge forwarding coverage CLOSED s7096** (ROGUESQ_S7095_DPC / ROGUESQ_S7096_FWD=ctl, rerun after any dpc_bridge.cpp submit/defer/wrap edit; MISSING_UNEXPLAINED/dup/order must stay 0). Next: edit-walker census (NEXT.md).
+25. **DPC registers CLOSED s7095; bridge forwarding coverage CLOSED s7096** (ROGUESQ_S7095_DPC / ROGUESQ_S7096_FWD=ctl, rerun after any dpc_bridge.cpp submit/defer/wrap edit; MISSING_UNEXPLAINED/dup/order must stay 0). Edit-walker census CLOSED s7097 (ROGUESQ_S7097_EDIT=ctl; unattributed must stay 0). Next: RT64 vs angrylion on the same stream (NEXT.md).
 
 ## Evidence index
 

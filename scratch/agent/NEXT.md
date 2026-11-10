@@ -1,24 +1,19 @@
-# NEXT: owner reports first; otherwise census of the bridge's own RDP edit walkers
-HYPOTHESIS-ID: bridge-edit-census
-Context: s7096 closed forwarding coverage. RT64 gets exactly the hardware-consumed byte stream (0 missing/dup/order over
-34 GB), and every content change between DPC_END and the RT64 handoff (dd4 16:9: ~18 B/task, 399k B per 300 s; dd1: 0)
-happens INSIDE rs64_dpc_record_submit (src/rsp/dpc_bridge.cpp ~5960): pre-compare 0 over every forwarded byte. Which
-walker makes which change has been named only by op histogram (0x2D = rs64_g1d_title_clear scissor clamp; the bulk in
-words whose head byte is 0x02/0x03 = triangle payload), so it is single-source.
-Hypotheses: H-edit-intended (every changed byte belongs to a walker's documented edit, e.g. spike clamp/cull rewriting
-vertex/edge words, title scissor clamp, pause dim, rect_wrap) vs H-edit-stray (some walker writes bytes it did not mean
-to, e.g. misparses a command boundary and patches triangle payload as a command, the s6936 per-bump hazard) vs
-H-edit-retail (an edit fires in plain flight where retail drawing should pass through untouched: a candidate for G5b/G5f
-visual defects).
-Unit (ONE instrument, ONE run, reuse src/rsp/s7096_fwd_cover.cpp):
-1. In rs64_dpc_record_submit_impl, snapshot [lo,hi) before each walker call (census, title_clear, wipe_scan, pillar_scan,
-   rect_wrap, pause_dim, spike, g5b.., floor; see the t[] timing slots) and diff after it. Per walker: bytes changed,
-   commands changed (decoded at true command boundaries with the 16 B texrect / 32..176 B triangle step), op of the
-   enclosing command, and the first 8 examples (old/new words). Unattributed = post diff not explained by any walker (must be 0).
-2. Positive control: ROGUESQ_S7096_FWD=ctl also flips one byte inside rs64_dpc_record_submit between two walkers on 1 task
-   per 1000; it must show up as "unattributed".
-3. Run L6 dd4 16:9 (env NOCAP=1 ASP=16:9 zsh scratch/s7031/arm.zsh 6 4 <name> "ROGUESQ_S7096_FWD=ctl" 120 180) and dd1
-   4:3 back to back.
-Outcomes: every byte attributed to its walker's documented edit = H-edit-intended (close the bridge layer); a walker
-patching payload words at non-boundaries = H-edit-stray, fix the walker; edits in plain flight that alter retail geometry
-= H-edit-retail, report per-walker counts to the owner with before/after frames.
+# NEXT: owner reports first; otherwise RT64 vs angrylion on the exact forwarded RDP stream (layer below the bridge)
+HYPOTHESIS-ID: rt64-vs-angrylion-stream
+Context: the bridge is closed end to end (s7095 DPC registers, s7096 forwarding = hardware byte stream, s7097 every edit is a
+documented walker edit, 0 unattributed). So any G5b terrain drop the owner still sees at dd2/dd4 is either already in the RDP
+stream the ucode emits (game/ucode side) or in RT64's rendering of a correct stream. Nothing has compared RT64 output with a
+reference RDP on the SAME dd4 stream (s6744/s6748 angrylion matches were retail-ROM frames at dd1).
+Hypotheses: H-stream (frames with missing terrain already lack the terrain triangles in the forwarded stream; angrylion
+replay of the stream shows the same hole) vs H-rt64 (stream carries the triangles, angrylion draws them, RT64's presented frame
+lacks them: RT64 framebuffer/depth/tile-cache or present-selection defect) vs H-none (no frame in the capture differs beyond
+the A/A floor: the owner's drops are not reproduced by this recipe; report and ask for a screen recording timestamp).
+Unit (ONE capture, offline analysis):
+1. Capture: L6 (and L4) dd4 16:9 owner recipe with ROGUESQ_G5B_FRAME=<file> (dpc_bridge.cpp rs64_g5b_frame: per swap marker,
+   RAM every ROGUESQ_G5B_FRAME_EVERY swaps, every forwarded range) plus the presented-frame capture (scratch/s6894/g5b_capture)
+   in the same run.
+2. Replay each RAM+range frame through tools/angrylion_replay/replay.c; score terrain pixel fraction per frame for angrylion vs
+   RT64 presented (same VI swap number); flag frames where RT64 < angrylion by more than the A/A floor (replay a frame twice = 0).
+3. Positive control: drop one terrain triangle range from a replayed frame; the scorer must flag it.
+Outcomes: flagged frames = H-rt64 (bisect RT64 state for that frame); holes in both = H-stream (go upstream into the ucode/game
+terrain submit); no flags with a passing control = H-none.
