@@ -185419,3 +185419,23 @@ Positive control for the cull wiring: [s7031] ocull/f ph0 0 vs ph1/ph2 3419/3450
 Verdict H-clean on all six; rules out H-fail and H-nocull. The per-level sweep is CLOSED: every level 0-18 has flown at the dd6 bundle at 16:9 (L10 health only),
 0 crashes / 0 stalls in 15 holds over s7041-s7043; bundle fps >= 59.0 everywhere. Two lines (health + same-run cost). Not checked: image on L12/L13, where the cull
 is load-bearing and cuts the most - that is the next unit (NEXT.md dd6-bundle-loadbearing-image). OWNER-OPT-INS "Farthest view" now says all levels.
+
+## Session 7044 (2026-11-09) — dd6 auto bundle image on load-bearing L12/L13 at 16:9: L12 VISIBLE (far off-map horizon band cut, 0.8-0.9 / 1.8% px, A/A 0.00), L13 clean
+
+Work unit (NEXT.md dd6-bundle-loadbearing-image): s7041-s7043 held every level at the dd6 auto bundle; on L12/L13 the cull is load-bearing
+(42.8 -> 59.7, 48.3 -> 59.9 fps) but image neutrality had only been measured on L1/L4 poses + cutscenes. No game build. Screen unlocked (IOConsoleLocked false).
+What ran (scratch/s7044/all.zsh -> run.zsh = s7040 recipe, 16:9 FPS60 dd6 UNSAFE MELT WIDEWIN cap 10240, NOREF, FZ 36 46 56 66 80 100 125 150):
+arms dd6off (OFFMAPCULL=-1) / dd6b (auto) / dd6b2 (A/A) / dd4 (cap 8192), L12 then L13, 8 runs.
+Health: 8/8 alive_at_end=1, vi_stalls30s=0, crashlines=0, CRASH grep 0; [s7037] 1 in dd6b/dd6b2, 0 in dd6off/dd4 (wiring control).
+Path: each level's 4 arms share every [posefreeze] pos (L12 one pos at all 8 freezes, 156.526,-8.539,19.825: the craft is held; L13 6 freezes, 6 distinct pos).
+Image (tools/s7032_pose_cull_score.py --base dd6off, mean |dLum| / frac>24):
+- L12 k0-k3: frames black (pre-flight, mean lum 2), all arms 0.00: FZ too early for L12, uninformative.
+- L12 k4-k7: dd6b 0.81/0.018, 0.80/0.018, 0.88/0.019, 0.87/0.019; A/A dd6b vs dd6b2 0.000 at every pose; dd4 control 14.74, 14.44, 8.68, 8.54.
+  By eye (crop docs/owner_sheet_s7044_dd6_l12_horizon.jpg, rows off/on k4, off/on k6; diff bbox y 1421-1466 of 1592, full width): dd6off draws a curved,
+  fogged far ground band (pale ice band at k4/k5, green grass at k6/k7); dd6b leaves a flat, hard, slightly jagged horizon lower down. [s7031] dims=88x88,
+  win z=-65: the eye is near the z map edge looking outward, so the removed band is off-map clamped terrain past 0.6 x fog end.
+- L13 k0-k5: dd6b 0.00-0.01 (diff = a thin horizon sliver at k4/k5), A/A 0.000; dd4 control only 0.38-1.36 (dark red lava level, low contrast: weak control).
+Verdict: L12 H-visible (the NEXT.md threshold >0.5 / >1% px is crossed with A/A at 0), L13 H-neutral (weak-control caveat). Rules out H-path (one path per level).
+Two lines on L12 (score + by-eye crop), single run per arm. The bundle is not image-neutral on every level; s7038-s7040 poses never put the eye near a map edge looking out.
+Not yet known: whether retail dd1 shows that band at all (if the band is itself an extension artifact the bundle is nearer retail).
+OWNER-OPT-INS "Farthest view" now carries the L12 defect line. Next: L12 dd1 reference + K 0.8/1.0 arms + same-run cost hold (NEXT.md dd6-bundle-l12-horizon).
