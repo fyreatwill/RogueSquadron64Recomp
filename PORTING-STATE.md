@@ -185586,3 +185586,22 @@ Unit (NEXT.md s7050, HYPOTHESIS-ID dd6-bundle-219-l12-cost): H-clean / H-visible
 - Skipped the planned hold: it was meant to qualify the cost of the default this session reverted. Cost at K0.6 21:9 comes from s7048/s7050 (L12 ~58.6-59 fps).
 - OWNER-OPT-INS: the s7050 ultrawide line now says K=0.5 is opt-in only (L12 +0.8 fps, L4 loses a horizon strip), with the sheet.
 - Rules out: a global lower K at 21:9. What is left for 21:9 L12: cap 9216 (s7049: invisible on L12, +0.5 fps, unqualified on L1/L4) or accepting ~59 fps.
+
+## Session 7052 (2026-11-09) — 21:9 L12 cost thread closed: WIDEWIN cap 9216 is visible on L4 at 21:9 (far-left shoreline lowered, 0.26-0.39 vs ctl 8192 0.74-1.15); no default change (H-visible)
+
+Unit (NEXT.md s7051, HYPOTHESIS-ID dd6-bundle-219-l12-cost): H-clean / H-visible for ROGUESQ_DD_WIDEWIN_CAP=9216 as a 21:9 default.
+- Boring check: the default host cap is 0 (rs64_s7012_cap, upstream_compat.cpp:343); the effective 10240 comes from the POOLX clamp 5,
+  so the base arm set CAP=10240 explicitly (as s7051 did). Screen unlocked (IOConsoleLocked false), no other game instance.
+- Frozen poses (scratch/s7052/run.zsh <LV>, 21:9 FPS60 dd6 UNSAFE MELT WIDEWIN, bundle auto K0.6 KEDGE 0.8,12; arms c10240 / c9216 / c8192
+  positive control; 6 runs, 0 crash, [s7037] k=0.6 in all; [s7012] logged n=1 9216 etc.; identical posefreeze positions across arms).
+  tools/s7032_pose_cull_score.py --base c10240:
+  L1 (7 poses): c9216 <=0.01, c8192 <=0.02 -> the cap does not bind on L1 at these poses; no power there (control silent).
+  **L4 (7 poses): c9216 0.39/0.37/0.38/0.36/0.32/0.28/0.26 (0.4% px), c8192 0.74-1.15 (1.0% px), A/A intra 0.00.** c9216 diff bbox
+  x 1-1007, y 716-799 of 2720x1252 (k0/k6; k3 also a thin sliver to x 2714) = the far shoreline on the left; c8192 the same band across
+  the full width. By eye (docs/owner_sheet_s7052_l4_219_cap9216.jpg, rows 10240 | 9216 | 8192 | autocontrast diff, k0, H 0.40-0.75):
+  9216 lowers and roughens the far water edge on the left.
+- Verdict: H-visible (L4 >0.3 at 5 of 7 poses; single run, but A/A 0.00, same positions, control fires). No build, no default change.
+  The 21:9 L12 cost thread is CLOSED at ~59 fps: both cheap levers (K0.5 s7051, cap 9216 s7052) shave the L4 21:9 horizon.
+- OWNER-OPT-INS: the s7049 line "9216 looks identical" now notes the L4 21:9 shoreline loss with the sheet.
+- New question from the data: the L4 21:9 band is cap-sensitive, so the default 10240 may itself cut it. NEXT.md: c12288 (POOLX_MAX=6) arm.
+- Rules out: any cap below 10240 as an invisible 21:9 speed-up.
