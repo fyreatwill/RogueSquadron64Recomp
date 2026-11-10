@@ -1,12 +1,15 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7098 (2026-11-10).
+Compact operational handoff, as of Session 7099 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7099 FPS60 near-wall flicker, same-run 30/60 split (G1E_LIMIT=1 WIN=600, FPS60=0, L6 dd4 16:9): 2 episodes in 60 fps windows vs 0 at 30, P(0)=0.47 under equal per-tick rates, so NOT yet discriminating; in flight the camera eye (0x80130C10) reverses direction equally often at both rates (0.045/0.062 vs 0.052/0.051, two blocks), so H-osc as a general spring overshoot is refuted.** The g3c per-VI line now logs lim (0x80128EAF), mach time and eye (tools/s7099_wall_split.py, tools/s7099_eye_reversal.py). Locally, episode 1 has the eye jittering ~0.03 back and forth for 0.25 s and episode 2 lands on a dead stop and reversal: push-out-like, single-source, n=2. Three repeats queued (soak_queue/s7099_wallsplit_r1..r3).
+- In plain words: one run is too short to say whether the wall flicker is more common at 60 fps. The camera does not shake in general at 60 fps; something pushes it back at the moment of a flicker.
 
 **s7098 G5b: the big in-flight terrain drops RT64 presents are already in the RDP stream (H-stream, two lines); they are a near-wall flicker that follows FPS60, not draw distance (single-run arms).** One L6 dd4 16:9 owner-recipe run captured the forwarded stream (ROGUESQ_G5B_FRAME, RAM every 20 swaps) and the presented window (g5b_capture) together. angrylion needs a 16 MB core for dd>1 (stock RDRAM_MAX_SIZE 8 MB overflows rdram_hidden[] on cimg 0x98AA00; tools/angrylion_replay/build16.sh). (1) 316 own-RAM flight swaps, angrylion vs presented (tools/s7098_rt64_vs_al.py, lag 15 ms): floor 0.043, 1/316 over threshold, KILL_AREA=3000 control 16/16 flagged. (2) All 70 g5b_drops transients, candidate swaps within 100 ms replayed (tools/s7098_transients.py): 53 are matched by a swap's hardware render. The 10 large ones (T 0.12-0.71) the scorer called RT64-only look identical to their angrylion render by eye (scratch/s7098/rt64_a.png, rt64_b.png; the gap is a HUD-position offset only). Every large event is the near canyon wall missing for 1-3 frames while the camera hugs or enters it, sky showing through. Arms on L6 (tools/s7098_wall_flicker.py, episodes per run): dd4 FPS60 6 and 4; CULL_SPIKE=tog splits 1 on / 3 off episodes (cull refuted); dd4 FPS60=0 gives 0 in 130 s of wall-hug; dd1 FPS60 gives 2 (same picture: the camera alternates inside and outside the wall).
 - In plain words: the renderer draws exactly what it is given. The missing-wall flashes come from the game side, and they only appear with the 60 fps mode on, at any draw distance.

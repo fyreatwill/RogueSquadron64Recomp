@@ -186972,3 +186972,33 @@ Left open: the camera term (H-osc spring/push-out tuned for dt 1/30, H-par parit
 Next: same-run split using ROGUESQ_G1E_LIMIT=1 ROGUESQ_G1E_WIN=600 with FPS60=0 (60 fps in alternate windows), plus a camera eye log.
 New: tools/s7098_rt64_vs_al.py, tools/s7098_transients.py, tools/s7098_wall_flicker.py, tools/angrylion_replay/build16.sh.
 CURRENT-TRUTH: s7088-s7091 headline bullets migrated to PROJECT-OVERVIEW (size 58.1 -> 55.9 KB with the s7098 bullet). Owner save untouched (no save swap; NO_SAVE_WRITE from runner/common).
+
+## Session 7099 (2026-11-10) — FPS60 near-wall flicker, same-run 30/60 split: 2 episodes in the 60 fps windows vs 0 at 30 (not yet significant); the camera eye does not oscillate per tick in flight (H-osc as a general spring overshoot refuted, two blocks)
+HYPOTHESIS-ID: fps60-wall-camera
+Instrument (one build): the ROGUESQ_G3C_LOG=1 per-VI line (lib/N64ModernRuntime/ultramodern/src/events.cpp g3c::apply) now also carries
+lim = arbiter byte 0x80128EAF (1 = 60 fps window, 2 = retail 30), m = mach_absolute_time (the g5b_capture clock), eye = 0x80130C10..18
+(the view-pyramid eye the terrain stream reads, s7011). Patch exported (submodule-patches/N64ModernRuntime.patch).
+Run: scratch/s7099/arm.zsh (= s7098 arm with FPS60 removed) L6 dd4 16:9, ROGUESQ_FPS60=0 ROGUESQ_G1E_LIMIT=1 ROGUESQ_G1E_WIN=600, 120+240 s,
+g5b_capture 15376 frames 255.8 s, 0 crash, 23050 g3c lines. The NEXT.md arm needed no new lever: G1E_LIMIT already existed (s6255).
+Results (tools/s7099_wall_split.py raw csv log [--shift S]; tools/s7099_eye_reversal.py log t0 t1):
+- Positive control: the s7098 detector finds 3 events / 2 episodes (28.7-28.9 s and 32.8 s), so the instrument fires in this run.
+- Split: lim=1 129.9 s, wall-hug 73.5 s, 2 episodes, 3759 ticks (28.9 ticks/s: dd4 caps the 60 fps arm near 30); lim=2 125.8 s, hug 79.4 s,
+  0 episodes, 2304 ticks (18.3/s). Equal per-tick rate predicts 0.76 episodes at lim=2, P(0)=0.47: NOT discriminating on one run.
+  A 10 s shift swaps the labels as it must; a 5 s shift does not smear because both episodes sit mid-window (a weak control at n=2).
+- Eye reversal in flight (fraction of consecutive tick steps with a negative dot product, craft moving): t 120-250 lim1 0.045 / lim2 0.052,
+  t 250-385 lim1 0.062 / lim2 0.051. A dt-1/30-tuned spring overshooting at 1/60 would raise lim1 well above lim2; it does not, so H-osc as
+  a GENERAL per-tick oscillation is refuted (two blocks). Pre-flight (t<120) lim1 0.168 vs 0.021 is menus/cutscene, not flight.
+- Local traces (eye per VI, -0.25..+0.08 s around each event): episode 1 (28.7 s) shows the eye x jittering back and forth by ~0.03
+  (51.23, 51.20, 51.19, 51.22, 51.19, 51.23, 51.20 ...) for >=0.25 s before the drop while eye-to-player distance shrinks smoothly; episode 2
+  (32.75 s) follows a smooth descent (steps 0.2-0.3) that stops dead and reverses (0.225 -> 0.060, x 47.27 -> 47.31) on the event tick.
+  Both look like a terrain push-out clamp acting on the eye, locally. Single-source, n=2.
+- H-par: in the traces every tick advance comes with an eye change (no skipped camera update on alternate ticks); not supported. The
+  split tool's global "skip" field (0.43/0.38) counts gfx tasks, several per frame, and is NOT a valid H-par measure; ignore it.
+- Side datum: the 0x80137DBC "player" floats are not a clean world position (one sample pl=-8e-39,46.3,-0.16); the eye/pl step ratio
+  0.7-0.8 says they move together, but do not use them as coordinates. The [g1e] per-window sec field reads 0.00 whenever
+  ROGUESQ_G1E_DUMP is unset (w0 reset every VI by the snap guard), so its tasks/s and path/s are garbage; use the g3c lim field instead.
+Rules out: H-osc as a whole-flight spring overshoot. Leaves: H-ret (equal per-tick rate) vs a local push-out effect that only shows at 1/60.
+Queued: scratch/agent/soak_queue/s7099_wallsplit_r1..r3.sh (same recipe; they print the split and reversal lines, delete their raw).
+Next: fold r1-r3, pool episodes per state per tick (need ~8+ total to separate a 2x rate), and dump the eye trace at every episode.
+New: tools/s7099_wall_split.py, tools/s7099_eye_reversal.py, scratch/s7099/arm.zsh; events.cpp g3c line extended.
+Owner save untouched (NO_SAVE_WRITE from the common script).
