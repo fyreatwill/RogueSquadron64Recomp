@@ -185704,3 +185704,21 @@ Unit (NEXT.md s7056, HYPOTHESIS-ID dd6-219-levelK-l13): H-l13-gain / H-l13-free 
   No ORIGIN needed (performance tuning of an opt-in cull). OWNER-OPT-INS line added.
 - Verdict line: the same-run tog selects H-l13-gain (+0.9 fps, rsp -1.3 ms) and refutes H-l13-free (K0.6 sat at 58.5) and H-l13-visible
   (0 px vs a firing K0.3 control). Rules out: L13 needing a separate KEDGE-style exception. Next: 21:9 survey of L2/L3 (16:9 cull gainers, s7041).
+
+## Session 7058 (2026-11-10) — 21:9 dd6 bundle L2/L3 already at 59.5-59.7 fps with K=0.6: K=0.5 saves rsp 0.5-0.8 ms but no fps (H-done), auto KLEVEL stays 12:0.5,13:0.5; survey of the 10 unmeasured levels queued as soaks
+
+Unit (NEXT.md s7057, HYPOTHESIS-ID dd6-219-levelK-survey): H-more (L2/L3 < 59.5 at K0.6, K0.5 gains >= +0.5 fps) vs H-done.
+- Boring checks: no other game instance, screen unlocked (ioreg), load ~5. CURRENT-TRUTH 56 KB (< 60 KB, no maintenance).
+- Holds (scratch/s7058/run_hold.zsh = s7057 copy with KLEVEL=2:0.5,3:0.5 TOG; 21:9 dd6 FPS60 MELT, explicit tog3 bundle K0.6 -> phases 0.5/0.6/0.5):
+  L2t: 507 s flight, alive, vi_stalls30s 0, crashlines 0; log `[s7056] level=2 k=0.5,0.6,0.5` (lever armed on the right level).
+    g5e_cost_by_parity --phases 3 --skip-s 130 --split xor8, 22.8k frames: p0 59.5 fps rsp 10.40 / p1 (K0.6) 59.6 rsp 10.93 / p2 59.7 rsp 10.42;
+    P(>=2VI) 0.01 all; A/A p2-p0 +0.2 fps rsp +0.02. K0.6-K0.5 rsp +0.52 ms, fps -0.1 (inside A/A).
+  L3t: 507 s flight, alive, 0 stall, 0 crash; `[s7056] level=3 k=0.5,0.6,0.5`. 22.7k frames: 59.6 / 59.5 / 59.7 fps, rsp 9.79 / 10.61 / 9.80;
+    P 0.01 all; A/A +0.1 fps rsp +0.02. K0.6-K0.5 rsp +0.83 ms, fps +0.1/-0.2.
+  Positive control: the lever moves rsp by 0.5-0.8 ms same run (A/A 0.02), so it is live; fps cannot move because both levels sit at the 60 fps ceiling
+  (rsp ~10.5 ms vs L12/L13 ~13 ms, where K0.5 gave +0.6..+0.9 fps).
+- Verdict line: selects H-done, refutes H-more for L2 and L3. No code change; auto KLEVEL stays 12:0.5,13:0.5 (no pose qualification needed).
+  Rules out: L2/L3 as 21:9 laggards (the 16:9 s7041 gain does not carry to a deficit at 21:9).
+- Queued soaks scratch/agent/soak_queue/s7058_219auto_L{0,6,7,8,9,11,14,16,17,18}.sh: auto bundle path, 21:9 dd6, 360 s hold, G1E_TL timeline,
+  exit 1 on crash / not alive. Next iteration scores each with --phases 1 and runs the tog K split only on levels < 59.5 fps.
+  L10 (cloud level, no terrain grid) and L15 (owner-gated 21:9 crash) left out.

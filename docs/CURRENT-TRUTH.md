@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7056 (2026-11-10).
+Compact operational handoff, as of Session 7058 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7058 21:9 L2/L3 need no level K (H-done, no build).** Same-run tog K0.5/0.6/0.5, 21:9 dd6 bundle, 507 s each, 0 crash/stall: L2 59.5/59.6/59.7 fps, rsp 10.40/10.93/10.42; L3 59.6/59.5/59.7, rsp 9.79/10.61/9.80 (A/A rsp 0.02). K0.5 saves 0.5-0.8 ms rsp but both levels already sit at the 60 fps ceiling, so auto KLEVEL stays `12:0.5,13:0.5`. 21:9 measured: L1-L5, L12, L13; the other 10 levels (not L10 cloud, L15 owner-gated) are queued as auto-path soaks (s7058_219auto_L*).
 
 **s7057 dd6 21:9 bundle uses K=0.5 on L12 and L13 (ROGUESQ_DD_OFFMAPCULL_KLEVEL, auto `12:0.5,13:0.5` when FB_WIDTH>796 and no explicit _K; level from gCurrentLevel 0x80130B70).** L13 same-run tog 0.5/0.6/0.5 at 21:9, 509 s, 0 crash: 59.4/58.5/59.4 fps, rsp 11.83/13.06/11.75, P(>=2VI) 0.01/0.03/0.01 (A/A p2-p0 0.0 fps). L13 frozen poses (k0-k3): K0.5 0 px with dLum>8 vs K0.6, K0.3 control 3/9/64 px (0.07/0.18/0.29) fires; single-source (one run, dark level). L12 (s7056): 59.6/59.0/59.5. L4 keeps 0.6 (s7051 band). `KLEVEL=-` disables.
 
