@@ -110,3 +110,35 @@ with sign-extended immediates, lwl/lwr pairs and singles and swl/swr pairs and s
 Before the fix: 34 mismatches, all divisor-0 ddiv/ddivu. After: 0. Negative control (zero-extending reference): 1436 mismatches.
 Not covered: sra/srav on non-sign-extended inputs (architecturally undefined; lowering = ares's s32(rt.s64 >> sa)), single partial
 lwr bits 63..32 (implementation-defined; low 32 compared).
+
+## s7086: memory access, immediates and conditional branches (CLOSED, no live miscompile)
+
+Tools: `tools/s7086_mem_branch_census.py` (offline, over scratch/s7082/regen + the live ../N64Recomp/RecompiledFuncs) and
+`tools/s7086_mem_test/run_test.py` (host test at -O2 with the live flags). Unlike s7085, each site is checked with its
+OPERANDS: register numbers and the immediate value printed in C must equal the disassembly's.
+
+| class | sites | result |
+|---|---|---|
+| lb/lbu/lh/lhu/lw/lwu/ld | 383/5172/783/4894/26880/2/4 | all match; 177 lw are the jump-table loads s7083 proved are never read (177 = the s7083 table count) |
+| sb/sh/sw/sd | 5321/4560/25554/46 | all match (SD high word at +0) |
+| ll/sc/scd/sync | 0/0/2/0 | ll/sc/sync absent; the 2 scd are in decoded data (next unit) |
+| cache | 37 | lowered to nothing (correct: no host cache) |
+| lui/addiu/ori/andi/xori | 22262/34384/1904/6475/121 | values match; addiu lo16 sign-extended, ori/andi/xori zero-extended. 0 RELOC_ (main ELF is not relocatable), so %hi/%lo pairing has nothing to check |
+| beq/bne/blez/bgtz/bltz/bgez | 7234/5969/351/127/107/241 | condition operator + operands match; delay slot inside the taken block then `goto L_target`, again on fall-through |
+| beql/bnel/blezl/bgtzl/bltzl/bgezl | 747/878/13/9/33/32 | fall-through is `goto skip_N` past an identical delay-slot copy, so the slot runs only when taken |
+| bgezal/bltzal + jal/jalr $ra reads | 8/6 | 6 sites read $ra after a link op before writing it: exactly the s1971 bltzal $zero PIC sites, all 6 patched in the live output |
+
+Explained differences (182): 177 jump-table lw; 2 bgtz in interpolatePointTableSamplesToPackedWord /
+interpolateLutSamplesToPackedWord where a stray out-of-function label (L_8009276C, L_80092A10) sits before the delay-slot
+copy (the s7081 self-branch class; the live output dispatches through g_rs64_sbx_target, checked); 3 branches whose block
+runs past the function end in decoded data (rspbootTextPreamble 0x800825CC, the 0x8009D97C table word twice). 8 more in
+data_gap_/fake_func_. Labels on a delay-slot address: 4, all on the fall-through copy (correct).
+Constant offsets misaligned for the width: 52 in real code (sh/sw in loadTopCloudsAsset, initializeRadar, loadSfxAsset,
+updateCraftSelectAnimState, ...). They are the odd-base idiom: loadTopCloudsAsset sets `$s0 = $s3 + 0x26DF`, then
+`sh -0x17($s0)` hits `$s3 + 0x26C8`, which is aligned. The macros XOR the summed address, so any split is correct when the
+effective address is aligned; a misaligned one address-errors on retail.
+Controls: positive ld 0x800934D4 and beql 0x8000354C enumerated and ok; s1971 6/6 found and patched. Negative: lbu ->
+MEM_HU, one beql without `goto skip_`, one s1971 patch line removed: each adds exactly one finding.
+Host test: 11522 rows (8 random fills x every aligned address in a 64-byte window x width 1/2/4/8 x 6 base/offset splits,
+loads and stores against a big-endian byte model, plus lw/lwu sign/zero extension of 0x80000000): 0 bad. Negative control
+(MEM_BU swizzle ^2): 3065 bad.

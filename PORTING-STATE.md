@@ -186471,3 +186471,33 @@ site and for all 30 shapes. H-ddivu-ub (64-bit divide by zero differs from hardw
 rows wrong before, 0 after) and fixed in recomp.h. Next discriminator: the memory-access + branch-likely census (NEXT.md),
 per shape {matches, differs-unreachable, differs-live}.
 In short: the census refutes live integer miscompiles, the host test selects the ddivu divide-by-zero gap, and the recomp.h fix closes it.
+
+## Session 7086 (2026-11-10) — N64Recomp memory-access + branch census closed: 154,486 operand-checked sites (loads/stores, immediates, 14 branch ops) lower correctly, $ra-after-link reads are exactly the 6 patched s1971 sites, host memory test 11522/11522
+
+Unit (NEXT.md, offline, no game run, no code change to the game): tools/s7086_mem_branch_census.py over the pristine
+front-end output scratch/s7082/regen plus the live ../N64Recomp/RecompiledFuncs, and tools/s7086_mem_test/run_test.py.
+Each site is checked with operands (register numbers and immediate values), not just the statement shape.
+- Loads/stores: 73,599 sites over lb/lbu/lh/lhu/lw/lwu/ld/sb/sh/sw/sd match. The only lw differences are 177 jump-table
+  loads, the same 177 tables s7083 proved are never read. ll/sc/sync: 0 sites. cache: 37, lowered to nothing.
+- Immediates: 65,146 lui/addiu/ori/andi/xori match (addiu lo16 sign-extended, logic ops zero-extended). There are 0 RELOC_
+  macros (the main ELF is not relocatable), so the planned %hi/%lo pairing check has nothing to test.
+- Branches: 15,741 conditional branches. Conditions match. Delay slots run on both paths for plain branches and only when taken
+  for likely ones (`goto skip_N` past an identical copy). 5 differences are explained: 2 stray s7081 self-branch labels in
+  the resampler helpers (live output fixed, checked) and 3 blocks that run past a function end in decoded data.
+- Link register: MIPS jal/jalr/bgezal/bltzal write $ra = A+8, and the C call does not. 6 sites read $ra after a link op
+  before writing it. They are exactly the s1971 bltzal $zero PIC sites, and all 6 carry the ctx->r31 patch in the live output.
+- 52 constant offsets in real code are misaligned for their width. They are the odd-base idiom (loadTopCloudsAsset
+  `$s0 = $s3+0x26DF`, `sh -0x17($s0)` = `$s3+0x26C8`, aligned). The macros XOR the summed address, so this is correct.
+- Host test, -O2 with the live flags: 11522 rows of MEM_B/BU/H/HU/W/WU/LD/SD loads and stores. It covers every aligned address
+  in a window, 6 base/offset splits (negative and odd), and lw/lwu extension, against a big-endian byte model. Result: 0 bad.
+- Controls: positive (ld 0x800934D4, beql 0x8000354C, s1971 6/6) pass. Negative mutations (lbu->MEM_HU, a beql without
+  goto skip_, one s1971 patch removed) each add exactly one finding. The host negative control (byte swizzle ^2) gives 3065 bad.
+  A first host build hit SIGBUS from my own test (base 0x80000000-3 wrapped positive); I moved the window to phys 0x100.
+Opcode coverage over s7083-s7086: every mnemonic in the output is censused except and/xor/negu/nor (1108 sites), mfc0 (12),
+.word (7) and scd (2). That is the closing unit (NEXT.md).
+Rules out: load/store swizzle, ld/sd word order, immediate sign extension, branch delay-slot placement and branch-likely
+nullification as sources of live miscompiles.
+Discrimination: H-mem-branch-live-miscompile (a memory or branch lowering differs on a live path) REFUTED for all 28 shapes.
+H-link-ra (a $ra read after a link op sees the caller's $ra) is confined to the 6 s1971 sites, and those are fixed.
+In short: the memory, immediate and branch lowering is correct. The only link-register gap was already patched, and one small
+census of residual opcodes is left.
