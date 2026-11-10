@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7100 (2026-11-10).
+Compact operational handoff, as of Session 7101 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,9 +8,12 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
-**s7100 FPS60 near-wall flicker = H-push (two lines): pooled over 4 same-run 30/60 splits (L6 dd4 16:9, G1E_LIMIT=1 WIN=600), the per-tick episode rate is 4.1x higher in 60 fps windows (14/15207 vs 2/8853 ticks, binomial p=0.033; per wall-hug minute p=0.003), so H-ret (equal per tick) is refuted; and at every 60 fps episode the camera eye zig-zags (10/12 jitter, up to a reversal every tick) while the 2 retail-rate episodes are clean dead stops (tools/s7100_episode_eye.py; baseline flight windows 53-86% smooth).** Caveat: baseline not wall-hug-conditioned.
+**s7101 FPS60 near-wall flicker: the camera writer chain is named and four hypotheses are refuted.** Per tick: (1) updatePlayerVehicleByControlMode mode 3 chases a target fixed in the craft frame, with speed*dt and no terrain query; (2) applyPlayerVehicleStateUpdate 0x8004CD00 then runs a near-plane collision. It ray-tests camera->corner against terrain (sampleTerrainAtNpcPosition) and on a hit snaps pos = hit - 2*near*unit(corner-pos), with no dt. Its loop tests only 3 of the 4 corners it builds. (3) The result is copied into the matrix the terrain builder reads. Refuted: chase overshoot (0/6724 ticks, ROGUESQ_S7101_CAMCLAMP never fired), craft jitter (0 craft reversals in 13 episodes), a mid-tick transient read (24/24 builder reads = final), and terrain-origin shift (world reversals 12 = eye reversals 12). In a lim1 episode the target moves smoothly but the camera falls back 1.70 -> 2.62 with every-tick y/z alternation: the push-out holds it. **Correction to s7100:** with two more runs the per-tick rate excess is 1.6x, p=0.185, so "more frequent at 60 fps" is unproven (single-source for the zig-zag mechanism).
+- In plain words: the camera bumps off the canyon wall by a fixed amount every frame and was never told about one corner of its own view, so the wall can be cut off at the screen edge. Whether 60 fps makes it more frequent is not proven.
+- Next: log the push-out per corner (hits, the untested 4th corner's state) at an episode, plus a same-run arm that tests all 4 corners (NEXT.md, slug fps60-wall-camera).
+
+**s7100 (superseded in part by s7101) FPS60 near-wall flicker = H-push (two lines): pooled over 4 same-run 30/60 splits (L6 dd4 16:9, G1E_LIMIT=1 WIN=600), the per-tick episode rate is 4.1x higher in 60 fps windows (14/15207 vs 2/8853 ticks, binomial p=0.033; per wall-hug minute p=0.003), so H-ret (equal per tick) is refuted; and at every 60 fps episode the camera eye zig-zags (10/12 jitter, up to a reversal every tick) while the 2 retail-rate episodes are clean dead stops (tools/s7100_episode_eye.py; baseline flight windows 53-86% smooth).** Caveat: baseline not wall-hug-conditioned.
 - In plain words: at 60 fps the camera's "don't go through the wall" correction overshoots, so the camera flips in and out of the wall frame by frame, and the wall vanishes on the inside frames.
-- Next: name the code that writes the camera position at an episode tick and read its push-out (NEXT.md, slug fps60-wall-camera).
 
 **s7099 FPS60 near-wall flicker, same-run 30/60 split (G1E_LIMIT=1 WIN=600, FPS60=0, L6 dd4 16:9): 2 episodes in 60 fps windows vs 0 at 30, P(0)=0.47 under equal per-tick rates, so NOT yet discriminating; in flight the camera eye (0x80130C10) reverses direction equally often at both rates (0.045/0.062 vs 0.052/0.051, two blocks), so H-osc as a general spring overshoot is refuted.** The g3c per-VI line now logs lim (0x80128EAF), mach time and eye (tools/s7099_wall_split.py, tools/s7099_eye_reversal.py). Locally, episode 1 has the eye jittering ~0.03 back and forth for 0.25 s and episode 2 lands on a dead stop and reversal: push-out-like, single-source, n=2. Three repeats queued (soak_queue/s7099_wallsplit_r1..r3).
 - In plain words: one run is too short to say whether the wall flicker is more common at 60 fps. The camera does not shake in general at 60 fps; something pushes it back at the moment of a flicker.
@@ -145,6 +148,7 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 maintenance)" and "
   true-60 Hz latency levels are sticky in whole vsyncs.
 
 ## Superseded conclusions — do not act on these
+- s7100 "FPS60 near-wall episodes are 4.1x more frequent per tick (p=0.033)". Believable: 4 same-run splits agreed in direction. Two more runs (s7101 A, C) bring it to 1.6x, p=0.185; the excess is unproven. Also s7100's "push-out tuned for dt 1/30": the s7101 push-out has no dt.
 - s7059 "transition stalls are mostly the game thread polling isAudioSlotActive/anyAudioSlotActive". Believable: 209/298 game-thread xctrace
   samples in stalls were audio polling. s7064's slot ring timed the waits directly: 25-66 ms per 200-335 ms gap (~14%); the sampler saw only
   ~30 samples per stall, so the off-sample remainder (game thread OS-silent 133-150 ms) was never attributed.
@@ -311,7 +315,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 23. **RSPRecomp scalar lowering: CLOSED s7093** (tools/s7093_su_census.py --controls; sltiu $zero/neg-imm template fixed in RSPRecomp; rerun after any RSPRecomp change).
 24. **RSP runtime DMA + cop0: CLOSED s7094** (audio ucode_data off-by-one fixed; tools/s7094_dma_test + tools/s7094_dma_census.py, rerun after any rsp.hpp/rsp.cpp DMA edit).
 25. **DPC registers CLOSED s7095; bridge forwarding coverage CLOSED s7096** (ROGUESQ_S7095_DPC / ROGUESQ_S7096_FWD=ctl, rerun after any dpc_bridge.cpp submit/defer/wrap edit; MISSING_UNEXPLAINED/dup/order must stay 0). Edit-walker census CLOSED s7097 (ROGUESQ_S7097_EDIT=ctl; unattributed must stay 0). RT64 vs angrylion on the same dd4 stream CLOSED s7098 (H-stream: big drops are in the stream; replay with tools/angrylion_replay/build16.sh).
-26. **FPS60 near-wall flicker (s7098): open.** Near canyon wall vanishes for 1-3 frames when the camera hugs or enters it; FPS60-only on L6 (0 episodes with FPS60=0), present at dd1 and dd4. Next: name which FPS60 frames carry a camera on the wrong side of the wall (NEXT.md).
+26. **FPS60 near-wall flicker (s7098-s7101): open.** The near canyon wall vanishes for 1-3 frames while the camera hugs it. Writer chain named in s7101: the chase, then the applyPlayerVehicleStateUpdate near-plane push-out (3 of 4 corners tested). The 60 fps excess per tick is unproven (1.6x, p=0.185). Next: per-corner push-out log + a 4-corner arm (NEXT.md).
 
 ## Evidence index
 

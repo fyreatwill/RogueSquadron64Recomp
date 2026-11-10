@@ -187025,3 +187025,48 @@ buildVisibleTerrainGridAroundCamera from its a0 eye) and how its push-out is ste
 Next: name the writer of the camera position that feeds the eye at an episode tick (write watch / call-site trace) and read the clamp code;
 then a fix candidate (scale the push-out by dt, or run the camera collision at the 30 Hz sim tick) with a same-run tog control.
 New: tools/s7100_episode_eye.py. Owner save untouched (NO_SAVE_WRITE from the common script).
+
+## Session 7101 (2026-11-10) — FPS60 near-wall flicker: camera writer chain named (chase in updatePlayerVehicleByControlMode, then a near-plane terrain push-out in applyPlayerVehicleStateUpdate that tests only 3 of 4 corners); chase overshoot, craft jitter, mid-tick read and terrain-origin shift all refuted; the s7100 per-tick rate excess does not hold up over two more runs
+Ran (all L6 dd4 16:9, scratch/s7099/arm.zsh, ROGUESQ_G1E_LIMIT=1 WIN=600 G3C_LOG=1, 0 crash in 4 runs):
+ A s7101a: new store watch tools/apply_s7101_camwatch.py (ROGUESQ_S7101_CAMW=<path> + STORE_DIAG=1; s5798 macro range on
+   [*0x80138D1C, +0x58) and the pointer word) — first range cam+0x28..0x58. Perturbed: store-diag slows the game, log coverage
+   lost after ~50 s of capture. Used for writer identity only.
+ B s7101b: new PC hook tools/apply_s7101_chaselog.py (ROGUESQ_S7101_CHASE=<path>) at 0x8004D6C8 (dist, dt, pos, target,
+   speed, gain, min-dt) + candidate fix ROGUESQ_S7101_CAMCLAMP=tog (land on target if the step overshoots).
+ C s7101c: B + a builder-read hook at buildVisibleTerrainGridAroundCamera entry (bv lines, same file, mach-ordered).
+ D s7101d: store watch widened to cam+0x00..0x58.
+Writer chain per flight tick (camera object 0x80138458; *0x80138D1C rewritten every tick with the same value by
+refreshAllSceneNodeInverseTransforms 0x80053764):
+ 1. updatePlayerVehicleByControlMode mode 3 (jump table 0x8003A900[3] = 0x8004D4D4) = pure chase: target = craft matrix x
+    offset cam+0x58 (0, -0.105, -0.0047); pos(cam+0x10) += speed*dt*unit(target-pos), speed rate-limited toward
+    k*min(|dist-d0|,1) (k = 5, d0 ~0.047); split step (0x8004D5C8..) when dt > cam+0xA4 (min dt seen). No terrain query.
+ 2. applyPlayerVehicleStateUpdate 0x8004CD00 = near-plane collision: builds 4 near-plane corner points from the FOV
+    (transformVec3ByMat34 x4, sp+72/84/96/108), then for s4 = 0..2 ONLY (slti s4,3: the 4th corner sp+108 is never
+    tested) ray-tests pos->corner with sampleTerrainAtNpcPosition and on a hit sets pos = hit - 2*near*unit(corner-pos)
+    (addScaledVec3ToVec3 0x800AA3E0); then a height floor at 0x8004D044..4C (y only). No dt anywhere. Census D: 4613 ticks
+    with an addScaledVec3ToVec3 push, 1028 with the y floor.
+ 3. updateEffectObjectOrientationQuat / mat3x4Multiply / buildEffectObjectWorldTransform copy pos into the matrix
+    translation cam+0x4C..0x54 (transient 0,0,0 then restored within the tick); the terrain builder reads that.
+Results:
+ - Chase overshoot (H-pushfix as framed in NEXT): refuted. B: 0 / 6724 chase ticks step past the target (clamp arm never
+   fired, so CAMCLAMP is a no-op; left in, default off, do not use).
+ - Craft jitter (H-craft, new tools/s7101_target_vs_eye.py on s7099 r1-r3 + C): 0 craft-position reversals in 13 lim1
+   episode windows (eye reversals 24+12+17+12); baseline craft reversals <0.001/tick.
+ - Mid-tick transient read (H-order): refuted. C (tools/s7101_bvread.py): in the lim1 episode 24/24 builder reads equal the
+   chase+push final position; overall lim1 2963/3298 (the rest = the next tick's split step, dev ~0.05 = (dt-mindt)*speed).
+ - Terrain-origin shift: refuted. C episode: world camera reversals 12 == eye reversals 12 (the camera really zig-zags).
+ - Episode C t=135.8 (lim1), per tick: target moves smoothly (+0.058 z/tick, y fixed -6.087, i.e. below the camera), the
+   chase steps toward it, yet the camera distance grows 1.70 -> 2.62 over 0.45 s and y/z alternate every tick
+   (-4.85/-4.88, 29.25/29.30): the push-out (step 2) holds the camera back on alternate ticks. So H-push stands, but the
+   push is a geometric snap, not a dt-tuned correction.
+ - Rate: s7099_wall_split on A (perturbed) lim1 4 ep / 3402 ticks, lim2 2 / 1950; C lim1 1 / 2748, lim2 3 / 1950.
+   Pooled with s7100's four runs: lim1 19 / 21357 vs lim2 7 / 12753 ticks, ratio 1.6, P(>=19 of 26) = 0.185 (0.177
+   without A). The s7100 "4.1x per tick, p=0.033" does NOT replicate; the 60 fps excess per tick is unproven. The
+   every-tick zig-zag is present at lim1 episodes; lim2 C episodes show 0-5 reversals in 12-16 ticks.
+ORIGIN: no mitigation landed. Writer of the zig-zag = applyPlayerVehicleStateUpdate's push-out acting on the chase output
+ (retail code, retail-equal at both rates as far as measured).
+Rules out: chase overshoot, craft jitter, mid-tick read, terrain-origin shift. Leaves: (a) H-corner4: the untested 4th
+ near-plane corner enters the wall, so the near plane clips the wall (sky through it) while 3 tested corners are clear;
+ (b) H-snap: the snap along one corner ray moves the camera so a different corner / the chase re-enters next tick.
+New: tools/apply_s7101_camwatch.py, tools/apply_s7101_chaselog.py (both in fixup_game_funcs_vendored.py's list),
+ tools/s7101_target_vs_eye.py, tools/s7101_camw.py, tools/s7101_bvread.py. Owner save untouched (NO_SAVE_WRITE).

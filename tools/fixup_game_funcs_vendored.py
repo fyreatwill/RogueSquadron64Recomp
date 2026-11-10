@@ -42121,6 +42121,8 @@ RS64_REPLAY = [
     "apply_s7031_offmap.py",  # s7031: G1c off-map cell census + ROGUESQ_DD_OFFMAPCULL=<R>|tog3 ring cull (needs s7030)
     "apply_s7032_eyegate.py",  # s7032: off-map cull gated on the eye cell being over the map (ROGUESQ_DD_OFFMAPCULL_EYE=0 ungated)
     "apply_s7064_slotwait.py",  # s7064: transition-stall audio-slot drain wait ring, ROGUESQ_S7064=<path> (measurement only)
+    "apply_s7101_camwatch.py",  # s7101: flight camera matrix write-watch, ROGUESQ_S7101_CAMW=<path> + STORE_DIAG=1 (measurement only)
+    "apply_s7101_chaselog.py",  # s7101: per-tick flight chase-camera step log, ROGUESQ_S7101_CHASE=<path> (measurement only)
     "apply_s7069_callsite_gate.py",  # s7069: inline flag gate (same-name macro) for lowfield_store/synth_read calls; MUST stay last
 ]
 
