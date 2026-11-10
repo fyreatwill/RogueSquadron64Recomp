@@ -186344,3 +186344,27 @@ Differential test (new tools/s7081_selfbranch_test/): mips_ref.py is a small big
   Harness bug fixed on the way: the first build lacked data stubs for the preamble's hook flags (dyld abort, every case read as a crash). Also, PointTable never reached its end compare until s2 was set to the last sample's address (t1 == s2 is an equality test on even addresses).
 Game: rebuild clean. Same recipe as s7080: L6 dd1 4:3 FPS60, boot to flight 309 s, alive at the end, 0 VI stalls, 0 crash lines. The `[s7081 selfbranch] fix on` line is present once (init control). 0 exits fired, as expected for a block that is dead in play (s6878). The resampler functions are absent from 114 host stack samples, so live reach is still not shown in this run. Preempt fixup still reports 6.
 DISCRIMINATION: selects the return-and-dispatch fix as exact against retail on all 16 exits (two lines: independent interpreter + the old arm diverging on exactly the exit cases). It refutes "the old path silently corrupts": it crashes. Rules out any remaining out-of-function goto on live code except the 2 decoded-data gaps. Not covered: a live in-game exit (none occurs), and the other N64Recomp warning classes (next unit).
+
+## Session 7082 (2026-11-10) — N64Recomp warning census closed: every warning is the fixed s7081 resampler class, decoded data, or correct main->overlay runtime lookup
+
+What ran: one fresh front-end pass, `tools/regen_front.sh scratch/s7082/regen` (live tree untouched), and a census of its
+247-line n64recomp.log. New tool tools/s7082_jal_census.py; write-up docs/N64RECOMP-WARNING-CENSUS.md.
+
+Result:
+- Only two log classes exist (0 jump-table / unhandled-instruction / error lines).
+- "branching outside of the function": tools/scan_selfbranch.py lists 36 gotos. 16 = the four resampler helpers (H-live,
+  fixed s7081). 20 = decoded data: data_gap_* (14), fake_func_800B89F4, rspbootTextPreamble, and the word at 0x8009D978/7C
+  (applyVoiceDelayFilter past its `jr ra` at 0x8009D970, plus its duplicate entry static_3_8009D978): that word is the
+  $ra-relative table the s1971 bltzal PIC idiom reads. Agrees with the s6871 reading.
+- "No function found for jal target ... runtime lookup": 191 lines, 126 pairs. 188 are main-text callers whose target is a
+  function START in an overlay (mission/menu/cinematic share 0x800A5130); 24 of the 66 targets are a start in one overlay
+  and mid-function in another (e.g. 0x800C58A0 menuOverlayInit vs mission mid-function, called from mainGameLoop;
+  0x800AE98C/0x800AEA18 cinematic getters called from loadDatFile). Retail bytes at each show `jr ra` of the previous
+  function then a prologue, so they are real entries and the game chooses by loaded overlay. A wrong-overlay call exits
+  loudly in get_function (overlays.cpp:644), so none can be silent. 3 lines are in decoded data (data_gap_800AF6A8 ->
+  0x800EA01C past the cinematic end; jal 0x8334B334 = the applyVoiceDelayFilter table word, twice).
+- Positive control, same pass: the 16 known resampler rows appear; 188/191 jal lines resolve to overlay starts.
+
+Rules out: any further live miscompile inside N64Recomp's warning set. Not covered because N64Recomp does not warn: 81
+`jr $reg` sites lowered to LOOKUP_FUNC tail calls and 177 jump-table switches; next unit.
+No game run (offline only, no code path changed); no ORIGIN line needed (no mitigation).

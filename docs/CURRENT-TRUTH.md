@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7081 (2026-11-10).
+Compact operational handoff, as of Session 7082 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7082 N64Recomp warning census CLOSED (docs/N64RECOMP-WARNING-CENSUS.md, tools/s7082_jal_census.py, one scratch front-end pass): the log has only two classes.** "Branching outside" 36 gotos = 16 resampler exits (fixed s7081) + 20 in decoded data (data_gap_/fake_func_, applyVoiceDelayFilter's $ra table word). "No function found for jal target" 191 lines = 188 main->overlay calls to real overlay function starts (runtime lookup, correct; a wrong-overlay call exits loudly in get_function) + 3 in decoded data. No live miscompile left in the warning set. Unwarned next: 81 `jr $reg` LOOKUP_FUNC tail calls and 177 jump tables.
 
 **s7081 N64Recomp self-branch miscompile FIXED (tools/fixup_selfbranch.py, default on, `ROGUESQ_SELFBRANCH_FIX=0` = old path): the 16 backward out-of-function branches in the 4 voice resampler helpers now store the caller-tail target and return; the caller dispatches to a label at that target (retail: finished one-shot sample -> store last word, zero-fill, caller epilogue).** Differential test tools/s7081_selfbranch_test/run_test.py runs the generated C against an independent MIPS interpreter executing the retail ELF bytes: fix arm 2400/2400 exit+loop cases match (all 16 targets hit), old arm crashes on every case whose exit fires (it rereads samples from address 0), loop-path controls match in both arms. Live funcs_24.c byte-equal to the tested file; preempt 6; L6 boot to flight 309 s clean, 0 exits fired (block dead in play, s6878). The 2 data_gap_* out-of-function gotos are decoded data, left alone.
 

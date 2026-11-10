@@ -1,16 +1,13 @@
-# NEXT: owner reports first; otherwise N64Recomp warning-class census (engineering rung)
-HYPOTHESIS-ID: n64recomp-warning-census
-Context: s7081 fixed the self-branch class (tools/fixup_selfbranch.py + tools/s7081_selfbranch_test). Old regen logs
-(../N64Recomp/fixup_*.log, scratch/*/regen*.log) carry other `[Warn]` lines: "branching outside" for audioCompandS16 (already
-handled by s5668 fixup_label_realign), __OSGlobalIntMask, static_3_800A2FE4, lvj_checkComplexObjectives, static_3_800A50AC,
-fake_func_*; plus any jump-table / unhandled-instruction warnings.
-Unit (one bounded change):
-1. Run one fresh N64Recomp pass into a scratch output dir (docs/REGEN-VERIFY.md recipe, do NOT touch the live tree), capture
-   stderr, and group every [Warn]/[Error] by class and function.
-2. For each class decide: H-handled (an existing fixup repairs it: name it), H-data (decoded data, no caller), H-live (real
-   code, wrong output). For "branching outside" rows, tools/scan_selfbranch.py on the scratch tree says whether a goto
-   leaves its function; lvj_checkComplexObjectives and __OSGlobalIntMask are the first suspects (real code).
-3. Any H-live row gets the s7081 treatment: generic fixup + differential test with tools/s7081_selfbranch_test/mips_ref.py
-   (extend its opcode set if needed; it raises on unknown opcodes, so coverage is explicit).
-Discriminator: warning class x {handled, data, live}. Closes when every class has a named owner or a fix.
-Controls: fixup_preempt_point.py says 6, fixup_selfbranch.py says 16, L6 boot to flight clean (sed s7081->s7082 scratch/s7081/run.zsh).
+# NEXT: owner reports first; otherwise N64Recomp silent-lowering census (jr $reg + jump tables)
+HYPOTHESIS-ID: n64recomp-silent-lowering-census
+Context: s7082 closed every class N64Recomp WARNS about (docs/N64RECOMP-WARNING-CENSUS.md). Lowerings it does not warn
+about: 81 `LOOKUP_FUNC(ctx->rN)` sites (jr $non-ra treated as tail call) and 177 `switch (jr_addend...)` jump tables in
+scratch/s7082/regen (pristine front-end output, regenerate with tools/regen_front.sh if cleaned).
+Unit (offline, one bounded change):
+1. Enumerate both. For each jr-$reg site: is it a real tail call / function-pointer jump (H-tail), a jump table N64Recomp
+   failed to recognise (H-missed-table: the register comes from a lw off a lui/addiu table base + index), or decoded data?
+2. For each jump table: read the table from the ROM (tools/s7082_jal_census.py shows how to map vram->rom per section) and
+   check every entry lands on a printed label inside the same function and the case count matches the bound check (sltiu).
+3. Any H-missed-table or bad-entry row: generic fixup + differential test with tools/s7081_selfbranch_test/mips_ref.py.
+Discriminator: site x {tail, missed-table, data} and table x {all entries in-function, some out}. Closes when every site
+has a class. Positive control: a known table (e.g. one in mainGameLoop) must classify all-in.
