@@ -1,0 +1,87 @@
+--- a/factor5_ucode_ovl20_recompiled.c
++++ b/factor5_ucode_ovl20_recompiled.c
+@@ -1,5 +1,9 @@
++#include <cstdio>
+ #include "librecomp/rsp.hpp"
+ #include "librecomp/rsp_vu_impl.hpp"
++extern "C" void rs64_m4_accum_probe(void *rsp, uint32_t stage, uint32_t r9, const uint8_t *rdram);  /* fixup: M4 accumulator probe v2 */
++extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len);  /* fixup: M4 operand source probe v1 */
++extern "C" void rs64_m4_src_probe(void *rsp, uint32_t r13);  /* fixup: M4 operand source probe v1 */
+ RspExitReason factor5_ucode_ovl20(uint8_t* rdram, [[maybe_unused]] uint32_t ucode_addr) {
+     uint32_t           r1 = 0,  r2 = 0,  r3 = 0,  r4 = 0,  r5 = 0,  r6 = 0,  r7 = 0;
+     uint32_t  r8 = 0,  r9 = 0, r10 = 0, r11 = 0, r12 = 0, r13 = 0, r14 = 0, r15 = 0;
+@@ -277,6 +281,7 @@
+     // mtc0        $2, SP_DRAM_ADDR
+     SET_DMA_DRAM(r2);
+     // mtc0        $3, SP_RD_LEN
++    rs64_m4_dma_probe(dma_mem_address, dma_dram_address, r3);  /* fixup: M4 operand source probe v1 */
+     DO_DMA_READ(r3);
+     // sw          $2, 0x5C($18)
+     RSP_MEM_W_STORE(0X5C, r18, r2);
+@@ -374,6 +379,7 @@
+     // mtc0        $2, SP_DRAM_ADDR
+     SET_DMA_DRAM(r2);
+     // mtc0        $4, SP_RD_LEN
++    rs64_m4_dma_probe(dma_mem_address, dma_dram_address, r4);  /* fixup: M4 operand source probe v1 */
+     DO_DMA_READ(r4);
+ L_124C:
+     // bne         $4, $zero, L_124C
+@@ -750,6 +756,7 @@
+     rsp.VMUDN<0>(rsp.vpu.r[3], rsp.vpu.r[0], rsp.vpu.r[2]);
+     // vmadh       $v2, $v1, $v2
+     rsp.VMADH<0>(rsp.vpu.r[2], rsp.vpu.r[1], rsp.vpu.r[2]);
++    rs64_m4_accum_probe(&rsp, 1, r9, rdram);  /* fixup: M4 accumulator probe v2 */
+     // addiu       $17, $17, 0x10
+     r17 = RSP_ADD32(r17, 0X10);
+     // slv         $v2[0], 0x14($11)
+@@ -1075,6 +1082,7 @@
+     // ori         $9, $zero, 0x670
+     r9 = 0 | 0X670;
+ L_162C:
++    rs64_m4_src_probe(&rsp, r13);  /* fixup: M4 operand source probe v1 */
+     // vmudn       $v28, $v12, $v2[0h]
+     rsp.VMUDN<4>(rsp.vpu.r[28], rsp.vpu.r[12], rsp.vpu.r[2]);
+     // addi        $13, $13, 0x10
+@@ -1181,8 +1189,10 @@
+     rsp.VMADN<0>(rsp.vpu.r[7], rsp.vpu.r[5], rsp.vpu.r[0]);
+     // ldv         $v29[0], 0x60($zero)
+     rsp.LDV<0>(rsp.vpu.r[29], 0, 0XC);
++    rs64_m4_accum_probe(&rsp, 10, r9, rdram);  /* fixup: M4 accumulator probe v2 */
+     // vmadh       $v6, $v4, $v0
+     rsp.VMADH<0>(rsp.vpu.r[6], rsp.vpu.r[4], rsp.vpu.r[0]);
++    rs64_m4_accum_probe(&rsp, 11, r9, rdram);  /* fixup: M4 accumulator probe v2 */
+     // ldv         $v29[8], 0x60($zero)
+     rsp.LDV<8>(rsp.vpu.r[29], 0, 0XC);
+     // vmadn       $v7, $v30, $v30[0]
+@@ -1191,10 +1201,12 @@
+     if (r3 == 0) {
+         // vge         $v6, $v6, $v29[1q]
+         rsp.VGE<3>(rsp.vpu.r[6], rsp.vpu.r[6], rsp.vpu.r[29]);
++    rs64_m4_accum_probe(&rsp, 12, r9, rdram);  /* fixup: M4 accumulator probe v2 */
+         goto L_1740;
+     }
+     // vge         $v6, $v6, $v29[1q]
+     rsp.VGE<3>(rsp.vpu.r[6], rsp.vpu.r[6], rsp.vpu.r[29]);
++    rs64_m4_accum_probe(&rsp, 12, r9, rdram);  /* fixup: M4 accumulator probe v2 */
+     // lqv         $v3[0], 0x160($zero)
+     rsp.LQV<0>(rsp.vpu.r[3], 0, 0X16);
+     // vmudl       $v16, $v5, $v3[1]
+@@ -1250,6 +1262,7 @@
+     rsp.SSV<14>(rsp.vpu.r[27], r9, 0X24);
+     // ssv         $v26[14], 0x4A($9)
+     rsp.SSV<14>(rsp.vpu.r[26], r9, 0X25);
++    rs64_m4_accum_probe(&rsp, 13, r9, rdram);  /* fixup: M4 accumulator probe v2 */
+     // bgtz        $10, L_162C
+     if (RSP_SIGNED(r10) > 0) {
+         // addiu       $9, $9, 0x50
+@@ -2522,7 +2535,9 @@
+     if (RSP_SIGNED(r2) >= 0) {
+         // vmadh       $v7, $v7, $v30[2]
+         rsp.VMADH<10>(rsp.vpu.r[7], rsp.vpu.r[7], rsp.vpu.r[30]);
+-        goto L_0000;
++        // goto L_0000 — out-of-IMEM target, never taken in practice;
++
++        return RspExitReason::ImemOverrun;
+     }
+     // vmadh       $v7, $v7, $v30[2]
+     rsp.VMADH<10>(rsp.vpu.r[7], rsp.vpu.r[7], rsp.vpu.r[30]);

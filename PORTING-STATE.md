@@ -186644,3 +186644,50 @@ Work unit (NEXT.md, slug fixup-layer-statement-census): offline, no game run, no
   selects, and it closes the CPU fixup layer. Next discriminator: the same per-address multiset on the RSP layer
   (build/factor5_ucode vs a pristine RSPRecomp pass), after checking those files are compiled in at all.
 - Durable doc: docs/N64RECOMP-WARNING-CENSUS.md s7090 section. Next: the same census for build/factor5_ucode.
+
+## Session 7091 (2026-11-10) — RSP ucode fixup census closed: 0 unexplained retail-instruction changes; the fixed ucode was not regenerable from a fresh pass, now it is (tools/ucode_regen.sh + committed patches)
+
+Unit (NEXT.md rsp-ucode-fixup-census). Step 0 (boring first): three TUs are compiled (CMakeLists 251-255):
+build/factor5_ucode/factor5_ucode_recompiled.c (gfx, with the 9 overlays spliced in by fixup 6*),
+factor5_ucode_b_recompiled.c (audio), factor5_boot_recompiled.c. The ovl*.c files are splice SOURCES only;
+ovl20 is also edited (M4 probes) but not compiled. All of build/ is gitignored.
+
+Fresh pass: `../N64Recomp/build/RSPRecomp` on copies of the 12 tomls (output redirected to scratch/s7091/pristine;
+toml paths resolve relative to the toml, so the copies must sit in the repo root). 8 of 9 overlay files are
+byte-identical to live (they are never edited); ovl20, main, audio, boot differ.
+
+Finding 1 (durability defect): `tools/fixup_factor5_ucode.py` CANNOT rebuild the live ucode from a fresh pass.
+Plain run: main exits 1 at fixup 6d (anchors on fixup 9's rs64_e9prov_l1db0_predecessor line, which sits later
+in the file); audio and boot exit 1 at fixup 24 (block not gated to the main ucode) BEFORE anything is written,
+so a fresh regen would ship the boot ucode's per-task printf spam and lose every audio probe. On the live files
+the script is an idempotent no-op (rc 0 on main; rc 1 on audio at fixup 24, ignored by CMake's
+RESULT_VARIABLE). New tools/s7091_ucode_regen.py runs the 60 "# Fixup" blocks transactionally (a failing block
+is rolled back) in passes to a fixed point: main 43 applications / 3 passes, still 800 diff lines short; blocks
+13, 14, 15, 16, 17, 13b, 19, 19b(+22), 21, 22, 20, 21-store never apply fresh because their anchors name text
+later blocks rewrote (fixup 13 anchors `> 16384`, since replaced by rs64_cap_v; fixup 19's v1->v2 migration
+branch fires on fresh text and exits before its fresh-install branch). Repairing ~14 historical anchors to
+reproduce exact placement is a long tail with no runtime value, so instead:
+- tools/ucode_fixed/*.patch (4 files, 321 KB): the exact pristine->live delta for main/audio/boot/ovl20.
+- tools/ucode_regen.sh verify|restore|snapshot: RSPRecomp fresh -> apply patches -> byte compare (restore
+  refuses to overwrite a differing file without FORCE=1; snapshot refreshes the patches after a deliberate
+  fixup edit). `verify` this session: SAME on all 12 files, census verdict below.
+
+Finding 2 (census): new tools/s7091_ucode_insn_census.py. A record = one RSPRecomp instruction (its
+"// mnem  ops" comment + emitted C lines); "fixup:"-tagged lines dropped; labels normalised (OVL24_135C ->
+L_135C). Region-aware for main: runs are split by label prefix; resident (L_) records vs pristine main as a
+multiset, each spliced run (CLIP_ -> ovl4, OVLxx_ -> ovlxx) must be an exact contiguous run of its source
+overlay. Result: resident 1111 vs pristine 1111, +3/-3; 9 spliced runs (1332 records), 0 breaks; audio
+1119/1119 and boot 65/65 exact; ovl20 +1/-1. The 4 modified records all keep every retail C line in order and
+are owned by named blocks: two out-of-IMEM exits (`goto L_0000` / `return ImemOverrun` after vmadh v30[2]/[3])
+rewritten to the fixup-1a self-restart, the ovl20 copy of the same goto rewritten by fixup 1, and fixup 4's
+Rs64OvlTrace::on()-gated counter after `srl $3,$4,12`. Verdict: 4 modified-retail-kept, 0 unexplained, 0 splice
+breaks, exit 0. Controls (same run, --controls): duplicate one resident vmadn -> resident +4 / unexplained 1;
+drop one resident sqv -> -4 / unexplained 1; drop one record inside the first spliced run -> splice-breaks 1.
+Negative control: the 8 unedited overlay files are byte-identical to the fresh pass.
+
+Rules out: H-ucode-fixup-dup (a fixup block duplicating or dropping a retail RSP instruction) for all compiled
+ucode. No runtime change (compiled files untouched), so no game run was needed or made.
+Weakness, labelled: the splice check proves each spliced run is SOME contiguous run of its source overlay, not
+that it is the run at the intended IMEM address (a run copied from the wrong offset of the same overlay would
+pass). Single-source for that sub-claim; fixup 6* asserts the external labels of each region.
+Next: RSP vector-unit fast paths (NEXT.md, slug rsp-vu-fastpath-diff).

@@ -1,0 +1,262 @@
+--- a/factor5_ucode_b_recompiled.c
++++ b/factor5_ucode_b_recompiled.c
+@@ -1,4 +1,9 @@
++#include <cstdio>
+ #include "librecomp/rsp.hpp"
++extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram, uint32_t r2, uint32_t field348, uint32_t field44, uint32_t dest);  /* fixup: image-stage audit */
++extern "C" void rs64_s4210_cmd_rec(uint32_t src);
++extern "C" void rs64_s4220_snap(uint32_t pc);
++extern "C" void rs64_audio_image_break(uint32_t pc);  /* fixup: image-task break witness */
+ #include "librecomp/rsp_vu_impl.hpp"
+ RspExitReason factor5_ucode_b(uint8_t* rdram, [[maybe_unused]] uint32_t ucode_addr) {
+     uint32_t           r1 = 0,  r2 = 0,  r3 = 0,  r4 = 0,  r5 = 0,  r6 = 0,  r7 = 0;
+@@ -109,6 +114,9 @@
+     // ori         $7, $zero, 0x4F
+     r7 = 0 | 0X4F;
+ L_1104:
++    rs64_audio_image_stage(0, rdram, r2, RSP_MEM_W_LOAD(0X348, 0), 0, 0);  /* fixup: image-stage audit */
++    rs64_s4210_cmd_rec(r4);  /* fixup: s4210 cmd ring */
++    rs64_s4220_snap(0x1104);  /* fixup: s4220 snap */
+     // jal         0x19A4
+     r31 = 0x110C;
+     // nop
+@@ -117,6 +125,7 @@
+     // nop
+ 
+ L_110C:
++    rs64_s4220_snap(0x110C);  /* fixup: s4220 snap */
+     // jal         0x143C
+     r31 = 0x1114;
+     // lhu         $6, 0x2C($2)
+@@ -125,6 +134,7 @@
+     // lhu         $6, 0x2C($2)
+     r6 = RSP_MEM_HU_LOAD(0X2C, r2);
+ L_1114:
++    rs64_s4220_snap(0x1114);  /* fixup: s4220 snap */
+     // beq         $6, $zero, L_12C8
+     if (r6 == 0) {
+         // lbu         $5, 0x3C($2)
+@@ -149,6 +159,7 @@
+     // or          $5, $zero, $2
+     r5 = 0 | r2;
+ L_112C:
++    rs64_s4220_snap(0x112C);  /* fixup: s4220 snap */
+     // lbu         $7, 0x3C($2)
+     r7 = RSP_MEM_BU(0X3C, r2);
+     // bne         $7, $zero, L_118C
+@@ -185,6 +196,7 @@
+     // addiu       $5, $2, 0x24
+     r5 = RSP_ADD32(r2, 0X24);
+ L_1164:
++    rs64_s4220_snap(0x1164);  /* fixup: s4220 snap */
+     // jal         0x1394
+     r31 = 0x116C;
+     // nop
+@@ -193,6 +205,7 @@
+     // nop
+ 
+ L_116C:
++    rs64_s4220_snap(0x116C);  /* fixup: s4220 snap */
+     // jal         0x143C
+     r31 = 0x1174;
+     // lhu         $7, 0x42($2)
+@@ -201,6 +214,7 @@
+     // lhu         $7, 0x42($2)
+     r7 = RSP_MEM_HU_LOAD(0X42, r2);
+ L_1174:
++    rs64_s4220_snap(0x1174);  /* fixup: s4220 snap */
+     // beq         $7, $zero, L_1184
+     if (r7 == 0) {
+         // ori         $6, $zero, 0x6F0
+@@ -217,6 +231,7 @@
+     // addiu       $5, $2, 0x30
+     r5 = RSP_ADD32(r2, 0X30);
+ L_1184:
++    rs64_s4220_snap(0x1184);  /* fixup: s4220 snap */
+     // j           L_1200
+     // lbu         $5, 0x3E($2)
+     r5 = RSP_MEM_BU(0X3E, r2);
+@@ -224,6 +239,7 @@
+     // lbu         $5, 0x3E($2)
+     r5 = RSP_MEM_BU(0X3E, r2);
+ L_118C:
++    rs64_s4220_snap(0x118C);  /* fixup: s4220 snap */
+     // jal         0x143C
+     r31 = 0x1194;
+     // ori         $6, $zero, 0xAF0
+@@ -232,6 +248,7 @@
+     // ori         $6, $zero, 0xAF0
+     r6 = 0 | 0XAF0;
+ L_1194:
++    rs64_s4220_snap(0x1194);  /* fixup: s4220 snap */
+     // jal         0x1340
+     r31 = 0x119C;
+     // addiu       $5, $2, 0x24
+@@ -240,6 +257,7 @@
+     // addiu       $5, $2, 0x24
+     r5 = RSP_ADD32(r2, 0X24);
+ L_119C:
++    rs64_s4220_snap(0x119C);  /* fixup: s4220 snap */
+     // jal         0x1394
+     r31 = 0x11A4;
+     // nop
+@@ -248,6 +266,7 @@
+     // nop
+ 
+ L_11A4:
++    rs64_s4220_snap(0x11A4);  /* fixup: s4220 snap */
+     // lbu         $6, 0x3C($2)
+     r6 = RSP_MEM_BU(0X3C, r2);
+     // lbu         $5, 0x3E($2)
+@@ -270,6 +289,7 @@
+     // sh          $8, 0xE4A($zero)
+     RSP_MEM_H_STORE(0XE4A, 0, r8);
+ L_11C8:
++    rs64_s4220_snap(0x11C8);  /* fixup: s4220 snap */
+     // jal         0x143C
+     r31 = 0x11D0;
+     // lbu         $7, 0x3D($2)
+@@ -278,6 +298,7 @@
+     // lbu         $7, 0x3D($2)
+     r7 = RSP_MEM_BU(0X3D, r2);
+ L_11D0:
++    rs64_s4220_snap(0x11D0);  /* fixup: s4220 snap */
+     // beq         $7, $zero, L_11F8
+     if (r7 == 0) {
+         // ori         $6, $zero, 0xAF0
+@@ -294,6 +315,7 @@
+     // addiu       $5, $2, 0x30
+     r5 = RSP_ADD32(r2, 0X30);
+ L_11E0:
++    rs64_s4220_snap(0x11E0);  /* fixup: s4220 snap */
+     // lbu         $5, 0x3F($2)
+     r5 = RSP_MEM_BU(0X3F, r2);
+     // lbu         $6, 0x3D($2)
+@@ -310,11 +332,13 @@
+     // ori         $8, $zero, 0x6F0
+     r8 = 0 | 0X6F0;
+ L_11F8:
++    rs64_s4220_snap(0x11F8);  /* fixup: s4220 snap */
+     // lbu         $5, 0x3E($2)
+     r5 = RSP_MEM_BU(0X3E, r2);
+     // andi        $5, $5, 0x1F
+     r5 = r5 & 0X1F;
+ L_1200:
++    rs64_s4220_snap(0x1200);  /* fixup: s4220 snap */
+     // or          $11, $zero, $5
+     r11 = 0 | r5;
+     // lbu         $7, 0xE48($zero)
+@@ -357,6 +381,7 @@
+     // ori         $7, $zero, 0x7F
+     r7 = 0 | 0X7F;
+ L_123C:
++    rs64_s4220_snap(0x123C);  /* fixup: s4220 snap */
+     // lw          $5, 0x44($2)
+     r5 = RSP_MEM_W_LOAD(0X44, r2);
+     // bne         $5, $zero, L_1268
+@@ -378,6 +403,7 @@
+     // ori         $5, $zero, 0x3A0
+     r5 = 0 | 0X3A0;
+ L_1254:
++    rs64_s4220_snap(0x1254);  /* fixup: s4220 snap */
+     // lbu         $6, 0x3C($5)
+     r6 = RSP_MEM_BU(0X3C, r5);
+     // beq         $6, $zero, L_1268
+@@ -396,6 +422,7 @@
+     // nop
+ 
+ L_1268:
++    rs64_s4220_snap(0x1268);  /* fixup: s4220 snap */
+     // jal         0x1450
+     r31 = 0x1270;
+     // or          $5, $zero, $11
+@@ -404,6 +431,7 @@
+     // or          $5, $zero, $11
+     r5 = 0 | r11;
+ L_1270:
++    rs64_s4220_snap(0x1270);  /* fixup: s4220 snap */
+     // lw          $6, 0x44($2)
+     r6 = RSP_MEM_W_LOAD(0X44, r2);
+     // bne         $6, $zero, L_1294
+@@ -433,6 +461,7 @@
+     // ori         $2, $zero, 0x3A0
+     r2 = 0 | 0X3A0;
+ L_1294:
++    rs64_s4220_snap(0x1294);  /* fixup: s4220 snap */
+     // lbu         $8, 0xE48($zero)
+     r8 = RSP_MEM_BU(0XE48, 0);
+     // andi        $7, $8, 0xF
+@@ -450,6 +479,7 @@
+     // addiu       $8, $8, -0x10
+     r8 = RSP_ADD32(r8, -0X10);
+ L_12AC:
++    rs64_s4220_snap(0x12AC);  /* fixup: s4220 snap */
+     // lw          $6, 0x348($zero)
+     r6 = RSP_MEM_W_LOAD(0X348, 0);
+     // sll         $8, $8, 3
+@@ -468,6 +498,7 @@
+     // addiu       $7, $7, -0x1
+     r7 = RSP_ADD32(r7, -0X1);
+ L_12C8:
++    rs64_s4220_snap(0x12C8);  /* fixup: s4220 snap */
+     // jal         0x1D68
+     r31 = 0x12D0;
+     // nop
+@@ -476,6 +507,7 @@
+     // nop
+ 
+ L_12D0:
++    rs64_s4220_snap(0x12D0);  /* fixup: s4220 snap */
+     // ori         $5, $zero, 0x3F0
+     r5 = 0 | 0X3F0;
+     // ori         $6, $zero, 0x570
+@@ -484,10 +516,12 @@
+     r31 = 0x12E0;
+     // ori         $7, $zero, 0x6F0
+     r7 = 0 | 0X6F0;
++    rs64_audio_image_stage(1, rdram, r2, RSP_MEM_W_LOAD(0X348, 0), 0, 0);  /* fixup: image-stage audit */
+     goto L_1830;
+     // ori         $7, $zero, 0x6F0
+     r7 = 0 | 0X6F0;
+ L_12E0:
++    rs64_s4220_snap(0x12E0);  /* fixup: s4220 snap */
+     // ori         $5, $zero, 0x6F0
+     r5 = 0 | 0X6F0;
+     // lw          $6, 0x44($2)
+@@ -496,10 +530,12 @@
+     r31 = 0x12F0;
+     // ori         $7, $zero, 0x2FF
+     r7 = 0 | 0X2FF;
++    rs64_audio_image_stage(2, rdram, r2, RSP_MEM_W_LOAD(0X348, 0), RSP_MEM_W_LOAD(0X44, r2), r6);  /* fixup: image-stage audit */
+     goto L_13B0;
+     // ori         $7, $zero, 0x2FF
+     r7 = 0 | 0X2FF;
+ L_12F0:
++    rs64_s4220_snap(0x12F0);  /* fixup: s4220 snap */
+     // lw          $4, 0xE4C($zero)
+     r4 = RSP_MEM_W_LOAD(0XE4C, 0);
+     // addiu       $3, $3, -0x1
+@@ -525,6 +561,7 @@
+     // ori         $ra, $zero, 0x10D8
+     r31 = 0 | 0X10D8;
+ L_1314:
++    rs64_s4220_snap(0x1314);  /* fixup: s4220 snap */
+     // lw          $6, 0x348($zero)
+     r6 = RSP_MEM_W_LOAD(0X348, 0);
+     // ori         $5, $zero, 0xCB0
+@@ -535,6 +572,7 @@
+     r31 = 0x1328;
+     // addiu       $6, $6, 0x100
+     r6 = RSP_ADD32(r6, 0X100);
++    rs64_audio_image_stage(3, rdram, r2, RSP_MEM_W_LOAD(0X348, 0), 0, r6);  /* fixup: image-stage audit */
+     goto L_13B0;
+     // addiu       $6, $6, 0x100
+     r6 = RSP_ADD32(r6, 0X100);
+@@ -543,6 +581,7 @@
+     r5 = 0 | 0X4000;
+     // mtc0        $5, SP_STATUS
+     // break       0
++    rs64_audio_image_break(0x1328u);  /* fixup: image-task break witness */
+     return RspExitReason::Broke;
+     // nop
+ 

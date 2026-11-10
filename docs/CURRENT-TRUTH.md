@@ -1,12 +1,15 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7090 (2026-11-10).
+Compact operational handoff, as of Session 7091 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7091 RSP ucode fixup census CLOSED, and the fixed ucode is regenerable again.** tools/s7091_ucode_insn_census.py (region-aware, controls built in): resident 1111/1111 retail instructions, 9 spliced overlay runs exact contiguous copies of their source, audio 1119/1119, boot 65/65; 4 modified records all keep the retail lines (fixup 1/1a exit rewrites, fixup 4 gated counter); 0 unexplained. Defect found: build/ is gitignored and fixup_factor5_ucode.py cannot rebuild the live ucode from a fresh RSPRecomp pass (stale anchors; fixup 24 ungated exits 1 on audio/boot before writing). Fresh-regen path now: `zsh tools/ucode_regen.sh verify|restore|snapshot` (RSPRecomp + tools/ucode_fixed/*.patch; verify = 12/12 byte-identical). After any deliberate fixup edit to the live ucode run `snapshot` and commit the patches.
+- In plain words: the patch scripts for the graphics/audio microcode only add checks and logging, they never repeat or lose a game instruction; and the patched microcode can now be rebuilt from scratch.
 
 **s7090 fixup-layer statement census CLOSED: 0 untagged duplicate / dropped / foreign retail statements across 2,476 matched functions (tools/s7090_fixup_statement_census.py, exit 0; positive control = pre-s7089 funcs_24 gives exactly the 3 s7089 duplicates).** Per function and per guest address it compares the statement multiset of the pristine N64Recomp pass (scratch/s7082/regen) with the live fixup-patched tree, after unwrapping S5798/s4307 store/read wrappers, dropping diagnostic calls, and normalising callee names. 2,050 functions are statement-identical. Every difference is a PATCH- or sNNNN-tagged change (14,311), body code of multi-line PATCH blocks (197), a probe that swallowed a `// 0x` comment so a call is filed one address earlier (20 paired as moved), or an unreferenced label (18). The 186 tagged shortfalls are named rewrites: 93 same-target rewrites (FPS60 tick scaling, despawn ticks, widescreen stride), 35 control replacements (sbx exits, data-gap traps), 46 replaced by another statement at the address (rs5908_call wrappers, atomic stores, logged stores), 16 whole blocks replaced (s327 audio wait-spin pump), 9 dead copies after `return;` or `$zero` writes (tools/s7090_shortfall_classify.py). 3 functions are sized differently by the two passes (data_gap_80024A0C, data_gap_800CC3D4, rspbootTextPreamble) and were not compared. Not covered: build/factor5_ucode (RSP layer; no pristine pass yet).
 - In plain words: our patch scripts add checks and logging, but outside the changes they label, none of them repeats or loses an instruction the game itself contains. The audio re-init duplicate fixed in s7089 was the only one.
@@ -298,6 +301,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 18. **N64Recomp lowering censuses: series CLOSED s7087** (s7082 warnings, s7083 control flow, s7084 FPU, s7085 integer + ddivu /0 fix, s7086 memory/immediates/branches, s7087 residual opcodes + 120/120 mnemonic coverage + osGetCount sign-extension fix; tools/s708[2-7]_*). Rerun all after any regen.
 19. **Host-shim census: CLOSED s7088 (ABI) + s7089 (results vs ROM; s3531 duplicate-call fixup bug fixed).**
 20. **Fixup-layer statement census: CLOSED s7090** (0 untagged dup/drop; tools/s7090_fixup_statement_census.py, exit 1 = a defect; rerun after any fixup edit).
+21. **RSP ucode fixup census: CLOSED s7091** (0 unexplained; regen via tools/ucode_regen.sh, rerun `verify` after any RSPRecomp/fixup change). Next: rsp_vu fast-path differential (NEXT.md).
 21. **RSP-ucode fixup census: NEXT** (build/factor5_ucode vs a pristine RSPRecomp pass; NEXT.md).
 
 ## Evidence index
