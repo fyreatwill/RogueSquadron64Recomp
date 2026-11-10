@@ -1,13 +1,11 @@
-# NEXT: cheaper fog-depth K at 21:9 for L12 with the dd6 bundle (cap lever closed s7049)
+# NEXT: qualify the s7050 21:9 K=0.5 bundle default on L1/L4/L13 (image) + one L12 hold at the default
 HYPOTHESIS-ID: dd6-bundle-219-l12-cost
-Context (s7049): cap 8192 +0.7/+2.0 fps but drops a distant ground band (13.4 at L12 21:9 poses k4/k5); 9216 invisible, +0.5 fps only.
-Same config gave 59.0 and 56.3 fps in two runs (host/path spread ~3 fps): only same-run deltas count.
-Hypotheses: H-K (OFFMAPCULL_K 0.5 or 0.45 with KEDGE 0.8,12 keeps the L12 21:9 poses <=0.1 vs K0.6 and gains >=1.5 fps same run) /
-H-K-visible (lower K shows the hard cut again at the poses; then K is not a lever at 21:9) / H-noop (lower K culls little extra:
-ocull/f rises <10%, fps flat -> cost lives in near/on-map cells; then G1c phase 2 21:9 L12 is closed as "host-dependent ~57-59").
+Context (s7050): dd6 bundle now uses OFFMAPCULL_K=0.5 when FB_WIDTH>796 (21:9). L12 21:9: +0.9/+0.7 fps vs 0.6, poses 0.00 (ctl 0.60).
+Only L12 poses checked; s7038 qualified L1/L4 21:9 at K=0.6 (<=0.18/<=0.23).
+Hypotheses: H-clean (K0.5 vs K0.6 <=0.1 mean dLum at every in-flight pose on L1, L4, L13) / H-visible-elsewhere (some level shows a
+horizon sliver/cut at K0.5 > 0.3 -> revert to 0.6 or make K per-level) / H-l1-sliver (L1 low eye poses see the fog line move but <0.3).
 Unit (no build):
-1. Hold: copy scratch/s7049/run_hold.zsh, WIDEWIN=1 CAP=10240, ROGUESQ_DD_OFFMAPCULL_K=0.6,0.5,0.45 (tog3), KEDGE "0.8,12" all
-   phases; run twice with the order rotated (0.5,0.45,0.6); tools/g5e_cost_by_parity.py <tl.bin.PID> <run.log> --phases 3 --skip-s 130 --split xor8.
-2. Poses: scratch/s7049/run.zsh arms k06 (=cap10240 base) / k05 / k045 (+ROGUESQ_DD_OFFMAPCULL_K=...; set OFFMAPCULL=2 H=off explicitly)
-   / foldk0 ctl; tools/s7032_pose_cull_score.py <dir> --base k06 --aa foldk0. Positive control foldk0 must score ~0.6.
-Outcomes: H-K -> per-aspect K in the s7037 bundle (main.cpp) as a code change; H-K-visible / H-noop -> OWNER-OPT-INS note and close.
+1. Poses: copy scratch/s7050/run.zsh; arms k05 (=new auto default, no explicit K) / k06 (+ROGUESQ_DD_OFFMAPCULL_K=0.6) / foldk0 ctl
+   (+KEDGE=0) per level LV=1, 4, 13: `zsh run.zsh <LV>`; score tools/s7032_pose_cull_score.py <dir> --base k06 --aa foldk0. Ctl must be >0.3 on L4/L13 at least.
+2. Hold: scratch/s7050/run_hold.zsh-like on L1 with K tog3 "0.5,0.6,0.5" for A/A and cost on a non-L12 level.
+Outcomes: H-clean -> close the 21:9 L12 cost thread, owner look; H-visible-elsewhere -> revert the 21:9 branch in main.cpp (s7050 block) or gate it.

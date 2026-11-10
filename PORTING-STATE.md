@@ -185553,3 +185553,17 @@ H-other partly (the 21:9 L12 shortfall is cell load plus ~3 fps of run-to-run ho
 inside the cross-run spread and unchecked on other levels. OWNER-OPT-INS states the trade (8192 = faster but loses a ground strip).
 Verdict: refutes H-cap; selects H-cap-visible (8192) / 9216 neutral-small. Next: cheaper fog-depth K at 21:9 (K tog3 0.6/0.5/0.45 with
 KEDGE), same hold+poses design (NEXT.md).
+
+## Session 7050 (2026-11-09) — 21:9 L12 fog-depth K lever: K=0.5 is +0.9/+0.7 fps and pixel-identical at the in-flight poses (H-K); dd6 bundle now uses K=0.5 when wider than 16:9
+
+Unit (NEXT.md s7049, HYPOTHESIS-ID dd6-bundle-219-l12-cost): H-K / H-K-visible / H-noop for ROGUESQ_DD_OFFMAPCULL_K at 21:9 L12 with the dd6 bundle (cap 10240, KEDGE 0.8,12).
+- Holds (scratch/s7050/run_hold.zsh, tog3 K, 2x ~507 s flight, alive, 0 VI stalls, 0 CRASH; tools/g5e_cost_by_parity.py --phases 3 --skip-s 130 --split xor8):
+  run Ka K=0.6/0.5/0.45: 58.6/59.5/59.7 fps, rsp 13.61/12.33/11.68 ms, P(>=2VI) 0.02/0.01/0.01;
+  run Kb K=0.5/0.45/0.6: 59.5/59.4/58.8 fps, rsp 12.16/11.56/13.44, P 0.01/0.01/0.02.
+  K0.5 vs 0.6: +0.9/+0.7 fps, rsp -1.27/-1.29; K0.45 vs 0.6: +1.1/+0.6, rsp -1.93/-1.88. Two runs agree in sign and size. ocull/f (Ka, t=564) 2355/2891/3145 -> +23%/+34% culled: H-noop refuted.
+- Frozen poses (scratch/s7050/run.zsh, arms k06 / k05 / k045 / foldk0, L12 21:9 NOREF, 4/4 0 crash, [s7037] logged k=0.6/0.5/0.45/0.6-kedge0, same posefreeze pos 156.526,-8.539,19.825):
+  tools/s7032_pose_cull_score.py --base k06: k05 and k045 0.00/0.000 at all poses incl. in-flight k4-k6; foldk0 0.60/0.59/0.66 (1.5% px) = positive control fires.
+  Pose-window ocull/f k06 ~207-225, k05 ~432-449, k045 ~536-552: the lower K culls ~2x the cells at those poses and none of them reaches a pixel. H-K-visible refuted at these poses (single-source image evidence: one run, 3 in-flight poses, one level).
+- Change: src/main/main.cpp rs64_g1c_apply_dd_policy s7037 block: K default is 0.5 when ROGUESQ_FB_WIDTH > 796 (aspect wider than 16:9; the aspect policy runs first), else 0.6; setenv overwrite=0 so an explicit K wins. 0.45 not taken: its extra gain over 0.5 is inside the run spread (+0.2/-0.1 fps) and it leaves less margin before the cut shows. Boot check of the built binary: 21:9 -> "[s7037] ... k=0.5", 16:9 -> "k=0.6". No ORIGIN needed (performance tuning of an opt-in cull, no mitigation).
+- Rules out: K as a no-op lever at 21:9 (H-noop). Not yet shown: K0.5 invisibility on L1/L4/L13 at 21:9 (s7038 L1/L4 qualified K0.6 only), hold at the new default with no tog.
+- OWNER-OPT-INS: ultrawide speed-up line added. No owner sheet: the arms are pixel-identical at every pose.
