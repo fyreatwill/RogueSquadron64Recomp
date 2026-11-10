@@ -186501,3 +186501,37 @@ Discrimination: H-mem-branch-live-miscompile (a memory or branch lowering differ
 H-link-ra (a $ra read after a link op sees the caller's $ra) is confined to the 6 s1971 sites, and those are fixed.
 In short: the memory, immediate and branch lowering is correct. The only link-register gap was already patched, and one small
 census of residual opcodes is left.
+
+## Session 7087 (2026-11-10) — N64Recomp residual-opcode census closes the lowering series: and/or/xor/nor/negu 2571 operand-checked sites match, COP0/.word/scd sites classified, 120/120 mnemonics mapped to a census, osGetCount_recomp sign-extension fixed
+
+Unit (NEXT.md n64recomp-residual-op-census): the last mnemonics no s7082-s7086 census checked, then a coverage table.
+New tools/s7087_residual_census.py (offline, scratch/s7082/regen; output scratch/s7087/census.txt, exit 0) and
+tools/s7087_logic_test/ (logic_test.c + run_test.py, -O2 with the live flags).
+
+Results:
+- and 889 / or 1463 / xor 96 / nor 44 / negu 79: every site's first statement equals the expected text built from the
+  disassembly's own register numbers (`rD = S op T`, nor `~(S | T)`, negu `SUB32(0, T)`). 0 mismatches.
+- mfc0/mtc0: 9 Status reads + 13 Status writes, all in 7 hand-written FR=1 routines (transformAndEmitFaceVertices,
+  evalCubicSplineAtTime, mat3x4Multiply, transformVec3ByMat34, rotateVec3ByMat3x3, quaternionToMat3x4,
+  projectPointToScreen): `mfc0; lui 0x400; or; mtc0` on entry, `nor; and; mtc0` on exit. Lowered to cop0_status_read/
+  write; librecomp switches ctx->f_odd on FR and asserts on any other bit; run_thread_function value-inits the context
+  with FR=0 (the game's GCC code is FR=0 o32). projectPointToScreen sets FR and returns on both `jr $ra` without clearing
+  (retail does the same), but it has no jal, no pointer word in the ROM and no lui/addiu build of 0x800196A8: dead.
+  3 mfc0 Compare are in data_gap_80099FDC. 0 mfc0 Count: the game's osGetCount is replaced by osGetCount_recomp.
+- .word 7: 6 in data_gap_ functions, 1 is __OSGlobalIntMask (0x80039110 = 0x003FFF01, a libultra data word listed as a
+  function, never called). scd 0x8009D8C0 (2 copies): after filterVoiceSampleBlock's jr, label L_8009D8BC referenced only
+  by `bltzal $zero, L_8009D8BC` at 0x8009D7E0 (the s1971 PIC idiom, never taken): data bytes, lowered to do_break.
+- Shim found on the way: osGetCount_recomp did `ctx->r2 = osGetCount();` with a u32, so Count >= 0x80000000 reached $v0
+  zero-extended; mfc0 sign-extends. Fixed to `(int32_t)` in lib/N64ModernRuntime/librecomp/src/ultra_translation.cpp,
+  submodule-patches/N64ModernRuntime.patch re-exported. 0 generated call sites, so no behaviour change in this game.
+  Other `ctx->r2 = <u32>` shim returns are small values or int32_t (checked by grep over librecomp/src and src/).
+- Coverage: 120 mnemonics, 326,200 sites, 0 unmapped (mapping = mnemonic named in a census tool's source).
+- Host test: 2176 rows (and/or/xor/nor 17x17 incl. non-sign-extended inputs, sign-extension preservation, negu, f_odd
+  aliasing of all 16 odd FPRs in FR=0 and FR=1 on the real recomp_context, osGetCount extension): 0 bad; NEG build (nor
+  as (S|T), negu as ADD32) 303 bad. Census controls: and 0x80004910 + Status read 0x800196A8 enumerated ok; mutated
+  nor + negu add exactly 2 findings.
+Rules out: any and/or/xor/nor/negu, COP0 or data-word miscompile in the live code. The N64Recomp lowering series
+s7082-s7087 is CLOSED (docs/N64RECOMP-WARNING-CENSUS.md "s7087").
+Game: rebuild clean (librecomp ultra_translation.cpp recompiled). Same recipe as s7080 (scratch/s7087/run.zsh: L6 dd1 4:3
+FPS60, NOCAP): boot to flight 310 s, alive at the end, 0 VI stalls, 0 crash lines (exit 1 = the NOCAP missing-capture cat).
+Next: host-shim ABI census of the 145 hand-written `*_recomp` shims (NEXT.md, HYPOTHESIS-ID host-shim-abi-census).

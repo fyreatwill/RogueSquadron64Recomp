@@ -4452,7 +4452,7 @@ index ae0f44f..049aea6 100644
  
  extern "C" void __osSpSetPc_recomp(uint8_t* rdram, recomp_context* ctx) {
 diff --git a/librecomp/src/ultra_translation.cpp b/librecomp/src/ultra_translation.cpp
-index e0d367e..cfe0435 100644
+index e0d367e..9215bdb 100644
 --- a/librecomp/src/ultra_translation.cpp
 +++ b/librecomp/src/ultra_translation.cpp
 @@ -20,7 +20,7 @@ extern "C" void osStartThread_recomp(uint8_t* rdram, recomp_context* ctx) {
@@ -4499,6 +4499,16 @@ index e0d367e..cfe0435 100644
      osSetEventMesg(rdram, (OSEvent)ctx->r4, (int32_t)ctx->r5, (OSMesg)ctx->r6);
  }
  
+@@ -70,7 +74,8 @@ extern "C" void osViSetEvent_recomp(uint8_t * rdram, recomp_context * ctx) {
+ }
+ 
+ extern "C" void osGetCount_recomp(uint8_t * rdram, recomp_context * ctx) {
+-    ctx->r2 = osGetCount();
++    // s7087: mfc0 Count sign-extends the 32-bit value into the GPR; a plain u32 assignment zero-extended it.
++    ctx->r2 = (int32_t)osGetCount();
+ }
+ 
+ extern "C" void osSetCount_recomp(uint8_t * rdram, recomp_context * ctx) {
 diff --git a/librecomp/src/vi.cpp b/librecomp/src/vi.cpp
 index 1f3a4cf..b9cc34f 100644
 --- a/librecomp/src/vi.cpp

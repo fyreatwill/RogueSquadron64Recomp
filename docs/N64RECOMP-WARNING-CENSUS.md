@@ -142,3 +142,40 @@ MEM_HU, one beql without `goto skip_`, one s1971 patch line removed: each adds e
 Host test: 11522 rows (8 random fills x every aligned address in a 64-byte window x width 1/2/4/8 x 6 base/offset splits,
 loads and stores against a big-endian byte model, plus lw/lwu sign/zero extension of 0x80000000): 0 bad. Negative control
 (MEM_BU swizzle ^2): 3065 bad.
+
+## s7087: residual opcodes and the coverage table (CLOSED; series CLOSED)
+
+Tools: `tools/s7087_residual_census.py` (offline, over scratch/s7082/regen) and `tools/s7087_logic_test/run_test.py`
+(host test at -O2 with the live flags). Output: scratch/s7087/census.txt.
+
+| class | sites | result |
+|---|---|---|
+| and / or / xor | 889 / 1463 / 96 | operand-checked: `rD = S op T` with the disassembly's registers, full 64-bit, all match |
+| nor | 44 | `~(S \| T)` on 64 bits (38 `~(0 \| T)`, the `not` idiom); all match. Sign-extended inputs give a sign-extended result |
+| negu | 79 | `SUB32(0, T)`; all match |
+| mfc0 / mtc0 Status | 9 / 13 | all in 7 hand-written FR=1 matrix routines (transformAndEmitFaceVertices, evalCubicSplineAtTime, mat3x4Multiply, transformVec3ByMat34, rotateVec3ByMat3x3, quaternionToMat3x4, projectPointToScreen): `mfc0; lui 0x400; or; mtc0` sets FR on entry, `nor; and; mtc0` clears it on exit. Lowered to cop0_status_read/write, which switch ctx->f_odd (FR=0: odd single = high half of fpr n-1; FR=1: own register) and assert on any non-FR bit. New contexts start FR=0 (recomp.cpp run_thread_function, value-init), matching the game's FR=0 o32 code |
+| mfc0 Compare | 3 | data_gap_80099FDC (decoded data), do_break |
+| mfc0 Count | 0 | the game's osGetCount (0x8002BF90) is replaced by librecomp `osGetCount_recomp` and has 0 call sites in the generated code. The shim zero-extended the u32; FIXED to `(int32_t)` (hardware sign-extends). osGetTime_recomp (14 call sites) already split the u64 into two sign-extended halves |
+| .word | 7 | 6 in data_gap_ functions; 1 is `__OSGlobalIntMask` (0x80039110 = 0x003FFF01), a libultra data word the symbol file lists as a function, never called |
+| scd | 2 (1 address) | 0x8009D8C0 after filterVoiceSampleBlock's `jr $ra`, under label L_8009D8BC; the only reference is `bltzal $zero, L_8009D8BC` (0x8009D7E0), the s1971 PIC idiom that is never taken: the bytes are a data table. Lowered to do_break, unreachable |
+
+projectPointToScreen returns with FR still set (no clear on either `jr $ra`), retail too. It has no jal, no pointer word
+in the ROM and no lui/addiu address build in the generated code, so it is dead; if it ever ran, the per-context f_odd
+pointer would follow retail.
+
+Other host shims writing $v0 (librecomp + src): every other `ctx->r2 = <u32>` returns a small value (AI length/frequency,
+DP status, yielded flag, sizes) or an int32_t (handles at 0x80800000+, message results), so only osGetCount was affected.
+
+Host test: 2176 rows (and/or/xor/nor over 17x17 values including non-sign-extended ones, nor/and/xor sign-extension
+preservation, negu, f_odd aliasing for all 16 odd FPRs in FR=0 and FR=1 on the real recomp_context, osGetCount extension):
+0 bad. Negative control (nor as `(S|T)`, negu as ADD32): 303 bad. Census controls: positive `and` 0x80004910 and Status
+read 0x800196A8 enumerated and ok; negative: one nor and one negu mutated, exactly 2 new findings.
+
+**Coverage: 120 mnemonics, 326,200 sites, 0 unmapped.** Every mnemonic in the front-end output is named by at least one
+census tool: s7083 control flow (j/jal/jr/jalr/b*, break, cache, jump tables), s7084 FPU (all .s/.d ops, c.*, bc1*,
+lwc1/swc1/ldc1/sdc1, mfc1/mtc1, cfc1/ctc1), s7085 integer (mult/div family, shifts, slt*, addu/subu/add/daddi,
+lwl/lwr/swl/swr), s7086 memory/immediates/branches (all loads/stores, lui/addiu/ori/andi/xori, every conditional
+branch and likely form), s7087 and/or/xor/nor/negu, mfc0/mtc0, .word, scd, nop. The mapping is checked by name mention
+in each tool's source (tools/s7087_residual_census.py `coverage`). **The N64Recomp lowering series s7082-s7087 is
+closed: no live miscompile remains; the two semantic gaps found (ddiv/ddivu by zero, s7085; osGetCount zero-extension,
+s7087, dead here) are fixed.**
