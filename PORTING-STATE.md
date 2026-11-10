@@ -187070,3 +187070,6 @@ Rules out: chase overshoot, craft jitter, mid-tick read, terrain-origin shift. L
  (b) H-snap: the snap along one corner ray moves the camera so a different corner / the chase re-enters next tick.
 New: tools/apply_s7101_camwatch.py, tools/apply_s7101_chaselog.py (both in fixup_game_funcs_vendored.py's list),
  tools/s7101_target_vs_eye.py, tools/s7101_camw.py, tools/s7101_bvread.py. Owner save untouched (NO_SAVE_WRITE).
+Discrimination: refutes H-pushfix (chase overshoot), H-craft, H-order and H-origin; selects H-push in its geometric form
+(the applyPlayerVehicleStateUpdate near-plane push-out is the writer of the per-tick zig-zag). Next discriminator: the
+per-corner push-out log + same-run ROGUESQ_S7102_CAM4=tog arm splits H-corner4 / H-snap / H-mesh (NEXT.md).
