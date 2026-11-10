@@ -185979,3 +185979,6 @@ Positive control: the off arm shows every gated symbol back at s7067 levels (s70
 Residual synth_read/lowfield samples are the call from generated code itself (function entry + one guard load); removing them
 needs a call-site gate in the fixup scripts. Total saving ~0.3% of a core; no fps claim (cross-run, and the game sits at 60).
 Rules out: H-ungated as "helpers do real work with no env" (only the FNV hash did); confirms H-call (call overhead) for the rest.
+Verdict: selects H-call (the cost was the per-command / per-store calls into already-gated helpers, plus one ungated FNV), refutes
+H-ungated (no helper did logging work with no env set) and H-needed for the gated five (none feed a default-on feature; dpc_record_submit_impl
+and spike_scan do, and stay). Next discriminator: H-callsite vs H-floor for the [Game] 0 residual (scratch/agent/NEXT.md).
