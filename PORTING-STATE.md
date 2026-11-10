@@ -185857,3 +185857,37 @@ HYPOTHESIS-ID: transition-stall-audio-wait. CURRENT-TRUTH 37.1 KB (no maintenanc
 - Verdict (gate wording): the slot ring + TL gap ring selects H-retail for the audio drain part and refutes H-cadence and
   H-preempt-residual; it refutes the s7059 "audio polling is the bulk" reading. Next discriminator: host stack samples of the
   game thread inside the 133-150 ms OS-silent stretch, to discriminate H-vispin / H-compute / H-tokenwait (NEXT.md).
+
+## Session 7065 (2026-11-10) — transition-stall silent stretch named: waitForMusyXAudioTaskDone's 16-chunk countdown = 3072 samples at 22047 Hz = 139 ms (8.37 VI), a retail-designed audio-time wait; H-vispin (audio-time variant) selected, H-compute and H-tokenwait refuted
+HYPOTHESIS-ID: transition-stall-silent-stretch. CURRENT-TRUTH 38.3 KB (no maintenance). No new soak verdicts since s7064.
+- Unit (NEXT s7064): what fills the game thread's 133-150 ms OS-silent stretch in each scene-transition stall. Hypotheses: H-vispin
+  (timed busy wait, retail feel), H-compute (~140 ms host compute: glyph/menu build), H-tokenwait (blocked on a host lock / run token).
+- Offline first (s7059 Time Profiler capture, scratch/s7065/dens.py, bins.py): Time Profiler records on-CPU samples only and saturates
+  at ~33 samples/100 ms per thread (control: the busy Gfx thread, max 33/100 ms, median dt 2 ms). Silent stretches held 3-46 samples
+  (fully on-CPU would be ~46), so the game thread was off-CPU for much of the stretch with no OS mesg call logged: off-CPU is
+  invisible to that tool, so a blocked-stack sampler was needed.
+- Run (no build): s7064 recipe L6 dd1 4:3 FPS60 + G1E_TL + S7064 rings (scratch/s7065/run.zsh) plus new tools/s7065_sample_loop.zsh
+  (back-to-back `sample <pid> 1 1`, which records blocked stacks too; 752 stacks/s, ~79% time coverage, 288 files). Flight 366 s,
+  alive, 0 crash lines, 0 VI stalls, 13 TL gaps >150 ms (202-298 ms).
+- New tools/s7065_sample_yields.py splits the MAIN-thread stacks into OS waits (do_recv), yield_self_1ms by guest caller, and on-CPU,
+  and fits the file-to-ring clock offset: 0.23 s, +-3 s controls score 0 (python monotonic = the TL steady clock).
+  Positive control: normal seconds are 99% `osRecvMesg` waits (waitForPostSwapAck 174k, submitGfxFrame 29k samples), on-CPU 4.8k.
+- Result: all 742 yield samples of the run fall in transition seconds. In every one of the 7 sampled gaps,
+  `runVideoFrameTick -> musyxNoopStub -> waitForMusyXAudioTaskDone -> yield_self_1ms` holds 85-104 samples (113-138 ms at
+  1.33 ms/sample); plus shutdownMusyXVoices 51-59 (2 gaps) and waitForAnyAudioSlot 20 (1 gap, = s7064's 25-66 ms drain).
+  On-CPU guest work in the gaps is small. H-compute refuted (no compute burst); H-tokenwait refuted (the blocked frames are our
+  1 ms yield inside a guest poll loop, not a host lock).
+- Second line (code decode, funcs_24.c musyxSynthFrame 0x80091418-0x800916A4): the countdown at 0x8014998A that
+  waitForMusyXAudioTaskDone seeds to 16 is decremented by s3 = the number of 0xC0 (192-sample) mix chunks produced that synth frame
+  (16-entry chunk ring at 0x80149988 index, per-frame chunk cap at -0x68B2). So the wait = 16 x 192 = 3072 output samples; at the
+  game's 22047 Hz AI rate = 139.3 ms = 8.37 VI (1.91 chunks per VI), which predicts both the 133-150 ms stretch and its 8-or-9-VI
+  quantization measured independently by the s7064 TL ring.
+- Verdict: H-vispin selected in its audio-time form: the bulk of each transition stall is the game deliberately waiting for 3072
+  samples of audio to be mixed before it tears down/reinitialises (cutscene, menu, mission end). The wait length is fixed by the
+  game's own constants and the AI rate, not by our scheduler, so retail pays the same ~139 ms (inference from the code; the oracle
+  cannot drive these transitions, so no retail timing measurement). Gap = 139 ms countdown + 25-66 ms slot drain (s7064) + an
+  occasional ~70 ms shutdownMusyXVoices scan. Transition-stall thread CLOSED as retail feel, outside G5c's bar (loads).
+- Side observation (not acted on): per-frame getenv() inside setupCameraMatrices / streamTerrainGridCellsByDistance / osRecvMesg
+  patches, and an fprintf in intersectSegmentWithObjectSphere, show in the game-thread stacks; ~25 samples per 288 s, negligible.
+- Rules out: host compute or a host lock as the transition-stall bulk; any fix that would shorten it without changing game audio
+  behaviour.
