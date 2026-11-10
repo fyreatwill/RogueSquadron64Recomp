@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7072 (2026-11-10).
+Compact operational handoff, as of Session 7074 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7074 menu fade-quad family renamed (9 names): 0x800CC85C is the one active screen fade quad, not a "player ship".** Bodies (objdump of ../rogue_squadron64/build/roguesquadron.elf .ovl.menu): createMenuScreenFadeQuad = allocMenuSolidQuadSprite(64,16) (a w x h texture memset 0xFF, registered) -> 0x800CC864; startMenuScreenFade scales it to the viewport and sets rate 0x800CFAF4; tickMenuScreenFade raises alpha byte +0x2F by rate*dt to 255 and returns 1 after 7 frames at 255 (0x800CC860; the FPS60 tick-site 0x800B41B8 in fixup_fps60_ticks.py is this counter); getMenuScreenFadeRemaining = 1-alpha/255; endMenuScreenFade unlinks it and decrements the live menu element count 0x800CC850 (also bumped by allocMenuSceneElement, ex-spawnProjectileObject). Counts identical before/after in 14 files, preempt control 6 unchanged, rebuild clean; L6 dd1 4:3 boot to flight 309 s, 0 crash lines, tickMenuScreenFade in 2/112 samples (positive control).
 
 **s7072 menu "Debris" cell-mesh family renamed: it is the menu JPEG (JFIF) decoder, not a glyph mesh.** Evidence from the bodies: callers are parseJfifDHTMarker / resetJfifDecodeState / loadJfifAsset; a bit reader with 0xFF stuffing and 0xFFD9 EOI detection; a Huffman size table from 16 counts capped at 256; libjpeg's 0x580-byte range-limit table plus a >>3 (5-bit) copy; four 256-entry YCbCr->RGB tables using 1.402/1.772/0.71414/0.34414 (all in the ELF); a float IDCT. 11 renames (scratch/s7072/renames.tsv) applied to the live tree, menu_overlay.txt, syms toml and fixup_preempt_point.py. Control: the preempt fixup reports 6 functions / 9 tag lines before and after. Rebuild plus an L6 boot to flight: renamed symbols in 3/113 host samples, 0 crash. The format-message callers (rasterizeFormatMessageGlyphs, tickFormatMessageWorker) drive this decoder, so their names are suspect too (NEXT.md).
 
@@ -265,7 +267,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 14. **Owner judgement / parked:** FPS60 feel, G3c sheets, QoS default, native hangar geometry,
     rare dd4/dd8 gfx SIGBUS (single-source). Reopen on an owner report or side-effect failure.
 15. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first.
-16. **Misnomer rename (optional, owner reports preempt):** s7072 Debris family -> JPEG decoder; s7073 "format-message" worker family -> async backdrop JPEG loader (enqueueBackdropLoad, tickBackdropLoaderWorker, decodeBackdropTilesToTextures, ...). Next: allocTextRenderTarget 0x800B32F4 and neighbours 0x800B2630-0x800B4400 (NEXT.md).
+16. **Misnomer rename (optional, owner reports preempt):** s7072 Debris family -> JPEG decoder; s7073 "format-message" worker family -> async backdrop JPEG loader (enqueueBackdropLoad, tickBackdropLoaderWorker, decodeBackdropTilesToTextures, ...). s7074 menu "ship throttle/text target" names -> screen fade quad family (startMenuScreenFade, tickMenuScreenFade, isMenuScreenFadeActive, endMenuScreenFade, createMenuScreenFadeQuad, allocMenuSolidQuadSprite, allocMenuSceneElement; scratch/s7074/renames.tsv). Next: loadNamedTextureDescriptor 0x800B2D50 (formats "backdrop/%s": a sync backdrop load?), copyMorphTargetVertices 0x800B438C, the "Hud" sprite names 0x800B448C-0x800B4618 inside the menu overlay (NEXT.md).
 
 ## Evidence index
 

@@ -3319,9 +3319,9 @@ def apply_s1994_drain_post():
          + wrap("arbiter", "        bufferArbiterProducerScanWait(rdram, ctx);\n")),
         ("destroy",
          "    ctx->r5 = ADD32(ctx->r5, -0X2380);\n"
-         "    destroyPlayerShipRecord(rdram, ctx);\n",
+         "    endMenuScreenFade(rdram, ctx);\n",
          "    ctx->r5 = ADD32(ctx->r5, -0X2380);\n"
-         + wrap("destroy", "        destroyPlayerShipRecord(rdram, ctx);\n")),
+         + wrap("destroy", "        endMenuScreenFade(rdram, ctx);\n")),
         ("shutdown",
          "    // 0x800B2504: jal         0x800B3F00\n"
          "    // 0x800B2508: nop\n"
@@ -32517,8 +32517,8 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
 
     # s574 / item -7: hangar-exit gate probes. s573 offline H1 confirmed craft-leave
     # never start-matches mission overlay; hangar exit is multi-frame (A|START 0x9000
-    # confirm writes 0x800CD6D4 only if isPlayerShipActive==0; frame returns non-
-    # 0x00FFFFFF only if accumulateShipThrottleCharge nonzero). Discriminating:
+    # confirm writes 0x800CD6D4 only if isMenuScreenFadeActive==0; frame returns non-
+    # 0x00FFFFFF only if tickMenuScreenFade nonzero). Discriminating:
     # which gate sticks on synthetic leave Start. Always-on (no env) with event-
     # driven + rate-limited logs so leave-window samples are not lost to first-N
     # caps (hangarmenu-ckpt after_2 already silent by leave). Tags:
@@ -32526,10 +32526,10 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
     # [graceful-menu].
     _s574_n = 0
     if p.name == "funcs_30.c":
-        # isPlayerShipActive: log gPlayerShip + ret. Always on ret change / first 10 /
+        # isMenuScreenFadeActive: log gPlayerShip + ret. Always on ret change / first 10 /
         # every 200 so leave-time samples survive.
         _ship_old = (
-            "RECOMP_FUNC void isPlayerShipActive(uint8_t* rdram, recomp_context* ctx) {\n"
+            "RECOMP_FUNC void isMenuScreenFadeActive(uint8_t* rdram, recomp_context* ctx) {\n"
             "    uint64_t hi = 0, lo = 0, result = 0;\n"
             "    int c1cs = 0;\n"
             "    // 0x800B4264: lui         $v0, 0x800D\n"
@@ -32542,7 +32542,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
             "    return;\n"
         )
         _ship_new = (
-            "RECOMP_FUNC void isPlayerShipActive(uint8_t* rdram, recomp_context* ctx) {\n"
+            "RECOMP_FUNC void isMenuScreenFadeActive(uint8_t* rdram, recomp_context* ctx) {\n"
             "    uint64_t hi = 0, lo = 0, result = 0;\n"
             "    int c1cs = 0;\n"
             "    // 0x800B4264: lui         $v0, 0x800D\n"
@@ -32576,7 +32576,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
         else:
             report.append(f"WARNING: s574 ship-active count={text.count(_ship_old)}")
 
-        # accumulateShipThrottleCharge: log ship + ret at both return paths.
+        # tickMenuScreenFade: log ship + ret at both return paths.
         # Nonzero ret always; zero ret rate-limited.
         _thr_sites = [
             # early return when charge counter >= 7 (ret=1)
@@ -32839,7 +32839,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
                 "    // 0x800AC914: sw          $v1, -0x292C($v0)\n"
                 "    g_rs64_last_guest_pc = 0x800AC914u;\n"
                 "    MEM_W(-0X292C, ctx->r2) = ctx->r3;\n"
-                "    updateTextOverlayLookupEntry(rdram, ctx);\n",
+                "    startMenuScreenFade(rdram, ctx);\n",
                 "0x800AC914",
                 "r3",
                 "    // 0x800AC914: sw          $v1, -0x292C($v0)\n"
@@ -32852,7 +32852,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
                 "        s_sel_n_ac914++;\n"
                 "    }\n"
                 "    MEM_W(-0X292C, ctx->r2) = ctx->r3;\n"
-                "    updateTextOverlayLookupEntry(rdram, ctx);\n",
+                "    startMenuScreenFade(rdram, ctx);\n",
             ),
             (
                 "    // 0x800AC914: sw          $v1, -0x292C($v0)\n"
@@ -33447,10 +33447,10 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
 
 
     # s612 / item -376 / H-ship1b: instrument the ONLY two writers of gPlayerShip
-    # (0x800CC85C = 0x800D0000-0x37A4). Non-null arm is updateTextOverlayLookupEntry
+    # (0x800CC85C = 0x800D0000-0x37A4). Non-null arm is startMenuScreenFade
     # @ 0x800B40D0 (only when current value is null); zero arm is
-    # destroyPlayerShipRecord @ 0x800B42A8. s611 offline: thr11 destroy co-requires
-    # post-hsel isPlayerShipActive ret=1 (s592_a+s607 yes; s610 stall no). Cause vs
+    # endMenuScreenFade @ 0x800B42A8. s611 offline: thr11 destroy co-requires
+    # post-hsel isMenuScreenFadeActive ret=1 (s592_a+s607 yes; s610 stall no). Cause vs
     # co-symptom open — log every store/zero with val + host return address so the
     # next recovery-active soak shows who re-arms (or fails to) after hangar-sel.
     # Tags: [ship-store] [ship-zero] [ship-store-skip]. Always-on (writes are rare).
@@ -33512,7 +33512,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
             report.append(f"WARNING: s612 ship-zero 0x800B42A8 count={text.count(_zero_old)}")
 
         # Skip arm: ship already non-null so 0x800B40D0 store is not taken. Rate-limit
-        # because hangar/menu may call updateTextOverlayLookupEntry every frame.
+        # because hangar/menu may call startMenuScreenFade every frame.
         _skip_old = (
             "    // 0x800B4068: bne         $v0, $zero, L_800B4138\n"
             "    if (ctx->r2 != 0) {\n"
@@ -33553,7 +33553,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
             text = text.replace('#include "recomp.h"\n', '#include "recomp.h"\n#include <stdio.h>\n', 1)
 
     # s637 / item -393 / H-shipn3-gate residual: thr11d_new requires ship-store n=3
-    # then throttle-ret n=3 ret=1 then destroyPlayerShipRecord — all from
+    # then throttle-ret n=3 ret=1 then endMenuScreenFade — all from
     # runModelViewerLoop (s629+s633 dual-source). Store arm is L_800CA51C when
     # (A/START with unlock) OR sp+0xB8; B8 is set at 0x800CA1E0 when a float
     # accumulator at 0x800D0120+0x90*s3+4 exceeds *0x800A79B8. n=2 destroy is
@@ -33591,7 +33591,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
             "    // 0x800CA51C: jal         0x800B4264\n"
             "    // 0x800CA520: nop\n"
             "\n"
-            "    isPlayerShipActive(rdram, ctx);\n"
+            "    isMenuScreenFadeActive(rdram, ctx);\n"
         )
         _arm_new = (
             "L_800CA51C:\n"
@@ -33611,7 +33611,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
             "        }\n"
             "        s_mv_arm_n++;\n"
             "    }\n"
-            "    isPlayerShipActive(rdram, ctx);\n"
+            "    isMenuScreenFadeActive(rdram, ctx);\n"
         )
         if "model-viewer ship-arm entry (s637, item -393" in text:
             report.append(f"{p.name}: mv-ship-arm 0x800CA51C (s637, item -393) already present")

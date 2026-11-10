@@ -186123,3 +186123,38 @@ NOCAP, 1 s host samples): tickBackdropLoaderWorker in 36/129 samples, decodeBack
 (positive control: the renamed, hooked functions run), runInMissionFrame 67 (flight reached), 0 CRASH/SIGSEGV/SIGBUS lines.
 Rules out: H-text (no glyph/format-text path; "format" was the %03ld tile-name sprintf). Next: allocTextRenderTarget 0x800B32F4
 sits inside this block and is likely a backdrop texture target, not text.
+
+## Session 7074 (2026-11-10) — menu fade-quad family renamed: 0x800CC85C is the active screen fade quad, not a "player ship"; 9 renames (startMenuScreenFade, tickMenuScreenFade, allocMenuSolidQuadSprite, allocMenuSceneElement ...), counts identical in 14 files, preempt control 6 unchanged, L6 boot to flight clean
+
+NEXT.md unit (HYPOTHESIS-ID generated-symbol-misnomer-fixes): check every menu_overlay.txt name in 0x800B2630..0x800B4400.
+Method change: disassembled ../rogue_squadron64/build/roguesquadron.elf with mips64-elf-objdump (ELF symbols carry the
+pre-rename names) instead of reading RecompiledFuncs bodies; one python pass indexed calls/callers/lui+imm refs for the block.
+Findings (single body read per function + caller lists; the shared globals are the second line):
+- allocTextRenderTarget 0x800B32F4 (NEXT.md question): H-backdrop and H-text both refuted. It mallocs a w x h texture, memsets
+  the pixels 0xFF, writes 0xFFFF halves, registers it (registerHmtTextureInTable) and builds a 0x38 menu element, element count
+  byte 0x800CC850++. Callers: initTextTextureTarget (64,16) and spawnMenuListItemSprite. -> allocMenuSolidQuadSprite.
+- initTextTextureTarget 0x800B4020 = allocMenuSolidQuadSprite(64,16) -> 0x800CC864. -> createMenuScreenFadeQuad.
+- updateTextOverlayLookupEntry 0x800B4048: if 0x800CC85C==0, scales the 0x800CC864 quad to viewport w/h, places it at -w/2,-h/2,
+  flags |= 0x02400003, rate a2*k -> 0x800CFAF4, frame counter 0x800CC860 = 0, active = quad, adds to scene, visible.
+  -> startMenuScreenFade.
+- accumulateShipThrottleCharge 0x800B4168: alpha byte quad->+0xC->+0x2F += rate*dt, clamp 255; once at 255 counts 0x800CC860 and
+  returns 1 at 7 frames. -> tickMenuScreenFade (fixup_fps60_ticks.py site 0x800B41B8 is this counter; comment updated by rename).
+- computeThrottleChargeFraction 0x800B4224 = 1 - alpha/255 -> getMenuScreenFadeRemaining; isPlayerShipActive 0x800B4264 =
+  (0x800CC85C != 0) -> isMenuScreenFadeActive; destroyPlayerShipRecord 0x800B4274 = removeLookupTableEntry(quad), clear
+  0x800CC85C, element count-- -> endMenuScreenFade (callers: gracefulMenuShutdown, menuControllerInput, ship-select, model viewer).
+- spawnProjectileObject 0x800B42D4 (menu overlay): malloc 0x38 + 0x10 node, h0/h2/w1C from args, id = count 0x800CC850++.
+  Callers buildScaledFormatTextElement, menuControllerInput. -> allocMenuSceneElement.
+- decrementTextTextureRefcount 0x800B3CC0 = 0x800CC850-- -> decrementMenuSceneElementCount.
+Names that hold or stay open: setChildPosFromI16Pair, getStructField0xC (literal), pollServiceMessageByte (tryRecvServiceMessage).
+Open for next: loadNamedTextureDescriptor 0x800B2D50 (formats "backdrop/%s" 0x800A5C20 + load_asset + zmemcpy: maybe a sync
+backdrop load), allocFormatTextElement, copyMorphTargetVertices, the "Hud" sprite names 0x800B448C..0x800B4618 (NEXT.md).
+Applied (scratch/s7074/renames.tsv, files.txt): perl \b over live RecompiledFuncs funcs_28/29/30/31/33/34/36/49.c, funcs.h,
+recomp_overlays.inl, ../rogue_squadron64/symbol_files/menu_overlay.txt (comments rewritten; uncommitted there as in s7072/s7073,
+this entry is the record), syms/rogue_squadron.syms.toml, tools/fixup_game_funcs_vendored.py (needles and replacements renamed
+together), tools/fixup_fps60_ticks.py. None of the new names existed before.
+Control: per-file occurrence counts identical before/after (scratch/s7074/before.txt vs after.txt, 14 files); 0 old-name hits
+left; fixup_preempt_point.py "hooks present in 6 functions" before and after. Rebuild clean (build/build_s7074.log).
+Run scratch/s7074/run.zsh (s7031 arm L6 dd1 4:3 NOCAP, 1 s samples): mission_t=71 s, flight 309 s, alive at end, vi_stalls30s=0,
+crashlines=0; samples 112: tickMenuScreenFade 2 (positive control: the renamed fn runs under its new name), tickBackdropLoaderWorker
+27, menuControllerInput 12, runInMissionFrame 69.
+Rules out: the "player ship / throttle charge" and "text render target" readings of this block.

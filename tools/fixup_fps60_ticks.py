@@ -24,7 +24,7 @@ TAG = "/* PATCH: s6821 fps60 ticks */"
 FIX = {
     0x8007030C: "multiEventTemplateNpcHandler +0x6 lifetime",
     0x8006C024: "advanceNpcOnCurvedPath +0x1C countdown",
-    0x800B41B8: "accumulateShipThrottleCharge 0x800CC860 count-up <7",
+    0x800B41B8: "tickMenuScreenFade 0x800CC860 count-up <7",
     0x800F8708: "executeActorType4Effect +0x92 count-up <20",
     0x80044938: "cutsceneActorNpcHandler +0x108 count-up <5",
     0x800AF5A0: "cinematicStageAdvancer +0x938 count-up <7",

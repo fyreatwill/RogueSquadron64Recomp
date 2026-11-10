@@ -1,14 +1,18 @@
-# NEXT: owner reports first; otherwise check allocTextRenderTarget and the other menu_overlay names in 0x800B2630-0x800B4400
+# NEXT: owner reports first; otherwise finish the menu-block misnomer check 0x800B2A98-0x800B4618
 HYPOTHESIS-ID: generated-symbol-misnomer-fixes
-Context (s7073): 0x800B2630..0x800B3F24 is the async backdrop JPEG loader (enqueueBackdropLoad, tickBackdropLoaderWorker,
-openBackdropJpegAssets, decodeBackdropTilesToTextures, freeBackdropLoadRequest; strings "backdrop/%s", "%03ld", "alpha" at
-0x800A5C20..0x800A5C50 in ../rogue_squadron64/build/roguesquadron.elf .ovl.menu, file off 0x10b410 = va 0x800A5130).
-Unit: list every menu_overlay.txt symbol with address in 0x800B2630..0x800B4400 (allocTextRenderTarget 0x800B32F4,
-buildPrefixedAssetName 0x800B43F4, ...), read each body in ../N64Recomp/RecompiledFuncs (bound by next RECOMP_FUNC line, NOT
-awk '/^}/' - bodies bleed), list its callees and the string constants it loads (0x800A5Cxx).
-Hypotheses: H-backdrop (allocTextRenderTarget is the backdrop tile texture target; callers are the loader) vs H-text (a real
-text render target with text callers). Discriminator: its callers and the w/h it is passed.
-If misnomer: rename as in s7073 (scratch/s7073/renames.tsv recipe: perl word-boundary over live funcs_*.c, funcs.h,
-recomp_overlays.inl, symbol_files, syms toml, every tools/ fixup needle+replacement), control = per-file counts + fixup_preempt
-6/9, rebuild, scratch/s7031/arm.zsh L6 dd1 4:3 NOCAP with 1 s samples (positive control = renamed fn in samples).
-If all names in the range hold: close the misnomer thread for the menu block and take the next G rung.
+Context (s7074): 0x800B4020-0x800B42D4 is the menu screen-fade quad family (renamed); 0x800CC850 is the live menu
+element count. Fast method (s7074): objdump the ELF, NOT the RecompiledFuncs bodies (diag noise):
+  mips64-elf-objdump -d -j .ovl.menu --start-address=0x... --stop-address=0x... ../rogue_squadron64/build/roguesquadron.elf
+  (ELF symbols carry the OLD names; current names are in ../rogue_squadron64/symbol_files/menu_overlay.txt.)
+  Strings: file off = va - 0x800A5130 + 0x10b410.
+Unit, remaining candidates in this block:
+ - loadNamedTextureDescriptor 0x800B2D50: sprintf "backdrop/%s" + load_asset + zmemcpy + registerHmtTextureInTable.
+   H-sync-backdrop (a synchronous backdrop/named image load) vs H-generic (generic named texture). Discriminator: the
+   asset path prefix it formats for every caller (buildHudAmmoReadout, createMenuTextLabels, runMenuShipSelectScreen...).
+ - allocFormatTextElement 0x800B2A98 (rs_malloc+memset, element count 0x800CC850): likely another menu element ctor.
+ - copyMorphTargetVertices 0x800B438C: copies u16 array a1->+20[a2+i] into a0->+20[i] and a0->+0xC->+0xC[i], count a0->+8.
+ - spawnHudReticleAtMeshBounds / positionHudSpriteOffset / createHudSpritePair / layoutHudSpriteScreenRect 0x800B448C-0x800B4618
+   live in the MENU overlay: H-hud (really HUD) vs H-menu-sprite. Discriminator: callers (menuControllerInput, spawnMenuListItemSprite).
+If misnomer: rename via scratch/s7074/renames.tsv recipe (files.txt, before/after counts, perl \b over live tree + symbol_files +
+syms toml + tools/*.py), fixup_preempt_point.py must still say 6, rebuild, scratch/s7074/run.zsh (L6 dd1 4:3 NOCAP + 1 s samples).
+If all hold: close the menu-block misnomer thread and take the next G rung.
