@@ -185854,3 +185854,6 @@ HYPOTHESIS-ID: transition-stall-audio-wait. CURRENT-TRUTH 37.1 KB (no maintenanc
 - Caveat: caller ra reads 0 (recompiled code does not maintain $ra for direct calls), so per-caller attribution is still the s7059 xctrace.
 - Next (NEXT.md): what the game thread does in its 133-150 ms OS-silent stretch (VI-quantized: H-vispin a poll on a VI-updated
   counter, vs H-compute text glyph/menu build that happens to last ~8 VI).
+- Verdict (gate wording): the slot ring + TL gap ring selects H-retail for the audio drain part and refutes H-cadence and
+  H-preempt-residual; it refutes the s7059 "audio polling is the bulk" reading. Next discriminator: host stack samples of the
+  game thread inside the 133-150 ms OS-silent stretch, to discriminate H-vispin / H-compute / H-tokenwait (NEXT.md).
