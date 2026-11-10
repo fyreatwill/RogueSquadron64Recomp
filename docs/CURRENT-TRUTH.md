@@ -1,12 +1,16 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7095 (2026-11-10).
+Compact operational handoff, as of Session 7096 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7096 DPC bridge forwarding coverage CLOSED: RT64 receives exactly the hardware-consumed RDP byte stream (H-fwd-exact, two lines).** src/rsp/s7096_fwd_cover.cpp (ROGUESQ_S7096_FWD=1|ctl; hooks in RSP_DPC_START/END, rs64_rt_submit site ids, every deliberate drop path, rs64_dpc_record_submit pre-compare). L6 flight, 3 runs: dd1 4:3 2.82 GB, dd4 16:9 15.07 / 16.60 GB, HW == FWD with 0 missing / dup / out-of-order / foreign, 0 drop paths fired; self-test 8/8, ctl mutant flagged 64/64 tasks. Content: dd1 0; dd4 ~18 B/task differ at the handoff, but 0 differ just before record_submit (pre_bytes == fwd), so every change is one of our own edit walkers (0x2D = g1d title_clear scissor clamp; bulk = triangle words, attribution single-source). No late writer, so the bridge is not a G5b terrain-drop source.
+- In plain words: every drawing command the graphics microcode produces reaches the renderer exactly once and in order. The only bytes that change on the way are our own deliberate fixes.
+- Next: name each edit walker's byte changes (NEXT.md, slug bridge-edit-census).
 
 **s7095 RSP-side DPC register model vs hardware CLOSED: 0 branch-relevant differences (H-dpc-ok on two lines).** Offline: tools/s7095_dpc_census.py (exit 0) finds 15/15 ROM DPC sites. The STATUS bits tested are only XBUS, DMA_BUSY and START_VALID, and an idle instant RDP reports 0 for each, as our constant does. The only STATUS write is 0x1 (clear XBUS). Live: src/rsp/s7095_dpc_model.cpp (ROGUESQ_S7095_DPC=1, self-test 4/4) shadows hardware semantics over 22 K tasks and 92 M reads in an L6 flight of 309 s. CURRENT and END differ from the shadow only at task entry (per-task reset) and between START and END (the snap). The shadow's wait predicates spin 0 times, and both task-entry branches lead to a fresh start. The 64-poll escape fired 0 times.
 - In plain words: the port's answers to the graphics microcode's "is the drawing chip ready?" questions lead it to exactly the same decisions real hardware would.
@@ -302,7 +306,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 21. **RSP ucode fixup census: CLOSED s7091** (0 unexplained; regen via tools/ucode_regen.sh, rerun `verify` after any RSPRecomp/fixup change).
 22. **RSP VU fast paths + divide: CLOSED s7092** (tools/s7092_vu_mem_test, 0/8.59 G; rerun after any rsp_vu*.hpp / rsp.hpp DMEM edit).
 23. **RSPRecomp scalar lowering: CLOSED s7093** (tools/s7093_su_census.py --controls; sltiu $zero/neg-imm template fixed in RSPRecomp; rerun after any RSPRecomp change).
-24. **RSP runtime DMA + cop0: CLOSED s7094** (audio ucode_data off-by-one fixed; tools/s7094_dma_test + tools/s7094_dma_census.py, rerun after any rsp.hpp/rsp.cpp DMA edit). Next: DPC register model (NEXT.md).
+24. **RSP runtime DMA + cop0: CLOSED s7094** (audio ucode_data off-by-one fixed; tools/s7094_dma_test + tools/s7094_dma_census.py, rerun after any rsp.hpp/rsp.cpp DMA edit).
+25. **DPC registers CLOSED s7095; bridge forwarding coverage CLOSED s7096** (ROGUESQ_S7095_DPC / ROGUESQ_S7096_FWD=ctl, rerun after any dpc_bridge.cpp submit/defer/wrap edit; MISSING_UNEXPLAINED/dup/order must stay 0). Next: edit-walker census (NEXT.md).
 
 ## Evidence index
 

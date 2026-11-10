@@ -186857,3 +186857,39 @@ DISCRIMINATION: H-dpc-ok is selected on two lines (ROM decode plus the live shad
 divergence is in a context where both values give the same branch. H-dpc-xbus is refuted (the only write clears XBUS). This
 closes the RSP side end to end (s7091-s7095). No fix needed. Next: the bridge's RDP forwarding coverage, i.e. whether every
 byte hardware would consume in [CURRENT, END) reaches RT64 exactly once (NEXT.md, slug rdp-submit-coverage).
+
+## Session 7096 (2026-11-10) — DPC bridge forwarding coverage CLOSED: RT64 receives exactly the hardware-consumed byte stream (0 missing / 0 duplicate / 0 out-of-order over 34.1 GB, 3 runs); every late content change is one of our own record_submit edits
+HYPOTHESIS-ID: rdp-submit-coverage. Hypotheses: H-fwd-exact (bytes forwarded to RT64 == the [CURRENT, END) stream an
+instantly consuming hardware RDP reads, each once, in order) vs H-fwd-drop (ranges lost at wraps / task ends / defer:
+a G5b terrain-drop candidate) vs H-fwd-dup vs H-fwd-order.
+Instrument: new src/rsp/s7096_fwd_cover.cpp (ROGUESQ_S7096_FWD=1|ctl). The HW stream comes from hooks in
+include/rsp_dpc_macros.h RSP_DPC_START/END: hardware model, CURRENT=START if START_VALID else the previous END, persists
+across tasks, plus a byte snapshot taken at the END write. The FWD stream: every ultramodern::submit_rdp_range goes through
+rs64_rt_submit, which now takes a site id (live/merged/wrap/commit/synth/forcefs). Every deliberate bridge drop records its
+range with a reason (pipe/synthrep/cimg/oob/wrapdrop/noflush/eqlast/uj). An online per-task matcher reports matched / out
+of order / duplicate / foreign / missing, attributes missing bytes to recorded drops, and compares content at the handoff.
+A pre-compare at the top of rs64_dpc_record_submit (before the bridge's edit walkers) splits late writes from our edits.
+Controls: an init self-test on 8 crafted streams passes 8/8. The ctl arm mutates 1 task in 1000 in the matcher's input
+(inside the first call of >= 64 B: drop 8 B, duplicate 8 B, swap two 8 B chunks, flip 1 snapshot byte). v1 mutated "call
+#2-#5" and never fired, because a task makes ONE merged RT64 call (plus wrap flushes), so that run counts as a datum only.
+Runs (scratch/s7096/run.zsh + arm c/d, L6, FPS60, owner-style route, flight 308-309 s each, 0 crash, 0 VI stall):
+| arm | tasks | HW bytes = FWD bytes | missing / dup / order / foreign | drops recorded | content diff | ctl flagged |
+| A dd1 4:3 | 21,776 | 2,824,708,824 | 0/0/0/0 | 0 | 0 | 21/21 (all 4 classes) |
+| B dd4 16:9 | 22,124 | 15,068,792,088 | 0/0/0/0 | 0 | 417,532 | 22/22 bad, 20/22 all 4 |
+| D dd4 16:9 | 21,805 | 16,604,129,200 | 0/0/0/0 | 0 | 399,098; pre-edit 0 over pre_bytes = 16,604,129,200 | 21/21 bad, 20/21 all 4 |
+(C = D without pre_bytes, same picture: 9.64 GB, content 354,589, pre 0.) Site split at dd4: merged commit 2.5-2.7 GB, wrap
+flush 7.1-12.4 GB, live 0, synth/forcefs 0 (no synthetic FULL_SYNCs in flight). Not one deliberate-drop path fired (pipe,
+cimg, oob, wrap-drop, no-flush, eqlast, UJ tasks all 0), and the hardware never laps without a START (hw_laps_nostart 0).
+The two ctl tasks that missed "all 4" are ring-lap tasks. There the greedy forward search finds the mutated address in a
+later lap, so the matcher classes a mutation as order/dup rather than missing. It is still flagged (tasks_bad), and in the
+main stream it cannot arise because every byte matched at the cursor.
+Content: at dd1 0. At dd4 16:9 about 18 B/task change between END and the RT64 handoff, and the same run shows 0 changes
+just before rs64_dpc_record_submit over every forwarded byte. So no late writer (ucode DMA, CPU, overlap) touches the ring
+after END. All the changes come from our own edit walkers: SET_SCISSOR 0x2D on title tasks is rs64_g1d_title_clear's
+centre-512 clamp at 16:9 (s6720, read in code: 0x9B8659.. 00->80 / 00->23). The bulk sits in 8-byte words whose head byte
+is 0x02/0x03 (341,619 + 11,969), i.e. triangle payload rewritten by the clamp/cull walkers. That attribution is by op
+histogram only (single-source), and it is the next unit.
+Result: H-fwd-exact selected on two lines (byte-sequence match + same-run control flagged every mutation); H-fwd-drop,
+H-fwd-dup and H-fwd-order refuted for flight at dd1 4:3 and dd4 16:9. The bridge is not a G5b terrain-drop source.
+Rules out: lost / doubled / reordered RDP bytes at ring wraps, deferral, stream or commit; late ring overwrites before RT64 reads.
+Default build unchanged (all hooks behind rs64_s7096_on).

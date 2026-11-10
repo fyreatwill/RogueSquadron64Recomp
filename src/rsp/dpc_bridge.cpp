@@ -150,8 +150,14 @@ static uint32_t s_task_max_hi = 0;
 // previous task steers ~1/5 tasks into a resume path that loads the trig
 // segment over the DL staging area (2026-07-13 canary bisect).
 extern "C" int rs64_s7095_on; extern "C" void rs64_s7095_task(); extern "C" void rs64_s7095_cur_read(uint32_t ours, int escaped);
+// s7096: forwarding coverage (src/rsp/s7096_fwd_cover.cpp). Sites: 0 live 1 merged 2 wrap 3 commit 4 synth 5 forcefs;
+// drops: 0 pipe 1 synthrep 2 cimg 3 oob 4 wrapdrop 5 noflush 6 eqlast 7 uj.
+extern "C" int rs64_s7096_on; extern "C" void rs64_s7096_task(); extern "C" void rs64_s7096_fwd(uint32_t lo, uint32_t hi, int site);
+extern "C" void rs64_s7096_drop(uint32_t lo, uint32_t hi, int why);
+#define RS64_S7096_DROP(lo, hi, why) do { if (rs64_s7096_on) rs64_s7096_drop((lo), (hi), (why)); } while (0)
 extern "C" void rs64_dpc_reset() {
     if (rs64_s7095_on) rs64_s7095_task();
+    if (rs64_s7096_on) rs64_s7096_task();
     g_rsp_dpc_start = 0;
     g_rsp_dpc_end = 0;
     g_rsp_dpc_current = 0;
@@ -5930,13 +5936,16 @@ extern "C" { int g_rs64_s7026 = [] { const char *e = std::getenv("ROGUESQ_S7026_
 uint64_t g_rs64_s7026_rt_n = 0, g_rs64_s7026_rt_ns = 0, g_rs64_s7026_rt_by = 0, g_rs64_s7026_rec_n = 0, g_rs64_s7026_rec_ns = 0,
          g_rs64_s7026_smp_n = 0, g_rs64_s7026_smp_w = 0, g_rs64_s7026_smp_c = 0; int g_rs64_s7026_spin_win = 0; }
 static void rs64_dpc_record_submit_impl(uint32_t lo, uint32_t hi);
+extern "C" void rs64_s7096_pre(uint32_t lo, uint32_t hi);
 static inline void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
+    if (rs64_s7096_on) rs64_s7096_pre(lo, hi);   // s7096: bytes before the bridge's record/edit walkers
     if (!g_rs64_s7026) { rs64_dpc_record_submit_impl(lo, hi); return; }
     const uint64_t t0 = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
     rs64_dpc_record_submit_impl(lo, hi);
     g_rs64_s7026_rec_ns += clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - t0; ++g_rs64_s7026_rec_n;
 }
-static inline void rs64_rt_submit(uint32_t lo, uint32_t hi) {
+static inline void rs64_rt_submit(uint32_t lo, uint32_t hi, int site) {
+    if (rs64_s7096_on) rs64_s7096_fwd(lo, hi, site);
     if (!g_rs64_s7026) { ultramodern::submit_rdp_range(lo, hi); return; }
     static const uint64_t spin = [] { const char *e = std::getenv("ROGUESQ_S7026_SPIN_NS"); return e ? (uint64_t)std::strtoull(e, nullptr, 0) : 0ull; }();
     const bool smp = (g_rs64_s7026_rt_n & 15u) == 0;
@@ -6304,8 +6313,8 @@ static void submit_deferred_merged(uint32_t &bytes, size_t &calls) {
             bytes += hi - lo;
             calls++;
             rs64_dpc_record_submit(lo, hi);
-            rs64_rt_submit(lo, hi);
-        }
+            rs64_rt_submit(lo, hi, 1);
+        } else RS64_S7096_DROP(lo, hi, 4);
         if (i < g_deferred_ranges.size()) {
             lo = g_deferred_ranges[i].first;
             hi = g_deferred_ranges[i].second;
@@ -6451,6 +6460,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
     if (end_phys <= s_last_end) {
         if (end_phys == s_last_end) {
             // Exactly where we left off: nothing new to forward.
+            RS64_S7096_DROP(start_phys, end_phys, 6);
             return;
         }
         // END moved BACKWARDS: the ucode wrapping its RDP ring back to the
@@ -6481,6 +6491,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
         static std::atomic<uint64_t> s_wf_n{0}, s_wf_bytes{0}, s_wf_dropped{0};
         if (!(s_wrap_flush && g_defer_active)) {
             ++s_wf_dropped;
+            RS64_S7096_DROP(start_phys, end_phys, 5);
             if ((n & 1023) == 1)
                 fprintf(stderr, "[s4273-wrap] flush=0 wrapBumps=%llu\n", (unsigned long long)s_wf_dropped.load());
             return;
@@ -6592,7 +6603,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                         if (wm_runs <= 4 || (wm_runs & 0x3FF) == 0)
                             fprintf(stderr, "[s6933-wm] runs=%lu ranges=%lu bad=%lu control=%lu\n", wm_runs, wm_ranges, wm_bad, wm_ctl);
                     }
-                    rs64_rt_submit(wm_lo, wm_hi);
+                    rs64_rt_submit(wm_lo, wm_hi, 2);
                 }
                 for (const WmUndo &u : wm_undo) {
                     memcpy(g_rdram_for_submit + u.lo, wm_live.data() + u.off, u.hi - u.lo);
@@ -6608,7 +6619,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
             };
             rs64_g1e_bc_check("wrap");
             for (const auto &r : g_deferred_ranges) {
-                if (should_drop_wrap_rdp(r.first, r.second)) continue;
+                if (should_drop_wrap_rdp(r.first, r.second)) { RS64_S7096_DROP(r.first, r.second, 4); continue; }
                 if (wm_hi > wm_lo && wm_hi != r.first) wm_flush();
                 b += r.second - r.first;
                 rs64_e9prov_mark_submitted(r.first, r.second);
@@ -6710,6 +6721,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
             fprintf(stderr, "[dpc-oob-range #%d] dropping submit range 0x%08X..0x%08X\n",
                     s_n, submit_lo, submit_hi);
         }
+        RS64_S7096_DROP(submit_lo, submit_hi, 3);
         if (bf2) { g_bf2_fwd_bytes -= submit_hi - submit_lo; --g_bf2_fwd_subs;   // s7028: keep the s_fwd sums equal to the atomic path's
                    s_fwd_bytes.fetch_add(submit_hi - submit_lo); s_fwd_submits.fetch_add(1); }
         return;
@@ -7211,7 +7223,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                 g_deferred_ranges.emplace_back(kSynthFsPhys, kSynthFsPhys + 8); ++g_rs64_g1e_ranges;
                 if (g_bc_on) g_bc_ranges.emplace_back(kSynthFsPhys, kSynthFsPhys + 8);
             } else {
-                rs64_rt_submit(kSynthFsPhys, kSynthFsPhys + 8);
+                rs64_rt_submit(kSynthFsPhys, kSynthFsPhys + 8, 4);
             }
             static std::atomic<uint64_t> s_inject_n{0};
             uint64_t in = ++s_inject_n;
@@ -7236,9 +7248,11 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
         static const bool s_keep_pipe = []{ const char *e = std::getenv("ROGUESQ_DPC_KEEP_PIPE"); return !(e && *e == '0'); }();  // default ON; =0 restores the old drop
         if (op6_head == 0x27 && !(s_keep_pipe && g_defer_active)) {
             if (inject_synth_fullsync(/*replace_pipe_hist=*/true)) {
+                RS64_S7096_DROP(submit_lo, submit_hi, 0);
                 return; // drop the PIPE; synth FULL_SYNC already queued
             }
             (void)rdram;
+            RS64_S7096_DROP(submit_lo, submit_hi, 0);
             return; // drop PIPE always
         }
         // Residual non-FULL_SYNC size-8 at sticky slot (F3/FD/F5…): same
@@ -7249,6 +7263,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
         // E7 drop-return path did not.
         if (op6_head != 0x29 && gate_inject) {
             if (inject_synth_fullsync(/*replace_pipe_hist=*/false)) {
+                RS64_S7096_DROP(submit_lo, submit_hi, 1);
                 return;
             }
         }
@@ -7835,6 +7850,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                             (unsigned long long)n, submit_lo, addr24);
                         fflush(stderr);
                     }
+                    RS64_S7096_DROP(submit_lo, submit_hi, 2);
                     return;
                 }
             }
@@ -7899,12 +7915,13 @@ rs64_bf_push:
     }
 
     if (should_drop_wrap_rdp(submit_lo, submit_hi)) {
+        RS64_S7096_DROP(submit_lo, submit_hi, 4);
         return;
     }
 
     rs64_e9prov_mark_submitted(submit_lo, submit_hi);
     rs64_dpc_record_submit(submit_lo, submit_hi);
-    rs64_rt_submit(submit_lo, submit_hi);
+    rs64_rt_submit(submit_lo, submit_hi, 0);
 }
 
 extern "C" void rs64_dpc_defer_begin() {
@@ -7955,6 +7972,7 @@ extern "C" void rs64_dpc_defer_begin() {
 
 static void rs64_dpc_defer_end_impl(int commit) {
     g_defer_active = false;
+    if (!commit && rs64_s7096_on) for (const auto &r : g_deferred_ranges) rs64_s7096_drop(r.first, r.second, 7);
     if (commit) rs64_g1e_bc_check("commit");
     if (commit) {   // s6956: per-arm task tally (positive control: cmpWords must advance only with on-tasks)
         static unsigned long onT = 0, offT = 0; (g_rs64_g1e_cdiag ? onT : offT)++;
@@ -8003,13 +8021,14 @@ static void rs64_dpc_defer_end_impl(int commit) {
         else {
             for (const auto& r : g_deferred_ranges) {
                 if (should_drop_wrap_rdp(r.first, r.second)) {
+                    RS64_S7096_DROP(r.first, r.second, 4);
                     continue;
                 }
                 bytes += r.second - r.first;
                 calls++;
                 rs64_e9prov_mark_submitted(r.first, r.second);
                 rs64_dpc_record_submit(r.first, r.second);
-                rs64_rt_submit(r.first, r.second);
+                rs64_rt_submit(r.first, r.second, 3);
             }
         }
 
@@ -8325,7 +8344,7 @@ extern "C" void rsp_force_fullsync() {
                 g_last_submit_hi.load(std::memory_order_acquire), addr, addr + 8);
         fflush(stderr);
     }
-    rs64_rt_submit(addr, addr + 8);
+    rs64_rt_submit(addr, addr + 8, 5);
 }
 
 // s6712 G1e: split the gfx task's RSP segment into bridge (per-DPC_END submit, task-end commit) vs the rest

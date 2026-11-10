@@ -46,10 +46,14 @@ extern "C" void rs64_s7095_end(uint32_t v);
 extern "C" void rs64_s7095_status_write(uint32_t v);
 extern "C" void rs64_s7095_end_read(uint32_t ours);
 extern "C" void rs64_s7095_status_read();
+// s7096: ROGUESQ_S7096_FWD=1 compares the hardware-consumed DPC byte stream with what the bridge forwards (src/rsp/s7096_fwd_cover.cpp).
+extern "C" int rs64_s7096_on;
+extern "C" void rs64_s7096_start(uint32_t v);
+extern "C" void rs64_s7096_end(uint32_t v, const uint8_t* rdram);
 static inline uint32_t rs64_dpc_end_read_hook() { if (rs64_s7095_on) rs64_s7095_end_read(g_rsp_dpc_end); return g_rsp_dpc_end; }
 static inline uint32_t rs64_dpc_status_read_hook() { if (rs64_s7095_on) rs64_s7095_status_read(); return 0u; }
-#define RSP_DPC_START(value)   do { uint32_t _v = (uint32_t)(value); if (rs64_s7095_on) rs64_s7095_start(_v); g_rsp_dpc_start = _v; g_rsp_dpc_current = _v; } while (0)
-#define RSP_DPC_END(value)     do { uint32_t _v = (uint32_t)(value); if (rs64_s7095_on) rs64_s7095_end(_v); g_rsp_dpc_end = _v; g_rsp_dpc_current = _v; rsp_dpc_submit(rdram, g_rsp_dpc_start, _v); } while (0)
+#define RSP_DPC_START(value)   do { uint32_t _v = (uint32_t)(value); if (rs64_s7095_on) rs64_s7095_start(_v); if (rs64_s7096_on) rs64_s7096_start(_v); g_rsp_dpc_start = _v; g_rsp_dpc_current = _v; } while (0)
+#define RSP_DPC_END(value)     do { uint32_t _v = (uint32_t)(value); if (rs64_s7095_on) rs64_s7095_end(_v); if (rs64_s7096_on) rs64_s7096_end(_v, rdram); g_rsp_dpc_end = _v; g_rsp_dpc_current = _v; rsp_dpc_submit(rdram, g_rsp_dpc_start, _v); } while (0)
 #define RSP_DPC_END_READ()     (rs64_dpc_end_read_hook())
 #define RSP_DPC_CURRENT_READ() (rs64_dpc_current_read())
 #define RSP_DPC_STATUS_WRITE(value) do { uint32_t _v = (uint32_t)(value); if (rs64_s7095_on) rs64_s7095_status_write(_v); (void)_v; } while (0)

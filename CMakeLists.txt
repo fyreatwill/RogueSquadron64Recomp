@@ -347,6 +347,7 @@ add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/rsp/dpc_bridge.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7094_dma_shape.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7095_dpc_model.cpp
+    ${CMAKE_SOURCE_DIR}/src/rsp/s7096_fwd_cover.cpp
     ${FACTOR5_UCODE_TLS_CPP}
     ${FACTOR5_UCODE_LEAN_CPP}
     ${FACTOR5_UCODE_NMAC_CPP}
