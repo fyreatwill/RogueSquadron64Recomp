@@ -152,7 +152,9 @@ static float s7034_k[3] = {0.0f, 0.0f, 0.0f}; static uint64_t s7034_kc[3][20], s
 // s7046 eye-to-edge K gate: ROGUESQ_DD_OFFMAPCULL_KEDGE=<k2>[,N[,phasemask]] (default N=8, mask 7): an off-map cell past R whose clamped
 // edge lies on a map side the eye (s7032 latched eye cell) is within N cells of uses K=k2 instead of K. s7046_kc = cells that took k2,
 // s7046_ed = per-frame histogram of the eye's min distance to any map side (0..31, 31 = >=31).
-static float s7046_k2 = -1.0f; static int s7046_n = 8, s7046_mask = 7; static uint64_t s7046_kc[3], s7046_kcull[3], s7046_ed[3][32];
+// s7047 per-phase form: ROGUESQ_DD_OFFMAPCULL_KEDGE=<k2a>,<Na>;<k2b>,<Nb>;<k2c>,<Nc> (tog3 phase 0/1/2; k2<=0 = gate off that phase), so
+// two variants and the plain-K baseline share one hold.
+static float s7046_k2[3] = {-1.0f, -1.0f, -1.0f}; static int s7046_n[3] = {8, 8, 8}, s7046_mask = 7; static uint64_t s7046_kc[3], s7046_kcull[3], s7046_ed[3][32];
 static int s7031_R[3] = {-1, -1, -1}, s7031_w = 0, s7031_hgt = 0; static uint64_t s7031_off[3][20], s7031_ring[3][18], s7031_rband[3][18], s7031_cull[3];
 static uint64_t s7030_h[3][20], s7030_cull[3], s7030_frames[3], s7030_t0 = 0, s7030_last = 0; static double s7030_F[3], s7030_FE[3];
 // s7032 eye gate (tools/apply_s7032_eyegate.py): the s7031 ring cull leaves a sky void once the eye is over the off-map plateau
@@ -205,9 +207,12 @@ extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
         if (const char* k = getenv("ROGUESQ_DD_OFFMAPCULL_K")) { float a, b, c;
             if (sscanf(k, "%f,%f,%f", &a, &b, &c) == 3) { s7034_k[0] = a; s7034_k[1] = b; s7034_k[2] = c; } else s7034_k[0] = s7034_k[1] = s7034_k[2] = (float)atof(k); }
         fprintf(stderr, "[s7034] offmapcull K=%g,%g,%g\n", s7034_k[0], s7034_k[1], s7034_k[2]);
-        if (const char* ke = getenv("ROGUESQ_DD_OFFMAPCULL_KEDGE")) { float a = -1; int n = 8, m = 7; const int c = sscanf(ke, "%f,%d,%d", &a, &n, &m);
-            if (c >= 1 && a > 0) { s7046_k2 = a; s7046_n = c >= 2 ? n : 8; s7046_mask = c >= 3 ? m : 7; } }
-        fprintf(stderr, "[s7046] kedge k2=%g N=%d mask=%d\n", s7046_k2, s7046_n, s7046_mask);
+        if (const char* ke = getenv("ROGUESQ_DD_OFFMAPCULL_KEDGE")) {
+            if (strchr(ke, ';')) { const char* q = ke; for (int i = 0; i < 3 && q; i++) { float a = -1; int n = 8; const int c = sscanf(q, "%f,%d", &a, &n);
+                    if (c >= 1 && a > 0) { s7046_k2[i] = a; s7046_n[i] = c >= 2 ? n : 8; } q = strchr(q, ';'); if (q) q++; } s7046_mask = 7; }
+            else { float a = -1; int n = 8, m = 7; const int c = sscanf(ke, "%f,%d,%d", &a, &n, &m);
+                if (c >= 1 && a > 0) { for (int i = 0; i < 3; i++) { s7046_k2[i] = a; s7046_n[i] = c >= 2 ? n : 8; } s7046_mask = c >= 3 ? m : 7; } } }
+        fprintf(stderr, "[s7046] kedge k2=%g,%g,%g N=%d,%d,%d mask=%d\n", s7046_k2[0], s7046_k2[1], s7046_k2[2], s7046_n[0], s7046_n[1], s7046_n[2], s7046_mask);
         fprintf(stderr, "[s7031] offmapcull R=%d,%d,%d tog3=%d\n", s7031_R[0], s7031_R[1], s7031_R[2], s7030_tog3);
         fprintf(stderr, "[s7030] fogcull tog3=%d k=%g,%g,%g a0=0x%08X\n", s7030_tog3, s7030_k[0], s7030_k[1], s7030_k[2], a0); }
     auto rf = [&](uint32_t a) { uint32_t v = (uint32_t)MEM_W(0, (int64_t)(int32_t)a); float f; memcpy(&f, &v, 4); return f; };
@@ -238,8 +243,8 @@ extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
               fprintf(stderr, "[s7034] t=%.0f ph=%d K=%g kept/f=%.1f chist/f=%s\n", (mt - s7030_t0) / 24e6, p, s7034_k[p], s7034_kk[p] / fr, kb); }
             { char eb[300]; int oe = 0; uint64_t en = 0; for (int b = 0; b < 32; b++) en += s7046_ed[p][b]; const double ed = en ? (double)en : 1.0;
               for (int b = 0; b < 32; b++) oe += snprintf(eb + oe, sizeof eb - oe, "%s%.2f", b ? "," : "", s7046_ed[p][b] / ed);
-              fprintf(stderr, "[s7046] t=%.0f ph=%d k2=%g N=%d on=%d k2cells/f=%.1f k2cull/f=%.1f eyeedge=%s\n", (mt - s7030_t0) / 24e6, p, s7046_k2, s7046_n,
-                      (s7046_k2 > 0 && ((s7046_mask >> p) & 1)) ? 1 : 0, s7046_kc[p] / fr, s7046_kcull[p] / fr, eb); }
+              fprintf(stderr, "[s7046] t=%.0f ph=%d k2=%g N=%d on=%d k2cells/f=%.1f k2cull/f=%.1f eyeedge=%s\n", (mt - s7030_t0) / 24e6, p, s7046_k2[p], s7046_n[p],
+                      (s7046_k2[p] > 0 && ((s7046_mask >> p) & 1)) ? 1 : 0, s7046_kc[p] / fr, s7046_kcull[p] / fr, eb); }
             fprintf(stderr, "[s7032] t=%.0f ph=%d eye=%d,%d ring=%d eyeoff_cells/f=%.1f spread_bad=%llu\n", (mt - s7030_t0) / 24e6, p, s7032_eyex, s7032_eyez, s7032_eyering, s7032_eyeoff[p] / fr, (unsigned long long)s7032_spread_bad);
             fprintf(stderr, "[s7031] t=%.0f ph=%d R=%d dims=%dx%d win=%d,%d ocull/f=%.1f off/f=%s ring/f=%s rband/f=%s\n", (mt - s7030_t0) / 24e6, p, s7031_R[p], s7031_w, s7031_hgt,
                     (int32_t)MEM_W(0, (int64_t)(int32_t)0x80132DB0), (int32_t)MEM_W(0, (int64_t)(int32_t)0x80132DB8), s7031_cull[p] / fr, buf, rb, rb2); } }
@@ -267,9 +272,9 @@ extern "C" int rs64_s7031_cell(float d, int32_t x, int32_t z) {
         const int r = dx > dz ? dx : dz; const int rc = r > 17 ? 17 : r; s7031_off[p][bc]++; s7031_ring[p][rc]++; if (bc >= 5 && bc < 10) s7031_rband[p][rc]++;
         if (s7031_R[p] >= 0 && r > s7031_R[p]) {
             float K = s7034_k[p]; int k2 = 0;
-            if (s7046_k2 > 0 && ((s7046_mask >> p) & 1) && s7032_eyering == 0) { /* s7046: near-side cells use k2 */
-                const int N = s7046_n; if ((x < 0 && s7032_eyex < N) || (x >= s7031_w && s7031_w - 1 - s7032_eyex < N) ||
-                                            (z < 0 && s7032_eyez < N) || (z >= s7031_hgt && s7031_hgt - 1 - s7032_eyez < N)) { K = s7046_k2; k2 = 1; s7046_kc[p]++; } }
+            if (s7046_k2[p] > 0 && ((s7046_mask >> p) & 1) && s7032_eyering == 0) { /* s7046: near-side cells use k2 */
+                const int N = s7046_n[p]; if ((x < 0 && s7032_eyex < N) || (x >= s7031_w && s7031_w - 1 - s7032_eyex < N) ||
+                                            (z < 0 && s7032_eyez < N) || (z >= s7031_hgt && s7031_hgt - 1 - s7032_eyez < N)) { K = s7046_k2[p]; k2 = 1; s7046_kc[p]++; } }
             if (K > 0 && !(s7030_fe > 0 && dn > K * s7030_fe)) s7034_kk[p]++; /* s7034: too near, keep */
             else { s7030_h[p][bc]++; s7031_cull[p]++; s7034_kc[p][bc]++; if (k2) s7046_kcull[p]++; return 1; } } }
     return rs64_s7030_cell(d);

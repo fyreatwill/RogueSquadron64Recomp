@@ -12047,8 +12047,11 @@ static void rs64_g1c_apply_dd_policy() {
     { const char* ww = std::getenv("ROGUESQ_DD_WIDEWIN");
       if (dd >= 6.0 - 1e-3 && ww && *ww && ww[0] != '0' && !std::getenv("ROGUESQ_DD_OFFMAPCULL")) {
           setenv("ROGUESQ_DD_OFFMAPCULL", "2", 1); setenv("ROGUESQ_DD_OFFMAPCULL_K", "0.6", 0); setenv("ROGUESQ_DD_OFFMAPCULL_H", "off", 0);
+          // s7047: eye-to-edge K gate (s7046) folded in: off-map cells on a map side within 12 cells of the eye use K=0.8, which hides
+          // L12's hard horizon cut (frozen poses 0.07 vs 0.81, 2 runs) for ~0.3 ms rsp (L12 59.6/59.9 vs 59.8 fps same run). =0 disables.
+          setenv("ROGUESQ_DD_OFFMAPCULL_KEDGE", "0.8,12", 0);
           g_rs64_s7030 = 1;
-          std::fprintf(stderr, "[s7037] dd bundle offmapcull=2 k=%s h=%s (auto)\n", std::getenv("ROGUESQ_DD_OFFMAPCULL_K"), std::getenv("ROGUESQ_DD_OFFMAPCULL_H"));
+          std::fprintf(stderr, "[s7037] dd bundle offmapcull=2 k=%s h=%s kedge=%s (auto)\n", std::getenv("ROGUESQ_DD_OFFMAPCULL_K"), std::getenv("ROGUESQ_DD_OFFMAPCULL_H"), std::getenv("ROGUESQ_DD_OFFMAPCULL_KEDGE"));
       } }
     char b[16];
     std::snprintf(b, sizeof b, "%d", px);

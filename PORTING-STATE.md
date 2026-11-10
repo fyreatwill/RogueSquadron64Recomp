@@ -185488,3 +185488,27 @@ OWNER-OPT-INS offers `_KEDGE=0.8,12`. Next (NEXT.md): N=10 / k2=0.7 variants on 
 Verdict: this refutes H-whole (the gated cells that hide the cut cost 1.0 fps on L12, global K=0.8 cost 5.6) and selects H-partial at the
 0.5 fps margin; the change is a working opt-in feature (KEDGE), not only a counter. Next discriminator: whether N=10 or k2=0.7 keeps the
 pose score <=0.1 while reaching >=58.5 fps on L12 (fold into the bundle) or not (stay opt-in, owner choice).
+
+## Session 7047 (2026-11-09) — KEDGE variants: only 0.8,12 is invisible on L12 (N=10 0.39, k2=0.7 0.27); per-phase KEDGE syntax; ke12 holds L12 59.6-59.9 / L13 60.0 same run -> folded into the dd6 auto bundle
+Work unit from NEXT.md (HYPOTHESIS-ID dd6-bundle-l12-horizon). Two code changes, four run sets, one game at a time.
+1. Frozen poses 16:9 FPS60 L12 NOREF (scratch/s7047/run.zsh, s7046 recipe, pre-change binary): arms dd6off / dd6b (auto bundle K=0.6, positive
+   control) / ke12 (0.8,12) / ke10 (0.8,10) / k07e12 (0.7,12). 5/5 0 crashes, same posefreeze path as s7046 (156.526,-8.539,19.825).
+   s7032 scorer vs dd6off k4/k5/k6: dd6b 0.81/0.80/0.88 (1.8% px, ctl fires, = s7046), **ke12 0.07/0.07/0.07 0.0%** (replicates s7046),
+   ke10 0.39/0.38/0.42 (0.8%), k07e12 0.27/0.27/0.29 (0.5%). k2cells/f ph0: ke12 2027, ke10 1295, k07e12 1952. By eye
+   (docs/owner_sheet_s7047_l12_kedge_variants.jpg, rows dd6off/dd6b/ke12/ke10/k07e12, bottom 45%, k4/k6): ke12 = dd6off soft band; ke10 shows a
+   step where the N=10 boundary crosses the band; k07e12 a flat cut like dd6b. Only N=12,k2=0.8 passes the <=0.1 bar (two lines: score + eye).
+2. Change: src/main/upstream_compat.cpp KEDGE per-phase form `k2a,Na;k2b,Nb;k2c,Nc` (tog3 phases; k2<=0 = off), old form unchanged.
+   s7046_k2/s7046_n became [3] arrays. [s7046] kedge line prints all three.
+3. Same-run hold L12 16:9 (scratch/s7047/run_hold.zsh H12aa 12 "0.8,12" "0.8,12": R=2 K=0.6 all phases, KEDGE "0.8,12;0;0.8,12", 505 s
+   flight): alive, 0 stalls, 0 crash. g5e_cost_by_parity xor8 (22.8k frames): p0 ke12 59.6 fps rsp 12.32 / p1 K0.6 59.8 rsp 11.93 /
+   p2 ke12 59.9 rsp 12.26 (ke12 A/A 0.06 ms; ke12 cost +0.33..0.39 ms rsp, T +0.04). Control: [s7046] ph0/ph2 on=1 k2cells/f 1141/1209, ph1 on=0 0.
+   s7046's single-phase 58.0 came from a heavier path (k2cells/f 1836): the bar >=58.5 is met in 2 of 3 ke12 phases over 2 runs, mean ~59.2.
+4. Fold (pre-registered outcome): src/main/main.cpp s7037 bundle adds setenv("ROGUESQ_DD_OFFMAPCULL_KEDGE","0.8,12",0); [s7037] prints kedge.
+   Fold check, poses L12 (scratch/s7047/run_fold.zsh, F12): fold (auto) 0.07/0.07/0.07 0.0% vs foldk0 (KEDGE=0) 0.81/0.80/0.88 against
+   this session's dd6off (cross-run frozen-pose A/A has been 0.00); logs: fold "kedge k2=0.8,0.8,0.8 N=12", foldk0 "k2=-1". KEDGE=0 = old cut.
+5. Same-run hold L13 16:9 (H13aa, same arms): alive, 0 stalls, 0 crash; p0/p1/p2 60.0/60.0/60.0 fps, ke12 rsp +0.44..0.50 ms, T 0.00.
+Result: N=10 and k2=0.7 are refuted as cheaper invisible variants (both visible); ke12 is the only invisible setting and costs <=0.4 ms rsp with
+no frame-rate cost on L12/L13 in this run, so it is folded into the dd6 bundle default (owner look still decides; OWNER-OPT-INS updated).
+Not checked: 21:9 (owner's ultrawide; wider frustum loads more side cells) -> NEXT.md.
+Verdict: refutes the N=10 / k2=0.7 variants (visible at 0.39 / 0.27 vs ctl 0.81) and selects KEDGE=0.8,12, now the bundle default (fold
+check 0.07 vs KEDGE=0 0.81). The change is code: per-phase KEDGE parse + bundle default. Next discriminator: 21:9 L12 poses + hold.
