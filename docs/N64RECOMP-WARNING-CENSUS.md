@@ -198,3 +198,44 @@ markers): host test shim == ROM transcription on 400,000/400,000; the game passe
 __ull_rem, __ll_div, osSetTimer countdown join, osGetTime split): 1889/1889 on operands with bit 31 set in either
 half; negative control (low-word masks removed) 323 mismatches. Not covered: non-ABI semantics of the remaining
 called shims (what each returns vs the libultra routine it replaces) — that is the next unit.
+
+## s7089 host-shim RESULT census (which shim results the game reads, and do they match the ROM)
+
+Tool: `tools/s7089_shim_result_census.py` (offline; exit 0 = controls pass, count exact, 0 duplicate calls).
+Forward liveness walk over the retail ELF (all code sections) from every `jal` to a called shim that the
+generated tree contains: a $v0/$v1 read before a write = consumed; `jr ra` with the register live = handed to the
+containing function's callers (followed, depth <= 4); a call kills both; delay slots and branch-likely
+nullification honoured. 142 ELF jal sites sit inside libultra routines that are themselves replaced by shims and
+are dropped. Controls: 0x80003874 osRecvMesg -> `beq v0,v1` must be consumed (PASS); synthetic overwrite unread
+(PASS); synthetic `jr ra` returned (PASS); ELF sites in generated code 285 == generated shim calls 285 (PASS); a
+per-function duplicate-jal detector reports 0 (PASS). Run on the pre-fix funcs_24.c the same tool reports 286 vs
+285 MISMATCH and 2 duplicates (positive control for the defect below).
+
+Result: 31 of the 55 called shims have results nobody reads. The 24 consumed ones against the ROM routine:
+
+| shim | consumer reads | shim value | ROM value | verdict |
+|---|---|---|---|---|
+| __ll_div/__ll_mul/__ull_div/__ull_rem | v0:v1 (_Litob, printf path) | 64-bit split, sign-extended halves | same | matches (divisor is the radix, never 0) |
+| __osDisableInt | v0 -> a0 of __osRestoreInt (0x80091274, musyxSynthFrame) | v0 unchanged | old Status IE | matches in effect: the only reader is the paired no-op __osRestoreInt |
+| osAiSetFrequency | v0 stored to 0x801496F4 (2 sites) | ROM float formula (s7088) | same | matches |
+| osEepromProbe | v0 != 0 | 1 (Eep4k) | 1 for a 4K EEPROM | matches |
+| osEepromLongRead/Write | v0 == 0 / error path | 0 | 0 on a present EEPROM | matches |
+| osMotorInit/Start/Stop | v0 == 0 | NOPACK/CONTRFAIL/DEVICE/0; INVALID when uninitialised | same codes | matches |
+| osPfsInitPak/AllocateFile/DeleteFile/FindFile/ReadWriteFile | v0 == 0 | 1 = PFS_ERR_NOPACK | 1 with no pak | matches (no Controller Pak on the host) |
+| osGetTime | v1 (low word), 14 sites | u64 split (s7088) | same | matches |
+| osRecvMesg | v0 == -1 / bltz (5 of 53 sites) | -1 empty+NOBLOCK, else 0 | same | matches |
+| osSendMesg | v0 == -1 (0x80007000) and factor5MutexRelease's return | -1 full+NOBLOCK, else 0 | same | matches |
+| osSpTaskYielded | v0 < 2 loop (0x80019E14) | 0 (completion-wins model) | SP_STATUS_YIELDED bit | matches the no-yield model; the ROM's task-flags write needs SP YIELD status, never set here |
+| osStartThread/osStopThread | v1 only through 4-deep void return chains (depth cap) | - | void | not a real consumer (compiled C never reads v1 after a void callee) |
+| osVirtualToPhysical | v0 stored into task fields (7 sites) | K0/K1 & 0x1FFFFFFF | same | matches (s7088) |
+
+**Defect found by the count control (FIXED): reapplyAudioConfig (retail 0x80091C88) ran initFactor5Mutex and
+osAiSetFrequency twice.** Writer: the s3531 selector-setup-contract block in tools/fixup_game_funcs_vendored.py
+replaced needles with `call + needle if "jal" in needle`; the two multi-line needles contain "jal" and their
+replacement already contains the whole block, so the block was pasted twice (the first mutex copy without its
+`goto after_0`). Retail executes each once. Effect: osCreateMesgQueue(0x80149990,1)+osSendMesg twice per call;
+a thread woken by the first send would hold the token while the second send hands out another (two holders of
+the Factor 5 mutex). Fix: the rule now prepends only for one-line needles (checked on the pristine s7082 pass:
+1 call each, block equal to live modulo the later s4307 layer), and tools/fixup_s7089_dupcall.py (idempotent,
+in the vendored chain) removed the second copies from the live tree. Built binary: one `bl` to each in
+_reapplyAudioConfig.

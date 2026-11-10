@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7088 (2026-11-10).
+Compact operational handoff, as of Session 7089 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7089 host-shim RESULT census CLOSED + one fixup defect FIXED (tools/s7089_shim_result_census.py, controls + exact site count 285==285 + duplicate-call detector).** 31 of 55 called shims have results nobody reads; the 24 consumed all match the ROM routine (table docs/N64RECOMP-WARNING-CENSUS.md s7089). The count control caught OUR s3531 fixup rule (`call + needle if "jal" in needle`) pasting reapplyAudioConfig's initFactor5Mutex and osAiSetFrequency blocks twice (retail: once each; double mutex create+send can yield two holders). Fixed in the vendored rule + tools/fixup_s7089_dupcall.py (idempotent, in the chain); binary has one call each; L6 boot to flight 310 s clean. Next: fixup-layer statement census (NEXT.md).
 
 **s7088 host-shim ABI census CLOSED for the ABI layer: 55 of 129 `*_recomp` shims are called (286 sites); 52 match, 3 differ only unreachably, 0 live (tools/s7088_shim_abi_census.py, controls built in; table in docs/N64RECOMP-WARNING-CENSUS.md).** One semantic gap: osAiSetFrequency used integer rounding where the ROM (0x80029D20) uses float math with truncation and returns -1 for dacRate < 132; the two disagreed on 22 of 400,000 inputs, none standard. FIXED to the ROM formula (ai.cpp rs64_ai_set_frequency_retail); host test tools/s7088_shim_test 400,000/400,000 plus 1889/1889 64-bit join/split cases; the game asks for 22050 and gets 22047 before and after (live boot 45 s, audio live). Next: per-shim return SEMANTICS vs the ROM routine each one replaces (NEXT.md).
 
@@ -290,7 +292,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 16. **Misnomer rename: CLOSED s7080** (menu overlay s7072-s7077, text-slot family s7078/s7080, controller input s7079). Tools: tools/apply_symbol_renames.py + tools/s7075_fnsum.py. Reopen only on an owner report.
 17. **N64Recomp self-branch miscompile: FIXED s7081** (tools/fixup_selfbranch.py in the vendored fixup chain, differential test vs retail bytes). Any new `branching outside` warning after a regen: rerun tools/scan_selfbranch.py + the test.
 18. **N64Recomp lowering censuses: series CLOSED s7087** (s7082 warnings, s7083 control flow, s7084 FPU, s7085 integer + ddivu /0 fix, s7086 memory/immediates/branches, s7087 residual opcodes + 120/120 mnemonic coverage + osGetCount sign-extension fix; tools/s708[2-7]_*). Rerun all after any regen.
-19. **Host-shim ABI census: NEXT** (librecomp/src + src `*_recomp` shims vs libultra prototypes: arg registers, 64-bit pairs, stack args, return extension; NEXT.md).
+19. **Host-shim census: CLOSED s7088 (ABI) + s7089 (results vs ROM; s3531 duplicate-call fixup bug fixed).**
+20. **Fixup-layer statement census: NEXT** (every pristine retail statement once per function in the live tree, instrumentation normalised; NEXT.md).
 
 ## Evidence index
 

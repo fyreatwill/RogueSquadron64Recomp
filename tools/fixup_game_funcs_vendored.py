@@ -35233,7 +35233,10 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
         ]:
             if text.count(needle) != 1:
                 raise RuntimeError(f"s3531 {p.name}: anchor count={text.count(needle)} for {needle.strip()}")
-            text = text.replace(needle, call + needle if "jal" in needle else call, 1)
+            # s7089: only the one-line jal-comment needles get the call PREPENDED; the multi-line needles are
+            # full call blocks whose replacement already contains them (prepending duplicated the block, so
+            # reapplyAudioConfig ran initFactor5Mutex and osAiSetFrequency twice).
+            text = text.replace(needle, call + needle if needle.count("\n") == 1 else call, 1)
         changed = True
         report.append("funcs_24.c: s3531 selector setup contract patched x5")
 
@@ -42494,3 +42497,5 @@ _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_
 # s7081: N64Recomp backward out-of-function branch miscompile (16 resampler helper exits, s6871) repaired by a
 # return-and-dispatch; differential test tools/s7081_selfbranch_test/run_test.py. ROGUESQ_SELFBRANCH_FIX=0 = old path.
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_selfbranch.py")), str(base)])
+# s7089: remove the duplicated s3531 call blocks from an already-patched tree (idempotent; no-op after the rule fix above).
+_sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_s7089_dupcall.py")), str(base)])

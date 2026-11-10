@@ -1,16 +1,19 @@
-# NEXT: owner reports first; otherwise per-shim return semantics vs the ROM routine each one replaces
-HYPOTHESIS-ID: host-shim-semantics-census
-Context: s7088 closed the o32 ABI layer of the 55 called `*_recomp` shims (tools/s7088_shim_abi_census.py; 0 live) and
-found one semantic gap by reading the ROM (osAiSetFrequency rounding, fixed). The ROM still contains every replaced
-libultra routine: `mips64-elf-objdump -d ../rogue_squadron64/build/roguesquadron.elf --start-address=<fn>`.
+# NEXT: owner reports first; otherwise fixup-layer statement census (every retail statement once per function)
+HYPOTHESIS-ID: fixup-layer-statement-census
+Context: s7089 closed the host-shim layer (ABI s7088 + results s7089, tools/s7089_shim_result_census.py) and found that
+OUR fixup layer, not N64Recomp, had duplicated two call blocks in reapplyAudioConfig (s3531 `call + needle` rule; fixed,
+tools/fixup_s7089_dupcall.py). The s7089 detector only sees duplicated `jal` comments. A duplicated or dropped
+non-call statement (store, delay slot, branch) from any of the ~40k lines of fixup/apply layers would be invisible.
 Unit (offline, one tool, no game run unless a live defect is found):
-1. For each of the 55 called shims, list which guest registers / memory the callers READ after the call (v0, v1, out-
-   pointer args): walk the generated code after each `X_recomp(rdram, ctx)` site in ../N64Recomp/RecompiledFuncs up to the
-   next write of v0/v1 (reads before write = consumed). Shims whose results nobody reads are done.
-2. For consumed results, compare the shim's value with the ROM routine's: return codes (osRecvMesg/osSendMesg/osJamMesg
-   -1 on full/empty with NOBLOCK, osSetTimer 0, osEepromLongRead/Write 0 or CONT_NO_RESPONSE_ERROR, osContInit bitpattern,
-   osEepromProbe type, osPfs* NOPACK, __osDisableInt previous mask, osContGetQuery status bytes).
-3. Discriminator per shim: {result unread, matches ROM, differs-unreachable, differs-live}. A differs-live finding gets
-   a fix + host test + a live check in the same session; lib/ edits need ./submodule-patches/export.sh + commit.
-Positive control: the pre-s7088 osAiSetFrequency text must show as differs (22 inputs); negative: __osDisableInt with v0
-unread by every caller must come out "result unread".
+1. Per function, extract the guest statements N64Recomp emits (lines following each `// 0xADDR: insn` comment up to the
+   next comment: assignments to ctx->rN / ctx->fN, MEM_* stores, gotos, if-heads, calls) from the pristine front-end
+   pass scratch/s7082/regen and from the live ../N64Recomp/RecompiledFuncs (+ build/factor5_ucode if it has a pristine).
+2. Normalise known instrumentation wrappers (s4307 synth-read `{ uint32_t s4575_a = ...; X; rs64_... }`, S5798 store
+   wrappers `{ MEM_W(..) = ..; RS64_S5798_ST(..); }`, `if (__builtin_expect(g_rs64_store_diag,0)) ...` lines, PATCH-tagged
+   lines) back to the bare statement, then compare the per-address statement multisets.
+3. Classify every address whose live count != pristine count: {instrumentation-only, intended PATCH (tag names it),
+   duplicate, dropped}. A duplicate/dropped without a PATCH tag naming the change is a defect: fix in the fixup that wrote it.
+Controls: positive = the pre-s7089 reapplyAudioConfig (scratch/s7089/funcs_24.pre.c.gz) must show 0x80091CB0 and 0x80091CBC
+as duplicates; negative = a function with no patches (pick one from the pristine/live diff with zero changed lines) gives 0.
+Expected outcomes: 0 untagged dup/drop (closes the fixup layer); or N sites, each one a named writer + fix + rebuild + L6 boot.
+Live check recipe (s7089): `zsh scratch/s7089/run.zsh` (L6 dd1 4:3 FPS60, boot to flight).

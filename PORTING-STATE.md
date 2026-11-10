@@ -186573,3 +186573,42 @@ HYPOTHESIS-ID: host-shim-abi-census. Offline unit from NEXT.md, plus one live bo
 - In plain words: this census refutes a live ABI defect in the called shims, selects the ROM-rounding gap in
   osAiSetFrequency as the one real deviation and closes it with a code fix (the rs64_ai_set_frequency_retail lines are
   the fix, not instrumentation).
+
+## Session 7089 (2026-11-10) — host-shim result census: 31/55 called shim results unread, 24 consumed all match the ROM; found and fixed a fixup-made duplicate of reapplyAudioConfig's initFactor5Mutex + osAiSetFrequency calls
+
+HYPOTHESIS-ID: host-shim-semantics-census. Offline unit from NEXT.md, plus a rebuild and one live boot for the fix.
+- What ran: new tools/s7089_shim_result_census.py. It runs a forward $v0/$v1 liveness walk over the retail ELF (all code
+  sections) from every `jal` to a called shim that the generated tree contains. It follows `jr ra` into callers (depth
+  4) and honours delay slots and branch-likely slots. It also checks that ELF sites equal generated call sites, and it
+  flags any `jal` address that appears twice inside one generated function. Output: scratch/s7089/census_post.txt, exit 0.
+- Controls: positive 0x80003874 osRecvMesg->beq v0,v1 consumed PASS; synthetic overwrite unread PASS; synthetic jr ra
+  returned PASS. Count: 285 ELF sites == 285 generated calls (3 osViSetMode sites whose jal comment was stripped by
+  patches are matched by delay slot). 142 ELF sites inside replaced libultra code are dropped.
+- Result: 31 called shims' results are never read. The 24 consumed ones were checked by hand against the ROM routine
+  (table in docs/N64RECOMP-WARNING-CENSUS.md s7089); all match. __osDisableInt's v0 (left untouched) goes only to the
+  no-op __osRestoreInt. osSpTaskYielded=0 fits the no-yield model. The osStart/StopThread "v1" readers are 4-deep chains
+  through void functions, not real consumers. NEXT.md's planned negative control ("__osDisableInt result unread") was
+  wrong: one live caller reads it, but only into the paired no-op.
+- DEFECT (found by the count control, FIXED): the live reapplyAudioConfig (retail 0x80091C88, reached from
+  runVideoFrameTick->reapplyDisplayMode on a display-mode change) ran initFactor5Mutex twice and osAiSetFrequency twice.
+  The first mutex copy had no `goto after_0`. ORIGIN: the s3531 selector-contract block in
+  tools/fixup_game_funcs_vendored.py used `call + needle if "jal" in needle`. Its two multi-line needles contain "jal",
+  and their replacement already holds the whole block, so the block was pasted twice. Retail runs each once. Not a
+  legitimate value: it is our fixup's text bug. Risk: osCreateMesgQueue(0x80149990,1)+osSendMesg twice. A thread
+  woken by the first send keeps the token, and the second send hands out another (two mutex holders).
+  Fix: the rule now prepends only one-line needles. Checked on the pristine s7082 pass: 1 call each, and the block
+  equals the live one apart from the later s4307 layer. New tools/fixup_s7089_dupcall.py (idempotent, in the vendored
+  chain after selfbranch) removed the second copies from the live funcs_24.c. Pre-fix copy: scratch/s7089/funcs_24.pre.c.gz.
+  On that copy the census reports 286 vs 285 MISMATCH and 2 duplicates (positive control). On the fixed tree it
+  reports 0. Built binary: one `bl` each to initFactor5Mutex and osAiSetFrequency_recomp in _reapplyAudioConfig.
+- Live: rebuilt, `zsh scratch/s7089/run.zsh` (L6 dd1 4:3 FPS60): hold 305 s, flight 310 s, alive at end, 0 VI stalls,
+  0 crash lines, `[m5-selector-ai-return-control] input=0x561F` (audio set, 22047 Hz). The ai-boundary rows all carry
+  ra=0, so they cannot split calls by site. The live call count was not measured; the static (source + binary)
+  evidence stands alone for "called once".
+- Rules out: a host shim returning a value the game reads that differs from the ROM routine.
+- Discrimination: H-shim-semantic-live (a consumed shim result differs from the ROM) is refuted for all 24 consumed
+  shims. H-fixup-dup (our fixup layer changes retail control flow) is selected by the count control, with 1 instance.
+- In plain words: the host shims hand the game the same answers the real N64 library would. The census did catch one
+  of our own patch scripts making the audio re-init run twice, and that is fixed.
+- Next: a census of the whole fixup layer, checking each retail statement appears once per function against the
+  pristine pass (NEXT.md, slug fixup-layer-statement-census). The s7089 detector only sees duplicated jal comments.
