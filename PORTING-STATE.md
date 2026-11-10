@@ -186691,3 +186691,8 @@ Weakness, labelled: the splice check proves each spliced run is SOME contiguous 
 that it is the run at the intended IMEM address (a run copied from the wrong offset of the same overlay would
 pass). Single-source for that sub-claim; fixup 6* asserts the external labels of each region.
 Next: RSP vector-unit fast paths (NEXT.md, slug rsp-vu-fastpath-diff).
+Discrimination (s7091): this refutes H-ucode-fixup-dup (a fixup block duplicating or dropping a retail RSP
+instruction) and selects H-ucode-fixup-clean for every compiled ucode file; it closes the RSP fixup layer.
+Separately it refutes "fixup_factor5_ucode.py regenerates the live ucode from a fresh pass" (it exits at 6d /
+24); root cause = stale anchors on text later blocks rewrote; fixed by tools/ucode_regen.sh + patches. Next
+discriminator: fast-path vs byte-loop DMEM vector loads/stores and SIMD vs SISD VRCP/VSAR (rsp-vu-fastpath-diff).
