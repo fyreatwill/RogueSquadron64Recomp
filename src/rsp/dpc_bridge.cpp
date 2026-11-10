@@ -149,7 +149,9 @@ static uint32_t s_task_max_hi = 0;
 // resume-vs-fresh branches based on DPC registers; state leaking from the
 // previous task steers ~1/5 tasks into a resume path that loads the trig
 // segment over the DL staging area (2026-07-13 canary bisect).
+extern "C" int rs64_s7095_on; extern "C" void rs64_s7095_task(); extern "C" void rs64_s7095_cur_read(uint32_t ours, int escaped);
 extern "C" void rs64_dpc_reset() {
+    if (rs64_s7095_on) rs64_s7095_task();
     g_rsp_dpc_start = 0;
     g_rsp_dpc_end = 0;
     g_rsp_dpc_current = 0;
@@ -166,12 +168,14 @@ uint32_t rs64_dpc_current_read() {
     if (v == s_last) {
         if (++s_repeats >= 64) {
             s_repeats = 0;
+            if (rs64_s7095_on) rs64_s7095_cur_read(v, 1);
             return v + 8;
         }
     } else {
         s_last = v;
         s_repeats = 0;
     }
+    if (rs64_s7095_on) rs64_s7095_cur_read(v, 0);
     return v;
 }
 

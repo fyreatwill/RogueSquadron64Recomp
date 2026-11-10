@@ -1,19 +1,20 @@
-# NEXT: owner reports first; otherwise the RSP-side DPC register model vs hardware
-HYPOTHESIS-ID: rsp-dpc-reg-model
-Context: the recompiled-RSP layer and its runtime are audited end to end (s7091 fixups, s7092 VU memory + divide,
-s7093 scalar lowering, s7094 SP DMA + SP cop0: one off-by-one fixed in rsp.cpp audio ucode_data staging). What is
-left on the RSP side is the DPC (RDP command) register model the ucode reads and writes: mfc0 DPC_STATUS /
-DPC_CURRENT / DPC_END and mtc0 DPC_START / DPC_END / DPC_STATUS (gfx TU lines ~396-464 and ~2444-2515, audio TU 17/38).
-RSPRecomp emits RSP_DPC_STATUS_READ() etc. (../N64Recomp/RSPRecomp/src/rsp_recomp.cpp; fixups in
-tools/ucode_fixed/factor5_ucode_recompiled.c.patch); the bridge is src/rsp/dpc_bridge.cpp.
-Hypotheses: H-dpc-ok (every value the ucode branches on matches what hardware returns at that point: XBUS/DMEM bit,
-START_VALID, END_VALID, CMD_BUSY/PIPE_BUSY, CURRENT advance) vs H-dpc-shape (a status bit the ucode polls is returned
-differently, so a wait loop exits early/never, or CURRENT is reported before the RDP consumed it, changing the
-ucode's buffer-wrap decision) vs H-dpc-xbus (the ucode toggles XBUS via DPC_STATUS writes and the bridge ignores it).
-Unit (offline first):
-1. tools/s7095_dpc_census.py: list every DPC mfc0/mtc0 site in the 3 TUs, the bits each branch tests (andi masks),
-   and what the bridge returns / does for each (code-read of dpc_bridge.cpp + RSPRecomp's lowering).
-2. Reference: angrylion/parallel-rdp or cxd4 DPC handling + n64brew DPC_STATUS bit table; name each mismatch.
-3. If a mismatch is live, one passive counter run like s7094 (ROGUESQ_S7094_DMASHAPE pattern, one gated call),
-   L6 boot to flight `zsh scratch/s7094/run.zsh` with the env swapped.
-Controls: site-count control (DPC site totals equal the census grep); positive = a mutated bit mask the detector flags.
+# NEXT: owner reports first; otherwise RDP forwarding coverage of the DPC bridge
+HYPOTHESIS-ID: rdp-submit-coverage
+Context: the RSP side is closed end to end (s7091 fixups, s7092 VU, s7093 scalar, s7094 DMA/cop0, s7095 DPC registers:
+src/rsp/s7095_dpc_model.cpp shadow, 0 branch-relevant differences). Untested is the next layer: does src/rsp/dpc_bridge.cpp
+rsp_dpc_submit_impl (high-water mark s_submit_last_end, wrap flush ROGUESQ_DPC_WRAP_FLUSH, deferral rs64_dpc_defer_*,
+s7027 bump fast path, prewrap) forward to RT64 exactly the bytes hardware would consume, i.e. the union of [CURRENT, END)
+per END write, each once and in order?
+Hypotheses: H-fwd-exact (forwarded byte stream == hardware consumption stream) vs H-fwd-drop (some ranges never reach RT64,
+e.g. at ring wraps or task boundaries: a candidate for G5b terrain drops) vs H-fwd-dup (ranges forwarded twice: a candidate
+for duplicated draws or cost) vs H-fwd-order (all bytes, wrong order across a wrap).
+Unit (ONE instrument, ONE run):
+1. Extend s7095_dpc_model.cpp: on each shadow END write, append the hardware-consumed range [cur, END) to a per-task list;
+   in rs64_dpc_record_submit (dpc_bridge.cpp ~5929) append the forwarded range; at task end (rs64_s7095_task) compare the
+   two lists as byte sets and as sequences: count missing bytes, duplicated bytes, out-of-order ranges, per task, with the
+   first 8 examples (task, range, wrap flag).
+2. Positive control in the self-test (drop one range, duplicate one range, swap two ranges: each must be flagged), plus a
+   same-run mutant arm ROGUESQ_S7095_DPC=ctl that skips forwarding one range per 1000 tasks in the comparison only.
+3. Run scratch/s7095/run.zsh (L6 dd1 4:3) and then the same at dd4 16:9 (owner recipe, ring wraps more often) back to back.
+Outcomes: 0/0/0 at both = H-fwd-exact (close the bridge); missing>0 = H-fwd-drop, name the code path (wrap/defer/fast path)
+and fix it; dup>0 = H-fwd-dup; order>0 = H-fwd-order.

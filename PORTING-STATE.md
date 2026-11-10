@@ -186822,3 +186822,38 @@ read is what hardware returns. DPC_* reads go through the DPC bridge (RSP_DPC_ST
 DISCRIMINATION: this selects H-dma-shape for exactly one live site (audio ucode_data staging, fixed); H-dma-ok holds for
 every DMA the 3 ucode TUs themselves issue (0 defect shapes in 83 M + 136 M DMAs, controls firing); this refutes H-cop0 by
 code-read (single-source). Rules out the RSP DMA model as a source of DMEM corruption. Next: DPC register model (NEXT.md).
+
+## Session 7095 (2026-11-10) — RSP-side DPC register model vs hardware CLOSED: 0 live branch-relevant differences (15/15 ROM sites, 92 M live reads shadowed)
+HYPOTHESIS-ID: rsp-dpc-reg-model. Hypotheses: H-dpc-ok (every DPC value the ucode branches on gives the same branch
+outcome as hardware with an instantly consuming RDP) vs H-dpc-shape (a polled status bit, or a CURRENT value reported too
+early, changes a wait loop or the ring-wrap / task-entry resume decision) vs H-dpc-xbus (the ucode sets XBUS and the bridge
+drops the write).
+1. Offline, tools/s7095_dpc_census.py (exit 0): decodes the ROM words (s7093 decoder, independent of RSPRecomp) for every
+   mfc0/mtc0 on cop0 8-15. main 12 sites (3 in delay slots, which RSPRecomp emits twice, so 15 macro uses; live 15), ucode_b
+   2/2, boot 1/1; overlay TUs 6 or 15 uses (resident copies, s7091). The STATUS bits tested are only 0x1 XBUS (0x1E14, b
+   0x1080), 0x100 DMA_BUSY (b 0x1098, boot 0x107C) and 0x400 START_VALID (0x114C, 0x1E48). An idle RDP that consumes
+   instantly, with XBUS cleared, reports 0 for all three, and our RSP_DPC_STATUS_READ() is a constant 0. The only STATUS
+   write is 0x1E58 value 0x1 (clear XBUS), so XBUS is never set: H-dpc-xbus refuted. The audio ucode (src/rsp/aspMain.cpp)
+   has no DPC access. Positive controls flagged: mask mutated to 0x80 (CBUF_READY, hardware 1) and write mutated to 0x2.
+2. Live, new passive instrument src/rsp/s7095_dpc_model.cpp (ROGUESQ_S7095_DPC=1; hooks in include/rsp_dpc_macros.h
+   and in dpc_bridge.cpp rs64_dpc_current_read / rs64_dpc_reset; startup self-test 4/4 pass, crafted sequences fire both
+   wait predicates and the escape fires 2 times in 130 polls). It keeps a hardware shadow: START sets START_VALID and leaves
+   CURRENT alone; END loads CURRENT from START, then consumes to END; nothing resets between tasks. It compares every read
+   with ours. Run: L6 dd1 4:3, boot to flight (scratch/s7095/run.zsh), flight 309 s, 0 crash, 0 VI stall. Over 22,041 tasks,
+   92.27 M END writes, 92.30 M CURRENT reads, 92.31 M STATUS reads and 23,429 ring wraps (no laps, max chunk 0x160):
+   - CURRENT differs from the shadow in only two contexts. 'entry' (22,039, which is tasks-2): our per-task reset gives 0
+     where the shadow has the previous END. 'pend' (23,429, which equals wraps): we snap CURRENT to the new START, where the
+     shadow keeps the old END. In 'other' it differs 0 times.
+   - Shadow wait predicates: L_115C (spin while CURRENT == new START) 0, L_116C (spin while CURRENT is in (START,
+     START+len]) 0, so the hardware value exits both wrap waits on the first poll, as ours does. START_VALID pending at a
+     STATUS read 0, START_VALID pending at task start 0, XBUS differs 0.
+   - Task-entry decision (0x1DB0..0x1E44): the shadow has CURRENT == END at every entry (hw_cur_ne_end_at_entry 0), so
+     hardware takes branch 4 (CURRENT == END) or branch 2 (buffer start above END). Ours takes branch 2 (END 0). Both go to
+     L_1E48 for a fresh ring start. The resume path (branch 5) needs CURRENT != END, so it is unreachable with an instant
+     RDP under either model.
+   - Bounded-poll escape (rs64_dpc_current_read returns v+8 after 64 identical polls): 0 fires in 92.3 M reads. It is dead
+     in live play, and the shadow shows that hardware would never spin there either. It stays as a deadlock guard.
+DISCRIMINATION: H-dpc-ok is selected on two lines (ROM decode plus the live shadow). H-dpc-shape is refuted: every
+divergence is in a context where both values give the same branch. H-dpc-xbus is refuted (the only write clears XBUS). This
+closes the RSP side end to end (s7091-s7095). No fix needed. Next: the bridge's RDP forwarding coverage, i.e. whether every
+byte hardware would consume in [CURRENT, END) reaches RT64 exactly once (NEXT.md, slug rdp-submit-coverage).
