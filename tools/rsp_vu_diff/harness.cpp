@@ -13,6 +13,18 @@ static uint8_t g_dmem[0x2000];
 #define RSP_MEM_W(a, b) (*(int32_t*)&g_dmem[(b) & 0xFFC])
 #define RSP_MEM_WU(a, b) (*(uint32_t*)&g_dmem[(b) & 0xFFC])
 static void rs64_m5_audio_dmem_vector_store(...) {}
+// s7092: symbols the live rsp_vu_impl.hpp now references (loads/stores are not exercised here; tools/s7092_vu_mem_test covers them)
+extern "C" int rs64_rsp_hooks_on; int rs64_rsp_hooks_on = 0; static int rs64_g1e_dmem = 0;
+static uint32_t rs64_dmem_w(uint32_t) { return 0; } static void rs64_dmem_w_set(uint32_t, uint32_t) {}
+static uint16_t rs64_dmem_h(uint32_t) { return 0; } static void rs64_dmem_h_set(uint32_t, uint16_t) {}
+extern "C" void rs64_spike_sdv_note(uint32_t, uint32_t, const uint32_t*) {}
+extern "C" int rs64_sdv_snap_enabled(void) { return 0; }
+extern "C" int rs64_vu_ring_enabled(void) { return 0; }
+extern "C" void rs64_vld_note(uint32_t, uint32_t, const char*) {}
+extern "C" void rs64_vu_ring_vte(uint32_t, const uint16_t*) {}
+extern "C" uint32_t rs64_vu_ring_prev_vd(void) { return 0; }
+extern "C" void rs64_vu_ring_capture_prev(const uint16_t*) {}
+extern "C" void rs64_vu_ring_push(uint32_t, uint32_t, uint32_t, const uint16_t*) {}
 static uint16_t rspReciprocals[512]; static uint16_t rspInverseSquareRoots[512];
 #include "rsp_vu_impl.hpp"
 static uint64_t rs = 0x9E3779B97F4A7C15ull;

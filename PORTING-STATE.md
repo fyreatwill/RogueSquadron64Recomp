@@ -186696,3 +186696,40 @@ instruction) and selects H-ucode-fixup-clean for every compiled ucode file; it c
 Separately it refutes "fixup_factor5_ucode.py regenerates the live ucode from a fresh pass" (it exits at 6d /
 24); root cause = stale anchors on text later blocks rewrote; fixed by tools/ucode_regen.sh + patches. Next
 discriminator: fast-path vs byte-loop DMEM vector loads/stores and SIMD vs SISD VRCP/VSAR (rsp-vu-fastpath-diff).
+
+## Session 7092 (2026-11-10) — RSP vector-unit DMEM fast paths and divide unit: 8.59 G compares, 0 differences (tools/s7092_vu_mem_test); s6301 SIMD/SISD harness repaired against live headers
+
+Unit (NEXT.md rsp-vu-fastpath-diff). Boring first: op census of the three compiled ucode TUs
+(build/factor5_ucode/*.c) — loads LBV<1,3,5,7,9> LDV<0,8> LLV<0,8> LQV<0> LRV<0> LSV<0,2,4,8,14> LUV<0>, stores
+SBV<1..13 odd> SDV<0,8> SLV<0,4,8,12> SQV<0> SSV<0..14 even> SUV<0>, divide VRCP<8,9,11,13> VRCPH<8,9,11,12,15>
+VRCPL<11,12,15>, VMOV<8,9,10,12,13>, VSAR<8,9,10>; no VRSQ*, VRND, VMACQ, LTV/STV, LWV. VMOV/VSAR/VRCP* have no
+SIMD/SISD split of their own (only the vt(e) broadcast, already in s6301), so (c) was re-scoped from SIMD-vs-SISD to
+ares-vs-an-independent-implementation.
+
+New tools/s7092_vu_mem_test (harness.cpp + run.sh, builds from the LIVE headers each run):
+(a)/(b) every vector load/store (11 loads, 10 stores incl. all the ucode uses) x every e 0..15 x every DMEM address
+0..0xFFF plus a 0x40000000-aliased copy, random vector + DMEM, fast path (rs64_g1e_dmem=1) vs byte loop (=0),
+comparing the register, all of DMEM and an untouched guard page; scalar RSP_MEM_{W,HU,H}_LOAD/{W,H}_STORE the same.
+(c) divide unit vs cxd4 do_div + div_ROM (rs64-oracle/src/mupen64plus-rsp-cxd4/vu/divide.c, extracted verbatim):
+VRCP<8>/<11>, VRSQ<8> all 65536 single inputs; VRCPL<12> after a single divide (DIVDP clear); VRCPH->VRCPL<8> and
+VRSQH->VRSQL<15> over all 2^32 double inputs, full 32-bit DivOut (low lane + high via the next VRCPH).
+Result: 8,592,990,208 compares, 0 bad (31 s). Positive controls (same tool, mutated copies of the live text):
+ldv_lane (xor 1 into LDV's second fast word) -> 2048 per LDV e=0/4/8 = every aligned address; wrap (rs64_dmem_w mask
+0xFFC -> 0x1FFC) -> exactly 2 per LDV e (address 0xFFC and its alias: the +4 word must wrap to 0); lqv_cnt (LQV count
+from address&7) -> 1024 LQV e=0; rcp_rom (one reciprocal entry flipped) -> 390 divide diffs. The run.sh refuses a
+mutant that did not apply.
+
+Side repair: tools/rsp_vu_diff (s6301) no longer built — its committed simd/sisd rsp_vu.hpp copies predate s6774's
+r128::word() and the harness lacked the rs64_* symbols the live impl references. run.sh now regenerates both copies
+from the live header (sisd = SSE4_1 branch flags flipped, refuses if the flip did not apply); harness got stubs.
+Live result: IDENTICAL 496/496. Same-run positive control (temp copy, SISD VCL ACCL lane 2 xor 1): VCL differs on
+all 16 e, nothing else. Extra arm: -DRS64_RSP_NEON_MAC=1 (the s6941 NEON multiply bodies the gfx TU ships) vs SIMD:
+496/496 identical.
+
+Discrimination (s7092): refutes H-fast-bad (no (op, e, address) pair where the s6774 aligned DMEM fast paths differ
+from ares' byte loops, wrap at 0xFFF and high-bit aliasing included) and H-div-bad (ares' computed reciprocal /
+inverse-sqrt tables + VRCP/VRCPL/VRCPH/VRSQ/VRSQL sequencing equal cxd4's MAME-derived ROM path on every input);
+selects H-fast-ok and H-div-ok. Two independent lines for the divide (ares formula tables vs MAME ROM dump via cxd4);
+the DMEM paths are proven equal to ares, not to hardware. Closes the VU layer for every op the ucode compiles.
+Next discriminator: RSPRecomp's scalar-unit lowering (su ops, branch/delay slots, mfc0/mtc0 DMA and semaphore
+registers, IMEM wrap of jr targets) against cxd4 su.c semantics (slug rsp-su-lowering-census).

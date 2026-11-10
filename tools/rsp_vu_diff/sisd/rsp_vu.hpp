@@ -79,6 +79,9 @@ struct RSP {
         auto byte(u32 index) const -> uint8_t { return ((uint8_t*)&u128)[15 - index]; }
 
         auto element(u32 index) -> uint16_t& { return ((uint16_t*)&u128)[7 - index]; }
+        // s6774 G1e: big-endian vector word n (bytes 4n..4n+3) as one native u32; see rs64_dmem_w in rsp.hpp.
+        auto word(u32 index) -> uint32_t& { return ((uint32_t*)&u128)[3 - index]; }
+        auto word(u32 index) const -> uint32_t { return ((uint32_t*)&u128)[3 - index]; }
         auto element(u32 index) const -> uint16_t { return ((uint16_t*)&u128)[7 - index]; }
 
         auto u8(u32 index) -> uint8_t& { return ((uint8_t*)&u128)[15 - index]; }

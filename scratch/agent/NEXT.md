@@ -1,21 +1,26 @@
-# NEXT: owner reports first; otherwise RSP vector-unit fast-path differential (DMEM load/store + non-elementwise ops)
-HYPOTHESIS-ID: rsp-vu-fastpath-diff
-Context: s7091 closed the RSP ucode fixup layer (tools/s7091_ucode_insn_census.py, 0 unexplained; regen via
-tools/ucode_regen.sh). The layer under it is librecomp's RSP vector unit (lib/N64ModernRuntime/librecomp/include/
-librecomp/rsp_vu_impl.hpp). tools/rsp_vu_diff (s6301) fuzzed 31 ELEMENTWISE ops SIMD vs SISD (496/496 identical).
-NOT covered, but used by the compiled gfx/audio ucode: (a) the s6774 aligned DMEM fast paths
-(`if (rs64_g1e_dmem && !(address & 3))` in LDV/SDV, LLV/SLV, LSV/SSV, LQV/SQV) vs their byte-loop slow paths;
-(b) LBV/SBV/LRV/LUV/SUV; (c) VRCP/VRCPH/VRCPL, VMOV, VSAR (non-elementwise, state-carrying DivIn/DivOut).
-Hypotheses: H-fast-ok (fast path == byte loop for every e, address, incl. 0xFFF wrap and the e<=8 boundary) vs
-H-fast-bad (some (e, address) pair differs: wrong lane, wrong wrap, endian); for (c) H-div-ok vs H-div-bad
-(SIMD vs SISD differ on a VRCP/VRCPH/VRCPL sequence or VSAR element).
-Unit (offline, one tool, extend tools/rsp_vu_diff harness or a new tools/s7092_vu_mem_test):
-1. Exhaustive for (a)/(b): every template e (0..15), every DMEM address 0..0xFFF, random vector + DMEM contents;
-   run with rs64_g1e_dmem=1 and =0 and compare full vector reg + DMEM bytes. Same for stores.
-2. (c): random sequences of VRCPH->VRCPL->VRCP (and VRSQ family if compiled) in SIMD vs SISD builds, compare vd +
-   DivIn/DivOut/DivDP state; VSAR e=8/9/10 and others.
-Controls: positive = flip one lane in a copy of a fast path (or the wrap mask) and show it is flagged; negative =
-the same op run twice with the same path.
-Expected outcomes: all equal (closes the VU layer for the ops the ucode uses), or a named (op, e, address) pair ->
-fix in lib/ (then ./submodule-patches/export.sh + commit) + `zsh tools/ucode_regen.sh verify` + L6 boot
-(`zsh scratch/s7089/run.zsh`).
+# NEXT: owner reports first; otherwise RSPRecomp scalar-unit lowering census vs cxd4 su.c
+HYPOTHESIS-ID: rsp-su-lowering-census
+Context: s7092 closed the RSP vector unit (tools/s7092_vu_mem_test 0/8.59 G; tools/rsp_vu_diff 496/496 live).
+The remaining RSP layer is how ../N64Recomp/RSPRecomp/src/rsp_recomp.cpp lowers SCALAR instructions into
+build/factor5_ucode/*.c. Mnemonics used (s7092 census over the 3 compiled TUs): ori addiu lhu or jal mtc2 andi sll
+bne addu beq lw lbu j sh mtc0 sw jr mfc0 sb mfc2 subu slt addi srl and lh lui sra negu blez bgtz sllv bgez bltz
+xori sub srlv nor xor break add sltiu lb cfc2 b.
+Hypotheses: H-su-ok (every lowering matches RSP semantics: 32-bit wrap, no overflow traps on add/addi/sub,
+sign/zero extension of lh/lb/lhu/lbu incl. UNALIGNED scalar loads/stores (RSP allows them, byte loop), shift
+amount masks &31, slt/sltiu signedness, mfc2/mtc2/cfc2 element byte order and e=15 wrap, branch delay slots,
+jr/jal target masking to IMEM 0xFFC (and the link value), r0 never written) vs H-su-bad (a named op/operand
+shape lowers differently; candidates: sltiu sign-extended immediate compared unsigned, mfc2 at odd e, cfc2 of
+VCC/VCE packing, srlv/sllv mask, jal link = pc+8 & 0xFFF).
+Unit (offline, one tool tools/s7093_su_census.py + a host test like tools/s7085_int_test):
+1. Parse every RSPRecomp record ("// mnem ops" + C lines) in the 3 TUs; per mnemonic, classify the emitted C
+   shape(s) and count sites (expect one shape per mnemonic per operand class; print any outlier).
+2. For each shape, a host C test: the emitted expression vs a cxd4 su.c / vu MFC2/MTC2/CFC2 reference over
+   exhaustive 16-bit immediates x random registers (and every DMEM address for the loads/stores, using the live
+   RSP_MEM_* block like s7092 run.sh does).
+3. Control flow: every jr/jal/j/b* target resolves to an existing label or the dispatch switch; delay-slot
+   instruction emitted before the branch is taken (check order in each record).
+Controls: positive = mutate one emitted shape in a copy (e.g. sltiu compare signed) and show the test flags it;
+count control = per-mnemonic site totals equal the RSPRecomp instruction count of the fresh pass
+(tools/ucode_regen.sh verify regenerates it).
+Expected outcomes: 0 outliers / 0 diffs (closes the RSP scalar layer), or a named (op, operand shape) -> fix in
+RSPRecomp or tools/fixup_factor5_ucode.py, `zsh tools/ucode_regen.sh snapshot`, L6 boot (`zsh scratch/s7089/run.zsh`).

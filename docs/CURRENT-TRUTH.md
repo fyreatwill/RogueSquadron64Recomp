@@ -1,12 +1,16 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7091 (2026-11-10).
+Compact operational handoff, as of Session 7092 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7092 RSP vector-unit DMEM fast paths + divide unit CLOSED: 8,592,990,208 compares, 0 differences (tools/s7092_vu_mem_test, `zsh run.sh`, exit 0).** Every vector load/store x every e x every DMEM address (+ high-bit alias): s6774 fast path == ares byte loop (vector, all DMEM, guard page); scalar W/HU/H loads/stores the same; VRCP/VRSQ single (all 65536), VRCPH->VRCPL and VRSQH->VRSQL double (all 2^32) == cxd4's MAME-ROM do_div (independent implementation). Controls: LDV lane 2048/e, wrap 2/e (0xFFC), LQV count 1024, ROM entry 390. tools/rsp_vu_diff (s6301) repaired to build from live headers: 496/496 SIMD==SISD, NEON-MAC arm 496/496, VCL control fires on 16/16 e.
+- In plain words: the sped-up microcode memory accesses and the divide instructions give exactly the same answers as the reference code, on every possible input.
+- Next: RSPRecomp scalar-unit lowering vs cxd4 su.c (NEXT.md, slug rsp-su-lowering-census).
 
 **s7091 RSP ucode fixup census CLOSED, and the fixed ucode is regenerable again.** tools/s7091_ucode_insn_census.py (region-aware, controls built in): resident 1111/1111 retail instructions, 9 spliced overlay runs exact contiguous copies of their source, audio 1119/1119, boot 65/65; 4 modified records all keep the retail lines (fixup 1/1a exit rewrites, fixup 4 gated counter); 0 unexplained. Defect found: build/ is gitignored and fixup_factor5_ucode.py cannot rebuild the live ucode from a fresh RSPRecomp pass (stale anchors; fixup 24 ungated exits 1 on audio/boot before writing). Fresh-regen path now: `zsh tools/ucode_regen.sh verify|restore|snapshot` (RSPRecomp + tools/ucode_fixed/*.patch; verify = 12/12 byte-identical). After any deliberate fixup edit to the live ucode run `snapshot` and commit the patches.
 - In plain words: the patch scripts for the graphics/audio microcode only add checks and logging, they never repeat or lose a game instruction; and the patched microcode can now be rebuilt from scratch.
@@ -301,7 +305,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 18. **N64Recomp lowering censuses: series CLOSED s7087** (s7082 warnings, s7083 control flow, s7084 FPU, s7085 integer + ddivu /0 fix, s7086 memory/immediates/branches, s7087 residual opcodes + 120/120 mnemonic coverage + osGetCount sign-extension fix; tools/s708[2-7]_*). Rerun all after any regen.
 19. **Host-shim census: CLOSED s7088 (ABI) + s7089 (results vs ROM; s3531 duplicate-call fixup bug fixed).**
 20. **Fixup-layer statement census: CLOSED s7090** (0 untagged dup/drop; tools/s7090_fixup_statement_census.py, exit 1 = a defect; rerun after any fixup edit).
-21. **RSP ucode fixup census: CLOSED s7091** (0 unexplained; regen via tools/ucode_regen.sh, rerun `verify` after any RSPRecomp/fixup change). Next: rsp_vu fast-path differential (NEXT.md).
+21. **RSP ucode fixup census: CLOSED s7091** (0 unexplained; regen via tools/ucode_regen.sh, rerun `verify` after any RSPRecomp/fixup change).
+22. **RSP VU fast paths + divide: CLOSED s7092** (tools/s7092_vu_mem_test, 0/8.59 G; rerun after any rsp_vu*.hpp / rsp.hpp DMEM edit). Next: RSPRecomp scalar lowering census (NEXT.md).
 
 ## Evidence index
 
