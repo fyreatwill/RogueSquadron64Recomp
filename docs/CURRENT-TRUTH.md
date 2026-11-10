@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7075 (2026-11-10).
+Compact operational handoff, as of Session 7076 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7076 menu block 0x800B80B4-0x800BE3E8 is pilot-select/settings UI, not flight (20 renames, block closed).** Menu-only callers; bodies: updateNameEntryLetterWheel (was handleNabooFlightInput; charset "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?&"), handleDeletePilotConfirmation (was handleNabooActionButtons; calls clearAccountRecordAndMarkInactive), tickMenuImageTileWipe/buildMenuImageTileWipeMesh (were TieInterceptor physics/update), buildHelmetLayerMatrices, loadRogueLogoRefModels. New tools/apply_symbol_renames.py (collision/stale/comment-safe, per-file recount; controls pass). L6 boot to flight clean. objdump labels in menu.asm can be mission-overlay symbols at shared addresses.
 
 **s7075 menu block 0x800B2A98-0x800B4618 misnomers fixed (9 renames, block closed): loadNamedTextureDescriptor = loadBackdropImageElement, the SYNC load_asset("backdrop/%s") cut into named tiles (hilite, logo, the_head%d, medal_sh, rebel_sh); the "Hud" sprite family is menu-only (createMenuSpritePair etc.); buildHudAmmoReadout = buildMenuLogoAndHeadImages.** tools/s7075_fnsum.py summarises ELF functions (calls by current name, constants, strings from the ELF at va-0x800A5130+0x10b410, not the ROM). Counts identical in 8 files, preempt control 6, L6 boot to flight 309 s clean, renamed fns in 5/112 samples.
 
@@ -269,7 +271,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 14. **Owner judgement / parked:** FPS60 feel, G3c sheets, QoS default, native hangar geometry,
     rare dd4/dd8 gfx SIGBUS (single-source). Reopen on an owner report or side-effect failure.
 15. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first.
-16. **Misnomer rename (optional, owner reports preempt):** s7072 Debris family -> JPEG decoder; s7073 "format-message" worker family -> async backdrop JPEG loader (enqueueBackdropLoad, tickBackdropLoaderWorker, decodeBackdropTilesToTextures, ...). s7074 menu "ship throttle/text target" names -> screen fade quad family (startMenuScreenFade, tickMenuScreenFade, isMenuScreenFadeActive, endMenuScreenFade, createMenuScreenFadeQuad, allocMenuSolidQuadSprite, allocMenuSceneElement; scratch/s7074/renames.tsv). Next: loadNamedTextureDescriptor 0x800B2D50 (formats "backdrop/%s": a sync backdrop load?), copyMorphTargetVertices 0x800B438C, the "Hud" sprite names 0x800B448C-0x800B4618 inside the menu overlay (NEXT.md).
+16. **Misnomer rename (optional, owner reports preempt):** s7076 block 0x800B80B4-0x800BE3E8 closed (letter wheel, delete-pilot, tile wipe; use tools/apply_symbol_renames.py). Next: allocCraftPreviewEffectObject / initCraftPreviewEffectWithRandom / spawnProjectileObject 0x800B42D4. s7072 Debris family -> JPEG decoder; s7073 "format-message" worker family -> async backdrop JPEG loader (enqueueBackdropLoad, tickBackdropLoaderWorker, decodeBackdropTilesToTextures, ...). s7074 menu "ship throttle/text target" names -> screen fade quad family (startMenuScreenFade, tickMenuScreenFade, isMenuScreenFadeActive, endMenuScreenFade, createMenuScreenFadeQuad, allocMenuSolidQuadSprite, allocMenuSceneElement; scratch/s7074/renames.tsv). Next: loadNamedTextureDescriptor 0x800B2D50 (formats "backdrop/%s": a sync backdrop load?), copyMorphTargetVertices 0x800B438C, the "Hud" sprite names 0x800B448C-0x800B4618 inside the menu overlay (NEXT.md).
 
 ## Evidence index
 

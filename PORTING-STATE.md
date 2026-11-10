@@ -186196,3 +186196,44 @@ fns run under the new names), tickBackdropLoaderWorker 29, menuControllerInput 1
 Rules out: the text-element, morph-vertex, HUD-reticle and ammo-readout readings of this block. Block 0x800B2630-0x800B4618 closed.
 Next: the menu-overlay "player craft" block 0x800B80B4-0x800BE3E8 (playerVwingMainUpdate, integrateTieInterceptorPhysics,
 handleNabooFlightInput ... in the MENU overlay = hangar model viewer, not flight).
+
+## Session 7076 (2026-11-10) — menu "player craft" block 0x800B80B4-0x800BE3E8 is pilot-select/settings UI, not flight: 20 renames (letter wheel, delete-pilot confirm, image tile wipe, helmet/controller/logo models), new tools/apply_symbol_renames.py, preempt control 6 unchanged, L6 boot to flight clean
+NEXT.md unit (HYPOTHESIS-ID generated-symbol-misnomer-fixes). Hypotheses: H-viewer/H-menu (menu UI with flight-sounding names
+left by the automated naming pass) vs H-flight (real flight logic duplicated in the menu overlay).
+Discriminator 1, callers (.ovl.menu jal map, /tmp helper over scratch/s7075/menu.asm): all 26 functions in the block are called
+only from menu code (menuControllerInput, runMenuRandomBackdropScreen, loadControllerModel, loadMenuSceneModelAndMaterials,
+allocCraftPreviewEffectObject, initCraftPreviewEffectWithRandom, menuSubtype02Handler). H-flight refuted.
+Discriminator 2, bodies (subagent asm read of all 20, plus my own independent checks of 3): handleNabooFlightInput reads only
+left/right button masks 0x00400100/0x00800200, spins a wheel with inertia and snap, and draws the helmet model;
+allocT16EffectContext's charset pointer 0x800CCBF0 -> 0x800A5E08 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?&" (read from the ELF by me);
+handleNabooActionButtons calls clearAccountRecordAndMarkInactive at 0x800BE8DC (me). So the block is the pilot-name letter wheel,
+the delete-pilot confirm, the menu image tile wipe, and the helmet/controller/r_logo_ref menu models.
+Renames (scratch/s7076/proposed.tsv, evidence column copied into the menu_overlay.txt comments as "s7076: ... (was X)"):
+updateShipPartAnimation->updateMenuGlyphIconPair, initVwingHudAndSlotState->initFrontendMenuResources,
+loadVwingMeshAssets->loadRogueLogoRefModels, buildVwingRenderMatrices->buildHelmetLayerMatrices,
+animateVwingThrusterMaterial->buildControllerModelLayerMatrices, updateVwingTrailGeometry->animateRogueLogoRefModel,
+playerVwingMainUpdate->updatePilotSlotLogoModels, driveFalconAnimationKeyframes->updateMenuPopupMessage,
+applyTieInterceptorAnimState->setupMenuConfirmChoiceItems, copyTieInterceptorAnimBuffer->pushMenuConfirmDialog,
+applyTieInterceptorSlotAnim->setupAccountSlotMenuItems, updateTieInterceptorAnimFlag->refreshMenuToggleItemLabels,
+integrateTieInterceptorPhysics->tickMenuImageTileWipe, spawnTieInterceptorParticles->allocMenuImageTileWipeMesh,
+playerTieInterceptorMainUpdate->buildMenuImageTileWipeMesh, easeT16AnimationKeyframe->fadeControllerSettingsCallouts,
+allocT16EffectContext->allocNameEntryLetterWheel, computeNabooBankingOrientation->layoutLetterWheelGlyph,
+handleNabooFlightInput->updateNameEntryLetterWheel, handleNabooActionButtons->handleDeletePilotConfirmation.
+KEEP: initControllerSettingsStructs, controllerSettingsScreen. Weakest (single-source, subagent only): updateMenuGlyphIconPair
+(glyphs 5/6 unidentified), setupAccountSlotMenuItems and the confirm pair (front texts 0xA9/0xBA-0xBD not decoded; front_TXT is compressed).
+New tool tools/apply_symbol_renames.py replaces the hand recipe (renames.tsv + cnt.py): refuses on collisions, duplicates and
+stale old names, skips comments (symbol files keep "(was X)" notes), rewrites with \b, re-counts per file (new == pre old,
+old == 0). Default targets: RecompiledFuncs *.c/*.h/*.inl, ../rogue_squadron64/symbol_files/*.txt, syms toml, tools/*.py.
+Controls: s7075's TSV (already applied) is refused (negative control); its reverse dry-runs to 9 renames / 8 files /
+0 mismatches, the same 8 files s7075 edited by hand (positive control). Applied: 20 renames, 8 files, 0 mismatches.
+fixup_preempt_point.py "hooks present in 6 functions" before and after. Rebuild clean (build/build_s7076.log).
+menu_overlay.txt edits are in ../rogue_squadron64 (uncommitted there as with s7075; this entry is the record).
+Run scratch/s7076/run.zsh (s7031 arm L6 dd1 4:3 NOCAP, 1 s samples): mission_t=71 s, flight 309 s, alive_at_end=1,
+vi_stalls30s=0, crashlines=0; 113 samples: updateMenuPopupMessage 1 (a renamed fn runs under its new name; weak positive control,
+since this route never visits name entry or delete pilot), old names 0, menuControllerInput 8, runInMissionFrame 76.
+Side finding: menu.asm (objdump of the whole ELF) labels menu code with mission-overlay symbols at shared addresses
+(computeTieInterceptorOrientation 0x800BC4F8, orientEffectToVelocity, acquireLockOnTarget, ...), so "+0x.." offsets in it can be
+from the wrong overlay. Read function starts from menu_overlay.txt, not objdump labels.
+Rules out: flight, physics, particle and banking readings of this block.
+Next: the callers that look misnamed too: allocCraftPreviewEffectObject / initCraftPreviewEffectWithRandom (they own the tile-wipe
+object) and spawnProjectileObject 0x800B42D4 (creates the 0x800CF10C image element).

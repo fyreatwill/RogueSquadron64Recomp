@@ -1,18 +1,16 @@
-# NEXT: owner reports first; otherwise misnomer check of the menu-overlay "player craft" block 0x800B80B4-0x800BE3E8
+# NEXT: owner reports first; otherwise misnomer check of the menu-overlay tile-wipe owners
 HYPOTHESIS-ID: generated-symbol-misnomer-fixes
-Context (s7075): block 0x800B2630-0x800B4618 closed. Names in 0x800B80B4-0x800BE3E8 (menu_overlay.txt lines ~549-575) read
-like flight code (playerVwingMainUpdate, integrateTieInterceptorPhysics, spawnTieInterceptorParticles, handleNabooFlightInput,
-handleNabooActionButtons, computeNabooBankingOrientation, initVwingHudAndSlotState, updateVwingTrailGeometry) but live in the
-MENU overlay, so they are most likely the hangar / craft-select model viewer animations.
-Hypotheses per name: H-viewer (hangar craft model animation: keyframes, material/thruster flicker, rotation by stick) vs
-H-flight (real flight logic duplicated into the menu, e.g. a demo/attract flight). Discriminator: menu-overlay callers
-(dispatch table? runMenuShipSelectScreen?), controller reads (stick -> rotate model vs -> craft velocity), and calls into
-the mission-side physics/weapon code (none expected under H-viewer).
-Method: python3 tools/s7075_fnsum.py 0x800B80B4 0x800BE3E8 [--asm]; callers:
-  mips64-elf-objdump -d -j .ovl.menu ../rogue_squadron64/build/roguesquadron.elf > scratch/s7076/menu.asm and awk for "jal <addr>"
-  (restrict to .ovl.menu: the 3 overlays share 0x800A5130).
-If misnomer: rename via the scratch/s7075 recipe (renames.tsv, files.txt, cnt.py before/after, regex \b over live
-RecompiledFuncs + symbol_files + syms toml + tools/*.py), fixup_preempt_point.py must still say 6, rebuild,
-scratch/s7075/run.zsh with s7076 (L6 dd1 4:3 NOCAP + 1 s samples). Note L6 boots through the hangar? samples need the renamed
-fns: if none show, add a hangar-scroll arm (scratch/s6995/arm.zsh) as the positive control.
+Context (s7076): block 0x800B80B4-0x800BE3E8 closed (20 renames; it is pilot-select / settings UI). Their callers still look
+misnamed: allocCraftPreviewEffectObject 0x800C4DB8 and initCraftPreviewEffectWithRandom 0x800C4DF0 own the image tile-wipe
+object (allocMenuImageTileWipeMesh / buildMenuImageTileWipeMesh), and spawnProjectileObject 0x800B42D4 creates the 0x800CF10C
+image element. Also check the neighbours in 0x800C4B90-0x800C4F00 (loadControllerModel, loadHelmetModel).
+Hypotheses per name: H-menu-wipe (they create/start the menu image tile wipe) vs H-preview (a real craft preview effect,
+e.g. the hangar ship) vs H-projectile (no: menu overlay has no weapons). Discriminator: body (sizes 4988 / tile arrays /
+rand&1 direction), menu-only callers, what the produced object is passed to.
+Method: python3 tools/s7075_fnsum.py <start> <stop> [--asm]; callers via the .ovl.menu jal map over scratch/s7075/menu.asm
+(beware: objdump labels inside menu.asm can be MISSION overlay symbols at shared addresses; take function starts from
+../rogue_squadron64/symbol_files/menu_overlay.txt).
+If misnomer: write scratch/s7077/renames.tsv, python3 tools/apply_symbol_renames.py scratch/s7077/renames.tsv --dry-run, then
+apply; tools/fixup_preempt_point.py ../N64Recomp/RecompiledFuncs must still say 6; rebuild; sed s7076->s7077 of
+scratch/s7076/run.zsh and run it (L6 dd1 4:3 NOCAP + 1 s samples).
 If all hold: close the menu-overlay misnomer thread and take the next G rung.
