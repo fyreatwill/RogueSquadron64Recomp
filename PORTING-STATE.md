@@ -186466,3 +186466,7 @@ lines, mission_cycles=2. The cap_s7085.txt "No such file" line and rc=1 come fro
 Rules out: integer mult/div/shift/compare/unaligned-access lowering as a source of live miscompiles. Remaining lowering classes
 not yet censused: loads/stores (byte/half XOR swizzle, ld/sd, ll/sc, cache), %hi/%lo reloc pairs, integer branch-likely delay
 slots (beql/bnel/blezl...).
+Discrimination: H-int-live-miscompile (an integer lowering differs on a live path) REFUTED for every guarded or constant-divisor
+site and for all 30 shapes. H-ddivu-ub (64-bit divide by zero differs from hardware) SELECTED by the host test (34/34 divisor-0
+rows wrong before, 0 after) and fixed in recomp.h. Next discriminator: the memory-access + branch-likely census (NEXT.md),
+per shape {matches, differs-unreachable, differs-live}.
