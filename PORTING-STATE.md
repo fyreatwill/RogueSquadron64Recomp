@@ -185485,3 +185485,6 @@ Result: H-partial at the pre-registered bar (58.0 < 58.5), but much nearer H-gat
 (45.9 -> 58.0 vs -> 59.0) while removing the visible cut, where global K=0.8 kept only ~70% (54.1). So the visible band and the cost are
 largely separable (rules out H-whole). Two lines (score + by eye) for the image; cost single run per level. Not folded into the bundle default:
 OWNER-OPT-INS offers `_KEDGE=0.8,12`. Next (NEXT.md): N=10 / k2=0.7 variants on poses + one L12 hold, then fold the best into the s7037 bundle.
+Verdict: this refutes H-whole (the gated cells that hide the cut cost 1.0 fps on L12, global K=0.8 cost 5.6) and selects H-partial at the
+0.5 fps margin; the change is a working opt-in feature (KEDGE), not only a counter. Next discriminator: whether N=10 or k2=0.7 keeps the
+pose score <=0.1 while reaching >=58.5 fps on L12 (fold into the bundle) or not (stay opt-in, owner choice).
