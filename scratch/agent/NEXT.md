@@ -1,22 +1,19 @@
-# NEXT: FPS60 near-wall flicker: log the y-clamp inputs, and add a same-run fix arm for the push vs y-clamp fight
-HYPOTHESIS-ID: fps60-wall-camera
-Context (s7102, single run, 1 episode): in applyPlayerVehicleStateUpdate 0x8004CD00 the corner push (corners 0-2) and the
-y clamp after the loop (0x8004CFD4..0x8004D04C: h = 0x80067D90(x=+0x4C, z=+0x54, 0x80138058, out sp+0x78); if h - y < +0xB8
-then y = out.y - +0xB8) alternate tick by tick at the episode ("flips" push/all-miss/push: 105 per 1000 ticks in the episode vs 3.2
-lim1 / 0.8 lim2 in flight). Corner 3 is not involved (H-corner4 not supported). x,z of the clamp sample is the matrix copy
-+0x4C/+0x54, refreshed only on hit ticks (stale on miss ticks).
-First fold soak results s7102_push_r1/r2 (scratch/s7102/corner_r*.txt, fight_r*.txt, split_r*.txt): more episodes for the
-CAM4 split and the flip rate per lim.
+# NEXT: FPS60 near-wall flicker: log the terrain builder's per-cell keep/cull decisions near the camera across an episode
+HYPOTHESIS-ID: fps60-wall-terrain-cull
+Context (s7103): the camera collision in applyPlayerVehicleStateUpdate does not explain the episodes. Corners are left inside at exit on
+41% of clean lim1 flight ticks, several episodes have no corner inside, and the ROGUESQ_S7103_CAMFIX re-push arm leaves the episode rate
+unchanged (5/2714 off vs 5/3738 on, P=0.42). s7098 showed the missing wall is absent from the game's own RDP stream, so the game decides
+not to submit it. The terrain builder buildVisibleTerrainGridAroundCamera (s7101 bv hook at its entry, same CHASE file) reads the camera
+matrix +0x4C..0x54. Find its per-cell visibility / cull tests (frustum, behind-camera, distance, LOD) by static read first.
 Unit (one build, one run, scratch/s7099/arm.zsh 6 4 <tag> "... ROGUESQ_S7101_CHASE=<file>" 120 240):
- 1. Extend tools/apply_s7102_pushlog.py yf/pe lines with h (f0 after 0x80067D90), out point sp+0x78..0x80, margin +0xB8, the
-    sample x,z (+0x4C/+0x54) vs pos x,z (+0x10/+0x18), and whether the branch was taken (log on both sides).
- 2. Fix arm ROGUESQ_S7103_CAMFIX=tog (30 s halves), candidates chosen from the logged inputs:
-    (a) sample the clamp at pos x,z (+0x10/+0x18) instead of the stale matrix x,z;
-    (b) run the corner push again after the clamp moves y (so the clamp never leaves the near plane in the wall).
-    Default off = retail.
+ 1. New tools/apply_s7104_cellcull.py: per builder call, for cells within ~3 cell widths of the camera: cell id/x,z, each cull test's inputs
+    and verdict, and kept/submitted. One line per call with a compact kept-mask too, mach-stamped (episode alignment as s7103_residual.py).
+ 2. Positive control: the far cells culled by distance must show up as culled in normal flight (the test visibly fires).
 Hypotheses:
- H-stale  the clamp samples the ground at a stale x,z (miss ticks), so h is wrong -> (a) removes the flips
- H-squeeze  the gap between ground+margin and the wall is narrower than the near-plane push, so no position satisfies both -> (a) does
-           not help, (b) does (the push wins and the clamp cannot leave the near plane inside the wall)
- H-retail  the same flips happen at lim2 at the same per-tick rate (pooled with the r1/r2 soaks) -> it is retail behaviour that 60 fps only shows more often
-Outcomes: flips/1000 ticks and episodes per CAMFIX half; owner before/after frames if an arm wins. Default stays retail.
+ H-behind  a near wall cell whose centre/bbox sits behind the camera plane is culled while its wall faces are still on screen (camera hugging
+           the wall puts the cell centre behind the eye) -> episode ticks show the wall cell flipping kept/culled with the camera's z/yaw
+ H-frustum the cell bbox vs frustum test uses a stale or narrower (4:3, not the 16:9 wide) frustum -> the culled cells are at the screen side
+ H-lod     the cell switches LOD / patch and the replacement has no wall faces for 1-3 frames -> kept, but the submitted mesh differs
+ H-none    the builder keeps the cell on episode ticks -> the drop is later (display list / F5 ucode clip of the near polys); go to the DL
+Outcomes: per episode, the wall cell's kept flag and which test removed it. Default stays retail.
+Queued already (fold first): soak_queue/s7103_camfix_r1/r2 (same s7103 recipe, resid_r*.txt) for more CAMFIX episodes.

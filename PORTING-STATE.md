@@ -187103,3 +187103,30 @@ Results:
 ORIGIN: no mitigation landed; CAM4 is an opt-in diagnostic arm (default retail).
 Rules out: the 4th-corner omission as the cause of the observed episode; collision mesh missing at the episode.
 Queued: soak_queue/s7102_push_r1.sh, s7102_push_r2.sh (same recipe, CAM4=tog), which need this build (they write corner_/fight_ summaries).
+
+## Session 7103 (2026-11-10) — FPS60 near-wall flicker: an exit re-test of all 4 near-plane corners and a same-run re-push fix arm show the camera collision does not explain the episodes (fix leaves the rate unchanged, residual inside corners are common in clean flight); s7102 H-fight refuted as the cause
+
+Folded soaks s7102_push_r1/r2 (scratch/s7102/corner_r*, fight_r*, split_r*): 3 more episodes. r1 lim1 CAM4 off: all corners in, alternating
+with corner 3 alone inside ([0123][3]...), 83 flips/1000. r2 lim1 CAM4 ON: corner 3 alone inside on 12/17 ticks (so testing it does not stop the
+episode), 0 flips. r2 lim2 CAM4 on: all 4 corners pushed every tick, 0 flips. So flips (s7102 H-fight) are absent in 2 of 4 episodes.
+Ran: one L6 dd4 16:9 run (scratch/s7099/arm.zsh 6 4 s7103a, ROGUESQ_G1E_LIMIT=1 WIN=600 G3C_LOG=1, ROGUESQ_S7101_CHASE=scratch/s7103/push_a.txt,
+ROGUESQ_S7103_CAMFIX=tog), 0 crashes, 254.8 s capture, 14667 frames, 9 episodes (7 lim1, 2 lim2).
+New instrument + arm tools/apply_s7103_camfix.py (fixup list after s7102_pushlog). At applyPlayerVehicleStateUpdate exit it re-tests all 4 corners
+as offsets from the loop-start pos, from the final pos (scratch sampleTerrainAtNpcPosition calls below sp, as s7102's probe), and logs the
+y-clamp inputs h, d, margin +0xB8, taken, out point (rx lines). ROGUESQ_S7103_CAMFIX=1|tog re-pushes (pos = hit - f20*unit(offset), also copied to
++0x4C) until no corner hits, up to 4 passes. Default off = retail. New analysis tools/s7103_residual.py.
+Control: exit bit 3 agrees with the s7102 pc corner-3 probe on 1940/2043 unclamped fix-off ticks (344 pc hits). The two rays differ after a push,
+because pc uses the absolute corner and rx uses the offset. The instrument fires: residual on 22-44% of flight ticks.
+Results (scratch/s7103/resid_a.txt, fight_a.txt):
+- A corner is still inside at exit on 40.6% of lim1 / 22.3% of lim2 fix-off normal-flight ticks, which do not flicker, vs 66.7% of fix-off episode ticks.
+  Some episodes have no residual on most ticks (t=29.7 []*x4 then [2]; t=214.6 1/12 ticks). Residual is not specific to the episodes.
+- Fix arm: residual after fix 30% (vs 44% before) in lim1 flight; 33% of ticks need >1 pass (the pushes do not converge). Episodes fix off 5/2714 ticks,
+  fix on 5/3738 (P(>=5 of 10 off | equal) = 0.42). The fix does not remove episodes, so H-squeeze (b) is refuted.
+- Flips (s7102 tool, fix ticks included): episode 38-42/1000 vs flight 4.8-6.3. Elevated, but r2 had episodes with 0 flips, so flips go with
+  wall-hugging and are not the cause.
+- Episodes at lim2 are real: 2/2130 vs 7/3261 lim1 ticks this run.
+ORIGIN: no mitigation landed; CAMFIX is an opt-in diagnostic arm (default retail) that failed.
+Rules out: the camera collision state (residual inside corners, push/clamp fight, untested 4th corner) as the cause of the wall dropping.
+Next: s7098 found the wall missing from the game's RDP stream, so the game chooses not to submit it. Log buildVisibleTerrainGridAroundCamera
+per-cell cull decisions near the camera (NEXT.md, new slug fps60-wall-terrain-cull). Queued soak_queue/s7103_camfix_r1/r2 (same recipe).
+Housekeeping: deleted analysed capture raws scratch/s7099/s7101[a-d].raw and s7102a.raw (~15 GB, their csvs are kept).
