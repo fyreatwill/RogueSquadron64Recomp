@@ -185378,3 +185378,23 @@ Verdict H-clean on these four levels: no crash, stall or fps drop from the bundl
 New tool: tools/dd6_bundle_level_sweep.zsh (sweep + scoring in one, LEVELS/ASP/TAG, ANALYZE_ONLY=1 re-scores; reproduced this report as scratch/s7041/sweep_report.txt).
 OWNER-OPT-INS "Farthest view" line extended with the level list.
 Next: same sweep on L0, L8, L9, L11, L12 (NEXT.md), then L13-L18.
+
+## Session 7042 (2026-11-09) — dd6 auto bundle per-level sweep, batch 2 at 16:9: L0, L8, L9, L11, L12 each hold ~506 s clean, cull fires on all five; L12 needs it (42.8 -> 59.7 fps same run) (H-clean)
+
+Work unit (NEXT.md dd6-bundle-level-sweep): same sweep as s7041 on the next five levels. No game build. Screen unlock checked by the tool.
+Command: `env LEVELS="0 8 9 11 12" TAG=S42 zsh tools/dd6_bundle_level_sweep.zsh scratch/s7042` (report scratch/s7042/sweep_report.txt).
+Recipe: 16:9 FPS60 dd6 UNSAFE MELT WIDEWIN cap 10240, CW 640x360 no capture, same-run tog3 OFFMAPCULL R=-1,2,2 K=0,0.6,0.6 H=off
+(phase 0 = cull off control, phases 1/2 = bundle values, A/A), 170+330 s hold, cost from G1E_TL (g5e_cost_by_parity --phases 3 --skip-s 130 --split xor8).
+Health: L0 flight_s 506 inits 3; L8 509 inits 2; L9 507 inits 1; L11 509 inits 3; L12 510 inits 1; all alive_at_end=1, vi_stalls30s=0, crashlines=0,
+CRASH/SIGSEGV/SIGBUS grep 0 in every run.log. [s7037] 0 as expected (explicit env wins).
+Cost, fps p0 -> p1/p2, rsp delta p1/p2, P(>=2VI) p0 -> p1:
+- L0 (72x72) 58.7 -> 59.8/59.7, rsp 12.92 -> 10.36 (-2.56/-2.43), P 0.02 -> 0.00
+- L8 (64x64) 59.9 -> 59.6/60.0, rsp 7.89 -> 6.89 (-1.00/-0.95), P 0.00: not rsp-bound, neutral (the p1 59.6 sits inside the p1/p2 A/A spread of 0.4)
+- L9 (76x78) 58.4 -> 59.9/59.9, rsp 11.41 -> 9.39 (-2.01/-1.99), P 0.03 -> 0.00
+- L11 (72x72) 59.8 -> 60.0/59.6, rsp 7.05 -> 6.01 (-1.03/-0.94), P 0.00: neutral (A/A spread 0.4 fps)
+- L12 (88x88) 42.8 -> 59.7/59.8, rsp 16.19 -> 12.23 (-3.95/-3.93), T 23.35 -> 16.75 ms, P(>=2VI) 0.40 -> 0.01/0.00
+Positive control for the cull wiring: [s7031] ocull/f ph0 0 vs ph1/ph2 2462/2479 (L0), 2600/2607 (L8), 2885/2916 (L9), 3645/3568 (L11), 2940/2926 (L12).
+Verdict H-clean on all five; rules out H-fail and H-nocull there. New datum: L12 is the first level where dd6 WIDEWIN without the cull crosses the VI cliff
+(rsp 16.2 ms, 40% of frames >= 2 VI) - the bundle's auto cull is load-bearing on L12, not just a saving. Evidence is health + same-run cost (two lines);
+no image check on these levels (image neutrality rests on L1/L4 poses + cutscene ranker).
+OWNER-OPT-INS "Farthest view" level list extended. Levels at dd6 bundle now: L0-L9, L11, L12 (L10 health only). Next: L13-L18 (NEXT.md).

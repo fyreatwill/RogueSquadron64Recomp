@@ -8,6 +8,9 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7042 dd6 auto bundle holds on L0, L8, L9, L11, L12 at 16:9 (H-clean; no build; tools/dd6_bundle_level_sweep.zsh).** Same recipe as s7041, ~506 s flight each,
+5/5 alive_at_end=1, vi_stalls30s=0, crashlines=0, CRASH grep 0. fps off -> bundle p1/p2: L0 58.7 -> 59.8/59.7 (rsp -2.56), L8 59.9 -> 59.6/60.0 (rsp -1.00, neutral), L9 58.4 -> 59.9/59.9 (rsp -2.01),
+L11 59.8 -> 60.0/59.6 (rsp -1.03, neutral), **L12 (88x88) 42.8 -> 59.7/59.8, P(>=2VI) 0.40 -> 0.01, rsp 16.19 -> 12.23 (-3.95)**: plain dd6 WIDEWIN is past the VI cliff on L12 and the bundle cull is what holds it. Cull fires everywhere (ocull/f ph1 2462-3645, ph0 0). Unrun: L13-L18 (L10 health only).
 **s7041 dd6 auto bundle holds on L2, L3, L6, L7 at 16:9 (H-clean; no game build; new tools/dd6_bundle_level_sweep.zsh).** FPS60 dd6 MELT WIDEWIN cap 10240, ~505 s flight per level,
 same-run tog3 R=-1,2,2 K=0,0.6,0.6: 4/4 alive_at_end=1, vi_stalls30s=0, crashlines=0. fps off -> bundle (A/A p1/p2): L2 58.7 -> 59.8/59.9 (rsp -2.45), L3 58.6 -> 60.0/60.0 (rsp -3.33),
 L6 59.3 -> 59.2/59.1 (rsp 6.2 -> 5.7, not rsp-bound: neutral), L7 59.5 -> 59.6/59.7 (rsp -1.98). Cull fires on every level (ocull/f ph1 2542-3285, ph0 0). Health + cost only (no image check on these levels:
@@ -340,7 +343,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    s7028/s7029: bridge closed (H-call). s7030: ROGUESQ_DD_FOGCULL (opt-in): 2% of cells past fog end (0 ms); 0.5 x fog end culls 51%, rsp -4.9 ms, invisible on L1
    (cells behind the off-map horizon wall?). Next: classify on-map/off-map cells and cull off-map rings, L1 + L4 (NEXT.md).
    s7031-s7036: off-map cull past 0.6 x fog end qualified (see headline). s7037: folded into the DD knob for dd>=6+WIDEWIN; 12288 cells (POOLX_MAX=6) cost
-   +0.6 ms rsp with no edge-score gain at dd8: dd6+bundle is the max useful step. s7038: close-out sheet done, bundle invisible (<=0.23 vs A/A 0.00), dd6 > dd4 > dd1; CLOSED on the owner's look. s7039: bundle invisible in the cutscene playlist (tog3 rank, R0 control fires). s7040: clean at 16:9 too (poses <=0.28, L1 58.6 -> 59.9 fps). Nothing left to run; owner look.
+   +0.6 ms rsp with no edge-score gain at dd8: dd6+bundle is the max useful step. s7038: close-out sheet done, bundle invisible (<=0.23 vs A/A 0.00), dd6 > dd4 > dd1; CLOSED on the owner's look. s7039: bundle invisible in the cutscene playlist (tog3 rank, R0 control fires). s7040: clean at 16:9 too (poses <=0.28, L1 58.6 -> 59.9 fps). s7041/s7042: 16:9 holds clean on L0, L2, L3, L6-L9, L11, L12 (L12 needs the cull: 42.8 -> 59.7 fps). Next: L13-L18 (NEXT.md); then owner look.
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).
