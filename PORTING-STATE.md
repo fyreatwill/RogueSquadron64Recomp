@@ -185781,6 +185781,6 @@ HYPOTHESIS-ID: dd6-219-levelK-survey. CURRENT-TRUTH 58.1 KB at start (no mainten
   like the explicit cap), A/A +0.06. Burst 270-390 s: 60.0/58.2/60.0 fps, P 0.00/0.03/0.00 (333 ms shift 60.0/59.2/59.2).
 - Verdict: H-8192-holds, two runs (three burst windows) plus s7060's 4096 run: L9's burst dip is the dd6 window's 8193-10240 cells; 8192 restores
   ~60 fps. Bursts were milder than s7058's 55 fps one in both runs. Image cost of 8192 on L9 is unmeasured (s7052: 9216 was visible on L4), so no fold.
-- Rules out: H-8192-dips, H-noburst.
-- Next: frozen poses on L9 21:9 (scratch/s7061/run_pose.zsh: c10240 / c8192 / c6144 control); fold CAPLEVEL 9:8192 into the 21:9 auto bundle only if c8192 is
+- This selects H-8192-holds and refutes H-8192-dips and H-noburst (both runs had a burst).
+- Next discriminator: frozen poses on L9 21:9 (scratch/s7061/run_pose.zsh: c10240 / c8192 / c6144 control); fold CAPLEVEL 9:8192 into the 21:9 auto bundle only if c8192 is
   invisible while c6144 shows.
