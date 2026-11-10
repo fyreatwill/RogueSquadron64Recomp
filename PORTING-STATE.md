@@ -185512,3 +185512,22 @@ no frame-rate cost on L12/L13 in this run, so it is folded into the dd6 bundle d
 Not checked: 21:9 (owner's ultrawide; wider frustum loads more side cells) -> NEXT.md.
 Verdict: refutes the N=10 / k2=0.7 variants (visible at 0.39 / 0.27 vs ctl 0.81) and selects KEDGE=0.8,12, now the bundle default (fold
 check 0.07 vs KEDGE=0 0.81). The change is code: per-phase KEDGE parse + bundle default. Next discriminator: 21:9 L12 poses + hold.
+
+## Session 7048 (2026-11-09) — 21:9 L12 dd6 bundle: KEDGE gate invisible (0.06 vs ctl 0.66), but L12 21:9 holds only ~56 fps with the bundle, gate or not (gate -0.8 fps)
+Work unit from NEXT.md (HYPOTHESIS-ID dd6-bundle-l12-horizon). No build (binary carries the s7047 fold). One game at a time.
+1. Frozen poses 21:9 FPS60 L12 NOREF (scratch/s7048/run.zsh: s7047 recipe with ROGUESQ_ASPECT=21:9), arms dd6off / fold (auto bundle,
+   KEDGE 0.8,12) / foldk0 (KEDGE=0, positive control). 3/3 alive, 0 crash, 0 stalls, same posefreeze path (156.526,-8.539,19.825);
+   [s7037] only in fold/foldk0; logs: fold "kedge k2=0.8,0.8,0.8 N=12", foldk0 "k2=-1". s7032 scorer vs dd6off k4/k5/k6: fold
+   0.06/0.05/0.06 0.0% px, foldk0 0.66/0.65/0.71 1.5-1.6% px, intra 0.00 (k0-k3 pre-flight black). By eye
+   (docs/owner_sheet_s7048_l12_219_kedge.jpg, rows dd6off/fold/foldk0, bottom 45%, k4|k6): fold = dd6off soft band, foldk0 flat cut.
+2. Same-run hold L12 21:9 (scratch/s7048/run_hold.zsh H12w 12 "0.8,12" "0.8,12": CW 840x360, R=2 K=0.6 all phases, KEDGE
+   "0.8,12;0;0.8,12", 507 s flight): alive, 0 stalls, 0 crash. g5e_cost_by_parity xor8 (21.2k frames): p0 ke12 55.8 fps rsp 13.75 /
+   p1 K0.6 56.5 rsp 13.48 / p2 ke12 55.6 rsp 13.74; P(>=2VI) 0.07/0.06/0.08. A/A p0-p2 0.2 fps / 0.01 ms; gate cost +0.27 ms rsp,
+   -0.7..-0.9 fps. Control: [s7046] k2cells/f ph0 1895 / ph1 0 / ph2 1957 (16:9 s7047 was 1141/1209: the wider frustum loads ~60% more
+   edge cells). ocull/f 2440 (cull fires).
+Result: H-wide-visible refuted (gate invisible at 21:9, two lines: score + eye). H-same refuted on cost: L12 at 21:9 is below the 58.5
+bar with the bundle in every phase. H-wide-cost only partly: K0.6 alone is also below (56.5), so the shortfall is the 21:9 L12 cell load
+(rsp ~13.5 vs ~12 at 16:9), and the gate adds only 0.8 fps of it. KEDGE stays the bundle default; OWNER-OPT-INS gets the 21:9 caveat.
+Not run: L1 21:9 KEDGE cost (low value: L1 16:9 cost was nil).
+Verdict: refutes H-wide-visible and H-same; selects "21:9 L12 bundle cost" as a new thread (cap lever next, NEXT.md
+dd6-bundle-219-l12-cost). Datum only, no code change this session; new owner sheet docs/owner_sheet_s7048_l12_219_kedge.jpg.
