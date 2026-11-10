@@ -185398,3 +185398,24 @@ Verdict H-clean on all five; rules out H-fail and H-nocull there. New datum: L12
 (rsp 16.2 ms, 40% of frames >= 2 VI) - the bundle's auto cull is load-bearing on L12, not just a saving. Evidence is health + same-run cost (two lines);
 no image check on these levels (image neutrality rests on L1/L4 poses + cutscene ranker).
 OWNER-OPT-INS "Farthest view" level list extended. Levels at dd6 bundle now: L0-L9, L11, L12 (L10 health only). Next: L13-L18 (NEXT.md).
+
+## Session 7043 (2026-11-09) — dd6 auto bundle per-level sweep, batch 3 at 16:9: L13-L18 each hold ~504 s clean, cull fires on all six; L13 needs it (48.3 -> 59.9 fps same run); sweep CLOSED (H-clean)
+
+Work unit (NEXT.md dd6-bundle-level-sweep): same sweep as s7041/s7042 on the last six levels. No game build. Screen unlock checked by the tool.
+Command: `env LEVELS="13 14 15 16 17 18" TAG=S43 zsh tools/dd6_bundle_level_sweep.zsh scratch/s7043` (report scratch/s7043/sweep_report.txt).
+Recipe unchanged (16:9 FPS60 dd6 UNSAFE MELT WIDEWIN cap 10240, CW 640x360, same-run tog3 OFFMAPCULL R=-1,2,2 K=0,0.6,0.6 H=off; phase 0 = cull off control,
+phases 1/2 = bundle values, A/A; cost from G1E_TL, --phases 3 --skip-s 130 --split xor8).
+Health: L13 flight_s 506 inits 1; L14 506 inits 1; L15 504 inits 1; L16 504 inits 8; L17 506 inits 8; L18 507 inits 1; all alive_at_end=1, vi_stalls30s=0,
+crashlines=0, CRASH/SIGSEGV/SIGBUS grep 0 in every run.log; [s7037] 0 as expected (explicit env wins). L16/L17 inits=8 = the known autopilot backdrop cycling
+(G1e item 11); flight_s still ~504 and fewer [s7031] samples (n25/n15 vs n43-44).
+Cost, fps p0 -> p1/p2, rsp delta p1/p2, P(>=2VI) p0 -> p1:
+- L13 (64x64) 48.3 -> 59.9/59.9, rsp 14.77 -> 11.94 (-2.83/-2.86), T 20.70 -> 16.68 ms, P 0.24 -> 0.00  (load-bearing, like L12)
+- L14 (72x72) 59.1 -> 60.0/60.0, rsp -2.93/-2.86, P 0.01 -> 0.00
+- L15 (94x100) 60.0 -> 60.0/59.9, rsp -1.00/-0.90 (neutral)
+- L16 (74x74) 58.2 -> 59.2/59.2, rsp -0.98/-0.99, P 0.01 -> 0.00
+- L17 (100x100) 59.0 -> 59.2/59.0, rsp -0.92/-0.91 (neutral within A/A 0.2)
+- L18 (64x64) 60.0 -> 60.0/60.0, rsp -3.04/-2.99 (headroom only)
+Positive control for the cull wiring: [s7031] ocull/f ph0 0 vs ph1/ph2 3419/3450 (L13), 2926/2905 (L14), 2247/2253 (L15), 2122/2224 (L16), 3081/3117 (L17), 3658/3706 (L18).
+Verdict H-clean on all six; rules out H-fail and H-nocull. The per-level sweep is CLOSED: every level 0-18 has flown at the dd6 bundle at 16:9 (L10 health only),
+0 crashes / 0 stalls in 15 holds over s7041-s7043; bundle fps >= 59.0 everywhere. Two lines (health + same-run cost). Not checked: image on L12/L13, where the cull
+is load-bearing and cuts the most - that is the next unit (NEXT.md dd6-bundle-loadbearing-image). OWNER-OPT-INS "Farthest view" now says all levels.
