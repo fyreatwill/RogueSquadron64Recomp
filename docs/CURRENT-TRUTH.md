@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7093 (2026-11-10).
+Compact operational handoff, as of Session 7094 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,9 +8,12 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7094 RSP runtime DMA + cop0 model vs hardware CLOSED; one live off-by-one FIXED.** Host differential (tools/s7094_dma_test, `zsh run.sh`): live rsp.hpp DMA vs cxd4 su.c verbatim, canonical shape 0/80,000 bad (fast+slow, rd+wr), every unmodelled feature (mem&7, len rounding, count/skip, 4 KB wrap) differs, len2 mutant fails. Live census (ROGUESQ_S7094_DMASHAPE=1, src/rsp/s7094_dma_shape.cpp; `python3 tools/s7094_dma_census.py build/rs64_s7094.log`, exit 1 = defect shape): 83 M DMAs on L6, the ucode never uses an unmodelled shape; the one defect was run_task's audio ucode_data staging passing the size (0x800) as SP_RD_LEN, copying 0x801 bytes. Fixed to size-1 in librecomp rsp.cpp (ROGUESQ_S7094_UCODE_DATA_OFF1=1 = old); L6 flight 310 s clean, census 0 defects. cop0 constant-0 reads consistent with synchronous DMA and the completion-wins yield model (single-source code-read).
+- In plain words: the way the port copies data in and out of the sound/graphics processor now matches the hardware byte for byte; one copy was a byte too long and is fixed.
+- Next: DPC (RDP command) register model the ucode reads/writes vs hardware (NEXT.md, slug rsp-dpc-reg-model).
+
 **s7093 RSPRecomp scalar lowering CLOSED: 0 live differences; one latent template defect FIXED (tools/s7093_su_census.py --controls, exit 0).** ROM-decoded pristine pass of the 3 compiled RSP TUs: decode 1,777/1,777, control flow + delay slots 0 defects (0x1FF0 bgez IMEM wrap owned by the L_0000 self-restart fixup), cop0/cop2 forms match, 1,083 live scalar lines 94,060 cases 0 bad, 1,090 RSPRecomp-generated boundary lines 91,360 cases 0 bad, MFC2/MTC2/CFC2/CTC2 3.47 M cases 0 bad vs cxd4. jal link 0x1xxx vs hardware 0x0xxx: all 11 non-jr $31 readers are save/restore -> jr, harmless. Fixed: `sltiu rt, $zero, -imm` lowered to a SIGNED int compare (`0 < -0X8000` = 0, RSP gives 1); RSPRecomp now emits `U32(-0X...)` (../N64Recomp commit 85c6156, mirror submodule-patches/n64recomp-rsprecomp-sltiu.patch); 0 live sites, ucode regen 12/12 byte-identical. Controls: corrupted ROM bit, 5 mutant shapes 35/35, pre-fix template 2,000 bad, MFC2 wrap mutant.
 - In plain words: the translator that turns the graphics/audio microcode into C handles every ordinary instruction the game uses correctly; one rare form it got wrong is not used by this game, and it is fixed anyway.
-- Next: runtime RSP DMA + cop0 model vs hardware (NEXT.md, slug rsp-dma-cop0-model).
 
 **s7092 RSP vector-unit DMEM fast paths + divide unit CLOSED: 8.59 G compares, 0 differences (tools/s7092_vu_mem_test, `zsh run.sh`).** Vector/scalar DMEM fast paths == ares byte loops on every e x address; VRCP/VRSQ single + double == cxd4 do_div. tools/rsp_vu_diff 496/496 SIMD==SISD from live headers.
 
@@ -30,14 +33,6 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 **s7082-s7086 N64Recomp lowering censuses CLOSED (details + tables: docs/N64RECOMP-WARNING-CENSUS.md; tools/s7082_jal_census.py, s7083_lowering_census.py, s7084_fpu_census.py + s7084_fpu_test, s7085_int_census.py + s7085_int_test, s7086_mem_branch_census.py + s7086_mem_test; rerun all after any regen).** Warning log = 2 explained classes (s7082). Control flow: 80 jalr + 1 fixed jr, 177/177 jump tables match ROM (s7083). FPU: ~59k sites / 43 shapes, RM windows honoured, 0 live miscompiles (s7084). Integer: 99,400 sites / 30 shapes; the only gap, ddiv/ddivu by zero (C UB, lo=0), FIXED in recomp.h (s7085). s7086: 154,486 operand-checked load/store/immediate/branch sites match (177 dropped jump-table lw never read; 2 stray s7081 labels, live-fixed; delay slots and likely-nullification correct); the only $ra-after-link reads are the 6 s1971 bltzal PIC sites, all patched; host memory test 11522/11522 (neg control 3065 bad). The residual opcodes closed in s7087.
 
 **s7081 N64Recomp self-branch miscompile FIXED (tools/fixup_selfbranch.py, default on, `ROGUESQ_SELFBRANCH_FIX=0` = old path): the 16 backward out-of-function branches in the 4 voice resampler helpers now store the caller-tail target and return; the caller dispatches to a label at that target (retail: finished one-shot sample -> store last word, zero-fill, caller epilogue).** Differential test tools/s7081_selfbranch_test/run_test.py runs the generated C against an independent MIPS interpreter executing the retail ELF bytes: fix arm 2400/2400 exit+loop cases match (all 16 targets hit), old arm crashes on every case whose exit fires (it rereads samples from address 0), loop-path controls match in both arms. Live funcs_24.c byte-equal to the tested file; preempt 6; L6 boot to flight 309 s clean, 0 exits fired (block dead in play, s6878). The 2 data_gap_* out-of-function gotos are decoded data, left alone.
-
-**s7080 last "player anim" pair is the text-slot channel layer (3 renames, misnomer thread CLOSED): advanceTextSlotAnimationPhase (phase += rate*dt, then activateTextSlotItemKeyframe(slot +8, item +9, alpha)), getTextSlotChannelQuadSprite (+1100 is a sprite pointer, not a count), allocSolidQuadSprite (was buildPlayerCraftAssetTemplate; main-segment twin of allocMenuSolidQuadSprite).** Preempt 6, L6 boot to flight 309 s clean.
-
-**s7079 mission-overlay "player HUD tracking" family is the controller-input layer (5 renames): tickControllerInput (OSContPad 0x80130B88 edge detect, stick deadzone, 16 per-button hold timers 0x8010BEA8), clearControllerInputState, initAllControllerInputState, loadControllerButtonMapPreset (presets 0x80109AD0 hold single N64 button bits), applyDemoRecordedPadInput.** setPlayerSlotPositionVec3 holds (672-byte player record 0x80137DB8). L6 flight 309 s clean, preempt 6.
-
-**s7078 main-segment "player slot" family (table 0x8009FC10) is the 12-entry TEXT/FONT slot table, not players (25 renames PlayerSlot -> TextSlot).** Bodies: loadCharTextureSet builds a 256-byte char->glyph map per slot, the layout function parses NUL/space/tab/newline/~, callers are voice subtitles + menu text screens, loadFontAsset sits in the family. Preempt control 6, L6 boot to flight 309 s clean. Next: mission-overlay "player slot" trio.
-
-**s7077 menu tile-wipe owners renamed (2 renames; menu-overlay misnomer thread closed): allocCraftPreviewEffectObject = allocMenuImageTileWipe (rs_malloc(24), mesh at +0x14), initCraftPreviewEffectWithRandom = startMenuImageTileWipe (dir rand&1 at +0xC, images 0x800CF108/0x800CF10C, mesh build).** Only caller is the menu main function. Preempt control 6, binary has the new names and not the old, L6 dd1 4:3 boot to flight 309 s, 0 crash, 0 VI stall.
 
 **s7076 menu block 0x800B80B4-0x800BE3E8 is pilot-select/settings UI, not flight (20 renames, block closed).** Menu-only callers; bodies: updateNameEntryLetterWheel (was handleNabooFlightInput; charset "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?&"), handleDeletePilotConfirmation (was handleNabooActionButtons; calls clearAccountRecordAndMarkInactive), tickMenuImageTileWipe/buildMenuImageTileWipeMesh (were TieInterceptor physics/update), buildHelmetLayerMatrices, loadRogueLogoRefModels. New tools/apply_symbol_renames.py (collision/stale/comment-safe, per-file recount; controls pass). L6 boot to flight clean. objdump labels in menu.asm can be mission-overlay symbols at shared addresses.
 
@@ -309,7 +304,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 20. **Fixup-layer statement census: CLOSED s7090** (0 untagged dup/drop; tools/s7090_fixup_statement_census.py, exit 1 = a defect; rerun after any fixup edit).
 21. **RSP ucode fixup census: CLOSED s7091** (0 unexplained; regen via tools/ucode_regen.sh, rerun `verify` after any RSPRecomp/fixup change).
 22. **RSP VU fast paths + divide: CLOSED s7092** (tools/s7092_vu_mem_test, 0/8.59 G; rerun after any rsp_vu*.hpp / rsp.hpp DMEM edit).
-23. **RSPRecomp scalar lowering: CLOSED s7093** (tools/s7093_su_census.py --controls; sltiu $zero/neg-imm template fixed in RSPRecomp; rerun after any RSPRecomp change). Next: runtime RSP DMA + cop0 model (NEXT.md).
+23. **RSPRecomp scalar lowering: CLOSED s7093** (tools/s7093_su_census.py --controls; sltiu $zero/neg-imm template fixed in RSPRecomp; rerun after any RSPRecomp change).
+24. **RSP runtime DMA + cop0: CLOSED s7094** (audio ucode_data off-by-one fixed; tools/s7094_dma_test + tools/s7094_dma_census.py, rerun after any rsp.hpp/rsp.cpp DMA edit). Next: DPC register model (NEXT.md).
 
 ## Evidence index
 

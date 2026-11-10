@@ -186780,3 +186780,45 @@ Not covered: rsp.cpp dma_rdram_to_dmem / dma_dmem_to_rdram vs hardware SP DMA (R
 DISCRIMINATION: selects H-su-ok for every live site (0 diffs over 94,060 live cases, controls firing) and refutes
 H-su-bad for the live ucode; H-su-bad holds only for the latent sltiu-$zero-negative-immediate template shape (0 live
 sites, fixed in RSPRecomp). Next discriminator: rsp-dma-cop0-model, H-dma-ok vs H-dma-shape vs H-cop0 (NEXT.md).
+
+## Session 7094 (2026-11-10) — RSP runtime DMA + cop0 model vs hardware: one live off-by-one FIXED (audio ucode_data staging copied 0x801 bytes), everything else matches
+Unit (NEXT.md, slug rsp-dma-cop0-model): compare the runtime the recompiled RSP code calls (librecomp rsp.hpp
+dma_rdram_to_dmem / dma_dmem_to_rdram, SET_DMA_*/DO_DMA_* macros, RSPRecomp's constant cop0 reads) with hardware.
+Three lines of evidence:
+1. Host differential tools/s7094_dma_test (`zsh run.sh`): the LIVE rsp.hpp DMA functions (hooks stubbed) vs cxd4 su.c
+   MT_DMA_* + SP_DMA_READ/WRITE extracted verbatim, 20,000 random cases per class x rd/wr x fast/slow = 560,000 compares.
+   CANON shape (mem&7=0, raw&7=7, raw<0x1000, fits the 4 KB bank, DRAM<8 MB): 0 bad of 80,000. DRAM low-3-bit class:
+   0 bad (both mask &0xFFFFF8). Every other hardware feature the runtime does not model differs on ~all cases:
+   mem low 3 bits, raw&7 != 7 (hardware rounds to 8 inside the 8-byte copy loop), count/skip rows, skip bits alone
+   (runtime takes them as length), DMEM wrap at 0x1000 (runtime clips). Controls: len2 mutant (runtime copies raw+2)
+   fails CANON 65,835/80,000 (rc 1); norel mutant (drop cxd4's |7 in mtc0) changes nothing, which shows the rounding
+   lives in cxd4's 8-byte loop, not the mtc0 store (scratch/s7094/control_*.txt).
+2. Static census tools/s7094_dma_census.py: SP_RD_LEN sites 6 / SP_WR_LEN 2 across the 3 compiled TUs (count control
+   = s7093's C sections, pass); 28 DMA-routine call sites (10 gfx, 17 audio, 1 boot) listed with their literal mem/len; every literal length ends
+   in 7/F (0xF, 0x3F, 0x4F, 0x7F, 0xFF, 0x17F, 0x197, 0x2FF, 0xFFF ...), the dynamic ones are masked (&0xFFF,
+   &0xFF0 - 1, &0x3FF, lhu-1).
+3. Live census (new passive instrument src/rsp/s7094_dma_shape.cpp, one gated call at the top of both rsp.hpp DMA
+   functions, ROGUESQ_S7094_DMASHAPE=1; startup self-test 10/10 pass; same-run positive control
+   ctl_count_mask7ff fires on every live raw >= 0x800; IMEM flag fires on overlay loads): L6 4:3 dd1 boot to flight,
+   83 M DMAs, 290 distinct shapes. On the DMEM bank: mem_lo3 0, count 0, skip 0, wrap 0, raw==-1 0. len_not7 hits only
+   IMEM overlay loads (skipped by design, the ucode is recompiled) plus ONE DMEM shape:
+   rd bank=aud mem=0x0000 len=0x800 dram=0x800A4E00 (19,869 times) = run_task's audio ucode_data staging.
+ORIGIN: the writer is lib/N64ModernRuntime/librecomp/src/rsp.cpp run_task. It passed ucode_data_dma_size (the declared
+0x800 image size, or the legacy 0xF80) to dma_rdram_to_dmem, whose argument is the hardware SP_RD_LEN value
+(bytes - 1). So every audio task copied 0x801 bytes: one byte from RDRAM ucode_data+0x800 into DMEM 0x800, which
+rspboot (passes ucode_data_size - 1) never writes. Upstream used 0xF80 - 1; main.cpp's gfx staging uses size - 1;
+the s-era M5 rewrite that introduced declared_size dropped the -1 against its own comment ("declare a 0x800-byte image").
+Not a legitimate value. FIX: pass size - 1 (ROGUESQ_S7094_UCODE_DATA_OFF1=1 restores the old copy for an A/B).
+Qualification (two runs, same recipe scratch/s7094/run.zsh): before L6 flight 305 s, 0 crash, 0 VI stall, defect
+shapes 1; after: flight 310 s, 0 crash, 0 VI stall, audio tasks live (2.14 M aud reads, 125,805 aud writes), the shape
+is now len=0x7FF, census defect shapes 0 (rc 0). Whether the stray byte was ever read before being written by the audio
+ucode is NOT measured; the fix is hardware-exact either way.
+cop0 (H-cop0), code-read, single-source: RSPRecomp lowers mfc0 SP_STATUS / SEMAPHORE / DMA_FULL / DMA_BUSY to 0.
+DMA is synchronous, so FULL/BUSY 0 is exact. The only SP_STATUS consumer is the gfx task-start yield test (andi 0x80,
+SIG0); 0 = "no yield requested", consistent with sp.cpp's completion-wins osSpTaskYielded (returns 0). SP_STATUS
+writes (0x2800 clear SIG1/SIG2 at start, 0x4000 set SIG2 before break) are dropped; the CPU side gets task completion
+from the runtime, not from those bits. Semaphore: no CPU-side SP_SEMAPHORE literal found in the recompiled C, so a 0
+read is what hardware returns. DPC_* reads go through the DPC bridge (RSP_DPC_STATUS_READ), not audited here.
+DISCRIMINATION: H-dma-shape selected for exactly one live site (audio ucode_data staging, fixed); H-dma-ok holds for
+every DMA the 3 ucode TUs themselves issue (0 defect shapes in 83 M + 136 M DMAs, controls firing); H-cop0 refuted by
+code-read (single-source). Rules out the RSP DMA model as a source of DMEM corruption. Next: DPC register model (NEXT.md).

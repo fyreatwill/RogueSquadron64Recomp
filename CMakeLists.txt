@@ -345,6 +345,7 @@ add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/main/upstream_compat.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/aspMain.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/dpc_bridge.cpp
+    ${CMAKE_SOURCE_DIR}/src/rsp/s7094_dma_shape.cpp
     ${FACTOR5_UCODE_TLS_CPP}
     ${FACTOR5_UCODE_LEAN_CPP}
     ${FACTOR5_UCODE_NMAC_CPP}
