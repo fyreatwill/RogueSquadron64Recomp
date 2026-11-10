@@ -186893,3 +186893,7 @@ Result: H-fwd-exact selected on two lines (byte-sequence match + same-run contro
 H-fwd-dup and H-fwd-order refuted for flight at dd1 4:3 and dd4 16:9. The bridge is not a G5b terrain-drop source.
 Rules out: lost / doubled / reordered RDP bytes at ring wraps, deferral, stream or commit; late ring overwrites before RT64 reads.
 Default build unchanged (all hooks behind rs64_s7096_on).
+Discrimination: this selects H-fwd-exact and refutes H-fwd-drop, H-fwd-dup and H-fwd-order (byte-sequence match plus the
+same-run mutant control). The pre-edit compare refutes a late ring writer for the dd4 content changes. Next discriminator:
+a per-walker before/after diff inside rs64_dpc_record_submit (NEXT.md, bridge-edit-census) discriminates H-edit-intended
+from H-edit-stray and H-edit-retail.
