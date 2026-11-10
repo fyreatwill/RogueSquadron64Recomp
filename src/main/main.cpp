@@ -12051,13 +12051,16 @@ static void rs64_g1c_apply_dd_policy() {
           // band (0.23-0.33 mean dLum vs K=0.6, 0.7% px, visible by eye; KEDGE does not cover it). K=0.5 stays an explicit opt-in.
           // s7056: level-scoped instead: wider than 16:9 (FB_WIDTH > 796) and no explicit K -> K=0.5 on L12 only (s7050 gain), L4 keeps 0.6.
           { const char* fw = std::getenv("ROGUESQ_FB_WIDTH");
-            if (fw && std::atoi(fw) > 796 && !std::getenv("ROGUESQ_DD_OFFMAPCULL_K")) setenv("ROGUESQ_DD_OFFMAPCULL_KLEVEL", "12:0.5,13:0.5", 0); }
+            if (fw && std::atoi(fw) > 796 && !std::getenv("ROGUESQ_DD_OFFMAPCULL_K")) setenv("ROGUESQ_DD_OFFMAPCULL_KLEVEL", "12:0.5,13:0.5", 0);
+            // s7062: 21:9 L9 WIDEWIN cap 8192 (s7061: holds the dense burst ~60 fps where 10240 dips; frozen poses 0.00 vs 10240 in
+            // 2 runs while the 6144 control shows 1.18/0.99/0.25). Auto only when no explicit _CAP; an explicit _CAPLEVEL wins.
+            if (fw && std::atoi(fw) > 796 && !std::getenv("ROGUESQ_DD_WIDEWIN_CAP")) setenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL", "9:8192", 0); }
           setenv("ROGUESQ_DD_OFFMAPCULL_K", "0.6", 0); setenv("ROGUESQ_DD_OFFMAPCULL_H", "off", 0);
           // s7047: eye-to-edge K gate (s7046) folded in: off-map cells on a map side within 12 cells of the eye use K=0.8, which hides
           // L12's hard horizon cut (frozen poses 0.07 vs 0.81, 2 runs) for ~0.3 ms rsp (L12 59.6/59.9 vs 59.8 fps same run). =0 disables.
           setenv("ROGUESQ_DD_OFFMAPCULL_KEDGE", "0.8,12", 0);
           g_rs64_s7030 = 1;
-          std::fprintf(stderr, "[s7037] dd bundle offmapcull=2 k=%s h=%s kedge=%s klevel=%s (auto)\n", std::getenv("ROGUESQ_DD_OFFMAPCULL_K"), std::getenv("ROGUESQ_DD_OFFMAPCULL_H"), std::getenv("ROGUESQ_DD_OFFMAPCULL_KEDGE"), std::getenv("ROGUESQ_DD_OFFMAPCULL_KLEVEL") ? std::getenv("ROGUESQ_DD_OFFMAPCULL_KLEVEL") : "-");
+          std::fprintf(stderr, "[s7037] dd bundle offmapcull=2 k=%s h=%s kedge=%s klevel=%s caplevel=%s (auto)\n", std::getenv("ROGUESQ_DD_OFFMAPCULL_K"), std::getenv("ROGUESQ_DD_OFFMAPCULL_H"), std::getenv("ROGUESQ_DD_OFFMAPCULL_KEDGE"), std::getenv("ROGUESQ_DD_OFFMAPCULL_KLEVEL") ? std::getenv("ROGUESQ_DD_OFFMAPCULL_KLEVEL") : "-", std::getenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL") ? std::getenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL") : "-");
       } }
     char b[16];
     std::snprintf(b, sizeof b, "%d", px);

@@ -1,13 +1,12 @@
-# NEXT: L9 21:9 frozen poses for the s7061 level cap 8192 -> fold CAPLEVEL 9:8192 into the 21:9 auto bundle if invisible
+# NEXT: fold the s7062 L10/L15 21:9 dd6 auto holds -> close the 21:9 dd6 level survey
 HYPOTHESIS-ID: dd6-219-levelK-survey
-Context s7061: cap 8192 holds L9's dense burst at ~60 fps (2 runs: 59.8/58.3/59.5 and 60.0/58.2/60.0 in 8192/10240/8192 phases). New opt-in knob
-ROGUESQ_DD_WIDEWIN_CAPLEVEL=<lvl>:<cells> (src/main/upstream_compat.cpp rs64_s7012_cap), not auto. Image cost of 8192 on L9 is unmeasured.
-Run (screen unlocked: /usr/sbin/ioreg -n Root -d1 | grep -c '"CGSSessionScreenIsLocked"=Yes' must print 0):
-  zsh scratch/s7061/run_pose.zsh 9      (arms c10240 base / c8192 via CAPLEVEL / c6144 positive control; out scratch/s7062/L9)
-Score: python3 tools/s7032_pose_cull_score.py --base c10240 <dir> (see s7052/s7057 usage in PORTING-STATE), plus eye the frames.
-  Positive control: c6144 must show a difference > c8192 (if c6144 is ~0 too, poses are not on the wide edge -> move FZ later/earlier).
+Context s7062: 9:8192 is now in the 21:9 auto bundle (L9 60.00 fps). Every level except L10 (cloud, crash check only) and L15 has a 21:9 dd6 survey row.
+Soaks queued: scratch/agent/soak_queue/s7062_219auto_L10.sh, _L15.sh (the loop runs them; verdict lines in SOAK-RESULTS.md).
+If they have not run yet: run one directly (screen unlocked: /usr/sbin/ioreg -n Root -d1 | grep -c '"CGSSessionScreenIsLocked"=Yes' must print 0):
+  env WD=90 zsh scratch/s7058/run_hold.zsh L15g 15 auto 130 230; pkill -9 -x RogueSquadron64Recomp
+Score: python3 tools/s7060_survey_table.py --suf g --levels 10,15   (or --levels 10-15 if the list form is not accepted)
 Hypotheses:
- H-invisible: c8192 <=0.1 mean |dLum| / ~0% px while c6144 shows -> add `9:8192` to an auto ROGUESQ_DD_WIDEWIN_CAPLEVEL in src/main/main.cpp s7037 block
-   (next to the KLEVEL auto, FB_WIDTH>796, setenv overwrite=0, only if no explicit _CAP), log in [s7037], one 21:9 L9 auto hold to confirm [s7061] fires.
- H-visible: c8192 shows a band (like L4 c9216 in s7052) -> try 9216 the same way (poses + burst); if that also shows, record trade, leave opt-in, close L9.
-Any crash: side-effect failure (G4 rule) -> capture and root-cause first.
+ H-ok: both alive, 0 crash, L15 >= 59.5 fps excl. gaps -> 21:9 dd6 survey CLOSED; write the 19-level table summary into CURRENT-TRUTH, OWNER-OPT-INS one line.
+ H-laggard: L15 < 59.5 with RSP-bound slow frames -> same-run cap toggle like s7061 (scratch/s7061/run_caplevel.zsh with level 15).
+ H-crash: any crash (L15 had a 21:9 crash fixed by s6992 PTRMASK) -> G4 side-effect rule: capture a backtrace and root-cause first.
+After closing: the ladder rungs left are owner-judgement items; take the next non-owner item in CURRENT-TRUTH Next steps (e.g. the rare dd4/dd8 gfx SIGBUS only if a soak hits it).

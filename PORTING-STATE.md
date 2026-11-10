@@ -185784,3 +185784,22 @@ HYPOTHESIS-ID: dd6-219-levelK-survey. CURRENT-TRUTH 58.1 KB at start (no mainten
 - This selects H-8192-holds and refutes H-8192-dips and H-noburst (both runs had a burst).
 - Next discriminator: frozen poses on L9 21:9 (scratch/s7061/run_pose.zsh: c10240 / c8192 / c6144 control); fold CAPLEVEL 9:8192 into the 21:9 auto bundle only if c8192 is
   invisible while c6144 shows.
+
+## Session 7062 (2026-11-10) — L9 21:9 cap 8192 is invisible at frozen poses (6144 control shows): folded `9:8192` into the 21:9 dd6 auto bundle
+HYPOTHESIS-ID: dd6-219-levelK-survey. CURRENT-TRUTH 58.1 KB at start (no maintenance). No new soak verdicts.
+- Unit (NEXT s7061): image cost of the s7061 L9 cap 8192. Hypotheses H-invisible / H-visible.
+- A previous attempt (scratch/s7062/L9_interrupted) died partway through the c8192 arm (no harness line); its c10240 and c8192 frames were complete for k0-k5, so it
+  counts as a second run of those two arms. Re-ran the whole script (scratch/s7061/run_pose.zsh 9 -> scratch/s7062/L9): 3 arms, each 207 s of flight, alive,
+  0 crash, 0 VI stall, 6 poses (k0-k5, pos x 80..140). The [s7061] line confirms each knob fired (caplevel=(none) / 9:8192 / 9:6144).
+- tools/s7032_pose_cull_score.py --base c10240: intra 0.00 at every pose; **c8192 0.00/0.000 at all 6 poses** (the interrupted run also gave 0.00 at all 6);
+  **control c6144 1.18/0.027, 0.99/0.024, 0.25/0.006** at k0-k2, 0 at k3-k5. So the instrument sees a smaller window, and at L9's poses 8192 changes no pixel.
+- Verdict: H-invisible (two runs for c8192, positive control in the same run). Caveat: the poses lie along the PIN route at 80-140 x, not inside the 270-370 s
+  combat burst, so the image there is covered by the pose sample only.
+- Change: src/main/main.cpp s7037 block: if FB_WIDTH > 796 and there is no explicit ROGUESQ_DD_WIDEWIN_CAP, setenv ROGUESQ_DD_WIDEWIN_CAPLEVEL=9:8192 (overwrite 0,
+  so an explicit _CAPLEVEL wins; `ROGUESQ_DD_WIDEWIN_CAPLEVEL=-` turns it off, because sscanf rejects it). [s7037] now prints caplevel=.
+- Confirm hold (scratch/s7058/run_hold.zsh L9c 9 auto, new build, 21:9 dd6 auto bundle): 368 s of flight, alive, 0 crash, 0 VI stall; log shows
+  `[s7037] ... caplevel=9:8192 (auto)` and `[s7061] widewin caplevel=9:8192`. tools/s7060_survey_table.py: **L9 60.00 fps (59.98 excl. gaps), P(>=2VI) 0.00,
+  5 slow frames, rsp 9.76** vs the s7058 auto run at 10240 (suffix a): 58.50, P 0.03, 469 slow frames, rsp 10.47. That comparison crosses runs, and burst severity
+  varies, so it supports s7061's same-run result without proving anything on its own.
+- Rules out: H-visible for L9 at 8192.
+- Queued soaks s7062_219auto_L10 / _L15 (the two levels with no 21:9 dd6 survey row) to finish the survey.
