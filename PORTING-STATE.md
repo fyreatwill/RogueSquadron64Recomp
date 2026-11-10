@@ -186470,3 +186470,4 @@ Discrimination: H-int-live-miscompile (an integer lowering differs on a live pat
 site and for all 30 shapes. H-ddivu-ub (64-bit divide by zero differs from hardware) SELECTED by the host test (34/34 divisor-0
 rows wrong before, 0 after) and fixed in recomp.h. Next discriminator: the memory-access + branch-likely census (NEXT.md),
 per shape {matches, differs-unreachable, differs-live}.
+In short: the census refutes live integer miscompiles, the host test selects the ddivu divide-by-zero gap, and the recomp.h fix closes it.
