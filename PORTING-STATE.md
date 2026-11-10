@@ -186010,3 +186010,26 @@ Single run per arm, sequential: no fps claim (the game sits at 60 in this recipe
 Verdict: selects H-callsite (inline flag removes the residual completely), refutes H-floor. host-selftime-audit CLOSED.
 Next (optional, owner reports preempt): Gfx-thread top non-ucode term is XXH3_hashLong_64b 1021 samples (7.3%) +
 _platform_memmove 1136 (8.1%) - see NEXT.md (HYPOTHESIS-ID gfx-hash-audit).
+
+## Session 7070 (2026-11-10) — gfx-hash-audit CLOSED, no build: Gfx-thread XXH3_hashLong / memmove are RT64 framebuffer RAM tracking + writeback (~77% / ~60%), texture hashing ~11%, no rs64 caller; ~0.22 ms/frame, off the VI cliff
+
+What ran: new offline tool `tools/s7070_parents.py` (per-thread caller attribution of a leaf's on-CPU SELF samples
+over `sample` dumps, immediate caller sym+offset and depth-N chains, blocking leaves excluded) over the existing
+s7069 dumps (L6 dd1 4:3 FPS60): `on` arm (214 dumps) and `off` arm (213 dumps), two independent dump sets.
+
+Result (Gfx Thread, on / off arm):
+- XXH3_hashLong_64b self 1021 / 1024 (7.3 / 7.6% of Gfx on-CPU self). Callers: FramebufferManager::checkRAM+616
+  (via State::checkRDRAM <- processRDPLists) 36 / 34%; FramebufferManager::hashTracking+64 (fullSync) 20 / 22%;
+  State::updateScreen +4960 / +2248 (screen fb RAM hash + present storage hash, rt64_state.cpp:3721/3875) 32 / 34%;
+  TMEMHasher::hash (TextureManager::uploadTexture) 12 / 11%.
+- _platform_memmove self 1136 / 1053 (8.1 / 7.8%). Callers: NativeTarget::copyToRAM (Framebuffer::copyNativeToRAM,
+  two fullSync sites) 42 / 36%; FramebufferStorage::store (storeRAM <- checkRDRAM) 22 / 24%; updateScreen+3964 7 / 8%;
+  factor5_ucode_nmac 7 / 7% (LLE ucode DMEM copies, functional); rsp_dpc_submit_impl vector insert 4 / 5%; TMEMHasher 4%.
+- Cost: hash+memmove ~2160 samples of ~162 s sampled wall = ~1.3% of the Gfx thread's wall = ~0.22 ms per 16.7 ms
+  frame; the run holds 60 fps, so it is not on the >=2-VI cliff.
+
+Verdict: H-ours refuted (no rs64 frame among hash callers; the only rs64-side memmove is the DPC byte push, already
+closed s7026-s7029). H-tex is minor (11%). The bulk is RT64's own framebuffer RAM tracking/writeback design
+(checkRAM/hashTracking/storeRAM/copyNativeToRAM), which keeps CPU-visible framebuffers coherent; H-redundant is at
+most the double hash in updateScreen (~0.07 ms/frame) — not worth a knob. Thread closed; nothing landed in code.
+Rules out: gfx-thread hashing/copy as a frame-pacing or headroom lever at dd1.

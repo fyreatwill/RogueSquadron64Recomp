@@ -1,13 +1,12 @@
-# NEXT: (optional, low value) Gfx-thread XXH3_hashLong / memmove audit
-HYPOTHESIS-ID: gfx-hash-audit
-Context (s7069): host-selftime-audit closed. Gfx Thread on-CPU self in the s7069 on arm (scratch/s7069/on, 214 sample dumps,
-L6 dd1 4:3 FPS60): factor5_ucode_nmac 29.6% (the LLE ucode, functional), _platform_memmove 8.1% (1136), XXH3_hashLong_64b
-7.3% (1021), rsp_dpc_submit_impl 6.5%. AN OWNER REPORT PREEMPTS THIS (CURRENT-TRUTH Next steps 1-12 await owner flights).
-Hypotheses: H-tex (RT64 hashes TMEM/texture uploads per load; cost scales with loads, needed for its texture cache) vs
-H-redundant (the same bytes are rehashed several times per frame, e.g. per tile or per copyNativeToRAM/framebuffer check, and
-can be memoised) vs H-ours (a hash we added in rs64* RT64 glue, e.g. rs64LoadBlockRuns or a frame-diff detector).
-Discriminator, NO build first: re-read the existing dumps for the callers of XXH3_hashLong_64b and _platform_memmove
-(the `sample` call trees in scratch/s7069/on/smp_*.txt carry full stacks; write a small parent-frame tally, tools/s7070_parents.py).
-Caller split decides: RT64 texture cache path -> H-tex (close unless bytes/frame look redundant); an rs64 frame -> H-ours
-(gate it like s7068); same call site with many calls per frame of identical size -> H-redundant (memoise, same-build A/B with
-an =0 knob, scratch/s7069/both.zsh recipe).
+# NEXT: owner reports first; otherwise ladder item 4 (generated-symbol renaming sweep)
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
+Context (s7070): gfx-hash-audit closed (RT64 framebuffer tracking, ~0.22 ms/frame, no rs64 caller). Every CURRENT-TRUTH
+Next-steps item 1-12 awaits the owner's flight/look; 13/13b closed; 14-15 parked. AN OWNER REPORT PREEMPTS THIS.
+If none: check `grep -n '^## Session ' PORTING-STATE.md | tail -15` (ITERATION.md item 4 REVISIT rule), then resume
+the renaming sweep: count remaining `func_0x` placeholders, pick the next contiguous address band, name from
+call-graph/string/caller evidence. Beware: rename edits do not reset the churn counter — pair them with a real
+code/tool change (e.g. a tools/ helper that ranks unnamed functions by host self-time from the s7069 dumps, so the
+sweep names the hot ones first).
+Hypotheses for the ranking pass: H-hot-named (top guest self-time functions are already named) vs H-hot-unnamed
+(several hot guest functions are still func_0x...). Discriminator: tools/s7067_selftime.py --thread Game over
+scratch/s7069/on, joined with the rename map.

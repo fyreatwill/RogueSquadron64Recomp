@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7069 (2026-11-10).
+Compact operational handoff, as of Session 7070 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7070 gfx-hash-audit CLOSED (no build, tools/s7070_parents.py over the s7069 on/off dumps, two sets agree): Gfx-thread XXH3_hashLong (7.3%) and memmove (8.1%) are RT64 framebuffer RAM tracking/writeback (checkRAM, hashTracking, storeRAM, copyNativeToRAM, updateScreen: ~77% of hash, ~60% of memmove), texture hashing ~11%, no rs64 caller.** ~0.22 ms/frame total, 60 fps held: not a lever.
 
 **s7069 host-selftime-audit CLOSED: the 2033 generated rs64_m5_lowfield_store / rs64_s4307_synth_read call sites test a flag inline (tools/apply_s7069_callsite_gate.py, same-name macro after the decl, call lines untouched; `ROGUESQ_DIAG_CALLSITE=0` = old path).** Same build, L6 dd1 4:3 FPS60 268 s each, 0 crash/stall: [Game] 0 hook samples 0/0 vs 71/60 control; the bigger win was skipped argument evaluation (two s5228 lowfield sites call getenv per store): getenv 597 -> 15, [Game] 0 on-CPU self 4625 -> 3591. Single run per arm.
 
@@ -255,7 +257,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
     Use fl_shown/fl_miss, not shown/s, for per-level fps. Open, owner scope: why L7/L16/L17 autopilot holds cycle the backdrop menu.
 12. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png).
 13. **Scene-transition stalls: CLOSED s7065** (retail-designed 3072-sample audio wait, ~139 ms, plus slot drain). Reopen only on an owner report of a transition hitch longer than ~350 ms.
-13b. **Hot getenv: CLOSED s7066. Hot dladdr: CLOSED s7067. Diag call-site gates: CLOSED s7068 (ROGUESQ_DIAG_GATE) + s7069 (generated sites, ROGUESQ_DIAG_CALLSITE).** Optional next: Gfx-thread XXH3_hashLong (7.3%) / memmove (8.1%) audit (NEXT.md, gfx-hash-audit). Take only when nothing owner-facing is open.
+13b. **Hot getenv: CLOSED s7066. Hot dladdr: CLOSED s7067. Diag call-site gates: CLOSED s7068 (ROGUESQ_DIAG_GATE) + s7069 (generated sites, ROGUESQ_DIAG_CALLSITE).** Gfx-thread hash/memmove audit CLOSED s7070 (RT64 framebuffer tracking, ~0.22 ms/frame, no rs64 caller).
 14. **Owner judgement / parked:** FPS60 feel, G3c sheets, QoS default, native hangar geometry,
     rare dd4/dd8 gfx SIGBUS (single-source). Reopen on an owner report or side-effect failure.
 15. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first.
