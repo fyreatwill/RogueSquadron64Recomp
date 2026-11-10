@@ -186925,3 +186925,50 @@ Discrimination: selects H-edit-intended, refutes H-edit-stray (0 payload writes 
 0 guard writes). H-edit-retail: in plain flight only spike (owner-requested default on) and region (16:9 HUD anchor, ASPECT
 opt-in) edit, neither touches terrain geometry beyond the culled wedges, so the bridge is not a G5b terrain-drop source.
 The bridge layer (DPC registers s7095, forwarding s7096, edits s7097) is closed. Rerun after any walker edit.
+
+## Session 7098 (2026-11-10) — RT64 vs angrylion on the same dd4 stream: big presented terrain drops are already in the RDP stream (H-stream); they are an FPS60 near-wall flicker, not a draw-distance effect
+
+Work unit from NEXT.md (slug rt64-vs-angrylion-stream). Owner recipe L6 dd4 16:9 FPS60, no logging env, scratch/s7098/arm.zsh (copy of s6895's).
+
+Capture a6: one run, ROGUESQ_G5B_FRAME (RAM every 20 swaps) plus g5b_capture of the window (384x216, 11,473 frames, 158.8 s,
+74 g5b_drops transients). The stream file reached its 22 GB cap 154 s into the 159 s presented window. The flight part
+(mach <= 20949200000000, then mission over and menus) holds 316 swaps that carry their own RAM snapshot. a6.cap (23 GB) was
+deleted after replay. The replayed frames stay in scratch/s7098/al and altr.
+
+Tool defect found: frame_replay SIGSEGVs on these frames. ASan on a source build: global-buffer-overflow in fbfill_16, because the
+g3_angrylion core is built with RDRAM_MAX_SIZE 0x800000 and rdp/rdram.c sizes static rdram_hidden[] from it. At dd4 16:9 the colour
+image is at 0x98AA00 (796 wide), above 8 MB. New tools/angrylion_replay/build16.sh builds a patched 16 MB copy. Any earlier replay
+of a dd>1 frame with an image above 8 MB was invalid. The s6895 frames worked, so their images were presumably below 8 MB.
+
+Results:
+1. Sampled frames (tools/s7098_rt64_vs_al.py): 48x27 block diff after lag calibration (15 ms). Median 0.043, MAD 0.009,
+   threshold 0.099; 1/316 frames flagged (11902, 0.10). Positive control: a KILL_AREA=3000 replay of 16 of the swaps is flagged
+   16/16 (smallest kill effect 0.09 -> 0.12 over threshold).
+2. Every presented transient (tools/s7098_transients.py, 70 in flight): all swaps within 100 ms before each of x, a=x-1 and b=x+k
+   were replayed (257 swaps), and the best-matching swap was scored. 53 are H-stream (some swap's hardware render matches x as well
+   as it matches the neighbours), 7 are unmatched (neighbours above 0.10) and 10 were scored H-rt64. Those 10 are the large ones,
+   T 0.12-0.71. By eye (scratch/s7098/rt64_a.png, rt64_b.png: a | x | b | angrylion(sx)), each angrylion render shows the same
+   picture as the presented transient. The score gap is the HUD radar sitting further left in the replay; that HUD 16:9 anchor is
+   applied in RT64, not in the stream. So all 10 are H-stream, and H-rt64 is refuted for every large drop in this run.
+3. What the large drops are: in every one the near canyon wall that fills the view vanishes for 1-3 frames while the camera hugs or
+   enters it, and sky and far terrain show through.
+4. Arms, one run each, L6, tools/s7098_wall_flicker.py (events: T >= 0.12 after a wall-hug frame; episodes: events more than 1 s apart):
+   | arm | setting | wall-hug s | events | episodes |
+   |---|---|---|---|---|
+   | a6 | dd4 FPS60 | 121 | 16 | 6 |
+   | t6 | dd4 FPS60 CULL_SPIKE=tog | 131 | 26 | 4 (1 in cull-on seconds, 3 in cull-off) |
+   | n6 | dd4 FPS60=0 | 130 | 0 | 0 |
+   | d6 | dd1 FPS60 | 118 | 18 | 2 |
+   t6 refutes the spike cull, since episodes occur in both parities. The d6 events are the same picture (scratch/s7098/d6_ev.png):
+   the eye alternates between inside and outside the wall, and when it is inside the wall is not drawn. n6 still has 39 small
+   transients, so the detector was running, but n6 is a cross-run arm with no same-run positive control. Its 0 is single-source.
+
+Conclusion: RT64 renders the stream faithfully on every large drop in this capture. The drops visible at the owner recipe on L6 are
+game-side. They follow FPS60 (the game ticks at 60 Hz with dt 1/60) and not dd: dd1 shows them too. This does not explain the owner's
+report that dd1 is clean and dd2/dd4 drop. Either the owner's dd1 flight did not hug walls, or there is a second, dd-dependent class
+this route did not show.
+Rules out: H-rt64 (for the large drops), the spike cull as their source, and dd as the trigger of the near-wall class.
+Left open: the camera term (H-osc spring/push-out tuned for dt 1/30, H-par parity-gated routine, H-ret retail also enters the wall).
+Next: same-run split using ROGUESQ_G1E_LIMIT=1 ROGUESQ_G1E_WIN=600 with FPS60=0 (60 fps in alternate windows), plus a camera eye log.
+New: tools/s7098_rt64_vs_al.py, tools/s7098_transients.py, tools/s7098_wall_flicker.py, tools/angrylion_replay/build16.sh.
+CURRENT-TRUTH: s7088-s7091 headline bullets migrated to PROJECT-OVERVIEW (size 58.1 -> 55.9 KB with the s7098 bullet). Owner save untouched (no save swap; NO_SAVE_WRITE from runner/common).

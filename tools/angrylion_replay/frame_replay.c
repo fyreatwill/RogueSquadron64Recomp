@@ -2,7 +2,7 @@
 // usage: frame_replay cap.bin outdir swap [swap...]    (sorted ascending). For each swap: uses the newest 'RAM ' snapshot at or
 // before it, runs that swap's ranges, writes outdir/f<swap>.rgb (w h u32 then RGB8) for the widest 16-bit colour image.
 // KILL_AREA=<px>: zero tris whose rough area exceeds it. Positive control: the colour image is pre-filled magenta, "painted" counts pixels the replay changed.
-// Build: D=~/Documents/Tools/g3_angrylion; clang -O1 -I$D/src/src/core -I$D/src/src tools/angrylion_replay/frame_replay.c $D/build/libalp-core.a -lc++ -o frame_replay
+// Build: tools/angrylion_replay/build16.sh <dir> (s7098: needs a 16 MB core for dd>1 frames). Old: D=~/Documents/Tools/g3_angrylion; clang -O1 -I$D/src/src/core -I$D/src/src tools/angrylion_replay/frame_replay.c $D/build/libalp-core.a -lc++ -o frame_replay
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
