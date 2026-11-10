@@ -186819,6 +186819,6 @@ SIG0); 0 = "no yield requested", consistent with sp.cpp's completion-wins osSpTa
 writes (0x2800 clear SIG1/SIG2 at start, 0x4000 set SIG2 before break) are dropped; the CPU side gets task completion
 from the runtime, not from those bits. Semaphore: no CPU-side SP_SEMAPHORE literal found in the recompiled C, so a 0
 read is what hardware returns. DPC_* reads go through the DPC bridge (RSP_DPC_STATUS_READ), not audited here.
-DISCRIMINATION: H-dma-shape selected for exactly one live site (audio ucode_data staging, fixed); H-dma-ok holds for
-every DMA the 3 ucode TUs themselves issue (0 defect shapes in 83 M + 136 M DMAs, controls firing); H-cop0 refuted by
+DISCRIMINATION: this selects H-dma-shape for exactly one live site (audio ucode_data staging, fixed); H-dma-ok holds for
+every DMA the 3 ucode TUs themselves issue (0 defect shapes in 83 M + 136 M DMAs, controls firing); this refutes H-cop0 by
 code-read (single-source). Rules out the RSP DMA model as a source of DMEM corruption. Next: DPC register model (NEXT.md).
