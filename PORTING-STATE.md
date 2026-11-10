@@ -185625,3 +185625,23 @@ Unit (NEXT.md s7052, HYPOTHESIS-ID dd6-219-l4-cap-saturation): does 10240 itself
   Sheet docs/owner_sheet_s7053_l4_219_cap12288.jpg (k0, rows 10240 | 12288 | 9216 | autocontrast diff 10240 vs 12288, H 0.40-0.75).
   OWNER-OPT-INS: 12288 line added next to the s7052 9216 line, cost marked unmeasured on L4.
 - Rules out: 10240 as saturated on L4 21:9. Open: what 12288 costs on L4 21:9 (NEXT.md: same-run tog3 hold 10240/12288).
+
+## Session 7054 (2026-11-09) — 21:9 L4 WIDEWIN cap 12288 (POOLX_MAX=6) is ~free: rsp +0.23..0.27 ms vs 10240, fps inside the same-run A/A spread, 0 crash (H-free); offered as opt-in, default unchanged
+
+Unit (NEXT.md s7053, HYPOTHESIS-ID dd6-219-l4-cap12288-cost): H-free / H-cliff / H-unsafe for ROGUESQ_DD_POOLX_MAX=6 + WIDEWIN cap 12288 on L4 21:9. No build.
+- Boring checks: screen unlocked (IOConsoleLocked false), no other game instance, load ~3-4.
+- scratch/s7054/run_hold.zsh = scratch/s7049/run_hold.zsh with O=scratch/s7054 and ROGUESQ_DD_POOLX_MAX=6 in COMMON (dd6 bundle, R=2 K=0.6 KEDGE 0.8,12
+  all phases, 21:9 CW 840x360, CULL=1). Anchors `[s7012] widewin cap n=3 10240,12288,10240 tog3=1` / `n=3 12288,10240,12288 tog3=1`.
+  Harness note: macOS is case-insensitive, so run dir g1_lvl4s7031L4a reused the old s7031 L4A dir (its old log survives as run.log.zst).
+- Run A (10240/12288/10240), 508 s flight, alive, 0 VI stalls, crashlines 0, CRASH grep 0; g5e_cost_by_parity --phases 3 --skip-s 130 --split xor8, 22.6k frames:
+  58.7 / 59.5 / 59.5 fps, rsp 9.83 / 10.08 / 10.07 ms, P(>=2VI) 0.02/0.01/0.01.
+- Run B (12288/10240/12288), 508 s, same health: 59.4 / 59.3 / 58.7 fps, rsp 11.39 / 11.16 / 11.43, P 0.01/0.01/0.02.
+- 12288 vs 10240: rsp +0.25/+0.23 (A), +0.23/+0.27 (B): four comparisons agree. fps deltas +0.8/0.0 (A), +0.1/-0.6 (B) = inside the A/A spread of the
+  duplicated cap (0.8 in A, 0.7 in B). Cross-run absolute rsp differs by ~1.3 ms (host/path), so only within-run deltas count.
+- Positive control (new scratch/s7054/cells.py, mean of [s7031] per-phase lines, t>=200): ring_sum/f 12288 5697/5855/5818 vs 10240 4257/4121/4371
+  (+35% cells walked, so the cap really grows the window); ocull/f +1340..1400 at 12288, so the off-map cull removes most of the extra cells,
+  which is why the cost is a quarter of s7037's +0.6 ms at L1 dd8.
+- Verdict: H-free selected (both runs within 0.5 fps of the matched 10240 phase on average, P(>=2VI) <=0.02); H-cliff and H-unsafe refuted for L4.
+  Together with s7053 (12288 raises the far-left L4 shoreline 2-5 rows), 12288 is a small free gain at 21:9 on L4. Not checked: L12 21:9, the level
+  that sits closest to the VI cliff with the bundle (s7049 ~56-59 fps at 10240).
+- Change: OWNER-OPT-INS 12288 line now states the measured cost. Default stays 10240 (owner-gated).

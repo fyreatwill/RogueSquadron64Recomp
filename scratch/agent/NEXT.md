@@ -1,17 +1,16 @@
-# NEXT: what does WIDEWIN cap 12288 (POOLX_MAX=6) cost on L4 at 21:9? (same-run tog3 hold)
-HYPOTHESIS-ID: dd6-219-l4-cap12288-cost
-Context: s7053 showed the default cap 10240 still binds slightly on L4 21:9: 12288 raises the far-left shoreline 2-5 rows
-(score 0.08-0.17, sheet docs/owner_sheet_s7053_l4_219_cap12288.jpg). s7037 measured 12288 at +0.6 ms rsp on L1 dd8 21:9 (no edge gain there).
-Whether it can be offered to the owner for 21:9 depends on the L4 frame rate.
+# NEXT: does WIDEWIN cap 12288 (POOLX_MAX=6) stay under the VI cliff on L12 at 21:9? (same-run tog3 hold)
+HYPOTHESIS-ID: dd6-219-cap12288-l12
+Context: s7054 measured 12288 on L4 21:9 as ~free (rsp +0.25 ms, fps inside A/A). s7053 showed it buys a few far-shoreline rows on L4.
+L12 is the load-bearing level at 21:9 (s7049: 10240 at 56.3-59.0 fps; s7048 ~56). The opt-in line must say whether 12288 hurts there.
 Hypotheses:
- H-free: 12288 vs 10240 within ~0.5 fps and P(>=2VI) <= 0.03 in both runs -> offer as a 21:9 opt-in line in OWNER-OPT-INS (default unchanged).
- H-cliff: 12288 drops >1.5 fps or P(>=2VI) > 0.05 in both runs -> record, no opt-in, cap thread closed at 10240.
- H-unsafe: crash / heap or spill failure in the 12288 phases -> record.
+ H-free-L12: 12288 vs 10240 within the same-run A/A spread in both runs, P(>=2VI) not >0.03 above 10240 -> OWNER-OPT-INS: 12288 fine at 21:9 everywhere tested.
+ H-cliff-L12: 12288 drops >1 fps beyond A/A or P(>=2VI) +0.04 in both runs -> OWNER-OPT-INS: 12288 costs L12, keep 10240.
+ H-noop-L12: ring_sum/f not higher at 12288 (window already bounded on 88x88 L12) -> cost/benefit moot there; record.
 Unit (no build):
-1. cp scratch/s7049/run_hold.zsh scratch/s7054/run_hold.zsh; O -> scratch/s7054; add ROGUESQ_DD_POOLX_MAX=6 to COMMON.
-   Run A: `zsh scratch/s7054/run_hold.zsh L4a 4 10240,12288,10240`; Run B (rotated): `... L4b 4 12288,10240,12288` (~11 min each,
-   one game at a time). Anchor: `[s7012] widewin cap n=3 ... tog3=1` in each log.
-2. Per-phase fps/rsp/P(>=2VI) with the same analysis as s7049 (grep its PORTING-STATE entry for the tl_*.bin command, xor8 split).
-   The duplicated cap in each run gives an A/A for that run.
-3. Update OWNER-OPT-INS 12288 line with the measured cost; ledger + commit.
+1. cp scratch/s7054/run_hold.zsh scratch/s7055/run_hold.zsh; sed O -> scratch/s7055. Avoid run names that case-collide with
+   existing scratch/agent/m6/g1_lvl12s7031* dirs (ls -d first; macOS is case-insensitive). E.g. names L12p / L12q.
+   Run A: `zsh scratch/s7055/run_hold.zsh L12p 12 10240,12288,10240`; Run B: `... L12q 12 12288,10240,12288` (~11 min each, one at a time).
+2. python3 tools/g5e_cost_by_parity.py --phases 3 --skip-s 130 --split xor8 scratch/s7055/tl_<N>.bin.* scratch/agent/m6/g1_lvl12s7031<N>/run.log
+   python3 scratch/s7054/cells.py scratch/agent/m6/g1_lvl12s7031<N>/run.log  (positive control: ring_sum/f higher at 12288)
+3. Update OWNER-OPT-INS 12288 line; ledger + commit.
 Owner-gated items (G5a-G5i, L15 21:9, G1d) still need nothing run; check them first.
