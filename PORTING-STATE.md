@@ -186733,3 +186733,47 @@ selects H-fast-ok and H-div-ok. Two independent lines for the divide (ares formu
 the DMEM paths are proven equal to ares, not to hardware. Closes the VU layer for every op the ucode compiles.
 Next discriminator: RSPRecomp's scalar-unit lowering (su ops, branch/delay slots, mfc0/mtc0 DMA and semaphore
 registers, IMEM wrap of jr targets) against cxd4 su.c semantics (slug rsp-su-lowering-census).
+
+## Session 7093 (2026-11-10) — RSPRecomp scalar-unit lowering census CLOSED: 0 live differences; one latent template defect (sltiu with $zero and a negative immediate) FIXED in RSPRecomp
+
+Work unit (NEXT.md, slug rsp-su-lowering-census): does RSPRecomp lower every SCALAR RSP instruction in the 3 compiled
+TUs (main gfx ucode, audio ucode B, boot) the way the RSP executes it? New tool `tools/s7093_su_census.py --controls`
+(exit 0; report scratch/s7093/census.txt). It does not trust rabbitizer or RSPRecomp's templates: every top-level record
+of a fresh pristine pass (`zsh tools/ucode_regen.sh verify`) gets a vram by counting (every L_ label agrees, record
+count == text_size/4), its retail word is read from the ROM and decoded by the tool's own decoder.
+Results:
+- A decode: comment mnemonic and fields == ROM word on every record of all 3 TUs (1,777 records; 0 mismatches).
+- B control flow: every branch/j/jal/jr goto == target computed from the word; delay slot == the next ROM word, emitted
+  inside the taken path before the goto and again as the following top-level record; no branch in a delay slot; every
+  jal emits `r31 = 0x{pc+8}`. One target differs and is already owned: main 0x1FF0 `bgez` runs past the IMEM end (the
+  hardware PC wraps to 0x000 = IMEM 0x1000) and RSPRecomp emits `goto L_0000`; the live fixup "L_0000 self-restart"
+  (PORTING-STATE s5428-s5455) handles it. Allowlisted only while the live file carries that tag.
+- C cop0/cop2: every mfc0/mtc0 action matches the decoded register (DPC_* go to the bridge macros; SP_STATUS, DMA_FULL,
+  DMA_BUSY, SEMAPHORE read 0 by design); mfc2/mtc2 carry the decoded element, cfc2 the decoded rd (only rd 1 = VCC used).
+- D semantics: the 1,083 distinct live scalar lines (1,845 records; ALU, shifts, slt*, loads, stores, branch
+  conditions) compiled into host functions with the live rsp.hpp DMEM block + RSP_ADD32/SUB32/SIGNED and run against a
+  Python reference of the decoded word (wrap, sign/zero extension, sign-extended immediates, unaligned and wrapping DMEM
+  bytes, shift masks), fast DMEM path and byte loops: 94,060 cases, 0 bad. Plus 1,090 SYNTHETIC lines produced by the
+  real RSPRecomp binary from assembled boundary instructions (imm 0/0x7FFF/0x8000/0xFFFF/..., rs = $zero and a
+  register, every shift amount, wrap/unaligned memory offsets): 91,360 cases, 0 bad after the fix below.
+- E cop2 moves: rsp.MFC2/MTC2 all 16 e, CTC2->CFC2 rd 0..3 x 65,536 values + per-lane flags vs a byte-level cxd4 su.c
+  reference: 3,473,408 cases, 0 bad.
+- F jal link: RSPRecomp stores 0x1000|(pc+8), hardware stores (pc+8)&0xFFF. All 11 non-jr readers of $31 are pure
+  save -> restore -> jr chains ($30/$7/$8 copies, DMEM 0x16A and 0x50($18) halfwords, and audio ucode B lane 6 of $v31
+  via mtc2/mfc2: every vector op on $v31 in ucode B uses e=8..13, lanes 0-5, and $v31 is never stored), and the
+  indirect dispatch masks (jump_target|0x1000)&0x1FFF, so the bit-12 difference never reaches data. The ucode itself
+  loads 0x1xxx return addresses (`ori $ra, $zero, 0x1088`). Harmless.
+DEFECT FOUND AND FIXED (latent, 0 live sites): RSPRecomp lowered `sltiu rt, $zero, -imm` to `rt = 0 < -0X8000 ? 1 : 0`.
+r0 prints as the int literal 0, so the compare is SIGNED and gives 0 where the RSP gives 1 (2,000 bad synthetic cases).
+With rs = a register the uint32_t operand forces an unsigned compare, so only the $zero form was wrong. Fix in
+../N64Recomp/RSPRecomp/src/rsp_recomp.cpp (commit 85c6156 in that repo; mirror submodule-patches/n64recomp-rsprecomp-sltiu.patch):
+a negative immediate is emitted as U32(-0X...). Non-negative immediates print as before, so the 12 live ucode TUs
+regenerate byte-identical (`tools/ucode_regen.sh verify` 12/12 SAME; the only 2 sltiu sites use $10 with imm 3). No game
+binary change, so no boot run was needed (nothing to test at runtime).
+Controls (all fire): one corrupted ROM bit -> check A flags it; mutant shapes (sltiu signed, lb zero-extended, sra
+logical, beq->bne, sllv &15) flagged on 35/35 distinct live lines; the pre-fix sltiu template gives 2,000 bad; MFC2
+without its e+1 wrap gives 32,636 bad.
+Rules out: RSPRecomp scalar lowering as a source of any RSP misbehaviour in this game. With s7091 (fixups) and s7092 (VU
+memory + divide), the recompiled-RSP layer is audited end to end except the runtime DMA / cop0 model (next).
+Not covered: rsp.cpp dma_rdram_to_dmem / dma_dmem_to_rdram vs hardware SP DMA (RD_LEN length|count|skip fields,
+8-byte alignment, DMEM/IMEM bit 12), and the cop0 status/semaphore modelling choices. These are the next unit (NEXT.md).

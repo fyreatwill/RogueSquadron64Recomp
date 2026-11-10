@@ -1,0 +1,17 @@
+diff --git a/RSPRecomp/src/rsp_recomp.cpp b/RSPRecomp/src/rsp_recomp.cpp
+index 5302de1..a184d09 100644
+--- a/RSPRecomp/src/rsp_recomp.cpp
++++ b/RSPRecomp/src/rsp_recomp.cpp
+@@ -477,7 +477,11 @@ bool process_instruction(size_t instr_index, const std::vector<rabbitizer::Instr
+             print_line("{}{} = {}{} < {}{} ? 1 : 0", ctx_gpr_prefix(rd), rd, ctx_gpr_prefix(rs), rs, ctx_gpr_prefix(rt), rt);
+             break;
+         case InstrId::rsp_sltiu:
+-            print_line("{}{} = {}{} < {} ? 1 : 0", ctx_gpr_prefix(rt), rt, ctx_gpr_prefix(rs), rs, signed_imm_string);
++            // s7093 (RS64): the immediate is sign-extended then compared UNSIGNED. With rs = $zero the left operand is
++            // the int literal 0, so `0 < -0X8000` was a signed int compare (0) where the RSP gives 1. Negative
++            // immediates are wrapped in U32() so the compare is unsigned whatever rs prints as; others are unchanged.
++            print_line("{}{} = {}{} < {} ? 1 : 0", ctx_gpr_prefix(rt), rt, ctx_gpr_prefix(rs), rs,
++                (int16_t)imm < 0 ? fmt::format("U32({})", signed_imm_string) : signed_imm_string);
+             break;
+             // Loads
+             // TODO ld

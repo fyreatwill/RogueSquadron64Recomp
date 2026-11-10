@@ -266,3 +266,13 @@ Tagged excesses of a retail statement at its own address: 5, all null-pointer gu
 (reserveAndEmitDLEntry s169, submitSceneNodeRender s3553). Shortfall classes: rewritten-same-lhs 93, other-stmt-at-addr 46,
 control-replaced 35, addr-block-absent 16 (s327 audio wait-spin pump), bare-drop 9 (dead copies after `return;` cut by
 s6869, `$zero` writes, the moved VI calls). Not covered: build/factor5_ucode.
+
+## s7093 RSPRecomp scalar-unit lowering (tools/s7093_su_census.py --controls, exit 0)
+
+Pristine pass of the 3 compiled RSP TUs, ROM-decoded by the tool's own decoder. A decode 1,777/1,777 records match;
+B control flow + delay slots 0 defects (main 0x1FF0 bgez wrap to IMEM 0x000 = goto L_0000, owned by the "L_0000
+self-restart" fixup); C cop0/cop2 forms all match; D 1,083 live distinct scalar lines 94,060 cases 0 bad, 1,090
+RSPRecomp-generated synthetic boundary lines 91,360 cases 0 bad; E MFC2/MTC2/CFC2/CTC2 3,473,408 cases 0 bad vs cxd4;
+F jal link bit 12 (0x1xxx vs hardware 0x0xxx): all 11 non-jr $31 readers are save/restore -> jr, harmless.
+Defect fixed: `sltiu rt, $zero, <negative imm>` emitted `0 < -0X...` (signed int compare); now `0 < U32(-0X...)`
+(RSPRecomp commit 85c6156; 0 live sites, ucode regen 12/12 byte-identical). Rerun after any RSPRecomp change.
