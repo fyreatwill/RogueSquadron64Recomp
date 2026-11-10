@@ -186570,3 +186570,6 @@ HYPOTHESIS-ID: host-shim-abi-census. Offline unit from NEXT.md, plus one live bo
   SELECTED for osAiSetFrequency, fixed, host test 400,000/400,000. Next discriminator: for each called shim,
   whether callers read v0/v1/out-args after the call, and whether that value matches the ROM routine
   (NEXT.md, slug host-shim-semantics-census).
+- In plain words: this census refutes a live ABI defect in the called shims, selects the ROM-rounding gap in
+  osAiSetFrequency as the one real deviation and closes it with a code fix (the rs64_ai_set_frequency_retail lines are
+  the fix, not instrumentation).
