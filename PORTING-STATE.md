@@ -185803,3 +185803,5 @@ HYPOTHESIS-ID: dd6-219-levelK-survey. CURRENT-TRUTH 58.1 KB at start (no mainten
   varies, so it supports s7061's same-run result without proving anything on its own.
 - Rules out: H-visible for L9 at 8192.
 - Queued soaks s7062_219auto_L10 / _L15 (the two levels with no 21:9 dd6 survey row) to finish the survey.
+- This selects H-invisible and refutes H-visible (L9, cap 8192, 21:9 dd6).
+- Next discriminator: the L10/L15 21:9 dd6 auto holds (H-ok / H-laggard / H-crash, NEXT.md) close or extend the 21:9 level survey.
