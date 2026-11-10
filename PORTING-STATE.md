@@ -186777,3 +186777,6 @@ Rules out: RSPRecomp scalar lowering as a source of any RSP misbehaviour in this
 memory + divide), the recompiled-RSP layer is audited end to end except the runtime DMA / cop0 model (next).
 Not covered: rsp.cpp dma_rdram_to_dmem / dma_dmem_to_rdram vs hardware SP DMA (RD_LEN length|count|skip fields,
 8-byte alignment, DMEM/IMEM bit 12), and the cop0 status/semaphore modelling choices. These are the next unit (NEXT.md).
+DISCRIMINATION: selects H-su-ok for every live site (0 diffs over 94,060 live cases, controls firing) and refutes
+H-su-bad for the live ucode; H-su-bad holds only for the latent sltiu-$zero-negative-immediate template shape (0 live
+sites, fixed in RSPRecomp). Next discriminator: rsp-dma-cop0-model, H-dma-ok vs H-dma-shape vs H-cop0 (NEXT.md).
