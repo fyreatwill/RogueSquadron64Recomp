@@ -67,3 +67,24 @@ injected). Before the delay-slot and call rules were added the scan reported 142
 a `jal` return value or a delay-slot `lui` write, i.e. scanner defects, not code.
 
 Verdict: N64Recomp's silent control-flow lowerings are correct for this ROM except the one jr-$t9 return, already fixed.
+
+## s7084: FPU lowering (CLOSED, no live miscompile)
+
+Tools: `tools/s7084_fpu_census.py` (static, over scratch/s7082/regen) and `tools/s7084_fpu_test/run_test.py`
+(host semantic test of the recomp.h FPU macros at the live -O2 flags). Both exit 0; rerun after any regen.
+
+| Class | Count | Verdict |
+|---|---|---|
+| Lowering shape per op (43 op x fmt shapes, add/sub/mul/div/sqrt/abs/neg/mov .s/.d, cvt.*, trunc.w.*, ceil.w.d, c.lt/le/ole/eq, bc1t/f(l), l/s wc1/dc1, m/t fc1, c/t fc1) | ~59k sites | 0 unmatched. c.le/c.ole/c.lt/c.eq -> C `<=`/`<`/`==`: false on NaN in both. Negative control (one CVT_W_S mutated to TRUNC_W_S) is flagged. |
+| cvt.w.s / cvt.w.d (rounding-mode sensitive) | 13 + 2 | 13 run at default RM=0 = host nearest-even (lrintf). Positive control: convertMat3x4ToN64Mtx's 3 are listed. The 2 cvt.w.d in guPerspectiveF run in the only ctc1 window (RM=1, toward zero). |
+| ctc1 / set_cop1_cs -> fesetround | 3 (all guPerspectiveF, gcc's double->u16 perspNorm idiom) | Honoured: the built object has fesetround -> frintx/fcvtzs -> fegetround -> fesetround(restore), in that order. Host test: 144 rows (cvt.w.d/cvt.w.s/trunc.w.s/cvt.s.d in all 4 modes, value computed before the mode switch) match an exact MIPS reference; mode-blind negative control mismatches 33 rows. |
+| cfc1 flag/cause reads (`& 0x78`) | 2 (guPerspectiveF) | **Differs, unreachable.** get_cop1_cs returns RM only, so flags read 0 and clang deletes the >=2^31 retry path. Retail reaches that path only if 131072/(near+far) >= 2^31, and the function already takes near+far <= 2 to the 65535 branch. |
+| Odd-FPR direct access `ctx->fODD.*` | 750 in 10 asm math helpers | All 750 preceded by CHECK_FR, an assert that is live in this build (Debug, `___assert_rtn` in funcs_4.c.o), so an FR=0 execution aborts loudly and never miscompiles silently. Accesses through f_odd (mtc1/mfc1/lwc1 to odd regs, 127) map FR=0 to the even reg's upper half and FR=1 to the reg itself, as the R4300 does. |
+| Status.FR toggles (mtc0 c0_sr) | 7 helpers set and clear FR; projectPointToScreen sets FR and never clears it | Retail bytes do the same (no static jal caller; jalr only). The runtime keeps FR per guest thread context, as libultra does (__osDispatchThread restores SR), so it matches hardware. |
+| Likely branches bc1tl/bc1fl | 794 | All shaped `if (cond) { delay; goto L; } goto skip_N; <dead copy>`: delay slot runs only when taken. |
+| FMA contraction (R4300 has no FMA) | 145 fmadd/fmsub in the built RecompiledFuncs | All 145 sit on injected patch C lines (host helpers: dist2, camera aim, dd/edge-fade math, probes), 0 on lowered guest statements. Pristine regen compiled with live flags: 0 fused (34 files that compile standalone), as fp-contract=on only fuses within one C expression and every guest op is its own statement. |
+| FCSR.FS (flush denormal results) | retail FCSR 0x01000800 | Known difference since s6012: host FZ is off unless ROGUESQ_FTZ=1, so the port keeps denormal results that retail flushes to 0 (magnitudes < 1.2e-38). Left opt-in (s6013 soaks: no effect). |
+| trunc.w.* / cvt.w.* out of range or NaN | n/a | Retail raises the unimplemented-operation exception (a crash); host saturates or gives 0. Lenient only on paths where retail would already have died. |
+
+Verdict: no FPU lowering in this ROM differs from R4300 semantics on a reachable path. Next silent class: integer
+mult/div and 64-bit lowering (hi/lo, div by zero, INT_MIN/-1, dmult/ddiv, lwl/lwr/swl/swr).

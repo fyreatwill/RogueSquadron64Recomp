@@ -186391,3 +186391,37 @@ Result:
 
 Rules out: a miscompile in N64Recomp's jalr/jr/jump-table lowering for this ROM. Next: FPU-lowering census (NEXT.md).
 No ORIGIN line needed (no mitigation, no runtime change).
+
+## Session 7084 (2026-11-10) — N64Recomp FPU-lowering census closed: ~59k FPU sites over 43 shapes lower correctly, rounding modes honoured, odd-FPR access assert-guarded, all 145 FMAs in injected patch C, 0 live miscompiles
+
+What ran (offline, no game run): new tools/s7084_fpu_census.py over the pristine s7082 front-end pass (scratch/s7082/regen;
+output scratch/s7084/census.txt). New tools/s7084_fpu_test/ (fpu_test.c + run_test.py) compiles the recomp.h FPU macros
+with the live -O2 RecompiledFuncs flags and compares them against an exact MIPS reference. Disassembled the built
+funcs_8.c.o (guPerspectiveF) and every RecompiledFuncs .o for fused multiply-adds. Write-up: docs/N64RECOMP-WARNING-CENSUS.md
+s7084 table.
+
+Result:
+- Shapes: every FPU site's first lowered statement matches the correct R4300 lowering for its op (43 op x fmt shapes,
+  0 unmatched). Negative control: one CVT_W_S mutated to TRUNC_W_S in memory is flagged (exactly +1).
+- Rounding: 13 cvt.w.s run at default RM=0 (host lrintf = nearest-even). Positive control: convertMat3x4ToN64Mtx's 3 are
+  listed. The only 3 ctc1/2 non-save cfc1 sites are guPerspectiveF's gcc double->u16 perspNorm idiom (RM=1 window).
+  Object order is fesetround -> frintx/fcvtzs -> fegetround -> fesetround(restore), so the mode is honoured. The host test
+  passes 144/144 rows (cvt.w.d, cvt.w.s, trunc.w.s and cvt.s.d in all 4 modes, value computed before the switch); a
+  mode-blind control fails 33.
+- Difference, unreachable: get_cop1_cs returns RM only, so `cfc1 & 0x78` reads 0 and clang deletes the >=2^31 retry path
+  (only one frintx in the object). Retail reaches it only if 131072/(near+far) >= 2^31, and near+far <= 2 already
+  branches to 65535.
+- Odd FPRs: 750 direct `ctx->fODD.*` accesses in 10 asm math helpers, all preceded by CHECK_FR. Asserts are live in this
+  build (Debug, ___assert_rtn referenced in funcs_4.c.o), so an FR=0 execution aborts loudly. The 127 f_odd accesses map
+  per FR like the R4300 does. The retail bytes toggle FR in 7 helpers (or/and on c0_sr). projectPointToScreen sets FR and
+  never clears it, in the retail bytes too (no static jal caller). The per-thread ctx matches libultra's per-thread SR.
+- Likely branches: 794 bc1tl/bc1fl, all with the delay slot inside the taken block and goto skip_N after.
+- FMA: 145 fmadd/fmsub in the built RecompiledFuncs, attributed via -l line info. All are on injected patch C lines
+  (host helpers), 0 on lowered guest statements. The pristine regen compiled standalone with live flags has 0 fused ops
+  in the 34 files that compile (fp-contract=on fuses only within one expression; the positive control a*b+c fuses, the
+  split form does not).
+- Known and left: FCSR.FS (retail 0x01000800) vs host FZ off unless ROGUESQ_FTZ=1 (s6012/s6013). Out-of-range or NaN
+  trunc/cvt: retail traps, host saturates; only matters on paths where retail already dies.
+
+Rules out: an N64Recomp FPU lowering miscompile for this ROM on a reachable path. Next: integer mult/div/64-bit lowering
+census (NEXT.md). No ORIGIN line needed (no mitigation, no runtime change).
