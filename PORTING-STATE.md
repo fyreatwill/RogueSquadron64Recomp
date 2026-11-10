@@ -185682,3 +185682,6 @@ Unit (NEXT.md s7055, HYPOTHESIS-ID dd6-219-l12-levelK): H-levelK / H-noread / H-
 - Verdict: H-levelK selected (gain kept on L12, L4 unchanged by construction and log). Image on L12 at K0.5 rests on s7050 frozen poses (0.00 vs
   ctl 0.60); not re-posed this session. H-other-levels untested beyond L1/L4/L12: the rule only touches L12.
 - Rules out: needing a per-frame level byte hunt (the documented global works, two runs show 19 -> 12 / 19 -> 4 transitions matching LEVEL).
+- Verdict line: the same-run tog selects H-levelK (K=0.5 on L12 only: +0.6/+0.5 fps, rsp -1.2/-1.3 ms, L4 logged k=0.6) and refutes H-noread
+  (gCurrentLevel 0x80130B70 reads 12 / 4 in mission). The change is behavioural (auto KLEVEL default in the dd6 bundle), not diagnostic-only.
+  Next discriminator: L13 21:9 same-run K 0.5/0.6/0.5 (H-l13-gain vs H-l13-free vs H-l13-visible, NEXT.md).
