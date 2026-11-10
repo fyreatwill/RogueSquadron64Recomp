@@ -186565,3 +186565,8 @@ HYPOTHESIS-ID: host-shim-abi-census. Offline unit from NEXT.md, plus one live bo
 - Not covered: whether each called shim RETURNS what the libultra routine it replaces returns (e.g. __osDisableInt
   leaves v0 unset; restore is a no-op, so harmless only if no caller uses v0 for anything else). That is the next unit.
 - lib/ edited -> ./submodule-patches/export.sh run, N64ModernRuntime.patch refreshed in this commit.
+- Discrimination: H-shim-abi-live (a called shim mis-decodes an argument or zero-extends a return the game can see)
+  REFUTED: 0 of 55, controls passing. H-shim-semantic (a shim computes a value different from the ROM routine)
+  SELECTED for osAiSetFrequency, fixed, host test 400,000/400,000. Next discriminator: for each called shim,
+  whether callers read v0/v1/out-args after the call, and whether that value matches the ROM routine
+  (NEXT.md, slug host-shim-semantics-census).
