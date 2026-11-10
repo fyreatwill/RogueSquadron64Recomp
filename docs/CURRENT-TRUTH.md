@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7077 (2026-11-10).
+Compact operational handoff, as of Session 7078 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7078 main-segment "player slot" family (table 0x8009FC10) is the 12-entry TEXT/FONT slot table, not players (25 renames PlayerSlot -> TextSlot).** Bodies: loadCharTextureSet builds a 256-byte char->glyph map per slot, the layout function parses NUL/space/tab/newline/~, callers are voice subtitles + menu text screens, loadFontAsset sits in the family. Preempt control 6, L6 boot to flight 309 s clean. Next: mission-overlay "player slot" trio.
 
 **s7077 menu tile-wipe owners renamed (2 renames; menu-overlay misnomer thread closed): allocCraftPreviewEffectObject = allocMenuImageTileWipe (rs_malloc(24), mesh at +0x14), initCraftPreviewEffectWithRandom = startMenuImageTileWipe (dir rand&1 at +0xC, images 0x800CF108/0x800CF10C, mesh build).** Only caller is the menu main function. Preempt control 6, binary has the new names and not the old, L6 dd1 4:3 boot to flight 309 s, 0 crash, 0 VI stall.
 

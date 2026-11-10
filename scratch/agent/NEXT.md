@@ -1,12 +1,16 @@
-# NEXT: owner reports first; otherwise misnomer check of the main-segment "player slot" anim family
+# NEXT: owner reports first; otherwise misnomer check of the mission-overlay "player slot" trio
 HYPOTHESIS-ID: generated-symbol-misnomer-fixes
-Context (s7077): menu-overlay misnomer thread CLOSED. animateCraftSelectFlags (menu 0x800C4C8C) loops over items and calls
-setPlayerSlotAnimationFlag 0x80063CFC, samplePlayerAnimChannel 0x80061F34, activateAnimationKeyframe 0x80061C74 and
-getPlayerSlotFieldAt34 0x80063C3C with a0=5. Menus have no player, so "player slot" may be a generic anim-channel/HMT slot table.
-Hypotheses: H-generic (slot = generic animation/HMT channel index, used by menu + mission alike) vs H-player (slot 0..n
-really are player/wingman entities and 5 is a menu-reserved one). Discriminator: the table base and stride the functions
-index, every caller's a0 values (grep jal over main + both overlays), and what is stored at slot+0x34.
-Method: python3 tools/s7075_fnsum.py <start> <stop> [--asm] over 0x80061C00-0x80063D80; symbols from
-../rogue_squadron64/symbol_files/*.txt. If misnomer: scratch/s7078/renames.tsv, tools/apply_symbol_renames.py --dry-run then
-apply; fixup_preempt_point.py must still say 6; rebuild; sed s7077->s7078 of scratch/s7077/run.zsh and run it.
+Context (s7078): the main-segment "player slot" family (table 0x8009FC10) is the 12-entry TEXT/FONT slot table;
+25 PlayerSlot/PlayerAnim names became TextSlot (scratch/s7078/renames.tsv). Three mission-overlay names still say
+"player slot" but do NOT reference 0x8009FC10: clearPlayerSlotHudTracking 0x800BEE18, loadPlayerSlotHudPreset
+0x800BF264 (calls the former), setPlayerSlotPositionVec3 0x800B40F0.
+Hypotheses: H-player (they index a real player/wingman array, names hold) vs H-other (HUD/text/camera slot or generic
+object, misnomer). Discriminator: the base each indexes (lui/addiu pairs), every caller and its args (jal map of
+/tmp-style objdump of .ovl.mission; regenerate with mips64-elf-objdump -d -j .ovl.mission
+../rogue_squadron64/build/roguesquadron.elf), and what the stored fields are read by.
+Method: same as s7078 (scratch/s7078/renames.tsv -> tools/apply_symbol_renames.py --dry-run, then apply;
+fixup_preempt_point.py must still say 6; cmake build; sed s7078->s7079 of scratch/s7078/run.zsh and run it).
+Also unresolved from s7078: advancePlayerAnimationPhase 0x80062B04 (calls activateTextSlotItemKeyframe, does not
+index the table itself) and getPlayerSlotAnimChannelCount 0x80063F70 (reads a0+1100, not the table) - check their
+callers' a0 before renaming.
 If all hold: close the misnomer thread and take the next G rung.

@@ -10494,7 +10494,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
         )
     # (scoped, s378 backport) target: activateAnimationKeyframe
     func_start_m = re.search(
-        r"RECOMP_FUNC void activateAnimationKeyframe\(uint8_t\* rdram, recomp_context\* ctx\) \{\n",
+        r"RECOMP_FUNC void activateTextSlotItemKeyframe\(uint8_t\* rdram, recomp_context\* ctx\) \{\n",
         text)
     if func_start_m:
         body_start = func_start_m.end()
@@ -10510,7 +10510,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
         if n:
             text = text[:body_start] + new_body + text[body_end:]
             changed = True
-            report.append(f"{p.name}: activateAnimationKeyframe table-deref guard patched x{n}")
+            report.append(f"{p.name}: activateTextSlotItemKeyframe table-deref guard patched x{n}")
             if "#include <stdio.h>" not in text:
                 text = text.replace('#include "recomp.h"\n', '#include "recomp.h"\n#include <stdio.h>\n', 1)
             if "#include <stdlib.h>" not in text:
@@ -19837,7 +19837,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
         # anchor, 0x80061EF4, falls inside activateAnimationKeyframe's own range even
         # though it guards the argument passed into the setLookupEntryField5ByKey call)
         func_start_m = re.search(
-            r"RECOMP_FUNC void activateAnimationKeyframe\(uint8_t\* rdram, recomp_context\* ctx\) \{\n",
+            r"RECOMP_FUNC void activateTextSlotItemKeyframe\(uint8_t\* rdram, recomp_context\* ctx\) \{\n",
             text)
         if func_start_m:
             body_start = func_start_m.end()
@@ -23423,7 +23423,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
     # Session 424.
     if p.name == "funcs_14.c":
         func_start_m = re.search(
-            r"RECOMP_FUNC void startPlayerSlotAnimationChannelLooping\(uint8_t\* rdram, recomp_context\* ctx\) \{\n",
+            r"RECOMP_FUNC void startTextSlotAnimationChannelLooping\(uint8_t\* rdram, recomp_context\* ctx\) \{\n",
             text)
         if func_start_m:
             body_start = func_start_m.end()
@@ -23435,7 +23435,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
                 r"(    // 0x80063094: sw          \$s0, 0x10\(\$sp\)\n"
                 r"    MEM_W\(0X10, ctx->r29\) = ctx->r16;\n)",
                 r"\1"
-                r"    if (ctx->r17 < 0x80010000) { // PATCH: startPlayerSlotAnimationChannelLooping wild-pointer guard (s424) -- see fixup_game_funcs.py comment\n"
+                r"    if (ctx->r17 < 0x80010000) { // PATCH: startTextSlotAnimationChannelLooping wild-pointer guard (s424) -- see fixup_game_funcs.py comment\n"
                 r"        static int s_slotloop_wild_logged = 0;\n"
                 r'        if (s_slotloop_wild_logged < 20) { fprintf(stderr, "[slot-anim-loop-guard] wild s1=0x%08X n=%d\\n", ctx->r17, s_slotloop_wild_logged); s_slotloop_wild_logged++; }' "\n"
                 r"        ctx->r2 = 0;\n"
@@ -23445,7 +23445,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
             if n:
                 text = _add_stdio(text[:body_start] + new_body + text[body_end:])
                 changed = True
-                report.append(f"{p.name}: [slot-anim-loop-guard] startPlayerSlotAnimationChannelLooping wild-pointer guard patched x{n}")
+                report.append(f"{p.name}: [slot-anim-loop-guard] startTextSlotAnimationChannelLooping wild-pointer guard patched x{n}")
 
     # initCraftSelectScreen (s424): companion write-site diagnostic for the
     # startPlayerSlotAnimationChannelLooping guard above -- logs the pointer

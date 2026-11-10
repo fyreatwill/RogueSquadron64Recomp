@@ -186259,3 +186259,29 @@ shows _allocMenuImageTileWipe/_startMenuImageTileWipe and neither old name. L6 d
 (the wipe runs only on menu transitions; it was also 0 in s7076).
 Next: the main-segment anim-slot family (setPlayerSlotAnimationFlag, samplePlayerAnimChannel, getPlayerSlotFieldAt34),
 which the menu calls with slot 5: is "player" a misnomer?
+
+## Session 7078 (2026-11-10) — main-segment "player slot" family is the 12-entry TEXT/FONT slot table (0x8009FC10), not players: 25 PlayerSlot/PlayerAnim names -> TextSlot, preempt control 6, L6 boot to flight clean
+
+What ran: the s7077 NEXT.md misnomer check of 0x80061C00-0x80064300 (objdump of all four sections of
+../rogue_squadron64/build/roguesquadron.elf, a jal/a0 scan over every caller, /tmp/s7078/scan.py).
+Evidence (three independent lines, all from the bodies):
+- loadCharTextureSet 0x800613C0 indexes 0x8009FC10, rs_mallocs 256 bytes into slot+0x20 and fills it as a
+  char -> glyph index map from the slot's char list (count u16 at +0, bytes at +0xC). That is a font.
+- measurePlayerSlotTextLayout 0x80062108 indexes the same table and walks a NUL-terminated string, special-casing
+  space (32), tab (9), newline (10) and '~' (126). That is text layout.
+- The only main-segment callers of the get/set/sample/rgb functions are initVoiceSubtitleSystem and
+  tickVoiceSubtitleDisplay (slot index from a halfword global, 4 or 11) plus linkHudNodeAndComputeScreenPos; menu
+  callers (printLevelSelectWeaponText, updateMenuPopupMessage, setupMenuConfirmChoiceItems ...) use slots 0,2,5,8,9,11.
+  loadFontAsset ("fonts/<name>") 0x80061A88 sits right in the family. Mission and cinematic overlays never call them.
+H-generic/H-text selected; H-player (real player/wingman entities) refuted: the slot 'A'..'L' markers, per-item RGB
+at +0x2C and keyframed "channels" are text items (subtitle lines, menu captions) with animated colour/position.
+Change: scratch/s7078/renames.tsv (25 names, e.g. initAllPlayerSlots -> initAllTextSlots, getPlayerSlotFieldAt34 ->
+getTextSlotItem, activateAnimationKeyframe -> activateTextSlotItemKeyframe, measurePlayerSlotTextLayout ->
+measureTextSlotStringLayout, setPlayerSlotEntryRGB -> setTextSlotItemRGB, applyPlayerSlotAnimChannelKeyframe (menu)
+-> applyTextSlotAnimChannelKeyframe) applied by tools/apply_symbol_renames.py: 19 files, 0 mismatches; s7078
+comment added to the symbol-file batch notes. Left alone (do not index the table): advancePlayerAnimationPhase,
+getPlayerSlotAnimChannelCount (reads a0+1100), and the mission trio clearPlayerSlotHudTracking /
+loadPlayerSlotHudPreset / setPlayerSlotPositionVec3.
+Controls: fixup_preempt_point.py still 6; nm shows 4/4 sampled new names and 0/3 old. L6 dd1 4:3 NOCAP run
+(scratch/s7078/run.zsh): 309 s flight, alive, 0 crash lines, 0 VI stalls; renamed text functions in 1/113 host samples.
+Next: the mission-overlay "player slot" trio (NEXT.md).
