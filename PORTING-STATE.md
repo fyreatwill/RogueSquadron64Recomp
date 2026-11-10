@@ -186285,3 +186285,26 @@ loadPlayerSlotHudPreset / setPlayerSlotPositionVec3.
 Controls: fixup_preempt_point.py still 6; nm shows 4/4 sampled new names and 0/3 old. L6 dd1 4:3 NOCAP run
 (scratch/s7078/run.zsh): 309 s flight, alive, 0 crash lines, 0 VI stalls; renamed text functions in 1/113 host samples.
 Next: the mission-overlay "player slot" trio (NEXT.md).
+
+## Session 7079 (2026-11-10) — mission-overlay "player HUD tracking" family is the controller-input layer: 5 renames (tickControllerInput, clearControllerInputState, initAllControllerInputState, loadControllerButtonMapPreset, applyDemoRecordedPadInput), setPlayerSlotPositionVec3 holds, preempt 6, L6 boot to flight clean
+HYPOTHESIS-ID: generated-symbol-misnomer-fixes. Work unit from NEXT.md (H-player vs H-other for the mission trio).
+Evidence (objdump of ../rogue_squadron64/build/roguesquadron.elf, /tmp/s7079_all.dis):
+- 0x80130B88 is a 4 x 6-byte array = OSContPad (u16 buttons, s8 stick x/y, u8 errno). tickPlayerHudIndicators
+  computes pressed = cur & ~(prev & mask) into 0x80130B88, copies cur to prev (0x8010BFB0, 6-byte stride), normalises
+  stick x/y by constants at 0x800A622C/30 with clamp + deadzone into 0x8010BDD8 (2 floats/controller), decays two
+  per-controller floats at 0x8010BDF8, and adds dt to 16 per-button hold timers at 0x8010BEA8 (64 B/controller) while
+  the bit is set. It calls applyDemoRecordedHudEvents when flag 0x20 is set; that function writes buttons and stick
+  bytes from the demo record into 0x80130B88 (demo pad playback).
+- initAllPlayersHudTracking loops 4 controllers; per controller it copies 18 u16 from preset table 0x80109AD0[profile
+  byte 5 of 0x80130B40] to 0x8010BE18 + 36*i. The four preset arrays (0x8009DDD0..0x8009DE5F) hold only single N64
+  button bits (0x8000 A, 0x4000 B, 0x2000 Z, 0x1000 START, D-pad 0x0800..0x0100, L 0x0020, R 0x0010, C 0x0008..0x0001):
+  controller button-map presets (the options-menu control configurations). loadPlayerSlotHudPreset(ctrl, preset) is
+  the single-controller version.
+- clearPlayerSlotHudTracking(i) zeroes that controller's pad, prev pad, edge mask, hold timers and stick floats.
+- setPlayerSlotPositionVec3 (only caller npcWordDevastatorUpdate) stores a vec3 at +0x19C of the 672-byte record
+  0x80137DB8[u8 a0], the record getPlayerField2 & co. index: name HOLDS.
+Change: scratch/s7079/renames.tsv via tools/apply_symbol_renames.py: 7 files, 0 mismatches (dry-run then apply).
+Controls: fixup_preempt_point.py still 6; nm: 7 hits for new names, 0 for old. L6 dd1 4:3 NOCAP run
+(scratch/s7079/run.zsh): 309 s flight, alive, 0 crash lines, 0 VI stalls; renamed input fns in 5/113 host samples.
+Rules out: H-player for 4 of the trio's family (they are per-controller, not per-player/HUD).
+Still unchecked: advancePlayerAnimationPhase 0x80062B04 (5 callers) and getPlayerSlotAnimChannelCount 0x80063F70.

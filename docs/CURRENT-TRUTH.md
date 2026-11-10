@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7078 (2026-11-10).
+Compact operational handoff, as of Session 7079 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7079 mission-overlay "player HUD tracking" family is the controller-input layer (5 renames): tickControllerInput (OSContPad 0x80130B88 edge detect, stick deadzone, 16 per-button hold timers 0x8010BEA8), clearControllerInputState, initAllControllerInputState, loadControllerButtonMapPreset (presets 0x80109AD0 hold single N64 button bits), applyDemoRecordedPadInput.** setPlayerSlotPositionVec3 holds (672-byte player record 0x80137DB8). L6 flight 309 s clean, preempt 6.
 
 **s7078 main-segment "player slot" family (table 0x8009FC10) is the 12-entry TEXT/FONT slot table, not players (25 renames PlayerSlot -> TextSlot).** Bodies: loadCharTextureSet builds a 256-byte char->glyph map per slot, the layout function parses NUL/space/tab/newline/~, callers are voice subtitles + menu text screens, loadFontAsset sits in the family. Preempt control 6, L6 boot to flight 309 s clean. Next: mission-overlay "player slot" trio.
 
