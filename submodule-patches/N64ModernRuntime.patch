@@ -943,10 +943,10 @@ index dbf46b2..fa76436 100644
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
 diff --git a/librecomp/src/ai.cpp b/librecomp/src/ai.cpp
-index 0195f2b..8d8b36c 100644
+index 0195f2b..4330ea4 100644
 --- a/librecomp/src/ai.cpp
 +++ b/librecomp/src/ai.cpp
-@@ -1,29 +1,211 @@
+@@ -1,29 +1,231 @@
  #include "recomp.h"
  #include <cstdio>
 +#include <cstdlib>
@@ -1089,17 +1089,38 @@ index 0195f2b..8d8b36c 100644
 +        std::fflush(stderr);
 +    }
 +}
++
++// s7088-begin: retail osAiSetFrequency arithmetic, transcribed from the ROM (0x80029D20):
++// f = (float)osViClock / (float)freq + 0.5f (cvt.s.w, +2^32 if freq < 0), dacRate = cvt.w.s with
++// FCSR RM=1 (truncate; the f >= 2^31 overflow path needs freq == 0, never passed), return
++// -1 if dacRate < 132, else osViClock / (s32)dacRate. The previous integer form
++// (clock + freq/2) / freq differed for 21 inputs in 368..200000 (tools/s7088_shim_test).
++static inline int32_t rs64_ai_set_frequency_retail(uint32_t freq, uint32_t clock) {
++    volatile float ff = (float)(int32_t)freq;
++    if ((int32_t)freq < 0) ff = ff + 4294967296.0f;
++    volatile float q = (float)(int32_t)clock / ff;
++    volatile float f = q + 0.5f;
++    if (!(f < 2147483648.0f)) return -1; // dacRate would be >= 2^31: retail path unreachable here
++    const uint32_t dacRate = (uint32_t)(int32_t)f;
++    if (dacRate < 132u) return -1;
++    return (int32_t)clock / (int32_t)dacRate;
++}
++// s7088-end
  
  extern "C" void osAiSetFrequency_recomp(uint8_t* rdram, recomp_context* ctx) {
      uint32_t freq = ctx->r4;
 -    // This makes actual audio frequency more accurate to console, but may not be desirable
 -    //uint32_t dacRate = (uint32_t)(((float)VI_NTSC_CLOCK / freq) + 0.5f);
 -    //freq = VI_NTSC_CLOCK / dacRate;
+-    ctx->r2 = freq;
 +    rs64_m5_selector_ai_boundary(0x80029E78u, ctx->r31, ctx->r4, ctx->r5,
 +                                 ctx->r6, ctx->r16, ctx->r17, ctx->r2);
-+    const uint32_t dacRate = (VI_NTSC_CLOCK + (freq / 2u)) / freq;
-+    freq = VI_NTSC_CLOCK / dacRate;
-     ctx->r2 = freq;
++    const int32_t ret = rs64_ai_set_frequency_retail(freq, VI_NTSC_CLOCK);
++    ctx->r2 = (int32_t)ret;
++    if (ret < 0) {
++        return; // retail: dacRate < 132 programs nothing and returns -1
++    }
++    freq = (uint32_t)ret;
 +    rs64_m5_selector_ai_return(freq, ctx->r2);
      ultramodern::set_audio_frequency(freq);
  }

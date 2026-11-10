@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7087 (2026-11-10).
+Compact operational handoff, as of Session 7088 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7088 host-shim ABI census CLOSED for the ABI layer: 55 of 129 `*_recomp` shims are called (286 sites); 52 match, 3 differ only unreachably, 0 live (tools/s7088_shim_abi_census.py, controls built in; table in docs/N64RECOMP-WARNING-CENSUS.md).** One semantic gap: osAiSetFrequency used integer rounding where the ROM (0x80029D20) uses float math with truncation and returns -1 for dacRate < 132; the two disagreed on 22 of 400,000 inputs, none standard. FIXED to the ROM formula (ai.cpp rs64_ai_set_frequency_retail); host test tools/s7088_shim_test 400,000/400,000 plus 1889/1889 64-bit join/split cases; the game asks for 22050 and gets 22047 before and after (live boot 45 s, audio live). Next: per-shim return SEMANTICS vs the ROM routine each one replaces (NEXT.md).
 
 **s7087 N64Recomp lowering series CLOSED: residual opcodes all lower correctly and every one of the 120 mnemonics (326,200 sites) maps to a census tool (tools/s7087_residual_census.py + tools/s7087_logic_test, table in docs/N64RECOMP-WARNING-CENSUS.md).** and/or/xor/nor/negu 2571 operand-checked sites match; host test 2176/2176 (neg control 303 bad). All 22 Status mfc0/mtc0 sit in 7 hand-written FR=1 matrix routines that set FR on entry and clear it on exit; cop0_status_write switches ctx->f_odd and new contexts start FR=0, as retail. projectPointToScreen leaves FR set (retail too) but has no caller. Compare reads, 6 of 7 .word and the scd are decoded data (the scd sits behind a never-taken `bltzal $zero` PIC idiom); the 7th .word is the libultra data word __OSGlobalIntMask. osGetCount_recomp zero-extended its u32 return (hardware sign-extends): FIXED in librecomp, dead here (0 call sites). Next: the same audit one layer up, the 145 hand-written `*_recomp` host shims (NEXT.md).
 

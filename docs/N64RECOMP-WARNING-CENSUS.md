@@ -179,3 +179,22 @@ branch and likely form), s7087 and/or/xor/nor/negu, mfc0/mtc0, .word, scd, nop. 
 in each tool's source (tools/s7087_residual_census.py `coverage`). **The N64Recomp lowering series s7082-s7087 is
 closed: no live miscompile remains; the two semantic gaps found (ddiv/ddivu by zero, s7085; osGetCount zero-extension,
 s7087, dead here) are fixed.**
+
+## s7088 host-shim ABI census (one layer up: the hand-written `*_recomp` shims)
+
+Tool `tools/s7088_shim_abi_census.py` (controls built in), host test `tools/s7088_shim_test/run_test.py`.
+129 shims (librecomp/src + src/, no duplicate definitions), **55 called** from generated code (286 call sites),
+73 uncalled. Checks per body: A 64-bit arg joins (hi = even reg r4/r6, lo = hi+1, low word masked), B stack args
+(sp+0x10.., u64 8-aligned), C integer returns sign-extended, D `_arg`/`_return` limits. Controls: pre-s7087
+osGetCount body flags C (positive), osGetTime clean, osSetTimer with r6/r7 swapped gives exactly +1 A (negative).
+**Verdicts: 52 match, 3 differs-unreachable, 0 differs-live.** The 3: osVirtualToPhysical (returns <2^29 for all 7
+task-pointer callers), osAiSetFrequency (<= 368,800 or -1), osSpTaskYielded (0/1): zero- equals sign-extension.
+Uncalled osAiGetLength also returns a bare u32 (dead).
+Semantic gap found beyond the ABI: **osAiSetFrequency used integer rounding `(clock + f/2)/f`; the ROM (0x80029D20)
+uses single-float `clock/(float)f + 0.5f` truncated, and returns -1 when dacRate < 132.** They disagree on 22 inputs in
+1..400000 (none of 8000/11025/16000/22050/32000/44100/48000). FIXED (ai.cpp `rs64_ai_set_frequency_retail`, s7088
+markers): host test shim == ROM transcription on 400,000/400,000; the game passes 22050 and gets 22047 either way
+(live boot, 45 s, audio queue live), so the fix changes no observed value here. 64-bit shapes (__ll_mul, __ull_div,
+__ull_rem, __ll_div, osSetTimer countdown join, osGetTime split): 1889/1889 on operands with bit 31 set in either
+half; negative control (low-word masks removed) 323 mismatches. Not covered: non-ABI semantics of the remaining
+called shims (what each returns vs the libultra routine it replaces) — that is the next unit.

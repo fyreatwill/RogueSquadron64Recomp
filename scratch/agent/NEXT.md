@@ -1,20 +1,16 @@
-# NEXT: owner reports first; otherwise the host-shim ABI census (librecomp/src libultra replacements)
-HYPOTHESIS-ID: host-shim-abi-census
-Context: the N64Recomp lowering series is CLOSED (s7082-s7087, docs/N64RECOMP-WARNING-CENSUS.md, 120/120 mnemonics
-mapped). The generated code is now checked; the hand-written layer it calls is not. s7087 found one shim defect class by
-accident (osGetCount_recomp zero-extended its u32 return; fixed, dead in this game). There are 128 `*_recomp` shims in
-lib/N64ModernRuntime/librecomp/src/*.cpp and 17 in src/. Each one hand-decodes the o32 ABI.
-Unit (offline, one tool + one host test, no game run needed unless a live defect is found):
-1. Enumerate every `extern "C" void X_recomp(` in librecomp/src and src/; mark which ones the generated code actually calls
-   (grep `X_recomp(rdram, ctx)` in ../N64Recomp/RecompiledFuncs/*.c; count call sites).
-2. For each CALLED shim, pair it with its libultra prototype (ultramodern/include/ultramodern/ultra64.h, or the libultra
-   headers if missing) and check: (a) argument registers: a0-a3 in order, 64-bit args in an EVEN pair (a2:a3) with the high
-   word first, 5th+ args at sp+0x10, 0x14, ... (u64 on the stack 8-aligned); (b) casts: pointers (int32_t) before TO_PTR,
-   s32 args sign-extended, u8/u16 masked; (c) return: 32-bit returns sign-extended into r2 (int32_t), u64 split r2=hi,
-   r3=lo, each sign-extended (osGetTime_recomp is the model); (d) float args/returns (f12/f14, f0) if any.
-3. Host test for the 64-bit split/join shapes (osSetTimer countdown a2:a3 + stack interval, osSetTime, osGetTime) with values
-   >= 0x80000000 in each half.
-Discriminator per shim: {matches, differs-unreachable (0 call sites or value range cannot trigger), differs-live}.
-Positive control: osGetCount_recomp at the pre-s7087 text (`ctx->r2 = osGetCount();`, apply it to a copy) must be flagged
-as a zero-extended u32 return; osGetTime_recomp must pass. Negative: mutate one shim's a2/a3 order in a copy -> exactly one
-finding. A differs-live finding gets a fix in lib/ + ./submodule-patches/export.sh + a commit in the same session.
+# NEXT: owner reports first; otherwise per-shim return semantics vs the ROM routine each one replaces
+HYPOTHESIS-ID: host-shim-semantics-census
+Context: s7088 closed the o32 ABI layer of the 55 called `*_recomp` shims (tools/s7088_shim_abi_census.py; 0 live) and
+found one semantic gap by reading the ROM (osAiSetFrequency rounding, fixed). The ROM still contains every replaced
+libultra routine: `mips64-elf-objdump -d ../rogue_squadron64/build/roguesquadron.elf --start-address=<fn>`.
+Unit (offline, one tool, no game run unless a live defect is found):
+1. For each of the 55 called shims, list which guest registers / memory the callers READ after the call (v0, v1, out-
+   pointer args): walk the generated code after each `X_recomp(rdram, ctx)` site in ../N64Recomp/RecompiledFuncs up to the
+   next write of v0/v1 (reads before write = consumed). Shims whose results nobody reads are done.
+2. For consumed results, compare the shim's value with the ROM routine's: return codes (osRecvMesg/osSendMesg/osJamMesg
+   -1 on full/empty with NOBLOCK, osSetTimer 0, osEepromLongRead/Write 0 or CONT_NO_RESPONSE_ERROR, osContInit bitpattern,
+   osEepromProbe type, osPfs* NOPACK, __osDisableInt previous mask, osContGetQuery status bytes).
+3. Discriminator per shim: {result unread, matches ROM, differs-unreachable, differs-live}. A differs-live finding gets
+   a fix + host test + a live check in the same session; lib/ edits need ./submodule-patches/export.sh + commit.
+Positive control: the pre-s7088 osAiSetFrequency text must show as differs (22 inputs); negative: __osDisableInt with v0
+unread by every caller must come out "result unread".

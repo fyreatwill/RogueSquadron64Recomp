@@ -186535,3 +186535,33 @@ s7082-s7087 is CLOSED (docs/N64RECOMP-WARNING-CENSUS.md "s7087").
 Game: rebuild clean (librecomp ultra_translation.cpp recompiled). Same recipe as s7080 (scratch/s7087/run.zsh: L6 dd1 4:3
 FPS60, NOCAP): boot to flight 310 s, alive at the end, 0 VI stalls, 0 crash lines (exit 1 = the NOCAP missing-capture cat).
 Next: host-shim ABI census of the 145 hand-written `*_recomp` shims (NEXT.md, HYPOTHESIS-ID host-shim-abi-census).
+
+## Session 7088 (2026-11-10) — host-shim ABI census closed: 55 called shims, 52 match, 3 unreachable zero-extensions, 0 live; osAiSetFrequency now uses the ROM float formula
+
+HYPOTHESIS-ID: host-shim-abi-census. Offline unit from NEXT.md, plus one live boot to check the fix.
+- What ran: `tools/s7088_shim_abi_census.py` enumerates every `X_recomp(uint8_t* rdram, ...)` body in
+  lib/N64ModernRuntime/librecomp/src and src/ (129, no duplicates), counts `X_recomp(rdram, ctx)` call sites in
+  ../N64Recomp/RecompiledFuncs + build/factor5_ucode (55 called, 286 sites), and checks A 64-bit arg joins,
+  B stack-arg offsets, C sign-extended returns, D `_arg`/`_return` limits. Same-run controls: the pre-s7087
+  osGetCount body is flagged by C (positive); osGetTime is clean; osSetTimer with r6/r7 swapped adds exactly one
+  A finding (negative). All PASS.
+- Result: 52 match; 3 differs-unreachable (osVirtualToPhysical returns K0/K1 & 0x1FFFFFFF for the 7 task-pointer
+  callers at 0x80033D58..; osAiSetFrequency <= 368,800; osSpTaskYielded 0/1): for these values zero-extension and
+  sign-extension give the same register. 0 differs-live. By-hand review of all 55 bodies agreed (o32 order a0-a3,
+  osCreateThread sp+0x10/0x14, osSetTimer a2:a3 + sp+0x10 u64 + 0x18/0x1C, MEM_W/load_doubleword hi-first).
+- Semantic gap found (two sources): the shim computed dacRate = (clock + f/2) / f; the ROM osAiSetFrequency
+  (mips64-elf-objdump of rogue_squadron64/build/roguesquadron.elf at 0x80029D20, osViClock word 0x80039108 =
+  0x02E6D354 = 48681812) does `f = (float)clock / (float)freq + 0.5f`, cvt.w.s under RM=1 (truncate), returns
+  -1 without touching the AI if dacRate < 132, else clock / (s32)dacRate. A host sweep found the two formulas differ
+  on 22 inputs in 1..400000; none are standard rates. FIXED: ai.cpp `rs64_ai_set_frequency_retail` (s7088
+  markers), and the -1 path now returns before set_audio_frequency. `tools/s7088_shim_test/run_test.py` compiles the
+  REAL shim text: 400,000/400,000 equal to a step-by-step ROM transcription (old formula differs on 22 = positive
+  control); 64-bit shapes (__ll_mul/__ull_div/__ull_rem/__ll_div, osSetTimer countdown join, osGetTime split)
+  1889/1889 with bit 31 set in either half; negative control (a1 low-word masks removed) 323 mismatches -> RESULT PASS.
+- Live: rebuilt, 45 s boot: alive, 0 crash lines, `[m5-selector-ai-return-control] input=0x561F` (the game asks for
+  22050 and gets 22047, the same as before the fix and as retail), s4245 audio set-next ~115/s through t=44 s.
+  So the fix changes no observed value in this game. It is a fidelity fix, not a bug that was being hit.
+- Rules out: an o32-ABI decoding defect in any called host shim as a source of live misbehaviour.
+- Not covered: whether each called shim RETURNS what the libultra routine it replaces returns (e.g. __osDisableInt
+  leaves v0 unset; restore is a no-op, so harmless only if no caller uses v0 for anything else). That is the next unit.
+- lib/ edited -> ./submodule-patches/export.sh run, N64ModernRuntime.patch refreshed in this commit.
