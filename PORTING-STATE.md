@@ -186033,3 +186033,27 @@ closed s7026-s7029). H-tex is minor (11%). The bulk is RT64's own framebuffer RA
 (checkRAM/hashTracking/storeRAM/copyNativeToRAM), which keeps CPU-visible framebuffers coherent; H-redundant is at
 most the double hash in updateScreen (~0.07 ms/frame) — not worth a knob. Thread closed; nothing landed in code.
 Rules out: gfx-thread hashing/copy as a frame-pacing or headroom lever at dd1.
+
+## Session 7071 (2026-11-10) — hot-unnamed ranking: 0 of 2500 generated guest functions carry a placeholder name and every hot guest function is semantically named (H-hot-named); renaming sweep confirmed closed, one hot misnomer family (menu "Debris" cell-mesh = format-message glyph mesh) queued
+
+What ran: new offline tool `tools/s7071_hot_unnamed.py` (guest set = every RECOMP_FUNC in
+N64Recomp/RecompiledFuncs, 2500 defs; self + inclusive host samples across all threads; flags func_/fake_func_/
+static_N_ placeholders, `--all` lists named ones) over the s7069 on+off dumps (427 `sample` files, L6 dd1 4:3 FPS60).
+No build, no game run.
+
+Result: placeholder-named defs = 0 (independent second line: grep of `RECOMP_FUNC void` names in the generated
+sources, also 0; the 143 hex-suffixed names are deliberate data_gap_/noopHandler_/returnOne_ labels from
+tools/rename_generated_symbols.py). Positive control: the placeholder regex matches func_800C8C1C, static_5_800AF6AC
+and fake_func_800AA6CC and rejects data_gap_; the guest set sees slotDispatcherIter 1006 self samples,
+intersectSegmentWithObjectSphere 336, sendServiceMessage 278, submitSceneNodeRender 255, setupAssetDma 245,
+transformAndEmitFaceVertices 190, all semantically named. H-hot-unnamed refuted; the s6268 "0 real placeholder funcs"
+sweep closure stands, so NEXT.md's "resume the sweep" premise was stale.
+
+Misnomer found (two lines): the menu_overlay.txt family 0x800C7970..0x800C9B8C (rebuildDebrisCellGeometry,
+emitDebrisCellFaces, buildDebrisCellBitfield, decodeDeltaCellCounts, buildDebrisMeshFromCells, cloneCellBufferWithAlloc,
+allocZeroedCellRecord) is the format-message text glyph cell-mesh builder: (1) call graph, buildDebrisMeshFromCells'
+only callers are rasterizeFormatMessageGlyphs and tickFormatMessageWorker; (2) s6807 host samples put it on the
+menu text path (69/90 ms gaps). Not renamed this session: the names live in the sibling repo
+rogue_squadron64/symbol_files/menu_overlay.txt and are referenced by tools/fixup_preempt_point.py, so it needs a full
+regen + build + boot check (queued as NEXT.md).
+Rules out: placeholder names as a remaining sweep target; the sweep is now misnomer correction only.

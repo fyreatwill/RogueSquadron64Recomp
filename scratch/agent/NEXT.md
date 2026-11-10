@@ -1,12 +1,14 @@
-# NEXT: owner reports first; otherwise ladder item 4 (generated-symbol renaming sweep)
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
-Context (s7070): gfx-hash-audit closed (RT64 framebuffer tracking, ~0.22 ms/frame, no rs64 caller). Every CURRENT-TRUTH
-Next-steps item 1-12 awaits the owner's flight/look; 13/13b closed; 14-15 parked. AN OWNER REPORT PREEMPTS THIS.
-If none: check `grep -n '^## Session ' PORTING-STATE.md | tail -15` (ITERATION.md item 4 REVISIT rule), then resume
-the renaming sweep: count remaining `func_0x` placeholders, pick the next contiguous address band, name from
-call-graph/string/caller evidence. Beware: rename edits do not reset the churn counter — pair them with a real
-code/tool change (e.g. a tools/ helper that ranks unnamed functions by host self-time from the s7069 dumps, so the
-sweep names the hot ones first).
-Hypotheses for the ranking pass: H-hot-named (top guest self-time functions are already named) vs H-hot-unnamed
-(several hot guest functions are still func_0x...). Discriminator: tools/s7067_selftime.py --thread Game over
-scratch/s7069/on, joined with the rename map.
+# NEXT: owner reports first; otherwise rename the menu "Debris" cell-mesh misnomer family
+HYPOTHESIS-ID: generated-symbol-misnomer-fixes
+Context (s7071): placeholder sweep CLOSED (0/2500 placeholder defs, tools/s7071_hot_unnamed.py). Sweep = misnomers only.
+Unit: rename the 0x800C7970..0x800C9B8C family in /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/
+menu_overlay.txt (rebuildDebrisCellGeometry, emitDebrisCellFaces, buildDebrisCellBitfield, decodeDeltaCellCounts,
+buildDebrisMeshFromCells, cloneCellBufferWithAlloc, allocZeroedCellRecord) to glyph-mesh names. First READ each body
+(N64Recomp/RecompiledFuncs) so each name says what it does. Update every by-name reference in the same change:
+`grep -rln <old> tools src docs/*.md` (tools/fixup_preempt_point.py FUNCS list for sure).
+Then regen in order: make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake build; boot to title + one menu text
+screen (SELECT LEVEL) with 0 crash, and check fixup_preempt_point still reports its patch sites (positive control:
+same count as before the rename — record it BEFORE regen).
+Hypotheses: H-clean (rename is pure: same site counts, boot clean) vs H-hidden-ref (some fixup/hook matches the old
+name silently and its patch count drops). Discriminator: per-fixup applied-site counts before vs after regen.
+If rogue_squadron64 is not a git repo you may commit, record the diff in PORTING-STATE instead.

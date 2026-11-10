@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7070 (2026-11-10).
+Compact operational handoff, as of Session 7071 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7071 renaming sweep confirmed CLOSED (tools/s7071_hot_unnamed.py over s7069 dumps): 0 of 2500 generated guest defs carry a placeholder name; every hot guest function is semantically named. Remaining sweep work = misnomer fixes only; first: the menu "Debris" cell-mesh family 0x800C7970..0x800C9B8C is the format-message glyph mesh builder (callers rasterizeFormatMessageGlyphs/tickFormatMessageWorker + s6807 samples), rename queued in NEXT.md (needs regen; fixup_preempt_point.py names it).**
 
 **s7070 gfx-hash-audit CLOSED (no build, tools/s7070_parents.py over the s7069 on/off dumps, two sets agree): Gfx-thread XXH3_hashLong (7.3%) and memmove (8.1%) are RT64 framebuffer RAM tracking/writeback (checkRAM, hashTracking, storeRAM, copyNativeToRAM, updateScreen: ~77% of hash, ~60% of memmove), texture hashing ~11%, no rs64 caller.** ~0.22 ms/frame total, 60 fps held: not a lever.
 
@@ -261,6 +263,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 14. **Owner judgement / parked:** FPS60 feel, G3c sheets, QoS default, native hangar geometry,
     rare dd4/dd8 gfx SIGBUS (single-source). Reopen on an owner report or side-effect failure.
 15. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first.
+16. **Misnomer rename (optional, owner reports preempt):** menu "Debris" cell-mesh family -> format-message glyph mesh names; see NEXT.md.
 
 ## Evidence index
 
