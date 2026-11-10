@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7071 (2026-11-10).
+Compact operational handoff, as of Session 7072 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7072 menu "Debris" cell-mesh family renamed: it is the menu JPEG (JFIF) decoder, not a glyph mesh.** Evidence from the bodies: callers are parseJfifDHTMarker / resetJfifDecodeState / loadJfifAsset; a bit reader with 0xFF stuffing and 0xFFD9 EOI detection; a Huffman size table from 16 counts capped at 256; libjpeg's 0x580-byte range-limit table plus a >>3 (5-bit) copy; four 256-entry YCbCr->RGB tables using 1.402/1.772/0.71414/0.34414 (all in the ELF); a float IDCT. 11 renames (scratch/s7072/renames.tsv) applied to the live tree, menu_overlay.txt, syms toml and fixup_preempt_point.py. Control: the preempt fixup reports 6 functions / 9 tag lines before and after. Rebuild plus an L6 boot to flight: renamed symbols in 3/113 host samples, 0 crash. The format-message callers (rasterizeFormatMessageGlyphs, tickFormatMessageWorker) drive this decoder, so their names are suspect too (NEXT.md).
 
 **s7071 renaming sweep confirmed CLOSED (tools/s7071_hot_unnamed.py over s7069 dumps): 0 of 2500 generated guest defs carry a placeholder name; every hot guest function is semantically named. Remaining sweep work = misnomer fixes only; first: the menu "Debris" cell-mesh family 0x800C7970..0x800C9B8C is the format-message glyph mesh builder (callers rasterizeFormatMessageGlyphs/tickFormatMessageWorker + s6807 samples), rename queued in NEXT.md (needs regen; fixup_preempt_point.py names it).**
 
@@ -263,7 +265,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 14. **Owner judgement / parked:** FPS60 feel, G3c sheets, QoS default, native hangar geometry,
     rare dd4/dd8 gfx SIGBUS (single-source). Reopen on an owner report or side-effect failure.
 15. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first.
-16. **Misnomer rename (optional, owner reports preempt):** menu "Debris" cell-mesh family -> format-message glyph mesh names; see NEXT.md.
+16. **Misnomer rename (optional, owner reports preempt):** s7072 renamed the "Debris" family to JPEG decoder names. Next: check whether the format-message worker/rasterizer names are misnomers for a JPEG image loader (NEXT.md).
 
 ## Evidence index
 

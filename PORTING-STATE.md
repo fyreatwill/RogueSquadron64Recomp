@@ -186057,3 +186057,39 @@ menu text path (69/90 ms gaps). Not renamed this session: the names live in the 
 rogue_squadron64/symbol_files/menu_overlay.txt and are referenced by tools/fixup_preempt_point.py, so it needs a full
 regen + build + boot check (queued as NEXT.md).
 Rules out: placeholder names as a remaining sweep target; the sweep is now misnomer correction only.
+
+## Session 7072 (2026-11-10) — menu "Debris" cell-mesh family renamed: it is the menu JPEG (JFIF) decoder, not the glyph mesh builder s7071 guessed; 11 renames, preempt-fixup control 6/9 unchanged, L6 boot to flight clean
+
+NEXT.md unit (misnomer sweep, HYPOTHESIS-ID generated-symbol-misnomer-fixes). Before renaming I read each body in
+../N64Recomp/RecompiledFuncs. The s7071 guess ("format-message glyph mesh") was wrong too:
+- callers: parseJfifDHTMarker -> decodeDeltaCellCounts, allocDebrisCellTable; resetJfifDecodeState -> allocCellGeometryBuffer,
+  cloneCellBufferWithAlloc; loadJfifAsset -> allocZeroedCellRecord.
+- findFreeCellBitSlot 0x800C87B0: bit reader (bit buffer +0x44, count +0x46, src +0x34), 0xFF then 0xD9 sets the EOI flag +0x4D.
+  allocCellBitGroup: the same reader plus a 17-bit code walk = Huffman symbol decode.
+- decodeDeltaCellCounts 0x800C83E4: sums 16 BITS counts, fails (0x10) past 0x100 total, rs_malloc(n+1) = Huffman size table.
+- cloneCellBufferWithAlloc 0x800C9A88: 0x580-byte alloc, 0x100 zeros, identity 0..255, 0xFF fill, memcpy, second copy >>3 =
+  libjpeg prepare_range_limit_table plus a 5-bit copy (RGBA5551).
+- allocCellGeometryBuffer 0x800C8A64: four 0x400 allocs scaled by floats at 0x800A7894..78A8; 1.402, 1.772, 0.71414, 0.34414
+  are all in build/roguesquadron.elf = YCbCr->RGB tables.
+- emitDebrisCellFaces: float add/sub/mul butterflies with no callees = float IDCT. buildDebrisCellBitfield: memset 64 coeffs,
+  0xF run nibble = block coefficient decode. rebuildDebrisCellGeometry calls both = MCU decode. buildDebrisMeshFromCells calls it
+  in a loop with zmemcpy = scan decode to image.
+
+Renames (scratch/s7072/renames.tsv): rebuildDebrisCellGeometry->decodeJpegMcuBlocks, emitDebrisCellFaces->idctJpegBlockFloat,
+buildDebrisCellBitfield->decodeJpegBlockCoefficients, decodeDeltaCellCounts->buildJpegHuffmanSizeTable,
+allocDebrisCellTable->buildJpegHuffmanCodeTable, findFreeCellBitSlot->readJpegBits, allocCellBitGroup->decodeJpegHuffmanSymbol,
+allocCellGeometryBuffer->buildJpegYccRgbTables, buildDebrisMeshFromCells->decodeJpegScanToImage,
+cloneCellBufferWithAlloc->buildJpegRangeLimitTables, allocZeroedCellRecord->allocJpegDecoderState. The new names did not exist
+anywhere before. I applied them with word boundaries to the live tree (funcs_30/35/36.c, funcs.h, recomp_overlays.inl: 64 refs),
+../rogue_squadron64/symbol_files/menu_overlay.txt lines 576-586 (that repo already had uncommitted edits, so nothing is
+committed there and this entry is the record), syms/rogue_squadron.syms.toml (11) and tools/fixup_preempt_point.py (FUNCS +
+docstring). The regen path picks the names up from the symbol file. Historical census docs (M3-S3608/S4683/S4843/S4846/S4848)
+keep the old names on purpose.
+
+H-clean vs H-hidden-ref: fixup_preempt_point.py reports "hooks present in 6 functions" and 9 tag lines both before and after,
+with no duplicate insertion, so H-clean. Rebuild was clean. One run (scratch/s7072/run, s7031 arm L6 dd1 4:3, 1 s host samples
+from +5 s): the renamed decodeJpegScanToImage/decodeJpegMcuBlocks/idctJpegBlockFloat/decodeJpegBlockCoefficients/
+decodeJpegHuffmanSymbol show in 3 of 113 samples, under rasterizeFormatMessageGlyphs in 2. That is the positive control that
+the hooked, renamed functions run. The route reached flight (runInMissionFrame in 54 samples) with 0 CRASH/SIGSEGV/SIGBUS lines.
+Remaining old-name hits in the samples are unrelated real names (updateDestructionDebrisNpc, byteAnimatedDebrisNpcHandler).
+Rules out: the s7071 "glyph mesh" reading. Open: the format-message callers drive a JPEG decoder, so their names are suspect.

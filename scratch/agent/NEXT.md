@@ -1,14 +1,12 @@
-# NEXT: owner reports first; otherwise rename the menu "Debris" cell-mesh misnomer family
+# NEXT: owner reports first; otherwise audit the "format-message" names that drive the menu JPEG decoder
 HYPOTHESIS-ID: generated-symbol-misnomer-fixes
-Context (s7071): placeholder sweep CLOSED (0/2500 placeholder defs, tools/s7071_hot_unnamed.py). Sweep = misnomers only.
-Unit: rename the 0x800C7970..0x800C9B8C family in /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/
-menu_overlay.txt (rebuildDebrisCellGeometry, emitDebrisCellFaces, buildDebrisCellBitfield, decodeDeltaCellCounts,
-buildDebrisMeshFromCells, cloneCellBufferWithAlloc, allocZeroedCellRecord) to glyph-mesh names. First READ each body
-(N64Recomp/RecompiledFuncs) so each name says what it does. Update every by-name reference in the same change:
-`grep -rln <old> tools src docs/*.md` (tools/fixup_preempt_point.py FUNCS list for sure).
-Then regen in order: make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake build; boot to title + one menu text
-screen (SELECT LEVEL) with 0 crash, and check fixup_preempt_point still reports its patch sites (positive control:
-same count as before the rename — record it BEFORE regen).
-Hypotheses: H-clean (rename is pure: same site counts, boot clean) vs H-hidden-ref (some fixup/hook matches the old
-name silently and its patch count drops). Discriminator: per-fixup applied-site counts before vs after regen.
-If rogue_squadron64 is not a git repo you may commit, record the diff in PORTING-STATE instead.
+Context (s7072): 0x800C7970..0x800C9B8C is the menu JPEG (JFIF) decoder (renamed, scratch/s7072/renames.tsv). Its callers
+rasterizeFormatMessageGlyphs (0x800B3D14) and tickFormatMessageWorker (0x800B3650) call decodeJpegScanToImage, and the
+s3608 audit's "glyph buffer" (+0x38 = rs_malloc((w*h*field4)>>1), +0x3C = (w*h)/4) looks like an image/alpha buffer.
+Unit: read enqueueFormatMessage / tickFormatMessageWorker / buildFormatMessageGlyphBuffer / processAndDisposeFormatMessage /
+rasterizeFormatMessageGlyphs / disposeFormatMsgQueueMember bodies, and the strings passed to enqueueFormatMessage (asset
+paths? sprintf of a format string at 0x800A5C40). Hypotheses: H-jpeg-loader (an async JPEG image loader worker: strings
+are file names, buffers are RGBA5551 + alpha) vs H-text (it really formats text and JPEG decodes glyph sheets).
+Discriminator: the format string at 0x800A5C40 and the enqueued strings (read them from the ELF / one boot log).
+If H-jpeg-loader: rename the family the same way (word-boundary sed over live tree, menu_overlay.txt, syms toml,
+tools/fixup_preempt_point.py FUNCS has rasterizeFormatMessageGlyphs), control = fixup site count 6/9 unchanged, boot to flight.
