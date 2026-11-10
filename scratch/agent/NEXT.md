@@ -1,27 +1,22 @@
-# NEXT: FPS60 near-wall flicker: log the near-plane push-out per corner at an episode, with a same-run 4-corner arm
+# NEXT: FPS60 near-wall flicker: log the y-clamp inputs, and add a same-run fix arm for the push vs y-clamp fight
 HYPOTHESIS-ID: fps60-wall-camera
-Context (s7101): camera chain per tick = chase (updatePlayerVehicleByControlMode mode 3, no terrain query) -> near-plane
-push-out applyPlayerVehicleStateUpdate 0x8004CD00 -> matrix copy -> terrain builder. The push-out builds 4 near-plane
-corners (sp+72/84/96/108 via transformVec3ByMat34), but its loop (0x8004CF0C..0x8004CFC0, `slti v0,s4,3`) ray-tests only
-the first 3 (pos->corner, sampleTerrainAtNpcPosition 0x80068D5C). On a hit it sets pos = hit - 2*near*unit(corner-pos)
-(addScaledVec3ToVec3 0x800AA3E0, a2 = f20 = 2*near). Then there is a y floor at 0x8004D044. Chase overshoot, craft jitter,
-mid-tick read and terrain-origin shift are refuted. The 60 fps per-tick excess is unproven (1.6x, p=0.185).
-Recipe: scratch/s7099/arm.zsh 6 4 <tag> "ROGUESQ_G1E_LIMIT=1 ROGUESQ_G1E_WIN=600 ROGUESQ_G3C_LOG=1 ROGUESQ_S7101_CHASE=<file>" 120 240
-(no STORE_DIAG: it perturbs the game). Episode tools: s7099_wall_split.py <raw> <csv> <run.log>; s7101_bvread.py; s7101_target_vs_eye.py.
-Unit (one build, one run):
- 1. PC hooks in applyPlayerVehicleStateUpdate (fixup script like tools/apply_s7101_chaselog.py, same CHASE file): per
-    corner i=0..3, log the corner point, the pos before, the hit flag (v0 after the sampleTerrainAtNpcPosition call at
-    0x8004CF58), the hit point (sp+16), and the pos after. For corner 3 (never tested), call sampleTerrainAtNpcPosition
-    from the hook on a scratch copy, or replicate the call with the same args, to learn whether it is inside terrain.
-    Also log the y-floor branch (0x8004D044 taken).
-    Positive control: hits > 0 on wall-hug ticks, and the logged pos-after must equal the next ch line's pre-step pos.
- 2. Arm ROGUESQ_S7102_CAM4=tog (30 s halves, like s7101_clamp_on): loop bound 3 -> 4 (test the 4th corner as well).
+Context (s7102, single run, 1 episode): in applyPlayerVehicleStateUpdate 0x8004CD00 the corner push (corners 0-2) and the
+y clamp after the loop (0x8004CFD4..0x8004D04C: h = 0x80067D90(x=+0x4C, z=+0x54, 0x80138058, out sp+0x78); if h - y < +0xB8
+then y = out.y - +0xB8) alternate tick by tick at the episode ("flips" push/all-miss/push: 105 per 1000 ticks in the episode vs 3.2
+lim1 / 0.8 lim2 in flight). Corner 3 is not involved (H-corner4 not supported). x,z of the clamp sample is the matrix copy
++0x4C/+0x54, refreshed only on hit ticks (stale on miss ticks).
+First fold soak results s7102_push_r1/r2 (scratch/s7102/corner_r*.txt, fight_r*.txt, split_r*.txt): more episodes for the
+CAM4 split and the flip rate per lim.
+Unit (one build, one run, scratch/s7099/arm.zsh 6 4 <tag> "... ROGUESQ_S7101_CHASE=<file>" 120 240):
+ 1. Extend tools/apply_s7102_pushlog.py yf/pe lines with h (f0 after 0x80067D90), out point sp+0x78..0x80, margin +0xB8, the
+    sample x,z (+0x4C/+0x54) vs pos x,z (+0x10/+0x18), and whether the branch was taken (log on both sides).
+ 2. Fix arm ROGUESQ_S7103_CAMFIX=tog (30 s halves), candidates chosen from the logged inputs:
+    (a) sample the clamp at pos x,z (+0x10/+0x18) instead of the stale matrix x,z;
+    (b) run the corner push again after the clamp moves y (so the clamp never leaves the near plane in the wall).
     Default off = retail.
 Hypotheses:
- H-corner4  the flicker frames have corner 3 inside the wall while corners 0-2 are clear -> CAM4 removes the episodes
- H-snap     the push alternates between corners or ticks (hit on tick n, miss on n+1) and the near plane crosses the wall
-            on the miss ticks -> CAM4 does not help; fix = keep the push active (hysteresis) or push by the full near-plane radius
- H-mesh     all tested rays miss at the flicker frames (collision terrain != visual mesh) -> neither helps; the next probe is the
-            terrain sample vs the drawn cell height
-Outcomes: per-episode corner table; episode count per CAM4 half (needs a >=2x drop for H-corner4). Owner sheet of before/after
-frames if CAM4 wins. The default stays retail until the owner says otherwise.
+ H-stale  the clamp samples the ground at a stale x,z (miss ticks), so h is wrong -> (a) removes the flips
+ H-squeeze  the gap between ground+margin and the wall is narrower than the near-plane push, so no position satisfies both -> (a) does
+           not help, (b) does (the push wins and the clamp cannot leave the near plane inside the wall)
+ H-retail  the same flips happen at lim2 at the same per-tick rate (pooled with the r1/r2 soaks) -> it is retail behaviour that 60 fps only shows more often
+Outcomes: flips/1000 ticks and episodes per CAMFIX half; owner before/after frames if an arm wins. Default stays retail.

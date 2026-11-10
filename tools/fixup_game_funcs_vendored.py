@@ -42123,6 +42123,7 @@ RS64_REPLAY = [
     "apply_s7064_slotwait.py",  # s7064: transition-stall audio-slot drain wait ring, ROGUESQ_S7064=<path> (measurement only)
     "apply_s7101_camwatch.py",  # s7101: flight camera matrix write-watch, ROGUESQ_S7101_CAMW=<path> + STORE_DIAG=1 (measurement only)
     "apply_s7101_chaselog.py",  # s7101: per-tick flight chase-camera step log, ROGUESQ_S7101_CHASE=<path> (measurement only)
+    "apply_s7102_pushlog.py",  # s7102: per-corner near-plane push-out log (same CHASE file) + ROGUESQ_S7102_CAM4=1|tog 4-corner arm
     "apply_s7069_callsite_gate.py",  # s7069: inline flag gate (same-name macro) for lowfield_store/synth_read calls; MUST stay last
 ]
 

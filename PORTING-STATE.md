@@ -187073,3 +187073,33 @@ New: tools/apply_s7101_camwatch.py, tools/apply_s7101_chaselog.py (both in fixup
 Discrimination: refutes H-pushfix (chase overshoot), H-craft, H-order and H-origin; selects H-push in its geometric form
 (the applyPlayerVehicleStateUpdate near-plane push-out is the writer of the per-tick zig-zag). Next discriminator: the
 per-corner push-out log + same-run ROGUESQ_S7102_CAM4=tog arm splits H-corner4 / H-snap / H-mesh (NEXT.md).
+
+## Session 7102 (2026-11-10) — FPS60 near-wall flicker: per-corner push-out log shows the corner push and the y clamp in applyPlayerVehicleStateUpdate fighting tick by tick at the episode; the untested 4th corner is not involved (single run, 1 episode)
+
+Ran: one L6 dd4 16:9 run (scratch/s7099/arm.zsh 6 4 s7102a, ROGUESQ_G1E_LIMIT=1 WIN=600 G3C_LOG=1,
+ROGUESQ_S7101_CHASE=scratch/s7102/push_a.txt, ROGUESQ_S7102_CAM4=tog), 0 crashes, 253 s capture, 15270 frames.
+New instrument tools/apply_s7102_pushlog.py (in the fixup_game_funcs_vendored.py list after s7101_chaselog). It writes these lines
+into the CHASE file: pu (per tested corner: corner, pos before, hit flag, hit point, pos after), pc (corner 3 ray-tested by a
+scratch sampleTerrainAtNpcPosition call from the final loop pos when CAM4 is off; the callee writes only its own
+stack and the scratch hit record), yf (y clamp taken) and pe (final pos, cam4 state). The ROGUESQ_S7102_CAM4=1|tog arm changes the loop bound
+from 3 to 4 (tog = odd 30 s halves); the default is off, which is retail. New analysis tools: tools/s7102_push_corner.py and tools/s7102_floor_fight.py.
+Control: 2857/5845 flight ticks have a corner hit; pe pos == the next ch pre-step pos on 3183/3896 lim1 ticks. The
+mismatches (lim2 nearly all, dev median 0.058) are the documented split step (s7101), so the log is aligned with the chase.
+Static read of the y clamp 0x8004CFD4..0x8004D04C: 0x80067D90(x = +0x4C, z = +0x54, terrain 0x80138058, out sp+0x78)
+returns h. If h - pos.y < cam+0xB8, then y = out.y - cam+0xB8 (written to +0x14 and +0x50). The x,z it samples is the matrix copy,
+which the loop refreshes only on hit ticks.
+Results:
+- Episode lim1 t=129.0 (the only one; split: lim1 1 ep / 3004 ticks, lim2 0 / 1866). Corner masks per tick:
+  [123][123][123][0123][123][23][123][.][023][0][.][123][0123]|[123][23][123][23][23][123]. The y clamp fires on 11/19
+  ticks and always lowers y, by 0.04-0.34 (e.g. after an all-hit push to y 0.414, the next tick all rays miss and the clamp
+  moves y 0.414 -> 0.208 -> -0.130, then all three corners hit and push it back to 0.434). This "flip" pattern is push, all-miss, push.
+  Flips per 1000 ticks: episode 105, flight lim1 3.19 (11), flight lim2 0.84 (2); P(>=11 of 13 at lim1 | equal per tick) = 0.052.
+- H-corner4 not supported: corner 3 is never the only corner inside the wall in the episode (0/19). In normal flight it is the only one on
+  3.6% of ticks (77 lim1 / 9 lim2 cam4-off ticks) with no flicker. CAM4 halves: on 0 episodes / 3430 ticks, off 1 / 2415,
+  which does not discriminate (n=1).
+- H-mesh refuted for this episode: the rays hit on 17/19 ticks.
+- H-snap is selected in a specific form, H-fight: the near-plane push and the y clamp alternate. The dt-free clamp lowers y on a tick where
+  the rays from the new pos all miss, and the next tick pushes it back. Single-source (one episode).
+ORIGIN: no mitigation landed; CAM4 is an opt-in diagnostic arm (default retail).
+Rules out: the 4th-corner omission as the cause of the observed episode; collision mesh missing at the episode.
+Queued: soak_queue/s7102_push_r1.sh, s7102_push_r2.sh (same recipe, CAM4=tog), which need this build (they write corner_/fight_ summaries).
