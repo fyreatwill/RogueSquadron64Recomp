@@ -1,16 +1,16 @@
-# NEXT: idiom-class audit — uncached getenv() in per-frame paths (host cost / lock contention)
-HYPOTHESIS-ID: hot-getenv-audit
-Context (s7065): the transition-stall thread is CLOSED (retail 3072-sample audio wait). Every G5 item awaits the owner. Host
-samples of the game thread showed getenv() (-> __findenv_locked, a process-wide lock shared with RT64/SDL threads) called per
-frame from patched setupCameraMatrices, streamTerrainGridCellsByDistance and osRecvMesg (factor5MutexAcquire), ~25 samples/288 s on
-MAIN; RecompiledFuncs carries 2182 getenv references. Small, but it is a whole idiom class and it is ours.
+# NEXT: idiom-class audit — host self-time of our own (non-guest) helpers on the game threads in flight
+HYPOTHESIS-ID: host-selftime-audit
+Context (s7066): hot getenv closed by an image-wide cache (src/main/rs64_env_cache.cpp). All G5 items await the owner.
+Capture once, analyze many: scratch/s7066/on/smp_*.txt (289 x 1 s host samples, all threads, cache on, L6 dd1 4:3 FPS60, 365 s flight)
+and scratch/s7066/off/ are already on disk. No build needed for the first half.
 Hypotheses:
- H-few: only a handful of sites call getenv per call (not cached in a static); fix those in their apply/fixup scripts, done.
- H-many: dozens of hot sites; add one cached-env helper (rs64_env_cached(name) -> static table) and convert by script.
- H-none-hot: the sampled sites already cache and the samples are first-call or a different path (then close with the census).
-Method, offline first: grep-enumerate every getenv( in N64Recomp/RecompiledFuncs/*.c, src/, lib/N64ModernRuntime; classify each
-as cached (static init / s_on<0 guard) vs per-call; for per-call ones, name the function and whether it is per-frame (callers in
-the s7065 sample trees: scratch/s7065/smp_*.txt, tools/s7065_sample_yields.py). Then fix per-call hot sites in the owning
-tools/apply_*.py / fixup script (regen-safe), rebuild, one hold (scratch/s7065/run.zsh <name> 6 + tools/s7065_sample_loop.zsh) and
-show getenv samples on MAIN drop to 0 with fps unchanged. Positive control: the s7065 baseline count (~25/288 s).
-Hard rules: diagnostics/edits in generated code go through tools/fixup_*.py / apply scripts; one game run at a time; SIGKILL.
+ H-diag: diagnostic leftovers (per-frame probe/ring/counter helpers, fprintf gates, atomics) hold a measurable share (>2%) of
+   MAIN/[Game] 0 on-CPU self samples; fix the top class (gate by a cached static or compile out) and re-measure.
+ H-guest: on-CPU time is dominated by generated guest functions and RT64/ucode work; our helpers < 1% -> close the class.
+ H-runtime: ultramodern/librecomp glue (osRecvMesg, yield, MEM_* helpers) dominates our share -> audit that path instead.
+Method: write tools/s7067_selftime.py: per thread, self samples by leaf symbol, excluding blocking leaves (__psynch_*, mach_msg*,
+__semwait_signal, nanosleep, kevent), and bucket symbols as guest (RecompiledFuncs names / func_0x), ours (rs64_*, s6xxx/s7xxx
+helpers, src/ functions), runtime (ultramodern/librecomp), RT64, libsystem. Positive control: the on vs off arms must show the
+getenv bucket difference (~776 -> 0 libsystem getenv) in the same tool. Then fix the top "ours" class if H-diag, rebuild, one
+hold with the sampler (scratch/s7066/both.zsh pattern), same-build =0 arm where a knob exists.
+Hard rules: generated-code edits go through tools/fixup_*.py / apply scripts; one game run at a time; SIGKILL.

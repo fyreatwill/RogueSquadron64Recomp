@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7065 (2026-11-10).
+Compact operational handoff, as of Session 7066 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7066 hot-getenv class CLOSED: one cached getenv for the whole image (src/main/rs64_env_cache.cpp, default on, `ROGUESQ_ENV_CACHE=0` = libSystem path).** Census (tools/s7066_getenv_census.py): 2265 generated getenv sites (110 per-call) + 1031 host sites (529 per-call by heuristic) + lib/ ultramodern/RT64, too many to patch singly, so the executable now defines getenv/setenv/unsetenv/putenv: ROGUESQ_* names are served from a lock-free per-name table (no environ lock), any setenv through the image invalidates it, other names pass through; dylibs (SDL) keep libSystem's. Two runs, s7065 recipe L6 dd1 4:3 FPS60, host-sampled (tools/s7066_getenv_samples.py): on = 0 libSystem getenv samples (99 cheap cached lookups) vs off (positive control) 776 (MAIN 456), s7065 baseline 583; both 365 s flight, 0 crash, 0 VI stall, fps 58.9 / 59.0 (cross-run; the cost was ~0.25% of MAIN, so no fps gain is claimed). Policy setenv values still seen ([s7037] lines / auto bundle unaffected: setenv invalidates).
 
 **s7065 transition stalls CLOSED as retail feel (H-vispin, audio-time form).** Host blocked-stack samples (tools/s7065_sample_loop.zsh + tools/s7065_sample_yields.py, no build; L6 dd1 4:3 FPS60, 366 s, 0 crash): in all 7 sampled gaps the game thread's OS-silent stretch is `runVideoFrameTick -> musyxNoopStub -> waitForMusyXAudioTaskDone` yielding 113-138 ms (normal seconds: 99% osRecvMesg waits). Code: its countdown 0x8014998A = 16 mix chunks of 192 samples = 3072 samples at 22047 Hz = 139 ms = 8.37 VI, matching s7064's 8/9-VI quantization. Gap = 139 ms fixed wait + 25-66 ms slot drain + occasional ~70 ms shutdownMusyXVoices. H-compute, H-tokenwait refuted. Retail timing inferred from code (oracle cannot reach these scenes).
 
@@ -247,6 +249,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
     Use fl_shown/fl_miss, not shown/s, for per-level fps. Open, owner scope: why L7/L16/L17 autopilot holds cycle the backdrop menu.
 12. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png).
 13. **Scene-transition stalls: CLOSED s7065** (retail-designed 3072-sample audio wait, ~139 ms, plus slot drain). Reopen only on an owner report of a transition hitch longer than ~350 ms.
+13b. **Hot getenv: CLOSED s7066** (image-wide cache). Next audit (offline, s7066 samples): our own host self-time on MAIN/game threads in flight (diagnostic leftovers).
 14. **Owner judgement / parked:** FPS60 feel, G3c sheets, QoS default, native hangar geometry,
     rare dd4/dd8 gfx SIGBUS (single-source). Reopen on an owner report or side-effect failure.
 15. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first.

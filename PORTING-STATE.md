@@ -185891,3 +185891,33 @@ HYPOTHESIS-ID: transition-stall-silent-stretch. CURRENT-TRUTH 38.3 KB (no mainte
   patches, and an fprintf in intersectSegmentWithObjectSphere, show in the game-thread stacks; ~25 samples per 288 s, negligible.
 - Rules out: host compute or a host lock as the transition-stall bulk; any fix that would shorten it without changing game audio
   behaviour.
+
+## Session 7066 (2026-11-10) — hot-getenv idiom class closed: the executable now defines a lock-free cached getenv for ROGUESQ_* names (setenv invalidates); libSystem getenv samples 776 -> 0 same build, fps unchanged
+HYPOTHESIS-ID: hot-getenv-audit. CURRENT-TRUTH 40.3 KB (no maintenance). No new soak verdicts since s7062.
+- Unit (NEXT s7065): idiom-class audit of uncached getenv() in per-frame paths. Hypotheses H-few (a handful of per-call sites, fix
+  in their apply scripts), H-many (dozens; one cached helper), H-none-hot (sampled sites already cache).
+- Census (new tools/s7066_getenv_census.py, heuristic: `static ... = getenv` lines or a once-guard within 6 lines = cached):
+  RecompiledFuncs 2265 sites, 110 per-call (51 are rs64_probe_submit_gate_store POOLWATCH copies that are in fact cached by a
+  `pw_en==2` sentinel the heuristic misses; the hot ones: streamTerrainGridCellsByDistance ROGUESQ_FORFACE_LOG x3 at entry/return,
+  binPolygonIntoTerrainGrid, buildVisibleTerrainGridAroundCamera ASPECT_SCALE, linkHudNodeAndComputeScreenPos HUD_DX,
+  slotDispatcherIter, runInMissionFrame); host src/ + ultramodern/librecomp 1031 sites, 529 per-call by heuristic (ROGUESQ_LOG_ALL
+  pairs everywhere, osRecvMesg/events.cpp, queue_samples); RT64 also samples getenv under addFramebuffer. s7065 baseline samples
+  (tools/s7066_getenv_samples.py): 583 libSystem getenv samples, MAIN 314, [Game] 0 181. Verdict H-many: the class is too wide to
+  convert site by site (and half of it sits in lib/ and generated code).
+- Change: new src/main/rs64_env_cache.cpp (Darwin only, CMakeLists add_executable) defines getenv/setenv/unsetenv/putenv in the
+  image, so every reference in our objects and static libs (RecompiledFuncs, ultramodern, librecomp, RT64) binds here; dylibs (SDL)
+  keep libSystem's. ROGUESQ_* lookups go through a 4096-slot open-addressing table (constant-initialised, safe at static-init time;
+  readers lock-free with acquire loads; misses fill under a private mutex via dlsym(RTLD_NEXT) real getenv; unset results cached
+  too). setenv/unsetenv/putenv call the real function and bump a generation so every entry refetches: main()'s policy setenv calls
+  (DD bundle, OSMEM, RAMTOP) stay visible. Non-ROGUESQ names pass straight through. `ROGUESQ_ENV_CACHE=0` = old path. nm confirms
+  T _getenv/_setenv/_unsetenv/_putenv in the binary. No regen needed (no generated-code edit); no lib/ edit.
+- Run (scratch/s7066/both.zsh, one game at a time): s7065 recipe L6 dd1 4:3 FPS60 + G1E_TL ring + tools/s7065_sample_loop.zsh,
+  arm on then arm off. Both: flight 365 s, alive, 0 crash lines, 0 VI stalls; banner `[s7066] env-cache on` / `off`.
+  Samples (289 files each): on = libSystem getenv 0, image getenv 99 (MAIN 39, [Game] 0 40); off (positive control, same build) =
+  libSystem 776 (MAIN 456, [Game] 0 219, Gfx 27, RT64 Workload 14) + image 39. So getenv cost on the game threads falls ~8x and the
+  environ lock is gone from every thread we compile. fps (g5e_cost_by_parity --phases 1 --skip-s 130): on 58.9 / off 59.0, run_mean
+  0.87 / 0.79 ms, rsp 3.07 / 3.02 (cross-run on an animating mission with different mission_cycles 1 vs 3: noise, not a result).
+  The total was ~0.25% of MAIN samples, so no frame-time gain is claimed; this removes a cross-thread lock, not a measured stall.
+- Rules out: H-none-hot (the off arm shows 776 real libSystem samples), H-few (110+529 per-call sites). Class closed.
+- Next: same s7066 sample sets, offline: rank our own host self-time (non-guest, non-wait frames) on MAIN / [Game] 0 in flight
+  seconds to find other diagnostic leftovers on the per-frame path (H-log class from G1b), then fix the top class.
