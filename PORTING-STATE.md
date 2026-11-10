@@ -186612,3 +186612,31 @@ HYPOTHESIS-ID: host-shim-semantics-census. Offline unit from NEXT.md, plus a reb
   of our own patch scripts making the audio re-init run twice, and that is fixed.
 - Next: a census of the whole fixup layer, checking each retail statement appears once per function against the
   pristine pass (NEXT.md, slug fixup-layer-statement-census). The s7089 detector only sees duplicated jal comments.
+
+## Session 7090 (2026-11-10) — fixup-layer statement census closed: 0 untagged duplicate or dropped retail statements in 2,476 functions; the s7089 duplicate was the only one
+
+Work unit (NEXT.md, slug fixup-layer-statement-census): offline, no game run, no code-generation change.
+- New tool tools/s7090_fixup_statement_census.py. It matches functions by first guest address between the pristine
+  N64Recomp pass (scratch/s7082/regen, 2,484 functions) and the live fixup-patched tree (../N64Recomp/RecompiledFuncs,
+  2,500), and compares the retail statement multiset at every guest address. Normalisation: unwrap S5798/s4307
+  brace wrappers, drop diagnostic statements, map callee names to CALL. Tagging: PATCH or `// sNNNN` lines plus
+  every line inside the braces they open. Helper tools/s7090_shortfall_classify.py classifies the tagged shortfalls.
+- Controls, same run: positive = the pre-s7089 funcs_24 (scratch/s7089/funcs_24.pre.c.gz) gives exactly the 3 s7089
+  duplicates (0x80091CB0 ADD32 + initFactor5Mutex, 0x80091CBC osAiSetFrequency), exit 1. Negative = 2,050
+  statement-identical functions.
+- Result: dup 0, dropped 0, foreign 0 (exit 0). Differences: patched 14,311, added 197 (PATCH-block bodies), moved 20
+  (the s803 VI-caller probes swallowed the `jal`/delay-slot comments, so osViSetMode_recomp is filed one address
+  earlier in initVideoSubsystem / applyPendingViChanges / swapBufferWithViMode; same count), unref-label 18.
+  Tagged excesses of a retail statement: 5, all null-pointer guards that goto the retail target (s169, s3553).
+  Tagged shortfalls 186: rewritten-same-lhs 93 (rs64_tick_step/int_step/fq_k FPS60 scaling, rs64_despawn_ticks,
+  g_rs64_ww stride), other-stmt 46 (rs5908_call wrappers, __atomic stores, [b40w] logged stores), control-replaced 35
+  (g_rs64_sbx exits, data-gap __builtin_trap), addr-block-absent 16 (s327 audio wait-spin pump in shutdownAudioEngine
+  and waitForMusyXAudioTaskDone), bare-drop 9 (dead copies after `return;` removed by the s6869 data-word cut,
+  `$zero` writes, the moved VI calls).
+- Not compared: 3 functions the two passes size differently (data_gap_80024A0C, data_gap_800CC3D4 = 1,107 decoded
+  data words in live vs 3 in pristine, rspbootTextPreamble); 6 pristine starts that fall inside larger live
+  functions (setRngSeed in rand_recomp, isCinematicActive in tickCutsceneObject, ...) and 17 live-only data_gap
+  functions. These are symbol-file differences between the passes, not fixup edits.
+- Rules out: H-fixup-dup beyond the single s7089 instance; any untagged fixup statement drop. Single-tool evidence
+  for the classes, but the positive control is independent (a known defect from s7089).
+- Durable doc: docs/N64RECOMP-WARNING-CENSUS.md s7090 section. Next: the same census for build/factor5_ucode.

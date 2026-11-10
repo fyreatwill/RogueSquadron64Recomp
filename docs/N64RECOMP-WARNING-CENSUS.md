@@ -239,3 +239,30 @@ the Factor 5 mutex). Fix: the rule now prepends only for one-line needles (check
 1 call each, block equal to live modulo the later s4307 layer), and tools/fixup_s7089_dupcall.py (idempotent,
 in the vendored chain) removed the second copies from the live tree. Built binary: one `bl` to each in
 _reapplyAudioConfig.
+
+## s7090 fixup-layer statement census (does any fixup repeat or lose a retail statement?)
+
+Tool: `tools/s7090_fixup_statement_census.py` (offline, ~3 s; exit 0 = no untagged dup/drop/foreign).
+Pristine = scratch/s7082/regen (front-end N64Recomp pass, no fixups). Live = ../N64Recomp/RecompiledFuncs.
+Functions are matched by first guest address (renames ignored). Statements are filed under the preceding `// 0xADDR:`
+comment; `{ X; RS64_S5798_ST(..); }` / s4307 synth-read wrappers are unwrapped, `rs64_*`/`RS64_*`/`rsNNNN_*`/
+`g_rs64*`/fprintf/declaration statements and `if (__builtin_expect(g_rs64...))` lines are dropped, `name(rdram, ctx);`
+becomes `CALL(rdram, ctx);`. A line carrying `PATCH` or a `// sNNNN` / `/* sNNNN` comment is tagged, and so is every
+line until the braces it opens close.
+
+| class | count | meaning |
+|---|---|---|
+| identical functions | 2,050 / 2,476 | statement multisets equal at every address |
+| patched | 14,311 | difference carried by tagged lines (of which 186 shortfalls: see tools/s7090_shortfall_classify.py) |
+| added | 197 | untagged code N64Recomp never emits in that function (PATCH-block bodies the brace rule misses) |
+| moved | 20 (10 pairs) | an s803 VI probe swallowed the `// 0x` comment, so the call is filed one address earlier |
+| unref-label | 18 | a label no goto in the function targets (e.g. renderVoiceAudioBlock's stray L_8009D980) |
+| dup / dropped / foreign | **0 / 0 / 0** | |
+| extent mismatch (not compared) | 3 | data_gap_80024A0C, data_gap_800CC3D4, rspbootTextPreamble: sized differently by the two passes |
+
+Positive control: `--file-override funcs_24.c=scratch/s7089/funcs_24.pre.c.gz` gives dup=3 (reapplyAudioConfig 0x80091CB0
+ADD32 + initFactor5Mutex, 0x80091CBC osAiSetFrequency), exit 1. Negative control: 2,050 identical functions.
+Tagged excesses of a retail statement at its own address: 5, all null-pointer guards that `goto` the retail branch target
+(reserveAndEmitDLEntry s169, submitSceneNodeRender s3553). Shortfall classes: rewritten-same-lhs 93, other-stmt-at-addr 46,
+control-replaced 35, addr-block-absent 16 (s327 audio wait-spin pump), bare-drop 9 (dead copies after `return;` cut by
+s6869, `$zero` writes, the moved VI calls). Not covered: build/factor5_ucode.
