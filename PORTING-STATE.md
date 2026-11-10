@@ -185902,7 +185902,7 @@ HYPOTHESIS-ID: hot-getenv-audit. CURRENT-TRUTH 40.3 KB (no maintenance). No new 
   binPolygonIntoTerrainGrid, buildVisibleTerrainGridAroundCamera ASPECT_SCALE, linkHudNodeAndComputeScreenPos HUD_DX,
   slotDispatcherIter, runInMissionFrame); host src/ + ultramodern/librecomp 1031 sites, 529 per-call by heuristic (ROGUESQ_LOG_ALL
   pairs everywhere, osRecvMesg/events.cpp, queue_samples); RT64 also samples getenv under addFramebuffer. s7065 baseline samples
-  (tools/s7066_getenv_samples.py): 583 libSystem getenv samples, MAIN 314, [Game] 0 181. Verdict H-many: the class is too wide to
+  (tools/s7066_getenv_samples.py): 583 libSystem getenv samples, MAIN 314, [Game] 0 181. The census selects H-many: the class is too wide to
   convert site by site (and half of it sits in lib/ and generated code).
 - Change: new src/main/rs64_env_cache.cpp (Darwin only, CMakeLists add_executable) defines getenv/setenv/unsetenv/putenv in the
   image, so every reference in our objects and static libs (RecompiledFuncs, ultramodern, librecomp, RT64) binds here; dylibs (SDL)
@@ -185918,6 +185918,8 @@ HYPOTHESIS-ID: hot-getenv-audit. CURRENT-TRUTH 40.3 KB (no maintenance). No new 
   environ lock is gone from every thread we compile. fps (g5e_cost_by_parity --phases 1 --skip-s 130): on 58.9 / off 59.0, run_mean
   0.87 / 0.79 ms, rsp 3.07 / 3.02 (cross-run on an animating mission with different mission_cycles 1 vs 3: noise, not a result).
   The total was ~0.25% of MAIN samples, so no frame-time gain is claimed; this removes a cross-thread lock, not a measured stall.
-- Rules out: H-none-hot (the off arm shows 776 real libSystem samples), H-few (110+529 per-call sites). Class closed.
+- The same-build on/off pair refutes H-none-hot (the off arm shows 776 real libSystem samples) and the census refutes H-few
+  (110+529 per-call sites); selects H-many. The cache resolves the class: closed. Next discriminator (NEXT.md, host-selftime-audit):
+  our own helpers' share of on-CPU self samples on MAIN/[Game] 0 in flight, >2% selects H-diag, <1% selects H-guest.
 - Next: same s7066 sample sets, offline: rank our own host self-time (non-guest, non-wait frames) on MAIN / [Game] 0 in flight
   seconds to find other diagnostic leftovers on the per-frame path (H-log class from G1b), then fix the top class.
