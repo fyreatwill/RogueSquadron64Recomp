@@ -1392,3 +1392,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261110-1400 | s7099_wallsplit_r3 (run by s7100 iteration) | rc=0 | ~396s | scratch/s7099/soak_r3.out
 20261110-144128 | s7102_push_r1 | rc=0 | 395s | scratch/agent/soak_results/s7102_push_r1_20261110-144128.log
 20261110-144803 | s7102_push_r2 | rc=0 | 396s | scratch/agent/soak_results/s7102_push_r2_20261110-144803.log
+20261110-150556 | s7103_camfix_r1 | rc=0 | 396s | scratch/agent/soak_results/s7103_camfix_r1_20261110-150556.log
+20261110-151232 | s7103_camfix_r2 | rc=0 | 395s | scratch/agent/soak_results/s7103_camfix_r2_20261110-151232.log

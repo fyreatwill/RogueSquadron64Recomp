@@ -1,19 +1,21 @@
-# NEXT: FPS60 near-wall flicker: log the terrain builder's per-cell keep/cull decisions near the camera across an episode
-HYPOTHESIS-ID: fps60-wall-terrain-cull
-Context (s7103): the camera collision in applyPlayerVehicleStateUpdate does not explain the episodes. Corners are left inside at exit on
-41% of clean lim1 flight ticks, several episodes have no corner inside, and the ROGUESQ_S7103_CAMFIX re-push arm leaves the episode rate
-unchanged (5/2714 off vs 5/3738 on, P=0.42). s7098 showed the missing wall is absent from the game's own RDP stream, so the game decides
-not to submit it. The terrain builder buildVisibleTerrainGridAroundCamera (s7101 bv hook at its entry, same CHASE file) reads the camera
-matrix +0x4C..0x54. Find its per-cell visibility / cull tests (frustum, behind-camera, distance, LOD) by static read first.
-Unit (one build, one run, scratch/s7099/arm.zsh 6 4 <tag> "... ROGUESQ_S7101_CHASE=<file>" 120 240):
- 1. New tools/apply_s7104_cellcull.py: per builder call, for cells within ~3 cell widths of the camera: cell id/x,z, each cull test's inputs
-    and verdict, and kept/submitted. One line per call with a compact kept-mask too, mach-stamped (episode alignment as s7103_residual.py).
- 2. Positive control: the far cells culled by distance must show up as culled in normal flight (the test visibly fires).
+# NEXT: FPS60 near-wall flicker: what the mesh/emit stage makes of the near cells across an episode
+HYPOTHESIS-ID: fps60-wall-mesh-emit
+Context (s7104): streamTerrainGridCellsByDistance keeps the eye cell and forward rows (K) on every call of all 8 episodes; S/C/N culls never fire,
+and the empty-footprint rate near the eye is the same as in flight. So the wall cell is in the distance-sorted list. s7098 showed the wall is absent
+from the game's RDP stream. The loss sits between the list and the RDP: buildGridCellMeshForFace (called from buildVisibleTerrainGridAroundCamera,
+s6417 meshlog anchor after_11 0x80043AAC; LOD dist^2 tiers 0x8009DE94..A0, far cutoff DEB4), per-face/vertex emission, or the F5 ucode clip.
+Unit (one build, one run: scratch/s7099/arm.zsh 6 4 s7105a "ROGUESQ_G1E_LIMIT=1 ROGUESQ_G1E_WIN=600 ROGUESQ_G3C_LOG=1
+  ROGUESQ_S7101_CHASE=$PWD/scratch/s7105/push_a.txt ROGUESQ_S7104_CELL=1 ROGUESQ_S7105_EMIT=1" 120 240):
+ 1. Static read buildGridCellMeshForFace first: per-cell paths that emit nothing (back-face test, LOD tier, vertex-cache/DL chunk overflow, a
+    per-face near/behind test).
+ 2. New tools/apply_s7105_emit.py: for every list node within ring<=3 of the eye cell (node +0xC col, +0x10 row, +8 dist^2), log per frame:
+    LOD tier chosen, faces tested / emitted, vertices/tris written to the DL. Append to the same cc line stream (key m, frame).
+ 3. Same run, per frame: RDP tri count (existing G5B/G3C counters) so emitted-vs-drawn can be compared.
+ Positive control: far cells must show the lower LOD tiers and fewer tris than ring 0 (the tier test visibly fires).
 Hypotheses:
- H-behind  a near wall cell whose centre/bbox sits behind the camera plane is culled while its wall faces are still on screen (camera hugging
-           the wall puts the cell centre behind the eye) -> episode ticks show the wall cell flipping kept/culled with the camera's z/yaw
- H-frustum the cell bbox vs frustum test uses a stale or narrower (4:3, not the 16:9 wide) frustum -> the culled cells are at the screen side
- H-lod     the cell switches LOD / patch and the replacement has no wall faces for 1-3 frames -> kept, but the submitted mesh differs
- H-none    the builder keeps the cell on episode ticks -> the drop is later (display list / F5 ucode clip of the near polys); go to the DL
-Outcomes: per episode, the wall cell's kept flag and which test removed it. Default stays retail.
-Queued already (fold first): soak_queue/s7103_camfix_r1/r2 (same s7103 recipe, resid_r*.txt) for more CAMFIX episodes.
+ H-emit-skip  the wall cell's faces are skipped by the mesh stage (back-face/near test with the eye on the wrong side) -> emitted tris for the
+              near ring drop at the episode while the cell stays K
+ H-lodswap    the tier for the eye-ring cell flips across a dist^2 boundary at 60 fps, and the other tier's mesh has no wall faces
+ H-clip       tris are emitted as in flight, but the RDP tri count drops -> F5 ucode near-plane clip/cull (camera inside the near distance)
+ H-elsewhere  neither changes -> the wall is not terrain-grid geometry (a separate object or prop mesh); find its draw path
+Outcomes: per episode, the near-ring emitted tri count and LOD tier vs the flight distribution. Default stays retail.

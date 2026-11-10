@@ -187133,3 +187133,37 @@ Housekeeping: deleted analysed capture raws scratch/s7099/s7101[a-d].raw and s71
 Discrimination: refutes H-squeeze, H-fight and H-corner4 as the cause (the same-run fix arm leaves the episode rate unchanged, and residual
 corners are common in clean flight), and selects the submit side (terrain builder). Next discriminator: per-cell kept/culled verdicts in
 buildVisibleTerrainGridAroundCamera across an episode split H-behind / H-frustum / H-lod / H-none (NEXT.md).
+
+## Session 7104 (2026-11-10) — FPS60 near-wall flicker: the terrain stream keeps every cell around the eye through all 8 episodes; its only firing cull is the empty-footprint test, at the flight rate (H-none, single run); the drop is downstream of the cell list
+
+Folded soaks s7103_camfix_r1/r2 (scratch/s7103/resid_r1/r2, split_r1/r2): 18 more episodes, 15 of them with ROGUESQ_S7103_CAMFIX on, several with no
+corner inside on any tick ([]/* runs). Confirms s7103: the re-push fix does not remove episodes. Camera collision thread closed as not the cause.
+
+Static read of streamTerrainGridCellsByDistance (funcs_9.c). It is called once per frame. Outer loop over rows fp < sp+0x14 (= d, 0x80132DBC), inner
+over columns s4 < sp+0x10 (= w, 0x80132DB4). 0x80043070 is the ROW end and the epilogue is L_80043138. First argument a0 (sp+0x80) = eye in cell
+units (x +0, z +8): f20/f22 = cell - eye + 0.5 is the sort distance. Per-cell outcomes:
+E 0x80042D64 A==B==-128 (footprint never covered the cell); S 0x80042D8C/DA4 A<rec[3] or rec[4]<B (pyramid height span vs cell height range);
+F our s7030 cull (dd>=6 only); C 0x80042DE0 kept a3 >= cap *(u16*)0x80130C4C (ends the row); N 0x80042EA8 0x80048508(x,z,1)==0 (0x7E, uncounted);
+K insert into the dist^2-sorted list.
+
+New tools/apply_s7104_cellcull.py (fixup list after s7103): ROGUESQ_S7104_CELL=1 plus the CHASE file writes one `cc` line per stream call: eye, eye
+cell, window, kept/cap, whole-window E,S,F,C,N,K counts, and a 7x7 verdict grid around the eye cell with A/B/rec3/rec4 bytes. Measurement only.
+New tools/s7104_cellcull.py (push.txt drops.csv split.txt; episode alignment as s7103_residual.py).
+First build flushed at 0x80043070, so it wrote one ROW per line. Caught on the first lines (n sums ~64, kept cumulative), run killed and discarded,
+fixed to the epilogue and the sp+0x80 eye (the sp+0x84 world point read 102,0,14 constant).
+
+Run (scratch/s7099/arm.zsh 6 4 s7104a, L6 dd4 16:9 FPS60, G1E_LIMIT=1 600-VI windows, CELL=1): 0 crashes, 9839 cc calls, 8 episodes
+(lim1 3 / 4223 ticks, lim2 5 / 2388). scratch/s7104/cell_a.txt.
+- Control: whole-window E fires 5.58 M times (9746/9839 calls) and K 34.7 M. S, F, C and N fire 0 times in the whole run (no height-span reject,
+  no cap hit (kept ~3100-4100 of cap 8192), no null mesh).
+- Near grid, episode calls (116) vs flight calls (9723): ring 0 (eye cell) K 100% / 100%; ring 1 E 15.8% / 19.9%, K 59.6% / 56.5%; ring 2-3
+  the same within 1 pt. In all 8 episodes the eye cell and the forward rows stay K on every call across the episode. The E cells sit at the
+  back/side edge of the footprint, as they do in flight.
+- Refuted at the builder stage: H-behind (S never fires), H-lod/no-mesh (N never fires), pool cap (C never fires). H-frustum is not raised:
+  the empty-footprint rate near the eye is no higher in episodes than in flight. Selected: H-none, single run. The wall cell is in the
+  distance-sorted list. The missing wall is lost downstream: per-cell mesh build (buildGridCellMeshForFace, including its dist^2 tiers
+  0x8009DE94..), face/vertex emission, or the F5 ucode near-plane clip of near polygons.
+- Caveat: ±3 cells covers the walls the camera hugs (s7098 frames) only if a cell is about 2 world units. The wall cell itself is not named,
+  so a culled wall cell further out is not excluded.
+Next: per near cell, log what the mesh stage emits (faces, vertices, tris to the DL) together with the RDP tri count for the same frame.
+Episode vs flight then shows whether the wall polygons are emitted and clipped, or never emitted (NEXT.md, slug fps60-wall-mesh-emit).
