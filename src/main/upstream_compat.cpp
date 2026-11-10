@@ -1297,9 +1297,21 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
     uint32_t ra      = (uint32_t)ctx->r31;
     const char* site = "?";
 #if !defined(_WIN32)
-    Dl_info di{};
-    if (dladdr(__builtin_return_address(0), &di) && di.dli_sname) {
-        site = di.dli_sname;
+    {   // s7067: dladdr walks the symbol table (~70 us/call, 96% of this function's host cost, ~7.4k calls a run);
+        // the call sites are a handful of generated functions, so cache name by return address. ROGUESQ_DLADDR_CACHE=0 = old path.
+        static const bool cache_on = [] { const char* e = std::getenv("ROGUESQ_DLADDR_CACHE"); return !(e && *e == '0'); }();
+        void* ra_host = __builtin_return_address(0);
+        static std::mutex s_m; static void* s_ra[16]{}; static const char* s_name[16]{}; static int s_n = 0;
+        bool hit = false;
+        if (cache_on) {
+            std::lock_guard<std::mutex> lk(s_m);
+            for (int i = 0; i < s_n; ++i) if (s_ra[i] == ra_host) { site = s_name[i]; hit = true; break; }
+        }
+        if (!hit) {
+            Dl_info di{};
+            if (dladdr(ra_host, &di) && di.dli_sname) site = di.dli_sname;  // dli_sname points into the image: stable
+            if (cache_on) { std::lock_guard<std::mutex> lk(s_m); if (s_n < 16) { s_ra[s_n] = ra_host; s_name[s_n] = site; ++s_n; } }
+        }
     }
 #endif
     fprintf(stderr,

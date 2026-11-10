@@ -185923,3 +185923,29 @@ HYPOTHESIS-ID: hot-getenv-audit. CURRENT-TRUTH 40.3 KB (no maintenance). No new 
   our own helpers' share of on-CPU self samples on MAIN/[Game] 0 in flight, >2% selects H-diag, <1% selects H-guest.
 - Next: same s7066 sample sets, offline: rank our own host self-time (non-guest, non-wait frames) on MAIN / [Game] 0 in flight
   seconds to find other diagnostic leftovers on the per-frame path (H-log class from G1b), then fix the top class.
+
+## Session 7067 (2026-11-10) — host self-time audit of our own helpers in flight: diagnostics are 6-10% of game/gfx-thread on-CPU self time but ~0.7% of one core; the top single leftover (per-call dladdr in osViSetMode_recomp, 96% of its cost) is now cached, 67 -> 3.7 us/call same build
+
+HYPOTHESIS-ID: host-selftime-audit. No regen needed (src/ only).
+- New tool `tools/s7067_selftime.py`: per-thread on-CPU SELF samples by leaf over `sample` dumps, blocking leaves excluded,
+  buckets guest / ucode / ours / patches / runtime / rt64 / libsys / diag (rs64_*, sNNNN_, rs64Log*, printf family) from nm
+  over build/CMakeFiles object groups. Positive control on the s7066 dumps, same tool: MAIN libsys `__findenv_locked` 447 (env
+  cache off) vs 0 (on).
+- s7066 on-arm dumps (289 x 1 s, L6 dd1 4:3 FPS60): the game threads are barely on CPU. MAIN 5092 self samples in 289 s
+  (~18 ms/s; guest 77%, diag 9.6%, top diag rs64_s4307_synth_read 1.7%); Gfx Thread 23216 (~80 ms/s; factor5_ucode_nmac 31%,
+  memmove 8%, XXH3 7%, rsp_dpc_submit_impl 6%, diag 6.4%: rs64_dpc_record_submit_impl 329, rs64_spike_scan 303 (that is the
+  default-on CULL_SPIKE, functional), rs64LogE9BoundaryCommand 157, e9prov 198); [Game] 0 group 6021 (wait_for_resumed 49%,
+  **dyld findClosestSymbol 518 = 8.6%**, rs64_m5_lowfield_store 172); [Game] 2 (decompress) diag 44% (rs64_floor_writer_context,
+  rs64_m5_source_context). H-diag selected by share (>2% on MAIN, Gfx, [Game] 0), H-guest refuted for MAIN-ish threads, H-runtime
+  refuted (runtime <1.5%). Absolute cost is small (~0.7% of one core for all diag), so no fps claim.
+- Writer of the dladdr cost: `osViSetMode_recomp` (src/main/upstream_compat.cpp) called dladdr(__builtin_return_address(0))
+  unconditionally for its log line's `site=`, ~20 calls/s from applyPendingViChanges on the VI retrace handler. Fix: cache the
+  name per return address (16 slots, mutex), `ROGUESQ_DLADDR_CACHE=0` = old path. Log content unchanged (site= names identical).
+- Same-build A/B, scratch/s7067/both.zsh (s7066 recipe, 100+160 s), both 268 s flight, alive, 0 crash, 0 VI stall:
+  on: osViSetMode inclusive 35 samples / 9477 calls (~3.7 us), dladdr 1; off (control): 332 / 4964 calls (~67 us), dladdr 312,
+  [Game] 0 findClosestSymbol 300 self. The call-count difference (9477 vs 4964 log lines) is unexplained, single run each; it
+  does not affect the per-call figure.
+- Rules out: runtime glue as our hot share; dladdr anywhere else (the other dladdr sites in upstream_compat/mesgqueue are env-gated
+  and drew 0 samples).
+- Next: the remaining diag class on Gfx Thread (dpc_record_submit_impl, rs64LogE9BoundaryCommand, e9prov) and [Game] 0
+  rs64_m5_lowfield_store / s4307_synth_read: check whether each does work with no env flag set, gate it behind a cached static.

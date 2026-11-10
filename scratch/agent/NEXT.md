@@ -1,16 +1,13 @@
-# NEXT: idiom-class audit — host self-time of our own (non-guest) helpers on the game threads in flight
+# NEXT: gate the ungated diagnostic helpers on the Gfx Thread and audio game thread
 HYPOTHESIS-ID: host-selftime-audit
-Context (s7066): hot getenv closed by an image-wide cache (src/main/rs64_env_cache.cpp). All G5 items await the owner.
-Capture once, analyze many: scratch/s7066/on/smp_*.txt (289 x 1 s host samples, all threads, cache on, L6 dd1 4:3 FPS60, 365 s flight)
-and scratch/s7066/off/ are already on disk. No build needed for the first half.
+Context (s7067): tools/s7067_selftime.py over scratch/s7067/{on,off} (and s7066) shows diag = 6.4% of Gfx Thread on-CPU self
+(rs64_dpc_record_submit_impl 329, rs64LogE9BoundaryCommand 157 [lib/rt64/src/hle/rt64_interpreter.cpp:289], rs64_e9prov_task_begin /
+rs64_e9prov_authoritative_span 198 [src/rsp/dpc_bridge.cpp:2193/3282]) and ~10% of [Game] 0 (rs64_m5_lowfield_store 172,
+rs64_s4307_synth_read 127). rs64_spike_scan is the default-on CULL_SPIKE: functional, leave it.
 Hypotheses:
- H-diag: diagnostic leftovers (per-frame probe/ring/counter helpers, fprintf gates, atomics) hold a measurable share (>2%) of
-   MAIN/[Game] 0 on-CPU self samples; fix the top class (gate by a cached static or compile out) and re-measure.
- H-guest: on-CPU time is dominated by generated guest functions and RT64/ucode work; our helpers < 1% -> close the class.
- H-runtime: ultramodern/librecomp glue (osRecvMesg, yield, MEM_* helpers) dominates our share -> audit that path instead.
-Method: write tools/s7067_selftime.py: per thread, self samples by leaf symbol, excluding blocking leaves (__psynch_*, mach_msg*,
-__semwait_signal, nanosleep, kevent), and bucket symbols as guest (RecompiledFuncs names / func_0x), ours (rs64_*, s6xxx/s7xxx
-helpers, src/ functions), runtime (ultramodern/librecomp), RT64, libsystem. Positive control: the on vs off arms must show the
-getenv bucket difference (~776 -> 0 libsystem getenv) in the same tool. Then fix the top "ours" class if H-diag, rebuild, one
-hold with the sampler (scratch/s7066/both.zsh pattern), same-build =0 arm where a knob exists.
-Hard rules: generated-code edits go through tools/fixup_*.py / apply scripts; one game run at a time; SIGKILL.
+ H-ungated: each helper does real work (ring writes, string building) with no env flag set -> gate it behind a cached static,
+   default off, keep the env to turn it on.
+ H-needed: some feed a default-on feature (like spike_scan feeds CULL_SPIKE) -> leave, document.
+Discriminator: read each helper's entry; then one same-build run with the sampler (scratch/s7067/both.zsh pattern, knob =0 arm
+restoring old behaviour), diag self samples per helper on vs off, plus the s7066 getenv control still at 0.
+Low value (~0.5% of a core). If an owner report arrives, it takes priority. lib/rt64 edits need submodule-patches/export.sh + commit.

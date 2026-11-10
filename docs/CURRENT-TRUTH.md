@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7066 (2026-11-10).
+Compact operational handoff, as of Session 7067 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7067 host self-time audit (tools/s7067_selftime.py, s7066 dumps): our diagnostics are 6-10% of MAIN / Gfx / [Game] 0 on-CPU self time but only ~0.7% of one core (game threads are ~2% busy, Gfx ~8%).** Top single leftover was a per-call dladdr in osViSetMode_recomp's log line (8.6% of [Game] 0 self). Now cached per return address (`ROGUESQ_DLADDR_CACHE=0` = old path): same build, 268 s L6 flights, 0 crash/stall: 3.7 vs 67 us per call, dladdr samples 1 vs 312. Positive control: __findenv_locked 447 -> 0 across the s7066 arms in the same tool. No fps claim.
 
 **s7066 hot-getenv class CLOSED: one cached getenv for the whole image (src/main/rs64_env_cache.cpp, default on, `ROGUESQ_ENV_CACHE=0` = libSystem path).** Census (tools/s7066_getenv_census.py): 2265 generated getenv sites (110 per-call) + 1031 host sites (529 per-call by heuristic) + lib/ ultramodern/RT64, too many to patch singly, so the executable now defines getenv/setenv/unsetenv/putenv: ROGUESQ_* names are served from a lock-free per-name table (no environ lock), any setenv through the image invalidates it, other names pass through; dylibs (SDL) keep libSystem's. Two runs, s7065 recipe L6 dd1 4:3 FPS60, host-sampled (tools/s7066_getenv_samples.py): on = 0 libSystem getenv samples (99 cheap cached lookups) vs off (positive control) 776 (MAIN 456), s7065 baseline 583; both 365 s flight, 0 crash, 0 VI stall, fps 58.9 / 59.0 (cross-run; the cost was ~0.25% of MAIN, so no fps gain is claimed). Policy setenv values still seen ([s7037] lines / auto bundle unaffected: setenv invalidates).
 
@@ -249,7 +251,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
     Use fl_shown/fl_miss, not shown/s, for per-level fps. Open, owner scope: why L7/L16/L17 autopilot holds cycle the backdrop menu.
 12. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png).
 13. **Scene-transition stalls: CLOSED s7065** (retail-designed 3072-sample audio wait, ~139 ms, plus slot drain). Reopen only on an owner report of a transition hitch longer than ~350 ms.
-13b. **Hot getenv: CLOSED s7066** (image-wide cache). Next audit (offline, s7066 samples): our own host self-time on MAIN/game threads in flight (diagnostic leftovers).
+13b. **Hot getenv: CLOSED s7066** (image-wide cache). **Hot dladdr: CLOSED s7067** (osViSetMode site cache). Next: ungated diag helpers on Gfx Thread (rs64_dpc_record_submit_impl, rs64LogE9BoundaryCommand, e9prov) and [Game] 0 (rs64_m5_lowfield_store, rs64_s4307_synth_read): gate behind a cached static if they run with no env set. Low value (~0.5% of a core); take only when nothing owner-facing is open.
 14. **Owner judgement / parked:** FPS60 feel, G3c sheets, QoS default, native hangar geometry,
     rare dd4/dd8 gfx SIGBUS (single-source). Reopen on an owner report or side-effect failure.
 15. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first.
