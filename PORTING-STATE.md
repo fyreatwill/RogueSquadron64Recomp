@@ -185460,3 +185460,28 @@ Result: H-trade. No single K is both invisible on L12 and under the VI cliff (0.
 Rules out H-K (raise K globally / dims-aware K) as a fix that keeps 60 fps on L12. OWNER-OPT-INS now offers the choice
 (default hard edge at 60, or _K=0.8 soft band at ~54). Next (NEXT.md): an eye-to-edge K gate (k2=0.8 only for the outward edge the
 eye is near) to see whether the visible band and the cost are the same cells (H-whole) or separable (H-gate).
+
+## Session 7046 (2026-11-09) — eye-to-edge K gate (ROGUESQ_DD_OFFMAPCULL_KEDGE): N=12 makes the L12 horizon cut invisible at 58.0 fps (K=0.6 59.0, global K=0.8 was 54.1); L1 cost nil (H-partial, near H-gate)
+Work unit from NEXT.md (HYPOTHESIS-ID dd6-bundle-l12-horizon). One build, three run sets, one game at a time.
+Change: src/main/upstream_compat.cpp new opt-in ROGUESQ_DD_OFFMAPCULL_KEDGE=<k2>[,N[,phasemask]] (default N=8, mask 7) in the s7034 K path
+(rs64_s7031_cell): an off-map cell past R whose clamped edge lies on a map side the s7032 latched eye cell is within N cells of uses K=k2
+instead of K (only while the eye is on-map). New [s7046] per-phase line: k2cells/f, k2cull/f, eyeedge = histogram of the eye's min distance to
+any map side (0..31). The forward half-plane test planned in NEXT.md was dropped: the stream already skips out-of-view cells (s7011), and the
+world forward vector's sign/scale relative to cell indices is unverified.
+1. Frozen poses 16:9 FPS60 L12 NOREF (scratch/s7046/run.zsh, s7045 recipe): arms dd6off / dd6b (auto bundle K=0.6) / ke8 (KEDGE=0.8,8) /
+   ke12 (KEDGE=0.8,12). 4/4 0 crashes, [s7037] in the 3 bundle arms, all on one posefreeze path (pos 156.526,-8.539,19.825); k0-k3 pre-flight black.
+   tools/s7032_pose_cull_score.py --base dd6off k4/k5/k6: dd6b 0.81/0.80/0.88 (1.8% px, reproduces s7044/s7045), **ke8 identical to dd6b**
+   (0.81/0.80/0.88: at these poses the eye is >8 cells from that edge), **ke12 0.07/0.07/0.07, 0.0% px** (= global K=0.8 in s7045).
+   Positive control: ke8 ph0 k2cells/f 737 (k2cull 192), ke12 1991 (739). By eye docs/owner_sheet_s7046_l12_kedge.jpg (bottom 45%, rows
+   dd6off / dd6b / ke8 / ke12, cols k4 / k6): ke12 keeps the soft fogged band like dd6off; dd6b and ke8 show the hard flat edge.
+2. Same-run cost hold L12 (scratch/s7046/run_hold.zsh H12ke12 12 12: tog3 R=-1,2,2 K=0,0.6,0.6, KEDGE=0.8,12 phase 2 only, 505 s flight):
+   alive_at_end=1, vi_stalls30s=0, crash 0. g5e_cost_by_parity --phases 3 --skip-s 130 --split xor8 (20.9k frames):
+     p0 off 45.9 fps rsp 15.85 P(>=2VI) 0.31; p1 K=0.6 59.0 rsp 12.03 P 0.02; **p2 K=0.6+KEDGE12 58.0 rsp 12.71 (+0.68 vs p1) P 0.03**.
+   Control: [s7046] ph2 on=1 k2cells/f 1836 k2cull 355, ph0/ph1 on=0 0; ocull/f ph1 2929 ph2 2426. (An N=8 hold was started and killed
+   after the pose result; its output was discarded.)
+3. Same-run cost hold L1 (H1ke12 1 12): alive, 0 stalls, 0 crash; p0 58.7 / p1 59.6 / p2 59.7 fps, rsp p2-p1 +0.75 ms but T -0.03:
+   no frame-rate cost (within the 0.3 ms bar on T). ph2 k2cells/f 2115.
+Result: H-partial at the pre-registered bar (58.0 < 58.5), but much nearer H-gate than H-whole: the gate keeps 90% of K=0.6's L12 saving
+(45.9 -> 58.0 vs -> 59.0) while removing the visible cut, where global K=0.8 kept only ~70% (54.1). So the visible band and the cost are
+largely separable (rules out H-whole). Two lines (score + by eye) for the image; cost single run per level. Not folded into the bundle default:
+OWNER-OPT-INS offers `_KEDGE=0.8,12`. Next (NEXT.md): N=10 / k2=0.7 variants on poses + one L12 hold, then fold the best into the s7037 bundle.
