@@ -185805,3 +185805,24 @@ HYPOTHESIS-ID: dd6-219-levelK-survey. CURRENT-TRUTH 58.1 KB at start (no mainten
 - Queued soaks s7062_219auto_L10 / _L15 (the two levels with no 21:9 dd6 survey row) to finish the survey.
 - This selects H-invisible and refutes H-visible (L9, cap 8192, 21:9 dd6).
 - Next discriminator: the L10/L15 21:9 dd6 auto holds (H-ok / H-laggard / H-crash, NEXT.md) close or extend the 21:9 level survey.
+
+## Session 7063 (2026-11-10) — 21:9 dd6 auto survey CLOSED: L10/L15 holds clean, all 19 levels ~60 fps in flight
+HYPOTHESIS-ID: dd6-219-levelK-survey (closed) -> transition-stall-audio-wait.
+Step 0: CURRENT-TRUTH 58,707 bytes (< 60000), no maintenance; compacted anyway (see below).
+Folded soaks (s7062 build, 21:9 dd6 auto bundle): s7062_219auto_L10 rc=0 452 s (hold 364 s, flight 366 s, alive_at_end=1,
+vi_stalls30s=0, crashlines=0); s7062_219auto_L15 rc=0 450 s (hold 363 s, flight 365 s, alive, 0 stalls, 0 crash lines,
+godrefills 11). tools/s7060_survey_table.py --suf g --levels 10,15: L10 60.00 fps / excl. 60.00, rsp 4.50 (cloud level,
+little terrain), 0 gaps, P(>=2VI) 0.00, 1 slow frame -> OK; L15 60.00 / 59.99, rsp 9.15 (p90 12.38), 0 gaps, P 0.00,
+4 slow frames, K 0.6 -> OK.
+Verdict: H-ok selected (both alive, 0 crash, L15 >= 59.5); refutes H-laggard (L15 has no RSP-bound slow-frame burst) and
+H-crash (L15's old 21:9 crash class, fixed s6992 PTRMASK, did not recur in 365 s flight). Full table (fps excl. gaps,
+all suffix rings in scratch/s7058): L0 59.61, L2 59.58, L3 59.60, L6 59.80, L7 59.92, L8 59.98, L9 58.45 pre-cap ->
+60.00 with auto 9:8192 (s7062), L10 60.00, L11 59.93, L14 59.92, L15 59.99, L16 59.48 (transition stalls, 59.68 excl.
+>40 ms), L17 59.70, L18 60.00; L1-L5/L12/L13 from s7050-s7058. Two lines: the soak harness verdict lines (alive,
+crash/stall counters) and the per-frame TL ring scored offline.
+Rules out: any further level-scoped K or cap need at 21:9 dd6 (every level at the ~60 fps ceiling in flight).
+Docs: CURRENT-TRUTH headline s7063 + Next steps item 6 closed, new item 13 (transition stalls); headline bullets
+s7006-s7045 migrated verbatim to PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7063)" (58.7 KB -> ~37 KB).
+OWNER-OPT-INS: one line, 21:9 farthest-view checked on all 19 levels.
+Next (NEXT.md): the 200-320 ms scene-transition stalls (anyAudioSlotActive polling, single-source xctrace s7059):
+H-retail vs H-cadence vs H-preempt-residual, one ring instrument per stall.

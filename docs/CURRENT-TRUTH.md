@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7062 (2026-11-10).
+Compact operational handoff, as of Session 7063 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7063 21:9 dd6 auto survey CLOSED: all 19 levels hold ~60 fps in flight with 0 crashes (H-ok).** Last two holds on the s7062 build (queued soaks s7062_219auto_L10/_L15, 363-364 s flight each, alive, 0 crash lines, 0 VI stalls): L10 60.00 fps, L15 59.99 excl. gaps, P(>=2VI) 0.00, no RSP-bound slow frames (tools/s7060_survey_table.py --suf g). Per level, fps excl. gaps (s7058-s7062 rings): L0 59.61, L2 59.58, L3 59.60, L6 59.80, L7 59.92, L8 59.98, L9 60.00 (with auto 9:8192, s7062), L10 60.00, L11 59.93, L14 59.92, L15 59.99, L16 59.48 (transition stalls = loads, 59.68 excl. >40 ms), L17 59.70, L18 60.00; L1-L5/L12/L13 measured s7050-s7058 (L12/L13 need auto K=0.5). Older headline bullets s7006-s7045 moved to PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7063)".
 
 **s7062 21:9 dd6 auto bundle now caps L9 at 8192 cells (`ROGUESQ_DD_WIDEWIN_CAPLEVEL=9:8192` auto when FB_WIDTH>796 and no explicit _CAP; explicit _CAPLEVEL wins, `=-` off).** Frozen poses L9 21:9 (6 poses, 2 runs for c8192): c8192 vs c10240 0.00 at every pose, control c6144 1.18/0.99/0.25 at k0-k2 (same run). Confirm hold on the new build: 368 s, 0 crash, [s7037] caplevel=9:8192 (auto), L9 60.00 fps, P(>=2VI) 0.00, 5 slow frames (s7058 auto at 10240: 58.50, 469 slow frames; cross-run, supporting only). L10/L15 21:9 dd6 holds queued (s7062_219auto_*), the last levels without a survey row.
 
@@ -37,152 +39,6 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 **s7048 21:9 L12 check of the folded dd6 bundle (no build): KEDGE stays invisible, but L12 at 21:9 runs only ~56 fps with the bundle, gate or no gate.** Frozen poses 21:9 FPS60 L12 NOREF, arms dd6off / fold (auto, KEDGE 0.8,12) / foldk0 (KEDGE=0, positive control), 3/3 0 crashes, same posefreeze path: k4-k6 fold 0.06/0.05/0.06 0.0% px vs foldk0 0.66/0.65/0.71 1.5% px; by eye fold = dd6off soft band, foldk0 the flat cut (docs/owner_sheet_s7048_l12_219_kedge.jpg, rows dd6off/fold/foldk0, bottom 45%, k4|k6). Same-run hold L12 21:9 (tog3 KEDGE "0.8,12;0;0.8,12", 507 s flight, alive, 0 stalls, 0 crash), xor8 21.2k frames: p0 ke12 55.8 fps rsp 13.75 / p1 K0.6 56.5 rsp 13.48 / p2 ke12 55.6 rsp 13.74, P(>=2VI) 0.07/0.06/0.08; A/A p0-p2 0.2 fps, gate cost -0.7..-0.9 fps (+0.27 ms rsp), k2cells/f 1895/0/1957. So H-same refuted on cost, H-wide-visible refuted, H-wide-cost only partly: the shortfall is the 21:9 L12 bundle itself (rsp ~13.5 vs ~12 at 16:9), not the gate. KEDGE stays the default. Next: a cheaper lever for 21:9 L12 (cap tog3, NEXT.md).
 
 **s7047 KEDGE=0.8,12 FOLDED into the dd6 auto bundle (src/main/main.cpp s7037 block, setenv overwrite=0; `ROGUESQ_DD_OFFMAPCULL_KEDGE=0` restores the hard cut).** Variants on L12 16:9 frozen poses vs dd6off: ke12 0.07/0.0% px (replicates s7046), ke10 0.39/0.8% (visible step at the N boundary), k07e12 0.27/0.5%, dd6b ctl 0.81/1.8%: only N=12,k2=0.8 is invisible. New per-phase syntax `KEDGE=a,Na;b,Nb;c,Nc` (upstream_compat.cpp) -> same-run hold ke12/K0.6/ke12: L12 59.6/59.8/59.9 fps (ke12 rsp +0.39/+0.33 ms vs K0.6; ke12 A/A 0.06), L13 60.0/60.0/60.0 (rsp +0.45), 0 crash/stall. Fold check: auto bundle 0.07 vs KEDGE=0 0.81 at the same poses, [s7037] kedge=0.8,12 logged. s7046's 58.0 fps (other autopilot path, k2cells/f 1836 vs 1140) is the low end; the >=58.5 bar is met in 2/3 ke12 phases over two runs. Owner look still decides; 21:9 L12 not yet checked (NEXT.md).
-
-**s7045 L12 horizon cut: H-trade (no K both invisible and under the VI cliff; no build).** Frozen poses 16:9 L12 NOREF, arms dd6off / dd6b (K=0.6) / k08 / k10 / dd1, 5 runs, 0 crashes/stalls, [s7037] in the 3 bundle arms only, all on one path (k0-k3 pre-flight black again; k4-k6 in flight). vs dd6off: K=0.6 0.80-0.88 / 1.8% px, **K=0.8 0.07 / 0.0% px (by eye identical)**, K=1.0 0.00. **Retail dd1 draws no ground there at all** (fog to the frame bottom; dd1 vs dd6off 11-12.6), so the band is extension ground and the defect is the jagged cut edge, not lost retail content. Same-run cost hold (504 s, tog3 R=-1,2,2 K=0,0.8,1.0, xor8, 17.8k frames): fps 42.5 -> **54.1** (K=0.8, rsp -1.11, P(>=2VI) 0.41 -> 0.11) / 43.9 (K=1.0, rsp -0.18); s7042 K=0.6 was 59.7 (rsp -3.95). ocull/f ph0/1/2 = 0/1439/397 (positive control). Sheet docs/owner_sheet_s7045_l12_k_sweep.jpg; OWNER-OPT-INS offers the choice. Next: soften the cut edge instead of moving it (NEXT.md).
-
-**s7043 dd6 auto bundle holds on L13-L18 at 16:9 (H-clean; no build): sweep CLOSED, every level 0-18 now flown at the bundle (L10 health only).** ~504 s flight each, 6/6 alive_at_end=1, vi_stalls30s=0, crashlines=0, CRASH grep 0. fps off -> bundle p1/p2: **L13 (64x64) 48.3 -> 59.9/59.9, P(>=2VI) 0.24 -> 0.00, rsp -2.83** (second load-bearing level after L12), L14 59.1 -> 60.0/60.0 (rsp -2.93), L15 60.0 -> 60.0/59.9 (rsp -1.00), L16 58.2 -> 59.2/59.2, L17 59.0 -> 59.2/59.0 (L16/L17 inits=8, autopilot backdrop cycling; rsp -0.9..-1.0), L18 60.0 -> 60.0 (rsp -3.04). Cull fires everywhere (ocull/f ph1 2122-3658, ph0 0). Gap: image neutrality is only checked on L1/L4 poses + cutscenes; next unit checks frozen poses on load-bearing L12/L13 (NEXT.md).
-
-**s7042 dd6 auto bundle holds on L0, L8, L9, L11, L12 at 16:9 (H-clean; no build; tools/dd6_bundle_level_sweep.zsh).** Same recipe as s7041, ~506 s flight each,
-5/5 alive_at_end=1, vi_stalls30s=0, crashlines=0, CRASH grep 0. fps off -> bundle p1/p2: L0 58.7 -> 59.8/59.7 (rsp -2.56), L8 59.9 -> 59.6/60.0 (rsp -1.00, neutral), L9 58.4 -> 59.9/59.9 (rsp -2.01),
-L11 59.8 -> 60.0/59.6 (rsp -1.03, neutral), **L12 (88x88) 42.8 -> 59.7/59.8, P(>=2VI) 0.40 -> 0.01, rsp 16.19 -> 12.23 (-3.95)**: plain dd6 WIDEWIN is past the VI cliff on L12 and the bundle cull is what holds it. Cull fires everywhere (ocull/f ph1 2462-3645, ph0 0). Unrun: L13-L18 (L10 health only).
-**s7040 dd6 auto bundle is clean at 16:9 too (H-clean; no build).** Frozen poses 16:9 FPS60 dd6 MELT WIDEWIN cap 10240, arms dd6off/dd6b/dd6b2/dd4, 8 runs + 1 hold, 0 crashes/stalls:
-dd6b vs dd6off L1 <=0.19, L4 <=0.28 (max 0.6% px, horizon sliver by eye), A/A 0.00 at all 15 poses, dd4 control 3.5-8.8. Same-run cost L1 (505 s hold, tog3): 58.6 -> 59.9/59.8 fps,
-rsp -3.15/-3.01 ms (A/A 0.14), cull fires (ocull/f 0/2671/2692). No aspect gate needed. Sheets docs/owner_sheet_s7040_dd6_169_l1.jpg / _l4.jpg; 16:9 line in OWNER-OPT-INS.
-**s7039 dd6 auto bundle is clean in cutscenes too (H-clean; no game build).** AT THE MOVIES playlist, 21:9 FPS60 dd6 UNSAFE MELT WIDEWIN cap 10240, one run of 960 s,
-0 crashes, same-run ROGUESQ_DD_OFFMAPCULL=tog3 R=-1,2,0 K=0,0.6,0 H=off (ph0 off, ph1 = bundle, ph2 = ungated R=0 control). Cull counters: ocull/f 0 / 897 / 1612 (fires in
-cutscenes). New tools/g5h_toggle_rank3.cpp (58k frames, 384x164): edges off->bundle ratio p90 1.05 p99 1.65, mid-second control p90 1.07 p99 1.36; positive control
-bundle->R0 max 4.15 (green-field shot t=549-555: ground removed, viewed). Top 4 off->bundle edges viewed: 2 fades to black that start in ph0 (lum 18->13, 35->15),
-a capital-ship pass and a haze change that recover in ph2 (which culls a superset), so not the cull. Sheet docs/owner_sheet_s7039_dd6_cutscenes.jpg. Single run (one line of
-image evidence plus the counters). OWNER-OPT-INS updated; also corrected its stale s6921 MELT "known defect" (s6923 showed it is the game's shield mesh).
-**s7038 G1c phase 2 closed on the owner's look (H-done; no build).** Frozen poses, 21:9 FPS60, arms dd6off / dd6b (bundle auto) / dd6b2 / dd4 (cap 8192) / dd1, 10 runs, 0 crashes, 0 VI stalls.
-Bundle invisible: dd6b vs dd6off <=0.18 (L1, 7 poses) and <=0.23 (L4, 8 poses), max 0.5% of pixels, a fog-line horizon sliver by eye; A/A dd6b vs dd6b2 0.00 at every pose; [s7037] fired in dd6b/dd6b2 only.
-Positive control: dd6 vs dd4 same path 4-8 mean dLum (L1 5.8-7.8, L4 4.1-8.0), dd6 vs dd1 6-21 (L4 dd1 took a slightly different path, y -4.45 vs -4.34). Owner sheets
-docs/owner_sheet_s7038_dd_closeout_l1.jpg / _l4.jpg (dd1 | dd4 | dd6 | diffs); one-line command in OWNER-OPT-INS. Default stays retail until the owner chooses.
-**s7037 dd bundle: dd>=6 + WIDEWIN now arms the fog-depth off-map cull itself (R=2 K=0.6 H=off; explicit ROGUESQ_DD_OFFMAPCULL* wins, =-1 off); new opt-in
-ROGUESQ_DD_POOLX_MAX=6..8 lifts the px5 cell clamp.** L1 21:9 dd8 WIDEWIN=tog3 cap 10240/12288/12288 + POOLX_MAX=6, 289 s flight, 0 crashes/stalls, positive control
-[s7037] line + [s7031] R=2,2,2 K=0.6 fired. Same run: 12288 costs run +0.44 / rsp +0.57..0.65 ms (57.2 -> 56.8/56.2 fps, P(>=2VI) 0.05 -> 0.06/0.07; A/A p1-p2 0.08 ms),
-so the window does grow (cost-only evidence: single-source, no window trace), but g5e_edge_score shows no gain beyond the p1/p2 A/A spread (hard80% centre 11.5 vs 11.1/9.8).
-Selects neither H-room (dd8 is <59 fps even at 10240) nor H-cliff: more cells buy nothing visible. dd6 + bundle stays the top setting; next: owner close-out sheet.
-**s7036 300 s holds qualify the fog-depth off-map cull opt-in (H-clean; no build).** scratch/s7036/run_hold.zsh, 21:9 dd6 WIDEWIN cap 10240 MELT FPS60 CULL_SPIKE=1,
-same-run tog3 R=-1,2,2 K=0,0.6,0.6 (cull on 2/3 of each run), ~505 s flight per level, 0 crashes, 0 VI stalls (g5e_cost_by_parity --phases 3 --skip-s 130):
-L1 54.0 -> 59.5/59.1 fps, rsp -2.82/-2.67 (s7034 -3.04); L4 57.2 -> 59.2/59.3, rsp -1.27/-1.40 (s7035 -1.52); L5 60.0 -> 60.0, rsp -1.34 (headroom). The two K=0.6
-phases agree to 0.15 ms (A/A). OWNER-OPT-INS line no longer experimental. Next: fold it into the DD knob, then spend the headroom (NEXT.md).
-**s7035 L4 repeat: H-general, fog-depth off-map cull is an owner opt-in (21:9 dd6 WIDEWIN cap 10240 MELT FPS60, 8 runs, 0 crashes).** Frozen poses (8, NOREF):
-vs the pose-matched base offB, K=0.6 <=0.10 and K=0.7 <=0.01 at every pose, ungated R=2 0.12-7.51, A/A r2k99 0.00 (FOGCULL 0.3 control 0.6-7.3 on the other path).
-Same-run cost: K=0.6 rsp -1.52 ms (55.5 -> 58.5 fps, P(>=2VI) 0.08 -> 0.02), K=0.7 -0.66. Sheet docs/owner_sheet_s7035_fogdepth_l4.jpg; opt-in line in OWNER-OPT-INS.
-**Harness trap:** under NOREF (any level but L1) separate same-env runs take one of TWO discrete flight paths (offA/offB differ from freeze 1 on, y -4.34 vs -3.59);
-score every arm against a base on the SAME path (check [posefreeze] pos) plus an A/A arm on that path, or the image score is a path diff (s7035 first pass: 20-37 for all cull arms).
-**s7034 off-map cull past k x fog end: H-fogdepth on L1 (21:9 dd6 WIDEWIN cap 10240 MELT FPS60, 6 runs, 0 crashes).** New ROGUESQ_DD_OFFMAPCULL_K=<k>|a,b,c
-(default 0): an off-map cell past R is culled only if its depth > k x fog end. Frozen poses, _H=off: K=0.6 0.01-0.04 at poses 0-4 and 0.18/0.17 at the void poses 5/6
-(ungated R=2 10.6/39.0, FOGCULL 0.3 control 3.6/4.0; by eye = offA, diff a horizon sliver); K=0.8 <=0.05. Same-run cost: K=0.6 rsp -3.04 ms, 54.8 -> 60.0 fps,
-P(>=2VI) 0.10 -> 0.00; K=0.8 only -0.56. Sheet docs/owner_sheet_s7034_fogdepth.jpg. Single level: L4 repeat next (NEXT.md), then owner opt-in
-`ROGUESQ_DD_OFFMAPCULL=2 ROGUESQ_DD_OFFMAPCULL_H=off ROGUESQ_DD_OFFMAPCULL_K=0.6`.
-**s7033 off-map height gate: image-neutral but costs nothing (H-costgone; L1 21:9 dd6 WIDEWIN cap 10240 MELT FPS60, 5 runs, 0 crashes).** New default-on
-ROGUESQ_DD_OFFMAPCULL_H=<margin> (=off fixed R, =tog gate in tog3 phase 1 only) culls an off-map cell past R only while the eye is below its clamped edge cell's
-top, read from the game's own record bytes (rec+3/+4, units y*C/H as in scanConvertTriangleToSpanTable; up self-calibrated from the eye cell, y down-negative).
-Frozen poses: R=2+gate = offA to 0.00 at all 7 poses; R=2 ungated reproduces s7032 exactly (0.20..39.0), k03 control 0.5-4.0 (sheet docs/owner_sheet_s7033_heightgate.jpg).
-Same-run cost (tog3 R=-1 / 2+gate / 2): rsp 14.19 / 14.20 / 6.23 ms, fps 53.3 / 55.2 / 59.8; the gate leaves 42 of 5444 culled cells/frame: the eye is above the
-edge tops on nearly the whole flight. So s7032's "poses 0-4 are below the plateau top" is wrong (by-eye reading): the cull is invisible there for another reason
-(fog / on-map occlusion). Height lever closed. Next: off-map AND past k x fog end (NEXT.md).
-**s7032 off-map cull is VISIBLE at frozen poses (H-plateau; L1 21:9 dd6, separate deterministic same-pose runs, tools/s7032_pose_cull_score.py, 9 runs 0 crashes):**
-A/A 0.01, FOGCULL=0.3 control 0.5-4.0. Below the plateau top, R=2 trims only a wall-top sliver (0.13-0.51). Once the craft climbs above the off-map plateau near the edge,
-R=2 leaves a sky void (39.0) and R=8 a wedge (15.5) (docs/owner_sheet_s7032_offmap_pose.jpg). The eye stays on the map (new eye-cell latch, tools/apply_s7032_eyegate.py;
-its EYE gate never fired), so the gate must be height-based: cull only while the eye is below the clamped edge height. OFFMAPCULL is not an opt-in candidate yet.
-Fixed: a plain ROGUESQ_DD_FOGCULL=<k> starting with '0' (e.g. 0.3) never armed the hook; only tog3 worked before.
-**s7031 off-map cells (tools/apply_s7031_offmap.py, opt-in ROGUESQ_DD_OFFMAPCULL=<R>|tog3, default off; dd6 21:9 WIDEWIN cap 10240, L1 + L4, 0 crashes): H-offmap selected
-on census + cost.** 82% (L1, map 64x64) / 62% (L4, 94x94) of streamed cells are off the map (clamp branch), 95% / 82% of the 0.5-1.0 fog-end band, mostly 17+ rings
-outside the edge. Culling off-map cells beyond 2 rings: L1 rsp 15.21 -> 5.46 ms (49.6 -> 60 fps), L4 12.27 -> 8.56 (55.4 -> 60). Image NOT qualified: the mean-image
-A/A floor exceeded the k=0.3 control in both runs (autopilot banking); by eye the L1 wall face stays (sheets docs/owner_sheet_s7031_offmap_l1.jpg / _l4.jpg). Next:
-frozen-pose check done s7032 (visible).
-**s7030 fogged-cell cull (ROGUESQ_DD_FOGCULL=<k>|tog3, opt-in default off, tools/apply_s7030_fogcull.py; L1 dd6 21:9 WIDEWIN cap 10240, 3 runs, 0 crashes):**
-H-fogwaste refuted: only 2.1% of the ~7040 streamed cells/frame lie past the fog end (fe ~86 grid, frustum far 108); culling them (k=1) saves 0 ms.
-But a forward-depth cull at 0.5 x fog end removes 51% of cells: rsp -4.9 ms/frame, 48.6-53.8 -> 59.7-60 fps (two runs; 1/3-period shifted control smears),
-and on L1 the image does not change (mean-image |d| 2.4-3.1 vs k=0.3 positive control 8.2; sheet docs/owner_sheet_s7030_fogcull.jpg): those cells sit
-behind the dark horizon "wall", which looks like clamped off-map cells (s7024: 97-98% of getGridCellValueAt time is the off-map clamp branch).
-New lead H-offmap (single level, single-source). k=0.5 is NOT a default candidate until an open level is checked. Next: NEXT.md (off-map cells).
-**s7029 bridge trimming CLOSED (H-call; L1 dd6 21:9 WIDEWIN cap 10240, 0 crashes x2):** the s7028 BUMPFAST=2 bad2=1 was the CHECKER: its
-`ref.exchange(0) == x && ...` short-circuited on the 4 planted flushes, so ref_cmds was never reset and flush 5 always miscompared. Fixed;
-BUMPFAST=2 CHECK now exact (bad2 0 of 13499, ctl2 4/4, state guard 475M bad 0). Shadow split, same run (new ROGUESQ_G1E_BUMPFAST_SH=tog3,
-tools/s7029_shadow_split.py): net ns/bump as-is 9.66, reserve 14.68, no-shadow 13.65 -> neither the S4272 shadow copy nor vector growth carries
-the remainder (both arms read slower: per-arm noise ~5 ns/bump); the rest is call overhead + range push. Single-source. Bridge micro-trimming
-stops here (whole bridge <0.3 ms/task left to win); BUMPFAST/BUMPFAST=2 stay opt-in. Next: NEXT.md (fogged-cell cull at dd>4).
-**s7028 bump cost split (BUMPFAST=tog3 same-run 3-way + new AQ_NULL offset column, tools/s7028_bump_push_split.py, L1 dd6 21:9 WIDEWIN cap 10240, 0 crashes):**
-H-offset: 9.0 of the 24.7 ns/bump "bridge self" is the AQ=3 clock pair (flat across arms). Real cost is 15.7 ns/bump (~1.37 ms/task): checks 1.7 (11%),
-counter atomics 3.3 (21%, below the 40% H-atomics bar), push/shadow/call 10.7 (68%, the largest term). New opt-in BUMPFAST=2 (plain per-task counters)
-is NOT exact yet: CHECK bad2=1 of 11702 task flushes (ctl2 4/4, state guard 395M bad 0). s7026/s7027 per-bump absolutes include the offset; their deltas stand.
-**s7025 clamp drift named and fixed (tools/apply_s7025_clampsplit.py, same switch ROGUESQ_S7022_ST=1, L1 dd6 21:9 WIDEWIN cap 10240, 4 runs, 0 crashes):**
-the ~40 -> 130 ns climb per clampGridCellLookup call was the create path (~40-80 creates/frame, 88 ns -> 6.5 us each), and inside it neither game
-call (processGridCellByDistance 22 ns, nested alloc gv 45 ns, both flat) but our own host hook rs64_s6963_create, which also updated the unbounded
-std index while mode 3 was active. Fix, default: update only the index in use (ROGUESQ_G1E_CREATE_BOTH=1 old, =tog 8 s A/B). Same run: create 218 ns
-flat vs 1.0 -> 4.9 us, clamp call 92 vs 122 ns (~0.2-0.3 ms/frame at dd6). Exact: CHECK=2 45.0M compares 0 bad, flip 45110/45110. Residual: index
-get+validate rise ~25 ns once the 10240-record pool fills (record reads spread, r_step ~3400): minor, left. Thread closed; next NEXT.md.
-**s7024 getGridCellValueAt split (tools/apply_s7024_gvbranch.py, ROGUESQ_S7022_ST=1, L1 dd6 21:9 WIDEWIN, 4 runs, 0 crashes): H-clamp.** The off-map
-clampGridCellLookup branch is 97-98% of gv time (4500-6300 calls/frame, 113-155 ns); direct table hits 10 ns; node walk ~0. New default at dd>1
-ROGUESQ_G1E_CELLIDX=3: the s6963 index as a bounded flat table (record -> key reverse array; =2 old std index, tog3 = same-run A/B). Same speed
-as std (113.7 vs 112.9 ns, same run), exact (CHECK 42.1M compares 0 bad, flip control 42253/42253). The std index never drops re-used records'
-keys (7.5k -> 338k in 3 min); the flat one peaks at 10.2k. Per-call cost climbs ~40 -> 130 ns over a hold in both modes, so it is not the container.
-Next: what that drift is (NEXT.md).
-**s7023 stream loop split (tools/apply_s7023_calleetime.py, same switch ROGUESQ_S7022_ST=1, same recipe, 0 crashes; path counts sum exactly to cells):**
-callees 55-60% / self 40-45%: getGridCellValueAt 96-120 ns/call = 41-48% of the loop (largest term), processGridCellByDistance 31 ns/call 12-14%,
-call-path inline 74-81 ns/cell, skip cells 33-38 ns. 75-78% of cells take the call path (H-skipmix refuted), 0 rejects. Ceiling of a fix here ~0.7 ms/frame. Next: NEXT.md.
-**s7022 stream walk is linear (ROGUESQ_S7022_ST=1 per-call timer, tools/apply_s7022_streamtime.py, same-run tog3 8192/10240, L1 dd6 21:9 WIDEWIN, 0 crashes):**
-streamTerrainGridCellsByDistance runs once per frame, setup 0.5 us, loop 1.38 ms at 8192 cells / 1.69 ms at 10240 (inclusive of its two callees),
-171 ns/cell flat at both caps: H-superlinear refuted, every window cell is walked every frame. xctrace put 62% of the function's samples on
-0.5 us of setup code: per-line xctrace splits inside big recompiled functions are attribution artifacts, do not act on them. Next: NEXT.md.
-**s7021 G1c per-cell cost named (per-frame xctrace split of the s7020 dd6 cap toggle, tools/xctrace_phase_split.py, 50 paired triples, 0 crashes):**
-+2048 cells = gfx thread +1.72 +-0.22 ms/frame (= TL rsp +1.72; A/A +0.05): ucode self +0.70 spread over L_1F98/pre/L_1090/L_162C/L_16B8/L_1298/L_1740,
-DPC submit +0.68 (bridge self 0.24, RT64 submit_rdp_range 0.23, record_submit 0.16); game thread +0.91 (= TL run +0.93): streamTerrainGridCellsByDistance
-+0.31 (largest single term), renderFlatMeshFaceGroup +0.15. A per-SECOND split reads ~0 by construction (cells cut fps in the same ratio): split per frame.
-Change, default on: the e9prov route counters (ovl_route & 4 more) are gated out of the owner ucode (ROGUESQ_E9PROV_FORCE=1|tog restores); same-run
-tog A/B at dd6 cap 10240: rsp -0.14, T -0.42 ms/frame (51.0 vs 49.9 fps; shift control rsp -0.01), ovl_route samples 0 vs +0.22 ms/frame. Next: NEXT.md.
-**s7020 G1c dd6 cell-cap split (same run, tog3 caps 8192/10240/10240, L1 21:9 WIDEWIN owner path, 0 crashes): H-cells.** cap 8192 59.2 fps rsp 12.42 run 3.10
-(= dd4), cap 10240 52.1/52.6 fps, rsp +1.73/+1.60, run +0.74/+0.66; A/A null p2-p1 rsp -0.14; 1 s shift relabels, 0.5 s smears. The dd multiplier
-itself costs ~0 at fixed cells. Binding limit above dd4 = per-cell cost (~0.85 ms rsp + 0.35 ms run per 1000 cells). Next: profile split by cap phase (NEXT.md).
-**s7019 G1c dd>4 headroom (L1 21:9 WIDEWIN owner path, separate runs, 0 crashes x3):** dd4 59.5 fps (rsp 12.6), dd6 55.8 (rsp 13.9, P(>=2VI) 0.07),
-dd8 53.3 (rsp 14.0, P 0.13). Above dd5 the cell pool is clamped (main.cpp rs64_g1c_apply_dd_policy POOLX<=5 = 10240 cells): dd6 and dd8 place the same
-128x80 window (trace 17), pool never exhausted (site 18 = 0), so dd8 adds ~2.5 fps of cost and no terrain cells (cost source unnamed: dd-multiplier-scaled).
-dd4 stays the top 60 fps owner setting. Next: same-run cap split at dd6 (NEXT.md).
-**s7018 gfx-host-glue closed:** on the xor8 split the live record_submit walks (pillar+fused rect_wrap+tail) cost rsp 0.45 ms/frame
-(G2 GLUE_TOG=1; walk timer 0.23 ms/frame), the s7016 fusion saves 0.26 ms (F2; timer 0.15), A/A null +0.08 (N3, reproduces N2), all in rsp, rdp/dpc 0;
-L1 21:9 dd4 WIDEWIN owner path 59.3-59.9 fps, 0 crashes x3. Glue is 2-4% of a ~12.6 ms gfx task: trimming is done. Next: G1c dd>4 headroom (NEXT.md).
-**s7017 tog split de-biased:** the s7010 odd-second bias is the harness autopilot's 2 s press cycle (a, sl, a, sr = 8 s cycle; 4 s rsp
-component 0.4-0.9 ms in 8/8 rings), not the tool or the game. New split xor8 = (sec ^ sec>>3)&1 (rs64_tog_odd, default; ROGUESQ_TOG_SPLIT=parity
-old) cancels any 8 s-periodic load. Same build: A/A null rsp +0.08 ms (parity on the same frames +0.73); positive control WIDEWIN=tog L1 21:9 dd4
-rsp +3.50 ms, fps 60.0/59.6 (s7015 parity said +4.21, 58.1), 0 crashes. g5e_cost_by_parity.py reads split= from the anchor. Older parity deltas
-under ~1 ms remain unreadable; re-measure with the new split.
-**s7015 WIDEWIN owner-path cost on other levels/aspect (same-run tog, FAST=1 PROBES=0, dd4 MELT CULL=1, 0 crashes, 0 VI stalls, 320 s holds):**
-L15 21:9 fps 60.0/60.0 (rsp +1.95), L4 16:9 59.7/59.6 (rsp +2.34), L1 21:9 60.0/58.1, P(>=2VI) 0.00/0.03 (rsp 9.27->13.48, +4.21: the densest arm);
-0.5 s-shifted controls collapse (|rsp| <= 0.5). WIDEWIN is offered in OWNER-OPT-INS; default stays the owner's call. Next: trim the gfx-thread host glue (NEXT.md).
-**s7014 WIDEWIN costs no fps on the owner's path; s7010-s7013's VI cliff was the harness.** m6_god_common.sh sets ROGUESQ_LOG_PHASE,
-which turns G1E_FAST off and G1E_PROBES on (main ucode TU, slow DMA). Same-run tog3 caps 4096/6144/8192 with FAST=1 PROBES=0
-(21:9 dd4 L4, MELT, CULL=1): fps 58.9/59.9/60.0, P(>=2VI) 0.00, rsp 8.8/10.4/11.1 ms (vs 13.6/15.6/16.9, 57/37.5/35 fps probes-on);
-second run WIDEWIN=1 cap 8192 fixed: ~58.5 fps, P 0.01-0.04, rsp 11.4-11.9, 0 crashes. New harness switch OWNER_TIMING=1 (use for every
-timing arm). Gfx-thread profile at 21:9 dd4 (xctrace + new tools/xctrace_ucode_blocks.py / xctrace_fn_lines.py): ucode self 41%,
-DPC_END at L_1198 -> rsp_dpc_submit_impl 34% (RT64 RDP decode 16%, our bridge self 8% + rs64_dpc_record_submit ~12 full-stream scans 7%).
-**G5i fixed s6995, awaiting the owner's look:** the hangar fish-eye after an abort was our s6907 aim
-releasing onto the retail view on a fixed 3.85 s clock; scrolls over more distance or chained presses (4.8-6.7 s, likely
-after re-entry because the cursor starts on another craft) were handed back mid pan (craft 23-31 deg off axis). Release
-is now keyed on the raw view reaching the craft (ROGUESQ_G5G_RELMODE=time = old). Same-build A/B <=4.5 vs 22.8/31.1 deg.
-Stale statics / re-entry RAM refuted (re-entry identical to first entry on equal scrolls). Sheet docs/owner_sheet_s6995_g5i_reentry.png.
-s6997: holds at the owner's FULLSCREEN dd2 and dd4 (all scrolls <=4.5 deg; same-build RELMODE=time control 22.8/31.1);
-sheet docs/owner_sheet_s6997_g5i_fullscreen.png. s6999: holds at 21:9 dd2 and after an abort from level 14 (all <=4.5 deg,
-incl. 6.9 s scrolls; RELMODE=time control 22.8/31.1 at 21:9); sheet docs/owner_sheet_s6999_g5i_219.png. Nothing left to run.
-**s7000 G5b:** FWDWIN far-loss fix also holds on L7 at dd4 (armed dips 36 -> 0, ring 5/6 dips 61/77 -> 0/3, near unchanged,
-site-15 control 5868/5976 odd vs 100/5998 even); L10 has no terrain in flight. Next steps 3.
-**s7001 G5b ring 7 closed:** the armed outer-ring dips sit on AXIS headings (0 near diagonals, 5 arms), the 64-cell window edge
-stepping across the ring-7 boundary (56 cells); extra terrain the old clamp never drew, not a loss (tools/g5b_ring7_discrim.py).
-**s7002 G5f short lines:** W_SHEET_PX 200 -> 40 same run (ROGUESQ_W_SHEET_ALT) ADDS lines under 60 px (20-39 px 605 -> 1096, 9/10 windows,
-~= the 627 extra drops): kept clamped 40-200 px tris are real slivers; 200 stays. 18 viewed 20 px+ lines at dd4 L4 are all real motion (tools/g5f_short_buckets.py).
-**s7003 G5f dd1 closed:** same-run W_CLAMP=tog at dd1 L4: clamp ON has fewer short lines (20-39 px 649 off -> 305 on, 100+ 47 -> 7, on below off in 5/5 windows,
-control 87%); viewed clamp-off long lines are knife lines. s6895's 306-vs-157 belonged to the old area rule. Default on at dd1 stands.
-**s7004 G5f dd2 L7:** two same-run W_CLAMP=tog captures (flight frames only; the autopilot crashes ~75 s in, later frames are menus): 100+ px lines
-22 -> 9 and 8 -> 3 off -> on; short-line counts follow scene content (run 1 on lower, run 2 on higher = HUD reticle in odd seconds), not the clamp.
-New ROGUESQ_W_SHEET_DROPLOG=<path> (rt64): 23 in-flight drops matched to frames, 0 visible holes. L7 clamp-off long lines are mostly bolts (knife lines rare here).
-**s7005 G5f owner sheet (dd4 L4 16:9):** docs/owner_sheet_s7005_g5f.png (tools/g5f_owner_sheet.py). 100+ px lines off -> on 145 -> 26 (T40), 252 -> 34 (T20, catches the
-faint dotted lines); 0 of 24 viewed clamp-on candidates are knife lines; solid and dotted knife lines seen only in clamp-off seconds. Toggle-edge frames
-(VI phase < 0.05) were rendered in the previous second: never count them for W_CLAMP=tog arms.
-**s7006 G5f 21:9 dd4 L4:** 100+ px 170 -> 57 (T40), 243 -> 59 (T20), controls 91%/76%; 0 of 29 viewed clamp-on events are knife lines (far-terrain edge,
-bolts, buildings), the 6 longest clamp-off are knife lines. Sheet docs/owner_sheet_s7006_g5f_219.png. G5f now closes on the owner's look at 16:9 and 21:9.
 
 Open or awaiting the owner (each one line; detail in the s6994 archive under the session):
 - **s6992 FIXED, default on: L15 21:9 dd4 crash.** ORIGIN ours: the game's pointer test
@@ -373,7 +229,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    s7028/s7029: bridge closed (H-call). s7030: ROGUESQ_DD_FOGCULL (opt-in): 2% of cells past fog end (0 ms); 0.5 x fog end culls 51%, rsp -4.9 ms, invisible on L1
    (cells behind the off-map horizon wall?). Next: classify on-map/off-map cells and cull off-map rings, L1 + L4 (NEXT.md).
    s7031-s7036: off-map cull past 0.6 x fog end qualified (see headline). s7037: folded into the DD knob for dd>=6+WIDEWIN; 12288 cells (POOLX_MAX=6) cost
-   +0.6 ms rsp with no edge-score gain at dd8: dd6+bundle is the max useful step. s7038: close-out sheet done, bundle invisible (<=0.23 vs A/A 0.00), dd6 > dd4 > dd1; CLOSED on the owner's look. s7039: bundle invisible in the cutscene playlist (tog3 rank, R0 control fires). s7040: clean at 16:9 too (poses <=0.28, L1 58.6 -> 59.9 fps). s7041/s7042: 16:9 holds clean on L0, L2, L3, L6-L9, L11, L12 (L12 needs the cull: 42.8 -> 59.7 fps). s7043: L13-L18 clean too (L13 48.3 -> 59.9 needs the cull); sweep CLOSED. s7044: L12 bundle shows a hard horizon cut (L13 clean); s7045: retail dd1 has no ground there, K=0.8 invisible but 54 fps; s7046: KEDGE=0.8,12 invisible at 58.0 fps (L1 no cost). s7047: N=10 / k2=0.7 visible (0.39 / 0.27); ke12 folded into the bundle (L12 59.6-59.9, L13 60.0 same run). s7048: 21:9 L12 gate still invisible (0.06 vs ctl 0.66) but the bundle holds only ~56 fps there (K0.6 56.5, ke12 55.7; gate -0.8 fps). s7049: cap 8192 visible, 9216 tiny. s7050: K=0.5 at >16:9 folded into the bundle (L12 21:9 +0.9/+0.7 fps, poses 0.00). s7051: K0.5 shaves the L4 21:9 far horizon (0.33, by eye) -> reverted, opt-in only. s7052-s7055: caps 9216 visible, 12288 small cost. s7056: K=0.5 level-scoped to L12 at >16:9 (KLEVEL, +0.6/+0.5 fps same run, L4 stays 0.6). s7057: L13 added (+0.9 fps, poses clean vs K0.3 control). Next: 21:9 fps survey of the unmeasured levels (NEXT.md); then owner look.
+   +0.6 ms rsp with no edge-score gain at dd8: dd6+bundle is the max useful step. s7038: close-out sheet done, bundle invisible (<=0.23 vs A/A 0.00), dd6 > dd4 > dd1; CLOSED on the owner's look. s7039: bundle invisible in the cutscene playlist (tog3 rank, R0 control fires). s7040: clean at 16:9 too (poses <=0.28, L1 58.6 -> 59.9 fps). s7041/s7042: 16:9 holds clean on L0, L2, L3, L6-L9, L11, L12 (L12 needs the cull: 42.8 -> 59.7 fps). s7043: L13-L18 clean too (L13 48.3 -> 59.9 needs the cull); sweep CLOSED. s7044: L12 bundle shows a hard horizon cut (L13 clean); s7045: retail dd1 has no ground there, K=0.8 invisible but 54 fps; s7046: KEDGE=0.8,12 invisible at 58.0 fps (L1 no cost). s7047: N=10 / k2=0.7 visible (0.39 / 0.27); ke12 folded into the bundle (L12 59.6-59.9, L13 60.0 same run). s7048: 21:9 L12 gate still invisible (0.06 vs ctl 0.66) but the bundle holds only ~56 fps there (K0.6 56.5, ke12 55.7; gate -0.8 fps). s7049: cap 8192 visible, 9216 tiny. s7050: K=0.5 at >16:9 folded into the bundle (L12 21:9 +0.9/+0.7 fps, poses 0.00). s7051: K0.5 shaves the L4 21:9 far horizon (0.33, by eye) -> reverted, opt-in only. s7052-s7055: caps 9216 visible, 12288 small cost. s7056: K=0.5 level-scoped to L12 at >16:9 (KLEVEL, +0.6/+0.5 fps same run, L4 stays 0.6). s7057: L13 added (+0.9 fps, poses clean vs K0.3 control). s7058-s7063: 21:9 survey of all 19 levels CLOSED (~60 fps in flight, 0 crashes; L9 auto cap 9:8192). Owner look.
 7. **G5f knife lines: fixed s6906; owner flight.** Lines < 60 px at dd4 L4: real geometry, W_SHEET_PX=200 confirmed (s7002). dd1 closed s7003 (clamp halves transients, removes knife lines). dd2 L7 s7004: long lines fewer, drops leave 0 holes (DROPLOG). Owner sheet s7005 docs/owner_sheet_s7005_g5f.png (dd4 L4: 0 clamp-on knife lines in 24 viewed). 21:9 dd4 s7006: 0 clamp-on knife lines in 29 viewed, sheet docs/owner_sheet_s7006_g5f_219.png. Nothing left to run; owner look.
 8. **G5g hangar stretch: done s6907** — superseded in priority by item 1 (re-entry failure).
    Owner decides on flight and cutscene lens (report sheet docs/owner_sheet_s6907_lens_elsewhere.png).
@@ -383,9 +239,10 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 11. **G1e residual: CLOSED s6996** (in flight 59.7-60 on all levels; the shortfall was non-flight time).
     Use fl_shown/fl_miss, not shown/s, for per-level fps. Open, owner scope: why L7/L16/L17 autopilot holds cycle the backdrop menu.
 12. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png).
-13. **Owner judgement / parked:** FPS60 feel, G3c sheets, QoS default, native hangar geometry,
+13. **Next non-owner unit (s7063): scene-transition stalls** (200-320 ms gaps on L6/L7/L16/L17, xctrace names anyAudioSlotActive polling, same at dd1 4:3): retail behaviour or our audio-slot drain cadence? See NEXT.md.
+14. **Owner judgement / parked:** FPS60 feel, G3c sheets, QoS default, native hangar geometry,
     rare dd4/dd8 gfx SIGBUS (single-source). Reopen on an owner report or side-effect failure.
-14. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first.
+15. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first.
 
 ## Evidence index
 

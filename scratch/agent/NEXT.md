@@ -1,12 +1,26 @@
-# NEXT: fold the s7062 L10/L15 21:9 dd6 auto holds -> close the 21:9 dd6 level survey
-HYPOTHESIS-ID: dd6-219-levelK-survey
-Context s7062: 9:8192 is now in the 21:9 auto bundle (L9 60.00 fps). Every level except L10 (cloud, crash check only) and L15 has a 21:9 dd6 survey row.
-Soaks queued: scratch/agent/soak_queue/s7062_219auto_L10.sh, _L15.sh (the loop runs them; verdict lines in SOAK-RESULTS.md).
-If they have not run yet: run one directly (screen unlocked: /usr/sbin/ioreg -n Root -d1 | grep -c '"CGSSessionScreenIsLocked"=Yes' must print 0):
-  env WD=90 zsh scratch/s7058/run_hold.zsh L15g 15 auto 130 230; pkill -9 -x RogueSquadron64Recomp
-Score: python3 tools/s7060_survey_table.py --suf g --levels 10,15   (or --levels 10-15 if the list form is not accepted)
+# NEXT: scene-transition stalls (200-320 ms) — retail audio wait or our slot-drain cadence?
+HYPOTHESIS-ID: transition-stall-audio-wait
+Context: 21:9 dd6 survey closed s7063 (19 levels ~60 fps). The remaining in-run gaps are 200-320 ms stalls at scene
+transitions on L6/L7/L16/L17 (also dd1 4:3, s7059). One xctrace (single-source) put 209/298 game-thread samples in
+isAudioSlotActive/anyAudioSlotActive polling under menuOverlayInit / endMissionCleanup / cinematicLoopBody.
+s6809 already fixed one variant (preempt point in anyAudioSlotActive so the audio thread can reap). G5c bar excludes
+loads, so this is a fidelity/feel question, not a G5c failure.
 Hypotheses:
- H-ok: both alive, 0 crash, L15 >= 59.5 fps excl. gaps -> 21:9 dd6 survey CLOSED; write the 19-level table summary into CURRENT-TRUTH, OWNER-OPT-INS one line.
- H-laggard: L15 < 59.5 with RSP-bound slow frames -> same-run cap toggle like s7061 (scratch/s7061/run_caplevel.zsh with level 15).
- H-crash: any crash (L15 had a 21:9 crash fixed by s6992 PTRMASK) -> G4 side-effect rule: capture a backtrace and root-cause first.
-After closing: the ladder rungs left are owner-judgement items; take the next non-owner item in CURRENT-TRUTH Next steps (e.g. the rare dd4/dd8 gfx SIGBUS only if a soak hits it).
+ H-retail: the slots are genuinely busy (a sound still playing out); retail waits the same time. Fingerprint: slot
+   stays active for ~= the remaining sample count / 32 kHz of the voice it carries; reap happens on the first audio
+   frame after the voice ends.
+ H-cadence: the voice ended long before, but our audio thread reaps/clears the slot only on a coarse host cadence
+   (AI buffer drain, host callback size) or is starved while the game spins. Fingerprint: slot-end-of-data timestamp
+   to slot-idle timestamp >> one audio frame (~5 ms at 60 Hz task rate).
+ H-preempt-residual: the s6809 preempt point is not reached on this path (a different spin site / isAudioSlotActive
+   called directly), so the audio thread is blocked behind the run token. Fingerprint: zero audio-task runs during the
+   stall window.
+Discriminator, ONE build, ONE run (L6 dd1 4:3 FPS60, scratch/s7059/run_dd1.zsh recipe, ~15 stalls per run):
+ per stall (game thread inside anyAudioSlotActive > 50 ms): which slot ids are active, per slot the voice's
+ end-of-data time (sample cursor hits end), the time the slot goes idle, and audio-task count / AI pushes inside the
+ window. Ring buffer dumped at exit, no per-frame stderr. Positive control: a forced long voice (or the title music
+ slot) must show active-until-end with end->idle < 10 ms.
+Outcome map: end->idle small and active time = real remaining audio -> H-retail (close as retail, owner note);
+ end->idle large -> H-cadence (fix the reap cadence); no audio tasks in window -> H-preempt-residual (extend
+ tools/fixup_preempt_point.py to the missing site).
+Hard rules: diagnostics in generated code go through tools/fixup_*.py; one game run at a time; SIGKILL.
