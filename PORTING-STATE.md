@@ -186308,3 +186308,25 @@ Controls: fixup_preempt_point.py still 6; nm: 7 hits for new names, 0 for old. L
 (scratch/s7079/run.zsh): 309 s flight, alive, 0 crash lines, 0 VI stalls; renamed input fns in 5/113 host samples.
 Rules out: H-player for 4 of the trio's family (they are per-controller, not per-player/HUD).
 Still unchecked: advancePlayerAnimationPhase 0x80062B04 (5 callers) and getPlayerSlotAnimChannelCount 0x80063F70.
+
+## Session 7080 (2026-11-10) — last two "player anim" names are text-slot channel functions (H-text): 3 renames (advanceTextSlotAnimationPhase, getTextSlotChannelQuadSprite, allocSolidQuadSprite), misnomer thread CLOSED, preempt 6, L6 boot to flight clean
+HYPOTHESIS-ID: generated-symbol-misnomer-fixes. Work unit from NEXT.md (H-text vs H-player for the remaining pair).
+Evidence (objdump of ../rogue_squadron64/build/roguesquadron.elf, /tmp/all.dis; the ELF still carries pre-s7078 names):
+- advancePlayerAnimationPhase 0x80062B04: a0 is the channel record built by startTextSlotAnimationChannelExt (caller
+  0x80062818 fills +8/+9 bytes, +A/+C shorts, +E rate, +10/+14 just before the call) or a menu-overlay global
+  (0x800CD66C, 0x800CDA7C, 0x800CDFA4; 0x800AEC14 calls startTextSlotAnimationChannel on the same pointer first). Body:
+  if active byte +1, phase float +4 += count(+1)*rate(+E)*dt*k, clamped 0..max (clears +1 at the low end), then
+  activateTextSlotItemKeyframe(slot=+8, item=+9, alpha byte from phase*a1). That function indexes the text-slot table
+  0x8009FC10. So H-text; H-player refuted (no player record 0x80137DB8 anywhere in the path).
+- getPlayerSlotAnimChannelCount 0x80063F70 = `lw v0,1100(a0)`. The only writer of +1100 is initTextSlotAnimationChannelFull
+  (0x80062D3C, s6 = its rs_malloc'd channel record), storing the RETURN of buildPlayerCraftAssetTemplate 0x800638C4, which
+  is a pointer (later passed to findLookupEntryByKey/setLookupEntryField5ByKey), not a count.
+- buildPlayerCraftAssetTemplate 0x800638C4 (1 caller): rs_malloc(52) sprite object, rs_malloc(w*h) memset 0xFF,
+  registerHmtTextureInTable, stores the texture id at +0x30, frees the pixels, returns the object: the main-segment twin
+  of the menu's allocMenuSolidQuadSprite (s7074). No craft asset involved.
+Change: scratch/s7080/renames.tsv via tools/apply_symbol_renames.py: 8 files, 0 mismatches (dry-run then apply).
+Controls: fixup_preempt_point.py ../N64Recomp/RecompiledFuncs still 6; nm: 1 hit each for the 3 new names, 0 for the old.
+L6 dd1 4:3 NOCAP run (scratch/s7080/run.zsh): 309 s flight, alive, 0 crash lines, 0 VI stalls; renamed fns in 1/112 host samples.
+Rules out: H-player for the whole 0x80061C74-0x80063F98 block (it is the text-slot family end to end).
+Thread status: misnomer-rename thread CLOSED (menu overlay s7077, main text-slot family s7078/s7080, mission input s7079).
+Next: an engineering rung, not more renames (s7077-s7080 were rename-only): the N64Recomp self-branch miscompile fix (NEXT.md).

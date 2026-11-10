@@ -9858,7 +9858,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
         )
     # (scoped, s376 backport) target: advancePlayerAnimationPhase
     func_start_m = re.search(
-        r"RECOMP_FUNC void advancePlayerAnimationPhase\(uint8_t\* rdram, recomp_context\* ctx\) \{\n",
+        r"RECOMP_FUNC void advanceTextSlotAnimationPhase\(uint8_t\* rdram, recomp_context\* ctx\) \{\n",
         text)
     if func_start_m:
         body_start = func_start_m.end()
@@ -9875,7 +9875,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
         if n:
             text = text[:body_start] + new_body + text[body_end:]
             changed = True
-            report.append(f"{p.name}: advancePlayerAnimationPhase recursion diagnostic patched x{n}")
+            report.append(f"{p.name}: advanceTextSlotAnimationPhase recursion diagnostic patched x{n}")
             if "#include <stdio.h>" not in text:
                 text = text.replace('#include "recomp.h"\n', '#include "recomp.h"\n#include <stdio.h>\n', 1)
             if "#include <stdlib.h>" not in text:
@@ -23542,7 +23542,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
     # PORTING-STATE next session entry.
     if p.name == "funcs_14.c":
         func_start_m = re.search(
-            r"RECOMP_FUNC void advancePlayerAnimationPhase\(uint8_t\* rdram, recomp_context\* ctx\) \{\n",
+            r"RECOMP_FUNC void advanceTextSlotAnimationPhase\(uint8_t\* rdram, recomp_context\* ctx\) \{\n",
             text)
         if func_start_m:
             body_start = func_start_m.end()
@@ -23556,7 +23556,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
                 r"(    // 0x80062B1C: lb          \$v1, 0x1\(\$s0\)\n"
                 r"    ctx->r3 = MEM_B\(ctx->r16, 0X1\);\n)",
                 r"\1"
-                r"    if (ctx->r16 < 0x80010000) { // PATCH: advancePlayerAnimationPhase wild-arg guard (this session) -- see fixup_game_funcs.py comment\n"
+                r"    if (ctx->r16 < 0x80010000) { // PATCH: advanceTextSlotAnimationPhase wild-arg guard (this session) -- see fixup_game_funcs.py comment\n"
                 r"        static int s_animphase_wild_logged = 0;\n"
                 r'        if (s_animphase_wild_logged < 20) { fprintf(stderr, "[anim-phase-guard] wild s0(arg)=0x%08X n=%d\\n", ctx->r16, s_animphase_wild_logged); s_animphase_wild_logged++; }' "\n"
                 r"        ctx->r31 = MEM_W(ctx->r29, 0X14);\n"
@@ -23571,7 +23571,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
             if n:
                 text = _add_stdio(text[:body_start] + new_body + text[body_end:])
                 changed = True
-                report.append(f"{p.name}: [anim-phase-guard] advancePlayerAnimationPhase wild-arg guard patched x{n}")
+                report.append(f"{p.name}: [anim-phase-guard] advanceTextSlotAnimationPhase wild-arg guard patched x{n}")
 
     # runHangarMenuFromOverlay (0x800C6854) wild-a0 write guard (s428, item
     # -265). s427's live run + its confirmation soak (s427_hangarinit_regression,

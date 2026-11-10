@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7079 (2026-11-10).
+Compact operational handoff, as of Session 7080 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7080 last "player anim" pair is the text-slot channel layer (3 renames, misnomer thread CLOSED): advanceTextSlotAnimationPhase (phase += rate*dt, then activateTextSlotItemKeyframe(slot +8, item +9, alpha)), getTextSlotChannelQuadSprite (+1100 is a sprite pointer, not a count), allocSolidQuadSprite (was buildPlayerCraftAssetTemplate; main-segment twin of allocMenuSolidQuadSprite).** Preempt 6, L6 boot to flight 309 s clean.
 
 **s7079 mission-overlay "player HUD tracking" family is the controller-input layer (5 renames): tickControllerInput (OSContPad 0x80130B88 edge detect, stick deadzone, 16 per-button hold timers 0x8010BEA8), clearControllerInputState, initAllControllerInputState, loadControllerButtonMapPreset (presets 0x80109AD0 hold single N64 button bits), applyDemoRecordedPadInput.** setPlayerSlotPositionVec3 holds (672-byte player record 0x80137DB8). L6 flight 309 s clean, preempt 6.
 
@@ -277,7 +279,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 14. **Owner judgement / parked:** FPS60 feel, G3c sheets, QoS default, native hangar geometry,
     rare dd4/dd8 gfx SIGBUS (single-source). Reopen on an owner report or side-effect failure.
 15. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first.
-16. **Misnomer rename (optional, owner reports preempt): menu overlay CLOSED s7077** (s7072-s7077: JPEG decoder, backdrop loaders, screen fade quad, pilot-select/settings UI, tile wipe alloc/start; flight-flavoured names left in menu_overlay.txt are craft strings and hangar/bridge data, which fit). Use tools/apply_symbol_renames.py + tools/s7075_fnsum.py. Next: main-segment anim-slot family the menu calls with slot 5 (setPlayerSlotAnimationFlag 0x80063CFC, samplePlayerAnimChannel 0x80061F34, getPlayerSlotFieldAt34 0x80063C3C; is "player" right?).
+16. **Misnomer rename: CLOSED s7080** (menu overlay s7072-s7077, text-slot family s7078/s7080, controller input s7079). Tools: tools/apply_symbol_renames.py + tools/s7075_fnsum.py. Reopen only on an owner report.
+17. **N64Recomp self-branch miscompile (engineering rung, s7081+):** 16 backward branches out of a function compile as jumps to the function's own entry (PROJECT-OVERVIEW s6871/s6878, H-dead on missions 1-2). Fix it in a fixup script so a future live path cannot hit it (NEXT.md).
 
 ## Evidence index
 
