@@ -187130,3 +187130,6 @@ Rules out: the camera collision state (residual inside corners, push/clamp fight
 Next: s7098 found the wall missing from the game's RDP stream, so the game chooses not to submit it. Log buildVisibleTerrainGridAroundCamera
 per-cell cull decisions near the camera (NEXT.md, new slug fps60-wall-terrain-cull). Queued soak_queue/s7103_camfix_r1/r2 (same recipe).
 Housekeeping: deleted analysed capture raws scratch/s7099/s7101[a-d].raw and s7102a.raw (~15 GB, their csvs are kept).
+Discrimination: refutes H-squeeze, H-fight and H-corner4 as the cause (the same-run fix arm leaves the episode rate unchanged, and residual
+corners are common in clean flight), and selects the submit side (terrain builder). Next discriminator: per-cell kept/culled verdicts in
+buildVisibleTerrainGridAroundCamera across an episode split H-behind / H-frustum / H-lod / H-none (NEXT.md).
