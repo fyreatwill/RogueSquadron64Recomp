@@ -88,3 +88,25 @@ Tools: `tools/s7084_fpu_census.py` (static, over scratch/s7082/regen) and `tools
 
 Verdict: no FPU lowering in this ROM differs from R4300 semantics on a reachable path. Next silent class: integer
 mult/div and 64-bit lowering (hi/lo, div by zero, INT_MIN/-1, dmult/ddiv, lwl/lwr/swl/swr).
+
+## s7085: integer lowering (CLOSED; one C-UB difference fixed in recomp.h)
+
+tools/s7085_int_census.py over scratch/s7082/regen (output scratch/s7085/census.txt); host test
+tools/s7085_int_test/run_test.py (int_test.c compiled at the live -O2 flags against an exact R4300 reference).
+
+| item | sites | verdict |
+|---|---|---|
+| shapes (mult/multu/div/divu/ddivu, mflo/mfhi, sll/srl/sra/v, dsll/dsrl/dsra(32), slt/sltu/slti/sltiu, addu/addiu/add/subu, lwl/lwr/swl/swr) | 99,400 over 30 shapes | all match; 177 addu are the s7083 `jr_addend_` jump-table form. Negative control: one mult mutated S64(S32 -> U64(U32 is flagged (+1) |
+| sltiu immediates | 876 sites, 83 distinct | none >= 0x8000, so the sign-extended-immediate edge case never occurs |
+| mflo/mfhi with no mult/div earlier in the function (hi/lo are per-function locals) | 0 | none |
+| div (90) / divu (45) zero / INT_MIN guards | 89 div guarded break7+break6, 43 divu break7 | retail traps on these; positive control 0x800464F4 (loadGridCellTilesByDistance) classified guarded |
+| unguarded 32-bit divides | 3 | _Ldtob div by 100000, computeNoteRatePairFromTableA/B divu by 0x300: constant divisors, safe |
+| unguarded 64-bit divides | 2 ddivu | u64DivU64 0x80007500 (divisor = 64-bit data at 0x80039100, callers computeElapsedMillis / emitProfilerBarSegment) and divideByMixerBaseFrequency 0x80093F2C (divisor *0x801440C0, set by resetMusyXEngineState). **Differed on /0: C UB, arm64 udiv gives lo=0; R4300 gives lo=-1, hi=a.** Fixed in recomp.h DDIV/DDIVU (hardware result for b==0) |
+| add (overflow trap dropped) | 4, all bcopy_recomp | address + length on KSEG0 pointers; retail would fault, so only a crash path differs |
+| do_break guards after a C division (could clang delete them as UB?) | - | host test: the generated 0x800464F4 shape with a variable divisor still calls do_break for /0 and INT_MIN/-1 at -O2. Object break counts drop only where the divisor is a constant (e.g. spawnNpcWithRandomRotation div by 45), where folding is correct |
+
+Host test: 3476 rows (mult/multu/div/divu/dmult/dmultu/ddiv/ddivu over 17x17 values, every shift 0..63, sltiu/slti/ADD32/SUB32
+with sign-extended immediates, lwl/lwr pairs and singles and swl/swr pairs and singles at all 4 misalignments, both guard shapes).
+Before the fix: 34 mismatches, all divisor-0 ddiv/ddivu. After: 0. Negative control (zero-extending reference): 1436 mismatches.
+Not covered: sra/srav on non-sign-extended inputs (architecturally undefined; lowering = ares's s32(rt.s64 >> sa)), single partial
+lwr bits 63..32 (implementation-defined; low 32 compared).

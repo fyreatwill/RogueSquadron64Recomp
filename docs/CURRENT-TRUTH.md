@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7084 (2026-11-10).
+Compact operational handoff, as of Session 7085 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7085 N64Recomp integer-lowering census CLOSED, one C-UB difference FIXED (tools/s7085_int_census.py + tools/s7085_int_test/run_test.py, docs/N64RECOMP-WARNING-CENSUS.md s7085 table).** 99,400 integer sites over 30 shapes lower correctly (mutation control flagged). 0 mflo/mfhi read hi/lo from another function. All 89 div and 43 divu sites with a variable divisor are break-7 guarded (retail traps), and the guard survives -O2 (host test). 3 unguarded 32-bit divides use constant divisors. The 2 unguarded ddivu (u64DivU64, MusyX divideByMixerBaseFrequency) gave lo=0 on a zero divisor (C UB, arm64 udiv) where the R4300 gives -1. recomp.h DDIV/DDIVU now return the hardware result (lib patch exported). Host test 3476/3476, zero-extend control fails 1436. Rebuild + L6 dd1 4:3 FPS60 boot to flight 310 s, 0 crash, 0 VI stall. Next: memory-access + branch-likely census.
 
 **s7084 N64Recomp FPU-lowering census CLOSED (tools/s7084_fpu_census.py + tools/s7084_fpu_test/run_test.py, offline, docs/N64RECOMP-WARNING-CENSUS.md s7084 table): 0 live miscompiles.** About 59k FPU sites over 43 op shapes all lower correctly (negative mutation control flagged). The 15 cvt.w sites honour FCSR.RM: the only ctc1 window (guPerspectiveF, RZ) compiles in the right order, and the host test passes 144/144 against an exact MIPS reference while a mode-blind control fails 33. All 750 odd-FPR direct accesses sit behind a live CHECK_FR assert. The 145 FMAs in the build are all in injected patch C, none in guest statements. The one difference is that cfc1 flag bits read 0, so the guPerspectiveF >=2^31 retry path is dead; retail cannot reach it (near+far<=2 guard). FS/FTZ stays the known opt-in. Next: integer mult/div/64-bit census.
 
@@ -289,7 +291,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 15. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first.
 16. **Misnomer rename: CLOSED s7080** (menu overlay s7072-s7077, text-slot family s7078/s7080, controller input s7079). Tools: tools/apply_symbol_renames.py + tools/s7075_fnsum.py. Reopen only on an owner report.
 17. **N64Recomp self-branch miscompile: FIXED s7081** (tools/fixup_selfbranch.py in the vendored fixup chain, differential test vs retail bytes). Any new `branching outside` warning after a regen: rerun tools/scan_selfbranch.py + the test.
-18. **N64Recomp lowering censuses:** warning set closed s7082, silent control-flow lowerings closed s7083, FPU lowering closed s7084 (0 live miscompiles; tools/s7083_lowering_census.py, tools/s7084_fpu_census.py, tools/s7084_fpu_test/run_test.py; rerun all after any regen). Next: integer mult/div/64-bit lowering census (NEXT.md): hi/lo, div by zero, INT_MIN/-1, dmult/ddiv/dsra32, lwl/lwr/swl/swr, against tools/s7081_selfbranch_test/mips_ref.py.
+18. **N64Recomp lowering censuses:** warning set closed s7082, silent control-flow lowerings closed s7083, FPU lowering closed s7084, integer lowering closed s7085 (ddivu /0 fixed in recomp.h) (tools/s7083_lowering_census.py, tools/s7084_fpu_census.py, tools/s7084_fpu_test/run_test.py, tools/s7085_int_census.py, tools/s7085_int_test/run_test.py; rerun all after any regen). Next: memory-access + integer branch-likely lowering census (NEXT.md).
 
 ## Evidence index
 

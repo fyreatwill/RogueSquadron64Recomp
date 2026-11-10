@@ -186425,3 +186425,44 @@ Result:
 
 Rules out: an N64Recomp FPU lowering miscompile for this ROM on a reachable path. Next: integer mult/div/64-bit lowering
 census (NEXT.md). No ORIGIN line needed (no mitigation, no runtime change).
+
+## Session 7085 (2026-11-10) — N64Recomp integer-lowering census closed: 99,400 sites / 30 shapes match, div guards survive -O2, 2 unguarded ddivu gave lo=0 on a zero divisor (C UB) and recomp.h DDIV/DDIVU now return the R4300 result
+
+What ran: new tools/s7085_int_census.py over the pristine s7082 front-end pass (scratch/s7082/regen; output
+scratch/s7085/census.txt). New tools/s7085_int_test/ (int_test.c + run_test.py) compiles the exact emitted integer statements
+and the recomp.h macros with the live -O2 flags and compares them against an exact R4300 reference. Counted do_break call
+relocations in the built RecompiledFuncs objects against do_break lines in the live source. Then a lib edit, export, rebuild
+and an L6 boot. Write-up: docs/N64RECOMP-WARNING-CENSUS.md s7085 table.
+
+Result:
+- Shapes: 99,400 integer sites over 30 op shapes match the correct lowering (32-bit results sign-extended, div through S64,
+  variable shifts masked &31/&63, sltiu compared unsigned). The 177 addu that feed jump tables use the s7083 `jr_addend_` form.
+  Negative control: one mult mutated S64(S32 -> U64(U32 in memory is flagged (+1). Positive control: the 0x800464F4 div in
+  loadGridCellTilesByDistance is enumerated and classified guarded (break 7 + break 6).
+- sltiu: 876 sites, 83 distinct immediates, none >= 0x8000, so the sign-extended-immediate edge case never occurs.
+- hi/lo are per-function locals in the generated C: 0 mflo/mfhi sites run with no mult/div earlier in the same function.
+- Divides: 89/90 div are guarded by break 7 + break 6, 43/45 divu by break 7. Retail traps on a zero divisor there, so the host
+  value (lo=0) only matters where retail already dies. The 3 unguarded 32-bit divides use constant divisors (_Ldtob /100000,
+  computeNoteRatePairFromTableA/B divu by 0x300). The 2 unguarded **ddivu** are u64DivU64 0x80007500 (divisor is 64-bit data
+  at 0x80039100, callers computeElapsedMillis / emitProfilerBarSegment) and divideByMixerBaseFrequency 0x80093F2C (divisor
+  *0x801440C0, written by resetMusyXEngineState from its argument). DDIVU did `a / b`: C UB on b==0, arm64 udiv gives
+  lo=0, hi=a. The R4300 gives lo=0xFFFF...FFFF, hi=a. I did not prove whether a zero divisor can reach these sites in play
+  (single-source: static reading only).
+- ORIGIN: the generator emits plain C `/` and `%` for 64-bit divides (N64Recomp recomp.h DDIV/DDIVU). The difference is a
+  semantic gap in the macro, not a corruption. No value is wrong upstream.
+- Fix: recomp.h DDIV/DDIVU return the hardware result for b==0 (ddiv: lo = a<0 ? 1 : -1, hi = a). The file is
+  lib/N64ModernRuntime/N64Recomp/include/recomp.h; submodule-patches/N64Recomp-nested.patch was re-exported and contains only
+  this hunk plus offset shifts. Host test before the fix: 3476 rows, 34 mismatches, all divisor-0 ddiv/ddivu. After: 0.
+  Negative control (a zero-extending reference): 1436 mismatches. The rebuilt u64DivU64 object has `cbz x10` before the udiv.
+- Could clang delete the do_break guards, given the C division by zero before them is UB? Host test: the generated 0x800464F4
+  shape with a variable divisor still calls do_break for /0 and for INT_MIN/-1 at -O2. In the live objects the do_break count
+  is 194 vs 1380 source lines. The drop is in sites with a constant divisor (e.g. spawnNpcWithRandomRotation divides by 45),
+  where folding the guard is correct. funcs_10.c (variable lhu divisor) keeps all of its guards.
+- add with an overflow trap: 4 sites, all bcopy_recomp (pointer + length); retail would fault, so only a crash path differs.
+- Not covered: sra/srav on non-sign-extended input (architecturally undefined; the lowering is ares's s32(rt.s64 >> sa)), and
+  bits 63..32 after a single partial lwr (implementation-defined; low 32 bits compared).
+Game: rebuild clean. Same recipe as s7080: L6 dd1 4:3 FPS60, boot to flight 310 s, alive at the end, 0 VI stalls, 0 crash
+lines, mission_cycles=2. The cap_s7085.txt "No such file" line and rc=1 come from NOCAP=1, as in s7080.
+Rules out: integer mult/div/shift/compare/unaligned-access lowering as a source of live miscompiles. Remaining lowering classes
+not yet censused: loads/stores (byte/half XOR swizzle, ld/sd, ll/sc, cache), %hi/%lo reloc pairs, integer branch-likely delay
+slots (beql/bnel/blezl...).
