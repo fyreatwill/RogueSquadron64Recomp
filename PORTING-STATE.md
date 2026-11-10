@@ -187169,3 +187169,35 @@ Discrimination: this run refutes H-behind, H-lod (no-mesh) and the pool cap as t
 (the builder keeps the wall cell). The next discriminator is emitted tris per near cell vs RDP tris on the same frame (H-emit-skip / H-lodswap / H-clip / H-elsewhere).
 Next: per near cell, log what the mesh stage emits (faces, vertices, tris to the DL) together with the RDP tri count for the same frame.
 Episode vs flight then shows whether the wall polygons are emitted and clipped, or never emitted (NEXT.md, slug fps60-wall-mesh-emit).
+
+## Session 7105 (2026-11-10) — FPS60 near-wall flicker: every near-eye terrain cell the stream keeps is emitted as an F5 TRI_GEN on every frame of all 4 episodes, with an unchanged LOD byte and command word (H-emit-skip and H-lodswap refuted, single run); the loss is in the RSP/ucode or the wall is not grid terrain
+HYPOTHESIS-ID: fps60-wall-mesh-emit
+Static read (s7105). buildGridCellMeshForFace 0x8004317C walks the distance list (a0 head, via node+4): per node a LOD tier from node+8 dist^2 vs the
+table 0x8009DE94 (0x800431E0..0x80043294) gives the lod byte elem+0x10 (elem = *(node+0x14)+0x20; 0 = 25-height mode-0 mesh, 2 = flat 4-corner
+path; far cells are lod 2), morph shorts elem+0x16..0x1E, then buildGridCellMesh 0x8004B930 and the elem+0/+4 chain link; the chain is cut at the
+far cutoff 0x8009DEB4 and that element is returned (s5). A post pass 0x80043528..0x80043770 forces lod 1 on neighbours of lod-2 cells.
+The emit is renderFlatMeshFaceGroup 0x8001108C: s0 = *(s1+0x20), loop L_800113F0..0x800119A4 (s0 = *(s0+0)); EVERY element writes one 0x28-byte
+TRI_GEN (0x05) command: height path L_80011714 (w0 = 05 | size<<16 | (t0&F)<<12 | (+0x2E&1)<<8 | lod; w1..: the colour bytes, +0x24 height ptr,
++0x28 colour ptr) or the flat path (lod 2, inline corner heights). There is no per-cell cull in this CPU loop. renderUnlitMeshFaces 0x80011C9C is
+the same walk but emits only elements with +0x2E bit 1 (it never fired in this run, uv=0).
+New tools/apply_s7105_emit.py (fixup list after s7104, needs it): ROGUESQ_S7105_EMIT=1 + S7104_CELL=1 + the CHASE file write one `ce` line per
+buildGridCellMeshForFace call: list length, renderer calls and visits, whole-list lod histogram, and per cell in the 7x7 around the eye: list dup
+count, lod byte, on-the-s5-chain bit, emit visits, plus the emitted w0 of the 9 ring<=1 cells. Measurement only.
+New tools/s7105_emit.py (push.txt drops.csv split.txt; episode alignment as s7104_cellcull.py).
+Run (scratch/s7099/arm.zsh 6 4 s7105a, L6 dd4 16:9 FPS60, G1E_LIMIT=1 600-VI windows, CELL=1 EMIT=1): 0 crashes, 9247 gens, 4 episodes (lim1 2 /
+3812 ticks, lim2 2 / 2291; fewer than s7104's 8). scratch/s7105/emit_a.txt, split_a.txt.
+- Controls: the renderer runs 2 calls per gen, one starting at the s5 chain start, and visits exactly the list length in 9214/9247 gens (the 33 others
+  are gens with no render call, rc=0). Lod histogram over the whole list 0: 51 k, 1: 9.5 M, 2: 23.2 M; lod 0 is 35% of ring-0 cells, 15% of ring-3
+  cells and 0.15% of the list, so the tier test fires and grades by distance. The s5 chain bit is not the render path (the renderer walks the whole
+  list, rv == nl), kept only as a side count.
+- Episode gens (54): ring 0 emitted 100%; ring 1-3: every listed cell emitted (0 listed-not-emitted, 0 duplicates). Flight gens (9193): the only
+  listed-not-emitted cells are the 33 no-render gens. Across each episode the near 3x3 lod bytes and the eye cell's w0 stay constant
+  (t=163.3: lod .0./211, w0 05050000 every gen; t=207.3: 1../11./100 then 11./11./100 as one cell enters, w0 05050001).
+- Refuted: H-emit-skip (the wall cell is emitted), H-lodswap (no lod change across an episode). Remaining: H-clip (the F5 ucode near clip or reject of
+  TRI_GEN triangles with the eye at or inside the wall) and H-elsewhere (the wall is not grid terrain or lies beyond +-3 cells).
+Discrimination: this run refutes H-emit-skip and H-lodswap and selects the RSP side (H-clip) or H-elsewhere. Single run, 4 episodes.
+Not done from NEXT.md: the same-frame RDP tri count. The RSP processes a whole task, so a frame total cannot be tied to one TRI_GEN; it needs a
+hook in the recompiled ucode dispatcher, which is the next unit.
+ORIGIN: no mitigation code added (measurement only).
+Next: hook the F5 ucode's TRI_GEN dispatch (build/factor5_ucode via the ucode fixup), count the RDP triangles each TRI_GEN command produces, keyed by
+the command's DRAM address, and log the CPU cmd addresses of the near cells; episode vs flight per near cell (NEXT.md, slug fps60-wall-rsp-clip).
