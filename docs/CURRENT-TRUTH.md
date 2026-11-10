@@ -302,7 +302,6 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 19. **Host-shim census: CLOSED s7088 (ABI) + s7089 (results vs ROM; s3531 duplicate-call fixup bug fixed).**
 20. **Fixup-layer statement census: CLOSED s7090** (0 untagged dup/drop; tools/s7090_fixup_statement_census.py, exit 1 = a defect; rerun after any fixup edit).
 21. **RSP ucode fixup census: CLOSED s7091** (0 unexplained; regen via tools/ucode_regen.sh, rerun `verify` after any RSPRecomp/fixup change). Next: rsp_vu fast-path differential (NEXT.md).
-21. **RSP-ucode fixup census: NEXT** (build/factor5_ucode vs a pristine RSPRecomp pass; NEXT.md).
 
 ## Evidence index
 
