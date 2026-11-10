@@ -185439,3 +185439,24 @@ Verdict: L12 H-visible (the NEXT.md threshold >0.5 / >1% px is crossed with A/A 
 Two lines on L12 (score + by-eye crop), single run per arm. The bundle is not image-neutral on every level; s7038-s7040 poses never put the eye near a map edge looking out.
 Not yet known: whether retail dd1 shows that band at all (if the band is itself an extension artifact the bundle is nearer retail).
 OWNER-OPT-INS "Farthest view" now carries the L12 defect line. Next: L12 dd1 reference + K 0.8/1.0 arms + same-run cost hold (NEXT.md dd6-bundle-l12-horizon).
+
+## Session 7045 (2026-11-09) — L12 dd6 bundle horizon cut: retail dd1 has no ground there, K=0.8 is invisible but holds only 54.1 fps, K=1.0 43.9 (H-trade)
+Work unit from NEXT.md (HYPOTHESIS-ID dd6-bundle-l12-horizon). No build. Two runs-sets, one game at a time.
+1. Frozen poses, 16:9 FPS60 L12 NOREF (scratch/s7045/run.zsh, FZ 80..170): arms dd6off (OFFMAPCULL=-1), dd6b (auto bundle K=0.6),
+   k08 (bundle + OFFMAPCULL_K=0.8), k10 (K=1.0), dd1 (retail draw distance). 5/5 alive_at_end=1, vi_stalls30s=0, crashlines=0,
+   CRASH grep 0; [s7037] bundle line in dd6b/k08/k10 only (explicit K wins via setenv overwrite=0). All arms report the same posefreeze
+   pos (one path). k0-k3 (80-110 s) are pre-flight black again (mean lum 1.7 in every arm); k4-k6 are flight.
+   tools/s7032_pose_cull_score.py --base dd6off (mean |dLum| / px>24 fraction) k4/k5/k6:
+     dd6b 0.81/0.018 0.80/0.018 0.88/0.019 (reproduces s7044), k08 0.07/0.000 x3, k10 0.00 x3, dd1 11.5/11.3/12.6 (0.17).
+   By eye (docs/owner_sheet_s7045_l12_k_sweep.jpg, bottom 45% crops, rows dd1/dd6off/dd6b/k08/k10, cols k4/k6): dd1 has NO ground
+   near the horizon at all (fog gradient down to the frame bottom); dd6off draws a soft curved fogged band; dd6b cuts it to a flat
+   jagged edge lower down; k08 and k10 look identical to dd6off. So H-ret is half true: the band is extension ground retail never
+   draws, but the bundle's visible defect is the hard cut edge, which retail does not show either.
+2. Same-run cost hold L12 (scratch/s7045/run_hold.zsh, 504 s flight, tog3 R=-1,2,2 K=0,0.8,1.0, H=off, no capture):
+   alive_at_end=1, vi_stalls30s=0, crash 0. tools/g5e_cost_by_parity.py tl run.log --phases 3 --skip-s 130 --split xor8 (17.8k frames):
+     p0 off 42.5 fps rsp 16.15 P(>=2VI) 0.41; p1 K=0.8 54.1 rsp 15.05 (-1.11) P 0.11; p2 K=1.0 43.9 rsp 15.97 (-0.18) P 0.37.
+   Positive control: ocull/f mean (t>200) ph0 0 / ph1 1439 / ph2 397. s7042 (same recipe) K=0.6: 42.8 -> 59.7, rsp -3.95.
+Result: H-trade. No single K is both invisible on L12 and under the VI cliff (0.6: 59.7 fps, visible; 0.8: invisible, 54.1).
+Rules out H-K (raise K globally / dims-aware K) as a fix that keeps 60 fps on L12. OWNER-OPT-INS now offers the choice
+(default hard edge at 60, or _K=0.8 soft band at ~54). Next (NEXT.md): an eye-to-edge K gate (k2=0.8 only for the outward edge the
+eye is near) to see whether the visible band and the cost are the same cells (H-whole) or separable (H-gate).
