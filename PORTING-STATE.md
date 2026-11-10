@@ -185645,3 +185645,20 @@ Unit (NEXT.md s7053, HYPOTHESIS-ID dd6-219-l4-cap12288-cost): H-free / H-cliff /
   Together with s7053 (12288 raises the far-left L4 shoreline 2-5 rows), 12288 is a small free gain at 21:9 on L4. Not checked: L12 21:9, the level
   that sits closest to the VI cliff with the bundle (s7049 ~56-59 fps at 10240).
 - Change: OWNER-OPT-INS 12288 line now states the measured cost. Default stays 10240 (owner-gated).
+
+## Session 7055 (2026-11-10) — 21:9 L12 WIDEWIN cap 12288 costs ~0.3 fps / rsp +0.15 ms / run +0.46 ms vs 10240, P(>=2VI) unchanged, 0 crash (H-free-L12 marginal, H-cliff refuted); L12 21:9 sits at ~54-55 fps whatever the cap
+
+Unit (NEXT.md s7054, HYPOTHESIS-ID dd6-219-cap12288-l12): H-free-L12 / H-cliff-L12 / H-noop-L12 for ROGUESQ_DD_POOLX_MAX=6 + cap 12288 on L12 21:9. No build.
+- Boring checks: no other game instance, AC power, load ~3-4. scratch/s7055/run_hold.zsh = s7054 script with O=scratch/s7055. Run names L12p/L12q
+  (no case-collision with existing g1_lvl12s7031* dirs, checked). Anchors `[s7012] widewin cap n=3 10240,12288,10240` / `12288,10240,12288 tog3=1`.
+- Run A (10240/12288/10240): 506 s flight, alive, vi_stalls30s 0, crashlines 0, CRASH grep 0; g5e_cost_by_parity --phases 3 --skip-s 130 --split xor8,
+  21.0k frames: 55.0 / 55.2 / 55.5 fps, rsp 13.86 / 14.03 / 13.92, guest run 3.22 / 3.69 / 3.21, P(>=2VI) 0.09 / 0.09 / 0.08.
+- Run B (12288/10240/12288): 507 s, same health, 20.6k frames: 53.9 / 54.8 / 54.3 fps, rsp 14.04 / 13.86 / 14.03, run 3.67 / 3.22 / 3.69, P 0.11/0.09/0.10.
+- 12288 vs 10240: rsp +0.17/+0.11 (A), +0.18/+0.17 (B); guest run +0.46/+0.48 (A), +0.45/+0.47 (B) — consistent in all four, and larger than on L4
+  (s7054 did not split run). fps +0.2/-0.3 (A, inside A/A 0.5), -0.9/-0.5 (B, A/A 0.4): mean ~-0.3 fps. P(>=2VI) +0.00..+0.02.
+- Positive control (scratch/s7054/cells.py): ring_sum/f 12288 7071 (A) / 6932, 6968 (B) vs 10240 5469, 5335 (A) / 5311 (B) = +30% cells; ocull/f
+  +1600, so the cap grows the window on L12 too (H-noop refuted).
+- Verdict: H-cliff-L12 refuted (no >1 fps drop in either run, P not +0.04); H-free-L12 holds in A, marginally exceeded in B (-0.9 vs A/A 0.4).
+  12288 is a small cost on L12, not a cliff. The bigger fact: L12 21:9 with the dd6 bundle is at 54-55 fps (P 0.09-0.11) in both runs, matching
+  s7048 (~56) and the low half of s7049 (56.3/59.0): the binding limit there is not the cap.
+- Change: OWNER-OPT-INS 12288 line extended with the L12 numbers. Default stays 10240 (owner-gated). No code change.

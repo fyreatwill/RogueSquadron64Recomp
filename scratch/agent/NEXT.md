@@ -1,16 +1,15 @@
-# NEXT: does WIDEWIN cap 12288 (POOLX_MAX=6) stay under the VI cliff on L12 at 21:9? (same-run tog3 hold)
-HYPOTHESIS-ID: dd6-219-cap12288-l12
-Context: s7054 measured 12288 on L4 21:9 as ~free (rsp +0.25 ms, fps inside A/A). s7053 showed it buys a few far-shoreline rows on L4.
-L12 is the load-bearing level at 21:9 (s7049: 10240 at 56.3-59.0 fps; s7048 ~56). The opt-in line must say whether 12288 hurts there.
+# NEXT: level-scoped K=0.5 for L12 at 21:9 (keeps L4 at K=0.6)
+HYPOTHESIS-ID: dd6-219-l12-levelK
+Context: s7055: L12 21:9 dd6 bundle runs 54-55 fps (P(>=2VI) ~0.10) at cap 10240 or 12288; the cap is not the limit.
+s7050: K=0.5 on L12 21:9 +0.9/+0.7 fps with frozen poses 0.00 vs K=0.6. s7051 reverted K=0.5 globally because L4 21:9 shaves a far-horizon band.
+A per-level K would take L12's gain without L4's loss.
 Hypotheses:
- H-free-L12: 12288 vs 10240 within the same-run A/A spread in both runs, P(>=2VI) not >0.03 above 10240 -> OWNER-OPT-INS: 12288 fine at 21:9 everywhere tested.
- H-cliff-L12: 12288 drops >1 fps beyond A/A or P(>=2VI) +0.04 in both runs -> OWNER-OPT-INS: 12288 costs L12, keep 10240.
- H-noop-L12: ring_sum/f not higher at 12288 (window already bounded on 88x88 L12) -> cost/benefit moot there; record.
-Unit (no build):
-1. cp scratch/s7054/run_hold.zsh scratch/s7055/run_hold.zsh; sed O -> scratch/s7055. Avoid run names that case-collide with
-   existing scratch/agent/m6/g1_lvl12s7031* dirs (ls -d first; macOS is case-insensitive). E.g. names L12p / L12q.
-   Run A: `zsh scratch/s7055/run_hold.zsh L12p 12 10240,12288,10240`; Run B: `... L12q 12 12288,10240,12288` (~11 min each, one at a time).
-2. python3 tools/g5e_cost_by_parity.py --phases 3 --skip-s 130 --split xor8 scratch/s7055/tl_<N>.bin.* scratch/agent/m6/g1_lvl12s7031<N>/run.log
-   python3 scratch/s7054/cells.py scratch/agent/m6/g1_lvl12s7031<N>/run.log  (positive control: ring_sum/f higher at 12288)
-3. Update OWNER-OPT-INS 12288 line; ledger + commit.
-Owner-gated items (G5a-G5i, L15 21:9, G1d) still need nothing run; check them first.
+ H-levelK: a level-gated K=0.5 (L12 only, FB wider than 16:9) gives L12 +>=0.7 fps same-run, L12 poses <=0.05, L4 unchanged (K stays 0.6, [s7037] log shows 0.6).
+ H-noread: the current level cannot be read cheaply at bundle time (bundle runs at startup before level load) -> needs a per-frame K switch in the
+   upstream_compat.cpp cull (g_rs64_s7030 path) keyed on a guest level byte; find the byte first (owner save current-mission byte, ROGUESQ_FORCE_SAVE_MISSION
+   path, s5705-s5720 recipes) and verify with a same-run log line on L4 and L12.
+ H-other-levels: K=0.5 visibly shaves other levels too (only L1, L4, L12 were posed) -> restrict to L12 and record.
+Unit: (1) grep the K read site in src/main/upstream_compat.cpp and the level byte (grep PORTING-STATE 'current-mission byte', 'FORCE_SAVE_MISSION');
+(2) add ROGUESQ_DD_OFFMAPCULL_KLEVEL=<lvl>:<k>[,...] (default "12:0.5" only when FB_WIDTH>796, explicit _K wins), log [s7056] level=%d k=%f once per change;
+(3) same-run check: L12 21:9 hold with tog3 KLEVEL on/off/on via scratch/s7055/run_hold.zsh pattern; L4 21:9 short hold confirming k=0.6; frozen poses L12 (s7050 recipe).
+Owner-gated items (G5a-G5i, L15 21:9, G1d) still need nothing run.

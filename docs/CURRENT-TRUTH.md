@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7054 (2026-11-09).
+Compact operational handoff, as of Session 7055 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7055 21:9 L12 WIDEWIN cap 12288 is a small cost, not a cliff (no build, no default change).** Same-run tog3 holds, 2x506 s, 0 crash/stall: 12288 vs 10240 rsp +0.11..+0.18, guest run +0.45..+0.48 ms (all 4 comparisons), fps +0.2/-0.3 (A) -0.9/-0.5 (B), P(>=2VI) +0..0.02; control ring_sum/f +30%. L12 21:9 bundle sits at 54-55 fps (P 0.09-0.11) whatever the cap: next lever is a level-scoped K=0.5 (s7050: L12 +0.8 fps, poses 0.00) that leaves L4 at 0.6 (s7051).
 
 **s7054 21:9 L4 WIDEWIN cap 12288 (POOLX_MAX=6) is ~free (H-free, no build, no default change).** Same-run tog3 holds, 2x508 s flight, alive, 0 crash/stall, xor8 ~22.6k frames: run A 10240/12288/10240 58.7/59.5/59.5 fps, rsp 9.83/10.08/10.07; run B 12288/10240/12288 59.4/59.3/58.7, rsp 11.39/11.16/11.43. 12288 vs 10240 rsp +0.25/+0.23 (A) +0.23/+0.27 (B), fps inside the A/A spread (0.7-0.8), P(>=2VI) <=0.02. Positive control: [s7031] ring_sum/f 5700-5850 vs 4120-4370 (+35% cells walked), +1350-1400 ocull/f, so the off-map cull eats most of the extra cells. OWNER-OPT-INS 12288 line now carries the cost. 21:9 cap thread closed: 12288 offered as opt-in, default 10240 unchanged (owner-gated).
 
