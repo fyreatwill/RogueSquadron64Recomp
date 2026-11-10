@@ -42490,3 +42490,7 @@ _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_
 
 # s6132 G1d: parameterise the 8 MB pointer-range guards (RS64_RAM_TOP). Must run after every other patch (they emit the literal).
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_ramtop.py")), str(base)])
+
+# s7081: N64Recomp backward out-of-function branch miscompile (16 resampler helper exits, s6871) repaired by a
+# return-and-dispatch; differential test tools/s7081_selfbranch_test/run_test.py. ROGUESQ_SELFBRANCH_FIX=0 = old path.
+_sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_selfbranch.py")), str(base)])

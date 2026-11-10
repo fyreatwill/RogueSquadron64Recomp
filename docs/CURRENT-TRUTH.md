@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7080 (2026-11-10).
+Compact operational handoff, as of Session 7081 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7081 N64Recomp self-branch miscompile FIXED (tools/fixup_selfbranch.py, default on, `ROGUESQ_SELFBRANCH_FIX=0` = old path): the 16 backward out-of-function branches in the 4 voice resampler helpers now store the caller-tail target and return; the caller dispatches to a label at that target (retail: finished one-shot sample -> store last word, zero-fill, caller epilogue).** Differential test tools/s7081_selfbranch_test/run_test.py runs the generated C against an independent MIPS interpreter executing the retail ELF bytes: fix arm 2400/2400 exit+loop cases match (all 16 targets hit), old arm crashes on every case whose exit fires (it rereads samples from address 0), loop-path controls match in both arms. Live funcs_24.c byte-equal to the tested file; preempt 6; L6 boot to flight 309 s clean, 0 exits fired (block dead in play, s6878). The 2 data_gap_* out-of-function gotos are decoded data, left alone.
 
 **s7080 last "player anim" pair is the text-slot channel layer (3 renames, misnomer thread CLOSED): advanceTextSlotAnimationPhase (phase += rate*dt, then activateTextSlotItemKeyframe(slot +8, item +9, alpha)), getTextSlotChannelQuadSprite (+1100 is a sprite pointer, not a count), allocSolidQuadSprite (was buildPlayerCraftAssetTemplate; main-segment twin of allocMenuSolidQuadSprite).** Preempt 6, L6 boot to flight 309 s clean.
 
@@ -118,7 +120,7 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 maintenance)" and "
 - **Spill arena (s6858)** + heap address audit H-clean (s6862, docs/HEAP-ADDR-AUDIT.md); s6992
   found the 7-site pointer-mask class this audit missed (it looked for heap bounds, not mask tests).
 - **Regen (s6863-s6881):** replay from pristine compiles/links/boots; live tree NOT regenerated
-  (docs/REGEN-VERIFY.md). N64Recomp self-branch miscompile not fixed, H-dead on missions 1-2 (s6878).
+  (docs/REGEN-VERIFY.md). N64Recomp self-branch miscompile FIXED s7081 (tools/fixup_selfbranch.py).
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off;
   true-60 Hz latency levels are sticky in whole vsyncs.
 
@@ -280,7 +282,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
     rare dd4/dd8 gfx SIGBUS (single-source). Reopen on an owner report or side-effect failure.
 15. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first.
 16. **Misnomer rename: CLOSED s7080** (menu overlay s7072-s7077, text-slot family s7078/s7080, controller input s7079). Tools: tools/apply_symbol_renames.py + tools/s7075_fnsum.py. Reopen only on an owner report.
-17. **N64Recomp self-branch miscompile (engineering rung, s7081+):** 16 backward branches out of a function compile as jumps to the function's own entry (PROJECT-OVERVIEW s6871/s6878, H-dead on missions 1-2). Fix it in a fixup script so a future live path cannot hit it (NEXT.md).
+17. **N64Recomp self-branch miscompile: FIXED s7081** (tools/fixup_selfbranch.py in the vendored fixup chain, differential test vs retail bytes). Any new `branching outside` warning after a regen: rerun tools/scan_selfbranch.py + the test.
+18. **N64Recomp warning-class census (engineering rung, s7082+):** classify every other N64Recomp warning class on live code the way s7081 closed self-branches (NEXT.md).
 
 ## Evidence index
 

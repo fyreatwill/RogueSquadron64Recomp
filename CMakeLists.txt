@@ -341,6 +341,7 @@ add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/main/rt64_render_context.cpp
     $<$<PLATFORM_ID:Darwin>:${CMAKE_SOURCE_DIR}/src/main/rs64_env_cache.cpp>
     ${CMAKE_SOURCE_DIR}/src/main/register_overlays.cpp
+    ${CMAKE_SOURCE_DIR}/src/main/rs64_selfbranch.cpp
     ${CMAKE_SOURCE_DIR}/src/main/upstream_compat.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/aspMain.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/dpc_bridge.cpp

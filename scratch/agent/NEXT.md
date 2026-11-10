@@ -1,19 +1,16 @@
-# NEXT: owner reports first; otherwise fix the N64Recomp self-branch miscompile (engineering rung)
-HYPOTHESIS-ID: n64recomp-selfbranch-fix
-Context: misnomer-rename thread CLOSED s7080 (do NOT do more renames; s7077-s7080 were rename-only and the loop's
-no-engineering counter is high). Known miscompile (PROJECT-OVERVIEW "Silent N64Recomp miscompile", PORTING-STATE s6871
-design, s6878 H-dead on missions 1-2): 16 backward branches that leave their function are emitted as a jump to the
-function's OWN entry instead of the real target, in the voice resampler helpers (0x8009264C..0x800934A4 area).
+# NEXT: owner reports first; otherwise N64Recomp warning-class census (engineering rung)
+HYPOTHESIS-ID: n64recomp-warning-census
+Context: s7081 fixed the self-branch class (tools/fixup_selfbranch.py + tools/s7081_selfbranch_test). Old regen logs
+(../N64Recomp/fixup_*.log, scratch/*/regen*.log) carry other `[Warn]` lines: "branching outside" for audioCompandS16 (already
+handled by s5668 fixup_label_realign), __OSGlobalIntMask, static_3_800A2FE4, lvj_checkComplexObjectives, static_3_800A50AC,
+fake_func_*; plus any jump-table / unhandled-instruction warnings.
 Unit (one bounded change):
-1. Enumerate the 16 sites from the N64Recomp "branching outside" warnings / s6871 scan; for each, record source fn,
-   branch PC, real target, the function containing the target.
-2. Hypotheses: H-tail (target is the start of a loop body that can be reached by calling the containing function at a
-   label -> emit a correct goto inside a merged function) vs H-dup (simplest correct fix: in a new tools/fixup_selfbranch.py,
-   replace each bad `goto <own entry>` with a call to a helper that runs the target block, or make N64Recomp treat the
-   pair as one function via syms toml size merge) vs H-abort (if neither is safe, replace with a loud trap + log so a
-   live hit can never silently corrupt). Pick the smallest CORRECT one; H-abort is the floor.
-3. Discriminating control: unit-test the patched C for one site with a synthetic rdram/ctx (or an ASan/separate build dir
-   arm that forces the branch), plus the usual: fixup_preempt_point.py says 6, cmake build, L6 boot to flight clean
-   (sed s7080->s7081 scratch/s7080/run.zsh).
-Regen order if regen is needed: make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake (docs/REGEN-VERIFY.md: live tree
-is not regenerated; prefer a fixup applied to the live tree, idempotent, also wired into the fixup chain).
+1. Run one fresh N64Recomp pass into a scratch output dir (docs/REGEN-VERIFY.md recipe, do NOT touch the live tree), capture
+   stderr, and group every [Warn]/[Error] by class and function.
+2. For each class decide: H-handled (an existing fixup repairs it: name it), H-data (decoded data, no caller), H-live (real
+   code, wrong output). For "branching outside" rows, tools/scan_selfbranch.py on the scratch tree says whether a goto
+   leaves its function; lvj_checkComplexObjectives and __OSGlobalIntMask are the first suspects (real code).
+3. Any H-live row gets the s7081 treatment: generic fixup + differential test with tools/s7081_selfbranch_test/mips_ref.py
+   (extend its opcode set if needed; it raises on unknown opcodes, so coverage is explicit).
+Discriminator: warning class x {handled, data, live}. Closes when every class has a named owner or a fix.
+Controls: fixup_preempt_point.py says 6, fixup_selfbranch.py says 16, L6 boot to flight clean (sed s7081->s7082 scratch/s7081/run.zsh).
