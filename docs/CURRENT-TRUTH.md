@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7068 (2026-11-10).
+Compact operational handoff, as of Session 7069 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7069 host-selftime-audit CLOSED: the 2033 generated rs64_m5_lowfield_store / rs64_s4307_synth_read call sites test a flag inline (tools/apply_s7069_callsite_gate.py, same-name macro after the decl, call lines untouched; `ROGUESQ_DIAG_CALLSITE=0` = old path).** Same build, L6 dd1 4:3 FPS60 268 s each, 0 crash/stall: [Game] 0 hook samples 0/0 vs 71/60 control; the bigger win was skipped argument evaluation (two s5228 lowfield sites call getenv per store): getenv 597 -> 15, [Game] 0 on-CPU self 4625 -> 3591. Single run per arm.
 
 **s7068 diag call-site gates (`ROGUESQ_DIAG_GATE=0` = old path): per-RDP-command e9 boundary/provenance calls (rt64_interpreter.cpp), the per-gfx-task 4 KB ucode FNV (rs64_e9prov_task_begin) and the many-gate store/load hooks (rs64_m5_lowfield_store, rs64_s4307_synth_read) now early-out unless their logs are on.** Same build, L6 dd1 4:3 FPS60, 268 s flights each, 0 crash/stall: Gfx diag self 665 vs 1066 samples (BoundaryCommand 0/115, authoritative_span 0/74, task_begin 3/55), [Game] 0 diag 285 vs 450 (synth_read 70/127, lowfield 42/127; residual = generated call entry). ~0.3% of a core; no fps claim. dpc_record_submit_impl/spike_scan are functional, left.
 
@@ -253,7 +255,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
     Use fl_shown/fl_miss, not shown/s, for per-level fps. Open, owner scope: why L7/L16/L17 autopilot holds cycle the backdrop menu.
 12. **G1d close-out awaiting owner judgement** (scratch/s6731/sheet_menus_owner.png).
 13. **Scene-transition stalls: CLOSED s7065** (retail-designed 3072-sample audio wait, ~139 ms, plus slot drain). Reopen only on an owner report of a transition hitch longer than ~350 ms.
-13b. **Hot getenv: CLOSED s7066. Hot dladdr: CLOSED s7067. Diag call-site gates: CLOSED s7068** (ROGUESQ_DIAG_GATE). Optional last step, ~0.1% of a core: gate the generated rs64_s4307_synth_read / rs64_m5_lowfield_store call sites in the fixup scripts. Take only when nothing owner-facing is open.
+13b. **Hot getenv: CLOSED s7066. Hot dladdr: CLOSED s7067. Diag call-site gates: CLOSED s7068 (ROGUESQ_DIAG_GATE) + s7069 (generated sites, ROGUESQ_DIAG_CALLSITE).** Optional next: Gfx-thread XXH3_hashLong (7.3%) / memmove (8.1%) audit (NEXT.md, gfx-hash-audit). Take only when nothing owner-facing is open.
 14. **Owner judgement / parked:** FPS60 feel, G3c sheets, QoS default, native hangar geometry,
     rare dd4/dd8 gfx SIGBUS (single-source). Reopen on an owner report or side-effect failure.
 15. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first.

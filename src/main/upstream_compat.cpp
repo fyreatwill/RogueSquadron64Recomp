@@ -2894,6 +2894,8 @@ static void rs64_s4575_load(uint32_t pc, uint32_t addr) {
     }
 }
 extern "C" void rs64_s4457_list_check(uint8_t* rdram, uint32_t value);
+// s7069: inline call-site gate read by the generated code (tools/apply_s7069_callsite_gate.py); see main.cpp g_rs64_lowfield_hook.
+extern "C" { int g_rs64_synthread_hook = 1; }
 extern "C" void rs64_s4307_synth_read(uint8_t* rdram, uint32_t pc,
                                         uint32_t addr, uint32_t value) {
     // s7068: one early-out for the synth-read hook (S4457 list check, S4575 load hist, S4307 rows; all default off).
@@ -2903,7 +2905,11 @@ extern "C" void rs64_s4307_synth_read(uint8_t* rdram, uint32_t pc,
         const char* g = std::getenv("ROGUESQ_DIAG_GATE");
         return (g && g[0] == '0') || on("ROGUESQ_LOG_S4457") || on("ROGUESQ_LOG_S4575") || on("ROGUESQ_LOG_S4307");
     }();
-    if (!s7068_any) return;
+    if (!s7068_any) {
+        const char* c = std::getenv("ROGUESQ_DIAG_CALLSITE");
+        if (!(c && c[0] == '0')) g_rs64_synthread_hook = 0;
+        return;
+    }
     if (pc == 0x80091378u || pc == 0x8009133Cu) rs64_s4457_list_check(rdram, value);
     rs64_s4575_load(pc, addr);
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4307"); return e && e[0] && e[0] != '0'; }();

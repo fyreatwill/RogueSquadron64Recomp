@@ -1,12 +1,13 @@
-# NEXT: (optional, low value) generated call-site gate for the synth-read / lowfield store hooks
-HYPOTHESIS-ID: host-selftime-audit
-Context (s7068): ROGUESQ_DIAG_GATE gates landed; residual [Game] 0 diag = rs64_s4307_synth_read 70 + rs64_m5_lowfield_store 42
-samples per ~268 s flight (function entry from generated code, ~0.1% of a core). Everything owner-facing is awaiting owner
-flights (CURRENT-TRUTH Next steps 1-12). AN OWNER REPORT PREEMPTS THIS.
-Hypotheses: H-callsite (an inline `if (g_rs64_diag_hooks)` before each generated call removes the residual) vs H-floor (the
-residual is sampler attribution of the surrounding guest code; gating changes nothing).
-Work: emit the guard in tools/apply_s4307_synth_read_join.py / apply_s4340_m5_lowfield_writer.py (and the s4982/s4986/s4542/s4805
-needle strings that match those lines; fixup_live_replay.py moves lowfield lines by regex) -> full regen order make_elf ->
-N64Recomp -> fixup_game_funcs -> cmake. Measure with scratch/s7068/both.zsh (on vs ROGUESQ_DIAG_GATE=0).
-If the needle chain makes this risky (many patches key on the exact line text), CLOSE the audit instead and take the next
-ladder rung in ITERATION.md 3c.
+# NEXT: (optional, low value) Gfx-thread XXH3_hashLong / memmove audit
+HYPOTHESIS-ID: gfx-hash-audit
+Context (s7069): host-selftime-audit closed. Gfx Thread on-CPU self in the s7069 on arm (scratch/s7069/on, 214 sample dumps,
+L6 dd1 4:3 FPS60): factor5_ucode_nmac 29.6% (the LLE ucode, functional), _platform_memmove 8.1% (1136), XXH3_hashLong_64b
+7.3% (1021), rsp_dpc_submit_impl 6.5%. AN OWNER REPORT PREEMPTS THIS (CURRENT-TRUTH Next steps 1-12 await owner flights).
+Hypotheses: H-tex (RT64 hashes TMEM/texture uploads per load; cost scales with loads, needed for its texture cache) vs
+H-redundant (the same bytes are rehashed several times per frame, e.g. per tile or per copyNativeToRAM/framebuffer check, and
+can be memoised) vs H-ours (a hash we added in rs64* RT64 glue, e.g. rs64LoadBlockRuns or a frame-diff detector).
+Discriminator, NO build first: re-read the existing dumps for the callers of XXH3_hashLong_64b and _platform_memmove
+(the `sample` call trees in scratch/s7069/on/smp_*.txt carry full stacks; write a small parent-frame tally, tools/s7070_parents.py).
+Caller split decides: RT64 texture cache path -> H-tex (close unless bytes/frame look redundant); an rs64 frame -> H-ours
+(gate it like s7068); same call site with many calls per frame of identical size -> H-redundant (memoise, same-build A/B with
+an =0 knob, scratch/s7069/both.zsh recipe).

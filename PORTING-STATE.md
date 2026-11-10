@@ -185982,3 +185982,31 @@ Rules out: H-ungated as "helpers do real work with no env" (only the FNV hash di
 Verdict: selects H-call (the cost was the per-command / per-store calls into already-gated helpers, plus one ungated FNV), refutes
 H-ungated (no helper did logging work with no env set) and H-needed for the gated five (none feed a default-on feature; dpc_record_submit_impl
 and spike_scan do, and stay). Next discriminator: H-callsite vs H-floor for the [Game] 0 residual (scratch/agent/NEXT.md).
+
+## Session 7069 (2026-11-10) — generated call-site gate for rs64_m5_lowfield_store / rs64_s4307_synth_read: 2033 sites now test a flag inline; [Game] 0 hook samples 71/60 -> 0/0 and per-store getenv argument evaluation 597 -> 15, same build (ROGUESQ_DIAG_CALLSITE=0 = old path), 0 crash
+
+HYPOTHESIS-ID: host-selftime-audit (closing step from s7068 NEXT.md). H-callsite vs H-floor.
+Change: tools/apply_s7069_callsite_gate.py (registered LAST in RS64_REPLAY, applied to the live tree, idempotent). The call
+lines are NOT edited (~10 later patches s4542/s4805/s4981-s4987/fixup_live_replay key on their exact text); instead, after
+the last extern declaration of each hook in funcs_23.c / funcs_24.c it adds a same-name function-like macro
+`(g_rs64_..._hook ? (hook)(args) : (void)0)`. Host flags g_rs64_lowfield_hook (main.cpp) and g_rs64_synthread_hook
+(upstream_compat.cpp) start at 1; each hook clears its flag on its first call when its s7068 any-gate is off, so static-init
+order cannot matter and behaviour is unchanged (the hook already returned at once). ROGUESQ_DIAG_CALLSITE=0 or
+ROGUESQ_DIAG_GATE=0 keeps the flags at 1. Sites gated: lowfield 698 (funcs_23) + 607 (funcs_24), synth_read 728.
+Run: scratch/s7069/both.zsh (s7068 recipe: L6 dd1 4:3 FPS60, tools/s7065_sample_loop.zsh host sampler, 214 dumps/arm), same
+build, arm on (default) then off (ROGUESQ_DIAG_CALLSITE=0). Both: flight_s=268, alive_at_end=1, crashlines=0, vi_stalls30s=0.
+tools/s7067_selftime.py, [Game] 0:
+| symbol | on | off (control) |
+| on-CPU self total | 3591 | 4625 |
+| diag total | 169 | 305 |
+| rs64_m5_lowfield_store | 0 | 71 |
+| rs64_s4307_synth_read | 0 | 60 |
+| getenv (ours, cached) | 15 | 597 |
+Positive control: the off arm reproduces s7068's residual (s7068 on-arm: 42/70 hook samples). Unexpected larger term: two
+lowfield call sites (funcs_23.c ~12114/12426, s5228 B40/C88 value arms) evaluate getenv() in their VALUE argument on every
+store; the gate skips argument evaluation, removing ~13% of [Game] 0 on-CPU self time. The 15 left are those stores' own
+functional getenv (the MEM_B line above each). Gfx thread unchanged (679 vs 607 diag, noise; no gfx-side change).
+Single run per arm, sequential: no fps claim (the game sits at 60 in this recipe).
+Verdict: selects H-callsite (inline flag removes the residual completely), refutes H-floor. host-selftime-audit CLOSED.
+Next (optional, owner reports preempt): Gfx-thread top non-ucode term is XXH3_hashLong_64b 1021 samples (7.3%) +
+_platform_memmove 1136 (8.1%) - see NEXT.md (HYPOTHESIS-ID gfx-hash-audit).

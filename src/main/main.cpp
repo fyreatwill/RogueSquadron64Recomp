@@ -5684,6 +5684,13 @@ extern "C" void rs64_s5229_flush(int bi, const char* why) {
     std::fputc('\n', stderr);
     std::fflush(stderr);
 }
+// s7069: inline call-site gate read by the generated code (tools/apply_s7069_callsite_gate.py). Starts at 1; the hook clears
+// it on its first call when every gate is off. ROGUESQ_DIAG_CALLSITE=0 / ROGUESQ_DIAG_GATE=0 keep it 1 (old path).
+extern "C" { int g_rs64_lowfield_hook = 1; }
+static bool rs64_s7069_callsite_on() {
+    const char* c = std::getenv("ROGUESQ_DIAG_CALLSITE");
+    return !(c && c[0] == '0');
+}
 extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
                                          uint32_t addr, uint32_t value) {
     // s7068: one early-out for the whole store hook (every gate below is env-armed, all default off).
@@ -5696,7 +5703,7 @@ extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
                on("ROGUESQ_LOG_S4429_HEAP") || on("ROGUESQ_LOG_S4443_WATCH") || on("ROGUESQ_LOG_ALL") ||
                on("ROGUESQ_LOG_M5_LOWFIELD_WRITER");
     }();
-    if (!s7068_any) return;
+    if (!s7068_any) { if (rs64_s7069_callsite_on()) g_rs64_lowfield_hook = 0; return; }
     if (rs64_s5229_on()) rs64_s5229_store(width, pc, addr, value);
     {   // s4472: who stores into the slot-0 request byte 0x801545FD (word 0x801545FC)? Control: slot-0 status word 0x80154620.
         static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4472"); return e && e[0] && e[0] != '0'; }();
