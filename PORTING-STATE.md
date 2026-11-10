@@ -185531,3 +185531,25 @@ bar with the bundle in every phase. H-wide-cost only partly: K0.6 alone is also 
 Not run: L1 21:9 KEDGE cost (low value: L1 16:9 cost was nil).
 Verdict: refutes H-wide-visible and H-same; selects "21:9 L12 bundle cost" as a new thread (cap lever next, NEXT.md
 dd6-bundle-219-l12-cost). Datum only, no code change this session; new owner sheet docs/owner_sheet_s7048_l12_219_kedge.jpg.
+
+## Session 7049 (2026-11-09) — 21:9 L12 dd6 bundle cap lever: 8192 is cheaper (+0.7/+2.0 fps, rsp -0.6) but VISIBLE (13.4 at 2 poses), 9216 invisible but only +0.5 fps; run-to-run spread ~2.7 fps (H-cap-visible)
+Work unit from NEXT.md (HYPOTHESIS-ID dd6-bundle-219-l12-cost). No build. One game at a time.
+1. Same-run hold L12 21:9 (scratch/s7049/run_hold.zsh: s7048 recipe, CW 840x360, R=2 K=0.6 KEDGE "0.8,12" all phases,
+   ROGUESQ_DD_WIDEWIN=tog3 ROGUESQ_DD_WIDEWIN_CAP=a,b,c), two runs with the order rotated, both 507 s flight, alive, 0 stalls,
+   0 crash; anchors `[s7012] widewin cap n=3 ... tog3=1`, `[s7046] kedge k2=0.8,0.8,0.8 N=12,12,12`.
+   H12c (10240,8192,9216), xor8 22.7k frames: 10240 59.0 fps rsp 13.43 / 8192 59.7 rsp 12.83 / 9216 59.5 rsp 13.30, P(>=2VI) .02/.00/.01.
+   H12r (8192,10240,9216), 21.8k frames: 8192 58.3 rsp 13.12 / 10240 56.3 rsp 13.75 / 9216 56.8 rsp 13.58, P(>=2VI) .03/.07/.06.
+   Within-run ordering replicates: 8192 vs 10240 +0.7 / +2.0 fps (rsp -0.60 / -0.63 ms); 9216 vs 10240 +0.5 / +0.5 (rsp -0.13 / -0.16).
+   Cross-run level for the same config: 10240 59.0 vs 56.3 (and s7048 55.6-56.5): host load / autopilot path move it ~3 fps, so
+   s7048's "56 fps" was partly the run, not only the setting. Control: ocull/f fires in all phases (1100-2540).
+2. Frozen poses L12 21:9 NOREF (scratch/s7049/run.zsh), arms cap10240 / cap8192 / cap9216 / foldk0 (KEDGE=0, positive control),
+   4/4 0 crash, [s7037] in all, same posefreeze path (156.526,-8.539,19.825, same as s7048). s7032 scorer vs cap10240, k4/k5/k6:
+   foldk0 0.60/0.59/0.66 (1.5% px; matches s7048's 0.66 -> instrument live), cap9216 0.00/0.00/0.00, **cap8192 13.40/13.13/0.00
+   (9.5% px)**. By eye (docs/owner_sheet_s7049_l12_219_cap.jpg, bottom 45%, k4|k6): at k4 10240 draws a pale ice/snow ground band at
+   the frame bottom, 8192 shows dark green ground there instead. Second line: cap10240 frames equal s7048's fold (0.00) and dd6off
+   (0.06) at the same poses cross-run, cap8192 differs from both by 13.4 -> the band is real extended ground that 8192 drops.
+Result: H-cap refuted (no cap is both invisible and reliably >=58.5: 9216 invisible but 56.8 in run 2), H-cap-visible selected for 8192,
+H-other partly (the 21:9 L12 shortfall is cell load plus ~3 fps of run-to-run host/path variance). No default change: 9216's +0.5 fps is
+inside the cross-run spread and unchecked on other levels. OWNER-OPT-INS states the trade (8192 = faster but loses a ground strip).
+Verdict: refutes H-cap; selects H-cap-visible (8192) / 9216 neutral-small. Next: cheaper fog-depth K at 21:9 (K tog3 0.6/0.5/0.45 with
+KEDGE), same hold+poses design (NEXT.md).

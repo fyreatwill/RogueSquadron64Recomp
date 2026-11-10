@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7048 (2026-11-09).
+Compact operational handoff, as of Session 7049 (2026-11-09).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7049 21:9 L12 cap lever (no build): 8192 is cheaper but VISIBLE, 9216 invisible but tiny (H-cap-visible).** Same-run holds (tog3 WIDEWIN_CAP, order rotated, 2x507 s, 0 crash/stall): 8192 vs 10240 +0.7/+2.0 fps (rsp -0.60/-0.63), 9216 +0.5/+0.5 (rsp -0.13/-0.16); absolute 10240 59.0 in one run, 56.3 in the other (host/path spread ~3 fps, so s7048's 56 was partly the run). Frozen poses vs cap10240: cap9216 0.00, foldk0 ctl 0.60-0.66, **cap8192 13.4 at k4/k5 (9.5% px: drops a distant ice ground band; cap10240 = s7048 fold/dd6off cross-run)**. No default change; OWNER-OPT-INS states the trade; sheet docs/owner_sheet_s7049_l12_219_cap.jpg. Next: cheaper fog-depth K at 21:9 (NEXT.md).
 
 **s7048 21:9 L12 check of the folded dd6 bundle (no build): KEDGE stays invisible, but L12 at 21:9 runs only ~56 fps with the bundle, gate or no gate.** Frozen poses 21:9 FPS60 L12 NOREF, arms dd6off / fold (auto, KEDGE 0.8,12) / foldk0 (KEDGE=0, positive control), 3/3 0 crashes, same posefreeze path: k4-k6 fold 0.06/0.05/0.06 0.0% px vs foldk0 0.66/0.65/0.71 1.5% px; by eye fold = dd6off soft band, foldk0 the flat cut (docs/owner_sheet_s7048_l12_219_kedge.jpg, rows dd6off/fold/foldk0, bottom 45%, k4|k6). Same-run hold L12 21:9 (tog3 KEDGE "0.8,12;0;0.8,12", 507 s flight, alive, 0 stalls, 0 crash), xor8 21.2k frames: p0 ke12 55.8 fps rsp 13.75 / p1 K0.6 56.5 rsp 13.48 / p2 ke12 55.6 rsp 13.74, P(>=2VI) 0.07/0.06/0.08; A/A p0-p2 0.2 fps, gate cost -0.7..-0.9 fps (+0.27 ms rsp), k2cells/f 1895/0/1957. So H-same refuted on cost, H-wide-visible refuted, H-wide-cost only partly: the shortfall is the 21:9 L12 bundle itself (rsp ~13.5 vs ~12 at 16:9), not the gate. KEDGE stays the default. Next: a cheaper lever for 21:9 L12 (cap tog3, NEXT.md).
 
@@ -21,10 +23,6 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 **s7042 dd6 auto bundle holds on L0, L8, L9, L11, L12 at 16:9 (H-clean; no build; tools/dd6_bundle_level_sweep.zsh).** Same recipe as s7041, ~506 s flight each,
 5/5 alive_at_end=1, vi_stalls30s=0, crashlines=0, CRASH grep 0. fps off -> bundle p1/p2: L0 58.7 -> 59.8/59.7 (rsp -2.56), L8 59.9 -> 59.6/60.0 (rsp -1.00, neutral), L9 58.4 -> 59.9/59.9 (rsp -2.01),
 L11 59.8 -> 60.0/59.6 (rsp -1.03, neutral), **L12 (88x88) 42.8 -> 59.7/59.8, P(>=2VI) 0.40 -> 0.01, rsp 16.19 -> 12.23 (-3.95)**: plain dd6 WIDEWIN is past the VI cliff on L12 and the bundle cull is what holds it. Cull fires everywhere (ocull/f ph1 2462-3645, ph0 0). Unrun: L13-L18 (L10 health only).
-**s7041 dd6 auto bundle holds on L2, L3, L6, L7 at 16:9 (H-clean; no game build; new tools/dd6_bundle_level_sweep.zsh).** FPS60 dd6 MELT WIDEWIN cap 10240, ~505 s flight per level,
-same-run tog3 R=-1,2,2 K=0,0.6,0.6: 4/4 alive_at_end=1, vi_stalls30s=0, crashlines=0. fps off -> bundle (A/A p1/p2): L2 58.7 -> 59.8/59.9 (rsp -2.45), L3 58.6 -> 60.0/60.0 (rsp -3.33),
-L6 59.3 -> 59.2/59.1 (rsp 6.2 -> 5.7, not rsp-bound: neutral), L7 59.5 -> 59.6/59.7 (rsp -1.98). Cull fires on every level (ocull/f ph1 2542-3285, ph0 0). Health + cost only (no image check on these levels:
-the bundle's image neutrality rests on L1/L4 poses + cutscenes). Remaining unrun at dd6 bundle: L0, L8, L9, L11-L18 (L10 health only).
 **s7040 dd6 auto bundle is clean at 16:9 too (H-clean; no build).** Frozen poses 16:9 FPS60 dd6 MELT WIDEWIN cap 10240, arms dd6off/dd6b/dd6b2/dd4, 8 runs + 1 hold, 0 crashes/stalls:
 dd6b vs dd6off L1 <=0.19, L4 <=0.28 (max 0.6% px, horizon sliver by eye), A/A 0.00 at all 15 poses, dd4 control 3.5-8.8. Same-run cost L1 (505 s hold, tog3): 58.6 -> 59.9/59.8 fps,
 rsp -3.15/-3.01 ms (A/A 0.14), cull fires (ocull/f 0/2671/2692). No aspect gate needed. Sheets docs/owner_sheet_s7040_dd6_169_l1.jpg / _l4.jpg; 16:9 line in OWNER-OPT-INS.
