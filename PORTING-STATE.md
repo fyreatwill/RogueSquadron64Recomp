@@ -185567,3 +185567,22 @@ Unit (NEXT.md s7049, HYPOTHESIS-ID dd6-bundle-219-l12-cost): H-K / H-K-visible /
 - Change: src/main/main.cpp rs64_g1c_apply_dd_policy s7037 block: K default is 0.5 when ROGUESQ_FB_WIDTH > 796 (aspect wider than 16:9; the aspect policy runs first), else 0.6; setenv overwrite=0 so an explicit K wins. 0.45 not taken: its extra gain over 0.5 is inside the run spread (+0.2/-0.1 fps) and it leaves less margin before the cut shows. Boot check of the built binary: 21:9 -> "[s7037] ... k=0.5", 16:9 -> "k=0.6". No ORIGIN needed (performance tuning of an opt-in cull, no mitigation).
 - Rules out: K as a no-op lever at 21:9 (H-noop). Not yet shown: K0.5 invisibility on L1/L4/L13 at 21:9 (s7038 L1/L4 qualified K0.6 only), hold at the new default with no tog.
 - OWNER-OPT-INS: ultrawide speed-up line added. No owner sheet: the arms are pixel-identical at every pose.
+
+## Session 7051 (2026-11-09) — 21:9 K=0.5 bundle default fails on L4 (horizon band shaved, 0.23-0.33, visible by eye; H-visible-elsewhere): reverted to K=0.6 at every aspect
+
+Unit (NEXT.md s7050, HYPOTHESIS-ID dd6-bundle-219-l12-cost): H-clean / H-visible-elsewhere / H-l1-sliver for the s7050 21:9 default K=0.5.
+- Frozen poses (scratch/s7051/run.zsh <LV>, 21:9 FPS60 dd6 MELT WIDEWIN cap 10240 KEDGE 0.8,12 auto; arms k05 = auto default, k06 = explicit
+  ROGUESQ_DD_OFFMAPCULL_K=0.6, foldk0 = auto + KEDGE=0 positive control; 9 runs, 0 crash, [s7037] logged k=0.5/0.6/0.5; identical posefreeze
+  positions across arms per level). tools/s7032_pose_cull_score.py --base k06:
+  L1 (7 poses): k05 <=0.05 everywhere; foldk0 0.56/0.53 at k5/k6 (control fires there, weak 0.01-0.06 at k0-k4).
+  **L4 (7 poses): k05 0.06/0.09/0.11/0.16/0.23/0.29/0.33 (0.1-0.7% px), and foldk0 is pixel-identical to k05 (0.00 at k4-k6 vs base k05)**:
+  the change comes from K itself, and KEDGE does not cover these cells. The difference sits in one band, rows 717-803 of 1252, x 681-2097 =
+  the far horizon. By eye (docs/owner_sheet_s7051_l4_219_k05_band.png, rows: K0.6 / K0.5 / autocontrast diff, k6): K0.6 draws a curved far
+  ground band, K0.5 shaves it to a lower, flatter edge. That is the same defect class as the s7044 L12 cut.
+  L13 (4 poses, run reached k0-k3 only): k05 <=0.03, but the control is also only 0.01-0.03 (dark level, as s7044), so no evidence either way.
+- Verdict: H-visible-elsewhere (L4 0.33 > the 0.3 bar, visible; single run, but same-run A/A intra 0.00 and identical positions). H-clean refuted.
+- Change: src/main/main.cpp s7037 block: 21:9 branch removed, K default 0.6 at every aspect again (setenv overwrite=0, explicit K still wins).
+  Rebuilt; boot check 21:9 dd6 WIDEWIN -> "[s7037] ... k=0.6", with ROGUESQ_DD_OFFMAPCULL_K=0.5 -> k=0.5.
+- Skipped the planned hold: it was meant to qualify the cost of the default this session reverted. Cost at K0.6 21:9 comes from s7048/s7050 (L12 ~58.6-59 fps).
+- OWNER-OPT-INS: the s7050 ultrawide line now says K=0.5 is opt-in only (L12 +0.8 fps, L4 loses a horizon strip), with the sheet.
+- Rules out: a global lower K at 21:9. What is left for 21:9 L12: cap 9216 (s7049: invisible on L12, +0.5 fps, unqualified on L1/L4) or accepting ~59 fps.

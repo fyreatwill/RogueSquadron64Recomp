@@ -12047,10 +12047,9 @@ static void rs64_g1c_apply_dd_policy() {
     { const char* ww = std::getenv("ROGUESQ_DD_WIDEWIN");
       if (dd >= 6.0 - 1e-3 && ww && *ww && ww[0] != '0' && !std::getenv("ROGUESQ_DD_OFFMAPCULL")) {
           setenv("ROGUESQ_DD_OFFMAPCULL", "2", 1);
-          // s7050: wider than 16:9 (FB_WIDTH > 796, set by the aspect policy that runs first) uses K=0.5: L12 21:9 same-run holds
-          // +0.9/+0.7 fps (rsp -1.27/-1.29 ms) vs K=0.6, frozen in-flight poses 0.00 vs K=0.6 (KEDGE=0 control 0.60). 16:9 keeps 0.6.
-          { const char* fw = std::getenv("ROGUESQ_FB_WIDTH"); const bool wide = fw && std::atoi(fw) > 796;
-            setenv("ROGUESQ_DD_OFFMAPCULL_K", wide ? "0.5" : "0.6", 0); } setenv("ROGUESQ_DD_OFFMAPCULL_H", "off", 0);
+          // s7050 made 21:9 default to K=0.5 (L12 +0.9/+0.7 fps); s7051 reverted it: on L4 21:9 K=0.5 shaves the far horizon
+          // band (0.23-0.33 mean dLum vs K=0.6, 0.7% px, visible by eye; KEDGE does not cover it). K=0.5 stays an explicit opt-in.
+          setenv("ROGUESQ_DD_OFFMAPCULL_K", "0.6", 0); setenv("ROGUESQ_DD_OFFMAPCULL_H", "off", 0);
           // s7047: eye-to-edge K gate (s7046) folded in: off-map cells on a map side within 12 cells of the eye use K=0.8, which hides
           // L12's hard horizon cut (frozen poses 0.07 vs 0.81, 2 runs) for ~0.3 ms rsp (L12 59.6/59.9 vs 59.8 fps same run). =0 disables.
           setenv("ROGUESQ_DD_OFFMAPCULL_KEDGE", "0.8,12", 0);
