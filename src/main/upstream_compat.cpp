@@ -356,11 +356,22 @@ extern "C" int rs64_s7012_cap(void) {
         while (e && *e && n < 3) { v[n++] = atoi(e); const char* c = strchr(e, ','); e = c ? c + 1 : nullptr; }
         const char* w = getenv("ROGUESQ_DD_WIDEWIN"); tog3 = (w && w[0] == 't' && w[1] && w[2] && w[3] == '3');
         fprintf(stderr, "[s7012] widewin cap n=%d %d,%d,%d tog3=%d\n", n, v[0], v[1], v[2], tog3); }
-    if (n == 0) return 0;
-    if (!tog3) return v[0];
-    const uint64_t mt = mach_absolute_time(); static int anc = 0;
-    if (!anc) { anc = 1; rs64_tog_anchor(mt); }  /* tog3 cycles on sec %% 3, not on the s7017 split */
-    return v[(int)((mt / 24000000u) % 3u) % n];
+    /* s7061 level-scoped cap: ROGUESQ_DD_WIDEWIN_CAPLEVEL=<lvl>:<cells>[,...] caps those levels (gCurrentLevel as latched by
+       rs64_s7030_begin, s7056_last). _CAPLEVEL_TOG=1 (needs WIDEWIN=tog3): phase 1 ignores it (same-run on/off/on). */
+    static int cl[32]; static int clinit = 0, cltog = 0;
+    if (!clinit) { clinit = 1; for (int i = 0; i < 32; i++) cl[i] = 0;
+        if (const char* q = getenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL")) while (q && *q) { int l = -1, c = 0;
+            if (sscanf(q, "%d:%d", &l, &c) == 2 && l >= 0 && l < 32 && c > 0) cl[l] = c; q = strchr(q, ','); if (q) q++; }
+        { const char* t = getenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL_TOG"); cltog = t && t[0] == '1'; }
+        fprintf(stderr, "[s7061] widewin caplevel=%s tog=%d\n", getenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL") ? getenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL") : "(none)", cltog); }
+    int ph = 0;
+    if (tog3) { const uint64_t mt = mach_absolute_time(); static int anc = 0;
+        if (!anc) { anc = 1; rs64_tog_anchor(mt); }  /* tog3 cycles on sec %% 3, not on the s7017 split */
+        ph = (int)((mt / 24000000u) % 3u); }
+    const int base = n == 0 ? 0 : (tog3 ? v[ph % n] : v[0]);
+    const uint32_t lv = s7056_last;
+    if (lv < 32 && cl[lv] > 0 && !(cltog && tog3 && ph == 1) && (base == 0 || cl[lv] < base)) return cl[lv];
+    return base;
 }
 // s7022 G1c (tools/apply_s7022_streamtime.py): per-call timing of streamTerrainGridCellsByDistance, ROGUESQ_S7022_ST=1.
 // Buckets by the s7012 cap value (tog3 phase); prints one [s7022-st] line per bucket per 256 calls. Ticks are mach (24 MHz here).

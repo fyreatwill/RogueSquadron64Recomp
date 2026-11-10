@@ -185768,3 +185768,19 @@ HYPOTHESIS-ID: dd6-219-levelK-survey. CURRENT-TRUTH 57.7 KB at start (<60 KB, no
   milder than the s7058 one (bursts vary with combat). L16, L6 and L7 stay transition stalls. L8, L14 (with s7058/s7059: L0-L7, L11-L13) need nothing.
 - Rules out: KLEVEL for L9 or L16.
 - Next: same-run cap 8192/10240/8192 on L9 (s7020: 8192 = dd4 cost; s7012: the side-edge gain arrives by 6144). If 8192 holds 60 in the burst, add a level-scoped cap (auto, like KLEVEL) and pose-qualify the edge. Fold L17/L18 when the loop runs them.
+
+## Session 7061 (2026-11-10) — L9 21:9 dd6 burst dip: WIDEWIN cap 8192 holds ~60 fps where 10240 dips (2 runs); new level-scoped cap knob ROGUESQ_DD_WIDEWIN_CAPLEVEL
+HYPOTHESIS-ID: dd6-219-levelK-survey. CURRENT-TRUTH 58.1 KB at start (no maintenance). New soak verdicts s7058_219auto_L17/L18 rc=0, folded: survey table L17 58.50 whole / 59.70 excl. gaps (26 transition gaps, slow-frame rsp 5.3), L18 60.00 / 60.00, both OK.
+- Unit (NEXT s7060): does cap 8192 hold 60 fps in L9's dense burst? Hypotheses H-8192-holds / H-8192-dips / H-noburst.
+- Run 1 (scratch/s7061/run_cap.zsh L9c8, explicit WIDEWIN tog3 CAP=8192,10240,8192, k 0.6, 21:9 dd6, 505 s, alive, 0 crash, 0 VI stall, godrefills 16):
+  positive control rsp p1-p0 +0.56 / run +0.51 ms (10240 vs 8192; s7060 4096 gave +2.15), A/A p2-p0 rsp -0.00. Whole 59.9/59.4/59.7. Slow (>25 ms) frames
+  binned: 270-370 s and 450-545 s. Burst 270-370: 59.8/58.3/59.5 fps, P(>=2VI) 0.00/0.03/0.01 (333 ms shift 59.5/58.5/59.6); 450-545: 59.9/59.0/59.5.
+- Arm 2 = new code: rs64_s7012_cap (src/main/upstream_compat.cpp) gains ROGUESQ_DD_WIDEWIN_CAPLEVEL=<lvl>:<cells>[,...] (level from s7056_last, the
+  gCurrentLevel latched by rs64_s7030_begin; min with any explicit cap) and _CAPLEVEL_TOG=1 (tog3 phase 1 ignores it). Logs [s7061]. Not auto anywhere.
+  Run 2 (scratch/s7061/run_caplevel.zsh L9cl, CAP=10240 x3 + CAPLEVEL=9:8192 TOG, 505 s, alive, 0 crash, godrefills 20): rsp p1-p0 +0.52 (knob behaves
+  like the explicit cap), A/A +0.06. Burst 270-390 s: 60.0/58.2/60.0 fps, P 0.00/0.03/0.00 (333 ms shift 60.0/59.2/59.2).
+- Verdict: H-8192-holds, two runs (three burst windows) plus s7060's 4096 run: L9's burst dip is the dd6 window's 8193-10240 cells; 8192 restores
+  ~60 fps. Bursts were milder than s7058's 55 fps one in both runs. Image cost of 8192 on L9 is unmeasured (s7052: 9216 was visible on L4), so no fold.
+- Rules out: H-8192-dips, H-noburst.
+- Next: frozen poses on L9 21:9 (scratch/s7061/run_pose.zsh: c10240 / c8192 / c6144 control); fold CAPLEVEL 9:8192 into the 21:9 auto bundle only if c8192 is
+  invisible while c6144 shows.

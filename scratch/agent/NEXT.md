@@ -1,16 +1,13 @@
-# NEXT: L9 21:9 dd6 dense-burst dip: does a smaller cell cap (8192) hold 60 fps in the burst? then a level-scoped cap
+# NEXT: L9 21:9 frozen poses for the s7061 level cap 8192 -> fold CAPLEVEL 9:8192 into the 21:9 auto bundle if invisible
 HYPOTHESIS-ID: dd6-219-levelK-survey
-Context s7060: L9 dips to ~55 fps in a 30-40 s combat burst (rsp 17-22 ms). K=0.5 does not help (same run). Same-run CAP 4096/10240/4096: burst window
-60.0/58.7/60.0 fps -> the dd6 window's extra cells cost it (H-dd-window). Single run, mild burst.
-First: python3 tools/s7060_survey_table.py  (fold s7058_219auto_L17/L18 if SOAK-RESULTS shows them; LAGGARD rows need the same treatment).
-Run (screen unlocked check: /usr/sbin/ioreg -n Root -d1 | grep -c '"CGSSessionScreenIsLocked"=Yes' must print 0):
-  sed 's/CAP=4096,10240,4096/CAP=8192,10240,8192/; s#scratch/s7060#scratch/s7061#' scratch/s7060/run_cap.zsh > scratch/s7061/run_cap.zsh (mkdir first)
-  env WD=90 zsh scratch/s7061/run_cap.zsh L9c8 9 tog ; pkill -9 -x RogueSquadron64Recomp
-Score: find the burst: python3 tools/g5e_cost_by_parity.py --phases 1 --skip-s 130 --gaps 25 <tl> <log> | grep 't=' (bin by 30 s), then
-  --phases 3 --skip-s <a> --until-s <b> on the burst window, plus --shift-ms 333 as control. Positive control: rsp p1-p0 > 0 over the whole run.
+Context s7061: cap 8192 holds L9's dense burst at ~60 fps (2 runs: 59.8/58.3/59.5 and 60.0/58.2/60.0 in 8192/10240/8192 phases). New opt-in knob
+ROGUESQ_DD_WIDEWIN_CAPLEVEL=<lvl>:<cells> (src/main/upstream_compat.cpp rs64_s7012_cap), not auto. Image cost of 8192 on L9 is unmeasured.
+Run (screen unlocked: /usr/sbin/ioreg -n Root -d1 | grep -c '"CGSSessionScreenIsLocked"=Yes' must print 0):
+  zsh scratch/s7061/run_pose.zsh 9      (arms c10240 base / c8192 via CAPLEVEL / c6144 positive control; out scratch/s7062/L9)
+Score: python3 tools/s7032_pose_cull_score.py --base c10240 <dir> (see s7052/s7057 usage in PORTING-STATE), plus eye the frames.
+  Positive control: c6144 must show a difference > c8192 (if c6144 is ~0 too, poses are not on the wide edge -> move FZ later/earlier).
 Hypotheses:
- H-8192-holds: 8192 phases ~60 fps / P(>=2VI) ~0 in the burst while 10240 dips -> implement a level-scoped cap (ROGUESQ_DD_WIDEWIN_CAPLEVEL=9:8192,
-   auto at 21:9 like KLEVEL in src/main/main.cpp s7037/s7056 block), then pose-qualify the edge (scratch/s7057/run.zsh pattern).
- H-8192-dips: 8192 dips too -> try 6144 the same way (s7012: edge gain already in by 6144); if even that dips, the burst is game-side cost (record, close).
- H-noburst: no burst in the run (needs heavy combat) -> repeat once; if still none, record and keep the s7060 result as single-source.
+ H-invisible: c8192 <=0.1 mean |dLum| / ~0% px while c6144 shows -> add `9:8192` to an auto ROGUESQ_DD_WIDEWIN_CAPLEVEL in src/main/main.cpp s7037 block
+   (next to the KLEVEL auto, FB_WIDTH>796, setenv overwrite=0, only if no explicit _CAP), log in [s7037], one 21:9 L9 auto hold to confirm [s7061] fires.
+ H-visible: c8192 shows a band (like L4 c9216 in s7052) -> try 9216 the same way (poses + burst); if that also shows, record trade, leave opt-in, close L9.
 Any crash: side-effect failure (G4 rule) -> capture and root-cause first.
