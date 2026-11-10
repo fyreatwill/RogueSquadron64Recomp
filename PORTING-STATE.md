@@ -186158,3 +186158,41 @@ Run scratch/s7074/run.zsh (s7031 arm L6 dd1 4:3 NOCAP, 1 s samples): mission_t=7
 crashlines=0; samples 112: tickMenuScreenFade 2 (positive control: the renamed fn runs under its new name), tickBackdropLoaderWorker
 27, menuControllerInput 12, runInMissionFrame 69.
 Rules out: the "player ship / throttle charge" and "text render target" readings of this block.
+
+## Session 7075 (2026-11-10) — menu block 0x800B2A98-0x800B4618 misnomers fixed: loadNamedTextureDescriptor is the SYNC backdrop image loader (hilite/logo/medal_sh/the_head%d), "Hud" sprite family is menu-only; 9 renames, counts identical in 8 files, preempt control 6 unchanged, L6 boot to flight clean, renamed fns in 5/112 samples
+
+NEXT.md unit (HYPOTHESIS-ID generated-symbol-misnomer-fixes): finish the menu block 0x800B2A98-0x800B4618.
+Method: new tools/s7075_fnsum.py (objdump of ../rogue_squadron64/build/roguesquadron.elf .ovl.menu; prints calls under
+CURRENT names, lui+imm constants and the string at each; strings come from the ELF at file off va-0x800A5130+0x10b410, NOT
+the ROM, whose menu overlay is not at that offset — the s7074 NEXT.md "file off" note pointed at the ROM and read garbage).
+Callers restricted to .ovl.menu (the three overlays share 0x800A5130, so whole-ELF jal greps mix in mission callers).
+Findings (body + menu-overlay callers + caller string args):
+- loadNamedTextureDescriptor 0x800B2D50: sprintf("backdrop/%s") + load_asset (synchronous, raw image header: fmt nibble +0,
+  w +4, h +6, pixels +12), cut into a1 x a2 tiles, each named "P?" / "Q?" + "%03ld" (? = 'A'+element id), zmemcpy +
+  registerHmtTextureInTable, asset rs_free'd. Caller names: "hilite" (menuControllerInput), "logo" and "the_head%d"
+  (buildHudAmmoReadout), "rebel_sh"/"medal_sh" (createMenuTextLabels, ship select, menuSubtype02), "%s_d"/"%s_f"
+  (postLevelSaveInit). H-sync-backdrop selected, H-generic refuted. -> loadBackdropImageElement.
+- allocFormatTextElement 0x800B2A98: 0x38 element sized a1 x a2 using the TEMPLATE element a0's tile dims and format, tile
+  count ceil(w/tw)*ceil(h/th), empty u16 tile-id array +20, 0x30 sprite at +12 (scale 1.0, rgba 255). No text. ->
+  allocMenuElementLikeTemplate.
+- copyMorphTargetVertices 0x800B438C: copies u16 tile ids src->+20[first+i] into dst->+20 and dst sprite +0xC->+0xC, count
+  dst->+8. Not vertices. -> copyMenuElementTileIds.
+- buildPrefixedAssetName 0x800B43F4: "alpha"+name in static 0x800CE6B0 (openBackdropJpegAssets' alpha companion) ->
+  buildAlphaAssetName.
+- spawnHudReticleAtMeshBounds / positionHudSpriteOffset / createHudSpritePair / layoutHudSpriteScreenRect 0x800B448C-0x800B4618:
+  menu-overlay only (callers menuControllerInput, spawnMenuListItemSprite, updateUiSpriteScrollAndAlpha); two 0x30 sprites added
+  to a menu scene and laid out from an element's position (+32) and image w/h. H-hud refuted (no flight HUD in this overlay),
+  H-menu-sprite selected. -> spawnMenuElementSpritePair, layoutMenuElementSpritePair, createMenuSpritePair, layoutMenuSpritePairRect.
+- Extra: buildHudAmmoReadout 0x800B82D8 (menu overlay, sole caller menuControllerInput) loads backdrops "logo" and
+  "the_head%d" (index from gGameSettings+0x18) -> buildMenuLogoAndHeadImages.
+Applied (scratch/s7075/renames.tsv, files.txt): regex \b over live RecompiledFuncs funcs_30/31/33/34.c, funcs.h,
+recomp_overlays.inl, ../rogue_squadron64/symbol_files/menu_overlay.txt (s7075 comments; uncommitted there, this entry is the
+record), syms/rogue_squadron.syms.toml. No tools/*.py named them. None of the new names existed before. Historic docs left as is.
+Control: per-file counts identical before/after (scratch/s7075/before.txt vs after.txt, 8 files), 0 old-name hits left;
+fixup_preempt_point.py "hooks present in 6 functions" before and after. Rebuild clean (build/build_s7075.log).
+Run scratch/s7075/run.zsh (s7031 arm L6 dd1 4:3 NOCAP, 1 s samples): mission_t=71 s, flight 309 s, alive at end,
+vi_stalls30s=0, crashlines=0; samples 112: loadBackdropImageElement 3, buildMenuLogoAndHeadImages 2 (positive control: renamed
+fns run under the new names), tickBackdropLoaderWorker 29, menuControllerInput 12, runInMissionFrame 61.
+Rules out: the text-element, morph-vertex, HUD-reticle and ammo-readout readings of this block. Block 0x800B2630-0x800B4618 closed.
+Next: the menu-overlay "player craft" block 0x800B80B4-0x800BE3E8 (playerVwingMainUpdate, integrateTieInterceptorPhysics,
+handleNabooFlightInput ... in the MENU overlay = hangar model viewer, not flight).

@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7074 (2026-11-10).
+Compact operational handoff, as of Session 7075 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7075 menu block 0x800B2A98-0x800B4618 misnomers fixed (9 renames, block closed): loadNamedTextureDescriptor = loadBackdropImageElement, the SYNC load_asset("backdrop/%s") cut into named tiles (hilite, logo, the_head%d, medal_sh, rebel_sh); the "Hud" sprite family is menu-only (createMenuSpritePair etc.); buildHudAmmoReadout = buildMenuLogoAndHeadImages.** tools/s7075_fnsum.py summarises ELF functions (calls by current name, constants, strings from the ELF at va-0x800A5130+0x10b410, not the ROM). Counts identical in 8 files, preempt control 6, L6 boot to flight 309 s clean, renamed fns in 5/112 samples.
 
 **s7074 menu fade-quad family renamed (9 names): 0x800CC85C is the one active screen fade quad, not a "player ship".** Bodies (objdump of ../rogue_squadron64/build/roguesquadron.elf .ovl.menu): createMenuScreenFadeQuad = allocMenuSolidQuadSprite(64,16) (a w x h texture memset 0xFF, registered) -> 0x800CC864; startMenuScreenFade scales it to the viewport and sets rate 0x800CFAF4; tickMenuScreenFade raises alpha byte +0x2F by rate*dt to 255 and returns 1 after 7 frames at 255 (0x800CC860; the FPS60 tick-site 0x800B41B8 in fixup_fps60_ticks.py is this counter); getMenuScreenFadeRemaining = 1-alpha/255; endMenuScreenFade unlinks it and decrements the live menu element count 0x800CC850 (also bumped by allocMenuSceneElement, ex-spawnProjectileObject). Counts identical before/after in 14 files, preempt control 6 unchanged, rebuild clean; L6 dd1 4:3 boot to flight 309 s, 0 crash lines, tickMenuScreenFade in 2/112 samples (positive control).
 
