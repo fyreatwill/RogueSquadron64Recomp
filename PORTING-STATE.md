@@ -185722,3 +185722,29 @@ Unit (NEXT.md s7057, HYPOTHESIS-ID dd6-219-levelK-survey): H-more (L2/L3 < 59.5 
 - Queued soaks scratch/agent/soak_queue/s7058_219auto_L{0,6,7,8,9,11,14,16,17,18}.sh: auto bundle path, 21:9 dd6, 360 s hold, G1E_TL timeline,
   exit 1 on crash / not alive. Next iteration scores each with --phases 1 and runs the tog K split only on levels < 59.5 fps.
   L10 (cloud level, no terrain grid) and L15 (owner-gated 21:9 crash) left out.
+
+## Session 7059 (2026-11-10) — 21:9 dd6 auto survey L0/L6/L7/L11: all ~60 fps in flight; the L6/L7 shortfall is 200-320 ms scene-transition stalls (menu/cutscene/mission-end audio-slot drain on harness mission cycles), identical at dd1 4:3, so no KLEVEL addition
+HYPOTHESIS-ID: dd6-219-levelK-survey. CURRENT-TRUTH 56.7 KB (<60 KB, no maintenance). New soak verdicts: s7058_219auto_L0 rc=0, s7058_219auto_L11 rc=0 (folded here).
+- Unit (NEXT s7058): score the queued 21:9 dd6 auto-path survey. Hypotheses: H-laggard (some level <59.5 fps with rsp >=12.5 ms -> level K) vs
+  H-alldone. Ran L6 and L7 by hand (soak recipes moved to soak_queue/done/), L0/L11 came from the loop.
+- Tool fix: tools/g5e_cost_by_parity.py exited "no [s7010-clk] anchor" on auto runs (the anchor prints only under tog). --phases 1 now runs
+  anchorless (one arm, guard off); control: L2t scored --phases 1 gives 59.6 fps, = s7058.
+- Results (21:9 dd6 bundle auto, [s7056] level=<L> k=0.6 logged, 360 s hold, alive, 0 crash, 0 VI stalls): L0 59.5 fps rsp 12.45 P(>=2VI) 0.01;
+  L11 59.6 rsp 8.16 P 0.00; L6 58.8 rsp 8.37 P 0.00; L7 59.1 rsp 6.00 P 0.00. VI 60.00/s in all.
+- L6/L7 are below 59.5 with LOW rsp, so not H-laggard. New --gaps option: L6 has 43 frames >40 ms (21 >150 ms), pairs of ~200-320 ms + ~60 ms,
+  rsp 0 inside (no gfx task), "run" (not in osRecvMesg) ~190 ms. Gap rate per level from every TL ring since s7030: L6 6.8-7.0/100 s, L7 2.9-5.3,
+  L16 8.7, L17 8.1, L11 2.0-2.3, L0 1.0-1.3, L2/L3/L9/L13/L14/L15/L18 0. Excluding >150 ms gaps: L6 59.80, L7 59.93, L11 59.94, L0 59.61 fps.
+- Discriminator 1 (dd ownership): L6 at dd1 4:3 FPS60, no dd bundle (scratch/s7059/run_dd1.zsh): 15 gaps >150 ms, same 220-305 ms / rsp 0 shape,
+  59.15 fps whole, 59.85 excl. -> the stall is not dd6 cost (CELLIDX is off at dd1, so not the s6963 clamp walk either).
+- Discriminator 2 (what runs): second dd1 L6 run with a 150 s xctrace Time Profiler attach (scratch/s7059/xc.zsh; this run hit mission_cycles=2).
+  Ring view of one 251 ms stall: the game thread (slot 8) logs no mesg event for 133 ms. New tools/g5e_stall_split.py fits the trace-to-ring
+  offset by samples-in-stalls (152.48 s: 298 samples vs 86/94 at +-1 s) and classes each stall's game-thread samples: 10 stalls in the window,
+  209 audio-slot polling (isAudioSlotActive/anyAudioSlotActive), 85 other (text glyph build rasterizeFormatMessageGlyphs -> buildDebrisMeshFromCells,
+  menu draw), 4 waits; outer callers menuOverlayInit 180, endMissionCleanup 47, cinematicLoopBody 44, runInMissionFrame 25.
+  An earlier "game thread is off-CPU" reading was my error (wrong trace offset + a 60-sample/100 ms hot threshold the sampler never reaches).
+- Verdict: H-alldone for L0/L6/L7/L11 (with s7058: L1-L5, L12, L13). The whole-run shortfall is scene transitions (mission end, menus, cutscenes)
+  that the autopilot harness cycles through on levels where it fails/restarts the mission (inits up to 6); they are loads, outside G5c's
+  "no gap >250 ms outside loads" bar, and dd-independent. Single-source: the audio-drain share comes from one trace. Not shown: whether retail
+  hitches the same at these transitions (oracle cannot drive missions).
+- Rules out: a level K need on L0/L6/L7/L11; dd6 as the source of the L6/L7 gaps.
+- Remaining survey: s7058_219auto_L8, L9, L14, L16, L17, L18 stay queued; score with --gaps 150 and use the "excluding these gaps" fps.

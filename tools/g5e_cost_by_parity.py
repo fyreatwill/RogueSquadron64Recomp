@@ -20,12 +20,15 @@ ap.add_argument('--phases', type=int, default=2, help='s7012: 3 = WIDEWIN=tog3, 
 ap.add_argument('--split', choices=('parity', 'xor8', 'hash'), default=None,
                 help='s7017: arm of a mach second s. parity = s&1 (s7010, biased by the autopilot 2 s press cycle); xor8 = (s ^ s>>3)&1 '
                      '(rs64_tog_odd: cancels any 8 s-periodic load exactly over 16 s); hash = splitmix32(s)&1 (unbiased, ~6x noisier)')
+ap.add_argument('--gaps', type=float, default=0.0, help='s7059: also list every frame with T > this many ms (t since ring start, run/blk/rsp split)')
 ap.add_argument('--inject-ms', type=float, default=0.0, help='s7017 estimator control: add this to rsp of on-arm frames')
 a = ap.parse_args()
 m = None
 for ln in open(a.log, errors='replace'):
     mm = re.search(r'\[s7010-clk\] steady_us=(-?\d+) mach=(\d+)(?: split=(\w+))?', ln)
     if mm: m = (int(mm.group(1)), int(mm.group(2))); split_log = mm.group(3) or 'parity'; break
+if not m and a.phases == 1:  # s7059: auto-path (no tog) runs print no anchor; one phase needs none and has no flips to guard
+    m = (0, 0); split_log = 'parity'; a.guard_ms = 0.0; print('no anchor: --phases 1, whole run is one arm, guard off')
 if not m: sys.exit('no [s7010-clk] anchor in log')
 S, M = m
 if a.split is None: a.split = split_log  # s7017: the anchor names the split the run toggled on (absent = s7010 parity)
@@ -66,7 +69,13 @@ for k in range(len(sw) - 1):
     if pa != pb or flip_dist_ms(ta) < a.guard_ms or flip_dist_ms(tb) < a.guard_ms: continue
     nvi = bisect.bisect_right(vis, tb) - bisect.bisect_right(vis, ta)
     if pa == 1: rsp += a.inject_ms
-    fr.append(dict(p=pa, T=(tb - ta) / 1e3, run=(tb - ta) / 1e3 - blk, rsp=rsp, rdp=rdp, dpc=dpc, nvi=nvi))
+    fr.append(dict(p=pa, T=(tb - ta) / 1e3, run=(tb - ta) / 1e3 - blk, rsp=rsp, rdp=rdp, dpc=dpc, nvi=nvi, t=(ta - t0) / 1e6, blk=blk))
+if a.gaps > 0:
+    gl = [f for f in fr if f['T'] > a.gaps]
+    print(f"gaps>{a.gaps:.0f}ms: n={len(gl)} sum={sum(f['T'] for f in gl)/1e3:.2f}s  run={sum(f['run'] for f in gl)/1e3:.2f}s blk={sum(f['blk'] for f in gl)/1e3:.2f}s rsp={sum(f['rsp'] for f in gl)/1e3:.2f}s")
+    span = sum(f['T'] for f in fr) / 1e3; gs = sum(f['T'] for f in gl) / 1e3
+    print(f"fps excluding these gaps (s7059: menu/cutscene/mission-end transitions on harness mission cycles): {(len(fr) - len(gl)) / max(1e-9, span - gs):.2f}")
+    for f in gl: print(f"  t={f['t']:7.1f}s T={f['T']:6.1f} run={f['run']:6.1f} blk={f['blk']:6.1f} rsp={f['rsp']:6.1f} rdp={f['rdp']:5.1f} vi={f['nvi']}")
 def pct(v, q): v = sorted(v); return v[min(len(v) - 1, int(q * len(v)))]
 print(f'marks={n} game slot={G} frames kept={len(fr)} (guard {a.guard_ms} ms, skip {a.skip_s} s)')
 print(' arm  n     fps    T_mean  run_mean run_p90  rsp_mean rsp_p90  rdp_mean dpc_mean  P(>=2VI)')

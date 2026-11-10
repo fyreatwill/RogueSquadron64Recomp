@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7058 (2026-11-10).
+Compact operational handoff, as of Session 7059 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7059 21:9 dd6 auto survey: L0/L6/L7/L11 hold ~60 fps in flight, no KLEVEL addition (H-alldone so far, no game build).** Auto-path holds, 0 crash/stall: L0 59.5, L11 59.6, L6 58.8, L7 59.1 fps whole-run, but steady state is 59.6-59.9 once the >150 ms gaps are dropped (L6 59.80, L7 59.93); rsp 6-12.5 ms, P(>=2VI) <=0.01. The gaps (200-320 ms pairs, rsp 0, recur on L6/L7/L16/L17 at 3-9 per 100 s, none on L2/L3/L13-15/L18) are the SAME at dd1 4:3 (L6 15 gaps, 59.85 excl.), so not dd6 cost. xctrace aligned to the TL ring (fit 298 samples-in-stalls vs 86/94 at +-1 s): every stall sits in menuOverlayInit / endMissionCleanup / cinematicLoopBody (209/298 samples polling anyAudioSlotActive, the rest text-glyph build), 25 in runInMissionFrame = scene transitions from harness mission cycles (inits up to 6), i.e. loads, outside G5c's bar. Single-source on the audio-drain share (one trace). Tools: g5e_cost_by_parity.py --gaps (+ anchorless --phases 1), new tools/g5e_stall_split.py. L8, L9, L14, L16, L17, L18 still queued as soaks.
 
 **s7058 21:9 L2/L3 need no level K (H-done, no build).** Same-run tog K0.5/0.6/0.5, 21:9 dd6 bundle, 507 s each, 0 crash/stall: L2 59.5/59.6/59.7 fps, rsp 10.40/10.93/10.42; L3 59.6/59.5/59.7, rsp 9.79/10.61/9.80 (A/A rsp 0.02). K0.5 saves 0.5-0.8 ms rsp but both levels already sit at the 60 fps ceiling, so auto KLEVEL stays `12:0.5,13:0.5`. 21:9 measured: L1-L5, L12, L13; the other 10 levels (not L10 cloud, L15 owner-gated) are queued as auto-path soaks (s7058_219auto_L*).
 
