@@ -187002,3 +187002,26 @@ Queued: scratch/agent/soak_queue/s7099_wallsplit_r1..r3.sh (same recipe; they pr
 Next: fold r1-r3, pool episodes per state per tick (need ~8+ total to separate a 2x rate), and dump the eye trace at every episode.
 New: tools/s7099_wall_split.py, tools/s7099_eye_reversal.py, scratch/s7099/arm.zsh; events.cpp g3c line extended.
 Owner save untouched (NO_SAVE_WRITE from the common script).
+
+## Session 7100 (2026-11-10) — FPS60 near-wall flicker pooled over 4 same-run 30/60 splits: per-tick episode rate 4.1x higher in 60 fps windows (14/15207 vs 2/8853 ticks, p=0.033), and the camera eye zig-zags every tick at 60 fps episodes (H-push selected, two lines)
+Ran: s7099_wallsplit r3 directly (the loop ran r1, r2). Recipe for all four: scratch/s7099/arm.zsh, L6 dd4 16:9, ROGUESQ_FPS60=0 ROGUESQ_G1E_LIMIT=1
+ROGUESQ_G1E_WIN=600 ROGUESQ_G3C_LOG=1, 120+240 s. 0 crash in 4 runs. The queue script was moved to soak_queue/done/s7099_wallsplit_r3_manual.sh.
+Per-run split (tools/s7099_wall_split.py): w6 lim1 2 ep / 3759 ticks, lim2 0 / 2304; r1 6 / 3519 vs 0 / 1717; r2 3 / 4503 vs 2 / 2533;
+r3 3 / 3426 vs 0 / 2299. Pooled: lim1 14 episodes / 15207 ticks (0.92 per 1000), lim2 2 / 8853 (0.23 per 1000), ratio 4.1. Conditional
+binomial under an equal per-tick rate: P(>=14 of 16 in lim1 | p=0.632) = 0.033. Per wall-hug minute: lim1 332.6 s hug vs lim2 308.9 s, P = 0.003.
+Line 1 (rate): meets NEXT.md's H-push bar (>=2x, p<0.05). H-ret (the 60 fps mode only doubles the chances per real second) is refuted:
+the excess holds per sim tick, not just per second.
+Line 2 (eye trace, new tools/s7100_episode_eye.py: eye ticks -0.3..+0.1 s around each episode's first event, reversal = negative dot product
+of consecutive eye steps, class jitter >=2 rev / stop / smooth, baseline = every 0.4 s flight window per lim). lim1 episodes: 12/12 non-smooth,
+10 jitter (rev up to 12 in 24 ticks = the eye flips direction every tick, i.e. it alternates inside/outside the wall); lim2 episodes: 2/2
+"stop" with 0 reversals (dead stop, no zig-zag). Baseline smooth fraction 0.53-0.86 per run/lim, jitter 0.09-0.30 (the classifier fires
+on ordinary flight, so it is not a constant "non-smooth" label). P(12/12 non-smooth | baseline <=0.47) < 1e-4.
+Caveat: the baseline is NOT conditioned on wall-hug (the soaks delete their raw capture), so part of the episode excess may be "the camera
+is touching the wall" rather than "the 60 fps step"; the lim1-only every-tick zig-zag vs the lim2 clean stop is the dt-specific part.
+Reading: a terrain push-out/clamp on the camera eye that is tuned for dt 1/30 overshoots at 1/60: the eye alternates between a pushed-out and
+an inside-the-wall position tick by tick, and the inside ticks are the frames where the near wall is culled (sky through it).
+Rules out: H-ret. Leaves: which code writes the camera position (0x80130C10 is the terrain builder's copy, built by
+buildVisibleTerrainGridAroundCamera from its a0 eye) and how its push-out is stepped.
+Next: name the writer of the camera position that feeds the eye at an episode tick (write watch / call-site trace) and read the clamp code;
+then a fix candidate (scale the push-out by dt, or run the camera collision at the 30 Hz sim tick) with a same-run tog control.
+New: tools/s7100_episode_eye.py. Owner save untouched (NO_SAVE_WRITE from the common script).

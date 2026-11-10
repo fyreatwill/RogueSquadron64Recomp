@@ -1,12 +1,16 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7099 (2026-11-10).
+Compact operational handoff, as of Session 7100 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7100 FPS60 near-wall flicker = H-push (two lines): pooled over 4 same-run 30/60 splits (L6 dd4 16:9, G1E_LIMIT=1 WIN=600), the per-tick episode rate is 4.1x higher in 60 fps windows (14/15207 vs 2/8853 ticks, binomial p=0.033; per wall-hug minute p=0.003), so H-ret (equal per tick) is refuted; and at every 60 fps episode the camera eye zig-zags (10/12 jitter, up to a reversal every tick) while the 2 retail-rate episodes are clean dead stops (tools/s7100_episode_eye.py; baseline flight windows 53-86% smooth).** Caveat: baseline not wall-hug-conditioned.
+- In plain words: at 60 fps the camera's "don't go through the wall" correction overshoots, so the camera flips in and out of the wall frame by frame, and the wall vanishes on the inside frames.
+- Next: name the code that writes the camera position at an episode tick and read its push-out (NEXT.md, slug fps60-wall-camera).
 
 **s7099 FPS60 near-wall flicker, same-run 30/60 split (G1E_LIMIT=1 WIN=600, FPS60=0, L6 dd4 16:9): 2 episodes in 60 fps windows vs 0 at 30, P(0)=0.47 under equal per-tick rates, so NOT yet discriminating; in flight the camera eye (0x80130C10) reverses direction equally often at both rates (0.045/0.062 vs 0.052/0.051, two blocks), so H-osc as a general spring overshoot is refuted.** The g3c per-VI line now logs lim (0x80128EAF), mach time and eye (tools/s7099_wall_split.py, tools/s7099_eye_reversal.py). Locally, episode 1 has the eye jittering ~0.03 back and forth for 0.25 s and episode 2 lands on a dead stop and reversal: push-out-like, single-source, n=2. Three repeats queued (soak_queue/s7099_wallsplit_r1..r3).
 - In plain words: one run is too short to say whether the wall flicker is more common at 60 fps. The camera does not shake in general at 60 fps; something pushes it back at the moment of a flicker.
