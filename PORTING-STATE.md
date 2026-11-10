@@ -185605,3 +185605,23 @@ Unit (NEXT.md s7051, HYPOTHESIS-ID dd6-bundle-219-l12-cost): H-clean / H-visible
 - OWNER-OPT-INS: the s7049 line "9216 looks identical" now notes the L4 21:9 shoreline loss with the sheet.
 - New question from the data: the L4 21:9 band is cap-sensitive, so the default 10240 may itself cut it. NEXT.md: c12288 (POOLX_MAX=6) arm.
 - Rules out: any cap below 10240 as an invisible 21:9 speed-up.
+
+## Session 7053 (2026-11-09) — 21:9 L4 cap saturation: the default WIDEWIN cap 10240 still binds a little; 12288 (POOLX_MAX=6) raises the far-left shoreline 2-5 rows (0.08-0.17 vs ctl 9216 0.26-0.39), H-more-small, no default change
+
+Unit (NEXT.md s7052, HYPOTHESIS-ID dd6-219-l4-cap-saturation): does 10240 itself shave the L4 21:9 far shoreline?
+- No build. scratch/s7053/run.zsh 4 (s7052 recipe: frozen poses 21:9 FPS60 dd6 UNSAFE MELT WIDEWIN, bundle auto K0.6 KEDGE 0.8,12, NOREF,
+  FZ 80..170), arms c10240 / c12288 (+ROGUESQ_DD_POOLX_MAX=6 +CAP=12288) / c9216 control. 3 runs, 0 crash, [s7037] k=0.6 in all,
+  `[s7012] widewin cap n=1 12288,0,0` in the c12288 log (the effective cap; note `[ddbundle] px=` prints ceil(dd) BEFORE the POOLX_MAX clamp,
+  so it reads px=6 in every dd6 arm and is not evidence of the clamp), 7 posefreeze poses each, identical positions.
+- tools/s7032_pose_cull_score.py --base c10240 (k0..k6): c12288 0.17/0.08/0.16/0.08/0.15/0.13/0.11 (0.1-0.2% px); control c9216
+  0.39/0.37/0.38/0.36/0.32/0.28/0.26 = s7052's numbers exactly (replicates); A/A intra 0.00.
+- Band (scratch/s7053/sheet.py, PIL only): c12288 diff bbox x 1-931, y 713-787 = the same far-left shoreline band s7052 found for 9216.
+- Direction (second line, column scan x 10..900 step 10, first row with lum<70 in y 600-900 = top of the far water): mean water-top row
+  c10240 758.1/759.7/777.5/790.3/835.5/877.2 (k0-k5), c12288 -5.3/-2.2/-4.4/-1.9/-4.7/-4.3 rows (higher = more far terrain drawn),
+  c9216 +11.7/+10.6/+10.7/+8.9/+9.5/+7.8 rows (lower). Monotonic in the cap: the L4 21:9 far-left band is pool-limited at 10240 too.
+  (k6 water top is below my scan window, so 0 there means nothing.)
+- Verdict: H-more but small (score below the 0.3 bar set in NEXT.md; ~4 of 1252 rows on the left third). Single run, two measures
+  (scorer + column scan) agree, control fires. No default change (owner-gated, and 12288 costs rsp +0.6 ms at L1 dd8, s7037).
+  Sheet docs/owner_sheet_s7053_l4_219_cap12288.jpg (k0, rows 10240 | 12288 | 9216 | autocontrast diff 10240 vs 12288, H 0.40-0.75).
+  OWNER-OPT-INS: 12288 line added next to the s7052 9216 line, cost marked unmeasured on L4.
+- Rules out: 10240 as saturated on L4 21:9. Open: what 12288 costs on L4 21:9 (NEXT.md: same-run tog3 hold 10240/12288).

@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7052 (2026-11-09).
+Compact operational handoff, as of Session 7053 (2026-11-09).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7053 21:9 L4: the default WIDEWIN cap 10240 still binds a little (H-more-small, no build, no default change).** Frozen poses, arms c10240 / c12288 (POOLX_MAX=6) / c9216 ctl, 3 runs 0 crash: c12288 0.08-0.17 (0.1-0.2% px) in the same far-left shoreline band, ctl c9216 0.26-0.39 (replicates s7052); column scan: far water top rises 2-5 rows at 12288, falls 8-12 at 9216. Sheet docs/owner_sheet_s7053_l4_219_cap12288.jpg, OWNER-OPT-INS line added. Open: 12288 cost on L4 21:9 (NEXT.md).
 
 **s7052 21:9 L12 cost thread CLOSED (H-visible, no build, no default change): WIDEWIN cap 9216 is visible on L4 at 21:9.** Frozen poses 21:9 FPS60 dd6 bundle (K0.6 KEDGE auto), arms c10240 / c9216 / c8192 ctl, 6 runs 0 crash, [s7037] k=0.6 in all, same positions per level. tools/s7032_pose_cull_score.py --base c10240: **L4 c9216 0.39/0.37/0.38/0.36/0.32/0.28/0.26 (0.4% px), ctl c8192 0.74-1.15 (1.0% px), A/A 0.00**; band rows ~716-800 x 1-1007 of 2720x1252 = the far shoreline on the left, lowered and jagged by eye (docs/owner_sheet_s7052_l4_219_cap9216.jpg). L1: c9216 and c8192 both <=0.02 (cap does not bind on L1: no power). 21:9 L12 stays ~59 fps at the bundle (s7048-s7050); both cheap levers (K0.5 s7051, cap 9216 s7052) shave the L4 horizon. OWNER-OPT-INS corrected. Next: does cap 10240 itself shave L4 21:9 (POOLX_MAX=6 12288 arm, NEXT.md).
 

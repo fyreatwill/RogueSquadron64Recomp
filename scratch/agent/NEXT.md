@@ -1,16 +1,17 @@
-# NEXT: does the default WIDEWIN cap 10240 itself shave the L4 21:9 far shoreline? (POOLX_MAX=6 / cap 12288 arm, frozen poses)
-HYPOTHESIS-ID: dd6-219-l4-cap-saturation
-Context: s7052 closed the 21:9 L12 cost thread (~59 fps accepted): cap 9216 lowers the L4 21:9 far-left shoreline (0.26-0.39,
-rows ~716-800), cap 8192 more (0.74-1.15). The band is cap-sensitive on L4 at 21:9, so 10240 (the POOLX clamp 5) may also be cutting it.
-s7037 found 12288 (ROGUESQ_DD_POOLX_MAX=6) bought nothing on the L1 dd8 edge score, but L1 does not bind on the cap (s7052: 8192 = 0.02 on L1).
+# NEXT: what does WIDEWIN cap 12288 (POOLX_MAX=6) cost on L4 at 21:9? (same-run tog3 hold)
+HYPOTHESIS-ID: dd6-219-l4-cap12288-cost
+Context: s7053 showed the default cap 10240 still binds slightly on L4 21:9: 12288 raises the far-left shoreline 2-5 rows
+(score 0.08-0.17, sheet docs/owner_sheet_s7053_l4_219_cap12288.jpg). s7037 measured 12288 at +0.6 ms rsp on L1 dd8 21:9 (no edge gain there).
+Whether it can be offered to the owner for 21:9 depends on the L4 frame rate.
 Hypotheses:
- H-saturated: c12288 vs c10240 <= 0.1 at every L4 pose while c9216 (control, 0.26-0.39 in s7052) fires -> 10240 is enough, note it, pick next rung.
- H-more: c12288 vs c10240 > 0.3 in the same band, ADDING ground -> measure cost (same-run tog3 hold L4 21:9 cap 10240/12288) and offer
-   POOLX_MAX=6 as an owner opt-in for 21:9 (default unchanged without the owner).
- H-unsafe: c12288 crashes / heap or spill failure -> record, no opt-in.
+ H-free: 12288 vs 10240 within ~0.5 fps and P(>=2VI) <= 0.03 in both runs -> offer as a 21:9 opt-in line in OWNER-OPT-INS (default unchanged).
+ H-cliff: 12288 drops >1.5 fps or P(>=2VI) > 0.05 in both runs -> record, no opt-in, cap thread closed at 10240.
+ H-unsafe: crash / heap or spill failure in the 12288 phases -> record.
 Unit (no build):
-1. cp scratch/s7052/run.zsh scratch/s7053/run.zsh; sed s7052->s7053; arms c10240 (CAP=10240) / c12288 (+ROGUESQ_DD_POOLX_MAX=6
-   +ROGUESQ_DD_WIDEWIN_CAP=12288) / c9216 ctl; `zsh scratch/s7053/run.zsh 4` (~15 min). Check [ddbundle] px=6 in the c12288 log.
-2. python3 tools/s7032_pose_cull_score.py scratch/s7053/L4 --base c10240; band bbox with the PIL snippet from s7052 (threshold 24).
-3. Sheet docs/owner_sheet_s7053_*.jpg rows 10240 | 12288 | 9216 | diff, same crop as s7052 (H 0.40-0.75).
+1. cp scratch/s7049/run_hold.zsh scratch/s7054/run_hold.zsh; O -> scratch/s7054; add ROGUESQ_DD_POOLX_MAX=6 to COMMON.
+   Run A: `zsh scratch/s7054/run_hold.zsh L4a 4 10240,12288,10240`; Run B (rotated): `... L4b 4 12288,10240,12288` (~11 min each,
+   one game at a time). Anchor: `[s7012] widewin cap n=3 ... tog3=1` in each log.
+2. Per-phase fps/rsp/P(>=2VI) with the same analysis as s7049 (grep its PORTING-STATE entry for the tl_*.bin command, xor8 split).
+   The duplicated cap in each run gives an A/A for that run.
+3. Update OWNER-OPT-INS 12288 line with the measured cost; ledger + commit.
 Owner-gated items (G5a-G5i, L15 21:9, G1d) still need nothing run; check them first.
