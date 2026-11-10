@@ -186237,3 +186237,25 @@ from the wrong overlay. Read function starts from menu_overlay.txt, not objdump 
 Rules out: flight, physics, particle and banking readings of this block.
 Next: the callers that look misnamed too: allocCraftPreviewEffectObject / initCraftPreviewEffectWithRandom (they own the tile-wipe
 object) and spawnProjectileObject 0x800B42D4 (creates the 0x800CF10C image element).
+
+## Session 7077 (2026-11-10) — menu tile-wipe owners renamed (allocMenuImageTileWipe, startMenuImageTileWipe); menu-overlay misnomer thread closed; L6 boot to flight clean
+
+What ran: the s7076 NEXT.md misnomer check of 0x800C4B90-0x800C4F00 (tools/s7075_fnsum.py --asm, callers from the
+scratch/s7075/menu.asm jal map).
+- 0x800C4DB8 allocCraftPreviewEffectObject: rs_malloc(24), then allocMenuImageTileWipeMesh, result stored at +0x14.
+  Its only caller is 0x800B48E8 in the menu main function. -> allocMenuImageTileWipe.
+- 0x800C4DF0 initCraftPreviewEffectWithRandom: +0xC = rand&1 (the wipe direction tickMenuImageTileWipe reads), +0 = 0,
+  +4/+8 = a2/a3, which the only caller (0x800B59B8) loads from 0x800CF108/0x800CF10C (the target/source image tile
+  arrays), +0x10 = buildMenuImageTileWipeMesh(...). -> startMenuImageTileWipe. H-menu-wipe selected; H-preview
+  (no craft model or preview is touched) and H-projectile refuted.
+- Left alone, because the evidence is thin: loadControllerModel/loadHelmetModel (they fit, from their asset strings), animateCraftSelectFlags
+  (per-item loop calling the main-segment anim-slot functions with slot 5), getCraftStatIfThresholdMet.
+- A grep of menu_overlay.txt for flight-flavoured names (tie/wing/naboo/projectile/particle/hud/craft/player/ship)
+  turns up only craft asset strings and hangar/bridge tables. Those fit, so the menu-overlay misnomer thread is CLOSED.
+Change: scratch/s7077/renames.tsv applied by tools/apply_symbol_renames.py (6 sites in 6 files each, 0 mismatches),
+plus comments on the two symbol-file lines. Controls: fixup_preempt_point.py still reports 6 functions. nm of the rebuilt binary
+shows _allocMenuImageTileWipe/_startMenuImageTileWipe and neither old name. L6 dd1 4:3 NOCAP run (scratch/s7077/run.zsh):
+309 s flight, alive, 0 crash lines, 0 VI stalls. The wipe functions appear in 0/112 host samples, which is expected
+(the wipe runs only on menu transitions; it was also 0 in s7076).
+Next: the main-segment anim-slot family (setPlayerSlotAnimationFlag, samplePlayerAnimChannel, getPlayerSlotFieldAt34),
+which the menu calls with slot 5: is "player" a misnomer?

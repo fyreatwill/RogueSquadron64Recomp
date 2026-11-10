@@ -1,12 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7076 (2026-11-10).
+Compact operational handoff, as of Session 7077 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7077 menu tile-wipe owners renamed (2 renames; menu-overlay misnomer thread closed): allocCraftPreviewEffectObject = allocMenuImageTileWipe (rs_malloc(24), mesh at +0x14), initCraftPreviewEffectWithRandom = startMenuImageTileWipe (dir rand&1 at +0xC, images 0x800CF108/0x800CF10C, mesh build).** Only caller is the menu main function. Preempt control 6, binary has the new names and not the old, L6 dd1 4:3 boot to flight 309 s, 0 crash, 0 VI stall.
 
 **s7076 menu block 0x800B80B4-0x800BE3E8 is pilot-select/settings UI, not flight (20 renames, block closed).** Menu-only callers; bodies: updateNameEntryLetterWheel (was handleNabooFlightInput; charset "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?&"), handleDeletePilotConfirmation (was handleNabooActionButtons; calls clearAccountRecordAndMarkInactive), tickMenuImageTileWipe/buildMenuImageTileWipeMesh (were TieInterceptor physics/update), buildHelmetLayerMatrices, loadRogueLogoRefModels. New tools/apply_symbol_renames.py (collision/stale/comment-safe, per-file recount; controls pass). L6 boot to flight clean. objdump labels in menu.asm can be mission-overlay symbols at shared addresses.
 
@@ -271,7 +273,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 14. **Owner judgement / parked:** FPS60 feel, G3c sheets, QoS default, native hangar geometry,
     rare dd4/dd8 gfx SIGBUS (single-source). Reopen on an owner report or side-effect failure.
 15. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first.
-16. **Misnomer rename (optional, owner reports preempt):** s7076 block 0x800B80B4-0x800BE3E8 closed (letter wheel, delete-pilot, tile wipe; use tools/apply_symbol_renames.py). Next: allocCraftPreviewEffectObject / initCraftPreviewEffectWithRandom / spawnProjectileObject 0x800B42D4. s7072 Debris family -> JPEG decoder; s7073 "format-message" worker family -> async backdrop JPEG loader (enqueueBackdropLoad, tickBackdropLoaderWorker, decodeBackdropTilesToTextures, ...). s7074 menu "ship throttle/text target" names -> screen fade quad family (startMenuScreenFade, tickMenuScreenFade, isMenuScreenFadeActive, endMenuScreenFade, createMenuScreenFadeQuad, allocMenuSolidQuadSprite, allocMenuSceneElement; scratch/s7074/renames.tsv). Next: loadNamedTextureDescriptor 0x800B2D50 (formats "backdrop/%s": a sync backdrop load?), copyMorphTargetVertices 0x800B438C, the "Hud" sprite names 0x800B448C-0x800B4618 inside the menu overlay (NEXT.md).
+16. **Misnomer rename (optional, owner reports preempt): menu overlay CLOSED s7077** (s7072-s7077: JPEG decoder, backdrop loaders, screen fade quad, pilot-select/settings UI, tile wipe alloc/start; flight-flavoured names left in menu_overlay.txt are craft strings and hangar/bridge data, which fit). Use tools/apply_symbol_renames.py + tools/s7075_fnsum.py. Next: main-segment anim-slot family the menu calls with slot 5 (setPlayerSlotAnimationFlag 0x80063CFC, samplePlayerAnimChannel 0x80061F34, getPlayerSlotFieldAt34 0x80063C3C; is "player" right?).
 
 ## Evidence index
 
