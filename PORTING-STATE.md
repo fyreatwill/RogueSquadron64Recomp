@@ -186639,4 +186639,8 @@ Work unit (NEXT.md, slug fixup-layer-statement-census): offline, no game run, no
   functions. These are symbol-file differences between the passes, not fixup edits.
 - Rules out: H-fixup-dup beyond the single s7089 instance; any untagged fixup statement drop. Single-tool evidence
   for the classes, but the positive control is independent (a known defect from s7089).
+- Discrimination: H-fixup-stmt-dup (a fixup pastes or drops untagged retail statements beyond s7089) REFUTES at 0 sites
+  with the positive control firing; H-fixup-tagged-only (every fixup change is a labelled patch) is what this census
+  selects, and it closes the CPU fixup layer. Next discriminator: the same per-address multiset on the RSP layer
+  (build/factor5_ucode vs a pristine RSPRecomp pass), after checking those files are compiled in at all.
 - Durable doc: docs/N64RECOMP-WARNING-CENSUS.md s7090 section. Next: the same census for build/factor5_ucode.
