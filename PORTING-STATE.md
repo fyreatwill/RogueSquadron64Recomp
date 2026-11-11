@@ -187515,5 +187515,7 @@ for lod 0/1/2 (s7112 capture); (4) NEARLOD on-seconds: eye + ring 1 lod 0 on 579
 Rules out: H-coarse (different height source: same bytes), H-interp (same diagonal), H-ponder (ponderation words 0 on the joined eye
 cells), LOD decimation as the cause of the eye-cell near-z loss. Voids: s7113 H-raymiss confirmation and H-gap refutation.
 ORIGIN: no mitigation landed (NEARLOD is an opt-in disable of a retail LOD decimation, refuted as a fix; default retail).
+Verdict: the NEARLOD arm refutes H-coarse (LOD decimation) and closes slug fps60-wall-lod; artifacts scratch/s7114/hsrc_a.txt,
+hsrc_c.txt, parity_b.txt, parity_c.txt. Next discriminator: exact-geometry H-gap vs H-frame vs H-tile.
 Discrimination line: H-coarse/LOD split by the NEARLOD tog arm (control passes, no effect). Next: exact-geometry H-gap on run c
 on-seconds, where drawn == collision by construction (NEXT.md, slug fps60-wall-gap).
