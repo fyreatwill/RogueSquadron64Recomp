@@ -188602,3 +188602,28 @@ Owner sheet docs/owner_sheet_s7148_intro_169.png (tools/s7148_sheet.py; 5 frames
 (24 GB); scratch/s7148/C2.cap (14 GB, from the interrupted earlier attempt, never scored) left in place. Owner save untouched.
 Next: item 37, the same intro at 21:9 in two arms (default vs ROGUESQ_VI_EXACT_ROWS=1): the planet limb is a sharp y target that can
 pixel-qualify EXACT_ROWS, which s7147 could not do on crawl glyphs.
+
+## Session 7149 (2026-11-11) — G3 mission intro cutscene at 21:9: RT64 == angrylion after one fit in every phase (H-equal at 21:9); ROGUESQ_VI_EXACT_ROWS=1 is worse in all phases (H-rows296 favoured, single-source), stays opt-in; item 37 CLOSED
+HYPOTHESIS-ID: g3-intro-219-exact-rows
+Work unit from NEXT.md. Route tools/s7146_arm.zsh (AP ending 64:a), owner recipe FPS60 dd4 ASPECT=21:9, capture 504x216, window
+1360x626 (same as s7141: rect 0,11,469,216, split 117,352), SECS=275 FROM=9750 EVERY=10, owner save read-only. Two runs, one after
+the other, 0 crash both, both hit the 12 GB stream cap: T1 default (8511 presented frames, 478 RAM swaps), T2 ROGUESQ_VI_EXACT_ROWS=1
+(8592 frames). Positive control for the arm: T2 run.log has `[s7147-exact-rows] fb 640x296 -> present rows 294` (T1: 0 lines), so the
+intro fb really was presented at 294 rows in T2. Scorer painted-square control PASS both runs (lags 15 / 20 ms).
+Phases by swap (s7148): space 9860-10350 (50 swaps), sea cinematic 10400-13450 (305/306), flight 13520+ (101/100); best-pframe joins
+(tools/s7148_pfsearch.py); joint fit scratch/s7149/fitrun.py (k=1, e 0.968..1.004 step 0.004, sy -6..8 qpx, sx 0..2 qpx, 12 frames):
+| phase | T1 identity | T1 best (e,sx,sy) | T1 fitted | T2 identity | T2 best (e,sx,sy) | T2 fitted |
+|---|---|---|---|---|---|---|
+| space | 0.0427 | 0.988, 1, 0 | 0.0009 | 0.0536 | 0.984, 1, 2 | 0.0016 |
+| sea cinematic | 0.0247 | 0.984, 2, -2 | 0.0049 | 0.0384 | 0.988, 2, 2 | 0.0077 |
+| flight | 0.0169 | 0.992, 2, 0 | 0.0006 | 0.0272 | 0.992, 2, 2 | 0.0036 |
+21:9 default vs 16:9 (s7148 C3 fitted 0.0012 / 0.0042 / 0.0042): same floor -> H-equal at 21:9 for the intro cutscene.
+EXACT_ROWS: predicted e shift 294/296 = -0.0068 (about 1.7 grid steps). Seen: space -0.004, sea +0.004, flight 0; sy moves +2 qpx in all
+phases instead. The EXACT_ROWS arm is worse in every phase at identity (+0.010..0.014) and after the fit (floor x1.6..x6). So
+H-rows294 (EXACT_ROWS matches the model better) is REFUTED on pixels; H-trade only partly (e/sy do trade, but the floors differ);
+H-rows296 FAVOURED: the default 296-row presentation is closer to angrylion's 640x300 fb. Single-source: one run per arm, cross-run
+(per-swap joins, not phase-gated within one run). The VI-register reading (294 scanned rows, s7147) stands; the pixel test cannot say
+what a real TV shows, only that EXACT_ROWS adds resample error against the model frame. EXACT_ROWS stays opt-in, default unchanged.
+Owner sheet docs/owner_sheet_s7149_intro_219.png (tools/s7148_sheet.py; swaps 10020 space, 11410 / 12430 sea, 13851 flight, T1).
+T1.cap / T2.cap deleted after scoring (24 GB); s7148 C2.cap (14 GB unscored leftover) deleted at session start. Owner save untouched.
+Next: item 38, the in-flight pause menu at 21:9 (2D overlay on the 1024 fb; matched only at 4:3 so far, s6778).

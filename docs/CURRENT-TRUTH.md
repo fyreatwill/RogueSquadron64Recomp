@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7148 (2026-11-11).
+Compact operational handoff, as of Session 7149 (2026-11-11).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -316,7 +316,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 34. **G3 text crawl 21:9: CLOSED s7146 (H-equal).** Route = s7146_arm.zsh with AP ending 64:a (crawl swaps 5200+). Crawl = 640x300 fb (cimg w640, 0 texrects): RECT_ASPECT=0 arm identical. One fit (x +0.25, y 0, yscale 0.992) + x-scale 1.0025: frac 0.082 -> 0.004-0.008. Sheet docs/owner_sheet_s7146_crawl_219.png.
 35. **640-fb crawl x-scale 1.0025: CLOSED s7147 (noise).** VI scans exactly 640 cols (xScale 0x400, hStart 108..748) and RT64 boxes 640 in the 1024 fb's window span; a fine-grid fit (tools/s7147_joint_fit.py) gives 1.000 on two new runs, 1.0025 only on s7146 T1. Side: RT64 fbSize() shows 2 rows more than the VI (296 vs 294, 336 vs 334); opt-in ROGUESQ_VI_EXACT_ROWS=1, register-correct, pixel-unqualified.
 36. **G3 mission intro cutscene 16:9: CLOSED s7148 (H-equal).** Route s7146_arm FROM=9750 EVERY=10 SECS=275 DL=150 DU=115 (space 9860-10350, sea cinematic 10400-13450, flight 13520+). After one fit (e 0.980-0.984) all phases <= 0.0042. Score with tools/s7148_pfsearch.py (per-swap frame join; the global-lag join fakes 0.25 on fast motion); s7141_post now rebuilds a stale idx. Sheet docs/owner_sheet_s7148_intro_169.png.
-37. **(next, NEXT.md) intro cutscene at 21:9, arms default vs ROGUESQ_VI_EXACT_ROWS=1:** pixel-qualify EXACT_ROWS on the planet limb (fitted e should move toward 1.0 if 294 rows is right).
+37. **Intro cutscene 21:9 + ROGUESQ_VI_EXACT_ROWS: CLOSED s7149 (H-equal at 21:9; EXACT_ROWS stays opt-in, not promoted).** Default arm after one fit: space 0.0009, sea 0.0049, flight 0.0006 (16:9: 0.0012/0.0042/0.0042). EXACT_ROWS=1 (fired 640x296 -> 294 rows) is worse in all 3 phases: identity 0.043/0.025/0.017 -> 0.054/0.038/0.027, fitted floor 0.0009/0.0049/0.0006 -> 0.0016/0.0077/0.0036; best e moves only on space (0.988 -> 0.984). One run per arm (single-source). Sheet docs/owner_sheet_s7149_intro_219.png.
+38. **(next, NEXT.md) G3 in-flight pause menu at 21:9 (owner recipe):** start press in flight after the intro, RT64 vs angrylion on the overlay text boxes (RECT_ASPECT path, s7142).
 
 ## Evidence index
 
