@@ -5,7 +5,7 @@ usage: s7146_xscale.py raw aldir frames.csv sx sy e "name=x0:y0:x1:y1;..." [nsam
 import sys, os, csv, statistics as S, importlib.util
 sp = importlib.util.spec_from_file_location('f', os.path.join(os.path.dirname(os.path.abspath(__file__)), 's7122_fidelity.py')); F = importlib.util.module_from_spec(sp); sp.loader.exec_module(F)
 from PIL import Image
-raw = F.Raw(sys.argv[1]); ald = sys.argv[2]; R = (0, 11, 469, 216); W, H = 469, 205; Q = 4
+raw = F.Raw(sys.argv[1]); ald = sys.argv[2]; R = tuple(map(int, os.environ.get('XS_RECT', '0,11,469,216').split(','))); W, H = R[2] - R[0], R[3] - R[1]; Q = 4  # s7156: XS_RECT (16:9 = 0,9,369,216)
 rows = [r for r in csv.DictReader(open(sys.argv[3])) if int(r['pframe']) > 0]
 n = int(sys.argv[8]) if len(sys.argv) > 8 else 24; rows = rows[::max(1, len(rows) // n)][:n]
 sx, sy, e = float(sys.argv[4]), float(sys.argv[5]), float(sys.argv[6]); cx = W / 2 * Q

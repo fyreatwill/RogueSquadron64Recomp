@@ -188836,3 +188836,42 @@ pillars black; level-select/craft sides == angrylion) and refutes H-rect with th
 1.333x widening the fix removes (a same-run positive control for the k instrument). Closes item 35. New tools/s7155_sheet.py, owner
 sheet docs/owner_sheet_s7155_title_menus_169.png (RT64 default | RECT_ASPECT=0 | angrylion). .cap streams and replay dirs deleted.
 CURRENT-TRUTH items 31-35 merged into one line (58.0 KB). Next: logo recede + text crawl at 16:9 (scored at 21:9 only).
+
+## Session 7156 (2026-11-11) — G3 STAR WARS logo recede, chapter title and text crawl at 16:9: RT64 == angrylion after the standard fit (H-equal); crawl x-scale minimum exactly 1.000 at 16:9 (the 21:9 1.0025 term is 21:9-only, H-crawl-wide refuted); 640 fb fills the 16:9 width (H-strip refuted); item 32 closed, G3 menu/cutscene matrix complete
+HYPOTHESIS-ID: g3-logo-crawl-169
+Work unit from NEXT.md (item 32). No maintenance (58.0 KB < 60000). No new soak results. Owner save untouched (no SAVE_FROM, NO_SAVE_WRITE).
+tools/s7146_arm.zsh RDIR=s7156 ASP=16:9 SECS=112 FROM=4150 EVERY=5 DL=69 DU=38 CW=384 CH=216, s6995 route ending 64:a, owner recipe FPS60 dd4.
+C1 default, C2 ROGUESQ_RECT_ASPECT=0, one at a time. 0 crash both (7.9 / 7.6 GB streams, deleted after post). tools/s7152_post.zsh crop
+0,9,369,216 split 46,322: pre-fill replay accepted on 481/481 and 458/458 swaps; painted-square control PASS both.
+Phases from an angrylion contact sheet (scratch/s7156/phase.png): hangar departure 4150-4630 (cimg w796), then cimg w640 from 4635: space
+pan, STAR WARS logo 4650-5150, "Chapter IV / DARK EMPIRE" 5200-5550, crawl body 5600-6550. tools/s7146_opcensus.py on C1 4700/5400/5900/6400:
+cimg w640, scissor 0,0-640,300, 164-558 tri0F, 0 texrects (same stream shape as 21:9 s7146), so RECT_ASPECT has nothing to act on.
+CAPTURE TAIL TRAP: the presented capture ends before the stream: C1 swaps >=6380 and C2 >=6270 all join to the last raw frame (pframe
+clamped). The first sheet showed it (swap 6400 RT64 a line behind angrylion). Crawl fits below use only pframe < max-2 (C1 156, C2 134 frames).
+s7146's 21:9 run had only 5/263 clamped (from 6590) and its x-scale re-run without them still picks 1.0025 (centre/left/right 0.0067/0.0033/
+0.0042 vs 0.0096/0.0197/0.0207 at 1.000), so that result stands.
+Fits, tools/s7143_affine.py (fitted, nominal in brackets):
+| arm/phase | fit (sx,sy,e) | centre 66:0:303:207 | left 0:66 | right 303:369 | near rows 150-207 |
+|---|---|---|---|---|---|
+| C1 hangar (93) | 1,-2,0.984 | 0.0007 (0.017) | 0.0001 | 0.0014 | 0.0001 |
+| C1 logo (101) | 1,-4,0.976 | 0.0041 (0.025) | 0.0001 | 0.0003 | 0.0002 |
+| C2 logo | 1,-4,0.976 | 0.0034 (0.019) | 0.0001 | 0.0003 | 0.0002 |
+| C1 chapter title (71) | 1,-2,0.984 | 0.0010 (0.019) | 0.0001 | 0.0002 | 0.0015 (0.042) |
+| C1 crawl valid | 1,0,0.988 | 0.0202 (0.122) | 0.0215 | 0.0158 | 0.0575 (0.239) |
+| C2 crawl valid | 1,-2,0.984 | 0.0131 (0.130) | 0.0087 | 0.0057 | 0.0218 (0.241) |
+Width, two lines, both arms: (a) tools/s7146_xscale.py (new XS_RECT env, default unchanged) at (1,-2,0.984): crawl minimum exactly 1.000
+(C1 centre/left/right/near 0.0139/0.0087/0.0075/0.0225; 1.0025 0.0164/0.0115/0.0187/0.0329; 0.995 and 1.005 2-5x worse; C2 the same shape);
+dx sweep minimum at 0. Same-run hangar (796 fb) 1.000 too. (b) tools/s7154_kgrid.py crawl k=1 best on centre/near/wide (0.0040/0.0116/0.0087
+C1, 0.0049/0.0290/0.0105 C2); the k=1.333 positive control 0.075-0.29; logo k=1 0.0121 (best 1.005 0.0117, not distinct, as the s7155 title
+logo) and 0.0083. So at 16:9 the 640x300 fb is presented at the width angrylion gives it; s7146's 0.25% is a 21:9 presentation term only
+(sub-pixel, open low-priority lead: 640 -> 21:9 output scale in RT64 VI mapping).
+Near-row residual = capture timing: scratch/s7156/lagnb.py scores each crawl frame against presented frames pframe-2..+2 at the fit; near
+box median at the join 0.0218 / 0.0575, best neighbour 0.0057 / 0.0192 (C2 / C1; C1 prefers +2); centre 0.009 -> 0.006-0.007. The near rows
+scroll fastest, so a 1-2 frame join error dominates there. C1 vs C2 differ by join lag (post lag 10 vs 15 ms), not RECT_ASPECT.
+Pillars: the 640 fb spans the whole 16:9 crop (sides carry crawl text, nominal 0.10) and those side boxes fit angrylion at 0.006-0.02; logo
+and title sides 0.0001-0.0003 (black both). H-strip refuted.
+Verdict line: this selects H-equal for logo, chapter title and crawl at 16:9, refutes H-crawl-wide (x-scale 1.000, two instruments,
+1.333 control fires) and H-strip; RECT_ASPECT inert (0 texrects, both arms at the floor). Closes item 32: the G3 menu/cutscene matrix
+is complete at 21:9 and 16:9. New tools/s7156_sheet.py (s7146_sheet with SHEET_RECT/SHEET_LABEL), owner sheet
+docs/owner_sheet_s7156_logo_crawl_169.png (RT64 | angrylion: logo 4750, chapter title 5450, crawl 5900, 6300).
+Next: G3 in-flight owner-recipe fidelity on the levels not yet scored (L1/L4/L6 at 16:9 and L6/L15 at 21:9 are done).

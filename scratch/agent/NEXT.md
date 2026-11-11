@@ -1,19 +1,19 @@
-# NEXT: G3 STAR WARS logo recede + opening text crawl at 16:9 vs angrylion (CURRENT-TRUTH item 32)
-HYPOTHESIS-ID: g3-logo-crawl-169
-State (s7155): every menu screen is H-equal at 21:9 and 16:9 (title, SELECT GAME, level select, craft, OPTIONS, PASSCODES, debrief,
-pause, hangar). Logo recede (s7145) and text crawl (s7146, 640x300 fb triangles) were scored at 21:9 only. 16:9 = owner TV
-(fb 796 wide, crop 0,9,369,216, 4:3 band x 66..303).
-Hypotheses: H-equal (fit <= ~0.005 on band boxes, crawl x-scale ~1.0025 as 21:9 = presentation noise); H-crawl-wide (the 640 fb is
-scaled/positioned differently at 16:9: fitted x-scale or offset beyond the 21:9 term); H-strip (non-black pillars beside the 640 fb).
-Commands (one game at a time; ~24 GB disk free at s7155, delete .cap after post):
- C1: env RDIR=s7156 ASP=16:9 SECS=112 FROM=4150 EVERY=5 DL=69 DU=38 CW=384 CH=216 AP=<s7146 route: s6995 presses ending 64:a, i.e.
-     6:start,11:start,16:start,21:start,25:left,27:start,33:start,40:right,46:left,52:right,58:left,64:a> zsh tools/s7146_arm.zsh C1 ""
- C2: same + "ROGUESQ_RECT_ASPECT=0" (rule 13).
-Post: zsh tools/s7152_post.zsh scratch/s7156 C1 0,9,369,216 46,322; check which dir is valid with a phase sheet (s7155 inline sheet:
- thumbnails every 4th swap) - crawl fb is 640x300, try *r first, *n if magenta. Join tools/s7148_pfsearch.py, split logo / chapter title /
- crawl by swap, fit tools/s7143_affine.py box 66:4:303:200 (AFF_SX 0..3 AFF_SY -8..2 AFF_E 1..0.96 for the logo, as s7145), width term
- tools/s7154_kmd.py + 1.333x control tools/s7154_kgrid.py (env CROP=0,9,369,216 ALSUF=r|n, run from scratch/s7156). Pillars: s7155
- scratch/s7155/pill.py pattern (PIL only, no numpy on this host).
-Discriminating outcomes: band boxes at floor + k 1.000 + pillars 0 -> H-equal (closes the 16:9 menu/cutscene matrix; then next open
- G-ladder rung); fitted x-scale/offset off by >1% vs 21:9 -> H-crawl-wide; RT64-only pillar pixels -> H-strip.
-Owner save rule: no SAVE_FROM; NO_SAVE_WRITE stays. CURRENT-TRUTH 58.0 KB (<60000).
+# NEXT: G3 in-flight owner-recipe fidelity on unscored levels (CURRENT-TRUTH item 33)
+HYPOTHESIS-ID: g3-owner-recipe-levels
+State (s7156): the G3 menu/cutscene matrix is complete at 21:9 and 16:9 (H-equal everywhere). In flight at the owner recipe (FPS60 dd4
+16:9), only L1, L4 (s7131) and L6 (s7125) are scored against angrylion; at 21:9, L6 and L15 (s7141). Remaining: L0, L2, L3, L5, L7-L18
+(L10 = cloud level, no terrain grid: still a valid render check). Take two per iteration, most distinct first: L2 (G3b spike-report level)
+and L5 (Jade Moon), then L10, L7, L12 (horizon-cut level), L13 ...
+Hypotheses: H-equal (frac>40 median at the ~0.01-0.03 floor, outliers = scorer frame-match artefacts, as L1/L4/L6); H-level (a level-specific
+material/combiner/texture path RT64 draws differently: a persistent region in the same screen place over many frames); H-dd (diffs only in
+extended dd>1 cells, i.e. far rows, while near rows are at the floor).
+Commands (one game at a time; ~29 GB free at s7156, each stream ~12.6 GB, delete the .cap right after the replay):
+ tools/s7131_arm.zsh hardcodes R=scratch/s7131: add an RDIR env (default s7131) first, as s7146_arm did.
+ L2: env RDIR=s7157 zsh tools/s7131_arm.zsh 2 L2 "ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=7500 ROGUESQ_G5B_FRAME_MAX_MB=12000"
+ Post: zsh tools/s7141_post.zsh scratch/s7157 L2 0,9,369,216 46,322 ; then rm scratch/s7157/L2.cap ; then the same for L5.
+ Check FROM lands in flight per level (s7131 used 7500 for L1/L4; look at the run's swap count vs the flight start in run.log). Drop any
+ swap whose pframe is clamped to the last raw frame (s7156 capture-tail trap). For outliers, s7143_affine fit + by-eye RT64|angrylion
+ sheet (tools/s7156_sheet.py, SHEET_RECT=0,9,369,216 SHEET_LABEL=16:9).
+Discriminating outcomes: floor + only frame-match outliers -> H-equal for that level; a fixed-place region repeating over frames -> H-level
+(op-census the swap with tools/s7146_opcensus.py, name the op); excess confined to far rows -> H-dd.
+Owner save rule: no SAVE_FROM; NO_SAVE_WRITE stays. CURRENT-TRUTH 58.4 KB (<60000).
