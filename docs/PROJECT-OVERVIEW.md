@@ -11465,3 +11465,24 @@ bolts, buildings), the 6 longest clamp-off are knife lines. Sheet docs/owner_she
 **s7094 RSP runtime DMA + cop0 model vs hardware CLOSED; one live off-by-one FIXED.** Host differential (tools/s7094_dma_test, `zsh run.sh`): live rsp.hpp DMA vs cxd4 su.c verbatim, canonical shape 0/80,000 bad (fast+slow, rd+wr), every unmodelled feature (mem&7, len rounding, count/skip, 4 KB wrap) differs, len2 mutant fails. Live census (ROGUESQ_S7094_DMASHAPE=1, src/rsp/s7094_dma_shape.cpp; `python3 tools/s7094_dma_census.py build/rs64_s7094.log`, exit 1 = defect shape): 83 M DMAs on L6, the ucode never uses an unmodelled shape; the one defect was run_task's audio ucode_data staging passing the size (0x800) as SP_RD_LEN, copying 0x801 bytes. Fixed to size-1 in librecomp rsp.cpp (ROGUESQ_S7094_UCODE_DATA_OFF1=1 = old); L6 flight 310 s clean, census 0 defects. cop0 constant-0 reads consistent with synchronous DMA and the completion-wins yield model (single-source code-read).
 - In plain words: the way the port copies data in and out of the sound/graphics processor now matches the hardware byte for byte; one copy was a byte too long and is fixed.
 
+
+
+## Migrated from CURRENT-TRUTH (s7121)
+
+Near-wall flicker headline bullets s7103-s7114 (summarised in CURRENT-TRUTH item 26):
+
+**s7114:** y-clamp sampler and eye-cell TriGen read identical bytes; LOD decimation flags (mesh+0x14) make drawn leave collision by up to ~1 u, but the NEARLOD=16 tog arm (lod 0 control 5794/5794) leaves losses 22/21: H-coarse refuted; s7113 rebuild biased (+0.07..+0.52).
+
+**s7112:** the F5 ucode emits every visible eye-cell triangle (63/9118 near-crossing front-visible dropped, no excess on loss swaps; ROGUESQ_S7112_TRI + tools/s7112_trireject.py): H-reject refuted, the near cut is correct clipping.
+
+**s7111:** render eye == pushed eye (10294/10294, 9981/9981); a margin re-push clearing all corners (CAMFIX=tog1 PUSHK=1.5, tools/apply_s7111_camfixk.py) leaves losses 29/22 (ctl 23/28): H-postmove, H-margin refuted.
+
+**s7109:** at retail settings (FPS60 off, dd1, 4:3) the eye cell is near-clipped as often as at the owner recipe (17.4 vs 15.9 / hug-min; docs/owner_sheet_s7109_retail_nearclip.png): game behaviour, not an opt-in.
+
+**s7108:** push-out corner width is the retail pixel-aspect term (k 1.208 at 16:9 and 4:3); CAMWIDE=tog widening leaves losses 27/22; losses also occur at the 30 fps rate (H-aspect, H-neardist, H-tick refuted). Tools s7108_split.py, apply_s7108_camwide.py.
+
+**s7107:** per-triangle source-cell tags (ROGUESQ_S7107_TAG=1, tools/s7107_painter.py / s7107_losscan.py / s7107_sheet.py): on the dropped swap the eye cell has 1 tri instead of 4, presented frames show a straight diagonal cut (docs/owner_sheet_s7107_nearclip_a.png, _b.png).
+
+**s7106:** the F5 ucode does emit the 9 near-eye cells' TRI_GENs as screen-covering tris on 8/10 episode swaps (H-clip refuted; src/rsp/s7106_rsptri.cpp, ROGUESQ_S7106_RSPTRI).
+
+**s7103:** re-pushing all 4 near corners at push-out exit (ROGUESQ_S7103_CAMFIX) leaves the episode rate unchanged (5/2714 off vs 5/3738 on ticks); s7102 H-fight/H-squeeze refuted.

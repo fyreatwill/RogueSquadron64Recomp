@@ -1,15 +1,16 @@
-# NEXT: classify the 2-16 u one-tick flight-camera steps seen in s7120 (both arms), offline first
-HYPOTHESIS-ID: fps60-cam-step
-Context (s7120): s7119_hop --lag on scratch/s7115/push_{m,n,o,p}.txt finds 21 >0.5 u jerk events in open flight (no need, no lift in the
-window): t/t+1 pairs, 2.0-16.3 u, >= 17 ticks after any lift. These are single-tick steps of the presented eye Y. If the owner sees them,
-they are hops far bigger than anything the lift does.
-Hypotheses:
-  H-cut: a legitimate camera cut (respawn, mode change, cutscene/pause camera, debrief): X and Z also jump, cam id or phase changes nearby,
-         and retail 30 fps runs show the same steps.
-  H-snap: an FPS60 camera snap in steady flight: only Y (or the chase offset) steps, the craft position is smooth, and the steps are absent
-         at FPS60=0.
-  H-log: a parse or join artefact (an rx line paired with the wrong nl, a cam id switch): the steps vanish when rx is joined by m.
-Discriminator (offline, no build): for each event m, print 6 ticks of the rx pos x,y,z, the craft position (if the push log carries it;
-  grep the line types first: `cut -c1-3 push_n.txt | sort | uniq -c`), cam id, and the nearest losscan/phase marker. Then grep the m in sh_X.txt
-  and the run's VI-phase log for a scene change. Positive control: --inject at a known tick must show up as a Y-only step.
-If H-snap survives: one game pair (FPS60=1 vs 0, same L6 recipe, no lift) counting the steps per 1e3 ticks.
+# NEXT: G3 in-flight render fidelity at RETAIL settings: RT64 presented frames vs angrylion on the same RDP stream
+HYPOTHESIS-ID: g3-flight-fidelity
+Why: every owner-facing G5 item now waits on the owner's look (CURRENT-TRUTH items 1-12, 26). Ladder 3c G3 "in-flight frame diffs against
+retail framebuffers" has only been done for the dd4 drop question (s7098, H-stream). A whole-frame fidelity diff at retail settings has not.
+Recipe: L1 and L6, dd1, 4:3, FPS60 off, no opt-ins except defaults (CULL_SPIKE is default on: also run one arm with ROGUESQ_CULL_SPIKE=0 so
+the diff is vs the true retail stream). Capture with the s7098 pair: ROGUESQ_G5B_FRAME (forwarded RDP stream + RAM every N swaps) and the
+presented window (scratch/s6894/g5b_capture, arm script pattern scratch/s7115/arm.zsh). Replay the dumped frames with
+tools/angrylion_replay (stock 8 MB core is fine at dd1; build16.sh only for dd>1). Grep PORTING-STATE s7098 for the exact env/commands.
+Hypotheses (per matched frame, angrylion vs RT64 downscaled to 320x240):
+  H-equal   : residual is filtering/AA/resolution noise only (mean |diff| small, no connected region > ~0.5% of frame above 40 levels).
+  H-combiner: systematic colour/alpha difference on specific materials (water, sky, cockpit/HUD, explosions): same region every frame.
+  H-geom    : geometry in angrylion missing or extra in RT64 (connected regions with edge structure; check s7098 was dd4-only).
+  H-fog     : depth/fog band difference along the horizon (row-profile of the diff).
+Discriminator: per-frame connected-region table (area, bbox, mean diff, dominant colour both sides), pooled across >=20 frames per level.
+Positive control: paint a 20x20 block into one angrylion frame -> the scorer must report exactly one region of 400 px at that bbox.
+Output: owner sheet docs/owner_sheet_s7122_fidelity.png (angrylion | RT64 | diff) for the worst 4 frames, and a classified table.

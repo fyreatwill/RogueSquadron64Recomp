@@ -187722,3 +187722,28 @@ Rules out: H-partial/H-none for the opt-in; lift release as a hop source.
 Open: what the 2-16 u one-tick flight-camera steps are (a legitimate camera cut or respawn, vs an FPS60 camera snap). Next: NEXT.md (slug
 fps60-cam-step), offline on the existing push logs first.
 Item 26 is DONE and closes on the owner's look (OWNER-OPT-INS updated).
+
+## Session 7121 (2026-11-10) — fps60-cam-step: the s7120 "2-16 u one-tick flight-camera steps" are a log-join artefact (H-log): 19/21 span a switch between camera objects, 2 are a static non-flight cam cut; the flight cam 80138458 has 0 steps >0.5 u over 4 runs, and the stray flight tick between the cut cams is never presented
+HYPOTHESIS-ID: fps60-cam-step (closed)
+What ran: offline only, no build, no game run. New tools/s7121_camstep.py on scratch/s7115/push_{m,n,o,p}.txt (L6 dd4 16:9 FPS60,
+NEARLIFT=tog1 NEARK=1.6). It joins nl+rx for the flight cam 80138458 ONLY, attaches the chase line (ch: pos = previous tick's rx pos, tgt),
+lists other cam ids active within +-0.25 s, and classifies each |d2Y| > 0.5 open-flight event (need = lift = 0 on all 4 window ticks) as
+H-cut (X/Z/tgt also jump or another cam nearby), H-snap (Y-only, the chase consumes it next tick), or H-log (the rx step is not in the next
+tick's chase input).
+Positive controls (same file, push_n): --inject 4000:3 (rx Y only) -> 3 events, all H-log; --inject 4000:3 --inject-chase (step also in the
+next tick's ch.pos, what a real snap looks like) -> 3 events, all H-snap. The detector fires and both labels are reachable.
+Result: flight cam 80138458, ticks scored 8800/8392/7972/6612: 0 events > 0.5 u in every run. At 0.3 u: 3 small H-snap events in run n
+(0.37-0.45 u), 0 in m, o and p.
+Why s7119/s7120 saw 21: tools/s7119_hop.py joined nl+rx for whichever cam logged them. Those lines come from 3 cam objects (rx counts in
+run n: 458 8411, 930 545, A28 393). Re-joining its 21 events, 19/21 windows mix cams (458 -> A28, A28 -> 458 -> 930) and the step is the
+Y difference between two different camera objects. The other 2 are inside cam A28 (static Y -10.66, then -7.59: a cut within a scripted view).
+Second line, the presented camera (bv cam per swap): the sequence is always flight 458 -> A28 for ~1.6-6.1 s -> ONE 458 rx tick -> 930 for
+~2 s -> 458 (the scripted death/respawn-style cut sequence the autopilot hits at walls). Around every such transition in m/n/p the swaps
+present A28, then 930 (or the 800B1910 UI cam for a menu interlude), and never the stray 458 tick. So nothing reaches the screen: these
+are legitimate camera cuts (H-cut at the presented level), and the flight camera never steps.
+Re-scored s7119_hop with the new --cam 80138458 filter (the default is unchanged, so old outputs reproduce): verdict H-smooth in all 4 runs
+(p99 ratio 0.85/0.48/0.52/0.39). Pooled >1.0 u jerks per 1e3 ticks off 0.33 vs on 0.00 (was 0.76 vs 1.06 mixed), >0.5 2.71 vs 0.47.
+The s7120 sentence "the lift arm has more >1.0 jerks" was the artefact; with the lift the flight camera is strictly smoother.
+Rules out: H-snap (no FPS60 camera snap in steady flight), H-cut as a visible defect. Superseded: s7120 "the flight camera sometimes jumps
+2-16 units in one frame".
+Item 26 stays DONE, closes on the owner's look. Next: G3 render fidelity rung (NEXT.md).

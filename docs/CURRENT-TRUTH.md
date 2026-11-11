@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7120 (2026-11-10).
+Compact operational handoff, as of Session 7121 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -9,29 +9,14 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 ## Headline
 
 **s7120 near-wall NEARLIFT=1 NEARK=1.6 REPLICATED against the retail camera in the same runs (3 new runs n-p + m, L6 dd4 16:9 FPS60, tog1 per mach second): edge-excluded steady wall losses off/on 42/2 over ~24.8k swaps per arm (z -6.0, 95% removed; per run 19/0, 10/0, 10/1, m 3/1).** H-fix (pre-registered >=75%). Off-arm control (>=10 pooled losses) passes. Hop: H-smooth in every run (on/off wall-jerk p99 ratio 0.40-0.52; injected 1 u step caught each run). The on arm has more >0.5 u jerks in open-flight windows (17 vs 4). New `--lag` in tools/s7119_hop.py: all 17 are >=17 ticks after any lift, in pairs, and 2-16 u in size (a one-tick camera step), while the lift never exceeds 1.31 u. So the lift does not cause them (H-release refuted, two lines).
-- In plain words: with the lift on, 95% of the wall flashes are gone in the same runs, and the camera does not hop. The flight camera does sometimes jump 2-16 units in a single frame. That has nothing to do with the lift.
-- Next: classify those one-tick camera steps (cut / respawn / FPS60 snap) (NEXT.md, slug fps60-cam-step). Item 26 closes on the owner's look.
+- In plain words: with the lift on, 95% of the wall flashes are gone in the same runs, and the camera does not hop.
+- **s7121:** the "2-16 u one-tick camera steps" s7120 reported were a log-join artefact. tools/s7119_hop.py mixed 3 camera objects. The flight cam 80138458 has 0 steps >0.5 u over 4 runs (tools/s7121_camstep.py, with an inject control for both labels), and the stray flight tick between scripted cut cams (A28 -> 930) is never presented (bv per swap). Re-scored with `s7119_hop.py --cam 80138458`: >1.0 u jerks off 0.33 vs on 0.00 per 1e3 ticks.
+- Next: G3 render-fidelity rung (NEXT.md, slug g3-flight-fidelity). Item 26 closes on the owner's look.
 
 **s7119/s7118:** no hop at k1.6 vs the retail camera, same run (wall jerk p99 0.25 vs 0.33 u; sheet docs/owner_sheet_s7119_nearlift_hop.png); NEARK=1.6 selected H-margin (k1.0/k1.6 steady losses 13/1, 5 runs; tools/s7118_edge.py).
 
 **s7116/s7117:** NEARLIFT replicates (4 runs, losses 83/31, z -4.9; removes the pierce class); a swap presents the previous tick's camera (k-1 join, single-source); residual losses had terrain at 1.0-1.5 near (tools/s7116_phase.py, tools/s7117_tickjoin.py).
 **s7115:** exact eye-tile geometry refutes H-gap; the loss is terrain inside the render near pyramid the retail push-out ray test cannot see from inside (H-probe, confirmed s7116); tools/s7115_neargap.py, tools/apply_s7115_nearlift.py.
-
-**s7114:** y-clamp sampler and eye-cell TriGen read identical bytes; LOD decimation flags (mesh+0x14) make drawn leave collision by up to ~1 u, but the NEARLOD=16 tog arm (lod 0 control 5794/5794) leaves losses 22/21: H-coarse refuted; s7113 rebuild biased (+0.07..+0.52).
-
-**s7112:** the F5 ucode emits every visible eye-cell triangle (63/9118 near-crossing front-visible dropped, no excess on loss swaps; ROGUESQ_S7112_TRI + tools/s7112_trireject.py): H-reject refuted, the near cut is correct clipping.
-
-**s7111:** render eye == pushed eye (10294/10294, 9981/9981); a margin re-push clearing all corners (CAMFIX=tog1 PUSHK=1.5, tools/apply_s7111_camfixk.py) leaves losses 29/22 (ctl 23/28): H-postmove, H-margin refuted.
-
-**s7109:** at retail settings (FPS60 off, dd1, 4:3) the eye cell is near-clipped as often as at the owner recipe (17.4 vs 15.9 / hug-min; docs/owner_sheet_s7109_retail_nearclip.png): game behaviour, not an opt-in.
-
-**s7108:** push-out corner width is the retail pixel-aspect term (k 1.208 at 16:9 and 4:3); CAMWIDE=tog widening leaves losses 27/22; losses also occur at the 30 fps rate (H-aspect, H-neardist, H-tick refuted). Tools s7108_split.py, apply_s7108_camwide.py.
-
-**s7107:** per-triangle source-cell tags (ROGUESQ_S7107_TAG=1, tools/s7107_painter.py / s7107_losscan.py / s7107_sheet.py): on the dropped swap the eye cell has 1 tri instead of 4, presented frames show a straight diagonal cut (docs/owner_sheet_s7107_nearclip_a.png, _b.png).
-
-**s7106:** the F5 ucode does emit the 9 near-eye cells' TRI_GENs as screen-covering tris on 8/10 episode swaps (H-clip refuted; src/rsp/s7106_rsptri.cpp, ROGUESQ_S7106_RSPTRI).
-
-**s7103:** re-pushing all 4 near corners at push-out exit (ROGUESQ_S7103_CAMFIX) leaves the episode rate unchanged (5/2714 off vs 5/3738 on ticks); s7102 H-fight/H-squeeze refuted.
 
 **s7098 G5b: the big in-flight terrain drops RT64 presents are already in the RDP stream (H-stream, two lines); they are a near-wall flicker that follows FPS60, not draw distance (single-run arms).** One L6 dd4 16:9 owner-recipe run captured the forwarded stream (ROGUESQ_G5B_FRAME, RAM every 20 swaps) and the presented window (g5b_capture) together. angrylion needs a 16 MB core for dd>1 (stock RDRAM_MAX_SIZE 8 MB overflows rdram_hidden[] on cimg 0x98AA00; tools/angrylion_replay/build16.sh). (1) 316 own-RAM flight swaps, angrylion vs presented (tools/s7098_rt64_vs_al.py, lag 15 ms): floor 0.043, 1/316 over threshold, KILL_AREA=3000 control 16/16 flagged. (2) All 70 g5b_drops transients, candidate swaps within 100 ms replayed (tools/s7098_transients.py): 53 are matched by a swap's hardware render. The 10 large ones (T 0.12-0.71) the scorer called RT64-only look identical to their angrylion render by eye (scratch/s7098/rt64_a.png, rt64_b.png; the gap is a HUD-position offset only). Every large event is the near canyon wall missing for 1-3 frames while the camera hugs or enters it, sky showing through. Arms on L6 (tools/s7098_wall_flicker.py, episodes per run): dd4 FPS60 6 and 4; CULL_SPIKE=tog splits 1 on / 3 off episodes (cull refuted); dd4 FPS60=0 gives 0 in 130 s of wall-hug; dd1 FPS60 gives 2 (same picture: the camera alternates inside and outside the wall).
 - In plain words: the renderer draws exactly what it is given. The missing-wall flashes come from the game side, and they only appear with the 60 fps mode on, at any draw distance.
@@ -157,6 +142,7 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 maintenance)" and "
   true-60 Hz latency levels are sticky in whole vsyncs.
 
 ## Superseded conclusions — do not act on these
+- s7120 "the flight camera sometimes jumps 2-16 u in one frame (open flight, both arms)" and "the lift arm has more >1.0 u jerks". Believable: t/t+1 pairs of equal size, far from any lift, in all runs. s7121: the join in s7119_hop mixed cam objects 458/A28/930; per-cam the flight cam has 0 such steps and the cut cams' stray tick is never presented.
 - s7113 "H-raymiss CONFIRMED: the collision tests a surface up to ~0.2 u off the drawn mesh; H-gap refuted". Believable: two-pose static control agreed to 0.002-0.004 u and lattice snap fitted. But a common-mode error (fitted P00/P11, corner-frame basis) passes a two-pose test; s7114 exact surfaces from the shared bytes show the rebuild biased +0.07..+0.18 p50 (p90 to +0.52) where drawn == collision exactly.
 - s7113 "the drawn mesh is displaced from the collision grid (0.042 off lattice)". Believable: same rebuild. s7114: TriGen and the sampler read the identical 25 bytes on the same lattice; the only real divergence is LOD decimation (flags in mesh+0x14), and removing it does not change the loss rate.
 - s7098 "the near-wall flashes only appear with the 60 fps mode on". Believable: presented-episode counts leaned FPS60. At stream level the eye-cell near clip occurs at the 30 fps rate (s7108) and at full retail settings at the same rate (s7109, 17.4 vs 15.9 per hug-min).
@@ -328,7 +314,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 23. **RSPRecomp scalar lowering: CLOSED s7093** (tools/s7093_su_census.py --controls; sltiu $zero/neg-imm template fixed in RSPRecomp; rerun after any RSPRecomp change).
 24. **RSP runtime DMA + cop0: CLOSED s7094** (audio ucode_data off-by-one fixed; tools/s7094_dma_test + tools/s7094_dma_census.py, rerun after any rsp.hpp/rsp.cpp DMA edit).
 25. **DPC registers CLOSED s7095; bridge forwarding coverage CLOSED s7096** (ROGUESQ_S7095_DPC / ROGUESQ_S7096_FWD=ctl, rerun after any dpc_bridge.cpp submit/defer/wrap edit; MISSING_UNEXPLAINED/dup/order must stay 0). Edit-walker census CLOSED s7097 (ROGUESQ_S7097_EDIT=ctl; unattributed must stay 0). RT64 vs angrylion on the same dd4 stream CLOSED s7098 (H-stream: big drops are in the stream; replay with tools/angrylion_replay/build16.sh).
-26. **Near-wall flicker (s7098-s7115): eye-cell near-plane loss, RETAIL behaviour (s7109). Refuted: corner width, near 15, margin re-push, post-move, ucode drop, LOD decimation (s7108-s7114), H-gap (s7115). s7115 H-probe CONFIRMED s7116 (opt-in ROGUESQ_S7115_NEARLIFT=1: pooled 4 runs losses 83/31, pierce class removed). s7117: swap = previous tick's camera; residual at terrain 1.0-1.5 near. s7118: NEARK=1.6 removes it (steady 13/1, 5 runs). s7119: no hop at k1.6 (H-smooth, same-run jerk vs off). s7120: off vs k1.6 replicated, 42/2 over 4 runs (z -6.0). DONE: closes on the owner's look.** Drop is in the RDP stream (s7098).
+26. **Near-wall flicker (s7098-s7115): eye-cell near-plane loss, RETAIL behaviour (s7109). Refuted: corner width, near 15, margin re-push, post-move, ucode drop, LOD decimation (s7108-s7114), H-gap (s7115). s7115 H-probe CONFIRMED s7116 (opt-in ROGUESQ_S7115_NEARLIFT=1: pooled 4 runs losses 83/31, pierce class removed). s7117: swap = previous tick's camera; residual at terrain 1.0-1.5 near. s7118: NEARK=1.6 removes it (steady 13/1, 5 runs). s7119: no hop at k1.6 (H-smooth, same-run jerk vs off). s7120: off vs k1.6 replicated, 42/2 over 4 runs (z -6.0). s7121: no flight-cam steps (s7120 steps were a cam-mix join). DONE: closes on the owner's look.** Drop is in the RDP stream (s7098).
 
 ## Evidence index
 

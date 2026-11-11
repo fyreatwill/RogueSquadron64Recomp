@@ -23,6 +23,7 @@ ap.add_argument("push", nargs="+")
 ap.add_argument("--inject", default=None)
 ap.add_argument("--edge", type=float, default=0.0, help="skip windows < EDGE s after an arm change")
 ap.add_argument("--top", type=int, default=0)
+ap.add_argument("--cam", default=None, help="s7121: keep only this cam id (e.g. 80138458 = flight cam); default mixes all cams (s7119/s7120 behaviour, which joins across cam switches)")
 ap.add_argument("--lag", action="store_true", help="s7120: for >0.5 'neither' events print ticks since last need>0 / lift>0 (same arm segment)")
 a = ap.parse_args()
 
@@ -48,7 +49,7 @@ for path in a.push:
             pend = (mm.group(2), int(mm.group(3)), float(mm.group(4) or 1), float(mm.group(5)), float(mm.group(6))) if mm else None
         elif ln.startswith("rx ") and pend is not None:
             mm = rx_re.match(ln)
-            if mm and mm.group(2) == pend[0]:
+            if mm and mm.group(2) == pend[0] and (a.cam is None or mm.group(2) == a.cam):
                 ticks.append([int(mm.group(1)), float(mm.group(4)), pend[3], pend[4], pend[1], pend[2]])
             pend = None
     if a.inject:
