@@ -1,19 +1,13 @@
-# NEXT: G3 in-flight pause menu at 21:9, owner recipe (CURRENT-TRUTH item 38)
-HYPOTHESIS-ID: g3-pause-menu-219
-State (s7149): the whole mission intro (space, sea cinematic, flight) is RT64 == angrylion at 21:9 after one fit (<= 0.005);
-ROGUESQ_VI_EXACT_ROWS=1 is worse in every phase and stays opt-in. The pause menu was matched at 4:3 only (s6778, retail oracle);
-at 21:9 it is a 2D overlay (emblem + text boxes) on the 1024 fb, i.e. the texrect path that s7142 RECT_ASPECT fixed for menus.
-Route: s7149 route reaches flight at swap ~13520, flight shown until the 275 s end. Add a START press late in flight.
-Step 1 (one run): env RDIR=s7150 ASP=21:9 SECS=300 FROM=13300 EVERY=5 DL=150 DU=115 \
-  AP=6:start,11:start,16:start,21:start,25:left,27:start,33:start,40:right,46:left,52:right,58:left,64:a,262:start zsh tools/s7146_arm.zsh P1 ""
-  Check the pause menu is in the capture (op census tools/s7146_opcensus.py: texrect count jumps; or eyeball one presented frame). If the
-  start press landed in a cutscene, move it later (268) and rerun once.
-Step 2: zsh tools/s7141_post.zsh scratch/s7150 P1 0,11,469,216 117,352; split frames into flight-before / pause-open by swap;
-  tools/s7148_pfsearch.py per phase; scratch/s7149/fitrun.py pattern (copy, D=scratch/s7150) with JE 0.976..1.0, JY -4..4, JX 0..2.
-  Boxes: all, centre, left, right, plus text-box rects read off the presented frame. Delete .cap after scoring.
-Hypotheses / outcomes:
-  H-equal: pause frames reach the flight floor (<= ~0.005 fitted) with the same (e, sx, sy) as flight -> close item 38, owner sheet.
-  H-rect-diff: text boxes / emblem score above the floor with a width mismatch (RECT_ASPECT path wrong for this overlay) -> fix in
-    rt64 rect path (export.sh + commit after any lib/ edit).
-  H-hud-anchor: the flight HUD (shifted by g1d anchor) is drawn under/over the open pause window in one renderer only.
-Owner save rule: no SAVE_FROM; NO_SAVE_WRITE stays. Keep CURRENT-TRUTH under 60000 B (58.8 KB now).
+# NEXT: capture colour space at source (CURRENT-TRUTH item 39)
+HYPOTHESIS-ID: g3-capture-colourspace
+State (s7150): tools/g5b_capture.swift captures 32BGRA with no colorSpaceName, so values are Display-P3 (untagged); angrylion replays are
+sRGB. tools/s7122_fidelity.py FID_P3=1 converts offline (flat-area error -30..55%, 4:3 text blue lift +51 -> +11). Fix it at source.
+Step 1: in g5b_capture.swift set cfg.colorSpaceName = CGColorSpace.sRGB (and log it), rebuild scratch/s6894/g5b_capture (check how it was
+  built: grep swiftc in PORTING-STATE s6894/s6914).
+Step 2 (one run, same-run control impossible across captures, so run TWO capture processes on the same game window at once: old binary and
+  new binary, same CW/CH): env RDIR=s7151 ASP=21:9 SECS=300 FROM=15300 EVERY=5 DL=150 DU=115 AP=<s7150 AP> zsh tools/s7146_arm.zsh P1 ""
+  plus a second g5b_capture (old binary) started alongside (edit a copy of the arm script, tools/s7151_arm.zsh).
+Outcomes: H-src: new raw ~= FID_P3(old raw) within ~3/channel on flat areas, and the new raw vs angrylion matches FID_P3 scores ->
+  make the capture sRGB, keep FID_P3 only for old raws. H-partial: new raw still differs (ScreenCaptureKit ignores colorSpaceName for
+  window filters) -> keep FID_P3=1 as the documented default for new work and say so in CURRENT-TRUTH run recipes.
+Owner save rule: no SAVE_FROM; NO_SAVE_WRITE stays. Keep CURRENT-TRUTH under 60000 B.

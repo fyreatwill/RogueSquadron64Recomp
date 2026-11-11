@@ -36,7 +36,24 @@ class Raw:
             self.f.seek(i * self.rec); self.T.append(struct.unpack('<Q', self.f.read(8))[0])
     def img(self, i):
         self.f.seek(i * self.rec + 16)
-        return Image.frombytes('RGB', (self.w, self.h), self.f.read(self.w * self.h * 3))
+        im = Image.frombytes('RGB', (self.w, self.h), self.f.read(self.w * self.h * 3))
+        return _p3_to_srgb(im) if FID_P3 else im
+
+
+# s7150: g5b_capture (ScreenCaptureKit, 32BGRA, no colorSpaceName set) returns the window in the display's colour space
+# (Display P3 here), untagged; angrylion replays are sRGB. s6740 found the same for screencapture PNGs and fixed only
+# g3_oracle_match.py. FID_P3=1 converts every presented frame P3 -> sRGB before the diff (off by default so s7122-s7150
+# numbers stay comparable; new comparisons should set it). Measured s7150: flat-area colour error drops by 30-55%.
+FID_P3 = os.environ.get('FID_P3', '0') == '1'
+_P3X = None
+def _p3_to_srgb(im):
+    global _P3X
+    if _P3X is None:
+        from PIL import ImageCms
+        _P3X = ImageCms.buildTransform(ImageCms.getOpenProfile('/System/Library/ColorSync/Profiles/Display P3.icc'),
+                                       ImageCms.createProfile('sRGB'), 'RGB', 'RGB', renderingIntent=1)
+    from PIL import ImageCms
+    return ImageCms.applyTransform(im, _P3X)
 
 
 def dmap(a, b):

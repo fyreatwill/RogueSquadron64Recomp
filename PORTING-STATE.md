@@ -188627,3 +188627,34 @@ what a real TV shows, only that EXACT_ROWS adds resample error against the model
 Owner sheet docs/owner_sheet_s7149_intro_219.png (tools/s7148_sheet.py; swaps 10020 space, 11410 / 12430 sea, 13851 flight, T1).
 T1.cap / T2.cap deleted after scoring (24 GB); s7148 C2.cap (14 GB unscored leftover) deleted at session start. Owner save untouched.
 Next: item 38, the in-flight pause menu at 21:9 (2D overlay on the 1024 fb; matched only at 4:3 so far, s6778).
+
+## Session 7150 (2026-11-11) — G3 in-flight pause menu at 21:9: RT64 == angrylion after one fit (H-equal); RECT_ASPECT inert on the overlay (H-rect-diff refuted); replay-tool magenta pre-fill bug fixed; capture is Display-P3 untagged (FID_P3 scorer option)
+HYPOTHESIS-ID: g3-pause-menu-219
+Work unit from NEXT.md (item 38). Three runs, one at a time, owner recipe FPS60 dd4, owner save read-only, 0 crashes all:
+P1 21:9 default (FROM=13300 EVERY=5, hit the 12 GB cap at swap 16100; 561 RAM swaps), R0 21:9 ROGUESQ_RECT_ASPECT=0 (FROM=15300),
+Q4 4:3 (CW=320 CH=240, FROM=15300). Route tools/s7146_arm.zsh, AP ...,64:a,262:start. Pause opens at swap ~15485 (P1), ~15635 (R0),
+~15600 (Q4): texrects 12 -> 103, tris constant (op census tools/s7146_opcensus.py). Pause pass (scratch/s7150/opseq.py, rawwin.py):
+after the scene, cimg B20000 Z clear, back to 9D5000, 2 full-screen tris with prim alpha 0x80 (2-cycle, pixel*a + mem*(1-a): a 50%
+dimming quad), 212 emblem tris, 103 texrects (IA8 font, point, 1-cycle, texel*prim, alpha-compare 0x80, opaque; integer x, ds=dt=1).
+1. FIRST SCORE WAS A TOOL ARTIFACT: pause identity frac 0.79, angrylion background magenta. Cause: tools/angrylion_replay/frame_replay.c
+   pre-filled the colour image magenta (its painted-pixel control) on every cimg CHANGE, so 9D5000 -> B20000 -> 9D5000 after the scene
+   wiped it. Fixed: once per colour image per frame (PREFILL_EVERY=1 restores). Same build, swap 15590: old painted 457281/458752 with
+   magenta bg, new 458752 with the dimmed scene. Re-replay: pause identity 0.793 -> 0.0177, flight unchanged 0.0166 (control: frames
+   without a late cimg switch are untouched). RT64 was right: scene dims to ~0.45 (37,57,78 -> 16,29,40).
+2. Fit (scratch/s7150/fitrun.py, best-pframe joins s7148_pfsearch): P1 flight all 0.0006 (= s7149 floor); pause all 0.0017, emblem 0.0048,
+   menu 0.0047, goals 0.035. Per-line fits all pick the global (e 0.992, sx 2 qpx); goals left/right halves want opposite k (1.01/0.995):
+   no width or offset term. Glyph cores (scratch/s7150/glyphcore.py, brightest 10%): RT64 darker and +30..+51 blue on yellow text in ALL
+   arms (R0 21:9 RECT_ASPECT=0 and Q4 4:3 alike) -> not the 21:9 rect path.
+3. Colour space: tools/g5b_capture.swift sets 32BGRA but no colorSpaceName, so ScreenCaptureKit returns Display-P3 values; angrylion is
+   sRGB. (s6740 found this for screencapture PNGs and fixed only g3_oracle_match.py; the s7122 scorer never converted.) Two lines:
+   (a) sRGB->P3 of angrylion's yellow (220,172,3) predicts (213,174,57), RT64 shows (194,159,54); (b) new tools/s7122_fidelity.py
+   FID_P3=1 (P3 -> sRGB via the system Display P3.icc) cuts flat-area error emblem 21 -> 14, sky 16 -> 8, sea 11 -> 8 and the 4:3 text
+   blue lift +51 -> +11, +30 -> +3 (scratch/s7150/p3test.py). With FID_P3=1, P1 pause: all 0.0010, emblem 0.0029, goals 0.0172 (halved).
+   Default off so s7122-s7149 numbers stay comparable. Residual on text = thin-stroke resampling (0.46 capture px per fb px at 21:9).
+4. RECT_ASPECT: same grid (k 0.995..1.005, FID_P3=1), R0 beats P1 in every box (goals 0.0007 vs 0.0065, all 0.0001 vs 0.0008), but in
+   P1 the emblem (tris, which RECT_ASPECT never touches) prefers the same k 1.005 as the goals texrects while the frame prefers 0.995:
+   a per-run presentation-scale term (s7147 noise class), cross-run, single-source. Both arms fit the text at |k-1| <= 0.5%: no 1.33x
+   or 2% widening, so RECT_ASPECT is inert on this overlay. H-rect-diff REFUTED; H-hud-anchor not seen (no HUD draws in the pause pass).
+Verdict: H-equal, item 38 CLOSED. Owner sheet docs/owner_sheet_s7150_pause_219.png (tools/s7150_pause_sheet.py; 4:3 tiles from a
+320x240 capture with an approximate crop rect). All three .cap deleted after scoring (raws + replays kept). Owner save untouched.
+Next: item 39, set the capture colour space to sRGB at source and validate against FID_P3 on one run.

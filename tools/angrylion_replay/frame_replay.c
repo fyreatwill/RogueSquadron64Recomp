@@ -3,6 +3,8 @@
 // before it, runs that swap's ranges, writes outdir/f<swap>.rgb (w h u32 then RGB8) for the widest 16-bit colour image.
 // SNAP_FROM=<swap> (s7124): start every replayed swap from the RAM snapshot recorded at that older swap instead of the newest one
 // (the H-tool control: on an EVERY=1 stream, own vs older snapshot must differ only on materials the CPU streamed in between).
+// s7150: the magenta pre-fill runs once per colour image per frame. Before s7150 it re-ran on every cimg CHANGE, so a frame that
+// switches 9D5000 -> B20000 (Z clear) -> 9D5000 after drawing (the in-flight pause menu) lost its scene to magenta. PREFILL_EVERY=1 restores.
 // KILL_AREA=<px>: zero tris whose rough area exceeds it. Positive control: the colour image is pre-filled magenta, "painted" counts pixels the replay changed.
 // Build: tools/angrylion_replay/build16.sh <dir> (s7098: needs a 16 MB core for dd>1 frames). Old: D=~/Documents/Tools/g3_angrylion; clang -O1 -I$D/src/src/core -I$D/src/src tools/angrylion_replay/frame_replay.c $D/build/libalp-core.a -lc++ -o frame_replay
 #include <stdio.h>
@@ -13,6 +15,7 @@
 #include "n64video.h"
 #define RAM 0x1000000u
 void msg_error(const char *f,...){} void msg_warning(const char *f,...){}
+static uint32_t filled[32]; static int nf; static int refill_every; /* s7150 */
 static uint8_t *rdram, *snap; static uint32_t dpr[DP_NUM_REG], vir[VI_NUM_REG], mi;
 static uint32_t *dpp[DP_NUM_REG], *vip[VI_NUM_REG]; static uint8_t dmem[0x2000];
 static void intr(void) {}
@@ -26,7 +29,7 @@ int main(int ac, char **av) {
     struct n64video_config c; n64video_config_init(&c);
     c.gfx.rdram = rdram; c.gfx.rdram_size = RAM; c.gfx.dmem = dmem; c.gfx.vi_reg = vip; c.gfx.dp_reg = dpp;
     c.gfx.mi_intr_reg = &mi; c.gfx.mi_intr_cb = intr; c.parallel = false; c.num_workers = 1;
-    n64video_init(&c);
+    n64video_init(&c); refill_every = getenv("PREFILL_EVERY") != NULL;
     static uint8_t *fixsnap = NULL; const int snapfrom = getenv("SNAP_FROM") ? atoi(getenv("SNAP_FROM")) : -1; int havefix = 0;
     long killA = getenv("KILL_AREA") ? atol(getenv("KILL_AREA")) : 0, killed = 0;
     int wi = 3, want = atoi(av[wi]); uint32_t tag, sw = 0; uint64_t t; int have = 0, active = 0; uint32_t cimg = 0, cw = 0; long nr = 0;
@@ -49,14 +52,14 @@ int main(int ac, char **av) {
             if (eof) break;
             if (fread(&t, 8, 1, f) != 1 || fread(&sw, 4, 1, f) != 1) break;
             if ((int)sw == want) { if (!have) continue; /* s7124: this swap's own RAM record follows and starts the frame */
-                memcpy(rdram, havefix ? fixsnap : snap, RAM); active = 1; nr = 0; cimg = 0; cw = 0; }
+                memcpy(rdram, havefix ? fixsnap : snap, RAM); active = 1; nr = 0; cimg = 0; cw = 0; nf = 0; }
             else if ((int)sw > want) { fprintf(stderr, "swap %d absent\n", want); if (++wi >= ac) break; want = atoi(av[wi]); }
             continue;
         }
         if (tag == 0x204D4152u) { if (fread(snap, 1, RAM, f) != RAM) break; have = 1;
             if ((int)sw == snapfrom && !havefix) { fixsnap = malloc(RAM); memcpy(fixsnap, snap, RAM); havefix = 1; } if (active) { /* s7124 fix: the stream writes SWAP then this swap's RAM, so a frame that has run no range yet takes its OWN snapshot
                 (before s7124 it kept the previous one, EVERY swaps stale: s7122's garbled L6 textures). LEGACY_SNAP=1 restores the old behaviour. */
-                if (nr == 0 && !havefix && !getenv("LEGACY_SNAP")) memcpy(rdram, snap, RAM); } else if ((int)sw == want) { memcpy(rdram, havefix ? fixsnap : snap, RAM); active = 1; nr = 0; cimg = 0; cw = 0; } continue; }
+                if (nr == 0 && !havefix && !getenv("LEGACY_SNAP")) memcpy(rdram, snap, RAM); } else if ((int)sw == want) { memcpy(rdram, havefix ? fixsnap : snap, RAM); active = 1; nr = 0; cimg = 0; cw = 0; nf = 0; } continue; }
         if (tag != 0x20474E52u) { fprintf(stderr, "bad tag %08X\n", tag); return 3; }
         uint32_t lo, n; if (fread(&lo, 4, 1, f) != 1 || fread(&n, 4, 1, f) != 1) break;
         if (n > 0x200000) { fseek(f, n, SEEK_CUR); continue; }
@@ -64,7 +67,7 @@ int main(int ac, char **av) {
         if (!active) continue;
         for (uint32_t a = 0; a + 8 <= n;) { uint32_t w0 = rw(cmd, a), w1 = rw(cmd, a + 4), op = (w0 >> 24) & 0x3F, l = 8;
             if (op >= 8 && op <= 15) l = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0); else if (op == 0x24 || op == 0x25) l = 16;
-            else if (op == 0x3F) { uint32_t w = (w0 & 0x3FF) + 1; if (w >= cw && ((w0 >> 19) & 3) == 2) { cw = w; if (cimg != (w1 & 0xFFFFFF)) { cimg = w1 & 0xFFFFFF; for (uint32_t i = 0; i < w * 448; i++) { uint32_t q = (cimg + 2 * i) ^ 2; rdram[q] = 0x3E; rdram[q + 1] = 0xF8; } } } }
+            else if (op == 0x3F) { uint32_t w = (w0 & 0x3FF) + 1; if (w >= cw && ((w0 >> 19) & 3) == 2) { cw = w; if (cimg != (w1 & 0xFFFFFF)) { cimg = w1 & 0xFFFFFF; int seen = 0; for (int k = 0; k < nf; k++) seen |= filled[k] == cimg; if (!seen && nf < 32) filled[nf++] = cimg; if (!seen || refill_every) for (uint32_t i = 0; i < w * 448; i++) { uint32_t q = (cimg + 2 * i) ^ 2; rdram[q] = 0x3E; rdram[q + 1] = 0xF8; } } } }
             if (killA > 0 && op >= 8 && op <= 15 && a + l <= n) { // zero a big terrain tri: NOPs in its place
                 int32_t xl = (int32_t)rw(cmd, a + 8) >> 16, xh = (int32_t)rw(cmd, a + 16) >> 16, xm = (int32_t)rw(cmd, a + 24) >> 16;
                 int yl = ((int32_t)(w0 << 18) >> 18) / 4, yh = ((int32_t)(w1 << 18) >> 18) / 4; int wd = abs(xh - xl) > abs(xh - xm) ? abs(xh - xl) : abs(xh - xm);
