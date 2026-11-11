@@ -1,16 +1,17 @@
-# NEXT: G3 in-flight render fidelity at RETAIL settings: RT64 presented frames vs angrylion on the same RDP stream
+# NEXT: G3 presentation geometry at 4:3 retail: is the off-centre 553x480 pillarbox what the VI asks for?
 HYPOTHESIS-ID: g3-flight-fidelity
-Why: every owner-facing G5 item now waits on the owner's look (CURRENT-TRUTH items 1-12, 26). Ladder 3c G3 "in-flight frame diffs against
-retail framebuffers" has only been done for the dd4 drop question (s7098, H-stream). A whole-frame fidelity diff at retail settings has not.
-Recipe: L1 and L6, dd1, 4:3, FPS60 off, no opt-ins except defaults (CULL_SPIKE is default on: also run one arm with ROGUESQ_CULL_SPIKE=0 so
-the diff is vs the true retail stream). Capture with the s7098 pair: ROGUESQ_G5B_FRAME (forwarded RDP stream + RAM every N swaps) and the
-presented window (scratch/s6894/g5b_capture, arm script pattern scratch/s7115/arm.zsh). Replay the dumped frames with
-tools/angrylion_replay (stock 8 MB core is fine at dd1; build16.sh only for dd>1). Grep PORTING-STATE s7098 for the exact env/commands.
-Hypotheses (per matched frame, angrylion vs RT64 downscaled to 320x240):
-  H-equal   : residual is filtering/AA/resolution noise only (mean |diff| small, no connected region > ~0.5% of frame above 40 levels).
-  H-combiner: systematic colour/alpha difference on specific materials (water, sky, cockpit/HUD, explosions): same region every frame.
-  H-geom    : geometry in angrylion missing or extra in RT64 (connected regions with edge structure; check s7098 was dd4-only).
-  H-fog     : depth/fog band difference along the horizon (row-profile of the diff).
-Discriminator: per-frame connected-region table (area, bbox, mean diff, dominant colour both sides), pooled across >=20 frames per level.
-Positive control: paint a 20x20 block into one angrylion frame -> the scorer must report exactly one region of 400 px at that bbox.
-Output: owner sheet docs/owner_sheet_s7122_fidelity.png (angrylion | RT64 | diff) for the worst 4 frames, and a classified table.
+Why: s7122 found pixel fidelity H-equal in L1 flight. On the way it found that the default 640x512 window (32 pt title bar) shows the
+game's 512x448 colour image at x 21..574 (553 px wide, left margin 21, right 66). That is neither a 4:3 fill nor centred. A retail TV fills
+4:3 unless VI H_START/X_SCALE say otherwise.
+Hypotheses:
+  H-retail : the game's VI regs (H_START, X_SCALE, WIDTH, V_START, Y_SCALE) place the active picture this way on a real NTSC line
+             (H_START standard 0x006C..0x02EC = 640 px). Then retail is also pillarboxed/off-centre and nothing is ours.
+  H-rt64   : the VI regs ask for a (near) full 640 line, and RT64's VI->output mapping shrinks or shifts it.
+  H-fit    : our window/aspect code (main.cpp WINDOW_FIT, ROGUESQ_ASPECT default path, s6885 WIDE_EARLY) offsets it at 4:3.
+Discriminator, one run: log the VI registers per VI (ultramodern VI state, or osViSetMode's mode table) during L1 flight at default 4:3.
+Compute the expected active rectangle on a 640x480 NTSC raster, and compare it with the presented rect measured by g5b_capture (rect search
+as in tools/s7122_fidelity.py). Second line: run angrylion's VI stage (full VI filter, n64video_update_screen) on one replayed swap and
+measure where the picture lands in its output. Check git log / grep "x 21" or "pillar" in PORTING-STATE first (G1f WINDOW_FIT, s6142).
+Outcomes: VI rect == presented -> H-retail (report, offer an opt-in fill). VI full but presented shrunk -> H-rt64/H-fit; then toggle
+WINDOW_FIT/ASPECT in the same run to split them, fix, and give the owner a before/after sheet.
+Also open: texture fidelity on texture-streaming levels (L6) needs ROGUESQ_G5B_FRAME_EVERY=1 over a short FROM window, so each swap has its own snapshot.

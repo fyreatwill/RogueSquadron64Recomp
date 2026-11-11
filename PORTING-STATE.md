@@ -187747,3 +187747,39 @@ The s7120 sentence "the lift arm has more >1.0 jerks" was the artefact; with the
 Rules out: H-snap (no FPS60 camera snap in steady flight), H-cut as a visible defect. Superseded: s7120 "the flight camera sometimes jumps
 2-16 units in one frame".
 Item 26 stays DONE, closes on the owner's look. Next: G3 render fidelity rung (NEXT.md).
+
+## Session 7122 (2026-11-10) — G3 retail-settings fidelity: RT64 presented frames match angrylion on the same RDP stream in L1 flight (H-equal: residual is edges plus terrain-texture speckle, 2.4% of pixels over 40, no region >0.9% of frame); the spike cull costs no fidelity; L6 texture content is not evaluable by replay; RT64 shows the 512x448 frame pillarboxed off-centre in a 4:3 window (open)
+HYPOTHESIS-ID: g3-flight-fidelity
+Work unit from NEXT.md. Recipe: tools/s7122_arm.zsh (copy of scratch/s7122/arm.zsh): dd1, FPS60=0, default 4:3 window, no logging env,
+ROGUESQ_G5B_FRAME (RAM every 20 swaps) plus g5b_capture 320x240 of the window, ONE run per arm, 120 s delay + 180 s record.
+Arms: c1 = L1 default (CULL_SPIKE on), z1 = L1 ROGUESQ_CULL_SPIKE=0, c6 = L6 default. 0 crash, 0 VI stall in all three runs.
+Replays with scratch/s7098/frame_replay16: 286 / 286 / 294 swaps (every RAM-owning swap inside the record window). The streams were 10.4-10.7 GB each and were deleted after replay.
+New: tools/s7122_fidelity.py (match + per-pixel diff at the PRESENTED resolution, connected regions, row profile, `control` mode),
+tools/s7122_sheet.py (angrylion | RT64 | diff mask). Positive control: painting a 20x20 block into a replay gives exactly one 400 px region at the
+painted bbox, and identity gives 0 regions (PASS).
+Geometry found on the way: the 640x512 window (32 pt title bar) shows the game's 512x448 colour image as a 553x480 pillarbox at x 21..574,
+left margin 21 px and right margin 66 px, NOT a 4:3 fill and not centred. Rect search (+-1 px) picks capture rect 20,15,279,240 (median
+mean|d| 7.9, against 9.8-11.0 one px off).
+Results (per frame d = mean |dRGB|, T = 40, region >= 0.5% of frame = 291 px):
+| arm | frames | mean d median / p90 / max | frac > T median / max | regions >= 0.5% | verdict |
+|---|---|---|---|---|---|
+| c1 L1 | 286 | 7.79 / 8.72 / 9.90 | 0.024 / 0.036 | 36 in 35 frames, all <=511 px, sparse speckle | H-equal |
+| z1 L1 CULL_SPIKE=0 | 286 | 7.70 / 8.46 / 13.57 | 0.025 / 0.056 | 41 in 39 frames | H-equal, same as c1 |
+| c6 L6 flight (cimg 620000/690000) | 178 | (frac median 0.013, max 0.038) | | | geometry equal, textures not evaluable |
+| c6 L6 end cutscene/menus | 102 | frac 0.04-0.99 | | | replay tool limit |
+- L1 (docs/owner_sheet_s7122_fidelity.png, the 3 worst frames): the diff mask holds only silhouette edges (craft, ridge line, HUD rings: sub-pixel
+  filtering) and single-pixel speckle in the high-frequency terrain texture. There is no colour block on any material, so H-combiner is refuted. Nothing is
+  missing or extra (H-geom refuted). The row profile is 4.9-6.4 in the sky rows and rises to 8-12 toward the bottom where the terrain texture is: texture
+  detail, with no horizon band (H-fog refuted). The large "regions" in the table are sparse speckle with bboxes spanning the terrain (area ~400 px in a 40k px bbox).
+- The spike cull at retail settings changes nothing measurable (c1 vs z1, cross-run but on the same metric with the same floor).
+- L6 flight (docs/owner_sheet_s7122_fidelity_L6.png): ship and HUD placement match, but the angrylion textures are garbled (magenta/cyan noise,
+  octagon radar). The RAM snapshot taken at the swap's first range does not hold the textures the frame actually used, because L6 streams them during the frame. RT64's
+  textures look coherent, but the replay cannot judge them. L6 end-of-mission cutscene frames (cimg 720000/790000) have a CPU-drawn backdrop the
+  replay cannot reproduce (only overlays render), and the 0.5-painted frames are interlaced/half-height images that load_al mis-crops. Both are tool limits.
+  The "MISSION FAILED" overlay frame (swap 9542) differs only at text edges.
+Conclusion: at retail settings in L1 flight, RT64 renders the stream faithfully (two lines: whole-frame metric over 572 frames in 2 runs, plus the
+eyeballed worst-frame sheet). Nothing in RT64's rasterisation/combiner needs a fix there.
+Rules out: H-combiner, H-geom, H-fog for L1 retail flight; any fidelity cost of the default spike cull.
+Left open: (1) presentation geometry, the 553x480 off-centre pillarbox: is it what the VI registers ask for (retail TV shows the same), or RT64's
+VI-to-window mapping? (2) texture fidelity on texture-streaming levels needs a per-range RAM snapshot (EVERY=1 on a short window) to be evaluable.
+Owner save untouched (forced-level route, NO_SAVE_WRITE).
