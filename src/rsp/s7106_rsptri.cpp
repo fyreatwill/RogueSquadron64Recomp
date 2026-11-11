@@ -21,6 +21,12 @@
 //   c<k>=<cmds>,<tris>,<zero-tri cmds>,<min>,<max>[,<mode tris>:<count>] for k = 0 (mode0 sub0), 1 (mode0 sub1), 2 (mode 2), 3 other
 //   n=<9 x seen,tris,zero,degenerate,minx,miny,maxx,maxy (px, '-' if none)> separated by ';', row-major dz -1..1, dx -1..1
 //   kp=<published slots> k4=<eye cell w0,p8,p9>
+// s7107 (fps60-wall-painter), ROGUESQ_S7107_TAG=1 on top of S7106_RSPTRI: every RDP triangle the DMEM parse sees pushes one tag
+// byte into an SPSC FIFO; dpc_bridge.cpp pops one per forwarded triangle (rs64_s7107_pop) and stores it in the pad byte of the
+// ROGUESQ_G5B_TRIS record. The order is the same on both sides (s7106: tall == tbr on 8505/8505 swaps). Tag: 0..48 = 7x7 cell
+// (dz+3)*7 + dx+3 around the eye (24 = eye cell; keys from tools/apply_s7107_painter.py), 0x40|class = a TRI_GEN matching no
+// published key, 0x80|op = a triangle produced by a non-TRI_GEN command (op = w0>>24 & 0x7F), 0xFD = before any fetch,
+// 0xFF = popped from an empty FIFO (desync). rt line gains q=<depth at swap>,<empty pops>,<pushes>,<pops>,<FIFO overflows>.
 #include <atomic>
 #include <cstdint>
 #include <cstdio>
@@ -30,6 +36,13 @@
 extern "C" int rs64_swap_n(void);
 extern "C" {
 uint32_t g_s7106_kw[9], g_s7106_k8[9], g_s7106_k9[9];
+uint32_t g_s7107_kw[49], g_s7107_k8[49], g_s7107_k9[49];
+int rs64_s7107_tag = [] {
+    const char* e = getenv("ROGUESQ_S7107_TAG");
+    int v = (e && *e && *e != '0') ? 1 : 0;
+    if (v) fprintf(stderr, "[s7107] per-triangle source-cell tag FIFO armed\n");
+    return v;
+}();
 int rs64_s7106_on = [] {
     const char* e = getenv("ROGUESQ_S7106_RSPTRI");
     int v = (e && *e && *e != '0') ? 1 : 0;
@@ -48,6 +61,16 @@ struct {
 uint32_t g_pos = 0xD60;
 int g_cls = -1, g_near = -1;  // command being processed: class (-1 = not a TRI_GEN), near-cell slot
 uint32_t g_cmdtris = 0;
+uint8_t g_tag = 0xFD;  // s7107: tag of the command being processed
+constexpr uint32_t kQ = 1u << 22;
+uint8_t g_q[kQ];
+std::atomic<uint32_t> g_qh{0}, g_qt{0};  // head = pushes, tail = pops (monotonic)
+std::atomic<uint32_t> g_qempty{0}; uint32_t g_qover = 0, g_qpush_sw = 0; std::atomic<uint32_t> g_qpop_sw{0};
+inline void qpush(uint8_t v) {
+    const uint32_t h = g_qh.load(std::memory_order_relaxed);
+    if (h - g_qt.load(std::memory_order_acquire) >= kQ) { g_qover++; return; }
+    g_q[h & (kQ - 1)] = v; g_qh.store(h + 1, std::memory_order_release); g_qpush_sw++;
+}
 inline uint32_t rdw(const uint8_t* dm, uint32_t a) {
     uint32_t v = 0;
     for (int q = 0; q < 4; ++q) v = (v << 8) | dm[((a + q) & 0xFFFu) ^ 3u];
@@ -77,7 +100,13 @@ void emit_swap() {
         if (j < 8) fputc(';', g_f);
     }
     int kp = 0; for (int j = 0; j < 9; ++j) kp += g_s7106_kw[j] != 0;
-    fprintf(g_f, " kp=%d k4=%08x,%08x,%08x\n", kp, g_s7106_kw[4], g_s7106_k8[4], g_s7106_k9[4]);
+    fprintf(g_f, " kp=%d k4=%08x,%08x,%08x", kp, g_s7106_kw[4], g_s7106_k8[4], g_s7106_k9[4]);
+    if (rs64_s7107_tag) {
+        int kq = 0; for (int j = 0; j < 49; ++j) kq += g_s7107_kw[j] != 0;
+        fprintf(g_f, " q=%u,%u,%u,%u,%u kq=%d", g_qh.load() - g_qt.load(), g_qempty.exchange(0), g_qpush_sw, g_qpop_sw.exchange(0), g_qover, kq);
+        g_qpush_sw = 0;
+    }
+    fputc('\n', g_f);
 }
 // Parse RDP commands in DMEM [g_pos, end) and attribute their triangles to the current command.
 void parse(const uint8_t* dm, uint32_t end) {
@@ -89,6 +118,7 @@ void parse(const uint8_t* dm, uint32_t end) {
         if (a + len > end) { S.mis++; break; }
         if (op >= 0x08 && op <= 0x0F) {
             S.tall++; g_cmdtris++;
+            if (rs64_s7107_tag) qpush(g_tag);
             if (g_near >= 0) {
                 Near& n = S.nr[g_near];
                 const uint32_t w1 = rdw(dm, a + 4);
@@ -118,6 +148,13 @@ void close_cmd() {
 }  // namespace
 
 extern "C" void rs64_s7106_btri(void) { g_btri.fetch_add(1, std::memory_order_relaxed); }
+extern "C" uint8_t rs64_s7107_pop(void) {
+    if (!rs64_s7107_tag) return 0xFF;
+    const uint32_t tl = g_qt.load(std::memory_order_relaxed);
+    if (tl == g_qh.load(std::memory_order_acquire)) { g_qempty.fetch_add(1, std::memory_order_relaxed); return 0xFF; }
+    const uint8_t v = g_q[tl & (kQ - 1)]; g_qt.store(tl + 1, std::memory_order_release); g_qpop_sw.fetch_add(1, std::memory_order_relaxed);
+    return v;
+}
 
 extern "C" void rs64_s7106_flush(const uint8_t* dm, uint32_t r16) {
     if (r16 >= g_pos && r16 <= 0x1000u) parse(dm, r16);
@@ -137,6 +174,7 @@ extern "C" void rs64_s7106_fetch(const uint8_t* dm, uint32_t r17, uint32_t w0, u
     close_cmd();
     const int sw = rs64_swap_n();
     if (sw != S.sw) { emit_swap(); reset_swap(sw); }
+    g_tag = (uint8_t)(0x80u | ((w0 >> 24) & 0x7Fu));
     if ((w0 >> 24) != 0x05) return;
     S.ntg++;
     const uint32_t mode = (w0 >> 8) & 0xFF, sub = w0 & 0xFF;
@@ -144,4 +182,9 @@ extern "C" void rs64_s7106_fetch(const uint8_t* dm, uint32_t r17, uint32_t w0, u
     const uint32_t p8 = rdw(dm, r17 + 0x20), p9 = rdw(dm, r17 + 0x24);
     for (int j = 0; j < 9; ++j)
         if (g_s7106_kw[j] == w0 && g_s7106_k8[j] == p8 && g_s7106_k9[j] == p9) { g_near = j; break; }
+    if (rs64_s7107_tag) {
+        g_tag = (uint8_t)(0x40u | (uint32_t)g_cls);
+        for (int j = 0; j < 49; ++j)
+            if (g_s7107_kw[j] == w0 && g_s7107_k8[j] == p8 && g_s7107_k9[j] == p9) { g_tag = (uint8_t)j; break; }
+    }
 }

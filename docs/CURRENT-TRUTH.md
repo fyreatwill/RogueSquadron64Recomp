@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7106 (2026-11-10).
+Compact operational handoff, as of Session 7107 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,15 +8,13 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7107 FPS60 near-wall flicker: the wall is the eye terrain cell clipped by the near plane (H-nearclip selected; H-elsewhere, H-rdp, H-frame refuted; two lines, one clean episode).** Per-triangle source-cell tags (ROGUESQ_S7107_TAG=1 with S7106_RSPTRI and G5B_TRIS; tools/apply_s7107_painter.py, FIFO in src/rsp/s7106_rsptri.cpp, pad byte of the tris record; 0 empty pops / 0 overflows / depth 0 at every swap). L6 dd4 16:9: on the dropped swap the eye cell, last painter of 565/568 lost cells on the swap before, has 1 tri instead of 4 and its tris hug z ~0; the presented frames show the wall cut along a straight diagonal (near-plane / wall intersection) with the canyon behind (docs/owner_sheet_s7107_nearclip_a.png, _b.png). Tools: tools/s7107_painter.py, s7107_losscan.py, s7107_sheet.py. Corrects s7106 (it could not pick the dropped swap).
+- In plain words: the camera gets closer to the canyon wall than the 3D view's near cut-off, so the graphics chip correctly slices off the wall in front of it and the sky shows through.
+- Next: the push-out's 4 near corners vs the 16:9-widened projection (NEXT.md, slug fps60-wall-nearclip).
+
 **s7106 FPS60 near-wall flicker: the F5 ucode converts the 9 near-eye cells' TRI_GENs into screen-covering triangles on the event swaps of 8 of 10 episodes (H-clip refuted as the general cause, single run).** src/rsp/s7106_rsptri.cpp (ROGUESQ_S7106_RSPTRI=<file>; ucode fixup "s7106 rsptri" at the L_1090 fetch and L_112C flush, DMEM 0xD60 buffer fill r16; keys from tools/apply_s7106_rsptri.py; analysis tools/s7106_rsptri.py). Control: ucode-side parse == bridge forwarded tris on 8505/8505 swaps (41.3 M). Eye cell 4.31 tris/cmd, 8% zero in episodes vs 2.41 / 62% in flight.
 - In plain words: the graphics microcode does turn the nearby ground into triangles when the wall vanishes; the loss is either a different piece of ground or those triangles draw nothing.
 - Next: tag every triangle with its source cell (all 49) and join with the painter map of the wall region on a dropped frame (NEXT.md, slug fps60-wall-painter).
-
-**s7105 FPS60 near-wall flicker: every near-eye terrain cell the stream keeps is emitted as an F5 TRI_GEN on every frame of all 4 episodes, LOD byte and command word unchanged (H-emit-skip, H-lodswap refuted, single run).** tools/apply_s7105_emit.py (ROGUESQ_S7105_EMIT=1 with S7104_CELL=1, ce lines in the CHASE file; analysis tools/s7105_emit.py). The CPU emit renderFlatMeshFaceGroup 0x8001108C writes one 0x28-byte TRI_GEN per list cell with no per-cell cull (visits == list length in 9214/9247 gens; the rest had no render call). L6 dd4 16:9 FPS60: 54 episode gens, 0 listed-not-emitted near cells, 0 duplicates; lod 0 (full 25-height mesh) is 35% of ring-0 cells vs 0.15% of the list (tier control fires).
-- In plain words: the game hands the nearby ground to the graphics chip every frame, the same way; the wall is lost inside the chip's microcode, or it is not ground at all.
-- Next: count RDP triangles per TRI_GEN in the recompiled ucode, keyed by command address (NEXT.md, slug fps60-wall-rsp-clip).
-
-**s7104 FPS60 near-wall flicker: the terrain cell stream keeps every cell around the eye through all 8 episodes (H-none, single run).** tools/apply_s7104_cellcull.py (ROGUESQ_S7104_CELL=1); detail PORTING-STATE s7104.
 
 **s7103 FPS60 near-wall flicker: the camera collision does not explain the episodes; the re-push fix does not remove them (s7102 H-fight and H-squeeze refuted as the cause, single run, 9 episodes).** tools/apply_s7103_camfix.py re-tests all 4 near-plane corners at applyPlayerVehicleStateUpdate exit (offsets from the loop-start pos, from the final pos) and logs the y-clamp inputs (rx lines, CHASE file). ROGUESQ_S7103_CAMFIX=1|tog re-pushes until clear (<=4 passes); default off = retail. L6 dd4 16:9 run, CAMFIX=tog: a corner is still inside at exit on 41% of lim1 / 22% of lim2 normal-flight ticks with no flicker, vs 67% of episode ticks, so this is not specific to the episodes. Several episodes have no corner inside on most ticks ([]* patterns, clamp taken). Episodes: fix off 5 in 2714 ticks, fix on 5 in 3738 (P=0.42), so the fix does not help. Episodes also happen at lim2 (2 in 2130 ticks vs 7 in 3261 at lim1). s7102 repeats r1/r2 add 3 episodes: 2 have 0 flips, one has corner 3 alone inside with CAM4 on, and one at lim2 has all corners pushed every tick. Control: the exit test's bit 3 agrees with the s7102 corner-3 probe on 95% of unclamped ticks (they use different ray ends after a push).
 - In plain words: the camera's anti-clip code is messy, but tidying it does not stop the wall vanishing. Something else drops the wall from the frame.
@@ -314,7 +312,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 23. **RSPRecomp scalar lowering: CLOSED s7093** (tools/s7093_su_census.py --controls; sltiu $zero/neg-imm template fixed in RSPRecomp; rerun after any RSPRecomp change).
 24. **RSP runtime DMA + cop0: CLOSED s7094** (audio ucode_data off-by-one fixed; tools/s7094_dma_test + tools/s7094_dma_census.py, rerun after any rsp.hpp/rsp.cpp DMA edit).
 25. **DPC registers CLOSED s7095; bridge forwarding coverage CLOSED s7096** (ROGUESQ_S7095_DPC / ROGUESQ_S7096_FWD=ctl, rerun after any dpc_bridge.cpp submit/defer/wrap edit; MISSING_UNEXPLAINED/dup/order must stay 0). Edit-walker census CLOSED s7097 (ROGUESQ_S7097_EDIT=ctl; unattributed must stay 0). RT64 vs angrylion on the same dd4 stream CLOSED s7098 (H-stream: big drops are in the stream; replay with tools/angrylion_replay/build16.sh).
-26. **FPS60 near-wall flicker (s7098-s7105): open.** The near canyon wall is missing for 1-3 frames while the camera hugs it; the drop is in the RDP stream (s7098). Ruled out: camera collision (s7103), the terrain stream cull (s7104: near cells always kept), the CPU emit and LOD (s7105: every near cell emitted as TRI_GEN, lod constant). Left: H-clip (F5 ucode near clip/reject) vs H-elsewhere (not grid terrain). Next: per-TRI_GEN RDP tri count in the recompiled ucode (NEXT.md).
+26. **FPS60 near-wall flicker (s7098-s7107): cause selected, fix open.** The near canyon wall is missing for 1-3 frames while the camera hugs it; the drop is in the RDP stream (s7098). Ruled out: camera re-push (s7103), the terrain stream cull (s7104: near cells always kept), the CPU emit and LOD (s7105: every near cell emitted as TRI_GEN every frame, lod/w0 constant; tools/apply_s7105_emit.py), not-grid-terrain and overdraw (s7107). s7107: it is the near-plane clip of the eye cell (camera inside the near distance). Next: why the push-out lets the near plane into the wall at 16:9 (corner width vs FP_XSCALE, 4th corner); fix as opt-in, then default with owner.
 
 ## Evidence index
 

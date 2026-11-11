@@ -187245,3 +187245,51 @@ ORIGIN: no mitigation code added (measurement only).
 Next: tag every RDP triangle with its source TRI_GEN cell for the whole 7x7 (publish all 49 keys) and join with the G5B_TRIS painter map
 of the wall's screen region on an episode frame vs its neighbours: which cell paints the wall normally, and are its triangles present
 (and with what z) on the dropped frame (NEXT.md, slug fps60-wall-painter).
+
+## Session 7107 (2026-11-10) — FPS60 near-wall flicker: per-triangle source-cell tags show the wall's painter is the eye terrain cell and its triangles are ABSENT on the dropped swap (not overdrawn); the presented frames show straight near-plane cut lines (H-nearclip selected, H-elsewhere / H-rdp / H-frame refuted, two lines on one clean episode)
+HYPOTHESIS-ID: fps60-wall-painter
+CURRENT-TRUTH 58189 B, under the Step 0 trigger, no maintenance. No new soak verdicts (last folded: s7103_camfix_r1/r2).
+New instrument (one build):
+- tools/apply_s7107_painter.py (fixup list after apply_s7106_rsptri): s7105_visit publishes the TRI_GEN key (w0, words 8/9) of
+  every one of the 49 cells of the 7x7 around the eye into g_s7107_kw/k8/k9[49].
+- src/rsp/s7106_rsptri.cpp, ROGUESQ_S7107_TAG=1 (with S7106_RSPTRI): every RDP triangle the ucode DMEM parse sees pushes a tag byte
+  into an SPSC FIFO (0..48 = 7x7 cell, 0x40|class = TRI_GEN with no published key, 0x80|op = triangle from a non-TRI_GEN ucode
+  command); dpc_bridge.cpp pops one per forwarded triangle and stores it in the pad byte of the ROGUESQ_G5B_TRIS record. rt lines
+  gain q=depth,empty,push,pop,overflow kq=keys.
+- tools/s7107_painter.py (per capture episode: dropped swap = largest loss of TRI_GEN-painted 16 px grid cells vs the swap 2
+  earlier, painter tags over the lost cells in both swaps, the reference painters' tri counts / bbox / z), tools/s7107_losscan.py
+  (the same loss detector over every swap of the run), tools/s7107_sheet.py (capture contact sheet).
+Run: scratch/s7099/arm.zsh 6 4 s7107a (L6 dd4 16:9 FPS60, G1E_LIMIT=1 600-VI windows, CELL/EMIT/RSPTRI/TAG + G5B_TRIS), 0 CRASH,
+capture 15026 frames 58.9/s, tris.bin 1.33 GB / 15767 swaps. Only 2 capture episodes this run (lim1 2, lim2 0; s7106 had 10).
+Controls (same run):
+- FIFO sync: 13142 rt swaps, 0 empty pops, 0 overflows, depth 0 at every swap boundary: every forwarded triangle got the tag of
+  the ucode command that produced it.
+- Detector: 200 random flight swap pairs 2 apart lose median 0, p90 86, p99 354 cells; episode 1's dropped swap loses 568.
+- Painter: the reference swap of episode 1 names the eye cell c+0+0 as last painter of 565 of 568 lost cells (4 tris covering
+  x 287..995 of the 16:9 image) - the tag finds the wall's source.
+Result, episode 1 (t=206.5, T=0.15): swaps 13940-13946 the eye cell paints the right of the screen with 3-7 large tris whose z
+falls (5A41 -> 04AE top 16 bits, some tris at z 0005); swap 13947 the eye moves into the next cell in x (c-1+0 takes the left);
+dropped swap 13948: the old eye cell has 1 tri (5k px^2 top strip) instead of 3-4, x 575/725..995 is painted by nothing (353 cells)
+or op34 non-terrain (214); swap 13949 it is back (9 tris, one at z 0003). Presented frames 206.505-206.579 (docs/
+owner_sheet_s7107_nearclip_a.png): the right part of the wall is cut away along a STRAIGHT diagonal line with the canyon visible
+through it - the intersection line of the near plane with the wall plane. Episode 2 (t=212.0-212.3, 87 lost cells, inside the
+detector noise) on the sheet (owner_sheet_s7107_nearclip_b.png): frames alternate between the wall filling the view and the wall cut
+by straight diagonal edges, i.e. the eye oscillates across the near distance of the wall.
+Whole run (tools/s7107_losscan.py, lost >= 300 cells): 199 swaps in the capture span; 96 have near-cell (ring <= 1) tris with
+top-z <= 0x2000 in the reference or the dropped swap, most painted by the eye cell, most with no capture event (the capture
+detector needs a transient that comes back; some are fast camera turns). Not every stream loss is a visible drop; not counted as
+evidence beyond "near-z eye-cell loss is common".
+Discrimination: H-elsewhere (painter is a ring>=2 cell or non-TRI_GEN) refuted - the painter is the eye cell; H-rdp (tris present
+but overdrawn / z) refuted - the painter's tris are absent from the stream on the dropped swap; H-frame (no stream difference)
+refuted - the loss is at swap granularity. Selected: H-nearclip - the camera comes closer to the wall than the projection near
+plane, and the ucode near-plane clip legitimately removes the part of the eye cell in front of it (straight cut line on screen;
+the remaining tris hug z ~0). This corrects s7106's reading: s7106 found the eye cell's tris present on the swap nearest each
+event at its +-0.3 s swap alignment, but it could not pick the dropped swap; here the stream itself picks it, and on it the eye
+cell has 1 tri where it had 4. Two lines (stream tags + presented geometry), one clean episode; frequency not established.
+Lead for the cause (code-read, not yet measured): s7101's push-out in applyPlayerVehicleStateUpdate builds its 4 near-plane corners
+from the game FOV; at ASPECT=16:9 the projection is widened (s6142/s6144 FP_XSCALE), so if the corners are not widened too the side
+parts of the real near plane are never tested - episode 1's cut is on the right side. Untested 4th corner (s7101/s7102) is the other.
+ORIGIN: no mitigation code added (measurement only).
+Next: read how 0x8004CD00 builds the near corners (x half-width vs the projection's x scale at 16:9, near distance vs the
+projection near), and build ROGUESQ_S7108_CAMWIDE=1|tog widening the corner x by the aspect scale; same-run tog on L6 dd4 16:9,
+counting capture episodes and stream near-z eye-cell losses per state, plus an ASPECT=4:3 arm (NEXT.md, slug fps60-wall-nearclip).

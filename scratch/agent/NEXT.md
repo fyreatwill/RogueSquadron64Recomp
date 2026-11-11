@@ -1,25 +1,25 @@
-# NEXT: FPS60 near-wall flicker: which terrain cell paints the wall, and are its triangles present / with what z on the dropped frame
-HYPOTHESIS-ID: fps60-wall-painter
-Context (s7106): the ucode turns the 9 near-eye cells' TRI_GENs into screen-covering triangles on the event swaps of 8/10 episodes
-(src/rsp/s7106_rsptri.cpp; control ucode parse == bridge tris on 8505/8505 swaps). H-clip refuted as the general cause.
-Unit (one build, one run):
- 1. Widen the key publish to all 49 cells (tools/apply_s7106_rsptri.py: drop the ring<=1 test, j = i, arrays [49]; s7106_rsptri.cpp
-    near[] -> 49, keep the per-swap rt line compact: only cells with seen>0).
- 2. In s7106_rsptri.cpp also write, per triangle parsed for a matched cell, a compact record to a binary side file
-    (ROGUESQ_S7106_TRIS=<file>): swap, cell index, op, the 5 edge vertices (as G5B_TRIS), the top z (op&1) and shade alpha.
-    Or simpler: run with ROGUESQ_G5B_TRIS as well and store, per swap, the ordinal range of each matched cell's tris (tall counter at
-    the start/end of the command), since tall == bridge order (s7106 control).
- 3. Same arm: scratch/s7099/arm.zsh 6 4 s7107a "ROGUESQ_G1E_LIMIT=1 ROGUESQ_G1E_WIN=600 ROGUESQ_G3C_LOG=1
-    ROGUESQ_S7101_CHASE=$PWD/scratch/s7107/push_a.txt ROGUESQ_S7104_CELL=1 ROGUESQ_S7105_EMIT=1 ROGUESQ_S7106_RSPTRI=$PWD/scratch/s7107/rt_a.txt
-    ROGUESQ_G5B_TRIS=$PWD/scratch/s7107/tris_a.bin" 120 240 ; split via tools/s7099_wall_split.py raw csv run.log.
- 4. Offline: for each episode, the drop region (g5b_drops csv) on the dropped frame vs 2 frames before: last painter per screen cell
-    (tools/g5b_cover_map.py / g5b_point_stack.py) labelled with the source cell.
+# NEXT: FPS60 near-wall flicker: why the camera push-out lets the near plane into the wall (16:9 corner width?), and fix it
+HYPOTHESIS-ID: fps60-wall-nearclip
+Context (s7107): the dropped wall is the eye terrain cell clipped by the projection near plane (tags: eye cell 4 -> 1 tri on the
+dropped swap, z ~0; presented frames show a straight near-plane cut, docs/owner_sheet_s7107_nearclip_a/_b.png). The camera's
+near-plane push-out is applyPlayerVehicleStateUpdate 0x8004CD00 (s7101: 4 corners from the FOV via transformVec3ByMat34, ray test
+pos->corner for s4=0..2 only, on hit pos = hit - 2*near*unit(corner-pos)); s7103's re-push of all 4 corners did not help.
+Unit:
+ 1. Code-read (no run): how 0x8004CD00 builds the corner offsets - which FOV / aspect / near constants it reads - vs what the
+    projection uses at ASPECT=16:9 (s6142 wide camera, s6144 FP_XSCALE = ASPECT_SCALE, guPerspective near). Write the numbers.
+ 2. Build ROGUESQ_S7108_CAMWIDE=1|tog (new tools/apply_s7108_camwide.py): scale the corner x half-width by the aspect scale the
+    projection uses (and optionally test all 4 corners, reuse s7103's CAMFIX path), =tog in odd mach seconds (same-run control).
+ 3. Run scratch/s7099/arm.zsh 6 4 s7108a "ROGUESQ_G1E_WIN=600 ROGUESQ_G3C_LOG=1 ROGUESQ_S7101_CHASE=$PWD/scratch/s7108/push_a.txt
+    ROGUESQ_S7104_CELL=1 ROGUESQ_S7105_EMIT=1 ROGUESQ_S7106_RSPTRI=$PWD/scratch/s7108/rt_a.txt ROGUESQ_S7107_TAG=1
+    ROGUESQ_G5B_TRIS=$PWD/scratch/s7108/tris_a.bin ROGUESQ_S7108_CAMWIDE=tog" 120 240 ; split episodes/stream losses by tog state
+    (capture episodes from g5b_drops + tools/s7098_wall_flicker.py rule; stream near-z eye-cell losses from tools/s7107_losscan.py).
+    Second arm if time: same with ROGUESQ_ASPECT=4:3 (edit arm.zsh copy) and CAMWIDE=0.
 Hypotheses:
- H-elsewhere  the wall region's painter on clean frames is a ring>=2 cell or a non-TRI_GEN draw, and that source's tris are absent
-              on the dropped frame -> follow that source (CPU list / ucode count for it)
- H-rdp        the painter's triangles are present on the dropped frame but are overdrawn/lose z (sky, a later draw) or carry a z/alpha
-              change -> z/blend path (compare z of the same cell across the event)
- H-frame      no difference in the stream at swap granularity -> the loss is inside a swap (presented frame vs swap pairing at FPS60)
-Positive control: the same painter map on a clean frame must name the eye/near cells for the ground under the craft.
-s7106 leftovers: t=211.2 (eye cell lod-0 05050000 gives 0-1 tris throughout) and t=158.6 (frame total 7623 -> 2952 into the event).
-Default stays retail.
+ H-aspect   corners use the 4:3 width while the 16:9 projection is wider -> CAMWIDE on removes most episodes / near-z losses; the
+            4:3 arm shows few
+ H-corner4  the untested 4th corner (s7101) -> the cut sits at that corner's screen quadrant; CAMWIDE alone does not help
+ H-neardist the push distance (2*near) vs the projection near differ (e.g. our far/near scaling at dd>1) -> compare numbers in (1);
+            dd1 arm still drops (s7098: dd1 FPS60 2 episodes)
+ H-tick     the push-out is right but the FPS60 render-only frames use a camera that skipped it -> episodes only in lim1 windows
+Positive control: the stream loss detector must still flag the clipped swaps in the off state (s7107 numbers: p99 354 cells).
+Default stays retail; any fix is opt-in until the owner judges it.
