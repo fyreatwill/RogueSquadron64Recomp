@@ -458,7 +458,7 @@ index a0d4a6a..f6a56a9 100644
              // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
              //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..05d6a19 100644
+index 6255872..9916a95 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
 @@ -4,12 +4,115 @@
@@ -1297,7 +1297,7 @@ index 6255872..05d6a19 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -520,13 +1276,86 @@ namespace RT64 {
+@@ -520,13 +1276,104 @@ namespace RT64 {
                      hlslpp::float2 v2_texcoord = baseTexcoord.xy + texcoordDe.xy * dy_2;
                      hlslpp::float2 v3_opposite_texcoord = baseTexcoord.xy + texcoordDe.xy * dy_3;
                      hlslpp::float2 v3_texcoord = v3_opposite_texcoord + texcoordDx.xy * dx_3;
@@ -1347,6 +1347,7 @@ index 6255872..05d6a19 100644
 +                        static const int s_wClampMode = []{ const char *e = std::getenv("ROGUESQ_W_CLAMP"); return !(e && *e) ? 1 : *e == '0' ? 0 : *e == 't' ? 2 : 1; }();  // s6906 G5f: default on at every dd, knife lines are these wedges (=0 old)
 +                        const bool s_wClamp = s_wClampMode == 2 ? (((mach_absolute_time() / 24000000ull) & 1) != 0) : s_wClampMode != 0;
 +                        float cw1 = w1, cw2 = w2, cw3 = w3, tw1 = w1, tw2 = w2, tw3 = w3;
++                        bool s7126Dropped = false;
 +                        if (s_wClamp && (w1 <= 0.0f || w2 <= 0.0f || w3 <= 0.0f)) {
 +                            const float wMax = std::max({w1, w2, w3});
 +                            // All three negative stays clipped away. No such tri occurred in any s6895 capture.
@@ -1378,6 +1379,23 @@ index 6255872..05d6a19 100644
 +                                        x1, y1, x2, y2, x3, y3, w1, w2, w3); std::fflush(s_dropLog); }
 +                                    posWorkBuffer[workBufferIndex + 1].x = posWorkBuffer[workBufferIndex + 2].x = x1;
 +                                    posWorkBuffer[workBufferIndex + 1].y = posWorkBuffer[workBufferIndex + 2].y = y1;
++                                    s7126Dropped = true;
++                                }
++                            }
++                        }
++                        // s7126 wsheet-escape: ROGUESQ_W_KEEPLOG=<path> logs every perspective tri that is NOT dropped and has any W <= 0
++                        // (class M, mixed sign, clamped) or min(W)/max(W) < 1/64 with all W > 0 (class P), span >= ROGUESQ_W_KEEPLOG_MIN px
++                        // (default 20): tick, class, 3 screen vertices, 3 raw W, span. Splits H-span (M, span <= W_SHEET_PX) from H-pos (P).
++                        {
++                            static FILE *s_keepLog = []{ const char *e = std::getenv("ROGUESQ_W_KEEPLOG"); FILE *o = e && *e ? std::fopen(e, "w") : nullptr; return o; }();  // unbuffered by fflush per line: runs end in SIGKILL (s7126 lost a 1 MB buffer)
++                            static const float s_keepMin = []{ const char *e = std::getenv("ROGUESQ_W_KEEPLOG_MIN"); return e && *e ? float(std::atof(e)) : 20.0f; }();
++                            if (s_keepLog && !s7126Dropped) {
++                                const float wMn = std::min({w1, w2, w3}), wMx = std::max({w1, w2, w3});
++                                const char cls = (wMn <= 0.0f) ? 'M' : (wMx > 0.0f && wMn < wMx * (1.0f / 64.0f)) ? 'P' : 0;
++                                if (cls) {
++                                    const float sp = std::max(std::max({x1, x2, x3}) - std::min({x1, x2, x3}), std::max({y1, y2, y3}) - std::min({y1, y2, y3}));
++                                    if (sp >= s_keepMin) std::fprintf(s_keepLog, "%llu %c %.1f %.1f %.1f %.1f %.1f %.1f %.5g %.5g %.5g %.1f\n", (unsigned long long)mach_absolute_time(),
++                                        cls, x1, y1, x2, y2, x3, y3, w1, w2, w3, sp), std::fflush(s_keepLog);
 +                                }
 +                            }
 +                        }
@@ -1390,7 +1408,7 @@ index 6255872..05d6a19 100644
                      }
                      else {
                          posWorkBuffer[workBufferIndex + 0].w = 1.0f;
-@@ -537,7 +1366,157 @@ namespace RT64 {
+@@ -537,7 +1384,157 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
@@ -1548,7 +1566,7 @@ index 6255872..05d6a19 100644
                  }
                  // No texture coefficients
                  else {
-@@ -547,6 +1526,22 @@ namespace RT64 {
+@@ -547,6 +1544,22 @@ namespace RT64 {
                      texcoordWorkBuffer[workBufferIndex + 0] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 1] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 2] = interop::float2(0.0f, 0.0f);
@@ -1571,7 +1589,7 @@ index 6255872..05d6a19 100644
                  }
  
                  if (hasDepth) {
-@@ -580,11 +1575,170 @@ namespace RT64 {
+@@ -580,11 +1593,170 @@ namespace RT64 {
                      posWorkBuffer[workBufferIndex + 2].z = 0.0f;
                  }
  

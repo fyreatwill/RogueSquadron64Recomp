@@ -1,18 +1,17 @@
-# NEXT: the W_SHEET escape sheet at the owner recipe: a guard-band sky sheet RT64 draws as a dark band (cull did not drop it)
+# NEXT: fold the s7126 apex soaks; name the escaping sheet-fan member's class, then fix it
 HYPOTHESIS-ID: wsheet-escape
-Why: s7125 closed owner-recipe texture fidelity (H-equal), but in w6's cull-ON seconds (L6 dd4 16:9 FPS60, swaps 7635-7641, ~0.2 s)
-one thin sheet from a cliff edge across the sky was NOT dropped by ROGUESQ_W_SHEET_PX (no DROPLOG line). Angrylion paints it beige,
-RT64 dark. Sheet: docs/owner_sheet_s7125_wsheet_escape.png row 1. A dark streak across the sky is the owner's G5f "knife line" class.
-Hypotheses:
-  H-span : mixed-sign W, but screen span <= 200 px in RT64's coordinates (the band is long but its triangles are a fan of short ones):
-           lowering W_SHEET_PX or using the clamped-W footprint area drops it.
-  H-pos  : all three W > 0 (no clamp path); the dark colour comes from a near-zero W giving a huge 1/W shade/tex step: needs a
-           separate rule (e.g. W ratio max/min > K over a guard-band span).
-  H-other: not the W path at all (e.g. a fill/rect or a different combiner): name the command.
-Discriminator, one run: tools/s7125_arm.zsh L6 with ROGUESQ_W_SHEET_STATS=1 plus a NEW kept-tri log in rt64_gbi_rdp.cpp
-(ROGUESQ_W_KEEPLOG=<path>: for every texturePerspective tri with min(W)/max(W) < 1/64 OR any W<=0 that is NOT dropped, log tick,
-3 screen vertices, 3 W, span) — lib/rt64 edit, so run ./submodule-patches/export.sh and commit. Arm EVERY=1 FROM=7500 as in s7125
-so the frame can be replayed and matched (score with tools/s7122_fidelity.py, rect 0,9,369,216). Match the escape frames to keep-log
-ticks by mach time (lag ~10-15 ms). Positive control: DROPLOG lines must appear on the known cull frames in the same run.
-Outcomes: H-span -> tune the drop rule with a same-run W_SHEET_ALT arm and re-score (no new missing terrain); H-pos -> add the ratio
-rule behind an env, default on only after a same-run qualification; H-other -> name the command and its producer.
+State (s7126): the s7125 w6 swap-7641 dark sky band is a real escape of the W_SHEET cull (8 fan tris with apex (994.8,-112) dropped, one
+member drawn dark). Fan geometry refutes H-span (the escaper spans >> 200 px). Remaining:
+  H-pos  : the escaper has all W > 0 (one near-zero W at the W-plane zero crossing next to the cliff edge): class P in ROGUESQ_W_KEEPLOG.
+           The P class exists (s7126 k7: 59 kept P tris >= 150 px, max 666, W ratio median 0.0048).
+  H-other: not a perspective tri (no keep line at all next to the drops): name the command (fill/rect/non-persp tri) from a stream.
+Step 1 (no game run needed if the soaks ran): read scratch/agent/SOAK-RESULTS.md and scratch/s7126/apex_r{1,2,3}.txt.
+  - Any 'P' hit in tools/s7126_apex.py output -> H-pos. Design the rule: drop (or clamp like M) a P tri that shares a vertex with a dropped
+    tri in the same frame is not implementable per-tri in RT64; instead test a per-tri rule on the logged hits vs all P lines offline:
+    e.g. W ratio < 1/256 AND span > W_SHEET_PX. Count how many of the ~150 kept P tris per run the rule would also drop (each is potential
+    missing geometry: near-wall tris have large W range too). Land behind ROGUESQ_W_SHEET_POS=<ratio> with a W_SHEET_ALT-style same-run toggle,
+    qualify on one owner-recipe L6 stream run (tools/s7126_arm.zsh, EVERY=1 FROM=7500) with s7122_fidelity.py: no new missing terrain.
+  - Only 'M' or nothing, but a dark band is reported -> H-other: one stream run with tools/s7126_arm.zsh and decode the frame's commands.
+  - 0 hits in 3 x 300 s: escape rate < 1 per ~54k swaps; write that as the bound, close wsheet-escape as rare, move to the next G3/G5 item
+    in CURRENT-TRUTH Next steps.
+Commands: python3 tools/s7126_apex.py scratch/s7126/apex_rN_keep.txt scratch/s7126/apex_rN_drop.txt ; python3 tools/s7126_keep.py ... --minspan 200

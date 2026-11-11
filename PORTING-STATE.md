@@ -187877,3 +187877,32 @@ ORIGIN: the HUD diff was written by our rs64_region_scan running after the recor
 guard-band terrain tris at dd4 (s6895 class); nothing here is a new mitigation.
 Disk: o6/w6/p6 streams (12 GB each) deleted after replay; w6.raw, p6.raw and replays kept in scratch/s7125.
 Owner save untouched (forced-level route, NO_SAVE_WRITE).
+
+## Session 7126 (2026-11-10) — wsheet-escape: new RT64 kept-tri log (ROGUESQ_W_KEEPLOG) + log-only escape detector; the s7125 sky-band escape is genuine (not an arm-boundary artefact) and, by fan geometry, H-span is refuted (escaper is all-W-positive or non-perspective); it did not recur in one owner-recipe run; 3 recurrence soaks queued
+HYPOTHESIS-ID: wsheet-escape
+Work unit from NEXT.md. Code: lib/rt64/src/gbi/rt64_gbi_rdp.cpp ROGUESQ_W_KEEPLOG=<path> (+ _MIN px, default 20): every perspective tri that is
+NOT dropped with any W<=0 (class M, clamped) or min/max W < 1/64 with all W>0 (class P): tick, class, 3 screen verts, 3 raw W, span; fflush per
+line (first run k6 used a 1 MB setvbuf and lost the whole log, ~230 KB, to the SIGKILL: instrument defect, rerun as k7). Patch exported
+(submodule-patches/rt64.patch). New tools/s7126_arm.zsh (s7125_arm, own dir), tools/s7126_keep.py (class/span table, episodes, per-swap join),
+tools/s7126_apex.py (log-only detector: a kept tri sharing a screen vertex +-0.6 px with a dropped tri within 3 ms = an escaped sheet-fan member).
+Run k7: L6 owner recipe (FPS60 dd4 16:9), EVERY=1 FROM=7500, cull default on (no ALT), DROPLOG + KEEPLOG + STATS; 724 swaps (15 s), 0 crash.
+Replayed 723 with frame_replay16, scored with s7122_fidelity.py rect 0,9,369,216: lag 20 ms, median mean|d| 1.75 (= s7125 p6), control PASS.
+Results:
+1. Keep-log positive control: M lines span>=20 = 2860 vs the in-game [wsheet] counter 2858 (20-200 px kept, both blocks), same run.
+   Kept by span (px <20/40/60/100/150/200/400/more): M 0/1770/765/233/60/32/0/0 (never above 200: the cull works as written);
+   P 0/8/31/105/63/22/27/10: all-positive-W tris with a 30-1000x W range exist and run long (59 >= 150 px, max 666; ratio median 0.0048).
+2. The s7125 cliff-sheet episode recurs (k7 swaps 7658-7661) and is dropped whole: 8/8/9/5 drops per frame, RT64 shows sky, no dark band
+   (scratch/s7126/sheet_k7.png rows 1-3). 0 dark-band frames in 723 swaps. Long kept tris in the stream window: 2 (P 303 px at 7568, M 152 px at
+   7791), neither visible as a band. Apex detector over the whole run: 0 P, 1 M (a 179 px clamp next to a drop: the join fires, its control).
+3. s7125 w6 re-read (H-boundary, new, refuted): escape frame 7641 sits 6 ms before the ALT (cull-off) second, but its 8 drops are 35 ms
+   inside the cull-on second (k7: RT64 handles a frame's tris 1.8-9.4 ms after the previous swap record, so they are 7641's own). Shape:
+   7641 = 2991 px thin dark band (RT64 35/33/32 vs angrylion 98/89/76); 7642-7644 (cull off) = the whole ~11k px wedge dark. So 7641 is a
+   real escape: the cull dropped 8 fan tris and one member stayed.
+4. Geometry (single-source): all 8 dropped tris share apex (994.8,-112) with W=16384 there and W~-14.5k at the near pair; the visible band runs
+   from the cliff edge to that apex, so the escaping tri spans >> 200 px. A mixed-sign tri that long is dropped, so H-span is refuted for
+   this escaper; it is H-pos (all W>0 near the zero crossing: one tiny W, the P class shown to exist in 1) or H-other (non-perspective).
+Rate: 1 escaped frame in ~2100 owner-recipe swaps (s7125) + 0/723 (k7). Not catchable per stream run; the detector needs only logs.
+Queued scratch/agent/soak_queue/s7126_apex_L6_r{1,2,3}.sh (no stream, KEEPLOG+DROPLOG, apex detector verdict in scratch/s7126/apex_r*.txt).
+Verdict: refutes H-span (geometry) and the arm-boundary reading; H-pos vs H-other stays open until a recurrence is logged.
+ORIGIN: the escaping band comes from the guest's guard-band sheet fans at dd4 (s6895 class); no new mitigation landed (diagnostic only).
+Disk: k7.cap (12 GB) deleted after replay; k7.raw, k7r replays, keep/drop logs kept in scratch/s7126. Owner save untouched.
