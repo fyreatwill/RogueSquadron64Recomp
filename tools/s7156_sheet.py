@@ -9,5 +9,5 @@ sw = sys.argv[5].split(','); S = Image.new('RGB', (2 * W + 6, len(sw) * (H + 16)
 for i, s in enumerate(sw):
     r = rows[s]; y = i * (H + 16)
     S.paste(raw.img(int(r['pframe'])).crop(R), (0, y + 14)); S.paste(F.load_al(os.path.join(sys.argv[2], 'f%s.rgb' % s)).resize((W, H), Image.BOX), (W + 6, y + 14))
-    d.text((4, y + 1), 'RT64 %s swap %s (frac_c %s)' % (L, s, r['frac_c']), fill=(255, 255, 0)); d.text((W + 10, y + 1), 'angrylion', fill=(255, 255, 0))
+    d.text((4, y + 1), 'RT64 %s swap %s (frac_c %s)' % (L, s, r.get('frac_c', r['frac_over_T'])), fill=(255, 255, 0)); d.text((W + 10, y + 1), 'angrylion', fill=(255, 255, 0))
 S.save(sys.argv[4]); print(sys.argv[4], S.size)

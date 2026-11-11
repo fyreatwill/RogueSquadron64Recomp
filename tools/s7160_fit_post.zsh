@@ -2,9 +2,10 @@
 # s7160: after tools/s7141_post.zsh, rescore one level with the refit capture rect (default 0,10,370,217, the L0/L12 fit),
 # print summary + 8 row bands + worst-swap neighbours (duplicate pframe = frame-match lag), write the owner sheet (worst, median, p20).
 # usage: s7160_fit_post.zsh <dir> <name> [rect] [sheet.png]   e.g. s7160_fit_post.zsh scratch/s7160 L3
+# env SPLIT=117,352 SHEET_LABEL=21:9 for 21:9 captures (s7165).
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 D=$1; N=$2; R=${3:-0,10,370,217}; T=$(echo $R | tr , _); O=$D/${N}_f$T; SH=${4:-docs/owner_sheet_${D:t}_${N}_fidelity.png}
-python3 tools/s7122_fidelity.py score $D/$N.raw $D/$N.idx $D/${N}r $O --rect $R --split 46,322 > $O.log 2>&1 || { tail -3 $O.log; exit 1; }
+python3 tools/s7122_fidelity.py score $D/$N.raw $D/$N.idx $D/${N}r $O --rect $R --split ${SPLIT:-46,322} > $O.log 2>&1 || { tail -3 $O.log; exit 1; }
 echo "rect $R"; python3 tools/s7157_fsum.py $O.frames.csv | tail -2
 S=$(python3 - $O <<'PY'
 import csv, sys, collections
@@ -16,4 +17,4 @@ for w in s[-3:][::-1]: print('worst swap %s pframe %s frac %s frac_c %s dup %d' 
 print(','.join(s[i]['swap'] for i in (m - 1, m // 2, m // 5)))
 PY
 )
-env SHEET_RECT=$R SHEET_LABEL=16:9 python3 tools/s7156_sheet.py $D/$N.raw $D/${N}r $O.frames.csv $SH $S
+env SHEET_RECT=$R SHEET_LABEL=${SHEET_LABEL:-16:9} python3 tools/s7156_sheet.py $D/$N.raw $D/${N}r $O.frames.csv $SH $S

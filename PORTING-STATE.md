@@ -188997,3 +188997,31 @@ Three game runs, one at a time, screen unlocked, 0 CRASH/SIGSEGV/SIGBUS lines in
 - L17 arm 2 (same + ROGUESQ_W_SHEET_ALT=0 = keep mixed-sign sheets in odd 24 MHz seconds, drop in even; ROGUESQ_W_SHEET_DROPLOG): 1884 drops. Drops mapped to swaps by idx mach (bisect). Flight window (before medal 10591): frac_c med drop-second swaps WITH drops 0.0105 (n=62), drop-second swaps without drops 0.0062 (n=267), keep seconds 0.0073 (n=361). Sheet docs/owner_sheet_s7164_L17_wsheet_slab.png: on drop swaps 10121 and 10492 angrylion shows the dark streaks and RT64 does not. The 10492 drops are 9 tris fanning from ~(240-275, 250-290) to the guard-band corner (1193,671) with W ~ -7000..-11600 / +16350. That matches where the angrylion streak is and which way it runs. The top keep-second frames (10097/10098, 0.024) differ only by craft lag.
 - ATTRIBUTION (two lines: per-swap drop correlation + drop-vertex geometry matching the streak): the L17 slab is the mixed-sign guard-band sheet that the deliberate default ROGUESQ_W_SHEET_PX=200 cull drops (s7002/s7125 knife-spike class, owner G5f wanted them gone). It is not an RT64 defect: H-rt64 refuted. Gap: no keep-second frame with a visible slab was found to show RT64 drawing it in this run. s7125 showed that positive on L6, so on L17 the keep half is single-source.
 Rules out: H-rt64 for the L17 slab, H-wsheet(POS), H-spike. Next: 21:9 in-flight owner-recipe sweep over the levels other than L6/L15 (NEXT.md).
+
+## Session 7165 (2026-11-11) — G3 owner recipe 21:9 L1 + L4 flight == angrylion (centre 0.005/0.006, 0 flight >0.05); NEW: L4 mid-mission cutscene leaves the water right of screen centre uncleared/undrawn at 21:9 (dd1 and dd4; not at 4:3 retail by eye)
+HYPOTHESIS-ID: g3-owner-recipe-219 -> g3-219-cutscene-hole.
+Six game runs, one at a time, screen unlocked, 0 CRASH/SIGSEGV/SIGBUS in every run.log. Owner save untouched (NO_SAVE_WRITE, no SAVE_FROM).
+- L1 21:9 (tools/s7141_arm.zsh 1 L1w, ASPECT=21:9 EVERY=1 FROM=7500 MAX_MB 12000; s7141_post rect 0,11,469,216 split 117,352; CONTROL PASS):
+  686 swaps, all flight. s7159_regfit: inner/centre3d want (0,1); s7163_rectfit (CTRL x0+4 PASS) -> 1,12,469,217. Refit: frac med/p90/max
+  0.009/0.010/0.011, 0 >0.05, centre 0.005, side 0.014, dup pframes 0; shift-2 control from the same capture 357 >0.05. Bands 3.47 3.23 2.55 2.47
+  3.10 3.33 3.93 9.28 (bottom = lives ring, as every level). Sheet docs/owner_sheet_s7165_L1_219_fidelity.png identical by eye. H-equal.
+- L4 21:9 (L4w, same recipe; rectfit -> 1,11,469,216): 695 swaps, frac 0.006/0.014/0.072, centre 0.006 side 0.006; 13 swaps >0.05, all
+  7939-7951. Flight H-equal. The outliers sit in a letterboxed cutscene 7885-8083 (X-wing chased by TIEs over water toward the city, no HUD).
+  Per-swap unpainted px (replay log painted-of-total, new tools/s7165_letterbox.py): baseline 53, burst 7928-7955 rising to 27136 and 7976-7980
+  13793. angrylion leaves the water band right of the screen centre magenta (never written this frame); RT64 shows a stale streaky smear there.
+  Sheets docs/owner_sheet_s7165_L4_219_fidelity.png (worst = cutscene), scratch/s7141/L4w_burst.png.
+- The cutscene is event-triggered: s7131 16:9 was in plain flight at the same swaps. New tools/s7165_rawlb.py finds letterboxed spans in a
+  presented raw (positive control: L4w.raw span = the replay's 7885-8083). Seen in L4w (~190 s run time), L4d1 (~270 s), L4r43 (~277 s), L4xt
+  (~300 s); not in L4x0 (autopilot MISSION FAILED twice, scene never reached).
+- Arms, presented frames at the same offset into the cutscene (docs/owner_sheet_s7165_L4_219_cutscene_hole.png, dd4 vs dd1):
+  dd1 21:9 (L4d1, stream window missed the scene): same smear at cut+80/+100, hard vertical edge at x 0.50 -> H-dd REFUTED.
+  4:3 retail settings (L4r43: ASPECT=4:3 FPS60=0 dd1, 288x216 capture): no smear in any sampled frame of f7620-7860 (single-source, presented
+  only; at 4:3 the undrawn area may just hold plausible stale content).
+  HORIZON_XFIX=0 (L4x0): VOID, no cutscene. HORIZON_XFIX=tog (L4xt, parity = capture mach/24e6 & 1, docs/owner_sheet_s7165_L4_219_cutscene_xfixtog.png):
+  the whole hole phase cut+70..+110 fell in OFF seconds; its left edge is at 0.506 of the width there and at 0.50 with the fix on (L4d1).
+  So x/k does not move the edge. A split at ndc ~0 is invariant under /k, so this does not yet rule the s7133 path in or out.
+Rules out: H-dd for the cutscene hole. Open, not discriminated: H-clear (the s7133/s7136 horizon clear-rect builder 0x8005B51C emits
+rects in the cutscene camera that leave the lower-right uncleared under ASPECT), H-cam (the cutscene camera viewport/perspective is widened differently
+from the flight camera, s6104), H-terrain (water cells right of centre culled by the wide frustum). The cap was deleted before the stream
+could be inspected (mistake: keep the .cap until the outliers are explained); kept L4wr f7870-8100 replays, L4w/L4d1/L4r43/L4xt raws.
+Tool edits: tools/s7160_fit_post.zsh takes env SPLIT / SHEET_LABEL (21:9); tools/s7156_sheet.py falls back to frac_over_T when frac_c is missing.
