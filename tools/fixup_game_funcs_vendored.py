@@ -42138,6 +42138,7 @@ RS64_REPLAY = [
     "apply_s7133_horizon_x.py",  # s7133: ROGUESQ_HORIZON_XFIX (default on, =0 retail, =tog A/B) divides the horizon clear split x by ROGUESQ_ASPECT_SCALE (21:9 side-band holes)
     "apply_s7135_pitch_gate.py",  # s7135: ROGUESQ_HORIZON_GATEFIX (default on, no-op at 4:3, =0 retail, =tog A/B) lowers the horizon clear builder's 60 deg pitch skip gate under ASPECT so wide corner rays near the horizon still get the clear (21:9 no-clear strip)
     "apply_s7136_sky_fill.py",  # s7136: ROGUESQ_HORIZON_SKYFILL (default on, no-op at 4:3, =0 retail, =tog A/B) widens the horizon clear to the whole viewport under ASPECT so the sky side above the band top gets the band fade colour (21:9/16:9 sky-corner holes)
+    "apply_s7166_skyfill_bottom.py",  # s7166: ROGUESQ_HORIZON_SKYFILL_BOT (default on, =0 s7136, =tog) keeps the builder rects' bottom/right edge in the s7136 widened rect (letterboxed viewports start at y 54: h-1 was a height; L4 21:9 cutscene lower-right hole)
     "apply_s7134_cull_x.py",  # s7134: ROGUESQ_CULL_XFIX (opt-in, default off = retail; =1 render sites, =tog A/B, =all 19 sites) widens the sphere-in-view test (0x8001DC34) x-extent by the s6104 guPerspective factor (21:9 cloud-tile / object side culls)
     "apply_s7069_callsite_gate.py",  # s7069: inline flag gate (same-name macro) for lowfield_store/synth_read calls; MUST stay last
 ]

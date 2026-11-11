@@ -3582,6 +3582,24 @@ extern "C" void rs64_g5b_trigen(uint32_t pc, uint32_t w0, uint32_t w1, uint32_t 
 // s7128: RT64 (rt64_gbi_rdp.cpp W_SHEET_POS) calls this on every corner-hairline detection, dropped or not (=t off arm).
 static std::atomic<int> g_rs64_wsheetpos_trig{-1};
 extern "C" void rs64_wsheetpos_note(int arm) { (void)arm; g_rs64_wsheetpos_trig.store(g_rs64_swap_n.load(std::memory_order_relaxed), std::memory_order_relaxed); }
+// s7166 g3-219-cutscene-hole: ROGUESQ_G5B_FRAME_TRIG_LB=<k> makes the TRIG ring fire on the k-th letterbox span (default 1) instead of on
+// W_SHEET_POS detections. A span = setupMissionTransitionScreenOverlay calls (tools/apply_s6898_letterbox.py site, every letterboxed
+// cutscene frame) with gaps < 30 swaps, counted only from ROGUESQ_G5B_FRAME_FROM. One-shot: later spans are logged, not dumped.
+// Every span start/end goes to stderr as [lbspan], so a run names its cutscene swaps even without the recorder.
+static std::atomic<int> g_rs64_lb_trig{-1};
+extern "C" void rs64_frame_trig_lb(void) {
+    static const int k = [] { const char *e = std::getenv("ROGUESQ_G5B_FRAME_TRIG_LB"); return e && *e ? std::max(1, atoi(e)) : 0; }();
+    static const int from = [] { const char *e = std::getenv("ROGUESQ_G5B_FRAME_FROM"); return e && *e ? atoi(e) : 0; }();
+    static int a = -1, b = -1, n = 0; static uint64_t calls = 0;
+    const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
+    calls++;
+    if (b >= 0 && sw - b < 30) { b = sw; return; }
+    if (a >= 0) fprintf(stderr, "[lbspan] end start=%d last=%d\n", a, b);
+    a = b = sw;
+    if (sw >= from) n++;
+    fprintf(stderr, "[lbspan] start sw=%d n=%d k=%d calls=%llu\n", sw, n, k, (unsigned long long)calls);
+    if (k > 0 && sw >= from && n == k) { g_rs64_lb_trig.store(sw, std::memory_order_relaxed); fprintf(stderr, "[lbspan] TRIGGER sw=%d\n", sw); }
+}
 static void rs64_g5b_frame(uint32_t lo, uint32_t hi) {
     static FILE *f = [] { const char *e = std::getenv("ROGUESQ_G5B_FRAME"); FILE *o = (e && *e) ? fopen(e, "wb") : (FILE *)nullptr; if (o) setvbuf(o, nullptr, _IOFBF, 1 << 24); return o; }();
     if (!f || g_rdram_for_submit == nullptr || hi <= lo || hi > kSubmitRamEnd) return;
@@ -3609,7 +3627,8 @@ static void rs64_g5b_frame(uint32_t lo, uint32_t hi) {
         };
         if (sw != last) {
             if (cur >= 0) {  // the previous slot is complete
-                const int trig = g_rs64_wsheetpos_trig.exchange(-1);
+                static const bool lbmode = [] { const char *e = std::getenv("ROGUESQ_G5B_FRAME_TRIG_LB"); return e && *e; }();
+                const int trig = lbmode ? g_rs64_lb_trig.exchange(-1) : g_rs64_wsheetpos_trig.exchange(-1);
                 if (trig >= 0) {
                     dumpUntil = std::max(dumpUntil, ring[cur].sw + trigPost);
                     std::vector<Slot *> ord; for (auto &q : ring) if (q.sw >= 0) ord.push_back(&q);

@@ -53,7 +53,9 @@ extern "C" uint32_t g_s6489[8]; // s6489 cumulative cell-gate exit counters (pat
 extern "C" uint32_t rs64_phase_ord(void);
 // s6718 G1d: widened 640x340 mission-intro width (0 = off) and "live video state is the 640x340 intro"; set by fixup patches.
 // s6898: letterbox overlay right edge follows the widened frame, tools/apply_s6898_letterbox.py. ROGUESQ_G1D_LETTERBOX=0 = old, =tog = odd mach seconds fixed.
+extern "C" void rs64_frame_trig_lb(void);  // s7166: dpc_bridge.cpp ROGUESQ_G5B_FRAME_TRIG_LB ring trigger (letterbox overlay call)
 extern "C" uint32_t rs64_s6898_ovl_x1(uint32_t x1, uint32_t w) {
+    rs64_frame_trig_lb();
     static int mode = -1, fbw = 0;
     if (mode < 0) { const char* e = getenv("ROGUESQ_G1D_LETTERBOX"); mode = (e && *e == '0') ? 0 : (e && *e == 't') ? 2 : 1; const char* b = getenv("ROGUESQ_FB_WIDTH"); fbw = b ? atoi(b) : 0; }
     if (!mode || fbw <= 512 || (int)w != fbw || x1 >= w) return x1;

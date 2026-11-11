@@ -189025,3 +189025,35 @@ rects in the cutscene camera that leave the lower-right uncleared under ASPECT),
 from the flight camera, s6104), H-terrain (water cells right of centre culled by the wide frustum). The cap was deleted before the stream
 could be inspected (mistake: keep the .cap until the outliers are explained); kept L4wr f7870-8100 replays, L4w/L4d1/L4r43/L4xt raws.
 Tool edits: tools/s7160_fit_post.zsh takes env SPLIT / SHEET_LABEL (21:9); tools/s7156_sheet.py falls back to frac_over_T when frac_c is missing.
+
+## Session 7166 (2026-11-11) — L4 21:9 cutscene lower-right hole FIXED: s7136 SKYFILL used the viewport height as the bottom row; letterboxed viewports start at y 54
+HYPOTHESIS-ID: g3-219-cutscene-hole (closed).
+Four game runs, one at a time, screen unlocked, 0 CRASH/SIGSEGV/SIGBUS in every run.log. Owner save untouched (NO_SAVE_WRITE, no SAVE_FROM).
+Engineering:
+- New recorder trigger ROGUESQ_G5B_FRAME_TRIG_LB=<k> (src/rsp/dpc_bridge.cpp rs64_frame_trig_lb, called from rs64_s6898_ovl_x1 in
+  src/main/upstream_compat.cpp = every setupMissionTransitionScreenOverlay call): the G5B_FRAME_TRIG ring fires on the k-th letterbox
+  span (gap < 30 swaps) counted from ROGUESQ_G5B_FRAME_FROM, instead of on W_SHEET_POS notes. [lbspan] start/end/TRIGGER on stderr.
+  Positive control PASS: L4lb trigger at swap 10326, recording starts 0.26 s before the presented letterbox span that
+  tools/s7165_rawlb.py finds in the same run's raw (same mach clock). Fired in all 4 runs (sw 10326 / 10332 / 10356 / 11257).
+- tools/s7166_holetris.py: per swap FillRects (+ hit flag), tris whose bbox touches a region grouped by (combiner/othermode), scissors.
+- tools/apply_s7166_skyfill_bottom.py (fixup list right after s7136), ROGUESQ_HORIZON_SKYFILL_BOT default on, =0 restores s7136, =tog.
+- tools/s7166_sheet.py; sheet docs/owner_sheet_s7166_L4_219_cutscene_fix.png (matched trig+94 / trig+83 before vs after, angrylion + RT64).
+Runs (tools/s7141_arm.zsh 4 <n> "ASPECT dd1 FROM=7000 TRIG=4,260 TRIG_LB=1" 100 320; replay tools/s7141_post.zsh, control PASS each):
+- L4lb 21:9 (before): 256 letterboxed swaps, 75 with unpainted > 200, max 27136 (trig+62..+117 and +145..+163), i.e. the s7165 burst.
+  The unpainted area is exactly x 512-1023 x rows 340-392 (512 x 53). Stream: colour + Z clear rects {0,54,1023,339} and {0,Y,511,393};
+  in hole swaps NO triangle reaches rows 340-393 on either half (control swaps: 120-500 tris there); left half is covered by rect 2.
+- L4c0 21:9 ROGUESQ_CULL_SPIKE=0 + LOG_SPIKE=1: unpainted sequence byte-identical (same 75 counts, shifted 5 swaps), no [spike-swap]
+  line in the hole swaps -> the bridge spike cull is not it; the scene is deterministic relative to the trigger.
+- L4a43 4:3 (same FPS60 dd1): max unpainted 338. The builder's pair there is {256,Y,511,393} {0,Y,255,393}: both reach row 393, and
+  the same phase also has 0 tris in the bottom band, so retail relies on the right below-horizon rect.
+ORIGIN (ours): the viewport struct at 0x80138D20 holds w 1024 (+0x12) and h 340 (+0x16). s7136 SKYFILL overwrites the pair's first rect
+  with {0,0,w-1,h-1}: h-1 = 339 is a HEIGHT used as an absolute row. In flight the viewport starts at y 0 so it is the true bottom (s7136
+  verdicts unchanged); in the letterboxed cutscene (y 54..393) it cut the clear 54 rows short and removed the right below-horizon rect.
+  The builder's values are retail-correct. Fix: widened rect bottom/right = max(h-1 / w-1, the pair's own y1 / x1), read before the overwrite.
+- L4fx 21:9 (after, default build): 227 letterboxed swaps, 0 with unpainted > 200 (max 0, baseline 53 -> 0 too). Same phase check: swap
+  11351 has rect-2 top 211 exactly as before-swap 10420 and again 0 tris in the bottom band, but rect 1 now {0,54,1023,393}.
+Single-run per arm; the before/after is cross-run but phase-locked on the letterbox trigger, and L4lb vs L4c0 shows the scene is
+byte-deterministic there. Flight no-op is by construction (builder rects never exceed h-1 when y0 = 0), not measured this session.
+Rules out: H-terrain (our x-cull) and H-cam for the hole edge; the edge at x 0.50 is the builder's split (ndc ~0, s7165 tog was right
+that /k cannot move it). Not ours to fix: the bottom band has no water geometry for ~1 s in this shot at any aspect (game behaviour).
+Caps deleted after the explanation (4.5 GB each); replays scratch/s7141/L4{lb,c0,a43,fx}r and raws kept.
