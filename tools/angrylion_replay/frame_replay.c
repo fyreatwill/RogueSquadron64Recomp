@@ -5,6 +5,8 @@
 // (the H-tool control: on an EVERY=1 stream, own vs older snapshot must differ only on materials the CPU streamed in between).
 // s7150: the magenta pre-fill runs once per colour image per frame. Before s7150 it re-ran on every cimg CHANGE, so a frame that
 // switches 9D5000 -> B20000 (Z clear) -> 9D5000 after drawing (the in-flight pause menu) lost its scene to magenta. PREFILL_EVERY=1 restores.
+// s7152: NOPREFILL=1 skips the magenta pre-fill entirely, so pixels the frame does not draw keep the RAM snapshot's colour image
+// (menus that redraw only part of the fb per frame: title/main-menu swaps paint 25%). "painted" then counts non-magenta, not drawn.
 // KILL_AREA=<px>: zero tris whose rough area exceeds it. Positive control: the colour image is pre-filled magenta, "painted" counts pixels the replay changed.
 // Build: tools/angrylion_replay/build16.sh <dir> (s7098: needs a 16 MB core for dd>1 frames). Old: D=~/Documents/Tools/g3_angrylion; clang -O1 -I$D/src/src/core -I$D/src/src tools/angrylion_replay/frame_replay.c $D/build/libalp-core.a -lc++ -o frame_replay
 #include <stdio.h>
@@ -29,7 +31,7 @@ int main(int ac, char **av) {
     struct n64video_config c; n64video_config_init(&c);
     c.gfx.rdram = rdram; c.gfx.rdram_size = RAM; c.gfx.dmem = dmem; c.gfx.vi_reg = vip; c.gfx.dp_reg = dpp;
     c.gfx.mi_intr_reg = &mi; c.gfx.mi_intr_cb = intr; c.parallel = false; c.num_workers = 1;
-    n64video_init(&c); refill_every = getenv("PREFILL_EVERY") != NULL;
+    n64video_init(&c); refill_every = getenv("PREFILL_EVERY") != NULL; const int noprefill = getenv("NOPREFILL") != NULL;
     static uint8_t *fixsnap = NULL; const int snapfrom = getenv("SNAP_FROM") ? atoi(getenv("SNAP_FROM")) : -1; int havefix = 0;
     long killA = getenv("KILL_AREA") ? atol(getenv("KILL_AREA")) : 0, killed = 0;
     int wi = 3, want = atoi(av[wi]); uint32_t tag, sw = 0; uint64_t t; int have = 0, active = 0; uint32_t cimg = 0, cw = 0; long nr = 0;
@@ -67,7 +69,7 @@ int main(int ac, char **av) {
         if (!active) continue;
         for (uint32_t a = 0; a + 8 <= n;) { uint32_t w0 = rw(cmd, a), w1 = rw(cmd, a + 4), op = (w0 >> 24) & 0x3F, l = 8;
             if (op >= 8 && op <= 15) l = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0); else if (op == 0x24 || op == 0x25) l = 16;
-            else if (op == 0x3F) { uint32_t w = (w0 & 0x3FF) + 1; if (w >= cw && ((w0 >> 19) & 3) == 2) { cw = w; if (cimg != (w1 & 0xFFFFFF)) { cimg = w1 & 0xFFFFFF; int seen = 0; for (int k = 0; k < nf; k++) seen |= filled[k] == cimg; if (!seen && nf < 32) filled[nf++] = cimg; if (!seen || refill_every) for (uint32_t i = 0; i < w * 448; i++) { uint32_t q = (cimg + 2 * i) ^ 2; rdram[q] = 0x3E; rdram[q + 1] = 0xF8; } } } }
+            else if (op == 0x3F) { uint32_t w = (w0 & 0x3FF) + 1; if (w >= cw && ((w0 >> 19) & 3) == 2) { cw = w; if (cimg != (w1 & 0xFFFFFF)) { cimg = w1 & 0xFFFFFF; int seen = 0; for (int k = 0; k < nf; k++) seen |= filled[k] == cimg; if (!seen && nf < 32) filled[nf++] = cimg; if (!noprefill && (!seen || refill_every)) for (uint32_t i = 0; i < w * 448; i++) { uint32_t q = (cimg + 2 * i) ^ 2; rdram[q] = 0x3E; rdram[q + 1] = 0xF8; } } } }
             if (killA > 0 && op >= 8 && op <= 15 && a + l <= n) { // zero a big terrain tri: NOPs in its place
                 int32_t xl = (int32_t)rw(cmd, a + 8) >> 16, xh = (int32_t)rw(cmd, a + 16) >> 16, xm = (int32_t)rw(cmd, a + 24) >> 16;
                 int yl = ((int32_t)(w0 << 18) >> 18) / 4, yh = ((int32_t)(w1 << 18) >> 18) / 4; int wd = abs(xh - xl) > abs(xh - xm) ? abs(xh - xl) : abs(xh - xm);

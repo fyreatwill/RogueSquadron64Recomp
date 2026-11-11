@@ -188682,3 +188682,39 @@ sips-sRGB and sRGB raw vs (186,230,254)/(30,54,78) in native raw and stored PNG.
 Verdict line: this selects H-src (ScreenCaptureKit honours colorSpaceName for window filters, output == ColorSync P3->sRGB),
 refutes H-partial, and closes item 39. Raws before s7151 stay Display-P3 and need FID_P3=1; new raws need nothing.
 Raws deleted after scoring (2.7 GB each). Next: item 40, G3 title/main menu/profile screens at 21:9 on sRGB captures.
+
+## Session 7152 (2026-11-11) — G3 title + SELECT GAME (profile) screens at 21:9: RT64 == angrylion after one fit (H-equal); RECT_ASPECT inert there; replay NOPREFILL mode for memory-blended menus
+HYPOTHESIS-ID: g3-title-menu-219
+Work unit from NEXT.md (item 40). No maintenance (59.9 KB < 60000). No new soak results. Owner save untouched (no SAVE_FROM, NO_SAVE_WRITE).
+Two runs, one at a time, owner recipe FPS60 dd4 21:9, tools/s7146_arm.zsh default boot AP, SECS=45 EVERY=3 DL=8 DU=32, sRGB captures
+(FID_P3 off): M1 default (FROM=200, hit the 12 GB cap at swap 2406), R0 ROGUESQ_RECT_ASPECT=0 (FROM=650). 0 crash both.
+Phases (angrylion contact sheet): attract Hoth demo <=690 (640 fb), title START/OPTIONS 720-990, title->profile transition 1000-1100,
+SELECT GAME (profile "ASS") 1104-1250, fade 1260-1340, level select 1387+.
+1. TOOL GAP FOUND AND FIXED: the first s7141_post pass scored 514/736 swaps; swaps 690-1350 were all dropped. Op census
+   (s7146_opcensus.py): title/profile frames are 112-170 texrects into cimg B20000 w1024 with scissor 256,0-768,448, i.e. only the
+   512-px centre band, and the backdrop art alpha-blends over memory: the magenta pre-fill replay is magenta-tinted inside the band and
+   magenta outside, so load_al (row majority non-magenta) rejects it. tools/angrylion_replay/frame_replay.c NOPREFILL=1 skips the
+   pre-fill (undrawn pixels keep the RAM snapshot's colour image: black sides here). NOPREFILL is wrong for 336-row fbs (level select:
+   rows 336-447 are stale RAM, the row crop fails; frac 0.03 -> 0.2-0.38), so new tools/s7152_post.zsh replays both ways and builds a
+   combined dir taking the pre-fill replay wherever load_al accepts it (M1: 514 pre-fill + 228 NOPREFILL). Painted-square control PASS.
+2. Score (combined, per-swap search s7148_pfsearch, static screens so offsets are arbitrary): nominal frac>40 title 0.029, SELECT GAME
+   0.023, attract 0.025, transition 0.008, fade 0.003; sides 0.0000. Affine fit (s7143_affine.py, fit box centre 117:4:352:200, grid
+   sx 0..3/4, sy -1..0.5, e 1..0.984) picks (x +0.5 px, y 0, yscale 0.992), the s7144 fit, in all four arm/phase cases:
+| arm/phase | fit box | text box | art/panel | other |
+|---|---|---|---|---|
+| M1 title | 0.0583 -> 0.0020 | START/OPTIONS 0.1083 -> 0.0003 | art 0.0607 -> 0.0014 | logo 0.0828 -> 0.0023 |
+| R0 title | 0.0581 -> 0.0020 | 0.1087 -> 0.0003 | 0.0607 -> 0.0014 | 0.0828 -> 0.0023 |
+| M1 SELECT GAME | 0.0459 -> 0.0012 | title 0.0268 -> 0.0000 | panel 0.0498 -> 0.0022 | lower 0.0543 -> 0.0010 |
+| R0 SELECT GAME | 0.0502 -> 0.0011 | 0.0248 -> 0.0000 | 0.0521 -> 0.0020 | 0.0613 -> 0.0008 |
+   RECT_ASPECT is inert on these screens (identical fitted numbers; the 512x448 scissor does not match the VI fb ratio, so RT64's rect
+   scaling never triggers). Same-run positive control, level select: M1 title box 0.1496 -> 0.0004 fitted, R0 0.3091 -> 0.3100 (fit cannot
+   repair the 1.33x text), name 0.057 vs 0.144: the instrument separates the arms where they differ.
+3. Colour (brightest 10% per box, alignment-free): blue lift START/OPTIONS +2.4 (R0 +2.3), SELECT GAME +3.5 (R0 +8.7), logo white
+   +1.1, vs s7150's +30..+51 before the s7151 sRGB fix. H-colour refuted. START/OPTIONS red core -15 (thin italic strokes at 0.46
+   capture px per fb px; the shape fits at 0.0003, so resampling, not colour). Single run per arm.
+Observation for the owner: at 21:9 the title and profile screens are pillarboxed (art in the centre band, black sides) in RT64 AND in
+angrylion; that is the game's own draw, not a port defect. Widening them would be new work, owner's call.
+Verdict line: this selects H-equal for the title and SELECT GAME screens at 21:9, refutes H-rect (RECT_ASPECT inert, same-run control
+fires on level select) and H-colour (blue lift <= ~4 on sRGB captures), and closes item 40 (CURRENT-TRUTH renumbered: items 31-39
+merged into 31, this is 32). Owner sheet docs/owner_sheet_s7152_title_menus_219.png (tools/s7152_sheet.py). .cap streams deleted.
+CURRENT-TRUTH 59.9 -> 58.0 KB. Next: options menu + mission abort/debrief screens at 21:9 (item 33).
