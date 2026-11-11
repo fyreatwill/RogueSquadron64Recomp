@@ -187981,3 +187981,17 @@ remains passive: queued scratch/agent/soak_queue/s7128_wsheetpos_p{3,4}.sh (same
 when nothing triggers and prints ctl/det counts).
 Disk: deleted scratch/s7128/p{1,2}.raw (11 GB, no trigger, unusable) and the empty .cap files.
 ORIGIN: no new mitigation; the cull is s7127's. Rules out: a dead detector/recorder as the reason for the missing p1/p2 verdicts.
+
+## Session 7130 (2026-11-11) — wsheet-escape CLOSED: s7128 p3 dropped-arm fires are invisible (RT64 == angrylion where the cull dropped, H-fixed); p4 0 fires; owner sheet docs/owner_sheet_s7129_wsheet_cull.png
+HYPOTHESIS-ID: wsheet-escape
+Work unit from NEXT.md: fold s7128_wsheetpos_p3/p4, then build the owner sheet and close the slug.
+p3 (rc=0, 392 s, L6 owner recipe FPS60 dd4 16:9, W_SHEET_POS=t): 5 detections, ALL arm 1 (dropped), corner (-199,-112), W 5454-16384; 24 swaps replayed.
+tools/s7128_pixel.py: arm 1 n=5, line-minus-control |d| median -0.1 max 0.0; RT64 darkening beyond angrylion median 0.0 max 0.6. So where the cull
+dropped the wedge, RT64 equals the hardware along the wedge path: nothing visible was lost (H-fixed; H-harm refuted directly, second line of evidence
+after the s7129 construction argument). p4 (rc=0, 390 s): 0 detections, corner-free control fired 10 (real zero).
+Rate over the four 300 s soaks: 0, 0, 5, 0 (plus t1 5): clustered, rare.
+New tools/s7129_sheet.py -> docs/owner_sheet_s7129_wsheet_cull.png: row 0 the s7125 escaped dark band (before the cull); rows 1-2 p3 dropped fires
+(swaps 6332, 6282) angrylion | RT64 with the wedge marked cyan; row 3 t1 kept control (swap 8353) marked yellow. Along every mark RT64 == angrylion.
+Verdict: the corner-hairline cull is pixel-neutral in both arms on two independent renderers; G5f's remaining W_SHEET escape is closed on data. Owner look
+still decides G5f overall. Next: G3 owner-recipe fidelity on L1/L4 (CURRENT-TRUTH item 28, new slug g3-owner-recipe-levels).
+ORIGIN: no new mitigation; the cull is s7127's (writer: game guard-band corner clamp at dd4).

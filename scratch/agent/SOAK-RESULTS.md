@@ -1402,3 +1402,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261111-0034 | s7127_apex_L6_n3 (run by s7127 iteration, W_SHEET_POS final) | rc=0 | ~420s | scratch/s7127/apex_n3.soak.log
 20261111-005331 | s7128_wsheetpos_p1 | rc=0 | 388s | scratch/agent/soak_results/s7128_wsheetpos_p1_20261111-005331.log
 20261111-005959 | s7128_wsheetpos_p2 | rc=0 | 388s | scratch/agent/soak_results/s7128_wsheetpos_p2_20261111-005959.log
+20261111-011004 | s7128_wsheetpos_p3 | rc=0 | 392s | scratch/agent/soak_results/s7128_wsheetpos_p3_20261111-011004.log
+20261111-011636 | s7128_wsheetpos_p4 | rc=0 | 390s | scratch/agent/soak_results/s7128_wsheetpos_p4_20261111-011636.log
