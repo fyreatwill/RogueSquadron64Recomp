@@ -187965,3 +187965,19 @@ H-harm on arm 1 stays open. Queued scratch/agent/soak_queue/s7128_wsheetpos_p{1,
 scratch/s7128/p*_pixel.txt, .cap deleted after replay).
 ORIGIN: no new mitigation; the cull is s7127's (writer: game guard-band corner clamp at dd4). This session adds diagnostics and a toggle only.
 Disk: t1.cap deleted after replay; t1.raw (5.9 GB), t1r, logs kept in scratch/s7128.
+
+## Session 7129 (2026-11-11) — wsheet-escape: folded s7128 soaks p1/p2 (0 corner-hairline detections in 2x300 s, control fired 6/2, so no stream was recorded); dropped-arm harm refuted by construction; p3/p4 queued with raw-capture cleanup
+HYPOTHESIS-ID: wsheet-escape
+Work unit from NEXT.md: fold s7128_wsheetpos_p1/p2 (L6 owner recipe FPS60 dd4 16:9, ROGUESQ_W_SHEET_POS=t, TRIG=6,4), then judge arm 1 (dropped).
+Result: both soaks rc=0, 0 crash, ~388 s each. scratch/s7128/p{1,2}_pixel.txt was never written because p*.cap is 0 bytes and p*.idx is empty:
+run.log has 0 [g5btrig] and 0 [wsheetpos] lines (detector never matched), while the same-run looser control [wsheetposc] (span > 200 px with a vertex
+outside the scissor in both axes) fired 6 (p1) and 2 (p2) times, so the RT64 path was live and the null is a real zero. The recorder worked as designed
+(it writes only on a detection). Rate of the corner+thin class at this recipe: 5, 0, 0 in three 300 s L6 runs (s7127 n2 27 was the looser v1 rule).
+Dropped-arm question (H-fixed vs H-harm), second line of evidence by reading the code: RDP edge triangles carry their own vertices and RT64 rebuilds
+the work buffer per command (rt64_gbi_rdp.cpp:466/536, drawTris at :1817), so the drop (collapsing vertices 1,2 onto vertex 0) can only remove that
+triangle's own pixels; with s7128 t1 showing those same-class wedges draw nothing visible on RT64 or angrylion (control 6-11 vs 0.3-1.3), dropping
+cannot lose a visible pixel or touch neighbours. H-harm refuted (pixel data for the kept arm + construction); a direct arm-1 pixel measurement
+remains passive: queued scratch/agent/soak_queue/s7128_wsheetpos_p{3,4}.sh (same recipe; now deletes the ~5.5 GB window raw and empty .cap
+when nothing triggers and prints ctl/det counts).
+Disk: deleted scratch/s7128/p{1,2}.raw (11 GB, no trigger, unusable) and the empty .cap files.
+ORIGIN: no new mitigation; the cull is s7127's. Rules out: a dead detector/recorder as the reason for the missing p1/p2 verdicts.
