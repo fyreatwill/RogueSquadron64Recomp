@@ -188055,3 +188055,48 @@ during a bank). ORIGIN: the bad values are the game's own clear rects at 0x80138
 Next: store watch (apply_s5798_recwatch pattern) on [0x80138D90,0x80138DB0) to name the writer PC and function, logging camera roll.
 Then fix that function's x-scale under ASPECT (not a forced full clear, which would paint flat fill colour over the sky).
 Owner save untouched (forced-level route, NO_SAVE_WRITE).
+
+## Session 7133 (2026-11-11) — G3 21:9 side-band holes: writer of the horizon-split clear named (0x8005B51C) and its x-scale fixed under ASPECT (default on); a second, sky-side hole class remains past the top of the cloud band
+HYPOTHESIS-ID: g3-owner-recipe-219
+Work unit from NEXT.md (H-xscale / H-clamp / H-retail). Four L6 forced-route runs, owner recipe FPS60 dd4, screen unlocked, 0 crash:
+W1 21:9 store watch (no fix), F1 21:9 fix on, R1 4:3, S1 16:9 fix on. New tools/s7133_arm.zsh (s7132_arm into scratch/s7133),
+tools/s7133_swatch.py ([swatch] table by camera-offset band), tools/s7133_rects.py (per-swap FillRect list of a G5B capture).
+1. Writer (no new build: the s6843 generic store watch is already in every store hook). ROGUESQ_STORE_DIAG=1
+   ROGUESQ_STORE_WATCH=138D18:138DE4 on W1. Positive control: the camera's own fields +0x04..+0x73 show their per-frame writers on
+   4988 swaps (8001C7FC.., 800536A8.., 80058048). Clear list band: 0x8005B8FC/90C/924/930/938/940/948/950 write the two u16 rects at
+   +0x7C..+0x8B on 4277 swaps, the other branches (8005BC24..BC78) on 113-171, and 0x8005BC88 does count += 2 at +0x74. Function
+   0x8005B51C (generated name setupWalkerSpriteTileQuad, really the horizon clear-rect builder; 800FAB10.. is the per-frame reset).
+2. Code (read from the MIPS): it projects three horizon points through the camera with ndc_x = x/z * cot(fov/2) * 0.75 (rodata
+   0x8003AE44 = 0.75 = 1/(4:3), read from the ROM), ndc_y = y/z * cot, puts the split at pixel x t0 = w/2 + (w/2) * ndc_x (0x8005B770,
+   w = camera+0x10), and steps each half's rect to the horizon line using NDC slopes times pixel distances. The rects cover the
+   GROUND side (the flat fog-beige far ground); a cloud band covers the sky side. Under ROGUESQ_ASPECT the viewport is k times wider
+   and guPerspective's aspect is x k (k = ASPECT_SCALE, 2.0 at 21:9, 1.5547 at 16:9), so the true NDC is ndc_x / k. The split lands
+   k times too far from the centre (H-xscale). The slopes stay right, because the extra k cancels in the ratio, so only t0 is wrong.
+   H-clamp refuted: nothing clamps to 640 / 4:3.
+3. Fix: tools/apply_s7133_horizon_x.py (funcs_13.c, listed in fixup_game_funcs_vendored.py) divides that one product by k.
+   ROGUESQ_HORIZON_XFIX default on (no-op at k = 1, i.e. 4:3 retail), =0 restores, =tog odd mach seconds. Log line [s7133].
+   The route is deterministic up to the burst: F1 bursts at the same swaps as s7132 (7524-7578), in near-identical poses
+   (sheet docs/owner_sheet_s7133_horizon_x.png: left s7132 unfixed, right F1 fixed, swaps 7530 and 7541; magenta = never drawn).
+   Split x moves as predicted: 7520 700 -> 624, 7541 800 -> 688 (512 + (x-512)/2 = 606 / 656; poses differ slightly).
+   Angrylion replay, unpainted px per swap, split by whether the swap emits any clear FillRect:
+| run | swaps with a clear: n / >3000 px / max | no-clear swaps: n / >3000 / max |
+|---|---|---|
+| s7132 21:9 no fix | 669 / 52 / 58287 | 42 / 14 / 30185 |
+| F1 21:9 fix | 355 / 18 / 29780 | 356 / 14 / 27559 |
+| S1 16:9 fix | 367 / 0 / 351 | 106 / 67 / 30674 |
+| R1 4:3 (fix no-op) | 238 swaps: 0 >3000, max 959 (not split) | |
+   The top-right side-band hole (between the wall edge and the misplaced split) is gone: quadrant TR 4427 / 7853 px -> 0 at 7530 / 7541.
+   No regression at 16:9 among the swaps the fix acts on (0 / 367). S1's 67 hole swaps (7500-7566) are a static scene: every swap is
+   the same single 228608-byte range, no HUD, no clear fill, at normal swap pacing. The fix cannot touch a swap with no rects. What
+   that static stretch is (death camera? pause?) is unexplained; single run.
+4. Residual 21:9 class (18 clear swaps 7524-7541): holes bottom-left, on the SKY side, beyond the edge of the cloud-band triangles
+   (s7132_tricover: no tri and no rect at (200,420) in F1 7541; clouds at (60,200) are tri #75). Camera rolled ~150 deg, so a 21:9
+   corner looks further above the horizon than a 4:3/16:9 corner can (H-skyband, single-run reading). R1 (4:3) has 0 such frames,
+   but its pose differs (camera inside the wall, dark screen): cross-run, not a same-pose control, so H-retail is not decided for
+   this class. The no-clear swaps (14 in both 21:9 runs, 7564-7591) are a third, unexplained class.
+In plain words: the game works out where the horizon is to decide which part of the screen to clear, and it did that sum for a 4:3
+screen. At widescreen it got the split point wrong. That is fixed. The other hole, at the far corner past the clouds, is still there.
+ORIGIN: the bad values are the game's own clear rects, written by 0x8005B51C with the 4:3 constant 0.75 at 0x8003AE44; they are
+legitimate in retail (k = 1) and wrong only because ASPECT widens the projection without telling this function.
+Captures kept for the next unit: scratch/s7133/F1.cap (12.6 GB) + F1.idx/F1.rects; scratch/s7132/L6w.cap. W1/R1/S1 captures deleted.
+Owner save untouched (forced-level route, NO_SAVE_WRITE).
