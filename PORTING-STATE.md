@@ -187201,3 +187201,45 @@ hook in the recompiled ucode dispatcher, which is the next unit.
 ORIGIN: no mitigation code added (measurement only).
 Next: hook the F5 ucode's TRI_GEN dispatch (build/factor5_ucode via the ucode fixup), count the RDP triangles each TRI_GEN command produces, keyed by
 the command's DRAM address, and log the CPU cmd addresses of the near cells; episode vs flight per near cell (NEXT.md, slug fps60-wall-rsp-clip).
+
+## Session 7106 (2026-11-10) — FPS60 near-wall flicker: per-command RDP triangle census in the F5 ucode; the 9 near-eye cells' TRI_GENs keep producing screen-covering triangles through 8 of 10 episodes (H-clip refuted as the general cause, single run); the ucode DMEM parse matches the bridge triangle count on 8505/8505 swaps
+HYPOTHESIS-ID: fps60-wall-rsp-clip
+CURRENT-TRUTH 58119 B, under the Step 0 trigger, no maintenance. No new soak verdicts since s7103_camfix_r1/r2 (already folded).
+Static read. The main gfx ucode appends RDP commands to a DMEM output buffer at 0xD60 with fill pointer r16; the flush routine L_112C
+(r10 = r16 - 0xD60) DMAs [0xD60, r16) to the RDRAM FIFO, kicks DPC_END and resets r16 = 0xD60. The dispatch loop L_1090 fetches the
+command words at DMEM r17. So the RDP bytes command k produces are DMEM [r16 at fetch k, r16 at fetch k+1), split by any flush between.
+The overlay files build/factor5_ucode/*ovl*.c are not compiled (CMake builds only the main, _b and boot TUs; overlay code is spliced
+into the main file), so one TU covers it.
+New instrument (one build):
+- src/rsp/s7106_rsptri.cpp (ROGUESQ_S7106_RSPTRI=<file>): rs64_s7106_fetch at every L_1090 fetch (placed before the s6896 TG edge fix,
+  so p8/p9 are as the CPU wrote them) and rs64_s7106_flush at the L_112C flush entry parse [pos, r16) with the RDP length table and
+  give the triangles to the command being processed. One `rt` line per swap: TRI_GEN count, their tris, all tris, bridge tris, per
+  class (w0 mode/sub) cmds/tris/zero-tri/min/max/modal count, and per near cell (3x3 around the eye) seen/tris/zero/degenerate/bbox.
+- tools/fixup_factor5_ucode.py block "s7106 rsptri" (idempotent; tools/ucode_fixed patch refreshed with ucode_regen.sh snapshot,
+  verify = 0 DIFF, census 0 unexplained).
+- tools/apply_s7106_rsptri.py (fixup list after s7105): s7105_visit publishes w0 + words 8/9 (+0x20/+0x24) of the last TRI_GEN
+  emitted for each ring<=1 cell into g_s7106_kw/k8/k9; a fetched TRI_GEN matching (w0, p8, p9) is attributed to that cell.
+- dpc_bridge.cpp rs64_spike_scan calls rs64_s7106_btri per forwarded triangle: the independent per-swap count (tbr).
+- tools/s7106_rsptri.py (rt.txt drops.csv split.txt; episode alignment as s7105_emit.py).
+Run: scratch/s7099/arm.zsh 6 4 s7106a (L6 dd4 16:9 FPS60, G1E_LIMIT=1 600-VI windows, CELL=1 EMIT=1 RSPTRI), 0 CRASH lines, capture
+15563 frames 61.5/s, 10 episodes (lim1 6, lim2 4). scratch/s7106/rt_a.txt, rsptri_a.txt, split_a.txt.
+Controls (positive, same run):
+- Mark everything: over 8505 TRI_GEN swaps the DMEM parse total equals the bridge's forwarded-triangle total on every swap (41,324,051
+  both, |diff| p90 0), 0 parse overruns. So the attribution sees every RDP triangle exactly once. TRI_GENs carry 90.3% of all tris.
+- Key match: 9 (6917 swaps) or 8 (723) of the 9 near keys published; each matched cell is seen about once per swap (seen=1), so the
+  keys are unique per cell. Classes: mode0 sub1 (the 05050001 cells, 3x3 grid) modal 8 tris when unclipped, max 15; mode 2 quads 2,
+  max 5; zero-tri commands 45-66% (off-screen cells rejected), so the counter moves both ways.
+Result. Eye cell (slot 4): flight 2.41 tris/cmd with 62% zero-tri commands (the camera is high, the ground under it out of view);
+episode 4.31 tris/cmd with 8% zero. At the swap nearest each event the eye cell emits 2-8 tris whose bbox covers most of the screen
+(e.g. -199..995 x -112..559 px) in 8 of 10 episodes, with no change across the event (t=124.3: 2 tris every swap, t=131.1: 2-4). The
+other two: t=211.2 (eye cell is a lod-0 05050000 cell giving 0-1 tris on all 12 swaps, before and after the event, slot 7 gives 4-5)
+and t=218.0 (eye 0 tris on 3 swaps at -0.24..-0.17 s, 7 at the event). One episode (t=158.6) shows the whole-frame total falling
+7623 -> 2952 over 0.27 s into the event, the only big tall change seen.
+Discrimination: H-clip (the ucode turns the near cells' TRI_GENs into 0 triangles on episode frames) is refuted as the general cause:
+the near cells are converted to triangles, screen-covering ones, on the event swaps. Remaining: H-elsewhere (the wall is a ring >= 2
+cell or not grid terrain) and H-rdp (the triangles are there but paint nothing: z, coverage or blend). Single run, 10 episodes; the
+swap/event alignment is the capture-clock mapping of s7104/s7105 (per swap, ~33 ms), so a one-frame loss inside a swap is not excluded.
+ORIGIN: no mitigation code added (measurement only).
+Next: tag every RDP triangle with its source TRI_GEN cell for the whole 7x7 (publish all 49 keys) and join with the G5B_TRIS painter map
+of the wall's screen region on an episode frame vs its neighbours: which cell paints the wall normally, and are its triangles present
+(and with what z) on the dropped frame (NEXT.md, slug fps60-wall-painter).

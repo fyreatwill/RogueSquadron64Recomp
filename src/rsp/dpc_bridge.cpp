@@ -3593,6 +3593,7 @@ static void rs64_g5b_frame(uint32_t lo, uint32_t hi) {
     if (sw - lastram >= every) { lastram = sw; const uint32_t m = 0x204D4152u; put(&m, 4); put(g_rdram_for_submit, kSubmitRamEnd); }
     const uint32_t m = 0x20474E52u, n = hi - lo; put(&m, 4); put(&lo, 4); put(&n, 4); put(g_rdram_for_submit + lo, n);
 }
+extern "C" int rs64_s7106_on; extern "C" void rs64_s7106_btri(void);  // s7106 rsptri control
 static int g_rs64_skyz_why = 7; static uint32_t g_rs64_skyz_m = 0; static bool g_rs64_skyz_sel2 = false;  // s6948: SKYZ decision for the audit
 static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     static const bool on = [] { const char *e = std::getenv("ROGUESQ_LOG_SPIKE"); return e && *e && *e != '0'; }();
@@ -3779,6 +3780,7 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         if (s_bd) { s_bA += s_bc0 == 0xFC127E24u && s_bc1 == 0xFFFFFFFFu; s_bB += s_bc0 == 0xFC127FFFu && s_bc1 == 0xFFFFFE3Fu; }
         const uint32_t len = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
         if (a + 32 > hi) break;
+        if (__builtin_expect(rs64_s7106_on, 0)) rs64_s7106_btri();  // s7106: independent per-swap tri count (control for the ucode DMEM parse)
         const double yl = sx14(w0 & 0x3FFF), ym = sx14((w1 >> 16) & 0x3FFF), yh = sx14(w1 & 0x3FFF);
         auto fx = [&](uint32_t o) { return (double)(int32_t)rd(a + o) / 65536.0; };
         const double xl = fx(8), dl = fx(12), xh = fx(16), dh = fx(20), xm = fx(24), dm = fx(28);

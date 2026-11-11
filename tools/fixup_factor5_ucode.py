@@ -3207,6 +3207,27 @@ if is_main_ucode and G5B_FIX_MARKER not in text:
         print(f"fixup_factor5_ucode: G5B FIX ANCHOR FAILED (decl={n_decl}, call={n_call}).", file=sys.stderr)
         sys.exit(1)
 
+# s7106 fps60-wall-rsp-clip: per-command RDP triangle census (src/rsp/s7106_rsptri.cpp). rs64_s7106_fetch at every L_1090
+# fetch, before the s6896 TG edge fix edits p8/p9 (so the key matches the CPU emit); rs64_s7106_flush at the L_112C flush entry
+# (r16 = DMEM 0xD60 output buffer fill). ROGUESQ_S7106_RSPTRI=<file>. Measurement only.
+S7106_MARKER = "/* fixup: s7106 rsptri */"
+if is_main_ucode and S7106_MARKER not in text:
+    text, n_decl = re.subn(
+        r"(extern \"C\" void rs64_f5_vtx_probe[^\n]*\n)",
+        lambda m: m.group(1) + 'extern "C" int rs64_s7106_on; extern "C" void rs64_s7106_fetch(const uint8_t*, uint32_t, uint32_t, uint32_t); extern "C" void rs64_s7106_flush(const uint8_t*, uint32_t);  ' + S7106_MARKER + "\n",
+        text, count=1)
+    text, n_call = re.subn(
+        r"(    rs64_f5_state_probe\(r17, r19, r20\);[^\n]*\n)",
+        lambda m: m.group(1) + "    if (__builtin_expect(rs64_s7106_on, 0)) rs64_s7106_fetch((const uint8_t*)RS64_DMEM_BASE, r17, r19, r16);  " + S7106_MARKER + "\n",
+        text, count=1)
+    text, n_fl = re.subn(
+        r"(    // addiu       \$10, \$16, -0xD60\n)",
+        lambda m: "    if (__builtin_expect(rs64_s7106_on, 0)) rs64_s7106_flush((const uint8_t*)RS64_DMEM_BASE, r16);  " + S7106_MARKER + "\n" + m.group(1),
+        text, count=1)
+    if (n_decl, n_call, n_fl) != (1, 1, 1):
+        print(f"fixup_factor5_ucode: S7106 ANCHOR FAILED (decl={n_decl}, call={n_call}, flush={n_fl}).", file=sys.stderr)
+        sys.exit(1)
+
 # ---------------------------------------------------------------------------
 # Fixup 18: record L_11B0's actual indirect continuation (s726).
 # ---------------------------------------------------------------------------

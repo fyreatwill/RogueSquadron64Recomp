@@ -1,6 +1,6 @@
 --- a/factor5_ucode_recompiled.c
 +++ b/factor5_ucode_recompiled.c
-@@ -1,2541 +1,5983 @@
+@@ -1,2541 +1,5986 @@
  #include "librecomp/rsp.hpp"
  #include "librecomp/rsp_vu_impl.hpp"
 -RspExitReason factor5_ucode(uint8_t* rdram, [[maybe_unused]] uint32_t ucode_addr) {
@@ -2569,6 +2569,7 @@
 +extern "C" void rs64_m4_y8000_store(uint32_t r16);  /* fixup: M4 store attest */
 +extern "C" void rs64_f5_state_probe(uint32_t r17, uint32_t w0, uint32_t w1);  /* fixup: F5 state census v1 */
 +extern "C" void rs64_f5_vtx_probe(uint32_t pc, uint32_t w0, uint32_t w1, const uint8_t *rdram);  /* fixup: F5 VTX source probe v1 */
++extern "C" int rs64_s7106_on; extern "C" void rs64_s7106_fetch(const uint8_t*, uint32_t, uint32_t, uint32_t); extern "C" void rs64_s7106_flush(const uint8_t*, uint32_t);  /* fixup: s7106 rsptri */
 +extern "C" int rs64_g5b_tg_on; extern "C" void rs64_g5b_trigen(uint32_t pc, uint32_t w0, uint32_t w1, uint32_t p8, uint32_t p9);  /* fixup: s6896 G5b TriGen base witness */
 +extern "C" int rs64_g5b_tg_fix; extern "C" int rs64_g5b_tg_edge(uint32_t w0, uint32_t *p8, uint32_t *p9);  /* fixup: s6896 G5b TriGen s16 edge */
 +extern "C" void rs64_m4_index_probe(uint32_t kind, uint32_t slot, uint32_t p0, uint32_t p1, uint32_t p2, uint32_t index, uint32_t masked, uint32_t c0, uint32_t c1, uint32_t c2);  /* fixup: M4 producer consumer index join v1 */
@@ -2790,6 +2791,7 @@
 +    // lw          $20, 0x4($17)
 +    r20 = RSP_MEM_W_LOAD(0X4, r17);
 +    rs64_f5_state_probe(r17, r19, r20);  /* fixup: F5 state census v1 */
++    if (__builtin_expect(rs64_s7106_on, 0)) rs64_s7106_fetch((const uint8_t*)RS64_DMEM_BASE, r17, r19, r16);  /* fixup: s7106 rsptri */
 +    if ((r19 >> 24) == 0x04) rs64_f5_vtx_probe(r17, r19, r20, rdram);  /* fixup: F5 VTX source probe v1 */
 +    if (__builtin_expect(rs64_g5b_tg_on, 0) && (r19 >> 24) == 0x05) rs64_g5b_trigen(r17, r19, r20, RSP_MEM_W_LOAD(0X20, r17), RSP_MEM_W_LOAD(0X24, r17));  /* fixup: s6896 G5b TriGen base witness */
 +    if (__builtin_expect(rs64_g5b_tg_fix, 0) && (r19 >> 24) == 0x05) { uint32_t p8_6896 = RSP_MEM_W_LOAD(0X20, r17), p9_6896 = RSP_MEM_W_LOAD(0X24, r17); if (rs64_g5b_tg_edge(r19, &p8_6896, &p9_6896)) { RSP_MEM_W_STORE(0X20, r17, p8_6896); RSP_MEM_W_STORE(0X24, r17, p9_6896); } }  /* fixup: s6896 G5b TriGen s16 edge */
@@ -2913,6 +2915,7 @@
 +L_112C:
 +    // lw          $8, 0x8($18)
 +    r8 = RSP_MEM_W_LOAD(0X8, r18);
++    if (__builtin_expect(rs64_s7106_on, 0)) rs64_s7106_flush((const uint8_t*)RS64_DMEM_BASE, r16);  /* fixup: s7106 rsptri */
 +    // addiu       $10, $16, -0xD60
 +    r10 = RSP_ADD32(r16, -0XD60);
 +    rs64_m4_y8000_flush(r16, 0x112C, rs64_m4_y8000_step(0x112C));  /* fixup: M4 y8000 */  rs64_m4_norm_sample(&rsp, 0x112C, rs64_iter, rdram);  /* fixup: M4 normalized boundary schema v2 */

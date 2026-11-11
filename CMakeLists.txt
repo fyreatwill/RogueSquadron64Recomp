@@ -349,6 +349,7 @@ add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7095_dpc_model.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7096_fwd_cover.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7097_edit_census.cpp
+    ${CMAKE_SOURCE_DIR}/src/rsp/s7106_rsptri.cpp
     ${FACTOR5_UCODE_TLS_CPP}
     ${FACTOR5_UCODE_LEAN_CPP}
     ${FACTOR5_UCODE_NMAC_CPP}

@@ -42127,6 +42127,7 @@ RS64_REPLAY = [
     "apply_s7103_camfix.py",  # s7103: exit residual corner test + y-clamp inputs (CHASE file rx lines) + ROGUESQ_S7103_CAMFIX=1|tog re-push arm
     "apply_s7104_cellcull.py",  # s7104: per-call near-eye terrain cell keep/cull verdicts (CHASE file cc lines), ROGUESQ_S7104_CELL=1 (measurement only)
     "apply_s7105_emit.py",  # s7105: near-eye terrain cells list -> render chain -> TRI_GEN emit + lod (CHASE file ce lines), ROGUESQ_S7105_EMIT=1 (measurement only)
+    "apply_s7106_rsptri.py",  # s7106: publish near-cell TRI_GEN keys for the ucode per-command RDP tri census (src/rsp/s7106_rsptri.cpp), ROGUESQ_S7106_RSPTRI=<file> (measurement only)
     "apply_s7069_callsite_gate.py",  # s7069: inline flag gate (same-name macro) for lowfield_store/synth_read calls; MUST stay last
 ]
 
