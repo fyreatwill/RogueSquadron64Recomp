@@ -1394,3 +1394,9 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261110-144803 | s7102_push_r2 | rc=0 | 396s | scratch/agent/soak_results/s7102_push_r2_20261110-144803.log
 20261110-150556 | s7103_camfix_r1 | rc=0 | 396s | scratch/agent/soak_results/s7103_camfix_r1_20261110-150556.log
 20261110-151232 | s7103_camfix_r2 | rc=0 | 395s | scratch/agent/soak_results/s7103_camfix_r2_20261110-151232.log
+20261110-235337 | s7126_apex_L6_r1 | rc=0 | 387s | scratch/agent/soak_results/s7126_apex_L6_r1_20261110-235337.log
+20261111-000004 | s7126_apex_L6_r2 | rc=0 | 386s | scratch/agent/soak_results/s7126_apex_L6_r2_20261111-000004.log
+20261111-001753 | s7126_apex_L6_r3 (run by s7127 iteration) | rc=0 | ~420s | scratch/s7126/apex_r3.soak.log
+20261111-0018 | s7127_apex_L6_n1 (run by s7127 iteration, NLOG build) | rc=0 | ~420s | scratch/s7127/apex_n1.soak.log
+20261111-0027 | s7127_apex_L6_n2 (run by s7127 iteration, W_SHEET_POS v1) | rc=0 | ~420s | scratch/s7127/apex_n2.soak.log
+20261111-0034 | s7127_apex_L6_n3 (run by s7127 iteration, W_SHEET_POS final) | rc=0 | ~420s | scratch/s7127/apex_n3.soak.log

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """s7126 wsheet-escape detector from logs only: a KEPT perspective tri (ROGUESQ_W_KEEPLOG) that shares a screen vertex (+-0.6 px) with a
 DROPPED tri (ROGUESQ_W_SHEET_DROPLOG) within --ms (default 3) is a sheet-fan member that escaped the cull (the s7125 w6 swap-7641 band shape).
+s7127: also accepts a ROGUESQ_W_NLOG file as keep.txt (same 12 fields, class N = untextured, T = textured non-perspective,
+W fields 0): a hit there is H-other, an escaper the W cull cannot see.
 usage: s7126_apex.py keep.txt drop.txt [--ms 3]"""
 import sys, bisect, collections
 keep, drop = sys.argv[1], sys.argv[2]; ms = float(sys.argv[sys.argv.index('--ms') + 1]) if '--ms' in sys.argv else 3.0

@@ -458,7 +458,7 @@ index a0d4a6a..f6a56a9 100644
              // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
              //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..9916a95 100644
+index 6255872..569726b 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
 @@ -4,12 +4,115 @@
@@ -638,7 +638,7 @@ index 6255872..9916a95 100644
                  // TODO flush when tile and level change
                  tile = (curData[0].w0 >> 16) & 0x7;
                  level = (curData[0].w0 >> 19) & 0x7;
-@@ -406,6 +538,11 @@ namespace RT64 {
+@@ -406,6 +538,23 @@ namespace RT64 {
                  posWorkBuffer[workBufferIndex + 1].y = y2;
                  posWorkBuffer[workBufferIndex + 2].x = x3;
                  posWorkBuffer[workBufferIndex + 2].y = y3;
@@ -647,10 +647,22 @@ index 6255872..9916a95 100644
 +                if (x3 < bx0) bx0 = x3; if (x3 > bx1) bx1 = x3;
 +                if (y2 < by0) by0 = y2; if (y2 > by1) by1 = y2;
 +                if (y3 < by0) by0 = y3; if (y3 > by1) by1 = y3;
++                // s7127 wsheet-escape: ROGUESQ_W_NLOG=<path> logs every tri the W_SHEET cull can NOT see (untextured = class N,
++                // textured without perspective = class T) with span >= ROGUESQ_W_NLOG_MIN px (default 200), in the W_KEEPLOG
++                // 12-field format (W fields 0) so tools/s7126_apex.py joins it against the DROPLOG unchanged: covers H-other.
++                {
++                    static FILE *s_nLog = []{ const char *e = std::getenv("ROGUESQ_W_NLOG"); return e && *e ? std::fopen(e, "w") : nullptr; }();
++                    static const float s_nMin = []{ const char *e = std::getenv("ROGUESQ_W_NLOG_MIN"); return e && *e ? float(std::atof(e)) : 200.0f; }();
++                    if (s_nLog && (!textured || !texturePerspective)) {
++                        const float sp = std::max(bx1 - bx0, by1 - by0);
++                        if (sp >= s_nMin) std::fprintf(s_nLog, "%llu %c %.1f %.1f %.1f %.1f %.1f %.1f 0 0 0 %.1f\n", (unsigned long long)mach_absolute_time(),
++                            textured ? 'T' : 'N', x1, y1, x2, y2, x3, y3, sp), std::fflush(s_nLog);
++                    }
++                }
  
                  curData += triangleBaseWords;
  
-@@ -420,6 +557,23 @@ namespace RT64 {
+@@ -420,6 +569,23 @@ namespace RT64 {
                  // Calculate x distance from the point opposite vertex 3 to vertex 3 itself.
                  float dx_3 = x3 - x3_opposite;
  
@@ -674,7 +686,7 @@ index 6255872..9916a95 100644
                  if (shaded) {
                      hlslpp::int4 baseColorFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -455,6 +609,15 @@ namespace RT64 {
+@@ -455,6 +621,15 @@ namespace RT64 {
                      hlslpp::float4 colorDe = hlslpp::float4(colorDeFixed) * (1.0f / 65536.0f);
                      // hlslpp::float4 colorDy   = hlslpp::float4(colorDyFixed)   * (1.0f / 65536.0f);
  
@@ -690,7 +702,7 @@ index 6255872..9916a95 100644
                      // Offset the base color (which seems to start at XH) by the distance between YH and the y-coord of XH.
                      hlslpp::float4 v1Color = baseColor + colorDe * dy_1;
                      // Use the edge derivative to calculate the color at the middle vertex from the color at the major vertex
-@@ -464,6 +627,179 @@ namespace RT64 {
+@@ -464,6 +639,179 @@ namespace RT64 {
                      // Use the x derivative to calculate the color at the last vertex, starting from its opposite point
                      hlslpp::float4 v3Color = v3OppositeColor + colorDx * dx_3;
  
@@ -870,7 +882,7 @@ index 6255872..9916a95 100644
                      colorWorkBuffer[workBufferIndex + 0] = v1Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 1] = v2Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 2] = v3Color * (1/255.0f);
-@@ -477,6 +813,426 @@ namespace RT64 {
+@@ -477,6 +825,426 @@ namespace RT64 {
                      colorWorkBuffer[workBufferIndex + 2] = interop::float4(0.0f, 0.0f, 0.0f, 0.0f);
                  }
  
@@ -1297,7 +1309,7 @@ index 6255872..9916a95 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -520,13 +1276,104 @@ namespace RT64 {
+@@ -520,13 +1288,142 @@ namespace RT64 {
                      hlslpp::float2 v2_texcoord = baseTexcoord.xy + texcoordDe.xy * dy_2;
                      hlslpp::float2 v3_opposite_texcoord = baseTexcoord.xy + texcoordDe.xy * dy_3;
                      hlslpp::float2 v3_texcoord = v3_opposite_texcoord + texcoordDx.xy * dx_3;
@@ -1383,6 +1395,44 @@ index 6255872..9916a95 100644
 +                                }
 +                            }
 +                        }
++                        // s7127 wsheet-escape H-pos fix: ROGUESQ_W_SHEET_POS (default 1, =0 restores s7126). The s7125/s7127 escaper is a member
++                        // of a guard-band sheet fan whose W are all > 0 (5454 / 596130 / 595700): the mixed-sign rule above cannot see it and
++                        // RT64 draws it as a dark sky band while its dropped siblings show sky. Its signature, found once in 6 logs (~92k
++                        // owner-recipe swaps, ~220 kept P tris >= 200 px) and on no other tri: min/max W < 1/64, span > W_SHEET_PX, and a
++                        // vertex clamped to a guard-band CORNER (>= 20% of the scissor size outside it in x AND in y; 16:9 = (-199,-112), (-398,-224), (994.8,-112)).
++                        if (s_wClamp && !s7126Dropped && w1 > 0.0f && w2 > 0.0f && w3 > 0.0f) {
++                            static const bool s_sheetPos = []{ const char *e = std::getenv("ROGUESQ_W_SHEET_POS"); return !(e && *e == '0'); }();
++                            static const float s_sheetPx2 = []{ const char *e = std::getenv("ROGUESQ_W_SHEET_PX"); return e && *e ? float(std::atof(e)) : 200.0f; }();
++                            const float wMn = std::min({w1, w2, w3}), wMx = std::max({w1, w2, w3});
++                            if (s_sheetPos && s_sheetPx2 > 0.0f && wMn < wMx * (1.0f / 64.0f) && state->rdp->scissorStackSize > 0) {
++                                const float spanPx = std::max(std::max({x1, x2, x3}) - std::min({x1, x2, x3}), std::max({y1, y2, y3}) - std::min({y1, y2, y3}));
++                                const FixedRect &sc = state->rdp->scissorRectStack[state->rdp->scissorStackSize - 1];
++                                const float sx0 = sc.ulx / 4.0f, sy0 = sc.uly / 4.0f, sx1 = sc.lrx / 4.0f, sy1 = sc.lry / 4.0f;
++                                const float gx = 0.2f * (sx1 - sx0), gy = 0.2f * (sy1 - sy0);
++                                auto corner = [&](float x, float y) { return (x <= sx0 - gx || x >= sx1 + gx) && (y <= sy0 - gy || y >= sy1 + gy); };
++                                // ...and the other two vertices within 8 px (a hairline wedge: n2 fires 1.6-4.3 px, the n1 escaper 2.9 px; the one wide
++                                // corner tri ever logged, k7 base 377 px, showed no band and is kept).
++                                auto thin = [](float ax, float ay, float bx, float by) { return std::fabs(ax - bx) <= 8.0f && std::fabs(ay - by) <= 8.0f; };
++                                // Same-run positive control (log only, nothing dropped): long P tris with any vertex outside the scissor in both axes.
++                                auto out0 = [&](float x, float y) { return (x < sx0 || x > sx1) && (y < sy0 || y > sy1); };
++                                if (spanPx > s_sheetPx2 && (out0(x1, y1) || out0(x2, y2) || out0(x3, y3))) {
++                                    static uint64_t s_posC = 0;
++                                    if (++s_posC <= 10 || (s_posC & (s_posC - 1)) == 0) fprintf(stderr, "[wsheetposc] n=%llu span=%.0f v=%.1f,%.1f %.1f,%.1f %.1f,%.1f sc=%.0f,%.0f,%.0f,%.0f\n",
++                                        (unsigned long long)s_posC, spanPx, x1, y1, x2, y2, x3, y3, sx0, sy0, sx1, sy1);
++                                }
++                                if (spanPx > s_sheetPx2 && gx > 0.0f && gy > 0.0f && ((corner(x1, y1) && thin(x2, y2, x3, y3)) || (corner(x2, y2) && thin(x1, y1, x3, y3)) || (corner(x3, y3) && thin(x1, y1, x2, y2)))) {
++                                    static FILE *s_dropLogP = []{ const char *e = std::getenv("ROGUESQ_W_SHEET_DROPLOG"); return e && *e ? std::fopen((std::string(e) + ".pos").c_str(), "w") : nullptr; }();
++                                    static uint64_t s_posN = 0;
++                                    if (++s_posN <= 20 || (s_posN & (s_posN - 1)) == 0) fprintf(stderr, "[wsheetpos] n=%llu span=%.0f v=%.1f,%.1f %.1f,%.1f %.1f,%.1f W=%.5g %.5g %.5g sc=%.0f,%.0f,%.0f,%.0f\n",
++                                        (unsigned long long)s_posN, spanPx, x1, y1, x2, y2, x3, y3, w1, w2, w3, sx0, sy0, sx1, sy1);
++                                    if (s_dropLogP) { std::fprintf(s_dropLogP, "%llu %.1f %.1f %.1f %.1f %.1f %.1f %.5g %.5g %.5g\n", (unsigned long long)mach_absolute_time(),
++                                        x1, y1, x2, y2, x3, y3, w1, w2, w3); std::fflush(s_dropLogP); }
++                                    posWorkBuffer[workBufferIndex + 1].x = posWorkBuffer[workBufferIndex + 2].x = x1;
++                                    posWorkBuffer[workBufferIndex + 1].y = posWorkBuffer[workBufferIndex + 2].y = y1;
++                                    s7126Dropped = true;
++                                }
++                            }
++                        }
 +                        // s7126 wsheet-escape: ROGUESQ_W_KEEPLOG=<path> logs every perspective tri that is NOT dropped and has any W <= 0
 +                        // (class M, mixed sign, clamped) or min(W)/max(W) < 1/64 with all W > 0 (class P), span >= ROGUESQ_W_KEEPLOG_MIN px
 +                        // (default 20): tick, class, 3 screen vertices, 3 raw W, span. Splits H-span (M, span <= W_SHEET_PX) from H-pos (P).
@@ -1408,7 +1458,7 @@ index 6255872..9916a95 100644
                      }
                      else {
                          posWorkBuffer[workBufferIndex + 0].w = 1.0f;
-@@ -537,7 +1384,157 @@ namespace RT64 {
+@@ -537,7 +1434,157 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
@@ -1566,7 +1616,7 @@ index 6255872..9916a95 100644
                  }
                  // No texture coefficients
                  else {
-@@ -547,6 +1544,22 @@ namespace RT64 {
+@@ -547,6 +1594,22 @@ namespace RT64 {
                      texcoordWorkBuffer[workBufferIndex + 0] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 1] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 2] = interop::float2(0.0f, 0.0f);
@@ -1589,7 +1639,7 @@ index 6255872..9916a95 100644
                  }
  
                  if (hasDepth) {
-@@ -580,11 +1593,170 @@ namespace RT64 {
+@@ -580,11 +1643,170 @@ namespace RT64 {
                      posWorkBuffer[workBufferIndex + 2].z = 0.0f;
                  }
  

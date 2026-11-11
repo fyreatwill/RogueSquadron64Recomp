@@ -187906,3 +187906,35 @@ Queued scratch/agent/soak_queue/s7126_apex_L6_r{1,2,3}.sh (no stream, KEEPLOG+DR
 Verdict: refutes H-span (geometry) and the arm-boundary reading; H-pos vs H-other stays open until a recurrence is logged.
 ORIGIN: the escaping band comes from the guest's guard-band sheet fans at dd4 (s6895 class); no new mitigation landed (diagnostic only).
 Disk: k7.cap (12 GB) deleted after replay; k7.raw, k7r replays, keep/drop logs kept in scratch/s7126. Owner save untouched.
+
+## Session 7127 (2026-11-11) — wsheet-escape: H-pos CONFIRMED (the s7125 escaper is an all-W-positive hairline wedge from a guard-band corner); new default-on RT64 cull ROGUESQ_W_SHEET_POS; ROGUESQ_W_NLOG covers the non-perspective blind spot
+HYPOTHESIS-ID: wsheet-escape
+Work unit from NEXT.md (fold the s7126 apex soaks). All runs: L6 owner recipe (FPS60 dd4 16:9), no capture, ~307 s flight each, 0 crash,
+0 VI stall, owner save untouched (NO_SAVE_WRITE).
+1. s7126 apex soaks r1/r2 (loop) + r3 (run here): 0 P hits in 3 x 307 s (~55k swaps); the detector's control fired in every run (the same
+   deterministic 179 px M clamp next to a drop, identical coords in k7/r1/r2/r3). Kept-P class/span tables match k7.
+2. Detector blind spot (new, boring-first): the W cull and KEEPLOG live inside `if (textured) { if (texturePerspective)`, so an untextured
+   or non-perspective escaper (H-other) could never appear. New ROGUESQ_W_NLOG=<path> (+_MIN, default 200 px) in rt64_gbi_rdp.cpp logs every
+   such tri (class N untextured, T textured non-persp) in the KEEPLOG 12-field format; tools/s7126_apex.py reads it unchanged.
+   n1: 26083 N + 110678 T lines; 61 N joins in 3 episodes, but a +5 s time-shifted null gives 18, so the vertex join is NOT specific for N/T
+   (untextured mesh neighbours share vertices with sheet tris). N/T tris are drawn without W, so RT64 cannot diverge from the RDP on them the way
+   the s7125 band did (RT64 dark vs angrylion bright): H-other is disfavoured, not refuted.
+3. n1 KEEPLOG logged THE escape (first in ~74k swaps after s7125): P tri v=(-199,-112) (219.8,155.5) (217.5,153.8), W=5454 / 596130 / 595700
+   (all > 0, ratio 0.009), span 419 px, 0.01 ms after a dropped fan of 8 tris with apex (994.8,-112) W=16384 and near pair W~-10.6k, i.e. the
+   s7125 shape exactly. -> H-pos CONFIRMED (two lines: s7125 fan geometry + this logged tri).
+   A W-ratio rule cannot separate it (kept P >= 200 px ratio quantiles 0.0004-0.0156 straddle 0.009). Its signature: a vertex clamped to a
+   guard-band CORNER and the other two vertices ~3 px apart (a hairline wedge).
+4. Fix: ROGUESQ_W_SHEET_POS (default 1, =0 restores s7126) in rt64_gbi_rdp.cpp, same gate as W_CLAMP: all W > 0, min/max W < 1/64,
+   span > W_SHEET_PX, one vertex >= 20% of the scissor size outside it in x AND y, the other two within 8 px -> dropped like the W_SHEET cull
+   (vertices collapsed). Logs [wsheetpos] (stderr, capped) + DROPLOG.pos; same-run log-only control [wsheetposc] (any long P tri with a vertex
+   outside the scissor in both axes).
+   n2 (v1 rule, no thin test): 27 fires, ALL hairlines: corner (-398,-224) x8 (W 5400 vs 3.5e5-5.5e5) and (994.8,-112) x19, base 1.6-4.3 px,
+   spans 959-1077 px: knife lines from the screen corner. Scissor confirmed 0,0,795,447 at 16:9, so the corners are the +-25% and +-50% clamps.
+   Offline over k7/r1-r3/n1 the v1 rule picks the n1 escaper and one k7 tri (-186.5,-112) with a 377 px base that s7126 saw drawn without a band;
+   the thin test (<= 8 px) keeps that one. Final rule: n3: 0 fires (episode did not occur), control 8 lines, all correctly kept (below-screen
+   vertices fail the corner test; the one corner case (-212,672) has a 55-64 px base), KEEPLOG 0 P escapes, NLOG 122 N joins (non-specific).
+Verdict: selects H-pos, disfavours H-other (single argument). Evidence for "no new missing geometry" is geometric only (every fire is a <= 4.3 px
+wedge); the pixel check (fire frames vs angrylion) is the next unit.
+ORIGIN: the writer is the game's own guard-band clamp at dd4 (F5 ucode vertex clamp to +-25%/+-50% of the viewport), and the stream carries a
+fan whose RDP W plane is positive at the clamped corner; the hardware paints it as sky/flat band, RT64 draws a dark hairline. Same class as s6895.
+Tools: tools/s7126_apex.py (NLOG note). Patches exported (submodule-patches/rt64.patch). Soak recipes s7127_apex_L6_n{1,2,3} run here.
