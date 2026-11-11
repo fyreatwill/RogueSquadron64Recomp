@@ -188875,3 +188875,22 @@ Verdict line: this selects H-equal for logo, chapter title and crawl at 16:9, re
 is complete at 21:9 and 16:9. New tools/s7156_sheet.py (s7146_sheet with SHEET_RECT/SHEET_LABEL), owner sheet
 docs/owner_sheet_s7156_logo_crawl_169.png (RT64 | angrylion: logo 4750, chapter title 5450, crawl 5900, 6300).
 Next: G3 in-flight owner-recipe fidelity on the levels not yet scored (L1/L4/L6 at 16:9 and L6/L15 at 21:9 are done).
+
+## Session 7157 (2026-11-11) — G3 in-flight owner-recipe fidelity on L2 and L5 (FPS60 dd4 16:9): RT64 == angrylion on both (H-equal); far rows below the near-row floor (H-dd refuted), no fixed-place region (H-level refuted)
+HYPOTHESIS-ID: g3-owner-recipe-levels
+Work unit from NEXT.md. tools/s7131_arm.zsh now takes RDIR (default s7131). One run per level, sequential, screen unlocked, forced-level route,
+extra env ROGUESQ_G5B_FRAME_EVERY=1 FROM=7500 MAX_MB=12000, capture 384x216, window 1360x796, 0 crash lines in run.log. Replayed with
+tools/s7141_post.zsh (frame_replay16, 4 chunks of 60). Positive control (painted 20x20 -> one 400 px region) PASS on both.
+Scored with --rect 0,9,369,216 --split 46,322, after dropping pframe==0 and pframe==last (s7131 start clamp, s7156 tail clamp).
+| level | swaps | lag | mean|d| med/p90/max | frac>40 med/p90/max | >0.05 | centre/side frac med |
+|---|---|---|---|---|---|---|
+| L2 | 714 | 25 ms | 2.94/5.20/5.96 | 0.007/0.009/0.011 | 0 | 0.004/0.012 |
+| L5 (Jade Moon) | 690 | 25 ms | 2.84/3.23/6.70 | 0.009/0.012/0.033 | 0 | 0.009/0.009 |
+(shift-2 variant for L2 is worse, 0.007/0.019/0.056, so it is the wrong registration; the shift-0 score stands.)
+Rows (mean|d| in 8 bands, top to bottom): L2 1.45 2.64 1.79 2.18 4.02 3.83 4.29 5.64 7.43; L5 1.44 2.36 2.00 1.95 4.93 3.63 2.74 3.81 3.65.
+The far rows (where extended dd4 cells sit) score lower than the near ground, so H-dd is refuted. Excess sits in near ground texture speckle.
+The single L5 outlier, swap 7990 (frac 0.033), is a banked turn over the canyon wall. By eye both renderers show the same picture, with craft,
+planet limb and wall edges shifted, which is frame-match lag as on L1 swap 7827. Two lines of evidence: score at the floor, and the by-eye sheet.
+Sheet docs/owner_sheet_s7157_L2_L5_fidelity.png (L2: worst, median and p20 swaps; L5: worst and median).
+Disk: 25 GB free after the run (each level costs 12.6 GB stream + 3.2 GB raw). The .cap, .raw and replay dirs were deleted after scoring; csvs are kept in scratch/s7157.
+Verdict: H-equal on L2 and L5. Scored at 16:9 now: L1 L2 L4 L5 L6. Next: L10 (cloud level) and L7.
