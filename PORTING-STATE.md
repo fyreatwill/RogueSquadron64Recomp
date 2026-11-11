@@ -188431,3 +188431,22 @@ glyph edge filtering (RT64 bilinear at window res vs angrylion box-downscale)? u
 Side observation (unverified): at 21:9 the hangar picture is 1024 px of content shown at 2.286:1, i.e. pixel aspect 0.75 vs retail 512x336 at 4:3
 (0.875) if that is the retail hangar fb. Would be a G1d squash of the whole wide picture; needs the 4:3 hangar fbSize first.
 Streams deleted after scoring; raws, replays, csvs in scratch/s7142 (gitignored).
+
+## Session 7143 (2026-11-11) — G3 hangar 21:9 text-box residual (0.20) is scoring-rect sub-pixel registration shared with the 3D, not RT64 text; H-misalign/H-tex refuted, item 31 CLOSED
+HYPOTHESIS-ID: g3-fidelity-hangar-219
+Offline only (NEXT.md step 1), on the s7142 H2 (21:9 fix on) and H3 (fix off) raws + angrylion replays, rect 0,11,469,216, title box 165:8:305:38.
+New tools: tools/s7143_textbox.py (integer dx/dy, half-px, x-scale, blur-AL, blur-both, signed colour, column profile), tools/s7143_subpix.py
+(1/4 compare-px x/y sweep per box), tools/s7143_affine.py (fit ONE x-offset/y-offset/y-scale registration on a fit box, score every box at it).
+1. Integer shifts: best d+1+0 0.128 (base 0.203). Half-px: angrylion moved +0.5 px right -> 0.064. x-scale 0.94-1.06 never beats base (no residual
+   width error after the s7142 fix). Blur of angrylion only: 0.13-0.16 (filtering alone does not explain it). Signed colour: blue +8.8/255 in the box.
+2. The 1/4-px sweep applies to every box, not just text: optimum x = +0.5..0.75 compare px for title, ship, side bands; optimum y grows with
+   screen y (title +0.4, y40-160 bands +1.0, y160-200 +1.5) = a vertical scale error of the scoring rect (~0.7%), i.e. capture geometry.
+3. One fit on the 3D centre minus title (24 frames): (x+0.5, y, yscale 0.988) -> centre 0.049->0.015, side 0.0025->0.0002, title 0.198->0.072.
+   Fit on the title instead: (x+0.75, 0, 0.996) -> title 0.024 and the 3D centre still 0.019 at the same fit. The two fits agree within 1/4
+   compare px (~0.55 fb px). Negative control: H3 (fix off, text 1.33x wide) under its own 3D fit stays title 0.371->0.375, so the registration
+   fit cannot erase a real text-geometry defect.
+Verdict: H-misalign (text-only offset) refuted at 1/4 compare-px resolution; H-tex refuted (title reaches 0.024 by registration alone, no texel
+diff left to explain); H-filter not needed. The s7142 "text 0.21 / centre 0.05" residuals were the scoring rect, not RT64. Single-run, 2 lines
+(per-box shift table + cross-fit with H3 control). Unresolved below ~0.5 fb px. Item 31 CLOSED; s7122_fidelity scores without sub-pixel
+registration, so later fidelity numbers should use s7143_affine.py.
+Owner save untouched (no run).
