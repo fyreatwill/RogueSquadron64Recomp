@@ -188763,3 +188763,39 @@ Verdict line: this selects H-equal for OPTIONS, PASSCODES, MISSION FAILED and th
 (RECT_ASPECT inert: same fitted numbers, width term follows the triangles, 1.333x synthetic control fires) and closes item 33 (the
 last unscored 2D screens at 21:9). Owner sheet docs/owner_sheet_s7153_options_debrief_219.png (tools/s7153_sheet.py; helpers tools/s7153_phsheet.py, s7153_kmd.py, s7153_kgrid.py). .cap streams deleted.
 Next: the same screens at 16:9 (the owner's TV), where s6924 found pillar strips on OPTIONS (NEXT.md).
+
+## Session 7154 (2026-11-11) — G3 OPTIONS, PASSCODES, MISSION FAILED and mission-results screens at 16:9: RT64 == angrylion after the standard fit (H-equal); RT64 pillars pure black (H-strip refuted); RECT_ASPECT inert (H-rect refuted); item 34 closed
+HYPOTHESIS-ID: g3-2d-screens-169
+Work unit from NEXT.md (item 34). No maintenance (58.6 KB < 60000). No new soak results. Owner save untouched (no SAVE_FROM, NO_SAVE_WRITE).
+Owner recipe FPS60 dd4 ASPECT=16:9, window 1360x796, capture 384x216 sRGB, tools/s7146_arm.zsh, crop 0,9,369,216. Four runs, one at a
+time, 0 crash all: O1 (OPTIONS route 10:start,17:down,19:a,25:down,27:down,29:a,35:b,38:b, FROM=1000 EVERY=3), R1 = O1 + RECT_ASPECT=0,
+D1 (abort route ...,88:start,92:down,96:a,100:left,103:a,110:a,116:a, FROM=5400 EVERY=4), D2 = D1 + RECT_ASPECT=0.
+Scorer defect found: at 16:9 the s7152_post combined dir (*c) took the magenta pre-fill replay for EVERY swap (554/554; load_al's
+magenta rejection does not trip on the 796-wide fb), giving median mean|d| 108.7 on O1. Scored on the NOPREFILL dir (*n) directly:
+O1 5.89, D1 20.1 (stale RAM pillars, below). Painted-square control PASS on O1n/R1n/D1n/D2n.
+Join tools/s7148_pfsearch.py, fit tools/s7143_affine.py (fit box = 4:3 centre band 66:4:303:200, debrief 70:4:299:200; grids as s7153):
+| arm/screen | fit (sx,sy qpx, e) | fit box | title/top | mid | low | rings L/R |
+|---|---|---|---|---|---|---|
+| O1 OPTIONS (217 swaps) | 2,-2,0.984 | 0.0595 -> 0.0000 | 0.0000 | 0.0000 | 0.0000 | - |
+| R1 OPTIONS (217) | 2,-2,0.984 | 0.0556 -> 0.0000 | 0.0000 | 0.0000 | 0.0000 | - |
+| O1 PASSCODES (204) | 2,0,0.988 | 0.0580 -> 0.0007 | 0.0002 | 0.0015 | 0.0002 | - |
+| R1 PASSCODES (203) | 1,0,0.988 | 0.0545 -> 0.0010 | 0.0032 | 0.0010 | 0.0002 | - |
+| D1 MISSION FAILED (60) | 1,-2,0.984 | 0.0441 -> 0.0003 | 0.0001 | 0.0006 | 0.0000 | 0.0000/0.0002 |
+| D2 MISSION FAILED | 2,-2,0.984 | 0.0479 -> 0.0029 | 0.0009 | 0.0053 | 0.0000 | 0.0080/0.0016 |
+| D1 results (113) | 2,-2,0.984 | 0.0563 -> 0.0044 | 0.0107 | 0.0019 | 0.0044 | 0.0002/0.0000 |
+| D2 results | 2,-2,0.984 | 0.0577 -> 0.0105 | 0.0230 (k-fit 0.0096) | 0.0079 | 0.0054 | 0.0080/0.0016 |
+Same fit term as every s714x/s715x screen (x +0.25..0.5 px, yscale 0.984-0.988). Results top residual 0.010 = stroke edges, as 21:9 (0.0084).
+RECT_ASPECT (two lines, as s7153): (a) width sweep, new tools/s7154_kmd.py (s7153_kmd with env CROP/ALSUF/BOXES): D1 rings (triangles
+only) k 1.000-1.005, text/title k 1.000; D2 rings k 1.010, text 1.005, title 1.010: the text follows the triangles RECT_ASPECT never
+touches = the per-run presentation scale (s7150/s7153 class, cross-run, single run per arm). (b) tools/s7154_kgrid.py synthetic 1.333x
+widening scores 0.13-0.32 in every box vs <= 0.010 at the best k, both arms. RECT_ASPECT inert on all four screens at 16:9.
+Pillars (H-strip discriminator, owner-visible): presented RT64 frames, columns 0-58 and 311-369 of the crop, every 6th swap per phase:
+mean 0.0 max 0 on OPTIONS, PASSCODES, MISSION FAILED and results in all four arms; the 58-70 / 299-311 edge columns carry band
+content (max 46-109). Positive control in the same frames: band mean 22-45, max 222-255; and the 15 presented frames with nonzero
+pillars in the D2 window were the full-width SELECT LEVEL scene after the results (window overran the phase), so the probe sees side
+pixels when present. The s6924 OPTIONS strips do not recur (s6926 SCISSOR_TOL holds). angrylion NOPREFILL pillars on the debrief show
+stale RAM (what hardware with our widened VI would show); RT64 black is the better picture, as at 21:9.
+Verdict line: this selects H-equal for OPTIONS, PASSCODES, MISSION FAILED and mission results at 16:9, refutes H-strip (pillars pure
+black, every arm) and H-rect (fitted numbers equal across RECT_ASPECT arms, width term follows the triangles, 1.333x control fires),
+and closes item 34. Owner sheet docs/owner_sheet_s7154_options_debrief_169.png (tools/s7154_sheet.py). .cap streams and pre-fill
+replay dirs deleted. Next: title / SELECT GAME / level select / available craft at 16:9 (scored only at 21:9: s7144, s7152).
