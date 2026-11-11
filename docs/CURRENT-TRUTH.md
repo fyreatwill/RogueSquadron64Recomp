@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7121 (2026-11-10).
+Compact operational handoff, as of Session 7123 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -11,8 +11,9 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 **s7120 near-wall NEARLIFT=1 NEARK=1.6 REPLICATED against the retail camera in the same runs (3 new runs n-p + m, L6 dd4 16:9 FPS60, tog1 per mach second): edge-excluded steady wall losses off/on 42/2 over ~24.8k swaps per arm (z -6.0, 95% removed; per run 19/0, 10/0, 10/1, m 3/1).** H-fix (pre-registered >=75%). Off-arm control (>=10 pooled losses) passes. Hop: H-smooth in every run (on/off wall-jerk p99 ratio 0.40-0.52; injected 1 u step caught each run). The on arm has more >0.5 u jerks in open-flight windows (17 vs 4). New `--lag` in tools/s7119_hop.py: all 17 are >=17 ticks after any lift, in pairs, and 2-16 u in size (a one-tick camera step), while the lift never exceeds 1.31 u. So the lift does not cause them (H-release refuted, two lines).
 - In plain words: with the lift on, 95% of the wall flashes are gone in the same runs, and the camera does not hop.
 - **s7121:** the "2-16 u one-tick camera steps" s7120 reported were a log-join artefact. tools/s7119_hop.py mixed 3 camera objects. The flight cam 80138458 has 0 steps >0.5 u over 4 runs (tools/s7121_camstep.py, with an inject control for both labels), and the stray flight tick between scripted cut cams (A28 -> 930) is never presented (bv per swap). Re-scored with `s7119_hop.py --cam 80138458`: >1.0 u jerks off 0.33 vs on 0.00 per 1e3 ticks.
-- **s7122:** G3 retail-settings fidelity: L1 flight RT64 == angrylion on the same stream (H-equal, 572 frames over 2 runs: mean|d| 7.8, 2.4% px > 40, edges and texture speckle only; sheet docs/owner_sheet_s7122_fidelity.png; tools/s7122_fidelity.py + control). CULL_SPIKE costs nothing. L6 textures are not replay-evaluable (snapshot timing). Open: at 4:3 RT64 shows the 512x448 image as a 553x480 pillarbox, off-centre (21/66 px margins).
-- Next: G3 presentation geometry (NEXT.md, slug g3-flight-fidelity). Item 26 closes on the owner's look.
+- **s7122:** G3 retail-settings fidelity: L1 flight RT64 == angrylion on the same stream (H-equal, 572 frames over 2 runs: mean|d| 7.8, 2.4% px > 40, edges and texture speckle only; sheet docs/owner_sheet_s7122_fidelity.png; tools/s7122_fidelity.py + control). CULL_SPIKE costs nothing. L6 textures are not replay-evaluable (snapshot timing).
+- **s7123:** the s7122 "off-centre 553x480 pillarbox" is centred (margins 43/45 pt; the asymmetry was ScreenCaptureKit padding the right of a 320x240 capture of a 640x512 window; title-bar control). The narrow box is RT64's square-column fb box = the owner-closed VI_SHAPE question (s6928), nothing new. Use tools/s7123_present_rect.py for capture margins.
+- Next: G3 L6 texture fidelity with per-swap RAM snapshots (NEXT.md, slug g3-flight-fidelity). Item 26 closes on the owner's look.
 
 **s7119/s7118:** no hop at k1.6 vs the retail camera, same run (wall jerk p99 0.25 vs 0.33 u; sheet docs/owner_sheet_s7119_nearlift_hop.png); NEARK=1.6 selected H-margin (k1.0/k1.6 steady losses 13/1, 5 runs; tools/s7118_edge.py).
 
@@ -143,6 +144,7 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 maintenance)" and "
   true-60 Hz latency levels are sticky in whole vsyncs.
 
 ## Superseded conclusions — do not act on these
+- s7122 "RT64 shows the 4:3 picture off-centre (21/66 px margins)". Believable: rect search on the capture fit well. s7123: SCK pads the right of the capture; in window points the margins are 43/45 (centred).
 - s7120 "the flight camera sometimes jumps 2-16 u in one frame (open flight, both arms)" and "the lift arm has more >1.0 u jerks". Believable: t/t+1 pairs of equal size, far from any lift, in all runs. s7121: the join in s7119_hop mixed cam objects 458/A28/930; per-cam the flight cam has 0 such steps and the cut cams' stray tick is never presented.
 - s7113 "H-raymiss CONFIRMED: the collision tests a surface up to ~0.2 u off the drawn mesh; H-gap refuted". Believable: two-pose static control agreed to 0.002-0.004 u and lattice snap fitted. But a common-mode error (fitted P00/P11, corner-frame basis) passes a two-pose test; s7114 exact surfaces from the shared bytes show the rebuild biased +0.07..+0.18 p50 (p90 to +0.52) where drawn == collision exactly.
 - s7113 "the drawn mesh is displaced from the collision grid (0.042 off lattice)". Believable: same rebuild. s7114: TriGen and the sampler read the identical 25 bytes on the same lattice; the only real divergence is LOD decimation (flags in mesh+0x14), and removing it does not change the loss rate.

@@ -187783,3 +187783,23 @@ Rules out: H-combiner, H-geom, H-fog for L1 retail flight; any fidelity cost of 
 Left open: (1) presentation geometry, the 553x480 off-centre pillarbox: is it what the VI registers ask for (retail TV shows the same), or RT64's
 VI-to-window mapping? (2) texture fidelity on texture-streaming levels needs a per-range RAM snapshot (EVERY=1 on a short window) to be evaluable.
 Owner save untouched (forced-level route, NO_SAVE_WRITE).
+
+## Session 7123 (2026-11-10) — G3 presentation geometry at 4:3: the s7122 "off-centre 553x480 pillarbox" is centred (margins 43/45 pt); the asymmetry was ScreenCaptureKit's top-left padding; the narrowness is RT64's square-column fb box, the owner-closed VI_SHAPE question (s6928, closed 2026-11-08), not a new defect
+HYPOTHESIS-ID: g3-flight-fidelity
+Work unit from NEXT.md (H-retail vs H-rt64 vs H-fit for the 4:3 picture rect). Boring thing first, offline, on the s7122 captures (no new run).
+Line 1 (capture geometry): g5b_capture asks SCK for 320x240 of a 640x512 pt window. SCK keeps the window aspect (scale 0.4688 px/pt -> 300x240) and pads
+the remaining 20 columns on the RIGHT, not centred. Positive control in the same frames: the grey title bar (rows 0..14) is non-black at x 0..299 and black
+at 300..319, every sampled frame of c1 and c6. s7122 measured margins against the 320-wide capture: 20 px left, 41 px right, which it scaled x2.13 to 21/66.
+Against the real 300-px window the picture is at cols 20..278: margins 42.7 / 44.8 pt (difference 2.1 pt = one capture pixel), 552.5 x 478 pt.
+New tools/s7123_present_rect.py (padding-aware window rect from the title bar, built-in control exit 2 if the title bar does not start at x 0): c1 and c6
+CENTRED. Negative control: the same frame with the picture moved 20 capture px right -> margins 85.3 / 2.1, OFF-CENTRE (exit 1). PASS.
+Line 2 (what the VI asks): s6928's oracle --vi-regs read retail h=108..748 (640 dots) with xScale 0x333 for the 512-column modes (s4642 read the same in our
+port's VI regs). So a retail TV shows the 512x448 image 640 dots wide (full width, ~448 of 480 lines). Expected boxes from the tool: RT64 fb box (square
+columns, VI_SHAPE off, the default) 548.6 x 480, margins 45.7 each; VI shape 640 x 448. Measured 552.5 x 478 matches the fb box within capture resolution.
+Result: H-fit refuted (centred, the window code adds no offset). The narrow box is H-rt64 by design: RT64 presents VI fbSize with square columns. That is
+exactly s6928's finding; its fix ROGUESQ_VI_SHAPE=1 exists, and the owner closed the shape question on 2026-11-08 ("picture shape is fine on the TV as it is",
+VI_SHAPE stays opt-in). Nothing to change; no new opt-in needed.
+Rules out: an off-centre present at 4:3; any WINDOW_FIT/ASPECT offset at default settings. Caveat for every g5b_capture user: SCK pads at the right/bottom when
+the capture aspect differs from the window aspect; measure margins with tools/s7123_present_rect.py or capture at the window aspect.
+ORIGIN: n/a (measurement only, no mitigation).
+Next: G3 texture fidelity on the texture-streaming level L6 with a per-swap RAM snapshot (ROGUESQ_G5B_FRAME_EVERY=1, short FROM window).

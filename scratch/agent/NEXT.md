@@ -1,17 +1,20 @@
-# NEXT: G3 presentation geometry at 4:3 retail: is the off-centre 553x480 pillarbox what the VI asks for?
+# NEXT: G3 texture fidelity on the texture-streaming level L6: RT64 vs angrylion with a per-swap RAM snapshot
 HYPOTHESIS-ID: g3-flight-fidelity
-Why: s7122 found pixel fidelity H-equal in L1 flight. On the way it found that the default 640x512 window (32 pt title bar) shows the
-game's 512x448 colour image at x 21..574 (553 px wide, left margin 21, right 66). That is neither a 4:3 fill nor centred. A retail TV fills
-4:3 unless VI H_START/X_SCALE say otherwise.
+Why: s7122 found L1 flight RT64 == angrylion (H-equal), but L6 textures could not be judged: with EVERY=20 the RAM snapshot is taken at the swap's first
+range, while L6 streams textures during the frame, so angrylion replays garbled textures (magenta/cyan noise). s7123 closed presentation geometry
+(centred; narrowness = owner-closed VI_SHAPE). Texture content on a streaming level is the remaining G3 fidelity gap.
 Hypotheses:
-  H-retail : the game's VI regs (H_START, X_SCALE, WIDTH, V_START, Y_SCALE) place the active picture this way on a real NTSC line
-             (H_START standard 0x006C..0x02EC = 640 px). Then retail is also pillarboxed/off-centre and nothing is ours.
-  H-rt64   : the VI regs ask for a (near) full 640 line, and RT64's VI->output mapping shrinks or shifts it.
-  H-fit    : our window/aspect code (main.cpp WINDOW_FIT, ROGUESQ_ASPECT default path, s6885 WIDE_EARLY) offsets it at 4:3.
-Discriminator, one run: log the VI registers per VI (ultramodern VI state, or osViSetMode's mode table) during L1 flight at default 4:3.
-Compute the expected active rectangle on a 640x480 NTSC raster, and compare it with the presented rect measured by g5b_capture (rect search
-as in tools/s7122_fidelity.py). Second line: run angrylion's VI stage (full VI filter, n64video_update_screen) on one replayed swap and
-measure where the picture lands in its output. Check git log / grep "x 21" or "pillar" in PORTING-STATE first (G1f WINDOW_FIT, s6142).
-Outcomes: VI rect == presented -> H-retail (report, offer an opt-in fill). VI full but presented shrunk -> H-rt64/H-fit; then toggle
-WINDOW_FIT/ASPECT in the same run to split them, fix, and give the owner a before/after sheet.
-Also open: texture fidelity on texture-streaming levels (L6) needs ROGUESQ_G5B_FRAME_EVERY=1 over a short FROM window, so each swap has its own snapshot.
+  H-equal  : with a snapshot per swap, angrylion's L6 textures look like RT64's (residual = edges/speckle as on L1, frac>40 median ~0.02).
+  H-tex    : RT64 samples stale or wrong texture data on L6 (TMEM/texture cache hash misses a streamed upload): coherent RT64 colour blocks that
+             differ from angrylion on whole materials.
+  H-tool   : even EVERY=1 snapshots are taken too early in the swap (textures loaded after the first range): angrylion still garbled -> the
+             replay needs a snapshot per range (RNG) or per LOADBLOCK, not a fidelity datum.
+Discriminator, one run: tools/s7122_arm.zsh 6 t6 "ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=5000 ROGUESQ_G5B_FRAME_MAX_MB=12000" 120 180
+(arm.zsh hardcodes EVERY=20 in XENV_EXTRA; the extra env comes later on the line, check it wins, or edit a copy). L6 flight swaps were 4282..9542 in s7122
+(c6.swaps). Replay ~300 consecutive swaps with scratch/s7098/frame_replay16 as s7122 did, score with tools/s7122_fidelity.py (rect from
+tools/s7123_present_rect.py: capture rect 20,15,279,240) and build a sheet with tools/s7122_sheet.py. Delete the stream after replay (~10 GB).
+Positive control: the s7122 painted-block control on one replay (one 400 px region). Same-run control for H-tool: a replay of the same swap from an
+EVERY=1 snapshot vs one 20 swaps older must differ on streamed materials only.
+Outcomes: H-equal -> G3 flight fidelity closed for L1+L6, take the next G3 item (hangar artifacts list in CURRENT-TRUTH). H-tex -> name the material,
+dump its TMEM load and RT64's texture hash for that swap. H-tool -> fix the snapshot point in dpc_bridge.cpp (snapshot at the first LOADBLOCK/LOADTILE of
+each range) and rerun.
