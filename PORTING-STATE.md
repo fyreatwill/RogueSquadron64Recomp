@@ -188818,7 +188818,7 @@ Fit tools/s7143_affine.py box 66:4:303:200, AFF_SX 0..3 AFF_SY -4..2 AFF_E 1..0.
 | R1 SELECT GAME | 2,0,0.988 | 0.0003 | 0.0007 | 0.0063 | 0.0000/0.0000 |
 | T1 SELECT LEVEL (41) | 2,-2,0.984 | 0.0001 | 0.0107 | 0.0294 | 0.0000/0.0000 (nom 0.012/0.027) |
 | R1 SELECT LEVEL | 2,-2,0.984 | 0.1141 | 0.0352 | 0.1914 | 0.0000/0.0000 |
-| T1 AVAILABLE CRAFT (89) | 2,-2,0.984 | (fit 0.0128 set) | 0.0124 | 0.0342 | 0.0000/0.0000 |
+| T1 AVAILABLE CRAFT (89) | 2,-2,0.984 | 0.0000 (kgrid k=1) | 0.0124 | 0.0342 | 0.0000/0.0000 |
 | R1 AVAILABLE CRAFT | 2,-2,0.984 | 0.0992 | 0.0544 | 0.2219 | 0.0000/0.0000 |
 T1 level-select/craft mid/low residuals (0.011-0.034) are the animated platform/holo, same range as 21:9 s7144 (0.005-0.040).
 Title top 0.013 is the logo outline in both arms (kgrid best k 1.005, 0.0131): equal across arms, so not a rect term.
