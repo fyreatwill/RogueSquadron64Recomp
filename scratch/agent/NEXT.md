@@ -1,26 +1,17 @@
-# NEXT: sky top-fade bins, colour-free check: are their polys ever in the RDP stream? (follow-up to s7137, item 29)
-HYPOTHESIS-ID: g3-sky-topfade
-State (s7137): 0 top-fade-colour tris at dd1 4:3 (D1) and dd4 21:9 (Y1, incl. all 31 burst swaps 7530-7560 where the corner
-looks above the band top). H-topdd refuted: the bin objects have the same state at both dd. In the shared render list, sector k's
-+0 links to top bin 8+k, which links to sector k+1 (tools/s7137_skyobj.py). Sector tris draw with shade 255 (white), so the HOB
-vertex colour A89880 may never reach the RDP shade, and the colour detector may be blind.
+# NEXT: 21:9 / 16:9 sky-corner and horizon fixes on levels other than L6 (G3 ladder, after item 29 closed s7138)
+HYPOTHESIS-ID: g3-wide-holes-levels
+State (s7138): item 29 CLOSED as retail. The sky top-fade "bins" are a skirt the loader (0x8005AB34) builds from each band rim
+edge: v0/v1 (alpha 0) = rim copies, v2/v3 (alpha FF) = rim + fadeH in y, where fadeH = getLevelConfigHalfword (0x8006B604) =
+level table 0x800A05D0 + 0x30*level + 0x2C. L6 is the only level 0-20 with fadeH 0 (all others 8, RAM == ROM 0xA11D0), so on L6
+every skirt quad has zero area and the ucode emits 0 tris although the frame DL calls all visible bins.
+All hole classes (XFIX, GATEFIX, SKYFILL) were measured on L6 only. On fadeH-8 levels the skirt DOES draw, under the SKYFILL corner.
 Hypotheses:
-- H-topretail: the top-bin polys are never emitted (empty/unused DL, per-object cull, or a draw flag). Predicts no stream tris at
-  the projected top-bin screen positions on Y1 burst swaps.
-- H-topcolour: they ARE emitted but shaded white/modulated. Predicts stream tris whose 3 vertices match the projected top-bin
-  vertices (within ~2 px).
-Discriminator, OFFLINE, no run: scratch/s7136/Y1.cap (kept, RAM every 20 swaps from 7500, stream every swap). At RAM swaps 7520/7540:
-  1. Find the top-bin vertex data. Object 8+k fields +0x34..+0x58 hold pointers into 0x8087xxxx / 0x80C1xxxx (dd4 spill). Read the
-     loadSkyHorizonHob store sequence (N64Recomp/RecompiledFuncs/funcs_13.c:5157-6766, objects built around 0x8005AF10-0x8005B114,
-     stride 0x5C) to name which field is the vertex array, which is the DL.
-  2. Project the vertices with the camera of the same snapshot (matrix at *(0x80138D1C)+0x28 and the projection, as
-     tools/s7136_band_elev.py does) and match them against the stream tris of that swap (tools/s7134_band.py vertex list).
-  Positive control in the same pass: project SECTOR objects 0-7 the same way. Their tris must match (they draw), or the
-  projection is wrong.
-Outcomes: sectors match + top bins match -> H-topcolour: the fade IS drawn, so look at what covers it (the SKYFILL corner is
-beige because the fade is transparent toward beige: then the stair is the authored look, close). Sectors match + top bins absent
--> H-topretail: find the gate (read the render walker for the object field that differs, e.g. +0x30, or the DL contents) and decide
-with the owner whether drawing them is worth it. Sectors don't match -> fix the projection first.
-Budget: this is iteration 2 of g3-sky-topfade. If it does not discriminate, close the thread as owner look (beige corner) and move
-on to the next CURRENT-TRUTH backlog item.
-Owner save rule applies. CURRENT-TRUTH ~58.9 KB: keep edits net-zero.
+- H-clean: L1/L4/L15 at 21:9 dd4 show 0 hole swaps with the three fixes on, and the skirt blends into the full-viewport clear.
+- H-seam: the skirt (alpha 0 -> FF over 8 units) leaves a visible seam/stripe against the SKYFILL clear colour (clear colour vs
+  level fog colour differ: table +0x24 vs +0x28 colours differ on most levels, e.g. L1 82B6D3 / 80B8D0).
+- H-newclass: a level-specific hole class (different sky HOB or band layout) that L6 did not have.
+Discriminator: one run per level, tools/s7138_arm.zsh <lvl> <name> "ROGUESQ_ASPECT=21:9" 120 180 with CW=?? as s7136 Y1, then
+tools/s7136_post.zsh scratch/s7138 <name> (hole score + angrylion replay), tools/s7138_bindegen.py (skirt non-degenerate) and
+tools/s7138_streamseq.py on a corner-above-band swap (skirt tris present, their colour vs clear colour). Same-run control: a
+HORIZON_SKYFILL=0 arm on the same level must show holes (>0) or the 0 is not a result.
+Owner save rule applies. CURRENT-TRUTH ~59 KB: keep edits net-zero.

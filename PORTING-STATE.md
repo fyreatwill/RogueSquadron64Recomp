@@ -188288,3 +188288,38 @@ by colour.
 Next (NEXT.md): a colour-free check. Project the top-bin polys from RAM (Y1 burst, camera from the same RAM) to screen, and look
 for stream tris at those positions.
 Kept: scratch/s7137/*.bandtop, d1 replays scratch/s7137/D1r (5+3 frames), sheets. D1.cap deleted. Owner save untouched.
+
+## Session 7138 (2026-11-11) — G3 sky top-fade bins CLOSED as retail: they are a fade skirt whose height comes from the level config table (+0x2C), which is 0 on L6 only, so on L6 every skirt quad is zero-area and the ucode emits nothing; L1 (height 8) draws the skirt
+HYPOTHESIS-ID: g3-sky-topfade
+Work unit from NEXT.md (item 29, iteration 2 of the thread): are the top-bin polys ever in the RDP stream (H-topretail vs H-topcolour)?
+Offline first, on the kept s7136 Y1 capture (L6 dd4 21:9 FPS60), then a same-thread positive control run on L1.
+1. New tools/s7138_ramsnap.py (RAM snapshot -> guest-order 16 MB image). Snapshot 7540: object +0x34 is the object's GBI DL
+   (+0x3C = same minus 8, NOOP or a patched head). Frame DL buffers 0x808B33xx / 0x80C023xx: `01020040 808E5040` (G_MTX) then
+   `06000000 <obj+0x3C>` (F3DSWRS_DL) alternating sector k / top bin 8+k for the 5 in-view azimuths (4,12,5,13,6,14,7,15,0,8);
+   bins 1-3 / 9-11 not called. So the bins ARE called (H-topretail in its "never submitted" form refuted at DL level).
+2. Bin DL: E7/B9/EE/B7/B6/BE header, VTX 0x04 16 verts (8 B s16 xyz), VTXCOLOR 0x02, CC FCFFFFFF FFFE793C (shade), geometry
+   set 0x200 clear 0x2000, 4x TRI2 0xB4 (16 B, quad indices v3,v0,v1,v2 /5), ENDDL. Colours A8988000 x2, A89880FF x2 per quad.
+3. New tools/s7138_streamseq.py (run-length RDP state/tri sequence of one swap): at Y1 7540 the bin combiner FE793C appears 5 times
+   (= the 5 calls), each followed only by othermode commands and the next sector's combiner: 0 tris. The ucode runs the bin DL and
+   rejects all 8 tris per bin. Sector tris (TRIE shade FFFFFFFF) appear in the same stream (control: detector sees sky tris).
+4. New tools/s7138_bindegen.py (per snapshot: decode each object's VTX/TRI2, 3D area per quad; locates the 16-object sky block by
+   the 0x003D0018 word at stride 0x5C): Y1 707/707 snapshots, bins 24/24 quads zero-area, all vertices y=-38 (the sectors' bottom
+   rim); sector quads decoded 0 zero-area (area control).
+5. ORIGIN (writer): loadSkyHorizonHob 0x8005B0A0-0x8005B288 builds each skirt quad from a band rim edge (a,b): v0=a, v1=b, v2=b,
+   v3=a, colours 0/1 from 0x80136E18 (alpha 0), 2/3 from 0x78(sp) (alpha FF), then v2.y and v3.y += $fp. $fp = return of
+   0x8006B604 getLevelConfigHalfword = lh 0x2C(0x800A05D0 + 0x30*level), level byte 0x80130B40. Table read from RAM and ROM
+   (found at ROM 0xA11D0): +0x2C = 8 on levels 0-5 and 7-20, **0 on level 6 only**; RAM == ROM all rows. So the zero area is the
+   retail data, not ours: retail L6 draws no skirt either. Legitimate value.
+6. Positive control run (new tools/s7138_arm.zsh = s7136_arm into scratch/s7138; L1, dd4 16:9 FPS60, 120+60 s, 0 crash, 4182
+   window frames): sky block S=0x8055CDA0, fadeH 8; 307/307 flight snapshots 0/24 zero-area quads, y {-38,-30}; stream swaps 9000
+   and 10400: 5 bin calls each followed by 10 / 14 TRIC tris shaded 82B6D3 alpha FF -> 80B8D0 alpha 0 (= L1 table +0x24/+0x28
+   colours). Same mechanism, height 8 -> skirt drawn.
+Verdict: H-topretail by retail data (two lines: loader code + ROM table value 0 on L6; stream 0 tris on L6 vs drawn on L1 with the
+same code). H-topcolour refuted (colour reaches shade: L1 skirt tris carry the vertex colours). The beige L6 corner under SKYFILL
+is the retail L6 look. Item 29 CLOSED.
+In plain words: the faint fade at the top edge of the sky band is switched off for this one level in the game's own level
+settings, so the original game does not draw it there either. On other levels it is drawn, and the port draws it.
+Rules out: draw distance, aspect, colour detector blindness, ucode clip bugs as the reason for the missing L6 fade.
+Next (NEXT.md, slug g3-wide-holes-levels): the 21:9 hole fixes were only measured on L6; check fadeH-8 levels where the skirt
+does draw under the SKYFILL clear, with a SKYFILL=0 control arm.
+Deleted: scratch/s7136/Y1.cap (12.6 GB, consumed), P1.cap/.raw (disk 95%). Kept scratch/s7138/bindegen_*.txt, seq*.txt. Owner save untouched.
