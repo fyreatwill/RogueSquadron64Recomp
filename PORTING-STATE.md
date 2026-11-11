@@ -188917,3 +188917,28 @@ Side datum (single-source, recording-loaded): presented-frame step histograms sh
 L10/L2 0). These runs record a 12 GB RDP stream, so the gaps can't be counted as owner-recipe stalls (G5c). They are not evidence for or against.
 Sheet docs/owner_sheet_s7158_L10_L7_fidelity.png (per level: worst, median and p20 swaps, RT64 | angrylion). The .cap, .raw and replay dirs are deleted; csvs are kept in scratch/s7158.
 Verdict: H-equal on L10 and L7. Scored at 16:9 now: L1 L2 L4 L5 L6 L7 L10. Next: L12 (horizon-cut) and L13.
+
+## Session 7159 (2026-11-11) — G3 in-flight owner-recipe fidelity on L12 and L13 (FPS60 dd4 16:9): both H-equal; L12's 2x floor is a capture-registration misfit (rect ~1% small, all levels), not a level material path
+HYPOTHESIS-ID: g3-owner-recipe-levels
+Work unit from NEXT.md, same recipe as s7158 (`env RDIR=s7159 zsh tools/s7131_arm.zsh <lvl> <name> "ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=7500
+ROGUESQ_G5B_FRAME_MAX_MB=12000"`), one game at a time, screen unlocked, NO_SAVE_WRITE on, 0 CRASH/SIGSEGV/SIGBUS/abort lines in both run.logs. Replay with
+tools/s7141_post.zsh (rect 0,9,369,216, split 46,322); painted positive control PASS on both.
+| level | swaps | lag | mean|d| med/p90/max | frac>40 med/p90/max | >0.05 | centre/side frac med |
+|---|---|---|---|---|---|---|---|
+| L12 (rect 0,9,369,216) | 683 | 30 ms | 4.78/5.44/7.76 | 0.021/0.026/0.034 | 0 | 0.018/0.032 |
+| L12 (refit 1,10,370,217) | 683 | 30 ms | 4.27/4.81/8.48 | 0.015/0.018/0.028 | 0 | 0.010/0.032 |
+| L13 | 712 | 15 ms | 2.61/3.10/4.54 | 0.009/0.014/0.018 | 0 | 0.007/0.016 |
+L12 at the fixed rect was 2x the floor everywhere (p10 0.0148, flat over the run). Pairing is not the cause: shift +1/-1 give 0.023/0.036 and the per-swap best of {-1,0,+1}
+is 0.0212. A fixed-place region repeats (centre box x 145-210 y 110-150, 161 px/frame vs 0-36 on L2/L5/L7/L10). It is the X-wing plus the green target ring, but the diffs
+are two-signed (527 RT64-brighter vs 443 darker) and the zoomed diff (docs/owner_sheet_s7159_L12_edge_diff.png) is a pure edge outline of craft, ring, terrain
+silhouette and cloud streaks. That is a displacement, not a colour or material difference: H-level refuted, two lines of evidence. A shifted crop at (+1,+1) brings L12
+inner frac from 0.016 to 0.0075. Refitting the full rect drops the craft-box excess from 160.9 to 0.2 px/frame and centre frac to 0.010. Side frac stays 0.032: the HUD boxes
+want different shifts (radar (+1,0), lives (0,+2), icon (0,0), centre (0,+1)), which reads as a ~1% scale misfit of the capture rect, not a single offset.
+New tool tools/s7159_regfit.py (per-box best integer shift; run before deleting .raw). On L13 it gives the SAME per-box pattern (radar (1,0), lives (0,2), icon (0,0), centre
+(0,2)). So the misfit belongs to the instrument on every level: L12 only shows it because its frames are dense with edges (a close X-wing against a textured cloud sky).
+The s7125-s7158 H-equal verdicts stand (they were scored against this same floor), but every floor number is registration-limited by ~0.003-0.01.
+8 row bands (L12 refit): 5.65 4.53 3.11 2.24 3.78 3.65 3.96 9.12 (the last band is the border row, 119.9); L13: 1.29 2.56 1.66 1.53 3.86 3.29 3.37 3.96. The horizon and far rows
+are not above the near rows: H-dd refuted on both. L13 worst swap 8043 (0.0175): its neighbours are 0.009-0.010 and pframe jumps 1798 -> 1804, so it is frame-match lag.
+Sheets docs/owner_sheet_s7159_L12_fidelity.png (refit rect), docs/owner_sheet_s7159_L13_fidelity.png, docs/owner_sheet_s7159_L12_edge_diff.png (RT64 | angrylion | 3x diff).
+The .cap, .raw and replay dirs are deleted; csvs are kept in scratch/s7159.
+Verdict: H-equal on L12 and L13. Scored at 16:9 now: L1 L2 L4 L5 L6 L7 L10 L12 L13. Next: L0 and L3, with regfit run before the .raw is deleted.
