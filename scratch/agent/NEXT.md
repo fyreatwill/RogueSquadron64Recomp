@@ -1,19 +1,17 @@
-# NEXT: why the eye gets within 15 units of the canyon wall despite the push-out (s7110 H-margin)
-HYPOTHESIS-ID: fps60-wall-margin
-Context: s7110 (ROGUESQ_DD_NEAR=0.5 with the new ROGUESQ_DD_NEAR_TOG=1) left eye-cell near-z losses unchanged (8 near30 / 12 near15),
-and on-state reference swaps already show the eye cell at the 15 plane. The push-out (applyPlayerVehicleStateUpdate 0x8004CD00)
-pushes the 4 near corners (x=w*0.5*240/h, y=120, z=120/tan((fovy+2)/2), times 2*near) out of terrain; s7102/s7103 logged its corners
-(CHASE file, pc/rx lines) and re-pushing at exit did not help.
-Unit: ONE instrument, ONE run (L6 dd4 16:9 FPS60, scratch/s7110/arm.zsh, same env as s7110 minus DD_NEAR): per presented camera,
-log (a) the pushed camera position at push-out exit, (b) the eye position + forward vector setupCameraMatrices passes to the
-lookat/view build (same cam struct, s2+8), (c) the terrain height under the eye and the eye's nearest wall distance along forward
-(re-use the push-out's own collision call if callable, else the cell triangle plane from S7104/S7105), all mach-stamped.
-Then on every losscan eye-cell near-z loss: is |b - a| > 0 (eye moved after the push), or a == b with forward wall distance < near
-(push-out probes miss the wall: corner rays vs the centre ray, or the wall is in a terrain cell the probe does not test)?
+# NEXT: does the F5 ucode drop whole near-crossing eye-cell triangles? (s7111: camera-side levers refuted)
+HYPOTHESIS-ID: fps60-wall-reject
+Context: s7111 showed the eye cell is lost even when all 4 push-out corner rays are clear (no terrain within 60 render units) and a
+margin re-push (CAMFIX=tog1 PUSHK=1.5, residual 0.000) leaves eye-cell near-z losses at 29/22 (ctl 23/28). Render eye == pushed eye.
 Hypotheses:
- H-postmove  render eye differs from the pushed position on dropped swaps (chase lerp / shake / later camera update) -> push the
-             final eye, or apply the push after that update
- H-probe     eye == pushed position but forward distance to the wall < 30: the corner probes miss this wall -> add a centre/forward
-             probe in an opt-in fix (ROGUESQ_NEAR_FIX), before/after sheet
- H-cell      the wall triangles belong to a cell the collision query does not return (cell boundary) -> fix the query cell range
-Positive control: the loss list must still flag >= 300-cell eye swaps; (a)==(b) must hold on ordinary non-hug frames.
+ H-reject   the LLE F5 ucode rejects a TRI_GEN triangle outright when a vertex is past the near plane (beside/behind the eye) instead of
+            clipping it, so a large wall tri whose visible part is far beyond near vanishes -> retail hardware behaviour; fix would be a
+            host-side or ucode-side near clip (opt-in) or keeping eye-cell vertices out of the near distance.
+ H-raymiss  the eye cell's wall really is within near in view, and sampleTerrainAtNpcPosition does not see it (other geometry / LOD /
+            ridge between rays) -> fix in the probe (extra rays vs the rendered cell triangles).
+Unit: ONE instrument in the ucode census (src/rsp/s7106_rsptri.cpp, ROGUESQ_S7106_RSPTRI): for each TRI_GEN of the eye cell (s7107 keys),
+dump the DMEM transformed vertices (x,y,z,w + clip flags) the triangle stage reads, and the RDP tris emitted per source triangle.
+Read the F5 TRI_GEN vertex/clip layout first (docs/F5-UCODE-REFERENCE.md, reference/gliden64/F5Rogue.cpp TriGen*), then the recompiled
+ucode for where it tests clip flags. Run scratch/s7111/arm.zsh 6 4 b with the s7111 env minus CAMFIX/PUSHK.
+Outcome: on losscan eye-cell losses, a source tri with >=1 vertex w<near and >=1 in-view vertex beyond near that emits 0 RDP tris ->
+H-reject; every lost tri has its in-view part within near (clipped polygon emitted) -> H-raymiss.
+Positive control: ordinary far tris must show 1:1 source -> RDP tris; a tri fully in view must never be dropped.

@@ -187379,3 +187379,36 @@ dropped swaps (is the render eye moved after the push, e.g. by the chase lerp, t
 update?), and the push ray hits vs the terrain cell the eye sits in (NEXT.md, slug fps60-wall-margin).
 Discrimination line: this run refutes H-fix (near 15 leaves eye-cell losses at 12 vs 8) and selects H-margin (on-state reference
 swaps already at the 15 plane); the next discriminator is pushed position vs render eye position on the dropped swaps.
+
+## Session 7111 (2026-11-10) — FPS60 near-wall flicker: the render eye equals the pushed camera position on every tick, and a margin re-push that clears all four corner rays (residual 0.000) leaves eye-cell near-z losses unchanged (29 off / 22 on, shifted control 23/28): H-postmove and H-margin refuted; the loss is not camera proximity along the probe rays
+
+Offline first (capture once, analyze many): new tools/s7111_margin.py joins the S7101 CHASE log (ch/pu/rx/pe/bv lines of the flight
+camera 0x80138458) with tools/s7107_losscan.py rows (eye-cell near-z losses, ticks in [t-150 ms, t]) and +-3 s shifted controls.
+On s7110 data: bv (terrain builder eye from the camera matrix +0x4C) == pe (pushed pos at push-out exit) on 10294/10294 ticks, so the
+eye is not moved after the push (H-postmove refuted for the matrix eye). Corner rays: |corner - pos| / f20 p10/p50/p90 = 0.999/1.000/
+1.001, and on hits |post - hit| = f20 exactly, so the retail push leaves the corner ON the wall; loss windows had a corner still
+inside on 85% of ticks vs 18% overall and 42% / 21% in the -3 s / +3 s controls (single-source, suggestive).
+New arm tools/apply_s7111_camfixk.py (fixup list after s7110 neartog): ROGUESQ_S7103_CAMFIX=tog1 = s7103 re-push in odd absolute
+mach seconds (s7108_split clock); ROGUESQ_S7111_PUSHK=<k> re-push distance k*f20 (default 1 = s7103). Default off = retail.
+Ran: scratch/s7111/arm.zsh 6 4 a (L6 dd4 16:9 FPS60, CAMFIX=tog1 PUSHK=1.5, G1E_WIN=600 G3C_LOG=1, CHASE + S7104_CELL + S7105_EMIT +
+S7106_RSPTRI + S7107_TAG + G5B_TRIS). 0 CRASH, capture 18543 frames / 275.1 s, 0 gaps > 250 ms; 10623 flight ticks.
+Positive controls: arm live and effective, after-fix corner residual 0.000 on all 4943 fx-on ticks (>1 pass 1.7%); loss detector
+still flags >= 300-cell swaps (316); bv == pe 9981/9981.
+Result (scratch/s7111/split_a.txt, split_ctl.txt, margin_a.txt):
+| state | hug s | eye-cell near-z losses | other | presented episodes |
+| fix off | 99.4 | 29 | 90 | 1 |
+| fix on (k 1.5) | 105.6 | 22 | 109 | 2 |
+| 0.5 s shifted | 102.8 / 102.2 | 23 / 28 | 108 / 91 | 1 / 2 |
+Line 1: clearing every corner by 0.5*f20 does not reduce eye-cell losses (29 vs 22, the shift gives 23 vs 28). Line 2: per-loss
+windows, losses at t=125.82, 173.82 (and 61.30 apart from corner 3) have NO corner hit and no residual on any of the ~9 ticks before
+the dropped swap, i.e. no terrain within 60 render units along any of the 4 near-corner rays, yet the eye cell is lost.
+Geometry: a flat wall crossing the in-view near rectangle must cross one of the 4 edge rays before depth near, so clear rays rule out
+an in-view planar wall within the near plane. Remaining: H-raymiss (sampleTerrainAtNpcPosition does not see the rendered wall: other
+geometry/LOD, a ridge between rays) vs H-reject (the ucode drops a whole near-crossing TRI_GEN triangle, a vertex beside/behind the
+eye, whose in-view part lies beyond near; GLideN64's HLE F5Rogue.cpp only trivially rejects via isClipped and clips on the host, so it
+is no witness for the LLE ucode). The t=50.0-50.7 cluster has no flight-camera ticks (non-flight camera), excluded from line 2.
+Rules out: the push-out margin and post-push camera moves as the lever. CAMFIX/PUSHK is a diagnostic arm, not an owner fix.
+ORIGIN: no mitigation landed (opt-in diagnostic arm, default retail, refuted).
+Discrimination line: this run refutes H-postmove (bv == pe) and H-margin (residual 0 with losses unchanged) and leaves H-raymiss vs
+H-reject; the next discriminator is per-vertex eye depth and clip flags of the eye cell's TRI_GEN vertices inside the ucode on the
+dropped swaps vs the RDP triangles it emits (NEXT.md, slug fps60-wall-reject).
