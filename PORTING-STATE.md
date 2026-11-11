@@ -187412,3 +187412,36 @@ ORIGIN: no mitigation landed (opt-in diagnostic arm, default retail, refuted).
 Discrimination line: this run refutes H-postmove (bv == pe) and H-margin (residual 0 with losses unchanged) and leaves H-raymiss vs
 H-reject; the next discriminator is per-vertex eye depth and clip flags of the eye cell's TRI_GEN vertices inside the ucode on the
 dropped swaps vs the RDP triangles it emits (NEXT.md, slug fps60-wall-reject).
+
+## Session 7112 (2026-11-10) — FPS60 near-wall flicker: the F5 ucode emits every visible eye-cell triangle, near-crossing ones included (63 of 9118 front-visible near-crossing tris emit 0, rejected-visible 1-2 of ~110 per loss swap at every lag -2..+2): H-reject refuted, H-raymiss selected
+HYPOTHESIS-ID: fps60-wall-reject (closed; next slug fps60-wall-raymiss).
+Instrument (new, one build): tools/fixup_factor5_ucode.py "s7112 tri" hooks L_17F0 entry (the per-source-triangle consumer;
+r11/r12/r13 = DMEM vertex records 0x670 + 0x28*k: +0 clip xyzw s16, +8 frac, +0x18 screen xy, +0x24 flags, 0x7070 frustum
+LE/GE x,y,z, 0x0707 guard band). src/rsp/s7106_rsptri.cpp rs64_s7112_tri (ROGUESQ_S7112_TRI=<file>, needs S7106_RSPTRI) writes
+136 B per eye-cell tri (s7107 tag 24) plus 1/64 of all other TRI_GEN tris as a control, with the RDP tris each source triangle
+produced (DMEM parse growth until the next L_17F0/fetch). Static read: L_17F0 trivially rejects when all 3 share a 0x7070 bit,
+hands to the clip overlay (r5=4, CLIP_* splice) when any has 0x4343 (near/far z or guard band), else setup.
+Offline reference tools/s7112_trireject.py: exact 4D Sutherland-Hodgman clip against -w<=x,y,z<=w, signed NDC area of the
+surviving polygon; front facing learned from the setup path.
+Ran: scratch/s7112/arm.zsh 6 4 a (L6 dd4 16:9 FPS60, G1E_WIN=600 G3C_LOG=1, CHASE + S7104_CELL + S7105_EMIT + S7106_RSPTRI +
+S7107_TAG + G5B_TRIS + S7112_TRI). 0 CRASH, capture 18334 frames / 274.9 s, 0 gaps > 250 ms. 2,554,599 records, 0 bad magic.
+Positive controls: facing separates the setup path cleanly (visible area < 0: 18838 emitted / 2 not; > 0: 9756 not / 9 emitted);
+tclip never drops a tri the exact clip calls visible (all tclip rows "none"/tiny, control and eye); losscan still flags 293
+>= 300-cell swaps, 41 eye-cell near-z losses (s7108 criterion).
+Result (scratch/s7112/reject_a.txt):
+| population | front-visible (area > 0.002) | emitted 0 |
+| control 1/64 sample | 16609 | 378 (2.3%) |
+| eye cell, all | 14981 | 68 (0.45%) |
+| eye cell, near-crossing (1-2 vertices z < -w) | 9118 | 63 |
+| loss swaps lag -2/-1/0/+1/+2 | 124/106/111/109/125 | 1/2/2/2/2 |
+- The clip overlay turns near-crossing eye-cell tris into 1-4 RDP tris (43279 near-crossing: 5129x2, 3611x1, 1590x3, 374x4).
+- On the loss swaps the eye cell's visible tris are drawn at the same rate as on neighbouring swaps: the loss is not a ucode drop.
+  What the ucode drops there is what exact clipping says lies in front of the near plane only (the wall really is between the eye
+  and near 15 in view) -> the s7107 straight near cut is correct clipping of geometry the camera is inside.
+- The 68 eye rejected-visible tris are small (|a| <= 0.037 of the viewport), clustered on consecutive swaps (16140-16145), mostly 2
+  vertices with w <= 0, and not concentrated on loss swaps: a minor clip-overlay edge class, not this flicker (single-source).
+Rules out: H-reject (ucode/LLE near-crossing rejection). With s7111 (corner rays clear at 1.5x yet the wall sits inside near), this
+selects H-raymiss: the camera collision probe does not see the rendered eye-cell wall. Next: compare, per loss tick, the eye cell's
+rendered triangles (world or eye space) with the terrain height/ray sample the push-out reads (sampleTerrainAtNpcPosition): is the
+collision surface a different (coarser / other-LOD / other-grid) surface from the rendered TriGen mesh?
+ORIGIN: no mitigation landed (measurement only, env-gated, default off).

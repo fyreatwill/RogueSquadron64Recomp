@@ -3228,6 +3228,24 @@ if is_main_ucode and S7106_MARKER not in text:
         print(f"fixup_factor5_ucode: S7106 ANCHOR FAILED (decl={n_decl}, call={n_call}, flush={n_fl}).", file=sys.stderr)
         sys.exit(1)
 
+# s7112 fps60-wall-reject: per-source-triangle record at the L_17F0 entry (r11/r12/r13 = DMEM vertex records, base 0x670,
+# stride 0x28 per vertex: +0 clip xyzw int s16, +8 frac u16, +0x18 screen xy, +0x24 clip flags). src/rsp/s7106_rsptri.cpp
+# rs64_s7112_tri logs the eye cell's tris (and 1/64 of the others as a control) with the RDP tris they produced.
+# ROGUESQ_S7112_TRI=<file> on top of ROGUESQ_S7106_RSPTRI. Measurement only.
+S7112_MARKER = "/* fixup: s7112 tri */"
+if is_main_ucode and S7112_MARKER not in text:
+    text, n_decl = re.subn(
+        r"(extern \"C\" void rs64_f5_vtx_probe[^\n]*\n)",
+        lambda m: m.group(1) + 'extern "C" int rs64_s7112_on; extern "C" void rs64_s7112_tri(const uint8_t*, uint32_t, uint32_t, uint32_t, uint32_t);  ' + S7112_MARKER + "\n",
+        text, count=1)
+    text, n_call = re.subn(
+        r"(L_17F0:\n    rs64_cs\.eval\+\+;[^\n]*\n)",
+        lambda m: m.group(1) + "    if (__builtin_expect(rs64_s7112_on, 0)) rs64_s7112_tri((const uint8_t*)RS64_DMEM_BASE, r11, r12, r13, r16);  " + S7112_MARKER + "\n",
+        text, count=1)
+    if (n_decl, n_call) != (1, 1):
+        print(f"fixup_factor5_ucode: S7112 ANCHOR FAILED (decl={n_decl}, call={n_call}).", file=sys.stderr)
+        sys.exit(1)
+
 # ---------------------------------------------------------------------------
 # Fixup 18: record L_11B0's actual indirect continuation (s726).
 # ---------------------------------------------------------------------------

@@ -1,12 +1,16 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7111 (2026-11-10).
+Compact operational handoff, as of Session 7112 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7112 near-wall flicker: the F5 ucode draws every visible eye-cell triangle (H-reject refuted, H-raymiss selected; exact-clip reference + facing control, single run).** New ROGUESQ_S7112_TRI (L_17F0 per-source-tri record, tools/fixup_factor5_ucode.py "s7112 tri", src/rsp/s7106_rsptri.cpp) + tools/s7112_trireject.py (4D clip of the logged clip-space verts). L6 dd4 16:9 FPS60: 9118 front-visible near-crossing eye tris, 63 emit 0; on the 41 eye-cell loss swaps 1-2 of ~110 visible eye tris are dropped at every lag -2..+2 (no excess). The near cut is correct clipping: the wall really lies inside near 15.
+- In plain words: the graphics microcode is not losing the wall. The camera is genuinely too close to (inside) the wall that gets drawn, while the camera's collision check thinks it is clear, so the collision check must be testing a different surface than the one drawn.
+- Next: per loss tick, rendered eye-cell TriGen surface vs the surface the push-out samples (NEXT.md, slug fps60-wall-raymiss).
 
 **s7111 near-wall flicker: the camera collision is not the lever (H-postmove and H-margin refuted, two lines, single run).** tools/s7111_margin.py (offline, CHASE log + losscan): the terrain builder's eye equals the pushed position at push-out exit on 10294/10294 (s7110) and 9981/9981 (s7111) flight ticks. Push corner rays are exactly f20 = 2*near long and the retail push leaves a corner touching the wall (residual 18% of ticks, 85% of ticks feeding an eye-cell loss in s7110). New arm tools/apply_s7111_camfixk.py: ROGUESQ_S7103_CAMFIX=tog1 (odd mach seconds) + ROGUESQ_S7111_PUSHK=1.5. L6 dd4 16:9 FPS60: after-fix corner residual 0.000 on all 4943 fix-on ticks (arm control), yet eye-cell near-z losses 29 off / 22 on (0.5 s shifted 23/28), and several losses (t=125.8, 173.8) have all four corner rays clear for 150 ms.
 - In plain words: keeping the camera further from the wall in the four directions the game checks does not stop the flicker. The wall disappears even when nothing is close to the camera in those directions.
@@ -315,7 +319,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 23. **RSPRecomp scalar lowering: CLOSED s7093** (tools/s7093_su_census.py --controls; sltiu $zero/neg-imm template fixed in RSPRecomp; rerun after any RSPRecomp change).
 24. **RSP runtime DMA + cop0: CLOSED s7094** (audio ucode_data off-by-one fixed; tools/s7094_dma_test + tools/s7094_dma_census.py, rerun after any rsp.hpp/rsp.cpp DMA edit).
 25. **DPC registers CLOSED s7095; bridge forwarding coverage CLOSED s7096** (ROGUESQ_S7095_DPC / ROGUESQ_S7096_FWD=ctl, rerun after any dpc_bridge.cpp submit/defer/wrap edit; MISSING_UNEXPLAINED/dup/order must stay 0). Edit-walker census CLOSED s7097 (ROGUESQ_S7097_EDIT=ctl; unattributed must stay 0). RT64 vs angrylion on the same dd4 stream CLOSED s7098 (H-stream: big drops are in the stream; replay with tools/angrylion_replay/build16.sh).
-26. **Near-wall flicker (s7098-s7111): eye-cell near-plane loss, RETAIL behaviour (s7109); camera-side levers refuted (corner width s7108, near 15 s7110, margin re-push s7111, render eye = pushed eye s7111). Next: ucode per-vertex depth/clip on dropped swaps, H-reject vs H-raymiss (slug fps60-wall-reject).** Drop is in the RDP stream (s7098); terrain stream cull, CPU emit, LOD ruled out (s7104/s7105); not grid-terrain/overdraw (s7107).
+26. **Near-wall flicker (s7098-s7111): eye-cell near-plane loss, RETAIL behaviour (s7109); camera-side levers refuted (corner width s7108, near 15 s7110, margin re-push s7111, render eye = pushed eye s7111). ucode drop refuted s7112 (H-reject). Next: H-raymiss, collision surface vs rendered TriGen surface (slug fps60-wall-raymiss).** Drop is in the RDP stream (s7098); terrain stream cull, CPU emit, LOD ruled out (s7104/s7105); not grid-terrain/overdraw (s7107).
 
 ## Evidence index
 

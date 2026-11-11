@@ -35,12 +35,20 @@
 #include <mach/mach_time.h>
 extern "C" int rs64_swap_n(void);
 extern "C" {
+extern int rs64_s7112_on;
 uint32_t g_s7106_kw[9], g_s7106_k8[9], g_s7106_k9[9];
 uint32_t g_s7107_kw[49], g_s7107_k8[49], g_s7107_k9[49];
 int rs64_s7107_tag = [] {
     const char* e = getenv("ROGUESQ_S7107_TAG");
     int v = (e && *e && *e != '0') ? 1 : 0;
     if (v) fprintf(stderr, "[s7107] per-triangle source-cell tag FIFO armed\n");
+    return v;
+}();
+int rs64_s7112_on = [] {
+    const char* e = getenv("ROGUESQ_S7112_TRI");
+    const char* r = getenv("ROGUESQ_S7106_RSPTRI");
+    int v = (e && *e && *e != '0' && r && *r && *r != '0') ? 1 : 0;
+    if (v) fprintf(stderr, "[s7112] eye-cell per-triangle clip record armed (%s)\n", e);
     return v;
 }();
 int rs64_s7106_on = [] {
@@ -60,7 +68,7 @@ struct {
 } S;
 uint32_t g_pos = 0xD60;
 int g_cls = -1, g_near = -1;  // command being processed: class (-1 = not a TRI_GEN), near-cell slot
-uint32_t g_cmdtris = 0;
+uint32_t g_cmdtris = 0, g_w0 = 0;
 uint8_t g_tag = 0xFD;  // s7107: tag of the command being processed
 constexpr uint32_t kQ = 1u << 22;
 uint8_t g_q[kQ];
@@ -134,7 +142,19 @@ void parse(const uint8_t* dm, uint32_t end) {
     }
     g_pos = a < end ? end : a;
 }
+// s7112: one open per-source-triangle record; its RDP tris = g_cmdtris growth until the next L_17F0 entry or fetch.
+// Record (little-endian, 136 B): u32 magic 0x37313132, u32 sw, u32 w0, u16 cmd ordinal in swap, u8 tag (s7107 7x7 cell, 24 =
+// eye; 0xFE = near-key eye cell without S7107 tag; 0x80|cls = control sample), u8 nrdp, then 3 x 0x28 vertex record bytes in
+// RSP (big-endian) order, vertices r11, r12, r13.
+FILE* g_tf = nullptr; bool g_topen = false; uint32_t g_tbase = 0, g_cmdord = 0, g_tctl = 0; uint8_t g_trec[136];
+void close_tri() {
+    if (!g_topen) return;
+    g_topen = false;
+    const uint32_t n = g_cmdtris - g_tbase; g_trec[15] = (uint8_t)(n > 255 ? 255 : n);
+    if (g_tf) fwrite(g_trec, 1, sizeof g_trec, g_tf);
+}
 void close_cmd() {
+    close_tri();
     if (g_cls >= 0) {
         Cls& c = S.c[g_cls];
         c.n++; c.t += g_cmdtris; c.z += g_cmdtris == 0;
@@ -156,6 +176,32 @@ extern "C" uint8_t rs64_s7107_pop(void) {
     return v;
 }
 
+extern "C" void rs64_s7112_tri(const uint8_t* dm, uint32_t r11, uint32_t r12, uint32_t r13, uint32_t r16) {
+    if (!g_f) return;  // the s7106 file opens at the first fetch
+    if (!g_tf) {
+        static bool tried = false; if (tried) return; tried = true;
+        const char* e = getenv("ROGUESQ_S7112_TRI");
+        g_tf = fopen(e, "wb");
+        if (!g_tf) { fprintf(stderr, "[s7112] cannot open %s\n", e); return; }
+        setvbuf(g_tf, nullptr, _IOFBF, 1 << 22);
+    }
+    if (r16 >= g_pos && r16 <= 0x1000u) parse(dm, r16);
+    close_tri();
+    if (g_cls < 0) return;
+    uint8_t tag;
+    if (rs64_s7107_tag && g_tag == 24) tag = 24;
+    else if (!rs64_s7107_tag && g_near == 4) tag = 0xFE;
+    else if ((++g_tctl & 63) == 0) tag = (uint8_t)(0x80u | (uint32_t)g_cls);
+    else return;
+    const uint32_t mg = 0x37313132u, sw = (uint32_t)S.sw, w0 = g_w0;
+    memcpy(g_trec, &mg, 4); memcpy(g_trec + 4, &sw, 4); memcpy(g_trec + 8, &w0, 4);
+    const uint16_t ord = (uint16_t)g_cmdord; memcpy(g_trec + 12, &ord, 2); g_trec[14] = tag; g_trec[15] = 0;
+    const uint32_t rr[3] = {r11, r12, r13};
+    for (int v = 0; v < 3; ++v)
+        for (int b = 0; b < 0x28; ++b) g_trec[16 + v * 0x28 + b] = dm[((rr[v] + b) & 0xFFFu) ^ 3u];
+    g_topen = true; g_tbase = g_cmdtris;
+}
+
 extern "C" void rs64_s7106_flush(const uint8_t* dm, uint32_t r16) {
     if (r16 >= g_pos && r16 <= 0x1000u) parse(dm, r16);
     g_pos = 0xD60;
@@ -173,8 +219,9 @@ extern "C" void rs64_s7106_fetch(const uint8_t* dm, uint32_t r17, uint32_t w0, u
     if (r16 <= 0x1000u) parse(dm, r16);
     close_cmd();
     const int sw = rs64_swap_n();
-    if (sw != S.sw) { emit_swap(); reset_swap(sw); }
-    g_tag = (uint8_t)(0x80u | ((w0 >> 24) & 0x7Fu));
+    if (sw != S.sw) { emit_swap(); reset_swap(sw); g_cmdord = 0; if (g_tf && (sw % 600) == 0) fflush(g_tf); }
+    g_cmdord++;
+    g_tag = (uint8_t)(0x80u | ((w0 >> 24) & 0x7Fu)); g_w0 = w0;
     if ((w0 >> 24) != 0x05) return;
     S.ntg++;
     const uint32_t mode = (w0 >> 8) & 0xFF, sub = w0 & 0xFF;

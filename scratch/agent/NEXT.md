@@ -1,17 +1,19 @@
-# NEXT: does the F5 ucode drop whole near-crossing eye-cell triangles? (s7111: camera-side levers refuted)
-HYPOTHESIS-ID: fps60-wall-reject
-Context: s7111 showed the eye cell is lost even when all 4 push-out corner rays are clear (no terrain within 60 render units) and a
-margin re-push (CAMFIX=tog1 PUSHK=1.5, residual 0.000) leaves eye-cell near-z losses at 29/22 (ctl 23/28). Render eye == pushed eye.
+# NEXT: is the camera collision surface the same surface the eye-cell TriGen mesh renders? (s7112: ucode drop refuted)
+HYPOTHESIS-ID: fps60-wall-raymiss
+Context: s7112 (ROGUESQ_S7112_TRI + tools/s7112_trireject.py) showed the F5 ucode emits the visible eye-cell tris on loss swaps;
+the near cut is correct clipping, so the rendered wall really lies inside near 15 of the eye. s7111 showed all 4 push-out corner
+rays (2*near long) clear at those ticks. So the probe (sampleTerrainAtNpcPosition / push-out at camera 0x80138458) and the render
+disagree about where the wall is.
 Hypotheses:
- H-reject   the LLE F5 ucode rejects a TRI_GEN triangle outright when a vertex is past the near plane (beside/behind the eye) instead of
-            clipping it, so a large wall tri whose visible part is far beyond near vanishes -> retail hardware behaviour; fix would be a
-            host-side or ucode-side near clip (opt-in) or keeping eye-cell vertices out of the near distance.
- H-raymiss  the eye cell's wall really is within near in view, and sampleTerrainAtNpcPosition does not see it (other geometry / LOD /
-            ridge between rays) -> fix in the probe (extra rays vs the rendered cell triangles).
-Unit: ONE instrument in the ucode census (src/rsp/s7106_rsptri.cpp, ROGUESQ_S7106_RSPTRI): for each TRI_GEN of the eye cell (s7107 keys),
-dump the DMEM transformed vertices (x,y,z,w + clip flags) the triangle stage reads, and the RDP tris emitted per source triangle.
-Read the F5 TRI_GEN vertex/clip layout first (docs/F5-UCODE-REFERENCE.md, reference/gliden64/F5Rogue.cpp TriGen*), then the recompiled
-ucode for where it tests clip flags. Run scratch/s7111/arm.zsh 6 4 b with the s7111 env minus CAMFIX/PUSHK.
-Outcome: on losscan eye-cell losses, a source tri with >=1 vertex w<near and >=1 in-view vertex beyond near that emits 0 RDP tris ->
-H-reject; every lost tri has its in-view part within near (clipped polygon emitted) -> H-raymiss.
-Positive control: ordinary far tris must show 1:1 source -> RDP tris; a tri fully in view must never be dropped.
+ H-lod      the collision samples a coarser height grid / other LOD than the TriGen mesh draws (TriGen ponderation / option edge
+            corrections move vertices; walls are steep so a small grid offset is a large horizontal shift).
+ H-gap      the rays pass between samples (the 4 corners miss a ridge/wall face that the camera's view frustum crosses in front).
+ H-space    a units/space mismatch (render scale vs collision scale, or the dd>1 extended-cell transform) puts the drawn wall off
+            the sampled one.
+Unit (offline first, capture once): S7112 records already hold clip-space verts of every eye-cell tri per swap. Add to the same
+build the camera view matrix per swap (or eye pos + basis from the CHASE log) and invert clip -> world for the eye cell's tris;
+compare the world wall plane with the height samples the push-out reads at the 4 corners (CHASE log values) on the 41 loss
+swaps vs +-3 s shifted controls. Outcome: drawn surface within near of the eye where the sampled height says clear, offset
+consistently along one axis -> H-lod/H-space (measure the offset); offset random and the miss always between corners -> H-gap.
+Positive control: on non-loss flight ticks the inverted render surface must match the sampled height within a few units.
+Run recipe: scratch/s7112/arm.zsh 6 4 <name> "<s7112 env>" 120 260 (env list in PORTING-STATE s7112).
