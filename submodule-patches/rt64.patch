@@ -10168,7 +10168,7 @@ index 69a82ac..6e82095 100644
  
              if (device != nullptr) {
 diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
-index b9cb1f5..195108c 100644
+index b9cb1f5..9b03ba6 100644
 --- a/src/render/rt64_framebuffer_renderer.cpp
 +++ b/src/render/rt64_framebuffer_renderer.cpp
 @@ -1,3 +1,4 @@
@@ -11947,7 +11947,21 @@ index b9cb1f5..195108c 100644
          void *paramBufferBytes = framebuffer.paramsBuffer->map();
          memcpy(paramBufferBytes, &fbParams, sizeof(interop::FramebufferParams));
          framebuffer.paramsBuffer->unmap();
-@@ -1643,6 +3228,17 @@ namespace RT64 {
+@@ -1569,7 +3154,12 @@ namespace RT64 {
+         const float SimilarityPercentage = 0.1f; // TODO: Make more strict once VI ratios are in.
+         const float scissorRatio = static_cast<float>(fbPair.scissorRect.width(false, true)) / static_cast<float>(fbPair.scissorRect.height(false, true));
+         const bool adjustRatio = (abs((scissorRatio / p.aspectRatioSource) - 1.0f) < SimilarityPercentage);
+-        const float aspectRatioScale = adjustRatio ? (p.aspectRatioTarget / p.aspectRatioSource) : 1.0f;
++        // PATCH (s7142 G3): the port runs the gfx ucode LLE and the game itself renders the wide picture (G1d FB_WIDTH), so every
++        // triangle arrives as a screen-space RawTriangles draw that this scale never touches. Applying it to Rectangle / fill draws
++        // only (inv = source/target, 3.048/2.286 = 1.333 for the 21:9 hangar fb 1024x336) drew menu and hangar text 1.33x wider than
++        // the RDP stream about the fb centre (RT64 vs angrylion, s7142). Default: scale 1 (stream-exact). ROGUESQ_RECT_ASPECT=0 restores.
++        static const bool s7142RectFix = [] { const char *e = std::getenv("ROGUESQ_RECT_ASPECT"); return !(e && *e == '0'); }();
++        const float aspectRatioScale = (adjustRatio && !s7142RectFix) ? (p.aspectRatioTarget / p.aspectRatioSource) : 1.0f;
+         InstanceDrawCall instanceDrawCall;
+         interop::RenderIndices renderIndices;
+         uint32_t globalCallIndex = 0;
+@@ -1643,6 +3233,17 @@ namespace RT64 {
  
              for (uint32_t d = 0; (d < proj.gameCallCount) && (globalCallIndex < p.maxGameCall); d++) {
                  const GameCall &call = proj.gameCalls[d];
@@ -11965,7 +11979,7 @@ index b9cb1f5..195108c 100644
                  renderIndices.instanceIndex = call.callDesc.callIndex;
                  renderIndices.faceIndicesStart = call.meshDesc.faceIndicesStart;
                  renderIndices.rdpTileIndex = call.callDesc.tileIndex;
-@@ -1789,6 +3385,22 @@ namespace RT64 {
+@@ -1789,6 +3390,22 @@ namespace RT64 {
  
                              RenderViewport viewportRect = convertViewportRect(call.callDesc.rect, p.resolutionScale, p.fbWidth, invRatioScale, extOriginPercentage, horizontalMisalignment, call.callDesc.rectLeftOrigin, call.callDesc.rectRightOrigin);
                              triangles.screenScale = { viewportRect.width / framebuffer.viewport.width, viewportRect.height / framebuffer.viewport.height };

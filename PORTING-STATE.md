@@ -188401,3 +188401,33 @@ Verdict: H-equal at 21:9 on L15 and L6; H-wide-rt64 refuted (side excess = HUD r
 H-align not needed (0 outliers). Item 30 CLOSED. Sheet docs/owner_sheet_s7141_219_fidelity.png (angrylion | RT64 | diff x4, 2 L15 + 2
 L6 swaps). Streams (.cap) deleted after scoring; raws, replays and csvs in scratch/s7141.
 Owner save untouched (forced-level route, NO_SAVE_WRITE).
+
+## Session 7142 (2026-11-11) — G3 hangar RT64 vs angrylion at 21:9 and 16:9: RT64 drew 2D texrects 1.33x wide (aspectRatioScale on Rectangle draws), fixed default-on (ROGUESQ_RECT_ASPECT=0 restores)
+HYPOTHESIS-ID: g3-fidelity-hangar-219
+Work unit from NEXT.md (H-equal / H-wide-menu / H-hangar-cam). New tools/s7142_arm.zsh: s6995 first-entry hangar route (owner save
+read-only, NO_SAVE_WRITE, no SAVE_FROM), owner recipe FPS60 dd4 + ROGUESQ_ASPECT=21:9|16:9, G5B_FRAME EVERY=3 from swap FROM, MAX_MB 12000,
+g5b_capture 504x216 alongside; scored with tools/s7141_post.zsh (unchanged). Painted-square control PASS on all 5 replays; 0 crash all runs.
+H1 (FROM=1900): the first ~300 swaps paired with frames from before the window recorder started (DL=38 s): harness artefact, so FROM=2250 afterwards.
+Steady hangar: centre frac>40 median 0.08 vs side 0.007. Sheet + zoom: angrylion text is ~1.3x narrower than RT64's at the same height; 3D ship
+matches; rect registration sweep gains nothing (best 7.35 vs 7.38). G5B recorder runs after every bridge walker (s7125), so the bytes are equal:
+cause is inside RT64.
+ORIGIN: RT64 framebuffer_renderer: aspectRatioScale = target/source when the fb-pair scissor ratio is within 10% of the VI fb ratio. The port
+hands RT64 a Manual target (21:9 -> "1024:448" = 2.286; 16:9 -> 16:9) while the game itself renders the wide fb (VI fbSize 1024x336 = 3.048 /
+796x336). Rectangle and fill draws then get invRatioScale = 3.048/2.286 = 1.333 about fbWidth/2; LLE triangles take the RawTriangles path, which
+never applies it. So text/2D was 1.33x wider than the stream asked and inconsistent with the 3D. Not a guest value: legitimately-designed RT64
+behaviour for HLE games that render 4:3 and get expanded, wrong for this LLE wide-fb port. In flight the scissor ratio differs, so flight was unaffected (s7141 H-equal).
+Fix: lib/rt64 rt64_framebuffer_renderer.cpp aspectRatioScale = 1 unless ROGUESQ_RECT_ASPECT=0 (exported to submodule-patches/rt64.patch).
+Same-build arms (frames 733-737 each; text boxes = title + craft-name boxes via s7141_mask.py, 80 frames):
+| arm | centre frac>40 med | side med | >0.05 | text boxes | centre minus text |
+|---|---|---|---|---|---|
+| 21:9 fix on (H2) | 0.051 | 0.0073 | 24 | 0.213 | 0.020 |
+| 21:9 RECT_ASPECT=0 (H3) | 0.074 | 0.0073 | 51 | 0.334 | 0.026 |
+| 16:9 fix on (G2) | 0.056 | 0.0134 | 135 | 0.206 | 0.025 |
+| 16:9 RECT_ASPECT=0 (G3) | 0.082 | 0.0135 | 497 | 0.335 | 0.031 |
+Shift-2 controls (slow hangar scene, weak): 21:9 on 178 >0.05, 16:9 on 305. Two lines: code path + same-build A/B at two aspects; the zoom shows text
+overlapping exactly with the fix on (scratch/s7142/title_zoom_H2.png).
+Residual: centre 0.05 = 1-px silhouette edges of ship and hangar (same class as flight walls, by eye, single-source); text boxes 0.21 =
+glyph edge filtering (RT64 bilinear at window res vs angrylion box-downscale)? unproven. Owner sheet docs/owner_sheet_s7142_rect_aspect.png.
+Side observation (unverified): at 21:9 the hangar picture is 1024 px of content shown at 2.286:1, i.e. pixel aspect 0.75 vs retail 512x336 at 4:3
+(0.875) if that is the retail hangar fb. Would be a G1d squash of the whole wide picture; needs the 4:3 hangar fbSize first.
+Streams deleted after scoring; raws, replays, csvs in scratch/s7142 (gitignored).
