@@ -188345,3 +188345,24 @@ Owner sheet docs/owner_sheet_s7139_L1_skyfill_219.png (pose-matched by pitch + h
 showing the edge strips, right = default). Rules out: H-newclass on L1, H-seam (colour). Open: L4 / L15 (other sky HOBs).
 Deleted: Y1L1/Z1L1 .cap/.raw/replays (26 GB). Kept .idx/.rects/.pitch/.swaps, bindegen_*L1.txt, seqY1L1_5622.txt, r.log.
 Next (NEXT.md, same slug): L4 and L15 at 21:9, same two-arm recipe with tools/s7139_post.zsh.
+
+## Session 7140 (2026-11-11) — G3 21:9 hole fixes on L4 and L15: fixes-on 0/98 (L4) and 0/84 (L15) flight swaps with unpainted px vs ROGUESQ_HORIZON_SKYFILL=0 controls 93/101 (max 1027) and 77/91 (max 684); fill colour matches each level's skirt top within 3/255 (H-clean on L4 and L15; H-seam refuted; item 29 closes on the owner's look)
+HYPOTHESIS-ID: g3-wide-holes-levels. Owner save untouched; one game at a time.
+Ran: `env CW=504 CH=216 zsh tools/s7138_arm.zsh <4|15> <Y1|Z1>L<n> "ROGUESQ_ASPECT=21:9 [ROGUESQ_HORIZON_SKYFILL=0] ROGUESQ_G5B_FRAME_MAX_MB=9000" 120 180`
+(dd4, FPS60, forced route, EVERY=20). The L4 pair was found already running/finished at session start (launched by an interrupted
+attempt of this iteration; Y1L4 posted, Z1L4 in flight); I let Z1L4 finish, then ran Y1L15 and Z1L15 via scratch/s7138/run_L15.zsh.
+0 crash lines in all four run.logs. Posted with `tools/s7139_post.zsh scratch/s7138 <name> <minswap>`; sky fadeH 8 on both (s7138_bindegen).
+Results (per-swap unpainted = $12-$10 of <name>r.log):
+- L4 pre-flight phase is IDENTICAL in both arms, so it is not ours to fix here: (i) a 768-wide intro cutscene with an undrawn bottom
+  letterbox bar (82944 px = rows 340-447, f3462), (ii) a 1024-wide load plateau that is a flat B000B0 fill with HUD + craft and a constant
+  1471 unpainted px (f3902), lasting until the sky arrives (Y 4342, Z 4222). Flight = first swap after the plateau.
+- L4 flight: Y1 (fixes on) 0/98 swaps with holes; Z1 (SKYFILL=0) 93/101, 100-1027 px (the usual corner wedges in banked turns).
+- L15 flight (sky from swap 5603 Y / 5443 Z): Y1 0/84; Z1 77/91, max 684 px. L15 has no pre-flight plateau.
+- H-seam (s7138_streamseq): L4 skirt TRIC alpha-0 A06860 vs alpha-FF 9D6B63 (diff 3/255); L15 A8E0F8 vs ABE2F9 (diff 3/255). The
+  full-viewport clear uses table +0x24 (= the alpha-0 colour, shown s7139 on L1), so the filled corner sits within 3/255 of the skirt.
+  Single-source for L4/L15 (colour inferred from the s7139 L1 identity, not read back from the fill rect this run).
+Owner sheet docs/owner_sheet_s7140_L4_L15_skyfill_219.png: L15 rows pose-matched by camera fwd.y+up.y (tools/s7135_campitch.py,
+Z:Y 5463:5603, 5823:5883, 6263:6503); L4 rows are SAME SWAP NUMBER, NOT pose-matched (the L4 caps were deleted for disk before the pitch
+pass; the right-column "(same pose)" label is the sheet tool's fixed text and is wrong for those two rows).
+Rules out: a level-dependent hole class under the three 21:9 fixes on the four levels measured (L1, L4, L6, L15: 0 flight holes each).
+Not measured: the other 17 levels; 16:9 only on L6 (s7136).
