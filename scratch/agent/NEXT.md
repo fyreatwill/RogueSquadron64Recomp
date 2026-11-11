@@ -1,15 +1,14 @@
-# NEXT: G3 owner-recipe fidelity, last level L18 + attribute the L17 dark slab (CURRENT-TRUTH item 33)
-HYPOTHESIS-ID: g3-owner-recipe-levels
-State (s7163): H-equal at 16:9 on L0-L14, L16 flight, L17 flight. At 21:9: L6, L15. Remaining: L18.
-Open datum (s7163, single-source): L17 trench swaps 9920-9927, angrylion draws a large dark-grey slab on the right that RT64 does not.
-Hypotheses for the slab: H-wsheet (ROGUESQ_W_SHEET_POS drops it, after the cap is recorded), H-spike (CULL_SPIKE drops it), H-rt64 (RT64 itself loses it with both culls off = a real renderer defect), H-lag (frame-match picks a neighbour; refuted if dup 0 holds and the craft is aligned, as in s7163).
-Discriminator: per arm, RT64 vs ITS OWN same-run angrylion (no cross-run A/B). A frame showing the slab in angrylion and not in RT64 means a drop in that arm. Slab in both with W_SHEET_POS=0 -> H-wsheet. Same with CULL_SPIKE=0 -> H-spike. Absent from RT64 with both off -> H-rt64.
-Order (one game at a time; screen unlocked check: /usr/sbin/ioreg -n Root -d1 | grep -o 'CGSSessionScreenIsLocked[^,]*' prints nothing):
-1. L18: env RDIR=s7164 zsh tools/s7131_arm.zsh 18 L18 "ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=7500 ROGUESQ_G5B_FRAME_MAX_MB=12000"
-   zsh tools/s7141_post.zsh scratch/s7164 L18 0,9,369,216 46,322 ; rm scratch/s7164/L18.cap ; python3 tools/s7159_regfit.py scratch/s7164 L18 ; zsh tools/s7160_fit_post.zsh scratch/s7164 L18
-   LOOK AT THE SHEET FIRST. If it shows menus or a medal screen (side frac 1.000 = angrylion magenta side bands), find the flight window. Rescore with
-   python3 tools/s7122_fidelity.py score <raw> <idx> <dir>r <out> --rect 0,10,370,217 --split 46,322 --t1 <mach of last flight swap from idx col 2>
-   then python3 tools/s7163_rectfit.py <raw> <dir>r <out>.frames.csv 0,10,370,217 and rescore at the best rect. If it is all menu, place FROM by swap (counts agree across runs; L17 flight was 9900).
-2. L17 slab arms, same recipe with FROM=9900 plus "ROGUESQ_W_SHEET_POS=0 ROGUESQ_CULL_SPIKE=0" first (one run). If RT64 then draws the slab, run one arm per cull. Score with --t1 at the medal start (L17: first swap with frac_s>0.5). Check frames whose angrylion shows the slab (s7156_sheet.py with chosen swaps).
-Delete .cap/.raw/<name>r/chunk* after each score (disk ~30 GB, each run ~16 GB transient). Owner save rule: NO_SAVE_WRITE stays, no SAVE_FROM.
-CURRENT-TRUTH ~58.8 KB (<60000 maintenance trigger): keep edits net-neutral.
+# NEXT: G3 owner-recipe in-flight fidelity at 21:9, remaining levels (CURRENT-TRUTH item 34)
+HYPOTHESIS-ID: g3-owner-recipe-219
+State (s7164): 16:9 H-equal on L0-L18 (flight windows). 21:9: only L6 (s7141, centre 0.012) and L15 (0.019) scored. The owner plays on a 21:9 ultrawide.
+Hypotheses per level: H-equal (RT64 == angrylion at the retail floor), H-wide (a 21:9-only defect: hole/sky corner/HUD anchor, as s7133-s7136 found on L6),
+H-cull (diff explained by the deliberate W_SHEET_PX / W_SHEET_POS / CULL_SPIKE drops: confirm with same-run W_SHEET_ALT=0 + W_SHEET_DROPLOG like s7164), H-lag (dup pframe).
+Discriminator: per level, RT64 vs its own same-run angrylion over the flight window: centre frac med, frames >0.05, bands, worst-swap sheets.
+Order (one game at a time; screen unlocked check prints nothing: /usr/sbin/ioreg -n Root -d1 | grep -o 'CGSSessionScreenIsLocked[^,]*'):
+1. L1, L4 (then L0, L2, L3, ...): tools/s7141_arm.zsh <lvl> <name> "ROGUESQ_ASPECT=21:9 ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=7500 ROGUESQ_G5B_FRAME_MAX_MB=12000"
+   (check s7141 PORTING-STATE entry for its exact post command and CW/CH; s7141_arm writes into scratch/s7141), then tools/s7141_post.zsh <dir> <name> 0,11,469,216 <split>,
+   rm the .cap, python3 tools/s7159_regfit.py, then tools/s7160_fit_post.zsh <dir> <name> <rect> (refit with tools/s7163_rectfit.py; SHEET_LABEL is 16:9 in fit_post, edit for 21:9).
+   LOOK AT THE SHEET FIRST; menus/medal screens: rescore with --t1 <mach from idx col 2 of the last flight swap>.
+2. Any frame with angrylion geometry RT64 lacks: same-run W_SHEET_ALT=0 + ROGUESQ_W_SHEET_DROPLOG=<path>, map drops to swaps via idx mach (bisect), as s7164.
+Delete .cap/.raw/<name>r/chunk* after each score (disk ~60 GB free; each run ~16 GB transient). Owner save rule: NO_SAVE_WRITE stays, no SAVE_FROM.
+CURRENT-TRUTH ~59 KB (<60000 maintenance trigger): keep edits net-neutral or prune.

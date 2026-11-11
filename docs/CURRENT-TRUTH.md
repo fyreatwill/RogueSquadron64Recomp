@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7163 (2026-11-11).
+Compact operational handoff, as of Session 7164 (2026-11-11).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -313,7 +313,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 30. **G3 owner-recipe fidelity at 21:9: CLOSED s7141 (H-equal).** L15 med 0.019, L6 0.012; side excess = HUD rings. tools/s7141_{arm,post}.zsh. Sheet docs/owner_sheet_s7141_219_fidelity.png.
 31. **G3 menu/cutscene fidelity series 21:9 + 16:9: CLOSED s7142-s7155 (H-equal everywhere under one capture registration fit x +0.25..0.75 px, yscale 0.984-0.992).** Hangar RECT_ASPECT fix s7142 (default on; RT64 scaled texrects 1.33x); level select/craft 21:9 s7144, 16:9 s7155 (RECT_ASPECT=0 control: text best-fit k=1.333, 0.032 vs 0.107 at k=1; fix on k=1.000 at floor); logo 21:9 s7145; crawl s7146 (640 fb); intro cutscene 16:9 s7148, 21:9 s7149 (VI_EXACT_ROWS stays opt-in); pause s7150; capture sRGB at source s7151; title/SELECT GAME 21:9 s7152, 16:9 s7155 (fitted <=0.006, menu text 0.0002; RECT_ASPECT inert); OPTIONS/PASSCODES/MISSION FAILED/results 21:9 s7153, 16:9 s7154. Title/profile/debrief draw only the 4:3 centre band: score on tools/s7152_post.zsh's NOPREFILL dir (*n) at 16:9 (the *c combine keeps magenta at 796 wide); 336-row screens on *r. RT64 pillars pure black (hardware: stale RAM). Tools tools/s7146_arm.zsh, s7148_pfsearch.py, s7143_affine.py, s7154_{kmd,kgrid}.py, s7155_sheet.py. Sheets docs/owner_sheet_s714[2-9]_*, s715[0-5]_*. Detail: PORTING-STATE.
 32. **G3 logo + chapter title + crawl at 16:9: CLOSED s7156 (H-equal).** Crawl x-scale 1.000 at 16:9 (the s7146 1.0025 is 21:9-only, sub-pixel); 640 fb fills the 16:9 width; RECT_ASPECT inert (0 texrects). TRAP: the presented capture can end before the stream; drop swaps whose pframe is clamped to the last raw frame before fitting. Sheet docs/owner_sheet_s7156_logo_crawl_169.png. The G3 menu/cutscene matrix is complete.
-33. **(next, NEXT.md) G3 in-flight owner-recipe fidelity** (all H-equal at 16:9: L0-L14, L16, L17 flight; s7163: L16/L17 end in a medal screen whose unpainted side bands swamp the score, so score only the flight window with --t1, and refit the rect per level with tools/s7163_rectfit.py; L17 flight needs FROM=9900; L6/L15 at 21:9). Open datum (single-source): L17 swaps 9920-9927, angrylion draws a dark slab RT64 does not; arm W_SHEET_POS=0 / CULL_SPIKE=0 to attribute. Next L18. Delete .cap/.raw after each score (disk ~30 GB).
+33. **G3 in-flight owner-recipe fidelity 16:9: CLOSED s7164 (H-equal L0-L18; L6/L15 also 21:9).** Score only the flight window (--t1 before any medal screen), refit the rect with tools/s7163_rectfit.py. L18 centre 0.015, 0 >0.05. L17 dark slab = the deliberate W_SHEET_PX mixed-sign sheet cull (knife-spike class), not RT64: persists with W_SHEET_POS=0 CULL_SPIKE=0; same-run W_SHEET_ALT=0 + DROPLOG puts 9 dropped tris on the slab swap, fanning to the guard-band corner along the slab (sheet docs/owner_sheet_s7164_L17_wsheet_slab.png).
+34. **(next, NEXT.md) G3 in-flight owner-recipe fidelity at 21:9 on the remaining levels** (owner plays 21:9; only L6/L15 done): tools/s7141_arm.zsh with ROGUESQ_ASPECT=21:9, rect 0,11,469,216, same flight-window discipline.
 
 ## Evidence index
 
