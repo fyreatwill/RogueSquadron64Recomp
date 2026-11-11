@@ -345,3 +345,25 @@ for s in loss:
     a = A[s]
     print(f"  sw {s:5d} ntri {a['nt']:2d} near {a['nf']:.3f} ({a['nfe']:.3f}) rays " +
           ' '.join('x' if x is None else '%.2f' % x for x in a['ray']) + f" hits {a['hits']} exit-mask {a['rmask']} mind {a['mind']:.3f}")
+
+# ---- s7114 LOD split (fps60-wall-lod): eye-cell LOD byte from the s7105 'ce' line (g= cell 24 = dz 0 dx 0, hex nibble 2 = lod)
+# built just before the swap. Drawn TriGen modes: lod 0 = TriGen0000 (5x5 nodes, 32 tris), lod 1 = TriGen0001 (every other node,
+# 3x3, 8 tris), lod 2 = TriGen02 (4 corners, 2 tris). The collision (0x80067D90 / sampleTerrainAtNpcPosition) always interpolates
+# the full 5x5 tile heights, so H-coarse predicts |d| ~ 0 at lod 0 and the mismatch at lod 1/2.
+CE = []
+for line in open(pushf, errors='replace'):
+    if not line.startswith('ce '): continue
+    mm = re.search(r' m=(\d+) .* g=([0-9a-f]{196})', line)
+    if mm: c = mm.group(2)[24 * 4:24 * 4 + 4]; CE.append((int(mm.group(1)), int(c[1], 16) if c[0] != '0' else -1))
+CE.sort(); cem = [x[0] for x in CE]
+def lod_of(sw):
+    j = bisect.bisect_right(cem, SWM.get(sw, 0)) - 1
+    return CE[j][1] if j >= 0 and SWM[sw] - CE[j][0] < 40 * 24000 else None
+print(f'\nLOD SPLIT (s7114): ce lines {len(CE)}')
+for lv in (0, 1, 2):
+    S = [s for s in flight if lod_of(s) == lv]
+    nt = sorted(A[s]['nt'] for s in S if s in A)
+    print(f'  lod {lv}: flight swaps {len(S)}, loss swaps {sum(1 for s in loss if lod_of(s) == lv)}/{len(loss)}, '
+          f'eye-cell tris p10/p50/p90 ' + ('/'.join(str(nt[int(q * (len(nt) - 1))]) for q in (0.1, 0.5, 0.9)) if nt else '-'))
+    rxrep(f'lod {lv} flight', S); rxrep(f'lod {lv} loss', [s for s in loss if lod_of(s) == lv]); conrep(f'lod {lv} flight', S)
+print('  loss swaps with no ce lod:', sum(1 for s in loss if lod_of(s) is None))

@@ -1,20 +1,23 @@
-# NEXT: where do the drawn TriGen terrain heights diverge from the camera collision's height data? (s7113: H-raymiss confirmed)
-HYPOTHESIS-ID: fps60-wall-lod
-Context: s7113 (tools/s7113_raymiss.py, offline on the s7112 capture) rebuilt the eye-cell TRI_GEN tris in world space (cross-pose
-static control |dy| 0.0017 / |dxz| 0.0043 median) and showed the camera's ray test (sampleTerrainAtNpcPosition, s7103 exit mask)
-misses the drawn wall on 74% of rays whose corner sits 25-50% f20 inside it, and the y-clamp sampler 0x80067D90 under the camera
-matches the drawn height within 0.01 on only 9% of ticks (loss ticks: drawn ground 0.08-0.25 ABOVE the game floor, y-down world).
-Drawn vertices sit 0.042 (p50) off the 0.5 lattice. Geomorph (H-morph) not supported offline (|dy| does not grow with depth change).
-Hypotheses (one instrument, one build, one run):
- H-coarse  the collision reads a different / coarser height source (terrain struct 0x80138058) than the TriGen cell source heights.
- H-ponder  TriGen input heights equal the collision data at lattice nodes, but the ucode (or CPU cell builder) displaces the drawn
-           vertices (ponderation / edge-correction / option bits) so the drawn surface leaves the collision surface.
- H-interp  same node heights, different interpolation inside the cell (collision bilinear/other diagonal vs drawn 4x4 sub-quads).
-Discriminator: per flight tick, for the eye cell's 5x5 lattice nodes, log (a) the collision height (call 0x80067D90 vertically at each
-node xz on a scratch stack, as s7103 does for sampleTerrainAtNpcPosition) and (b) the TriGen INPUT vertex data the CPU builder hands
-the ucode for that cell (S7105_EMIT / buildGridCellMeshForFace source words). Offline join with the s7112 rebuilt drawn vertices.
- (a)!=(b) at nodes -> H-coarse; (a)==(b) at nodes but drawn != (b) -> H-ponder (name the ucode/CPU step); nodes equal and drawn
- equal at nodes but mid-quad differs -> H-interp. Positive control: on flat flight cells (low slope) all three must agree.
-Fix direction once named (opt-in, default retail): make the camera push-out / y-clamp test the drawn surface (e.g. sample the
-drawn cell's height for the y clamp, or add a margin equal to the measured max displacement), qualified by losscan eye-cell losses.
-Run recipe: scratch/s7112/arm.zsh 6 4 <name> "<s7112 env + new env>" 120 260; analysis tools/s7113_raymiss.py tri.bin push.txt tris.bin losscan.txt.
+# NEXT: exact-geometry near-plane test where drawn == collision (s7114 run c on-seconds)
+HYPOTHESIS-ID: fps60-wall-gap
+Context: s7114 proved the eye-cell TriGen and the y-clamp sampler read the identical 25 bytes; with ROGUESQ_S7114_NEARLOD=16 on
+(odd mach seconds of scratch/s7114 run c) every near cell is lod 0 plain, so the drawn eye-cell surface IS the collision surface
+(exact, 0.000), yet eye-cell near-z losses persist (22 on / 21 off). s7113's clip-space rebuild is biased (do NOT use its world
+rebuild or its H-gap row). Build the world geometry exactly instead:
+ - surface: hx b= bytes, tile origin x0 = o.x - (qx + fx) * 0.5, z0 = o.z - (qz + fz) * 0.5 (o from the same tick's rx line), node
+   y = s8 * sc / 256 + y0, 00-11 diagonal (tools/s7114_hsrc.py coll()). Positive control: the surface at o must equal hx h exactly.
+ - camera: eye = bv rd; near-plane rectangle and probe rays from the game's own pu corners (c - p0 offsets, forward 0.140) and the
+   s7108 guPerspective near/fovy/aspect args; push-out rays = pre -> c segments of the pu lines.
+Hypotheses:
+ H-gap     the exact surface pierces the near rectangle (or the near frustum slab) while all 3-4 corner probe segments miss it
+           (a ridge or bump between rays): predicts pierce-without-ray-hit on most on-second loss swaps, rare elsewhere.
+ H-frame   the near rectangle the renderer clips with is not the one the push-out protects (render basis / near distance / eye differ
+           from the pu corner frame): predicts the exact surface does NOT reach the push-out rectangle on loss swaps, yet the eye-cell
+           tris are near-clipped; check render near z (s7110: near 15 in clip units) against 0.117 world.
+ H-tile    the near-clipped tris belong to the eye cell but the part crossing near lies in a neighbouring tile the probes test with
+           another tile's bytes: predicts crossings at cell edges; needs neighbour bytes (add to hx if so).
+Discriminator: per flight swap (run c on-seconds; run a for all-lod comparison): pierce(rect) yes/no, any probe segment hit yes/no,
+min distance from eye to the exact surface vs f20 and near, on loss swaps vs +-3 s shifted swaps. Offline only, data in scratch/s7114
+(push_c.txt, tris_c.bin, losscan_c.txt; tri_c.bin holds the clip-space tris if a cross-check is needed).
+If H-gap: fix direction = extra probe rays (edge midpoints + centre) in applyPlayerVehicleStateUpdate, opt-in, qualified by
+tools/s7114_parity.py episodes on a tog arm.

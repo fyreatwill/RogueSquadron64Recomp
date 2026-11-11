@@ -42132,6 +42132,8 @@ RS64_REPLAY = [
     "apply_s7108_camwide.py",  # s7108: push-out corner width vs guPerspective args ([s7108] stderr) + ROGUESQ_S7108_CAMWIDE=1|tog corner widening arm
     "apply_s7110_neartog.py",  # s7110: ROGUESQ_DD_NEAR_TOG=1 applies DD_NEAR only in odd mach seconds (same-run near-plane arm)
     "apply_s7111_camfixk.py",  # s7111: ROGUESQ_S7103_CAMFIX=tog1 (odd mach seconds) + ROGUESQ_S7111_PUSHK=<k> re-push margin arm
+    "apply_s7114_hsrc.py",  # s7114: y-clamp sampler tile/bytes (CHASE hx lines) vs eye-cell TriGen cmd + 25 height bytes (ht lines), ROGUESQ_S7114_HSRC=1 (measurement only)
+    "apply_s7114_nearlod.py",  # s7114: ROGUESQ_S7114_NEARLOD=<r2> (+_TOG=1) ignores the per-cell forced-decimation flags (mesh+0x14 bits 3/2) for terrain cells with dist^2 < r2 (opt-in, default retail)
     "apply_s7069_callsite_gate.py",  # s7069: inline flag gate (same-name macro) for lowfield_store/synth_read calls; MUST stay last
 ]
 

@@ -187477,3 +187477,43 @@ below the effect. Retail behaviour (s7109), so any fix is opt-in.
 ORIGIN: no mitigation landed (offline measurement tool only).
 Discrimination line: H-raymiss vs H-gap split by line 1 + the in-near/no-ray row; next is H-coarse vs H-ponder vs H-interp (NEXT.md,
 slug fps60-wall-lod): collision height at the eye cell's lattice nodes vs the TriGen input words vs the drawn vertices, one build.
+
+## Session 7114 (2026-11-10) — FPS60 near-wall flicker: the y-clamp sampler and the eye-cell TriGen read the identical 25 height bytes; per-cell flags force decimated near meshes (drawn leaves collision by up to ~1 u), but a same-run NEARLOD fix arm that makes every near cell lod 0 (drawn == collision exactly, control passes) leaves eye-cell near-z losses unchanged (22 on / 21 off): H-coarse refuted, s7113 rebuild shown biased (its H-raymiss/H-gap verdicts void)
+HYPOTHESIS-ID: fps60-wall-lod (closed; next slug fps60-wall-gap).
+Static reads (two GLideN64-checked paths): sampler 0x80067D90 (recompiled misnomer wrapAngleToCyclicRange) = struct 0x80136DC0, u16 tile
+map +0 (&0x1FFF) -> 30-byte tiles at *(+4), 25 s8 heights at +5 (5x5, row = z quarter, 0.5 u), plane split fx >= fz on the 00-11
+diagonal, y = interp * (+0x10 * 1/256) + (+0x18). TriGen (renderFlatMeshFaceGroup L_80011714): params[2] = elem+0x24 height pointer,
+params[1] = edge option bytes elem+0x11..14 (neighbour lods), params[5..7] = ponderation elem+0x16..1E, params[8]/[9] origin/step;
+TriGen0000 splits on the same 00-11 diagonal; TriGen0001 (lod 1) uses nodes 0/2/4 only; flat path (mode 2/3) 4 inline corners.
+buildGridCellMeshForFace 0x8004332C..0x800433E0: mesh+0x14 bit 3 forces lod 1 and bit 2 forces lod 2 after the distance tier.
+Changes: tools/apply_s7114_hsrc.py (ROGUESQ_S7114_HSRC=1, CHASE hx + ht lines, measurement only); tools/apply_s7114_nearlod.py
+(ROGUESQ_S7114_NEARLOD=<r2> [+ _TOG=1 odd mach seconds], opt-in, default retail: clears the forced-decimation bits for nodes with
+dist^2 < r2); both in fixup_game_funcs_vendored.py before apply_s7069_callsite_gate. Offline tools/s7114_hsrc.py (exact surfaces,
+rebuild-bias check via s7113, loss class join), tools/s7114_parity.py (same-run on/off split, swaps + episodes, shifted controls);
+tools/s7113_raymiss.py gained a LOD split section.
+Ran (scratch/s7114/arm.zsh 6 4 {a,b,c}; L6 dd4 16:9 FPS60, G1E_WIN=600 G3C_LOG=1, CHASE + S7104_CELL + S7105_EMIT + S7106_RSPTRI +
+S7107_TAG + G5B_TRIS + S7112_TRI + S7114_HSRC): a = plain; b = + DD_LODMUL=16 _TOG=1; c = + S7114_NEARLOD=16 _TOG=1. All 0 crash,
+269-277 s captured, 0 gaps > 250 ms (presented transients a 123, b 213, c 73).
+Controls: (1) sampler rebuild from the logged bytes = logged h on 11938/11938 ticks, |err| max 2.3e-6, plane bit 11938/11938;
+(2) eye-cell params[2] == tile + 5 with identical bytes on 10449/10449 joined ticks; (3) CPU lod byte vs eye-cell tri count 34/8/2
+for lod 0/1/2 (s7112 capture); (4) NEARLOD on-seconds: eye + ring 1 lod 0 on 5794/5794, 0 option commands (off: retail mix).
+| run a (exact, no rebuild) | n | under camera p10/p90 | cell max p50 / max |
+| lod0 plain | 936 | 0.000 / 0.000 | 0.000 / 0.000 |
+| lod0 edge options | 2478 | -0.012 / 0.000 | 0.078 / 0.664 |
+| lod1 plain | 5062 | -0.029 / +0.030 | 0.195 / 1.133 |
+| flat 4-corner | 738 | -0.032 / +0.033 | 0.059 / 0.391 |
+| loss split | swaps off/on | losses off/on | episodes off/on | z (shift +-0.5 s) |
+| b LODMUL (null: lod unchanged) | 9323/9202 | 21/36 | 9/13 | +2.04 (-0.71/+0.71) |
+| c NEARLOD (drawn == collision on) | 8416/8336 | 21/22 | 12/10 | +0.18 (+0.81/-0.81) |
+- Line 1: the tog arm with a passing control shows no effect. Line 2: 22 of run c's 43 losses fall on lod0-plain eye cells whose drawn
+  surface equals the collision surface to 0.000 everywhere in the cell. Run a had 0/54 losses on lod0 plain (7.9% of flight); that
+  correlation does not survive the causal arm (confound, e.g. lod0 plain needs all neighbours lod 0, i.e. open terrain).
+- s7113 rebuild bias (rebuilt drawn-minus-h minus exact, same tick): lod0 plain p50 +0.178 (a) / +0.073 (c), p90 +0.52 / +0.33.
+  So s7113 line 2 (y clamp disagrees with the drawn height) and line 1 / the H-gap row (both on the rebuilt mesh) are void.
+- ROGUESQ_DD_LODMUL does not change near-cell lod (the flags override the tier); null arm b shows swap-level z overstates because
+  losses come in wall-hug episodes: judge on episodes.
+Rules out: H-coarse (different height source: same bytes), H-interp (same diagonal), H-ponder (ponderation words 0 on the joined eye
+cells), LOD decimation as the cause of the eye-cell near-z loss. Voids: s7113 H-raymiss confirmation and H-gap refutation.
+ORIGIN: no mitigation landed (NEARLOD is an opt-in disable of a retail LOD decimation, refuted as a fix; default retail).
+Discrimination line: H-coarse/LOD split by the NEARLOD tog arm (control passes, no effect). Next: exact-geometry H-gap on run c
+on-seconds, where drawn == collision by construction (NEXT.md, slug fps60-wall-gap).
