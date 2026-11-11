@@ -187835,3 +187835,45 @@ texture error.
 Next: the same check at the owner recipe dd4 16:9 FPS60 (NEXT.md, slug g3-owner-recipe-fidelity).
 Verdict: this selects H-equal and refutes H-tex and H-tool for L6 retail flight; it closes G3 retail-settings flight fidelity. Next discriminator: own-snapshot vs SNAP_FROM replays at the owner recipe (dd4 16:9 FPS60) split H-equal / H-wide / H-hi (NEXT.md).
 Owner save untouched (forced-level route, NO_SAVE_WRITE).
+
+## Session 7125 (2026-11-10) — G3 owner-recipe fidelity (L6 dd4 16:9 FPS60): RT64 == angrylion to the retail floor once the stream recorder sits after the radar-disc shift walker (fixed); remaining large diffs are the deliberate W_SHEET cull of guard-band sheets the hardware paints as flat bands; one sheet escapes the cull and RT64 draws it as a dark band (open)
+HYPOTHESIS-ID: g3-owner-recipe-fidelity
+Work unit from NEXT.md (H-equal / H-wide / H-hi). New tools/s7125_arm.zsh (s7124_arm with the owner recipe ROGUESQ_FPS60=1
+ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_ASPECT=16:9, capture 384x216). Window 1360x796 pt; tools/s7123_present_rect.py: picture fills the
+client area (1360x764 pt), capture rect 0,9,369,216 (shifted rects 0,8 / 1,9 score worse, so 0,9 is best). Three runs, L6, EVERY=1
+FROM=7500 MAX_MB=12000 (~700 flight swaps, 19 s, images 0x98AA00 / 0xA38C00 at 796 wide, all above 8 MB), 0 crash each.
+| run | setting | frames | mean|d| med/p90/max | frac>40 med/p90/max | frames >0.02 | regions >=1000 | HUD-area px/frame |
+|---|---|---|---|---|---|---|---|
+| o6 | default, old recorder | 697 | 4.39/5.83/17.0 | 0.030/0.040/0.112 | 491 | 110 | 1166 |
+| w6 | W_SHEET_ALT=0 (cull off in odd s) + DROPLOG, old recorder | 710 | 3.98/5.71/15.6 | 0.025/0.040/0.178 | 369 | 114 | 874 |
+| p6 | default, FIXED recorder | 713 | 1.85/2.94/12.9 | 0.010/0.015/0.105 | 7 | 3 | 79 |
+(retail-settings L6 floor, s7124: 1.62 / 0.010.)
+Findings:
+1. HUD (every frame in o6/w6, ~1000 px): angrylion drew the radar disc left of the ring, RT64 inside it. Writer = our s6158
+   rs64_region_scan (ROGUESQ_SHIFT_REGION, auto-set by the aspect policy), which edits submit RAM in rs64_dpc_record_submit AFTER
+   rs64_g5b_frame (walker slot 8 before 9). So the replay stream was not what RT64 is given; s7098's "HUD anchor applied in RT64"
+   was this. Fixed: src/rsp/dpc_bridge.cpp records after region_scan and floor_scan (ROGUESQ_G5B_FRAME_EARLY=1 restores). p6 HUD
+   diff 1166 -> 79 px/frame; disc in the ring in both renders (docs/owner_sheet_s7125_owner_recipe_fidelity.png). Tool defect, not a
+   render defect. Two lines: code order + the p6 re-score.
+2. Sky sheets: the worst frames in every run are a large flat beige wedge from a cliff edge across the sky that angrylion (hardware
+   model) paints. RT64 default shows clouds there; in w6's cull-off seconds RT64 draws it as a dark band
+   (docs/owner_sheet_s7125_wsheet_keep.png). This is the documented s6895 class (mixed-sign W guard-band tris "the stream itself is
+   wrong there, the RDP paints them as fans and bands", dropped by ROGUESQ_W_SHEET_PX=200 in rt64_gbi_rdp.cpp). Same-run toggle:
+   cull-off seconds 42 frames with non-HUD regions >=1000 px vs 15 in cull-on seconds; frames whose window holds a logged drop
+   score frac 0.034 vs 0.019 without. So RT64 differs from hardware there BY DESIGN, and its picture is the better one.
+   The toggle is also the same-run positive control: the scorer sees a material-level change. The stale-snapshot control
+   (SNAP_FROM=7500) had no power in this scene: own vs stale replays differ in only 0.1% of pixels (median, 100 swaps),
+   because the textures do not change over 19 s. o6 own vs stale scored the same.
+3. Open residual: in w6 cull-ON seconds (swaps 7635-7641, about 0.2 s) one thin sheet is NOT dropped (no DROPLOG line in those
+   frames). Angrylion paints it beige; RT64 draws it as a dark band across the sky (docs/owner_sheet_s7125_wsheet_escape.png, row
+   1). It escapes either because its span is <= 200 px or because all three W are positive. A dark streak across the sky is the kind
+   of thing the owner would call a knife line (G5f).
+4. Silhouette edges: a 1-2 px line along every bright/dark ridge in all arms (resolution/AA of RT64 at 1360 wide vs angrylion 796
+   box-scaled), as in s7122/s7124. H-hi refuted: no whole-frame offsets or colour blocks at images above 8 MB; textures (clouds, canyon)
+   match.
+Verdict: selects H-equal at the owner recipe (p6 0.010 median = retail floor; 7/713 frames >0.02, all the sheet episode). H-wide holds
+only for the deliberate W_SHEET cull and the recorder position (fixed). H-hi refuted. Next: the escaping sheet (finding 3).
+ORIGIN: the HUD diff was written by our rs64_region_scan running after the recorder (tool order). The beige sheets come from the guest's
+guard-band terrain tris at dd4 (s6895 class); nothing here is a new mitigation.
+Disk: o6/w6/p6 streams (12 GB each) deleted after replay; w6.raw, p6.raw and replays kept in scratch/s7125.
+Owner save untouched (forced-level route, NO_SAVE_WRITE).

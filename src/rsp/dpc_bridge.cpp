@@ -5999,7 +5999,12 @@ static void rs64_dpc_record_submit_impl(uint32_t lo, uint32_t hi) {
     if (tm) t[4] = mach_absolute_time();
     RS64_W7(7, rs64_spike_scan(lo, hi));
     if (tm) t[5] = mach_absolute_time();
-    if (!skip) { RS64_W7(8, rs64_g5b_frame(lo, hi)); RS64_W7(9, rs64_region_scan(lo, hi)); RS64_W7(10, rs64_floor_scan(lo, hi)); }
+    // s7125 G3: the G5B_FRAME recorder now runs AFTER the region shift (radar disc, s6158) and floor walkers, so the replay stream is
+    // the bytes RT64 is given; before, every 16:9/21:9 capture showed the disc unshifted (~1000 px HUD diff per frame vs RT64).
+    // ROGUESQ_G5B_FRAME_EARLY=1 restores the old pre-walker record point.
+    static const bool s_g5bEarly = [] { const char *e = std::getenv("ROGUESQ_G5B_FRAME_EARLY"); return e && *e == '1'; }();
+    if (!skip) { if (s_g5bEarly) RS64_W7(8, rs64_g5b_frame(lo, hi)); RS64_W7(9, rs64_region_scan(lo, hi)); RS64_W7(10, rs64_floor_scan(lo, hi));
+                 if (!s_g5bEarly) RS64_W7(8, rs64_g5b_frame(lo, hi)); }
     if (tm) {
         t[6] = mach_absolute_time();
         for (int i = 0; i < 6; i++) s_acc[odd][i] += t[i + 1] - t[i];

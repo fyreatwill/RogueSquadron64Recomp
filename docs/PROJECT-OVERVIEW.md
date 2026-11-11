@@ -11486,3 +11486,12 @@ Near-wall flicker headline bullets s7103-s7114 (summarised in CURRENT-TRUTH item
 **s7106:** the F5 ucode does emit the 9 near-eye cells' TRI_GENs as screen-covering tris on 8/10 episode swaps (H-clip refuted; src/rsp/s7106_rsptri.cpp, ROGUESQ_S7106_RSPTRI).
 
 **s7103:** re-pushing all 4 near corners at push-out exit (ROGUESQ_S7103_CAMFIX) leaves the episode rate unchanged (5/2714 off vs 5/3738 on ticks); s7102 H-fight/H-squeeze refuted.
+
+
+### Migrated from CURRENT-TRUTH headline (s7125)
+
+**s7095 RSP-side DPC register model vs hardware CLOSED: 0 branch-relevant differences (H-dpc-ok on two lines).** Offline: tools/s7095_dpc_census.py (exit 0) finds 15/15 ROM DPC sites. The STATUS bits tested are only XBUS, DMA_BUSY and START_VALID, and an idle instant RDP reports 0 for each, as our constant does. The only STATUS write is 0x1 (clear XBUS). Live: src/rsp/s7095_dpc_model.cpp (ROGUESQ_S7095_DPC=1, self-test 4/4) shadows hardware semantics over 22 K tasks and 92 M reads in an L6 flight of 309 s. CURRENT and END differ from the shadow only at task entry (per-task reset) and between START and END (the snap). The shadow's wait predicates spin 0 times, and both task-entry branches lead to a fresh start. The 64-poll escape fired 0 times.
+- In plain words: the port's answers to the graphics microcode's "is the drawing chip ready?" questions lead it to exactly the same decisions real hardware would.
+- Next: the bridge's RDP forwarding coverage (NEXT.md, slug rdp-submit-coverage).
+
+**s7092 RSP vector-unit DMEM fast paths + divide unit CLOSED: 8.59 G compares, 0 differences (tools/s7092_vu_mem_test, `zsh run.sh`).** Vector/scalar DMEM fast paths == ares byte loops on every e x address; VRCP/VRSQ single + double == cxd4 do_div. tools/rsp_vu_diff 496/496 SIMD==SISD from live headers.
