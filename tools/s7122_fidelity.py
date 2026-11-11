@@ -9,6 +9,7 @@ are tabulated: area, bbox, mean d, mean RGB on each side. Also a row profile of 
 
 usage:
   s7122_fidelity.py score raw idx aldir out_prefix [--rect x0,y0,x1,y1] [--t0 mach] [--t1 mach]
+  (s7141: --split cx0,cx1 adds central-band vs side-band columns to frames.csv; --shift n mis-pairs by n presented frames = positive control)
   s7122_fidelity.py control aldir         (positive control: paint 20x20 into a replay; must give exactly one 400 px region)
 Writes out_prefix.frames.csv, out_prefix.regions.csv, out_prefix.rows.csv. Pure python + PIL (no numpy on this host).
 """
@@ -71,7 +72,7 @@ def fit(pres, rect, size):
     return pres.crop(rect)
 
 
-def score(rawp, idx, aldir, outp, rect=None, t0=0, t1=1 << 63):
+def score(rawp, idx, aldir, outp, rect=None, t0=0, t1=1 << 63, split=None, shift=0):
     raw = Raw(rawp); sw = {}
     for line in open(idx):
         s, m, *_ = map(int, line.split()); sw[s] = m
@@ -98,16 +99,27 @@ def score(rawp, idx, aldir, outp, rect=None, t0=0, t1=1 << 63):
         sc = statistics.median(md(al[s], P(at(sw[s], lag))) for s in ks[::3])
         if best is None or sc < best[0]: best = (sc, lag)
     lag = best[1]; print('lag %.1f ms median mean|d| %.2f' % (lag / 24000.0, best[0]))
-    fo = open(outp + '.frames.csv', 'w'); fo.write('swap,pframe,meand,frac_over_T,nreg,biggest\n')
+    fo = open(outp + '.frames.csv', 'w'); fo.write('swap,pframe,meand,frac_over_T,nreg,biggest' + (',meand_c,frac_c,meand_s,frac_s' if split else '') + '\n')
     ro = open(outp + '.regions.csv', 'w'); ro.write('swap,area,x0,y0,x1,y1,meand,al_rgb,rt64_rgb\n')
     rowsum = [0.0] * H; nfr = 0
     for s in ks:
         i0 = at(sw[s], lag)
         cand = [(md(al[s], P(j)), j) for j in range(max(0, i0 - 2), min(len(raw.T), i0 + 3))]
-        m, j = min(cand); p = P(j); d = dmap(al[s], p)
+        m, j = min(cand)
+        if shift: j = min(max(0, j + shift), len(raw.T) - 1); m = md(al[s], P(j))  # s7141 positive control: deliberately mis-paired
+        p = P(j); d = dmap(al[s], p)
         regs = regions(d, W, H, al[s], p); nfr += 1
         for y in range(H): rowsum[y] += sum(d[y * W:(y + 1) * W]) / W
-        fo.write('%d,%d,%.2f,%.4f,%d,%d\n' % (s, j, m, sum(1 for v in d if v > T) / len(d), len(regs), regs[0]['area'] if regs else 0))
+        ext = ''
+        if split:  # s7141: central 4:3 band columns [split[0], split[1]) vs the side bands
+            cs = [0, 0, 0]; ss = [0, 0, 0]
+            for y in range(H):
+                row = d[y * W:(y + 1) * W]
+                for x, v in enumerate(row):
+                    a_ = cs if split[0] <= x < split[1] else ss
+                    a_[0] += v; a_[1] += v > T; a_[2] += 1
+            ext = ',%.2f,%.4f,%.2f,%.4f' % (cs[0] / cs[2], cs[1] / cs[2], ss[0] / max(1, ss[2]), ss[1] / max(1, ss[2]))
+        fo.write('%d,%d,%.2f,%.4f,%d,%d%s\n' % (s, j, m, sum(1 for v in d if v > T) / len(d), len(regs), regs[0]['area'] if regs else 0, ext))
         for r in regs:
             ro.write('%d,%d,%d,%d,%d,%d,%.1f,%s,%s\n' % (s, r['area'], r['x0'], r['y0'], r['x1'], r['y1'], r['md'],
                      '/'.join(map(str, r['a'])), '/'.join(map(str, r['b']))))
@@ -138,4 +150,6 @@ if __name__ == '__main__':
             if k == '--rect': kw['rect'] = tuple(map(int, v.split(',')))
             elif k == '--t0': kw['t0'] = int(v)
             elif k == '--t1': kw['t1'] = int(v)
+            elif k == '--split': kw['split'] = tuple(map(int, v.split(',')))
+            elif k == '--shift': kw['shift'] = int(v)
         score(a[2], a[3], a[4], a[5], **kw)

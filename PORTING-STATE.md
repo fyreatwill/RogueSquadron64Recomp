@@ -188366,3 +188366,38 @@ Z:Y 5463:5603, 5823:5883, 6263:6503); L4 rows are SAME SWAP NUMBER, NOT pose-mat
 pass; the right-column "(same pose)" label is the sheet tool's fixed text and is wrong for those two rows).
 Rules out: a level-dependent hole class under the three 21:9 fixes on the four levels measured (L1, L4, L6, L15: 0 flight holes each).
 Not measured: the other 17 levels; 16:9 only on L6 (s7136).
+
+## Session 7141 (2026-11-11) — G3 owner-recipe fidelity at 21:9 on L15 and L6 (fixes on): RT64 == angrylion (H-equal); the side-band excess is edge-anchored HUD rings and wall silhouette edges, not a wide-x renderer path (H-wide-rt64 refuted)
+HYPOTHESIS-ID: g3-fidelity-219
+Work unit from NEXT.md (H-equal / H-wide-rt64 / H-align). New tools/s7141_arm.zsh (s7132_arm into scratch/s7141), tools/s7141_post.zsh
+(index, replay every RAM-owning swap with frame_replay16 in 4 parallel chunks of 60, control, score, shifted score). tools/s7122_fidelity.py
+gains --split cx0,cx1 (per-frame central-band vs side-band mean|d| and frac>40 columns) and --shift n (pairs each swap n presented
+frames off its best match = positive control). New tools/s7141_summ.py, s7141_mask.py (centre vs side with HUD boxes masked),
+s7141_colprof.py (16-bucket column profile + rect registration sweep), s7141_sheet.py.
+Runs: one at a time, screen unlocked, forced-level route, owner recipe FPS60 dd4 + ROGUESQ_ASPECT=21:9, G5B_FRAME_EVERY=1 FROM=7500
+MAX_MB=12000, window 1360x626, capture 504x216, rect 0,11,469,216 (s7132), central 4:3 band = middle half (ASPECT_SCALE 2.0) = cols
+117..352. 0 crash both. Hole fixes (XFIX, GATEFIX, SKYFILL) default on. Painted-square control PASS on both replays.
+| arm | frames | lag | mean|d| med/p90/max | frac>40 med/p90/max | >0.02 | >0.05 | centre frac med | side frac med |
+|---|---|---|---|---|---|---|---|---|
+| L15 21:9 | 716 | 20 ms | 6.65/8.31/11.8 | 0.019/0.023/0.034 | 264 | 0 | 0.0096 | 0.0290 |
+| L15 shift 2 (control) | 716 | | 9.78/13.8/22.6 | 0.034/0.062/0.126 | 645 | 165 | 0.022 | 0.042 |
+| L6 21:9 | 336 | 15 ms | 1.43/3.47/4.0 | 0.012/0.016/0.020 | 3 | 0 | 0.0049 | 0.0187 |
+| L6 shift 2 (control) | 336 | | 5.07/65.3/119 | 0.028/0.456/0.865 | 213 | 139 | 0.016 | 0.038 |
+(s7132 L6 21:9 before the hole fixes: 66 >0.02, 48 >0.05, all in the hole burst; s7125 16:9 L6 floor 1.85/0.010.)
+Findings:
+1. No frame reaches 0.05 at 21:9 on either level, against 165/139 in the mis-paired control from the same capture. The s7132 hole burst is
+   gone with the fixes on (L6 max 0.020).
+2. Side bands score 2-3x the centre. L15: masking the three edge-anchored HUD boxes (radar ring top right, craft icon top left, lives
+   ring bottom left) makes side = centre (0.0100 vs 0.0098, 100-frame sample). The HUD boxes alone score 0.115. The same boxes score 0.086
+   on s7131's 16:9 L4 data, so this is not a 21:9 effect: the thin red ring and the radar blips resample differently (RT64 at window
+   resolution, captured at 504 wide, vs angrylion 1024 box-downscaled). By eye the rings are identical (scratch/s7141/hud_zoom.png).
+   L6: HUD-masked side 0.0099 vs centre 0.0051. The sheet shows only 1-px silhouette lines where the dark canyon walls meet the beige
+   ground, and in this flight those lines cross the side bands. Content placement, same picture (single-source by eye for L6).
+3. Registration sweep (L15, 30 frames): the nominal rect is within 0.1 mean|d| of the best of x0/x1 +-2. y +1 gains 0.3-0.4, which is
+   uniform, not side-specific. Column profile: high at the right edge (HUD ring) and the far-left bucket. No scale error.
+4. L6 flight ended at swap ~7835 (craft crashed, MISSION FAILED and stats screens). From there the replay's last colour image is
+   0xB20000/0xA40000 half painted, so the scorer drops those frames: 336 of 742 are flight. That is the game's own death sequence, not a fault.
+Verdict: H-equal at 21:9 on L15 and L6; H-wide-rt64 refuted (side excess = HUD ring resampling present at 16:9 too + edge placement);
+H-align not needed (0 outliers). Item 30 CLOSED. Sheet docs/owner_sheet_s7141_219_fidelity.png (angrylion | RT64 | diff x4, 2 L15 + 2
+L6 swaps). Streams (.cap) deleted after scoring; raws, replays and csvs in scratch/s7141.
+Owner save untouched (forced-level route, NO_SAVE_WRITE).

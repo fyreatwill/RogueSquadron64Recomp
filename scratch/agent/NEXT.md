@@ -1,18 +1,16 @@
-# NEXT: G3 owner-recipe fidelity at 21:9 (CURRENT-TRUTH item 30; s7131 did 16:9 only on L1/L4)
-HYPOTHESIS-ID: g3-fidelity-219
-State (s7140): 21:9 hole fixes clean on L1/L4/L6/L15 (0 flight holes each vs controls 77-95%). Item 29 closes on the owner's look.
-Question: at the owner recipe with ROGUESQ_ASPECT=21:9, does RT64's presented window match angrylion replays of the same RDP stream?
+# NEXT: G3 hangar / menus RT64 vs angrylion at 21:9 owner recipe (CURRENT-TRUTH item 31)
+HYPOTHESIS-ID: g3-fidelity-hangar-219
+State (s7141): flight fidelity at the owner recipe is H-equal on L1/L4 (16:9), L6 (16:9 + 21:9), L15 (21:9). Non-flight views
+(SELECT YOUR CRAFT hangar with the G5g/G5i camera fix, level select, mission briefing) have no RT64-vs-angrylion score at 21:9.
 Hypotheses:
-- H-equal: mean|d| and frac>40 within the s7122/s7131 floors (L1 ~7.8-8.4 / 0.024-0.028; L4 6.8 / 0.017) on every scored swap.
-- H-wide-rt64: RT64 differs only in the extended side columns (x outside the central 4:3 band): a renderer path (scissor, guard band,
-  texrect at wide x) that the 16:9 run never exercised.
-- H-align: diffs are frame misalignment in fast rolls only (check best-of +-2 lag; single outlier frames).
-Run (one game at a time, ~5.5 min each, delete .cap/.raw after scoring; disk ~61 GB free):
-  copy tools/s7138_arm.zsh -> it already records stream + window at CW x CH; use CW=504 CH=216 (21:9 content)
-  env CW=504 CH=216 zsh tools/s7138_arm.zsh 15 F1L15 "ROGUESQ_ASPECT=21:9 ROGUESQ_G5B_FRAME_MAX_MB=9000" 120 180
-  env CW=504 CH=216 zsh tools/s7138_arm.zsh 6 F1L6 "ROGUESQ_ASPECT=21:9 ROGUESQ_G5B_FRAME_MAX_MB=9000" 120 180
-  replay with tools/s7139_post.zsh (flight start from s7138_bindegen), then score with tools/s7122_fidelity.py
-  (read its usage + the s7131 PORTING-STATE entry for the rect/lag flags; the content rect at 21:9 differs from 0,9,369,216 —
-  measure it from the raw first). Add a column split (central 4:3 vs side bands) to the score: that is the H-wide-rt64 discriminator.
-Positive control: a deliberately shifted (1 frame lag off) pairing must score well above the floor, or a pass is not a result.
-Owner save rule applies. CURRENT-TRUTH ~59.8 KB: keep edits net-zero (Step 0 triggers at 60000).
+- H-equal: the hangar/menu swaps score within the flight floors (frac>40 med <= 0.02, 0 frames > 0.05).
+- H-wide-menu: wide 2D menu art (texrects, fills) or the ASPECT HUD/menu anchor walkers differ in RT64 at x outside the 4:3 band.
+- H-hangar-cam: the G5g/G5i camera change exposes geometry RT64 draws differently (guard band, near clip) during the ship scroll.
+Run: needs a hangar driver, not the forced-level route. Find the G5i (s6995) or G5g (s6907) hangar-scroll recipe in PORTING-STATE (grep
+'Session 6995', 'Session 6907') and copy its key script into a tools/s7142_arm.zsh that also sets ROGUESQ_G5B_FRAME=<cap>
+ROGUESQ_G5B_FRAME_EVERY=1 FROM=<first hangar swap> MAX_MB=12000 and runs scratch/s6894/g5b_capture at 504x216. Replay and score with
+  zsh tools/s7141_post.zsh scratch/s7142 <name> 0,11,469,216 117,352     (check the rect with tools/s7123_present_rect.py first)
+  python3 tools/s7141_summ.py ...; python3 tools/s7141_mask.py ... (HUD boxes differ in menus: mask none first)
+Positive control: the --shift 2 score from the same capture must put >=100 frames over 0.05 (on slow menus use --shift 10) and the
+painted-square control must PASS, or a pass is not a result. Owner save rule: hangar route reads the real save, NO_SAVE_WRITE stays on.
+CURRENT-TRUTH ~59.7 KB: keep edits net-zero (Step 0 triggers at 60000).
