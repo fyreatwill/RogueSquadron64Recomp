@@ -187938,3 +187938,30 @@ wedge); the pixel check (fire frames vs angrylion) is the next unit.
 ORIGIN: the writer is the game's own guard-band clamp at dd4 (F5 ucode vertex clamp to +-25%/+-50% of the viewport), and the stream carries a
 fan whose RDP W plane is positive at the clamped corner; the hardware paints it as sky/flat band, RT64 draws a dark hairline. Same class as s6895.
 Tools: tools/s7126_apex.py (NLOG note). Patches exported (submodule-patches/rt64.patch). Soak recipes s7127_apex_L6_n{1,2,3} run here.
+
+## Session 7128 (2026-11-11) — wsheet-escape pixel check, run 1: new trigger-ring stream recorder + ROGUESQ_W_SHEET_POS=t; 5 corner-hairline detections, all in the kept arm, are invisible in BOTH renderers (RT64 == angrylion along the wedge, positive control passes); the dropped arm is still unmeasured, 2 soaks queued
+HYPOTHESIS-ID: wsheet-escape
+Work unit from NEXT.md (pixel-qualify the s7127 corner-hairline cull). Code:
+- lib/rt64/src/gbi/rt64_gbi_rdp.cpp: ROGUESQ_W_SHEET_POS=t detects in every second and drops only in odd 24 MHz seconds (same clock as W_CLAMP=tog);
+  DROPLOG.pos gains an 11th field, arm (1 dropped / 0 kept); every detection calls weak rs64_wsheetpos_note(arm). Patch exported.
+- src/rsp/dpc_bridge.cpp: ROGUESQ_G5B_FRAME_TRIG=<pre>,<post> keeps the last pre+1 swaps (16 MB RAM + ranges each) in memory and writes them, in the
+  normal ROGUESQ_G5B_FRAME format with a RAM record per swap, only on a W_SHEET_POS detection, plus the post swaps after it ([g5btrig] on stderr).
+  One 330 s flight came to 389 MB instead of ~12 GB per 15 s at EVERY=1, so rare events are now replayable. frame_replay16 reads it unchanged.
+- New tools/s7128_arm.zsh (s7126_arm, own dir, EVERY=1), tools/s7128_pixel.py (per fire: corner->base path vs +-6 px control path, luminance
+  AL/RT64 and |d| on each, candidate swaps in a window, verdict per arm), tools/s7128_ctl.py (positive controls).
+Run t1: L6 owner recipe (FPS60 dd4 16:9), POS=t, TRIG=6,4, DROPLOG + KEEPLOG, g5b_capture 384x216 over 330 s; 0 crash, owner save untouched.
+Trigger fired twice (swaps 8353, 9326) -> 22 swaps dumped, all replayed with frame_replay16 (796x448, painted 356.5k/356.6k); fidelity control PASS;
+score lag 25 ms, mean|d| 2.2-2.6 per frame (s7125 floor ~1.85-2.3).
+Detections: 5, ALL arm 0 (both clusters fell in even seconds): 4 at the NEW corner (1193.8,-224) (the +50% right clamp, not seen in n1/n2) and
+1 at (-398,-224); W 5400 vs 0.85e6-3.3e6, bases 2.5-3.5 px. All carry the corner+thin signature.
+Per fire, on its owning swap: line |d| 0.3-1.3 vs control 0.4-1.4 (RT64 == hardware on the wedge); RT64 darkening beyond AL median 0.2 lum.
+Positive control (tools/s7128_ctl.py, same frames): painting the path 1 px wide at 50% gives line |d| 6.0-11.2 vs 0.3-1.2 unpainted, so a hairline
+is visible to the sampler at capture scale. Native 796x448 angrylion: line lum 13.1-24.3 vs +-3 px control 13.5-23.8: the hardware draws nothing
+distinguishable along these wedges either.
+Verdict (single run, 2 clusters): for the n2-class corner hairlines in this run, H-harm is refuted for the kept arm (nothing visible on either
+renderer to lose or to show) and the "dark knife line" picture is NOT seen. So these detections are harmless to drop and also invisible to keep;
+only the s7125/n1 escaper (a visible 2991 px dark band) showed a difference. The dropped-arm pixel check (arm 1) is still unmeasured; H-fixed /
+H-harm on arm 1 stays open. Queued scratch/agent/soak_queue/s7128_wsheetpos_p{1,2}.sh (same recipe, auto replay + s7128_pixel.py verdict in
+scratch/s7128/p*_pixel.txt, .cap deleted after replay).
+ORIGIN: no new mitigation; the cull is s7127's (writer: game guard-band corner clamp at dd4). This session adds diagnostics and a toggle only.
+Disk: t1.cap deleted after replay; t1.raw (5.9 GB), t1r, logs kept in scratch/s7128.

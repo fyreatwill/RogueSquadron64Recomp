@@ -3579,6 +3579,9 @@ extern "C" void rs64_g5b_trigen(uint32_t pc, uint32_t w0, uint32_t w1, uint32_t 
 // (tools/angrylion_replay/frame_replay.c). Records, u32 tag first: 'SWAP' mach(u64) swap; 'RAM ' 16 MB RDRAM, at the first range
 // of every ROGUESQ_G5B_FRAME_EVERY-th swap (default 10); 'RNG ' lo len bytes (after the spike cull, so what RT64 gets).
 // ROGUESQ_G5B_FRAME_FROM=<swap> starts it; ROGUESQ_G5B_FRAME_MAX_MB caps it (default 24000).
+// s7128: RT64 (rt64_gbi_rdp.cpp W_SHEET_POS) calls this on every corner-hairline detection, dropped or not (=t off arm).
+static std::atomic<int> g_rs64_wsheetpos_trig{-1};
+extern "C" void rs64_wsheetpos_note(int arm) { (void)arm; g_rs64_wsheetpos_trig.store(g_rs64_swap_n.load(std::memory_order_relaxed), std::memory_order_relaxed); }
 static void rs64_g5b_frame(uint32_t lo, uint32_t hi) {
     static FILE *f = [] { const char *e = std::getenv("ROGUESQ_G5B_FRAME"); FILE *o = (e && *e) ? fopen(e, "wb") : (FILE *)nullptr; if (o) setvbuf(o, nullptr, _IOFBF, 1 << 24); return o; }();
     if (!f || g_rdram_for_submit == nullptr || hi <= lo || hi > kSubmitRamEnd) return;
@@ -3589,6 +3592,41 @@ static void rs64_g5b_frame(uint32_t lo, uint32_t hi) {
     const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
     if (sw < from || total >= cap) return;
     auto put = [&](const void *p, size_t n) { fwrite(p, 1, n, f); total += n; };
+    // s7128 wsheet-escape: ROGUESQ_G5B_FRAME_TRIG=<pre>,<post> keeps the last <pre>+1 swaps (16 MB RAM + ranges each) in memory and
+    // writes them, in the normal format with a RAM record per swap, only when RT64 reports a W_SHEET_POS detection
+    // (rs64_wsheetpos_note, either arm) plus the <post> swaps after it. RT64 handles a swap's tris 2-10 ms after the bridge moves on,
+    // so the ring must cover the lag. A whole 300 s flight then costs ~17 MB per kept swap instead of 12 GB per 15 s.
+    static const int trigPre = [] { const char *e = std::getenv("ROGUESQ_G5B_FRAME_TRIG"); return e && *e ? std::max(1, atoi(e)) : 0; }();
+    if (trigPre > 0) {
+        static const int trigPost = [] { const char *e = std::getenv("ROGUESQ_G5B_FRAME_TRIG"); const char *c = e ? std::strchr(e, ',') : nullptr; return c ? atoi(c + 1) : 4; }();
+        struct Slot { int sw = -1; uint64_t t = 0; std::vector<uint8_t> ram, rng; };
+        static std::vector<Slot> ring(trigPre + 1);
+        static int cur = -1, lastDumped = -1, dumpUntil = -1;
+        auto dump = [&](Slot &q) {
+            if (q.sw < 0 || q.sw <= lastDumped || q.ram.empty()) return;
+            const uint32_t m = 0x50415753u, qs = (uint32_t)q.sw, mr = 0x204D4152u; put(&m, 4); put(&q.t, 8); put(&qs, 4);
+            put(&mr, 4); put(q.ram.data(), kSubmitRamEnd); put(q.rng.data(), q.rng.size()); fflush(f); lastDumped = q.sw;
+        };
+        if (sw != last) {
+            if (cur >= 0) {  // the previous slot is complete
+                const int trig = g_rs64_wsheetpos_trig.exchange(-1);
+                if (trig >= 0) {
+                    dumpUntil = std::max(dumpUntil, ring[cur].sw + trigPost);
+                    std::vector<Slot *> ord; for (auto &q : ring) if (q.sw >= 0) ord.push_back(&q);
+                    std::sort(ord.begin(), ord.end(), [](Slot *a, Slot *b) { return a->sw < b->sw; });
+                    for (Slot *q : ord) dump(*q);
+                    fprintf(stderr, "[g5btrig] trig_sw=%d at_sw=%d dumped_to=%d until=%d MB=%llu\n", trig, ring[cur].sw, lastDumped, dumpUntil, (unsigned long long)(total >> 20));
+                } else if (ring[cur].sw <= dumpUntil) dump(ring[cur]);
+            }
+            last = sw; cur = (cur + 1) % (int)ring.size(); Slot &q = ring[cur];
+            q.sw = sw; q.t = mach_absolute_time(); q.rng.clear();
+            if (q.ram.size() != kSubmitRamEnd) q.ram.resize(kSubmitRamEnd);
+            std::memcpy(q.ram.data(), g_rdram_for_submit, kSubmitRamEnd);
+        }
+        Slot &q = ring[cur]; const uint32_t m = 0x20474E52u, n = hi - lo; const size_t o = q.rng.size(); q.rng.resize(o + 12 + n);
+        std::memcpy(&q.rng[o], &m, 4); std::memcpy(&q.rng[o + 4], &lo, 4); std::memcpy(&q.rng[o + 8], &n, 4); std::memcpy(&q.rng[o + 12], g_rdram_for_submit + lo, n);
+        return;
+    }
     if (sw != last) { last = sw; const uint32_t m = 0x50415753u, q = (uint32_t)sw; const uint64_t t = mach_absolute_time(); put(&m, 4); put(&t, 8); put(&q, 4); fflush(f); }
     if (sw - lastram >= every) { lastram = sw; const uint32_t m = 0x204D4152u; put(&m, 4); put(g_rdram_for_submit, kSubmitRamEnd); }
     const uint32_t m = 0x20474E52u, n = hi - lo; put(&m, 4); put(&lo, 4); put(&n, 4); put(g_rdram_for_submit + lo, n);
