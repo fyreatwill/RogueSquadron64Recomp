@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7128 (2026-11-11).
+Compact operational handoff, as of Session 7131 (2026-11-11).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -315,7 +315,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 25. **DPC registers CLOSED s7095; bridge forwarding coverage CLOSED s7096** (ROGUESQ_S7095_DPC / ROGUESQ_S7096_FWD=ctl, rerun after any dpc_bridge.cpp submit/defer/wrap edit; MISSING_UNEXPLAINED/dup/order must stay 0). Edit-walker census CLOSED s7097 (ROGUESQ_S7097_EDIT=ctl; unattributed must stay 0). RT64 vs angrylion on the same dd4 stream CLOSED s7098 (H-stream: big drops are in the stream; replay with tools/angrylion_replay/build16.sh).
 26. **Near-wall flicker (s7098-s7115): eye-cell near-plane loss, RETAIL behaviour (s7109). Refuted: corner width, near 15, margin re-push, post-move, ucode drop, LOD decimation (s7108-s7114), H-gap (s7115). s7115 H-probe CONFIRMED s7116 (opt-in ROGUESQ_S7115_NEARLIFT=1: pooled 4 runs losses 83/31, pierce class removed). s7117: swap = previous tick's camera; residual at terrain 1.0-1.5 near. s7118: NEARK=1.6 removes it (steady 13/1, 5 runs). s7119: no hop at k1.6 (H-smooth, same-run jerk vs off). s7120: off vs k1.6 replicated, 42/2 over 4 runs (z -6.0). s7121: no flight-cam steps (s7120 steps were a cam-mix join). DONE: closes on the owner's look.** Drop is in the RDP stream (s7098).
 27. **G3 flight fidelity at retail settings: CLOSED s7124** (L1 s7122 + L6 s7124, RT64 == angrylion; replay snapshot bug fixed in frame_replay.c). Owner recipe L6 CLOSED s7125 (H-equal). W_SHEET escape CLOSED s7130 (ROGUESQ_W_SHEET_POS default on; both arms pixel-checked; owner sheet s7129).
-28. **G3 owner-recipe fidelity on more levels (next).** L6 only so far: repeat tools/s7125_arm.zsh (FPS60 dd4 16:9, rect 0,9,369,216) on L1 and L4, score vs angrylion; any frame over the L6 floor (frac>40 0.010, mean|d| 1.85) is a datum to root-cause.
+28. **G3 owner-recipe fidelity L1/L4: CLOSED s7131 (H-equal).** tools/s7131_arm.zsh, rect 0,9,369,216, swaps with pframe 0 (before the window capture) excluded. L1 mean|d| 8.42 frac>40 0.028 (L1 retail floor s7122 7.79/0.024; grass speckle), 1 frame >0.05 = fast-roll frame misalignment; L4 6.76/0.017, max 0.023. Sheet docs/owner_sheet_s7131_L1_L4_fidelity.png.
+29. **G3 owner-recipe fidelity at 21:9 (next).** Owner plays on a 21:9 screen; repeat s7131_arm with ROGUESQ_ASPECT=21:9 on L6, score vs angrylion (window rect re-measured with tools/s7123_present_rect.py).
 
 ## Evidence index
 

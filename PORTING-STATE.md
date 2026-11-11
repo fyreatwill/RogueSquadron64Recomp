@@ -187995,3 +187995,27 @@ New tools/s7129_sheet.py -> docs/owner_sheet_s7129_wsheet_cull.png: row 0 the s7
 Verdict: the corner-hairline cull is pixel-neutral in both arms on two independent renderers; G5f's remaining W_SHEET escape is closed on data. Owner look
 still decides G5f overall. Next: G3 owner-recipe fidelity on L1/L4 (CURRENT-TRUTH item 28, new slug g3-owner-recipe-levels).
 ORIGIN: no new mitigation; the cull is s7127's (writer: game guard-band corner clamp at dd4).
+
+## Session 7131 (2026-11-11) — G3 owner-recipe fidelity on L1 and L4 (FPS60 dd4 16:9): RT64 == angrylion on both (H-equal); the only outliers are scorer frame-matching artefacts
+HYPOTHESIS-ID: g3-owner-recipe-levels
+Work unit from NEXT.md (H-equal / H-level / H-dd). New tools/s7131_arm.zsh (s7125_arm with scratch/s7131 paths). One run per level, sequentially, screen
+unlocked (ioreg check), extra env ROGUESQ_G5B_FRAME_EVERY=1 FROM=7500 MAX_MB=12000; ~690 RAM-owning swaps each (12.6 GB stream, deleted after
+replay), window 1360x796, capture 384x216, 0 crash. Replayed with scratch/s7124/al16/frame_replay16 in chunks of 60 swaps (one call with all 690
+args stopped silently after the first swap; chunks replay all of them). Positive control (painted 20x20 -> one 400 px region) PASS on both.
+Scored with tools/s7122_fidelity.py score --rect 0,9,369,216.
+| level | frames | lag | mean|d| med/p90/max | frac>40 med/p90/max | >0.05 |
+|---|---|---|---|---|---|
+| L1 (all) | 689 | 25 ms | 8.44/9.08/38.4 | 0.028/0.037/0.354 | 20 |
+| L1 (pframe>0) | 668 | | 8.42/8.98/15.1 | 0.028/0.036/0.080 | 1 |
+| L4 | 691 | 20 ms | 6.76/7.19/7.54 | 0.017/0.020/0.023 | 0 |
+(floors: L6 owner recipe s7125 1.85/0.010; L1 retail settings s7122 c1 7.79/0.024.)
+Findings:
+1. L1 swaps 7500-7520 (frac 0.35 decaying) all match presented frame 0: the stream starts before g5b_capture's 120 s delay, so the matcher clamps.
+   Scorer artefact, not render (sheet scratch/s7131/L1_start.png). Exclude pframe==0 in future scores.
+2. L1 swap 7827 (0.080), the one real outlier: fast roll; angrylion and RT64 show the same picture, and the diff is the cloud/path/craft edges shifted by
+   about one frame. That is matching lag, not content (docs/owner_sheet_s7131_L1_L4_fidelity.png row 1).
+3. The L1 floor (8.4) is its retail floor (7.8, s7122: high-frequency grass speckle + silhouette edges), +0.6 at dd4/16:9. L4 (Gerrard V city) only has
+   edge lines (craft, buildings, horizon), with no regions and no missing terrain. H-level is refuted on both; H-dd is refuted too, because no frame has a diff region in
+   the extended cells.
+Verdict: H-equal on L1, L4 and L6 at the owner recipe. Item 28 is CLOSED. Next: the same check at 21:9 (the owner's monitor).
+Owner save untouched (forced-level route, NO_SAVE_WRITE). L1.raw/L4.raw and csvs kept in scratch/s7131.
