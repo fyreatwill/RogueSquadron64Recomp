@@ -188103,3 +188103,51 @@ that class. Next discriminator (NEXT.md): the cloud-band tris' screen extent in 
 near the 4:3 x-extent (H-skycull).
 Captures kept for the next unit: scratch/s7133/F1.cap (12.6 GB) + F1.idx/F1.rects; scratch/s7132/L6w.cap. W1/R1/S1 captures deleted.
 Owner save untouched (forced-level route, NO_SAVE_WRITE).
+
+## Session 7134 (2026-11-11) — G3 21:9 sky-side corner holes: H-skycull refuted (the game's sphere-in-view test widened at render sites and at all 19 sites leaves the burst intact, pose-controlled); H-skyband stands; widening kept as opt-in ROGUESQ_CULL_XFIX
+HYPOTHESIS-ID: g3-owner-recipe-219
+Work unit from NEXT.md (H-skyband / H-skycull / H-retail for the 21:9 sky-side corner class, CURRENT-TRUTH item 29a).
+1. Offline, F1 7541 (s7133 capture). New tools/s7134_band.py (per-swap tri vertex list with timg/combiner/othermode + coverage PNG).
+   The sky band is tris #0-#82, op E, cc 127E24FFFFFFFF, om 002C0000552224 (no Z), 15 tile textures 0x78B600-0x799620. Its edge
+   next to the magenta hole is a cell zigzag: (-32,323) (134.8,296.5) (152.2,389.2) (252.5,351.8) (326,324), not a smooth arc.
+   I first read that zigzag as per-cell culling (H-skycull).
+2. Code read. The cloud layer 0x8005A4B4 (generated name updateWalkerParticlePositions; loadTopCloudsAsset builds it) draws a 4x4
+   tile grid per layer and drops tiles whose centre fails transformVec3ToNpcLocalWithScale (0x8001DC34, the game's sphere-in-view
+   test, 19 call sites). That test's x half-extent is E = (cam+0x10/cam+0x14) * (0x8011A844/0x8011A838) * 0x8011A840 (0x8001DEAC
+   radius path, 0x8001E168 point path). That is the same product setupCameraMatrices passes to guPerspective. s6104 multiplies
+   only the guPerspective copy by k, so under ASPECT the test still uses a 4:3 x-extent. A real widescreen defect, by code.
+   The cloud layer is only called when *(lvl+0xF00) != 0 (0x8005C504). In L6 the same-run counter saw 0 cloud-site calls, so the L6
+   band is probably the sky-horizon HOB mesh on the generic object path, not the cloud tiles.
+3. Instrument + fix candidate: tools/apply_s7134_cull_x.py (funcs_4 / funcs_6 / funcs_12 / funcs_13, listed in the vendored fixup).
+   setupCameraMatrices records the factor s6104 really applied, per camera struct (r17: flight cam 0x80138D20 k 2, hangar 1.2 / 1.49).
+   The test multiplies E by it. Only the render callers are widened: cloud tiles, addNpcToVisibilityBucket x3 and
+   selectMeshLodAndSubmitForRender. The other 14 sites include game logic (isPointInsideTriggerVolume, cutsceneDispatchSlotsByFlag,
+   advanceNpcOnCurvedPath, effect spawners that draw rand), and =all widens them too. [s7134] per-second calls/passes, on vs off.
+   Note: a recompiled jal does not set $ra, so a callee cannot identify its caller from ctx->r31. The fix sets a flag at the call site.
+4. Runs, L6 forced route, owner recipe FPS60 dd4 21:9, G5B stream from swap 7500, screen unlocked, 0 crash, angrylion replay,
+   tools/s7134_score.py (hole px per swap split by clear / no-clear, the s7133 table):
+| arm | clear swaps >3000 px (range, max) | no-clear swaps >3000 (range, max) |
+|---|---|---|
+| Z1 CULL_XFIX=0 (positive control) | 11 (7527-7537, 24783) | 13 (7558-7571, 28026) |
+| T1 =tog | burst 7524-7544 (30467), all in off seconds | 7569-7580 (28230), all in on seconds |
+| F3 =1 render sites | 10 (7517-7526, 27398) | 10 (7540-7549, 27750) |
+| A1 =all 19 sites | 19 (7518-7536, 30839) | 17 (7562-7579, 30317) |
+| F2 =1 (default-on build) | route late: cutscene until 7633; flight 7634-8208 has 1 hole swap (7838, top-right, mesh edge) | |
+   The no-clear burst that follows each clear burst (right-edge beige strip, no clear rect at all) shows that each run reached the
+   same banked pose, so it serves as a same-run pose marker. The clear-class burst is there in every arm, with the same shape (sheet
+   docs/owner_sheet_s7134_cull_arms.png: Z1 / F3 / A1 at the peak and at the marker). The test, at any scope, is not what leaves those
+   pixels empty.
+   T1 same-run tog over 253 s of alternating seconds: pass rate 0.259 on vs 0.236 off. The widening does change visibility, but no
+   pixel benefit has been shown (single-source).
+5. Decision: ROGUESQ_CULL_XFIX is opt-in (default off = retail; =1 render sites, =tog, =all). It stays available for a side-edge
+   object pop-in check. F2's late route is unexplained (F3 with the same setting was on time): one-off.
+ORIGIN: the holes are pixels nothing draws. The sky-band mesh ends there, its edge is the authored mesh boundary, and widening every
+cull leaves it in place (H-skyband). The 4:3 extent in 0x8001DC34 is the game's own retail-correct value, which ASPECT invalidates.
+That is a separate latent defect, now behind the opt-in.
+In plain words: I widened the game's "is this on screen?" check to match the wide view. It changes what gets drawn a little, but
+the empty corner stays, so the sky mesh really does stop there. The fix for that corner has to fill it, not un-cull it.
+Verdict: refutes H-skycull (both scopes, with a pose control); H-skyband stands. H-retail is moot, because a 4:3 view cannot see
+that corner. Next (NEXT.md): under ASPECT > 1, fill the sky-side remainder (a full-frame fill before the sky, or a sky-side
+rect from the horizon builder), plus the no-clear class (the builder's 0-rect branch at 21:9).
+Kept: scratch/s7134/Z1.cap + Z1.idx/Z1.rects/Z1r (fix-off control with both classes), scratch/s7133/F1.cap. F2/T1/F3/A1 caps deleted.
+Owner save untouched (forced-level route, NO_SAVE_WRITE).
