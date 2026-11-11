@@ -188894,3 +188894,26 @@ planet limb and wall edges shifted, which is frame-match lag as on L1 swap 7827.
 Sheet docs/owner_sheet_s7157_L2_L5_fidelity.png (L2: worst, median and p20 swaps; L5: worst and median).
 Disk: 25 GB free after the run (each level costs 12.6 GB stream + 3.2 GB raw). The .cap, .raw and replay dirs were deleted after scoring; csvs are kept in scratch/s7157.
 Verdict: H-equal on L2 and L5. Scored at 16:9 now: L1 L2 L4 L5 L6. Next: L10 (cloud level) and L7.
+
+## Session 7158 (2026-11-11) — G3 in-flight owner-recipe fidelity on L10 and L7 (FPS60 dd4 16:9): RT64 == angrylion on both (H-equal); far rows below near floor (H-dd refuted), worst swaps are frame-match lag (H-level refuted)
+HYPOTHESIS-ID: g3-owner-recipe-levels
+Work unit from NEXT.md. Same recipe as s7157: `env RDIR=s7158 zsh tools/s7131_arm.zsh <lvl> <name> "ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=7500
+ROGUESQ_G5B_FRAME_MAX_MB=12000"`, one game at a time, screen unlocked (ioreg check), forced-level route, NO_SAVE_WRITE on, 0 CRASH/SIGSEGV/SIGBUS/abort lines
+in either run.log. Replayed with tools/s7141_post.zsh (rect 0,9,369,216, split 46,322). Positive control (painted 20x20 -> one 400 px region) PASS on both.
+Scored with tools/s7157_fsum.py after dropping pframe==0 and pframe==last.
+| level | swaps | lag | mean|d| med/p90/max | frac>40 med/p90/max | >0.05 | centre/side frac med |
+|---|---|---|---|---|---|---|---|
+| L10 | 745 | 15 ms | 4.66/5.12/5.48 | 0.007/0.011/0.013 | 0 | 0.003/0.017 |
+| L7 | 722 | 15 ms | 4.37/5.74/8.75 | 0.008/0.010/0.022 | 0 | 0.005/0.015 |
+(shift-2 is worse on both: L10 0.034 med, L7 0.013 med / 46 frames >0.05, so the shift-0 registration stands.)
+8 row bands, top to bottom: L10 2.49 2.89 2.93 3.38 5.32 5.63 6.49 7.21; L7 3.07 4.05 3.58 3.59 4.92 4.55 4.91 6.35. The far rows (extended dd4 cells)
+score lowest and the near ground highest, so H-dd is refuted again. L10 is a canyon ground level in this route, not cloud-only (sheet): the NEXT.md "cloud level"
+label was wrong.
+L7 worst swap 8214 (frac 0.022, side 0.045): one 881 px region at the top-right edge (284..369 x 0..14), angrylion sky 59/75/108 vs RT64 terrain 31/21/13.
+Swaps 8213 and 8214 both pair with presented frame 1606 (duplicate match), and the next swap jumps to pframe 1615. Neighbours 8200-8220 all sit at
+0.007-0.011. So RT64 is showing the previous frame for 8214: frame-match lag during a climb, not a fixed-place region. H-level refuted: there is
+one isolated swap, not a repeating region. L10 worst 7584 (0.0135) matches by eye (sheet).
+Side datum (single-source, recording-loaded): presented-frame step histograms show rare gaps >=6 capture frames (L7 1, L5 s7157 5 of up to 20 frames,
+L10/L2 0). These runs record a 12 GB RDP stream, so the gaps can't be counted as owner-recipe stalls (G5c). They are not evidence for or against.
+Sheet docs/owner_sheet_s7158_L10_L7_fidelity.png (per level: worst, median and p20 swaps, RT64 | angrylion). The .cap, .raw and replay dirs are deleted; csvs are kept in scratch/s7158.
+Verdict: H-equal on L10 and L7. Scored at 16:9 now: L1 L2 L4 L5 L6 L7 L10. Next: L12 (horizon-cut) and L13.
