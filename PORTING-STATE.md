@@ -187239,6 +187239,8 @@ Discrimination: H-clip (the ucode turns the near cells' TRI_GENs into 0 triangle
 the near cells are converted to triangles, screen-covering ones, on the event swaps. Remaining: H-elsewhere (the wall is a ring >= 2
 cell or not grid terrain) and H-rdp (the triangles are there but paint nothing: z, coverage or blend). Single run, 10 episodes; the
 swap/event alignment is the capture-clock mapping of s7104/s7105 (per swap, ~33 ms), so a one-frame loss inside a swap is not excluded.
+Discrimination line: this run refutes H-clip as the general near-wall drop (8/10 episodes) and selects the painter question; the next
+discriminator is the per-cell painter map of the wall region on a dropped frame (H-elsewhere / H-rdp / H-frame).
 ORIGIN: no mitigation code added (measurement only).
 Next: tag every RDP triangle with its source TRI_GEN cell for the whole 7x7 (publish all 49 keys) and join with the G5B_TRIS painter map
 of the wall's screen region on an episode frame vs its neighbours: which cell paints the wall normally, and are its triangles present
