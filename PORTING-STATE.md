@@ -187623,3 +187623,39 @@ Rules out: an interpolated render eye (does not exist at FPS60); a dt-size camer
 Next: NEARLIFT depth knob (ROGUESQ_S7115_NEARK=<k>: sample the pyramid to k*near and lift by need + 0.05 near), same-run tog between k=1.0
 and k=1.6 with the lift on in both halves; H-margin predicts on-second losses fall in the k=1.6 half; H-other predicts no change.
 Changes: tools/s7117_tickjoin.py (new).
+
+## Session 7118 (2026-11-10) — FPS60 near-wall flicker: the NEARK depth arm selects H-margin; with the lift on and the sampled near pyramid deepened 1.0 -> 1.6 near, edge-excluded steady losses fall 13 -> 1 over 5 same-run toggle runs (z -3.2; confirmatory pair alone 4/1, z -1.3, same direction); control passes every run; NEARK=1.6 added to the owner opt-in
+
+HYPOTHESIS-ID: fps60-wall-frame (closed: H-margin selected; next slug fps60-wall-hop)
+
+What ran: tools/apply_s7115_nearlift.py gained ROGUESQ_S7115_NEARK=<k>|togK:<k> (sample depths s = 1..ceil(4k) quarter-near steps, so the
+pyramid is checked to k * near; togK = k on odd mach seconds, 1.0 on even; nl lines carry k=; in-place upgrade of a pre-NEARK patched tree via
+tools/s7115_nearlift_oldpre.txt). tools/s7115_neargap.py skips torn rx lines. Built 19:39 (regen chain, fixup list unchanged). Five runs of
+scratch/s7115/arm.zsh 6 4 {h,i,j,k,l} with ROGUESQ_S7115_NEARLIFT=1 ROGUESQ_S7115_NEARK=togK:1.6 plus all s7101-s7115 passive instruments
+(cmd_*.txt). h-j were run by an interrupted earlier attempt at this session (data intact, analysis never ran); this session analysed them, then
+ran k, l. One game at a time, 0 crashes, 0 presented gaps > 250 ms, 65-73 fps presented.
+Positive control (same run, nl lines): need>0 ticks k1.0/k1.6 = h .066/.194, i .044/.171, j .049/.115, k .025/.084, l .037/.100; flight dmin
+(tickjoin k-1) 1.25-near bin off/on h .179/.007, i .081/.013, j .072/0, k .048/.003, l .094/.004 -- the deeper lift clears the band it targets.
+Raw s7116_phase halves h-j: 10/6, z -1.0, which misses the NEXT.md ">2x" bar. But all 6 k1.6-half losses fell in phase 1.00-1.25, 4 of them
+<= 40 ms after the 1.0 -> 1.6 edge, and 0 in the other 0.75 s of each k1.6 second. That reading is post hoc, so before analysing k and l I
+fixed a rule: new tools/s7118_edge.py sets aside swaps < W = 0.1 s after either edge and compares steady rates.
+| run | steady k1.0/k1.6 losses | per 1e4 swaps | z | edge losses B->A / A->B |
+| h (expl.) | 6/0 | 9.4/0 | -2.46 | 1/2 |
+| i (expl.) | 1/0 | 1.8/0 | -0.99 | 0/2 |
+| j (expl.) | 2/0 | 3.5/0 | -1.41 | 0/2 |
+| k (conf.) | 2/0 | 3.3/0 | -1.40 | 0/0 |
+| l (conf.) | 2/1 | 3.6/1.8 | -0.57 | 2/0 |
+| pooled | 13/1 | 4.4/0.34 | -3.19 | 3/6 |
+Confirmatory alone 4/1 (z -1.33): same direction, too small to stand alone. The h-j A->B edge enrichment (6 of 1976 swaps, ~6x steady k1.0)
+did not replicate in k-l (0/1285), so no lift-onset hop mechanism is claimed. k1.0 losses with a tick: dmin 1.25 near in h 7/7, l 4/4, j 1/2;
+k's two are dmin 3 (a non-near class, as were h's two edge-window k1.6 losses).
+Same-script check on s7116 tog1 runs e-g (lift off/on): steady 70/24, z -4.75 -- the edge rule reproduces the s7116 result.
+Note: lift-on k1.0 loss rates in h-l (1.8-9.4 per 1e4) are well under the s7116 lift-on seconds (6.7-17.8): constant lift (no off seconds
+leaving the eye in the rock) may matter, untested.
+Cost: lift p99 k1.0 0.34-0.79 u, k1.6 0.58-0.88 u; max 0.94 vs 1.31 u. Lift fires on 8-19% of k1.6 ticks vs 2.5-7% at k1.0.
+Verdict: H-margin selected (the visible loss extends to about 1.5 near: checking to 1.6 near removes the residual). H-proj not separately tested:
+a 1.6 margin covers both. H-other not needed (losses vanish with the arm, so they were real near-terrain losses). Two lines: the loss-rate
+split and the dmin-band clearance in the same runs; the confirmatory pair alone is underpowered (stated).
+Changes: tools/apply_s7115_nearlift.py (NEARK), tools/s7115_nearlift_oldpre.txt, tools/s7115_neargap.py (torn-line skip), tools/s7118_edge.py
+(new); docs/OWNER-OPT-INS.md row now NEARLIFT=1 NEARK=1.6; CURRENT-TRUTH headline + item 26.
+Rules out: the residual being losscan false positives; a lift-onset edge mechanism (not replicated). Leaves open: hop visibility at k1.6.

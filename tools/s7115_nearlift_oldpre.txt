@@ -1,0 +1,28 @@
+/* PATCH: s7115 nearlift */
+static int s7115_on(void) { static int md = -1; extern uint64_t mach_absolute_time(void);
+  if (md < 0) { const char* e = getenv("ROGUESQ_S7115_NEARLIFT"); md = !e || !*e || *e == '0' ? 0 : (!strcmp(e, "tog1") ? 2 : 1); }
+  if (md == 2) return (int)((mach_absolute_time() / 24000000ull) & 1); return md; }
+static float s7115_h(uint8_t* rdram, recomp_context* ctx, float x, float z) {
+  recomp_context sv = *ctx; uint32_t ns = (uint32_t)ctx->r29 - 0x80; float h;
+  ctx->r29 = (int64_t)(int32_t)ns; ctx->f12.fl = x; ctx->f14.fl = z; ctx->r7 = (int64_t)(int32_t)(ns + 0x10);
+  wrapAngleToCyclicRange(rdram, ctx); h = ctx->f0.fl; *ctx = sv; return h; }
+static void s7115_lift(uint8_t* rdram, recomp_context* ctx, int on) {
+  uint32_t s1 = (uint32_t)ctx->r17, sp0 = (uint32_t)ctx->r29; float o[4][3], c[3], p[3], r[3], u[3], f[3], n, need = 0.0f, lift = 0.0f;
+  float f20 = s7103_f20, nr = 0.5f * f20; if (!(f20 > 0.01f && f20 < 10.0f)) return;
+  for (int i = 0; i < 4; i++) { s7102_v3(rdram, sp0 + 0x48 + 12 * i, c); float l = 0;
+    for (int q = 0; q < 3; q++) { o[i][q] = c[q] - s7103_p0[q]; l += o[i][q] * o[i][q]; }
+    l = sqrtf(l); if (!(l > 0.5f * f20 && l < 2.0f * f20)) return; }  /* corner loop skipped: no frame */
+  for (int q = 0; q < 3; q++) { r[q] = o[1][q] - o[0][q]; u[q] = o[2][q] - o[1][q]; }
+  n = sqrtf(r[0] * r[0] + r[1] * r[1] + r[2] * r[2]); if (!(n > 1e-6f)) return; for (int q = 0; q < 3; q++) r[q] /= n;
+  n = sqrtf(u[0] * u[0] + u[1] * u[1] + u[2] * u[2]); if (!(n > 1e-6f)) return; for (int q = 0; q < 3; q++) u[q] /= n;
+  f[0] = r[1] * u[2] - r[2] * u[1]; f[1] = r[2] * u[0] - r[0] * u[2]; f[2] = r[0] * u[1] - r[1] * u[0];
+  if (f[0] * o[0][0] + f[1] * o[0][1] + f[2] * o[0][2] < 0) for (int q = 0; q < 3; q++) f[q] = -f[q];
+  s7102_v3(rdram, s1 + 0x10, p);
+  { float h = s7115_h(rdram, ctx, p[0], p[2]); if (p[1] - h > need) need = p[1] - h; }
+  for (int gx = -4; gx <= 4; gx++) for (int gy = -2; gy <= 2; gy++) for (int s = 1; s <= 4; s++) {
+    float t = 0.25f * s * nr, q3[3];
+    for (int q = 0; q < 3; q++) q3[q] = p[q] + t * (f[q] + 0.25f * gx * 1.368f * r[q] + 0.5f * gy * 0.637f * u[q]);
+    float h = s7115_h(rdram, ctx, q3[0], q3[2]); if (q3[1] - h > need) need = q3[1] - h; }
+  if (on && need > 0.0f) { lift = need + 0.05f * nr; float y = p[1] - lift; uint32_t w; memcpy(&w, &y, 4);
+    MEM_W(0x14, (int64_t)(int32_t)s1) = w; MEM_W(0x50, (int64_t)(int32_t)s1) = w; }
+  if (s7101_cf) fprintf(s7101_cf, "nl m=%llu cam=%08X on=%d need=%.6g lift=%.6g\n", s7102_m(), s1, on, (double)need, (double)lift); }

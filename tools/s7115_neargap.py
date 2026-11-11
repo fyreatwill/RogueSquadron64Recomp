@@ -42,7 +42,9 @@ for line in open(pushf, errors='replace'):
     if k == 'ch ': cur = {'m': int(d['m']), 'pu': [], 'bv': None, 'rx': None, 'hx': None}; T.append(cur); lasthx = None
     elif cur is None: continue
     elif k == 'pu ': cur['pu'].append((int(d['i']), int(d['hit']), V(d['c']), V(d['pre']), V(d['hp'])))
-    elif k == 'rx ': cur['rx'] = V(d['o']); cur['p0'] = V(d['p0']); cur['hx'] = lasthx
+    elif k == 'rx ':
+        if 'p0' not in d or 'o' not in d: continue  # s7118: line torn by an interleaved/killed write
+        cur['rx'] = V(d['o']); cur['p0'] = V(d['p0']); cur['hx'] = lasthx
     elif k == 'bv ' and cur['bv'] is None: cur['bv'] = (int(d['m']), V(d['rd']))
 
 def basis(t):
