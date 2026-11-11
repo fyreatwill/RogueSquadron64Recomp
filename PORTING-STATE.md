@@ -188257,3 +188257,34 @@ Verdict: selects H-fill-rect, refutes H-band-scale. Class (a) closed at 21:9 and
 missing sky top-fade (0 drawn at dd4) retail at dd1, or ours?
 Kept: scratch/s7136/Y1.cap + Y1.idx/Y1.rects/Y1r/Y1.pitch, V1.idx/V1.rects/V1r/V1.pitch. V1.cap and the .raw files deleted.
 Owner save untouched (forced-level route, NO_SAVE_WRITE).
+
+## Session 7137 (2026-11-11) — G3 sky top-fade bins: dd1 4:3 also draws 0 top-fade tris and the bin objects are identical in state to dd4 (H-topdd refuted); the dd1 arm cannot settle retail-vs-colour because the bins sit above the band top, off-screen at 4:3; at 21:9 every burst swap with the corner above the band draws 0 too
+HYPOTHESIS-ID: g3-sky-topfade
+Work unit from NEXT.md (CURRENT-TRUTH item 29 follow-up): are the sky band's top-fade bins drawn in retail (dd1 4:3) but lost at dd4?
+1. Run D1: tools/s7136_arm.zsh 6 D1 with ROGUESQ_ASPECT=4:3 ROGUESQ_DRAW_DISTANCE=1 G5B_FRAME_FROM=6000 EVERY=20 (CW=320 CH=240).
+   The later env wins: run.log prints "[g1d] ROGUESQ_ASPECT=4:3 applied" and "[dd] multiplier 1". FPS60 on (owner recipe), L6
+   forced route, screen unlocked, 0 crash, 14872 window frames. Capture 12.5 GB, 12823 swaps, 642 RAM snapshots (deleted after use).
+2. tools/s7136_topfade.py, D1 6000-18800 step 400 (32 swaps): 0 top-fade-colour (168,152,128) tris every swap; shaded tris 0-1349.
+   Same-run detector control: the terrain shade bucket (24,24,24) holds 1467 of 2685 shaded tris over 3 swaps. A shade histogram
+   (every shaded tri's start colour in 8-step buckets) has NO bucket near (168,152,128) in D1 or in s7136 Y1 (dd4 21:9).
+3. tools/s7136_skybins.py: sky bin block S = 0x8034BF90 at dd1 (0x8056E010 at dd4). The +0x30 word pattern is identical at both
+   draw distances (4 on objects 0-3,7,8-11,15; 0x9xx on 4-6 and 12-14), so dd does not change the bin objects' state.
+   New tools/s7137_skyobj.py (23-word dump of the 16 objects, LE words): the +0 link of sector k points to top bin 8+k, and top bin
+   8+k links to sector k+1. So the top bins sit in the SAME render list as the sectors that do draw. +0x14 = 0x79 (sector polys)
+   vs 0x10/0x08/0x0C (top-bin polys).
+4. Degenerate discriminator: at 4:3 the band's top edge is almost never on screen. New tools/s7137_bandtop.py (per swap: sky-band
+   tris, othermode 002C + combiner low 24 bits FFFFFF, and their min top y): the median band top is y -170 over 432 band swaps, so
+   the top bins (above the band top) sit off-screen at 4:3, and 0 tris is expected whether or not they are submitted. The filter
+   is not sky-specific at dd1: the one "band top on screen" swap (15500) is a canyon wall in the angrylion replay
+   (scratch/s7137/d1_bandtop.png). The D1 sky in the replays is lavender (scratch/s7137/d1_pitchup.png 6080), not Y1's beige.
+5. The case that CAN show them, Y1 21:9 swaps 7530-7560 (the burst where the corner looks above the band top): 0 top-fade tris
+   on all 31 swaps (shaded 1046-1545 each).
+Verdict: H-topdd refuted (dd1 0 = dd4 0, and the bin objects have the same state). H-topretail and H-topcolour are still open:
+the band's own sector tris draw with shade 255 (white, s7136), so the HOB vertex colour may not reach the RDP shade. In that case a
+colour detector is blind to the top bins.
+In plain words: the faded top of the sky is missing at normal draw distance too, so the draw-distance setting is not removing it.
+It may never be drawn, or it may be drawn in a colour the detector does not look for. That has to be checked by position, not
+by colour.
+Next (NEXT.md): a colour-free check. Project the top-bin polys from RAM (Y1 burst, camera from the same RAM) to screen, and look
+for stream tris at those positions.
+Kept: scratch/s7137/*.bandtop, d1 replays scratch/s7137/D1r (5+3 frames), sheets. D1.cap deleted. Owner save untouched.

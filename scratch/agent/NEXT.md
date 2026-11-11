@@ -1,21 +1,26 @@
-# NEXT: sky top-fade bins — drawn in retail (dd1 4:3) but lost at dd4, or never drawn? (follow-up to s7136, item 29)
+# NEXT: sky top-fade bins, colour-free check: are their polys ever in the RDP stream? (follow-up to s7137, item 29)
 HYPOTHESIS-ID: g3-sky-topfade
-State: s7136 closed the wide sky-corner hole with ROGUESQ_HORIZON_SKYFILL (full-viewport clear under ASPECT). The corner now
-shows flat haze beige as a stair against the clouds. loadSkyHorizonHob (0x8005AB34) builds 8 azimuth sectors plus 8 'top' bins
-whose polys fade (vertex colour A89880 alpha 0..FF) into that beige. tools/s7136_topfade.py counted 0 top-fade-colour tris in
-15 sampled swaps of L6 dd4 21:9 flight (scratch/s7136/Y1.cap); detector positive control at shade (26,26,26) = 1629.
-Sky bin objects are at S+0x1C+0x5C*k (S = 0x8056E010 on L6, tools/s7136_skybins.py finds S by signature). Objects 4-6 and 12-14
-hold pointers in 0x80C1xxxx (the dd>1 spill arena, s6858); the others hold pointers in 0x8087xxxx.
+State (s7137): 0 top-fade-colour tris at dd1 4:3 (D1) and dd4 21:9 (Y1, incl. all 31 burst swaps 7530-7560 where the corner
+looks above the band top). H-topdd refuted: the bin objects have the same state at both dd. In the shared render list, sector k's
++0 links to top bin 8+k, which links to sector k+1 (tools/s7137_skyobj.py). Sector tris draw with shade 255 (white), so the HOB
+vertex colour A89880 may never reach the RDP shade, and the colour detector may be blind.
 Hypotheses:
-- H-topdd: dd>1 loses the top bins (spill-arena placement, or the dd far/LOD changes). Predicts top-fade tris > 0 at dd1.
-- H-topretail: retail never draws them in L6 flight (a cull, or the 0x30 per-object field / LOD keeps them off). Predicts 0 at dd1 too.
-- H-topcolour: they ARE drawn, but shade is modulated (fog / prim), so the detector misses them. Check: at dd1, list the textured
-  tris drawn with the sky textures 0x78B600-0x799620 (tools/s7134_band.py) and compare the count with 8 sectors x polys.
-Discriminator, ONE run: tools/s7136_arm.zsh 6 D1 "ROGUESQ_ASPECT=4:3 ROGUESQ_DRAW_DISTANCE=1 ROGUESQ_G5B_FRAME_EVERY=20" (note: the arm
-script hardcodes DRAW_DISTANCE=4 and ASPECT=16:9 in XENV_EXTRA; later env wins only if the game reads the last occurrence —
-check, otherwise copy the arm with dd1/4:3). Then python3 tools/s7136_topfade.py scratch/s7136/D1.cap <first> <last> 20, plus
-s7134_band.py on 3 swaps: band tri count and sky-texture set vs Y1 (dd4).
-Outcomes: dd1 > 0 and dd4 0 -> H-topdd: find what dd changes for those objects (S+0x1C+0x5C*k fields at dd1 vs dd4, same RAM
-offsets), fix, and rerun Y1 to get the authored fade in the corner. Both 0 + same band tri count -> H-topretail: close the thread;
-the beige corner stays (owner look). Detector 0 but extra sky-texture tris at dd1 -> H-topcolour: fix the detector first.
-Owner save rule applies. CURRENT-TRUTH is 58.7 KB: keep edits net-zero.
+- H-topretail: the top-bin polys are never emitted (empty/unused DL, per-object cull, or a draw flag). Predicts no stream tris at
+  the projected top-bin screen positions on Y1 burst swaps.
+- H-topcolour: they ARE emitted but shaded white/modulated. Predicts stream tris whose 3 vertices match the projected top-bin
+  vertices (within ~2 px).
+Discriminator, OFFLINE, no run: scratch/s7136/Y1.cap (kept, RAM every 20 swaps from 7500, stream every swap). At RAM swaps 7520/7540:
+  1. Find the top-bin vertex data. Object 8+k fields +0x34..+0x58 hold pointers into 0x8087xxxx / 0x80C1xxxx (dd4 spill). Read the
+     loadSkyHorizonHob store sequence (N64Recomp/RecompiledFuncs/funcs_13.c:5157-6766, objects built around 0x8005AF10-0x8005B114,
+     stride 0x5C) to name which field is the vertex array, which is the DL.
+  2. Project the vertices with the camera of the same snapshot (matrix at *(0x80138D1C)+0x28 and the projection, as
+     tools/s7136_band_elev.py does) and match them against the stream tris of that swap (tools/s7134_band.py vertex list).
+  Positive control in the same pass: project SECTOR objects 0-7 the same way. Their tris must match (they draw), or the
+  projection is wrong.
+Outcomes: sectors match + top bins match -> H-topcolour: the fade IS drawn, so look at what covers it (the SKYFILL corner is
+beige because the fade is transparent toward beige: then the stair is the authored look, close). Sectors match + top bins absent
+-> H-topretail: find the gate (read the render walker for the object field that differs, e.g. +0x30, or the DL contents) and decide
+with the owner whether drawing them is worth it. Sectors don't match -> fix the projection first.
+Budget: this is iteration 2 of g3-sky-topfade. If it does not discriminate, close the thread as owner look (beige corner) and move
+on to the next CURRENT-TRUTH backlog item.
+Owner save rule applies. CURRENT-TRUTH ~58.9 KB: keep edits net-zero.
