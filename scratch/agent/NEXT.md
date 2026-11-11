@@ -1,19 +1,19 @@
-# NEXT: opt-in fix for the eye-cell near-plane clip (retail behaviour, s7109)
-HYPOTHESIS-ID: fps60-wall-nearfix
-Context: s7109 showed the canyon-wall near clip at retail settings (17.4 eye-cell near-z losses per wall-hug minute vs 15.9 at the
-owner recipe). The push-out (applyPlayerVehicleStateUpdate 0x8004CD00) keeps the camera 2*near from the wall using the camera
-struct near s2+0x2C = 30; ROGUESQ_DD_NEAR=<m> (tools/apply_s6031_far.py, already built) scales ONLY the guPerspective near arg in
-setupCameraMatrices, so DD_NEAR=0.5 puts the plane at 15 with the push margin unchanged.
-Unit: two sequential L6 runs on the owner recipe (scratch/s7099/arm.zsh 6 4 <name> "<s7109 instrument env> ROGUESQ_FPS60=1"), arm A
-without DD_NEAR (or reuse s7108 as A if the recipe matches) and arm B with ROGUESQ_DD_NEAR=0.5. Better: add a `tog` mode to DD_NEAR
-in apply_s6031_far.py (odd absolute mach seconds, like S7108_CAMWIDE) so both arms live in ONE run, then split with
-tools/s7108_split.py (its parity clock is the same) incl. the --shift 0.5 control.
-Positive controls: the [s7108] line must print pnear=15 in the on state; losscan must still flag >= 300-cell swaps in the off state.
-Also measure z-fighting: count frames with terrain/object flicker away from walls (losscan "other" rows per minute per state) since
-halving near halves the depth precision near the camera.
+# NEXT: why the eye gets within 15 units of the canyon wall despite the push-out (s7110 H-margin)
+HYPOTHESIS-ID: fps60-wall-margin
+Context: s7110 (ROGUESQ_DD_NEAR=0.5 with the new ROGUESQ_DD_NEAR_TOG=1) left eye-cell near-z losses unchanged (8 near30 / 12 near15),
+and on-state reference swaps already show the eye cell at the 15 plane. The push-out (applyPlayerVehicleStateUpdate 0x8004CD00)
+pushes the 4 near corners (x=w*0.5*240/h, y=120, z=120/tan((fovy+2)/2), times 2*near) out of terrain; s7102/s7103 logged its corners
+(CHASE file, pc/rx lines) and re-pushing at exit did not help.
+Unit: ONE instrument, ONE run (L6 dd4 16:9 FPS60, scratch/s7110/arm.zsh, same env as s7110 minus DD_NEAR): per presented camera,
+log (a) the pushed camera position at push-out exit, (b) the eye position + forward vector setupCameraMatrices passes to the
+lookat/view build (same cam struct, s2+8), (c) the terrain height under the eye and the eye's nearest wall distance along forward
+(re-use the push-out's own collision call if callable, else the cell triangle plane from S7104/S7105), all mach-stamped.
+Then on every losscan eye-cell near-z loss: is |b - a| > 0 (eye moved after the push), or a == b with forward wall distance < near
+(push-out probes miss the wall: corner rays vs the centre ray, or the wall is in a terrain cell the probe does not test)?
 Hypotheses:
- H-fix    eye-cell near-z losses drop >= 3x in the on state with "other" losses unchanged -> offer ROGUESQ_NEAR_FIX (or document
-          DD_NEAR=0.5) in OWNER-OPT-INS with a before/after sheet; owner decides the default
- H-margin losses unchanged -> the clipped tris are closer than 15 (the push-out lets the camera nearer than 2*near on some swaps);
-          read the chase log's push distance on the dropped swaps and fix the push-out instead
- H-zfight losses drop but "other" rises -> try 0.7, or scale near only while the push-out is active
+ H-postmove  render eye differs from the pushed position on dropped swaps (chase lerp / shake / later camera update) -> push the
+             final eye, or apply the push after that update
+ H-probe     eye == pushed position but forward distance to the wall < 30: the corner probes miss this wall -> add a centre/forward
+             probe in an opt-in fix (ROGUESQ_NEAR_FIX), before/after sheet
+ H-cell      the wall triangles belong to a cell the collision query does not return (cell boundary) -> fix the query cell range
+Positive control: the loss list must still flag >= 300-cell eye swaps; (a)==(b) must hold on ordinary non-hug frames.

@@ -187350,3 +187350,32 @@ uses the camera struct near (s2+0x2C), so DD_NEAR=0.5 moves the plane to 15 and 
 the eye-cell loss rate with a z-fight check (NEXT.md, slug fps60-wall-nearfix).
 Discrimination line: this run selects H-retail (eye-cell near-z losses 17.4/hug-min at retail settings vs 15.9 at the owner recipe,
 presented straight-line cuts in both) and refutes H-opt; the next discriminator is ROGUESQ_DD_NEAR=0.5 vs 1 on the same instruments.
+
+## Session 7110 (2026-11-10) — FPS60 near-wall flicker: halving the projection near plane (ROGUESQ_DD_NEAR=0.5, same-run tog) does not reduce eye-cell near-z losses (8 off / 12 on), and on-state reference swaps already have the wall at the 15 plane, so the camera gets nearer the wall than the push-out margin (H-fix refuted, H-margin selected)
+
+New tools/apply_s7110_neartog.py (fixup list after s7108): ROGUESQ_DD_NEAR_TOG=1 applies the DD_NEAR scale only in odd absolute
+mach seconds (same clock as S7108_CAMWIDE=tog / tools/s7108_split.py; the split's "camwide=1" column = near-on). Default off.
+Ran: one L6 dd4 16:9 FPS60 run, scratch/s7110/arm.zsh (copy of s7099/arm.zsh) `6 4 a "ROGUESQ_FPS60=1 ROGUESQ_DD_NEAR=0.5
+ROGUESQ_DD_NEAR_TOG=1 ROGUESQ_G1E_WIN=600 G3C_LOG=1 S7101_CHASE=scratch/s7110/push_a.txt S7104_CELL=1 S7105_EMIT=1
+S7106_RSPTRI=scratch/s7110/rt_a.txt S7107_TAG=1 G5B_TRIS=scratch/s7110/tris_a.bin" 120 260`. 0 CRASH, capture 19475 frames / 274.1 s
+(71 fps, all 11214 chase lines lim=1), 0 gaps > 250 ms.
+Positive controls: [far] lines mn 0.5 on 70 / mn 0 on 50 (toggle live); [s7108] pnear=15 on 4 of 21 lines; losscan still flags
+>= 300-cell swaps in both states (84 / 114 rows).
+Result (scratch/s7110/split_a.txt, split_ctl.txt, losscan_a.txt):
+| state | hug s | eye-cell near-z losses | other losses | presented episodes |
+| near 30 (off) | 91.4 | 8 | 76 | 4 |
+| near 15 (on)  | 93.1 | 12 | 102 | 1 |
+| 0.5 s shifted control | 93.1 / 91.5 | 9 / 11 | 54 / 124 | 3 / 2 |
+Line 1: eye-cell near-z losses do not drop with the plane at 15 (8 vs 12, the shifted clock gives 9 vs 11), so H-fix is refuted.
+The presented-episode split 4/1 smears to 3/2 under the shift: too few events to claim anything. "Other" losses also swing 54/124
+under the shift, so this run cannot show a z-fight cost either way.
+Line 2 (depth values): off-state eye losses have the reference swap's eye-cell minz at 0x3448-0x3D86 (wall ~50 units away at near 30)
+and the drop at ~0x0004-0x0015 (at the plane). On-state losses (t=40.08, 78.01, 78.03, 166.56) already have the REFERENCE swap's minz at
+0x000C-0x0018, i.e. the wall sits at the 15 plane before it is cut. So the eye reaches within 15 units of the wall even though the
+push-out keeps the corners 2*30 = 60 away: H-margin selected (single run, two lines from the same capture).
+Rules out: the projection near distance as the fix lever. Next: find why the eye ends up closer than the push margin — compare the
+pushed camera position from the push-out (S7101 CHASE pc/push lines) with the eye position setupCameraMatrices actually uses on the
+dropped swaps (is the render eye moved after the push, e.g. by the chase lerp, the cockpit/shake offset, or a later camera
+update?), and the push ray hits vs the terrain cell the eye sits in (NEXT.md, slug fps60-wall-margin).
+Discrimination line: this run refutes H-fix (near 15 leaves eye-cell losses at 12 vs 8) and selects H-margin (on-state reference
+swaps already at the 15 plane); the next discriminator is pushed position vs render eye position on the dropped swaps.
