@@ -188942,3 +188942,29 @@ are not above the near rows: H-dd refuted on both. L13 worst swap 8043 (0.0175):
 Sheets docs/owner_sheet_s7159_L12_fidelity.png (refit rect), docs/owner_sheet_s7159_L13_fidelity.png, docs/owner_sheet_s7159_L12_edge_diff.png (RT64 | angrylion | 3x diff).
 The .cap, .raw and replay dirs are deleted; csvs are kept in scratch/s7159.
 Verdict: H-equal on L12 and L13. Scored at 16:9 now: L1 L2 L4 L5 L6 L7 L10 L12 L13. Next: L0 and L3, with regfit run before the .raw is deleted.
+
+## Session 7160 (2026-11-11) — G3 in-flight owner-recipe fidelity on L0 and L3 (FPS60 dd4 16:9): both H-equal after the s7159 rect refit; new one-call scorer tools/s7160_fit_post.zsh
+HYPOTHESIS-ID: g3-owner-recipe-levels
+Work unit from NEXT.md, recipe as s7159 (`env RDIR=s7160 zsh tools/s7131_arm.zsh <lvl> <name> "ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=7500
+ROGUESQ_G5B_FRAME_MAX_MB=12000"`), one game at a time, screen unlocked (no CGSSessionScreenIsLocked key), NO_SAVE_WRITE on, 0 CRASH/SIGSEGV/SIGBUS/abort lines in
+both run.logs. Replay tools/s7141_post.zsh; painted positive control PASS on both (identity 0 regions, painted 1 region).
+| level | swaps | lag | rect | mean|d| med/p90/max | frac>40 med/p90/max | >0.05 | centre/side frac med |
+|---|---|---|---|---|---|---|---|---|
+| L0 | 689 | 20 ms | 0,9,369,216 | 3.38/3.96/7.95 | 0.016/0.020/0.036 | 0 | 0.014/0.022 |
+| L0 | | | 1,10,370,217 | 3.36/3.61/7.78 | 0.014/0.016/0.034 | 0 | 0.009/0.028 |
+| L0 | | | 1,10,371,218 | 4.80/5.15/8.85 | 0.024/0.026/0.046 | 0 | 0.016/0.048 |
+| L0 | | | 0,10,370,217 | 3.17/3.46/7.72 | 0.013/0.015/0.032 | 0 | 0.008/0.027 |
+| L3 | 703 | 25 ms | 0,9,369,216 | 1.60/2.40/3.38 | 0.003/0.005/0.006 | 0 | 0.002/0.006 |
+| L3 | | | 0,10,370,217 | 1.29/1.88/3.01 | 0.001/0.002/0.003 | 0 | 0.000/0.004 |
+regfit (s7159_regfit.py) gives the same offsets as L12/L13 on both levels: inner (1,1), centre3d (0,1), radar (1,0), lives (0,2), icon (0,0). So the misfit is the capture
+rect, not a level: second and third level with identical numbers. L0 at the fixed rect was 1.6x the floor; the refit 0,10,370,217 brings centre to 0.008 (floor), and the
++1 x1/y1 grid point overshoots (0.016), so 0,10,370,217 is the better default than s7159's 1,10,370,217. Side frac stays ~0.027 (HUD boxes, as on L12).
+Row bands (refit; top->bottom): L0 2.30 2.27 1.55 1.18 2.54 2.55 3.01 9.71; L3 2.34 2.01 1.06 0.69 0.86 1.01 1.33 2.14. Far rows (top half, where dd4 adds terrain)
+sit at or below the near rows: H-dd refuted on both. The last L0 band is the border row as on L12.
+Worst L0 swap 8040 (frac 0.032, frac_c 0.020) shares pframe 1944 with swap 8039 (duplicate pframe = presented frame not yet updated); the sheet shows the whole scene
+offset (craft lower, a hut in frame on RT64 only), i.e. frame-match lag, not a render diff. 19 duplicate pframes on L0, 10 on L3. H-level refuted (no fixed-place one-signed
+region; worst-3 are lag on L0 and at noise 0.0025 on L3).
+Caveat: L3 is a dark night level; frac>40 rarely trips on low-contrast frames, so its near-zero frac is partly the threshold. mean|d| 1.29 is the stronger line there.
+Change: tools/s7160_fit_post.zsh (rescore with refit rect, print summary, 8 row bands, duplicate-pframe count and worst-3 swaps with their dup status, write owner sheet
+worst/median/p20). Sheets docs/owner_sheet_s7160_L0_fidelity.png, docs/owner_sheet_s7160_L3_fidelity.png. .cap/.raw/replays deleted (disk 31 GB free).
+Rules out: H-level and H-dd on L0 and L3. Remaining unscored at 16:9: L8 L9 L11 L14 L16-L18.
