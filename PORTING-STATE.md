@@ -188098,5 +188098,8 @@ In plain words: the game works out where the horizon is to decide which part of 
 screen. At widescreen it got the split point wrong. That is fixed. The other hole, at the far corner past the clouds, is still there.
 ORIGIN: the bad values are the game's own clear rects, written by 0x8005B51C with the 4:3 constant 0.75 at 0x8003AE44; they are
 legitimate in retail (k = 1) and wrong only because ASPECT widens the projection without telling this function.
+Verdict: the store watch + code read selects H-xscale (root cause of the top-right side-band class) and refutes H-clamp; the fix closes
+that class. Next discriminator (NEXT.md): the cloud-band tris' screen extent in F1 7530/7541, an arc at fixed elevation (H-skyband) vs cuts
+near the 4:3 x-extent (H-skycull).
 Captures kept for the next unit: scratch/s7133/F1.cap (12.6 GB) + F1.idx/F1.rects; scratch/s7132/L6w.cap. W1/R1/S1 captures deleted.
 Owner save untouched (forced-level route, NO_SAVE_WRITE).
