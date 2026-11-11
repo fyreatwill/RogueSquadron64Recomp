@@ -188474,3 +188474,28 @@ has no x-scale; the fix-off control (1.33x text) does not (0.16-0.34). Two lines
 Owner sheet docs/owner_sheet_s7144_menus_219.png (tools/s7144_sheet.py: fix on | angrylion | fix off, both screens).
 Streams (.cap, 6 GB each) deleted after scoring; raws, replays, csvs, affine*.log in scratch/s7144 (gitignored). Owner save untouched.
 Next: the opening STAR WARS crawl at 21:9 (item 33) and the 4:3 hangar fbSize side lead.
+
+## Session 7145 (2026-11-11) — G3 STAR WARS logo recede at 21:9: RT64 == angrylion under one registration fit (H-equal); H-crawl-4:3 refuted; the text crawl is not reached on the s6995 route, item 33 CLOSED
+HYPOTHESIS-ID: g3-fidelity-crawl-219
+Work unit from NEXT.md. tools/s7144_arm.zsh (RDIR=s7145) owner recipe FPS60 dd4 ASPECT=21:9, owner save read-only, DL=69 DU=14 SECS=86:
+C1 default (FROM=3800), C2 ROGUESQ_RECT_ASPECT=0 (FROM=4150). 0 crash both. Swap 3800 ~ t 62 s (raw starts 6.8 s after it; swaps
+before ~4190 clamp to pframe 1 and are invalid). Route order from the angrylion replays: hangar craft departure 62-68 s, STAR WARS logo
+receding 69-75 s, then mission flight. The yellow text crawl never appears: the AP 70:start press skips it (so s7144's "70/76 = crawl"
+reading was half right). Painted-square control PASS both. Scored tools/s7141_post.zsh rect 0,11,469,216 split 117,352.
+Logo phase (swaps 4196-4510, nominal centre 0.087->0.02 as the logo shrinks; sides 0.001; shift-2 arm == nominal 0.045, so the
+thin outline is already off by more than the shift at nominal). s7143_affine.py with widened grid (AFF_SX=0,1,2 AFF_SY=-8..0 AFF_E=0.992..0.96),
+fit interior at (x 0..+0.25 px, y -0.5, yscale 0.984) in all three cases:
+| arm/phase | centre nominal -> fitted | logo box | left/right |
+|---|---|---|---|
+| C1 logo | 0.046 -> 0.007 | 0.105 -> 0.016 | 0.001 -> 0.000 |
+| C2 logo (RECT_ASPECT=0) | 0.036 -> 0.007 | 0.084 -> 0.018 | 0.001 -> 0.000 |
+| C1 flight | 0.015 -> 0.0001 | 0.025 -> 0.0002 | 0.022/0.026 -> 0.0003/0.009 (right: HUD ring, s7141) |
+x-scale sweep about the screen centre at the fitted registration (scratch/s7145/xscale.py): logo residual minimum at exactly 1.000
+(0.016), 0.995/1.005 -> 0.021-0.024, 0.98/1.02 -> 0.058-0.066 (both arms): logo width matches angrylion within 0.5%, so H-crawl-4:3
+(4:3 sub-viewport stretched by our wide path) is refuted. RECT_ASPECT=0 does not change the logo: it is drawn as triangles, not texrects,
+so H-crawl-rect cannot apply to the logo. The text-crawl part of H-crawl-rect stays untested (not reached). Yscale 0.984 vs s7144's 0.992:
+the same capture vertical-scale term (window capture of a 205-row compare crop), not game geometry: logo and flight share it.
+Two lines: affine fit + independent x-scale sweep, two arms, single run each. Owner sheet docs/owner_sheet_s7145_logo_219.png
+(tools/s7145_sheet.py: RT64 | angrylion, 3 logo frames + 1 flight). .cap streams deleted; raws/replays/logs in scratch/s7145 (gitignored).
+Owner save untouched. CURRENT-TRUTH 59961 B: still under the 60000 maintenance trigger, barely; the next iteration should prune.
+Next: item 34, the text crawl itself on an AP route without the 70/76 s presses.
