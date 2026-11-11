@@ -188657,4 +188657,6 @@ dimming quad), 212 emblem tris, 103 texrects (IA8 font, point, 1-cycle, texel*pr
    or 2% widening, so RECT_ASPECT is inert on this overlay. H-rect-diff REFUTED; H-hud-anchor not seen (no HUD draws in the pause pass).
 Verdict: H-equal, item 38 CLOSED. Owner sheet docs/owner_sheet_s7150_pause_219.png (tools/s7150_pause_sheet.py; 4:3 tiles from a
 320x240 capture with an approximate crop rect). All three .cap deleted after scoring (raws + replays kept). Owner save untouched.
+Verdict line: this selects H-equal for the pause overlay at 21:9, refutes H-rect-diff (text fits at |k-1|<=0.5% in all 3 arms) and
+H-hud-anchor, and closes item 38. Next discriminator: same-window dual capture (old vs sRGB-configured g5b_capture) selects H-src vs H-partial.
 Next: item 39, set the capture colour space to sRGB at source and validate against FID_P3 on one run.
