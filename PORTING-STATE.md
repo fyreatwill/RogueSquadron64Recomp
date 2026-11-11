@@ -188194,7 +188194,7 @@ ROGUESQ_ASPECT's wider view (s6104) breaks the assumption behind it. Nothing is 
 In plain words: when you dive steeply, the game stops clearing the background, because on a 4:3 screen the ground then fills
 everything. On a wide screen the far corners still see distant ground the terrain never reaches, so a stale strip showed. The
 game now decides that with the real screen width.
-Verdict: H-gate43 selected and fixed (21:9 13 -> 0 no-clear hole swaps, pose-matched, two lines). Next (NEXT.md): unit (a), the
+Verdict: this selects H-gate43 and refutes H-vis43 and H-other; the root cause is fixed (21:9 13 -> 0 no-clear hole swaps, pose-matched, two lines). Next (NEXT.md): unit (a), the
 sky-side fill, now known to show at 16:9 as well.
 Kept: scratch/s7135/W1.cap (16:9 fix-on, class (a) burst at 7536-7544) + W1.idx/W1.rects/W1r/W1.pitch, X1.idx/X1.rects/X1r/X1.pitch.
 X1.cap and the .raw window captures deleted. Owner save untouched (forced-level route, NO_SAVE_WRITE).
