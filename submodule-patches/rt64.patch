@@ -7308,7 +7308,7 @@ index e3d289c..5da989d 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..e9b6d0a 100644
+index 10f98af..1c2805b 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -9450,7 +9450,7 @@ index 10f98af..e9b6d0a 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1915,6 +3609,22 @@ namespace RT64 {
+@@ -1915,6 +3609,33 @@ namespace RT64 {
              viDifferent = (newVI != lastScreenVI);
              lastScreenVI = newVI;
  
@@ -9460,12 +9460,23 @@ index 10f98af..e9b6d0a 100644
 +                static int s_viext_n = 0;
 +                static int s_viext_flight_n = 0;
 +                const bool s_viext_menu = (newVI.width == 640 || newVI.width == 320);
-+                if (s_viext_menu ? (++s_viext_n <= 100) : (++s_viext_flight_n <= 600)) {
++                // s7147: ROGUESQ_VI_EXTENT_PROBE=2 logs only when a register other than origin changes (budget 4000), so late
++                // scenes (the 640x300 crawl) are not starved by the boot menus' origin flips.
++                static const bool s_viext_dedupe = std::getenv("ROGUESQ_VI_EXTENT_PROBE")[0] == '2';
++                static VI s_viext_last{};
++                VI s_viext_cmp = newVI; s_viext_cmp.origin = s_viext_last.origin; s_viext_cmp.vCurrentLine = s_viext_last.vCurrentLine;
++                const bool s_viext_new = !s_viext_dedupe || (s_viext_cmp != s_viext_last);
++                if (s_viext_dedupe) s_viext_last = newVI;
++                if (s_viext_new && (s_viext_dedupe ? (++s_viext_n <= 4000) : s_viext_menu ? (++s_viext_n <= 100) : (++s_viext_flight_n <= 600))) {
 +                    const unsigned xs = newVI.xTransform.xScale, xo = newVI.xTransform.xOffset;
 +                    const unsigned hs = newVI.hRegion.hStart, he = newVI.hRegion.hEnd;
-+                    std::fprintf(stderr, "[viext #%d] origin=0x%08X width=%u type=%u hStart=%u hEnd=%u xScale=0x%X xOffset=0x%X visCols=%u\n",
++                    std::fprintf(stderr, "[viext #%d] origin=0x%08X width=%u type=%u hStart=%u hEnd=%u xScale=0x%X xOffset=0x%X visCols=%u vStart=%u vEnd=%u yScale=0x%X yOffset=0x%X serrate=%u visRows1024=%u fbSize=%ux%u\n",
 +                        s_viext_n, newVI.origin, newVI.width, (unsigned)newVI.status.type, hs, he, xs, xo,
-+                        (unsigned)(((he > hs ? he - hs : 0) * xs) / 1024));
++                        (unsigned)(((he > hs ? he - hs : 0) * xs) / 1024),
++                        (unsigned)newVI.vRegion.vStart, (unsigned)newVI.vRegion.vEnd, (unsigned)newVI.yTransform.yScale, (unsigned)newVI.yTransform.yOffset,
++                        (unsigned)newVI.status.serrate,
++                        (unsigned)(((newVI.vRegion.vEnd > newVI.vRegion.vStart ? newVI.vRegion.vEnd - newVI.vRegion.vStart : 0) * newVI.yTransform.yScale) / 2048),
++                        (unsigned)screenFbSize.x, (unsigned)screenFbSize.y);
 +                    std::fflush(stderr);
 +                }
 +            }
@@ -9473,7 +9484,7 @@ index 10f98af..e9b6d0a 100644
              // Diagnostic (ROGUESQ_LOG_PRESENT_EARLY=1) — track why viHistory stays empty.
              // We reuse the same env flag the present-early matcher uses.
              static const bool s_us_log_pe = [](){
-@@ -1959,12 +3669,30 @@ namespace RT64 {
+@@ -1959,12 +3680,30 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -9506,7 +9517,7 @@ index 10f98af..e9b6d0a 100644
          screenCpuProfiler.start();
          bool fbChangesMade = false;
          bool screenChangesMade = false;
-@@ -1972,7 +3700,11 @@ namespace RT64 {
+@@ -1972,7 +3711,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -9519,7 +9530,7 @@ index 10f98af..e9b6d0a 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -1989,6 +3721,7 @@ namespace RT64 {
+@@ -1989,6 +3732,7 @@ namespace RT64 {
                      uint64_t currentHash = XXH3_64bits(fbRAM, screenFb->RAMBytes);
                      if (currentHash != screenFb->RAMHash) {
                          {
@@ -9527,7 +9538,7 @@ index 10f98af..e9b6d0a 100644
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
                              const std::scoped_lock lock(ext.presentQueue->screenFbChangePoolMutex);
-@@ -2018,9 +3751,132 @@ namespace RT64 {
+@@ -2018,9 +3762,132 @@ namespace RT64 {
              // Store the RAM required by the VI so the render thread can display it if necessary.
              if (screenFbSiz >= G_IM_SIZ_16b) {
                  uint32_t screenFbBytes = uint32_t(screenFbSize.x * screenFbSize.y) << (screenFbSiz - 1);
@@ -9663,7 +9674,7 @@ index 10f98af..e9b6d0a 100644
                  screenChangesMade = (newScreenHash != lastScreenHash);
                  lastScreenHash = newScreenHash;
              }
-@@ -2033,26 +3889,51 @@ namespace RT64 {
+@@ -2033,26 +3900,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -9733,7 +9744,7 @@ index 10f98af..e9b6d0a 100644
              }
          }
  
-@@ -2060,6 +3941,7 @@ namespace RT64 {
+@@ -2060,6 +3952,7 @@ namespace RT64 {
          if (fromEarlyPresent || viDifferent || fbChangesMade || screenChangesMade || forceAdvance) {
              // Push a new renderer event to the timeline for presenting this VI.
              present.screenVI = newVI;
@@ -9741,7 +9752,7 @@ index 10f98af..e9b6d0a 100644
              advancePresent(present, false);
              ext.presentQueue->advanceToNextPresent();
  
-@@ -2910,4 +4792,4 @@ namespace RT64 {
+@@ -2910,4 +4803,4 @@ namespace RT64 {
              break;
          }
      }
@@ -12638,10 +12649,10 @@ index 0848f3e..616bbb1 100644
  
          TextureUpload newUpload;
 diff --git a/src/render/rt64_vi_renderer.cpp b/src/render/rt64_vi_renderer.cpp
-index b4ff4e9..b29e247 100644
+index b4ff4e9..be28328 100644
 --- a/src/render/rt64_vi_renderer.cpp
 +++ b/src/render/rt64_vi_renderer.cpp
-@@ -4,9 +4,20 @@
+@@ -4,10 +4,43 @@
  
  #include "rt64_vi_renderer.h"
  
@@ -12660,9 +12671,32 @@ index b4ff4e9..b29e247 100644
 +extern "C" __attribute__((weak)) int rs64_g1d_edge_cw;
 +
  namespace RT64 {
++    // RS64 s7147: VI::fbSize() estimates the displayed rows as (vEnd-vStart)/2 * yScale + 2 "ExtraRows", rounded to a multiple of 4.
++    // The hardware VI scans exactly (vEnd-vStart)/2 lines advancing yScale/1024 fb rows each (crawl 640x300 fb: vStart 125, vEnd 419,
++    // yScale 0x800 -> 294 rows; RT64 presents 296; hangar 334 -> 336), so RT64 squeezes the picture ~0.6% vertically and shows two
++    // extra bottom rows. ROGUESQ_VI_EXACT_ROWS=1 (opt-in, default off) presents the VI's own row count. Display-only.
++    static hlslpp::uint2 rs64PresentFbSize(const VI &vi) {
++        hlslpp::uint2 sz = vi.fbSize();
++        static const bool s_exact = [](){ const char *v = std::getenv("ROGUESQ_VI_EXACT_ROWS"); return v && v[0] && v[0] != '0'; }();
++        if (!s_exact || (sz.x == 0) || (sz.y == 0) || (vi.width == 0)) return sz;
++        const int lines2 = int(vi.vRegion.vEnd) - int(vi.vRegion.vStart);
++        const uint32_t ys = vi.yTransform.yScale;
++        if ((lines2 <= 0) || (ys == 0)) return sz;
++        const uint32_t rows = uint32_t(lround(double(lines2) * double(ys) * (double(vi.width) / double(sz.x)) / 2048.0));
++        if ((rows == 0) || (rows > sz.y)) return sz;
++        static uint32_t s_lx = 0, s_ly = 0, s_lr = 0;
++        if ((s_lx != uint32_t(sz.x)) || (s_ly != uint32_t(sz.y)) || (s_lr != rows)) {
++            s_lx = uint32_t(sz.x); s_ly = uint32_t(sz.y); s_lr = rows;
++            std::fprintf(stderr, "[s7147-exact-rows] fb %ux%u -> present rows %u (vStart %u vEnd %u yScale 0x%X)\n", s_lx, s_ly, rows,
++                (unsigned)vi.vRegion.vStart, (unsigned)vi.vRegion.vEnd, (unsigned)ys);
++        }
++        sz.y = rows;
++        return sz;
++    }
      // VIRenderer
  
-@@ -67,9 +78,45 @@ namespace RT64 {
+     VIRenderer::VIRenderer() { }
+@@ -67,16 +100,61 @@ namespace RT64 {
  
          descriptorSet->setTexture(descriptorSet->gInput, p.texture, RenderTextureLayout::SHADER_READ);
  
@@ -12708,8 +12742,9 @@ index b4ff4e9..b29e247 100644
          p.commandList->setViewports(viewport);
          p.commandList->setScissors(scissor);
  
-@@ -77,6 +124,15 @@ namespace RT64 {
-         pushConstants.videoResolution = computeHDSize(hlslpp::float2(p.vi->fbSize()), p.resolutionScale, p.downsamplingScale);
+         interop::VideoInterfaceCB pushConstants;
+-        pushConstants.videoResolution = computeHDSize(hlslpp::float2(p.vi->fbSize()), p.resolutionScale, p.downsamplingScale);
++        pushConstants.videoResolution = computeHDSize(hlslpp::float2(rs64PresentFbSize(*p.vi)), p.resolutionScale, p.downsamplingScale);
          pushConstants.textureResolution = { float(p.textureWidth), float(p.textureHeight) };
          pushConstants.gamma = p.vi->gamma();
 +        static const bool s_viShapeLog = std::getenv("ROGUESQ_VI_SHAPE_LOG") != nullptr;
@@ -12724,13 +12759,13 @@ index b4ff4e9..b29e247 100644
  
          p.commandList->setPipeline(shader->pipeline.get());
          p.commandList->setGraphicsPipelineLayout(shader->pipelineLayout.get());
-@@ -100,8 +156,31 @@ namespace RT64 {
+@@ -100,8 +178,31 @@ namespace RT64 {
          // on the screen. To work around that, the viewport the buffer will be drawn in will be expanded so only
          // the region of interest is rendered. A scissor will cut it off correctly according to the coordinates
          // specified by the VI.
 -        const hlslpp::float2 sdSize = removeBlackBorders ? hlslpp::float2(vi.fbSize()) : hlslpp::float2(320.0f, 240.0f);
 -        const hlslpp::float2 hdSize = computeHDSize(sdSize, resolutionScale, downsamplingScale);
-+        hlslpp::float2 sdSize = removeBlackBorders ? hlslpp::float2(vi.fbSize()) : hlslpp::float2(320.0f, 240.0f);
++        hlslpp::float2 sdSize = removeBlackBorders ? hlslpp::float2(rs64PresentFbSize(vi)) : hlslpp::float2(320.0f, 240.0f);
 +        // RS64 s6928 G1d: ROGUESQ_VI_SHAPE=1 (opt-in, default off = the old fbSize box). The VI scans out on a fixed raster:
 +        // retail 512-column modes run xScale 0x333 over all 640 dots (oracle --vi-regs), so a column is 1.25 dots wide and
 +        // the picture box is dots x half-lines, not columns x rows. Widened modes keep the same column width: ROGUESQ_FB_WIDTH

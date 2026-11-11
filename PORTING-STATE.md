@@ -188527,3 +188527,38 @@ present mapping, to say whether hardware VI shows the same. Owner sheet docs/own
 RT64 | angrylion, 3 crawl frames). Note for the owner: at 21:9 the crawl's 640x300 picture fills the window and the widest lines run off both
 edges, the same in angrylion (game stream). CURRENT-TRUTH trimmed 59961 -> ~58000 B (items 28-33 one line each). Owner save untouched.
 Next: item 35, the 640-fb presentation x-scale (VI regs at the crawl).
+
+## Session 7147 (2026-11-11) — G3 crawl x-scale 1.0025: VI scans exactly 640 cols and RT64 boxes 640 in the same window rect as the 1024 fb (H-vi-hw, H-rt64-present refuted); the term does not reproduce under a fine y fit (H-grid/noise), item 35 CLOSED; found RT64 presents 2 extra rows vs the VI (opt-in ROGUESQ_VI_EXACT_ROWS=1)
+HYPOTHESIS-ID: g3-crawl-640fb-xscale
+Work unit from NEXT.md. Instrument (lib/rt64, exported): the existing [viext] probe in rt64_state.cpp now also prints vStart/vEnd/yScale/
+yOffset/serrate/visRows/fbSize, and ROGUESQ_VI_EXTENT_PROBE=2 logs only when a register other than origin changes (budget 4000). Run V1 (old
+probe, =1) was a false-zero lesson: its run-lifetime 100-line budget for 640/320 widths ran out in the boot menus, so the crawl VI never
+printed (iron rule 3). V3 (=2, s7146 crawl route, 21:9 owner recipe, 0 crash) gives per mode (hStart 108, hEnd 748 = 640 dots everywhere):
+| scene | width | xScale | visCols | vStart..vEnd | yScale | VI rows | RT64 fbSize |
+|---|---|---|---|---|---|---|---|
+| crawl/logo | 640 | 0x400 | 640 | 125..419 | 0x800 | 294 | 640x296 |
+| hangar/flight | 1024 | 0x666 | 1023 | 105..439 | 0x800 | 334 | 1024x336 |
+| intro | 768 | 0x4CC | 767 | 51..493 | 0x612 | 335 | 768x336 |
+| boot 640x480 | 640 | 0x400 | 640 | 35..509 | 0x800 | 474 | 640x476 |
+| boot 320 | 320 | 0x200 | 320 | 53..495 | 0x400 | 221 | 320x224 |
+ROGUESQ_VI_SHAPE_LOG: the crawl's 640x296 box is presented at vp 1.0,0 1357.9x594 (tex 2030 = 640 x 3.172), the hangar's 1024x336 at
+1.1,0 1357.7x594. So horizontally the hardware VI shows exactly the 640 fb columns 1:1 (xScale 0x400 over 640 dots, xOffset 0) and RT64
+puts the 640 columns into the same window span (+-0.2 px) as the 1024 fb: H-vi-hw REFUTED (VI is not 638.4) and H-rt64-present REFUTED at
+the VI/box level (fbSize.x = 640, viewRectangle/cropRectangle are the unit rect in RT64, hStart/hEnd/xScale unused for the box).
+Fit check, new tools/s7147_joint_fit.py (joint k x-scale, e y-scale, sx, sy grid per box; env JK JE JY JX): (1) s7146 T1 crawl, s7146's coarse
+grid (e step 0.004, sy step 1/2 px): k 1.0025 in every box (all 0.0050 vs 0.0126 at 1.000), same-run hangar 1.000: H-ycouple (perspective
+shear trading y error for x) REFUTED there. (2) New same-recipe runs E0 (default) and E1 (ROGUESQ_VI_EXACT_ROWS=1), FROM 4150 EVERY 5,
+s7141_post.zsh rect 0,11,469,216, painted-square CONTROL PASS both, 0 crash, ~8 GB streams deleted after replay. Fine grid (e step 0.002,
+sy step 1/4 px, sx 1): E0 crawl all 0.0050 @k1.000 vs 0.0066 @1.0025; E1 crawl 0.0055 vs 0.0078; hangar both 1.000. (3) The same fine grid
+on s7146 T1 still picks 1.0025 (0.0050 vs 0.0074). Verdict: the 0.25% x term does not reproduce across runs (T1 yes, E0/E1 no), sits at
+~+-0.6 capture px at the crop edges of a 504-px capture, and has no VI-level cause: below the instrument floor, closed as noise (H-grid/noise,
+single-source either way). Item 35 CLOSED. Lesson: coarse-grid affine fits can push a y misfit into a fake x-scale; use the fine grid.
+Side finding (two lines: the logged registers above, and RT64's own fbSize() comment, which admits a heuristic): RT64 presents
+(vEnd-vStart)/2*yScale + 2 "ExtraRows" rounded to a multiple of 4, so every mode shows 1-3 rows more than the VI scans (296 vs 294 etc.):
+picture squeezed ~0.6% vertically with extra bottom rows. New opt-in ROGUESQ_VI_EXACT_ROWS=1 (lib/rt64/src/render/rt64_vi_renderer.cpp,
+rs64PresentFbSize: present box + VI shader videoResolution use the VI row count, display-only, default off; [s7147-exact-rows] logs the
+mapping). First E1 build had the halved-width (2048 VI -> 1024 fb) factor inverted (1024x444 -> 111 rows); fixed, V4 run verifies all six
+modes (221/474/335/442/334/294 rows), 0 crash, 0 zero-size frames. Pixel effect NOT resolved by the fitter: E1's best (e, sy) moves by an
+offset (sy -1 -> +2 quarter px) rather than the predicted e -0.007, because e and sy trade off over the crawl's lower-half text; both arms
+reach the same floor. So EXACT_ROWS is register-correct but pixel-unqualified; stays opt-in, owner may choose. Owner save untouched.
+Next: G3 owner-recipe fidelity for the mission intro cutscenes at 16:9 (not yet covered by items 27-34), NEXT.md.

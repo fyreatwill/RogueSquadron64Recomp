@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7146 (2026-11-11).
+Compact operational handoff, as of Session 7147 (2026-11-11).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -36,8 +36,6 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 **s7081 N64Recomp self-branch miscompile FIXED (tools/fixup_selfbranch.py, default on, `ROGUESQ_SELFBRANCH_FIX=0` = old path): the 16 backward out-of-function branches in the 4 voice resampler helpers now store the caller-tail target and return; the caller dispatches to a label at that target (retail: finished one-shot sample -> store last word, zero-fill, caller epilogue).** Differential test tools/s7081_selfbranch_test/run_test.py runs the generated C against an independent MIPS interpreter executing the retail ELF bytes: fix arm 2400/2400 exit+loop cases match (all 16 targets hit), old arm crashes on every case whose exit fires (it rereads samples from address 0), loop-path controls match in both arms. Live funcs_24.c byte-equal to the tested file; preempt 6; L6 boot to flight 309 s clean, 0 exits fired (block dead in play, s6878). The 2 data_gap_* out-of-function gotos are decoded data, left alone.
 
 **s7072 menu "Debris" cell-mesh family renamed: it is the menu JPEG (JFIF) decoder, not a glyph mesh.** Evidence from the bodies: callers are parseJfifDHTMarker / resetJfifDecodeState / loadJfifAsset; a bit reader with 0xFF stuffing and 0xFFD9 EOI detection; a Huffman size table from 16 counts capped at 256; libjpeg's 0x580-byte range-limit table plus a >>3 (5-bit) copy; four 256-entry YCbCr->RGB tables using 1.402/1.772/0.71414/0.34414 (all in the ELF); a float IDCT. 11 renames (scratch/s7072/renames.tsv) applied to the live tree, menu_overlay.txt, syms toml and fixup_preempt_point.py. Control: the preempt fixup reports 6 functions / 9 tag lines before and after. Rebuild plus an L6 boot to flight: renamed symbols in 3/113 host samples, 0 crash. The format-message callers (rasterizeFormatMessageGlyphs, tickFormatMessageWorker) drive this decoder, so their names are suspect too (NEXT.md).
-
-**s7071 renaming sweep confirmed CLOSED (tools/s7071_hot_unnamed.py over s7069 dumps): 0 of 2500 generated guest defs carry a placeholder name; every hot guest function is semantically named. Remaining sweep work = misnomer fixes only; first: the menu "Debris" cell-mesh family 0x800C7970..0x800C9B8C is the format-message glyph mesh builder (callers rasterizeFormatMessageGlyphs/tickFormatMessageWorker + s6807 samples), rename queued in NEXT.md (needs regen; fixup_preempt_point.py names it).**
 
 **s7070 gfx-hash-audit CLOSED (no build, tools/s7070_parents.py over the s7069 on/off dumps, two sets agree): Gfx-thread XXH3_hashLong (7.3%) and memmove (8.1%) are RT64 framebuffer RAM tracking/writeback (checkRAM, hashTracking, storeRAM, copyNativeToRAM, updateScreen: ~77% of hash, ~60% of memmove), texture hashing ~11%, no rs64 caller.** ~0.22 ms/frame total, 60 fps held: not a lever.
 
@@ -316,7 +314,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 32. **G3 level select + available craft 21:9: CLOSED s7144 (H-equal).** Sheet docs/owner_sheet_s7144_menus_219.png.
 33. **G3 STAR WARS logo recede 21:9: CLOSED s7145 (H-equal).** Sheet docs/owner_sheet_s7145_logo_219.png.
 34. **G3 text crawl 21:9: CLOSED s7146 (H-equal).** Route = s7146_arm.zsh with AP ending 64:a (crawl swaps 5200+). Crawl = 640x300 fb (cimg w640, 0 texrects): RECT_ASPECT=0 arm identical. One fit (x +0.25, y 0, yscale 0.992) + x-scale 1.0025: frac 0.082 -> 0.004-0.008. Sheet docs/owner_sheet_s7146_crawl_219.png.
-35. **(next, NEXT.md) 640-fb presentation x-scale 1.0025:** crawl/logo 640x300 fb presented 0.25% wider than its fb dump (1024 fb scenes 1.000, same run). VI (pfm 640x300 sets no osViSetMode) or RT64 present mapping; decide whether hardware VI shows the same. Side lead: 4:3 hangar VI fbSize.
+35. **640-fb crawl x-scale 1.0025: CLOSED s7147 (noise).** VI scans exactly 640 cols (xScale 0x400, hStart 108..748) and RT64 boxes 640 in the 1024 fb's window span; a fine-grid fit (tools/s7147_joint_fit.py) gives 1.000 on two new runs, 1.0025 only on s7146 T1. Side: RT64 fbSize() shows 2 rows more than the VI (296 vs 294, 336 vs 334); opt-in ROGUESQ_VI_EXACT_ROWS=1, register-correct, pixel-unqualified.
+36. **(next, NEXT.md) G3 mission intro cutscenes at the owner recipe 16:9** vs angrylion (not covered by 27-34).
 
 ## Evidence index
 
