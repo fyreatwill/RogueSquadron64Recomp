@@ -1,13 +1,16 @@
-# NEXT: hop metric + owner sheet for NEARLIFT=1 NEARK=1.6 (constant, not toggled)
-HYPOTHESIS-ID: fps60-wall-hop
-Context (s7118): NEARK=1.6 removes the residual near-wall losses (steady 13/1 over 5 runs), but the lift fires on 8-19% of wall-hug ticks, p99 0.6-0.9 u,
-max 1.3 u. The owner will judge it by eye; give them a number and a sheet first.
-Hypotheses: H-smooth (the lift changes slowly tick to tick: its per-tick delta is under the natural camera y motion, so no visible hop),
-H-hop (onset/offset steps: per-tick |delta lift| p99 exceeds the camera's natural per-tick y step at the same speed), H-shake (lift alternates on/off
-on consecutive ticks near a wall edge -> jitter, a G3c(c)-style sign-alternating second difference).
-Measurement (offline-first, one run): arm.zsh 6 4 m "<cmd_k env with ROGUESQ_S7115_NEARK=1.6 constant>"; from the push nl lines compute per-tick
-lift delta, its second difference sign-alternation rate, and compare with per-tick eye y delta from rx/ch lines on non-lift ticks (same run).
-Positive control: inject a known step offline (add 0.5 u to one tick) and confirm the metric flags it. Sheet: 6 frames around the 3 largest lift
-onsets (tools/s7107_sheet.py on m.raw; keep the raw until the sheet exists) -> docs/owner_sheet_s7119_nearlift_hop.png.
-Outcomes: H-smooth -> owner sheet, recommend; H-hop -> rate-limit the lift (ease over ~4 ticks) as ROGUESQ_S7115_NEAREASE, same-run tog;
-H-shake -> add hysteresis (hold the lift N ticks).
+# NEXT: off vs NEARK=1.6 wall-loss replication in the same runs (owner recipe), then the opt-in closes on the owner's look
+HYPOTHESIS-ID: fps60-wall-confirm
+Context (s7119): at NEARLIFT=1 NEARK=1.6 the camera does not hop (H-smooth vs retail, same run m). But off vs k1.6 *losses* in the same run were
+never powered: s7116 was off vs k1.0, s7118 k1.0 vs k1.6, and run m (tog1, k1.6) had only 3 off losses (steady 3/1, z -1.0).
+Hypotheses: H-fix (k1.6 removes >=75% of off-arm steady losses), H-partial (25-75%), H-none (<25%; s7118 k1.0->1.6 gain was route luck).
+Runs: one game at a time, 3 runs n, o, p:
+  sed 's/_m\./_n./g; s/ 6 4 m / 6 4 n /' scratch/s7115/cmd_m.txt > scratch/s7115/cmd_n.txt ; zsh scratch/s7115/cmd_n.txt > scratch/s7115/arm_n.log 2>&1
+  (same for o, p; check the screen is unlocked first: /usr/sbin/ioreg -n Root -d1 | grep -c '"CGSSessionScreenIsLocked"=Yes' must print 0).
+  NOTE: a waiter using `pgrep -f cmd_m.txt` matches itself; wait on the background task notification instead.
+Per run: python3 tools/s7107_losscan.py tris_X.bin X.csv > losscan_X.txt; python3 tools/s7118_edge.py 0.1 tris_X.bin losscan_X.txt push_X.txt
+  (pool with run m); python3 tools/s7119_hop.py --edge 0.1 push_X.txt (hop replication; pre-registered H-smooth rule). Delete X.raw after
+  analysis unless a sheet is needed.
+Positive control: the s7118_edge off-arm must show >= 10 pooled steady losses (else the runs hugged walls too little: add a run). The hop control is
+  --inject T:1.0 (+3 on >0.25).
+Outcomes: H-fix -> close item 26 on the owner's look (OWNER-OPT-INS already says so), next ladder item; H-partial/H-none -> table the residual
+  dmin bands (s7117 tickjoin) for k1.6 losses.

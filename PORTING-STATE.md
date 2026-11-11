@@ -187659,3 +187659,39 @@ split and the dmin-band clearance in the same runs; the confirmatory pair alone 
 Changes: tools/apply_s7115_nearlift.py (NEARK), tools/s7115_nearlift_oldpre.txt, tools/s7115_neargap.py (torn-line skip), tools/s7118_edge.py
 (new); docs/OWNER-OPT-INS.md row now NEARLIFT=1 NEARK=1.6; CURRENT-TRUTH headline + item 26.
 Rules out: the residual being losscan false positives; a lift-onset edge mechanism (not replicated). Leaves open: hop visibility at k1.6.
+
+## Session 7119 (2026-11-10) — FPS60 near-wall lift hop metric: at the owner setting (NEARLIFT, NEARK=1.6) the presented camera is no jerkier at walls than the retail camera in the same run (H-smooth: wall jerk p99 0.25 vs 0.33 u, wall-attributed >0.5 u jerks 1 vs 2, sign-alternation 0.32 vs 0.32); at the old k=1.0 the lift roughly doubled wall jerks under toggling, and k=1.6 halves them vs k=1.0 in constant-lift runs; owner sheet docs/owner_sheet_s7119_nearlift_hop.png
+
+HYPOTHESIS-ID: fps60-wall-hop
+
+What ran: new tools/s7119_hop.py (offline, push logs). Format facts found on the way: the nl line precedes rx for the same cam; the flight
+camera is 80138458 (not 80138930, which is a static cam); rx pos.y is the presented eye with the lift already applied; m is mach time at 24 MHz.
+The lift is written into camera state, so the next tick's chase starts from the lifted eye. That makes NEXT.md's planned |delta lift| metric
+wrong: a lift "offset" is not an eye drop. The first pass used it and the lift-off-free-flight comparator, and called H-hop on every run
+(p99 |dlift| 0.39-0.88 vs natural |dY| p99 0.07-0.15). Both choices are biased (wall ticks vs open flight), so they are discarded and
+recorded here as a dead end. Final metric: presented eye jerk |d2Y| per tick over 4-tick windows that sit wholly in one arm, optional edge
+exclusion, per arm (on, k): "wall" ticks (need > 0 on t or t-1) vs the same-run on=0 wall ticks, d2Y sign-alternation rate, and an
+arm-level rate of |d2Y| > 0.25/0.5/1.0 per 1e3 ticks split by window class (need>0 vs open flight).
+Positive control: --inject T:1.0 adds a 1 u step to the presented Y of one tick. The >0.25 / >0.5 counters rise by 3 (e, h, m), and >1.0 by 1-3.
+A 0.5 u injection rises only 1 over the e off-wall p99 (0.98 u), so the retail camera at walls already jerks ~0.5-1 u at p99.
+Offline on existing runs:
+| runs | arms | wall-attributed >0.5 u jerks (edge 0 / 0.25 s) | open-flight >0.5 |
+| d-g (s7116, NEARLIFT=tog1, k1.0) | off / on | 28/57 ; 19/49 | 20/23 |
+| h-l (s7118, lift on, togK:1.6) | k1.0 / k1.6 | 30/12 ; 28/11 | 25/29 |
+So at k1.0 the lift ~2x the wall jerks (single-run-type, toggle runs). At k1.6 vs k1.0 it halves them (z ~2.8 at edge 0). The same-run off vs
+k1.6 comparison did not exist, so one run was made: scratch/s7115/arm.zsh 6 4 m with ROGUESQ_S7115_NEARLIFT=tog1 ROGUESQ_S7115_NEARK=1.6
+(need computed at k1.6 in both arms, so "wall" means the same thing in both) plus all s7101-s7115 passive instruments (cmd_m.txt). L6 dd4
+16:9 FPS60, 190 s capture, 69.8 fps presented, 0 gaps > 250 ms, 0 crash.
+Run m: need>0 ticks off 586/5126, on 428/5094 (lift fired on all 428, so the arm acted). Wall |d2Y| p99 off 0.327 / on 0.250 (max off 7.14,
+which is a retail snap; on 0.54); sign-alt off 0.324 / on 0.318; wall-attributed >0.5 u jerks off 2 / on 1; arm totals >0.5 off 6 / on 7, and most
+of these are open-flight. Edge exclusions 0.1 and 0.25 s change nothing (p99 ratio 0.76 / 0.51). Pre-registered verdict: H-smooth (on p99 is
+not > 1.5x off; alt ratio 0.98). Losses in the same run (s7107_losscan + s7118_edge W=0.1): steady off/on 3/1, z -1.0. This route hugged walls
+less, so the loss arm is underpowered and is not evidence by itself. Raw phase: 3/2.
+Owner sheet: docs/owner_sheet_s7119_nearlift_hop.png = 6 consecutive presented frames around each of the 3 largest lift-on wall jerks
+(t 173.7, 177.9, 125.7 s; |d2Y| 0.54, 0.32, 0.21). All 3 are wall-hug frames with no visible vertical step between neighbours. m.raw deleted
+after the sheet; tris_m.bin and push_m.txt kept.
+Two lines for H-smooth at k1.6: the same-run off/on jerk distribution (run m), and the k1.6 < k1.0 halving over 5 constant-lift runs (h-l).
+The s7116 tog1 k1.0 excess was not re-tested at k1.6 over several runs, and run m is one run, so the claim is single-run for off vs k1.6.
+Changes: tools/s7119_hop.py (new); docs/owner_sheet_s7119_nearlift_hop.png (new); OWNER-OPT-INS row updated; CURRENT-TRUTH headline + item 26.
+Rules out: a visible lift hop or shake at NEARK=1.6 (single run vs retail). Also rules out the dlift metric as a hop measure (state persistence).
+Leaves open: off vs k1.6 losses in the same run with enough wall-hug (next: replicate run m x3).

@@ -1,12 +1,16 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7116 (2026-11-10).
+Compact operational handoff, as of Session 7119 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep there for any sNNNN.
 
 ## Headline
+
+**s7119 near-wall hop: H-smooth at the owner setting. Same run (L6 dd4 16:9 FPS60, NEARLIFT=tog1 NEARK=1.6): presented eye jerk at walls p99 0.25 u with the lift vs 0.33 u without, wall-attributed >0.5 u jerks 1 vs 2, sign-alternation 0.32 vs 0.32 (tools/s7119_hop.py, injected 1 u step control caught).** Over 5 constant-lift runs (h-l), k1.6 halves the wall jerks of k1.0 (12 vs 30). At k1.0 under toggling the lift doubled them (s7116 d-g, 57 vs 28). Off vs k1.6 rests on one run (single-run). Same-run losses were underpowered (steady 3/1). Sheet: docs/owner_sheet_s7119_nearlift_hop.png.
+- In plain words: the deeper lift does not make the camera bounce. Near walls it moves no more abruptly than the normal game camera.
+- Next: replicate run m x3 for an off vs k1.6 loss count in the same runs (NEXT.md, slug fps60-wall-confirm); then the opt-in closes on the owner's look.
 
 **s7118 near-wall: the NEARK depth arm selects H-margin (5 runs L6 dd4 16:9 FPS60, lift on, k toggled 1.0/1.6 per mach second). Pre-registered edge-excluded rate (tools/s7118_edge.py, W=0.1 s): exploratory h-j 9/0 (z -3.0), confirmatory k-l 4/1 (z -1.3, same direction, underpowered alone), pooled steady losses k1.0/k1.6 13/1 per ~29k swaps each (z -3.2).** Control passes every run: need>0 ticks 2.5-6.6% -> 8.4-19.4%; the flight dmin 1.25-near bin falls 0.05-0.18 -> 0.003-0.007. k1.0 losses sit at dmin 1.25 near. Cost: lift p99 0.34-0.79 -> 0.58-0.88 u, max 1.31 u. Raw halves 10/6 in h-j: 6 of the k1.6 losses fall <0.1 s after the 1.0->1.6 edge (did not replicate in k-l: 0/1285). OWNER-OPT-INS now recommends NEARLIFT=1 + NEARK=1.6.
 - In plain words: checking 1.6x as far in front of the lens removes nearly all the remaining wall flashes. The camera lifts a little more often, so whether that shows as a hop is next.
@@ -326,7 +330,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 23. **RSPRecomp scalar lowering: CLOSED s7093** (tools/s7093_su_census.py --controls; sltiu $zero/neg-imm template fixed in RSPRecomp; rerun after any RSPRecomp change).
 24. **RSP runtime DMA + cop0: CLOSED s7094** (audio ucode_data off-by-one fixed; tools/s7094_dma_test + tools/s7094_dma_census.py, rerun after any rsp.hpp/rsp.cpp DMA edit).
 25. **DPC registers CLOSED s7095; bridge forwarding coverage CLOSED s7096** (ROGUESQ_S7095_DPC / ROGUESQ_S7096_FWD=ctl, rerun after any dpc_bridge.cpp submit/defer/wrap edit; MISSING_UNEXPLAINED/dup/order must stay 0). Edit-walker census CLOSED s7097 (ROGUESQ_S7097_EDIT=ctl; unattributed must stay 0). RT64 vs angrylion on the same dd4 stream CLOSED s7098 (H-stream: big drops are in the stream; replay with tools/angrylion_replay/build16.sh).
-26. **Near-wall flicker (s7098-s7115): eye-cell near-plane loss, RETAIL behaviour (s7109). Refuted: corner width, near 15, margin re-push, post-move, ucode drop, LOD decimation (s7108-s7114), H-gap (s7115). s7115 H-probe CONFIRMED s7116 (opt-in ROGUESQ_S7115_NEARLIFT=1: pooled 4 runs losses 83/31, pierce class removed). s7117: swap = previous tick's camera; residual at terrain 1.0-1.5 near. s7118: NEARK=1.6 removes it (steady 13/1, 5 runs). Next: hop metric + sheet (slug fps60-wall-hop).** Drop is in the RDP stream (s7098).
+26. **Near-wall flicker (s7098-s7115): eye-cell near-plane loss, RETAIL behaviour (s7109). Refuted: corner width, near 15, margin re-push, post-move, ucode drop, LOD decimation (s7108-s7114), H-gap (s7115). s7115 H-probe CONFIRMED s7116 (opt-in ROGUESQ_S7115_NEARLIFT=1: pooled 4 runs losses 83/31, pierce class removed). s7117: swap = previous tick's camera; residual at terrain 1.0-1.5 near. s7118: NEARK=1.6 removes it (steady 13/1, 5 runs). s7119: no hop at k1.6 (H-smooth, same-run jerk vs off). Next: off vs k1.6 loss replication (slug fps60-wall-confirm), then owner look.** Drop is in the RDP stream (s7098).
 
 ## Evidence index
 
