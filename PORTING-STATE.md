@@ -189135,3 +189135,19 @@ split 117,352; s7163_rectfit; s7160_fit_post). angrylion CONTROL PASS and rectfi
   Sheet docs/owner_sheet_s7171_L12_219_fidelity.png identical by eye.
 Verdict: H-equal on both; no hole, no lag outlier. Deleted L11w/L12w .cap/.raw after scoring (~33 GB).
 21:9 done: L0-L12, L15; 5 to go (L13, L14, L16-L18).
+
+## Session 7172 (2026-11-11) — G3 owner recipe 21:9 L13 + L14 flight == angrylion (centre 0.000/0.005, 0 flight >0.05)
+HYPOTHESIS-ID: g3-owner-recipe-219.
+Two game runs, one at a time, screen unlocked (ioreg: no CGSSessionScreenIsLocked key), 0 CRASH/SIGSEGV/SIGBUS in either run.log. Owner save untouched.
+Recipe as s7167-s7171 (tools/s7141_arm.zsh <lvl> L<lvl>w ASPECT=21:9 EVERY=1 FROM=7500 MAX_MB=12000, CW=504 CH=216; s7141_post rect 0,11,469,216
+split 117,352; s7163_rectfit; s7160_fit_post). angrylion CONTROL PASS and rectfit CTRL x0+4 PASS on both.
+- L13 (L13w, dark red lava/rock canyon): 685 swaps (684 replayed), lag 30 ms. Refit 0,11,470,218: meand 0.95/1.06/1.17,
+  frac 0.001/0.001/0.001, 0 >0.05, centre 0.000, side 0.001, dup 0. Shift-2 control at 0,11,469,216: meand 2.81/4.59/6.24 vs 1.64/1.87/2.06
+  unshifted, 0 swaps >0.05 (dark/smooth level like L3/L8: >0.05 count has no power, judged by meand ratio 2.5x).
+  Sheet docs/owner_sheet_s7172_L13_219_fidelity.png identical by eye.
+- L14 (L14w, overcast cloud sky + dark ground, missile): 687 swaps, lag 25 ms. Refit 1,12,469,217: meand 3.66/4.02/4.41,
+  frac 0.010/0.011/0.013, 0 >0.05, centre 0.005, side 0.014, dup 0. Shift-2 control meand 7.72/12.69/18.33, 81 swaps >0.05 (fires).
+  Side 0.014 and right band meand 9.2 are flat across the run (worst swap 0.0127): cloud-texture filtering plus the radar disc, no per-swap gap.
+  Sheet docs/owner_sheet_s7172_L14_219_fidelity.png identical by eye.
+Verdict: H-equal on both; no hole, no lag outlier. Deleted L13w/L14w .cap/.raw after scoring (~32 GB).
+21:9 done: L0-L15; 3 to go (L16-L18).
