@@ -188799,3 +188799,40 @@ Verdict line: this selects H-equal for OPTIONS, PASSCODES, MISSION FAILED and mi
 black, every arm) and H-rect (fitted numbers equal across RECT_ASPECT arms, width term follows the triangles, 1.333x control fires),
 and closes item 34. Owner sheet docs/owner_sheet_s7154_options_debrief_169.png (tools/s7154_sheet.py). .cap streams and pre-fill
 replay dirs deleted. Next: title / SELECT GAME / level select / available craft at 16:9 (scored only at 21:9: s7144, s7152).
+
+## Session 7155 (2026-11-11) — G3 title, SELECT GAME, SELECT LEVEL and AVAILABLE CRAFT at 16:9: RT64 == angrylion after the standard fit (H-equal); RECT_ASPECT fires on level select/craft at 16:9 (fix-off text best-fit k=1.333) and is inert on title/profile; pillars black; item 35 closed
+HYPOTHESIS-ID: g3-menus-169
+Work unit from NEXT.md (item 35). No maintenance (59.0 KB < 60000). No new soak results. Owner save untouched (no SAVE_FROM, NO_SAVE_WRITE).
+Owner recipe FPS60 dd4 ASPECT=16:9, window 1360x796, capture 384x216 sRGB, tools/s7146_arm.zsh default boot AP, SECS=45 FROM=200
+EVERY=4 DL=8 DU=32, crop 0,9,369,216. Two runs, one at a time, 0 crash both: T1 default, R1 = T1 + ROGUESQ_RECT_ASPECT=0. One run
+covered all four screens (the planned separate M route was not needed): from phase thumbnails, title swaps 713-985, SELECT GAME
+1097-1241, SELECT LEVEL 1417-1577, AVAILABLE CRAFT 1609-1961 (R1 within 1 swap). Swaps < ~700 predate the capture (pframe 0-2,
+invalid); capture ends at frame ~2102 (hangar). s7152_post again combined 592/592 pre-fill (16:9 defect, s7154): title/profile scored
+on *n, level select/craft (336-row fbs) on *r. Painted-square control PASS on T1r/T1n/R1r/R1n.
+Fit tools/s7143_affine.py box 66:4:303:200, AFF_SX 0..3 AFF_SY -4..2 AFF_E 1..0.984 (fitted, nominal in brackets):
+| arm/screen | fit (sx,sy,e) | top 70:4:299:60 | mid 70:60:299:150 | low 70:150:299:200 | sides 0:62 / 307:369 |
+|---|---|---|---|---|---|
+| T1 title (69 swaps) | 2,-2,0.984 | 0.0129 (0.101) | 0.0002 | 0.0003 | 0.0000/0.0000 |
+| R1 title | 2,-2,0.984 | 0.0129 | 0.0002 | 0.0003 | 0.0000/0.0000 |
+| T1 SELECT GAME (37) | 2,0,0.988 | 0.0003 | 0.0007 | 0.0063 | 0.0000/0.0000 |
+| R1 SELECT GAME | 2,0,0.988 | 0.0003 | 0.0007 | 0.0063 | 0.0000/0.0000 |
+| T1 SELECT LEVEL (41) | 2,-2,0.984 | 0.0001 | 0.0107 | 0.0294 | 0.0000/0.0000 (nom 0.012/0.027) |
+| R1 SELECT LEVEL | 2,-2,0.984 | 0.1141 | 0.0352 | 0.1914 | 0.0000/0.0000 |
+| T1 AVAILABLE CRAFT (89) | 2,-2,0.984 | (fit 0.0128 set) | 0.0124 | 0.0342 | 0.0000/0.0000 |
+| R1 AVAILABLE CRAFT | 2,-2,0.984 | 0.0992 | 0.0544 | 0.2219 | 0.0000/0.0000 |
+T1 level-select/craft mid/low residuals (0.011-0.034) are the animated platform/holo, same range as 21:9 s7144 (0.005-0.040).
+Title top 0.013 is the logo outline in both arms (kgrid best k 1.005, 0.0131): equal across arms, so not a rect term.
+RECT_ASPECT, two lines: (a) tools/s7154_kmd.py width sweep: T1 text/title/triangle k 1.000 on all four screens (title logo 1.005);
+R1 title/profile identical to T1 (inert: these are triangle-drawn band screens), R1 level select/craft text boxes flat (25-35, no
+minimum inside k 0.99-1.015) = scale outside the sweep; (b) tools/s7154_kgrid.py: T1 k=1 best everywhere and k=1.333 0.09-0.48;
+R1 level select top best k=1.333 0.032 vs k=1 0.107, low k=1.333 0.170 vs 0.253; craft top 0.032 vs 0.098, low 0.198 vs 0.223.
+So at 16:9 with the fix off RT64 draws level select/craft texrects 1.33x wide (the s7142 hangar class, now measured on these screens
+at 16:9), and the default-on fix brings them to the angrylion floor.
+Pillars (presented RT64, cols 0-58 / 311-369, every 6th swap; scratch/s7155/pill.py): title and SELECT GAME mean 0.0 max 0 both arms;
+positive control band mean 40-51 max 237-255 same frames. Level select/craft fill the width (pillar mean 25-28) and those side boxes
+fit angrylion at 0.0000 (nominal 0.012-0.028), so the side content is the game's own drawing.
+Verdict line: this selects H-equal for title, SELECT GAME, SELECT LEVEL and AVAILABLE CRAFT at 16:9, refutes H-strip (title/profile
+pillars black; level-select/craft sides == angrylion) and refutes H-rect with the fix on (k 1.000), while the fix-off arm shows the
+1.333x widening the fix removes (a same-run positive control for the k instrument). Closes item 35. New tools/s7155_sheet.py, owner
+sheet docs/owner_sheet_s7155_title_menus_169.png (RT64 default | RECT_ASPECT=0 | angrylion). .cap streams and replay dirs deleted.
+CURRENT-TRUTH items 31-35 merged into one line (58.0 KB). Next: logo recede + text crawl at 16:9 (scored at 21:9 only).
