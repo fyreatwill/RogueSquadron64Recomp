@@ -187321,3 +187321,4 @@ Rules out: corner width vs the widened projection, push distance vs projection n
 Open: whether retail settings (FPS60 off, dd1, 4:3) clip the same way. s7098/s7100's "follows FPS60" was a presented-episode
 count with weak statistics (s7101: 1.6x, p=0.185).
 Next: the same instruments at retail settings (NEXT.md, slug fps60-wall-retail).
+Discrimination line: this run refutes H-aspect (corner width), H-neardist and H-tick (60 fps render-only frames) as the source of the eye-cell near clip; H-corner4 stays refuted by s7102 r2 (CAM4 on, episodes remain). The next discriminator is the same instruments at retail settings (FPS60 off, dd1, 4:3): it selects H-retail (same clip rate) or H-opt (no clip).
