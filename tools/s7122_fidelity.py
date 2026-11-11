@@ -128,8 +128,11 @@ def score(rawp, idx, aldir, outp, rect=None, t0=0, t1=1 << 63, split=None, shift
 
 
 def control(aldir):
-    fn = sorted(f for f in os.listdir(aldir) if f.endswith('.rgb'))[0]
-    a = load_al(os.path.join(aldir, fn)); W, H = a.size
+    # s7144: first replay whose image loads (a menu-entry frame can be mostly unpainted -> load_al None)
+    for fn in sorted(f for f in os.listdir(aldir) if f.endswith('.rgb')):
+        a = load_al(os.path.join(aldir, fn))
+        if a is not None: break
+    W, H = a.size
     r0 = regions(dmap(a, a.copy()), W, H)
     b = a.copy(); x0, y0 = W // 3, H // 3
     for y in range(y0, y0 + 20):

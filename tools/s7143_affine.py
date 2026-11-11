@@ -18,7 +18,9 @@ for r in rows:
 def warp(a4, sx, sy, e): return a4.transform(a4.size, Image.AFFINE, (1, 0, -sx, 0, e, -sy), Image.BILINEAR).resize((W, H), Image.BOX)
 def frac(a, p, b): d = F.dmap(a.crop(b), p.crop(b)); return sum(v > F.T for v in d) / len(d)
 def med(sx, sy, e, b, sub=fr): return S.median(frac(warp(a4, sx, sy, e), p, b) for a4, p in sub)
-grid = [(sx, sy, e) for sx in (1, 2, 3, 4) for sy in (-2, 0, 2, 4) for e in (1.0, 0.996, 0.992, 0.988, 0.984)]
+GX = tuple(map(int, os.environ.get('AFF_SX', '1,2,3,4').split(','))); GY = tuple(map(int, os.environ.get('AFF_SY', '-2,0,2,4').split(',')))  # s7144: env grids
+GE = tuple(map(float, os.environ.get('AFF_E', '1.0,0.996,0.992,0.988,0.984').split(',')))
+grid = [(sx, sy, e) for sx in GX for sy in GY for e in GE]
 sub = fr[::3]; t = {g: med(*g, FB, sub) for g in grid}; g0 = min(t, key=t.get)
 print('frames', len(fr), 'fit on', FB, 'nominal %.4f' % med(0, 0, 1.0, FB), 'best (sx/4, sy/4, yscale) =', g0, '%.4f (fit subset)' % t[g0])
 for nm, b in boxes:

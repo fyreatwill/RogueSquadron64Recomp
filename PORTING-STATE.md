@@ -188450,3 +188450,27 @@ diff left to explain); H-filter not needed. The s7142 "text 0.21 / centre 0.05" 
 (per-box shift table + cross-fit with H3 control). Unresolved below ~0.5 fb px. Item 31 CLOSED; s7122_fidelity scores without sub-pixel
 registration, so later fidelity numbers should use s7143_affine.py.
 Owner save untouched (no run).
+
+## Session 7144 (2026-11-11) — G3 level select + available-craft screens at 21:9: RT64 == angrylion under one registration fit (H-equal); H-rect and H-wide-menu refuted, item 32 CLOSED
+HYPOTHESIS-ID: g3-fidelity-menus-219
+Work unit from NEXT.md. Route check first (s6995 d1 frames): on this route level select is ~24-28 s and the AVAILABLE CRAFT screen 28-37 s,
+both BEFORE the hangar (the 70/76 s presses are the STAR WARS crawl into the mission, not a briefing screen). New tools/s7144_arm.zsh
+(s7142_arm with RDIR): owner recipe FPS60 dd4 ASPECT=21:9, owner save read-only, FROM=1300 DL=23 DU=17 SECS=42, EVERY=3.
+M1 = default (RECT_ASPECT fix on), M2 = ROGUESQ_RECT_ASPECT=0 (negative control). 0 crash both. Scored with tools/s7141_post.zsh rect 0,11,469,216
+split 117,352. Tool fixes: s7122_fidelity.py control now uses the first replay that loads (the first menu-entry swaps are 25% painted ->
+load_al None crashed the control); s7143_affine.py grids overridable by AFF_SX/AFF_SY/AFF_E. Painted-square control PASS both replays.
+Phases by angrylion title: LS swaps 1400-1585, AC 1600-1985, hangar 2140+. Centre frac>40 nominal: M1 ~0.10 (AC) vs M2 ~0.145.
+Affine fit on the union box 117:4:352:192 (24 frames per phase) -> same fit (x +0.75 compare px, y 0, yscale 0.992) in all four arm/phase cases:
+| arm/phase | title | level name | small text | 3D platform | side |
+|---|---|---|---|---|---|
+| M1 LS fitted (nominal) | 0.005 (0.115) | 0.036 (0.236) | - | 0.026 (0.072) | 0.0001 |
+| M1 AC fitted (nominal) | 0.009 (0.163) | 0.040 (0.303) | 0.016 (0.109) | 0.024 (0.072) | 0.0001 |
+| M2 LS fitted | 0.219 | 0.300 | 0.079 | 0.027 | 0.0001 |
+| M2 AC fitted | 0.292 | 0.343 | 0.163 | 0.044 | 0.0001 |
+Separate fits: platform-only, name-only and title-only all choose x +0.5..0.75 px; their y terms give the same displacement at each box's rows
+(title -0.4 px, platform/name ~-1.5 px), i.e. one vertical scale of the capture (same as s7143's 0.988-0.992). H-rect (some menu text on
+another rect path) refuted: text and 3D agree within 1/4 compare px. H-wide-menu refuted: fix-on text reaches the 3D floor under a fit that
+has no x-scale; the fix-off control (1.33x text) does not (0.16-0.34). Two lines: per-box fits + cross-arm control, single run each.
+Owner sheet docs/owner_sheet_s7144_menus_219.png (tools/s7144_sheet.py: fix on | angrylion | fix off, both screens).
+Streams (.cap, 6 GB each) deleted after scoring; raws, replays, csvs, affine*.log in scratch/s7144 (gitignored). Owner save untouched.
+Next: the opening STAR WARS crawl at 21:9 (item 33) and the 4:3 hangar fbSize side lead.
