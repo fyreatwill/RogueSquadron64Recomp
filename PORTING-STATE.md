@@ -188323,3 +188323,25 @@ Rules out: draw distance, aspect, colour detector blindness, ucode clip bugs as 
 Next (NEXT.md, slug g3-wide-holes-levels): the 21:9 hole fixes were only measured on L6; check fadeH-8 levels where the skirt
 does draw under the SKYFILL clear, with a SKYFILL=0 control arm.
 Deleted: scratch/s7136/Y1.cap (12.6 GB, consumed), P1.cap/.raw (disk 95%). Kept scratch/s7138/bindegen_*.txt, seq*.txt. Owner save untouched.
+
+## Session 7139 (2026-11-11) — G3 21:9 hole fixes on a fadeH-8 level: L1 dd4 21:9 FPS60 with the three fixes on draws 0 hole px in 111/111 flight swaps vs 95/107 with ROGUESQ_HORIZON_SKYFILL=0 (max 1020 px); the full-viewport clear colour matches the L1 skirt top within 4/255 (H-clean on L1; H-seam refuted)
+HYPOTHESIS-ID: g3-wide-holes-levels. Screen unlocked (CGSSessionScreenIsLocked absent), owner save untouched.
+Ran (sequential, one game at a time): `env CW=504 CH=216 zsh tools/s7138_arm.zsh 1 Y1L1 "ROGUESQ_ASPECT=21:9 ROGUESQ_G5B_FRAME_MAX_MB=9000" 120 180`
+and the same with `ROGUESQ_HORIZON_SKYFILL=0` (Z1L1). L1 forced route, dd4, FPS60, EVERY=20. Streams 9.4 GB each (MAX_MB cap hit at swap ~6600;
+flight from swap 4402 Y / 4262 Z, sky fadeH 8 confirmed by tools/s7138_bindegen.py). 0 crash lines in either run.
+New tools/s7139_post.zsh = s7136_post restricted to RAM-owning swaps >= MIN (EVERY=20 captures; the old post replayed every boot/menu swap).
+Results (angrylion replay, tools/s7134_score.py field painted-of):
+| arm | flight swaps | swaps with unpainted px | >200 px | max |
+| Y1L1 fixes on (XFIX, GATEFIX, SKYFILL default) | 111 | 0 | 0 | 0 |
+| Z1L1 SKYFILL=0 (same-recipe control) | 107 | 95 | 32 | 1020 |
+The control fires (Z1L1 >0 on 89% of swaps), so Y1L1's 0 is a result. Cross-run arms, but the score is per-swap absolute, not an A/B of an
+animating scene. Z holes on L1 are NOT the L6 corner class: magenta 1 px strips along the bottom/right viewport edge in banked dives (the
+retail clear rects end at x 1023 / y 447 but split the screen, e.g. Z 5622 {624,0,1023,295}+{556,296,1023,447}); the L1 skirt covers
+the above-band corner. Colour (H-seam): streamseq Y 5622 shows the skirt tris drawn (CC FE793C, TRIC 80B8D000 / 82B6D3FF), and the
+full-viewport clear paints 128,184,208 = 80B8D0 at 5-bit, which is also what Z's retail clear rects paint; skirt top 82B6D3 -> 128,180,208.
+Max difference 4/255: no foreign colour. The band/skirt-top boundary is a hard 1-step edge (row 30 x 940-1024: 48,96,136 -> 128,184,208);
+the skirt is only 8 units high so its alpha ramp is ~0-1 px; that is the game's own art, never on screen at 4:3 (s7137), single-source.
+Owner sheet docs/owner_sheet_s7139_L1_skyfill_219.png (pose-matched by pitch + horizontal-up, tools/s7135_campitch.py; left = fill off
+showing the edge strips, right = default). Rules out: H-newclass on L1, H-seam (colour). Open: L4 / L15 (other sky HOBs).
+Deleted: Y1L1/Z1L1 .cap/.raw/replays (26 GB). Kept .idx/.rects/.pitch/.swaps, bindegen_*L1.txt, seqY1L1_5622.txt, r.log.
+Next (NEXT.md, same slug): L4 and L15 at 21:9, same two-arm recipe with tools/s7139_post.zsh.
