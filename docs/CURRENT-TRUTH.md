@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7152 (2026-11-11).
+Compact operational handoff, as of Session 7153 (2026-11-11).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -313,7 +313,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 30. **G3 owner-recipe fidelity at 21:9: CLOSED s7141 (H-equal).** L15 med 0.019, L6 0.012; side excess = HUD rings. tools/s7141_{arm,post}.zsh. Sheet docs/owner_sheet_s7141_219_fidelity.png.
 31. **G3 21:9/16:9 menu + cutscene fidelity series: CLOSED s7142-s7152 (H-equal everywhere, one capture registration fit x +0.25..0.75 px, yscale 0.984-0.992).** Hangar RECT_ASPECT fix s7142 (default on); level select/craft s7144; logo s7145; crawl s7146 (640 fb, x-scale 1.0025 = noise s7147); intro cutscene 16:9 s7148, 21:9 s7149 (ROGUESQ_VI_EXACT_ROWS stays opt-in, worse); pause menu s7150; capture sRGB at source s7151 (raws before s7151 need FID_P3=1). Sheets docs/owner_sheet_s714[2-9]_*, s7150. Tools: tools/s7146_arm.zsh, s7141_post.zsh, s7148_pfsearch.py, s7143_affine.py. Detail: PORTING-STATE.
 32. **G3 title / SELECT GAME (profile) 21:9: CLOSED s7152 (H-equal; RECT_ASPECT inert there, H-colour refuted).** Title and profile screens draw only the 512-px centre band (scissor 256..768) of a 1024x448 fb and alpha-blend over memory: score them with tools/s7152_post.zsh (NOPREFILL replays where the pre-fill one is magenta-tinted; frame_replay.c NOPREFILL=1). Fitted title 0.0020 (menu text 0.0003), SELECT GAME 0.0012, identical with RECT_ASPECT=0; same-run control level select title 0.0004 vs 0.31. Sheet docs/owner_sheet_s7152_title_menus_219.png.
-33. **(next, NEXT.md) G3 options menu + mission debrief/abort screens 21:9** (last unscored 2D screens).
+33. **G3 OPTIONS / PASSCODES / MISSION FAILED / mission results 21:9: CLOSED s7153 (H-equal; RECT_ASPECT inert).** Fitted OPTIONS 0.0000, PASSCODES 0.0011, failed 0.0005, results 0.0050 (stroke edges). Results width term follows the medal triangles (per-run scale, s7150 class); 1.333x synthetic control 0.08-0.32. Debrief draws only 256..768 of a 1024 fb under a full scissor: hardware pillars = stale RAM, RT64 black (better). Routes: OPTIONS 10:start,17:down,19:a; abort on the s7146 boot 88:start,92:down,96:a,100:left,103:a. Sheet docs/owner_sheet_s7153_options_debrief_219.png.
+34. **(next, NEXT.md) G3 the same 2D screens at 16:9** (owner's TV; s6924 pillar strips on OPTIONS at 16:9, fixed s6926 tolerance).
 
 ## Evidence index
 

@@ -188718,3 +188718,48 @@ Verdict line: this selects H-equal for the title and SELECT GAME screens at 21:9
 fires on level select) and H-colour (blue lift <= ~4 on sRGB captures), and closes item 40 (CURRENT-TRUTH renumbered: items 31-39
 merged into 31, this is 32). Owner sheet docs/owner_sheet_s7152_title_menus_219.png (tools/s7152_sheet.py). .cap streams deleted.
 CURRENT-TRUTH 59.9 -> 58.0 KB. Next: options menu + mission abort/debrief screens at 21:9 (item 33).
+
+## Session 7153 (2026-11-11) — G3 OPTIONS, PASSCODES, MISSION FAILED and mission-results screens at 21:9: RT64 == angrylion after the standard fit (H-equal); RECT_ASPECT inert on all four; debrief pillars are undrawn stale RAM on hardware, black in RT64
+HYPOTHESIS-ID: g3-options-debrief-219
+Work unit from NEXT.md (item 33). No maintenance (58.0 KB < 60000). No new soak results. Owner save untouched (no SAVE_FROM, NO_SAVE_WRITE).
+Owner recipe FPS60 dd4 21:9, tools/s7146_arm.zsh, sRGB captures, scored with tools/s7152_post.zsh rect 0,11,469,216 split 117,352,
+per-swap join tools/s7148_pfsearch.py, fit tools/s7143_affine.py (AFF_SX 0..3, AFF_SY -4..2, AFF_E 1..0.984). Six runs, one at a time, 0 crash all.
+Route dead ends (documented): O1 AP 6:start,11:down,12:start and O2 16:down,19:start: the title ignores input until ~t 17 s after a 6:start
+boot, later downs toggle START/OPTIONS and START won both times (SELECT GAME). Working OPTIONS route = s6721's: 10:start,17:down,19:a,
+25:down,27:down,29:a(PASSCODES),35:b,38:b (O3 default, R3 ROGUESQ_RECT_ASPECT=0; FROM=1000 EVERY=3 DL=8 DU=32). Abort route: on the
+s7146 boot the pause opens at t=88 (s6995's 105:start un-pauses here; D1 also had DL/DU covering t 8-40 only, D2 flew on): working
+...,82:start,88:start,92:down,96:a,100:left,103:a,110:a,116:a, FROM=5400 EVERY=4 DL=86 DU=38 (D3 default, D4 RECT_ASPECT=0).
+1. Op census (s7146_opcensus.py): OPTIONS = 215 texrects into cimg B20000 w1024, scissor 256,0-768,448 (title layout, s7152).
+   Debrief/results = 334 tris (medal) + 149-508 texrects into cimg A40000 w1024 with a FULL scissor 0,0-1023,448, no fill ops: the
+   game never draws columns outside 256..768.
+2. Fitted frac>40 (fit box centre 117/118:4:352:200; same fit as s7144/s7152, x +0.25..0.5 px, yscale 0.992):
+| arm/screen | fit box | title | text | other |
+|---|---|---|---|---|
+| O3 OPTIONS (157 swaps) | 0.0429 -> 0.0000 | 0.1602 -> 0.0000 | items 0.0967 -> 0.0000 | BACK 0.2794 -> 0.0000 |
+| R3 OPTIONS (117) | 0.0596 -> 0.0000 | 0.1864 -> 0.0000 | 0.1215 -> 0.0000 | 0.2254 -> 0.0000 |
+| O3 PASSCODES (230) | 0.0385 -> 0.0011 | 0.1963 -> 0.0221 (local sx +0.5 px: 0.0000) | code 0.1444 -> 0.0000 | art 0.0011 |
+| R3 PASSCODES (230) | 0.0399 -> 0.0008 | 0.1860 -> 0.0169 | 0.1585 -> 0.0006 | art 0.0011 |
+| D3 MISSION FAILED (41) | 0.0344 -> 0.0005 | top 0.0000 | mid 0.0653 -> 0.0013 | low 0.0000 |
+| D4 MISSION FAILED (45) | 0.0306 -> 0.0024 | 0.0006 | 0.0663 -> 0.0042 | 0.0000 |
+| D3 results (88) | 0.0491 -> 0.0050 | 0.0509 -> 0.0084 | 0.0520 -> 0.0030 | low 0.0089 |
+| D4 results (66) | 0.0457 -> 0.0103 | 0.0500 -> 0.0215 | 0.0512 -> 0.0071 | low 0.0091 |
+   The PASSCODES title residual is a quarter-pixel offset: a local grid (k 0.995..1.005, sx, sy, e) gives 0.0000 at sx +0.5 px with k
+   insensitive. Results residual = stroke edges only (scratch/s7153/dres.png, x3 diff), no shifted or widened glyphs.
+3. RECT_ASPECT discriminator on the results screen, two lines. (a) Width sweep on mean|d| (scratch/s7153/kmd.py, k about the centre):
+   D3 default: medal-ring boxes (triangles only) and text boxes all minimise at k 1.000. D4 RECT_ASPECT=0: ring triangles minimise at
+   k 1.010 (ringL 3.03 -> 0.55, ringR 1.32 -> 0.33) and the text at 1.005-1.010: the text follows the triangles, which RECT_ASPECT never
+   touches, so this is the per-run presentation-scale term s7150 saw (cross-run, single run per arm), not a rect-path effect.
+   (b) Synthetic positive control (scratch/s7153/kgrid.py): a 1.333x widening (the s7142 defect size) scores 0.08-0.32 in every box
+   vs <= 0.02 at k 1, so the instrument would catch it; neither arm shows it. OPTIONS/PASSCODES numbers are identical across arms.
+   RECT_ASPECT inert on all four screens. H-rect refuted; H-blend handled (NOPREFILL combined dir; OPTIONS 489-529 NOPREFILL swaps).
+4. Pillars (owner-visible, not a defect): on the debrief the angrylion replay's side columns show stale RAM of the reused colour image
+   (D3: an old in-flight frame with HUD, side frac 0.22; D4 happened to be black, side 0.0000). Real hardware with our widened VI would
+   show that junk; RT64 presents black in both runs. RT64 is the better picture here; nothing to fix. If the owner ever sees junk in the
+   debrief pillars, the game-side fix is a pillar clear like s6720's title clear.
+Controls: painted-square control PASS on every replay dir (O3c/R3c/D3c/D4c; s7122_fidelity control on the *r dir fails when every
+pre-fill replay is rejected on menu-only runs, so run it on the combined *c dir). The --shift 2 mis-pair control does not separate
+static menus (0.0212 vs 0.0214) and is not used as one here.
+Verdict line: this selects H-equal for OPTIONS, PASSCODES, MISSION FAILED and the mission-results screen at 21:9, refutes H-rect
+(RECT_ASPECT inert: same fitted numbers, width term follows the triangles, 1.333x synthetic control fires) and closes item 33 (the
+last unscored 2D screens at 21:9). Owner sheet docs/owner_sheet_s7153_options_debrief_219.png (tools/s7153_sheet.py; helpers tools/s7153_phsheet.py, s7153_kmd.py, s7153_kgrid.py). .cap streams deleted.
+Next: the same screens at 16:9 (the owner's TV), where s6924 found pillar strips on OPTIONS (NEXT.md).
