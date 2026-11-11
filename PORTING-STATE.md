@@ -188198,3 +188198,62 @@ Verdict: this selects H-gate43 and refutes H-vis43 and H-other; the root cause i
 sky-side fill, now known to show at 16:9 as well.
 Kept: scratch/s7135/W1.cap (16:9 fix-on, class (a) burst at 7536-7544) + W1.idx/W1.rects/W1r/W1.pitch, X1.idx/X1.rects/X1r/X1.pitch.
 X1.cap and the .raw window captures deleted. Owner save untouched (forced-level route, NO_SAVE_WRITE).
+
+## Session 7136 (2026-11-11) — G3 wide sky-corner holes (class (a)): the corner looks above the sky band's top edge, where the art expects the clear colour; the horizon clear now covers the whole viewport under ASPECT (ROGUESQ_HORIZON_SKYFILL, default on): 21:9 and 16:9 hole swaps -> 0
+HYPOTHESIS-ID: g3-owner-recipe-219
+Work unit from NEXT.md (class (a), CURRENT-TRUTH item 29): H-band-scale vs H-fill-rect, offline first, then a patch and runs.
+1. Offline, s7134 Z1 7533 (21:9, fix off) and s7135 W1 7542 (16:9). tools/s7134_band.py: the band (op E, om 002C..., no Z) spans
+   x -77..908 of 1024 at 21:9 and -169..790 of 796 at 16:9. It is projected 3D geometry across the full width, not a 4:3
+   screen-space placement: H-band-scale refuted. The othermode has no perspective bit (affine), so 1/w gives no depth.
+   tools/s7136_band_elev.py (rays through band vertices and hole pixels, camera from the capture RAM; sign checked against the
+   ground-side clear rects): band vertex rays reach at most +16.8 deg elevation (16:9 +14.5). The hole pixels sit at +5..+17 deg,
+   az -95..-75, just above the band's top edge. The 4:3 corner of the same pose is at +4.1 deg, inside the band.
+2. Code read of the sky: 0x8005AB34 (generated name loadSkyHorizonHob) loads HOB 'horiz_sky' (getHobObjectByName 0x80057B4C)
+   and sorts the polys into 8 azimuth sectors (centroid atan2 / (pi/4), rodata 0x8003AE24 = 0.785398) plus 8 'top' bins (polys
+   whose vertices lie within 10 units of the max height, up to 30 polys). Each bin is a render object at S+0x1C+0x5C*k
+   (S = 0x8056E010 on L6, found by signature, tools/s7136_skybins.py). The top-bin polys carry vertex colours A8988000 / A89880FF,
+   so the band's authored top row fades to alpha 0 toward (168,152,128). The horizon clear builder 0x8005B51C fills with
+   ACE1 (RGBA5551 = 173,156,132): the same beige. Rect list = cam+0x74 count, +0x78 pointer, u16 {x0,y0,x1,y1} pairs.
+   tools/s7136_shade.py: every band tri is opaque (shade 255). tools/s7136_topfade.py: 0 top-fade-colour tris in 15 sampled swaps
+   over 700 swaps of L6 flight. Positive control: the same detector at the terrain shade (26,26,26) counts 1629 / 1066.
+   Hypotheses: H-band-scale refuted; H-fill-rect selected. Above the band, retail expects the clear colour; a 4:3 view never
+   looks there at this pose, and the wide view does.
+3. Fix: tools/apply_s7136_sky_fill.py (funcs_13.c, listed in the vendored fixup after s7135). When ASPECT k != 1, after the
+   builder appends its rect pair (count += 2 at 0x8005BC88) the pair's first rect becomes the whole viewport {0,0,w-1,h-1} (w, h
+   = cam+0x12/+0x16, as the builder uses). Same colour and same DL position (before the band), so band and terrain still draw
+   over it; only pixels nothing else paints change. ROGUESQ_HORIZON_SKYFILL: default on, no-op at 4:3, =0 retail, =tog.
+   [s7136] stderr: frames widened per mach second.
+   BUG on the first build (Y0): the block went after the label L_8005BC8C. The steep-pitch early return (0x8005B5F0 bc1t, the
+   s7135 gate) jumps there with $v1 = garbage, so the first gate skip read 0xCCCCCCCD: SIGBUS at setupWalkerSpriteTileQuad+10832
+   = funcs_13.c:8798 (lldb image lookup), last guest pc 0x80022160, died in the 130 s verify. This was my patch, not a game crash.
+   The apply script now inserts before the label; re-applying to a clean copy gives a byte-identical file. Log
+   scratch/s7136/Y0_crash_att1.log.gz.
+4. Runs, L6 forced route, owner recipe FPS60 dd4, G5B stream every swap from 7500, screen unlocked, angrylion replay
+   (tools/s7136_post.zsh: index, frame_replay16 in chunks of 119, rects, tools/s7134_score.py):
+| arm | positive control | clear swaps >3000 px (max) | no-clear swaps >3000 | crash |
+|---|---|---|---|---|
+| Z1 21:9 fill off (s7134 control) | - | 11 (24783) | 13 (28026; GATEFIX off) | 0 |
+| Y1 21:9 SKYFILL on | 11007 frames widened / 210 s | 0 of 706 (max 0) | 0 of 0 | 0 |
+| W1 16:9 fill off (s7135 control) | - | 9 (13888) | 0 of 6 | 0 |
+| V1 16:9 SKYFILL on | 13535 frames widened / 240 s | 0 of 700 (max 0) | 0 of 0 | 0 |
+   0 unpainted is guaranteed by construction once the full fill runs, so it only shows that the fill is reached on every swap.
+   The look is the real check. Pose-matched (forward + up vector distance <= 0.004, tools/s7135_campitch.py): Z1 7527/7533/7536
+   vs Y1 7538/7550/7552, W1 7536/7542 vs V1 7528/7533. The magenta corner is now flat beige, the colour of the ground-side haze
+   in the same frame. Second line: RT64's presented window (Y1.raw at the same swaps, scratch/s7136/Y1_rt64_burst.png) shows
+   the same beige corner, so RT64 == angrylion there.
+   Sheets docs/owner_sheet_s7136_sky_fill.png (21:9) and docs/owner_sheet_s7136_sky_fill_169.png (16:9). The V1 7533 orange
+   streak is a cross-run explosion, not the fill.
+   Caveat for the owner: the corner is a flat beige stair against the clouds, because the band's own top-fade bins are never
+   drawn in L6 flight (above). Whether they draw at dd1/4:3 is untested. If they are a dd>1 or port loss, restoring them would
+   replace the stair with the authored fade (NEXT.md).
+ORIGIN: the empty pixels are a view direction the retail art never covers: above the opaque sky band's top edge (about +17 deg),
+which only a wider-than-4:3 corner reaches in a banked dive. The game's clear builder (0x8005B51C) paints only the ground side.
+That is correct at 4:3, and ROGUESQ_ASPECT makes it insufficient. The fill uses the game's own clear colour, the band's fade
+target. No value is guarded.
+In plain words: in a steep banked dive on a wide screen, the corner of the picture looks a little higher into the sky than the
+game's sky picture reaches, and nothing was painted there. The game now paints its normal haze colour behind everything first,
+so that corner shows haze instead of a hole.
+Verdict: selects H-fill-rect, refutes H-band-scale. Class (a) closed at 21:9 and 16:9 (pose-matched, two lines). Next: is the
+missing sky top-fade (0 drawn at dd4) retail at dd1, or ours?
+Kept: scratch/s7136/Y1.cap + Y1.idx/Y1.rects/Y1r/Y1.pitch, V1.idx/V1.rects/V1r/V1.pitch. V1.cap and the .raw files deleted.
+Owner save untouched (forced-level route, NO_SAVE_WRITE).
