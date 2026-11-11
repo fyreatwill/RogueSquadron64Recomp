@@ -187958,7 +187958,7 @@ Per fire, on its owning swap: line |d| 0.3-1.3 vs control 0.4-1.4 (RT64 == hardw
 Positive control (tools/s7128_ctl.py, same frames): painting the path 1 px wide at 50% gives line |d| 6.0-11.2 vs 0.3-1.2 unpainted, so a hairline
 is visible to the sampler at capture scale. Native 796x448 angrylion: line lum 13.1-24.3 vs +-3 px control 13.5-23.8: the hardware draws nothing
 distinguishable along these wedges either.
-Verdict (single run, 2 clusters): for the n2-class corner hairlines in this run, H-harm is refuted for the kept arm (nothing visible on either
+Verdict (single run, 2 clusters): this refutes the "visible dark knife line" reading (H-miss-style) for the n2-class corner hairlines and refutes H-harm for the kept arm (nothing visible on either
 renderer to lose or to show) and the "dark knife line" picture is NOT seen. So these detections are harmless to drop and also invisible to keep;
 only the s7125/n1 escaper (a visible 2991 px dark band) showed a difference. The dropped-arm pixel check (arm 1) is still unmeasured; H-fixed /
 H-harm on arm 1 stays open. Queued scratch/agent/soak_queue/s7128_wsheetpos_p{1,2}.sh (same recipe, auto replay + s7128_pixel.py verdict in
