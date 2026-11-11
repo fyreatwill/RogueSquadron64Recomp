@@ -189092,3 +189092,17 @@ s7163_rectfit; s7160_fit_post). angrylion CONTROL PASS and rectfit CTRL x0+4 PAS
 Verdict: H-equal on both; no hole, no lag. Lesson for the remaining dark levels: check the shift-2 meand ratio, not only the >0.05 count.
 Housekeeping: deleted the closed arm raws L4lb/L4fx/L4a43/L4w and the scored L0w/L2w raws (22 GB; numbers above and in s7165-s7167), and L3w.cap/L5w.cap.
 21:9 done: L0-L6, L15; 11 to go (L7-L14, L16-L18).
+
+## Session 7169 (2026-11-11) — G3 owner recipe 21:9 L7 + L8 flight == angrylion (centre 0.002/0.001, 0 flight >0.05)
+HYPOTHESIS-ID: g3-owner-recipe-219.
+Two game runs, one at a time, screen unlocked (ioreg: no CGSSessionScreenIsLocked key), 0 CRASH/SIGSEGV/SIGBUS in either run.log. Owner save untouched.
+Recipe as s7167/s7168 (tools/s7141_arm.zsh <lvl> L<lvl>w ASPECT=21:9 EVERY=1 FROM=7500 MAX_MB=12000, CW=504 CH=216; s7141_post rect 0,11,469,216
+split 117,352; s7163_rectfit; s7160_fit_post). angrylion CONTROL PASS and rectfit CTRL x0+4 PASS on both.
+- L7 (L7w, canyon level, heavy rock texture): 723 swaps (722 replayed), lag 15 ms. Refit 1,11,469,216: meand 3.63/4.53/4.98, frac 0.003/0.005/0.007,
+  0 >0.05, centre 0.002, side 0.004, dup pframes 55. Shift-2 control meand 5.37/9.09/13.38, 13 swaps >0.05 (fires). The higher meand floor is
+  texture-edge noise on high-frequency rock (bands even 3.3-5.1, no localised hole). Sheet docs/owner_sheet_s7169_L7_219_fidelity.png identical by eye.
+- L8 (L8w, orange-sky desert): 699 swaps (697 scored), lag 20 ms. Refit 1,12,469,216: meand 2.14/2.54/3.68, frac 0.002/0.002/0.006, 0 >0.05,
+  centre 0.001, side 0.001, dup 13. Shift-2 control meand 4.35/6.01/7.97 but 0 swaps >0.05 (smooth scene: count has no power, as L3), so the verdict
+  rests on the meand ratio (2.14 vs 4.35) and the sheet docs/owner_sheet_s7169_L8_219_fidelity.png (identical by eye).
+Verdict: H-equal on both; no hole, no lag. Deleted L7w/L8w .cap and .raw (~34 GB) after scoring.
+21:9 done: L0-L8, L15; 9 to go (L9-L14, L16-L18).
