@@ -23,6 +23,7 @@ ap.add_argument("push", nargs="+")
 ap.add_argument("--inject", default=None)
 ap.add_argument("--edge", type=float, default=0.0, help="skip windows < EDGE s after an arm change")
 ap.add_argument("--top", type=int, default=0)
+ap.add_argument("--lag", action="store_true", help="s7120: for >0.5 'neither' events print ticks since last need>0 / lift>0 (same arm segment)")
 a = ap.parse_args()
 
 NUM = r"(-?[0-9.eE+-]+)"
@@ -37,6 +38,7 @@ def sgn(x): return (x > 1e-6) - (x < -1e-6)
 
 TOT = {}
 BIG = {}
+LAG = {}
 for path in a.push:
     ticks = []  # [m, Y, need, lift, on, k]
     pend = None
@@ -75,7 +77,12 @@ for path in a.push:
             b["all"].append(abs(d2b))
             if abs(d2b) > 0.5:
                 BIG.setdefault((on, k), [0, 0, 0]); g = BIG[(on, k)]
-                g[0 if any(x[2] > 0 for x in w) else (1 if any(x[3] > 0 for x in w) else 2)] += 1
+                cls = 0 if any(x[2] > 0 for x in w) else (1 if any(x[3] > 0 for x in w) else 2)
+                g[cls] += 1
+                if a.lag and cls == 2:
+                    ln = next((i - j for j in range(i - 1, -1, -1) if s[j][2] > 0), -1)
+                    ll = next((i - j for j in range(i - 1, -1, -1) if s[j][3] > 0), -1)
+                    LAG.setdefault((on, k), []).append((ln, ll, round(abs(d2b), 3)))
             if w[3][2] > 0 or w[2][2] > 0:
                 b["wall"].append(abs(d2b)); b["ev"].append((abs(d2b), w[3][0], w[3][3]))
                 if sgn(d2a) and sgn(d2b): b["alt"][0] += 1; b["alt"][1] += sgn(d2a) != sgn(d2b)
@@ -116,3 +123,7 @@ for key in sorted(TOT):
     print(f"  on={key[0]} k={key[1]:g}: n {T[0]}  >0.25 {T[1]} ({1e3*T[1]/n:.2f})  >0.5 {T[2]} ({1e3*T[2]/n:.2f})  >1.0 {T[3]} ({1e3*T[3]/n:.2f})")
 print("POOLED >0.5 events by window: need>0 / lift>0 only / neither (open flight, not the lift):")
 for key in sorted(BIG): print(f"  on={key[0]} k={key[1]:g}: {BIG[key]}")
+if a.lag:
+    print("s7120 'neither' >0.5 events: (ticks since need>0, ticks since lift>0, |d2Y|); -1 = none in segment")
+    for key in sorted(LAG):
+        v = LAG[key]; print(f"  on={key[0]} k={key[1]:g}: n {len(v)} sinceNeed<=8 {sum(0 <= x[0] <= 8 for x in v)} sinceLift<=8 {sum(0 <= x[1] <= 8 for x in v)} | {sorted(v)}")

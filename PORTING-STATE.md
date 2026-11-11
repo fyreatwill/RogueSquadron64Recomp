@@ -187695,3 +187695,30 @@ The s7116 tog1 k1.0 excess was not re-tested at k1.6 over several runs, and run 
 Changes: tools/s7119_hop.py (new); docs/owner_sheet_s7119_nearlift_hop.png (new); OWNER-OPT-INS row updated; CURRENT-TRUTH headline + item 26.
 Rules out: a visible lift hop or shake at NEARK=1.6 (single run vs retail). Also rules out the dlift metric as a hop measure (state persistence).
 Leaves open: off vs k1.6 losses in the same run with enough wall-hug (next: replicate run m x3).
+
+## Session 7120 (2026-11-10) — FPS60 near-wall: NEARLIFT=1 NEARK=1.6 replicated against the retail camera in the same runs (off/on steady wall losses 42/2 over 4 runs, z -6.0, H-fix); hop H-smooth every run; the extra open-flight jerks on the lift arm are 2-16 u one-tick camera steps >=17 ticks from any lift (not the lift)
+HYPOTHESIS-ID: fps60-wall-confirm (closed) -> fps60-cam-step
+What ran: three more copies of run m (scratch/s7115/cmd_{n,o,p}.txt: L6 dd4 16:9 FPS60, ROGUESQ_S7115_NEARLIFT=tog1 NEARK=1.6, lift
+toggled per mach second against the retail camera), one game at a time, screen unlocked each run. Capture 190-192 s each, 0 crashes, max
+present gap 75-87 ms. Analysis per run in scratch/s7115/post.sh (s7107_losscan -> s7118_edge W=0.1 -> s7119_hop --edge 0.1, plus a
+--inject 3000:1.0 control).
+Pre-registered (NEXT.md): H-fix if k1.6 removes >=75% of the off-arm steady losses, H-partial 25-75%, H-none <25%. Control: off arm >= 10
+pooled steady losses.
+Result, edge-excluded steady losses off/on (A=off, B=lift on):
+  n 19/0 (z -4.33), o 10/0 (z -3.12), p 10/1 (z -2.74), m 3/1 (s7119). Pooled m-p: 42/2 over 24841/24706 swaps, rate 16.9 vs 0.8 per 1e4,
+  ratio 0.05, z -6.01 (scratch/s7115/edge_pool_mnop.txt). Edge-window (<0.1 s after a switch) losses 5 on->off and 1 off->on.
+  -> H-fix: 95% removed. The control passes (42 >= 10; every run on its own >= 10 except m). Three of three new runs agree in direction,
+  and the result now has two independent lines: s7118 (k1.0 vs k1.6, 13/1) and this one (off vs k1.6).
+Hop (s7119 rule): H-smooth in n, o, p (wall-jerk p99 ratio on/off 0.48 / 0.52 / 0.40; alternation ratio 0.92-1.26 < 1.5). The injected
+1 u step adds 3 to >0.25 on the off arm each run, so the control is caught. Pooled m-p per 1e3 ticks: >0.25 7.06 off vs 4.82 on, >0.5 3.04
+vs 1.63, >1.0 0.81 vs 1.13 (hop_pool_mnop.txt).
+Caveat checked: by window class, the >0.5 events were need>0 / lift-only / neither = off [45,0,4] vs on [9,0,17]. If release of the lift
+caused the 17 on-arm "neither" events, they would sit within a few ticks after lift>0 (H-release). New `--lag` flag in tools/s7119_hop.py
+gives ticks since the last need>0 / lift>0. All 17 (and the off arm's 4) are >= 17 ticks after any lift (0 within 8). They come in t/t+1
+pairs of equal size, 2.0-16.3 u, i.e. a one-tick step in presented Y. The lift's max is 1.31 u (s7118), so it cannot make them: two
+independent lines (timing and size) refute H-release. Both arms have them, and 17 vs 4 is 9 vs 2 step pairs, which reads as route luck
+(single-source on that point).
+Rules out: H-partial/H-none for the opt-in; lift release as a hop source.
+Open: what the 2-16 u one-tick flight-camera steps are (a legitimate camera cut or respawn, vs an FPS60 camera snap). Next: NEXT.md (slug
+fps60-cam-step), offline on the existing push logs first.
+Item 26 is DONE and closes on the owner's look (OWNER-OPT-INS updated).
