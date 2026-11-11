@@ -189061,3 +189061,18 @@ Conclusion: this selects H-clear in an ours form (root cause: the s7136 SKYFILL 
 H-terrain, H-cam and H-spikecull (CULL_SPIKE=0 byte-identical). Closes g3-219-cutscene-hole pending the owner's look.
 Next discriminator (item 34 sweep): per level, 21:9 centre frac vs angrylion on the flight window; any wide-only gap gets the s7166
 rect-vs-magenta-bbox test (tools/s7166_holetris.py).
+
+## Session 7167 (2026-11-11) — G3 owner recipe 21:9 L0 + L2 flight == angrylion (centre 0.001/0.001, 0 flight >0.05)
+HYPOTHESIS-ID: g3-owner-recipe-219.
+Two game runs, one at a time, screen unlocked (ioreg), 0 CRASH/SIGSEGV/SIGBUS in either run.log. Owner save untouched (NO_SAVE_WRITE, no SAVE_FROM).
+Recipe both levels: tools/s7141_arm.zsh <lvl> <n> "ROGUESQ_ASPECT=21:9 ROGUESQ_G5B_FRAME_EVERY=1 FROM=7500 MAX_MB=12000" (CW=504 CH=216),
+tools/s7141_post.zsh rect 0,11,469,216 split 117,352 (angrylion CONTROL PASS each), tools/s7163_rectfit.py (CTRL x0+4 PASS), s7160_fit_post.
+- L0 (L0w; captured and scored by an earlier interrupted iteration at 14:03-14:11 that wrote no entry; folded here from its files):
+  685 swaps, refit 1,13,469,216: frac med/p90/max 0.007/0.009/0.021, 0 >0.05, centre 0.001, side 0.013, dup pframes 4.
+  Shift-2 control same capture: 51 >0.05 (fires). Bands 2.39 2.64 1.86 1.12 1.35 1.40 2.17 3.56. Sheet docs/owner_sheet_s7167_L0_219_fidelity.png.
+- L2 (L2w): 721 swaps, all flight by the sheet (canyon walls, water, walker). Refit 1,12,469,216: frac 0.003/0.005/0.010, 0 >0.05,
+  centre 0.001, side 0.005, dup 0. Shift-2 control 99 >0.05. Bands 1.84 2.10 1.60 2.03 3.28 3.72 5.00 6.59 (bottom = lives ring).
+  Worst swaps 7995-7997 (frac_c <=0.004, the walker leg close to camera). Sheet docs/owner_sheet_s7167_L2_219_fidelity.png identical by eye.
+Verdict: H-equal on both; no hole, no lag. No letterboxed cutscene fell in either window (none seen on the sheets; not trigger-checked).
+Housekeeping: disk was at 5.8 GB free; deleted L0w.cap, L2w.cap (explained) and the closed s7165/s7166 arm raws L4xt/L4c0/L4d1/L4r43
+(ledger keeps their numbers). 21:9 done: L0 L1 L2 L4 L6 L15; 13 to go.
