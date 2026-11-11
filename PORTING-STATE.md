@@ -189106,3 +189106,17 @@ split 117,352; s7163_rectfit; s7160_fit_post). angrylion CONTROL PASS and rectfi
   rests on the meand ratio (2.14 vs 4.35) and the sheet docs/owner_sheet_s7169_L8_219_fidelity.png (identical by eye).
 Verdict: H-equal on both; no hole, no lag. Deleted L7w/L8w .cap and .raw (~34 GB) after scoring.
 21:9 done: L0-L8, L15; 9 to go (L9-L14, L16-L18).
+
+## Session 7170 (2026-11-11) — G3 owner recipe 21:9 L9 + L10 flight == angrylion (centre 0.001/0.001, 0 flight >0.05)
+HYPOTHESIS-ID: g3-owner-recipe-219.
+Two game runs, one at a time, screen unlocked (ioreg: no CGSSessionScreenIsLocked key), 0 CRASH/SIGSEGV/SIGBUS in either run.log. Owner save untouched.
+Recipe as s7167-s7169 (tools/s7141_arm.zsh <lvl> L<lvl>w ASPECT=21:9 EVERY=1 FROM=7500 MAX_MB=12000, CW=504 CH=216; s7141_post rect 0,11,469,216
+split 117,352; s7163_rectfit; s7160_fit_post). angrylion CONTROL PASS and rectfit CTRL x0+4 PASS on both.
+- L9 (L9w, orange-sky canyon + AT-ST/walker cutscene): 724 swaps (723 replayed), lag 20 ms. Refit 0,12,469,217: meand 1.97/2.24/8.11,
+  frac 0.002/0.006/0.036, 0 >0.05, centre 0.001, side 0.003, dup pframes 39. Shift-2 control meand 4.26/6.87, 29 swaps >0.05 (fires).
+  Worst swaps 7575/7577/7579 (frac 0.036/0.025/0.019) are dup=1 pframes: moving craft and target rings one frame apart (H-lag, not a hole).
+  Sheet docs/owner_sheet_s7170_L9_219_fidelity.png identical by eye apart from that lag.
+- L10 (L10w, sandstorm/desert canyon): 745 swaps, lag 10 ms. Refit 1,11,469,216: meand 2.81/3.10/3.36, frac 0.003/0.005/0.007, 0 >0.05,
+  centre 0.001, side 0.005, dup 9. Shift-2 control meand 10.11/16.66, 270 swaps >0.05 (fires strongly). Sheet docs/owner_sheet_s7170_L10_219_fidelity.png identical by eye.
+Verdict: H-equal on both; no hole. Deleted L9w/L10w .cap/.raw after scoring, plus the already-scored L3w/L5w/L6w/L15w raws (~15.7 GB).
+21:9 done: L0-L10, L15; 7 to go (L11-L14, L16-L18).

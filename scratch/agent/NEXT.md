@@ -1,6 +1,6 @@
 # NEXT: G3 in-flight owner-recipe fidelity at 21:9, remaining levels (CURRENT-TRUTH item 34)
 HYPOTHESIS-ID: g3-owner-recipe-219
-State (s7169): L0-L8 and L15 H-equal at 21:9. Next two: L9 and L10, then L11.. L18 (skip L15) two per iteration.
+State (s7170): L0-L10 and L15 H-equal at 21:9. Next two: L11 and L12, then L13, L14, L16-L18 two per iteration.
 Recipe (per level, one run at a time; check disk >= 20 GB free first, a cap is 12.6 GB; delete the .cap once the outliers are explained):
   env CW=504 CH=216 zsh tools/s7141_arm.zsh <lvl> L<lvl>w "ROGUESQ_ASPECT=21:9 ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=7500 ROGUESQ_G5B_FRAME_MAX_MB=12000"
   zsh tools/s7141_post.zsh scratch/s7141 L<lvl>w 0,11,469,216 117,352   (check CONTROL PASS; _sh2 is the shift-2 positive control)
