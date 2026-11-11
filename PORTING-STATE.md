@@ -189057,3 +189057,7 @@ byte-deterministic there. Flight no-op is by construction (builder rects never e
 Rules out: H-terrain (our x-cull) and H-cam for the hole edge; the edge at x 0.50 is the builder's split (ndc ~0, s7165 tog was right
 that /k cannot move it). Not ours to fix: the bottom band has no water geometry for ~1 s in this shot at any aspect (game behaviour).
 Caps deleted after the explanation (4.5 GB each); replays scratch/s7141/L4{lb,c0,a43,fx}r and raws kept.
+Conclusion: this selects H-clear in an ours form (root cause: the s7136 SKYFILL rect bottom, not the s7133 split) and refutes
+H-terrain, H-cam and H-spikecull (CULL_SPIKE=0 byte-identical). Closes g3-219-cutscene-hole pending the owner's look.
+Next discriminator (item 34 sweep): per level, 21:9 centre frac vs angrylion on the flight window; any wide-only gap gets the s7166
+rect-vs-magenta-bbox test (tools/s7166_holetris.py).
