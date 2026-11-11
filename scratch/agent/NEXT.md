@@ -1,19 +1,20 @@
-# NEXT: is the camera collision surface the same surface the eye-cell TriGen mesh renders? (s7112: ucode drop refuted)
-HYPOTHESIS-ID: fps60-wall-raymiss
-Context: s7112 (ROGUESQ_S7112_TRI + tools/s7112_trireject.py) showed the F5 ucode emits the visible eye-cell tris on loss swaps;
-the near cut is correct clipping, so the rendered wall really lies inside near 15 of the eye. s7111 showed all 4 push-out corner
-rays (2*near long) clear at those ticks. So the probe (sampleTerrainAtNpcPosition / push-out at camera 0x80138458) and the render
-disagree about where the wall is.
-Hypotheses:
- H-lod      the collision samples a coarser height grid / other LOD than the TriGen mesh draws (TriGen ponderation / option edge
-            corrections move vertices; walls are steep so a small grid offset is a large horizontal shift).
- H-gap      the rays pass between samples (the 4 corners miss a ridge/wall face that the camera's view frustum crosses in front).
- H-space    a units/space mismatch (render scale vs collision scale, or the dd>1 extended-cell transform) puts the drawn wall off
-            the sampled one.
-Unit (offline first, capture once): S7112 records already hold clip-space verts of every eye-cell tri per swap. Add to the same
-build the camera view matrix per swap (or eye pos + basis from the CHASE log) and invert clip -> world for the eye cell's tris;
-compare the world wall plane with the height samples the push-out reads at the 4 corners (CHASE log values) on the 41 loss
-swaps vs +-3 s shifted controls. Outcome: drawn surface within near of the eye where the sampled height says clear, offset
-consistently along one axis -> H-lod/H-space (measure the offset); offset random and the miss always between corners -> H-gap.
-Positive control: on non-loss flight ticks the inverted render surface must match the sampled height within a few units.
-Run recipe: scratch/s7112/arm.zsh 6 4 <name> "<s7112 env>" 120 260 (env list in PORTING-STATE s7112).
+# NEXT: where do the drawn TriGen terrain heights diverge from the camera collision's height data? (s7113: H-raymiss confirmed)
+HYPOTHESIS-ID: fps60-wall-lod
+Context: s7113 (tools/s7113_raymiss.py, offline on the s7112 capture) rebuilt the eye-cell TRI_GEN tris in world space (cross-pose
+static control |dy| 0.0017 / |dxz| 0.0043 median) and showed the camera's ray test (sampleTerrainAtNpcPosition, s7103 exit mask)
+misses the drawn wall on 74% of rays whose corner sits 25-50% f20 inside it, and the y-clamp sampler 0x80067D90 under the camera
+matches the drawn height within 0.01 on only 9% of ticks (loss ticks: drawn ground 0.08-0.25 ABOVE the game floor, y-down world).
+Drawn vertices sit 0.042 (p50) off the 0.5 lattice. Geomorph (H-morph) not supported offline (|dy| does not grow with depth change).
+Hypotheses (one instrument, one build, one run):
+ H-coarse  the collision reads a different / coarser height source (terrain struct 0x80138058) than the TriGen cell source heights.
+ H-ponder  TriGen input heights equal the collision data at lattice nodes, but the ucode (or CPU cell builder) displaces the drawn
+           vertices (ponderation / edge-correction / option bits) so the drawn surface leaves the collision surface.
+ H-interp  same node heights, different interpolation inside the cell (collision bilinear/other diagonal vs drawn 4x4 sub-quads).
+Discriminator: per flight tick, for the eye cell's 5x5 lattice nodes, log (a) the collision height (call 0x80067D90 vertically at each
+node xz on a scratch stack, as s7103 does for sampleTerrainAtNpcPosition) and (b) the TriGen INPUT vertex data the CPU builder hands
+the ucode for that cell (S7105_EMIT / buildGridCellMeshForFace source words). Offline join with the s7112 rebuilt drawn vertices.
+ (a)!=(b) at nodes -> H-coarse; (a)==(b) at nodes but drawn != (b) -> H-ponder (name the ucode/CPU step); nodes equal and drawn
+ equal at nodes but mid-quad differs -> H-interp. Positive control: on flat flight cells (low slope) all three must agree.
+Fix direction once named (opt-in, default retail): make the camera push-out / y-clamp test the drawn surface (e.g. sample the
+drawn cell's height for the y clamp, or add a margin equal to the measured max displacement), qualified by losscan eye-cell losses.
+Run recipe: scratch/s7112/arm.zsh 6 4 <name> "<s7112 env + new env>" 120 260; analysis tools/s7113_raymiss.py tri.bin push.txt tris.bin losscan.txt.

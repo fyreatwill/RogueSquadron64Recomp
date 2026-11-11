@@ -187445,3 +187445,35 @@ selects H-raymiss: the camera collision probe does not see the rendered eye-cell
 rendered triangles (world or eye space) with the terrain height/ray sample the push-out reads (sampleTerrainAtNpcPosition): is the
 collision surface a different (coarser / other-LOD / other-grid) surface from the rendered TriGen mesh?
 ORIGIN: no mitigation landed (measurement only, env-gated, default off).
+
+## Session 7113 (2026-11-10) — FPS60 near-wall flicker: offline world rebuild of the drawn eye-cell terrain shows the camera collision tests a different surface (probe misses the drawn wall on 74% of rays whose corner is 25-50% of f20 inside it; y-clamp floor matches the drawn height within 0.01 on 9% of ticks): H-raymiss confirmed, H-gap refuted
+HYPOTHESIS-ID: fps60-wall-raymiss (closed; next slug fps60-wall-lod).
+Offline only, capture once (s7112 run: scratch/s7112/tri_a.bin, push_a.txt, tris_a.bin, losscan_a.txt). New tool tools/s7113_raymiss.py.
+Reconstruction: eye-cell clip verts give z = 1.0018 w - 60.05 (residual p50 0.05), so z = -w at w 30.0 = near 0.1172 (f20/2): w = 256
+x eye depth. P00 / P11 fitted 0.72 / 1.54 by lattice snap (0.5 u TriGen quarter-cell grid; 16:9 x the 1.21 pixel-aspect term);
+camera basis = push corner frame (corners c - loop-start pos p0 = (+-0.164, +-0.092, 0.140) in an orthonormal r/u/f frame); eye = bv rd
+(= pushed pos, s7111); tick = last bv before the swap's G5B_TRIS mach, dt < 40 ms (8271 flight swaps). World is y-down.
+Positive controls: (1) static terrain: the same lattice node rebuilt from two poses 8 swaps apart, |dy| p50/p90 0.0017/0.0655,
+|dxz| 0.0043/0.0598 (lag 1: |dxz| 0.0113); (2) lattice snap 0.065 (random 0.25) vs 0.188 with the push-corner P; (3) the game's ray
+hit points: perp distance from the ray p50 0.012 but p90 0.12 and up to 1.22 x past the corner, so hp is not a pure ray hit and the
+exit re-test mask (s7103 rx r, same origin and offsets) is the clean witness.
+Results (scratch/s7113/raymiss_a.txt):
+| measure | all flight | loss swaps (36) | lag +-1,+-2 | +-3 s |
+| drawn wall < 0.9 f20 along a retail probe ray from the pushed eye | 0.078 | 0.778 | 0.528 | 0.171 |
+| P(game re-test inside / drawn crossing < 0.95 f20) | 0.485 | 0.635 | 0.586 | 0.324 |
+| drawn crossing depth 0.25-0.50 / 0.50-0.75 / 0.75-0.95 f20: game inside | 117/445, 465/911, 476/825 | 11/21, 17/26, 11/15 | | |
+| in near pyramid with no ray crossed (H-gap) | 0.007 | 0.000 | 0.000 | 0.000 |
+| drawn height minus y-clamp sampler 0x80067D90 under the camera, p10/p50/p90 | -0.081/+0.046/+0.191 (|d|<0.01 9%) | -0.251/-0.078/+0.004 | | |
+- Line 1: the probe often calls a ray clear while the drawn surface lies well inside its length (e.g. sw 20105-20117: drawn crossings
+  0.23-0.45 f20 on two rays, near-pyramid fraction 0.87, game exit mask 0).
+- Line 2: an independent sampler, the y clamp's terrain height under the camera, disagrees with the drawn height on 91% of ticks by up to
+  ~0.2 u, and on loss ticks the drawn ground sits above the game's floor (0/34 with the usual sign); 0.2 u is ~2 x near.
+- Not a quad-diagonal / lattice-line pattern (|d| p50 0.066 on lattice lines vs 0.079 mid), and drawn vertices sit 0.042 p50 off the
+  regular 0.5 lattice: the drawn mesh is displaced from the grid the collision assumes. H-morph (geomorph with distance) not supported
+  (scratch/s7113/morph.txt: |dy| p50 0.0013-0.0052 for depth changes 0.25-1.0; the worst bin is near-zero camera motion, stale-tick pairs).
+Rules out: H-gap (the wall enters between the rays); confirms H-raymiss (collision surface != drawn TriGen surface) with two lines.
+Caveats: single run; the static-control p90 (0.065) is a tail of the same size as some offsets, but the medians (0.002-0.004) are 20-60x
+below the effect. Retail behaviour (s7109), so any fix is opt-in.
+ORIGIN: no mitigation landed (offline measurement tool only).
+Discrimination line: H-raymiss vs H-gap split by line 1 + the in-near/no-ray row; next is H-coarse vs H-ponder vs H-interp (NEXT.md,
+slug fps60-wall-lod): collision height at the eye cell's lattice nodes vs the TriGen input words vs the drawn vertices, one build.
