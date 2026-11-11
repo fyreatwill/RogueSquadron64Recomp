@@ -189120,3 +189120,18 @@ split 117,352; s7163_rectfit; s7160_fit_post). angrylion CONTROL PASS and rectfi
   centre 0.001, side 0.005, dup 9. Shift-2 control meand 10.11/16.66, 270 swaps >0.05 (fires strongly). Sheet docs/owner_sheet_s7170_L10_219_fidelity.png identical by eye.
 Verdict: H-equal on both; no hole. Deleted L9w/L10w .cap/.raw after scoring, plus the already-scored L3w/L5w/L6w/L15w raws (~15.7 GB).
 21:9 done: L0-L10, L15; 7 to go (L11-L14, L16-L18).
+
+## Session 7171 (2026-11-11) — G3 owner recipe 21:9 L11 + L12 flight == angrylion (centre 0.003/0.005, 0 flight >0.05)
+HYPOTHESIS-ID: g3-owner-recipe-219.
+Two game runs, one at a time, screen unlocked (ioreg: no CGSSessionScreenIsLocked key), 0 CRASH/SIGSEGV/SIGBUS in either run.log. Owner save untouched.
+Recipe as s7167-s7170 (tools/s7141_arm.zsh <lvl> L<lvl>w ASPECT=21:9 EVERY=1 FROM=7500 MAX_MB=12000, CW=504 CH=216; s7141_post rect 0,11,469,216
+split 117,352; s7163_rectfit; s7160_fit_post). angrylion CONTROL PASS and rectfit CTRL x0+4 PASS on both.
+- L11 (L11w, snow/ice ridges, overcast sky): 705 swaps (704 replayed), lag 15 ms. Refit 1,12,469,216: meand 3.28/3.99/4.58,
+  frac 0.005/0.008/0.011, 0 >0.05, centre 0.003, side 0.006, dup 8. Shift-2 control meand 7.68/13.27/20.40, 135 swaps >0.05 (fires).
+  Worst swaps 7500-7503 (frac 0.011) are the first recorded frames, uniform small diff, no hole. Sheet docs/owner_sheet_s7171_L11_219_fidelity.png identical by eye.
+- L12 (L12w, green hills + blue cloud sky, landing pad): 682 swaps (680 scored), lag 30 ms. Refit 1,12,469,217: meand 2.76/3.07/3.39,
+  frac 0.009/0.010/0.011, 0 >0.05, centre 0.005, side 0.012, dup 0. Shift-2 control meand 7.20/20.17/23.23, 282 swaps >0.05 (fires strongly).
+  Side frac 0.012 is the highest so far but flat across the run (p50 0.009 to max 0.011): sky-cloud texture filtering, no per-swap gap.
+  Sheet docs/owner_sheet_s7171_L12_219_fidelity.png identical by eye.
+Verdict: H-equal on both; no hole, no lag outlier. Deleted L11w/L12w .cap/.raw after scoring (~33 GB).
+21:9 done: L0-L12, L15; 5 to go (L13, L14, L16-L18).
