@@ -187519,3 +187519,46 @@ Verdict: the NEARLOD arm refutes H-coarse (LOD decimation) and closes slug fps60
 hsrc_c.txt, parity_b.txt, parity_c.txt. Next discriminator: exact-geometry H-gap vs H-frame vs H-tile.
 Discrimination line: H-coarse/LOD split by the NEARLOD tog arm (control passes, no effect). Next: exact-geometry H-gap on run c
 on-seconds, where drawn == collision by construction (NEXT.md, slug fps60-wall-gap).
+
+## Session 7115 (2026-11-10) — FPS60 near-wall flicker: exact eye-tile geometry refutes H-gap (every near-pyramid pierce is crossed by a corner segment, 0/25 and 0/33 exceptions); the loss is terrain inside the render near pyramid that the retail push-out ray test cannot see from inside the rock (H-probe selected); an opt-in near-pyramid lift arm with a passing control cuts losses 10 -> 4, episodes 8 -> 1 in one run (suggestive, n small)
+
+Offline first (s7114 runs c and a, capture once): new tools/s7115_neargap.py. Surface = the 25 bytes of the y-clamp tile under the
+camera (hx), node (i, j) at x0 + 0.5 i, z0 + 0.5 j, y = s8 * sc / 256 + y0, 00-11 diagonal. Camera: eye = bv rd, basis from the pu
+corner frame, near 30/256, half-tans 1.368/0.637 (s7108). Finding on the way: world y points DOWN (the clamp keeps pos.y <= h - mg;
+eye minus surface = -0.352 = -mg on clamped ticks), which my first pass had backwards (every tick read "under"; caught by the eye-surf
+column, fixed before any verdict).
+Controls: (1) surface at o == hx h, max 2.1e-6 (c) / 2.3e-6 (a); (2) surface at the game's own pu hit points == hp.y, p50 7e-5,
+<1e-3 on 100% / 99.7%; (3) positive: surface moved 1 u toward the eye -> pierce 0.53 of flight ticks (vs 0.10), instrument fires.
+| run c (a) | n | pierce near pyramid | depth to surface < 1.5 near | p0 inside terrain | pierce & no exact corner crossing |
+| eye-cell near-z losses | 43 (54) | 0.58 (0.61) | 0.79 (0.78) | 0.19 (0.37) | 0/25 (0/33) |
+| losses -3 s | 43 (56) | 0.14 (0.29) | 0.33 (0.54) | 0.07 (0.04) | 0 |
+| losses +3 s | 41 (54) | 0.12 (0.09) | 0.56 (0.22) | 0.00 (0.04) | 0 |
+| flight sample | 3000 | 0.10 (0.10) | 0.26 (0.22) | 0.005 (0.012) | 0.024 (0.017) |
+- H-gap refuted: whenever the surface enters the near pyramid, an exact corner segment from the final eye crosses it. H-tile: out-of-
+  tile samples p50 0 (2-3 losses per run sit on a neighbour tile). H-frame open: ~40% of losses do not pierce at the joined tick (nearest
+  surface 1.0-1.75 near; tick join or render frame).
+- Per-ray (game pu flag vs exact segment pre -> c): segments starting inside the terrain almost never hit (c: 31 hits / 210; loss ticks
+  21/96 rays start inside vs 0.8% elsewhere; a: 51/138 vs 0.8%); from outside the test hits ~97-99% of crossings and also fires on
+  near-misses within ~0.3 u (hit points sit up to 0.13 off the segment line): it is a sampled test, not an exact segment test.
+- From the FINAL pos the game test (rx r mask) does flag 21/25 (c) and 26/33 (a) pierce losses, so retail simply never re-tests after
+  the clamp (s7103), and s7111's re-push along the corner ray did not reduce losses; the lever must clear the near pyramid itself.
+Fix arm (new tools/apply_s7115_nearlift.py, fixup list after apply_s7114_nearlod.py): ROGUESQ_S7115_NEARLIFT=1|tog1, at push-out exit
+samples the near pyramid (9 x 5 rays x 4 depths) with the y-clamp sampler 0x80067D90 (f12 x, f14 z, a3 out, f0 h) and lifts pos.y by
+the deepest penetration + 5% near (+0x14 and +0x50). CHASE nl lines log need/lift in both states. Default off = retail.
+Ran: scratch/s7115/arm.zsh 6 4 d (copy of s7114 arm; L6 dd4 16:9 FPS60, G1E_WIN=600 G3C_LOG=1, CHASE + S7104_CELL + S7105_EMIT +
+S7106_RSPTRI + S7107_TAG + G5B_TRIS + S7114_HSRC + S7115_NEARLIFT=tog1; command in scratch/s7115/cmd_d.txt). 0 crash, capture
+13719 frames / 191.9 s (71.5 fps), 0 gaps > 250 ms, 14062 flight swaps.
+Positive control: nl need > 0 on 172/1036 off ticks and 149/1029 on ticks, all 149 lifted; exact near-pyramid pierce on on-second
+flight ticks 0.002 vs 0.150 off-second (scratch/s7115/neargap_d.txt).
+| run d | swaps | eye-cell near-z losses | episodes |
+| lift off | 7026 | 10 | 8 |
+| lift on | 7036 | 4 | 1 |
+| +0.5 s / -0.5 s shifted clock | | 5/9, 9/5 | 3/6, 6/3 |
+Line 1: the arm clears the geometry it targets; losses and episodes fall (z -1.61), but 14 losses in one run: the shifted controls swing
+z +-1.07, so this is not yet significant. Line 2: the 4 on-second losses pierce only 1/4 at the joined tick (vs 5/10 off), consistent
+with the residual being the H-frame/tick-join class, not the pyramid.
+ORIGIN: retail camera logic (s7109 retail rate equal): chase move can leave the loop-start pos inside the rock, the corner ray test is
+blind from inside, and the y clamp lifts only to h(eye xz) - mg. The arm is an opt-in correction of that, default retail.
+Rules out: H-gap (a ridge between probe rays) and H-tile as the main class.
+Discrimination line: exact geometry refutes H-gap and selects H-probe (pierce on 58-61% of losses vs 10%, p0-inside 19-37% vs 0.5-1.2%);
+the NEARLIFT tog arm passes its control and points the right way (10/4, 8/1) but needs >= 30 losses; next: 2 more tog1 runs.
