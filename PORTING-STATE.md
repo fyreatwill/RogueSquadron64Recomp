@@ -187562,3 +187562,30 @@ blind from inside, and the y clamp lifts only to h(eye xz) - mg. The arm is an o
 Rules out: H-gap (a ridge between probe rays) and H-tile as the main class.
 Discrimination line: exact geometry refutes H-gap and selects H-probe (pierce on 58-61% of losses vs 10%, p0-inside 19-37% vs 0.5-1.2%);
 the NEARLIFT tog arm passes its control and points the right way (10/4, 8/1) but needs >= 30 losses; next: 2 more tog1 runs.
+
+## Session 7116 (2026-11-10) — FPS60 near-wall flicker: the s7115 NEARLIFT arm replicates over 4 same-run toggle runs (pooled eye-cell losses off/on 83/31, z -4.9; episodes 43/14, z -3.8; 4/4 runs same direction; control passes every run); it removes exactly the near-pyramid pierce class, leaving a ~30% non-pierce class untouched; opt-in added to OWNER-OPT-INS
+
+HYPOTHESIS-ID: fps60-wall-probe (closed confirmed; next slug fps60-wall-frame)
+
+What ran: three more runs of the s7115 recipe (scratch/s7115/arm.zsh 6 4 {e,f,g}: L6, dd4, 16:9, FPS60, ROGUESQ_S7115_NEARLIFT=tog1 = lift on during odd
+mach seconds, all s7101-s7115 passive instruments). One game at a time, each 190 s capture, 0 crashes, 0 presented gaps > 250 ms. Analysis per run: s7107_losscan,
+s7114_parity (+-0.5 s), s7115_neargap; new tools/s7116_phase.py pools runs and prints losses/episodes per 0.25 s phase of the 2 s toggle cycle.
+
+Results (losses off/on, episodes off/on): d 10/4, 8/1 (s7115); e 25/4, 11/2; f 24/12, 11/6; g 24/11, 13/5. Pooled 83/31 (z -4.87), episodes 43/14 (z -3.84).
+Phase table (swaps ~6650 per bin, losses): off 18 31 14 20 | on 6 10 10 5 -- every off bin exceeds every on bin, so the effect is not a toggle-edge artefact.
+Positive control (same run, offline exact-geometry pierce on flight ticks): on 0.003 / 0.001 / 0.001 vs off 0.060 / 0.069 / 0.100 (e/f/g).
+Mechanism split: off-second losses pierce the near pyramid 68-71%; on-second losses pierce 0/4, 0/12, 0/11 (e/f/g). So the lift removes the pierce class completely
+and the residual (~30% of off losses, ~same count as on losses) is a separate non-pierce class (H-frame candidate).
+Lift size (run e): fires on 336/3949 on ticks (8.5%), p99 0.31 u, max 0.59 u.
+Why the s7114_parity +-0.5 s shift controls did not collapse in e (20/9 vs 9/20): with losses clustered in phase, a +0.5 shift puts off-early with on-late in one
+bin; the phase table is the correct control and it is uniform within each state. Two independent lines: the loss-rate split (4 runs) and the pierce-class split.
+
+Owner sheet: docs/owner_sheet_s7116_nearlift_off.png (3 off-second losses in run g, 6 presented frames each: diagonal wall cut to sky in every row) and _on.png
+(3 on-second deepest lifts, t = .03-.19 s after the toggle switched on). The on rows include the camera hop out of the rock at toggle-on and two rows show diagonal
+edges not separable from real wall edges by eye: the sheet does NOT give a clean visual before/after; the metric does. Process error: runs d-f raw captures were
+deleted before the sheet was planned, so g was run (adds n) and kept.
+
+Changes: tools/s7116_phase.py (new); docs/OWNER-OPT-INS.md row for ROGUESQ_S7115_NEARLIFT=1 (default off = retail, owner to judge flashes and hop visibility);
+CURRENT-TRUTH headline + item 26; s7113/s7115 headline lines compacted.
+Rules out: NEARLIFT effect being chance (z -4.9) or a toggle-edge artefact (phase table). Leaves open: the non-pierce residual, and whether the lift is visible as a hop
+at constant NEARLIFT=1.

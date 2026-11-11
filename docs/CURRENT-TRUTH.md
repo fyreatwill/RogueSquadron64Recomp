@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7115 (2026-11-10).
+Compact operational handoff, as of Session 7116 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,13 +8,13 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
-**s7115 near-wall flicker: H-gap REFUTED (2 runs, exact geometry); the loss is terrain inside the render near pyramid that the retail push-out cannot see (H-probe selected); a same-run lift arm with a passing control cuts losses 10 -> 4 and episodes 8 -> 1, but n is small (single run, shifted controls 5/9, 9/5).** New tools/s7115_neargap.py (exact eye-tile surface from the s7114 hx bytes, y points DOWN: the clamp keeps y <= h - mg; near 30/256, half-tans 1.368/0.637; controls: surface == hx h max 2e-6, == game pu hit points p50 7e-5, surface-shift positive control fires). s7114 runs c/a: the surface enters the near pyramid on 58%/61% of eye-cell losses vs ~10% of flight ticks, and every pierce is crossed by an exact corner segment from the final eye (pierce & no ray 0/25, 0/33). The loop-start pos is already inside the terrain on 19%/37% of losses vs 0.5%/1.2% of flight ticks; the retail ray test (sampleTerrainAtNpcPosition) almost never fires from inside, and the y clamp lifts only to h(eye xz) - mg, so a rising wall ahead stays inside near. The ray test is also fuzzy from outside (hits ~97% of crossings, plus near-misses within ~0.3 u). New opt-in ROGUESQ_S7115_NEARLIFT=1|tog1 (tools/apply_s7115_nearlift.py): at push-out exit samples the near pyramid with the y-clamp sampler 0x80067D90 and lifts pos.y by the deepest penetration + 5% near. Run d (L6 dd4 16:9 FPS60, tog1): on-second pierce 0.002 vs 0.150 off (control), losses off/on 10/4, episodes 8/1 (z -1.61), 71 fps, 0 gaps > 250 ms.
-- In plain words: the wall vanishes because the camera's nose pokes into the rock, and the game's own camera check cannot feel rock it is already inside. A fix that lifts the camera until its view is clear works on the geometry and looks promising on the flicker, but one run is too few to call.
-- Next: 2 more NEARLIFT=tog1 runs to reach >= 30 losses (NEXT.md, slug fps60-wall-probe); if it holds, owner sheet and an opt-in entry.
+**s7116 near-wall flicker: the NEARLIFT fix REPLICATES (4 runs, 4/4 same direction): pooled eye-cell losses off/on 83/31 (z -4.9), episodes 43/14 (z -3.8); every 0.25 s off-phase bin exceeds every on-phase bin; the control passes in each run (on-second flight pierce 0.001-0.003 vs off 0.060-0.100). It removes the pierce class only: on-second losses pierce 0/27 in e-g; the remaining ~30% non-pierce losses (H-frame class) are untouched.** New tools/s7116_phase.py (phase table over runs). The s7114_parity +-0.5 s shift controls do not collapse when losses cluster in phase (they add off-early to on-late), so read the phase table instead. ROGUESQ_S7115_NEARLIFT=1 added to docs/OWNER-OPT-INS.md as opt-in (default off = retail). Owner sheet docs/owner_sheet_s7116_nearlift_off.png / _on.png: off rows show the diagonal wall cut; on rows were picked at the deepest lifts, right after the toggle switches on, so they include the camera hop out of the rock and do not show a clean before/after by eye.
+- In plain words: lifting the camera out of the rock really does cut the wall flashes to about a third, repeatably. The rest are a different kind.
+- Next: the residual non-pierce class (H-frame: tick join +-1, render projection frame) offline on runs d-g (NEXT.md, slug fps60-wall-frame); owner judges NEARLIFT=1 for hops.
+
+**s7115:** exact eye-tile geometry refutes H-gap; the loss is terrain inside the render near pyramid the retail push-out ray test cannot see from inside (H-probe, confirmed s7116); tools/s7115_neargap.py, tools/apply_s7115_nearlift.py.
 
 **s7114:** y-clamp sampler and eye-cell TriGen read identical bytes; LOD decimation flags (mesh+0x14) make drawn leave collision by up to ~1 u, but the NEARLOD=16 tog arm (lod 0 control 5794/5794) leaves losses 22/21: H-coarse refuted; s7113 rebuild biased (+0.07..+0.52).
-
-**s7113 (VOID, see s7114):** clip-space world rebuild of the eye cell; its y-clamp mismatch and ray-contradiction lines rest on a rebuild later shown biased by 0.07-0.5 u.
 
 **s7112:** the F5 ucode emits every visible eye-cell triangle (63/9118 near-crossing front-visible dropped, no excess on loss swaps; ROGUESQ_S7112_TRI + tools/s7112_trireject.py): H-reject refuted, the near cut is correct clipping.
 
@@ -325,7 +325,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 23. **RSPRecomp scalar lowering: CLOSED s7093** (tools/s7093_su_census.py --controls; sltiu $zero/neg-imm template fixed in RSPRecomp; rerun after any RSPRecomp change).
 24. **RSP runtime DMA + cop0: CLOSED s7094** (audio ucode_data off-by-one fixed; tools/s7094_dma_test + tools/s7094_dma_census.py, rerun after any rsp.hpp/rsp.cpp DMA edit).
 25. **DPC registers CLOSED s7095; bridge forwarding coverage CLOSED s7096** (ROGUESQ_S7095_DPC / ROGUESQ_S7096_FWD=ctl, rerun after any dpc_bridge.cpp submit/defer/wrap edit; MISSING_UNEXPLAINED/dup/order must stay 0). Edit-walker census CLOSED s7097 (ROGUESQ_S7097_EDIT=ctl; unattributed must stay 0). RT64 vs angrylion on the same dd4 stream CLOSED s7098 (H-stream: big drops are in the stream; replay with tools/angrylion_replay/build16.sh).
-26. **Near-wall flicker (s7098-s7115): eye-cell near-plane loss, RETAIL behaviour (s7109). Refuted: corner width, near 15, margin re-push, post-move, ucode drop, LOD decimation (s7108-s7114), H-gap (s7115). Selected s7115: H-probe (terrain inside the near pyramid, invisible to the retail ray test from inside); opt-in ROGUESQ_S7115_NEARLIFT arm 10 -> 4 losses in one run. Next: replicate (slug fps60-wall-probe).** Drop is in the RDP stream (s7098).
+26. **Near-wall flicker (s7098-s7115): eye-cell near-plane loss, RETAIL behaviour (s7109). Refuted: corner width, near 15, margin re-push, post-move, ucode drop, LOD decimation (s7108-s7114), H-gap (s7115). s7115 H-probe CONFIRMED s7116 (opt-in ROGUESQ_S7115_NEARLIFT=1: pooled 4 runs losses 83/31, pierce class removed). Next: residual non-pierce H-frame class (slug fps60-wall-frame).** Drop is in the RDP stream (s7098).
 
 ## Evidence index
 

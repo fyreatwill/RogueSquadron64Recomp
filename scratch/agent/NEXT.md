@@ -1,13 +1,11 @@
-# NEXT: replicate the s7115 NEARLIFT tog1 arm to >= 30 eye-cell losses (2 more runs), then owner sheet
-HYPOTHESIS-ID: fps60-wall-probe
-Context: s7115 selected H-probe (terrain inside the render near pyramid; retail ray test blind from inside). ROGUESQ_S7115_NEARLIFT=tog1
-run d: control passes (on pierce 0.002 vs 0.150), losses off/on 10/4, episodes 8/1, shifted 5/9 and 9/5 -> not yet significant.
-Do: two more runs, one at a time, same recipe with the name changed (e, f):
-  sed 's/ 6 4 d / 6 4 e /; s/_d\./_e./g' scratch/s7115/cmd_d.txt > scratch/s7115/cmd_e.txt; zsh scratch/s7115/cmd_e.txt  (then f)
-  consider DL/DU 120 300 (args 5/6 of arm.zsh) for more hug time.
-Per run: python3 tools/s7107_losscan.py tris_X.bin X.csv > losscan_X.txt; tools/s7114_parity.py tris_X.bin losscan_X.txt push_X.txt 0.5 -0.5;
-tools/s7115_neargap.py push_X.txt tris_X.bin losscan_X.txt (control: on-second flight pierce ~0).
-Outcomes: pooled d+e+f off >> on with shifted controls near even -> H-probe fix confirmed: make owner sheet of presented frames
-(g5b_capture raw, on vs off wall hugs), add NEARLIFT=1 to docs/OWNER-OPT-INS.md as opt-in, owner judges; also check it does not lift
-the camera visibly in normal flight (nl lift p99, presented-frame camera height). Pooled even -> H-probe is not the lever; take the
-H-frame class (losses whose joined tick does not pierce: check tick join +1/-1 and the render projection frame).
+# NEXT: residual non-pierce near-wall losses (the class NEARLIFT does not touch), offline on s7115 runs d-g
+HYPOTHESIS-ID: fps60-wall-frame
+Context: s7116 confirmed NEARLIFT (pooled 83/31). On-second losses pierce the near pyramid 0/27 (e-g); ~30% of off losses also do not pierce. Data on disk:
+scratch/s7115/{tris,push,losscan,neargap}_{d,e,f,g}.bin/txt (g.raw kept for frames).
+Hypotheses for the non-pierce losses: H-join (loss swap joined to the wrong camera tick: re-test pierce at tick -1/+1/+2; FPS60 render-only frames use an
+interpolated camera that may be inside while both sim ticks are outside), H-proj (the render near plane/projection used for that swap differs from f20/half-tans
+s7108 assume: read the swap's actual projection from the G5B stream), H-other (not a near-plane loss at all: losscan rule false positive; check presented frames in
+g.raw with tools/s7107_sheet.py).
+Discriminator, one offline pass: for every non-pierce loss in d-g, pierce at tick offsets -2..+2 and with the interpolated (render) eye; plus a sheet of g's
+non-pierce on-second losses. H-join: pierce appears at an offset/interp eye; H-proj: none pierce but near-z of dropped tris < f20 frustum; H-other: frames show no cut.
+If H-join: extend the lift to the render-only interpolated eye (apply_s7115_nearlift.py). Also queue/ask: owner judges ROGUESQ_S7115_NEARLIFT=1 for hops.
