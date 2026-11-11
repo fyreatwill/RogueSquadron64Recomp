@@ -1,18 +1,19 @@
-# NEXT: is the eye-cell near-plane clip (the "FPS60 near-wall flicker") retail game behaviour?
-HYPOTHESIS-ID: fps60-wall-retail
-Context (s7108): the push-out corner width (0.86 of the projection, the same at 4:3), near distance (30 = 30) and the 60 fps tick
-(stream losses 49/49 at lim2 in s7108; 30 lim1 / 27 lim2 in s7107) are all refuted. The clip is static-recompiled retail camera
-logic meeting canyon walls, so it may happen in retail too.
-Unit: one run, L6, retail settings, same instruments, no CAMWIDE:
-  copy scratch/s7099/arm.zsh to scratch/s7109/arm_retail.zsh, drop ROGUESQ_DRAW_DISTANCE/ROGUESQ_ASPECT from XENV_EXTRA (dd1, 4:3),
-  and make sure ROGUESQ_FPS60 is unset/0 (check what g1_level_coverage_common.zsh exports first); keep G3C_LOG, S7101_CHASE,
-  S7106_RSPTRI, S7107_TAG, G5B_TRIS. g5b_capture size must follow the 4:3 window (check the window line in cap_*.txt).
-  Then: tools/s7107_losscan.py tris.bin drops.csv > losscan; count eye-cell near-z rows (ref c+0+0, drop minz < 0x100) per
-  wall-hug minute, against s7108's 49 / ~90 hug-min-equivalent numbers (tools/s7108_split.py prints hug s per state).
+# NEXT: opt-in fix for the eye-cell near-plane clip (retail behaviour, s7109)
+HYPOTHESIS-ID: fps60-wall-nearfix
+Context: s7109 showed the canyon-wall near clip at retail settings (17.4 eye-cell near-z losses per wall-hug minute vs 15.9 at the
+owner recipe). The push-out (applyPlayerVehicleStateUpdate 0x8004CD00) keeps the camera 2*near from the wall using the camera
+struct near s2+0x2C = 30; ROGUESQ_DD_NEAR=<m> (tools/apply_s6031_far.py, already built) scales ONLY the guPerspective near arg in
+setupCameraMatrices, so DD_NEAR=0.5 puts the plane at 15 with the push margin unchanged.
+Unit: two sequential L6 runs on the owner recipe (scratch/s7099/arm.zsh 6 4 <name> "<s7109 instrument env> ROGUESQ_FPS60=1"), arm A
+without DD_NEAR (or reuse s7108 as A if the recipe matches) and arm B with ROGUESQ_DD_NEAR=0.5. Better: add a `tog` mode to DD_NEAR
+in apply_s6031_far.py (odd absolute mach seconds, like S7108_CAMWIDE) so both arms live in ONE run, then split with
+tools/s7108_split.py (its parity clock is the same) incl. the --shift 0.5 control.
+Positive controls: the [s7108] line must print pnear=15 in the on state; losscan must still flag >= 300-cell swaps in the off state.
+Also measure z-fighting: count frames with terrain/object flicker away from walls (losscan "other" rows per minute per state) since
+halving near halves the depth precision near the camera.
 Hypotheses:
- H-retail  eye-cell near-z losses at retail settings at a similar per-hug-minute rate -> retail behaviour; report to the owner with
-           a sheet (tools/s7107_sheet.py) and offer an opt-in fix (e.g. a bigger push margin, or a lower near plane via ROGUESQ_DD_NEAR)
- H-opt     ~0 losses at retail settings while the camera hugs walls -> an opt-in (dd>1 far/near scaling, 16:9 viewport) owns it;
-           bisect by adding dd4, then 16:9
-Positive control: losscan must flag the s7108 swaps when rerun on s7108 data (49 eye rows), and the retail run must show wall-hug
-seconds > 30 (else the null is from not hugging walls).
+ H-fix    eye-cell near-z losses drop >= 3x in the on state with "other" losses unchanged -> offer ROGUESQ_NEAR_FIX (or document
+          DD_NEAR=0.5) in OWNER-OPT-INS with a before/after sheet; owner decides the default
+ H-margin losses unchanged -> the clipped tris are closer than 15 (the push-out lets the camera nearer than 2*near on some swaps);
+          read the chase log's push distance on the dropped swaps and fix the push-out instead
+ H-zfight losses drop but "other" rises -> try 0.7, or scale near only while the push-out is active

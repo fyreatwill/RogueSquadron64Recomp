@@ -187322,3 +187322,31 @@ Open: whether retail settings (FPS60 off, dd1, 4:3) clip the same way. s7098/s71
 count with weak statistics (s7101: 1.6x, p=0.185).
 Next: the same instruments at retail settings (NEXT.md, slug fps60-wall-retail).
 Discrimination line: this run refutes H-aspect (corner width), H-neardist and H-tick (60 fps render-only frames) as the source of the eye-cell near clip; H-corner4 stays refuted by s7102 r2 (CAM4 on, episodes remain). The next discriminator is the same instruments at retail settings (FPS60 off, dd1, 4:3): it selects H-retail (same clip rate) or H-opt (no clip).
+
+## Session 7109 (2026-11-10) — FPS60 near-wall flicker: retail settings (FPS60 off, dd1, 4:3) clip the eye terrain cell at the near plane at the same rate as the owner recipe, so the clip is game behaviour, not an opt-in (H-retail selected, H-opt refuted; two lines, single run)
+
+Ran: one L6 run at retail settings, scratch/s7109/arm_retail.zsh (a copy of scratch/s7099/arm.zsh with ROGUESQ_DRAW_DISTANCE and
+ROGUESQ_ASPECT dropped, capture 288x216 for the 4:3 window; ROGUESQ_FPS60 is not set by g1_level_coverage_common/m6_god_common),
+`zsh scratch/s7109/arm_retail.zsh 6 1 r1 "ROGUESQ_G1E_WIN=600 ROGUESQ_G3C_LOG=1 ROGUESQ_S7101_CHASE=... ROGUESQ_S7104_CELL=1
+ROGUESQ_S7105_EMIT=1 ROGUESQ_S7106_RSPTRI=... ROGUESQ_S7107_TAG=1 ROGUESQ_G5B_TRIS=..." 120 260`. Mission reached att 1 (t=71), 0
+crashes, capture 15395 frames / 275.9 s / 55.8 fps, window 640x512, tris.bin 12921 swaps covering t up to 272.9 s. Every chase line
+lim=2 (6135 of 6135): the whole run sat at the retail 30 fps rate. [s7108] lines: w=512 h=448 fov 65 near 30, k 1.208 (same
+pixel-aspect corner ratio as at 16:9).
+Controls: tools/s7107_losscan.py rerun on s7108's tris_a.bin reproduces scratch/s7108/losscan_a.txt byte for byte (328 swaps >= 300
+lost cells, 49 eye-cell near-z); the retail run flags 235 swaps >= 300 lost cells and has 207 s of wall-hug (> 30 s required).
+Result (scratch/s7109/losscan_r1.txt, split_r1.txt; the tog halves are meaningless here and are summed):
+| arm | settings | hug s | eye-cell near-z stream losses | per hug-min | presented episodes |
+| s7108 | FPS60 dd4 16:9 (lim2 224.7 of 240.4 s) | 184.4 | 49 | 15.9 | 1 |
+| s7109 | retail: FPS60 off, dd1, 4:3 | 207.0 | 60 | 17.4 | 1 (t=112.2) |
+Line 2 (presented frames, docs/owner_sheet_s7109_retail_nearclip.png, t=112.2 and 264.25): the dark canyon wall fills the view and
+for 2-4 frames its lower part is cut away along a straight line with the sunlit canyon showing through, the same near-plane cut as
+s7107's owner-recipe sheet.
+Rules out: H-opt (dd>1 far/near scaling, the 16:9 viewport, FPS60 as owners of the clip). The eye-cell near clip is static-recompiled
+retail camera logic: the push-out keeps the camera 2*near from the wall at the corner directions, and the wall still crosses the
+near plane (30) on single swaps. Caveat: "retail" means the port at retail settings; no hardware/emulator run (the oracle is
+undriven past attract). The owner's dd-dependent drop (dd1 clean by eye) remains unexplained by this class.
+Next: opt-in fix. ROGUESQ_DD_NEAR=<m> (tools/apply_s6031_far.py) already scales only the guPerspective near arg, while the push-out
+uses the camera struct near (s2+0x2C), so DD_NEAR=0.5 moves the plane to 15 and leaves the push distance at 2*30. Test it against
+the eye-cell loss rate with a z-fight check (NEXT.md, slug fps60-wall-nearfix).
+Discrimination line: this run selects H-retail (eye-cell near-z losses 17.4/hug-min at retail settings vs 15.9 at the owner recipe,
+presented straight-line cuts in both) and refutes H-opt; the next discriminator is ROGUESQ_DD_NEAR=0.5 vs 1 on the same instruments.
