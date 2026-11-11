@@ -188151,3 +188151,50 @@ that corner. Next (NEXT.md): under ASPECT > 1, fill the sky-side remainder (a fu
 rect from the horizon builder), plus the no-clear class (the builder's 0-rect branch at 21:9).
 Kept: scratch/s7134/Z1.cap + Z1.idx/Z1.rects/Z1r (fix-off control with both classes), scratch/s7133/F1.cap. F2/T1/F3/A1 caps deleted.
 Owner save untouched (forced-level route, NO_SAVE_WRITE).
+
+## Session 7135 (2026-11-11) — G3 21:9 no-clear strip: the horizon clear builder's 60 deg pitch skip gate assumes 4:3 corners; aspect-aware gate (ROGUESQ_HORIZON_GATEFIX, default on) takes 21:9 dive no-clear hole swaps 13 -> 0
+HYPOTHESIS-ID: g3-owner-recipe-219
+Work unit from NEXT.md (unit (b), the no-clear class, CURRENT-TRUTH item 29).
+1. Code read of 0x8005B51C (generated setupWalkerSpriteTileQuad). The builder always appends 2 rects (count += 2 at 0x8005BC88) unless
+   it returns early at 0x8005B5F0: sqrt(f.x^2 + f.z^2) < 0.5 (rodata 0x8003AE34), with f = the camera forward vector. The caller
+   (0x8005C378, case 4 of the dispatcher at 0x8005BD00) gets it through 0x80059D18 from the matrix at *(0x80138D1C)+0x28
+   (3rd rotation column, M+0x8/+0x14/+0x20). So the gate is "pitch > 60 deg: skip the clear". There is no on-screen test in NDC, so
+   NEXT's H-vis43 had the wrong mechanism. Other rodata: 0x8003AE38 = pi/360 (fov deg -> half rad), fov at cam 0x80138D20+0x20 = 65.
+2. Offline, s7134 Z1 capture (fix off for this; RAM every swap), new tools/s7135_campitch.py: the gate trips at swap 7557 (horiz
+   0.492), and the 0-rect class starts at 7558 and holds the whole dive (min horiz 0.403). That is an exact match.
+   scratch/s7135/horizon_vis.py (max world-y of the 4 frustum corner rays, fov 65, tx = 4/3 ty * k): at 21:9 (k = 2) the horizon is
+   OFF screen from 7559 on (max -0.025 .. -0.21), but only just. The corner rays hit ground far past the terrain range, and with no
+   clear those pixels keep the previous frame. At 4:3 the same poses give -0.39 .. -0.54. Retail's gate guarantees, worst case over
+   roll, a corner elevation of -sqrt(0.75) + 0.5*D0 = -0.335 (D = tan(fov/2) sqrt(1 + (4k/3)^2)), so the ground there is near and
+   the terrain covers it.
+   Hypotheses: H-vis43 refuted (no NDC test exists), H-other refuted (the gate state matches the frames exactly),
+   H-gate43 (new, selected): the gate's 0.5 is retail-correct for 4:3 corners and ASPECT invalidates it.
+3. Fix: tools/apply_s7135_pitch_gate.py (funcs_13.c, before the compare at 0x8005B5E8; listed in the vendored fixup after s7133).
+   The threshold becomes h* with g(h*, Dk) = g(0.5, D0), g(h, D) = -sqrt(1-h^2) + h*D, solved by bisection once per fov change.
+   21:9 0.3347 (about 70 deg), 16:9 (k 1.555) 0.3973, k = 1 gives 0.5 (no-op). ROGUESQ_HORIZON_GATEFIX: default on, =0 retail,
+   =tog odd mach seconds. [s7135] stderr: per-second retail-skip / rescued counts.
+   Bug on the first build: MEM_W(0x20, cam) with a zero-extended uint32_t base reads outside rdram, so the gate never engaged and
+   there was no [s7135] line. Fixed with (gpr)(int32_t)cam. The rerun is the result below.
+   Cosmetic: the threshold line prints about 300 times per run with the same %g fov (fov presumably varies in low bits). Harmless.
+4. Runs, L6 forced route, owner recipe FPS60 dd4, G5B stream every swap from 7500, angrylion replay, tools/s7134_score.py:
+| arm | positive control | clear swaps >3000 (range, max) | no-clear swaps >3000 | dive window max hole |
+|---|---|---|---|---|
+| Z1 21:9 fix off (s7134) | gate trips 7557 | 11 (7527-7537, 24783) | 13 (7558-7571, 28026) | 28026 (mean 4634) |
+| X1 21:9 GATEFIX on | rescued 9-51/s; 0 swaps without rects | 23 (7511-7533, 30487) | 0 (no 0-rect swap at all) | 840 (mean 745, floor ~600) |
+| W1 16:9 GATEFIX on | retail-skip 396, rescued 238 | 9 (7536-7544, 13888) | 0 of 6 (7589-7594, max 1243) | 1243 |
+   Pose control: X1's dive is the same pose as Z1's (7560-7597, min horiz 0.398 vs 0.403; sheet pairs matched by horiz).
+   There are two lines of evidence: the rects file (rects present in every dive swap) and the replay pixels (strip gone).
+   Sheet docs/owner_sheet_s7135_pitch_gate.png (tools/s7135_sheet.py): Z1 7558/7562/7566 vs X1 7562/7568/7572. The magenta
+   right-edge strip is filled with the haze colour.
+   16:9: the 6 swaps past 16:9's threshold (horiz < 0.397) still skip and show no hole, as the worst-case model predicts. The 7536-7544
+   burst is at pitch -40..-44 (horiz > 0.7), where the gate is not involved. That is the sky-side class (a), and it shows at 16:9 too
+   (new; the s7133 16:9 run, 367 swaps, did not reach this pose).
+ORIGIN: the writer is the game's own horizon clear builder 0x8005B51C. Its 0.5 gate value is legitimate for retail 4:3, and
+ROGUESQ_ASPECT's wider view (s6104) breaks the assumption behind it. Nothing is guarded. The constant is re-derived for the real aspect.
+In plain words: when you dive steeply, the game stops clearing the background, because on a 4:3 screen the ground then fills
+everything. On a wide screen the far corners still see distant ground the terrain never reaches, so a stale strip showed. The
+game now decides that with the real screen width.
+Verdict: H-gate43 selected and fixed (21:9 13 -> 0 no-clear hole swaps, pose-matched, two lines). Next (NEXT.md): unit (a), the
+sky-side fill, now known to show at 16:9 as well.
+Kept: scratch/s7135/W1.cap (16:9 fix-on, class (a) burst at 7536-7544) + W1.idx/W1.rects/W1r/W1.pitch, X1.idx/X1.rects/X1r/X1.pitch.
+X1.cap and the .raw window captures deleted. Owner save untouched (forced-level route, NO_SAVE_WRITE).
