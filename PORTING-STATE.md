@@ -188660,3 +188660,25 @@ Verdict: H-equal, item 38 CLOSED. Owner sheet docs/owner_sheet_s7150_pause_219.p
 Verdict line: this selects H-equal for the pause overlay at 21:9, refutes H-rect-diff (text fits at |k-1|<=0.5% in all 3 arms) and
 H-hud-anchor, and closes item 38. Next discriminator: same-window dual capture (old vs sRGB-configured g5b_capture) selects H-src vs H-partial.
 Next: item 39, set the capture colour space to sRGB at source and validate against FID_P3 on one run.
+
+## Session 7151 (2026-11-11) — capture colour space fixed at source: g5b_capture now sRGB (H-src, two independent lines); same-executable dual-capture hang found
+HYPOTHESIS-ID: g3-capture-colourspace
+Work unit from NEXT.md (item 39). No maintenance (59.5 KB). No new soak results. Owner save untouched (no SAVE_FROM, NO_SAVE_WRITE).
+Change: tools/g5b_capture.swift sets SCStreamConfiguration.colorSpaceName = CGColorSpace.sRGB (env G5B_CS=native restores the
+pre-s7151 Display-P3-untagged output), prints the mode, and writes a `<out.raw>.cs` sidecar ("sRGB"/"native"). tools/s7122_fidelity.py
+reads the sidecar and never applies FID_P3 to an sRGB raw (prints a notice). New tools/build_g5b_capture.sh rebuilds into
+scratch/s6894/g5b_capture (the path s7142/s7144/s7146 arms use; old binary kept as g5b_capture_pre7151). New tools/s7151_arm.zsh
+(s7146 pause route, two captures of the same window: sRGB and native), tools/s7151_cs_compare.py, tools/s7151_png_check.py.
+Tool defect found on the way: two processes of the SAME executable path both hang in the SCK window lookup (never print "window",
+0 frames; D1 first attempt and a 30 s retest), while new+old binaries, or the binary plus a copy, both capture. The arm copies it.
+Line 1 (one run D1, owner recipe FPS60 dd4 21:9, 0 crash, 8454/8475 frames, 32 pairs by displayTime): sRGB raw vs native raw
+|d| R 8.80 G 0.85 B 1.65 (flight frames up to R 23.7); sRGB raw vs P3->sRGB(native) (system Display P3.icc, the FID_P3 transform)
+|d| 0.30/0.12/0.13. Positive control (--shift 30 mis-pair): 16-22. Boot-logo test pair (t_new/t_old): 0.70 -> 0.09, shift ~4-5.
+Line 2 (run D2, independent of PIL and of SCK's transform): window PNGs from screencapture are tagged Display P3; sips/ColorSync
+-> sRGB. Dominant flat colours (4-level bins): sips-sRGB(png) (10,30,42) (10,26,38) (82,30,30) (86,118,126); sRGB raw (10,26,38)
+(10,30,42) (86,118,126); native raw = PNG as stored (14,26,38) (18,30,42) (94,114,126). Second scene: (174,230,254)/(22,58,82) in
+sips-sRGB and sRGB raw vs (186,230,254)/(30,54,78) in native raw and stored PNG. (A block-wise PNG-vs-raw diff was not usable:
+1360x626 window vs 504x216 letterboxed raw misregisters; recorded, not used.)
+Verdict line: this selects H-src (ScreenCaptureKit honours colorSpaceName for window filters, output == ColorSync P3->sRGB),
+refutes H-partial, and closes item 39. Raws before s7151 stay Display-P3 and need FID_P3=1; new raws need nothing.
+Raws deleted after scoring (2.7 GB each). Next: item 40, G3 title/main menu/profile screens at 21:9 on sRGB captures.

@@ -3,6 +3,9 @@
 // Record per complete frame: u64 displayTime (mach ticks), u32 w, u32 h, then w*h*3 bytes. Idle (unchanged) frames are
 // not delivered, so a gap in displayTime is a repeated frame. Control: tools/g5b_capture.swift against a known movie.
 // usage: g5b_capture <owner-substring> <out.raw> <w> <h> <delay-s> <duration-s>
+// s7151: frames are converted to sRGB by ScreenCaptureKit (cfg.colorSpaceName), matching angrylion replays. Before s7151
+// the capture had no colorSpaceName and returned the display's space (Display P3 here) untagged; G5B_CS=native restores
+// that (old raws need tools/s7122_fidelity.py FID_P3=1).
 import Foundation
 import ScreenCaptureKit
 import CoreMedia
@@ -13,6 +16,10 @@ _ = NSApplication.shared  // CGS must be initialised or SCStream asserts in a CL
 let a = CommandLine.arguments
 guard a.count >= 7 else { print("usage: owner out w h delay dur"); exit(2) }
 let want = a[1], outPath = a[2]
+let csMode = ProcessInfo.processInfo.environment["G5B_CS"] ?? "srgb"
+print("colorspace \(csMode == "native" ? "native(display)" : "sRGB")"); fflush(stdout)
+// s7151 sidecar <out.raw>.cs names the colour space, so scorers never convert an sRGB raw twice (s7122_fidelity FID_P3).
+try? (csMode == "native" ? "native\n" : "sRGB\n").write(toFile: outPath + ".cs", atomically: true, encoding: .utf8)
 let W = Int(a[3])!, H = Int(a[4])!, delayS = Double(a[5])!, durS = Double(a[6])!
 
 final class Sink: NSObject, SCStreamOutput, SCStreamDelegate {
@@ -70,6 +77,7 @@ func census() async {
 func openStream(_ sink: Sink, _ win: SCWindow) async -> SCStream? {
     let cfg = SCStreamConfiguration()
     cfg.width = W; cfg.height = H; cfg.pixelFormat = kCVPixelFormatType_32BGRA
+    if csMode != "native" { cfg.colorSpaceName = CGColorSpace.sRGB }
     cfg.minimumFrameInterval = CMTime(value: 1, timescale: 120); cfg.queueDepth = 8; cfg.showsCursor = false
     let st = SCStream(filter: SCContentFilter(desktopIndependentWindow: win), configuration: cfg, delegate: sink)
     do {

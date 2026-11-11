@@ -1,13 +1,13 @@
-# NEXT: capture colour space at source (CURRENT-TRUTH item 39)
-HYPOTHESIS-ID: g3-capture-colourspace
-State (s7150): tools/g5b_capture.swift captures 32BGRA with no colorSpaceName, so values are Display-P3 (untagged); angrylion replays are
-sRGB. tools/s7122_fidelity.py FID_P3=1 converts offline (flat-area error -30..55%, 4:3 text blue lift +51 -> +11). Fix it at source.
-Step 1: in g5b_capture.swift set cfg.colorSpaceName = CGColorSpace.sRGB (and log it), rebuild scratch/s6894/g5b_capture (check how it was
-  built: grep swiftc in PORTING-STATE s6894/s6914).
-Step 2 (one run, same-run control impossible across captures, so run TWO capture processes on the same game window at once: old binary and
-  new binary, same CW/CH): env RDIR=s7151 ASP=21:9 SECS=300 FROM=15300 EVERY=5 DL=150 DU=115 AP=<s7150 AP> zsh tools/s7146_arm.zsh P1 ""
-  plus a second g5b_capture (old binary) started alongside (edit a copy of the arm script, tools/s7151_arm.zsh).
-Outcomes: H-src: new raw ~= FID_P3(old raw) within ~3/channel on flat areas, and the new raw vs angrylion matches FID_P3 scores ->
-  make the capture sRGB, keep FID_P3 only for old raws. H-partial: new raw still differs (ScreenCaptureKit ignores colorSpaceName for
-  window filters) -> keep FID_P3=1 as the documented default for new work and say so in CURRENT-TRUTH run recipes.
-Owner save rule: no SAVE_FROM; NO_SAVE_WRITE stays. Keep CURRENT-TRUTH under 60000 B.
+# NEXT: G3 title / main menu / profile screens at 21:9 vs angrylion (CURRENT-TRUTH item 40)
+HYPOTHESIS-ID: g3-title-menu-219
+State (s7151): g5b_capture is sRGB at source (rebuilt into scratch/s6894/g5b_capture; .cs sidecar). Score with FID_P3 UNSET.
+Not yet compared: the title screen ("press start"), main menu and profile/load screens between the logo recede (s7145) and level
+select (s7144). Hypotheses: H-equal (RT64 == angrylion after one fit, <= ~0.005 like s7144/s7145); H-rect (texrect text width/offset
+differs at 21:9, RECT_ASPECT path, s7142); H-colour (residual colour bias now that capture is sRGB: glyph-core blue lift should be
+~0, s7150 saw +11 after FID_P3).
+Step 1: find the swap range of these screens: env RDIR=s7152 ASP=21:9 SECS=45 FROM=200 EVERY=3 DL=8 DU=32 zsh tools/s7146_arm.zsh M1 ""
+  (AP default = boot route; check scratch/s7152/M1.g5g.txt / op census tools/s7146_opcensus.py for menu texrect counts).
+Step 2: post + score as s7144/s7146 (tools/s7141_post.zsh, tools/s7148_pfsearch.py per-swap join), arm RECT_ASPECT=0 in the same
+  iteration (rule 13). Glyph cores per s7150 glyphcore.py with FID_P3 off: expect blue lift ~0 (H-colour refuted) or not.
+Owner save rule: no SAVE_FROM; NO_SAVE_WRITE stays. Keep CURRENT-TRUTH under 60000 B (59.9 KB now: prune closed items 31-35 to
+one line each first).

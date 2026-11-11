@@ -32,18 +32,24 @@ class Raw:
     def __init__(self, path):
         self.f = open(path, 'rb'); t, self.w, self.h = struct.unpack('<QII', self.f.read(16))
         self.rec = 16 + self.w * self.h * 3; n = os.path.getsize(path) // self.rec; self.T = []
+        # s7151: g5b_capture now captures sRGB at source and writes <raw>.cs; FID_P3 then is a no-op for that raw
+        self.srgb = os.path.exists(path + '.cs') and open(path + '.cs').read().strip() == 'sRGB'
+        if FID_P3 and self.srgb: print('FID_P3: %s is sRGB at source (.cs sidecar), not converting' % path, file=sys.stderr)
         for i in range(n):
             self.f.seek(i * self.rec); self.T.append(struct.unpack('<Q', self.f.read(8))[0])
     def img(self, i):
         self.f.seek(i * self.rec + 16)
         im = Image.frombytes('RGB', (self.w, self.h), self.f.read(self.w * self.h * 3))
-        return _p3_to_srgb(im) if FID_P3 else im
+        return _p3_to_srgb(im) if (FID_P3 and not self.srgb) else im
 
 
 # s7150: g5b_capture (ScreenCaptureKit, 32BGRA, no colorSpaceName set) returns the window in the display's colour space
 # (Display P3 here), untagged; angrylion replays are sRGB. s6740 found the same for screencapture PNGs and fixed only
 # g3_oracle_match.py. FID_P3=1 converts every presented frame P3 -> sRGB before the diff (off by default so s7122-s7150
 # numbers stay comparable; new comparisons should set it). Measured s7150: flat-area colour error drops by 30-55%.
+# s7151: FIXED AT SOURCE. g5b_capture sets colorSpaceName sRGB (two lines: SCK sRGB == this transform of a native capture
+# of the same window within 0.3/channel; dominant colours == sips ColorSync sRGB of a tagged PNG). New raws carry a .cs
+# sidecar and are never converted; FID_P3=1 is only for raws captured before s7151.
 FID_P3 = os.environ.get('FID_P3', '0') == '1'
 _P3X = None
 def _p3_to_srgb(im):

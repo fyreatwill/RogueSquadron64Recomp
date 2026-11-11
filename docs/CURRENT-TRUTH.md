@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7150 (2026-11-11).
+Compact operational handoff, as of Session 7151 (2026-11-11).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -187,6 +187,7 @@ Recent only; older entries: PROJECT-OVERVIEW "(s6994 maintenance)", "(s6900 main
 - Present rings (ROGUESQ_PRESENT_RING): check tools/g1e_present_cadence.py first; at=0 throughout
   is not a measurement; the window must be partly visible (ROGUESQ_WINDOW_POS). Late-present
   positive control: load generator scratch/s6982/burst.
+- g5b_capture is sRGB at source since s7151 (.cs sidecar). Raws captured before s7151 are Display-P3 untagged: score them with FID_P3=1.
 - Freezes: stalls = [g1b] sd_wall max; image freezes = tools/g5c_frozen_runs.py on a g5b_capture
   .raw; `sample <pid> <s> <ms>` costs no build.
 - AT THE MOVIES shots by run time (dd1 16:9): 76 887-912, 77 912-924, 78 924-942, 79 942-952 s.
@@ -318,7 +319,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 36. **G3 mission intro cutscene 16:9: CLOSED s7148 (H-equal).** Route s7146_arm FROM=9750 EVERY=10 SECS=275 DL=150 DU=115 (space 9860-10350, sea cinematic 10400-13450, flight 13520+). After one fit (e 0.980-0.984) all phases <= 0.0042. Score with tools/s7148_pfsearch.py (per-swap frame join; the global-lag join fakes 0.25 on fast motion); s7141_post now rebuilds a stale idx. Sheet docs/owner_sheet_s7148_intro_169.png.
 37. **Intro cutscene 21:9 + ROGUESQ_VI_EXACT_ROWS: CLOSED s7149 (H-equal at 21:9; EXACT_ROWS stays opt-in, not promoted).** Default arm after one fit: space 0.0009, sea 0.0049, flight 0.0006 (16:9: 0.0012/0.0042/0.0042). EXACT_ROWS=1 (fired 640x296 -> 294 rows) is worse in all 3 phases: identity 0.043/0.025/0.017 -> 0.054/0.038/0.027, fitted floor 0.0009/0.0049/0.0006 -> 0.0016/0.0077/0.0036; best e moves only on space (0.988 -> 0.984). One run per arm (single-source). Sheet docs/owner_sheet_s7149_intro_219.png.
 38. **G3 in-flight pause menu 21:9: CLOSED s7150 (H-equal; H-rect-diff refuted).** Route s7146_arm AP ending 64:a,262:start (pause opens swap ~15485-15635). Pause pass = Z clear, 50% black quad (prim a 0x80), emblem tris, 103 IA8 point texrects. Fitted (FID_P3=1): all 0.0010, emblem 0.0029, goals 0.017; RECT_ASPECT=0 and 4:3 arms fit text at |k-1|<=0.5% (inert here). Tool bug fixed: frame_replay.c re-ran its magenta pre-fill on every cimg CHANGE, wiping scenes before a late Z clear (pause identity 0.79 -> 0.018; PREFILL_EVERY=1 restores). Sheet docs/owner_sheet_s7150_pause_219.png.
-39. **(next, NEXT.md) Capture colour space: g5b_capture returns Display-P3 values untagged, angrylion is sRGB.** s7122_fidelity FID_P3=1 converts (flat-area error -30..55%, 4:3 text blue lift +51 -> +11); fix at source (SCStreamConfiguration colorSpaceName sRGB), validate vs FID_P3 on one run.
+39. **Capture colour space: FIXED AT SOURCE s7151 (H-src, two lines).** tools/g5b_capture.swift sets colorSpaceName sRGB (G5B_CS=native restores) and writes a `<raw>.cs` sidecar; s7122_fidelity skips FID_P3 on sidecar-sRGB raws. Same window, one run: sRGB raw vs P3->sRGB(native raw) |d| 0.30/0.12/0.13 vs identity 8.8/0.85/1.65 (shift control 16-22); dominant colours == sips sRGB of a tagged PNG. Build: tools/build_g5b_capture.sh. Two processes of one executable path hang: copy it.
+40. **(next, NEXT.md) G3 title / main menu / profile screens 21:9** vs angrylion, first scoring on sRGB-at-source captures (FID_P3 off).
 
 ## Evidence index
 
