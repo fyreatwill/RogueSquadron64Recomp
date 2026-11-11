@@ -188019,3 +188019,39 @@ Findings:
    the extended cells.
 Verdict: H-equal on L1, L4 and L6 at the owner recipe. Item 28 is CLOSED. Next: the same check at 21:9 (the owner's monitor).
 Owner save untouched (forced-level route, NO_SAVE_WRITE). L1.raw/L4.raw and csvs kept in scratch/s7131.
+
+## Session 7132 (2026-11-11) — G3 owner-recipe fidelity at 21:9 (L6 FPS60 dd4): RT64 == angrylion except one 1.1 s burst of undrawn side-band holes; the cause is the game's per-half partial background clear (camera 0x80138D18 rect list), not the renderer
+HYPOTHESIS-ID: g3-owner-recipe-219
+Work unit from NEXT.md (H-equal / H-wide / H-tool). New tools/s7132_arm.zsh (s7131_arm, capture size from CW/CH, default 504x216).
+One run, screen unlocked, L6 forced route, extra env ROGUESQ_ASPECT=21:9 G5B_FRAME_EVERY=1 FROM=7500 MAX_MB=12000: 714 swaps
+(12.6 GB stream, kept in scratch/s7132/L6w.cap for re-analysis), window 1360x626, 0 crash. Log: ASPECT 21:9 -> FB_WIDTH 1024,
+guPerspective x2, footprint x-extent x2. Window rect (s7123_present_rect): picture fills the window, capture rect 0,11,469,216 (H-tool refuted).
+713 swaps replayed with frame_replay16 (4 parallel chunks of 60), fidelity control PASS.
+| arm | frames | lag | mean|d| med/p90/max | frac>40 med/p90/max | >0.02 | >0.05 |
+|---|---|---|---|---|---|---|
+| L6 21:9 | 713 | 20 ms | 1.61/3.76/18.3 | 0.0095/0.018/0.134 | 66 | 48 |
+(16:9 L6 s7125: 1.85 / 0.010, 7/713 over 0.02.)
+Findings:
+1. All 66 outliers are ONE contiguous burst, swaps 7524-7591 (~1.1 s of a banked pass along a canyon wall). In these the angrylion
+   replay leaves up to 58k of 458k px at its magenta pre-fill (median frame: 156 px). So no RDP command touched those pixels. RT64 shows
+   plausible content there, which is the previous contents of its framebuffer (stale). The three 16:9 runs (s7125 L6, s7131 L1/L4,
+   2094 swaps) have 0 frames with >3000 unpainted px. Sheet docs/owner_sheet_s7132_219_clear_holes.png (angrylion | RT64 | diff).
+2. Stream decode (new tools/s7132_tricover.py, edge-walk point cover + fill/texrect census): no triangle and no rect covers the hole
+   points. The swap's background clear is two FillRects (on the Z image 0xB20000, then on colour 0x8F5000) that are NOT full-screen:
+   a per-half split at a moving x, each half cleared only over a vertical span. Examples: 7518 {692..1023 x 0..447, 0..691 x 0..122};
+   7550 {864..1023 x 0..374, 0..863 x 0..94}; 7800 {468..1023 x 0..447, 0..467 x 113..447}; 7900-8200 {512.., 156..447} x2. The holes
+   are exactly where neither the partial clear nor geometry lands. So the cause is H-clear: the game's background-clear region estimate
+   (the horizon split) misses part of the wide view while the craft is rolled. H-renderer is refuted, because angrylion and RT64 receive
+   the same stream and the gap is in that stream.
+3. Code path (read from the generated C): emitFrameRdpInitDl (0x80008D20) clears each rect of the list at *(0x801142C4), each clamped
+   to the viewport, and falls back to the full viewport when the pointer is null. refreshEffectObjectCamerasAndState (0x80052FF8)
+   installs camera+0x74 via setActiveRenderListPtr. The RAM snapshot at swap 7800 has camera 0x80138D18: +0x74 = 2 rects,
+   +0x78 = 0x80138D94 holding {468,0,1023,447},{0,113,467,447}, matching that swap's fills exactly (located by value search). That
+   identifies the CONSUMER and the data, but not the writer: no direct sh/sw to 0x80138D94 exists in the generated code, so the
+   builder writes it through a pointer.
+Not concluded (single run, single level): the hypothesis that the writer projects the horizon with the 4:3 x-scale (a rolled horizon's
+screen slope depends on the x/y projection ratio, so it would be right at zero roll and wrong in banked turns, which fits a burst
+during a bank). ORIGIN: the bad values are the game's own clear rects at 0x80138D94; their writer is still unnamed.
+Next: store watch (apply_s5798_recwatch pattern) on [0x80138D90,0x80138DB0) to name the writer PC and function, logging camera roll.
+Then fix that function's x-scale under ASPECT (not a forced full clear, which would paint flat fill colour over the sky).
+Owner save untouched (forced-level route, NO_SAVE_WRITE).

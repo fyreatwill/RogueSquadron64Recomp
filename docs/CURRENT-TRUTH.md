@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7131 (2026-11-11).
+Compact operational handoff, as of Session 7132 (2026-11-11).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -13,7 +13,7 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 - **s7127-s7130 W_SHEET escape: CLOSED.** Escaper = all-W-positive hairline wedge from a guard-band corner ((-199,-112), (-398,-224), (994.8,-112), (1193.8,-224) at 16:9). Default-on ROGUESQ_W_SHEET_POS (rt64_gbi_rdp.cpp; =0 restores, =t drops in odd 24 MHz seconds only) drops long, all-W>0, W-ratio < 1/64 tris with a corner vertex and a <= 8 px base. ROGUESQ_G5B_FRAME_TRIG=<pre>,<post> (dpc_bridge.cpp) writes a swap ring only around a detection.
 - Pixel check: kept arm t1 5 fires invisible on RT64 and angrylion (|d| 0.3-1.3 = control; painted-line control 6-11); dropped arm p3 5 fires, line-minus-control |d| median -0.1 (H-fixed, RT64 == hardware where dropped); p1/p2/p4 0 fires (corner-free control fired 6/2/10). Rate ~0-5 per 300 s. Owner sheet docs/owner_sheet_s7129_wsheet_cull.png (tools/s7129_sheet.py).
 
-**s7124:** L6 retail flight RT64 == angrylion (H-equal); the s7122 "garbled" textures were a frame_replay.c snapshot bug (fixed; LEGACY_SNAP=1 / SNAP_FROM=<swap>); tools/s7124_arm.zsh, s7124_capidx.py.
+**s7132 21:9 owner recipe L6:** RT64 == angrylion except a 1.1 s banked-wall burst of holes the game never clears or draws (partial background-clear rects at 0x80138D94, writer unnamed; item 29).
 
 **s7120-s7123:** NEARLIFT k1.6 replicated vs retail camera same run (steady wall losses 42/2 over 4 runs, z -6.0; H-smooth; s7121: the 2-16 u camera steps were a 3-camera log join, flight cam 80138458 has 0 steps; use `s7119_hop.py --cam 80138458`). s7122: L1 flight RT64 == angrylion (572 frames, mean|d| 7.8, edges + speckle; tools/s7122_fidelity.py, s7122_sheet.py); CULL_SPIKE costs nothing. s7123: the 4:3 pillarbox is centred (SCK pads the right; tools/s7123_present_rect.py); its narrowness = owner-closed VI_SHAPE.
 
@@ -316,7 +316,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 26. **Near-wall flicker (s7098-s7115): eye-cell near-plane loss, RETAIL behaviour (s7109). Refuted: corner width, near 15, margin re-push, post-move, ucode drop, LOD decimation (s7108-s7114), H-gap (s7115). s7115 H-probe CONFIRMED s7116 (opt-in ROGUESQ_S7115_NEARLIFT=1: pooled 4 runs losses 83/31, pierce class removed). s7117: swap = previous tick's camera; residual at terrain 1.0-1.5 near. s7118: NEARK=1.6 removes it (steady 13/1, 5 runs). s7119: no hop at k1.6 (H-smooth, same-run jerk vs off). s7120: off vs k1.6 replicated, 42/2 over 4 runs (z -6.0). s7121: no flight-cam steps (s7120 steps were a cam-mix join). DONE: closes on the owner's look.** Drop is in the RDP stream (s7098).
 27. **G3 flight fidelity at retail settings: CLOSED s7124** (L1 s7122 + L6 s7124, RT64 == angrylion; replay snapshot bug fixed in frame_replay.c). Owner recipe L6 CLOSED s7125 (H-equal). W_SHEET escape CLOSED s7130 (ROGUESQ_W_SHEET_POS default on; both arms pixel-checked; owner sheet s7129).
 28. **G3 owner-recipe fidelity L1/L4: CLOSED s7131 (H-equal).** tools/s7131_arm.zsh, rect 0,9,369,216, swaps with pframe 0 (before the window capture) excluded. L1 mean|d| 8.42 frac>40 0.028 (L1 retail floor s7122 7.79/0.024; grass speckle), 1 frame >0.05 = fast-roll frame misalignment; L4 6.76/0.017, max 0.023. Sheet docs/owner_sheet_s7131_L1_L4_fidelity.png.
-29. **G3 owner-recipe fidelity at 21:9 (next).** Owner plays on a 21:9 screen; repeat s7131_arm with ROGUESQ_ASPECT=21:9 on L6, score vs angrylion (window rect re-measured with tools/s7123_present_rect.py).
+29. **G3 owner-recipe fidelity at 21:9 (s7132): RT64 == angrylion (med 1.61/0.0095) except ONE 1.1 s burst (66/713 swaps) of undrawn side-band holes while banked along a wall.** The stream has no command there, so RT64 shows stale pixels. The cause is the game's per-half partial background clear: rect list at camera 0x80138D18 +0x74/+0x78 -> 0x80138D94, consumed by emitFrameRdpInitDl. The writer is unnamed (no direct store). NEXT: a store watch on 0x80138D90..DB0 names the writer, then fix its x-scale under ASPECT. 0 such frames in 2094 16:9 swaps. tools/s7132_arm.zsh, s7132_tricover.py; sheet docs/owner_sheet_s7132_219_clear_holes.png.
 
 ## Evidence index
 
