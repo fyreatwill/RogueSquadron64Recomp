@@ -188499,3 +188499,31 @@ Two lines: affine fit + independent x-scale sweep, two arms, single run each. Ow
 (tools/s7145_sheet.py: RT64 | angrylion, 3 logo frames + 1 flight). .cap streams deleted; raws/replays/logs in scratch/s7145 (gitignored).
 Owner save untouched. CURRENT-TRUTH 59961 B: still under the 60000 maintenance trigger, barely; the next iteration should prune.
 Next: item 34, the text crawl itself on an AP route without the 70/76 s presses.
+
+## Session 7146 (2026-11-11) — G3 opening text crawl at 21:9: RT64 == angrylion (H-equal); crawl is triangles on a 640x300 fb (H-crawl-rect refuted); residual = 0.25% presentation x-scale of the 640 fb, item 34 CLOSED
+HYPOTHESIS-ID: g3-fidelity-text-crawl-219
+Work unit from NEXT.md. New tools/s7146_arm.zsh (s7144_arm with AP overridable, RDIR s7146). Route: s6995 presses ending at 64:a (no 70/76 s
+start presses), SECS=112, DL=69 DU=38, FROM=4150, EVERY=5, owner recipe FPS60 dd4 ASPECT=21:9, owner save read-only. T1 default, T2
+ROGUESQ_RECT_ASPECT=0. 0 crash both; 8.2 GB streams (deleted after scoring). Crawl reached: angrylion contact sheet shows hangar departure
+4150-4560, space 4570, logo 4675-5100, "Chapter IV / DARK EMPIRE" from ~5200, crawl body to 6610 (end of capture).
+Scored tools/s7141_post.zsh rect 0,11,469,216 split 117,352; painted-square control PASS both. Nominal frac>40 per phase (T1, pframe>=5):
+hangar 0.011, logo 0.015, crawl 0.085 (centre 0.091, sides 0.068): thin high-contrast glyph edges amplify registration.
+New tools/s7146_opcensus.py (per-swap RDP op census): crawl swaps 5900/6400 = cimg w640 @9F9800, scissor 0,0-640,300, fill, 364-557 tri0F,
+0 texrects (hangar 4300: cimg w1024, 989 tri0F). Run log: pfm 640x300 issues no osViSetMode (last mode set = 512->1024 xScale 0x666).
+s7143_affine.py on crawl swaps >=5300 (24 frames), fit box whole crop: best (x +0.25 px, y 0, yscale 0.992) both arms:
+| arm | crop nominal -> fitted | centre | left | right | far (top) | near (bottom) |
+|---|---|---|---|---|---|---|
+| T1 | 0.082 -> 0.0105 | 0.089 -> 0.010 | 0.077 -> 0.018 | 0.068 -> 0.019 | 0.011 -> 0.001 | 0.144 -> 0.026 |
+| T2 RECT_ASPECT=0 | 0.084 -> 0.017 | 0.098 -> 0.013 | 0.078 -> 0.017 | 0.060 -> 0.022 | 0.015 -> 0.002 | 0.138 -> 0.029 |
+Side excess: left wants dx +0.25..0.5 px, right -0.5 px (opposite) -> x-scale. New tools/s7146_xscale.py (per-box x-scale about the centre +
+dx sweep; XS_K env): crawl minimum at 1.0025 in both arms (T1 centre/left/right/near 0.0065/0.0035/0.0043/0.0082 vs 0.010/0.018/0.019/0.026
+at 1.000; 1.005 back up). Same-run hangar (1024 fb) minimum 1.000 (right 0.0008 vs 0.0091 at 1.0025), s7145 C1 flight 1.000. Logo frames of
+this run are too weak to separate 1.000/1.0025 (0.034/0.033).
+Conclusions: H-equal (glyph drawing identical; after one global fit + x-scale the crawl is at the floor 0.004-0.008); H-crawl-rect REFUTED by two
+lines (0 texrects in the stream; RECT_ASPECT=0 arm gives the same fit and residual); H-crawl-persp (row-dependent x error) not seen: near and
+centre choose the same scale, far band insensitive (small glyphs), so single-source for the top rows. The 0.25% (~1.6 fb px over 640) is a
+whole-image presentation term of the 640x300 fb, not text: open lead = VI regs at the crawl (hStart/hEnd/xScale) vs RT64 VI::fbSize /
+present mapping, to say whether hardware VI shows the same. Owner sheet docs/owner_sheet_s7146_crawl_219.png (tools/s7146_sheet.py,
+RT64 | angrylion, 3 crawl frames). Note for the owner: at 21:9 the crawl's 640x300 picture fills the window and the widest lines run off both
+edges, the same in angrylion (game stream). CURRENT-TRUTH trimmed 59961 -> ~58000 B (items 28-33 one line each). Owner save untouched.
+Next: item 35, the 640-fb presentation x-scale (VI regs at the crawl).
