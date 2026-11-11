@@ -189076,3 +189076,19 @@ tools/s7141_post.zsh rect 0,11,469,216 split 117,352 (angrylion CONTROL PASS eac
 Verdict: H-equal on both; no hole, no lag. No letterboxed cutscene fell in either window (none seen on the sheets; not trigger-checked).
 Housekeeping: disk was at 5.8 GB free; deleted L0w.cap, L2w.cap (explained) and the closed s7165/s7166 arm raws L4xt/L4c0/L4d1/L4r43
 (ledger keeps their numbers). 21:9 done: L0 L1 L2 L4 L6 L15; 13 to go.
+
+## Session 7168 (2026-11-11) — G3 owner recipe 21:9 L3 + L5 flight == angrylion (centre 0.001/0.002, 0 flight >0.05)
+HYPOTHESIS-ID: g3-owner-recipe-219.
+Two game runs, one at a time, screen unlocked (ioreg: no CGSSessionScreenIsLocked key), 0 CRASH/SIGSEGV/SIGBUS in either run.log. Owner save untouched.
+Recipe as s7167 (tools/s7141_arm.zsh <lvl> L<lvl>w ASPECT=21:9 EVERY=1 FROM=7500 MAX_MB=12000, CW=504 CH=216; s7141_post rect 0,11,469,216 split 117,352;
+s7163_rectfit; s7160_fit_post). angrylion CONTROL PASS and rectfit CTRL x0+4 PASS on both.
+- L3 (L3w, dark night level): 713 swaps (712 replayed), lag 25 ms. Start rect: meand 1.05/1.18/1.42, frac 0.001/0.002/0.003, 0 >0.05.
+  Refit 0,11,470,218: meand 0.73/0.80/0.88, frac 0.000/0.000/0.001, 0 >0.05, centre 0.000, dup 0. Bands 0.58 1.00 0.59 0.62 0.58 0.48 0.46 1.54.
+  Shift-2 control: meand 2.74/4.61/7.98 (2.6x), frac p90 0.010, but 0 swaps >0.05. On this dark scene the >0.05 count has NO power,
+  so for L3 the verdict rests on meand (0.73 vs control 2.74) and on the sheet (identical by eye). Sheet docs/owner_sheet_s7168_L3_219_fidelity.png.
+- L5 (L5w, asteroid/space level): 692 swaps (690 scored), lag 20 ms. Refit 1,12,469,217: meand 1.56/1.79/2.04, frac 0.002/0.003/0.004, 0 >0.05,
+  centre 0.002, side 0.003, dup pframes 6. Shift-2 control meand 3.20/5.56/11.96, 9 swaps >0.05 (fires). Worst swaps 7538/7539/8169 frac <=0.004.
+  Sheet docs/owner_sheet_s7168_L5_219_fidelity.png identical by eye (stars, planet, asteroid rock, HUD).
+Verdict: H-equal on both; no hole, no lag. Lesson for the remaining dark levels: check the shift-2 meand ratio, not only the >0.05 count.
+Housekeeping: deleted the closed arm raws L4lb/L4fx/L4a43/L4w and the scored L0w/L2w raws (22 GB; numbers above and in s7165-s7167), and L3w.cap/L5w.cap.
+21:9 done: L0-L6, L15; 11 to go (L7-L14, L16-L18).
