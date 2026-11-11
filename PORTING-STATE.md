@@ -188561,4 +188561,8 @@ mapping). First E1 build had the halved-width (2048 VI -> 1024 fb) factor invert
 modes (221/474/335/442/334/294 rows), 0 crash, 0 zero-size frames. Pixel effect NOT resolved by the fitter: E1's best (e, sy) moves by an
 offset (sy -1 -> +2 quarter px) rather than the predicted e -0.007, because e and sy trade off over the crawl's lower-half text; both arms
 reach the same floor. So EXACT_ROWS is register-correct but pixel-unqualified; stays opt-in, owner may choose. Owner save untouched.
+Verdict: the register log refutes H-vi-hw and H-rt64-present (VI and RT64 both map exactly 640 columns); the fine-grid fit refutes a
+reproducible x presentation term and selects H-noise, which closes item 35. Beyond the instrument: a landed opt-in presentation fix
+(ROGUESQ_VI_EXACT_ROWS) for the measured 2-row VI deviation. Next discriminator: cutscene frac>40 after one fine-grid fit vs the
+crawl/flight floor (~0.01), worst-swap op census to split H-cut-diff from H-cut-ours (NEXT.md).
 Next: G3 owner-recipe fidelity for the mission intro cutscenes at 16:9 (not yet covered by items 27-34), NEXT.md.
