@@ -187294,3 +187294,30 @@ ORIGIN: no mitigation code added (measurement only).
 Next: read how 0x8004CD00 builds the near corners (x half-width vs the projection's x scale at 16:9, near distance vs the
 projection near), and build ROGUESQ_S7108_CAMWIDE=1|tog widening the corner x by the aspect scale; same-run tog on L6 dd4 16:9,
 counting capture episodes and stream near-z eye-cell losses per state, plus an ASPECT=4:3 arm (NEXT.md, slug fps60-wall-nearclip).
+
+## Session 7108 (2026-11-10) — FPS60 near-wall flicker: the push-out corner width does not cause the eye-cell near clip (CAMWIDE=tog no change), and the clip happens at the 30 fps rate too (H-aspect, H-neardist, H-tick refuted)
+
+Ran: one L6 dd4 16:9 owner-recipe run (scratch/s7099/arm.zsh 6 4 s7108a, ROGUESQ_G1E_WIN=600 G3C_LOG=1, S7101_CHASE, S7104_CELL,
+S7105_EMIT, S7106_RSPTRI, S7107_TAG, G5B_TRIS, ROGUESQ_S7108_CAMWIDE=tog). 0 crashes, 255.1 s capture, 13877 frames, 12412 tris swaps.
+Code-read of applyPlayerVehicleStateUpdate 0x8004CD00 (constants read from the ROM at 0x8003A8D0-0x8003A8F0): the corner vector is
+x = w*0.5*240/h, y = 120, z = 120/tan((fovy+2)/2 deg), scaled by f20 = 2*near. The camera struct s2 = 0x80138D18 + i*0x144 is the
+setupCameraMatrices camera (cam = s2+8), so s2+0x18/0x1C are the viewport w/h that s6112 VPW widens (w 796 at 16:9), s2+0x28 the
+fovy and s2+0x2C the near. setupCameraMatrices gives guPerspective aspect = (w/h) * (vs_w / vi_w) * f(0x8011A840) * ASPECT_SCALE.
+New tools/apply_s7108_camwide.py (fixup list after s7107): records the final guPerspective fovy/aspect/near per camera struct and
+prints them beside the corner half-tans once per 600 push-out calls ([s7108] lines); ROGUESQ_S7108_CAMWIDE=1|tog scales the corner x
+by max(1, k) so the corners cover the projection with the retail 2-degree margin (tog: odd absolute mach seconds). Default off.
+New tools/s7108_split.py (presented episodes + losscan rows split by tog state, --shift control).
+Numbers (10 [s7108] lines, constant): w 796 h 448, fov 65 = pfov 65, near 30 = pnear 30, corner horizontal half-tan hx 1.176 vs
+projection px 1.368, vertical 0.662 vs 0.637, k 1.208. The 1.208 is the pixel-aspect term (2.1469 / (796/448)); with w 512 the
+same ratio holds at 4:3, so the narrow corners are retail, not a 16:9 artefact. Near distances agree, so H-neardist is refuted.
+Split (scratch/s7108/split_a.txt, losscan_a.txt): eye-cell near-z stream losses (ref painter c+0+0, drop minz < 0x100) 27 with
+CAMWIDE off vs 22 on; with the 0.5 s shifted-clock control, 18 vs 31. Presented episodes: 0 off, 1 on. Widening the corners does not
+remove the clip, so H-aspect is refuted as the cause (single run). Positive control: losscan flagged 328 swaps with >= 300 lost cells,
+49 of them eye-cell near-z, in both states.
+Rate split (losscan rows against the [g3c] lim state): this run sat at lim2 (retail 30 fps rate) for 224.7 of 240.4 s and all 49 eye
+losses were at lim2. Re-analysis of s7107 (equal time, lim1 121.7 s / lim2 123.8 s): eye losses 30 lim1 vs 27 lim2. So at stream
+level the eye-cell near clip is not tied to the 60 fps tick (H-tick refuted, two runs). It is retail camera logic meeting the wall.
+Rules out: corner width vs the widened projection, push distance vs projection near, FPS60 render-only frames as the source of the clip.
+Open: whether retail settings (FPS60 off, dd1, 4:3) clip the same way. s7098/s7100's "follows FPS60" was a presented-episode
+count with weak statistics (s7101: 1.6x, p=0.185).
+Next: the same instruments at retail settings (NEXT.md, slug fps60-wall-retail).

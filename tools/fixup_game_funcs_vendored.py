@@ -42129,6 +42129,7 @@ RS64_REPLAY = [
     "apply_s7105_emit.py",  # s7105: near-eye terrain cells list -> render chain -> TRI_GEN emit + lod (CHASE file ce lines), ROGUESQ_S7105_EMIT=1 (measurement only)
     "apply_s7106_rsptri.py",  # s7106: publish near-cell TRI_GEN keys for the ucode per-command RDP tri census (src/rsp/s7106_rsptri.cpp), ROGUESQ_S7106_RSPTRI=<file> (measurement only)
     "apply_s7107_painter.py",  # s7107: publish all 49 near-eye cell TRI_GEN keys for the per-triangle source-cell tag FIFO (src/rsp/s7106_rsptri.cpp, ROGUESQ_S7107_TAG=1; measurement only)
+    "apply_s7108_camwide.py",  # s7108: push-out corner width vs guPerspective args ([s7108] stderr) + ROGUESQ_S7108_CAMWIDE=1|tog corner widening arm
     "apply_s7069_callsite_gate.py",  # s7069: inline flag gate (same-name macro) for lowfield_store/synth_read calls; MUST stay last
 ]
 
