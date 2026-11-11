@@ -8,9 +8,13 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
+**s7117 near-wall non-pierce residual (offline, runs d-g): a swap presents the PREVIOUS tick's camera (loss pierce peaks at k=-1 in 4/4 runs, pooled 0.80 vs 0.67 at k0; single-source). The re-join explains 15/57 non-pierce losses. The rest (27 of 31 lift-on losses) have terrain 1.0-1.5 near ahead of the eye, 26/31 vs ~0.31 of lift-on flight: the s7115 lift clears only to 1.05 near, and the loss reaches further (H-margin/H-proj lead).** FPS60 is a real 60 Hz sim, so there is no interpolated render eye. Losses follow slow (>25 ms) wall frames 78% of the time, but game dt is 1/60 on every tick and near-wall flight is slow too (confound, no camera-step mechanism). tools/s7117_tickjoin.py.
+- In plain words: most of the remaining flashes happen just past where the lift stops checking. Checking a bit further ahead is the next test.
+- Next: lift-depth knob ROGUESQ_S7115_NEARK, same-run tog k=1.0 vs 1.6 with the lift on (NEXT.md, slug fps60-wall-frame).
+
 **s7116 near-wall flicker: the NEARLIFT fix REPLICATES (4 runs, 4/4 same direction): pooled eye-cell losses off/on 83/31 (z -4.9), episodes 43/14 (z -3.8); every 0.25 s off-phase bin exceeds every on-phase bin; the control passes in each run (on-second flight pierce 0.001-0.003 vs off 0.060-0.100). It removes the pierce class only: on-second losses pierce 0/27 in e-g; the remaining ~30% non-pierce losses (H-frame class) are untouched.** New tools/s7116_phase.py (phase table over runs). The s7114_parity +-0.5 s shift controls do not collapse when losses cluster in phase (they add off-early to on-late), so read the phase table instead. ROGUESQ_S7115_NEARLIFT=1 added to docs/OWNER-OPT-INS.md as opt-in (default off = retail). Owner sheet docs/owner_sheet_s7116_nearlift_off.png / _on.png: off rows show the diagonal wall cut; on rows were picked at the deepest lifts, right after the toggle switches on, so they include the camera hop out of the rock and do not show a clean before/after by eye.
 - In plain words: lifting the camera out of the rock really does cut the wall flashes to about a third, repeatably. The rest are a different kind.
-- Next: the residual non-pierce class (H-frame: tick join +-1, render projection frame) offline on runs d-g (NEXT.md, slug fps60-wall-frame); owner judges NEARLIFT=1 for hops.
+- Owner judges NEARLIFT=1 for hops.
 
 **s7115:** exact eye-tile geometry refutes H-gap; the loss is terrain inside the render near pyramid the retail push-out ray test cannot see from inside (H-probe, confirmed s7116); tools/s7115_neargap.py, tools/apply_s7115_nearlift.py.
 
@@ -325,7 +329,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 23. **RSPRecomp scalar lowering: CLOSED s7093** (tools/s7093_su_census.py --controls; sltiu $zero/neg-imm template fixed in RSPRecomp; rerun after any RSPRecomp change).
 24. **RSP runtime DMA + cop0: CLOSED s7094** (audio ucode_data off-by-one fixed; tools/s7094_dma_test + tools/s7094_dma_census.py, rerun after any rsp.hpp/rsp.cpp DMA edit).
 25. **DPC registers CLOSED s7095; bridge forwarding coverage CLOSED s7096** (ROGUESQ_S7095_DPC / ROGUESQ_S7096_FWD=ctl, rerun after any dpc_bridge.cpp submit/defer/wrap edit; MISSING_UNEXPLAINED/dup/order must stay 0). Edit-walker census CLOSED s7097 (ROGUESQ_S7097_EDIT=ctl; unattributed must stay 0). RT64 vs angrylion on the same dd4 stream CLOSED s7098 (H-stream: big drops are in the stream; replay with tools/angrylion_replay/build16.sh).
-26. **Near-wall flicker (s7098-s7115): eye-cell near-plane loss, RETAIL behaviour (s7109). Refuted: corner width, near 15, margin re-push, post-move, ucode drop, LOD decimation (s7108-s7114), H-gap (s7115). s7115 H-probe CONFIRMED s7116 (opt-in ROGUESQ_S7115_NEARLIFT=1: pooled 4 runs losses 83/31, pierce class removed). Next: residual non-pierce H-frame class (slug fps60-wall-frame).** Drop is in the RDP stream (s7098).
+26. **Near-wall flicker (s7098-s7115): eye-cell near-plane loss, RETAIL behaviour (s7109). Refuted: corner width, near 15, margin re-push, post-move, ucode drop, LOD decimation (s7108-s7114), H-gap (s7115). s7115 H-probe CONFIRMED s7116 (opt-in ROGUESQ_S7115_NEARLIFT=1: pooled 4 runs losses 83/31, pierce class removed). s7117: swap = previous tick's camera; residual losses sit at terrain 1.0-1.5 near, beyond the lift's 1.05. Next: NEARK depth arm (slug fps60-wall-frame).** Drop is in the RDP stream (s7098).
 
 ## Evidence index
 

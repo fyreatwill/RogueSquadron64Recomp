@@ -187589,3 +187589,37 @@ Changes: tools/s7116_phase.py (new); docs/OWNER-OPT-INS.md row for ROGUESQ_S7115
 CURRENT-TRUTH headline + item 26; s7113/s7115 headline lines compacted.
 Rules out: NEARLIFT effect being chance (z -4.9) or a toggle-edge artefact (phase table). Leaves open: the non-pierce residual, and whether the lift is visible as a hop
 at constant NEARLIFT=1.
+
+## Session 7117 (2026-11-10) — FPS60 near-wall flicker, non-pierce residual offline on s7115 runs d-g: a swap presents the PREVIOUS sim tick's camera (pierce association peaks at k=-1 in 4/4 runs); that re-join explains 15/57 non-pierce losses; the remaining ~44 (27 of them on lift-on seconds) sit with terrain 1.0-1.5 near ahead of the eye, 26/31 on-second losses vs ~0.31 of on-second flight: the lift clears to 1.05 near but the loss reaches further (H-proj/H-margin lead); no interpolated render eye exists (FPS60 is a real 60 Hz sim)
+
+HYPOTHESIS-ID: fps60-wall-frame
+
+What ran (offline, no build, no game run): new tools/s7117_tickjoin.py (execs tools/s7115_neargap.py up to its analysis section, so parsing,
+surface, geo() and the loss rule are identical; controls 1-2 re-print: surface at o max 1.8-2.4e-6, surface at game hit points <1e-3 on
+99.5-99.9%). Per loss swap, the exact-geometry near-pyramid pierce at tick offsets k = -3..+2 from the s7115 join (last bv tick <= swap,
+p50 2.4-3.1 ms before it), with a 600-swap flight sample as the base rate. Output scratch/s7115/tickjoin_{d,e,f,g}.txt.
+Boring thing first: docs/FPS60-FIXES.md: FPS60 clamps the frame limiter 2 -> 1, so every presented game frame is a full sim tick. There is
+no render-only interpolated eye, so NEXT.md's "interpolated eye" arm of H-join does not exist; the only join freedom is which tick built the DL.
+
+| off-second losses: pierce at offset | k-3 | k-2 | k-1 | k0 | k+1 | k+2 |
+| d (10) | 0.10 | 0.30 | **0.60** | 0.50 | 0.40 | 0.40 |
+| e (25) | 0.32 | 0.56 | **0.84** | 0.68 | 0.44 | 0.40 |
+| f (24) | 0.46 | 0.58 | **0.83** | 0.71 | 0.62 | 0.54 |
+| g (24) | 0.21 | 0.42 | **0.79** | 0.71 | 0.58 | 0.54 |
+Flight base rate is flat across k (0.05-0.16), so the loss/flight ratio also peaks at k-1 in 4/4 runs (4.1, 17.8, 13.4, 7.6).
+Pooled off-second pierce 66/83 = 0.80 at k-1 vs 56/83 = 0.67 at k0. Reading: the swap shows the display list built from the previous tick's
+camera (one-tick pipeline). Single-source (one dataset, one rule), but consistent in 4/4 runs.
+Non-pierce at k0 (57 losses, off+on): pierce at k-1 1/8, 4/12, 5/19, 5/18 = 15/57; at any k in -3..+2 17/57. So H-join explains ~1/4.
+Residual with the k-1 join: off 17/83, on 27/31 (on-second pierce at k-1 only 4/31: the lift clears the pyramid on the tick it runs).
+Depth to the surface along screen rays (k-1, non-pierce): on-second losses 26/31 have the surface at 1.0-1.5 near (bins 1.25/1.50)
+vs on-second flight 0.24-0.36 in the same bins (~2.7x enrichment); off-second flight 0.15-0.29. On seconds the lift parks the eye just past
+1.05 near (flight on 1.25 bin 0.17-0.30 vs off 0.10-0.17), and the losses that remain are exactly those parked ticks.
+Side check, 33 ms steps: 78% of losses (89/114) follow a >25 ms wall-clock gap between ticks vs 12-26% of far flight. But the game's ch dt is
+1/60 on every tick (0 ticks with dt > 0.025 in all runs), so these are slow wall-clock frames, not longer camera steps, and near-wall flight
+already shows them at 0.21/0.53/0.55/0.72 (heavy scenes). Mostly a scene-weight confound; no camera-step mechanism (H-dt refuted by the dt field).
+Verdict line: H-join PARTLY selected (k-1 is the right join, explains 15/57); H-proj/H-margin selected as the lead for the rest (losses with
+terrain at 1.0-1.5 near, where the s7115 lift stops at 1.05); H-other (losscan false positives) not tested (no sheet this session).
+Rules out: an interpolated render eye (does not exist at FPS60); a dt-size camera step on slow frames (dt constant 1/60).
+Next: NEARLIFT depth knob (ROGUESQ_S7115_NEARK=<k>: sample the pyramid to k*near and lift by need + 0.05 near), same-run tog between k=1.0
+and k=1.6 with the lift on in both halves; H-margin predicts on-second losses fall in the k=1.6 half; H-other predicts no change.
+Changes: tools/s7117_tickjoin.py (new).
