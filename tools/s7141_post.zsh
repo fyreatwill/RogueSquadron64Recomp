@@ -4,7 +4,7 @@
 setopt nonomatch
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 D=$1; N=$2; RECT=$3; SPLIT=$4; AL=scratch/s7124/al16/frame_replay16
-[ -f $D/$N.idx ] || python3 tools/s7098_rt64_vs_al.py index $D/$N.cap $D/$N.idx
+[ -f $D/$N.idx -a ! $D/$N.cap -nt $D/$N.idx ] || python3 tools/s7098_rt64_vs_al.py index $D/$N.cap $D/$N.idx
 awk '$5==1 {print $1}' $D/$N.idx > $D/$N.swaps
 mkdir -p $D/${N}r; rm -f $D/chunk${N}_*
 split -l 60 $D/$N.swaps $D/chunk${N}_

@@ -188566,3 +188566,39 @@ reproducible x presentation term and selects H-noise, which closes item 35. Beyo
 (ROGUESQ_VI_EXACT_ROWS) for the measured 2-row VI deviation. Next discriminator: cutscene frac>40 after one fine-grid fit vs the
 crawl/flight floor (~0.01), worst-swap op census to split H-cut-diff from H-cut-ours (NEXT.md).
 Next: G3 owner-recipe fidelity for the mission intro cutscenes at 16:9 (not yet covered by items 27-34), NEXT.md.
+
+## Session 7148 (2026-11-11) — G3 mission intro cutscene at 16:9 (owner recipe): RT64 == angrylion after one registration fit in every phase (H-equal); the nominal 0.2+ frames were a stale-index join and a global-lag join, not rendering; item 36 CLOSED
+HYPOTHESIS-ID: g3-fidelity-intro-cutscene-169
+Work unit from NEXT.md. Route tools/s7146_arm.zsh (s6995 presses ending 64:a), owner recipe FPS60 dd4 ASPECT=16:9, capture 384x216, window
+1360x796 (rect 0,9,369,216, split 46,322), owner save read-only. Two runs, 0 crash both:
+- C1: SECS=180 FROM=6550 EVERY=5 DL=100 DU=70. Stream hit the 12 GB cap at swap 10060; crawl 6550-9800, space intro from ~9850.
+- C3: SECS=275 FROM=9750 EVERY=10 DL=150 DU=115 (8496 presented frames, cap again 12 GB at swap 14621): whole intro = space/planet
+  flyby 9860-10350, sea/AT-AT/Y-wing cinematic 10400-13450, flight with HUD from ~13520.
+Defect found and fixed in the scorer: the first C1 score (mean|d| 20.65, frac 0.21) used a STALE C1.idx (06:53, from an interrupted
+earlier attempt that also left scratch/s7148/C2*); swap times were 591 s before the capture. tools/s7141_post.zsh reused any existing idx;
+it now rebuilds when the .cap is newer. Rebuilt: median mean|d| 4.89, painted-square control PASS (both runs).
+Second join defect: the scorer joins swap->presented frame with one global lag (C1: 135 ms, fitted on the slow crawl); on the fast space
+flyby at FPS60 it picked neighbour frames (ships moved), giving frac 0.25-0.27 on swaps 10015-10025. New tools/s7148_pfsearch.py
+(per-swap best presented frame in +-20): C1 cutscene median 0.0754 -> 0.0540, worst 0.27 -> 0.065. In C3 (lag 20 ms) the join was
+already right (offsets ~0, medians unchanged), so the residual there is registration.
+Registration, tools/s7147_joint_fit.py (now takes JR=crop rect; was hardwired to the 21:9 rect), k=1, e 0.976..1.0, sy -2..8 qpx,
+sx 0..2 qpx, 12 frames per phase, best-pframe joins:
+| run/phase | identity frac>40 (all) | best (e, sx, sy) | fitted all | centre | left | right | top | bottom |
+|---|---|---|---|---|---|---|---|---|
+| C1 space | 0.0519 | 0.980, 1, -2 | 0.0008 | - | - | - | - | planet 0.0015 |
+| C3 space | 0.0529 | 0.980, 1, -2 | 0.0012 | 0.0012 | 0.0000 | 0.0006 | 0.0000 | 0.0024 |
+| C3 sea cinematic | 0.0298 | 0.984, 2, -2 | 0.0042 | 0.0023 | 0.0008 | 0.0115 | 0.0038 | 0.0035 |
+| C3 flight | 0.0233 | 0.984, 2, -2 | 0.0042 | 0.0019 | 0.0012 | 0.0094 | 0.0077 | 0.0008 |
+Every phase is at or under the ~0.01 flight/crawl floor after one fit; the space phase agrees across two runs (two lines), the sea
+cinematic is one run (single-source). The fit term is the same in all phases: a y-scale 0.980-0.984 = the 300-row angrylion frame vs
+the 294 (VI) / 296 (RT64 fbSize, s7147) rows presented (294/300 = 0.980, 296/300 = 0.987); e and sy trade off, so this does not yet say
+which row count RT64 should present. Op census (tools/s7146_opcensus.py): cutscene = cimg 640x300, scissor 0,0-640,300, 40 texrects
+(10 128-px strips: the backdrop) + 100-770 tri0F + tri0D; same fb as the crawl. Right-box residual 0.009-0.012 (flight: HUD ring top
+right) is the largest box; not examined further.
+Conclusions: H-equal SELECTED (renderer draws the intro cutscene like the accurate model); H-cut-diff REFUTED for RT64 (no geometry class
+differs after the fit); H-cut-ours NOT tested by this unit: both renderers consume the same forwarded stream, so a cutscene walker edit
+would not show here; whether the cutscene STREAM matches retail at dd4 is G5h's question (CURRENT-TRUTH item 9, owner look).
+Owner sheet docs/owner_sheet_s7148_intro_169.png (tools/s7148_sheet.py; 5 frames, RT64 | angrylion). C1.cap/C3.cap deleted after scoring
+(24 GB); scratch/s7148/C2.cap (14 GB, from the interrupted earlier attempt, never scored) left in place. Owner save untouched.
+Next: item 37, the same intro at 21:9 in two arms (default vs ROGUESQ_VI_EXACT_ROWS=1): the planet limb is a sharp y target that can
+pixel-qualify EXACT_ROWS, which s7147 could not do on crawl glyphs.

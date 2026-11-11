@@ -3,11 +3,11 @@
 Tests H-ycouple: on the perspective crawl a y-mapping error moves glyph x in opposite directions on the left and right (the trapezoid
 shears), which a fixed-e x-scale sweep reads as an x-scale. If the joint best k returns to 1.000 once (e, sy) are free, the s7146 1.0025
 x-scale was y coupling, not an x presentation term.
-usage: s7147_joint_fit.py raw aldir frames.csv "name=x0:y0:x1:y1;..." [nsample]   env: JK JE JY JX (comma grids; sx, sy in 1/4 px)"""
+usage: s7147_joint_fit.py raw aldir frames.csv "name=x0:y0:x1:y1;..." [nsample]   env: JR (crop rect, default 21:9 0,11,469,216) JK JE JY JX (comma grids; sx, sy in 1/4 px)"""
 import sys, os, csv, statistics as S, importlib.util, itertools
 sp = importlib.util.spec_from_file_location('f', os.path.join(os.path.dirname(os.path.abspath(__file__)), 's7122_fidelity.py')); F = importlib.util.module_from_spec(sp); sp.loader.exec_module(F)
 from PIL import Image
-raw = F.Raw(sys.argv[1]); ald = sys.argv[2]; R = (0, 11, 469, 216); W, H = 469, 205; Q = 4; cx = W / 2 * Q
+raw = F.Raw(sys.argv[1]); ald = sys.argv[2]; R = tuple(map(int, os.environ.get('JR', '0,11,469,216').split(','))); W, H = R[2] - R[0], R[3] - R[1]; Q = 4; cx = W / 2 * Q
 rows = [r for r in csv.DictReader(open(sys.argv[3])) if int(r['pframe']) > 0]
 n = int(sys.argv[5]) if len(sys.argv) > 5 else 16; rows = rows[::max(1, len(rows) // n)][:n]
 boxes = [(b.split('=')[0], tuple(map(int, b.split('=')[1].split(':')))) for b in sys.argv[4].split(';')]
