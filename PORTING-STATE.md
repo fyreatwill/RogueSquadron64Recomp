@@ -187289,6 +187289,7 @@ cell has 1 tri where it had 4. Two lines (stream tags + presented geometry), one
 Lead for the cause (code-read, not yet measured): s7101's push-out in applyPlayerVehicleStateUpdate builds its 4 near-plane corners
 from the game FOV; at ASPECT=16:9 the projection is widened (s6142/s6144 FP_XSCALE), so if the corners are not widened too the side
 parts of the real near plane are never tested - episode 1's cut is on the right side. Untested 4th corner (s7101/s7102) is the other.
+Discrimination line: this run refutes H-elsewhere, H-rdp and H-frame and selects H-nearclip (eye cell cut by the near plane); the next discriminator is a same-run CAMWIDE=tog split of the push-out corner width (H-aspect vs H-corner4 / H-neardist / H-tick).
 ORIGIN: no mitigation code added (measurement only).
 Next: read how 0x8004CD00 builds the near corners (x half-width vs the projection's x scale at 16:9, near distance vs the
 projection near), and build ROGUESQ_S7108_CAMWIDE=1|tog widening the corner x by the aspect scale; same-run tog on L6 dd4 16:9,
