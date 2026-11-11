@@ -187833,4 +187833,5 @@ renders L6's streamed textures faithfully. G3 retail-settings flight fidelity CL
 Caveat: s7098 (G5b, EVERY=20) used the buggy replayer; its geometry conclusions stand (drops are whole walls), but its 0.043 floor includes stale
 texture error.
 Next: the same check at the owner recipe dd4 16:9 FPS60 (NEXT.md, slug g3-owner-recipe-fidelity).
+Verdict: this selects H-equal and refutes H-tex and H-tool for L6 retail flight; it closes G3 retail-settings flight fidelity. Next discriminator: own-snapshot vs SNAP_FROM replays at the owner recipe (dd4 16:9 FPS60) split H-equal / H-wide / H-hi (NEXT.md).
 Owner save untouched (forced-level route, NO_SAVE_WRITE).
