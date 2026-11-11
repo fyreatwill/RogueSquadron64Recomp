@@ -187803,3 +187803,34 @@ Rules out: an off-centre present at 4:3; any WINDOW_FIT/ASPECT offset at default
 the capture aspect differs from the window aspect; measure margins with tools/s7123_present_rect.py or capture at the window aspect.
 ORIGIN: n/a (measurement only, no mitigation).
 Next: G3 texture fidelity on the texture-streaming level L6 with a per-swap RAM snapshot (ROGUESQ_G5B_FRAME_EVERY=1, short FROM window).
+
+## Session 7124 (2026-11-10) — G3 L6 texture fidelity: RT64 == angrylion on a texture-streaming level (H-equal); s7122's garbled L6 textures were a frame_replay.c bug (each frame started from the PREVIOUS RAM snapshot), fixed
+HYPOTHESIS-ID: g3-flight-fidelity
+Work unit from NEXT.md (H-equal vs H-tex vs H-tool). One run: tools/s7124_arm.zsh (copy of s7122_arm with scratch/s7124 paths) L6, dd1, 4:3,
+FPS60=0, ROGUESQ_G5B_FRAME_EVERY=1 FROM=5000 MAX_MB=12000 (env order: the extra env follows EVERY=20 in XENV_EXTRA, later wins; confirmed by 741/741
+swaps carrying RAM). Stream swaps 5000..5740 (24.7 s of flight, 12.0 GB, deleted after replay), window capture 10942 frames 320x240. 0 crash.
+Tool bug found by reading frame_replay.c before replaying: rs64_g5b_frame writes 'SWAP' then that swap's 'RAM ' then 'RNG ' records. frame_replay
+started the frame on the SWAP tag from the snapshot it already held (the previous one, EVERY swaps old) and the following RAM tag hit the
+"keep frame's own view" branch, so a swap's own snapshot was NEVER used; at EVERY=1 the first swap errored "no snapshot before". Fixed: a frame
+that has run no range takes its own snapshot (LEGACY_SNAP=1 restores the old behaviour); new SNAP_FROM=<swap> forces one older snapshot for every
+replayed swap (the H-tool control). Rebuilt scratch/s7124/al16/frame_replay16 with tools/angrylion_replay/build16.sh. New tools/s7124_capidx.py
+indexes a stream (swap mach hasram nranges bytes).
+Results (tools/s7122_fidelity.py, rect 20,15,279,240, lag 15 ms; 370 swaps each cimg 620000/690000):
+| arm | frames | mean|d| median / p90 / max | frac>40 median / p90 / max | frames frac>0.02 | biggest region |
+|---|---|---|---|---|---|
+| own snapshot (fixed) | 740 | 1.62 / 2.93 / 6.71 | 0.010 / 0.013 / 0.023 | 3 | 654 px |
+| LEGACY_SNAP (1 swap stale) | 739 | 1.62 / 2.93 / 6.71 | 0.010 / 0.013 / 0.023 | - | 654 px (64/739 replays differ in bytes) |
+| SNAP_FROM=5000 (up to 740 stale) | 739 | 3.27 / 4.40 / 6.72 | 0.022 / 0.026 / 0.031 | 417 | 904 px |
+- Own (docs/owner_sheet_s7124_fidelity_L6.png, 4 worst frames): sky clouds, canyon walls, radar map and HUD coherent in angrylion; the diff is
+  silhouette edges only. H-tex refuted; H-tool refuted as stated (the snapshot point is fine, the replayer was wrong).
+- Positive control same run (docs/owner_sheet_s7124_stale_control.png): the stale snapshot shows the CPU-drawn radar map as a solid red
+  whole-material block on every worst frame, so the scorer does catch material-level texture errors. Identity/painted control PASS
+  (s7122_fidelity.py control: 0 regions / one 400 px region).
+- L6 scores lower than L1 (1.6 vs 7.8) because these frames are flat sky and dark canyon, not high-frequency terrain texture.
+ORIGIN: the garbled s7122 L6 replays were written by frame_replay.c's frame-start memcpy of the previous snapshot (tool defect, not game/RT64).
+Conclusion (two lines: whole-frame metric over 740 frames + eyeballed worst frames, with a same-run stale control): at retail settings RT64
+renders L6's streamed textures faithfully. G3 retail-settings flight fidelity CLOSED for L1 + L6.
+Caveat: s7098 (G5b, EVERY=20) used the buggy replayer; its geometry conclusions stand (drops are whole walls), but its 0.043 floor includes stale
+texture error.
+Next: the same check at the owner recipe dd4 16:9 FPS60 (NEXT.md, slug g3-owner-recipe-fidelity).
+Owner save untouched (forced-level route, NO_SAVE_WRITE).

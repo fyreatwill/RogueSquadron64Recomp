@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7123 (2026-11-10).
+Compact operational handoff, as of Session 7124 (2026-11-10).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -8,12 +8,12 @@ PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6994 maintenance)" — grep ther
 
 ## Headline
 
-**s7120 near-wall NEARLIFT=1 NEARK=1.6 REPLICATED against the retail camera in the same runs (3 new runs n-p + m, L6 dd4 16:9 FPS60, tog1 per mach second): edge-excluded steady wall losses off/on 42/2 over ~24.8k swaps per arm (z -6.0, 95% removed; per run 19/0, 10/0, 10/1, m 3/1).** H-fix (pre-registered >=75%). Off-arm control (>=10 pooled losses) passes. Hop: H-smooth in every run (on/off wall-jerk p99 ratio 0.40-0.52; injected 1 u step caught each run). The on arm has more >0.5 u jerks in open-flight windows (17 vs 4). New `--lag` in tools/s7119_hop.py: all 17 are >=17 ticks after any lift, in pairs, and 2-16 u in size (a one-tick camera step), while the lift never exceeds 1.31 u. So the lift does not cause them (H-release refuted, two lines).
-- In plain words: with the lift on, 95% of the wall flashes are gone in the same runs, and the camera does not hop.
-- **s7121:** the "2-16 u one-tick camera steps" s7120 reported were a log-join artefact. tools/s7119_hop.py mixed 3 camera objects. The flight cam 80138458 has 0 steps >0.5 u over 4 runs (tools/s7121_camstep.py, with an inject control for both labels), and the stray flight tick between scripted cut cams (A28 -> 930) is never presented (bv per swap). Re-scored with `s7119_hop.py --cam 80138458`: >1.0 u jerks off 0.33 vs on 0.00 per 1e3 ticks.
-- **s7122:** G3 retail-settings fidelity: L1 flight RT64 == angrylion on the same stream (H-equal, 572 frames over 2 runs: mean|d| 7.8, 2.4% px > 40, edges and texture speckle only; sheet docs/owner_sheet_s7122_fidelity.png; tools/s7122_fidelity.py + control). CULL_SPIKE costs nothing. L6 textures are not replay-evaluable (snapshot timing).
-- **s7123:** the s7122 "off-centre 553x480 pillarbox" is centred (margins 43/45 pt; the asymmetry was ScreenCaptureKit padding the right of a 320x240 capture of a 640x512 window; title-bar control). The narrow box is RT64's square-column fb box = the owner-closed VI_SHAPE question (s6928), nothing new. Use tools/s7123_present_rect.py for capture margins.
-- Next: G3 L6 texture fidelity with per-swap RAM snapshots (NEXT.md, slug g3-flight-fidelity). Item 26 closes on the owner's look.
+**s7124 G3 L6 texture fidelity: RT64 == angrylion on a texture-streaming level (H-equal).** The s7122 "garbled L6 textures" were a replay-tool bug, not snapshot timing: the stream writes SWAP before that swap's RAM record, and tools/angrylion_replay/frame_replay.c started each frame from the PREVIOUS snapshot and ignored its own (EVERY swaps stale). Fixed (LEGACY_SNAP=1 restores it; new SNAP_FROM=<swap> forces an older snapshot). One L6 dd1 4:3 run, EVERY=1, 740 flight swaps (tools/s7124_arm.zsh, tools/s7124_capidx.py): own snapshot mean|d| median 1.62, frac>40 median 0.010, 0 regions >=1000 px, 3/740 frames over 0.02; diff is silhouette edges only (docs/owner_sheet_s7124_fidelity_L6.png). Same-run control SNAP_FROM=5000 (up to 740 swaps stale): mean|d| 3.27, 417/739 frames over 0.02, the CPU-drawn radar map shows as a solid block (docs/owner_sheet_s7124_stale_control.png). 1-swap-stale = own on the metric (64/739 files differ in bytes).
+- In plain words: the renderer draws the textures correctly on the streaming level too; the earlier "garbled" look was our replay tool reading the wrong memory copy.
+- s7098 used the same tool at EVERY=20 (geometry drops, not textures): its conclusions stand, but its 0.043 floor likely includes stale-texture error.
+- Next: owner-recipe (dd4 16:9 FPS60) texture fidelity with the fixed tool (NEXT.md, slug g3-owner-recipe-fidelity).
+
+**s7120-s7123:** NEARLIFT k1.6 replicated vs retail camera same run (steady wall losses 42/2 over 4 runs, z -6.0; H-smooth; s7121: the 2-16 u camera steps were a 3-camera log join, flight cam 80138458 has 0 steps; use `s7119_hop.py --cam 80138458`). s7122: L1 flight RT64 == angrylion (572 frames, mean|d| 7.8, edges + speckle; tools/s7122_fidelity.py, s7122_sheet.py); CULL_SPIKE costs nothing. s7123: the 4:3 pillarbox is centred (SCK pads the right; tools/s7123_present_rect.py); its narrowness = owner-closed VI_SHAPE.
 
 **s7119/s7118:** no hop at k1.6 vs the retail camera, same run (wall jerk p99 0.25 vs 0.33 u; sheet docs/owner_sheet_s7119_nearlift_hop.png); NEARK=1.6 selected H-margin (k1.0/k1.6 steady losses 13/1, 5 runs; tools/s7118_edge.py).
 
@@ -318,6 +318,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 24. **RSP runtime DMA + cop0: CLOSED s7094** (audio ucode_data off-by-one fixed; tools/s7094_dma_test + tools/s7094_dma_census.py, rerun after any rsp.hpp/rsp.cpp DMA edit).
 25. **DPC registers CLOSED s7095; bridge forwarding coverage CLOSED s7096** (ROGUESQ_S7095_DPC / ROGUESQ_S7096_FWD=ctl, rerun after any dpc_bridge.cpp submit/defer/wrap edit; MISSING_UNEXPLAINED/dup/order must stay 0). Edit-walker census CLOSED s7097 (ROGUESQ_S7097_EDIT=ctl; unattributed must stay 0). RT64 vs angrylion on the same dd4 stream CLOSED s7098 (H-stream: big drops are in the stream; replay with tools/angrylion_replay/build16.sh).
 26. **Near-wall flicker (s7098-s7115): eye-cell near-plane loss, RETAIL behaviour (s7109). Refuted: corner width, near 15, margin re-push, post-move, ucode drop, LOD decimation (s7108-s7114), H-gap (s7115). s7115 H-probe CONFIRMED s7116 (opt-in ROGUESQ_S7115_NEARLIFT=1: pooled 4 runs losses 83/31, pierce class removed). s7117: swap = previous tick's camera; residual at terrain 1.0-1.5 near. s7118: NEARK=1.6 removes it (steady 13/1, 5 runs). s7119: no hop at k1.6 (H-smooth, same-run jerk vs off). s7120: off vs k1.6 replicated, 42/2 over 4 runs (z -6.0). s7121: no flight-cam steps (s7120 steps were a cam-mix join). DONE: closes on the owner's look.** Drop is in the RDP stream (s7098).
+27. **G3 flight fidelity at retail settings: CLOSED s7124** (L1 s7122 + L6 s7124, RT64 == angrylion; replay snapshot bug fixed in frame_replay.c). Open: the same check at the owner recipe (dd4 16:9 FPS60), NEXT.md.
 
 ## Evidence index
 

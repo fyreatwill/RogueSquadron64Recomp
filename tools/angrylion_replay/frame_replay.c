@@ -1,6 +1,8 @@
 // s6895 G5b: replay swaps from a ROGUESQ_G5B_FRAME capture through angrylion-plus's RDP core and write the colour image.
 // usage: frame_replay cap.bin outdir swap [swap...]    (sorted ascending). For each swap: uses the newest 'RAM ' snapshot at or
 // before it, runs that swap's ranges, writes outdir/f<swap>.rgb (w h u32 then RGB8) for the widest 16-bit colour image.
+// SNAP_FROM=<swap> (s7124): start every replayed swap from the RAM snapshot recorded at that older swap instead of the newest one
+// (the H-tool control: on an EVERY=1 stream, own vs older snapshot must differ only on materials the CPU streamed in between).
 // KILL_AREA=<px>: zero tris whose rough area exceeds it. Positive control: the colour image is pre-filled magenta, "painted" counts pixels the replay changed.
 // Build: tools/angrylion_replay/build16.sh <dir> (s7098: needs a 16 MB core for dd>1 frames). Old: D=~/Documents/Tools/g3_angrylion; clang -O1 -I$D/src/src/core -I$D/src/src tools/angrylion_replay/frame_replay.c $D/build/libalp-core.a -lc++ -o frame_replay
 #include <stdio.h>
@@ -25,6 +27,7 @@ int main(int ac, char **av) {
     c.gfx.rdram = rdram; c.gfx.rdram_size = RAM; c.gfx.dmem = dmem; c.gfx.vi_reg = vip; c.gfx.dp_reg = dpp;
     c.gfx.mi_intr_reg = &mi; c.gfx.mi_intr_cb = intr; c.parallel = false; c.num_workers = 1;
     n64video_init(&c);
+    static uint8_t *fixsnap = NULL; const int snapfrom = getenv("SNAP_FROM") ? atoi(getenv("SNAP_FROM")) : -1; int havefix = 0;
     long killA = getenv("KILL_AREA") ? atol(getenv("KILL_AREA")) : 0, killed = 0;
     int wi = 3, want = atoi(av[wi]); uint32_t tag, sw = 0; uint64_t t; int have = 0, active = 0; uint32_t cimg = 0, cw = 0; long nr = 0;
     static char ibuf[1 << 22]; setvbuf(f, ibuf, _IOFBF, sizeof ibuf);
@@ -45,12 +48,15 @@ int main(int ac, char **av) {
             }
             if (eof) break;
             if (fread(&t, 8, 1, f) != 1 || fread(&sw, 4, 1, f) != 1) break;
-            if ((int)sw == want) { if (!have) { fprintf(stderr, "no snapshot before %d\n", want); return 2; }
-                memcpy(rdram, snap, RAM); active = 1; nr = 0; cimg = 0; cw = 0; }
+            if ((int)sw == want) { if (!have) continue; /* s7124: this swap's own RAM record follows and starts the frame */
+                memcpy(rdram, havefix ? fixsnap : snap, RAM); active = 1; nr = 0; cimg = 0; cw = 0; }
             else if ((int)sw > want) { fprintf(stderr, "swap %d absent\n", want); if (++wi >= ac) break; want = atoi(av[wi]); }
             continue;
         }
-        if (tag == 0x204D4152u) { if (fread(snap, 1, RAM, f) != RAM) break; have = 1; if (active) { /* keep frame's own view */ } else if ((int)sw == want) { memcpy(rdram, snap, RAM); active = 1; nr = 0; cimg = 0; cw = 0; } continue; }
+        if (tag == 0x204D4152u) { if (fread(snap, 1, RAM, f) != RAM) break; have = 1;
+            if ((int)sw == snapfrom && !havefix) { fixsnap = malloc(RAM); memcpy(fixsnap, snap, RAM); havefix = 1; } if (active) { /* s7124 fix: the stream writes SWAP then this swap's RAM, so a frame that has run no range yet takes its OWN snapshot
+                (before s7124 it kept the previous one, EVERY swaps stale: s7122's garbled L6 textures). LEGACY_SNAP=1 restores the old behaviour. */
+                if (nr == 0 && !havefix && !getenv("LEGACY_SNAP")) memcpy(rdram, snap, RAM); } else if ((int)sw == want) { memcpy(rdram, havefix ? fixsnap : snap, RAM); active = 1; nr = 0; cimg = 0; cw = 0; } continue; }
         if (tag != 0x20474E52u) { fprintf(stderr, "bad tag %08X\n", tag); return 3; }
         uint32_t lo, n; if (fread(&lo, 4, 1, f) != 1 || fread(&n, 4, 1, f) != 1) break;
         if (n > 0x200000) { fseek(f, n, SEEK_CUR); continue; }
