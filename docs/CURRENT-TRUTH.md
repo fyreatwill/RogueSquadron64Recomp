@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7192 (2026-11-12).
+Compact operational handoff, as of Session 7193 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -51,7 +51,10 @@ Open or awaiting the owner:
   [stall-wait] (each guest thread's current blocking mq + recompiled caller) and [stall-cf0] (last 48 CF0 events), default on.
   s7192 forced arm ROGUESQ_CF0_DELAY_TEST=600:40|100 builds that exact pre-state on demand (retrace on CF0 fullq, vflag 1) and
   it heals 10/10 (H-stale-heals): the freeze needs tid 3 blocked on a SECOND queue whose producer depends on retrace (cycle).
-  Lead: submitGfxFrame+0xc70 on 8011A7E8. 0 freezes in 70 owner-env boots since s7190.
+  s7193: waitForPostSwapAck exits when the retrace thread's postSwapRdpReset clears 0x8011A8C8, so a slow vflag clear produces the
+  s6993 state by design; 120 forced retrace holds (ROGUESQ_RETRACE_HOLD_TEST) at every boot phase always park tid 3 back on CF0,
+  never on 8011A7E8 or another retrace-fed queue -> H-cycle refuted; the post-clear yield is host std::this_thread::yield (cannot lose
+  tid 3). PASSIVE now: [stall-wait]/[stall-cf0] + host sample name the second wait on recurrence. 0 freezes in 73 owner-env boots.
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -174,8 +177,10 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) M6 boot freeze, cycle search (s7192: delayed receiver alone heals):** producers of every queue
-   tid 3 blocks on, each checked for a retrace/VI dependency; then a forced arm holding 8011A7E8 while retrace sits on CF0 fullq.
+1. **(next, NEXT.md) Runtime hazard from s7192: external message to a refused mq requeued forever.** dequeue_external_messages
+   requeues when do_send fails on a queue mesgqueue_guard refused, which froze 10/10 v1 boots. Fix it (drop + log once), qualify with
+   the v1 positive control (freeze -> heal) and a clean owner-env control. M6 boot freeze is passive since s7193 (cycle and yield
+   refuted, see headline).
    Earlier: s7191 static census closed the game-code side (see headline bullet);
    the next freeze's [stall-wait]/[stall-cf0] rows name the delayed receiver and its second wait. Hunter
    `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`; 41 owner-env boots clean; s7190_bootloop_d queued

@@ -7376,7 +7376,46 @@ struct Rs64Cf0Delay {
         rs64_waittab_dump();
     }
 };
+// s7193 M6 boot freeze, retrace-dependency census: ROGUESQ_RETRACE_HOLD_TEST=<start>:<period>:<ms>:<count> (default off).
+// The retrace thread (tid 0, viRetraceHandlerThread) sends NOBLOCK to 0x80128D10 once per VI just before its vflag check and
+// blocking CF0 post, whatever the vflag. On the start-th such send and every period-th after (up to count holds), hold the
+// retrace thread for <ms> BEFORE the send, cooperatively on a private timer queue on its own stack (s7192 v2 scratch rule).
+// Every other guest thread runs free, so at the end of the hold each one sits in the first wait that only the retrace thread
+// can release. Prints [rt-hold] (CF0 state, vflag, 0x8011A8C8/C9/89D) and [rt-hold-w] per thread (IN = blocked now, mq, recompiled
+// caller, blocking calls made during the hold). A thread that ends IN a queue other than CF0 with ~0 calls during the hold is a
+// retrace-dependent second wait: the cycle edge the s6993 freeze needs (H-cycle). All waits on CF0 / VI-forwarded queues = H-none.
+struct Rs64RetraceHold {
+    static const int* cfg() { static int c[4] = {0, 0, 0, 0}; static const bool once = [] {
+        const char* e = std::getenv("ROGUESQ_RETRACE_HOLD_TEST"); if (e && *e) std::sscanf(e, "%d:%d:%d:%d", &c[0], &c[1], &c[2], &c[3]); return true; }(); (void)once; return c; }
+    static void maybe(uint8_t* rdram, recomp_context* ctx) {
+        const int* c = cfg();
+        if (c[0] <= 0 || (uint32_t)ctx->r4 != 0x80128D10u || (s32)ctx->r6 != 0) return;
+        if (rogue_current_thread_id(rdram) != 0) return;
+        static int vi = 0, held = 0; ++vi;
+        if (vi < c[0] || held >= (c[3] > 0 ? c[3] : 1) || ((vi - c[0]) % (c[1] > 0 ? c[1] : 1)) != 0) return;
+        ++held;
+        uint32_t n0[64]; for (int i = 0; i < 64; ++i) n0[i] = g_rs64_waittab[i].n.load();
+        const uint32_t base = (((uint32_t)ctx->r29) - 0x200u) & ~0xFu;
+        const uint32_t mq = base, buf = base + 0x20u, tm = base + 0x40u;
+        const int ms = c[2] > 0 ? c[2] : 50; const int64_t t0 = rs64_wt_us();
+        osCreateMesgQueue(rdram, (PTR(OSMesgQueue))mq, (PTR(OSMesg))buf, 1);
+        osSetTimer(rdram, (PTR(OSTimer))tm, (OSTime)ms * 46875ull, 0, (PTR(OSMesgQueue))mq, (OSMesg)0x7193);
+        osRecvMesg(rdram, (PTR(OSMesgQueue))mq, (PTR(OSMesg))0, 1);
+        const OSMesgQueue& q = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))0x80128CF0u);
+        std::fprintf(stderr, "[rt-hold] n=%d vi=%d waited_ms=%.1f cf0_valid=%d cf0_fullq=%08X cf0_mtq=%08X vflag=%u c8=%u c9=%u f89d=%u\n", held, vi,
+                     (rs64_wt_us() - t0) / 1000.0, (int)q.validCount, (uint32_t)q.blocked_on_send, (uint32_t)q.blocked_on_recv, rdram[0x37808 ^ 3],
+                     rdram[0x11A8C8 ^ 3], rdram[0x11A8C9 ^ 3], rdram[0x11A89D ^ 3]);
+        for (int i = 1; i < 64; ++i) {
+            const Rs64WaitEnt& w = g_rs64_waittab[i];
+            if (!w.n.load()) continue;
+            char sb[160];
+            std::fprintf(stderr, "[rt-hold-w] n=%d tid=%d %s op=%c mq=%08X caller=%s calls_during=%u\n", held, i, w.pending.load() ? "IN" : "last",
+                         (char)w.op.load(), w.mq.load(), rs64_wt_sym(w.ra.load(), sb, sizeof sb), w.n.load() - n0[i]);
+        }
+    }
+};
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
+    Rs64RetraceHold::maybe(rdram, ctx);
     Rs64WaitScope s7191_ws(rdram, (uint32_t)ctx->r4, (uintptr_t)__builtin_return_address(0), (s32)ctx->r6, 'S');
     { /* s6571: every direct osSendMesg to the hud service queue (svc 0x80954F60 +0x1D0), any sender */
         static const bool on = [] { const char* e = std::getenv("ROGUESQ_SVCNULL"); return e && e[0] && e[0] != '0'; }();

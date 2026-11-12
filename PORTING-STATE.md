@@ -189695,3 +189695,40 @@ verified in source).
   env) or on the retrace thread, then delay + retrace blocked on CF0 closes a cycle. NEXT.md: list the producers of every queue
   tid 3 blocks on and check each for a retrace/VI dependency; then one forced arm that holds the 8011A7E8 delivery while
   retrace sits on CF0's fullq.
+
+## Session 7193 (2026-11-12) — M6 boot freeze retrace-dependency census: 120 forced retrace holds over the boot window always park tid 3 back on CF0 (waitForPostSwapAck), never on a second retrace-fed queue -> H-cycle-7e8 refuted; remaining lead is the host scheduler (yield) losing tid 3
+HYPOTHESIS-ID: m6-boot-freeze-loop
+- **Static (step 1 of NEXT.md), read from RecompiledFuncs:**
+  - 0x8011A7E8 (gfx DP-done) has ONE producer: dpInterruptHandlerThread (0x8001C328) recvs the host OS_EVENT_DP queue 0x8011A408 and
+    sends NOBLOCK to 7E8 only if gate byte 0x8011A89D != 0. Host DP event = events.cpp dp_complete(), raised right after
+    renderer_context->send_dl returns on the gfx thread. send_dl can stall only on RT64's 4-slot workload ring, whose thread waits
+    for presents ALREADY issued (workload.presentId), so the host DP path does not need the guest retrace thread.
+  - Gate 0x8011A89D is set by submitGfxFrame (0x8000C254, before its NOBLOCK task send to scheduler 0x8011A420, cap 8) and by
+    postSwapRdpReset (0x8001C218), cleared by advanceVideoFrame (0x80017EAC, unconditional) and by the two flag-checked 7E8 waiters
+    (bufferArbiterProducerScanWait 0x8000BFD4, 0x80018244). submitGfxFrame's sync recv (s1!=0, 0x8000C2B8/0x8000C4A8) is unconditional.
+  - viRetraceHandlerThread per VI: osViSwapBuffer -> postSwapRdpReset (if 0x8011A8C8: clears it, sets 89D, submits RDP task NOBLOCK
+    to 0x8011A420) -> NOBLOCK send 0x80128D10 -> if vflag: BLOCKING send CF0.
+  - waitForPostSwapAck (0x8001C260): if C9 && C8: loop { vflag=1; recv CF0; vflag=0; osYieldThread } while C8; C9=0. C8 is cleared
+    by the RETRACE thread's postSwapRdpReset, which runs before its CF0 post on the same VI. So a receiver delayed >=2 VIs between recv
+    and vflag clear leaves the loop with retrace parked on CF0's full-send list and vflag 0: the s6993 state is the ordinary
+    exit of this loop, which matches s7192 (it heals once tid 3 next comes back to CF0).
+- **Instrument (src/main/upstream_compat.cpp Rs64RetraceHold, default off):** `ROGUESQ_RETRACE_HOLD_TEST=<start>:<period>:<ms>:<count>`
+  holds tid 0 (retrace) BEFORE its per-VI NOBLOCK send to 0x80128D10 (fires every VI regardless of vflag, so the hold lands at an
+  arbitrary point of tid 3's frame), cooperatively on a private timer queue 0x200 below its sp, then prints [rt-hold] (CF0 valid,
+  fullq, mtq, vflag, C8, C9, 89D) and [rt-hold-w] for every guest thread (IN/last, mq, recompiled caller, blocking calls during hold).
+- **Run (scratch/s7193/arms.zsh, hold1-3.log):** owner env (s6993 recipe), 3 boots x 36 s, HOLD=120:37:60:40 (VI 120..1563, period
+  prime vs the 2-VI frame; covers the s6993 freeze point fs~273). 120/120 holds fired (waited ~60 ms), 0 crash, 0 stall, fs~1877.
+- **Result:** at all 120 hold ends: tid 3 IN R CF0 caller waitForPostSwapAck, calls_during 0, cf0 valid 0, mtq=tid 3, vflag 1, C8 0,
+  C9 1, 89D 1. tid 1/2/5 IN recvServiceMessage (801548C0/80154CF0/802CCA30), tid 4 recvServiceMessage 8018FAC0 (IN 15, last 105).
+  Positive control: the instrument fires every hold and shows threads blocked on retrace-fed waits (tid 3 IN CF0 at each).
+  Whatever the phase, a retrace-absent tid 3 runs its frame to completion and parks on CF0, which heals the moment retrace posts.
+  **H-cycle-7e8 refuted** (tid 3 was never IN 8011A7E8 or any non-CF0 queue at a hold end; 7E8's producer chain has no retrace
+  edge, static). H-other-wait refuted for the boot window sampled. Caveat: 40 phases/boot x 3 boots, not exhaustive.
+- **H-host-yield refuted statically, same session:** the yield after the vflag clear is osYieldThread_recomp
+  (src/main/upstream_compat.cpp:738) = host std::this_thread::yield(), with no guest-scheduler state, so it cannot lose tid 3.
+- **State of the thread:** both guest-side explanations are now refuted (s7191 receivers balanced, s7192 pre-state heals, s7193 no
+  second retrace-fed wait at any sampled phase), and so is the yield. The second wait is unknown and is NOT reproducible by forcing.
+  Go passive: [stall-wait]/[stall-cf0] plus the host `sample` ride along in every run and name it on the next recurrence (0/73 since s7190).
+  Pivot (NEXT.md) to the one concrete runtime defect this thread found: s7192's latent hazard, where an external message to a
+  queue that mesgqueue_guard refused is requeued forever by dequeue_external_messages. It froze 10/10 boots under the v1 artifact.
+ORIGIN: no mitigation; instrument only.

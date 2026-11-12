@@ -1,21 +1,25 @@
-# NEXT: M6 boot freeze, find the dependency cycle (CURRENT-TRUTH item 1)
-HYPOTHESIS-ID: m6-boot-freeze-loop
-State (s7192): ROGUESQ_CF0_DELAY_TEST=<k>[:<ms>] (src/main/upstream_compat.cpp Rs64Cf0Delay) holds the CF0 receiver (tid 3,
-waitForPostSwapAck) after a recv. The retrace thread then blocks on CF0's full-send list with vflag 1, which is the s6993 pre-state,
-and it HEALS 10/10. So the freeze needs tid 3 to block on a second queue whose producer waits on retrace.
-Unit (offline first, then ONE forced arm, one build):
- 1. Static: the guest waits tid 3 makes between CF0 recvs (waittab: waitForPostSwapAck CF0, submitGfxFrame+0xc70 8011A7E8,
-    others?). For each queue, name the producer (guest thread, or host external source SP/DP/VI) and whether it can need the
-    retrace thread (tid 0, 8011CD28) to run or to have posted (VI msgs, VI_LOCK pacing, osViSwapBuffer, present thread).
-    Tools: grep osSendMesg sites to those mq in RecompiledFuncs, src/main/*.cpp enqueue_external_message* callers.
- 2. Forced arm: extend Rs64Cf0Delay with ROGUESQ_CF0_DELAY_TEST=<k>:<ms>:hold7e8, which also withholds delivery to 8011A7E8 for
-    the hold (or makes tid 3 do a recv on 8011A7E8 during the hold). Arms: hold7e8 40 ms, plain 40 ms (heals, s7192), ctl k=0.
-    5 boots each: env HUNT_OWNER=1 HUNT_ENV="ROGUESQ_STALL_DUMP_VI=300 ROGUESQ_CF0_DELAY_TEST=..." zsh tools/boot_freeze_hunt.sh
-    Healthy boots keep only the 200-line tail, so the positive control must come from one full-log boot per arm (see s7192 entry).
-Outcomes: H-cycle-7e8: the hold7e8 arm freezes with the s6993 dump (retrace on CF0 fullq, vflag 0, tid 3 IN 8011A7E8), so name the
-  gating producer and break the dependency (a NOBLOCK retrace post if CF0 is a doorbell; qualify with the same arm).
-  H-other-wait: it heals. The second wait is elsewhere, so take step 1's next queue.
-  H-none: step 1 finds no producer with a retrace dependency. Then the freeze is not a pure guest-queue cycle (host present/VI
-  thread); look at the host [stall-dump] self-sample on the next real recurrence. Stay passive and pivot to the next ladder rung.
-Trap: guest scratch for any private queue must sit below rs64_ram_top (use the guest stack); s7192 v1 at 0x9FF00000 was
-refused by mesgqueue_guard and froze 10/10 as an artifact.
+# NEXT: runtime hazard, external message to a refused mq is requeued forever (CURRENT-TRUTH item 1)
+HYPOTHESIS-ID: refused-mq-requeue
+Context: s7192 v1 put a timer's target queue at 0x9FF00000 (above rs64_ram_top). mesgqueue_guard refused osCreateMesgQueue, and
+every boot froze at fs~600, 10/10 (ctl 5/5 clean). lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp: do_send returns false on a
+refused mq (line ~543), and all three delivery paths (dequeue_external_messages ~l.458, wait_for_external_message ~l.472,
+wait_for_external_message_timed ~l.484) requeue when `!sent && requeue_if_blocked`. A message that can never be delivered then
+loops forever. The waiting thread spins on it and the batch drain re-enqueues it on every pass.
+M6 boot freeze is PASSIVE since s7193 (guest cycle refuted by 120 retrace holds, yield = host std::this_thread::yield).
+Hypotheses:
+ H-requeue-freeze: the infinite requeue is what froze the v1 boots (spin or starvation of later external messages).
+ H-other: v1 froze for another reason (e.g. the delayed receiver never woke because its private recv returned at once and the
+   game ran on with a corrupted stack slot). Then the fix changes nothing in the v1 arm.
+Unit (one build, three arms):
+ 1. Add a test hook that restores the v1 scratch address: ROGUESQ_CF0_DELAY_TEST=<k>:<ms>:v1 makes Rs64Cf0Delay use 0x9FF00000.
+ 2. Fix in mesgqueue.cpp: when do_send failed because mesgqueue_guard refused the mq (or mq->msg), DROP the message and log
+    `[mesgqueue-guard] dropped undeliverable external msg mq=..` once per mq, instead of requeueing. Keep requeue for genuinely
+    full queues. Gate the old behaviour behind ROGUESQ_REFUSED_REQUEUE=1 for the A/B.
+ 3. Arms, owner env, 5 boots x 34 s each (scratch/s7192/arms.zsh pattern):
+    a) v1 + ROGUESQ_REFUSED_REQUEUE=1 (positive control: must freeze, as in s7192 v1)
+    b) v1 + fix (expect heal: recv returns at once, no freeze)
+    c) k=0 control + fix (expect clean, fs~1950)
+ 4. lib/ edit: run ./submodule-patches/export.sh and commit the refreshed patch in the SAME session.
+Outcomes: a freezes and b heals -> H-requeue-freeze selected, fix lands default-on. Both freeze -> H-other: read the v1 dump's
+[stall-wait] table and do not land the fix as a freeze cure (keep it as hygiene only if it is harmless). a heals -> the
+control failed, so re-check the v1 hook before concluding anything.
