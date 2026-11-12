@@ -189394,3 +189394,40 @@ the apparent loss). H-res/edge selected for the remainder. H-retail not needed. 
 high-res edge rendering is the expected look. No fix. s7155's 16:9 "animated holo" residual is this edge class too (not re-measured).
 Lesson for scorers: check the rect against raw height (242 > 240 raw rows) and prefer full-res captures for thin geometry.
 Deleted F1.cap/.raw (15 GB); kept F1r replays and scratch/s7141/L17m.cap.
+
+## Session 7183 (2026-11-12) — G3 retail 4:3: crawl and pause == angrylion (edge class, H-equal); the interlaced 512x448 screen is ELITE ROGUES (not level description): RT64 shows each field as a clean frame, the fb-weave reference combs while scrolling (explains s7181's Elite Rogues 0.047)
+HYPOTHESIS-ID: g3-retail-43-remaining.
+No maintenance (57786 B < 60000). No new soak results. Owner save untouched (NO_SAVE_WRITE, no SAVE_FROM). Screen unlocked. 2 game runs,
+one at a time, 0 CRASH/SIGSEGV/SIGBUS. Retail settings both: FPS60=0, dd1, ASPECT=4:3, window captured at FULL size (CW=849 CH=788).
+Runs: A = `env CW=849 CH=788 zsh tools/s7141_arm.zsh 17 L17d "ROGUESQ_FPS60=0 ROGUESQ_DRAW_DISTANCE=1 ROGUESQ_ASPECT=4:3
+ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=4450 ROGUESQ_G5B_FRAME_MAX_MB=12000" 110 75` (forced L17 route; stream 4450-5198, 12 GB cap);
+B = `env RDIR=s7183 ASP=4:3 AP=<s6995 route to 64:a>,262:start SECS=300 FROM=2300 EVERY=12 DL=66 DU=234 CW=849 CH=788 zsh tools/s7146_arm.zsh B1
+"ROGUESQ_FPS60=0 ROGUESQ_DRAW_DISTANCE=1"` (crawl route + pause press; stream 2300-9380, 591 RAM swaps, 11 GB). Post tools/s7152_post.zsh
+(pre-fill r + NOPREFILL n). Painted-square CONTROL PASS on both. Phases B1 (angrylion contact sheet): hangar departure 2300-2768, logo
+2780-3300, Chapter IV crawl 3300-5440 (cimg w640, 640x300), planet/cutscene 5450-8040 (other fbs, not scored), flight 8060-8285, PAUSED 8300-9380.
+1. Interlaced screen (A, swaps 4583-5041, cimg 0x790000). Census: every swap (60/s) paints only the EVEN rows (painted 114464 of 229376,
+   checked rows 0-23 and 200-223 on 7 swaps); VI mode type 0x09 ctrl 0x324E (serrate), yScale 0x02000800, VI width 1024 = 2 fb rows per
+   line, origin 0x790400. By eye it is the ELITE ROGUES rank list scrolling over a hangar photo slideshow (docs/owner_sheet_s7183_43_remaining.png),
+   NOT the mission level-description screen (s7180's label was a guess from the fb shape). Odd rows in RAM are never RDP-drawn; they hold the
+   previous frame (RT64 writeback), so the NOPREFILL "weave" combs whenever the list scrolls.
+   New tools/s7183_parity.py (weave / bob / prev-field models, comb index, REPAIR=<n> per-model re-pairing, synthetic bob+weave control):
+   control PASS 459/459 both. Whole range: WEAVE 2.81, BOB 3.53, PREV 2.68 median d; bob effect real -0.43 vs synthetic +1.87 (no bob).
+   Comb split: hardware fb weave combed on 79/459 swaps, RT64 presented combed on 0. On combed swaps, re-paired per model (REPAIR=4): BOB best
+   d 3.84 at presented offset +1 (59/79), PREV 3.74 at offset 0, WEAVE 6.95. So RT64 presents each field's picture as one clean frame (a
+   perfect bob/progressive look); the first-pass "PREV wins 66/79" was a one-frame pairing lag. Scores (rectfit 0,26,849,666, CTRL x0+4 PASS):
+   40 of the 41 >0.05 swaps are combed swaps; the 380 uncombed field swaps frac med 0.0105, 1 >0.05 (4691, 0.0517, next to a combed run).
+   Progressive hangar photo 4450-4582 frac 0.021, 0 >0.05. This explains s7181's "Elite Rogues (n) L17m 0.047, 21 >0.05" (same screen at
+   EVERY=2): the reference, not RT64. Single-source on what a CRT shows from the never-drawn odd rows (frame_replay outputs the fb, not the VI).
+2. Crawl (B, 3300-5440): rect 0,25,849,662 by eye (640x300 fills the 637-row box), rectfit 3,25,845,663 (CTRL PASS). Nominal frac med 0.0355,
+   42 >0.05 in periodic 2-swap pairs every ~150 swaps; those pairs sit in capture bursts (raw frame gaps 7-11 ms instead of 33) and re-pair to
+   0.034-0.042 at presented offset +3/+4 (8 checked), so they are pairing errors. s7143_affine fit (1/4 px, 0, 1.0): all 0.0239. New
+   tools/s7183_native_edge.py (native-res score with re-pairing, AL edge split, 1 px shift control): native 640x300 frac 0.0245, mean|d| 2.92,
+   97% of >40 px on angrylion glyph edges; control 0.0454, worse on 24/24 (PASS). Logo 2780-3300 frac 0.011. H-equal (s7182 edge class).
+3. Pause (B, 8300-9380, 91 RAM swaps, static): rectfit 1,26,849,667 (CTRL PASS). frac med 0.0134, max 0.0146, 0 >0.05; same-run flight 8060-8285
+   0.0103, cutscene 0.0132. Shift-2 ctl fires on flight (p90 0.0425, 1 >0.05) and not on the static pause (expected). Native 512 rows: frac
+   0.0105, 100% of loss px on AL edges, 1 px shift ctl 0.0306 worse on 24/24. H-equal.
+Verdict: H-equal for the crawl and pause at retail 4:3 (two lines each: presented-res score + native edge split with a shift control).
+H-interlace: RT64 bobs/progressive-presents the field screen (no comb) where the fb weave combs. Not a render defect: the hardware VI shows
+one field per scan, not a weave. H-tool hit twice: capture-burst pairing on the crawl, and the weave reference on the field screen. Not run: the
+no-ASPECT-env arm (s7181 found RECT_ASPECT inert there), and the real level-description screen (not reached: the L17 route goes
+MISSION FAILED -> Elite Rogues -> craft). Deleted L17d/B1/L17m .cap/.raw (~70 GB); kept replays + csvs.
