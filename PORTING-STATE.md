@@ -189229,3 +189229,33 @@ All three streams hit the 12 GB cap (743-746 swaps). angrylion CONTROL PASS each
 Verdict: H-equal on L8, L9, L10 at retail settings (two lines: whole-run metric with a firing same-run shift-2 control and passing rect control,
 plus eyeballed sheets). H-hole, H-lag and H-tool outliers absent. Deleted .cap/.raw after scoring.
 Retail 4:3 done: L0-L10. Next: L11, L12, L13 (same recipe and rect; L13 is dark, judge by meand ratio).
+
+## Session 7177 (2026-11-11) — G3 retail settings (4:3, dd1, FPS60 off) L11 + L12 + L13 flight == angrylion (centre 0.006/0.006/0.001, 0 >0.05 after a scorer crop fix)
+HYPOTHESIS-ID: g3-retail-43-sweep.
+Three game runs, one at a time (L11 and L12 posts overlapped the next run), screen unlocked (ioreg has no CGSSessionScreenIsLocked),
+0 CRASH/SIGSEGV/SIGBUS in every run.log/keys.log; each run.log shows "[g1d] ROGUESQ_ASPECT=4:3 applied" and "[dd] ... multiplier 1".
+Owner save untouched. Recipe as s7174-s7176 (tools/s7141_arm.zsh, CW=320 CH=240, FROM=7500, MAX_MB=12000); window 1062x828 each run.
+All three streams hit the 12 GB cap (738-742 swaps). angrylion CONTROL PASS and s7163_rectfit CTRL x0+4 PASS each run.
+- L11 (snow, Escape from Fest): the window opens on a MISSION FAILED results screen, then a restart flyby, then flight. Default
+  scorer: 36 swaps >0.05 (frac ~0.24-0.43), exactly the even swaps 7582-7652 (fb 0x695C00) of the restart flyby; odd swaps (fb
+  0x62B800) fine. Cause = TOOL: those replays paint the 340-row VI band (rows 0-339) plus 6 stray HUD-coloured rows 442-447;
+  load_al crops first..last painted row, so it pulled in the 102-row magenta gap and squashed the image vertically (sheet
+  scratch/s7141/L11_probe.png: angrylion horizon/dome visibly compressed, magenta below). A NOPREFILL replay of the same swaps
+  (gap = stale RAM garbage) still scored 35 >0.05, so it is the crop, not the prefill. Rows 442-447 lie outside the band the VI
+  displays, so they are invisible on hardware and on RT64; writer not traced (inside the same fb's RDP stream).
+  FIX: tools/s7122_fidelity.py FID_MAINRUN=1 (opt-in, default off so earlier numbers stay comparable) crops to the longest
+  contiguous painted run. A scan of every L11 replay finds exactly these 36 files with a row gap. With it: meand 3.82/4.54/5.38,
+  frac 0.010/0.015/0.023, 0 >0.05, centre 0.006, side 0.012; shift-2 ctl 120 swaps >0.05, including the affected swaps
+  (7624-7627 at 0.05-0.10), so the crop does not hide differences. Rectfit keeps 0,10,308,241. Sheet docs/owner_sheet_s7177_L11_43_fidelity.png
+  identical by eye (worst = the results screen at frac_c 0.047).
+- L12 (blue sky, X-wing): meand 3.52/3.72/13.19, 0.011/0.013/0.073, 1 swap >0.05 (8069, frac 0.073), centre 0.006, side 0.014.
+  8069 = H-lag: its image is presented in pframe 6971 only (mean|d| 4.2 there, same as neighbours at their pframes); the
+  matcher picked 6966, which still shows swap 8068 (14.1). Shift-2 ctl 209 >0.05 (fires). Rectfit keeps the rect.
+  Sheet docs/owner_sheet_s7177_L12_43_fidelity.png identical by eye.
+- L13 (dark red canyon, Y-wing): meand 1.39/1.53/2.02, frac 0.004/0.005/0.007, 0 >0.05, centre 0.001; rectfit best
+  0,9,308,242 -> centre 0.0024. Dark level: shift-2 meand 3.92 vs 1.53 (2.6x) and 10 swaps >0.05 (fires). Sheet
+  docs/owner_sheet_s7177_L13_43_fidelity.png identical by eye.
+Verdict: H-equal on L11, L12, L13 at retail settings (whole-run metric with firing same-run shift-2 control and passing rect
+control, plus eyeballed sheets). H-hole absent; H-lag explains L12's single outlier; H-tool explains (and the fix removes) L11's 36.
+New tools/s7177_post_lvl.zsh runs the post chain for one level. Deleted .cap/.raw after scoring.
+Retail 4:3 done: L0-L13. Next: L14, L15, L16 with FID_MAINRUN=1 (then L17 with FROM=4700 + delay 60, L18).

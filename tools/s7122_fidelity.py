@@ -25,6 +25,13 @@ def load_al(path):
     rows = [y for y in range(h) if sum(1 for x in range(0, w, 8) if px[(y * w + x) * 3:(y * w + x) * 3 + 3] != b'\xf8\x00\xf8') > (w // 8) // 2]
     if not rows: return None
     y0, y1 = rows[0], rows[-1] + 1
+    if FID_MAINRUN:
+        # s7177: crop to the longest contiguous painted run. L11 (fb 0x695C00) paints 6 stray rows 442-447 below its 340-row
+        # VI band; the default first..last crop then pulls in the 102-row magenta gap and squashes the image (frac ~0.4).
+        runs, a = [], rows[0]
+        for p, q in zip(rows, rows[1:] + [None]):
+            if q != p + 1: runs.append((a, p + 1)); a = q
+        y0, y1 = max(runs, key=lambda r: r[1] - r[0])
     return Image.frombytes('RGB', (w, y1 - y0), px[y0 * w * 3:y1 * w * 3])
 
 
@@ -50,6 +57,7 @@ class Raw:
 # s7151: FIXED AT SOURCE. g5b_capture sets colorSpaceName sRGB (two lines: SCK sRGB == this transform of a native capture
 # of the same window within 0.3/channel; dominant colours == sips ColorSync sRGB of a tagged PNG). New raws carry a .cs
 # sidecar and are never converted; FID_P3=1 is only for raws captured before s7151.
+FID_MAINRUN = os.environ.get("FID_MAINRUN", "0") == "1"  # s7177, see load_al
 FID_P3 = os.environ.get('FID_P3', '0') == '1'
 _P3X = None
 def _p3_to_srgb(im):
