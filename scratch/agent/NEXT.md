@@ -1,15 +1,16 @@
-# NEXT: G3 true-retail arm (no ROGUESQ_ASPECT env) on crawl, pause and LEVEL DESCRIPTION (CURRENT-TRUTH item 41)
-HYPOTHESIS-ID: g3-retail-43-noaspect
-Why: s7181 scored menus/cutscenes with ASP=off (RECT_ASPECT inert there), but crawl (s7183), pause (s7183) and the LDESC overlay (s7184)
-were scored only under ROGUESQ_ASPECT=4:3. With no env the window opens 640x480-class (check cap_*.txt window size; set CW/CH to it).
-Runs (one at a time, screen unlocked: `/usr/sbin/ioreg -n Root -d1 | grep -c '"CGSSessionScreenIsLocked"=Yes'` must print 0):
- A (LDESC): env RDIR=s7185 ASP=off FROM=0 EVERY=5 SECS=56 DL=5 DU=60 CW=<w> CH=<h> AP=6:start,11:start,16:start,21:start,25:left,27:start,31:cup,43:cup,47:start
-    zsh tools/s7146_arm.zsh A1 "ROGUESQ_FPS60=0 ROGUESQ_DRAW_DISTANCE=1"   (phases s7184: SELLVL ~1150-1262, AVAIL 1270-1365, LDESC 1440-1770)
- B (crawl + pause): the s7183 B1 route with ASP=off (PORTING-STATE s7183 "B =" line; FROM=2300 EVERY=12 SECS=300).
-Post: tools/s7152_post.zsh <dir> <name> <rect> <split>, then tools/s7163_rectfit.py to fit the rect (window size differs from 849x788),
-tools/s7183_native_edge.py per phase, tools/s7184_ldesc_region.py raw aldir frames.csv rect ldesc_lo ldesc_hi <craft-info swap> 12.
-Hypotheses: H-equal (same native fractions as s7183/s7184 within ~0.005), H-scale (a non-4:3 window applies a different presentation
-scale: rectfit lands off-aspect, kfit != 1), H-rect (RECT_ASPECT path differs without ASPECT env; s7181 says inert).
-Discriminator: native frac + edge share + kfit vs the s7184/s7183 numbers; same-run control = the craft-info / flight phases.
-Delete .cap/.raw after scoring. Owner save rule stands; never write WORKING to STATUS.
-If this closes H-equal the G3 retail 4:3 matrix is complete; take the next 3c ladder rung not closed (owner-look items need no runs).
+# NEXT: G3 owner recipe in FULLSCREEN vs angrylion (CURRENT-TRUTH item 42)
+HYPOTHESIS-ID: g3-owner-fullscreen
+Why: G5's owner recipe is `ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_ASPECT=16:9 ROGUESQ_FULLSCREEN=1`, but every G3 fidelity
+capture (s7122-s7185) was a window (504x216 .. 849x788). Fullscreen changes the swapchain size, RT64's window-derived resolution scale
+and the presenter's fit, none of which is scored. s7185 showed scores move with presented scale (edge class), so the fit is the question.
+Boring first: does scratch/s6894/g5b_capture find the fullscreen window (SCK "not on screen" / Code -3815 = no)? s6930 checked fullscreen
+at auto/16:9/21:9 on the built-in display by screenshots only. If SCK cannot capture it, use `screencapture -l<id>` stills on a few phases.
+Run (screen unlocked: `/usr/sbin/ioreg -n Root -d1 | grep -c '"CGSSessionScreenIsLocked"=Yes'` prints 0; owner save read-only):
+  env RDIR=s7186 ASP=16:9 FROM=1900 EVERY=3 SECS=120 CW=<display w> CH=<display h> zsh tools/s7146_arm.zsh F1 "ROGUESQ_FULLSCREEN=1"
+  (s7146_arm defaults FPS60=1 dd4; default AP is the L6 hangar route). Window size: read cap_F1.txt "window (...)" line.
+Post: tools/s7152_post.zsh scratch/s7186 F1 <rect> <split>; tools/s7163_rectfit.py for the flight and menu ranges;
+tools/s7183_native_edge.py per phase (shift ctl must PASS).
+Hypotheses: H-equal (native frac within ~0.005 of the windowed s7125/s7155 numbers, edge share >=85%), H-scale (fullscreen fit is
+non-uniform: rectfit x/y scales differ by >1%), H-res (internal resolution does not follow the display: presented image is an upscale,
+edge loss rises sharply and fine detail blurs vs a windowed same-res control).
+Discriminator: rect scale ratio x/y + native frac + edge share vs windowed numbers. Delete .cap/.raw after scoring. Never write WORKING to STATUS.

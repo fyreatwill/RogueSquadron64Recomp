@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7184 (2026-11-12).
+Compact operational handoff, as of Session 7185 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -298,7 +298,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 38. **G3 holo platform ring "7/8 brightness": CLOSED s7182, not a defect.** Ring tris are shade-only AA opaque (no blend term). Interior lit pixels RT64 253 vs AL 248 (5551 ceiling); the whole loss is on segment edges/seams (83-85% of loss px on an AL edge; sheet docs/owner_sheet_s7182_ring_edges.png): RT64 high-res geometric edges vs hardware staircases. Half the s7181 number was the 320x240 rect being 1 row short (fit 234 rows; tools/s7182_yfit.py). Tools s7182_tristate/ringfull/ringint/ringmap.
 39. **G3 retail 4:3 crawl + pause + interlaced screen: CLOSED s7183 (H-equal).** Crawl native frac 0.0245 (97% of loss on glyph edges), pause 0.0134 (flight same run 0.0103), both shift controls PASS. The interlaced 512x448 screen is ELITE ROGUES (even rows only, 60/s; s7180 mislabelled it level description): RT64 presents each field as a clean frame; the NOPREFILL weave combs on scroll (79/459 swaps; odd rows = RT64 writeback), which is s7181's Elite Rogues 0.047. Uncombed swaps 0.0105. Tools s7183_parity.py (REPAIR=n), s7183_native_edge.py. TRAP: capture bursts (7-11 ms raw gaps) mis-pair 2-swap runs; re-pair +-6. Sheet docs/owner_sheet_s7183_43_remaining.png.
 40. **G3 retail 4:3 LEVEL DESCRIPTION overlay: CLOSED s7184 (H-equal).** It is C-up on AVAILABLE CRAFT (route AP ...,25:left,27:start,31:cup,43:cup,47:start). Native frac 0.030 vs craft-info control 0.025 same run; 85% of the excess in the text band, glyphs are 1-px strokes (0 interior px), 94% on AL edges; x-scale k=1.000 (RECT_ASPECT fine), no typing lag. tools/s7184_ldesc_region.py. Sheet docs/owner_sheet_s7184_43_ldesc.png.
-41. **(next, NEXT.md) G3 true-retail arm: no ROGUESQ_ASPECT env** (ASP=off) on crawl, pause and LDESC, same scorers; s7181 menus were inert there.
+41. **G3 true-retail (no ROGUESQ_ASPECT env) crawl/pause/LDESC: CLOSED s7185 (H-equal; G3 retail 4:3 matrix complete).** Native frac: LDESC 0.035 (s7184 0.030), crawl 0.036 (0.025), pause 0.016 (0.011), 89-100% on AL edges, shift ctl PASS all, LDESC kfit 1.000, 0 glyph-interior loss; the rise tracks the smaller presented scale (640x512 window). Shape: 512-wide screens present pillarboxed 554x480, the 640x300 crawl 1:1 letterboxed (s6928 VI_SHAPE class, owner-closed 2026-11-08).
+42. **(next, NEXT.md) G3 owner recipe in FULLSCREEN** (ROGUESQ_FULLSCREEN=1, built-in display): all G3 captures so far were windowed; score L6 flight + a menu vs angrylion.
 
 ## Evidence index
 

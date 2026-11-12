@@ -189460,3 +189460,30 @@ Verdict: H-equal (two lines: native edge split 94% + text-band localisation with
 high-res, hardware stair-steps them, s7182/s7183 edge class). H-rect refuted (k=1.000), H-type refuted (constant loss per glyph px).
 Not run: the no-ASPECT-env arm (crawl/pause/LDESC with ROGUESQ_ASPECT unset); s7181 found RECT_ASPECT inert there, next unit.
 Deleted L1.cap/.raw; kept replays and csvs.
+
+## Session 7185 (2026-11-12) — G3 true retail (no ROGUESQ_ASPECT env): LEVEL DESCRIPTION, crawl and pause == angrylion (edge class, H-equal); G3 retail 4:3 matrix complete; no-env shape = s6928 class (512-wide screens pillarboxed 554x480, crawl 1:1 letterboxed)
+HYPOTHESIS-ID: g3-retail-43-noaspect (CLOSED -> next g3-owner-fullscreen).
+No maintenance (59094 B < 60000). No new soak results. Owner save untouched (NO_SAVE_WRITE, no SAVE_FROM). Screen unlocked (ioreg 0).
+2 game runs, one at a time, 0 crash. Retail settings: FPS60=0, dd1, ROGUESQ_ASPECT unset (ASP=off). Window 640x512 incl. title bar (32 rows),
+captured full size (CW=640 CH=512).
+A = `env RDIR=s7185 ASP=off FROM=0 EVERY=5 SECS=56 DL=5 DU=60 CW=640 CH=512 AP=6:start,11:start,16:start,21:start,25:left,27:start,31:cup,43:cup,47:start
+zsh tools/s7146_arm.zsh A1 "ROGUESQ_FPS60=0 ROGUESQ_DRAW_DISTANCE=1"` (419 RAM swaps). B = same with AP=<default route to 64:a>,262:start SECS=300
+FROM=2300 EVERY=12 DL=66 DU=234 (590 RAM swaps, 11 GB). Post tools/s7152_post.zsh (painted CONTROL PASS both); phases as s7183/s7184 (checked on a
+presented contact sheet: hangar, logo, crawl, cutscene, flight, PAUSED).
+1. Presentation shape (no env): 512x339 menus present at 640x424 (y 62-486, uniform 1.25x); 512x448 flight/pause at 554x480 pillarboxed
+   (x 43-597, uniform 1.08x); the 640x300 crawl 1:1 letterboxed (1,123,639,423). Under ASPECT=4:3 (s7183) the same screens filled the 4:3 box.
+   This is the s6928 VI_SHAPE class (port shows 512 columns ~0.87 of TV width), owner-closed 2026-11-08 ("shape fine"); recorded, not acted on.
+2. LDESC (A, rectfit 0,62,640,486, CTRL PASS): presented frac med SELLVL 0.0227 / AVAIL pre 0.0297 / LDESC 0.0402 / AVAIL post 0.0307 / craft
+   0.0215, 0 >0.05. Native 512x339 n=16: 0.0178 / 0.0254 / 0.0349 / 0.0262 (s7184: 0.0170/0.0247/0.0304/0.0256), AL-edge share 94/89/94/90%,
+   1 px shift ctl worse 16/16 in all four. s7184_ldesc_region: loss per mask px 0.34 (s7184 0.24), glyph interior 1 px loss 0, kfit best
+   k=1.000 on 12/12, blanked-text control PASS 12/12.
+3. Crawl (B 3300-5440, rect 1,123,639,423): presented med 0.0348, 7 >0.05 (s7183 0.0355, 42 pairing pairs); shift-2 0.0440. Native 640x300
+   n=24: 0.0360 (s7183 0.0245), 100% on AL edges, shift ctl 24/24 PASS. Logo 0.0097.
+4. Pause (B 8300-9380, rect 43,33,597,514): presented med 0.0171 max 0.0190, 0 >0.05; native 512x448 0.0162 (s7183 0.0105), 95% on AL edges,
+   shift ctl 24/24 PASS. Same-run flight 8060-8290 native 0.0108, 90% edges, ctl 16/16 (presented shift-2 rectfit ctl FAILED on flight, sub-px).
+Verdict: H-equal (two lines per screen: native edge share 89-100% with shift control + LDESC text-band localisation, 0 interior loss, k=1.000).
+H-scale refuted as a fidelity defect (every rect fits a uniform scale; the shape difference is s6928's). H-rect refuted (k=1.000). The higher
+edge-only fractions vs s7183/s7184 track the smaller presented scale (1.08-1.25x here vs 1.33-2.1x at 849x788): single-run inference, no
+same-run window-size control. G3 retail 4:3 matrix (flight L0-L18, menus/cutscenes, crawl, pause, LDESC, both ASPECT arms) is complete.
+Next: the owner recipe has never been scored in FULLSCREEN (all G3 captures windowed) -> NEXT.md g3-owner-fullscreen.
+Deleted A1/B1 .cap/.raw (~31 GB); kept replays + csvs in scratch/s7185.
