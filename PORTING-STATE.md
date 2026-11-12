@@ -189519,3 +189519,17 @@ scored before; not used for the verdict.
 Verdict H-equal. Owner sheet docs/owner_sheet_s7186_fullscreen_fidelity.png (craft, title, flight; the frac labels on it are the UNFITTED
 presented scores). Deleted .cap/.raw (~47 GB) and the *n/*r replay dirs (the *c symlinks now dangle; csvs/txt kept in scratch/s7186).
 Next: ASPECT=auto + FULLSCREEN (display-derived fb width ~714, never scored) -> NEXT.md g3-owner-auto-fullscreen.
+
+## Session 7187 (2026-11-12) — MAINTENANCE: CURRENT-TRUTH compacted 60188 -> 20212 B, backlog renumbered into one 1-16 sequence
+
+Step 0 fired (CURRENT-TRUTH 60188 B > 60000). No experiments run.
+- Archived the whole s7186 CURRENT-TRUTH verbatim into PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7187 maintenance)"
+  (headings demoted two levels so they do not collide).
+- Headline: the ~30 s7047-s7098 per-session paragraphs collapsed into four summary blocks (G3 fidelity matrix H-equal
+  s7122-s7186; default-on G3 fixes; engineering closed s7066-s7098; dd6 wide auto bundle s7037-s7063). Open/owner list kept.
+- Next steps: the 3 KB s7017-s7065 chronology preamble and the 3 KB item-6 dd chronology reduced to their conclusions;
+  closed items 11-42 merged into owner-look items, one "rerun-after-change censuses" item (every census tool and its
+  trigger kept) and one "G3 fidelity scoring kit" paragraph carrying every scorer/arm tool and every TRAP. Renumbered 1-16;
+  the active unit (ASPECT=auto + FULLSCREEN, old item 43) is now item 1.
+- Superseded, run recipes, G1 coverage, durable constraints: kept verbatim.
+Net: 313 -> 219 lines, -39976 bytes. Next: NEXT.md unit unchanged (g3-owner-auto-fullscreen).

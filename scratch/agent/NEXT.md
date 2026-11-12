@@ -1,6 +1,6 @@
 # NEXT: G3 ROGUESQ_ASPECT=auto + FULLSCREEN vs angrylion (CURRENT-TRUTH item 43)
 HYPOTHESIS-ID: g3-owner-auto-fullscreen
-NOTE: CURRENT-TRUTH is 60188 B after s7186 -> Step 0 makes the next iteration MAINTENANCE first. Do this unit after it.
+NOTE: s7187 maintenance done (CURRENT-TRUTH 20212 B); this unit is CURRENT-TRUTH Next steps item 1.
 Why: on the owner's TV/ultrawide the natural setting is ASPECT=auto + FULLSCREEN, which derives the fb width from the display
 (main.cpp rs64_g1d_apply_aspect_policy; built-in panel 3024x1898 below the notch -> ~1.593:1 -> fb ~714 wide). s7186 scored only
 ASPECT=16:9 (796). A non-standard width exercises the s6121 projection/viewport scaling, RECT_ASPECT (s7142) and the HUD shift at a width no G3 run has seen.
