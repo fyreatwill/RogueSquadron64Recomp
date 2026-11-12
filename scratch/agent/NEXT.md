@@ -1,4 +1,4 @@
-# NEXT: G3 ROGUESQ_ASPECT=auto + FULLSCREEN vs angrylion (CURRENT-TRUTH item 43)
+# NEXT: G3 ROGUESQ_ASPECT=auto + FULLSCREEN vs angrylion (CURRENT-TRUTH item 1)
 HYPOTHESIS-ID: g3-owner-auto-fullscreen
 NOTE: s7187 maintenance done (CURRENT-TRUTH 20212 B); this unit is CURRENT-TRUTH Next steps item 1.
 Why: on the owner's TV/ultrawide the natural setting is ASPECT=auto + FULLSCREEN, which derives the fb width from the display
