@@ -189906,7 +189906,7 @@ Arms (scratch/s7198/arms.zsh; owner env, 60 s each, run one after another; pause
 - Positive controls: the pause and resume lines fire in every armed run, and the trim fires in the trim and default arms. The
   ctl null (0 trims) therefore comes from an instrument that can fire, and it is backed by a direct margin measurement
   (peak 36 ms against a 150 ms limit).
-- Discrimination: H-dead is refuted, since audio resumes in both arms. H-backlog in its "lasting" form is refuted too: the
+- Discrimination: this selects H-recovers-with-transient and refutes H-dead (audio resumes in both arms). H-backlog in its "lasting" form is refuted too: the
   queue drains to normal ~30 ms in ~2 s. What is real is a transient that grows with pause length: ~87 ms of stale audio per
   paused second, played while the drain thread stays on the 10/s fallback cadence. A 10-minute TV-off would replay about 52 s
   of stale audio with a slowed guest audio clock. The trim bounds that to <=150 ms, whatever the pause length.
