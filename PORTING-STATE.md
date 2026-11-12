@@ -190794,3 +190794,30 @@ Side datum: the owner path spends ~77% of the 16.7 ms budget in that L4 window (
 Change: scratch/agent/g1_level_coverage_common.zsh now defaults OWNER_TIMING=1 for any arm whose XENV_EXTRA carries
 ROGUESQ_PRESENT_RING or ROGUESQ_G1B=1 (OWNER_TIMING=0 opts back into the diagnostic path), printing "[s7229] timing arm".
 Next: owner-path headroom in that window (dd6 21:9, RETINA=1, busy host), since 12.8 of 16.7 ms is the thinnest margin measured.
+
+## Session 7230 (2026-11-12) — owner-path headroom in the L4 t=77-97 window: dd4 is safe under every owner setting and a busy host (2.7-3.7 ms margin); the published dd6 21:9 farthest-view line is NOT (flat 30/s for 21 s, 20.5 ms gfx task) = H-dd selected
+Unit from NEXT (HYPOTHESIS-ID owner-path-frame-headroom). Quiet host (idle > 51000 s, screen unlocked, load1 3.6-4.3), one binary
+(build 13:07), direct owner harness tools/g1e_owner_quiet_arms.zsh (no recipe logging, G1E_FAST path), LEVEL=4, FPS60, windowed, HOLD=240,
++ROGUESQ_G1B=1. Arms (scratch/s7230/all.zsh, data scratch/s7230, zst):
+  base  dd4 ASPECT=auto (FB 692) RETINA=0        ret   = base + RETINA=1 (swapchain 2476x1608 vs 1238x804, witnessed)
+  dd6w  dd4 21:9 (FB 1024)  [NOTE: asked dd6 but without ROGUESQ_DD_UNSAFE the radius clamps to 4: log "[dd] multiplier 4" while
+        [ddbundle] says dd=6.00; boring-thing catch, kept as the 21:9 dd4 arm]
+  busy  = base with 4x `yes` burners (load1 6.76)
+  dd6r  the OWNER-OPT-INS "farthest view" line: dd6 DD_UNSAFE=1 DD_MELT=1 DD_WIDEWIN=1 21:9 (echo "multiplier 6"; [s7037] auto bundle
+        offmapcull=2 k=0.6 kedge=0.8,12 on, [s7034] kept ~1180-1200 cells/frame in the window)
+New scorer tools/s7230_headroom.py (heaviest 20-s window, headroom = 16.7 - its mean gfx task wall, fixed window, seconds whose max task
+>= 17 ms). Positive control: on the s7229 logs it reproduces direct 12.76 ms / diag 21.95 ms at t=77 exactly.
+Result (flight seconds <55/s; window t=77-97 tasks/s and mean sd_wall; headroom; flat-30 runs by s7229_flat30_cost.py):
+  base  10/239  60.0/s 12.97 ms  3.70 ms  0 flat
+  ret   10/239  59.3/s 13.14 ms  3.54 ms  0 flat (one 47-task second at t=93)
+  busy   8/239  60.0/s 13.54 ms  3.11 ms  0 flat
+  dd6w   7/239  60.0/s 13.94 ms  2.73 ms  0 flat
+  dd6r 109/239  30.0/s 20.53 ms -3.94 ms  1 flat run t=77 21 s (sd_wall 20.5, sd_cpu 18.7, VI 60/s), plus 2-6 s flat bursts to t=224
+Second, independent instrument (RT64 present ring, new (fb,gen) per second): base/ret/busy/dd6w 0 flat seconds, 228-231 s >=55;
+dd6r 62 flat seconds, longest 21 s from t=76, 126 s >=55. All arms cursorMask 0x10 (level 4), 0 CRASH, alive at end.
+VERDICT: H-dd selected (two instruments): the dd6 radius at 21:9 adds ~6.6 ms per gfx task over dd4 at the same 1024 width in this window
+and tips the owner to 30/s; the off-map cull is engaged, so this is its residual cost. H-retina (+0.17 ms) and H-host (+0.57 ms with 4
+burners) are real but small; dd4 owner settings are H-safe (min margin 2.7 ms at 21:9). Rules out: the s7054/s7063 "L4 21:9 dd6 ~59-60"
+reading for this stretch (moved to superseded; those were whole-flight averages on the then route). Single level, single run per arm.
+Change: tools/s7230_headroom.py (new); docs/OWNER-OPT-INS.md correction under the farthest-view line (use dd4 for a steady 60).
+Next: decompose and cut the dd6 21:9 heavy-window cost without the visible strips K0.5 / cap 9216 caused (s7051/s7052).
