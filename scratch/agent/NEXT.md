@@ -1,14 +1,20 @@
-# NEXT (s7231): cut the dd6 21:9 cost in the L4 heavy window (s7230: flat 30/s, 20.5 ms gfx task vs 13.9 ms at dd4 21:9)
-HYPOTHESIS-ID: dd6-wide-heavy-window-cost
-Context: s7230 closed owner-path headroom for dd4 (all owner settings + busy host 2.7-3.7 ms margin). The OWNER-OPT-INS farthest-view
-line (DRAW_DISTANCE=6 DD_UNSAFE=1 DD_MELT=1 DD_WIDEWIN=1 ASPECT=21:9) drops L4 to 30/s at t=77-97 (and 2-6 s bursts to t=224).
-Hypotheses for where the +6.6 ms goes: H-cells (kept cells/frame ~1200 after the K0.6 off-map cull; cost linear in cells, s7019-s7029),
-H-tris (the far ring cells are high-LOD meshes: verts/tris per cell rise, not the cell count), H-clip (far cells straddle the
-guard band / near plane and cost clip work in the F5 ucode), H-cap (WIDEWIN cap 10240 is the binding term: cells hit it).
-Discriminator, one build, one run: dd6r recipe with a same-run toggle every 10 s (phase-gated) between cap 10240 and 8192 and between
-KLEVEL 4:0.6 and 4:0.5, logging per second [g1b] sd_wall + [s7034] kept/f + gfx task vtx/tri counts (check which ROGUESQ_* counter
-gives tris per task before building anything new). Outcome: sd_wall tracks kept/f -> H-cells (then a frame-time governor that trims
-the far ring only when the last N tasks exceed ~15 ms); tracks tris at equal cells -> H-tris (far-ring LOD down); neither -> H-clip.
-Run: env R=$PWD/scratch/s7231 HOLD=240 ARMS="6:dd6r:ROGUESQ_FORCE_SAVE_MISSION=4+ROGUESQ_FULLSCREEN=0+ROGUESQ_ASPECT=21:9+ROGUESQ_RETINA=0+ROGUESQ_DD_UNSAFE=1+ROGUESQ_DD_MELT=1+ROGUESQ_DD_WIDEWIN=1+ROGUESQ_G1B=1+ROGUESQ_STORE_DIAG=0" zsh tools/g1e_owner_quiet_arms.zsh
-Score: python3 tools/s7230_headroom.py scratch/s7231/log_*.txt ; python3 tools/s7229_flat30_cost.py ...
-Visual bar: any fix must keep the L4 far-left shoreline (s7052 sheet) and the L12 soft band (s7047). Owner path only.
+# NEXT (s7232): are WIDEWIN's extra triangles on screen? (s7231: WIDEWIN = +4.5 ms/task in L4 t=77-97 at 21:9 dd4, flat 30/s)
+HYPOTHESIS-ID: widewin-heavy-window-cost
+Context: s7231 2x2 (L4 t=77-97, 21:9, owner path): dd4 13.96 ms/60, dd6 14.62/58.6, dd4+WW 18.47/30, dd6+WW 20.73/30. Cost tracks RDP
+tri/task (1.80 ms per 1000, R2 0.60) plus a window residual (+1.3..+3.7 ms, biggest with WW). Cap 8192 (26% fewer streamed cells) saves
+nothing; K0.45 saves ~1 ms.
+Hypotheses for WW's +2k tri/task and residual:
+  H-offscreen: WW cells submit triangles that land outside the 21:9 scissor (or entirely in the guard band): pure waste -> a host-side
+    per-cell frustum test on the WW-only columns removes them with no visible change.
+  H-onscreen: the extra triangles are the visible side terrain WW exists to draw -> only a budget/governor (trim WW columns when the last
+    N tasks > ~15 ms) or a cheaper LOD for the outer WW columns can help; owner chooses look vs 60.
+  H-clip: the residual is ucode clip/cull work on vertices whose triangles never reach the RDP (count by vertices loaded vs tris out).
+Discriminator, ONE build: in the existing G1CF RDP stream walk (src/main/rt64_render_context.cpp ~line 2205, s_g1cf.tri) decode each
+triangle's YH/YL and XL/XH/XM edge starts (fixed point s11.2 / s15.16) and count tri_in (bbox intersects the scissor), tri_out (bbox
+fully outside), plus per gfx task the ucode's vertex-load count if a counter exists (grep ROGUESQ_ for vtx counters first). Print in [g1cf].
+Positive control: at 4:3 dd1 tri_out must be ~0; a forced off-screen arm (ROGUESQ_DD_WIDEWIN=1 at 4:3 dd4, where the extra side cells are
+off-screen by construction) must show tri_out > 0.
+Run: same arms as s7231 run2/run3 (scratch/s7231/run2.zsh, run3.zsh) a4 vs n4 only, plus the 4:3 control. Score: tools/s7231_cost_decomp.py
+(extend to tri_in/tri_out). Outcome: WW's extra tri mostly tri_out -> H-offscreen (build the cull); mostly tri_in -> H-onscreen (governor);
+tri equal but residual large -> H-clip.
+Visual bar: keep the s7009 side-edge gain (docs/owner_sheet_s7009_widewin_219.png) and the L4 far-left shoreline (s7052).

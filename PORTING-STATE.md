@@ -190821,3 +190821,31 @@ burners) are real but small; dd4 owner settings are H-safe (min margin 2.7 ms at
 reading for this stretch (moved to superseded; those were whole-flight averages on the then route). Single level, single run per arm.
 Change: tools/s7230_headroom.py (new); docs/OWNER-OPT-INS.md correction under the farthest-view line (use dd4 for a steady 60).
 Next: decompose and cut the dd6 21:9 heavy-window cost without the visible strips K0.5 / cap 9216 caused (s7051/s7052).
+
+## Session 7231 (2026-11-12) — L4 21:9 heavy-window cost is WIDEWIN, not the dd6 radius (2x2: dd4 13.96 ms/60, dd6 14.62/58.6, dd4+WW 18.47/30, dd6+WW 20.73/30); cap and streamed-cell count refuted as the cost term, RDP triangles explain 60%
+Unit from NEXT (HYPOTHESIS-ID dd6-wide-heavy-window-cost). Quiet host (idle > 52900 s, screen unlocked, load1 3.1-4.6), build 13:07 (no rebuild),
+direct owner harness tools/g1e_owner_quiet_arms.zsh, LEVEL=4 (cursorMask 0x10 every arm), FPS60, windowed 21:9, RETINA=0, HOLD=240, G1B=1,
+G1E_TL ring. Five runs, one game at a time (scratch/s7231/run{,2,3}.zsh, logs zst; decompress before scoring):
+  tog  dd6 UNSAFE MELT, explicit tog3 (sec%3): ph0 K0.6 cap10240 (= auto bundle) | ph1 K0.45 cap10240 | ph2 K0.6 cap8192 ([s7012] tog3=1, [s7031] tog3=1 witnessed)
+  a6   dd6 UNSAFE MELT WIDEWIN (auto bundle) + ROGUESQ_G1CF=1      a4  same without UNSAFE (radius clamps to 4, "[dd] multiplier 4"; bundle still on)
+  n4   dd4 no WIDEWIN no MELT (= s7230 dd6w flags) + G1CF          n6  dd6 UNSAFE, no WIDEWIN (no bundle) + G1CF
+Boring-thing catch: s7230's "dd4 21:9" arm had no ROGUESQ_DD_WIDEWIN, so its 13.94 ms vs the dd6 line's 20.5 ms confounded radius with window.
+Result, window t=77-97 (tools/s7230_headroom.py + s7229_flat30_cost.py + new tools/s7231_cost_decomp.py):
+  arm  sd_wall  tasks/s  flat-30 runs   RDP tri/task
+  n4   13.96    60.0     0              6181
+  n6   14.62    58.6     0              6343
+  a4   18.47    30.0     1 (t=77, 20 s) 8140
+  a6   20.73    30.0     1 (t=77, 21 s) 8591
+Tog run, g5e_cost_by_parity.py --phases 3, ring t=77-97: rsp ph0 20.27 / ph1 19.23 / ph2 19.93 ms (all 30/s); K0.45 -1.04 ms (shift-500 control
+-0.15), cap 8192 -0.34 (shift control -0.47, i.e. noise). Streamed cells/f ([s7030] deltas) ph0 ~8350 vs ph2 ~6100-6300: cutting 26% of the
+window's cells costs nothing measurable -> the window cell count and the cap are not the cost (H-cap, H-cells refuted); off-map kept cells
+halve under K0.45 for ~1 ms (H-cells-offmap: real, small). Per-second fit of sd_wall on RDP tri/task (G1CF, flight t=60-230, 4 arms pooled):
+1.80 ms per 1000 tri/task, R2 0.60 (shuffle control R2 0.00-0.004); per arm R2 0.22-0.70. Window residuals above the pooled line: n4 +1.28,
+n6 +1.64, a4 +2.26, a6 +3.72 ms -> the heavy window carries per-triangle work the RDP count misses, most with WIDEWIN (clip / vertex work
+on cells whose triangles are culled in the ucode is the lead). G1CF dsize is 0 on the owner path (g_rs64_g1cf_dsize not fed): fit is tri-only.
+VERDICT: H-widewin selected (+4.5 ms at dd4, +6.1 ms at dd6; the radius adds +0.7 without WIDEWIN, +2.3 with it). Two instruments ([g1b]
+sd_wall per second and the G1E_TL rsp split; tog ph0 20.27 vs a6 20.73). Single run per arm, single level. Rules out: s7230 "H-dd: the dd6
+radius costs 6.6 ms" and s7014-s7017 "WIDEWIN is free at 21:9 dd4" for this window (both moved to superseded); H-cap; window-cell H-cells.
+Change: tools/s7231_cost_decomp.py (new); docs/OWNER-OPT-INS.md corrections on the WIDEWIN and dd6 lines (steady 60 at 21:9 = WIDEWIN off;
+dd6 UNSAFE without WIDEWIN holds ~59 here). 0 CRASH in all five runs, all alive at end.
+Next: are WIDEWIN's extra ~2k triangles per task on screen? Classify RDP triangles by bbox vs scissor in the existing G1CF stream walk.

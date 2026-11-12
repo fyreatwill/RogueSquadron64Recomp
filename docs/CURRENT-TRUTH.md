@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7230 (2026-11-12).
+Compact operational handoff, as of Session 7231 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -36,7 +36,7 @@ already in the RDP stream (s7098). Scene-transition stalls are the retail 3072-s
 
 dd6 21:9/16:9 auto bundle (s7037-s7063, detail archived): off-map cull past 0.6 x fog end, KEDGE=0.8,12,
 WIDEWIN cap 10240, auto KLEVEL `12:0.5,13:0.5` and CAPLEVEL `9:8192` when FB_WIDTH>796. All 19 levels
-hold ~60 fps in flight with 0 crashes at 21:9 (s7063; EXCEPT L4 heavy window t=77-97: flat 30/s, 20.5 ms task, s7230) and 16:9 (s7043). Cap 12288 is an opt-in (+0.25 ms
+hold ~60 fps in flight with 0 crashes at 21:9 (s7063; EXCEPT L4 heavy window t=77-97: flat 30/s, 20.5 ms task, s7230; s7231: the cost is WIDEWIN, not the dd6 radius, see Next 1) and 16:9 (s7043). Cap 12288 is an opt-in (+0.25 ms
 rsp, +2-5 L4 shoreline rows); cap 9216/8192 and K0.5 globally shave a horizon somewhere (refuted as defaults).
 
 Open or awaiting the owner:
@@ -216,6 +216,7 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 mai
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- s7230 "the dd6 radius at 21:9 adds ~6.6 ms per gfx task over dd4 (H-dd)" and s7014-s7017 "WIDEWIN costs little or none at 21:9 dd4". Believable: s7230's dd4 21:9 arm (13.94 ms) differed from the dd6 line only, it seemed, in the radius; in fact it also lacked ROGUESQ_DD_WIDEWIN, and s7014-s7017 measured whole-flight/other windows. s7231 2x2 in the L4 t=77-97 window: WIDEWIN +4.5 ms at dd4 (flat 30/s), radius +0.7 ms without WIDEWIN.
 - s7054/s7063 "Gerrard V (L4) at 21:9 dd6 runs 58.7-59.5 fps / all 19 levels ~60 at 21:9". Believable: whole-flight averages on the then route. s7230 (owner path, direct harness, two instruments): L4 t=77-97 flat 30/s for 21 s at 20.5 ms per gfx task, 109/239 s <55/s; dd4 21:9 holds 60 there.
 - s7227/s7228 "in-flight flat-30 under FPS60 is the game's own frame rate (H-content)". Believable: rigid 33.3 ms game swaps with a free present path and a 60 Hz VI timer, no display event. s7229: the harness ran the diagnostic ucode path (LOG_PHASE -> G1E_PROBES, 21.95 ms task); the owner path holds 60/s there (12.8 ms).
 - s7180 "swaps 4700-5028 of the L17 route are the level-description screen" and s7181 "Elite Rogues 0.047, 21 >0.05". Believable: 512x448 interlaced fb after MISSION FAILED. s7183: it is the Elite Rogues list; the residual is the fb-weave reference combing while it scrolls.
@@ -312,12 +313,16 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) dd6 21:9 L4 heavy-window cost (s7230: flat 30/s for 21 s, gfx task 20.5 ms vs 13.9 at dd4 21:9).**
-   Owner-path headroom at dd4 is CLOSED (s7230 H-safe for dd4: 16:9-auto 13.0 ms / 3.7 ms margin, 21:9 13.9 / 2.7, RETINA=1 13.1,
-   4 CPU burners 13.6; 0 flat seconds in all four, two instruments). Next: decompose the +6.6 ms (kept cells/frame, verts, tris per
-   ring at dd6 vs dd4 in t=77-97, scratch/s7230 logs carry [s7034] kept/f + chist) and cut it without a visible strip (s7051/s7052
-   showed K0.5 and cap 9216 shave the L4 shoreline): candidates a frame-time governor on the dd radius/cap, or a cheaper far ring.
-   Score: tools/s7230_headroom.py + s7229_flat30_cost.py. Owner path only (direct harness or OWNER_TIMING=1).
+1. **(next, NEXT.md) WIDEWIN cost at 21:9 (s7231 2x2, L4 t=77-97, owner path, one run per cell, 0 crashes, cursorMask 0x10).**
+   gfx task ms / fps: dd4 13.96/60, dd6 14.62/58.6 (both WIDEWIN off), dd4+WIDEWIN 18.47/30 (flat 20 s), dd6+WIDEWIN 20.73/30 (flat 21 s)
+   -> H-widewin selected (+4.5 ms at dd4, +6.1 at dd6), the radius adds only +0.7 / +2.3 (single run per arm; two instruments: [g1b]
+   sd_wall and the G1E_TL rsp split agree, tog ph0 20.27 vs a6 20.73). Same-run tog3 in the dd6+WW line: K 0.6->0.45 rsp -1.04 ms
+   (shift control -0.15), cap 10240->8192 -0.34 (shift control -0.47 = noise) although streamed cells/f fall 8300->6100: the cap
+   and the streamed window cell count are NOT the cost (H-cap, H-cells refuted). Cost tracks RDP triangles: pooled fit 1.80 ms per
+   1000 tri/task (R2 0.60, shuffle 0.00); WIDEWIN adds ~2.0-2.4k tri/task in the window, and the window sits +1.3..+3.7 ms above the
+   line (extra per-triangle work the count misses, largest with WIDEWIN). OWNER-OPT-INS corrected: steady 60 at 21:9 = WIDEWIN off.
+   Next: are WIDEWIN's extra triangles on screen? (see NEXT.md). Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
+   dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.
    Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
