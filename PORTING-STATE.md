@@ -189732,3 +189732,8 @@ HYPOTHESIS-ID: m6-boot-freeze-loop
   Pivot (NEXT.md) to the one concrete runtime defect this thread found: s7192's latent hazard, where an external message to a
   queue that mesgqueue_guard refused is requeued forever by dequeue_external_messages. It froze 10/10 boots under the v1 artifact.
 ORIGIN: no mitigation; instrument only.
+Discrimination summary (s7193): the 120-hold census refutes H-cycle-7e8 and H-other-wait for the sampled boot window (tid 3 ends IN CF0
+at every hold end, never on 8011A7E8 or another retrace-fed queue). The osYieldThread_recomp source refutes H-host-yield (it is a
+host-only yield). Next discriminator, passive: on the next real freeze the [stall-wait] row for tid 3 (IN <mq> vs last) selects
+between a guest wait and a host-side loss. Active next unit (NEXT.md): the refused-mq requeue A/B, where arm a (old requeue, must
+freeze) vs arm b (drop, must heal) on the v1 recipe selects H-requeue-freeze or H-other.
