@@ -189151,3 +189151,25 @@ split 117,352; s7163_rectfit; s7160_fit_post). angrylion CONTROL PASS and rectfi
   Sheet docs/owner_sheet_s7172_L14_219_fidelity.png identical by eye.
 Verdict: H-equal on both; no hole, no lag outlier. Deleted L13w/L14w .cap/.raw after scoring (~32 GB).
 21:9 done: L0-L15; 3 to go (L16-L18).
+
+## Session 7173 (2026-11-11) — G3 owner recipe 21:9 L16 + L17 + L18 flight == angrylion; item 34 CLOSED (H-equal L0-L18)
+HYPOTHESIS-ID: g3-owner-recipe-219 (closed).
+Four game runs, one at a time, screen unlocked (ioreg: no CGSSessionScreenIsLocked key), 0 CRASH/SIGSEGV/SIGBUS in every run.log. Owner save untouched.
+Recipe as s7167-s7172 (tools/s7141_arm.zsh <lvl> L<lvl>w ASPECT=21:9 EVERY=1 MAX_MB=12000, CW=504 CH=216; s7141_post rect 0,11,469,216
+split 117,352; s7163_rectfit; s7160_fit_post). angrylion CONTROL PASS and rectfit CTRL x0+4 PASS on every run.
+- L16 (desert, domes): RDP capture hit the 12 GB cap at swap 7762, so 263 swaps replayed (heavier frames). Lag 5 ms. Refit 1,11,468,218:
+  meand 1.89/3.57/4.58, frac 0.002/0.017/0.017, 0 >0.05, centre 0.003, side 0.002. Shift-2 ctl 32 swaps >0.05 (fires). Sheet
+  docs/owner_sheet_s7173_L16_219_fidelity.png identical by eye (flight + letterboxed cutscene).
+- L17 first run (FROM=7500) was INVALID for flight: the window (swaps 7840-8244) is the level-select/briefing room. Contact sheet of the
+  presented raw (note: g5b raw frames carry a 16-byte header, stride 504*216*3+16) plus run.log show the Death Star trench autopilot fails
+  the mission: initMission at VI 3520 (~60 s), MISSION FAILED / menu at VI 7534 (125.9 s), retry at VI 9344/10368, repeating on an ~80 s cycle.
+  Menu frames did match (only swap 7840, dup-pframe transition, frac 0.39). Not a renderer datum; aim/win is out of scope.
+- L17 rerun with FROM=4700 and arm delay 60 s (flight 1): 717 swaps, lag 25 ms. Refit 1,11,469,217: frac med 0.002-0.008, 0 >0.05, centre 0.008
+  (fit_post), side 0.000. Shift-2 ctl only 6 swaps >0.05 and meand ratio ~1.0: black space/trench level has no control power, judged by sheet.
+  Worst swaps 5174-5177 are the pause-menu opening over flight (autopilot): radar ring fading in one renderer a frame earlier = lag.
+  Sheet docs/owner_sheet_s7173_L17_219_fidelity.png: trench frames identical by eye.
+- L18 (snow canyon): 712 swaps, lag 15 ms. Refit 1,12,469,216: meand med 6.09, centre 0.004, side 0.010, 1 swap >0.05 (8000, frac 0.054,
+  dup=1 lag). Shift-2 ctl 261 swaps >0.05 (fires). Sheet docs/owner_sheet_s7173_L18_219_fidelity.png identical by eye.
+Verdict: H-equal on L16, L17, L18; no hole, no non-lag outlier. Item 34 (21:9 owner-recipe in-flight fidelity) CLOSED: L0-L18 H-equal.
+Deleted all .cap/.raw after scoring. Rules out a wide-only render difference in flight at 21:9 on any level (L17 single-source: weak control).
+Next: G3 in-flight fidelity at retail settings (4:3, dd1, no FPS60) on the levels beyond L1/L6 (CURRENT-TRUTH item 36).
