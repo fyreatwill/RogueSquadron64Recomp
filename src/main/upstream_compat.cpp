@@ -7363,7 +7363,9 @@ struct Rs64Cf0Delay {
         // Scratch on the receiver's own guest stack, 0x200 below sp (free; the nested wait is host-side). s7192 v1 used
         // 0x9FF00000: above rs64_ram_top, so mesgqueue_guard refused the queue, the recv returned at once and the timer's
         // post to the refused queue froze every boot (10/10) - an instrument artifact, not the s6993 state.
-        const uint32_t base = (((uint32_t)ctx->r29) - 0x200u) & ~0xFu;
+        // s7194: ROGUESQ_CF0_DELAY_TEST=<k>:<ms>:v1 restores the v1 scratch (0x9FF00000) as the refused-mq requeue test arm.
+        static const bool v1 = [] { const char* e = std::getenv("ROGUESQ_CF0_DELAY_TEST"); return e && std::strstr(e, ":v1") != nullptr; }();
+        const uint32_t base = v1 ? 0x9FF00000u : ((((uint32_t)ctx->r29) - 0x200u) & ~0xFu);
         const uint32_t mq = base, buf = base + 0x20u, tm = base + 0x40u;
         osCreateMesgQueue(rdram, (PTR(OSMesgQueue))mq, (PTR(OSMesg))buf, 1);
         const int ms = ms_arm(); const int64_t t0 = rs64_wt_us(); const uint32_t g0 = g_rs64_cf0_n.load();

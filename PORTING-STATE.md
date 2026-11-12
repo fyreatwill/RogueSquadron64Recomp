@@ -189737,3 +189737,28 @@ at every hold end, never on 8011A7E8 or another retrace-fed queue). The osYieldT
 host-only yield). Next discriminator, passive: on the next real freeze the [stall-wait] row for tid 3 (IN <mq> vs last) selects
 between a guest wait and a host-side loss. Active next unit (NEXT.md): the refused-mq requeue A/B, where arm a (old requeue, must
 freeze) vs arm b (drop, must heal) on the v1 recipe selects H-requeue-freeze or H-other.
+
+## Session 7194 (2026-11-12) — refused-mq requeue fix: external messages to a mesgqueue_guard-refused queue are now dropped (logged once per mq) instead of requeued forever; v1 positive control freezes 5/5 with the old path and heals 5/5 with the fix, owner-env control 5/5 clean
+- **Change (lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp, patch exported):** new `external_requeue_ok()` guards all three
+  requeue sites (dequeue_external_messages, wait_for_external_message, wait_for_external_message_timed). If the target mq, or its
+  msg buffer, is outside 0x80000000..rs64_ram_top, do_send can never succeed, so the message is dropped and logged
+  `[mesgqueue-guard] dropped undeliverable external msg mq=.. msg=.. src=.. dropped_total=..` (once per mq, up to 64 mqs).
+  A genuinely full in-range queue still requeues as before. `ROGUESQ_REFUSED_REQUEUE=1` restores the old requeue-forever path (A/B arm).
+- **Test hook (src/main/upstream_compat.cpp Rs64Cf0Delay):** `ROGUESQ_CF0_DELAY_TEST=<k>:<ms>:v1` puts the delay scratch back at
+  0x9FF00000 (the s7192 v1 artifact) as a test that can reproduce the refused-mq case on demand.
+- **Arms, one build, owner env (HUNT_OWNER=1), 5 boots x 34 s (scratch/s7194/arms.zsh, arms.out):**
+  a) v1 + REFUSED_REQUEUE=1: **5/5 FROZEN** at fs 614-651 (positive control, matches s7192 v1 10/10);
+  b) v1 + fix: **5/5 OK** fs 1950-2078; c) k=0 + fix: **5/5 OK** fs 1950-2079.
+  Full-log boot of arm b (scratch/s7194/full_b.log): `osCreateMesgQueue refused mq_=0x9FF00000`, `[cf0-delay] begin k=600`,
+  `end waited_ms=0.0`, then `dropped undeliverable external msg mq=0x9FF00000 msg=0x00007192 src=0 dropped_total=1`, fs=1949.
+  So the v1 path really ran in the fixed arm, and the drop is what let it heal (two lines: arm split + the drop line in the same boot).
+- **Selects H-requeue-freeze:** the v1 freeze was the timer message to the refused queue cycling through the external queue forever.
+  H-other refuted for v1 (with only the requeue changed, the same delay heals). Fix lands default-on.
+- **Scope note:** this does NOT explain the rare real s6993 boot freeze (no refused-mq line in that dump; its CF0 is in range).
+  That thread stays passive ([stall-wait]/[stall-cf0] on recurrence).
+ORIGIN: the writer is the runtime's own timer/event path: osSetTimer posts via enqueue_external_message_src (src 0 = timer, requeue on)
+to an mq that mesgqueue_guard rejected. The value is legitimate (a real timer message); the queue is not deliverable, so dropping is
+the correct behaviour, not a mitigation of a corrupted value. The game itself never targets a refused mq in 15 logged boots here.
+Discrimination summary: arm a (old requeue) 5/5 FROZEN vs arm b (drop) 5/5 OK on the identical v1 recipe selects H-requeue-freeze;
+control c 5/5 OK shows the fix is harmless on the normal path. Next (NEXT.md): class audit of every mesgqueue_guard refusal return
+path for other retry-forever / spin shapes (guard-refusal livelock class).
