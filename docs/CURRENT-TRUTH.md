@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7216 (2026-11-12).
+Compact operational handoff, as of Session 7217 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -143,6 +143,10 @@ Open or awaiting the owner:
   content like hardware. The 21:9 "dark ring" (19% of lit px) was the row misfit below; interiors equal (s7182 edge class).
   Sheet docs/owner_sheet_s7216_219_frontend.png. TRAP: RT64 presents rows 0-443 of 448-row and 0-335 of 339-row screens; score with
   tools/s7122_fidelity.py FID_ALROWS=444 / 336 and check scratch/s7216/yprof.py (dy per band) first.
+- **s7217 LEVEL DESCRIPTION at 21:9 and 16:9 == angrylion (H-match, CLOSED):** owner recipe, s7184 route; LDESC centre frac 0.044 / 0.036
+  (AVAIL 0.034 / 0.029, 4:3 0.038), 0 swaps >0.05, dx 0 dy flat, text box k=1.000 (RECT_ASPECT right), 0 glyph-interior loss, controls PASS.
+  Crawl / pause / MISSION FAILED were already scored at 21:9 (s7146 / s7150 / s7153). **G3 fidelity matrix complete** at every aspect arm.
+  Sheet docs/owner_sheet_s7217_ldesc_wide.png.
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -265,10 +269,10 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) G3 21:9 remaining screens:** MISSION FAILED, level description (C-up on AVAILABLE CRAFT), chapter crawl and
-   PAUSED at 21:9 with the s7216 row model (FID_ALROWS). Long-route fail/ER/menus/hangar CLOSED s7216 (headline).
-   Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
-   Retina default: owner (s7205).
+1. **(next, NEXT.md) G5c gap check at the full owner recipe incl. fullscreen 21:9 + RETINA=1:** long hangar->mission run with the
+   present ring, no gap >250 ms outside loads (G5c bar) and 0 crashes, to back the owner's RETINA default decision (s7205) with an
+   endurance datum. G3 wide-aspect fidelity CLOSED s7217. Boot freeze stays passive; hunter
+   `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
 4. **G5b terrain drops: owner flight.** FWDWIN far-loss fix holds L1/L4/L5/L7 (tools/g5b_fwdwin_seamless.py).

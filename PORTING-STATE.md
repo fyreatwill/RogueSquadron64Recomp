@@ -190434,3 +190434,33 @@ for those rows; check the band dy profile (scratch/s7216/yprof.py) before trusti
 448/339 rows (s7144, s7155) carried this misfit in their animated-holo residuals; their H-equal verdicts stand (residual only shrinks).
 Not reached on this route: MISSION FAILED (this route showed GAME OVER), level description, crawl, pause at 21:9.
 Deleted FE21 .cap/.raw (30 GB), replays and the s7215 L21.cap; CSVs in scratch/s7216/csv.
+
+## Session 7217 (2026-11-12) — G3 LEVEL DESCRIPTION overlay at 21:9 and 16:9 (owner recipe) == angrylion (H-match): text box k=1.000, 0 glyph-interior loss, dx 0 / dy flat under the s7216 row model; the other NEXT.md "remaining" 21:9 screens (crawl s7146, pause s7150, MISSION FAILED s7153) were already scored, so G3 wide-aspect matrix is complete
+HYPOTHESIS-ID: g3-21x9-remaining-screens (CLOSED).
+Unit from NEXT. No maintenance (32.9 KB). No new soak results. Owner save untouched (s7146_arm: NO_SAVE_WRITE, no SAVE_FROM). 2 game runs,
+one at a time, 0 CRASH/SIGSEGV/SIGBUS. Boring-first check: grep of PORTING-STATE showed NEXT.md's list was stale: the 21:9 crawl (s7146),
+in-flight PAUSED (s7150) and MISSION FAILED (s7153) were scored H-equal at 21:9 before the row model; s7216 states the row model only shrinks
+those residuals, so they stand. The one screen never scored at a wide aspect was LEVEL DESCRIPTION (s7184/s7185 were 4:3 / no-env only).
+Runs (s7184 route, owner recipe FPS60 dd4): `env RDIR=s7217 ASP=21:9 FROM=0 EVERY=5 SECS=60 DL=5 DU=62 CW=1680 CH=720
+AP=6:start,11:start,16:start,21:start,25:left,27:start,31:cup,43:cup,47:start zsh tools/s7146_arm.zsh L1 ""` and the same with ASP=16:9
+CW=1360 CH=796 name M1. Post `env FID_ALROWS=336 zsh tools/s7152_post.zsh scratch/s7217 L1 1,37,1564,720 391,1172` (M1: 0,32,1360,796, split
+243,1117 = fb cols 142-654 of 796); painted CONTROL PASS both. fbs: 21:9 1024x339, 16:9 796x339 from swap ~1350. Phases from angrylion
+contact sheets (scratch/s7217/phase*.png): SELECT LEVEL 1432-1592, AVAILABLE CRAFT 1600-1830, typing ~1832-1945, LDESC ~1950-2560, AVAIL
+post 2632-2850, SELECT YOUR CRAFT 2952+.
+Presented centre frac >T (median; 0 swaps >0.05 in every phase, both arms; capture-tail clamp dropped):
+| aspect | SELLVL | AVAIL pre | typing | LDESC | AVAIL post | hangar | +4-row rect ctl LDESC | shift-2 ctl LDESC |
+| 21:9 | 0.0245 | 0.0340 | 0.0339 | 0.0439 | 0.0347 | 0.0191 | 0.1096 (136/136 >0.05) | 0.0461 |
+| 16:9 | 0.0212 | 0.0288 | 0.0317 | 0.0357 | 0.0293 | 0.0166 | 0.0979 (122/122) | 0.0380 |
+(4:3 s7184 for reference: SELLVL 0.0238, AVAIL 0.0307, LDESC 0.0380.) yprof (scratch/s7217/yprof.py = s7216's with YD env): best dx 0 /
+dy 0 on all 5 bands in SELLVL, LDESC and AVAIL post at both aspects (one band dy -1 at d -0.09 on SELLVL): H-shift refuted.
+tools/s7184_ldesc_region.py (n=12, ctl craft-info swap 1702, FID_ALROWS=336): 21:9 whole-frame excess +1390 px, text-band ROI +1497 (all of it
+in the text band); in-mask loss 0.351 of mask, glyph-interior px 1, loss 0; kfit best k=1.000 on every frame (0.104 vs 0.149/0.137 at
+0.99/1.01, 0.226 at 1.333); magenta-block CONTROL 12/12 PASS. 16:9: excess +1026 whole / +1014 ROI, in-mask 0.258, interior loss 0, k=1.000
+every frame, CONTROL 12/12 PASS. Text box fb cols 364-636 at 21:9 (same box in angrylion; position is the game's).
+Verdict line: this selects H-match for LEVEL DESCRIPTION at 21:9 and 16:9 (two lines each: phase scores at the 4:3 floor + shift/row
+controls firing, and text-band localisation with 0 interior loss and k=1.000) and refutes H-shift (dx 0, dy flat) and H-rect (RECT_ASPECT
+scales the overlay text correctly at both wide aspects; a 1.333 stretch scores 2.2x worse). The 0.35 per-mask-px loss at 21:9 vs 0.24-0.26
+at 4:3/16:9 is the larger capture downscale (1563->1024 cols) on 1-px glyph strokes, the s7182 edge class (single-source on that reading).
+Sheet docs/owner_sheet_s7217_ldesc_wide.png (angrylion | RT64 | diff x3, 21:9 and 16:9): diff on glyph outlines and ring edges only.
+G3 matrix now complete at 4:3, no-env, 16:9, 21:9, fullscreen 16:9 and auto for flight L0-L18, menus, cutscenes, crawl, pause, fail,
+results, ER and LDESC. Deleted .cap/.raw/replays (23 GB); CSVs in scratch/s7217/csv.
