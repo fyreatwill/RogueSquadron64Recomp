@@ -190001,3 +190001,39 @@ close and adopt (not exercised by this test). New witnesses: [pad-hp] added/remo
 This selects H-pad-orphan and refutes H-pad-latch (same-run old/new/ctl arms); the fix resolves the root cause in the host
 REMOVED handler. Next discriminator: a virtual display destroyed under a fullscreen window (H-display-dead vs
 H-display-follow vs H-aspect-stale, scratch/agent/NEXT.md).
+
+## Session 7202 (2026-11-12) — display hot-plug: fullscreen on a removed display left the game in a hidden Space (0 frames on screen, H-display-dead) and a windowed move to a 2x display left a quarter-size image (stale layer); both fixed, default on
+
+Unit from NEXT.md (HYPOTHESIS-ID input-display-hotplug). Ground truth for "a display goes away" is a real macOS display:
+new tool tools/virtual_display.m (private CGVirtualDisplay API, unsigned build works: `clang -fobjc-arc -framework Foundation
+-framework CoreGraphics tools/virtual_display.m -o build/virtual_display`; `virtual_display 1920 1080 <hold_s>` creates a
+1x 1920x1080 display at x=1512, holds, destroys). Positive control: CGGetActiveDisplayList 1->2->1 every run, and SDL posts
+SDL_DISPLAYEVENT 3 (disconnected) in the game. Per-frame witness: ROGUESQ_PRESENT_RING P rows with presentedTime > 0 = a
+frame CoreAnimation actually put on screen (the 1x virtual display itself never reports presentedTime, so the metric reads
+only the built-in display). New witness [g1f-win] (src/main/rs64_display_mac.mm rs64_window_state_log): NSWindow frame,
+screen, isOnActiveSpace, occlusion, fullscreen style, layer drawableSize/contentsScale at +0..8 s after any display event.
+Scripts scratch/s7202/arms.zsh (old build) and arms2.zsh (5 arms, one run each, game on the virtual display via
+ROGUESQ_WINDOW_POS, display destroyed ~26 s after start, ROGUESQ_ASPECT=16:9).
+
+Old path (s7202 arms fs/win and fsO/winO, ROGUESQ_DISPLAY_HOTPLUG=0):
+- Fullscreen: macOS moves the window to the built-in panel (frame 1512x949, swap chain resized, Z row) but keeps it
+  fullscreen in a Space that is NOT shown: active_space=0, occlusion not visible, 0 on-screen presents/s for the 18 s
+  measured; screenshot shows the desktop, no game. H-display-dead CONFIRMED (the owner would have to find a hidden Space).
+- Windowed: the window follows to the built-in panel (on-screen 30/s, H-display-follow for position), but SDL's Metal view
+  rescales the layer drawable to 2x pixels (2720x1528) while RT64's needsResize compares only the point size (1360x764,
+  unchanged; plume is built with PLUME_APPLE_RETINA_ENABLED OFF), so RT64 renders a 1360x764 image into the top-left of a
+  2720x1528 drawable for good: quarter-size picture in the window corner (screenshot win_post.png).
+Fixes, default on, ROGUESQ_DISPLAY_HOTPLUG=0 = old:
+- lib/rt64 plume_metal.cpp MetalSwapChain::needsResize also returns true when the layer drawable differs from the swap
+  chain size (resize() puts it back). Exported to submodule-patches/rt64-plume.patch.
+- src/main/main.cpp rs64_display_hotplug_tick (update_gfx, main thread): on a display removal while fullscreen, leave
+  fullscreen at +0.3 s and re-enter desktop fullscreen + raise at +1.5 s, so macOS builds the Space on a live display.
+Fixed arms: fsN active_space=1 occl_visible=1, on-screen presents back to 30/s within ~2 s of removal (25:4 26:30 27:13
+28..43:30), screenshot shows the game fullscreen on the panel; winN layer back to 1360x764 within 0.5 s, screenshot shows
+the full picture. Control bi (launch on the built-in panel, no virtual display): 0 stale-layer resizes, 0 Z rows, 30/s on
+screen, so the new check does not fire in normal play. 0 CRASH in all 8 runs.
+H-aspect-stale: by construction, ASPECT/FB_WIDTH are chosen once at boot; after a move RT64 scales the same game image
+into the new drawable (16:9 game on a 16:10 panel = small bars). Not changed (game-side width cannot change live).
+Side finding for the next unit: bi shows SDL drawable 2720x1528 at create but RT64's swap chain runs at the 1360x764 point
+size, so on any 2x display (built-in Retina, a 4K TV at "looks like 1080p") the game is rendered at half the panel's
+resolution and upscaled by CoreAnimation. That is G1f item (4) "internal resolution follows the window", unmeasured until now.

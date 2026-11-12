@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7201 (2026-11-12).
+Compact operational handoff, as of Session 7202 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -76,7 +76,14 @@ Open or awaiting the owner:
   with a second pad connected (only an ADDED ever opened a pad). Now the first remaining game controller is adopted on
   REMOVED (or on a silent detach). Forced arm ROGUESQ_PAD_HOTPLUG_TEST=<sec> (two SDL virtual pads, P1 detached): old 24 s
   of btn 0 after removal, fix 24 s of P2's word 0x4000, ctl P1 0x8000 throughout. No latch on the old path either.
-  Display hot-plug (fullscreen on a display that goes away) is the next unit; [g1f] display lines now log it.
+  s7202: display hot-plug fixed, default on (ROGUESQ_DISPLAY_HOTPLUG=0 = old). Real display removal (tools/virtual_display.m,
+  CGVirtualDisplay): fullscreen old path stayed fullscreen in a hidden Space (0 frames on screen for 18 s), now leaves and
+  re-enters fullscreen on the remaining display (30/s on screen within 2 s); windowed move to a 2x panel left RT64 drawing a
+  quarter-size image (plume needsResize checked points only), now resizes when the layer drawable is stale. Built-in control
+  0 extra resizes. [g1f-win] logs window/Space/layer state after any display event. Next: Retina render scale (below).
+- **Retina render scale (s7202 side finding, next unit):** plume is built with PLUME_APPLE_RETINA_ENABLED OFF, so the swap
+  chain runs at the window's POINT size: 1360x764 on a 2720x1528 drawable on the built-in panel; a 4K TV at 2x scaling gets a
+  1080p render upscaled. G1f item (4) "a 4K TV is sharp" was never measured at the pixel level.
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.

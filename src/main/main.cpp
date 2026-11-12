@@ -11914,6 +11914,48 @@ static bool rs64_g1f_fullscreen = false;
 extern "C" double rs64_display_top_inset_frac(void);
 #endif
 static bool rs64_g1f_optin = false;  // ASPECT or FULLSCREEN set: high-DPI drawable; unset = retail window
+// s7202 display hot-plug: the event watch records display add/remove/move; update_gfx (main thread) logs where the
+// window went and, if a display was removed while fullscreen, leaves and re-enters desktop fullscreen so macOS builds
+// the fullscreen Space on a display that still exists. ROGUESQ_DISPLAY_HOTPLUG=0 = old (witness only).
+static std::atomic<int> g_rs64_disp_ev{0};
+static std::atomic<int> g_rs64_disp_removed{0};
+static void* g_rs64_nswin = nullptr;
+static void* g_rs64_layer = nullptr;
+#ifdef __APPLE__
+extern "C" void rs64_window_state_log(void* nswindow, void* metal_layer, const char* tag);
+#endif
+static void rs64_display_hotplug_tick() {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_DISPLAY_HOTPLUG"); return !(e && *e == '0'); }();
+    static double t_ev = -1.0, t_rm = -1.0; static int logs = 0, step = 0;
+    if (!g_rs64_window) return;
+    const double now = (double)SDL_GetPerformanceCounter() / SDL_GetPerformanceFrequency();
+    if (g_rs64_disp_ev.exchange(0)) { t_ev = now; logs = 0; }
+    if (g_rs64_disp_removed.exchange(0)) {
+        const bool fs = (SDL_GetWindowFlags(g_rs64_window) & SDL_WINDOW_FULLSCREEN) != 0;
+        fprintf(stderr, "[g1f] display removed fullscreen=%d hotplug=%d\n", (int)fs, (int)on);
+        if (on && fs) { t_rm = now; step = 0; }
+    }
+#ifdef __APPLE__
+    static const double at[] = {0.0, 0.5, 1.0, 2.0, 3.0, 5.0, 8.0};
+    if (t_ev >= 0.0 && logs < 7 && now - t_ev >= at[logs]) {
+        char tag[32]; std::snprintf(tag, sizeof(tag), "+%.1fs", at[logs]);
+        rs64_window_state_log(g_rs64_nswin, g_rs64_layer, tag);
+        logs++;
+    }
+#endif
+    if (t_rm >= 0.0) {
+        if (step == 0 && now - t_rm >= 0.3) {
+            SDL_SetWindowFullscreen(g_rs64_window, 0);
+            fprintf(stderr, "[g1f] hotplug: leave fullscreen\n"); step = 1;
+        } else if (step == 1 && now - t_rm >= 1.5) {
+            SDL_SetWindowFullscreen(g_rs64_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+            SDL_RaiseWindow(g_rs64_window);
+            int ww = 0, wh = 0; SDL_GetWindowSize(g_rs64_window, &ww, &wh);
+            fprintf(stderr, "[g1f] hotplug: re-enter fullscreen on display %d window %dx%d\n", SDL_GetWindowDisplayIndex(g_rs64_window), ww, wh);
+            t_rm = -1.0; t_ev = now; logs = 0;
+        }
+    }
+}
 
 // Size a window of aspect r to ~90% of the usable desktop of display 0.
 static void rs64_g1f_fit_window(double r) {
@@ -12033,7 +12075,12 @@ ultramodern::gfx_callbacks_t::gfx_data_t create_gfx() {
         if (ev->type == SDL_WINDOWEVENT && ev->window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED)
             fprintf(stderr, "[g1f] display changed -> %d\n", ev->window.data1);  // s7201 witness for the display hot-plug unit
         if (ev->type == SDL_DISPLAYEVENT)
+        {
             fprintf(stderr, "[g1f] display event %d display=%u\n", (int)ev->display.event, (unsigned)ev->display.display);
+            g_rs64_disp_ev.store(1);
+            if (ev->display.event == SDL_DISPLAYEVENT_DISCONNECTED) g_rs64_disp_removed.store(1);
+        }
+        if (ev->type == SDL_WINDOWEVENT && ev->window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED) g_rs64_disp_ev.store(1);
         static std::atomic<int> any{0};
         const bool first = any.fetch_add(1) < 40;
         if (first) { fprintf(stderr, "[keywitness] anyevent type=0x%X\n", (unsigned)ev->type); fflush(stderr); }
@@ -12086,6 +12133,7 @@ ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::
     SDL_VERSION(&wm.version);
     SDL_GetWindowWMInfo(sdl_window, &wm);
     SDL_MetalView view = SDL_Metal_CreateView(sdl_window);
+    g_rs64_nswin = (void*)wm.info.cocoa.window; g_rs64_layer = SDL_Metal_GetLayer(view);
     { int dw = 0, dh = 0; SDL_Metal_GetDrawableSize(sdl_window, &dw, &dh); fprintf(stderr, "[g1f] drawable %dx%d\n", dw, dh); }
     return ultramodern::renderer::WindowHandle{ wm.info.cocoa.window, SDL_Metal_GetLayer(view) };
 #else
@@ -12107,6 +12155,7 @@ void update_gfx(ultramodern::gfx_callbacks_t::gfx_data_t) {
     // the controller-input poll on the game thread never sees those keys.
     SDL_PumpEvents();
     rs64_g1f_apply_fs_toggle();
+    rs64_display_hotplug_tick();
 }
 
 // ---------------------------------------------------------------------------

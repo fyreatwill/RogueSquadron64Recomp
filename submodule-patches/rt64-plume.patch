@@ -1,5 +1,5 @@
 diff --git a/plume_metal.cpp b/plume_metal.cpp
-index a5f30a3..4f5719b 100644
+index a5f30a3..5ece112 100644
 --- a/plume_metal.cpp
 +++ b/plume_metal.cpp
 @@ -9,17 +9,91 @@
@@ -517,7 +517,29 @@ index a5f30a3..4f5719b 100644
              layer->setDrawableSize(drawableSize);
  
              for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
-@@ -2050,6 +2442,17 @@ namespace plume {
+@@ -2011,7 +2403,20 @@ namespace plume {
+     bool MetalSwapChain::needsResize() const {
+         uint32_t windowWidth, windowHeight;
+         getWindowSize(windowWidth, windowHeight);
+-        return (layer == nullptr) || (width != windowWidth) || (height != windowHeight);
++        if ((layer == nullptr) || (width != windowWidth) || (height != windowHeight)) return true;
++        // s7202 display hot-plug: moving the window to a display with another backing scale (2x Retina <-> 1x TV) makes
++        // SDL's Metal view rescale the layer drawable to pixels while the window's point size, the only thing checked above,
++        // stays the same. RT64 then rendered its point-sized image into the top-left of a 2x drawable. Treat a layer drawable
++        // that no longer matches the swap chain as a resize (resize() puts it back). ROGUESQ_DISPLAY_HOTPLUG=0 = old check.
++        static const bool on = [] { const char *e = getenv("ROGUESQ_DISPLAY_HOTPLUG"); return !(e && *e == '0'); }();
++        if (!on) return false;
++        const CGSize cur = layer->drawableSize();
++        const bool stale = ((uint32_t)cur.width != width) || ((uint32_t)cur.height != height);
++        if (stale) {
++            static std::atomic<int> n{0};
++            if (n.fetch_add(1) < 20) fprintf(stderr, "[g1f] layer drawable %dx%d != swapchain %ux%u -> resize\n", (int)cur.width, (int)cur.height, width, height);
++        }
++        return stale;
+     }
+ 
+     void MetalSwapChain::setVsyncEnabled(const bool vsyncEnabled) {
+@@ -2050,6 +2455,17 @@ namespace plume {
          acquireBuffer->encodeSignalEvent(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue);
          acquireBuffer->commit();
  
@@ -535,7 +557,7 @@ index a5f30a3..4f5719b 100644
          CA::MetalDrawable *nextDrawable = layer->nextDrawable();
          if (nextDrawable == nullptr) {
              fprintf(stderr, "No more drawables available for rendering.\n");
-@@ -2118,6 +2521,14 @@ namespace plume {
+@@ -2118,6 +2534,14 @@ namespace plume {
          for (uint32_t i = 0; i < desc.colorAttachmentsCount; i++) {
              const MetalTextureView *colorAttachmentView = desc.colorAttachmentViews && desc.colorAttachmentViews[i] ? static_cast<const MetalTextureView *>(desc.colorAttachmentViews[i]) : nullptr;
              const MetalTexture *colorAttachment = colorAttachmentView ? colorAttachmentView->parentTexture : static_cast<const MetalTexture *>(desc.colorAttachments[i]);
@@ -550,7 +572,7 @@ index a5f30a3..4f5719b 100644
              assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
  
              MetalAttachment attachment;
-@@ -3008,6 +3419,17 @@ namespace plume {
+@@ -3008,6 +3432,17 @@ namespace plume {
                  dstOrigin
              );
              activeBlitEncoder->popDebugGroup();
@@ -568,7 +590,7 @@ index a5f30a3..4f5719b 100644
          } else {
              assert(dstTexture != nullptr);
              assert(srcTexture != nullptr);
-@@ -3695,6 +4117,13 @@ namespace plume {
+@@ -3695,6 +4130,13 @@ namespace plume {
              cmdBuffer->encodeWait(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue++);
          }
  
@@ -582,7 +604,7 @@ index a5f30a3..4f5719b 100644
          cmdBuffer->commit();
  
          // Commit all command lists except the last one
-@@ -3712,6 +4141,25 @@ namespace plume {
+@@ -3712,6 +4154,25 @@ namespace plume {
          const MetalCommandList *interfaceCommandList = static_cast<const MetalCommandList *>(commandLists[commandListCount - 1]);
          interfaceCommandList->mtl->enqueue();
  
