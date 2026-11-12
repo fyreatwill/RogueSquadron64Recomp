@@ -1,14 +1,13 @@
-# NEXT (s7222): RETINA=1 display ADDED while fullscreen on the 2x built-in (reverse of s7221)
-HYPOTHESIS-ID: retina-hotplug
-Context: s7221 closed removal (1x display removed while fullscreen -> re-enter on built-in at 3024x1898). Untested: a display
-ADDED while the game is fullscreen on the built-in. The s7202 handler logs [g1f] on any display event; it should NOT leave
-fullscreen or resize for an add.
-Hypotheses: H-ok (no leave/re-enter, layer stays 3024x1898, on-screen presents continuous 30/s through the add); H-churn (the add
-triggers the leave/re-enter path or a swap chain resize, a visible blink / gap >250 ms); H-dead (Space change hides the game, P at=0).
-Run: copy scratch/s7221/arms.zsh, but start the game with NO window pos (built-in), FULLSCREEN=1 ASPECT=auto, sleep 20, THEN
-start build/virtual_display 1920 1080 15 (add at ~20 s, removed at ~35 s), screencapture at +5 s after add and +5 s after removal.
-Arms a1 RETINA=1, a0 RETINA=0. Score with scratch/s7221/sum.py (P at>0 per second from 15 s, Z rows), grep [g1f]/[g1f-win]/[retina].
-Positive control: vd log ndisp 1->2->1 and [s7199-hotplug] added row in the log; on-screen P>0 before the add (built-in reports at).
-Outcomes: H-ok -> retina-hotplug closed for good, move to backlog item 2+ (owner-look items: produce nothing new; take the next
-ladder rung not closed, e.g. G1e/G3 checks at RETINA=1 21:9 window); H-churn -> gate the handler to removals of the window's display;
-H-dead -> fix in rs64_display_hotplug_tick.
+# NEXT (s7223): RETINA=1 + ASPECT=21:9 WINDOWED on the 2x built-in
+HYPOTHESIS-ID: retina-wide-window
+Context: RETINA=1 is closed for fullscreen auto (s7203-s7222: flight, front end, endurance, hot-plug). Not yet scored: a
+non-fullscreen 21:9 window at RETINA=1 (owner plays 21:9; the window path sizes via rs64_g1f_fit_window, swap chain at
+backing pixels). Hypotheses: H-ok (backing chain = 2x window size, full 21:9 viewport, same route as RETINA=0, hf higher);
+H-letter (viewport/scissor computed in points -> a quarter-size or letterboxed 3D view in the 2x chain); H-cost (gaps >250 ms
+or presents <30/s at 2x on 21:9).
+Run: arms r1 RETINA=1 / r0 RETINA=0, both `ROGUESQ_ASPECT=21:9` no FULLSCREEN, LEVEL=4 owner flight recipe (see
+tools/s7125_arm.zsh / scratch/s7220 for the route), PRESENT_RING, screencapture at fixed phase points. Score with
+scratch/s7222/sum2.py (P/s, gaps, Z rows), tools/s7220_shot_pair.py for in-phase shot pairs, hf residual as in s7221 scores.txt.
+Positive control: [retina] swapchain create row = 2x window size in r1, 1x in r0; hf ctl (r1 down/up 2x ~= r0 level).
+Outcomes: H-ok -> RETINA windowed closed, owner sheet; H-letter -> fix viewport scale on the windowed path; H-cost -> G1b
+instrument on the 2x chain.

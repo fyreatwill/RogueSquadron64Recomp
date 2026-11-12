@@ -190569,3 +190569,27 @@ Selects H-ok; refutes H-half (getScaleFactor/needsResize follow the new 2x scree
 (windowed 1x->2x s7203, fullscreen removal s7221). Default RETINA stays the owner's call.
 Next: reverse case, a display ADDED while fullscreen on the built-in at RETINA=1 (no move expected; check no stray resize,
 hidden Space or swap chain loss), then backlog.
+
+## Session 7222 (2026-11-12) — display ADDED while fullscreen = no-op (H-ok); removing a FOREIGN display cycled fullscreen (H-churn, ~3 s at 13-19/s) -> hotplug cycle now gated to removals of the window's own display
+- Run 1 (scratch/s7222/arms.zsh, pre-fix binary): FULLSCREEN=1 ASPECT=auto on the built-in, 1x virtual display added at ~20 s,
+  removed at ~35 s; arms RETINA=1 / RETINA=0. Positive control: vd ndisp 1->2->1, `[s7199-hotplug] added=3`, `[g1f] display
+  event 2/4`, on-screen P=30/s before the add.
+  - ADD: H-ok in both arms. No resize, no Z (swap chain) row, no leave; [g1f-win] frame/layer unchanged (3024x1898@2 r1,
+    1512x949@2 r0), nscreens=2, 30 on-screen presents/s through the whole add window.
+  - REMOVAL of the added display (window NOT on it): `[g1f] display removed fullscreen=1` -> our s7202 handler did
+    `hotplug: leave fullscreen` + re-enter: 2 resizes, Z rows 3024x1724 -> 3024x1898, on-screen 19/20/17 per s for 3 s
+    (no gap >250 ms). H-churn, caused by our handler, not macOS.
+- ORIGIN: rs64_display_hotplug_tick (src/main/main.cpp) cycled fullscreen on ANY display removal while fullscreen; s7202 wrote it
+  for the s7221 case (window's display removed) and never checked which display went.
+- Fix (src/main/main.cpp): remember SDL_GetDisplayBounds of the fullscreen window's display each tick; on a removal, cycle only
+  if no current display has those bounds. ROGUESQ_HOTPLUG_ANY=1 restores the old behaviour. Log line now carries
+  own_display / still_present / any.
+- Run 2 (scratch/s7222/arms2.zsh, fixed binary, RETINA=1, scorer scratch/s7222/sum2.py):
+  | arm | case | log | resizes | Z rows | min on-screen P/s | gaps>250 |
+  | g | foreign removal, gated | still_present=1, no cycle | 2 (boot only) | 0 | 29 | 0 |
+  | a | same, HOTPLUG_ANY=1 (control) | leave + re-enter | 4 | 2 | 13 | 0 |
+  | m | window ON removed vd (s7221 path) | still_present=0, leave + re-enter on display 0 | 6 | 6 | 30/s from +2 s | 0 |
+  Control arm a reproduces the churn in the same build, so g's clean row is a real fix, and m shows the own-display path
+  still recovers (3024x1898 on the built-in; pre-removal P at=0 on the vd as in s7221). Screenshot g_rm5 shows the game
+  fullscreen on the built-in. 0 crashes in 5 runs.
+- Rules out: any fullscreen disturbance from a display add. Hot-plug thread fully closed (add / foreign removal / own removal).

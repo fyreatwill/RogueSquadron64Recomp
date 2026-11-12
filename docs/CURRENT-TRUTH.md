@@ -107,6 +107,9 @@ Open or awaiting the owner:
   tools/s7220_shot_pair.py; sheet docs/owner_sheet_s7220_retina_frontend/. **RETINA flight + front end CLOSED.**
   s7221 fullscreen display removal at RETINA=1: re-enter on the 2x built-in builds a 3024x1898 chain (r0 1512x949), 30/s on screen
   in ~2 s, backing-res sharpness kept (hf 1.178 vs 0.856, ctl 0.792). **RETINA hot-plug CLOSED.**
+  s7222 display ADDED while fullscreen on the built-in: no resize, no swap chain change, 30/s steady (both RETINA arms). Removing a
+  display the window is NOT on used to cycle fullscreen (resize + ~3 s at 13-19/s); s7222 gates the cycle to removals of the
+  window's own display (bounds match; ROGUESQ_HOTPLUG_ANY=1 = old). Gated: 0 resizes, min 29/s; own-display removal still re-enters.
 - **s7206 interlaced stills fixed, default on (lib/rt64):** the title / backdrop stills are interlaced double-stride VI (width 1592,
   fb 796 cols B51E00, origin B52438). VI::fbAddress() subtracted a 1592-col row -> B517C8, so early present never matched the
   current VI (presented 20/s on VI changes only), or matched a leftover zero-height VI-history entry and presented 60/s through it
@@ -279,9 +282,9 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) RETINA=1 display ADDED while fullscreen on the built-in** (reverse of s7221; expect no move, no stray
-   resize/hidden Space). s7221 CLOSED removal: 1x virtual display removed while fullscreen -> re-enter on the 2x built-in at
-   3024x1898, 30/s on screen in ~2 s, hf 1.178 vs r0 0.856 (ctl 0.792). Boot freeze stays passive (66 clean owner-env boots); hunter
+1. **(next, NEXT.md) RETINA=1 + ASPECT=21:9 WINDOWED on the 2x built-in** (G1d/G3 at RETINA=1, not fullscreen): full 21:9
+   viewport, backing-res chain, sharpness vs RETINA=0, 0 gaps >250 ms, front end + LEVEL=4 flight. Hot-plug fully CLOSED s7222
+   (add: no-op; foreign removal: gated, no cycle; own removal: re-enter). Boot freeze stays passive; hunter
    `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).

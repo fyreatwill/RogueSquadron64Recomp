@@ -11930,10 +11930,27 @@ static void rs64_display_hotplug_tick() {
     if (!g_rs64_window) return;
     const double now = (double)SDL_GetPerformanceCounter() / SDL_GetPerformanceFrequency();
     if (g_rs64_disp_ev.exchange(0)) { t_ev = now; logs = 0; }
-    if (g_rs64_disp_removed.exchange(0)) {
+    // s7222: remember the bounds of the display the fullscreen window sits on; a removal of ANOTHER display (window's
+    // display still present at the same bounds) must not cycle fullscreen (it cost a resize + ~3 s at ~18/s).
+    // ROGUESQ_HOTPLUG_ANY=1 = old behaviour (cycle on any removal while fullscreen).
+    static const bool any = [] { const char* e = std::getenv("ROGUESQ_HOTPLUG_ANY"); return e && *e == '1'; }();
+    static SDL_Rect fsb{0, 0, 0, 0};
+    const bool pend = g_rs64_disp_removed.exchange(0) != 0;
+    if (!pend && t_rm < 0.0 && (SDL_GetWindowFlags(g_rs64_window) & SDL_WINDOW_FULLSCREEN)) {
+        const int di = SDL_GetWindowDisplayIndex(g_rs64_window);
+        SDL_Rect b; if (di >= 0 && SDL_GetDisplayBounds(di, &b) == 0) fsb = b;
+    }
+    if (pend) {
         const bool fs = (SDL_GetWindowFlags(g_rs64_window) & SDL_WINDOW_FULLSCREEN) != 0;
-        fprintf(stderr, "[g1f] display removed fullscreen=%d hotplug=%d\n", (int)fs, (int)on);
-        if (on && fs) { t_rm = now; step = 0; }
+        bool still = false;
+        const int nd = SDL_GetNumVideoDisplays();
+        for (int i = 0; i < nd && fsb.w > 0; i++) {
+            SDL_Rect b; if (SDL_GetDisplayBounds(i, &b) == 0 && b.x == fsb.x && b.y == fsb.y && b.w == fsb.w && b.h == fsb.h) still = true;
+        }
+        fprintf(stderr, "[g1f] display removed fullscreen=%d hotplug=%d own_display=%d,%d,%dx%d still_present=%d any=%d\n", (int)fs, (int)on,
+                fsb.x, fsb.y, fsb.w, fsb.h, (int)still, (int)any);
+        if (on && fs && (any || !still)) { t_rm = now; step = 0; }
+        else if (on && fs) fprintf(stderr, "[g1f] hotplug: window's display still present, no fullscreen cycle\n");
     }
 #ifdef __APPLE__
     static const double at[] = {0.0, 0.5, 1.0, 2.0, 3.0, 5.0, 8.0};
