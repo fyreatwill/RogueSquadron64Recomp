@@ -190042,3 +190042,4 @@ frames); windowed arm SELECTS H-display-follow for position but adds H-layer-sta
 H-aspect-stale is confirmed by construction and left as is. Next discriminator: RETINA=0/1 arms on the built-in panel
 (swap chain size, gpu_ms, edge sharpness of a phase-matched frame) with the 1x virtual display as the null control
 (NEXT.md, HYPOTHESIS-ID retina-render-scale).
+In short: this selects H-display-dead (fullscreen) and refutes H-display-follow for fullscreen; root cause of the windowed defect is plume's point-only needsResize.
