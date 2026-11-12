@@ -189259,3 +189259,24 @@ Verdict: H-equal on L11, L12, L13 at retail settings (whole-run metric with firi
 control, plus eyeballed sheets). H-hole absent; H-lag explains L12's single outlier; H-tool explains (and the fix removes) L11's 36.
 New tools/s7177_post_lvl.zsh runs the post chain for one level. Deleted .cap/.raw after scoring.
 Retail 4:3 done: L0-L13. Next: L14, L15, L16 with FID_MAINRUN=1 (then L17 with FROM=4700 + delay 60, L18).
+
+## Session 7178 (2026-11-11) — G3 retail settings (4:3, dd1, FPS60 off) L14 + L15 + L16 flight == angrylion (centre 0.009/0.007/0.011, 0 >0.05)
+HYPOTHESIS-ID: g3-retail-43-sweep.
+Three game runs, one at a time (posts overlapped the next run), screen unlocked (ioreg has no CGSSessionScreenIsLocked),
+0 CRASH/SIGSEGV/SIGBUS in each run.log; each shows "[g1d] ROGUESQ_ASPECT=4:3 applied" and "[dd] ... multiplier 1". Owner save
+untouched. Recipe as s7174-s7177 (tools/s7141_arm.zsh, CW=320 CH=240, FROM=7500, MAX_MB=12000); window 1062x828 each run; all
+streams hit the 12 GB cap (739-744 swaps). Scored with FID_MAINRUN=1 (tools/s7177_post_lvl.zsh). angrylion CONTROL PASS and
+s7163_rectfit CTRL x0+4 PASS each run; rectfit keeps 0,10,308,241 on all three.
+- L14: meand 4.58/5.06/5.26, frac 0.013/0.014/0.015, 0 >0.05, centre 0.009 side 0.014; shift-2 ctl 217 >0.05, centre 0.022.
+  Sheet docs/owner_sheet_s717x_L14_43_fidelity.png (worst frac 0.0146) identical by eye.
+- L15: meand 3.91/4.05/13.84, frac 0.013/0.014/0.048, 0 >0.05, centre 0.007 side 0.015; shift-2 ctl 243 >0.05. Sheet
+  docs/owner_sheet_s717x_L15_43_fidelity.png (worst 7841 frac 0.048) identical by eye.
+- L16 (Beggar's Canyon): meand 3.36/4.09/4.29, frac 0.012/0.019/0.021, 0 >0.05, centre 0.011. The whole-run shift-2 control
+  looked weak (40 >0.05, centre 0.016) because swaps 7500-7850 are the static MISSION FAILED results screen (shift-2 of a static
+  image is nearly identical: 0.0100 vs 0.0098) and 7851-7900 are black. Flight only (swaps >=7900, n=346): main frac med 0.0126,
+  centre 0.0115, 0 >0.05; shift-2 0.0181 / 0.0168 / 11 >0.05, so the control fires on flight. Rect CTRL x0+4 0.041 vs 0.015.
+  Results screen frac_c rises to ~0.043 at swaps 7726-7826 (medal disc zoom), still <0.05; sheet docs/owner_sheet_s717x_L16_43_fidelity.png
+  shows the disc and flight identical by eye.
+Verdict: H-equal on L14, L15, L16 at retail settings (whole-run metric + firing shift-2 control on flight + passing rect control,
+plus eyeballed sheets). H-hole, H-lag, H-tool not needed. Rules out a renderer difference at retail on these levels. Deleted .cap/.raw.
+Remaining: L17 (FROM=4700, arm delay 60), L18.
