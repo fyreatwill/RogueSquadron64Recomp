@@ -189574,8 +189574,8 @@ Runs: M1 = `env RDIR=s7188 ASP=auto FROM=200 EVERY=4 SECS=45 DL=8 DU=32 CW=1512 
    M2, colprof 1 undrawn column (711) on SELLVL/craft/hangar, scores in item 2 unchanged within noise, fits 0/1,0,1510-1512,957.
 Open from this: the 1 undrawn right column at EVERY even width (scissor 711 at fb 712). Unknown whether retail 640 does the same (scissor 639)
 or our G1d widening loses a column -> next unit g3-menu-scissor-col.
-Discrimination: SELECTS H-equal (scores, item 2/4) and H-wide (the odd width costs one extra undrawn column, M2/M3 vs M1 same route);
-REFUTES H-rect (gross texrect scale) and the apparent 0.4% menu narrowing (fitter local minimum). H-hud not separately measured (HUD-bearing
+Discrimination: selects H-equal (scores, item 2/4) and H-wide (the odd width costs one extra undrawn column, M2/M3 vs M1 same route);
+refutes H-rect (gross texrect scale) and the apparent 0.4% menu narrowing (fitter local minimum). H-hud not separately measured (HUD-bearing
 flight frames score 0 >0.02). Next discriminator: SETSCISSOR xh on the 339-row menus at retail 640 (639 -> retail, 640 -> our widening).
 Owner sheet docs/owner_sheet_s7188_auto_fullscreen.png (title, SELECT GAME, AVAILABLE CRAFT, hangar; RT64 presented vs angrylion, after the fix).
 Deleted .cap/.raw (~32 GB) and the replay dirs; csvs/txt kept in scratch/s7188. docs/OWNER-OPT-INS.md G1f row updated.
