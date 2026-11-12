@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7219 (2026-11-12).
+Compact operational handoff, as of Session 7220 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -102,6 +102,9 @@ Open or awaiting the owner:
   covered the fullscreen Space (pmset; P at=0 from then on): host event. Scorer now prints `hidden` (P at=0) rows; harness logs front-app changes.
   s7219 replicate, 600 s on screen throughout (1 front row, 0 hidden): 59.7/s, 0 gaps >250, gpu p95 0.75 (0.77 past 354 s), max 2.76 ms,
   0 crashes, 1 swap chain. **RETINA endurance complete (H-free, two runs); default = owner's call.**
+  s7220 front end (s7215 L17 long route, auto FULLSCREEN, a1 vs a0): viewport 3016x1898 = 2 x 1509x949, same route (mode sequence),
+  in-phase shot pairs bbox <=1 px at 4x, diff <=3.2; 0 gaps >250, gpu p95 0.78 vs 0.44 (H-ok; H-scale/H-cost refuted).
+  tools/s7220_shot_pair.py; sheet docs/owner_sheet_s7220_retina_frontend/. **RETINA flight + front end CLOSED.**
 - **s7206 interlaced stills fixed, default on (lib/rt64):** the title / backdrop stills are interlaced double-stride VI (width 1592,
   fb 796 cols B51E00, origin B52438). VI::fbAddress() subtracted a 1592-col row -> B517C8, so early present never matched the
   current VI (presented 20/s on VI changes only), or matched a leftover zero-height VI-history entry and presented 60/s through it
@@ -274,9 +277,9 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) RETINA=1 + auto long-route front end:** flight endurance CLOSED s7219 (600 s, 0 >250, 0 hidden). Menus,
-   hangar, cutscenes and interlaced stills at contentsScale 2 are unchecked: present cost + one fidelity spot on the s7215 route.
-   G3 wide-aspect fidelity CLOSED s7217. Boot freeze stays passive; hunter
+1. **(next, NEXT.md) RETINA=1 fullscreen display hot-plug:** flight (s7219) and front end (s7220) CLOSED. Untested: scale change
+   while FULLSCREEN (1x virtual display <-> 2x built-in, tools/virtual_display.m); s7203 covered windowed 1x->2x only. Queued soak
+   s7220_bootloop_retina (12 owner-env RETINA boots). Boot freeze stays passive; hunter
    `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).

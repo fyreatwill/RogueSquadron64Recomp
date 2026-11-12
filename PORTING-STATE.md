@@ -190514,3 +190514,35 @@ gpu max 2.76 ms (s7218 a1's 32.3 ms was in its hidden tail, so it was the off-sc
 Two lines of evidence for H-free through 600 s at RETINA=1: s7218 on-screen 95-354 s (59.6/s, 0 >250) and s7219 95-600 s (59.7/s, 0 >250,
 0 hidden). Rules out H-long (no stall class past 354 s at 2x drawable / 8x internal; gpu p95 flat 0.75 -> 0.77 between windows, no growth)
 and H-host-again for this run. RETINA=1 cost vs RETINA=0 stays ~+0.3 ms gpu p95 (s7218 a0 0.43). Default decision stays with the owner.
+
+## Session 7220 (2026-11-12) — RETINA=1 + ASPECT=auto FULLSCREEN long-route front end == RETINA=0 (H-ok): full viewports, same route, shot pairs match while in phase, 0 gaps >250 ms; H-scale and H-cost refuted; new tools/s7220_shot_pair.py
+HYPOTHESIS-ID: retina-frontend
+Unit from NEXT. No maintenance (34.0 KB). No new soak results. Screen unlocked (IOConsoleLocked false), HID idle 43855 s, load ~4.
+Owner save untouched (g1_level_coverage harness, NO_SAVE_WRITE). 2 game runs, sequential (scratch/s7220/r.zsh -> arm.zsh): the s7215 L17
+long route (boot -> menus -> hangar -> L17 -> pause/fail -> GAME OVER -> ER, looped) at owner recipe FPS60 dd4 + ROGUESQ_ASPECT=auto
+ROGUESQ_FULLSCREEN=1 ROGUESQ_VI_SHAPE_LOG=1 + PRESENT_RING, arms a1 RETINA=1 / a0 RETINA=0, 230 s hold, screencapture -x every 10 s
+(20..230 s) instead of the window capture. Front app was the game at all 22 shots in both arms. A macOS "Updates Available" banner sat
+top-right in every shot (host noise; it is inside the full-width bbox and shows as a small lit box on dark load frames).
+Positive controls: exactly one `[retina] swapchain create` per arm, a1 3024x1898 / a0 1512x949; shot scorer control (left quarter blanked
+-> bbox moves) PASS; census exit 0. 0 CRASH/SIGBUS/SIGSEGV/[stall-dump] in either arm.
+Route parity: the collapsed osViSetMode sequence is identical in both arms (3 interlaced D50 visits each, DA0/DF0/E40/C90 in the same
+order); only dwell counts differ (DA0 1646 vs 2114 VIs at one menu), so the arms drift out of phase after ~100 s.
+| measure | a1 RETINA=1 | a0 RETINA=0 |
+| window viewport (census) | 3016x1898 (2426 of 2473 lines) | 1509x949 (2407 of 2415) |
+| non-full viewports | 1: the 320x224 boot logo (4:3 by design) | 1: same |
+| [s7213-shape] corrections | 4, all 83-203 lines after a mode switch | 1, 74 lines after |
+| presents / gpu p50 p95 max ms (whole run) | 13415 / 0.54 0.78 2.04 | 13228 / 0.34 0.44 1.41 |
+| gaps >50 / >250 / max ms / hidden | 42 / 0 / 147.5 / 0 | 37 / 0 / 148.4 / 0 |
+Shots (tools/s7220_shot_pair.py, new; sips 4x downscale, pure python): in phase 20-90 s every lit pair has bbox within 1 px (4 screen px)
+and mean abs luma diff 0.54-3.16 (t20 interlaced title still 0.54, t40 AVAILABLE CRAFT 2.65, t50 1.18, t80/t90 pause menu 2.8/2.9).
+30 s is a fade (a0 vs prev 44) and 60 s a load-timing dark frame. Past 100 s, nearest-match over all a0 shots leaves 3 pairs with bbox
+3-6 px off at the top edge (fades on dim top rows); no a1 frame anywhere has a half-size or offset picture (every lit a1 bbox reaches
+x1>=747 of 756 and y1>=488 of 491). The 4:3 GAME OVER / ER backdrops (x 107..) are the game's own centred content, the same in both arms.
+Side note: a1 logs 38 [g1d-vishape-vp] rows for the boot 640x476 screen against 1 in a0. They are log-on-change rows: the two field
+buffers' render targets alternate 3026 vs 3052 px wide (videoRes 3026, viewport unchanged), so no shape change. No gap followed it.
+Verdict: H-ok, two lines (log viewports full, plus pixel bboxes and in-phase diffs with a passing control). Refutes H-scale (no
+point-size rect/scissor/pillarbox path; viewport = 2 x a0 exactly) and H-cost (0 >250 ms, max gap = the retail MusyX wait, gpu p95 +0.34 ms).
+RETINA=1 thread CLOSED for flight (s7218/s7219) and front end (s7220). Owner sheet docs/owner_sheet_s7220_retina_frontend/
+(title still and pause menu, a1 vs a0). Queued soak scratch/agent/soak_queue/s7220_bootloop_retina.sh (12 owner-env boots
+with auto + RETINA=1, hunter control on boot 1). Logs gzipped in scratch/s7220.
+Next: RETINA=1 fullscreen display hot-plug (2x <-> 1x while fullscreen) (NEXT.md).
