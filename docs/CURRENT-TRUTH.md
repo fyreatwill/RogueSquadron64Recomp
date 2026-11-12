@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7211 (2026-11-12).
+Compact operational handoff, as of Session 7212 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -245,8 +245,13 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) mode-switch pillarbox flash at 16:9:** s7211 logged 2 one-shot RT64 viewports `fb 796x444 vp 166,0 1028x764`
-   (4:3 pillarbox) at the flight -> 448-row mode switch. Visible one-frame flash or an unpresented pass? Boot freeze stays passive.
+1. **(next, NEXT.md) mode-switch box census at 21:9 and 4:3.** s7212 CLOSED the 16:9 case as H-unseen: the one-shot
+   `fb 796x444 vp 166,0 1028x764` (4:3 pillarbox) is ~8 presents of the stale last-drawn target through the vi-follow-draw mode=3
+   override (REGISTER of 0xA62B80 / 0x9DE900, then `[vi-follow-stale] idle 8 presents`), whose per-target resolutionScale (2.251,3.0)
+   was set under the 336-row flight VI; applied to the 444-row VI it gives a 4:3 HD box (1792x1332). Those presents fall on
+   208-byte fill-only swaps (3449-3451 / 9410-9412) and the window capture is black there (sides 0.0, centre 0.0) with full-width
+   lit frames from +73 ms (tools/s7212_pillar_scan.py, synthetic-box control PASS). Latent: a LIT first frame after a VI height
+   change would show the box; none on the whole 16:9 route (3 events in 2 logs, all fills). Boot freeze stays passive.
    Hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`. Retina default: owner (s7205).
    CLOSED s7211: 16:9 "vertical crop" = the game's own VI range (448-row screens scan 442 rows, flight 334; RT64 shows 444/336,
    2 more than hardware). Nothing cropped vs retail at any aspect. tools/s7211_vi_rows.py tabulates any VI_EXTENT_PROBE=2 log.

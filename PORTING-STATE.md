@@ -190288,3 +190288,29 @@ Thread wide-vertical-crop CLOSED. Side datum (single-source, log only): 2 one-sh
 (a 4:3 pillarbox at 16:9, sc 166..1192) right after the flight -> 448-mode switch (log lines 266947, 840515; VI #21 43..501), with the
 previous mode's 4246x1360 target. Whether that is a visible one-frame pillarbox flash is the next unit. Window raw kept for it
 (scratch/s7141/V169.raw 7.3 GB, .cap 3.2 GB; delete after).
+
+## Session 7212 (2026-11-12) — 16:9 mode-switch pillarbox: ~8 presents of a stale flight-rs target in a 4:3 box, all on black fill-only swaps, so nothing visible (H-unseen); new tools/s7212_pillar_scan.py
+HYPOTHESIS-ID: mode-switch-pillarbox
+Unit from NEXT. No maintenance (30.4 KB). No new soak results. Screen unlocked (ioreg, no CGSSessionScreenIsLocked). Owner save untouched
+(s7141 harness, NO_SAVE_WRITE).
+Step 1, offline, the kept s7211 raw: NOT usable. Mapping log -> swap ([fbw]/[region-gate] swap numbers) -> mach (s7098 index of V169.cap):
+the two events sit at swap ~3450 (mach 1029204.5 s) and ~9410 (1029305.5 s); the window raw spans 1029257.7-1029291.7 s (DL 112, DU 34),
+so it covered neither. Deleted V169.raw/.cap (10.6 GB) unscored.
+Step 2, 1 game run, scratch/s7212/p1.zsh: same s7141 arm, L17 owner recipe FPS60 dd4 16:9 windowed 1360x796, ROGUESQ_VI_SHAPE_LOG=1,
+window capture DL 48 DU 30 (covers the first switch). 0 CRASH/SIGSEGV/SIGBUS. The event recurred once (log line 267890, swap ~3450).
+Mechanism (log + code, lib/rt64 rt64_present_queue.cpp ~440 / rt64_vi_renderer.cpp getViewportAndScissor): at osViSetMode #910 (width
+512 -> 796, yScale 0x7B9) the vi-follow-draw mode=3 override REGISTERs the last-drawn 0xA62B80 (s7211: 0x9DE900) and presents its target,
+whose resolutionScale (2.251, 3.0) was set under the 336-row flight VI (rs.y = ceil(764/336), rs.x = rs.y x aspectTarget/aspectSource).
+Applied to the 444-row VI that is an HD box 1792x1332 = 4:3, so the viewport pillarboxes (166..1192). After 8 idle presents
+`[vi-follow-stale] #1 ... idle 8 presents -> present VI buffer` switches to the VI's own target (rs 1.985,2.0, full width).
+Line 1 (RDP stream, .cap index): the swaps at the switch are fill-only: 3449/3450/3451 = 1 RNG of 208 bytes each (s7211 event 2:
+9410-9412, 208 bytes too); real draws resume at 3452 (465 KB).
+Line 2 (pixels, new tools/s7212_pillar_scan.py: side-band vs centre luma per window frame, flags dark-sides/lit-centre frames with
+full-width neighbours): 1497 frames over 30 s, 0 hits; frames -325..+56 ms around swap 3450 are black everywhere (side 0.0, centre 0.0),
+full-width lit from +73 ms (side 44, centre 36). Control: brightest frame with its sides zeroed flags, the original does not: PASS.
+Verdict: H-unseen selected (the boxed presents are black fill frames inside a black window). H-flash REFUTED on this route; H-design
+refuted (not the pillar/edge crop code: the box comes from computeHDSize with the stale target rs). Census: VI_SHAPE_LOG runs in
+scratch/agent/m6 = 2 logs, 3 non-full 796 viewports, all this event. LATENT (single-source, code reading): a lit first frame after a VI
+height change through the follow-draw override would show the box for ~8 presents; candidate fix = box shape from the present VI and
+the current shared rs, not the stale target's. Not landed: no visible symptom to qualify it against. Raw deleted after scoring.
+Next: same census at 21:9 and 4:3 (NEXT.md).
