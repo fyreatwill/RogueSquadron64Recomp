@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7210 (2026-11-12).
+Compact operational handoff, as of Session 7211 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -245,10 +245,11 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) 16:9 vertical crop check:** s7210 fit says the 1360x796 window shows native rows 0-443 of a 448-row
-   screen. Is that every screen at 16:9 windowed/fullscreen (flight HUD bottom rows), retail VI range, or window rounding?
-   Retina default: owner (s7205). Boot freeze stays passive (headline).
-   Hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
+1. **(next, NEXT.md) mode-switch pillarbox flash at 16:9:** s7211 logged 2 one-shot RT64 viewports `fb 796x444 vp 166,0 1028x764`
+   (4:3 pillarbox) at the flight -> 448-row mode switch. Visible one-frame flash or an unpresented pass? Boot freeze stays passive.
+   Hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`. Retina default: owner (s7205).
+   CLOSED s7211: 16:9 "vertical crop" = the game's own VI range (448-row screens scan 442 rows, flight 334; RT64 shows 444/336,
+   2 more than hardware). Nothing cropped vs retail at any aspect. tools/s7211_vi_rows.py tabulates any VI_EXTENT_PROBE=2 log.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
 4. **G5b terrain drops: owner flight.** FWDWIN far-loss fix holds L1/L4/L5/L7 (tools/g5b_fwdwin_seamless.py).

@@ -190262,3 +190262,29 @@ frame at 16:9 as at 4:3; H-more-break refuted (the "bob" pick was the 448-vs-444
 static (G == W off the fades) and s7206 showed them pixel-identical across the present fix. Thread field-mode-census CLOSED.
 New datum (single-source, fit only): the 16:9 1360x796 window shows native rows 0-443 of ER; rows 444-447 are near-black (mean ~4/255), so
 nothing visible is lost there; whether flight loses HUD rows is the next unit. Raws (35 GB) and replays deleted; census/parity text in scratch/s7210.
+
+## Session 7211 (2026-11-12) — 16:9 vertical crop: the game's own VI scans 442 rows on the 448-row screens (334 in flight); RT64 presents 444 (336), so nothing is cropped vs retail (H-vi-range), thread closed
+HYPOTHESIS-ID: wide-vertical-crop
+Unit from NEXT. No maintenance (30219 B). No new soak results. Screen unlocked (ioreg). Owner save untouched (s7141 harness, NO_SAVE_WRITE).
+1 game run, scratch/s7211/v1.zsh: owner recipe FPS60 dd4 16:9 windowed 1360x796, L17 route (flight, MISSION FAILED, Elite Rogues),
+ROGUESQ_VI_EXTENT_PROBE=2 (VI regs on any non-origin change) + ROGUESQ_VI_SHAPE_LOG=1 (RT64 window viewport), 0 CRASH/SIGSEGV/SIGBUS.
+New tools/s7211_vi_rows.py: per VI mode, hardware rows = (vEnd-vStart)/2 lines x yScale/1024 stride rows (x2 fb rows on a double-stride
+interlace) vs RT64's fbSize box and window viewport (scratch/s7211/vi_rows.txt):
+| screen | width | vStart..vEnd | yScale | hw rows | RT64 box | window vp |
+| flight (AA3C00/A631B8 ping-pong) | 796 | 105..439 | 0x800 | 334 | 796x336 | 0.9,0 1358.2x764 |
+| Elite Rogues / title stills | 1592 (double stride) / 796 | 51..493 | 0x400 / 0x800 | 442 | 796x444 | 0.3,0 1359.4x764 |
+| mission-end 448 mode | 796 | 43..501 | 0x7B9 | 442.1 | 796x444 | same |
+| boot 640x480 | 640 | 35..509 | 0x800 | 474 | 640x476 | 1.1,0 1357.9x764 |
+| intro 640 | 640 | 51..493 | 0x612 | 335.4 | 640x336 | 0.9,0 1358.2x764 |
+| boot 320 | 320 | 37..511 / 53..495 | 0x400 | 237 / 221 | 320x240 / 320x224 | 0.4,0 1359.2x764 |
+Line 1 (registers, the game's own VI programming): the 448-row screens are scanned for 442 lines, so retail hardware shows fb rows
+0-441 and never 442-447; flight shows 0-333. Same vStart/vEnd/yScale as the s7147 21:9 table, so the range is aspect-independent.
+Line 2 (pixels, independent of the logs): s7210's regfit of the 16:9 ER window fitted exactly native rows 0-443 = RT64's 444-row box
+(VI 442 + RT64's ExtraRows 2, s7147). Every box fills the full 764-px content height (vp y 0, h 764): no offset, no window crop.
+Verdict: H-vi-range selected. H-rt64-crop REFUTED (RT64 shows 2 rows MORE than the hardware, not fewer; flight HUD rows 334-335 are
+the extra ones). H-fit (true count 448) REFUTED: the fit agrees with RT64's box to the row. Window rounding (1360/764) is irrelevant.
+ROGUESQ_VI_EXACT_ROWS=1 (s7147, opt-in) already presents the hardware count; s7149 found it worse against angrylion, stays opt-in.
+Thread wide-vertical-crop CLOSED. Side datum (single-source, log only): 2 one-shot viewport lines `fb 796x444 vp 166.1,0 1027.8x764`
+(a 4:3 pillarbox at 16:9, sc 166..1192) right after the flight -> 448-mode switch (log lines 266947, 840515; VI #21 43..501), with the
+previous mode's 4246x1360 target. Whether that is a visible one-frame pillarbox flash is the next unit. Window raw kept for it
+(scratch/s7141/V169.raw 7.3 GB, .cap 3.2 GB; delete after).
