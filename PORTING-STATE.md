@@ -190464,3 +190464,31 @@ at 4:3/16:9 is the larger capture downscale (1563->1024 cols) on 1-px glyph stro
 Sheet docs/owner_sheet_s7217_ldesc_wide.png (angrylion | RT64 | diff x3, 21:9 and 16:9): diff on glyph outlines and ring edges only.
 G3 matrix now complete at 4:3, no-env, 16:9, 21:9, fullscreen 16:9 and auto for flight L0-L18, menus, cutscenes, crawl, pause, fail,
 results, ER and LDESC. Deleted .cap/.raw/replays (23 GB); CSVs in scratch/s7217/csv.
+
+## Session 7218 (2026-11-12) — G5c endurance at FULLSCREEN + ASPECT=auto, RETINA=1 vs 0 (LEVEL=4, 420 s): on-screen both arms 59.5 presents/s, 0 gaps >250 ms, 0 crashes (H-free through 354 s); a1's one 1048 ms gap is a host event (Claude.app auto-update covered the fullscreen Space), not Retina; scorer + harness now flag it
+
+Ran: `env R=$PWD/scratch/s7218 HOLD=420 ARMS="4:a1:ROGUESQ_FORCE_SAVE_MISSION=4+ROGUESQ_ASPECT=auto+ROGUESQ_RETINA=1 4:a0:ROGUESQ_FORCE_SAVE_MISSION=4+ROGUESQ_ASPECT=auto" zsh tools/g1e_owner_quiet_arms.zsh`
+(owner recipe FPS60 dd4 FULLSCREEN, quiet host: idle 42000 s, screen unlocked). Both arms alive at 420 s, no LEVEL MISMATCH,
+0 CRASH/SIGBUS/[stall-dump], exactly 1 `[retina] swapchain create` each (a1 3024x1898 = 2x of fs 1512x949; a0 1512x949), 0 [g1f-win]
+rows (no display/Space event logged by the game), so H-auto (resize loop / swap-chain re-creates) refuted.
+
+tools/s7204_ring_cost.py, from t=95 / from t=240:
+| arm | pres/s | gpu p50/p95/max ms | gaps >50 | gaps >250 | max gap ms | hidden P rows (first) |
+| a1 RETINA=1 | 59.5 / 59.3 | 0.45 / 0.68 / 32.3 | 14 / 7 | 1 / 1 | 1048.4 | 3760 (353.96 s) |
+| a0 RETINA=0 | 59.5 / 59.4 | 0.35 / 0.43 / 1.21 | 24 / 18 | 0 / 0 | 146.8 | 0 |
+a1 restricted to its on-screen window 95-353.9 s: 15429 presents, 59.6/s, 0 gaps >250, max 146.7 ms = a0. Every >50 ms gap in both
+arms is the paired ~145 + ~70 ms retail MusyX scene-transition wait (s7065) at fb/VI switches.
+
+The a1 1048 ms gap (t=353.92 -> 354.96): Q row `acq_ms=1031.338` = CAMetalLayer nextDrawable's 1 s timeout; the two P rows just before
+have `at=0.000000` (Metal presentedTime 0: the frame never reached the screen) and EVERY later P row (3760, to the end at 418 s) is
+at=0, while the game kept submitting ~60/s (wl/W rows normal). Cause from a second source, `pmset -g log`: 11:33:59-11:34:01 Claude
+(pid 22417) "Preparing to relaunch" + ShipIt "Updating" = the Claude desktop app auto-updated and relaunched. Ring end mono
+1037669.24 = 11:35:10 (kill), so t=353.96 = 11:34:06, 5 s after the relaunch: the new Claude window covered the game's fullscreen
+Space. HID idle did not fall, so watch_human did not void the arm. Not Retina, not a render stall; it is the cost of an off-screen
+Metal layer (one 1 s drawable timeout, then ~8 ms acquires with skip=1 rows). a1's gpu max 32.3 ms is at t=414 s, also hidden.
+ORIGIN: the stall's writer is the host (Claude.app ShipIt relaunch taking the front), named by pmset timestamps against the ring clock.
+
+Rules out: H-long through 354 s at RETINA=1 (past the 240 s of s7204); H-auto (one swap chain, no resizes). The a1 tail 354-420 s
+is NOT evidence either way (not on screen). Landed: s7204_ring_cost.py prints `hidden` (P rows with at=0) and first_hidden_s, so a
+covered window cannot pass as a stall again; g1e_owner_quiet_arms.zsh logs every frontmost-app change to arms.log (`<arm> front t=..`).
+Side note: pmset lists a defunct RogueSquadron64Recomp pid 36480 (7 days, <defunct>) still holding a display-sleep assertion; harmless zombie.

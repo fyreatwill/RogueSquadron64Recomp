@@ -12,7 +12,11 @@ AP="${EARLY}${FL%,}"
 idle(){ if [ -n "$IDLE_FEED" ]; then tail -1 "$IDLE_FEED"; else ioreg -c IOHIDSystem | awk '/HIDIdleTime/{printf "%d\n",$NF/1e9; exit}'; fi; }
 # s6935: arm lq went void because a human left the fullscreen Space at t=80 while idle at the END of the arm still looked late (idle gives the LAST input, not the first).
 # Any fall in idle during an arm means a human is on: kill the arm at once, hand the display back, exit 2. Test: IDLE_FEED=<file> with a falling tail, see tools/g1e_quiet_watch_test.zsh
-watch_human(){ local p=$(idle) c t=0; while kill -0 $1 2>/dev/null; do /bin/sleep 2; t=$((t+2)); c=$(idle); if (( c + 1 < p )); then echo "$(date +%T) $2 human input t=$t idle $p -> $c, arm void" >> $R/arms.log; echo void > $R/void_$2; kill -KILL $1 2>/dev/null; return; fi; p=$c; done; }
+# s7218: also log every change of the frontmost app (a Claude.app auto-update relaunch covered the fullscreen Space at t=354
+# in s7218 arm a1: 64 s of presents never reached the screen, one 1 s nextDrawable timeout). Not a void, a recorded host event.
+front(){ lsappinfo info -only name "$(lsappinfo front)" 2>/dev/null | sed 's/.*="//;s/"$//'; }
+watch_human(){ local p=$(idle) c t=0 f0="" f; while kill -0 $1 2>/dev/null; do /bin/sleep 2; t=$((t+2)); c=$(idle);
+  f=$(front); [[ -n $f && $f != $f0 ]] && { echo "$(date +%T) $2 front t=$t $f" >> $R/arms.log; f0=$f; }; if (( c + 1 < p )); then echo "$(date +%T) $2 human input t=$t idle $p -> $c, arm void" >> $R/arms.log; echo void > $R/void_$2; kill -KILL $1 2>/dev/null; return; fi; p=$c; done; }
 for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do
   a=("${(@s/:/)spec}"); x=${spec#*:*:}; x=${x//+/ }; dd=$a[1]; arm=$a[2]; i=$(idle)
   echo "$(date +%T) $arm start idle=$i" >> $R/arms.log

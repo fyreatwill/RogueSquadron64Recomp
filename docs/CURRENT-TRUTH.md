@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7217 (2026-11-12).
+Compact operational handoff, as of Session 7218 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -97,6 +97,9 @@ Open or awaiting the owner:
   (badge 0.567 -> 0.815, icon 0.542 -> 0.727, radar 0.418 -> 0.778; positive control R1 down/up 2x = 0.539/0.402/0.374, the R0 level)
   and visually (radar ring and ticks crisp). Ground texture 0.653 -> 0.734 (camera pose differs between arms, so scene-confounded).
   Owner sheet docs/owner_sheet_s7205_retina.png. **Awaiting the owner: make RETINA=1 the default?**
+  s7218 endurance (FULLSCREEN + ASPECT=auto, LEVEL=4, 420 s, RETINA=1 vs 0): on screen both 59.5 presents/s, 0 gaps >250 ms,
+  0 crashes, 1 swap chain each; RETINA gpu p95 0.68 vs 0.43 ms. a1's one 1048 ms gap at 354 s = Claude.app auto-update relaunch
+  covered the fullscreen Space (pmset; P at=0 from then on): host event. Scorer now prints `hidden` (P at=0) rows; harness logs front-app changes.
 - **s7206 interlaced stills fixed, default on (lib/rt64):** the title / backdrop stills are interlaced double-stride VI (width 1592,
   fb 796 cols B51E00, origin B52438). VI::fbAddress() subtracted a 1592-col row -> B517C8, so early present never matched the
   current VI (presented 20/s on VI changes only), or matched a leftover zero-height VI-history entry and presented 60/s through it
@@ -269,9 +272,9 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) G5c gap check at the full owner recipe incl. fullscreen 21:9 + RETINA=1:** long hangar->mission run with the
-   present ring, no gap >250 ms outside loads (G5c bar) and 0 crashes, to back the owner's RETINA default decision (s7205) with an
-   endurance datum. G3 wide-aspect fidelity CLOSED s7217. Boot freeze stays passive; hunter
+1. **(next, NEXT.md) G5c RETINA=1 + auto replicate, 600 s:** s7218 was clean on screen to 354 s, then the host covered the window.
+   Re-run a1 alone with HOLD=600 (front-app logging now in the harness) to cover 354-600 s; pass = hidden 0, 0 gaps >250 outside loads.
+   G3 wide-aspect fidelity CLOSED s7217. Boot freeze stays passive; hunter
    `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
