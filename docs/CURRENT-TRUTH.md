@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7187 (2026-11-12).
+Compact operational handoff, as of Session 7188 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -9,15 +9,17 @@ Grep there for any sNNNN.
 
 ## Headline
 
-**G3 render fidelity is H-equal everywhere scored (s7122-s7186).** RT64 == angrylion to the retail
+**G3 render fidelity is H-equal everywhere scored (s7122-s7188).** RT64 == angrylion to the retail
 floor at retail 4:3 (flight L0-L18 s7180, menus/cutscenes s7181-s7185), owner recipe 16:9 (flight L0-L18
 s7164, menus s7142-s7156), 21:9 (flight L0-L18 s7173, holes s7132-s7140) and fullscreen 16:9 (s7186:
-menus 0.004-0.019 native frac, L6 flight 0.0037). The only large residuals anywhere are the deliberate
-ROGUESQ_W_SHEET_PX / W_SHEET_POS guard-band sky-sheet culls (s7125, s7127-s7130). Open: ASPECT=auto
-(non-standard fb width) has never been scored (item 1).
+menus 0.004-0.019 native frac, L6 flight 0.0037) and ASPECT=auto fullscreen (s7188: fb 712, menus 0.004-0.023,
+L6 flight 0.0064). The only large residuals anywhere are the deliberate ROGUESQ_W_SHEET_PX / W_SHEET_POS
+guard-band sky-sheet culls (s7125, s7127-s7130).
 - In plain words: at every setting checked, the renderer draws the same picture as an accurate N64 model.
 
 Fixes from the G3 series, all default on (=0 restores the old path):
+- **FBW_ALIGN (s7188):** non-standard aspects (auto) round FB_WIDTH to a multiple of 4 (713 -> 712): the odd width
+  left 2 undrawn right columns on the 339-row menus (game scissor xh 711) and an unaligned 1426 B stride. 796/1024 unchanged.
 - **RECT_ASPECT (s7142):** RT64 scaled 2D texrects 1.33x when the scissor matched the VI fb ratio; fixed.
 - **HORIZON_XFIX / GATEFIX / SKYFILL (s7133-s7136) + SKYFILL_BOT (s7166):** 21:9/16:9 sky holes; no-op at 4:3.
   L6 zero-height top-fade skirt is retail (s7138).
@@ -167,10 +169,10 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) G3 ROGUESQ_ASPECT=auto + FULLSCREEN** vs angrylion: fb width derived from the display
-   (~714 on the built-in panel), never scored. Recipe = s7186's with ASP=auto (tools/s7146_arm.zsh,
-   tools/s7131_arm.zsh). TRAPs: always fit the rect (tools/s7163_rectfit.py; s7186 nominal was 7 rows off);
-   s7131_arm hardcodes ASPECT=16:9 in XENV_EXTRA, check override order.
+1. **(next, NEXT.md) 339-row menu scissor column:** at every even fb width the game's SELECT LEVEL / AVAILABLE CRAFT /
+   hangar scissor stops at xh = fbw-1 (711 at 712; s7188 tools/s7188_capscissor.py), so the right column is never drawn (black in
+   RT64, pre-fill in angrylion). Is retail 640 the same (scissor 639) or does our G1d widening lose it? Closed s7188: ASPECT=auto +
+   FULLSCREEN == angrylion. TRAPs: rectfit needs `--slack 40` in fullscreen (fb is 957 pt tall in 949) and >= 2 start rects.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
 4. **G5b terrain drops: owner flight.** FWDWIN far-loss fix holds L1/L4/L5/L7 (tools/g5b_fwdwin_seamless.py).

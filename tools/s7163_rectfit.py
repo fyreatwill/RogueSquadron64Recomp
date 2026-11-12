@@ -3,7 +3,7 @@
 presented-frame pairing already chosen by s7122_fidelity score (frames.csv pframe column), so each candidate rect costs
 one crop+resize+diff per sampled swap instead of a full rescore.
 
-usage: s7163_rectfit.py raw aldir frames.csv x0,y0,x1,y1 [--every n] [--swap-lo a] [--swap-hi b] [--step 1]
+usage: s7163_rectfit.py raw aldir frames.csv x0,y0,x1,y1 [--every n] [--swap-lo a] [--swap-hi b] [--step 1] [--slack 2]
 prints the objective (mean frac>T over sampled swaps, central band split 46,322 also reported) for the start rect and the
 best rect found. Positive control: the start rect +4 px on x0 must score worse than the start rect (printed as CTRL).
 """
@@ -17,6 +17,7 @@ from PIL import Image
 a = sys.argv[1:]; raw = fid.Raw(a[0]); aldir = a[1]; fcsv = a[2]; rect0 = tuple(map(int, a[3].split(',')))
 opt = dict(zip(a[4::2], a[5::2])); every = int(opt.get('--every', 4)); lo = int(opt.get('--swap-lo', 0))
 hi = int(opt.get('--swap-hi', 1 << 62)); step = int(opt.get('--step', 1))
+slack = int(opt.get('--slack', 2))  # s7188: how far the rect may run past the capture (picture cropped by the window)
 rows = [r for r in csv.DictReader(open(fcsv)) if lo <= int(r['swap']) < hi][::every]
 pairs = []
 for r in rows:
@@ -43,7 +44,7 @@ while improved:
     for k in range(4):
         for dv in (-step, step):
             c = list(cur); c[k] += dv; c = tuple(c)
-            if c[2] - c[0] < 100 or c[3] - c[1] < 60 or c[0] < 0 or c[1] < 0 or c[2] > raw.w + 2 or c[3] > raw.h + 2: continue
+            if c[2] - c[0] < 100 or c[3] - c[1] < 60 or c[0] < 0 or c[1] < 0 or c[2] > raw.w + slack or c[3] > raw.h + slack: continue
             s = obj(c)
             if s[0] < best[0] - 1e-5: best, cur, improved = s, c, True; print('  ->', cur, 'frac %.4f centre %.4f' % best)
 print('best', ','.join(map(str, cur)), 'frac %.4f centre %.4f' % best)

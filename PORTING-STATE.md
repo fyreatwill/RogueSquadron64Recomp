@@ -189533,3 +189533,46 @@ Step 0 fired (CURRENT-TRUTH 60188 B > 60000). No experiments run.
   the active unit (ASPECT=auto + FULLSCREEN, old item 43) is now item 1.
 - Superseded, run recipes, G1 coverage, durable constraints: kept verbatim.
 Net: 313 -> 219 lines, -39976 bytes. Next: NEXT.md unit unchanged (g3-owner-auto-fullscreen).
+
+## Session 7188 (2026-11-12) — G3 ASPECT=auto + FULLSCREEN == angrylion (H-equal); auto gave an ODD fb width 713, which leaves 2 undrawn right columns on the 339-row menus instead of 1: FB_WIDTH now rounded to a multiple of 4 (713 -> 712), validated same-route
+HYPOTHESIS-ID: g3-owner-auto-fullscreen (CLOSED -> next g3-menu-scissor-col).
+No maintenance (CURRENT-TRUTH 20212 B). No new soak results. Owner save untouched (NO_SAVE_WRITE, no SAVE_FROM). Screen unlocked (ioreg, before
+every run). 4 game runs, one at a time, 0 crash lines in all.
+Recipe: FPS60=1 dd4 ASPECT=auto FULLSCREEN=1, built-in display. run.log: `[g1f] ROGUESQ_ASPECT=auto display=1512x982 -> 1.5916:1` (notch band
+0.0326), `[g1d] FB_WIDTH=713`, window 1512x949 pt, drawable 3024x1898.
+Runs: M1 = `env RDIR=s7188 ASP=auto FROM=200 EVERY=4 SECS=45 DL=8 DU=32 CW=1512 CH=949 zsh tools/s7146_arm.zsh M1 "ROGUESQ_FULLSCREEN=1"`
+(593 RAM swaps, menus); L6A = `env RDIR=s7188 CW=1008 CH=633 zsh tools/s7131_arm.zsh 6 L6A "ROGUESQ_ASPECT=auto ROGUESQ_FULLSCREEN=1 ..."`
+(s7131's hardcoded ASPECT=16:9 is overridden: XENV is an env list, later wins; confirmed FB_WIDTH=713 in its run.log); M2 = M1 with ASP=712:448
+(discriminator arm, no build); M3 = M1 after the fix. Post tools/s7152_post.zsh, painted CONTROL PASS on M1/L6A/M3.
+1. Shape. tools/s7163_rectfit.py stopped at its hard bound y1 = capture h + 2 (951). New `--slack N` option (default 2 = old behaviour); with
+   --slack 40 every phase converges to 0/1,0,1511/1512,957 (fb drawn 957 pt tall in a 949-pt window: 444.3 of 448 fb rows visible). s7186's
+   16:9 fit (858 rows in the 851-row nominal box) gives the same 444.3 rows, so this is the same VI vertical term at both widths, not new
+   cropping (two lines: 5/5 phase fits + the s7186 ratio). TRAP: a first descent from 7,0,1505,949 settled at 3..1509 (looked like a 0.4% menu
+   narrowing vs flight 0..1008@2/3); restarting from 0,0,1512,957 scores lower on every phase (SELECT GAME 0.0023 vs 0.0036, title 0.0036
+   vs 0.0046, craft 0.0177 vs 0.0190) -> that "narrowing" was a local minimum. Always fit from >= 2 starts.
+2. Native scores at 0,0,1512,957 (s7183_native_edge n=24), M1 at 713 / M3 at 712: title 0.0057 / 0.0061, SELECT GAME 0.0041 / 0.0050,
+   SELECT LEVEL 0.0177 / 0.0180, AVAILABLE CRAFT 0.0220 / 0.0232, hangar 0.0141 / 0.0146; AL-edge share 99/100/91/90/67%; 1px shift ctl PASS
+   24/24 except hangar 23/24 (same as s7186). s7186 fullscreen 16:9 fitted: 0.0049/0.0039/0.0151/0.0192/0.0118; s7184 windowed craft 0.025,
+   SELLVL 0.017 -> inside the scored range. H-equal.
+3. H-rect (texrect k at 713): no k sweep (tools/s7154_kmd boxes are tuned to 469x216 captures). Score-based only: s7142's 1.33x texrect
+   error scored >0.1 non-edge; text-heavy craft/SELLVL here are 0.018-0.023 with 90% on AL edges -> a gross RECT_ASPECT failure is excluded;
+   sub-1% k is not measured (single line).
+4. L6 flight (718 swaps 7500-8217, presented at 2/3): median 0.0064 p90 0.0076, 0 frames >0.02 (s7186: 0.0037 / 0.0078). Shift-2 pairing ctl:
+   p90 0.0174, 44 >0.02, 17 >0.05 -> scorer has power. Native at the flight-fitted rect 0,0,1008,638: 0.0051, 100% on AL edges, shift ctl
+   19/24 (smooth wall scene; at a 2-px-off rect the ctl drops to 4/24, which is how the flight rect was found). The flight rect fit itself has
+   no power (CTRL x0+4 FAIL): use the menu rect scaled.
+5. H-wide (the new finding). tools/s7188_colprof.py (per native column |d|, edge columns vs median) on the 339-row menus at 713: the last 2
+   columns (711, 712) are angrylion pre-fill magenta (undrawn) and RT64 black; title/SELECT GAME (448-row) have 0 undrawn columns.
+   tools/s7188_capscissor.py on the captured RDP stream (swaps 1700-1720): SETSCISSOR (0,0,711,339) and FILLRECT lr (711,339) at BOTH 712
+   and 713; colour image width = fb width. So the writer is the game's 339-row viewport/scissor path, which evens the width and stops the
+   scissor at 711: 1 undrawn column at any even width, 2 at the odd 713. RT64 == angrylion either way (both leave it undrawn).
+   ORIGIN: rs64_g1d_apply_aspect_policy (src/main/main.cpp) rounded 448*w/h to the nearest integer with no alignment, so auto on a
+   non-standard display gave an odd width (stride 1426 B, not 8-aligned; every verified width 640/796/1024 is a multiple of 4).
+   Fix (default on): non-VI_SHAPE widths 513..1024 are rounded to a multiple of 4 ((w+2)&~3, as the VI_SHAPE path already did), and RT64's
+   output aspect is set to `<fbw>:448` (s6688 rule). 16:9 (796) and the 1024 clamp do not move. ROGUESQ_FBW_ALIGN=0 = unrounded.
+   Validation M3 (true auto): `[g1d] FB_WIDTH 713 -> 712 (multiple of 4, s7188)`, scissor/fill/cimg identical to the explicit 712:448 arm
+   M2, colprof 1 undrawn column (711) on SELLVL/craft/hangar, scores in item 2 unchanged within noise, fits 0/1,0,1510-1512,957.
+Open from this: the 1 undrawn right column at EVERY even width (scissor 711 at fb 712). Unknown whether retail 640 does the same (scissor 639)
+or our G1d widening loses a column -> next unit g3-menu-scissor-col.
+Owner sheet docs/owner_sheet_s7188_auto_fullscreen.png (title, SELECT GAME, AVAILABLE CRAFT, hangar; RT64 presented vs angrylion, after the fix).
+Deleted .cap/.raw (~32 GB) and the replay dirs; csvs/txt kept in scratch/s7188. docs/OWNER-OPT-INS.md G1f row updated.

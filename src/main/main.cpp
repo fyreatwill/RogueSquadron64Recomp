@@ -12169,6 +12169,22 @@ static void rs64_g1d_apply_aspect_policy() {
         if (fbw <= 512) return;  // s6929: the 512 picture is already 1.397, narrower windows just letterbox it
         if (fbw == 640) fbw = 644;  // s6929: at 640 the presenter cannot tell flight (par 1.25) from a 640 mode (par 1)
         setenv("ROGUESQ_G1D_340PERSP", "0", 0);
+    } else if ((fbw & 3) && fbw > 512 && fbw <= 1024) {
+        // s7188: ASPECT=auto on a non-standard display (built-in panel below the notch: 1.5916 -> 713) gave an ODD
+        // width: RGBA16 row stride 1426 B (not 8-aligned) and the 339-row menus (SELECT LEVEL / AVAILABLE CRAFT /
+        // hangar) even the width and scissor at xh 711, leaving 2 undrawn right columns instead of the 1 every even
+        // width shows (RDP stream, s7188 capscissor). Round to a multiple of 4 like the VI_SHAPE path (16:9 796 and
+        // the 1024 clamp are already aligned, so the verified widths do not move). RT64's output aspect follows the
+        // rounded width (s6688 rule). ROGUESQ_FBW_ALIGN=0 keeps the unrounded width.
+        const char* al = std::getenv("ROGUESQ_FBW_ALIGN");
+        if (!(al && *al == '0')) {
+            const int f0 = fbw;
+            fbw = (fbw + 2) & ~3;
+            char ab[32];
+            std::snprintf(ab, sizeof ab, "%d:448", fbw);
+            if (fit) { setenv("ROGUESQ_ASPECT", ab, 1); as = std::getenv("ROGUESQ_ASPECT"); }
+            std::fprintf(stderr, "[g1d] FB_WIDTH %d -> %d (multiple of 4, s7188)\n", f0, fbw);
+        }
     }
     char b[32];
     if (fbw > 1024) {
