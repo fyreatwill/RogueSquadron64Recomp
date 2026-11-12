@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7181 (2026-11-12).
+Compact operational handoff, as of Session 7182 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -294,7 +294,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 34. **G3 in-flight owner-recipe fidelity at 21:9: CLOSED s7173 (H-equal L0-L18; centre <=0.006, 0 flight >0.05 beyond dup-pframe lag).** Shift-2 ctl fires except dark/smooth L3/L8/L13/L17 (judged by meand ratio + sheet). TRAP: L17 (trench) autopilot dies ~126 s, so FROM=7500 lands in level select; use FROM=4700 with arm delay 60. Sheets docs/owner_sheet_s71{67..73}_L*_219_fidelity.png.
 35. **G3 L4 21:9 mid-mission cutscene lower-right hole: FIXED s7166 (ours: s7136 SKYFILL rect bottom).** SKYFILL wrote {0,0,w-1,h-1} with h = viewport HEIGHT (340 at 0x80138D20+0x16); letterboxed viewports start at y 54, so the widened rect ended at row 339 and replaced the builder's right below-horizon rect; rows 340-392 right of x 512 were never cleared, exposed when no water tri reaches the bottom band (0 tris at 21:9 and 4:3). Fix tools/apply_s7166_skyfill_bottom.py, ROGUESQ_HORIZON_SKYFILL_BOT (default on, =0 s7136, =tog): rect keeps the builder pair's max bottom/right. L4 21:9 unpainted max 27136 -> 0 (75 -> 0 swaps); CULL_SPIKE=0 byte-identical (not the cull); 4:3 max 338. Recorder trigger ROGUESQ_G5B_FRAME_TRIG_LB=<k> (letterbox span k, dpc_bridge.cpp). Sheet docs/owner_sheet_s7166_L4_219_cutscene_fix.png; owner look.
 36. **G3 in-flight retail 4:3 fidelity: CLOSED s7180 (H-equal L0-L18).** L17 needs FROM=3300 (autopilot fails ~126 s). 37. **G3 retail 4:3 menus/cutscenes: H-equal s7181** on 18 screen classes (logos, title, SELECT GAME/LEVEL, craft, hangar, intro cutscene, GAME OVER, debriefs, MISSION FAILED, Elite Rogues), arms ASPECT=4:3 and no ASPECT env. 448-row cutscenes need FID_MAINRUN=1 (stray rows 442-447). RECT_ASPECT=0 under ASPECT=4:3 stretches 2D rects (N64 logo k 1.45, menus 1.15); inert with no ASPECT env. Not reached: interlaced level-description screen, crawl, pause. Sheet docs/owner_sheet_s7181_43_menus.png.
-38. **(next, NEXT.md) Holo platform ring ~7/8 brightness on RT64** (s7181: lit segments AL 248 -> RT64 218 at the 849x788 window, 238 at 640x512; lag-flat, wall control 0). Read the ring tris' combine/othermode from scratch/s7141/L17m.cap swap 5161, then split blend vs resolution.
+38. **G3 holo platform ring "7/8 brightness": CLOSED s7182, not a defect.** Ring tris are shade-only AA opaque (no blend term). Interior lit pixels RT64 253 vs AL 248 (5551 ceiling); the whole loss is on segment edges/seams (83-85% of loss px on an AL edge; sheet docs/owner_sheet_s7182_ring_edges.png): RT64 high-res geometric edges vs hardware staircases. Half the s7181 number was the 320x240 rect being 1 row short (fit 234 rows; tools/s7182_yfit.py). Tools s7182_tristate/ringfull/ringint/ringmap.
+39. **(next, NEXT.md) G3 retail 4:3 remaining screens:** interlaced 512x448 level-description screen, text crawl, pause menu, scored with full-res window capture (CW/CH = window size) and a fitted rect.
 
 ## Evidence index
 

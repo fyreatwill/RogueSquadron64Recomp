@@ -189365,3 +189365,32 @@ NOT reached this session: the 512x448 interlaced level-description screen (route
 Verdict: H-equal for 18 retail-4:3 screen classes (two arms: ASPECT=4:3 and no ASPECT); H-tool hit and fixed on the cutscene crop;
 H-rect refuted for ASPECT=4:3 with the fix off (stretch), confirmed inert at true retail; H-interlace untested (screen not reached).
 Kept scratch/s7141/L17m.cap/.idx/r replay for the ring work; deleted M1/R1/T0/T0R .cap/.raw.
+
+## Session 7182 (2026-11-12) — holo ring "7/8 brightness" is edge treatment + scorer misregistration, not a blend bug (H-res/edge selected, H-blend refuted, two lines); interiors equal
+HYPOTHESIS-ID: g3-holo-ring-brightness (CLOSED -> next g3-retail-43-remaining).
+No maintenance (57362 B < 60000). No new soak results. Owner save untouched (NO_SAVE_WRITE, no SAVE_FROM). Screen unlocked.
+1 game run (F1), 0 CRASH/SIGSEGV/SIGBUS.
+Step 1, offline RDP state (new tools/s7182_tristate.py cap swap box): swap 5161 of scratch/s7141/L17m.cap. Lit ring segments = 198
+tri0D, combine shade-only (c0 a15 b15 c31 d4, alpha shade), 1cyc AA opaque (bl 0011 = CLR_IN,A_IN,CLR_MEM,A_MEM; cvg_dest clamp,
+alpha_cvg_sel, img_read, aa, z_cmp/upd, no force_blend), shade max (255,255,201,255). So interior pixels = shade, no blend or alpha
+term that could give 7/8. Over them: 7 xlu beam tris (force_blend, bl 0010, zmode xlu, shade alpha ramp ~0 -> ~180).
+Step 2, offline re-score of the s7181 data: the ring residual was partly a scorer artifact. The 320x240 capture rect 0,9,308,242 is one
+row short: AL fits best at 234 rows (yfit on craft, hangar, MISSION FAILED, Elite Rogues all pick (234,9); tools/s7182_yfit.py), so
+RT64 sat 1 presented row low below y~120 on the craft screen (best integer shift (0,+1) 17/17 frames; top band and MF (0,0)). With the
+shift, AL-lit pixels 248 -> 235 instead of 218. Forward binning by AL luma also has a regression-to-mean bias (reverse binning shows
+AL darker in RT64's top bin).
+Step 3, one run F1 = s7181 M1 route (tools/s7146_arm.zsh RDIR=s7182 ASP=4:3 FROM=0 EVERY=5 SECS=70 DL=5 DU=60, FPS60=0 dd1) with the
+window captured at FULL 849x788 (CW/CH) instead of 320x240; 503 RAM swaps replayed in angrylion (frame_replay16). Rect fit
+(s7163_rectfit) 1,25,848,668; SELECT LEVEL + AVAILABLE CRAFT frac 0.0195 (M1 at 320x240: 0.038/0.047, so half of that residual was the
+capture downscale). Ring at NATIVE 512x339, RT64 box-downscaled (tools/s7182_ringfull.py): ring luma d -4.8 (sellevel) / -5.2 (craft),
+wall control +0.6, best shift (0,0); p99 RT64 249 vs AL 243 (brighter); lit>192 px -21%.
+Two lines that the loss is edges only (tools/s7182_ringint.py): (1) interior lit pixels (all 8 AL neighbours lit) RT64-AL +3.0/+4.3,
+RGB 253/253/188 vs 248/248/189 (hardware RGBA5551 ceiling 248 vs RT64 8-bit); edge pixels -26.9/-33.5; 83%/85% of loss pixels lie on an
+AL luma step. (2) Loss map docs/owner_sheet_s7182_ring_edges.png (AL | RT64 | red = AL brighter by >40): red only on segment outlines and
+seams, interiors grey. Angrylion's edges are hard staircases fully lit up to the boundary; RT64 at high internal resolution draws the
+true geometric edge, so partly covered native pixels average darker.
+Verdict: H-blend refuted (no gain term; interiors equal or brighter). H-capture partly true (1-row rect error + 320x240 downscale doubled
+the apparent loss). H-res/edge selected for the remainder. H-retail not needed. Not a render defect: RT64 cannot store N64 coverage, and
+high-res edge rendering is the expected look. No fix. s7155's 16:9 "animated holo" residual is this edge class too (not re-measured).
+Lesson for scorers: check the rect against raw height (242 > 240 raw rows) and prefer full-res captures for thin geometry.
+Deleted F1.cap/.raw (15 GB); kept F1r replays and scratch/s7141/L17m.cap.
