@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7188 (2026-11-12).
+Compact operational handoff, as of Session 7189 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -13,7 +13,7 @@ Grep there for any sNNNN.
 floor at retail 4:3 (flight L0-L18 s7180, menus/cutscenes s7181-s7185), owner recipe 16:9 (flight L0-L18
 s7164, menus s7142-s7156), 21:9 (flight L0-L18 s7173, holes s7132-s7140) and fullscreen 16:9 (s7186:
 menus 0.004-0.019 native frac, L6 flight 0.0037) and ASPECT=auto fullscreen (s7188: fb 712, menus 0.004-0.023,
-L6 flight 0.0064). The only large residuals anywhere are the deliberate ROGUESQ_W_SHEET_PX / W_SHEET_POS
+L6 flight 0.0064). The 1 undrawn right column on 339-row menus is retail (s7189). The only large residuals anywhere are the deliberate ROGUESQ_W_SHEET_PX / W_SHEET_POS
 guard-band sky-sheet culls (s7125, s7127-s7130).
 - In plain words: at every setting checked, the renderer draws the same picture as an accurate N64 model.
 
@@ -169,10 +169,10 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) 339-row menu scissor column:** at every even fb width the game's SELECT LEVEL / AVAILABLE CRAFT /
-   hangar scissor stops at xh = fbw-1 (711 at 712; s7188 tools/s7188_capscissor.py), so the right column is never drawn (black in
-   RT64, pre-fill in angrylion). Is retail 640 the same (scissor 639) or does our G1d widening lose it? Closed s7188: ASPECT=auto +
-   FULLSCREEN == angrylion. TRAPs: rectfit needs `--slack 40` in fullscreen (fb is 957 pt tall in 949) and >= 2 start rects.
+1. **(next, NEXT.md) M6 boot freeze, active hunt:** loop title boots (queued soaks, ~15 boots per 600 s recipe, STALL_SAMPLE_DIR armed)
+   until the s6993 retrace-thread FULL-send stall recurs; then name the writer from the host stacks. Closed s7189: the 339-row menu
+   scissor column is retail (oracle retail ROM: scissor 511,339 at fb 512; angrylion leaves col 511 undrawn at 4:3), no change.
+   TRAPs (s7188): rectfit needs `--slack 40` in fullscreen and >= 2 start rects.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
 4. **G5b terrain drops: owner flight.** FWDWIN far-loss fix holds L1/L4/L5/L7 (tools/g5b_fwdwin_seamless.py).

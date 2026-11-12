@@ -189579,3 +189579,22 @@ refutes H-rect (gross texrect scale) and the apparent 0.4% menu narrowing (fitte
 flight frames score 0 >0.02). Next discriminator: SETSCISSOR xh on the 339-row menus at retail 640 (639 -> retail, 640 -> our widening).
 Owner sheet docs/owner_sheet_s7188_auto_fullscreen.png (title, SELECT GAME, AVAILABLE CRAFT, hangar; RT64 presented vs angrylion, after the fix).
 Deleted .cap/.raw (~32 GB) and the replay dirs; csvs/txt kept in scratch/s7188. docs/OWNER-OPT-INS.md G1f row updated.
+
+## Session 7189 (2026-11-12) — G3 339-row menu scissor column CLOSED as retail (H-retail): the retail ROM under mupen issues SETSCISSOR (0,0,511,339) + FILLRECT lr 511 at fb 512, and angrylion leaves column 511 undrawn at retail 4:3 exactly as at 712/796; no change
+HYPOTHESIS-ID: g3-menu-scissor-col (CLOSED -> next m6-boot-freeze-loop).
+No maintenance (CURRENT-TRUTH ~20.6 KB). No new soak results. Owner save untouched (NO_SAVE_WRITE, no SAVE_FROM). Screen unlocked (ioreg). No build.
+1 game run: R1 = `env RDIR=s7189 ASP=off FROM=1200 EVERY=20 SECS=45 DL=8 DU=32 zsh tools/s7146_arm.zsh R1 ""` (true retail, no ASPECT env), 0 crash lines.
+1. Port 4:3 stream (NEW tools/s7189_cap_perswap.py R1.cap, per swap on change): swaps 1200-1350 448-row title, scissor pair (511,447)+(512,448);
+   1351-2016 339-row menus, scissor pair (511,339)+(512,340), FILLRECT lr (511,339), colour image 512. Same fbw-1 shape as s7188 at 712/713.
+2. Retail ground truth, independent of our runtime (NEW tools/s7189_bin_scissor.py on the s6785 oracle dump scratch/s6785/hangar/retail.bin.zst,
+   retail ROM under mupen64plus rdplog, native 4:3 SELECT LEVEL hangar): scissor (0,0,512,340) x806 + (0,0,511,339) x806, FILLRECT lr (511,339)
+   x806, cimg 512. The s6785 port bin gives the same pairs. Parser positive control: the full-width xh=fbw scissor (512,340) is read in the same
+   stream, and the port bin also reads (640,340)/(639,479) on its 640-wide phases, so the -1 value is not a decode artefact.
+3. Pixel line: angrylion replay (frame_replay16, magenta pre-fill) of R1 swaps 1400/1600/1800/2000: painted 173229 of 229376 = exactly 511 x 339;
+   column 511 is magenta on 339/339 rows, columns 0/1/509/510 on 0/339 (control: neighbours drawn).
+Verdict: H-retail (two independent lines: retail-ROM oracle stream + port 4:3 stream/angrylion pixels). The game itself scissors one column short
+on the 339-row screens at every width; our G1d widening reproduces retail exactly. H-widen and H-fill refuted. RT64 == angrylion (both leave it
+undrawn; RT64 black). No fix (retail matching; a 1-px edge the VI overscan hides on a CRT).
+Side note (arithmetic, single-source): ASPECT=auto on the owner's displays lands on already-verified widths: 21:9 3440x1440 = 2.389 clamps to
+1024/448 -> 1024 (s7173 path); 16:9 TV 448*16/9 = 796.4 -> 796 (multiple of 4, s7164/s7186 path). Only off-standard panels (this Mac) hit new widths.
+Deleted R1.cap/.raw; replay frames + logs kept in scratch/s7189.
