@@ -190343,5 +190343,5 @@ scan narrow 12 = the fade frames also present in X21 (15 = 12 + the 3 squashed);
 neighbour f2231 in geometry. C21 fix=0: squashed band back (f1305-1306 rows 228..528, mean 26.2), vp 0,166.8 1360x260.3 logged. F43 (4:3) and
 F169 (16:9) fix on: 1 correction each (4:3: 512x444 stale rs 2.625,3.0 after the vi-follow-draw REGISTER at osViSetMode #910; 16:9: the s7212
 event), all other viewports full, no box-shaped narrow frame (9-10 fades). Owner sheet docs/owner_sheet_s7213_shape.png (before/after, 21:9).
-Rules out: H-fill-only at 21:9 (B is lit). Not yet tested: ASPECT=auto (Expand branch) and fullscreen. Raws/caps deleted after scoring.
-Next: same census at ASPECT=auto fullscreen (Expand branch of the fix) over the long s7210 route (NEXT.md).
+Verdict: selects H-lit at 21:9 (event B, pixels + RDP bytes + same-binary fix=0/fix=1 arms); refutes H-fill-only as a class closure. Rules out: H-fill-only at 21:9 (B is lit). Not yet tested: ASPECT=auto (Expand branch) and fullscreen. Raws/caps deleted after scoring.
+Next discriminator: ASPECT=auto fullscreen fix=1 vs fix=0 arms; [s7213-shape] firing on ordinary frames (H-false) vs only on mode switches (H-ok) (NEXT.md).
