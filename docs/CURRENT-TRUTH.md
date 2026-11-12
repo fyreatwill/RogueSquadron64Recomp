@@ -170,7 +170,9 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into on
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
 1. **(next, NEXT.md) M6 boot freeze, active hunt:** loop title boots (queued soaks, ~15 boots per 600 s recipe, STALL_SAMPLE_DIR armed)
-   until the s6993 retrace-thread FULL-send stall recurs; then name the writer from the host stacks. Closed s7189: the 339-row menu
+   until the s6993 retrace-thread FULL-send stall recurs; then name the writer from the host stacks. s7190: hunter
+   `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12` (s6993 env + same-run two-path control);
+   13 owner-recipe boots clean, control PASS; b-d queued (scratch/agent/soak_queue/s7190_bootloop_*). Closed s7189: the 339-row menu
    scissor column is retail (oracle retail ROM: scissor 511,339 at fb 512; angrylion leaves col 511 undrawn at 4:3), no change.
    TRAPs (s7188): rectfit needs `--slack 40` in fullscreen and >= 2 start rects.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.

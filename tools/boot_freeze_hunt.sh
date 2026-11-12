@@ -9,12 +9,22 @@
 # Usage (repo root): tools/boot_freeze_hunt.sh <outdir> [boots=12] [boot_secs=40] [stall=12]
 # s6835: HUNT_ENV="K=V ..." adds env to every boot; the runtime [stall-dump] (arbiter slot states + video, frame-sync and
 # retrace VI queues with their waiting thread) lands in boot*_freeze.tail.log and is echoed on the FROZEN line.
+# s7190: HUNT_CONTROL=1 makes boot 1 a non-failing positive control for BOTH capture paths: it runs with
+# ROGUESQ_STALL_DUMP_TEST=300 (the runtime's forced [stall-dump] must write its detached self-sample
+# rs64_stall_*.sample.txt into ROGUESQ_STALL_SAMPLE_DIR) and is SIGSTOPped at 18 s (the hunter must call it FROZEN).
+# Prints "CONTROL dump=PASS|FAIL frozen=PASS|FAIL"; a control FAIL exits 3 (instrument broken, nulls void), a control
+# PASS does not count as a freeze. ROGUESQ_STALL_SAMPLE_DIR defaults to <outdir> for every boot.
+# HUNT_OWNER=1 adds the s6993 freeze env (owner recipe as run by tools/g1e_owner_quiet_arms.zsh arm L4).
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-O=${1:?outdir}; N=${2:-12}; BOOT_SECS=${3:-40}; STALL=${4:-12}; mkdir -p $O; bad=0
+O=${1:?outdir}; N=${2:-12}; BOOT_SECS=${3:-40}; STALL=${4:-12}; mkdir -p $O; O=${O:A}; bad=0; ctlbad=0
+OWNER_ENV="ROGUESQ_FORCE_SAVE_MISSION=4 ROGUESQ_FORCE_UNLOCK=4 ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_GODMODE=1 ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_ASPECT=16:9 ROGUESQ_FULLSCREEN=1 ROGUESQ_VI_LOCK=1 ROGUESQ_VI_LOCK_TARGET_MS=10 ROGUESQ_QOS_ALL=1 ROGUESQ_G1B=1"
+[[ -n $HUNT_OWNER ]] && HUNT_ENV="$OWNER_ENV $HUNT_ENV"
+[[ -n $HUNT_CONTROL ]] && HUNT_SELFTEST=1
 fsof() { grep -a -o 'fs=[0-9]*' $1 2>/dev/null | tail -1 | cut -d= -f2; }
 for i in $(seq 1 $N); do
   L=$O/boot$i.log
-  ( cd build && exec env ROGUESQ_NO_PKILL=1 ROGUESQ_LOG_PHASE=1 ${=HUNT_ENV} ./RogueSquadron64Recomp ) > $L 2>&1 &
+  CE=""; [[ -n $HUNT_CONTROL && $i == 1 ]] && CE="ROGUESQ_STALL_DUMP_TEST=300"
+  ( cd build && exec env ROGUESQ_NO_PKILL=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_STALL_SAMPLE_DIR=$O ${=HUNT_ENV} ${=CE} ./RogueSquadron64Recomp ) > $L 2>&1 &
   P=$!; t=0; last=-1; since=0; st=OK
   while (( t < BOOT_SECS )); do
     sleep 2; t=$(( t + 2 ))
@@ -32,7 +42,7 @@ for i in $(seq 1 $N); do
   fs=$(fsof $L); fs=${fs:-0}
   [[ $st == OK ]] && (( fs < 200 )) && st=FROZEN
   if [[ $st == FROZEN ]]; then
-    bad=1; [[ -n $HUNT_SELFTEST ]] && kill -CONT $P
+    bad=1; [[ -n $HUNT_SELFTEST && $i == 1 ]] && kill -CONT $P
     sample $P 3 -file $O/boot${i}_freeze_a.sample.txt >/dev/null 2>&1
     sleep 5
     sample $P 3 -file $O/boot${i}_freeze_b.sample.txt >/dev/null 2>&1
@@ -46,5 +56,15 @@ for i in $(seq 1 $N); do
   [[ $st == FROZEN ]] || { tail -200 $L > $O/boot$i.tail.log; rm -f $L; }
   echo "boot$i fs=$fs t=$t $vo crash=$crash $st"
   [[ $st == FROZEN ]] && grep -a "\[stall-dump\]" $O/boot${i}_freeze.tail.log | head -8
+  print -l $O/rs64_stall_*.sample.txt(N) | sed 's/^/runtime self-sample: /'
+  if [[ -n $HUNT_CONTROL && $i == 1 ]]; then
+    d=FAIL; [[ -n $(print -l $O/rs64_stall_*.sample.txt(N)) ]] && d=PASS
+    f=FAIL; [[ $st == FROZEN ]] && f=PASS
+    echo "CONTROL dump=$d frozen=$f"
+    [[ $d == PASS && $f == PASS ]] || ctlbad=1
+    (( crash == 0 )) && bad=0
+    mkdir -p $O/control; mv $O/rs64_stall_*.sample.txt(N) $O/boot1*(N) $O/ctl_boot1*(N) $O/control/ 2>/dev/null
+  fi
 done
+(( ctlbad )) && exit 3
 exit $bad

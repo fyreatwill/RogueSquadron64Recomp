@@ -189598,3 +189598,25 @@ undrawn; RT64 black). No fix (retail matching; a 1-px edge the VI overscan hides
 Side note (arithmetic, single-source): ASPECT=auto on the owner's displays lands on already-verified widths: 21:9 3440x1440 = 2.389 clamps to
 1024/448 -> 1024 (s7173 path); 16:9 TV 448*16/9 = 796.4 -> 796 (multiple of 4, s7164/s7186 path). Only off-standard panels (this Mac) hit new widths.
 Deleted R1.cap/.raw; replay frames + logs kept in scratch/s7189.
+
+## Session 7190 (2026-11-12) — M6 boot freeze active hunt: tools/boot_freeze_hunt.sh gains a same-run two-path positive control (HUNT_CONTROL) and the s6993 freeze env (HUNT_OWNER); 12/12 owner-recipe boots clean with both controls PASS; recipes b-d queued
+
+HYPOTHESIS-ID: m6-boot-freeze-loop.
+Boring-first: the s6834/s6835 hunts (44 boots) ran RETAIL settings, but both live freezes came from non-retail envs (s6814
+a30_s2 capture recipe; s6993 owner recipe dd4 FPS60 16:9 FULLSCREEN VI_LOCK QOS_ALL G1B, LEVEL 4). So the hunt must run the
+s6993 env, and its nulls need a same-run control of BOTH capture paths.
+Tool change (tools/boot_freeze_hunt.sh): HUNT_OWNER=1 prepends the s6993 env (+ NO_SAVE_WRITE); ROGUESQ_STALL_SAMPLE_DIR=<outdir>
+on every boot so the runtime [stall-dump] self-sample (s6993) lands with the run; HUNT_CONTROL=1 makes boot 1 a non-failing
+control: ROGUESQ_STALL_DUMP_TEST=300 must write rs64_stall_*.sample.txt (runtime path) AND a SIGSTOP at 18 s must be called
+FROZEN (hunter path); prints `CONTROL dump=.. frozen=..`, exit 3 on a control FAIL; control artefacts move to <outdir>/control.
+Runs: scratch/s7190/ctl (2 boots) and scratch/s7190/hunt_a (recipe scratch/s7190/s7190_bootloop_a.sh, 13 boots x 34 s):
+CONTROL dump=PASS frozen=PASS both times (runtime self-sample names 12 [Game] threads; hunter sample 12); real boots 13/13
+across both runs reached fs 1950-1952 by 34 s (FPS60), VI origin alternating 0xA12B00/0xA7CF00, 0 crash, 0 FROZEN.
+Result: null with a passing same-run control -> the owner-recipe boot freeze did not recur in 13 boots (rate bound only:
+consistent with s6993's ~1/65; no hypothesis is selected or refuted yet). H-consumer / H-race / H-host still await a
+recurrence; the capture path is now proven end to end in the freeze env.
+Queued scratch/agent/soak_queue/s7190_bootloop_{b,c,d}.sh (14 boots each, same env, exit 1 on FROZEN/crash).
+ORIGIN: no mitigation; instrument only.
+Discrimination summary: no discriminating result this session (no recurrence); the control passing in the freeze env means
+any later FROZEN from b-d carries runtime + hunter host stacks that split H-consumer (receiver blocked elsewhere) from
+H-race (queue full of duplicate VI posts) from H-host (host lock in stacks).
