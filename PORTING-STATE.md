@@ -190177,3 +190177,33 @@ Verdict: H-motion selected at 16:9 (two lines: captured distinct 20.1 -> 58.6/s 
 the 4:3 equality is single-source). The s7206 defaults stand.
 Next: the f1 4:3 double present (H-twopath: early present + VI-change present both fire for one VI; H-field: one present per field
 change; H-window: windowed vs fullscreen supersede path).
+
+## Session 7208 (2026-11-12) — 4:3 double present: VI-path static present fired every VI alongside early presents (0x790000 / static-VI terms); gated on early-present idle, pairs 1376 -> 4, distinct images unchanged
+
+Work unit: NEXT.md s7207 follow-up (HYPOTHESIS-ID interlaced-still-present). Hypotheses H-twopath / H-field / H-window.
+
+Offline first (s7207 ring_ER1.txt, no new run): every < 4 ms pair was a VI-path present (wl_ms=0, same wl and gen as the
+previous early present) followed ~2.5 ms later by the next workload's early present. Each 16.6 ms period had 2 presents of
+which one repeated the old image. The pairs sat mostly in seconds 10-30 (the 4:3 boot logos, last-drawn fb 790000, ~110 presents/s)
+and in menu transitions (120-140, 170, 200). Elite Rogues itself (30/s, field workloads 790000+620000/690000) had 0 pairs, so the
+NEXT.md framing "the ER field screen presents twice" was wrong about where; H-field is not selected (2 workloads per image but
+1 present). H-twopath selected: two paths, same wl.
+ORIGIN: lib/rt64 State::updateScreen needStaticPresent. Its `g_rs64_last_drawn_fb == 0x790000` term (Session 21, for the
+1024-wide phase with no early presents) and `lastScreenFactorCounter > 2` (static VI) term stay true on every VI of a static-VI
+4:3 screen drawn into 790000, so the VI path presented on top of PresentEarly. Same flaw s6885 fixed for the width term. At 16:9
+the last-drawn fb is B51E00, not 790000, and the queue already marks the duplicate skip=1, so only 4:3 showed it (H-window not needed).
+Fix (default on, ROGUESQ_PE_DEDUPE=0 = old): both terms count only after > 8 VIs without an early present (s_rs64ViSinceEarly,
+as for wideStatic). Patch exported (submodule-patches/rt64.patch).
+
+Arms, same session, same binary (scratch/s7208; er43.zsh = s7207 ER route L17 retail 4:3 windowed 849x788 with presented capture
+424x394 from t=5 s; boot.zsh = owner-recipe 16:9 fullscreen boot stills; tools/s7208_present_pairs.py new):
+| arm | pairs <4 ms | presents | distinct images | notes |
+| D1 4:3 fix | 4 | 6165 | 5799 | boot logos 10-30 s: 536 distinct / 565 presents |
+| D0 4:3 old | 1376 (VE 1339) | 8314 | 5730 | boot logos: 537 / 1096 |
+| b1 16:9 fix | 1 | 7699 | B51E00 58.7/s, A38C00 59.5/s | |
+| b0 16:9 old | 1 | 7712 | B51E00 58.7/s, A38C00 59.6/s | |
+Per-window distinct counts match within 1% where phases align (120-130 s 290/292, 130-140 s 473/477); the 90-110 s and 180 s windows
+differ by route timing between the runs (not a loss: both directions). 0 crashes in 4 runs. Positive control for the pair counter:
+D0 (old path) reproduces the s7207 pairs (1376 vs s7207 ER1 1219 on the same route).
+Rules out: H-field (one present per image on ER), losing images to the gate (distinct equal, both arms).
+Next: the 30/s ER field screen at 4:3: check the woven image against angrylion with the G3 kit, close if equal.
