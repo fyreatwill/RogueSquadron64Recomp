@@ -189998,4 +189998,6 @@ Fix, default on (ROGUESQ_PAD_HOTPLUG=0 = old): on REMOVED of ours, rs64_pad_adop
 controller (skipping the removed id); also each poll, if ours reports !SDL_GameControllerGetAttached without an event,
 close and adopt (not exercised by this test). New witnesses: [pad-hp] added/removed/adopt lines (always), and
 [g1f] display changed / display event lines in the event watch for the next unit (display hot-plug).
-Next: display side (fullscreen window when the TV display goes away / moves).
+This selects H-pad-orphan and refutes H-pad-latch (same-run old/new/ctl arms); the fix resolves the root cause in the host
+REMOVED handler. Next discriminator: a virtual display destroyed under a fullscreen window (H-display-dead vs
+H-display-follow vs H-aspect-stale, scratch/agent/NEXT.md).
