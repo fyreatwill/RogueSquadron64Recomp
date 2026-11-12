@@ -189915,3 +189915,34 @@ Arms (scratch/s7198/arms.zsh; owner env, 60 s each, run one after another; pause
 - Found for the next unit: main.cpp has no SDL_AUDIODEVICEREMOVED/ADDED handling. An output that really disconnects (HDMI
   TV off, Bluetooth gone) is never closed or reopened. Audio stays dead until F9 or a rate change reopens the device. The
   forced pause arm models a stuck device, not a removed one.
+
+## Session 7199 (2026-11-12) — audio output hot-plug: a real CoreAudio device removal left the named route dead for good (115 -> 13 bufs/s, trims every ~3 s, no recovery); handler landed, default on, reopens via the REMOVED event (bitmask) or a drain-stall watchdog and moves back on ADDED; real-removal arm 0 trims / 115 bufs/s
+HYPOTHESIS-ID: audio-hotplug
+What ran: src/main/main.cpp (no lib/ edit, no regen) + new tools/audio_hotplug_agg.c (CoreAudio test tool: create/destroy a
+public aggregate output wrapping the default output = a genuine device ADDED/REMOVED; build line in its header).
+- Folded soak s7198_backlog_L4 (LEVEL=4 owner recipe, 374 s): trims=0, fallback=0, peak queued 36.1 ms. The s7198 150 ms
+  margin holds in mission (second line of evidence after the boot/attract ctl).
+- Note: the binary links sdl2-compat (SDL3 underneath), so SDL2 disconnect semantics could not be assumed; measured instead.
+- Code: poll_input records SDL_AUDIODEVICEREMOVED (playback) ids into a bitmask and counts ADDED; audio_hotplug_apply runs on
+  the audio thread (queue_samples, like F9) under audio_device_mutex and reopens on (1) REMOVED for our id, (2)
+  SDL_GetAudioDeviceStatus == STOPPED, (3) drain-stall: audio_hotplug_note_queue sees no pull (queue never drops below the
+  previous post's size) for 400 ms on a PLAYING device; back-off 1-8 s; paused time is not a stall. ADDED while we run on the
+  fallback default and the preference resolves again -> reopen onto it. ROGUESQ_AUDIO_HOTPLUG=0 = old. Forced arm
+  ROGUESQ_AUDIO_REMOVE_TEST=<sec> pushes a synthetic REMOVED. Logs [s7199-hotplug], [s7199-aev] (first 32 audio events).
+- ORIGIN: the writer of the dead state is SDL3/CoreAudio: removing the opened device stops its pulls; nobody reopened. Not a guest defect.
+Arms (scratch/s7199/arms.zsh, owner env + ROGUESQ_AUDIO_DEVICE=RS64HotplugTest, 60 s each, one at a time; real = destroy the
+aggregate at 15 s, re-create at 30 s; logs scratch/s7199/{,b_,c_}*.log):
+| arm | after removal (t15-30) | after re-add (t30+) | reopens |
+| real0 (HOTPLUG=0) | 10-13 bufs/s, trim every ~3 s, dead | still dead to t60 (re-add ignored) | 0 |
+| v1 real (event path, single id) | dead like real0 | dead | 0: REMOVED which=2 then which=0 overwrote the stored id |
+| v2 real (watchdog, single id) | recovers ~0.5 s (why=drain-stall -> <system default>) | why=preferred-added back onto it | 2 |
+| v3 real (final) | 115 bufs/s, 0 trims (why=removed-event, 124 ms) | preferred-added (172 ms), 0 trims | 2 |
+| v3 synth (REMOVE_TEST=15) | removed-event reopen, 0 trims | n/a | 1 |
+| v3 pause (AI_STALL_TEST=15:35) | intentional pause: 0 reopens (v2 had 1 spurious reopen at resume; fixed) | resumes alone | 0 |
+| v3 ctl | 113-117 bufs/s, 0 trims | n/a | 0 |
+- Positive controls: synthetic REMOVED fires the handler; the real0 arm shows the failure the fix removes, same tool, same route.
+  The ctl null (0 reopens / 0 trims over 60 s) comes from detectors that fired in the other arms.
+- Selects H-reopen-ok on the named route. Refutes H-sdl-heals for a named route (real0 never heals, even when the same name
+  comes back). H-reopen-race: no crash in 7 arms; every reopen holds audio_device_mutex (single-source: 60 s runs only).
+- Two independent detectors both fire on a real removal (event in v3, watchdog in v2), so the fix does not hang on one SDL behaviour.
+- Untested: pref=default with the system default output itself removed (SDL3 should migrate it). NEXT.md.

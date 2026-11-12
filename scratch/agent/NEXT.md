@@ -1,21 +1,17 @@
-# NEXT: audio output hot-plug (s7198 follow-up)
+# NEXT: audio hot-plug on the system-default route (s7199 follow-up)
 HYPOTHESIS-ID: audio-hotplug
-Context: s7197 posts AI anyway when the device stops pulling; s7198 caps the stuck queue at 150 ms (ROGUESQ_AI_BACKLOG_MS).
-Both handle a device that is STUCK. main.cpp (open_audio_output ~7971, audio_route_apply_cycle ~8000, set_frequency ~8060)
-has no SDL_AUDIODEVICEREMOVED / SDL_AUDIODEVICEADDED handling. When an output really disconnects (HDMI TV off, Bluetooth
-headset gone), SDL2 marks the opened device disconnected and nobody reopens a device. Audio stays dead until F9 or a rate change.
-First, fold soak s7198_backlog_L4 from SOAK-RESULTS (expect trims=0 and peak [s7198-q] ms << 150 in mission).
-Unit (one build, all arms):
- 1. Find the SDL event pump (grep SDL_PollEvent in src/main). On SDL_AUDIODEVICEREMOVED with iscapture==0 and which==audio_device:
-    close and reopen (the preferred name falls back to the default; see open_audio_output). On SDL_AUDIODEVICEADDED whose name
-    matches g_audio_route_pref while we run on the fallback: reopen onto it. Log [s7199-hotplug]. Hold audio_device_mutex.
-    ROGUESQ_AUDIO_HOTPLUG=0 = old.
- 2. Forced arm ROGUESQ_AUDIO_REMOVE_TEST=<sec>: SDL_PushEvent a synthetic SDL_AUDIODEVICEREMOVED for the open device (and, if
-    feasible, SDL_GetAudioDeviceStatus before and after).
- 3. Arms (owner env, 60 s, test at 15 s, [s7198-q] logger via ROGUESQ_AI_STALL_TEST=100000): hotplug=0 vs default vs ctl.
+Context: s7199 landed the hot-plug handler (main.cpp audio_hotplug_apply / audio_hotplug_note_queue) and proved it on a NAMED
+route with a real CoreAudio removal (tools/audio_hotplug_agg.c; arms scratch/s7199/arms.zsh). Untested: ROGUESQ_AUDIO_DEVICE=default
+while the macOS DEFAULT output itself is removed.
+Unit:
+ 1. Add `setdefault <name>|restore` to tools/audio_hotplug_agg.c (save the old default output UID to a file first; ALWAYS
+    restore it at the end of the script, also on failure: trap EXIT). This briefly changes the owner's system output.
+ 2. Arms (owner env as in scratch/s7199/arms.zsh, ROGUESQ_AUDIO_DEVICE=default, aggregate = system default, destroy at 15 s):
+    hotplug=1 vs hotplug=0, plus ctl (no destroy).
 Hypotheses:
-- H-reopen-ok: the default arm reopens (new device id); bufs/s returns to ~115 within 1 s and queued stays ~30 ms.
-- H-reopen-race: the reopen races queue_samples/get_frames_remaining (mutex gap) -> crash or a 0-id window. Fix the locking.
-- H-sdl-heals: SDL2 on macOS already migrates a default-device stream itself (CoreAudio default-device follow). Then only
-  named-pref devices need the handler. Discriminate with the hotplug=0 arm on the "<system default>" route vs a named route.
-Discriminator: device id plus bufs/s and queued after the event, per arm.
+- H-sdl-heals: SDL3 migrates the default stream; hotplug=0 keeps 115 bufs/s and 0 trims after the destroy. Then the handler is a
+  no-op on this route (check it does not reopen needlessly; a needless reopen costs ~120-170 ms of audio-thread block).
+- H-dead-default: hotplug=0 drops to ~13 bufs/s with trims (like the s7199 named route); hotplug=1 recovers (removed-event or
+  drain-stall) within 0.5 s.
+Discriminator: per-second bufs/trims in [s7198-q] (ROGUESQ_AI_STALL_TEST=100000 arms the logger) and the [s7199-hotplug] reopen lines.
+After this, the audio host-robustness thread closes; go back to CURRENT-TRUTH Next steps (owner-look items, then ITERATION 3c ladder).

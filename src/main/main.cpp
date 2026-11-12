@@ -7951,7 +7951,7 @@ static void audio_route_load_pref() {
 }
 
 // Exact SDL device name for the preference, or empty for the system default.
-static std::string audio_route_resolve() {
+static std::string audio_route_resolve(bool quiet = false) {
     if (audio_route_is_default(g_audio_route_pref)) return {};
     std::string want = g_audio_route_pref;
     for (auto& c : want) c = (char)std::tolower((unsigned char)c);
@@ -7963,11 +7963,13 @@ static std::string audio_route_resolve() {
         for (auto& c : l) c = (char)std::tolower((unsigned char)c);
         if (l.find(want) != std::string::npos) return name;
     }
+    if (quiet) return {};
     fprintf(stderr, "[audio-route] no output device matches '%s'; using the system default\n", g_audio_route_pref.c_str());
     fflush(stderr);
     return {};
 }
 
+static std::string g_audio_open_name;  // s7199: resolved name of the open device, "" = system default (audio_device_mutex)
 static void open_audio_output() {
     std::lock_guard<std::recursive_mutex> lock(audio_device_mutex);
     audio_route_load_pref();
@@ -7983,6 +7985,9 @@ static void open_audio_output() {
         fprintf(stderr, "[audio-route] opening '%s' failed (%s); falling back to the system default\n",
                 name.c_str(), SDL_GetError());
         audio_device = SDL_OpenAudioDevice(nullptr, 0, &desired, nullptr, 0);
+        g_audio_open_name.clear();
+    } else {
+        g_audio_open_name = name;
     }
     if (!audio_device) {
         fprintf(stderr, "[Audio] SDL_OpenAudioDevice failed: %s\n", SDL_GetError());
@@ -8024,6 +8029,101 @@ static void audio_route_apply_cycle() {
         audio_device = 0;
     }
     open_audio_output();
+}
+
+// s7199: output hot-plug. When the open output disconnects (TV off, headset gone) SDL2 marks the device disabled and
+// nobody reopened one, so audio stayed dead until F9 or a rate change. Two detectors, either reopens: the
+// SDL_AUDIODEVICEREMOVED event for our device id (posted by the event pump), and SDL_GetAudioDeviceStatus ==
+// SDL_AUDIO_STOPPED polled every 250 ms (SDL2 reports a disconnected device as STOPPED; covers an event eaten by a
+// filter). An SDL_AUDIODEVICEADDED whose name matches the preference while we run on the fallback default moves back
+// onto it. Runs on the audio thread like F9. ROGUESQ_AUDIO_HOTPLUG=0 = old behaviour.
+// Forced arm: ROGUESQ_AUDIO_REMOVE_TEST=<sec> pushes a synthetic REMOVED for the open device at <sec>.
+// Bitmask of removed playback ids (bit = id & 31): a real removal posts REMOVED for our id followed at once by one for
+// id 0 (measured s7199), so a single stored id was overwritten before the audio thread read it.
+static std::atomic<uint32_t> g_audio_hp_removed{0};
+static std::atomic<int> g_audio_hp_added{0};
+// Third detector (measured s7199: a real CoreAudio device removal under sdl2-compat/SDL3 posts NO REMOVED for our id and
+// the status stays PLAYING, while the device silently stops pulling): drain watchdog. queue_samples reports the queue
+// size before each post; any drop since the previous post's size is the device pulling. No pull for 400 ms on an
+// unpaused device = stalled -> reopen (falls back to the system default if the named device is gone). Back-off 1,2,4,8 s
+// between stall reopens so a present-but-stuck device does not reopen 115 times a second; reset after 2 s of pulling.
+static bool g_audio_hp_stalled = false;  // audio thread only
+static void audio_hotplug_note_queue(uint32_t raw_before, uint32_t after) {
+    static uint32_t last_after = 0;
+    static auto last_pull = std::chrono::steady_clock::now();
+    static auto last_reopen = last_pull - std::chrono::hours(1);
+    static double backoff_s = 1.0;
+    const auto now = std::chrono::steady_clock::now();
+    if (raw_before < last_after || after == 0) {
+        last_pull = now;
+        if (backoff_s > 1.0 && std::chrono::duration<double>(now - last_reopen).count() > backoff_s + 2.0) backoff_s = 1.0;
+    } else if (audio_device && SDL_GetAudioDeviceStatus(audio_device) != SDL_AUDIO_PLAYING) {
+        last_pull = now;  // paused on purpose (s7197 test): not a stall, and do not fire the moment it resumes
+    } else if (audio_device && std::chrono::duration<double>(now - last_pull).count() > 0.4 &&
+               std::chrono::duration<double>(now - last_reopen).count() > backoff_s &&
+               SDL_GetAudioDeviceStatus(audio_device) == SDL_AUDIO_PLAYING) {
+        g_audio_hp_stalled = true;
+        last_reopen = now;
+        last_pull = now;
+        backoff_s = std::min(backoff_s * 2.0, 8.0);
+    }
+    last_after = after;
+}
+static void audio_hotplug_apply() {
+    static const bool on = [] { const char* e = getenv("ROGUESQ_AUDIO_HOTPLUG"); return !(e && e[0] == '0'); }();
+    static const double test_s = [] { const char* e = getenv("ROGUESQ_AUDIO_REMOVE_TEST"); return e ? atof(e) : 0.0; }();
+    static const auto t0 = std::chrono::steady_clock::now();
+    static auto last_poll = t0;
+    static bool test_done = false;
+    static uint32_t n_reopen = 0;
+    const uint32_t rem = g_audio_hp_removed.exchange(0, std::memory_order_acq_rel);
+    const int added = g_audio_hp_added.exchange(0, std::memory_order_acq_rel);
+    std::lock_guard<std::recursive_mutex> lock(audio_device_mutex);
+    const auto now = std::chrono::steady_clock::now();
+    if (test_s > 0 && !test_done && audio_device &&
+        std::chrono::duration<double>(now - t0).count() >= test_s) {
+        test_done = true;
+        SDL_Event ev{};
+        ev.type = SDL_AUDIODEVICEREMOVED;
+        ev.adevice.which = audio_device;
+        ev.adevice.iscapture = 0;
+        const int pushed = SDL_PushEvent(&ev);
+        fprintf(stderr, "[s7199-hotplug] TEST pushed REMOVED device=%u at %.1f s pushed=%d status=%d\n",
+                (unsigned)audio_device, test_s, pushed, (int)SDL_GetAudioDeviceStatus(audio_device));
+        fflush(stderr);
+    }
+    if (rem || added)
+        fprintf(stderr, "[s7199-hotplug] event removed_mask=0x%X added=%d open=%u on=%d\n", rem, added, (unsigned)audio_device,
+                on ? 1 : 0);
+    if (!on) return;
+    bool stopped = false;
+    if (now - last_poll >= std::chrono::milliseconds(250)) {
+        last_poll = now;
+        stopped = audio_device && SDL_GetAudioDeviceStatus(audio_device) == SDL_AUDIO_STOPPED;
+    }
+    const char* why = nullptr;
+    const bool stall = g_audio_hp_stalled;
+    g_audio_hp_stalled = false;
+    if (audio_device && (rem & (1u << ((uint32_t)audio_device & 31u)))) why = "removed-event";
+    else if (stopped) why = "status-stopped";
+    else if (stall) why = "drain-stall";
+    else if (added > 0 && !audio_device) why = "added-while-closed";
+    else if (added > 0 && g_audio_open_name.empty() && !audio_route_is_default(g_audio_route_pref) &&
+             !audio_route_resolve(true).empty()) why = "preferred-added";
+    if (!why) return;
+    const auto r0 = std::chrono::steady_clock::now();
+    const uint32_t old = audio_device;
+    if (audio_device) {
+        SDL_CloseAudioDevice(audio_device);
+        audio_device = 0;
+    }
+    open_audio_output();
+    ++n_reopen;
+    fprintf(stderr, "[s7199-hotplug] reopen n=%u why=%s old=%u new=%u name=%s status=%d took=%.1f ms\n", n_reopen, why, old,
+            (unsigned)audio_device, g_audio_open_name.empty() ? "<system default>" : g_audio_open_name.c_str(),
+            audio_device ? (int)SDL_GetAudioDeviceStatus(audio_device) : -1,
+            std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - r0).count());
+    fflush(stderr);
 }
 
 static void set_frequency(uint32_t freq) {
@@ -8078,6 +8178,7 @@ static std::atomic<uint32_t> s7198_bufs_sec{0}, s7198_trims_sec{0};
 static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_addr) {
     rs64_s4245_tick(4, 1);
     audio_route_apply_cycle();
+    audio_hotplug_apply();
     // s371 (M5-AUDIO-PLAN.md Step 6): this parameter was named `num_bytes` but
     // is actually a SAMPLE count -- ultramodern::queue_audio_buffer
     // (lib/N64ModernRuntime/ultramodern/src/audio.cpp:25-36) computes
@@ -8145,6 +8246,7 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
     {
         std::lock_guard<std::recursive_mutex> lock(audio_device_mutex);
         queued_before = audio_device ? SDL_GetQueuedAudioSize(audio_device) : 0;
+        const uint32_t raw_queued_before = queued_before;
         // s7198: a device that stops pulling (paused, output disconnected) keeps receiving the s7197 fallback-paced
         // buffers, so its queue grows ~768 B per post and replays as latency once it resumes. Hardware's DAC never holds
         // more than the AI's two buffers. When the queue already holds more than ROGUESQ_AI_BACKLOG_MS at the live rate,
@@ -8164,6 +8266,7 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
         if (audio_device) {
             queue_result = SDL_QueueAudio(audio_device, native_samples.data(),
                                           (Uint32)(num_samples * sizeof(int16_t)));
+            audio_hotplug_note_queue(raw_queued_before, SDL_GetQueuedAudioSize(audio_device));
         }
         queued_after = audio_device ? SDL_GetQueuedAudioSize(audio_device) : 0;
     }
@@ -8446,9 +8549,10 @@ static size_t get_frames_remaining() {
                 last_sec = (int)el;
                 const uint32_t q = SDL_GetQueuedAudioSize(audio_device);
                 const uint32_t rate = audio_sample_rate ? audio_sample_rate : 1;
-                fprintf(stderr, "[s7198-q] t=%d queued=%u ms=%.1f rate=%u bufs=%u trims=%u state=%s\n", last_sec, q,
+                fprintf(stderr, "[s7198-q] t=%d queued=%u ms=%.1f rate=%u bufs=%u trims=%u state=%s dev=%u st=%d\n", last_sec, q,
                         q * 1000.0 / (rate * 4.0), rate, s7198_bufs_sec.exchange(0), s7198_trims_sec.exchange(0),
-                        resumed ? "resumed" : (paused ? "paused" : "pre"));
+                        resumed ? "resumed" : (paused ? "paused" : "pre"), (unsigned)audio_device,
+                        (int)SDL_GetAudioDeviceStatus(audio_device));
             }
         }
         queued = SDL_GetQueuedAudioSize(audio_device);
@@ -10797,6 +10901,19 @@ static void poll_input() {
 #endif
         if (e.type == SDL_KEYDOWN && !e.key.repeat && e.key.keysym.sym == SDLK_F9) {
             g_audio_route_cycle.fetch_add(1, std::memory_order_acq_rel);
+        }
+        if (e.type == SDL_AUDIODEVICEADDED || e.type == SDL_AUDIODEVICEREMOVED) {
+            static int n_aev = 0;
+            if (++n_aev <= 32)
+                fprintf(stderr, "[s7199-aev] n=%d type=%s which=%u capture=%d\n", n_aev,
+                        e.type == SDL_AUDIODEVICEADDED ? "added" : "removed", (unsigned)e.adevice.which,
+                        (int)e.adevice.iscapture);
+        }
+        if (e.type == SDL_AUDIODEVICEREMOVED && !e.adevice.iscapture) {
+            g_audio_hp_removed.fetch_or(1u << (e.adevice.which & 31u), std::memory_order_acq_rel);
+        }
+        if (e.type == SDL_AUDIODEVICEADDED && !e.adevice.iscapture) {
+            g_audio_hp_added.fetch_add(1, std::memory_order_acq_rel);
         }
         // Diagnostic: log F1-F4 to confirm the keys are reaching the SDL
         // queue at all. If we see these logs, SDL is delivering keypresses

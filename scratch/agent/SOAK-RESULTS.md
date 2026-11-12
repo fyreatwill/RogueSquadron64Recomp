@@ -1409,3 +1409,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261112 | s7191 fold: s7190_bootloop_b/_c rc=2 = bash syntax error at recipe line 11 (zsh glob), AFTER the hunter returned 0; 28/28 boots crash=0 OK, 0 FROZEN. _d recipe fixed.
 20261112-035942 | s7190_bootloop_d | rc=0 | 498s | scratch/agent/soak_results/s7190_bootloop_d_20261112-035942.log
 20261112 | s7192 fold: s7190_bootloop_d rc=0, 14/14 owner-env boots crash=0 OK, 0 FROZEN (recipe had no HUNT_CONTROL; same binary's control PASS in s7190/s7191). Owner-env total 55 clean.
+20261112-054328 | s7198_backlog_L4 | rc=0 | 406s | scratch/agent/soak_results/s7198_backlog_L4_20261112-054328.log
+20261112 | s7199 fold: s7198_backlog_L4 rc=0, LEVEL=4 owner recipe 374 s: trims=0 fallback=0, peak queued 36.1 ms at 22047 Hz (limit 150). Margin holds in mission.
