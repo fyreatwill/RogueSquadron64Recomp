@@ -1,15 +1,13 @@
-# NEXT (s7215): long-route present-shape census at 21:9, fix on, then close mode-switch-pillarbox
-HYPOTHESIS-ID: mode-switch-pillarbox
-Context: s7213 fixed the 21:9 mode-switch letterbox (ROGUESQ_PRESENT_SHAPEFIX, lib/rt64 present_queue). s7213 checked 4:3/16:9/21:9 windowed
-and s7214 checked ASPECT=auto and ASPECT=expand fullscreen, all on the SHORT L17 route (5 s + 45 s capture). Both: H-ok (only real
-mode-switch mismatches, all viewports full). The long s7210 route (boot -> menus -> L17 -> MISSION FAILED -> Elite Rogues x2) has more mode
-switches (fail screen, ER double-stride stills) that were never covered.
-Hypotheses: H-ok (every [s7213-shape] line on the long route sits at a VI mode switch, every non-upload viewport full, no box frame);
-H-new (a mode switch on the fail/ER path shows a lit box the fix misses, e.g. a scratch/RDRAM-upload target, since those are excluded
-from the fix, or a target whose rs ratio matches but whose VI height changed).
-Discriminator, 1 run (+1 fix=0 control only if a non-full viewport shows up):
-  env CW=1680 CH=720 zsh tools/s7141_arm.zsh 17 L21 "ROGUESQ_G5B_FRAME_EVERY=100000 ROGUESQ_VI_SHAPE_LOG=1 ROGUESQ_ASPECT=21:9" 150 80
-  (delay/duration as scratch/s7210/fc.zsh so the capture covers MISSION FAILED -> ER). Then: grep [s7213-shape] and list non-full
-  [g1d-vishape-vp]; python3 tools/s7213_box_scan.py scratch/s7141/L21.raw scan; tools/s7214_gain_sheet.py on any narrow frame not
-  explained by a fade. Raws are ~11 GB at 1512x949, so delete after scoring.
-H-ok -> close the thread in CURRENT-TRUTH (move it to Closed work), take the next backlog item. H-new -> fix it in the same iteration.
+# NEXT (s7216): G3 21:9 front-end fidelity on the long route (MISSION FAILED, Elite Rogues) vs angrylion
+HYPOTHESIS-ID: g3-21x9-frontend-fidelity
+Context: present-shape thread closed s7215 (logs + pixels clean). The G3 presented-frame matrix (s7122-s7186) scored flight and the
+front-end mostly at 16:9/4:3; the 21:9 fail screen, ER list and the fail wipes were never scored against the oracle. At 21:9 these
+screens draw centred content (game scissor 341..1019 of 1360) and a 1024-wide fb (16:9 used 796, B51E00).
+Hypotheses: H-match (RT64 central band matches angrylion within the s7141 scoring floor, bars black);
+H-shift (band offset/scaled vs oracle: wide-width patches move the 4:3 content); H-field (ER interlaced field handling at 1024 wide
+differs from the 16:9 progressive result of s7210, e.g. weave/bob rows).
+Discriminator, 1 run: tools/s7141_arm.zsh 17 FE21 "ROGUESQ_ASPECT=21:9 ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=<swap of
+MISSION FAILED>" 150 80 (CW=1680 CH=720; find the swap from the s7210 census timings ~125 s / ~205 s), then
+tools/s7141_post.zsh with the central-band rect (s7210_regfit.py first, TRAP in CURRENT-TRUTH), tools/s7122_fidelity.py.
+Positive control: a deliberately shifted replay (+4 rows) must score worse. Each outcome names its hypothesis; fix H-shift/H-field in
+the same iteration.

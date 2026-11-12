@@ -190371,3 +190371,24 @@ Verdict: selects H-ok for ASPECT=auto and ASPECT=expand fullscreen (logs: 1 real
 Expand want = the workload rs; pixels: no box frame in either arm). Refutes H-false. Rules out: false fires on ordinary frames in the Expand
 branch. Untested: the long s7210 route (MISSION FAILED -> Elite Rogues) at 21:9. Raws deleted after scoring.
 Next discriminator: long-route 21:9 census with fix on (NEXT.md), then close mode-switch-pillarbox.
+
+## Session 7215 (2026-11-12) — long-route present-shape census at 21:9, fix on: 16 corrections all at real VI mode switches, 0 new boxes (H-ok); mode-switch-pillarbox CLOSED; new tools/s7215_shape_census.py
+HYPOTHESIS-ID: mode-switch-pillarbox
+Unit from NEXT. No maintenance (31.7 KB). No new soak results. Screen unlocked (IOConsoleLocked false). Owner save untouched (s7141 harness,
+NO_SAVE_WRITE). 1 game run (scratch/s7215/r.zsh): L17 long route (boot -> menus -> L17 -> MISSION FAILED -> Elite Rogues x2), owner recipe
++ ROGUESQ_ASPECT=21:9 ROGUESQ_VI_SHAPE_LOG=1, window 1360x626, capture 1680x720 150 s + 80 s (4389 frames, 15.9 GB), 13145 presents, 0 CRASH.
+Route parity (log): the osViSetMode sequence is the s7210 FC1 one (title + 2 ER visits of the interlaced mode 0x80128D50, DA0/DF0/E40 around
+the mission and fail screens), so every mode switch of the s7210 route ran.
+Logs (tools/s7215_shape_census.py, new): 16 [s7213-shape] corrections, every one 25..874 log lines after an osViSetMode / vi-mode-table line
+(exit 0). Kinds: fb 1024x336 rs 5.143,3 -> 2.25,3 (x6, flight->448 switch, the s7213 class), 1024x444 rs 1.5,2 -> 1.982,2 (x4, 4:3 target
+on a wide VI), 1024x444 rs 2.572,1.5 -> 1.487,1.5 (x6, NEW kind: a flight-shaped target at the fail/ER switches, corrected like the others).
+Viewports: 2539 lines, only the genuine 320x224 boot logo is non-full (4:3 by design, s7213). Four rs 1.0 presents of an undrawn VI buffer
+during load_level_hmp ([vi-follow-stale] ... present VI buffer, the RDRAM-upload path excluded from the fix) carry sc 340..1020, but the
+~40 frames before them already carry sc 341..1019: the game's own centred content, not a box.
+Pixels (tools/s7213_box_scan.py scan): 51 narrow of 4185 lit, all progressive fades (rows shrinking/growing over 3-10 frames) or wipes
+(cols 1288 -> 216 over 20 frames); none box-shaped (no symmetric single-frame pillar/band). Positive control on f2067 and f4359: CONTROL PASS.
+Pixel coverage is the 150-230 s window only; the logs cover the whole run.
+Verdict: selects H-ok (two lines: per-correction mode-switch proximity + full viewports in the log; no box frame in pixels with a passing
+control). Refutes H-new for the fail/ER path. Rules out: a lit box from RDRAM-upload presents at load. Thread mode-switch-pillarbox CLOSED
+(s7212-s7215: 4:3/16:9/21:9 windowed, auto/expand fullscreen, short and long route). Raw deleted after scoring.
+Next: G3 21:9 front-end fidelity (MISSION FAILED, ER, fail wipes) vs angrylion (NEXT.md).

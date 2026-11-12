@@ -132,7 +132,10 @@ Open or awaiting the owner:
   RT64 init (it never uses Expand); ROGUESQ_ASPECT=expand is the only Expand user. Both: exactly 1 mismatch per run, the boot 4:3 vi-follow-draw
   target (auto rs 2.25,3 -> 2.973; expand 3.137 -> 4.145 = the rs ordinary 512x444 frames carry), 0 false fires on ordinary frames, all other
   viewports full. fix=0 arm logs the 4:3 pillar (vp 185..1324) but it falls in the dark title-still fade-in: no box frame in pixels (x8 gain sheet,
-  scan control PASS). Single-route datum (L17 short route).
+  scan control PASS). s7215 long route at 21:9 (s7210 mode sequence incl. 3 interlaced 0x80128D50 visits, MISSION FAILED, ER x2):
+  16 corrections, all <=874 log lines after an osViSetMode/vi-mode-table line, 0 non-full viewports bar the 320x224 boot logo;
+  box scan 51 narrow = fades/wipes only (control PASS x2). tools/s7215_shape_census.py (exit 1 = correction off a mode switch).
+  **mode-switch-pillarbox thread CLOSED.**
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -255,11 +258,10 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) long-route present-shape census at 21:9 fix on** (s7210 route: boot -> menus -> L17 -> MISSION FAILED ->
-   Elite Rogues x2): every [s7213-shape] line a real mode switch, every viewport full, box scan clean; then close mode-switch-pillarbox.
-   CLOSED: s7213 21:9 letterbox (lit, fixed), 4:3/16:9 (fill-only, corrected); s7214 auto/expand fullscreen (H-ok, 1 event each,
-   unseen). Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh
-   tools/boot_freeze_hunt.sh <out> N 34 12`. Retina default: owner (s7205).
+1. **(next, NEXT.md) G3 21:9 front-end fidelity on the long route** (MISSION FAILED, Elite Rogues, fail wipes, the
+   load-time stale VI-buffer presents) vs angrylion with the s7141 kit. Present-shape thread CLOSED s7215 (see headline).
+   Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
+   Retina default: owner (s7205).
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
 4. **G5b terrain drops: owner flight.** FWDWIN far-loss fix holds L1/L4/L5/L7 (tools/g5b_fwdwin_seamless.py).
