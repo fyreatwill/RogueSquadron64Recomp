@@ -190089,3 +190089,18 @@ VERDICT: H-free selected (two lines: L4 and the L6 replicate both hold 60.0 fps 
 16.7 ms budget). H-fill refuted (8x internal adds +0.05-0.13 ms median, p95 <= 0.9 ms). H-mem refuted (0 gaps > 250 ms in any arm;
 the >50 ms gaps match R0 counts outside the 20/s screen). RETINA=1 is a free default-on candidate; owner decides.
 Next: owner sheet of same-scene flight crops RETINA 0 vs 1, then the owner picks the default.
+
+## Session 7205 (2026-11-12) — Retina flight owner sheet: H-sharp selected (HUD detail 0.42-0.57 -> 0.73-0.82 with RETINA=1, control at R0 level)
+Unit from NEXT (HYPOTHESIS-ID retina-render-scale). tools/g1e_owner_quiet_arms.zsh gained SHOTS="t1,t2,..." (screencapture -x at
+those seconds after launch, same autopilot timeline per arm). Run: HOLD 200, SHOTS 140..170 step 6, arms R0 / R1 (ROGUESQ_RETINA=1),
+LEVEL=4 owner recipe (FPS60 dd4 16:9 fullscreen), quiet host (idle > 26900 s), screen unlocked. Witness: [retina] swapchain create
+1512x949 (R0) / 3024x1898 (R1). Both arms alive at the end, 0 CRASH, no level mismatch. Data scratch/s7205.
+Finding on the way: the autopilot camera pose differs between arms at the same offset, and a macOS "Updates Available" notification
+covers the top-right of every shot, so whole-frame scores mix scene content (centre crop even read R0 > R1). Re-scored on
+fixed-position HUD crops (same content both arms), scratch/s7203/hf.py metric, 6 shots each, mean:
+  badge R0 0.567 R1 0.815 ctl 0.539 | icon 0.542 0.727 0.402 | radar 0.418 0.778 0.374 | ground 0.653 0.734 0.610 (pose-confounded).
+ctl = R1 shot box-down 2x and bilinear-up: lands at the R0 level, so the metric sees exactly the lost half-resolution detail.
+VERDICT: H-sharp selected (two lines: HUD scores in 3/3 crops x 6/6 shots, and the visual sheet: radar ring and ticks crisp in R1,
+stair-stepped in R0). H-same refuted for HUD; terrain gain smaller and confounded. Owner sheet docs/owner_sheet_s7205_retina.png,
+OWNER-OPT-INS row updated. Default stays off until the owner says.
+Next: s7204 side datum, the 20/s non-flight screen where R0 queued extra presents that R1 did not.

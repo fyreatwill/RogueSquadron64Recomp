@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7204 (2026-11-12).
+Compact operational handoff, as of Session 7205 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -92,7 +92,11 @@ Open or awaiting the owner:
   s7204 flight cost at the owner recipe (FPS60 dd4 16:9 fullscreen, quiet host, L4 + L6 x2): H-free selected. fl_shown 59.9/60.0/59.5/60.0
   (R1) vs 59.9/59.9/59.8 (R0), GPU median +0.05-0.13 ms (0.41-0.44 vs 0.28-0.36), p95 <= 0.90 ms, 0 gaps > 250 ms, 0 crashes in 6 arms.
   The one 92-gap arm (L6r1) was an 8 s non-flight screen (VI origin B517C8) where the game itself updates at 20/s in both arms;
-  the replicate L6r1b skipped it and showed 2 gaps. Scorer tools/s7204_ring_cost.py. Next: owner sheet of flight crops, then owner picks the default.
+  the replicate L6r1b skipped it and showed 2 gaps. Scorer tools/s7204_ring_cost.py.
+  s7205 flight sharpness (LEVEL=4 owner recipe, 6 timed shots per arm, scratch/s7205/scores.txt): H-sharp selected on fixed HUD crops
+  (badge 0.567 -> 0.815, icon 0.542 -> 0.727, radar 0.418 -> 0.778; positive control R1 down/up 2x = 0.539/0.402/0.374, the R0 level)
+  and visually (radar ring and ticks crisp). Ground texture 0.653 -> 0.734 (camera pose differs between arms, so scene-confounded).
+  Owner sheet docs/owner_sheet_s7205_retina.png. **Awaiting the owner: make RETINA=1 the default?**
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -215,8 +219,10 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) Retina owner sheet: same-scene flight crops RETINA 0 vs 1 (cost measured s7204: free), then owner picks the default.** Pad/display hot-plug closed s7201-s7202. Audio hot-plug is closed (s7199 named
-   route fixed; s7200 default route heals inside SDL3, handler idle). Boot freeze stays passive (headline). Hunter
+1. **(next, NEXT.md) s7204 side datum: 20/s non-flight screen (VI origin B517C8) where RETINA=0 queued extra 60/s presents with
+   vi=B51E00 that RETINA=1 did not (single-source, L6 autopilot backdrop cycle).** Name the screen and check whether the present
+   difference is real (same-run toggle impossible; replicate both arms on that screen). Retina default: owner (sheet s7205).
+   Pad/display/audio hot-plug closed s7199-s7202. Boot freeze stays passive (headline). Hunter
    `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).

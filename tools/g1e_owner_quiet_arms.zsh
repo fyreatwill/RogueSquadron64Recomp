@@ -26,7 +26,9 @@ for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do
   ( cd build && exec env ROGUESQ_FORCE_SAVE_MISSION=1 ROGUESQ_FORCE_UNLOCK=1 ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_GODMODE=1 ROGUESQ_AUTOPILOT_HOLD_MS=1800 ROGUESQ_AUTOPILOT=$AP ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=$dd ROGUESQ_ASPECT=16:9 ROGUESQ_FULLSCREEN=1 ROGUESQ_PRESENT_RING=$R/ring_$arm.txt ${=x} ./RogueSquadron64Recomp ) > ${LOGTO:-$R/log_$arm.txt} 2>&1 & gp=$!
   ( for k in 1 2 3 4 5 6 7 8; do /bin/sleep 12; osascript -e 'tell application "System Events" to set frontmost of (first process whose name contains "RogueSquadron64Recomp") to true' >/dev/null 2>&1; done ) & rp=$!
   rm -f $R/void_$arm; watch_human $gp $arm & wp=$!
-  for ((n=0; n<HOLD; n+=2)); do /bin/sleep 2; [ -e $R/void_$arm ] && break; done; alive=0; kill -0 $gp 2>/dev/null && alive=1
+  # s7205: SHOTS="150,160,..." = screencapture -x at those seconds after launch (same autopilot timeline in every arm).
+  if [ -n "$SHOTS" ]; then ( t0=$SECONDS; k=0; for s in ${(s:,:)SHOTS}; do k=$((k+1)); while (( SECONDS - t0 < s )); do /bin/sleep 0.5; done; [ -e $R/void_$arm ] && break; screencapture -x $R/shot_${arm}_c$k.png; done ) & sp=$!; fi
+  for ((n=0; n<HOLD; n+=2)); do /bin/sleep 2; [ -e $R/void_$arm ] && break; done; [ -n "$sp" ] && kill $sp 2>/dev/null; alive=0; kill -0 $gp 2>/dev/null && alive=1
   kill -KILL $gp 2>/dev/null; kill $rp 2>/dev/null; kill $wp 2>/dev/null; kill -KILL $hp 2>/dev/null
   [ -e $R/void_$arm ] && { echo human > $R/quiet.done; exit 2; }
   cm=$(grep -a -m1 -o 'cursorMask)=0x[0-9A-Fa-f]*' ${LOGTO:-$R/log_$arm.txt} | sed 's/.*=//'); want=$(printf '0x%08X' $((1 << lv)))
