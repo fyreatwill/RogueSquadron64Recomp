@@ -190718,3 +190718,6 @@ flight (after the hold; unexamined, single shot). Both flights 0 crashlines, 0 V
 Second line of evidence: the code path (the only aspect source was display 0's mode) plus the measured FB_WIDTH change 712 -> 796 on
 the same display. Sheet docs/owner_sheet_s7226_auto_second_display.png (old bars vs fix fill, t=150). OWNER-OPT-INS updated.
 Rules out: H-ok. Not covered: a real HDMI TV / ultrawide (virtual displays only), RETINA=1 on a 2x secondary (s7221 covers 2x chains).
+Discrimination: this run selects H-window and H-main (both measured on the old path) and refutes H-ok (fold BARS 16/18 vs ffix FILL 17/18,
+same display, same route, control PASS). Fix landed (target-display helper, default = old when no lever). Next discriminator (NEXT
+s7227): F11 toggle x2 + removal of the target display while fullscreen on it, H-ok vs H-jump vs H-dead, scored per display.
